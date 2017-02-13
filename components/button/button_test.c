@@ -39,7 +39,8 @@ const char* TAG_BTN = "BTN_TEST";
 
 void button_tap_cb(void* arg)
 {
-    ESP_EARLY_LOGI(TAG_BTN, "tap cb, heap: %d\n", esp_get_free_heap_size());
+    char* pstr = (char*) arg;
+    ESP_EARLY_LOGI(TAG_BTN, "tap cb (%s), heap: %d\n", pstr, esp_get_free_heap_size());
 }
 
 void button_press_2s_cb(void* arg)
@@ -56,14 +57,17 @@ void button_test()
 {
     printf("before btn init, heap: %d\n", esp_get_free_heap_size());
     button_handle_t btn_handle = button_dev_init(BUTTON_IO_NUM, 2, BUTTON_ACTIVE_LEVEL);
-    button_dev_add_tap_cb(button_tap_cb, NULL, 50 / portTICK_PERIOD_MS, btn_handle);
+    button_dev_add_tap_cb(BUTTON_PUSH_CB, button_tap_cb, "PUSH", 50 / portTICK_PERIOD_MS, btn_handle);
+    button_dev_add_tap_cb(BUTTON_RELEASE_CB, button_tap_cb, "RELEASE", 50 / portTICK_PERIOD_MS, btn_handle);
+    button_dev_add_tap_cb(BUTTON_TAP_CB, button_tap_cb, "TAP", 50 / portTICK_PERIOD_MS, btn_handle);
+
     button_dev_add_press_cb(0, button_press_2s_cb, NULL, 2000 / portTICK_PERIOD_MS, btn_handle);
     button_dev_add_press_cb(1, button_press_5s_cb, NULL, 5000 / portTICK_PERIOD_MS, btn_handle);
     printf("after btn init, heap: %d\n", esp_get_free_heap_size());
 
     vTaskDelay(40000 / portTICK_PERIOD_MS);
     printf("free btn: heap:%d\n", esp_get_free_heap_size());
-    button_dev_free(btn_handle);
+//    button_dev_free(btn_handle);
     printf("after free btn: heap:%d\n", esp_get_free_heap_size());
 }
 #endif
