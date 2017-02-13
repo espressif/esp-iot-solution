@@ -11,11 +11,16 @@
 #include "freertos/task.h"
 #include "esp_system.h"
 #include "nvs_flash.h"
+#include "esp_wifi.h"
 #include "wifi.h"
 
 void app_main()
 {
     nvs_flash_init();
+    wifi_sta_status_t wifi_st = wifi_get_status();
+    printf("wifi status:%d\n", wifi_st);
     wifi_setup(WIFI_MODE_STA);
-    wifi_connect_start("Netcore", "", portMAX_DELAY);
+    wifi_connect_start("IOT_DEMO_TEST", "123456789", portMAX_DELAY);
+    wifi_st = wifi_get_status();
+    printf("wifi status:%d\n", wifi_st);
 }

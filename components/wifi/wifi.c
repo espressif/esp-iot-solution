@@ -119,3 +119,8 @@ esp_err_t wifi_connect_start(const char *ssid, const char *pwd, uint32_t ticks_t
     xSemaphoreGive(wifi_mux);
     return ret;
 }
+
+wifi_sta_status_t wifi_get_status()
+{
+    return wifi_sta_st;
+}

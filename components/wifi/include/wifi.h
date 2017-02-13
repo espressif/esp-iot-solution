@@ -6,9 +6,9 @@
 
 
 typedef enum {
-    WIFI_STATUS_STA_DISCONNECTED,
-    WIFI_STATUS_STA_CONNECTING,
-    WIFI_STATUS_STA_CONNECTED,
+    WIFI_STATUS_STA_DISCONNECTED,           /**< ESP32 station disconnected */
+    WIFI_STATUS_STA_CONNECTING,             /**< ESP32 station connecting */
+    WIFI_STATUS_STA_CONNECTED,              /**< ESP32 station connected */
 } wifi_sta_status_t;
 
 /**
@@ -37,5 +37,12 @@ esp_err_t wifi_connect_start(const char *ssid, const char *pwd, uint32_t ticks_t
  *  @brief WiFi stop connecting
  */
 void wifi_connect_stop();
+
+/**
+  * @brief  get wifi status.
+  *
+  * @return status of the wifi station
+  */
+wifi_sta_status_t wifi_get_status();
 
 #endif
