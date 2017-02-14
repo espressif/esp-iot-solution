@@ -1,5 +1,5 @@
-#ifndef __WIFI_H__
-#define __WIFI_H__
+#ifndef _IOT_WIFI_H_
+#define _IOT_WIFI_H_
 #include "esp_log.h"
 
 #define WIFI_CONNECTED_EVT	BIT0
