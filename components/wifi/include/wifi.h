@@ -5,25 +5,6 @@
 #define WIFI_CONNECTED_EVT	BIT0
 #define WIFI_STOP_REQ_EVT   BIT1
 
-#define err_assert(param)      \
-	if((param) != ESP_OK){     \
-		ESP_LOGE("error_assert", "ERROR!\n");   \
-		return ESP_FAIL;       \
-	}
-
-#define pointer_assert(tag, param)	\
-	if((param) == NULL){		\
-		ESP_LOGE(tag, "%s:%d (%s) - the point is null\n", __FILE__, __LINE__, __FUNCTION__);	\
-		return ESP_FAIL;	\
-	}
-
-
-#define res_assert(tag, res, ret) \
-        if((res) == pdFALSE) { \
-            ESP_LOGE(tag, "%s:%d (%s)Res pdFALSE",__FILE__, __LINE__, __FUNCTION__); \
-            return ret; \
-        }
-
 typedef enum {
     WIFI_STATUS_STA_DISCONNECTED,           /**< ESP32 station disconnected */
     WIFI_STATUS_STA_CONNECTING,             /**< ESP32 station connecting */

@@ -10,37 +10,43 @@
 #include "esp_log.h"
 #include "wifi.h"
 
+#define IOT_CHECK(tag, a, ret)  if(!(a)) {                                             \
+        ESP_LOGE(tag,"%s:%d (%s)", __FILE__, __LINE__, __FUNCTION__);      \
+        return (ret);                                                                   \
+        }
+
+#define ERR_ASSERT(tag, param)  IOT_CHECK(tag, (param) == ESP_OK, ESP_FAIL)
+#define POINT_ASSERT(tag, param)	IOT_CHECK(tag, (param) != NULL, ESP_FAIL)
+#define RES_ASSERT(tag, res, ret)   IOT_CHECK(tag, (res) != pdFALSE, ret)
+
 // Debug tag in esp log
 static const char* TAG = "wifi";
 // Create an event group to handle different WiFi events.
-static EventGroupHandle_t wifi_event_group = NULL;
+static EventGroupHandle_t s_wifi_event_group = NULL;
 // Mutex to protect WiFi connect
-static xSemaphoreHandle wifi_mux = NULL;
+static xSemaphoreHandle s_wifi_mux = NULL;
 
-// If this is defined as 1, set the log level to DEBUG mode.
-#define DEBUG_EN 1
-
-static wifi_sta_status_t wifi_sta_st = WIFI_STATUS_STA_DISCONNECTED;
+static wifi_sta_status_t s_wifi_sta_st = WIFI_STATUS_STA_DISCONNECTED;
 
 static esp_err_t wifi_event_handler(void *ctx, system_event_t *event)
 {
     switch (event->event_id) {
         case SYSTEM_EVENT_STA_START:
-            wifi_sta_st = WIFI_STATUS_STA_CONNECTING;
+            s_wifi_sta_st = WIFI_STATUS_STA_CONNECTING;
             ESP_LOGI(TAG, "SYSTEM_EVENT_STA_START\n");
             break;
         case SYSTEM_EVENT_STA_GOT_IP:
-            wifi_sta_st = WIFI_STATUS_STA_CONNECTED;
+            s_wifi_sta_st = WIFI_STATUS_STA_CONNECTED;
             ESP_LOGI(TAG, "SYSREM_EVENT_STA_GOT_IP\n");
             // Set event bit to sync with other tasks.
-            xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_EVT);
+            xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_EVT);
             break;
         case SYSTEM_EVENT_STA_DISCONNECTED:
-            wifi_sta_st = WIFI_STATUS_STA_DISCONNECTED;
+            s_wifi_sta_st = WIFI_STATUS_STA_DISCONNECTED;
             ESP_LOGI(TAG, "SYSTEM_EVENT_STA_DISCONNECTED\n");
             esp_wifi_connect();
             // Clear event bit so WiFi task knows the disconnect-event
-            xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_EVT);
+            xEventGroupClearBits(s_wifi_event_group, WIFI_CONNECTED_EVT);
             break;
         default:
             printf("Get default WiFi event: %d\n", event->event_id);
@@ -54,38 +60,38 @@ esp_err_t wifi_setup(wifi_mode_t wifi_mode)
 #if DEBUG_EN
     esp_log_level_set(TAG, ESP_LOG_DEBUG);
 #endif
-    if (wifi_mux == NULL) {
-        wifi_mux = xSemaphoreCreateMutex();
-        pointer_assert(TAG, wifi_mux);
+    if (s_wifi_mux == NULL) {
+        s_wifi_mux = xSemaphoreCreateMutex();
+        POINT_ASSERT(TAG, s_wifi_mux);
     }
     tcpip_adapter_init();
     // hoop WiFi event handler
-    err_assert(esp_event_loop_init(wifi_event_handler, NULL));
+    ERR_ASSERT(TAG, esp_event_loop_init(wifi_event_handler, NULL));
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT()
     // Init WiFi
-    err_assert(esp_wifi_init(&cfg));
-    err_assert(esp_wifi_set_storage(WIFI_STORAGE_RAM));
+    ERR_ASSERT(TAG, esp_wifi_init(&cfg));
+    ERR_ASSERT(TAG, esp_wifi_set_storage(WIFI_STORAGE_RAM));
     esp_wifi_set_mode(wifi_mode);
     esp_wifi_start();
     // Init event group
-    wifi_event_group = xEventGroupCreate();
-    pointer_assert(TAG, wifi_event_group);
+    s_wifi_event_group = xEventGroupCreate();
+    POINT_ASSERT(TAG, s_wifi_event_group);
     return ESP_OK;
 }
 
 void wifi_connect_stop()
 {
     esp_wifi_stop();
-    xEventGroupSetBits(wifi_event_group, WIFI_STOP_REQ_EVT);
+    xEventGroupSetBits(s_wifi_event_group, WIFI_STOP_REQ_EVT);
 }
 
 esp_err_t wifi_connect_start(const char *ssid, const char *pwd, uint32_t ticks_to_wait)
 {
     // Take mutex
-    BaseType_t res = xSemaphoreTake(wifi_mux, ticks_to_wait);
-    res_assert(TAG, res, ESP_ERR_TIMEOUT);
+    BaseType_t res = xSemaphoreTake(s_wifi_mux, ticks_to_wait);
+    RES_ASSERT(TAG, res, ESP_ERR_TIMEOUT);
     // Clear stop event bit
-    xEventGroupClearBits(wifi_event_group, WIFI_STOP_REQ_EVT);
+    xEventGroupClearBits(s_wifi_event_group, WIFI_STOP_REQ_EVT);
     wifi_config_t wifi_config;
     memset(&wifi_config, 0, sizeof(wifi_config_t));
     // Connect router
@@ -96,7 +102,7 @@ esp_err_t wifi_connect_start(const char *ssid, const char *pwd, uint32_t ticks_t
     esp_wifi_connect();
     // Wait event bits
     EventBits_t uxBits;
-    uxBits = xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED_EVT | WIFI_STOP_REQ_EVT, false, false, ticks_to_wait);
+    uxBits = xEventGroupWaitBits(s_wifi_event_group, WIFI_CONNECTED_EVT | WIFI_STOP_REQ_EVT, false, false, ticks_to_wait);
     esp_err_t ret;
     // WiFi connected event
     if (uxBits & WIFI_CONNECTED_EVT) {
@@ -107,7 +113,7 @@ esp_err_t wifi_connect_start(const char *ssid, const char *pwd, uint32_t ticks_t
     else if (uxBits & WIFI_STOP_REQ_EVT) {
         ESP_LOGI(TAG, "WiFi connecting stop.");
         // Clear stop event bit
-        xEventGroupClearBits(wifi_event_group, WIFI_STOP_REQ_EVT);
+        xEventGroupClearBits(s_wifi_event_group, WIFI_STOP_REQ_EVT);
         ret = ESP_FAIL;
     }
     // WiFi connect timeout
@@ -116,11 +122,11 @@ esp_err_t wifi_connect_start(const char *ssid, const char *pwd, uint32_t ticks_t
         ESP_LOGW(TAG, "WiFi connect fail");
         ret = ESP_ERR_TIMEOUT;
     }
-    xSemaphoreGive(wifi_mux);
+    xSemaphoreGive(s_wifi_mux);
     return ret;
 }
 
 wifi_sta_status_t wifi_get_status()
 {
-    return wifi_sta_st;
+    return s_wifi_sta_st;
 }
