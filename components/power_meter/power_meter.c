@@ -154,14 +154,16 @@ pm_handle_t powermeter_create(pm_config_t pm_config)
     }
     pm_dev->sel_io_num = pm_config.sel_io_num;
     pm_dev->sel_level = pm_config.sel_level;
-    gpio_config_t io_conf;
-    io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
-    io_conf.mode = GPIO_MODE_OUTPUT;
-    io_conf.pin_bit_mask = BIT(pm_dev->sel_io_num);
-    io_conf.pull_down_en = 0;
-    io_conf.pull_up_en = 0;
-    gpio_config(&io_conf);
-    gpio_set_level(pm_dev->sel_io_num, pm_config.sel_level);
+    if (pm_config.sel_io_num < GPIO_PIN_COUNT) {
+        gpio_config_t io_conf;
+        io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
+        io_conf.mode = GPIO_MODE_OUTPUT;
+        io_conf.pin_bit_mask = BIT(pm_dev->sel_io_num);
+        io_conf.pull_down_en = 0;
+        io_conf.pull_up_en = 0;
+        gpio_config(&io_conf);
+        gpio_set_level(pm_dev->sel_io_num, pm_config.sel_level);
+    }
     pm_dev->pm_mode = pm_config.pm_mode;
     g_pm_group[g_pm_num++] = pm_dev;
     return (pm_handle_t) pm_dev;
@@ -180,6 +182,7 @@ esp_err_t powermeter_change_mode(pm_handle_t pm_handle, pm_mode_t mode)
     else {
         pm_dev->pm_mode = mode;
         pm_dev->sel_level = (~pm_dev->sel_level) & 0x01;
+        IOT_CHECK(TAG, pm_dev->sel_io_num < GPIO_PIN_COUNT, ESP_FAIL);
         gpio_set_level(pm_dev->sel_io_num, pm_dev->sel_level);
         ESP_LOGI(TAG, "power meter mode:%d", mode);
         return ESP_OK;

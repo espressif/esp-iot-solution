@@ -18,9 +18,9 @@
 #include "driver/pcnt.h"
 
 typedef enum {
-    PM_BOTH_VC = 0,
-    PM_SINGLE_CURRENT,
-    PM_SINGLE_VOLTAGE,
+    PM_BOTH_VC = 0,                 /**< voltage and current are measured at the same time by different pin */
+    PM_SINGLE_CURRENT,              /**< only current is measured now */
+    PM_SINGLE_VOLTAGE,              /**< only voltage is measured now */
 } pm_mode_t;
 
 typedef enum {
@@ -30,22 +30,50 @@ typedef enum {
 } pm_value_type_t;
 
 typedef struct {
-    uint8_t power_io_num;
-    pcnt_unit_t power_pcnt_unit;
-    uint32_t power_ref_param;
-    uint8_t voltage_io_num;
-    pcnt_unit_t voltage_pcnt_unit;
-    uint32_t voltage_ref_param;
-    uint8_t current_io_num;
-    pcnt_unit_t current_pcnt_unit;
-    uint32_t current_ref_param;
-    uint8_t sel_io_num;
-    uint8_t sel_level;
-    pm_mode_t pm_mode;
+    uint8_t power_io_num;               /**< gpio number of the pin outputing power */
+    pcnt_unit_t power_pcnt_unit;        /**< pulse count unit of power pin */
+    uint32_t power_ref_param;           /**< reference value to calculate actual power value */
+    uint8_t voltage_io_num;             /**< gpio number of the pin outputing voltage */
+    pcnt_unit_t voltage_pcnt_unit;      /**< pulse count unit of voltage pin */
+    uint32_t voltage_ref_param;         /**< reference value to calculate actual voltage value */
+    uint8_t current_io_num;             /**< gpio number of the pin outputing current */
+    pcnt_unit_t current_pcnt_unit;      /**< pulse count unit of current pin */
+    uint32_t current_ref_param;         /**< reference value to calculate actual current value */
+    uint8_t sel_io_num;                 /**< gpio number of mode select pin */
+    uint8_t sel_level;                  /**< the gpio level you wang to set to mode select pin */
+    pm_mode_t pm_mode;                  /**< mode of power meter refer to struct pm_mode_t */
 } pm_config_t;
 
 typedef void* pm_handle_t;
+
+/**
+  * @brief  create power meter
+  *
+  * @param  pm_config refer to struct pm_config_t
+  *
+  * @return the handle of the power meter
+  */
 pm_handle_t powermeter_create(pm_config_t pm_config);
+
+/**
+  * @brief  read value of power meter
+  *
+  * @param  pm_handle handle of the power meter
+  * @param  value_type which value you want to read, refer to struct pm_value_type_t
+  *
+  * @return the value
+  */
 uint32_t powermeter_read(pm_handle_t pm_handle, pm_value_type_t value_type);
+
+/**
+  * @brief  change the mode of power meter
+  *
+  * @param  pm_handle handle of the power meter
+  * @param  mode the mode you want to change to 
+  *
+  * @return 
+  *     - ESP_OK: succeed
+  *     - others: fail
+  */
 esp_err_t powermeter_change_mode(pm_handle_t pm_handle, pm_mode_t mode);
 #endif
