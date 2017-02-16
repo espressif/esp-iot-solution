@@ -14,7 +14,6 @@
 #include "esp_wifi.h"
 #include "wifi.h"
 
-
 void app_main()
 {
     nvs_flash_init();
