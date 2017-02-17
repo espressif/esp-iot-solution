@@ -135,6 +135,7 @@ esp_err_t sc_start(uint32_t ticks_to_wait)
         ret = ESP_ERR_TIMEOUT;
     }
     esp_smartconfig_stop();
+    s_sc_status = SC_STATUS_WAIT;
     xSemaphoreGive(s_sc_mux);
     return ret;
 }

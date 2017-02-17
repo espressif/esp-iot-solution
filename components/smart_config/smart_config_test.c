@@ -23,7 +23,7 @@ void sc_check_status(void* arg)
 void sc_test()
 {
     esp_err_t res;
-    sc_setup(SC_TYPE_ESPTOUCH, WIFI_MODE_STA, true);
+    sc_setup(SC_TYPE_ESPTOUCH, WIFI_MODE_STA, 0);
     xTaskCreate(sc_check_status, "sc_check_status", 1024*2, NULL, 5, NULL);
     while (1) {
         res = sc_start(20000 / portTICK_PERIOD_MS);
