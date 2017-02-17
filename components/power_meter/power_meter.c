@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/timers.h"
@@ -31,10 +32,11 @@
 #define PM_PCNT_FILTER  100
 #define PM_VALUE_INF    (1000 * 1000 * 1000)
 
-#define IOT_CHECK(tag, a, ret)  if(!(a)) {                                             \
-        return (ret);                                                                   \
+#define IOT_CHECK(tag, a, ret)  if(!(a)) {       \
+        return (ret);                            \
         }
 #define ERR_ASSERT(tag, param)  IOT_CHECK(tag, (param) == ESP_OK, ESP_FAIL)
+#define POINT_ASSERT(tag, param)	IOT_CHECK(tag, (param) != NULL, ESP_FAIL)
 
 typedef struct {
     pcnt_unit_t pcnt_unit;
@@ -81,21 +83,23 @@ static void pm_pcnt_intr_handler(void *arg)
     PCNT.int_clr.val = 0xff;
     pm_dev_t* pm_dev;
     pm_pin_t* pm_pin;
-    for(uint8_t i = 0; i < g_pm_num; i++) {
-        pm_dev = g_pm_group[i];
-        for(uint8_t j = 0; j < PM_PIN_MAX; j++) {
-            pm_pin = pm_dev->pm_pin[j];
-            if (pm_pin != NULL && (BIT(pm_pin->pcnt_unit) & intr_status)) {
-                if (PCNT.status_unit[pm_pin->pcnt_unit].h_lim_lat) {
-                    pcnt_counter_clear(pm_pin->pcnt_unit);
-                    pcnt_counter_resume(pm_pin->pcnt_unit);
-                    uint32_t time = system_get_time();
-                    pm_pin->time_diff = (time - pm_pin->last_time) / (PM_PCNT_H_LIM - 1);
-                    pm_pin->last_time = time;
-                    xTimerResetFromISR(pm_pin->xTimer, pdFALSE);
-                }
-                if (PCNT.status_unit[pm_pin->pcnt_unit].thres0_lat) {
-                    pm_pin->last_time = system_get_time();
+    for(uint8_t i = 0; i < PM_MAX; i++) {
+        if (g_pm_group[i] != NULL) {
+            pm_dev = g_pm_group[i];
+            for(uint8_t j = 0; j < PM_PIN_MAX; j++) {
+                pm_pin = pm_dev->pm_pin[j];
+                if (pm_pin != NULL && (BIT(pm_pin->pcnt_unit) & intr_status)) {
+                    if (PCNT.status_unit[pm_pin->pcnt_unit].h_lim_lat) {
+                        pcnt_counter_clear(pm_pin->pcnt_unit);
+                        pcnt_counter_resume(pm_pin->pcnt_unit);
+                        uint32_t time = system_get_time();
+                        pm_pin->time_diff = (time - pm_pin->last_time) / (PM_PCNT_H_LIM - 1);
+                        pm_pin->last_time = time;
+                        xTimerResetFromISR(pm_pin->xTimer, pdFALSE);
+                    }
+                    if (PCNT.status_unit[pm_pin->pcnt_unit].thres0_lat) {
+                        pm_pin->last_time = system_get_time();
+                    }
                 }
             }
         }
@@ -137,6 +141,14 @@ static pm_pin_t* powermeter_pin_create(uint8_t io_num, pcnt_unit_t pcnt_unit, ui
     return pm_pin;
 }
 
+static esp_err_t powermeter_pin_delete(pm_pin_t* pm_pin)
+{
+    POINT_ASSERT(TAG, pm_pin);
+    xTimerDelete(pm_pin->xTimer, portMAX_DELAY);
+    free(pm_pin);
+    return ESP_OK;
+}
+
 pm_handle_t powermeter_create(pm_config_t pm_config)
 {
     pm_dev_t* pm_dev = (pm_dev_t*)calloc(1, sizeof(pm_dev_t));
@@ -165,8 +177,39 @@ pm_handle_t powermeter_create(pm_config_t pm_config)
         gpio_set_level(pm_dev->sel_io_num, pm_config.sel_level);
     }
     pm_dev->pm_mode = pm_config.pm_mode;
-    g_pm_group[g_pm_num++] = pm_dev;
+    if (g_pm_num >= PM_MAX) {
+        return NULL;
+    }
+    g_pm_num++;
+    for (int i = 0; i < PM_MAX; i++) {
+        if (g_pm_group[i] == NULL) {
+            g_pm_group[i] = pm_dev;
+            break;
+        }
+    }
+            
     return (pm_handle_t) pm_dev;
+}
+
+esp_err_t powermeter_delete(pm_handle_t pm_handle)
+{
+    pm_dev_t* pm_dev = (pm_dev_t*) pm_handle;
+    POINT_ASSERT(TAG, pm_handle);
+    for (int i = 0; i < PM_MAX; i++) {
+        if (g_pm_group[i] == pm_dev) {
+            g_pm_group[i] = NULL;
+            break;
+        }
+    }
+    for (int i = 0; i < PM_PIN_MAX; i++) {
+        if (pm_dev->pm_pin[i] != NULL) {
+            powermeter_pin_delete(pm_dev->pm_pin[i]);
+            pm_dev->pm_pin[i] = NULL;
+        }
+    }
+    free(pm_dev);
+    g_pm_num--;
+    return ESP_OK;
 }
 
 esp_err_t powermeter_change_mode(pm_handle_t pm_handle, pm_mode_t mode)

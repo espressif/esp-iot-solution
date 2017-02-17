@@ -29,6 +29,23 @@ static void read_value(void* arg)
         ESP_LOGI(TAG, "value of power:%d", powermeter_read(pm_handle, PM_POWER));
         ESP_LOGI(TAG, "value of voltage:%d", powermeter_read(pm_handle, PM_VOLTAGE));
         ESP_LOGI(TAG, "value of current:%d", powermeter_read(pm_handle, PM_CURRENT));
+        powermeter_delete(pm_handle);
+        vTaskDelay(5000 / portTICK_RATE_MS);
+        pm_config_t pm_conf = {
+            .power_io_num = PM_CF_IO_NUM,
+            .power_pcnt_unit = PCNT_UNIT_0,
+            .power_ref_param = PM_POWER_PARAM,
+            .voltage_io_num = PM_CFI_IO_NUM,
+            .voltage_pcnt_unit = PCNT_UNIT_1,
+            .voltage_ref_param = PM_VOLTAGE_PARAM,
+            .current_io_num = PM_CFI_IO_NUM,
+            .current_pcnt_unit = PCNT_UNIT_1,
+            .current_ref_param = PM_CURRENT_PARAM,
+            .sel_io_num = 17,
+            .sel_level = 0,
+            .pm_mode = PM_SINGLE_VOLTAGE
+        };
+        pm_handle = powermeter_create(pm_conf);
     }
     vTaskDelete(NULL);
 }

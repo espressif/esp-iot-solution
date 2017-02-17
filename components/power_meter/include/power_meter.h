@@ -56,12 +56,23 @@ typedef void* pm_handle_t;
 pm_handle_t powermeter_create(pm_config_t pm_config);
 
 /**
+  * @brief  delete power meter, free memory
+  *
+  * @param  pm_handle handle of the power meter
+  *
+  * @return 
+  *     - ESP_OK: succeed
+  *     - ESP_FAIL: pm_handle is NULL
+  */
+esp_err_t powermeter_delete(pm_handle_t pm_handle);
+
+/**
   * @brief  read value of power meter
   *
   * @param  pm_handle handle of the power meter
   * @param  value_type which value you want to read, refer to struct pm_value_type_t
   *
-  * @return the value
+  * @return 
   */
 uint32_t powermeter_read(pm_handle_t pm_handle, pm_value_type_t value_type);
 
