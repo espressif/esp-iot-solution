@@ -19,7 +19,7 @@
 	* Then hook different event callbacks to the button object.
 	* To free the object, you can call button_dev_free to delete the button object and free the memory that used.
 	
-###NOTE: 
+### NOTE:
 > All the event callback function are realized by FreeRTOS soft timer APIs, the callback must follow the rule: 
 
 
