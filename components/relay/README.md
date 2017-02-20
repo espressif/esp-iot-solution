@@ -1,0 +1,17 @@
+# Component: relay
+
+* This component defines a button as a well encapsulated object.
+
+* A relay device is defined by:
+	* gpio number(s) which control(s) the relay
+	* closed level decided by peripheral hardware. If the relay you use is closed when the given voltage is high, set it to RELAY_CLOSE_HIGH, else set it to RELAY_CLOSE_LOW 
+	* control mode which decides how to control the relay(by gpio or d flip-flop)
+	* io mode which decides the mode of gpio(normal or rtc)
+
+* A relay device can provide:
+	* relay_state_write to set the state of relay
+	* relay_state_read to read the state of relay
+
+* To use the relay device, you need to:
+	* create a relay device returned by relay_create
+	* to free the object, you can call relay_delete to delete the relay object and free the memory
