@@ -1,6 +1,8 @@
 # Component: relay
 
 * This component defines a button as a well encapsulated object.
+    * Usually a relay is only driven by a GPIO.
+    * Sometimes a relay will be driven by a D flip-flop.
 
 * A relay device is defined by:
 	* gpio number(s) which control(s) the relay

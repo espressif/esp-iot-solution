@@ -1,6 +1,7 @@
 # Component: touchpad
 
 * This component defines a touchpad as a well encapsulated object.
+    * Based on touchpad driver in esp-idf.
 
 * A touchpad device is defined by:
 	* touchpad number(refer to comments of touch_pad_t for touchpad number and gpio number pair) 
