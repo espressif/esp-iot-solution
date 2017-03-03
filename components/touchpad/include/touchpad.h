@@ -23,6 +23,20 @@ typedef enum {
     TOUCHPAD_SERIAL_TRIGGER,        /**< number of touchpad evetn ttiggerred will be in direct proportion to the duration of press*/
 } touchpad_trigger_t;
 
+typedef enum {
+    TOUCHPAD_EVENT_PUSH,            /**< touch pad push event */
+    TOUCHPAD_EVENT_RELEASE,         /**< touch pad release event */
+    TOUCHPAD_EVENT_TAP,             /**< touch pad quick tap event */
+    TOUCHPAD_EVENT_LONG_PRESS,      /**< touch pad long press event */
+} touchpad_event_t;
+
+typedef struct {
+    touchpad_handle_t handle;
+    touch_pad_t num;
+    touchpad_event_t event;
+} touchpad_msg_t;
+    
+
 /**
   * @brief  create touchpad device
   *
@@ -30,12 +44,18 @@ typedef enum {
   * @param  threshold the sample value of a touchpad under which the interrupt will be triggered
   * @param  filter_value filter time of touchpad
   * @param  trigger refer to enum touchpad_trigger_t
+  * @param  long_press_sec the number of seconds more than whick a LONG_PRESS_EVENT would accour
+  * @param  queue_ptr pointer to a queue for message send, 
+  *         the queue_handle which queue_ptr point to must be assigned NULL if you want a new queue to be created in this function
+  *         else queue_ptr must point to an exit queue_handle(refer to touchpad_test.c)
+  *
+  * @param  queue_len length of the queue
   *
   * @return
   *     - ESP_OK: succeed
   *     - others: fail
   */
-touchpad_handle_t touchpad_create(touch_pad_t touch_pad_num, uint32_t threshold, uint32_t filter_value, touchpad_trigger_t trigger);
+touchpad_handle_t touchpad_create(touch_pad_t touch_pad_num, uint32_t threshold, uint32_t filter_value, touchpad_trigger_t trigger, uint32_t long_press_sec, xQueueHandle* queue_ptr, UBaseType_t queue_len);
 
 /**
   * @brief  delete touchpad device

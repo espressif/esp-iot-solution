@@ -12,7 +12,6 @@
 #include "esp_system.h"
 #include "nvs_flash.h"
 #include "esp_wifi.h"
-#include "wifi.h"
 
 void app_main()
 {
