@@ -3,7 +3,8 @@
 #include "esp_spi_flash.h"
 #include "param.h"
 
-#define PARAM_SEC   0x3d
+#define PARAM_NAMESPACE     "param_save"
+#define PARAM_KEY      "struct"
 #define TAG     "param_test"
 
 typedef struct {
@@ -22,14 +23,14 @@ void param_test()
         .b = 99,
     };
     ESP_LOGI(TAG, "param write a:%d, b:%d", param.a, param.b);
-    param_save(PARAM_SEC, &param, sizeof(param_t));
-    param_load(PARAM_SEC, &param_read, sizeof(param_t));
+    param_save(PARAM_NAMESPACE, PARAM_KEY, &param, sizeof(param_t));
+    param_load(PARAM_NAMESPACE, PARAM_KEY, &param_read);
     ESP_LOGI(TAG, "param read a:%d, b:%d", param_read.a, param_read.b);
     
     param.a = 77;
     param.b = 88;
     ESP_LOGI(TAG, "param write a:%d, b:%d", param.a, param.b);
-    param_save(PARAM_SEC, &param, sizeof(param_t));
-    param_load(PARAM_SEC, &param_read, sizeof(param_t));
+    param_save(PARAM_NAMESPACE, PARAM_KEY, &param, sizeof(param_t));
+    param_load(PARAM_NAMESPACE, PARAM_KEY, &param_read);
     ESP_LOGI(TAG, "param read a:%d, b:%d", param_read.a, param_read.b);
 }

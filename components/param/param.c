@@ -1,6 +1,7 @@
 #include "esp_system.h"
 #include "esp_spi_flash.h"
 #include "esp_log.h"
+#include "nvs.h"
 #include "param.h"
 
 #define IOT_CHECK(tag, a, ret)  if(!(a)) {                                             \
@@ -14,40 +15,24 @@
 
 static const char* TAG = "param";
 
-esp_err_t param_save(uint16_t start_sec, void *param, uint16_t len)
+esp_err_t param_save(const char* namespace, const char* key, void *param, uint16_t len)
 {
-    uint32_t flag;
-    POINT_ASSERT(TAG, param);
-    ERR_ASSERT(TAG, spi_flash_read((start_sec + 2) * SPI_FLASH_SEC_SIZE, &flag, sizeof(flag)) );
-    if (flag == 0) {
-        ERR_ASSERT(TAG, spi_flash_erase_sector(start_sec + 1) );
-        ERR_ASSERT(TAG, spi_flash_write((start_sec + 1) * SPI_FLASH_SEC_SIZE, param, len) );
-        flag = 1;
-        ERR_ASSERT(TAG, spi_flash_erase_sector(start_sec + 2) );
-        ERR_ASSERT(TAG, spi_flash_write((start_sec + 2) * SPI_FLASH_SEC_SIZE, &flag, sizeof(flag)) );
-        spi_flash_read((start_sec + 2) * SPI_FLASH_SEC_SIZE, &flag, sizeof(flag));
-    }
-    else {
-        ERR_ASSERT(TAG, spi_flash_erase_sector(start_sec+ 0) );
-        ERR_ASSERT(TAG, spi_flash_write((start_sec + 0) * SPI_FLASH_SEC_SIZE, param, len) );
-        flag = 0;
-        ERR_ASSERT(TAG, spi_flash_erase_sector(start_sec + 2) );
-        ERR_ASSERT(TAG, spi_flash_write((start_sec + 2) * SPI_FLASH_SEC_SIZE, &flag, sizeof(flag)) );
-        spi_flash_read((start_sec + 2) * SPI_FLASH_SEC_SIZE, &flag, sizeof(flag));
-    }
+    nvs_handle my_handle;
+    ERR_ASSERT(TAG, nvs_open(namespace, NVS_READWRITE, &my_handle));
+    ERR_ASSERT(TAG, nvs_set_blob(my_handle, key, param, len));
+    ERR_ASSERT(TAG, nvs_commit(my_handle));
+    nvs_close(my_handle);
     return ESP_OK;
 }
 
-esp_err_t param_load(uint16_t start_sec, void *dest, uint16_t len)
+esp_err_t param_load(const char* namespace, const char* key,void* dest)
 {
-    uint32_t flag;
-    POINT_ASSERT(TAG, dest);
-    ERR_ASSERT(TAG, spi_flash_read((start_sec + 2) * SPI_FLASH_SEC_SIZE, &flag, sizeof(flag)) );
-    if (flag == 0) {
-        ERR_ASSERT(TAG, spi_flash_read((start_sec + 0) * SPI_FLASH_SEC_SIZE, dest, len) );
-    }
-    else {
-        ERR_ASSERT(TAG, spi_flash_read((start_sec + 1) * SPI_FLASH_SEC_SIZE, dest, len) );
-    }
-    return ESP_OK;    
+    nvs_handle my_handle;
+    uint16_t required_size = 0;
+    ERR_ASSERT(TAG, nvs_open(namespace, NVS_READWRITE, &my_handle));
+    ERR_ASSERT(TAG, nvs_get_blob(my_handle, key, NULL, &required_size));
+    IOT_CHECK(TAG, required_size != 0, ESP_FAIL);
+    ERR_ASSERT(TAG, nvs_get_blob(my_handle, key, dest, &required_size));
+    nvs_close(my_handle);
+    return ESP_OK;
 }
