@@ -81,7 +81,7 @@ static void tp_timer_callback(TimerHandle_t xTimer)
                         xQueueSendToBack(touchpad_dev->queue, &msg, TIMER_CALLBACK_MAX_WAIT_TICK / portTICK_RATE_MS);
                     }
                 }
-                xTimerResetFromISR(touchpad_dev->timer, portMAX_DELAY);
+                xTimerReset(touchpad_dev->timer, portMAX_DELAY);
             }
             else {
                 msg.event = TOUCHPAD_EVENT_RELEASE;
