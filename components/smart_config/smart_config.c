@@ -80,7 +80,7 @@ esp_err_t sc_setup(smartconfig_type_t sc_type, wifi_mode_t wifi_mode, bool fast_
     tcpip_adapter_init();
     
     IOT_CHECK(TAG ,wifi_mode != WIFI_MODE_AP, ESP_FAIL);
-     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT()
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     // Init WiFi
     ERR_ASSERT(TAG, esp_event_loop_init(NULL, NULL));
     ERR_ASSERT(TAG, esp_wifi_init(&cfg));
