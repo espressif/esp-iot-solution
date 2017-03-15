@@ -27,7 +27,7 @@
 #define PM_PIN_MAX  3
 #define PM_CRITICAL_PERIOD  (5 * 1000)
 #define PM_VALUE_MULTIPLE   100
-#define PM_PCNT_H_LIM   2
+#define PM_PCNT_H_LIM   1001
 #define PM_PCNT_L_LIM   -1000
 #define PM_PCNT_FILTER  100
 #define PM_VALUE_INF    (1000 * 1000 * 1000)
