@@ -175,7 +175,6 @@ joylink_proc_lan_json_ctrl(uint8_t *json_cmd, struct sockaddr_in *sin_recv, sock
 
     joylink_parse_json_ctrl(feedid, (char*)json_cmd);
     ret = joylink_dev_lan_json_ctrl((char *)json_cmd);
-   
     memcpy(data, &tt, 4);
     ret = joylink_dev_get_json_snap_shot(data + 4, sizeof(data) - 4, ret, feedid);
 

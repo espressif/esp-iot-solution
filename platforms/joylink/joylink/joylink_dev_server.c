@@ -565,7 +565,8 @@ joylink_proc_server()
         log_info("Server close, Reconnect!\r\n");
         return;
     }
-
+	log_info("Server org ctrl :%s", recBuffer);
+	
     JLPacketParam_t param;
     ret = joylink_dencypt_server_req(&param, recBuffer, ret, recPainText, JL_MAX_PACKET_LEN);
 

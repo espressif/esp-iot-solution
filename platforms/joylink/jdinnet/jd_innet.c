@@ -24,10 +24,22 @@
 #include "nvs.h"
 #include "nvs_flash.h"
 
-#define AES_KEY "4QNEXWPFBM4VZJM8"
+static char g_innet_aes_key[64];
 const uint8_t AES_IV[16];
 uint8_t jd_aes_out_buffer[128];
 static xTaskHandle jd_innet_timer_task_handle = NULL;
+
+void jd_innet_set_aes_key(char * pKey)
+{
+	if(pKey)
+		memcpy(g_innet_aes_key, pKey, strlen(pKey)+1);
+}
+
+char * jd_innet_get_aes_key(void)
+{
+	return (char*)g_innet_aes_key;
+}
+
 /*recv packet callback*/
 static void jd_innet_pack_callback(void *buf, wifi_promiscuous_pkt_type_t type)
 {
@@ -46,7 +58,7 @@ static void jd_innet_pack_callback(void *buf, wifi_promiscuous_pkt_type_t type)
         if (joylink_cfg_Result(&Ret) == 0) {
             if (Ret.type != 0) {
                 memset(AES_IV,0x0,sizeof(AES_IV));
-                len = device_aes_decrypt((const uint8 *)AES_KEY, strlen(AES_KEY),AES_IV,
+                len = device_aes_decrypt((const uint8 *)g_innet_aes_key, strlen(g_innet_aes_key),AES_IV,
                     Ret.encData + 1,Ret.encData[0],
                     jd_aes_out_buffer,sizeof(jd_aes_out_buffer));
                 if (len > 0) {

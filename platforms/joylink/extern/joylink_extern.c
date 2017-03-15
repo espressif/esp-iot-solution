@@ -24,16 +24,34 @@
 #include "nvs.h"
 #include "nvs_flash.h"
 
-#include "esp_wifi.h"
-
+typedef struct __attr_{
+    char name[32];
+    E_JL_DEV_ATTR_GET_CB get;
+    E_JL_DEV_ATTR_SET_CB set;
+}Attr_t;
 
 typedef struct _attr_manage_{
-    uint32_t power;
-} esp_device_t;
+    Attr_t power;
+    Attr_t subdev;
+    Attr_t uuid;
+    Attr_t feedid;
+    Attr_t accesskey;
+    Attr_t localkey;
+    Attr_t server_st;
+	Attr_t macaddr;	
+	Attr_t server_info;	
+    
+    Attr_t version;	
 
-esp_device_t g_esp_dev, *g_dev = &g_esp_dev;
+}WIFIManage_t;
+
+WIFIManage_t _g_am, *_g_pam = &_g_am;
 
 #define JOYLINK_NVS_NAMESPACE       "joylink"
+#define JOYLINK_CTRL_DEV_TIMEOUT  (500) //ms
+
+
+int joylink_get_dev_json_status(char *out_data, int32_t max_len);
 
 /**
  * brief:
@@ -86,6 +104,18 @@ joylink_dev_set_connect_st(int st)
     /**
      *FIXME:must to do
      */
+    static uint8_t server_st = 0;
+    if (st == JL_SERVER_ST_WORK) {
+		if (server_st == 0) {
+			server_st = 1;
+    		joylink_event_send(JOYLINK_EVENT_CLOUD_CONNECTED);
+		}
+    } else {
+    	if (server_st == 1) {
+			server_st = 0;
+			joylink_event_send(JOYLINK_EVENT_CLOUD_DISCONNECTED);
+    	}
+	}
     int ret = E_RET_OK;
     return ret;
 }
@@ -166,7 +196,6 @@ E_JLRetCode_t
 joylink_dev_get_jlp_info(JLPInfo_t *jlp)
 {
     nvs_handle out_handle;
-    uint8_t mac[6];
     if(NULL == jlp){
         return E_RET_ERROR;
     }
@@ -176,11 +205,6 @@ joylink_dev_get_jlp_info(JLPInfo_t *jlp)
     int ret = E_RET_ERROR;
     size_t size = 0;
     log_debug("--joylink_dev_get_jlp_info");
-
-    if (esp_wifi_get_mac(ESP_IF_WIFI_STA,mac) == ESP_OK) {
-        sprintf(jlp->mac,MACSTR,MAC2STR(mac));
-    }
-
     if (nvs_open(JOYLINK_NVS_NAMESPACE, NVS_READONLY, &out_handle) != ESP_OK) {
         return E_RET_ERROR;
     }
@@ -245,8 +269,8 @@ joylink_dev_get_snap_shot(char *out_snap, int32_t out_max)
     /**
      *FIXME:must to do
      */
+    log_debug("Lan upload Script : to server");
     int len = 0;
-    len = snprintf(out_snap,out_max, "{\"code\":0, \"streams\":[{\"current_value\":%d,\"stream_id\":\"power\"}]}", g_dev->power);
 
     return len;
 }
@@ -265,9 +289,32 @@ joylink_dev_get_json_snap_shot(char *out_snap, int32_t out_max, int code, char *
     /**
      *FIXME:must to do
      */
-    sprintf(out_snap, "{\"code\":%d, \"feedid\":\"%s\"}", code, feedid);
-
-    return strlen(out_snap);
+    log_debug("Lan upload JSON : to lan");
+    int ret = 0;
+	//joylink_get_staus_buff();
+//    sprintf(out_snap, "{\"code\":%d, \"feedid\":\"%s\"}", code, feedid);
+	char *data_buf = NULL;
+	data_buf = (char *)malloc(JL_MAX_PACKET_LEN);
+	if (data_buf == NULL) {
+		log_error("malloc err");
+		goto ERR;
+	}
+	memset(data_buf, 0, JL_MAX_PACKET_LEN);
+	joylink_get_dev_json_status(data_buf, out_max);
+	sprintf(out_snap, "%s", (char*)data_buf);
+	int32_t size = strlen(out_snap);
+	if (size > out_max) {
+		log_error(" ERROR: len > out_max, len %d", size);
+		goto ERR;
+	}
+    return size;
+ERR:
+	if (strlen(feedid)){
+		sprintf(out_snap, "{\"code\":%d, \"feedid\":\"%s\"}", 0, feedid);
+	} else {
+		sprintf(out_snap, "{\"code\":%d, \"msg\":\"%d\"}", 0, JOYLINK_ERROR_RAM_LACK);
+	}
+	return strlen(out_snap);
 }
 
 /**
@@ -286,59 +333,33 @@ joylink_dev_lan_json_ctrl(const char *json_cmd)
     /**
      *FIXME:must to do
      */
-    log_debug("json ctrl:%s", json_cmd);
     int ret = E_RET_ERROR;
-    if(json_cmd == NULL){
-        printf("--->:ERROR: json_cmd is NULL\n");
+	if(json_cmd == NULL){
+        log_error("--->:ERROR: json_cmd is NULL\n");
         return ret;
     }
+	
+    log_debug("json ctrl:%s", json_cmd);
+	int size = strlen(json_cmd) + 1;
+	char * pdata = (char*)malloc(size);
+	memset(pdata, 0, size);
+	if (size > JL_MAX_PACKET_LEN) {
+		log_error("--->:ERROR: size overflaw\n");
+	}
 
-    cJSON * pJson = cJSON_Parse(json_cmd);
-
-    if(NULL == pJson){
-        printf("--->:cJSON_Parse is error:%s\n", json_cmd);
-      return ret;
-    }
-
-    cJSON * pSub = cJSON_GetObjectItem(pJson, "cmd");
-    if(NULL != pSub){
-        printf("--->:cmd is %d\n",pSub->valueint);
-    }
-
-    pSub = cJSON_GetObjectItem(pJson, "data");
-    if(NULL != pSub){
-        cJSON * psubjson = cJSON_GetObjectItem(pSub, "streams");
-        if(NULL != psubjson){
-            pSub = psubjson;
-            int size = cJSON_GetArraySize(pSub);
-            for (int loop = 0; loop < size;loop++) {
-                psubjson = cJSON_GetArrayItem(pSub,loop);
-
-                if (NULL != psubjson) {
-                    pSub = psubjson;
-                    psubjson = cJSON_GetObjectItem(pSub, "stream_id");
-
-                    if (NULL != psubjson) {
-                        printf("para:%s\n",psubjson->valuestring);
-
-                        if (strcmp("power",psubjson->valuestring) == 0) {
-                            psubjson = cJSON_GetObjectItem(pSub, "current_value");
-                            if (NULL != psubjson) {
-                                printf("value:%s\n",psubjson->valuestring);
-                                g_dev->power = atoi(psubjson->valuestring);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    
-    
-    cJSON_Delete(pJson);
-
-    ret = E_RET_OK;
-
+	memcpy(pdata, json_cmd, size);
+	if (xQueueSend(xQueueJoyDown, &pdata, 0) != pdTRUE) {
+		log_error("--->:ERROR: xQueueSend err\n");
+		free(pdata);
+		return ret;
+	}
+	
+	//JOYLINK_CTRL_DEV_TIMEOUT / portTICK_PERIOD_MS
+	//ctrl dev OK, wait data redly
+	ret = xSemaphoreTake(xSemJoyReply, JOYLINK_CTRL_DEV_TIMEOUT / portTICK_PERIOD_MS);
+	if (ret == pdTRUE) {
+		ret = E_RET_OK;
+	}
     return ret;
 }
 
@@ -360,6 +381,7 @@ joylink_dev_script_ctrl(const char *cmd, JLContrl_t *ctr, int from_server)
     /**
      *FIXME:must to do
      */
+    log_debug("script ctrl : form lan or server");
     int ret = E_RET_ERROR;
     int offset = 0;
     int time_tmp;
@@ -436,4 +458,5 @@ joylink_dev_ota_status_upload()
      */
     joylink_server_ota_status_upload_req(&otaUpload);
 }
+
 

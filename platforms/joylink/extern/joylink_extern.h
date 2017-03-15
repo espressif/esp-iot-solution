@@ -22,6 +22,8 @@ extern "C"
 #include "joylink_dev.h"
 #include "joylink.h"
 #include "joylink_ret_code.h"
+#include "esp_wifi.h"
+#include "esp_joylink.h"
 
 #define JL_ATTR_WLAN24G      			"wlan24g"
 #define JL_ATTR_SUBDEVS      	        "subdeviceslist"
@@ -132,5 +134,13 @@ joylink_dev_register_attr_cb(
 #ifdef __cplusplus
 }
 #endif
+
+extern SemaphoreHandle_t xSemJoyReply ;
+extern xQueueHandle xQueueJoyDown ;
+extern xQueueHandle xQueueJoyEvent ;
+
+int joylink_get_dev_json_status(char *out_data, int32_t max_len);
+void joylink_dev_clear_jlp_info(void);
+int joylink_event_send(joylink_event_t event);
 
 #endif /* __LOGGING_EXTERN__ */

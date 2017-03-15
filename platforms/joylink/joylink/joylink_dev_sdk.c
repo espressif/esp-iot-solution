@@ -34,8 +34,7 @@ JLDevice_t  _g_dev = {
     .server_st = 0,
     .hb_lost_count = 0,
     .lan_socket = -1,
-    //.local_port = 80,
-    .local_port = 4320,
+    .local_port = 80,
 #ifdef __LINUX_UB2__
     .jlp.mac= "11:22:33:44:55:66",
     .jlp.version = 1,
@@ -61,11 +60,11 @@ JLDevice_t  _g_dev = {
     .jlp.lancon = E_LAN_CTRL_ENABLE,
     .jlp.cmd_tran_type = E_CMD_TYPE_LUA_SCRIPT
 #elif defined(PLATFORM_ESP32)
-    .jlp.mac= "",
+    .jlp.mac= "24:0a:c4:03:f0:f8",
     .jlp.version = 1,
     .jlp.accesskey = "",//NDJY9396Z9P4KNDU
     .jlp.localkey = "",
-    .jlp.feedid = "",
+    .jlp.feedid = "148768116959346410",
     .jlp.devtype = E_JLDEV_TYPE_NORMAL,
     .jlp.joylink_server = "live.smart.jd.com",
     .jlp.server_port = 2002, 
@@ -110,7 +109,7 @@ joylink_main_loop(void)
 	static uint32_t serverTimer;
 	joylink_util_timer_reset(&serverTimer);
 	static int interval = 0;
-
+	static uint8_t is_connected = 0;
 	sin.sin_addr.s_addr = htonl(INADDR_ANY);
 	sin.sin_family = AF_INET;
 	sin.sin_port = htons(_g_pdev->local_port);
@@ -139,8 +138,16 @@ joylink_main_loop(void)
 		if (joylink_util_is_time_out(serverTimer, interval)){
 			joylink_util_timer_reset(&serverTimer);
             if(joylink_dev_is_net_ok()){
+				if (0 == is_connected) {
+					is_connected = 1;
+					joylink_event_send(JOYLINK_EVENT_WIFI_GOT_IP);
+				}
                 interval = joylink_proc_server_st();
             }else{
+            	if (1 == is_connected) {
+					is_connected = 0;
+					joylink_event_send(JOYLINK_EVENT_WIFI_DISCONNECTED);
+				}
                 interval = 1000 * 10;
             }
 		}

@@ -95,26 +95,26 @@ int joylink_cfg_50msTimer(void)
 {
 	if (pSmnt->directTimerSkip){
 		pSmnt->directTimerSkip--;
-		return 50;
+		return 100;
 	}
 	
 	if (pSmnt->state == SMART_FINISH){
 		printf_high("-------------------->Finished\n");
 		pSmnt->directTimerSkip = 10000/50;
-		return 50;
+		return 100;
 	}
 	
 	if (pSmnt->isProbeReceived >0 ){
 		printf_high("-------------------->Probe Stay(CH:%d) %d\n", pSmnt->chCurrentIndex + 1, pSmnt->isProbeReceived);
 		pSmnt->isProbeReceived = 0;
 		pSmnt->directTimerSkip = 5000 / 50;
-		return 50;
+		return 100;
 	}
 	
 	if (pSmnt->chCurrentProbability > 0){
 		pSmnt->chCurrentProbability--;
 		printf_high("------------------->SYNC (CH:%d) %d\n", pSmnt->chCurrentIndex + 1, pSmnt->chCurrentProbability);
-		return 50;
+		return 100;
 	}
 
 	pSmnt->chCurrentIndex = (pSmnt->chCurrentIndex + 1) % 13;
@@ -126,7 +126,7 @@ int joylink_cfg_50msTimer(void)
 	pSmnt->syncCount = 0;
 	pSmnt->chCurrentProbability = 0;
 	printf_high("CH=%d, T=%d\n", pSmnt->chCurrentIndex +1, 50);
-	return 50;
+	return 100;
 }
 
 static void  broadcastAdd(int ascii)

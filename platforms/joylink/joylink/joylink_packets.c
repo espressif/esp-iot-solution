@@ -153,10 +153,10 @@ joylink_packet_script_ctrl_rsp(char *data, int max, JLContrl_t *ctrl)
     memcpy(data, &time_v, 4);
     memcpy(data + 4, &ctrl->biz_code , 4);
     memcpy(data + 8, &ctrl->serial, 4);
-
+	log_debug();
     ret = joylink_dev_get_snap_shot(data + 12, JL_MAX_PACKET_LEN - 12);
-
-    printf("XXXX :len:%d:%s\n", ret, data+12);
+	if(ret > 0)
+    	printf("XXXX :len:%d:%s\n", ret, data+12);
     return ret > 0 ? ret + 12 : 0;
 }
 

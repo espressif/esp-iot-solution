@@ -1,7 +1,7 @@
 include ./Makefile.rule
 
-DEPS= auth json list example joylink 
-#DEPS= auth json list extern joylink 
+#DEPS= auth json list example joylink 
+DEPS= auth json list extern joylink 
 
 all: ${DEPS} jt
 
