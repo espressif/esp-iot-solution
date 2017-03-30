@@ -1,7 +1,7 @@
 #
 # Component Makefile
 #
-COMPONENT_ADD_INCLUDEDIRS := components include abstract
+#COMPONENT_ADD_INCLUDEDIRS := components include abstract
 
 COMPONENT_SRCDIRS := main library port
 
