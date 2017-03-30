@@ -1,0 +1,32 @@
+menu "Joylink"
+
+config JOYLINK_ENABLE
+    bool "Enable Joylink"
+    default "y"
+
+config JOYLINK_BLE_ENABLE
+    bool "Enable Joylink BLE"
+    default "y"
+    depends on JOYLINK_ENABLE && BT_ENABLED
+
+config JOYLINK_SMNT_BUTTON_NUM
+    int "the io number for one key configuration network"
+    default 14
+    depends on JOYLINK_ENABLE
+
+config JOYLINK_RESET_BUTTON_NUM
+    int "the io number for reset"
+    default 15
+    depends on JOYLINK_ENABLE
+
+config JOYLINK_BLE_BUTTON_ENABLE
+    bool "Enable Joylink BLE button to trigger configuration wifi"
+    default "n"
+    depends on JOYLINK_ENABLE && BT_ENABLED
+    
+config JOYLINK_BLE_BUTTON_NUM
+    int "the io number for BLE configuration network"
+    default 13
+    depends on JOYLINK_BLE_BUTTON_ENABLE
+
+endmenu

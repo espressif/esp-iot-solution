@@ -1,0 +1,46 @@
+1.void joylink_cfg_init(unsigned char* pBuffer);
+功能说明：初始化时调用传入一个1024存储的空间,每次进入一键配置模式时，调用一次。 
+输入参数：bufer地址
+输出参数：无                                 
+
+2.int  joylink_cfg_50msTimer(void);
+功能说明：50ms定时器回调,如果返回非零,那么这个值作为下一次调用的时间间隔,可能的取值为(50,100,5000,10000)
+输入参数：无
+输出参数：目前默认返回50
+
+3.void joylink_cfg_DataAction(PHEADER_802_11 pHeader, int length);                
+功能说明：数据包解析，抓到空中的数据包后，调用该函数，进行数据解析
+输入参数：pHeader-- 数据包的802.11头地址
+					length -- 数据包的8021.11数据区长度
+
+4.int  joylink_cfg_Result(joylinkResult_t* pRet);				
+功能说明：	获取SMNT的结果
+输出参数：1-未产生结果 0-产生结果，结果存放在pRet地址中,
+输入参数：存放数据的结构体指针
+
+数据存放在结构体 pRet中：
+typedef struct _joylinkResult
+{
+	unsigned char type;	                        	// 0:NotReady, 1:ControlPacketOK, 2:BroadcastOK, 3:MulticastOK
+  unsigned char encData[1+32+32+32];            // Total Length + EncodeData
+}joylinkResult_t;
+
+数据的传输通过密文的方式，采用AES加解密算法秘钥长度128bits,数据格式如下：
+encData[0]   -- Total Length
+encData[1]后 -- 密文数据
+
+密文解密后数据
+PASS Length   	[1Byte]	密码的长度
+PASS         		[<32Byte]	密码的实际内容
+IP           		[4Byte]	发送者的IP地址
+Port         		[2Byte]	发送者的工作端口
+SSID         		[<32Byte]	WIFI网络SSID
+
+说明：数据的组织，Total Length 是明文的方式，表示后面密文的数据长度,明文的长度通过解密函数获得，PASS Length + PASS + IP + Port + SSID采用AES密文的方式，
+秘钥默认使用1234567812345678（APP demo 里的key部分），正常使用的key为产品注册时获得，IV参数为全数值0
+
+5.extern void adp_changeCh(int i);
+功能说明：外部实现的切换信道参数
+输入参数：信道值（1-13）
+输出参数：无
+

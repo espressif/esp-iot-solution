@@ -1,0 +1,1826 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+AES_128	auth/test.c	7;"	d	file:
+AES_BLOCK_SIZE	auth/aes.h	/^    AES_BLOCK_SIZE = 16$/;"	e	enum:__anon33
+AES_CCM_AUTH_E	auth/aes.h	/^    AES_CCM_AUTH_E     = -181,  \/* AES-CCM Authentication check failure *\/$/;"	e	enum:__anon35
+AES_DECRYPTION	auth/aes.h	/^    AES_DECRYPTION = 1,$/;"	e	enum:__anon33
+AES_ENCRYPTION	auth/aes.h	/^    AES_ENCRYPTION = 0,$/;"	e	enum:__anon33
+AES_ENC_TYPE	auth/aes.h	/^    AES_ENC_TYPE   = 1,   \/* cipher unique type *\/$/;"	e	enum:__anon33
+AES_GCM_AUTH_E	auth/aes.h	/^    AES_GCM_AUTH_E     = -180,  \/* AES-GCM Authentication check failure *\/$/;"	e	enum:__anon35
+AES_LEN	auth/test.c	8;"	d	file:
+AES_iv	auth/aes.c	/^uint8_t  AES_iv[] = "0123456789abcdef";  \/* align *\/$/;"	v
+ALGO_ID_E	auth/aes.h	/^    ALGO_ID_E          = -133,  \/* setting algo id error *\/$/;"	e	enum:__anon35
+ALIGN16	auth/aes.h	21;"	d
+ALT_NAME_E	auth/aes.h	/^    ALT_NAME_E         = -177,  \/* alt name size problem, too big *\/$/;"	e	enum:__anon35
+ASN_AFTER_DATE_E	auth/aes.h	/^    ASN_AFTER_DATE_E   = -151,  \/* ASN date error, current date after *\/$/;"	e	enum:__anon35
+ASN_BEFORE_DATE_E	auth/aes.h	/^    ASN_BEFORE_DATE_E  = -150,  \/* ASN date error, current date before *\/$/;"	e	enum:__anon35
+ASN_BITSTR_E	auth/aes.h	/^    ASN_BITSTR_E       = -147,  \/* ASN bit string error, wrong id *\/$/;"	e	enum:__anon35
+ASN_DATE_SZ_E	auth/aes.h	/^    ASN_DATE_SZ_E      = -149,  \/* ASN date error, bad size *\/$/;"	e	enum:__anon35
+ASN_DH_KEY_E	auth/aes.h	/^    ASN_DH_KEY_E       = -158,  \/* ASN key init error, invalid input *\/$/;"	e	enum:__anon35
+ASN_ECC_KEY_E	auth/aes.h	/^    ASN_ECC_KEY_E      = -171,  \/* ASN ECC bad input *\/$/;"	e	enum:__anon35
+ASN_EXPECT_0_E	auth/aes.h	/^    ASN_EXPECT_0_E     = -146,  \/* ASN expect error, not zero *\/$/;"	e	enum:__anon35
+ASN_GETINT_E	auth/aes.h	/^    ASN_GETINT_E       = -142,  \/* ASN get big int error, invalid data *\/$/;"	e	enum:__anon35
+ASN_INPUT_E	auth/aes.h	/^    ASN_INPUT_E        = -154,  \/* ASN input error, not enough data *\/$/;"	e	enum:__anon35
+ASN_NTRU_KEY_E	auth/aes.h	/^    ASN_NTRU_KEY_E     = -159,  \/* ASN ntru key decode error, invalid input *\/$/;"	e	enum:__anon35
+ASN_OBJECT_ID_E	auth/aes.h	/^    ASN_OBJECT_ID_E    = -144,  \/* ASN object id error, invalid id *\/$/;"	e	enum:__anon35
+ASN_PARSE_E	auth/aes.h	/^    ASN_PARSE_E        = -140,  \/* ASN parsing error, invalid input *\/$/;"	e	enum:__anon35
+ASN_RSA_KEY_E	auth/aes.h	/^    ASN_RSA_KEY_E      = -143,  \/* ASN key init error, invalid input *\/$/;"	e	enum:__anon35
+ASN_SIG_CONFIRM_E	auth/aes.h	/^    ASN_SIG_CONFIRM_E  = -155,  \/* ASN sig error, confirm failure *\/$/;"	e	enum:__anon35
+ASN_SIG_HASH_E	auth/aes.h	/^    ASN_SIG_HASH_E     = -156,  \/* ASN sig error, unsupported hash type *\/$/;"	e	enum:__anon35
+ASN_SIG_KEY_E	auth/aes.h	/^    ASN_SIG_KEY_E      = -157,  \/* ASN sig error, unsupported key type *\/$/;"	e	enum:__anon35
+ASN_SIG_OID_E	auth/aes.h	/^    ASN_SIG_OID_E      = -152,  \/* ASN signature error, mismatched oid *\/$/;"	e	enum:__anon35
+ASN_TAG_NULL_E	auth/aes.h	/^    ASN_TAG_NULL_E     = -145,  \/* ASN tag error, not null *\/$/;"	e	enum:__anon35
+ASN_TIME_E	auth/aes.h	/^    ASN_TIME_E         = -153,  \/* ASN time error, unknown time type *\/$/;"	e	enum:__anon35
+ASN_UNKNOWN_OID_E	auth/aes.h	/^    ASN_UNKNOWN_OID_E  = -148,  \/* ASN oid error, unknown sum id *\/$/;"	e	enum:__anon35
+ASN_VERSION_E	auth/aes.h	/^    ASN_VERSION_E      = -141,  \/* ASN version error, invalid number *\/$/;"	e	enum:__anon35
+Aes	auth/aes.h	/^typedef struct Aes {$/;"	s
+Aes	auth/aes.h	/^} Aes;$/;"	t	typeref:struct:Aes
+Aes::key	auth/aes.h	/^    ALIGN16 uint32_t key[60];$/;"	m	struct:Aes	access:public
+Aes::reg	auth/aes.h	/^    ALIGN16 uint32_t reg[AES_BLOCK_SIZE \/ sizeof(uint32_t)];      \/* for CBC mode *\/$/;"	m	struct:Aes	access:public
+Aes::rounds	auth/aes.h	/^    uint32_t  rounds;$/;"	m	struct:Aes	access:public
+Aes::tmp	auth/aes.h	/^    ALIGN16 uint32_t tmp[AES_BLOCK_SIZE \/ sizeof(uint32_t)];      \/* same         *\/$/;"	m	struct:Aes	access:public
+AesCbcDecrypt	auth/aes.c	/^int AesCbcDecrypt(Aes* aes, uint8_t* out, const uint8_t* in, uint32_t sz)$/;"	f	signature:(Aes* aes, uint8_t* out, const uint8_t* in, uint32_t sz)
+AesCbcDecrypt	auth/aes.c	/^static int AesCbcDecrypt(Aes* aes, uint8_t* out, const uint8_t* in, uint32_t sz);$/;"	p	file:	signature:(Aes* aes, uint8_t* out, const uint8_t* in, uint32_t sz)
+AesCbcEncrypt	auth/aes.c	/^int AesCbcEncrypt(Aes* aes, uint8_t* out, const uint8_t* in, uint32_t sz)$/;"	f	signature:(Aes* aes, uint8_t* out, const uint8_t* in, uint32_t sz)
+AesCbcEncrypt	auth/aes.c	/^static int AesCbcEncrypt(Aes* aes, uint8_t* out, const uint8_t* in, uint32_t sz);$/;"	p	file:	signature:(Aes* aes, uint8_t* out, const uint8_t* in, uint32_t sz)
+AesDecrypt	auth/aes.c	/^static void AesDecrypt(Aes* aes, const uint8_t* inBlock, uint8_t* outBlock)$/;"	f	file:	signature:(Aes* aes, const uint8_t* inBlock, uint8_t* outBlock)
+AesEncrypt	auth/aes.c	/^static void AesEncrypt(Aes* aes, const uint8_t* inBlock, uint8_t* outBlock)$/;"	f	file:	signature:(Aes* aes, const uint8_t* inBlock, uint8_t* outBlock)
+AesSetIV	auth/aes.c	/^static int AesSetIV(Aes* aes, const uint8_t* iv)$/;"	f	file:	signature:(Aes* aes, const uint8_t* iv)
+AesSetKey	auth/aes.c	/^int AesSetKey(Aes* aes, const uint8_t* userKey, uint32_t keylen, const uint8_t* iv,$/;"	f	signature:(Aes* aes, const uint8_t* userKey, uint32_t keylen, const uint8_t* iv, int dir)
+AesSetKey	auth/aes.c	/^static int AesSetKey(Aes* aes, const uint8_t* userKey, uint32_t keylen, const uint8_t* iv, int dir);$/;"	p	file:	signature:(Aes* aes, const uint8_t* userKey, uint32_t keylen, const uint8_t* iv, int dir)
+AesSetKeyLocal	auth/aes.c	/^static int AesSetKeyLocal(Aes* aes, const uint8_t* userKey, uint32_t keylen,$/;"	f	file:	signature:(Aes* aes, const uint8_t* userKey, uint32_t keylen, const uint8_t* iv, int dir)
+Attr_t	example/joylink_extern.c	/^}Attr_t;$/;"	t	typeref:struct:__attr_	file:
+Attr_t	extern/joylink_extern.c	/^}Attr_t;$/;"	t	typeref:struct:__attr_	file:
+BAD_ALIGN_E	auth/aes.h	/^    BAD_ALIGN_E        = -187,  \/* Bad alignment for operation, no alloc *\/$/;"	e	enum:__anon35
+BAD_FUNC_ARG	auth/aes.h	/^    BAD_FUNC_ARG       = -173,  \/* Bad function argument provided *\/$/;"	e	enum:__anon35
+BUFFER_E	auth/aes.h	/^    BUFFER_E           = -132,  \/* output buffer too small or input too large *\/$/;"	e	enum:__anon35
+Black	joylink/joylink_log.h	29;"	d
+Blue	joylink/joylink_log.h	33;"	d
+Brown	joylink/joylink_log.h	32;"	d
+ByteReverseWord32	auth/aes.c	/^\/*STATIC INLINE *\/uint32_t ByteReverseWord32(uint32_t value)$/;"	f	signature:(uint32_t value)
+ByteReverseWords	auth/aes.c	/^\/*STATIC INLINE *\/void ByteReverseWords(uint32_t* out, const uint32_t* in,$/;"	f	signature:(uint32_t* out, const uint32_t* in, uint32_t byteCount)
+CAVIUM_INIT_E	auth/aes.h	/^    CAVIUM_INIT_E      = -182,  \/* Cavium Init type error *\/$/;"	e	enum:__anon35
+CA_TRUE_E	auth/aes.h	/^    CA_TRUE_E          = -138,  \/* setting CA basic constraint true error *\/$/;"	e	enum:__anon35
+CHANNEL_SWITCH_TIME	joylink/joylink_cfg.h	15;"	d
+COMPRESS_E	auth/aes.h	/^    COMPRESS_E         = -184,  \/* Compress error *\/$/;"	e	enum:__anon35
+COMPRESS_INIT_E	auth/aes.h	/^    COMPRESS_INIT_E    = -183,  \/* Compress init error *\/$/;"	e	enum:__anon35
+CRC16	auth/crc.c	/^unsigned short CRC16(const unsigned char* buffer, uint32_t size)$/;"	f	signature:(const unsigned char* buffer, uint32_t size)
+CRC16	auth/crc.h	/^unsigned short CRC16(const unsigned char* buffer, unsigned int size);$/;"	p	signature:(const unsigned char* buffer, unsigned int size)
+CRYPTGEN_E	auth/aes.h	/^    CRYPTGEN_E         = -104,  \/* windows crypt generation error *\/$/;"	e	enum:__anon35
+CYASSL_WORD_SIZE	auth/aes.h	/^	CYASSL_WORD_SIZE  = sizeof(uint32_t)$/;"	e	enum:__anon34
+Curve_B_1	auth/uECC.c	147;"	d	file:
+Curve_B_1	auth/uECC.c	271;"	d	file:
+Curve_B_1	auth/uECC.c	352;"	d	file:
+Curve_B_2	auth/uECC.c	150;"	d	file:
+Curve_B_2	auth/uECC.c	272;"	d	file:
+Curve_B_2	auth/uECC.c	353;"	d	file:
+Curve_B_3	auth/uECC.c	153;"	d	file:
+Curve_B_3	auth/uECC.c	273;"	d	file:
+Curve_B_3	auth/uECC.c	354;"	d	file:
+Curve_B_4	auth/uECC.c	157;"	d	file:
+Curve_B_4	auth/uECC.c	275;"	d	file:
+Curve_B_4	auth/uECC.c	356;"	d	file:
+Curve_B_5	auth/uECC.c	161;"	d	file:
+Curve_B_5	auth/uECC.c	277;"	d	file:
+Curve_B_5	auth/uECC.c	358;"	d	file:
+Curve_G_1	auth/uECC.c	166;"	d	file:
+Curve_G_1	auth/uECC.c	280;"	d	file:
+Curve_G_1	auth/uECC.c	361;"	d	file:
+Curve_G_2	auth/uECC.c	174;"	d	file:
+Curve_G_2	auth/uECC.c	284;"	d	file:
+Curve_G_2	auth/uECC.c	365;"	d	file:
+Curve_G_3	auth/uECC.c	182;"	d	file:
+Curve_G_3	auth/uECC.c	288;"	d	file:
+Curve_G_3	auth/uECC.c	369;"	d	file:
+Curve_G_4	auth/uECC.c	192;"	d	file:
+Curve_G_4	auth/uECC.c	294;"	d	file:
+Curve_G_4	auth/uECC.c	373;"	d	file:
+Curve_G_5	auth/uECC.c	202;"	d	file:
+Curve_G_5	auth/uECC.c	300;"	d	file:
+Curve_G_5	auth/uECC.c	377;"	d	file:
+Curve_N_1	auth/uECC.c	212;"	d	file:
+Curve_N_1	auth/uECC.c	306;"	d	file:
+Curve_N_1	auth/uECC.c	381;"	d	file:
+Curve_N_2	auth/uECC.c	215;"	d	file:
+Curve_N_2	auth/uECC.c	307;"	d	file:
+Curve_N_2	auth/uECC.c	382;"	d	file:
+Curve_N_3	auth/uECC.c	218;"	d	file:
+Curve_N_3	auth/uECC.c	308;"	d	file:
+Curve_N_3	auth/uECC.c	383;"	d	file:
+Curve_N_4	auth/uECC.c	222;"	d	file:
+Curve_N_4	auth/uECC.c	310;"	d	file:
+Curve_N_4	auth/uECC.c	385;"	d	file:
+Curve_N_5	auth/uECC.c	226;"	d	file:
+Curve_N_5	auth/uECC.c	312;"	d	file:
+Curve_N_5	auth/uECC.c	387;"	d	file:
+Curve_P_1	auth/uECC.c	128;"	d	file:
+Curve_P_1	auth/uECC.c	262;"	d	file:
+Curve_P_1	auth/uECC.c	343;"	d	file:
+Curve_P_2	auth/uECC.c	131;"	d	file:
+Curve_P_2	auth/uECC.c	263;"	d	file:
+Curve_P_2	auth/uECC.c	344;"	d	file:
+Curve_P_3	auth/uECC.c	134;"	d	file:
+Curve_P_3	auth/uECC.c	264;"	d	file:
+Curve_P_3	auth/uECC.c	345;"	d	file:
+Curve_P_4	auth/uECC.c	138;"	d	file:
+Curve_P_4	auth/uECC.c	266;"	d	file:
+Curve_P_4	auth/uECC.c	347;"	d	file:
+Curve_P_5	auth/uECC.c	142;"	d	file:
+Curve_P_5	auth/uECC.c	268;"	d	file:
+Curve_P_5	auth/uECC.c	349;"	d	file:
+Cyan	joylink/joylink_log.h	35;"	d
+DATA_SIZE	auth/test.c	10;"	d	file:
+DATE_E	auth/aes.h	/^    DATE_E             = -135,  \/* setting date validity error *\/$/;"	e	enum:__anon35
+DECOMPRESS_E	auth/aes.h	/^    DECOMPRESS_E       = -186,  \/* DeCompress error *\/$/;"	e	enum:__anon35
+DECOMPRESS_INIT_E	auth/aes.h	/^    DECOMPRESS_INIT_E  = -185,  \/* DeCompress init error *\/$/;"	e	enum:__anon35
+DevEnable_t	joylink/joylink.h	/^}DevEnable_t;$/;"	t	typeref:struct:__dev_enable
+DevInfo_t	example/joylink_dev.h	/^}DevInfo_t;$/;"	t	typeref:struct:__dev_info
+DevScan_t	joylink/joylink.h	/^}DevScan_t;$/;"	t	typeref:struct:__lan_scan
+ECC_BAD_ARG_E	auth/aes.h	/^    ECC_BAD_ARG_E      = -170,  \/* ECC input argument of wrong type *\/$/;"	e	enum:__anon35
+ECC_CURVE_OID_E	auth/aes.h	/^    ECC_CURVE_OID_E    = -172,  \/* Unsupported ECC OID curve type *\/$/;"	e	enum:__anon35
+ET_ACCESSKEYAES	joylink/joylink.h	/^	ET_ACCESSKEYAES = 3,$/;"	e	enum:__anon14
+ET_ECDH	joylink/joylink.h	/^	ET_ECDH = 2,$/;"	e	enum:__anon14
+ET_NOTHING	joylink/joylink.h	/^	ET_NOTHING = 0,$/;"	e	enum:__anon14
+ET_PSKAES	joylink/joylink.h	/^	ET_PSKAES = 1,$/;"	e	enum:__anon14
+ET_SESSIONKEYAES	joylink/joylink.h	/^	ET_SESSIONKEYAES = 4$/;"	e	enum:__anon14
+EVEN	auth/uECC.c	1508;"	d	file:
+EXTENSIONS_E	auth/aes.h	/^    EXTENSIONS_E       = -139,  \/* setting extensions error *\/$/;"	e	enum:__anon35
+EXTRA_CFLAGS	auth/Makefile	/^EXTRA_CFLAGS = -I$(shell cd .. ; pwd)\/include $/;"	m
+E_CMD_TYPE_JSON	joylink/joylink.h	/^    E_CMD_TYPE_JSON = 0,$/;"	e	enum:_cmd_type
+E_CMD_TYPE_LUA_SCRIPT	joylink/joylink.h	/^    E_CMD_TYPE_LUA_SCRIPT = 1$/;"	e	enum:_cmd_type
+E_EncType	joylink/joylink.h	/^}E_EncType;$/;"	t	typeref:enum:__anon14
+E_JLBOOL_t	joylink/joylink_ret_code.h	/^}E_JLBOOL_t;$/;"	t	typeref:enum:_bool_
+E_JLCMDType_t	joylink/joylink.h	/^}E_JLCMDType_t;$/;"	t	typeref:enum:_cmd_type
+E_JLDEV_ST_CONFD	joylink/joylink.h	/^    E_JLDEV_ST_CONFD = 1$/;"	e	enum:_dev_state
+E_JLDEV_ST_NO_CONF	joylink/joylink.h	/^    E_JLDEV_ST_NO_CONF = 0,$/;"	e	enum:_dev_state
+E_JLDEV_TYPE_GW	joylink/joylink.h	/^    E_JLDEV_TYPE_GW = 1,$/;"	e	enum:_dev_type
+E_JLDEV_TYPE_NORMAL	joylink/joylink.h	/^    E_JLDEV_TYPE_NORMAL = 0,$/;"	e	enum:_dev_type
+E_JLDEV_TYPE_SUB	joylink/joylink.h	/^    E_JLDEV_TYPE_SUB = 2$/;"	e	enum:_dev_type
+E_JLDevState_t	joylink/joylink.h	/^}E_JLDevState_t;$/;"	t	typeref:enum:_dev_state
+E_JLDevType_t	joylink/joylink.h	/^}E_JLDevType_t;$/;"	t	typeref:enum:_dev_type
+E_JLLanCtrlType_t	joylink/joylink.h	/^}E_JLLanCtrlType_t;$/;"	t	typeref:enum:_lan_ctrl_type
+E_JLRetCode_t	joylink/joylink_ret_code.h	/^}E_JLRetCode_t;$/;"	t	typeref:enum:_ret_code
+E_JLSubDevTransType_t	joylink/joylink.h	/^}E_JLSubDevTransType_t;$/;"	t	typeref:enum:_tran_type
+E_JL_DEV_ATTR_GET_CB	extern/joylink_extern.h	/^typedef int (*E_JL_DEV_ATTR_GET_CB)(char *buf, \\$/;"	t
+E_JL_DEV_ATTR_SET_CB	extern/joylink_extern.h	/^typedef int (*E_JL_DEV_ATTR_SET_CB)(const char *json_in);$/;"	t
+E_JL_DEV_ATTR_TYPE	extern/joylink_extern.h	/^}E_JL_DEV_ATTR_TYPE;$/;"	t	typeref:enum:__anon38
+E_LAN_CTRL_DISABLE	joylink/joylink.h	/^    E_LAN_CTRL_DISABLE = 0,$/;"	e	enum:_lan_ctrl_type
+E_LAN_CTRL_ENABLE	joylink/joylink.h	/^    E_LAN_CTRL_ENABLE = 1$/;"	e	enum:_lan_ctrl_type
+E_LIST_ERROR	list/joylink_list.h	/^    E_LIST_ERROR = -1,$/;"	e	enum:__list_ret
+E_LIST_ERROR_PARAM_INVAILD	list/joylink_list.h	/^    E_LIST_ERROR_PARAM_INVAILD = -2$/;"	e	enum:__list_ret
+E_LIST_RET	list/joylink_list.h	/^}E_LIST_RET;$/;"	t	typeref:enum:__list_ret
+E_LIST_RET_OK	list/joylink_list.h	/^    E_LIST_RET_OK = 0,$/;"	e	enum:__list_ret
+E_PT_REV_ST_DATA	joylink/joylink.h	/^    E_PT_REV_ST_DATA = 2,$/;"	e	enum:_protocol_rec_st
+E_PT_REV_ST_END	joylink/joylink.h	/^    E_PT_REV_ST_END = 3$/;"	e	enum:_protocol_rec_st
+E_PT_REV_ST_HEAD	joylink/joylink.h	/^    E_PT_REV_ST_HEAD = 1,$/;"	e	enum:_protocol_rec_st
+E_PT_REV_ST_MAGIC	joylink/joylink.h	/^    E_PT_REV_ST_MAGIC = 0,$/;"	e	enum:_protocol_rec_st
+E_PT_REV_ST_t	joylink/joylink.h	/^}E_PT_REV_ST_t;$/;"	t	typeref:enum:_protocol_rec_st
+E_PacketType	joylink/joylink.h	/^}E_PacketType;$/;"	t	typeref:enum:__anon13
+E_RET_ALL_DATA_HIT	joylink/joylink_ret_code.h	/^    E_RET_ALL_DATA_HIT = 1001,$/;"	e	enum:_ret_code
+E_RET_DATA_COMING	joylink/joylink_ret_code.h	/^    E_RET_DATA_COMING = 1002$/;"	e	enum:_ret_code
+E_RET_ERROR	joylink/joylink_ret_code.h	/^    E_RET_ERROR = -1,$/;"	e	enum:_ret_code
+E_RET_ERROR_NO_EXIST	joylink/joylink_ret_code.h	/^    E_RET_ERROR_NO_EXIST = -2,$/;"	e	enum:_ret_code
+E_RET_ERROR_PARAM_INVAID	joylink/joylink_ret_code.h	/^    E_RET_ERROR_PARAM_INVAID = -3,$/;"	e	enum:_ret_code
+E_RET_ERROR_PKG_BREAK_ARRAY	joylink/joylink_ret_code.h	/^    E_RET_ERROR_PKG_BREAK_ARRAY = -1003,$/;"	e	enum:_ret_code
+E_RET_ERROR_PKG_NUM_BREAK_MAX	joylink/joylink_ret_code.h	/^    E_RET_ERROR_PKG_NUM_BREAK_MAX = -1002,$/;"	e	enum:_ret_code
+E_RET_ERROR_PKG_SAME	joylink/joylink_ret_code.h	/^    E_RET_ERROR_PKG_SAME = -1001,$/;"	e	enum:_ret_code
+E_RET_FAIL	joylink/joylink_ret_code.h	/^    E_RET_FAIL = 0,$/;"	e	enum:_bool_
+E_RET_OK	joylink/joylink_ret_code.h	/^    E_RET_OK = 0,$/;"	e	enum:_ret_code
+E_RET_TRUE	joylink/joylink_ret_code.h	/^    E_RET_TRUE = 1$/;"	e	enum:_bool_
+E_SCAN_TYPE_ALL	joylink/joylink.h	/^    E_SCAN_TYPE_ALL = 0,$/;"	e	enum:__scan_type
+E_SCAN_TYPE_CONFIGED	joylink/joylink.h	/^    E_SCAN_TYPE_CONFIGED = 2$/;"	e	enum:__scan_type
+E_SCAN_TYPE_WAITCONF	joylink/joylink.h	/^    E_SCAN_TYPE_WAITCONF = 1,$/;"	e	enum:__scan_type
+E_SUBDEV_TRANS_TYPE_433	joylink/joylink.h	/^    E_SUBDEV_TRANS_TYPE_433 = 3$/;"	e	enum:_tran_type
+E_SUBDEV_TRANS_TYPE_BLE	joylink/joylink.h	/^    E_SUBDEV_TRANS_TYPE_BLE = 2,$/;"	e	enum:_tran_type
+E_SUBDEV_TRANS_TYPE_WIFI	joylink/joylink.h	/^    E_SUBDEV_TRANS_TYPE_WIFI = 0,$/;"	e	enum:_tran_type
+E_SUBDEV_TRANS_TYPE_ZIGBEE	joylink/joylink.h	/^    E_SUBDEV_TRANS_TYPE_ZIGBEE = 1,$/;"	e	enum:_tran_type
+E_ScanType_t	joylink/joylink.h	/^}E_ScanType_t;$/;"	t	typeref:enum:__scan_type
+EccPoint	auth/uECC.c	/^typedef struct EccPoint {$/;"	s	file:
+EccPoint	auth/uECC.c	/^} EccPoint;$/;"	t	typeref:struct:EccPoint	file:
+EccPoint::x	auth/uECC.c	/^    uECC_word_t x[uECC_WORDS];$/;"	m	struct:EccPoint	file:	access:public
+EccPoint::y	auth/uECC.c	/^    uECC_word_t y[uECC_WORDS];$/;"	m	struct:EccPoint	file:	access:public
+EccPoint_compute_public_key	auth/uECC.c	/^static int EccPoint_compute_public_key(EccPoint *result, uECC_word_t *private) {$/;"	f	file:	signature:(EccPoint *result, uECC_word_t *private)
+EccPoint_double_jacobian	auth/uECC.c	/^static void EccPoint_double_jacobian(uECC_word_t * RESTRICT X1,$/;"	f	file:	signature:(uECC_word_t * RESTRICT X1, uECC_word_t * RESTRICT Y1, uECC_word_t * RESTRICT Z1)
+EccPoint_isZero	auth/uECC.c	/^static cmpresult_t EccPoint_isZero(const EccPoint *point) {$/;"	f	file:	signature:(const EccPoint *point)
+EccPoint_mult	auth/uECC.c	/^static void EccPoint_mult(EccPoint * RESTRICT result,$/;"	f	file:	signature:(EccPoint * RESTRICT result, const EccPoint * RESTRICT point, const uECC_word_t * RESTRICT scalar, const uECC_word_t * RESTRICT initialZ, bitcount_t numBits)
+F	auth/md5.c	10;"	d	file:
+FF	auth/md5.c	15;"	d	file:
+FSb	auth/joylinkAES.c	/^static unsigned char FSb[256];$/;"	v	file:
+FT0	auth/joylinkAES.c	/^static unsigned long FT0[256];$/;"	v	file:
+FT1	auth/joylinkAES.c	/^static unsigned long FT1[256];$/;"	v	file:
+FT2	auth/joylinkAES.c	/^static unsigned long FT2[256];$/;"	v	file:
+FT3	auth/joylinkAES.c	/^static unsigned long FT3[256];$/;"	v	file:
+G	auth/md5.c	11;"	d	file:
+GETBYTE	auth/aes.c	688;"	d	file:
+GG	auth/md5.c	21;"	d	file:
+Green	joylink/joylink_log.h	31;"	d
+H	auth/md5.c	12;"	d	file:
+HARDWARE_AES	auth/joylinkCrypto.h	30;"	d
+HARDWARE_ARC4	auth/joylinkCrypto.h	20;"	d
+HARDWARE_MD5	auth/joylinkCrypto.h	34;"	d
+HARDWARE_RSA	auth/joylinkCrypto.h	42;"	d
+HH	auth/md5.c	27;"	d	file:
+HIGH_BIT_SET	auth/uECC.c	111;"	d	file:
+HIGH_BIT_SET	auth/uECC.c	245;"	d	file:
+HIGH_BIT_SET	auth/uECC.c	326;"	d	file:
+HMAC_finish	auth/uECC.c	/^static void HMAC_finish(uECC_HashContext *hash_context, const uint8_t *K, uint8_t *result) {$/;"	f	file:	signature:(uECC_HashContext *hash_context, const uint8_t *K, uint8_t *result)
+HMAC_init	auth/uECC.c	/^static void HMAC_init(uECC_HashContext *hash_context, const uint8_t *K) {$/;"	f	file:	signature:(uECC_HashContext *hash_context, const uint8_t *K)
+HMAC_update	auth/uECC.c	/^static void HMAC_update(uECC_HashContext *hash_context,$/;"	f	file:	signature:(uECC_HashContext *hash_context, const uint8_t *message, unsigned message_size)
+I	auth/md5.c	13;"	d	file:
+IDNode_t	list/joylink_list.h	/^}IDNode_t;$/;"	t	typeref:struct:_id_node
+II	auth/md5.c	33;"	d	file:
+INIT_LIST_HEAD	list/yc_list.h	17;"	d
+INT16_C	auth/stdint.h	279;"	d
+INT16_MAX	auth/stdint.h	161;"	d
+INT16_MIN	auth/stdint.h	156;"	d
+INT32_C	auth/stdint.h	280;"	d
+INT32_MAX	auth/stdint.h	162;"	d
+INT32_MIN	auth/stdint.h	157;"	d
+INT64_C	auth/stdint.h	282;"	d
+INT64_C	auth/stdint.h	284;"	d
+INT64_MAX	auth/stdint.h	163;"	d
+INT64_MIN	auth/stdint.h	158;"	d
+INT8_C	auth/stdint.h	278;"	d
+INT8_MAX	auth/stdint.h	160;"	d
+INT8_MIN	auth/stdint.h	155;"	d
+INTMAX_C	auth/stdint.h	299;"	d
+INTMAX_C	auth/stdint.h	302;"	d
+INTMAX_MAX	auth/stdint.h	238;"	d
+INTMAX_MIN	auth/stdint.h	236;"	d
+INTPTR_MAX	auth/stdint.h	226;"	d
+INTPTR_MAX	auth/stdint.h	230;"	d
+INTPTR_MIN	auth/stdint.h	225;"	d
+INTPTR_MIN	auth/stdint.h	229;"	d
+INT_FAST16_MAX	auth/stdint.h	203;"	d
+INT_FAST16_MAX	auth/stdint.h	206;"	d
+INT_FAST16_MIN	auth/stdint.h	193;"	d
+INT_FAST16_MIN	auth/stdint.h	196;"	d
+INT_FAST32_MAX	auth/stdint.h	204;"	d
+INT_FAST32_MAX	auth/stdint.h	207;"	d
+INT_FAST32_MIN	auth/stdint.h	194;"	d
+INT_FAST32_MIN	auth/stdint.h	197;"	d
+INT_FAST64_MAX	auth/stdint.h	209;"	d
+INT_FAST64_MIN	auth/stdint.h	199;"	d
+INT_FAST8_MAX	auth/stdint.h	201;"	d
+INT_FAST8_MIN	auth/stdint.h	191;"	d
+INT_LEAST16_MAX	auth/stdint.h	179;"	d
+INT_LEAST16_MIN	auth/stdint.h	174;"	d
+INT_LEAST32_MAX	auth/stdint.h	180;"	d
+INT_LEAST32_MIN	auth/stdint.h	175;"	d
+INT_LEAST64_MAX	auth/stdint.h	181;"	d
+INT_LEAST64_MIN	auth/stdint.h	176;"	d
+INT_LEAST8_MAX	auth/stdint.h	178;"	d
+INT_LEAST8_MIN	auth/stdint.h	173;"	d
+ISSUER_E	auth/aes.h	/^    ISSUER_E           = -137,  \/* setting issuer  name error *\/$/;"	e	enum:__anon35
+JDMD5Decode	auth/md5.c	/^static void JDMD5Decode(unsigned int *output, unsigned char *input, unsigned int len)$/;"	f	file:	signature:(unsigned int *output, unsigned char *input, unsigned int len)
+JDMD5Decode	auth/md5.c	/^static void JDMD5Decode(unsigned int *output, unsigned char *input, unsigned int len);$/;"	p	file:	signature:(unsigned int *output, unsigned char *input, unsigned int len)
+JDMD5Encode	auth/md5.c	/^static void JDMD5Encode(unsigned char *output, unsigned int *input, unsigned int len)$/;"	f	file:	signature:(unsigned char *output, unsigned int *input, unsigned int len)
+JDMD5Encode	auth/md5.c	/^static void JDMD5Encode(unsigned char *output, unsigned int *input, unsigned int len);$/;"	p	file:	signature:(unsigned char *output, unsigned int *input, unsigned int len)
+JDMD5Final	auth/md5.c	/^void JDMD5Final(MD5_CTX *context,unsigned char digest[16])$/;"	f	signature:(MD5_CTX *context,unsigned char digest[16])
+JDMD5Final	auth/md5.h	/^void JDMD5Final(MD5_CTX *context,unsigned char digest[16]);$/;"	p	signature:(MD5_CTX *context,unsigned char digest[16])
+JDMD5Init	auth/md5.c	/^void JDMD5Init(MD5_CTX *context)$/;"	f	signature:(MD5_CTX *context)
+JDMD5Init	auth/md5.h	/^void JDMD5Init(MD5_CTX *context);$/;"	p	signature:(MD5_CTX *context)
+JDMD5Transform	auth/md5.c	/^static void JDMD5Transform(unsigned int state[4], unsigned char block[64])$/;"	f	file:	signature:(unsigned int state[4], unsigned char block[64])
+JDMD5Transform	auth/md5.c	/^static void JDMD5Transform(unsigned int state[4], unsigned char block[64]);$/;"	p	file:	signature:(unsigned int state[4], unsigned char block[64])
+JDMD5Update	auth/md5.c	/^void JDMD5Update(MD5_CTX *context,unsigned char *input,unsigned int inputlen)$/;"	f	signature:(MD5_CTX *context,unsigned char *input,unsigned int inputlen)
+JDMD5Update	auth/md5.h	/^void JDMD5Update(MD5_CTX *context,unsigned char *input,unsigned int inputlen);$/;"	p	signature:(MD5_CTX *context,unsigned char *input,unsigned int inputlen)
+JLAuthRsp_t	joylink/joylink.h	/^}JLAuthRsp_t;$/;"	t	typeref:struct:__anon20
+JLAuth_t	joylink/joylink.h	/^}JLAuth_t;$/;"	t	typeref:struct:__anon19
+JLCmdHeader_t	joylink/joylink.h	/^}JLCmdHeader_t;$/;"	t	typeref:struct:__anon11
+JLCommonHeader_t	joylink/joylink.h	/^}JLCommonHeader_t;$/;"	t	typeref:struct:__anon10
+JLContrlRsp_t	joylink/joylink.h	/^}JLContrlRsp_t;$/;"	t	typeref:struct:__anon24
+JLContrl_t	joylink/joylink.h	/^}JLContrl_t;$/;"	t	typeref:struct:__anon23
+JLDataSubHbRsp_t	joylink/joylink_sub_dev.h	/^}JLDataSubHbRsp_t;$/;"	t	typeref:struct:__anon4
+JLDataSubUploadRsp_t	joylink/joylink_sub_dev.h	/^}JLDataSubUploadRsp_t;$/;"	t	typeref:struct:__anon5
+JLDataUploadRsp_t	joylink/joylink.h	/^}JLDataUploadRsp_t;$/;"	t	typeref:struct:__anon26
+JLDataUpload_t	joylink/joylink.h	/^}JLDataUpload_t;$/;"	t	typeref:struct:__anon25
+JLDevInfo_t	joylink/joylink.h	/^}JLDevInfo_t;$/;"	t	typeref:struct:__anon18
+JLDevice_t	joylink/joylink.h	/^}JLDevice_t;$/;"	t	typeref:struct:__anon17
+JLEccContex_t	auth/joylink_crypt.h	/^}JLEccContex_t;$/;"	t	typeref:struct:__anon30
+JLHearBeatRst_t	joylink/joylink.h	/^}JLHearBeatRst_t;$/;"	t	typeref:struct:__anon22
+JLHearBeat_t	joylink/joylink.h	/^}JLHearBeat_t;$/;"	t	typeref:struct:__anon21
+JLJoinPacket_t	joylink/joylink_join_packet.c	/^}JLJoinPacket_t;$/;"	t	typeref:struct:__join_packet	file:
+JLJoinPacket_t	list/test.c	/^}JLJoinPacket_t;$/;"	t	typeref:struct:__join_packet	file:
+JLKey_t	auth/joylink_crypt.h	/^}JLKey_t;$/;"	t	typeref:struct:__anon31
+JLOtaOrder_t	joylink/joylink.h	/^}JLOtaOrder_t;$/;"	t	typeref:struct:__anon27
+JLOtaUploadRsp_t	joylink/joylink.h	/^}JLOtaUploadRsp_t;$/;"	t	typeref:struct:__anon29
+JLOtaUpload_t	joylink/joylink.h	/^}JLOtaUpload_t;$/;"	t	typeref:struct:__anon28
+JLPInfo_t	joylink/joylink.h	/^}JLPInfo_t;$/;"	t	typeref:struct:__anon16
+JLPacketHead_t	joylink/joylink.h	/^}JLPacketHead_t;$/;"	t	typeref:struct:__anon12
+JLPacketParam_t	joylink/joylink.h	/^}JLPacketParam_t;$/;"	t	typeref:struct:__anon15
+JLSubContrl_t	joylink/joylink_sub_dev.h	/^}JLSubContrl_t;$/;"	t	typeref:struct:__anon8
+JLSubDevInfo_t	joylink/joylink_sub_dev.h	/^}JLSubDevInfo_t;$/;"	t	typeref:struct:__anon6
+JLSubHearBeat_t	joylink/joylink_sub_dev.h	/^}JLSubHearBeat_t;$/;"	t	typeref:struct:__anon7
+JLSubUnbind_t	joylink/joylink_sub_dev.h	/^}JLSubUnbind_t;$/;"	t	typeref:struct:__anon9
+JL_ATTR_ACCESSKEY	extern/joylink_extern.h	31;"	d
+JL_ATTR_CONN_STATUS	extern/joylink_extern.h	33;"	d
+JL_ATTR_FEEDID	extern/joylink_extern.h	30;"	d
+JL_ATTR_LOCALKEY	extern/joylink_extern.h	32;"	d
+JL_ATTR_MACADDR	extern/joylink_extern.h	34;"	d
+JL_ATTR_SUBDEVS	extern/joylink_extern.h	27;"	d
+JL_ATTR_UUID	extern/joylink_extern.h	29;"	d
+JL_ATTR_VERSION	extern/joylink_extern.h	35;"	d
+JL_ATTR_WAN_SPEED	extern/joylink_extern.h	28;"	d
+JL_ATTR_WLAN24G	extern/joylink_extern.h	26;"	d
+JL_BZCODE_CTRL	joylink/joylink.h	36;"	d
+JL_BZCODE_GET_SNAPSHOT	joylink/joylink.h	35;"	d
+JL_BZCODE_UNBIND	joylink/joylink.h	37;"	d
+JL_JOIN_PKG_RUN	joylink/joylink_join_packet.c	24;"	d	file:
+JL_JOIN_PKG_RUN	list/test.c	25;"	d	file:
+JL_JOIN_PKG_STOP	joylink/joylink_join_packet.c	25;"	d	file:
+JL_JOIN_PKG_STOP	list/test.c	26;"	d	file:
+JL_LOG_LEVEL	joylink/joylink_log.h	38;"	d
+JL_LOG_LEVEL_DEBUG	joylink/joylink_log.h	27;"	d
+JL_LOG_LEVEL_ERROR	joylink/joylink_log.h	25;"	d
+JL_LOG_LEVEL_FATAL	joylink/joylink_log.h	22;"	d
+JL_LOG_LEVEL_INFO	joylink/joylink_log.h	24;"	d
+JL_LOG_LEVEL_NOTICE	joylink/joylink_log.h	23;"	d
+JL_LOG_LEVEL_WARN	joylink/joylink_log.h	26;"	d
+JL_MAX_AES_EXTERN	joylink/joylink.h	70;"	d
+JL_MAX_CUT_PACKET_LEN	joylink/joylink_dev_lan.c	35;"	d	file:
+JL_MAX_DBG_LEN	joylink/joylink.h	20;"	d
+JL_MAX_FEEDID_LEN	joylink/joylink.h	17;"	d
+JL_MAX_IP_LEN	joylink/joylink.h	14;"	d
+JL_MAX_JOIN_PKG_ARRARY	joylink/joylink_join_packet.c	22;"	d	file:
+JL_MAX_JOIN_PKG_ARRARY	list/test.c	22;"	d	file:
+JL_MAX_JOIN_PKG_TOTAL_LEN	joylink/joylink_join_packet.c	23;"	d	file:
+JL_MAX_JOIN_PKG_TOTAL_LEN	list/test.c	23;"	d	file:
+JL_MAX_KEY_BIN_LEN	joylink/joylink.h	18;"	d
+JL_MAX_KEY_STR_LEN	joylink/joylink.h	19;"	d
+JL_MAX_MAC_LEN	joylink/joylink.h	15;"	d
+JL_MAX_MSG_LEN	joylink/joylink.h	28;"	d
+JL_MAX_OPT_LEN	joylink/joylink.h	21;"	d
+JL_MAX_PACKET_LEN	joylink/joylink.h	13;"	d
+JL_MAX_PAYLOAD_LEN	joylink/joylink.h	69;"	d
+JL_MAX_PHEAD_LEN	joylink/joylink.h	68;"	d
+JL_MAX_SERVER_HB_LOST	joylink/joylink.h	22;"	d
+JL_MAX_SERVER_NAME_LEN	joylink/joylink.h	24;"	d
+JL_MAX_SERVER_NUM	joylink/joylink.h	23;"	d
+JL_MAX_STATUS_DESC_LEN	joylink/joylink.h	29;"	d
+JL_MAX_SUB	example/joylink_extern_sub_dev.c	16;"	d	file:
+JL_MAX_SUB_DEV	joylink/joylink.h	25;"	d
+JL_MAX_URL_LEN	joylink/joylink.h	27;"	d
+JL_MAX_UUID_LEN	joylink/joylink.h	16;"	d
+JL_MAX_VERSION_NAME_LEN	joylink/joylink.h	26;"	d
+JL_SERVER_ST_AUTH	joylink/joylink.h	32;"	d
+JL_SERVER_ST_INIT	joylink/joylink.h	31;"	d
+JL_SERVER_ST_WORK	joylink/joylink.h	33;"	d
+JL_SUB_DEV_MAX	json/joylink_json_sub_dev.c	20;"	d	file:
+JOYLINKMUL	auth/joylinkAES.c	128;"	d	file:
+JOYLINKROTL8	auth/joylinkAES.c	126;"	d	file:
+JOYLINKXTIME	auth/joylinkAES.c	127;"	d	file:
+JOYLINK_AES_FROUND	auth/joylinkAES.c	360;"	d	file:
+JOYLINK_AES_RROUND	auth/joylinkAES.c	383;"	d	file:
+JOYLINK_BUFFER_SPACE_ERR	auth/joylinkErrno.h	/^    JOYLINK_BUFFER_SPACE_ERR        = -100,             \/*buffer不足*\/$/;"	e	enum:__anon32
+JOYLINK_CANCEL_ERR	auth/joylinkErrno.h	/^    JOYLINK_CANCEL_ERR              = -1004,            \/*用户取消操作*\/$/;"	e	enum:__anon32
+JOYLINK_CFG_TIME	joylink/joylink_cfg.h	16;"	d
+JOYLINK_CHECKSUM_ERR	auth/joylinkErrno.h	/^    JOYLINK_CHECKSUM_ERR            = -102,             \/*数据校验失败*\/$/;"	e	enum:__anon32
+JOYLINK_DEVID_ERR	auth/joylinkErrno.h	/^    JOYLINK_DEVID_ERR               = -105,             \/*设备ID有误*\/$/;"	e	enum:__anon32
+JOYLINK_ENC2_DECRYPT	auth/joylinkCrypto.h	24;"	d
+JOYLINK_ENC2_ENCRYPT	auth/joylinkCrypto.h	23;"	d
+JOYLINK_ENC4_DECRYPT	auth/joylinkCrypto.h	40;"	d
+JOYLINK_ENC4_ENCRYPT	auth/joylinkCrypto.h	39;"	d
+JOYLINK_ENC4_KEY_BIT	auth/joylinkCrypto.h	38;"	d
+JOYLINK_ENCINFO_ERR	auth/joylinkErrno.h	/^    JOYLINK_ENCINFO_ERR             = -109,             \/*加密信息有误*\/$/;"	e	enum:__anon32
+JOYLINK_ENCTYPE_ERR	auth/joylinkErrno.h	/^    JOYLINK_ENCTYPE_ERR             = -107,             \/*不支持的加密策略*\/$/;"	e	enum:__anon32
+JOYLINK_GET_CMD_ERR	auth/joylinkErrno.h	/^    JOYLINK_GET_CMD_ERR             = -103,             \/*接收命令类型有误*\/$/;"	e	enum:__anon32
+JOYLINK_GET_DEVID_ERR	auth/joylinkErrno.h	/^    JOYLINK_GET_DEVID_ERR           = -104,             \/*设备ID不一致*\/$/;"	e	enum:__anon32
+JOYLINK_GET_ULONG_LE	auth/joylinkAES.c	81;"	d	file:
+JOYLINK_MAGIC_ERR	auth/joylinkErrno.h	/^    JOYLINK_MAGIC_ERR               = -108,             \/*无效数据包,magic有误*\/$/;"	e	enum:__anon32
+JOYLINK_NETWORK_TIMEOUT	auth/joylinkErrno.h	/^    JOYLINK_NETWORK_TIMEOUT         = -1002,            \/*网络超时*\/$/;"	e	enum:__anon32
+JOYLINK_PARAM_INVALID	auth/joylinkErrno.h	/^    JOYLINK_PARAM_INVALID           = -1000,            \/*参数数据有误*\/$/;"	e	enum:__anon32
+JOYLINK_PUT_ULONG_LE	auth/joylinkAES.c	91;"	d	file:
+JOYLINK_RECV_DATA_ERR	auth/joylinkErrno.h	/^    JOYLINK_RECV_DATA_ERR           = -1003,             \/*接收到的数据有误*\/$/;"	e	enum:__anon32
+JOYLINK_RECV_LEN_ERR	auth/joylinkErrno.h	/^    JOYLINK_RECV_LEN_ERR            = -101,             \/*接收数据长度有误*\/$/;"	e	enum:__anon32
+JOYLINK_STATUS_CHANNEL_LOCKED	joylink/joylink_cfg.h	/^	JOYLINK_STATUS_CHANNEL_LOCKED = 1,$/;"	e	enum:__anon3
+JOYLINK_STATUS_COMPLETE	joylink/joylink_cfg.h	/^	JOYLINK_STATUS_COMPLETE = 2$/;"	e	enum:__anon3
+JOYLINK_STATUS_CONTINUE	joylink/joylink_cfg.h	/^	JOYLINK_STATUS_CONTINUE = 0,$/;"	e	enum:__anon3
+JOYLINK_SUCCESS	auth/joylinkErrno.h	/^    JOYLINK_SUCCESS                 = 0,$/;"	e	enum:__anon32
+JOYLINK_SYSTEM_ERR	auth/joylinkErrno.h	/^    JOYLINK_SYSTEM_ERR              = -1001,            \/*系统调用错误,例如创建socket失败*\/$/;"	e	enum:__anon32
+JOYLINK_TOKEN_ERR	auth/joylinkErrno.h	/^    JOYLINK_TOKEN_ERR               = -106,             \/*设备TOKEN有误*\/$/;"	e	enum:__anon32
+JoyLink_joylinkCrypto_h	auth/joylinkCrypto.h	10;"	d
+JoyLink_joylinkErrno_h	auth/joylinkErrno.h	10;"	d
+LHead_t	list/yc_list.h	/^typedef struct yc_list_head LHead_t;$/;"	t	typeref:struct:yc_list_head
+LIST_BOOL_FALSE	list/joylink_list.h	13;"	d
+LIST_BOOL_TRUE	list/joylink_list.h	14;"	d
+LIST_BOOL_t	list/joylink_list.h	/^typedef int LIST_BOOL_t;$/;"	t
+LITTLE_ENDIAN_ORDER	auth/aes.h	8;"	d
+MAX_CODE_E	auth/aes.h	/^    MAX_CODE_E         = -100,  \/* errors -101 - -199 *\/$/;"	e	enum:__anon35
+MAX_ERROR_SZ	auth/aes.h	/^    MAX_ERROR_SZ       =  80,   \/* max size of error string *\/$/;"	e	enum:__anon35
+MAX_TRIES	auth/uECC.c	100;"	d	file:
+MD5_CTX	auth/md5.h	/^}MD5_CTX;$/;"	t	typeref:struct:__anon36
+MD5_H	auth/md5.h	2;"	d
+MEMORY_E	auth/aes.h	/^    MEMORY_E           = -125,  \/* out of memory error *\/$/;"	e	enum:__anon35
+MIN_CODE_E	auth/aes.h	/^    MIN_CODE_E         = -200   \/* errors -101 - -199 *\/$/;"	e	enum:__anon35
+MODULE	auth/Makefile	/^MODULE = obj-$(shell pwd | sed "s\/.*\\\/\/\/" ).o$/;"	m
+MP_ADD_E	auth/aes.h	/^    MP_ADD_E           = -115,  \/* mp_add error state, can't add *\/$/;"	e	enum:__anon35
+MP_CMP_E	auth/aes.h	/^    MP_CMP_E           = -120,  \/* mp_cmp error state *\/$/;"	e	enum:__anon35
+MP_EXPTMOD_E	auth/aes.h	/^    MP_EXPTMOD_E       = -112,  \/* mp_exptmod error state *\/$/;"	e	enum:__anon35
+MP_INIT_E	auth/aes.h	/^    MP_INIT_E          = -110,  \/* mp_init error state *\/$/;"	e	enum:__anon35
+MP_INVMOD_E	auth/aes.h	/^    MP_INVMOD_E        = -119,  \/* mp_invmod error state, can't inv mod *\/$/;"	e	enum:__anon35
+MP_MOD_E	auth/aes.h	/^    MP_MOD_E           = -118,  \/* mp_mod error state, can't mod *\/$/;"	e	enum:__anon35
+MP_MULMOD_E	auth/aes.h	/^    MP_MULMOD_E        = -117,  \/* mp_mulmod error state, can't multiply mod *\/$/;"	e	enum:__anon35
+MP_MUL_E	auth/aes.h	/^    MP_MUL_E           = -116,  \/* mp_mul error state, can't multiply *\/$/;"	e	enum:__anon35
+MP_READ_E	auth/aes.h	/^    MP_READ_E          = -111,  \/* mp_read error state *\/$/;"	e	enum:__anon35
+MP_SUB_E	auth/aes.h	/^    MP_SUB_E           = -114,  \/* mp_sub error state, can't subtract *\/$/;"	e	enum:__anon35
+MP_TO_E	auth/aes.h	/^    MP_TO_E            = -113,  \/* mp_to_xxx error state, can't convert *\/$/;"	e	enum:__anon35
+MP_ZERO_E	auth/aes.h	/^    MP_ZERO_E          = -121,  \/* got a mp zero result, not expected *\/$/;"	e	enum:__anon35
+NOT_COMPILED_IN	auth/aes.h	/^    NOT_COMPILED_IN    = -174,  \/* Feature not compiled in *\/$/;"	e	enum:__anon35
+NO_PASSWORD	auth/aes.h	/^    NO_PASSWORD        = -176,  \/* no password provided by user *\/$/;"	e	enum:__anon35
+NULL	auth/aes.h	24;"	d
+OPEN_RAN_E	auth/aes.h	/^    OPEN_RAN_E         = -101,  \/* opening random device error *\/$/;"	e	enum:__anon35
+O_CLOEXEC	auth/uECC.c	465;"	d	file:
+PADDING	auth/md5.c	/^static unsigned char PADDING[]={0x80,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,$/;"	v	file:
+PTRDIFF_MAX	auth/stdint.h	249;"	d
+PTRDIFF_MAX	auth/stdint.h	252;"	d
+PTRDIFF_MIN	auth/stdint.h	248;"	d
+PTRDIFF_MIN	auth/stdint.h	251;"	d
+PT_AUTH	joylink/joylink.h	/^	PT_AUTH =           9,$/;"	e	enum:__anon13
+PT_BEAT	joylink/joylink.h	/^	PT_BEAT =           10,$/;"	e	enum:__anon13
+PT_JSONCONTROL	joylink/joylink.h	/^	PT_JSONCONTROL =    3,$/;"	e	enum:__anon13
+PT_OTA_ORDER	joylink/joylink.h	/^	PT_OTA_ORDER =      7,$/;"	e	enum:__anon13
+PT_OTA_UPLOAD	joylink/joylink.h	/^	PT_OTA_UPLOAD =     8,$/;"	e	enum:__anon13
+PT_SCAN	joylink/joylink.h	/^	PT_SCAN =           1,$/;"	e	enum:__anon13
+PT_SCRIPTCONTROL	joylink/joylink.h	/^	PT_SCRIPTCONTROL =  4,$/;"	e	enum:__anon13
+PT_SERVERCONTROL	joylink/joylink.h	/^	PT_SERVERCONTROL =  11,$/;"	e	enum:__anon13
+PT_SUB_ADD	joylink/joylink.h	/^	PT_SUB_ADD =        105,$/;"	e	enum:__anon13
+PT_SUB_AUTH	joylink/joylink.h	/^	PT_SUB_AUTH =       102,$/;"	e	enum:__anon13
+PT_SUB_CLOUD_CTRL	joylink/joylink.h	/^	PT_SUB_CLOUD_CTRL = 111,$/;"	e	enum:__anon13
+PT_SUB_HB	joylink/joylink.h	/^	PT_SUB_HB  =        110,$/;"	e	enum:__anon13
+PT_SUB_LAN_JSON	joylink/joylink.h	/^	PT_SUB_LAN_JSON =   103,$/;"	e	enum:__anon13
+PT_SUB_LAN_SCRIPT	joylink/joylink.h	/^	PT_SUB_LAN_SCRIPT = 104,$/;"	e	enum:__anon13
+PT_SUB_UNBIND	joylink/joylink.h	/^	PT_SUB_UNBIND =     113$/;"	e	enum:__anon13
+PT_SUB_UPLOAD	joylink/joylink.h	/^	PT_SUB_UPLOAD =     112,$/;"	e	enum:__anon13
+PT_UNKNOWN	joylink/joylink.h	/^	PT_UNKNOWN =        0,$/;"	e	enum:__anon13
+PT_UPLOAD	joylink/joylink.h	/^	PT_UPLOAD =         12,$/;"	e	enum:__anon13
+PT_WRITE_ACCESSKEY	joylink/joylink.h	/^	PT_WRITE_ACCESSKEY = 2,$/;"	e	enum:__anon13
+PUBLIC_KEY_E	auth/aes.h	/^    PUBLIC_KEY_E       = -134,  \/* setting public key error *\/$/;"	e	enum:__anon35
+Purple	joylink/joylink_log.h	34;"	d
+RAN_BLOCK_E	auth/aes.h	/^    RAN_BLOCK_E        = -105,  \/* reading random device would block *\/$/;"	e	enum:__anon35
+RCON	auth/joylinkAES.c	/^static unsigned long RCON[10];$/;"	v	file:
+READ_RAN_E	auth/aes.h	/^    READ_RAN_E         = -102,  \/* reading random device error *\/$/;"	e	enum:__anon35
+RESTRICT	auth/uECC.c	81;"	d	file:
+RESTRICT	auth/uECC.c	84;"	d	file:
+RESTRICT	auth/uECC.c	86;"	d	file:
+ROTATE_LEFT	auth/md5.c	14;"	d	file:
+RSA_BUFFER_E	auth/aes.h	/^    RSA_BUFFER_E       = -131,  \/* RSA buffer error, output too small or $/;"	e	enum:__anon35
+RSA_WRONG_TYPE_E	auth/aes.h	/^    RSA_WRONG_TYPE_E   = -130,  \/* RSA wrong block type for RSA function *\/$/;"	e	enum:__anon35
+RSb	auth/joylinkAES.c	/^static unsigned char RSb[256];$/;"	v	file:
+RT0	auth/joylinkAES.c	/^static unsigned long RT0[256];$/;"	v	file:
+RT1	auth/joylinkAES.c	/^static unsigned long RT1[256];$/;"	v	file:
+RT2	auth/joylinkAES.c	/^static unsigned long RT2[256];$/;"	v	file:
+RT3	auth/joylinkAES.c	/^static unsigned long RT3[256];$/;"	v	file:
+Red	joylink/joylink_log.h	30;"	d
+SIG_ATOMIC_MAX	auth/stdint.h	257;"	d
+SIG_ATOMIC_MIN	auth/stdint.h	256;"	d
+SIZE_MAX	auth/stdint.h	261;"	d
+SIZE_MAX	auth/stdint.h	263;"	d
+SOCKADDR	joylink/joylink.h	/^typedef struct sockaddr SOCKADDR;$/;"	t	typeref:struct:sockaddr
+SSID_SWITCH_TIME	joylink/joylink_cfg.h	14;"	d
+ST_t	joylink/test.c	/^}ST_t;$/;"	t	typeref:struct:__s	file:
+SUBJECT_E	auth/aes.h	/^    SUBJECT_E          = -136,  \/* setting subject name error *\/$/;"	e	enum:__anon35
+SUPPORTS_INT128	auth/uECC.c	91;"	d	file:
+SUPPORTS_INT128	auth/uECC.c	94;"	d	file:
+SUPPORTS_INT128	auth/uECC.c	96;"	d	file:
+SubDev_t	example/joylink_dev.h	/^}SubDev_t;$/;"	t	typeref:struct:__anon1
+TGW_ATTR_A	extern/joylink_extern.h	/^    TGW_ATTR_A    $/;"	e	enum:__anon38
+TGW_ATTR_J	extern/joylink_extern.h	/^    TGW_ATTR_J = 1, $/;"	e	enum:__anon38
+TGW_BIND_STATUS_E	extern/joylink_extern.h	/^}TGW_BIND_STATUS_E;$/;"	t	typeref:enum:__anon41
+TGW_CLOUD_CONN_STATUS_E	extern/joylink_extern.h	/^}TGW_CLOUD_CONN_STATUS_E;$/;"	t	typeref:enum:__anon39
+TGW_CLOUD_INITAL	extern/joylink_extern.h	/^    TGW_CLOUD_INITAL = 0,  $/;"	e	enum:__anon39
+TGW_CLOUD_LOGGED	extern/joylink_extern.h	/^    TGW_CLOUD_LOGGED      $/;"	e	enum:__anon39
+TGW_NET_CONNECTED	extern/joylink_extern.h	/^    TGW_NET_CONNECTED  $/;"	e	enum:__anon40
+TGW_NET_CONNECTING	extern/joylink_extern.h	/^    TGW_NET_CONNECTING,	$/;"	e	enum:__anon40
+TGW_NET_CONN_STATUS_E	extern/joylink_extern.h	/^}TGW_NET_CONN_STATUS_E;$/;"	t	typeref:enum:__anon40
+TGW_NET_STATUS	extern/joylink_extern.h	/^TGW_NET_CONN_STATUS_E TGW_NET_STATUS(void);$/;"	p	signature:(void)
+TGW_NET_UNCONNECT	extern/joylink_extern.h	/^    TGW_NET_UNCONNECT = 0,$/;"	e	enum:__anon40
+TGW_STATUS_BINDED	extern/joylink_extern.h	/^    TGW_STATUS_BINDED  	$/;"	e	enum:__anon41
+TGW_STATUS_UNBIND	extern/joylink_extern.h	/^    TGW_STATUS_UNBIND = 0, $/;"	e	enum:__anon41
+Td	auth/aes.c	/^static const uint32_t Td[5][256] = {$/;"	v	file:
+Te	auth/aes.c	/^static const uint32_t Te[5][256] = {$/;"	v	file:
+UINT16_C	auth/stdint.h	289;"	d
+UINT16_MAX	auth/stdint.h	167;"	d
+UINT32	auth/joylinkSetting.h	4;"	d
+UINT32_C	auth/stdint.h	290;"	d
+UINT32_MAX	auth/stdint.h	168;"	d
+UINT64_C	auth/stdint.h	292;"	d
+UINT64_C	auth/stdint.h	294;"	d
+UINT64_MAX	auth/stdint.h	169;"	d
+UINT8	auth/joylinkSetting.h	3;"	d
+UINT8_C	auth/stdint.h	288;"	d
+UINT8_MAX	auth/stdint.h	166;"	d
+UINTMAX_C	auth/stdint.h	300;"	d
+UINTMAX_C	auth/stdint.h	303;"	d
+UINTMAX_MAX	auth/stdint.h	241;"	d
+UINTPTR_MAX	auth/stdint.h	227;"	d
+UINTPTR_MAX	auth/stdint.h	231;"	d
+UINT_FAST16_MAX	auth/stdint.h	214;"	d
+UINT_FAST16_MAX	auth/stdint.h	217;"	d
+UINT_FAST32_MAX	auth/stdint.h	215;"	d
+UINT_FAST32_MAX	auth/stdint.h	218;"	d
+UINT_FAST64_MAX	auth/stdint.h	220;"	d
+UINT_FAST8_MAX	auth/stdint.h	212;"	d
+UINT_LEAST16_MAX	auth/stdint.h	185;"	d
+UINT_LEAST32_MAX	auth/stdint.h	186;"	d
+UINT_LEAST64_MAX	auth/stdint.h	187;"	d
+UINT_LEAST8_MAX	auth/stdint.h	184;"	d
+UNICODE_SIZE_E	auth/aes.h	/^    UNICODE_SIZE_E     = -175,  \/* Unicode password too big *\/$/;"	e	enum:__anon35
+WCHAR_MAX	auth/stdint.h	270;"	d
+WCHAR_MIN	auth/stdint.h	269;"	d
+WIFICtrl_t	example/joylink_dev.h	/^}WIFICtrl_t;$/;"	t	typeref:struct:__wifi_ctrl
+WIFIInfo_t	example/joylink_dev.h	/^}WIFIInfo_t;$/;"	t	typeref:struct:__wifi_info
+WIFIManage_t	example/joylink_extern.c	/^}WIFIManage_t;$/;"	t	typeref:struct:_attr_manage_	file:
+WIFIManage_t	extern/joylink_extern.c	/^}WIFIManage_t;$/;"	t	typeref:struct:_attr_manage_	file:
+WIFI_CTRL_DISABLE	example/joylink_dev.h	10;"	d
+WIFI_CTRL_OFF	example/joylink_dev.h	9;"	d
+WIFI_CTRL_ON	example/joylink_dev.h	8;"	d
+WIFI_INFO_24G	example/joylink_dev.h	12;"	d
+WIFI_INFO_5G	example/joylink_dev.h	13;"	d
+WIN32_LEAN_AND_MEAN	auth/uECC.c	441;"	d	file:
+WINCRYPT_E	auth/aes.h	/^    WINCRYPT_E         = -103,  \/* windows crypt init error *\/$/;"	e	enum:__anon35
+WINT_MAX	auth/stdint.h	275;"	d
+WINT_MIN	auth/stdint.h	274;"	d
+XMEMCPY	auth/aes.c	12;"	d	file:
+XYcZ_add	auth/uECC.c	/^static void XYcZ_add(uECC_word_t * RESTRICT X1,$/;"	f	file:	signature:(uECC_word_t * RESTRICT X1, uECC_word_t * RESTRICT Y1, uECC_word_t * RESTRICT X2, uECC_word_t * RESTRICT Y2)
+XYcZ_addC	auth/uECC.c	/^static void XYcZ_addC(uECC_word_t * RESTRICT X1,$/;"	f	file:	signature:(uECC_word_t * RESTRICT X1, uECC_word_t * RESTRICT Y1, uECC_word_t * RESTRICT X2, uECC_word_t * RESTRICT Y2)
+XYcZ_initial_double	auth/uECC.c	/^static void XYcZ_initial_double(uECC_word_t * RESTRICT X1,$/;"	f	file:	signature:(uECC_word_t * RESTRICT X1, uECC_word_t * RESTRICT Y1, uECC_word_t * RESTRICT X2, uECC_word_t * RESTRICT Y2, const uECC_word_t * RESTRICT initial_Z)
+XorWords	auth/aes.c	/^\/*STATIC INLINE *\/void XorWords(uint32_t* r, const uint32_t* a, uint32_t n)$/;"	f	signature:(uint32_t* r, const uint32_t* a, uint32_t n)
+_24g	example/joylink_dev.h	/^    WIFIInfo_t _24g;$/;"	m	struct:__wifi_ctrl	access:public
+_5g	example/joylink_dev.h	/^    WIFIInfo_t _5g;$/;"	m	struct:__wifi_ctrl	access:public
+_CRC_H	auth/crc.h	2;"	d
+_JOIN_PKG_H	joylink/joylink_join_packet.h	2;"	d
+_JOYLINK_DEV_H_	example/joylink_dev.h	2;"	d
+_JOYLINK_H_	joylink/joylink.h	2;"	d
+_JOYLINK_RET_CODE_H_	joylink/joylink_ret_code.h	2;"	d
+_MICRO_ECC_H_	auth/uECC.h	4;"	d
+_NODECACHE_H	auth/joylink_crypt.h	2;"	d
+_PACKETS_H	joylink/joylink_packets.h	2;"	d
+_SECURITY_H	joylink/joylink_security.h	2;"	d
+_STDINT_H	auth/stdint.h	23;"	d
+_UTILS_H	joylink/joylink_utils.h	2;"	d
+_YC_LLIST_H	list/yc_list.h	2;"	d
+__AES_H	auth/aes.h	2;"	d
+__AVR__	auth/uECC.c	4;"	d	file:
+__INT64_C	auth/stdint.h	145;"	d
+__INT64_C	auth/stdint.h	148;"	d
+__JD_LIST_H_	list/joylink_list.h	2;"	d
+__JOYLINK_CFG_H	joylink/joylink_cfg.h	3;"	d
+__JOYLINK_EXTERN_H__	extern/joylink_extern.h	15;"	d
+__JOYLINK_EXTERN_JSON__	example/joylink_extern_json.h	14;"	d
+__JOYLINK_JSON__	json/joylink_json.h	2;"	d
+__JOYLINK_LOG_H__	joylink/joylink_log.h	2;"	d
+__JOYLINK_SUB_DEV_H__	joylink/joylink_sub_dev.h	2;"	d
+__UINT64_C	auth/stdint.h	146;"	d
+__UINT64_C	auth/stdint.h	149;"	d
+__anon10::checksum	joylink/joylink.h	/^	unsigned char checksum;$/;"	m	struct:__anon10	access:public
+__anon10::enctype	joylink/joylink.h	/^	unsigned int enctype;$/;"	m	struct:__anon10	access:public
+__anon10::len	joylink/joylink.h	/^	unsigned int len;$/;"	m	struct:__anon10	access:public
+__anon10::magic	joylink/joylink.h	/^	unsigned int magic;$/;"	m	struct:__anon10	access:public
+__anon11::cmd	joylink/joylink.h	/^	unsigned char cmd[2];$/;"	m	struct:__anon11	access:public
+__anon11::type	joylink/joylink.h	/^	unsigned int type;$/;"	m	struct:__anon11	access:public
+__anon12::crc	joylink/joylink.h	/^	unsigned short	crc;$/;"	m	struct:__anon12	access:public
+__anon12::enctype	joylink/joylink.h	/^	unsigned char	enctype;$/;"	m	struct:__anon12	access:public
+__anon12::index	joylink/joylink.h	/^	unsigned char	index;$/;"	m	struct:__anon12	access:public
+__anon12::magic	joylink/joylink.h	/^	unsigned int	magic;$/;"	m	struct:__anon12	access:public
+__anon12::optlen	joylink/joylink.h	/^	unsigned short	optlen;$/;"	m	struct:__anon12	access:public
+__anon12::payloadlen	joylink/joylink.h	/^	unsigned short	payloadlen;$/;"	m	struct:__anon12	access:public
+__anon12::reserved	joylink/joylink.h	/^	unsigned char	reserved;$/;"	m	struct:__anon12	access:public
+__anon12::total	joylink/joylink.h	/^	unsigned char	total;$/;"	m	struct:__anon12	access:public
+__anon12::type	joylink/joylink.h	/^	unsigned char	type;$/;"	m	struct:__anon12	access:public
+__anon12::version	joylink/joylink.h	/^	unsigned char	version;$/;"	m	struct:__anon12	access:public
+__anon15::type	joylink/joylink.h	/^	E_PacketType type;$/;"	m	struct:__anon15	access:public
+__anon15::version	joylink/joylink.h	/^	int version;	$/;"	m	struct:__anon15	access:public
+__anon16::accesskey	joylink/joylink.h	/^	char accesskey[33];$/;"	m	struct:__anon16	access:public
+__anon16::cmd_tran_type	joylink/joylink.h	/^	int cmd_tran_type;			\/\/ (0:bin, 1:Lua, 2:Js)$/;"	m	struct:__anon16	access:public
+__anon16::crc32	joylink/joylink.h	/^    unsigned int crc32;$/;"	m	struct:__anon16	access:public
+__anon16::devdbg	joylink/joylink.h	/^	char devdbg[JL_MAX_DBG_LEN];$/;"	m	struct:__anon16	access:public
+__anon16::devtype	joylink/joylink.h	/^    int devtype;$/;"	m	struct:__anon16	access:public
+__anon16::feedid	joylink/joylink.h	/^	char feedid[JL_MAX_FEEDID_LEN];$/;"	m	struct:__anon16	access:public
+__anon16::ip	joylink/joylink.h	/^	char ip[JL_MAX_IP_LEN];$/;"	m	struct:__anon16	access:public
+__anon16::isUsed	joylink/joylink.h	/^	int	isUsed;$/;"	m	struct:__anon16	access:public
+__anon16::joylink_server	joylink/joylink.h	/^    char joylink_server[JL_MAX_SERVER_NAME_LEN];$/;"	m	struct:__anon16	access:public
+__anon16::lancon	joylink/joylink.h	/^	int lancon;			    \/\/ 1 suport Lan $/;"	m	struct:__anon16	access:public
+__anon16::localkey	joylink/joylink.h	/^    char localkey[33];$/;"	m	struct:__anon16	access:public
+__anon16::mac	joylink/joylink.h	/^	char mac[JL_MAX_MAC_LEN];$/;"	m	struct:__anon16	access:public
+__anon16::port	joylink/joylink.h	/^	int port;		$/;"	m	struct:__anon16	access:public
+__anon16::protocol	joylink/joylink.h	/^    int protocol;           \/\/ 0:WIFI 1:zigbee 2:bluetooth 3:433$/;"	m	struct:__anon16	access:public
+__anon16::pubkeyC	joylink/joylink.h	/^	uint8_t pubkeyC[JL_MAX_KEY_BIN_LEN];$/;"	m	struct:__anon16	access:public
+__anon16::pubkeyS	joylink/joylink.h	/^	char pubkeyS[JL_MAX_KEY_STR_LEN];$/;"	m	struct:__anon16	access:public
+__anon16::server_port	joylink/joylink.h	/^    int server_port;$/;"	m	struct:__anon16	access:public
+__anon16::servropt	joylink/joylink.h	/^	char servropt[JL_MAX_OPT_LEN];$/;"	m	struct:__anon16	access:public
+__anon16::sessionKey	joylink/joylink.h	/^	uint8_t sessionKey[33];$/;"	m	struct:__anon16	access:public
+__anon16::sharedkey	joylink/joylink.h	/^	uint8_t sharedkey[uECC_BYTES];$/;"	m	struct:__anon16	access:public
+__anon16::uuid	joylink/joylink.h	/^	char uuid[JL_MAX_UUID_LEN];$/;"	m	struct:__anon16	access:public
+__anon16::version	joylink/joylink.h	/^	short version;$/;"	m	struct:__anon16	access:public
+__anon17::dev_detail	joylink/joylink.h	/^    uint8_t dev_detail[JL_MAX_PACKET_LEN];$/;"	m	struct:__anon17	access:public
+__anon17::hb_lost_count	joylink/joylink.h	/^    int hb_lost_count;$/;"	m	struct:__anon17	access:public
+__anon17::jlp	joylink/joylink.h	/^    JLPInfo_t jlp;$/;"	m	struct:__anon17	access:public
+__anon17::lan_socket	joylink/joylink.h	/^    int lan_socket;$/;"	m	struct:__anon17	access:public
+__anon17::local_port	joylink/joylink.h	/^    short local_port;$/;"	m	struct:__anon17	access:public
+__anon17::payload_total	joylink/joylink.h	/^    int payload_total;$/;"	m	struct:__anon17	access:public
+__anon17::send_buff	joylink/joylink.h	/^    uint8_t send_buff[JL_MAX_PACKET_LEN];$/;"	m	struct:__anon17	access:public
+__anon17::send_p	joylink/joylink.h	/^    char *send_p;$/;"	m	struct:__anon17	access:public
+__anon17::server_socket	joylink/joylink.h	/^    int server_socket;$/;"	m	struct:__anon17	access:public
+__anon17::server_st	joylink/joylink.h	/^    int server_st;	 \/\/ 0:Socket init 1:Auth 2:HB$/;"	m	struct:__anon17	access:public
+__anon17::wifi	joylink/joylink.h	/^    WIFICtrl_t wifi;$/;"	m	struct:__anon17	access:public
+__anon18::data	joylink/joylink.h	/^    void *data;$/;"	m	struct:__anon18	access:public
+__anon18::jlp	joylink/joylink.h	/^    JLPInfo_t jlp;$/;"	m	struct:__anon18	access:public
+__anon18::msg	joylink/joylink.h	/^    char msg[250];$/;"	m	struct:__anon18	access:public
+__anon18::state	joylink/joylink.h	/^    int state;$/;"	m	struct:__anon18	access:public
+__anon18::type	joylink/joylink.h	/^    E_JLDevType_t type;$/;"	m	struct:__anon18	access:public
+__anon19::random_unm	joylink/joylink.h	/^	unsigned int random_unm;$/;"	m	struct:__anon19	access:public
+__anon19::timestamp	joylink/joylink.h	/^    unsigned int timestamp;$/;"	m	struct:__anon19	access:public
+__anon1::device_name	example/joylink_dev.h	/^    char device_name[256];$/;"	m	struct:__anon1	access:public
+__anon1::down	example/joylink_dev.h	/^    int down;$/;"	m	struct:__anon1	access:public
+__anon1::ip	example/joylink_dev.h	/^    char ip[64];$/;"	m	struct:__anon1	access:public
+__anon1::lastest_online_time	example/joylink_dev.h	/^    char lastest_online_time[64];$/;"	m	struct:__anon1	access:public
+__anon1::mac	example/joylink_dev.h	/^    char mac[32];$/;"	m	struct:__anon1	access:public
+__anon1::type	example/joylink_dev.h	/^    int type;$/;"	m	struct:__anon1	access:public
+__anon1::up	example/joylink_dev.h	/^    int up;$/;"	m	struct:__anon1	access:public
+__anon20::random_unm	joylink/joylink.h	/^	unsigned int random_unm;$/;"	m	struct:__anon20	access:public
+__anon20::session_key	joylink/joylink.h	/^	unsigned char session_key[];$/;"	m	struct:__anon20	access:public
+__anon20::timestamp	joylink/joylink.h	/^	unsigned int timestamp;$/;"	m	struct:__anon20	access:public
+__anon21::rssi	joylink/joylink.h	/^	unsigned short rssi;$/;"	m	struct:__anon21	access:public
+__anon21::timestamp	joylink/joylink.h	/^	unsigned int timestamp; $/;"	m	struct:__anon21	access:public
+__anon21::verion	joylink/joylink.h	/^	unsigned short verion;$/;"	m	struct:__anon21	access:public
+__anon22::code	joylink/joylink.h	/^	unsigned int code;$/;"	m	struct:__anon22	access:public
+__anon22::timestamp	joylink/joylink.h	/^	unsigned int timestamp;$/;"	m	struct:__anon22	access:public
+__anon23::biz_code	joylink/joylink.h	/^	unsigned int biz_code;$/;"	m	struct:__anon23	access:public
+__anon23::cmd	joylink/joylink.h	/^	unsigned char cmd[];$/;"	m	struct:__anon23	access:public
+__anon23::feedid	joylink/joylink.h	/^    char feedid[JL_MAX_FEEDID_LEN];$/;"	m	struct:__anon23	access:public
+__anon23::serial	joylink/joylink.h	/^	unsigned int serial;$/;"	m	struct:__anon23	access:public
+__anon23::timestamp	joylink/joylink.h	/^	unsigned int timestamp;$/;"	m	struct:__anon23	access:public
+__anon24::biz_code	joylink/joylink.h	/^	unsigned int biz_code;$/;"	m	struct:__anon24	access:public
+__anon24::resp	joylink/joylink.h	/^	unsigned char resp[1];$/;"	m	struct:__anon24	access:public
+__anon24::resp_length	joylink/joylink.h	/^	unsigned char resp_length[4];$/;"	m	struct:__anon24	access:public
+__anon24::serial	joylink/joylink.h	/^	unsigned int serial;$/;"	m	struct:__anon24	access:public
+__anon24::streams	joylink/joylink.h	/^	unsigned char streams[1];$/;"	m	struct:__anon24	access:public
+__anon24::timestamp	joylink/joylink.h	/^	unsigned int timestamp;$/;"	m	struct:__anon24	access:public
+__anon25::data	joylink/joylink.h	/^    unsigned char data[2];$/;"	m	struct:__anon25	access:public
+__anon25::timestamp	joylink/joylink.h	/^    unsigned int timestamp;$/;"	m	struct:__anon25	access:public
+__anon26::code	joylink/joylink.h	/^	unsigned int code;$/;"	m	struct:__anon26	access:public
+__anon26::timestamp	joylink/joylink.h	/^	unsigned int timestamp;$/;"	m	struct:__anon26	access:public
+__anon27::crc32	joylink/joylink.h	/^    unsigned int crc32;$/;"	m	struct:__anon27	access:public
+__anon27::feedid	joylink/joylink.h	/^    char feedid[JL_MAX_FEEDID_LEN];$/;"	m	struct:__anon27	access:public
+__anon27::productuuid	joylink/joylink.h	/^    char productuuid[JL_MAX_UUID_LEN];$/;"	m	struct:__anon27	access:public
+__anon27::serial	joylink/joylink.h	/^	int serial;$/;"	m	struct:__anon27	access:public
+__anon27::url	joylink/joylink.h	/^    char url[JL_MAX_URL_LEN];$/;"	m	struct:__anon27	access:public
+__anon27::version	joylink/joylink.h	/^    int version;$/;"	m	struct:__anon27	access:public
+__anon27::versionname	joylink/joylink.h	/^    char versionname[JL_MAX_VERSION_NAME_LEN];$/;"	m	struct:__anon27	access:public
+__anon28::feedid	joylink/joylink.h	/^    char feedid[JL_MAX_FEEDID_LEN];$/;"	m	struct:__anon28	access:public
+__anon28::productuuid	joylink/joylink.h	/^    char productuuid[JL_MAX_UUID_LEN];$/;"	m	struct:__anon28	access:public
+__anon28::progress	joylink/joylink.h	/^    int progress;$/;"	m	struct:__anon28	access:public
+__anon28::status	joylink/joylink.h	/^    int status;$/;"	m	struct:__anon28	access:public
+__anon28::status_desc	joylink/joylink.h	/^    char status_desc[JL_MAX_STATUS_DESC_LEN];$/;"	m	struct:__anon28	access:public
+__anon29::code	joylink/joylink.h	/^	int code;$/;"	m	struct:__anon29	access:public
+__anon29::msg	joylink/joylink.h	/^	char msg[JL_MAX_MSG_LEN];$/;"	m	struct:__anon29	access:public
+__anon2::pwd	joylink/joylink_cfg.h	/^	char pwd[65];						$/;"	m	struct:__anon2	access:public
+__anon2::pwd_length	joylink/joylink_cfg.h	/^	unsigned char pwd_length;$/;"	m	struct:__anon2	access:public
+__anon2::source_ip	joylink/joylink_cfg.h	/^  int source_ip[4];$/;"	m	struct:__anon2	access:public
+__anon2::source_port	joylink/joylink_cfg.h	/^  unsigned int source_port;$/;"	m	struct:__anon2	access:public
+__anon2::ssid	joylink/joylink_cfg.h	/^	char ssid[65];						$/;"	m	struct:__anon2	access:public
+__anon2::ssid_length	joylink/joylink_cfg.h	/^  unsigned char ssid_length;$/;"	m	struct:__anon2	access:public
+__anon2::sum	joylink/joylink_cfg.h	/^	unsigned char sum;$/;"	m	struct:__anon2	access:public
+__anon30::devPubKey	auth/joylink_crypt.h	/^	uint8_t devPubKey[uECC_BYTES * 2];$/;"	m	struct:__anon30	access:public
+__anon30::devPubKeyC	auth/joylink_crypt.h	/^	uint8_t devPubKeyC[uECC_BYTES + 1];$/;"	m	struct:__anon30	access:public
+__anon30::isInited	auth/joylink_crypt.h	/^	int isInited;$/;"	m	struct:__anon30	access:public
+__anon30::priKey	auth/joylink_crypt.h	/^	uint8_t priKey[uECC_BYTES];$/;"	m	struct:__anon30	access:public
+__anon31::pubkeyC	auth/joylink_crypt.h	/^	uint8_t pubkeyC[JL_MAX_KEY_BIN_LEN];		\/\/ ѹ????ʽ?Ĺ?Կ$/;"	m	struct:__anon31	access:public
+__anon31::sharedkey	auth/joylink_crypt.h	/^	uint8_t sharedkey[uECC_BYTES];		\/\/ ?豸?Ĺ?????Կ$/;"	m	struct:__anon31	access:public
+__anon36::buffer	auth/md5.h	/^    unsigned char buffer[64];   $/;"	m	struct:__anon36	access:public
+__anon36::count	auth/md5.h	/^    unsigned int count[2];$/;"	m	struct:__anon36	access:public
+__anon36::state	auth/md5.h	/^    unsigned int state[4];$/;"	m	struct:__anon36	access:public
+__anon37::buf	auth/joylinkAES.c	/^    unsigned long buf[68];      \/*!<  unaligned data    *\/$/;"	m	struct:__anon37	file:	access:public
+__anon37::nr	auth/joylinkAES.c	/^    int nr;                     \/*!<  number of rounds  *\/$/;"	m	struct:__anon37	file:	access:public
+__anon37::rk	auth/joylinkAES.c	/^    unsigned long *rk;          \/*!<  AES round keys    *\/$/;"	m	struct:__anon37	file:	access:public
+__anon4::code	joylink/joylink_sub_dev.h	/^	unsigned int	code;$/;"	m	struct:__anon4	access:public
+__anon4::timestamp	joylink/joylink_sub_dev.h	/^	unsigned int 	timestamp;$/;"	m	struct:__anon4	access:public
+__anon5::code	joylink/joylink_sub_dev.h	/^	unsigned int code;$/;"	m	struct:__anon5	access:public
+__anon5::feedid	joylink/joylink_sub_dev.h	/^	unsigned char feedid[JL_MAX_FEEDID_LEN];$/;"	m	struct:__anon5	access:public
+__anon5::timestamp	joylink/joylink_sub_dev.h	/^	unsigned int timestamp;$/;"	m	struct:__anon5	access:public
+__anon6::feedid	joylink/joylink_sub_dev.h	/^	unsigned char 	feedid[JL_MAX_FEEDID_LEN];$/;"	m	struct:__anon6	access:public
+__anon6::rssi	joylink/joylink_sub_dev.h	/^	unsigned short	rssi;$/;"	m	struct:__anon6	access:public
+__anon6::state	joylink/joylink_sub_dev.h	/^	unsigned char state;$/;"	m	struct:__anon6	access:public
+__anon6::version	joylink/joylink_sub_dev.h	/^	unsigned short	version;$/;"	m	struct:__anon6	access:public
+__anon7::num	joylink/joylink_sub_dev.h	/^	unsigned short num;$/;"	m	struct:__anon7	access:public
+__anon7::rssi	joylink/joylink_sub_dev.h	/^	unsigned short	rssi;$/;"	m	struct:__anon7	access:public
+__anon7::sdevinfo	joylink/joylink_sub_dev.h	/^	JLSubDevInfo_t sdevinfo[];$/;"	m	struct:__anon7	access:public
+__anon7::timestamp	joylink/joylink_sub_dev.h	/^	unsigned int timestamp; $/;"	m	struct:__anon7	access:public
+__anon7::verion	joylink/joylink_sub_dev.h	/^	unsigned short	verion;$/;"	m	struct:__anon7	access:public
+__anon8::biz_code	joylink/joylink_sub_dev.h	/^	unsigned int biz_code;$/;"	m	struct:__anon8	access:public
+__anon8::cmd	joylink/joylink_sub_dev.h	/^	unsigned char *cmd;$/;"	m	struct:__anon8	access:public
+__anon8::feedid	joylink/joylink_sub_dev.h	/^    char feedid [JL_MAX_FEEDID_LEN];$/;"	m	struct:__anon8	access:public
+__anon8::serial	joylink/joylink_sub_dev.h	/^	unsigned int	 serial;$/;"	m	struct:__anon8	access:public
+__anon8::timestamp	joylink/joylink_sub_dev.h	/^	unsigned int timestamp;$/;"	m	struct:__anon8	access:public
+__anon9::biz_code	joylink/joylink_sub_dev.h	/^	unsigned int    biz_code;$/;"	m	struct:__anon9	access:public
+__anon9::info	joylink/joylink_sub_dev.h	/^	JLSubDevInfo_t 	*info;$/;"	m	struct:__anon9	access:public
+__anon9::num	joylink/joylink_sub_dev.h	/^	unsigned short  num;$/;"	m	struct:__anon9	access:public
+__anon9::serial	joylink/joylink_sub_dev.h	/^	unsigned int	serial;$/;"	m	struct:__anon9	access:public
+__anon9::timestamp	joylink/joylink_sub_dev.h	/^	unsigned int	timestamp;$/;"	m	struct:__anon9	access:public
+__attr_	example/joylink_extern.c	/^typedef struct __attr_{$/;"	s	file:
+__attr_	extern/joylink_extern.c	/^typedef struct __attr_{$/;"	s	file:
+__attr_::get	example/joylink_extern.c	/^    E_JL_DEV_ATTR_GET_CB get;$/;"	m	struct:__attr_	file:	access:public
+__attr_::get	extern/joylink_extern.c	/^    E_JL_DEV_ATTR_GET_CB get;$/;"	m	struct:__attr_	file:	access:public
+__attr_::name	example/joylink_extern.c	/^    char name[128];$/;"	m	struct:__attr_	file:	access:public
+__attr_::name	extern/joylink_extern.c	/^    char name[128];$/;"	m	struct:__attr_	file:	access:public
+__attr_::set	example/joylink_extern.c	/^    E_JL_DEV_ATTR_SET_CB set;$/;"	m	struct:__attr_	file:	access:public
+__attr_::set	extern/joylink_extern.c	/^    E_JL_DEV_ATTR_SET_CB set;$/;"	m	struct:__attr_	file:	access:public
+__dev_enable	joylink/joylink.h	/^typedef struct __dev_enable{$/;"	s
+__dev_enable::accesskey	joylink/joylink.h	/^    char accesskey[34];$/;"	m	struct:__dev_enable	access:public
+__dev_enable::cmd_tran_type	joylink/joylink.h	/^    char cmd_tran_type;$/;"	m	struct:__dev_enable	access:public
+__dev_enable::feedid	joylink/joylink.h	/^    char feedid[34];$/;"	m	struct:__dev_enable	access:public
+__dev_enable::joylink_server	joylink/joylink.h	/^    char joylink_server[JL_MAX_SERVER_NAME_LEN];$/;"	m	struct:__dev_enable	access:public
+__dev_enable::lancon	joylink/joylink.h	/^    char lancon;$/;"	m	struct:__dev_enable	access:public
+__dev_enable::localkey	joylink/joylink.h	/^    char localkey[34];$/;"	m	struct:__dev_enable	access:public
+__dev_enable::opt	joylink/joylink.h	/^    char opt[JL_MAX_SERVER_NAME_LEN];$/;"	m	struct:__dev_enable	access:public
+__dev_enable::server_port	joylink/joylink.h	/^    int server_port;$/;"	m	struct:__dev_enable	access:public
+__dev_info	example/joylink_dev.h	/^typedef struct __dev_info{$/;"	s
+__dev_info::down	example/joylink_dev.h	/^    int down[32];$/;"	m	struct:__dev_info	access:public
+__dev_info::ip	example/joylink_dev.h	/^    char ip[64];$/;"	m	struct:__dev_info	access:public
+__dev_info::last_on_time	example/joylink_dev.h	/^    char last_on_time[254];$/;"	m	struct:__dev_info	access:public
+__dev_info::mac	example/joylink_dev.h	/^    char mac[64];$/;"	m	struct:__dev_info	access:public
+__dev_info::name	example/joylink_dev.h	/^    char name[254];$/;"	m	struct:__dev_info	access:public
+__dev_info::up	example/joylink_dev.h	/^    int up[32];$/;"	m	struct:__dev_info	access:public
+__g_ekey	auth/joylink_crypt.c	/^JLEccContex_t __g_ekey = {0};$/;"	v
+__int8_t_defined	auth/stdint.h	35;"	d
+__intptr_t_defined	auth/stdint.h	120;"	d
+__intptr_t_defined	auth/stdint.h	126;"	d
+__join_packet	joylink/joylink_join_packet.c	/^typedef struct  __join_packet{$/;"	s	file:
+__join_packet	list/test.c	/^typedef struct  __join_packet{$/;"	s	file:
+__join_packet::current_count	joylink/joylink_join_packet.c	/^    int current_count;$/;"	m	struct:__join_packet	file:	access:public
+__join_packet::current_count	list/test.c	/^    int current_count;$/;"	m	struct:__join_packet	file:	access:public
+__join_packet::id	joylink/joylink_join_packet.c	/^    int id;$/;"	m	struct:__join_packet	file:	access:public
+__join_packet::id	list/test.c	/^    int id;$/;"	m	struct:__join_packet	file:	access:public
+__join_packet::is_run	joylink/joylink_join_packet.c	/^    int is_run;$/;"	m	struct:__join_packet	file:	access:public
+__join_packet::is_run	list/test.c	/^    int is_run;$/;"	m	struct:__join_packet	file:	access:public
+__join_packet::lhead	joylink/joylink_join_packet.c	/^    LHead_t lhead;$/;"	m	struct:__join_packet	file:	access:public
+__join_packet::lhead	list/test.c	/^    LHead_t lhead;$/;"	m	struct:__join_packet	file:	access:public
+__join_packet::name	joylink/joylink_join_packet.c	/^    char name[256];$/;"	m	struct:__join_packet	file:	access:public
+__join_packet::name	list/test.c	/^    char name[256];$/;"	m	struct:__join_packet	file:	access:public
+__join_packet::phead	joylink/joylink_join_packet.c	/^    JLPacketHead_t phead;$/;"	m	struct:__join_packet	file:	access:public
+__join_packet::phead	list/test.c	/^    JLPacketHead_t phead;$/;"	m	struct:__join_packet	file:	access:public
+__join_packet::total_len	joylink/joylink_join_packet.c	/^    int total_len;$/;"	m	struct:__join_packet	file:	access:public
+__join_packet::total_len	list/test.c	/^    int total_len;$/;"	m	struct:__join_packet	file:	access:public
+__lan_scan	joylink/joylink.h	/^typedef struct __lan_scan{$/;"	s
+__lan_scan::type	joylink/joylink.h	/^    E_ScanType_t type;$/;"	m	struct:__lan_scan	access:public
+__lan_scan::uuid	joylink/joylink.h	/^    char uuid[JL_MAX_UUID_LEN];$/;"	m	struct:__lan_scan	access:public
+__list_ret	list/joylink_list.h	/^typedef enum __list_ret{$/;"	g
+__s	joylink/test.c	/^typedef struct __s{$/;"	s	file:
+__s::i	joylink/test.c	/^    int i;$/;"	m	struct:__s	file:	access:public
+__s::name	joylink/test.c	/^    char name[24];$/;"	m	struct:__s	file:	access:public
+__scan_type	joylink/joylink.h	/^typedef enum __scan_type{$/;"	g
+__uint32_t_defined	auth/stdint.h	52;"	d
+__wifi_ctrl	example/joylink_dev.h	/^typedef struct __wifi_ctrl{$/;"	s
+__wifi_ctrl::_24g	example/joylink_dev.h	/^    WIFIInfo_t _24g;$/;"	m	struct:__wifi_ctrl	access:public
+__wifi_ctrl::_5g	example/joylink_dev.h	/^    WIFIInfo_t _5g;$/;"	m	struct:__wifi_ctrl	access:public
+__wifi_ctrl::cmd	example/joylink_dev.h	/^    char cmd;$/;"	m	struct:__wifi_ctrl	access:public
+__wifi_ctrl::downspeed	example/joylink_dev.h	/^    int downspeed;$/;"	m	struct:__wifi_ctrl	access:public
+__wifi_ctrl::online_state	example/joylink_dev.h	/^    char online_state;$/;"	m	struct:__wifi_ctrl	access:public
+__wifi_ctrl::upspeed	example/joylink_dev.h	/^    int upspeed;$/;"	m	struct:__wifi_ctrl	access:public
+__wifi_info	example/joylink_dev.h	/^typedef struct __wifi_info{$/;"	s
+__wifi_info::at	example/joylink_dev.h	/^    char at[254];$/;"	m	struct:__wifi_info	access:public
+__wifi_info::disabled	example/joylink_dev.h	/^    char disabled;$/;"	m	struct:__wifi_info	access:public
+__wifi_info::encryption	example/joylink_dev.h	/^    char encryption[254];$/;"	m	struct:__wifi_info	access:public
+__wifi_info::hidden	example/joylink_dev.h	/^    char hidden;$/;"	m	struct:__wifi_info	access:public
+__wifi_info::key	example/joylink_dev.h	/^    char key[254];$/;"	m	struct:__wifi_info	access:public
+__wifi_info::on	example/joylink_dev.h	/^    char on;$/;"	m	struct:__wifi_info	access:public
+__wifi_info::ssid	example/joylink_dev.h	/^    char ssid[254];$/;"	m	struct:__wifi_info	access:public
+_attr_manage_	example/joylink_extern.c	/^typedef struct _attr_manage_{$/;"	s	file:
+_attr_manage_	extern/joylink_extern.c	/^typedef struct _attr_manage_{$/;"	s	file:
+_attr_manage_::accesskey	example/joylink_extern.c	/^    Attr_t accesskey;$/;"	m	struct:_attr_manage_	file:	access:public
+_attr_manage_::accesskey	extern/joylink_extern.c	/^    Attr_t accesskey;$/;"	m	struct:_attr_manage_	file:	access:public
+_attr_manage_::feedid	example/joylink_extern.c	/^    Attr_t feedid;$/;"	m	struct:_attr_manage_	file:	access:public
+_attr_manage_::feedid	extern/joylink_extern.c	/^    Attr_t feedid;$/;"	m	struct:_attr_manage_	file:	access:public
+_attr_manage_::localkey	example/joylink_extern.c	/^    Attr_t localkey;$/;"	m	struct:_attr_manage_	file:	access:public
+_attr_manage_::localkey	extern/joylink_extern.c	/^    Attr_t localkey;$/;"	m	struct:_attr_manage_	file:	access:public
+_attr_manage_::macaddr	example/joylink_extern.c	/^	Attr_t macaddr;	$/;"	m	struct:_attr_manage_	file:	access:public
+_attr_manage_::macaddr	extern/joylink_extern.c	/^	Attr_t macaddr;	$/;"	m	struct:_attr_manage_	file:	access:public
+_attr_manage_::pass_word	extern/joylink_extern.c	/^	Attr_t pass_word;	$/;"	m	struct:_attr_manage_	file:	access:public
+_attr_manage_::server_info	example/joylink_extern.c	/^	Attr_t server_info;	$/;"	m	struct:_attr_manage_	file:	access:public
+_attr_manage_::server_info	extern/joylink_extern.c	/^	Attr_t server_info;	$/;"	m	struct:_attr_manage_	file:	access:public
+_attr_manage_::server_st	example/joylink_extern.c	/^    Attr_t server_st;$/;"	m	struct:_attr_manage_	file:	access:public
+_attr_manage_::server_st	extern/joylink_extern.c	/^    Attr_t server_st;$/;"	m	struct:_attr_manage_	file:	access:public
+_attr_manage_::ssid	extern/joylink_extern.c	/^	Attr_t ssid;	$/;"	m	struct:_attr_manage_	file:	access:public
+_attr_manage_::subdev	example/joylink_extern.c	/^    Attr_t subdev;$/;"	m	struct:_attr_manage_	file:	access:public
+_attr_manage_::subdev	extern/joylink_extern.c	/^    Attr_t subdev;$/;"	m	struct:_attr_manage_	file:	access:public
+_attr_manage_::uuid	example/joylink_extern.c	/^    Attr_t uuid;$/;"	m	struct:_attr_manage_	file:	access:public
+_attr_manage_::uuid	extern/joylink_extern.c	/^    Attr_t uuid;$/;"	m	struct:_attr_manage_	file:	access:public
+_attr_manage_::version	example/joylink_extern.c	/^	Attr_t version;	$/;"	m	struct:_attr_manage_	file:	access:public
+_attr_manage_::wlan24g	example/joylink_extern.c	/^    Attr_t wlan24g;$/;"	m	struct:_attr_manage_	file:	access:public
+_attr_manage_::wlan24g	extern/joylink_extern.c	/^    Attr_t wlan24g;$/;"	m	struct:_attr_manage_	file:	access:public
+_attr_manage_::wlanspeed	example/joylink_extern.c	/^    Attr_t wlanspeed;$/;"	m	struct:_attr_manage_	file:	access:public
+_attr_manage_::wlanspeed	extern/joylink_extern.c	/^    Attr_t wlanspeed;$/;"	m	struct:_attr_manage_	file:	access:public
+_bool_	joylink/joylink_ret_code.h	/^typedef enum _bool_{$/;"	g
+_cmd_type	joylink/joylink.h	/^typedef enum _cmd_type{$/;"	g
+_dev_state	joylink/joylink.h	/^typedef enum _dev_state{$/;"	g
+_dev_type	joylink/joylink.h	/^typedef enum _dev_type{$/;"	g
+_g_am	example/joylink_extern.c	/^WIFIManage_t _g_am, *_g_pam = &_g_am;$/;"	v
+_g_am	extern/joylink_extern.c	/^WIFIManage_t _g_am, *_g_pam = &_g_am;$/;"	v
+_g_dev	joylink/joylink_dev_sdk.c	/^JLDevice_t  _g_dev = {$/;"	v
+_g_jps	joylink/joylink_join_packet.c	/^JLJoinPacket_t _g_jps[JL_MAX_JOIN_PKG_ARRARY];$/;"	v
+_g_jps	list/test.c	/^JLJoinPacket_t _g_jps[JL_MAX_JOIN_PKG_ARRARY];$/;"	v
+_g_pam	example/joylink_extern.c	/^WIFIManage_t _g_am, *_g_pam = &_g_am;$/;"	v
+_g_pam	extern/joylink_extern.c	/^WIFIManage_t _g_am, *_g_pam = &_g_am;$/;"	v
+_g_pdev	joylink/joylink_dev_sdk.c	/^JLDevice_t  *_g_pdev = &_g_dev;$/;"	v
+_g_pwifi	example/joylink_extern.c	/^WIFICtrl_t *_g_pwifi = &_g_wifi;$/;"	v
+_g_sub_dev	example/joylink_extern_sub_dev.c	/^JLDevInfo_t _g_sub_dev[JL_MAX_SUB] = { $/;"	v
+_g_wifi	example/joylink_extern.c	/^WIFICtrl_t _g_wifi = {$/;"	v
+_id_node	list/joylink_list.h	/^typedef struct _id_node	$/;"	s
+_id_node::data	list/joylink_list.h	/^    void *data;$/;"	m	struct:_id_node	access:public
+_id_node::id	list/joylink_list.h	/^	int32_t	id;$/;"	m	struct:_id_node	access:public
+_id_node::len	list/joylink_list.h	/^    int32_t len;$/;"	m	struct:_id_node	access:public
+_id_node::list	list/joylink_list.h	/^	LHead_t	list;$/;"	m	struct:_id_node	access:public
+_lan_ctrl_type	joylink/joylink.h	/^typedef enum _lan_ctrl_type{$/;"	g
+_protocol_rec_st	joylink/joylink.h	/^typedef enum _protocol_rec_st{$/;"	g
+_ret_code	joylink/joylink_ret_code.h	/^typedef enum _ret_code{$/;"	g
+_tran_type	joylink/joylink.h	/^typedef enum _tran_type{$/;"	g
+accesskey	example/joylink_extern.c	/^    Attr_t accesskey;$/;"	m	struct:_attr_manage_	file:	access:public
+accesskey	extern/joylink_extern.c	/^    Attr_t accesskey;$/;"	m	struct:_attr_manage_	file:	access:public
+accesskey	joylink/joylink.h	/^	char accesskey[33];$/;"	m	struct:__anon16	access:public
+accesskey	joylink/joylink.h	/^    char accesskey[34];$/;"	m	struct:__dev_enable	access:public
+apply_z	auth/uECC.c	/^static void apply_z(uECC_word_t * RESTRICT X1,$/;"	f	file:	signature:(uECC_word_t * RESTRICT X1, uECC_word_t * RESTRICT Y1, const uECC_word_t * RESTRICT Z)
+asm_add	auth/uECC.c	12;"	d	file:
+asm_clear	auth/uECC.c	5;"	d	file:
+asm_cmp	auth/uECC.c	9;"	d	file:
+asm_isZero	auth/uECC.c	6;"	d	file:
+asm_mmod_fast	auth/uECC.c	19;"	d	file:
+asm_modAdd	auth/uECC.c	16;"	d	file:
+asm_modInv	auth/uECC.c	20;"	d	file:
+asm_modSub	auth/uECC.c	17;"	d	file:
+asm_modSub_fast	auth/uECC.c	18;"	d	file:
+asm_mult	auth/uECC.c	14;"	d	file:
+asm_numBits	auth/uECC.c	8;"	d	file:
+asm_rshift1	auth/uECC.c	11;"	d	file:
+asm_set	auth/uECC.c	10;"	d	file:
+asm_square	auth/uECC.c	15;"	d	file:
+asm_sub	auth/uECC.c	13;"	d	file:
+asm_testBit	auth/uECC.c	7;"	d	file:
+at	example/joylink_dev.h	/^    char at[254];$/;"	m	struct:__wifi_info	access:public
+bitcount_t	auth/uECC.c	/^typedef int bitcount_t;$/;"	t	file:
+bitcount_t	auth/uECC.c	/^typedef int16_t bitcount_t;$/;"	t	file:
+biz_code	joylink/joylink.h	/^	unsigned int biz_code;$/;"	m	struct:__anon23	access:public
+biz_code	joylink/joylink.h	/^	unsigned int biz_code;$/;"	m	struct:__anon24	access:public
+biz_code	joylink/joylink_sub_dev.h	/^	unsigned int    biz_code;$/;"	m	struct:__anon9	access:public
+biz_code	joylink/joylink_sub_dev.h	/^	unsigned int biz_code;$/;"	m	struct:__anon8	access:public
+block_size	auth/uECC.h	/^    unsigned block_size; \/* Hash function block size in bytes, eg 64 for SHA-256. *\/$/;"	m	struct:uECC_HashContext	access:public
+buf	auth/joylinkAES.c	/^    unsigned long buf[68];      \/*!<  unaligned data    *\/$/;"	m	struct:__anon37	file:	access:public
+buffer	auth/md5.h	/^    unsigned char buffer[64];   $/;"	m	struct:__anon36	access:public
+cJSON	json/cJSON.h	/^typedef struct cJSON {$/;"	s
+cJSON	json/cJSON.h	/^} cJSON;$/;"	t	typeref:struct:cJSON
+cJSON::child	json/cJSON.h	/^	struct cJSON *child;		\/* An array or object item will have a child pointer pointing to a chain of the items in the array\/object. *\/$/;"	m	struct:cJSON	typeref:struct:cJSON::cJSON	access:public
+cJSON::next	json/cJSON.h	/^	struct cJSON *next,*prev;	\/* next\/prev allow you to walk array\/object chains. Alternatively, use GetArraySize\/GetArrayItem\/GetObjectItem *\/$/;"	m	struct:cJSON	typeref:struct:cJSON::cJSON	access:public
+cJSON::prev	json/cJSON.h	/^	struct cJSON *next,*prev;	\/* next\/prev allow you to walk array\/object chains. Alternatively, use GetArraySize\/GetArrayItem\/GetObjectItem *\/$/;"	m	struct:cJSON	typeref:struct:cJSON::	access:public
+cJSON::string	json/cJSON.h	/^	char *string;				\/* The item's name string, if this item is the child of, or is in the list of subitems of an object. *\/$/;"	m	struct:cJSON	access:public
+cJSON::type	json/cJSON.h	/^	int type;					\/* The type of the item, as above. *\/$/;"	m	struct:cJSON	access:public
+cJSON::valuedouble	json/cJSON.h	/^	double valuedouble;			\/* The item's number, if type==cJSON_Number *\/$/;"	m	struct:cJSON	access:public
+cJSON::valueint	json/cJSON.h	/^	int valueint;				\/* The item's number, if type==cJSON_Number *\/$/;"	m	struct:cJSON	access:public
+cJSON::valuestring	json/cJSON.h	/^	char *valuestring;			\/* The item's string, if type==cJSON_String *\/$/;"	m	struct:cJSON	access:public
+cJSON_AddBoolToObject	json/cJSON.h	130;"	d
+cJSON_AddFalseToObject	json/cJSON.h	129;"	d
+cJSON_AddItemReferenceToArray	json/cJSON.c	/^void	cJSON_AddItemReferenceToArray(cJSON *array, cJSON *item)						{cJSON_AddItemToArray(array,create_reference(item));}$/;"	f	signature:(cJSON *array, cJSON *item)
+cJSON_AddItemReferenceToArray	json/cJSON.h	/^extern void cJSON_AddItemReferenceToArray(cJSON *array, cJSON *item);$/;"	p	signature:(cJSON *array, cJSON *item)
+cJSON_AddItemReferenceToObject	json/cJSON.c	/^void	cJSON_AddItemReferenceToObject(cJSON *object,const char *string,cJSON *item)	{cJSON_AddItemToObject(object,string,create_reference(item));}$/;"	f	signature:(cJSON *object,const char *string,cJSON *item)
+cJSON_AddItemReferenceToObject	json/cJSON.h	/^extern void	cJSON_AddItemReferenceToObject(cJSON *object,const char *string,cJSON *item);$/;"	p	signature:(cJSON *object,const char *string,cJSON *item)
+cJSON_AddItemToArray	json/cJSON.c	/^void   cJSON_AddItemToArray(cJSON *array, cJSON *item)						{cJSON *c=array->child;if (!item) return; if (!c) {array->child=item;} else {while (c && c->next) c=c->next; suffix_object(c,item);}}$/;"	f	signature:(cJSON *array, cJSON *item)
+cJSON_AddItemToArray	json/cJSON.h	/^extern void cJSON_AddItemToArray(cJSON *array, cJSON *item);$/;"	p	signature:(cJSON *array, cJSON *item)
+cJSON_AddItemToObject	json/cJSON.c	/^void   cJSON_AddItemToObject(cJSON *object,const char *string,cJSON *item)	{if (!item) return; if (item->string) cJSON_free(item->string);item->string=cJSON_strdup(string);cJSON_AddItemToArray(object,item);}$/;"	f	signature:(cJSON *object,const char *string,cJSON *item)
+cJSON_AddItemToObject	json/cJSON.h	/^extern void	cJSON_AddItemToObject(cJSON *object,const char *string,cJSON *item);$/;"	p	signature:(cJSON *object,const char *string,cJSON *item)
+cJSON_AddNullToObject	json/cJSON.h	127;"	d
+cJSON_AddNumberToObject	json/cJSON.h	131;"	d
+cJSON_AddStringToObject	json/cJSON.h	132;"	d
+cJSON_AddTrueToObject	json/cJSON.h	128;"	d
+cJSON_Array	json/cJSON.h	37;"	d
+cJSON_CreateArray	json/cJSON.c	/^cJSON *cJSON_CreateArray(void)					{cJSON *item=cJSON_New_Item();if(item)item->type=cJSON_Array;return item;}$/;"	f	signature:(void)
+cJSON_CreateArray	json/cJSON.h	/^extern cJSON *cJSON_CreateArray(void);$/;"	p	signature:(void)
+cJSON_CreateBool	json/cJSON.c	/^cJSON *cJSON_CreateBool(int b)					{cJSON *item=cJSON_New_Item();if(item)item->type=b?cJSON_True:cJSON_False;return item;}$/;"	f	signature:(int b)
+cJSON_CreateBool	json/cJSON.h	/^extern cJSON *cJSON_CreateBool(int b);$/;"	p	signature:(int b)
+cJSON_CreateDoubleArray	json/cJSON.c	/^cJSON *cJSON_CreateDoubleArray(double *numbers,int count)		{int i;cJSON *n=0,*p=0,*a=cJSON_CreateArray();for(i=0;a && i<count;i++){n=cJSON_CreateNumber(numbers[i]);if(!i)a->child=n;else suffix_object(p,n);p=n;}return a;}$/;"	f	signature:(double *numbers,int count)
+cJSON_CreateDoubleArray	json/cJSON.h	/^extern cJSON *cJSON_CreateDoubleArray(double *numbers,int count);$/;"	p	signature:(double *numbers,int count)
+cJSON_CreateFalse	json/cJSON.c	/^cJSON *cJSON_CreateFalse(void)					{cJSON *item=cJSON_New_Item();if(item)item->type=cJSON_False;return item;}$/;"	f	signature:(void)
+cJSON_CreateFalse	json/cJSON.h	/^extern cJSON *cJSON_CreateFalse(void);$/;"	p	signature:(void)
+cJSON_CreateFloatArray	json/cJSON.c	/^cJSON *cJSON_CreateFloatArray(float *numbers,int count)			{int i;cJSON *n=0,*p=0,*a=cJSON_CreateArray();for(i=0;a && i<count;i++){n=cJSON_CreateNumber(numbers[i]);if(!i)a->child=n;else suffix_object(p,n);p=n;}return a;}$/;"	f	signature:(float *numbers,int count)
+cJSON_CreateFloatArray	json/cJSON.h	/^extern cJSON *cJSON_CreateFloatArray(float *numbers,int count);$/;"	p	signature:(float *numbers,int count)
+cJSON_CreateIntArray	json/cJSON.c	/^cJSON *cJSON_CreateIntArray(int *numbers,int count)				{int i;cJSON *n=0,*p=0,*a=cJSON_CreateArray();for(i=0;a && i<count;i++){n=cJSON_CreateNumber(numbers[i]);if(!i)a->child=n;else suffix_object(p,n);p=n;}return a;}$/;"	f	signature:(int *numbers,int count)
+cJSON_CreateIntArray	json/cJSON.h	/^extern cJSON *cJSON_CreateIntArray(int *numbers,int count);$/;"	p	signature:(int *numbers,int count)
+cJSON_CreateNull	json/cJSON.c	/^cJSON *cJSON_CreateNull(void)					{cJSON *item=cJSON_New_Item();if(item)item->type=cJSON_NULL;return item;}$/;"	f	signature:(void)
+cJSON_CreateNull	json/cJSON.h	/^extern cJSON *cJSON_CreateNull(void);$/;"	p	signature:(void)
+cJSON_CreateNumber	json/cJSON.c	/^cJSON *cJSON_CreateNumber(double num)			{cJSON *item=cJSON_New_Item();if(item){item->type=cJSON_Number;item->valuedouble=num;item->valueint=(int)num;}return item;}$/;"	f	signature:(double num)
+cJSON_CreateNumber	json/cJSON.h	/^extern cJSON *cJSON_CreateNumber(double num);$/;"	p	signature:(double num)
+cJSON_CreateObject	json/cJSON.c	/^cJSON *cJSON_CreateObject(void)					{cJSON *item=cJSON_New_Item();if(item)item->type=cJSON_Object;return item;}$/;"	f	signature:(void)
+cJSON_CreateObject	json/cJSON.h	/^extern cJSON *cJSON_CreateObject(void);$/;"	p	signature:(void)
+cJSON_CreateString	json/cJSON.c	/^cJSON *cJSON_CreateString(const char *string)	{cJSON *item=cJSON_New_Item();if(item){item->type=cJSON_String;item->valuestring=cJSON_strdup(string);}return item;}$/;"	f	signature:(const char *string)
+cJSON_CreateString	json/cJSON.h	/^extern cJSON *cJSON_CreateString(const char *string);$/;"	p	signature:(const char *string)
+cJSON_CreateStringArray	json/cJSON.c	/^cJSON *cJSON_CreateStringArray(const char **strings,int count)	{int i;cJSON *n=0,*p=0,*a=cJSON_CreateArray();for(i=0;a && i<count;i++){n=cJSON_CreateString(strings[i]);if(!i)a->child=n;else suffix_object(p,n);p=n;}return a;}$/;"	f	signature:(const char **strings,int count)
+cJSON_CreateStringArray	json/cJSON.h	/^extern cJSON *cJSON_CreateStringArray(const char **strings,int count);$/;"	p	signature:(const char **strings,int count)
+cJSON_CreateTrue	json/cJSON.c	/^cJSON *cJSON_CreateTrue(void)					{cJSON *item=cJSON_New_Item();if(item)item->type=cJSON_True;return item;}$/;"	f	signature:(void)
+cJSON_CreateTrue	json/cJSON.h	/^extern cJSON *cJSON_CreateTrue(void);$/;"	p	signature:(void)
+cJSON_Delete	json/cJSON.c	/^void cJSON_Delete(cJSON *c)$/;"	f	signature:(cJSON *c)
+cJSON_Delete	json/cJSON.h	/^extern void   cJSON_Delete(cJSON *c);$/;"	p	signature:(cJSON *c)
+cJSON_DeleteItemFromArray	json/cJSON.c	/^void   cJSON_DeleteItemFromArray(cJSON *array,int which)			{cJSON_Delete(cJSON_DetachItemFromArray(array,which));}$/;"	f	signature:(cJSON *array,int which)
+cJSON_DeleteItemFromArray	json/cJSON.h	/^extern void   cJSON_DeleteItemFromArray(cJSON *array,int which);$/;"	p	signature:(cJSON *array,int which)
+cJSON_DeleteItemFromObject	json/cJSON.c	/^void   cJSON_DeleteItemFromObject(cJSON *object,const char *string) {cJSON_Delete(cJSON_DetachItemFromObject(object,string));}$/;"	f	signature:(cJSON *object,const char *string)
+cJSON_DeleteItemFromObject	json/cJSON.h	/^extern void   cJSON_DeleteItemFromObject(cJSON *object,const char *string);$/;"	p	signature:(cJSON *object,const char *string)
+cJSON_DetachItemFromArray	json/cJSON.c	/^cJSON *cJSON_DetachItemFromArray(cJSON *array,int which)			{cJSON *c=array->child;while (c && which>0) c=c->next,which--;if (!c) return 0;$/;"	f	signature:(cJSON *array,int which)
+cJSON_DetachItemFromArray	json/cJSON.h	/^extern cJSON *cJSON_DetachItemFromArray(cJSON *array,int which);$/;"	p	signature:(cJSON *array,int which)
+cJSON_DetachItemFromObject	json/cJSON.c	/^cJSON *cJSON_DetachItemFromObject(cJSON *object,const char *string) {int i=0;cJSON *c=object->child;while (c && cJSON_strcasecmp(c->string,string)) i++,c=c->next;if (c) return cJSON_DetachItemFromArray(object,i);return 0;}$/;"	f	signature:(cJSON *object,const char *string)
+cJSON_DetachItemFromObject	json/cJSON.h	/^extern cJSON *cJSON_DetachItemFromObject(cJSON *object,const char *string);$/;"	p	signature:(cJSON *object,const char *string)
+cJSON_Duplicate	json/cJSON.c	/^cJSON *cJSON_Duplicate(cJSON *item,int recurse)$/;"	f	signature:(cJSON *item,int recurse)
+cJSON_Duplicate	json/cJSON.h	/^extern cJSON *cJSON_Duplicate(cJSON *item,int recurse);$/;"	p	signature:(cJSON *item,int recurse)
+cJSON_False	json/cJSON.h	32;"	d
+cJSON_GetArrayItem	json/cJSON.c	/^cJSON *cJSON_GetArrayItem(cJSON *array,int item)				{cJSON *c=array->child;  while (c && item>0) item--,c=c->next; return c;}$/;"	f	signature:(cJSON *array,int item)
+cJSON_GetArrayItem	json/cJSON.h	/^extern cJSON *cJSON_GetArrayItem(cJSON *array,int item);$/;"	p	signature:(cJSON *array,int item)
+cJSON_GetArraySize	json/cJSON.c	/^int    cJSON_GetArraySize(cJSON *array)							{cJSON *c=array->child;int i=0;while(c)i++,c=c->next;return i;}$/;"	f	signature:(cJSON *array)
+cJSON_GetArraySize	json/cJSON.h	/^extern int	  cJSON_GetArraySize(cJSON *array);$/;"	p	signature:(cJSON *array)
+cJSON_GetErrorPtr	json/cJSON.c	/^const char *cJSON_GetErrorPtr(void) {return ep;}$/;"	f	signature:(void)
+cJSON_GetErrorPtr	json/cJSON.h	/^extern const char *cJSON_GetErrorPtr(void);$/;"	p	signature:(void)
+cJSON_GetObjectItem	json/cJSON.c	/^cJSON *cJSON_GetObjectItem(cJSON *object,const char *string)	{cJSON *c=object->child; while (c && cJSON_strcasecmp(c->string,string)) c=c->next; return c;}$/;"	f	signature:(cJSON *object,const char *string)
+cJSON_GetObjectItem	json/cJSON.h	/^extern cJSON *cJSON_GetObjectItem(cJSON *object,const char *string);$/;"	p	signature:(cJSON *object,const char *string)
+cJSON_Hooks	json/cJSON.h	/^typedef struct cJSON_Hooks {$/;"	s
+cJSON_Hooks	json/cJSON.h	/^} cJSON_Hooks;$/;"	t	typeref:struct:cJSON_Hooks
+cJSON_Hooks::free_fn	json/cJSON.h	/^      void (*free_fn)(void *ptr);$/;"	m	struct:cJSON_Hooks	access:public
+cJSON_Hooks::malloc_fn	json/cJSON.h	/^      void *(*malloc_fn)(size_t sz);$/;"	m	struct:cJSON_Hooks	access:public
+cJSON_InitHooks	json/cJSON.c	/^void cJSON_InitHooks(cJSON_Hooks* hooks)$/;"	f	signature:(cJSON_Hooks* hooks)
+cJSON_InitHooks	json/cJSON.h	/^extern void cJSON_InitHooks(cJSON_Hooks* hooks);$/;"	p	signature:(cJSON_Hooks* hooks)
+cJSON_IsReference	json/cJSON.h	40;"	d
+cJSON_NULL	json/cJSON.h	34;"	d
+cJSON_New_Item	json/cJSON.c	/^static cJSON *cJSON_New_Item(void)$/;"	f	file:	signature:(void)
+cJSON_Number	json/cJSON.h	35;"	d
+cJSON_Object	json/cJSON.h	38;"	d
+cJSON_Parse	json/cJSON.c	/^cJSON *cJSON_Parse(const char *value) {return cJSON_ParseWithOpts(value,0,0);}$/;"	f	signature:(const char *value)
+cJSON_Parse	json/cJSON.h	/^extern cJSON *cJSON_Parse(const char *value);$/;"	p	signature:(const char *value)
+cJSON_ParseWithOpts	json/cJSON.c	/^cJSON *cJSON_ParseWithOpts(const char *value,const char **return_parse_end,int require_null_terminated)$/;"	f	signature:(const char *value,const char **return_parse_end,int require_null_terminated)
+cJSON_ParseWithOpts	json/cJSON.h	/^extern cJSON *cJSON_ParseWithOpts(const char *value,const char **return_parse_end,int require_null_terminated);$/;"	p	signature:(const char *value,const char **return_parse_end,int require_null_terminated)
+cJSON_Print	json/cJSON.c	/^char *cJSON_Print(cJSON *item)				{ return print_value(item,0,1);}$/;"	f	signature:(cJSON *item)
+cJSON_Print	json/cJSON.h	/^extern char  *cJSON_Print(cJSON *item);$/;"	p	signature:(cJSON *item)
+cJSON_PrintUnformatted	json/cJSON.c	/^char *cJSON_PrintUnformatted(cJSON *item)	{return print_value(item,0,0);}$/;"	f	signature:(cJSON *item)
+cJSON_PrintUnformatted	json/cJSON.h	/^extern char  *cJSON_PrintUnformatted(cJSON *item);$/;"	p	signature:(cJSON *item)
+cJSON_ReplaceItemInArray	json/cJSON.c	/^void   cJSON_ReplaceItemInArray(cJSON *array,int which,cJSON *newitem)		{cJSON *c=array->child;while (c && which>0) c=c->next,which--;if (!c) return;$/;"	f	signature:(cJSON *array,int which,cJSON *newitem)
+cJSON_ReplaceItemInArray	json/cJSON.h	/^extern void cJSON_ReplaceItemInArray(cJSON *array,int which,cJSON *newitem);$/;"	p	signature:(cJSON *array,int which,cJSON *newitem)
+cJSON_ReplaceItemInObject	json/cJSON.c	/^void   cJSON_ReplaceItemInObject(cJSON *object,const char *string,cJSON *newitem){int i=0;cJSON *c=object->child;while(c && cJSON_strcasecmp(c->string,string))i++,c=c->next;if(c){newitem->string=cJSON_strdup(string);cJSON_ReplaceItemInArray(object,i,newitem);}}$/;"	f	signature:(cJSON *object,const char *string,cJSON *newitem)
+cJSON_ReplaceItemInObject	json/cJSON.h	/^extern void cJSON_ReplaceItemInObject(cJSON *object,const char *string,cJSON *newitem);$/;"	p	signature:(cJSON *object,const char *string,cJSON *newitem)
+cJSON_SetIntValue	json/cJSON.h	135;"	d
+cJSON_String	json/cJSON.h	36;"	d
+cJSON_True	json/cJSON.h	33;"	d
+cJSON__h	json/cJSON.h	24;"	d
+cJSON_free	json/cJSON.c	/^static void (*cJSON_free)(void *ptr) = free;$/;"	v	file:
+cJSON_malloc	json/cJSON.c	/^static void *(*cJSON_malloc)(size_t sz) = malloc;$/;"	v	file:
+cJSON_strcasecmp	json/cJSON.c	/^static int cJSON_strcasecmp(const char *s1,const char *s2)$/;"	f	file:	signature:(const char *s1,const char *s2)
+cJSON_strdup	json/cJSON.c	/^static char* cJSON_strdup(const char* str)$/;"	f	file:	signature:(const char* str)
+checksum	joylink/joylink.h	/^	unsigned char checksum;$/;"	m	struct:__anon10	access:public
+child	json/cJSON.h	/^	struct cJSON *child;		\/* An array or object item will have a child pointer pointing to a chain of the items in the array\/object. *\/$/;"	m	struct:cJSON	typeref:struct:cJSON::cJSON	access:public
+cmd	example/joylink_dev.h	/^    char cmd;$/;"	m	struct:__wifi_ctrl	access:public
+cmd	joylink/joylink.h	/^	unsigned char cmd[2];$/;"	m	struct:__anon11	access:public
+cmd	joylink/joylink.h	/^	unsigned char cmd[];$/;"	m	struct:__anon23	access:public
+cmd	joylink/joylink_sub_dev.h	/^	unsigned char *cmd;$/;"	m	struct:__anon8	access:public
+cmd_tran_type	joylink/joylink.h	/^	int cmd_tran_type;			\/\/ (0:bin, 1:Lua, 2:Js)$/;"	m	struct:__anon16	access:public
+cmd_tran_type	joylink/joylink.h	/^    char cmd_tran_type;$/;"	m	struct:__dev_enable	access:public
+cmpresult_t	auth/uECC.c	/^typedef int cmpresult_t;$/;"	t	file:
+cmpresult_t	auth/uECC.c	/^typedef int8_t cmpresult_t;$/;"	t	file:
+code	joylink/joylink.h	/^	int code;$/;"	m	struct:__anon29	access:public
+code	joylink/joylink.h	/^	unsigned int code;$/;"	m	struct:__anon22	access:public
+code	joylink/joylink.h	/^	unsigned int code;$/;"	m	struct:__anon26	access:public
+code	joylink/joylink_sub_dev.h	/^	unsigned int	code;$/;"	m	struct:__anon4	access:public
+code	joylink/joylink_sub_dev.h	/^	unsigned int code;$/;"	m	struct:__anon5	access:public
+count	auth/md5.h	/^    unsigned int count[2];$/;"	m	struct:__anon36	access:public
+crc	joylink/joylink.h	/^	unsigned short	crc;$/;"	m	struct:__anon12	access:public
+crc32	joylink/joylink.h	/^    unsigned int crc32;$/;"	m	struct:__anon16	access:public
+crc32	joylink/joylink.h	/^    unsigned int crc32;$/;"	m	struct:__anon27	access:public
+crc32_table	auth/crc.c	/^uint32_t crc32_table[256];$/;"	v
+crc8	auth/crc.c	/^unsigned char crc8(unsigned char *A,unsigned char n)$/;"	f	signature:(unsigned char *A,unsigned char n)
+crc8	auth/crc.h	/^unsigned char crc8(unsigned char *A, unsigned char n);$/;"	p	signature:(unsigned char *A, unsigned char n)
+create_project_path	once.sh	/^create_project_path()$/;"	f
+create_reference	json/cJSON.c	/^static cJSON *create_reference(cJSON *item) {cJSON *ref=cJSON_New_Item();if (!ref) return 0;memcpy(ref,item,sizeof(cJSON));ref->string=0;ref->type|=cJSON_IsReference;ref->next=ref->prev=0;return ref;}$/;"	f	file:	signature:(cJSON *item)
+current_count	joylink/joylink_join_packet.c	/^    int current_count;$/;"	m	struct:__join_packet	file:	access:public
+current_count	list/test.c	/^    int current_count;$/;"	m	struct:__join_packet	file:	access:public
+curve_G	auth/uECC.c	/^static const EccPoint curve_G = uECC_CONCAT(Curve_G_, uECC_CURVE);$/;"	v	file:
+curve_b	auth/uECC.c	/^static const uECC_word_t curve_b[uECC_WORDS] = uECC_CONCAT(Curve_B_, uECC_CURVE);$/;"	v	file:
+curve_n	auth/uECC.c	/^static const uECC_word_t curve_n[uECC_N_WORDS] = uECC_CONCAT(Curve_N_, uECC_CURVE);$/;"	v	file:
+curve_p	auth/uECC.c	/^static const uECC_word_t curve_p[uECC_WORDS] = uECC_CONCAT(Curve_P_, uECC_CURVE);$/;"	v	file:
+curve_x_side	auth/uECC.c	/^static void curve_x_side(uECC_word_t * RESTRICT result, const uECC_word_t * RESTRICT x) {$/;"	f	file:	signature:(uECC_word_t * RESTRICT result, const uECC_word_t * RESTRICT x)
+data	joylink/joylink.h	/^    unsigned char data[2];$/;"	m	struct:__anon25	access:public
+data	joylink/joylink.h	/^    void *data;$/;"	m	struct:__anon18	access:public
+data	list/joylink_list.h	/^    void *data;$/;"	m	struct:_id_node	access:public
+decode	lua/example.lua	/^function decode( cmd )$/;"	f
+default_RNG	auth/uECC.c	/^static int default_RNG(uint8_t *dest, unsigned size) {$/;"	f	file:	signature:(uint8_t *dest, unsigned size)
+devPubKey	auth/joylink_crypt.h	/^	uint8_t devPubKey[uECC_BYTES * 2];$/;"	m	struct:__anon30	access:public
+devPubKeyC	auth/joylink_crypt.h	/^	uint8_t devPubKeyC[uECC_BYTES + 1];$/;"	m	struct:__anon30	access:public
+dev_detail	joylink/joylink.h	/^    uint8_t dev_detail[JL_MAX_PACKET_LEN];$/;"	m	struct:__anon17	access:public
+devdbg	joylink/joylink.h	/^	char devdbg[JL_MAX_DBG_LEN];$/;"	m	struct:__anon16	access:public
+device_aes_decrypt	auth/aes.c	/^int device_aes_decrypt(const uint8_t * key, int keyLength, const uint8_t * iv, const uint8_t *pEncIn, int encLength, uint8_t *pPlainOut, int maxOutLen)$/;"	f	signature:(const uint8_t * key, int keyLength, const uint8_t * iv, const uint8_t *pEncIn, int encLength, uint8_t *pPlainOut, int maxOutLen)
+device_aes_decrypt	auth/aes.h	/^int device_aes_decrypt(const uint8_t * key, int keyLength, const uint8_t * iv, const uint8_t *pEncIn, int encLength, uint8_t *pPlainOut, int maxOutLen);$/;"	p	signature:(const uint8_t * key, int keyLength, const uint8_t * iv, const uint8_t *pEncIn, int encLength, uint8_t *pPlainOut, int maxOutLen)
+device_aes_decrypt	auth/joylinkAES.c	/^int device_aes_decrypt(const UINT8 * key, int keyLength, $/;"	f	signature:(const UINT8 * key, int keyLength, const UINT8 * iv, const UINT8 *pEncIn, int encLength, UINT8 *pPlainOut, int maxOutLen)
+device_aes_encrypt	auth/aes.c	/^int device_aes_encrypt(const uint8_t * key, int keyLength, const uint8_t * iv, const uint8_t *pPlainIn, int plainLength, uint8_t *pEncOut, int maxOutLen)$/;"	f	signature:(const uint8_t * key, int keyLength, const uint8_t * iv, const uint8_t *pPlainIn, int plainLength, uint8_t *pEncOut, int maxOutLen)
+device_aes_encrypt	auth/aes.h	/^int device_aes_encrypt(const uint8_t * key, int keyLength, $/;"	p	signature:(const uint8_t * key, int keyLength, const uint8_t * iv, const uint8_t *pPlainIn, int plainLength, uint8_t *pEncOut, int maxOutLen)
+device_aes_encrypt	auth/joylinkAES.c	/^int device_aes_encrypt(const UINT8 * key, int keyLength,$/;"	f	signature:(const UINT8 * key, int keyLength, const UINT8 * iv, const UINT8 *pPlainIn, int plainLength, UINT8 *pEncOut, int maxOutLen)
+device_name	example/joylink_dev.h	/^    char device_name[256];$/;"	m	struct:__anon1	access:public
+devtype	joylink/joylink.h	/^    int devtype;$/;"	m	struct:__anon16	access:public
+disabled	example/joylink_dev.h	/^    char disabled;$/;"	m	struct:__wifi_info	access:public
+down	example/joylink_dev.h	/^    int down;$/;"	m	struct:__anon1	access:public
+down	example/joylink_dev.h	/^    int down[32];$/;"	m	struct:__dev_info	access:public
+downspeed	example/joylink_dev.h	/^    int downspeed;$/;"	m	struct:__wifi_ctrl	access:public
+encryption	example/joylink_dev.h	/^    char encryption[254];$/;"	m	struct:__wifi_info	access:public
+enctype	joylink/joylink.h	/^	unsigned char	enctype;$/;"	m	struct:__anon12	access:public
+enctype	joylink/joylink.h	/^	unsigned int enctype;$/;"	m	struct:__anon10	access:public
+ep	json/cJSON.c	/^static const char *ep;$/;"	v	file:
+feedid	example/joylink_extern.c	/^    Attr_t feedid;$/;"	m	struct:_attr_manage_	file:	access:public
+feedid	extern/joylink_extern.c	/^    Attr_t feedid;$/;"	m	struct:_attr_manage_	file:	access:public
+feedid	joylink/joylink.h	/^	char feedid[JL_MAX_FEEDID_LEN];$/;"	m	struct:__anon16	access:public
+feedid	joylink/joylink.h	/^    char feedid[34];$/;"	m	struct:__dev_enable	access:public
+feedid	joylink/joylink.h	/^    char feedid[JL_MAX_FEEDID_LEN];$/;"	m	struct:__anon23	access:public
+feedid	joylink/joylink.h	/^    char feedid[JL_MAX_FEEDID_LEN];$/;"	m	struct:__anon27	access:public
+feedid	joylink/joylink.h	/^    char feedid[JL_MAX_FEEDID_LEN];$/;"	m	struct:__anon28	access:public
+feedid	joylink/joylink_sub_dev.h	/^	unsigned char 	feedid[JL_MAX_FEEDID_LEN];$/;"	m	struct:__anon6	access:public
+feedid	joylink/joylink_sub_dev.h	/^	unsigned char feedid[JL_MAX_FEEDID_LEN];$/;"	m	struct:__anon5	access:public
+feedid	joylink/joylink_sub_dev.h	/^    char feedid [JL_MAX_FEEDID_LEN];$/;"	m	struct:__anon8	access:public
+finish_hash	auth/uECC.h	/^    void (*finish_hash)(struct uECC_HashContext *context, uint8_t *hash_result);$/;"	m	struct:uECC_HashContext	access:public
+firstByteMark	json/cJSON.c	/^static const unsigned char firstByteMark[7] = { 0x00, 0x00, 0xC0, 0xE0, 0xF0, 0xF8, 0xFC };$/;"	v	file:
+free_fn	json/cJSON.h	/^      void (*free_fn)(void *ptr);$/;"	m	struct:cJSON_Hooks	access:public
+g_rng_function	auth/uECC.c	/^static uECC_RNG_Function g_rng_function = &default_RNG;$/;"	v	file:
+get	example/joylink_extern.c	/^    E_JL_DEV_ATTR_GET_CB get;$/;"	m	struct:__attr_	file:	access:public
+get	extern/joylink_extern.c	/^    E_JL_DEV_ATTR_GET_CB get;$/;"	m	struct:__attr_	file:	access:public
+hb_lost_count	joylink/joylink.h	/^    int hb_lost_count;$/;"	m	struct:__anon17	access:public
+hidden	example/joylink_dev.h	/^    char hidden;$/;"	m	struct:__wifi_info	access:public
+i	joylink/test.c	/^    int i;$/;"	m	struct:__s	file:	access:public
+id	joylink/joylink_join_packet.c	/^    int id;$/;"	m	struct:__join_packet	file:	access:public
+id	list/joylink_list.h	/^	int32_t	id;$/;"	m	struct:_id_node	access:public
+id	list/test.c	/^    int id;$/;"	m	struct:__join_packet	file:	access:public
+index	joylink/joylink.h	/^	unsigned char	index;$/;"	m	struct:__anon12	access:public
+info	joylink/joylink_sub_dev.h	/^	JLSubDevInfo_t 	*info;$/;"	m	struct:__anon9	access:public
+init_hash	auth/uECC.h	/^    void (*init_hash)(struct uECC_HashContext *context);$/;"	m	struct:uECC_HashContext	access:public
+int16_t	auth/stdint.h	/^typedef short int		int16_t;$/;"	t
+int32_t	auth/stdint.h	/^typedef int			int32_t;$/;"	t
+int64_t	auth/stdint.h	/^typedef long int		int64_t;$/;"	t
+int64_t	auth/stdint.h	/^typedef long long int		int64_t;$/;"	t
+int8_t	auth/stdint.h	/^typedef signed char		int8_t;$/;"	t
+int_fast16_t	auth/stdint.h	/^typedef int			int_fast16_t;$/;"	t
+int_fast16_t	auth/stdint.h	/^typedef long int		int_fast16_t;$/;"	t
+int_fast32_t	auth/stdint.h	/^typedef int			int_fast32_t;$/;"	t
+int_fast32_t	auth/stdint.h	/^typedef long int		int_fast32_t;$/;"	t
+int_fast64_t	auth/stdint.h	/^typedef long int		int_fast64_t;$/;"	t
+int_fast64_t	auth/stdint.h	/^typedef long long int		int_fast64_t;$/;"	t
+int_fast8_t	auth/stdint.h	/^typedef signed char		int_fast8_t;$/;"	t
+int_least16_t	auth/stdint.h	/^typedef short int		int_least16_t;$/;"	t
+int_least32_t	auth/stdint.h	/^typedef int			int_least32_t;$/;"	t
+int_least64_t	auth/stdint.h	/^typedef long int		int_least64_t;$/;"	t
+int_least64_t	auth/stdint.h	/^typedef long long int		int_least64_t;$/;"	t
+int_least8_t	auth/stdint.h	/^typedef signed char		int_least8_t;$/;"	t
+intmax_t	auth/stdint.h	/^typedef long int		intmax_t;$/;"	t
+intmax_t	auth/stdint.h	/^typedef long long int		intmax_t;$/;"	t
+intptr_t	auth/stdint.h	/^typedef int			intptr_t;$/;"	t
+intptr_t	auth/stdint.h	/^typedef long int		intptr_t;$/;"	t
+ip	example/joylink_dev.h	/^    char ip[64];$/;"	m	struct:__anon1	access:public
+ip	example/joylink_dev.h	/^    char ip[64];$/;"	m	struct:__dev_info	access:public
+ip	joylink/joylink.h	/^	char ip[JL_MAX_IP_LEN];$/;"	m	struct:__anon16	access:public
+isInited	auth/joylink_crypt.h	/^	int isInited;$/;"	m	struct:__anon30	access:public
+isUsed	joylink/joylink.h	/^	int	isUsed;$/;"	m	struct:__anon16	access:public
+is_joylink_idnode_exist	list/joylink_list.c	/^is_joylink_idnode_exist(int32_t id, LHead_t *lhead)$/;"	f	signature:(int32_t id, LHead_t *lhead)
+is_joylink_idnode_exist	list/joylink_list.h	/^int32_t is_joylink_idnode_exist(int32_t id, LHead_t *lhead);$/;"	p	signature:(int32_t id, LHead_t *lhead)
+is_run	joylink/joylink_join_packet.c	/^    int is_run;$/;"	m	struct:__join_packet	file:	access:public
+is_run	list/test.c	/^    int is_run;$/;"	m	struct:__join_packet	file:	access:public
+jds2pri	lua/example.lua	/^function jds2pri( code, cmd )$/;"	f
+jds2pri	lua/only_trans.lua	/^function jds2pri(code, jds) $/;"	f
+jl_parse_24g	example/joylink_extern_json.c	/^jl_parse_24g(WIFICtrl_t *wctr, char * pMsg)$/;"	f	signature:(WIFICtrl_t *wctr, char * pMsg)
+jl_parse_24g	example/joylink_extern_json.h	/^jl_parse_24g(WIFICtrl_t *wctr, char * pMsg);$/;"	p	signature:(WIFICtrl_t *wctr, char * pMsg)
+jl_parse_jlp	example/joylink_extern_json.c	/^jl_parse_jlp(JLPInfo_t *jlp, char * pMsg)$/;"	f	signature:(JLPInfo_t *jlp, char * pMsg)
+jl_parse_jlp	example/joylink_extern_json.h	/^jl_parse_jlp(JLPInfo_t *jlp, char * pMsg);$/;"	p	signature:(JLPInfo_t *jlp, char * pMsg)
+jl_parse_wan_speed	example/joylink_extern_json.c	/^jl_parse_wan_speed(WIFICtrl_t *wctr, char * pMsg)$/;"	f	signature:(WIFICtrl_t *wctr, char * pMsg)
+jl_parse_wan_speed	example/joylink_extern_json.h	/^jl_parse_wan_speed(WIFICtrl_t *wctr, char * pMsg);$/;"	p	signature:(WIFICtrl_t *wctr, char * pMsg)
+jlp	joylink/joylink.h	/^    JLPInfo_t jlp;$/;"	m	struct:__anon17	access:public
+jlp	joylink/joylink.h	/^    JLPInfo_t jlp;$/;"	m	struct:__anon18	access:public
+joy_test_dev_ctrl	json/test.c	/^int joy_test_dev_ctrl() $/;"	f
+joy_test_dev_enable	json/test.c	/^int joy_test_dev_enable() $/;"	f
+joy_test_dev_info	json/test.c	/^int joy_test_dev_info() $/;"	f
+joylinkENC3	auth/joylinkCrypto.h	/^extern void joylinkENC3(UINT8 *input, UINT32 inputlen, UINT8 output[16]);$/;"	p	signature:(UINT8 *input, UINT32 inputlen, UINT8 output[16])
+joylinkEnc1Crypt	auth/joylinkCrypto.h	/^extern int joylinkEnc1Crypt(UINT8 *key, UINT32 keyLen, UINT8 *data, UINT32 len);$/;"	p	signature:(UINT8 *key, UINT32 keyLen, UINT8 *data, UINT32 len)
+joylinkEnc2Context	auth/joylinkAES.c	/^}joylinkEnc2Context;$/;"	t	typeref:struct:__anon37	file:
+joylinkEnc2Crypt	auth/joylinkAES.c	/^int joylinkEnc2Crypt(UINT8 *key, UINT32 keyLen, UINT8 *iv, UINT8 *data, UINT32 *len, UINT32 maxLen, int isPKCS5, int type)$/;"	f	signature:(UINT8 *key, UINT32 keyLen, UINT8 *iv, UINT8 *data, UINT32 *len, UINT32 maxLen, int isPKCS5, int type)
+joylinkEnc2Crypt	auth/joylinkCrypto.h	/^extern int joylinkEnc2Crypt(UINT8 *key, UINT32 keyLen, UINT8 *iv, UINT8 *data, UINT32 *len, UINT32 maxLen, int isPKCS5, int type);$/;"	p	signature:(UINT8 *key, UINT32 keyLen, UINT8 *iv, UINT8 *data, UINT32 *len, UINT32 maxLen, int isPKCS5, int type)
+joylinkEnc4Crypt	auth/joylinkCrypto.h	/^extern int joylinkEnc4Crypt(UINT8 *input, UINT32 inputLen, UINT8 *output, UINT32 maxLen, UINT8 *key, int type);$/;"	p	signature:(UINT8 *input, UINT32 inputLen, UINT8 *output, UINT32 maxLen, UINT8 *key, int type)
+joylinkPadding	auth/joylinkAES.c	/^static int joylinkPadding(UINT8 *data, UINT32 len, UINT32 maxLen, int isPKCS5)$/;"	f	file:	signature:(UINT8 *data, UINT32 len, UINT32 maxLen, int isPKCS5)
+joylinkUnPadding	auth/joylinkAES.c	/^static int joylinkUnPadding(UINT8 *data, UINT32 len, int isPKCS5)$/;"	f	file:	signature:(UINT8 *data, UINT32 len, int isPKCS5)
+joylink_cfg_deinit	joylink/joylink_cfg.h	/^void joylink_cfg_deinit();$/;"	p	signature:()
+joylink_cfg_get_result	joylink/joylink_cfg.h	/^int joylink_cfg_get_result(joylink_result_t *result);$/;"	p	signature:(joylink_result_t *result)
+joylink_cfg_init	joylink/joylink_cfg.h	/^int joylink_cfg_init();$/;"	p	signature:()
+joylink_cfg_recv	joylink/joylink_cfg.h	/^joylink_status_t joylink_cfg_recv(unsigned char *da, unsigned char *sa, int len, void *user_data);$/;"	p	signature:(unsigned char *da, unsigned char *sa, int len, void *user_data)
+joylink_cfg_set_aes_key	joylink/joylink_cfg.h	/^int joylink_cfg_set_aes_key(char *key, int len);$/;"	p	signature:(char *key, int len)
+joylink_dencrypt_sub_dev_data	joylink/joylink_security.c	/^joylink_dencrypt_sub_dev_data(const uint8_t *p_in, int in_len, $/;"	f	signature:(const uint8_t *p_in, int in_len, const uint8_t *key, int key_type, uint8_t* p_out, int maxlen)
+joylink_dencrypt_sub_dev_data	joylink/joylink_security.h	/^joylink_dencrypt_sub_dev_data(const uint8_t *p_in, int in_len, $/;"	p	signature:(const uint8_t *p_in, int in_len, const uint8_t *key, int key_type, uint8_t* p_out, int maxlen)
+joylink_dencypt_lan_req	joylink/joylink_security.c	/^joylink_dencypt_lan_req(JLPacketParam_t *pParam, const uint8_t *pIn, int length, uint8_t* pOut, int maxlen)$/;"	f	signature:(JLPacketParam_t *pParam, const uint8_t *pIn, int length, uint8_t* pOut, int maxlen)
+joylink_dencypt_lan_req	joylink/joylink_security.h	/^int joylink_dencypt_lan_req(JLPacketParam_t *pParam, const uint8_t *pIn, int length, uint8_t* pOut, int maxlen);$/;"	p	signature:(JLPacketParam_t *pParam, const uint8_t *pIn, int length, uint8_t* pOut, int maxlen)
+joylink_dencypt_server_req	joylink/joylink_security.c	/^joylink_dencypt_server_req($/;"	f	signature:( JLPacketParam_t *pParam, const uint8_t *pIn, int length, uint8_t* pOut, int maxlen)
+joylink_dencypt_server_req	joylink/joylink_security.h	/^int joylink_dencypt_server_req(JLPacketParam_t *pParam, const uint8_t *pIn, int length, uint8_t* pOut, int maxlen);$/;"	p	signature:(JLPacketParam_t *pParam, const uint8_t *pIn, int length, uint8_t* pOut, int maxlen)
+joylink_dev_get_client_list	example/joylink_extern.c	/^joylink_dev_get_client_list()$/;"	f
+joylink_dev_get_client_list	example/joylink_extern.c	/^joylink_dev_get_client_list();$/;"	p	file:
+joylink_dev_get_jlp_info	example/joylink_extern.c	/^joylink_dev_get_jlp_info(JLPInfo_t *jlp)$/;"	f	signature:(JLPInfo_t *jlp)
+joylink_dev_get_jlp_info	extern/joylink_extern.c	/^joylink_dev_get_jlp_info(JLPInfo_t *jlp)$/;"	f	signature:(JLPInfo_t *jlp)
+joylink_dev_get_jlp_info	extern/joylink_extern.h	/^joylink_dev_get_jlp_info(JLPInfo_t *jlp);$/;"	p	signature:(JLPInfo_t *jlp)
+joylink_dev_get_json_snap_shot	example/joylink_extern.c	/^joylink_dev_get_json_snap_shot(char *out_snap, int32_t out_max, int code, char *feedid)$/;"	f	signature:(char *out_snap, int32_t out_max, int code, char *feedid)
+joylink_dev_get_json_snap_shot	extern/joylink_extern.c	/^joylink_dev_get_json_snap_shot(char *out_snap, int32_t out_max, int code, char *feedid)$/;"	f	signature:(char *out_snap, int32_t out_max, int code, char *feedid)
+joylink_dev_get_json_snap_shot	extern/joylink_extern.h	/^joylink_dev_get_json_snap_shot(char *out_snap, int32_t out_max, int code, char *feedid);$/;"	p	signature:(char *out_snap, int32_t out_max, int code, char *feedid)
+joylink_dev_get_snap_shot	example/joylink_extern.c	/^joylink_dev_get_snap_shot(char *out_snap, int32_t out_max)$/;"	f	signature:(char *out_snap, int32_t out_max)
+joylink_dev_get_snap_shot	extern/joylink_extern.c	/^joylink_dev_get_snap_shot(char *out_snap, int32_t out_max)$/;"	f	signature:(char *out_snap, int32_t out_max)
+joylink_dev_get_snap_shot	extern/joylink_extern.h	/^joylink_dev_get_snap_shot(char *out_snap, int32_t out_max);$/;"	p	signature:(char *out_snap, int32_t out_max)
+joylink_dev_get_ver	example/joylink_extern.c	/^joylink_dev_get_ver();$/;"	p	file:
+joylink_dev_get_ver	extern/joylink_extern.c	/^joylink_dev_get_ver();$/;"	p	file:
+joylink_dev_get_ver	joylink/joylink_dev_sdk.c	/^joylink_dev_get_ver()$/;"	f
+joylink_dev_init	joylink/joylink_dev_sdk.c	/^joylink_dev_init()$/;"	f	file:
+joylink_dev_is_net_ok	example/joylink_extern.c	/^joylink_dev_is_net_ok()$/;"	f
+joylink_dev_is_net_ok	extern/joylink_extern.c	/^joylink_dev_is_net_ok()$/;"	f
+joylink_dev_is_net_ok	extern/joylink_extern.h	/^joylink_dev_is_net_ok();$/;"	p	signature:()
+joylink_dev_lan_json_ctrl	example/joylink_extern.c	/^joylink_dev_lan_json_ctrl(const char *json_cmd)$/;"	f	signature:(const char *json_cmd)
+joylink_dev_lan_json_ctrl	extern/joylink_extern.c	/^joylink_dev_lan_json_ctrl(const char *json_cmd)$/;"	f	signature:(const char *json_cmd)
+joylink_dev_lan_json_ctrl	extern/joylink_extern.h	/^joylink_dev_lan_json_ctrl(const char *json_cmd);$/;"	p	signature:(const char *json_cmd)
+joylink_dev_ota	example/joylink_extern.c	/^joylink_dev_ota(JLOtaOrder_t *otaOrder)$/;"	f	signature:(JLOtaOrder_t *otaOrder)
+joylink_dev_ota	extern/joylink_extern.c	/^joylink_dev_ota(JLOtaOrder_t *otaOrder)$/;"	f	signature:(JLOtaOrder_t *otaOrder)
+joylink_dev_ota	extern/joylink_extern.h	/^joylink_dev_ota(JLOtaOrder_t *otaOrder);$/;"	p	signature:(JLOtaOrder_t *otaOrder)
+joylink_dev_ota_status_upload	example/joylink_extern.c	/^joylink_dev_ota_status_upload()$/;"	f
+joylink_dev_ota_status_upload	extern/joylink_extern.c	/^joylink_dev_ota_status_upload()$/;"	f
+joylink_dev_ota_status_upload	extern/joylink_extern.h	/^joylink_dev_ota_status_upload();$/;"	p	signature:()
+joylink_dev_parse_wifi_ctrl	example/joylink_extern_json.c	/^joylink_dev_parse_wifi_ctrl(WIFICtrl_t *wctr, const char * pMsg)$/;"	f	signature:(WIFICtrl_t *wctr, const char * pMsg)
+joylink_dev_parse_wifi_ctrl	example/joylink_extern_json.h	/^joylink_dev_parse_wifi_ctrl(WIFICtrl_t *wctr, const char * pMsg);$/;"	p	signature:(WIFICtrl_t *wctr, const char * pMsg)
+joylink_dev_parse_wifictrl_from_server	example/joylink_extern_json.c	/^joylink_dev_parse_wifictrl_from_server(WIFICtrl_t *wctr, const char * pMsg)$/;"	f	signature:(WIFICtrl_t *wctr, const char * pMsg)
+joylink_dev_parse_wifictrl_from_server	example/joylink_extern_json.h	/^joylink_dev_parse_wifictrl_from_server(WIFICtrl_t *wctr, const char * pMsg);$/;"	p	signature:(WIFICtrl_t *wctr, const char * pMsg)
+joylink_dev_register_attr_cb	example/joylink_extern.c	/^joylink_dev_register_attr_cb($/;"	f	signature:( const char *name, E_JL_DEV_ATTR_TYPE type, E_JL_DEV_ATTR_GET_CB attr_get_cb, E_JL_DEV_ATTR_SET_CB attr_set_cb)
+joylink_dev_register_attr_cb	extern/joylink_extern.c	/^joylink_dev_register_attr_cb($/;"	f	signature:( const char *name, E_JL_DEV_ATTR_TYPE type, E_JL_DEV_ATTR_GET_CB attr_get_cb, E_JL_DEV_ATTR_SET_CB attr_set_cb)
+joylink_dev_register_attr_cb	extern/joylink_extern.h	/^joylink_dev_register_attr_cb($/;"	p	signature:( const char *name, E_JL_DEV_ATTR_TYPE type, E_JL_DEV_ATTR_GET_CB attr_get_cb, E_JL_DEV_ATTR_SET_CB attr_set_cb)
+joylink_dev_script_ctrl	example/joylink_extern.c	/^joylink_dev_script_ctrl(const char *recPainText, JLContrl_t *ctr, int from_server)$/;"	f	signature:(const char *recPainText, JLContrl_t *ctr, int from_server)
+joylink_dev_script_ctrl	extern/joylink_extern.c	/^joylink_dev_script_ctrl(const char *cmd, JLContrl_t *ctr, int from_server)$/;"	f	signature:(const char *cmd, JLContrl_t *ctr, int from_server)
+joylink_dev_script_ctrl	extern/joylink_extern.h	/^joylink_dev_script_ctrl(const char *recPainText, JLContrl_t *ctr, int from_server);$/;"	p	signature:(const char *recPainText, JLContrl_t *ctr, int from_server)
+joylink_dev_set_attr	extern/joylink_extern.c	/^joylink_dev_set_attr(WIFICtrl_t *wi)$/;"	f	signature:(WIFICtrl_t *wi)
+joylink_dev_set_attr	extern/joylink_extern.h	/^joylink_dev_set_attr(WIFICtrl_t *wi);$/;"	p	signature:(WIFICtrl_t *wi)
+joylink_dev_set_attr_example	example/joylink_extern.c	/^joylink_dev_set_attr_example(WIFICtrl_t *wi, JLPInfo_t *jlp)$/;"	f	signature:(WIFICtrl_t *wi, JLPInfo_t *jlp)
+joylink_dev_set_attr_example	example/joylink_extern.c	/^joylink_dev_set_attr_example(WIFICtrl_t *wi, JLPInfo_t *jlp);$/;"	p	file:	signature:(WIFICtrl_t *wi, JLPInfo_t *jlp)
+joylink_dev_set_attr_jlp	example/joylink_extern.c	/^joylink_dev_set_attr_jlp(JLPInfo_t *jlp)$/;"	f	signature:(JLPInfo_t *jlp)
+joylink_dev_set_attr_jlp	extern/joylink_extern.c	/^joylink_dev_set_attr_jlp(JLPInfo_t *jlp)$/;"	f	signature:(JLPInfo_t *jlp)
+joylink_dev_set_attr_jlp	extern/joylink_extern.h	/^joylink_dev_set_attr_jlp(JLPInfo_t *jlp);$/;"	p	signature:(JLPInfo_t *jlp)
+joylink_dev_set_connect_st	example/joylink_extern.c	/^joylink_dev_set_connect_st(int st)$/;"	f	signature:(int st)
+joylink_dev_set_connect_st	extern/joylink_extern.c	/^joylink_dev_set_connect_st(int st)$/;"	f	signature:(int st)
+joylink_dev_set_connect_st	extern/joylink_extern.h	/^joylink_dev_set_connect_st(int st);$/;"	p	signature:(int st)
+joylink_dev_set_ver	example/joylink_extern.c	/^joylink_dev_set_ver(short ver);$/;"	p	file:	signature:(short ver)
+joylink_dev_set_ver	extern/joylink_extern.c	/^joylink_dev_set_ver(short ver);$/;"	p	file:	signature:(short ver)
+joylink_dev_set_ver	joylink/joylink_dev_sdk.c	/^joylink_dev_set_ver(short ver)$/;"	f	signature:(short ver)
+joylink_dev_start_softap	extern/joylink_extern.c	/^joylink_dev_start_softap(char *ap_ssid)$/;"	f	signature:(char *ap_ssid)
+joylink_dev_stop_softap	extern/joylink_extern.c	/^joylink_dev_stop_softap()$/;"	f
+joylink_dev_sub_add	example/joylink_extern_sub_dev.c	/^joylink_dev_sub_add(JLDevInfo_t *dev, int num)$/;"	f	signature:(JLDevInfo_t *dev, int num)
+joylink_dev_sub_add	extern/joylink_extern.h	/^joylink_dev_sub_add(JLDevInfo_t *dev, int num);$/;"	p	signature:(JLDevInfo_t *dev, int num)
+joylink_dev_sub_add	extern/joylink_extern_sub_dev.c	/^joylink_dev_sub_add(JLDevInfo_t *dev, int num)$/;"	f	signature:(JLDevInfo_t *dev, int num)
+joylink_dev_sub_ctrl	example/joylink_extern_sub_dev.c	/^joylink_dev_sub_ctrl(const char* cmd, int cmd_len, char* feedid)$/;"	f	signature:(const char* cmd, int cmd_len, char* feedid)
+joylink_dev_sub_ctrl	extern/joylink_extern.h	/^joylink_dev_sub_ctrl(const char* cmd, int cmd_len, char* feedid);$/;"	p	signature:(const char* cmd, int cmd_len, char* feedid)
+joylink_dev_sub_ctrl	extern/joylink_extern_sub_dev.c	/^joylink_dev_sub_ctrl(const char* cmd, int cmd_len, char* feedid)$/;"	f	signature:(const char* cmd, int cmd_len, char* feedid)
+joylink_dev_sub_devs_get	example/joylink_extern_sub_dev.c	/^joylink_dev_sub_devs_get(int *count, int scan_type)$/;"	f	signature:(int *count, int scan_type)
+joylink_dev_sub_devs_get	extern/joylink_extern.h	/^joylink_dev_sub_devs_get(int *count, int scan_type);$/;"	p	signature:(int *count, int scan_type)
+joylink_dev_sub_devs_get	extern/joylink_extern_sub_dev.c	/^joylink_dev_sub_devs_get(int *count, int scan_type)$/;"	f	signature:(int *count, int scan_type)
+joylink_dev_sub_get_by_feedid	example/joylink_extern_sub_dev.c	/^joylink_dev_sub_get_by_feedid(char *feedid, JLDevInfo_t *dev)$/;"	f	signature:(char *feedid, JLDevInfo_t *dev)
+joylink_dev_sub_get_by_feedid	extern/joylink_extern.h	/^joylink_dev_sub_get_by_feedid(char *feedid, JLDevInfo_t *dev);$/;"	p	signature:(char *feedid, JLDevInfo_t *dev)
+joylink_dev_sub_get_by_feedid	extern/joylink_extern_sub_dev.c	/^joylink_dev_sub_get_by_feedid(char *feedid, JLDevInfo_t *dev)$/;"	f	signature:(char *feedid, JLDevInfo_t *dev)
+joylink_dev_sub_get_snap_shot	example/joylink_extern_sub_dev.c	/^joylink_dev_sub_get_snap_shot(char *feedid, int *out_len)$/;"	f	signature:(char *feedid, int *out_len)
+joylink_dev_sub_get_snap_shot	extern/joylink_extern.h	/^joylink_dev_sub_get_snap_shot(char *feedid, int *out_len);$/;"	p	signature:(char *feedid, int *out_len)
+joylink_dev_sub_get_snap_shot	extern/joylink_extern_sub_dev.c	/^joylink_dev_sub_get_snap_shot(char *feedid, int *out_len)$/;"	f	signature:(char *feedid, int *out_len)
+joylink_dev_sub_unbind	example/joylink_extern_sub_dev.c	/^joylink_dev_sub_unbind(const char *feedid)$/;"	f	signature:(const char *feedid)
+joylink_dev_sub_unbind	extern/joylink_extern.h	/^joylink_dev_sub_unbind(const char *feedid);$/;"	p	signature:(const char *feedid)
+joylink_dev_sub_unbind	extern/joylink_extern_sub_dev.c	/^joylink_dev_sub_unbind(const char *feedid)$/;"	f	signature:(const char *feedid)
+joylink_dev_sub_update_keys_by_uuid_mac	example/joylink_extern_sub_dev.c	/^joylink_dev_sub_update_keys_by_uuid_mac(char *uuid, char *mac, JLDevInfo_t *dev)$/;"	f	signature:(char *uuid, char *mac, JLDevInfo_t *dev)
+joylink_dev_sub_update_keys_by_uuid_mac	extern/joylink_extern.h	/^joylink_dev_sub_update_keys_by_uuid_mac(char *uuid, char *mac, JLDevInfo_t *dev);$/;"	p	signature:(char *uuid, char *mac, JLDevInfo_t *dev)
+joylink_dev_sub_update_keys_by_uuid_mac	extern/joylink_extern_sub_dev.c	/^joylink_dev_sub_update_keys_by_uuid_mac(char *uuid, char *mac, JLDevInfo_t *dev)$/;"	f	signature:(char *uuid, char *mac, JLDevInfo_t *dev)
+joylink_ecc_contex_init	auth/joylink_crypt.c	/^joylink_ecc_contex_init(void)$/;"	f	signature:(void)
+joylink_ecc_contex_init	joylink/joylink_dev_sdk.c	/^extern int joylink_ecc_contex_init(void);$/;"	p	file:	signature:(void)
+joylink_enc2_crypt_cbc	auth/joylinkAES.c	/^static int joylink_enc2_crypt_cbc( joylinkEnc2Context *ctx,$/;"	f	file:	signature:( joylinkEnc2Context *ctx, int mode, size_t length, unsigned char iv[16], const unsigned char *input, unsigned char *output )
+joylink_enc2_crypt_ecb	auth/joylinkAES.c	/^static int joylink_enc2_crypt_ecb( joylinkEnc2Context *ctx,$/;"	f	file:	signature:( joylinkEnc2Context *ctx, int mode, const unsigned char input[16], unsigned char output[16] )
+joylink_enc2_gen_tables	auth/joylinkAES.c	/^static void joylink_enc2_gen_tables( void )$/;"	f	file:	signature:( void )
+joylink_enc2_init_done	auth/joylinkAES.c	/^static int joylink_enc2_init_done = 0;$/;"	v	file:
+joylink_enc2_setkey_dec	auth/joylinkAES.c	/^static int joylink_enc2_setkey_dec( joylinkEnc2Context *ctx, const unsigned char *key, unsigned int keysize )$/;"	f	file:	signature:( joylinkEnc2Context *ctx, const unsigned char *key, unsigned int keysize )
+joylink_enc2_setkey_enc	auth/joylinkAES.c	/^static int joylink_enc2_setkey_enc(joylinkEnc2Context *ctx, const unsigned char *key, unsigned int keysize)$/;"	f	file:	signature:(joylinkEnc2Context *ctx, const unsigned char *key, unsigned int keysize)
+joylink_encrypt_lan_basic	joylink/joylink_security.c	/^int joylink_encrypt_lan_basic($/;"	f	signature:( uint8_t* pBuf, int buflen, E_EncType enctype, E_PacketType cmd, uint8_t* key, const uint8_t* payload, int length)
+joylink_encrypt_lan_basic	joylink/joylink_security.h	/^int joylink_encrypt_lan_basic(uint8_t* pBuf, int buflen, E_EncType enctype, E_PacketType cmd, uint8_t* key, const uint8_t* payload, int length);$/;"	p	signature:(uint8_t* pBuf, int buflen, E_EncType enctype, E_PacketType cmd, uint8_t* key, const uint8_t* payload, int length)
+joylink_encrypt_sub_dev_data	joylink/joylink_security.c	/^joylink_encrypt_sub_dev_data($/;"	f	signature:( uint8_t* pBuf, int buflen, E_EncType enctype, uint8_t* key, const uint8_t* payload, int length)
+joylink_encrypt_sub_dev_data	joylink/joylink_security.h	/^joylink_encrypt_sub_dev_data($/;"	p	signature:( uint8_t* pBuf, int buflen, E_EncType enctype, uint8_t* key, const uint8_t* payload, int length)
+joylink_encypt_server_rsp	joylink/joylink_security.c	/^int joylink_encypt_server_rsp($/;"	f	signature:( uint8_t* pBuf, int buflen, E_PacketType cmd, uint8_t* key, const uint8_t* payload, int payloadLen)
+joylink_encypt_server_rsp	joylink/joylink_security.h	/^int joylink_encypt_server_rsp(uint8_t* pBuf, int buflen, E_PacketType cmd, uint8_t* key, const uint8_t* payload, int payloadLen);$/;"	p	signature:(uint8_t* pBuf, int buflen, E_PacketType cmd, uint8_t* key, const uint8_t* payload, int payloadLen)
+joylink_get_wifi_attr	example/joylink_extern.c	/^joylink_get_wifi_attr(WIFICtrl_t *wi)$/;"	f	signature:(WIFICtrl_t *wi)
+joylink_get_wifi_attr	example/joylink_extern.c	/^joylink_get_wifi_attr(WIFICtrl_t *wi);$/;"	p	file:	signature:(WIFICtrl_t *wi)
+joylink_idnode_add	list/joylink_list.c	/^joylink_idnode_add(int32_t id, void *data, int32_t data_len, LHead_t *lhead)$/;"	f	signature:(int32_t id, void *data, int32_t data_len, LHead_t *lhead)
+joylink_idnode_add	list/joylink_list.h	/^int32_t joylink_idnode_add(int32_t id, void *data, int32_t data_len, LHead_t *lhead);$/;"	p	signature:(int32_t id, void *data, int32_t data_len, LHead_t *lhead)
+joylink_idnode_del	list/joylink_list.c	/^joylink_idnode_del(int32_t id, LHead_t *lhead)$/;"	f	signature:(int32_t id, LHead_t *lhead)
+joylink_idnode_del	list/joylink_list.h	/^int32_t joylink_idnode_del(int32_t id, LHead_t *lhead);$/;"	p	signature:(int32_t id, LHead_t *lhead)
+joylink_idnode_get_by_id	list/joylink_list.c	/^joylink_idnode_get_by_id(int32_t id, LHead_t *lhead)$/;"	f	signature:(int32_t id, LHead_t *lhead)
+joylink_idnode_get_by_id	list/joylink_list.h	/^IDNode_t * joylink_idnode_get_by_id(int32_t id, LHead_t *lhead);$/;"	p	signature:(int32_t id, LHead_t *lhead)
+joylink_idnode_list_clear	list/joylink_list.c	/^joylink_idnode_list_clear(LHead_t *lhead)$/;"	f	signature:(LHead_t *lhead)
+joylink_idnode_list_clear	list/joylink_list.h	/^int32_t joylink_idnode_list_clear(LHead_t *lhead);$/;"	p	signature:(LHead_t *lhead)
+joylink_idnode_list_debugp	list/joylink_list.c	/^joylink_idnode_list_debugp(LHead_t *lhead)$/;"	f	signature:(LHead_t *lhead)
+joylink_idnode_list_debugp	list/joylink_list.h	/^void joylink_idnode_list_debugp(LHead_t *lhead);$/;"	p	signature:(LHead_t *lhead)
+joylink_ids_get	list/joylink_list.c	/^joylink_ids_get(int32_t size, int32_t *pids, LHead_t *lhead)$/;"	f	signature:(int32_t size, int32_t *pids, LHead_t *lhead)
+joylink_ids_get	list/joylink_list.h	/^int joylink_ids_get(int32_t size, int32_t *pids, LHead_t *lhead);$/;"	p	signature:(int32_t size, int32_t *pids, LHead_t *lhead)
+joylink_join_pkg_add_data	joylink/joylink_join_packet.c	/^joylink_join_pkg_add_data(char *name, int id, JLPacketHead_t *phead, char *data, int len)$/;"	f	signature:(char *name, int id, JLPacketHead_t *phead, char *data, int len)
+joylink_join_pkg_add_data	joylink/joylink_join_packet.h	/^joylink_join_pkg_add_data(char *name, int id, JLPacketHead_t *phead, char *data, int len);$/;"	p	signature:(char *name, int id, JLPacketHead_t *phead, char *data, int len)
+joylink_join_pkg_add_data	list/test.c	/^joylink_join_pkg_add_data(char *name, int id, JLPacketHead_t *phead, char *data, int len)$/;"	f	signature:(char *name, int id, JLPacketHead_t *phead, char *data, int len)
+joylink_join_pkg_cache_new_node	joylink/joylink_join_packet.c	/^joylink_join_pkg_cache_new_node(char *name, int id, JLPacketHead_t *phead, char *data, int len)$/;"	f	file:	signature:(char *name, int id, JLPacketHead_t *phead, char *data, int len)
+joylink_join_pkg_cache_new_node	list/test.c	/^joylink_join_pkg_cache_new_node(char *name, int id, JLPacketHead_t *phead, char *data, int len)$/;"	f	file:	signature:(char *name, int id, JLPacketHead_t *phead, char *data, int len)
+joylink_join_pkg_clean_node_by_name_id	joylink/joylink_join_packet.c	/^joylink_join_pkg_clean_node_by_name_id(char *name, int id)$/;"	f	signature:(char *name, int id)
+joylink_join_pkg_clean_node_by_name_id	joylink/joylink_join_packet.h	/^joylink_join_pkg_clean_node_by_name_id(char *name, int id);$/;"	p	signature:(char *name, int id)
+joylink_join_pkg_clean_node_by_name_id	list/test.c	/^joylink_join_pkg_clean_node_by_name_id(char *name, int id)$/;"	f	signature:(char *name, int id)
+joylink_join_pkg_get_idle_index	joylink/joylink_join_packet.c	/^joylink_join_pkg_get_idle_index()$/;"	f	file:
+joylink_join_pkg_get_idle_index	list/test.c	/^joylink_join_pkg_get_idle_index()$/;"	f	file:
+joylink_join_pkg_get_index_by_name_id	joylink/joylink_join_packet.c	/^joylink_join_pkg_get_index_by_name_id(char *name, int id)$/;"	f	file:	signature:(char *name, int id)
+joylink_join_pkg_get_index_by_name_id	list/test.c	/^joylink_join_pkg_get_index_by_name_id(char *name, int id)$/;"	f	file:	signature:(char *name, int id)
+joylink_join_pkg_join_data	joylink/joylink_join_packet.c	/^joylink_join_pkg_join_data(char *name, int id, int *out_len)$/;"	f	signature:(char *name, int id, int *out_len)
+joylink_join_pkg_join_data	joylink/joylink_join_packet.h	/^joylink_join_pkg_join_data(char *name, int id, int *out_len);$/;"	p	signature:(char *name, int id, int *out_len)
+joylink_join_pkg_join_data	list/test.c	/^joylink_join_pkg_join_data(char *name, int id, int *out_len)$/;"	f	signature:(char *name, int id, int *out_len)
+joylink_main_loop	joylink/joylink_dev_sdk.c	/^joylink_main_loop(void)$/;"	f	signature:(void)
+joylink_main_start	joylink/joylink_dev_sdk.c	/^joylink_main_start()$/;"	f
+joylink_package_client_list_	example/joylink_extern_json.c	/^joylink_package_client_list_(SubDev_t *sdev, int count)$/;"	f	signature:(SubDev_t *sdev, int count)
+joylink_package_client_list_	example/joylink_extern_json.h	/^joylink_package_client_list_(SubDev_t *sdev, int count);$/;"	p	signature:(SubDev_t *sdev, int count)
+joylink_package_ota_upload	json/joylink_json.c	/^joylink_package_ota_upload(JLOtaUpload_t *otaUpload)$/;"	f	signature:(JLOtaUpload_t *otaUpload)
+joylink_package_ota_upload	json/joylink_json.h	/^joylink_package_ota_upload(JLOtaUpload_t *otaUpload);$/;"	p	signature:(JLOtaUpload_t *otaUpload)
+joylink_package_ota_upload_req	joylink/joylink_packets.c	/^joylink_package_ota_upload_req(JLOtaUpload_t *otaUpload)$/;"	f	signature:(JLOtaUpload_t *otaUpload)
+joylink_package_ota_upload_req	joylink/joylink_packets.h	/^int joylink_package_ota_upload_req(JLOtaUpload_t *otaUpload);$/;"	p	signature:(JLOtaUpload_t *otaUpload)
+joylink_package_scan	json/joylink_json.c	/^joylink_package_scan(const char *retMsg, const int retCode,$/;"	f	signature:(const char *retMsg, const int retCode, int scan_type, JLDevice_t *dv)
+joylink_package_scan	json/joylink_json.h	/^joylink_package_scan(const char *retMsg, const int retCode, $/;"	p	signature:(const char *retMsg, const int retCode, int scan_type, JLDevice_t *dv)
+joylink_package_subdev	json/joylink_json.h	/^joylink_package_subdev(JLDevInfo_t *sdev, int count);$/;"	p	signature:(JLDevInfo_t *sdev, int count)
+joylink_package_subdev	json/joylink_json_sub_dev.c	/^joylink_package_subdev(JLDevInfo_t *sdev, int count)$/;"	f	signature:(JLDevInfo_t *sdev, int count)
+joylink_packet_lan_scan_rsp	joylink/joylink_packets.c	/^joylink_packet_lan_scan_rsp(DevScan_t *scan)$/;"	f	signature:(DevScan_t *scan)
+joylink_packet_lan_scan_rsp	joylink/joylink_packets.h	/^int joylink_packet_lan_scan_rsp(DevScan_t *scan);$/;"	p	signature:(DevScan_t *scan)
+joylink_packet_lan_write_key_rsp	joylink/joylink_packets.c	/^joylink_packet_lan_write_key_rsp(void)$/;"	f	signature:(void)
+joylink_packet_lan_write_key_rsp	joylink/joylink_packets.h	/^int joylink_packet_lan_write_key_rsp(void);$/;"	p	signature:(void)
+joylink_packet_script_ctrl_rsp	joylink/joylink_packets.c	/^joylink_packet_script_ctrl_rsp(char *data, int max, JLContrl_t *ctrl)$/;"	f	signature:(char *data, int max, JLContrl_t *ctrl)
+joylink_packet_script_ctrl_rsp	joylink/joylink_packets.h	/^int joylink_packet_script_ctrl_rsp(char *data, int max, JLContrl_t *ctrl);$/;"	p	signature:(char *data, int max, JLContrl_t *ctrl)
+joylink_packet_server_auth_rsp	joylink/joylink_packets.c	/^joylink_packet_server_auth_rsp(void)$/;"	f	signature:(void)
+joylink_packet_server_auth_rsp	joylink/joylink_packets.h	/^int joylink_packet_server_auth_rsp(void);$/;"	p	signature:(void)
+joylink_packet_server_hb_req	joylink/joylink_packets.c	/^joylink_packet_server_hb_req(void)$/;"	f	signature:(void)
+joylink_packet_server_hb_req	joylink/joylink_packets.h	/^int joylink_packet_server_hb_req(void);$/;"	p	signature:(void)
+joylink_packet_server_ota_order_rsp	joylink/joylink_packets.c	/^joylink_packet_server_ota_order_rsp(JLOtaOrder_t *otaOrder)$/;"	f	signature:(JLOtaOrder_t *otaOrder)
+joylink_packet_server_ota_order_rsp	joylink/joylink_packets.h	/^int joylink_packet_server_ota_order_rsp(JLOtaOrder_t *otaOrder);$/;"	p	signature:(JLOtaOrder_t *otaOrder)
+joylink_packet_server_sub_hb_req	joylink/joylink_sub_dev.c	/^joylink_packet_server_sub_hb_req(void)$/;"	f	signature:(void)
+joylink_packet_server_sub_hb_req	joylink/joylink_sub_dev.h	/^joylink_packet_server_sub_hb_req(void);$/;"	p	signature:(void)
+joylink_packet_server_upload_req	joylink/joylink_packets.c	/^joylink_packet_server_upload_req(void)$/;"	f	signature:(void)
+joylink_packet_server_upload_req	joylink/joylink_packets.h	/^int joylink_packet_server_upload_req(void);$/;"	p	signature:(void)
+joylink_packet_sub_add_rsp	json/joylink_json.h	/^joylink_packet_sub_add_rsp(const JLDevInfo_t *de, int num, char *out);$/;"	p	signature:(const JLDevInfo_t *de, int num, char *out)
+joylink_packet_sub_add_rsp	json/joylink_json_sub_dev.c	/^joylink_packet_sub_add_rsp(const JLDevInfo_t *de, int num, char *out)$/;"	f	signature:(const JLDevInfo_t *de, int num, char *out)
+joylink_packet_sub_auth_rsp	json/joylink_json.h	/^joylink_packet_sub_auth_rsp(const JLDevInfo_t *de, char *out);$/;"	p	signature:(const JLDevInfo_t *de, char *out)
+joylink_packet_sub_auth_rsp	json/joylink_json_sub_dev.c	/^joylink_packet_sub_auth_rsp(const JLDevInfo_t *de, char *out)$/;"	f	signature:(const JLDevInfo_t *de, char *out)
+joylink_packet_subdev_script_ctrl_rsp	joylink/joylink_sub_dev.c	/^joylink_packet_subdev_script_ctrl_rsp(char *data, int max, JLSubContrl_t *ctrl)$/;"	f	signature:(char *data, int max, JLSubContrl_t *ctrl)
+joylink_packet_subdev_script_ctrl_rsp	joylink/joylink_sub_dev.h	/^joylink_packet_subdev_script_ctrl_rsp(char *data, int max, JLSubContrl_t *ctrl);$/;"	p	signature:(char *data, int max, JLSubContrl_t *ctrl)
+joylink_packet_subdev_unbind_rsp	joylink/joylink_sub_dev.c	/^joylink_packet_subdev_unbind_rsp(char* data, int max, JLSubUnbind_t* unbind)$/;"	f	signature:(char* data, int max, JLSubUnbind_t* unbind)
+joylink_packet_subdev_unbind_rsp	joylink/joylink_sub_dev.h	/^joylink_packet_subdev_unbind_rsp(char* data, int max, JLSubUnbind_t* unbind);$/;"	p	signature:(char* data, int max, JLSubUnbind_t* unbind)
+joylink_parse_client_list	example/joylink_extern_json.c	/^joylink_parse_client_list(SubDev_t *sdev, int max, char * pMsg)$/;"	f	signature:(SubDev_t *sdev, int max, char * pMsg)
+joylink_parse_client_list	example/joylink_extern_json.h	/^joylink_parse_client_list(SubDev_t *sdev, int max, char * pMsg);$/;"	p	signature:(SubDev_t *sdev, int max, char * pMsg)
+joylink_parse_json_ctrl	json/joylink_json.c	/^joylink_parse_json_ctrl(char *feedid, const char * pMsg)$/;"	f	signature:(char *feedid, const char * pMsg)
+joylink_parse_json_ctrl	json/joylink_json.h	/^joylink_parse_json_ctrl(char *feedid, const char * pMsg);$/;"	p	signature:(char *feedid, const char * pMsg)
+joylink_parse_lan_write_key	json/joylink_json.c	/^joylink_parse_lan_write_key(DevEnable_t *de, const char * pMsg)$/;"	f	signature:(DevEnable_t *de, const char * pMsg)
+joylink_parse_lan_write_key	json/joylink_json.h	/^joylink_parse_lan_write_key(DevEnable_t *de, const char * pMsg);$/;"	p	signature:(DevEnable_t *de, const char * pMsg)
+joylink_parse_scan	json/joylink_json.c	/^joylink_parse_scan(DevScan_t *scan, const char * pMsg)$/;"	f	signature:(DevScan_t *scan, const char * pMsg)
+joylink_parse_scan	json/joylink_json.h	/^joylink_parse_scan(DevScan_t *scan, const char * pMsg);$/;"	p	signature:(DevScan_t *scan, const char * pMsg)
+joylink_parse_server_ota_order_req	json/joylink_json.c	/^joylink_parse_server_ota_order_req(JLOtaOrder_t* otaOrder, const char * pMsg)$/;"	f	signature:(JLOtaOrder_t* otaOrder, const char * pMsg)
+joylink_parse_server_ota_order_req	json/joylink_json.h	/^joylink_parse_server_ota_order_req(JLOtaOrder_t *otaOrder, const char * pMsg);$/;"	p	signature:(JLOtaOrder_t *otaOrder, const char * pMsg)
+joylink_parse_server_ota_upload_req	json/joylink_json.c	/^joylink_parse_server_ota_upload_req(JLOtaUploadRsp_t* otaUpload, const char* pMsg)$/;"	f	signature:(JLOtaUploadRsp_t* otaUpload, const char* pMsg)
+joylink_parse_server_ota_upload_req	json/joylink_json.h	/^joylink_parse_server_ota_upload_req(JLOtaUploadRsp_t* otaUpload, const char* pMsg);$/;"	p	signature:(JLOtaUploadRsp_t* otaUpload, const char* pMsg)
+joylink_parse_sub_add	json/joylink_json.h	/^joylink_parse_sub_add(const uint8_t* pMsg, int *out_num);$/;"	p	signature:(const uint8_t* pMsg, int *out_num)
+joylink_parse_sub_add	json/joylink_json_sub_dev.c	/^joylink_parse_sub_add(const uint8_t* pMsg, int* out_num)$/;"	f	signature:(const uint8_t* pMsg, int* out_num)
+joylink_parse_sub_auth	json/joylink_json.h	/^joylink_parse_sub_auth(const uint8_t* pMsg, JLDevInfo_t *dev);$/;"	p	signature:(const uint8_t* pMsg, JLDevInfo_t *dev)
+joylink_parse_sub_auth	json/joylink_json_sub_dev.c	/^joylink_parse_sub_auth(const uint8_t* pMsg, JLDevInfo_t *dev)$/;"	f	signature:(const uint8_t* pMsg, JLDevInfo_t *dev)
+joylink_proc_lan	joylink/joylink_dev_lan.c	/^joylink_proc_lan()$/;"	f
+joylink_proc_lan	joylink/joylink_dev_sdk.c	/^extern void joylink_proc_lan();$/;"	p	file:
+joylink_proc_lan_json_ctrl	joylink/joylink_dev_lan.c	/^joylink_proc_lan_json_ctrl(uint8_t *json_cmd, struct sockaddr_in *sin_recv, socklen_t addrlen)$/;"	f	file:	signature:(uint8_t *json_cmd, struct sockaddr_in *sin_recv, socklen_t addrlen)
+joylink_proc_lan_rsp_send	joylink/joylink_dev_lan.c	/^joylink_proc_lan_rsp_send(uint8_t* data, int len,  struct sockaddr_in *sin_recv, socklen_t addrlen)$/;"	f	signature:(uint8_t* data, int len, struct sockaddr_in *sin_recv, socklen_t addrlen)
+joylink_proc_lan_scan	joylink/joylink_dev_lan.c	/^joylink_proc_lan_scan(uint8_t *src, struct sockaddr_in *sin_recv, socklen_t addrlen)$/;"	f	file:	signature:(uint8_t *src, struct sockaddr_in *sin_recv, socklen_t addrlen)
+joylink_proc_lan_script_ctrl	joylink/joylink_dev_lan.c	/^joylink_proc_lan_script_ctrl(uint8_t *src, struct sockaddr_in *sin_recv, socklen_t addrlen)$/;"	f	file:	signature:(uint8_t *src, struct sockaddr_in *sin_recv, socklen_t addrlen)
+joylink_proc_lan_sub_add	joylink/joylink_sub_dev.c	/^joylink_proc_lan_sub_add(uint8_t *src, struct sockaddr_in *sin_recv, socklen_t addrlen)$/;"	f	signature:(uint8_t *src, struct sockaddr_in *sin_recv, socklen_t addrlen)
+joylink_proc_lan_sub_add	joylink/joylink_sub_dev.h	/^joylink_proc_lan_sub_add(uint8_t *src, struct sockaddr_in *sin_recv, socklen_t addrlen);$/;"	p	signature:(uint8_t *src, struct sockaddr_in *sin_recv, socklen_t addrlen)
+joylink_proc_lan_sub_auth	joylink/joylink_sub_dev.c	/^joylink_proc_lan_sub_auth(uint8_t *src, struct sockaddr_in *sin_recv, socklen_t addrlen)$/;"	f	signature:(uint8_t *src, struct sockaddr_in *sin_recv, socklen_t addrlen)
+joylink_proc_lan_sub_auth	joylink/joylink_sub_dev.h	/^joylink_proc_lan_sub_auth(uint8_t *src, struct sockaddr_in *sin_recv, socklen_t addrlen);$/;"	p	signature:(uint8_t *src, struct sockaddr_in *sin_recv, socklen_t addrlen)
+joylink_proc_lan_sub_script_ctrl	joylink/joylink_sub_dev.c	/^joylink_proc_lan_sub_script_ctrl(uint8_t *src, int src_len,$/;"	f	signature:(uint8_t *src, int src_len, struct sockaddr_in *sin_recv, socklen_t addrlen)
+joylink_proc_lan_sub_script_ctrl	joylink/joylink_sub_dev.h	/^joylink_proc_lan_sub_script_ctrl(uint8_t *src, int src_len, struct sockaddr_in *sin_recv, socklen_t addrlen);$/;"	p	signature:(uint8_t *src, int src_len, struct sockaddr_in *sin_recv, socklen_t addrlen)
+joylink_proc_lan_write_key	joylink/joylink_dev_lan.c	/^joylink_proc_lan_write_key(uint8_t *src, struct sockaddr_in *sin_recv, socklen_t addrlen)$/;"	f	file:	signature:(uint8_t *src, struct sockaddr_in *sin_recv, socklen_t addrlen)
+joylink_proc_server	joylink/joylink_dev_sdk.c	/^extern void joylink_proc_server();$/;"	p	file:
+joylink_proc_server	joylink/joylink_dev_server.c	/^joylink_proc_server()$/;"	f
+joylink_proc_server_auth	joylink/joylink_dev_server.c	/^joylink_proc_server_auth(uint8_t* recPainText)$/;"	f	file:	signature:(uint8_t* recPainText)
+joylink_proc_server_ctrl	joylink/joylink_dev_server.c	/^joylink_proc_server_ctrl(uint8_t* recPainText)$/;"	f	file:	signature:(uint8_t* recPainText)
+joylink_proc_server_hb	joylink/joylink_dev_server.c	/^joylink_proc_server_hb(uint8_t* recPainText)$/;"	f	file:	signature:(uint8_t* recPainText)
+joylink_proc_server_ota_order	joylink/joylink_dev_server.c	/^joylink_proc_server_ota_order(uint8_t* json, int json_len)$/;"	f	file:	signature:(uint8_t* json, int json_len)
+joylink_proc_server_ota_upload	joylink/joylink_dev_server.c	/^joylink_proc_server_ota_upload(uint8_t* json)$/;"	f	file:	signature:(uint8_t* json)
+joylink_proc_server_st	joylink/joylink_dev_sdk.c	/^extern int joylink_proc_server_st();$/;"	p	file:
+joylink_proc_server_st	joylink/joylink_dev_server.c	/^joylink_proc_server_st()$/;"	f
+joylink_proc_server_sub_ctrl	joylink/joylink_dev_server.c	/^joylink_proc_server_sub_ctrl(uint8_t* recPainText, unsigned short payloadlen)$/;"	f	file:	signature:(uint8_t* recPainText, unsigned short payloadlen)
+joylink_proc_server_sub_hb	joylink/joylink_dev_server.c	/^joylink_proc_server_sub_hb(uint8_t* recPainText)$/;"	f	file:	signature:(uint8_t* recPainText)
+joylink_proc_server_sub_unbind	joylink/joylink_dev_server.c	/^joylink_proc_server_sub_unbind(uint8_t* recPainText, unsigned short payloadlen)$/;"	f	file:	signature:(uint8_t* recPainText, unsigned short payloadlen)
+joylink_proc_server_sub_upload	joylink/joylink_dev_server.c	/^joylink_proc_server_sub_upload(uint8_t* recPainText)$/;"	f	file:	signature:(uint8_t* recPainText)
+joylink_proc_server_upload	joylink/joylink_dev_server.c	/^joylink_proc_server_upload(uint8_t* recPainText)$/;"	f	file:	signature:(uint8_t* recPainText)
+joylink_result_t	joylink/joylink_cfg.h	/^} joylink_result_t;$/;"	t	typeref:struct:__anon2
+joylink_send_big_pkg	joylink/joylink_dev_lan.c	/^joylink_send_big_pkg(struct sockaddr_in *sin_recv, socklen_t addrlen)$/;"	f	signature:(struct sockaddr_in *sin_recv, socklen_t addrlen)
+joylink_server	joylink/joylink.h	/^    char joylink_server[JL_MAX_SERVER_NAME_LEN];$/;"	m	struct:__anon16	access:public
+joylink_server	joylink/joylink.h	/^    char joylink_server[JL_MAX_SERVER_NAME_LEN];$/;"	m	struct:__dev_enable	access:public
+joylink_server_ota_status_upload_req	joylink/joylink.h	/^void joylink_server_ota_status_upload_req(JLOtaUpload_t *otaUpload);$/;"	p	signature:(JLOtaUpload_t *otaUpload)
+joylink_server_ota_status_upload_req	joylink/joylink_dev_server.c	/^joylink_server_ota_status_upload_req(JLOtaUpload_t *otaUpload)$/;"	f	signature:(JLOtaUpload_t *otaUpload)
+joylink_server_recv	joylink/joylink_dev_server.c	/^joylink_server_recv(char fd, char *rec_buff, int max)$/;"	f	signature:(char fd, char *rec_buff, int max)
+joylink_server_st_auth	joylink/joylink_dev_server.c	/^joylink_server_st_auth()$/;"	f	file:
+joylink_server_st_init	joylink/joylink_dev_server.c	/^joylink_server_st_init()$/;"	f	file:
+joylink_server_st_time_out_check	joylink/joylink_dev_server.c	/^joylink_server_st_time_out_check()$/;"	f	file:
+joylink_server_st_work	joylink/joylink_dev_server.c	/^joylink_server_st_work()$/;"	f	file:
+joylink_server_subdev_upload_req	joylink/joylink_dev_server.c	/^joylink_server_subdev_upload_req()$/;"	f	file:
+joylink_server_upload_req	joylink/joylink_dev_lan.c	/^extern int joylink_server_upload_req();$/;"	p	file:
+joylink_server_upload_req	joylink/joylink_dev_server.c	/^joylink_server_upload_req()$/;"	f
+joylink_status_t	joylink/joylink_cfg.h	/^} joylink_status_t;$/;"	t	typeref:enum:__anon3
+joylink_sub_dev_del	example/joylink_extern_sub_dev.c	/^joylink_sub_dev_del(JLDevInfo_t *dev, int num)$/;"	f	signature:(JLDevInfo_t *dev, int num)
+joylink_sub_dev_del	extern/joylink_extern.h	/^joylink_sub_dev_del(JLDevInfo_t *dev, int num);$/;"	p	signature:(JLDevInfo_t *dev, int num)
+joylink_sub_dev_del	extern/joylink_extern_sub_dev.c	/^joylink_sub_dev_del(JLDevInfo_t *dev, int num)$/;"	f	signature:(JLDevInfo_t *dev, int num)
+joylink_sub_dev_get_by_uuid_mac	example/joylink_extern_sub_dev.c	/^joylink_sub_dev_get_by_uuid_mac(char *uuid, char *mac, JLDevInfo_t *dev)$/;"	f	signature:(char *uuid, char *mac, JLDevInfo_t *dev)
+joylink_sub_dev_get_by_uuid_mac	extern/joylink_extern.h	/^joylink_sub_dev_get_by_uuid_mac(char *uuid, char *mac, JLDevInfo_t *dev);$/;"	p	signature:(char *uuid, char *mac, JLDevInfo_t *dev)
+joylink_sub_dev_get_by_uuid_mac	extern/joylink_extern_sub_dev.c	/^joylink_sub_dev_get_by_uuid_mac(char *uuid, char *mac, JLDevInfo_t *dev)$/;"	f	signature:(char *uuid, char *mac, JLDevInfo_t *dev)
+joylink_subdev_script_ctrl	joylink/joylink_sub_dev.c	/^joylink_subdev_script_ctrl(uint8_t* recPainText, JLSubContrl_t *ctr, unsigned short payloadlen)$/;"	f	signature:(uint8_t* recPainText, JLSubContrl_t *ctr, unsigned short payloadlen)
+joylink_subdev_script_ctrl	joylink/joylink_sub_dev.h	/^joylink_subdev_script_ctrl(uint8_t* recPainText, JLSubContrl_t *ctr, unsigned short payloadlen);$/;"	p	signature:(uint8_t* recPainText, JLSubContrl_t *ctr, unsigned short payloadlen)
+joylink_subdev_unbind	joylink/joylink_sub_dev.c	/^joylink_subdev_unbind(uint8_t* recPainText, JLSubUnbind_t* unbind)$/;"	f	signature:(uint8_t* recPainText, JLSubUnbind_t* unbind)
+joylink_subdev_unbind	joylink/joylink_sub_dev.h	/^joylink_subdev_unbind(uint8_t* recPainText, JLSubUnbind_t* unbind);$/;"	p	signature:(uint8_t* recPainText, JLSubUnbind_t* unbind)
+joylink_test_crc32	example/joylink_extern.c	/^joylink_test_crc32()$/;"	f
+joylink_util_byte2hexstr	joylink/joylink_utils.c	/^joylink_util_byte2hexstr(const uint8_t *pBytes, int srcLen, uint8_t *pDstStr, int dstLen)$/;"	f	signature:(const uint8_t *pBytes, int srcLen, uint8_t *pDstStr, int dstLen)
+joylink_util_byte2hexstr	joylink/joylink_utils.h	/^joylink_util_byte2hexstr(const uint8_t *pBytes, int srcLen, uint8_t *pDstStr, int dstLen);$/;"	p	signature:(const uint8_t *pBytes, int srcLen, uint8_t *pDstStr, int dstLen)
+joylink_util_cut_ip_port	example/joylink_extern.c	/^joylink_util_cut_ip_port(const char *ipport, char *out_ip, int *out_port);$/;"	p	file:	signature:(const char *ipport, char *out_ip, int *out_port)
+joylink_util_cut_ip_port	joylink/joylink_utils.c	/^joylink_util_cut_ip_port(const char *ipport, char *out_ip, int *out_port)$/;"	f	signature:(const char *ipport, char *out_ip, int *out_port)
+joylink_util_cut_ip_port	joylink/joylink_utils.h	/^joylink_util_cut_ip_port(const char *ipport, char *out_ip, int *out_port);$/;"	p	signature:(const char *ipport, char *out_ip, int *out_port)
+joylink_util_cut_ip_port	list/test.c	/^joylink_util_cut_ip_port(const char *ipport, char *out_ip, int *out_port)$/;"	f	signature:(const char *ipport, char *out_ip, int *out_port)
+joylink_util_get_ipstr	joylink/joylink_utils.c	/^joylink_util_get_ipstr(struct sockaddr_in* pPeerAddr, char* str)$/;"	f	signature:(struct sockaddr_in* pPeerAddr, char* str)
+joylink_util_get_ipstr	joylink/joylink_utils.h	/^joylink_util_get_ipstr(struct sockaddr_in* pPeerAddr, char* str);$/;"	p	signature:(struct sockaddr_in* pPeerAddr, char* str)
+joylink_util_getsys_ms	joylink/joylink_utils.c	/^joylink_util_getsys_ms(void)$/;"	f	file:	signature:(void)
+joylink_util_hexStr2bytes	joylink/joylink_utils.c	/^joylink_util_hexStr2bytes(const char *hexStr, uint8_t *buf, int bufLen)$/;"	f	signature:(const char *hexStr, uint8_t *buf, int bufLen)
+joylink_util_hexStr2bytes	joylink/joylink_utils.h	/^joylink_util_hexStr2bytes(const char *hexStr, uint8_t *buf, int bufLen);$/;"	p	signature:(const char *hexStr, uint8_t *buf, int bufLen)
+joylink_util_is_time_out	joylink/joylink_utils.c	/^joylink_util_is_time_out(uint32_t timestamp, uint32_t timeout)$/;"	f	signature:(uint32_t timestamp, uint32_t timeout)
+joylink_util_is_time_out	joylink/joylink_utils.h	/^joylink_util_is_time_out(uint32_t timestamp, uint32_t timeout);$/;"	p	signature:(uint32_t timestamp, uint32_t timeout)
+joylink_util_timer_reset	joylink/joylink_utils.c	/^joylink_util_timer_reset(uint32_t *timestamp)$/;"	f	signature:(uint32_t *timestamp)
+joylink_util_timer_reset	joylink/joylink_utils.h	/^joylink_util_timer_reset(uint32_t *timestamp);$/;"	p	signature:(uint32_t *timestamp)
+key	auth/aes.h	/^    ALIGN16 uint32_t key[60];$/;"	m	struct:Aes	access:public
+key	example/joylink_dev.h	/^    char key[254];$/;"	m	struct:__wifi_info	access:public
+lan_socket	joylink/joylink.h	/^    int lan_socket;$/;"	m	struct:__anon17	access:public
+lancon	joylink/joylink.h	/^	int lancon;			    \/\/ 1 suport Lan $/;"	m	struct:__anon16	access:public
+lancon	joylink/joylink.h	/^    char lancon;$/;"	m	struct:__dev_enable	access:public
+last_on_time	example/joylink_dev.h	/^    char last_on_time[254];$/;"	m	struct:__dev_info	access:public
+lastest_online_time	example/joylink_dev.h	/^    char lastest_online_time[64];$/;"	m	struct:__anon1	access:public
+len	joylink/joylink.h	/^	unsigned int len;$/;"	m	struct:__anon10	access:public
+len	list/joylink_list.h	/^    int32_t len;$/;"	m	struct:_id_node	access:public
+lhead	joylink/joylink_join_packet.c	/^    LHead_t lhead;$/;"	m	struct:__join_packet	file:	access:public
+lhead	list/test.c	/^    LHead_t lhead;$/;"	m	struct:__join_packet	file:	access:public
+list	list/joylink_list.h	/^	LHead_t	list;$/;"	m	struct:_id_node	access:public
+list_entry	list/yc_list.h	112;"	d
+list_for_each	list/yc_list.h	132;"	d
+list_for_each_entry	list/yc_list.h	140;"	d
+list_for_each_entry_safe	list/yc_list.h	152;"	d
+local_port	joylink/joylink.h	/^    short local_port;$/;"	m	struct:__anon17	access:public
+localkey	example/joylink_extern.c	/^    Attr_t localkey;$/;"	m	struct:_attr_manage_	file:	access:public
+localkey	extern/joylink_extern.c	/^    Attr_t localkey;$/;"	m	struct:_attr_manage_	file:	access:public
+localkey	joylink/joylink.h	/^    char localkey[33];$/;"	m	struct:__anon16	access:public
+localkey	joylink/joylink.h	/^    char localkey[34];$/;"	m	struct:__dev_enable	access:public
+log_debug	joylink/joylink_log.h	85;"	d
+log_error	joylink/joylink_log.h	67;"	d
+log_fatal	joylink/joylink_log.h	40;"	d
+log_info	joylink/joylink_log.h	58;"	d
+log_notice	joylink/joylink_log.h	49;"	d
+log_warn	joylink/joylink_log.h	76;"	d
+mac	example/joylink_dev.h	/^    char mac[32];$/;"	m	struct:__anon1	access:public
+mac	example/joylink_dev.h	/^    char mac[64];$/;"	m	struct:__dev_info	access:public
+mac	joylink/joylink.h	/^	char mac[JL_MAX_MAC_LEN];$/;"	m	struct:__anon16	access:public
+macaddr	example/joylink_extern.c	/^	Attr_t macaddr;	$/;"	m	struct:_attr_manage_	file:	access:public
+macaddr	extern/joylink_extern.c	/^	Attr_t macaddr;	$/;"	m	struct:_attr_manage_	file:	access:public
+magic	joylink/joylink.h	/^	unsigned int	magic;$/;"	m	struct:__anon12	access:public
+magic	joylink/joylink.h	/^	unsigned int magic;$/;"	m	struct:__anon10	access:public
+main	auth/test.c	/^int main()$/;"	f
+main	joylink/joylink_dev_sdk.c	/^main()$/;"	f
+main	joylink/test.c	/^int main()$/;"	f
+main	json/test.c	/^int main(int arvc , char **argv)$/;"	f	signature:(int arvc , char **argv)
+main	list/test.c	/^int main()$/;"	f
+make_crc	auth/crc.c	/^uint32_t make_crc(uint32_t crc, unsigned char *string, uint32_t size)$/;"	f	signature:(uint32_t crc, unsigned char *string, uint32_t size)
+make_crc	auth/crc.h	/^uint32_t make_crc(uint32_t crc, unsigned char *string, uint32_t size);$/;"	p	signature:(uint32_t crc, unsigned char *string, uint32_t size)
+make_crc32_table	auth/crc.c	/^void make_crc32_table()$/;"	f
+make_crc32_table	auth/crc.h	/^void make_crc32_table();$/;"	p	signature:()
+malloc_fn	json/cJSON.h	/^      void *(*malloc_fn)(size_t sz);$/;"	m	struct:cJSON_Hooks	access:public
+mem_get	list/joylink_list.h	16;"	d
+mem_put	list/joylink_list.h	17;"	d
+mod_sqrt	auth/uECC.c	/^static void mod_sqrt(uECC_word_t *a) {$/;"	f	file:	signature:(uECC_word_t *a)
+mod_sqrt_secp224r1_rm	auth/uECC.c	/^static void mod_sqrt_secp224r1_rm(uECC_word_t *d2,$/;"	f	file:	signature:(uECC_word_t *d2, uECC_word_t *e2, uECC_word_t *f2, const uECC_word_t *c, const uECC_word_t *d0, const uECC_word_t *e0, const uECC_word_t *d1, const uECC_word_t *e1)
+mod_sqrt_secp224r1_rp	auth/uECC.c	/^static void mod_sqrt_secp224r1_rp(uECC_word_t *d1,$/;"	f	file:	signature:(uECC_word_t *d1, uECC_word_t *e1, uECC_word_t *f1, const uECC_word_t *c, const uECC_word_t *r)
+mod_sqrt_secp224r1_rs	auth/uECC.c	/^static void mod_sqrt_secp224r1_rs(uECC_word_t *d1,$/;"	f	file:	signature:(uECC_word_t *d1, uECC_word_t *e1, uECC_word_t *f1, const uECC_word_t *d0, const uECC_word_t *e0, const uECC_word_t *f0)
+mod_sqrt_secp224r1_rss	auth/uECC.c	/^static void mod_sqrt_secp224r1_rss(uECC_word_t *d1,$/;"	f	file:	signature:(uECC_word_t *d1, uECC_word_t *e1, uECC_word_t *f1, const uECC_word_t *d0, const uECC_word_t *e0, const uECC_word_t *f0, const bitcount_t j)
+msg	joylink/joylink.h	/^	char msg[JL_MAX_MSG_LEN];$/;"	m	struct:__anon29	access:public
+msg	joylink/joylink.h	/^    char msg[250];$/;"	m	struct:__anon18	access:public
+mul2add	auth/uECC.c	/^static void mul2add(uECC_word_t a,$/;"	f	file:	signature:(uECC_word_t a, uECC_word_t b, uECC_word_t *r0, uECC_word_t *r1, uECC_word_t *r2)
+muladd	auth/uECC.c	/^static void muladd(uECC_word_t a,$/;"	f	file:	signature:(uECC_word_t a, uECC_word_t b, uECC_word_t *r0, uECC_word_t *r1, uECC_word_t *r2)
+muladd_exists	auth/uECC.c	2283;"	d	file:
+muladd_exists	auth/uECC.c	707;"	d	file:
+name	example/joylink_dev.h	/^    char name[254];$/;"	m	struct:__dev_info	access:public
+name	example/joylink_extern.c	/^    char name[128];$/;"	m	struct:__attr_	file:	access:public
+name	extern/joylink_extern.c	/^    char name[128];$/;"	m	struct:__attr_	file:	access:public
+name	joylink/joylink_join_packet.c	/^    char name[256];$/;"	m	struct:__join_packet	file:	access:public
+name	joylink/test.c	/^    char name[24];$/;"	m	struct:__s	file:	access:public
+name	list/test.c	/^    char name[256];$/;"	m	struct:__join_packet	file:	access:public
+next	json/cJSON.h	/^	struct cJSON *next,*prev;	\/* next\/prev allow you to walk array\/object chains. Alternatively, use GetArraySize\/GetArrayItem\/GetObjectItem *\/$/;"	m	struct:cJSON	typeref:struct:cJSON::cJSON	access:public
+next	list/yc_list.h	/^	struct yc_list_head *next;$/;"	m	struct:yc_list_head	typeref:struct:yc_list_head::yc_list_head	access:public
+nr	auth/joylinkAES.c	/^    int nr;                     \/*!<  number of rounds  *\/$/;"	m	struct:__anon37	file:	access:public
+num	joylink/joylink_sub_dev.h	/^	unsigned short  num;$/;"	m	struct:__anon9	access:public
+num	joylink/joylink_sub_dev.h	/^	unsigned short num;$/;"	m	struct:__anon7	access:public
+omega_mult	auth/uECC.c	/^static void omega_mult(uECC_word_t * RESTRICT result, const uECC_word_t * RESTRICT right);$/;"	p	file:	signature:(uECC_word_t * RESTRICT result, const uECC_word_t * RESTRICT right)
+omega_mult	auth/uECC.c	/^static void omega_mult(uint32_t * RESTRICT result, const uint32_t * RESTRICT right) {$/;"	f	file:	signature:(uint32_t * RESTRICT result, const uint32_t * RESTRICT right)
+omega_mult	auth/uECC.c	/^static void omega_mult(uint64_t * RESTRICT result, const uint64_t * RESTRICT right) {$/;"	f	file:	signature:(uint64_t * RESTRICT result, const uint64_t * RESTRICT right)
+omega_mult	auth/uECC.c	/^static void omega_mult(uint8_t * RESTRICT result, const uint8_t * RESTRICT right) {$/;"	f	file:	signature:(uint8_t * RESTRICT result, const uint8_t * RESTRICT right)
+on	example/joylink_dev.h	/^    char on;$/;"	m	struct:__wifi_info	access:public
+online_state	example/joylink_dev.h	/^    char online_state;$/;"	m	struct:__wifi_ctrl	access:public
+opt	joylink/joylink.h	/^    char opt[JL_MAX_SERVER_NAME_LEN];$/;"	m	struct:__dev_enable	access:public
+optlen	joylink/joylink.h	/^	unsigned short	optlen;$/;"	m	struct:__anon12	access:public
+packageGWInfo	example/joylink_extern_json.c	/^packageGWInfo(const char *retMsg, const int retCode, $/;"	f	signature:(const char *retMsg, const int retCode, const WIFICtrl_t *wci, const char *devlist)
+packageGWInfo	example/joylink_extern_json.h	/^packageGWInfo(const char *retMsg, $/;"	p	signature:(const char *retMsg, const int retCode, const WIFICtrl_t *wci, const char *devlist)
+packageWIFIInfo	example/joylink_extern_json.c	/^packageWIFIInfo(const WIFIInfo_t *wc, const int max, char * out_buff, int g24)$/;"	f	signature:(const WIFIInfo_t *wc, const int max, char * out_buff, int g24)
+packageWIFIInfo	example/joylink_extern_json.h	/^packageWIFIInfo(const WIFIInfo_t *wc, $/;"	p	signature:(const WIFIInfo_t *wc, const int max, char * out_buff, int g24)
+parse_array	json/cJSON.c	/^static const char *parse_array(cJSON *item,const char *value)$/;"	f	file:	signature:(cJSON *item,const char *value)
+parse_array	json/cJSON.c	/^static const char *parse_array(cJSON *item,const char *value);$/;"	p	file:	signature:(cJSON *item,const char *value)
+parse_number	json/cJSON.c	/^static const char *parse_number(cJSON *item,const char *num)$/;"	f	file:	signature:(cJSON *item,const char *num)
+parse_object	json/cJSON.c	/^static const char *parse_object(cJSON *item,const char *value)$/;"	f	file:	signature:(cJSON *item,const char *value)
+parse_object	json/cJSON.c	/^static const char *parse_object(cJSON *item,const char *value);$/;"	p	file:	signature:(cJSON *item,const char *value)
+parse_string	json/cJSON.c	/^static const char *parse_string(cJSON *item,const char *str)$/;"	f	file:	signature:(cJSON *item,const char *str)
+parse_value	json/cJSON.c	/^static const char *parse_value(cJSON *item,const char *value)$/;"	f	file:	signature:(cJSON *item,const char *value)
+parse_value	json/cJSON.c	/^static const char *parse_value(cJSON *item,const char *value);$/;"	p	file:	signature:(cJSON *item,const char *value)
+parse_wifictrl_ssid	example/joylink_extern_json.c	/^parse_wifictrl_ssid(WIFIInfo_t *pw, char * pMsg)$/;"	f	signature:(WIFIInfo_t *pw, char * pMsg)
+parse_wifictrl_ssid	example/joylink_extern_json.h	/^parse_wifictrl_ssid(WIFIInfo_t *pw, char * pMsg);$/;"	p	signature:(WIFIInfo_t *pw, char * pMsg)
+pass_word	extern/joylink_extern.c	/^	Attr_t pass_word;	$/;"	m	struct:_attr_manage_	file:	access:public
+payload_total	joylink/joylink.h	/^    int payload_total;$/;"	m	struct:__anon17	access:public
+payloadlen	joylink/joylink.h	/^	unsigned short	payloadlen;$/;"	m	struct:__anon12	access:public
+phead	joylink/joylink_join_packet.c	/^    JLPacketHead_t phead;$/;"	m	struct:__join_packet	file:	access:public
+phead	list/test.c	/^    JLPacketHead_t phead;$/;"	m	struct:__join_packet	file:	access:public
+port	joylink/joylink.h	/^	int port;		$/;"	m	struct:__anon16	access:public
+prev	json/cJSON.h	/^	struct cJSON *next,*prev;	\/* next\/prev allow you to walk array\/object chains. Alternatively, use GetArraySize\/GetArrayItem\/GetObjectItem *\/$/;"	m	struct:cJSON	typeref:struct:cJSON::	access:public
+prev	list/yc_list.h	/^	struct yc_list_head *prev;$/;"	m	struct:yc_list_head	typeref:struct:yc_list_head::yc_list_head	access:public
+pri2jds	lua/example.lua	/^function pri2jds( code, length, bin )$/;"	f
+pri2jds	lua/only_trans.lua	/^function pri2jds(code, length, bin) $/;"	f
+priKey	auth/joylink_crypt.h	/^	uint8_t priKey[uECC_BYTES];$/;"	m	struct:__anon30	access:public
+print_array	json/cJSON.c	/^static char *print_array(cJSON *item,int depth,int fmt)$/;"	f	file:	signature:(cJSON *item,int depth,int fmt)
+print_array	json/cJSON.c	/^static char *print_array(cJSON *item,int depth,int fmt);$/;"	p	file:	signature:(cJSON *item,int depth,int fmt)
+print_number	json/cJSON.c	/^static char *print_number(cJSON *item)$/;"	f	file:	signature:(cJSON *item)
+print_object	json/cJSON.c	/^static char *print_object(cJSON *item,int depth,int fmt)$/;"	f	file:	signature:(cJSON *item,int depth,int fmt)
+print_object	json/cJSON.c	/^static char *print_object(cJSON *item,int depth,int fmt);$/;"	p	file:	signature:(cJSON *item,int depth,int fmt)
+print_string	json/cJSON.c	/^static char *print_string(cJSON *item)	{return print_string_ptr(item->valuestring);}$/;"	f	file:	signature:(cJSON *item)
+print_string_ptr	json/cJSON.c	/^static char *print_string_ptr(const char *str)$/;"	f	file:	signature:(const char *str)
+print_value	json/cJSON.c	/^static char *print_value(cJSON *item,int depth,int fmt)$/;"	f	file:	signature:(cJSON *item,int depth,int fmt)
+print_value	json/cJSON.c	/^static char *print_value(cJSON *item,int depth,int fmt);$/;"	p	file:	signature:(cJSON *item,int depth,int fmt)
+productuuid	joylink/joylink.h	/^    char productuuid[JL_MAX_UUID_LEN];$/;"	m	struct:__anon27	access:public
+productuuid	joylink/joylink.h	/^    char productuuid[JL_MAX_UUID_LEN];$/;"	m	struct:__anon28	access:public
+progress	joylink/joylink.h	/^    int progress;$/;"	m	struct:__anon28	access:public
+protocol	joylink/joylink.h	/^    int protocol;           \/\/ 0:WIFI 1:zigbee 2:bluetooth 3:433$/;"	m	struct:__anon16	access:public
+pubkeyC	auth/joylink_crypt.h	/^	uint8_t pubkeyC[JL_MAX_KEY_BIN_LEN];		\/\/ ѹ????ʽ?Ĺ?Կ$/;"	m	struct:__anon31	access:public
+pubkeyC	joylink/joylink.h	/^	uint8_t pubkeyC[JL_MAX_KEY_BIN_LEN];$/;"	m	struct:__anon16	access:public
+pubkeyS	joylink/joylink.h	/^	char pubkeyS[JL_MAX_KEY_STR_LEN];$/;"	m	struct:__anon16	access:public
+pwd	joylink/joylink_cfg.h	/^	char pwd[65];						$/;"	m	struct:__anon2	access:public
+pwd_length	joylink/joylink_cfg.h	/^	unsigned char pwd_length;$/;"	m	struct:__anon2	access:public
+random_unm	joylink/joylink.h	/^	unsigned int random_unm;$/;"	m	struct:__anon19	access:public
+random_unm	joylink/joylink.h	/^	unsigned int random_unm;$/;"	m	struct:__anon20	access:public
+rcon	auth/aes.c	/^static const uint32_t rcon[] = {$/;"	v	file:
+reg	auth/aes.h	/^    ALIGN16 uint32_t reg[AES_BLOCK_SIZE \/ sizeof(uint32_t)];      \/* for CBC mode *\/$/;"	m	struct:Aes	access:public
+reserved	joylink/joylink.h	/^	unsigned char	reserved;$/;"	m	struct:__anon12	access:public
+resp	joylink/joylink.h	/^	unsigned char resp[1];$/;"	m	struct:__anon24	access:public
+resp_length	joylink/joylink.h	/^	unsigned char resp_length[4];$/;"	m	struct:__anon24	access:public
+result_size	auth/uECC.h	/^    unsigned result_size; \/* Hash function result size in bytes, eg 32 for SHA-256. *\/$/;"	m	struct:uECC_HashContext	access:public
+rk	auth/joylinkAES.c	/^    unsigned long *rk;          \/*!<  AES round keys    *\/$/;"	m	struct:__anon37	file:	access:public
+rotlFixed	auth/aes.c	/^\/*STATIC INLINE *\/uint32_t rotlFixed(uint32_t x, uint32_t y)$/;"	f	signature:(uint32_t x, uint32_t y)
+rotrFixed	auth/aes.c	/^\/*STATIC INLINE *\/uint32_t rotrFixed(uint32_t x, uint32_t y)$/;"	f	signature:(uint32_t x, uint32_t y)
+rounds	auth/aes.h	/^    uint32_t  rounds;$/;"	m	struct:Aes	access:public
+rssi	joylink/joylink.h	/^	unsigned short rssi;$/;"	m	struct:__anon21	access:public
+rssi	joylink/joylink_sub_dev.h	/^	unsigned short	rssi;$/;"	m	struct:__anon6	access:public
+rssi	joylink/joylink_sub_dev.h	/^	unsigned short	rssi;$/;"	m	struct:__anon7	access:public
+sdevinfo	joylink/joylink_sub_dev.h	/^	JLSubDevInfo_t sdevinfo[];$/;"	m	struct:__anon7	access:public
+send_buff	joylink/joylink.h	/^    uint8_t send_buff[JL_MAX_PACKET_LEN];$/;"	m	struct:__anon17	access:public
+send_p	joylink/joylink.h	/^    char *send_p;$/;"	m	struct:__anon17	access:public
+serial	joylink/joylink.h	/^	int serial;$/;"	m	struct:__anon27	access:public
+serial	joylink/joylink.h	/^	unsigned int serial;$/;"	m	struct:__anon23	access:public
+serial	joylink/joylink.h	/^	unsigned int serial;$/;"	m	struct:__anon24	access:public
+serial	joylink/joylink_sub_dev.h	/^	unsigned int	 serial;$/;"	m	struct:__anon8	access:public
+serial	joylink/joylink_sub_dev.h	/^	unsigned int	serial;$/;"	m	struct:__anon9	access:public
+server_info	example/joylink_extern.c	/^	Attr_t server_info;	$/;"	m	struct:_attr_manage_	file:	access:public
+server_info	extern/joylink_extern.c	/^	Attr_t server_info;	$/;"	m	struct:_attr_manage_	file:	access:public
+server_port	joylink/joylink.h	/^    int server_port;$/;"	m	struct:__anon16	access:public
+server_port	joylink/joylink.h	/^    int server_port;$/;"	m	struct:__dev_enable	access:public
+server_socket	joylink/joylink.h	/^    int server_socket;$/;"	m	struct:__anon17	access:public
+server_st	example/joylink_extern.c	/^    Attr_t server_st;$/;"	m	struct:_attr_manage_	file:	access:public
+server_st	extern/joylink_extern.c	/^    Attr_t server_st;$/;"	m	struct:_attr_manage_	file:	access:public
+server_st	joylink/joylink.h	/^    int server_st;	 \/\/ 0:Socket init 1:Auth 2:HB$/;"	m	struct:__anon17	access:public
+servropt	joylink/joylink.h	/^	char servropt[JL_MAX_OPT_LEN];$/;"	m	struct:__anon16	access:public
+sessionKey	joylink/joylink.h	/^	uint8_t sessionKey[33];$/;"	m	struct:__anon16	access:public
+session_key	joylink/joylink.h	/^	unsigned char session_key[];$/;"	m	struct:__anon20	access:public
+set	example/joylink_extern.c	/^    E_JL_DEV_ATTR_SET_CB set;$/;"	m	struct:__attr_	file:	access:public
+set	extern/joylink_extern.c	/^    E_JL_DEV_ATTR_SET_CB set;$/;"	m	struct:__attr_	file:	access:public
+set_project_path	once.sh	/^set_project_path()$/;"	f
+sharedkey	auth/joylink_crypt.h	/^	uint8_t sharedkey[uECC_BYTES];		\/\/ ?豸?Ĺ?????Կ$/;"	m	struct:__anon31	access:public
+sharedkey	joylink/joylink.h	/^	uint8_t sharedkey[uECC_BYTES];$/;"	m	struct:__anon16	access:public
+skip	json/cJSON.c	/^static const char *skip(const char *in) {while (in && *in && (unsigned char)*in<=32) in++; return in;}$/;"	f	file:	signature:(const char *in)
+smax	auth/uECC.c	/^static bitcount_t smax(bitcount_t a, bitcount_t b) {$/;"	f	file:	signature:(bitcount_t a, bitcount_t b)
+source_ip	joylink/joylink_cfg.h	/^  int source_ip[4];$/;"	m	struct:__anon2	access:public
+source_port	joylink/joylink_cfg.h	/^  unsigned int source_port;$/;"	m	struct:__anon2	access:public
+ssid	example/joylink_dev.h	/^    char ssid[254];$/;"	m	struct:__wifi_info	access:public
+ssid	extern/joylink_extern.c	/^	Attr_t ssid;	$/;"	m	struct:_attr_manage_	file:	access:public
+ssid	joylink/joylink_cfg.h	/^	char ssid[65];						$/;"	m	struct:__anon2	access:public
+ssid_length	joylink/joylink_cfg.h	/^  unsigned char ssid_length;$/;"	m	struct:__anon2	access:public
+state	auth/md5.h	/^    unsigned int state[4];$/;"	m	struct:__anon36	access:public
+state	joylink/joylink.h	/^    int state;$/;"	m	struct:__anon18	access:public
+state	joylink/joylink_sub_dev.h	/^	unsigned char state;$/;"	m	struct:__anon6	access:public
+status	joylink/joylink.h	/^    int status;$/;"	m	struct:__anon28	access:public
+status_desc	joylink/joylink.h	/^    char status_desc[JL_MAX_STATUS_DESC_LEN];$/;"	m	struct:__anon28	access:public
+streams	joylink/joylink.h	/^	unsigned char streams[1];$/;"	m	struct:__anon24	access:public
+string	json/cJSON.h	/^	char *string;				\/* The item's name string, if this item is the child of, or is in the list of subitems of an object. *\/$/;"	m	struct:cJSON	access:public
+stringToTable	lua/example.lua	/^function stringToTable(sta)$/;"	f
+subdev	example/joylink_extern.c	/^    Attr_t subdev;$/;"	m	struct:_attr_manage_	file:	access:public
+subdev	extern/joylink_extern.c	/^    Attr_t subdev;$/;"	m	struct:_attr_manage_	file:	access:public
+suffix_object	json/cJSON.c	/^static void suffix_object(cJSON *prev,cJSON *item) {prev->next=item;item->prev=prev;}$/;"	f	file:	signature:(cJSON *prev,cJSON *item)
+sum	joylink/joylink_cfg.h	/^	unsigned char sum;$/;"	m	struct:__anon2	access:public
+swordcount_t	auth/uECC.c	/^typedef int swordcount_t;$/;"	t	file:
+swordcount_t	auth/uECC.c	/^typedef int8_t swordcount_t;$/;"	t	file:
+tableToString	lua/example.lua	/^function tableToString(cmd)$/;"	f
+tail_index	example/joylink_extern_sub_dev.c	/^int tail_index = 0;$/;"	v
+test	joylink/test.c	/^test(ST_t *st)$/;"	f	signature:(ST_t *st)
+test_join_data	list/test.c	/^test_join_data()$/;"	f
+test_joylink_package_ota_upload	json/test.c	/^test_joylink_package_ota_upload()$/;"	f
+test_joylink_parse_server_ota_order_req	json/test.c	/^test_joylink_parse_server_ota_order_req()$/;"	f
+test_joylink_parse_server_ota_upload_req	json/test.c	/^test_joylink_parse_server_ota_upload_req()$/;"	f
+test_pacage_scan	json/test.c	/^test_pacage_scan()$/;"	f
+test_sub_dev	json/test.c	/^void test_sub_dev()$/;"	f
+test_wifi_server	json/test.c	/^void test_wifi_server()$/;"	f
+timestamp	joylink/joylink.h	/^	unsigned int timestamp; $/;"	m	struct:__anon21	access:public
+timestamp	joylink/joylink.h	/^	unsigned int timestamp;$/;"	m	struct:__anon20	access:public
+timestamp	joylink/joylink.h	/^	unsigned int timestamp;$/;"	m	struct:__anon22	access:public
+timestamp	joylink/joylink.h	/^	unsigned int timestamp;$/;"	m	struct:__anon23	access:public
+timestamp	joylink/joylink.h	/^	unsigned int timestamp;$/;"	m	struct:__anon24	access:public
+timestamp	joylink/joylink.h	/^	unsigned int timestamp;$/;"	m	struct:__anon26	access:public
+timestamp	joylink/joylink.h	/^    unsigned int timestamp;$/;"	m	struct:__anon19	access:public
+timestamp	joylink/joylink.h	/^    unsigned int timestamp;$/;"	m	struct:__anon25	access:public
+timestamp	joylink/joylink_sub_dev.h	/^	unsigned int	timestamp;$/;"	m	struct:__anon9	access:public
+timestamp	joylink/joylink_sub_dev.h	/^	unsigned int 	timestamp;$/;"	m	struct:__anon4	access:public
+timestamp	joylink/joylink_sub_dev.h	/^	unsigned int timestamp; $/;"	m	struct:__anon7	access:public
+timestamp	joylink/joylink_sub_dev.h	/^	unsigned int timestamp;$/;"	m	struct:__anon5	access:public
+timestamp	joylink/joylink_sub_dev.h	/^	unsigned int timestamp;$/;"	m	struct:__anon8	access:public
+tmp	auth/aes.h	/^    ALIGN16 uint32_t tmp[AES_BLOCK_SIZE \/ sizeof(uint32_t)];      \/* same         *\/$/;"	m	struct:Aes	access:public
+tmp	auth/uECC.h	/^    uint8_t *tmp; \/* Must point to a buffer of at least (2 * result_size + block_size) bytes. *\/$/;"	m	struct:uECC_HashContext	access:public
+total	joylink/joylink.h	/^	unsigned char	total;$/;"	m	struct:__anon12	access:public
+total_len	joylink/joylink_join_packet.c	/^    int total_len;$/;"	m	struct:__join_packet	file:	access:public
+total_len	list/test.c	/^    int total_len;$/;"	m	struct:__join_packet	file:	access:public
+type	example/joylink_dev.h	/^    int type;$/;"	m	struct:__anon1	access:public
+type	joylink/joylink.h	/^	E_PacketType type;$/;"	m	struct:__anon15	access:public
+type	joylink/joylink.h	/^	unsigned char	type;$/;"	m	struct:__anon12	access:public
+type	joylink/joylink.h	/^	unsigned int type;$/;"	m	struct:__anon11	access:public
+type	joylink/joylink.h	/^    E_JLDevType_t type;$/;"	m	struct:__anon18	access:public
+type	joylink/joylink.h	/^    E_ScanType_t type;$/;"	m	struct:__lan_scan	access:public
+type	json/cJSON.h	/^	int type;					\/* The type of the item, as above. *\/$/;"	m	struct:cJSON	access:public
+uECC_ASM	auth/uECC.h	40;"	d
+uECC_ASM	auth/uECC.h	42;"	d
+uECC_ASM	auth/uECC.h	46;"	d
+uECC_BYTES	auth/uECC.h	75;"	d
+uECC_CONCAT	auth/uECC.h	67;"	d
+uECC_CONCAT1	auth/uECC.h	66;"	d
+uECC_CURVE	auth/uECC.h	56;"	d
+uECC_HashContext	auth/uECC.h	/^typedef struct uECC_HashContext {$/;"	s
+uECC_HashContext	auth/uECC.h	/^} uECC_HashContext;$/;"	t	typeref:struct:uECC_HashContext
+uECC_HashContext::block_size	auth/uECC.h	/^    unsigned block_size; \/* Hash function block size in bytes, eg 64 for SHA-256. *\/$/;"	m	struct:uECC_HashContext	access:public
+uECC_HashContext::finish_hash	auth/uECC.h	/^    void (*finish_hash)(struct uECC_HashContext *context, uint8_t *hash_result);$/;"	m	struct:uECC_HashContext	access:public
+uECC_HashContext::init_hash	auth/uECC.h	/^    void (*init_hash)(struct uECC_HashContext *context);$/;"	m	struct:uECC_HashContext	access:public
+uECC_HashContext::result_size	auth/uECC.h	/^    unsigned result_size; \/* Hash function result size in bytes, eg 32 for SHA-256. *\/$/;"	m	struct:uECC_HashContext	access:public
+uECC_HashContext::tmp	auth/uECC.h	/^    uint8_t *tmp; \/* Must point to a buffer of at least (2 * result_size + block_size) bytes. *\/$/;"	m	struct:uECC_HashContext	access:public
+uECC_HashContext::update_hash	auth/uECC.h	/^    void (*update_hash)(struct uECC_HashContext *context,$/;"	m	struct:uECC_HashContext	access:public
+uECC_N_WORDS	auth/uECC.c	393;"	d	file:
+uECC_N_WORDS_1	auth/uECC.c	122;"	d	file:
+uECC_N_WORDS_1	auth/uECC.c	256;"	d	file:
+uECC_N_WORDS_1	auth/uECC.c	337;"	d	file:
+uECC_N_WORDS_2	auth/uECC.c	123;"	d	file:
+uECC_N_WORDS_2	auth/uECC.c	257;"	d	file:
+uECC_N_WORDS_2	auth/uECC.c	338;"	d	file:
+uECC_N_WORDS_3	auth/uECC.c	124;"	d	file:
+uECC_N_WORDS_3	auth/uECC.c	258;"	d	file:
+uECC_N_WORDS_3	auth/uECC.c	339;"	d	file:
+uECC_N_WORDS_4	auth/uECC.c	125;"	d	file:
+uECC_N_WORDS_4	auth/uECC.c	259;"	d	file:
+uECC_N_WORDS_4	auth/uECC.c	340;"	d	file:
+uECC_N_WORDS_5	auth/uECC.c	126;"	d	file:
+uECC_N_WORDS_5	auth/uECC.c	260;"	d	file:
+uECC_N_WORDS_5	auth/uECC.c	341;"	d	file:
+uECC_PLATFORM	auth/uECC.c	27;"	d	file:
+uECC_PLATFORM	auth/uECC.c	29;"	d	file:
+uECC_PLATFORM	auth/uECC.c	31;"	d	file:
+uECC_PLATFORM	auth/uECC.c	33;"	d	file:
+uECC_PLATFORM	auth/uECC.c	35;"	d	file:
+uECC_PLATFORM	auth/uECC.c	37;"	d	file:
+uECC_PLATFORM	auth/uECC.c	39;"	d	file:
+uECC_PLATFORM	auth/uECC.c	57;"	d	file:
+uECC_PLATFORM	auth/uECC.c	58;"	d	file:
+uECC_RNG_Function	auth/uECC.h	/^typedef int (*uECC_RNG_Function)(uint8_t *dest, unsigned size);$/;"	t
+uECC_SQUARE_FUNC	auth/uECC.h	63;"	d
+uECC_WORDS	auth/uECC.c	392;"	d	file:
+uECC_WORDS_1	auth/uECC.c	116;"	d	file:
+uECC_WORDS_1	auth/uECC.c	250;"	d	file:
+uECC_WORDS_1	auth/uECC.c	331;"	d	file:
+uECC_WORDS_2	auth/uECC.c	117;"	d	file:
+uECC_WORDS_2	auth/uECC.c	251;"	d	file:
+uECC_WORDS_2	auth/uECC.c	332;"	d	file:
+uECC_WORDS_3	auth/uECC.c	118;"	d	file:
+uECC_WORDS_3	auth/uECC.c	252;"	d	file:
+uECC_WORDS_3	auth/uECC.c	333;"	d	file:
+uECC_WORDS_4	auth/uECC.c	119;"	d	file:
+uECC_WORDS_4	auth/uECC.c	253;"	d	file:
+uECC_WORDS_4	auth/uECC.c	334;"	d	file:
+uECC_WORDS_5	auth/uECC.c	120;"	d	file:
+uECC_WORDS_5	auth/uECC.c	254;"	d	file:
+uECC_WORDS_5	auth/uECC.c	335;"	d	file:
+uECC_WORD_BITS	auth/uECC.c	112;"	d	file:
+uECC_WORD_BITS	auth/uECC.c	246;"	d	file:
+uECC_WORD_BITS	auth/uECC.c	327;"	d	file:
+uECC_WORD_BITS_MASK	auth/uECC.c	114;"	d	file:
+uECC_WORD_BITS_MASK	auth/uECC.c	248;"	d	file:
+uECC_WORD_BITS_MASK	auth/uECC.c	329;"	d	file:
+uECC_WORD_BITS_SHIFT	auth/uECC.c	113;"	d	file:
+uECC_WORD_BITS_SHIFT	auth/uECC.c	247;"	d	file:
+uECC_WORD_BITS_SHIFT	auth/uECC.c	328;"	d	file:
+uECC_WORD_SIZE	auth/uECC.c	45;"	d	file:
+uECC_WORD_SIZE	auth/uECC.c	47;"	d	file:
+uECC_WORD_SIZE	auth/uECC.c	49;"	d	file:
+uECC_WORD_SIZE	auth/uECC.c	54;"	d	file:
+uECC_WORD_SIZE	auth/uECC.c	55;"	d	file:
+uECC_WORD_SIZE	auth/uECC.c	68;"	d	file:
+uECC_WORD_SIZE	auth/uECC.c	69;"	d	file:
+uECC_WORD_SIZE	auth/uECC.c	76;"	d	file:
+uECC_WORD_SIZE	auth/uECC.c	77;"	d	file:
+uECC_arch_other	auth/uECC.h	16;"	d
+uECC_arm	auth/uECC.h	19;"	d
+uECC_arm_thumb	auth/uECC.h	20;"	d
+uECC_arm_thumb2	auth/uECC.h	22;"	d
+uECC_asm_fast	auth/uECC.h	37;"	d
+uECC_asm_none	auth/uECC.h	35;"	d
+uECC_asm_small	auth/uECC.h	36;"	d
+uECC_avr	auth/uECC.h	21;"	d
+uECC_bytes	auth/uECC.c	/^int uECC_bytes(void) {$/;"	f	signature:(void)
+uECC_bytes	auth/uECC.h	/^int uECC_bytes(void);$/;"	p	signature:(void)
+uECC_compress	auth/uECC.c	/^void uECC_compress(const uint8_t public_key[uECC_BYTES*2], uint8_t compressed[uECC_BYTES+1]) {$/;"	f	signature:(const uint8_t public_key[uECC_BYTES*2], uint8_t compressed[uECC_BYTES+1])
+uECC_compress	auth/uECC.h	/^void uECC_compress(const uint8_t public_key[uECC_BYTES*2], uint8_t compressed[uECC_BYTES+1]);$/;"	p	signature:(const uint8_t public_key[uECC_BYTES*2], uint8_t compressed[uECC_BYTES+1])
+uECC_compute_public_key	auth/uECC.c	/^int uECC_compute_public_key(const uint8_t private_key[uECC_BYTES],$/;"	f	signature:(const uint8_t private_key[uECC_BYTES], uint8_t public_key[uECC_BYTES * 2])
+uECC_compute_public_key	auth/uECC.h	/^int uECC_compute_public_key(const uint8_t private_key[uECC_BYTES],$/;"	p	signature:(const uint8_t private_key[uECC_BYTES], uint8_t public_key[uECC_BYTES * 2])
+uECC_curve	auth/uECC.c	/^int uECC_curve(void) {$/;"	f	signature:(void)
+uECC_curve	auth/uECC.h	/^int uECC_curve(void);$/;"	p	signature:(void)
+uECC_decompress	auth/uECC.c	/^void uECC_decompress(const uint8_t compressed[uECC_BYTES+1], uint8_t public_key[uECC_BYTES*2]) {$/;"	f	signature:(const uint8_t compressed[uECC_BYTES+1], uint8_t public_key[uECC_BYTES*2])
+uECC_decompress	auth/uECC.h	/^void uECC_decompress(const uint8_t compressed[uECC_BYTES+1], uint8_t public_key[uECC_BYTES*2]);$/;"	p	signature:(const uint8_t compressed[uECC_BYTES+1], uint8_t public_key[uECC_BYTES*2])
+uECC_dword_t	auth/uECC.c	/^typedef uint16_t uECC_dword_t;$/;"	t	file:
+uECC_dword_t	auth/uECC.c	/^typedef uint64_t uECC_dword_t;$/;"	t	file:
+uECC_dword_t	auth/uECC.c	/^typedef unsigned __int128 uECC_dword_t;$/;"	t	file:
+uECC_dword_t	auth/uECC.c	/^typedef unsigned long long uECC_dword_t;$/;"	t	file:
+uECC_make_key	auth/uECC.c	/^int uECC_make_key(uint8_t public_key[uECC_BYTES*2], uint8_t private_key[uECC_BYTES]) {$/;"	f	signature:(uint8_t public_key[uECC_BYTES*2], uint8_t private_key[uECC_BYTES])
+uECC_make_key	auth/uECC.h	/^int uECC_make_key(uint8_t public_key[uECC_BYTES*2], uint8_t private_key[uECC_BYTES]);$/;"	p	signature:(uint8_t public_key[uECC_BYTES*2], uint8_t private_key[uECC_BYTES])
+uECC_secp160r1	auth/uECC.h	50;"	d
+uECC_secp192r1	auth/uECC.h	51;"	d
+uECC_secp224r1	auth/uECC.h	54;"	d
+uECC_secp256k1	auth/uECC.h	53;"	d
+uECC_secp256r1	auth/uECC.h	52;"	d
+uECC_set_rng	auth/uECC.c	/^void uECC_set_rng(uECC_RNG_Function rng_function) {$/;"	f	signature:(uECC_RNG_Function rng_function)
+uECC_set_rng	auth/uECC.h	/^void uECC_set_rng(uECC_RNG_Function rng_function);$/;"	p	signature:(uECC_RNG_Function rng_function)
+uECC_shared_secret	auth/uECC.c	/^int uECC_shared_secret(const uint8_t public_key[uECC_BYTES*2],$/;"	f	signature:(const uint8_t public_key[uECC_BYTES*2], const uint8_t private_key[uECC_BYTES], uint8_t secret[uECC_BYTES])
+uECC_shared_secret	auth/uECC.h	/^int uECC_shared_secret(const uint8_t public_key[uECC_BYTES*2],$/;"	p	signature:(const uint8_t public_key[uECC_BYTES*2], const uint8_t private_key[uECC_BYTES], uint8_t secret[uECC_BYTES])
+uECC_sign	auth/uECC.c	/^int uECC_sign(const uint8_t private_key[uECC_BYTES],$/;"	f	signature:(const uint8_t private_key[uECC_BYTES], const uint8_t message_hash[uECC_BYTES], uint8_t signature[uECC_BYTES*2])
+uECC_sign	auth/uECC.h	/^int uECC_sign(const uint8_t private_key[uECC_BYTES],$/;"	p	signature:(const uint8_t private_key[uECC_BYTES], const uint8_t message_hash[uECC_BYTES], uint8_t signature[uECC_BYTES*2])
+uECC_sign_deterministic	auth/uECC.c	/^int uECC_sign_deterministic(const uint8_t private_key[uECC_BYTES],$/;"	f	signature:(const uint8_t private_key[uECC_BYTES], const uint8_t message_hash[uECC_BYTES], uECC_HashContext *hash_context, uint8_t signature[uECC_BYTES*2])
+uECC_sign_deterministic	auth/uECC.h	/^int uECC_sign_deterministic(const uint8_t private_key[uECC_BYTES],$/;"	p	signature:(const uint8_t private_key[uECC_BYTES], const uint8_t message_hash[uECC_BYTES], uECC_HashContext *hash_context, uint8_t signature[uECC_BYTES*2])
+uECC_sign_with_k	auth/uECC.c	/^static int uECC_sign_with_k(const uint8_t private_key[uECC_BYTES],$/;"	f	file:	signature:(const uint8_t private_key[uECC_BYTES], const uint8_t message_hash[uECC_BYTES], uECC_word_t k[uECC_N_WORDS], uint8_t signature[uECC_BYTES*2])
+uECC_size_1	auth/uECC.h	69;"	d
+uECC_size_2	auth/uECC.h	70;"	d
+uECC_size_3	auth/uECC.h	71;"	d
+uECC_size_4	auth/uECC.h	72;"	d
+uECC_size_5	auth/uECC.h	73;"	d
+uECC_valid_public_key	auth/uECC.c	/^int uECC_valid_public_key(const uint8_t public_key[uECC_BYTES*2]) {$/;"	f	signature:(const uint8_t public_key[uECC_BYTES*2])
+uECC_valid_public_key	auth/uECC.h	/^int uECC_valid_public_key(const uint8_t public_key[uECC_BYTES*2]);$/;"	p	signature:(const uint8_t public_key[uECC_BYTES*2])
+uECC_verify	auth/uECC.c	/^int uECC_verify(const uint8_t public_key[uECC_BYTES*2],$/;"	f	signature:(const uint8_t public_key[uECC_BYTES*2], const uint8_t hash[uECC_BYTES], const uint8_t signature[uECC_BYTES*2])
+uECC_verify	auth/uECC.h	/^int uECC_verify(const uint8_t private_key[uECC_BYTES*2],$/;"	p	signature:(const uint8_t private_key[uECC_BYTES*2], const uint8_t hash[uECC_BYTES], const uint8_t signature[uECC_BYTES*2])
+uECC_word_t	auth/uECC.c	/^typedef uint32_t uECC_word_t;$/;"	t	file:
+uECC_word_t	auth/uECC.c	/^typedef uint64_t uECC_word_t;$/;"	t	file:
+uECC_word_t	auth/uECC.c	/^typedef uint8_t uECC_word_t;$/;"	t	file:
+uECC_x86	auth/uECC.h	17;"	d
+uECC_x86_64	auth/uECC.h	18;"	d
+uint16_t	auth/stdint.h	/^typedef unsigned short int	uint16_t;$/;"	t
+uint32_t	auth/stdint.h	/^typedef unsigned int		uint32_t;$/;"	t
+uint64_t	auth/stdint.h	/^typedef unsigned long int	uint64_t;$/;"	t
+uint64_t	auth/stdint.h	/^typedef unsigned long long int	uint64_t;$/;"	t
+uint8_t	auth/stdint.h	/^typedef unsigned char		uint8_t;$/;"	t
+uint_fast16_t	auth/stdint.h	/^typedef unsigned int		uint_fast16_t;$/;"	t
+uint_fast16_t	auth/stdint.h	/^typedef unsigned long int	uint_fast16_t;$/;"	t
+uint_fast32_t	auth/stdint.h	/^typedef unsigned int		uint_fast32_t;$/;"	t
+uint_fast32_t	auth/stdint.h	/^typedef unsigned long int	uint_fast32_t;$/;"	t
+uint_fast64_t	auth/stdint.h	/^typedef unsigned long int	uint_fast64_t;$/;"	t
+uint_fast64_t	auth/stdint.h	/^typedef unsigned long long int	uint_fast64_t;$/;"	t
+uint_fast8_t	auth/stdint.h	/^typedef unsigned char		uint_fast8_t;$/;"	t
+uint_least16_t	auth/stdint.h	/^typedef unsigned short int	uint_least16_t;$/;"	t
+uint_least32_t	auth/stdint.h	/^typedef unsigned int		uint_least32_t;$/;"	t
+uint_least64_t	auth/stdint.h	/^typedef unsigned long int	uint_least64_t;$/;"	t
+uint_least64_t	auth/stdint.h	/^typedef unsigned long long int	uint_least64_t;$/;"	t
+uint_least8_t	auth/stdint.h	/^typedef unsigned char		uint_least8_t;$/;"	t
+uintmax_t	auth/stdint.h	/^typedef unsigned long int	uintmax_t;$/;"	t
+uintmax_t	auth/stdint.h	/^typedef unsigned long long int	uintmax_t;$/;"	t
+uintptr_t	auth/stdint.h	/^typedef unsigned int		uintptr_t;$/;"	t
+uintptr_t	auth/stdint.h	/^typedef unsigned long int	uintptr_t;$/;"	t
+up	example/joylink_dev.h	/^    int up;$/;"	m	struct:__anon1	access:public
+up	example/joylink_dev.h	/^    int up[32];$/;"	m	struct:__dev_info	access:public
+update_V	auth/uECC.c	/^static void update_V(uECC_HashContext *hash_context, uint8_t *K, uint8_t *V) {$/;"	f	file:	signature:(uECC_HashContext *hash_context, uint8_t *K, uint8_t *V)
+update_hash	auth/uECC.h	/^    void (*update_hash)(struct uECC_HashContext *context,$/;"	m	struct:uECC_HashContext	access:public
+upspeed	example/joylink_dev.h	/^    int upspeed;$/;"	m	struct:__wifi_ctrl	access:public
+url	joylink/joylink.h	/^    char url[JL_MAX_URL_LEN];$/;"	m	struct:__anon27	access:public
+uuid	example/joylink_extern.c	/^    Attr_t uuid;$/;"	m	struct:_attr_manage_	file:	access:public
+uuid	extern/joylink_extern.c	/^    Attr_t uuid;$/;"	m	struct:_attr_manage_	file:	access:public
+uuid	joylink/joylink.h	/^	char uuid[JL_MAX_UUID_LEN];$/;"	m	struct:__anon16	access:public
+uuid	joylink/joylink.h	/^    char uuid[JL_MAX_UUID_LEN];$/;"	m	struct:__lan_scan	access:public
+valuedouble	json/cJSON.h	/^	double valuedouble;			\/* The item's number, if type==cJSON_Number *\/$/;"	m	struct:cJSON	access:public
+valueint	json/cJSON.h	/^	int valueint;				\/* The item's number, if type==cJSON_Number *\/$/;"	m	struct:cJSON	access:public
+valuestring	json/cJSON.h	/^	char *valuestring;			\/* The item's string, if type==cJSON_String *\/$/;"	m	struct:cJSON	access:public
+verion	joylink/joylink.h	/^	unsigned short verion;$/;"	m	struct:__anon21	access:public
+verion	joylink/joylink_sub_dev.h	/^	unsigned short	verion;$/;"	m	struct:__anon7	access:public
+version	example/joylink_extern.c	/^	Attr_t version;	$/;"	m	struct:_attr_manage_	file:	access:public
+version	joylink/joylink.h	/^	int version;	$/;"	m	struct:__anon15	access:public
+version	joylink/joylink.h	/^	short version;$/;"	m	struct:__anon16	access:public
+version	joylink/joylink.h	/^	unsigned char	version;$/;"	m	struct:__anon12	access:public
+version	joylink/joylink.h	/^    int version;$/;"	m	struct:__anon27	access:public
+version	joylink/joylink_sub_dev.h	/^	unsigned short	version;$/;"	m	struct:__anon6	access:public
+versionname	joylink/joylink.h	/^    char versionname[JL_MAX_VERSION_NAME_LEN];$/;"	m	struct:__anon27	access:public
+vli2_rshift1	auth/uECC.c	/^static void vli2_rshift1(uECC_word_t *vli) {$/;"	f	file:	signature:(uECC_word_t *vli)
+vli2_rshift1_n	auth/uECC.c	/^static void vli2_rshift1_n(uECC_word_t *vli) {$/;"	f	file:	signature:(uECC_word_t *vli)
+vli2_sub	auth/uECC.c	/^static uECC_word_t vli2_sub(uECC_word_t *result,$/;"	f	file:	signature:(uECC_word_t *result, const uECC_word_t *left, const uECC_word_t *right)
+vli2_sub_n	auth/uECC.c	/^static uECC_word_t vli2_sub_n(uECC_word_t *result,$/;"	f	file:	signature:(uECC_word_t *result, const uECC_word_t *left, const uECC_word_t *right)
+vli_add	auth/uECC.c	/^static uECC_word_t vli_add(uECC_word_t *result, const uECC_word_t *left, const uECC_word_t *right) {$/;"	f	file:	signature:(uECC_word_t *result, const uECC_word_t *left, const uECC_word_t *right)
+vli_add	auth/uECC.c	/^static uECC_word_t vli_add(uECC_word_t *result,$/;"	p	file:	signature:(uECC_word_t *result, const uECC_word_t *left, const uECC_word_t *right)
+vli_add_n	auth/uECC.c	/^static uECC_word_t vli_add_n(uECC_word_t *result,$/;"	f	file:	signature:(uECC_word_t *result, const uECC_word_t *left, const uECC_word_t *right)
+vli_bytesToNative	auth/uECC.c	/^static void vli_bytesToNative(uint32_t *native, const uint8_t *bytes) {$/;"	f	file:	signature:(uint32_t *native, const uint8_t *bytes)
+vli_bytesToNative	auth/uECC.c	/^static void vli_bytesToNative(uint64_t *native, const uint8_t *bytes) {$/;"	f	file:	signature:(uint64_t *native, const uint8_t *bytes)
+vli_bytesToNative	auth/uECC.c	2006;"	d	file:
+vli_clear	auth/uECC.c	/^static void vli_clear(uECC_word_t *vli) {$/;"	f	file:	signature:(uECC_word_t *vli)
+vli_clear	auth/uECC.c	/^static void vli_clear(uECC_word_t *vli);$/;"	p	file:	signature:(uECC_word_t *vli)
+vli_clear_n	auth/uECC.c	/^static void vli_clear_n(uECC_word_t *vli) {$/;"	f	file:	signature:(uECC_word_t *vli)
+vli_cmp	auth/uECC.c	/^static cmpresult_t vli_cmp(const uECC_word_t *left, const uECC_word_t *right) {$/;"	f	file:	signature:(const uECC_word_t *left, const uECC_word_t *right)
+vli_cmp	auth/uECC.c	/^static cmpresult_t vli_cmp(const uECC_word_t *left, const uECC_word_t *right);$/;"	p	file:	signature:(const uECC_word_t *left, const uECC_word_t *right)
+vli_cmp_n	auth/uECC.c	/^static cmpresult_t vli_cmp_n(const uECC_word_t *left, const uECC_word_t *right) {$/;"	f	file:	signature:(const uECC_word_t *left, const uECC_word_t *right)
+vli_cmp_n	auth/uECC.c	2433;"	d	file:
+vli_equal	auth/uECC.c	/^static cmpresult_t vli_equal(const uECC_word_t *left, const uECC_word_t *right) {$/;"	f	file:	signature:(const uECC_word_t *left, const uECC_word_t *right)
+vli_equal	auth/uECC.c	/^static cmpresult_t vli_equal(const uECC_word_t *left, const uECC_word_t *right);$/;"	p	file:	signature:(const uECC_word_t *left, const uECC_word_t *right)
+vli_isZero	auth/uECC.c	/^static uECC_word_t vli_isZero(const uECC_word_t *vli) {$/;"	f	file:	signature:(const uECC_word_t *vli)
+vli_isZero	auth/uECC.c	/^static uECC_word_t vli_isZero(const uECC_word_t *vli);$/;"	p	file:	signature:(const uECC_word_t *vli)
+vli_isZero_n	auth/uECC.c	/^static uECC_word_t vli_isZero_n(const uECC_word_t *vli) {$/;"	f	file:	signature:(const uECC_word_t *vli)
+vli_mmod_fast	auth/uECC.c	/^static void vli_mmod_fast(uECC_word_t *RESTRICT result, uECC_word_t *RESTRICT product) {$/;"	f	file:	signature:(uECC_word_t *RESTRICT result, uECC_word_t *RESTRICT product)
+vli_mmod_fast	auth/uECC.c	/^static void vli_mmod_fast(uECC_word_t *RESTRICT result, uECC_word_t *RESTRICT product);$/;"	p	file:	signature:(uECC_word_t *RESTRICT result, uECC_word_t *RESTRICT product)
+vli_mmod_fast	auth/uECC.c	/^static void vli_mmod_fast(uint32_t *RESTRICT result, uint32_t *RESTRICT product) {$/;"	f	file:	signature:(uint32_t *RESTRICT result, uint32_t *RESTRICT product)
+vli_mmod_fast	auth/uECC.c	/^static void vli_mmod_fast(uint64_t *RESTRICT result, uint64_t *RESTRICT product) {$/;"	f	file:	signature:(uint64_t *RESTRICT result, uint64_t *RESTRICT product)
+vli_mmod_fast	auth/uECC.c	/^static void vli_mmod_fast(uint8_t *RESTRICT result, uint8_t *RESTRICT product) {$/;"	f	file:	signature:(uint8_t *RESTRICT result, uint8_t *RESTRICT product)
+vli_mmod_fast	auth/uECC.c	/^void vli_mmod_fast(uint32_t *RESTRICT result, uint32_t *RESTRICT product)$/;"	f	signature:(uint32_t *RESTRICT result, uint32_t *RESTRICT product)
+vli_mmod_fast	auth/uECC.c	/^void vli_mmod_fast(uint8_t *RESTRICT result, uint8_t *RESTRICT product) {$/;"	f	signature:(uint8_t *RESTRICT result, uint8_t *RESTRICT product)
+vli_modAdd	auth/uECC.c	/^static void vli_modAdd(uECC_word_t *result,$/;"	f	file:	signature:(uECC_word_t *result, const uECC_word_t *left, const uECC_word_t *right, const uECC_word_t *mod)
+vli_modAdd	auth/uECC.c	/^static void vli_modAdd(uECC_word_t *result,$/;"	p	file:	signature:(uECC_word_t *result, const uECC_word_t *left, const uECC_word_t *right, const uECC_word_t *mod)
+vli_modAdd_n	auth/uECC.c	/^static void vli_modAdd_n(uECC_word_t *result,$/;"	f	file:	signature:(uECC_word_t *result, const uECC_word_t *left, const uECC_word_t *right, const uECC_word_t *mod)
+vli_modAdd_n	auth/uECC.c	2435;"	d	file:
+vli_modInv	auth/uECC.c	/^static void vli_modInv(uECC_word_t *result, const uECC_word_t *input, const uECC_word_t *mod) {$/;"	f	file:	signature:(uECC_word_t *result, const uECC_word_t *input, const uECC_word_t *mod)
+vli_modInv	auth/uECC.c	/^static void vli_modInv(uECC_word_t *result, const uECC_word_t *input, const uECC_word_t *mod);$/;"	p	file:	signature:(uECC_word_t *result, const uECC_word_t *input, const uECC_word_t *mod)
+vli_modInv_n	auth/uECC.c	/^static void vli_modInv_n(uECC_word_t *result, const uECC_word_t *input, const uECC_word_t *mod) {$/;"	f	file:	signature:(uECC_word_t *result, const uECC_word_t *input, const uECC_word_t *mod)
+vli_modInv_n	auth/uECC.c	2434;"	d	file:
+vli_modMult_fast	auth/uECC.c	/^static void vli_modMult_fast(uECC_word_t *result,$/;"	f	file:	signature:(uECC_word_t *result, const uECC_word_t *left, const uECC_word_t *right)
+vli_modMult_fast	auth/uECC.c	/^static void vli_modMult_fast(uECC_word_t *result,$/;"	p	file:	signature:(uECC_word_t *result, const uECC_word_t *left, const uECC_word_t *right)
+vli_modMult_n	auth/uECC.c	/^static void vli_modMult_n(uECC_word_t *result, const uECC_word_t *left, const uECC_word_t *right) {$/;"	f	file:	signature:(uECC_word_t *result, const uECC_word_t *left, const uECC_word_t *right)
+vli_modSquare_fast	auth/uECC.c	/^static void vli_modSquare_fast(uECC_word_t *result, const uECC_word_t *left) {$/;"	f	file:	signature:(uECC_word_t *result, const uECC_word_t *left)
+vli_modSquare_fast	auth/uECC.c	/^static void vli_modSquare_fast(uECC_word_t *result, const uECC_word_t *left);$/;"	p	file:	signature:(uECC_word_t *result, const uECC_word_t *left)
+vli_modSquare_fast	auth/uECC.c	1503;"	d	file:
+vli_modSub	auth/uECC.c	/^static void vli_modSub(uECC_word_t *result,$/;"	f	file:	signature:(uECC_word_t *result, const uECC_word_t *left, const uECC_word_t *right, const uECC_word_t *mod)
+vli_modSub	auth/uECC.c	/^static void vli_modSub(uECC_word_t *result,$/;"	p	file:	signature:(uECC_word_t *result, const uECC_word_t *left, const uECC_word_t *right, const uECC_word_t *mod)
+vli_modSub_fast	auth/uECC.c	855;"	d	file:
+vli_mult	auth/uECC.c	/^static void vli_mult(uECC_word_t *result, const uECC_word_t *left, const uECC_word_t *right) {$/;"	f	file:	signature:(uECC_word_t *result, const uECC_word_t *left, const uECC_word_t *right)
+vli_mult	auth/uECC.c	/^static void vli_mult(uECC_word_t *result, const uECC_word_t *left, const uECC_word_t *right);$/;"	p	file:	signature:(uECC_word_t *result, const uECC_word_t *left, const uECC_word_t *right)
+vli_mult_n	auth/uECC.c	/^static void vli_mult_n(uECC_word_t *result, const uECC_word_t *left, const uECC_word_t *right) {$/;"	f	file:	signature:(uECC_word_t *result, const uECC_word_t *left, const uECC_word_t *right)
+vli_nativeToBytes	auth/uECC.c	/^static void vli_nativeToBytes(uint8_t * RESTRICT dest, const uint8_t * RESTRICT src) {$/;"	f	file:	signature:(uint8_t * RESTRICT dest, const uint8_t * RESTRICT src)
+vli_nativeToBytes	auth/uECC.c	/^static void vli_nativeToBytes(uint8_t *bytes, const uint32_t *native) {$/;"	f	file:	signature:(uint8_t *bytes, const uint32_t *native)
+vli_nativeToBytes	auth/uECC.c	/^static void vli_nativeToBytes(uint8_t *bytes, const uint64_t *native) {$/;"	f	file:	signature:(uint8_t *bytes, const uint64_t *native)
+vli_numBits	auth/uECC.c	/^static bitcount_t vli_numBits(const uECC_word_t *vli, wordcount_t max_words) {$/;"	f	file:	signature:(const uECC_word_t *vli, wordcount_t max_words)
+vli_numBits	auth/uECC.c	/^static bitcount_t vli_numBits(const uECC_word_t *vli, wordcount_t max_words);$/;"	p	file:	signature:(const uECC_word_t *vli, wordcount_t max_words)
+vli_numDigits	auth/uECC.c	/^static wordcount_t vli_numDigits(const uECC_word_t *vli, wordcount_t max_words) {$/;"	f	file:	signature:(const uECC_word_t *vli, wordcount_t max_words)
+vli_rshift1	auth/uECC.c	/^static void vli_rshift1(uECC_word_t *vli) {$/;"	f	file:	signature:(uECC_word_t *vli)
+vli_rshift1	auth/uECC.c	/^static void vli_rshift1(uECC_word_t *vli);$/;"	p	file:	signature:(uECC_word_t *vli)
+vli_rshift1_n	auth/uECC.c	/^static void vli_rshift1_n(uECC_word_t *vli) {$/;"	f	file:	signature:(uECC_word_t *vli)
+vli_set	auth/uECC.c	/^static void vli_set(uECC_word_t *dest, const uECC_word_t *src) {$/;"	f	file:	signature:(uECC_word_t *dest, const uECC_word_t *src)
+vli_set	auth/uECC.c	/^static void vli_set(uECC_word_t *dest, const uECC_word_t *src);$/;"	p	file:	signature:(uECC_word_t *dest, const uECC_word_t *src)
+vli_set_n	auth/uECC.c	/^static void vli_set_n(uECC_word_t *dest, const uECC_word_t *src) {$/;"	f	file:	signature:(uECC_word_t *dest, const uECC_word_t *src)
+vli_square	auth/uECC.c	/^static void vli_square(uECC_word_t *result, const uECC_word_t *left) {$/;"	f	file:	signature:(uECC_word_t *result, const uECC_word_t *left)
+vli_square	auth/uECC.c	/^static void vli_square(uECC_word_t *result, const uECC_word_t *left);$/;"	p	file:	signature:(uECC_word_t *result, const uECC_word_t *left)
+vli_square	auth/uECC.c	818;"	d	file:
+vli_sub	auth/uECC.c	/^static uECC_word_t vli_sub(uECC_word_t *result, const uECC_word_t *left, const uECC_word_t *right) {$/;"	f	file:	signature:(uECC_word_t *result, const uECC_word_t *left, const uECC_word_t *right)
+vli_sub	auth/uECC.c	/^static uECC_word_t vli_sub(uECC_word_t *result,$/;"	p	file:	signature:(uECC_word_t *result, const uECC_word_t *left, const uECC_word_t *right)
+vli_sub_n	auth/uECC.c	/^static uECC_word_t vli_sub_n(uECC_word_t *result,$/;"	f	file:	signature:(uECC_word_t *result, const uECC_word_t *left, const uECC_word_t *right)
+vli_testBit	auth/uECC.c	/^static uECC_word_t vli_testBit(const uECC_word_t *vli, bitcount_t bit) {$/;"	f	file:	signature:(const uECC_word_t *vli, bitcount_t bit)
+vli_testBit	auth/uECC.c	/^static uECC_word_t vli_testBit(const uECC_word_t *vli, bitcount_t bit);$/;"	p	file:	signature:(const uECC_word_t *vli, bitcount_t bit)
+wc	json/test.c	/^WIFICtrl_t wc;$/;"	v
+wifi	joylink/joylink.h	/^    WIFICtrl_t wifi;$/;"	m	struct:__anon17	access:public
+wlan24g	example/joylink_extern.c	/^    Attr_t wlan24g;$/;"	m	struct:_attr_manage_	file:	access:public
+wlan24g	extern/joylink_extern.c	/^    Attr_t wlan24g;$/;"	m	struct:_attr_manage_	file:	access:public
+wlanspeed	example/joylink_extern.c	/^    Attr_t wlanspeed;$/;"	m	struct:_attr_manage_	file:	access:public
+wlanspeed	extern/joylink_extern.c	/^    Attr_t wlanspeed;$/;"	m	struct:_attr_manage_	file:	access:public
+wordcount_t	auth/uECC.c	/^typedef uint8_t wordcount_t;$/;"	t	file:
+wordcount_t	auth/uECC.c	/^typedef unsigned wordcount_t;$/;"	t	file:
+x	auth/uECC.c	/^    uECC_word_t x[uECC_WORDS];$/;"	m	struct:EccPoint	file:	access:public
+xorbuf	auth/aes.c	/^\/*STATIC INLINE *\/void xorbuf(uint8_t* buf, const uint8_t* mask, uint32_t count)$/;"	f	signature:(uint8_t* buf, const uint8_t* mask, uint32_t count)
+y	auth/uECC.c	/^    uECC_word_t y[uECC_WORDS];$/;"	m	struct:EccPoint	file:	access:public
+yc_list_add	list/yc_list.h	/^static inline void yc_list_add (struct yc_list_head *_new, struct yc_list_head *head)$/;"	f	signature:(struct yc_list_head *_new, struct yc_list_head *head)
+yc_list_add_tail	list/yc_list.h	/^static inline void yc_list_add_tail (struct yc_list_head *_new, struct yc_list_head *head)$/;"	f	signature:(struct yc_list_head *_new, struct yc_list_head *head)
+yc_list_del	list/yc_list.h	/^static inline void yc_list_del (struct yc_list_head *old)$/;"	f	signature:(struct yc_list_head *old)
+yc_list_del_init	list/yc_list.h	/^static inline void yc_list_del_init (struct yc_list_head *old)$/;"	f	signature:(struct yc_list_head *old)
+yc_list_empty	list/yc_list.h	/^static inline int yc_list_empty (struct yc_list_head *head)$/;"	f	signature:(struct yc_list_head *head)
+yc_list_head	list/yc_list.h	/^struct yc_list_head {$/;"	s
+yc_list_head::next	list/yc_list.h	/^	struct yc_list_head *next;$/;"	m	struct:yc_list_head	typeref:struct:yc_list_head::yc_list_head	access:public
+yc_list_head::prev	list/yc_list.h	/^	struct yc_list_head *prev;$/;"	m	struct:yc_list_head	typeref:struct:yc_list_head::yc_list_head	access:public
+yc_list_size	list/yc_list.h	/^static inline int yc_list_size(struct yc_list_head *head){$/;"	f	signature:(struct yc_list_head *head)

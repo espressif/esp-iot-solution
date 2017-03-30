@@ -1,0 +1,121 @@
+Upgrade urgency levels:
+
+LOW:      No need to upgrade unless there are new features you want to use.
+MODERATE: Program an upgrade of the server, but it's not urgent.
+HIGH:     There is a critical bug that may affect a subset of users. Upgrade!
+CRITICAL: There is a critical bug affecting MOST USERS. Upgrade ASAP.
+
+--------------------------------------------------------------------------------
+--[ joylink 1.3.4 ] Release date: 
+
+# UPGRADE URGENCY: LOW for joylink. 
+
+* [NEW] No. 
+* [FIX] Add CID firmwareVersion modelCode in func joylink_package_scan 
+* [FIX] Add productuuid in func joylink_parse_write_key 
+* [FIX] joylink_server_upload_req : add  joylink_encrypt_sub_dev_data()
+=======================
+
+** IMPORTANT ** 
+
+
+--[ joylink 1.3.3 ] Release date: 
+
+# UPGRADE URGENCY: LOW for joylink. 
+
+* [NEW] No. 
+* [FIX] joylink_json.c:joylink_parse_scan, add  cJSON_Delete(pJson);
+* [FIX] joylink_json.c:joylink_package_scan, del cJson_CreateArry;
+=======================
+
+** IMPORTANT ** 
+
+--------------------------------------------------------------------------------
+--[ joylink 1.3.2 ] Release date: 
+
+# UPGRADE URGENCY: LOW for joylink. 
+
+* [NEW] No. 
+* [FIX] Add sdk/lua/example.lua sdk/lua/only_trans.lua 
+* [FIX] Change var name in joylink.h     
+=======================
+
+** IMPORTANT ** 
+
+--------------------------------------------------------------------------------
+--[ joylink 1.3.1 ] Release date: 
+
+# UPGRADE URGENCY: LOW for joylink. 
+
+* [NEW] Add big package cut and send ,but code is for debug. 
+
+* [FIX] 
+=======================
+
+** IMPORTANT ** 
+
+--------------------------------------------------------------------------------
+
+--[ joylink 1.3.0 ] Release date: 
+
+# UPGRADE URGENCY: CRITICAL for joylink. 
+
+* [FIX] Fix the error of joylink_parse_lan_write_key()
+
+* [FIX] Change .jlp.trantype = 0, to .jlp.trantype = 1
+
+Migrating from 1.2 to 1.3
+=========================
+
+joylink_dev_sdk 1.2 is mostly a strict subset of 1.3. However there are a few things
+that you should be aware of:
+
+The following default attr changed:
+
+    * .jlp.trantype = 1, means suport lua script.
+--------------------------------------------------------------------------------
+
+joylink_dev_sdk 1.2 release notes
+=======================
+
+** IMPORTANT ** Check the 'Migrating from 1.1 to 1.2' section at the end of
+                this file for information about what changed between 1.1 and
+                1.2 and how this may affect your application.
+
+--------------------------------------------------------------------------------
+Upgrade urgency levels:
+
+LOW:      No need to upgrade unless there are new features you want to use.
+MODERATE: Program an upgrade of the server, but it's not urgent.
+HIGH:     There is a critical bug that may affect a subset of users. Upgrade!
+CRITICAL: There is a critical bug affecting MOST USERS. Upgrade ASAP.
+--------------------------------------------------------------------------------
+
+--[ joylink 1.2.0 ] Release date: 14 Jul 2014
+
+# UPGRADE URGENCY: LOW for joylink , this is a features enhancement
+                   release mostly. 
+
+* [FIX] Recive data that's len bigger than 1400 from server. (steven)
+
+* [NEW] The new OTA feature. (yangnan)
+
+Migrating from 1.1 to 1.2
+=========================
+
+joylink_dev_sdk 1.1 is mostly a strict subset of 1.2. However there are a few things
+that you should be aware of:
+
+The following commands changed behavior:
+
+    * XXXX.
+    * YYYY.
+--------------------------------------------------------------------------------
+
+Credits: 
+Thanks to all the contributors and the amazing
+community we have.
+
+See commit messages for more joylink_dev_sdk.
+
+Cheers!
