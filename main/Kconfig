@@ -1,0 +1,88 @@
+menu "Iot_Solution"
+
+    choice CLOUD_TYPE
+        bool "cloud type"
+        default CLOUD_ALINK
+        help
+          select the cloud type
+
+    config CLOUD_ALINK
+        bool "alink cloud"
+    config CLOUD_JOYLINK
+        bool "joylink cloud"
+    endchoice
+
+    choice SMART_DEVICE_TYPE
+    bool "Device type"
+    default SMART_SOCKET_DEVICE
+    help
+      select the device type
+
+    config SMART_SOCKET_DEVICE
+        bool "smart socket"
+    config SMART_LIGHT_DEVICE
+        bool "smart light"
+    endchoice
+
+    menu "Joylink"
+        config JOYLINK_SMNT_BUTTON_NUM
+            int "the io number for one key configuration network"
+            default 14
+
+        config JOYLINK_RESET_BUTTON_NUM
+            int "the io number for reset"
+            default 15
+    endmenu
+
+    menu "Alink"
+        choice LOG_ALINK_LEVEL
+        bool "Default log verbosity"
+        default LOG_ALINK_LEVEL_INFO
+        help
+           Specify how much output to see in logs by default.
+           Note that this setting limits which log statements
+           are compiled into the program. So setting this to, say,
+           "Warning" would mean that changing log level to "Debug"
+           at runtime will not be possible.
+        config LOG_ALINK_LEVEL_NONE
+           bool "No output"
+        config LOG_ALINK_LEVEL_ERROR
+           bool "Error"
+        config LOG_ALINK_LEVEL_WARN
+           bool "Warning"
+        config LOG_ALINK_LEVEL_INFO
+           bool "Info"
+        config LOG_ALINK_LEVEL_DEBUG
+           bool "Debug"
+        config LOG_ALINK_LEVEL_VERBOSE
+           bool "Verbose"
+        endchoice
+
+        config LOG_ALINK_LEVEL
+            int
+            default 0 if LOG_ALINK_LEVEL_NONE
+            default 1 if LOG_ALINK_LEVEL_ERROR
+            default 2 if LOG_ALINK_LEVEL_WARN
+            default 3 if LOG_ALINK_LEVEL_INFO
+            default 4 if LOG_ALINK_LEVEL_DEBUG
+            default 5 if LOG_ALINK_LEVEL_VERBOSE
+
+        config ALINK_RESET_KEY_IO
+          int "Configure alink to restore the factory-set GPIO"
+          default 0
+          help
+                Configure alink to restore the factory-set GPIO
+
+        config WIFI_WAIT_TIME
+            int "the connection router maximum latency unit is seconds"
+            default 60
+            help
+                the connection router maximum latency unit is seconds
+
+        config ALINK_TASK_PRIOTY
+            int "Configure the priority of all alink tasks"
+            default 4
+            help
+                Configure the priority of all alink tasks
+    endmenu
+endmenu
