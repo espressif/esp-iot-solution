@@ -26,6 +26,13 @@
 #define _IOT_LIGHT_DEVICE_H_
 #include "light.h"
 typedef void* light_dev_handle_t;
+
+typedef enum {
+    LIGHT_STA_DISCONNECTED,    
+    LIGHT_CONNECTING_CLOUD,    
+    LIGHT_CLOUD_CONNECTED,
+} light_net_status_t;
+
 light_handle_t light_init();
 
 esp_err_t light_set(light_dev_handle_t light_dev, uint8_t bright, uint8_t temp);
@@ -33,4 +40,6 @@ esp_err_t light_set(light_dev_handle_t light_dev, uint8_t bright, uint8_t temp);
 uint8_t light_bright_get(light_dev_handle_t light_dev);
 
 uint8_t light_temp_get(light_dev_handle_t light_dev);
+
+esp_err_t light_net_status_write(light_dev_handle_t light_handle, light_net_status_t net_status);
 #endif

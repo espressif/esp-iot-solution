@@ -103,5 +103,8 @@ esp_err_t virtual_device_net_write(virtual_dev_net_t vd_net)
 #ifdef SMART_SOCKET_DEVICE
     return socket_net_status_write(g_socket, vd_net);
 #endif
+#ifdef SMART_LIGHT_DEVICE
+    return light_net_status_write(g_light, vd_net);
+#endif
     return ESP_OK;
 }
