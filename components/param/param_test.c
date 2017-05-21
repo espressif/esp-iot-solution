@@ -1,3 +1,6 @@
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/timers.h"
 #include "esp_system.h"
 #include "esp_log.h"
 #include "esp_spi_flash.h"
@@ -22,6 +25,11 @@ void param_test()
         .a = 99,
         .b = 99,
     };
+    esp_err_t ret;
+    ESP_LOGI(TAG, "heap size before param: %d", esp_get_free_heap_size());
+    ret = param_load(PARAM_NAMESPACE, PARAM_KEY, &param_read);
+    ESP_LOGI(TAG, "param read a:%d, b:%d", param_read.a, param_read.b);
+    ESP_LOGI(TAG, "param_load return : %d", ret);
     ESP_LOGI(TAG, "param write a:%d, b:%d", param.a, param.b);
     param_save(PARAM_NAMESPACE, PARAM_KEY, &param, sizeof(param_t));
     param_load(PARAM_NAMESPACE, PARAM_KEY, &param_read);
@@ -33,4 +41,5 @@ void param_test()
     param_save(PARAM_NAMESPACE, PARAM_KEY, &param, sizeof(param_t));
     param_load(PARAM_NAMESPACE, PARAM_KEY, &param_read);
     ESP_LOGI(TAG, "param read a:%d, b:%d", param_read.a, param_read.b);
+    ESP_LOGI(TAG, "heap size after param: %d", esp_get_free_heap_size());
 }
