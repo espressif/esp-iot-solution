@@ -1,0 +1,7 @@
+build/
+.settings
+.config
+*.o
+*.pyc
+*.d
+*.old
