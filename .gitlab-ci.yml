@@ -15,18 +15,29 @@ build:
   script: 
     - ls
     - pwd
+    - echo "path:"
+    - export PATH="/opt/xtensa-esp32-elf/bin:$PATH"
+    - echo $PATH
+    - python /home/gitlab-runner/test.py
+    - echo "test idf1"
+    - echo $IDF_PATH
+    - source ~/.bash_profile
+    - echo "test idf2"
+    - echo $IDF_PATH
     - echo "test111"
+    - make defconfig
+    - make -j8
   # depending on your build setup it's most likely a good idea to cache outputs to reduce the build time
   # cache:
   #   paths:
   #     - "*.o"
 
 # run tests using the binary built before
-test:
-  stage: test
-  tags:
-    - iot
-  script:
-    - ls
-    - pwd
-    - echo "test2"
+#test:
+#  stage: test
+#  tags:
+#    - iot
+#  script:
+#    - ls
+#    - pwd
+#    - echo "test2"
