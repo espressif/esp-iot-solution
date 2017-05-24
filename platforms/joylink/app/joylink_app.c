@@ -19,11 +19,12 @@
 * This file is for gatt client. It can scan ble device, connect one device,
 *
 ****************************************************************************/
-
 #include <stdint.h>
 #include <string.h>
 #include <stdbool.h>
 #include <stdio.h>
+
+#include "joylink_app.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -42,7 +43,7 @@
 extern int joylink_main_start();
 extern void joylink_dev_clear_jlp_info(void);
 
-#ifdef CONFIG_JOYLINK_BLE_ENABLE
+#if JOYLINK_BLE_ENABLE
 extern void joylink_ble_init(void);
 extern esp_err_t event_handler(void *ctx, system_event_t *event);
 extern void joylink_gatts_adv_data_enable(void);
@@ -82,7 +83,7 @@ static void joylink_task(void *pvParameters)
 
     vTaskDelete(NULL);
 }
-#ifndef CONFIG_JOYLINK_BLE_ENABLE
+#if ( JOYLINK_BLE_ENABLE == 0 )
 static esp_err_t event_handler(void *ctx, system_event_t *event)
 {
     switch(event->event_id) {
@@ -136,7 +137,7 @@ static void joylink_button_reset_tap_cb(void* arg)
     esp_restart();
 }
 
-#ifdef CONFIG_JOYLINK_BLE_BUTTON_ENABLE
+#if JOYLINK_BLE_BUTTON_ENABLE
 static void joylink_button_ble_tap_cb(void* arg)
 {
     joylink_gatts_adv_data_enable();
@@ -145,13 +146,13 @@ static void joylink_button_ble_tap_cb(void* arg)
 
 static void initialise_key(void)
 {
-    button_handle_t btn_handle = button_dev_init(CONFIG_JOYLINK_SMNT_BUTTON_NUM, 0, BUTTON_ACTIVE_LOW);
+    button_handle_t btn_handle = button_dev_init(JOYLINK_SMNT_BUTTON_NUM, 0, BUTTON_ACTIVE_LOW);
     button_dev_add_tap_cb(BUTTON_PUSH_CB, joylink_button_smnt_tap_cb, "PUSH", 50 / portTICK_PERIOD_MS, btn_handle);
 
-    btn_handle = button_dev_init(CONFIG_JOYLINK_RESET_BUTTON_NUM, 0, BUTTON_ACTIVE_LOW);
+    btn_handle = button_dev_init(JOYLINK_RESET_BUTTON_NUM, 0, BUTTON_ACTIVE_LOW);
     button_dev_add_tap_cb(BUTTON_PUSH_CB, joylink_button_reset_tap_cb, "PUSH", 50 / portTICK_PERIOD_MS, btn_handle);
 
-#ifdef CONFIG_JOYLINK_BLE_BUTTON_ENABLE
+#if JOYLINK_BLE_BUTTON_ENABLE
     btn_handle = button_dev_init(CONFIG_JOYLINK_BLE_BUTTON_NUM, 0, BUTTON_ACTIVE_LOW);
     button_dev_add_tap_cb(BUTTON_PUSH_CB, joylink_button_ble_tap_cb, "PUSH", 50 / portTICK_PERIOD_MS, btn_handle);
 #endif
@@ -161,7 +162,7 @@ void joylink_app_start(void)
 {
     nvs_flash_init();
     initialise_wifi();
-#ifdef CONFIG_JOYLINK_BLE_ENABLE
+#if JOYLINK_BLE_ENABLE
     joylink_ble_init();
 #endif
     initialise_key();

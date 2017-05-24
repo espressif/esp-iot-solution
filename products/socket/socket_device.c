@@ -65,16 +65,70 @@ typedef struct {
     SemaphoreHandle_t xSemWriteInfo;
 } socket_dev_t;
 
+
+static const socket_uint_def_t DEF_SOCKET_UNIT[SOCKET_UNIT_NUM] = {
+        {
+        .button_io           = SMART_SOCKET_UNIT0_BUTTON_IO,
+        .button_active_level = SMART_SOCKET_UNIT0_BUTTON_ACTIVE_LEVEL,
+        .led_io              = SMART_SOCKET_UNIT0_LED_IO,
+        .led_off_level       = SMART_SOCKET_UNIT0_LED_OFF_LEVEL,
+        .relay_off_level     = SMART_SOCKET_UNIT0_RELAY_OFF_LEVEL,
+        .relay_ctrl_mode     = SMART_SOCKET_UNIT0_RELAY_CTRL_MODE,
+        .relay_io_mode       = SMART_SOCKET_UNIT0_RELAY_IO_MODE,
+        .relay_ctl_io        = SMART_SOCKET_UNIT0_RELAY_CTL_IO,
+        .relay_clk_io        = SMART_SOCKET_UNIT0_RELAY_CLK_IO,
+        },
+#if SOCKET_UNIT_NUM > 1
+        {
+        .button_io           = SMART_SOCKET_UNIT1_BUTTON_IO,
+        .button_active_level = SMART_SOCKET_UNIT1_BUTTON_ACTIVE_LEVEL,
+        .led_io              = SMART_SOCKET_UNIT1_LED_IO,
+        .led_off_level       = SMART_SOCKET_UNIT1_LED_OFF_LEVEL,
+        .relay_off_level     = SMART_SOCKET_UNIT1_RELAY_OFF_LEVEL,
+        .relay_ctrl_mode     = SMART_SOCKET_UNIT1_RELAY_CTRL_MODE,
+        .relay_io_mode       = SMART_SOCKET_UNIT1_RELAY_IO_MODE,
+        .relay_ctl_io        = SMART_SOCKET_UNIT1_RELAY_CTL_IO,
+        .relay_clk_io        = SMART_SOCKET_UNIT1_RELAY_CLK_IO,
+        },
+#endif
+#if SOCKET_UNIT_NUM > 2
+        {
+        .button_io           = SMART_SOCKET_UNIT2_BUTTON_IO,
+        .button_active_level = SMART_SOCKET_UNIT2_BUTTON_ACTIVE_LEVEL,
+        .led_io              = SMART_SOCKET_UNIT2_LED_IO,
+        .led_off_level       = SMART_SOCKET_UNIT2_LED_OFF_LEVEL,
+        .relay_off_level     = SMART_SOCKET_UNIT2_RELAY_OFF_LEVEL,
+        .relay_ctrl_mode     = SMART_SOCKET_UNIT2_RELAY_CTRL_MODE,
+        .relay_io_mode       = SMART_SOCKET_UNIT2_RELAY_IO_MODE,
+        .relay_ctl_io        = SMART_SOCKET_UNIT2_RELAY_CTL_IO,
+        .relay_clk_io        = SMART_SOCKET_UNIT2_RELAY_CLK_IO,
+        },
+#endif
+#if SOCKET_UNIT_NUM > 3
+        {
+        .button_io           = SMART_SOCKET_UNIT3_BUTTON_IO,
+        .button_active_level = SMART_SOCKET_UNIT3_BUTTON_ACTIVE_LEVEL,
+        .led_io              = SMART_SOCKET_UNIT3_LED_IO,
+        .led_off_level       = SMART_SOCKET_UNIT3_LED_OFF_LEVEL,
+        .relay_off_level     = SMART_SOCKET_UNIT3_RELAY_OFF_LEVEL,
+        .relay_ctrl_mode     = SMART_SOCKET_UNIT3_RELAY_CTRL_MODE,
+        .relay_io_mode       = SMART_SOCKET_UNIT3_RELAY_IO_MODE,
+        .relay_ctl_io        = SMART_SOCKET_UNIT3_RELAY_CTL_IO,
+        .relay_clk_io        = SMART_SOCKET_UNIT3_RELAY_CLK_IO,
+        },
+#endif
+};
+
 static socket_dev_t* g_socket;
 static socket_unit_t* socket_unit_create(socket_status_t* state_ptr, button_handle_t btn, relay_handle_t relay,
         led_handle_t led, touchpad_handle_t touchpad)
 {
     socket_unit_t* socket_unit = (socket_unit_t*) calloc(1, sizeof(socket_unit_t));
-    socket_unit->state_ptr = state_ptr;
-    socket_unit->btn_handle = btn;
-    socket_unit->relay_handle = relay;
-    socket_unit->led_handle = led;
-    socket_unit->tp_handle = touchpad;
+    socket_unit->state_ptr     = state_ptr;
+    socket_unit->btn_handle    = btn;
+    socket_unit->relay_handle  = relay;
+    socket_unit->led_handle    = led;
+    socket_unit->tp_handle     = touchpad;
     return socket_unit;
 }
 
@@ -199,45 +253,47 @@ socket_handle_t socket_init(SemaphoreHandle_t xSemWriteInfo)
     socket_dev->net_led = led_create(NET_LED_NUM, LED_DARK_LEVEL);
     led_state_write(socket_dev->net_led, LED_QUICK_BLINK);
 
+#if SOCKET_POWER_METER_ENABLE
     /* create a power meter object */
     pm_config_t pm_conf = {
-        .power_io_num = PM_CF_IO_NUM,
-        .power_pcnt_unit = PCNT_UNIT_0,
-        .power_ref_param = PM_POWER_PARAM,
-        .voltage_io_num = PM_CFI_IO_NUM,
+        .power_io_num      = PM_CF_IO_NUM,
+        .power_pcnt_unit   = PCNT_UNIT_0,
+        .power_ref_param   = PM_POWER_PARAM,
+        .voltage_io_num    = PM_CFI_IO_NUM,
         .voltage_pcnt_unit = PCNT_UNIT_1,
         .voltage_ref_param = PM_VOLTAGE_PARAM,
-        .current_io_num = PM_CFI_IO_NUM,
+        .current_io_num    = PM_CFI_IO_NUM,
         .current_pcnt_unit = PCNT_UNIT_1,
         .current_ref_param = PM_CURRENT_PARAM,
         .sel_io_num = 17,
         .sel_level = 0,
         .pm_mode = PM_SINGLE_VOLTAGE
     };
-    relay_io_t relay_io;
     socket_dev->pm_handle = powermeter_create(pm_conf);
-
+    xTaskCreate(powermeter_task, "powermeter_task", 2048, socket_dev, 5, NULL);
+#endif
+    relay_io_t relay_io;
     /* create a button object as the main button */
     socket_dev->main_btn = button_dev_init(BUTTON_IO_NUM_MAIN, 0, BUTTON_ACTIVE_LEVEL);
     button_dev_add_tap_cb(BUTTON_TAP_CB, main_button_cb, socket_dev, 50 / portTICK_PERIOD_MS, socket_dev->main_btn);
 
     /* create units */
     for (int i = 0; i < SOCKET_UNIT_NUM; i++) {
-        btn_handle = button_dev_init(button_io[i], 0, BUTTON_ACTIVE_LEVEL);
-        if (RELAY_CONTROL_MODE == RELAY_GPIO_CONTROL) {
-            relay_io.single_io.ctl_io_num = relay_ctl_io[i];
+        btn_handle = button_dev_init(DEF_SOCKET_UNIT[i].button_io, 0, DEF_SOCKET_UNIT[i].button_active_level);
+
+        if (DEF_SOCKET_UNIT[i].relay_ctrl_mode == RELAY_GPIO_CONTROL) {
+            relay_io.single_io.ctl_io_num = DEF_SOCKET_UNIT[i].relay_ctl_io;
         } else {
-            relay_io.flip_io.d_io_num = relay_ctl_io[i];
-            relay_io.flip_io.cp_io_num = relay_clk_io[i];
+            relay_io.flip_io.d_io_num = DEF_SOCKET_UNIT[i].relay_ctl_io;
+            relay_io.flip_io.cp_io_num = DEF_SOCKET_UNIT[i].relay_clk_io;
         }
-        relay_handle = relay_create(relay_io, RELAY_CLOSE_LEVEL, RELAY_CONTROL_MODE, RELAY_IO_MODE);
-        led_handle = led_create(led_io[i], LED_DARK_LEVEL);
+        relay_handle = relay_create(relay_io, DEF_SOCKET_UNIT[i].relay_off_level, DEF_SOCKET_UNIT[i].relay_ctrl_mode, DEF_SOCKET_UNIT[i].relay_io_mode);
+        led_handle = led_create(DEF_SOCKET_UNIT[i].led_io, DEF_SOCKET_UNIT[i].led_off_level);
         socket_dev->units[i] = socket_unit_create(&socket_dev->save_param.unit_sta[i], btn_handle, relay_handle,
                 led_handle, NULL);
         button_dev_add_tap_cb(BUTTON_TAP_CB, button_tap_cb, socket_dev->units[i], 50 / portTICK_PERIOD_MS, btn_handle);
         socket_unit_set(socket_dev->units[i], socket_dev->save_param.unit_sta[i]);
     }
 
-    xTaskCreate(powermeter_task, "powermeter_task", 2048, socket_dev, 5, NULL);
     return socket_dev;
 }

@@ -214,8 +214,8 @@ int platform_thread_create(_OUT_ void **thread,
 
     // if (pdTRUE == xTaskCreatePinnedToCore((TaskFunction_t)start_routine, name, stack_size * 2, arg, DEFAULU_TASK_PRIOTY, thread, 0)) {
     ALINK_LOGD("thread_create name: %s, stack_size: %d, priority:%d",
-               name, stack_size * 2, DEFAULU_TASK_PRIOTY);
-    ret = xTaskCreate((TaskFunction_t)start_routine, name, stack_size * 2, arg, DEFAULU_TASK_PRIOTY, thread);
+               name, stack_size * 2, ALINK_DEFAULU_TASK_PRIOTY);
+    ret = xTaskCreate((TaskFunction_t)start_routine, name, stack_size * 2, arg, ALINK_DEFAULU_TASK_PRIOTY, thread);
     ALINK_ERROR_CHECK(ret != pdTRUE, ALINK_ERR, "thread_create name: %s, stack_size: %d, ret: %d", name, stack_size * 2, ret);
 
     int pos = get_task_name_location(name);
@@ -295,7 +295,7 @@ char *platform_get_os_version(_OUT_ char version_str[PLATFORM_OS_VERSION_LEN])
 char *platform_get_module_name(_OUT_ char name_str[PLATFORM_MODULE_NAME_LEN])
 {
     ALINK_PARAM_CHECK(name_str == NULL);
-    memcpy(name_str, MODULE_NAME, PLATFORM_MODULE_NAME_LEN);
+    memcpy(name_str, ALINK_MODULE_NAME, PLATFORM_MODULE_NAME_LEN);
     return name_str;
 }
 

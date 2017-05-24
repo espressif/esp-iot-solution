@@ -25,21 +25,45 @@
 #include <stdlib.h>
 #include "light.h"
 #include "light_device.h"
+#include "light_config.h"
 #include "param.h"
 #include "button.h"
 
-#define LIGHT_NAME_SPACE    "param"
-#define LIGHT_PARAM_KEY     "light"
-#define CHANNEL_NUM     3
-#define LIGHT_FREQ_HZ   1000
-#define LIGHT_FULL_DUTY ((1 << LEDC_TIMER_13_BIT) - 1)
+typedef struct {
+    int ledc_channel;
+    int ledc_gpio;
+} light_conf_t;
 
-#define CHANNEL_ID_R    0
-#define CHANNEL_ID_G    1
-#define CHANNEL_ID_B    2
-#define CHANNEL_R_IO    17
-#define CHANNEL_G_IO    18
-#define CHANNEL_B_IO    19
+static const light_conf_t LIGHT_PWM_UNIT[IOT_LIGHT_CHANNEL_NUM] = {
+    {
+        .ledc_channel = IOT_LIGHT_PWM_U0_LEDC_CHANNEL,
+        .ledc_gpio    = IOT_LIGHT_PWM_U0_LEDC_IO,
+    },
+#if IOT_LIGHT_CHANNEL_NUM > 1
+    {
+        .ledc_channel = IOT_LIGHT_PWM_U1_LEDC_CHANNEL,
+        .ledc_gpio    = IOT_LIGHT_PWM_U1_LEDC_IO,
+    },
+#endif
+#if IOT_LIGHT_CHANNEL_NUM > 2
+    {
+        .ledc_channel = IOT_LIGHT_PWM_U2_LEDC_CHANNEL,
+        .ledc_gpio    = IOT_LIGHT_PWM_U2_LEDC_IO,
+    },
+#endif
+#if IOT_LIGHT_CHANNEL_NUM > 3
+    {
+        .ledc_channel = IOT_LIGHT_PWM_U3_LEDC_CHANNEL,
+        .ledc_gpio    = IOT_LIGHT_PWM_U3_LEDC_IO,
+    },
+#endif
+#if IOT_LIGHT_CHANNEL_NUM > 4
+    {
+        .ledc_channel = IOT_LIGHT_PWM_U4_LEDC_CHANNEL,
+        .ledc_gpio    = IOT_LIGHT_PWM_U4_LEDC_IO,
+    },
+#endif
+};
 
 typedef struct {
     uint8_t bright;
@@ -54,12 +78,13 @@ typedef struct {
 light_dev_handle_t light_init()
 {
     light_device_t* light_dev = (light_device_t*)calloc(1, sizeof(light_device_t));
-    light_handle_t light = light_create(LEDC_TIMER_0, LEDC_HIGH_SPEED_MODE, LIGHT_FREQ_HZ, CHANNEL_NUM, LEDC_TIMER_13_BIT);
+    light_handle_t light = light_create(IOT_LIGHT_PWM_TIMER_IDX, IOT_LIGHT_PWM_SPEED_MODE, IOT_LIGHT_FREQ_HZ, IOT_LIGHT_CHANNEL_NUM, IOT_LIGHT_PWM_BIT_NUM);
     light_dev->light = light;
-    light_channel_regist(light, CHANNEL_ID_R, CHANNEL_R_IO, LEDC_CHANNEL_0, LEDC_HIGH_SPEED_MODE);
-    light_channel_regist(light, CHANNEL_ID_G, CHANNEL_G_IO, LEDC_CHANNEL_1, LEDC_HIGH_SPEED_MODE);
-    light_channel_regist(light, CHANNEL_ID_B, CHANNEL_B_IO, LEDC_CHANNEL_2, LEDC_HIGH_SPEED_MODE);
-    if (param_load(LIGHT_NAME_SPACE, LIGHT_PARAM_KEY, &(light_dev->light_param)) != ESP_OK) {
+    for(int i = 0; i< IOT_LIGHT_CHANNEL_NUM; i ++) {
+        light_channel_regist(light, i, LIGHT_PWM_UNIT[i].ledc_gpio, LIGHT_PWM_UNIT[i].ledc_channel, IOT_LIGHT_PWM_SPEED_MODE);
+    }
+
+    if (param_load(IOT_LIGHT_NAME_SPACE, IOT_LIGHT_PARAM_KEY, &(light_dev->light_param)) != ESP_OK) {
         light_set((light_dev_handle_t)light_dev, 0, 0);
     }
     else {
@@ -74,7 +99,7 @@ static esp_err_t light_state_write(light_handle_t light_handle, uint32_t duty[])
     if (light_handle ==NULL) {
         return ESP_FAIL;
     }
-    for (int i = 0; i < CHANNEL_NUM; i++) {
+    for (int i = 0; i < IOT_LIGHT_CHANNEL_NUM; i++) {
         light_duty_write(light_handle, i, duty[i], LIGHT_DUTY_FADE_2S);
     }
     return ESP_OK;
@@ -87,11 +112,11 @@ esp_err_t light_set(light_dev_handle_t light_dev, uint8_t bright, uint8_t temp)
     }
     uint32_t sum_duty = bright * LIGHT_FULL_DUTY / 100;
     uint32_t r_duty = sum_duty * sum_duty / 1000 >= LIGHT_FULL_DUTY ? LIGHT_FULL_DUTY : sum_duty * sum_duty / 1000;
-    uint32_t duty[CHANNEL_NUM] = {r_duty, (14700 + temp*108) * sum_duty / 25500 / 2, (4100 + temp*214) * sum_duty / 25500 / 2};
+    uint32_t duty[IOT_LIGHT_CHANNEL_NUM] = {r_duty, (14700 + temp*108) * sum_duty / 25500 / 2, (4100 + temp*214) * sum_duty / 25500 / 2};
     light_device_t* light = (light_device_t*)light_dev;
     light->light_param.bright = bright;
     light->light_param.temp = temp;
-    param_save(LIGHT_NAME_SPACE, LIGHT_PARAM_KEY, &light->light_param, sizeof(save_param_t));
+    param_save(IOT_LIGHT_NAME_SPACE, IOT_LIGHT_PARAM_KEY, &light->light_param, sizeof(save_param_t));
     return light_state_write(light->light, duty);
 }
 
@@ -103,12 +128,12 @@ esp_err_t light_net_status_write(light_dev_handle_t light_handle, light_net_stat
     light_device_t* light_dev = (light_device_t*)light_handle;
     switch (net_status) {
         case LIGHT_STA_DISCONNECTED:
-            light_breath_write(light_handle, CHANNEL_ID_R, 4000);
-            light_duty_write(light_handle, CHANNEL_ID_G, 0, LIGHT_SET_DUTY_DIRECTLY);
-            light_duty_write(light_handle, CHANNEL_ID_B, 0, LIGHT_SET_DUTY_DIRECTLY);
+            light_breath_write(light_handle, IOT_CHANNEL_ID_R, 4000);
+            light_duty_write(light_handle, IOT_CHANNEL_ID_G, 0, LIGHT_SET_DUTY_DIRECTLY);
+            light_duty_write(light_handle, IOT_CHANNEL_ID_B, 0, LIGHT_SET_DUTY_DIRECTLY);
             break;
         case LIGHT_CLOUD_CONNECTED:
-            if (param_load(LIGHT_NAME_SPACE, LIGHT_PARAM_KEY, &(light_dev->light_param)) != ESP_OK) {
+            if (param_load(IOT_LIGHT_NAME_SPACE, IOT_LIGHT_PARAM_KEY, &(light_dev->light_param)) != ESP_OK) {
                 light_set(light_handle, 0, 0);
             }
             else {

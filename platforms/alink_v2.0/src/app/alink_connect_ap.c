@@ -81,7 +81,7 @@ alink_err_t alink_connect_ap()
 
     ret = alink_read_wifi_config(&wifi_config);
     if (ret == ALINK_OK) {
-        if (platform_awss_connect_ap(WIFI_WAIT_TIME, (char *)wifi_config.sta.ssid, (char *)wifi_config.sta.password,
+        if (platform_awss_connect_ap(ALINK_WIFI_WAIT_TIME, (char *)wifi_config.sta.ssid, (char *)wifi_config.sta.password,
                                      0, 0, wifi_config.sta.bssid, 0) == ALINK_OK) {
             return ALINK_OK;
         }
