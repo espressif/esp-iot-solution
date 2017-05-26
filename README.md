@@ -13,8 +13,8 @@
 
 ### Usage
 * This code is based on esp-idf project.
-* This repository doesn't contain esp-idf code, you should first clone the esp-idf code by **git clone --recurisve  https://gitlab.espressif.cn:6688/idf/esp-idf.git**
-* To clone the this repository by **git clone https://gitlab.espressif.cn:6688/rd/esp-iot-solution.git**
+* This repository doesn't contain esp-idf code, you should first clone the esp-idf code by **git clone --recurisve  https://github.com/espressif/esp-idf.git**
+* To clone the this repository by **git clone https://github.com/espressif/esp-iot-solution.git**
 * Change to the directory of this project, run `make menuconfig` to configure the project.
 * Compiling the Project by `make all`
 > ... will compile app, bootloader and generate a partition table based on the config.
