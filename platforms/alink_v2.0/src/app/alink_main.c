@@ -43,7 +43,7 @@
 #define Method_PostRawData   "postDeviceRawData"
 #define Method_GetAlinkTime  "getAlinkTime"
 
-#ifdef ALINK_PASSTHROUGH
+#if ALINK_PASSTHROUGH
 #define ALINK_METHOD_POST     Method_PostRawData
 #define ALINK_GET_DEVICE_DATA ALINK_GET_DEVICE_RAWDATA
 #define ALINK_SET_DEVICE_DATA ALINK_SET_DEVICE_RAWDATA
@@ -204,7 +204,7 @@ static alink_err_t alink_trans_init()
     /*wait main device login, -1 means wait forever */
     ret = alink_wait_connect(ALINK_WAIT_FOREVER);
     ALINK_ERROR_CHECK(ret != ALINK_OK, ALINK_ERR, "alink_start :%d", ret);
-    xTaskCreate(alink_post_data, "alink_post_data", 1024 * 4, NULL, DEFAULU_TASK_PRIOTY, NULL);
+    xTaskCreate(alink_post_data, "alink_post_data", 1024 * 4, NULL, ALINK_DEFAULU_TASK_PRIOTY, NULL);
     return ret;
 }
 
@@ -244,11 +244,11 @@ int esp_alink_event_init(_IN_ alink_event_cb_t cb)
     if (xQueueEvent == NULL)
         xQueueEvent = xQueueCreate(EVENT_QUEUE_NUM, sizeof(alink_event_t));
     xTaskCreate(alink_event_loop_task, "alink_event_task",
-                1024 * 2, NULL, DEFAULU_TASK_PRIOTY, NULL);
+                1024 * 2, NULL, ALINK_DEFAULU_TASK_PRIOTY, NULL);
     return ALINK_OK;
 }
 
-#ifdef ALINK_PASSTHROUGH
+#if ALINK_PASSTHROUGH
 #define RawDataHeader   "{\"rawData\":\""
 #define RawDataTail     "\", \"length\":\"%d\"}"
 int esp_alink_write(_IN_ void *up_cmd, size_t len, int micro_seconds)

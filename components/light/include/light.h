@@ -54,7 +54,7 @@ light_handle_t light_create(ledc_timer_t timer, ledc_mode_t speed_mode, uint32_t
   * @brief  add an output channel to light
   *
   * @param  light_handle 
-  * @param  channel_id the id of channel (0 ~ channel_num-1)
+  * @param  channel_idx the id of channel (0 ~ channel_num-1)
   * @param  io_num
   * @param  channel the ledc channel you want to use
   * @param  mode 
@@ -63,7 +63,7 @@ light_handle_t light_create(ledc_timer_t timer, ledc_mode_t speed_mode, uint32_t
   *     - ESP_OK: succeed
   *     - others: fail
   */
-esp_err_t light_channel_regist(light_handle_t light_handle, uint8_t channel_id, gpio_num_t io_num, ledc_channel_t channel, ledc_mode_t mode);
+esp_err_t light_channel_regist(light_handle_t light_handle, uint8_t channel_idx, gpio_num_t io_num, ledc_channel_t channel, ledc_mode_t mode);
 
 /**
   * @brief  free the momery of light

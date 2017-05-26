@@ -38,6 +38,18 @@ typedef enum {
     SOCKET_CLOUD_CONNECTED,
 } socket_net_status_t;
 
+
+typedef struct {
+    gpio_num_t button_io;
+    int button_active_level;
+    gpio_num_t led_io;
+    int led_off_level;
+    gpio_num_t relay_ctl_io;
+    gpio_num_t relay_clk_io;
+    int relay_off_level;
+    int relay_ctrl_mode;
+    int relay_io_mode;
+} socket_uint_def_t;
 /**
   * @brief  socket device initilize
   *

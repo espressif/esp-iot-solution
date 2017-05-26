@@ -154,7 +154,7 @@ esp_err_t cloud_init(cloud_event_cb_t cb)
     initialise_key();
     printf("mode: json, free_heap: %u\n", esp_get_free_heap_size());
     joylink_info_t product_info = {
-			.innet_aes_key = "JBJS5PB8CN47I8FB",
+			.innet_aes_key = "DNWXVNMPGRZB7DC5",
 		    .jlp.version = 1,
 		    .jlp.accesskey = "",//NDJY9396Z9P4KNDU
 		    .jlp.localkey = "",
@@ -165,7 +165,7 @@ esp_err_t cloud_init(cloud_event_cb_t cb)
 		    .jlp.CID= "011c022b",
 		    .jlp.firmwareVersion = "001",
 		    .jlp.modelCode = "a1",
-		    .jlp.uuid = "PAAXAS",
+		    .jlp.uuid = "GNQIYS",
 		    .jlp.lancon = E_LAN_CTRL_ENABLE,
 		    .jlp.cmd_tran_type = E_CMD_TYPE_JSON
     };

@@ -166,12 +166,12 @@ FREE_MEM:
     return ESP_OK;
 }
 
-esp_err_t light_channel_regist(light_handle_t light_handle, uint8_t channel_id, gpio_num_t io_num, ledc_channel_t channel, ledc_mode_t mode)
+esp_err_t light_channel_regist(light_handle_t light_handle, uint8_t channel_idx, gpio_num_t io_num, ledc_channel_t channel, ledc_mode_t mode)
 {
     light_t* light = (light_t*)light_handle;
     POINT_ASSERT(TAG, light_handle);
-    IOT_CHECK(TAG, channel_id < light->channel_num, FAIL);
-    light->channel_group[channel_id] = light_channel_create(io_num, channel, mode, light->ledc_timer);
+    IOT_CHECK(TAG, channel_idx < light->channel_num, FAIL);
+    light->channel_group[channel_idx] = light_channel_create(io_num, channel, mode, light->ledc_timer);
     if (g_fade_installed == false) {
         ledc_fade_func_install(0);
         g_fade_installed = true;

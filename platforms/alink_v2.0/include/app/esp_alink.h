@@ -1,5 +1,5 @@
-#ifndef __ALINK_USER_CONFIG_H__
-#define __ALINK_USER_CONFIG_H__
+#ifndef __ESP_ALINK_H__
+#define __ESP_ALINK_H__
 #include "esp_log.h"
 #include "alink_export.h"
 #include "platform.h"
@@ -9,6 +9,7 @@
 #include "freertos/queue.h"
 #include "lwip/sockets.h"
 #include "json_parser.h"
+#include "alink_config.h"
 
 #include <stdio.h>
 typedef int32_t alink_err_t;
@@ -24,7 +25,6 @@ typedef int32_t alink_err_t;
 #ifndef ALINK_ERR
 #define ALINK_ERR   -1
 #endif
-
 
 #ifndef _IN_
 #define _IN_            /**< indicate that this is a input parameter. */
@@ -46,11 +46,7 @@ typedef int32_t alink_err_t;
 #endif
 
 #undef LOG_LOCAL_LEVEL
-#define LOG_LOCAL_LEVEL CONFIG_LOG_ALINK_LEVEL
-
-/*#ifdef CONFIG_ALINK_PASSTHROUGH
-#define ALINK_PASSTHROUGH
-#endif*/
+#define LOG_LOCAL_LEVEL ALINK_LOG_LEVEL
 
 #define ALINK_LOGE( format, ... ) ESP_LOGE(TAG, "[%s, %d]:" format, __func__, __LINE__, ##__VA_ARGS__)
 #define ALINK_LOGW( format, ... ) ESP_LOGW(TAG, "[%s, %d]:" format, __func__, __LINE__, ##__VA_ARGS__)
@@ -61,16 +57,9 @@ typedef int32_t alink_err_t;
 #define ALINK_ERROR_CHECK(con, err, format, ...) if(con) {ALINK_LOGE(format, ##__VA_ARGS__); perror(__func__); return err;}
 #define ALINK_PARAM_CHECK(con) if(con) {ALINK_LOGE("Parameter error, "); perror(__func__); assert(0);}
 
-/* alink main */
-#define WIFI_WAIT_TIME      (CONFIG_WIFI_WAIT_TIME * 1000)
-#define ALINK_RESET_KEY_IO  CONFIG_ALINK_RESET_KEY_IO
-#define DEFAULU_TASK_PRIOTY CONFIG_ALINK_TASK_PRIOTY
-
 /* alink_os */
 #define ALINK_CHIPID "esp32"
-#define MODULE_NAME "ESP-WROOM-32"
 
-#define ALINK_DATA_LEN 512
 typedef enum {
     ALINK_EVENT_CLOUD_CONNECTED = 0,
     ALINK_EVENT_CLOUD_DISCONNECTED,

@@ -1,0 +1,23 @@
+#ifndef __ALINK_USER_CONFIG_H__
+#define __ALINK_USER_CONFIG_H__
+#include "esp_log.h"
+
+#if CONFIG_CLOUD_ALINK
+#define ALINK_PASSTHROUGH           CONFIG_ALINK_PASSTHROUGH
+#define ALINK_LOG_LEVEL             CONFIG_LOG_ALINK_LEVEL
+#define ALINK_WIFI_WAIT_TIME        (CONFIG_WIFI_WAIT_TIME * 1000)
+#define ALINK_RESET_KEY_IO          CONFIG_ALINK_RESET_KEY_IO
+#define ALINK_DEFAULU_TASK_PRIOTY   CONFIG_ALINK_TASK_PRIOTY
+#define ALINK_MODULE_NAME           CONFIG_ALINK_MODULE_NAME
+#define ALINK_DATA_LEN              CONFIG_ALINK_DATA_LEN
+#else
+#define ALINK_PASSTHROUGH         (1)
+#define ALINK_LOG_LEVEL           (ESP_LOG_INFO)
+#define ALINK_WIFI_WAIT_TIME      (60)
+#define ALINK_RESET_KEY_IO        (0)
+#define ALINK_DEFAULU_TASK_PRIOTY (4)
+#define ALINK_MODULE_NAME         "ESP-WROOM-32"
+#define ALINK_DATA_LEN            (512)
+#endif
+
+#endif
