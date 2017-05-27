@@ -13,18 +13,21 @@ build:
   # before_script: 
   #   - apt update && apt -y install make autoconf 
   script: 
-    - ls
-    - pwd
-    - echo "path:"
     - export PATH="/opt/xtensa-esp32-elf/bin:$PATH"
     - echo $PATH
-    - python /home/gitlab-runner/test.py
-    - echo "test idf1"
     - echo $IDF_PATH
     - source ~/.bash_profile
-    - echo "test idf2"
     - echo $IDF_PATH
-    - echo "test111"
+    - cp tools/sdkconfig_alink_light sdkconfig
+    - make defconfig
+    - make -j8
+    - cp tools/sdkconfig_alink_socket sdkconfig
+    - make defconfig
+    - make -j8
+    - cp tools/sdkconfig_joylink_light sdkconfig
+    - make defconfig
+    - make -j8
+    - cp tools/sdkconfig_joylink_socket sdkconfig
     - make defconfig
     - make -j8
   # depending on your build setup it's most likely a good idea to cache outputs to reduce the build time
