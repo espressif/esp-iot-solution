@@ -147,23 +147,33 @@ menu "Iot_Solution"
             range 0 1
             default 1
             
+            choice SMART_SOCKET_UNIT0_RELAY_CTRL_MODE
+                bool "UNIT[0] relay control mode"
+                    default SMART_SOCKET_UNIT0_RELAY_SINGLE_IO
+                config SMART_SOCKET_UNIT0_RELAY_D_FLIPFLOP
+                    bool "Relay mode: D flip-flop"
+                config SMART_SOCKET_UNIT0_RELAY_SINGLE_IO
+                    bool "Relay mode: single IO"
+                endchoice
             config SMART_SOCKET_UNIT0_RELAY_CTRL_MODE
-            int "UNIT[0] relay control mode"
-            range 0 1
-            default 1
-            help
-                To set teh control mode of relay
-                0: D flip-flop mode
-                1: Simple GPIO mode
-            
+                int
+                default 0 if SMART_SOCKET_UNIT0_RELAY_D_FLIPFLOP
+                default 1 if SMART_SOCKET_UNIT0_RELAY_SINGLE_IO    
+                
+            choice SMART_SOCKET_UNIT0_RELAY_IO_MODE
+                bool "UNIT[0] relay IO mode"
+                    default SMART_SOCKET_UNIT0_RELAY_IO_DIG
+                config SMART_SOCKET_UNIT0_RELAY_IO_DIG
+                    bool "Relay on digital IO"
+                config SMART_SOCKET_UNIT0_RELAY_IO_RTC
+                    bool "Relay by RTC IO"
+                endchoice
             config SMART_SOCKET_UNIT0_RELAY_IO_MODE
-            int "UNIT[0] relay IO mode"
-            range 0 1
-            default 0
-            help
-                To set the GPIO mode for relay
-                0: Digital GPIO
-                1: RTC GPIO
+                int
+                default 0 if SMART_SOCKET_UNIT0_RELAY_IO_DIG
+                default 1 if SMART_SOCKET_UNIT0_RELAY_IO_RTC   
+                
+                
             
             config SMART_SOCKET_UNIT0_RELAY_CTL_IO
             int "UNIT[0] relay ctrl io"
@@ -171,9 +181,14 @@ menu "Iot_Solution"
             default 12
             
             config SMART_SOCKET_UNIT0_RELAY_CLK_IO
-            #depends on SMART_SOCKET_UNIT0_RELAY_CTRL_MODE
+            depends on SMART_SOCKET_UNIT0_RELAY_D_FLIPFLOP
             int "UNIT[0] relay clk io(in D-flip-flop mode)"
             range -1 34
+            default -1
+            
+            config SMART_SOCKET_UNIT0_RELAY_CLK_IO
+            depends on SMART_SOCKET_UNIT0_RELAY_SINGLE_IO
+            int
             default -1
         endmenu
         
@@ -203,24 +218,37 @@ menu "Iot_Solution"
             int "UNIT[1] relay off level"
             range 0 1
             default 1
-            
+                        
+            choice SMART_SOCKET_UNIT1_RELAY_CTRL_MODE
+                bool "UNIT[1] relay control mode"
+                    default SMART_SOCKET_UNIT1_RELAY_SINGLE_IO
+                config SMART_SOCKET_UNIT1_RELAY_D_FLIPFLOP
+                    bool "Relay mode: D flip-flop"
+                config SMART_SOCKET_UNIT1_RELAY_SINGLE_IO
+                    bool "Relay mode: single IO"
+                endchoice
             config SMART_SOCKET_UNIT1_RELAY_CTRL_MODE
-            int "UNIT[1] relay control mode"
-            range 0 1
-            default 1
-            help
-                To set teh control mode of relay
-                0: D flip-flop mode
-                1: Simple GPIO mode
-            
+                int
+                default 0 if SMART_SOCKET_UNIT1_RELAY_D_FLIPFLOP
+                default 1 if SMART_SOCKET_UNIT1_RELAY_SINGLE_IO    
+                
+            choice SMART_SOCKET_UNIT1_RELAY_IO_MODE
+                bool "UNIT[1] relay IO mode"
+                    default SMART_SOCKET_UNIT1_RELAY_IO_DIG
+                config SMART_SOCKET_UNIT1_RELAY_IO_DIG
+                    bool "Relay on digital IO"
+                config SMART_SOCKET_UNIT1_RELAY_IO_RTC
+                    bool "Relay by RTC IO"
+                endchoice
             config SMART_SOCKET_UNIT1_RELAY_IO_MODE
-            int "UNIT[1] relay IO mode"
-            range 0 1
-            default 0
-            help
-                To set the GPIO mode for relay
-                0: Digital GPIO
-                1: RTC GPIO
+                int
+                default 0 if SMART_SOCKET_UNIT1_RELAY_IO_DIG
+                default 1 if SMART_SOCKET_UNIT1_RELAY_IO_RTC 
+                
+                
+                
+                
+                
             
             config SMART_SOCKET_UNIT1_RELAY_CTL_IO
             int "UNIT[1] relay ctrl io"
@@ -228,9 +256,14 @@ menu "Iot_Solution"
             default 13
             
             config SMART_SOCKET_UNIT1_RELAY_CLK_IO
-            #depends on SMART_SOCKET_UNIT1_RELAY_CTRL_MODE
+            depends on SMART_SOCKET_UNIT1_RELAY_D_FLIPFLOP
             int "UNIT[1] relay clk io(in D-flip-flop mode)"
             range -1 34
+            default -1
+            
+            config SMART_SOCKET_UNIT1_RELAY_CLK_IO
+            depends on SMART_SOCKET_UNIT1_RELAY_SINGLE_IO
+            int
             default -1
         endmenu
         
@@ -260,24 +293,34 @@ menu "Iot_Solution"
             int "UNIT[2] relay off level"
             range 0 1
             default 1
-            
+                                    
+            choice SMART_SOCKET_UNIT2_RELAY_CTRL_MODE
+                bool "UNIT[2] relay control mode"
+                    default SMART_SOCKET_UNIT2_RELAY_SINGLE_IO
+                config SMART_SOCKET_UNIT2_RELAY_D_FLIPFLOP
+                    bool "Relay mode: D flip-flop"
+                config SMART_SOCKET_UNIT2_RELAY_SINGLE_IO
+                    bool "Relay mode: single IO"
+                endchoice
             config SMART_SOCKET_UNIT2_RELAY_CTRL_MODE
-            int "UNIT[2] relay control mode"
-            range 0 1
-            default 1
-            help
-                To set teh control mode of relay
-                0: D flip-flop mode
-                1: Simple GPIO mode
-            
+                int
+                default 0 if SMART_SOCKET_UNIT2_RELAY_D_FLIPFLOP
+                default 1 if SMART_SOCKET_UNIT2_RELAY_SINGLE_IO    
+                
+            choice SMART_SOCKET_UNIT2_RELAY_IO_MODE
+                bool "UNIT[2] relay IO mode"
+                    default SMART_SOCKET_UNIT2_RELAY_IO_DIG
+                config SMART_SOCKET_UNIT2_RELAY_IO_DIG
+                    bool "Relay on digital IO"
+                config SMART_SOCKET_UNIT2_RELAY_IO_RTC
+                    bool "Relay by RTC IO"
+                endchoice
             config SMART_SOCKET_UNIT2_RELAY_IO_MODE
-            int "UNIT[2] relay IO mode"
-            range 0 1
-            default 0
-            help
-                To set the GPIO mode for relay
-                0: Digital GPIO
-                1: RTC GPIO
+                int
+                default 0 if SMART_SOCKET_UNIT2_RELAY_IO_DIG
+                default 1 if SMART_SOCKET_UNIT2_RELAY_IO_RTC 
+                
+                
             
             config SMART_SOCKET_UNIT2_RELAY_CTL_IO
             int "UNIT[2] relay ctrl io"
@@ -285,9 +328,14 @@ menu "Iot_Solution"
             default 22
             
             config SMART_SOCKET_UNIT2_RELAY_CLK_IO
-            #depends on SMART_SOCKET_UNIT2_RELAY_CTRL_MODE
+            depends on SMART_SOCKET_UNIT2_RELAY_D_FLIPFLOP
             int "UNIT[2] relay clk io(in D-flip-flop mode)"
             range -1 34
+            default -1
+            
+            config SMART_SOCKET_UNIT2_RELAY_CLK_IO
+            depends on SMART_SOCKET_UNIT2_RELAY_SINGLE_IO
+            int
             default -1
         endmenu
         
@@ -317,24 +365,33 @@ menu "Iot_Solution"
             int "UNIT[3] relay off level"
             range 0 1
             default 1
-            
+                              
+            choice SMART_SOCKET_UNIT3_RELAY_CTRL_MODE
+                bool "UNIT[3] relay control mode"
+                    default SMART_SOCKET_UNIT3_RELAY_SINGLE_IO
+                config SMART_SOCKET_UNIT3_RELAY_D_FLIPFLOP
+                    bool "Relay mode: D flip-flop"
+                config SMART_SOCKET_UNIT3_RELAY_SINGLE_IO
+                    bool "Relay mode: single IO"
+                endchoice
             config SMART_SOCKET_UNIT3_RELAY_CTRL_MODE
-            int "UNIT[3] relay control mode"
-            range 0 1
-            default 1
-            help
-                To set teh control mode of relay
-                0: D flip-flop mode
-                1: Simple GPIO mode
-            
+                int
+                default 0 if SMART_SOCKET_UNIT3_RELAY_D_FLIPFLOP
+                default 1 if SMART_SOCKET_UNIT3_RELAY_SINGLE_IO    
+                
+            choice SMART_SOCKET_UNIT3_RELAY_IO_MODE
+                bool "UNIT[3] relay IO mode"
+                    default SMART_SOCKET_UNIT3_RELAY_IO_DIG
+                config SMART_SOCKET_UNIT3_RELAY_IO_DIG
+                    bool "Relay on digital IO"
+                config SMART_SOCKET_UNIT3_RELAY_IO_RTC
+                    bool "Relay by RTC IO"
+                endchoice
             config SMART_SOCKET_UNIT3_RELAY_IO_MODE
-            int "UNIT[3] relay IO mode"
-            range 0 1
-            default 0
-            help
-                To set the GPIO mode for relay
-                0: Digital GPIO
-                1: RTC GPIO
+                int
+                default 0 if SMART_SOCKET_UNIT3_RELAY_IO_DIG
+                default 1 if SMART_SOCKET_UNIT3_RELAY_IO_RTC 
+                
             
             config SMART_SOCKET_UNIT3_RELAY_CTL_IO
             int "UNIT[3] relay ctrl io"
@@ -342,9 +399,14 @@ menu "Iot_Solution"
             default 27
             
             config SMART_SOCKET_UNIT3_RELAY_CLK_IO
-            #depends on SMART_SOCKET_UNIT3_RELAY_CTRL_MODE
+            depends on SMART_SOCKET_UNIT3_RELAY_D_FLIPFLOP
             int "UNIT[3] relay clk io(in D-flip-flop mode)"
             range -1 34
+            default -1
+            
+            config SMART_SOCKET_UNIT3_RELAY_CLK_IO
+            depends on SMART_SOCKET_UNIT3_RELAY_SINGLE_IO
+            int
             default -1
         endmenu
     endmenu
@@ -376,31 +438,97 @@ menu "Iot_Solution"
             help 
                 To set the PWM frequency of light
                
+            #config SMART_LIGHT_PWM_BIT_NUM
+            #int "LEDC bit number"
+            #range 10 15
+            #default 13
+            #help
+            #    To set the resolution for PWM channels
+            #    So the duty range will 0 ~ (2 ^ bit_num) - 1
+            
+            choice SMART_LIGHT_PWM_BIT_NUM
+                bool "LEDC bit number"
+                    default SMART_LIGHT_LEDC_13_BIT
+                config SMART_LIGHT_LEDC_10_BIT
+                    bool "LEDC 10-bit counter"
+                config SMART_LIGHT_LEDC_11_BIT
+                    bool "LEDC 11-bit counter"
+                config SMART_LIGHT_LEDC_12_BIT
+                    bool "LEDC 12-bit counter"
+                config SMART_LIGHT_LEDC_13_BIT
+                    bool "LEDC 13-bit counter"
+                config SMART_LIGHT_LEDC_14_BIT
+                    bool "LEDC 14-bit counter"
+                config SMART_LIGHT_LEDC_15_BIT
+                    bool "LEDC 15-bit counter"
+                endchoice
             config SMART_LIGHT_PWM_BIT_NUM
-            int "LEDC bit number"
-            range 10 15
-            default 13
-            help
-                To set the resolution for PWM channels
-                So the duty range will 0 ~ (2 ^ bit_num) - 1
+                int
+                default 10 if SMART_LIGHT_LEDC_10_BIT
+                default 11 if SMART_LIGHT_LEDC_11_BIT 
+                default 12 if SMART_LIGHT_LEDC_12_BIT 
+                default 13 if SMART_LIGHT_LEDC_13_BIT 
+                default 14 if SMART_LIGHT_LEDC_14_BIT 
+                default 15 if SMART_LIGHT_LEDC_15_BIT 
             
+            
+            
+            
+            
+            
+            
+            #config SMART_LIGHT_PWM_SPEED_MODE
+            #int "LEDC hw mode"
+            #range 0 1
+            #default 0
+            #help 
+            #    To set the speed mode of PWM hw
+            #    0: high-speed mode
+            #    1: low-speed mode
+            #    Usually we use default value(0)
+                
+            choice SMART_LIGHT_PWM_SPEED_MODE
+                bool "LEDC CHANNEL MODE"
+                    default SMART_LIGHT_LEDC_HIGH_SPEED_CHANNELS
+                config SMART_LIGHT_LEDC_HIGH_SPEED_CHANNELS
+                    bool "LEDC high speed channels"
+                config SMART_LIGHT_LEDC_LOW_SPEED_CHANNELS
+                    bool "LEDC low speed channels"
+                endchoice
             config SMART_LIGHT_PWM_SPEED_MODE
-            int "LEDC hw mode"
-            range 0 1
-            default 0
-            help 
-                To set the speed mode of PWM hw
-                0: high-speed mode
-                1: low-speed mode
-                Usually we use default value(0)
+                int
+                default 0 if SMART_LIGHT_LEDC_HIGH_SPEED_CHANNELS
+                default 1 if SMART_LIGHT_LEDC_LOW_SPEED_CHANNELS 
             
+            
+            
+            #config SMART_LIGHT_PWM_TIMER_IDX
+            #int "LEDC hw timer"
+            #range 0 3
+            #default 0
+            #help
+            #    To set the timer index of LEDC
+            #    Chosen from TIME[0 - 3]
+            
+            
+            choice SMART_LIGHT_PWM_TIMER_IDX
+                bool "LEDC TIMER IDX"
+                    default SMART_LIGHT_LEDC_TIMER_0
+                config SMART_LIGHT_LEDC_TIMER_0
+                    bool "LEDC TIMER_0"
+                config SMART_LIGHT_LEDC_TIMER_1
+                    bool "LEDC TIMER_1"
+                config SMART_LIGHT_LEDC_TIMER_2
+                    bool "LEDC TIMER_2"
+                config SMART_LIGHT_LEDC_TIMER_3
+                    bool "LEDC TIMER_3"
+                endchoice
             config SMART_LIGHT_PWM_TIMER_IDX
-            int "LEDC hw timer"
-            range 0 3
-            default 0
-            help
-                To set the timer index of LEDC
-                Chosen from TIME[0 - 3]
+                int
+                default 0 if SMART_LIGHT_LEDC_TIMER_0
+                default 1 if SMART_LIGHT_LEDC_TIMER_1
+                default 2 if SMART_LIGHT_LEDC_TIMER_2
+                default 3 if SMART_LIGHT_LEDC_TIMER_3 
         endmenu
         
         config SMART_LIGHT_PWM_CHANNEL_NUM
@@ -506,6 +634,58 @@ menu "Iot_Solution"
     #source "../platforms/alink_v2.0/Kconfig_alink" 
     menu "Alink"
     depends on DEMO_ENABLE && CLOUD_ALINK
+    
+    menu "Product Info"
+    config ALINK_INFO_SN
+    string "SN"
+    default 12345678
+    
+    config ALINK_INFO_NAME
+    string "NAME"
+    default ALINKTEST
+    
+    config ALINK_INFO_VERSION
+    string "VERSION"
+    default 1.0.0
+    
+    config ALINK_INFO_MODEL
+    string "MODEL"
+    default ALINKTEST_LIVING_LIGHT_SMARTLED
+    
+    config ALINK_INFO_KEY
+    string "KEY"
+    default ljB6vqoLzmP8fGkE6pon
+    
+    config ALINK_INFO_SECRET
+    string "SECRET"
+    default YJJZjytOCXDhtQqip4EjWbhR95zTgI92RVjzjyZF
+    
+    config ALINK_INFO_SANDBOX_KEY
+    string "SANDBOX KEY"
+    default dpZZEpm9eBfqzK7yVeLq
+    
+    config ALINK_INFO_SANDBOX_SECRET
+    string "SANDBOX SECRET"
+    default THnfRRsU5vu6g6m9X6uFyAjUWflgZ0iyGjdEneKm
+    
+    config ALINK_INFO_TYPE
+    string "TYPE"
+    default LIGHT
+    
+    config ALINK_INFO_CATEGORY
+    string "CATEGORY"
+    default LIVING
+    
+    config ALINK_INFO_MANUFACTURER
+    string "MANUFACTURER"
+    default ALINKTEST
+    
+    config ALINK_INFO_CID
+    string "CID"
+    default 2D0044000F47333139373038
+    
+    endmenu
+    
     choice LOG_ALINK_LEVEL
     bool "Default log verbosity"
     default LOG_ALINK_LEVEL_INFO    
@@ -576,6 +756,89 @@ menu "Iot_Solution"
     #source "../platforms/joylink/Kconfig_joylink"
     menu "Joylink"
     depends on DEMO_ENABLE && CLOUD_JOYLINK
+    
+    menu "Product Info"
+        config JOYLINK_AES_KEY
+            string "JOYLINK AES KEY"
+            default DNWXVNMPGRZB7DC5
+        config JOYLINK_VERSION
+            int "JOYLINK VERSION"
+            default 1
+        config JOYLINK_ACCESSKEY
+            string "JOYLINK_ACCESSKEY"
+            default ""
+        config JOYLINK_LOCAL_KEY
+            string "JOYLINK LOCAL KEY"
+            default ""
+        config JOYLINK_FEEDID
+            string "JOYLINK FEEDID"
+            default ""
+            
+        choice JOYLINK_DEVTYPE
+        bool "JOYLINK DEV TYPE"
+            default JOYLINK_DEV_TYPE_NORMAL
+        config JOYLINK_DEV_TYPE_NORMAL
+            bool "DEV TYPE NORMAL"
+        config JOYLINK_DEV_TYPE_GW
+            bool "DEV TYPE GW"
+        config JOYLINK_DEV_TYPE_SUB
+            bool "DEV TYPE SUB"
+        endchoice
+    
+        config JOYLINK_DEVTYPE
+            int
+            default 0 if JOYLINK_DEV_TYPE_NORMAL
+            default 1 if JOYLINK_DEV_TYPE_GW
+            default 2 if JOYLINK_DEV_TYPE_SUB
+
+        config JOYLINK_SERVER
+            string "JOYLINK SERVER"
+            default "live.smart.jd.com"
+        config JOYLINK_SERVER_PORT
+            int "JOYLINK SERVER PORT"
+            default 2002
+        config JOYLINK_CID
+            string "JOYLINK CID"
+            default "011c022b"
+        config JOYLINK_FW_VERSION
+            string "JOYLINK FIRMWARE VERSION"
+            default "001"
+        config JOYLINK_MODEL_CODE
+            string "JOYLINK MODEL CODE"
+            default "a1"
+        config JOYLINK_UUID
+            string "JOYLINK UUID"
+            default "GNQIYS"
+        
+
+        choice JOYLINK_LAN_CTRL
+            bool "JOYLINK LAN CTRL"
+                default JOYLINK_LAN_CTRL_ENABLE
+            config JOYLINK_LAN_CTRL_DISABLE
+                bool "DEV LAN CTRL DISABLE"
+            config JOYLINK_LAN_CTRL_ENABLE
+                bool "DEV LAN CTRL ENABLE"
+            endchoice
+        config JOYLINK_LAN_CTRL
+            int
+            default 0 if JOYLINK_LAN_CTRL_DISABLE
+            default 1 if JOYLINK_LAN_CTRL_ENABLE
+           
+        choice JOYLINK_CMD_TYPE
+            bool "JOYLINK CMD TYPE"
+                default JOYLINK_CMD_TYPE_JSON
+            config JOYLINK_CMD_TYPE_JSON
+                bool "DEV CMD TYPE JSON"
+            config JOYLINK_CMD_TYPE_LUA
+                bool "DEV CMD TYPE LUA SCRIPT"
+            endchoice
+        config JOYLINK_CMD_TYPE
+            int
+            default 0 if JOYLINK_CMD_TYPE_JSON
+            default 1 if JOYLINK_CMD_TYPE_LUA 
+    
+    endmenu
+    
     config JOYLINK_SMNT_BUTTON_NUM
         int "the io number for one key configuration network"
         default 14

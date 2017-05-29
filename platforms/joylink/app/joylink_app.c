@@ -24,7 +24,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#include "joylink_app.h"
+#include "joylink_config.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
