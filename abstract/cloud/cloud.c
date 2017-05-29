@@ -32,10 +32,12 @@
 #ifdef CLOUD_ALINK
 #include "product.h"
 #include "esp_alink.h"
+#include "alink_config.h"
 #endif
 #ifdef CLOUD_JOYLINK
 #include "jd_innet.h"
 #include "esp_joylink.h"
+#include "joylink_config.h"
 #endif
 
 typedef esp_err_t (*cloud_event_cb_t)(cloud_event_t);
@@ -124,18 +126,18 @@ esp_err_t cloud_init(cloud_event_cb_t cb)
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
     ESP_ERROR_CHECK( esp_wifi_set_storage(WIFI_STORAGE_RAM) );
     alink_product_t product_info = {
-        .sn             = "12345678",
-        .name           = "ALINKTEST",
-        .version        = "1.0.0",
-        .model          = "ALINKTEST_LIVING_LIGHT_SMARTLED",
-        .key            = "ljB6vqoLzmP8fGkE6pon",
-        .secret         = "YJJZjytOCXDhtQqip4EjWbhR95zTgI92RVjzjyZF",
-        .key_sandbox    = "dpZZEpm9eBfqzK7yVeLq",
-        .secret_sandbox = "THnfRRsU5vu6g6m9X6uFyAjUWflgZ0iyGjdEneKm",
-        // .type           = "LIGHT",
-        // .category       = "LIVING",
-        // .manufacturer   = "ALINKTEST",
-        // .cid            = "2D0044000F47333139373038",
+        .sn             = ALINK_INFO_SN,
+        .name           = ALINK_INFO_NAME,
+        .version        = ALINK_INFO_VERSION,
+        .model          = ALINK_INFO_MODEL,
+        .key            = ALINK_INFO_KEY,
+        .secret         = ALINK_INFO_SECRET,
+        .key_sandbox    = ALINK_INFO_SANDBOX_KEY,
+        .secret_sandbox = ALINK_INFO_SANDBOX_SECRET,
+        .type           = ALINK_INFO_TYPE,
+        .category       = ALINK_INFO_CATEGORY,
+        .manufacturer   = ALINK_INFO_MANUFACTURER,
+        .cid            = ALINK_INFO_CID,
     };
 
     ALINK_LOGI("*********************************");
@@ -149,25 +151,30 @@ esp_err_t cloud_init(cloud_event_cb_t cb)
     esp_alink_init(&product_info);
 #endif
 
+
+
+
+
+
 #ifdef CLOUD_JOYLINK
     initialise_wifi();
     initialise_key();
     printf("mode: json, free_heap: %u\n", esp_get_free_heap_size());
     joylink_info_t product_info = {
-			.innet_aes_key = "DNWXVNMPGRZB7DC5",
-		    .jlp.version = 1,
-		    .jlp.accesskey = "",//NDJY9396Z9P4KNDU
-		    .jlp.localkey = "",
-		    .jlp.feedid = "",
-		    .jlp.devtype = E_JLDEV_TYPE_NORMAL,
-		    .jlp.joylink_server = "live.smart.jd.com",
-		    .jlp.server_port = 2002, 
-		    .jlp.CID= "011c022b",
-		    .jlp.firmwareVersion = "001",
-		    .jlp.modelCode = "a1",
-		    .jlp.uuid = "GNQIYS",
-		    .jlp.lancon = E_LAN_CTRL_ENABLE,
-		    .jlp.cmd_tran_type = E_CMD_TYPE_JSON
+			.innet_aes_key       = JOYLINK_AES_KEY,
+		    .jlp.version         = JOYLINK_VERSION,
+		    .jlp.accesskey       = JOYLINK_ACCESSKEY,//NDJY9396Z9P4KNDU
+		    .jlp.localkey        = JOYLINK_LOCAL_KEY,
+		    .jlp.feedid          = JOYLINK_FEEDID,
+		    .jlp.devtype         = JOYLINK_DEVTYPE,
+		    .jlp.joylink_server  = JOYLINK_SERVER,
+		    .jlp.server_port     = JOYLINK_SERVER_PORT,
+		    .jlp.CID             = JOYLINK_CID,
+		    .jlp.firmwareVersion = JOYLINK_FW_VERSION,
+		    .jlp.modelCode       = JOYLINK_MODEL_CODE,
+		    .jlp.uuid            = JOYLINK_UUID,
+		    .jlp.lancon          = JOYLINK_LAN_CTRL,
+		    .jlp.cmd_tran_type   = JOYLINK_CMD_TYPE
     };
 	uint8_t dev_mac[6];
 	char dev_mac_str[20];
