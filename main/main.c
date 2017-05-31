@@ -35,7 +35,8 @@
 #include "cloud.h"
 #include "virtual_device.h"
 
-#ifndef ALINK_PASSTHROUGH
+
+#if CONFIG_DEMO_ENABLE
 static const char *TAG = "app_main";
 SemaphoreHandle_t xSemWriteInfo = NULL;
 virtual_device_t virtual_device = {
@@ -98,13 +99,7 @@ esp_err_t cloud_event_handler(cloud_event_t event)
     return ESP_OK;
 }
 
-/******************************************************************************
- * FunctionName : app_main
- * Description  : entry of user application, init user function here
- * Parameters   : none
- * Returns      : none
-*******************************************************************************/
-void app_main()
+void iot_demo_start()
 {
     ESP_LOGI(TAG, "mode: json, free_heap: %u\n", esp_get_free_heap_size());
     nvs_flash_init();
@@ -119,3 +114,18 @@ void app_main()
     ESP_LOGI(TAG, "free_heap3:%u\n", esp_get_free_heap_size());
 }
 #endif
+
+/******************************************************************************
+ * FunctionName : app_main
+ * Description  : entry of user application, init user function here
+ * Parameters   : none
+ * Returns      : none
+*******************************************************************************/
+void app_main()
+{
+#if CONFIG_DEMO_ENABLE
+    iot_demo_start();
+#else
+    printf("in app_main...\n");
+#endif
+}

@@ -9,7 +9,7 @@ menu "Iot_Solution"
     choice SMART_DEVICE_TYPE
         bool "Device type"
         default SMART_SOCKET_DEVICE
-        #depends on DEMO_ENABLE
+        depends on DEMO_ENABLE
         help
           select the device type
 
