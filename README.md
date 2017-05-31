@@ -1,6 +1,6 @@
 `Project Description of IoT Solution`
 
-Read < [==Wiki==](https://gitlab.espressif.cn:6688/rd/esp-iot-solution/wikis/home#project-structure) >  to find out how to run IoT examples
+Read < ==Wiki== >  to find how to run IoT examples
 
 ## IDEAS
 * We want to make this repository be a code version 'Lego blocks', so the users can easily pick the blocks/components that they need in their projects.
