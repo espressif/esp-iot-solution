@@ -49,77 +49,77 @@ static void jd_innet_pack_callback(void *buf, wifi_promiscuous_pkt_type_t type)
     PHEADER_802_11 frame = NULL;
     uint8_t ssid_len = 0;
 
-    if (type != WIFI_PKT_CTRL) {
-        pack_all = (wifi_promiscuous_pkt_t *)buf;
-        frame = (PHEADER_802_11)pack_all->payload;
-        len = pack_all->rx_ctrl.sig_len;
-        joylink_cfg_DataAction(frame, len);
+    //if (type != WIFI_PKT_CTRL) {
+    pack_all = (wifi_promiscuous_pkt_t *)buf;
+    frame = (PHEADER_802_11)pack_all->payload;
+    len = pack_all->rx_ctrl.sig_len;
+    joylink_cfg_DataAction(frame, len);
 
-        if (joylink_cfg_Result(&Ret) == 0) {
-            if (Ret.type != 0) {
-                memset(AES_IV,0x0,sizeof(AES_IV));
-                len = device_aes_decrypt((const uint8 *)g_innet_aes_key, strlen(g_innet_aes_key),AES_IV,
-                    Ret.encData + 1,Ret.encData[0],
-                    jd_aes_out_buffer,sizeof(jd_aes_out_buffer));
-                if (len > 0) {
-                    wifi_config_t config;
-                    memset(&config,0x0,sizeof(config));
+    if (joylink_cfg_Result(&Ret) == 0) {
+        if (Ret.type != 0) {
+            memset(AES_IV,0x0,sizeof(AES_IV));
+            len = device_aes_decrypt((const uint8 *)g_innet_aes_key, strlen(g_innet_aes_key),AES_IV,
+                Ret.encData + 1,Ret.encData[0],
+                jd_aes_out_buffer,sizeof(jd_aes_out_buffer));
+            if (len > 0) {
+                wifi_config_t config;
+                memset(&config,0x0,sizeof(config));
 
-                    if (jd_aes_out_buffer[0] > 32) {
-                        log_debug("sta password len error\r\n");
-                        return;
-                    }
-                    
-                    memcpy(config.sta.password,jd_aes_out_buffer + 1,jd_aes_out_buffer[0]);
-
-                    ssid_len = len - 1 - jd_aes_out_buffer[0] - 4 - 2;
-
-                    if (ssid_len > sizeof(config.sta.ssid)) {
-                        log_debug("sta ssid len error\r\n");
-                        return;
-
-                    }
-                    strncpy((char*)config.sta.ssid,(const char*)(jd_aes_out_buffer + 1 + jd_aes_out_buffer[0] + 4 + 2),ssid_len);
-                    log_debug("ssid:%s\r\n",config.sta.ssid);
-                    log_debug("password:%s\r\n",config.sta.password);
-                    if (esp_wifi_set_config(ESP_IF_WIFI_STA,&config) != ESP_OK) {
-                        log_debug("set sta fail\r\n");
-                    } else {
-                        if (esp_wifi_connect() != ESP_OK) {
-                            log_debug("sta connect fail\r\n");
-                        } else {
-                            if (jd_innet_timer_task_handle != NULL) {
-                                vTaskDelete(jd_innet_timer_task_handle);
-                                jd_innet_timer_task_handle = NULL;
-                            }
-                            esp_wifi_set_promiscuous(0);
-                            // save flash
-                            nvs_handle out_handle;
-                            char data[65];
-                            if (nvs_open("joylink_wifi", NVS_READWRITE, &out_handle) != ESP_OK) {
-                                return;
-                            }
-
-                            memset(data,0x0,sizeof(data));
-                            strncpy(data,(char*)config.sta.ssid,sizeof(config.sta.ssid));
-                            if (nvs_set_str(out_handle,"ssid",data) != ESP_OK) {
-                                log_debug("--set ssid fail");
-                            }
-
-                            memset(data,0x0,sizeof(data));
-                            strncpy(data,(char*)config.sta.password,sizeof(config.sta.password));
-                            if (nvs_set_str(out_handle,"password",data) != ESP_OK) {
-                                log_debug("--set password fail");
-                            }
-                            nvs_close(out_handle);
-                        }
-                    }
-                } else {
-                    log_debug("aes fail\r\n");
+                if (jd_aes_out_buffer[0] > 32) {
+                    log_debug("sta password len error\r\n");
+                    return;
                 }
+                
+                memcpy(config.sta.password,jd_aes_out_buffer + 1,jd_aes_out_buffer[0]);
+
+                ssid_len = len - 1 - jd_aes_out_buffer[0] - 4 - 2;
+
+                if (ssid_len > sizeof(config.sta.ssid)) {
+                    log_debug("sta ssid len error\r\n");
+                    return;
+
+                }
+                strncpy((char*)config.sta.ssid,(const char*)(jd_aes_out_buffer + 1 + jd_aes_out_buffer[0] + 4 + 2),ssid_len);
+                log_debug("ssid:%s\r\n",config.sta.ssid);
+                log_debug("password:%s\r\n",config.sta.password);
+                if (esp_wifi_set_config(ESP_IF_WIFI_STA,&config) != ESP_OK) {
+                    log_debug("set sta fail\r\n");
+                } else {
+                    if (esp_wifi_connect() != ESP_OK) {
+                        log_debug("sta connect fail\r\n");
+                    } else {
+                        if (jd_innet_timer_task_handle != NULL) {
+                            vTaskDelete(jd_innet_timer_task_handle);
+                            jd_innet_timer_task_handle = NULL;
+                        }
+                        esp_wifi_set_promiscuous(0);
+                        // save flash
+                        nvs_handle out_handle;
+                        char data[65];
+                        if (nvs_open("joylink_wifi", NVS_READWRITE, &out_handle) != ESP_OK) {
+                            return;
+                        }
+
+                        memset(data,0x0,sizeof(data));
+                        strncpy(data,(char*)config.sta.ssid,sizeof(config.sta.ssid));
+                        if (nvs_set_str(out_handle,"ssid",data) != ESP_OK) {
+                            log_debug("--set ssid fail");
+                        }
+
+                        memset(data,0x0,sizeof(data));
+                        strncpy(data,(char*)config.sta.password,sizeof(config.sta.password));
+                        if (nvs_set_str(out_handle,"password",data) != ESP_OK) {
+                            log_debug("--set password fail");
+                        }
+                        nvs_close(out_handle);
+                    }
+                }
+            } else {
+                log_debug("aes fail\r\n");
             }
         }
     }
+    //}
 }
 
 void adp_changeCh(int i)
