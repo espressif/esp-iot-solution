@@ -38,7 +38,7 @@ void platform_awss_switch_channel(char primary_channel,
 static void IRAM_ATTR  wifi_sniffer_cb_(void *recv_buf, wifi_promiscuous_pkt_type_t type) {
     char *buf = NULL;
     uint16_t len = 0;
-    if (type == WIFI_PKT_CTRL) return;
+    // if (type == WIFI_PKT_CTRL) return;
     wifi_promiscuous_pkt_t *sniffer = (wifi_promiscuous_pkt_t*)recv_buf;
     buf = (char *)sniffer->payload;
     len = sniffer->rx_ctrl.sig_len;
