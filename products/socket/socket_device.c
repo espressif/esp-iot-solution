@@ -140,7 +140,7 @@ static void socket_unit_set(socket_unit_t* socket_unit, socket_status_t state)
             relay_state_write(socket_unit->relay_handle, RELAY_STATUS_OPEN);
         }
         if (socket_unit->led_handle != NULL) {
-            led_state_write(socket_unit->led_handle, LED_NORMAL_OFF);
+            led_state_write(socket_unit->led_handle, LED_OFF);
         }
     } else {
         *(socket_unit->state_ptr) = SOCKET_ON;
@@ -148,7 +148,7 @@ static void socket_unit_set(socket_unit_t* socket_unit, socket_status_t state)
             relay_state_write(socket_unit->relay_handle, RELAY_STATUS_CLOSE);
         }
         if (socket_unit->led_handle != NULL) {
-            led_state_write(socket_unit->led_handle, LED_NORMAL_ON);
+            led_state_write(socket_unit->led_handle, LED_ON);
         }
     }
     if (g_socket != NULL) {
@@ -227,7 +227,7 @@ esp_err_t socket_net_status_write(socket_handle_t socket_handle, socket_net_stat
             led_state_write(socket_dev->net_led, LED_SLOW_BLINK);
             break;
         case SOCKET_CLOUD_CONNECTED:
-            led_state_write(socket_dev->net_led, LED_NORMAL_ON);
+            led_state_write(socket_dev->net_led, LED_ON);
             break;
         default:
             break;
@@ -244,10 +244,7 @@ socket_handle_t socket_init(SemaphoreHandle_t xSemWriteInfo)
     g_socket = socket_dev;
     memset(socket_dev, 0, sizeof(socket_dev_t));
     param_load(SOCKET_NAME_SPACE, SOCKET_PARAM_KEY, &socket_dev->save_param);
-
     socket_dev->xSemWriteInfo = xSemWriteInfo;
-    /* set led frequency */
-    led_setup(5, 1);
 
     /* create net led */
     socket_dev->net_led = led_create(NET_LED_NUM, LED_DARK_LEVEL);
