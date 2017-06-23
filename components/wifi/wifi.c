@@ -91,7 +91,8 @@ esp_err_t wifi_connect_start(const char *ssid, const char *pwd, uint32_t ticks_t
     BaseType_t res = xSemaphoreTake(s_wifi_mux, ticks_to_wait);
     RES_ASSERT(TAG, res, ESP_ERR_TIMEOUT);
     // Clear stop event bit
-    xEventGroupClearBits(s_wifi_event_group, WIFI_STOP_REQ_EVT);
+    esp_wifi_disconnect();
+    xEventGroupClearBits(s_wifi_event_group, WIFI_STOP_REQ_EVT | WIFI_CONNECTED_EVT);
     wifi_config_t wifi_config;
     memset(&wifi_config, 0, sizeof(wifi_config_t));
     // Connect router
