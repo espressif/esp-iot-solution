@@ -1,4 +1,17 @@
 menu "IoT hardware resources"
+    config RELAY_ENABLE
+        bool "RELAY ENABLE"
+        default y
+        help
+            "Select this one to enable relay component"
+    menu "Relay"
+        depends on RELAY_ENABLE
+
+        config DFLIPFLOP_CLK_PERIOD_US
+            int "Dflipflop clock period us (2~1000)"
+            range 2 1000
+            default 500
+    endmenu
     config STATUS_LED_ENABLE
         bool "STATUS LED ENABLE"
         default y
