@@ -290,17 +290,19 @@ esp_err_t cloud_write(virtual_device_t virtual_device, int ms_wait)
     memset(up_cmd, 0, ALINK_DATA_LEN);
     sprintf(up_cmd, main_dev_params, virtual_device.power, virtual_device.temp_value, virtual_device.light_value,
             virtual_device.time_delay, virtual_device.work_mode);
+    esp_err_t ret = esp_alink_write(up_cmd, ALINK_DATA_LEN, ms_wait);
     free(up_cmd);
-    return esp_alink_write(up_cmd, ALINK_DATA_LEN, ms_wait);
+    return ret;
 #endif
 #ifdef CLOUD_JOYLINK
     char *up_cmd = (char *)malloc(JOYLINK_DATA_LEN);
     memset(up_cmd, 0, JOYLINK_DATA_LEN);
     sprintf(up_cmd, joylink_json_upload_str, JOYLINK_RET_JSON_OK, virtual_device.power, virtual_device.light_value,
 			virtual_device.temp_value, virtual_device.work_mode, "red");
-    return esp_joylink_write(up_cmd, strlen(up_cmd)+1, 500 / portTICK_PERIOD_MS);
+    int ret = esp_joylink_write(up_cmd, strlen(up_cmd)+1, 500 / portTICK_PERIOD_MS);
+    free(up_cmd);
+    return ret;
 #endif
-    return ESP_FAIL;
 }
 
 int cloud_sys_net_is_ready(void)

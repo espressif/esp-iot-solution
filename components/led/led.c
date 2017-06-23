@@ -170,6 +170,7 @@ esp_err_t led_state_write(led_handle_t led_handle, led_status_t state)
             break;
         case LED_SLOW_BLINK:
             led_slow_blink(led_handle);
+            break;
         default:
             break;
     }
