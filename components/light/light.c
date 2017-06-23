@@ -171,6 +171,10 @@ esp_err_t light_channel_regist(light_handle_t light_handle, uint8_t channel_idx,
     light_t* light = (light_t*)light_handle;
     POINT_ASSERT(TAG, light_handle);
     IOT_CHECK(TAG, channel_idx < light->channel_num, FAIL);
+    if (light->channel_group[channel_idx] != NULL) {
+        ESP_LOGE(TAG, "this channel index has been registered");
+        return ESP_FAIL;
+    }
     light->channel_group[channel_idx] = light_channel_create(io_num, channel, mode, light->ledc_timer);
     if (g_fade_installed == false) {
         ledc_fade_func_install(0);
