@@ -1,21 +1,39 @@
-// Copyright 2015-2016 Espressif Systems (Shanghai) PTE LTD
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+  * ESPRESSIF MIT License
+  *
+  * Copyright (c) 2017 <ESPRESSIF SYSTEMS (SHANGHAI) PTE LTD>
+  *
+  * Permission is hereby granted for use on ESPRESSIF SYSTEMS products only, in which case,
+  * it is free of charge, to any person obtaining a copy of this software and associated
+  * documentation files (the "Software"), to deal in the Software without restriction, including
+  * without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
+  * and/or sell copies of the Software, and to permit persons to whom the Software is furnished
+  * to do so, subject to the following conditions:
+  *
+  * The above copyright notice and this permission notice shall be included in all copies or
+  * substantial portions of the Software.
+  *
+  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+  * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+  * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+  *
+  */
 
 #ifndef _IOT_POWER_METER_H_
 #define _IOT_POWER_METER_H_
+
+#include "sdkconfig.h"
+#if CONFIG_POWER_METER_ENABLE
+
 #include "esp_system.h"
 #include "driver/pcnt.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef enum {
     PM_BOTH_VC = 0,                 /**< voltage and current are measured at the same time by different pin */
@@ -87,4 +105,26 @@ uint32_t powermeter_read(pm_handle_t pm_handle, pm_value_type_t value_type);
   *     - others: fail
   */
 esp_err_t powermeter_change_mode(pm_handle_t pm_handle, pm_mode_t mode);
+
+#ifdef __cplusplus
+}
+#endif
+
+#ifdef __cplusplus
+class power_meter
+{
+private:
+    pm_handle_t m_pm_handle;
+    power_meter(const power_meter&);
+    power_meter& operator = (const power_meter&);
+
+public:
+    power_meter(const pm_config_t &pm_config);
+    ~power_meter();
+
+    uint32_t read(pm_value_type_t value_type);
+    esp_err_t change_mode(pm_mode_t mode);
+};
+#endif
+#endif
 #endif
