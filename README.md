@@ -48,3 +48,18 @@ Exit miniterm by typing Ctrl-].
 * Within `products`, we will develop ESP `socket` products, smoker detector, LED light, temperature controller, button products and so on.
 
 * We aim to develop IoT solution from the very basis, i.e. from the smallest modules, so that we could combine different modules with distinct platforms, and get various products.
+
+
+### well encapsulated modules
+
+* button: Provide some useful functions of physical buttons, such as short press, long press, release and so on.
+* LED: Provide different states including bright, dark, quick blink and slow blink of led. You could use this module to indicate different states of the program.
+* light: Provide functions of a smart light. You could add different pwm channels to the light and set the channels to different states such as custom duty cycle, custom blink frequecy, breathing light effect and so on.
+* OTA: Provide Over The Air Updates function.
+* param: Provide data read and write functions, based on NVS.
+* power_meter: Provide power, voltage and current measurement. The driver is based on BL0937 chip.
+* relay: Provide two methods to control relays. One method uses a delay flip-flop and another uses RTC IO to control relay directly.
+* smart_config: Provide a blocking function to perform smart config. User could set the time out of smart config.
+* touchpad: Provide some useful functions of touchpad, such as single trigger, serial trigger, short press, long press and so on.
+* ulp_monitor: Provide simple apis to use ULP coprocessor to collect and save data of temprature sensor and adc while deep sleep.
+* wifi: Provide a blocking function to make esp32 connect to ap. User could set the time out of connecting.
