@@ -25,9 +25,9 @@
 #define PM_PCNT_THRES0     1
 #define PM_MAX  2
 #define PM_PIN_MAX  3
-#define PM_CRITICAL_PERIOD  (5 * 1000)
+#define PM_ZERO_PERIOD  (5 * 1000)
 #define PM_VALUE_MULTIPLE   100
-#define PM_PCNT_H_LIM   1001
+#define PM_PCNT_H_LIM   11
 #define PM_PCNT_L_LIM   -1000
 #define PM_PCNT_FILTER  100
 #define PM_VALUE_INF    (1000 * 1000 * 1000)
@@ -43,14 +43,15 @@ typedef struct {
     uint32_t last_time;
     uint32_t time_diff;
     uint32_t ref_param;
-    TimerHandle_t xTimer;
+    bool zero_flag;
 } pm_pin_t;
 
 typedef struct {
     pm_pin_t* pm_pin[PM_PIN_MAX];
+    pm_mode_t pm_mode;
+    TimerHandle_t zero_timer;
     uint8_t sel_io_num;
     uint8_t sel_level;
-    pm_mode_t pm_mode;
 } pm_dev_t;
 
 // Debug tag in esp log
@@ -67,13 +68,14 @@ static void pm_timer_callback(TimerHandle_t xTimer)
         for (int j = 0; j < PM_PIN_MAX; j++) {
             if (pm_dev->pm_pin[j] != NULL) {
                 pm_pin = pm_dev->pm_pin[j];
-                if (pm_pin->xTimer == xTimer) {
+                if (pm_pin->zero_flag == true) {
                     pm_pin->time_diff = PM_VALUE_INF;
                     pcnt_counter_clear(pm_pin->pcnt_unit);
                     pcnt_counter_resume(pm_pin->pcnt_unit);
                 }
+                pm_pin->zero_flag = true;
             }
-        }
+        }
     }
 }
 
@@ -95,7 +97,7 @@ static void pm_pcnt_intr_handler(void *arg)
                         uint32_t time = system_get_time();
                         pm_pin->time_diff = (time - pm_pin->last_time) / (PM_PCNT_H_LIM - 1);
                         pm_pin->last_time = time;
-                        xTimerResetFromISR(pm_pin->xTimer, pdFALSE);
+                        pm_pin->zero_flag = false;
                     }
                     if (PCNT.status_unit[pm_pin->pcnt_unit].thres0_lat) {
                         pm_pin->last_time = system_get_time();
@@ -108,6 +110,11 @@ static void pm_pcnt_intr_handler(void *arg)
 
 static pm_pin_t* powermeter_pin_create(uint8_t io_num, pcnt_unit_t pcnt_unit, uint32_t ref_param)
 {
+    pm_pin_t* pm_pin = (pm_pin_t*) calloc(1, sizeof(pm_pin_t));
+    if (pm_pin == NULL) {
+        ESP_LOGE(TAG, "error no memory");
+        return NULL;
+    }
     pcnt_config_t pcnt_config = {
         .pulse_gpio_num = io_num,
         .ctrl_gpio_num = -1,
@@ -132,26 +139,32 @@ static pm_pin_t* powermeter_pin_create(uint8_t io_num, pcnt_unit_t pcnt_unit, ui
     pcnt_intr_enable(pcnt_unit);
     pcnt_counter_resume(pcnt_unit);
 
-    pm_pin_t* pm_pin = (pm_pin_t*) calloc(1, sizeof(pm_pin_t));
     pm_pin->last_time = 0;
     pm_pin->pcnt_unit = pcnt_unit;
     pm_pin->ref_param = ref_param;
     pm_pin->time_diff = PM_VALUE_INF;
-    pm_pin->xTimer = xTimerCreate("pm_timer", PM_CRITICAL_PERIOD / portTICK_RATE_MS, pdFALSE, (void*) 0, pm_timer_callback);
+    pm_pin->zero_flag = true;
     return pm_pin;
 }
 
 static esp_err_t powermeter_pin_delete(pm_pin_t* pm_pin)
 {
     POINT_ASSERT(TAG, pm_pin);
-    xTimerDelete(pm_pin->xTimer, portMAX_DELAY);
     free(pm_pin);
     return ESP_OK;
 }
 
 pm_handle_t powermeter_create(pm_config_t pm_config)
 {
+    if (g_pm_num >= PM_MAX) {
+        ESP_LOGE(TAG, "too many powermeters created");
+        return NULL;
+    }
     pm_dev_t* pm_dev = (pm_dev_t*)calloc(1, sizeof(pm_dev_t));
+    if (pm_dev == NULL) {
+        ESP_LOGE(TAG, "error no memory");
+        return NULL;
+    }
     for(int i = 0; i < PM_PIN_MAX; i++) {
         pm_dev->pm_pin[i] = NULL;
     }
@@ -177,9 +190,7 @@ pm_handle_t powermeter_create(pm_config_t pm_config)
         gpio_set_level(pm_dev->sel_io_num, pm_config.sel_level);
     }
     pm_dev->pm_mode = pm_config.pm_mode;
-    if (g_pm_num >= PM_MAX) {
-        return NULL;
-    }
+    pm_dev->zero_timer = xTimerCreate("pm_zero_timer", PM_ZERO_PERIOD, pdTRUE, (void*)0, pm_timer_callback);
     g_pm_num++;
     for (int i = 0; i < PM_MAX; i++) {
         if (g_pm_group[i] == NULL) {
@@ -207,6 +218,10 @@ esp_err_t powermeter_delete(pm_handle_t pm_handle)
             pm_dev->pm_pin[i] = NULL;
         }
     }
+    if (pm_dev->zero_timer != NULL) {
+        xTimerDelete(pm_dev->zero_timer, portMAX_DELAY);
+        pm_dev->zero_timer = NULL;
+    }
     free(pm_dev);
     g_pm_num--;
     return ESP_OK;
@@ -214,6 +229,11 @@ esp_err_t powermeter_delete(pm_handle_t pm_handle)
 
 esp_err_t powermeter_change_mode(pm_handle_t pm_handle, pm_mode_t mode)
 {
+    POINT_ASSERT(TAG, pm_handle);
+    if (mode > PM_SINGLE_VOLTAGE || mode < 0) {
+        ESP_LOGE(TAG, "error pm_mode");
+        return ESP_FAIL;
+    }
     pm_dev_t* pm_dev = (pm_dev_t*) pm_handle;
     if (mode == PM_BOTH_VC) {
         return ESP_FAIL;
@@ -234,6 +254,10 @@ esp_err_t powermeter_change_mode(pm_handle_t pm_handle, pm_mode_t mode)
 
 uint32_t powermeter_read(pm_handle_t pm_handle, pm_value_type_t value_type)
 {
+    if (pm_handle == NULL) {
+        ESP_LOGE(TAG, "argument check error");
+        return 0;
+    }
     pm_dev_t* pm_dev = (pm_dev_t*) pm_handle;
     switch (value_type) {
         case PM_POWER:
@@ -296,6 +320,7 @@ uint32_t powermeter_read(pm_handle_t pm_handle, pm_value_type_t value_type)
             }
             break;
         default:
+            ESP_LOGE(TAG, "error power meter value type");
             break;
     }
     return 0;
