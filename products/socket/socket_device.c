@@ -274,12 +274,12 @@ socket_handle_t socket_init(SemaphoreHandle_t xSemWriteInfo)
 #endif
     relay_io_t relay_io;
     /* create a button object as the main button */
-    socket_dev->main_btn = button_dev_init(BUTTON_IO_NUM_MAIN, 0, BUTTON_ACTIVE_LEVEL);
-    button_dev_add_tap_cb(BUTTON_TAP_CB, main_button_cb, socket_dev, 50 / portTICK_PERIOD_MS, socket_dev->main_btn);
+    socket_dev->main_btn = button_create(BUTTON_IO_NUM_MAIN, BUTTON_ACTIVE_LEVEL, BUTTON_SINGLE_TRIGGER, 0);
+    button_add_cb(socket_dev->main_btn, BUTTON_TAP_CB, main_button_cb, socket_dev, 50 / portTICK_PERIOD_MS);
 
     /* create units */
     for (int i = 0; i < SOCKET_UNIT_NUM; i++) {
-        btn_handle = button_dev_init(DEF_SOCKET_UNIT[i].button_io, 0, DEF_SOCKET_UNIT[i].button_active_level);
+        btn_handle = button_create(DEF_SOCKET_UNIT[i].button_io, DEF_SOCKET_UNIT[i].button_active_level, BUTTON_SINGLE_TRIGGER, 0);
 
         if (DEF_SOCKET_UNIT[i].relay_ctrl_mode == RELAY_GPIO_CONTROL) {
             relay_io.single_io.ctl_io_num = DEF_SOCKET_UNIT[i].relay_ctl_io;
@@ -291,7 +291,7 @@ socket_handle_t socket_init(SemaphoreHandle_t xSemWriteInfo)
         led_handle = led_create(DEF_SOCKET_UNIT[i].led_io, DEF_SOCKET_UNIT[i].led_off_level);
         socket_dev->units[i] = socket_unit_create(&socket_dev->save_param.unit_sta[i], btn_handle, relay_handle,
                 led_handle, NULL);
-        button_dev_add_tap_cb(BUTTON_TAP_CB, button_tap_cb, socket_dev->units[i], 50 / portTICK_PERIOD_MS, btn_handle);
+        button_add_cb(btn_handle, BUTTON_TAP_CB, button_tap_cb, socket_dev->units[i], 50 / portTICK_PERIOD_MS);
         socket_unit_set(socket_dev->units[i], socket_dev->save_param.unit_sta[i]);
     }
 

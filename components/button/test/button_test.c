@@ -56,18 +56,19 @@ void button_press_5s_cb(void* arg)
 void button_test()
 {
     printf("before btn init, heap: %d\n", esp_get_free_heap_size());
-    button_handle_t btn_handle = button_dev_init(BUTTON_IO_NUM, 2, BUTTON_ACTIVE_LEVEL);
-    button_dev_add_tap_cb(BUTTON_PUSH_CB, button_tap_cb, "PUSH", 50 / portTICK_PERIOD_MS, btn_handle);
-    button_dev_add_tap_cb(BUTTON_RELEASE_CB, button_tap_cb, "RELEASE", 50 / portTICK_PERIOD_MS, btn_handle);
-    button_dev_add_tap_cb(BUTTON_TAP_CB, button_tap_cb, "TAP", 50 / portTICK_PERIOD_MS, btn_handle);
+    button_handle_t btn_handle = button_create(BUTTON_IO_NUM, BUTTON_ACTIVE_LEVEL, BUTTON_SERIAL_TRIGGER, 3);
+    button_add_cb(btn_handle, BUTTON_PUSH_CB, button_tap_cb, "PUSH", 50 / portTICK_PERIOD_MS);
+    button_add_cb(btn_handle, BUTTON_RELEASE_CB, button_tap_cb, "RELEASE", 50 / portTICK_PERIOD_MS);
+    button_add_cb(btn_handle, BUTTON_TAP_CB, button_tap_cb, "TAP", 50 / portTICK_PERIOD_MS);
+    button_add_cb(btn_handle, BUTTON_SERIAL_CB, button_tap_cb, "SERIAL", 1000 / portTICK_PERIOD_MS);
 
-    button_dev_add_press_cb(0, button_press_2s_cb, NULL, 2000 / portTICK_PERIOD_MS, btn_handle);
-    button_dev_add_press_cb(1, button_press_5s_cb, NULL, 5000 / portTICK_PERIOD_MS, btn_handle);
+    button_add_custom_cb(btn_handle, 2, button_press_2s_cb, NULL);
+    button_add_custom_cb(btn_handle, 5, button_press_5s_cb, NULL);
     printf("after btn init, heap: %d\n", esp_get_free_heap_size());
 
     vTaskDelay(40000 / portTICK_PERIOD_MS);
     printf("free btn: heap:%d\n", esp_get_free_heap_size());
-//    button_dev_free(btn_handle);
+    button_delete(btn_handle);
     printf("after free btn: heap:%d\n", esp_get_free_heap_size());
 }
 #endif
