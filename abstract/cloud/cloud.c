@@ -303,6 +303,7 @@ esp_err_t cloud_write(virtual_device_t virtual_device, int ms_wait)
     free(up_cmd);
     return ret;
 #endif
+    return ESP_OK;
 }
 
 int cloud_sys_net_is_ready(void)
