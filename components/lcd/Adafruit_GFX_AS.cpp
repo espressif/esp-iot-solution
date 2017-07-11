@@ -32,13 +32,13 @@ POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "Adafruit_GFX_AS.h"
-#include "glcdfont.c" 			//Default font file
+#include "glcdfont.c"           //Default font file
 
 //Debug purpose
 #include "esp_log.h"
 
 extern "C" {
-#include "crypto/common.h"		//Add missing cpp gaurds
+#include "crypto/common.h"      //Add missing cpp gaurds
 }
 
 #define abs(x) ((x)<0 ? -(x) : (x))
@@ -353,8 +353,8 @@ void Adafruit_GFX_AS::fillTriangle (int16_t x0, int16_t y0, int16_t x1, int16_t 
 
 void Adafruit_GFX_AS::drawBitmap(int16_t x, int16_t y, const uint16_t *bitmap, int16_t w, int16_t h)
 {
-	/*Update in subclass*/
-	for (uint16_t j = 0; j < h; j++) {
+    /*Update in subclass*/
+    for (uint16_t j = 0; j < h; j++) {
         for (uint16_t i = 0; i < w; i++) {
             drawPixel(x + i, y + j, bitmap[j * w + i]);
         }
@@ -383,8 +383,8 @@ void Adafruit_GFX_AS::setTextSize(uint8_t s)
 
 void Adafruit_GFX_AS::setTextColor(uint16_t c)
 {
-	/* For 'transparent' background, we'll set the bg to the same as fg instead of using a flag*/    
-	textcolor = textbgcolor = c;
+    /* For 'transparent' background, we'll set the bg to the same as fg instead of using a flag*/    
+    textcolor = textbgcolor = c;
 }
 
 void Adafruit_GFX_AS::setTextColor(uint16_t c, uint16_t b)
@@ -444,7 +444,7 @@ void Adafruit_GFX_AS::charBounds(char c, int16_t *x, int16_t *y, int16_t *minx, 
 
     } 
 
-	else { // Default font
+    else { // Default font
         if(c == '\n') {                     // Newline?
             *x  = 0;                        // Reset x to zero,
             *y += textsize * 8;             // advance y one line
@@ -500,12 +500,12 @@ void Adafruit_GFX_AS::setRotation(uint8_t x)
     switch (rotation) {
     case 0:
     case 2: _width  = WIDTH;
-	        _height = HEIGHT;
-	        break;
+            _height = HEIGHT;
+            break;
     case 1:
     case 3: _width  = HEIGHT;
-	        _height = WIDTH;
-	        break;
+            _height = WIDTH;
+            break;
     }
 }
 
@@ -531,7 +531,7 @@ void Adafruit_GFX_AS::drawPixel(int16_t x, int16_t y, uint16_t color)
 
 void Adafruit_GFX_AS::drawBitmapFont(int16_t x, int16_t y, uint8_t w, uint8_t h, const uint16_t *bitmap)
 {
-	// Do nothing, definition virtual void over rides to subclass
+    // Do nothing, definition virtual void over rides to subclass
 }
 
 int Adafruit_GFX_AS::drawString(const char *string, uint16_t x, uint16_t y)
@@ -539,8 +539,8 @@ int Adafruit_GFX_AS::drawString(const char *string, uint16_t x, uint16_t y)
     uint16_t xPlus = x;
     setTextCursor(xPlus, y);
     while (*string) {
-        xPlus = write(*string);        // write string char-by-char					
-        setTextCursor(xPlus, y);	   // increment cursor
+        xPlus = write(*string);        // write string char-by-char                 
+        setTextCursor(xPlus, y);       // increment cursor
         string++;                      // Move cursor right
     }
     return xPlus;
@@ -553,7 +553,7 @@ int Adafruit_GFX_AS::write(uint8_t c)
             cursor_x  = 0;                     // Reset x to zero,
             cursor_y += textsize * 8;          // advance y one line
         } 
-		else if(c != '\r') {                 // Ignore carriage returns
+        else if(c != '\r') {                 // Ignore carriage returns
             if(wrap && ((cursor_x + textsize * 6) > _width)) { // Off right?
                 cursor_x  = 0;                 // Reset x to zero,
                 cursor_y += textsize * 8;      // advance y one line
@@ -562,13 +562,13 @@ int Adafruit_GFX_AS::write(uint8_t c)
             cursor_x += textsize * 6;          // Advance x one char
         }
     } 
-	
-	else {
+    
+    else {
         if(c == '\n') {
             cursor_x  = 0;
             cursor_y += (int16_t)textsize * (uint8_t)gfxFont->yAdvance;
         } 
-		else if(c != '\r') {
+        else if(c != '\r') {
             uint8_t first = gfxFont->first;
             if((c >= first) && (c <= (uint8_t)gfxFont->last)) {
 
@@ -576,13 +576,13 @@ int Adafruit_GFX_AS::write(uint8_t c)
                 uint8_t   w     = glyph->width,
                           h     = glyph->height;
 
-                if((w > 0) && (h > 0)) { 				 // Is there an associated bitmap?
+                if((w > 0) && (h > 0)) {                 // Is there an associated bitmap?
                     int16_t xo = (int8_t)glyph->xOffset; // sic
                     if(wrap && ((cursor_x + textsize * (xo + w)) > _width)) {
                         cursor_x  = 0;
                         cursor_y += (int16_t)textsize * (uint8_t)gfxFont->yAdvance;
-                    }		
-					drawChar(cursor_x, cursor_y, c, textcolor, textbgcolor, textsize);
+                    }       
+                    drawChar(cursor_x, cursor_y, c, textcolor, textbgcolor, textsize);
                 }
                 cursor_x += (uint8_t)glyph->xAdvance * (int16_t)textsize;
             }
@@ -593,9 +593,9 @@ int Adafruit_GFX_AS::write(uint8_t c)
 
 void Adafruit_GFX_AS::drawChar(int16_t x, int16_t y, unsigned char c, uint16_t color, uint16_t bg, uint8_t size)
 {
-	uint16_t swapped_foregnd_color = SWAPBYTES(color);  //SWAP earlier, or use SPI LSB first mode
-	uint16_t swapped_backgnd_color = SWAPBYTES(bg);
-		
+    uint16_t swapped_foregnd_color = SWAPBYTES(color);  //SWAP earlier, or use SPI LSB first mode
+    uint16_t swapped_backgnd_color = SWAPBYTES(bg);
+        
     if(!gfxFont) { // 'Classic' built-in font
 
         if((x >= _width)            || // Clip right
@@ -606,55 +606,55 @@ void Adafruit_GFX_AS::drawChar(int16_t x, int16_t y, unsigned char c, uint16_t c
 
         if(!_cp437 && (c >= 176)) c++; // Handle 'classic' charset behavior
 
-		//Check if bg!=color which is a flag for transperant backgrounds in our case
-		if(color != bg) {
-			//Make a premade bmp canvas and push the entire char canvas to the screen
-			uint16_t bmp[8][5];		
-	        for (uint8_t i = 0; i < 5; i++) { // Char bitmap = 5 columns
-	            uint8_t line = font[c * 5 + i];
-	            for (uint8_t j = 0; j < 8; j++, line >>= 1) {
-	                if(line & 1) {
-	                    if(size == 1) {
-							bmp[j][i] = swapped_foregnd_color;                        
-							//drawPixel(x+i, y+j, color); //The Old Adafruit way
-	                    }
-	                    else {
-							fillRect(x+i*size, y+j*size, size, size, color); //not as fast... set font size = 1 for speed
-	                    }
-	                }
-					else {
-						bmp[j][i] = swapped_backgnd_color;
-					}                
-	            }
-	        }
-			
-			uint16_t bmp_arr[40];
-			for (uint8_t cnt = 0; cnt < 40; cnt++) {
-				bmp_arr[cnt] = (bmp[(uint8_t)(cnt / 5)][(uint8_t)(cnt % 5)]); //5*8 Matrix to 40 element Array
-			}
-			drawBitmapFont(x, y, 5, 8, bmp_arr); //Speeds up fonts instead of using drawPixel
-		}
+        //Check if bg!=color which is a flag for transperant backgrounds in our case
+        if(color != bg) {
+            //Make a premade bmp canvas and push the entire char canvas to the screen
+            uint16_t bmp[8][5];     
+            for (uint8_t i = 0; i < 5; i++) { // Char bitmap = 5 columns
+                uint8_t line = font[c * 5 + i];
+                for (uint8_t j = 0; j < 8; j++, line >>= 1) {
+                    if(line & 1) {
+                        if(size == 1) {
+                            bmp[j][i] = swapped_foregnd_color;                        
+                            //drawPixel(x+i, y+j, color); //The Old Adafruit way
+                        }
+                        else {
+                            fillRect(x+i*size, y+j*size, size, size, color); //not as fast... set font size = 1 for speed
+                        }
+                    }
+                    else {
+                        bmp[j][i] = swapped_backgnd_color;
+                    }                
+                }
+            }
+            
+            uint16_t bmp_arr[40];
+            for (uint8_t cnt = 0; cnt < 40; cnt++) {
+                bmp_arr[cnt] = (bmp[(uint8_t)(cnt / 5)][(uint8_t)(cnt % 5)]); //5*8 Matrix to 40 element Array
+            }
+            drawBitmapFont(x, y, 5, 8, bmp_arr); //Speeds up fonts instead of using drawPixel
+        }
 
-		//If user wants transperant background, check for transperancy flag which is (color == bg)
-		else if(color == bg) {
-			//Can't speedup fonts since no pushing pre-made canvas not possible, the fonts printed by this loop will be slow
-			for (uint8_t i = 0; i < 5; i++) { // Char bitmap = 5 columns
-	            uint8_t line = font[c * 5 + i];
-	            for (uint8_t j = 0; j < 8; j++, line >>= 1) {
-	                if(line & 1) {
-	                    if(size == 1) {                 
-							drawPixel(x+i, y+j, color); //The Old Adafruit way
-	                    }
-	                    else {
-							fillRect(x+i*size, y+j*size, size, size, color); //not as fast... set font size = 1 for speed
-	                    }
-	                }         
-            	}
-        	}
-		}
+        //If user wants transperant background, check for transperancy flag which is (color == bg)
+        else if(color == bg) {
+            //Can't speedup fonts since no pushing pre-made canvas not possible, the fonts printed by this loop will be slow
+            for (uint8_t i = 0; i < 5; i++) { // Char bitmap = 5 columns
+                uint8_t line = font[c * 5 + i];
+                for (uint8_t j = 0; j < 8; j++, line >>= 1) {
+                    if(line & 1) {
+                        if(size == 1) {                 
+                            drawPixel(x+i, y+j, color); //The Old Adafruit way
+                        }
+                        else {
+                            fillRect(x+i*size, y+j*size, size, size, color); //not as fast... set font size = 1 for speed
+                        }
+                    }         
+                }
+            }
+        }
     } 
-	else { 
-		// Custom font
+    else { 
+        // Custom font
         // Character is assumed previously filtered by write() to eliminate
         // newlines, returns, non-printable characters, etc.  Calling
         // drawChar() directly with 'bad' characters of font may cause mayhem!
@@ -675,55 +675,59 @@ void Adafruit_GFX_AS::drawChar(int16_t x, int16_t y, unsigned char c, uint16_t c
             xo16 = xo;
             yo16 = yo;
         }
-		if(color != bg) {
-			uint16_t bmp[w+5][h+5]; //w*h plus some extra space
-	        for(yy=0; yy<h; yy++) {
-	            for(xx=0; xx<w; xx++) {
-	                if(!(bit++ & 7)) {
-	                    bits = bitmap[bo++];
-	                }
-					
-	                if(bits & 0x80) {
-	                    if(size == 1) {
-	                        //drawPixel(x+xo+xx, y+yo+yy, color); //Old adafruit way
-							bmp[yy][xx] = swapped_foregnd_color;
-	                    } 
-						else {
-	                        fillRect(x+(xo16+xx)*size, y+(yo16+yy)*size, size, size, color);
-	                    }
-	                }
-					
-					if(!(bits & 0x80)) {
-						bmp[yy][xx] = swapped_backgnd_color;
-					}
-	                bits <<= 1;
-	            }
-	        }
-			
-			uint16_t bmp_arr[w*h];
-			for (uint8_t cnt = 0; cnt < w*h; cnt++) {
-				bmp_arr[cnt] = (bmp[(uint8_t)(cnt / w)][(uint8_t)(cnt % w)]);
-			}
-			drawBitmapFont(x+xo, y+yo, w, h, bmp_arr); //Speeds up fonts instead of using drawPixel
-		}
-		else if(color == bg) {
-	        for(yy=0; yy<h; yy++) {
-	            for(xx=0; xx<w; xx++) {
-	                if(!(bit++ & 7)) {
-	                    bits = bitmap[bo++];
-	                }
-	                if(bits & 0x80) {
-	                    if(size == 1) {
-	                        drawPixel(x+xo+xx, y+yo+yy, color); //Old adafruit way
-	                    } 
-						else {
-	                        fillRect(x+(xo16+xx)*size, y+(yo16+yy)*size, size, size, color);
-	                    }
-	                }
-	                bits <<= 1;
-	            }
-	        }
-		}
+        if(color != bg) {
+            uint16_t bmp[w+5][h+5]; //w*h plus some extra space
+            for(yy=0; yy<h; yy++) {
+                for(xx=0; xx<w; xx++) {
+                    if(!(bit++ & 7)) {
+                        bits = bitmap[bo++];
+                    }
+                    
+                    if(bits & 0x80) {
+                        if(size == 1) {
+                            //drawPixel(x+xo+xx, y+yo+yy, color); //Old adafruit way
+                            bmp[yy][xx] = swapped_foregnd_color;
+                        } 
+                        else {
+                            fillRect(x+(xo16+xx)*size, y+(yo16+yy)*size, size, size, color);
+                        }
+                    }
+                    
+                    if(!(bits & 0x80)) {
+                        bmp[yy][xx] = swapped_backgnd_color;
+                    }
+                    bits <<= 1;
+                }
+            }
+            
+            uint16_t bmp_arr[w*h];
+            for (uint8_t cnt = 0; cnt < w*h; cnt++) {
+                bmp_arr[cnt] = (bmp[(uint8_t)(cnt / w)][(uint8_t)(cnt % w)]);
+            }
+            drawBitmapFont(x+xo, y+yo, w, h, bmp_arr); //Speeds up fonts instead of using drawPixel
+        }
+        
+        else if(color == bg) {
+            //Unimplemented: Transparent bg for custom fonts
+            /*
+            for(yy=0; yy<h; yy++) {
+                for(xx=0; xx<w; xx++) {
+                    if(!(bit++ & 7)) {
+                        bits = bitmap[bo++];
+                    }
+                    if(bits & 0x80) {
+                        if(size == 1) {
+                            drawPixel(x+xo+xx, y+yo+yy, color); //Old adafruit way
+                        } 
+                        else {
+                            fillRect(x+(xo16+xx)*size, y+(yo16+yy)*size, size, size, color);
+                        }
+                    }
+                    bits <<= 1;
+                }
+            }*/
+            ESP_LOGE("LCD", "Custom fonts with transparent bg not supported yet\n");
+        }
     } // End classic vs custom font
 }
 
@@ -755,7 +759,7 @@ int Adafruit_GFX_AS::drawFloat(float floatNumber, uint8_t decimal, uint16_t poX,
     for (unsigned char i = 0; i < decimal; ++i) {
         rounding /= 10.0;
     }
-	
+    
     floatNumber += rounding;
     temp         = (long)floatNumber;
     xPlus        = drawNumber(temp, poX, poY);
