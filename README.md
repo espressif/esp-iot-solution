@@ -63,3 +63,11 @@ Exit miniterm by typing Ctrl-].
 * touchpad: Provide some useful functions of touchpad, such as single trigger, serial trigger, short press, long press and so on.
 * ulp_monitor: Provide simple apis to use ULP coprocessor to collect and save data of temprature sensor and adc while deep sleep.
 * wifi: Provide a blocking function to make esp32 connect to ap. User could set the time out of connecting.
+* 
+
+# Solution list:
+
+* Low power / deep sleep / co-processor solution
+* Touch sensor solution and application note
+* Security solution and factory flow
+* AWS + Amazon Alexa custom skills service solution
