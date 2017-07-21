@@ -50,7 +50,7 @@ Exit miniterm by typing Ctrl-].
 * We aim to develop IoT solution from the very basis, i.e. from the smallest modules, so that we could combine different modules with distinct platforms, and get various products.
 
 
-### well encapsulated modules
+### Well encapsulated modules
 
 * button: Provide some useful functions of physical buttons, such as short press, long press, release and so on.
 * LED: Provide different states including bright, dark, quick blink and slow blink of led. You could use this module to indicate different states of the program.
