@@ -18,7 +18,7 @@
 * 为了验证第二部分的模型，我们对 TOUCH pad 进行了温度测试与电压测试。
 * 不同温度与电压下各 pad 的读数如下二图所示，从图中可以看出温度与电压的变化都会对 TOUCH pad 的读数有影响，使用过程中动态地调整 pad 的无触摸读数期望值与中断触发阈值是有必要的。
 
-    | <img src="https://gitlab.espressif.cn:6688/rd/esp-iot-solution/raw/doc/touchpad/documents/touchpad/pad%E6%B8%A9%E5%BA%A6_%E8%AF%BB%E6%95%B0%E6%9B%B2%E7%BA%BF.png" width = "500" alt="touchpad_temp0" align=center />|<img src="https://gitlab.espressif.cn:6688/rd/esp-iot-solution/raw/doc/touchpad/documents/touchpad/pad%E7%94%B5%E5%8E%8B_%E8%AF%BB%E6%95%B0%E6%9B%B2%E7%BA%BF.png" width = "500" alt="touchpad_volt0" align=center /> |
+    | <img src="./touchpad/pad温度_读数曲线.png" width = "500" alt="touchpad_temp0" align=center />|<img src="./touchpad/pad电压_读数曲线.png" width = "500" alt="touchpad_volt0" align=center /> |
     |--|--|
     |  |  |
     
@@ -27,19 +27,19 @@
 
 * 温度测试的 pad 读数数据如下表所示：
 
-    <img src="https://gitlab.espressif.cn:6688/rd/esp-iot-solution/raw/doc/touchpad/documents/touchpad/pad%E6%B8%A9%E5%BA%A6_%E8%AF%BB%E6%95%B0.png" width = "500" alt="touchpad_temp1" align=center />
+    <img src="./touchpad/pad温度_读数.png" width = "500" alt="touchpad_temp1" align=center />
 
 *  不同温度下第 i 个 pad 的数学期望与 N 个 pad 的数学期望平均值的比值 Eval<sub>it</sub>/AVG<sub>t</sub> 如下表所示：
 
-    <img src="https://gitlab.espressif.cn:6688/rd/esp-iot-solution/raw/doc/touchpad/documents/touchpad/pad%E6%B8%A9%E5%BA%A6_%E6%AF%94%E5%80%BC.png" width = "500" alt="touchpad_temp2" align=center />
+    <img src="./touchpad/pad温度_比值.png" width = "500" alt="touchpad_temp2" align=center />
 
 * 电压测试的 pad 读数数据如下表所示：
 
-    <img src="https://gitlab.espressif.cn:6688/rd/esp-iot-solution/raw/doc/touchpad/documents/touchpad/pad%E7%94%B5%E5%8E%8B_%E8%AF%BB%E6%95%B0.png" width = "500" alt="touchpad_volt1" align=center />
+    <img src="./touchpad/pad电压_读数.png" width = "500" alt="touchpad_volt1" align=center />
 
-*  不同温度下第 i 个 pad 的数学期望与 N 个 pad 的数学期望平均值的比值 Eval<sub>it</sub>/AVG<sub>t</sub> 如下表所示：
+*  不同电压下第 i 个 pad 的数学期望与 N 个 pad 的数学期望平均值的比值 Eval<sub>it</sub>/AVG<sub>t</sub> 如下表所示：
 
-    <img src="https://gitlab.espressif.cn:6688/rd/esp-iot-solution/raw/doc/touchpad/documents/touchpad/pad%E7%94%B5%E5%8E%8B_%E6%AF%94%E5%80%BC.png" width = "500" alt="touchpad_volt2" align="center" />
+    <img src="./touchpad/pad电压_比值.png" width = "500" alt="touchpad_volt2" align="center" />
 
 * 从表2与表4可以看出无论温度与电压如何变化，每一个 pad 的 Eval<sub>it</sub>/AVG<sub>t</sub> 都是一个较为稳定的数值，其波动范围仅为 1%左右。通过这两个实验可以证明我们的模型是准确的。
 
@@ -57,9 +57,9 @@
 * 在 TOUCH 传感器上增加隔板能起到保护作用，但是会使得传感器灵敏度下降，我们对此进行了测试。
 * TOUCH pad 无触摸、隔一层pcb触摸和隔一层pcb+1mm塑料隔板触摸时的读数变化如下表与下图所示：
 
-    <img src="https://gitlab.espressif.cn:6688/rd/esp-iot-solution/raw/doc/touchpad/documents/touchpad/touchpad_%E9%9A%94%E6%9D%BF%E6%B5%8B%E8%AF%95%E5%9B%BE%E8%A1%A8.png" width = "500" alt="touchpad_geban2" align=center />
+    <img src="./touchpad/touchpad_隔板测试图表.png" width = "500" alt="touchpad_geban2" align=center />
 
-    <img src="https://gitlab.espressif.cn:6688/rd/esp-iot-solution/raw/doc/touchpad/documents/touchpad/touchpad_%E9%9A%94%E6%9D%BF%E6%B5%8B%E8%AF%95.png" width = "300" alt="touchpad_geban1" align=center />
+    <img src="./touchpad/touchpad_隔板测试.png" width = "300" alt="touchpad_geban1" align=center />
 
 * 在 TOUCH 传感器与手指间隔 pcb 或者塑料隔板会严重影响 TOUCH pad 灵敏度，可以看到触摸引起的读数相对变化量仅为 3% 左右
 
@@ -98,7 +98,7 @@ touchpad_set_serial_trigger(tp, trigger_thres_sec, interval_ms, cb, arg);
 
 *  touchpad 滑块采用如下图所示的结构布置多个 pad ，手指触碰滑块时，用户可以读取触碰点在滑块上的相对位置。
 
-    <img src="https://gitlab.espressif.cn:6688/rd/esp-iot-solution/raw/doc/touchpad/documents/touchpad/slide_touchpad.png" width = "500" alt="touchpad_volt2" align=center />
+    <img src="./touchpad/slide_touchpad.png" width = "500" alt="touchpad_volt2" align=center />
 
 * touchpad 滑块触碰点位置的计算采用质心计算的灵感。首先，按顺序为每一个 pad i 赋予位置权重 w<sub>i</sub> = i * ξ ，式中 ξ 决定了定位的精度，ξ 越大位置分割越细。例如图中将从左到右的5个 pad 的权值依次赋值为 0，10，20，30，40。然后读取 t 时刻每个 pad 上的读数变化量 Δval<sub>it</sub> = Eval<sub>it</sub> - real<sub>it</sub> ， real<sub>it</sub> 是事时读数。最后，计算相对位置：posi<sub>t</sub> = (Δval<sub>0t</sub> * w<sub>0</sub> + Δval<sub>1t</sub> * w<sub>1</sub> + ... + Δval<sub>(N-1)t</sub> * w<sub>N-1</sub>) / (Δval<sub>0t</sub> + Δval<sub>1t</sub> + ... + Δval<sub>(N-1)t</sub>) 。此相对位置将是一个在 0 和 (N-1)*ξ 的值。
 * 驱动步骤：
