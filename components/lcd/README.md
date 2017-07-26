@@ -1,4 +1,4 @@
-#TFT LCD Example Code for ESP32
+##TFT LCD Example Code for ESP32##
 
 This example is based on [Adafruit’s Library](https://github.com/adafruit/Adafruit_ILI9341) for ILI9341. This component can display<br />
 1. Text<br />
