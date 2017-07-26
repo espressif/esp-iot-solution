@@ -67,7 +67,7 @@
 1. bootloader 读取到 efuse 中的 FLASH_CRYPT_CNT 为0，于是利用硬件随机数生成器产生加密用的 key ，此 key 被保存在 efuse 中，对于软件是读写保护的
 2. bootloader 对所有需要被加密的 partition 在 flash 中原处加密
 3. 默认情况下 efuse 中的 DISABLE_DL_ENCRYPT, DISABLE_DL_DECRYPT 和 DISABLE_DL_CACHE 会被烧写为1，这样 UART bootloader 时就不能读取到解密后的 flash 数据
-4. efuse 中的 FLASH_CRYPT_CONFIG 被烧写成 0xf，此标志用于决定加密 key 的多少位被用于加密算法，设置为 0xf 时使用所有256位
+4. efuse 中的 FLASH_CRYPT_CONFIG 被烧写成 0xf，此标志用于决定加密 key 的多少位被用于计算每一个 flash 块（32字节）对应的秘钥，设置为 0xf 时使用所有256位
 5. efuse 中的 FLASH_CRYPT_CNT 被烧写成 0x01，此标志用于 flash 烧写次数限制以及加密控制，详见“FLASH_CRYPT_CNT”一节
 6. bootloader 将自己重启，从加密的 flash 执行软件 bootloader
 
@@ -108,7 +108,7 @@
 	* 存储在 flash 中的只读数据
 	* 任何通过 API esp_spi_flash_mmap() 读取的数据
 	* 由 ROM bootloader 读取的软件 bootloader image 数据
-* 如果在被加密的代码中调用 API esp_partition_read()，则读取的 flash 数据是经过解密后的数据
+* 如果调用 API esp_partition_read()读取被加密区域的数据，则读取的 flash 数据是经过解密后的数据
 
 ### 哪些方式读到不解密的数据（无法使用的脏数据）
 * 通过 API esp_spi_flash_read() 读取的数据
@@ -299,3 +299,55 @@
 	* 使用者不能遗失私钥，必须使用私钥用于对 OTA app 签名(如果有OTA功能)。
 	* 用户可以选择不启用 app image的签名校验，只需要关闭menuconfig中的secure boot功能即可。下载工具会更具配置文件，通过efuse启用secure boot。
 	  禁用app image的签名校验会存在安全隐患。
+
+# 开发阶段使用可重复烧写 flash 的 Secure Boot 与 Flash encryption
+1. make menuconfig 中使能 secure boot 和 flash encrypt，“Secure bootloader mode”选择“Reflashable”，并设置你的公钥/私钥.pem文件路径
+2. 编译 bootloader 并生成 secure boot key：
+```
+make bootloader
+```
+
+3. 使用 key 和 bootloader 计算 带 digest 的 bootloader
+```
+python $IDF_PATH/components/esptool_py/esptool/espsecure.py digest_secure_bootloader --keyfile ./build/bootloader/secure_boot_key.bin -o ./build/bootloader/bootloader_with_digest.bin ./build/bootloader/bootloader.bin
+```
+
+4. 编译 partition_table 与 app
+```
+make partition_table
+make app
+```
+
+5. 加密三个 bin 文件
+```
+python $IDF_PATH/components/esptool_py/esptool/espsecure.py encrypt_flash_data --keyfile flash_encrypt_key.bin --address 0x0 -o build/bootloader/bootloader_digest_encrypt.bin build/bootloader/bootloader_with_digest.bi
+python $IDF_PATH/components/esptool_py/esptool/espsecure.py encrypt_flash_data --keyfile flash_encrypt_key.bin --address 0x8000 -o build/partitions_singleapp_encrypt.bin build/partitions_singleapp.bin
+python $IDF_PATH/components/esptool_py/esptool/espsecure.py encrypt_flash_data --keyfile flash_encrypt_key.bin --address 0x10000 -o build/iot_encrypt.bin build/iot.bin
+```
+
+6. 烧写三个加密后的 bin 文件
+```
+python $IDF_PATH/components/esptool_py/esptool/esptool.py --baud 1152000 write_flash 0x0 build/bootloader/bootloader_digest_encrypt.bin
+python $IDF_PATH/components/esptool_py/esptool/esptool.py --baud 1152000 write_flash 0x8000 build/partitions_singleapp_encrypt.bin
+python $IDF_PATH/components/esptool_py/esptool/esptool.py --baud 1152000 write_flash 0x10000 build/iot_encrypt.bin
+```
+
+7. 将 flash_encryption_key 烧入 efuse （仅在第一次boot前烧写）：
+```
+python $IDF_PATH/components/esptool_py/esptool/espefuse.py burn_key flash_encryption flash_encrypt_key.bin
+```
+
+8. 将 secure boot key 烧入efuse（仅在第一次boot前烧写）：
+```
+python $IDF_PATH/components/esptool_py/esptool/espefuse.py burn_key secure_boot ./build/bootloader/secure_boot_key.bin
+```
+
+9. 烧写 efuse 中的控制标志（仅在第一次boot前烧写）
+```
+python $IDF_PATH/components/esptool_py/esptool/espefuse.py burn_efuse ABS_DONE_0
+python $IDF_PATH/components/esptool_py/esptool/espefuse.py burn_efuse FLASH_CRYPT_CNT
+python $IDF_PATH/components/esptool_py/esptool/espefuse.py burn_efuse FLASH_CRYPT_CONFIG 0xf
+python $IDF_PATH/components/esptool_py/esptool/espefuse.py burn_efuse DISABLE_DL_ENCRYPT
+python $IDF_PATH/components/esptool_py/esptool/espefuse.py burn_efuse DISABLE_DL_DECRYPT
+python $IDF_PATH/components/esptool_py/esptool/espefuse.py burn_efuse DISABLE_DL_CACHE
+```
