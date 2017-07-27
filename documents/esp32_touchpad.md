@@ -73,7 +73,7 @@
 * 用户可以设置连续触发模式，这时在步骤三种若 val<sub>i</sub> < thres<sub>it</sub> ，就会执行pad serial trigger 回调。
 * esp-iot-solution 中的使用步骤：
 
-    ```c
+```c
 /*
  创建 touchpad 对象
 thres_percent 的设置取决于使用场景下 touchpad 的灵敏度，大致取值可以参考如下：
@@ -96,7 +96,7 @@ touchpad_set_serial_trigger(tp, trigger_thres_sec, interval_ms, cb, arg);
 
 # TOUCH pad 滑块驱动方案
 
-*  touchpad 滑块采用如下图所示的结构布置多个 pad ，手指触碰滑块时，用户可以读取触碰点在滑块上的相对位置。
+*  touchpad 滑块采用如下图所示的结构布置多个 pad ，一个 pad 使用一个 touch 传感器，手指触碰滑块时，用户可以读取触碰点在滑块上的相对位置。
 
     <img src="./touchpad/slide_touchpad.png" width = "500" alt="touchpad_volt2" align=center />
 
@@ -105,8 +105,7 @@ touchpad_set_serial_trigger(tp, trigger_thres_sec, interval_ms, cb, arg);
 	* 1、初始化时按位置顺序创建 pad 实例，为每一个 pad 实例添加 push 与release 回调函数。
 	* 2、在 push 和 release 回调函数中，读取此滑块中每一个 touchpad 的 值，按上面的公式计算相对位置。
 * esp-iot-solution 中的使用步骤：
-
-    ```c++
+```c++
 /*
 创建 touchpad 滑块对象
 num 决定使用多少个 pad 组成一个滑块
@@ -115,3 +114,35 @@ tps 是 TOUCH_PAD_NUM 的数组，每一个 TOUCH_PAD_NUM 在数组中的位置�
 touchpad_slide_handle_t tp_slide = touchpad_slide_create(num, tps);
 uint8_t pos = touchpad_slide_position(tp_slide);		// 用于读取手指触碰位置在滑块上的相对位置，手指没触碰时返回 255
 ```
+
+* 为了做到了利用有限的 touch 传感器驱动更长的 pad 滑块，可以使用下图所示的双工滑块
+
+<img src="./touchpad/diplexed_slide.png" width = "500" alt="touchpad_volt2" align=center />
+
+* 图中的双工滑块用到了 16 个 pad ，但只需要使用 8 个 touch 传感器。左半部分 8 个 pad 按顺序使用 8 个传感器。右半部分 8 个 pad 以乱序使用 8 个传感器。但是右半部分所谓的乱序要确保左半部分相邻 pad 使用的传感器在右半部分对应的 pad 相隔一定距离
+* 当左半部分有 pad 触摸时，右半部分使用同一传感器的 pad 也会被认为有触摸，此时算法会寻找相邻 pad 都有读数变化的区域，去除孤立的触发 pad
+* 例如图中，当我们在1 、2 位置触摸滑块时，传感器 0 和 1 上的 1,2,9,12 号 pad 都会被认为触发，但是只有 1 和 2 是相邻 pad 触发，而 9 和 12 是两个孤立的触发 pad，所以算法会将位置定位在 1,2 区域
+* 在 esp-iot-solution 中，用户不需要区分单工滑块和双工滑块，两者使用相同的 API 进行操作
+* 双工 touchpad 滑块对象创建方式：
+
+```c
+const touch_pad_t tps[] = {0, 1, 2, 3, 4, 5, 6, 7, 0, 3, 6, 1, 4, 7, 2, 5};	// 假设图中 的16个 pad 按此顺序使用0~7这8个传感器
+touchpad_slide_handle_t tp_slide = touchpad_slide_create(16, tps);
+```
+
+# 矩阵 TOUCH pad 方案
+* 单个 TOUCH pad 的驱动方案每一个 pad 按键都需要一个传感器，在 pad 使用数量较大的应用场合下，可以使用矩阵的驱动方式
+* TOUCH pad 矩阵使用如下图所示的结构，每个 pad 被分成 4 块，相对的两块连接同一个传感器，同时矩阵中每一行（每一列）的水平块（垂直块）连接一个传感器
+<img src="./touchpad/matrix_touchpad.png" width = "500" alt="touchpad_volt2" align=center />
+
+* 当一个 pad 上横竖两个对应传感器同时都被触发时，该 pad 才会被认为有触摸。例如图中 sensor1 和 sensor2 同时触发时，左上角的 pad 被判定为有触摸事件
+* esp-iot-solution 中创建矩阵 TOUCH pad 的方法如下，矩阵 TOUCH pad 可以像单个 pad 一样添加回调函数，设置连续触发等
+```c
+// 第1,2个参数指定水平与垂直方向的传感器数量，第3,4个参数是数组，指定了水平（垂直）方向按顺序的传感器编号
+const touch_pad_t x_tps[] = {2, 3};		// 图中水平方向的sensor2和sensor3
+const touch_pad_t y_tps[] = {0, 1};		// 图中垂直方向的sensor0和sensor1
+touchpad_matrix_handle_t tp_matrix = touchpad_matrix_create(sizeof(x_tps)/sizeof(x_tps[0]), sizeof(y_tps)/sizeof(y_tps[0]),
+                                                                x_tps, y_tps, TOUCHPAD_THRES_PERCENT, TOUCHPAD_FILTER_MS);
+```
+
+* `注意！`：由于矩阵 TOUCH pad 驱动方式的限制，同时只能按一个 pad。当多个 pad 同时按下时不会有触摸事件触发，当一个 pad 正被触摸时，触摸其他 pad 不会有事件触发
