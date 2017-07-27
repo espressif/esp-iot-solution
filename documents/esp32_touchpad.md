@@ -116,6 +116,7 @@ uint8_t pos = touchpad_slide_position(tp_slide);		// 用于读取手指触碰位
 ```
 
 * 为了做到了利用有限的 touch 传感器驱动更长的 pad 滑块，可以使用下图所示的双工滑块
+
 <img src="./touchpad/diplexed_slide.png" width = "500" alt="touchpad_volt2" align=center />
 
 * 图中的双工滑块用到了 16 个 pad ，但只需要使用 8 个 touch 传感器。左半部分 8 个 pad 按顺序使用 8 个传感器。右半部分 8 个 pad 以乱序使用 8 个传感器。但是右半部分所谓的乱序要确保左半部分相邻 pad 使用的传感器在右半部分对应的 pad 相隔一定距离
