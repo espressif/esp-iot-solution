@@ -124,7 +124,8 @@ uint8_t pos = touchpad_slide_position(tp_slide);		// 用于读取手指触碰位
 * 例如图中，当我们在1 、2 位置触摸滑块时，传感器 0 和 1 上的 1,2,9,12 号 pad 都会被认为触发，但是只有 1 和 2 是相邻 pad 触发，而 9 和 12 是两个孤立的触发 pad，所以算法会将位置定位在 1,2 区域
 * 在 esp-iot-solution 中，用户不需要区分单工滑块和双工滑块，两者使用相同的 API 进行操作
 * 双工 touchpad 滑块对象创建方式：
-```c++
+
+```c
 const touch_pad_t tps[] = {0, 1, 2, 3, 4, 5, 6, 7, 0, 3, 6, 1, 4, 7, 2, 5};	// 假设图中 的16个 pad 按此顺序使用0~7这8个传感器
 touchpad_slide_handle_t tp_slide = touchpad_slide_create(16, tps);
 ```
