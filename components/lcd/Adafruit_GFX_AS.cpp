@@ -539,14 +539,14 @@ int Adafruit_GFX_AS::drawString(const char *string, uint16_t x, uint16_t y)
     uint16_t xPlus = x;
     setTextCursor(xPlus, y);
     while (*string) {
-        xPlus = write(*string);        // write string char-by-char                 
+        xPlus = write_char(*string);        // write_char string char-by-char                 
         setTextCursor(xPlus, y);       // increment cursor
         string++;                      // Move cursor right
     }
     return xPlus;
 }
 
-int Adafruit_GFX_AS::write(uint8_t c)
+int Adafruit_GFX_AS::write_char(uint8_t c)
 {
     if(!gfxFont) { // 'Classic' built-in font
         if(c == '\n') {                        // Newline?
@@ -627,12 +627,14 @@ void Adafruit_GFX_AS::drawChar(int16_t x, int16_t y, unsigned char c, uint16_t c
                     }                
                 }
             }
-            
-            uint16_t bmp_arr[40];
-            for (uint8_t cnt = 0; cnt < 40; cnt++) {
-                bmp_arr[cnt] = (bmp[(uint8_t)(cnt / 5)][(uint8_t)(cnt % 5)]); //5*8 Matrix to 40 element Array
+			
+            if(size == 1) {
+	            uint16_t bmp_arr[40];
+	            for (uint8_t cnt = 0; cnt < 40; cnt++) {
+	                bmp_arr[cnt] = (bmp[(uint8_t)(cnt / 5)][(uint8_t)(cnt % 5)]); //5*8 Matrix to 40 element Array
+	            }
+	            drawBitmapFont(x, y, 5, 8, bmp_arr); //Speeds up fonts instead of using drawPixel
             }
-            drawBitmapFont(x, y, 5, 8, bmp_arr); //Speeds up fonts instead of using drawPixel
         }
 
         //If user wants transperant background, check for transperancy flag which is (color == bg)
@@ -655,7 +657,7 @@ void Adafruit_GFX_AS::drawChar(int16_t x, int16_t y, unsigned char c, uint16_t c
     } 
     else { 
         // Custom font
-        // Character is assumed previously filtered by write() to eliminate
+        // Character is assumed previously filtered by write_char() to eliminate
         // newlines, returns, non-printable characters, etc.  Calling
         // drawChar() directly with 'bad' characters of font may cause mayhem!
 
@@ -699,13 +701,15 @@ void Adafruit_GFX_AS::drawChar(int16_t x, int16_t y, unsigned char c, uint16_t c
                     bits <<= 1;
                 }
             }
-            
-            uint16_t bmp_arr[w*h];
-            for (uint8_t cnt = 0; cnt < w*h; cnt++) {
-                bmp_arr[cnt] = (bmp[(uint8_t)(cnt / w)][(uint8_t)(cnt % w)]);
-            }
-            drawBitmapFont(x+xo, y+yo, w, h, bmp_arr); //Speeds up fonts instead of using drawPixel
-        }
+			
+            if (size == 1) {
+	            uint16_t bmp_arr[w*h];
+	            for (uint8_t cnt = 0; cnt < w*h; cnt++) {
+	                bmp_arr[cnt] = (bmp[(uint8_t)(cnt / w)][(uint8_t)(cnt % w)]);
+	            }
+	            drawBitmapFont(x+xo, y+yo, w, h, bmp_arr); //Speeds up fonts instead of using drawPixel
+        	}
+		}
         
         else if(color == bg) {
             //Unimplemented: Transparent bg for custom fonts

@@ -10,9 +10,9 @@
 class Adafruit_GFX_AS
 {
 public:
+   
     Adafruit_GFX_AS(int16_t w, int16_t h); // Constructor
-    /*Find information about virtual void functions in subclass file
-    (Adafruit_ILI9341_fast_as.h)*/
+    /*Find information about virtual void functions in subclass file (Adafruit_lcd_fast_as.h)*/
     // This MUST be defined by the subclass:
     virtual void drawPixel(int16_t x, int16_t y, uint16_t color);
     virtual void drawBitmapFont(int16_t x, int16_t y, uint8_t w, uint8_t h, const uint16_t * bitmap);
@@ -33,7 +33,7 @@ public:
      * @brief Meant for internal use. Filter out new lines and only let legit bitmaps pass & Increment addr for new char 
      * @param c character you want to check for existance and then send to drawChar
      */
-    int write(uint8_t c);
+    int write_char(uint8_t c);
 
     /**
      * @brief draw circumference
