@@ -108,11 +108,11 @@ static void initialise_wifi(void)
 
 static void initialise_key(void)
 {
-    button_handle_t btn_handle = button_dev_init(CONFIG_JOYLINK_SMNT_BUTTON_NUM, 0, BUTTON_ACTIVE_LOW);
-    button_dev_add_tap_cb(BUTTON_PUSH_CB, joylink_button_smnt_tap_cb, "PUSH", 50 / portTICK_PERIOD_MS, btn_handle);
+    button_handle_t btn_handle = button_create(CONFIG_JOYLINK_SMNT_BUTTON_NUM, BUTTON_ACTIVE_LOW, BUTTON_SINGLE_TRIGGER, 0);
+    button_add_cb(btn_handle, BUTTON_PUSH_CB, joylink_button_smnt_tap_cb, "PUSH", 50 / portTICK_PERIOD_MS);
 
-    btn_handle = button_dev_init(CONFIG_JOYLINK_RESET_BUTTON_NUM, 0, BUTTON_ACTIVE_LOW);
-    button_dev_add_tap_cb(BUTTON_PUSH_CB, joylink_button_reset_tap_cb, "PUSH", 50 / portTICK_PERIOD_MS, btn_handle);
+    btn_handle = button_create(CONFIG_JOYLINK_RESET_BUTTON_NUM, BUTTON_ACTIVE_LOW, BUTTON_SINGLE_TRIGGER, 0);
+    button_add_cb(btn_handle, BUTTON_PUSH_CB, joylink_button_reset_tap_cb, "PUSH", 50 / portTICK_PERIOD_MS);
 }
 #endif
 
