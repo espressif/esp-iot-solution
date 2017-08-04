@@ -25,13 +25,11 @@
 #define IS31FL3XXX_TEST_CODE 1
 #if IS31FL3XXX_TEST_CODE
 
-#define IS31FL3218_TEST 0
-#define IS31FL3736_TEST 1
-
 #include <stdio.h>
 #include "driver/i2c.h"
 #include "is31fl3218.h"
 #include "is31fl3736.h"
+#include "led_12_8_image.h"
 
 #define I2C_MASTER_SCL_IO    21        /*!< gpio number for I2C master clock */
 #define I2C_MASTER_SDA_IO    22        /*!< gpio number for I2C master data  */
@@ -59,75 +57,12 @@ void led_dev_init()
     led3736 = sensor_is31fl3736_create(i2c_bus, GPIO_NUM_32, 0, 0, 0XCF);
 }
 
-//------TOUCH func debug------//
-#include "touchpad.h"
-int vol = 5;
-void touch_task(void* arg)
-{
-    touch_pad_t pads[] = {TOUCH_PAD_NUM6, TOUCH_PAD_NUM7, TOUCH_PAD_NUM8, TOUCH_PAD_NUM9};
-    touchpad_slide_handle_t slide = touchpad_slide_create(4, pads);
-    int vol_prev = 0;
-    uint8_t reg, reg_val;
-    while(1) {
-        int pos = touchpad_slide_position(slide);
-        if (pos == 255) {
-            printf("pos invalid\n");
-        } else {
-            printf("position: %d\n", pos);
-            vol = pos * 12 / 30;
-            if (vol == vol_prev) {
-            } else {
-                vol_prev = vol;
-                for (int i = 6; i < IS31FL3736_CSX_MAX; i++) {
-                    for (int j = 0; j < IS31FL3736_SWY_MAX; j++) {
-                        reg = i * 2 + j * 0x10;
-                        if (j < vol) {
-                            reg_val = 50;
-                        } else {
-                            reg_val = 0;
-                        }
-                        is31fl3736_write_reg(I2C_MASTER_NUM, reg, &reg_val, 1);
-                    }
-                }
-            }
-        }
-        vTaskDelay(50/portTICK_PERIOD_MS);
-    }
-}
-
-void is32f13xxx_bar_task(void* arg)
-{
-    int i, j;
-    uint8_t reg, reg_val;
-    int vol_prev = 0;
-    while(1) {
-        uint8_t buf[12] = {0};
-        if(vol == vol_prev) {
-        } else {
-            vol_prev = vol;
-            for (i = 6; i < IS31FL3736_CSX_MAX; i++) {
-                for (j = 0; j < IS31FL3736_SWY_MAX; j++) {
-                    reg = i * 2 + j * 0x10;
-                    if (j < vol) {
-                        reg_val = 50;
-                    } else {
-                        reg_val = 0;
-                    }
-                    is31fl3736_write_reg(I2C_MASTER_NUM, reg, &reg_val, 1);
-                }
-            }
-        }
-        vTaskDelay(10/portTICK_PERIOD_MS);
-    }
-}
-
 esp_err_t is31fl3736_send_buf(i2c_port_t i2c_port, uint8_t x, uint8_t y, char *c, uint8_t duty, uint8_t* buf)
 {
     is31fl3736_fill_buf(led3736, duty, buf);
     return ESP_OK;
 }
 
-#include "led_12_8_image.h"
 /**
  * @brief display the char in matrix
  */
@@ -176,30 +111,9 @@ esp_err_t is31fl3736_display_buf(i2c_port_t i2c_port, uint8_t x, uint8_t y, char
 }
 
 
-void is31f13xxx_test_task(void* pvParameters)
+void is31f13736_test_task(void* pvParameters)
 {
     int i=11;
-#if IS31FL3218_TEST
-    float bh1750_data;
-    is31fl3218_info_t info;
-    info.i2c_port = I2C_MASTER_NUM;
-    IS31FL3218_CH_MUM(info.ch_bit, IS31FL3218_CH_NUM_MAX);
-    printf("enable ch bit: 0x%08x\r\n", info.ch_bit);
-    ESP_ERROR_CHECK( is31fl3218_init(&info) );
-    ESP_ERROR_CHECK( is31fl3218_channel_set(info.i2c_port, info.ch_bit, 0) );
-    while(1){
-        vTaskDelay(100 / portTICK_RATE_MS);
-        ESP_ERROR_CHECK( is31fl3218_channel_set(info.i2c_port, IS31FL3218_CH_BIT(i), j) );
-        if(++i > IS31FL3218_CH_NUM_MAX - 1) {
-            i = 0;
-            if (j == 0) 
-                j = 255;
-            else
-                j = 0;
-        }
-        
-    }
-#elif IS31FL3736_TEST
     char c = 'e';
     static uint8_t dir = 0;
     is31fl3736_write_page(led3736, IS31FL3736_PAGE(1));
@@ -237,10 +151,9 @@ void is31f13xxx_test_task(void* pvParameters)
         }
     }
     vTaskDelete(NULL);
-#endif
 }
 
-void fill_pixel(uint8_t x, uint8_t y, uint8_t duty)
+void fill_pixel(int x, int y, uint8_t duty)
 {
     if (x == -1 || y == -1) {
         return;
@@ -249,9 +162,9 @@ void fill_pixel(uint8_t x, uint8_t y, uint8_t duty)
     is31fl3736_write_reg(led3736, reg, &duty, 1);
 }
 
-void is31f13xxx_test()
+void is31f13736_test()
 {
     led_dev_init();
-    xTaskCreate(is31f13xxx_test_task, "is31f13xxx_test_task", 1024 * 2, NULL, 10, NULL);
+    xTaskCreate(is31f13736_test_task, "is31f13xxx_test_task", 1024 * 2, NULL, 10, NULL);
 }
 #endif
