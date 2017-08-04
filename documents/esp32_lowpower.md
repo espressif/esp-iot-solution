@@ -53,6 +53,17 @@
     * 调用ulp_monitor_start设置测量频率并启动协处理器
     * 调用esp_deep_sleep_start()开始deep sleep
 
+## 用户交互场景，使用 touchpad 触摸（gpio 按键）唤醒（例如控制面板）
+* 此场景一般用于一些用户交互设备如控制面板等。当用户长时间没有操作面板（例如触摸 touchpad，按 gpio 按键）时，可使 ESP32 进入 deep sleep 模式，并设置 touchpad（gpio）唤醒。支持 touchpad 唤醒的 deep sleep 模式下，芯片的电流大约为 30uA 。
+* 逻辑流程图：
+
+    <img src="deep_sleep/touchpad_deepsleep_process.png" width = "400" alt="touchpad_deepsleep_process" align=center />
+
+* 程序流程：
+	* 芯片 boot 后运行用户交互与控制程序
+	* 配置需要用于唤醒的 touchpad （包括初始化与设置阈值，可查看 iot-solution 中的 touchpad 方案）
+	* 调用 esp_deep_sleep_enable_touchpad_wakeup() 使能 touchpad 唤醒 ，然后调用esp_deep_sleep_start() 开始 deep sleep 
+
 # deep sleep支持不同唤醒源时电流情况
 * 正常工作，ESP32作为station时，平均电流约为115mA：
 
@@ -66,3 +77,6 @@
 * deep sleep期间，协处理器周期性运行数据采集程序（每秒采集10次，所以图中的尖峰是协处理器工作时的电流）：
 
     <img src="https://gitlab.espressif.cn:6688/rd/esp-iot-solution/raw/demo/low_power/main/esp32_deepsleep_ulp_current.png" width = "500" alt="esp32_deepsleep_ulp_current" align=center />
+* 支持 touchpad 唤醒时， deep sleep期间的平均电流约为30uA左右：
+
+    <img src="deep_sleep/touchpad_deepsleep_current.png" width = "500" alt="touchpad_deepsleep_current" align=center />
