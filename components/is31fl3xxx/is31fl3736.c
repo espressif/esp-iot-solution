@@ -1,0 +1,374 @@
+/*
+  * ESPRESSIF MIT License
+  *
+  * Copyright (c) 2017 <ESPRESSIF SYSTEMS (SHANGHAI) PTE LTD>
+  *
+  * Permission is hereby granted for use on ESPRESSIF SYSTEMS products only, in which case,
+  * it is free of charge, to any person obtaining a copy of this software and associated
+  * documentation files (the "Software"), to deal in the Software without restriction, including
+  * without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
+  * and/or sell copies of the Software, and to permit persons to whom the Software is furnished
+  * to do so, subject to the following conditions:
+  *
+  * The above copyright notice and this permission notice shall be included in all copies or
+  * substantial portions of the Software.
+  *
+  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+  * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+  * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+  *
+  */
+  
+#include <stdio.h>
+#include "driver/i2c.h"
+#include "esp_log.h"
+#include "is31fl3736.h"
+
+static const char *tag = "IS31FL3736";
+
+#define IS31_ERROR_CHECK(con) if(!(con)) {ESP_LOGE(tag,"err"); printf("%s %d",__func__,__LINE__); return ESP_FAIL;}
+#define IS31_PARAM_CHECK(con) if(!(con)) {ESP_LOGE(tag,"Parameter error, "); printf("%s %d",__func__,__LINE__); assert(0);}
+#define IS31_RES_CHECK(con) if(!(con)) {ESP_LOGE(tag,"Parameter error, "); printf("%s %d",__func__,__LINE__); assert(0);}
+
+#define IS31FL3736_WRITE_BIT    0x00
+#define IS31FL3736_READ_BIT     0x01
+#define IS31FL3736_ACK_CHECK_EN 1
+#define IS31FL3736_READ_ACK     0x0         /*!< I2C ack value */
+#define IS31FL3736_READ_NACK    0x1         /*!< I2C nack value */
+#define IS31FL3736_CMD_WRITE_EN 0xC5 /*!< magic num */
+#define IS31FL3736_I2C_ID       0xA0 /*!< I2C Addr,up to ADDR1/ADDR2 pin */
+
+typedef struct {
+    i2c_bus_handle_t bus;
+    uint16_t dev_addr;
+    bool dev_addr_10bit_en;
+    gpio_num_t rst_io;
+    is31fl3736_addr_pin_conn_t addr1;
+    is31fl3736_addr_pin_conn_t addr2;
+    uint8_t cur_val;
+} is31fl3736_dev_t;
+
+/**
+ * @brief set software shutdown mode
+ */
+esp_err_t is31fl3736_write_page(is31fl3736_handle_t sensor, uint8_t page_num)
+{
+    IS31_PARAM_CHECK(page_num < 3);
+    is31fl3736_dev_t* sens = (is31fl3736_dev_t*) sensor;
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd);
+    i2c_master_write_byte(cmd, (sens->dev_addr) | IS31FL3736_WRITE_BIT, IS31FL3736_ACK_CHECK_EN);
+    i2c_master_write_byte(cmd, IS31FL3736_RET_CMD_LOCK, IS31FL3736_ACK_CHECK_EN);
+    i2c_master_write_byte(cmd, IS31FL3736_CMD_WRITE_EN, IS31FL3736_ACK_CHECK_EN);
+    i2c_master_stop(cmd);
+    int ret = i2c_bus_cmd_begin(sens->bus, cmd, 1000 / portTICK_RATE_MS);
+    i2c_cmd_link_delete(cmd);
+    IS31_RES_CHECK(ret == ESP_OK);
+    cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd);
+    i2c_master_write_byte(cmd, (sens->dev_addr) | IS31FL3736_WRITE_BIT, IS31FL3736_ACK_CHECK_EN);
+    i2c_master_write_byte(cmd, IS31FL3736_REG_CMD, IS31FL3736_ACK_CHECK_EN);
+    i2c_master_write_byte(cmd, page_num, IS31FL3736_ACK_CHECK_EN);
+    i2c_master_stop(cmd);
+    ret = i2c_bus_cmd_begin(sens->bus, cmd, 1000 / portTICK_RATE_MS);
+    i2c_cmd_link_delete(cmd);
+    return ret;
+}
+
+/**
+ * @brief set software shutdown mode
+ */
+//xSemaphoreHandle reg_mux = NULL;
+esp_err_t is31fl3736_write_reg(is31fl3736_handle_t sensor, uint8_t reg_addr, uint8_t *data, uint8_t data_num)
+{
+    is31fl3736_dev_t* sens = (is31fl3736_dev_t*) sensor;
+    int i;
+    IS31_PARAM_CHECK(NULL != data);
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd);
+    i2c_master_write_byte(cmd, (sens->dev_addr) | IS31FL3736_WRITE_BIT, IS31FL3736_ACK_CHECK_EN);
+    i2c_master_write_byte(cmd, reg_addr, IS31FL3736_ACK_CHECK_EN);
+    for (i = 0; i < data_num; i++) {
+        i2c_master_write_byte(cmd, *(data + i), IS31FL3736_ACK_CHECK_EN);
+    }
+    i2c_master_stop(cmd);
+    int ret = i2c_bus_cmd_begin(sens->bus, cmd, 1000 / portTICK_RATE_MS);
+    i2c_cmd_link_delete(cmd);
+    return ret;
+}
+
+esp_err_t is31fl3736_read_reg(is31fl3736_handle_t sensor, uint8_t reg_addr, uint8_t *data)
+{
+    is31fl3736_dev_t* sens = (is31fl3736_dev_t*) sensor;
+    esp_err_t ret;
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd);
+    i2c_master_write_byte(cmd, (sens->dev_addr) | IS31FL3736_WRITE_BIT, IS31FL3736_ACK_CHECK_EN);
+    i2c_master_write_byte(cmd, reg_addr, IS31FL3736_ACK_CHECK_EN);
+    i2c_master_stop(cmd);
+    i2c_master_start(cmd);
+    i2c_master_write_byte(cmd, (sens->dev_addr) | IS31FL3736_READ_BIT, IS31FL3736_ACK_CHECK_EN);
+    i2c_master_read_byte(cmd, data, IS31FL3736_READ_NACK);
+    i2c_master_stop(cmd);
+    ret = i2c_bus_cmd_begin(sens->bus, cmd, 1000 / portTICK_RATE_MS);
+    i2c_cmd_link_delete(cmd);
+    return ret;
+}
+
+/**
+ * @brief set software shutdown mode
+ */
+esp_err_t is31fl3736_set_mode(is31fl3736_handle_t sensor, is31fl3736_mode_t mode)
+{
+    uint8_t reg_val;
+    reg_val = IS31FL3736_CMD_WRITE_EN;
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, IS31FL3736_RET_CMD_LOCK, &reg_val, 1));
+    reg_val = IS31FL3736_PAGE(3);
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, IS31FL3736_REG_CMD, &reg_val, 1));
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, IS31FL3736_REG_PG3_CONFIG, (uint8_t*)&mode, 1));
+    return ESP_OK;
+}
+
+esp_err_t is31fl3736_set_global_current(is31fl3736_handle_t sensor, uint8_t curr_value)
+{
+    is31fl3736_dev_t* sens = (is31fl3736_dev_t*) sensor;
+    uint8_t reg_val;
+    reg_val = IS31FL3736_CMD_WRITE_EN;
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, IS31FL3736_RET_CMD_LOCK, &reg_val, 1));
+    reg_val = IS31FL3736_PAGE(3);
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, IS31FL3736_REG_CMD, &reg_val, 1));
+    reg_val = curr_value;
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, IS31FL3736_REG_PG3_CURR, &reg_val, 1));
+    sens->cur_val = curr_value;
+    return ESP_OK;
+}
+
+esp_err_t is31fl3736_set_resistor(is31fl3736_handle_t sensor, is31fl3736_res_type_t type, is31fl3736_res_t res_val)
+{
+    uint8_t reg_val;
+    reg_val = IS31FL3736_CMD_WRITE_EN;
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, IS31FL3736_RET_CMD_LOCK, &reg_val, 1));
+    reg_val = IS31FL3736_PAGE(3);
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, IS31FL3736_REG_CMD, &reg_val, 1));
+    reg_val = res_val;
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, type, &reg_val, 1));
+    return ESP_OK;
+}
+
+/**
+ * @brief reset all register into default
+ */
+esp_err_t is31fl3736_reset_register(is31fl3736_handle_t sensor)
+{
+    uint8_t reg_val;
+    reg_val = IS31FL3736_CMD_WRITE_EN;
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, IS31FL3736_RET_CMD_LOCK, &reg_val, 1));
+    reg_val = IS31FL3736_PAGE(3);
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, IS31FL3736_REG_CMD, &reg_val, 1));
+    reg_val = 0;
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_read_reg(sensor, IS31FL3736_REG_PG3_RESET, &reg_val));
+    return ESP_OK;
+}
+
+/**
+ * @brief change LED channels ON/OFF in LED Control mode
+ * current source (CS-X) 1~8; 
+ * switch scan (SW-Y) 1 ~ 12; all == 8 * 12 == 96
+ */
+esp_err_t is31fl3736_set_led_matrix(is31fl3736_handle_t sensor, uint16_t cs_x_bit, uint16_t sw_y_bit,
+        is31fl3736_led_stau_t status)
+{
+    int i, j, k;
+    uint8_t reg, reg_mask, reg_val, temp;
+    is31fl3736_write_page(sensor, IS31FL3736_PAGE(0));
+    for (i = 0; i < 2; i++) {
+        if ((cs_x_bit >> (i * 4)) & 0xf) {
+            for (j = 0; j < IS31FL3736_SWY_MAX; j++) {
+                if ((sw_y_bit >> j) & 0x1) {
+                    reg = IS31FL3736_REG_PG0_SWITCH(j*2 + i); //find which reg to write
+                    reg_mask = 0;
+                    temp = 0xF & (cs_x_bit >> ((i) * 4));
+                    for (k = 0; k < 4; k++) {
+                        if ((temp >> k) & 0x1) {
+                            reg_mask |= (0x1 << (2 * k));
+                        }
+                    }
+                    if (status == IS31FL3736_LED_ON) {
+                        reg_val = reg_mask;
+                    } else {
+                        reg_val = 0;
+                    }
+                    ESP_LOGD(tag, "reg 0x%02X; val 0x%02x\r\n", reg, reg_val);
+                    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, reg, &reg_val, 1));
+                }
+            }
+        }
+    }
+    return ESP_OK;
+}
+
+esp_err_t is31fl3736_fill_buf(is31fl3736_handle_t sensor, uint8_t duty, uint8_t* buf)
+{
+    /* print the image */
+    for (int i = 0; i < IS31FL3736_SWY_MAX; i++) {
+        is31fl3736_set_pwm_duty_matrix(sensor, buf[i], IS31FL3736_CH_BIT(i), duty);
+    }
+    return ESP_OK;
+}
+
+/**
+ * @brief change channels PWM duty cycle data register
+ */
+esp_err_t is31fl3736_set_pwm_duty_matrix(is31fl3736_handle_t sensor, uint16_t cs_x_bit, uint16_t sw_y_bit, uint8_t duty)
+{
+    int i, j;
+    uint8_t reg, reg_val;
+    is31fl3736_write_page(sensor, IS31FL3736_PAGE(1));
+    for (i = 0; i < IS31FL3736_CSX_MAX - 2; i++) {
+        for (j = 0; j < IS31FL3736_SWY_MAX; j++) {
+            if (((cs_x_bit >> i) & 0x1) && ((sw_y_bit >> j) & 0x1)) {
+                reg = i * 2 + j * 0x10;
+                reg_val = duty;
+                ESP_LOGD(tag, "reg %02X; val 0x%02x\r\n", reg, reg_val);
+                IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, reg, &reg_val, 1));
+            } else if (((sw_y_bit >> j) & 0x1)) {
+                reg = i * 2 + j * 0x10;
+                reg_val = 0;
+                ESP_LOGD(tag, "reg %02X; val 0x%02x\r\n", reg, reg_val);
+                IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, reg, &reg_val, 1));
+            }
+        }
+    }
+    return ESP_OK;
+}
+
+/**
+ * @brief change channels PWM duty cycle data register
+ */
+esp_err_t is31fl3736_set_channel_duty(is31fl3736_handle_t sensor, uint8_t pwm_ch, uint8_t duty)
+{
+    uint8_t reg_val;
+    IS31_PARAM_CHECK(pwm_ch <= IS31FL3736_PWM_CHANNEL_MAX);
+    reg_val = IS31FL3736_CMD_WRITE_EN;
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, IS31FL3736_RET_CMD_LOCK, &reg_val, 1));
+    reg_val = IS31FL3736_PAGE(1);
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, IS31FL3736_REG_CMD, &reg_val, 1));
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, pwm_ch, &duty, 1));
+    return ESP_OK;
+}
+
+/**
+ * @brief change channels PWM duty cycle data register
+ */
+esp_err_t is31fl3736_set_breath_mode(is31fl3736_handle_t sensor, uint8_t pwm_ch, is31fl3736_auto_breath_mode_t mode)
+{
+    uint8_t reg_val;
+    IS31_PARAM_CHECK(pwm_ch <= IS31FL3736_PWM_CHANNEL_MAX);
+    reg_val = IS31FL3736_CMD_WRITE_EN;
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, IS31FL3736_RET_CMD_LOCK, &reg_val, 1));
+    reg_val = IS31FL3736_PAGE(1);
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, IS31FL3736_REG_CMD, &reg_val, 1));
+    reg_val = mode;
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, pwm_ch, &reg_val, 1));
+    return ESP_OK;
+}
+
+/**
+ * @brief Load PWM Register and LED Control Register��s data
+ */
+esp_err_t is31fl3736_update_auto_breath_register(is31fl3736_handle_t sensor)
+{
+    uint8_t reg_val;
+    reg_val = IS31FL3736_CMD_WRITE_EN;
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, IS31FL3736_RET_CMD_LOCK, &reg_val, 1));
+    reg_val = IS31FL3736_PAGE(3);
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, IS31FL3736_REG_CMD, &reg_val, 1));
+    reg_val = 0;
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, IS31FL3736_REG_PG3_UPDATE, &reg_val, 1));
+    return ESP_OK;
+}
+
+/**
+ * @brief change SDB io status to reset IC
+ */
+esp_err_t is31fl3736_hardware_reset(is31fl3736_handle_t sensor)
+{
+    is31fl3736_dev_t* sens = (is31fl3736_dev_t*) sensor;
+    gpio_set_level(sens->rst_io, 0);
+    vTaskDelay(10 / portTICK_RATE_MS);
+    gpio_set_level(sens->rst_io, 1);
+    return ESP_OK;
+}
+
+esp_err_t is31fl3736_init(is31fl3736_handle_t sensor)
+{
+    is31fl3736_mode_t mode;
+    is31fl3736_dev_t* sens = (is31fl3736_dev_t*) sensor;
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_hardware_reset(sensor));
+    mode.val = 0;
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_set_mode(sensor, mode));
+    /* Open all LED */
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_set_led_matrix(sensor, IS31FL3736_CSX_MAX_MASK, IS31FL3736_SWY_MAX_MASK, IS31FL3736_LED_ON));
+    /* Set PWM data to 0 */
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_set_pwm_duty_matrix(sensor, IS31FL3736_CSX_MAX_MASK, IS31FL3736_SWY_MAX_MASK, 0));
+    mode.normal_en = 1;
+    /* Release software shutdown to normal operation */
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_set_mode(sensor, mode));
+    /* Set global current */
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_set_global_current(sensor, sens->cur_val));
+
+    uint8_t reg, reg_val;
+    is31fl3736_write_page(sensor, IS31FL3736_PAGE(1));
+    for (int i = 0; i < IS31FL3736_CSX_MAX; i++) {
+        for (int j = 0; j < IS31FL3736_SWY_MAX; j++) {
+            reg = i * 2 + j * 0x10;
+            reg_val = 0;
+            ESP_LOGD(tag, "reg %02X; val 0x%02x\r\n", reg, reg_val);
+            IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, reg, &reg_val, 1));
+        }
+    }
+    return ESP_OK;
+}
+
+uint8_t is31fl3736_get_i2c_addr(is31fl3736_addr_pin_conn_t addr1_pin, is31fl3736_addr_pin_conn_t addr2_pin)
+{
+    uint8_t addr = IS31FL3736_I2C_ID | ((uint8_t) addr1_pin << 1) | ((uint8_t) addr2_pin << 3);
+    ESP_LOGI(tag, "slave ADDR : %02x", (uint8_t )addr);
+    return addr;
+}
+
+is31fl3736_handle_t sensor_is31fl3736_create(i2c_bus_handle_t bus, gpio_num_t rst_io, int addr1, int addr2,
+        uint8_t cur_val)
+{
+    is31fl3736_dev_t* sensor = (is31fl3736_dev_t*) calloc(1, sizeof(is31fl3736_dev_t));
+    sensor->bus = bus;
+    sensor->dev_addr = is31fl3736_get_i2c_addr(addr1, addr2);
+    sensor->dev_addr_10bit_en = 0;
+    sensor->rst_io = rst_io;
+    sensor->cur_val = cur_val;
+    gpio_config_t gpio_conf = {
+        .intr_type = GPIO_INTR_DISABLE,
+        .mode = GPIO_MODE_OUTPUT,
+        .pin_bit_mask = ((uint64_t) (((uint64_t) 1) << rst_io)),
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .pull_up_en = GPIO_PULLUP_ENABLE,
+    };
+    gpio_config(&gpio_conf);
+    is31fl3736_init(sensor);
+    return (is31fl3736_handle_t) sensor;
+}
+
+esp_err_t sensor_is31fl3736_delete(is31fl3736_handle_t sensor, bool del_bus)
+{
+    is31fl3736_dev_t* sens = (is31fl3736_dev_t*) sensor;
+    if (del_bus) {
+        i2s_bus_delete(sens->bus);
+        sens->bus = NULL;
+    }
+    free(sens);
+    return ESP_OK;
+}
+
