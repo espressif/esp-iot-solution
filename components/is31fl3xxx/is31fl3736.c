@@ -54,26 +54,26 @@ typedef struct {
 /**
  * @brief set software shutdown mode
  */
-esp_err_t is31fl3736_write_page(is31fl3736_handle_t sensor, uint8_t page_num)
+esp_err_t is31fl3736_write_page(is31fl3736_handle_t fxled, uint8_t page_num)
 {
     IS31_PARAM_CHECK(page_num < 3);
-    is31fl3736_dev_t* sens = (is31fl3736_dev_t*) sensor;
+    is31fl3736_dev_t* led = (is31fl3736_dev_t*) fxled;
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
     i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (sens->dev_addr) | IS31FL3736_WRITE_BIT, IS31FL3736_ACK_CHECK_EN);
+    i2c_master_write_byte(cmd, (led->dev_addr) | IS31FL3736_WRITE_BIT, IS31FL3736_ACK_CHECK_EN);
     i2c_master_write_byte(cmd, IS31FL3736_RET_CMD_LOCK, IS31FL3736_ACK_CHECK_EN);
     i2c_master_write_byte(cmd, IS31FL3736_CMD_WRITE_EN, IS31FL3736_ACK_CHECK_EN);
     i2c_master_stop(cmd);
-    int ret = i2c_bus_cmd_begin(sens->bus, cmd, 1000 / portTICK_RATE_MS);
+    int ret = i2c_bus_cmd_begin(led->bus, cmd, 1000 / portTICK_RATE_MS);
     i2c_cmd_link_delete(cmd);
     IS31_RES_CHECK(ret == ESP_OK);
     cmd = i2c_cmd_link_create();
     i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (sens->dev_addr) | IS31FL3736_WRITE_BIT, IS31FL3736_ACK_CHECK_EN);
+    i2c_master_write_byte(cmd, (led->dev_addr) | IS31FL3736_WRITE_BIT, IS31FL3736_ACK_CHECK_EN);
     i2c_master_write_byte(cmd, IS31FL3736_REG_CMD, IS31FL3736_ACK_CHECK_EN);
     i2c_master_write_byte(cmd, page_num, IS31FL3736_ACK_CHECK_EN);
     i2c_master_stop(cmd);
-    ret = i2c_bus_cmd_begin(sens->bus, cmd, 1000 / portTICK_RATE_MS);
+    ret = i2c_bus_cmd_begin(led->bus, cmd, 1000 / portTICK_RATE_MS);
     i2c_cmd_link_delete(cmd);
     return ret;
 }
@@ -82,38 +82,38 @@ esp_err_t is31fl3736_write_page(is31fl3736_handle_t sensor, uint8_t page_num)
  * @brief set software shutdown mode
  */
 //xSemaphoreHandle reg_mux = NULL;
-esp_err_t is31fl3736_write_reg(is31fl3736_handle_t sensor, uint8_t reg_addr, uint8_t *data, uint8_t data_num)
+esp_err_t is31fl3736_write_reg(is31fl3736_handle_t fxled, uint8_t reg_addr, uint8_t *data, uint8_t data_num)
 {
-    is31fl3736_dev_t* sens = (is31fl3736_dev_t*) sensor;
+    is31fl3736_dev_t* led = (is31fl3736_dev_t*) fxled;
     int i;
     IS31_PARAM_CHECK(NULL != data);
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
     i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (sens->dev_addr) | IS31FL3736_WRITE_BIT, IS31FL3736_ACK_CHECK_EN);
+    i2c_master_write_byte(cmd, (led->dev_addr) | IS31FL3736_WRITE_BIT, IS31FL3736_ACK_CHECK_EN);
     i2c_master_write_byte(cmd, reg_addr, IS31FL3736_ACK_CHECK_EN);
     for (i = 0; i < data_num; i++) {
         i2c_master_write_byte(cmd, *(data + i), IS31FL3736_ACK_CHECK_EN);
     }
     i2c_master_stop(cmd);
-    int ret = i2c_bus_cmd_begin(sens->bus, cmd, 1000 / portTICK_RATE_MS);
+    int ret = i2c_bus_cmd_begin(led->bus, cmd, 1000 / portTICK_RATE_MS);
     i2c_cmd_link_delete(cmd);
     return ret;
 }
 
-esp_err_t is31fl3736_read_reg(is31fl3736_handle_t sensor, uint8_t reg_addr, uint8_t *data)
+esp_err_t is31fl3736_read_reg(is31fl3736_handle_t fxled, uint8_t reg_addr, uint8_t *data)
 {
-    is31fl3736_dev_t* sens = (is31fl3736_dev_t*) sensor;
+    is31fl3736_dev_t* led = (is31fl3736_dev_t*) fxled;
     esp_err_t ret;
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
     i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (sens->dev_addr) | IS31FL3736_WRITE_BIT, IS31FL3736_ACK_CHECK_EN);
+    i2c_master_write_byte(cmd, (led->dev_addr) | IS31FL3736_WRITE_BIT, IS31FL3736_ACK_CHECK_EN);
     i2c_master_write_byte(cmd, reg_addr, IS31FL3736_ACK_CHECK_EN);
     i2c_master_stop(cmd);
     i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (sens->dev_addr) | IS31FL3736_READ_BIT, IS31FL3736_ACK_CHECK_EN);
+    i2c_master_write_byte(cmd, (led->dev_addr) | IS31FL3736_READ_BIT, IS31FL3736_ACK_CHECK_EN);
     i2c_master_read_byte(cmd, data, IS31FL3736_READ_NACK);
     i2c_master_stop(cmd);
-    ret = i2c_bus_cmd_begin(sens->bus, cmd, 1000 / portTICK_RATE_MS);
+    ret = i2c_bus_cmd_begin(led->bus, cmd, 1000 / portTICK_RATE_MS);
     i2c_cmd_link_delete(cmd);
     return ret;
 }
@@ -121,55 +121,55 @@ esp_err_t is31fl3736_read_reg(is31fl3736_handle_t sensor, uint8_t reg_addr, uint
 /**
  * @brief set software shutdown mode
  */
-esp_err_t is31fl3736_set_mode(is31fl3736_handle_t sensor, is31fl3736_mode_t mode)
+esp_err_t is31fl3736_set_mode(is31fl3736_handle_t fxled, is31fl3736_mode_t mode)
 {
     uint8_t reg_val;
     reg_val = IS31FL3736_CMD_WRITE_EN;
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, IS31FL3736_RET_CMD_LOCK, &reg_val, 1));
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, IS31FL3736_RET_CMD_LOCK, &reg_val, 1));
     reg_val = IS31FL3736_PAGE(3);
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, IS31FL3736_REG_CMD, &reg_val, 1));
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, IS31FL3736_REG_PG3_CONFIG, (uint8_t*)&mode, 1));
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, IS31FL3736_REG_CMD, &reg_val, 1));
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, IS31FL3736_REG_PG3_CONFIG, (uint8_t*)&mode, 1));
     return ESP_OK;
 }
 
-esp_err_t is31fl3736_set_global_current(is31fl3736_handle_t sensor, uint8_t curr_value)
+esp_err_t is31fl3736_set_global_current(is31fl3736_handle_t fxled, uint8_t curr_value)
 {
-    is31fl3736_dev_t* sens = (is31fl3736_dev_t*) sensor;
+    is31fl3736_dev_t* led = (is31fl3736_dev_t*) fxled;
     uint8_t reg_val;
     reg_val = IS31FL3736_CMD_WRITE_EN;
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, IS31FL3736_RET_CMD_LOCK, &reg_val, 1));
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, IS31FL3736_RET_CMD_LOCK, &reg_val, 1));
     reg_val = IS31FL3736_PAGE(3);
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, IS31FL3736_REG_CMD, &reg_val, 1));
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, IS31FL3736_REG_CMD, &reg_val, 1));
     reg_val = curr_value;
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, IS31FL3736_REG_PG3_CURR, &reg_val, 1));
-    sens->cur_val = curr_value;
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, IS31FL3736_REG_PG3_CURR, &reg_val, 1));
+    led->cur_val = curr_value;
     return ESP_OK;
 }
 
-esp_err_t is31fl3736_set_resistor(is31fl3736_handle_t sensor, is31fl3736_res_type_t type, is31fl3736_res_t res_val)
+esp_err_t is31fl3736_set_resistor(is31fl3736_handle_t fxled, is31fl3736_res_type_t type, is31fl3736_res_t res_val)
 {
     uint8_t reg_val;
     reg_val = IS31FL3736_CMD_WRITE_EN;
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, IS31FL3736_RET_CMD_LOCK, &reg_val, 1));
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, IS31FL3736_RET_CMD_LOCK, &reg_val, 1));
     reg_val = IS31FL3736_PAGE(3);
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, IS31FL3736_REG_CMD, &reg_val, 1));
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, IS31FL3736_REG_CMD, &reg_val, 1));
     reg_val = res_val;
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, type, &reg_val, 1));
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, type, &reg_val, 1));
     return ESP_OK;
 }
 
 /**
  * @brief reset all register into default
  */
-esp_err_t is31fl3736_reset_register(is31fl3736_handle_t sensor)
+esp_err_t is31fl3736_reset_register(is31fl3736_handle_t fxled)
 {
     uint8_t reg_val;
     reg_val = IS31FL3736_CMD_WRITE_EN;
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, IS31FL3736_RET_CMD_LOCK, &reg_val, 1));
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, IS31FL3736_RET_CMD_LOCK, &reg_val, 1));
     reg_val = IS31FL3736_PAGE(3);
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, IS31FL3736_REG_CMD, &reg_val, 1));
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, IS31FL3736_REG_CMD, &reg_val, 1));
     reg_val = 0;
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_read_reg(sensor, IS31FL3736_REG_PG3_RESET, &reg_val));
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_read_reg(fxled, IS31FL3736_REG_PG3_RESET, &reg_val));
     return ESP_OK;
 }
 
@@ -178,12 +178,12 @@ esp_err_t is31fl3736_reset_register(is31fl3736_handle_t sensor)
  * current source (CS-X) 1~8; 
  * switch scan (SW-Y) 1 ~ 12; all == 8 * 12 == 96
  */
-esp_err_t is31fl3736_set_led_matrix(is31fl3736_handle_t sensor, uint16_t cs_x_bit, uint16_t sw_y_bit,
+esp_err_t is31fl3736_set_led_matrix(is31fl3736_handle_t fxled, uint16_t cs_x_bit, uint16_t sw_y_bit,
         is31fl3736_led_stau_t status)
 {
     int i, j, k;
     uint8_t reg, reg_mask, reg_val, temp;
-    is31fl3736_write_page(sensor, IS31FL3736_PAGE(0));
+    is31fl3736_write_page(fxled, IS31FL3736_PAGE(0));
     for (i = 0; i < 2; i++) {
         if ((cs_x_bit >> (i * 4)) & 0xf) {
             for (j = 0; j < IS31FL3736_SWY_MAX; j++) {
@@ -202,7 +202,7 @@ esp_err_t is31fl3736_set_led_matrix(is31fl3736_handle_t sensor, uint16_t cs_x_bi
                         reg_val = 0;
                     }
                     ESP_LOGD(tag, "reg 0x%02X; val 0x%02x\r\n", reg, reg_val);
-                    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, reg, &reg_val, 1));
+                    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, reg, &reg_val, 1));
                 }
             }
         }
@@ -210,11 +210,11 @@ esp_err_t is31fl3736_set_led_matrix(is31fl3736_handle_t sensor, uint16_t cs_x_bi
     return ESP_OK;
 }
 
-esp_err_t is31fl3736_fill_buf(is31fl3736_handle_t sensor, uint8_t duty, uint8_t* buf)
+esp_err_t is31fl3736_fill_buf(is31fl3736_handle_t fxled, uint8_t duty, uint8_t* buf)
 {
     /* print the image */
     for (int i = 0; i < IS31FL3736_SWY_MAX; i++) {
-        is31fl3736_set_pwm_duty_matrix(sensor, buf[i], IS31FL3736_CH_BIT(i), duty);
+        is31fl3736_set_pwm_duty_matrix(fxled, buf[i], IS31FL3736_CH_BIT(i), duty);
     }
     return ESP_OK;
 }
@@ -222,23 +222,23 @@ esp_err_t is31fl3736_fill_buf(is31fl3736_handle_t sensor, uint8_t duty, uint8_t*
 /**
  * @brief change channels PWM duty cycle data register
  */
-esp_err_t is31fl3736_set_pwm_duty_matrix(is31fl3736_handle_t sensor, uint16_t cs_x_bit, uint16_t sw_y_bit, uint8_t duty)
+esp_err_t is31fl3736_set_pwm_duty_matrix(is31fl3736_handle_t fxled, uint16_t cs_x_bit, uint16_t sw_y_bit, uint8_t duty)
 {
     int i, j;
     uint8_t reg, reg_val;
-    is31fl3736_write_page(sensor, IS31FL3736_PAGE(1));
+    is31fl3736_write_page(fxled, IS31FL3736_PAGE(1));
     for (i = 0; i < IS31FL3736_CSX_MAX - 2; i++) {
         for (j = 0; j < IS31FL3736_SWY_MAX; j++) {
             if (((cs_x_bit >> i) & 0x1) && ((sw_y_bit >> j) & 0x1)) {
                 reg = i * 2 + j * 0x10;
                 reg_val = duty;
                 ESP_LOGD(tag, "reg %02X; val 0x%02x\r\n", reg, reg_val);
-                IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, reg, &reg_val, 1));
+                IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, reg, &reg_val, 1));
             } else if (((sw_y_bit >> j) & 0x1)) {
                 reg = i * 2 + j * 0x10;
                 reg_val = 0;
                 ESP_LOGD(tag, "reg %02X; val 0x%02x\r\n", reg, reg_val);
-                IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, reg, &reg_val, 1));
+                IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, reg, &reg_val, 1));
             }
         }
     }
@@ -248,86 +248,86 @@ esp_err_t is31fl3736_set_pwm_duty_matrix(is31fl3736_handle_t sensor, uint16_t cs
 /**
  * @brief change channels PWM duty cycle data register
  */
-esp_err_t is31fl3736_set_channel_duty(is31fl3736_handle_t sensor, uint8_t pwm_ch, uint8_t duty)
+esp_err_t is31fl3736_set_channel_duty(is31fl3736_handle_t fxled, uint8_t pwm_ch, uint8_t duty)
 {
     uint8_t reg_val;
     IS31_PARAM_CHECK(pwm_ch <= IS31FL3736_PWM_CHANNEL_MAX);
     reg_val = IS31FL3736_CMD_WRITE_EN;
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, IS31FL3736_RET_CMD_LOCK, &reg_val, 1));
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, IS31FL3736_RET_CMD_LOCK, &reg_val, 1));
     reg_val = IS31FL3736_PAGE(1);
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, IS31FL3736_REG_CMD, &reg_val, 1));
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, pwm_ch, &duty, 1));
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, IS31FL3736_REG_CMD, &reg_val, 1));
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, pwm_ch, &duty, 1));
     return ESP_OK;
 }
 
 /**
  * @brief change channels PWM duty cycle data register
  */
-esp_err_t is31fl3736_set_breath_mode(is31fl3736_handle_t sensor, uint8_t pwm_ch, is31fl3736_auto_breath_mode_t mode)
+esp_err_t is31fl3736_set_breath_mode(is31fl3736_handle_t fxled, uint8_t pwm_ch, is31fl3736_auto_breath_mode_t mode)
 {
     uint8_t reg_val;
     IS31_PARAM_CHECK(pwm_ch <= IS31FL3736_PWM_CHANNEL_MAX);
     reg_val = IS31FL3736_CMD_WRITE_EN;
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, IS31FL3736_RET_CMD_LOCK, &reg_val, 1));
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, IS31FL3736_RET_CMD_LOCK, &reg_val, 1));
     reg_val = IS31FL3736_PAGE(1);
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, IS31FL3736_REG_CMD, &reg_val, 1));
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, IS31FL3736_REG_CMD, &reg_val, 1));
     reg_val = mode;
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, pwm_ch, &reg_val, 1));
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, pwm_ch, &reg_val, 1));
     return ESP_OK;
 }
 
 /**
  * @brief Load PWM Register and LED Control Register��s data
  */
-esp_err_t is31fl3736_update_auto_breath_register(is31fl3736_handle_t sensor)
+esp_err_t is31fl3736_update_auto_breath_register(is31fl3736_handle_t fxled)
 {
     uint8_t reg_val;
     reg_val = IS31FL3736_CMD_WRITE_EN;
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, IS31FL3736_RET_CMD_LOCK, &reg_val, 1));
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, IS31FL3736_RET_CMD_LOCK, &reg_val, 1));
     reg_val = IS31FL3736_PAGE(3);
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, IS31FL3736_REG_CMD, &reg_val, 1));
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, IS31FL3736_REG_CMD, &reg_val, 1));
     reg_val = 0;
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, IS31FL3736_REG_PG3_UPDATE, &reg_val, 1));
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, IS31FL3736_REG_PG3_UPDATE, &reg_val, 1));
     return ESP_OK;
 }
 
 /**
  * @brief change SDB io status to reset IC
  */
-esp_err_t is31fl3736_hardware_reset(is31fl3736_handle_t sensor)
+esp_err_t is31fl3736_hardware_reset(is31fl3736_handle_t fxled)
 {
-    is31fl3736_dev_t* sens = (is31fl3736_dev_t*) sensor;
-    gpio_set_level(sens->rst_io, 0);
+    is31fl3736_dev_t* led = (is31fl3736_dev_t*) fxled;
+    gpio_set_level(led->rst_io, 0);
     vTaskDelay(10 / portTICK_RATE_MS);
-    gpio_set_level(sens->rst_io, 1);
+    gpio_set_level(led->rst_io, 1);
     return ESP_OK;
 }
 
-esp_err_t is31fl3736_init(is31fl3736_handle_t sensor)
+esp_err_t is31fl3736_init(is31fl3736_handle_t fxled)
 {
     is31fl3736_mode_t mode;
-    is31fl3736_dev_t* sens = (is31fl3736_dev_t*) sensor;
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_hardware_reset(sensor));
+    is31fl3736_dev_t* led = (is31fl3736_dev_t*) fxled;
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_hardware_reset(fxled));
     mode.val = 0;
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_set_mode(sensor, mode));
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_set_mode(fxled, mode));
     /* Open all LED */
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_set_led_matrix(sensor, IS31FL3736_CSX_MAX_MASK, IS31FL3736_SWY_MAX_MASK, IS31FL3736_LED_ON));
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_set_led_matrix(fxled, IS31FL3736_CSX_MAX_MASK, IS31FL3736_SWY_MAX_MASK, IS31FL3736_LED_ON));
     /* Set PWM data to 0 */
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_set_pwm_duty_matrix(sensor, IS31FL3736_CSX_MAX_MASK, IS31FL3736_SWY_MAX_MASK, 0));
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_set_pwm_duty_matrix(fxled, IS31FL3736_CSX_MAX_MASK, IS31FL3736_SWY_MAX_MASK, 0));
     mode.normal_en = 1;
     /* Release software shutdown to normal operation */
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_set_mode(sensor, mode));
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_set_mode(fxled, mode));
     /* Set global current */
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_set_global_current(sensor, sens->cur_val));
+    IS31_ERROR_CHECK(ESP_OK == is31fl3736_set_global_current(fxled, led->cur_val));
 
     uint8_t reg, reg_val;
-    is31fl3736_write_page(sensor, IS31FL3736_PAGE(1));
+    is31fl3736_write_page(fxled, IS31FL3736_PAGE(1));
     for (int i = 0; i < IS31FL3736_CSX_MAX; i++) {
         for (int j = 0; j < IS31FL3736_SWY_MAX; j++) {
             reg = i * 2 + j * 0x10;
             reg_val = 0;
             ESP_LOGD(tag, "reg %02X; val 0x%02x\r\n", reg, reg_val);
-            IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(sensor, reg, &reg_val, 1));
+            IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, reg, &reg_val, 1));
         }
     }
     return ESP_OK;
@@ -343,12 +343,12 @@ uint8_t is31fl3736_get_i2c_addr(is31fl3736_addr_pin_conn_t addr1_pin, is31fl3736
 is31fl3736_handle_t sensor_is31fl3736_create(i2c_bus_handle_t bus, gpio_num_t rst_io, int addr1, int addr2,
         uint8_t cur_val)
 {
-    is31fl3736_dev_t* sensor = (is31fl3736_dev_t*) calloc(1, sizeof(is31fl3736_dev_t));
-    sensor->bus = bus;
-    sensor->dev_addr = is31fl3736_get_i2c_addr(addr1, addr2);
-    sensor->dev_addr_10bit_en = 0;
-    sensor->rst_io = rst_io;
-    sensor->cur_val = cur_val;
+    is31fl3736_dev_t* fxled = (is31fl3736_dev_t*) calloc(1, sizeof(is31fl3736_dev_t));
+    fxled->bus = bus;
+    fxled->dev_addr = is31fl3736_get_i2c_addr(addr1, addr2);
+    fxled->dev_addr_10bit_en = 0;
+    fxled->rst_io = rst_io;
+    fxled->cur_val = cur_val;
     gpio_config_t gpio_conf = {
         .intr_type = GPIO_INTR_DISABLE,
         .mode = GPIO_MODE_OUTPUT,
@@ -357,18 +357,18 @@ is31fl3736_handle_t sensor_is31fl3736_create(i2c_bus_handle_t bus, gpio_num_t rs
         .pull_up_en = GPIO_PULLUP_ENABLE,
     };
     gpio_config(&gpio_conf);
-    is31fl3736_init(sensor);
-    return (is31fl3736_handle_t) sensor;
+    is31fl3736_init(fxled);
+    return (is31fl3736_handle_t) fxled;
 }
 
-esp_err_t sensor_is31fl3736_delete(is31fl3736_handle_t sensor, bool del_bus)
+esp_err_t sensor_is31fl3736_delete(is31fl3736_handle_t fxled, bool del_bus)
 {
-    is31fl3736_dev_t* sens = (is31fl3736_dev_t*) sensor;
+    is31fl3736_dev_t* led = (is31fl3736_dev_t*) fxled;
     if (del_bus) {
-        i2s_bus_delete(sens->bus);
-        sens->bus = NULL;
+        i2s_bus_delete(led->bus);
+        led->bus = NULL;
     }
-    free(sens);
+    free(led);
     return ESP_OK;
 }
 

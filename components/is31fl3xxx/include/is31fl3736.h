@@ -132,160 +132,134 @@ uint8_t is31fl3736_get_i2c_addr(is31fl3736_addr_pin_conn_t addr1_pin, is31fl3736
 
 /**
  * @brief The Configuration mode of IS31FL3736.
- *
- * @param i2c_port  i2s num of used to communicate
+ * @param fxled object handle of is31fl3736
  * @param mode  refer to is31fl3736_mode_t
- *
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL error
  */
-esp_err_t is31fl3736_set_mode(is31fl3736_handle_t sensor, is31fl3736_mode_t mode);
+esp_err_t is31fl3736_set_mode(is31fl3736_handle_t fxled, is31fl3736_mode_t mode);
 
 /**
  * @brief The Global Current Control Register modulates all CSx (x=1~8) DC current.
- *
- * @param i2c_port  i2s num of used to communicate
+ * @param fxled object handle of is31fl3736
  * @param curr_value  range: 0 ~ 255; I_out = 840/R_ext * curr_value/256
- *
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL error
  */
-esp_err_t is31fl3736_set_global_current(is31fl3736_handle_t sensor, uint8_t curr_value);
+esp_err_t is31fl3736_set_global_current(is31fl3736_handle_t fxled, uint8_t curr_value);
 
 /**
  * @brief SWy Pull-Up Resistor and CSx Pull-Down Resistor Selection.
- *
- * @param i2c_port  i2s num of used to communicate
+ * @param fxled object handle of is31fl3736
  * @param type  refer to is31fl3736_res_type_t
  * @param res_val  refer to is31fl3736_res_t
- *
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL error
  */
-esp_err_t is31fl3736_set_resistor(is31fl3736_handle_t sensor, is31fl3736_res_type_t type, is31fl3736_res_t res_val);
+esp_err_t is31fl3736_set_resistor(is31fl3736_handle_t fxled, is31fl3736_res_type_t type, is31fl3736_res_t res_val);
 
 /**
  * @brief contorl the LED matrix.
- *
- * @param i2c_port  i2s num of used to communicate
+ * @param fxled object handle of is31fl3736
  * @param cs_x_bit  BIT0 ~ BIT8 represent current source channel 0 ~ channel 8
  * @param sw_y_bit  BIT0 ~ BIT12 represent switch channel 0 ~ channel 12
  * @param status  ON/OFF
- *
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL error
  */
-esp_err_t is31fl3736_set_led_matrix(is31fl3736_handle_t sensor, uint16_t cs_x_bit, uint16_t sw_y_bit, is31fl3736_led_stau_t status);
+esp_err_t is31fl3736_set_led_matrix(is31fl3736_handle_t fxled, uint16_t cs_x_bit, uint16_t sw_y_bit, is31fl3736_led_stau_t status);
 
 /**
  * @brief contorl the LED matrix.
- *
- * @param i2c_port  i2s num of used to communicate
+ * @param fxled object handle of is31fl3736
  * @param cs_x_bit  BIT0 ~ BIT8 represent current source channel 0 ~ channel 8
  * @param sw_y_bit  BIT0 ~ BIT12 represent switch channel 0 ~ channel 12
  * @param duty  the PWM duty for this LED 
- *
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL error
  */
-esp_err_t is31fl3736_set_pwm_duty_matrix(is31fl3736_handle_t sensor, uint16_t cs_x_bit, uint16_t sw_y_bit, uint8_t duty);
+esp_err_t is31fl3736_set_pwm_duty_matrix(is31fl3736_handle_t fxled, uint16_t cs_x_bit, uint16_t sw_y_bit, uint8_t duty);
 
 /**
  * @brief in PWM mode change duty.
- *
- * @param i2c_port  i2s num of used to communicate
+ * @param fxled object handle of is31fl3736
  * @param pwm_ch  0 ~ IS31FL3736_PWM_CHANNEL_MAX
  * @param duty  duty for each pwm channel
- *
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL error
  */
-esp_err_t is31fl3736_set_channel_duty(is31fl3736_handle_t sensor, uint8_t pwm_ch, uint8_t duty);
+esp_err_t is31fl3736_set_channel_duty(is31fl3736_handle_t fxled, uint8_t pwm_ch, uint8_t duty);
 
 /**
  * @brief in PWM mode change duty.
- *
- * @param i2c_port  i2s num of used to communicate
+ * @param fxled object handle of is31fl3736
  * @param pwm_ch  0 ~ IS31FL3736_PWM_CHANNEL_MAX
  * @param mode  auto breath mode for each pwm channel
- *
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL error
  */
-esp_err_t is31fl3736_set_breath_mode(is31fl3736_handle_t sensor, uint8_t pwm_ch, is31fl3736_auto_breath_mode_t mode);
+esp_err_t is31fl3736_set_breath_mode(is31fl3736_handle_t fxled, uint8_t pwm_ch, is31fl3736_auto_breath_mode_t mode);
 
 /**
  * @brief set the auto breath mode detail.
- *
- * @param i2c_port  i2s num of used to communicate
- *
+ * @param fxled object handle of is31fl3736
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL error
  */
-esp_err_t is31fl3736_update_auto_breath_register(is31fl3736_handle_t sensor);
+esp_err_t is31fl3736_update_auto_breath_register(is31fl3736_handle_t fxled);
 
 /**
  * @brief Reset all register to POR state.
- *
- * @param i2c_port  i2s num of used to communicate
- *
+ * @param fxled object handle of is31fl3736
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL error
  */
-esp_err_t is31fl3736_reset_register(is31fl3736_handle_t sensor);
+esp_err_t is31fl3736_reset_register(is31fl3736_handle_t fxled);
 
 /**
  * @brief Change SDB io status to reset IC.
- *
- * @param i2c_port  i2s num of used to commuicate
+ * @param fxled object handle of is31fl3736
  * @param sdb_io_number io num connected SDB pin
- *
  * @return
  *     - ESP_OK Success
  */
-esp_err_t is31fl3736_hardware_reset(is31fl3736_handle_t sensor);
+esp_err_t is31fl3736_hardware_reset(is31fl3736_handle_t fxled);
 
 /**
  * @brief Ready to write reg page.
- *
- * @param i2c_port  i2s num of used to commuicate
+ * @param fxled object handle of is31fl3736
  * @param page_num reg page (P0 ~ P3)
- *
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL error
  */
-esp_err_t is31fl3736_write_page(is31fl3736_handle_t sensor, uint8_t page_num);
+esp_err_t is31fl3736_write_page(is31fl3736_handle_t fxled, uint8_t page_num);
 
 /**
  * @brief Change SDB io status to reset IC.
- *
- * @param info  init info
- *
+ * @param fxled object handle of is31fl3736
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL error
  */
-esp_err_t is31fl3736_init(is31fl3736_handle_t sensor);
+esp_err_t is31fl3736_init(is31fl3736_handle_t fxled);
 
 /**
  * @brief Create and init is31fl3736 slave device
- *
  * @param bus I2C bus object handle
  * @param rst_io reset IO number
  * @param addr1 strap value of addr1 pin
  * @param addr2 strap value of addr2 pin
  * @param cur_val current value
- *
  * @return
  *     - NULL Fail
  *     - Others Success
@@ -295,18 +269,18 @@ is31fl3736_handle_t sensor_is31fl3736_create(i2c_bus_handle_t bus, gpio_num_t rs
 /**
  * @brief Delete and release a is31fl3736 object
  *
- * @param sensor object handle of is31fl3736
+ * @param fxled object handle of is31fl3736
  * @param del_bus Whether to delete the I2C bus
  *
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t sensor_is31fl3736_delete(is31fl3736_handle_t sensor, bool del_bus);
+esp_err_t sensor_is31fl3736_delete(is31fl3736_handle_t fxled, bool del_bus);
 
 /**
  * @brief Write is31fl3736 device register
- * @param sensor object handle of is31fl3736
+ * @param fxled object handle of is31fl3736
  * @param reg_addr register address
  * @param data data pointer
  * @param data_num data length
@@ -314,17 +288,17 @@ esp_err_t sensor_is31fl3736_delete(is31fl3736_handle_t sensor, bool del_bus);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t is31fl3736_write_reg(is31fl3736_handle_t sensor, uint8_t reg_addr, uint8_t *data, uint8_t data_num);
+esp_err_t is31fl3736_write_reg(is31fl3736_handle_t fxled, uint8_t reg_addr, uint8_t *data, uint8_t data_num);
 
 /**
  * @brief Write is31fl3736 device register
- * @param sensor object handle of is31fl3736
+ * @param fxled object handle of is31fl3736
  * @param duty pwm duty
  * @param buf pointer of data map
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t is31fl3736_fill_buf(is31fl3736_handle_t sensor, uint8_t duty, uint8_t* buf);
+esp_err_t is31fl3736_fill_buf(is31fl3736_handle_t fxled, uint8_t duty, uint8_t* buf);
 
 #endif

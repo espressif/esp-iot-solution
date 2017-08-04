@@ -114,20 +114,19 @@ void snake_auto_run()
 void GameProcess(void *arg)
 {
     int mode = (int) arg;
-    int cnt=0, i, j;
+    int i;
     curPoint food;
     food.y = -1;
     food.x = -1;
 
     while(gpio_get_level(0) == 1) {
-        curPoint tmp;
+
         if (food.y == -1) {
             create_food(&food);
             printf("food: ");
             disp_pos(&food);
             fill_pixel(food.x, food.y, FOOD_DUTY);
         }
-        tmp = Ms.body[Ms.len];
         fill_pixel(Ms.body[Ms.len].x, Ms.body[Ms.len].y, 0x0);
         //move forward by one step
         for (i = Ms.len - 1; i >= 1; i--) {
@@ -216,34 +215,6 @@ void snake_set_dir_right()
     printf("right\n");
     if (Ms.arrowHead != HEAD_LEFT) {
         Ms.arrowHead = HEAD_RIGHT;
-    }
-}
-
-#include "touchpad.h"
-void touch_control_task(void* arg)
-{
-    touch_pad_t pads[] = { TOUCH_PAD_NUM6, TOUCH_PAD_NUM7, TOUCH_PAD_NUM8, TOUCH_PAD_NUM9 };
-    touchpad_slide_handle_t slide = touchpad_slide_create(4, pads);
-    int vol_prev = 0;
-    uint8_t reg, reg_val;
-
-    while (1) {
-        int pos = touchpad_slide_position(slide);
-        if (pos == 255) {
-
-        } else {
-            printf("position: %d\n", pos);
-            if (pos >= 0 && pos < 7) {
-                snake_set_dir_up();
-            } else if (pos >= 7 && pos <= 15) {
-                snake_set_dir_down();
-            } else if (pos > 15 && pos <= 25) {
-                snake_set_dir_right();
-            } else if (pos > 25 && pos <= 30) {
-                snake_set_dir_left();
-            }
-        }
-        vTaskDelay(50 / portTICK_PERIOD_MS);
     }
 }
 
