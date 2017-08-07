@@ -22,22 +22,20 @@
   *
   */
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/queue.h"
 #include "esp_system.h"
 #include "esp_log.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/timers.h"
-#include "driver/rtc_io.h"
+#include "driver/gpio.h"
 #include "relay.h"
 
-#define RELAY_0_D_IO_NUM    2
-#define RELAY_0_CP_IO_NUM   4
-#define RELAY_1_D_IO_NUM    12
-#define RELAY_1_CP_IO_NUM   13
-#define TAG "relay"
+#define RELAY_0_D_IO_NUM    GPIO_NUM_2
+#define RELAY_0_CP_IO_NUM   GPIO_NUM_4
+#define RELAY_1_D_IO_NUM    GPIO_NUM_12
+#define RELAY_1_CP_IO_NUM   GPIO_NUM_13
 
-static relay_handle_t relay_0, relay_1;
-
-void relay_test()
+extern "C" void relay_obj_test()
 {
     relay_io_t relay_io_0 = {
         .flip_io = {
@@ -50,20 +48,34 @@ void relay_test()
             .ctl_io_num = RELAY_1_D_IO_NUM,
         },
     };
-    relay_0 = relay_create(relay_io_0, RELAY_CLOSE_HIGH, RELAY_DFLIP_CONTROL, RELAY_IO_RTC);
-    relay_1 = relay_create(relay_io_1, RELAY_CLOSE_HIGH, RELAY_DFLIP_CONTROL, RELAY_IO_RTC);
-    relay_state_write(relay_0, RELAY_STATUS_CLOSE);
-    relay_state_write(relay_1, RELAY_STATUS_OPEN);
-    ESP_LOGI(TAG, "relay0 state:%d", relay_state_read(relay_0));
-    ESP_LOGI(TAG, "relay1 state:%d", relay_state_read(relay_1));
-    vTaskDelay(1 / portTICK_RATE_MS);
-    relay_state_write(relay_0, RELAY_STATUS_OPEN);
-    relay_state_write(relay_1, RELAY_STATUS_CLOSE);
-    ESP_LOGI(TAG, "relay0 state:%d", relay_state_read(relay_0));
-    ESP_LOGI(TAG, "relay1 state:%d", relay_state_read(relay_1));
-    vTaskDelay(1 / portTICK_RATE_MS);
-    relay_state_write(relay_0, RELAY_STATUS_CLOSE);
-    relay_state_write(relay_1, RELAY_STATUS_OPEN);
-    ESP_LOGI(TAG, "relay0 state:%d", relay_state_read(relay_0));
-    ESP_LOGI(TAG, "relay1 state:%d", relay_state_read(relay_1));
+    relay relay_0(relay_io_0, RELAY_CLOSE_HIGH, RELAY_DFLIP_CONTROL, RELAY_IO_NORMAL);
+    relay relay_1(relay_io_1, RELAY_CLOSE_HIGH, RELAY_GPIO_CONTROL, RELAY_IO_NORMAL);
+
+
+    relay_0.on();
+    printf("relay[0]: on, status: %d\n", relay_0.status());
+    vTaskDelay(2000 / portTICK_RATE_MS);
+
+    relay_1.off();
+    printf("relay[1]: off, status: %d\n", relay_1.status());
+    vTaskDelay(2000 / portTICK_RATE_MS);
+
+    relay_0.off();
+    printf("relay[0]: off, status: %d\n", relay_0.status());
+    vTaskDelay(2000 / portTICK_RATE_MS);
+
+    relay_1.on();
+    printf("relay[1]: on, status: %d\n", relay_1.status());
+    vTaskDelay(2000 / portTICK_RATE_MS);
+
+    relay_0.on();
+    printf("relay[0]: on, status: %d\n", relay_0.status());
+    vTaskDelay(2000 / portTICK_RATE_MS);
+
+    relay_1.off();
+    printf("relay[1]: off, status: %d\n", relay_1.status());
+    vTaskDelay(2000 / portTICK_RATE_MS);
+
+    relay_0.off();
+    printf("relay[0]: off, status: %d\n", relay_0.status());
 }

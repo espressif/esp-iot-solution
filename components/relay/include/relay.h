@@ -1,20 +1,37 @@
-// Copyright 2015-2016 Espressif Systems (Shanghai) PTE LTD
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+  * ESPRESSIF MIT License
+  *
+  * Copyright (c) 2017 <ESPRESSIF SYSTEMS (SHANGHAI) PTE LTD>
+  *
+  * Permission is hereby granted for use on ESPRESSIF SYSTEMS products only, in which case,
+  * it is free of charge, to any person obtaining a copy of this software and associated
+  * documentation files (the "Software"), to deal in the Software without restriction, including
+  * without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
+  * and/or sell copies of the Software, and to permit persons to whom the Software is furnished
+  * to do so, subject to the following conditions:
+  *
+  * The above copyright notice and this permission notice shall be included in all copies or
+  * substantial portions of the Software.
+  *
+  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+  * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+  * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+  *
+  */
 
 #ifndef _IOT_RELAY_H_
 #define _IOT_RELAY_H_
 
+#include "sdkconfig.h"
+
+#if CONFIG_RELAY_ENABLE
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 typedef void* relay_handle_t;
 
 typedef enum {
@@ -41,7 +58,8 @@ typedef struct {
     gpio_num_t d_io_num;            /**< voltage level control pin of d flip-flop */ 
     gpio_num_t cp_io_num;           /**< clock pin of d flip-flop */
 } d_flip_io_t;
-
+
+
 typedef struct {
     gpio_num_t ctl_io_num;
 } relay_single_io_t;
@@ -95,5 +113,31 @@ relay_status_t relay_state_read(relay_handle_t relay_handle);
   *     - others: fail
   */
 esp_err_t relay_delete(relay_handle_t relay_handle);
+
+#ifdef __cplusplus
+}
+#endif
+
+#ifdef __cplusplus
+#include "controllable_obj.h"
+class relay : public controllable_obj
+{
+private:
+    relay_handle_t m_relay_handle;
+    relay(const relay&);
+    relay& operator = (const relay&);
+
+public:
+    relay(relay_io_t relay_io, relay_close_level_t close_level, relay_ctl_mode_t ctl_mode, relay_io_mode_t io_mode);
+
+    virtual esp_err_t on();
+    virtual esp_err_t off();
+    relay_status_t status();
+    virtual ~relay();
+};
+
+#endif
+
+#endif
 
 #endif
