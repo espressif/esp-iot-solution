@@ -25,14 +25,23 @@
 #ifndef _IOT_LED_H_
 #define _IOT_LED_H_
 
+#include "sdkconfig.h"
+
+#if CONFIG_STATUS_LED_ENABLE
+#include "esp_err.h"
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 typedef enum {
     LED_DARK_LOW = 0,       /**< choose this parameter if the led is dark when the level of gpio is low */
     LED_DARK_HIGH = 1,      /**< choose this parameter if the led is dark when the level of gpio is high */
 } led_dark_level_t;
 
 typedef enum {
-    LED_NORMAL_OFF,
-    LED_NORMAL_ON,
+    LED_OFF,
+    LED_ON,
     LED_QUICK_BLINK,
     LED_SLOW_BLINK,
 } led_status_t;
@@ -47,15 +56,21 @@ typedef void* led_handle_t;
 
 /**
   * @brief  led initialize.
-  *
-  * @param  quick_blink_fre 
-  * @param  slow_blink_fre
-  *
   * @return
   *     - ESP_OK: succeed
   *     - others: fail
   */
-esp_err_t led_setup(uint64_t quick_blink_fre, uint64_t slow_blink_fre);
+esp_err_t led_setup();
+
+/**
+ * @brief led blink frequency update
+ * @param quick_blink_freq quick blink frequency
+ * @param slow_blink_freq slow blink frequency
+ * @return
+ *     - ESP_OK: success
+ *     - others: fail
+ */
+esp_err_t led_update_blink_freq(int quick_blink_freq, int slow_blink_freq);
 
 /**
   * @brief  create new led.
@@ -137,5 +152,46 @@ led_mode_t led_mode_read(led_handle_t led_handle);
   * @return duty of night mode
   */
 uint8_t led_night_duty_read();
+
+#ifdef __cplusplus
+}
+#endif
+
+#ifdef __cplusplus
+#include "controllable_obj.h"
+class led: public controllable_obj
+{
+private:
+    led_handle_t m_led_handle;
+    static uint64_t m_quick_blink_freq;
+    static uint64_t m_slow_blink_freq;
+    led(const led&);
+    led& operator=(const led&);
+public:
+    led(uint8_t io_num, led_dark_level_t dark_level);
+
+    esp_err_t state_write(led_status_t state);
+    led_status_t state_read();
+    esp_err_t mode_write(led_mode_t mode);
+    led_mode_t mode_read();
+
+    esp_err_t quick_blink();
+    esp_err_t slow_blink();
+    esp_err_t night_mode();
+    esp_err_t normal_mode();
+
+    static esp_err_t blink_freq_write(uint64_t quick_fre, uint64_t slow_fre);
+    static esp_err_t night_duty_write(uint8_t duty);
+    static uint8_t night_duty_read();
+
+    virtual esp_err_t on();
+    virtual esp_err_t off();
+
+    virtual ~led();
+};
+
+#endif
+
+#endif
 
 #endif

@@ -7,7 +7,7 @@
 	* `dark_level` which decided by peripheral hardware
 
 * An led device can provide:
-	* `LED_NORMAL_OFF`, `LED_NORMAL_ON`, `LED_QUICK_BLINK` and `LED_SLOW_BLINK` four states which can be set by calling led_state_write()
+	* `LED_OFF`, `LED_ON`, `LED_QUICK_BLINK` and `LED_SLOW_BLINK` four states which can be set by calling led_state_write()
 	* `LED_NORMAL_MODE` and `LED_NIGHT_MODE` two modes which can be set by calling led_mode_write()
 	* led_state_read() or led_mode_read() can be called to get the current state or mode of the led
 
