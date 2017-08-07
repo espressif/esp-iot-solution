@@ -27,8 +27,8 @@
 #include "power_meter.h"
 #include "esp_log.h"
 
-#define PM_CF_IO_NUM    25
-#define PM_CFI_IO_NUM   26
+#define PM_CF_IO_NUM    GPIO_NUM_25
+#define PM_CFI_IO_NUM   GPIO_NUM_26
 
 #define PM_CF_PCNT_UNIT     PCNT_UNIT_0
 #define PM_CFI_PCNT_UNIT    PCNT_UNIT_1
@@ -38,29 +38,9 @@
 #define PM_CURRENT_PARAM    13670
 
 static const char* TAG = "powermeter_test";
-pm_handle_t pm_handle;
 
-static void read_value(void* arg)
+extern "C" void power_meter_obj_test()
 {
-    pm_handle_t pm_handle = arg;
-    for (int i = 0; i < 2; i++) {
-        powermeter_change_mode(pm_handle, PM_SINGLE_VOLTAGE);
-        vTaskDelay(5000 / portTICK_RATE_MS);
-        ESP_LOGI(TAG, "value of power:%d", powermeter_read(pm_handle, PM_POWER));
-        ESP_LOGI(TAG, "value of voltage:%d", powermeter_read(pm_handle, PM_VOLTAGE));
-        ESP_LOGI(TAG, "value of current:%d", powermeter_read(pm_handle, PM_CURRENT));
-        powermeter_change_mode(pm_handle, PM_SINGLE_CURRENT);
-        vTaskDelay(5000 / portTICK_RATE_MS);
-        ESP_LOGI(TAG, "value of power:%d", powermeter_read(pm_handle, PM_POWER));
-        ESP_LOGI(TAG, "value of voltage:%d", powermeter_read(pm_handle, PM_VOLTAGE));
-        ESP_LOGI(TAG, "value of current:%d", powermeter_read(pm_handle, PM_CURRENT));
-    }
-    vTaskDelete(NULL);
-}
-
-void power_meter_test()
-{
-    printf("before power meter create, heap: %d\n", esp_get_free_heap_size());
     pm_config_t pm_conf = {
         .power_io_num = PM_CF_IO_NUM,
         .power_pcnt_unit = PCNT_UNIT_0,
@@ -75,9 +55,19 @@ void power_meter_test()
         .sel_level = 0,
         .pm_mode = PM_SINGLE_VOLTAGE
     };
-    pm_handle = powermeter_create(pm_conf);
-    xTaskCreate(read_value, "read_value", 2048, pm_handle, 5, NULL);
-    vTaskDelay(60000 / portTICK_RATE_MS);
-    powermeter_delete(pm_handle);
-    printf("after power meter delete, heap: %d\n", esp_get_free_heap_size());
+    power_meter* my_pm = new power_meter(pm_conf);
+    while (1) {
+        my_pm->change_mode(PM_SINGLE_VOLTAGE);
+        vTaskDelay(5000 / portTICK_RATE_MS);
+        ESP_LOGI(TAG, "value of power:%d", my_pm->read(PM_POWER));
+        ESP_LOGI(TAG, "value of voltage:%d", my_pm->read(PM_VOLTAGE));
+        ESP_LOGI(TAG, "value of current:%d", my_pm->read(PM_CURRENT));
+
+        my_pm->change_mode(PM_SINGLE_CURRENT);
+        vTaskDelay(5000 / portTICK_RATE_MS);
+        ESP_LOGI(TAG, "value of power:%d", my_pm->read(PM_POWER));
+        ESP_LOGI(TAG, "value of voltage:%d", my_pm->read(PM_VOLTAGE));
+        ESP_LOGI(TAG, "value of current:%d", my_pm->read(PM_CURRENT));
+    }
+    delete my_pm;
 }

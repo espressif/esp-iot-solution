@@ -1,16 +1,29 @@
-// Copyright 2015-2016 Espressif Systems (Shanghai) PTE LTD
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+/*
+  * ESPRESSIF MIT License
+  *
+  * Copyright (c) 2017 <ESPRESSIF SYSTEMS (SHANGHAI) PTE LTD>
+  *
+  * Permission is hereby granted for use on ESPRESSIF SYSTEMS products only, in which case,
+  * it is free of charge, to any person obtaining a copy of this software and associated
+  * documentation files (the "Software"), to deal in the Software without restriction, including
+  * without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
+  * and/or sell copies of the Software, and to permit persons to whom the Software is furnished
+  * to do so, subject to the following conditions:
+  *
+  * The above copyright notice and this permission notice shall be included in all copies or
+  * substantial portions of the Software.
+  *
+  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+  * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+  * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+  *
+  */
 
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+#include "sdkconfig.h"
+#if CONFIG_POWER_METER_ENABLE
 
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
@@ -21,15 +34,15 @@
 #include "esp_log.h"
 #include "power_meter.h"
 
-#define PM_PCNT_CHANNEL     PCNT_CHANNEL_0
+#define PM_PCNT_CHANNEL     CONFIG_POWER_METER_PCNT_CHANNEL
 #define PM_PCNT_THRES0     1
 #define PM_MAX  2
 #define PM_PIN_MAX  3
-#define PM_ZERO_PERIOD  (5 * 1000)
-#define PM_VALUE_MULTIPLE   100
+#define PM_ZERO_PERIOD      CONFIG_POWER_METER_ZERO_PERIOD_MS
+#define PM_VALUE_MULTIPLE   CONFIG_POWER_METER_VALUE_MULTIPLE
 #define PM_PCNT_H_LIM   11
 #define PM_PCNT_L_LIM   -1000
-#define PM_PCNT_FILTER  100
+#define PM_PCNT_FILTER      CONFIG_POWER_METER_PCNT_FILTER
 #define PM_VALUE_INF    (1000 * 1000 * 1000)
 
 #define IOT_CHECK(tag, a, ret)  if(!(a)) {       \
@@ -325,3 +338,5 @@ uint32_t powermeter_read(pm_handle_t pm_handle, pm_value_type_t value_type)
     }
     return 0;
 }
+
+#endif
