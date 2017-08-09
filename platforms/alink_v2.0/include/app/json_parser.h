@@ -26,7 +26,9 @@
  */
 #ifndef JSON_PARSER_H
 #define JSON_PARSER_H
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 /**
 The descriptions of the json value node type
 **/
@@ -141,4 +143,7 @@ char* json_get_next_object(int type, char* str, char** key, int* key_len, char**
     for (pos = json_get_object(JARRAY, str); \
          pos!=0 && *pos!=0 && (pos=json_get_next_object(JARRAY, ++pos, 0, 0, &entry, &len, &type))!=0; )
 
+#ifdef __cplusplus
+}
+#endif
 #endif

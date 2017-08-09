@@ -65,6 +65,10 @@
 #ifndef __ESP_JOYLINK_H__
 #define __ESP_JOYLINK_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "joylink.h"
 #include "joylink_log.h"
 #include "joylink_ret_code.h"
@@ -229,4 +233,7 @@ joylink_type_t joylink_get_down_cmd_type(char *down_cmd, char *feedid_out);
 */
 char* joylink_json_get_value_by_id(char* p_cJsonStr, int iStrLen, const char* p_cName, int* p_iValueLen);
 
+#ifdef __cplusplus
+}
+#endif
 #endif
