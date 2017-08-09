@@ -19,7 +19,7 @@
 * 此场景使用ESP32定时地采集传感器的数据并上传数据，此时可使用deep sleep的timer唤醒源。ESP32采集数据上传后进入deep sleep，设置timer唤醒，唤醒后再采集数据上传，如此循环。此场景ESP32需要周期性的唤醒，不能充分利用ESP32的低功耗，但是优势在于此场景可以进行复杂传感器数据采集。
 * 逻辑流程图：
 
-    <img src="https://gitlab.espressif.cn:6688/rd/esp-iot-solution/raw/demo/low_power/main/low_power_flow_chart1.jpg" width = "500" alt="low_power_flow_chart1" align=center />
+    <img src="deep_sleep/low_power_flow_chart1.jpg" width = "500" alt="low_power_flow_chart1" align=center />
 * 程序流程：
     * 芯片boot后读取传感器数据，将数据上传
     * 调用esp_deep_sleep_enable_timer_wakeup(sleep_time_us)设置deep sleep时间
@@ -29,7 +29,7 @@
 * 此场景中不需要周期性的采集传感器数据，当传感器采集到异常数据时会主动向ESP32输出gpio触发电平。此时，ESP32可以进入支持RTC IO唤醒的deep sleep模式，如果传感器没有采集到异常数据，ESP32将持续睡眠，只有在传感器采集到异常数据并将提示GPIO置为指定电平时ESP32才会从deep sleep唤醒，然后发出警报或者上传数据。此场景充分利用了ESP32的低功耗，但是对传感器要求较高，需要具有gpio触发功能。
 * 逻辑流程图：
 
-    <img src="https://gitlab.espressif.cn:6688/rd/esp-iot-solution/raw/demo/low_power/main/low_power_flow_chart2.jpg" width = "500" alt="low_power_flow_chart2" align=center />
+    <img src="deep_sleep/low_power_flow_chart2.jpg" width = "500" alt="low_power_flow_chart2" align=center />
 * 程序流程：
     * 芯片boot后读取传感器数据，发出警报或者上报异常
     * 调用rtc_gpio_pulldown_en(MY_RTC_WAKEUP_IO)或者rtc_gpio_pullup_en(MY_RTC_WAKEUP_IO)设置想要的内部下拉或上拉类型
@@ -40,7 +40,7 @@
 * 此场景中传感器不具有gpio触发功能，需要cpu和片上外设进行轮询式数据采集或者异常检测。ESP32的ULP协处理器可以进行简单的数据采集，并在指定条件下唤醒ESP32进行进一步的处理，此过程中采集的数据可存放在RTC slow memory中，供ESP32唤醒时读取。目前ULP协处理只支持片上温度传感器和ADC数据的采集。此场景的优势在于可以在低功耗情况下频繁地采集数据，降低了对传感器的要求。
 * 逻辑流程图：
 
-    <img src="https://gitlab.espressif.cn:6688/rd/esp-iot-solution/raw/demo/low_power/main/low_power_flow_chart3.jpg" width = "500" alt="low_power_flow_chart3" align=center />
+    <img src="deep_sleep/low_power_flow_chart3.jpg" width = "500" alt="low_power_flow_chart3" align=center />
 * 用户可以自己根据ULP指令集写汇编程序用于deep sleep时，ULP协处理器执行，流程如下:
     * 芯片boot后从RTC_SLOW_MEMORY读取deep sleep时ULP协处理采集的数据，上传数据
     * 调用ulp_process_macros_and_load()将汇编代码拷贝到RTC_SLOW_MEMORY
@@ -67,16 +67,16 @@
 # deep sleep支持不同唤醒源时电流情况
 * 正常工作，ESP32作为station时，平均电流约为115mA：
 
-    <img src="https://gitlab.espressif.cn:6688/rd/esp-iot-solution/raw/demo/low_power/main/esp32_station_current.png" width = "500" alt="esp32_station_current" align=center />
+    <img src="deep_sleep/esp32_station_current.png" width = "500" alt="esp32_station_current" align=center />
 * 支持定时唤醒时，deep sleep期间的平均电流约为6uA：
 
-    <img src="https://gitlab.espressif.cn:6688/rd/esp-iot-solution/raw/demo/low_power/main/esp32_deepsleep_timer_current.png" width = "500" alt="esp32_deepsleep_timer_current" align=center />
+    <img src="deep_sleep/esp32_deepsleep_timer_current.png" width = "500" alt="esp32_deepsleep_timer_current" align=center />
 * 支持rtc io唤醒时，deep sleep期间的平均电流约为6uA（注：这里采用了esp_deep_sleep_enable_ext1_wakeup()，所以deep sleep时工作电流只有5微安左右，若使用esp_deep_sleep_enable_ext0_wakeup()，工作电流会有100微安左右RTC外设的额外消耗，所以建议使用esp_deep_sleep_enable_ext1_wakeup()取代esp_deep_sleep_enable_ext0_wakeup()）：
 
-    <img src="https://gitlab.espressif.cn:6688/rd/esp-iot-solution/raw/demo/low_power/main/esp32_deepsleep_rtcio_current.png" width = "500" alt="esp32_deepsleep_rtcio_current" align=center />
+    <img src="deep_sleep/esp32_deepsleep_rtcio_current.png" width = "500" alt="esp32_deepsleep_rtcio_current" align=center />
 * deep sleep期间，协处理器周期性运行数据采集程序（每秒采集10次，所以图中的尖峰是协处理器工作时的电流）：
 
-    <img src="https://gitlab.espressif.cn:6688/rd/esp-iot-solution/raw/demo/low_power/main/esp32_deepsleep_ulp_current.png" width = "500" alt="esp32_deepsleep_ulp_current" align=center />
+    <img src="deep_sleep/esp32_deepsleep_ulp_current.png" width = "500" alt="esp32_deepsleep_ulp_current" align=center />
 * 支持 touchpad 唤醒时， deep sleep期间的平均电流约为30uA左右：
 
     <img src="deep_sleep/touchpad_deepsleep_current.png" width = "500" alt="touchpad_deepsleep_current" align=center />
