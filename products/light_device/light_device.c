@@ -81,7 +81,7 @@ light_dev_handle_t light_init()
     light_handle_t light = light_create(IOT_LIGHT_PWM_TIMER_IDX, IOT_LIGHT_PWM_SPEED_MODE, IOT_LIGHT_FREQ_HZ, IOT_LIGHT_CHANNEL_NUM, IOT_LIGHT_PWM_BIT_NUM);
     light_dev->light = light;
     for(int i = 0; i< IOT_LIGHT_CHANNEL_NUM; i ++) {
-        light_channel_regist(light, i, LIGHT_PWM_UNIT[i].ledc_gpio, LIGHT_PWM_UNIT[i].ledc_channel, IOT_LIGHT_PWM_SPEED_MODE);
+        light_channel_regist(light, i, LIGHT_PWM_UNIT[i].ledc_gpio, LIGHT_PWM_UNIT[i].ledc_channel);
     }
 
     if (param_load(IOT_LIGHT_NAME_SPACE, IOT_LIGHT_PARAM_KEY, &(light_dev->light_param)) != ESP_OK) {

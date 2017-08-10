@@ -5,6 +5,7 @@
 #include "esp_log.h"
 #include "esp_spi_flash.h"
 #include "param.h"
+#include "unity.h"
 
 #define PARAM_NAMESPACE     "param_save"
 #define PARAM_KEY      "struct"
@@ -42,4 +43,9 @@ void param_test()
     param_load(PARAM_NAMESPACE, PARAM_KEY, &param_read);
     ESP_LOGI(TAG, "param read a:%d, b:%d", param_read.a, param_read.b);
     ESP_LOGI(TAG, "heap size after param: %d", esp_get_free_heap_size());
+}
+
+TEST_CASE("Param test", "[param][iot]")
+{
+    param_test();
 }

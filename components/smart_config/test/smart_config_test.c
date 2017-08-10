@@ -5,8 +5,9 @@
 #include "freertos/queue.h"
 #include "freertos/event_groups.h"
 #include "freertos/semphr.h"
+#include "unity.h"
 
-#define SMART_CONFIG_TEST_EN 0
+#define SMART_CONFIG_TEST_EN 1
 #if SMART_CONFIG_TEST_EN
 void sc_check_status(void* arg)
 {
@@ -38,4 +39,10 @@ void sc_test()
     }
 
 }
+
+TEST_CASE("ESPTOUCH test", "[esptouch][iot]")
+{
+    sc_test();
+}
+
 #endif

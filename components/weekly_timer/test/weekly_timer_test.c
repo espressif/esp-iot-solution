@@ -22,6 +22,7 @@
 #include "socket_device.h"
 #include "weekly_timer.h"
 #include "wifi.h"
+#include "unity.h"
 
 static weekly_timer_handle_t tmr1, tmr2;
 void timer_cb(void *timer_name)
@@ -79,4 +80,9 @@ void weekly_timer_test()
         printf("time: %s \n", ctime(&time_now));
         vTaskDelay(1000/portTICK_PERIOD_MS);
     }
+}
+
+TEST_CASE("Weekly timer test", "[weekly_timer][iot]")
+{
+    weekly_timer_test();
 }

@@ -26,6 +26,7 @@
 #if BH1750_TEST_CODE
 
 #include <stdio.h>
+#include "unity.h"
 #include "driver/i2c.h"
 #include "bh1750.h"
 #include "i2c_bus.h"
@@ -104,6 +105,10 @@ void bh1750_test()
     xTaskCreate(bh1750_test_task, "bh1750_test_task", 1024 * 2, NULL, 10, NULL);
 }
 
+TEST_CASE("Sensor BH1750 test", "[bh1750][iot][sensor]")
+{
+    bh1750_test();
+}
 
 
 #endif

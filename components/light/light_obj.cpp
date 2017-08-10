@@ -27,7 +27,7 @@
 #include "esp_log.h"
 #include "light.h"
 
-light::light(ledc_timer_t timer, uint8_t channel_num, uint32_t freq_hz = 1000, ledc_timer_bit_t timer_bit = LEDC_TIMER_13_BIT, ledc_mode_t speed_mode = LEDC_HIGH_SPEED_MODE): m_full_duty((1 << timer_bit) - 1), m_channel_num(channel_num) 
+light::light(ledc_timer_t timer, uint8_t channel_num, uint32_t freq_hz = 1000, ledc_timer_bit_t timer_bit = LEDC_TIMER_13_BIT, ledc_mode_t speed_mode = LEDC_HIGH_SPEED_MODE): m_full_duty((1 << timer_bit) - 1), m_channel_num(channel_num)
 {
     m_light_handle = light_create(timer, speed_mode, freq_hz, channel_num, timer_bit);
 }
@@ -38,12 +38,17 @@ light::~light()
     m_light_handle = NULL;
 }
 
-esp_err_t light::channel_regist(uint8_t channel_idx, gpio_num_t io_num, ledc_channel_t channel, ledc_mode_t mode = LEDC_HIGH_SPEED_MODE)
+esp_err_t light::channel_regist(uint8_t channel_idx, gpio_num_t io_num, ledc_channel_t channel)
 {
-    return light_channel_regist(m_light_handle, channel_idx, io_num, channel, mode);
+    return light_channel_regist(m_light_handle, channel_idx, io_num, channel);
 }
 
-esp_err_t light::duty_write(uint8_t channel_id, uint32_t duty, light_duty_mode_t duty_mode = LIGHT_SET_DUTY_DIRECTLY)
+esp_err_t light::duty_write(uint8_t channel_id, uint32_t duty)
+{
+    return light_duty_write(m_light_handle, channel_id, duty, LIGHT_SET_DUTY_DIRECTLY);
+}
+
+esp_err_t light::fade_write(uint8_t channel_id, uint32_t duty, light_duty_mode_t duty_mode = LIGHT_SET_DUTY_DIRECTLY)
 {
     return light_duty_write(m_light_handle, channel_id, duty, duty_mode);
 }

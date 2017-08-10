@@ -31,6 +31,7 @@
 #include "esp32/ulp.h"
 #include "driver/adc.h"
 #include "driver/dac.h"
+#include "unity.h"
 
 #define ULP_PROGRAM_ADDR    0
 #define ULP_DATA_ADDR       80
@@ -58,11 +59,18 @@ void ulp_monitor_test()
     ESP_LOGI("ulp_monitor_test", "ulp deep sleep wakeup test");
     memset(RTC_SLOW_MEM, 0, CONFIG_ULP_COPROC_RESERVE_MEM);
     ulp_monitor_init(ULP_PROGRAM_ADDR, ULP_DATA_ADDR);
+    //todo: to use the new-style definition of ADC_WIDTH_12Bit.
     adc1_config_width(ADC_WIDTH_12Bit);
+    //todo: to use the new-style definition of ADC_ATTEN_11db
     adc1_config_channel_atten(ADC1_CHANNEL_6, ADC_ATTEN_11db);
     ulp_add_adc_monitor(ADC1_CHANNEL_6, 10, 4000, ADC_DATA_OFFSET, ADC_DATA_NUM, true);
     //ulp_add_temprature_monitor(0, 300, TEMP_DATA_OFFSET, TEMP_DATA_NUM, true);
     ulp_monitor_start(3600 / 10);
     gettimeofday(&sleep_enter_time, NULL);
     esp_deep_sleep_start();
+}
+
+TEST_CASE("ULP monitor test", "[ulp_monitor][iot][ulp]")
+{
+    ulp_monitor_test();
 }

@@ -29,6 +29,7 @@
 #include "esp_log.h"
 #include "esp_wifi.h"
 #include "wifi.h"
+#include "unity.h"
 
 #define OTA_SERVER_IP      "192.168.1.3"
 #define OTA_SERVER_PORT    8070
@@ -53,3 +54,8 @@ void ota_test()
     ESP_LOGI(TAG, "free heap size after ota: %d", esp_get_free_heap_size());
     esp_restart();
 } 
+
+TEST_CASE("OTA test", "[ota][iot]")
+{
+    ota_test();
+}

@@ -31,6 +31,7 @@
 #include "is31fl3218.h"
 #include "is31fl3736.h"
 #include "i2c_bus.h"
+#include "unity.h"
 
 #define I2C_MASTER_SCL_IO    19        /*!< gpio number for I2C master clock */
 #define I2C_MASTER_SDA_IO    18        /*!< gpio number for I2C master data  */
@@ -39,8 +40,8 @@
 #define I2C_MASTER_RX_BUF_DISABLE   0  /*!< I2C master do not need buffer */
 #define I2C_MASTER_FREQ_HZ    100000   /*!< I2C master clock frequency */
 
-i2c_bus_handle_t i2c_bus = NULL;
-is31fl3218_handle_t fxled = NULL;
+static i2c_bus_handle_t i2c_bus = NULL;
+static is31fl3218_handle_t fxled = NULL;
 
 #define DEBUG_MODE  0
 #if DEBUG_MODE
@@ -189,6 +190,11 @@ void is31f13xxx_test()
 {
     fxled_is31fl3218_init();
     is31f13218_test_task(NULL);
+}
+
+TEST_CASE("I2C led is31f13218 test", "[is31f13218][iot][fxled]")
+{
+    is31f13xxx_test();
 }
 
 #endif

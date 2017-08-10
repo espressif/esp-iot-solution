@@ -26,6 +26,7 @@
 #if IS31FL3XXX_TEST_CODE
 
 #include <stdio.h>
+#include "unity.h"
 #include "driver/i2c.h"
 #include "is31fl3218.h"
 #include "is31fl3736.h"
@@ -38,8 +39,8 @@
 #define I2C_MASTER_RX_BUF_DISABLE   0  /*!< I2C master do not need buffer */
 #define I2C_MASTER_FREQ_HZ    400000   /*!< I2C master clock frequency */
 
-i2c_bus_handle_t i2c_bus = NULL;
-is31fl3736_handle_t led3736 = NULL;
+static i2c_bus_handle_t i2c_bus = NULL;
+static is31fl3736_handle_t led3736 = NULL;
 /**
  * @brief i2c master initialization
  */
@@ -166,5 +167,10 @@ void is31f13736_test()
 {
     led_dev_init();
     xTaskCreate(is31f13736_test_task, "is31f13xxx_test_task", 1024 * 2, NULL, 10, NULL);
+}
+
+TEST_CASE("I2C led is31f13736 test", "[is31f13736][iot][fxled]")
+{
+    is31f13736_test();
 }
 #endif

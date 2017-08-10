@@ -26,6 +26,7 @@
 #include "freertos/task.h"
 #include "power_meter.h"
 #include "esp_log.h"
+#include "unity.h"
 
 #define PM_CF_IO_NUM    25
 #define PM_CFI_IO_NUM   26
@@ -80,4 +81,9 @@ void power_meter_test()
     vTaskDelay(60000 / portTICK_RATE_MS);
     powermeter_delete(pm_handle);
     printf("after power meter delete, heap: %d\n", esp_get_free_heap_size());
+}
+
+TEST_CASE("Power meter test", "[power_meter][iot]")
+{
+    power_meter_test();
 }

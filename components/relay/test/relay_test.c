@@ -28,6 +28,7 @@
 #include "freertos/timers.h"
 #include "driver/rtc_io.h"
 #include "relay.h"
+#include "unity.h"
 
 #define RELAY_0_D_IO_NUM    2
 #define RELAY_0_CP_IO_NUM   4
@@ -66,4 +67,9 @@ void relay_test()
     relay_state_write(relay_1, RELAY_STATUS_OPEN);
     ESP_LOGI(TAG, "relay0 state:%d", relay_state_read(relay_0));
     ESP_LOGI(TAG, "relay1 state:%d", relay_state_read(relay_1));
+}
+
+TEST_CASE("Relay test", "[relay][iot]")
+{
+    relay_test();
 }
