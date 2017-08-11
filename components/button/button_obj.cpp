@@ -27,7 +27,7 @@
 #include "esp_system.h"
 #include "button.h"
 
-button::button(gpio_num_t gpio_num, button_active_t active_level = BUTTON_ACTIVE_LOW, button_trigger_t trigger = BUTTON_SINGLE_TRIGGER, uint32_t serial_thres_sec = 3)
+button::button(gpio_num_t gpio_num, button_active_t active_level, button_trigger_t trigger, uint32_t serial_thres_sec)
 {
     m_btn_handle = button_create(gpio_num, active_level, trigger, serial_thres_sec);
 }

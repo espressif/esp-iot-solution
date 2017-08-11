@@ -30,7 +30,7 @@
 #include "driver/gpio.h"
 #include "relay.h"
 
-relay::relay(relay_io_t relay_io, relay_close_level_t close_level, relay_ctl_mode_t ctl_mode, relay_io_mode_t io_mode = RELAY_IO_NORMAL)
+relay::relay(relay_io_t relay_io, relay_close_level_t close_level, relay_ctl_mode_t ctl_mode, relay_io_mode_t io_mode)
 {
     m_relay_handle = relay_create(relay_io, close_level, ctl_mode, io_mode);
 }

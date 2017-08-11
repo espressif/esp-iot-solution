@@ -128,7 +128,7 @@ private:
     relay& operator = (const relay&);
 
 public:
-    relay(relay_io_t relay_io, relay_close_level_t close_level, relay_ctl_mode_t ctl_mode, relay_io_mode_t io_mode);
+    relay(relay_io_t relay_io, relay_close_level_t close_level, relay_ctl_mode_t ctl_mode, relay_io_mode_t io_mode = RELAY_IO_NORMAL);
 
     virtual esp_err_t on();
     virtual esp_err_t off();

@@ -134,7 +134,7 @@ private:
     button(const button&);
     button& operator = (const button&);
 public:
-    button(gpio_num_t gpio_num, button_active_t active_level, button_trigger_t trigger, uint32_t serial_thres_sec);
+    button(gpio_num_t gpio_num, button_active_t active_level = BUTTON_ACTIVE_LOW, button_trigger_t trigger = BUTTON_SINGLE_TRIGGER, uint32_t serial_thres_sec = 3);
     ~button();
 
     esp_err_t add_cb(button_cb_type_t type, button_cb cb, void* arg, int interval_tick);
