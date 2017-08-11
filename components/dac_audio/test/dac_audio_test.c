@@ -27,7 +27,7 @@
 #include "freertos/task.h"
 #include "driver/i2s.h"
 #include "dac_audio.h"
-
+#include "unity.h"
 #include "ja_alert_e2.h"
 #include "ja_alert.h"
 #include "ja_off_e2.h"
@@ -75,4 +75,8 @@ void audio_test()
     }
 }
 
+TEST_CASE("Dac audio test", "[dac_audio][iot][audio]")
+{
+    audio_test();
+}
 

@@ -24,6 +24,7 @@
 #include "freertos/FreeRTOS.h"
 #include "esp_system.h"
 #include "wifi.h"
+#include "unity.h"
 
 extern "C" void wifi_obj_test()
 {
@@ -31,3 +32,9 @@ extern "C" void wifi_obj_test()
     printf("connect wifi\n");
     my_wifi.connect_start("IOT_DEMO_TEST", "123456789", portMAX_DELAY);
 }
+
+TEST_CASE("Wifi connect test", "[wifi_connect][iot][wifi]")
+{
+    wifi_obj_test();
+}
+

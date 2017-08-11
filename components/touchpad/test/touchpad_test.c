@@ -4,8 +4,9 @@
 #include "driver/touch_pad.h"
 #include "touchpad.h"
 #include "esp_log.h"
+#include "unity.h"
 
-#define TOUCH_PAD_TEST 0
+#define TOUCH_PAD_TEST 1
 #if TOUCH_PAD_TEST
 #define TOUCHPAD_THRESHOLD  1000
 #define TOUCHPAD_FILTER_VALUE   150
@@ -64,5 +65,10 @@ void touchpad_test()
     vTaskDelay((30 * 1000) / portTICK_RATE_MS);
     ESP_LOGI(TAG, "touchpad 1 deleted"); 
     touchpad_delete(touchpad_dev1);
+}
+
+TEST_CASE("Touch sensor test", "[touch][iot][rtc]")
+{
+    touchpad_test();
 }
 #endif

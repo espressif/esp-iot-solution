@@ -26,6 +26,7 @@
 #include "freertos/task.h"
 #include "power_meter.h"
 #include "esp_log.h"
+#include "unity.h"
 
 #define PM_CF_IO_NUM    GPIO_NUM_25
 #define PM_CFI_IO_NUM   GPIO_NUM_26
@@ -70,4 +71,9 @@ extern "C" void power_meter_obj_test()
         ESP_LOGI(TAG, "value of current:%d", my_pm->read(PM_CURRENT));
     }
     delete my_pm;
+}
+
+TEST_CASE("Power meter obj test", "[power_meter][iot]")
+{
+    power_meter_obj_test();
 }

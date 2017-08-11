@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include "driver/i2c.h"
 #include "lis2dh12.h"
+#include "unity.h"
 
 #define I2C_MASTER_SCL_IO    19        /*!< gpio number for I2C master clock */
 #define I2C_MASTER_SDA_IO    18        /*!< gpio number for I2C master data  */
@@ -36,8 +37,8 @@
 #define I2C_MASTER_RX_BUF_DISABLE   0  /*!< I2C master do not need buffer */
 #define I2C_MASTER_FREQ_HZ    100000   /*!< I2C master clock frequency */
 
-i2c_bus_handle_t i2c_bus = NULL;
-lis2dh12_handle_t sens = NULL;
+static i2c_bus_handle_t i2c_bus = NULL;
+static lis2dh12_handle_t sens = NULL;
 
 /**
  * @brief i2c master initialization
@@ -108,5 +109,9 @@ void lis2dh12_test()
     xTaskCreate(lis2dh12_test_task, "lis2dh12_test_task", 1024 * 2, NULL, 10, NULL);
 }
 
+TEST_CASE("Sensor lis2dh12 test", "[lis2dh12][iot][sensor]")
+{
+    lis2dh12_test();
+}
 #endif
 

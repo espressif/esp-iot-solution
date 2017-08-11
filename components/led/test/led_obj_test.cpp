@@ -28,6 +28,7 @@
 #include "esp_system.h"
 #include "esp_log.h"
 #include "led.h"
+#include "unity.h"
 
 extern "C" void led_obj_test()
 {
@@ -65,3 +66,9 @@ extern "C" void led_obj_test()
         con_objs[i]->off();
     }
 }
+
+TEST_CASE("LED status test", "[led][iot]")
+{
+    led_obj_test();
+}
+

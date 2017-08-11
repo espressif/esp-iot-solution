@@ -26,6 +26,7 @@
 #if HTS221_TEST_CODE
 
 #include <stdio.h>
+#include "unity.h"
 #include "driver/i2c.h"
 #include "i2c_bus.h"
 #include "hts221.h"
@@ -38,8 +39,8 @@
 #define I2C_MASTER_RX_BUF_DISABLE   0           /*!< I2C master do not need buffer */
 #define I2C_MASTER_FREQ_HZ          100000      /*!< I2C master clock frequency */
 
-i2c_bus_handle_t i2c_bus = NULL;
-hts221_handle_t hts221 = NULL;
+static i2c_bus_handle_t i2c_bus = NULL;
+static hts221_handle_t hts221 = NULL;
 /**
  * @brief i2c master initialization
  */
@@ -104,5 +105,9 @@ void hts221_test()
     xTaskCreate(hts221_test_task, "hts221_test_task", 1024 * 2, NULL, 10, NULL);
 }
 
+TEST_CASE("Sensor hts221 test", "[hts221][iot][sensor]")
+{
+    hts221_test();
+}
 #endif
 

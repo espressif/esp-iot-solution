@@ -61,13 +61,12 @@ light_handle_t light_create(ledc_timer_t timer, ledc_mode_t speed_mode, uint32_t
   * @param  channel_idx the id of channel (0 ~ channel_num-1)
   * @param  io_num
   * @param  channel the ledc channel you want to use
-  * @param  mode 
   *
   * @return
   *     - ESP_OK: succeed
   *     - others: fail
   */
-esp_err_t light_channel_regist(light_handle_t light_handle, uint8_t channel_idx, gpio_num_t io_num, ledc_channel_t channel, ledc_mode_t mode);
+esp_err_t light_channel_regist(light_handle_t light_handle, uint8_t channel_idx, gpio_num_t io_num, ledc_channel_t channel);
 
 /**
   * @brief  free the momery of light
@@ -148,12 +147,13 @@ private:
 public:
     light(ledc_timer_t timer, uint8_t channel_num, uint32_t freq_hz, ledc_timer_bit_t timer_bit, ledc_mode_t speed_mode);
 
-    esp_err_t channel_regist(uint8_t channel_idx, gpio_num_t io_num, ledc_channel_t channel, ledc_mode_t mode);
-    esp_err_t duty_write(uint8_t channel_id, uint32_t duty, light_duty_mode_t duty_mode);
+    esp_err_t channel_regist(uint8_t channel_idx, gpio_num_t io_num, ledc_channel_t channel);
+    esp_err_t duty_write(uint8_t channel_id, uint32_t duty);
+    esp_err_t fade_write(uint8_t channel_id, uint32_t duty, light_duty_mode_t duty_mode);
     esp_err_t breath_write(uint8_t channel_id, int breath_period);
     esp_err_t blink_start(uint32_t channel_mask, uint32_t period_ms);
     esp_err_t blink_stop();
-    inline uint32_t get_full_duty();
+    uint32_t get_full_duty();
 
     virtual esp_err_t on();
     virtual esp_err_t off();

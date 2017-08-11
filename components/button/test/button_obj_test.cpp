@@ -25,12 +25,13 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_system.h"
+#include "unity.h"
 #include "button.h"
 #include "esp_log.h"
 
 #define BUTTON_IO_NUM  GPIO_NUM_0
 #define BUTTON_ACTIVE_LEVEL   BUTTON_ACTIVE_LOW
-const char* TAG_BTN = "BTN_TEST";
+static const char* TAG_BTN = "BTN_TEST";
 
 static void button_tap_cb(void* arg)
 {
@@ -66,4 +67,9 @@ extern "C" void button_obj_test()
     vTaskDelay(40000 / portTICK_PERIOD_MS);
     delete btn;
     ESP_LOGI(TAG_BTN, "button is deleted");
+}
+
+TEST_CASE("Button cpp test", "[button_cpp][iot]")
+{
+    button_obj_test();
 }

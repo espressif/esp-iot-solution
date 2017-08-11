@@ -27,11 +27,12 @@
 #include "freertos/task.h"
 #include "esp_log.h"
 #include "light.h"
+#include "unity.h"
 
 #define CHANNEL_ID_R    0
 #define CHANNEL_ID_G    1
 #define CHANNEL_ID_B    2
-#define CHANNEL_R_IO    GPIO_NUM_17
+#define CHANNEL_R_IO    GPIO_NUM_15
 #define CHANNEL_G_IO    GPIO_NUM_18
 #define CHANNEL_B_IO    GPIO_NUM_19
 
@@ -39,7 +40,8 @@ extern "C" void light_obj_test()
 {
     const char* TAG = "light_obj_test";
     ESP_LOGI(TAG, "create a light with 3 channels");
-    light my_light(LEDC_TIMER_0, 3);
+    light my_light(LEDC_TIMER_0, 3, 1000, LEDC_TIMER_13_BIT, LEDC_HIGH_SPEED_MODE);
+
     my_light.channel_regist(CHANNEL_ID_R, CHANNEL_R_IO, LEDC_CHANNEL_0);
     my_light.channel_regist(CHANNEL_ID_G, CHANNEL_G_IO, LEDC_CHANNEL_1);
     my_light.channel_regist(CHANNEL_ID_B, CHANNEL_B_IO, LEDC_CHANNEL_2);
@@ -55,7 +57,7 @@ extern "C" void light_obj_test()
     ESP_LOGI(TAG, "set different duty");
     my_light.duty_write(CHANNEL_ID_R, my_light.get_full_duty());
     my_light.duty_write(CHANNEL_ID_G, 0);
-    my_light.duty_write(CHANNEL_ID_B, my_light.get_full_duty() / 2);
+    my_light.duty_write(CHANNEL_ID_B, (my_light.get_full_duty() / 2));
     vTaskDelay(5000 / portTICK_RATE_MS);
 
     ESP_LOGI(TAG, "set CHANNEL_G to breath mode");
@@ -66,4 +68,9 @@ extern "C" void light_obj_test()
     my_light.blink_start((1<<CHANNEL_ID_R)|(1<<CHANNEL_ID_G)|(1<<CHANNEL_ID_B), 100);
 
     vTaskDelay(10000 / portTICK_RATE_MS);   //delay 10 seconds, or the light object would be delete automatically
+}
+
+TEST_CASE("LIGHT obj test", "[light_cpp][iot]")
+{
+    light_obj_test();
 }

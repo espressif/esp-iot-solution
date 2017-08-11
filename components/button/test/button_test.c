@@ -32,10 +32,13 @@
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include "freertos/timers.h"
+
+#include "unity.h"
 #include "button.h"
 #include "esp_system.h"
 #include "esp_log.h"
-const char* TAG_BTN = "BTN_TEST";
+
+static const char* TAG_BTN = "BTN_TEST";
 
 void button_tap_cb(void* arg)
 {
@@ -71,4 +74,10 @@ void button_test()
     button_delete(btn_handle);
     printf("after free btn: heap:%d\n", esp_get_free_heap_size());
 }
+
+TEST_CASE("Button test", "[button][iot]")
+{
+    button_test();
+}
+
 #endif

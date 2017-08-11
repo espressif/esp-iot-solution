@@ -27,6 +27,9 @@
 #include "power_meter.h"
 #include "esp_log.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 power_meter::power_meter(const pm_config_t &pm_config)
 {
     m_pm_handle = powermeter_create(pm_config);
@@ -47,3 +50,6 @@ esp_err_t power_meter::change_mode(pm_mode_t mode)
 {
     return powermeter_change_mode(m_pm_handle, mode);
 }
+#ifdef __cplusplus
+}
+#endif

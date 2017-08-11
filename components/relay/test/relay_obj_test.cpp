@@ -29,6 +29,7 @@
 #include "esp_log.h"
 #include "driver/gpio.h"
 #include "relay.h"
+#include "unity.h"
 
 #define RELAY_0_D_IO_NUM    GPIO_NUM_2
 #define RELAY_0_CP_IO_NUM   GPIO_NUM_4
@@ -78,4 +79,9 @@ extern "C" void relay_obj_test()
 
     relay_0.off();
     printf("relay[0]: off, status: %d\n", relay_0.status());
+}
+
+TEST_CASE("Relay cpp test", "[relay_cpp][iot]")
+{
+    relay_obj_test();
 }
