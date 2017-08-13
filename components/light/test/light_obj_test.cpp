@@ -40,7 +40,7 @@ extern "C" void light_obj_test()
 {
     const char* TAG = "light_obj_test";
     ESP_LOGI(TAG, "create a light with 3 channels");
-    light my_light(LEDC_TIMER_0, 3, 1000, LEDC_TIMER_13_BIT, LEDC_HIGH_SPEED_MODE);
+    light my_light(3);
 
     my_light.channel_regist(CHANNEL_ID_R, CHANNEL_R_IO, LEDC_CHANNEL_0);
     my_light.channel_regist(CHANNEL_ID_G, CHANNEL_G_IO, LEDC_CHANNEL_1);
@@ -70,7 +70,36 @@ extern "C" void light_obj_test()
     vTaskDelay(10000 / portTICK_RATE_MS);   //delay 10 seconds, or the light object would be delete automatically
 }
 
+class A
+{
+public:
+    int a;
+    A( int i ){
+        a = i;
+    }
+};
+
+class B
+{
+public:
+    A a;
+//    B(A t)
+//    {
+//        a = t;
+//    }
+    B(int t):a(t){}
+//private:
+};
+
+
+
+
 TEST_CASE("LIGHT obj test", "[light_cpp][iot]")
 {
+    A a(5);
+    B b(7);
+    printf("test b.a.a: %d\n", b.a.a);
+    printf("t: %d\n", a.a);
+
     light_obj_test();
 }

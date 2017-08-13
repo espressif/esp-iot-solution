@@ -145,8 +145,7 @@ private:
     light& operator=(const light&);
 
 public:
-    light(ledc_timer_t timer, uint8_t channel_num, uint32_t freq_hz, ledc_timer_bit_t timer_bit, ledc_mode_t speed_mode);
-
+    light(uint8_t channel_num, uint32_t freq_hz = 1000, ledc_timer_t timer = LEDC_TIMER_0, ledc_timer_bit_t timer_bit = LEDC_TIMER_13_BIT, ledc_mode_t speed_mode = LEDC_HIGH_SPEED_MODE);
     esp_err_t channel_regist(uint8_t channel_idx, gpio_num_t io_num, ledc_channel_t channel);
     esp_err_t duty_write(uint8_t channel_id, uint32_t duty);
     esp_err_t fade_write(uint8_t channel_id, uint32_t duty, light_duty_mode_t duty_mode);
