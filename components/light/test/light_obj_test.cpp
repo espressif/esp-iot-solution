@@ -40,66 +40,90 @@ extern "C" void light_obj_test()
 {
     const char* TAG = "light_obj_test";
     ESP_LOGI(TAG, "create a light with 3 channels");
-    light my_light(3);
+    CLight my_light(LIGHT_CH_NUM_3);
 
-    my_light.channel_regist(CHANNEL_ID_R, CHANNEL_R_IO, LEDC_CHANNEL_0);
-    my_light.channel_regist(CHANNEL_ID_G, CHANNEL_G_IO, LEDC_CHANNEL_1);
-    my_light.channel_regist(CHANNEL_ID_B, CHANNEL_B_IO, LEDC_CHANNEL_2);
+    my_light.red.init(CHANNEL_R_IO, LEDC_CHANNEL_0);
+    my_light.green.init(CHANNEL_G_IO, LEDC_CHANNEL_1);
+    my_light.blue.init(CHANNEL_B_IO, LEDC_CHANNEL_2);
 
-    ESP_LOGI(TAG, "open the light");
+    ESP_LOGI(TAG, "turn on the light");
     my_light.on();
-    vTaskDelay(5000 / portTICK_RATE_MS);
-
-    ESP_LOGI(TAG, "close the light");
+    vTaskDelay(1000 / portTICK_RATE_MS);
+    ESP_LOGI(TAG, "turn off the light");
     my_light.off();
-    vTaskDelay(5000 / portTICK_RATE_MS);
+    vTaskDelay(1000 / portTICK_RATE_MS);
 
     ESP_LOGI(TAG, "set different duty");
-    my_light.duty_write(CHANNEL_ID_R, my_light.get_full_duty());
-    my_light.duty_write(CHANNEL_ID_G, 0);
-    my_light.duty_write(CHANNEL_ID_B, (my_light.get_full_duty() / 2));
-    vTaskDelay(5000 / portTICK_RATE_MS);
+    my_light.red.duty(my_light.get_full_duty());
+    my_light.green.duty((my_light.get_full_duty() / 3));
+    my_light.blue.duty((my_light.get_full_duty() / 2));
+    vTaskDelay(2000 / portTICK_RATE_MS);
 
-    ESP_LOGI(TAG, "set CHANNEL_G to breath mode");
-    my_light.breath_write(CHANNEL_ID_G, 4000);
+    my_light.red.duty(0);
+    my_light.green.duty(0);
+    my_light.blue.duty(0);
+    vTaskDelay(100 / portTICK_RATE_MS);
 
-    vTaskDelay(10000 / portTICK_RATE_MS);
     ESP_LOGI(TAG, "make light blink");
-    my_light.blink_start((1<<CHANNEL_ID_R)|(1<<CHANNEL_ID_G)|(1<<CHANNEL_ID_B), 100);
+    my_light.blink_start(1 << CHANNEL_ID_R, 100);
+    vTaskDelay(2000 / portTICK_RATE_MS);
+    my_light.blink_start(1 << CHANNEL_ID_G, 100);
+    vTaskDelay(2000 / portTICK_RATE_MS);
+    my_light.blink_start(1 << CHANNEL_ID_B, 100);
+    vTaskDelay(2000 / portTICK_RATE_MS);
+    my_light.blink_start((1 << CHANNEL_ID_R) | (1 << CHANNEL_ID_G), 100);
+    vTaskDelay(2000 / portTICK_RATE_MS);
+    my_light.blink_start((1 << CHANNEL_ID_G) | (1 << CHANNEL_ID_B), 100);
+    vTaskDelay(2000 / portTICK_RATE_MS);
+    my_light.blink_start((1 << CHANNEL_ID_B) | (1 << CHANNEL_ID_R), 100);
+    vTaskDelay(2000 / portTICK_RATE_MS);
+    my_light.blink_stop();
 
-    vTaskDelay(10000 / portTICK_RATE_MS);   //delay 10 seconds, or the light object would be delete automatically
+    my_light.red.duty(my_light.get_full_duty());
+    my_light.green.duty(0);
+    my_light.blue.duty(0);
+    vTaskDelay(1000 / portTICK_RATE_MS);
+    my_light.red.duty(0);
+    my_light.green.duty(my_light.get_full_duty());
+    my_light.blue.duty(0);
+    vTaskDelay(1000 / portTICK_RATE_MS);
+    my_light.red.duty(0);
+    my_light.green.duty(0);
+    my_light.blue.duty(my_light.get_full_duty());
+    vTaskDelay(1000 / portTICK_RATE_MS);
+    my_light.blue.duty(0);
+
+    ESP_LOGI(TAG, "set CHANNEL_R to breath mode");
+    my_light.red.breath(1000);
+    vTaskDelay(3000 / portTICK_RATE_MS);
+    my_light.red.duty(0);
+    ESP_LOGI(TAG, "set CHANNEL_G to breath mode");
+    my_light.green.breath(1000);
+    vTaskDelay(3000 / portTICK_RATE_MS);
+    my_light.green.duty(0);
+    ESP_LOGI(TAG, "set CHANNEL_B to breath mode");
+    my_light.blue.breath(1000);
+    vTaskDelay(3000 / portTICK_RATE_MS);
+    my_light.blue.duty(0);
+
+    ESP_LOGI(TAG, "set CHANNEL_R to breath mode");
+    my_light.red.breath(1000);
+    my_light.green.breath(1000);
+    vTaskDelay(3000 / portTICK_RATE_MS);
+    my_light.red.duty(0);
+    ESP_LOGI(TAG, "set CHANNEL_G to breath mode");
+    my_light.green.breath(1000);
+    my_light.blue.breath(1000);
+    vTaskDelay(3000 / portTICK_RATE_MS);
+    my_light.green.duty(0);
+    ESP_LOGI(TAG, "set CHANNEL_B to breath mode");
+    my_light.blue.breath(1000);
+    my_light.red.breath(1000);
+    vTaskDelay(3000 / portTICK_RATE_MS);
+    my_light.blue.duty(0);
 }
-
-class A
-{
-public:
-    int a;
-    A( int i ){
-        a = i;
-    }
-};
-
-class B
-{
-public:
-    A a;
-//    B(A t)
-//    {
-//        a = t;
-//    }
-    B(int t):a(t){}
-//private:
-};
-
-
-
 
 TEST_CASE("LIGHT obj test", "[light_cpp][iot]")
 {
-    A a(5);
-    B b(7);
-    printf("test b.a.a: %d\n", b.a.a);
-    printf("t: %d\n", a.a);
-
     light_obj_test();
 }

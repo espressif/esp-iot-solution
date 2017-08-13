@@ -41,6 +41,15 @@ typedef enum {
     LIGHT_DUTY_FADE_MAX,            /*!< user shouldn't use this */
 } light_duty_mode_t;
 
+typedef enum {
+    LIGHT_CH_NUM_1 = 1,             /*!< Light channel number */
+    LIGHT_CH_NUM_2 = 2,             /*!< Light channel number */
+    LIGHT_CH_NUM_3 = 3,             /*!< Light channel number */
+    LIGHT_CH_NUM_4 = 4,             /*!< Light channel number */
+    LIGHT_CH_NUM_5 = 5,             /*!< Light channel number */
+    LIGHT_CH_NUM_MAX,               /*!< user shouldn't use this */
+} light_channel_num_t;
+#define LIGHT_MAX_CHANNEL_NUM   (5)
 /**
   * @brief  light initialize
   *
@@ -135,28 +144,49 @@ esp_err_t light_blink_stop(light_handle_t light_handle);
 
 #ifdef __cplusplus
 #include "controllable_obj.h"
-class light : public controllable_obj
+class CLightChannel
+{
+private:
+    gpio_num_t m_io_num = GPIO_NUM_MAX;
+    ledc_channel_t m_ledc_idx = LEDC_CHANNEL_MAX;
+    int m_ch_idx;
+    uint32_t m_ch_full_duty;
+    light_handle_t *mp_channel_handle;
+    esp_err_t check_init();
+public:
+    uint32_t m_duty = 0;
+    CLightChannel(light_handle_t *p_light_handle, int idx, uint32_t full_duty);
+    esp_err_t on();
+    esp_err_t off();
+    esp_err_t init(gpio_num_t io_num, ledc_channel_t ledc_channel);
+    esp_err_t duty(uint32_t duty_val, light_duty_mode_t duty_mode = LIGHT_SET_DUTY_DIRECTLY);
+    uint32_t duty();
+    esp_err_t breath(int breath_period_ms);
+};
+
+class CLight: public controllable_obj
 {
 private:
     light_handle_t m_light_handle;
     uint32_t m_full_duty;
     uint32_t m_channel_num;
-    light(const light&);
-    light& operator=(const light&);
-
+    CLight(const CLight&);
+    CLight& operator=(const CLight&);
+    CLightChannel *m_channels[LIGHT_MAX_CHANNEL_NUM] = { &red, &green, &blue, &cw, &ww };
 public:
-    light(uint8_t channel_num, uint32_t freq_hz = 1000, ledc_timer_t timer = LEDC_TIMER_0, ledc_timer_bit_t timer_bit = LEDC_TIMER_13_BIT, ledc_mode_t speed_mode = LEDC_HIGH_SPEED_MODE);
-    esp_err_t channel_regist(uint8_t channel_idx, gpio_num_t io_num, ledc_channel_t channel);
-    esp_err_t duty_write(uint8_t channel_id, uint32_t duty);
-    esp_err_t fade_write(uint8_t channel_id, uint32_t duty, light_duty_mode_t duty_mode);
-    esp_err_t breath_write(uint8_t channel_id, int breath_period);
+    CLight(light_channel_num_t channel_num, uint32_t freq_hz = 1000, ledc_timer_t timer = LEDC_TIMER_0,
+            ledc_timer_bit_t timer_bit = LEDC_TIMER_13_BIT, ledc_mode_t speed_mode = LEDC_HIGH_SPEED_MODE);
+    CLightChannel red;
+    CLightChannel green;
+    CLightChannel blue;
+    CLightChannel cw;
+    CLightChannel ww;
     esp_err_t blink_start(uint32_t channel_mask, uint32_t period_ms);
     esp_err_t blink_stop();
     uint32_t get_full_duty();
-
     virtual esp_err_t on();
     virtual esp_err_t off();
-    virtual ~light();
+    virtual ~CLight();
 };
 #endif
 

@@ -56,6 +56,7 @@ typedef struct {
     ledc_timer_t ledc_timer;
     uint32_t full_duty;
     uint32_t freq_hz;
+    ledc_timer_bit_t timer_bit;
     light_channel_t* channel_group[0];
 } light_t;
 
@@ -127,6 +128,7 @@ light_handle_t light_create(ledc_timer_t timer, ledc_mode_t speed_mode, uint32_t
     light_ptr->full_duty = (1 << timer_bit) - 1;
     light_ptr->freq_hz = freq_hz;
     light_ptr->mode = speed_mode;
+    light_ptr->timer_bit = timer_bit;
     for (int i = 0; i < channel_num; i++) {
         light_ptr->channel_group[i] = NULL;
     }
@@ -236,14 +238,20 @@ esp_err_t light_blink_start(light_handle_t light_handle, uint32_t channel_mask, 
     light_t* light = (light_t*)light_handle;
     POINT_ASSERT(TAG, light_handle);
     IOT_CHECK(TAG, period_ms > 0 && period_ms <= 1000, ESP_FAIL);
-    ledc_set_freq(light->mode, light->ledc_timer, 1000 / period_ms);
+    ledc_timer_config_t timer_conf = {
+        .timer_num = light->ledc_timer,
+        .speed_mode = light->mode,
+        .freq_hz = 1000 / period_ms,
+        .bit_num = LEDC_TIMER_10_BIT,
+    };
+    ERR_ASSERT(TAG, ledc_timer_config( &timer_conf), NULL);
     for (int i = 0; i < light->channel_num; i++) {
         if (light->channel_group[i] != NULL) {
             if (light->channel_group[i]->timer != NULL) {
                 xTimerStop(light->channel_group[i]->timer, portMAX_DELAY);
             }
             if (channel_mask & 1<<i) {
-                light_duty_write(light_handle, i, light->full_duty / 2, LIGHT_SET_DUTY_DIRECTLY);
+                light_duty_write(light_handle, i, (1 << LEDC_TIMER_10_BIT) / 2, LIGHT_SET_DUTY_DIRECTLY);
             } else {
                 light_duty_write(light_handle, i, 0, LIGHT_SET_DUTY_DIRECTLY);
             }
@@ -256,7 +264,13 @@ esp_err_t light_blink_stop(light_handle_t light_handle)
 {
     light_t* light = (light_t*)light_handle;
     POINT_ASSERT(TAG, light_handle);
-    ledc_set_freq(light->mode, light->ledc_timer, light->freq_hz);
+    ledc_timer_config_t timer_conf = {
+        .timer_num = light->ledc_timer,
+        .speed_mode = light->mode,
+        .freq_hz = light->freq_hz,
+        .bit_num = light->timer_bit,
+    };
+    ERR_ASSERT(TAG, ledc_timer_config( &timer_conf), NULL);
     for (int i = 0; i < light->channel_num; i++) {
         light_duty_write(light_handle, i, 0, LIGHT_SET_DUTY_DIRECTLY);
     }
