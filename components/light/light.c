@@ -32,7 +32,7 @@
 #include "driver/ledc.h"
 #include "light.h"
 
-#define TAG "light"
+static const char* TAG = "light";
 
 #define IOT_CHECK(tag, a, ret)  if(!(a)) {       \
         return (ret);                            \
@@ -244,7 +244,7 @@ esp_err_t light_blink_start(light_handle_t light_handle, uint32_t channel_mask, 
         .freq_hz = 1000 / period_ms,
         .bit_num = LEDC_TIMER_10_BIT,
     };
-    ERR_ASSERT(TAG, ledc_timer_config( &timer_conf), NULL);
+    ERR_ASSERT(TAG, ledc_timer_config( &timer_conf), ESP_FAIL);
     for (int i = 0; i < light->channel_num; i++) {
         if (light->channel_group[i] != NULL) {
             if (light->channel_group[i]->timer != NULL) {
@@ -270,7 +270,7 @@ esp_err_t light_blink_stop(light_handle_t light_handle)
         .freq_hz = light->freq_hz,
         .bit_num = light->timer_bit,
     };
-    ERR_ASSERT(TAG, ledc_timer_config( &timer_conf), NULL);
+    ERR_ASSERT(TAG, ledc_timer_config( &timer_conf), ESP_FAIL);
     for (int i = 0; i < light->channel_num; i++) {
         light_duty_write(light_handle, i, 0, LIGHT_SET_DUTY_DIRECTLY);
     }

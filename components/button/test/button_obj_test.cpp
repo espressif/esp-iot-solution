@@ -51,15 +51,15 @@ static void button_press_5s_cb(void* arg)
 
 extern "C" void button_obj_test()
 {
-    char *push = "PUSH";
-    char *release = "RELEASE";
-    char *tap = "TAP";
-    char *serial = "SERIAL";
+    const char *push = "PUSH";
+    const char *release = "RELEASE";
+    const char *tap = "TAP";
+    const char *serial = "SERIAL";
     button* btn = new button(BUTTON_IO_NUM, BUTTON_ACTIVE_LEVEL, BUTTON_SERIAL_TRIGGER, 3);
-    btn->add_cb(BUTTON_PUSH_CB, button_tap_cb, push, 50 / portTICK_PERIOD_MS);
-    btn->add_cb(BUTTON_RELEASE_CB, button_tap_cb, release, 50 / portTICK_PERIOD_MS);
-    btn->add_cb(BUTTON_TAP_CB, button_tap_cb, tap, 50 / portTICK_PERIOD_MS);
-    btn->add_cb(BUTTON_SERIAL_CB, button_tap_cb, serial, 1000 / portTICK_PERIOD_MS);
+    btn->add_cb(BUTTON_PUSH_CB, button_tap_cb, (void*) push, 50 / portTICK_PERIOD_MS);
+    btn->add_cb(BUTTON_RELEASE_CB, button_tap_cb, (void*) release, 50 / portTICK_PERIOD_MS);
+    btn->add_cb(BUTTON_TAP_CB, button_tap_cb, (void*) tap, 50 / portTICK_PERIOD_MS);
+    btn->add_cb(BUTTON_SERIAL_CB, button_tap_cb, (void*) serial, 1000 / portTICK_PERIOD_MS);
     
     btn->add_custom_cb(2, button_press_2s_cb, NULL);
     btn->add_custom_cb(5, button_press_5s_cb, NULL);
