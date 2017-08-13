@@ -44,6 +44,9 @@
 /*Include desired font here*/
 #include "FreeSans9pt7b.h"
 
+#include "unity.h"
+
+
 spi_device_handle_t spi = NULL;
 Adafruit_lcd tft(spi);  //Global def for LCD
 
@@ -82,7 +85,7 @@ extern "C" esp_err_t event_handler(void *ctx, system_event_t *event)
 }
 
 
-extern "C" void esp_draw(void *param)
+extern "C" void esp_draw()
 {	
 	/*Initilize ESP32 to scan for Access points*/
 	tcpip_adapter_init();
@@ -96,7 +99,7 @@ extern "C" void esp_draw(void *param)
 
 	/*Initialize LCD*/
 	lcd_pin_conf_t lcd_pins = {
-        .lcd_model    = ILI9341,
+        .lcd_model    = ST7789,
         .pin_num_miso = GPIO_NUM_25,
         .pin_num_mosi = GPIO_NUM_23,
         .pin_num_clk  = GPIO_NUM_19,
@@ -113,7 +116,7 @@ extern "C" void esp_draw(void *param)
     int x = 0, y = 0;
     int dim = 6;
     uint16_t rand_color;
-    tft.setRotation(1);
+    tft.setRotation(3);
     for (int i = 0; i < dim; i++) {
         for (int j = 0; j < 10 - 2 * i; j++) {
             rand_color = rand();
@@ -230,32 +233,28 @@ extern "C" void esp_draw(void *param)
 	tft.drawString("AP Name",    10, 50);
 	tft.drawString("RSSI",      180, 50);
 	tft.setFontStyle(NULL);
-	
-	while(1) {		
-		ESP_ERROR_CHECK(esp_wifi_scan_start(&scan_config, true));
-		uint16_t ap_num = 20;
-		wifi_ap_record_t ap_records[20];
-		ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&ap_num, ap_records));
-		printf("Found %d access points:\n", ap_num);
-		
-		/*Print 10 of them on the screen*/
-		for(uint8_t i = 0; i < ap_num; i++) {
-			tft.drawNumber(i+1, 10, 60 + (i*10));
-			tft.setTextColor(COLOR_YELLOW, COLOR_ESP_BKGD);
-			tft.drawString((char *)ap_records[i].ssid, 30, 60 + (i*10));
-			tft.setTextColor(COLOR_GREEN, COLOR_ESP_BKGD);
-			tft.drawNumber(100 + ap_records[i].rssi,  200, 60 + (i*10));
-		}
-		vTaskDelay(2000 / portTICK_PERIOD_MS);
-		tft.fillRect(5, 60, 230, 250, COLOR_ESP_BKGD);
-	}
-	vTaskDelete(NULL);	
+
+    ESP_ERROR_CHECK(esp_wifi_scan_start(&scan_config, true));
+    uint16_t ap_num = 20;
+    wifi_ap_record_t ap_records[20];
+    ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&ap_num, ap_records));
+    printf("Found %d access points:\n", ap_num);
+
+    /*Print 10 of them on the screen*/
+    for (uint8_t i = 0; i < ap_num; i++) {
+        tft.drawNumber(i + 1, 10, 60 + (i * 10));
+        tft.setTextColor(COLOR_YELLOW, COLOR_ESP_BKGD);
+        tft.drawString((char *) ap_records[i].ssid, 30, 60 + (i * 10));
+        tft.setTextColor(COLOR_GREEN, COLOR_ESP_BKGD);
+        tft.drawNumber(100 + ap_records[i].rssi, 200, 60 + (i * 10));
+    }
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
 }
 
-/*
-extern "C" void app_main(void *arg)
+
+TEST_CASE("LCD cpp test", "[lcd][iot]")
 {
-	xTaskCreate(esp_draw, "esp_draw", 4096, NULL, 5, NULL);
+    esp_draw();
 }
-*/
+
 
