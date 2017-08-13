@@ -29,6 +29,9 @@
 #include "is31fl3736_reg.h"
 #include "i2c_bus.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #define DBG_TEST(s) printf("[%s %d] "s"\r\n",__func__, __LINE__);
 
@@ -300,5 +303,9 @@ esp_err_t is31fl3736_write_reg(is31fl3736_handle_t fxled, uint8_t reg_addr, uint
  *     - ESP_FAIL Fail
  */
 esp_err_t is31fl3736_fill_buf(is31fl3736_handle_t fxled, uint8_t duty, uint8_t* buf);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

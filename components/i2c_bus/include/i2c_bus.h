@@ -25,6 +25,11 @@
 #define _IOT_I2C_BUS_H_
 #include "driver/i2c.h"
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef void* i2c_bus_handle_t;
 
 /**
@@ -61,5 +66,8 @@ esp_err_t i2s_bus_delete(i2c_bus_handle_t bus);
  *     - ESP_FAIL Fail
  */
 esp_err_t i2c_bus_cmd_begin(i2c_bus_handle_t bus, i2c_cmd_handle_t cmd, portBASE_TYPE ticks_to_wait);
+#ifdef __cplusplus
+}
+#endif
 #endif
 

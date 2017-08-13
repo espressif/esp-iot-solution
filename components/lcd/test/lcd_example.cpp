@@ -47,8 +47,8 @@
 #include "unity.h"
 
 
-spi_device_handle_t spi = NULL;
-Adafruit_lcd tft(spi);  //Global def for LCD
+static spi_device_handle_t spi = NULL;
+static Adafruit_lcd tft(spi);  //Global def for LCD
 
 wifi_scan_config_t scan_config = {
 	.ssid = 0,

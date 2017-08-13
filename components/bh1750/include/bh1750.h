@@ -25,6 +25,10 @@
 #ifndef _IOT_BH1750_H_
 #define _IOT_BH1750_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "driver/i2c.h"
 #include "i2c_bus.h"
 typedef enum{
@@ -151,7 +155,9 @@ bh1750_handle_t sensor_bh1750_create(i2c_bus_handle_t bus, uint16_t dev_addr, bo
  */
 esp_err_t sensor_bh1750_delete(bh1750_handle_t sensor, bool del_bus);
 
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 

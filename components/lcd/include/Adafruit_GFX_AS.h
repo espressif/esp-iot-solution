@@ -217,6 +217,14 @@ public:
      */
     int drawFloat(float floatNumber, uint8_t decimal, uint16_t poX, uint16_t poY);
 
+    int drawFloatSevSeg(float floatNumber, uint8_t decimal, uint16_t poX, uint16_t poY, uint8_t size);
+
+    int drawUnicodeSevSeg(uint16_t uniCode, uint16_t x, uint16_t y, uint8_t size);
+
+    int drawStringSevSeg(const char *string, uint16_t poX, uint16_t poY, uint8_t size);
+
+    int drawNumberSevSeg(int long_num, uint16_t poX, uint16_t poY, uint8_t size);
+
     /**
      * @brief Gives the current height acc. to rotation
      * @return height
