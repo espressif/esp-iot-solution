@@ -68,7 +68,7 @@
 * 在 esp-iot-solution 中，用户可以直接创建一个 TOUCH pad 实例，用户需要设定 pad i 中断触发阈值百分比λ<sub>i</sub>，真实的阈值为 thres<sub>it</sub> = λ<sub>i</sub> * Eval<sub>it</sub>，其中 Eval<sub>it</sub> 会定时地自校准。同时用户需要设置滤波时间 filter<sub>i</sub> 。
 * 驱动步骤：
 	* 1、pad 中断触发，开启软件定时器，定时时间为filter<sub>i</sub>毫秒
-	* 2、定时中断触发，读取 pad 采样值 val<sub>i</sub> 。若 val<sub>i</sub> < thres<sub>it</sub> ，执行 pad push 回调，重启软件定时
+	* 2、定时中断触发，读取 pad 采样值 val<sub>i</sub> 。若 val<sub>i</sub> < thres<sub>it</sub> ，执行 pad push 回调，重启软件定时。否则，不启动定时器，等待下一个 pad 中断。
 	* 3、定时中断触发，读取 pad 采样值 val<sub>i</sub> 。若 val<sub>i</sub> > thres<sub>it</sub> ，执行 pad tap 与 pad release 回调。否则重启定时器重复步骤3。
 * 用户可以设置连续触发模式，这时在步骤三种若 val<sub>i</sub> < thres<sub>it</sub> ，就会执行pad serial trigger 回调。
 * esp-iot-solution 中的使用步骤：
@@ -77,9 +77,9 @@
 /*
  创建 touchpad 对象
 thres_percent 的设置取决于使用场景下 touchpad 的灵敏度，大致取值可以参考如下：
-	1、如果使用是 pad 直接与手指接触，则将 thres_percent 设置为 70~80 即可得到很好的灵敏度，同时又能保证很高的稳定性
-	2、如果 pad 放置于 pcb 的最底层，手指与 pad 之间会间隔 1mm 左右厚度的 pcb，则将 thres_percent 设置为97左右
-	3、若果还要在 pcb上加一层 1mm 左右的塑料保护层，则将 thres_percent 设置为99，这时稳定性会比较低，容易发生误触发 
+	1、如果使用是 pad 直接与手指接触，则将 thres_percent 设置为 700~800 即可得到很好的灵敏度，同时又能保证很高的稳定性
+	2、如果 pad 放置于 pcb 的最底层，手指与 pad 之间会间隔 1mm 左右厚度的 pcb，则将 thres_percent 设置为970左右
+	3、若果还要在 pcb上加一层 1mm 左右的塑料保护层，则将 thres_percent 设置为990，这时稳定性会比较低，容易发生误触发 
 filter_value 用于判断释放的轮询周期，一般设置为150即可
 touchpad_handle_t 用于后续对此 touchpad 的控制
 */
@@ -111,7 +111,7 @@ touchpad_set_serial_trigger(tp, trigger_thres_sec, interval_ms, cb, arg);
 num 决定使用多少个 pad 组成一个滑块
 tps 是 TOUCH_PAD_NUM 的数组，每一个 TOUCH_PAD_NUM 在数组中的位置要跟 pcb 上的实际位置严格对应
 */
-touchpad_slide_handle_t tp_slide = touchpad_slide_create(num, tps);
+touchpad_slide_handle_t tp_slide = touchpad_slide_create(num, tps, POS_SCALE, TOUCHPAD_THRES_PERCENT, TOUCHPAD_FILTER_MS);
 uint8_t pos = touchpad_slide_position(tp_slide);		// 用于读取手指触碰位置在滑块上的相对位置，手指没触碰时返回 255
 ```
 
@@ -127,7 +127,7 @@ uint8_t pos = touchpad_slide_position(tp_slide);		// 用于读取手指触碰位
 
 ```c
 const touch_pad_t tps[] = {0, 1, 2, 3, 4, 5, 6, 7, 0, 3, 6, 1, 4, 7, 2, 5};	// 假设图中 的16个 pad 按此顺序使用0~7这8个传感器
-touchpad_slide_handle_t tp_slide = touchpad_slide_create(16, tps);
+touchpad_slide_handle_t tp_slide = touchpad_slide_create(16, tps, POS_SCALE, TOUCHPAD_THRES_PERCENT, TOUCHPAD_FILTER_MS);
 ```
 
 # 矩阵 TOUCH pad 方案
@@ -135,12 +135,12 @@ touchpad_slide_handle_t tp_slide = touchpad_slide_create(16, tps);
 * TOUCH pad 矩阵使用如下图所示的结构，每个 pad 被分成 4 块，相对的两块连接同一个传感器，同时矩阵中每一行（每一列）的水平块（垂直块）连接一个传感器
 <img src="./touchpad/matrix_touchpad.png" width = "500" alt="touchpad_volt2" align=center />
 
-* 当一个 pad 上横竖两个对应传感器同时都被触发时，该 pad 才会被认为有触摸。例如图中 sensor1 和 sensor2 同时触发时，左上角的 pad 被判定为有触摸事件
+* 当一个 pad 上横竖两个对应传感器同时都被触发时，该 pad 才会被认为有触摸。例如图中 sensor2 和 sensor3 同时触发时，左上角的 pad 被判定为有触摸事件
 * esp-iot-solution 中创建矩阵 TOUCH pad 的方法如下，矩阵 TOUCH pad 可以像单个 pad 一样添加回调函数，设置连续触发等
 ```c
 // 第1,2个参数指定水平与垂直方向的传感器数量，第3,4个参数是数组，指定了水平（垂直）方向按顺序的传感器编号
-const touch_pad_t x_tps[] = {2, 3};		// 图中水平方向的sensor2和sensor3
-const touch_pad_t y_tps[] = {0, 1};		// 图中垂直方向的sensor0和sensor1
+const touch_pad_t x_tps[] = {3, 4, 5};		// 图中水平方向的sensor3, sensor4, sensor5
+const touch_pad_t y_tps[] = {0, 1, 2};		// 图中垂直方向的sensor0, sensor1, sensor2
 touchpad_matrix_handle_t tp_matrix = touchpad_matrix_create(sizeof(x_tps)/sizeof(x_tps[0]), sizeof(y_tps)/sizeof(y_tps[0]),
                                                                 x_tps, y_tps, TOUCHPAD_THRES_PERCENT, TOUCHPAD_FILTER_MS);
 ```
