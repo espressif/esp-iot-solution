@@ -36,6 +36,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 //Debug purpose
 #include "esp_log.h"
+#include "Font7s.h"
 
 extern "C" {
 #include "crypto/common.h"      //Add missing cpp gaurds
@@ -785,4 +786,164 @@ int Adafruit_GFX_AS::drawFloat(float floatNumber, uint8_t decimal, uint16_t poX,
         decy -= temp;
     }
     return poX;
+}
+
+int Adafruit_GFX_AS::drawFloatSevSeg(float floatNumber, uint8_t decimal, uint16_t poX, uint16_t poY, uint8_t size)
+{
+    unsigned int temp = 0;
+    float decy = 0.0;
+    float rounding = 0.5;
+    float eep = 0.000001;
+    int sumX = 0;
+    uint16_t xPlus = 0;
+
+    if (floatNumber - 0.0 < eep) {
+        xPlus = drawUnicodeSevSeg('-', poX, poY, size);
+        floatNumber = -floatNumber;
+        poX  += xPlus;
+        sumX += xPlus;
+    }
+
+    for (unsigned char i = 0; i < decimal; ++i) {
+        rounding /= 10.0;
+    }
+    floatNumber += rounding;
+    temp = (long)floatNumber;
+    xPlus = drawNumberSevSeg(temp, poX, poY, size);
+    poX  += xPlus;
+    sumX += xPlus;
+
+    if (decimal > 0) {
+        xPlus = drawUnicodeSevSeg('.', poX, poY, size);
+        poX += xPlus;                                       /* Move cursor right   */
+        sumX += xPlus;
+    } else {
+        return sumX;
+    }
+
+    decy = floatNumber - temp;
+    for (unsigned char i = 0; i < decimal; i++) {
+        decy *= 10;                                         /* For the next decimal*/
+        temp = decy;                                        /* Get the decimal     */
+        xPlus = drawNumberSevSeg(temp, poX, poY, size);
+        poX += xPlus;                                       /* Move cursor right   */
+        sumX += xPlus;
+        decy -= temp;
+    }
+    return sumX;
+}
+
+int Adafruit_GFX_AS::drawUnicodeSevSeg(uint16_t uniCode, uint16_t x, uint16_t y, uint8_t size)
+{
+    if (size) {
+        uniCode -= 32;
+    }
+    uint16_t width = 0;
+    uint16_t height = 0;
+    const uint8_t *flash_address = 0;
+    int8_t gap = 0;
+
+#ifdef LOAD_FONT2
+    if (size == 2) {
+        flash_address = chrtbl_f16[uniCode];
+        width = *(widtbl_f16 + uniCode);
+        height = chr_hgt_f16;
+        gap = 1;
+    }
+#endif
+
+#ifdef LOAD_FONT4
+    if (size == 4) {
+        flash_address = chrtbl_f32[uniCode];
+        width = *(widtbl_f32 + uniCode);
+        height = chr_hgt_f32;
+        gap = -3;
+    }
+#endif
+
+#ifdef LOAD_FONT6
+    if (size == 6) {
+        flash_address = chrtbl_f64[uniCode];
+        width = *(widtbl_f64 + uniCode);
+        height = chr_hgt_f64;
+        gap = -3;
+    }
+#endif
+
+#if 1 //LOAD_FONT7
+    if (size == 7) {
+        flash_address = chrtbl_f7s[uniCode];
+        width = *(widtbl_f7s + uniCode);
+        height = chr_hgt_f7s;
+        gap = 2;
+    }
+#endif
+
+    uint16_t w = (width + 7) / 8;
+    uint16_t pX      = 0;
+    uint16_t pY      = y;
+    uint8_t line = 0;
+
+    for (int i = 0; i < height; i++) {
+
+        if (textcolor != textbgcolor) {
+            drawFastHLine(x, pY, width + gap, textbgcolor);
+        }
+
+        for (int k = 0; k < w; k++)      {
+            line = *(flash_address + w*i+k);
+            if (line) {
+                pX = x + k * 8;
+                if (line & 0x80) {
+                    drawPixel(pX, pY, textcolor);
+                }
+                if (line & 0x40) {
+                    drawPixel(pX + 1, pY, textcolor);
+                }
+                if (line & 0x20) {
+                    drawPixel(pX + 2, pY, textcolor);
+                }
+                if (line & 0x10) {
+                    drawPixel(pX + 3, pY, textcolor);
+                }
+                if (line & 0x8) {
+                    drawPixel(pX + 4, pY, textcolor);
+                }
+                if (line & 0x4) {
+                    drawPixel(pX + 5, pY, textcolor);
+                }
+                if (line & 0x2) {
+                    drawPixel(pX + 6, pY, textcolor);
+                }
+                if (line & 0x1) {
+                    drawPixel(pX + 7, pY, textcolor);
+                }
+            }
+        }
+        pY++;
+    }
+    return width + gap;      // x +
+}
+
+int Adafruit_GFX_AS::drawStringSevSeg(const char *string, uint16_t poX, uint16_t poY, uint8_t size)
+{
+    uint16_t sumX = 0;
+    while (*string) {
+        uint16_t xPlus = drawUnicodeSevSeg(*string, poX, poY, size);
+        sumX += xPlus;
+        string++;
+        poX += xPlus;                                     /* Move cursor right*/
+    }
+    return sumX;
+}
+
+int Adafruit_GFX_AS::drawNumberSevSeg(int long_num, uint16_t poX, uint16_t poY, uint8_t size)
+{
+    char tmp[10];
+    if (long_num < 0) {
+        snprintf(tmp, sizeof(tmp), "%d", long_num);
+    } else {
+        snprintf(tmp, sizeof(tmp), "%u", long_num);
+    }
+    return drawStringSevSeg(tmp, poX, poY, size);
 }

@@ -24,6 +24,9 @@
 
 #ifndef _IOT_HTS221_H_
 #define _IOT_HTS221_H_
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include "driver/i2c.h"
 #include "i2c_bus.h"
@@ -638,5 +641,9 @@ hts221_handle_t sensor_hts221_create(i2c_bus_handle_t bus, uint16_t dev_addr, bo
  *     - ESP_FAIL Fail
  */
 esp_err_t sensor_hts221_delete(hts221_handle_t sensor, bool del_bus);
+
+#ifdef __cplusplus
+}
+#endif
 #endif
 

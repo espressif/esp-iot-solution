@@ -27,6 +27,9 @@
 
 #include "driver/i2c.h"
 #include "i2c_bus.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #define WRITE_BIT      I2C_MASTER_WRITE  /*!< I2C master write */
 #define READ_BIT       I2C_MASTER_READ   /*!< I2C master read */
@@ -814,4 +817,8 @@ lis2dh12_handle_t sensor_lis2dh12_create(i2c_bus_handle_t bus, uint16_t dev_addr
  *     - ESP_FAIL Fail
  */
 esp_err_t sensor_lis2dh12_delete(lis2dh12_handle_t sensor, bool del_bus);
+
+#ifdef __cplusplus
+}
+#endif
 #endif

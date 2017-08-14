@@ -30,6 +30,10 @@
 
 #define DBG_TEST(s) printf("[%s %d] "s"\r\n",__func__, __LINE__);
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define IS31FL3218_CH_NUM_MAX 18
 #define IS31FL3218_CH_NUM_MAX_MASK   (0x3ffff)
 #define IS31FL3218_I2C_ID 0xA8                  /*!< I2C Addr*/
@@ -169,5 +173,9 @@ is31fl3218_handle_t led_is31fl3218_create(i2c_bus_handle_t bus);
  *     - ESP_FAIL Fail
  */
 esp_err_t led_is31fl3218_delete(is31fl3218_handle_t fxled, bool del_bus);
+
+#ifdef __cplusplus
+}
+#endif
 #endif
 
