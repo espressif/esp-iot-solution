@@ -79,13 +79,47 @@ wifi_sta_status_t wifi_get_status();
 #endif
 
 #ifdef __cplusplus
-class wifi
+
+/**
+ * class of wifi
+ * simple usage:
+ * CWiFi my_wifi(WIFI_MODE_STA);
+ * my_wifi.connect_start("IOT_DEMO_TEST", "123456789", portMAX_DELAY);
+ */
+class CWiFi
 {
 public:
-    wifi(wifi_mode_t mode);
+    /**
+     * @brief  constructor of CLED
+     *
+     * @param  mode refer to enum wifi_mode_t
+     */
+    CWiFi(wifi_mode_t mode);
 
+    /**
+     * @brief  wifi connect with timeout
+     *
+     * @param  ssid ssid of the target AP
+     * @param  pwd password of the target AP
+     * @param  ticks_to_wait system tick number to wait
+     *
+     * @return
+     *     - ESP_OK: connect to AP successfully
+     *     - ESP_TIMEOUT: timeout
+     *     - ESP_FAIL: fail
+     */
     esp_err_t connect_start(const char *ssid, const char *pwd, uint32_t ticks_to_wait);
+    
+    /**
+     *  @brief WiFi stop connecting
+     */
     void connect_stop();
+
+    /**
+     * @brief  get wifi status.
+     *
+     * @return status of the wifi station
+     */
     wifi_sta_status_t get_status();
 };
 #endif

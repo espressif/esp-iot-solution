@@ -32,9 +32,9 @@
 
 extern "C" void led_obj_test()
 {
-    led my_led_1(16, LED_DARK_LOW);
-    led* my_led_2 = new led(17, LED_DARK_LOW);
-    controllable_obj* con_objs[] = {&my_led_1, my_led_2};
+    CLED my_led_1(16, LED_DARK_LOW);
+    CLED* my_led_2 = new CLED(17, LED_DARK_LOW);
+    CControllable* con_objs[] = {&my_led_1, my_led_2};
 
     printf("open led_1, close led_2\n");
     my_led_1.on();
@@ -47,7 +47,7 @@ extern "C" void led_obj_test()
 
     vTaskDelay(5000 / portTICK_RATE_MS);
     printf("change quick blink freqency and slow blink freqency to 10 and 2\n");
-    led::blink_freq_write(10, 2);
+    CLED::blink_freq_write(10, 2);
 
     vTaskDelay(10000 / portTICK_RATE_MS);
     printf("open all\n");
@@ -57,7 +57,7 @@ extern "C" void led_obj_test()
 
     vTaskDelay(5000 / portTICK_RATE_MS);
     printf("set led1 to night mode\n");
-    led::night_duty_write(50);
+    CLED::night_duty_write(50);
     my_led_1.mode_write(LED_NIGHT_MODE);
 
     vTaskDelay(5000 / portTICK_RATE_MS);

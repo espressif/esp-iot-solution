@@ -30,23 +30,23 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-power_meter::power_meter(const pm_config_t &pm_config)
+CPowerMeter::CPowerMeter(const pm_config_t &pm_config)
 {
     m_pm_handle = powermeter_create(pm_config);
 }
 
-power_meter::~power_meter()
+CPowerMeter::~CPowerMeter()
 {
     powermeter_delete(m_pm_handle);
     m_pm_handle = NULL;
 }
 
-uint32_t power_meter::read(pm_value_type_t value_type)
+uint32_t CPowerMeter::read(pm_value_type_t value_type)
 {
     return powermeter_read(m_pm_handle, value_type);
 }
 
-esp_err_t power_meter::change_mode(pm_mode_t mode)
+esp_err_t CPowerMeter::change_mode(pm_mode_t mode)
 {
     return powermeter_change_mode(m_pm_handle, mode);
 }

@@ -127,18 +127,86 @@ esp_err_t button_rm_cb(button_handle_t btn_handle, button_cb_type_t type);
 #endif
 
 #ifdef __cplusplus
-class button
+
+/**
+ * class of button
+ * simple usage:
+ * CButton* btn = new CButton(BUTTON_IO_NUM, BUTTON_ACTIVE_LEVEL, BUTTON_SERIAL_TRIGGER, 3);
+ * btn->add_cb(BUTTON_PUSH_CB, button_tap_cb, (void*) push, 50 / portTICK_PERIOD_MS);
+ * btn->add_custom_cb(5, button_press_5s_cb, NULL);
+ * ......
+ * delete btn;
+ */
+class CButton
 {
 private:
     button_handle_t m_btn_handle;
-    button(const button&);
-    button& operator = (const button&);
-public:
-    button(gpio_num_t gpio_num, button_active_t active_level = BUTTON_ACTIVE_LOW, button_trigger_t trigger = BUTTON_SINGLE_TRIGGER, uint32_t serial_thres_sec = 3);
-    ~button();
 
+    /**
+     * prevent copy constructing
+     */
+    CButton(const CButton&);
+    CButton& operator = (const CButton&);
+public:
+
+    /**
+     * @brief constructor of CButton
+     * 
+     * @param gpio_num GPIO index of the pin that the button uses
+     * @param active_level button hardware active level.
+     *        For "BUTTON_ACTIVE_LOW" it means when the button pressed, the GPIO will read low level.
+     * @param trigger button event trigger mode
+     * @param serial_thres_sec the number of seconds more than whick a TOUCHPAD_SERIAL_CB would accour
+     */
+    CButton(gpio_num_t gpio_num, button_active_t active_level = BUTTON_ACTIVE_LOW, button_trigger_t trigger = BUTTON_SINGLE_TRIGGER, uint32_t serial_thres_sec = 3);
+    
+    ~CButton();
+
+    /**
+     * @brief Register a callback function for a button_cb_type_t action.
+     *
+     * @param type callback function type
+     * @param cb callback function for "TAP" action.
+     * @param arg Parameter for callback function
+     * @param interval_tick a filter to bypass glitch, unit: FreeRTOS ticks.
+     * @note
+     *        Button callback functions execute in the context of the timer service task.
+     *        It is therefore essential that button callback functions never attempt to block.
+     *        For example, a button callback function must not call vTaskDelay(), vTaskDelayUntil(),
+     *        or specify a non zero block time when accessing a queue or a semaphore.
+     * @return
+     *     - ESP_OK Success
+     *     - ESP_FAIL Parameter error
+     */
     esp_err_t add_cb(button_cb_type_t type, button_cb cb, void* arg, int interval_tick);
+
+
+    /**
+     * @brief
+     *
+     * @param press_sec the callback function would be called if you press the button for a specified period of time
+     * @param cb callback function for "PRESS" action.
+     * @param arg Parameter for callback function
+     *
+     * @note
+     *        Button callback functions execute in the context of the timer service task.
+     *        It is therefore essential that button callback functions never attempt to block.
+     *        For example, a button callback function must not call vTaskDelay(), vTaskDelayUntil(),
+     *        or specify a non zero block time when accessing a queue or a semaphore.
+     * @return
+     *     - ESP_OK Success
+     *     - ESP_FAIL Parameter error
+     */
     esp_err_t add_custom_cb(uint32_t press_sec, button_cb cb, void* arg);
+
+    /**
+     * @brief Remove callback
+     *
+     * @param type callback function event type
+     *
+     * @return
+     *     - ESP_OK Success
+     */
     esp_err_t rm_cb(button_cb_type_t type);
 };
 #endif

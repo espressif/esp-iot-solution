@@ -25,22 +25,22 @@
 #include "esp_system.h"
 #include "wifi.h"
 
-wifi::wifi(wifi_mode_t mode)
+CWiFi::CWiFi(wifi_mode_t mode)
 {
     wifi_setup(mode);
 }
 
-esp_err_t wifi::connect_start(const char *ssid, const char *pwd, uint32_t ticks_to_wait)
+esp_err_t CWiFi::connect_start(const char *ssid, const char *pwd, uint32_t ticks_to_wait)
 {
     return wifi_connect_start(ssid, pwd, ticks_to_wait);
 }
 
-void wifi::connect_stop()
+void CWiFi::connect_stop()
 {
     wifi_connect_stop();
 }
 
-wifi_sta_status_t wifi::get_status()
+wifi_sta_status_t CWiFi::get_status()
 {
     return wifi_get_status();
 }

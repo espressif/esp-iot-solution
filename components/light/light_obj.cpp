@@ -76,14 +76,14 @@ esp_err_t CLight::off()
     return ESP_OK;
 }
 
-CLightChannel::CLightChannel(light_handle_t *p_light_handle, int idx, uint32_t full_duty)
+CLight::CLightChannel::CLightChannel(light_handle_t *p_light_handle, int idx, uint32_t full_duty)
 {
     mp_channel_handle = p_light_handle;
     m_ch_idx = idx;
     m_ch_full_duty = full_duty;
 }
 
-esp_err_t CLightChannel::check_init()
+esp_err_t CLight::CLightChannel::check_init()
 {
     if ((m_io_num == GPIO_NUM_MAX) || (m_ledc_idx == LEDC_CHANNEL_MAX)) {
         ESP_LOGE(TAG, "Light channel not initialized!");
@@ -92,7 +92,7 @@ esp_err_t CLightChannel::check_init()
     return ESP_OK;
 }
 
-esp_err_t CLightChannel::init(gpio_num_t io_num, ledc_channel_t ledc_channel)
+esp_err_t CLight::CLightChannel::init(gpio_num_t io_num, ledc_channel_t ledc_channel)
 {
     m_io_num = io_num;
     m_ledc_idx = ledc_channel;
@@ -100,7 +100,7 @@ esp_err_t CLightChannel::init(gpio_num_t io_num, ledc_channel_t ledc_channel)
     return light_channel_regist(light_handle, m_ch_idx, io_num, ledc_channel);
 }
 
-esp_err_t CLightChannel::on()
+esp_err_t CLight::CLightChannel::on()
 {
     if (check_init() != ESP_OK) {
         return ESP_FAIL;
@@ -110,7 +110,7 @@ esp_err_t CLightChannel::on()
     return light_duty_write(light_handle, m_ch_idx, m_ch_full_duty, LIGHT_SET_DUTY_DIRECTLY);
 }
 
-esp_err_t CLightChannel::off()
+esp_err_t CLight::CLightChannel::off()
 {
     if (check_init() != ESP_OK) {
         return ESP_FAIL;
@@ -120,12 +120,12 @@ esp_err_t CLightChannel::off()
     return light_duty_write(light_handle, m_ch_idx, 0, LIGHT_SET_DUTY_DIRECTLY);
 }
 
-uint32_t CLightChannel::duty()
+uint32_t CLight::CLightChannel::duty()
 {
     return m_duty;
 }
 
-esp_err_t CLightChannel::duty(uint32_t duty_val, light_duty_mode_t duty_mode)
+esp_err_t CLight::CLightChannel::duty(uint32_t duty_val, light_duty_mode_t duty_mode)
 {
     if (check_init() != ESP_OK) {
         return ESP_FAIL;
@@ -138,7 +138,7 @@ esp_err_t CLightChannel::duty(uint32_t duty_val, light_duty_mode_t duty_mode)
     return ret;
 }
 
-esp_err_t CLightChannel::breath(int breath_period_ms)
+esp_err_t CLight::CLightChannel::breath(int breath_period_ms)
 {
     if (check_init() != ESP_OK) {
         return ESP_FAIL;

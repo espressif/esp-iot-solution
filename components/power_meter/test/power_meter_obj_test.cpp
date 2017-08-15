@@ -56,7 +56,7 @@ extern "C" void power_meter_obj_test()
         .sel_level = 0,
         .pm_mode = PM_SINGLE_VOLTAGE
     };
-    power_meter* my_pm = new power_meter(pm_conf);
+    CPowerMeter* my_pm = new CPowerMeter(pm_conf);
     while (1) {
         my_pm->change_mode(PM_SINGLE_VOLTAGE);
         vTaskDelay(5000 / portTICK_RATE_MS);

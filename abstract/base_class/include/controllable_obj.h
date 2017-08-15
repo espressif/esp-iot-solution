@@ -27,12 +27,12 @@
 #include "esp_err.h"
 
 #ifdef __cplusplus
-class controllable_obj
+class CControllable
 {
 public:
     virtual esp_err_t on() = 0;
     virtual esp_err_t off() = 0;
-    virtual ~controllable_obj() = 0;
+    virtual ~CControllable() = 0;
 };
 #endif
 

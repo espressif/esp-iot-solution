@@ -111,18 +111,55 @@ esp_err_t powermeter_change_mode(pm_handle_t pm_handle, pm_mode_t mode);
 #endif
 
 #ifdef __cplusplus
-class power_meter
+
+/**
+ * class of power meter
+ * simple usage:
+ * pm_config_t pm_conf;
+ * ......(set pm_config)
+ * CPowerMeter* my_pm = new CPowerMeter(pm_conf);
+ * my_pm->change_mode(PM_SINGLE_VOLTAGE);
+ * vTaskDelay(5000 / portTICK_RATE_MS);
+ * ESP_LOGI(TAG, "value of power:%d", my_pm->read(PM_POWER));
+ */
+class CPowerMeter
 {
 private:
     pm_handle_t m_pm_handle;
-    power_meter(const power_meter&);
-    power_meter& operator = (const power_meter&);
+
+    /**
+     * prevent copy construct
+     */
+    CPowerMeter(const CPowerMeter&);
+    CPowerMeter& operator = (const CPowerMeter&);
 
 public:
-    power_meter(const pm_config_t &pm_config);
-    ~power_meter();
+    /**
+     * @brief  constructor of CPowerMeter
+     *
+     * @param  pm_config config of power meter
+     */
+    CPowerMeter(const pm_config_t &pm_config);
+    ~CPowerMeter();
 
+    /**
+     * @brief  get measure value of power meter
+     *
+     * @param  value_type refer to enum pm_value_type_t
+     *
+     * @return value of measurement
+     */
     uint32_t read(pm_value_type_t value_type);
+
+    /**
+     * @brief  change mode of power meter
+     *
+     * @param  mode refer to enum pm_mode_t
+     *
+     * @return
+     *     - ESP_OK: succeed
+     *     - others: fail
+     */
     esp_err_t change_mode(pm_mode_t mode);
 };
 #endif
