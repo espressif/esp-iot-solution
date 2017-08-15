@@ -82,17 +82,16 @@ void Adafruit_lcd::drawBitmap(int16_t x, int16_t y, const uint16_t *bitmap, int1
 {
     setAddrWindow(x, y, x + w - 1, y + h - 1);
     int point_num = w * h;
-    uint16_t* data_buf = (uint16_t*) malloc(point_num * sizeof(uint16_t));
-    for (int i = 0; i < point_num; i++) {
-        data_buf[i] = SWAPBYTES(bitmap[i]);
-    }
-
     int gap_point = 1024;
-    uint16_t* cur_ptr = data_buf;
+    uint16_t* data_buf = (uint16_t*) malloc(gap_point * sizeof(uint16_t));
+    int offset = 0;
     while (point_num > 0) {
+        for (int i = 0; i < gap_point; i++) {
+            data_buf[i] = SWAPBYTES(bitmap[i + offset]);
+        }
         int trans_points = point_num > gap_point ? gap_point : point_num;
-        transmitData((uint8_t*) (cur_ptr), sizeof(uint16_t) * trans_points);
-        cur_ptr += trans_points;
+        transmitData((uint8_t*) (data_buf), sizeof(uint16_t) * trans_points);
+        offset += trans_points;
         point_num -= trans_points;
     }
     free(data_buf);
