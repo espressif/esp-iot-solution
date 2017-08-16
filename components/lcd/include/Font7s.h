@@ -1,7 +1,7 @@
-#define nr_chrs_f7s 96
-#define chr_hgt_f7s 48
-#define data_size_f7s 8
-#define firstchr_f7s 32
+#define NR_CHRS_F7S   96
+#define CHR_HGT_F7S   48
+#define DATA_SIZE_F7S  8
+#define FIRSTCHR_F7S  32
 
 extern const unsigned char widtbl_f7s[96];
 extern const unsigned char *chrtbl_f7s[96];

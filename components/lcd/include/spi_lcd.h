@@ -58,7 +58,8 @@ typedef struct {
     uint8_t pin_num_dc;   /*!<Pin to select Data or Command for LCD*/
     uint8_t pin_num_rst;  /*!<Pin to hardreset LCD*/
     uint8_t pin_num_bckl; /*!<Pin for adjusting Backlight- can use PWM/DAC too*/
-} lcd_pin_conf_t;
+    int clk_freq;
+} lcd_conf_t;
 
 /**
  * @brief struct holding LCD IDs
@@ -74,7 +75,7 @@ typedef struct {
  * @param pin_conf Pointer to the struct with mandatory pins required for the LCD
  * @param spi_dev Pointer to the SPI handler for sending the data
  */
-void lcd_init(lcd_pin_conf_t *pin_conf, spi_device_handle_t *spi_dev);
+void lcd_init(lcd_conf_t *pin_conf, spi_device_handle_t *spi_dev);
 
 /*Used by adafruit functions to send data*/
 void lcd_send_uint16_r(spi_device_handle_t spi, const uint16_t data, int32_t repeats);

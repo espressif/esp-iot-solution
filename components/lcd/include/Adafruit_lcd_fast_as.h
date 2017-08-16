@@ -2,6 +2,8 @@
 #define _ADAFRUIT_LCDH_
 /*This is the Adafruit subclass graphics file*/
 
+#include "string.h"
+#include "stdio.h"
 #include "Adafruit_GFX_AS.h"
 #include "spi_lcd.h"
 
@@ -51,6 +53,8 @@ private:
 
     spi_device_handle_t spi;
     uint8_t tabcolor;
+    bool dma_mode;
+    int dma_buf_size;
 
     /*Below are the functions which actually send data, defined in spi_ili.c*/
     void transmitCmdData(uint8_t cmd, const uint8_t data, uint8_t numDataByte);
@@ -75,9 +79,10 @@ private:
     {
         lcd_cmd(spi, cmd);
     }
-
+    void _fastSendBuf(const uint16_t* buf, int point_num, bool swap = true);
+    void _fastSendRep(uint16_t val, int rep_num);
 public:
-    Adafruit_lcd(spi_device_handle_t spi_t);
+    Adafruit_lcd(spi_device_handle_t spi_t, bool dma_en = true, int dma_word_size = 1024);
 
     void setSpiBus(spi_device_handle_t spi_dev);
 
@@ -162,6 +167,26 @@ public:
      * @brief pass 8-bit colors, get 16bit packed number
      */
     uint16_t color565(uint8_t r, uint8_t g, uint8_t b);
+
+    /**
+     * @brief write 7-segment float
+     */
+    int drawFloatSevSeg(float floatNumber, uint8_t decimal, uint16_t poX, uint16_t poY, uint8_t size);
+
+    /**
+     * @brief write 7-segment unicode
+     */
+    int drawUnicodeSevSeg(uint16_t uniCode, uint16_t x, uint16_t y, uint8_t size);
+
+    /**
+     * @brief write 7-segment string
+     */
+    int drawStringSevSeg(const char *string, uint16_t poX, uint16_t poY, uint8_t size);
+
+    /**
+     * @brief write 7-segment number
+     */
+    int drawNumberSevSeg(int long_num, uint16_t poX, uint16_t poY, uint8_t size);
 };
 
 #endif
