@@ -98,7 +98,7 @@ extern "C" void esp_draw()
     ESP_ERROR_CHECK( esp_wifi_start() );
 
 	/*Initialize LCD*/
-	lcd_pin_conf_t lcd_pins = {
+	lcd_conf_t lcd_pins = {
         .lcd_model    = ST7789,
         .pin_num_miso = GPIO_NUM_25,
         .pin_num_mosi = GPIO_NUM_23,
@@ -107,6 +107,7 @@ extern "C" void esp_draw()
         .pin_num_dc   = GPIO_NUM_21,
         .pin_num_rst  = GPIO_NUM_18,
         .pin_num_bckl = GPIO_NUM_5,
+        .clk_freq     = 20000000,
     };
     
     lcd_init(&lcd_pins, &spi);

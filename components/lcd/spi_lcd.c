@@ -137,23 +137,23 @@ void lcd_data(spi_device_handle_t spi, const uint8_t *data, int len)
     assert(ret == ESP_OK);              //Should have had no issues.
 }
 
-void lcd_init(lcd_pin_conf_t* pin_conf, spi_device_handle_t *spi_dev)
+void lcd_init(lcd_conf_t* lcd_conf, spi_device_handle_t *spi_dev)
 {
-    data_command = pin_conf->pin_num_dc;
+    data_command = lcd_conf->pin_num_dc;
     //Initialize SPI Bus for LCD
     spi_bus_config_t buscfg = {
-        .miso_io_num = pin_conf->pin_num_miso,
-        .mosi_io_num = pin_conf->pin_num_mosi,
-        .sclk_io_num = pin_conf->pin_num_clk,
+        .miso_io_num = lcd_conf->pin_num_miso,
+        .mosi_io_num = lcd_conf->pin_num_mosi,
+        .sclk_io_num = lcd_conf->pin_num_clk,
         .quadwp_io_num = -1,
         .quadhd_io_num = -1,
     };
     spi_bus_initialize(HSPI_HOST, &buscfg, 1);
 
     spi_device_interface_config_t devcfg = {
-        .clock_speed_hz = 20000000,               //Clock out at 20 MHz
+        .clock_speed_hz = lcd_conf->clk_freq,               //Clock out at 20 MHz
         .mode = 0,                                //SPI mode 0
-        .spics_io_num = pin_conf->pin_num_cs,     //CS pin
+        .spics_io_num = lcd_conf->pin_num_cs,     //CS pin
         .queue_size = 7,                          //We want to be able to queue 7 transactions at a time
         .pre_cb = lcd_spi_pre_transfer_callback,  //Specify pre-transfer callback to handle D/C line
     };
@@ -161,20 +161,20 @@ void lcd_init(lcd_pin_conf_t* pin_conf, spi_device_handle_t *spi_dev)
         
     int cmd = 0;
     //Initialize non-SPI GPIOs
-    gpio_pad_select_gpio(pin_conf->pin_num_dc);
-    gpio_pad_select_gpio(pin_conf->pin_num_rst);
-    gpio_pad_select_gpio(pin_conf->pin_num_bckl);
-    gpio_set_direction(pin_conf->pin_num_dc, GPIO_MODE_OUTPUT);
-    gpio_set_direction(pin_conf->pin_num_rst, GPIO_MODE_OUTPUT);
-    gpio_set_direction(pin_conf->pin_num_bckl, GPIO_MODE_OUTPUT);
+    gpio_pad_select_gpio(lcd_conf->pin_num_dc);
+    gpio_pad_select_gpio(lcd_conf->pin_num_rst);
+    gpio_pad_select_gpio(lcd_conf->pin_num_bckl);
+    gpio_set_direction(lcd_conf->pin_num_dc, GPIO_MODE_OUTPUT);
+    gpio_set_direction(lcd_conf->pin_num_rst, GPIO_MODE_OUTPUT);
+    gpio_set_direction(lcd_conf->pin_num_bckl, GPIO_MODE_OUTPUT);
 
     //Reset the display
-    gpio_set_level(pin_conf->pin_num_rst, 0);
+    gpio_set_level(lcd_conf->pin_num_rst, 0);
     vTaskDelay(100 / portTICK_RATE_MS);
-    gpio_set_level(pin_conf->pin_num_rst, 1);
+    gpio_set_level(lcd_conf->pin_num_rst, 1);
     vTaskDelay(100 / portTICK_RATE_MS);
 
-    if(pin_conf->lcd_model == ST7789)
+    if(lcd_conf->lcd_model == ST7789)
     {
         //Send all the commands for ST7789 Init
         while (st7789_init_cmds[cmd].databytes != 0xff) {
@@ -186,7 +186,7 @@ void lcd_init(lcd_pin_conf_t* pin_conf, spi_device_handle_t *spi_dev)
             cmd++;
         }
     }
-    else if(pin_conf->lcd_model == ILI9341)
+    else if(lcd_conf->lcd_model == ILI9341)
     {
         //Send all the commands for ILI9341 Init
         while (ili_init_cmds[cmd].databytes != 0xff) {
@@ -200,7 +200,7 @@ void lcd_init(lcd_pin_conf_t* pin_conf, spi_device_handle_t *spi_dev)
     }
     
     //Enable backlight
-    gpio_set_level(pin_conf->pin_num_bckl, 0);
+    gpio_set_level(lcd_conf->pin_num_bckl, 0);
 }
 
 void lcd_send_uint16_r(spi_device_handle_t spi, const uint16_t data, int32_t repeats)

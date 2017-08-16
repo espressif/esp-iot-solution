@@ -49,7 +49,7 @@
 #include "unity.h"
 
 static spi_device_handle_t spi = NULL;
-static Adafruit_lcd tft(spi);  //Global def for LCD
+static Adafruit_lcd tft(spi, true);  //Global def for LCD
 
 //-------------TEST CODE-----------------
 float target_room_temperature = 23.5;
@@ -62,7 +62,7 @@ int color(uint8_t r, uint8_t g, uint8_t b)
 int drawPlaceholder(Adafruit_lcd* tft, int x, int y, int width, int height, int bordercolor, const char* headertext, int header_text_offset, const GFXfont* font)
 {
     int headersize = 20;
-    int header_len = strlen(headertext);
+    tft->setTextColor(COLOR_GREEN, COLOR_BLACK);
 
     tft->drawRoundRect(x, y, width, height, 3, bordercolor);
     if (font) {
@@ -127,14 +127,45 @@ void drawWireFrame(Adafruit_lcd* tft)
     tft->drawString("Signal : ", 6, placeholderbody + 22);
     tft->drawString("Status : ", 6, placeholderbody + 42);
 }
-
+#include "lcd_image.h"
 void setupUI(Adafruit_lcd* tft)
 {
     tft->setRotation(3);
     tft->fillScreen(COLOR_BLACK);
+
+    tft->drawBitmap(0, 0, Status_320_240, 320, 240);
+    vTaskDelay(1000/portTICK_PERIOD_MS);
+
+    while (1) {
+        printf("draw\n");
+        tft->fillRect(0, 0, 320, 240, COLOR_BLUE);
+//        tft->drawBitmap(0, 0, Status_320_240, 320, 240);
+//        tft->drawBitmap(10, 10, water_pic_35, 35, 35);
+        vTaskDelay(500 / portTICK_PERIOD_MS);
+
+        tft->fillRect(0, 0, 320, 240, COLOR_GREEN);
+//        tft->drawBitmap(10, 10, brightness_pic_35, 35, 35);
+//        tft->drawBitmap(0, 0, pic1_320_240, 320, 240);
+        vTaskDelay(500 / portTICK_PERIOD_MS);
+
+        break;
+
+        tft->drawBitmap(0, 0, Status_320_240, 320, 240);
+        vTaskDelay(500/portTICK_PERIOD_MS);
+//        break;
+
+        tft->fillScreen(COLOR_BLACK);
+        tft->drawBitmap(0, 0, esp_logo, 137, 26);
+        drawWireFrame(tft);
+        drawTargetTemp(tft, target_room_temperature);
+        vTaskDelay(500/portTICK_PERIOD_MS);
+    }
+
+    tft->fillScreen(COLOR_BLACK);
     tft->drawBitmap(0, 0, esp_logo, 137, 26);
     drawWireFrame(tft);
     drawTargetTemp(tft, target_room_temperature);
+//    while(1);
 }
 //=======================================
 
@@ -159,8 +190,6 @@ static bh1750_handle_t bh1750 = NULL;
 void hts221_test_task()
 {
     uint8_t hts221_deviceid;
-    int16_t temperature;
-    int16_t humidity;
 
     hts221_get_deviceid(hts221, &hts221_deviceid);
     printf("hts221 device ID is: %02x\n", hts221_deviceid);
@@ -242,7 +271,7 @@ extern "C" void demo_lcd_init()
         lcd_data_queue = xQueueCreate(10, sizeof(lcd_data_t));
     }
 	/*Initialize LCD*/
-	lcd_pin_conf_t lcd_pins = {
+	lcd_conf_t lcd_pins = {
         .lcd_model    = ST7789,
         .pin_num_miso = GPIO_NUM_25,
         .pin_num_mosi = GPIO_NUM_23,
@@ -251,6 +280,7 @@ extern "C" void demo_lcd_init()
         .pin_num_dc   = GPIO_NUM_21,
         .pin_num_rst  = GPIO_NUM_18,
         .pin_num_bckl = GPIO_NUM_5,
+        .clk_freq     = 30000000,
     };
     
     lcd_init(&lcd_pins, &spi);
@@ -290,7 +320,6 @@ void demo_sensor_read_task(void* arg)
     int16_t temperature, temperature_last = 0;
     int16_t humidity, humidity_last = 0;
     float bh1750_data, bh1750_data_last = 0;
-    float val = 10.1;
     lcd_data_t data;
 
     while(1) {
@@ -330,7 +359,6 @@ void demo_sensor_read_task(void* arg)
         vTaskDelay(2000/portTICK_PERIOD_MS);
     }
 }
-
 
 TEST_CASE("LCD thermostat test", "[lcd_demo][iot]")
 {
