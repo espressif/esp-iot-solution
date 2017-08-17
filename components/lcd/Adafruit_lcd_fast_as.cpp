@@ -40,6 +40,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "Adafruit_GFX_AS.h"
 #include "spi_lcd.h"
 #include "Font7s.h"
+#include "freertos/semphr.h"
 
 /*Rotation Defines*/
 #define MADCTL_MY  0x80
@@ -59,6 +60,7 @@ Adafruit_lcd::Adafruit_lcd(spi_device_handle_t spi_t, bool dma_en, int dma_word_
     spi = spi_t;
     dma_mode = dma_en;
     dma_buf_size = dma_word_size;
+    spi_mux = xSemaphoreCreateMutex();
 }
 
 void Adafruit_lcd::setSpiBus(spi_device_handle_t spi_dev)
@@ -77,8 +79,10 @@ void Adafruit_lcd::drawPixel(int16_t x, int16_t y, uint16_t color)
     if ((x < 0) || (x >= _width) || (y < 0) || (y >= _height)) {
         return;
     }
+    xSemaphoreTake(spi_mux, portMAX_DELAY);
     setAddrWindow(x, y, x + 1, y + 1);
     transmitData(SWAPBYTES(color));
+    xSemaphoreGive(spi_mux);
 }
 
 void Adafruit_lcd::_fastSendBuf(const uint16_t* buf, int point_num, bool swap)
@@ -113,6 +117,7 @@ void Adafruit_lcd::_fastSendRep(uint16_t val, int rep_num)
     int point_num = rep_num;
     int gap_point = dma_buf_size;
     gap_point = (gap_point > point_num ? point_num : gap_point);
+
     uint16_t* data_buf = (uint16_t*) malloc(gap_point * sizeof(uint16_t));
     int offset = 0;
     while (point_num > 0) {
@@ -130,6 +135,7 @@ void Adafruit_lcd::_fastSendRep(uint16_t val, int rep_num)
 
 void Adafruit_lcd::drawBitmap(int16_t x, int16_t y, const uint16_t *bitmap, int16_t w, int16_t h)
 {
+    xSemaphoreTake(spi_mux, portMAX_DELAY);
     setAddrWindow(x, y, x + w - 1, y + h - 1);
     if (dma_mode) {
         _fastSendBuf(bitmap, w * h);
@@ -138,17 +144,20 @@ void Adafruit_lcd::drawBitmap(int16_t x, int16_t y, const uint16_t *bitmap, int1
             transmitData(SWAPBYTES(bitmap[i]), 1);
         }
     }
+    xSemaphoreGive(spi_mux);
 }
 
 void Adafruit_lcd::drawBitmapFont(int16_t x, int16_t y, uint8_t w, uint8_t h, const uint16_t *bitmap)
 {
     //Saves some memory and SWAPBYTES as compared to above API
+    xSemaphoreTake(spi_mux, portMAX_DELAY);
     setAddrWindow(x, y, x + w - 1, y + h - 1);
     if (dma_mode) {
         _fastSendBuf(bitmap, w * h, false);
     } else {
         transmitData((uint8_t*) bitmap, sizeof(uint16_t) * w * h);
     }
+    xSemaphoreGive(spi_mux);
 }
 
 void Adafruit_lcd::drawFastVLine(int16_t x, int16_t y, int16_t h, uint16_t color)
@@ -160,12 +169,14 @@ void Adafruit_lcd::drawFastVLine(int16_t x, int16_t y, int16_t h, uint16_t color
     if ((y + h - 1) >= _height) {
         h = _height - y;
     }
+    xSemaphoreTake(spi_mux, portMAX_DELAY);
     setAddrWindow(x, y, x, y + h - 1);
     if (dma_mode) {
         _fastSendRep(SWAPBYTES(color), h);
     } else {
         transmitData(SWAPBYTES(color), h);
     }
+    xSemaphoreGive(spi_mux);
 }
 
 void Adafruit_lcd::drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color)
@@ -177,12 +188,14 @@ void Adafruit_lcd::drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color
     if ((x + w - 1) >= _width) {
         w = _width - x;
     }
+    xSemaphoreTake(spi_mux, portMAX_DELAY);
     setAddrWindow(x, y, x + w - 1, y);
     if (dma_mode) {
         _fastSendRep(SWAPBYTES(color), w);
     } else {
         transmitData(SWAPBYTES(color), w);
     }
+    xSemaphoreGive(spi_mux);
 }
 
 void Adafruit_lcd::fillScreen(uint16_t color)
@@ -202,13 +215,14 @@ void Adafruit_lcd::fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t
     if ((y + h - 1) >= _height) {
         h = _height - y;
     }
+    xSemaphoreTake(spi_mux, portMAX_DELAY);
     setAddrWindow(x, y, x + w - 1, y + h - 1);
     if (dma_mode) {
         _fastSendRep(SWAPBYTES(color), h * w);
     } else {
         transmitData(SWAPBYTES(color), h * w);
     }
-
+    xSemaphoreGive(spi_mux);
 }
 
 uint16_t Adafruit_lcd::color565(uint8_t r, uint8_t g, uint8_t b)
@@ -218,8 +232,10 @@ uint16_t Adafruit_lcd::color565(uint8_t r, uint8_t g, uint8_t b)
 
 void Adafruit_lcd::scrollTo(uint16_t y)
 {
+    xSemaphoreTake(spi_mux, portMAX_DELAY);
     transmitCmd(0x37);
     transmitData(y);
+    xSemaphoreGive(spi_mux);
 }
 
 void Adafruit_lcd::setRotation(uint8_t m)
@@ -322,6 +338,7 @@ int Adafruit_lcd::drawUnicodeSevSeg(uint16_t uniCode, uint16_t x, uint16_t y, ui
     uint16_t w = (width + 7) / 8;
     uint8_t line = 0;
 
+    xSemaphoreTake(spi_mux, portMAX_DELAY);
     setAddrWindow(x, y, x + w * 8 - 1, y + height - 1);
     uint16_t* data_buf = (uint16_t*) malloc(dma_buf_size * sizeof(uint16_t));
     int point_num = w * height * 8;
@@ -349,6 +366,7 @@ int Adafruit_lcd::drawUnicodeSevSeg(uint16_t uniCode, uint16_t x, uint16_t y, ui
     }
     free(data_buf);
     data_buf = NULL;
+    xSemaphoreGive(spi_mux);
     return width + gap;
 }
 
