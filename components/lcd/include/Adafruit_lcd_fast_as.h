@@ -6,6 +6,7 @@
 #include "stdio.h"
 #include "Adafruit_GFX_AS.h"
 #include "spi_lcd.h"
+#include "freertos/semphr.h"
 
 #define LCD_TFTWIDTH  240
 #define LCD_TFTHEIGHT 320
@@ -55,6 +56,7 @@ private:
     uint8_t tabcolor;
     bool dma_mode;
     int dma_buf_size;
+    SemaphoreHandle_t spi_mux;
 
     /*Below are the functions which actually send data, defined in spi_ili.c*/
     void transmitCmdData(uint8_t cmd, const uint8_t data, uint8_t numDataByte);

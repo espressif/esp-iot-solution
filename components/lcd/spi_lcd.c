@@ -36,11 +36,13 @@
 #include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-
+#include "freertos/semphr.h"
+#include "freertos/xtensa_api.h"
+#include "freertos/task.h"
 #define SPIFIFOSIZE 16
 
 uint8_t data_command; /*Pin config for setting GPIO in SPI callback*/
-
+SemaphoreHandle_t spi_mux = NULL;
 /*
  This struct stores a bunch of command values to be initialized for ILI9341
 */
@@ -109,6 +111,14 @@ void lcd_spi_pre_transfer_callback(spi_transaction_t *t)
     gpio_set_level(data_command, dc);
 }
 
+esp_err_t _lcd_spi_send(spi_device_handle_t spi, spi_transaction_t* t)
+{
+    xSemaphoreTake(spi_mux, portMAX_DELAY);
+    esp_err_t ret = spi_device_transmit(spi, t); //Transmit!
+    xSemaphoreGive(spi_mux);
+    return ret;
+}
+
 void lcd_cmd(spi_device_handle_t spi, const uint8_t cmd)
 {
     esp_err_t ret;
@@ -117,7 +127,7 @@ void lcd_cmd(spi_device_handle_t spi, const uint8_t cmd)
         .tx_buffer = &cmd,             //The data is the cmd itself
         .user = (void *) 0,            //D/C needs to be set to 0
     };
-    ret = spi_device_transmit(spi, &t); //Transmit!
+    ret = _lcd_spi_send(spi, &t); //Transmit!
     assert(ret == ESP_OK);              //Should have had no issues.
 }
 
@@ -133,12 +143,15 @@ void lcd_data(spi_device_handle_t spi, const uint8_t *data, int len)
         .tx_buffer = data,              //Data
         .user = (void *) 1,             //D/C needs to be set to 1
     };
-    ret = spi_device_transmit(spi, &t); //Transmit!
+    ret = _lcd_spi_send(spi, &t); //Transmit!
     assert(ret == ESP_OK);              //Should have had no issues.
 }
 
 void lcd_init(lcd_conf_t* lcd_conf, spi_device_handle_t *spi_dev)
 {
+    if(spi_mux == NULL) {
+        spi_mux = xSemaphoreCreateMutex();
+    }
     data_command = lcd_conf->pin_num_dc;
     //Initialize SPI Bus for LCD
     spi_bus_config_t buscfg = {
@@ -220,7 +233,7 @@ void lcd_send_uint16_r(spi_device_handle_t spi, const uint16_t data, int32_t rep
         t.length = bytes_to_transfer * 8;   //Len is in bytes, transaction length is in bits.
         t.tx_buffer = word_tmp;             //Data
         t.user = (void *) 1;                //D/C needs to be set to 1
-        spi_device_transmit(spi, &t);       //Transmit!
+        _lcd_spi_send(spi, &t);       //Transmit!
         repeats -= bytes_to_transfer / 2;
     }
 }
@@ -234,7 +247,7 @@ void lcd_read_id(spi_device_handle_t spi, lcd_id_t *ili_id_num)
     memset(&t, 0, sizeof(t));           //Zero out the transaction
     t.flags |= SPI_TRANS_USE_RXDATA;
     t.rxlength = 4 * 8;           //read 4 bytes
-    spi_device_transmit(spi, &t);
+    _lcd_spi_send(spi, &t);
 
     //byte 0 is dummy read
     ili_id_num->mfg_id = t.rx_data[1];
