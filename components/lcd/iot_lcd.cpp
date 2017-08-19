@@ -36,11 +36,15 @@ POSSIBILITY OF SUCH DAMAGE.
  */
 
 
-#include "Adafruit_lcd_fast_as.h"
 #include "Adafruit_GFX_AS.h"
+#include "iot_lcd.h"
 #include "spi_lcd.h"
-#include "Font7s.h"
+#include "fonts/font7s.h"
+
+#include "driver/gpio.h"
+
 #include "freertos/semphr.h"
+#include "freertos/task.h"
 
 /*Rotation Defines*/
 #define MADCTL_MY  0x80
@@ -54,38 +58,91 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #define SWAPBYTES(i) ((i>>8) | (i<<8))
 
-Adafruit_lcd::Adafruit_lcd(spi_device_handle_t spi_t, bool dma_en, int dma_word_size) : Adafruit_GFX_AS(LCD_TFTWIDTH, LCD_TFTHEIGHT)
+CEspLcd::CEspLcd(lcd_conf_t* lcd_conf, int height, int width, bool dma_en, int dma_word_size) : Adafruit_GFX_AS(width, height)
 {
+    m_height = height;
+    m_width  = width;
     tabcolor = 0;
-    spi = spi_t;
     dma_mode = dma_en;
     dma_buf_size = dma_word_size;
-    spi_mux = xSemaphoreCreateMutex();
+    spi_mux = xSemaphoreCreateRecursiveMutex();
+    setSpiBus(lcd_conf);
 }
 
-void Adafruit_lcd::setSpiBus(spi_device_handle_t spi_dev)
+CEspLcd::~CEspLcd()
 {
-    spi = spi_dev;
+    spi_bus_remove_device(spi);
+    vSemaphoreDelete(spi_mux);
 }
 
-void Adafruit_lcd::transmitCmdData(uint8_t cmd, const uint8_t data, uint8_t numDataByte)
+void CEspLcd::setSpiBus(lcd_conf_t *lcd_conf)
 {
-    lcd_cmd(spi, (const uint8_t) cmd);
-    lcd_data(spi, &data, 1);
+    cmd_io = (gpio_num_t) lcd_conf->pin_num_dc;
+    dc.dc_io = cmd_io;
+    lcd_init(lcd_conf, &spi, &dc);
 }
 
-void Adafruit_lcd::drawPixel(int16_t x, int16_t y, uint16_t color)
+inline void CEspLcd::setAddrWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1)
+{
+    xSemaphoreTakeRecursive(spi_mux, portMAX_DELAY);
+    transmitCmdData(LCD_CASET, MAKEWORD(x0 >> 8, x0 & 0xFF, x1 >> 8, x1 & 0xFF));
+    transmitCmdData(LCD_PASET, MAKEWORD(y0 >> 8, y0 & 0xFF, y1 >> 8, y1 & 0xFF));
+    transmitCmd(LCD_RAMWR); // write to RAM
+    xSemaphoreGiveRecursive(spi_mux);
+}
+
+inline void CEspLcd::transmitData(uint16_t data)
+{
+    xSemaphoreTakeRecursive(spi_mux, portMAX_DELAY);
+    lcd_data(spi, (uint8_t *)&data, 2, &dc);
+    xSemaphoreGiveRecursive(spi_mux);
+}
+inline void CEspLcd::transmitCmdData(uint8_t cmd, uint32_t data)
+{
+    xSemaphoreTakeRecursive(spi_mux, portMAX_DELAY);
+    lcd_cmd(spi, cmd, &dc);
+    lcd_data(spi, (uint8_t *)&data, 4, &dc);
+    xSemaphoreGiveRecursive(spi_mux);
+}
+inline void CEspLcd::transmitData(uint16_t data, int32_t repeats)
+{
+    xSemaphoreTakeRecursive(spi_mux, portMAX_DELAY);
+    lcd_send_uint16_r(spi, data, repeats, &dc);
+    xSemaphoreGiveRecursive(spi_mux);
+}
+inline void CEspLcd::transmitData(uint8_t* data, int length)
+{
+    xSemaphoreTakeRecursive(spi_mux, portMAX_DELAY);
+    lcd_data(spi, (uint8_t *)data, length, &dc);
+    xSemaphoreGiveRecursive(spi_mux);
+}
+inline void CEspLcd::transmitCmd(uint8_t cmd)
+{
+    xSemaphoreTakeRecursive(spi_mux, portMAX_DELAY);
+    lcd_cmd(spi, cmd, &dc);
+    xSemaphoreGiveRecursive(spi_mux);
+}
+
+void CEspLcd::transmitCmdData(uint8_t cmd, const uint8_t data, uint8_t numDataByte)
+{
+    xSemaphoreTakeRecursive(spi_mux, portMAX_DELAY);
+    lcd_cmd(spi, (const uint8_t) cmd, &dc);
+    lcd_data(spi, &data, 1, &dc);
+    xSemaphoreGiveRecursive(spi_mux);
+}
+
+void CEspLcd::drawPixel(int16_t x, int16_t y, uint16_t color)
 {
     if ((x < 0) || (x >= _width) || (y < 0) || (y >= _height)) {
         return;
     }
-    xSemaphoreTake(spi_mux, portMAX_DELAY);
+    xSemaphoreTakeRecursive(spi_mux, portMAX_DELAY);
     setAddrWindow(x, y, x + 1, y + 1);
     transmitData(SWAPBYTES(color));
-    xSemaphoreGive(spi_mux);
+    xSemaphoreGiveRecursive(spi_mux);
 }
 
-void Adafruit_lcd::_fastSendBuf(const uint16_t* buf, int point_num, bool swap)
+void CEspLcd::_fastSendBuf(const uint16_t* buf, int point_num, bool swap)
 {
     if ((point_num * sizeof(uint16_t)) <= (16 * sizeof(uint32_t))) {
         transmitData((uint8_t*) buf, sizeof(uint16_t) * point_num);
@@ -112,7 +169,7 @@ void Adafruit_lcd::_fastSendBuf(const uint16_t* buf, int point_num, bool swap)
     }
 }
 
-void Adafruit_lcd::_fastSendRep(uint16_t val, int rep_num)
+void CEspLcd::_fastSendRep(uint16_t val, int rep_num)
 {
     int point_num = rep_num;
     int gap_point = dma_buf_size;
@@ -133,9 +190,9 @@ void Adafruit_lcd::_fastSendRep(uint16_t val, int rep_num)
     data_buf = NULL;
 }
 
-void Adafruit_lcd::drawBitmap(int16_t x, int16_t y, const uint16_t *bitmap, int16_t w, int16_t h)
+void CEspLcd::drawBitmap(int16_t x, int16_t y, const uint16_t *bitmap, int16_t w, int16_t h)
 {
-    xSemaphoreTake(spi_mux, portMAX_DELAY);
+    xSemaphoreTakeRecursive(spi_mux, portMAX_DELAY);
     setAddrWindow(x, y, x + w - 1, y + h - 1);
     if (dma_mode) {
         _fastSendBuf(bitmap, w * h);
@@ -144,23 +201,23 @@ void Adafruit_lcd::drawBitmap(int16_t x, int16_t y, const uint16_t *bitmap, int1
             transmitData(SWAPBYTES(bitmap[i]), 1);
         }
     }
-    xSemaphoreGive(spi_mux);
+    xSemaphoreGiveRecursive(spi_mux);
 }
 
-void Adafruit_lcd::drawBitmapFont(int16_t x, int16_t y, uint8_t w, uint8_t h, const uint16_t *bitmap)
+void CEspLcd::drawBitmapFont(int16_t x, int16_t y, uint8_t w, uint8_t h, const uint16_t *bitmap)
 {
     //Saves some memory and SWAPBYTES as compared to above API
-    xSemaphoreTake(spi_mux, portMAX_DELAY);
+    xSemaphoreTakeRecursive(spi_mux, portMAX_DELAY);
     setAddrWindow(x, y, x + w - 1, y + h - 1);
     if (dma_mode) {
         _fastSendBuf(bitmap, w * h, false);
     } else {
         transmitData((uint8_t*) bitmap, sizeof(uint16_t) * w * h);
     }
-    xSemaphoreGive(spi_mux);
+    xSemaphoreGiveRecursive(spi_mux);
 }
 
-void Adafruit_lcd::drawFastVLine(int16_t x, int16_t y, int16_t h, uint16_t color)
+void CEspLcd::drawFastVLine(int16_t x, int16_t y, int16_t h, uint16_t color)
 {
     // Rudimentary clipping
     if ((x >= _width) || (y >= _height)) {
@@ -169,17 +226,17 @@ void Adafruit_lcd::drawFastVLine(int16_t x, int16_t y, int16_t h, uint16_t color
     if ((y + h - 1) >= _height) {
         h = _height - y;
     }
-    xSemaphoreTake(spi_mux, portMAX_DELAY);
+    xSemaphoreTakeRecursive(spi_mux, portMAX_DELAY);
     setAddrWindow(x, y, x, y + h - 1);
     if (dma_mode) {
         _fastSendRep(SWAPBYTES(color), h);
     } else {
         transmitData(SWAPBYTES(color), h);
     }
-    xSemaphoreGive(spi_mux);
+    xSemaphoreGiveRecursive(spi_mux);
 }
 
-void Adafruit_lcd::drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color)
+void CEspLcd::drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color)
 {
     // Rudimentary clipping
     if ((x >= _width) || (y >= _height)) {
@@ -188,22 +245,22 @@ void Adafruit_lcd::drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color
     if ((x + w - 1) >= _width) {
         w = _width - x;
     }
-    xSemaphoreTake(spi_mux, portMAX_DELAY);
+    xSemaphoreTakeRecursive(spi_mux, portMAX_DELAY);
     setAddrWindow(x, y, x + w - 1, y);
     if (dma_mode) {
         _fastSendRep(SWAPBYTES(color), w);
     } else {
         transmitData(SWAPBYTES(color), w);
     }
-    xSemaphoreGive(spi_mux);
+    xSemaphoreGiveRecursive(spi_mux);
 }
 
-void Adafruit_lcd::fillScreen(uint16_t color)
+void CEspLcd::fillScreen(uint16_t color)
 {
     fillRect(0, 0, _width, _height, color);
 }
 
-void Adafruit_lcd::fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color)
+void CEspLcd::fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color)
 {
     // rudimentary clipping (drawChar w/big text requires this)
     if ((x >= _width) || (y >= _height)) {
@@ -215,65 +272,65 @@ void Adafruit_lcd::fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t
     if ((y + h - 1) >= _height) {
         h = _height - y;
     }
-    xSemaphoreTake(spi_mux, portMAX_DELAY);
+    xSemaphoreTakeRecursive(spi_mux, portMAX_DELAY);
     setAddrWindow(x, y, x + w - 1, y + h - 1);
     if (dma_mode) {
         _fastSendRep(SWAPBYTES(color), h * w);
     } else {
         transmitData(SWAPBYTES(color), h * w);
     }
-    xSemaphoreGive(spi_mux);
+    xSemaphoreGiveRecursive(spi_mux);
 }
 
-uint16_t Adafruit_lcd::color565(uint8_t r, uint8_t g, uint8_t b)
+uint16_t CEspLcd::color565(uint8_t r, uint8_t g, uint8_t b)
 {
     return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
 }
 
-void Adafruit_lcd::scrollTo(uint16_t y)
+void CEspLcd::scrollTo(uint16_t y)
 {
-    xSemaphoreTake(spi_mux, portMAX_DELAY);
+    xSemaphoreTakeRecursive(spi_mux, portMAX_DELAY);
     transmitCmd(0x37);
     transmitData(y);
-    xSemaphoreGive(spi_mux);
+    xSemaphoreGiveRecursive(spi_mux);
 }
 
-void Adafruit_lcd::setRotation(uint8_t m)
+void CEspLcd::setRotation(uint8_t m)
 {
     uint8_t data = 0;
     rotation = m % 4;  //Can't be more than 3
     switch (rotation) {
         case 0:
             data = MADCTL_MX | MADCTL_BGR;
-            _width = LCD_TFTWIDTH;
-            _height = LCD_TFTHEIGHT;
+            _width = m_width;
+            _height = m_height;
             break;
         case 1:
             data = MADCTL_MV | MADCTL_BGR;
-            _width = LCD_TFTHEIGHT;
-            _height = LCD_TFTWIDTH;
+            _width = m_height;
+            _height = m_width;
             break;
         case 2:
             data = MADCTL_MY | MADCTL_BGR;
-            _width = LCD_TFTWIDTH;
-            _height = LCD_TFTHEIGHT;
+            _width = m_width;
+            _height = m_height;
             break;
         case 3:
             data = MADCTL_MX | MADCTL_MY | MADCTL_MV | MADCTL_BGR;
-            _width = LCD_TFTHEIGHT;
-            _height = LCD_TFTWIDTH;
+            _width = m_height;
+            _height = m_width;
             break;
     }
     transmitCmdData(LCD_MADCTL, data, 1);
 }
 
-void Adafruit_lcd::invertDisplay(bool i)
+void CEspLcd::invertDisplay(bool i)
 {
     transmitCmd(i ? LCD_INVON : LCD_INVOFF);
 }
 
 
-int Adafruit_lcd::drawFloatSevSeg(float floatNumber, uint8_t decimal, uint16_t poX, uint16_t poY, uint8_t size)
+int CEspLcd::drawFloatSevSeg(float floatNumber, uint8_t decimal, uint16_t poX, uint16_t poY, uint8_t size)
 {
     unsigned int temp = 0;
     float decy = 0.0;
@@ -318,7 +375,7 @@ int Adafruit_lcd::drawFloatSevSeg(float floatNumber, uint8_t decimal, uint16_t p
     return sumX;
 }
 
-int Adafruit_lcd::drawUnicodeSevSeg(uint16_t uniCode, uint16_t x, uint16_t y, uint8_t size)
+int CEspLcd::drawUnicodeSevSeg(uint16_t uniCode, uint16_t x, uint16_t y, uint8_t size)
 {
     if (size) {
         uniCode -= 32;
@@ -338,7 +395,7 @@ int Adafruit_lcd::drawUnicodeSevSeg(uint16_t uniCode, uint16_t x, uint16_t y, ui
     uint16_t w = (width + 7) / 8;
     uint8_t line = 0;
 
-    xSemaphoreTake(spi_mux, portMAX_DELAY);
+    xSemaphoreTakeRecursive(spi_mux, portMAX_DELAY);
     setAddrWindow(x, y, x + w * 8 - 1, y + height - 1);
     uint16_t* data_buf = (uint16_t*) malloc(dma_buf_size * sizeof(uint16_t));
     int point_num = w * height * 8;
@@ -366,11 +423,11 @@ int Adafruit_lcd::drawUnicodeSevSeg(uint16_t uniCode, uint16_t x, uint16_t y, ui
     }
     free(data_buf);
     data_buf = NULL;
-    xSemaphoreGive(spi_mux);
+    xSemaphoreGiveRecursive(spi_mux);
     return width + gap;
 }
 
-int Adafruit_lcd::drawStringSevSeg(const char *string, uint16_t poX, uint16_t poY, uint8_t size)
+int CEspLcd::drawStringSevSeg(const char *string, uint16_t poX, uint16_t poY, uint8_t size)
 {
     uint16_t sumX = 0;
     while (*string) {
@@ -382,7 +439,7 @@ int Adafruit_lcd::drawStringSevSeg(const char *string, uint16_t poX, uint16_t po
     return sumX;
 }
 
-int Adafruit_lcd::drawNumberSevSeg(int long_num, uint16_t poX, uint16_t poY, uint8_t size)
+int CEspLcd::drawNumberSevSeg(int long_num, uint16_t poX, uint16_t poY, uint8_t size)
 {
     char tmp[10];
     if (long_num < 0) {

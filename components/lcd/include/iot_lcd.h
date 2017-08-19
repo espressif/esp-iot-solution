@@ -1,11 +1,13 @@
-#ifndef _ADAFRUIT_LCDH_
-#define _ADAFRUIT_LCDH_
+#ifndef _ESP_ADAFRUIT_LCD_H_
+#define _ESP_ADAFRUIT_LCD_H_
 /*This is the Adafruit subclass graphics file*/
 
 #include "string.h"
 #include "stdio.h"
-#include "Adafruit_GFX_AS.h"
-#include "spi_lcd.h"
+
+#include "driver/gpio.h"
+#include "driver/spi_master.h"
+
 #include "freertos/semphr.h"
 
 #define LCD_TFTWIDTH  240
@@ -48,45 +50,77 @@
 
 #define MAKEWORD(b1, b2, b3, b4) (uint32_t(b1) | ((b2) << 8) | ((b3) << 16) | ((b4) << 24))
 
-class Adafruit_lcd: public Adafruit_GFX_AS
+
+typedef enum {
+    ILI9341 = 0,
+    ST7789 = 1,
+} lcd_model_t;
+
+/**
+ * @brief struct to map GPIO to LCD pins
+ */
+typedef struct {
+    lcd_model_t lcd_model;
+    uint8_t pin_num_miso;        /*!<MasterIn, SlaveOut pin*/
+    uint8_t pin_num_mosi;        /*!<MasterOut, SlaveIn pin*/
+    uint8_t pin_num_clk;         /*!<SPI Clock pin*/
+    uint8_t pin_num_cs;          /*!<SPI Chip Select Pin*/
+    uint8_t pin_num_dc;          /*!<Pin to select Data or Command for LCD*/
+    uint8_t pin_num_rst;         /*!<Pin to hardreset LCD*/
+    uint8_t pin_num_bckl;        /*!<Pin for adjusting Backlight- can use PWM/DAC too*/
+    int clk_freq;                /*!< spi clock frequency */
+    uint8_t rst_active_level;    /*!< reset pin active level */
+    uint8_t bckl_active_level;   /*!< back-light active level */
+    spi_host_device_t spi_host;  /*!< spi host index*/
+} lcd_conf_t;
+
+/**
+ * @brief struct holding LCD IDs
+ */
+typedef struct {
+    uint8_t mfg_id;         /*!<Manufacturer's ID*/
+    uint8_t lcd_driver_id;  /*!<LCD driver Version ID*/
+    uint8_t lcd_id;         /*!<LCD Unique ID*/
+} lcd_id_t;
+
+
+typedef struct {
+    uint8_t dc_io;
+    uint8_t dc_level;
+} lcd_dc_t;
+
+#ifdef __cplusplus
+#include "Adafruit_GFX_AS.h"
+class CEspLcd: public Adafruit_GFX_AS
 {
 private:
-
-    spi_device_handle_t spi;
+    spi_device_handle_t spi = NULL;
     uint8_t tabcolor;
     bool dma_mode;
     int dma_buf_size;
+    uint16_t m_height;
+    uint16_t m_width;
     SemaphoreHandle_t spi_mux;
+    gpio_num_t cmd_io = GPIO_NUM_MAX;
+    lcd_dc_t dc;
 
     /*Below are the functions which actually send data, defined in spi_ili.c*/
     void transmitCmdData(uint8_t cmd, const uint8_t data, uint8_t numDataByte);
-    inline void transmitData(uint16_t data)
-    {
-        lcd_data(spi, (uint8_t *)&data, 2);
-    }
-    inline void transmitCmdData(uint8_t cmd, uint32_t data)
-    {
-        lcd_cmd(spi, cmd);
-        lcd_data(spi, (uint8_t *)&data, 4);
-    }
-    inline void transmitData(uint16_t data, int32_t repeats)
-    {
-        lcd_send_uint16_r(spi, data, repeats);
-    }
-    inline void transmitData(uint8_t* data, int length)
-    {
-        lcd_data(spi, (uint8_t *)data, length);
-    }
-    inline void transmitCmd(uint8_t cmd)
-    {
-        lcd_cmd(spi, cmd);
-    }
+    inline void transmitData(uint16_t data);
+    inline void transmitCmdData(uint8_t cmd, uint32_t data);
+    inline void transmitData(uint16_t data, int32_t repeats);
+    inline void transmitData(uint8_t* data, int length);
+    inline void transmitCmd(uint8_t cmd);
     void _fastSendBuf(const uint16_t* buf, int point_num, bool swap = true);
     void _fastSendRep(uint16_t val, int rep_num);
 public:
-    Adafruit_lcd(spi_device_handle_t spi_t, bool dma_en = true, int dma_word_size = 1024);
-
-    void setSpiBus(spi_device_handle_t spi_dev);
+    CEspLcd(lcd_conf_t* lcd_conf, int height = LCD_TFTHEIGHT, int width = LCD_TFTWIDTH, bool dma_en = true, int dma_word_size = 1024);
+    ~CEspLcd();
+    /**
+     * @brief init spi bus and lcd screen
+     * @param lcd_conf LCD parameters
+     */
+    void setSpiBus(lcd_conf_t *lcd_conf);
 
     /**
      * @brief fill screen background with color
@@ -152,12 +186,7 @@ public:
     void invertDisplay(bool i);
 
     /*Not useful for user, sets the Region of Interest window*/
-    inline void setAddrWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1)
-    {
-        transmitCmdData(LCD_CASET, MAKEWORD(x0 >> 8, x0 & 0xFF, x1 >> 8, x1 & 0xFF));
-        transmitCmdData(LCD_PASET, MAKEWORD(y0 >> 8, y0 & 0xFF, y1 >> 8, y1 & 0xFF));
-        transmitCmd(LCD_RAMWR); // write to RAM
-    }
+    inline void setAddrWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1);
 
     /**
      * @brief Scroll on Y-axis
@@ -190,5 +219,7 @@ public:
      */
     int drawNumberSevSeg(int long_num, uint16_t poX, uint16_t poY, uint8_t size);
 };
+
+#endif
 
 #endif

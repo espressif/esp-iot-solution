@@ -32,7 +32,7 @@
 
 /*SPI Includes*/
 #include "driver/spi_master.h"
-#include "Adafruit_lcd_fast_as.h"
+#include "iot_lcd.h"
 #include "Adafruit_GFX_AS.h"
 #include "image.h"
 
@@ -42,13 +42,10 @@
 #include "esp_event_loop.h"
 
 /*Include desired font here*/
-#include "FreeSans9pt7b.h"
-
+#include "fonts/FreeSans9pt7b.h"
 #include "unity.h"
 
-
-static spi_device_handle_t spi = NULL;
-static Adafruit_lcd tft(spi);  //Global def for LCD
+static CEspLcd* lcd_obj = NULL;
 
 wifi_scan_config_t scan_config = {
 	.ssid = 0,
@@ -108,41 +105,45 @@ extern "C" void esp_draw()
         .pin_num_rst  = GPIO_NUM_18,
         .pin_num_bckl = GPIO_NUM_5,
         .clk_freq     = 20000000,
+        .rst_active_level = 0,
+        .bckl_active_level = 0,
+        .spi_host = HSPI_HOST,
     };
     
-    lcd_init(&lcd_pins, &spi);
-    tft.setSpiBus(spi);
+	if(lcd_obj == NULL) {
+	    lcd_obj = new CEspLcd(&lcd_pins);
+	}
 
 	/*Welcome screen*/
     int x = 0, y = 0;
     int dim = 6;
     uint16_t rand_color;
-    tft.setRotation(3);
+    lcd_obj->setRotation(3);
     for (int i = 0; i < dim; i++) {
         for (int j = 0; j < 10 - 2 * i; j++) {
             rand_color = rand();
-            tft.fillRect(x * 32, y * 24, 32, 24, rand_color);
+            lcd_obj->fillRect(x * 32, y * 24, 32, 24, rand_color);
             ets_delay_us(20000);
             x++;
         }
         x--;
         for (int j = 0; j < 10 - 2 * i; j++) {
             rand_color = rand();
-            tft.fillRect(x * 32, y * 24, 32, 24, rand_color);
+            lcd_obj->fillRect(x * 32, y * 24, 32, 24, rand_color);
             ets_delay_us(20000);
             y++;
         }
         y--;
         for (int j = 0; j < 10 - 2 * i - 1; j++) {
             rand_color = rand();
-            tft.fillRect(x * 32, y * 24, 32, 24, rand_color);
+            lcd_obj->fillRect(x * 32, y * 24, 32, 24, rand_color);
             ets_delay_us(20000);
             x--;
         }
         x++;
         for (int j = 0; j < 10 - 2 * i - 1; j++) {
             rand_color = rand();
-            tft.fillRect((x - 1) * 32, y * 24, 32, 24, rand_color);
+            lcd_obj->fillRect((x - 1) * 32, y * 24, 32, 24, rand_color);
             ets_delay_us(20000);
             y--;
         }
@@ -151,89 +152,89 @@ extern "C" void esp_draw()
     vTaskDelay(1000 / portTICK_PERIOD_MS);
 
 	/*ESPecifications*/
-	tft.setRotation(2);
-    tft.fillScreen(COLOR_ESP_BKGD);
-	tft.setTextSize(1);
-    tft.drawBitmap(0, 0, esp_logo, 137, 26);
+	lcd_obj->setRotation(2);
+    lcd_obj->fillScreen(COLOR_ESP_BKGD);
+	lcd_obj->setTextSize(1);
+    lcd_obj->drawBitmap(0, 0, esp_logo, 137, 26);
 
-	tft.setTextColor(COLOR_GREEN, COLOR_ESP_BKGD);
-	tft.setFontStyle(&FreeSans9pt7b);
-	tft.drawString("CPU",                                     3, 40);
-	tft.setFontStyle(NULL);
-	tft.setTextColor(COLOR_YELLOW, COLOR_ESP_BKGD);
-    tft.drawString("Xtensa Dual-Core 32-bit LX6 MPU",         3, 50);
-	tft.drawString("Max Clock Speed at 240 MHz & 600 DMIPS ", 3, 60);
-	tft.drawString("at up to 600 DMIPS",                      3, 70);
-    tft.drawString("Memory: 520 KiB SRAM",                    3, 80);
+	lcd_obj->setTextColor(COLOR_GREEN, COLOR_ESP_BKGD);
+	lcd_obj->setFontStyle(&FreeSans9pt7b);
+	lcd_obj->drawString("CPU",                                     3, 40);
+	lcd_obj->setFontStyle(NULL);
+	lcd_obj->setTextColor(COLOR_YELLOW, COLOR_ESP_BKGD);
+    lcd_obj->drawString("Xtensa Dual-Core 32-bit LX6 MPU",         3, 50);
+	lcd_obj->drawString("Max Clock Speed at 240 MHz & 600 DMIPS ", 3, 60);
+	lcd_obj->drawString("at up to 600 DMIPS",                      3, 70);
+    lcd_obj->drawString("Memory: 520 KiB SRAM",                    3, 80);
 	
-	tft.setTextColor(COLOR_GREEN, COLOR_ESP_BKGD);
-	tft.setFontStyle(&FreeSans9pt7b);
-	tft.drawString("Wireless connectivity",               3,  110);
-	tft.setFontStyle(NULL);
-	tft.setTextColor(COLOR_YELLOW, COLOR_ESP_BKGD);
-	tft.drawString("Wi-Fi: 802.11 b/g/n/e/i",	          3,  120);
-	tft.drawString("Bluetooth: v4.2 BR/EDR and BLE",      3,  130);
+	lcd_obj->setTextColor(COLOR_GREEN, COLOR_ESP_BKGD);
+	lcd_obj->setFontStyle(&FreeSans9pt7b);
+	lcd_obj->drawString("Wireless connectivity",               3,  110);
+	lcd_obj->setFontStyle(NULL);
+	lcd_obj->setTextColor(COLOR_YELLOW, COLOR_ESP_BKGD);
+	lcd_obj->drawString("Wi-Fi: 802.11 b/g/n/e/i",	          3,  120);
+	lcd_obj->drawString("Bluetooth: v4.2 BR/EDR and BLE",      3,  130);
 
-	tft.setTextColor(COLOR_GREEN, COLOR_ESP_BKGD);
-	tft.setFontStyle(&FreeSans9pt7b);
-	tft.drawString("Power Management",                     3, 160);
-	tft.setFontStyle(NULL);
-	tft.setTextColor(COLOR_YELLOW, COLOR_ESP_BKGD);
-	tft.drawString("Internal LDO",                         3, 170);
-	tft.drawString("Individual power domain for RTC",      3, 180);
-	tft.drawString("5uA deep sleep current",               3, 190);
-	tft.drawString("Wake up from GPIO interrupt" ,         3, 200);
-	tft.drawString("Wake up from timer, ADC measurements", 3, 210);
-	tft.drawString("Wake up from capacitive sensor intr",  3, 220);
+	lcd_obj->setTextColor(COLOR_GREEN, COLOR_ESP_BKGD);
+	lcd_obj->setFontStyle(&FreeSans9pt7b);
+	lcd_obj->drawString("Power Management",                     3, 160);
+	lcd_obj->setFontStyle(NULL);
+	lcd_obj->setTextColor(COLOR_YELLOW, COLOR_ESP_BKGD);
+	lcd_obj->drawString("Internal LDO",                         3, 170);
+	lcd_obj->drawString("Individual power domain for RTC",      3, 180);
+	lcd_obj->drawString("5uA deep sleep current",               3, 190);
+	lcd_obj->drawString("Wake up from GPIO interrupt" ,         3, 200);
+	lcd_obj->drawString("Wake up from timer, ADC measurements", 3, 210);
+	lcd_obj->drawString("Wake up from capacitive sensor intr",  3, 220);
 
-	tft.setTextColor(COLOR_GREEN, COLOR_ESP_BKGD);
-	tft.setFontStyle(&FreeSans9pt7b);
-	tft.drawString("Security",                               3, 250);
-	tft.setFontStyle(NULL);
-	tft.setTextColor(COLOR_YELLOW, COLOR_ESP_BKGD);
-	tft.drawString("IEEE 802.11 standard security features", 3, 260);
-	tft.drawString("Secure boot & Flash Encryption",         3, 270);
-	tft.drawString("Cryptographic Hardware Acceleration",    3, 280);
-	tft.drawString("AES, RSA, SHA-2, EEC, RNG",              3, 290);
-	tft.drawString("1024-bit OTP",                           3, 300);
+	lcd_obj->setTextColor(COLOR_GREEN, COLOR_ESP_BKGD);
+	lcd_obj->setFontStyle(&FreeSans9pt7b);
+	lcd_obj->drawString("Security",                               3, 250);
+	lcd_obj->setFontStyle(NULL);
+	lcd_obj->setTextColor(COLOR_YELLOW, COLOR_ESP_BKGD);
+	lcd_obj->drawString("IEEE 802.11 standard security features", 3, 260);
+	lcd_obj->drawString("Secure boot & Flash Encryption",         3, 270);
+	lcd_obj->drawString("Cryptographic Hardware Acceleration",    3, 280);
+	lcd_obj->drawString("AES, RSA, SHA-2, EEC, RNG",              3, 290);
+	lcd_obj->drawString("1024-bit OTP",                           3, 300);
 
 	vTaskDelay(4000 / portTICK_PERIOD_MS);
-	tft.fillRect(0, 28, 240, 320, COLOR_ESP_BKGD);
+	lcd_obj->fillRect(0, 28, 240, 320, COLOR_ESP_BKGD);
 
-	tft.setTextColor(COLOR_GREEN, COLOR_ESP_BKGD);
-	tft.setFontStyle(&FreeSans9pt7b);
-	tft.drawString("Peripheral Interfaces",               3, 40);
-	tft.setFontStyle(NULL);
-	tft.setTextColor(COLOR_YELLOW, COLOR_ESP_BKGD);
-	tft.drawString("12-bit DAC, 18 channels",             3, 50);
-	tft.drawString("8-bit  DAC,  2 channels",             3, 60);
-	tft.drawString("SPI,  4 channels",				      3, 70);
-	tft.drawString("I2S,  4 channels",				      3, 80);
-	tft.drawString("I2C,  2 channels",				      3, 90);
-	tft.drawString("UART, 3 channels",				      3, 100);
-	tft.drawString("SD/SDIO/MMC Host",		              3, 110);
-	tft.drawString("SDIO/SPI Slave",	         	      3, 120);
-	tft.drawString("Ethernet MAC with DMA & IEEE 1588",   3, 130);
-	tft.drawString("CAN bus 2.0",	         	          3, 140);
-	tft.drawString("IR/RMT (Tx/Rx)",		              3, 150);
-	tft.drawString("Motor PWM",	         	              3, 160);
-	tft.drawString("LED PWM, 16 channels",		          3, 170);
-	tft.drawString("Ultra Low Power Analog Pre-Amp",      3, 180);
-	tft.drawString("Hall Effect Sensor",	              3, 190);
-	tft.drawString("Capacitive Touch Sense, 10 channels", 3, 200);
-	tft.drawString("Temperature Sensor",                  3, 210);
+	lcd_obj->setTextColor(COLOR_GREEN, COLOR_ESP_BKGD);
+	lcd_obj->setFontStyle(&FreeSans9pt7b);
+	lcd_obj->drawString("Peripheral Interfaces",               3, 40);
+	lcd_obj->setFontStyle(NULL);
+	lcd_obj->setTextColor(COLOR_YELLOW, COLOR_ESP_BKGD);
+	lcd_obj->drawString("12-bit DAC, 18 channels",             3, 50);
+	lcd_obj->drawString("8-bit  DAC,  2 channels",             3, 60);
+	lcd_obj->drawString("SPI,  4 channels",				      3, 70);
+	lcd_obj->drawString("I2S,  4 channels",				      3, 80);
+	lcd_obj->drawString("I2C,  2 channels",				      3, 90);
+	lcd_obj->drawString("UART, 3 channels",				      3, 100);
+	lcd_obj->drawString("SD/SDIO/MMC Host",		              3, 110);
+	lcd_obj->drawString("SDIO/SPI Slave",	         	      3, 120);
+	lcd_obj->drawString("Ethernet MAC with DMA & IEEE 1588",   3, 130);
+	lcd_obj->drawString("CAN bus 2.0",	         	          3, 140);
+	lcd_obj->drawString("IR/RMT (Tx/Rx)",		              3, 150);
+	lcd_obj->drawString("Motor PWM",	         	              3, 160);
+	lcd_obj->drawString("LED PWM, 16 channels",		          3, 170);
+	lcd_obj->drawString("Ultra Low Power Analog Pre-Amp",      3, 180);
+	lcd_obj->drawString("Hall Effect Sensor",	              3, 190);
+	lcd_obj->drawString("Capacitive Touch Sense, 10 channels", 3, 200);
+	lcd_obj->drawString("Temperature Sensor",                  3, 210);
 	vTaskDelay(4000 / portTICK_PERIOD_MS);
 	
-	tft.fillScreen(COLOR_ESP_BKGD);
-	tft.drawBitmap(0, 0, esp_logo, 137, 26);
-	tft.drawRoundRect(0, 0, 240, 320, 3, COLOR_WHITE);
-	tft.drawFastHLine(0, 25, 320, COLOR_WHITE);
-	tft.setTextColor(COLOR_WHITE, COLOR_ESP_BKGD);
-	tft.drawString("Wifi-scan", 180, 10);
-	tft.setFontStyle(&FreeSans9pt7b);
-	tft.drawString("AP Name",    10, 50);
-	tft.drawString("RSSI",      180, 50);
-	tft.setFontStyle(NULL);
+	lcd_obj->fillScreen(COLOR_ESP_BKGD);
+	lcd_obj->drawBitmap(0, 0, esp_logo, 137, 26);
+	lcd_obj->drawRoundRect(0, 0, 240, 320, 3, COLOR_WHITE);
+	lcd_obj->drawFastHLine(0, 25, 320, COLOR_WHITE);
+	lcd_obj->setTextColor(COLOR_WHITE, COLOR_ESP_BKGD);
+	lcd_obj->drawString("Wifi-scan", 180, 10);
+	lcd_obj->setFontStyle(&FreeSans9pt7b);
+	lcd_obj->drawString("AP Name",    10, 50);
+	lcd_obj->drawString("RSSI",      180, 50);
+	lcd_obj->setFontStyle(NULL);
 
     ESP_ERROR_CHECK(esp_wifi_scan_start(&scan_config, true));
     uint16_t ap_num = 20;
@@ -243,11 +244,11 @@ extern "C" void esp_draw()
 
     /*Print 10 of them on the screen*/
     for (uint8_t i = 0; i < ap_num; i++) {
-        tft.drawNumber(i + 1, 10, 60 + (i * 10));
-        tft.setTextColor(COLOR_YELLOW, COLOR_ESP_BKGD);
-        tft.drawString((char *) ap_records[i].ssid, 30, 60 + (i * 10));
-        tft.setTextColor(COLOR_GREEN, COLOR_ESP_BKGD);
-        tft.drawNumber(100 + ap_records[i].rssi, 200, 60 + (i * 10));
+        lcd_obj->drawNumber(i + 1, 10, 60 + (i * 10));
+        lcd_obj->setTextColor(COLOR_YELLOW, COLOR_ESP_BKGD);
+        lcd_obj->drawString((char *) ap_records[i].ssid, 30, 60 + (i * 10));
+        lcd_obj->setTextColor(COLOR_GREEN, COLOR_ESP_BKGD);
+        lcd_obj->drawNumber(100 + ap_records[i].rssi, 200, 60 + (i * 10));
     }
     vTaskDelay(2000 / portTICK_PERIOD_MS);
 }

@@ -32,9 +32,10 @@
 
 /*SPI Includes*/
 #include "driver/spi_master.h"
-#include "Adafruit_lcd_fast_as.h"
+#include "iot_lcd.h"
 #include "Adafruit_GFX_AS.h"
 #include "image.h"
+#include "lcd_image.h"
 
 #include "esp_wifi.h"
 #include "esp_log.h"
@@ -42,14 +43,13 @@
 #include "esp_event_loop.h"
 
 /*Include desired font here*/
-#include "FreeSans9pt7b.h"
-#include "FreeMono9pt7b.h"
-#include "FreeSerif9pt7b.h"
-#include "FreeSerifItalic9pt7b.h"
+#include "fonts/FreeSans9pt7b.h"
+#include "fonts/FreeMono9pt7b.h"
+#include "fonts/FreeSerif9pt7b.h"
+#include "fonts/FreeSerifItalic9pt7b.h"
 #include "unity.h"
 
-static spi_device_handle_t spi = NULL;
-static Adafruit_lcd tft(spi, true);  //Global def for LCD
+static CEspLcd* tft_obj = NULL;
 
 //-------------TEST CODE-----------------
 float target_room_temperature = 23.5;
@@ -59,7 +59,7 @@ int color(uint8_t r, uint8_t g, uint8_t b)
     return ((r&248)|g>>5) << 8 | ((g&28)<<3|b>>3);
 }
 
-int drawPlaceholder(Adafruit_lcd* tft, int x, int y, int width, int height, int bordercolor, const char* headertext, int header_text_offset, const GFXfont* font)
+int drawPlaceholder(CEspLcd* tft, int x, int y, int width, int height, int bordercolor, const char* headertext, int header_text_offset, const GFXfont* font)
 {
     int headersize = 20;
     tft->setTextColor(COLOR_GREEN, COLOR_BLACK);
@@ -79,7 +79,7 @@ const GFXfont* title_font = &FreeSerif9pt7b;
 const GFXfont* text_font = &FreeSerif9pt7b;
 const GFXfont* num_font = &FreeSerif9pt7b;
 
-void update_huminity(Adafruit_lcd* tft, int hum)
+void update_huminity(CEspLcd* tft, int hum)
 {
     tft->setFontStyle(num_font);
     char dtmp[10];
@@ -89,19 +89,19 @@ void update_huminity(Adafruit_lcd* tft, int hum)
     tft->drawString(dtmp, 195, 50);
 }
 
-void update_brightness(Adafruit_lcd* tft, float bright)
+void update_brightness(CEspLcd* tft, float bright)
 {
     tft->fillRect(193, 72, 55, 26, COLOR_BLACK);
     tft->drawFloat(bright, 1, 195, 90);
 }
 
-void drawTargetTemp(Adafruit_lcd* tft, float temp)
+void drawTargetTemp(CEspLcd* tft, float temp)
 {
     tft->setTextColor(COLOR_WHITE, COLOR_BLACK);
     tft->drawFloatSevSeg(temp, 1, 7, 54, 7);
 }
 
-void drawWireFrame(Adafruit_lcd* tft)
+void drawWireFrame(CEspLcd* tft)
 {
     tft->setTextColor(COLOR_GREEN, COLOR_BLACK);
     //Target placeholder
@@ -127,8 +127,8 @@ void drawWireFrame(Adafruit_lcd* tft)
     tft->drawString("Signal : ", 6, placeholderbody + 22);
     tft->drawString("Status : ", 6, placeholderbody + 42);
 }
-#include "lcd_image.h"
-void setupUI(Adafruit_lcd* tft)
+
+void setupUI(CEspLcd* tft)
 {
     tft->setRotation(3);
     tft->fillScreen(COLOR_BLACK);
@@ -137,35 +137,28 @@ void setupUI(Adafruit_lcd* tft)
     vTaskDelay(1000/portTICK_PERIOD_MS);
 
     while (1) {
-        printf("draw\n");
         tft->fillRect(0, 0, 320, 240, COLOR_BLUE);
-//        tft->drawBitmap(0, 0, Status_320_240, 320, 240);
-//        tft->drawBitmap(10, 10, water_pic_35, 35, 35);
         vTaskDelay(500 / portTICK_PERIOD_MS);
 
         tft->fillRect(0, 0, 320, 240, COLOR_GREEN);
-//        tft->drawBitmap(10, 10, brightness_pic_35, 35, 35);
-//        tft->drawBitmap(0, 0, pic1_320_240, 320, 240);
         vTaskDelay(500 / portTICK_PERIOD_MS);
 
-        break;
-
+        tft->invertDisplay(1);
         tft->drawBitmap(0, 0, Status_320_240, 320, 240);
         vTaskDelay(500/portTICK_PERIOD_MS);
-//        break;
-
         tft->fillScreen(COLOR_BLACK);
         tft->drawBitmap(0, 0, esp_logo, 137, 26);
         drawWireFrame(tft);
         drawTargetTemp(tft, target_room_temperature);
         vTaskDelay(500/portTICK_PERIOD_MS);
-    }
 
+        break;
+    }
+    tft->invertDisplay(0);
     tft->fillScreen(COLOR_BLACK);
     tft->drawBitmap(0, 0, esp_logo, 137, 26);
     drawWireFrame(tft);
     drawTargetTemp(tft, target_room_temperature);
-//    while(1);
 }
 //=======================================
 
@@ -281,11 +274,15 @@ extern "C" void demo_lcd_init()
         .pin_num_rst  = GPIO_NUM_18,
         .pin_num_bckl = GPIO_NUM_5,
         .clk_freq     = 30000000,
+        .rst_active_level = 0,
+        .bckl_active_level = 0,
+        .spi_host = HSPI_HOST,
     };
     
-    lcd_init(&lcd_pins, &spi);
-    tft.setSpiBus(spi);
-    setupUI(&tft);
+	if(tft_obj == NULL) {
+	    tft_obj = new CEspLcd(&lcd_pins);
+	}
+	setupUI(tft_obj);
 }
 
 void lcd_update_task(void* arg)
@@ -297,15 +294,15 @@ void lcd_update_task(void* arg)
             switch(data.type) {
                 case LCD_DATA_TEMP:
                     printf("val recv: %f\n", data.temp);
-                    drawTargetTemp(&tft, data.temp);
+                    drawTargetTemp(tft_obj, data.temp);
                     break;
                 case LCD_DATA_HUM:
                     printf("recv hum: %d\n", data.hum);
-                    update_huminity(&tft, data.hum);
+                    update_huminity(tft_obj, data.hum);
                     break;
                 case LCD_DATA_BRI:
                     printf("recv bri: %f\n", data.brightness);
-                    update_brightness(&tft, data.brightness);
+                    update_brightness(tft_obj, data.brightness);
                     break;
                 default:
                     printf("data type error: %d\n", data.type);
