@@ -32,7 +32,9 @@ POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "Adafruit_GFX_AS.h"
-#include "glcdfont.c"           //Default font file
+
+//Default font file
+#include "fonts/glcdfont.h"
 
 //Debug purpose
 #include "esp_log.h"
@@ -54,6 +56,11 @@ Adafruit_GFX_AS::Adafruit_GFX_AS(int16_t w, int16_t h): WIDTH(w), HEIGHT(h)
     textcolor = textbgcolor = 0xFFFF;
     wrap      = true;
     gfxFont   = NULL;
+}
+
+Adafruit_GFX_AS::~Adafruit_GFX_AS()
+{
+
 }
 
 // Draw a circle outline
@@ -553,7 +560,7 @@ int Adafruit_GFX_AS::write_char(uint8_t c)
             cursor_x  = 0;                     // Reset x to zero,
             cursor_y += textsize * 8;          // advance y one line
         } 
-        else if(c != '\r') {                 // Ignore carriage returns
+        else if(c != '\r') {                   // Ignore carriage returns
             if(wrap && ((cursor_x + textsize * 6) > _width)) { // Off right?
                 cursor_x  = 0;                 // Reset x to zero,
                 cursor_y += textsize * 8;      // advance y one line

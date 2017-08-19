@@ -1,19 +1,17 @@
-#ifndef _ADAFRUIT_GFX_AS_H
-#define _ADAFRUIT_GFX_AS_H
+#ifndef _ADAFRUIT_GFX_AS_H_
+#define _ADAFRUIT_GFX_AS_H_
 /*This is the Baseclass Graphics File*/
 
 #include "esp_types.h"
-#include "gfxfont.h"
+#include "fonts/gfxfont.h"
 
 #define SWAPBYTES(i) ((i>>8) | (i<<8))
 
 class Adafruit_GFX_AS
 {
 public:
-    bool dma_mode;
-    int dma_buf_size;
     Adafruit_GFX_AS(int16_t w, int16_t h); // Constructor
-    /*Find information about virtual void functions in subclass file (Adafruit_lcd_fast_as.h)*/
+    /*Find information about virtual void functions in subclass file (iot_lcd.h)*/
     // This MUST be defined by the subclass:
     virtual void drawPixel(int16_t x, int16_t y, uint16_t color);
     virtual void drawBitmapFont(int16_t x, int16_t y, uint8_t w, uint8_t h, const uint16_t * bitmap);
@@ -27,7 +25,7 @@ public:
     virtual void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color);
     virtual void fillScreen(uint16_t color);
     virtual void invertDisplay(bool i);
-
+    virtual ~Adafruit_GFX_AS();
     // These exist only with Adafruit_GFX_AS (no subclass overrides)
     
     /**

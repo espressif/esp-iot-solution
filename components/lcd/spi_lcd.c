@@ -1,34 +1,26 @@
 /*
- ILI9341 SPI Transmit Data Functions
-
- Based on ESP8266 library https://github.com/Sermus/ESP8266_Adafruit_ILI9341
-
- Copyright (c) 2015-2016 Andrey Filimonov.  All rights reserved.
-
- Additions for ESP32 Copyright (c) 2016-2017 Espressif Systems (Shanghai) PTE LTD
- 
- Redistribution and use in source and binary forms, with or without
- modification, are permitted provided that the following conditions are met:
- 
- - Redistributions of source code must retain the above copyright notice,
-   this list of conditions and the following disclaimer.
- - Redistributions in binary form must reproduce the above copyright notice,
-   this list of conditions and the following disclaimer in the documentation
-   and/or other materials provided with the distribution.
- 
- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- POSSIBILITY OF SUCH DAMAGE
-
-*/
+ * ESPRSSIF MIT License
+ *
+ * Copyright (c) 2015 <ESPRESSIF SYSTEMS (SHANGHAI) PTE LTD>
+ *
+ * Permission is hereby granted for use on ESPRESSIF SYSTEMS ESP8266 only, in which case,
+ * it is free of charge, to any person obtaining a copy of this software and associated
+ * documentation files (the "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the Software is furnished
+ * to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all copies or
+ * substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *
+ */
 
 #include <sys/param.h>
 #include "spi_lcd.h"
@@ -41,8 +33,6 @@
 #include "freertos/task.h"
 #define SPIFIFOSIZE 16
 
-uint8_t data_command; /*Pin config for setting GPIO in SPI callback*/
-SemaphoreHandle_t spi_mux = NULL;
 /*
  This struct stores a bunch of command values to be initialized for ILI9341
 */
@@ -51,6 +41,7 @@ typedef struct {
     uint8_t data[16];
     uint8_t databytes; //No of data in data; bit 7 = delay after set; 0xFF = end of cmds.
 } lcd_init_cmd_t;
+
 
 DRAM_ATTR static const lcd_init_cmd_t ili_init_cmds[]={
     {0xCF, {0x00, 0x83, 0x30}, 3},
@@ -103,56 +94,54 @@ DRAM_ATTR static const lcd_init_cmd_t st7789_init_cmds[] = {
     {0, {0}, 0xff},
 };
 
+#define LCD_CMD_LEV   (0)
+#define LCD_DATA_LEV  (1)
+
 /*This function is called (in irq context!) just before a transmission starts.
 It will set the D/C line to the value indicated in the user field */
 void lcd_spi_pre_transfer_callback(spi_transaction_t *t)
 {
-    int dc = (int)t->user;
-    gpio_set_level(data_command, dc);
+    lcd_dc_t *dc = (lcd_dc_t *) t->user;
+    gpio_set_level((int)dc->dc_io, (int)dc->dc_level);
 }
 
-esp_err_t _lcd_spi_send(spi_device_handle_t spi, spi_transaction_t* t)
+static esp_err_t _lcd_spi_send(spi_device_handle_t spi, spi_transaction_t* t)
 {
-    xSemaphoreTake(spi_mux, portMAX_DELAY);
-    esp_err_t ret = spi_device_transmit(spi, t); //Transmit!
-    xSemaphoreGive(spi_mux);
-    return ret;
+    return spi_device_transmit(spi, t); //Transmit!
 }
 
-void lcd_cmd(spi_device_handle_t spi, const uint8_t cmd)
+void lcd_cmd(spi_device_handle_t spi, const uint8_t cmd, lcd_dc_t *dc)
 {
     esp_err_t ret;
+    dc->dc_level = LCD_CMD_LEV;
     spi_transaction_t t = {
-        .length = 8,                   //Command is 8 bits
-        .tx_buffer = &cmd,             //The data is the cmd itself
-        .user = (void *) 0,            //D/C needs to be set to 0
+        .length = 8,                    // Command is 8 bits
+        .tx_buffer = &cmd,              // The data is the cmd itself
+        .user = (void *) dc,            // D/C needs to be set to 0
     };
-    ret = _lcd_spi_send(spi, &t); //Transmit!
-    assert(ret == ESP_OK);              //Should have had no issues.
+    ret = _lcd_spi_send(spi, &t);       // Transmit!
+    assert(ret == ESP_OK);              // Should have had no issues.
 }
 
-void lcd_data(spi_device_handle_t spi, const uint8_t *data, int len)
+void lcd_data(spi_device_handle_t spi, const uint8_t *data, int len, lcd_dc_t *dc)
 {
     esp_err_t ret;
     if (len == 0) {
         return;    //no need to send anything
     }
+    dc->dc_level = LCD_DATA_LEV;
 
     spi_transaction_t t = {
-        .length = len * 8,              //Len is in bytes, transaction length is in bits.
-        .tx_buffer = data,              //Data
-        .user = (void *) 1,             //D/C needs to be set to 1
+        .length = len * 8,              // Len is in bytes, transaction length is in bits.
+        .tx_buffer = data,              // Data
+        .user = (void *) dc,            // D/C needs to be set to 1
     };
-    ret = _lcd_spi_send(spi, &t); //Transmit!
-    assert(ret == ESP_OK);              //Should have had no issues.
+    ret = _lcd_spi_send(spi, &t);       // Transmit!
+    assert(ret == ESP_OK);              // Should have had no issues.
 }
 
-void lcd_init(lcd_conf_t* lcd_conf, spi_device_handle_t *spi_dev)
+void lcd_init(lcd_conf_t* lcd_conf, spi_device_handle_t *spi_dev, lcd_dc_t *dc)
 {
-    if(spi_mux == NULL) {
-        spi_mux = xSemaphoreCreateMutex();
-    }
-    data_command = lcd_conf->pin_num_dc;
     //Initialize SPI Bus for LCD
     spi_bus_config_t buscfg = {
         .miso_io_num = lcd_conf->pin_num_miso,
@@ -161,38 +150,38 @@ void lcd_init(lcd_conf_t* lcd_conf, spi_device_handle_t *spi_dev)
         .quadwp_io_num = -1,
         .quadhd_io_num = -1,
     };
-    spi_bus_initialize(HSPI_HOST, &buscfg, 1);
+    spi_bus_initialize(lcd_conf->spi_host, &buscfg, 1);
 
     spi_device_interface_config_t devcfg = {
-        .clock_speed_hz = lcd_conf->clk_freq,               //Clock out at 20 MHz
+        .clock_speed_hz = lcd_conf->clk_freq,     //Clock out frequency
         .mode = 0,                                //SPI mode 0
         .spics_io_num = lcd_conf->pin_num_cs,     //CS pin
         .queue_size = 7,                          //We want to be able to queue 7 transactions at a time
         .pre_cb = lcd_spi_pre_transfer_callback,  //Specify pre-transfer callback to handle D/C line
     };
-    spi_bus_add_device(HSPI_HOST, &devcfg, spi_dev);
+    spi_bus_add_device(lcd_conf->spi_host, &devcfg, spi_dev);
         
     int cmd = 0;
     //Initialize non-SPI GPIOs
     gpio_pad_select_gpio(lcd_conf->pin_num_dc);
-    gpio_pad_select_gpio(lcd_conf->pin_num_rst);
-    gpio_pad_select_gpio(lcd_conf->pin_num_bckl);
     gpio_set_direction(lcd_conf->pin_num_dc, GPIO_MODE_OUTPUT);
-    gpio_set_direction(lcd_conf->pin_num_rst, GPIO_MODE_OUTPUT);
-    gpio_set_direction(lcd_conf->pin_num_bckl, GPIO_MODE_OUTPUT);
 
     //Reset the display
-    gpio_set_level(lcd_conf->pin_num_rst, 0);
-    vTaskDelay(100 / portTICK_RATE_MS);
-    gpio_set_level(lcd_conf->pin_num_rst, 1);
-    vTaskDelay(100 / portTICK_RATE_MS);
+    if (lcd_conf->pin_num_rst < GPIO_NUM_MAX) {
+        gpio_pad_select_gpio(lcd_conf->pin_num_rst);
+        gpio_set_direction(lcd_conf->pin_num_rst, GPIO_MODE_OUTPUT);
+        gpio_set_level(lcd_conf->pin_num_rst, (lcd_conf->rst_active_level) & 0x1);
+        vTaskDelay(100 / portTICK_RATE_MS);
+        gpio_set_level(lcd_conf->pin_num_rst, (~(lcd_conf->rst_active_level)) & 0x1);
+        vTaskDelay(100 / portTICK_RATE_MS);
+    }
 
     if(lcd_conf->lcd_model == ST7789)
     {
         //Send all the commands for ST7789 Init
         while (st7789_init_cmds[cmd].databytes != 0xff) {
-            lcd_cmd(*spi_dev, st7789_init_cmds[cmd].cmd);
-            lcd_data(*spi_dev, st7789_init_cmds[cmd].data, st7789_init_cmds[cmd].databytes & 0x1F);
+            lcd_cmd(*spi_dev, st7789_init_cmds[cmd].cmd, dc);
+            lcd_data(*spi_dev, st7789_init_cmds[cmd].data, st7789_init_cmds[cmd].databytes & 0x1F, dc);
             if (st7789_init_cmds[cmd].databytes & 0x80) {
                 vTaskDelay(100 / portTICK_RATE_MS);
             }
@@ -203,8 +192,8 @@ void lcd_init(lcd_conf_t* lcd_conf, spi_device_handle_t *spi_dev)
     {
         //Send all the commands for ILI9341 Init
         while (ili_init_cmds[cmd].databytes != 0xff) {
-            lcd_cmd(*spi_dev, ili_init_cmds[cmd].cmd);
-            lcd_data(*spi_dev, ili_init_cmds[cmd].data, ili_init_cmds[cmd].databytes & 0x1F);
+            lcd_cmd(*spi_dev, ili_init_cmds[cmd].cmd, dc);
+            lcd_data(*spi_dev, ili_init_cmds[cmd].data, ili_init_cmds[cmd].databytes & 0x1F, dc);
             if (ili_init_cmds[cmd].databytes & 0x80) {
                 vTaskDelay(100 / portTICK_RATE_MS);
             }
@@ -213,15 +202,20 @@ void lcd_init(lcd_conf_t* lcd_conf, spi_device_handle_t *spi_dev)
     }
     
     //Enable backlight
-    gpio_set_level(lcd_conf->pin_num_bckl, 0);
+    if (lcd_conf->pin_num_bckl < GPIO_NUM_MAX) {
+        gpio_pad_select_gpio(lcd_conf->pin_num_bckl);
+        gpio_set_direction(lcd_conf->pin_num_bckl, GPIO_MODE_OUTPUT);
+        gpio_set_level(lcd_conf->pin_num_bckl, (lcd_conf->bckl_active_level) & 0x1);
+    }
 }
 
-void lcd_send_uint16_r(spi_device_handle_t spi, const uint16_t data, int32_t repeats)
+void lcd_send_uint16_r(spi_device_handle_t spi, const uint16_t data, int32_t repeats, lcd_dc_t *dc)
 {
     uint32_t i;
     uint32_t word = data << 16 | data;
     uint32_t word_tmp[16];
     spi_transaction_t t;
+    dc->dc_level = LCD_DATA_LEV;
 
     while (repeats > 0) {
         uint16_t bytes_to_transfer = MIN(repeats*sizeof(uint16_t), SPIFIFOSIZE*sizeof(uint32_t));
@@ -232,16 +226,16 @@ void lcd_send_uint16_r(spi_device_handle_t spi, const uint16_t data, int32_t rep
         memset(&t, 0, sizeof(t));           //Zero out the transaction
         t.length = bytes_to_transfer * 8;   //Len is in bytes, transaction length is in bits.
         t.tx_buffer = word_tmp;             //Data
-        t.user = (void *) 1;                //D/C needs to be set to 1
+        t.user = (void *) dc;                //D/C needs to be set to 1
         _lcd_spi_send(spi, &t);       //Transmit!
         repeats -= bytes_to_transfer / 2;
     }
 }
 
-void lcd_read_id(spi_device_handle_t spi, lcd_id_t *ili_id_num)
+void lcd_read_id(spi_device_handle_t spi, lcd_id_t *ili_id_num, lcd_dc_t *dc)
 {    
     uint8_t read_cmd = 0x04;
-    lcd_data(spi, &read_cmd, 1);        //Send Read Identity command
+    lcd_data(spi, &read_cmd, 1, dc);        //Send Read Identity command
     
     spi_transaction_t t;
     memset(&t, 0, sizeof(t));           //Zero out the transaction
