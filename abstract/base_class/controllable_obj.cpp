@@ -23,4 +23,4 @@
   */
 #include "controllable_obj.h"
 
-controllable_obj::~controllable_obj() {};
+CControllable::~CControllable() {};

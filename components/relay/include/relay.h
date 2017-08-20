@@ -120,20 +120,67 @@ esp_err_t relay_delete(relay_handle_t relay_handle);
 
 #ifdef __cplusplus
 #include "controllable_obj.h"
-class relay : public controllable_obj
+
+/**
+ * class of relay
+ * simple usage:
+ * relay_io_t relay_io_0 = {
+ *      .flip_io = {
+ *          .d_io_num = GPIO_NUM_2,
+ *          .cp_io_num = GPIO_NUM_4,
+ *      },
+ * };
+ * CRelay relay_0(relay_io_0, RELAY_CLOSE_HIGH, RELAY_DFLIP_CONTROL, RELAY_IO_NORMAL);
+ * relay_0.on();
+ */
+class CRelay : public CControllable
 {
 private:
     relay_handle_t m_relay_handle;
-    relay(const relay&);
-    relay& operator = (const relay&);
+
+    /**
+     * prevent copy construct
+     */
+    CRelay(const CRelay&);
+    CRelay& operator = (const CRelay&);
 
 public:
-    relay(relay_io_t relay_io, relay_close_level_t close_level, relay_ctl_mode_t ctl_mode, relay_io_mode_t io_mode = RELAY_IO_NORMAL);
+    /**
+     * @brief  constructor of CRelay
+     *
+     * @param  relay_io gpios of relay
+     * @param  close_level close voltage level of relay
+     * @param  ctl_mode control relay by d flip-flop or gpio
+     * @param  io_mode gpio work in normal mode or rtc mode
+     */
+    CRelay(relay_io_t relay_io, relay_close_level_t close_level, relay_ctl_mode_t ctl_mode, relay_io_mode_t io_mode = RELAY_IO_NORMAL);
 
+    /**
+     * @brief  turn on the relay
+     *
+     * @return
+     *     - ESP_OK: succeed
+     *     - others: fail
+     */
     virtual esp_err_t on();
+
+    /**
+     * @brief  turn off the relay
+     *
+     * @return
+     *     - ESP_OK: succeed
+     *     - others: fail
+     */
     virtual esp_err_t off();
+
+    /**
+     * @brief get current status of relay
+     *
+     * @return status
+     */
     relay_status_t status();
-    virtual ~relay();
+
+    virtual ~CRelay();
 };
 
 #endif

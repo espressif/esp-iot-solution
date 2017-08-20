@@ -49,8 +49,8 @@ extern "C" void relay_obj_test()
             .ctl_io_num = RELAY_1_D_IO_NUM,
         },
     };
-    relay relay_0(relay_io_0, RELAY_CLOSE_HIGH, RELAY_DFLIP_CONTROL, RELAY_IO_NORMAL);
-    relay relay_1(relay_io_1, RELAY_CLOSE_HIGH, RELAY_GPIO_CONTROL, RELAY_IO_NORMAL);
+    CRelay relay_0(relay_io_0, RELAY_CLOSE_HIGH, RELAY_DFLIP_CONTROL, RELAY_IO_NORMAL);
+    CRelay relay_1(relay_io_1, RELAY_CLOSE_HIGH, RELAY_GPIO_CONTROL, RELAY_IO_NORMAL);
 
 
     relay_0.on();

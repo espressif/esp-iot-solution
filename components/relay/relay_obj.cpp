@@ -30,28 +30,28 @@
 #include "driver/gpio.h"
 #include "relay.h"
 
-relay::relay(relay_io_t relay_io, relay_close_level_t close_level, relay_ctl_mode_t ctl_mode, relay_io_mode_t io_mode)
+CRelay::CRelay(relay_io_t relay_io, relay_close_level_t close_level, relay_ctl_mode_t ctl_mode, relay_io_mode_t io_mode)
 {
     m_relay_handle = relay_create(relay_io, close_level, ctl_mode, io_mode);
 }
 
-relay::~relay()
+CRelay::~CRelay()
 {
     relay_delete(m_relay_handle);
     m_relay_handle = NULL;
 }
 
-esp_err_t relay::on()
+esp_err_t CRelay::on()
 {
     return relay_state_write(m_relay_handle, RELAY_STATUS_CLOSE);
 }
 
-esp_err_t relay::off()
+esp_err_t CRelay::off()
 {
     return relay_state_write(m_relay_handle, RELAY_STATUS_OPEN);
 }
 
-relay_status_t relay::status()
+relay_status_t CRelay::status()
 {
     return relay_state_read(m_relay_handle);
 }

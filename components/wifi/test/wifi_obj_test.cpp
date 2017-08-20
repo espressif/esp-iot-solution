@@ -28,7 +28,7 @@
 
 extern "C" void wifi_obj_test()
 {
-    wifi my_wifi(WIFI_MODE_STA);
+    CWiFi my_wifi(WIFI_MODE_STA);
     printf("connect wifi\n");
     my_wifi.connect_start("IOT_DEMO_TEST", "123456789", portMAX_DELAY);
 }

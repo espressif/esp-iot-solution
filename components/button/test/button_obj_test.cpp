@@ -55,7 +55,7 @@ extern "C" void button_obj_test()
     const char *release = "RELEASE";
     const char *tap = "TAP";
     const char *serial = "SERIAL";
-    button* btn = new button(BUTTON_IO_NUM, BUTTON_ACTIVE_LEVEL, BUTTON_SERIAL_TRIGGER, 3);
+    CButton* btn = new CButton(BUTTON_IO_NUM, BUTTON_ACTIVE_LEVEL, BUTTON_SERIAL_TRIGGER, 3);
     btn->add_cb(BUTTON_PUSH_CB, button_tap_cb, (void*) push, 50 / portTICK_PERIOD_MS);
     btn->add_cb(BUTTON_RELEASE_CB, button_tap_cb, (void*) release, 50 / portTICK_PERIOD_MS);
     btn->add_cb(BUTTON_TAP_CB, button_tap_cb, (void*) tap, 50 / portTICK_PERIOD_MS);

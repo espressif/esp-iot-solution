@@ -159,35 +159,162 @@ uint8_t led_night_duty_read();
 
 #ifdef __cplusplus
 #include "controllable_obj.h"
-class led: public controllable_obj
+
+/**
+ * class of status led
+ * simple usage:
+ * CLED* my_led = new CLED(17, LED_DARK_LOW);
+ * my_led->off();
+ * my_led->slow_blink();
+ * CLED::blink_freq_write(10, 2);
+ * delete my_led;
+ */
+class CLED: public CControllable
 {
 private:
     led_handle_t m_led_handle;
-    static uint64_t m_quick_blink_freq;
-    static uint64_t m_slow_blink_freq;
-    led(const led&);
-    led& operator=(const led&);
-public:
-    led(uint8_t io_num, led_dark_level_t dark_level);
 
+    // the quick blink frequency of all status leds
+    static uint64_t m_quick_blink_freq;
+
+    // the slow blink frequency of all status leds
+    static uint64_t m_slow_blink_freq;
+
+    /**
+     * prevent copy construct
+     */
+    CLED(const CLED&);
+    CLED& operator=(const CLED&);
+public:
+    /**
+     * @brief  constructor of CLED
+     *
+     * @param  io_num
+     * @param  dark_level on whick level the led is dark
+     */
+    CLED(uint8_t io_num, led_dark_level_t dark_level);
+
+    /**
+     * @brief  set state of led
+     *
+     * @param  state refer to enum led_status_t
+     *
+     * @return
+     *     - ESP_OK: succeed
+     *     - others: fail
+     */
     esp_err_t state_write(led_status_t state);
+
+    /**
+     * @brief  get state of led
+     *
+     * @return state of led
+     */
     led_status_t state_read();
+
+    /**
+     * @brief  set mode of led
+     *
+     * @param  mode refer to enum led_mode_t
+     *
+     * @return
+     *     - ESP_OK: succeed
+     *     - others: fail
+     */
     esp_err_t mode_write(led_mode_t mode);
+
+    /**
+     * @brief  get mode of led
+     *
+     * @return mode of led
+     */
     led_mode_t mode_read();
 
+    /**
+     * @brief  set led to quick blink
+     *
+     * @return
+     *     - ESP_OK: succeed
+     *     - others: fail
+     */
     esp_err_t quick_blink();
+
+    /**
+     * @brief  set led to slow blink
+     *
+     * @return
+     *     - ESP_OK: succeed
+     *     - others: fail
+     */
     esp_err_t slow_blink();
+
+    /**
+     * @brief  set led to night mode
+     *
+     * @return
+     *     - ESP_OK: succeed
+     *     - others: fail
+     */
     esp_err_t night_mode();
+
+    /**
+     * @brief  set led to normal mode
+     *
+     * @return
+     *     - ESP_OK: succeed
+     *     - others: fail
+     */
     esp_err_t normal_mode();
 
-    static esp_err_t blink_freq_write(uint64_t quick_fre, uint64_t slow_fre);
+    /**
+     * @brief set blink frequency of all status leds
+     *
+     * @param quick_freq quick blink frequency
+     * @param slow_freq slow blink frequency
+     *
+     * @return
+     *     - ESP_OK: success
+     *     - others: fail
+     */
+    static esp_err_t blink_freq_write(uint64_t quick_freq, uint64_t slow_freq);
+
+    /**
+     * @brief set duty in night mode of all status leds
+     *
+     * @param duty 0~100
+     *
+     * @return
+     *     - ESP_OK: success
+     *     - others: fail
+     */
     static esp_err_t night_duty_write(uint8_t duty);
+
+    /**
+     * @brief get duty in night mode of all status leds
+     *
+     * @return duty of night mode
+     */
     static uint8_t night_duty_read();
 
+    /**
+     * @brief  set led to bright
+     *
+     * @return
+     *     - ESP_OK: succeed
+     *     - others: fail
+     */
     virtual esp_err_t on();
+
+    /**
+     * @brief  set led to dark
+     *
+     * @return
+     *     - ESP_OK: succeed
+     *     - others: fail
+     */
     virtual esp_err_t off();
 
-    virtual ~led();
+    virtual ~CLED();
 };
 
 #endif
