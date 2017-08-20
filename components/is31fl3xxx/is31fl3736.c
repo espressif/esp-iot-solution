@@ -29,25 +29,25 @@
 
 static const char *tag = "IS31FL3736";
 
-#define IS31_ERROR_CHECK(con) if(!(con)) {ESP_LOGE(tag,"err"); printf("%s %d",__func__,__LINE__); return ESP_FAIL;}
-#define IS31_PARAM_CHECK(con) if(!(con)) {ESP_LOGE(tag,"Parameter error, "); printf("%s %d",__func__,__LINE__); assert(0);}
-#define IS31_RES_CHECK(con) if(!(con)) {ESP_LOGE(tag,"Parameter error, "); printf("%s %d",__func__,__LINE__); assert(0);}
+#define IS31_ERROR_CHECK(con) if(!(con)) {ESP_LOGE(tag,"error: %s; line: %d",__func__,__LINE__); return ESP_FAIL;}
+#define IS31_PARAM_CHECK(con) if(!(con)) {ESP_LOGE(tag,"Parameter error: %s; line: %d",__func__,__LINE__); assert(0);}
+#define IS31_RES_CHECK(con) if(!(con)) {ESP_LOGE(tag,"Parameter error: %s; line: %d",__func__,__LINE__); assert(0);}
 
 #define IS31FL3736_WRITE_BIT    0x00
 #define IS31FL3736_READ_BIT     0x01
 #define IS31FL3736_ACK_CHECK_EN 1
 #define IS31FL3736_READ_ACK     0x0         /*!< I2C ack value */
 #define IS31FL3736_READ_NACK    0x1         /*!< I2C nack value */
-#define IS31FL3736_CMD_WRITE_EN 0xC5 /*!< magic num */
-#define IS31FL3736_I2C_ID       0xA0 /*!< I2C Addr,up to ADDR1/ADDR2 pin */
+#define IS31FL3736_CMD_WRITE_EN 0xC5        /*!< magic num */
+#define IS31FL3736_I2C_ID       0xA0        /*!< I2C Addr,up to ADDR1/ADDR2 pin */
 
 typedef struct {
     i2c_bus_handle_t bus;
     uint16_t dev_addr;
     bool dev_addr_10bit_en;
     gpio_num_t rst_io;
-    is31fl3736_addr_pin_conn_t addr1;
-    is31fl3736_addr_pin_conn_t addr2;
+    is31fl3736_addr_pin_t addr1;
+    is31fl3736_addr_pin_t addr2;
     uint8_t cur_val;
 } is31fl3736_dev_t;
 
@@ -91,9 +91,7 @@ esp_err_t is31fl3736_write_reg(is31fl3736_handle_t fxled, uint8_t reg_addr, uint
     i2c_master_start(cmd);
     i2c_master_write_byte(cmd, (led->dev_addr) | IS31FL3736_WRITE_BIT, IS31FL3736_ACK_CHECK_EN);
     i2c_master_write_byte(cmd, reg_addr, IS31FL3736_ACK_CHECK_EN);
-    for (i = 0; i < data_num; i++) {
-        i2c_master_write_byte(cmd, *(data + i), IS31FL3736_ACK_CHECK_EN);
-    }
+    i2c_master_write(cmd, data, data_num, IS31FL3736_ACK_CHECK_EN);
     i2c_master_stop(cmd);
     int ret = i2c_bus_cmd_begin(led->bus, cmd, 1000 / portTICK_RATE_MS);
     i2c_cmd_link_delete(cmd);
@@ -297,9 +295,11 @@ esp_err_t is31fl3736_update_auto_breath_register(is31fl3736_handle_t fxled)
 esp_err_t is31fl3736_hardware_reset(is31fl3736_handle_t fxled)
 {
     is31fl3736_dev_t* led = (is31fl3736_dev_t*) fxled;
-    gpio_set_level(led->rst_io, 0);
-    vTaskDelay(10 / portTICK_RATE_MS);
-    gpio_set_level(led->rst_io, 1);
+    if (led->rst_io < GPIO_NUM_MAX) {
+        gpio_set_level(led->rst_io, 0);
+        vTaskDelay(10 / portTICK_RATE_MS);
+        gpio_set_level(led->rst_io, 1);
+    }
     return ESP_OK;
 }
 
@@ -333,14 +333,14 @@ esp_err_t is31fl3736_init(is31fl3736_handle_t fxled)
     return ESP_OK;
 }
 
-uint8_t is31fl3736_get_i2c_addr(is31fl3736_addr_pin_conn_t addr1_pin, is31fl3736_addr_pin_conn_t addr2_pin)
+uint8_t is31fl3736_get_i2c_addr(is31fl3736_addr_pin_t addr1_pin, is31fl3736_addr_pin_t addr2_pin)
 {
     uint8_t addr = IS31FL3736_I2C_ID | ((uint8_t) addr1_pin << 1) | ((uint8_t) addr2_pin << 3);
     ESP_LOGI(tag, "slave ADDR : %02x", (uint8_t )addr);
     return addr;
 }
 
-is31fl3736_handle_t sensor_is31fl3736_create(i2c_bus_handle_t bus, gpio_num_t rst_io, int addr1, int addr2,
+is31fl3736_handle_t dev_is31fl3736_create(i2c_bus_handle_t bus, gpio_num_t rst_io, is31fl3736_addr_pin_t addr1, is31fl3736_addr_pin_t addr2,
         uint8_t cur_val)
 {
     is31fl3736_dev_t* fxled = (is31fl3736_dev_t*) calloc(1, sizeof(is31fl3736_dev_t));
@@ -349,19 +349,21 @@ is31fl3736_handle_t sensor_is31fl3736_create(i2c_bus_handle_t bus, gpio_num_t rs
     fxled->dev_addr_10bit_en = 0;
     fxled->rst_io = rst_io;
     fxled->cur_val = cur_val;
-    gpio_config_t gpio_conf = {
-        .intr_type = GPIO_INTR_DISABLE,
-        .mode = GPIO_MODE_OUTPUT,
-        .pin_bit_mask = ((uint64_t) (((uint64_t) 1) << rst_io)),
-        .pull_down_en = GPIO_PULLDOWN_DISABLE,
-        .pull_up_en = GPIO_PULLUP_ENABLE,
-    };
-    gpio_config(&gpio_conf);
+    if (rst_io < GPIO_NUM_MAX) {
+        gpio_config_t gpio_conf = {
+            .intr_type = GPIO_INTR_DISABLE,
+            .mode = GPIO_MODE_OUTPUT,
+            .pin_bit_mask = ((uint64_t) (((uint64_t) 1) << rst_io)),
+            .pull_down_en = GPIO_PULLDOWN_DISABLE,
+            .pull_up_en = GPIO_PULLUP_ENABLE,
+        };
+        gpio_config(&gpio_conf);
+    }
     is31fl3736_init(fxled);
     return (is31fl3736_handle_t) fxled;
 }
 
-esp_err_t sensor_is31fl3736_delete(is31fl3736_handle_t fxled, bool del_bus)
+esp_err_t dev_is31fl3736_delete(is31fl3736_handle_t fxled, bool del_bus)
 {
     is31fl3736_dev_t* led = (is31fl3736_dev_t*) fxled;
     if (del_bus) {

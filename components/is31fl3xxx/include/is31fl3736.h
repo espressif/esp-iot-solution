@@ -53,12 +53,12 @@ extern "C" {
 #define IS31FL3736_PAGE(i) (i) /*!< range 0 ~ 3 */
 
 typedef enum {
-    ADDR_PIN_CONNECT_TO_GND = 0, /**< [HW]addr pin connect to GMD pin */
-    ADDR_PIN_CONNECT_TO_SCL = 1, /**< [HW]addr pin connect to SCL pin */
-    ADDR_PIN_CONNECT_TO_SDA = 2, /**< [HW]addr pin connect to SDA pin */
-    ADDR_PIN_CONNECT_TO_VCC = 3, /**< [HW]addr pin connect to VCC pin */
-    ADDR_PIN_CONNECT_MAX,        /**< Reserve */
-} is31fl3736_addr_pin_conn_t;
+    ADDR_PIN_GND = 0, /**< [HW]addr pin connect to GMD pin */
+    ADDR_PIN_SCL = 1, /**< [HW]addr pin connect to SCL pin */
+    ADDR_PIN_SDA = 2, /**< [HW]addr pin connect to SDA pin */
+    ADDR_PIN_VCC = 3, /**< [HW]addr pin connect to VCC pin */
+    ADDR_PIN_MAX,        /**< Reserve */
+} is31fl3736_addr_pin_t;
 
 typedef union {
     struct {
@@ -131,7 +131,7 @@ typedef void* is31fl3736_handle_t;
  *
  * @return the iic salve addr
  */
-uint8_t is31fl3736_get_i2c_addr(is31fl3736_addr_pin_conn_t addr1_pin, is31fl3736_addr_pin_conn_t addr2_pin);
+uint8_t is31fl3736_get_i2c_addr(is31fl3736_addr_pin_t addr1_pin, is31fl3736_addr_pin_t addr2_pin);
 
 /**
  * @brief The Configuration mode of IS31FL3736.
@@ -267,7 +267,7 @@ esp_err_t is31fl3736_init(is31fl3736_handle_t fxled);
  *     - NULL Fail
  *     - Others Success
  */
-is31fl3736_handle_t sensor_is31fl3736_create(i2c_bus_handle_t bus, gpio_num_t rst_io, int addr1, int addr2, uint8_t cur_val);
+is31fl3736_handle_t dev_is31fl3736_create(i2c_bus_handle_t bus, gpio_num_t rst_io, is31fl3736_addr_pin_t addr1, is31fl3736_addr_pin_t addr2, uint8_t cur_val);
 
 /**
  * @brief Delete and release a is31fl3736 object
@@ -279,7 +279,7 @@ is31fl3736_handle_t sensor_is31fl3736_create(i2c_bus_handle_t bus, gpio_num_t rs
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t sensor_is31fl3736_delete(is31fl3736_handle_t fxled, bool del_bus);
+esp_err_t dev_is31fl3736_delete(is31fl3736_handle_t fxled, bool del_bus);
 
 /**
  * @brief Write is31fl3736 device register
