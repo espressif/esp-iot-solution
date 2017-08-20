@@ -55,7 +55,7 @@ void led_dev_init()
     conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
     conf.master.clk_speed = I2C_MASTER_FREQ_HZ;
     i2c_bus = i2c_bus_create(i2c_master_port, &conf);
-    led3736 = sensor_is31fl3736_create(i2c_bus, GPIO_NUM_32, 0, 0, 0XCF);
+    led3736 = dev_is31fl3736_create(i2c_bus, GPIO_NUM_32, 0, 0, 0XCF);
 }
 
 esp_err_t is31fl3736_send_buf(i2c_port_t i2c_port, uint8_t x, uint8_t y, char *c, uint8_t duty, uint8_t* buf)
