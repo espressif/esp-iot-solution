@@ -82,7 +82,7 @@ esp_err_t sc_setup(smartconfig_type_t sc_type, wifi_mode_t wifi_mode, bool fast_
     IOT_CHECK(TAG ,wifi_mode != WIFI_MODE_AP, ESP_FAIL);
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     // Init WiFi
-    ERR_ASSERT(TAG, esp_event_loop_init(NULL, NULL));
+    esp_event_loop_init(NULL, NULL);
     ERR_ASSERT(TAG, esp_wifi_init(&cfg));
     ERR_ASSERT(TAG, esp_wifi_set_storage(WIFI_STORAGE_RAM));
     esp_wifi_set_mode(wifi_mode);
@@ -102,7 +102,10 @@ esp_err_t sc_setup(smartconfig_type_t sc_type, wifi_mode_t wifi_mode, bool fast_
 
 void sc_stop()
 {
-    xEventGroupSetBits(s_sc_event_group, SC_STOP_REQ_EVT);
+    s_sc_status = SC_STATUS_WAIT;
+    if (s_sc_event_group) {
+        xEventGroupSetBits(s_sc_event_group, SC_STOP_REQ_EVT);
+    }
 }
 
 esp_err_t sc_start(uint32_t ticks_to_wait)
@@ -112,6 +115,7 @@ esp_err_t sc_start(uint32_t ticks_to_wait)
         return ESP_ERR_TIMEOUT;
     }
     xEventGroupClearBits(s_sc_event_group, SC_STOP_REQ_EVT);
+    s_sc_status = SC_STATUS_WAIT;
     esp_wifi_start();
     ESP_ERROR_CHECK(esp_smartconfig_start(sc_callback));
     // Wait event bits
@@ -135,7 +139,6 @@ esp_err_t sc_start(uint32_t ticks_to_wait)
         ret = ESP_ERR_TIMEOUT;
     }
     esp_smartconfig_stop();
-    s_sc_status = SC_STATUS_WAIT;
     xSemaphoreGive(s_sc_mux);
     return ret;
 }
