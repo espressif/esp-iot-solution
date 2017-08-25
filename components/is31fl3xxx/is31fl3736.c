@@ -225,7 +225,7 @@ esp_err_t is31fl3736_set_pwm_duty_matrix(is31fl3736_handle_t fxled, uint16_t cs_
     int i, j;
     uint8_t reg, reg_val;
     is31fl3736_write_page(fxled, IS31FL3736_PAGE(1));
-    for (i = 0; i < IS31FL3736_CSX_MAX - 2; i++) {
+    for (i = 0; i < IS31FL3736_CSX_MAX; i++) {
         for (j = 0; j < IS31FL3736_SWY_MAX; j++) {
             if (((cs_x_bit >> i) & 0x1) && ((sw_y_bit >> j) & 0x1)) {
                 reg = i * 2 + j * 0x10;
