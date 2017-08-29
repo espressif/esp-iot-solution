@@ -33,6 +33,6 @@ esp_err_t sc_start(uint32_t ticks_to_wait);
 /**
  * @brief Smartconfig stop
  */
-void smartconfig_stop();
+void sc_stop();
 
 #endif
