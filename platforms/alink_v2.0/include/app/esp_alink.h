@@ -12,6 +12,10 @@
 #include "alink_config.h"
 
 #include <stdio.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 typedef int32_t alink_err_t;
 #ifndef ALINK_TRUE
 #define ALINK_TRUE  1
@@ -72,5 +76,10 @@ int esp_alink_event_init(_IN_ alink_event_cb_t cb);
 int esp_alink_init(_IN_ const void *product_info);
 int esp_alink_write(_IN_ void *up_cmd, size_t size, int micro_seconds);
 int esp_alink_read(_OUT_ void *down_cmd, size_t size, int  micro_seconds);
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

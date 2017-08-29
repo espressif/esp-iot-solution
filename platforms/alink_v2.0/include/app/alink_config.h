@@ -1,6 +1,9 @@
 #ifndef __ALINK_USER_CONFIG_H__
 #define __ALINK_USER_CONFIG_H__
 #include "esp_log.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #if CONFIG_CLOUD_ALINK
 #define ALINK_PASSTHROUGH           CONFIG_ALINK_PASSTHROUGH
@@ -46,4 +49,7 @@
 #define ALINK_INFO_CID            "2D0044000F47333139373038"
 #endif
 
+#ifdef __cplusplus
+}
+#endif
 #endif

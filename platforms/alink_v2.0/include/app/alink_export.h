@@ -29,7 +29,7 @@
 #ifndef _ALINK_EXPORT_H_
 #define _ALINK_EXPORT_H_
 
-#if defined(__cplusplus) /* If this is a C++ compiler, use C linkage */
+#ifdef __cplusplus /* If this is a C++ compiler, use C linkage */
 extern "C"
 {
 #endif
@@ -265,5 +265,10 @@ int awss_start(void);
 int awss_stop(void);
 
 /** @} */ //end of awss
+
+#ifdef __cplusplus
+}
+#endif
+
 
 #endif
