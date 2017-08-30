@@ -12,10 +12,11 @@ build:
   #   - apt update && apt -y install make autoconf 
   script: 
     - export PATH="/opt/xtensa-esp32-elf/bin:$PATH"
+    - source ~/.bash_profile
+    - export IDF_PATH=$(pwd)/submodule/esp-idf
     - export IOT_SOLUTION_PATH=$(pwd)
     - echo $PATH
     - echo $IDF_PATH
-    - source ~/.bash_profile
     - echo $IOT_SOLUTION_PATH
     - echo $IDF_PATH
     - cd examples/smart_device

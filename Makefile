@@ -4,7 +4,7 @@
 #
 
 PROJECT_NAME := iot
-EXTRA_COMPONENT_DIRS := $(shell pwd)/products $(shell pwd)/abstract $(shell pwd)/platforms
+EXTRA_COMPONENT_DIRS := $(shell pwd)/products $(shell pwd)/platforms
 
 include $(IDF_PATH)/make/project.mk
 
