@@ -81,7 +81,7 @@ esp_err_t is31fl3218_set_channel_duty(is31fl3218_handle_t fxled, uint32_t ch_bit
     int ret, i;
     for (i = 0; i < IS31FL3218_CH_NUM_MAX; i++) {
         if ((ch_bit >> i) & 0x1) {
-            int ret = is31fl3218_write_reg(fxled, IS31FL3218_REG_PWM_1 + i, &duty, 1);
+            ret = is31fl3218_write_reg(fxled, IS31FL3218_REG_PWM_1 + i, &duty, 1);
             if (ret == ESP_OK) {
                 //PASS
             } else {

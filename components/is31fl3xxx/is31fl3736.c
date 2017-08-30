@@ -85,7 +85,6 @@ esp_err_t is31fl3736_write_page(is31fl3736_handle_t fxled, uint8_t page_num)
 esp_err_t is31fl3736_write_reg(is31fl3736_handle_t fxled, uint8_t reg_addr, uint8_t *data, uint8_t data_num)
 {
     is31fl3736_dev_t* led = (is31fl3736_dev_t*) fxled;
-    int i;
     IS31_PARAM_CHECK(NULL != data);
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
     i2c_master_start(cmd);

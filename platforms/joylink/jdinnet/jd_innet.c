@@ -25,7 +25,7 @@
 #include "nvs_flash.h"
 
 static char g_innet_aes_key[64];
-const uint8_t AES_IV[16];
+uint8_t AES_IV[16];
 uint8_t jd_aes_out_buffer[128];
 static xTaskHandle jd_innet_timer_task_handle = NULL;
 

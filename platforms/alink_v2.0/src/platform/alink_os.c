@@ -15,7 +15,7 @@
 #include "platform.h"
 #include "esp_alink.h"
 
-
+#define US_PER_SECOND   1000000
 #define PLATFORM_TABLE_CONTENT_CNT(table) (sizeof(table)/sizeof(table[0]))
 
 static const char *TAG = "alink_os";
@@ -140,7 +140,9 @@ void platform_msleep(_IN_ uint32_t ms)
 
 uint32_t platform_get_time_ms(void)
 {
-    return system_get_time() / 1000;
+    struct timeval tm;
+    gettimeofday(&tm, NULL);
+    return (tm.tv_sec * US_PER_SECOND + tm.tv_usec) / 1000;
 }
 
 int platform_thread_get_stack_size(_IN_ const char *thread_name)

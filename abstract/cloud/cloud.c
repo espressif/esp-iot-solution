@@ -44,7 +44,7 @@ typedef esp_err_t (*cloud_event_cb_t)(cloud_event_t);
 static const char *TAG = "cloud";
 
 #ifdef CLOUD_ALINK
-const char* device_attr[5] = { "OnOff_Power", "Color_Temperature", "Light_Brightness",
+static char* device_attr[5] = { "OnOff_Power", "Color_Temperature", "Light_Brightness",
                                 "TimeDelay_PowerOff", "WorkMode_MasterLight"
                               };
 
@@ -147,7 +147,7 @@ esp_err_t cloud_init(cloud_event_cb_t cb)
     ALINK_LOGI("type   : %s", product_info.type);
     ALINK_LOGI("version: %s", product_info.version);
     ALINK_LOGI("model  : %s", product_info.model);
-    ESP_ERROR_CHECK(esp_alink_event_init(cb));
+    ESP_ERROR_CHECK(esp_alink_event_init((alink_event_cb_t)cb));
     esp_alink_init(&product_info);
 #endif
 

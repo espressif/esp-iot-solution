@@ -50,7 +50,6 @@ static joylink_event_cb_t s_joylink_event_cb = NULL;
 
 void joylink_dev_clear_jlp_info(void);
 
-static portMUX_TYPE reasonSpinlock = portMUX_INITIALIZER_UNLOCKED;
 //{
 //"streams":[
 //    { ¡°stream_id¡±: ¡°switch¡±, ¡°current_value¡±: ¡°1¡± }
@@ -211,7 +210,6 @@ int joylink_event_send(joylink_event_t event)
 
 int joylink_event_post_to_user(joylink_event_t event) 
 {
-	int ret = JOYLINK_OK;
 	if (s_joylink_event_cb) {
 		return (*s_joylink_event_cb)(event);
 	}

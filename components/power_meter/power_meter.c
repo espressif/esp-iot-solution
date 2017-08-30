@@ -33,6 +33,7 @@
 #include "driver/pcnt.h"
 #include "esp_log.h"
 #include "power_meter.h"
+#include "sys/time.h"
 
 #define PM_PCNT_CHANNEL     CONFIG_POWER_METER_PCNT_CHANNEL
 #define PM_PCNT_THRES0     1
@@ -44,6 +45,7 @@
 #define PM_PCNT_L_LIM   -1000
 #define PM_PCNT_FILTER      CONFIG_POWER_METER_PCNT_FILTER
 #define PM_VALUE_INF    (1000 * 1000 * 1000)
+#define US_PER_SECOND   1000000
 
 #define IOT_CHECK(tag, a, ret)  if(!(a)) {       \
         return (ret);                            \
@@ -53,8 +55,8 @@
 
 typedef struct {
     pcnt_unit_t pcnt_unit;
-    uint32_t last_time;
-    uint32_t time_diff;
+    int last_time;
+    int time_diff;
     uint32_t ref_param;
     bool zero_flag;
 } pm_pin_t;
@@ -98,6 +100,7 @@ static void pm_pcnt_intr_handler(void *arg)
     PCNT.int_clr.val = 0xff;
     pm_dev_t* pm_dev;
     pm_pin_t* pm_pin;
+    struct timeval tm;
     for(uint8_t i = 0; i < PM_MAX; i++) {
         if (g_pm_group[i] != NULL) {
             pm_dev = g_pm_group[i];
@@ -107,13 +110,15 @@ static void pm_pcnt_intr_handler(void *arg)
                     if (PCNT.status_unit[pm_pin->pcnt_unit].h_lim_lat) {
                         pcnt_counter_clear(pm_pin->pcnt_unit);
                         pcnt_counter_resume(pm_pin->pcnt_unit);
-                        uint32_t time = system_get_time();
+                        gettimeofday(&tm, NULL);
+                        int time = tm.tv_sec * US_PER_SECOND + tm.tv_usec;
                         pm_pin->time_diff = (time - pm_pin->last_time) / (PM_PCNT_H_LIM - 1);
                         pm_pin->last_time = time;
                         pm_pin->zero_flag = false;
                     }
                     if (PCNT.status_unit[pm_pin->pcnt_unit].thres0_lat) {
-                        pm_pin->last_time = system_get_time();
+                        gettimeofday(&tm, NULL);
+                        pm_pin->last_time = tm.tv_sec * US_PER_SECOND + tm.tv_usec;
                     }
                 }
             }

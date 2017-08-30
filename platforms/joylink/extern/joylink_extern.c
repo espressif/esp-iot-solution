@@ -233,7 +233,7 @@ joylink_dev_get_jlp_info(JLPInfo_t *jlp)
         return E_RET_ERROR;
     }
 
-    if (nvs_get_u16(out_handle,"server_port",&jlp->server_port) != ESP_OK) {
+    if (nvs_get_u16(out_handle,"server_port", (uint16_t*) &jlp->server_port) != ESP_OK) {
         log_debug("--get server_port fail");
         return E_RET_ERROR;
     }
@@ -290,7 +290,6 @@ joylink_dev_get_json_snap_shot(char *out_snap, int32_t out_max, int code, char *
      *FIXME:must to do
      */
     log_debug("Lan upload JSON : to lan");
-    int ret = 0;
 	//joylink_get_staus_buff();
 //    sprintf(out_snap, "{\"code\":%d, \"feedid\":\"%s\"}", code, feedid);
 	char *data_buf = NULL;

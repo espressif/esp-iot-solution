@@ -19,7 +19,9 @@ Copyright (c) 2015-2050, JD Smart All rights reserved.
 #define printf_high(...)
 
 static uint8 getCrc(uint8 *ptr, uint8 len);
+#ifdef IS_FULL_LOG
 static void dump8(uint8* p, int split, int len);
+#endif
 static int  payLoadCheck(void);
 static void muticastAdd(uint8* pAddr);
 static void broadcastAdd(int ascii);
@@ -303,18 +305,20 @@ void joylink_cfg_DataAction(PHEADER_802_11 pHeader, int length)
 	{
 		if (pSmnt->state == SMART_CH_LOCKING)
 		{
-			if(isUplink == 1)
+			if(isUplink == 1) {
 				printf_high("uplink:(%02x-%04d)->length:%2x, =length-synfirst:(0x%02x),synfirst:%2x\n", *((uint8*)pHeader) & 0xFF, pHeader->Sequence, length, (uint8)(length - pSmnt->syncFirst +1),pSmnt->syncFirst);
-			else
+			}
+			else {
 				printf_high("downlink:(%02x-%04d)->length:%2x, =length-synfirst:(0x%02x),synfirst:%2x\n", *((uint8*)pHeader) & 0xFF, pHeader->Sequence, length, (uint8)(length - pSmnt->syncFirst_downlink +1),pSmnt->syncFirst_downlink);
-			
+			}
 		}
 		packetType = 2;
 	}
 	else if (memcmp(pDest, "\x01\x00\x5E", 3) == 0)
 	{
-		if (pSmnt->state == SMART_CH_LOCKING)
+		if (pSmnt->state == SMART_CH_LOCKING) {
 			printf_high("(%02x-%04d):%02x:%02x:%02x->%d\n", *((uint8*)pHeader) & 0xFF, pHeader->Sequence, pDest[3], pDest[4], pDest[5], (uint8)length);
+		}
 		packetType = 1;
 	}
 
@@ -533,6 +537,7 @@ static uint8 getCrc(uint8 *ptr, uint8 len)
 	}
 	return crc;
 }
+#ifdef IS_FULL_LOG
 static void dump8(uint8* p, int split, int len)
 {
 	int i;
@@ -549,4 +554,4 @@ static void dump8(uint8* p, int split, int len)
 	}
 	printf_high("Len=%d:%s\n",len, buf);
 }
-
+#endif

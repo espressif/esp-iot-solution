@@ -139,7 +139,6 @@ esp_err_t ota_start(const char *server_ip, uint16_t server_port, const char *fil
     esp_err_t ret = ESP_FAIL;
     esp_ota_handle_t upgrade_handle = 0;
     POINT_ASSERT(TAG, server_ip, ESP_ERR_INVALID_ARG);
-    POINT_ASSERT(TAG, server_port, ESP_ERR_INVALID_ARG);
     POINT_ASSERT(TAG, file_dir, ESP_ERR_INVALID_ARG);
     if (g_ota_mux == NULL) {
         g_ota_mux = xSemaphoreCreateMutex();

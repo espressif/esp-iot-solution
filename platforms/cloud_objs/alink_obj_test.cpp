@@ -45,10 +45,6 @@ static virtual_device_t virtual_device = {
     0x01, 0x30, 0x50, 0, 0x01
 };
 
-static const char* device_attr[5] = { "OnOff_Power", "Color_Temperature", "Light_Brightness",
-                                "TimeDelay_PowerOff", "WorkMode_MasterLight"
-                              };
-
 static const char *main_dev_params =
     "{\"OnOff_Power\": { \"value\": \"%d\" }, \"Color_Temperature\": { \"value\": \"%d\" }, \"Light_Brightness\": { \"value\": \"%d\" }, \"TimeDelay_PowerOff\": { \"value\": \"%d\"}, \"WorkMode_MasterLight\": { \"value\": \"%d\"}}";
 
@@ -65,7 +61,6 @@ static void read_task_test(void *arg)
 
 static void write_task_test(void *arg)
 {
-    esp_err_t ret;
     for (;;) {
         xSemaphoreTake(xSemWriteInfo, portMAX_DELAY);
         char *up_cmd = (char *) malloc(ALINK_DATA_LEN);
