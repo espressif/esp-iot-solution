@@ -7,7 +7,7 @@
 
 #include "driver/gpio.h"
 #include "driver/spi_master.h"
-
+#include "esp_partition.h"
 #include "freertos/semphr.h"
 
 #define LCD_TFTWIDTH  240
@@ -146,6 +146,23 @@ public:
      */
     void drawBitmap(int16_t x, int16_t y, const uint16_t *bitmap, int16_t w, int16_t h);
 
+    /**
+     * @brief Load bitmap data from flash partition and fill the pixels on LCD screen
+     * @param x Start position
+     * @param y Start position
+     * @param w width of image in bmp array
+     * @param h height of image in bmp array
+     * @param data_partition Flash storage that contains the bitmap data array.
+     * @param data_offset bitmap array begin offset
+     * @param malloc_pixal_size internal buffer size that driver would allocate.
+     * @param swap_bytes_en Whether to enable byte swap for each pixel word
+     *
+     * @return
+     *     - ESP_FAIL if partition is NULL
+     *     - ESP_OK on success
+     */
+    esp_err_t drawBitmapFromFlashPartition(int16_t x, int16_t y, int16_t w, int16_t h, esp_partition_t* data_partition,
+            int data_offset = 0, int malloc_pixal_size = 1024, bool swap_bytes_en = true);
     /**
      * @brief Avoid using it, Internal use for main class drawChar API
      */

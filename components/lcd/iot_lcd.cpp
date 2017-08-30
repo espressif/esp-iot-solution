@@ -41,6 +41,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "spi_lcd.h"
 #include "fonts/font7s.h"
 
+#include "esp_partition.h"
+#include "esp_log.h"
 #include "driver/gpio.h"
 
 #include "freertos/semphr.h"
@@ -57,6 +59,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 
 #define SWAPBYTES(i) ((i>>8) | (i<<8))
+static const char* TAG = "LCD";
 
 CEspLcd::CEspLcd(lcd_conf_t* lcd_conf, int height, int width, bool dma_en, int dma_word_size) : Adafruit_GFX_AS(width, height)
 {
@@ -202,6 +205,36 @@ void CEspLcd::drawBitmap(int16_t x, int16_t y, const uint16_t *bitmap, int16_t w
         }
     }
     xSemaphoreGiveRecursive(spi_mux);
+}
+
+esp_err_t CEspLcd::drawBitmapFromFlashPartition(int16_t x, int16_t y, int16_t w, int16_t h, esp_partition_t* data_partition, int data_offset, int malloc_pixal_size, bool swap_bytes_en)
+{
+    if (data_partition == NULL) {
+        ESP_LOGE(TAG, "Partition error, null!");
+        return ESP_FAIL;
+    }
+    xSemaphoreTakeRecursive(spi_mux, portMAX_DELAY);
+    uint16_t* recv_buf = (uint16_t*) calloc(malloc_pixal_size, sizeof(uint16_t));
+    setAddrWindow(x, y, x + w - 1, y + h - 1);
+
+    int offset = 0;
+    int point_num = w * h;
+    while (point_num) {
+        int len = malloc_pixal_size > point_num ? point_num : malloc_pixal_size;
+        esp_partition_read(data_partition, data_offset + offset * sizeof(uint16_t), (uint8_t*) recv_buf, len * sizeof(uint16_t));
+        if (swap_bytes_en) {
+            for (int i = 0; i < len; i++) {
+                recv_buf[i] = SWAPBYTES(recv_buf[i]);
+            }
+        }
+        transmitData((uint8_t*) recv_buf, len * sizeof(uint16_t));
+        offset += len;
+        point_num -= len;
+    }
+    free(recv_buf);
+    recv_buf = NULL;
+    xSemaphoreGiveRecursive(spi_mux);
+    return ESP_OK;
 }
 
 void CEspLcd::drawBitmapFont(int16_t x, int16_t y, uint8_t w, uint8_t h, const uint16_t *bitmap)
