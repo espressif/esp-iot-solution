@@ -18,8 +18,6 @@ build:
     - source ~/.bash_profile
     - echo $IOT_SOLUTION_PATH
     - echo $IDF_PATH
-    - make defconfig
-    - make -j8
     - cd examples/smart_device
     - cp ../../tools/default_config/sdkconfig_alink_light sdkconfig
     - make defconfig
