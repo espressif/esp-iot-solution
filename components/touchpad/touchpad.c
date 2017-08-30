@@ -619,8 +619,14 @@ esp_err_t touchpad_slide_delete(touchpad_slide_handle_t tp_slide_handle)
     POINT_ASSERT(TAG, tp_slide_handle);
     touchpad_slide_t *tp_slide = (touchpad_slide_t*) tp_slide_handle;
     for (int i = 0; i < tp_slide->tp_num; i++) {
-        touchpad_delete(tp_slide->tp_handles[i]);
-        tp_slide->tp_handles[i] = NULL;
+        if (tp_slide->tp_handles[i]) {
+            touchpad_delete(tp_slide->tp_handles[i]);
+            for (int j = i + 1; j < tp_slide->tp_num; j++) {
+                if (tp_slide->tp_handles[i] == tp_slide->tp_handles[j])
+                    tp_slide->tp_handles[j] = NULL;
+            }
+            tp_slide->tp_handles[i] = NULL;
+        }
     }
     free(tp_slide->tp_handles);
     free(tp_slide->tp_val);
