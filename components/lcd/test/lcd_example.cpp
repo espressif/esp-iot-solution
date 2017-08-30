@@ -51,7 +51,11 @@ wifi_scan_config_t scan_config = {
 	.ssid = 0,
 	.bssid = 0,
 	.channel = 0,
-	.show_hidden = true
+	.show_hidden = true,
+    .scan_type = WIFI_SCAN_TYPE_ACTIVE,
+    .scan_time = {
+        .passive = 0,
+    },
 };
 
 const int CONNECTED_BIT = BIT0;
