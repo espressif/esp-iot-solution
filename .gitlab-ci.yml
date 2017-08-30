@@ -15,6 +15,7 @@ build:
     - source ~/.bash_profile
     - export IDF_PATH=$(pwd)/submodule/esp-idf
     - export IOT_SOLUTION_PATH=$(pwd)
+    - git submodule update --recursive
     - echo $PATH
     - echo $IDF_PATH
     - echo $IOT_SOLUTION_PATH
