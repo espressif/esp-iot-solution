@@ -7,6 +7,7 @@
 
 #include <unistd.h>
 #include <netinet/in.h>
+#include "lwip/sockets.h"
 
 int 
 joylink_util_cut_ip_port(const char *ipport, char *out_ip, int *out_port);

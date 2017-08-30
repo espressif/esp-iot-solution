@@ -25,7 +25,7 @@
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include "esp_system.h"
-
+#include "sys/time.h"
 
 /******************************************************************************
  * FunctionName : app_main
@@ -35,5 +35,11 @@
 *******************************************************************************/
 void app_main()
 {
+    struct timeval tm;
+    gettimeofday(&tm, NULL);
+    printf("%ld,%ld!!!!\n", tm.tv_sec, tm.tv_usec);
+    vTaskDelay(100 / portTICK_PERIOD_MS);
+    gettimeofday(&tm, NULL);
+    printf("%ld,%ld!!!!\n", tm.tv_sec, tm.tv_usec);
     printf("app_main\n");
 }

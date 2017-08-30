@@ -33,6 +33,7 @@
 #include "soc/rtc.h"
 #include "ulp_monitor.h"
 
+#if CONFIG_ULP_COPROC_RESERVE_MEM
 #define ULP_PROGRAM_SIZE    (CONFIG_ULP_COPROC_RESERVE_MEM/8)
 #define ULP_PROGRAM_ADDR_LIMI   (CONFIG_ULP_COPROC_RESERVE_MEM / 8 - 6)
 #define ULP_DATA_ADDR_LIMI      (CONFIG_ULP_COPROC_RESERVE_MEM / 4 - 6)
@@ -44,12 +45,12 @@
 #define ERR_ASSERT(tag, param)  IOT_CHECK(tag, (param) == ESP_OK, ESP_FAIL)
 
 static const char* TAG = "ulp_monitor";
-static const ulp_insn_t g_program[ULP_PROGRAM_SIZE];
+static ulp_insn_t g_program[ULP_PROGRAM_SIZE];
 static uint16_t g_program_len, g_program_addr, g_data_addr;
 
-static esp_err_t ulp_add_subprogram(ulp_insn_t sub_program[], size_t sub_program_size)
+static esp_err_t ulp_add_subprogram(const ulp_insn_t sub_program[], size_t sub_program_size)
 {
-    if ((g_program_len + sub_program_size/sizeof(ulp_insn_t)) >= ULP_PROGRAM_SIZE) {
+    if ((g_program_len + sub_program_size/sizeof(ulp_insn_t)) > ULP_PROGRAM_SIZE) {
         ESP_LOGE(TAG, "program is too long!");
         return ESP_FAIL;
     }
@@ -206,3 +207,4 @@ void ulp_data_write(size_t addr, uint16_t value)
     RTC_SLOW_MEM[addr] = value;
     return;
 }
+#endif

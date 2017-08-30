@@ -135,7 +135,7 @@ extern "C" void joylink_test()
     char dev_mac_str[20];
     memset(dev_mac_str, 0, 20);
     esp_wifi_get_mac(ESP_IF_WIFI_STA, dev_mac);
-    sprintf(dev_mac_str, ""MACSTR"", MAC2STR(dev_mac));
+    sprintf(dev_mac_str, "" MACSTR "", MAC2STR(dev_mac));
     strcpy(product_info.jlp.mac, dev_mac_str);
     printf("*********************************\r\n");
     printf("*         PRODUCT INFO          *\r\n");

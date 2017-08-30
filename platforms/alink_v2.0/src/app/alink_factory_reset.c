@@ -18,6 +18,7 @@
 #include "esp_alink.h"
 
 #define ESP_INTR_FLAG_DEFAULT 0
+#define US_PER_SECOND   1000000
 
 static const char *TAG = "alink_factory_reset";
 static xQueueHandle gpio_evt_queue = NULL;
@@ -61,7 +62,7 @@ alink_err_t alink_key_scan(TickType_t ticks_to_wait)
     alink_err_t ret;
     BaseType_t press_key = pdFALSE;
     BaseType_t lift_key = pdFALSE;
-
+    struct timeval tm;
     int backup_time = 0;
     for (;;) {
         ret = xQueueReceive(gpio_evt_queue, &io_num, ticks_to_wait);
@@ -69,10 +70,12 @@ alink_err_t alink_key_scan(TickType_t ticks_to_wait)
 
         if (gpio_get_level(io_num) == 0) {
             press_key = pdTRUE;
-            backup_time = system_get_time();
+            gettimeofday(&tm, NULL);
+            backup_time = tm.tv_sec * US_PER_SECOND + tm.tv_usec;
         } else if (press_key) {
             lift_key = pdTRUE;
-            backup_time = system_get_time() - backup_time;
+            gettimeofday(&tm, NULL);
+            backup_time = tm.tv_sec * US_PER_SECOND + tm.tv_usec - backup_time;
         }
         if (press_key & lift_key) {
             press_key = pdFALSE;
