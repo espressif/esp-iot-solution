@@ -94,7 +94,7 @@ void hts221_test_task(void* pvParameters)
         printf("temperature value is: %2.2f\n", (float)temperature / 10);
         printf("**************************************************\n");
         vTaskDelay(1000 / portTICK_RATE_MS);
-        printf("heap: %d\n", system_get_free_heap_size());
+        printf("heap: %d\n", esp_get_free_heap_size());
     }
 }
 

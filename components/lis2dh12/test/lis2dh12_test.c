@@ -45,7 +45,6 @@ static lis2dh12_handle_t sens = NULL;
  */
 void i2c_master_init()
 {
-    int i2c_master_port = I2C_MASTER_NUM;
     i2c_config_t conf;
     conf.mode = I2C_MODE_MASTER;
     conf.sda_io_num = I2C_MASTER_SDA_IO;
@@ -55,8 +54,6 @@ void i2c_master_init()
     conf.master.clk_speed = I2C_MASTER_FREQ_HZ;
     i2c_bus = i2c_bus_create(I2C_MASTER_NUM, &conf);
     sens = sensor_lis2dh12_create(i2c_bus, LIS2DH12_I2C_ADDRESS, false);
-//    i2c_param_config(i2c_master_port, &conf);
-//    i2c_driver_install(i2c_master_port, conf.mode, I2C_MASTER_RX_BUF_DISABLE, I2C_MASTER_TX_BUF_DISABLE, 0);
 }
 
 void lis2dh12_test_task(void* pvParameters)

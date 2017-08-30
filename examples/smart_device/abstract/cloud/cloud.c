@@ -40,10 +40,10 @@
 #include "joylink_config.h"
 #endif
 
-typedef esp_err_t (*cloud_event_cb_t)(cloud_event_t);
-static const char *TAG = "cloud";
+typedef esp_err_t (* cloud_event_cb_t)(cloud_event_t);
 
 #ifdef CLOUD_ALINK
+static const char* TAG = "cloud";
 static char* device_attr[5] = { "OnOff_Power", "Color_Temperature", "Light_Brightness",
                                 "TimeDelay_PowerOff", "WorkMode_MasterLight"
                               };
@@ -53,6 +53,7 @@ const char *main_dev_params =
 #endif
 
 #ifdef CLOUD_JOYLINK
+static const char* TAG = "cloud";
 static char *device_attr[5] = { "power", "brightness", "colortemp", "mode", "color"};
 /*
  * brightness  |  int     |  0 ~ 100
@@ -140,13 +141,13 @@ esp_err_t cloud_init(cloud_event_cb_t cb)
         .cid            = ALINK_INFO_CID,
     };
 
-    ALINK_LOGI("*********************************");
-    ALINK_LOGI("*         PRODUCT INFO          *");
-    ALINK_LOGI("*********************************");
-    ALINK_LOGI("name   : %s", product_info.name);
-    ALINK_LOGI("type   : %s", product_info.type);
-    ALINK_LOGI("version: %s", product_info.version);
-    ALINK_LOGI("model  : %s", product_info.model);
+    ESP_LOGI(TAG, "*********************************");
+    ESP_LOGI(TAG, "*         PRODUCT INFO          *");
+    ESP_LOGI(TAG, "*********************************");
+    ESP_LOGI(TAG, "name   : %s", product_info.name);
+    ESP_LOGI(TAG, "type   : %s", product_info.type);
+    ESP_LOGI(TAG, "version: %s", product_info.version);
+    ESP_LOGI(TAG, "model  : %s", product_info.model);
     ESP_ERROR_CHECK(esp_alink_event_init((alink_event_cb_t)cb));
     esp_alink_init(&product_info);
 #endif

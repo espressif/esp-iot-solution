@@ -42,9 +42,7 @@ typedef enum {
     CLOUD_EVENT_STA_GOT_IP,
     CLOUD_EVENT_STA_DISCONNECTED,
 } cloud_event_t;
-#endif  
-
-#ifdef CLOUD_JOYLINK
+#else
 typedef enum {
     CLOUD_EVENT_NONE = 0,
     CLOUD_VETNT_SMART_CONFIG,

@@ -55,7 +55,8 @@ void ulp_monitor_test()
             printf("the data %d of temprature is:%d\n", i, ulp_data_read(ULP_DATA_ADDR + TEMP_DATA_OFFSET + i));
         }
     }
-    dac_out_voltage(DAC_CHANNEL_1, 127);
+    dac_output_enable(DAC_CHANNEL_1);
+    dac_output_voltage(DAC_CHANNEL_1, 127);
     ESP_LOGI("ulp_monitor_test", "ulp deep sleep wakeup test");
     memset(RTC_SLOW_MEM, 0, CONFIG_ULP_COPROC_RESERVE_MEM);
     ulp_monitor_init(ULP_PROGRAM_ADDR, ULP_DATA_ADDR);

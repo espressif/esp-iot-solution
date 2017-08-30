@@ -22,6 +22,7 @@
   *
   */
 
+#include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_system.h"
@@ -131,9 +132,12 @@ extern "C" void touchpad_obj_test()
     const touch_pad_t y_tps[] = {TOUCH_PAD_NUM5, TOUCH_PAD_NUM6, TOUCH_PAD_NUM7};
     touchpad_matrix *tp_matrix = new touchpad_matrix(sizeof(x_tps)/sizeof(x_tps[0]), sizeof(y_tps)/sizeof(y_tps[0]),
                                                 x_tps, y_tps, TOUCHPAD_THRES_PERCENT, TOUCHPAD_FILTER_VALUE);
-    char *push = "push_event";
-    char *press = "press 3s";
-    char *serial = "serial trigger";
+    char push[20];
+    strcpy(push, "push_event");
+    char press[20];
+    strcpy(press, "press 3s");
+    char serial[20];
+    strcpy(serial, "serial trigger");
     tp_matrix->add_cb(TOUCHPAD_CB_PUSH, tp_matrix_cb, push);
     tp_matrix->add_custom_cb(3, tp_matrix_cb, press);
     tp_matrix->set_serial_trigger(4, 500, tp_matrix_cb, serial);
