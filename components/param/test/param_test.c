@@ -4,6 +4,7 @@
 #include "esp_system.h"
 #include "esp_log.h"
 #include "esp_spi_flash.h"
+#include "nvs_flash.h"
 #include "param.h"
 #include "unity.h"
 
@@ -27,6 +28,15 @@ void param_test()
         .b = 99,
     };
     esp_err_t ret;
+    esp_err_t err = nvs_flash_init();
+    if (err == ESP_ERR_NVS_NO_FREE_PAGES) {
+        // NVS partition was truncated and needs to be erased
+        // Retry nvs_flash_init
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        err = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK( err );
+
     ESP_LOGI(TAG, "heap size before param: %d", esp_get_free_heap_size());
     ret = param_load(PARAM_NAMESPACE, PARAM_KEY, &param_read);
     ESP_LOGI(TAG, "param read a:%d, b:%d", param_read.a, param_read.b);
