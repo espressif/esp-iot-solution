@@ -146,3 +146,9 @@ touchpad_matrix_handle_t tp_matrix = touchpad_matrix_create(sizeof(x_tps)/sizeof
 ```
 
 * `注意！`：由于矩阵 TOUCH pad 驱动方式的限制，同时只能按一个 pad。当多个 pad 同时按下时不会有触摸事件触发，当一个 pad 正被触摸时，触摸其他 pad 不会有事件触发
+
+# PCB 设计实践
+* 可以使用金属弹簧取代触摸盘连接 touch 传感器，这样可以提高灵敏度，特别是需要使用防护隔板的情况下，经测试使用弹簧作为 touch pad 时加上 3mm 塑料隔板仍有较高的灵敏度
+* 可以使用 led 作为触摸效果的显示
+	* 使用弹簧作为 touch pad 的情况下，可以将 led 置于弹簧圈中间，紧贴 PCB 放置
+	* 使用普通触摸盘的情况下，可以在 PCB 上触摸盘中心位置挖小孔，将 led 置于小孔中
