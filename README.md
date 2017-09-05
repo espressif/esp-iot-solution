@@ -12,12 +12,11 @@ Read < ==Wiki== >  to find how to run IoT examples
 
 
 
-
 ### Usage
 * This code is based on esp-idf project.
-* This repository doesn't contain esp-idf code, you should first clone the esp-idf code by **git clone --recurisve  https://github.com/espressif/esp-idf.git**
-* To clone the this repository by **git clone https://github.com/espressif/esp-iot-solution.git**
-* Change to the directory of this project, run `make menuconfig` to configure the project.
+* This repository contains esp-idf code as submodule.
+* To clone this repository by **git clone --recurisve https://github.com/espressif/esp-iot-solution.git**
+* Change to the directory of examples (such as examples/smart_device) in esp-iot-solution, run `make menuconfig` to configure the project.
 * Compiling the Project by `make all`
 > ... will compile app, bootloader and generate a partition table based on the config.
 *  Flashing the Project
@@ -27,6 +26,14 @@ Read < ==Wiki== >  to find how to run IoT examples
 * Viewing Serial Output by `make monitor` target will use the already-installed [miniterm](http://pyserial.readthedocs.io/en/latest/tools.html#module-serial.tools.miniterm) (a part of pyserial) to display serial output from the ESP32 on the terminal console.
 Exit miniterm by typing Ctrl-].
 * To flash and monitor output in one pass, you can run: `make flash monitor`
+* You can use unit-test in esp-iot-solution to test all the components.
+* To use uint-test, follow these steps:
+	* Change to the directory of unit-test-app
+	* Compile unit-test-app by `make IOT_TEST_ALL=1 -j8`
+	* Flash the images by `make flash`
+	* Reset the chip and see the uart log using an uart tool such as minicom
+	* All kinds of components will be shown by uart and you need to send the index of the unit you want to test by uart
+	* Test code of the unit you select will be run
 
 
 ### WHY?
