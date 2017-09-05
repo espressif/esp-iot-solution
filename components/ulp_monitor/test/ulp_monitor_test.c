@@ -25,6 +25,7 @@
 #include <string.h>
 #include "esp_system.h"
 #include "esp_log.h"
+#include "esp_deep_sleep.h"
 #include "ulp_monitor.h"
 #include <time.h>
 #include <sys/time.h>
