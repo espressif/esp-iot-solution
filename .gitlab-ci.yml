@@ -1,53 +1,40 @@
-# This file is a template, and might need editing before it works on your project.  # use the official gcc image, based on debian # can use verions as well, like gcc:5.2
-# see https://hub.docker.com/_/gcc/
-image: gcc
+
+stages:
+  - build
+
+before_script:
+  - mkdir -p ~/.ssh
+  - chmod 700 ~/.ssh
+  - echo -n $GITLAB_KEY > ~/.ssh/id_rsa_base64
+  - base64 --decode --ignore-garbage ~/.ssh/id_rsa_base64 > ~/.ssh/id_rsa
+  - chmod 600 ~/.ssh/id_rsa
+  - echo -e "Host gitlab.espressif.cn\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
+  - git submodule update --init --recursive
+
+variables:
+  IDF_PATH: "$CI_PROJECT_DIR/submodule/esp-idf"
+  IOT_SOLUTION_PATH: "$CI_PROJECT_DIR"
 
 build:
   stage: build
   tags:
-    - iot
-  # instead of calling g++ directly you can also use some build toolkit like make
-  # install the necessary build tools when needed
-  # before_script: 
-  #   - apt update && apt -y install make autoconf 
-  script: 
-    - export PATH="/opt/xtensa-esp32-elf/bin:$PATH"
-    - source ~/.bash_profile
-    - export IDF_PATH=$(pwd)/submodule/esp-idf
-    - export IOT_SOLUTION_PATH=$(pwd)
-    - git submodule update --recursive
-    - echo $PATH
-    - echo $IDF_PATH
-    - echo $IOT_SOLUTION_PATH
-    - echo $IDF_PATH
+    - build
+  image: $CI_DOCKER_REGISTRY/esp32-ci-env
+  script:
     - cd examples/smart_device
     - cp ../../tools/default_config/sdkconfig_alink_light sdkconfig
     - make defconfig
-    - make -j8
+    - make -j5
     - cp ../../tools/default_config/sdkconfig_alink_socket sdkconfig
     - make defconfig
-    - make -j8
+    - make -j5
     - cp ../../tools/default_config/sdkconfig_joylink_light sdkconfig
     - make defconfig
-    - make -j8
+    - make -j5
     - cp ../../tools/default_config/sdkconfig_joylink_socket sdkconfig
     - make defconfig
-    - make -j8
+    - make -j5
     - cd ../../tools/unit-test-app
     - cp sdkconfig.default sdkconfig
     - make defconfig
-    - make IOT_TEST_ALL=1 -j8
-  # depending on your build setup it's most likely a good idea to cache outputs to reduce the build time
-  # cache:
-  #   paths:
-  #     - "*.o"
-
-# run tests using the binary built before
-#test:
-#  stage: test
-#  tags:
-#    - iot
-#  script:
-#    - ls
-#    - pwd
-#    - echo "test2"
+    - make IOT_TEST_ALL=1 -j5
