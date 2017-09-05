@@ -23,6 +23,7 @@
   */
   
 #include "esp_system.h"
+#include "esp_deep_sleep.h"
 #include "esp_log.h"
 #include "debugs.h"
 #include "unity.h"

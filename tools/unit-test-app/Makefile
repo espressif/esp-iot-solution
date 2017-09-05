@@ -3,6 +3,9 @@
 # project subdirectory.
 #
 
+#We will use the esp-idf in submodule by default.
+IDF_PATH:=$(shell pwd)/../../submodule/esp-idf
+
 PROJECT_NAME := unit-test-app
 
 EXTRA_COMPONENT_DIRS := $(shell pwd)/../../components $(shell pwd)/../../abstract $(shell pwd)/../../platforms $(shell pwd)/../../products

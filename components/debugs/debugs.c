@@ -31,6 +31,7 @@
 #include "esp_system.h"
 #include "esp_log.h"
 #include "esp_wifi.h"
+#include "esp_deep_sleep.h"
 #include "debugs.h"
 
 #define IOT_CHECK(tag, a, ret)  if(!(a)) {                                 \
