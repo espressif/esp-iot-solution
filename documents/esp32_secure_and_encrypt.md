@@ -22,13 +22,13 @@
 	* secure digest 与随机数 IV 保存在 flash 的 0x0 地址，用于在后续 boot 时验证 bootloader image 是否被篡改
 	* 若 menuconfig 中选择了禁止 JTAG 中断和 ROM BASIC 中断，bootloader 会将 efuse 中的一些标志位设置为禁止这些中断（强烈建议禁止这些中断）
 	* bootloader 通过烧写 efuse 中的 ABS_DONE_0 永久使能 secure boot
-4. 芯片在后面的 boot 中，ROM bootloader 发现 efuse 中的 ABS_DONE_0 被烧写，于是从 flash 的地址 0x0 读取第一次 boot 时保存的 secure digest，硬件使用 efuse 中的 secure boot key 与当前的 bootloader image 计算当前的 secure digest，若与 flash 中的 secure digest 不同，则 boot 不会继续，否则就执行软件 bootloader。
+4. 芯片在后面的 boot 中，ROM bootloader 发现 efuse 中的 ABS_DONE_0 被烧写，于是从 flash 的地址 0x0 读取第一次 boot 时保存的 secure digest 和随机数 IV，硬件使用 efuse 中的 secure boot key 、随机数 IV 与当前的 bootloader image 计算当前的 secure digest，若与 flash 中的 secure digest 不同，则 boot 不会继续，否则就执行软件 bootloader。
 5. 软件 bootloader 使用 bootloader image 中保存的公钥对 flash 中的 partition table 和 app images 签字进行验证，验证成功之后才会 boot 到 app 代码中
 
 ### 使用步骤
 1. make menuconfig 选择 "enable secure boot in bootloader"
 2. make menuconfig 设置保存公钥/秘钥对的文件
-3. 生成公钥和秘钥，先执行  "make" 命令，此时由于还没有公钥/秘钥对，所以命令行中会提示生成公钥/秘钥对的命令，按提示执行命令即可。但在产品级使用中，建议使用 openssl 或者其他工业级加密程序生成公钥/秘钥对。例如使用 openssl：“openssl ecparam -name prime256v1 -genkey -noout -out my_secure_boot_signing_key.pem”
+3. 生成公钥和秘钥，先执行  "make" 命令，此时由于还没有公钥/秘钥对，所以命令行中会提示生成公钥/秘钥对的命令，按提示执行命令即可。但在产品级使用中，建议使用 openssl 或者其他工业级加密程序生成公钥/秘钥对。例如使用 openssl：“openssl ecparam -name prime256v1 -genkey -noout -out my_secure_boot_signing_key.pem”（若使用现有的公钥/秘钥对文件，可以跳过此步）
 4. 运行命令 "make bootloader" 产生一个使能 secure boot 的 bootloader image
 5. 执行完4后命令行会提示下一步烧写 bootloader image 的命令，按提示烧写即可
 6. 运行命令 "make flash" 编译并烧写 partition table 和 app images 
