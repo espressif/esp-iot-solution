@@ -3,6 +3,7 @@ stages:
   - build
 
 before_script:
+  - export PATH="/opt/xtensa-esp32-elf/bin:$PATH"
   - mkdir -p ~/.ssh
   - chmod 700 ~/.ssh
   - echo -n $GITLAB_KEY > ~/.ssh/id_rsa_base64
@@ -18,22 +19,22 @@ variables:
 build:
   stage: build
   tags:
-    - build
+    - iot
   image: $CI_DOCKER_REGISTRY/esp32-ci-env
   script:
     - cd examples/smart_device
     - cp ../../tools/default_config/sdkconfig_alink_light sdkconfig
     - make defconfig
-    - make -j5
+    - make -j8
     - cp ../../tools/default_config/sdkconfig_alink_socket sdkconfig
     - make defconfig
-    - make -j5
+    - make -j8
     - cp ../../tools/default_config/sdkconfig_joylink_light sdkconfig
     - make defconfig
-    - make -j5
+    - make -j8
     - cp ../../tools/default_config/sdkconfig_joylink_socket sdkconfig
     - make defconfig
-    - make -j5
+    - make -j8
     - cd ../../tools/unit-test-app
     - cp sdkconfig.default sdkconfig
     - make defconfig
