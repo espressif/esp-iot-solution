@@ -28,10 +28,11 @@
 #include "esp_system.h"
 #include "touchpad.h"
 #include "esp_log.h"
+#include "unity.h"
 
-#define SINGLE_TOUCHPAD_TEST    0
+#define SINGLE_TOUCHPAD_TEST    1
 #define TOUCHPAD_SLIDE_TEST     0
-#define TOUCHPAD_MATRIX_TEST    1
+#define TOUCHPAD_MATRIX_TEST    0
 
 #define TOUCHPAD_THRES_PERCENT  95
 #define TOUCHPAD_FILTER_VALUE   150
@@ -40,14 +41,14 @@ static const char* TAG = "touchpad_test";
 #if SINGLE_TOUCHPAD_TEST
 static void tap_cb(void *arg)
 {
-    touchpad* touchpad_dev = (touchpad*) arg;
+    CTouchPad* touchpad_dev = (CTouchPad*) arg;
     touch_pad_t tp_num = touchpad_dev->touchpad_num();
     ESP_LOGI(TAG, "tap callback of touch pad num %d", tp_num);
 }
 
 static void serial_trigger_cb(void *arg)
 {
-    touchpad* touchpad_dev = (touchpad*) arg;
+    CTouchPad* touchpad_dev = (CTouchPad*) arg;
     touch_pad_t tp_num = touchpad_dev->touchpad_num();
     ESP_LOGI(TAG, "serial trigger callback of touch pad num %d", tp_num);
     ESP_LOGI(TAG, "touch pad value is %d", touchpad_dev->value());
@@ -55,28 +56,28 @@ static void serial_trigger_cb(void *arg)
 
 static void push_cb(void *arg)
 {
-    touchpad* touchpad_dev = (touchpad*) arg;
+    CTouchPad* touchpad_dev = (CTouchPad*) arg;
     touch_pad_t tp_num = touchpad_dev->touchpad_num();
     ESP_LOGI(TAG, "push callback of touch pad num %d", tp_num);
 }
 
 static void release_cb(void *arg)
 {
-    touchpad* touchpad_dev = (touchpad*) arg;
+    CTouchPad* touchpad_dev = (CTouchPad*) arg;
     touch_pad_t tp_num = touchpad_dev->touchpad_num();
     ESP_LOGI(TAG, "release callback of touch pad num %d", tp_num);
 }
 
 static void press_3s_cb(void *arg)
 {
-    touchpad* touchpad_dev = (touchpad*) arg;
+    CTouchPad* touchpad_dev = (CTouchPad*) arg;
     touch_pad_t tp_num = touchpad_dev->touchpad_num();
     ESP_LOGI(TAG, "press 3s callback of touch pad num %d", tp_num);
 }
 
 static void press_5s_cb(void *arg)
 {
-    touchpad* touchpad_dev = (touchpad*) arg;
+    CTouchPad* touchpad_dev = (CTouchPad*) arg;
     touch_pad_t tp_num = touchpad_dev->touchpad_num();
     ESP_LOGI(TAG, "press 5s callback of touch pad num %d", tp_num);
 }
@@ -93,8 +94,8 @@ static void tp_matrix_cb(void *arg, uint8_t x, uint8_t y)
 extern "C" void touchpad_obj_test()
 {
 #if SINGLE_TOUCHPAD_TEST
-    touchpad* tp_dev0 = new touchpad(TOUCH_PAD_NUM8, TOUCHPAD_THRES_PERCENT, TOUCHPAD_FILTER_VALUE);
-    touchpad* tp_dev1 = new touchpad(TOUCH_PAD_NUM9, TOUCHPAD_THRES_PERCENT);
+    CTouchPad* tp_dev0 = new CTouchPad(TOUCH_PAD_NUM8, TOUCHPAD_THRES_PERCENT, TOUCHPAD_FILTER_VALUE);
+    CTouchPad* tp_dev1 = new CTouchPad(TOUCH_PAD_NUM9, TOUCHPAD_THRES_PERCENT);
 
     tp_dev0->add_cb(TOUCHPAD_CB_TAP, tap_cb, tp_dev0);
     tp_dev0->add_cb(TOUCHPAD_CB_PUSH, push_cb, tp_dev0);
@@ -119,7 +120,7 @@ extern "C" void touchpad_obj_test()
 
 #if TOUCHPAD_SLIDE_TEST
     const touch_pad_t tps[] = {TOUCH_PAD_NUM5, TOUCH_PAD_NUM6, TOUCH_PAD_NUM7};
-    touchpad_slide *tp_slide = new touchpad_slide(3, tps);
+    CTouchPadSlide *tp_slide = new CTouchPadSlide(3, tps);
     while (1) {
         uint8_t pos = tp_slide->get_position();
         printf("%d\n", pos);
@@ -130,7 +131,7 @@ extern "C" void touchpad_obj_test()
 #if TOUCHPAD_MATRIX_TEST
     const touch_pad_t x_tps[] = {TOUCH_PAD_NUM0, TOUCH_PAD_NUM2, TOUCH_PAD_NUM3, TOUCH_PAD_NUM4, TOUCH_PAD_NUM8};
     const touch_pad_t y_tps[] = {TOUCH_PAD_NUM5, TOUCH_PAD_NUM6, TOUCH_PAD_NUM7};
-    touchpad_matrix *tp_matrix = new touchpad_matrix(sizeof(x_tps)/sizeof(x_tps[0]), sizeof(y_tps)/sizeof(y_tps[0]),
+    CTouchPadMatrix *tp_matrix = new CTouchPadMatrix(sizeof(x_tps)/sizeof(x_tps[0]), sizeof(y_tps)/sizeof(y_tps[0]),
                                                 x_tps, y_tps, TOUCHPAD_THRES_PERCENT, TOUCHPAD_FILTER_VALUE);
     char push[20];
     strcpy(push, "push_event");
@@ -145,4 +146,9 @@ extern "C" void touchpad_obj_test()
     ESP_LOGI(TAG, "delete touchpad matrix");
     delete tp_matrix;
 #endif
+}
+
+TEST_CASE("Touch sensor cpp test", "[touch][iot][rtc]")
+{
+    touchpad_obj_test();
 }
