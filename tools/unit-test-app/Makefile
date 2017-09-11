@@ -3,13 +3,15 @@
 # project subdirectory.
 #
 
-#We will use the esp-idf in submodule by default.
-IDF_PATH:=$(shell pwd)/../../submodule/esp-idf
-
 PROJECT_NAME := unit-test-app
+#If IOT_SOLUTION_PATH is not defined, use relative path as default value
+IOT_SOLUTION_PATH ?= $(shell pwd)/../../
 
-EXTRA_COMPONENT_DIRS := $(shell pwd)/../../components $(shell pwd)/../../abstract $(shell pwd)/../../platforms $(shell pwd)/../../products
-IOT_COMPONENTT_DIR := $(shell pwd)/../../components
+
+
+#Do not touch the code below
+#EXTRA_COMPONENT_DIRS := $(shell pwd)/../../components $(shell pwd)/../../abstract $(shell pwd)/../../platforms $(shell pwd)/../../products
+IOT_COMPONENTT_DIR := $(IOT_SOLUTION_PATH)/../../components
 
 # Find all component names. The component names are the same as the
 # directories they're in, so /bla/components/mycomponent/component.mk -> mycomponent.
@@ -27,7 +29,7 @@ else
 #TEST_COMPONENTS_LIST := $(TEST_COMPONENTS)
 endif
 
-include $(IDF_PATH)/make/project.mk
+include $(IOT_SOLUTION_PATH)/Makefile
 
 print_flash_cmd:
 	echo $(ESPTOOL_WRITE_FLASH_OPTIONS) $(ESPTOOL_ALL_FLASH_ARGS) | sed -e 's:'$(PWD)/build/'::g'

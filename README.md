@@ -1,18 +1,108 @@
-`Project Description of IoT Solution`
+# Project Description of IoT Solution
 
-Read < ==Wiki== >  to find how to run IoT examples
+---
+## Preparation
+* To clone this repository by **git clone --recurisve https://github.com/espressif/esp-iot-solution.git**
+* Set IOT_SOLUTION_PATH, for example:
 
-## IDEAS
-* We want to make this repository be a code version 'Lego blocks', so the users can easily pick the blocks/components that they need in their projects.
-* We make each single feature/function a small block/components, all the blocks are based on esp-idf.
-* We integrate the most popular IoT server platforms like `alink`, `joylink`, `AWS`, `esp-server` etc...
-* With those **blocks**, we can build all kinds of IoT applications.
-* We will provide some examples of several kinds of typical IoT products with detailed features, like smart socket/light/sensor.
-* If you can not find the exact block for your project here, please raise your requirements and give us the function description of the block, we will make it. 
+    ```
+    export IOT_SOLUTION_PATH=~/esp/esp-iot-solution
+    ```
+* esp-iot-solution project will overwrite the IDF_PATH to the submodule in makefile by default
+* You can refer to the Makefile in example if you want to build your own application.
+
+---
+
+## File structure
+* `components`
+    * small drivers of different divices like button and LED
+    * drivers of sensors
+    * drivers of different I2C devices
+    * friendly APIs of WiFi and OTA
+* `Documents`:
+    * Documentations of some important features
+    * Instruction of some different solutions
+* `Examples`:
+    * Example project using this framework
+* `Platforms`:
+    * Platforms
+    * Cloud services 
+* `Products`:
+    * Product that combined by different components
+    * For example, a Switch product consists of button, relay, etc.
+* `Submodule`:
+    * esp-idf works as submodule here
+* `tools`:
+    * different tools and scripts
+    * unit-test project
+    
+
+```
+├── Makefile
+├── README.md
+├── components
+│   ├── Kconfig
+│   ├── base_class
+│   ├── bh1750
+│   ├── button
+│   ├── component.mk
+│   ├── dac_audio
+│   ├── debugs
+│   ├── deep_sleep
+│   ├── hts221
+│   ├── http_request
+│   ├── i2c_bus
+│   ├── i2c_debug
+│   ├── is31fl3xxx
+│   ├── lcd
+│   ├── led
+│   ├── light
+│   ├── lis2dh12
+│   ├── ota
+│   ├── param
+│   ├── power_meter
+│   ├── relay
+│   ├── smart_config
+│   ├── touchpad
+│   ├── ulp_monitor
+│   ├── weekly_timer
+│   └── wifi
+├── documents
+│   ├── deep_sleep
+│   ├── esp32_lowpower.md
+│   ├── esp32_lowpower_EN.md
+│   ├── esp32_secure_and_encrypt.md
+│   ├── esp32_secure_encrypt
+│   ├── esp32_touchpad.md
+│   ├── esp32_touchpad_EN.md
+│   └── touchpad
+├── examples
+│   ├── README.md
+│   └── smart_device
+├── platforms
+│   ├── alink_v2.0
+│   ├── cloud_objs
+│   ├── joylink
+├── products
+│   ├── light
+│   ├── light_device
+│   ├── sensor
+│   ├── socket
+│   └── switch
+├── readme.txt
+├── sdkconfig
+├── submodule
+│   └── esp-idf
+└── tools
+    ├── default_config
+    └── unit-test-app
+```
 
 
 
-### Usage
+---
+
+## Usage
 * This code is based on esp-idf project.
 * This repository contains esp-idf code as submodule.
 * To clone this repository by **git clone --recurisve https://github.com/espressif/esp-iot-solution.git**
@@ -27,6 +117,11 @@ Read < ==Wiki== >  to find how to run IoT examples
 Exit miniterm by typing Ctrl-].
 * To flash and monitor output in one pass, you can run: `make flash monitor`
 * You can use unit-test in esp-iot-solution to test all the components.
+
+--- 
+
+## Unit-test
+
 * To use uint-test, follow these steps:
 	* Change to the directory of unit-test-app
 	* Compile unit-test-app by `make IOT_TEST_ALL=1 -j8`
@@ -36,28 +131,10 @@ Exit miniterm by typing Ctrl-].
 	* Test code of the unit you select will be run
 
 
-### WHY?
-* `IoT solution` needs be reliable at scale. Today’s market requirements demand that a platform can both scale up to support millions of devices with different usage and technology characteristics as well as scale down to support limited-deployment, single application pilot projects. A qualified IoT Solution has architected itself allow organizations to deploy devices cost-effectively and quickly with some integration and modification of submodules. 
-
-* At the same time, as platforms allow varying scales of deployments, the reliability of smallest modules and platforms must remain high. Use of redundant and fault-tolerant architecture is a must to eliminate outages and data loss for all but the most extraordinary of circumstances. Building such IoT-ready infrastructure is necessary as it provides a reliable and cost-effective platform upon which various projects can grow.
-
-* Enterprises will make modifications to existing solutions over time and create completely new IoT solutions. And it’s necessary to create a clear and logical separation between the different layers of the IoT technology stack. This enables businesses to adapt to changing business needs and reduces the engineering costs of future IoT deployments and incremental solution changes.
-
-### HOW?
+---
 
 
-* For `Espressif IoT Solution`, we would build from the three perspectives, modules, platforms and products.
-
-* Within `modules`, we have ESP-Mesh, Light, OTA, Relay, Security boot, Wi-Fi handler, OLED, LED,  Power Meter, LCD GUI, Smart Configure, Touch Pad, BLE pairing, button and etc.
-
-* Within `platforms`, we will build, including but not limited to, AWS, Amazon alexa echo, `Joylink`, We-chat connection and among others.
-
-* Within `products`, we will develop ESP `socket` products, smoker detector, LED light, temperature controller, button products and so on.
-
-* We aim to develop IoT solution from the very basis, i.e. from the smallest modules, so that we could combine different modules with distinct platforms, and get various products.
-
-
-### Well encapsulated modules
+## Encapsulated components
 
 * button: Provide some useful functions of physical buttons, such as short press, long press, release and so on.
 * LED: Provide different states including bright, dark, quick blink and slow blink of led. You could use this module to indicate different states of the program.
@@ -70,9 +147,10 @@ Exit miniterm by typing Ctrl-].
 * touchpad: Provide some useful functions of touchpad, such as single trigger, serial trigger, short press, long press and so on.
 * ulp_monitor: Provide simple apis to use ULP coprocessor to collect and save data of temprature sensor and adc while deep sleep.
 * wifi: Provide a blocking function to make esp32 connect to ap. User could set the time out of connecting.
-* 
 
-# Solution list:
+---
+
+## Solution list:
 
 * Low power / deep sleep / co-processor solution
 * Touch sensor solution and application note
