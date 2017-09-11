@@ -3,8 +3,9 @@
 # project subdirectory.
 #
 
-PROJECT_NAME := iot
-EXTRA_COMPONENT_DIRS := $(shell pwd)/products $(shell pwd)/platforms
+#Overwrite the IDF_PATH to the esp-idf path in submodule.
+IDF_PATH := $(IOT_SOLUTION_PATH)/submodule/esp-idf/
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components $(IOT_SOLUTION_PATH)/products $(IOT_SOLUTION_PATH)/platforms
 
 include $(IDF_PATH)/make/project.mk
 
