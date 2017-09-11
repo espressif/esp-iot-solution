@@ -1,10 +1,8 @@
-menu "Iot_Solution"
+menu "IoT Example - smart_device"
         
     config DEMO_ENABLE
-        bool "Enable example device"
+        bool
         default y
-        help
-          select to enable demo codes, otherwise, disable demo codes to write customized project
             
     choice SMART_DEVICE_TYPE
         bool "Device type"

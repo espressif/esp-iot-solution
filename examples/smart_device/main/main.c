@@ -35,8 +35,6 @@
 #include "cloud.h"
 #include "virtual_device.h"
 
-
-#if CONFIG_DEMO_ENABLE
 static const char *TAG = "app_main";
 SemaphoreHandle_t xSemWriteInfo = NULL;
 virtual_device_t virtual_device = {
@@ -113,7 +111,6 @@ void iot_demo_start()
     xTaskCreate(write_task_test, "write_task_test", 1024 * 8, NULL, 4, NULL);
     ESP_LOGI(TAG, "free_heap3:%u\n", esp_get_free_heap_size());
 }
-#endif
 
 /******************************************************************************
  * FunctionName : app_main
@@ -123,9 +120,5 @@ void iot_demo_start()
 *******************************************************************************/
 void app_main()
 {
-#if CONFIG_DEMO_ENABLE
     iot_demo_start();
-#else
-    printf("in app_main...\n");
-#endif
 }
