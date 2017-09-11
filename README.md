@@ -13,7 +13,7 @@
 
 ---
 
-## File structure
+## Framework structure
 * `components`
     * small drivers of different divices like button and LED
     * drivers of sensors
@@ -133,20 +133,45 @@ Exit miniterm by typing Ctrl-].
 
 ---
 
+## Example
+
+* To run the Examples project, follow the steps below:
+    * Change the directory to example
+    * choose one example project you want to run, we take smart_device here.
+    * Change the directory to smart_device under example
+    * Run `make menuconfig` to set the project parameters
+    * Run `make` to compile the project, or `make flash` to compile and flash the module.
+* Follow the instructions in wiki/example_smart_device.md
+
+---
+
+## Empty project
+
+* You can start your own appliction code base on the empty-project.
+* By default, you just need to run `make` under the example/smart_device directory. The makefile will set all the path by default.
+* Meanwhile, you can copy the example project to anywhere you want, in this case, you will have to set the `IOT_SOLUTION_PATH` so that the build system shall know where to find the code and link the files.
+* Set iot path:(replace 'YOUR_PATH' below), you can also add `IOT_SOLUTION_PATH ` to your environment PATH 
+        
+    ```
+        export IOT_SOLUTION_PATH = "YOUR_PATH/esp-iot-solution"
+```
+
+---
+
 
 ## Encapsulated components
 
-* button: Provide some useful functions of physical buttons, such as short press, long press, release and so on.
-* LED: Provide different states including bright, dark, quick blink and slow blink of led. You could use this module to indicate different states of the program.
-* light: Provide functions of a smart light. You could add different pwm channels to the light and set the channels to different states such as custom duty cycle, custom blink frequecy, breathing light effect and so on.
-* OTA: Provide Over The Air Updates function.
-* param: Provide data read and write functions, based on NVS.
-* power_meter: Provide power, voltage and current measurement. The driver is based on BL0937 chip.
-* relay: Provide two methods to control relays. One method uses a delay flip-flop and another uses RTC IO to control relay directly.
-* smart_config: Provide a blocking function to perform smart config. User could set the time out of smart config.
-* touchpad: Provide some useful functions of touchpad, such as single trigger, serial trigger, short press, long press and so on.
-* ulp_monitor: Provide simple apis to use ULP coprocessor to collect and save data of temprature sensor and adc while deep sleep.
-* wifi: Provide a blocking function to make esp32 connect to ap. User could set the time out of connecting.
+* `button`: Provide some useful functions of physical buttons, such as short press, long press, release and so on.
+* `LED`: Provide different states including bright, dark, quick blink and slow blink of led. You could use this module to indicate different states of the program.
+* `light`: Provide functions of a smart light. You could add different pwm channels to the light and set the channels to different states such as custom duty cycle, custom blink frequecy, breathing light effect and so on.
+* `OTA`: Provide Over The Air Updates function.
+* `param`: Provide data read and write functions, based on NVS.
+* `power_meter`: Provide power, voltage and current measurement. The driver is based on BL0937 chip.
+* `relay`: Provide two methods to control relays. One method uses a delay flip-flop and another uses RTC IO to control relay directly.
+* `smart_config`: Provide a blocking function to perform smart config. User could set the time out of smart config.
+* `touchpad`: Provide some useful functions of touchpad, such as single trigger, serial trigger, short press, long press and so on.
+* `ulp_monitor`: Provide simple apis to use ULP coprocessor to collect and save data of temprature sensor and adc while deep sleep.
+* `wifi`: Provide a blocking function to make esp32 connect to ap. User could set the time out of connecting.
 
 ---
 
