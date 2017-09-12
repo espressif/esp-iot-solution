@@ -52,7 +52,6 @@
 │   ├── hts221
 │   ├── http_request
 │   ├── i2c_bus
-│   ├── i2c_debug
 │   ├── is31fl3xxx
 │   ├── lcd
 │   ├── led
@@ -89,7 +88,6 @@
 │   ├── sensor
 │   ├── socket
 │   └── switch
-├── readme.txt
 ├── sdkconfig
 ├── submodule
 │   └── esp-idf

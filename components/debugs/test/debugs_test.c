@@ -23,7 +23,7 @@
   */
   
 #include "esp_system.h"
-#include "esp_deep_sleep.h"
+#include "esp_sleep.h"
 #include "esp_log.h"
 #include "debugs.h"
 #include "unity.h"
@@ -38,7 +38,7 @@ static void debug_123(void* arg)
 static void debug_deepsleep(void *arg)
 {
     ESP_LOGI(TAG, "sleep for 10 seconds");
-    esp_deep_sleep_enable_timer_wakeup(10 * 1000 * 1000);
+    esp_sleep_enable_timer_wakeup(10 * 1000 * 1000);
     esp_deep_sleep_start();
 }
 

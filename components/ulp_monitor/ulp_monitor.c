@@ -25,7 +25,7 @@
 #include <string.h>
 #include "esp_log.h"
 #include "esp32/ulp.h"
-#include "esp_deep_sleep.h"
+#include "esp_sleep.h"
 #include "driver/adc.h"
 #include "driver/rtc_io.h"
 #include "soc/rtc_cntl_reg.h"
@@ -181,7 +181,7 @@ esp_err_t ulp_monitor_start(uint32_t meas_per_hour)
     };
     ERR_ASSERT(TAG, ulp_add_subprogram(sub_program, sizeof(sub_program)));
     size_t size = g_program_len;
-    esp_deep_sleep_enable_ulp_wakeup();
+    esp_sleep_enable_ulp_wakeup();
     ERR_ASSERT(TAG, ulp_process_macros_and_load(g_program_addr, g_program, &size));
     const uint32_t sleep_cycles = rtc_clk_slow_freq_get_hz() * 3600 / meas_per_hour;
     REG_WRITE(SENS_ULP_CP_SLEEP_CYC0_REG, sleep_cycles);

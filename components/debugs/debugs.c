@@ -31,7 +31,7 @@
 #include "esp_system.h"
 #include "esp_log.h"
 #include "esp_wifi.h"
-#include "esp_deep_sleep.h"
+#include "esp_sleep.h"
 #include "debugs.h"
 
 #define IOT_CHECK(tag, a, ret)  if(!(a)) {                                 \
@@ -96,7 +96,7 @@ static const char* wakeup_info[] = {
 
 static void wakeup_info_log(void *arg)
 {
-    esp_deep_sleep_wakeup_cause_t wakeup_cause = esp_deep_sleep_get_wakeup_cause();
+    esp_sleep_wakeup_cause_t wakeup_cause = esp_sleep_get_wakeup_cause();
     ESP_LOGI(TAG, "wakeup reason: %s", wakeup_info[wakeup_cause]);
 }
 
