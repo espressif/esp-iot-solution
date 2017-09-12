@@ -27,7 +27,7 @@
 #include "freertos/queue.h"
 #include "esp_log.h"
 #include "unity.h"
-#include "esp_deep_sleep.h"
+#include "esp_sleep.h"
 #include "touchpad.h"
 
 #define TAG "deep_sleep_test"
@@ -39,7 +39,7 @@ void deep_sleep_gpio_test()
     ESP_LOGI(TAG, "start deep sleep, press key 34 and 35 at the same time to wakeup\n");
     uint64_t wakeup_pin_mask = 1ULL << 35;
     wakeup_pin_mask |= 1ULL << 34;
-    esp_deep_sleep_enable_ext1_wakeup(wakeup_pin_mask, ESP_EXT1_WAKEUP_ALL_LOW);
+    esp_sleep_enable_ext1_wakeup(wakeup_pin_mask, ESP_EXT1_WAKEUP_ALL_LOW);
     esp_deep_sleep_start();
 }
 
@@ -53,7 +53,7 @@ void deep_sleep_touch_test()
     ESP_LOGI(TAG, "waiting for 5 seconds...\n");
     vTaskDelay(5000 / portTICK_PERIOD_MS);
     ESP_LOGI(TAG, "start deep sleep, press TP1, TP2, TP3 or TP4 to wakeup\n");
-    esp_deep_sleep_enable_touchpad_wakeup();
+    esp_sleep_enable_touchpad_wakeup();
     esp_deep_sleep_start();
 }
 
