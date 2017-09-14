@@ -22,30 +22,27 @@
   *
   */
   
-#define BH1750_TEST_CODE 1
-#if BH1750_TEST_CODE
 
 #include <stdio.h>
 #include "unity.h"
 #include "driver/i2c.h"
-#include "bh1750.h"
+#include "mvh3004d.h"
 #include "i2c_bus.h"
 
-#define I2C_MASTER_SCL_IO           19          /*!< gpio number for I2C master clock */
-#define I2C_MASTER_SDA_IO           18          /*!< gpio number for I2C master data  */
+#define I2C_MASTER_SCL_IO           17          /*!< gpio number for I2C master clock */
+#define I2C_MASTER_SDA_IO           16          /*!< gpio number for I2C master data  */
 #define I2C_MASTER_NUM              I2C_NUM_1   /*!< I2C port number for master dev */
 #define I2C_MASTER_TX_BUF_DISABLE   0           /*!< I2C master do not need buffer */
 #define I2C_MASTER_RX_BUF_DISABLE   0           /*!< I2C master do not need buffer */
 #define I2C_MASTER_FREQ_HZ          100000      /*!< I2C master clock frequency */
 
-
 static i2c_bus_handle_t i2c_bus = NULL;
-static bh1750_handle_t sens = NULL;
+static mvh3004d_handle_t sens = NULL;
 
 /**
  * @brief i2c master initialization
  */
-void i2c_bus_init()
+static void i2c_bus_init()
 {
     i2c_config_t conf;
     conf.mode = I2C_MODE_MASTER;
@@ -57,58 +54,32 @@ void i2c_bus_init()
     i2c_bus = i2c_bus_create(I2C_MASTER_NUM, &conf);
 }
 
-void bh1750_init()
+void mvh3004d_init()
 {
     i2c_bus_init();
-    sens = sensor_bh1750_create(i2c_bus, 0x23, false);
+    sens = sensor_mvh3004d_create(i2c_bus, MVH3004D_SLAVE_ADDR, false);
 }
 
-void bh1750_test_task(void* pvParameters)
+void mvh3004d_test_task(void* pvParameters)
 {
-    int ret;
-    bh1750_cmd_measure_t cmd_measure;
-    float bh1750_data;
+    int cnt = 0;
+    float tp, rh;
     while(1){
-        uint32_t i;
-        bh1750_power_on(sens);
-        cmd_measure = BH1750_ONETIME_4LX_RES;
-        bh1750_set_measure_mode(sens, cmd_measure);
-        vTaskDelay(30 / portTICK_RATE_MS);
-        for (i=0; i<10; i++) {
-            ret = bh1750_get_data(sens, &bh1750_data);
-            if (ret == ESP_OK) {
-                printf("bh1750 val(one time mode): %f\n", bh1750_data);
-            } else {
-                printf("No ack, sensor not connected...\n");
-            }
-            vTaskDelay(1000 / portTICK_RATE_MS);
-        }
-        cmd_measure = BH1750_CONTINUE_4LX_RES;
-        bh1750_set_measure_mode(sens, cmd_measure);
-        vTaskDelay(30 / portTICK_RATE_MS);
-        for (i=0; i<10; i++) {
-            ret = bh1750_get_data(sens, &bh1750_data);
-            if (ret == ESP_OK) {
-                printf("bh1750 val(continuously mode): %f\n", bh1750_data);
-            } else {
-                printf("No ack, sensor not connected...\n");
-            }
-            vTaskDelay(1000 / portTICK_RATE_MS);
-        }
-        vTaskDelay(1000 / portTICK_RATE_MS);
+        mvh3004d_get_data(sens, &tp, &rh);
+        printf("test[%d]: tp: %.02f; rh: %.02f %%\n", cnt++, tp, rh);
+        vTaskDelay(10 / portTICK_RATE_MS);
     }
 }
 
-void bh1750_test()
+void mvh3004d_test()
 {
-    bh1750_init();
-    xTaskCreate(bh1750_test_task, "bh1750_test_task", 1024 * 2, NULL, 10, NULL);
+    mvh3004d_init();
+    xTaskCreate(mvh3004d_test_task, "mvh3004d_test_task", 1024 * 2, NULL, 10, NULL);
 }
 
-TEST_CASE("Sensor BH1750 test", "[bh1750][iot][sensor]")
+TEST_CASE("Sensor MVH3004D test", "[mvh3004d][iot][sensor]")
 {
-    bh1750_test();
+    mvh3004d_test();
 }
 
 
-#endif
