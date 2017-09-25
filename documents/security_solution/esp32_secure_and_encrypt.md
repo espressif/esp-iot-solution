@@ -122,17 +122,17 @@
 # Secure Boot 与 Flash Encryption 流程图
 * 第一次 boot 时 secure boot 与 flash encrypt 的生效过程如下图所示，图中蓝色框是 secure boot 的步骤，绿色框是 flash encrypt 的步骤
 
-	<img src="./esp32_secure_encrypt/secure_encrypt_first_boot.png" width = "300" alt="touchpad_temp1" align=center />
+	<img src="../_static/secure_encrypt/secure_encrypt_first_boot.png" width = "300" alt="touchpad_temp1" align=center />
 	
 * 后续 boot 时流程图如下，图中绿色框中的步骤会执行解密，解密是由硬件自动完成的
 
-	<img src="./esp32_secure_encrypt/secure_encrypt_subsequent_boot.png" width = "300" alt="touchpad_temp1" align=center />
+	<img src="../_static/secure_encrypt/secure_encrypt_subsequent_boot.png" width = "300" alt="touchpad_temp1" align=center />
 	
 	
 # Windows平台的下载工具
 
 * 乐鑫提供windows平台的下载工具，能够在工厂生产环境中批量烧写固件
-* 点击[这里](https://gitlab.espressif.cn:6688/application/PYTHON_FLASH_DOWNLOAD_TOOL/blob/master/README.md)，阅读生产下载固件的说明文档。
+* 点击[这里](download_tool.md)，阅读生产下载固件的说明文档。
 * 生产下载工具的配置文件在 configure 文件夹内，涉及安全特性的配置在 security.conf 中，目前涉及的配置内容如下表：
 
 	| `ITEM` | Function | default |
@@ -157,7 +157,7 @@
     |dl_cache_disable | 是否关闭下载模式下的flash cache功能| False|
 * 下载工具的内部逻辑和流程如下：
 
-	<img src="./esp32_secure_encrypt/download_tool_flow_chart.png" width = "400" alt="download frame" align=center />
+	<img src="../_static/secure_encrypt/download_tool_flow_chart.png" width = "400" alt="download frame" align=center />
 
 
 
@@ -190,7 +190,7 @@
 ```
 	2. 在menuconfig中，选择Sign binaries during build, 并指定刚才生成的密钥路径, 如下图。
 	
-		<img src="./esp32_secure_encrypt/menuconfig_02.png" width = "300" alt="touchpad_temp1" align=center />
+		<img src="../_static/secure_encrypt/menuconfig_02.png" width = "300" alt="touchpad_temp1" align=center />
 	3. 分别编译bootloader与应用代码
 	
 		```
@@ -215,7 +215,7 @@
     [FLASH ENCRYPTION]
     flash_encryption_en = False
     ```
-    <img src="./esp32_secure_encrypt/download_frame_02.png" width = "500" alt="download frame" align=center />
+    <img src="../_static/secure_encrypt/download_frame_02.png" width = "500" alt="download frame" align=center />
 	> 注意： 
 	> 修改并保存参数前，请先关闭下载工具，配置文件修改完成并保存后，再开启运行下载工具。
 	6. 或者我们可以通过下载工具的combine功能，将多个bin文件打包为一个文件，再由工厂flash烧录器烧录进flash进行批量生产。
@@ -225,7 +225,7 @@
 	   * 在 ‘combine’ 文件夹下，生成 target.bin，将其烧写到 Flash 的 0x0 地址即可。
 	   * 工具只会对填写的最大地址范围内的空白区域填充 0xff。并将文件按地址组合。
 	
-		<img src="./esp32_secure_encrypt/combine_01.png" width = "300" alt="download frame" align=center />
+		<img src="../_static/secure_encrypt/combine_01.png" width = "300" alt="download frame" align=center />
 	7. 下载完成后，需要运行一次程序，使bootloader完成security相关特性的初始化，包括AES密钥的随机生成并写入EFUSE，以及对明文的flash进行首次加密。
 		
 		> 请误在首次启动完成前，将芯片断电，以免造成芯片无法启动的情况。
@@ -255,7 +255,7 @@
 ```
 	2. 在menuconfig中，选择Sign binaries during build, 并指定刚才生成的密钥路径, 如下图。
 	
-		<img src="./esp32_secure_encrypt/menuconfig_02.png" width = "300" alt="touchpad_temp1" align=center />
+		<img src="../_static/secure_encrypt/menuconfig_02.png" width = "300" alt="touchpad_temp1" align=center />
 	3. 分别编译bootloader与应用代码
 	
 		```
@@ -292,7 +292,7 @@
 	
 	5. 使用下载工具进行下载，若不希望工具修改任何配置参数(比如flash 频率和模式)，请勾选‘DoNotChgBin’选项。下载工具会更具配置文件的设置，在下载过程中完成固件加密下载和密钥随机生成与烧写。
 	
-		<img src="./esp32_secure_encrypt/download_frame_new.png" width = "250" alt="download frame" align=center />
+		<img src="../_static/secure_encrypt/download_frame_new.png" width = "250" alt="download frame" align=center />
 
 * `注意事项`: 
 	* 用于签名的私钥需要保密，如果泄漏，app.bin有被伪造的可能性。

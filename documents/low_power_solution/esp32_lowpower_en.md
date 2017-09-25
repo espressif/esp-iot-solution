@@ -18,7 +18,7 @@
 ## Timed data acquisition and reporting (e.g., instrument status monitors)
 * In this scenario, ESP32 is used to periodically collect sensor data and upload them. Timers can be used as the wake-up source in this case. To be more specific, ESP32 will collect and upload sensor data, set timers as the wake-up source, enter Deep-sleep mode, and collect and upload sensor data again when coming out of deep sleep...
 * Logical flow diagram：
-    <img src="deep_sleep/low_power_flow_chart1.jpg" width = "500" alt="low_power_flow_chart1" align=center />
+    <img src="../_static/low_power/low_power_flow_chart1.jpg" width = "500" alt="low_power_flow_chart1" align=center />
 
 * Logical flow：
     1. ESP32 collects and uploads sensor data after booting;
@@ -30,7 +30,7 @@
   * when no exception is reported, ESP32 will stay in Deep-sleep mode;
   * only when the sensor collects abnormal data and the specified GPIO(s) is set to the specified electrical level(s), ESP32 will wake up from the Deep-sleep mode, and trigger an alarm or upload data.
 * Logical flow chart:
-    <img src="deep_sleep/low_power_flow_chart2.jpg" width = "500" alt="low_power_flow_chart2" align=center />
+    <img src="../_static/low_power/low_power_flow_chart2.jpg" width = "500" alt="low_power_flow_chart2" align=center />
 
 * Logical flow:
     1. ESP32 will read the abnormal data collected by the sensors, and trigger an alarm or upload data accordingly; 
@@ -42,7 +42,7 @@
 ## Data acquisition or abnormal detection (GPIO trigger is not supported and frequent data uploading is not needed)
 * In this scenario, the data acquisition or anomaly detection will be initiated by the CPU or the on-chip peripherals, instead of the sensor, because GPIO trigger is not supported by the sensor in this case. The ULP co-processor, integrated in ESP32, can perform some simple data acquisition, and wake ESP32 up for further processing if specific conditions are met. The data collected during this process can be stored in the RTC slow memory for future reading when ESP32 is awake. 
 * Logical flow diagram:
-    <img src="deep_sleep/low_power_flow_chart3.jpg" width = "500" alt="low_power_flow_chart3" align=center />
+    <img src="../_static/low_power/low_power_flow_chart3.jpg" width = "500" alt="low_power_flow_chart3" align=center />
 
 * Users can write tailored assembly codes that will be executed by the ULP co-processor during ESP32's deep sleep, according to the instruction set for ULP co-processor. The process is as follows: 
     1. ESP32 will read the data collected by the ULP co-processor during deep sleep from the RTC slow memory after booting, and upload these data; 
@@ -61,7 +61,7 @@
 ## User interaction scenario supported by touchpad trigger and GPIO trigger (e.g., control panels)
 * In this scenario, ESP32 is mostly used for some user interaction devices, such as control panels. When there is no user operations (such as Touchpad trigger/ GPIO trigger) for a long time, ESP32 will enter Deep-sleep mode and enable the touchpad/GPIO as the wake-up source. In Deep-sleep mode, the average current consumption of the chip is about 30 uA, with the touchpad enabled as the wake-up source. 
 * Logical flow diagram:
-    <img src="deep_sleep/touchpad_deepsleep_process.png" width = "400" alt="touchpad_deepsleep_process" align=center />
+    <img src="../_static/low_power/touchpad_deepsleep_process.png" width = "400" alt="touchpad_deepsleep_process" align=center />
 
 * Logical flow:
 	1. ESP32 executes the user interaction and control programs after booting;
@@ -70,19 +70,19 @@
 
 # Power consumption of ESP32 in Deep-sleep mode with different wake-up sources enabled
 * In Active mode, the average current of ESP32, working as a Station, is about 115 mA:
-    <img src="deep_sleep/esp32_station_current.png" width = "500" alt="esp32_station_current" align=center />
+    <img src="../_static/low_power/esp32_station_current.png" width = "500" alt="esp32_station_current" align=center />
 
 * In Deep-sleep mode, the average current of ESP32, with the timer enabled as the wake-up source, is about 6 uA:
-    <img src="deep_sleep/esp32_deepsleep_timer_current.png" width = "500" alt="esp32_deepsleep_timer_current" align=center />
+    <img src="../_static/low_power/esp32_deepsleep_timer_current.png" width = "500" alt="esp32_deepsleep_timer_current" align=center />
 
 * In Deep-sleep mode, the average current of ESP32, with the RTC IO enabled as the wake-up source, is about 6 uA:[^4]
-    <img src="deep_sleep/esp32_deepsleep_rtcio_current.png" width = "500" alt="esp32_deepsleep_rtcio_current" align=center />
+    <img src="../_static/low_power/esp32_deepsleep_rtcio_current.png" width = "500" alt="esp32_deepsleep_rtcio_current" align=center />
 
 * In Deep-sleep mode, the ULP co-processor will perform data acquisition periodically (the sampling frequency is 10 times per second in this example and the spikes in the chart below reflect the instantaneous current when the ULP co-processor is working):   
-    <img src="deep_sleep/esp32_deepsleep_ulp_current.png" width = "500" alt="esp32_deepsleep_ulp_current" align=center />
+    <img src="../_static/low_power/esp32_deepsleep_ulp_current.png" width = "500" alt="esp32_deepsleep_ulp_current" align=center />
 
 * In Deep-sleep mode, the average current of ESP32, with the touchpad enabled as the wake-up source, is about 30 uA:
-    <img src="deep_sleep/touchpad_deepsleep_current.png" width = "500" alt="touchpad_deepsleep_current" align=center />
+    <img src="../_static/low_power/touchpad_deepsleep_current.png" width = "500" alt="touchpad_deepsleep_current" align=center />
 
 [^1]: During deep sleep, the use of esp_deep_sleep_enable_ext0_wakeup() requires the support of RTC peripherals, which consumes additional 100 mA, while esp_deep_sleep_enable_ext1_wakeup() needs no RTC peripherals. In this case, esp_deep_sleep_enable_ext1_wakeup() is recommended at all times.  
 [^2]: For details on how to use the ulp_monitor module, please see the related readme.md and ulp_monitor_test.c files.
