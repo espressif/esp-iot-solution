@@ -176,25 +176,11 @@ Exit miniterm by typing Ctrl-].
 ---
 
 
-## Encapsulated components
-
-* `button`: Provide some useful functions of physical buttons, such as short press, long press, release and so on.
-* `LED`: Provide different states including bright, dark, quick blink and slow blink of led. You could use this module to indicate different states of the program.
-* `light`: Provide functions of a smart light. You could add different pwm channels to the light and set the channels to different states such as custom duty cycle, custom blink frequecy, breathing light effect and so on.
-* `OTA`: Provide Over The Air Updates function.
-* `param`: Provide data read and write functions, based on NVS.
-* `power_meter`: Provide power, voltage and current measurement. The driver is based on BL0937 chip.
-* `relay`: Provide two methods to control relays. One method uses a delay flip-flop and another uses RTC IO to control relay directly.
-* `smart_config`: Provide a blocking function to perform smart config. User could set the time out of smart config.
-* `touchpad`: Provide some useful functions of touchpad, such as single trigger, serial trigger, short press, long press and so on.
-* `ulp_monitor`: Provide simple apis to use ULP coprocessor to collect and save data of temprature sensor and adc while deep sleep.
-* `wifi`: Provide a blocking function to make esp32 connect to ap. User could set the time out of connecting.
-
----
 
 ## Solution list:
 
-* Low power / deep sleep / co-processor solution
-* Touch sensor solution and application note
-* Security solution and factory flow
-* AWS + Amazon Alexa custom skills service solution
+* [Low power / deep sleep / co-processor solution](documents/low_power_solution)
+* [Touch sensor solution and application note](documents/touch_pad_solution)
+* [Security solution and factory flow](documents/security_solution)
+
+
