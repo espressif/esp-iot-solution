@@ -3,13 +3,13 @@
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 **ESP32_ULP_EB V1** 开发板以乐鑫 ESP32 模组为核心, 外接一些 Touch Pad, 按键开关, 排针等. 主要用于检测模组在正常工作或睡眠状态下的电流情况.
 
-- - -
+---
 
 ## <h2 id="hardware">二 PCB功能模块:</h2> 
 
 <img src="../_static/deep_sleep/module.png" width="400" height="200">
 
-- - -
+---
 
 ## 三 功能实现及描述:
 
@@ -18,7 +18,7 @@
 * <h5 id="bootButton">系统复位按键</h5> 
 
     控制 ESP32 芯片 EN 脚，用与复位芯片，硬件设计如下:
-
+	<br>
     <img src="../_static/deep_sleep/reset_switch.png" width="200" height="100">
 
 
@@ -28,6 +28,7 @@
     <img src="../_static/deep_sleep/download_switch.png" width="200" height="100">
 
 * <h5 id="downloadMode">下载模式</h5> 
+
     [返回编译与下载](#compileAndRun)
 
     系统复位时，GPIO0 为低电平时，芯片进入下载模式。 长按Boot Button 的同时， 按下RST Button 复位系统，芯片将进入下载模式，等待下载固件，下载模式下可以看到系统启动的串口输出(波特率115200)如下：
@@ -307,13 +308,13 @@ void touchpad_wakeup_test(void)
 * `编译, 烧写与运行固件`
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-执行下面指令，编译所有 TestCase[^Compile1], 以下命令中的 flash 是下载命令, monitor 表示开启系统打印， 可根据实际情况选择添加:
+执行下面指令，编译所有 TestCase, 以下命令中的 flash 是下载命令, monitor 表示开启系统打印， 可根据实际情况选择添加:
 
 ```
     make IOT_TEST_ALL=1 flash monitor
 ```
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-也可以执行以下指令，只编译 ‘deep_sleep’ 相关的测试项[^Compile2]. 以下命令中的 flash 是下载命令, monitor 表示开启系统打印， 可根据实际情况选择添加:
+也可以执行以下指令，只编译 ‘deep_sleep’ 相关的测试项. 以下命令中的 flash 是下载命令, monitor 表示开启系统打印， 可根据实际情况选择添加:
  
 ```
     make TEST_COMPONENTS="deep_sleep" flash monitor
@@ -326,8 +327,6 @@ void touchpad_wakeup_test(void)
 > &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 > 注: 下载程序时, 如果无法自动开始下载，可以尝试[手动进入下载模式](#downloadMode)。下载固件完成后，按reset键重新运行程序，可以查看串口打印
 
-[^Compile1]: `*注意: 所有的testcase包含了IoT solution项目中所有的模块功能.*`
-[^Compile2]: `*注意: 示例 TEST_COMPONENTS="deep_sleep" 中 ‘=’ 两边不能有空格, 否则无法编译.*`
 
 * `选择测试项`
 
