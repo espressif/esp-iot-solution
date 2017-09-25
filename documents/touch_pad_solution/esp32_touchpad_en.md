@@ -20,24 +20,24 @@
     
 Readings under varied temperature| Readings under varied voltage 
     ---|---  
-    <img src="./touchpad/pad温度_读数曲线_EN.png" width = "500" alt="touchpad_temp0" align=center />|<img src="./touchpad/pad电压_读数曲线_EN.jpg" width = "500" alt="touchpad_volt0" align=center />                                                          
+    <img src="../_static/touch_pad/pad温度_读数曲线_EN.png" width = "500" alt="touchpad_temp0" align=center />|<img src="../_static/touch_pad/pad电压_读数曲线_EN.jpg" width = "500" alt="touchpad_volt0" align=center />                                                          
  
 
 * Table 1 shows the readings from the tested pads under varying temperature conditions:
  
-  <img src="./touchpad/pad温度_读数_EN.jpg" width = "800" alt="touchpad_temp1" align=center />
+  <img src="../_static/touch_pad/pad温度_读数_EN.jpg" width = "800" alt="touchpad_temp1" align=center />
 
 *  Table 2 shows the value of Eval<sub>it</sub>/AVG<sub>t</sub> (the ratio of the mathematical expectation of the i-th pad's readings to the average mathematical expectation of the N * pads' readings) when the temperature varies:
 
-    <img src="./touchpad/pad温度_比值_EN.jpg" width = "800" alt="touchpad_temp2" align=center />
+    <img src="../_static/touch_pad/pad温度_比值_EN.jpg" width = "800" alt="touchpad_temp2" align=center />
 
 * Table 3 shows the readings from the tested pads under varying voltage:
 
-      <img src="./touchpad/pad电压_读数_EN.jpg" width = "800" alt="touchpad_volt1" align=center />
+      <img src="../_static/touch_pad/pad电压_读数_EN.jpg" width = "800" alt="touchpad_volt1" align=center />
 
 * Table 4 shows the value of Eval<sub>it</sub>/AVG<sub>t</sub> (the ratio of the mathematical expectation of the i-th pad's readings to the average mathematical expectation of the N * pads' readings) when the voltage varies:
 
-       <img src="./touchpad/pad电压_比值_EN.jpg" width = "800" alt="touchpad_volt2" align="center" />
+       <img src="../_static/touch_pad/pad电压_比值_EN.jpg" width = "800" alt="touchpad_volt2" align="center" />
 
 * As Table 2 and Table 4 show, regardless of the varying temperature and voltage, the value of Eval<sub>it</sub>/AVG<sub>t</sub> is relatively stable with a fluctuation range of 1%. The two tests prove that the model is accurate.
 
@@ -58,9 +58,9 @@ Readings under varied temperature| Readings under varied voltage
 * Adding a plate to the touch sensor provides protection for the sensor. But it also decreases the touchpad's sensitivity. We carried out tests for it.
 * The chart and table below show the readings from the touchpad when not touched, when touched through one PCB, and when touched through one PCB plus a 1 mm plastic plate.
 
-      <img src="./touchpad/touchpad_隔板测试图表_EN.png" width = "600" alt="touchpad_geban2" align=center />
+      <img src="../_static/touch_pad/touchpad_隔板测试图表_EN.png" width = "600" alt="touchpad_geban2" align=center />
 
-    <img src="./touchpad/touchpad_隔板测试_EN.jpg" width = "600" alt="touchpad_geban1" align=center />
+    <img src="../_static/touch_pad/touchpad_隔板测试_EN.jpg" width = "600" alt="touchpad_geban1" align=center />
 
 * According to the test result, the difference of the three readings is only 3%. Thus, adding PCB or plastic plate in between the touchpad and the finger will severely impact the sensitivity of the pad. 
 
@@ -68,39 +68,24 @@ Readings under varied temperature| Readings under varied voltage
 
 * Users can set up a touchpad instance in esp-iot-solution. An interrupt trigger threshold percentage λ<sub>i</sub> needs to be set. The real threshold is thres<sub>it</sub> = λ<sub>i</sub> * Eval<sub>it</sub>. The parameter Eval<sub>it</sub> will self-calibrate at timed intervals. Users also need to set the filter time.
 * Steps:
-	* 1. When a pad interrupt is triggered, enable the software timer. The fixed time interval is filter<sub>i</sub>.    
-	* 2. When a timed interrupt is triggered, read the sampled value of the pad val<sub>i</sub>. If val<sub>i</sub> < thres<sub>it</sub>, execute the pad push callback and restart the software timer. If val<sub>i</sub> > thres<sub>it</sub>, wait for the next pad interrupt.
-	* 3. When another timed interrupt is triggered, read the value of the sampled pad, val<sub>i</sub>. If val<sub>i</sub> > thres<sub>it</sub>, execute the pad tap and pad release callbacks. Otherwise, restart the timer and repeat Step3.
+	* [step1] When a pad interrupt is triggered, enable the software timer. The fixed time interval is filter<sub>i</sub>.    
+	* [step2] When a timed interrupt is triggered, read the sampled value of the pad val<sub>i</sub>. If val<sub>i</sub> < thres<sub>it</sub>, execute the pad push callback and restart the software timer. If val<sub>i</sub> > thres<sub>it</sub>, wait for the next pad interrupt.
+	* [step3] When another timed interrupt is triggered, read the value of the sampled pad, val<sub>i</sub>. If val<sub>i</sub> > thres<sub>it</sub>, execute the pad tap and pad release callbacks. Otherwise, restart the timer and repeat Step3.
 * Users can set a continuous trigger mode. In this mode, if val<sub>i</sub> < thres<sub>it</sub> in Step3, the pad serial trigger callback will be executed.
 * Steps of calling the API for single touchpad in esp-iot-solution:
 
-```c
-/*
-Create a touchpad object C.
-- The configured value of thres_percent depends on the sensitivity of the touchpad in specific application scenarios:
-	1. If the pad is directly touched by a finger, set the value of thres_percent within the range of 700~800. It will ensure good sensitivity and stability.
-	2. If the pad is placed at the bottom of the PCB, meaning that the 1mm PCB comes between the pad and the finger, set the value of thres_percent around 970.
-	3. If a layer of 1mm plastic shielding is added to the PCB, set the value of thres_percent to 990. The touchpad stability is relatively low in this case and false trigger is likely to occur.
-	
-- Parameter filter_value is used to determine the polling cycle of the pad release and is generally set to 150. 
-- Parameter touchpad_handle_t is used for subsequent control of the touchpad.
-*/
-touchpad_handle_t tp = touchpad_create(touch_pad_num, thres_percent, filter_value);
-touchpad_add_cb(tp, cb_type, cb, arg);		// Add a callback function for push, release, or tap events.
-touchpad_add_custom_cb(tp, press_sec, cb, arg);		// Add a callback function for user-defined events. Users can define the number of seconds it takes in touching the pad in order to trigger the callback.
-/*
-Set the continuous trigger mode:
-- Parameter trigger_thres_sec determines the number of seconds it takes in touching the pad to enable the continuous trigger mode.
-- Parameter interval_ms determines the interval of time between two triggers in continuous trigger mode.
-*/
-touchpad_set_serial_trigger(tp, trigger_thres_sec, interval_ms, cb, arg);
+```
+    touchpad_handle_t tp = touchpad_create(touch_pad_num, thres_percent, filter_value);
+    touchpad_add_cb(tp, cb_type, cb, arg);		// Add a callback function for push, release, or tap events.
+    touchpad_add_custom_cb(tp, press_sec, cb, arg);// Add a callback function for user-defined events. Users can define the number of seconds it takes in touching the pad in order to trigger the callback.
+    touchpad_set_serial_trigger(tp, trigger_thres_sec, interval_ms, cb, arg);
 ```
 
 # Touchpad Slide Solution
 
 * The following figure shows the arrangement of multiple pads in a touchpad slide. Each pad is connected to a touch sensor. When a finger touches the slide, users can read the touch position on the slide.
 
-    <img src="./touchpad/slide_touchpad.png" width = "500" alt="touchpad_volt2" align=center />
+    <img src="../_static/touch_pad/slide_touchpad.png" width = "500" alt="touchpad_volt2" align=center />
 
 * Calculating the position of the touch point on the touchpad slide is based on centroid calculation.<br>First, give a position weight w<sub>i</sub> = i * ξ to each pad *i* in order. ξ determines the accuracy of positioning. The bigger ξ is, the finer the division of the position will be. For example, confer a position weight of 0, 10, 20, 30, and 40 respectively to the five pads from left to right in the figure above. Calculate the readings' variation of each pad at time *t* with Δval<sub>it</sub> = Eval<sub>it</sub> - real<sub>it</sub>. real<sub>it</sub> is the real-time readings from the pad. Then, calculate the relative position with posi<sub>t</sub> = (Δval<sub>0t</sub> * w<sub>0</sub> + Δval<sub>1t</sub> * w<sub>1</sub> + ... + Δval<sub>(N-1)t</sub> * w<sub>N-1</sub>) / (Δval<sub>0t</sub> + Δval<sub>1t</sub> + ... + Δval<sub>(N-1)t</sub>). The value of the posi<sub>t</sub> is between 0 and (N-1)*ξ.
 
@@ -120,7 +105,7 @@ uint8_t pos = touchpad_slide_position(tp_slide);		// Used to read the relative p
 
 * The duplex slide shown below can be used to drive a longer pad slide with a limited number of touch sensors.
 
-<img src="./touchpad/diplexed_slide.png" width = "500" alt="touchpad_volt2" align=center />
+<img src="../_static/touch_pad/diplexed_slide.png" width = "500" alt="touchpad_volt2" align=center />
 
 * The duplex slide in the figure above consists of 16 pads and 8 touch sensors. The left half of the 16 pads connect to the 8 touch sensors in order. The right half of the 16 pads connect to the 8 touch sensors in random order. This means that the touch sensors used by the adjacent pads in the left half should not be used by adjacent pads in the right half.
 * When a pad in the left half is touched, the right-half pad connecting to the same sensor is assumed to be touched as well. Algorithm will locate the area where the readings of adjacent pads change, and exclude assumed touches on non-adjacent pads in the right half. 
@@ -128,7 +113,7 @@ uint8_t pos = touchpad_slide_position(tp_slide);		// Used to read the relative p
 * In esp-iot-solution，the same API applies to the simplex slide and the duplex slide. 
 * Create a duplex touchpad slide object:
 
-```c
+    ```
 const touch_pad_t tps[] = {0, 1, 2, 3, 4, 5, 6, 7, 0, 3, 6, 1, 4, 7, 2, 5};	// The order in which the 16 pads are connected to sensor 0 to 7.
 touchpad_slide_handle_t tp_slide = touchpad_slide_create(16, tps, POS_SCALE, TOUCHPAD_THRES_PERCENT, TOUCHPAD_FILTER_MS);
 ```
@@ -137,11 +122,12 @@ touchpad_slide_handle_t tp_slide = touchpad_slide_create(16, tps, POS_SCALE, TOU
 * The single touchpad solution requires that a sensor assigned to each pad button. The touchpad matrix solution, in comparison, is more suitable for applications where a large number of pads are needed.
 * The following figure shows the touchpad matrix's structure. Each pad button is divided into four blocks. Opposite blocks within a pad are connected to the same sensor. In the touchpad matrix, the horizontal/vertical blocks in each row/column of pads are connected to the same sensor.
 
-<img src="./touchpad/matrix_touchpad.png" width = "500" alt="touchpad_volt2" align=center />
+<img src="../_static/touch_pad/matrix_touchpad.png" width = "500" alt="touchpad_volt2" align=center />
 
 * It is only when both (horizontal and vertical) sensors connected to a pad are triggered that the pad is assumed to be touched. For example, in the figure above, a touch event is assumed to occur on the upper left pad when both sensor2 and sensor3 are triggered at the same time.
 * Below is a guidance to creating a touchpad matrix in esp-iot-solution. Users can add callback functions and set up a continuous trigger mode.
-```c
+
+    ```
 /*
 Parameters sizeof(x_tps)/sizeof(x_tps[0] and sizeof(y_tps)/sizeof(y_tps[0] specify the number of horizontal and vertical sensors respectively. Parameters x_tps and y_tps are arrays specifying the horizontal/vertical sensor No. 
 */
