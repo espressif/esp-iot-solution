@@ -77,7 +77,7 @@ __EXT1 唤醒方式测试结果__
 
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-**从表格可以看出, deep_sleep 期间, 配置不同 RTC IO 唤醒时, 工作电流基本相同, 芯片的工作电流非常低. 采用 EXT1 唤醒方式时电流会比 EXT0 唤醒方式下少 1uA 左右. **
+**从表格可以看出, deep_sleep 期间, 配置不同 RTC IO 唤醒时, 工作电流基本相同, 芯片的工作电流非常低. 采用 EXT1 唤醒方式时电流会比 EXT0 唤醒方式下少 1uA 左右.**
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 _`注: RTC IO 请尽量采用外部上下拉方式, 在进入 deep_sleep 之前将其配置成 input floating 模式, 与采用内部上下拉方式相比, 这样可以有效降低 deep_sleep 期间电流.`_
