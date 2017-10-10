@@ -40,13 +40,12 @@ typedef void* mvh3004d_handle_t;
  *
  * @param bus I2C bus object handle
  * @param dev_addr I2C device address of sensor
- * @param addr_10bit_en To enable 10bit address
  *
  * @return
  *     - NULL Fail
  *     - Others Success
  */
-mvh3004d_handle_t sensor_mvh3004d_create(i2c_bus_handle_t bus, uint16_t dev_addr, bool addr_10bit_en);
+mvh3004d_handle_t sensor_mvh3004d_create(i2c_bus_handle_t bus, uint16_t dev_addr);
 
 /**
  * @brief Delete and release a sensor object
@@ -93,6 +92,48 @@ esp_err_t mvh3004d_get_temperature(mvh3004d_handle_t sensor, float* tp);
 
 #ifdef __cplusplus
 }
+#endif
+
+#ifdef __cplusplus
+/**
+ * class of mvh3004d temperature and humidity sensor
+ */
+class CMvh3004d
+{
+private:
+    mvh3004d_handle_t m_sensor_handle;
+    CI2CBus *bus;
+
+    /**
+     * prevent copy constructing
+     */
+    CMvh3004d(const CMvh3004d&);
+    CMvh3004d& operator = (const CMvh3004d&);
+public:
+    /**
+     * @brief Constructor for CMvh3004d class
+     * @param p_i2c_bus pointer to CI2CBus object
+     * @param addr slave device address
+     */
+    CMvh3004d(CI2CBus *p_i2c_bus, uint8_t addr = MVH3004D_SLAVE_ADDR);
+
+    /**
+     * @brief Destructor function for CMvh3004d class
+     */
+    ~CMvh3004d();
+
+    /**
+     * @brief read temperature
+     * @return temperature value
+     */
+    float read_temperature();
+
+    /**
+     * @brief read humidity
+     * @return humidity value
+     */
+    float read_humidity();
+};
 #endif
 
 #endif

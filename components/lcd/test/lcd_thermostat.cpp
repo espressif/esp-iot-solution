@@ -212,7 +212,7 @@ void i2c_sensor_init()
     conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
     conf.master.clk_speed = I2C_MASTER_FREQ_HZ;
     i2c_bus = i2c_bus_create(I2C_MASTER_NUM, &conf);
-    hts221 = sensor_hts221_create(i2c_bus, HTS221_I2C_ADDRESS, false);
+    hts221 = sensor_hts221_create(i2c_bus, HTS221_I2C_ADDRESS);
 
     uint8_t hts221_deviceid;
     hts221_get_deviceid(hts221, &hts221_deviceid);
@@ -235,7 +235,7 @@ void i2c_sensor_init()
     hts221_set_config(hts221, &hts221_config);
     hts221_set_activate(hts221);
 
-    bh1750 = sensor_bh1750_create(i2c_bus, 0x23, false);
+    bh1750 = sensor_bh1750_create(i2c_bus, 0x23);
     hts221_test_task();
 }
 

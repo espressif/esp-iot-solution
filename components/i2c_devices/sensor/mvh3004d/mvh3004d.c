@@ -38,15 +38,13 @@ static const char* TAG = "mvh3004d";
 typedef struct {
     i2c_bus_handle_t bus;
     uint16_t dev_addr;
-    bool dev_addr_10bit_en;
 } mvh3004d_dev_t;
 
-mvh3004d_handle_t sensor_mvh3004d_create(i2c_bus_handle_t bus, uint16_t dev_addr, bool addr_10bit_en)
+mvh3004d_handle_t sensor_mvh3004d_create(i2c_bus_handle_t bus, uint16_t dev_addr)
 {
     mvh3004d_dev_t* sensor = (mvh3004d_dev_t*) calloc(1, sizeof(mvh3004d_dev_t));
     sensor->bus = bus;
     sensor->dev_addr = dev_addr;
-    sensor->dev_addr_10bit_en = addr_10bit_en;
     return (mvh3004d_handle_t) sensor;
 }
 
@@ -54,7 +52,7 @@ esp_err_t sensor_mvh3004d_delete(mvh3004d_handle_t sensor, bool del_bus)
 {
     mvh3004d_dev_t* sens = (mvh3004d_dev_t*) sensor;
     if(del_bus) {
-        i2s_bus_delete(sens->bus);
+        i2c_bus_delete(sens->bus);
         sens->bus = NULL;
     }
     free(sens);

@@ -32,8 +32,8 @@
 #include "hts221.h"
 #include "esp_system.h"
 
-#define I2C_MASTER_SCL_IO           19          /*!< gpio number for I2C master clock */
-#define I2C_MASTER_SDA_IO           18          /*!< gpio number for I2C master data  */
+#define I2C_MASTER_SCL_IO           21          /*!< gpio number for I2C master clock */
+#define I2C_MASTER_SDA_IO           15          /*!< gpio number for I2C master data  */
 #define I2C_MASTER_NUM              I2C_NUM_1   /*!< I2C port number for master dev */
 #define I2C_MASTER_TX_BUF_DISABLE   0           /*!< I2C master do not need buffer */
 #define I2C_MASTER_RX_BUF_DISABLE   0           /*!< I2C master do not need buffer */
@@ -55,7 +55,7 @@ void i2c_sensor_hts221_init()
     conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
     conf.master.clk_speed = I2C_MASTER_FREQ_HZ;
     i2c_bus = i2c_bus_create(i2c_master_port, &conf);
-    hts221 = sensor_hts221_create(i2c_bus, HTS221_I2C_ADDRESS, false);
+    hts221 = sensor_hts221_create(i2c_bus, HTS221_I2C_ADDRESS);
 }
 
 void hts221_test_task(void* pvParameters)

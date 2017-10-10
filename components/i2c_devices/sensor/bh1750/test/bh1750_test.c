@@ -30,14 +30,14 @@
 #include "driver/i2c.h"
 #include "bh1750.h"
 #include "i2c_bus.h"
+#include "esp_log.h"
 
-#define I2C_MASTER_SCL_IO           19          /*!< gpio number for I2C master clock */
-#define I2C_MASTER_SDA_IO           18          /*!< gpio number for I2C master data  */
+#define I2C_MASTER_SCL_IO           21          /*!< gpio number for I2C master clock */
+#define I2C_MASTER_SDA_IO           15          /*!< gpio number for I2C master data  */
 #define I2C_MASTER_NUM              I2C_NUM_1   /*!< I2C port number for master dev */
 #define I2C_MASTER_TX_BUF_DISABLE   0           /*!< I2C master do not need buffer */
 #define I2C_MASTER_RX_BUF_DISABLE   0           /*!< I2C master do not need buffer */
 #define I2C_MASTER_FREQ_HZ          100000      /*!< I2C master clock frequency */
-
 
 static i2c_bus_handle_t i2c_bus = NULL;
 static bh1750_handle_t sens = NULL;
@@ -60,7 +60,7 @@ void i2c_bus_init()
 void bh1750_init()
 {
     i2c_bus_init();
-    sens = sensor_bh1750_create(i2c_bus, 0x23, false);
+    sens = sensor_bh1750_create(i2c_bus, 0x23);
 }
 
 void bh1750_test_task(void* pvParameters)
@@ -68,35 +68,31 @@ void bh1750_test_task(void* pvParameters)
     int ret;
     bh1750_cmd_measure_t cmd_measure;
     float bh1750_data;
-    while(1){
-        uint32_t i;
+    int cnt = 2;
+    while (cnt--) {
         bh1750_power_on(sens);
         cmd_measure = BH1750_ONETIME_4LX_RES;
         bh1750_set_measure_mode(sens, cmd_measure);
         vTaskDelay(30 / portTICK_RATE_MS);
-        for (i=0; i<10; i++) {
-            ret = bh1750_get_data(sens, &bh1750_data);
-            if (ret == ESP_OK) {
-                printf("bh1750 val(one time mode): %f\n", bh1750_data);
-            } else {
-                printf("No ack, sensor not connected...\n");
-            }
-            vTaskDelay(1000 / portTICK_RATE_MS);
+        ret = bh1750_get_data(sens, &bh1750_data);
+        if (ret == ESP_OK) {
+            printf("bh1750 val(one time mode): %f\n", bh1750_data);
+        } else {
+            printf("No ack, sensor not connected...\n");
         }
         cmd_measure = BH1750_CONTINUE_4LX_RES;
         bh1750_set_measure_mode(sens, cmd_measure);
         vTaskDelay(30 / portTICK_RATE_MS);
-        for (i=0; i<10; i++) {
-            ret = bh1750_get_data(sens, &bh1750_data);
-            if (ret == ESP_OK) {
-                printf("bh1750 val(continuously mode): %f\n", bh1750_data);
-            } else {
-                printf("No ack, sensor not connected...\n");
-            }
-            vTaskDelay(1000 / portTICK_RATE_MS);
+        ret = bh1750_get_data(sens, &bh1750_data);
+        if (ret == ESP_OK) {
+            printf("bh1750 val(continuously mode): %f\n", bh1750_data);
+        } else {
+            printf("No ack, sensor not connected...\n");
         }
         vTaskDelay(1000 / portTICK_RATE_MS);
     }
+    sensor_bh1750_delete(sens, true);
+    vTaskDelete(NULL);
 }
 
 void bh1750_test()

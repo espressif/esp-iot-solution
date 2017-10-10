@@ -177,5 +177,62 @@ esp_err_t led_is31fl3218_delete(is31fl3218_handle_t fxled, bool del_bus);
 #ifdef __cplusplus
 }
 #endif
+
+#ifdef __cplusplus
+/**
+ * class of is31fl3218 fxled driver
+ */
+class CIs31fl3218
+{
+private:
+    is31fl3218_handle_t m_led_handle;
+    CI2CBus *bus;
+
+    /**
+     * prevent copy constructing
+     */
+    CIs31fl3218(const CIs31fl3218&);
+    CIs31fl3218& operator = (const CIs31fl3218&);
+public:
+    /**
+     * @brief Constructor for CIs31fl3218 class
+     * @param p_i2c_bus pointer to CI2CBus object
+     */
+    CIs31fl3218(CI2CBus *p_i2c_bus);
+
+    /**
+     * @brief Destructor of CIs31fl3218 class
+     */
+    ~CIs31fl3218();
+
+    /**
+     * @brief Set pwm duty cycle for different channels
+     * @param ch_bit 18bit value, to mask the channels
+     * @param duty duty cycle value, from 0 to 0xff
+     * return
+     *     - ESP_OK Success
+     *     - ESP_ERR_INVALID_ARG Parameter error
+     *     - ESP_FAIL Sending command error, slave doesn't ACK the transfer.
+     *     - ESP_ERR_INVALID_STATE I2C driver not installed or not in master mode.
+     *     - ESP_ERR_TIMEOUT Operation timeout because the bus is busy.
+     */
+    esp_err_t set_duty(uint32_t ch_bit, uint8_t duty);
+
+    /**
+     * @brief Set pwm duty cycle from buffer, fill buffer values to pwm duty registers
+     * @param duty buffer pointer of duty values
+     * @param len buffer length
+     * @return
+     *     - ESP_OK Success
+     *     - ESP_ERR_INVALID_ARG Parameter error
+     *     - ESP_FAIL Sending command error, slave doesn't ACK the transfer.
+     *     - ESP_ERR_INVALID_STATE I2C driver not installed or not in master mode.
+     *     - ESP_ERR_TIMEOUT Operation timeout because the bus is busy.
+     */
+    esp_err_t write_duty_regs(uint8_t* duty, int len);
+
+
+};
+#endif
 #endif
 

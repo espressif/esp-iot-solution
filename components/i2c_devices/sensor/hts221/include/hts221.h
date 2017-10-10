@@ -622,13 +622,12 @@ esp_err_t hts221_get_temperature(hts221_handle_t sensor, int16_t *temperature);
  *
  * @param bus I2C bus object handle
  * @param dev_addr I2C device address of sensor
- * @param addr_10bit_en To enable 10bit address
  *
  * @return
  *     - NULL Fail
  *     - Others Success
  */
-hts221_handle_t sensor_hts221_create(i2c_bus_handle_t bus, uint16_t dev_addr, bool addr_10bit_en);
+hts221_handle_t sensor_hts221_create(i2c_bus_handle_t bus, uint16_t dev_addr);
 
 /**
  * @brief Delete and release a sensor object
@@ -644,6 +643,54 @@ esp_err_t sensor_hts221_delete(hts221_handle_t sensor, bool del_bus);
 
 #ifdef __cplusplus
 }
+#endif
+
+#ifdef __cplusplus
+/**
+ * class of HTS221 temperature and humidity sensor
+ */
+class CHts221
+{
+private:
+    hts221_handle_t m_sensor_handle;
+    CI2CBus *bus;
+
+    /**
+     * prevent copy constructing
+     */
+    CHts221(const CHts221&);
+    CHts221& operator = (const CHts221&);
+public:
+    /**
+     * @brief Constructor of CHts221 class
+     * @param p_i2c_bus pointer to CI2CBus object
+     * @param addr sensor device address
+     */
+    CHts221(CI2CBus *p_i2c_bus, uint8_t addr = HTS221_I2C_ADDRESS);
+
+    /**
+     * @brief Destructor function of CHts221 class
+     */
+    ~CHts221();
+
+    /**
+     * @brief read temperature
+     * @return temperature value
+     */
+    float read_temperature();
+
+    /**
+     * @brief read humidity
+     * @return humidity value
+     */
+    float read_humidity();
+
+    /**
+     * @brief read device ID
+     * @return device id
+     */
+    uint8_t id();
+};
 #endif
 #endif
 

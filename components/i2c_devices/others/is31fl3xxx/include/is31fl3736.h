@@ -308,4 +308,77 @@ esp_err_t is31fl3736_fill_buf(is31fl3736_handle_t fxled, uint8_t duty, uint8_t* 
 }
 #endif
 
+#ifdef __cplusplus
+/**
+ * class of is31fl3736 fxled driver
+ */
+class CIs31fl3736
+{
+private:
+    is31fl3736_handle_t m_led_handle;
+    CI2CBus *bus;
+
+    /**
+     * prevent copy constructing
+     */
+    CIs31fl3736(const CIs31fl3736&);
+    CIs31fl3736& operator = (const CIs31fl3736&);
+public:
+    /**
+     * @brief Constructor function of CIs31fl3736 class
+     * @param p_i2c_bus pointer to CI2CBus object
+     * @param rst_io gpio index for reset pin
+     * @param addr1 connection of addr pin1
+     * @param addr2 connection of addr pin2
+     * @param cur_val global current value for led driver
+     */
+    CIs31fl3736(CI2CBus *p_i2c_bus, gpio_num_t rst_io, is31fl3736_addr_pin_t addr1, is31fl3736_addr_pin_t addr2,
+                uint8_t cur_val);
+
+    /**
+     * @brief Destructor function of CIs31fl3736 class
+     */
+    ~CIs31fl3736();
+
+    /**
+     * @brief write slave device register
+     * @param reg_addr address for slave register
+     * @param data pointer to data buffer
+     * @param data_num data length to write
+     * @return
+     *     - ESP_OK Success
+     *     - ESP_ERR_INVALID_ARG Parameter error
+     *     - ESP_FAIL Sending command error, slave doesn't ACK the transfer.
+     *     - ESP_ERR_INVALID_STATE I2C driver not installed or not in master mode.
+     *     - ESP_ERR_TIMEOUT Operation timeout because the bus is busy.
+     */
+    esp_err_t write_reg(uint8_t reg_addr, uint8_t *data, uint8_t data_num);
+
+    /**
+     * @brief fill led matrix
+     * @param duty duty cycle value
+     * @param buf buffer that save the bit mask of raws in led matrix
+     * return
+     *     - ESP_OK Success
+     *     - ESP_ERR_INVALID_ARG Parameter error
+     *     - ESP_FAIL Sending command error, slave doesn't ACK the transfer.
+     *     - ESP_ERR_INVALID_STATE I2C driver not installed or not in master mode.
+     *     - ESP_ERR_TIMEOUT Operation timeout because the bus is busy.
+     */
+    esp_err_t fill_matrix(uint8_t duty, uint8_t* buf);
+
+    /**
+     * @brief set page number to operate
+     * @param page_num page number
+     * @return
+     *     - ESP_OK Success
+     *     - ESP_ERR_INVALID_ARG Parameter error
+     *     - ESP_FAIL Sending command error, slave doesn't ACK the transfer.
+     *     - ESP_ERR_INVALID_STATE I2C driver not installed or not in master mode.
+     *     - ESP_ERR_TIMEOUT Operation timeout because the bus is busy.
+     */
+    esp_err_t set_page(uint8_t page_num);
+};
+#endif
+
 #endif

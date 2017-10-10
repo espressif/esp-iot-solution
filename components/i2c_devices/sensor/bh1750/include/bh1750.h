@@ -40,6 +40,7 @@ typedef enum{
     BH1750_ONETIME_4LX_RES        =0x23,    /*!< Command to set measure mode as One Time L-Resolution mode*/
 }bh1750_cmd_measure_t;
 
+#define BH1750_I2C_ADDRESS_DEFAULT   (0x23)
 typedef void* bh1750_handle_t;
 
 /**
@@ -135,13 +136,12 @@ esp_err_t bh1750_change_measure_time(bh1750_handle_t sensor, uint8_t measure_tim
  *
  * @param bus I2C bus object handle
  * @param dev_addr I2C device address of sensor
- * @param addr_10bit_en To enable 10bit address
  *
  * @return
  *     - NULL Fail
  *     - Others Success
  */
-bh1750_handle_t sensor_bh1750_create(i2c_bus_handle_t bus, uint16_t dev_addr, bool addr_10bit_en);
+bh1750_handle_t sensor_bh1750_create(i2c_bus_handle_t bus, uint16_t dev_addr);
 
 /**
  * @brief Delete and release a sensor object
@@ -157,6 +157,76 @@ esp_err_t sensor_bh1750_delete(bh1750_handle_t sensor, bool del_bus);
 
 #ifdef __cplusplus
 }
+#endif
+
+#ifdef __cplusplus
+/**
+ * class of BH1750 light sensor
+ * simple usage:
+ * CBh1750 *bh1750 = new CBh1750(&i2c_bus);
+ * bh1750.read();
+ * ......
+ * delete(bh1750);
+ */
+class CBh1750
+{
+private:
+    bh1750_handle_t m_sensor_handle;
+    CI2CBus *bus;
+
+    /**
+     * prevent copy constructing
+     */
+    CBh1750(const CBh1750&);
+    CBh1750& operator = (const CBh1750&);
+public:
+    /**
+     * @brief constructor of CBh1750
+     *
+     * @param p_i2c_bus pointer to CI2CBus object
+     * @param addr slave device address
+     */
+    CBh1750(CI2CBus *p_i2c_bus, uint8_t addr = BH1750_I2C_ADDRESS_DEFAULT);
+
+    ~CBh1750();
+    /**
+     * @brief read brightness
+     * @return brightness value
+     */
+    float read();
+
+    /**
+     * @brief turn on the sensor
+     * @return
+     *     - ESP_OK Success
+     *     - ESP_ERR_INVALID_ARG Parameter error
+     *     - ESP_FAIL Sending command error, slave doesn't ACK the transfer.
+     *     - ESP_ERR_INVALID_STATE I2C driver not installed or not in master mode.
+     *     - ESP_ERR_TIMEOUT Operation timeout because the bus is busy.
+     */
+    esp_err_t on();
+
+    /**
+     * @brief turn off the sensor
+     * @return
+     *     - ESP_OK Success
+     *     - ESP_ERR_INVALID_ARG Parameter error
+     *     - ESP_FAIL Sending command error, slave doesn't ACK the transfer.
+     *     - ESP_ERR_INVALID_STATE I2C driver not installed or not in master mode.
+     *     - ESP_ERR_TIMEOUT Operation timeout because the bus is busy.     */
+    esp_err_t off();
+
+    /**
+     * @brief set test mode for sensor
+     * @return
+     *     - ESP_OK Success
+     *     - ESP_ERR_INVALID_ARG Parameter error
+     *     - ESP_FAIL Sending command error, slave doesn't ACK the transfer.
+     *     - ESP_ERR_INVALID_STATE I2C driver not installed or not in master mode.
+     *     - ESP_ERR_TIMEOUT Operation timeout because the bus is busy.
+     */
+    esp_err_t set_mode(bh1750_cmd_measure_t cmd_measure);
+};
 #endif
 
 #endif

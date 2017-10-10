@@ -42,15 +42,13 @@
 typedef struct {
     i2c_bus_handle_t bus;
     uint16_t dev_addr;
-    bool dev_addr_10bit_en;
 } bh1750_dev_t;
 
-bh1750_handle_t sensor_bh1750_create(i2c_bus_handle_t bus, uint16_t dev_addr, bool addr_10bit_en)
+bh1750_handle_t sensor_bh1750_create(i2c_bus_handle_t bus, uint16_t dev_addr)
 {
     bh1750_dev_t* sensor = (bh1750_dev_t*) calloc(1, sizeof(bh1750_dev_t));
     sensor->bus = bus;
     sensor->dev_addr = dev_addr;
-    sensor->dev_addr_10bit_en = addr_10bit_en;
     return (bh1750_handle_t) sensor;
 }
 
@@ -58,7 +56,7 @@ esp_err_t sensor_bh1750_delete(bh1750_handle_t sensor, bool del_bus)
 {
     bh1750_dev_t* sens = (bh1750_dev_t*) sensor;
     if(del_bus) {
-        i2s_bus_delete(sens->bus);
+        i2c_bus_delete(sens->bus);
         sens->bus = NULL;
     }
     free(sens);

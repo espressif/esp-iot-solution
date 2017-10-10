@@ -40,7 +40,6 @@ static const char* TAG = "lis2dh12";
 typedef struct {
     i2c_bus_handle_t bus;
     uint16_t dev_addr;
-    bool dev_addr_10bit_en;
 } lis2dh12_dev_t;
 
 esp_err_t lis2dh12_write_one_reg(lis2dh12_handle_t sensor, uint8_t reg_addr, uint8_t data)
@@ -262,12 +261,11 @@ esp_err_t lis2dh12_get_z_acc(lis2dh12_handle_t sensor, uint16_t *z_acc)
     return ESP_OK;
 }
 
-lis2dh12_handle_t sensor_lis2dh12_create(lis2dh12_handle_t bus, uint16_t dev_addr, bool addr_10bit_en)
+lis2dh12_handle_t sensor_lis2dh12_create(lis2dh12_handle_t bus, uint16_t dev_addr)
 {
     lis2dh12_dev_t* sensor = (lis2dh12_dev_t*) calloc(1, sizeof(lis2dh12_dev_t));
     sensor->bus = bus;
     sensor->dev_addr = dev_addr;
-    sensor->dev_addr_10bit_en = addr_10bit_en;
     return (lis2dh12_handle_t) sensor;
 }
 
@@ -275,7 +273,7 @@ esp_err_t sensor_lis2dh12_delete(lis2dh12_handle_t sensor, bool del_bus)
 {
     lis2dh12_dev_t* sens = (lis2dh12_dev_t*) sensor;
     if(del_bus) {
-        i2s_bus_delete(sens->bus);
+        i2c_bus_delete(sens->bus);
         sens->bus = NULL;
     }
     free(sens);

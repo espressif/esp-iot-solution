@@ -33,8 +33,8 @@
 #include "i2c_bus.h"
 #include "unity.h"
 
-#define I2C_MASTER_SCL_IO    19        /*!< gpio number for I2C master clock */
-#define I2C_MASTER_SDA_IO    18        /*!< gpio number for I2C master data  */
+#define I2C_MASTER_SCL_IO    21        /*!< gpio number for I2C master clock */
+#define I2C_MASTER_SDA_IO    15        /*!< gpio number for I2C master data  */
 #define I2C_MASTER_NUM     I2C_NUM_1   /*!< I2C port number for master dev */
 #define I2C_MASTER_TX_BUF_DISABLE   0  /*!< I2C master do not need buffer */
 #define I2C_MASTER_RX_BUF_DISABLE   0  /*!< I2C master do not need buffer */
@@ -67,8 +67,10 @@ void fxled_is31fl3218_init()
     }
 }
 
-void is31f13218_test_task(void* pvParameters)
+void is31f13218_test()
 {
+    fxled_is31fl3218_init();
+
     uint8_t i=0,j=255/10;
     ESP_ERROR_CHECK( is31fl3218_channel_set(fxled, IS31FL3218_CH_NUM_MAX_MASK, 0) );
     int cnt = 0;
@@ -182,19 +184,17 @@ void is31f13218_test_task(void* pvParameters)
                 break;
             }
         }
-        printf("dcnt: %d\n", dcnt);
     }
-}
 
-void is31f13xxx_test()
-{
-    fxled_is31fl3218_init();
-    is31f13218_test_task(NULL);
+    led_is31fl3218_delete(fxled, true);
+    fxled = NULL;
+    i2c_bus = NULL;
+    printf("heap: %d\n", esp_get_free_heap_size());
 }
 
 TEST_CASE("I2C led is31f13218 test", "[is31f13218][iot][fxled]")
 {
-    is31f13xxx_test();
+    is31f13218_test();
 }
 
 #endif

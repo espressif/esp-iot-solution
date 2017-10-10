@@ -29,7 +29,6 @@
 typedef struct {
     i2c_bus_handle_t bus;
     uint16_t dev_addr;
-    bool dev_addr_10bit_en;
 } hts221_dev_t;
 
 esp_err_t hts221_write_one_reg(hts221_handle_t sensor, uint8_t reg_addr, uint8_t data)
@@ -384,12 +383,11 @@ esp_err_t hts221_get_temperature(hts221_handle_t sensor, int16_t *temperature)
     return ESP_OK;
 }
 
-hts221_handle_t sensor_hts221_create(i2c_bus_handle_t bus, uint16_t dev_addr, bool addr_10bit_en)
+hts221_handle_t sensor_hts221_create(i2c_bus_handle_t bus, uint16_t dev_addr)
 {
     hts221_dev_t* sensor = (hts221_dev_t*) calloc(1, sizeof(hts221_dev_t));
     sensor->bus = bus;
     sensor->dev_addr = dev_addr;
-    sensor->dev_addr_10bit_en = addr_10bit_en;
     return (hts221_handle_t) sensor;
 }
 
@@ -397,7 +395,7 @@ esp_err_t sensor_hts221_delete(hts221_handle_t sensor, bool del_bus)
 {
     hts221_dev_t* sens = (hts221_dev_t*) sensor;
     if(del_bus) {
-        i2s_bus_delete(sens->bus);
+        i2c_bus_delete(sens->bus);
         sens->bus = NULL;
     }
     free(sens);
