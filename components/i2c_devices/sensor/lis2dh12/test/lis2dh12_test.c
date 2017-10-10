@@ -53,7 +53,7 @@ void i2c_master_init()
     conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
     conf.master.clk_speed = I2C_MASTER_FREQ_HZ;
     i2c_bus = i2c_bus_create(I2C_MASTER_NUM, &conf);
-    sens = sensor_lis2dh12_create(i2c_bus, LIS2DH12_I2C_ADDRESS, false);
+    sens = sensor_lis2dh12_create(i2c_bus, LIS2DH12_I2C_ADDRESS);
 }
 
 void lis2dh12_test_task(void* pvParameters)
@@ -64,7 +64,7 @@ void lis2dh12_test_task(void* pvParameters)
     uint16_t z_acc;
     lis2dh12_get_deviceid(sens, &deviceid);
     printf("LIS2DH12 device id is: %02x\n", deviceid);
-    
+
     lis2dh12_config_t  lis2dh12_config;
     lis2dh12_get_config(sens, &lis2dh12_config);
     printf("temp_enable is: %02x\n", lis2dh12_config.temp_enable);
@@ -74,7 +74,7 @@ void lis2dh12_test_task(void* pvParameters)
     printf("y_enable status is: %02x\n", lis2dh12_config.y_enable);
     printf("x_enable status is: %02x\n", lis2dh12_config.x_enable);
     printf("bdu_status status is: %02x\n", lis2dh12_config.bdu_status);
-    printf("full scale is: %02x\n", lis2dh12_config.fs);    
+    printf("full scale is: %02x\n", lis2dh12_config.fs);
 
     lis2dh12_config.temp_enable = LIS2DH12_TEMP_DISABLE;
     lis2dh12_config.odr = LIS2DH12_ODR_1HZ;
@@ -83,7 +83,7 @@ void lis2dh12_test_task(void* pvParameters)
     lis2dh12_config.y_enable = LIS2DH12_ENABLE;
     lis2dh12_config.x_enable = LIS2DH12_ENABLE;
     lis2dh12_config.bdu_status = LIS2DH12_DISABLE;
-    lis2dh12_config.fs = LIS2DH12_FS_16G;  
+    lis2dh12_config.fs = LIS2DH12_FS_16G;
     lis2dh12_set_config(sens, &lis2dh12_config);
 
     while(1){

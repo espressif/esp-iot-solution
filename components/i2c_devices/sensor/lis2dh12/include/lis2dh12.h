@@ -798,13 +798,12 @@ esp_err_t lis2dh12_get_z_acc(lis2dh12_handle_t sensor, uint16_t *z_acc);
  *
  * @param bus I2C bus object handle
  * @param dev_addr I2C device address of sensor
- * @param addr_10bit_en To enable 10bit address
  *
  * @return
  *     - NULL Fail
  *     - Others Success
  */
-lis2dh12_handle_t sensor_lis2dh12_create(i2c_bus_handle_t bus, uint16_t dev_addr, bool addr_10bit_en);
+lis2dh12_handle_t sensor_lis2dh12_create(i2c_bus_handle_t bus, uint16_t dev_addr);
 
 /**
  * @brief Delete and release a sensor object
@@ -820,5 +819,59 @@ esp_err_t sensor_lis2dh12_delete(lis2dh12_handle_t sensor, bool del_bus);
 
 #ifdef __cplusplus
 }
+#endif
+
+#ifdef __cplusplus
+/**
+ * class of lis2dh12 acceleration sensor
+ */
+class CLis2dh12
+{
+private:
+    lis2dh12_handle_t m_sensor_handle;
+    CI2CBus *bus;
+
+    /**
+     * prevent copy constructing
+     */
+    CLis2dh12(const CLis2dh12&);
+    CLis2dh12& operator = (const CLis2dh12&);
+public:
+    /**
+     * @brief Constructor of CLis2dh12 class
+     * @param p_i2c_bus pointer to CI2CBus object
+     * @param addr slave device address
+     */
+    CLis2dh12(CI2CBus *p_i2c_bus, uint8_t addr = LIS2DH12_I2C_ADDRESS);
+
+    /**
+     * @brief Destructor of CLis2dh12 class
+     */
+    ~CLis2dh12();
+
+    /**
+     * @brief Read device ID
+     * @return device ID
+     */
+    uint8_t id();
+
+    /**
+     * @brief get acceleration on x-axis
+     * @return acceleration on x-axis
+     */
+    uint16_t ax();
+
+    /**
+     * @brief get acceleration on y-axis
+     * @return acceleration on y-axis
+     */
+    uint16_t ay();
+
+    /**
+     * @brief get acceleration on z-axis
+     * @return acceleration on z-axis
+     */
+    uint16_t az();
+};
 #endif
 #endif

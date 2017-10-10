@@ -52,7 +52,7 @@ i2c_bus_handle_t i2c_bus_create(i2c_port_t port, i2c_config_t* conf);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t i2s_bus_delete(i2c_bus_handle_t bus);
+esp_err_t i2c_bus_delete(i2c_bus_handle_t bus);
 
 /**
  * @brief I2C start sending buffered commands
@@ -69,5 +69,60 @@ esp_err_t i2c_bus_cmd_begin(i2c_bus_handle_t bus, i2c_cmd_handle_t cmd, portBASE
 #ifdef __cplusplus
 }
 #endif
+
+
+#ifdef __cplusplus
+/**
+ * class of I2c bus
+ */
+class CI2CBus
+{
+private:
+    i2c_bus_handle_t m_i2c_bus_handle;
+
+    /**
+     * prevent copy constructing
+     */
+    CI2CBus(const CI2CBus&);
+    CI2CBus& operator = (const CI2CBus&);
+public:
+    /**
+     * @brief Constructor for CI2CBus class
+     * @param i2c_port I2C hardware port
+     * @param scl_io gpio index for slc pin
+     * @param sda_io gpio index for sda pin
+     * @param i2c_mode mode for I2C bus
+     * @param clk_hz I2C clock frequency
+     *
+     */
+    CI2CBus(i2c_port_t i2c_port, gpio_num_t scl_io, gpio_num_t sda_io, i2c_mode_t i2c_mode = I2C_MODE_MASTER, int clk_hz = 100000);
+
+    /**
+     * @brief Destructor function of CI2CBus class
+     */
+    ~CI2CBus();
+
+    /**
+     * @brief Send command and data to I2C bus
+     * @param cmd pointor to command link
+     * @ticks_to_wait max block time
+     * @return
+     *     - ESP_OK Success
+     *     - ESP_ERR_INVALID_ARG Parameter error
+     *     - ESP_FAIL Sending command error, slave doesn't ACK the transfer.
+     *     - ESP_ERR_INVALID_STATE I2C driver not installed or not in master mode.
+     *     - ESP_ERR_TIMEOUT Operation timeout because the bus is busy.
+     */
+    esp_err_t send(i2c_cmd_handle_t cmd, portBASE_TYPE ticks_to_wait);
+
+    /**
+     * @brief Get bus handle
+     * @return bus handle
+     */
+    i2c_bus_handle_t get_bus_handle();
+};
+#endif
+
+
 #endif
 

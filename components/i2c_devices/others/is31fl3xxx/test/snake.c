@@ -22,6 +22,10 @@
 extern void srand (unsigned int seed);
 extern int random (void);
 
+typedef void (*fill_pixel_func_t)(int x, int y, uint8_t duty);
+
+fill_pixel_func_t fill_pixel_func = NULL;
+
 typedef struct
 {
     int x, y;
@@ -41,8 +45,13 @@ MainSnack Ms;
 #define SNAKE_DUTY   (0xff/10)
 #define FOOD_DUTY    (0xff/10)
 
-void initGame();//Initial the variable for the game
-extern void fill_pixel(uint8_t x, uint8_t y, uint8_t duty);
+#ifdef __cplusplus
+extern "C" {
+#endif
+void initGame(void*);//Initial the variable for the game
+#ifdef __cplusplus
+}
+#endif
 
 void disp_pos(curPoint* point)
 {
@@ -70,11 +79,12 @@ bool is_dead()
 void create_food(curPoint* food)
 {
     int found = 0;
+    int cnt = 0;
     extern uint64_t system_get_rtc_time(void);
     srand(system_get_rtc_time());
     while (1) {
         found = 0;
-        int loop_num = rand() % 10;
+        int loop_num = (rand()+system_get_rtc_time()) % 10;
         while (loop_num--) {
             rand();
         }
@@ -85,7 +95,7 @@ void create_food(curPoint* food)
                 found = 1;
             }
         }
-        if (found == 0) {
+        if (found == 0 || cnt++ > 1000) {
             return;
         }
     }
@@ -120,14 +130,14 @@ void GameProcess(void *arg)
     food.x = -1;
 
     while(gpio_get_level(0) == 1) {
-
         if (food.y == -1) {
+            ets_printf("find\n");
             create_food(&food);
             printf("food: ");
             disp_pos(&food);
-            fill_pixel(food.x, food.y, FOOD_DUTY);
+            fill_pixel_func(food.x, food.y, FOOD_DUTY);
         }
-        fill_pixel(Ms.body[Ms.len].x, Ms.body[Ms.len].y, 0x0);
+        fill_pixel_func(Ms.body[Ms.len].x, Ms.body[Ms.len].y, 0x0);
         //move forward by one step
         for (i = Ms.len - 1; i >= 1; i--) {
             Ms.body[i + 1] = Ms.body[i];
@@ -171,15 +181,14 @@ void GameProcess(void *arg)
         //move and draw
         for (i = 1; i <= Ms.len; i++) {
             if (1 == i) {
-                fill_pixel(Ms.body[i].x, Ms.body[i].y, HEAD_DUTY);
+                fill_pixel_func(Ms.body[i].x, Ms.body[i].y, HEAD_DUTY);
             } else {
-                //fill_pixel(Ms.body[i].x, Ms.body[i].y, SNAKE_DUTY);
+                //fill_pixel_func(Ms.body[i].x, Ms.body[i].y, SNAKE_DUTY);
             }
         }
 
-
         if (mode == MODE_AUTO) {
-            vTaskDelay(20 / portTICK_PERIOD_MS);
+            vTaskDelay(10 / portTICK_PERIOD_MS);
         } else {
             vTaskDelay(500 / portTICK_PERIOD_MS);
         }
@@ -218,8 +227,9 @@ void snake_set_dir_right()
     }
 }
 
-void initGame()
+void initGame(void* fill_pixel_cb)
 {
+    fill_pixel_func = (fill_pixel_func_t)fill_pixel_cb;
     curPoint tmp;
     tmp.x = MAX_COLS / 2;
     tmp.y = MAX_LINES / 2;

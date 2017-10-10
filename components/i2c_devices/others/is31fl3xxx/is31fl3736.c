@@ -44,16 +44,12 @@ static const char *tag = "IS31FL3736";
 typedef struct {
     i2c_bus_handle_t bus;
     uint16_t dev_addr;
-    bool dev_addr_10bit_en;
     gpio_num_t rst_io;
     is31fl3736_addr_pin_t addr1;
     is31fl3736_addr_pin_t addr2;
     uint8_t cur_val;
 } is31fl3736_dev_t;
 
-/**
- * @brief set software shutdown mode
- */
 esp_err_t is31fl3736_write_page(is31fl3736_handle_t fxled, uint8_t page_num)
 {
     IS31_PARAM_CHECK(page_num < 3);
@@ -78,10 +74,6 @@ esp_err_t is31fl3736_write_page(is31fl3736_handle_t fxled, uint8_t page_num)
     return ret;
 }
 
-/**
- * @brief set software shutdown mode
- */
-//xSemaphoreHandle reg_mux = NULL;
 esp_err_t is31fl3736_write_reg(is31fl3736_handle_t fxled, uint8_t reg_addr, uint8_t *data, uint8_t data_num)
 {
     is31fl3736_dev_t* led = (is31fl3736_dev_t*) fxled;
@@ -115,9 +107,6 @@ esp_err_t is31fl3736_read_reg(is31fl3736_handle_t fxled, uint8_t reg_addr, uint8
     return ret;
 }
 
-/**
- * @brief set software shutdown mode
- */
 esp_err_t is31fl3736_set_mode(is31fl3736_handle_t fxled, is31fl3736_mode_t mode)
 {
     uint8_t reg_val;
@@ -345,7 +334,6 @@ is31fl3736_handle_t dev_is31fl3736_create(i2c_bus_handle_t bus, gpio_num_t rst_i
     is31fl3736_dev_t* fxled = (is31fl3736_dev_t*) calloc(1, sizeof(is31fl3736_dev_t));
     fxled->bus = bus;
     fxled->dev_addr = is31fl3736_get_i2c_addr(addr1, addr2);
-    fxled->dev_addr_10bit_en = 0;
     fxled->rst_io = rst_io;
     fxled->cur_val = cur_val;
     if (rst_io < GPIO_NUM_MAX) {
@@ -366,7 +354,7 @@ esp_err_t dev_is31fl3736_delete(is31fl3736_handle_t fxled, bool del_bus)
 {
     is31fl3736_dev_t* led = (is31fl3736_dev_t*) fxled;
     if (del_bus) {
-        i2s_bus_delete(led->bus);
+        i2c_bus_delete(led->bus);
         led->bus = NULL;
     }
     free(led);

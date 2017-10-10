@@ -64,7 +64,7 @@ i2c_bus_handle_t i2c_bus_create(i2c_port_t port, i2c_config_t* conf)
     return NULL;
 }
 
-esp_err_t i2s_bus_delete(i2c_bus_handle_t bus)
+esp_err_t i2c_bus_delete(i2c_bus_handle_t bus)
 {
     I2C_BUS_CHECK(bus != NULL, "Handle error", ESP_FAIL);
     i2c_bus_t* i2c_bus = (i2c_bus_t*) bus;
@@ -78,6 +78,5 @@ esp_err_t i2c_bus_cmd_begin(i2c_bus_handle_t bus, i2c_cmd_handle_t cmd, portBASE
     I2C_BUS_CHECK(bus != NULL, "Handle error", ESP_FAIL);
     I2C_BUS_CHECK(cmd != NULL, "I2C cmd error", ESP_FAIL);
     i2c_bus_t* i2c_bus = (i2c_bus_t*) bus;
-    esp_err_t ret = i2c_master_cmd_begin(i2c_bus->i2c_port, cmd, ticks_to_wait);
-    return ret;
+    return i2c_master_cmd_begin(i2c_bus->i2c_port, cmd, ticks_to_wait);
 }

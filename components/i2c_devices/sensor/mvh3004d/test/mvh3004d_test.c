@@ -57,7 +57,7 @@ static void i2c_bus_init()
 void mvh3004d_init()
 {
     i2c_bus_init();
-    sens = sensor_mvh3004d_create(i2c_bus, MVH3004D_SLAVE_ADDR, false);
+    sens = sensor_mvh3004d_create(i2c_bus, MVH3004D_SLAVE_ADDR);
 }
 
 void mvh3004d_test_task(void* pvParameters)
