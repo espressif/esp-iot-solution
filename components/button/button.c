@@ -88,8 +88,10 @@ static void button_tap_psh_cb(xTimerHandle tmr)
 {
     button_cb_t* btn_cb = (button_cb_t*) pvTimerGetTimerID(tmr);
     button_dev_t* btn = btn_cb->pbtn;
-    xTimerStop(btn->tap_rls_cb.tmr, 10);
-    if (btn->active_level == gpio_get_level(btn->io_num)) {
+    xTimerStop(btn->tap_rls_cb.tmr, portMAX_DELAY);
+    int lv = gpio_get_level(btn->io_num);
+
+    if (btn->active_level == lv) {
         // high, then key is up
         btn->state = BUTTON_STATE_PUSH;
         if (btn->trig_mode == BUTTON_SERIAL_TRIGGER) {
@@ -100,7 +102,11 @@ static void button_tap_psh_cb(xTimerHandle tmr)
             btn->tap_psh_cb.cb(btn->tap_psh_cb.arg);
         }
     } else {
-
+        // 50ms, check if this is a real key up
+        if (btn->tap_rls_cb.tmr) {
+            xTimerStop(btn->tap_rls_cb.tmr, portMAX_DELAY);
+            xTimerReset(btn->tap_rls_cb.tmr, portMAX_DELAY);
+        }
     }
 }
 
@@ -108,7 +114,7 @@ static void button_tap_rls_cb(xTimerHandle tmr)
 {
     button_cb_t* btn_cb = (button_cb_t*) pvTimerGetTimerID(tmr);
     button_dev_t* btn = btn_cb->pbtn;
-    xTimerStop(btn->tap_rls_cb.tmr, 10);
+    xTimerStop(btn->tap_rls_cb.tmr, portMAX_DELAY);
     if (btn->active_level == gpio_get_level(btn->io_num)) {
 
     } else {
@@ -116,17 +122,17 @@ static void button_tap_rls_cb(xTimerHandle tmr)
         button_cb_t *pcb = btn->cb_head;
         while (pcb != NULL) {
             if (pcb->tmr != NULL) {
-                xTimerStop(pcb->tmr, 10);
+                xTimerStop(pcb->tmr, portMAX_DELAY);
             }
             pcb = pcb->next_cb;
         }
         if (btn->trig_mode == BUTTON_SERIAL_TRIGGER && btn->press_serial_cb.tmr != NULL) {
-            xTimerStop(btn->press_serial_cb.tmr, 10);
+            xTimerStop(btn->press_serial_cb.tmr, portMAX_DELAY);
         }
         if (btn->tap_short_cb.cb && btn->state == BUTTON_STATE_PUSH) {
             btn->tap_short_cb.cb(btn->tap_short_cb.arg);
         }
-        if(btn->tap_rls_cb.cb) {
+        if(btn->tap_rls_cb.cb && btn->state != BUTTON_STATE_IDLE) {
             btn->tap_rls_cb.cb(btn->tap_rls_cb.arg);
         }
         btn->state = BUTTON_STATE_IDLE;
@@ -168,6 +174,9 @@ static void button_gpio_isr_handler(void* arg)
             xTimerStopFromISR(btn->tap_rls_cb.tmr, &HPTaskAwoken);
             xTimerResetFromISR(btn->tap_rls_cb.tmr, &HPTaskAwoken);
         }
+    }
+    if(HPTaskAwoken == pdTRUE) {
+        portYIELD_FROM_ISR();
     }
 }
 
