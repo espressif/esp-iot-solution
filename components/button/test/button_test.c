@@ -69,7 +69,7 @@ void button_test()
     button_add_custom_cb(btn_handle, 5, button_press_5s_cb, NULL);
     printf("after btn init, heap: %d\n", esp_get_free_heap_size());
 
-    vTaskDelay(40000 / portTICK_PERIOD_MS);
+    vTaskDelay(400000 / portTICK_PERIOD_MS);
     printf("free btn: heap:%d\n", esp_get_free_heap_size());
     button_delete(btn_handle);
     printf("after free btn: heap:%d\n", esp_get_free_heap_size());
