@@ -74,7 +74,7 @@ CEspLcd::CEspLcd(lcd_conf_t* lcd_conf, int height, int width, bool dma_en, int d
 
 CEspLcd::~CEspLcd()
 {
-    spi_bus_remove_device(spi);
+    spi_bus_remove_device(spi_wr);
     vSemaphoreDelete(spi_mux);
 }
 
@@ -82,7 +82,10 @@ void CEspLcd::setSpiBus(lcd_conf_t *lcd_conf)
 {
     cmd_io = (gpio_num_t) lcd_conf->pin_num_dc;
     dc.dc_io = cmd_io;
-    lcd_init(lcd_conf, &spi, &dc);
+    id.id = lcd_init(lcd_conf, &spi_wr, &dc);
+    id.mfg_id = (id.id >> (8 * 1)) & 0xff ;
+    id.lcd_driver_id = (id.id >> (8 * 2)) & 0xff;
+    id.lcd_id = (id.id >> (8 * 3)) & 0xff;
 }
 
 inline void CEspLcd::setAddrWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1)
@@ -97,41 +100,49 @@ inline void CEspLcd::setAddrWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16
 inline void CEspLcd::transmitData(uint16_t data)
 {
     xSemaphoreTakeRecursive(spi_mux, portMAX_DELAY);
-    lcd_data(spi, (uint8_t *)&data, 2, &dc);
+    lcd_data(spi_wr, (uint8_t *)&data, 2, &dc);
     xSemaphoreGiveRecursive(spi_mux);
 }
 inline void CEspLcd::transmitCmdData(uint8_t cmd, uint32_t data)
 {
     xSemaphoreTakeRecursive(spi_mux, portMAX_DELAY);
-    lcd_cmd(spi, cmd, &dc);
-    lcd_data(spi, (uint8_t *)&data, 4, &dc);
+    lcd_cmd(spi_wr, cmd, &dc);
+    lcd_data(spi_wr, (uint8_t *)&data, 4, &dc);
     xSemaphoreGiveRecursive(spi_mux);
 }
 inline void CEspLcd::transmitData(uint16_t data, int32_t repeats)
 {
     xSemaphoreTakeRecursive(spi_mux, portMAX_DELAY);
-    lcd_send_uint16_r(spi, data, repeats, &dc);
+    lcd_send_uint16_r(spi_wr, data, repeats, &dc);
     xSemaphoreGiveRecursive(spi_mux);
 }
 inline void CEspLcd::transmitData(uint8_t* data, int length)
 {
     xSemaphoreTakeRecursive(spi_mux, portMAX_DELAY);
-    lcd_data(spi, (uint8_t *)data, length, &dc);
+    lcd_data(spi_wr, (uint8_t *)data, length, &dc);
     xSemaphoreGiveRecursive(spi_mux);
 }
 inline void CEspLcd::transmitCmd(uint8_t cmd)
 {
     xSemaphoreTakeRecursive(spi_mux, portMAX_DELAY);
-    lcd_cmd(spi, cmd, &dc);
+    lcd_cmd(spi_wr, cmd, &dc);
     xSemaphoreGiveRecursive(spi_mux);
 }
 
 void CEspLcd::transmitCmdData(uint8_t cmd, const uint8_t data, uint8_t numDataByte)
 {
     xSemaphoreTakeRecursive(spi_mux, portMAX_DELAY);
-    lcd_cmd(spi, (const uint8_t) cmd, &dc);
-    lcd_data(spi, &data, 1, &dc);
+    lcd_cmd(spi_wr, (const uint8_t) cmd, &dc);
+    lcd_data(spi_wr, &data, 1, &dc);
     xSemaphoreGiveRecursive(spi_mux);
+}
+
+uint32_t CEspLcd::getLcdId()
+{
+    xSemaphoreTakeRecursive(spi_mux, portMAX_DELAY);
+    uint32_t id = lcd_get_id(spi_wr, &dc);
+    xSemaphoreGiveRecursive(spi_mux);
+    return id;
 }
 
 void CEspLcd::drawPixel(int16_t x, int16_t y, uint16_t color)

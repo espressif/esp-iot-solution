@@ -35,9 +35,10 @@ extern "C" {
 /** @brief Initialize the LCD by putting some data in the graphics registers
  *
  * @param pin_conf Pointer to the struct with mandatory pins required for the LCD
- * @param spi_dev Pointer to the SPI handler for sending the data
+ * @param spi_wr_dev Pointer to the SPI handler for sending the data
+ * @return lcd id
  */
-void lcd_init(lcd_conf_t* lcd_conf, spi_device_handle_t *spi_dev, lcd_dc_t *dc);
+uint32_t lcd_init(lcd_conf_t* lcd_conf, spi_device_handle_t *spi_wr_dev, lcd_dc_t *dc);
 
 /*Used by adafruit functions to send data*/
 void lcd_send_uint16_r(spi_device_handle_t spi, const uint16_t data, int32_t repeats, lcd_dc_t *dc);
@@ -60,6 +61,10 @@ void lcd_data(spi_device_handle_t spi, const uint8_t *data, int len, lcd_dc_t *d
  */
 void lcd_read_id(spi_device_handle_t spi, lcd_id_t *lcd_id, lcd_dc_t *dc);
 
+/**
+ * @brief get LCD ID
+ */
+uint32_t lcd_get_id(spi_device_handle_t spi, lcd_dc_t *dc);
 
 #ifdef __cplusplus
 }
