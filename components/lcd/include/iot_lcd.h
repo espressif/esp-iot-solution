@@ -52,8 +52,9 @@
 
 
 typedef enum {
-    ILI9341 = 0,
-    ST7789 = 1,
+    LCD_MOD_ILI9341 = 0,
+    LCD_MOD_ST7789 = 1,
+    LCD_MOD_AUTO_DET = 3,
 } lcd_model_t;
 
 /**
@@ -81,8 +82,8 @@ typedef struct {
     uint8_t mfg_id;         /*!<Manufacturer's ID*/
     uint8_t lcd_driver_id;  /*!<LCD driver Version ID*/
     uint8_t lcd_id;         /*!<LCD Unique ID*/
+    uint32_t id;
 } lcd_id_t;
-
 
 typedef struct {
     uint8_t dc_io;
@@ -94,7 +95,7 @@ typedef struct {
 class CEspLcd: public Adafruit_GFX_AS
 {
 private:
-    spi_device_handle_t spi = NULL;
+    spi_device_handle_t spi_wr = NULL;
     uint8_t tabcolor;
     bool dma_mode;
     int dma_buf_size;
@@ -114,6 +115,7 @@ private:
     void _fastSendBuf(const uint16_t* buf, int point_num, bool swap = true);
     void _fastSendRep(uint16_t val, int rep_num);
 public:
+    lcd_id_t id;
     CEspLcd(lcd_conf_t* lcd_conf, int height = LCD_TFTHEIGHT, int width = LCD_TFTWIDTH, bool dma_en = true, int dma_word_size = 1024);
     ~CEspLcd();
     /**
@@ -121,6 +123,11 @@ public:
      * @param lcd_conf LCD parameters
      */
     void setSpiBus(lcd_conf_t *lcd_conf);
+
+    /**
+     * @brief get LCD ID
+     */
+    uint32_t getLcdId();
 
     /**
      * @brief fill screen background with color

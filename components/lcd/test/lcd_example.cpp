@@ -100,7 +100,7 @@ extern "C" void esp_draw()
 
 	/*Initialize LCD*/
 	lcd_conf_t lcd_pins = {
-        .lcd_model    = ST7789,
+        .lcd_model    = LCD_MOD_AUTO_DET,
         .pin_num_miso = GPIO_NUM_25,
         .pin_num_mosi = GPIO_NUM_23,
         .pin_num_clk  = GPIO_NUM_19,
@@ -108,7 +108,7 @@ extern "C" void esp_draw()
         .pin_num_dc   = GPIO_NUM_21,
         .pin_num_rst  = GPIO_NUM_18,
         .pin_num_bckl = GPIO_NUM_5,
-        .clk_freq     = 20000000,
+        .clk_freq     = 20 * 1000 * 1000,
         .rst_active_level = 0,
         .bckl_active_level = 0,
         .spi_host = HSPI_HOST,
@@ -117,6 +117,7 @@ extern "C" void esp_draw()
 	if(lcd_obj == NULL) {
 	    lcd_obj = new CEspLcd(&lcd_pins);
 	}
+	printf("lcd id: 0x%08x\n", lcd_obj->id.id);
 
 	/*Welcome screen*/
     int x = 0, y = 0;

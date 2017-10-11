@@ -265,7 +265,7 @@ extern "C" void demo_lcd_init()
     }
 	/*Initialize LCD*/
 	lcd_conf_t lcd_pins = {
-        .lcd_model    = ST7789,
+        .lcd_model    = LCD_MOD_AUTO_DET,
         .pin_num_miso = GPIO_NUM_25,
         .pin_num_mosi = GPIO_NUM_23,
         .pin_num_clk  = GPIO_NUM_19,

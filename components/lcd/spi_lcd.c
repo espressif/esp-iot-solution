@@ -140,28 +140,9 @@ void lcd_data(spi_device_handle_t spi, const uint8_t *data, int len, lcd_dc_t *d
     assert(ret == ESP_OK);              // Should have had no issues.
 }
 
-void lcd_init(lcd_conf_t* lcd_conf, spi_device_handle_t *spi_dev, lcd_dc_t *dc)
+uint32_t lcd_init(lcd_conf_t* lcd_conf, spi_device_handle_t *spi_wr_dev, lcd_dc_t *dc)
 {
-    //Initialize SPI Bus for LCD
-    spi_bus_config_t buscfg = {
-        .miso_io_num = lcd_conf->pin_num_miso,
-        .mosi_io_num = lcd_conf->pin_num_mosi,
-        .sclk_io_num = lcd_conf->pin_num_clk,
-        .quadwp_io_num = -1,
-        .quadhd_io_num = -1,
-    };
-    spi_bus_initialize(lcd_conf->spi_host, &buscfg, 1);
 
-    spi_device_interface_config_t devcfg = {
-        .clock_speed_hz = lcd_conf->clk_freq,     //Clock out frequency
-        .mode = 0,                                //SPI mode 0
-        .spics_io_num = lcd_conf->pin_num_cs,     //CS pin
-        .queue_size = 7,                          //We want to be able to queue 7 transactions at a time
-        .pre_cb = lcd_spi_pre_transfer_callback,  //Specify pre-transfer callback to handle D/C line
-    };
-    spi_bus_add_device(lcd_conf->spi_host, &devcfg, spi_dev);
-        
-    int cmd = 0;
     //Initialize non-SPI GPIOs
     gpio_pad_select_gpio(lcd_conf->pin_num_dc);
     gpio_set_direction(lcd_conf->pin_num_dc, GPIO_MODE_OUTPUT);
@@ -176,37 +157,62 @@ void lcd_init(lcd_conf_t* lcd_conf, spi_device_handle_t *spi_dev, lcd_dc_t *dc)
         vTaskDelay(100 / portTICK_RATE_MS);
     }
 
-    if(lcd_conf->lcd_model == ST7789)
-    {
-        //Send all the commands for ST7789 Init
-        while (st7789_init_cmds[cmd].databytes != 0xff) {
-            lcd_cmd(*spi_dev, st7789_init_cmds[cmd].cmd, dc);
-            lcd_data(*spi_dev, st7789_init_cmds[cmd].data, st7789_init_cmds[cmd].databytes & 0x1F, dc);
-            if (st7789_init_cmds[cmd].databytes & 0x80) {
-                vTaskDelay(100 / portTICK_RATE_MS);
-            }
-            cmd++;
+    //Initialize SPI Bus for LCD
+    spi_bus_config_t buscfg = {
+        .miso_io_num = lcd_conf->pin_num_miso,
+        .mosi_io_num = lcd_conf->pin_num_mosi,
+        .sclk_io_num = lcd_conf->pin_num_clk,
+        .quadwp_io_num = -1,
+        .quadhd_io_num = -1,
+    };
+    spi_bus_initialize(lcd_conf->spi_host, &buscfg, 1);
+
+    spi_device_interface_config_t devcfg = {
+        .clock_speed_hz = 1 * 1000 * 1000,     //Clock out frequency
+        .mode = 0,                                //SPI mode 0
+        .spics_io_num = lcd_conf->pin_num_cs,     //CS pin
+        .queue_size = 7,                          //We want to be able to queue 7 transactions at a time
+        .pre_cb = lcd_spi_pre_transfer_callback,  //Specify pre-transfer callback to handle D/C line
+    };
+    spi_device_handle_t rd_id_handle;
+    spi_bus_add_device(lcd_conf->spi_host, &devcfg, &rd_id_handle);
+    uint32_t lcd_id = lcd_get_id(rd_id_handle, dc);
+    spi_bus_remove_device(rd_id_handle);
+
+    devcfg.clock_speed_hz = lcd_conf->clk_freq;
+    spi_bus_add_device(lcd_conf->spi_host, &devcfg, spi_wr_dev);
+
+    int cmd = 0;
+    const lcd_init_cmd_t* lcd_init_cmds = NULL;
+    if(lcd_conf->lcd_model == LCD_MOD_ST7789) {
+        lcd_init_cmds = st7789_init_cmds;
+    } else if(lcd_conf->lcd_model == LCD_MOD_ILI9341) {
+        lcd_init_cmds = ili_init_cmds;
+    } else if(lcd_conf->lcd_model == LCD_MOD_AUTO_DET) {
+        if (((lcd_id >> 8) & 0xff) == 0x42) {
+            lcd_init_cmds = st7789_init_cmds;
+        } else {
+            lcd_init_cmds = ili_init_cmds;
         }
     }
-    else if(lcd_conf->lcd_model == ILI9341)
-    {
-        //Send all the commands for ILI9341 Init
-        while (ili_init_cmds[cmd].databytes != 0xff) {
-            lcd_cmd(*spi_dev, ili_init_cmds[cmd].cmd, dc);
-            lcd_data(*spi_dev, ili_init_cmds[cmd].data, ili_init_cmds[cmd].databytes & 0x1F, dc);
-            if (ili_init_cmds[cmd].databytes & 0x80) {
-                vTaskDelay(100 / portTICK_RATE_MS);
-            }
-            cmd++;
+    assert(lcd_init_cmds != NULL);
+    //Send all the commands
+    while (lcd_init_cmds[cmd].databytes!=0xff) {
+        lcd_cmd(*spi_wr_dev, lcd_init_cmds[cmd].cmd, dc);
+        lcd_data(*spi_wr_dev, lcd_init_cmds[cmd].data, lcd_init_cmds[cmd].databytes&0x1F, dc);
+        if (lcd_init_cmds[cmd].databytes&0x80) {
+            vTaskDelay(100 / portTICK_RATE_MS);
         }
+        cmd++;
     }
-    
+
     //Enable backlight
     if (lcd_conf->pin_num_bckl < GPIO_NUM_MAX) {
         gpio_pad_select_gpio(lcd_conf->pin_num_bckl);
         gpio_set_direction(lcd_conf->pin_num_bckl, GPIO_MODE_OUTPUT);
         gpio_set_level(lcd_conf->pin_num_bckl, (lcd_conf->bckl_active_level) & 0x1);
     }
+    return lcd_id;
 }
 
 void lcd_send_uint16_r(spi_device_handle_t spi, const uint16_t data, int32_t repeats, lcd_dc_t *dc)
@@ -226,25 +232,26 @@ void lcd_send_uint16_r(spi_device_handle_t spi, const uint16_t data, int32_t rep
         memset(&t, 0, sizeof(t));           //Zero out the transaction
         t.length = bytes_to_transfer * 8;   //Len is in bytes, transaction length is in bits.
         t.tx_buffer = word_tmp;             //Data
-        t.user = (void *) dc;                //D/C needs to be set to 1
-        _lcd_spi_send(spi, &t);       //Transmit!
+        t.user = (void *) dc;               //D/C needs to be set to 1
+        _lcd_spi_send(spi, &t);             //Transmit!
         repeats -= bytes_to_transfer / 2;
     }
 }
 
-void lcd_read_id(spi_device_handle_t spi, lcd_id_t *ili_id_num, lcd_dc_t *dc)
-{    
-    uint8_t read_cmd = 0x04;
-    lcd_data(spi, &read_cmd, 1, dc);        //Send Read Identity command
-    
-    spi_transaction_t t;
-    memset(&t, 0, sizeof(t));           //Zero out the transaction
-    t.flags |= SPI_TRANS_USE_RXDATA;
-    t.rxlength = 4 * 8;           //read 4 bytes
-    _lcd_spi_send(spi, &t);
+uint32_t lcd_get_id(spi_device_handle_t spi, lcd_dc_t *dc)
+{
+    //get_id cmd
+    lcd_cmd( spi, 0x04, dc);
 
-    //byte 0 is dummy read
-    ili_id_num->mfg_id = t.rx_data[1];
-    ili_id_num->lcd_driver_id = t.rx_data[2];
-    ili_id_num->lcd_id = t.rx_data[3];
+    spi_transaction_t t;
+    dc->dc_level = LCD_DATA_LEV;
+    memset(&t, 0, sizeof(t));
+    t.length = 8 * 4;
+    t.flags = SPI_TRANS_USE_RXDATA;
+    t.user = (void *) dc;
+    esp_err_t ret = _lcd_spi_send(spi, &t);
+    assert( ret == ESP_OK );
+
+    return *(uint32_t*) t.rx_data;
 }
+
