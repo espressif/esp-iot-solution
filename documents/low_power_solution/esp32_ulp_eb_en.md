@@ -26,7 +26,7 @@
 
 * <h5 id="modeButton">System Mode Button</h5> 
     Connects to ESP32's GPIO0. Press the System Mode Button and then the RST Button, the system will enter the Download mode. Users can then download firmware to the flash. Below is the schematics: 
-
+    <br>
     <img src="../_static/deep_sleep/download_switch.png" width="200" height="100">
 
 * <h5 id="downloadMode">Download Mode</h5> 

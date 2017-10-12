@@ -5,7 +5,7 @@ ESP32 has 18 RTC GPIOs and 10 touchpads, which can all be configured as the wake
 ##Description
 
 * **Purpose**: measure the current consumptions of ESP32 in Deep_sleep mode, under different wake-up setups;
-* **Tool**: ESP32\_ULP\_EB V1 evaluation board. For details on how to use this board and complete configuation, please refer to [User Guide to ESP32\_ULP\_EB](./esp32_ulp_eb.md)；
+* **Tool**: ESP32\_ULP\_EB V1 evaluation board. For details on how to use this board and complete configuation, please refer to [User Guide to ESP32\_ULP\_EB](./esp32_ulp_eb_en.md)；
 * **Scope**: The current consumption of all the RTC GPIOs and touchpads of ESP32 are measured in this test, except for RTC GPIO\_37 and RTC GPIO\_38.
 
 _`Notes: GPIO_37 and GPIO_38 are not tested here, becuase these two pads are not led out to the pin header of the board.`_
@@ -85,7 +85,7 @@ _`Notes: To achieve lower power consumption, external resistors, instead of inte
 * The current consumptions of the chip in EXT1 mode are about 1 uA lower than that in EXT0 mode.
 
 
-##Touchpad
+## Touchpad
 
 Touchpad can be enabled as the wake-up source to wake up the chip from deep sleep.
 
