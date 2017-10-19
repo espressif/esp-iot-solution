@@ -19,8 +19,8 @@
 * As shown in the two figures below, the readings from each pad are subject to varying temperature and voltage. Users are advised to dynamically tune the mathematical expectation of the readings from the touchpads when not touched, and the interrupt trigger threshold during the tests. 
     
 Readings under varied temperature| Readings under varied voltage 
-    ---|---  
-    <img src="../_static/touch_pad/pad温度_读数曲线_EN.png" width = "500" alt="touchpad_temp0" align=center />|<img src="../_static/touch_pad/pad电压_读数曲线_EN.jpg" width = "500" alt="touchpad_volt0" align=center />                                                          
+|---|---|  
+|<img src="../_static/touch_pad/pad温度_读数曲线_EN.png" width = "500" alt="touchpad_temp0" align=center />|<img src="../_static/touch_pad/pad电压_读数曲线_EN.jpg" width = "500" alt="touchpad_volt0" align=center />|                                                          
  
 
 * Table 1 shows the readings from the tested pads under varying temperature conditions:
@@ -33,11 +33,11 @@ Readings under varied temperature| Readings under varied voltage
 
 * Table 3 shows the readings from the tested pads under varying voltage:
 
-      <img src="../_static/touch_pad/pad电压_读数_EN.jpg" width = "800" alt="touchpad_volt1" align=center />
+  <img src="../_static/touch_pad/pad电压_读数_EN.jpg" width = "800" alt="touchpad_volt1" align=center />
 
 * Table 4 shows the value of Eval<sub>it</sub>/AVG<sub>t</sub> (the ratio of the mathematical expectation of the i-th pad's readings to the average mathematical expectation of the N * pads' readings) when the voltage varies:
 
-       <img src="../_static/touch_pad/pad电压_比值_EN.jpg" width = "800" alt="touchpad_volt2" align="center" />
+   <img src="../_static/touch_pad/pad电压_比值_EN.jpg" width = "800" alt="touchpad_volt2" align="center" />
 
 * As Table 2 and Table 4 show, regardless of the varying temperature and voltage, the value of Eval<sub>it</sub>/AVG<sub>t</sub> is relatively stable with a fluctuation range of 1%. The two tests prove that the model is accurate.
 
@@ -58,9 +58,9 @@ Readings under varied temperature| Readings under varied voltage
 * Adding a plate to the touch sensor provides protection for the sensor. But it also decreases the touchpad's sensitivity. We carried out tests for it.
 * The chart and table below show the readings from the touchpad when not touched, when touched through one PCB, and when touched through one PCB plus a 1 mm plastic plate.
 
-      <img src="../_static/touch_pad/touchpad_隔板测试图表_EN.png" width = "600" alt="touchpad_geban2" align=center />
+  <img src="../_static/touch_pad/touchpad_隔板测试图表_EN.png" width = "600" alt="touchpad_geban2" align=center />
 
-    <img src="../_static/touch_pad/touchpad_隔板测试_EN.jpg" width = "600" alt="touchpad_geban1" align=center />
+  <img src="../_static/touch_pad/touchpad_隔板测试_EN.jpg" width = "600" alt="touchpad_geban1" align=center />
 
 * According to the test result, the difference of the three readings is only 3%. Thus, adding PCB or plastic plate in between the touchpad and the finger will severely impact the sensitivity of the pad. 
 
