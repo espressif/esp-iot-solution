@@ -55,6 +55,15 @@ CLED::~CLED()
     m_led_handle = NULL;
 }
 
+esp_err_t CLED::toggle()
+{
+    if (state_read() == LED_OFF) {
+        return on();
+    } else {
+        return off();
+    }
+}
+
 esp_err_t CLED::on()
 {
     return led_state_write(m_led_handle, LED_ON);

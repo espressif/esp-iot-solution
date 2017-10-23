@@ -231,7 +231,7 @@ Configure the chip into the touchpad wakeup mode, and use Touchpad 7, for exampl
 static void touchpad_wake_init(void)
 {
     //set tpuch_pad 7 as wakeup pad.
-    touchpad_create(TOUCH_PAD_NUM7, 900, 100);
+    touchpad_create(TOUCH_PAD_NUM7, 900, 0, 100);
 
     //this function call will lower system's  power consumption during deep_sleep mode.
     //if interested, you can not call this function to found what different about working current.

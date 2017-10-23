@@ -1,5 +1,8 @@
 #ifndef _CH450_H_
 #define _CH450_H_
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <stdio.h>
 #include <string.h>
 #include "driver/i2c.h"
@@ -64,4 +67,7 @@ esp_err_t ch450_write(ch450_handle_t dev, ch450_cmd_t ch450_cmd, uint8_t val);
  */
 esp_err_t ch450_write_num(ch450_handle_t dev, uint8_t seg_idx, uint8_t val);
 
+#ifdef __cplusplus
+}
+#endif
 #endif

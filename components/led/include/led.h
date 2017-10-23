@@ -213,6 +213,14 @@ public:
     led_status_t state_read();
 
     /**
+     * @brief toggle the led output
+     * @return
+     *     - ESP_OK: succeed
+     *     - others: fail
+     */
+    esp_err_t toggle();
+
+    /**
      * @brief  set mode of led
      *
      * @param  mode refer to enum led_mode_t

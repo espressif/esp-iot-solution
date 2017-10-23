@@ -81,17 +81,17 @@
         2、如果 pad 放置于 pcb 的最底层，手指与 pad 之间会间隔 1mm 左右厚度的 pcb，则将 thres_percent 设置为970左右
         3、若果还要在 pcb上加一层 1mm 左右的塑料保护层，则将 thres_percent 设置为990，这时稳定性会比较低，容易发生误触发 
     filter_value 用于判断释放的轮询周期，一般设置为150即可
-    touchpad_handle_t 用于后续对此 touchpad 的控制
+    tp_handle_t 用于后续对此 touchpad 的控制
     */
-    touchpad_handle_t tp = touchpad_create(touch_pad_num, thres_percent, filter_value);
-    touchpad_add_cb(tp, cb_type, cb, arg);		// 添加 push、release 或者 tap 事件的回调函数
-    touchpad_add_custom_cb(tp, press_sec, cb, arg);		// 添加用户定制事件的回调函数，用户设置持续按住 touchpad 多少秒触发该回调
+    tp_handle_t tp = tp_create(touch_pad_num, thres_percent, 0, filter_value);
+    tp_add_cb(tp, cb_type, cb, arg);		// 添加 push、release 或者 tap 事件的回调函数
+    tp_add_custom_cb(tp, press_sec, cb, arg);		// 添加用户定制事件的回调函数，用户设置持续按住 touchpad 多少秒触发该回调
     /*
     设置连续触发模式：
         trigger_thres_sec 决定按住 pad 多少秒后开始连续触发
         interval_ms 决定连续触发是两次触发间的时间间隔
     */
-    touchpad_set_serial_trigger(tp, trigger_thres_sec, interval_ms, cb, arg);
+    tp_set_serial_trigger(tp, trigger_thres_sec, interval_ms, cb, arg);
     ```
 
 # TOUCH pad 滑块驱动方案
@@ -112,8 +112,8 @@
     num 决定使用多少个 pad 组成一个滑块
     tps 是 TOUCH_PAD_NUM 的数组，每一个 TOUCH_PAD_NUM 在数组中的位置要跟 pcb 上的实际位置严格对应
     */
-    touchpad_slide_handle_t tp_slide = touchpad_slide_create(num, tps, POS_SCALE, TOUCHPAD_THRES_PERCENT, TOUCHPAD_FILTER_MS);
-    uint8_t pos = touchpad_slide_position(tp_slide);		// 用于读取手指触碰位置在滑块上的相对位置，手指没触碰时返回 255
+    tp_slide_handle_t tp_slide = tp_slide_create(num, tps, POS_SCALE, TOUCHPAD_THRES_PERCENT, NULL, TOUCHPAD_FILTER_MS);
+    uint8_t pos = tp_slide_position(tp_slide);		// 用于读取手指触碰位置在滑块上的相对位置，手指没触碰时返回 255
     ```
 
 * 为了做到了利用有限的 touch 传感器驱动更长的 pad 滑块，可以使用下图所示的双工滑块
@@ -128,7 +128,7 @@
 
     ```
     const touch_pad_t tps[] = {0, 1, 2, 3, 4, 5, 6, 7, 0, 3, 6, 1, 4, 7, 2, 5};	// 假设图中 的16个 pad 按此顺序使用0~7这8个传感器
-    touchpad_slide_handle_t tp_slide = touchpad_slide_create(16, tps, POS_SCALE, TOUCHPAD_THRES_PERCENT, TOUCHPAD_FILTER_MS);
+    tp_slide_handle_t tp_slide = tp_slide_create(16, tps, POS_SCALE, TOUCHPAD_THRES_PERCENT, NULL, TOUCHPAD_FILTER_MS);
     ```
 
 # 矩阵 TOUCH pad 方案
@@ -143,7 +143,7 @@
     // 第1,2个参数指定水平与垂直方向的传感器数量，第3,4个参数是数组，指定了水平（垂直）方向按顺序的传感器编号
     const touch_pad_t x_tps[] = {3, 4, 5};		// 图中水平方向的sensor3, sensor4, sensor5
     const touch_pad_t y_tps[] = {0, 1, 2};		// 图中垂直方向的sensor0, sensor1, sensor2
-    touchpad_matrix_handle_t tp_matrix = touchpad_matrix_create(sizeof(x_tps)/sizeof(x_tps[0]), sizeof(y_tps)/sizeof(y_tps[0]), x_tps, y_tps, TOUCHPAD_THRES_PERCENT, TOUCHPAD_FILTER_MS);
+    tp_matrix_handle_t tp_matrix = tp_matrix_create(sizeof(x_tps)/sizeof(x_tps[0]), sizeof(y_tps)/sizeof(y_tps[0]), x_tps, y_tps, TOUCHPAD_THRES_PERCENT, NULL, TOUCHPAD_FILTER_MS);
     ```
 
 * `注意！`：由于矩阵 TOUCH pad 驱动方式的限制，同时只能按一个 pad。当多个 pad 同时按下时不会有触摸事件触发，当一个 pad 正被触摸时，触摸其他 pad 不会有事件触发

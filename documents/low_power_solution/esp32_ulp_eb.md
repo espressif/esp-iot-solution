@@ -226,7 +226,7 @@ void timer_wakeup_test(void)
 static void touchpad_wake_init(void)
 {
     //set tpuch_pad 7 as wakeup pad.
-    touchpad_create(TOUCH_PAD_NUM7, 900, 100);
+    tp_create(TOUCH_PAD_NUM7, 900, 0, 100);
 
     //this function call will lower system's  power consumption during deep_sleep mode.
     //if interested, you can not call this function to found what different about working current.
