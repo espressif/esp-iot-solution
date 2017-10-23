@@ -127,7 +127,7 @@ TEST_CASE("Connect router test", "[wifi_test][iot]")
 }
 
 
-TEST_CASE("Mordem sleep start test", "[mordem_sleep][iot]")
+TEST_CASE("Modem sleep start test", "[mordem_sleep][iot]")
 {
     if(wifi_status == WIFI_STATUS_STOP) {
         TEST_LOG("please do \"Connect router test\" first");
@@ -141,7 +141,7 @@ TEST_CASE("Mordem sleep start test", "[mordem_sleep][iot]")
 }
 
 
-TEST_CASE("Mordem sleep stop test", "[mordem_sleep][iot]")
+TEST_CASE("Modem sleep stop test", "[mordem_sleep][iot]")
 {
     if(wifi_status == WIFI_STATUS_STOP) {
         TEST_LOG("please do \"Connect router test\" first");
