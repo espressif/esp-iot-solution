@@ -34,7 +34,7 @@
 #define TOUCHPAD_SLIDE_TEST     0
 #define TOUCHPAD_MATRIX_TEST    0
 
-#define TOUCHPAD_THRES_PERCENT  95
+#define TOUCHPAD_THRES_PERCENT  950
 #define TOUCHPAD_FILTER_VALUE   150
 static const char* TAG = "touchpad_test";
 
