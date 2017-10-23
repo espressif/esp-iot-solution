@@ -35,6 +35,9 @@ build:
     - cp ../../tools/default_config/sdkconfig_joylink_socket sdkconfig
     - make defconfig
     - make -j8
+    - cd ../empty_project
+    - make defconfig
+    - make -j8
     - cd ../../tools/unit-test-app
     - cp sdkconfig.default sdkconfig
     - make defconfig

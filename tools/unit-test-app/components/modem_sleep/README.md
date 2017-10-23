@@ -4,6 +4,6 @@
 
 - `Modem sleep start test` Switch into modem-sleep mode after 10 seconds later. wake up and sleep(turn off RF and PHY) periodically.
 
-- `Mordem sleep stop test` Exit modem-sleep mode, and switch into normal mode.
+- `Modem sleep stop test` Exit modem-sleep mode, and switch into normal mode.
 
 - `Wifi stop test` Disconnect router and switch off wifi.
