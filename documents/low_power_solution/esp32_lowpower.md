@@ -18,8 +18,8 @@
 ## 定时数据采集与上报（例如器械状态监控器）
 * 此场景使用 ESP32 定时地采集传感器的数据并上传数据, 此时可使用 deep sleep 的 timer 唤醒源. ESP32 采集数据上传后进入 deep sleep, 设置 timer 唤醒, 唤醒后再采集数据上传, 如此循环. 此场景 ESP32 需要周期性的唤醒, 不能充分利用 ESP32 的低功耗, 但是优势在于此场景可以进行复杂传感器数据采集.
 * 逻辑流程图:
-
-    <img src="../_static/low_power/low_power_flow_chart1.jpg" width = "500" alt="low_power_flow_chart1" align=center />
+    <br>
+    <img src="../_static/low_power/low_power_flow_chart1.png" width = "500" alt="low_power_flow_chart1" align=center />
 
 * 程序流程:
     * 芯片 boot 后读取传感器数据, 将数据上传
@@ -29,8 +29,8 @@
 ## 支持gpio触发的异常数据采集（例如烟雾报警器）
 * 此场景中不需要周期性的采集传感器数据, 当传感器采集到异常数据时会主动向 ESP32 输出 gpio 触发电平. 此时, ESP32 可以进入支持 RTC IO 唤醒的 deep sleep 模式, 如果传感器没有采集到异常数据, ESP32 将持续睡眠, 只有在传感器采集到异常数据并将提示 GPIO 置为指定电平时 ESP32 才会从 deep sleep 唤醒, 然后发出警报或者上传数据. 此场景充分利用了ESP32 的低功耗, 但是对传感器要求较高, 需要具有 gpio 触发功能.
 * 逻辑流程图:
-
-    <img src="../_static/low_power/low_power_flow_chart2.jpg" width = "500" alt="low_power_flow_chart2" align=center />
+    <br>
+    <img src="../_static/low_power/low_power_flow_chart2.png" width = "500" alt="low_power_flow_chart2" align=center />
 
 * 程序流程:
     * 首先确定 deep_sleep 唤醒方式. 根据唤醒方案, 配置 RTC IO 上下拉模式(如果是电平唤醒, 需要上拉, 如果是高电平唤醒, 需要下拉. 可以通过程序配置或外接上下拉电阻. 建采用外部上下拉, 功耗会更低.)
@@ -41,8 +41,8 @@
 ## 数据采集或异常检测（不支持 gpio 触发, 不需要频繁上传数据）
 * 此场景中传感器不具有 gpio 触发功能, 需要 cpu 和片上外设进行轮询式数据采集或者异常检测, ESP32 的 ULP 协处理器可以进行简单的数据采集, 并在指定条件下唤醒 ESP32 进行进一步的处理, 此过程中采集的数据可存放在 RTC slow memory 中, 供 ESP32 唤醒时读取, 目前 ULP 协处理只支持片上温度传感器和 ADC 数据的采. 此场景的优势在于可以在低功耗情况下频繁地采集数据, 降低了对传感器的要求.
 * 逻辑流程图:
-
-    <img src="../_static/low_power/low_power_flow_chart3.jpg" width = "500" alt="low_power_flow_chart3" align=center />
+    <br>
+    <img src="../_static/low_power/low_power_flow_chart3.png" width = "500" alt="low_power_flow_chart3" align=center />
 
 * 用户可以自己根据 ULP 指令集写汇编程序用于 deep sleep 时, ULP 协处理器执行, 流程如下:
     * 芯片 boot 后从 RTC_SLOW_MEMORY 读取 deep sleep 时 ULP 协处理采集的数据, 上传数据
@@ -59,7 +59,7 @@
 ## 用户交互场景, 使用 touchpad 触摸（gpio 按键）唤醒（例如控制面板）
 * 此场景一般用于一些用户交互设备如控制面板等. 当用户长时间没有操作面板（例如触摸 touchpad, 按 gpio 按键）时, 可使 ESP32 进入 deep sleep 模式, 并设置 touchpad（gpio）唤醒. 支持 touchpad 唤醒的 deep sleep 模式下, 芯片的电流大约为 30uA .
 * 逻辑流程图:
-
+    <br>
     <img src="../_static/low_power/touchpad_deepsleep_process.png" width = "400" alt="touchpad_deepsleep_process" align=center />
 
 * 程序流程:
