@@ -6,7 +6,7 @@
 * To clone this repository by 
 
     ```
-    git clone --recurisve https://github.com/espressif/esp-iot-solution
+    git clone --recursive https://github.com/espressif/esp-iot-solution
     ```
 
 * To initialize the submodules
