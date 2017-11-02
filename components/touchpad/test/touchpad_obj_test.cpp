@@ -26,7 +26,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_system.h"
-#include "touchpad.h"
+#include "iot_touchpad.h"
 #include "esp_log.h"
 #include "unity.h"
 
@@ -41,44 +41,44 @@ static const char* TAG = "touchpad_test";
 #if SINGLE_TOUCHPAD_TEST
 static void tap_cb(void *arg)
 {
-    CTouchPad* touchpad_dev = (CTouchPad*) arg;
-    touch_pad_t tp_num = touchpad_dev->touchpad_num();
+    CTouchPad* tp_dev = (CTouchPad*) arg;
+    touch_pad_t tp_num = tp_dev->tp_num();
     ESP_LOGI(TAG, "tap callback of touch pad num %d", tp_num);
 }
 
 static void serial_trigger_cb(void *arg)
 {
-    CTouchPad* touchpad_dev = (CTouchPad*) arg;
-    touch_pad_t tp_num = touchpad_dev->touchpad_num();
+    CTouchPad* tp_dev = (CTouchPad*) arg;
+    touch_pad_t tp_num = tp_dev->tp_num();
     ESP_LOGI(TAG, "serial trigger callback of touch pad num %d", tp_num);
-    ESP_LOGI(TAG, "touch pad value is %d", touchpad_dev->value());
+    ESP_LOGI(TAG, "touch pad value is %d", tp_dev->value());
 }
 
 static void push_cb(void *arg)
 {
-    CTouchPad* touchpad_dev = (CTouchPad*) arg;
-    touch_pad_t tp_num = touchpad_dev->touchpad_num();
+    CTouchPad* tp_dev = (CTouchPad*) arg;
+    touch_pad_t tp_num = tp_dev->tp_num();
     ESP_LOGI(TAG, "push callback of touch pad num %d", tp_num);
 }
 
 static void release_cb(void *arg)
 {
-    CTouchPad* touchpad_dev = (CTouchPad*) arg;
-    touch_pad_t tp_num = touchpad_dev->touchpad_num();
+    CTouchPad* tp_dev = (CTouchPad*) arg;
+    touch_pad_t tp_num = tp_dev->tp_num();
     ESP_LOGI(TAG, "release callback of touch pad num %d", tp_num);
 }
 
 static void press_3s_cb(void *arg)
 {
-    CTouchPad* touchpad_dev = (CTouchPad*) arg;
-    touch_pad_t tp_num = touchpad_dev->touchpad_num();
+    CTouchPad* tp_dev = (CTouchPad*) arg;
+    touch_pad_t tp_num = tp_dev->tp_num();
     ESP_LOGI(TAG, "press 3s callback of touch pad num %d", tp_num);
 }
 
 static void press_5s_cb(void *arg)
 {
-    CTouchPad* touchpad_dev = (CTouchPad*) arg;
-    touch_pad_t tp_num = touchpad_dev->touchpad_num();
+    CTouchPad* tp_dev = (CTouchPad*) arg;
+    touch_pad_t tp_num = tp_dev->tp_num();
     ESP_LOGI(TAG, "press 5s callback of touch pad num %d", tp_num);
 }
 #endif
@@ -91,10 +91,10 @@ static void tp_matrix_cb(void *arg, uint8_t x, uint8_t y)
 }
 #endif
 
-extern "C" void touchpad_obj_test()
+extern "C" void tp_obj_test()
 {
 #if SINGLE_TOUCHPAD_TEST
-    CTouchPad* tp_dev0 = new CTouchPad(TOUCH_PAD_NUM8, TOUCHPAD_THRES_PERCENT, TOUCHPAD_FILTER_VALUE);
+    CTouchPad* tp_dev0 = new CTouchPad(TOUCH_PAD_NUM8, TOUCHPAD_THRES_PERCENT, 0, TOUCHPAD_FILTER_VALUE);
     CTouchPad* tp_dev1 = new CTouchPad(TOUCH_PAD_NUM9, TOUCHPAD_THRES_PERCENT);
 
     tp_dev0->add_cb(TOUCHPAD_CB_TAP, tap_cb, tp_dev0);
@@ -150,5 +150,5 @@ extern "C" void touchpad_obj_test()
 
 TEST_CASE("Touch sensor cpp test", "[touch][iot][rtc]")
 {
-    touchpad_obj_test();
+    tp_obj_test();
 }

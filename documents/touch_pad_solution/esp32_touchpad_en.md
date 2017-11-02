@@ -75,10 +75,10 @@ Readings under varied temperature| Readings under varied voltage
 * Steps of calling the API for single touchpad in esp-iot-solution:
 
 ```
-    touchpad_handle_t tp = touchpad_create(touch_pad_num, thres_percent, filter_value);
-    touchpad_add_cb(tp, cb_type, cb, arg);		// Add a callback function for push, release, or tap events.
-    touchpad_add_custom_cb(tp, press_sec, cb, arg);// Add a callback function for user-defined events. Users can define the number of seconds it takes in touching the pad in order to trigger the callback.
-    touchpad_set_serial_trigger(tp, trigger_thres_sec, interval_ms, cb, arg);
+    tp_handle_t tp = tp_create(touch_pad_num, thres_percent, 0, filter_value);
+    tp_add_cb(tp, cb_type, cb, arg);		// Add a callback function for push, release, or tap events.
+    tp_add_custom_cb(tp, press_sec, cb, arg);// Add a callback function for user-defined events. Users can define the number of seconds it takes in touching the pad in order to trigger the callback.
+    tp_set_serial_trigger(tp, trigger_thres_sec, interval_ms, cb, arg);
 ```
 
 # Touchpad Slide Solution
@@ -99,8 +99,8 @@ Create a touchpad slide object.
 - Parameter num determines the number of pads in a slide. 
 - Parameter tps is an array of TOUCH_PAD_NUM. The position of each TOUCH_PAD_NUM in the array should strictly correspond to the pad's location on the PCB. 
 */
-touchpad_slide_handle_t tp_slide = touchpad_slide_create(num, tps, POS_SCALE, TOUCHPAD_THRES_PERCENT, TOUCHPAD_FILTER_MS);
-uint8_t pos = touchpad_slide_position(tp_slide);		// Used to read the relative position of the finger touch on the slide. Returns 255 when there is no finger touch. 
+tp_slide_handle_t tp_slide = tp_slide_create(num, tps, POS_SCALE, TOUCHPAD_THRES_PERCENT, NULL, TOUCHPAD_FILTER_MS);
+uint8_t pos = tp_slide_position(tp_slide);		// Used to read the relative position of the finger touch on the slide. Returns 255 when there is no finger touch. 
 ```
 
 * The duplex slide shown below can be used to drive a longer pad slide with a limited number of touch sensors.
@@ -115,7 +115,7 @@ uint8_t pos = touchpad_slide_position(tp_slide);		// Used to read the relative p
 
     ```
 const touch_pad_t tps[] = {0, 1, 2, 3, 4, 5, 6, 7, 0, 3, 6, 1, 4, 7, 2, 5};	// The order in which the 16 pads are connected to sensor 0 to 7.
-touchpad_slide_handle_t tp_slide = touchpad_slide_create(16, tps, POS_SCALE, TOUCHPAD_THRES_PERCENT, TOUCHPAD_FILTER_MS);
+tp_slide_handle_t tp_slide = tp_slide_create(16, tps, POS_SCALE, TOUCHPAD_THRES_PERCENT, NULL, TOUCHPAD_FILTER_MS);
 ```
 
 # Touchpad Matrix Solution
@@ -133,8 +133,8 @@ Parameters sizeof(x_tps)/sizeof(x_tps[0] and sizeof(y_tps)/sizeof(y_tps[0] speci
 */
 const touch_pad_t x_tps[] = {3, 4, 5};		// horizontal sensors (sensor3, sensor4, sensor5) in the figure above
 const touch_pad_t y_tps[] = {0, 1, 2};		// vertical sensors (sensor0, sensor1, sensor2) in the figure above]
-touchpad_matrix_handle_t tp_matrix = touchpad_matrix_create(sizeof(x_tps)/sizeof(x_tps[0]), sizeof(y_tps)/sizeof(y_tps[0]),
-                                                                x_tps, y_tps, TOUCHPAD_THRES_PERCENT, TOUCHPAD_FILTER_MS);
+tp_matrix_handle_t tp_matrix = tp_matrix_create(sizeof(x_tps)/sizeof(x_tps[0]), sizeof(y_tps)/sizeof(y_tps[0]),
+                                                                x_tps, y_tps, TOUCHPAD_THRES_PERCENT, NULL, TOUCHPAD_FILTER_MS);
 ```
 
 * **Notice**: <br>In the touchpad matrix solution, only one pad can be touched at a time. Touching multiple pads at the same time will not trigger a touch event. When a pad is being touched, touching the other pads will not trigger touch events.

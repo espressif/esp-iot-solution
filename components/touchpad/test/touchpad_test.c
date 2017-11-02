@@ -25,7 +25,7 @@
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include "driver/touch_pad.h"
-#include "touchpad.h"
+#include "iot_touchpad.h"
 #include "esp_log.h"
 #include "unity.h"
 
@@ -43,46 +43,46 @@
 static const char* TAG = "touchpad_test";
 
 #if SINGLE_TOUCHPAD_TEST
-static touchpad_handle_t touchpad_dev0, touchpad_dev1;
+static tp_handle_t tp_dev0, tp_dev1;
 static void tap_cb(void *arg)
 {
-    touchpad_handle_t touchpad_dev = (touchpad_handle_t) arg;
-    touch_pad_t tp_num = touchpad_num_get(touchpad_dev);
+    tp_handle_t tp_dev = (tp_handle_t) arg;
+    touch_pad_t tp_num = tp_num_get(tp_dev);
     ESP_LOGI(TAG, "tap callback of touch pad num %d", tp_num);
 }
 
 static void serial_trigger_cb(void *arg)
 {
-    touchpad_handle_t touchpad_dev = (touchpad_handle_t) arg;
-    touch_pad_t tp_num = touchpad_num_get(touchpad_dev);
+    tp_handle_t tp_dev = (tp_handle_t) arg;
+    touch_pad_t tp_num = tp_num_get(tp_dev);
     ESP_LOGI(TAG, "serial trigger callback of touch pad num %d", tp_num);
 }
 
 static void push_cb(void *arg)
 {
-    touchpad_handle_t touchpad_dev = (touchpad_handle_t) arg;
-    touch_pad_t tp_num = touchpad_num_get(touchpad_dev);
+    tp_handle_t tp_dev = (tp_handle_t) arg;
+    touch_pad_t tp_num = tp_num_get(tp_dev);
     ESP_LOGI(TAG, "push callback of touch pad num %d", tp_num);
 }
 
 static void release_cb(void *arg)
 {
-    touchpad_handle_t touchpad_dev = (touchpad_handle_t) arg;
-    touch_pad_t tp_num = touchpad_num_get(touchpad_dev);
+    tp_handle_t tp_dev = (tp_handle_t) arg;
+    touch_pad_t tp_num = tp_num_get(tp_dev);
     ESP_LOGI(TAG, "release callback of touch pad num %d", tp_num);
 }
 
 static void press_3s_cb(void *arg)
 {
-    touchpad_handle_t touchpad_dev = (touchpad_handle_t) arg;
-    touch_pad_t tp_num = touchpad_num_get(touchpad_dev);
+    tp_handle_t tp_dev = (tp_handle_t) arg;
+    touch_pad_t tp_num = tp_num_get(tp_dev);
     ESP_LOGI(TAG, "press 3s callback of touch pad num %d", tp_num);
 }
 
 static void press_5s_cb(void *arg)
 {
-    touchpad_handle_t touchpad_dev = (touchpad_handle_t) arg;
-    touch_pad_t tp_num = touchpad_num_get(touchpad_dev);
+    tp_handle_t tp_dev = (tp_handle_t) arg;
+    touch_pad_t tp_num = tp_num_get(tp_dev);
     ESP_LOGI(TAG, "press 5s callback of touch pad num %d", tp_num);
 }
 #endif
@@ -143,76 +143,58 @@ void gest_cb(void *arg, gesture_type_t type)
 }
 #endif
 
-void touchpad_test()
+void tp_test()
 {
 #if SINGLE_TOUCHPAD_TEST
-    touchpad_dev0 = touchpad_create(TOUCH_PAD_NUM8, TOUCHPAD_THRES_PERCENT, TOUCHPAD_FILTER_VALUE);
-    touchpad_dev1 = touchpad_create(TOUCH_PAD_NUM9, TOUCHPAD_THRES_PERCENT, TOUCHPAD_FILTER_VALUE);
+    tp_dev0 = tp_create(TOUCH_PAD_NUM8, TOUCHPAD_THRES_PERCENT, 0, TOUCHPAD_FILTER_VALUE);
+    tp_dev1 = tp_create(TOUCH_PAD_NUM9, TOUCHPAD_THRES_PERCENT, 0, TOUCHPAD_FILTER_VALUE);
     
-    touchpad_add_cb(touchpad_dev0, TOUCHPAD_CB_TAP, tap_cb, touchpad_dev0);
-    touchpad_add_cb(touchpad_dev0, TOUCHPAD_CB_PUSH, push_cb, touchpad_dev0);
-    touchpad_add_cb(touchpad_dev0, TOUCHPAD_CB_RELEASE, release_cb, touchpad_dev0);
-    touchpad_add_custom_cb(touchpad_dev0, 3, press_3s_cb, touchpad_dev0);
-    touchpad_add_custom_cb(touchpad_dev0, 5, press_5s_cb, touchpad_dev0);
+    tp_add_cb(tp_dev0, TOUCHPAD_CB_TAP, tap_cb, tp_dev0);
+    tp_add_cb(tp_dev0, TOUCHPAD_CB_PUSH, push_cb, tp_dev0);
+    tp_add_cb(tp_dev0, TOUCHPAD_CB_RELEASE, release_cb, tp_dev0);
+    tp_add_custom_cb(tp_dev0, 3, press_3s_cb, tp_dev0);
+    tp_add_custom_cb(tp_dev0, 5, press_5s_cb, tp_dev0);
 
-    touchpad_add_cb(touchpad_dev1, TOUCHPAD_CB_TAP, tap_cb, touchpad_dev1);
-    touchpad_set_serial_trigger(touchpad_dev1, 4, 1000, serial_trigger_cb, touchpad_dev1);
-    touchpad_add_custom_cb(touchpad_dev1, 3, press_3s_cb, touchpad_dev1);
-    touchpad_add_custom_cb(touchpad_dev1, 5, press_5s_cb, touchpad_dev1);
+    tp_add_cb(tp_dev1, TOUCHPAD_CB_TAP, tap_cb, tp_dev1);
+    tp_set_serial_trigger(tp_dev1, 4, 1000, serial_trigger_cb, tp_dev1);
+    tp_add_custom_cb(tp_dev1, 3, press_3s_cb, tp_dev1);
+    tp_add_custom_cb(tp_dev1, 5, press_5s_cb, tp_dev1);
 
     vTaskDelay((30 * 1000) / portTICK_RATE_MS);
     ESP_LOGI(TAG, "touchpad 0 deleted");
-    touchpad_delete(touchpad_dev0);
+    tp_delete(tp_dev0);
     vTaskDelay((30 * 1000) / portTICK_RATE_MS);
     ESP_LOGI(TAG, "touchpad 1 deleted"); 
-    touchpad_delete(touchpad_dev1);
+    tp_delete(tp_dev1);
 #endif
 
 #if TOUCHPAD_SLIDE_TEST
     uint8_t num = sizeof(tps) / sizeof(tps[0]);
-    touchpad_slide_handle_t tp_slide = touchpad_slide_create(num, tps, 2,TOUCHPAD_THRES_PERCENT, TOUCHPAD_FILTER_VALUE);
+    tp_slide_handle_t tp_slide = tp_slide_create(num, tps, 2,TOUCHPAD_THRES_PERCENT, NULL, TOUCHPAD_FILTER_VALUE);
     while (1) {
-        uint8_t pos = touchpad_slide_position(tp_slide);
+        uint8_t pos = tp_slide_position(tp_slide);
         printf("%d\n", pos);
         vTaskDelay(100 / portTICK_RATE_MS);
     }
 #endif
 
 #if TOUCHPAD_MATRIX_TEST
-    touchpad_matrix_handle_t tp_matrix = touchpad_matrix_create(sizeof(x_tps)/sizeof(x_tps[0]), sizeof(y_tps)/sizeof(y_tps[0]),
-                                                                x_tps, y_tps, TOUCHPAD_THRES_PERCENT, TOUCHPAD_FILTER_VALUE);
-    touchpad_matrix_add_cb(tp_matrix, TOUCHPAD_CB_PUSH, tp_matrix_cb, "push_event");
-    touchpad_matrix_add_cb(tp_matrix, TOUCHPAD_CB_RELEASE, tp_matrix_cb, "release_event");
-    touchpad_matrix_add_cb(tp_matrix, TOUCHPAD_CB_TAP, tp_matrix_cb, "tap_event");
-    touchpad_matrix_add_custom_cb(tp_matrix, 3, tp_matrix_cb, "press 3s");
-    touchpad_matrix_add_custom_cb(tp_matrix, 5, tp_matrix_cb, "press 5s");
-    touchpad_matrix_set_serial_trigger(tp_matrix, 4, 500, tp_matrix_cb, "serial trigger");
+    tp_matrix_handle_t tp_matrix = tp_matrix_create(sizeof(x_tps)/sizeof(x_tps[0]), sizeof(y_tps)/sizeof(y_tps[0]),
+                                                                x_tps, y_tps, TOUCHPAD_THRES_PERCENT, NULL, TOUCHPAD_FILTER_VALUE);
+    tp_matrix_add_cb(tp_matrix, TOUCHPAD_CB_PUSH, tp_matrix_cb, "push_event");
+    tp_matrix_add_cb(tp_matrix, TOUCHPAD_CB_RELEASE, tp_matrix_cb, "release_event");
+    tp_matrix_add_cb(tp_matrix, TOUCHPAD_CB_TAP, tp_matrix_cb, "tap_event");
+    tp_matrix_add_custom_cb(tp_matrix, 3, tp_matrix_cb, "press 3s");
+    tp_matrix_add_custom_cb(tp_matrix, 5, tp_matrix_cb, "press 5s");
+    tp_matrix_set_serial_trigger(tp_matrix, 4, 500, tp_matrix_cb, "serial trigger");
     vTaskDelay(60000 / portTICK_RATE_MS);
     ESP_LOGI("touchpad", "delete touchpad matrix");
-    touchpad_matrix_delete(tp_matrix);
+    tp_matrix_delete(tp_matrix);
 #endif
-
-#if PROXIMITY_SENSOR_TEST
-    proximity_sensor_handle_t prox_sen = proximity_sensor_create(0, 995, 150);
-    proximity_sensor_add_cb(prox_sen, prox_cb, NULL);
-    for (int i = 0; i < 30; i++) {
-        uint16_t val;
-        proximity_sensor_read(prox_sen, &val);
-        printf("proximity sensor value:%d\n", val);
-        vTaskDelay(1000 / portTICK_RATE_MS);
-    }
-#endif
-
-#if GESTURE_SENSOR_TEST
-    const touch_pad_t tps[] = {0, 2, 3, 4};
-    gesture_sensor_handle_t gest_hd = gesture_sensor_create(tps, 950, 150);
-    gesture_sensor_add_cb(gest_hd, gest_cb, NULL);
-#endif
-
 }
 
 TEST_CASE("Touch sensor test", "[touch][iot][rtc]")
 {
-    touchpad_test();
+    tp_test();
 }
 #endif

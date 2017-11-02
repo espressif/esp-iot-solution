@@ -57,7 +57,7 @@ typedef enum {
  * @param active_level button hardware active level.
  *        For "BUTTON_ACTIVE_LOW" it means when the button pressed, the GPIO will read low level.
  * @param trigger button event trigger mode
- * @param serial_thres_sec the number of seconds more than whick a TOUCHPAD_SERIAL_CB would accour
+ * @param serial_thres_sec the number of seconds more than whick a BUTTON_SERIAL_CB would accour
  *
  * @return A button_handle_t handle to the created button object, or NULL in case of error.
  */
@@ -156,7 +156,7 @@ public:
      * @param active_level button hardware active level.
      *        For "BUTTON_ACTIVE_LOW" it means when the button pressed, the GPIO will read low level.
      * @param trigger button event trigger mode
-     * @param serial_thres_sec the number of seconds more than whick a TOUCHPAD_SERIAL_CB would accour
+     * @param serial_thres_sec the number of seconds more than whick a BUTTON_SERIAL_CB would accour
      */
     CButton(gpio_num_t gpio_num, button_active_t active_level = BUTTON_ACTIVE_LOW, button_trigger_t trigger = BUTTON_SINGLE_TRIGGER, uint32_t serial_thres_sec = 3);
     

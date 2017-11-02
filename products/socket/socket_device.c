@@ -32,7 +32,7 @@
 #include "driver/pcnt.h"
 #include "button.h"
 #include "relay.h"
-#include "touchpad.h"
+#include "iot_touchpad.h"
 #include "led.h"
 #include "socket_device.h"
 #include "param.h"
@@ -53,7 +53,7 @@ typedef struct {
     button_handle_t btn_handle;
     relay_handle_t relay_handle;
     led_handle_t led_handle;
-    touchpad_handle_t tp_handle;
+    tp_handle_t tp_handle;
 } socket_unit_t;
 
 typedef struct {
@@ -121,7 +121,7 @@ static const socket_uint_def_t DEF_SOCKET_UNIT[SOCKET_UNIT_NUM] = {
 
 static socket_dev_t* g_socket;
 static socket_unit_t* socket_unit_create(socket_status_t* state_ptr, button_handle_t btn, relay_handle_t relay,
-        led_handle_t led, touchpad_handle_t touchpad)
+        led_handle_t led, tp_handle_t touchpad)
 {
     socket_unit_t* socket_unit = (socket_unit_t*) calloc(1, sizeof(socket_unit_t));
     socket_unit->state_ptr     = state_ptr;
