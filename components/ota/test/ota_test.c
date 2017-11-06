@@ -28,13 +28,16 @@
 #include "ota.h"
 #include "esp_log.h"
 #include "esp_wifi.h"
-#include "wifi.h"
+#include "iot_wifi.h"
 #include "unity.h"
 
 #define OTA_SERVER_IP      "192.168.1.3"
 #define OTA_SERVER_PORT    8070
 #define OTA_FILE_NAME      "/Desktop/iot.bin"
 #define TAG     "OTA_TEST"
+
+#define AP_SSID     CONFIG_AP_SSID
+#define AP_PASSWORD CONFIG_AP_PASSWORD
 
 static void ota_task(void *arg)
 {
@@ -45,8 +48,8 @@ static void ota_task(void *arg)
 
 void ota_test()
 {
-    wifi_setup(WIFI_MODE_STA);
-    wifi_connect_start("Netcore", "", portMAX_DELAY);
+    iot_wifi_setup(WIFI_MODE_STA);
+    iot_wifi_connect(AP_SSID, AP_PASSWORD, portMAX_DELAY);
     ESP_LOGI(TAG, "free heap size before ota: %d", esp_get_free_heap_size());
     xTaskCreate(ota_task, "ota_task", 1024 * 8, NULL, 5, NULL);
     ota_start(OTA_SERVER_IP, OTA_SERVER_PORT, OTA_FILE_NAME, 5000 / portTICK_RATE_MS);

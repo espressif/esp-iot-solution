@@ -46,7 +46,7 @@ typedef enum {
   *     - ESP_OK: succeed
   *     - others: fail
   */
-esp_err_t wifi_setup(wifi_mode_t);
+esp_err_t iot_wifi_setup(wifi_mode_t);
 
 /**
   * @brief  wifi connect with timeout
@@ -60,19 +60,19 @@ esp_err_t wifi_setup(wifi_mode_t);
   *     - ESP_TIMEOUT: timeout
   *     - ESP_FAIL: fail
   */
-esp_err_t wifi_connect_start(const char *ssid, const char *pwd, uint32_t ticks_to_wait);
+esp_err_t iot_wifi_connect(const char *ssid, const char *pwd, uint32_t ticks_to_wait);
 
 /**
  *  @brief WiFi stop connecting
  */
-void wifi_connect_stop();
+void iot_wifi_disconnect();
 
 /**
   * @brief  get wifi status.
   *
   * @return status of the wifi station
   */
-wifi_sta_status_t wifi_get_status();
+wifi_sta_status_t iot_wifi_get_status();
 
 #ifdef __cplusplus
 }
@@ -83,18 +83,51 @@ wifi_sta_status_t wifi_get_status();
 /**
  * class of wifi
  * simple usage:
- * CWiFi my_wifi(WIFI_MODE_STA);
- * my_wifi.connect_start("IOT_DEMO_TEST", "123456789", portMAX_DELAY);
+ * CWiFi *my_wifi = CWiFi::GetInstance(WIFI_MODE_STA);
+ * my_wifi->connect("AP_SSID", "AP_PASSWORD", portMAX_DELAY);
  */
 class CWiFi
 {
-public:
+private:
+    static CWiFi* m_instance;
+
+    /**
+     * prevent constructing in singleton mode
+     */
+    CWiFi(const CWiFi&);
+    CWiFi& operator=(const CWiFi&);
+
     /**
      * @brief  constructor of CLED
      *
      * @param  mode refer to enum wifi_mode_t
      */
-    CWiFi(wifi_mode_t mode);
+    CWiFi(wifi_mode_t mode = WIFI_MODE_STA);
+
+    /**
+     * prevent memory leak of m_instance
+     */
+    class CGarbo
+    {
+    public:
+        ~CGarbo()
+        {
+            if (CWiFi::m_instance) {
+                delete CWiFi::m_instance;
+            }
+        }
+    };
+    static CGarbo garbo;
+
+public:
+    /**
+     * @brief get the only instance of CWiFi
+     *
+     * @param product_info the information of product
+     *
+     * @return pointer to a CWiFi instance
+     */
+    static CWiFi* GetInstance(wifi_mode_t mode = WIFI_MODE_STA);
 
     /**
      * @brief  wifi connect with timeout
@@ -108,19 +141,19 @@ public:
      *     - ESP_TIMEOUT: timeout
      *     - ESP_FAIL: fail
      */
-    esp_err_t connect_start(const char *ssid, const char *pwd, uint32_t ticks_to_wait);
+    esp_err_t connect(const char *ssid, const char *pwd, uint32_t ticks_to_wait);
     
     /**
      *  @brief WiFi stop connecting
      */
-    void connect_stop();
+    void disconnect();
 
     /**
      * @brief  get wifi status.
      *
      * @return status of the wifi station
      */
-    wifi_sta_status_t get_status();
+    wifi_sta_status_t status();
 };
 #endif
 

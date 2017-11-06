@@ -21,9 +21,11 @@
 #include "nvs_flash.h"
 #include "socket_device.h"
 #include "weekly_timer.h"
-#include "wifi.h"
+#include "iot_wifi.h"
 #include "unity.h"
 
+#define AP_SSID     CONFIG_AP_SSID
+#define AP_PASSWORD CONFIG_AP_PASSWORD
 static weekly_timer_handle_t tmr1, tmr2;
 void timer_cb(void *timer_name)
 {
@@ -38,8 +40,8 @@ void timer_cb(void *timer_name)
 void weekly_timer_test()
 {
     nvs_flash_init();
-    wifi_setup(WIFI_MODE_STA);
-    wifi_connect_start("Netcore", "", portMAX_DELAY);
+    iot_wifi_setup(WIFI_MODE_STA);
+    iot_wifi_connect(AP_SSID, AP_PASSWORD, portMAX_DELAY);
 
     weekly_timer_init();
     vTaskDelay(5000/portTICK_PERIOD_MS);
