@@ -32,6 +32,7 @@
 #include "esp_event_loop.h"
 #include "esp_log.h"
 #include "wifi.h"
+#include "nvs_flash.h"
 
 #define IOT_CHECK(tag, a, ret)  if(!(a)) {                                             \
         ESP_LOGE(tag,"%s:%d (%s)", __FILE__, __LINE__, __FUNCTION__);      \
@@ -80,6 +81,7 @@ static esp_err_t wifi_event_handler(void *ctx, system_event_t *event)
 
 esp_err_t wifi_setup(wifi_mode_t wifi_mode)
 {
+    nvs_flash_init();
 #if DEBUG_EN
     esp_log_level_set(TAG, ESP_LOG_DEBUG);
 #endif

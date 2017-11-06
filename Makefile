@@ -10,5 +10,6 @@ EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components $(IOT_SOLUTION_PATH)/pro
 EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/i2c_devices
 EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/i2c_devices/sensor
 EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/i2c_devices/others
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/network
 include $(IDF_PATH)/make/project.mk
 
