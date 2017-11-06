@@ -12,6 +12,7 @@ IOT_COMPONENTT_DIR := $(IOT_SOLUTION_PATH)/components components
 IOT_COMPONENTT_DIR += $(IOT_SOLUTION_PATH)/components/i2c_devices
 IOT_COMPONENTT_DIR += $(IOT_SOLUTION_PATH)/components/i2c_devices/sensor
 IOT_COMPONENTT_DIR += $(IOT_SOLUTION_PATH)/components/i2c_devices/others
+IOT_COMPONENTT_DIR += $(IOT_SOLUTION_PATH)/components/network
 
 # Find all component names. The component names are the same as the
 # directories they're in, so /bla/components/mycomponent/component.mk -> mycomponent.

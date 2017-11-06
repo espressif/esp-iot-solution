@@ -1,0 +1,28 @@
+menu "IoT unit-test settings"
+    menu "TCP testcase"
+        config AP_SSID
+            string "Enter SSID of router to connect to"
+            default ""
+            help
+                "Enter SSID of router to connect to"
+
+        config AP_PASSWORD
+            string "Enter PASSWORD of router to connect to"
+            default ""
+            help
+                "Enter PASSWORD of router to connect to"
+        config TCP_SERVER_MAX_CONNECTION
+            int "Set max connection number for TCP server"
+            default 10
+            help
+                "Set max connection number for TCP server"
+        config TCP_SERVER_PORT
+            int "Set listening port for TCP server"
+            default 8002
+            help
+                "Set listening port for TCP server"
+    endmenu
+
+
+
+endmenu
