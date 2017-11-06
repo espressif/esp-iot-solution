@@ -29,7 +29,7 @@
 #include "unity.h"
 #include "button.h"
 #include "esp_log.h"
-#include "wifi.h"
+#include "iot_wifi.h"
 #include "iot_tcp.h"
 #include "tcpip_adapter.h"
 
@@ -44,9 +44,9 @@ static const char* TAG_WIFI = "WIFI";
 
 static void wifi_connect()
 {
-    CWiFi my_wifi(WIFI_MODE_STA);
+    CWiFi *my_wifi = CWiFi::GetInstance(WIFI_MODE_STA);
     ESP_LOGI(TAG_WIFI, "connect WiFi");
-    my_wifi.connect_start(AP_SSID, AP_PASSWORD, portMAX_DELAY);
+    my_wifi->connect(AP_SSID, AP_PASSWORD, portMAX_DELAY);
     ESP_LOGI(TAG_WIFI, "WiFi connected...");
 }
 

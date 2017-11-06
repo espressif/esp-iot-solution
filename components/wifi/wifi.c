@@ -31,7 +31,7 @@
 #include "esp_wifi.h"
 #include "esp_event_loop.h"
 #include "esp_log.h"
-#include "wifi.h"
+#include "iot_wifi.h"
 #include "nvs_flash.h"
 
 #define IOT_CHECK(tag, a, ret)  if(!(a)) {                                             \
@@ -49,7 +49,7 @@ static const char* TAG = "wifi";
 static EventGroupHandle_t s_wifi_event_group = NULL;
 // Mutex to protect WiFi connect
 static xSemaphoreHandle s_wifi_mux = NULL;
-
+//static bool wifi_sta_auto_reconnect = false;
 static wifi_sta_status_t s_wifi_sta_st = WIFI_STATUS_STA_DISCONNECTED;
 
 static esp_err_t wifi_event_handler(void *ctx, system_event_t *event)
@@ -68,7 +68,6 @@ static esp_err_t wifi_event_handler(void *ctx, system_event_t *event)
         case SYSTEM_EVENT_STA_DISCONNECTED:
             s_wifi_sta_st = WIFI_STATUS_STA_DISCONNECTED;
             ESP_LOGI(TAG, "SYSTEM_EVENT_STA_DISCONNECTED\n");
-            esp_wifi_connect();
             // Clear event bit so WiFi task knows the disconnect-event
             xEventGroupClearBits(s_wifi_event_group, WIFI_CONNECTED_EVT);
             break;
@@ -79,7 +78,7 @@ static esp_err_t wifi_event_handler(void *ctx, system_event_t *event)
     return ESP_OK;
 }
 
-esp_err_t wifi_setup(wifi_mode_t wifi_mode)
+esp_err_t iot_wifi_setup(wifi_mode_t wifi_mode)
 {
     nvs_flash_init();
 #if DEBUG_EN
@@ -104,13 +103,13 @@ esp_err_t wifi_setup(wifi_mode_t wifi_mode)
     return ESP_OK;
 }
 
-void wifi_connect_stop()
+void iot_wifi_disconnect()
 {
-    esp_wifi_stop();
+    esp_wifi_disconnect();
     xEventGroupSetBits(s_wifi_event_group, WIFI_STOP_REQ_EVT);
 }
 
-esp_err_t wifi_connect_start(const char *ssid, const char *pwd, uint32_t ticks_to_wait)
+esp_err_t iot_wifi_connect(const char *ssid, const char *pwd, uint32_t ticks_to_wait)
 {
     // Take mutex
     BaseType_t res = xSemaphoreTake(s_wifi_mux, ticks_to_wait);
@@ -144,7 +143,7 @@ esp_err_t wifi_connect_start(const char *ssid, const char *pwd, uint32_t ticks_t
     }
     // WiFi connect timeout
     else {
-        esp_wifi_stop();
+        iot_wifi_disconnect();
         ESP_LOGW(TAG, "WiFi connect fail");
         ret = ESP_ERR_TIMEOUT;
     }
@@ -152,7 +151,7 @@ esp_err_t wifi_connect_start(const char *ssid, const char *pwd, uint32_t ticks_t
     return ret;
 }
 
-wifi_sta_status_t wifi_get_status()
+wifi_sta_status_t iot_wifi_get_status()
 {
     return s_wifi_sta_st;
 }

@@ -23,24 +23,40 @@
   */
 #include "freertos/FreeRTOS.h"
 #include "esp_system.h"
-#include "wifi.h"
+#include "iot_wifi.h"
+
+CWiFi* CWiFi::m_instance = NULL;
+static xSemaphoreHandle s_iot_wifi_mux = xSemaphoreCreateMutex();
+
+CWiFi* CWiFi::GetInstance(wifi_mode_t mode)
+{
+    if (m_instance == NULL) {
+        xSemaphoreTake(s_iot_wifi_mux, portMAX_DELAY);
+        if (m_instance == NULL) {
+            m_instance = new CWiFi(mode);
+        }
+        xSemaphoreGive(s_iot_wifi_mux);
+    }
+    return m_instance;
+}
 
 CWiFi::CWiFi(wifi_mode_t mode)
 {
-    wifi_setup(mode);
+    iot_wifi_setup(mode);
 }
 
-esp_err_t CWiFi::connect_start(const char *ssid, const char *pwd, uint32_t ticks_to_wait)
+esp_err_t CWiFi::connect(const char *ssid, const char *pwd, uint32_t ticks_to_wait)
 {
-    return wifi_connect_start(ssid, pwd, ticks_to_wait);
+    return iot_wifi_connect(ssid, pwd, ticks_to_wait);
 }
 
-void CWiFi::connect_stop()
+void CWiFi::disconnect()
 {
-    wifi_connect_stop();
+    iot_wifi_disconnect();
 }
 
-wifi_sta_status_t CWiFi::get_status()
+wifi_sta_status_t CWiFi::status()
 {
-    return wifi_get_status();
+    return iot_wifi_get_status();
 }
+
