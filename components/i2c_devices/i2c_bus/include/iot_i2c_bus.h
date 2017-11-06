@@ -42,7 +42,7 @@ typedef void* i2c_bus_handle_t;
  *     - NULL Fail
  *     - Others Success
  */
-i2c_bus_handle_t i2c_bus_create(i2c_port_t port, i2c_config_t* conf);
+i2c_bus_handle_t iot_i2c_bus_create(i2c_port_t port, i2c_config_t* conf);
 
 /**
  * @brief Delete and release the I2C bus object
@@ -52,7 +52,7 @@ i2c_bus_handle_t i2c_bus_create(i2c_port_t port, i2c_config_t* conf);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t i2c_bus_delete(i2c_bus_handle_t bus);
+esp_err_t iot_i2c_bus_delete(i2c_bus_handle_t bus);
 
 /**
  * @brief I2C start sending buffered commands
@@ -65,7 +65,7 @@ esp_err_t i2c_bus_delete(i2c_bus_handle_t bus);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t i2c_bus_cmd_begin(i2c_bus_handle_t bus, i2c_cmd_handle_t cmd, portBASE_TYPE ticks_to_wait);
+esp_err_t iot_i2c_bus_cmd_begin(i2c_bus_handle_t bus, i2c_cmd_handle_t cmd, portBASE_TYPE ticks_to_wait);
 #ifdef __cplusplus
 }
 #endif

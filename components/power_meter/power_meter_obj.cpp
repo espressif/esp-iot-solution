@@ -24,7 +24,7 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "power_meter.h"
+#include "iot_power_meter.h"
 #include "esp_log.h"
 
 #ifdef __cplusplus
@@ -32,23 +32,23 @@ extern "C" {
 #endif
 CPowerMeter::CPowerMeter(const pm_config_t &pm_config)
 {
-    m_pm_handle = powermeter_create(pm_config);
+    m_pm_handle = iot_powermeter_create(pm_config);
 }
 
 CPowerMeter::~CPowerMeter()
 {
-    powermeter_delete(m_pm_handle);
+    iot_powermeter_delete(m_pm_handle);
     m_pm_handle = NULL;
 }
 
 uint32_t CPowerMeter::read(pm_value_type_t value_type)
 {
-    return powermeter_read(m_pm_handle, value_type);
+    return iot_powermeter_read(m_pm_handle, value_type);
 }
 
 esp_err_t CPowerMeter::change_mode(pm_mode_t mode)
 {
-    return powermeter_change_mode(m_pm_handle, mode);
+    return iot_powermeter_change_mode(m_pm_handle, mode);
 }
 #ifdef __cplusplus
 }

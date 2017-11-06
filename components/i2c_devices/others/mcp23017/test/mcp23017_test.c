@@ -28,8 +28,8 @@
 #include <stdio.h>
 #include "unity.h"
 #include "driver/i2c.h"
-#include "mcp23017.h"
-#include "i2c_bus.h"
+#include "iot_mcp23017.h"
+#include "iot_i2c_bus.h"
 #include "esp_log.h"
 
 #define I2C_MASTER_SCL_IO           21          /*!< gpio number for I2C master clock IO21*/
@@ -54,44 +54,44 @@ static void i2c_bus_init()
     conf.scl_io_num = I2C_MASTER_SCL_IO;
     conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
     conf.master.clk_speed = I2C_MASTER_FREQ_HZ;
-    i2c_bus = i2c_bus_create(I2C_MASTER_NUM, &conf);
+    i2c_bus = iot_i2c_bus_create(I2C_MASTER_NUM, &conf);
 }
 
 void mcp23017_init()
 {
     i2c_bus_init();
-    device = dev_mcp23017_create(i2c_bus, 0x20);
+    device = iot_mcp23017_create(i2c_bus, 0x20);
 }
 
 void mcp23017_test_task(void* pvParameters)
 {
     int cnt = 5;
-    mcp23017_set_iodirection(device, 0x11, MCP23017_GPIOA); //config input:1; 0:output
-    mcp23017_set_iodirection(device, 0x11, MCP23017_GPIOB);
+    iot_mcp23017_set_io_dir(device, 0x11, MCP23017_GPIOA); //config input:1; 0:output
+    iot_mcp23017_set_io_dir(device, 0x11, MCP23017_GPIOB);
     while (cnt--) {
 
         /*****Interrupt Test******/
-        mcp23017_enable_interrupt_pins(device, MCP23017_PIN1, true, 0x00);
+        iot_mcp23017_interrupt_en(device, MCP23017_PIN1, true, 0x00);
         vTaskDelay(1000 / portTICK_RATE_MS);
-        printf("Intf:%d\n", mcp23017_get_intflag_values(device));
+        printf("Intf:%d\n", iot_mcp23017_get_int_flag(device));
 
         /*****Normal Test*****
-         ret = mcp23017_read_ioport(device, MCP23017_GPIOA);
+         ret = iot_mcp23017_read_io(device, MCP23017_GPIOA);
          printf("GPIOA:%x\n", ret);
-         ret = mcp23017_read_ioport(device, MCP23017_GPIOB);
+         ret = iot_mcp23017_read_io(device, MCP23017_GPIOB);
          printf("GPIOB:%x\n", ret);
 
-//    	mcp23017_write_ioport(device,0x11, MCP23017_GPIOA);
-//    	mcp23017_write_ioport(device,0x22, MCP23017_GPIOB);
+//    	iot_mcp23017_write_io(device,0x11, MCP23017_GPIOA);
+//    	iot_mcp23017_write_io(device,0x22, MCP23017_GPIOB);
 //		vTaskDelay(1000 / portTICK_RATE_MS);
 
-         ret = mcp23017_read_ioport(device, MCP23017_GPIOA);
+         ret = iot_mcp23017_read_io(device, MCP23017_GPIOA);
          printf("Become GPIOA:%x\n", ret);
-         ret = mcp23017_read_ioport(device, MCP23017_GPIOB);
+         ret = iot_mcp23017_read_io(device, MCP23017_GPIOB);
          printf("Become GPIOB:%x\n", ret);
          vTaskDelay(1000 / portTICK_RATE_MS);*/
     }
-    dev_mcp23017_delete(device, true);
+    iot_mcp23017_delete(device, true);
     vTaskDelete(NULL);
 }
 

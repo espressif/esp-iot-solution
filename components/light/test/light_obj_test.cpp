@@ -26,7 +26,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
-#include "light.h"
+#include "iot_light.h"
 #include "unity.h"
 
 #define CHANNEL_ID_R    0

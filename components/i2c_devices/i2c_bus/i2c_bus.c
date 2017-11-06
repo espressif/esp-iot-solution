@@ -25,7 +25,7 @@
 #include <stdio.h>
 #include "esp_log.h"
 #include "driver/i2c.h"
-#include "i2c_bus.h"
+#include "iot_i2c_bus.h"
 
 typedef struct {
     i2c_config_t i2c_conf;   /*!<I2C bus parameters*/
@@ -40,7 +40,7 @@ static const char* I2C_BUS_TAG = "i2c_bus";
 #define ESP_INTR_FLG_DEFAULT  (0)
 #define ESP_I2C_MASTER_BUF_LEN  (0)
 
-i2c_bus_handle_t i2c_bus_create(i2c_port_t port, i2c_config_t* conf)
+i2c_bus_handle_t iot_i2c_bus_create(i2c_port_t port, i2c_config_t* conf)
 {
     I2C_BUS_CHECK(port < I2C_NUM_MAX, "I2C port error", NULL);
     I2C_BUS_CHECK(conf != NULL, "Pointer error", NULL);
@@ -64,7 +64,7 @@ i2c_bus_handle_t i2c_bus_create(i2c_port_t port, i2c_config_t* conf)
     return NULL;
 }
 
-esp_err_t i2c_bus_delete(i2c_bus_handle_t bus)
+esp_err_t iot_i2c_bus_delete(i2c_bus_handle_t bus)
 {
     I2C_BUS_CHECK(bus != NULL, "Handle error", ESP_FAIL);
     i2c_bus_t* i2c_bus = (i2c_bus_t*) bus;
@@ -73,7 +73,7 @@ esp_err_t i2c_bus_delete(i2c_bus_handle_t bus)
     return ESP_OK;
 }
 
-esp_err_t i2c_bus_cmd_begin(i2c_bus_handle_t bus, i2c_cmd_handle_t cmd, portBASE_TYPE ticks_to_wait)
+esp_err_t iot_i2c_bus_cmd_begin(i2c_bus_handle_t bus, i2c_cmd_handle_t cmd, portBASE_TYPE ticks_to_wait)
 {
     I2C_BUS_CHECK(bus != NULL, "Handle error", ESP_FAIL);
     I2C_BUS_CHECK(cmd != NULL, "I2C cmd error", ESP_FAIL);

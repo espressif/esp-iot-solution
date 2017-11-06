@@ -35,8 +35,8 @@ extern "C" {
 typedef void* relay_handle_t;
 
 typedef enum {
-    RELAY_CLOSE_LOW = 0,            /**< pass this param to relay_create if the relay is closed when control-gpio level is low */
-    RELAY_CLOSE_HIGH = 1,           /**< pass this param to relay_create if the relay is closed when control-gpio level is high */
+    RELAY_CLOSE_LOW = 0,            /**< pass this param to iot_relay_create if the relay is closed when control-gpio level is low */
+    RELAY_CLOSE_HIGH = 1,           /**< pass this param to iot_relay_create if the relay is closed when control-gpio level is high */
 } relay_close_level_t;
 
 typedef enum {
@@ -80,7 +80,7 @@ typedef union {
   *
   * @return relay_handle_t the handle of the relay created 
   */
-relay_handle_t relay_create(relay_io_t relay_io, relay_close_level_t close_level, relay_ctl_mode_t ctl_mode, relay_io_mode_t io_mode);
+relay_handle_t iot_relay_create(relay_io_t relay_io, relay_close_level_t close_level, relay_ctl_mode_t ctl_mode, relay_io_mode_t io_mode);
 
 /**
   * @brief set state of relay
@@ -92,7 +92,7 @@ relay_handle_t relay_create(relay_io_t relay_io, relay_close_level_t close_level
   *     - ESP_OK: succeed
   *     - others: fail
   */
-esp_err_t relay_state_write(relay_handle_t relay_handle, relay_status_t state);
+esp_err_t iot_relay_state_write(relay_handle_t relay_handle, relay_status_t state);
 
 /**
   * @brief get state of relay
@@ -101,7 +101,7 @@ esp_err_t relay_state_write(relay_handle_t relay_handle, relay_status_t state);
   *
   * @return state of the relay
   */
-relay_status_t relay_state_read(relay_handle_t relay_handle);
+relay_status_t iot_relay_state_read(relay_handle_t relay_handle);
 
 /**
   * @brief free the memory of relay
@@ -112,14 +112,14 @@ relay_status_t relay_state_read(relay_handle_t relay_handle);
   *     - ESP_OK: succeed
   *     - others: fail
   */
-esp_err_t relay_delete(relay_handle_t relay_handle);
+esp_err_t iot_relay_delete(relay_handle_t relay_handle);
 
 #ifdef __cplusplus
 }
 #endif
 
 #ifdef __cplusplus
-#include "controllable_obj.h"
+#include "iot_controllable_obj.h"
 
 /**
  * class of relay

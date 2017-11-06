@@ -30,7 +30,7 @@ extern "C" {
 #endif
 
 #include "driver/i2c.h"
-#include "i2c_bus.h"
+#include "iot_i2c_bus.h"
 typedef enum{
     BH1750_CONTINUE_1LX_RES       =0x10,    /*!< Command to set measure mode as Continuously H-Resolution mode*/
     BH1750_CONTINUE_HALFLX_RES    =0x11,    /*!< Command to set measure mode as Continuously H-Resolution mode2*/
@@ -52,7 +52,7 @@ typedef void* bh1750_handle_t;
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t bh1750_power_down(bh1750_handle_t sensor);
+esp_err_t iot_bh1750_power_down(bh1750_handle_t sensor);
 
 /**
  * @brief Set bh1750 as power on mode
@@ -63,7 +63,7 @@ esp_err_t bh1750_power_down(bh1750_handle_t sensor);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t bh1750_power_on(bh1750_handle_t sensor);
+esp_err_t iot_bh1750_power_on(bh1750_handle_t sensor);
 
 /**
  * @brief Reset data register of bh1750
@@ -74,7 +74,7 @@ esp_err_t bh1750_power_on(bh1750_handle_t sensor);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t bh1750_reset_data_register(bh1750_handle_t sensor);
+esp_err_t iot_bh1750_reset_data_register(bh1750_handle_t sensor);
 
 /**
  * @brief Get light intensity from bh1750
@@ -86,11 +86,11 @@ esp_err_t bh1750_reset_data_register(bh1750_handle_t sensor);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  * @note
- *        You should call this funtion to set measurement mode before call bh1750_get_data() to acquire data.
+ *        You should call this funtion to set measurement mode before call iot_bh1750_get_data() to acquire data.
  *        If you set to onetime mode, you just can get one measurement data.
- *        If you set to continuously mode, you can call bh1750_get_data() to acquire data repeatedly.
+ *        If you set to continuously mode, you can call iot_bh1750_get_data() to acquire data repeatedly.
  */
-esp_err_t bh1750_set_measure_mode(bh1750_handle_t sensor, bh1750_cmd_measure_t cmd_measure);
+esp_err_t iot_bh1750_set_measure_mode(bh1750_handle_t sensor, bh1750_cmd_measure_t cmd_measure);
 
 /**
  * @brief Get light intensity from bh1750
@@ -104,7 +104,7 @@ esp_err_t bh1750_set_measure_mode(bh1750_handle_t sensor, bh1750_cmd_measure_t c
  * @note
  *        You should get data after measurement time over, so take care of measurement time in different mode.
  */
-esp_err_t bh1750_get_data(bh1750_handle_t sensor, float* data);
+esp_err_t iot_bh1750_get_data(bh1750_handle_t sensor, float* data);
 
 /**
  * @brief Get light intensity from bh1750
@@ -117,7 +117,7 @@ esp_err_t bh1750_get_data(bh1750_handle_t sensor, float* data);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t bh1750_get_light_intensity(bh1750_handle_t sensor, bh1750_cmd_measure_t cmd_measure, float* data);
+esp_err_t iot_bh1750_get_light_intensity(bh1750_handle_t sensor, bh1750_cmd_measure_t cmd_measure, float* data);
 
 /**
  * @brief Change measurement time
@@ -129,7 +129,7 @@ esp_err_t bh1750_get_light_intensity(bh1750_handle_t sensor, bh1750_cmd_measure_
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t bh1750_change_measure_time(bh1750_handle_t sensor, uint8_t measure_time);
+esp_err_t iot_bh1750_change_measure_time(bh1750_handle_t sensor, uint8_t measure_time);
 
 /**
  * @brief Create and init sensor object and return a sensor handle
@@ -141,7 +141,7 @@ esp_err_t bh1750_change_measure_time(bh1750_handle_t sensor, uint8_t measure_tim
  *     - NULL Fail
  *     - Others Success
  */
-bh1750_handle_t sensor_bh1750_create(i2c_bus_handle_t bus, uint16_t dev_addr);
+bh1750_handle_t iot_bh1750_create(i2c_bus_handle_t bus, uint16_t dev_addr);
 
 /**
  * @brief Delete and release a sensor object
@@ -153,7 +153,7 @@ bh1750_handle_t sensor_bh1750_create(i2c_bus_handle_t bus, uint16_t dev_addr);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t sensor_bh1750_delete(bh1750_handle_t sensor, bool del_bus);
+esp_err_t iot_bh1750_delete(bh1750_handle_t sensor, bool del_bus);
 
 #ifdef __cplusplus
 }

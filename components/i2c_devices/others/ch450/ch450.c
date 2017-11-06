@@ -26,8 +26,8 @@
 #include <string.h>
 #include "driver/i2c.h"
 #include "esp_log.h"
-#include "ch450.h"
-#include "i2c_bus.h"
+#include "iot_ch450.h"
+#include "iot_i2c_bus.h"
 
 #define	CH450_I2C_ADDR0		0x40
 #define	CH450_I2C_MASK		0x3E
@@ -45,10 +45,10 @@ typedef struct {
 
 void ch450_init(ch450_handle_t dev)
 {
-    ch450_write(dev, CH450_SYS, 0x01);
+    iot_ch450_write(dev, CH450_SYS, 0x01);
 }
 
-ch450_handle_t dev_ch450_create(i2c_bus_handle_t bus)
+ch450_handle_t iot_ch450_create(i2c_bus_handle_t bus)
 {
     ch450_dev_t* seg = (ch450_dev_t*) calloc(1, sizeof(ch450_dev_t));
     seg->bus = bus;
@@ -56,18 +56,18 @@ ch450_handle_t dev_ch450_create(i2c_bus_handle_t bus)
     return (ch450_handle_t) seg;
 }
 
-esp_err_t dev_ch450_delete(ch450_handle_t dev, bool del_bus)
+esp_err_t iot_ch450_delete(ch450_handle_t dev, bool del_bus)
 {
     ch450_dev_t* seg = (ch450_dev_t*) dev;
     if(del_bus) {
-        i2c_bus_delete(seg->bus);
+        iot_i2c_bus_delete(seg->bus);
         seg->bus = NULL;
     }
     free(seg);
     return ESP_OK;
 }
 
-esp_err_t ch450_write(ch450_handle_t dev, ch450_cmd_t ch450_cmd, uint8_t val)
+esp_err_t iot_ch450_write(ch450_handle_t dev, ch450_cmd_t ch450_cmd, uint8_t val)
 {
     ch450_dev_t* seg = (ch450_dev_t*) dev;
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
@@ -75,12 +75,12 @@ esp_err_t ch450_write(ch450_handle_t dev, ch450_cmd_t ch450_cmd, uint8_t val)
     i2c_master_write_byte(cmd, (uint8_t) ch450_cmd, CH450_ACK_CHECK_EN);
     i2c_master_write_byte(cmd, val, CH450_ACK_CHECK_EN);
     i2c_master_stop(cmd);
-    int ret = i2c_bus_cmd_begin(seg->bus, cmd, portMAX_DELAY);
+    int ret = iot_i2c_bus_cmd_begin(seg->bus, cmd, portMAX_DELAY);
     i2c_cmd_link_delete(cmd);
     return ret;
 }
 
-esp_err_t ch450_write_num(ch450_handle_t dev, uint8_t seg_idx, uint8_t val)
+esp_err_t iot_ch450_write_num(ch450_handle_t dev, uint8_t seg_idx, uint8_t val)
 {
     ch450_cmd_t seg_cmd = CH450_SEG_2 + seg_idx * 2;
     uint8_t wr_val;
@@ -120,6 +120,6 @@ esp_err_t ch450_write_num(ch450_handle_t dev, uint8_t seg_idx, uint8_t val)
             break;
 
     }
-    return ch450_write(dev, seg_cmd, wr_val);
+    return iot_ch450_write(dev, seg_cmd, wr_val);
 }
 

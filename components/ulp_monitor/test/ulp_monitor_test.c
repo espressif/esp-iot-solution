@@ -26,7 +26,7 @@
 #include "esp_system.h"
 #include "esp_log.h"
 #include "esp_deep_sleep.h"
-#include "ulp_monitor.h"
+#include "iot_ulp_monitor.h"
 #include <time.h>
 #include <sys/time.h>
 #include "esp32/ulp.h"
@@ -50,24 +50,24 @@ void ulp_monitor_test()
         int sleep_time_ms = (now.tv_sec - sleep_enter_time.tv_sec) * 1000 + (now.tv_usec - sleep_enter_time.tv_usec) / 1000;
         ESP_LOGI("ulp_monitor_test", "Time speet in deep sleep: %dms", sleep_time_ms);
         for (int i = 0; i < ADC_DATA_NUM+2; i++) {
-            printf("the data %d of adc is:%d\n", i, ulp_data_read(ULP_DATA_ADDR + ADC_DATA_OFFSET + i));
+            printf("the data %d of adc is:%d\n", i, iot_ulp_data_read(ULP_DATA_ADDR + ADC_DATA_OFFSET + i));
         }
         for (int i = 0; i < TEMP_DATA_NUM+2; i++) {
-            printf("the data %d of temprature is:%d\n", i, ulp_data_read(ULP_DATA_ADDR + TEMP_DATA_OFFSET + i));
+            printf("the data %d of temprature is:%d\n", i, iot_ulp_data_read(ULP_DATA_ADDR + TEMP_DATA_OFFSET + i));
         }
     }
     dac_output_enable(DAC_CHANNEL_1);
     dac_output_voltage(DAC_CHANNEL_1, 127);
     ESP_LOGI("ulp_monitor_test", "ulp deep sleep wakeup test");
     memset(RTC_SLOW_MEM, 0, CONFIG_ULP_COPROC_RESERVE_MEM);
-    ulp_monitor_init(ULP_PROGRAM_ADDR, ULP_DATA_ADDR);
+    iot_ulp_monitor_init(ULP_PROGRAM_ADDR, ULP_DATA_ADDR);
     //todo: to use the new-style definition of ADC_WIDTH_12Bit.
     adc1_config_width(ADC_WIDTH_12Bit);
     //todo: to use the new-style definition of ADC_ATTEN_11db
     adc1_config_channel_atten(ADC1_CHANNEL_6, ADC_ATTEN_11db);
-    ulp_add_adc_monitor(ADC1_CHANNEL_6, 10, 4000, ADC_DATA_OFFSET, ADC_DATA_NUM, true);
-    //ulp_add_temprature_monitor(0, 300, TEMP_DATA_OFFSET, TEMP_DATA_NUM, true);
-    ulp_monitor_start(3600 / 10);
+    iot_ulp_add_adc_monitor(ADC1_CHANNEL_6, 10, 4000, ADC_DATA_OFFSET, ADC_DATA_NUM, true);
+    //iot_ulp_add_temprature_monitor(0, 300, TEMP_DATA_OFFSET, TEMP_DATA_NUM, true);
+    iot_ulp_monitor_start(3600 / 10);
     gettimeofday(&sleep_enter_time, NULL);
     esp_deep_sleep_start();
 }

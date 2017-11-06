@@ -26,8 +26,8 @@
 #include "freertos/task.h"
 #include "esp_system.h"
 #include "unity.h"
-#include "bh1750.h"
-#include "i2c_bus.h"
+#include "iot_bh1750.h"
+#include "iot_i2c_bus.h"
 #include "esp_log.h"
 
 #define I2C_MASTER_SCL_IO           (gpio_num_t)21          /*!< gpio number for I2C master clock */

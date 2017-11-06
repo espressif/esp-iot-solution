@@ -29,7 +29,7 @@
 #include "driver/adc.h"
 #include "driver/gpio.h"
 #include "iot_touchpad.h"
-#include "led.h"
+#include "iot_led.h"
 #include "evb.h"
 
 #define COVER_DEBUG  0

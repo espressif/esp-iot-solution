@@ -55,9 +55,9 @@
 
 * ULP co-processor enables more convenient data acquisition and data storage. In this IoT Solution, we have specifically added a ulp_monitor module, with which the user can easily start the ULP co-processor by directly calling a .c function:[^2]
     1. ESP32 will read the data collected by the ULP co-processor during deep sleep from the RTC slow memory after booting, and upload them;
-    2. Call function ulp_monitor_init(ULP_PROGRAM_ADDR, ULP_DATA_ADDR) to set the addresses for ULP co-processor's program execution and data storage;
-    3. Call function ulp_add_adc_monitor or ulp_add_temprature_monitor to set the type of the data collected by the ULP co-processor and the wake-up conditions (these settings can be added at the same time);
-    4. Call function ulp_monitor_start() to set the sampling frequency and start the ULP co-processor;
+    2. Call function iot_ulp_monitor_init(ULP_PROGRAM_ADDR, ULP_DATA_ADDR) to set the addresses for ULP co-processor's program execution and data storage;
+    3. Call function iot_ulp_add_adc_monitor or iot_ulp_add_temprature_monitor to set the type of the data collected by the ULP co-processor and the wake-up conditions (these settings can be added at the same time);
+    4. Call function iot_ulp_monitor_start() to set the sampling frequency and start the ULP co-processor;
     5. Call function esp_deep_sleep_start() to enter Deep-sleep mode. Currently, the ULP co-processor can only support data acquisition enabled by on-chip temperature sensor and ADC.
 * In this scenario, ESP32 can collect data frequently with limited power consumption, thus reducing the requirement on sensors.
 

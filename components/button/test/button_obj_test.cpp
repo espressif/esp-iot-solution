@@ -26,7 +26,7 @@
 #include "freertos/task.h"
 #include "esp_system.h"
 #include "unity.h"
-#include "button.h"
+#include "iot_button.h"
 #include "esp_log.h"
 
 #define BUTTON_IO_NUM  GPIO_NUM_0

@@ -32,7 +32,7 @@
 #include "esp_log.h"
 #include "esp_wifi.h"
 #include "esp_sleep.h"
-#include "debugs.h"
+#include "iot_debugs.h"
 
 #define IOT_CHECK(tag, a, ret)  if(!(a)) {                                 \
         ESP_LOGE(tag,"%s:%d (%s)", __FILE__, __LINE__, __FUNCTION__);      \
@@ -129,7 +129,7 @@ static void debug_task(void *arg)
     }
 }
 
-esp_err_t debug_init(uart_port_t uart_num, int baud_rate, int tx_io, int rx_io)
+esp_err_t iot_debug_init(uart_port_t uart_num, int baud_rate, int tx_io, int rx_io)
 {
     uart_config_t uart_config = {
         .baud_rate = baud_rate,
@@ -150,7 +150,7 @@ esp_err_t debug_init(uart_port_t uart_num, int baud_rate, int tx_io, int rx_io)
     return ESP_OK;
 }
 
-esp_err_t debug_add_custom_cmd(const char *cmd, debug_cb_t cb, void *arg)
+esp_err_t iot_debug_add_custom_cmd(const char *cmd, debug_cb_t cb, void *arg)
 {
     POINTER_ASSERT(TAG, cmd);
     POINTER_ASSERT(TAG, cb);
@@ -183,18 +183,18 @@ esp_err_t debug_add_custom_cmd(const char *cmd, debug_cb_t cb, void *arg)
     return ESP_OK;
 }
 
-esp_err_t debug_add_cmd(const char *cmd, debug_cmd_type_t cmd_type)
+esp_err_t iot_debug_add_cmd(const char *cmd, debug_cmd_type_t cmd_type)
 {
     POINTER_ASSERT(TAG, cmd);
     switch (cmd_type) {
         case DEBUG_CMD_WIFI_INFO:
-            debug_add_custom_cmd(cmd, wifi_info_log, NULL);
+            iot_debug_add_custom_cmd(cmd, wifi_info_log, NULL);
             break;
         case DEBUG_CMD_WAKEUP_INFO:
-            debug_add_custom_cmd(cmd, wakeup_info_log, NULL);
+            iot_debug_add_custom_cmd(cmd, wakeup_info_log, NULL);
             break;
         case DEBUG_CMD_RESTART:
-            debug_add_custom_cmd(cmd, debug_restart, NULL);
+            iot_debug_add_custom_cmd(cmd, debug_restart, NULL);
             break;
         default:
             break;
@@ -202,14 +202,14 @@ esp_err_t debug_add_cmd(const char *cmd, debug_cmd_type_t cmd_type)
     return ESP_OK;
 }
 
-esp_err_t debug_add_cmd_group(debug_cmd_info_t debug_cmds[], int len)
+esp_err_t iot_debug_add_cmd_group(debug_cmd_info_t debug_cmds[], int len)
 {
     if (len <= 0) {
         return ESP_FAIL;
     }
     for (int i = 0; i < len; i++) {
         debug_cmd_info_t cmd_info = debug_cmds[i];
-        debug_add_custom_cmd(cmd_info.cmd, cmd_info.cb, cmd_info.arg);
+        iot_debug_add_custom_cmd(cmd_info.cmd, cmd_info.cb, cmd_info.arg);
     }
     return ESP_OK;
 }

@@ -26,8 +26,8 @@
 #include <string.h>
 #include "driver/i2c.h"
 #include "esp_log.h"
-#include "is31fl3218.h"
-#include "i2c_bus.h"
+#include "iot_is31fl3218.h"
+#include "iot_i2c_bus.h"
 
 static const char* tag = "IS31";
 
@@ -49,7 +49,7 @@ typedef struct
 /**
  * @brief set software shutdown mode
  */
-esp_err_t is31fl3218_write_reg(is31fl3218_handle_t fxled, is31fl3218_reg_t reg_addr, uint8_t *data, uint8_t data_num)
+esp_err_t iot_is31fl3218_write(is31fl3218_handle_t fxled, is31fl3218_reg_t reg_addr, uint8_t *data, uint8_t data_num)
 {
     is31fl3218_dev_t* led = (is31fl3218_dev_t*) fxled;
     IS31_PARAM_CHECK(NULL != data);
@@ -59,7 +59,7 @@ esp_err_t is31fl3218_write_reg(is31fl3218_handle_t fxled, is31fl3218_reg_t reg_a
     i2c_master_write_byte(cmd, reg_addr, IS31FL3218_ACK_CHECK_EN);
     i2c_master_write(cmd, data, data_num, IS31FL3218_ACK_CHECK_EN);
     i2c_master_stop(cmd);
-    int ret = i2c_bus_cmd_begin(led->bus, cmd, 500 / portTICK_RATE_MS);
+    int ret = iot_i2c_bus_cmd_begin(led->bus, cmd, 500 / portTICK_RATE_MS);
     IS31_CHECK_I2C_RES(ret);
     i2c_cmd_link_delete(cmd);
     return ret;
@@ -68,9 +68,9 @@ esp_err_t is31fl3218_write_reg(is31fl3218_handle_t fxled, is31fl3218_reg_t reg_a
 /**
  * @brief set software shutdown mode
  */
-esp_err_t is31fl3218_set_mode(is31fl3218_handle_t fxled, is31fl3218_mode_t mode)
+esp_err_t iot_is31fl3218_set_mode(is31fl3218_handle_t fxled, is31fl3218_mode_t mode)
 {
-    int ret = is31fl3218_write_reg(fxled, IS31FL3218_REG_SHUTDOWN, (uint8_t *) &mode, 1);
+    int ret = iot_is31fl3218_write(fxled, IS31FL3218_REG_SHUTDOWN, (uint8_t *) &mode, 1);
     return ret;
 }
 
@@ -82,7 +82,7 @@ esp_err_t is31fl3218_set_channel_duty(is31fl3218_handle_t fxled, uint32_t ch_bit
     int ret, i;
     for (i = 0; i < IS31FL3218_CH_NUM_MAX; i++) {
         if ((ch_bit >> i) & 0x1) {
-            ret = is31fl3218_write_reg(fxled, IS31FL3218_REG_PWM_1 + i, &duty, 1);
+            ret = iot_is31fl3218_write(fxled, IS31FL3218_REG_PWM_1 + i, &duty, 1);
             if (ret == ESP_OK) {
                 //PASS
             } else {
@@ -100,7 +100,7 @@ esp_err_t is31fl3218_channel_enable(is31fl3218_handle_t fxled, uint32_t ch_bit)
     for (int i = 0; i < 3; i++) {
         conl[i] = (ch_bit >> (i * 6)) & 0x3f;
     }
-    int ret = is31fl3218_write_reg(fxled, IS31FL3218_REG_CONL_1, (uint8_t *) (conl), 3);
+    int ret = iot_is31fl3218_write(fxled, IS31FL3218_REG_CONL_1, (uint8_t *) (conl), 3);
     return ret;
 }
 
@@ -110,22 +110,22 @@ esp_err_t is31fl3218_channel_enable(is31fl3218_handle_t fxled, uint32_t ch_bit)
 esp_err_t is31fl3218_update_register(is31fl3218_handle_t fxled)
 {
     uint8_t m = 1;
-    return is31fl3218_write_reg(fxled, IS31FL3218_REG_UPDATE, &m, 1);
+    return iot_is31fl3218_write(fxled, IS31FL3218_REG_UPDATE, &m, 1);
 }
 
 /**
  * @brief reset all register into default
  */
-esp_err_t is31fl3218_reset_register(is31fl3218_handle_t fxled)
+esp_err_t iot_is31fl3218_reset_register(is31fl3218_handle_t fxled)
 {
     uint8_t m = 1;
-    return is31fl3218_write_reg(fxled, IS31FL3218_REG_UPDATE, &m, 1);
+    return iot_is31fl3218_write(fxled, IS31FL3218_REG_UPDATE, &m, 1);
 }
 
-esp_err_t is31fl3218_write_pwm_regs(is31fl3218_handle_t fxled, uint8_t* duty, int len)
+esp_err_t iot_is31fl3218_write_pwm_regs(is31fl3218_handle_t fxled, uint8_t* duty, int len)
 {
     int ret;
-    ret = is31fl3218_write_reg(fxled, IS31FL3218_REG_PWM_1, duty, len);
+    ret = iot_is31fl3218_write(fxled, IS31FL3218_REG_PWM_1, duty, len);
     if (ret != ESP_OK) {
         IS31_CHECK_I2C_RES(ret);
         return ret;
@@ -138,7 +138,7 @@ esp_err_t is31fl3218_write_pwm_regs(is31fl3218_handle_t fxled, uint8_t* duty, in
     return ESP_OK;
 }
 
-esp_err_t is31fl3218_channel_set(is31fl3218_handle_t fxled, uint32_t ch_bit, uint8_t duty)
+esp_err_t iot_is31fl3218_channel_set(is31fl3218_handle_t fxled, uint32_t ch_bit, uint8_t duty)
 {
     esp_err_t ret;
     ret = is31fl3218_set_channel_duty(fxled, ch_bit, duty);
@@ -154,30 +154,30 @@ esp_err_t is31fl3218_channel_set(is31fl3218_handle_t fxled, uint32_t ch_bit, uin
     return ESP_OK;
 }
 
-esp_err_t is31fl3218_init(is31fl3218_handle_t fxled)
+esp_err_t iot_is31fl3218_init(is31fl3218_handle_t fxled)
 {
     IS31_PARAM_CHECK(NULL != fxled);
-    IS31_ERROR_CHECK(ESP_OK == is31fl3218_reset_register(fxled));
-    IS31_ERROR_CHECK(ESP_OK == is31fl3218_set_mode(fxled, IS31FL3218_MODE_NORMAL));
+    IS31_ERROR_CHECK(ESP_OK == iot_is31fl3218_reset_register(fxled));
+    IS31_ERROR_CHECK(ESP_OK == iot_is31fl3218_set_mode(fxled, IS31FL3218_MODE_NORMAL));
     IS31_ERROR_CHECK(ESP_OK == is31fl3218_channel_enable(fxled, IS31FL3218_CH_NUM_MAX_MASK));
     IS31_ERROR_CHECK(ESP_OK == is31fl3218_update_register(fxled));
     return ESP_OK;
 }
 
-is31fl3218_handle_t led_is31fl3218_create(i2c_bus_handle_t bus)
+is31fl3218_handle_t iot_is31fl3218_create(i2c_bus_handle_t bus)
 {
     is31fl3218_dev_t* led = (is31fl3218_dev_t*) calloc(1, sizeof(is31fl3218_dev_t));
     led->bus = bus;
     led->dev_addr = IS31FL3218_I2C_ID;
-    is31fl3218_init(led);
+    iot_is31fl3218_init(led);
     return (is31fl3218_handle_t) led;
 }
 
-esp_err_t led_is31fl3218_delete(is31fl3218_handle_t fxled, bool del_bus)
+esp_err_t iot_is31fl3218_delete(is31fl3218_handle_t fxled, bool del_bus)
 {
     is31fl3218_dev_t* led = (is31fl3218_dev_t*) fxled;
     if (del_bus) {
-        i2c_bus_delete(led->bus);
+        iot_i2c_bus_delete(led->bus);
         led->bus = NULL;
     }
     free(led);

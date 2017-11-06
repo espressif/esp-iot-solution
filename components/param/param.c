@@ -2,7 +2,7 @@
 #include "esp_spi_flash.h"
 #include "esp_log.h"
 #include "nvs.h"
-#include "param.h"
+#include "iot_param.h"
 
 #define PARAM_CHECK(tag, a, ret)  if(!(a)) {                                 \
         ESP_LOGE(tag,"%s:%d (%s)", __FILE__, __LINE__, __FUNCTION__);      \
@@ -14,7 +14,7 @@
 
 static const char* TAG = "param";
 
-esp_err_t param_save(const char* namespace, const char* key, void *param, uint16_t len)
+esp_err_t iot_param_save(const char* namespace, const char* key, void *param, uint16_t len)
 {
     esp_err_t ret = ESP_ERR_INVALID_ARG;
     PARAM_POINT_ASSERT(TAG, namespace, OPEN_FAIL);
@@ -34,7 +34,7 @@ OPEN_FAIL:
     return ret;
 }
 
-esp_err_t param_load(const char* namespace, const char* key, void* dest)
+esp_err_t iot_param_load(const char* namespace, const char* key, void* dest)
 {
     esp_err_t ret = ESP_ERR_INVALID_ARG;
     PARAM_POINT_ASSERT(TAG, namespace, OPEN_FAIL);

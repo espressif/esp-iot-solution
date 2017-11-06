@@ -25,33 +25,33 @@
 #include <stdio.h>
 #include "esp_log.h"
 #include "driver/i2c.h"
-#include "i2c_bus.h"
-#include "is31fl3736.h"
+#include "iot_i2c_bus.h"
+#include "iot_is31fl3736.h"
 
 CIs31fl3736::CIs31fl3736(CI2CBus *p_i2c_bus, gpio_num_t rst_io, is31fl3736_addr_pin_t addr1, is31fl3736_addr_pin_t addr2,
                          uint8_t cur_val)
 {
     bus = p_i2c_bus;
-    m_led_handle = dev_is31fl3736_create(p_i2c_bus->get_bus_handle(),  rst_io, addr1, addr2, cur_val);
+    m_led_handle = iot_is31fl3736_create(p_i2c_bus->get_bus_handle(),  rst_io, addr1, addr2, cur_val);
 }
 
 CIs31fl3736::~CIs31fl3736()
 {
-    dev_is31fl3736_delete(m_led_handle, false);
+    iot_is31fl3736_delete(m_led_handle, false);
     m_led_handle = NULL;
 }
 
 esp_err_t CIs31fl3736::fill_matrix(uint8_t duty, uint8_t* buf)
 {
-    return is31fl3736_fill_buf(m_led_handle, duty, buf);
+    return iot_is31fl3736_fill_buf(m_led_handle, duty, buf);
 }
 
 esp_err_t CIs31fl3736::write_reg(uint8_t reg_addr, uint8_t *data, uint8_t data_num)
 {
-    return is31fl3736_write_reg(m_led_handle, reg_addr, data, data_num);
+    return iot_is31fl3736_write(m_led_handle, reg_addr, data, data_num);
 }
 
 esp_err_t CIs31fl3736::set_page(uint8_t page_num)
 {
-    return is31fl3736_write_page(m_led_handle, page_num);
+    return iot_is31fl3736_write_page(m_led_handle, page_num);
 }

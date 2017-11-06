@@ -25,7 +25,7 @@
 #include "esp_system.h"
 #include "esp_sleep.h"
 #include "esp_log.h"
-#include "debugs.h"
+#include "iot_debugs.h"
 #include "unity.h"
 
 static const char *TAG = "debugs_test";
@@ -44,13 +44,13 @@ static void debug_deepsleep(void *arg)
 
 TEST_CASE("Debug cmd test", "[debug][iot]")
 {
-    debug_init(UART_NUM_1, 115200, 16, 17);
+    iot_debug_init(UART_NUM_1, 115200, 16, 17);
     debug_cmd_info_t cmd_group[] = {
         {"123", debug_123, NULL},
         {"deep sleep", debug_deepsleep, NULL}
     };
-    debug_add_cmd_group(cmd_group, sizeof(cmd_group)/sizeof(cmd_group[0]));
-    debug_add_cmd("wifi", DEBUG_CMD_WIFI_INFO);
-    debug_add_cmd("wakeup", DEBUG_CMD_WAKEUP_INFO);
-    debug_add_cmd("restart", DEBUG_CMD_RESTART);
+    iot_debug_add_cmd_group(cmd_group, sizeof(cmd_group)/sizeof(cmd_group[0]));
+    iot_debug_add_cmd("wifi", DEBUG_CMD_WIFI_INFO);
+    iot_debug_add_cmd("wakeup", DEBUG_CMD_WAKEUP_INFO);
+    iot_debug_add_cmd("restart", DEBUG_CMD_RESTART);
 }

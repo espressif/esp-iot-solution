@@ -37,5 +37,5 @@
   *     - ESP_OK: succeed
   *     - others: fail
   */
-esp_err_t ota_start(const char *server_ip, uint16_t server_port, const char *file_dir, uint32_t ticks_to_wait);
+esp_err_t iot_ota_start(const char *server_ip, uint16_t server_port, const char *file_dir, uint32_t ticks_to_wait);
 #endif

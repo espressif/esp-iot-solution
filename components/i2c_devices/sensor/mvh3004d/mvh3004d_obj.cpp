@@ -25,33 +25,33 @@
 #include <stdio.h>
 #include "esp_log.h"
 #include "driver/i2c.h"
-#include "i2c_bus.h"
-#include "mvh3004d.h"
+#include "iot_i2c_bus.h"
+#include "iot_mvh3004d.h"
 
 CMvh3004d::CMvh3004d(CI2CBus *p_i2c_bus, uint8_t addr)
 {
     bus = p_i2c_bus;
-    m_sensor_handle = sensor_mvh3004d_create(bus->get_bus_handle(), addr);
+    m_sensor_handle = iot_mvh3004d_create(bus->get_bus_handle(), addr);
 
 }
 
 CMvh3004d::~CMvh3004d()
 {
-    sensor_mvh3004d_delete(m_sensor_handle, false);
+    iot_mvh3004d_delete(m_sensor_handle, false);
     m_sensor_handle = NULL;
 }
 
 float CMvh3004d::read_temperature()
 {
     float val;
-    mvh3004d_get_temperature(m_sensor_handle, &val);
+    iot_mvh3004d_get_temperature(m_sensor_handle, &val);
     return val;
 }
 
 float CMvh3004d::read_humidity()
 {
     float val;
-    mvh3004d_get_huminity(m_sensor_handle, &val);
+    iot_mvh3004d_get_huminity(m_sensor_handle, &val);
     return val;
 }
 

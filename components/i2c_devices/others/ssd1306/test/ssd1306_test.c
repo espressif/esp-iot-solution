@@ -35,11 +35,11 @@
 #include "unity.h"
 #include "esp_deep_sleep.h"
 
-#include "touchpad.h"
+#include "iot_touchpad.h"
 #include "driver/touch_pad.h"
 #include "driver/gpio.h"
-#include "i2c_bus.h"
-#include "ssd1306.h"
+#include "iot_i2c_bus.h"
+#include "iot_ssd1306.h"
 #include "ssd1306_fonts.h"
 
 #define	OLED_SHOW_LEFT_TOUCH		9
@@ -53,7 +53,7 @@ static const char* TAG = "ssd1306 test";
 static i2c_bus_handle_t i2c_bus = NULL;
 static ssd1306_handle_t dev = NULL;
 
-touchpad_handle_t touchpad_dev0, touchpad_dev1;
+tp_handle_t touchpad_dev0, touchpad_dev1;
 
 time_t g_now;
 
@@ -68,44 +68,42 @@ esp_err_t ssd1306_show_time(ssd1306_handle_t dev)
     tzset();
     localtime_r(&g_now, &timeinfo);
     strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
-//ets_printf("The current date/time in Shanghai is: %s\n", strftime_buf);
 
-    ssd1306_draw_3216char(dev, 0, 16, strftime_buf[11]);
-    ssd1306_draw_3216char(dev, 16, 16, strftime_buf[12]);
-    ssd1306_draw_3216char(dev, 32, 16, strftime_buf[13]);
-    ssd1306_draw_3216char(dev, 48, 16, strftime_buf[14]);
-    ssd1306_draw_3216char(dev, 64, 16, strftime_buf[15]);
-    ssd1306_draw_1616char(dev, 80, 32, strftime_buf[16]);
-    ssd1306_draw_1616char(dev, 96, 32, strftime_buf[17]);
-    ssd1306_draw_1616char(dev, 112, 32, strftime_buf[18]);
-//ssd1306_draw_bitmap(87, 16, &c_chBmp4016[0], 40, 16);
+    iot_ssd1306_draw_3216char(dev, 0, 16, strftime_buf[11]);
+    iot_ssd1306_draw_3216char(dev, 16, 16, strftime_buf[12]);
+    iot_ssd1306_draw_3216char(dev, 32, 16, strftime_buf[13]);
+    iot_ssd1306_draw_3216char(dev, 48, 16, strftime_buf[14]);
+    iot_ssd1306_draw_3216char(dev, 64, 16, strftime_buf[15]);
+    iot_ssd1306_draw_1616char(dev, 80, 32, strftime_buf[16]);
+    iot_ssd1306_draw_1616char(dev, 96, 32, strftime_buf[17]);
+    iot_ssd1306_draw_1616char(dev, 112, 32, strftime_buf[18]);
 
     char *day = strftime_buf;
     day[3] = '\0';
-    ssd1306_display_string(dev, 87, 16, (const uint8_t *) day, 14, 1);
-    ssd1306_display_string(dev, 0, 52, (const uint8_t *) "MUSIC", 12, 0);
-    ssd1306_display_string(dev, 52, 52, (const uint8_t *) "MENU", 12, 0);
-    ssd1306_display_string(dev, 98, 52, (const uint8_t *) "PHONE", 12, 0);
+    iot_ssd1306_draw_string(dev, 87, 16, (const uint8_t *) day, 14, 1);
+    iot_ssd1306_draw_string(dev, 0, 52, (const uint8_t *) "MUSIC", 12, 0);
+    iot_ssd1306_draw_string(dev, 52, 52, (const uint8_t *) "MENU", 12, 0);
+    iot_ssd1306_draw_string(dev, 98, 52, (const uint8_t *) "PHONE", 12, 0);
 
-    return ssd1306_refresh_gram(dev);
+    return iot_ssd1306_refresh_gram(dev);
 }
 
 esp_err_t ssd1306_show_signs(ssd1306_handle_t dev)
 {
     esp_err_t ret;
-    ret = ssd1306_clear_screen(dev, 0x00);
+    ret = iot_ssd1306_clear_screen(dev, 0x00);
     if (ret == ESP_FAIL) {
         return ret;
     }
 
-    ssd1306_draw_bitmap(dev, 0, 2, &c_chSingal816[0], 16, 8);
-    ssd1306_draw_bitmap(dev, 24, 2, &c_chBluetooth88[0], 8, 8);
-    ssd1306_draw_bitmap(dev, 40, 2, &c_chMsg816[0], 16, 8);
-    ssd1306_draw_bitmap(dev, 64, 2, &c_chGPRS88[0], 8, 8);
-    ssd1306_draw_bitmap(dev, 90, 2, &c_chAlarm88[0], 8, 8);
-    ssd1306_draw_bitmap(dev, 112, 2, &c_chBat816[0], 16, 8);
+    iot_ssd1306_draw_bitmap(dev, 0, 2, &c_chSingal816[0], 16, 8);
+    iot_ssd1306_draw_bitmap(dev, 24, 2, &c_chBluetooth88[0], 8, 8);
+    iot_ssd1306_draw_bitmap(dev, 40, 2, &c_chMsg816[0], 16, 8);
+    iot_ssd1306_draw_bitmap(dev, 64, 2, &c_chGPRS88[0], 8, 8);
+    iot_ssd1306_draw_bitmap(dev, 90, 2, &c_chAlarm88[0], 8, 8);
+    iot_ssd1306_draw_bitmap(dev, 112, 2, &c_chBat816[0], 16, 8);
 
-    return ssd1306_refresh_gram(dev);
+    return iot_ssd1306_refresh_gram(dev);
 }
 /**
  * @brief i2c master initialization
@@ -119,28 +117,27 @@ static void i2c_bus_init(void)
     conf.scl_io_num = OLED_IIC_SCL_NUM;
     conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
     conf.master.clk_speed = OLED_IIC_FREQ_HZ;
-    i2c_bus = i2c_bus_create(OLED_IIC_NUM, &conf);
+    i2c_bus = iot_i2c_bus_create(OLED_IIC_NUM, &conf);
 }
 
 static void dev_ssd1306_initialization(void)
 {
-    printf("oled task start!\n");
+    ESP_LOGI(TAG, "oled task start!");
     i2c_bus_init();
-    dev = dev_ssd1306_create(i2c_bus, 0x3C);
-    ssd1306_refresh_gram(dev);
+    dev = iot_ssd1306_create(i2c_bus, 0x3C);
+    iot_ssd1306_refresh_gram(dev);
     ssd1306_show_signs(dev);
-    printf("oled finish!\n");
+    ESP_LOGI(TAG, "oled finish!");
 }
 
 static void ssd1306_test_task(void* pvParameters)
 {
-    int cnt = 2;
     dev_ssd1306_initialization();
     while (1) {
         ssd1306_show_time(dev);
         vTaskDelay(100 / portTICK_RATE_MS);
     }
-    dev_ssd1306_delete(dev, true);
+    iot_ssd1306_delete(dev, true);
     vTaskDelete(NULL);
 }
 
@@ -167,10 +164,10 @@ static void power_cntl_off()
 
 static void tap_cb(void *arg)
 {
-    touchpad_handle_t touchpad_dev = (touchpad_handle_t) arg;
-    touch_pad_t tp_num = touchpad_num_get(touchpad_dev);
-    printf("tap callback of touch pad num %d\n", tp_num);
-    printf("deep sleep start\n");
+    tp_handle_t touchpad_dev = (tp_handle_t) arg;
+    touch_pad_t tp_num = iot_tp_num_get(touchpad_dev);
+    ESP_LOGI(TAG, "tap callback of touch pad num %d", tp_num);
+    ESP_LOGI(TAG, "deep sleep start");
 //    power_cntl_off();
 //    esp_deep_sleep_enable_touchpad_wakeup();
 //    esp_deep_sleep_start();
@@ -183,13 +180,13 @@ static void ssd1306_test()
     xTaskCreate(&ssd1306_test_task, "ssd1306_test_task", 2048 * 2, NULL, 5,
             NULL);
 
-    touchpad_dev0 = touchpad_create(OLED_SHOW_LEFT_TOUCH,
-    TOUCHPAD_THRES_PERCENT, TOUCHPAD_FILTER_INTERVAL);
-    touchpad_dev1 = touchpad_create(OLED_SHOW_RIGHT_TOUCH,
-    TOUCHPAD_THRES_PERCENT, TOUCHPAD_FILTER_INTERVAL);
+    touchpad_dev0 = iot_tp_create(OLED_SHOW_LEFT_TOUCH,
+    TOUCHPAD_THRES_PERCENT, 0, TOUCHPAD_FILTER_INTERVAL);
+    touchpad_dev1 = iot_tp_create(OLED_SHOW_RIGHT_TOUCH,
+    TOUCHPAD_THRES_PERCENT, 0, TOUCHPAD_FILTER_INTERVAL);
 
-    touchpad_add_cb(touchpad_dev0, TOUCHPAD_CB_RELEASE, tap_cb, touchpad_dev0);
-    touchpad_add_cb(touchpad_dev1, TOUCHPAD_CB_RELEASE, tap_cb, touchpad_dev1);
+    iot_tp_add_cb(touchpad_dev0, TOUCHPAD_CB_RELEASE, tap_cb, touchpad_dev0);
+    iot_tp_add_cb(touchpad_dev1, TOUCHPAD_CB_RELEASE, tap_cb, touchpad_dev1);
 
 
 //    vTaskDelay((30 * 1000) / portTICK_RATE_MS);

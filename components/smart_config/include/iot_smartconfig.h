@@ -8,7 +8,7 @@
  * @brief Get smartconfig status
  * @return Smartconfig status
  */
-smartconfig_status_t sc_get_status();
+smartconfig_status_t iot_sc_get_status();
 
 /**
   * @brief  SmartConfig initialize.
@@ -18,7 +18,7 @@ smartconfig_status_t sc_get_status();
   *     - ESP_OK: succeed
   *     - others: fail
   */
-esp_err_t sc_setup(smartconfig_type_t sc_type, wifi_mode_t wifi_mode, bool fast_mode_en);
+esp_err_t iot_sc_setup(smartconfig_type_t sc_type, wifi_mode_t wifi_mode, bool fast_mode_en);
 
 /**
   * @brief  Start SmartConfig .
@@ -28,7 +28,7 @@ esp_err_t sc_setup(smartconfig_type_t sc_type, wifi_mode_t wifi_mode, bool fast_
   *     - ESP_FAIL: fail
   *     - ESP_TIMEOUT: timeout
   */
-esp_err_t sc_start(uint32_t ticks_to_wait);
+esp_err_t iot_sc_start(uint32_t ticks_to_wait);
 
 /**
  * @brief Smartconfig stop

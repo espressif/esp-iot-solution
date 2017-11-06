@@ -28,7 +28,7 @@
 #include "esp_log.h"
 #include "esp_wifi.h"
 #include "esp_event_loop.h"
-#include "button.h"
+#include "iot_button.h"
 #ifdef CLOUD_ALINK
 #include "product.h"
 #include "esp_alink.h"
@@ -109,11 +109,11 @@ static void initialise_wifi(void)
 
 static void initialise_key(void)
 {
-    button_handle_t btn_handle = button_create(CONFIG_JOYLINK_SMNT_BUTTON_NUM, BUTTON_ACTIVE_LOW, BUTTON_SINGLE_TRIGGER, 1);
-    button_add_cb(btn_handle, BUTTON_PUSH_CB, joylink_button_smnt_tap_cb, "PUSH", 50 / portTICK_PERIOD_MS);
+    button_handle_t btn_handle = iot_button_create(CONFIG_JOYLINK_SMNT_BUTTON_NUM, BUTTON_ACTIVE_LOW, BUTTON_SINGLE_TRIGGER, 1);
+    iot_button_add_cb(btn_handle, BUTTON_PUSH_CB, joylink_button_smnt_tap_cb, "PUSH", 50 / portTICK_PERIOD_MS);
 
-    btn_handle = button_create(CONFIG_JOYLINK_RESET_BUTTON_NUM, BUTTON_ACTIVE_LOW, BUTTON_SINGLE_TRIGGER, 1);
-    button_add_cb(btn_handle, BUTTON_PUSH_CB, joylink_button_reset_tap_cb, "PUSH", 50 / portTICK_PERIOD_MS);
+    btn_handle = iot_button_create(CONFIG_JOYLINK_RESET_BUTTON_NUM, BUTTON_ACTIVE_LOW, BUTTON_SINGLE_TRIGGER, 1);
+    iot_button_add_cb(btn_handle, BUTTON_PUSH_CB, joylink_button_reset_tap_cb, "PUSH", 50 / portTICK_PERIOD_MS);
 }
 #endif
 

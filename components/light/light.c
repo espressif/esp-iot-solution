@@ -30,7 +30,7 @@
 #include "esp_log.h"
 #include "soc/ledc_reg.h"
 #include "driver/ledc.h"
-#include "light.h"
+#include "iot_light.h"
 
 static const char* TAG = "light";
 
@@ -112,7 +112,7 @@ static esp_err_t light_channel_delete(light_channel_t* light_channel)
     return ESP_OK;
 }
 
-light_handle_t light_create(ledc_timer_t timer, ledc_mode_t speed_mode, uint32_t freq_hz, uint8_t channel_num, ledc_timer_bit_t timer_bit) 
+light_handle_t iot_light_create(ledc_timer_t timer, ledc_mode_t speed_mode, uint32_t freq_hz, uint8_t channel_num, ledc_timer_bit_t timer_bit) 
 {
     IOT_CHECK(TAG, channel_num != 0, NULL);
     ledc_timer_config_t timer_conf = {
@@ -141,7 +141,7 @@ light_handle_t light_create(ledc_timer_t timer, ledc_mode_t speed_mode, uint32_t
     return (light_handle_t)light_ptr;
 }
 
-esp_err_t light_delete(light_handle_t light_handle)
+esp_err_t iot_light_delete(light_handle_t light_handle)
 {
     light_t* light = (light_t*)light_handle;
     POINT_ASSERT(TAG, light_handle);
@@ -168,7 +168,7 @@ FREE_MEM:
     return ESP_OK;
 }
 
-esp_err_t light_channel_regist(light_handle_t light_handle, uint8_t channel_idx, gpio_num_t io_num, ledc_channel_t channel)
+esp_err_t iot_light_channel_regist(light_handle_t light_handle, uint8_t channel_idx, gpio_num_t io_num, ledc_channel_t channel)
 {
     light_t* light = (light_t*)light_handle;
     POINT_ASSERT(TAG, light_handle);
@@ -185,7 +185,7 @@ esp_err_t light_channel_regist(light_handle_t light_handle, uint8_t channel_idx,
     return ESP_OK;
 }
 
-esp_err_t light_duty_write(light_handle_t light_handle, uint8_t channel_id, uint32_t duty, light_duty_mode_t duty_mode)
+esp_err_t iot_light_duty_write(light_handle_t light_handle, uint8_t channel_id, uint32_t duty, light_duty_mode_t duty_mode)
 {
     light_t* light = (light_t*)light_handle;
     POINT_ASSERT(TAG, light_handle);
@@ -209,7 +209,7 @@ esp_err_t light_duty_write(light_handle_t light_handle, uint8_t channel_id, uint
     return ESP_OK;
 }
 
-esp_err_t light_breath_write(light_handle_t light_handle, uint8_t channel_id, int breath_period_ms)
+esp_err_t iot_light_breath_write(light_handle_t light_handle, uint8_t channel_id, int breath_period_ms)
 {
     light_t* light = (light_t*)light_handle;
     POINT_ASSERT(TAG, light_handle);
@@ -233,7 +233,7 @@ esp_err_t light_breath_write(light_handle_t light_handle, uint8_t channel_id, in
     return ESP_OK;
 }
 
-esp_err_t light_blink_start(light_handle_t light_handle, uint32_t channel_mask, uint32_t period_ms)
+esp_err_t iot_light_blink_starte(light_handle_t light_handle, uint32_t channel_mask, uint32_t period_ms)
 {
     light_t* light = (light_t*)light_handle;
     POINT_ASSERT(TAG, light_handle);
@@ -251,16 +251,16 @@ esp_err_t light_blink_start(light_handle_t light_handle, uint32_t channel_mask, 
                 xTimerStop(light->channel_group[i]->timer, portMAX_DELAY);
             }
             if (channel_mask & 1<<i) {
-                light_duty_write(light_handle, i, (1 << LEDC_TIMER_10_BIT) / 2, LIGHT_SET_DUTY_DIRECTLY);
+                iot_light_duty_write(light_handle, i, (1 << LEDC_TIMER_10_BIT) / 2, LIGHT_SET_DUTY_DIRECTLY);
             } else {
-                light_duty_write(light_handle, i, 0, LIGHT_SET_DUTY_DIRECTLY);
+                iot_light_duty_write(light_handle, i, 0, LIGHT_SET_DUTY_DIRECTLY);
             }
         }
     }
     return ESP_OK;
 }
 
-esp_err_t light_blink_stop(light_handle_t light_handle)
+esp_err_t iot_light_blink_stop(light_handle_t light_handle)
 {
     light_t* light = (light_t*)light_handle;
     POINT_ASSERT(TAG, light_handle);
@@ -272,7 +272,7 @@ esp_err_t light_blink_stop(light_handle_t light_handle)
     };
     ERR_ASSERT(TAG, ledc_timer_config( &timer_conf), ESP_FAIL);
     for (int i = 0; i < light->channel_num; i++) {
-        light_duty_write(light_handle, i, 0, LIGHT_SET_DUTY_DIRECTLY);
+        iot_light_duty_write(light_handle, i, 0, LIGHT_SET_DUTY_DIRECTLY);
     }
     return ESP_OK;
 }

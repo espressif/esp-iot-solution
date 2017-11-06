@@ -1,6 +1,5 @@
 #ifndef _IOT_PARAM_H_
 #define _IOT_PARAM_H_
-
 /**
   * @brief  save param to flash with protect
   *
@@ -13,7 +12,7 @@
   *     - ESP_OK: succeed
   *     - others: fail
   */
-esp_err_t param_save(const char* namespace, const char* key, void* param, uint16_t len);
+esp_err_t iot_param_save(const char* namespace, const char* key, void* param, uint16_t len);
 
 /**
   * @brief  read param from flash
@@ -26,6 +25,6 @@ esp_err_t param_save(const char* namespace, const char* key, void* param, uint16
   *     - ESP_OK: succeed
   *     - others: fail
   */
-esp_err_t param_load(const char* namespace, const char* key, void* dest);
+esp_err_t iot_param_load(const char* namespace, const char* key, void* dest);
 
 #endif

@@ -32,7 +32,7 @@
 #include "driver/gpio.h"
 #include "driver/pcnt.h"
 #include "esp_log.h"
-#include "power_meter.h"
+#include "iot_power_meter.h"
 #include "sys/time.h"
 
 #define PM_PCNT_CHANNEL     CONFIG_POWER_METER_PCNT_CHANNEL
@@ -172,7 +172,7 @@ static esp_err_t powermeter_pin_delete(pm_pin_t* pm_pin)
     return ESP_OK;
 }
 
-pm_handle_t powermeter_create(pm_config_t pm_config)
+pm_handle_t iot_powermeter_create(pm_config_t pm_config)
 {
     if (g_pm_num >= PM_MAX) {
         ESP_LOGE(TAG, "too many powermeters created");
@@ -220,7 +220,7 @@ pm_handle_t powermeter_create(pm_config_t pm_config)
     return (pm_handle_t) pm_dev;
 }
 
-esp_err_t powermeter_delete(pm_handle_t pm_handle)
+esp_err_t iot_powermeter_delete(pm_handle_t pm_handle)
 {
     pm_dev_t* pm_dev = (pm_dev_t*) pm_handle;
     POINT_ASSERT(TAG, pm_handle);
@@ -245,7 +245,7 @@ esp_err_t powermeter_delete(pm_handle_t pm_handle)
     return ESP_OK;
 }
 
-esp_err_t powermeter_change_mode(pm_handle_t pm_handle, pm_mode_t mode)
+esp_err_t iot_powermeter_change_mode(pm_handle_t pm_handle, pm_mode_t mode)
 {
     POINT_ASSERT(TAG, pm_handle);
     if (mode > PM_SINGLE_VOLTAGE || mode < 0) {
@@ -270,7 +270,7 @@ esp_err_t powermeter_change_mode(pm_handle_t pm_handle, pm_mode_t mode)
     }
 }
 
-uint32_t powermeter_read(pm_handle_t pm_handle, pm_value_type_t value_type)
+uint32_t iot_powermeter_read(pm_handle_t pm_handle, pm_value_type_t value_type)
 {
     if (pm_handle == NULL) {
         ESP_LOGE(TAG, "argument check error");

@@ -26,7 +26,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/i2s.h"
-#include "dac_audio.h"
+#include "iot_dac_audio.h"
 #include "unity.h"
 #include "ja_alert_e2.h"
 #include "ja_alert.h"
@@ -65,11 +65,11 @@ void audio_test()
             {"audio_prompt_02", audio_prompt_e2, sizeof(audio_prompt_e2)},
 
     };
-    dac = dac_audio_create(0, 8000, 16, I2S_DAC_CHANNEL_RIGHT_EN, 1024, true);
+    dac = iot_dac_audio_create(0, 8000, 16, I2S_DAC_CHANNEL_RIGHT_EN, 1024, true);
     while (1) {
         for (int i = 0; i < sizeof(playlist)/sizeof(dac_audio_item_t); i++) {
             printf("playing file[%d]: %s\n", i, playlist[i].name);
-            dac_audio_play(dac, playlist[i].data, playlist[i].length, portMAX_DELAY);
+            iot_dac_audio_play(dac, playlist[i].data, playlist[i].length, portMAX_DELAY);
             vTaskDelay(500 / portTICK_PERIOD_MS);
         }
     }

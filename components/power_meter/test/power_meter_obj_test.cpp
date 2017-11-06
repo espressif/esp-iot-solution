@@ -24,7 +24,7 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "power_meter.h"
+#include "iot_power_meter.h"
 #include "esp_log.h"
 #include "unity.h"
 

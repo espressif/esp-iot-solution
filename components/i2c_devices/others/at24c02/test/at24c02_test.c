@@ -29,8 +29,8 @@
 #include "unity.h"
 #include "esp_log.h"
 #include "driver/i2c.h"
-#include "at24c02.h"
-#include "i2c_bus.h"
+#include "iot_at24c02.h"
+#include "iot_i2c_bus.h"
 
 #define I2C_MASTER_SCL_IO           21          /*!< gpio number for I2C master clock IO21*/
 #define I2C_MASTER_SDA_IO           15          /*!< gpio number for I2C master data  IO15*/
@@ -54,13 +54,13 @@ static void i2c_bus_init()
     conf.scl_io_num = I2C_MASTER_SCL_IO;
     conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
     conf.master.clk_speed = I2C_MASTER_FREQ_HZ;
-    i2c_bus = i2c_bus_create(I2C_MASTER_NUM, &conf);
+    i2c_bus = iot_i2c_bus_create(I2C_MASTER_NUM, &conf);
 }
 
 void at24c02_init()
 {
     i2c_bus_init();
-    dev = dev_at24c02_create(i2c_bus, 0x50);
+    dev = iot_at24c02_create(i2c_bus, 0x50);
 }
 
 void at24c02_test_task(void* pvParameters)
@@ -69,36 +69,36 @@ void at24c02_test_task(void* pvParameters)
     int cnt = 2;
     while (cnt--) {
         /****One data Test****/
-        at24c02_write_byte(dev, 0x20, 0x55);
+        iot_at24c02_write_byte(dev, 0x20, 0x55);
         vTaskDelay(100 / portTICK_RATE_MS);
 
-        at24c02_read_byte(dev, 0x20, &ret);
+        iot_at24c02_read_byte(dev, 0x20, &ret);
         printf("Value of Address 0x20 Last:%x\n", ret);
 
-        at24c02_write_byte(dev, 0x20, 0x23);
+        iot_at24c02_write_byte(dev, 0x20, 0x23);
         vTaskDelay(100 / portTICK_RATE_MS);
 
-        at24c02_read_byte(dev, 0x20, &ret);
+        iot_at24c02_read_byte(dev, 0x20, &ret);
         printf("Value of Address 0x20:%x\n", ret);
 
         /****** some data Test ****/
         uint8_t data[5] = { 0x10, 0x11, 0x12, 0x13, 0x14 };
-        at24c02_write(dev, 0x20, sizeof(data), data);
+        iot_at24c02_write(dev, 0x20, sizeof(data), data);
         vTaskDelay(100 / portTICK_RATE_MS);
 
-        at24c02_read(dev, 0x20, sizeof(data), data);
+        iot_at24c02_read(dev, 0x20, sizeof(data), data);
         printf("Value start Address 0x20 Last:%x,%x,%x,%x,%x,\n", data[0],
                 data[1], data[2], data[3], data[4]);
 
         uint8_t data1[5] = { 0x22, 0x23, 0x24, 0x25, 0x26 };
-        at24c02_write(dev, 0x20, sizeof(data1), data1);
+        iot_at24c02_write(dev, 0x20, sizeof(data1), data1);
         vTaskDelay(100 / portTICK_RATE_MS);
 
-        at24c02_read(dev, 0x20, sizeof(data1), data1);
+        iot_at24c02_read(dev, 0x20, sizeof(data1), data1);
         printf("Value start Address 0x20:%x,%x,%x,%x,%x,\n", data1[0], data1[1],
                 data1[2], data1[3], data1[4]);
     }
-    dev_at24c02_delete(dev, true);
+    iot_at24c02_delete(dev, true);
     vTaskDelete(NULL);
 }
 

@@ -28,14 +28,14 @@
 #include "freertos/queue.h"
 #include <string.h>
 #include "esp_log.h"
-#include "power_meter.h"
+#include "iot_power_meter.h"
 #include "driver/pcnt.h"
-#include "button.h"
-#include "relay.h"
+#include "iot_button.h"
+#include "iot_relay.h"
 #include "iot_touchpad.h"
-#include "led.h"
+#include "iot_led.h"
 #include "socket_device.h"
-#include "param.h"
+#include "iot_param.h"
 #include "socket_config.h"
 
 #define TAG "socket"
@@ -137,22 +137,22 @@ static void socket_unit_set(socket_unit_t* socket_unit, socket_status_t state)
     if (state == SOCKET_OFF) {
         *(socket_unit->state_ptr) = SOCKET_OFF;
         if (socket_unit->relay_handle != NULL) {
-            relay_state_write(socket_unit->relay_handle, RELAY_STATUS_OPEN);
+            iot_relay_state_write(socket_unit->relay_handle, RELAY_STATUS_OPEN);
         }
         if (socket_unit->led_handle != NULL) {
-            led_state_write(socket_unit->led_handle, LED_OFF);
+            iot_led_state_write(socket_unit->led_handle, LED_OFF);
         }
     } else {
         *(socket_unit->state_ptr) = SOCKET_ON;
         if (socket_unit->relay_handle != NULL) {
-            relay_state_write(socket_unit->relay_handle, RELAY_STATUS_CLOSE);
+            iot_relay_state_write(socket_unit->relay_handle, RELAY_STATUS_CLOSE);
         }
         if (socket_unit->led_handle != NULL) {
-            led_state_write(socket_unit->led_handle, LED_ON);
+            iot_led_state_write(socket_unit->led_handle, LED_ON);
         }
     }
     if (g_socket != NULL) {
-        param_save(SOCKET_NAME_SPACE, SOCKET_PARAM_KEY, &(g_socket->save_param), sizeof(g_socket->save_param));
+        iot_param_save(SOCKET_NAME_SPACE, SOCKET_PARAM_KEY, &(g_socket->save_param), sizeof(g_socket->save_param));
     }
 }
 
@@ -190,9 +190,9 @@ void powermeter_task(void* arg)
     socket_dev_t* socket_dev = (socket_dev_t*) arg;
     while(1) {
         vTaskDelay(5000 / portTICK_RATE_MS);
-        ESP_LOGI(TAG, "value of power:%d", powermeter_read(socket_dev->pm_handle, PM_POWER));
-        ESP_LOGI(TAG, "value of voltage:%d", powermeter_read(socket_dev->pm_handle, PM_VOLTAGE));
-        ESP_LOGI(TAG, "value of current:%d", powermeter_read(socket_dev->pm_handle, PM_CURRENT));
+        ESP_LOGI(TAG, "value of power:%d", iot_powermeter_read(socket_dev->pm_handle, PM_POWER));
+        ESP_LOGI(TAG, "value of voltage:%d", iot_powermeter_read(socket_dev->pm_handle, PM_VOLTAGE));
+        ESP_LOGI(TAG, "value of current:%d", iot_powermeter_read(socket_dev->pm_handle, PM_CURRENT));
     }
     vTaskDelete(NULL);
 }
@@ -221,13 +221,13 @@ esp_err_t socket_net_status_write(socket_handle_t socket_handle, socket_net_stat
     socket_dev_t* socket_dev = (socket_dev_t*) socket_handle;
     switch (net_sta) {
         case SOCKET_STA_DISCONNECTED:
-            led_state_write(socket_dev->net_led, LED_QUICK_BLINK);
+            iot_led_state_write(socket_dev->net_led, LED_QUICK_BLINK);
             break;
         case SOCKET_CONNECTING_CLOUD:
-            led_state_write(socket_dev->net_led, LED_SLOW_BLINK);
+            iot_led_state_write(socket_dev->net_led, LED_SLOW_BLINK);
             break;
         case SOCKET_CLOUD_CONNECTED:
-            led_state_write(socket_dev->net_led, LED_ON);
+            iot_led_state_write(socket_dev->net_led, LED_ON);
             break;
         default:
             break;
@@ -243,12 +243,12 @@ socket_handle_t socket_init(SemaphoreHandle_t xSemWriteInfo)
     socket_dev_t* socket_dev = (socket_dev_t*) calloc(1, sizeof(socket_dev_t));
     g_socket = socket_dev;
     memset(socket_dev, 0, sizeof(socket_dev_t));
-    param_load(SOCKET_NAME_SPACE, SOCKET_PARAM_KEY, &socket_dev->save_param);
+    iot_param_load(SOCKET_NAME_SPACE, SOCKET_PARAM_KEY, &socket_dev->save_param);
     socket_dev->xSemWriteInfo = xSemWriteInfo;
 
     /* create net led */
-    socket_dev->net_led = led_create(NET_LED_NUM, LED_DARK_LEVEL);
-    led_state_write(socket_dev->net_led, LED_QUICK_BLINK);
+    socket_dev->net_led = iot_led_create(NET_LED_NUM, LED_DARK_LEVEL);
+    iot_led_state_write(socket_dev->net_led, LED_QUICK_BLINK);
 
 #if SOCKET_POWER_METER_ENABLE
     /* create a power meter object */
@@ -266,17 +266,17 @@ socket_handle_t socket_init(SemaphoreHandle_t xSemWriteInfo)
         .sel_level = 0,
         .pm_mode = PM_SINGLE_VOLTAGE
     };
-    socket_dev->pm_handle = powermeter_create(pm_conf);
+    socket_dev->pm_handle = iot_powermeter_create(pm_conf);
     xTaskCreate(powermeter_task, "powermeter_task", 2048, socket_dev, 5, NULL);
 #endif
     relay_io_t relay_io;
     /* create a button object as the main button */
-    socket_dev->main_btn = button_create(BUTTON_IO_NUM_MAIN, BUTTON_ACTIVE_LEVEL, BUTTON_SINGLE_TRIGGER, 0);
-    button_add_cb(socket_dev->main_btn, BUTTON_TAP_CB, main_button_cb, socket_dev, 50 / portTICK_PERIOD_MS);
+    socket_dev->main_btn = iot_button_create(BUTTON_IO_NUM_MAIN, BUTTON_ACTIVE_LEVEL, BUTTON_SINGLE_TRIGGER, 0);
+    iot_button_add_cb(socket_dev->main_btn, BUTTON_TAP_CB, main_button_cb, socket_dev, 50 / portTICK_PERIOD_MS);
 
     /* create units */
     for (int i = 0; i < SOCKET_UNIT_NUM; i++) {
-        btn_handle = button_create(DEF_SOCKET_UNIT[i].button_io, DEF_SOCKET_UNIT[i].button_active_level, BUTTON_SINGLE_TRIGGER, 0);
+        btn_handle = iot_button_create(DEF_SOCKET_UNIT[i].button_io, DEF_SOCKET_UNIT[i].button_active_level, BUTTON_SINGLE_TRIGGER, 0);
 
         if (DEF_SOCKET_UNIT[i].relay_ctrl_mode == RELAY_GPIO_CONTROL) {
             relay_io.single_io.ctl_io_num = DEF_SOCKET_UNIT[i].relay_ctl_io;
@@ -284,11 +284,11 @@ socket_handle_t socket_init(SemaphoreHandle_t xSemWriteInfo)
             relay_io.flip_io.d_io_num = DEF_SOCKET_UNIT[i].relay_ctl_io;
             relay_io.flip_io.cp_io_num = DEF_SOCKET_UNIT[i].relay_clk_io;
         }
-        relay_handle = relay_create(relay_io, DEF_SOCKET_UNIT[i].relay_off_level, DEF_SOCKET_UNIT[i].relay_ctrl_mode, DEF_SOCKET_UNIT[i].relay_io_mode);
-        led_handle = led_create(DEF_SOCKET_UNIT[i].led_io, DEF_SOCKET_UNIT[i].led_off_level);
+        relay_handle = iot_relay_create(relay_io, DEF_SOCKET_UNIT[i].relay_off_level, DEF_SOCKET_UNIT[i].relay_ctrl_mode, DEF_SOCKET_UNIT[i].relay_io_mode);
+        led_handle = iot_led_create(DEF_SOCKET_UNIT[i].led_io, DEF_SOCKET_UNIT[i].led_off_level);
         socket_dev->units[i] = socket_unit_create(&socket_dev->save_param.unit_sta[i], btn_handle, relay_handle,
                 led_handle, NULL);
-        button_add_cb(btn_handle, BUTTON_TAP_CB, button_tap_cb, socket_dev->units[i], 50 / portTICK_PERIOD_MS);
+        iot_button_add_cb(btn_handle, BUTTON_TAP_CB, button_tap_cb, socket_dev->units[i], 50 / portTICK_PERIOD_MS);
         socket_unit_set(socket_dev->units[i], socket_dev->save_param.unit_sta[i]);
     }
 

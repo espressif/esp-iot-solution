@@ -22,7 +22,7 @@ typedef void* dac_audio_handle_t;
  *     - NULL Fail
  *     - Others Success
  */
-dac_audio_handle_t dac_audio_create(i2s_port_t i2s_num, int sample_rate, int sample_bits, i2s_dac_mode_t dac_mode, int dma_size, bool init_i2s);
+dac_audio_handle_t iot_dac_audio_create(i2s_port_t i2s_num, int sample_rate, int sample_bits, i2s_dac_mode_t dac_mode, int dma_size, bool init_i2s);
 
 /**
  * @brief Delete and release a DAC object
@@ -32,7 +32,7 @@ dac_audio_handle_t dac_audio_create(i2s_port_t i2s_num, int sample_rate, int sam
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t dac_audio_delete(dac_audio_handle_t dac_audio, bool delete_i2s);
+esp_err_t iot_dac_audio_delete(dac_audio_handle_t dac_audio, bool delete_i2s);
 
 /**
  * @brief play audio file
@@ -43,7 +43,7 @@ esp_err_t dac_audio_delete(dac_audio_handle_t dac_audio, bool delete_i2s);
  * @return
  *     - ESP_OK on success
  */
-esp_err_t dac_audio_play(dac_audio_handle_t dac_audio, const uint8_t* data, int length, TickType_t ticks_to_wait);
+esp_err_t iot_dac_audio_play(dac_audio_handle_t dac_audio, const uint8_t* data, int length, TickType_t ticks_to_wait);
 
 
 

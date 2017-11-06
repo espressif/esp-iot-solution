@@ -148,7 +148,7 @@ static void update_adjust_percent()
     // Read raw value of each touch sensor, get sum
     for (int i = 0; i < TOUCH_PAD_MAX; i++) {
         if (tp_group[i] != NULL) {
-            tp_read(tp_group[i], &val[i]);
+            iot_tp_read(tp_group[i], &val[i]);
             // If the raw value is less than threshold, we think the touch is triggered,
             // and calculate the value with the original one, instead of the 'touched' one.
             if (val[i] < tp_group[i]->threshold) {
@@ -184,7 +184,7 @@ static void tp_slide_pos_cb(void *arg)
     uint16_t *tp_val = tp_slide->tp_val; 
     for (int i = 0; i < tp_slide->tp_num; i++) {
         // read filtered value
-        tp_read(tp_slide->tp_handles[i], &tp_val[i]);
+        iot_tp_read(tp_slide->tp_handles[i], &tp_val[i]);
         tp_dev_t *tp = (tp_dev_t*) tp_slide->tp_handles[i];
         uint16_t norm_val;
         if (tp->thresh_abs > 0) {
@@ -349,7 +349,7 @@ static void tp_timer_callback(TimerHandle_t xTimer)
             tp_dev_t* tp_dev = tp_group[i];
             uint16_t value;
             // read filterd value
-            tp_read(tp_dev, &value);
+            iot_tp_read(tp_dev, &value);
             if (tp_dev->sum_ms == 0) {
                 tp_dev->state = TOUCHPAD_STATE_PUSH;
                 // run push event cb, reset custom event cb
@@ -413,7 +413,7 @@ static void touch_pad_isr_handler(void *arg)
     }
 }
 
-tp_handle_t tp_create(touch_pad_t touch_pad_num, uint16_t thres_percent, uint16_t thresh_abs, uint32_t filter_value)
+tp_handle_t iot_tp_create(touch_pad_t touch_pad_num, uint16_t thres_percent, uint16_t thresh_abs, uint32_t filter_value)
 {
     if (g_init_flag == false) {
         // global touch sensor hardware init
@@ -473,7 +473,7 @@ tp_handle_t tp_create(touch_pad_t touch_pad_num, uint16_t thres_percent, uint16_
     return (tp_handle_t) tp_dev;
 }
 
-esp_err_t tp_delete(tp_handle_t tp_handle)
+esp_err_t iot_tp_delete(tp_handle_t tp_handle)
 {
     POINT_ASSERT(TAG, tp_handle);
     tp_dev_t* tp_dev = (tp_dev_t*) tp_handle;
@@ -509,7 +509,7 @@ esp_err_t tp_delete(tp_handle_t tp_handle)
     return ESP_OK;
 }
 
-esp_err_t tp_add_cb(tp_handle_t tp_handle, tp_cb_type_t cb_type, tp_cb cb, void  *arg)
+esp_err_t iot_tp_add_cb(tp_handle_t tp_handle, tp_cb_type_t cb_type, tp_cb cb, void  *arg)
 {
     POINT_ASSERT(TAG, tp_handle);
     POINT_ASSERT(TAG, cb);
@@ -527,7 +527,7 @@ esp_err_t tp_add_cb(tp_handle_t tp_handle, tp_cb_type_t cb_type, tp_cb cb, void 
     return ESP_OK;
 }
 
-esp_err_t tp_set_serial_trigger(tp_handle_t tp_handle, uint32_t trigger_thres_sec, uint32_t interval_ms, tp_cb cb, void *arg)
+esp_err_t iot_tp_set_serial_trigger(tp_handle_t tp_handle, uint32_t trigger_thres_sec, uint32_t interval_ms, tp_cb cb, void *arg)
 {
     POINT_ASSERT(TAG, tp_handle);
     POINT_ASSERT(TAG, cb);
@@ -547,7 +547,7 @@ esp_err_t tp_set_serial_trigger(tp_handle_t tp_handle, uint32_t trigger_thres_se
     return ESP_OK;
 }
 
-esp_err_t tp_add_custom_cb(tp_handle_t tp_handle, uint32_t press_sec, tp_cb cb, void  *arg)
+esp_err_t iot_tp_add_custom_cb(tp_handle_t tp_handle, uint32_t press_sec, tp_cb cb, void  *arg)
 {
     POINT_ASSERT(TAG, tp_handle);
     POINT_ASSERT(TAG, cb);
@@ -569,13 +569,13 @@ esp_err_t tp_add_custom_cb(tp_handle_t tp_handle, uint32_t press_sec, tp_cb cb, 
     return ESP_OK;
 }
 
-touch_pad_t tp_num_get(const tp_handle_t tp_handle)
+touch_pad_t iot_tp_num_get(const tp_handle_t tp_handle)
 {
     tp_dev_t* tp_dev = (tp_dev_t*) tp_handle;
     return tp_dev->touch_pad_num;
 }
 
-esp_err_t tp_set_threshold(const tp_handle_t tp_handle, uint32_t threshold)
+esp_err_t iot_tp_set_threshold(const tp_handle_t tp_handle, uint32_t threshold)
 {
     POINT_ASSERT(TAG, tp_handle);
     tp_dev_t* tp_dev = (tp_dev_t*) tp_handle;
@@ -592,7 +592,7 @@ esp_err_t tp_get_threshold(const tp_handle_t tp_handle, uint32_t *threshold)
     return ESP_OK;
 }
 
-esp_err_t tp_set_filter(const tp_handle_t tp_handle, uint32_t filter_value)
+esp_err_t iot_tp_set_filter(const tp_handle_t tp_handle, uint32_t filter_value)
 {
     POINT_ASSERT(TAG, tp_handle);
     tp_dev_t* tp_dev = (tp_dev_t*) tp_handle;
@@ -600,7 +600,7 @@ esp_err_t tp_set_filter(const tp_handle_t tp_handle, uint32_t filter_value)
     return ESP_OK;
 }
 
-esp_err_t tp_read(const tp_handle_t tp_handle, uint16_t *touch_value_ptr)
+esp_err_t iot_tp_read(const tp_handle_t tp_handle, uint16_t *touch_value_ptr)
 {
     POINT_ASSERT(TAG, tp_handle);
     tp_dev_t* tp_dev = (tp_dev_t*) tp_handle;
@@ -614,7 +614,7 @@ static esp_err_t tp_read_raw(const tp_handle_t tp_handle, uint16_t *touch_value_
     return touch_pad_read(tp_dev->touch_pad_num, touch_value_ptr);
 }
 
-tp_slide_handle_t tp_slide_create(uint8_t num, const touch_pad_t *tps, uint32_t pos_scale, uint16_t thres_percent, const uint16_t *thresh_abs, uint32_t filter_value)
+tp_slide_handle_t iot_tp_slide_create(uint8_t num, const touch_pad_t *tps, uint32_t pos_scale, uint16_t thres_percent, const uint16_t *thresh_abs, uint32_t filter_value)
 {
     IOT_CHECK(TAG, tps != NULL, NULL);
     IOT_CHECK(TAG, pos_scale != 0, NULL);
@@ -641,25 +641,25 @@ tp_slide_handle_t tp_slide_create(uint8_t num, const touch_pad_t *tps, uint32_t 
             tp_slide->tp_handles[i] = tp_group[tps[i]];
         } else {
             if (thresh_abs) {
-                tp_slide->tp_handles[i] = tp_create(tps[i], thres_percent, thresh_abs[i], filter_value);
+                tp_slide->tp_handles[i] = iot_tp_create(tps[i], thres_percent, thresh_abs[i], filter_value);
             } else {
-                tp_slide->tp_handles[i] = tp_create(tps[i], thres_percent, NULL, filter_value);
+                tp_slide->tp_handles[i] = iot_tp_create(tps[i], thres_percent, NULL, filter_value);
             }
             // in each event callback function, it will calculate the related position
-            tp_add_cb(tp_slide->tp_handles[i], TOUCHPAD_CB_PUSH, tp_slide_pos_cb, tp_slide);
-            tp_set_serial_trigger(tp_slide->tp_handles[i], 1, filter_value, tp_slide_pos_cb, tp_slide);
+            iot_tp_add_cb(tp_slide->tp_handles[i], TOUCHPAD_CB_PUSH, tp_slide_pos_cb, tp_slide);
+            iot_tp_set_serial_trigger(tp_slide->tp_handles[i], 1, filter_value, tp_slide_pos_cb, tp_slide);
         }
     }
     return (tp_slide_handle_t*) tp_slide;
 }
 
-esp_err_t tp_slide_delete(tp_slide_handle_t tp_slide_handle)
+esp_err_t iot_tp_slide_delete(tp_slide_handle_t tp_slide_handle)
 {
     POINT_ASSERT(TAG, tp_slide_handle);
     tp_slide_t *tp_slide = (tp_slide_t*) tp_slide_handle;
     for (int i = 0; i < tp_slide->tp_num; i++) {
         if (tp_slide->tp_handles[i]) {
-            tp_delete(tp_slide->tp_handles[i]);
+            iot_tp_delete(tp_slide->tp_handles[i]);
             for (int j = i + 1; j < tp_slide->tp_num; j++) {
                 if (tp_slide->tp_handles[i] == tp_slide->tp_handles[j])
                     tp_slide->tp_handles[j] = NULL;
@@ -673,7 +673,7 @@ esp_err_t tp_slide_delete(tp_slide_handle_t tp_slide_handle)
     return ESP_OK;
 }
 
-uint8_t tp_slide_position(tp_slide_handle_t tp_slide_handle)
+uint8_t iot_tp_slide_position(tp_slide_handle_t tp_slide_handle)
 {
     IOT_CHECK(TAG, tp_slide_handle != NULL, SLIDE_POS_INF);
     tp_slide_t *tp_slide = (tp_slide_t*) tp_slide_handle;
@@ -722,7 +722,7 @@ static void tp_matrix_push_cb(void *arg)
         ESP_LOGD(TAG, "y[%d] tp[%d] rd: %d; thresh: %d\n", j, tp_dev->touch_pad_num, val, tp_dev->threshold);
         tp_dev_t *tp_x = tp_matrix->x_tps[x_idx];
         uint16_t x_val;
-        tp_read(tp_x, &x_val);
+        iot_tp_read(tp_x, &x_val);
         ESP_LOGD(TAG, "x[%d] tp[%d] rd: %d; thresh: %d\n", x_idx, tp_x->touch_pad_num, x_val, tp_x->threshold);
         if (val <= tp_dev->threshold) {
             if (idx < 0) {
@@ -813,7 +813,7 @@ static void tp_matrix_serial_trigger_cb(TimerHandle_t xTimer)
     }
 }
 
-tp_matrix_handle_t tp_matrix_create(uint8_t x_num, uint8_t y_num, const touch_pad_t *x_tps, const touch_pad_t *y_tps, uint16_t thres_percent, const uint16_t *thresh_abs, uint32_t filter_value)
+tp_matrix_handle_t iot_tp_matrix_create(uint8_t x_num, uint8_t y_num, const touch_pad_t *x_tps, const touch_pad_t *y_tps, uint16_t thres_percent, const uint16_t *thresh_abs, uint32_t filter_value)
 {
     IOT_CHECK(TAG, x_num != 0 && x_num < TOUCH_PAD_MAX, NULL);
     IOT_CHECK(TAG, y_num != 0 && y_num < TOUCH_PAD_MAX, NULL);
@@ -844,9 +844,9 @@ tp_matrix_handle_t tp_matrix_create(uint8_t x_num, uint8_t y_num, const touch_pa
     tp_matrix->y_num = y_num;
     for (int i = 0; i < x_num; i++) {
         if (thresh_abs) {
-            tp_matrix->x_tps[i] = tp_create(x_tps[i], thres_percent, thresh_abs[i], filter_value);
+            tp_matrix->x_tps[i] = iot_tp_create(x_tps[i], thres_percent, thresh_abs[i], filter_value);
         } else {
-            tp_matrix->x_tps[i] = tp_create(x_tps[i], thres_percent, NULL, filter_value);
+            tp_matrix->x_tps[i] = iot_tp_create(x_tps[i], thres_percent, NULL, filter_value);
         }
         if (tp_matrix->x_tps[i] == NULL) {
             goto CREATE_ERR;
@@ -854,15 +854,15 @@ tp_matrix_handle_t tp_matrix_create(uint8_t x_num, uint8_t y_num, const touch_pa
         tp_matrix->matrix_args[i].tp_matrix = tp_matrix;
         tp_matrix->matrix_args[i].tp_idx = i;
         // only add callback event to 'x' pads
-        tp_add_cb(tp_matrix->x_tps[i], TOUCHPAD_CB_PUSH, tp_matrix_push_cb, tp_matrix->matrix_args + i);
-        tp_add_cb(tp_matrix->x_tps[i], TOUCHPAD_CB_RELEASE, tp_matrix_release_cb, tp_matrix->matrix_args + i);
-        tp_add_cb(tp_matrix->x_tps[i], TOUCHPAD_CB_TAP, tp_matrix_tap_cb, tp_matrix->matrix_args + i);
+        iot_tp_add_cb(tp_matrix->x_tps[i], TOUCHPAD_CB_PUSH, tp_matrix_push_cb, tp_matrix->matrix_args + i);
+        iot_tp_add_cb(tp_matrix->x_tps[i], TOUCHPAD_CB_RELEASE, tp_matrix_release_cb, tp_matrix->matrix_args + i);
+        iot_tp_add_cb(tp_matrix->x_tps[i], TOUCHPAD_CB_TAP, tp_matrix_tap_cb, tp_matrix->matrix_args + i);
     }
     for (int i = 0; i < y_num; i++) {
         if (thresh_abs) {
-            tp_matrix->y_tps[i] = tp_create(y_tps[i], thres_percent, thresh_abs[x_num + i], filter_value);
+            tp_matrix->y_tps[i] = iot_tp_create(y_tps[i], thres_percent, thresh_abs[x_num + i], filter_value);
         } else {
-            tp_matrix->y_tps[i] = tp_create(y_tps[i], thres_percent, NULL, filter_value);
+            tp_matrix->y_tps[i] = iot_tp_create(y_tps[i], thres_percent, NULL, filter_value);
         }
         if (tp_matrix->y_tps[i] == NULL) {
             goto CREATE_ERR;
@@ -875,13 +875,13 @@ CREATE_ERR:
     ESP_LOGE(TAG, "touchpad matrix creaete error!");
     for (int i = 0; i < x_num; i++) {
         if (tp_matrix->x_tps[i] != NULL) {
-            tp_delete(tp_matrix->x_tps[i]);
+            iot_tp_delete(tp_matrix->x_tps[i]);
             tp_matrix->x_tps[i] = NULL;
         }
     }
     for (int i = 0; i < y_num; i++) {
         if (tp_matrix->y_tps[i] != NULL) {
-            tp_delete(tp_matrix->y_tps[i]);
+            iot_tp_delete(tp_matrix->y_tps[i]);
             tp_matrix->y_tps[i] = NULL;
         }
     }
@@ -893,19 +893,19 @@ CREATE_ERR:
     return NULL;
 }
 
-esp_err_t tp_matrix_delete(tp_matrix_handle_t tp_matrix_hd)
+esp_err_t iot_tp_matrix_delete(tp_matrix_handle_t tp_matrix_hd)
 {
     POINT_ASSERT(TAG, tp_matrix_hd);
     tp_matrix_t *tp_matrix = (tp_matrix_t*) tp_matrix_hd;
     for (int i = 0; i < tp_matrix->x_num; i++) {
         if (tp_matrix->x_tps[i] != NULL) {
-            tp_delete(tp_matrix->x_tps[i]);
+            iot_tp_delete(tp_matrix->x_tps[i]);
             tp_matrix->x_tps[i] = NULL;
         }
     }
     for (int i = 0; i < tp_matrix->y_num; i++) {
         if (tp_matrix->y_tps[i] != NULL) {
-            tp_delete(tp_matrix->y_tps[i]);
+            iot_tp_delete(tp_matrix->y_tps[i]);
             tp_matrix->y_tps[i] = NULL;
         }
     }
@@ -937,7 +937,7 @@ esp_err_t tp_matrix_delete(tp_matrix_handle_t tp_matrix_hd)
     return ESP_OK;
 }
 
-esp_err_t tp_matrix_add_cb(tp_matrix_handle_t tp_matrix_hd, tp_cb_type_t cb_type, tp_matrix_cb cb, void *arg)
+esp_err_t iot_tp_matrix_add_cb(tp_matrix_handle_t tp_matrix_hd, tp_cb_type_t cb_type, tp_matrix_cb cb, void *arg)
 {
     POINT_ASSERT(TAG, tp_matrix_hd);
     POINT_ASSERT(TAG, cb);
@@ -955,7 +955,7 @@ esp_err_t tp_matrix_add_cb(tp_matrix_handle_t tp_matrix_hd, tp_cb_type_t cb_type
     return ESP_OK;
 }
 
-esp_err_t tp_matrix_add_custom_cb(tp_matrix_handle_t tp_matrix_hd, uint32_t press_sec, tp_matrix_cb cb, void *arg)
+esp_err_t iot_tp_matrix_add_custom_cb(tp_matrix_handle_t tp_matrix_hd, uint32_t press_sec, tp_matrix_cb cb, void *arg)
 {
     POINT_ASSERT(TAG, tp_matrix_hd);
     POINT_ASSERT(TAG, cb);
@@ -977,7 +977,7 @@ esp_err_t tp_matrix_add_custom_cb(tp_matrix_handle_t tp_matrix_hd, uint32_t pres
     return ESP_OK;
 }
 
-esp_err_t tp_matrix_set_serial_trigger(tp_matrix_handle_t tp_matrix_hd, uint32_t trigger_thres_sec, uint32_t interval_ms, tp_matrix_cb cb, void *arg)
+esp_err_t iot_tp_matrix_set_serial_trigger(tp_matrix_handle_t tp_matrix_hd, uint32_t trigger_thres_sec, uint32_t interval_ms, tp_matrix_cb cb, void *arg)
 {
     POINT_ASSERT(TAG, tp_matrix_hd);
     POINT_ASSERT(TAG, cb);

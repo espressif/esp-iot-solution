@@ -26,8 +26,8 @@
 #include <stdio.h>
 #include "unity.h"
 #include "driver/i2c.h"
-#include "mvh3004d.h"
-#include "i2c_bus.h"
+#include "iot_mvh3004d.h"
+#include "iot_i2c_bus.h"
 
 #define I2C_MASTER_SCL_IO           17          /*!< gpio number for I2C master clock */
 #define I2C_MASTER_SDA_IO           16          /*!< gpio number for I2C master data  */
@@ -51,13 +51,13 @@ static void i2c_bus_init()
     conf.scl_io_num = I2C_MASTER_SCL_IO;
     conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
     conf.master.clk_speed = I2C_MASTER_FREQ_HZ;
-    i2c_bus = i2c_bus_create(I2C_MASTER_NUM, &conf);
+    i2c_bus = iot_i2c_bus_create(I2C_MASTER_NUM, &conf);
 }
 
 void mvh3004d_init()
 {
     i2c_bus_init();
-    sens = sensor_mvh3004d_create(i2c_bus, MVH3004D_SLAVE_ADDR);
+    sens = iot_mvh3004d_create(i2c_bus, MVH3004D_SLAVE_ADDR);
 }
 
 void mvh3004d_test_task(void* pvParameters)
@@ -65,7 +65,7 @@ void mvh3004d_test_task(void* pvParameters)
     int cnt = 0;
     float tp, rh;
     while(1){
-        mvh3004d_get_data(sens, &tp, &rh);
+        iot_mvh3004d_get_data(sens, &tp, &rh);
         printf("test[%d]: tp: %.02f; rh: %.02f %%\n", cnt++, tp, rh);
         vTaskDelay(10 / portTICK_RATE_MS);
     }

@@ -40,7 +40,7 @@ extern "C" {
   *     - ESP_OK: succeed
   *     - others: fail
   */
-esp_err_t ulp_monitor_init(uint16_t program_addr, uint16_t data_addr);
+esp_err_t iot_ulp_monitor_init(uint16_t program_addr, uint16_t data_addr);
 
 /**
   * @brief  read adc sample value in ulp
@@ -56,7 +56,7 @@ esp_err_t ulp_monitor_init(uint16_t program_addr, uint16_t data_addr);
   *     - ESP_OK: succeed
   *     - others: fail
   */
-esp_err_t ulp_add_adc_monitor(adc1_channel_t adc_chn, int16_t low_threshold, int16_t high_threshold, uint8_t data_offset, uint8_t data_num, bool num_max_wake);
+esp_err_t iot_ulp_add_adc_monitor(adc1_channel_t adc_chn, int16_t low_threshold, int16_t high_threshold, uint8_t data_offset, uint8_t data_num, bool num_max_wake);
 
 /**
   * @brief  read temprature sensor in ulp
@@ -71,7 +71,7 @@ esp_err_t ulp_add_adc_monitor(adc1_channel_t adc_chn, int16_t low_threshold, int
   *     - ESP_OK: succeed
   *     - others: fail
   */
-esp_err_t ulp_add_temprature_monitor(int16_t low_threshold, int16_t high_threshold, uint8_t data_offset, uint8_t data_num, bool num_max_wake);
+esp_err_t iot_ulp_add_temprature_monitor(int16_t low_threshold, int16_t high_threshold, uint8_t data_offset, uint8_t data_num, bool num_max_wake);
 
 /**
   * @brief  start running the ulp program
@@ -82,7 +82,7 @@ esp_err_t ulp_add_temprature_monitor(int16_t low_threshold, int16_t high_thresho
   *     - ESP_OK: succeed
   *     - others: fail
   */
-esp_err_t ulp_monitor_start(uint32_t meas_per_hour);
+esp_err_t iot_ulp_monitor_start(uint32_t meas_per_hour);
 
 /**
   * @brief  read value from RTC slow memory
@@ -91,7 +91,7 @@ esp_err_t ulp_monitor_start(uint32_t meas_per_hour);
   *
   * @return
   */
-uint16_t ulp_data_read(size_t addr);
+uint16_t iot_ulp_data_read(size_t addr);
 
 /**
   * @brief  write value to RTC slow memory
@@ -101,7 +101,7 @@ uint16_t ulp_data_read(size_t addr);
   *
   * @return
   */
-void ulp_data_write(size_t addr, uint16_t value);
+void iot_ulp_data_write(size_t addr, uint16_t value);
 
 #ifdef __cplusplus
 }

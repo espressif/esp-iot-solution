@@ -24,7 +24,7 @@
 
 #ifndef _IOT_LIGHT_DEVICE_H_
 #define _IOT_LIGHT_DEVICE_H_
-#include "light.h"
+#include "iot_light.h"
 typedef void* light_dev_handle_t;
 
 typedef enum {

@@ -57,7 +57,7 @@ typedef struct {
   *     - ESP_OK: succeed
   *     - others: fail
   */
-esp_err_t debug_init(uart_port_t uart_num, int baud_rate, int tx_io, int rx_io);
+esp_err_t iot_debug_init(uart_port_t uart_num, int baud_rate, int tx_io, int rx_io);
 
 /**
   * @brief  add custom debug command
@@ -70,7 +70,7 @@ esp_err_t debug_init(uart_port_t uart_num, int baud_rate, int tx_io, int rx_io);
   *     - ESP_OK: succeed
   *     - others: fail
   */
-esp_err_t debug_add_custom_cmd(const char *cmd, debug_cb_t cb, void *arg);
+esp_err_t iot_debug_add_custom_cmd(const char *cmd, debug_cb_t cb, void *arg);
 
 /**
   * @brief  add debug command
@@ -82,7 +82,7 @@ esp_err_t debug_add_custom_cmd(const char *cmd, debug_cb_t cb, void *arg);
   *     - ESP_OK: succeed
   *     - others: fail
   */
-esp_err_t debug_add_cmd(const char *cmd, debug_cmd_type_t cmd_type);
+esp_err_t iot_debug_add_cmd(const char *cmd, debug_cmd_type_t cmd_type);
 
 /**
   * @brief  add custom debug commands in batch
@@ -94,7 +94,7 @@ esp_err_t debug_add_cmd(const char *cmd, debug_cmd_type_t cmd_type);
   *     - ESP_OK: succeed
   *     - others: fail
   */
-esp_err_t debug_add_cmd_group(debug_cmd_info_t debug_cmds[], int len);
+esp_err_t iot_debug_add_cmd_group(debug_cmd_info_t debug_cmds[], int len);
 
 #ifdef __cplusplus
 }

@@ -31,7 +31,7 @@
 #include "driver/gpio.h"
 #include "driver/rtc_io.h"
 #include "esp_log.h"
-#include "relay.h"
+#include "iot_relay.h"
 
 #define DFLIPFLOP_DELAY_US      CONFIG_DFLIPFLOP_CLK_PERIOD_US
 #define IOT_CHECK(tag, a, ret)  if(!(a)) {                                 \
@@ -50,7 +50,7 @@ typedef struct {
 // Debug tag in esp log
 static const char* TAG = "relay";
 
-relay_handle_t relay_create(relay_io_t relay_io, relay_close_level_t close_level, relay_ctl_mode_t ctl_mode, relay_io_mode_t io_mode)
+relay_handle_t iot_relay_create(relay_io_t relay_io, relay_close_level_t close_level, relay_ctl_mode_t ctl_mode, relay_io_mode_t io_mode)
 {   
     relay_dev_t* relay_p = (relay_dev_t*) calloc(1, sizeof(relay_dev_t));
     relay_p->close_level = close_level;
@@ -89,7 +89,7 @@ relay_handle_t relay_create(relay_io_t relay_io, relay_close_level_t close_level
     return (relay_handle_t) relay_p;
 }
 
-esp_err_t relay_state_write(relay_handle_t relay_handle, relay_status_t state)
+esp_err_t iot_relay_state_write(relay_handle_t relay_handle, relay_status_t state)
 {
     relay_dev_t* relay_dev = (relay_dev_t*) relay_handle;
     POINT_ASSERT(TAG, relay_handle);
@@ -123,13 +123,13 @@ esp_err_t relay_state_write(relay_handle_t relay_handle, relay_status_t state)
     return ESP_OK;
 }
 
-relay_status_t relay_state_read(relay_handle_t relay_handle)
+relay_status_t iot_relay_state_read(relay_handle_t relay_handle)
 {
     relay_dev_t* relay_dev = (relay_dev_t*) relay_handle;
     return relay_dev->state;
 }
 
-esp_err_t relay_delete(relay_handle_t relay_handle)
+esp_err_t iot_relay_delete(relay_handle_t relay_handle)
 {
     POINT_ASSERT(TAG, relay_handle);
     free(relay_handle);

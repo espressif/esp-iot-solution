@@ -22,7 +22,7 @@
  *
  */
 #include "driver/i2c.h"
-#include "ssd1306.h"
+#include "iot_ssd1306.h"
 #include "ssd1306_fonts.h"
 #include <time.h>
 #include <sys/time.h>
@@ -42,13 +42,13 @@ static uint32_t _pow(uint8_t m, uint8_t n)
     return result;
 }
 
-void set_column_start_address(ssd1306_handle_t dev)
+void iot_set_column_address(ssd1306_handle_t dev)
 {
-    ssd1306_write_byte(dev, SSD1306_SET_LOWER_ADDRESS, SSD1306_CMD);
-    ssd1306_write_byte(dev, SSD1306_SET_HIGHER_ADDRESS, SSD1306_CMD);
+    iot_ssd1306_write_byte(dev, SSD1306_SET_LOWER_ADDRESS, SSD1306_CMD);
+    iot_ssd1306_write_byte(dev, SSD1306_SET_HIGHER_ADDRESS, SSD1306_CMD);
 }
 
-esp_err_t ssd1306_write_byte(ssd1306_handle_t dev, uint8_t chData,
+esp_err_t iot_ssd1306_write_byte(ssd1306_handle_t dev, uint8_t chData,
         uint8_t chCmd)
 {
     ssd1306_dev_t* device = (ssd1306_dev_t*) dev;
@@ -75,20 +75,20 @@ esp_err_t ssd1306_write_byte(ssd1306_handle_t dev, uint8_t chData,
     return ret;
 }
 
-esp_err_t ssd1306_fill_rectangle_screen(ssd1306_handle_t dev, uint8_t chXpos1,
+esp_err_t iot_ssd1306_fill_rectangle(ssd1306_handle_t dev, uint8_t chXpos1,
         uint8_t chYpos1, uint8_t chXpos2, uint8_t chYpos2, uint8_t chDot)
 {
     uint8_t chXpos, chYpos;
 
     for (chXpos = chXpos1; chXpos <= chXpos2; chXpos++) {
         for (chYpos = chYpos1; chYpos <= chYpos2; chYpos++) {
-            ssd1306_draw_point(dev, chXpos, chYpos, chDot);
+            iot_ssd1306_fill_point(dev, chXpos, chYpos, chDot);
         }
     }
-    return ssd1306_refresh_gram(dev);
+    return iot_ssd1306_refresh_gram(dev);
 }
 
-void ssd1306_display_num(ssd1306_handle_t dev, uint8_t chXpos, uint8_t chYpos,
+void iot_ssd1306_draw_num(ssd1306_handle_t dev, uint8_t chXpos, uint8_t chYpos,
         uint32_t chNum, uint8_t chLen, uint8_t chSize)
 {
     uint8_t i;
@@ -98,19 +98,19 @@ void ssd1306_display_num(ssd1306_handle_t dev, uint8_t chXpos, uint8_t chYpos,
         chTemp = (chNum / _pow(10, chLen - i - 1)) % 10;
         if (chShow == 0 && i < (chLen - 1)) {
             if (chTemp == 0) {
-                ssd1306_display_char(dev, chXpos + (chSize / 2) * i, chYpos,
+                iot_ssd1306_draw_char(dev, chXpos + (chSize / 2) * i, chYpos,
                         ' ', chSize, 1);
                 continue;
             } else {
                 chShow = 1;
             }
         }
-        ssd1306_display_char(dev, chXpos + (chSize / 2) * i, chYpos,
+        iot_ssd1306_draw_char(dev, chXpos + (chSize / 2) * i, chYpos,
                 chTemp + '0', chSize, 1);
     }
 }
 
-void ssd1306_display_char(ssd1306_handle_t dev, uint8_t chXpos, uint8_t chYpos,
+void iot_ssd1306_draw_char(ssd1306_handle_t dev, uint8_t chXpos, uint8_t chYpos,
         uint8_t chChr, uint8_t chSize, uint8_t chMode)
 {
     uint8_t i, j;
@@ -134,9 +134,9 @@ void ssd1306_display_char(ssd1306_handle_t dev, uint8_t chXpos, uint8_t chYpos,
 
         for (j = 0; j < 8; j++) {
             if (chTemp & 0x80) {
-                ssd1306_draw_point(dev, chXpos, chYpos, 1);
+                iot_ssd1306_fill_point(dev, chXpos, chYpos, 1);
             } else {
-                ssd1306_draw_point(dev, chXpos, chYpos, 0);
+                iot_ssd1306_fill_point(dev, chXpos, chYpos, 0);
             }
             chTemp <<= 1;
             chYpos++;
@@ -150,7 +150,7 @@ void ssd1306_display_char(ssd1306_handle_t dev, uint8_t chXpos, uint8_t chYpos,
     }
 }
 
-esp_err_t ssd1306_display_string(ssd1306_handle_t dev, uint8_t chXpos,
+esp_err_t iot_ssd1306_draw_string(ssd1306_handle_t dev, uint8_t chXpos,
         uint8_t chYpos, const uint8_t *pchString, uint8_t chSize,
         uint8_t chMode)
 {
@@ -161,20 +161,20 @@ esp_err_t ssd1306_display_string(ssd1306_handle_t dev, uint8_t chXpos,
             chYpos += chSize;
             if (chYpos > (SSD1306_HEIGHT - chSize)) {
                 chYpos = chXpos = 0;
-                ret = ssd1306_clear_screen(dev, 0x00);
+                ret = iot_ssd1306_clear_screen(dev, 0x00);
                 if (ret == ESP_FAIL) {
                     return ret;
                 }
             }
         }
-        ssd1306_display_char(dev, chXpos, chYpos, *pchString, chSize, chMode);
+        iot_ssd1306_draw_char(dev, chXpos, chYpos, *pchString, chSize, chMode);
         chXpos += chSize / 2;
         pchString++;
     }
     return ret;
 }
 
-void ssd1306_draw_point(ssd1306_handle_t dev, uint8_t chXpos, uint8_t chYpos,
+void iot_ssd1306_fill_point(ssd1306_handle_t dev, uint8_t chXpos, uint8_t chYpos,
         uint8_t chPoint)
 {
     ssd1306_dev_t* device = (ssd1306_dev_t*) dev;
@@ -194,7 +194,7 @@ void ssd1306_draw_point(ssd1306_handle_t dev, uint8_t chXpos, uint8_t chYpos,
     }
 }
 
-void ssd1306_draw_1616char(ssd1306_handle_t dev, uint8_t chXpos, uint8_t chYpos,
+void iot_ssd1306_draw_1616char(ssd1306_handle_t dev, uint8_t chXpos, uint8_t chYpos,
         uint8_t chChar)
 {
     uint8_t i, j;
@@ -204,7 +204,7 @@ void ssd1306_draw_1616char(ssd1306_handle_t dev, uint8_t chXpos, uint8_t chYpos,
         chTemp = c_chFont1612[chChar - 0x30][i];
         for (j = 0; j < 8; j++) {
             chMode = chTemp & 0x80 ? 1 : 0;
-            ssd1306_draw_point(dev, chXpos, chYpos, chMode);
+            iot_ssd1306_fill_point(dev, chXpos, chYpos, chMode);
             chTemp <<= 1;
             chYpos++;
             if ((chYpos - chYpos0) == 16) {
@@ -216,7 +216,7 @@ void ssd1306_draw_1616char(ssd1306_handle_t dev, uint8_t chXpos, uint8_t chYpos,
     }
 }
 
-void ssd1306_draw_3216char(ssd1306_handle_t dev, uint8_t chXpos, uint8_t chYpos,
+void iot_ssd1306_draw_3216char(ssd1306_handle_t dev, uint8_t chXpos, uint8_t chYpos,
         uint8_t chChar)
 {
     uint8_t i, j;
@@ -226,7 +226,7 @@ void ssd1306_draw_3216char(ssd1306_handle_t dev, uint8_t chXpos, uint8_t chYpos,
         chTemp = c_chFont3216[chChar - 0x30][i];
         for (j = 0; j < 8; j++) {
             chMode = chTemp & 0x80 ? 1 : 0;
-            ssd1306_draw_point(dev, chXpos, chYpos, chMode);
+            iot_ssd1306_fill_point(dev, chXpos, chYpos, chMode);
             chTemp <<= 1;
             chYpos++;
             if ((chYpos - chYpos0) == 32) {
@@ -238,7 +238,7 @@ void ssd1306_draw_3216char(ssd1306_handle_t dev, uint8_t chXpos, uint8_t chYpos,
     }
 }
 
-void ssd1306_draw_bitmap(ssd1306_handle_t dev, uint8_t chXpos, uint8_t chYpos,
+void iot_ssd1306_draw_bitmap(ssd1306_handle_t dev, uint8_t chXpos, uint8_t chYpos,
         const uint8_t *pchBmp, uint8_t chWidth, uint8_t chHeight)
 {
     uint16_t i, j, byteWidth = (chWidth + 7) / 8;
@@ -246,13 +246,13 @@ void ssd1306_draw_bitmap(ssd1306_handle_t dev, uint8_t chXpos, uint8_t chYpos,
     for (j = 0; j < chHeight; j++) {
         for (i = 0; i < chWidth; i++) {
             if (*(pchBmp + j * byteWidth + i / 8) & (128 >> (i & 7))) {
-                ssd1306_draw_point(dev, chXpos + i, chYpos + j, 1);
+                iot_ssd1306_fill_point(dev, chXpos + i, chYpos + j, 1);
             }
         }
     }
 }
 
-esp_err_t dev_ssd1306_init(ssd1306_handle_t dev)
+esp_err_t iot_ssd1306_init(ssd1306_handle_t dev)
 {
     esp_err_t ret;
     PIN_FUNC_SELECT(SSD1306_CS_MUX, SSD1306_CS_FUNC);
@@ -269,54 +269,54 @@ esp_err_t dev_ssd1306_init(ssd1306_handle_t dev)
     __SSD1306_RES_SET();		//RES set
 #endif
 
-    ssd1306_write_byte(dev, 0xAE, SSD1306_CMD);		//--turn off oled panel
-    ssd1306_write_byte(dev, 0x00, SSD1306_CMD);		//---set low column address
-    ssd1306_write_byte(dev, 0x10, SSD1306_CMD);		//---set high column address
-    ssd1306_write_byte(dev, 0x40, SSD1306_CMD);	//--set start line address  Set Mapping RAM Display Start Line (0x00~0x3F)
-    ssd1306_write_byte(dev, 0x81, SSD1306_CMD);	//--set contrast control register
-    ssd1306_write_byte(dev, 0xCF, SSD1306_CMD);	// Set SEG Output Current Brightness
-    ssd1306_write_byte(dev, 0xA1, SSD1306_CMD);		//--Set SEG/Column Mapping
-    ssd1306_write_byte(dev, 0xC0, SSD1306_CMD);		//Set COM/Row Scan Direction
-    ssd1306_write_byte(dev, 0xA6, SSD1306_CMD);		//--set normal display
-    ssd1306_write_byte(dev, 0xA8, SSD1306_CMD);	//--set multiplex ratio(1 to 64)
-    ssd1306_write_byte(dev, 0x3f, SSD1306_CMD);		//--1/64 duty
-    ssd1306_write_byte(dev, 0xD3, SSD1306_CMD);	//-set display offset	Shift Mapping RAM Counter (0x00~0x3F)
-    ssd1306_write_byte(dev, 0x00, SSD1306_CMD);		//-not offset
-    ssd1306_write_byte(dev, 0xd5, SSD1306_CMD);	//--set display clock divide ratio/oscillator frequency
-    ssd1306_write_byte(dev, 0x80, SSD1306_CMD);	//--set divide ratio, Set Clock as 100 Frames/Sec
-    ssd1306_write_byte(dev, 0xD9, SSD1306_CMD);		//--set pre-charge period
-    ssd1306_write_byte(dev, 0xF1, SSD1306_CMD);	//Set Pre-Charge as 15 Clocks & Discharge as 1 Clock
-    ssd1306_write_byte(dev, 0xDA, SSD1306_CMD);	//--set com pins hardware configuration
-    ssd1306_write_byte(dev, 0x12, SSD1306_CMD);
-    ssd1306_write_byte(dev, 0xDB, SSD1306_CMD);		//--set vcomh
-    ssd1306_write_byte(dev, 0x40, SSD1306_CMD);		//Set VCOM Deselect Level
-    ssd1306_write_byte(dev, 0x20, SSD1306_CMD);	//-Set Page Addressing Mode (0x00/0x01/0x02)
-    ssd1306_write_byte(dev, 0x02, SSD1306_CMD);
-    ssd1306_write_byte(dev, 0x8D, SSD1306_CMD);	//--set Charge Pump enable/disable
-    ssd1306_write_byte(dev, 0x14, SSD1306_CMD);		//--set(0x10) disable
-    ssd1306_write_byte(dev, 0xA4, SSD1306_CMD);	// Disable Entire Display On (0xa4/0xa5)
-    ssd1306_write_byte(dev, 0xA6, SSD1306_CMD);	// Disable Inverse Display On (0xa6/a7)
-    ssd1306_write_byte(dev, 0xAF, SSD1306_CMD);		//--turn on oled panel
+    iot_ssd1306_write_byte(dev, 0xAE, SSD1306_CMD);		//--turn off oled panel
+    iot_ssd1306_write_byte(dev, 0x00, SSD1306_CMD);		//---set low column address
+    iot_ssd1306_write_byte(dev, 0x10, SSD1306_CMD);		//---set high column address
+    iot_ssd1306_write_byte(dev, 0x40, SSD1306_CMD);	//--set start line address  Set Mapping RAM Display Start Line (0x00~0x3F)
+    iot_ssd1306_write_byte(dev, 0x81, SSD1306_CMD);	//--set contrast control register
+    iot_ssd1306_write_byte(dev, 0xCF, SSD1306_CMD);	// Set SEG Output Current Brightness
+    iot_ssd1306_write_byte(dev, 0xA1, SSD1306_CMD);		//--Set SEG/Column Mapping
+    iot_ssd1306_write_byte(dev, 0xC0, SSD1306_CMD);		//Set COM/Row Scan Direction
+    iot_ssd1306_write_byte(dev, 0xA6, SSD1306_CMD);		//--set normal display
+    iot_ssd1306_write_byte(dev, 0xA8, SSD1306_CMD);	//--set multiplex ratio(1 to 64)
+    iot_ssd1306_write_byte(dev, 0x3f, SSD1306_CMD);		//--1/64 duty
+    iot_ssd1306_write_byte(dev, 0xD3, SSD1306_CMD);	//-set display offset	Shift Mapping RAM Counter (0x00~0x3F)
+    iot_ssd1306_write_byte(dev, 0x00, SSD1306_CMD);		//-not offset
+    iot_ssd1306_write_byte(dev, 0xd5, SSD1306_CMD);	//--set display clock divide ratio/oscillator frequency
+    iot_ssd1306_write_byte(dev, 0x80, SSD1306_CMD);	//--set divide ratio, Set Clock as 100 Frames/Sec
+    iot_ssd1306_write_byte(dev, 0xD9, SSD1306_CMD);		//--set pre-charge period
+    iot_ssd1306_write_byte(dev, 0xF1, SSD1306_CMD);	//Set Pre-Charge as 15 Clocks & Discharge as 1 Clock
+    iot_ssd1306_write_byte(dev, 0xDA, SSD1306_CMD);	//--set com pins hardware configuration
+    iot_ssd1306_write_byte(dev, 0x12, SSD1306_CMD);
+    iot_ssd1306_write_byte(dev, 0xDB, SSD1306_CMD);		//--set vcomh
+    iot_ssd1306_write_byte(dev, 0x40, SSD1306_CMD);		//Set VCOM Deselect Level
+    iot_ssd1306_write_byte(dev, 0x20, SSD1306_CMD);	//-Set Page Addressing Mode (0x00/0x01/0x02)
+    iot_ssd1306_write_byte(dev, 0x02, SSD1306_CMD);
+    iot_ssd1306_write_byte(dev, 0x8D, SSD1306_CMD);	//--set Charge Pump enable/disable
+    iot_ssd1306_write_byte(dev, 0x14, SSD1306_CMD);		//--set(0x10) disable
+    iot_ssd1306_write_byte(dev, 0xA4, SSD1306_CMD);	// Disable Entire Display On (0xa4/0xa5)
+    iot_ssd1306_write_byte(dev, 0xA6, SSD1306_CMD);	// Disable Inverse Display On (0xa6/a7)
+    iot_ssd1306_write_byte(dev, 0xAF, SSD1306_CMD);		//--turn on oled panel
 
-    ret = ssd1306_clear_screen(dev, 0x00);
+    ret = iot_ssd1306_clear_screen(dev, 0x00);
     return ret;
 }
 
-ssd1306_handle_t dev_ssd1306_create(i2c_bus_handle_t bus, uint16_t dev_addr)
+ssd1306_handle_t iot_ssd1306_create(i2c_bus_handle_t bus, uint16_t dev_addr)
 {
     ssd1306_dev_t* dev = (ssd1306_dev_t*) calloc(1, sizeof(ssd1306_dev_t));
     dev->bus = bus;
     dev->dev_addr = dev_addr;
-    dev_ssd1306_init((ssd1306_handle_t) dev);
+    iot_ssd1306_init((ssd1306_handle_t) dev);
     return (ssd1306_handle_t) dev;
 }
 
-esp_err_t dev_ssd1306_delete(ssd1306_handle_t dev, bool del_bus)
+esp_err_t iot_ssd1306_delete(ssd1306_handle_t dev, bool del_bus)
 {
     ssd1306_dev_t* device = (ssd1306_dev_t*) dev;
     esp_err_t ret = ESP_OK;
     if (del_bus) {
-        ret = i2c_bus_delete(device->bus);
+        ret = iot_i2c_bus_delete(device->bus);
         if (ret == ESP_FAIL) {
             return ret;
         }
@@ -326,20 +326,20 @@ esp_err_t dev_ssd1306_delete(ssd1306_handle_t dev, bool del_bus)
     return ret;
 }
 
-esp_err_t ssd1306_refresh_gram(ssd1306_handle_t dev)
+esp_err_t iot_ssd1306_refresh_gram(ssd1306_handle_t dev)
 {
     ssd1306_dev_t* device = (ssd1306_dev_t*) dev;
     uint8_t i, j;
     esp_err_t ret;
 
     for (i = 0; i < 8; i++) {
-        ret = ssd1306_write_byte(dev, SSD1306_SET_PAGE_ADDR + i, SSD1306_CMD);
+        ret = iot_ssd1306_write_byte(dev, SSD1306_SET_PAGE_ADDR + i, SSD1306_CMD);
         if (ret == ESP_FAIL) {
             return ret;
         }
-        set_column_start_address(dev);
+        iot_set_column_address(dev);
         for (j = 0; j < 128; j++) {
-            ret = ssd1306_write_byte(dev, device->s_chDisplayBuffer[j][i],
+            ret = iot_ssd1306_write_byte(dev, device->s_chDisplayBuffer[j][i],
             SSD1306_DAT);
             if (ret == ESP_FAIL) {
                 return ret;
@@ -349,20 +349,20 @@ esp_err_t ssd1306_refresh_gram(ssd1306_handle_t dev)
     return ret;
 }
 
-esp_err_t ssd1306_clear_screen(ssd1306_handle_t dev, uint8_t chFill)
+esp_err_t iot_ssd1306_clear_screen(ssd1306_handle_t dev, uint8_t chFill)
 {
     ssd1306_dev_t* device = (ssd1306_dev_t*) dev;
     uint8_t i, j;
     esp_err_t ret;
     for (i = 0; i < 8; i++) {
-        ret = ssd1306_write_byte(dev, SSD1306_SET_PAGE_ADDR + i, SSD1306_CMD);
+        ret = iot_ssd1306_write_byte(dev, SSD1306_SET_PAGE_ADDR + i, SSD1306_CMD);
         if (ret == ESP_FAIL) {
             return ret;
         }
-        set_column_start_address(dev);
+        iot_set_column_address(dev);
         for (j = 0; j < 128; j++)
             device->s_chDisplayBuffer[j][i] = chFill;
     }
-    return ssd1306_refresh_gram(dev);
+    return iot_ssd1306_refresh_gram(dev);
 }
 

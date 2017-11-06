@@ -28,8 +28,8 @@
 #include <stdio.h>
 #include "unity.h"
 #include "driver/i2c.h"
-#include "bh1750.h"
-#include "i2c_bus.h"
+#include "iot_bh1750.h"
+#include "iot_i2c_bus.h"
 #include "esp_log.h"
 
 #define I2C_MASTER_SCL_IO           21          /*!< gpio number for I2C master clock */
@@ -54,13 +54,13 @@ void i2c_bus_init()
     conf.scl_io_num = I2C_MASTER_SCL_IO;
     conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
     conf.master.clk_speed = I2C_MASTER_FREQ_HZ;
-    i2c_bus = i2c_bus_create(I2C_MASTER_NUM, &conf);
+    i2c_bus = iot_i2c_bus_create(I2C_MASTER_NUM, &conf);
 }
 
 void bh1750_init()
 {
     i2c_bus_init();
-    sens = sensor_bh1750_create(i2c_bus, 0x23);
+    sens = iot_bh1750_create(i2c_bus, 0x23);
 }
 
 void bh1750_test_task(void* pvParameters)
@@ -70,20 +70,20 @@ void bh1750_test_task(void* pvParameters)
     float bh1750_data;
     int cnt = 2;
     while (cnt--) {
-        bh1750_power_on(sens);
+        iot_bh1750_power_on(sens);
         cmd_measure = BH1750_ONETIME_4LX_RES;
-        bh1750_set_measure_mode(sens, cmd_measure);
+        iot_bh1750_set_measure_mode(sens, cmd_measure);
         vTaskDelay(30 / portTICK_RATE_MS);
-        ret = bh1750_get_data(sens, &bh1750_data);
+        ret = iot_bh1750_get_data(sens, &bh1750_data);
         if (ret == ESP_OK) {
             printf("bh1750 val(one time mode): %f\n", bh1750_data);
         } else {
             printf("No ack, sensor not connected...\n");
         }
         cmd_measure = BH1750_CONTINUE_4LX_RES;
-        bh1750_set_measure_mode(sens, cmd_measure);
+        iot_bh1750_set_measure_mode(sens, cmd_measure);
         vTaskDelay(30 / portTICK_RATE_MS);
-        ret = bh1750_get_data(sens, &bh1750_data);
+        ret = iot_bh1750_get_data(sens, &bh1750_data);
         if (ret == ESP_OK) {
             printf("bh1750 val(continuously mode): %f\n", bh1750_data);
         } else {
@@ -91,7 +91,7 @@ void bh1750_test_task(void* pvParameters)
         }
         vTaskDelay(1000 / portTICK_RATE_MS);
     }
-    sensor_bh1750_delete(sens, true);
+    iot_bh1750_delete(sens, true);
     vTaskDelete(NULL);
 }
 

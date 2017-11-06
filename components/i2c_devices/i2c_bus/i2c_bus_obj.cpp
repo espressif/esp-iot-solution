@@ -25,7 +25,7 @@
 #include <stdio.h>
 #include "esp_log.h"
 #include "driver/i2c.h"
-#include "i2c_bus.h"
+#include "iot_i2c_bus.h"
 
 CI2CBus::CI2CBus(i2c_port_t i2c_port, gpio_num_t scl_io, gpio_num_t sda_io, i2c_mode_t i2c_mode, int clk_hz)
 {
@@ -36,18 +36,18 @@ CI2CBus::CI2CBus(i2c_port_t i2c_port, gpio_num_t scl_io, gpio_num_t sda_io, i2c_
     conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
     conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
     conf.master.clk_speed = clk_hz;
-    m_i2c_bus_handle = i2c_bus_create(i2c_port, &conf);
+    m_i2c_bus_handle = iot_i2c_bus_create(i2c_port, &conf);
 }
 
 CI2CBus::~CI2CBus()
 {
-    i2c_bus_delete(m_i2c_bus_handle);
+    iot_i2c_bus_delete(m_i2c_bus_handle);
     m_i2c_bus_handle = NULL;
 }
 
 esp_err_t CI2CBus::send(i2c_cmd_handle_t cmd, portBASE_TYPE ticks_to_wait)
 {
-    return i2c_bus_cmd_begin(m_i2c_bus_handle, cmd, ticks_to_wait);
+    return iot_i2c_bus_cmd_begin(m_i2c_bus_handle, cmd, ticks_to_wait);
 }
 
 i2c_bus_handle_t CI2CBus::get_bus_handle()

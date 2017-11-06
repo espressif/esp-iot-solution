@@ -25,7 +25,7 @@
 #include <stdio.h>
 #include "driver/i2c.h"
 #include "esp_log.h"
-#include "is31fl3736.h"
+#include "iot_is31fl3736.h"
 
 static const char *tag = "IS31FL3736";
 
@@ -50,7 +50,7 @@ typedef struct {
     uint8_t cur_val;
 } is31fl3736_dev_t;
 
-esp_err_t is31fl3736_write_page(is31fl3736_handle_t fxled, uint8_t page_num)
+esp_err_t iot_is31fl3736_write_page(is31fl3736_handle_t fxled, uint8_t page_num)
 {
     IS31_PARAM_CHECK(page_num < 3);
     is31fl3736_dev_t* led = (is31fl3736_dev_t*) fxled;
@@ -60,7 +60,7 @@ esp_err_t is31fl3736_write_page(is31fl3736_handle_t fxled, uint8_t page_num)
     i2c_master_write_byte(cmd, IS31FL3736_RET_CMD_LOCK, IS31FL3736_ACK_CHECK_EN);
     i2c_master_write_byte(cmd, IS31FL3736_CMD_WRITE_EN, IS31FL3736_ACK_CHECK_EN);
     i2c_master_stop(cmd);
-    int ret = i2c_bus_cmd_begin(led->bus, cmd, 1000 / portTICK_RATE_MS);
+    int ret = iot_i2c_bus_cmd_begin(led->bus, cmd, 1000 / portTICK_RATE_MS);
     i2c_cmd_link_delete(cmd);
     IS31_RES_CHECK(ret == ESP_OK);
     cmd = i2c_cmd_link_create();
@@ -69,12 +69,12 @@ esp_err_t is31fl3736_write_page(is31fl3736_handle_t fxled, uint8_t page_num)
     i2c_master_write_byte(cmd, IS31FL3736_REG_CMD, IS31FL3736_ACK_CHECK_EN);
     i2c_master_write_byte(cmd, page_num, IS31FL3736_ACK_CHECK_EN);
     i2c_master_stop(cmd);
-    ret = i2c_bus_cmd_begin(led->bus, cmd, 1000 / portTICK_RATE_MS);
+    ret = iot_i2c_bus_cmd_begin(led->bus, cmd, 1000 / portTICK_RATE_MS);
     i2c_cmd_link_delete(cmd);
     return ret;
 }
 
-esp_err_t is31fl3736_write_reg(is31fl3736_handle_t fxled, uint8_t reg_addr, uint8_t *data, uint8_t data_num)
+esp_err_t iot_is31fl3736_write(is31fl3736_handle_t fxled, uint8_t reg_addr, uint8_t *data, uint8_t data_num)
 {
     is31fl3736_dev_t* led = (is31fl3736_dev_t*) fxled;
     IS31_PARAM_CHECK(NULL != data);
@@ -84,7 +84,7 @@ esp_err_t is31fl3736_write_reg(is31fl3736_handle_t fxled, uint8_t reg_addr, uint
     i2c_master_write_byte(cmd, reg_addr, IS31FL3736_ACK_CHECK_EN);
     i2c_master_write(cmd, data, data_num, IS31FL3736_ACK_CHECK_EN);
     i2c_master_stop(cmd);
-    int ret = i2c_bus_cmd_begin(led->bus, cmd, 1000 / portTICK_RATE_MS);
+    int ret = iot_i2c_bus_cmd_begin(led->bus, cmd, 1000 / portTICK_RATE_MS);
     i2c_cmd_link_delete(cmd);
     return ret;
 }
@@ -102,58 +102,58 @@ esp_err_t is31fl3736_read_reg(is31fl3736_handle_t fxled, uint8_t reg_addr, uint8
     i2c_master_write_byte(cmd, (led->dev_addr) | IS31FL3736_READ_BIT, IS31FL3736_ACK_CHECK_EN);
     i2c_master_read_byte(cmd, data, IS31FL3736_READ_NACK);
     i2c_master_stop(cmd);
-    ret = i2c_bus_cmd_begin(led->bus, cmd, 1000 / portTICK_RATE_MS);
+    ret = iot_i2c_bus_cmd_begin(led->bus, cmd, 1000 / portTICK_RATE_MS);
     i2c_cmd_link_delete(cmd);
     return ret;
 }
 
-esp_err_t is31fl3736_set_mode(is31fl3736_handle_t fxled, is31fl3736_mode_t mode)
+esp_err_t iot_is31fl3736_set_mode(is31fl3736_handle_t fxled, is31fl3736_mode_t mode)
 {
     uint8_t reg_val;
     reg_val = IS31FL3736_CMD_WRITE_EN;
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, IS31FL3736_RET_CMD_LOCK, &reg_val, 1));
+    IS31_ERROR_CHECK(ESP_OK == iot_is31fl3736_write(fxled, IS31FL3736_RET_CMD_LOCK, &reg_val, 1));
     reg_val = IS31FL3736_PAGE(3);
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, IS31FL3736_REG_CMD, &reg_val, 1));
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, IS31FL3736_REG_PG3_CONFIG, (uint8_t*)&mode, 1));
+    IS31_ERROR_CHECK(ESP_OK == iot_is31fl3736_write(fxled, IS31FL3736_REG_CMD, &reg_val, 1));
+    IS31_ERROR_CHECK(ESP_OK == iot_is31fl3736_write(fxled, IS31FL3736_REG_PG3_CONFIG, (uint8_t*)&mode, 1));
     return ESP_OK;
 }
 
-esp_err_t is31fl3736_set_global_current(is31fl3736_handle_t fxled, uint8_t curr_value)
+esp_err_t iot_is31fl3736_set_global_current(is31fl3736_handle_t fxled, uint8_t curr_value)
 {
     is31fl3736_dev_t* led = (is31fl3736_dev_t*) fxled;
     uint8_t reg_val;
     reg_val = IS31FL3736_CMD_WRITE_EN;
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, IS31FL3736_RET_CMD_LOCK, &reg_val, 1));
+    IS31_ERROR_CHECK(ESP_OK == iot_is31fl3736_write(fxled, IS31FL3736_RET_CMD_LOCK, &reg_val, 1));
     reg_val = IS31FL3736_PAGE(3);
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, IS31FL3736_REG_CMD, &reg_val, 1));
+    IS31_ERROR_CHECK(ESP_OK == iot_is31fl3736_write(fxled, IS31FL3736_REG_CMD, &reg_val, 1));
     reg_val = curr_value;
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, IS31FL3736_REG_PG3_CURR, &reg_val, 1));
+    IS31_ERROR_CHECK(ESP_OK == iot_is31fl3736_write(fxled, IS31FL3736_REG_PG3_CURR, &reg_val, 1));
     led->cur_val = curr_value;
     return ESP_OK;
 }
 
-esp_err_t is31fl3736_set_resistor(is31fl3736_handle_t fxled, is31fl3736_res_type_t type, is31fl3736_res_t res_val)
+esp_err_t iot_is31fl3736_set_resistor(is31fl3736_handle_t fxled, is31fl3736_res_type_t type, is31fl3736_res_t res_val)
 {
     uint8_t reg_val;
     reg_val = IS31FL3736_CMD_WRITE_EN;
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, IS31FL3736_RET_CMD_LOCK, &reg_val, 1));
+    IS31_ERROR_CHECK(ESP_OK == iot_is31fl3736_write(fxled, IS31FL3736_RET_CMD_LOCK, &reg_val, 1));
     reg_val = IS31FL3736_PAGE(3);
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, IS31FL3736_REG_CMD, &reg_val, 1));
+    IS31_ERROR_CHECK(ESP_OK == iot_is31fl3736_write(fxled, IS31FL3736_REG_CMD, &reg_val, 1));
     reg_val = res_val;
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, type, &reg_val, 1));
+    IS31_ERROR_CHECK(ESP_OK == iot_is31fl3736_write(fxled, type, &reg_val, 1));
     return ESP_OK;
 }
 
 /**
  * @brief reset all register into default
  */
-esp_err_t is31fl3736_reset_register(is31fl3736_handle_t fxled)
+esp_err_t iot_is31fl3736_reset_reg(is31fl3736_handle_t fxled)
 {
     uint8_t reg_val;
     reg_val = IS31FL3736_CMD_WRITE_EN;
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, IS31FL3736_RET_CMD_LOCK, &reg_val, 1));
+    IS31_ERROR_CHECK(ESP_OK == iot_is31fl3736_write(fxled, IS31FL3736_RET_CMD_LOCK, &reg_val, 1));
     reg_val = IS31FL3736_PAGE(3);
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, IS31FL3736_REG_CMD, &reg_val, 1));
+    IS31_ERROR_CHECK(ESP_OK == iot_is31fl3736_write(fxled, IS31FL3736_REG_CMD, &reg_val, 1));
     reg_val = 0;
     IS31_ERROR_CHECK(ESP_OK == is31fl3736_read_reg(fxled, IS31FL3736_REG_PG3_RESET, &reg_val));
     return ESP_OK;
@@ -164,12 +164,12 @@ esp_err_t is31fl3736_reset_register(is31fl3736_handle_t fxled)
  * current source (CS-X) 1~8; 
  * switch scan (SW-Y) 1 ~ 12; all == 8 * 12 == 96
  */
-esp_err_t is31fl3736_set_led_matrix(is31fl3736_handle_t fxled, uint16_t cs_x_bit, uint16_t sw_y_bit,
+esp_err_t iot_is31fl3736_set_led_matrix(is31fl3736_handle_t fxled, uint16_t cs_x_bit, uint16_t sw_y_bit,
         is31fl3736_led_stau_t status)
 {
     int i, j, k;
     uint8_t reg, reg_mask, reg_val, temp;
-    is31fl3736_write_page(fxled, IS31FL3736_PAGE(0));
+    iot_is31fl3736_write_page(fxled, IS31FL3736_PAGE(0));
     for (i = 0; i < 2; i++) {
         if ((cs_x_bit >> (i * 4)) & 0xf) {
             for (j = 0; j < IS31FL3736_SWY_MAX; j++) {
@@ -188,7 +188,7 @@ esp_err_t is31fl3736_set_led_matrix(is31fl3736_handle_t fxled, uint16_t cs_x_bit
                         reg_val = 0;
                     }
                     ESP_LOGD(tag, "reg 0x%02X; val 0x%02x\r\n", reg, reg_val);
-                    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, reg, &reg_val, 1));
+                    IS31_ERROR_CHECK(ESP_OK == iot_is31fl3736_write(fxled, reg, &reg_val, 1));
                 }
             }
         }
@@ -196,11 +196,11 @@ esp_err_t is31fl3736_set_led_matrix(is31fl3736_handle_t fxled, uint16_t cs_x_bit
     return ESP_OK;
 }
 
-esp_err_t is31fl3736_fill_buf(is31fl3736_handle_t fxled, uint8_t duty, uint8_t* buf)
+esp_err_t iot_is31fl3736_fill_buf(is31fl3736_handle_t fxled, uint8_t duty, uint8_t* buf)
 {
     /* print the image */
     for (int i = 0; i < IS31FL3736_SWY_MAX; i++) {
-        is31fl3736_set_pwm_duty_matrix(fxled, buf[i], IS31FL3736_CH_BIT(i), duty);
+        iot_is31fl3736_set_pwm_duty_matrix(fxled, buf[i], IS31FL3736_CH_BIT(i), duty);
     }
     return ESP_OK;
 }
@@ -208,23 +208,23 @@ esp_err_t is31fl3736_fill_buf(is31fl3736_handle_t fxled, uint8_t duty, uint8_t* 
 /**
  * @brief change channels PWM duty cycle data register
  */
-esp_err_t is31fl3736_set_pwm_duty_matrix(is31fl3736_handle_t fxled, uint16_t cs_x_bit, uint16_t sw_y_bit, uint8_t duty)
+esp_err_t iot_is31fl3736_set_pwm_duty_matrix(is31fl3736_handle_t fxled, uint16_t cs_x_bit, uint16_t sw_y_bit, uint8_t duty)
 {
     int i, j;
     uint8_t reg, reg_val;
-    is31fl3736_write_page(fxled, IS31FL3736_PAGE(1));
+    iot_is31fl3736_write_page(fxled, IS31FL3736_PAGE(1));
     for (i = 0; i < IS31FL3736_CSX_MAX; i++) {
         for (j = 0; j < IS31FL3736_SWY_MAX; j++) {
             if (((cs_x_bit >> i) & 0x1) && ((sw_y_bit >> j) & 0x1)) {
                 reg = i * 2 + j * 0x10;
                 reg_val = duty;
                 ESP_LOGD(tag, "reg %02X; val 0x%02x\r\n", reg, reg_val);
-                IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, reg, &reg_val, 1));
+                IS31_ERROR_CHECK(ESP_OK == iot_is31fl3736_write(fxled, reg, &reg_val, 1));
             } else if (((sw_y_bit >> j) & 0x1)) {
                 reg = i * 2 + j * 0x10;
                 reg_val = 0;
                 ESP_LOGD(tag, "reg %02X; val 0x%02x\r\n", reg, reg_val);
-                IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, reg, &reg_val, 1));
+                IS31_ERROR_CHECK(ESP_OK == iot_is31fl3736_write(fxled, reg, &reg_val, 1));
             }
         }
     }
@@ -234,53 +234,53 @@ esp_err_t is31fl3736_set_pwm_duty_matrix(is31fl3736_handle_t fxled, uint16_t cs_
 /**
  * @brief change channels PWM duty cycle data register
  */
-esp_err_t is31fl3736_set_channel_duty(is31fl3736_handle_t fxled, uint8_t pwm_ch, uint8_t duty)
+esp_err_t iot_is31fl3736_set_channel_duty(is31fl3736_handle_t fxled, uint8_t pwm_ch, uint8_t duty)
 {
     uint8_t reg_val;
     IS31_PARAM_CHECK(pwm_ch <= IS31FL3736_PWM_CHANNEL_MAX);
     reg_val = IS31FL3736_CMD_WRITE_EN;
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, IS31FL3736_RET_CMD_LOCK, &reg_val, 1));
+    IS31_ERROR_CHECK(ESP_OK == iot_is31fl3736_write(fxled, IS31FL3736_RET_CMD_LOCK, &reg_val, 1));
     reg_val = IS31FL3736_PAGE(1);
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, IS31FL3736_REG_CMD, &reg_val, 1));
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, pwm_ch, &duty, 1));
+    IS31_ERROR_CHECK(ESP_OK == iot_is31fl3736_write(fxled, IS31FL3736_REG_CMD, &reg_val, 1));
+    IS31_ERROR_CHECK(ESP_OK == iot_is31fl3736_write(fxled, pwm_ch, &duty, 1));
     return ESP_OK;
 }
 
 /**
  * @brief change channels PWM duty cycle data register
  */
-esp_err_t is31fl3736_set_breath_mode(is31fl3736_handle_t fxled, uint8_t pwm_ch, is31fl3736_auto_breath_mode_t mode)
+esp_err_t iot_is31fl3736_set_breath_mode(is31fl3736_handle_t fxled, uint8_t pwm_ch, is31fl3736_auto_breath_mode_t mode)
 {
     uint8_t reg_val;
     IS31_PARAM_CHECK(pwm_ch <= IS31FL3736_PWM_CHANNEL_MAX);
     reg_val = IS31FL3736_CMD_WRITE_EN;
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, IS31FL3736_RET_CMD_LOCK, &reg_val, 1));
+    IS31_ERROR_CHECK(ESP_OK == iot_is31fl3736_write(fxled, IS31FL3736_RET_CMD_LOCK, &reg_val, 1));
     reg_val = IS31FL3736_PAGE(1);
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, IS31FL3736_REG_CMD, &reg_val, 1));
+    IS31_ERROR_CHECK(ESP_OK == iot_is31fl3736_write(fxled, IS31FL3736_REG_CMD, &reg_val, 1));
     reg_val = mode;
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, pwm_ch, &reg_val, 1));
+    IS31_ERROR_CHECK(ESP_OK == iot_is31fl3736_write(fxled, pwm_ch, &reg_val, 1));
     return ESP_OK;
 }
 
 /**
  * @brief Load PWM Register and LED Control Register��s data
  */
-esp_err_t is31fl3736_update_auto_breath_register(is31fl3736_handle_t fxled)
+esp_err_t iot_is31fl3736_update_auto_breath(is31fl3736_handle_t fxled)
 {
     uint8_t reg_val;
     reg_val = IS31FL3736_CMD_WRITE_EN;
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, IS31FL3736_RET_CMD_LOCK, &reg_val, 1));
+    IS31_ERROR_CHECK(ESP_OK == iot_is31fl3736_write(fxled, IS31FL3736_RET_CMD_LOCK, &reg_val, 1));
     reg_val = IS31FL3736_PAGE(3);
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, IS31FL3736_REG_CMD, &reg_val, 1));
+    IS31_ERROR_CHECK(ESP_OK == iot_is31fl3736_write(fxled, IS31FL3736_REG_CMD, &reg_val, 1));
     reg_val = 0;
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, IS31FL3736_REG_PG3_UPDATE, &reg_val, 1));
+    IS31_ERROR_CHECK(ESP_OK == iot_is31fl3736_write(fxled, IS31FL3736_REG_PG3_UPDATE, &reg_val, 1));
     return ESP_OK;
 }
 
 /**
  * @brief change SDB io status to reset IC
  */
-esp_err_t is31fl3736_hardware_reset(is31fl3736_handle_t fxled)
+esp_err_t iot_is31fl3736_hw_reset(is31fl3736_handle_t fxled)
 {
     is31fl3736_dev_t* led = (is31fl3736_dev_t*) fxled;
     if (led->rst_io < GPIO_NUM_MAX) {
@@ -291,49 +291,49 @@ esp_err_t is31fl3736_hardware_reset(is31fl3736_handle_t fxled)
     return ESP_OK;
 }
 
-esp_err_t is31fl3736_init(is31fl3736_handle_t fxled)
+esp_err_t iot_is31fl3736_init(is31fl3736_handle_t fxled)
 {
     is31fl3736_mode_t mode;
     is31fl3736_dev_t* led = (is31fl3736_dev_t*) fxled;
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_hardware_reset(fxled));
+    IS31_ERROR_CHECK(ESP_OK == iot_is31fl3736_hw_reset(fxled));
     mode.val = 0;
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_set_mode(fxled, mode));
+    IS31_ERROR_CHECK(ESP_OK == iot_is31fl3736_set_mode(fxled, mode));
     /* Open all LED */
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_set_led_matrix(fxled, IS31FL3736_CSX_MAX_MASK, IS31FL3736_SWY_MAX_MASK, IS31FL3736_LED_ON));
+    IS31_ERROR_CHECK(ESP_OK == iot_is31fl3736_set_led_matrix(fxled, IS31FL3736_CSX_MAX_MASK, IS31FL3736_SWY_MAX_MASK, IS31FL3736_LED_ON));
     /* Set PWM data to 0 */
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_set_pwm_duty_matrix(fxled, IS31FL3736_CSX_MAX_MASK, IS31FL3736_SWY_MAX_MASK, 0));
+    IS31_ERROR_CHECK(ESP_OK == iot_is31fl3736_set_pwm_duty_matrix(fxled, IS31FL3736_CSX_MAX_MASK, IS31FL3736_SWY_MAX_MASK, 0));
     mode.normal_en = 1;
     /* Release software shutdown to normal operation */
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_set_mode(fxled, mode));
+    IS31_ERROR_CHECK(ESP_OK == iot_is31fl3736_set_mode(fxled, mode));
     /* Set global current */
-    IS31_ERROR_CHECK(ESP_OK == is31fl3736_set_global_current(fxled, led->cur_val));
+    IS31_ERROR_CHECK(ESP_OK == iot_is31fl3736_set_global_current(fxled, led->cur_val));
 
     uint8_t reg, reg_val;
-    is31fl3736_write_page(fxled, IS31FL3736_PAGE(1));
+    iot_is31fl3736_write_page(fxled, IS31FL3736_PAGE(1));
     for (int i = 0; i < IS31FL3736_CSX_MAX; i++) {
         for (int j = 0; j < IS31FL3736_SWY_MAX; j++) {
             reg = i * 2 + j * 0x10;
             reg_val = 0;
             ESP_LOGD(tag, "reg %02X; val 0x%02x\r\n", reg, reg_val);
-            IS31_ERROR_CHECK(ESP_OK == is31fl3736_write_reg(fxled, reg, &reg_val, 1));
+            IS31_ERROR_CHECK(ESP_OK == iot_is31fl3736_write(fxled, reg, &reg_val, 1));
         }
     }
     return ESP_OK;
 }
 
-uint8_t is31fl3736_get_i2c_addr(is31fl3736_addr_pin_t addr1_pin, is31fl3736_addr_pin_t addr2_pin)
+uint8_t iot_is31fl3736_get_i2c_addr(is31fl3736_addr_pin_t addr1_pin, is31fl3736_addr_pin_t addr2_pin)
 {
     uint8_t addr = IS31FL3736_I2C_ID | ((uint8_t) addr1_pin << 1) | ((uint8_t) addr2_pin << 3);
     ESP_LOGI(tag, "slave ADDR : %02x", (uint8_t )addr);
     return addr;
 }
 
-is31fl3736_handle_t dev_is31fl3736_create(i2c_bus_handle_t bus, gpio_num_t rst_io, is31fl3736_addr_pin_t addr1, is31fl3736_addr_pin_t addr2,
+is31fl3736_handle_t iot_is31fl3736_create(i2c_bus_handle_t bus, gpio_num_t rst_io, is31fl3736_addr_pin_t addr1, is31fl3736_addr_pin_t addr2,
         uint8_t cur_val)
 {
     is31fl3736_dev_t* fxled = (is31fl3736_dev_t*) calloc(1, sizeof(is31fl3736_dev_t));
     fxled->bus = bus;
-    fxled->dev_addr = is31fl3736_get_i2c_addr(addr1, addr2);
+    fxled->dev_addr = iot_is31fl3736_get_i2c_addr(addr1, addr2);
     fxled->rst_io = rst_io;
     fxled->cur_val = cur_val;
     if (rst_io < GPIO_NUM_MAX) {
@@ -346,15 +346,15 @@ is31fl3736_handle_t dev_is31fl3736_create(i2c_bus_handle_t bus, gpio_num_t rst_i
         };
         gpio_config(&gpio_conf);
     }
-    is31fl3736_init(fxled);
+    iot_is31fl3736_init(fxled);
     return (is31fl3736_handle_t) fxled;
 }
 
-esp_err_t dev_is31fl3736_delete(is31fl3736_handle_t fxled, bool del_bus)
+esp_err_t iot_is31fl3736_delete(is31fl3736_handle_t fxled, bool del_bus)
 {
     is31fl3736_dev_t* led = (is31fl3736_dev_t*) fxled;
     if (del_bus) {
-        i2c_bus_delete(led->bus);
+        iot_i2c_bus_delete(led->bus);
         led->bus = NULL;
     }
     free(led);

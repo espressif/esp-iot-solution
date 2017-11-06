@@ -61,7 +61,7 @@ typedef enum {
   *
   * @return  the handle of light
   */
-light_handle_t light_create(ledc_timer_t timer, ledc_mode_t speed_mode, uint32_t freq_hz, uint8_t channel_num, ledc_timer_bit_t timer_bit);
+light_handle_t iot_light_create(ledc_timer_t timer, ledc_mode_t speed_mode, uint32_t freq_hz, uint8_t channel_num, ledc_timer_bit_t timer_bit);
 
 /**
   * @brief  add an output channel to light
@@ -75,7 +75,7 @@ light_handle_t light_create(ledc_timer_t timer, ledc_mode_t speed_mode, uint32_t
   *     - ESP_OK: succeed
   *     - others: fail
   */
-esp_err_t light_channel_regist(light_handle_t light_handle, uint8_t channel_idx, gpio_num_t io_num, ledc_channel_t channel);
+esp_err_t iot_light_channel_regist(light_handle_t light_handle, uint8_t channel_idx, gpio_num_t io_num, ledc_channel_t channel);
 
 /**
   * @brief  free the momery of light
@@ -86,7 +86,7 @@ esp_err_t light_channel_regist(light_handle_t light_handle, uint8_t channel_idx,
   *     - ESP_OK: succeed
   *     - others: fail
   */
-esp_err_t light_delete(light_handle_t light_handle);
+esp_err_t iot_light_delete(light_handle_t light_handle);
 
 /**
   * @brief  set the duty of a channel
@@ -99,7 +99,7 @@ esp_err_t light_delete(light_handle_t light_handle);
   *     - ESP_OK: succeed
   *     - others: fail
   */
-esp_err_t light_duty_write(light_handle_t light_handle, uint8_t channel_id, uint32_t duty, light_duty_mode_t duty_mode);
+esp_err_t iot_light_duty_write(light_handle_t light_handle, uint8_t channel_id, uint32_t duty, light_duty_mode_t duty_mode);
 
 /**
   * @brief  set a light channel to breath mode
@@ -112,7 +112,7 @@ esp_err_t light_duty_write(light_handle_t light_handle, uint8_t channel_id, uint
   *     - ESP_OK: succeed
   *     - others: fail
   */
-esp_err_t light_breath_write(light_handle_t light_handle, uint8_t channel_id, int breath_period);
+esp_err_t iot_light_breath_write(light_handle_t light_handle, uint8_t channel_id, int breath_period);
 
 /**
   * @brief  set some channels to blink,the others would be turned off
@@ -125,7 +125,7 @@ esp_err_t light_breath_write(light_handle_t light_handle, uint8_t channel_id, in
   *     - ESP_OK: succeed
   *     - others: fail
   */
-esp_err_t light_blink_start(light_handle_t light_handle, uint32_t channel_mask, uint32_t period_ms);
+esp_err_t iot_light_blink_starte(light_handle_t light_handle, uint32_t channel_mask, uint32_t period_ms);
 
 /**
   * @brief  set some channels to blink,the others would be turned off
@@ -136,14 +136,14 @@ esp_err_t light_blink_start(light_handle_t light_handle, uint32_t channel_mask, 
   *     - ESP_OK: succeed
   *     - others: fail
   */
-esp_err_t light_blink_stop(light_handle_t light_handle);
+esp_err_t iot_light_blink_stop(light_handle_t light_handle);
 
 #ifdef __cplusplus
 }
 #endif
 
 #ifdef __cplusplus
-#include "controllable_obj.h"
+#include "iot_controllable_obj.h"
 
 /**
  * class of light with at most 5 pwm channels

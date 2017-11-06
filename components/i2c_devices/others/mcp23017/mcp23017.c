@@ -23,8 +23,8 @@
  */
 #include <stdio.h>
 #include "driver/i2c.h"
-#include "mcp23017.h"
-#include "i2c_bus.h"
+#include "iot_mcp23017.h"
+#include "iot_i2c_bus.h"
 
 #define MCP23017_PORT_A_BYTE(x)         (x & 0xFF)                      //get pin of GPIOA
 #define MCP23017_PORT_B_BYTE(x)         (x >> 8)                        //get pin of GPIOB
@@ -72,7 +72,7 @@ typedef struct {
     uint16_t intEnabledPins;			//pin of interrupt
 } mcp23017_dev_t;
 
-esp_err_t mcp23017_write_byte(mcp23017_handle_t dev, uint8_t reg_addr,
+esp_err_t iot_mcp23017_write_byte(mcp23017_handle_t dev, uint8_t reg_addr,
         uint8_t data)
 {
     esp_err_t ret;
@@ -83,12 +83,12 @@ esp_err_t mcp23017_write_byte(mcp23017_handle_t dev, uint8_t reg_addr,
             ACK_CHECK_EN);
     i2c_master_write_byte(cmd, reg_addr, ACK_CHECK_EN);
     i2c_master_write_byte(cmd, data, ACK_CHECK_EN);
-    ret = i2c_bus_cmd_begin(device->bus, cmd, 1000 / portTICK_RATE_MS);
+    ret = iot_i2c_bus_cmd_begin(device->bus, cmd, 1000 / portTICK_RATE_MS);
     i2c_cmd_link_delete(cmd);
     return ret;
 }
 
-esp_err_t mcp23017_write(mcp23017_handle_t dev, uint8_t reg_start_addr,
+esp_err_t iot_mcp23017_write(mcp23017_handle_t dev, uint8_t reg_start_addr,
         uint8_t reg_num, uint8_t *data_buf)
 {
     uint32_t i = 0;
@@ -104,13 +104,13 @@ esp_err_t mcp23017_write(mcp23017_handle_t dev, uint8_t reg_start_addr,
             i2c_master_write_byte(cmd, reg_start_addr + i, ACK_CHECK_EN);
             i2c_master_write_byte(cmd, data_buf[i], ACK_CHECK_EN);
         }
-        ret = i2c_bus_cmd_begin(device->bus, cmd, 1000 / portTICK_RATE_MS);
+        ret = iot_i2c_bus_cmd_begin(device->bus, cmd, 1000 / portTICK_RATE_MS);
         i2c_cmd_link_delete(cmd);
     }
     return ret;
 }
 
-esp_err_t mcp23017_read_byte(mcp23017_handle_t dev, uint8_t reg,
+esp_err_t iot_mcp23017_read_byte(mcp23017_handle_t dev, uint8_t reg,
         uint8_t *data)
 {
     esp_err_t ret = ESP_FAIL;
@@ -121,7 +121,7 @@ esp_err_t mcp23017_read_byte(mcp23017_handle_t dev, uint8_t reg,
             ACK_CHECK_EN);
     i2c_master_write_byte(cmd, reg, ACK_CHECK_EN);
     i2c_master_stop(cmd);
-    ret = i2c_bus_cmd_begin(device->bus, cmd, 1000 / portTICK_RATE_MS);
+    ret = iot_i2c_bus_cmd_begin(device->bus, cmd, 1000 / portTICK_RATE_MS);
     i2c_cmd_link_delete(cmd);
     if (ret == ESP_FAIL) {
         return ret;
@@ -133,12 +133,12 @@ esp_err_t mcp23017_read_byte(mcp23017_handle_t dev, uint8_t reg,
             ACK_CHECK_EN);
     i2c_master_read_byte(cmd, data, NACK_VAL);
     i2c_master_stop(cmd);
-    ret = i2c_bus_cmd_begin(device->bus, cmd, 1000 / portTICK_RATE_MS);
+    ret = iot_i2c_bus_cmd_begin(device->bus, cmd, 1000 / portTICK_RATE_MS);
     i2c_cmd_link_delete(cmd);
     return ret;
 }
 
-esp_err_t mcp23017_read(mcp23017_handle_t dev, uint8_t reg_start_addr,
+esp_err_t iot_mcp23017_read(mcp23017_handle_t dev, uint8_t reg_start_addr,
         uint8_t reg_num, uint8_t *data_buf)
 {
     uint32_t i = 0;
@@ -152,7 +152,7 @@ esp_err_t mcp23017_read(mcp23017_handle_t dev, uint8_t reg_start_addr,
                 ACK_CHECK_EN);
         i2c_master_write_byte(cmd, reg_start_addr, ACK_CHECK_EN);
         i2c_master_stop(cmd);
-        ret = i2c_bus_cmd_begin(device->bus, cmd, 1000 / portTICK_RATE_MS);
+        ret = iot_i2c_bus_cmd_begin(device->bus, cmd, 1000 / portTICK_RATE_MS);
         i2c_cmd_link_delete(cmd);
         if (ret == ESP_FAIL) {
             return ret;
@@ -167,13 +167,13 @@ esp_err_t mcp23017_read(mcp23017_handle_t dev, uint8_t reg_start_addr,
         }
         i2c_master_read_byte(cmd, &data_buf[i], NACK_VAL);
         i2c_master_stop(cmd);
-        ret = i2c_bus_cmd_begin(device->bus, cmd, 1000 / portTICK_RATE_MS);
+        ret = iot_i2c_bus_cmd_begin(device->bus, cmd, 1000 / portTICK_RATE_MS);
         i2c_cmd_link_delete(cmd);
     }
     return ret;
 }
 
-mcp23017_handle_t dev_mcp23017_create(i2c_bus_handle_t bus, uint16_t dev_addr)
+mcp23017_handle_t iot_mcp23017_create(i2c_bus_handle_t bus, uint16_t dev_addr)
 {
     mcp23017_dev_t* device = (mcp23017_dev_t*) calloc(1,
             sizeof(mcp23017_dev_t));
@@ -182,24 +182,24 @@ mcp23017_handle_t dev_mcp23017_create(i2c_bus_handle_t bus, uint16_t dev_addr)
     return (mcp23017_handle_t) device;
 }
 
-esp_err_t dev_mcp23017_delete(mcp23017_handle_t dev, bool del_bus)
+esp_err_t iot_mcp23017_delete(mcp23017_handle_t dev, bool del_bus)
 {
     mcp23017_dev_t* device = (mcp23017_dev_t*) dev;
     if (del_bus) {
-        i2c_bus_delete(device->bus);
+        iot_i2c_bus_delete(device->bus);
         device->bus = NULL;
     }
     free(device);
     return ESP_OK;
 }
 
-esp_err_t mcp23017_set_pullups(mcp23017_handle_t dev, uint16_t pins)
+esp_err_t iot_mcp23017_set_pullup(mcp23017_handle_t dev, uint16_t pins)
 {
     uint8_t data[] = { MCP23017_PORT_A_BYTE(pins), MCP23017_PORT_B_BYTE(pins) };
-    return mcp23017_write(dev, MCP23017_REG_GPIOA, sizeof(data), data); //set REG_GPIOA(); REG_GPIOB();
+    return iot_mcp23017_write(dev, MCP23017_REG_GPIOA, sizeof(data), data); //set REG_GPIOA(); REG_GPIOB();
 }
 
-esp_err_t mcp23017_enable_interrupt_pins(mcp23017_handle_t dev, uint16_t pins,
+esp_err_t iot_mcp23017_interrupt_en(mcp23017_handle_t dev, uint16_t pins,
 bool isDefault, uint16_t defaultValue)
 {
     mcp23017_dev_t* device = (mcp23017_dev_t*) dev;
@@ -207,7 +207,7 @@ bool isDefault, uint16_t defaultValue)
     uint8_t data[] = { MCP23017_PORT_A_BYTE(pins), MCP23017_PORT_B_BYTE(pins) };
     if (!isDefault) {
         uint8_t data1[] = { 0, 0, 0, 0 };
-        if (mcp23017_write(dev, MCP23017_REG_DEFVALA, sizeof(data1),
+        if (iot_mcp23017_write(dev, MCP23017_REG_DEFVALA, sizeof(data1),
                 data1) == ESP_FAIL) {
             return ESP_FAIL;
         }
@@ -215,12 +215,12 @@ bool isDefault, uint16_t defaultValue)
         uint8_t data1[] = { MCP23017_PORT_A_BYTE(defaultValue),
                 MCP23017_PORT_B_BYTE(defaultValue), MCP23017_PORT_A_BYTE(pins),
                 MCP23017_PORT_B_BYTE(pins) };
-        if (mcp23017_write(dev, MCP23017_REG_DEFVALA, sizeof(data1),
+        if (iot_mcp23017_write(dev, MCP23017_REG_DEFVALA, sizeof(data1),
                 data1) == ESP_FAIL) {
             return ESP_FAIL;
         }
     }
-    if (mcp23017_write(dev, MCP23017_REG_GPINTENA, sizeof(data),
+    if (iot_mcp23017_write(dev, MCP23017_REG_GPINTENA, sizeof(data),
             data) == ESP_FAIL) {
         return ESP_FAIL;
     }
@@ -228,13 +228,13 @@ bool isDefault, uint16_t defaultValue)
     return ESP_OK;
 }
 
-esp_err_t mcp23017_disable_interrupt_pins(mcp23017_handle_t dev, uint16_t pins)
+esp_err_t iot_mcp23017_interrupt_disable(mcp23017_handle_t dev, uint16_t pins)
 {
     mcp23017_dev_t* device = (mcp23017_dev_t*) dev;
     //write register REG_GPINTENA(pins) REG_GPINTENB(pins) DEFVALA(0) DEFVALB(0) INTCONA(0) INTCONB(0)
     uint8_t data[] = { MCP23017_PORT_A_BYTE(device->intEnabledPins & ~pins),
             MCP23017_PORT_B_BYTE(device->intEnabledPins & ~pins) };
-    if (mcp23017_write(dev, MCP23017_REG_GPINTENA, sizeof(data),
+    if (iot_mcp23017_write(dev, MCP23017_REG_GPINTENA, sizeof(data),
             data) == ESP_FAIL) {
         return ESP_FAIL;
     }
@@ -242,14 +242,14 @@ esp_err_t mcp23017_disable_interrupt_pins(mcp23017_handle_t dev, uint16_t pins)
     return ESP_OK;
 }
 
-esp_err_t mcp23017_set_interrupt_pins_polarity(mcp23017_handle_t dev,
+esp_err_t iot_mcp23017_set_interrupt_polarity(mcp23017_handle_t dev,
         mcp23017_gpio_t gpio, uint8_t chLevel)
 {
     uint8_t getIOCON = {
             (gpio == MCP23017_GPIOA ) ?
                     MCP23017_REG_IOCONA : MCP23017_REG_IOCONB };
     uint8_t ioCONValue[] = { 0, 0 };
-    if (mcp23017_read(dev, getIOCON, sizeof(ioCONValue),
+    if (iot_mcp23017_read(dev, getIOCON, sizeof(ioCONValue),
             ioCONValue) == ESP_FAIL) {
         return ESP_FAIL;
     }
@@ -261,14 +261,14 @@ esp_err_t mcp23017_set_interrupt_pins_polarity(mcp23017_handle_t dev,
     } else {
         setIOCON[1] = *ioCONValue & ~MCP23017_IOCON_INTPOL;
     }
-    return mcp23017_write_byte(dev, setIOCON[0], setIOCON[1]);
+    return iot_mcp23017_write_byte(dev, setIOCON[0], setIOCON[1]);
 }
 
-esp_err_t mcp23017_set_seque_mode(mcp23017_handle_t dev, uint8_t isSeque)
+esp_err_t iot_mcp23017_set_seque_mode(mcp23017_handle_t dev, uint8_t isSeque)
 {
     uint8_t getIOCON = { MCP23017_REG_IOCONA };
     uint8_t ioCONValue[] = { 0, 0 };
-    if (mcp23017_read(dev, getIOCON, sizeof(ioCONValue),
+    if (iot_mcp23017_read(dev, getIOCON, sizeof(ioCONValue),
             ioCONValue) == ESP_FAIL) {
         return ESP_FAIL;
     }
@@ -279,17 +279,17 @@ esp_err_t mcp23017_set_seque_mode(mcp23017_handle_t dev, uint8_t isSeque)
     } else {
         setIOCON[1] = *ioCONValue & ~MCP23017_IOCON_SEQOP;
     }
-    return mcp23017_write_byte(dev, setIOCON[0], setIOCON[1]);
+    return iot_mcp23017_write_byte(dev, setIOCON[0], setIOCON[1]);
 }
 
-esp_err_t mcp23017_mirror_interrupt(mcp23017_handle_t dev, uint8_t mirror,
+esp_err_t iot_mcp23017_mirror_interrupt(mcp23017_handle_t dev, uint8_t mirror,
         mcp23017_gpio_t gpio)
 {
     uint8_t getIOCON = {
             (gpio == MCP23017_GPIOA ) ?
                     MCP23017_REG_IOCONA : MCP23017_REG_IOCONB };
     uint8_t ioCONValue[] = { 0, 0 }; // STM32 i2c minimum read is 2 bytes
-    if (mcp23017_read(dev, getIOCON, sizeof(ioCONValue),
+    if (iot_mcp23017_read(dev, getIOCON, sizeof(ioCONValue),
             ioCONValue) == ESP_FAIL) {
         return ESP_FAIL;
     }
@@ -302,35 +302,35 @@ esp_err_t mcp23017_mirror_interrupt(mcp23017_handle_t dev, uint8_t mirror,
     } else {
         setIOCON[1] = *ioCONValue & ~MCP23017_IOCON_MIRROR;
     }
-    return mcp23017_write_byte(dev, setIOCON[0], setIOCON[1]);
+    return iot_mcp23017_write_byte(dev, setIOCON[0], setIOCON[1]);
 }
 
-esp_err_t mcp23017_set_iodirection(mcp23017_handle_t dev, uint8_t value,
+esp_err_t iot_mcp23017_set_io_dir(mcp23017_handle_t dev, uint8_t value,
         mcp23017_gpio_t gpio)
 {
-    return mcp23017_write_byte(dev,
+    return iot_mcp23017_write_byte(dev,
             (gpio == MCP23017_GPIOA ) ?
                     MCP23017_REG_IODIRA : MCP23017_REG_IODIRB, value);
 }
 
-esp_err_t mcp23017_write_ioport(mcp23017_handle_t dev, uint8_t value,
+esp_err_t iot_mcp23017_write_io(mcp23017_handle_t dev, uint8_t value,
         mcp23017_gpio_t gpio)
 {
-    return mcp23017_write_byte(dev,
+    return iot_mcp23017_write_byte(dev,
             (gpio == MCP23017_GPIOA ) ? MCP23017_REG_GPIOA : MCP23017_REG_GPIOB,
             value);
 }
 
-uint8_t mcp23017_read_ioport(mcp23017_handle_t dev, mcp23017_gpio_t gpio)
+uint8_t iot_mcp23017_read_io(mcp23017_handle_t dev, mcp23017_gpio_t gpio)
 {
     uint8_t data = 0;
-    mcp23017_read_byte(dev,
+    iot_mcp23017_read_byte(dev,
             (gpio == MCP23017_GPIOA ) ? MCP23017_REG_GPIOA : MCP23017_REG_GPIOB,
             &data);
     return data;
 }
 
-uint16_t mcp23017_get_intpin_values(mcp23017_handle_t dev)
+uint16_t iot_mcp23017_get_int_pin(mcp23017_handle_t dev)
 {
     mcp23017_dev_t* device = (mcp23017_dev_t*) dev;
     uint16_t pinValues = 0;
@@ -338,13 +338,13 @@ uint16_t mcp23017_get_intpin_values(mcp23017_handle_t dev)
     if (device->intEnabledPins != 0) {
         uint8_t getIntPins[] = { MCP23017_REG_INTCAPA };
         uint8_t intPins[2] = { 0 };
-        mcp23017_read(device, getIntPins[0], sizeof(intPins), intPins);
+        iot_mcp23017_read(device, getIntPins[0], sizeof(intPins), intPins);
         pinValues = MCP23017_PORT_AB_WORD(intPins);
     }
 
     uint8_t getGPIOPins[] = { MCP23017_REG_GPIOA };
     uint8_t gpioPins[2] = { 0 };
-    if (mcp23017_read(device, getGPIOPins[0], sizeof(gpioPins),
+    if (iot_mcp23017_read(device, getGPIOPins[0], sizeof(gpioPins),
             gpioPins)==ESP_FAIL) return ESP_FAIL;
     uint16_t gpioValue = MCP23017_PORT_AB_WORD(gpioPins);
     pinValues |= (gpioValue & ~device->intEnabledPins); // Don't let current gpio values overwrite the intcap values
@@ -352,25 +352,25 @@ uint16_t mcp23017_get_intpin_values(mcp23017_handle_t dev)
     return pinValues;
 }
 
-uint16_t mcp23017_get_intflag_values(mcp23017_handle_t dev)
+uint16_t iot_mcp23017_get_int_flag(mcp23017_handle_t dev)
 {
     mcp23017_dev_t* device = (mcp23017_dev_t*) dev;
     uint8_t intfpins[2] = { 0 };
     uint8_t getIntPins[] = { MCP23017_REG_INTFA };
     uint16_t pinIntfValues = 0;
-    mcp23017_read(dev, getIntPins[0], sizeof(intfpins), intfpins);
+    iot_mcp23017_read(dev, getIntPins[0], sizeof(intfpins), intfpins);
     pinIntfValues = MCP23017_PORT_AB_WORD(intfpins);
     return pinIntfValues & device->intEnabledPins;
 }
 
-esp_err_t mcp23017_check_device_present(mcp23017_handle_t dev)
+esp_err_t iot_mcp23017_check_present(mcp23017_handle_t dev)
 {
     uint8_t lastregValue = 0x00;
     uint8_t regValue = 0x00;
-    mcp23017_read_byte(dev, MCP23017_REG_INTCONA, &lastregValue);
-    mcp23017_write_byte(dev, MCP23017_REG_INTCONA, 0xAA);
-    mcp23017_read_byte(dev, MCP23017_REG_INTCONA, &regValue);
-    mcp23017_write_byte(dev, MCP23017_REG_INTCONA, lastregValue);
+    iot_mcp23017_read_byte(dev, MCP23017_REG_INTCONA, &lastregValue);
+    iot_mcp23017_write_byte(dev, MCP23017_REG_INTCONA, 0xAA);
+    iot_mcp23017_read_byte(dev, MCP23017_REG_INTCONA, &regValue);
+    iot_mcp23017_write_byte(dev, MCP23017_REG_INTCONA, lastregValue);
     return (regValue == 0xAA) ? ESP_OK : ESP_FAIL;
 }
 
