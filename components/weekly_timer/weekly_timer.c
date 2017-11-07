@@ -29,7 +29,7 @@
 #include "freertos/timers.h"
 #include "esp_system.h"
 #include "esp_log.h"
-#include "weekly_timer.h"
+#include "iot_weekly_timer.h"
 #include "apps/sntp/sntp.h"
 
 #define IOT_CHECK(tag, a, ret)  if(!(a)) {                                 \
@@ -165,7 +165,7 @@ static void weekly_timer_obtain_time_task()
     vTaskDelete(NULL);
 }
 
-esp_err_t weekly_timer_init()
+esp_err_t iot_weekly_timer_init()
 {
     if (g_timer_loops != NULL) {
         return ESP_FAIL;
@@ -183,7 +183,7 @@ esp_err_t weekly_timer_init()
     return ESP_OK;
 }
 
-weekly_timer_handle_t weekly_timer_add(bool weekly_loop, weekday_mask_t week_mark, uint32_t time_num, const event_time_t *time_group)
+weekly_timer_handle_t iot_weekly_timer_add(bool weekly_loop, weekday_mask_t week_mark, uint32_t time_num, const event_time_t *time_group)
 {
     IOT_CHECK(TAG, g_timer_loops != NULL, NULL);
     IOT_CHECK(TAG, time_group != NULL, NULL);
@@ -220,7 +220,7 @@ weekly_timer_handle_t weekly_timer_add(bool weekly_loop, weekday_mask_t week_mar
     return (weekly_timer_handle_t)new_loop;
 }
 
-esp_err_t weekly_timer_delete(weekly_timer_handle_t timer_handle)
+esp_err_t iot_weekly_timer_delete(weekly_timer_handle_t timer_handle)
 {
     POINT_ASSERT(TAG, timer_handle);
     event_timer_loop_t* tm_loop = (event_timer_loop_t*) timer_handle;
@@ -237,7 +237,7 @@ esp_err_t weekly_timer_delete(weekly_timer_handle_t timer_handle)
     return ESP_FAIL;
 }
 
-esp_err_t weekly_timer_start(weekly_timer_handle_t timer_handle)
+esp_err_t iot_weekly_timer_start(weekly_timer_handle_t timer_handle)
 {
     POINT_ASSERT(TAG, timer_handle);
     event_timer_loop_t* tm_loop = (event_timer_loop_t*) timer_handle;
@@ -251,7 +251,7 @@ esp_err_t weekly_timer_start(weekly_timer_handle_t timer_handle)
     return ESP_OK;
 }
 
-esp_err_t weekly_timer_stop(weekly_timer_handle_t timer_handle)
+esp_err_t iot_weekly_timer_stop(weekly_timer_handle_t timer_handle)
 {
     POINT_ASSERT(TAG, timer_handle);
     event_timer_loop_t* tm_loop = (event_timer_loop_t*) timer_handle;

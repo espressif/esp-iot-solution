@@ -25,7 +25,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_system.h"
-#include "ota.h"
+#include "iot_ota.h"
 #include "esp_log.h"
 #include "esp_wifi.h"
 #include "iot_wifi.h"
@@ -42,7 +42,7 @@
 static void ota_task(void *arg)
 {
     ESP_LOGI(TAG, "ota task test mutex");
-    ota_start(OTA_SERVER_IP, OTA_SERVER_PORT, OTA_FILE_NAME, portMAX_DELAY);
+    iot_ota_start(OTA_SERVER_IP, OTA_SERVER_PORT, OTA_FILE_NAME, portMAX_DELAY);
     vTaskDelete(NULL);
 }
 
@@ -52,7 +52,7 @@ void ota_test()
     iot_wifi_connect(AP_SSID, AP_PASSWORD, portMAX_DELAY);
     ESP_LOGI(TAG, "free heap size before ota: %d", esp_get_free_heap_size());
     xTaskCreate(ota_task, "ota_task", 1024 * 8, NULL, 5, NULL);
-    ota_start(OTA_SERVER_IP, OTA_SERVER_PORT, OTA_FILE_NAME, 5000 / portTICK_RATE_MS);
+    iot_ota_start(OTA_SERVER_IP, OTA_SERVER_PORT, OTA_FILE_NAME, 5000 / portTICK_RATE_MS);
     vTaskDelay(10000 / portTICK_RATE_MS);
     ESP_LOGI(TAG, "free heap size after ota: %d", esp_get_free_heap_size());
     esp_restart();

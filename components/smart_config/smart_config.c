@@ -9,7 +9,7 @@
 #include "esp_event_loop.h"
 #include "esp_log.h"
 #include "esp_smartconfig.h"
-#include "smart_config.h"
+#include "iot_smartconfig.h"
 
 #define SC_DONE_EVT        BIT0
 #define SC_STOP_REQ_EVT    BIT1
@@ -30,7 +30,7 @@ static EventGroupHandle_t s_sc_event_group = NULL;
 static const char* TAG = "SC";
 static smartconfig_status_t s_sc_status = SC_STATUS_WAIT;
 
-smartconfig_status_t sc_get_status()
+smartconfig_status_t iot_sc_get_status()
 {
     return s_sc_status;
 }
@@ -75,7 +75,7 @@ static void sc_callback(smartconfig_status_t status, void *pdata)
     }
 }
 
-esp_err_t sc_setup(smartconfig_type_t sc_type, wifi_mode_t wifi_mode, bool fast_mode_en)
+esp_err_t iot_sc_setup(smartconfig_type_t sc_type, wifi_mode_t wifi_mode, bool fast_mode_en)
 {
     tcpip_adapter_init();
     
@@ -108,7 +108,7 @@ void sc_stop()
     }
 }
 
-esp_err_t sc_start(uint32_t ticks_to_wait)
+esp_err_t iot_sc_start(uint32_t ticks_to_wait)
 {
     portBASE_TYPE res = xSemaphoreTake(s_sc_mux, ticks_to_wait);
     if (res != pdPASS) {

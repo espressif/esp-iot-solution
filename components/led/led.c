@@ -30,7 +30,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
-#include "led.h"
+#include "iot_led.h"
 
 #define QUICK_BLINK_FREQ            CONFIG_STATUS_LED_QUICK_BLINK_FREQ     /*!< default 5 */
 #define SLOW_BLINK_FREQ             CONFIG_STATUS_LED_SLOW_BLINK_FREQ      /*!< default 1 */
@@ -131,24 +131,24 @@ static esp_err_t led_slow_blink(led_handle_t led_handle)
     return ESP_OK;
 }
 
-esp_err_t led_update_blink_freq(int quick_blink_freq, int slow_blink_freq)
+esp_err_t iot_led_update_blink_freq(int quick_blink_freq, int slow_blink_freq)
 {
     ERR_ASSERT(TAG, led_ledctimer_set(LED_QUICK_BLINK_TIMER, quick_blink_freq, LED_SPEED_MODE));
     ERR_ASSERT(TAG, led_ledctimer_set(LED_SLOW_BLINK_TIMER, slow_blink_freq, LED_SPEED_MODE));
     return ESP_OK;
 }
 
-esp_err_t led_setup()
+esp_err_t iot_led_setup()
 {
     ERR_ASSERT(TAG, led_ledctimer_set(LED_NORMAL_TIMER, LED_LONG_BRIGHT_FRE, LED_SPEED_MODE));
-    led_update_blink_freq(QUICK_BLINK_FREQ, SLOW_BLINK_FREQ);
+    iot_led_update_blink_freq(QUICK_BLINK_FREQ, SLOW_BLINK_FREQ);
     return ESP_OK;
 }
 
-led_handle_t led_create(uint8_t io_num, led_dark_level_t dark_level)
+led_handle_t iot_led_create(uint8_t io_num, led_dark_level_t dark_level)
 {
     if(!g_init_flg) {
-        led_setup();
+        iot_led_setup();
         g_init_flg = true;
     }
     led_dev_t *led_p = (led_dev_t*)calloc(1, sizeof(led_dev_t));
@@ -156,18 +156,18 @@ led_handle_t led_create(uint8_t io_num, led_dark_level_t dark_level)
     led_p->dark_level = dark_level;
     led_p->state = LED_OFF;
     led_p->mode = LED_NORMAL_MODE;
-    led_state_write(led_p, LED_OFF);
+    iot_led_state_write(led_p, LED_OFF);
     return (led_handle_t) led_p;
 }
 
-esp_err_t led_delete(led_handle_t led_handle)
+esp_err_t iot_led_delete(led_handle_t led_handle)
 {
     POINT_ASSERT(TAG, led_handle);
     free(led_handle);
     return ESP_OK;
 }
 
-esp_err_t led_state_write(led_handle_t led_handle, led_status_t state)
+esp_err_t iot_led_state_write(led_handle_t led_handle, led_status_t state)
 {
     led_dev_t* led_dev = (led_dev_t*) led_handle;
     POINT_ASSERT(TAG, led_dev);
@@ -191,34 +191,34 @@ esp_err_t led_state_write(led_handle_t led_handle, led_status_t state)
     return ESP_OK;
 }
 
-esp_err_t led_mode_write(led_handle_t led_handle, led_mode_t mode)
+esp_err_t iot_led_mode_write(led_handle_t led_handle, led_mode_t mode)
 {
     led_dev_t* led_dev = (led_dev_t*) led_handle;
     POINT_ASSERT(TAG, led_dev);
     led_dev->mode = mode;
-    led_state_write(led_handle, led_dev->state);
+    iot_led_state_write(led_handle, led_dev->state);
     return ESP_OK;
 }
 
-esp_err_t led_night_duty_write(uint8_t duty)
+esp_err_t iot_led_night_duty_write(uint8_t duty)
 {
     IOT_CHECK(TAG, duty <= 100, ESP_FAIL);
     g_night_duty = duty;
     return ESP_OK;
 }
 
-uint8_t led_night_duty_read()
+uint8_t iot_led_night_duty_read()
 {
     return g_night_duty;
 }
 
-led_status_t led_state_read(led_handle_t led_handle)
+led_status_t iot_led_state_read(led_handle_t led_handle)
 {
     led_dev_t* led_dev = (led_dev_t*) led_handle;
     return led_dev->state;
 }
 
-led_mode_t led_mode_read(led_handle_t led_handle)
+led_mode_t iot_led_mode_read(led_handle_t led_handle)
 {
     led_dev_t* led_dev = (led_dev_t*) led_handle;
     return led_dev->mode;

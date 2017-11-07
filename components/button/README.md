@@ -17,9 +17,9 @@
     This components are based on GPIO provided by idf and soft timer provided by FreeRTOS.
     
 * To use the button device, you need to :
-	* create a button object returned by button_create().
+	* create a button object returned by iot_button_create().
 	* Then hook different event callbacks to the button object.
-	* To free the object, you can call button_delete to delete the button object and free the memory that used.
+	* To free the object, you can call iot_button_delete to delete the button object and free the memory that used.
 	
 * Todo:
     * Add hardware timer mode(because sometimes soft-timer callback function is limited)

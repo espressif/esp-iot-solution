@@ -31,7 +31,7 @@
 #include "soc/rtc_cntl_reg.h"
 #include "soc/sens_reg.h"
 #include "soc/rtc.h"
-#include "ulp_monitor.h"
+#include "iot_ulp_monitor.h"
 
 #if CONFIG_ULP_COPROC_RESERVE_MEM
 #define ULP_PROGRAM_SIZE    (CONFIG_ULP_COPROC_RESERVE_MEM/8)
@@ -105,7 +105,7 @@ static esp_err_t ulp_add_monitor_program(ulp_insn_t read_reg_inst, int16_t low_t
     return ESP_OK;
 }
 
-esp_err_t ulp_monitor_init(uint16_t program_addr, uint16_t data_addr)
+esp_err_t iot_ulp_monitor_init(uint16_t program_addr, uint16_t data_addr)
 {
     if (program_addr > ULP_PROGRAM_ADDR_LIMI) {
         ESP_LOGE(TAG, "program address is to large!");
@@ -130,7 +130,7 @@ esp_err_t ulp_monitor_init(uint16_t program_addr, uint16_t data_addr)
     return ESP_OK;
 }
 
-esp_err_t ulp_add_adc_monitor(adc1_channel_t adc_chn, int16_t low_threshold, int16_t high_threshold, uint8_t data_offset, uint8_t data_num, bool num_max_wake)
+esp_err_t iot_ulp_add_adc_monitor(adc1_channel_t adc_chn, int16_t low_threshold, int16_t high_threshold, uint8_t data_offset, uint8_t data_num, bool num_max_wake)
 {
     if ((g_data_addr + data_offset + data_num + 2) > ULP_DATA_ADDR_LIMI) {
         ESP_LOGE(TAG, "data_offset or data_num is to large");
@@ -147,13 +147,13 @@ esp_err_t ulp_add_adc_monitor(adc1_channel_t adc_chn, int16_t low_threshold, int
     CLEAR_PERI_REG_MASK(SENS_SAR_START_FORCE_REG, SENS_ULP_CP_FORCE_START_TOP);
     SET_PERI_REG_MASK(SENS_SAR_READ_CTRL_REG, SENS_SAR1_DATA_INV);
     SET_PERI_REG_MASK(SENS_SAR_READ_CTRL2_REG, SENS_SAR2_DATA_INV);
-    ulp_data_write(g_data_addr + data_offset + data_num, data_num);
-    ulp_data_write(g_data_addr + data_offset + data_num + 1, 0);
+    iot_ulp_data_write(g_data_addr + data_offset + data_num, data_num);
+    iot_ulp_data_write(g_data_addr + data_offset + data_num + 1, 0);
     ERR_ASSERT(TAG, ulp_add_monitor_program((ulp_insn_t)I_ADC(R3, 0, adc_chn), low_threshold, high_threshold, data_offset, data_num, num_max_wake)); 
     return ESP_OK;
 }
 
-esp_err_t ulp_add_temprature_monitor(int16_t low_threshold, int16_t high_threshold, uint8_t data_offset, uint8_t data_num, bool num_max_wake)
+esp_err_t iot_ulp_add_temprature_monitor(int16_t low_threshold, int16_t high_threshold, uint8_t data_offset, uint8_t data_num, bool num_max_wake)
 {
     if ((g_data_addr + data_offset + data_num + 2) > ULP_DATA_ADDR_LIMI) {
         ESP_LOGE(TAG, "data_offset or data_num is to large");
@@ -164,13 +164,13 @@ esp_err_t ulp_add_temprature_monitor(int16_t low_threshold, int16_t high_thresho
     CLEAR_PERI_REG_MASK(SENS_SAR_TSENS_CTRL_REG, SENS_TSENS_POWER_UP);
     CLEAR_PERI_REG_MASK(SENS_SAR_TSENS_CTRL_REG, SENS_TSENS_DUMP_OUT);
     CLEAR_PERI_REG_MASK(SENS_SAR_TSENS_CTRL_REG, SENS_TSENS_POWER_UP_FORCE);
-    ulp_data_write(g_data_addr + data_offset + data_num, data_num);
-    ulp_data_write(g_data_addr + data_offset + data_num + 1, 0);
+    iot_ulp_data_write(g_data_addr + data_offset + data_num, data_num);
+    iot_ulp_data_write(g_data_addr + data_offset + data_num + 1, 0);
     ERR_ASSERT(TAG, ulp_add_monitor_program((ulp_insn_t)I_TSENS(R3, 8000), low_threshold, high_threshold, data_offset, data_num, num_max_wake));
     return ESP_OK;    
 }
 
-esp_err_t ulp_monitor_start(uint32_t meas_per_hour)
+esp_err_t iot_ulp_monitor_start(uint32_t meas_per_hour)
 {
     IOT_CHECK(TAG, meas_per_hour != 0, ESP_FAIL);
     const ulp_insn_t sub_program[] = {
@@ -189,7 +189,7 @@ esp_err_t ulp_monitor_start(uint32_t meas_per_hour)
     return ESP_OK;
 }
 
-uint16_t ulp_data_read(size_t addr)
+uint16_t iot_ulp_data_read(size_t addr)
 {
     if (addr >= ULP_DATA_ADDR_LIMI) {
         ESP_LOGE("ulp_monitor", "ulp data read address is too large");
@@ -198,7 +198,7 @@ uint16_t ulp_data_read(size_t addr)
     return RTC_SLOW_MEM[addr] & 0xffff;
 }
 
-void ulp_data_write(size_t addr, uint16_t value)
+void iot_ulp_data_write(size_t addr, uint16_t value)
 {
     if (addr >= ULP_DATA_ADDR_LIMI) {
         ESP_LOGE("ulp_monitor", "ulp data write address is too large");

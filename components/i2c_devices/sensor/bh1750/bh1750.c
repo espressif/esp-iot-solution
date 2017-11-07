@@ -23,8 +23,8 @@
   */
 #include <stdio.h>
 #include "driver/i2c.h"
-#include "bh1750.h"
-#include "i2c_bus.h"
+#include "iot_bh1750.h"
+#include "iot_i2c_bus.h"
 
 #define WRITE_BIT  I2C_MASTER_WRITE  /*!< I2C master write */
 #define READ_BIT   I2C_MASTER_READ   /*!< I2C master read */
@@ -44,7 +44,7 @@ typedef struct {
     uint16_t dev_addr;
 } bh1750_dev_t;
 
-bh1750_handle_t sensor_bh1750_create(i2c_bus_handle_t bus, uint16_t dev_addr)
+bh1750_handle_t iot_bh1750_create(i2c_bus_handle_t bus, uint16_t dev_addr)
 {
     bh1750_dev_t* sensor = (bh1750_dev_t*) calloc(1, sizeof(bh1750_dev_t));
     sensor->bus = bus;
@@ -52,18 +52,18 @@ bh1750_handle_t sensor_bh1750_create(i2c_bus_handle_t bus, uint16_t dev_addr)
     return (bh1750_handle_t) sensor;
 }
 
-esp_err_t sensor_bh1750_delete(bh1750_handle_t sensor, bool del_bus)
+esp_err_t iot_bh1750_delete(bh1750_handle_t sensor, bool del_bus)
 {
     bh1750_dev_t* sens = (bh1750_dev_t*) sensor;
     if(del_bus) {
-        i2c_bus_delete(sens->bus);
+        iot_i2c_bus_delete(sens->bus);
         sens->bus = NULL;
     }
     free(sens);
     return ESP_OK;
 }
 
-esp_err_t bh1750_power_down(bh1750_handle_t sensor)
+esp_err_t iot_bh1750_power_down(bh1750_handle_t sensor)
 {    
     bh1750_dev_t* sens = (bh1750_dev_t*) sensor;
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
@@ -71,12 +71,12 @@ esp_err_t bh1750_power_down(bh1750_handle_t sensor)
     i2c_master_write_byte(cmd, (sens->dev_addr << 1) | WRITE_BIT, ACK_CHECK_EN);
     i2c_master_write_byte(cmd, BH1750_POWER_DOWN, ACK_CHECK_EN);
     i2c_master_stop(cmd);
-    int ret = i2c_bus_cmd_begin(sens->bus, cmd, 1000 / portTICK_RATE_MS);
+    int ret = iot_i2c_bus_cmd_begin(sens->bus, cmd, 1000 / portTICK_RATE_MS);
     i2c_cmd_link_delete(cmd);
     return ret;
 }
 
-esp_err_t bh1750_power_on(bh1750_handle_t sensor)
+esp_err_t iot_bh1750_power_on(bh1750_handle_t sensor)
 {    
     bh1750_dev_t* sens = (bh1750_dev_t*) sensor;
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
@@ -84,26 +84,26 @@ esp_err_t bh1750_power_on(bh1750_handle_t sensor)
     i2c_master_write_byte(cmd, (sens->dev_addr) << 1 | WRITE_BIT, ACK_CHECK_EN);
     i2c_master_write_byte(cmd, BH1750_POWER_ON, ACK_CHECK_EN);
     i2c_master_stop(cmd);
-    int ret = i2c_bus_cmd_begin(sens->bus, cmd, 1000 / portTICK_RATE_MS);
+    int ret = iot_i2c_bus_cmd_begin(sens->bus, cmd, 1000 / portTICK_RATE_MS);
     i2c_cmd_link_delete(cmd);
     return ret;
 }
 
-esp_err_t bh1750_reset_data_register(bh1750_handle_t sensor)
+esp_err_t iot_bh1750_reset_data_register(bh1750_handle_t sensor)
 {    
     bh1750_dev_t* sens = (bh1750_dev_t*) sensor;
-    bh1750_power_on(sensor);
+    iot_bh1750_power_on(sensor);
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
     i2c_master_start(cmd);
     i2c_master_write_byte(cmd, (sens->dev_addr << 1) | WRITE_BIT, ACK_CHECK_EN);
     i2c_master_write_byte(cmd, BH1750_DATA_REG_RESET, ACK_CHECK_EN);
     i2c_master_stop(cmd);
-    int ret = i2c_bus_cmd_begin(sens->bus, cmd, 1000 / portTICK_RATE_MS);
+    int ret = iot_i2c_bus_cmd_begin(sens->bus, cmd, 1000 / portTICK_RATE_MS);
     i2c_cmd_link_delete(cmd);
     return ret;
 }
 
-esp_err_t bh1750_change_measure_time(bh1750_handle_t sensor, uint8_t measure_time)
+esp_err_t iot_bh1750_change_measure_time(bh1750_handle_t sensor, uint8_t measure_time)
 {
     bh1750_dev_t* sens = (bh1750_dev_t*) sensor;
     uint32_t i=0;
@@ -116,7 +116,7 @@ esp_err_t bh1750_change_measure_time(bh1750_handle_t sensor, uint8_t measure_tim
         i2c_master_write_byte(cmd, (sens->dev_addr << 1) | WRITE_BIT, ACK_CHECK_EN);
         i2c_master_write_byte(cmd, buf[i], ACK_CHECK_EN);
         i2c_master_stop(cmd);
-        int ret = i2c_bus_cmd_begin(sens->bus, cmd, 1000 / portTICK_RATE_MS);
+        int ret = iot_i2c_bus_cmd_begin(sens->bus, cmd, 1000 / portTICK_RATE_MS);
         i2c_cmd_link_delete(cmd);
         if (ret == ESP_FAIL) {
             return ret;
@@ -125,7 +125,7 @@ esp_err_t bh1750_change_measure_time(bh1750_handle_t sensor, uint8_t measure_tim
     return ESP_OK;
 }
 
-esp_err_t bh1750_set_measure_mode(bh1750_handle_t sensor, bh1750_cmd_measure_t cmd_measure)
+esp_err_t iot_bh1750_set_measure_mode(bh1750_handle_t sensor, bh1750_cmd_measure_t cmd_measure)
 {
     bh1750_dev_t* sens = (bh1750_dev_t*) sensor;
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
@@ -133,12 +133,12 @@ esp_err_t bh1750_set_measure_mode(bh1750_handle_t sensor, bh1750_cmd_measure_t c
     i2c_master_write_byte(cmd, (sens->dev_addr << 1) | WRITE_BIT, ACK_CHECK_EN);
     i2c_master_write_byte(cmd, cmd_measure, ACK_CHECK_EN);
     i2c_master_stop(cmd);
-    int ret = i2c_bus_cmd_begin(sens->bus, cmd, 1000 / portTICK_RATE_MS);
+    int ret = iot_i2c_bus_cmd_begin(sens->bus, cmd, 1000 / portTICK_RATE_MS);
     i2c_cmd_link_delete(cmd);
     return ret;
 }
 
-esp_err_t bh1750_get_data(bh1750_handle_t sensor, float* data)
+esp_err_t iot_bh1750_get_data(bh1750_handle_t sensor, float* data)
 {
     bh1750_dev_t* sens = (bh1750_dev_t*) sensor;
     uint8_t bh1750_data_h, bh1750_data_l;
@@ -148,7 +148,7 @@ esp_err_t bh1750_get_data(bh1750_handle_t sensor, float* data)
     i2c_master_read_byte(cmd, &bh1750_data_h, ACK_VAL);
     i2c_master_read_byte(cmd, &bh1750_data_l, NACK_VAL);
     i2c_master_stop(cmd);
-    int ret = i2c_bus_cmd_begin(sens->bus, cmd, 1000 / portTICK_RATE_MS);
+    int ret = iot_i2c_bus_cmd_begin(sens->bus, cmd, 1000 / portTICK_RATE_MS);
     i2c_cmd_link_delete(cmd);
     if (ret == ESP_FAIL) {
         return ESP_FAIL;
@@ -157,7 +157,7 @@ esp_err_t bh1750_get_data(bh1750_handle_t sensor, float* data)
     return ESP_OK;
 }
 
-esp_err_t bh1750_get_light_intensity(bh1750_handle_t sensor, bh1750_cmd_measure_t cmd_measure, float* data)
+esp_err_t iot_bh1750_get_light_intensity(bh1750_handle_t sensor, bh1750_cmd_measure_t cmd_measure, float* data)
 {
     bh1750_dev_t* sens = (bh1750_dev_t*) sensor;
     uint8_t bh1750_data_h, bh1750_data_l;
@@ -166,7 +166,7 @@ esp_err_t bh1750_get_light_intensity(bh1750_handle_t sensor, bh1750_cmd_measure_
     i2c_master_write_byte(cmd, (sens->dev_addr << 1) | WRITE_BIT, ACK_CHECK_EN);
     i2c_master_write_byte(cmd, cmd_measure, ACK_CHECK_EN);
     i2c_master_stop(cmd);
-    int ret = i2c_bus_cmd_begin(sens->bus, cmd, 1000 / portTICK_RATE_MS);
+    int ret = iot_i2c_bus_cmd_begin(sens->bus, cmd, 1000 / portTICK_RATE_MS);
     i2c_cmd_link_delete(cmd);
     if (ret != ESP_OK) {
         return ret;
@@ -182,7 +182,7 @@ esp_err_t bh1750_get_light_intensity(bh1750_handle_t sensor, bh1750_cmd_measure_
     i2c_master_read_byte(cmd, &bh1750_data_h, ACK_VAL);
     i2c_master_read_byte(cmd, &bh1750_data_l, NACK_VAL);
     i2c_master_stop(cmd);
-    ret = i2c_bus_cmd_begin(sens->bus, cmd, 1000 / portTICK_RATE_MS);
+    ret = iot_i2c_bus_cmd_begin(sens->bus, cmd, 1000 / portTICK_RATE_MS);
     i2c_cmd_link_delete(cmd);
     if (ret != ESP_OK) {
         return ret;

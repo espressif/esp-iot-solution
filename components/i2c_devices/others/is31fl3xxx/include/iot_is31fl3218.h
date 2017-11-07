@@ -26,7 +26,7 @@
 #define _IOT_IS31FL3218_H_
 
 #include "driver/i2c.h"
-#include "i2c_bus.h"
+#include "iot_i2c_bus.h"
 
 #define DBG_TEST(s) printf("[%s %d] "s"\r\n",__func__, __LINE__);
 
@@ -92,7 +92,7 @@ typedef void* is31fl3218_handle_t;
  *     - ESP_FAIL error
  *     - ESP_ERR_TIMEOUT  timeout
  */
-esp_err_t is31fl3218_set_mode(is31fl3218_handle_t fxled, is31fl3218_mode_t mode);
+esp_err_t iot_is31fl3218_set_mode(is31fl3218_handle_t fxled, is31fl3218_mode_t mode);
 
 /**
  * @brief IS31FL3218 will reset all registers to default value.
@@ -102,7 +102,7 @@ esp_err_t is31fl3218_set_mode(is31fl3218_handle_t fxled, is31fl3218_mode_t mode)
  *     - ESP_FAIL error
  *     - ESP_ERR_TIMEOUT  timeout
  */
-esp_err_t is31fl3218_reset_register(is31fl3218_handle_t fxled);
+esp_err_t iot_is31fl3218_reset_register(is31fl3218_handle_t fxled);
 
 /**
  * @brief set I2S port and enable PWM channel
@@ -115,7 +115,7 @@ esp_err_t is31fl3218_reset_register(is31fl3218_handle_t fxled);
  *     - ESP_FAIL error
  *     - ESP_ERR_TIMEOUT  timeout
  */
-esp_err_t is31fl3218_init(is31fl3218_handle_t fxled);
+esp_err_t iot_is31fl3218_init(is31fl3218_handle_t fxled);
 
 /**
  * @brief set PWM duty for every channel
@@ -127,7 +127,7 @@ esp_err_t is31fl3218_init(is31fl3218_handle_t fxled);
  *     - ESP_FAIL error
  *     - ESP_ERR_TIMEOUT  timeout
  */
-esp_err_t is31fl3218_channel_set(is31fl3218_handle_t fxled, uint32_t ch_bit, uint8_t duty);
+esp_err_t iot_is31fl3218_channel_set(is31fl3218_handle_t fxled, uint32_t ch_bit, uint8_t duty);
 
 /**
  * @brief Update PWM duty value with values in a buffer
@@ -139,7 +139,7 @@ esp_err_t is31fl3218_channel_set(is31fl3218_handle_t fxled, uint32_t ch_bit, uin
  *     - ESP_FAIL error
  *     - ESP_ERR_TIMEOUT  timeout
  */
-esp_err_t is31fl3218_write_pwm_regs(is31fl3218_handle_t fxled, uint8_t* duty, int len);
+esp_err_t iot_is31fl3218_write_pwm_regs(is31fl3218_handle_t fxled, uint8_t* duty, int len);
 
 /**
  * @brief Write device register
@@ -152,7 +152,7 @@ esp_err_t is31fl3218_write_pwm_regs(is31fl3218_handle_t fxled, uint8_t* duty, in
  *     - ESP_FAIL error
  *     - ESP_ERR_TIMEOUT  timeout
  */
-esp_err_t is31fl3218_write_reg(is31fl3218_handle_t fxled, is31fl3218_reg_t reg_addr, uint8_t *data, uint8_t data_num);
+esp_err_t iot_is31fl3218_write(is31fl3218_handle_t fxled, is31fl3218_reg_t reg_addr, uint8_t *data, uint8_t data_num);
 
 /**
  * @brief Create and init sensor object and return a led handle
@@ -162,7 +162,7 @@ esp_err_t is31fl3218_write_reg(is31fl3218_handle_t fxled, is31fl3218_reg_t reg_a
  *     - NULL Fail
  *     - Others Success
  */
-is31fl3218_handle_t led_is31fl3218_create(i2c_bus_handle_t bus);
+is31fl3218_handle_t iot_is31fl3218_create(i2c_bus_handle_t bus);
 
 /**
  * @brief Delete and release a LED object
@@ -172,7 +172,7 @@ is31fl3218_handle_t led_is31fl3218_create(i2c_bus_handle_t bus);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t led_is31fl3218_delete(is31fl3218_handle_t fxled, bool del_bus);
+esp_err_t iot_is31fl3218_delete(is31fl3218_handle_t fxled, bool del_bus);
 
 #ifdef __cplusplus
 }

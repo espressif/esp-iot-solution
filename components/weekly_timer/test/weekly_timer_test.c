@@ -20,7 +20,7 @@
 #include "nvs.h"
 #include "nvs_flash.h"
 #include "socket_device.h"
-#include "weekly_timer.h"
+#include "iot_weekly_timer.h"
 #include "iot_wifi.h"
 #include "unity.h"
 
@@ -31,7 +31,7 @@ void timer_cb(void *timer_name)
 {
     ets_printf("timer %s is trigered\n", (char*)timer_name);
     /*if (strcmp(timer_name, "timer0_num0") == 0) {
-        weekly_timer_stop(tmr2);
+        iot_weekly_timer_stop(tmr2);
         event_timer_delete(tmr2);
     }*/
     return;
@@ -43,7 +43,7 @@ void weekly_timer_test()
     iot_wifi_setup(WIFI_MODE_STA);
     iot_wifi_connect(AP_SSID, AP_PASSWORD, portMAX_DELAY);
 
-    weekly_timer_init();
+    iot_weekly_timer_init();
     vTaskDelay(5000/portTICK_PERIOD_MS);
 
     event_time_t event_tm[2];
@@ -63,8 +63,8 @@ void weekly_timer_test()
     w_m.en = 0;
     w_m.enable = 1;
     w_m.tuesday = 1;
-    tmr1 = weekly_timer_add(true, w_m, 2, event_tm);
-    weekly_timer_start(tmr1);
+    tmr1 = iot_weekly_timer_add(true, w_m, 2, event_tm);
+    iot_weekly_timer_start(tmr1);
 
     w_m.en = 0;
     w_m.enable = 1;
@@ -74,8 +74,8 @@ void weekly_timer_test()
     event_tm[0].tm_cb = timer_cb;
     event_tm[0].arg = "timer1_num0";
     event_tm[0].en = true;
-    tmr2 = weekly_timer_add(false, w_m, 1, event_tm);
-    weekly_timer_start(tmr2);
+    tmr2 = iot_weekly_timer_add(false, w_m, 1, event_tm);
+    iot_weekly_timer_start(tmr2);
 
     while(1) {
         time_t time_now = time(NULL);

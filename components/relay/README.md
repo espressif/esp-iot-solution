@@ -11,9 +11,9 @@
 	* io mode which decides the mode of gpio(normal or rtc)
 
 * A relay device can provide:
-	* relay_state_write to set the state of relay
-	* relay_state_read to read the state of relay
+	* iot_relay_state_write to set the state of relay
+	* iot_relay_state_read to read the state of relay
 
 * To use the relay device, you need to:
-	* create a relay device returned by relay_create
-	* to free the object, you can call relay_delete to delete the relay object and free the memory
+	* create a relay device returned by iot_relay_create
+	* to free the object, you can call iot_relay_delete to delete the relay object and free the memory

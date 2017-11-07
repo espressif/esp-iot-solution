@@ -26,7 +26,7 @@
 #define _IOT_LIS2DH12_H_
 
 #include "driver/i2c.h"
-#include "i2c_bus.h"
+#include "iot_i2c_bus.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -585,7 +585,7 @@ typedef void* lis2dh12_handle_t;
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t lis2dh12_write_one_reg(lis2dh12_handle_t sensor, uint8_t reg_addr, uint8_t data);
+esp_err_t iot_lis2dh12_write_byte(lis2dh12_handle_t sensor, uint8_t reg_addr, uint8_t data);
 
 /**
  * @brief Write value to multiple register of LIS2DH12
@@ -598,7 +598,7 @@ esp_err_t lis2dh12_write_one_reg(lis2dh12_handle_t sensor, uint8_t reg_addr, uin
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t lis2dh12_write_reg(lis2dh12_handle_t sensor, uint8_t reg_start_addr, uint8_t reg_num, uint8_t *data_buf);
+esp_err_t iot_lis2dh12_write(lis2dh12_handle_t sensor, uint8_t reg_start_addr, uint8_t reg_num, uint8_t *data_buf);
 
 /**
  * @brief Read value from register of LIS2DH12
@@ -611,7 +611,7 @@ esp_err_t lis2dh12_write_reg(lis2dh12_handle_t sensor, uint8_t reg_start_addr, u
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t lis2dh12_read_one_reg(lis2dh12_handle_t sensor, uint8_t reg, uint8_t *data);
+esp_err_t iot_lis2dh12_read_byte(lis2dh12_handle_t sensor, uint8_t reg, uint8_t *data);
 
 /**
  * @brief Read value from multiple register of LIS2DH12
@@ -624,7 +624,7 @@ esp_err_t lis2dh12_read_one_reg(lis2dh12_handle_t sensor, uint8_t reg, uint8_t *
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t lis2dh12_read_reg(lis2dh12_handle_t sensor, uint8_t reg_start_addr, uint8_t reg_num, uint8_t *data_buf);
+esp_err_t iot_lis2dh12_read(lis2dh12_handle_t sensor, uint8_t reg_start_addr, uint8_t reg_num, uint8_t *data_buf);
 
 /**
  * @brief Get device identification of LIS2DH12
@@ -636,7 +636,7 @@ esp_err_t lis2dh12_read_reg(lis2dh12_handle_t sensor, uint8_t reg_start_addr, ui
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t lis2dh12_get_deviceid(lis2dh12_handle_t sensor, uint8_t* deviceid);
+esp_err_t iot_lis2dh12_get_deviceid(lis2dh12_handle_t sensor, uint8_t* deviceid);
 
 /**
  * @brief Set configration of LIS2DH12
@@ -648,7 +648,7 @@ esp_err_t lis2dh12_get_deviceid(lis2dh12_handle_t sensor, uint8_t* deviceid);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t lis2dh12_set_config(lis2dh12_handle_t sensor, lis2dh12_config_t* lis2dh12_config);
+esp_err_t iot_lis2dh12_set_config(lis2dh12_handle_t sensor, lis2dh12_config_t* lis2dh12_config);
 
 /**
  * @brief Get configration of LIS2DH12
@@ -660,7 +660,7 @@ esp_err_t lis2dh12_set_config(lis2dh12_handle_t sensor, lis2dh12_config_t* lis2d
  *     - ESP_OK Success
  *     - others Fail
  */
-esp_err_t lis2dh12_get_config(lis2dh12_handle_t sensor, lis2dh12_config_t* lis2dh12_config);
+esp_err_t iot_lis2dh12_get_config(lis2dh12_handle_t sensor, lis2dh12_config_t* lis2dh12_config);
 
 /**
  * @brief Enable the temperature sensor of LIS2DH12
@@ -672,7 +672,7 @@ esp_err_t lis2dh12_get_config(lis2dh12_handle_t sensor, lis2dh12_config_t* lis2d
  *     - ESP_OK Success
  *     - others Fail
  */
-esp_err_t lis2dh12_set_temp_enable(lis2dh12_handle_t sensor, lis2dh12_temp_en_t temp_en);
+esp_err_t iot_lis2dh12_set_temp_enable(lis2dh12_handle_t sensor, lis2dh12_temp_en_t temp_en);
 
 /**
  * @brief Set output data rate
@@ -684,7 +684,7 @@ esp_err_t lis2dh12_set_temp_enable(lis2dh12_handle_t sensor, lis2dh12_temp_en_t 
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t lis2dh12_set_odr(lis2dh12_handle_t sensor, lis2dh12_odr_t odr);
+esp_err_t iot_lis2dh12_set_odr(lis2dh12_handle_t sensor, lis2dh12_odr_t odr);
 
 /**
  * @brief Enable z axis
@@ -696,7 +696,7 @@ esp_err_t lis2dh12_set_odr(lis2dh12_handle_t sensor, lis2dh12_odr_t odr);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t lis2dh12_set_z_enable(lis2dh12_handle_t sensor, lis2dh12_state_t status);
+esp_err_t iot_lis2dh12_set_z_enable(lis2dh12_handle_t sensor, lis2dh12_state_t status);
 
 /**
  * @brief Enable y axis
@@ -708,7 +708,7 @@ esp_err_t lis2dh12_set_z_enable(lis2dh12_handle_t sensor, lis2dh12_state_t statu
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t lis2dh12_set_y_enable(lis2dh12_handle_t sensor, lis2dh12_state_t status);
+esp_err_t iot_lis2dh12_set_y_enable(lis2dh12_handle_t sensor, lis2dh12_state_t status);
 
 /**
  * @brief Enable x axis
@@ -720,7 +720,7 @@ esp_err_t lis2dh12_set_y_enable(lis2dh12_handle_t sensor, lis2dh12_state_t statu
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t lis2dh12_set_x_enable(lis2dh12_handle_t sensor, lis2dh12_state_t status);
+esp_err_t iot_lis2dh12_set_x_enable(lis2dh12_handle_t sensor, lis2dh12_state_t status);
 
 /**
  * @brief Enable block data update
@@ -732,7 +732,7 @@ esp_err_t lis2dh12_set_x_enable(lis2dh12_handle_t sensor, lis2dh12_state_t statu
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t lis2dh12_set_bdumode(lis2dh12_handle_t sensor, lis2dh12_state_t status);
+esp_err_t iot_lis2dh12_set_bdumode(lis2dh12_handle_t sensor, lis2dh12_state_t status);
 
 /**
  * @brief Set full scale
@@ -744,7 +744,7 @@ esp_err_t lis2dh12_set_bdumode(lis2dh12_handle_t sensor, lis2dh12_state_t status
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t lis2dh12_set_fs(lis2dh12_handle_t sensor, lis2dh12_fs_t fs);
+esp_err_t iot_lis2dh12_set_fs(lis2dh12_handle_t sensor, lis2dh12_fs_t fs);
 
 /**
  * @brief Set operation mode
@@ -756,7 +756,7 @@ esp_err_t lis2dh12_set_fs(lis2dh12_handle_t sensor, lis2dh12_fs_t fs);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t lis2dh12_set_opt_mode(lis2dh12_handle_t sensor, lis2dh12_opt_mode_t opt_mode);
+esp_err_t iot_lis2dh12_set_opt_mode(lis2dh12_handle_t sensor, lis2dh12_opt_mode_t opt_mode);
 
 /**
  * @brief Get x axis acceleration
@@ -768,7 +768,7 @@ esp_err_t lis2dh12_set_opt_mode(lis2dh12_handle_t sensor, lis2dh12_opt_mode_t op
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t lis2dh12_get_x_acc(lis2dh12_handle_t sensor, uint16_t *x_acc);
+esp_err_t iot_lis2dh12_get_x_acc(lis2dh12_handle_t sensor, uint16_t *x_acc);
 
 /**
  * @brief Get y axis acceleration
@@ -780,7 +780,7 @@ esp_err_t lis2dh12_get_x_acc(lis2dh12_handle_t sensor, uint16_t *x_acc);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t lis2dh12_get_y_acc(lis2dh12_handle_t sensor, uint16_t *y_acc);
+esp_err_t iot_lis2dh12_get_y_acc(lis2dh12_handle_t sensor, uint16_t *y_acc);
 /**
  * @brief Get z axis acceleration
  *
@@ -791,7 +791,7 @@ esp_err_t lis2dh12_get_y_acc(lis2dh12_handle_t sensor, uint16_t *y_acc);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t lis2dh12_get_z_acc(lis2dh12_handle_t sensor, uint16_t *z_acc);
+esp_err_t iot_lis2dh12_get_z_acc(lis2dh12_handle_t sensor, uint16_t *z_acc);
 
 /**
  * @brief Create and init sensor object and return a sensor handle
@@ -803,7 +803,7 @@ esp_err_t lis2dh12_get_z_acc(lis2dh12_handle_t sensor, uint16_t *z_acc);
  *     - NULL Fail
  *     - Others Success
  */
-lis2dh12_handle_t sensor_lis2dh12_create(i2c_bus_handle_t bus, uint16_t dev_addr);
+lis2dh12_handle_t iot_lis2dh12_create(i2c_bus_handle_t bus, uint16_t dev_addr);
 
 /**
  * @brief Delete and release a sensor object
@@ -815,7 +815,7 @@ lis2dh12_handle_t sensor_lis2dh12_create(i2c_bus_handle_t bus, uint16_t dev_addr
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t sensor_lis2dh12_delete(lis2dh12_handle_t sensor, bool del_bus);
+esp_err_t iot_lis2dh12_delete(lis2dh12_handle_t sensor, bool del_bus);
 
 #ifdef __cplusplus
 }

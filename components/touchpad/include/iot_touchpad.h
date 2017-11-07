@@ -56,7 +56,7 @@ typedef enum {
   * @return
   *     NULL: fail
   */
-tp_handle_t tp_create(touch_pad_t touch_pad_num, uint16_t thres_percent, uint16_t thresh_abs, uint32_t filter_value);
+tp_handle_t iot_tp_create(touch_pad_t touch_pad_num, uint16_t thres_percent, uint16_t thresh_abs, uint32_t filter_value);
 
 /**
   * @brief  delete touchpad device
@@ -67,7 +67,7 @@ tp_handle_t tp_create(touch_pad_t touch_pad_num, uint16_t thres_percent, uint16_
   *     - ESP_OK: succeed
   *     - ESP_FAIL: the param tp_handle is NULL
   */
-esp_err_t tp_delete(tp_handle_t tp_handle);
+esp_err_t iot_tp_delete(tp_handle_t tp_handle);
 
 /**
   * @brief  add callback function
@@ -81,7 +81,7 @@ esp_err_t tp_delete(tp_handle_t tp_handle);
   *     - ESP_OK: succeed
   *     - ESP_FAIL: fail
   */
-esp_err_t tp_add_cb(tp_handle_t tp_handle, tp_cb_type_t cb_type, tp_cb cb, void  *arg);
+esp_err_t iot_tp_add_cb(tp_handle_t tp_handle, tp_cb_type_t cb_type, tp_cb cb, void  *arg);
 
 /**
   * @brief  set serial tigger
@@ -96,7 +96,7 @@ esp_err_t tp_add_cb(tp_handle_t tp_handle, tp_cb_type_t cb_type, tp_cb cb, void 
   *     - ESP_OK: succeed
   *     - ESP_FAIL: fail
   */
-esp_err_t tp_set_serial_trigger(tp_handle_t tp_handle, uint32_t trigger_thres_sec, uint32_t interval_ms, tp_cb cb, void *arg);
+esp_err_t iot_tp_set_serial_trigger(tp_handle_t tp_handle, uint32_t trigger_thres_sec, uint32_t interval_ms, tp_cb cb, void *arg);
 
 /**
   * @brief  add custom callback function
@@ -110,7 +110,7 @@ esp_err_t tp_set_serial_trigger(tp_handle_t tp_handle, uint32_t trigger_thres_se
   *     - ESP_OK: succeed
   *     - ESP_FAIL: fail
   */
-esp_err_t tp_add_custom_cb(tp_handle_t tp_handle, uint32_t press_sec, tp_cb cb, void  *arg);
+esp_err_t iot_tp_add_custom_cb(tp_handle_t tp_handle, uint32_t press_sec, tp_cb cb, void  *arg);
 
 /**
   * @brief  get the number of a touchpad
@@ -119,7 +119,7 @@ esp_err_t tp_add_custom_cb(tp_handle_t tp_handle, uint32_t press_sec, tp_cb cb, 
   *
   * @return  touchpad number
   */
-touch_pad_t tp_num_get(tp_handle_t tp_handle);
+touch_pad_t iot_tp_num_get(tp_handle_t tp_handle);
 
 /**
   * @brief  set the threshold of touchpad
@@ -131,7 +131,7 @@ touch_pad_t tp_num_get(tp_handle_t tp_handle);
   *     - ESP_OK: succeed
   *     - ESP_FAIL: the param tp_handle is NULL
   */
-esp_err_t tp_set_threshold(tp_handle_t tp_handle, uint32_t threshold);
+esp_err_t iot_tp_set_threshold(tp_handle_t tp_handle, uint32_t threshold);
 
 /**
   * @brief  set the filter value of touchpad
@@ -143,7 +143,7 @@ esp_err_t tp_set_threshold(tp_handle_t tp_handle, uint32_t threshold);
   *     - ESP_OK: succeed
   *     - ESP_FAIL: the param tp_handle is NULL
   */
-esp_err_t tp_set_filter(tp_handle_t tp_handle, uint32_t filter_value);
+esp_err_t iot_tp_set_filter(tp_handle_t tp_handle, uint32_t filter_value);
 
 /**
   * @brief  get sample value of the touchpad
@@ -155,7 +155,7 @@ esp_err_t tp_set_filter(tp_handle_t tp_handle, uint32_t filter_value);
   *     - ESP_OK: succeed
   *     - ESP_FAIL: the param tp_handle is NULL
   */
-esp_err_t tp_read(tp_handle_t tp_handle, uint16_t *touch_value_ptr);
+esp_err_t iot_tp_read(tp_handle_t tp_handle, uint16_t *touch_value_ptr);
 
 /**
   * @brief  create touchpad slide device
@@ -170,7 +170,7 @@ esp_err_t tp_read(tp_handle_t tp_handle, uint16_t *touch_value_ptr);
   * @return
   *     NULL: fail
   */
-tp_slide_handle_t tp_slide_create(uint8_t num, const touch_pad_t *tps, uint32_t pos_scale, uint16_t thres_percent, const uint16_t* thresh_abs, uint32_t filter_value);
+tp_slide_handle_t iot_tp_slide_create(uint8_t num, const touch_pad_t *tps, uint32_t pos_scale, uint16_t thres_percent, const uint16_t* thresh_abs, uint32_t filter_value);
 
 /**
   * @brief  get relative position
@@ -179,7 +179,7 @@ tp_slide_handle_t tp_slide_create(uint8_t num, const touch_pad_t *tps, uint32_t 
   *
   * @return  relative position of your touch on slide
   */
-uint8_t tp_slide_position(tp_slide_handle_t tp_slide_handle);
+uint8_t iot_tp_slide_position(tp_slide_handle_t tp_slide_handle);
 
 /**
   * @brief  delete touchpad slide device
@@ -190,7 +190,7 @@ uint8_t tp_slide_position(tp_slide_handle_t tp_slide_handle);
   *     - ESP_OK: succeed
   *     - ESP_FAIL: the param tp_slide_handle is NULL
   */
-esp_err_t tp_slide_delete(tp_slide_handle_t tp_slide_handle);
+esp_err_t iot_tp_slide_delete(tp_slide_handle_t tp_slide_handle);
 
 /**
   * @brief  create touchpad matrix device
@@ -206,7 +206,7 @@ esp_err_t tp_slide_delete(tp_slide_handle_t tp_slide_handle);
   * @return
   *     NULL: fail
   */
-tp_matrix_handle_t tp_matrix_create(uint8_t x_num, uint8_t y_num, const touch_pad_t *x_tps, const touch_pad_t *y_tps, uint16_t thres_percent, const uint16_t *thresh_abs, uint32_t filter_value);
+tp_matrix_handle_t iot_tp_matrix_create(uint8_t x_num, uint8_t y_num, const touch_pad_t *x_tps, const touch_pad_t *y_tps, uint16_t thres_percent, const uint16_t *thresh_abs, uint32_t filter_value);
 
 /**
   * @brief  delete touchpad matrix device
@@ -217,7 +217,7 @@ tp_matrix_handle_t tp_matrix_create(uint8_t x_num, uint8_t y_num, const touch_pa
   *     - ESP_OK: succeed
   *     - ESP_FAIL: the param tp_matrix_hd is NULL
   */
-esp_err_t tp_matrix_delete(tp_matrix_handle_t tp_matrix_hd);
+esp_err_t iot_tp_matrix_delete(tp_matrix_handle_t tp_matrix_hd);
 
 /**
   * @brief  add callback function
@@ -231,7 +231,7 @@ esp_err_t tp_matrix_delete(tp_matrix_handle_t tp_matrix_hd);
   *     - ESP_OK: succeed
   *     - ESP_FAIL: fail
   */
-esp_err_t tp_matrix_add_cb(tp_matrix_handle_t tp_matrix_hd, tp_cb_type_t cb_type, tp_matrix_cb cb, void *arg);
+esp_err_t iot_tp_matrix_add_cb(tp_matrix_handle_t tp_matrix_hd, tp_cb_type_t cb_type, tp_matrix_cb cb, void *arg);
 
 /**
   * @brief  add custom callback function
@@ -245,7 +245,7 @@ esp_err_t tp_matrix_add_cb(tp_matrix_handle_t tp_matrix_hd, tp_cb_type_t cb_type
   *     - ESP_OK: succeed
   *     - ESP_FAIL: fail
   */
-esp_err_t tp_matrix_add_custom_cb(tp_matrix_handle_t tp_matrix_hd, uint32_t press_sec, tp_matrix_cb cb, void *arg);
+esp_err_t iot_tp_matrix_add_custom_cb(tp_matrix_handle_t tp_matrix_hd, uint32_t press_sec, tp_matrix_cb cb, void *arg);
 
 /**
   * @brief  set serial tigger
@@ -260,7 +260,7 @@ esp_err_t tp_matrix_add_custom_cb(tp_matrix_handle_t tp_matrix_hd, uint32_t pres
   *     - ESP_OK: succeed
   *     - ESP_FAIL: fail
   */
-esp_err_t tp_matrix_set_serial_trigger(tp_matrix_handle_t tp_matrix_hd, uint32_t trigger_thres_sec, uint32_t interval_ms, tp_matrix_cb cb, void *arg);
+esp_err_t iot_tp_matrix_set_serial_trigger(tp_matrix_handle_t tp_matrix_hd, uint32_t trigger_thres_sec, uint32_t interval_ms, tp_matrix_cb cb, void *arg);
 
 
 #ifdef __cplusplus

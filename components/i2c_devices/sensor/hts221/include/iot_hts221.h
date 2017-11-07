@@ -29,7 +29,7 @@ extern "C" {
 #endif
 
 #include "driver/i2c.h"
-#include "i2c_bus.h"
+#include "iot_i2c_bus.h"
 
 #define WRITE_BIT      I2C_MASTER_WRITE  /*!< I2C master write */
 #define READ_BIT       I2C_MASTER_READ   /*!< I2C master read */
@@ -354,7 +354,7 @@ typedef void* hts221_handle_t;
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t hts221_write_one_reg(hts221_handle_t sensor, uint8_t reg_addr, uint8_t data);
+esp_err_t iot_hts221_write_byte(hts221_handle_t sensor, uint8_t reg_addr, uint8_t data);
 
 /**
  * @brief Write value to multiple register of HTS221
@@ -367,7 +367,7 @@ esp_err_t hts221_write_one_reg(hts221_handle_t sensor, uint8_t reg_addr, uint8_t
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t hts221_write_reg(hts221_handle_t sensor, uint8_t reg_start_addr, uint8_t reg_num, uint8_t *data_buf);
+esp_err_t iot_hts221_write(hts221_handle_t sensor, uint8_t reg_start_addr, uint8_t reg_num, uint8_t *data_buf);
 
 /**
  * @brief Read value from register of HTS221
@@ -380,7 +380,7 @@ esp_err_t hts221_write_reg(hts221_handle_t sensor, uint8_t reg_start_addr, uint8
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t hts221_read_one_reg(hts221_handle_t sensor, uint8_t reg, uint8_t *data);
+esp_err_t iot_hts221_read_byte(hts221_handle_t sensor, uint8_t reg, uint8_t *data);
 
 /**
  * @brief Read value from multiple register of HTS221
@@ -393,7 +393,7 @@ esp_err_t hts221_read_one_reg(hts221_handle_t sensor, uint8_t reg, uint8_t *data
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t hts221_read_reg(hts221_handle_t sensor, uint8_t reg_start_addr, uint8_t reg_num, uint8_t *data_buf);
+esp_err_t iot_hts221_read(hts221_handle_t sensor, uint8_t reg_start_addr, uint8_t reg_num, uint8_t *data_buf);
 
 /**
  * @brief Get device identification of HTS221
@@ -405,7 +405,7 @@ esp_err_t hts221_read_reg(hts221_handle_t sensor, uint8_t reg_start_addr, uint8_
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t hts221_get_deviceid(hts221_handle_t sensor, uint8_t* deviceid);
+esp_err_t iot_hts221_get_deviceid(hts221_handle_t sensor, uint8_t* deviceid);
 
 /**
  * @brief Set configration of HTS221
@@ -417,7 +417,7 @@ esp_err_t hts221_get_deviceid(hts221_handle_t sensor, uint8_t* deviceid);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t hts221_set_config(hts221_handle_t sensor, hts221_config_t* hts221_config);
+esp_err_t iot_hts221_set_config(hts221_handle_t sensor, hts221_config_t* hts221_config);
 
 /**
  * @brief Get configration of HTS221
@@ -429,7 +429,7 @@ esp_err_t hts221_set_config(hts221_handle_t sensor, hts221_config_t* hts221_conf
  *     - ESP_OK Success
  *     - others Fail
  */
-esp_err_t hts221_get_config(hts221_handle_t sensor, hts221_config_t* hts221_config);
+esp_err_t iot_hts221_get_config(hts221_handle_t sensor, hts221_config_t* hts221_config);
 
 /**
  * @brief Activate HTS221
@@ -439,7 +439,7 @@ esp_err_t hts221_get_config(hts221_handle_t sensor, hts221_config_t* hts221_conf
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t hts221_set_activate(hts221_handle_t sensor);
+esp_err_t iot_hts221_set_activate(hts221_handle_t sensor);
 
 /**
  * @brief Set HTS221 as power down mode
@@ -449,7 +449,7 @@ esp_err_t hts221_set_activate(hts221_handle_t sensor);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t hts221_set_powerdown(hts221_handle_t sensor);
+esp_err_t iot_hts221_set_powerdown(hts221_handle_t sensor);
 
 /**
  * @brief Set output data rate
@@ -461,7 +461,7 @@ esp_err_t hts221_set_powerdown(hts221_handle_t sensor);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t hts221_set_odr(hts221_handle_t sensor, hts221_odr_t odr);
+esp_err_t iot_hts221_set_odr(hts221_handle_t sensor, hts221_odr_t odr);
 
 /**
  * @brief Set humidity average
@@ -473,7 +473,7 @@ esp_err_t hts221_set_odr(hts221_handle_t sensor, hts221_odr_t odr);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t hts221_set_avgh(hts221_handle_t sensor, hts221_avgh_t avgh);
+esp_err_t iot_hts221_set_avgh(hts221_handle_t sensor, hts221_avgh_t avgh);
 
 /**
  * @brief Set temperature average
@@ -485,7 +485,7 @@ esp_err_t hts221_set_avgh(hts221_handle_t sensor, hts221_avgh_t avgh);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t hts221_set_avgt(hts221_handle_t sensor, hts221_avgt_t avgt);
+esp_err_t iot_hts221_set_avgt(hts221_handle_t sensor, hts221_avgt_t avgt);
 
 /**
  * @brief Enable block data update
@@ -497,7 +497,7 @@ esp_err_t hts221_set_avgt(hts221_handle_t sensor, hts221_avgt_t avgt);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t hts221_set_bdumode(hts221_handle_t sensor, hts221_state_t status);
+esp_err_t iot_hts221_set_bdumode(hts221_handle_t sensor, hts221_state_t status);
 
 /**
  * @brief  Reboot memory content
@@ -508,7 +508,7 @@ esp_err_t hts221_set_bdumode(hts221_handle_t sensor, hts221_state_t status);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t hts221_memory_boot(hts221_handle_t sensor);
+esp_err_t iot_hts221_memory_boot(hts221_handle_t sensor);
 
 /**
  * @brief Enable heater
@@ -520,7 +520,7 @@ esp_err_t hts221_memory_boot(hts221_handle_t sensor);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t hts221_set_heaterstate(hts221_handle_t sensor, hts221_state_t status);
+esp_err_t iot_hts221_set_heaterstate(hts221_handle_t sensor, hts221_state_t status);
 
 /**
  * @brief  Enable one-shot mode
@@ -531,7 +531,7 @@ esp_err_t hts221_set_heaterstate(hts221_handle_t sensor, hts221_state_t status);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t hts221_start_oneshot(hts221_handle_t sensor);
+esp_err_t iot_hts221_start_oneshot(hts221_handle_t sensor);
 
 /**
  * @brief Set level configuration of the interrupt pin DRDY
@@ -543,7 +543,7 @@ esp_err_t hts221_start_oneshot(hts221_handle_t sensor);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t hts221_set_irq_activelevel(hts221_handle_t sensor, hts221_drdylevel_t value);
+esp_err_t iot_hts221_set_irq_activelevel(hts221_handle_t sensor, hts221_drdylevel_t value);
 
 /**
  * @brief Set Push-pull/open drain configuration for the interrupt pin DRDY
@@ -555,7 +555,7 @@ esp_err_t hts221_set_irq_activelevel(hts221_handle_t sensor, hts221_drdylevel_t 
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t hts221_set_irq_outputtype(hts221_handle_t sensor, hts221_outputtype_t value);
+esp_err_t iot_hts221_set_irq_outputtype(hts221_handle_t sensor, hts221_outputtype_t value);
 
 /**
  * @brief Enable/disable the interrupt mode
@@ -567,7 +567,7 @@ esp_err_t hts221_set_irq_outputtype(hts221_handle_t sensor, hts221_outputtype_t 
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t hts221_set_irq_enable(hts221_handle_t sensor, hts221_state_t status);
+esp_err_t iot_hts221_set_irq_enable(hts221_handle_t sensor, hts221_state_t status);
 
 /**
  * @brief Read HTS221 humidity output registers
@@ -579,7 +579,7 @@ esp_err_t hts221_set_irq_enable(hts221_handle_t sensor, hts221_state_t status);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t hts221_get_raw_humidity(hts221_handle_t sensor, int16_t *humidity);
+esp_err_t iot_hts221_get_raw_humidity(hts221_handle_t sensor, int16_t *humidity);
 
 /**
  * @brief Read HTS221 Humidity output registers, and calculate humidity
@@ -591,7 +591,7 @@ esp_err_t hts221_get_raw_humidity(hts221_handle_t sensor, int16_t *humidity);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t hts221_get_humidity(hts221_handle_t sensor, int16_t *humidity);
+esp_err_t iot_hts221_get_humidity(hts221_handle_t sensor, int16_t *humidity);
 
 /**
  * @brief Read HTS221 temperature output registers
@@ -603,7 +603,7 @@ esp_err_t hts221_get_humidity(hts221_handle_t sensor, int16_t *humidity);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t hts221_get_raw_temperature(hts221_handle_t sensor, int16_t *temperature);
+esp_err_t iot_hts221_get_raw_temperature(hts221_handle_t sensor, int16_t *temperature);
 
 /**
  * @brief Read HTS221 temperature output registers, and calculate temperature
@@ -615,7 +615,7 @@ esp_err_t hts221_get_raw_temperature(hts221_handle_t sensor, int16_t *temperatur
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t hts221_get_temperature(hts221_handle_t sensor, int16_t *temperature);
+esp_err_t iot_hts221_get_temperature(hts221_handle_t sensor, int16_t *temperature);
 
 /**
  * @brief Create and init sensor object and return a sensor handle
@@ -627,7 +627,7 @@ esp_err_t hts221_get_temperature(hts221_handle_t sensor, int16_t *temperature);
  *     - NULL Fail
  *     - Others Success
  */
-hts221_handle_t sensor_hts221_create(i2c_bus_handle_t bus, uint16_t dev_addr);
+hts221_handle_t iot_hts221_create(i2c_bus_handle_t bus, uint16_t dev_addr);
 
 /**
  * @brief Delete and release a sensor object
@@ -639,7 +639,7 @@ hts221_handle_t sensor_hts221_create(i2c_bus_handle_t bus, uint16_t dev_addr);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t sensor_hts221_delete(hts221_handle_t sensor, bool del_bus);
+esp_err_t iot_hts221_delete(hts221_handle_t sensor, bool del_bus);
 
 #ifdef __cplusplus
 }

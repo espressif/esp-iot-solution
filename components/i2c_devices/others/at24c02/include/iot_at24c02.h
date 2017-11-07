@@ -31,7 +31,7 @@ extern "C"
 #endif
 
 #include "driver/i2c.h"
-#include "i2c_bus.h"
+#include "iot_i2c_bus.h"
 
 #define AT24C02_I2C_ADDRESS_DEFAULT   (0x50)    //1 0  1  0   A2  A1  A0  R/W
 
@@ -53,7 +53,7 @@ typedef void* at24c02_handle_t;                 /*handle of at24c02*/
  * @return
  *     - at24c02_handle_t
  */
-at24c02_handle_t dev_at24c02_create(i2c_bus_handle_t bus, uint16_t dev_addr);
+at24c02_handle_t iot_at24c02_create(i2c_bus_handle_t bus, uint16_t dev_addr);
 
 /**
  * @brief   delete AT24C02 handle_t
@@ -65,7 +65,7 @@ at24c02_handle_t dev_at24c02_create(i2c_bus_handle_t bus, uint16_t dev_addr);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t dev_at24c02_delete(at24c02_handle_t dev, bool del_bus);
+esp_err_t iot_at24c02_delete(at24c02_handle_t dev, bool del_bus);
 
 /**
  * @brief   Write a data on addr
@@ -73,7 +73,7 @@ esp_err_t dev_at24c02_delete(at24c02_handle_t dev, bool del_bus);
  *    - ESP_OK Success
  *    - ESP_FAIL Fail
  */
-esp_err_t at24c02_write_byte(at24c02_handle_t dev, uint8_t addr,
+esp_err_t iot_at24c02_write_byte(at24c02_handle_t dev, uint8_t addr,
         uint8_t data);
 
 /**
@@ -82,7 +82,7 @@ esp_err_t at24c02_write_byte(at24c02_handle_t dev, uint8_t addr,
  *    - ESP_OK Success
  *    - ESP_FAIL Fail
  */
-esp_err_t at24c02_read_byte(at24c02_handle_t dev, uint8_t addr,
+esp_err_t iot_at24c02_read_byte(at24c02_handle_t dev, uint8_t addr,
         uint8_t *data);
 
 /**
@@ -91,7 +91,7 @@ esp_err_t at24c02_read_byte(at24c02_handle_t dev, uint8_t addr,
  *    - ESP_OK Success
  *    - ESP_FAIL Fail
  */
-esp_err_t at24c02_write(at24c02_handle_t dev, uint8_t start_addr,
+esp_err_t iot_at24c02_write(at24c02_handle_t dev, uint8_t start_addr,
         uint8_t write_num, uint8_t *data_buf);
 
 /**
@@ -100,7 +100,7 @@ esp_err_t at24c02_write(at24c02_handle_t dev, uint8_t start_addr,
  *    - ESP_OK Success
  *    - ESP_FAIL Fail
  */
-esp_err_t at24c02_read(at24c02_handle_t dev, uint8_t start_addr,
+esp_err_t iot_at24c02_read(at24c02_handle_t dev, uint8_t start_addr,
         uint8_t read_num, uint8_t *data_buf);
 
 #ifdef __cplusplus

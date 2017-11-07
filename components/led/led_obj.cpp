@@ -29,7 +29,7 @@
 #include "freertos/queue.h"
 #include "esp_system.h"
 #include "esp_log.h"
-#include "led.h"
+#include "iot_led.h"
 
 #define QUICK_BLINK_FREQ_CPP     CONFIG_STATUS_LED_QUICK_BLINK_FREQ   /*!< default 5 */
 #define SLOW_BLINK_FREQ_CPP      CONFIG_STATUS_LED_SLOW_BLINK_FREQ    /*!< default 1 */
@@ -44,14 +44,14 @@ CLED::CLED(uint8_t io_num, led_dark_level_t dark_level)
         m_quick_blink_freq = QUICK_BLINK_FREQ_CPP;
         m_slow_blink_freq = SLOW_BLINK_FREQ_CPP;
         ESP_LOGI(LED_CPP_TAG, "setup led\n");
-        led_setup();
+        iot_led_setup();
     }
-    m_led_handle = led_create(io_num, dark_level);
+    m_led_handle = iot_led_create(io_num, dark_level);
 }
 
 CLED::~CLED()
 {
-    led_delete(m_led_handle);
+    iot_led_delete(m_led_handle);
     m_led_handle = NULL;
 }
 
@@ -66,42 +66,42 @@ esp_err_t CLED::toggle()
 
 esp_err_t CLED::on()
 {
-    return led_state_write(m_led_handle, LED_ON);
+    return iot_led_state_write(m_led_handle, LED_ON);
 }
 
 esp_err_t CLED::off()
 {
-    return led_state_write(m_led_handle, LED_OFF);
+    return iot_led_state_write(m_led_handle, LED_OFF);
 }
 
 esp_err_t CLED::state_write(led_status_t state)
 {
-    return led_state_write(m_led_handle, state);
+    return iot_led_state_write(m_led_handle, state);
 }
 
 led_status_t CLED::state_read()
 {
-    return led_state_read(m_led_handle);
+    return iot_led_state_read(m_led_handle);
 }
 
 esp_err_t CLED::mode_write(led_mode_t mode)
 {
-    return led_mode_write(m_led_handle, mode);
+    return iot_led_mode_write(m_led_handle, mode);
 }
 
 led_mode_t CLED::mode_read()
 {
-    return led_mode_read(m_led_handle);
+    return iot_led_mode_read(m_led_handle);
 }
 
 esp_err_t CLED::quick_blink()
 {
-    return led_state_write(m_led_handle, LED_QUICK_BLINK);
+    return iot_led_state_write(m_led_handle, LED_QUICK_BLINK);
 }
 
 esp_err_t CLED::slow_blink()
 {
-    return led_state_write(m_led_handle, LED_SLOW_BLINK);
+    return iot_led_state_write(m_led_handle, LED_SLOW_BLINK);
 }
 
 esp_err_t CLED::night_mode()
@@ -118,18 +118,18 @@ esp_err_t CLED::blink_freq_write(uint64_t quick_fre, uint64_t slow_fre)
 {
     m_quick_blink_freq = quick_fre;
     m_slow_blink_freq = slow_fre;
-    led_update_blink_freq(m_quick_blink_freq, m_slow_blink_freq);
+    iot_led_update_blink_freq(m_quick_blink_freq, m_slow_blink_freq);
     return ESP_OK;
 }
 
 esp_err_t CLED::night_duty_write(uint8_t duty)
 {
-    return led_night_duty_write(duty);
+    return iot_led_night_duty_write(duty);
 }
 
 uint8_t CLED::night_duty_read()
 {
-    return led_night_duty_read();
+    return iot_led_night_duty_read();
 }
 
 #endif

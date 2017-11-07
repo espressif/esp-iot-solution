@@ -30,7 +30,7 @@ extern "C" {
 #endif
 
 #include "driver/i2c.h"
-#include "i2c_bus.h"
+#include "iot_i2c_bus.h"
 
 typedef void* mvh3004d_handle_t;
 #define MVH3004D_SLAVE_ADDR    (0x44)
@@ -45,7 +45,7 @@ typedef void* mvh3004d_handle_t;
  *     - NULL Fail
  *     - Others Success
  */
-mvh3004d_handle_t sensor_mvh3004d_create(i2c_bus_handle_t bus, uint16_t dev_addr);
+mvh3004d_handle_t iot_mvh3004d_create(i2c_bus_handle_t bus, uint16_t dev_addr);
 
 /**
  * @brief Delete and release a sensor object
@@ -57,7 +57,7 @@ mvh3004d_handle_t sensor_mvh3004d_create(i2c_bus_handle_t bus, uint16_t dev_addr
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t sensor_mvh3004d_delete(mvh3004d_handle_t sensor, bool del_bus);
+esp_err_t iot_mvh3004d_delete(mvh3004d_handle_t sensor, bool del_bus);
 
 /**
  * @brief read temperature and huminity
@@ -68,7 +68,7 @@ esp_err_t sensor_mvh3004d_delete(mvh3004d_handle_t sensor, bool del_bus);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t mvh3004d_get_data(mvh3004d_handle_t sensor, float* tp, float* rh);
+esp_err_t iot_mvh3004d_get_data(mvh3004d_handle_t sensor, float* tp, float* rh);
 
 /**
  * @brief read huminity
@@ -78,7 +78,7 @@ esp_err_t mvh3004d_get_data(mvh3004d_handle_t sensor, float* tp, float* rh);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t mvh3004d_get_huminity(mvh3004d_handle_t sensor, float* rh);
+esp_err_t iot_mvh3004d_get_huminity(mvh3004d_handle_t sensor, float* rh);
 
 /**
  * @brief read temperature
@@ -88,7 +88,7 @@ esp_err_t mvh3004d_get_huminity(mvh3004d_handle_t sensor, float* rh);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t mvh3004d_get_temperature(mvh3004d_handle_t sensor, float* tp);
+esp_err_t iot_mvh3004d_get_temperature(mvh3004d_handle_t sensor, float* tp);
 
 #ifdef __cplusplus
 }

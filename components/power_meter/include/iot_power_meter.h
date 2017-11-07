@@ -71,7 +71,7 @@ typedef void* pm_handle_t;
   *
   * @return the handle of the power meter
   */
-pm_handle_t powermeter_create(pm_config_t pm_config);
+pm_handle_t iot_powermeter_create(pm_config_t pm_config);
 
 /**
   * @brief  delete power meter, free memory
@@ -82,7 +82,7 @@ pm_handle_t powermeter_create(pm_config_t pm_config);
   *     - ESP_OK: succeed
   *     - ESP_FAIL: pm_handle is NULL
   */
-esp_err_t powermeter_delete(pm_handle_t pm_handle);
+esp_err_t iot_powermeter_delete(pm_handle_t pm_handle);
 
 /**
   * @brief  read value of power meter
@@ -92,7 +92,7 @@ esp_err_t powermeter_delete(pm_handle_t pm_handle);
   *
   * @return 
   */
-uint32_t powermeter_read(pm_handle_t pm_handle, pm_value_type_t value_type);
+uint32_t iot_powermeter_read(pm_handle_t pm_handle, pm_value_type_t value_type);
 
 /**
   * @brief  change the mode of power meter
@@ -104,7 +104,7 @@ uint32_t powermeter_read(pm_handle_t pm_handle, pm_value_type_t value_type);
   *     - ESP_OK: succeed
   *     - others: fail
   */
-esp_err_t powermeter_change_mode(pm_handle_t pm_handle, pm_mode_t mode);
+esp_err_t iot_powermeter_change_mode(pm_handle_t pm_handle, pm_mode_t mode);
 
 #ifdef __cplusplus
 }

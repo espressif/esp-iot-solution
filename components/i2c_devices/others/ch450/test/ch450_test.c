@@ -24,8 +24,8 @@
   
 #include <stdio.h>
 #include "driver/i2c.h"
-#include "ch450.h"
-#include "i2c_bus.h"
+#include "iot_ch450.h"
+#include "iot_i2c_bus.h"
 #include "unity.h"
 #include "driver/gpio.h"
 
@@ -46,15 +46,15 @@ void ch450_test()
     conf.scl_io_num = I2C_MASTER_SCL_IO;
     conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
     conf.master.clk_speed = I2C_MASTER_FREQ_HZ;
-    i2c_bus = i2c_bus_create(I2C_MASTER_NUM, &conf);
+    i2c_bus = iot_i2c_bus_create(I2C_MASTER_NUM, &conf);
     if(seg ==NULL) {
-        seg = dev_ch450_create(i2c_bus);
+        seg = iot_ch450_create(i2c_bus);
     }
     int _idx = 0, _val = 0;
     while (1) {
         int idx = ((_idx ++) % 6);
         int val = ((_val ++) % 10);
-        ch450_write_num(seg, idx, val);
+        iot_ch450_write_num(seg, idx, val);
         vTaskDelay(200 / portTICK_PERIOD_MS);
     }
 }

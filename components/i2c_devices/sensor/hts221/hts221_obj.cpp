@@ -25,47 +25,47 @@
 #include <stdio.h>
 #include "esp_log.h"
 #include "driver/i2c.h"
-#include "i2c_bus.h"
-#include "hts221.h"
+#include "iot_i2c_bus.h"
+#include "iot_hts221.h"
 
 CHts221::CHts221(CI2CBus *p_i2c_bus, uint8_t addr)
 {
     bus = p_i2c_bus;
-    m_sensor_handle = sensor_hts221_create(bus->get_bus_handle(), addr);
+    m_sensor_handle = iot_hts221_create(bus->get_bus_handle(), addr);
     hts221_config_t hts221_config;
-    hts221_get_config(m_sensor_handle, &hts221_config);
+    iot_hts221_get_config(m_sensor_handle, &hts221_config);
     hts221_config.avg_h = HTS221_AVGH_32;
     hts221_config.avg_t = HTS221_AVGT_16;
     hts221_config.odr = HTS221_ODR_1HZ;
     hts221_config.bdu_status = HTS221_DISABLE;
     hts221_config.heater_status = HTS221_DISABLE;
-    hts221_set_config(m_sensor_handle, &hts221_config);
-    hts221_set_activate(m_sensor_handle);
+    iot_hts221_set_config(m_sensor_handle, &hts221_config);
+    iot_hts221_set_activate(m_sensor_handle);
 }
 
 CHts221::~CHts221()
 {
-    sensor_hts221_delete(m_sensor_handle, false);
+    iot_hts221_delete(m_sensor_handle, false);
     m_sensor_handle = NULL;
 }
 
 float CHts221::read_temperature()
 {
     int16_t temperature;
-    hts221_get_temperature(m_sensor_handle, &temperature);
+    iot_hts221_get_temperature(m_sensor_handle, &temperature);
     return (float) temperature / 10;
 }
 
 float CHts221::read_humidity()
 {
     int16_t humidity;
-    hts221_get_humidity(m_sensor_handle, &humidity);
+    iot_hts221_get_humidity(m_sensor_handle, &humidity);
     return (float) humidity / 10;
 }
 
 uint8_t CHts221::id()
 {
     uint8_t id;
-    hts221_get_deviceid(m_sensor_handle, &id);
+    iot_hts221_get_deviceid(m_sensor_handle, &id);
     return id;
 }

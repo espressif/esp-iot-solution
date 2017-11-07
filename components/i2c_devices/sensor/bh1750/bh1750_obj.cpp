@@ -25,40 +25,40 @@
 #include <stdio.h>
 #include "esp_log.h"
 #include "driver/i2c.h"
-#include "i2c_bus.h"
-#include "bh1750.h"
+#include "iot_i2c_bus.h"
+#include "iot_bh1750.h"
 
 CBh1750::CBh1750(CI2CBus *p_i2c_bus, uint8_t addr)
 {
     bus = p_i2c_bus;
-    m_sensor_handle = sensor_bh1750_create(bus->get_bus_handle(), addr);
+    m_sensor_handle = iot_bh1750_create(bus->get_bus_handle(), addr);
 
 }
 
 CBh1750::~CBh1750()
 {
-    sensor_bh1750_delete(m_sensor_handle, false);
+    iot_bh1750_delete(m_sensor_handle, false);
     m_sensor_handle = NULL;
 }
 
 float CBh1750::read()
 {
     float val;
-    bh1750_get_data(m_sensor_handle, &val);
+    iot_bh1750_get_data(m_sensor_handle, &val);
     return val;
 }
 
 esp_err_t CBh1750::on()
 {
-    return bh1750_power_on(m_sensor_handle);
+    return iot_bh1750_power_on(m_sensor_handle);
 }
 esp_err_t CBh1750::off()
 {
-    return bh1750_power_down(m_sensor_handle);
+    return iot_bh1750_power_down(m_sensor_handle);
 }
 
 esp_err_t CBh1750::set_mode(bh1750_cmd_measure_t cmd_measure)
 {
-    return bh1750_set_measure_mode(m_sensor_handle, cmd_measure);
+    return iot_bh1750_set_measure_mode(m_sensor_handle, cmd_measure);
 }
 

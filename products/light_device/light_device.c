@@ -23,11 +23,11 @@
   */
 
 #include <stdlib.h>
-#include "light.h"
+#include "iot_light.h"
 #include "light_device.h"
 #include "light_config.h"
-#include "param.h"
-#include "button.h"
+#include "iot_param.h"
+#include "iot_button.h"
 
 typedef struct {
     int ledc_channel;
@@ -78,13 +78,13 @@ typedef struct {
 light_dev_handle_t light_init()
 {
     light_device_t* light_dev = (light_device_t*)calloc(1, sizeof(light_device_t));
-    light_handle_t light = light_create(IOT_LIGHT_PWM_TIMER_IDX, IOT_LIGHT_PWM_SPEED_MODE, IOT_LIGHT_FREQ_HZ, IOT_LIGHT_CHANNEL_NUM, IOT_LIGHT_PWM_BIT_NUM);
+    light_handle_t light = iot_light_create(IOT_LIGHT_PWM_TIMER_IDX, IOT_LIGHT_PWM_SPEED_MODE, IOT_LIGHT_FREQ_HZ, IOT_LIGHT_CHANNEL_NUM, IOT_LIGHT_PWM_BIT_NUM);
     light_dev->light = light;
     for(int i = 0; i< IOT_LIGHT_CHANNEL_NUM; i ++) {
-        light_channel_regist(light, i, LIGHT_PWM_UNIT[i].ledc_gpio, LIGHT_PWM_UNIT[i].ledc_channel);
+        iot_light_channel_regist(light, i, LIGHT_PWM_UNIT[i].ledc_gpio, LIGHT_PWM_UNIT[i].ledc_channel);
     }
 
-    if (param_load(IOT_LIGHT_NAME_SPACE, IOT_LIGHT_PARAM_KEY, &(light_dev->light_param)) != ESP_OK) {
+    if (iot_param_load(IOT_LIGHT_NAME_SPACE, IOT_LIGHT_PARAM_KEY, &(light_dev->light_param)) != ESP_OK) {
         light_set((light_dev_handle_t)light_dev, 0, 0);
     }
     else {
@@ -100,7 +100,7 @@ static esp_err_t light_state_write(light_handle_t light_handle, uint32_t duty[])
         return ESP_FAIL;
     }
     for (int i = 0; i < IOT_LIGHT_CHANNEL_NUM; i++) {
-        light_duty_write(light_handle, i, duty[i], LIGHT_DUTY_FADE_2S);
+        iot_light_duty_write(light_handle, i, duty[i], LIGHT_DUTY_FADE_2S);
     }
     return ESP_OK;
 }
@@ -116,7 +116,7 @@ esp_err_t light_set(light_dev_handle_t light_dev, uint8_t bright, uint8_t temp)
     light_device_t* light = (light_device_t*)light_dev;
     light->light_param.bright = bright;
     light->light_param.temp = temp;
-    param_save(IOT_LIGHT_NAME_SPACE, IOT_LIGHT_PARAM_KEY, &light->light_param, sizeof(save_param_t));
+    iot_param_save(IOT_LIGHT_NAME_SPACE, IOT_LIGHT_PARAM_KEY, &light->light_param, sizeof(save_param_t));
     return light_state_write(light->light, duty);
 }
 
@@ -128,12 +128,12 @@ esp_err_t light_net_status_write(light_dev_handle_t light_handle, light_net_stat
     light_device_t* light_dev = (light_device_t*)light_handle;
     switch (net_status) {
         case LIGHT_STA_DISCONNECTED:
-            light_breath_write(light_handle, IOT_CHANNEL_ID_R, 4000);
-            light_duty_write(light_handle, IOT_CHANNEL_ID_G, 0, LIGHT_SET_DUTY_DIRECTLY);
-            light_duty_write(light_handle, IOT_CHANNEL_ID_B, 0, LIGHT_SET_DUTY_DIRECTLY);
+            iot_light_breath_write(light_handle, IOT_CHANNEL_ID_R, 4000);
+            iot_light_duty_write(light_handle, IOT_CHANNEL_ID_G, 0, LIGHT_SET_DUTY_DIRECTLY);
+            iot_light_duty_write(light_handle, IOT_CHANNEL_ID_B, 0, LIGHT_SET_DUTY_DIRECTLY);
             break;
         case LIGHT_CLOUD_CONNECTED:
-            if (param_load(IOT_LIGHT_NAME_SPACE, IOT_LIGHT_PARAM_KEY, &(light_dev->light_param)) != ESP_OK) {
+            if (iot_param_load(IOT_LIGHT_NAME_SPACE, IOT_LIGHT_PARAM_KEY, &(light_dev->light_param)) != ESP_OK) {
                 light_set(light_handle, 0, 0);
             }
             else {

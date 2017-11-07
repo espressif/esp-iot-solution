@@ -25,7 +25,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
-#include "light.h"
+#include "iot_light.h"
 #include "driver/ledc.h"
 
 static const char* TAG = "LIGHT_CPP";
@@ -36,23 +36,23 @@ CLight::CLight(light_channel_num_t channel_num, uint32_t freq_hz, ledc_timer_t t
         green(&m_light_handle, 1, m_full_duty), blue(&m_light_handle, 2, m_full_duty), cw(&m_light_handle, 3, m_full_duty),
         ww(&m_light_handle, 4, m_full_duty)
 {
-    m_light_handle = light_create(timer, speed_mode, freq_hz, channel_num, timer_bit);
+    m_light_handle = iot_light_create(timer, speed_mode, freq_hz, channel_num, timer_bit);
 }
 
 CLight::~CLight()
 {
-    light_delete(m_light_handle);
+    iot_light_delete(m_light_handle);
     m_light_handle = NULL;
 }
 
 esp_err_t CLight::blink_start(uint32_t channel_mask, uint32_t period_ms)
 {
-    return light_blink_start(m_light_handle, channel_mask, period_ms);
+    return iot_light_blink_starte(m_light_handle, channel_mask, period_ms);
 }
 
 esp_err_t CLight::blink_stop()
 {
-    return light_blink_stop(m_light_handle);
+    return iot_light_blink_stop(m_light_handle);
 }
 
 uint32_t CLight::get_full_duty()
@@ -97,7 +97,7 @@ esp_err_t CLight::CLightChannel::init(gpio_num_t io_num, ledc_channel_t ledc_cha
     m_io_num = io_num;
     m_ledc_idx = ledc_channel;
     light_handle_t light_handle = *mp_channel_handle;
-    return light_channel_regist(light_handle, m_ch_idx, io_num, ledc_channel);
+    return iot_light_channel_regist(light_handle, m_ch_idx, io_num, ledc_channel);
 }
 
 esp_err_t CLight::CLightChannel::on()
@@ -107,7 +107,7 @@ esp_err_t CLight::CLightChannel::on()
     }
     light_handle_t light_handle = *mp_channel_handle;
     m_duty = m_ch_full_duty;
-    return light_duty_write(light_handle, m_ch_idx, m_ch_full_duty, LIGHT_SET_DUTY_DIRECTLY);
+    return iot_light_duty_write(light_handle, m_ch_idx, m_ch_full_duty, LIGHT_SET_DUTY_DIRECTLY);
 }
 
 esp_err_t CLight::CLightChannel::off()
@@ -117,7 +117,7 @@ esp_err_t CLight::CLightChannel::off()
     }
     light_handle_t light_handle = *mp_channel_handle;
     m_duty = 0;
-    return light_duty_write(light_handle, m_ch_idx, 0, LIGHT_SET_DUTY_DIRECTLY);
+    return iot_light_duty_write(light_handle, m_ch_idx, 0, LIGHT_SET_DUTY_DIRECTLY);
 }
 
 uint32_t CLight::CLightChannel::duty()
@@ -131,7 +131,7 @@ esp_err_t CLight::CLightChannel::duty(uint32_t duty_val, light_duty_mode_t duty_
         return ESP_FAIL;
     }
     light_handle_t light_handle = *mp_channel_handle;
-    esp_err_t ret = light_duty_write(light_handle, m_ch_idx, duty_val, LIGHT_SET_DUTY_DIRECTLY);
+    esp_err_t ret = iot_light_duty_write(light_handle, m_ch_idx, duty_val, LIGHT_SET_DUTY_DIRECTLY);
     if (ret == ESP_OK) {
         m_duty = duty_val;
     }
@@ -144,7 +144,7 @@ esp_err_t CLight::CLightChannel::breath(int breath_period_ms)
         return ESP_FAIL;
     }
     light_handle_t light_handle = *mp_channel_handle;
-    return light_breath_write(light_handle, m_ch_idx, breath_period_ms);
+    return iot_light_breath_write(light_handle, m_ch_idx, breath_period_ms);
 }
 
 

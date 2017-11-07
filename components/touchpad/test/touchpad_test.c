@@ -47,42 +47,42 @@ static tp_handle_t tp_dev0, tp_dev1;
 static void tap_cb(void *arg)
 {
     tp_handle_t tp_dev = (tp_handle_t) arg;
-    touch_pad_t tp_num = tp_num_get(tp_dev);
+    touch_pad_t tp_num = iot_tp_num_get(tp_dev);
     ESP_LOGI(TAG, "tap callback of touch pad num %d", tp_num);
 }
 
 static void serial_trigger_cb(void *arg)
 {
     tp_handle_t tp_dev = (tp_handle_t) arg;
-    touch_pad_t tp_num = tp_num_get(tp_dev);
+    touch_pad_t tp_num = iot_tp_num_get(tp_dev);
     ESP_LOGI(TAG, "serial trigger callback of touch pad num %d", tp_num);
 }
 
 static void push_cb(void *arg)
 {
     tp_handle_t tp_dev = (tp_handle_t) arg;
-    touch_pad_t tp_num = tp_num_get(tp_dev);
+    touch_pad_t tp_num = iot_tp_num_get(tp_dev);
     ESP_LOGI(TAG, "push callback of touch pad num %d", tp_num);
 }
 
 static void release_cb(void *arg)
 {
     tp_handle_t tp_dev = (tp_handle_t) arg;
-    touch_pad_t tp_num = tp_num_get(tp_dev);
+    touch_pad_t tp_num = iot_tp_num_get(tp_dev);
     ESP_LOGI(TAG, "release callback of touch pad num %d", tp_num);
 }
 
 static void press_3s_cb(void *arg)
 {
     tp_handle_t tp_dev = (tp_handle_t) arg;
-    touch_pad_t tp_num = tp_num_get(tp_dev);
+    touch_pad_t tp_num = iot_tp_num_get(tp_dev);
     ESP_LOGI(TAG, "press 3s callback of touch pad num %d", tp_num);
 }
 
 static void press_5s_cb(void *arg)
 {
     tp_handle_t tp_dev = (tp_handle_t) arg;
-    touch_pad_t tp_num = tp_num_get(tp_dev);
+    touch_pad_t tp_num = iot_tp_num_get(tp_dev);
     ESP_LOGI(TAG, "press 5s callback of touch pad num %d", tp_num);
 }
 #endif
@@ -146,50 +146,50 @@ void gest_cb(void *arg, gesture_type_t type)
 void tp_test()
 {
 #if SINGLE_TOUCHPAD_TEST
-    tp_dev0 = tp_create(TOUCH_PAD_NUM8, TOUCHPAD_THRES_PERCENT, 0, TOUCHPAD_FILTER_VALUE);
-    tp_dev1 = tp_create(TOUCH_PAD_NUM9, TOUCHPAD_THRES_PERCENT, 0, TOUCHPAD_FILTER_VALUE);
+    tp_dev0 = iot_tp_create(TOUCH_PAD_NUM8, TOUCHPAD_THRES_PERCENT, 0, TOUCHPAD_FILTER_VALUE);
+    tp_dev1 = iot_tp_create(TOUCH_PAD_NUM9, TOUCHPAD_THRES_PERCENT, 0, TOUCHPAD_FILTER_VALUE);
     
-    tp_add_cb(tp_dev0, TOUCHPAD_CB_TAP, tap_cb, tp_dev0);
-    tp_add_cb(tp_dev0, TOUCHPAD_CB_PUSH, push_cb, tp_dev0);
-    tp_add_cb(tp_dev0, TOUCHPAD_CB_RELEASE, release_cb, tp_dev0);
-    tp_add_custom_cb(tp_dev0, 3, press_3s_cb, tp_dev0);
-    tp_add_custom_cb(tp_dev0, 5, press_5s_cb, tp_dev0);
+    iot_tp_add_cb(tp_dev0, TOUCHPAD_CB_TAP, tap_cb, tp_dev0);
+    iot_tp_add_cb(tp_dev0, TOUCHPAD_CB_PUSH, push_cb, tp_dev0);
+    iot_tp_add_cb(tp_dev0, TOUCHPAD_CB_RELEASE, release_cb, tp_dev0);
+    iot_tp_add_custom_cb(tp_dev0, 3, press_3s_cb, tp_dev0);
+    iot_tp_add_custom_cb(tp_dev0, 5, press_5s_cb, tp_dev0);
 
-    tp_add_cb(tp_dev1, TOUCHPAD_CB_TAP, tap_cb, tp_dev1);
-    tp_set_serial_trigger(tp_dev1, 4, 1000, serial_trigger_cb, tp_dev1);
-    tp_add_custom_cb(tp_dev1, 3, press_3s_cb, tp_dev1);
-    tp_add_custom_cb(tp_dev1, 5, press_5s_cb, tp_dev1);
+    iot_tp_add_cb(tp_dev1, TOUCHPAD_CB_TAP, tap_cb, tp_dev1);
+    iot_tp_set_serial_trigger(tp_dev1, 4, 1000, serial_trigger_cb, tp_dev1);
+    iot_tp_add_custom_cb(tp_dev1, 3, press_3s_cb, tp_dev1);
+    iot_tp_add_custom_cb(tp_dev1, 5, press_5s_cb, tp_dev1);
 
     vTaskDelay((30 * 1000) / portTICK_RATE_MS);
     ESP_LOGI(TAG, "touchpad 0 deleted");
-    tp_delete(tp_dev0);
+    iot_tp_delete(tp_dev0);
     vTaskDelay((30 * 1000) / portTICK_RATE_MS);
     ESP_LOGI(TAG, "touchpad 1 deleted"); 
-    tp_delete(tp_dev1);
+    iot_tp_delete(tp_dev1);
 #endif
 
 #if TOUCHPAD_SLIDE_TEST
     uint8_t num = sizeof(tps) / sizeof(tps[0]);
-    tp_slide_handle_t tp_slide = tp_slide_create(num, tps, 2,TOUCHPAD_THRES_PERCENT, NULL, TOUCHPAD_FILTER_VALUE);
+    tp_slide_handle_t tp_slide = iot_tp_slide_create(num, tps, 2,TOUCHPAD_THRES_PERCENT, NULL, TOUCHPAD_FILTER_VALUE);
     while (1) {
-        uint8_t pos = tp_slide_position(tp_slide);
+        uint8_t pos = iot_tp_slide_position(tp_slide);
         printf("%d\n", pos);
         vTaskDelay(100 / portTICK_RATE_MS);
     }
 #endif
 
 #if TOUCHPAD_MATRIX_TEST
-    tp_matrix_handle_t tp_matrix = tp_matrix_create(sizeof(x_tps)/sizeof(x_tps[0]), sizeof(y_tps)/sizeof(y_tps[0]),
+    tp_matrix_handle_t tp_matrix = iot_tp_matrix_create(sizeof(x_tps)/sizeof(x_tps[0]), sizeof(y_tps)/sizeof(y_tps[0]),
                                                                 x_tps, y_tps, TOUCHPAD_THRES_PERCENT, NULL, TOUCHPAD_FILTER_VALUE);
-    tp_matrix_add_cb(tp_matrix, TOUCHPAD_CB_PUSH, tp_matrix_cb, "push_event");
-    tp_matrix_add_cb(tp_matrix, TOUCHPAD_CB_RELEASE, tp_matrix_cb, "release_event");
-    tp_matrix_add_cb(tp_matrix, TOUCHPAD_CB_TAP, tp_matrix_cb, "tap_event");
-    tp_matrix_add_custom_cb(tp_matrix, 3, tp_matrix_cb, "press 3s");
-    tp_matrix_add_custom_cb(tp_matrix, 5, tp_matrix_cb, "press 5s");
-    tp_matrix_set_serial_trigger(tp_matrix, 4, 500, tp_matrix_cb, "serial trigger");
+    iot_tp_matrix_add_cb(tp_matrix, TOUCHPAD_CB_PUSH, tp_matrix_cb, "push_event");
+    iot_tp_matrix_add_cb(tp_matrix, TOUCHPAD_CB_RELEASE, tp_matrix_cb, "release_event");
+    iot_tp_matrix_add_cb(tp_matrix, TOUCHPAD_CB_TAP, tp_matrix_cb, "tap_event");
+    iot_tp_matrix_add_custom_cb(tp_matrix, 3, tp_matrix_cb, "press 3s");
+    iot_tp_matrix_add_custom_cb(tp_matrix, 5, tp_matrix_cb, "press 5s");
+    iot_tp_matrix_set_serial_trigger(tp_matrix, 4, 500, tp_matrix_cb, "serial trigger");
     vTaskDelay(60000 / portTICK_RATE_MS);
     ESP_LOGI("touchpad", "delete touchpad matrix");
-    tp_matrix_delete(tp_matrix);
+    iot_tp_matrix_delete(tp_matrix);
 #endif
 }
 

@@ -28,8 +28,8 @@
 #include "esp_log.h"
 #include "unity.h"
 #include "driver/gpio.h"
-#include "i2c_bus.h"
-#include "ssd1306.h"
+#include "iot_i2c_bus.h"
+#include "iot_ssd1306.h"
 
 #define POWER_CNTL_IO   			19
 

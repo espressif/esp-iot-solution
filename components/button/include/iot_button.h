@@ -61,7 +61,7 @@ typedef enum {
  *
  * @return A button_handle_t handle to the created button object, or NULL in case of error.
  */
-button_handle_t button_create(gpio_num_t gpio_num, button_active_t active_level, button_trigger_t trigger, uint32_t serial_thres_sec);
+button_handle_t iot_button_create(gpio_num_t gpio_num, button_active_t active_level, button_trigger_t trigger, uint32_t serial_thres_sec);
 
 /**
  * @brief Register a callback function for a button_cb_type_t action.
@@ -80,7 +80,7 @@ button_handle_t button_create(gpio_num_t gpio_num, button_active_t active_level,
  *     - ESP_OK Success
  *     - ESP_FAIL Parameter error
  */
-esp_err_t button_add_cb(button_handle_t btn_handle, button_cb_type_t type, button_cb cb, void* arg, int interval_tick);
+esp_err_t iot_button_add_cb(button_handle_t btn_handle, button_cb_type_t type, button_cb cb, void* arg, int interval_tick);
 
 /**
  * @brief
@@ -99,7 +99,7 @@ esp_err_t button_add_cb(button_handle_t btn_handle, button_cb_type_t type, butto
  *     - ESP_OK Success
  *     - ESP_FAIL Parameter error
  */
-esp_err_t button_add_custom_cb(button_handle_t btn_handle, uint32_t press_sec, button_cb cb, void* arg);
+esp_err_t iot_button_add_custom_cb(button_handle_t btn_handle, uint32_t press_sec, button_cb cb, void* arg);
 
 /**
  * @brief Delete button object and free memory
@@ -109,7 +109,7 @@ esp_err_t button_add_custom_cb(button_handle_t btn_handle, uint32_t press_sec, b
  *     - ESP_OK Success
  *     - ESP_FAIL Parameter error
  */
-esp_err_t button_delete(button_handle_t btn_handle);
+esp_err_t iot_button_delete(button_handle_t btn_handle);
 
 /**
  * @brief Remove callback
@@ -120,7 +120,7 @@ esp_err_t button_delete(button_handle_t btn_handle);
  * @return
  *     - ESP_OK Success
  */
-esp_err_t button_rm_cb(button_handle_t btn_handle, button_cb_type_t type);
+esp_err_t iot_button_rm_cb(button_handle_t btn_handle, button_cb_type_t type);
 
 #ifdef __cplusplus
 }

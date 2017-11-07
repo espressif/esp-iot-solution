@@ -28,8 +28,8 @@
 #include <stdio.h>
 #include "unity.h"
 #include "driver/i2c.h"
-#include "i2c_bus.h"
-#include "hts221.h"
+#include "iot_i2c_bus.h"
+#include "iot_hts221.h"
 #include "esp_system.h"
 
 #define I2C_MASTER_SCL_IO           21          /*!< gpio number for I2C master clock */
@@ -54,8 +54,8 @@ void i2c_sensor_hts221_init()
     conf.scl_io_num = I2C_MASTER_SCL_IO;
     conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
     conf.master.clk_speed = I2C_MASTER_FREQ_HZ;
-    i2c_bus = i2c_bus_create(i2c_master_port, &conf);
-    hts221 = sensor_hts221_create(i2c_bus, HTS221_I2C_ADDRESS);
+    i2c_bus = iot_i2c_bus_create(i2c_master_port, &conf);
+    hts221 = iot_hts221_create(i2c_bus, HTS221_I2C_ADDRESS);
 }
 
 void hts221_test_task(void* pvParameters)
@@ -64,11 +64,11 @@ void hts221_test_task(void* pvParameters)
     int16_t temperature;
     int16_t humidity;
     
-    hts221_get_deviceid(hts221, &hts221_deviceid);
+    iot_hts221_get_deviceid(hts221, &hts221_deviceid);
     printf("hts221 device ID is: %02x\n", hts221_deviceid);
         
     hts221_config_t hts221_config;    
-    hts221_get_config(hts221, &hts221_config);
+    iot_hts221_get_config(hts221, &hts221_config);
     printf("avg_h is: %02x\n", hts221_config.avg_h);
     printf("avg_t is: %02x\n", hts221_config.avg_t);
     printf("odr is: %02x\n", hts221_config.odr);
@@ -83,14 +83,14 @@ void hts221_test_task(void* pvParameters)
     hts221_config.odr = HTS221_ODR_1HZ;
     hts221_config.bdu_status = HTS221_DISABLE;
     hts221_config.heater_status = HTS221_DISABLE;
-    hts221_set_config(hts221, &hts221_config);
+    iot_hts221_set_config(hts221, &hts221_config);
     
-    hts221_set_activate(hts221);
+    iot_hts221_set_activate(hts221);
     while(1){
         printf("\n********HTS221 HUMIDITY&TEMPERATURE SENSOR********\n");
-        hts221_get_humidity(hts221, &humidity);
+        iot_hts221_get_humidity(hts221, &humidity);
         printf("humidity value is: %2.2f\n", (float)humidity / 10);
-        hts221_get_temperature(hts221, &temperature);
+        iot_hts221_get_temperature(hts221, &temperature);
         printf("temperature value is: %2.2f\n", (float)temperature / 10);
         printf("**************************************************\n");
         vTaskDelay(1000 / portTICK_RATE_MS);

@@ -51,9 +51,9 @@
     * 调用 esp_deep_sleep_start() 开始 deep sleep
 * 为了使用户更方便地使用协处理器进行数据采集与存储, 我们在 Iot Solution 中增加了 ulp_monitor 模块, 用户可直接调用 c 函数运行协处理器. ulp_monitor 模块使用按如下流程（具体可查看 ulp_monitor 模块的 readme.md 和 ulp_monitor_test.c 文件）:
     * 芯片 boot 后从 RTC_SLOW_MEMORY 读取 deep sleep 时 ULP 协处理采集的数据, 上传数据
-    * 调用 ulp_monitor_init(ULP_PROGRAM_ADDR, ULP_DATA_ADDR) 设置协处理器程序运行地址与数据保存地址
-    * 调用 ulp_add_adc_monitor 或 ulp_add_temprature_monitor 添加协处理器采集的数据类型和唤醒条件（可同时添加）
-    * 调用 ulp_monitor_start 设置测量频率并启动协处理器
+    * 调用 iot_ulp_monitor_init(ULP_PROGRAM_ADDR, ULP_DATA_ADDR) 设置协处理器程序运行地址与数据保存地址
+    * 调用 iot_ulp_add_adc_monitor 或 iot_ulp_add_temprature_monitor 添加协处理器采集的数据类型和唤醒条件（可同时添加）
+    * 调用 iot_ulp_monitor_start 设置测量频率并启动协处理器
     * 调用 esp_deep_sleep_start() 开始 deep sleep
 
 ## 用户交互场景, 使用 touchpad 触摸（gpio 按键）唤醒（例如控制面板）

@@ -27,7 +27,7 @@
 #include "freertos/task.h"
 #include "driver/i2s.h"
 #include "driver/dac.h"
-#include "dac_audio.h"
+#include "iot_dac_audio.h"
 
 typedef struct {
     i2s_port_t i2s_num;
@@ -36,7 +36,7 @@ typedef struct {
     int channel_num;
 } dac_audio_t;
 
-dac_audio_handle_t dac_audio_create(i2s_port_t i2s_num, int sample_rate, int sample_bits, i2s_dac_mode_t dac_mode, int dma_size, bool init_i2s)
+dac_audio_handle_t iot_dac_audio_create(i2s_port_t i2s_num, int sample_rate, int sample_bits, i2s_dac_mode_t dac_mode, int dma_size, bool init_i2s)
 {
     dac_audio_t *dac = (dac_audio_t*) calloc(sizeof(dac_audio_t), 1);
     if(init_i2s) {
@@ -56,7 +56,7 @@ dac_audio_handle_t dac_audio_create(i2s_port_t i2s_num, int sample_rate, int sam
     return (dac_audio_handle_t) dac;
 }
 
-esp_err_t dac_audio_delete(dac_audio_handle_t dac_audio, bool delete_i2s)
+esp_err_t iot_dac_audio_delete(dac_audio_handle_t dac_audio, bool delete_i2s)
 {
     dac_audio_t *dac = (dac_audio_t*) dac_audio;
     if (delete_i2s) {
@@ -67,7 +67,7 @@ esp_err_t dac_audio_delete(dac_audio_handle_t dac_audio, bool delete_i2s)
     return ESP_OK;
 }
 
-esp_err_t dac_audio_play(dac_audio_handle_t dac_audio, const uint8_t* data, int length, TickType_t ticks_to_wait)
+esp_err_t iot_dac_audio_play(dac_audio_handle_t dac_audio, const uint8_t* data, int length, TickType_t ticks_to_wait)
 {
     dac_audio_t *dac = (dac_audio_t*) dac_audio;
     i2s_write_bytes(dac->i2s_num, (const char*) data, length, ticks_to_wait);

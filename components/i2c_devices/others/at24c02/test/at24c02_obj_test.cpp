@@ -27,8 +27,8 @@
 #include "esp_system.h"
 #include "esp_log.h"
 #include "unity.h"
-#include "i2c_bus.h"
-#include "at24c02.h"
+#include "iot_i2c_bus.h"
+#include "iot_at24c02.h"
 
 #define I2C_MASTER_SCL_IO           (gpio_num_t)21          /*!< gpio number for I2C master clock IO21*/
 #define I2C_MASTER_SDA_IO           (gpio_num_t)15          /*!< gpio number for I2C master data  IO15*/

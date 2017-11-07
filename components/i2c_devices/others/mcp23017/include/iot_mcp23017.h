@@ -31,7 +31,7 @@ extern "C"
 #endif
 
 #include "driver/i2c.h"
-#include "i2c_bus.h"
+#include "iot_i2c_bus.h"
 
 #define MCP23017_GPIOA                 (uint8_t)0x00    //select GPIOA
 #define MCP23017_GPIOB                 (uint8_t)0x01    //select GPIOB
@@ -74,7 +74,7 @@ typedef enum {
  *    - ESP_OK Success
  *    - ESP_FAIL Fail
  */
-esp_err_t mcp23017_write_byte(mcp23017_handle_t dev, uint8_t reg_addr,
+esp_err_t iot_mcp23017_write_byte(mcp23017_handle_t dev, uint8_t reg_addr,
         uint8_t data);
 
 /**
@@ -83,7 +83,7 @@ esp_err_t mcp23017_write_byte(mcp23017_handle_t dev, uint8_t reg_addr,
  *    - ESP_OK Success
  *    - ESP_FAIL Fail
  */
-esp_err_t mcp23017_write(mcp23017_handle_t dev, uint8_t reg_start_addr,
+esp_err_t iot_mcp23017_write(mcp23017_handle_t dev, uint8_t reg_start_addr,
         uint8_t reg_num, uint8_t *data_buf);
 
 /**
@@ -92,7 +92,7 @@ esp_err_t mcp23017_write(mcp23017_handle_t dev, uint8_t reg_start_addr,
  *    - ESP_OK Success
  *    - ESP_FAIL Fail
  */
-esp_err_t mcp23017_read_byte(mcp23017_handle_t dev, uint8_t reg,
+esp_err_t iot_mcp23017_read_byte(mcp23017_handle_t dev, uint8_t reg,
         uint8_t *data);
 
 /**
@@ -101,7 +101,7 @@ esp_err_t mcp23017_read_byte(mcp23017_handle_t dev, uint8_t reg,
  *    - ESP_OK Success
  *    - ESP_FAIL Fail
  */
-esp_err_t mcp23017_read(mcp23017_handle_t dev, uint8_t reg_start_addr,
+esp_err_t iot_mcp23017_read(mcp23017_handle_t dev, uint8_t reg_start_addr,
         uint8_t reg_num, uint8_t *data_buf);
 
 /**
@@ -113,7 +113,7 @@ esp_err_t mcp23017_read(mcp23017_handle_t dev, uint8_t reg_start_addr,
  * @return
  *     - mcp23017_handle_t
  */
-mcp23017_handle_t dev_mcp23017_create(i2c_bus_handle_t bus, uint16_t dev_addr);
+mcp23017_handle_t iot_mcp23017_create(i2c_bus_handle_t bus, uint16_t dev_addr);
 
 /**
  * @brief delete MCP23017 handle_t
@@ -125,7 +125,7 @@ mcp23017_handle_t dev_mcp23017_create(i2c_bus_handle_t bus, uint16_t dev_addr);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t dev_mcp23017_delete(mcp23017_handle_t dev, bool del_bus);
+esp_err_t iot_mcp23017_delete(mcp23017_handle_t dev, bool del_bus);
 
 /**
  * @brief Set MCP23017 interrupt pin,
@@ -139,7 +139,7 @@ esp_err_t dev_mcp23017_delete(mcp23017_handle_t dev, bool del_bus);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t mcp23017_enable_interrupt_pins(mcp23017_handle_t dev, uint16_t pins,
+esp_err_t iot_mcp23017_interrupt_en(mcp23017_handle_t dev, uint16_t pins,
         bool isDefault, uint16_t defaultValue);
 
 /**
@@ -152,7 +152,7 @@ esp_err_t mcp23017_enable_interrupt_pins(mcp23017_handle_t dev, uint16_t pins,
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t mcp23017_disable_interrupt_pins(mcp23017_handle_t dev, uint16_t pins);
+esp_err_t iot_mcp23017_interrupt_disable(mcp23017_handle_t dev, uint16_t pins);
 
 /**
  * @brief Set the polarity of the INT output pin
@@ -164,7 +164,7 @@ esp_err_t mcp23017_disable_interrupt_pins(mcp23017_handle_t dev, uint16_t pins);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t mcp23017_set_interrupt_pins_polarity(mcp23017_handle_t dev,
+esp_err_t iot_mcp23017_set_interrupt_polarity(mcp23017_handle_t dev,
         mcp23017_gpio_t gpio, uint8_t chLevel);
 
 /**
@@ -178,7 +178,7 @@ esp_err_t mcp23017_set_interrupt_pins_polarity(mcp23017_handle_t dev,
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t mcp23017_set_seque_mode(mcp23017_handle_t dev, uint8_t isSeque);
+esp_err_t iot_mcp23017_set_seque_mode(mcp23017_handle_t dev, uint8_t isSeque);
 
 /**
  * @brief Set MCP23017 pin pullup
@@ -190,7 +190,7 @@ esp_err_t mcp23017_set_seque_mode(mcp23017_handle_t dev, uint8_t isSeque);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t mcp23017_set_pullups(mcp23017_handle_t dev, uint16_t pins);
+esp_err_t iot_mcp23017_set_pullup(mcp23017_handle_t dev, uint16_t pins);
 
 /**
  * @brief gets the interrupt capture values for pins with interrupts enabled,
@@ -203,7 +203,7 @@ esp_err_t mcp23017_set_pullups(mcp23017_handle_t dev, uint16_t pins);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-uint16_t mcp23017_get_intpin_values(mcp23017_handle_t dev);
+uint16_t iot_mcp23017_get_int_pin(mcp23017_handle_t dev);
 
 /**
  * @brief get interrupt flag of GPIO
@@ -213,7 +213,7 @@ uint16_t mcp23017_get_intpin_values(mcp23017_handle_t dev);
  * @return
  *     - value of GPIO interrupt flag
  */
-uint16_t mcp23017_get_intflag_values(mcp23017_handle_t dev);
+uint16_t iot_mcp23017_get_int_flag(mcp23017_handle_t dev);
 
 /**
  * @brief Check device Present
@@ -224,7 +224,7 @@ uint16_t mcp23017_get_intflag_values(mcp23017_handle_t dev);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t mcp23017_check_device_present(mcp23017_handle_t dev);
+esp_err_t iot_mcp23017_check_present(mcp23017_handle_t dev);
 
 /**
  * @brief Set MCP23017 GPIOA/GPIOB Mirror:1:Interrupt inconnect; 0:not connect.
@@ -237,7 +237,7 @@ esp_err_t mcp23017_check_device_present(mcp23017_handle_t dev);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t mcp23017_mirror_interrupt(mcp23017_handle_t dev, uint8_t mirror,
+esp_err_t iot_mcp23017_mirror_interrupt(mcp23017_handle_t dev, uint8_t mirror,
         mcp23017_gpio_t gpio);
 
 /**
@@ -250,7 +250,7 @@ esp_err_t mcp23017_mirror_interrupt(mcp23017_handle_t dev, uint8_t mirror,
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t mcp23017_write_ioport(mcp23017_handle_t dev, uint8_t value,
+esp_err_t iot_mcp23017_write_io(mcp23017_handle_t dev, uint8_t value,
         mcp23017_gpio_t gpio);
 
 /**
@@ -261,7 +261,7 @@ esp_err_t mcp23017_write_ioport(mcp23017_handle_t dev, uint8_t value,
  * @return
  *     - uint8_t
  */
-uint8_t mcp23017_read_ioport(mcp23017_handle_t dev, mcp23017_gpio_t gpio);
+uint8_t iot_mcp23017_read_io(mcp23017_handle_t dev, mcp23017_gpio_t gpio);
 
 /**
  * @brief set Direction of GPIOA;Set the logic level on pin <7: 0>
@@ -273,7 +273,7 @@ uint8_t mcp23017_read_ioport(mcp23017_handle_t dev, mcp23017_gpio_t gpio);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t mcp23017_set_iodirection(mcp23017_handle_t dev, uint8_t value,
+esp_err_t iot_mcp23017_set_io_dir(mcp23017_handle_t dev, uint8_t value,
         mcp23017_gpio_t gpio);
 
 #ifdef __cplusplus

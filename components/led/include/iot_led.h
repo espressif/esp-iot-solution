@@ -60,7 +60,7 @@ typedef void* led_handle_t;
   *     - ESP_OK: succeed
   *     - others: fail
   */
-esp_err_t led_setup();
+esp_err_t iot_led_setup();
 
 /**
  * @brief led blink frequency update
@@ -70,7 +70,7 @@ esp_err_t led_setup();
  *     - ESP_OK: success
  *     - others: fail
  */
-esp_err_t led_update_blink_freq(int quick_blink_freq, int slow_blink_freq);
+esp_err_t iot_led_update_blink_freq(int quick_blink_freq, int slow_blink_freq);
 
 /**
   * @brief  create new led.
@@ -80,7 +80,7 @@ esp_err_t led_update_blink_freq(int quick_blink_freq, int slow_blink_freq);
   *
   * @return the handle of the led
   */
-led_handle_t led_create(uint8_t io_num, led_dark_level_t dark_level);
+led_handle_t iot_led_create(uint8_t io_num, led_dark_level_t dark_level);
 
 /**
   * @brief  free the memory of led
@@ -91,7 +91,7 @@ led_handle_t led_create(uint8_t io_num, led_dark_level_t dark_level);
   *     - ESP_OK: succeed
   *     - others: fail
   */
-esp_err_t led_delete(led_handle_t led_handle);
+esp_err_t iot_led_delete(led_handle_t led_handle);
 
 /**
   * @brief  set state of led
@@ -103,7 +103,7 @@ esp_err_t led_delete(led_handle_t led_handle);
   *     - ESP_OK: succeed
   *     - others: fail
   */
-esp_err_t led_state_write(led_handle_t led_handle, led_status_t state);
+esp_err_t iot_led_state_write(led_handle_t led_handle, led_status_t state);
 
 /**
   * @brief  set mode of led
@@ -115,7 +115,7 @@ esp_err_t led_state_write(led_handle_t led_handle, led_status_t state);
   *     - ESP_OK: succeed
   *     - others: fail
   */
-esp_err_t led_mode_write(led_handle_t led_handle, led_mode_t mode);
+esp_err_t iot_led_mode_write(led_handle_t led_handle, led_mode_t mode);
 
 /**
   * @brief  set duty of night mode, all the leds share the same duty
@@ -126,7 +126,7 @@ esp_err_t led_mode_write(led_handle_t led_handle, led_mode_t mode);
   *     - ESP_OK: succeed
   *     - others: fail
   */
-esp_err_t led_night_duty_write(uint8_t duty);
+esp_err_t iot_led_night_duty_write(uint8_t duty);
 
 /**
   * @brief  get state of led
@@ -135,7 +135,7 @@ esp_err_t led_night_duty_write(uint8_t duty);
   *
   * @return state of led
   */
-led_status_t led_state_read(led_handle_t led_handle);
+led_status_t iot_led_state_read(led_handle_t led_handle);
 
 /**
   * @brief  get mode of led
@@ -144,21 +144,21 @@ led_status_t led_state_read(led_handle_t led_handle);
   *
   * @return mode of led
   */
-led_mode_t led_mode_read(led_handle_t led_handle);
+led_mode_t iot_led_mode_read(led_handle_t led_handle);
 
 /**
   * @brief  get duty of night mode
   *
   * @return duty of night mode
   */
-uint8_t led_night_duty_read();
+uint8_t iot_led_night_duty_read();
 
 #ifdef __cplusplus
 }
 #endif
 
 #ifdef __cplusplus
-#include "controllable_obj.h"
+#include "iot_controllable_obj.h"
 
 /**
  * class of status led

@@ -25,28 +25,28 @@
 #include <stdio.h>
 #include "esp_log.h"
 #include "driver/i2c.h"
-#include "i2c_bus.h"
-#include "is31fl3218.h"
+#include "iot_i2c_bus.h"
+#include "iot_is31fl3218.h"
 
 CIs31fl3218::CIs31fl3218(CI2CBus *p_i2c_bus)
 {
     bus = p_i2c_bus;
-    m_led_handle = led_is31fl3218_create(bus->get_bus_handle());
+    m_led_handle = iot_is31fl3218_create(bus->get_bus_handle());
 }
 
 CIs31fl3218::~CIs31fl3218()
 {
-    led_is31fl3218_delete(m_led_handle, false);
+    iot_is31fl3218_delete(m_led_handle, false);
     m_led_handle = NULL;
 }
 
 esp_err_t CIs31fl3218::set_duty(uint32_t ch_bit, uint8_t duty)
 {
-    return is31fl3218_channel_set(m_led_handle, ch_bit, duty);
+    return iot_is31fl3218_channel_set(m_led_handle, ch_bit, duty);
 }
 
 esp_err_t CIs31fl3218::write_duty_regs(uint8_t* duty, int len)
 {
-    return is31fl3218_write_pwm_regs(m_led_handle, duty, len);
+    return iot_is31fl3218_write_pwm_regs(m_led_handle, duty, len);
 }
 

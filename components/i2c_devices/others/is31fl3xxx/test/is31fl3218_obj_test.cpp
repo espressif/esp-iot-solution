@@ -27,9 +27,9 @@
 
 #include <stdio.h>
 #include "driver/i2c.h"
-#include "is31fl3218.h"
-#include "is31fl3736.h"
-#include "i2c_bus.h"
+#include "iot_is31fl3218.h"
+#include "iot_is31fl3736.h"
+#include "iot_i2c_bus.h"
 #include "unity.h"
 
 #define I2C_MASTER_SCL_IO           (gpio_num_t)21          /*!< gpio number for I2C master clock */

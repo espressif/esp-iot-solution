@@ -63,7 +63,7 @@ typedef void* weekly_timer_handle_t;
   *     - ESP_OK: succeed
   *     - others: fail
   */
-esp_err_t weekly_timer_init();
+esp_err_t iot_weekly_timer_init();
 
 /**
   * @brief  add an event_timer
@@ -75,7 +75,7 @@ esp_err_t weekly_timer_init();
   *
   * @return the handle to the timer
   */
-weekly_timer_handle_t weekly_timer_add(bool weekly_loop, weekday_mask_t week_mark, uint32_t time_num, const event_time_t *time_group);
+weekly_timer_handle_t iot_weekly_timer_add(bool weekly_loop, weekday_mask_t week_mark, uint32_t time_num, const event_time_t *time_group);
 
 /**
   * @brief  delete a timer
@@ -86,7 +86,7 @@ weekly_timer_handle_t weekly_timer_add(bool weekly_loop, weekday_mask_t week_mar
   *     - ESP_OK: succeed
   *     - others: fail
   */
-esp_err_t weekly_timer_delete(weekly_timer_handle_t timer_handle);
+esp_err_t iot_weekly_timer_delete(weekly_timer_handle_t timer_handle);
 
 /**
   * @brief  start a timer
@@ -97,7 +97,7 @@ esp_err_t weekly_timer_delete(weekly_timer_handle_t timer_handle);
   *     - ESP_OK: succeed
   *     - others: fail
   */
-esp_err_t weekly_timer_start(weekly_timer_handle_t timer_handle);
+esp_err_t iot_weekly_timer_start(weekly_timer_handle_t timer_handle);
 
 /**
   * @brief  stop a timer
@@ -108,7 +108,7 @@ esp_err_t weekly_timer_start(weekly_timer_handle_t timer_handle);
   *     - ESP_OK: succeed
   *     - others: fail
   */
-esp_err_t weekly_timer_stop(weekly_timer_handle_t timer_handle);
+esp_err_t iot_weekly_timer_stop(weekly_timer_handle_t timer_handle);
 
 #ifdef __cplusplus
 }

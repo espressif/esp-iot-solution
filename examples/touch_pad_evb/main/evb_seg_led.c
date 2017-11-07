@@ -27,8 +27,8 @@
 #include <stdio.h>
 #include "driver/i2c.h"
 #include "driver/gpio.h"
-#include "i2c_bus.h"
-#include "ch450.h"
+#include "iot_i2c_bus.h"
+#include "iot_ch450.h"
 #include "evb.h"
 
 static i2c_bus_handle_t i2c_bus = NULL;
@@ -43,14 +43,14 @@ void ch450_dev_init()
     conf.scl_io_num = I2C_MASTER_SCL_IO;
     conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
     conf.master.clk_speed = I2C_MASTER_FREQ_HZ;
-    i2c_bus = i2c_bus_create(I2C_MASTER_NUM, &conf);
+    i2c_bus = iot_i2c_bus_create(I2C_MASTER_NUM, &conf);
     if (seg == NULL) {
-        seg = dev_ch450_create(i2c_bus);
+        seg = iot_ch450_create(i2c_bus);
     }
 }
 
 void ch450_write_dig(int idx, int val)
 {
-    ch450_write_num(seg, idx, val);
+    iot_ch450_write_num(seg, idx, val);
 }
 

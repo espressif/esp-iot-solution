@@ -31,7 +31,7 @@ extern "C"
 
 #include "driver/gpio.h"
 #include "driver/i2c.h"
-#include "i2c_bus.h"
+#include "iot_i2c_bus.h"
 #include "stdint.h"
 
 /**
@@ -115,7 +115,7 @@ typedef void* ssd1306_handle_t;                         /*handle of ssd1306*/
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t dev_ssd1306_init(ssd1306_handle_t dev);
+esp_err_t iot_ssd1306_init(ssd1306_handle_t dev);
 
 /**
  * @brief   Create and initialization device object and return a device handle
@@ -126,7 +126,7 @@ esp_err_t dev_ssd1306_init(ssd1306_handle_t dev);
  * @return
  *     - device object handle of ssd1306
  */
-ssd1306_handle_t dev_ssd1306_create(i2c_bus_handle_t bus, uint16_t dev_addr);
+ssd1306_handle_t iot_ssd1306_create(i2c_bus_handle_t bus, uint16_t dev_addr);
 
 /**
  * @brief   Delete and release a device object
@@ -138,7 +138,7 @@ ssd1306_handle_t dev_ssd1306_create(i2c_bus_handle_t bus, uint16_t dev_addr);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t dev_ssd1306_delete(ssd1306_handle_t dev, bool del_bus);
+esp_err_t iot_ssd1306_delete(ssd1306_handle_t dev, bool del_bus);
 
 /**
  * @brief   Write command or data to ssd1306
@@ -151,7 +151,7 @@ esp_err_t dev_ssd1306_delete(ssd1306_handle_t dev, bool del_bus);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t ssd1306_write_byte(ssd1306_handle_t dev, uint8_t chData,
+esp_err_t iot_ssd1306_write_byte(ssd1306_handle_t dev, uint8_t chData,
         uint8_t chCmd);
 
 /**
@@ -165,7 +165,7 @@ esp_err_t ssd1306_write_byte(ssd1306_handle_t dev, uint8_t chData,
  * @return
  *     - NULL
  */
-void ssd1306_draw_point(ssd1306_handle_t dev, uint8_t chXpos, uint8_t chYpos,
+void iot_ssd1306_fill_point(ssd1306_handle_t dev, uint8_t chXpos, uint8_t chYpos,
         uint8_t chPoint);
 
 /**
@@ -178,7 +178,7 @@ void ssd1306_draw_point(ssd1306_handle_t dev, uint8_t chXpos, uint8_t chYpos,
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t ssd1306_fill_rectangle_screen(ssd1306_handle_t dev,
+esp_err_t iot_ssd1306_fill_rectangle(ssd1306_handle_t dev,
         uint8_t chXpos1, uint8_t chYpos1, uint8_t chXpos2, uint8_t chYpos2,
         uint8_t chDot);
 
@@ -193,7 +193,7 @@ esp_err_t ssd1306_fill_rectangle_screen(ssd1306_handle_t dev,
  * @return
  *     - NULL
  */
-void ssd1306_display_char(ssd1306_handle_t dev, uint8_t chXpos,
+void iot_ssd1306_draw_char(ssd1306_handle_t dev, uint8_t chXpos,
         uint8_t chYpos, uint8_t chChr, uint8_t chSize, uint8_t chMode);
 
 /**
@@ -207,7 +207,7 @@ void ssd1306_display_char(ssd1306_handle_t dev, uint8_t chXpos,
  * @return
  *     - NULL
  */
-void ssd1306_display_num(ssd1306_handle_t dev, uint8_t chXpos,
+void iot_ssd1306_draw_num(ssd1306_handle_t dev, uint8_t chXpos,
         uint8_t chYpos, uint32_t chNum, uint8_t chLen, uint8_t chSize);
 
 /**
@@ -221,7 +221,7 @@ void ssd1306_display_num(ssd1306_handle_t dev, uint8_t chXpos,
  * @return
  *     - NULL
  */
-void ssd1306_draw_1616char(ssd1306_handle_t dev, uint8_t chXpos,
+void iot_ssd1306_draw_1616char(ssd1306_handle_t dev, uint8_t chXpos,
         uint8_t chYpos, uint8_t chChar);
 
 /**
@@ -235,7 +235,7 @@ void ssd1306_draw_1616char(ssd1306_handle_t dev, uint8_t chXpos,
  * @return
  *     - NULL
  */
-void ssd1306_draw_3216char(ssd1306_handle_t dev, uint8_t chXpos,
+void iot_ssd1306_draw_3216char(ssd1306_handle_t dev, uint8_t chXpos,
         uint8_t chYpos, uint8_t chChar);
 
 /**
@@ -250,7 +250,7 @@ void ssd1306_draw_3216char(ssd1306_handle_t dev, uint8_t chXpos,
  * @return
  *     - NULL
  */
-void ssd1306_draw_bitmap(ssd1306_handle_t dev, uint8_t chXpos,
+void iot_ssd1306_draw_bitmap(ssd1306_handle_t dev, uint8_t chXpos,
         uint8_t chYpos, const uint8_t *pchBmp, uint8_t chWidth,
         uint8_t chHeight);
 
@@ -263,7 +263,7 @@ void ssd1306_draw_bitmap(ssd1306_handle_t dev, uint8_t chXpos,
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  **/
-esp_err_t ssd1306_refresh_gram(ssd1306_handle_t dev);
+esp_err_t iot_ssd1306_refresh_gram(ssd1306_handle_t dev);
 
 /**
  * @brief   Clear screen
@@ -274,7 +274,7 @@ esp_err_t ssd1306_refresh_gram(ssd1306_handle_t dev);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  **/
-esp_err_t ssd1306_clear_screen(ssd1306_handle_t dev, uint8_t chFill);
+esp_err_t iot_ssd1306_clear_screen(ssd1306_handle_t dev, uint8_t chFill);
 
 /**
  * @brief   Displays a string on the screen
@@ -288,7 +288,7 @@ esp_err_t ssd1306_clear_screen(ssd1306_handle_t dev, uint8_t chFill);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  **/
-esp_err_t ssd1306_display_string(ssd1306_handle_t dev, uint8_t chXpos,
+esp_err_t iot_ssd1306_draw_string(ssd1306_handle_t dev, uint8_t chXpos,
         uint8_t chYpos, const uint8_t *pchString, uint8_t chSize,
         uint8_t chMode);
 
@@ -299,7 +299,7 @@ esp_err_t ssd1306_display_string(ssd1306_handle_t dev, uint8_t chXpos,
  *
  * @retval  None
  **/
-void set_column_start_address(ssd1306_handle_t device);
+void iot_set_column_address(ssd1306_handle_t device);
 
 #ifdef __cplusplus
 }

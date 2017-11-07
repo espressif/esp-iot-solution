@@ -28,7 +28,7 @@
 #include "esp_system.h"
 #include "esp_log.h"
 #include "driver/gpio.h"
-#include "relay.h"
+#include "iot_relay.h"
 #include "unity.h"
 
 #define RELAY_0_D_IO_NUM    GPIO_NUM_2

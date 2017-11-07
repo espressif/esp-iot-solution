@@ -32,7 +32,7 @@
 #include "esp_err.h"
 #include "esp_system.h"
 #include "esp_log.h"
-#include "button.h"
+#include "iot_button.h"
 #include "nvs.h"
 #include "nvs_flash.h"
 #include "joylink_obj.h"
@@ -101,11 +101,11 @@ static void initialise_wifi(void)
 
 static void initialise_key(void)
 {
-    button_handle_t btn_handle = button_create(GPIO_NUM_0, BUTTON_ACTIVE_LOW, BUTTON_SINGLE_TRIGGER, 1);
-    button_add_cb(btn_handle, BUTTON_PUSH_CB, joylink_button_smnt_tap_cb, NULL, 50 / portTICK_PERIOD_MS);
+    button_handle_t btn_handle = iot_button_create(GPIO_NUM_0, BUTTON_ACTIVE_LOW, BUTTON_SINGLE_TRIGGER, 1);
+    iot_button_add_cb(btn_handle, BUTTON_PUSH_CB, joylink_button_smnt_tap_cb, NULL, 50 / portTICK_PERIOD_MS);
 
-    btn_handle = button_create(GPIO_NUM_15, BUTTON_ACTIVE_LOW, BUTTON_SINGLE_TRIGGER, 1);
-    button_add_cb(btn_handle, BUTTON_PUSH_CB, joylink_button_reset_tap_cb, NULL, 50 / portTICK_PERIOD_MS);
+    btn_handle = iot_button_create(GPIO_NUM_15, BUTTON_ACTIVE_LOW, BUTTON_SINGLE_TRIGGER, 1);
+    iot_button_add_cb(btn_handle, BUTTON_PUSH_CB, joylink_button_reset_tap_cb, NULL, 50 / portTICK_PERIOD_MS);
 }
 
 extern "C" void joylink_test()

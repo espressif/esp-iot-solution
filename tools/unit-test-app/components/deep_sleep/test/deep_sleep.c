@@ -38,7 +38,7 @@ static void timer_wake_init(void)
 //set touch_pad 7 as wakeup source
 static void touch_pad_wakeup_init(void)
 {
-    tp_create(TOUCH_PAD_NUM7, 900, 0, 100);
+    iot_tp_create(TOUCH_PAD_NUM7, 900, 0, 100);
     touch_pad_set_meas_time(0xffff, TOUCH_PAD_MEASURE_CYCLE_DEFAULT >> 3);
     esp_sleep_enable_touchpad_wakeup();
 }

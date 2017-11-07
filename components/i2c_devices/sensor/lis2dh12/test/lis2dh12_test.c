@@ -27,7 +27,7 @@
 
 #include <stdio.h>
 #include "driver/i2c.h"
-#include "lis2dh12.h"
+#include "iot_lis2dh12.h"
 #include "unity.h"
 
 #define I2C_MASTER_SCL_IO    19        /*!< gpio number for I2C master clock */
@@ -52,8 +52,8 @@ void i2c_master_init()
     conf.scl_io_num = I2C_MASTER_SCL_IO;
     conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
     conf.master.clk_speed = I2C_MASTER_FREQ_HZ;
-    i2c_bus = i2c_bus_create(I2C_MASTER_NUM, &conf);
-    sens = sensor_lis2dh12_create(i2c_bus, LIS2DH12_I2C_ADDRESS);
+    i2c_bus = iot_i2c_bus_create(I2C_MASTER_NUM, &conf);
+    sens = iot_lis2dh12_create(i2c_bus, LIS2DH12_I2C_ADDRESS);
 }
 
 void lis2dh12_test_task(void* pvParameters)
@@ -62,11 +62,11 @@ void lis2dh12_test_task(void* pvParameters)
     uint16_t x_acc;
     uint16_t y_acc;
     uint16_t z_acc;
-    lis2dh12_get_deviceid(sens, &deviceid);
+    iot_lis2dh12_get_deviceid(sens, &deviceid);
     printf("LIS2DH12 device id is: %02x\n", deviceid);
 
     lis2dh12_config_t  lis2dh12_config;
-    lis2dh12_get_config(sens, &lis2dh12_config);
+    iot_lis2dh12_get_config(sens, &lis2dh12_config);
     printf("temp_enable is: %02x\n", lis2dh12_config.temp_enable);
     printf("odr is: %02x\n", lis2dh12_config.odr);
     printf("option mode is: %02x\n", lis2dh12_config.opt_mode);
@@ -84,15 +84,15 @@ void lis2dh12_test_task(void* pvParameters)
     lis2dh12_config.x_enable = LIS2DH12_ENABLE;
     lis2dh12_config.bdu_status = LIS2DH12_DISABLE;
     lis2dh12_config.fs = LIS2DH12_FS_16G;
-    lis2dh12_set_config(sens, &lis2dh12_config);
+    iot_lis2dh12_set_config(sens, &lis2dh12_config);
 
     while(1){
         printf("\n******************************************\n");
-        lis2dh12_get_x_acc(sens, &x_acc);
+        iot_lis2dh12_get_x_acc(sens, &x_acc);
         printf("X-axis acceleration is: %08x\n", x_acc);
-        lis2dh12_get_y_acc(sens, &y_acc);
+        iot_lis2dh12_get_y_acc(sens, &y_acc);
         printf("Y-axis acceleration is: %08x\n", y_acc);
-        lis2dh12_get_z_acc(sens, &z_acc);
+        iot_lis2dh12_get_z_acc(sens, &z_acc);
         printf("Z-axis acceleration is: %08x\n", z_acc);
         printf("******************************************\n");
         vTaskDelay(1000 / portTICK_RATE_MS);

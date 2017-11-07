@@ -9,23 +9,23 @@
 	* filter value which decide the smallest time interval of two touchpad triggers
 
 * A touchpad device can provide:
-	* tp_add_cb to add callback functions to three different events
-	* tp_set_serial_trigger to make touchpad trigger events continuesly while pressing
-	* tp_add_custom_cb to add callback function to a custom press duration
-	* tp_read to get the sample value of touchpad
-	* tp_num_get to get the touchpad number of the touchpad device
-	* tp_set_threshold/filter to set the threshold value or filter value  mode of the touchpad
+	* iot_tp_add_cb to add callback functions to three different events
+	* iot_tp_set_serial_trigger to make touchpad trigger events continuesly while pressing
+	* iot_tp_add_custom_cb to add callback function to a custom press duration
+	* iot_tp_read to get the sample value of touchpad
+	* iot_tp_num_get to get the touchpad number of the touchpad device
+	* iot_tp_set_threshold/filter to set the threshold value or filter value  mode of the touchpad
 
 * To use the touchpad device, you need to:
-	* create a touchpad object return by tp_create()
-	* To delete the device, you can call tp_delete to delete the object and free the memory
+	* create a touchpad object return by iot_tp_create()
+	* To delete the device, you can call iot_tp_delete to delete the object and free the memory
 
 * More than one touchpad can make up a touchpad slide:
-	* call tp_slide_create to get a touchpad slide object
-	* call tp_slide_position to get relative position of your touch on slide
+	* call iot_tp_slide_create to get a touchpad slide object
+	* call iot_tp_slide_position to get relative position of your touch on slide
 
 * If plenty of touchpads are needed, you can use tp_matrix device:
-	* call tp_matrix_create to get a touchpad matirx object
+	* call iot_tp_matrix_create to get a touchpad matirx object
 	* m+n touchpad sensors are required to create a touchpad matrix which can provide m*n touchpads
 	* many functions of touchpad matrix device are similar with narmal touchpad device 
 
@@ -39,7 +39,7 @@
 	* call gesture_sensor_add_cb to set the callback function of gesture sensor and callback function will be called if any type of gesture is recognized (refer to enum gesture_type_t)
 
 ### NOTE:
-> Don't delete the same tp_handle more than once and you'd better to set the handle to NULL after calling tp_delete()
+> Don't delete the same tp_handle more than once and you'd better to set the handle to NULL after calling iot_tp_delete()
 
 > For thres_percent, you can refer to follow cases:
 * If the pads are touched directly, set thres_percent to 700~800

@@ -24,7 +24,7 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "power_meter.h"
+#include "iot_power_meter.h"
 #include "esp_log.h"
 #include "unity.h"
 
@@ -45,16 +45,16 @@ static void read_value(void* arg)
 {
     pm_handle_t pm_handle = arg;
     for (int i = 0; i < 2; i++) {
-        powermeter_change_mode(pm_handle, PM_SINGLE_VOLTAGE);
+        iot_powermeter_change_mode(pm_handle, PM_SINGLE_VOLTAGE);
         vTaskDelay(5000 / portTICK_RATE_MS);
-        ESP_LOGI(TAG, "value of power:%d", powermeter_read(pm_handle, PM_POWER));
-        ESP_LOGI(TAG, "value of voltage:%d", powermeter_read(pm_handle, PM_VOLTAGE));
-        ESP_LOGI(TAG, "value of current:%d", powermeter_read(pm_handle, PM_CURRENT));
-        powermeter_change_mode(pm_handle, PM_SINGLE_CURRENT);
+        ESP_LOGI(TAG, "value of power:%d", iot_powermeter_read(pm_handle, PM_POWER));
+        ESP_LOGI(TAG, "value of voltage:%d", iot_powermeter_read(pm_handle, PM_VOLTAGE));
+        ESP_LOGI(TAG, "value of current:%d", iot_powermeter_read(pm_handle, PM_CURRENT));
+        iot_powermeter_change_mode(pm_handle, PM_SINGLE_CURRENT);
         vTaskDelay(5000 / portTICK_RATE_MS);
-        ESP_LOGI(TAG, "value of power:%d", powermeter_read(pm_handle, PM_POWER));
-        ESP_LOGI(TAG, "value of voltage:%d", powermeter_read(pm_handle, PM_VOLTAGE));
-        ESP_LOGI(TAG, "value of current:%d", powermeter_read(pm_handle, PM_CURRENT));
+        ESP_LOGI(TAG, "value of power:%d", iot_powermeter_read(pm_handle, PM_POWER));
+        ESP_LOGI(TAG, "value of voltage:%d", iot_powermeter_read(pm_handle, PM_VOLTAGE));
+        ESP_LOGI(TAG, "value of current:%d", iot_powermeter_read(pm_handle, PM_CURRENT));
     }
     vTaskDelete(NULL);
 }
@@ -76,10 +76,10 @@ void power_meter_test()
         .sel_level = 0,
         .pm_mode = PM_SINGLE_VOLTAGE
     };
-    pm_handle = powermeter_create(pm_conf);
+    pm_handle = iot_powermeter_create(pm_conf);
     xTaskCreate(read_value, "read_value", 2048, pm_handle, 5, NULL);
     vTaskDelay(60000 / portTICK_RATE_MS);
-    powermeter_delete(pm_handle);
+    iot_powermeter_delete(pm_handle);
     printf("after power meter delete, heap: %d\n", esp_get_free_heap_size());
 }
 

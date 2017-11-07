@@ -164,9 +164,9 @@ void setupUI(CEspLcd* tft)
 
 //--------- SENSOR ----------
 #include "driver/i2c.h"
-#include "i2c_bus.h"
-#include "hts221.h"
-#include "bh1750.h"
+#include "iot_i2c_bus.h"
+#include "iot_hts221.h"
+#include "iot_bh1750.h"
 
 #define I2C_MASTER_SCL_IO           GPIO_NUM_27          /*!< gpio number for I2C master clock */
 #define I2C_MASTER_SDA_IO           GPIO_NUM_26          /*!< gpio number for I2C master data  */
@@ -184,18 +184,18 @@ void hts221_test_task()
 {
     uint8_t hts221_deviceid;
 
-    hts221_get_deviceid(hts221, &hts221_deviceid);
+    iot_hts221_get_deviceid(hts221, &hts221_deviceid);
     printf("hts221 device ID is: %02x\n", hts221_deviceid);
     hts221_config_t hts221_config;
-    hts221_get_config(hts221, &hts221_config);
+    iot_hts221_get_config(hts221, &hts221_config);
 
     hts221_config.avg_h = HTS221_AVGH_32;
     hts221_config.avg_t = HTS221_AVGT_16;
     hts221_config.odr = HTS221_ODR_1HZ;
     hts221_config.bdu_status = HTS221_DISABLE;
     hts221_config.heater_status = HTS221_DISABLE;
-    hts221_set_config(hts221, &hts221_config);
-    hts221_set_activate(hts221);
+    iot_hts221_set_config(hts221, &hts221_config);
+    iot_hts221_set_activate(hts221);
 }
 
 /**
@@ -211,14 +211,14 @@ void i2c_sensor_init()
     conf.scl_io_num = I2C_MASTER_SCL_IO;
     conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
     conf.master.clk_speed = I2C_MASTER_FREQ_HZ;
-    i2c_bus = i2c_bus_create(I2C_MASTER_NUM, &conf);
-    hts221 = sensor_hts221_create(i2c_bus, HTS221_I2C_ADDRESS);
+    i2c_bus = iot_i2c_bus_create(I2C_MASTER_NUM, &conf);
+    hts221 = iot_hts221_create(i2c_bus, HTS221_I2C_ADDRESS);
 
     uint8_t hts221_deviceid;
-    hts221_get_deviceid(hts221, &hts221_deviceid);
+    iot_hts221_get_deviceid(hts221, &hts221_deviceid);
     printf("hts221 device ID is: %02x\n", hts221_deviceid);
     hts221_config_t hts221_config;
-    hts221_get_config(hts221, &hts221_config);
+    iot_hts221_get_config(hts221, &hts221_config);
     printf("avg_h is: %02x\n", hts221_config.avg_h);
     printf("avg_t is: %02x\n", hts221_config.avg_t);
     printf("odr is: %02x\n", hts221_config.odr);
@@ -232,10 +232,10 @@ void i2c_sensor_init()
     hts221_config.odr = HTS221_ODR_1HZ;
     hts221_config.bdu_status = HTS221_DISABLE;
     hts221_config.heater_status = HTS221_DISABLE;
-    hts221_set_config(hts221, &hts221_config);
-    hts221_set_activate(hts221);
+    iot_hts221_set_config(hts221, &hts221_config);
+    iot_hts221_set_activate(hts221);
 
-    bh1750 = sensor_bh1750_create(i2c_bus, 0x23);
+    bh1750 = iot_bh1750_create(i2c_bus, 0x23);
     hts221_test_task();
 }
 
@@ -321,9 +321,9 @@ void demo_sensor_read_task(void* arg)
 
     while(1) {
         printf("\n********HTS221 HUMIDITY&TEMPERATURE SENSOR********\n");
-        hts221_get_humidity(hts221, &humidity);
+        iot_hts221_get_humidity(hts221, &humidity);
         printf("humidity value is: %2.2f\n", (float)humidity / 10);
-        hts221_get_temperature(hts221, &temperature);
+        iot_hts221_get_temperature(hts221, &temperature);
         printf("temperature value is: %2.2f\n", (float)temperature / 10);
         if (temperature_last != temperature) {
             data.type = LCD_DATA_TEMP;
@@ -340,11 +340,11 @@ void demo_sensor_read_task(void* arg)
             humidity_last = humidity;
         }
 
-        bh1750_power_on(bh1750);
-        bh1750_set_measure_mode(bh1750, BH1750_ONETIME_4LX_RES);
+        iot_bh1750_power_on(bh1750);
+        iot_bh1750_set_measure_mode(bh1750, BH1750_ONETIME_4LX_RES);
         vTaskDelay(30 / portTICK_RATE_MS);
 
-        bh1750_get_data(bh1750, &bh1750_data);
+        iot_bh1750_get_data(bh1750, &bh1750_data);
         printf("brightness: %f\n", bh1750_data);
         if (bh1750_data_last != bh1750_data) {
             data.type = LCD_DATA_BRI;

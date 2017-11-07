@@ -29,7 +29,7 @@
 
 #include "esp_system.h"
 #include "lwip/sockets.h"
-#include "ota.h"
+#include "iot_ota.h"
 #include "esp_log.h"
 #include "esp_ota_ops.h"
 #include "esp_partition.h"
@@ -132,7 +132,7 @@ static esp_err_t ota_download(int socket_id, esp_ota_handle_t ota_handle)
     return ESP_OK; 
 }
 
-esp_err_t ota_start(const char *server_ip, uint16_t server_port, const char *file_dir, uint32_t ticks_to_wait)
+esp_err_t iot_ota_start(const char *server_ip, uint16_t server_port, const char *file_dir, uint32_t ticks_to_wait)
 {
     TimerHandle_t ota_timer = NULL;
     int socket_id = -1;
