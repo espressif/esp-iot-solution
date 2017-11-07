@@ -28,7 +28,7 @@
 #include "esp_system.h"
 #include "unity.h"
 #include "esp_log.h"
-#include "iot_wifi.h"
+#include "iot_wifi_conn.h"
 #include "iot_tcp.h"
 #include "tcpip_adapter.h"
 

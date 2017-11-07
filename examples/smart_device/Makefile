@@ -8,4 +8,5 @@ PROJECT_NAME := smart_device
 IOT_SOLUTION_PATH ?= $(shell pwd)/../../
  
 EXTRA_COMPONENT_DIRS := $(shell pwd)/abstract
+EXTRA_COMPONENT_DIRS += $(shell pwd)/products
 include $(IOT_SOLUTION_PATH)/Makefile

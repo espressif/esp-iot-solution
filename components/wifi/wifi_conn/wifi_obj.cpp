@@ -21,44 +21,42 @@
   * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   *
   */
-
 #include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
 #include "esp_system.h"
-#include "iot_ota.h"
-#include "esp_log.h"
-#include "esp_wifi.h"
-#include "iot_wifi.h"
-#include "unity.h"
+#include "iot_wifi_conn.h"
 
-#define OTA_SERVER_IP      "192.168.1.3"
-#define OTA_SERVER_PORT    8070
-#define OTA_FILE_NAME      "/Desktop/iot.bin"
-#define TAG     "OTA_TEST"
+CWiFi* CWiFi::m_instance = NULL;
+static xSemaphoreHandle s_iot_wifi_mux = xSemaphoreCreateMutex();
 
-#define AP_SSID     CONFIG_AP_SSID
-#define AP_PASSWORD CONFIG_AP_PASSWORD
-
-static void ota_task(void *arg)
+CWiFi* CWiFi::GetInstance(wifi_mode_t mode)
 {
-    ESP_LOGI(TAG, "ota task test mutex");
-    iot_ota_start(OTA_SERVER_IP, OTA_SERVER_PORT, OTA_FILE_NAME, portMAX_DELAY);
-    vTaskDelete(NULL);
+    if (m_instance == NULL) {
+        xSemaphoreTake(s_iot_wifi_mux, portMAX_DELAY);
+        if (m_instance == NULL) {
+            m_instance = new CWiFi(mode);
+        }
+        xSemaphoreGive(s_iot_wifi_mux);
+    }
+    return m_instance;
 }
 
-void ota_test()
+CWiFi::CWiFi(wifi_mode_t mode)
 {
-    iot_wifi_setup(WIFI_MODE_STA);
-    iot_wifi_connect(AP_SSID, AP_PASSWORD, portMAX_DELAY);
-    ESP_LOGI(TAG, "free heap size before ota: %d", esp_get_free_heap_size());
-    xTaskCreate(ota_task, "ota_task", 1024 * 8, NULL, 5, NULL);
-    iot_ota_start(OTA_SERVER_IP, OTA_SERVER_PORT, OTA_FILE_NAME, 5000 / portTICK_RATE_MS);
-    vTaskDelay(10000 / portTICK_RATE_MS);
-    ESP_LOGI(TAG, "free heap size after ota: %d", esp_get_free_heap_size());
-    esp_restart();
-} 
-
-TEST_CASE("OTA test", "[ota][iot]")
-{
-    ota_test();
+    iot_wifi_setup(mode);
 }
+
+esp_err_t CWiFi::connect(const char *ssid, const char *pwd, uint32_t ticks_to_wait)
+{
+    return iot_wifi_connect(ssid, pwd, ticks_to_wait);
+}
+
+void CWiFi::disconnect()
+{
+    iot_wifi_disconnect();
+}
+
+wifi_sta_status_t CWiFi::status()
+{
+    return iot_wifi_get_status();
+}
+
