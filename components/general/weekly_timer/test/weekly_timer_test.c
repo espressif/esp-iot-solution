@@ -19,7 +19,6 @@
 #include "esp_system.h"
 #include "nvs.h"
 #include "nvs_flash.h"
-#include "socket_device.h"
 #include "iot_weekly_timer.h"
 #include "iot_wifi_conn.h"
 #include "unity.h"
