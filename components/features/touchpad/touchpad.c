@@ -643,7 +643,7 @@ tp_slide_handle_t iot_tp_slide_create(uint8_t num, const touch_pad_t *tps, uint3
             if (thresh_abs) {
                 tp_slide->tp_handles[i] = iot_tp_create(tps[i], thres_percent, thresh_abs[i], filter_value);
             } else {
-                tp_slide->tp_handles[i] = iot_tp_create(tps[i], thres_percent, NULL, filter_value);
+                tp_slide->tp_handles[i] = iot_tp_create(tps[i], thres_percent, 0, filter_value);
             }
             // in each event callback function, it will calculate the related position
             iot_tp_add_cb(tp_slide->tp_handles[i], TOUCHPAD_CB_PUSH, tp_slide_pos_cb, tp_slide);
@@ -846,7 +846,7 @@ tp_matrix_handle_t iot_tp_matrix_create(uint8_t x_num, uint8_t y_num, const touc
         if (thresh_abs) {
             tp_matrix->x_tps[i] = iot_tp_create(x_tps[i], thres_percent, thresh_abs[i], filter_value);
         } else {
-            tp_matrix->x_tps[i] = iot_tp_create(x_tps[i], thres_percent, NULL, filter_value);
+            tp_matrix->x_tps[i] = iot_tp_create(x_tps[i], thres_percent, 0, filter_value);
         }
         if (tp_matrix->x_tps[i] == NULL) {
             goto CREATE_ERR;
@@ -862,7 +862,7 @@ tp_matrix_handle_t iot_tp_matrix_create(uint8_t x_num, uint8_t y_num, const touc
         if (thresh_abs) {
             tp_matrix->y_tps[i] = iot_tp_create(y_tps[i], thres_percent, thresh_abs[x_num + i], filter_value);
         } else {
-            tp_matrix->y_tps[i] = iot_tp_create(y_tps[i], thres_percent, NULL, filter_value);
+            tp_matrix->y_tps[i] = iot_tp_create(y_tps[i], thres_percent, 0, filter_value);
         }
         if (tp_matrix->y_tps[i] == NULL) {
             goto CREATE_ERR;
