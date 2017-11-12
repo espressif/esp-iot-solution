@@ -23,7 +23,7 @@
   */
 #include "freertos/FreeRTOS.h"
 #include "esp_system.h"
-#include "iot_wifi.h"
+#include "iot_wifi_conn.h"
 #include "unity.h"
 
 #define AP_SSID     CONFIG_AP_SSID
@@ -33,11 +33,11 @@ extern "C" void wifi_obj_test()
 {
     CWiFi *my_wifi = CWiFi::GetInstance(WIFI_MODE_STA);
     printf("connect wifi\n");
-    my_wifi->connect(AP_SSID, CONFIG_AP_PASSWORD, portMAX_DELAY);
+    my_wifi->Connect(AP_SSID, CONFIG_AP_PASSWORD, portMAX_DELAY);
     vTaskDelay(5000 / portTICK_PERIOD_MS);
-    my_wifi->disconnect();
+    my_wifi->Disconnect();
     vTaskDelay(2000 / portTICK_PERIOD_MS);
-    my_wifi->connect(AP_SSID, CONFIG_AP_PASSWORD, portMAX_DELAY);
+    my_wifi->Connect(AP_SSID, CONFIG_AP_PASSWORD, portMAX_DELAY);
 }
 
 TEST_CASE("Wifi connect test", "[wifi_connect][iot][wifi]")

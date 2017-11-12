@@ -84,7 +84,7 @@ wifi_sta_status_t iot_wifi_get_status();
  * class of wifi
  * simple usage:
  * CWiFi *my_wifi = CWiFi::GetInstance(WIFI_MODE_STA);
- * my_wifi->connect("AP_SSID", "AP_PASSWORD", portMAX_DELAY);
+ * my_wifi->Connect("AP_SSID", "AP_PASSWORD", portMAX_DELAY);
  */
 class CWiFi
 {
@@ -141,19 +141,19 @@ public:
      *     - ESP_TIMEOUT: timeout
      *     - ESP_FAIL: fail
      */
-    esp_err_t connect(const char *ssid, const char *pwd, uint32_t ticks_to_wait);
+    esp_err_t Connect(const char *ssid, const char *pwd, uint32_t ticks_to_wait);
     
     /**
      *  @brief WiFi stop connecting
      */
-    void disconnect();
+    void Disconnect();
 
     /**
      * @brief  get wifi status.
      *
      * @return status of the wifi station
      */
-    wifi_sta_status_t status();
+    wifi_sta_status_t Status();
 };
 #endif
 

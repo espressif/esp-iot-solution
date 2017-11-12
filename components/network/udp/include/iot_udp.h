@@ -22,52 +22,32 @@
  *
  */
 
-#ifndef _IOT_TCP_H_
-#define _IOT_TCP_H_
+#ifndef _IOT_UDP_H_
+#define _IOT_UDP_H_
 
 #ifdef __cplusplus
 #include "tcpip_adapter.h"
-class CTcpConn
+class CUdpConn
 {
-friend class CTcpServer;
 private:
     /**
      * prevent copy constructing
      */
-    CTcpConn(const CTcpConn&);
-    CTcpConn& operator = (const CTcpConn&);
+    CUdpConn(const CUdpConn&);
+    CUdpConn& operator = (const CUdpConn&);
     int sockfd;
     int tout;
 
 public:
 
     /**
-     * @brief constructor of CTcpConn
+     * @brief constructor of CUdpConn
      * 
      * @param sock socket to communicate. Set -1, by default, to create a new socket,
      *        otherwise the object will use the given socket directly.
      */
-    CTcpConn(int sock = -1);
-    ~CTcpConn();
-    /**
-     * @brief Create a socket, if not given, and connect to the specific target(ip, port)
-     * @param ip ip address to connect
-     * @param port port to connect
-     * @return connect result
-     *     0 if success
-     *     <0 if fail
-     */
-    int Connect(const char* ip, uint16_t port);
-
-    /**
-     * @brief Create a socket, if not given, and connect to the specific target(ip, port)
-     * @param ip ip address to connect
-     * @param port port to connect
-     * @return connect result
-     *     0 if success
-     *     <0 if fail
-     */
-    int Connect(uint32_t ip, uint16_t port);
+    CUdpConn(int sock = -1);
+    ~CUdpConn();
 
     /**
      * @brief set socket timeout
@@ -78,6 +58,7 @@ public:
      */
     int SetTimeout(int timeout);
 
+    int Bind(uint16_t port);
     /**
      * @brief read data from socket
      * @param data buffer to receive data from socket
@@ -87,63 +68,48 @@ public:
      *     <0 if fail to read
      *     otherwise data length that read from socket
      */
-    int Read(uint8_t *data, int length, int timeout);
+    int RecvFrom(uint8_t* data, int length, struct sockaddr *from, size_t *fromlen, int timeout = -1);
 
     /**
      * @brief write data to socket
      * @param data pointer to data buffer to send
      * @param length data length to send to socket
+     * @param ip ip address to send data
+     * @param port target port to send data
      * return
      *     <0 if fail to write
      *     otherwise data length that written to socket
      */
-    int Write(const void *data, int length);
+    int SendTo(const void *data, size_t length, const char* ip, uint16_t port);
 
     /**
-     * @brief disconnect and close the TCP connection
-     * @return
-     *     <0 if error found
-     *     otherwise success
+     * @brief write data to socket
+     * @param data pointer to data buffer to send
+     * @param length data length to send to socket
+     * @param ip ip address to send data
+     * @param port target port to send data
+     * return
+     *     <0 if fail to write
+     *     otherwise data length that written to socket
      */
-    int Disconnect();
-};
-
-class CTcpServer: public CTcpConn
-{
-private:
-    /**
-     * prevent copy constructing
-     */
-    CTcpServer(const CTcpServer&);
-    CTcpServer& operator = (const CTcpServer&);
-public:
-    /**
-     * @brief constructor of CTcpServer
-     */
-    CTcpServer();
-    ~CTcpServer();
-    /**
-     * @brief start TCP listening at given port
-     * @param port listening port
-     * @param max_connection max connection number
-     * @return
-     *     <0 if error occur
-     *     otherwise success
-     */
-    int Listen(uint16_t port, int max_connection);
+    int SendTo(const void *data, size_t length, const in_addr_t ip, uint16_t port);
 
     /**
-     * @brief Wait client to connect and return a CTcpConn object
-     * @return
-     *     NULL if error occur
-     *     otherwise the pointer to a CTcpConn object
+     * @brief write data to socket
+     * @param data pointer to data buffer to send
+     * @param length data length to send to socket
+     * @param flag protocol flag
+     * @param to target address to send data
+     * return
+     *     <0 if fail to write
+     *     otherwise data length that written to socket
      */
-    CTcpConn* Accept();
+    int SendTo(const void *data, size_t size, int flags, const struct sockaddr *to);
 
     /**
-     * @brief Stop listening the port and close the listening socket
+     * @brief close the UDP socket
      */
-    void Stop();
+    void Close();
 };
 
 #endif

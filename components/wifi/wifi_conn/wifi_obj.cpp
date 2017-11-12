@@ -45,17 +45,17 @@ CWiFi::CWiFi(wifi_mode_t mode)
     iot_wifi_setup(mode);
 }
 
-esp_err_t CWiFi::connect(const char *ssid, const char *pwd, uint32_t ticks_to_wait)
+esp_err_t CWiFi::Connect(const char *ssid, const char *pwd, uint32_t ticks_to_wait)
 {
     return iot_wifi_connect(ssid, pwd, ticks_to_wait);
 }
 
-void CWiFi::disconnect()
+void CWiFi::Disconnect()
 {
     iot_wifi_disconnect();
 }
 
-wifi_sta_status_t CWiFi::status()
+wifi_sta_status_t CWiFi::Status()
 {
     return iot_wifi_get_status();
 }
