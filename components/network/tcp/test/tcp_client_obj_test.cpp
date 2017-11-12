@@ -45,7 +45,7 @@ static void wifi_connect()
 {
     CWiFi *my_wifi = CWiFi::GetInstance(WIFI_MODE_STA);
     ESP_LOGI(TAG_WIFI, "connect WiFi");
-    my_wifi->connect(AP_SSID, AP_PASSWORD, portMAX_DELAY);
+    my_wifi->Connect(AP_SSID, AP_PASSWORD, portMAX_DELAY);
     ESP_LOGI(TAG_WIFI, "WiFi connected...");
 }
 
@@ -64,14 +64,14 @@ extern "C" void tcp_client_obj_test()
         ESP_LOGI(TAG_CLI, "connect to: %d.%d.%d.%d(%d)", ((uint8_t*)&ipconfig.ip.addr)[0], ((uint8_t*)&ipconfig.ip.addr)[1],
                                                           ((uint8_t*)&ipconfig.ip.addr)[2], ((uint8_t*)&ipconfig.ip.addr)[3], SERVER_PORT);
 
-        if (client.connect(ipconfig.ip.addr, SERVER_PORT) < 0) {
+        if (client.Connect(ipconfig.ip.addr, SERVER_PORT) < 0) {
             ESP_LOGI(TAG_CLI, "fail to connect...");
             vTaskDelay(5000 / portTICK_PERIOD_MS);
             continue;
         }
         ESP_LOGI(TAG_CLI, "TCP connected");
 
-        if (client.write((const uint8_t*)data, strlen(data)) < 0) {
+        if (client.Write((const uint8_t*)data, strlen(data)) < 0) {
             ESP_LOGI(TAG_CLI, "fail to send data...");
             vTaskDelay(5000 / portTICK_PERIOD_MS);
             continue;
@@ -80,13 +80,13 @@ extern "C" void tcp_client_obj_test()
 
         ESP_LOGI(TAG_CLI, "TCP wait data, timeout 10 sec");
         memset(recv_buf, 0, sizeof(recv_buf));
-        if (client.read(recv_buf, sizeof(recv_buf), 10) > 0) {
+        if (client.Read(recv_buf, sizeof(recv_buf), 10) > 0) {
             ESP_LOGI(TAG_CLI, "recv: %s", recv_buf);
         } else {
             ESP_LOGI(TAG_CLI, "recv timeout...");
         }
         ESP_LOGI(TAG_CLI, "TCP disconnect");
-        client.disconnect();
+        client.Disconnect();
         ESP_LOGI(TAG_CLI, "heap: %d", esp_get_free_heap_size());
         vTaskDelay(2000 / portTICK_PERIOD_MS);
     }
@@ -99,8 +99,8 @@ void tcp_server_handle(void* arg)
     while (1) {
         if (conn) {
             ESP_LOGI(TAG_SRV, "send data...");
-            if (conn->write((const uint8_t*) data, strlen(data)) < 0) {
-                conn->disconnect();
+            if (conn->Write((const uint8_t*) data, strlen(data)) < 0) {
+                conn->Disconnect();
                 delete conn;
                 ESP_LOGI(TAG_SRV, "connection error, close");
                 break;
@@ -115,10 +115,10 @@ void tcp_server_handle(void* arg)
 extern "C" void tcp_server_obj_test(void* arg)
 {
     CTcpServer server;
-    server.listen(SERVER_PORT, SERVER_MAX_CONNECTION);
+    server.Listen(SERVER_PORT, SERVER_MAX_CONNECTION);
     while (1) {
         ESP_LOGI(TAG_SRV, "before accept...");
-        CTcpConn* conn = server.accept();
+        CTcpConn* conn = server.Accept();
         ESP_LOGI(TAG_SRV, "after accept...");
         xTaskCreate(tcp_server_handle, "tcp_server_handle", 2048, (void* )conn, 6, NULL);
     }
