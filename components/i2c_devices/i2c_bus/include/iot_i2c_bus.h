@@ -91,11 +91,11 @@ public:
      * @param i2c_port I2C hardware port
      * @param scl_io gpio index for slc pin
      * @param sda_io gpio index for sda pin
-     * @param i2c_mode mode for I2C bus
      * @param clk_hz I2C clock frequency
+     * @param i2c_mode mode for I2C bus
      *
      */
-    CI2CBus(i2c_port_t i2c_port, gpio_num_t scl_io, gpio_num_t sda_io, i2c_mode_t i2c_mode = I2C_MODE_MASTER, int clk_hz = 100000);
+    CI2CBus(i2c_port_t i2c_port, gpio_num_t scl_io, gpio_num_t sda_io, int clk_hz = 100000, i2c_mode_t i2c_mode = I2C_MODE_MASTER);
 
     /**
      * @brief Destructor function of CI2CBus class

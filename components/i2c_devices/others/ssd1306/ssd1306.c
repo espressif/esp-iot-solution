@@ -85,7 +85,7 @@ esp_err_t iot_ssd1306_fill_rectangle(ssd1306_handle_t dev, uint8_t chXpos1,
             iot_ssd1306_fill_point(dev, chXpos, chYpos, chDot);
         }
     }
-    return iot_ssd1306_refresh_gram(dev);
+    return ESP_OK;
 }
 
 void iot_ssd1306_draw_num(ssd1306_handle_t dev, uint8_t chXpos, uint8_t chYpos,
@@ -363,6 +363,6 @@ esp_err_t iot_ssd1306_clear_screen(ssd1306_handle_t dev, uint8_t chFill)
         for (j = 0; j < 128; j++)
             device->s_chDisplayBuffer[j][i] = chFill;
     }
-    return iot_ssd1306_refresh_gram(dev);
+    return ESP_OK;
 }
 

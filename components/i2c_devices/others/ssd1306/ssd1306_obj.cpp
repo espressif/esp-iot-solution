@@ -53,7 +53,7 @@ esp_err_t CSsd1306::fill_rectangle_screen(uint8_t chXpos1,
             chXpos2, chYpos2, chDot);
 }
 
-void CSsd1306::display_char(uint8_t chXpos, uint8_t chYpos,
+void CSsd1306::draw_char(uint8_t chXpos, uint8_t chYpos,
         uint8_t chChr, uint8_t chSize, uint8_t chMode)
 {
     iot_ssd1306_draw_char(m_dev_handle, chXpos, chYpos, chChr, chSize,
@@ -95,7 +95,7 @@ esp_err_t CSsd1306::clear_screen(uint8_t chFill)
     return iot_ssd1306_clear_screen(m_dev_handle, chFill);
 }
 
-esp_err_t CSsd1306::display_string(uint8_t chXpos, uint8_t chYpos,
+esp_err_t CSsd1306::draw_string(uint8_t chXpos, uint8_t chYpos,
         const uint8_t *pchString, uint8_t chSize, uint8_t chMode)
 {
     return iot_ssd1306_draw_string(m_dev_handle, chXpos, chYpos, pchString,
