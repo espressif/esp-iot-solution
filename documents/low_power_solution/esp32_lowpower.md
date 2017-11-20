@@ -61,7 +61,7 @@
 * 此场景的优势在于可以在低功耗情况下频繁地采集数据，从而降低对传感器的要求。
 
 ## 使用 Touchpad 触摸/GPIO 按键唤醒的用户交互场景（如控制面板）
-* 此场景多用于一些用户交互设备，如控制面板等。当用户长时间没有操作面板（例如 Touchpad 触摸／GPIO 按键）时，ESP32 将进入 Deep-sleep 模式，并设置为 Touchpad 触摸／GPIO 按键唤醒。在 Deep-sleep 模式下，当设置唤醒源为 touchpad 唤醒时，芯片的平均电流大约为 30 uA。
+* 此场景多用于一些用户交互设备，如控制面板等。当用户长时间没有操作面板（例如 Touchpad 触摸／GPIO 按键）时，ESP32 将进入 Deep-sleep 模式，并设置为 Touchpad 触摸／GPIO 按键唤醒。在 Deep-sleep 模式下，当设置唤醒源为 touchpad 唤醒时，芯片的平均电流大约为 50 uA。
 * 逻辑流程图：
     <br>
     <img src="../_static/low_power/touchpad_deepsleep_process.png" width = "400" alt="touchpad_deepsleep_process" align=center />
@@ -75,22 +75,22 @@
 * 	正常工作下，ESP32 作为 Station 时，平均电流约为 115 mA：
 
     <img src="../_static/low_power/esp32_station_current.png" width = "500" alt="esp32_station_current" align=center />
-   
+
 *  支持定时器唤醒时，Deep-sleep 模式下的平均电流约为 6 uA：
 
     <img src="../_static/low_power/esp32_deepsleep_timer_current.png" width = "500" alt="esp32_deepsleep_timer_current" align=center />
 
-* 	支持 RTC IO 唤醒时，Deep-sleep 模式下的平均电流约为 6 uA；[^4]    
+* 	支持 RTC IO 唤醒时，Deep-sleep 模式下的平均电流约为 6 uA；[^4]
 
     <img src="../_static/low_power/esp32_deepsleep_rtcio_current.png" width = "500" alt="esp32_deepsleep_rtcio_current" align=center />
-    
+
 * 	Deep-sleep 期间，协处理器周期性运行数据采集程序（本例中的采集频率为每秒 10 次，所以图中的尖峰是协处理器工作时的瞬时电流）：
 
     <img src="../_static/low_power/esp32_deepsleep_ulp_current.png" width = "500" alt="esp32_deepsleep_ulp_current" align=center />
 
-* 	支持 touchpad 唤醒时，Deep-sleep 期间的平均电流约为 13 uA 左右：
+* 	支持 touchpad 唤醒时，Deep-sleep 期间的平均电流约为 36 uA 左右：
 
-    <img src="../_static/low_power/touchpad_deepsleep_current.png" width = "500" alt="touchpad_deepsleep_current" align=center />
+    <img src="../_static/low_power/touchpad.png" width = "500" alt="touchpad_deepsleep_current" align=center />
 
 关于 deep_sleep 唤醒方式的配置, 可以参考 IOT-Solution 中 Test Case 或 [电流测试板使用简介](./esp32_ulp_eb.md)
 
@@ -100,4 +100,3 @@
 [^2]: 具体可查看 ulp_monitor 模块的 readme.md 和 ulp_monitor_test.c 文件。
 [^3]: 包括初始化与设置阈值，具体可查看 IoT Solution 中的 Touchpad 方案。
 [^4]: 这里采用了 esp_deep_sleep_enable_ext1_wakeup() 函数。
-
