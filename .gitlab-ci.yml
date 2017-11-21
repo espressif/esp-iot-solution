@@ -38,6 +38,9 @@ build:
     - cd ../empty_project
     - make defconfig
     - make -j8
+    - cd ../touch_pad_evb
+    - make defconfig
+    - make -j8
     - cd ../../tools/unit-test-app
     - cp sdkconfig.default sdkconfig
     - make defconfig
