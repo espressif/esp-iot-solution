@@ -168,6 +168,7 @@ uint32_t lcd_init(lcd_conf_t* lcd_conf, spi_device_handle_t *spi_wr_dev, lcd_dc_
     spi_bus_initialize(lcd_conf->spi_host, &buscfg, 1);
 
     spi_device_interface_config_t devcfg = {
+        // Use low speed to read ID.
         .clock_speed_hz = 1 * 1000 * 1000,     //Clock out frequency
         .mode = 0,                                //SPI mode 0
         .spics_io_num = lcd_conf->pin_num_cs,     //CS pin
@@ -179,6 +180,7 @@ uint32_t lcd_init(lcd_conf_t* lcd_conf, spi_device_handle_t *spi_wr_dev, lcd_dc_
     uint32_t lcd_id = lcd_get_id(rd_id_handle, dc);
     spi_bus_remove_device(rd_id_handle);
 
+    // Use high speed to write LCD
     devcfg.clock_speed_hz = lcd_conf->clk_freq;
     spi_bus_add_device(lcd_conf->spi_host, &devcfg, spi_wr_dev);
 
@@ -224,7 +226,7 @@ void lcd_send_uint16_r(spi_device_handle_t spi, const uint16_t data, int32_t rep
     dc->dc_level = LCD_DATA_LEV;
 
     while (repeats > 0) {
-        uint16_t bytes_to_transfer = MIN(repeats*sizeof(uint16_t), SPIFIFOSIZE*sizeof(uint32_t));
+        uint16_t bytes_to_transfer = MIN(repeats * sizeof(uint16_t), SPIFIFOSIZE * sizeof(uint32_t));
         for (i = 0; i < (bytes_to_transfer + 3) / 4; i++) {
             word_tmp[i] = word;
         }
