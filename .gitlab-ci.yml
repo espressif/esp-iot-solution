@@ -4,6 +4,7 @@ stages:
 
 before_script:
   - export PATH="/opt/xtensa-esp32-elf/bin:$PATH"
+  - export PATH="/opt/esp32ulp-elf-binutils/bin:$PATH"
   - mkdir -p ~/.ssh
   - chmod 700 ~/.ssh
   - echo -n $GITLAB_KEY > ~/.ssh/id_rsa_base64
