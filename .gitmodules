@@ -1,3 +1,6 @@
 [submodule "submodule/esp-idf"]
 	path = submodule/esp-idf
 	url = https://github.com/espressif/esp-idf.git
+[submodule "components/network/espmqtt"]
+	path = components/network/espmqtt
+	url = https://github.com/tuanpmt/espmqtt.git

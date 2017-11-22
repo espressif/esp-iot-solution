@@ -1,0 +1,15 @@
+menu "Demo Configuration"
+
+config WIFI_SSID
+    string "WiFi SSID"
+    help
+        SSID (network name) to connect to.
+
+config WIFI_PASSWORD
+    string "WiFi Password"
+    help
+        WiFi password (WPA or WPA2) to use.
+
+        Can be left blank if the network has no security set.
+
+endmenu
