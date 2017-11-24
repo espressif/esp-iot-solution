@@ -39,6 +39,9 @@ build:
     - cd ../empty_project
     - make defconfig
     - make -j8
+    - cd ../ulp_watering_device
+    - make defconfig
+    - make -j8
     - cd ../touch_pad_evb
     - make defconfig
     - make -j8
