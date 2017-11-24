@@ -98,21 +98,31 @@ If `esp_pm_lock_acquire` returns ESP_OK, the CPU's frequency will switch to the 
 
 Here is a test to prove this. First, configure LEDC to output 5KHz PWM signal and chosse APB clock as timer clock. So, if chip enter power save mode, the APB clock will switch to 40MHz, and the LEDC's frequency will reduce to half of the original one(2.5kHz). The first picture shows the LEDC waveform when executing code line 3 to line 4, meanwhile, the second one shows the waveform when executing code from line 5 to line 6.
 
-| | |
-|--:|:--|
-|<img src="../_static/testcase/DFS_and_light_sleep/pic4.svg.png" height=230, width=300, align=center>| When pm_lock are acquired, LEDC's frequency keeps 5kHz, this indicates that APB frequency is 80MHz, the CPU frequency is 240MHz and has not been changed during the hold of this pm_lock.|
-|<img src="../_static/testcase/DFS_and_light_sleep/pic3.svg.png" height=230 width=360>| After pm_lock are released, when task is suspended, LEDC's frequency becomes to 2.5kHz. otherwise, LEDC's frequency is 5kHz.|
+---
+
+### Lock acquired
+
+When pm_lock are acquired, LEDC's frequency keeps 5kHz, this indicates that APB frequency is 80MHz, the CPU frequency is 240MHz and has not been changed during the hold of this pm_lock.
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="../_static/testcase/DFS_and_light_sleep/pic4.svg.png" width=400, align=center>
+
+---
+
+### Release lock
+
+After pm_lock are released, when task is suspended, LEDC's frequency becomes to 2.5kHz. otherwise, LEDC's frequency is 5kHz.
+
+<img src="../_static/testcase/DFS_and_light_sleep/pic3.svg.png" width=500>
 
 
 
 
 
 
+---
 
 
-
-
-5 REF_TICK
+## 5 REF_TICK
 -
 Normally, APB frequency is 80MHz, when system goes into lower power mode, APB frequency will switch to 40MHz(RTC_CPU_FREQ_XTAL). This will affect the peripheral who's clock source is APB clock. But some peripherals can use REF_TICK as clock source. these peripherals can work even when APB frequency is changing. These peripherals are listed below:
 
@@ -134,13 +144,15 @@ Here's a case of LEDC.
 9.  }
 ```
 
-| | |
-|--:|:--|
-|<img src="../_static/testcase/DFS_and_light_sleep/pic5.svg.png" height=230 width=360> |Configure REF_TICK as LEDC's clock source. during the high level of GPIO18 output, When the sixth line of `vTaskDelay` is executedthe, CPU clock will be cut to 40M, but LEDC frequency will not change. |
+### Frequency switching
+
+Configure REF_TICK as LEDC's clock source. during the high level of GPIO18 output, When the sixth line of `vTaskDelay` is executedthe, CPU clock will be cut to 40M, but LEDC frequency will not change.
+
+<img src="../_static/testcase/DFS_and_light_sleep/pic5.svg.png" width=500> 
 
 
 
-
+---
 
 
 ### Current Test

@@ -4,11 +4,36 @@ Light-sleep is another power saving mode. In Light-sleep mode, CPUs, digital per
 
 This document gives a brief introduction of the ESP32's current consumption during Light-sleep mode and the results are as follows.
 
+---
+### Sleep time
 
-|Description|Waveform|TestCode|
-|--|--|--|
-| First we have a test about the time to sleep. We set a GPIO(GPIO18 in this case) from high to low level before we call `esp_light_sleep_start` to start the light-sleep mode. As shown below, after about **200us**, the chip completely goes to Light-sleep. | <img src="../_static/testcase/DFS_and_light_sleep/pic1.svg.png" height=250 width=350 align=center> |    gpio_set_level(GPIO_NUM_18, 1);<br>vTaskDelay(2000 / portTICK_PERIOD_MS);<br>gpio_set_level(GPIO_NUM_18, 0);<br>esp_light_sleep_start(); |
-| Second test is the time to resume from light_sleep. After chip was waked up, the program is executed from where it was last stopped, rather than restart. So We configure ext0 as wake up source, and about **566us** after ext0 source triggered, the chip resumed operation and GPIO18 output low. Figure shows this process.|<img src="../_static/testcase/DFS_and_light_sleep/pic2.svg.png" height=230 width=360>|esp_sleep_enable_ext0_wakeup(GPIO_NUM_34, 0);<br>gpio_set_level(GPIO_NUM_18, 0);<br>esp_light_sleep_start();<br>gpio_set_level(GPIO_NUM_18, 1);<br>|
+First we have a test about the time to enter sleep. We set a GPIO(GPIO18 in this case) from high to low level before we call `esp_light_sleep_start` to start the light-sleep mode. As shown below, after about **200us**, the chip completely goes to Light-sleep. 
+
+<img src="../_static/testcase/DFS_and_light_sleep/pic1.svg.png" width=450 align=center> 
+
+
+```
+gpio_set_level(GPIO_NUM_18, 1);
+vTaskDelay(2000 / portTICK_PERIOD_MS);
+gpio_set_level(GPIO_NUM_18, 0);
+esp_light_sleep_start();
+```
+---
+### Resume time
+
+Second test is the time to resume from light_sleep. After chip was waked up, the program is executed from where it was last stopped, rather than restart. So We configure ext0 as wake up source, and about **566us** after ext0 source triggered, the chip resumed operation and GPIO18 output low. Figure shows this process.
+
+<img src="../_static/testcase/DFS_and_light_sleep/pic2.svg.png" width=480>
+
+
+
+```
+esp_sleep_enable_ext0_wakeup(GPIO_NUM_34, 0);
+gpio_set_level(GPIO_NUM_18, 0);
+esp_light_sleep_start();
+gpio_set_level(GPIO_NUM_18, 1);
+```
+
 
 ---
 
