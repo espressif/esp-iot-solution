@@ -1,6 +1,6 @@
 # Current Consumption Test for ESP32 in Deep sleep
 
-ESP32 has 18 RTC GPIOs and 10 touchpads, which can all be configured as the wake-up source to wake up the chip from deep sleep. 
+ESP32 has 18 RTC GPIOs and 10 touchpads, which can all be configured as the wake-up source to wake up the chip from deep sleep.
 
 ##Description
 
@@ -18,7 +18,7 @@ External events can trigger level signals of the RTC GPIO, which has been config
 
 * EXT(0): wake up the chip when a specific GPIO pad, which has been configured as the wake-up source of the chip, meets certain requirement regarding electrical level. This GPIO can be configured as "high-level" triggered or "low-level" triggered;
 
-* EXT(1): wake up the chip when a set of specified GPIO pads, which have been configured as the wake-up sources of the chip, all meet certain requirements regarding electrical level. One GPIO can also be seen as a set of specified GPIOs (In this case, EXT(1) has no difference with EXT(0)). 
+* EXT(1): wake up the chip when a set of specified GPIO pads, which have been configured as the wake-up sources of the chip, all meet certain requirements regarding electrical level. One GPIO can also be seen as a set of specified GPIOs (In this case, EXT(1) has no difference with EXT(0)).
 
 **Configuration**
 
@@ -84,6 +84,18 @@ _`Notes: To achieve lower power consumption, external resistors, instead of inte
 * The current consumptions of the chip are basically the same and extremely low during the deep sleep, when different RTC GPIOs are configured as the wake-up sources；
 * The current consumptions of the chip in EXT1 mode are about 1 uA lower than that in EXT0 mode.
 
+|    Pad Num      | Current |
+|    :----        |  :----  |
+|  Pad0 (GPIO_4)  |  37.3 uA|
+|  Pad1 (GPIO_0)  |  35.7 uA|
+|  Pad2 (GPIO_2)  |  36.6 uA|
+|  Pad3 (GPIO_15) |  35.6 uA|
+|  Pad4 (GPIO_13) |  36.5 uA|
+|  Pad5 (GPIO_12) |  36.1 uA|
+|  Pad6 (GPIO_14) |  36.7 uA|
+|  Pad7 (GPIO_27) |  35.7 uA|
+|  Pad8 (GPIO_33) |  36.7 uA|
+|  Pad9 (GPIO_32) |  36.3 uA|
 
 ## Touchpad
 
@@ -98,18 +110,18 @@ Touchpad can be enabled as the wake-up source to wake up the chip from deep slee
 
 * __Wake-up source: touchpad__
 
-|    Pad Num     | Current |
-|    :----     | :----  |
-|  Pad0 (GPIO_4)  |  13.4 uA|
-|  Pad1 (GPIO_0)  |  13.5 uA|
-|  Pad2 (GPIO_2)  |  13.5 uA|
-|  Pad3 (GPIO_15) |  13.4 uA|
-|  Pad4 (GPIO_13) |  13.5 uA|
-|  Pad5 (GPIO_12) |  13.7 uA|
-|  Pad6 (GPIO_14) |  13.5 uA|
-|  Pad7 (GPIO_27) |  13.5 uA|
-|  Pad8 (GPIO_33) |  13.4 uA|
-|  Pad9 (GPIO_32) |  13.6 uA|
+
+|    Pad Num      | Current |
+|    :----        |  :----  |
+|  Pad0 (GPIO_4)  |  37.3 uA|
+|  Pad1 (GPIO_0)  |  35.7 uA|
+|  Pad2 (GPIO_2)  |  36.6 uA|
+|  Pad3 (GPIO_15) |  35.6 uA|
+|  Pad4 (GPIO_13) |  36.5 uA|
+|  Pad5 (GPIO_12) |  36.1 uA|
+|  Pad6 (GPIO_14) |  36.7 uA|
+|  Pad7 (GPIO_27) |  35.7 uA|
+|  Pad8 (GPIO_33) |  36.7 uA|
+|  Pad9 (GPIO_32) |  36.3 uA|
 
 _`Notes: touch_pad_set_meas_time can be used to adjust the charging/discharging cycle and the detection period of the touch sensor accordingly, so as to optimize the response time and achieve even lower power consumption.`_
-

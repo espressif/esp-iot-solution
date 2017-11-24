@@ -146,7 +146,7 @@ __注意事项:__
 |  EXT0    |      6.5uA        |   [见测试 1](#test1)  | RTC_IO 39(按键 S_VN)低电平 |
 |  EXT1    |      5.4uA        |   [见测试 2](#test2)  | RTC_IO34/35/36/39同时为低电平(四个唤醒按键同时按下)  |
 |  Timer   |      6uA          |   [见测试 3](#test3)   | 定时 10S 后唤醒 |
-| TouchPad |      13uA         |   [见测试 4](#test4)   | TOUCH_PAD_NUM7/GPIO27(丝印TP3)触摸唤醒 |
+| TouchPad |      36uA         |   [见测试 4](#test4)   | TOUCH_PAD_NUM7/GPIO27(丝印TP3)触摸唤醒 |
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 `(注: 这里采用外部 10K Ohm 的上拉电阻)`
@@ -230,7 +230,7 @@ static void touchpad_wake_init(void)
 
     //this function call will lower system's  power consumption during deep_sleep mode.
     //if interested, you can not call this function to found what different about working current.
-    touch_pad_set_meas_time(0xffff, TOUCH_PAD_MEASURE_CYCLE_DEFAULT >> 3);
+    touch_pad_set_meas_time(0xffff, TOUCH_PAD_MEASURE_CYCLE_DEFAULT);
     esp_sleep_enable_touchpad_wakeup();
 }
 ...
@@ -244,7 +244,7 @@ void touchpad_wakeup_test(void)
 ```
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-`注: TouchPad 初始化时调用了 touch_pad_set_meas_time 这个函数，调整touch sensor 读数时间和读数间隔时间, 这使得系统在deep_sleep 期间工作电流从默认340uA 降低到 13uA.`
+`注: TouchPad 初始化时调用了 touch_pad_set_meas_time 这个函数，调整touch sensor 读数时间和读数间隔时间, 这使得系统在deep_sleep 期间工作电流从默认340uA 降低到 36uA 左右.`
 
 
 ---

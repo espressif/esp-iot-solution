@@ -7,7 +7,7 @@
 
 ---
 
-## <h2 id="hardware"> 2. PCB Function Block</h2> 
+## <h2 id="hardware"> 2. PCB Function Block</h2>
 
 <img src="../_static/deep_sleep/module.png" width="400" height="200">
 
@@ -17,34 +17,34 @@
 
 ### 3.1 RST Button & Boot Button
 
-* <h5 id="bootButton">RST Button</h5> 
+* <h5 id="bootButton">RST Button</h5>
 
     Used for controlling the EN pin of ESP32，and resetting the chip. The hardware design is as follows:
 	<br>
     <img src="../_static/deep_sleep/reset_switch.png" width="200" height="100">
 
 
-* <h5 id="modeButton">System Mode Button</h5> 
-    Connects to ESP32's GPIO0. Press the System Mode Button and then the RST Button, the system will enter the Download mode. Users can then download firmware to the flash. Below is the schematics: 
+* <h5 id="modeButton">System Mode Button</h5>
+    Connects to ESP32's GPIO0. Press the System Mode Button and then the RST Button, the system will enter the Download mode. Users can then download firmware to the flash. Below is the schematics:
     <br>
     <img src="../_static/deep_sleep/download_switch.png" width="200" height="100">
 
-* <h5 id="downloadMode">Download Mode</h5> 
+* <h5 id="downloadMode">Download Mode</h5>
 
     [Compile and Execution](#compileAndRun)
 
     When the system resets, GPIO0 is at a low level. The chip enters the Download mode. Press and hold the Boot Button, while pressing the RST Button to reset the system, the chip will enter the Download mode and wait for downloading the firmware. The serial port will output the following log at a baud rate of 115200:
-    
+
     ```
     ets Jun  8 2016 00:22:57
     rst:0x1 (POWERON_RESET),boot:0x3 (DOWNLOAD_BOOT(UART0/UART1/SDIO_REI_REO_V2))
     waiting for download
     ```
 
-* <h5 id="flashMode">Firmware Operating Mode</h5> 
+* <h5 id="flashMode">Firmware Operating Mode</h5>
 
 	When the system resets, GPIO0 is at a high level. The chip enters the Flash Boot mode. GPIO loads firmware from the flash and runs the firmware. Release the Boot Button, and press the RST Button to reset the system directly. The serial port will output the following log at a baud rate of 115200:
-    
+
     ```
     ets Jun  8 2016 00:22:57
     rst:0x1 (POWERON_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
@@ -78,7 +78,7 @@ Below is the hardware design:
 The development board has four touchpads, which can also be used to wake up the module.
 
 Touchpads can work in the Deep-sleep mode, and wake up periodically for readings of charge and discharge. Once the reading is lower (or greater) than the threshold, the chip will be woken up.
- 
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 
 _`Note：Because of regular counting of charge and discharge, the touch sensor consumes a certain amount of power. Users need to set the touch sensor counting time and counting interval, and adjust the power consumption and wakeup sensitivity via the esp-idf touch_pad_set_meas_time interface in esp-idf`_
@@ -125,7 +125,7 @@ With the use of advanced power-management technologies, ESP32 can switch between
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 In Deep-sleep mode, the ESP32 CPU stops running, but the RTC peripherals, RTC memory, and the ULP co-processor can continue working. After entering the Deep-sleep mode, the chip can be woken up by external events, RTC timers, etc. Below are some wakeup modes:
 
-* EXT0 wakeup mode: 
+* EXT0 wakeup mode:
     >  RTC peripherals are enabled. Users can configure a RTC IO to wake up ESP32 at a high or low level.
 * EXT1 wakeup mode:
     > Users can configure one or more RTC IOs as the wakeup source to wake up ESP32 when one or more RTC IOs are at a high or low level simultaneously.
@@ -147,11 +147,11 @@ __Notes__
 Working current of the Deep-sleep mode in different wakeup modes:
 
 | Wakeup source  | Current in Deep-sleep mode |   Test steps   | Wakeup method|
-|----|----|----|----|  
+|----|----|----|----|
 |  EXT0    |      6.5 μA        |   [See Test 1](#test1)  | wake up when RTC_IO 39 (Button S_VN) is at a low level |
-|  EXT1    |      5.4 μA        |   [See Test 2](#test2)  | wake up when RTC_IO34/35/36/39 are at a low level simultaneously (the four wakeup buttons are pressed simultaneously)  |  
+|  EXT1    |      5.4 μA        |   [See Test 2](#test2)  | wake up when RTC_IO34/35/36/39 are at a low level simultaneously (the four wakeup buttons are pressed simultaneously)  |
 |  Timer   |      6 μA          |   [See Test 3](#test3)   | wake up 10s after entering Deep-sleep |
-| TouchPad |      13 μA         |   [See Test 4](#test4)   | wake up when touching TOUCH_PAD_NUM7/GPIO27 (chipset marking: TP3)|
+| TouchPad |      36 μA         |   [See Test 4](#test4)   | wake up when touching TOUCH_PAD_NUM7/GPIO27 (chipset marking: TP3)|
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 `(Note: External pull-up resistors of 10 kOhm are used.)`
@@ -160,7 +160,7 @@ Working current of the Deep-sleep mode in different wakeup modes:
 ### Notes to the test:
 
 
-<h5 id="test1">Test 1. EXT0 wakeup mode</h5> 
+<h5 id="test1">Test 1. EXT0 wakeup mode</h5>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 Configure RTC_IO 39 (labeled S_VN on the test board) to wake up the chip at a low level in the EXT0 wakeup mode. During the Deep-sleep, press the button to generate a low-level signal to wake up the chip. Below is the sample code:
 
@@ -181,7 +181,7 @@ void ext0_wakeup_test(void)
 
 ```
 
-<h5 id="test2">Test 2. EXT1 wakeup mode</h5> 
+<h5 id="test2">Test 2. EXT1 wakeup mode</h5>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 Configure RTC_IO 34, 35, 36, and 39 as the wakeup source in the EXT1 wakeup mode. When all these IOs are at a low level simultaneously, the chip is woken up from the Deep-sleep mode. Below is the sample code:
 
@@ -202,7 +202,7 @@ void ext1_wakeup_test(void)
 }
 ```
 
-<h5 id="test3">Test 3. RTC timer wakeup mode</h5> 
+<h5 id="test3">Test 3. RTC timer wakeup mode</h5>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 Configure RTC timer to wake up the chip after 10 seconds of Deep-sleep. Below is the sample code:
 
@@ -223,7 +223,7 @@ void timer_wakeup_test(void)
 
 ```
 
-<h5 id="test4">Test 4. Touchpad wakeup mode</h5> 
+<h5 id="test4">Test 4. Touchpad wakeup mode</h5>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 Configure the chip into the touchpad wakeup mode, and use Touchpad 7, for example, as an external wakeup source. The chip will be woken up when the Touchpad 7 is touched. Below is the sample code:
 
@@ -235,7 +235,7 @@ static void touchpad_wake_init(void)
 
     //this function call will lower system's  power consumption during deep_sleep mode.
     //if interested, you can not call this function to found what different about working current.
-    touch_pad_set_meas_time(0xffff, TOUCH_PAD_MEASURE_CYCLE_DEFAULT >> 3);
+    touch_pad_set_meas_time(0xffff, TOUCH_PAD_MEASURE_CYCLE_DEFAULT);
     esp_sleep_enable_touchpad_wakeup();
 }
 ...
@@ -249,13 +249,13 @@ void touchpad_wakeup_test(void)
 ```
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-`Note：During touchpad initialization, the function touch_pad_set_meas_time is called to adjust the time it takes for touch sensor reading and the interval between readings. So the working current of the system during Deep-sleep drops from the default 340 μA to 13 μA.`
+`Note：During touchpad initialization, the function touch_pad_set_meas_time is called to adjust the time it takes for touch sensor reading and the interval between readings. So the working current of the system during Deep-sleep drops from the default 340 μA to 36 μA.`
 
 ---
 
 ## 5. IoT-Solution TestCase Compiling Steps:
 
-### 5.1 Test Preparation 
+### 5.1 Test Preparation
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 Set up ESP-IDF, Espressif's official development framework, and related ESP32 tool-chain on the PC. For details please refer to [README.md](https://github.com/espressif/esp-idf/blob/master/README.md).
@@ -282,7 +282,7 @@ Execute the commands to download the esp-iot-solution project code:
     git submodule update --init --recursive
     ```
 
-### <h3 id="compileAndRun">5.3 Compiling and Execution</h3> 
+### <h3 id="compileAndRun">5.3 Compiling and Execution</h3>
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 After the sub-module code is downloaded, compile and test the TestCase in the esp-iot-solution project. Change directory to esp-iot-solution/tools/unit-test-app.
@@ -296,7 +296,7 @@ Execute the following commands to configure the parameters. For example, serial 
     cd YOUR_IOT_SOLUTION_PATH/tools/unit-test-app
     make menuconfig
 ```
-    
+
 
 * [`PCB Function Block`](#hardware)
 
@@ -312,9 +312,9 @@ Execute the following commands to compile all TestCases. The following command i
 ```
     make IOT_TEST_ALL=1 flash monitor
 ```
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 Users can also execute the following command to compile the `deep_sleep`-related test items only. In the following command, `flash` is the download command; `monitor` in the command is used to enable system print after downloading firmware. Users can add this parameter as need be.
- 
+
 ```
     make TEST_COMPONENTS="deep_sleep" flash monitor
 ```
@@ -357,7 +357,7 @@ Take EXT1 wakeup mode test as an example, enter 3 to execute `Deep_sleep EXT1 wa
 
     >>>   entering deep_sleep mode   <<<
 ```
-    
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 Press the four wakeup buttons on the development board simultaneously to wake up the chip. If the serial output shows that the system has been woken up, enter 1 to see wakeup mode.
 

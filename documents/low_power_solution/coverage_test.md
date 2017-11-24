@@ -93,18 +93,17 @@ Touch Pad 唤醒方式下, 芯片进入 deep_sleep 之前, 对 Touch Pad 进行�
 
 __TouchPad 唤醒方式测试结果__
 
-|    Pad Num     | Current |
-|    :----     | :----  |
-|  Pad0 (GPIO 4)  |  13.4uA |
-|  Pad1 (GPIO 0)  |  13.5uA |
-|  Pad2 (GPIO 2)  |  13.5uA |
-|  Pad3(GPIO 15) |  13.4uA |
-|  Pad4(GPIO 13) |  13.5uA |
-|  Pad5(GPIO 12) |  13.7uA |
-|  Pad6(GPIO 14) |  13.5uA |
-|  Pad7(GPIO 27) |  13.5uA |
-|  Pad8(GPIO 33) |  13.4uA |
-|  Pad9(GPIO 32) |  13.6uA |
-
+|    Pad Num      | Current |
+|    :----        |  :----  |
+|  Pad0 (GPIO_4)  |  37.3 uA|
+|  Pad1 (GPIO_0)  |  35.7 uA|
+|  Pad2 (GPIO_2)  |  36.6 uA|
+|  Pad3 (GPIO_15) |  35.6 uA|
+|  Pad4 (GPIO_13) |  36.5 uA|
+|  Pad5 (GPIO_12) |  36.1 uA|
+|  Pad6 (GPIO_14) |  36.7 uA|
+|  Pad7 (GPIO_27) |  35.7 uA|
+|  Pad8 (GPIO_33) |  36.7 uA|
+|  Pad9 (GPIO_32) |  36.3 uA|
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 _`注： 可以使用 touch_pad_set_meas_time 接口来调整 touch sensor 充放电时间和充放电检测间隔，从而在合适的响应时间下，获得更好的低功耗表现。`_

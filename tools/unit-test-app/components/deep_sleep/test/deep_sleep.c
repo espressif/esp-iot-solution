@@ -39,7 +39,7 @@ static void timer_wake_init(void)
 static void touch_pad_wakeup_init(void)
 {
     iot_tp_create(TOUCH_PAD_NUM7, 900, 0, 100);
-    touch_pad_set_meas_time(0xffff, TOUCH_PAD_MEASURE_CYCLE_DEFAULT >> 3);
+    touch_pad_set_meas_time(0xffff, 0xffff);
     esp_sleep_enable_touchpad_wakeup();
 }
 
@@ -131,4 +131,3 @@ TEST_CASE("Deep_sleep time wakeup test", "[deep_sleep][iot]")
     timer_wake_init();
     deep_sleep_start();
 }
-
