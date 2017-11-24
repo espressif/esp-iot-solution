@@ -53,8 +53,8 @@ ESP32 上电后，配置 ULP 协处理器相关的 RTC GPIO 和唤醒周期后�
 
 #### 4.4 代码分析
 
-本例子的代码保存在 GitHub 仓库 [espressif/esp-iot-solution]() 中,可通过 git 命令
-* git clone  --recursive https://gitlab.espressif.cn:6688/rd/esp-iot-solution/tree/feature/ulp_gpio/examples/ulp_rtc_gpio  来获取代码
+本例子的代码保存在 GitHub 仓库 [espressif/esp-iot-solution](https://github.com/espressif/esp-iot-solution.git) 中,可通过 git 命令
+* git clone  --recursive https://github.com/espressif/esp-iot-solution.git  来获取代码
 
 下面给出部分的汇编代码
 汇编代码主要分成三大部分：ADC 采样、RTC GPIO 操作以及 Polling CPU 唤醒，第一部分给出 ADC 采样的汇编代码，主要意图是多次采样 ADC 以及计算平均值
