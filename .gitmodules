@@ -4,6 +4,3 @@
 [submodule "components/network/espmqtt"]
 	path = components/network/espmqtt
 	url = https://github.com/tuanpmt/espmqtt.git
-[submodule "components/platforms/esp32-aliyun"]
-	path = components/platforms/esp32-aliyun
-	url = https://github.com/espressif/esp32-aliyun.git
