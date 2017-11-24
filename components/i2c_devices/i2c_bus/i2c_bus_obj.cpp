@@ -27,7 +27,7 @@
 #include "driver/i2c.h"
 #include "iot_i2c_bus.h"
 
-CI2CBus::CI2CBus(i2c_port_t i2c_port, gpio_num_t scl_io, gpio_num_t sda_io, i2c_mode_t i2c_mode, int clk_hz)
+CI2CBus::CI2CBus(i2c_port_t i2c_port, gpio_num_t scl_io, gpio_num_t sda_io, int clk_hz, i2c_mode_t i2c_mode)
 {
     i2c_config_t conf;
     conf.mode = i2c_mode;

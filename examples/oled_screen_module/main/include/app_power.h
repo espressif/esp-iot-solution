@@ -21,11 +21,24 @@
   * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   *
   */
-#ifndef _IOT_EXAMPLE1_H_
-#define _IOT_EXAMPLE1_H_
+#ifndef _APP_POWER_H_
+#define _APP_POWER_H_
 
+#include "driver/gpio.h"
 
-void example1();
+#ifdef __cplusplus
 
+class CPowerCtrl
+{
+private:
+   gpio_num_t io_num;
+public:
+   CPowerCtrl(gpio_num_t io);
+   ~CPowerCtrl();
+
+   void on();
+   void off();
+};
+#endif
 
 #endif  

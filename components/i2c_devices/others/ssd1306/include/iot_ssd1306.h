@@ -371,7 +371,7 @@ public:
      * @return
      *     - NULL
      */
-    void display_char(uint8_t chXpos, uint8_t chYpos, uint8_t chChr,
+    void draw_char(uint8_t chXpos, uint8_t chYpos, uint8_t chChr,
             uint8_t chSize, uint8_t chMode);
 
     /**
@@ -463,7 +463,7 @@ public:
      *     - ESP_OK Success
      *     - ESP_FAIL Fail
      **/
-    esp_err_t display_string(uint8_t chXpos, uint8_t chYpos,
+    esp_err_t draw_string(uint8_t chXpos, uint8_t chYpos,
             const uint8_t *pchString, uint8_t chSize, uint8_t chMode);
 
     /**

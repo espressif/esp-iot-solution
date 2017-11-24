@@ -1,0 +1,16 @@
+menu "IoT Screen settings"
+    config AP_SSID
+        string "Enter SSID of router to connect to"
+        default ""
+        help
+            "Enter SSID of router to connect to"
+
+    config AP_PASSWORD
+        string "Enter PASSWORD of router to connect to"
+        default ""
+        help
+            "Enter PASSWORD of router to connect to"
+
+
+
+endmenu
