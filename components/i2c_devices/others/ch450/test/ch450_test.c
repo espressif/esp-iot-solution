@@ -55,7 +55,7 @@ void ch450_test()
         int idx = ((_idx ++) % 6);
         int val = ((_val ++) % 10);
         iot_ch450_write_num(seg, idx, val);
-        vTaskDelay(200 / portTICK_PERIOD_MS);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
 
