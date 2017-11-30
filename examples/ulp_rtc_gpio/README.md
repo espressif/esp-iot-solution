@@ -89,7 +89,7 @@ toggle_complete:
 ## 4. 额外说明
 ![](../../documents/_static/ulp_rtc_gpio/2.png)
 
-如果你运行了这个例子，而且试图分析各个处理器切换的状态，可能会遇到上图中额外多出的 98ms 的疑惑。这里需要说明的是，这 98ms 主要是用来等待 RTC 状态机接收唤醒的，在汇编程序 `rtcio.S` 里也有体现。程序不断的在轮询 `RTC_CNTL_DIAG0_REG` 寄存器的第 19bit 的状态，在其 ready 之后才可以唤醒主 CPU 。
+如果你运行了这个例子，而且试图分析各个处理器切换状态，可能会遇到上图中额外多出的 98ms 的疑惑。这里需要说明的是，汇编程序 Polling CPU 并唤醒 CPU 时间是很短的，绝大部分的时间是用来 boot 主 CPU 的（例如主 CPU 上电动作、一级 Bootloader 加载打印等时间消耗）。因为在 DeepSleep 状态下 CPU 的各个模块都是被关掉的，如内部 8MHz 振荡器、40MHz 高速晶振、PLL 及射频模块均禁用；数字内核断电，CPU 内容丢失，这里有一个重新上电加载的过程。
 ```
 	/* Get ULP back to sleep */
 	.global exit
