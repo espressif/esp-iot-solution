@@ -1,0 +1,10 @@
+#
+# Automatically generated file; DO NOT EDIT.
+# Espressif IoT Development Framework Configuration
+#
+#
+# ESP32-specific
+#
+CONFIG_ULP_COPROC_ENABLED=y
+CONFIG_ULP_COPROC_RESERVE_MEM=1024
+
