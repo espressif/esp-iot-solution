@@ -36,6 +36,7 @@
 #include "Adafruit_GFX_AS.h"
 #include "image.h"
 
+#include "nvs_flash.h"
 #include "esp_wifi.h"
 #include "esp_log.h"
 #include "esp_system.h"
@@ -89,6 +90,7 @@ extern "C" esp_err_t event_handler(void *ctx, system_event_t *event)
 extern "C" void esp_draw()
 {	
 	/*Initilize ESP32 to scan for Access points*/
+    nvs_flash_init();
 	tcpip_adapter_init();
     wifi_event_group = xEventGroupCreate();
     ESP_ERROR_CHECK( esp_event_loop_init(event_handler, NULL) );
