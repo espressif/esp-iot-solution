@@ -260,43 +260,41 @@ esp_err_t iot_ssd1306_init(ssd1306_handle_t dev)
     PIN_FUNC_SELECT(SSD1306_DC_MUX, SSD1306_DC_FUNC);
     PIN_FUNC_SELECT(SSD1306_DIN_MUX, SSD1306_DIN_FUNC);
     PIN_FUNC_SELECT(SSD1306_CLK_MUX, SSD1306_CLK_FUNC);
-#ifdef	INTERFACE_4WIRE_SPI
 
-#endif
 #ifdef	INTERFACE_IIC
-    __SSD1306_CS_CLR();		    //CS reset
-    __SSD1306_DC_CLR();		    //D/C reset
-    __SSD1306_RES_SET();		//RES set
+    __SSD1306_CS_CLR(); //CS reset
+    __SSD1306_DC_CLR(); //D/C reset
+    __SSD1306_RES_SET();//RES set
 #endif
 
-    iot_ssd1306_write_byte(dev, 0xAE, SSD1306_CMD);		//--turn off oled panel
-    iot_ssd1306_write_byte(dev, 0x00, SSD1306_CMD);		//---set low column address
-    iot_ssd1306_write_byte(dev, 0x10, SSD1306_CMD);		//---set high column address
-    iot_ssd1306_write_byte(dev, 0x40, SSD1306_CMD);	//--set start line address  Set Mapping RAM Display Start Line (0x00~0x3F)
-    iot_ssd1306_write_byte(dev, 0x81, SSD1306_CMD);	//--set contrast control register
-    iot_ssd1306_write_byte(dev, 0xCF, SSD1306_CMD);	// Set SEG Output Current Brightness
-    iot_ssd1306_write_byte(dev, 0xA1, SSD1306_CMD);		//--Set SEG/Column Mapping
-    iot_ssd1306_write_byte(dev, 0xC0, SSD1306_CMD);		//Set COM/Row Scan Direction
-    iot_ssd1306_write_byte(dev, 0xA6, SSD1306_CMD);		//--set normal display
-    iot_ssd1306_write_byte(dev, 0xA8, SSD1306_CMD);	//--set multiplex ratio(1 to 64)
-    iot_ssd1306_write_byte(dev, 0x3f, SSD1306_CMD);		//--1/64 duty
-    iot_ssd1306_write_byte(dev, 0xD3, SSD1306_CMD);	//-set display offset	Shift Mapping RAM Counter (0x00~0x3F)
-    iot_ssd1306_write_byte(dev, 0x00, SSD1306_CMD);		//-not offset
-    iot_ssd1306_write_byte(dev, 0xd5, SSD1306_CMD);	//--set display clock divide ratio/oscillator frequency
-    iot_ssd1306_write_byte(dev, 0x80, SSD1306_CMD);	//--set divide ratio, Set Clock as 100 Frames/Sec
-    iot_ssd1306_write_byte(dev, 0xD9, SSD1306_CMD);		//--set pre-charge period
-    iot_ssd1306_write_byte(dev, 0xF1, SSD1306_CMD);	//Set Pre-Charge as 15 Clocks & Discharge as 1 Clock
-    iot_ssd1306_write_byte(dev, 0xDA, SSD1306_CMD);	//--set com pins hardware configuration
+    iot_ssd1306_write_byte(dev, 0xAE, SSD1306_CMD); //--turn off oled panel
+    iot_ssd1306_write_byte(dev, 0x00, SSD1306_CMD); //---set low column address
+    iot_ssd1306_write_byte(dev, 0x10, SSD1306_CMD); //---set high column address
+    iot_ssd1306_write_byte(dev, 0x40, SSD1306_CMD); //--set start line address  Set Mapping RAM Display Start Line (0x00~0x3F)
+    iot_ssd1306_write_byte(dev, 0x81, SSD1306_CMD); //--set contrast control register
+    iot_ssd1306_write_byte(dev, 0xCF, SSD1306_CMD); // Set SEG Output Current Brightness
+    iot_ssd1306_write_byte(dev, 0xA1, SSD1306_CMD); //--Set SEG/Column Mapping
+    iot_ssd1306_write_byte(dev, 0xC0, SSD1306_CMD); //Set COM/Row Scan Direction
+    iot_ssd1306_write_byte(dev, 0xA6, SSD1306_CMD); //--set normal display
+    iot_ssd1306_write_byte(dev, 0xA8, SSD1306_CMD); //--set multiplex ratio(1 to 64)
+    iot_ssd1306_write_byte(dev, 0x3f, SSD1306_CMD); //--1/64 duty
+    iot_ssd1306_write_byte(dev, 0xD3, SSD1306_CMD); //-set display offset	Shift Mapping RAM Counter (0x00~0x3F)
+    iot_ssd1306_write_byte(dev, 0x00, SSD1306_CMD); //-not offset
+    iot_ssd1306_write_byte(dev, 0xd5, SSD1306_CMD); //--set display clock divide ratio/oscillator frequency
+    iot_ssd1306_write_byte(dev, 0x80, SSD1306_CMD); //--set divide ratio, Set Clock as 100 Frames/Sec
+    iot_ssd1306_write_byte(dev, 0xD9, SSD1306_CMD); //--set pre-charge period
+    iot_ssd1306_write_byte(dev, 0xF1, SSD1306_CMD); //Set Pre-Charge as 15 Clocks & Discharge as 1 Clock
+    iot_ssd1306_write_byte(dev, 0xDA, SSD1306_CMD); //--set com pins hardware configuration
     iot_ssd1306_write_byte(dev, 0x12, SSD1306_CMD);
-    iot_ssd1306_write_byte(dev, 0xDB, SSD1306_CMD);		//--set vcomh
-    iot_ssd1306_write_byte(dev, 0x40, SSD1306_CMD);		//Set VCOM Deselect Level
-    iot_ssd1306_write_byte(dev, 0x20, SSD1306_CMD);	//-Set Page Addressing Mode (0x00/0x01/0x02)
+    iot_ssd1306_write_byte(dev, 0xDB, SSD1306_CMD); //--set vcomh
+    iot_ssd1306_write_byte(dev, 0x40, SSD1306_CMD); //Set VCOM Deselect Level
+    iot_ssd1306_write_byte(dev, 0x20, SSD1306_CMD); //-Set Page Addressing Mode (0x00/0x01/0x02)
     iot_ssd1306_write_byte(dev, 0x02, SSD1306_CMD);
-    iot_ssd1306_write_byte(dev, 0x8D, SSD1306_CMD);	//--set Charge Pump enable/disable
-    iot_ssd1306_write_byte(dev, 0x14, SSD1306_CMD);		//--set(0x10) disable
-    iot_ssd1306_write_byte(dev, 0xA4, SSD1306_CMD);	// Disable Entire Display On (0xa4/0xa5)
-    iot_ssd1306_write_byte(dev, 0xA6, SSD1306_CMD);	// Disable Inverse Display On (0xa6/a7)
-    iot_ssd1306_write_byte(dev, 0xAF, SSD1306_CMD);		//--turn on oled panel
+    iot_ssd1306_write_byte(dev, 0x8D, SSD1306_CMD); //--set Charge Pump enable/disable
+    iot_ssd1306_write_byte(dev, 0x14, SSD1306_CMD); //--set(0x10) disable
+    iot_ssd1306_write_byte(dev, 0xA4, SSD1306_CMD); // Disable Entire Display On (0xa4/0xa5)
+    iot_ssd1306_write_byte(dev, 0xA6, SSD1306_CMD); // Disable Inverse Display On (0xa6/a7)
+    iot_ssd1306_write_byte(dev, 0xAF, SSD1306_CMD); //--turn on oled panel
 
     ret = iot_ssd1306_clear_screen(dev, 0x00);
     return ret;

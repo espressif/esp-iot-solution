@@ -60,7 +60,7 @@ void CSsd1306::draw_char(uint8_t chXpos, uint8_t chYpos,
             chMode);
 }
 
-void CSsd1306::display_num(uint8_t chXpos, uint8_t chYpos,
+void CSsd1306::draw_num(uint8_t chXpos, uint8_t chYpos,
         uint32_t chNum, uint8_t chLen, uint8_t chSize)
 {
     iot_ssd1306_draw_num(m_dev_handle, chXpos, chYpos, chNum, chLen, chSize);
