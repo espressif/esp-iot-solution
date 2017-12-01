@@ -69,6 +69,11 @@ esp_err_t iot_at24c02_delete(at24c02_handle_t dev, bool del_bus);
 
 /**
  * @brief   Write a data on addr
+ *
+ * @param   dev object handle of at24c02
+ * @param   The address of the data to be written
+ * @param   the data to be written
+ *
  * @return
  *    - ESP_OK Success
  *    - ESP_FAIL Fail
@@ -78,6 +83,11 @@ esp_err_t iot_at24c02_write_byte(at24c02_handle_t dev, uint8_t addr,
 
 /**
  * @brief   Read a data on addr
+ *
+ * @param   dev object handle of at24c02
+ * @param   The address of the data to be read
+ * @param   Pointer to read data
+ *
  * @return
  *    - ESP_OK Success
  *    - ESP_FAIL Fail
@@ -87,6 +97,12 @@ esp_err_t iot_at24c02_read_byte(at24c02_handle_t dev, uint8_t addr,
 
 /**
  * @brief   Write some data start addr
+ *
+ * @param   dev object handle of at24c02
+ * @param   The address of the data to be written
+ * @param   The size of the data to be written
+ * @param   Pointer to write data
+ *
  * @return
  *    - ESP_OK Success
  *    - ESP_FAIL Fail
@@ -96,6 +112,12 @@ esp_err_t iot_at24c02_write(at24c02_handle_t dev, uint8_t start_addr,
 
 /**
  * @brief   Read some data start addr
+ *
+ * @param   dev object handle of at24c02
+ * @param   The address of the data to be read
+ * @param   The size of the data to be read
+ * @param   Pointer to read data
+ *
  * @return
  *    - ESP_OK Success
  *    - ESP_FAIL Fail
@@ -139,6 +161,10 @@ public:
     ~CAT24C02();
     /**
      * @brief   Write a data on addr
+     *
+     * @param   The address of the data to be written
+     * @param   the data to be written
+     *
      * @return
      *    - ESP_OK Success
      *    - ESP_FAIL Fail
@@ -147,6 +173,10 @@ public:
 
     /**
      * @brief   Read a data on addr
+     *
+     * @param   The address of the data to be read
+     * @param   Pointer to read data
+     *
      * @return
      *    - ESP_OK Success
      *    - ESP_FAIL Fail
@@ -156,6 +186,11 @@ public:
 
     /**
      * @brief   Write some data start addr
+     *
+     * @param   The address of the data to be written
+     * @param   The size of the data to be written
+     * @param   Pointer to write data
+     *
      * @return
      *    - ESP_OK Success
      *    - ESP_FAIL Fail
@@ -165,6 +200,11 @@ public:
 
     /**
      * @brief   Read some data start addr
+     *
+     * @param   The address of the data to be read
+     * @param   The size of the data to be read
+     * @param   Pointer to read data
+     *
      * @return
      *    - ESP_OK Success
      *    - ESP_FAIL Fail
