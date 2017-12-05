@@ -19,8 +19,8 @@
 
 
 /* set the ssid and password via "make menuconfig" under the directory unit-test-app */
-#define WIFI_SSID   CONFIG_DEFAULT_SSID
-#define WIFI_PWD    CONFIG_DEFAULT_PWD
+#define WIFI_SSID   CONFIG_AP_SSID
+#define WIFI_PWD    CONFIG_AP_PASSWORD
 
 
 #define WIFI_STATUS_STOP           0x0
