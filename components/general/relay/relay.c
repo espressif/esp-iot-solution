@@ -23,9 +23,6 @@
   */
 
 #include "sdkconfig.h"
-
-#if CONFIG_RELAY_ENABLE
-
 #include "freertos/FreeRTOS.h"
 #include "esp_system.h"
 #include "driver/gpio.h"
@@ -136,4 +133,3 @@ esp_err_t iot_relay_delete(relay_handle_t relay_handle)
     return ESP_OK;
 }
 
-#endif

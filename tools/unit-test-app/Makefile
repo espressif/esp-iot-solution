@@ -5,7 +5,7 @@
 
 PROJECT_NAME := unit-test-app
 #If IOT_SOLUTION_PATH is not defined, use relative path as default value
-IOT_SOLUTION_PATH ?= $(shell pwd)/../../
+IOT_SOLUTION_PATH ?= $(abspath $(shell pwd)/../../)
 
 #Do not touch the code below
 IOT_COMPONENTT_DIR := $(IOT_SOLUTION_PATH)/components components
@@ -34,5 +34,6 @@ else
 endif
 
 include $(IOT_SOLUTION_PATH)/Makefile
+include $(IDF_PATH)/make/project.mk
 print_flash_cmd:
 	echo $(ESPTOOL_WRITE_FLASH_OPTIONS) $(ESPTOOL_ALL_FLASH_ARGS) | sed -e 's:'$(PWD)/build/'::g'
