@@ -463,8 +463,10 @@ esp_err_t iot_apds9960_read(apds9960_handle_t sensor, uint8_t reg_addr, uint8_t 
 
 /**
  * @brief Set APDS9960 sensor timeout for I2C operations
+
  * @param sensor object handle of apds9960
  * @param tout_ms timeout value, in millisecond
+
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
@@ -520,7 +522,7 @@ apds9960_mode_t iot_apds9960_get_mode(apds9960_handle_t sensor);
  * idle, proximity, gesture, wait,color/ALS, and sleep.
  *
  * @param sensor object handle of apds9960
- * @param wait time
+ * @param time wait time
  *
  * @return
  *     - ESP_OK Success
@@ -545,7 +547,6 @@ esp_err_t iot_apds9960_set_adc_integration_time(apds9960_handle_t sensor,
  * @brief Get the integration time for the ADC of the APDS9960, in millis
  *
  * @param sensor object handle of apds9960
- * @param iTimeMS the integration time for the ADC of the APDS9960
  *
  * @return
  *     - iTimeMS the integration time for the ADC of the APDS9960
@@ -581,7 +582,7 @@ apds9960_again_t iot_apds9960_get_ambient_light_gain(apds9960_handle_t sensor);
  *
  * @param sensor object handle of apds9960
  * @param drive the value (0-3) for the LED drive strength
- * @param drive the value (0-3) for current boost (100-300%)
+ * @param boost the value (0-3) for current boost (100-300%)
  *
  * @return
  *     - ESP_OK Success
@@ -594,7 +595,7 @@ esp_err_t iot_apds9960_set_led_drive_boost(apds9960_handle_t sensor,
  * @brief  Enable proximity engine on APDS9960
  *
  * @param sensor object handle of apds9960
- * @param enable(true) or disable(false)
+ * @param en true to enable proximity engine, false to disable proximity engine
  *
  * @return
  *     - ESP_OK Success
@@ -606,7 +607,7 @@ esp_err_t iot_apds9960_enable_proximity_engine(apds9960_handle_t sensor, bool en
  * @brief  Set the receiver gain for proximity detection
  *
  * @param sensor object handle of apds9960
- * @param drive the value (apds9960_pgain_t) for the gain
+ * @param pGain the value (apds9960_pgain_t) for the gain
  *
  * @return
  *     - ESP_OK Success
@@ -629,8 +630,8 @@ apds9960_pgain_t iot_apds9960_get_proximity_gain(apds9960_handle_t sensor);
  * @brief  Set proximity pulse count and length
  *
  * @param sensor object handle of apds9960
- * @param proximity pulse count
- * @param proximity pulse length
+ * @param pLen proximity pulse count
+ * @param pulses proximity pulse length
  *
  * @return
  *     - ESP_OK Success
@@ -643,7 +644,7 @@ esp_err_t iot_apds9960_set_proximity_pulse(apds9960_handle_t sensor,
  * @brief Turns proximity interrupts on or off
  *
  * @param sensor object handle of apds9960
- * @param enable 1 to enable interrupts, 0 to turn them off
+ * @param en true to enable interrupts, false to disable interrupts
  *
  * @return
  *     - ESP_OK Success
@@ -655,11 +656,10 @@ esp_err_t iot_apds9960_enable_proximity_interrupt(apds9960_handle_t sensor, bool
  * @brief Get proximity interrupts status
  *
  * @param sensor object handle of apds9960
- * @param enable 1 to enable interrupts, 0 to turn them off
  *
  * @return
- *     - ESP_OK Success
- *     - ESP_FAIL Fail
+ *     - true means valid
+ *     - false means error
  */
 bool iot_apds9960_get_proximity_interrupt(apds9960_handle_t sensor);
 
@@ -677,8 +677,8 @@ uint8_t iot_apds9960_read_proximity(apds9960_handle_t sensor);
  * @brief Sets the lower threshold for proximity detection
  *
  * @param sensor object handle of apds9960
- * @param threshold the lower proximity threshold
- * @param threshold the higher proximity threshold
+ * @param low the lower proximity threshold
+ * @param high the higher proximity threshold
  * @param persistance count
  *
  * @return
@@ -692,7 +692,7 @@ esp_err_t iot_apds9960_set_proximity_interrupt_threshold(apds9960_handle_t senso
  * @brief Enable gesture engine on APDS9960
  *
  * @param sensor object handle of apds9960
- * @param enable(true) or disable(false)
+ * @param en true to enable gesture engine, false to disable gesture engine
  *
  * @return
  *     - ESP_OK Success
@@ -715,7 +715,7 @@ bool iot_apds9960_gesture_valid(apds9960_handle_t sensor);
  * @brief Set gesture dimensions
  *
  * @param sensor object handle of apds9960
- * @param gesture dimensions
+ * @param dims gesture dimensions
  *
  * @return
  *     - ESP_OK Success
@@ -728,7 +728,7 @@ esp_err_t iot_apds9960_set_gesture_dimensions(apds9960_handle_t sensor,
  * @brief Sets the FIFO threshold for gesture
  *
  * @param sensor object handle of apds9960
- * @param the FIFO threshold for gesture
+ * @param thresh the FIFO threshold for gesture
  *
  * @return
  *     - ESP_OK Success
@@ -741,7 +741,7 @@ esp_err_t iot_apds9960_set_gesture_fifo_threshold(apds9960_handle_t sensor,
  * @brief  Set the gesture gain for gesture detection
  *
  * @param sensor object handle of apds9960
- * @param drive the value (apds9960_ggain_t) for the gain
+ * @param gGain the value (apds9960_ggain_t) for the gain
  *
  * @return
  *     - ESP_OK Success
@@ -753,7 +753,8 @@ esp_err_t iot_apds9960_set_gesture_gain(apds9960_handle_t sensor, apds9960_ggain
  * @brief Sets the proximity threshold for gesture
  *
  * @param sensor object handle of apds9960
- * @param the proximity threshold for gesture
+ * @param entthresh the proximity enter threshold for gesture
+ * @param exitthresh the proximity exit threshold for gesture
  *
  * @return
  *     - ESP_OK Success
@@ -766,10 +767,10 @@ esp_err_t iot_apds9960_set_gesture_proximity_threshold(apds9960_handle_t sensor,
  * @brief Sets the offset for gesture
  *
  * @param sensor object handle of apds9960
- * @param the U offset for gesture
- * @param the D offset for gesture
- * @param the L offset for gesture
- * @param the R offset for gesture
+ * @param offset_up the U offset for gesture
+ * @param offset_down the D offset for gesture
+ * @param offset_left the L offset for gesture
+ * @param offset_right the R offset for gesture
  *
  * @return
  *     - ESP_OK Success
@@ -792,6 +793,8 @@ uint8_t iot_apds9960_read_gesture(apds9960_handle_t sensor);
 /**
  * @brief Reset some temp counts of gesture detection
  *
+ * @param sensor object handle of apds9960
+ *
  * @return
  *     - NULL
  */
@@ -801,13 +804,13 @@ void iot_apds9960_reset_counts(apds9960_handle_t sensor);
  * @brief  Set gesture pulse count and length
  *
  * @param sensor object handle of apds9960
- * @param Number OF PULSES
+ * @param gpulseLen Number OF PULSES
  *      FIELD                   VALUE PULSE LENGTH
  *  APDS9960_GPULSELEN_4US          4 μs
  *  APDS9960_GPULSELEN_8US          8 μs
  *  APDS9960_GPULSELEN_16US        16 μs
  *  APDS9960_GPULSELEN_32US        32 μs
- * @param PULSE LENGTH
+ * @param pulses PULSE LENGTH
  *          FIELD               VALUE Number OF PULSES
  *  APDS9960_GPULSELEN_4US          = 0x00,
  *  APDS9960_GPULSELEN_8US          = 0x01,
@@ -825,7 +828,7 @@ esp_err_t iot_apds9960_set_gesture_pulse(apds9960_handle_t sensor,
  * @brief Turns gesture-related interrupts on or off
  *
  * @param sensor object handle of apds9960
- * @param enable 1 to enable interrupts, 0 to turn them off
+ * @param en true to enable interrupts, false to disable interrupts
  *
  * @return
  *     - ESP_OK Success
@@ -837,7 +840,7 @@ esp_err_t iot_apds9960_enable_gesture_interrupt(apds9960_handle_t sensor, bool e
  * @brief Sets the time in low power mode between gesture detections
  *
  * @param sensor object handle of apds9960
- * @param the value for the wait time
+ * @param time the value for the wait time
  *          Value                   Wait time
  *   APDS9960_GWTIME_0MS            0 ms
  *   APDS9960_GWTIME_2_8MS          2.8 ms
@@ -858,7 +861,7 @@ esp_err_t iot_apds9960_set_gesture_waittime(apds9960_handle_t sensor, apds9960_g
  * @brief  Enable color engine on APDS9960
  *
  * @param sensor object handle of apds9960
- * @param enable 1 to enable interrupts, 0 to turn them off
+ * @param en true to enable interrupts, false to disable interrupts
  *
  * @return
  *     - ESP_OK Success
@@ -881,10 +884,10 @@ bool iot_apds9960_color_data_ready(apds9960_handle_t sensor);
  * @brief  Reads the raw red, green, blue and clear channel values
  *
  * @param sensor object handle of apds9960
- * @param pointer of r
- * @param pointer of g
- * @param pointer of b
- * @param pointer of c
+ * @param r pointer of r
+ * @param g pointer of g
+ * @param b pointer of b
+ * @param c pointer of c
  *
  * @return
  *     - ESP_OK Success
@@ -897,9 +900,9 @@ esp_err_t iot_apds9960_get_color_data(apds9960_handle_t sensor, uint16_t *r,
  * @brief  Converts the raw R/G/B values to color temperature in degrees Kelvin
  *
  * @param sensor object handle of apds9960
- * @param r
- * @param g
- * @param b
+ * @param r value of r
+ * @param g value of g
+ * @param b value of b
  *
  * @return
  *     - Return the results in degrees Kelvin
@@ -911,9 +914,9 @@ uint16_t iot_apds9960_calculate_color_temperature(apds9960_handle_t sensor,
  * @brief  Calculate ambient light values
  *
  * @param sensor object handle of apds9960
- * @param r
- * @param g
- * @param b
+ * @param r value of r
+ * @param g value of g
+ * @param b value of b
  *
  * @return
  *     - Return the results of ambient light values
@@ -925,7 +928,7 @@ uint16_t iot_apds9960_calculate_lux(apds9960_handle_t sensor, uint16_t r,
  * @brief Turns color interrupts on or off
  *
  * @param sensor object handle of apds9960
- * @param enable 1 to enable interrupts, 0 to turn them off
+ * @param en true to enable interrupts, false to disable interrupts
  *
  * @return
  *     - ESP_OK Success
@@ -938,8 +941,8 @@ esp_err_t iot_apds9960_enable_color_interrupt(apds9960_handle_t sensor, bool en)
  * @brief Set ALS interrupt low/high threshold
  *
  * @param sensor object handle of apds9960
- * @param low threshold
- * @param high threshold
+ * @param l low threshold
+ * @param h high threshold
  *
  * @return
  *     - ESP_OK Success
@@ -963,7 +966,7 @@ esp_err_t iot_apds9960_clear_interrupt(apds9960_handle_t sensor);
  * @brief enable apds9960 device
  *
  * @param sensor object handle of apds9960
- * @param enable 1 to enable, 0 to turn them off
+ * @param en true to enable sensor, false to disable sensor
  *
  * @return
  *     - ESP_OK Success
@@ -1045,7 +1048,7 @@ public:
      *
      * @param   p_i2c_bus pointer to CI2CBus object
      * @param   addr of device address
-     * @param   timeout for I2C operations, in ms
+     * @param   timeout_ms for I2C operations, in ms
      */
     CApds9960(CI2CBus *p_i2c_bus, uint8_t addr = APDS9960_I2C_ADDRESS, uint32_t timeout_ms = 1000);
 
@@ -1054,14 +1057,14 @@ public:
     /**
      * @brief Initializes gesture and configures the sensor
      *
-     * @param adc_integration_time
-     * @param  ALS Gain (AGAIN) values
+     * @param iTimeMS adc_integration_time
+     * @param gain ALS Gain (AGAIN) values
      *
      * @return
      *     - true opreation success
      *     - false opreation fail
      */
-    bool gesture_init(uint16_t iTimeMS = 10, apds9960_again_t = APDS9960_AGAIN_4X);
+    bool gesture_init(uint16_t iTimeMS = 10, apds9960_again_t gain = APDS9960_AGAIN_4X);
 
     /**
      * @brief Sets the integration time for the ADC of the APDS9960, in millis
@@ -1077,7 +1080,7 @@ public:
     /**
      * @brief Set the color/ALS gain on the APDS9960 (adjusts the sensitivity to light)
      *
-     * @param aGain the color/ALS gain on the APDS9960
+     * @param gain the color/ALS gain on the APDS9960
      *
      * @return
      *     - ESP_OK Success
@@ -1090,7 +1093,7 @@ public:
      * Sets the LED drive strength for proximity and ALS
      *
      * @param drive the value (0-3) for the LED drive strength
-     * @param drive the value (0-3) for current boost (100-300%)
+     * @param boost the value (0-3) for current boost (100-300%)
      *
      * @return
      *     - ESP_OK Success
@@ -1101,8 +1104,6 @@ public:
 
     /**
      * @brief Get the integration time for the ADC of the APDS9960, in millis
-     *
-     * @param iTimeMS the integration time for the ADC of the APDS9960
      *
      * @return
      *     - iTimeMS the integration time for the ADC of the APDS9960
@@ -1128,7 +1129,7 @@ public:
     /**
      * @brief  Enable proximity engine on APDS9960
      *
-     * @param enable(true) or disable(false)
+     * @param en true to enable proximity, flase to disable proximity
      *
      * @return
      *     - ESP_OK Success
@@ -1139,7 +1140,7 @@ public:
     /**
      * @brief Turns proximity interrupts on or off
      *
-     * @param enable 1 to enable interrupts, 0 to turn them off
+     * @param en true to enable proximity interrupt, flase to disable proximity interrupt
      *
      * @return
      *     - ESP_OK Success
@@ -1150,7 +1151,7 @@ public:
     /**
      * @brief  Set the receiver gain for proximity detection
      *
-     * @param drive the value (apds9960_pgain_t) for the gain
+     * @param gain the value (apds9960_pgain_t) for the gain
      *
      * @return
      *     - ESP_OK Success
@@ -1161,8 +1162,8 @@ public:
     /**
      * @brief  Set proximity pulse count and length
      *
-     * @param proximity pulse count
-     * @param proximity pulse length
+     * @param pLen proximity pulse count
+     * @param pulses proximity pulse length
      *
      * @return
      *     - ESP_OK Success
@@ -1173,8 +1174,8 @@ public:
     /**
      * @brief Sets the lower threshold for proximity detection
      *
-     * @param threshold the lower proximity threshold
-     * @param threshold the higher proximity threshold
+     * @param low the lower proximity threshold
+     * @param high the higher proximity threshold
      * @param persistance count
      *
      * @return
@@ -1195,13 +1196,11 @@ public:
     /**
      * @brief Get proximity interrupts status
      *
-     * @param enable 1 to enable interrupts, 0 to turn them off
-     *
      * @return
-     *     - ESP_OK Success
-     *     - ESP_FAIL Fail
+     *     - true means valid
+     *     - false means error
      */
-    bool get_proximity_interrupt();
+    bool get_proximity_interrupt(void);
 
     /**
      * @brief clear interrupt
@@ -1210,7 +1209,7 @@ public:
      *     - ESP_OK Success
      *     - ESP_FAIL Fail
      */
-    esp_err_t clear_interrupt();
+    esp_err_t clear_interrupt(void);
 
     /**
      * @brief Processes a gesture event and returns best guessed gesture
@@ -1227,12 +1226,12 @@ public:
      *     - true means valid
      *     - false means error
      */
-    bool gesture_valid();
+    bool gesture_valid(void);
 
     /**
      * @brief Enable gesture engine on APDS9960
      *
-     * @param enable(true) or disable(false)
+     * @param en true to enable gesture, flase to disable gesture
      *
      * @return
      *     - ESP_OK Success
@@ -1243,7 +1242,7 @@ public:
     /**
      * @brief Turns gesture-related interrupts on or off
      *
-     * @param enable 1 to enable interrupts, 0 to turn them off
+     * @param en true to enable gesture interrupt, flase to disable gesture interrupt
      *
      * @return
      *     - ESP_OK Success
@@ -1254,8 +1253,8 @@ public:
     /**
      * @brief  Set gesture pulse count and length
      *
-     * @param gesture pulse count
-     * @param gesture pulse length
+     * @param gLen gesture pulse count
+     * @param pulses gesture pulse length
      *
      * @return
      *     - ESP_OK Success
@@ -1266,7 +1265,7 @@ public:
     /**
      * @brief Set gesture dimensions
      *
-     * @param gesture dimensions
+     * @param dims gesture dimensions
      *
      * @return
      *     - ESP_OK Success
@@ -1277,7 +1276,7 @@ public:
     /**
      * @brief Sets the FIFO threshold for gesture
      *
-     * @param the FIFO threshold for gesture
+     * @param thresh the FIFO threshold for gesture
      *
      * @return
      *     - ESP_OK Success
@@ -1288,7 +1287,7 @@ public:
     /**
      * @brief Sets the time in low power mode between gesture detections
      *
-     * @param the value for the wait time
+     * @param time the value for the wait time
      *
      * @return
      *     - ESP_OK Success
@@ -1299,7 +1298,7 @@ public:
     /**
      * @brief  Set the gesture gain for gesture detection
      *
-     * @param drive the value (apds9960_ggain_t) for the gain
+     * @param gain the value (apds9960_ggain_t) for the gain
      *
      * @return
      *     - ESP_OK Success
@@ -1310,7 +1309,8 @@ public:
     /**
      * @brief Sets the proximity threshold for gesture
      *
-     * @param the proximity threshold for gesture
+     * @param entthresh the proximity enter threshold for gesture
+     * @param exitthresh the proximity exit threshold for gesture
      *
      * @return
      *     - ESP_OK Success
@@ -1321,10 +1321,10 @@ public:
     /**
      * @brief Sets the offset for gesture
      *
-     * @param the U offset for gesture
-     * @param the D offset for gesture
-     * @param the L offset for gesture
-     * @param the R offset for gesture
+     * @param offset_up the U offset for gesture
+     * @param offset_down the D offset for gesture
+     * @param offset_left the L offset for gesture
+     * @param offset_right the R offset for gesture
      *
      * @return
      *     - ESP_OK Success
@@ -1339,7 +1339,7 @@ public:
      * @return
      *     - NULL
      */
-    void reset_counts();
+    void reset_counts(void);
 
     /**
      * @brief  Get color detection status
@@ -1348,12 +1348,12 @@ public:
      *     - true Success
      *     - false Fail
      */
-    bool color_data_ready();
+    bool color_data_ready(void);
 
     /**
      * @brief  Enable color engine on APDS9960
      *
-     * @param enable 1 to enable interrupts, 0 to turn them off
+     * @param en true to enable color, flase to disable color
      *
      * @return
      *     - ESP_OK Success
@@ -1364,10 +1364,10 @@ public:
     /**
      * @brief  Reads the raw red, green, blue and clear channel values
      *
-     * @param pointer of r
-     * @param pointer of g
-     * @param pointer of b
-     * @param pointer of c
+     * @param r pointer of r
+     * @param g pointer of g
+     * @param b pointer of b
+     * @param c pointer of c
      *
      * @return
      *     - ESP_OK Success
@@ -1379,7 +1379,7 @@ public:
     /**
      * @brief Turns color interrupts on or off
      *
-     * @param enable 1 to enable interrupts, 0 to turn them off
+     * @param en true to enable color interrupt, flase to disable color interrupt
      *
      * @return
      *     - ESP_OK Success
@@ -1390,8 +1390,8 @@ public:
     /**
      * @brief Set ALS interrupt low/high threshold
      *
-     * @param low threshold
-     * @param high threshold
+     * @param l low threshold
+     * @param h high threshold
      *
      * @return
      *     - ESP_OK Success
@@ -1402,9 +1402,9 @@ public:
     /**
      * @brief  Converts the raw R/G/B values to color temperature in degrees Kelvin
      *
-     * @param r
-     * @param g
-     * @param b
+     * @param r value of r
+     * @param g value of r
+     * @param b value of r
      *
      * @return
      *     - Return the results in degrees Kelvin
@@ -1414,9 +1414,9 @@ public:
     /**
      * @brief  Calculate ambient light values
      *
-     * @param r
-     * @param g
-     * @param b
+     * @param r value of r
+     * @param g value of r
+     * @param b value of r
      *
      * @return
      *     - Return the results of ambient light values
@@ -1426,7 +1426,7 @@ public:
     /**
      * @brief enable apds9960 device
      *
-     * @param enable 1 to enable, 0 to turn them off
+     * @param en true to enable sensor, flase to disable sensor
      *
      * @return
      *     - ESP_OK Success

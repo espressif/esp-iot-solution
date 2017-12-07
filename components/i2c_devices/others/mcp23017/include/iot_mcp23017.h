@@ -70,6 +70,11 @@ typedef enum {
 
 /**
  * @brief   Write a data on addr
+ *
+ * @param   dev object handle of mcp230017
+ * @param   reg_addr register address
+ * @param   data write data
+ *
  * @return
  *    - ESP_OK Success
  *    - ESP_FAIL Fail
@@ -79,6 +84,12 @@ esp_err_t iot_mcp23017_write_byte(mcp23017_handle_t dev, uint8_t reg_addr,
 
 /**
  * @brief   Write some data start addr
+ *
+ * @param   dev object handle of mcp230017
+ * @param   reg_start_addr register address
+ * @param   reg_num data length
+ * @param   data_buf a pointer of will write data
+ *
  * @return
  *    - ESP_OK Success
  *    - ESP_FAIL Fail
@@ -88,6 +99,11 @@ esp_err_t iot_mcp23017_write(mcp23017_handle_t dev, uint8_t reg_start_addr,
 
 /**
  * @brief   Read a data on addr
+ *
+ * @param   dev object handle of mcp230017
+ * @param   reg register address
+ * @param   data pointer of save data
+ *
  * @return
  *    - ESP_OK Success
  *    - ESP_FAIL Fail
@@ -97,6 +113,12 @@ esp_err_t iot_mcp23017_read_byte(mcp23017_handle_t dev, uint8_t reg,
 
 /**
  * @brief   Read some data start addr
+ *
+ * @param   dev object handle of mcp230017
+ * @param   reg_start_addrregister address
+ * @param   reg_num data length
+ * @param   data_buf pointer of save data
+ *
  * @return
  *    - ESP_OK Success
  *    - ESP_FAIL Fail
@@ -105,10 +127,10 @@ esp_err_t iot_mcp23017_read(mcp23017_handle_t dev, uint8_t reg_start_addr,
         uint8_t reg_num, uint8_t *data_buf);
 
 /**
- * @brief Create MCP23017 handle_t
+ * @brief   Create MCP23017 handle_t
  *
- * @param sensor object handle of I2C
- * @param decice address
+ * @param   bus object handle of I2C
+ * @param   dev_addr decice address
  *
  * @return
  *     - mcp23017_handle_t
@@ -116,10 +138,10 @@ esp_err_t iot_mcp23017_read(mcp23017_handle_t dev, uint8_t reg_start_addr,
 mcp23017_handle_t iot_mcp23017_create(i2c_bus_handle_t bus, uint16_t dev_addr);
 
 /**
- * @brief delete MCP23017 handle_t
+ * @brief   delete MCP23017 handle_t
  *
- * @param dev object handle of MCP23017
- * @param whether delete i2c bus
+ * @param   dev object handle of MCP23017
+ * @param   del_bus whether delete i2c bus
  *
  * @return
  *     - ESP_OK Success
@@ -128,12 +150,14 @@ mcp23017_handle_t iot_mcp23017_create(i2c_bus_handle_t bus, uint16_t dev_addr);
 esp_err_t iot_mcp23017_delete(mcp23017_handle_t dev, bool del_bus);
 
 /**
- * @brief Set MCP23017 interrupt pin,
- * 			Only in GPIO work in INPUT mode,
- * 				Default:compare last value,
+ * @brief   Set MCP23017 interrupt pin,
+ *          Only in GPIO work in INPUT mode,
+ *              Default:compare last value,
  *
- * @param dev object handle of MCP23017
- * @param pin of interrupt
+ * @param   dev object handle of MCP23017
+ * @param   pins pin of interrupt
+ * @param   isDefault pins level use default
+ * @param   defaultValue pins default level
  *
  * @return
  *     - ESP_OK Success
@@ -146,7 +170,7 @@ esp_err_t iot_mcp23017_interrupt_en(mcp23017_handle_t dev, uint16_t pins,
  * @brief delete MCP23017 interrupt pin,
  *
  * @param dev object handle of MCP23017
- * @param pin of interrupt
+ * @param pins pin of interrupt
  *
  * @return
  *     - ESP_OK Success
@@ -155,10 +179,11 @@ esp_err_t iot_mcp23017_interrupt_en(mcp23017_handle_t dev, uint16_t pins,
 esp_err_t iot_mcp23017_interrupt_disable(mcp23017_handle_t dev, uint16_t pins);
 
 /**
- * @brief Set the polarity of the INT output pin
+ * @brief   Set the polarity of the INT output pin
  *
- * @param dev object handle of MCP23017
- * @param pin of interrupt
+ * @param   dev object handle of MCP23017
+ * @param   gpio pin of interrupt
+ * @param   chLevel interrupt polarity
  *
  * @return
  *     - ESP_OK Success
@@ -168,10 +193,10 @@ esp_err_t iot_mcp23017_set_interrupt_polarity(mcp23017_handle_t dev,
         mcp23017_gpio_t gpio, uint8_t chLevel);
 
 /**
- * @brief Sequential operation mode set
+ * @brief   Sequential operation mode set
  *
- * @param dev object handle of MCP23017
- * @param isSeque 1:Prohibit sequential operation, the address pointer is not incremented
+ * @param   dev object handle of MCP23017
+ * @param   isSeque 1:Prohibit sequential operation, the address pointer is not incremented
  *                  0:Enable sequential operation, address pointer increment
  *
  * @return
@@ -181,10 +206,10 @@ esp_err_t iot_mcp23017_set_interrupt_polarity(mcp23017_handle_t dev,
 esp_err_t iot_mcp23017_set_seque_mode(mcp23017_handle_t dev, uint8_t isSeque);
 
 /**
- * @brief Set MCP23017 pin pullup
+ * @brief   Set MCP23017 pin pullup
  *
- * @param dev object handle of MCP23017
- * @param pin of pullup
+ * @param   dev object handle of MCP23017
+ * @param   pins pin of pullup
  *
  * @return
  *     - ESP_OK Success
@@ -193,11 +218,11 @@ esp_err_t iot_mcp23017_set_seque_mode(mcp23017_handle_t dev, uint8_t isSeque);
 esp_err_t iot_mcp23017_set_pullup(mcp23017_handle_t dev, uint16_t pins);
 
 /**
- * @brief gets the interrupt capture values for pins with interrupts enabled,
+ * @brief   gets the interrupt capture values for pins with interrupts enabled,
  *          and gpio values for the ones that aren't.
  *          clear interrupt flag
  *
- * @param dev object handle of MCP23017
+ * @param   dev object handle of MCP23017
  *
  * @return
  *     - ESP_OK Success
@@ -206,9 +231,9 @@ esp_err_t iot_mcp23017_set_pullup(mcp23017_handle_t dev, uint16_t pins);
 uint16_t iot_mcp23017_get_int_pin(mcp23017_handle_t dev);
 
 /**
- * @brief get interrupt flag of GPIO
+ * @brief   get interrupt flag of GPIO
  *
- * @param dev object handle of MCP23017
+ * @param   dev object handle of MCP23017
  *
  * @return
  *     - value of GPIO interrupt flag
@@ -216,9 +241,9 @@ uint16_t iot_mcp23017_get_int_pin(mcp23017_handle_t dev);
 uint16_t iot_mcp23017_get_int_flag(mcp23017_handle_t dev);
 
 /**
- * @brief Check device Present
+ * @brief   Check device Present
  *
- * @param dev object handle of MCP23017
+ * @param   dev object handle of MCP23017
  *
  * @return
  *     - ESP_OK Success
@@ -227,11 +252,11 @@ uint16_t iot_mcp23017_get_int_flag(mcp23017_handle_t dev);
 esp_err_t iot_mcp23017_check_present(mcp23017_handle_t dev);
 
 /**
- * @brief Set MCP23017 GPIOA/GPIOB Mirror:1:Interrupt inconnect; 0:not connect.
+ * @brief   Set MCP23017 GPIOA/GPIOB Mirror:1:Interrupt inconnect; 0:not connect.
  *
- * @param dev object handle of MCP23017
- * @param whether set up mirror interrupt
- * @param select GPIOA/GPIOB
+ * @param   dev object handle of MCP23017
+ * @param   mirror whether set up mirror interrupt
+ * @param   gpio select GPIOA/GPIOB
  *
  * @return
  *     - ESP_OK Success
@@ -241,10 +266,11 @@ esp_err_t iot_mcp23017_mirror_interrupt(mcp23017_handle_t dev, uint8_t mirror,
         mcp23017_gpio_t gpio);
 
 /**
- * @brief write output value of GPIOA,(work in output)
+ * @brief   write output value of GPIOA,(work in output)
  *
- * @param dev object handle of MCP23017
- * @param value of GPIOA
+ * @param   dev object handle of MCP23017
+ * @param   value value of GPIOX
+ * @param   gpio GPIO of mcp23017
  *
  * @return
  *     - ESP_OK Success
@@ -254,20 +280,22 @@ esp_err_t iot_mcp23017_write_io(mcp23017_handle_t dev, uint8_t value,
         mcp23017_gpio_t gpio);
 
 /**
- * @brief read value of REG_GPIOA/REG_GPIOB;Reflects the logic level on pin <7: 0>
+ * @brief   read value of REG_GPIOA/REG_GPIOB;Reflects the logic level on pin <7: 0>
  *
- * @param dev object handle of MCP23017
+ * @param   dev object handle of MCP23017
+ * @param   gpio GPIO of mcp23017
  *
  * @return
- *     - uint8_t
+ *     - uint8_t value of level
  */
 uint8_t iot_mcp23017_read_io(mcp23017_handle_t dev, mcp23017_gpio_t gpio);
 
 /**
- * @brief set Direction of GPIOA;Set the logic level on pin <7: 0>
+ * @brief   set Direction of GPIOA;Set the logic level on pin <7: 0>
  *
- * @param dev object handle of MCP23017
- * @param value of GPIOA
+ * @param   dev object handle of MCP23017
+ * @param   value value of GPIOX
+ * @param   gpio GPIO of mcp23017
  *
  * @return
  *     - ESP_OK Success
@@ -302,19 +330,20 @@ private:
     CMCP23017& operator =(const CMCP23017&);
 public:
     /**
-     * @brief constructor of CMCP23017
+     * @brief   constructor of CMCP23017
      *
-     * @param p_i2c_bus pointer to CI2CBus object
-     * @param addr slave device address
+     * @param   p_i2c_bus pointer to CI2CBus object
+     * @param   addr slave device address
      */
     CMCP23017(CI2CBus *p_i2c_bus, uint8_t addr = MCP23017_I2C_ADDRESS_DEFAULT);
 
     ~CMCP23017();
 
     /**
-     * @brief set Direction of GPIOA;Set the logic level on pin <7: 0>
+     * @brief   set Direction of GPIOA;Set the logic level on pin <7: 0>
      *
-     * @param value of GPIOA
+     * @param   value of GPIOA
+     * @param   gpio GPIO of mcp23017
      *
      * @return
      *     - ESP_OK Success
@@ -323,9 +352,10 @@ public:
     esp_err_t set_iodirection(uint8_t value, mcp23017_gpio_t gpio);
 
     /**
-     * @brief set output value of GPIOA,(work in output)
+     * @brief   set output value of GPIOA,(work in output)
      *
-     * @param value of GPIOA
+     * @param   value value of GPIOA
+     * @param   gpio GPIO of mcp23017
      *
      * @return
      *     - ESP_OK Success
@@ -334,9 +364,9 @@ public:
     esp_err_t write_ioport(uint8_t value, mcp23017_gpio_t gpio);
 
     /**
-     * @brief read value of REG_GPIOA/REG_GPIOB;Reflects the logic level on pin <7: 0>
+     * @brief   read value of REG_GPIOA/REG_GPIOB;Reflects the logic level on pin <7: 0>
      *
-     * @param gpio:select GPIOA/GPIOB
+     * @param   gpio select GPIOA/GPIOB
      *
      * @return
      *     - uint8_t
@@ -344,10 +374,10 @@ public:
     uint8_t read_ioport(mcp23017_gpio_t gpio);
 
     /**
-     * @brief Set MCP23017 GPIOA/GPIOB Mirror:1:Interrupt inconnect; 0:not connect.
+     * @brief   Set MCP23017 GPIOA/GPIOB Mirror:1:Interrupt inconnect; 0:not connect.
      *
-     * @param whether set up mirror interrupt
-     * @param select GPIOA/GPIOB
+     * @param   mirror whether set up mirror interrupt
+     * @param   gpio select GPIOA/GPIOB
      *
      * @return
      *     - ESP_OK Success
@@ -356,10 +386,9 @@ public:
     esp_err_t mirror_interrupt(uint8_t mirror, mcp23017_gpio_t gpio);
 
     /**
-     * @brief Set MCP23017 pin pullup
+     * @brief   Set MCP23017 pin pullup
      *
-     * @param dev object handle of MCP23017
-     * @param pin of pullup
+     * @param   pins pin of pullup
      *
      * @return
      *     - ESP_OK Success
@@ -368,11 +397,13 @@ public:
     esp_err_t set_pullups(uint16_t pins);
 
     /**
-     * @brief Set MCP23017 interrupt pin,
+     * @brief   Set MCP23017 interrupt pin,
      *          Only in GPIO work in INPUT mode,
      *              Default:compare last value,
      *
-     * @param pin of interrupt
+     * @param   pins pin of interrupt
+     * @param   isDefault whether select default value
+     * @param   defaultValue default value
      *
      * @return
      *     - ESP_OK Success
@@ -382,9 +413,9 @@ public:
             uint16_t defaultValue);
 
     /**
-     * @brief Delete MCP23017 interrupt pin,
+     * @brief   Delete MCP23017 interrupt pin,
      *
-     * @param pin of interrupt
+     * @param   pins pin of interrupt
      *
      * @return
      *     - ESP_OK Success
@@ -393,32 +424,32 @@ public:
     esp_err_t disable_interrupt_pins(uint16_t pins);
 
     /**
-     * @brief gets the interrupt capture values for pins with interrupts enabled,
-     * 			and gpio values for the ones that aren't.
-     * 			clear interrupt flag
+     * @brief   gets the interrupt capture values for pins with interrupts enabled,
+     *          and gpio values for the ones that aren't.
+     *          clear interrupt flag
      *
      * @return
      *     - ESP_OK Success
      *     - ESP_FAIL Fail
      */
-    uint16_t get_intpin_values();
+    uint16_t get_intpin_values(void);
 
     /**
-     * @brief get interrupt flag of GPIOA
+     * @brief   get interrupt flag of GPIOA
      *
      * @return
      *     - value of GPIOA interrupt flag
      */
-    uint16_t get_intflag_values();
+    uint16_t get_intflag_values(void);
 
     /**
-     * @brief Check device Present
+     * @brief   Check device Present
      *
      * @return
      *     - ESP_OK Success
      *     - ESP_FAIL Fail
      */
-    esp_err_t check_device_present();
+    esp_err_t check_device_present(void);
 };
 #endif
 
