@@ -29,6 +29,45 @@
 
 ---
 
+## Build system and dependency
+
+* We can regard IoT solution project as a platform that contains different device drivers and features
+* `Add-on project`: If you want to use those drivers and build your project base on the framework, you need to include the IoT components into your project.
+
+	```
+PROJECT_NAME := empty_project
+#If IOT_SOLUTION_PATH is not defined, use relative path as default value
+IOT_SOLUTION_PATH ?= $(abspath $(shell pwd)/../../)
+include $(IOT_SOLUTION_PATH)/Makefile
+include $(IDF_PATH)/make/project.mk
+```
+  As we can see, in the Makefile of your project, you need to include the Makefile under $(IOT_SOLUTION_PATH) directory so that the build system can involve all the components and drivers you need.
+
+  `Note: In this way, the build system will replace the IDF_PATH with the directory of idf repository in submodule during the build process.`
+ 
+  If you don't want the replacement to happen(which means to use the ESP_IDF value from your system environment), you can modify as the following Makefile does:
+  
+  	```
+PROJECT_NAME := empty_project
+#If IOT_SOLUTION_PATH is not defined, use relative path as default value
+IOT_SOLUTION_PATH ?= $(abspath $(shell pwd)/../../)
+include $(IOT_SOLUTION_PATH)/components/component_conf.mk
+include $(IDF_PATH)/make/project.mk
+```
+* `Stand-alone component`: if you just want to pick one of the component and put it into your existing project, you just need to copy the single component to your project components directory. But you can also append the component list in your project Makefile like this:
+
+   ```
+   EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/the_one_you_want_to_use
+   ```
+* `Components control`: Usually we don't need all the device drivers to be compiled into our project, we can choose the necessary ones in menuconfig:
+
+    ```
+    make menuconfig --> IoT Solution settings --> IoT Components Management 
+    ```
+    Those components that not enabled, will not be compiled into the project, which alos means, you need to enable the components you would like to use.
+
+---
+
 ## Framework structure
 * `components`
     * small drivers of different divices like button and LED
@@ -40,12 +79,6 @@
     * Instruction of some different solutions
 * `Examples`:
     * Example project using this framework
-* `Platforms`:
-    * Platforms
-    * Cloud services 
-* `Products`:
-    * Product that combined by different components
-    * For example, a Switch product consists of button, relay, etc.
 * `Submodule`:
     * esp-idf works as submodule here
 * `tools`:
@@ -59,10 +92,14 @@
 ├── components
 ├── documents
 ├── examples
+│   └── check_pedestrian_flow
+│   └── empty_project
+│   └── eth2wifi
+│   └── oled_screen_module
 │   └── smart_device
-├── platforms
-├── products
-├── sdkconfig
+│   └── touch_pad_evb
+│   └── ulp_rtc_gpio
+│   └── ulp_watering_device
 ├── submodule
 │   └── esp-idf
 └── tools
@@ -108,7 +145,6 @@ Exit miniterm by typing Ctrl-].
 	* Use the default sdkconfig and compile unit-test-app by `make IOT_TEST_ALL=1 -j8`
 	
 	    ```
-	    cp sdkconfig.default sdkconfig
 	    make defconfig
 	    make IOT_TEST_ALL=1
 	    ```
@@ -142,10 +178,10 @@ Exit miniterm by typing Ctrl-].
 ## <h2 id="example">Example</h2>
 [back to top](#preparation)
 
-* To run the Examples project, follow the steps below:
+* To run the Examples projects, follow the steps below:
     * Change the directory to example 
     * choose one example project you want to run, we take smart_device here.
-    * Change the directory to smart_device under example
+    * Change the directory to the example project under example directory, take smart_device example as example here:
         
         ```
         cd YOUR_IOT_SOLUTION_PATH/example/smart_device
@@ -154,11 +190,10 @@ Exit miniterm by typing Ctrl-].
     * Run `make menuconfig` to set the project parameters in 
     
         ```
-        make menuconfig --> component config --> IoT Example - smart_device
+        make menuconfig --> IoT Example - smart_device
         ```
     
     * Run `make` to compile the project, or `make flash` to compile and flash the module.
-* Follow the instructions in `wiki/example_smart_device.md`
 
 ---
 
@@ -183,5 +218,16 @@ Exit miniterm by typing Ctrl-].
 * [Low power / deep sleep / co-processor solution](documents/low_power_solution)
 * [Touch sensor solution and application note](documents/touch_pad_solution)
 * [Security solution and factory flow](documents/security_solution)
+
+## Example list:
+* [check_pedestrian_flow](examples/check_pedestrian_flow)
+* [empty_project](examples/empty_project)
+* [eth2wifi](examples/eth2wifi)
+* [oled_screen_module](examples/oled_screen_module)
+* [smart_device](examples/smart_device)
+* [touch_pad_evb](examples/touch_pad_evb)
+* [ulp_rtc_gpio](examples/ulp_rtc_gpio)
+* [ulp_watering_device](examples/ulp_watering_device)
+
 
 

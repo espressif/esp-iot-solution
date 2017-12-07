@@ -3,13 +3,15 @@
 #
 # (Uses default behaviour of compiling all source files in directory, adding 'include' to include path.)
 
-EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/__config
-EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/features
-EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/general
-EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/wifi
-EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/spi_devices
-EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/i2c_devices
-EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/i2c_devices/sensor
-EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/i2c_devices/others
-EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/network
-EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/platforms
+IOT_COMPONENT_DIRS := $(IOT_SOLUTION_PATH)/components/__config
+IOT_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/features
+IOT_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/general
+IOT_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/wifi
+IOT_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/spi_devices
+IOT_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/i2c_devices
+IOT_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/i2c_devices/sensor
+IOT_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/i2c_devices/others
+IOT_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/network
+IOT_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/platforms
+
+EXTRA_COMPONENT_DIRS += $(IOT_COMPONENT_DIRS)

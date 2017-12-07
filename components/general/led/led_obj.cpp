@@ -22,8 +22,6 @@
  *
  */
 #include "sdkconfig.h"
-
-#if CONFIG_STATUS_LED_ENABLE
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
@@ -132,4 +130,3 @@ uint8_t CLED::night_duty_read()
     return iot_led_night_duty_read();
 }
 
-#endif
