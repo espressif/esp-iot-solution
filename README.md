@@ -20,6 +20,7 @@
     ```
     export IOT_SOLUTION_PATH=~/esp/esp-iot-solution
     ```
+
 * esp-iot-solution project will over `write` the `IDF_PATH` to the submodule in makefile by default
 * You can refer to the Makefile in example if you want to build your own application.
 * To run the example project, please refer to:
@@ -34,13 +35,13 @@
 * We can regard IoT solution project as a platform that contains different device drivers and features
 * `Add-on project`: If you want to use those drivers and build your project base on the framework, you need to include the IoT components into your project.
 
-	```
-PROJECT_NAME := empty_project
-#If IOT_SOLUTION_PATH is not defined, use relative path as default value
-IOT_SOLUTION_PATH ?= $(abspath $(shell pwd)/../../)
-include $(IOT_SOLUTION_PATH)/Makefile
-include $(IDF_PATH)/make/project.mk
-```
+    ```
+    PROJECT_NAME := empty_project
+    #If IOT_SOLUTION_PATH is not defined, use relative path as default value
+    IOT_SOLUTION_PATH ?= $(abspath $(shell pwd)/../../)
+    include $(IOT_SOLUTION_PATH)/Makefile
+    include $(IDF_PATH)/make/project.mk
+    ```
 
     As we can see, in the Makefile of your project, you need to include the Makefile under $(IOT_SOLUTION_PATH) directory so that the build system can involve all the components and drivers you need.
 
@@ -48,13 +49,14 @@ include $(IDF_PATH)/make/project.mk
 
     If you don't want the replacement to happen(which means to use the ESP_IDF value from your system environment), you can modify as the following Makefile does:
   
-  	```
-PROJECT_NAME := empty_project
-#If IOT_SOLUTION_PATH is not defined, use relative path as default value
-IOT_SOLUTION_PATH ?= $(abspath $(shell pwd)/../../)
-include $(IOT_SOLUTION_PATH)/components/component_conf.mk
-include $(IDF_PATH)/make/project.mk
-```
+    ```
+    PROJECT_NAME := empty_project
+    #If IOT_SOLUTION_PATH is not defined, use relative path as default value
+    IOT_SOLUTION_PATH ?= $(abspath $(shell pwd)/../../)
+    include $(IOT_SOLUTION_PATH)/components/component_conf.mk
+    include $(IDF_PATH)/make/project.mk
+    ```
+
 * `Stand-alone component`: if you just want to pick one of the component and put it into your existing project, you just need to copy the single component to your project components directory. But you can also append the component list in your project Makefile like this:
 
     ```
@@ -88,24 +90,24 @@ include $(IDF_PATH)/make/project.mk
     * unit-test project
 
     ```
-├── Makefile
-├── README.md
-├── components
-├── documents
-├── examples
-│   └── check_pedestrian_flow
-│   └── empty_project
-│   └── eth2wifi
-│   └── oled_screen_module
-│   └── smart_device
-│   └── touch_pad_evb
-│   └── ulp_rtc_gpio
-│   └── ulp_watering_device
-├── submodule
-│   └── esp-idf
-└── tools
-    └── unit-test-app
-```
+    ├── Makefile
+    ├── README.md
+    ├── components
+    ├── documents
+    ├── examples
+    │   └── check_pedestrian_flow
+    │   └── empty_project
+    │   └── eth2wifi
+    │   └── oled_screen_module
+    │   └── smart_device
+    │   └── touch_pad_evb
+    │   └── ulp_rtc_gpio
+    │   └── ulp_watering_device
+    ├── submodule
+    │   └── esp-idf
+    └── tools
+        └── unit-test-app
+    ```
 
 
 
@@ -136,42 +138,42 @@ Exit miniterm by typing Ctrl-].
 ## <h2 id="unit-test">Unit-test</h2>
 [back to top](#preparation)
 
-* To use uint-test, follow these steps:
-	* Change to the directory of unit-test-app
+### To use uint-test, follow these steps:
+* Change to the directory of unit-test-app
+
+    ```
+    cd YOUR_IOT_SOLUTION_PATH/tools/unit-test-app
+    ```
 	
-	    ```
-	    cd YOUR_IOT_SOLUTION_PATH/tools/unit-test-app
-	    ```
-	
-	* Use the default sdkconfig and compile unit-test-app by `make IOT_TEST_ALL=1 -j8`
-	
-	    ```
-	    make defconfig
-	    make IOT_TEST_ALL=1
-	    ```
-	
-	* Flash the images by `make flash`
-	
-	    ```
-	    make IOT_TEST_ALL=1 flash
-	    ```
-	
-	* Reset the chip and see the uart log using an uart tool such as minicom
-	* All kinds of components will be shown by uart
-	
-	    ```
-	    Here's the test menu, pick your combo:
-            (1)     "Sensor BH1750 test" [bh1750][iot][sensor]
-            (2)     "Button test" [button][iot]
-            (3)     "Button cpp test" [button_cpp][iot]
-            (4)     "Dac audio test" [dac_audio][iot][audio]
-            (5)     "Debug cmd test" [debug][iot]
-            (6)     "Deep sleep gpio test" [deep_sleep][rtc_gpio][current][iot]
-            (7)     "Deep sleep touch test" [deep_sleep][touch][current][iot]
-            ......
-	    ```
-	
-	* You need to send the index of the unit you want to test by uart. Test code of the unit you select will be run
+* Use the default sdkconfig and compile unit-test-app by `make IOT_TEST_ALL=1 -j8`
+
+    ```
+    make defconfig
+    make IOT_TEST_ALL=1
+    ```
+
+* Flash the images by `make flash`
+
+    ```
+    make IOT_TEST_ALL=1 flash
+    ```
+
+* Reset the chip and see the uart log using an uart tool such as minicom
+* All kinds of components will be shown by uart
+
+    ```
+    Here's the test menu, pick your combo:
+    (1)     "Sensor BH1750 test" [bh1750][iot][sensor]
+    (2)     "Button test" [button][iot]
+    (3)     "Button cpp test" [button_cpp][iot]
+    (4)     "Dac audio test" [dac_audio][iot][audio]
+    (5)     "Debug cmd test" [debug][iot]
+    (6)     "Deep sleep gpio test" [deep_sleep][rtc_gpio][current][iot]
+    (7)     "Deep sleep touch test" [deep_sleep][touch][current][iot]
+     ......
+    ```
+
+* You need to send the index of the unit you want to test by uart. Test code of the unit you select will be run
 
 
 ---
@@ -179,22 +181,22 @@ Exit miniterm by typing Ctrl-].
 ## <h2 id="example">Example</h2>
 [back to top](#preparation)
 
-* To run the Examples projects, follow the steps below:
-    * Change the directory to example 
-    * choose one example project you want to run, we take smart_device here.
-    * Change the directory to the example project under example directory, take smart_device example as example here:
+### To run the Examples projects, follow the steps below:
+* Change the directory to example 
+* choose one example project you want to run, we take smart_device here.
+* Change the directory to the example project under example directory, take smart_device example as example here:
         
-        ```
-        cd YOUR_IOT_SOLUTION_PATH/example/smart_device
-        ```
+    ```
+    cd YOUR_IOT_SOLUTION_PATH/example/smart_device
+    ```
        
-    * Run `make menuconfig` to set the project parameters in 
+* Run `make menuconfig` to set the project parameters in 
     
-        ```
-        make menuconfig --> IoT Example - smart_device
-        ```
+    ```
+    make menuconfig --> IoT Example - smart_device
+    ```
     
-    * Run `make` to compile the project, or `make flash` to compile and flash the module.
+* Run `make` to compile the project, or `make flash` to compile and flash the module.
 
 ---
 
