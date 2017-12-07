@@ -23,8 +23,6 @@
   */
 
 #include "sdkconfig.h"
-#if CONFIG_POWER_METER_ENABLE
-
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -343,5 +341,3 @@ uint32_t iot_powermeter_read(pm_handle_t pm_handle, pm_value_type_t value_type)
     }
     return 0;
 }
-
-#endif

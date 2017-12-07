@@ -26,8 +26,6 @@
 #define _IOT_POWER_METER_H_
 
 #include "sdkconfig.h"
-#if CONFIG_POWER_METER_ENABLE
-
 #include "esp_system.h"
 #include "driver/pcnt.h"
 
@@ -162,6 +160,5 @@ public:
      */
     esp_err_t change_mode(pm_mode_t mode);
 };
-#endif
 #endif
 #endif

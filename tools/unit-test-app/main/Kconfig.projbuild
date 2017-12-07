@@ -1,5 +1,5 @@
 menu "IoT unit-test settings"
-    menu "TCP testcase"
+    menu "WiFi config"
         config AP_SSID
             string "Enter SSID of router to connect to"
             default ""
@@ -11,6 +11,17 @@ menu "IoT unit-test settings"
             default ""
             help
                 "Enter PASSWORD of router to connect to"
+    endmenu
+    
+    menu "MQTT testcase"
+        config MQTT_BROKER_ADDR
+            string "Enter MQTT broker address"
+            default "192.168.1.1"
+            help
+                "Enter the address of MQTT broker"
+    endmenu       
+
+    menu "TCP testcase"
         config TCP_SERVER_MAX_CONNECTION
             int "Set max connection number for TCP server"
             default 10

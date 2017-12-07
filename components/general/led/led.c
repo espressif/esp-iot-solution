@@ -23,9 +23,6 @@
   */
 #include <stdio.h>
 #include "sdkconfig.h"
-
-#if CONFIG_STATUS_LED_ENABLE
-
 #include "driver/ledc.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -224,5 +221,4 @@ led_mode_t iot_led_mode_read(led_handle_t led_handle)
     return led_dev->mode;
 }
 
-#endif
 

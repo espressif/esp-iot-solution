@@ -24,10 +24,7 @@
 
 #ifndef _IOT_LED_H_
 #define _IOT_LED_H_
-
 #include "sdkconfig.h"
-
-#if CONFIG_STATUS_LED_ENABLE
 #include "esp_err.h"
 
 
@@ -324,9 +321,5 @@ public:
 
     virtual ~CLED();
 };
-
 #endif
-
-#endif
-
 #endif

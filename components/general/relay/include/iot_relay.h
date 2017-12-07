@@ -24,11 +24,7 @@
 
 #ifndef _IOT_RELAY_H_
 #define _IOT_RELAY_H_
-
 #include "sdkconfig.h"
-
-#if CONFIG_RELAY_ENABLE
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -184,7 +180,4 @@ public:
 };
 
 #endif
-
-#endif
-
 #endif

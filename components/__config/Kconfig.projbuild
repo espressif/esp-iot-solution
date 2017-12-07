@@ -1,0 +1,545 @@
+menu "IoT Solution settings"
+    menu "IoT Components Management"
+        menu "General functions"
+            config IOT_DAC_AUDIO_ENABLE
+                bool "DAC_AUDIO_ENABLE(Built-in DAC)"
+                default y
+                help
+                    "Select this one to enable audio DAC component"
+            config IOT_TOUCH_ENABLE
+                bool "TOUCH_DEVICE_ENABLE(based on touch sensor)"
+                default y
+                help
+                    "Select this one to enable touch device component"
+            config IOT_ULP_ENABLE
+                bool "ULP_MONITOR_DEVICE_ENABLE"
+                default n
+                help
+                    "Select this one to enable ULP monitor device"
+            config IOT_BUTTON_ENABLE
+                bool "BUTTON_DEVICE_ENABLE"
+                default y
+                help
+                    "Select this one to enable button device"
+            config IOT_DEBUG_ENABLE
+                bool "DEBUG_COMPONENT_ENABLE"
+                default n
+                help
+                    "Select this one to enable common debug function"
+            config IOT_LED_ENABLE
+                bool "LED_DEVICE_ENABLE"
+                default y
+                help
+                    "Select this one to enable LED device"
+                menu "Status LED"
+                    depends on IOT_LED_ENABLE
+                    config STATUS_LED_QUICK_BLINK_FREQ
+                        int "Quick blink frequency(Hz)"
+                        range 1 20
+                        default 5
+                    config STATUS_LED_SLOW_BLINK_FREQ
+                        int "Slow blink frequency(Hz)"
+                        range 1 20
+                        default 1
+                    
+                    choice STATUS_LED_SPEED_MODE_CHOICE
+                        bool "LEDC speed mode"
+                        default USE_LEDC_HIGHSPEED_MODE
+                        config USE_LEDC_HIGHSPEED_MODE
+                            bool "Select LEDC high-speed mode for status LED"
+                        config USE_LEDC_LOWSPEED_MODE
+                            bool "Select LEDC low-speed mode for status LED" 
+                    endchoice
+                    config STATUS_LED_SPEED_MODE
+                        int
+                        default 0 if USE_LEDC_HIGHSPEED_MODE
+                        default 1 if USE_LEDC_LOWSPEED_MODE
+                        
+                    # -------------- led quick blink config ---------------
+                        
+                    choice STATUS_LED_QUICK_BLINK_CHANNEL_CHOICE
+                        bool  "Status LED quick blink channel"
+                        default STATUS_LED_QUICK_BLINK_CHANNEL_0
+                        
+                        config STATUS_LED_QUICK_BLINK_CHANNEL_0
+                            bool "channel 0"
+                        config STATUS_LED_QUICK_BLINK_CHANNEL_1
+                            bool "channel 1"
+                        config STATUS_LED_QUICK_BLINK_CHANNEL_2
+                            bool "channel 2"                
+                        config STATUS_LED_QUICK_BLINK_CHANNEL_3
+                            bool "channel 3"                
+                        config STATUS_LED_QUICK_BLINK_CHANNEL_4
+                            bool "channel 4"                
+                        config STATUS_LED_QUICK_BLINK_CHANNEL_5
+                            bool "channel 5"
+                        config STATUS_LED_QUICK_BLINK_CHANNEL_6
+                            bool "channel 6"                
+                        config STATUS_LED_QUICK_BLINK_CHANNEL_7
+                            bool "channel 7" 
+                        config STATUS_LED_QUICK_BLINK_CHANNEL_DEF
+                            bool "channel default(0)"                                 
+                    endchoice
+                    config STATUS_LED_QUICK_BLINK_CHANNEL
+                        int 
+                        default 0 if STATUS_LED_QUICK_BLINK_CHANNEL_0
+                        default 1 if STATUS_LED_QUICK_BLINK_CHANNEL_1
+                        default 2 if STATUS_LED_QUICK_BLINK_CHANNEL_2
+                        default 3 if STATUS_LED_QUICK_BLINK_CHANNEL_3
+                        default 4 if STATUS_LED_QUICK_BLINK_CHANNEL_4
+                        default 5 if STATUS_LED_QUICK_BLINK_CHANNEL_5
+                        default 6 if STATUS_LED_QUICK_BLINK_CHANNEL_6
+                        default 7 if STATUS_LED_QUICK_BLINK_CHANNEL_7
+                        default 0 if STATUS_LED_QUICK_BLINK_CHANNEL_DEF
+                    
+                    choice STATUS_LED_QUICK_BLINK_TIMER_CHOICE
+                        bool  "Status LED quick blink timer"
+                        default STATUS_LED_QUICK_BLINK_TIMER_0
+                        
+                        config STATUS_LED_QUICK_BLINK_TIMER_0
+                            bool "TIMER 0"
+                        config STATUS_LED_QUICK_BLINK_TIMER_1
+                            bool "TIMER 1"
+                        config STATUS_LED_QUICK_BLINK_TIMER_2
+                            bool "TIMER 2"                
+                        config STATUS_LED_QUICK_BLINK_TIMER_3
+                            bool "TIMER 3"       
+                        config STATUS_LED_QUICK_BLINK_TIMER_DEF
+                            bool "TIMER default(0)"                                            
+                    endchoice
+                    config STATUS_LED_QUICK_BLINK_TIMER
+                        int 
+                        default 0 if STATUS_LED_QUICK_BLINK_TIMER_0
+                        default 1 if STATUS_LED_QUICK_BLINK_TIMER_1
+                        default 2 if STATUS_LED_QUICK_BLINK_TIMER_2
+                        default 3 if STATUS_LED_QUICK_BLINK_TIMER_3
+                        default 0 if STATUS_LED_QUICK_BLINK_TIMER_DEF
+                    
+                    
+                        
+                    # --------------- led slow blink config ----------------
+                    
+                    choice STATUS_LED_SLOW_BLINK_CHANNEL_CHOICE
+                        bool  "Status LED slow blink channel"
+                        default STATUS_LED_SLOW_BLINK_CHANNEL_1
+                        
+                        config STATUS_LED_SLOW_BLINK_CHANNEL_0
+                            bool "channel 0"
+                        config STATUS_LED_SLOW_BLINK_CHANNEL_1
+                            bool "channel 1"
+                        config STATUS_LED_SLOW_BLINK_CHANNEL_2
+                            bool "channel 2"                
+                        config STATUS_LED_SLOW_BLINK_CHANNEL_3
+                            bool "channel 3"                
+                        config STATUS_LED_SLOW_BLINK_CHANNEL_4
+                            bool "channel 4"                
+                        config STATUS_LED_SLOW_BLINK_CHANNEL_5
+                            bool "channel 5"
+                        config STATUS_LED_SLOW_BLINK_CHANNEL_6
+                            bool "channel 6"                
+                        config STATUS_LED_SLOW_BLINK_CHANNEL_7
+                            bool "channel 7"  
+                        config STATUS_LED_SLOW_BLINK_CHANNEL_DEF
+                            bool "channel default(1)"                                                  
+                    endchoice
+                    config STATUS_LED_SLOW_BLINK_CHANNEL
+                        int 
+                        default 0 if STATUS_LED_SLOW_BLINK_CHANNEL_0
+                        default 1 if STATUS_LED_SLOW_BLINK_CHANNEL_1
+                        default 2 if STATUS_LED_SLOW_BLINK_CHANNEL_2
+                        default 3 if STATUS_LED_SLOW_BLINK_CHANNEL_3
+                        default 4 if STATUS_LED_SLOW_BLINK_CHANNEL_4
+                        default 5 if STATUS_LED_SLOW_BLINK_CHANNEL_5
+                        default 6 if STATUS_LED_SLOW_BLINK_CHANNEL_6
+                        default 7 if STATUS_LED_SLOW_BLINK_CHANNEL_7   
+                        default 1 if STATUS_LED_SLOW_BLINK_CHANNEL_DEF
+                         
+                    choice STATUS_LED_SLOW_BLINK_TIMER_CHOICE
+                        bool  "Status LED slow blink timer"
+                        default STATUS_LED_SLOW_BLINK_TIMER_1
+                        
+                        config STATUS_LED_SLOW_BLINK_TIMER_0
+                            bool "TIMER 0"
+                        config STATUS_LED_SLOW_BLINK_TIMER_1
+                            bool "TIMER 1"
+                        config STATUS_LED_SLOW_BLINK_TIMER_2
+                            bool "TIMER 2"                
+                        config STATUS_LED_SLOW_BLINK_TIMER_3
+                            bool "TIMER 3"     
+                        config STATUS_LED_SLOW_BLINK_TIMER_DEF
+                            bool "TIMER default(1)"                                              
+                    endchoice
+                    config STATUS_LED_SLOW_BLINK_TIMER
+                        int 
+                        default 0 if STATUS_LED_SLOW_BLINK_TIMER_0
+                        default 1 if STATUS_LED_SLOW_BLINK_TIMER_1
+                        default 2 if STATUS_LED_SLOW_BLINK_TIMER_2
+                        default 3 if STATUS_LED_SLOW_BLINK_TIMER_3   
+                        default 1 if STATUS_LED_SLOW_BLINK_TIMER_DEF   
+                        
+                                 
+                    # ---------------- led night mode config ------------------
+                    
+                    config STATUS_LED_NIGHT_MODE_ENABLE
+                        bool "Status LED night mode enable"
+                        default y
+                        
+                        choice STATUS_LED_NIGHT_MODE_CHANNEL_CHOICE
+                            bool  "Status LED night mode channel"
+                            default STATUS_LED_NIGHT_MODE_CHANNEL_2
+                            depends on STATUS_LED_NIGHT_MODE_ENABLE
+                            
+                            config STATUS_LED_NIGHT_MODE_CHANNEL_0
+                                bool "channel 0"
+                            config STATUS_LED_NIGHT_MODE_CHANNEL_1
+                                bool "channel 1"
+                            config STATUS_LED_NIGHT_MODE_CHANNEL_2
+                                bool "channel 2"                
+                            config STATUS_LED_NIGHT_MODE_CHANNEL_3
+                                bool "channel 3"                
+                            config STATUS_LED_NIGHT_MODE_CHANNEL_4
+                                bool "channel 4"                
+                            config STATUS_LED_NIGHT_MODE_CHANNEL_5
+                                bool "channel 5"
+                            config STATUS_LED_NIGHT_MODE_CHANNEL_6
+                                bool "channel 6"                
+                            config STATUS_LED_NIGHT_MODE_CHANNEL_7
+                                bool "channel 7"      
+                            config STATUS_LED_NIGHT_MODE_CHANNEL_DEF
+                                bool "channel default(2)"                                                  
+                        endchoice
+                        config STATUS_LED_NIGHT_MODE_CHANNEL
+                            int 
+                            default 0 if STATUS_LED_NIGHT_MODE_CHANNEL_0
+                            default 1 if STATUS_LED_NIGHT_MODE_CHANNEL_1
+                            default 2 if STATUS_LED_NIGHT_MODE_CHANNEL_2
+                            default 3 if STATUS_LED_NIGHT_MODE_CHANNEL_3
+                            default 4 if STATUS_LED_NIGHT_MODE_CHANNEL_4
+                            default 5 if STATUS_LED_NIGHT_MODE_CHANNEL_5
+                            default 6 if STATUS_LED_NIGHT_MODE_CHANNEL_6
+                            default 7 if STATUS_LED_NIGHT_MODE_CHANNEL_7  
+                            default 2 if STATUS_LED_NIGHT_MODE_CHANNEL_DEF
+                        
+                        choice STATUS_LED_NIGHT_MODE_TIMER_CHOICE
+                            bool  "Status LED night mode timer"
+                            default STATUS_LED_NIGHT_MODE_TIMER_2
+                            depends on STATUS_LED_NIGHT_MODE_ENABLE
+                            
+                            config STATUS_LED_NIGHT_MODE_TIMER_0
+                                bool "TIMER 0"
+                            config STATUS_LED_NIGHT_MODE_TIMER_1
+                                bool "TIMER 1"
+                            config STATUS_LED_NIGHT_MODE_TIMER_2
+                                bool "TIMER 2"                
+                            config STATUS_LED_NIGHT_MODE_TIMER_3
+                                bool "TIMER 3"    
+                            config STATUS_LED_NIGHT_MODE_TIMER_DEF
+                                bool "TIMER default(2)"                                                   
+                        endchoice
+                        config STATUS_LED_NIGHT_MODE_TIMER
+                            int 
+                            default 0 if STATUS_LED_NIGHT_MODE_TIMER_0
+                            default 1 if STATUS_LED_NIGHT_MODE_TIMER_1
+                            default 2 if STATUS_LED_NIGHT_MODE_TIMER_2
+                            default 3 if STATUS_LED_NIGHT_MODE_TIMER_3  
+                            default 2 if STATUS_LED_NIGHT_MODE_TIMER_DEF  
+                endmenu  
+                
+                
+            config IOT_LIGHT_ENABLE
+                bool "LIGHT_DEVICE_ENABLE"
+                default y
+                help
+                    "Select this one to enable LIGHT device"
+            config IOT_OTA_FUNC_ENABLE
+                bool "OTA_FUNC_ENABLE"
+                default n
+                help
+                    "Select this one to enable OTA FUNC"   
+            config IOT_PARAM_ENABLE
+                bool "PARAM_FUNC_ENABLE"
+                default n
+                help
+                    "Select this one to enable PARAM FUNC"   
+            config IOT_POWER_METER_ENABLE
+                bool "POWER_METER_ENABLE"
+                default n
+                help
+                    "Select this one to enable power meter component"   
+                    
+                menu "Power meter"
+                    depends on IOT_POWER_METER_ENABLE        
+            
+                    choice POWER_METER_PCNT_CHANNEL_CHOICE
+                        bool "power meter pcnt channel"
+                        default USE_PCNT_CHANNEL_0
+                        config USE_PCNT_CHANNEL_0
+                            bool "Select PCNT_CHANNEL_0 for power meter"
+                        config USE_PCNT_CHANNEL_1
+                            bool "Select PCNT_CHANNEL_1 for power meter"
+                    endchoice
+                    config POWER_METER_PCNT_CHANNEL
+                        int
+                        default 0 if USE_PCNT_CHANNEL_0
+                        default 1 if USE_PCNT_CHANNEL_1
+                    choice POWER_METER_VALUE_MULTIPLE_CHOICE
+                        bool "To choose different value accuracy"
+                        default VALUW_MULTIPLE_100
+                        config VALUE_MULTIPLE_1
+                            bool "read_value = (int)real_value"
+                        config VALUE_MULTIPLE_10
+                            bool "read_value = (int)(real_value * 10)"
+                        config VALUE_MULTIPLE_100
+                            bool "read_value = (int)(real_value * 100)"
+                    endchoice
+                    config POWER_METER_VALUE_MULTIPLE
+                        int
+                        default 1 if VALUE_MULTIPLE_1
+                        default 10 if VALUE_MULTIPLE_10
+                        default 100 if VALUE_MULTIPLE_100
+                    config POWER_METER_PCNT_FILTER
+                        int "Filter of pcnt channel, counter in APB_CLK cycles (1~1023)"
+                        range 1 1023
+                        default 100
+            
+                    config POWER_METER_ZERO_PERIOD_MS
+                        int "Time(ms) to decide whether measure value is 0 (1000 ~ 10000)"
+                        range 1000 10000
+                        default 5000
+                endmenu
+            config IOT_RELAY_ENABLE
+                bool "RELAY ENABLE"
+                default n
+                help
+                    "Select this one to enable relay component"  
+                menu "Relay"
+                    depends on IOT_RELAY_ENABLE
+                    config DFLIPFLOP_CLK_PERIOD_US
+                        int "Dflipflop clock period us (2~1000)"
+                        range 2 1000
+                        default 500
+                endmenu
+                
+                                  
+            config IOT_WEEKLY_TIMER_ENABLE
+                bool "WEEKLY TIMER ENABLE"
+                default n
+                help
+                    "Select this one to enable weekly timer component"                      
+                    
+        endmenu
+        
+        menu "I2C devices"
+            config IOT_APDS9960_ENABLE
+                bool "APDS9960 ENABLE"
+                default y
+                help
+                    "Select this one to enable APDS9960 device"   
+            config IOT_AT24C02_ENABLE
+                bool "AT24C02 ENABLE"
+                default y
+                help
+                    "Select this one to enable AT24C02 device"
+            config IOT_BME280_ENABLE
+                bool "BME280 ENABLE"
+                default y
+                help
+                    "Select this one to enable BME280 device"                    
+            config IOT_CH450_ENABLE
+                bool "CH450 ENABLE"
+                default y
+                help
+                    "Select this one to enable CH450 device"                      
+            config IOT_IS31FL3XXX_ENABLE
+                bool "IS31FL3XXX ENABLE"
+                default y
+                help
+                    "Select this one to enable IS31FL3XXX device"                       
+            config IOT_MCP23017_ENABLE
+                bool "MCP23017 ENABLE"
+                default y
+                help
+                    "Select this one to enable MCP23017 device"                   
+            config IOT_OLED_ENABLE
+                bool "OLED_DEV_ENABLE(SSD1306)"
+                default y
+                help
+                    "Select this one to enable OLED device component"
+                menu "OLED device"
+                    depends on OLED_ENABLE 
+                endmenu     
+                
+            #------------------
+            #--  I2C sensor --- 
+            #------------------            
+            config IOT_BH1750_ENABLE
+                bool "SENSOR_BH1750_ENABLE"
+                default y
+                help
+                    "Select this one to enable BH1750 device component"  
+            config IOT_HTS221_ENABLE
+                bool "SENSOR_HTS221_ENABLE"
+                default y
+                help
+                    "Select this one to enable HTS221 device component"                       
+            config IOT_LIS2DH12_ENABLE
+                bool "SENSOR_LIS2DH12_ENABLE"
+                default y
+                help
+                    "Select this one to enable LIS2DH12 device component"                      
+            config IOT_MVH3004D_ENABLE
+                bool "SENSOR_MVH3004D_ENABLE"
+                default y
+                help
+                    "Select this one to enable MVH3004D device component"                     
+
+        endmenu
+        
+        menu "SPI devices"
+            config IOT_LCD_ENABLE
+                bool "SPI_LCD_ENABLE"
+                default y
+                help
+                    "Select this one to enable SPI LCD device" 
+            config IOT_EINK_ENABLE
+                bool "SPI_E-INK_ENABLE"
+                default y
+                help
+                    "Select this one to enable SPI E-INK SCREEN device"                       
+        endmenu
+        
+        
+        menu "Network and Protocols"
+            #--------------------------------------------
+            #--   beginning of MQTT ---
+            #--------------------------------------------
+            config IOT_MQTT_ENABLE
+                bool "MQTT_ENABLE"
+                default y
+                help
+                    "Select this one to enable MQTT component"  
+            menu "MQTT"
+            depends on IOT_MQTT_ENABLE
+            # This is actually also handled in the ESP32 startup code, not only in FreeRTOS.
+            config MQTT_PROTOCOL_311
+                bool "MQTT Protocol version 3.1.1"
+                default y
+                help
+                    If disable, it will use MQTT protocol version 3.1
+            
+            config MQTT_SECURITY_ON
+                bool "Enable MQTT over SSL"
+                default n
+                help
+                    Enable MQTT Over SSL
+            
+            config MQTT_PRIORITY
+                int "MQTT Task Priority"
+                range 1 15
+                default 5
+            
+            config MQTT_LOG_ERROR_ON
+                bool "Enable MQTT Debug message"
+                default y
+                help
+                    Disable it will redurce memory and run faster
+            config MQTT_LOG_WARN_ON
+                bool "Enable MQTT Warning message"
+                default y
+                help
+                    Disable it will redurce memory and run faster
+            config MQTT_LOG_INFO_ON
+                bool "Enable MQTT Info message"
+                default y
+                help
+                    Disable it will redurce memory and run faster
+            config MQTT_RECONNECT_TIMEOUT
+                int "Reconnect timeout (in second)"
+                range 10 16535
+                default 60
+            
+            config MQTT_QUEUE_BUFFER_SIZE_WORD
+                int "Outbox queue buffer size in word (4 bytes)"
+                range 256 4096
+                default 1024
+            
+            config MQTT_BUFFER_SIZE_BYTE
+                int "Network buffer size for MQTT in byte"
+                range 128 4096
+                default 1024
+            
+            config MQTT_MAX_HOST_LEN
+                int "Maximum host name len - in byte"
+                range 32 256
+                default 64
+            
+            config MQTT_MAX_CLIENT_LEN
+                int "Maximum client id len - in byte"
+                range 4 128
+                default 32
+            
+            config MQTT_MAX_USERNAME_LEN
+                int "Maximum mqtt username len - in byte"
+                range 4 128
+                default 32
+            
+            config MQTT_MAX_PASSWORD_LEN
+                int "Maximum mqtt password len - in byte"
+                range 4 128
+                default 32
+            config MQTT_MAX_LWT_TOPIC
+                int "Maximum mqtt lwt topic len - in byte"
+                range 4 128
+                default 32
+            config MQTT_MAX_LWT_MSG
+                int "Maximum mqtt lwt message len - in byte"
+                range 4 128
+                default 32
+            
+            endmenu
+            #--------------------------------------------
+            #---            END of MQTT               ---
+            #--------------------------------------------
+                        
+            config IOT_TCP_CLASS_ENABLE
+                bool "TCP_CLASS_ENABLE"
+                default y
+                help
+                    "Select this one to enable TCP class component"  
+            config IOT_UDP_CLASS_ENABLE
+                bool "UDP_CLASS_ENABLE"
+                default y
+                help
+                    "Select this one to enable UDP class component"              
+            
+        endmenu
+        
+        menu "Platforms and Clouds"
+            config IOT_ALINK_EMBED_ENABLE
+                bool "ALINK_EMBED_ENABLE"
+                default n
+                help
+                    "Select this one to enable ALINK EMBED component"   
+            config IOT_JOYLINK_ENABLE
+                bool "JOYLINK_ENABLE"
+                default n
+                help
+                    "Select this one to enable JOYLINK component"    
+        endmenu
+        
+        menu "WiFi abstract"
+            config IOT_SMARTCONFIG_ABSTRACT_ENABLE
+                bool "SMARTCONFIG_ABSTRACT_ENABLE"
+                default y
+                help
+                    "Select this one to enable SMARTCONFIG abstract component" 
+            config IOT_WIFI_ABSTRACT_ENABLE
+                bool "WIFI_ABSTRACT_ENABLE"
+                default y
+                help
+                    "Select this one to enable WiFi abstract component"                                  
+        endmenu
+
+    endmenu
+    
+endmenu
