@@ -41,11 +41,12 @@ IOT_SOLUTION_PATH ?= $(abspath $(shell pwd)/../../)
 include $(IOT_SOLUTION_PATH)/Makefile
 include $(IDF_PATH)/make/project.mk
 ```
-  As we can see, in the Makefile of your project, you need to include the Makefile under $(IOT_SOLUTION_PATH) directory so that the build system can involve all the components and drivers you need.
 
-  `Note: In this way, the build system will replace the IDF_PATH with the directory of idf repository in submodule during the build process.`
- 
-  If you don't want the replacement to happen(which means to use the ESP_IDF value from your system environment), you can modify as the following Makefile does:
+    As we can see, in the Makefile of your project, you need to include the Makefile under $(IOT_SOLUTION_PATH) directory so that the build system can involve all the components and drivers you need.
+
+    `Note: In this way, the build system will replace the IDF_PATH with the directory of idf repository in submodule during the build process.`
+
+    If you don't want the replacement to happen(which means to use the ESP_IDF value from your system environment), you can modify as the following Makefile does:
   
   	```
 PROJECT_NAME := empty_project
@@ -56,15 +57,16 @@ include $(IDF_PATH)/make/project.mk
 ```
 * `Stand-alone component`: if you just want to pick one of the component and put it into your existing project, you just need to copy the single component to your project components directory. But you can also append the component list in your project Makefile like this:
 
-   ```
-   EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/the_one_you_want_to_use
-   ```
+    ```
+    EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/the_one_you_want_to_use
+    ```
 * `Components control`: Usually we don't need all the device drivers to be compiled into our project, we can choose the necessary ones in menuconfig:
 
     ```
     make menuconfig --> IoT Solution settings --> IoT Components Management 
     ```
-    Those components that not enabled, will not be compiled into the project, which alos means, you need to enable the components you would like to use.
+
+    Those components that are not enabled, will not be compiled into the project, which alos means, you need to enable the components you would like to use.
 
 ---
 
@@ -84,24 +86,23 @@ include $(IDF_PATH)/make/project.mk
 * `tools`:
     * different tools and scripts
     * unit-test project
-    
 
-```
+    ```
 ├── Makefile
 ├── README.md
 ├── components
 ├── documents
 ├── examples
-│   └── check_pedestrian_flow
-│   └── empty_project
-│   └── eth2wifi
-│   └── oled_screen_module
-│   └── smart_device
-│   └── touch_pad_evb
-│   └── ulp_rtc_gpio
-│   └── ulp_watering_device
+│   └── check_pedestrian_flow
+│   └── empty_project
+│   └── eth2wifi
+│   └── oled_screen_module
+│   └── smart_device
+│   └── touch_pad_evb
+│   └── ulp_rtc_gpio
+│   └── ulp_watering_device
 ├── submodule
-│   └── esp-idf
+│   └── esp-idf
 └── tools
     └── unit-test-app
 ```
