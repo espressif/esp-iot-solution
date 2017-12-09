@@ -1,0 +1,38 @@
+menu "Power meter"
+    choice POWER_METER_PCNT_CHANNEL_CHOICE
+        bool "power meter pcnt channel"
+        default USE_PCNT_CHANNEL_0
+        config USE_PCNT_CHANNEL_0
+            bool "Select PCNT_CHANNEL_0 for power meter"
+        config USE_PCNT_CHANNEL_1
+            bool "Select PCNT_CHANNEL_1 for power meter"
+    endchoice
+    config POWER_METER_PCNT_CHANNEL
+        int
+        default 0 if USE_PCNT_CHANNEL_0
+        default 1 if USE_PCNT_CHANNEL_1
+    choice POWER_METER_VALUE_MULTIPLE_CHOICE
+        bool "To choose different value accuracy"
+        default VALUW_MULTIPLE_100
+        config VALUE_MULTIPLE_1
+            bool "read_value = (int)real_value"
+        config VALUE_MULTIPLE_10
+            bool "read_value = (int)(real_value * 10)"
+        config VALUE_MULTIPLE_100
+            bool "read_value = (int)(real_value * 100)"
+    endchoice
+    config POWER_METER_VALUE_MULTIPLE
+        int
+        default 1 if VALUE_MULTIPLE_1
+        default 10 if VALUE_MULTIPLE_10
+        default 100 if VALUE_MULTIPLE_100
+    config POWER_METER_PCNT_FILTER
+        int "Filter of pcnt channel, counter in APB_CLK cycles (1~1023)"
+        range 1 1023
+        default 100
+
+    config POWER_METER_ZERO_PERIOD_MS
+        int "Time(ms) to decide whether measure value is 0 (1000 ~ 10000)"
+        range 1000 10000
+        default 5000
+endmenu

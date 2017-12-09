@@ -4,8 +4,8 @@
 # (Uses default behaviour of compiling all source files in directory, adding 'include' to include path.)
 
 ifdef CONFIG_IOT_POWER_METER_ENABLE
-COMPONENT_ADD_INCLUDEDIRS := include
-COMPONENT_SRCDIRS := .
+COMPONENT_ADD_INCLUDEDIRS := ./power_meter/include
+COMPONENT_SRCDIRS := ./power_meter
 else
 # Disable component
 COMPONENT_ADD_INCLUDEDIRS :=

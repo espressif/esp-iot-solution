@@ -21,6 +21,14 @@ menu "IoT Solution settings"
                 default y
                 help
                     "Select this one to enable button device"
+                    
+                menu "Button"
+                depends on IOT_BUTTON_ENABLE
+                    config IO_GLITCH_FILTER_TIME_MS
+                        int "IO glitch filter timer ms (10~100)"
+                        range 10 100
+                        default 50
+                endmenu
             config IOT_DEBUG_ENABLE
                 bool "DEBUG_COMPONENT_ENABLE"
                 default n

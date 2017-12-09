@@ -1,11 +1,14 @@
-/* GPIO Example
+/* Smart device Example
+
+   For other examples please check:
+   https://github.com/espressif/esp-iot-solution/tree/master/examples
 
    This example code is in the Public Domain (or CC0 licensed, at your option.)
 
    Unless required by applicable law or agreed to in writing, this
    software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
    CONDITIONS OF ANY KIND, either express or implied.
-*/
+ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -60,8 +63,8 @@ void alink_key_trigger(void *arg)
     if (gpio_evt_queue == NULL) {
         gpio_evt_queue = xQueueCreate(2, sizeof(alink_key_t));
     }
-    btn = iot_button_create(ALINK_RESET_KEY_IO, 0, BUTTON_SINGLE_TRIGGER, 1);
-    iot_button_add_cb(btn, BUTTON_TAP_CB, alink_button_tap_cb, NULL, 50 / portTICK_RATE_MS);
+    btn = iot_button_create(ALINK_RESET_KEY_IO, 0);
+    iot_button_set_evt_cb(btn, BUTTON_CB_TAP, alink_button_tap_cb, NULL);
     iot_button_add_custom_cb(btn, 2, alink_button_press_2s_cb, NULL);
     iot_button_add_custom_cb(btn, 5, alink_button_press_5s_cb, NULL);
 

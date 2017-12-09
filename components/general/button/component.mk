@@ -3,8 +3,8 @@
 #
 # (Uses default behaviour of compiling all source files in directory, adding 'include' to include path.)
 ifdef CONFIG_IOT_BUTTON_ENABLE
-COMPONENT_ADD_INCLUDEDIRS := include
-COMPONENT_SRCDIRS := .
+COMPONENT_ADD_INCLUDEDIRS := ./button/include
+COMPONENT_SRCDIRS := ./button
 else
 # Disable component
 COMPONENT_ADD_INCLUDEDIRS :=

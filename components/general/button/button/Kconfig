@@ -1,0 +1,6 @@
+menu "Button"
+    config IO_GLITCH_FILTER_TIME_MS
+        int "IO glitch filter timer ms (10~100)"
+        range 10 100
+        default 50
+endmenu
