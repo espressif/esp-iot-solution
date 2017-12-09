@@ -25,21 +25,25 @@
 #ifndef _IOT_LIGHT_DEVICE_H_
 #define _IOT_LIGHT_DEVICE_H_
 #include "iot_light.h"
+
 typedef void* light_dev_handle_t;
 
 typedef enum {
-    LIGHT_STA_DISCONNECTED,    
+    LIGHT_STA_DISCONNECTED,
     LIGHT_CONNECTING_CLOUD,    
     LIGHT_CLOUD_CONNECTED,
 } light_net_status_t;
 
-light_handle_t light_init();
+light_dev_handle_t light_init();
 
-esp_err_t light_set(light_dev_handle_t light_dev, uint8_t bright, uint8_t temp);
+esp_err_t light_set(light_dev_handle_t light_dev, uint32_t hue, uint32_t saturation, uint32_t brightness);
 
-uint8_t light_bright_get(light_dev_handle_t light_dev);
+uint32_t light_hue_get(light_dev_handle_t light_dev);
 
-uint8_t light_temp_get(light_dev_handle_t light_dev);
+uint32_t light_saturation_get(light_dev_handle_t light_dev);
 
-esp_err_t light_net_status_write(light_dev_handle_t light_handle, light_net_status_t net_status);
+uint32_t light_brightness_get(light_dev_handle_t light_dev);
+
+esp_err_t light_net_status_write(light_dev_handle_t light_dev, light_net_status_t net_status);
 #endif
+

@@ -11,8 +11,8 @@ menu "IoT Example - smart_device"
         help
           select the device type
 
-    config SMART_SOCKET_DEVICE
-        bool "smart socket"
+    #config SMART_SOCKET_DEVICE
+    #    bool "smart socket"
     config SMART_LIGHT_DEVICE
         bool "smart light"
     endchoice
@@ -547,7 +547,7 @@ menu "IoT Example - smart_device"
             config SMART_LIGHT_PWM_UNIT0_LEDC_IO
             int "GPIO number for PWM unit[0]"
             range 0 34
-            default 17
+            default 25
             help
                 To set the output GPIO number for LEDC
         endmenu
@@ -562,7 +562,7 @@ menu "IoT Example - smart_device"
             config SMART_LIGHT_PWM_UNIT1_LEDC_IO
             int "GPIO number for PWM unit[1]"
             range 0 34
-            default 18
+            default 26
             help
                 To set the output GPIO number for LEDC
         endmenu
@@ -577,7 +577,7 @@ menu "IoT Example - smart_device"
             config SMART_LIGHT_PWM_UNIT2_LEDC_IO
             int "GPIO number for PWM unit[2]"
             range 0 34
-            default 19
+            default 27
             help
                 To set the output GPIO number for LEDC
         endmenu
@@ -625,130 +625,51 @@ menu "IoT Example - smart_device"
 
     config CLOUD_ALINK
         bool "alink cloud"
-    config CLOUD_JOYLINK
-        bool "joylink cloud"
+    #config CLOUD_JOYLINK
+    #    bool "joylink cloud"
     endchoice
     
     #source "../platforms/alink_v2.0/Kconfig_alink" 
     menu "Alink"
     depends on DEMO_ENABLE && CLOUD_ALINK
     
-    menu "Product Info"
-    config ALINK_INFO_SN
-    string "SN"
-    default 12345678
-    
-    config ALINK_INFO_NAME
-    string "NAME"
-    default ALINKTEST
-    
-    config ALINK_INFO_VERSION
-    string "VERSION"
-    default 1.0.0
-    
-    config ALINK_INFO_MODEL
-    string "MODEL"
-    default ALINKTEST_LIVING_LIGHT_SMARTLED
-    
-    config ALINK_INFO_KEY
-    string "KEY"
-    default ljB6vqoLzmP8fGkE6pon
-    
-    config ALINK_INFO_SECRET
-    string "SECRET"
-    default YJJZjytOCXDhtQqip4EjWbhR95zTgI92RVjzjyZF
-    
-    config ALINK_INFO_SANDBOX_KEY
-    string "SANDBOX KEY"
-    default dpZZEpm9eBfqzK7yVeLq
-    
-    config ALINK_INFO_SANDBOX_SECRET
-    string "SANDBOX SECRET"
-    default THnfRRsU5vu6g6m9X6uFyAjUWflgZ0iyGjdEneKm
-    
-    config ALINK_INFO_TYPE
-    string "TYPE"
-    default LIGHT
-    
-    config ALINK_INFO_CATEGORY
-    string "CATEGORY"
-    default LIVING
-    
-    config ALINK_INFO_MANUFACTURER
-    string "MANUFACTURER"
-    default ALINKTEST
-    
-    config ALINK_INFO_CID
-    string "CID"
-    default 2D0044000F47333139373038
-    
-    endmenu
-    
-    choice LOG_ALINK_LEVEL
-    bool "Default log verbosity"
-    default LOG_ALINK_LEVEL_INFO    
-    help
-       Specify how much output to see in logs by default.
-       Note that this setting limits which log statements
-       are compiled into the program. So setting this to, say,
-       "Warning" would mean that changing log level to "Debug"
-       at runtime will not be possible.
-    config LOG_ALINK_LEVEL_NONE
-       bool "No output"
-    config LOG_ALINK_LEVEL_ERROR
-       bool "Error"
-    config LOG_ALINK_LEVEL_WARN
-       bool "Warning"
-    config LOG_ALINK_LEVEL_INFO
-       bool "Info"
-    config LOG_ALINK_LEVEL_DEBUG
-       bool "Debug"
-    config LOG_ALINK_LEVEL_VERBOSE
-       bool "Verbose"
-    endchoice
-
-    config LOG_ALINK_LEVEL
-        int
-        default 0 if LOG_ALINK_LEVEL_NONE
-        default 1 if LOG_ALINK_LEVEL_ERROR
-        default 2 if LOG_ALINK_LEVEL_WARN
-        default 3 if LOG_ALINK_LEVEL_INFO
-        default 4 if LOG_ALINK_LEVEL_DEBUG
-        default 5 if LOG_ALINK_LEVEL_VERBOSE
-
-    config ALINK_RESET_KEY_IO
-      int "Configure alink to restore the factory-set GPIO"
-      default 0
-      help
-            Configure alink to restore the factory-set GPIO
-
-    config WIFI_WAIT_TIME
-        int "Timeout for connecting router, in seconds"
-        default 60
-        help
-            the connection router maximum latency unit is seconds
-
-    config ALINK_TASK_PRIOTY
-        int "Configure the priority of all alink tasks"
-        default 4
-        help
-            Configure the priority of all alink tasks
-    config ALINK_PASSTHROUGH
-        bool "Alink passthrough mode enable"
-        default "n"
-        help
-            Alink passthrough mode enable, in this mode, you will 
-            need a LUA script on server to parse binary data streams.
-    config ALINK_MODULE_NAME
-        string "Alink Module Name"
-        default "ESP-WROOM-32"
-        help
-            Alink module name
-    config ALINK_DATA_LEN
-        int "Alink TCP packets buffer length"
-        default 512
-        help
-            To set the max length for each data frame in alink
+        menu "Product Info"
+        config ALINK_INFO_NAME
+        string "NAME"
+        default alink_product
+        
+        config ALINK_INFO_VERSION
+        string "VERSION"
+        default 1.0.0
+        
+        config ALINK_INFO_MODEL
+        string "MODEL"
+        default ALINKTEST_LIVING_LIGHT_ALINK_TEST
+        
+        config ALINK_INFO_KEY
+        string "KEY"
+        default 5gPFl8G4GyFZ1fPWk20m
+        
+        config ALINK_INFO_SECRET
+        string "SECRET"
+        default ngthgTlZ65bX5LpViKIWNsDPhOf2As9ChnoL9gQb
+        
+        config ALINK_INFO_KEY_SANDBOX
+        string "KEY SANDBOX"
+        default dpZZEpm9eBfqzK7yVeLq
+        
+        config ALINK_INFO_SECRET_SANDBOX
+        string "SECRET SANDBOX"
+        default THnfRRsU5vu6g6m9X6uFyAjUWflgZ0iyGjdEneKm
+     
+        config ALINK_INFO_KEY_DEVICE
+        string "KEY DEVICE"
+        default vfyjJdC0O6b2P3UZXq4g
+        config ALINK_INFO_SECRET_DEVICE
+        string "SECRET DEVICE"
+        default puAxGjMbb4gd2beaapvMPZN4akedB3Xk
+        
+        endmenu
     endmenu
     
     #source "../platforms/joylink/Kconfig_joylink"

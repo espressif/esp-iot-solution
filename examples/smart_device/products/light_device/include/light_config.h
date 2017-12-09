@@ -56,7 +56,7 @@
 
 #else
 #define IOT_LIGHT_NAME_SPACE          "light"
-#define IOT_LIGHT_PARAM_KEY           "socket_param"
+#define IOT_LIGHT_PARAM_KEY           "light_param"
 #define IOT_LIGHT_FREQ_HZ             (1000)
 #define IOT_LIGHT_PWM_BIT_NUM         LEDC_TIMER_13_BIT
 #define IOT_LIGHT_PWM_TIMER_IDX       LEDC_TIMER_0

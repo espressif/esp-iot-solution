@@ -23,12 +23,25 @@
   */
 #ifndef _IOT_CLOUD_H_
 #define _IOT_CLOUD_H_
-#include "virtual_device.h"
 
-#ifdef CONFIG_CLOUD_ALINK
+#if CONFIG_CLOUD_ALINK
 #define CLOUD_ALINK
+
+#define ALINK_INFO_NAME            CONFIG_ALINK_INFO_NAME
+#define ALINK_INFO_VERSION         CONFIG_ALINK_INFO_VERSION
+#define ALINK_INFO_MODEL           CONFIG_ALINK_INFO_MODEL
+#define ALINK_INFO_KEY             CONFIG_ALINK_INFO_KEY
+#define ALINK_INFO_SECRET          CONFIG_ALINK_INFO_SECRET
+#define ALINK_INFO_KEY_SANDBOX     CONFIG_ALINK_INFO_KEY_SANDBOX
+#define ALINK_INFO_SECRET_SANDBOX  CONFIG_ALINK_INFO_SECRET_SANDBOX
+
+#if CONFIG_ALINK_VERSION_SDS
+#define ALINK_INFO_KEY_DEVICE      CONFIG_ALINK_INFO_KEY_DEVICE
+#define ALINK_INFO_SECRET_DEVICE   CONFIG_ALINK_INFO_SECRET_DEVICE
 #endif
-#ifdef CONFIG_CLOUD_JOYLINK
+#endif
+
+#if CONFIG_CLOUD_JOYLINK
 #define CLOUD_JOYLINK
 #endif
 
@@ -57,7 +70,7 @@ typedef enum {
 #endif
 
 esp_err_t cloud_init();
-esp_err_t cloud_read(virtual_device_t* virtual_dev,int ms_wait);
-esp_err_t cloud_write(virtual_device_t virtual_device, int ms_wait);
+esp_err_t cloud_read(int ms_wait);
+esp_err_t cloud_write(int ms_wait);
 int cloud_sys_net_is_ready(void);
-#endif  
+#endif
