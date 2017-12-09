@@ -1,0 +1,15 @@
+menu "IoT Touch EB settings"
+    choice TOUCH_EB_VERSION
+        bool "Touch EB version"
+        default TOUCH_EB_V2
+        help
+          select the TOUCH_EB hardware version
+
+    config TOUCH_EB_V1
+        bool "TOUCH_EB_V1"
+    config TOUCH_EB_V2
+        bool "TOUCH_EB_V2"
+    endchoice
+
+
+endmenu

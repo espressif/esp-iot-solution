@@ -47,10 +47,51 @@ void ch450_dev_init()
     if (seg == NULL) {
         seg = iot_ch450_create(i2c_bus);
     }
+    for (int i = 0; i<6;i++) {
+        ch450_write_dig(i, -1);
+    }
+}
+
+void ch450_write_led(int mask, int on_off)
+{
+    static uint8_t bit_mask = 0;
+    int seg_idx = 4;
+
+    uint8_t val = 0;
+    if (mask & BIT(3)) {
+        val |= BIT(0);
+    }
+    if (mask & BIT(4)) {
+        val |= BIT(1);
+    }
+    if (mask & BIT(2)) {
+        val |= BIT(4);
+    }
+    if (mask & BIT(1)) {
+        val |= BIT(5);
+    }
+    if (mask & BIT(0)) {
+        val |= BIT(6);
+    }
+    if (mask & BIT(5)) {
+        val |= BIT(7);
+    }
+    if (on_off) {
+        bit_mask |= val;
+    } else {
+        bit_mask &= (~val);
+    }
+    ch450_cmd_t seg_cmd = CH450_SEG_2 + seg_idx * 2;
+    iot_ch450_write(seg, seg_cmd, bit_mask);
 }
 
 void ch450_write_dig(int idx, int val)
 {
+#if CONFIG_TOUCH_EB_V2
+    if (idx > 3) {
+        return;
+    }
+#endif
     iot_ch450_write_num(seg, idx, val);
 }
 
