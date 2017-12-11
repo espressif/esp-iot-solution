@@ -131,7 +131,10 @@ esp_err_t CLight::CLightChannel::duty(uint32_t duty_val, light_duty_mode_t duty_
         return ESP_FAIL;
     }
     light_handle_t light_handle = *mp_channel_handle;
-    esp_err_t ret = iot_light_duty_write(light_handle, m_ch_idx, duty_val, LIGHT_SET_DUTY_DIRECTLY);
+    if (duty() == duty_val) {
+        return ESP_OK;
+    }
+    esp_err_t ret = iot_light_duty_write(light_handle, m_ch_idx, duty_val, duty_mode);
     if (ret == ESP_OK) {
         m_duty = duty_val;
     }

@@ -37,6 +37,15 @@ static const char *TAG = "touch_slide";
 #define TOUCH_SLIDE_5 TOUCH_PAD_NUM4
 #define TOUCH_SLIDE_LED_NUM_0     3
 #define TOUCH_SLIDE_LED_NUM_1     2
+#elif CONFIG_TOUCH_EB_V3
+#define TOUCH_SLIDE_0 TOUCH_PAD_NUM9
+#define TOUCH_SLIDE_1 TOUCH_PAD_NUM7
+#define TOUCH_SLIDE_2 TOUCH_PAD_NUM5
+#define TOUCH_SLIDE_3 TOUCH_PAD_NUM3
+#define TOUCH_SLIDE_4 TOUCH_PAD_NUM0
+#define TOUCH_SLIDE_5 TOUCH_PAD_NUM1
+#define TOUCH_SLIDE_LED_NUM_0     3
+#define TOUCH_SLIDE_LED_NUM_1     4
 #endif
 
 void evb_touch_slide_handle(int pos)
@@ -56,7 +65,7 @@ void evb_touch_slide_handle(int pos)
 
 void evb_touch_slide_init_then_run()
 {
-#if CONFIG_TOUCH_EB_V2
+#if (CONFIG_TOUCH_EB_V2 || CONFIG_TOUCH_EB_V3)
     evb_touch_button_init();
 #endif
     //slide touch

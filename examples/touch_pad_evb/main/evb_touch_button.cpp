@@ -28,6 +28,10 @@ extern CLED *led[4];
 #define TOUCH_BUTTON_0  TOUCH_PAD_NUM0
 #define TOUCH_BUTTON_1  TOUCH_PAD_NUM2
 #define TOUCH_BUTTON_2  TOUCH_PAD_NUM3
+#elif CONFIG_TOUCH_EB_V3
+#define TOUCH_BUTTON_0  TOUCH_PAD_NUM8
+#define TOUCH_BUTTON_1  TOUCH_PAD_NUM4
+#define TOUCH_BUTTON_2  TOUCH_PAD_NUM2
 #endif
 void evb_touch_button_handle(int idx, int type)
 {
@@ -59,6 +63,22 @@ void evb_touch_button_handle(int idx, int type)
     } else if (type == TOUCH_EVT_TYPE_SINGLE_RELEASE) {
         ch450_write_dig(1, idx);
         ch450_write_dig(0, -1);
+    } else {
+
+    }
+#elif CONFIG_TOUCH_EB_V3
+    idx = idx == TOUCH_BUTTON_0 ? 0 :
+          idx == TOUCH_BUTTON_1 ? 1 :
+          idx == TOUCH_BUTTON_2 ? 2 : 0;
+    ch450_write_dig(4, -1);
+    ch450_write_dig(3, -1);
+    if (type == TOUCH_EVT_TYPE_SINGLE_PUSH) {
+        ch450_write_dig(5, idx);
+        ch450_write_dig(4, -1);
+
+    } else if (type == TOUCH_EVT_TYPE_SINGLE_RELEASE) {
+        ch450_write_dig(4, idx);
+        ch450_write_dig(5, -1);
     } else {
 
     }

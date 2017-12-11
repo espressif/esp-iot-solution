@@ -22,8 +22,10 @@
 #define COVER_DEBUG  0
 #if COVER_DEBUG
 #define TOUCHPAD_THRES_PERCENT  990
+#define TOUCHPAD_SPRING_THRESH_PERCENT    980
 #else
 #define TOUCHPAD_THRES_PERCENT  900
+#define TOUCHPAD_SPRING_THRESH_PERCENT    980
 #endif
 #define TOUCHPAD_FILTER_VALUE   10
 
@@ -36,8 +38,13 @@ extern "C" {
 #define ADC1_TEST_CHANNEL (ADC1_CHANNEL_7)
 
 #define I2C_MASTER_NUM I2C_NUM_0
+#if CONFIG_TOUCH_EB_V3
+#define I2C_MASTER_SDA_IO GPIO_NUM_22
+#define I2C_MASTER_SCL_IO GPIO_NUM_23
+#else
 #define I2C_MASTER_SDA_IO GPIO_NUM_21
 #define I2C_MASTER_SCL_IO GPIO_NUM_19
+#endif
 #define I2C_MASTER_FREQ_HZ 100000
 
 enum {
@@ -45,6 +52,7 @@ enum {
     TOUCH_EVB_MODE_SLIDE,
     TOUCH_EVB_MODE_SPRING,
     TOUCH_EVB_MODE_CIRCLE,
+    TOUCH_EVB_MODE_SEQ_SLIDE,
 };
 
 typedef enum {
@@ -72,23 +80,46 @@ typedef struct {
     };
 } touch_evt_t;
 
+/*
+ * 7-segment display APIs
+ */
 void ch450_write_led(int mask, int on_off);
 void ch450_write_dig(int idx, int val);
+void ch450_write_dig_reverse(int idx, int num);
 void ch450_dev_init();
+
+/*
+ * ADC APIs
+ */
 void evb_adc_init();
 int  evb_adc_get_mode();
 
 void evb_led_init();
+
+/*
+ * Touch button APIs
+ */
 void evb_touch_button_init();
 void evb_touch_button_handle(int idx, int type);
 
+/*
+ * Touch matrix APIs
+ */
 void evb_touch_matrix_init();
 void evb_touch_matrix_handle(int x, int y, int type);
 
+/*
+ * Touch spring APIs
+ */
 void evb_touch_spring_handle(int idx, int type);
 void evb_touch_spring_init();
+
+/*
+ * Touch slide APIs
+ */
 void evb_touch_slide_init_then_run();
-void evb_touch_circle_init_then_run();
+void evb_touch_wheel_init_then_run();
+void evb_touch_seq_slide_init_then_run();
 
 #ifdef __cplusplus
 }
