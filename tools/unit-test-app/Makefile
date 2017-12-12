@@ -9,10 +9,10 @@ IOT_SOLUTION_PATH ?= $(abspath $(shell pwd)/../../)
 include $(IOT_SOLUTION_PATH)/Makefile
 
 #Do not touch the code below
-
+IOT_COMPONENT_DIRS += $(abspath $(shell pwd)/components)
 # Find all component names. The component names are the same as the
 # directories they're in, so /bla/components/mycomponent/component.mk -> mycomponent.
-IOT_COMPONENTS := $(dir $(foreach cd,$(IOT_COMPONENTT_DIRS),                           \
+IOT_COMPONENTS := $(dir $(foreach cd,$(IOT_COMPONENT_DIRS),                           \
 					$(wildcard $(cd)/*/component.mk) $(wildcard $(cd)/component.mk) \
 				))
 IOT_COMPONENTS := $(sort $(foreach comp,$(IOT_COMPONENTS),$(lastword $(subst /, ,$(comp)))))

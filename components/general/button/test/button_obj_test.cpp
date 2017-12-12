@@ -55,16 +55,16 @@ extern "C" void button_obj_test()
     const char *release = "RELEASE";
     const char *tap = "TAP";
     const char *serial = "SERIAL";
-    CButton* btn = new CButton(BUTTON_IO_NUM, BUTTON_ACTIVE_LEVEL, BUTTON_SERIAL_TRIGGER, 3);
-    btn->add_cb(BUTTON_PUSH_CB, button_tap_cb, (void*) push, 50 / portTICK_PERIOD_MS);
-    btn->add_cb(BUTTON_RELEASE_CB, button_tap_cb, (void*) release, 50 / portTICK_PERIOD_MS);
-    btn->add_cb(BUTTON_TAP_CB, button_tap_cb, (void*) tap, 50 / portTICK_PERIOD_MS);
-    btn->add_cb(BUTTON_SERIAL_CB, button_tap_cb, (void*) serial, 1000 / portTICK_PERIOD_MS);
+    CButton* btn = new CButton(BUTTON_IO_NUM, BUTTON_ACTIVE_LEVEL);
+    btn->set_evt_cb(BUTTON_CB_PUSH, button_tap_cb, (void*) push);
+    btn->set_evt_cb(BUTTON_CB_RELEASE, button_tap_cb, (void*) release);
+    btn->set_evt_cb(BUTTON_CB_TAP, button_tap_cb, (void*) tap);
+    btn->set_evt_cb(BUTTON_CB_SERIAL, button_tap_cb, (void*) serial);
     
     btn->add_custom_cb(2, button_press_2s_cb, NULL);
     btn->add_custom_cb(5, button_press_5s_cb, NULL);
 
-    vTaskDelay(40000 / portTICK_PERIOD_MS);
+    vTaskDelay(10000 / portTICK_PERIOD_MS);
     delete btn;
     ESP_LOGI(TAG_BTN, "button is deleted");
 }

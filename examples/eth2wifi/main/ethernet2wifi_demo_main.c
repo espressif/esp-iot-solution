@@ -1,5 +1,8 @@
 /* Ethernet to WiFi data forwarding Example
 
+   For other examples please check:
+   https://github.com/espressif/esp-iot-solution/tree/master/examples
+
    This example code is in the Public Domain (or CC0 licensed, at your option.)
 
    Unless required by applicable law or agreed to in writing, this

@@ -1,0 +1,6 @@
+menu "Relay"
+    config DFLIPFLOP_CLK_PERIOD_US
+        int "Dflipflop clock period us (2~1000)"
+        range 2 1000
+        default 500
+endmenu

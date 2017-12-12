@@ -168,9 +168,9 @@ static void tap_cb(void *arg)
     touch_pad_t tp_num = iot_tp_num_get(touchpad_dev);
     ESP_LOGI(TAG, "tap callback of touch pad num %d", tp_num);
     ESP_LOGI(TAG, "deep sleep start");
-//    power_cntl_off();
-//    esp_deep_sleep_enable_touchpad_wakeup();
-//    esp_deep_sleep_start();
+    power_cntl_off();
+    esp_deep_sleep_enable_touchpad_wakeup();
+    esp_deep_sleep_start();
 }
 
 static void ssd1306_test()
@@ -187,8 +187,8 @@ static void ssd1306_test()
 
     iot_tp_add_cb(touchpad_dev0, TOUCHPAD_CB_RELEASE, tap_cb, touchpad_dev0);
     iot_tp_add_cb(touchpad_dev1, TOUCHPAD_CB_RELEASE, tap_cb, touchpad_dev1);
-
-
+//
+//
 //    vTaskDelay((30 * 1000) / portTICK_RATE_MS);
 //    ESP_LOGI(TAG, "touchpad 0 deleted");
 //    touchpad_delete(touchpad_dev0);

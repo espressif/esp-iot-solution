@@ -1,26 +1,14 @@
-/*
-  * ESPRESSIF MIT License
-  *
-  * Copyright (c) 2017 <ESPRESSIF SYSTEMS (SHANGHAI) PTE LTD>
-  *
-  * Permission is hereby granted for use on ESPRESSIF SYSTEMS products only, in which case,
-  * it is free of charge, to any person obtaining a copy of this software and associated
-  * documentation files (the "Software"), to deal in the Software without restriction, including
-  * without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
-  * and/or sell copies of the Software, and to permit persons to whom the Software is furnished
-  * to do so, subject to the following conditions:
-  *
-  * The above copyright notice and this permission notice shall be included in all copies or
-  * substantial portions of the Software.
-  *
-  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-  * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-  * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-  *
-  */
+/* Smart device Example
+
+   For other examples please check:
+   https://github.com/espressif/esp-iot-solution/tree/master/examples
+
+   This example code is in the Public Domain (or CC0 licensed, at your option.)
+
+   Unless required by applicable law or agreed to in writing, this
+   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+   CONDITIONS OF ANY KIND, either express or implied.
+ */
 
 #include "esp_system.h"
 #include "cloud.h"
@@ -298,11 +286,11 @@ static void initialise_wifi(void)
 
 static void initialise_key(void)
 {
-    button_handle_t btn_handle = iot_button_create(CONFIG_JOYLINK_SMNT_BUTTON_NUM, BUTTON_ACTIVE_LOW, BUTTON_SINGLE_TRIGGER, 1);
-    iot_button_add_cb(btn_handle, BUTTON_PUSH_CB, joylink_button_smnt_tap_cb, "PUSH", 50 / portTICK_PERIOD_MS);
+    button_handle_t btn_handle = iot_button_create(CONFIG_JOYLINK_SMNT_BUTTON_NUM, BUTTON_ACTIVE_LOW);
+    iot_button_set_evt_cb(btn_handle, BUTTON_CB_PUSH, joylink_button_smnt_tap_cb, "PUSH");
 
-    btn_handle = iot_button_create(CONFIG_JOYLINK_RESET_BUTTON_NUM, BUTTON_ACTIVE_LOW, BUTTON_SINGLE_TRIGGER, 1);
-    iot_button_add_cb(btn_handle, BUTTON_PUSH_CB, joylink_button_reset_tap_cb, "PUSH", 50 / portTICK_PERIOD_MS);
+    btn_handle = iot_button_create(CONFIG_JOYLINK_RESET_BUTTON_NUM, BUTTON_ACTIVE_LOW);
+    iot_button_set_evt_cb(btn_handle, BUTTON_CB_PUSH, joylink_button_reset_tap_cb, "PUSH");
 }
 #endif
 

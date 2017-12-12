@@ -59,17 +59,17 @@ void button_press_5s_cb(void* arg)
 void button_test()
 {
     printf("before btn init, heap: %d\n", esp_get_free_heap_size());
-    button_handle_t btn_handle = iot_button_create(BUTTON_IO_NUM, BUTTON_ACTIVE_LEVEL, BUTTON_SERIAL_TRIGGER, 3);
-    iot_button_add_cb(btn_handle, BUTTON_PUSH_CB, button_tap_cb, "PUSH", 50 / portTICK_PERIOD_MS);
-    iot_button_add_cb(btn_handle, BUTTON_RELEASE_CB, button_tap_cb, "RELEASE", 50 / portTICK_PERIOD_MS);
-    iot_button_add_cb(btn_handle, BUTTON_TAP_CB, button_tap_cb, "TAP", 50 / portTICK_PERIOD_MS);
-    iot_button_add_cb(btn_handle, BUTTON_SERIAL_CB, button_tap_cb, "SERIAL", 1000 / portTICK_PERIOD_MS);
+    button_handle_t btn_handle = iot_button_create(BUTTON_IO_NUM, BUTTON_ACTIVE_LEVEL);
+    iot_button_set_evt_cb(btn_handle, BUTTON_CB_PUSH, button_tap_cb, "PUSH");
+    iot_button_set_evt_cb(btn_handle, BUTTON_CB_RELEASE, button_tap_cb, "RELEASE");
+    iot_button_set_evt_cb(btn_handle, BUTTON_CB_TAP, button_tap_cb, "TAP");
+    iot_button_set_serial_cb(btn_handle, 2, 1000/portTICK_RATE_MS, button_tap_cb, "SERIAL");
 
     iot_button_add_custom_cb(btn_handle, 2, button_press_2s_cb, NULL);
     iot_button_add_custom_cb(btn_handle, 5, button_press_5s_cb, NULL);
     printf("after btn init, heap: %d\n", esp_get_free_heap_size());
 
-    vTaskDelay(400000 / portTICK_PERIOD_MS);
+    vTaskDelay(10000 / portTICK_PERIOD_MS);
     printf("free btn: heap:%d\n", esp_get_free_heap_size());
     iot_button_delete(btn_handle);
     printf("after free btn: heap:%d\n", esp_get_free_heap_size());

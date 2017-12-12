@@ -1,14 +1,15 @@
-/* ULP Example: Read temperautre in deep sleep
+/* ULP Example: Read hall sensor in deep sleep
+
+   For other examples please check:
+   https://github.com/espressif/esp-iot-solution/tree/master/examples
 
    This example code is in the Public Domain (or CC0 licensed, at your option.)
 
    Unless required by applicable law or agreed to in writing, this
    software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
    CONDITIONS OF ANY KIND, either express or implied.
+ */
 
-   This file contains assembly code which runs on the ULP.
-
-*/
 
 /* ULP assembly files are passed through C preprocessor first, so include directives
    and C macros may be used in these files 

@@ -62,7 +62,6 @@ void power_cntl_off()
 
 extern "C" void ssd1306_obj_test()
 {
-    int cnt = 2;
     power_cntl_init();
     power_cntl_on();
     CI2CBus i2c_bus(OLED_IIC_NUM, OLED_IIC_SCL_NUM, OLED_IIC_SDA_NUM);

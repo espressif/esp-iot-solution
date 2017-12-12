@@ -59,7 +59,6 @@ struct btn_cb{
 struct button_dev{
     uint8_t io_num;
     uint8_t active_level;
-    button_trigger_t trig_mode;
     uint32_t serial_thres_sec;
     button_status_t state;
     button_cb_t tap_short_cb;
@@ -69,6 +68,7 @@ struct button_dev{
     button_cb_t* cb_head;
 };
 
+#define BUTTON_GLITCH_FILTER_TIME_MS   CONFIG_IO_GLITCH_FILTER_TIME_MS
 static const char* TAG = "button";
 
 static void button_press_cb(xTimerHandle tmr)
@@ -94,7 +94,7 @@ static void button_tap_psh_cb(xTimerHandle tmr)
     if (btn->active_level == lv) {
         // high, then key is up
         btn->state = BUTTON_STATE_PUSH;
-        if (btn->trig_mode == BUTTON_SERIAL_TRIGGER) {
+        if (btn->press_serial_cb.tmr) {
             xTimerChangePeriod(btn->press_serial_cb.tmr, btn->serial_thres_sec*1000 / portTICK_PERIOD_MS, portMAX_DELAY);
             xTimerReset(btn->press_serial_cb.tmr, portMAX_DELAY);
         }
@@ -126,7 +126,7 @@ static void button_tap_rls_cb(xTimerHandle tmr)
             }
             pcb = pcb->next_cb;
         }
-        if (btn->trig_mode == BUTTON_SERIAL_TRIGGER && btn->press_serial_cb.tmr != NULL) {
+        if (btn->press_serial_cb.tmr && btn->press_serial_cb.tmr != NULL) {
             xTimerStop(btn->press_serial_cb.tmr, portMAX_DELAY);
         }
         if (btn->tap_short_cb.cb && btn->state == BUTTON_STATE_PUSH) {
@@ -212,37 +212,26 @@ esp_err_t iot_button_delete(button_handle_t btn_handle)
     return ESP_OK;
 }
 
-button_handle_t iot_button_create(gpio_num_t gpio_num, button_active_t active_level, button_trigger_t trigger, uint32_t serial_thres_sec)
+button_handle_t iot_button_create(gpio_num_t gpio_num, button_active_t active_level)
 {
     IOT_CHECK(TAG, gpio_num < GPIO_NUM_MAX, NULL);
-    IOT_CHECK(TAG, serial_thres_sec != 0, NULL);
     button_dev_t* btn = (button_dev_t*) calloc(1, sizeof(button_dev_t));
     POINT_ASSERT(TAG, btn, NULL);
     btn->active_level = active_level;
     btn->io_num = gpio_num;
     btn->state = BUTTON_STATE_IDLE;
-    btn->trig_mode = trigger;
-    btn->serial_thres_sec = serial_thres_sec;
     btn->tap_rls_cb.arg = NULL;
     btn->tap_rls_cb.cb = NULL;
-    btn->tap_rls_cb.interval = 50 / portTICK_PERIOD_MS;
+    btn->tap_rls_cb.interval = BUTTON_GLITCH_FILTER_TIME_MS / portTICK_PERIOD_MS;
     btn->tap_rls_cb.pbtn = btn;
     btn->tap_rls_cb.tmr = xTimerCreate("btn_rls_tmr", btn->tap_rls_cb.interval, pdFALSE,
             &btn->tap_rls_cb, button_tap_rls_cb);
     btn->tap_psh_cb.arg = NULL;
     btn->tap_psh_cb.cb = NULL;
-    btn->tap_psh_cb.interval = 50 / portTICK_PERIOD_MS;
+    btn->tap_psh_cb.interval = BUTTON_GLITCH_FILTER_TIME_MS / portTICK_PERIOD_MS;
     btn->tap_psh_cb.pbtn = btn;
     btn->tap_psh_cb.tmr = xTimerCreate("btn_psh_tmr", btn->tap_psh_cb.interval, pdFALSE,
             &btn->tap_psh_cb, button_tap_psh_cb);
-    if (trigger == BUTTON_SERIAL_TRIGGER) {
-        btn->press_serial_cb.arg = NULL;
-        btn->press_serial_cb.cb = NULL;
-        btn->press_serial_cb.interval = 1000 / portTICK_PERIOD_MS;
-        btn->press_serial_cb.pbtn = btn;
-        btn->press_serial_cb.tmr = xTimerCreate("btn_serial_tmr", btn->serial_thres_sec*1000 / portTICK_PERIOD_MS,
-                pdFALSE, btn, button_press_serial_cb);
-    }
     gpio_install_isr_service(0);
     gpio_config_t gpio_conf;
     gpio_conf.intr_type = GPIO_INTR_ANYEDGE;
@@ -259,13 +248,13 @@ esp_err_t iot_button_rm_cb(button_handle_t btn_handle, button_cb_type_t type)
 {
     button_dev_t* btn = (button_dev_t*) btn_handle;
     button_cb_t* btn_cb = NULL;
-    if (type == BUTTON_PUSH_CB) {
+    if (type == BUTTON_CB_PUSH) {
         btn_cb = &btn->tap_psh_cb;
-    } else if (type == BUTTON_RELEASE_CB) {
+    } else if (type == BUTTON_CB_RELEASE) {
         btn_cb = &btn->tap_rls_cb;
-    } else if (type == BUTTON_TAP_CB) {
+    } else if (type == BUTTON_CB_TAP) {
         btn_cb = &btn->tap_short_cb;
-    } else if (type == BUTTON_SERIAL_CB) {
+    } else if (type == BUTTON_CB_SERIAL) {
         btn_cb = &btn->press_serial_cb;
     }
     btn_cb->cb = NULL;
@@ -275,33 +264,45 @@ esp_err_t iot_button_rm_cb(button_handle_t btn_handle, button_cb_type_t type)
     return ESP_OK;
 }
 
-esp_err_t iot_button_add_cb(button_handle_t btn_handle, button_cb_type_t type, button_cb cb, void* arg, int interval_tick)
+esp_err_t iot_button_set_serial_cb(button_handle_t btn_handle, uint32_t start_after_sec, TickType_t interval_tick, button_cb cb, void* arg)
+{
+    button_dev_t* btn = (button_dev_t*) btn_handle;
+    btn->serial_thres_sec = start_after_sec;
+    if (btn->press_serial_cb.tmr == NULL) {
+        btn->press_serial_cb.tmr = xTimerCreate("btn_serial_tmr", btn->serial_thres_sec*1000 / portTICK_PERIOD_MS,
+                            pdFALSE, btn, button_press_serial_cb);
+    }
+    btn->press_serial_cb.arg = arg;
+    btn->press_serial_cb.cb = cb;
+    btn->press_serial_cb.interval = interval_tick;
+    btn->press_serial_cb.pbtn = btn;
+    xTimerChangePeriod(btn->press_serial_cb.tmr, btn->serial_thres_sec*1000 / portTICK_PERIOD_MS, portMAX_DELAY);
+    return ESP_OK;
+}
+
+esp_err_t iot_button_set_evt_cb(button_handle_t btn_handle, button_cb_type_t type, button_cb cb, void* arg)
 {
     POINT_ASSERT(TAG, btn_handle, ESP_ERR_INVALID_ARG);
-    IOT_CHECK(TAG, interval_tick > 0, ESP_ERR_INVALID_ARG);
     button_dev_t* btn = (button_dev_t*) btn_handle;
-    if (type == BUTTON_PUSH_CB) {
+    if (type == BUTTON_CB_PUSH) {
         btn->tap_psh_cb.arg = arg;
         btn->tap_psh_cb.cb = cb;
-        btn->tap_psh_cb.interval = interval_tick;
+        btn->tap_psh_cb.interval = BUTTON_GLITCH_FILTER_TIME_MS / portTICK_RATE_MS;
         btn->tap_psh_cb.pbtn = btn;
-        xTimerChangePeriod(btn->tap_psh_cb.tmr, interval_tick, portMAX_DELAY);
-    } else if (type == BUTTON_RELEASE_CB) {
+        xTimerChangePeriod(btn->tap_psh_cb.tmr, btn->tap_psh_cb.interval, portMAX_DELAY);
+    } else if (type == BUTTON_CB_RELEASE) {
         btn->tap_rls_cb.arg = arg;
         btn->tap_rls_cb.cb = cb;
-        btn->tap_rls_cb.interval = interval_tick;
+        btn->tap_rls_cb.interval = BUTTON_GLITCH_FILTER_TIME_MS / portTICK_RATE_MS;
         btn->tap_rls_cb.pbtn = btn;
-        xTimerChangePeriod(btn->tap_rls_cb.tmr, interval_tick, portMAX_DELAY);
-    } else if (type == BUTTON_TAP_CB) {
+        xTimerChangePeriod(btn->tap_rls_cb.tmr, btn->tap_psh_cb.interval, portMAX_DELAY);
+    } else if (type == BUTTON_CB_TAP) {
         btn->tap_short_cb.arg = arg;
         btn->tap_short_cb.cb = cb;
-        btn->tap_short_cb.interval = interval_tick;
+        btn->tap_short_cb.interval = BUTTON_GLITCH_FILTER_TIME_MS / portTICK_RATE_MS;
         btn->tap_short_cb.pbtn = btn;
-    } else if (type == BUTTON_SERIAL_CB) {
-        btn->press_serial_cb.arg = arg;
-        btn->press_serial_cb.cb = cb;
-        btn->press_serial_cb.interval = interval_tick;
-        btn->press_serial_cb.pbtn = btn;
+    } else if (type == BUTTON_CB_SERIAL) {
+        iot_button_set_serial_cb(btn_handle, 1, 1000 / portTICK_RATE_MS, cb, arg);
     }
     return ESP_OK;
 }

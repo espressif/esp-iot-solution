@@ -30,13 +30,9 @@ extern "C" {
 #endif
 
 #include "driver/gpio.h"
+#include "freertos/portmacro.h"
 typedef void (* button_cb)(void*);
 typedef void* button_handle_t;
-
-typedef enum {
-    BUTTON_SINGLE_TRIGGER,  /**< button event will only trigger once no matter how long you press the touchpad */
-    BUTTON_SERIAL_TRIGGER,  /**< number of button event triggerred will be in direct proportion to the duration of press*/
-} button_trigger_t;
 
 typedef enum {
     BUTTON_ACTIVE_HIGH = 1,    /*!<button active level: high level*/
@@ -44,10 +40,10 @@ typedef enum {
 } button_active_t;
 
 typedef enum {
-    BUTTON_PUSH_CB = 0,   /*!<button push callback event */
-    BUTTON_RELEASE_CB,    /*!<button release callback event */
-    BUTTON_TAP_CB,        /*!<button quick tap callback event(will not trigger if there already is a "PRESS" event) */
-    BUTTON_SERIAL_CB,     /*!<button serial trigger callback event */
+    BUTTON_CB_PUSH = 0,   /*!<button push callback event */
+    BUTTON_CB_RELEASE,    /*!<button release callback event */
+    BUTTON_CB_TAP,        /*!<button quick tap callback event(will not trigger if there already is a "PRESS" event) */
+    BUTTON_CB_SERIAL,     /*!<button serial trigger callback event */
 } button_cb_type_t;
 
 /**
@@ -56,21 +52,19 @@ typedef enum {
  * @param gpio_num GPIO index of the pin that the button uses
  * @param active_level button hardware active level.
  *        For "BUTTON_ACTIVE_LOW" it means when the button pressed, the GPIO will read low level.
- * @param trigger button event trigger mode
- * @param serial_thres_sec the number of seconds more than whick a BUTTON_SERIAL_CB would accour
  *
  * @return A button_handle_t handle to the created button object, or NULL in case of error.
  */
-button_handle_t iot_button_create(gpio_num_t gpio_num, button_active_t active_level, button_trigger_t trigger, uint32_t serial_thres_sec);
+button_handle_t iot_button_create(gpio_num_t gpio_num, button_active_t active_level);
 
 /**
- * @brief Register a callback function for a button_cb_type_t action.
+ * @brief Register a callback function for a serial trigger event.
  *
  * @param btn_handle handle of the button object
- * @param type callback function type
- * @param cb callback function for "TAP" action.
- * @param arg Parameter for callback function
- * @param interval_tick a filter to bypass glitch, unit: FreeRTOS ticks.
+ * @start_after_sec define the time after which to start serial trigger action
+ * @interval_tick serial trigger interval
+ * @cb callback function for "TAP" action.
+ * @arg Parameter for callback function
  * @note
  *        Button callback functions execute in the context of the timer service task.
  *        It is therefore essential that button callback functions never attempt to block.
@@ -80,7 +74,25 @@ button_handle_t iot_button_create(gpio_num_t gpio_num, button_active_t active_le
  *     - ESP_OK Success
  *     - ESP_FAIL Parameter error
  */
-esp_err_t iot_button_add_cb(button_handle_t btn_handle, button_cb_type_t type, button_cb cb, void* arg, int interval_tick);
+esp_err_t iot_button_set_serial_cb(button_handle_t btn_handle, uint32_t start_after_sec, TickType_t interval_tick, button_cb cb, void* arg);
+
+/**
+ * @brief Register a callback function for a button_cb_type_t action.
+ *
+ * @param btn_handle handle of the button object
+ * @param type callback function type
+ * @param cb callback function for "TAP" action.
+ * @param arg Parameter for callback function
+ * @note
+ *        Button callback functions execute in the context of the timer service task.
+ *        It is therefore essential that button callback functions never attempt to block.
+ *        For example, a button callback function must not call vTaskDelay(), vTaskDelayUntil(),
+ *        or specify a non zero block time when accessing a queue or a semaphore.
+ * @return
+ *     - ESP_OK Success
+ *     - ESP_FAIL Parameter error
+ */
+esp_err_t iot_button_set_evt_cb(button_handle_t btn_handle, button_cb_type_t type, button_cb cb, void* arg);
 
 /**
  * @brief
@@ -132,7 +144,7 @@ esp_err_t iot_button_rm_cb(button_handle_t btn_handle, button_cb_type_t type);
  * class of button
  * simple usage:
  * CButton* btn = new CButton(BUTTON_IO_NUM, BUTTON_ACTIVE_LEVEL, BUTTON_SERIAL_TRIGGER, 3);
- * btn->add_cb(BUTTON_PUSH_CB, button_tap_cb, (void*) push, 50 / portTICK_PERIOD_MS);
+ * btn->add_cb(BUTTON_CB_PUSH, button_tap_cb, (void*) push, 50 / portTICK_PERIOD_MS);
  * btn->add_custom_cb(5, button_press_5s_cb, NULL);
  * ......
  * delete btn;
@@ -155,10 +167,8 @@ public:
      * @param gpio_num GPIO index of the pin that the button uses
      * @param active_level button hardware active level.
      *        For "BUTTON_ACTIVE_LOW" it means when the button pressed, the GPIO will read low level.
-     * @param trigger button event trigger mode
-     * @param serial_thres_sec the number of seconds more than whick a BUTTON_SERIAL_CB would accour
      */
-    CButton(gpio_num_t gpio_num, button_active_t active_level = BUTTON_ACTIVE_LOW, button_trigger_t trigger = BUTTON_SINGLE_TRIGGER, uint32_t serial_thres_sec = 3);
+    CButton(gpio_num_t gpio_num, button_active_t active_level = BUTTON_ACTIVE_LOW);
     
     ~CButton();
 
@@ -168,7 +178,6 @@ public:
      * @param type callback function type
      * @param cb callback function for "TAP" action.
      * @param arg Parameter for callback function
-     * @param interval_tick a filter to bypass glitch, unit: FreeRTOS ticks.
      * @note
      *        Button callback functions execute in the context of the timer service task.
      *        It is therefore essential that button callback functions never attempt to block.
@@ -178,8 +187,26 @@ public:
      *     - ESP_OK Success
      *     - ESP_FAIL Parameter error
      */
-    esp_err_t add_cb(button_cb_type_t type, button_cb cb, void* arg, int interval_tick);
+    esp_err_t set_evt_cb(button_cb_type_t type, button_cb cb, void* arg);
 
+    /**
+     * @brief Register a callback function for a serial trigger event.
+     *
+     * @param btn_handle handle of the button object
+     * @start_after_sec define the time after which to start serial trigger action
+     * @interval_tick serial trigger interval
+     * @cb callback function for "TAP" action.
+     * @arg Parameter for callback function
+     * @note
+     *        Button callback functions execute in the context of the timer service task.
+     *        It is therefore essential that button callback functions never attempt to block.
+     *        For example, a button callback function must not call vTaskDelay(), vTaskDelayUntil(),
+     *        or specify a non zero block time when accessing a queue or a semaphore.
+     * @return
+     *     - ESP_OK Success
+     *     - ESP_FAIL Parameter error
+     */
+    esp_err_t set_serial_cb(button_cb cb, void* arg, TickType_t interval_tick, uint32_t start_after_sec);
 
     /**
      * @brief
