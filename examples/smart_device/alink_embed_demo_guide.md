@@ -40,7 +40,7 @@
 
     <img src="../../documents/_static/example/alink_demo/select_device.png" width = "300" alt="select_device" align=center />
 
-5. 开发板上电，按一下 EN 开关，短按（1~5s） boot 按键，查看打印，出现 “ENTER SAMARTCONFIG MODE” 信息，即表示已进入配网模式；在任何时候只需要短按（1~5s） boot 按键即可重新进入配网模式。  
+5. 开发板上电，按一下 EN 开关，短按（1-5s） boot 按键，查看打印，出现 “ENTER SAMARTCONFIG MODE” 信息，即表示已进入配网模式；在任何时候只需要短按（1-5s） boot 按键即可重新进入配网模式。  
     注意：进入一键配网后若在 60s 内没有收到 SSID 和 password，则认为一键配网超时，模块自动进入热点配网模式
 
     <img src="../../documents/_static/example/alink_demo/esp32_devkit_c.png" width = "300" alt="esp32_devkit_c" align=center />
