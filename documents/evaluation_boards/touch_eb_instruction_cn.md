@@ -10,25 +10,25 @@ TOUCH_EB 套件用于评估和开发 ESP32 触摸传感器功能。评估套件�
 ## 2. 基本介绍
 
 - **开发环境准备**
- - [ESP-IDF](https://github.com/espressif/esp-idf) 是 ESP32 平台的软件开发包。文档 [Get Started](https://esp-idf.readthedocs.io/en/latest/get-started/index.html) 介绍编译环境的搭建和软件开发包的使用说明。
- - [ESP-Prog](./esp_prog_instruction.md) 是 ESP32 调试器。
+    - [ESP-IDF](https://github.com/espressif/esp-idf) 是 ESP32 平台的软件开发包。文档 [Get Started](https://esp-idf.readthedocs.io/en/latest/get-started/index.html) 介绍编译环境的搭建和软件开发包的使用说明。
+    - [ESP-Prog](./esp_prog_instruction_cn.md) 是 ESP32 调试器。
 
 - **软件获取**
- - [esp-iot-solution](https://github.com/espressif/esp-iot-solution) 基于 ESP-IDF 开发，包含多种应用解决方案。文档 [project-description-of-iot-solution](https://github.com/espressif/esp-iot-solution#project-description-of-iot-solution) 介绍了如何编译解决方案。
- - [touch_pad_evb](../../examples/touch_pad_evb) 是 TOUCH_EB 开发套件对应的应用方案，下载程序到 TOUCH_EB 开发板即可使用触摸功能。
+    - [esp-iot-solution](https://github.com/espressif/esp-iot-solution) 基于 ESP-IDF 开发，包含多种应用解决方案。文档 [project-description-of-iot-solution](https://github.com/espressif/esp-iot-solution#project-description-of-iot-solution) 介绍了如何编译解决方案。
+    - [touch_pad_evb](../../examples/touch_pad_evb) 是 TOUCH_EB 开发套件对应的应用方案，下载程序到 TOUCH_EB 开发板即可使用触摸功能。
 
 - **硬件手册**
-  - TOUCH_EB 开发套件的硬件原理图，PCB 文件，BOM 等文件参考 esp-iot-solution-hardware 工程。
-  - [ESP-Prog](./esp_prog_instruction.md) 调试器的介绍。
+    - TOUCH_EB 开发套件的硬件原理图，PCB 文件，BOM 等文件参考 esp-iot-solution-hardware 工程。
+    - [ESP-Prog](./esp_prog_instruction_cn.md) 调试器的介绍。
 
 - **相关参考资料**
-  - [Espressif 官网](www.espressif.com)。  
-  - [ESP32 编程指导](https://esp-idf.readthedocs.io/en/latest/index.html) : ESP32 相关开发文档汇总平台。包含内容全面，包括硬件手册，软件 API 介绍等。  
-  - [Espressif 下载中心](http://espressif.com/en/support/download/overview) : 乐鑫平台文档和工具的下载中心。
-  - [触摸传感器应用设计参考文档](https://github.com/espressif/esp-iot-solution/tree/master/documents/touch_pad_solution): ESP32 触摸传感器功能应用设计手册。包括触摸传感器原理介绍，软件设计，PCB 设计。
+    - [Espressif 官网](www.espressif.com)。  
+    - [ESP32 编程指导](https://esp-idf.readthedocs.io/en/latest/index.html) : ESP32 相关开发文档汇总平台。包含内容全面，包括硬件手册，软件 API 介绍等。  
+    - [Espressif 下载中心](http://espressif.com/en/support/download/overview) : 乐鑫平台文档和工具的下载中心。
+    - [触摸传感器应用设计参考文档](https://github.com/espressif/esp-iot-solution/tree/master/documents/touch_pad_solution): ESP32 触摸传感器功能应用设计手册。包括触摸传感器原理介绍，软件设计，PCB 设计。
 
 - **技术支持**
-  - TOUCH_EB 开发套件使用时遇到的问题，请在 esp-iot-solution 中提交 [issue](https://github.com/espressif/esp-iot-solution/issues)。
+    - TOUCH_EB 开发套件使用时遇到的问题，请在 esp-iot-solution 中提交 [issue](https://github.com/espressif/esp-iot-solution/issues)。
 
 ## 3. 开发板操作
 

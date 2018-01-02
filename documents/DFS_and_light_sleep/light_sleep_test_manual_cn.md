@@ -1,4 +1,4 @@
-## Ligth_sleep 电流测试步骤
+## Ligth_sleep 电流测试说明
 
 这篇文档将介绍如何在 esp-iot-solution 平台下进行 Light_sleep 期间电流的测试. Light_sleep 测试代码在 esp-iot-solution 中可以找到[测试代码链接](/tools/unit-test-app/components/light_sleep).
 
@@ -65,6 +65,6 @@ Here's the test menu, pick your combo:
 (6)	"Time to enter light_sleep test" [light_sleep][iot]
 ```
 
-log 上列举的就是我们可以进行的测试选项, 输入 5 则进行 Light_sleep time wakeup test. 在 Light_sleep 期间, 我们可以对电流进行测试.[接线图](/documents/low_power_solution/esp32_ulp_eb.md#53-%E7%BC%96%E8%AF%91%E4%B8%8E%E8%BF%90%E8%A1%8C). Light_sleep 期间, 电流是 800uA 左右.
+log 上列举的就是我们可以进行的测试选项, 输入 5 则进行 Light_sleep time wakeup test. 在 Light_sleep 期间, 我们可以对电流进行测试.[接线图](../evaluation_boards/esp32_ulp_eb_cn.md#compileAndRun). Light_sleep 期间, 电流是 800uA 左右.
 
 `Note : 在 Light_sleep 期间, 会有部分 GPIO(GPIO18, GPIO19, GPIO21, GGPIO22) 漏电, 所以建议在调用 esp_light_sleep_start 之前, 可以调用gpio_set_direction(), 将这些 GPIO 的输入与输出关闭.`

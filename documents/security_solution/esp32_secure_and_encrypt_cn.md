@@ -140,7 +140,7 @@
 # Windows平台的下载工具
 
 * 乐鑫提供windows平台的下载工具，能够在工厂生产环境中批量烧写固件
-* 点击[这里](download_tool.md)，阅读生产下载固件的说明文档。
+* 点击[这里](./download_tool_en.md)，阅读生产下载固件的说明文档。
 * 生产下载工具的配置文件在 configure 文件夹内，涉及安全特性的配置在 security.conf 中，目前涉及的配置内容如下表：
 
 | `ITEM` | Function | default |

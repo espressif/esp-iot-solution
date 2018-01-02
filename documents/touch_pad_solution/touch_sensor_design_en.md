@@ -147,7 +147,7 @@ The figure below illustrates a typical development flow of an ESP32 capacitive t
 
 **Debounce**: Touch threshold and hysteresis have certain ranges. The designer should set appropriate thresholds to reject spurious touch signals. For a consecutive debounce number of scan samples, a finger touch is reported only if the difference count is greater than touch threshold + hysteresis.
 
-**API**: Is the Application Programming Interface for the ESP touch sensor. The core functions are provided by [ESP-IDF](https://github.com/espressif/esp-idf) and documented in [Touch Sensor API Reference](https://esp-idf.readthedocs.io/en/latest/api-reference/peripherals/touch_pad.html). The API extension is avialable as [touchpad component](components/features/touchpad).
+**API**: Is the Application Programming Interface for the ESP touch sensor. The core functions are provided by [ESP-IDF](https://github.com/espressif/esp-idf) and documented in [Touch Sensor API Reference](https://esp-idf.readthedocs.io/en/latest/api-reference/peripherals/touch_pad.html). The API extension is avialable as [touchpad component](../../components/features/touchpad).
 
 ## 2. Introduction to the ESP32 Touch Sensor System
 

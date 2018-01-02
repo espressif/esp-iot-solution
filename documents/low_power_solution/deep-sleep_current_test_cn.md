@@ -1,7 +1,7 @@
 ## RTC IO, TouchPad 覆盖测试
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-*ESP32 拥有 18 个 RTC IO 和 10 个 TouchPad, 每一个 RTC IO 和 TouchPad 经过配置都可以将芯片从 deep_sleep 模式中唤醒, 从而可以实现低功耗方案*. 该项测试基于 ESP32 电流测试板, 开发板使用和测试程序配置请参考 deep_sleep 测试板使用简介 [电流测试板使用简介](./esp32_ulp_eb.md). 下面介绍的是通过配置不同唤醒方式, deep_sleep 期间芯片的工作电流. 所有的 RTC IO 和 TouchPad 都进行了测试.
+*ESP32 拥有 18 个 RTC IO 和 10 个 TouchPad, 每一个 RTC IO 和 TouchPad 经过配置都可以将芯片从 deep_sleep 模式中唤醒, 从而可以实现低功耗方案*. 该项测试基于 ESP32 电流测试板, 开发板使用和测试程序配置请参考 deep_sleep 测试板使用简介 [电流测试板使用简介](../evaluation_boards/esp32_ulp_eb_cn.md). 下面介绍的是通过配置不同唤醒方式, deep_sleep 期间芯片的工作电流. 所有的 RTC IO 和 TouchPad 都进行了测试.
 
 
 外部事件唤醒
@@ -12,7 +12,7 @@
 * EXT0 方式是当某个 RTC IO 上检测到有唤醒芯片的电平信号时, 芯片就被会唤醒, 在程序中配置是高电平还是低电平唤醒.
 * EXT1 方式下, 我们可以采用多个 RTC IO 组合触发方式, 当几个 RTC IO 上电平信号满足一定条件时，芯片将被唤醒. 如果只有一个 RTC IO 进行了配置, 效果将与 EXT0 类似.
 
-***具体程序配置请参考 [电流测试板使用简介](./esp32_ulp_eb.md) 第四章.***
+***具体程序配置请参考 [电流测试板使用简介](../evaluation_boards/esp32_ulp_eb_cn.md#testcase) 第四章.***
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 测试配置如下 : RTC IO 配置成输入 floating 模式. 程序配置某一个 RTC IO 为 wake_up IO. 当采用高电平唤醒时, 外部采用 10K 欧电阻下拉, 当采用低电平唤醒时, 外部采用 10K 欧电阻上拉. EXT0 唤醒方式测试结果中, 配置 GPIO_0 为 wake_up IO 时, 如果是配置低电平唤醒, deep_sleep 期间工作电流是 6.3uA, 配置成高电平唤醒时, deep_sleep 期间工作电流是 6.2uA.
@@ -89,7 +89,7 @@ Touch Pad 唤醒方式
 -
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-Touch Pad 唤醒方式下, 芯片进入 deep_sleep 之前, 对 Touch Pad 进行初始化，然后配置触发阈值. 进入 deep_sleep 后测量 sleep 期间电流. 测试配置程序可以参考文档[电流测试板使用简介](./esp32_ulp_eb.md)第四章.
+Touch Pad 唤醒方式下, 芯片进入 deep_sleep 之前, 对 Touch Pad 进行初始化，然后配置触发阈值. 进入 deep_sleep 后测量 sleep 期间电流. 测试配置程序可以参考文档[电流测试板使用简介](../evaluation_boards/esp32_ulp_eb_cn.md#testcase)第四章.
 
 __TouchPad 唤醒方式测试结果__
 
@@ -105,5 +105,6 @@ __TouchPad 唤醒方式测试结果__
 |  Pad7 (GPIO_27) |  35.7 uA|
 |  Pad8 (GPIO_33) |  36.7 uA|
 |  Pad9 (GPIO_32) |  36.3 uA|
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 _`注： 可以使用 touch_pad_set_meas_time 接口来调整 touch sensor 充放电时间和充放电检测间隔，从而在合适的响应时间下，获得更好的低功耗表现。`_

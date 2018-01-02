@@ -94,7 +94,10 @@
     <img src="../_static/low_power/touchpad.png" width = "500" alt="touchpad_deepsleep_current" align=center />
 
 [^1]: During deep sleep, the use of esp_deep_sleep_enable_ext0_wakeup() requires the support of RTC peripherals, which consumes additional 100 mA, while esp_deep_sleep_enable_ext1_wakeup() needs no RTC peripherals. In this case, esp_deep_sleep_enable_ext1_wakeup() is recommended at all times.
+
 [^2]: For details on how to use the ulp_monitor module, please see the related readme.md and ulp_monitor_test.c files.
+
 [^3]: Such as the initialization and threshold settings. For details, please see the Touchpad chapter in this IoT Solution.
+
 [^4]: Function esp_deep_sleep_enable_ext1_wakeup() is used in the test.
 

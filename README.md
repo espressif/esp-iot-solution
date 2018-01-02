@@ -1,4 +1,40 @@
-# Project Description of IoT Solution
+# IoT Solution Overview
+
+---
+
+## Solutions
+
+* [Deep-sleep low power solutions](./documents/low_power_solution/readme_en.md)
+    * [Current Consumption Test for ESP32 in Deep sleep](./documents/low_power_solution/deep-sleep_current_test_en.md)
+    * [ESP32 Low-Power Management Overview](./documents/low_power_solution/esp32_lowpower_solution_en.md)
+* [Light-sleep low power solutions overview](./documents/DFS_and_light_sleep/readme_en.md)
+    * [ESP32 DFS test manual](./documents/DFS_and_light_sleep/DFS_test_manual_en.md)
+    * [ESP32 Light-sleep features](./documents/DFS_and_light_sleep/light_sleep_performance_en.md)
+    * [ESP32 Light-sleep test manual](./documents/DFS_and_light_sleep/light_sleep_test_manual_cn.md)
+* [Touch Sensor Application Note](./documents/touch_pad_solution/touch_sensor_design_en.md)
+* [Security and Factory Flow](./documents/security_solution/readme_en.md)
+    * [ESP32 secure and encrypt](./documents/security_solution/esp32_secure_and_encrypt_cn.md)
+    * [Download Tool GUI Instruction](./documents/security_solution/download_tool_en.md)
+
+---
+
+
+## Evaluation board series
+* [User Guide to ESP32_ULP_EB_V1 Evaluation Board](./documents/evaluation_boards/esp32_ulp_eb_cn.md)
+* [User Guide to ESP32_TOUCH_EB_V3 Evaluation Board](./documents/evaluation_boards/touch_eb_instruction_cn.md)
+* [ESP download and debug board](./documents/evaluation_boards/esp_prog_instruction_cn.md)
+
+---
+
+## Example list:
+* [check_pedestrian_flow](examples/check_pedestrian_flow)
+* [empty_project](examples/empty_project)
+* [eth2wifi](examples/eth2wifi)
+* [oled_screen_module](examples/oled_screen_module)
+* [smart_device](examples/smart_device)
+* [touch_pad_evb](examples/touch_pad_evb)
+* [ulp_rtc_gpio](examples/ulp_rtc_gpio)
+* [ulp_watering_device](examples/ulp_watering_device)
 
 ---
 ## <h2 id="preparation">Preparation</h2>
@@ -72,7 +108,7 @@
 
 ---
 
-## Framework structure
+## Framework
 * `components`
     * small drivers of different divices like button and LED
     * drivers of sensors
@@ -213,24 +249,4 @@ Exit miniterm by typing Ctrl-].
     ```
 
 ---
-
-
-
-## Solution list:
-
-* [Low power / deep sleep / co-processor solution](documents/low_power_solution)
-* [Touch sensor solution and application note](documents/touch_pad_solution)
-* [Security solution and factory flow](documents/security_solution)
-
-## Example list:
-* [check_pedestrian_flow](examples/check_pedestrian_flow)
-* [empty_project](examples/empty_project)
-* [eth2wifi](examples/eth2wifi)
-* [oled_screen_module](examples/oled_screen_module)
-* [smart_device](examples/smart_device)
-* [touch_pad_evb](examples/touch_pad_evb)
-* [ulp_rtc_gpio](examples/ulp_rtc_gpio)
-* [ulp_watering_device](examples/ulp_watering_device)
-
-
 
