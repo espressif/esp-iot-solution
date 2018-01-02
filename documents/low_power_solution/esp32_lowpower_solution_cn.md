@@ -92,11 +92,14 @@
 
     <img src="../_static/low_power/touchpad.png" width = "500" alt="touchpad_deepsleep_current" align=center />
 
-关于 deep_sleep 唤醒方式的配置, 可以参考 IOT-Solution 中 Test Case 或 [电流测试板使用简介](./esp32_ulp_eb.md)
+关于 deep_sleep 唤醒方式的配置, 可以参考 IOT-Solution 中 Test Case 或 [电流测试板使用简介](../evaluation_boards/esp32_ulp_eb_cn.md)
 
-关于 deep_sleep 电流测试可以参考 RTC IO 和 TouchPad 覆盖[测试结果](./coverage_test.md)
+关于 deep_sleep 电流测试可以参考 RTC IO 和 TouchPad 覆盖[测试结果](./deep-sleep_current_test_cn.md)
 
 [^1]: 由于在 Deep-sleep 模式下调用 esp_deep_sleep_enable_ext0_wakeup() 函数需要打开 RTC 外设，这会额外产生 100 mA 左右的电流消耗，而调用 esp_deep_sleep_enable_ext1_wakeup() 函数则不需要打开 RTC 外设，所以建议全部使用 esp_deep_sleep_enable_ext1_wakeup()。
+
 [^2]: 具体可查看 ulp_monitor 模块的 readme.md 和 ulp_monitor_test.c 文件。
+
 [^3]: 包括初始化与设置阈值，具体可查看 IoT Solution 中的 Touchpad 方案。
+
 [^4]: 这里采用了 esp_deep_sleep_enable_ext1_wakeup() 函数。

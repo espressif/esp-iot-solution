@@ -1,4 +1,4 @@
-## Current test report during force light-sleep mode
+## Force-light-sleep mode
 
 Light-sleep is another power saving mode. In Light-sleep mode, CPUs, digital peripherals and most of the RAM are clock-gated, and supply voltage is reduced. Upon exit from Light-sleep, peripherals and CPUs resume operation, their internal state is preserved. By calling `esp_err_t esp_light_sleep_start()`, application can enter light sleep mode.
 
