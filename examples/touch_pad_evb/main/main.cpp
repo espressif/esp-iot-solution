@@ -73,6 +73,8 @@ extern "C" void app_main()
     } else if (mode ==  TOUCH_EVB_MODE_SPRING) {
         evb_touch_spring_init();
     } else if (mode == TOUCH_EVB_MODE_CIRCLE) {
-        evb_touch_circle_init_then_run();
+        evb_touch_wheel_init_then_run();
+    } else if (mode == TOUCH_EVB_MODE_SEQ_SLIDE) {
+        evb_touch_seq_slide_init_then_run();
     }
 }

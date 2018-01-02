@@ -19,12 +19,25 @@
 #include "evb.h"
 
 static const char *TAG = "touch_spring";
+#if CONFIG_TOUCH_EB_V2
 #define TOUCH_BUTTON_0  TOUCH_PAD_NUM9
 #define TOUCH_BUTTON_1  TOUCH_PAD_NUM6
 #define TOUCH_BUTTON_2  TOUCH_PAD_NUM5
 #define TOUCH_BUTTON_3  TOUCH_PAD_NUM8
 #define TOUCH_BUTTON_4  TOUCH_PAD_NUM7
 #define TOUCH_BUTTON_5  TOUCH_PAD_NUM4
+#define TOUCH_LED_IDX_0  0
+#define TOUCH_LED_IDX_1  1
+#elif CONFIG_TOUCH_EB_V3
+#define TOUCH_BUTTON_0  TOUCH_PAD_NUM9
+#define TOUCH_BUTTON_1  TOUCH_PAD_NUM3
+#define TOUCH_BUTTON_2  TOUCH_PAD_NUM0
+#define TOUCH_BUTTON_3  TOUCH_PAD_NUM7
+#define TOUCH_BUTTON_4  TOUCH_PAD_NUM5
+#define TOUCH_BUTTON_5  TOUCH_PAD_NUM1
+#define TOUCH_LED_IDX_0  4
+#define TOUCH_LED_IDX_1  3
+#endif
 static CTouchPad *tp_dev[6] = {0};
 
 void evb_touch_spring_led_toggle(int idx)
@@ -43,16 +56,20 @@ void evb_touch_spring_handle(int idx, int type)
           idx == TOUCH_BUTTON_3 ? 3 :
           idx == TOUCH_BUTTON_4 ? 4 :
           idx == TOUCH_BUTTON_5 ? 5 : 0;
+#if CONFIG_TOUCH_EB_V2
     ch450_write_dig(2, -1);
     ch450_write_dig(3, -1);
+#elif CONFIG_TOUCH_EB_V3
+    ch450_write_dig(5, -1);
+#endif
     if (type == TOUCH_EVT_TYPE_SPRING_PUSH) {
-        ch450_write_dig(0, idx);
-        ch450_write_dig(1, -1);
+        ch450_write_dig(TOUCH_LED_IDX_0, idx);
+        ch450_write_dig(TOUCH_LED_IDX_1, -1);
         ch450_write_led(BIT(idx), 1);
         evb_touch_spring_led_toggle(idx);
     } else if (type == TOUCH_EVT_TYPE_SPRING_RELEASE) {
-        ch450_write_dig(1, idx);
-        ch450_write_dig(0, -1);
+        ch450_write_dig(TOUCH_LED_IDX_1, idx);
+        ch450_write_dig(TOUCH_LED_IDX_0, -1);
     } else {
 
     }
@@ -84,12 +101,12 @@ static void spring_release_cb(void *arg)
 void evb_touch_spring_init()
 {
     //single touch
-    tp_dev[0] = new CTouchPad(TOUCH_BUTTON_0, TOUCHPAD_THRES_PERCENT, 0, TOUCHPAD_FILTER_VALUE);
-    tp_dev[1] = new CTouchPad(TOUCH_BUTTON_1, TOUCHPAD_THRES_PERCENT, 0, TOUCHPAD_FILTER_VALUE);
-    tp_dev[2] = new CTouchPad(TOUCH_BUTTON_2, TOUCHPAD_THRES_PERCENT, 0, TOUCHPAD_FILTER_VALUE);
-    tp_dev[3] = new CTouchPad(TOUCH_BUTTON_3, TOUCHPAD_THRES_PERCENT, 0, TOUCHPAD_FILTER_VALUE);
-    tp_dev[4] = new CTouchPad(TOUCH_BUTTON_4, TOUCHPAD_THRES_PERCENT, 0, TOUCHPAD_FILTER_VALUE);
-    tp_dev[5] = new CTouchPad(TOUCH_BUTTON_5, TOUCHPAD_THRES_PERCENT, 0, TOUCHPAD_FILTER_VALUE);
+    tp_dev[0] = new CTouchPad(TOUCH_BUTTON_0, TOUCHPAD_SPRING_THRESH_PERCENT, 0, TOUCHPAD_FILTER_VALUE);
+    tp_dev[1] = new CTouchPad(TOUCH_BUTTON_1, TOUCHPAD_SPRING_THRESH_PERCENT, 0, TOUCHPAD_FILTER_VALUE);
+    tp_dev[2] = new CTouchPad(TOUCH_BUTTON_2, TOUCHPAD_SPRING_THRESH_PERCENT, 0, TOUCHPAD_FILTER_VALUE);
+    tp_dev[3] = new CTouchPad(TOUCH_BUTTON_3, TOUCHPAD_SPRING_THRESH_PERCENT, 0, TOUCHPAD_FILTER_VALUE);
+    tp_dev[4] = new CTouchPad(TOUCH_BUTTON_4, TOUCHPAD_SPRING_THRESH_PERCENT, 0, TOUCHPAD_FILTER_VALUE);
+    tp_dev[5] = new CTouchPad(TOUCH_BUTTON_5, TOUCHPAD_SPRING_THRESH_PERCENT, 0, TOUCHPAD_FILTER_VALUE);
 
     tp_dev[0]->add_cb(TOUCHPAD_CB_PUSH, spring_push_cb, tp_dev[0]);
     tp_dev[1]->add_cb(TOUCHPAD_CB_PUSH, spring_push_cb, tp_dev[1]);

@@ -43,7 +43,11 @@ void ch450_dev_init()
 void ch450_write_led(int mask, int on_off)
 {
     static uint8_t bit_mask = 0;
+#if CONFIG_TOUCH_EB_V2
     int seg_idx = 4;
+#elif CONFIG_TOUCH_EB_V3
+    int seg_idx = 2;
+#endif
 
     uint8_t val = 0;
     if (mask & BIT(3)) {
@@ -73,13 +77,59 @@ void ch450_write_led(int mask, int on_off)
     iot_ch450_write(seg, seg_cmd, bit_mask);
 }
 
+void ch450_write_dig_reverse(int idx, int num)
+{
+    uint8_t val = 0;
+    switch(num) {
+        case 1:
+            val = 0x82;
+            break;
+        case 2:
+            val = 0xcd;
+            break;
+        case 3:
+            val = 0xc7;
+            break;
+        case 4:
+            val = 0xa3;
+            break;
+        case 5:
+            val = 0x67;
+            break;
+        case 6:
+            val = 0x6f;
+            break;
+        case 7:
+            val = 0xc2;
+            break;
+        case 8:
+            val = 0xef;
+            break;
+        case 9:
+            val = 0xe7;
+            break;
+        case 0:
+            val = 0xee;
+            break;
+        default:
+            val = 0;
+            break;
+    }
+    ch450_cmd_t seg_cmd = CH450_SEG_2 + idx * 2;
+    iot_ch450_write(seg, seg_cmd, val);
+}
+
 void ch450_write_dig(int idx, int val)
 {
-#if CONFIG_TOUCH_EB_V2
+#if CONFIG_TOUCH_EB_V1
+    iot_ch450_write_num(seg, idx, val);
+#elif CONFIG_TOUCH_EB_V2
     if (idx > 3) {
         return;
     }
-#endif
     iot_ch450_write_num(seg, idx, val);
+#elif CONFIG_TOUCH_EB_V3
+    ch450_write_dig_reverse(idx, val);
+#endif
 }
 

@@ -9,6 +9,8 @@ menu "IoT Touch EB settings"
         bool "TOUCH_EB_V1"
     config TOUCH_EB_V2
         bool "TOUCH_EB_V2"
+    config TOUCH_EB_V3
+        bool "TOUCH_EB_V3"
     endchoice
 
 
