@@ -306,7 +306,7 @@ void iot_epaper_draw_rectangle(epaper_handle_t dev, int x0, int y0, int x1,
  * @param  y1 point(x1,y1)
  * @param  colored display color
  */
-void ior_epaper_draw_filled_rectangle(epaper_handle_t dev, int x0, int y0,
+void iot_epaper_draw_filled_rectangle(epaper_handle_t dev, int x0, int y0,
         int x1, int y1, int colored);
 
 /**
