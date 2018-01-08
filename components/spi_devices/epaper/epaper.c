@@ -553,7 +553,7 @@ void iot_epaper_draw_rectangle(epaper_handle_t dev, int x0, int y0, int x1, int 
 /**
  *  @brief: this draws a filled rectangle
  */
-void ior_epaper_draw_filled_rectangle(epaper_handle_t dev, int x0, int y0, int x1, int y1, int colored)
+void iot_epaper_draw_filled_rectangle(epaper_handle_t dev, int x0, int y0, int x1, int y1, int colored)
 {
     int min_x, min_y, max_x, max_y;
     int i;
