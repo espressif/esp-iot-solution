@@ -1,4 +1,6 @@
-# Touch Sensor Design
+[[中文]](touch_sensor_design_cn.md) 
+
+# Touch Sensor Application Note
 
 Besides the core Wi-Fi functionality, the ESP32 integrates several peripheral devices to implement applications without providing additional external components. One of such devices is the touch sensor system with ten individual channels.
 

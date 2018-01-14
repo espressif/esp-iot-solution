@@ -41,7 +41,7 @@ RTC GPIO 一共有 18 个 IO 口，这些 GPIO 管脚具有低功耗 RTC 性能�
 
 ## 2. RTC GPIO 翻转图示
 本例子主 CPU 设置 ULP 协处理器每隔 10ms 唤醒自身一次 并且 ULP 协处理器每隔 8 个唤醒周期后，再唤醒主 CPU 一次，依此循环。每次处理器状态切换时，均有相应的 GPIO 翻转指示当前的状态。
-![](../../documents/_static/ulp_rtc_gpio/1.png)
+![](../../../documents/_static/ulp_rtc_gpio/1.png)
 
 ## 3.软件部分
 ESP32 的 C 语言编译环境安装和配置参照 [链接地址](https://esp-idf.readthedocs.io/en/latest/get-started/index.html#setup-toolchain)，另外 ULP 协处理器目前只支持汇编编程，所以还需要安装汇编工具链，下面介绍汇编工具链的安装和配置。
@@ -62,47 +62,42 @@ ULP 协处理器配置汇编编译工具链，只需两步即可安装配置完�
 entry:
 	/* Disable hold of RTC_GPIO10 output */
 	WRITE_RTC_REG(RTC_IO_TOUCH_PAD0_REG,RTC_IO_TOUCH_PAD0_HOLD_S,1,0)
-    
 	/* Set the RTC_GPIO10 output HIGH to signal that ULP is now up */
 	WRITE_RTC_REG(RTC_GPIO_OUT_W1TS_REG,RTC_GPIO_OUT_DATA_W1TS_S+10,1,1)
-    
 	/* Wait some cycles to have visible trace on the scope */
 	wait 1000
 ```
+
 同理，在进入 Deep-Sleep 之前，拉低 RTC_GPIO10 之后，则需要把 RTC_GPIO10 管脚的 hold 功能置位，使其在系统复位时能够保持原来的电平状态
 
 ```
 	.global toggle_complete
 toggle_complete:
-
 	/* Set the RTC_GPIO10 output LOW (clear output) to signal that ULP is now going down */
 	WRITE_RTC_REG(RTC_GPIO_OUT_W1TC_REG,RTC_GPIO_OUT_DATA_W1TC_S+10,1,1)
-
 	/* Enable hold on RTC_GPIO10 output */
 	WRITE_RTC_REG(RTC_IO_TOUCH_PAD0_REG,RTC_IO_TOUCH_PAD0_HOLD_S,1,1)
-
 	/* Compare the toggle counter with toggle cycles to wakeup SoC  and wakup SoC if the values match */ 
 	and r0, r3, toggle_cycles_to_wakeup
-    
 	jump wake_up, eq
 ```
+
 ## 4. 额外说明
-![](../../documents/_static/ulp_rtc_gpio/2.png)
+![](../../../documents/_static/ulp_rtc_gpio/2.png)
 
 如果你运行了这个例子，而且试图分析各个处理器切换状态，可能会遇到上图中额外多出的 98ms 的疑惑。这里需要说明的是，汇编程序 Polling CPU 并唤醒 CPU 时间是很短的，绝大部分的时间是用来 boot 主 CPU 的（例如主 CPU 上电动作、一级 Bootloader 加载打印等时间消耗）。因为在 DeepSleep 状态下 CPU 的各个模块都是被关掉的，如内部 8MHz 振荡器、40MHz 高速晶振、PLL 及射频模块均禁用；数字内核断电，CPU 内容丢失，这里有一个重新上电加载的过程。
+
 ```
 	/* Get ULP back to sleep */
 	.global exit
 exit:
 	halt
-    
 	.global wake_up
 wake_up:
 	/* Check if the SoC can be woken up */
 	READ_RTC_REG(RTC_CNTL_DIAG0_REG, 19, 1)
 	and r0, r0, 1
 	jump exit, eq
-
 	/* Wake up the SoC and stop ULP program */
 	wake
 	/* Stop the wakeup timer so it does not restart ULP */

@@ -1,3 +1,5 @@
+[[中文]](./deep-sleep_current_test_cn.md) 
+
 # Current Consumption Test for ESP32 in Deep sleep
 
 ESP32 has 18 RTC GPIOs and 10 touchpads, which can all be configured as the wake-up source to wake up the chip from deep sleep.

@@ -1,3 +1,6 @@
+
+[[中文]](./esp32_lowpower_solution_cn.md) 
+
 # ESP32 Low-Power Management Overview
 
 * Supported by its integrated Deep-sleep mode, ULP co-processor and RTC peripherals, ESP32 can be widely applied to a variety of power-sensitive applications. In Deep-sleep mode, all of the peripherals driven by APB_CLK, CPU and RAM are powered down; RTC_CLK is still running; and the RTC controller, RTC peripherals, ULP co-processor, RTC fast memory and RTC slow memory could be powered down or not, based on the specific setting of wake-up source in the application.
