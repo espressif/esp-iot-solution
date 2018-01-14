@@ -4,6 +4,6 @@
 
 * [ESP32 DFS test manual](./DFS_test_manual_en.md)
 * [ESP32 Light-sleep features](./light_sleep_performance_en.md)
-* [ESP32 Light-sleep test manual](./light_sleep_test_manual_cn.md)
+* __ESP32 Light-sleep test manual__ (English version is about to release)
 
 [[Documentation Home]](../readme_en.md)

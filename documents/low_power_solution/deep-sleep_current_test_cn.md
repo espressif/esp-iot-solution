@@ -1,7 +1,12 @@
-## RTC IO, TouchPad 覆盖测试
+[[EN]](./deep-sleep_current_test_en.md) 
+
+# ESP32 深度睡眠模式功耗测试
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-*ESP32 拥有 18 个 RTC IO 和 10 个 TouchPad, 每一个 RTC IO 和 TouchPad 经过配置都可以将芯片从 deep_sleep 模式中唤醒, 从而可以实现低功耗方案*. 该项测试基于 ESP32 电流测试板, 开发板使用和测试程序配置请参考 deep_sleep 测试板使用简介 [电流测试板使用简介](../evaluation_boards/esp32_ulp_eb_cn.md). 下面介绍的是通过配置不同唤醒方式, deep_sleep 期间芯片的工作电流. 所有的 RTC IO 和 TouchPad 都进行了测试.
+*ESP32 拥有 18 个 RTC IO 和 10 个 TouchPad, 每一个 RTC IO 和 TouchPad 经过配置都可以将芯片从 deep_sleep 模式中唤醒, 从而可以实现低功耗方案*. 
+
+## 概述
+该项测试基于 ESP32 电流测试板, 开发板使用和测试程序配置请参考 deep_sleep 测试板使用简介 [电流测试板使用简介](../evaluation_boards/esp32_ulp_eb_cn.md). 下面介绍的是通过配置不同唤醒方式, deep_sleep 期间芯片的工作电流. 所有的 RTC IO 和 TouchPad 都进行了测试.
 
 
 外部事件唤醒

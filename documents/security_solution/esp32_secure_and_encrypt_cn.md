@@ -1,4 +1,4 @@
-# Secure Boot
+# Secure Boot 功能概述
 
 ### 方案概述
 * Secure Boot 的目的是保证芯片只运行用户指定的程序，芯片每次启动时都会验证从 flash 中加载的 partition table 和 app images 是否是用户指定的

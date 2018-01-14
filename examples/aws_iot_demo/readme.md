@@ -2,11 +2,11 @@
 
 This is an adaptation of the [AWS IoT C SDK](https://github.com/aws/aws-iot-device-sdk-embedded-C) "subscribe_publish" example for ESP-IDF.
 
-# Configuration
+## Configuration
 
-See the Readme_AWS_setup.md in the parent directory for information about configuring the AWS IoT examples.
+See the [Readme_AWS_setup.md](Readme_AWS_setup.md) in the same directory for information about configuring the AWS IoT examples.
 
-# Monitoring MQTT Data from the device
+## Monitoring MQTT Data from the device
 
 After flashing the example to your ESP32, it should connect to Amazon and start subscribing/publishing MQTT data.
 

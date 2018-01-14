@@ -1,3 +1,6 @@
+
+[[中文]](esp32_ulp_eb_cn.md) 
+
 # User Guide to **ESP32_ULP_EB_V1** Evaluation Board
 
 ## 1. System Description
