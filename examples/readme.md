@@ -1,6 +1,6 @@
 
 ## ESP32 IOT Example list:
-* [ESP32 Pedestrian Flow Monitoring introduction](./check_pedestrian_flow) 
+* [ESP32 Pedestrian Flow Monitoring introduction](./check_pedestrian_flow)
     - The example demonstrates how to use ESP32 to calculate pedestrian flow in the Wi-Fi sniffer mode. 
     - Keywords: __WiFi sniffer OneNet MQTT__
 

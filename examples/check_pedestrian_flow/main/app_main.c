@@ -84,7 +84,6 @@ static inline uint32_t sniffer_timestamp()
 /* The callback function of sniffer */
 void wifi_sniffer_cb(void *recv_buf, wifi_promiscuous_pkt_type_t type)
 {
-
     wifi_promiscuous_pkt_t *sniffer = (wifi_promiscuous_pkt_t *)recv_buf;
     sniffer_payload_t *sniffer_payload = (sniffer_payload_t *)sniffer->payload;
 
@@ -171,7 +170,6 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
 
     return ESP_OK;
 }
-
 
 void esp32_wifi_init(void)
 {
