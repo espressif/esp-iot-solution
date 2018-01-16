@@ -15,5 +15,5 @@
     * __下载工具介绍__ (中文文档即将发布)
 * [ESP32 评估板系列](evaluation_boards/readme_cn.md)
     * [ESP32_ULP_EB 低功耗应用评估板](evaluation_boards/esp32_ulp_eb_cn.md)
-    * [ESP32_TOUCH_EB 触摸传感器应用评估板](evaluation_boards/touch_eb_instruction_cn.md)
+    * [ESP32-Sense 触摸传感器开发套件](evaluation_boards/esp32_sense_kit_guide_cn.md)
     * [ESP-Prog 下载与调试器](evaluation_boards/ESP-Prog_guide_cn.md)

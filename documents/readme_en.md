@@ -15,5 +15,5 @@
     * [Download Tool GUI Instruction](security_solution/download_tool_en.md)
 * [Evaluation board series](evaluation_boards/readme_en.md)
     * [User Guide to ESP32_ULP_EB_V1 Evaluation Board](evaluation_boards/esp32_ulp_eb_en.md)
-    * __User Guide to ESP32_TOUCH_EB_V3 Evaluation Board__ (English version is about to release)
+    * [User Guide to ESP32-Sense kit Board](evaluation_boards/esp32_sense_kit_guide_en.md)
     * [ESP-Prog download and debug board](evaluation_boards/ESP-Prog_guide_en.md)
