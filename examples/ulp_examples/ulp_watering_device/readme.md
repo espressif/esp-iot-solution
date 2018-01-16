@@ -13,22 +13,22 @@ ULP 协处理器大部分时间处于睡眠状态，定时唤醒后，通过 SAR
 硬件原理图使用 Kicad 设计，检测土壤湿度原理是通过 47k 电阻和土壤中的电阻分压，测得 ADC 值后推算出土壤的湿度。另外，湿润的土壤到干燥的土壤电阻值一般测得阻值数据是 20K - 100k 左右。
 
 需要注意：ESP32_ULP_EBV1 这个板子 GPIO34 有 10K 上拉电阻 R41 ，我们把它去掉了，因为 ADC 采集不需要这个电阻，并且还会造成漏电流。
-![](../../documents/_static/ulp_demo/s_7.png)
+![](../../../documents/_static/ulp_demo/s_7.png)
 
 #### 3.2 硬件实物
 |土壤湿度传感器|水泵|
 |---|---|
 |叉状电极插入土壤获得土壤阻值|5V 电机，可正反转|
-|![](../../documents/_static/ulp_demo/d_1.jpg)|![](../../documents/_static/ulp_demo/d_2.jpg)|
+|![](../../../documents/_static/ulp_demo/d_1.jpg)|![](../../../documents/_static/ulp_demo/d_2.jpg)|
 
 |继电器控制|ESP32_ULP_EBV1|
 |---|---|
 |继电器是负载 10A 250VAC 的单刀双掷，负电平控制常开端闭合|ESP32_ULP_EBV1 板子可方便的接入电流表测得芯片电流消耗情况| 
-|![](../../documents/_static/ulp_demo/d_3.jpg)|![](../../documents/_static/ulp_demo/d_4.jpg)|
+|![](../../../documents/_static/ulp_demo/d_3.jpg)|![](../../../documents/_static/ulp_demo/d_4.jpg)|
 
 #### 3.3整体连接图
 
-![](../../documents/_static/ulp_demo/e_1.jpg)
+![](../../../documents/_static/ulp_demo/e_1.jpg)
 
 ## 4.软件部分
 ESP32 的 C 语言编译环境安装和配置参照 [链接地址](https://esp-idf.readthedocs.io/en/latest/get-started/index.html#setup-toolchain)，另外 ULP 协处理器目前只支持汇编编程，所以还需要安装汇编工具链，下面介绍汇编工具链的安装和配置。
@@ -49,7 +49,7 @@ ULP 协处理器配置汇编编译工具链，只需两步即可安装配置完�
 
 #### 4.3 程序流程图
 ESP32 上电后，配置 ULP 协处理器相关的 RTC GPIO 和唤醒周期后进入休眠，ULP 协处理器醒来后，通过 ADC 指令获取土壤电阻分压 ADC 值，如果检测到 SENSOR 异常，则唤醒 CPU 闪烁 LED 指示灯，用户可自定义其他的出错处理（例如链接云上报数据）；如果检测到湿度区间合适则什么都不做继续睡眠降低功耗；如果湿度值低于设定阈值则打开 RTC GPIO 控制水泵浇水。
-![](../../documents/_static/ulp_demo/10.png)
+![](../../../documents/_static/ulp_demo/10.png)
 
 #### 4.4 代码分析
 
