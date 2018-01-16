@@ -7,12 +7,12 @@
 ## 2. 霍尔传感器读取示例
 本例子 ULP 协处理器每隔 3 S 唤醒一次，唤醒后在低功耗模式下读取霍尔传感器值, 通过 hall phase shift 两次，读取 vp 和 vn 值 各两次一共四个值，减去共模的部分可以得出 offset 值，这个值可以用来表征环境对霍尔传感器的影响。如图，第一次打印的数值是周围未有强磁场的情况下测得的霍尔传感器数值；第二次打印的数值是使用了一枚钕铁硼磁铁的 N 极接近 ESP32 时获取的数值；第三次打印的数值是钕铁硼磁铁的 S 极接近 ESP32 时获取的数值，可以看出霍尔传感器的数值发生了较大的变化。
 
-![](../../documents/_static/ulp_hall_sensor/hall_sensor.png)
+![](../../../documents/_static/ulp_hall_sensor/hall_sensor.png)
 
 ## 3. 系统连接
  HALL SENSOR 和 SAR ADC 连接情况见下图，HALL SENSOR 的 SENSOR_VP 和 SENSOR_VN 管脚分别连接到 SAR ADC1 的 SAR_MUX = 1 和 SAR_MUX = 4 上。
 
-![](../../documents/_static/ulp_hall_sensor/sar_adc.png)
+![](../../../documents/_static/ulp_hall_sensor/sar_adc.png)
 
 下表是 SAR ADC1 的输入信号及 SAR_MUX 通道
 
