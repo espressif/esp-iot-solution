@@ -609,9 +609,9 @@ An m×n matrix requires m+n touch sensors. A matrix button design consists of tw
 
 This chapter provides general guidelines for the touch sensor firmware design that help reduce the time to market for the product.
 
-### 4.1. The Impact of Wi-Fi on Touch Sensor
+### 4.1. The Impact of Wi-Fi Enabling on Touch Sensor
 
-Enabling Wi-Fi functionality will affect the stability of touch sensor reading. The Wi-Fi transceiver needs about 300 mA current, so frequent packet transmission introduces pressure on the power system and consequently affects the system's sensitivity, since the touch sensor is sensitive to power supply. The noise introduced by the power supply is periodic, and can be filtered out with filtering algorithms.
+The Wi-Fi transceiver needs about 300 mA current, and frequent packet transmission introduces pressure on the power system and consequently affects the system's sensitivity. Since the touch sensor is sensitive to power supply, enabling Wi-Fi functionality will affect the stability of touch sensor reading. The noise introduced by the power supply is periodic, and can be filtered out with filtering algorithms.
 
 The following table shows the standard deviation of the readings on each touch channel when Wi-Fi is on or off (the larger the value, the larger the data dispersion). It can be concluded that if Wi-Fi is enabled, the standard deviation of readings will increase; if filter is enabled, the standard deviation of readings will decrease. As a result, the filter mode is recommended.
 
@@ -621,7 +621,7 @@ The following table shows the standard deviation of the readings on each touch c
 |T1|1.43|2.06|0.50|0.73|
 |T2|0.97|1.15|0.64|0.49|
 
-The Wi-Fi function is power-consuming. The on and off states of Wi-Fi affect the touch sensor readings, with a maximum change rate of 1.12%. The change rate on each channel follows the order of 1.5% > (TOUCH 0 ~ TOUCH 4) > 1% > (TOUCH 5 ~ TOUCH 9) > 0.5%.
+The Wi-Fi function is power-consuming. Enabling Wi-Fi will decrease the the touch sensor reading capability, with a maximum decrease rate of 1.2%. The decrease rate on each channel follows the order of 0.5% < (TOUCH 5 ~ TOUCH 9) < 1% < (TOUCH 0 ~ TOUCH 4) < 1.5%.
 
 ### 4.2. Jitter Filter Solution
 
@@ -794,7 +794,7 @@ tp_matrix_handle_t tp_matrix = iot_tp_matrix_create(sizeof(x_tps)/sizeof(x_tps[0
 
 ## 5. Related Documents and Resources
 
-* [Touch Sensor Example](examples/touch_pad_evb)
-* [touchpad component](components/features/touchpad)
+* [ESP32-Sense Touch Sensor Development Kit](../evaluation_boards/readme_en.md)
+* [Touch Sensor software example](../../examples/touch_pad_evb)
 * ESP32 Programming Guide, [Touch Sensor API Reference](https://esp-idf.readthedocs.io/en/latest/api-reference/peripherals/touch_pad.html)
 * [ESP32 Technical Reference Manual](https://espressif.com/sites/default/files/documentation/esp32_technical_reference_manual_en.pdf), see section *Capacitive Touch Sensor*
