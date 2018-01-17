@@ -51,7 +51,7 @@ ESP-Prog 起到下载程序和供电作用。调试器上有两组跳针，IO0 �
 - **编译下载**  
 配置 [ESP32-Sense 项目工程](https://github.com/espressif/esp-iot-solution/tree/master/examples/touch_pad_evb) 的 config 参数，执行命令 `make menuconfig` 配置参数，如下图所示。执行命令 `make flash`，程序会自动下载到开发板中。  
 <div align="center"><img src="../_static/touch_eb/menuconfig-1.png" width = "500" alt="menuconfig-1" align=center /></div>  
-<div align="center"><img src="../_static/touch_eb/menuconfig-2.png" width = "500" alt="menuconfig-2" align=center /><div>  
+<div align="center"><img src="../_static/touch_eb/menuconfig-2.png" width = "500" alt="menuconfig-2" align=center /></div>  
 
 - **更换子板**  
 ESP32 上电时会检测子板上的分压电阻的分压值，识别不同的子板。更换子板后需给开发板重新上电。  
@@ -62,7 +62,7 @@ ESP32 上电时会检测子板上的分压电阻的分压值，识别不同的�
 
 - **主板系统框图**  
 下图是主板的功能框图。  
-<div align="center"><img src="../_static/touch_eb/touch_eb_block_diagram.png" width = "700" alt="touch_eb_block_diagram" align=center /><div>  
+<div align="center"><img src="../_static/touch_eb/touch_eb_block_diagram.png" width = "700" alt="touch_eb_block_diagram" align=center /></div>  
 
 - **主板硬件资源**  
 显示单元包括数码管和 RGB 三色灯电路。调试单元包括 ESP-Prog 调试器接口。主控单元包含 ESP32 模组。Mini USB 供电作用。  
