@@ -54,7 +54,7 @@ The ESP-Prog has a Jtag interface and a Program interface. Connect ESP-Prog and 
 - **Download programs**   
 Run `make menuconfig` to configure the config settings for ESP32-Sense Project, as the screenshot below shows. Run `make flash` to download programs into the development board.  
 <div align="center"><img src="../_static/touch_eb/menuconfig-1.png" width = "500" alt="menuconfig-1" align=center /></div>        
-<div align="center"><img src="../_static/touch_eb/menuconfig-2.png" width = "500" alt="menuconfig-2" align=center /><div>  
+<div align="center"><img src="../_static/touch_eb/menuconfig-2.png" width = "500" alt="menuconfig-2" align=center /></div>  
 
 - **Replace daughterboard**  
 ESP32 will detect the divided voltage of the voltage divider on the daughterboard when it is powered on to identify different daughterboards. Re-power on the development board after replacing the daughterboard.  
@@ -65,7 +65,7 @@ ESP32 will detect the divided voltage of the voltage divider on the daughterboar
 
 - **Function Block Diagram**  
 The image belows shows the function block diagram of the motherboard.  
-<div align="center"><img src="../_static/touch_eb/touch_eb_block_diagram.png" width = "700" alt="touch_eb_block_diagram" align=center /><div>  
+<div align="center"><img src="../_static/touch_eb/touch_eb_block_diagram.png" width = "700" alt="touch_eb_block_diagram" align=center /></div>  
 
 - **Motherboard Components**  
 The display unit includes three segment displays and an RGB circuit. The debug unit includes the ESP-Prog debugger interface. The main control unit includes the ESP32 module. The mini USB is the power supply.  
