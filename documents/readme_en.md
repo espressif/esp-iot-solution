@@ -16,4 +16,4 @@
 * [Evaluation board series](evaluation_boards/readme_en.md)
     * [User Guide to ESP32_ULP_EB_V1 Evaluation Board](evaluation_boards/esp32_ulp_eb_en.md)
     * [User Guide to ESP32-Sense kit Board](evaluation_boards/esp32_sense_kit_guide_en.md)
-    * [ESP-Prog download and debug board](evaluation_boards/ESP-Prog_guide_en.md)
+    * [User Guide to ESP-Prog download and debug board](evaluation_boards/ESP-Prog_guide_en.md)

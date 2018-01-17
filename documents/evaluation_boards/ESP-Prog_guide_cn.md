@@ -111,6 +111,8 @@ IO0 是 ESP8266 和 ESP32 的 Boot 模式选择管脚，芯片上电后 IO0 做�
 
 - [乐鑫官网](http://www.espressif.com)
 
+- **购买方式**：微信公众号： espressif_systems ，[淘宝商铺](https://espressif.taobao.com/)   
+
 - [ESP-Prog PCB 文件](http://espressif.com/zh-hans/support/download/documents?keys=+硬件资源)
 
 - [ESP32 JTAG 调试使用介绍](https://esp-idf.readthedocs.io/en/latest/api-guides/jtag-debugging/index.html#)

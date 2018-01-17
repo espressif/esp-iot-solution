@@ -107,7 +107,9 @@ Pin IO0 can be set to select ESP8266's and ESP32's boot modes. This pin can be u
 
 ## 5. Useful Links
 
-- [Espressif's Official Website](http://www.espressif.com)
+- [Espressif's Official Website](https://espressif.com)
+
+- **How to buy**: WeChat Account: espressif_systems, [Espressif Shop](https://espressif.taobao.com/)  
 
 - [ESP-Prog schematics, PCB reference design, BOM](http://espressif.com/en/support/download/documents?keys=+Hardware+Resources)
 

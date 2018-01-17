@@ -15,7 +15,7 @@ The following image shows the whole ESP32-Sense development kit.
 
 - **Set up Software Environment**  
     - [ESP-IDF](https://github.com/espressif/esp-idf) is the SDK for ESP32. You can refer to [Get Started](https://esp-idf.readthedocs.io/en/latest/get-started/index.html) for how to set up the ESP32 software environment.
-    - [ESP-Prog](./ESP-Prog_guide_cn.md) is the debugger for ESP32 that features download and debugging functions.
+    - [ESP-Prog](./ESP-Prog_guide_en.md) is the debugger for ESP32 that features download and debugging functions.
 
 - **ESP32 IoT Solution**  
     - [ESP32 IoT Solution](../../readme.md) project is based on ESP-IDF and contains multiple projects. Please refer to [Build system and dependency](../../readme.md#build-system-and-dependency) for how to set up and compile the programs.
@@ -23,15 +23,19 @@ The following image shows the whole ESP32-Sense development kit.
 
 - **Hardware Manuals**  
     - Please refer to [Espressif website](http://espressif.com/en/support/download/documents?keys=+Hardware+Resources) for the hardware resources including schematics, PCB reference design, BOM and other files.
-    - Please refer to [ESP-Prog](./ESP-Prog_guide_cn.md) for the introduction to the debugger.
+    - Please refer to [ESP-Prog](./ESP-Prog_guide_en.md) for the introduction to the debugger.
 
 - **Related Resources**  
-    - [Espressif website](http://www.espressif.com)
+    - [Espressif website](https://espressif.com)
     - [ESP32 programming guide](https://esp-idf.readthedocs.io/en/latest/index.html): It hosts extensive documentation for ESP-IDF ranging from hardware guides to API reference.   
     - [ESP32 touch sensor design](../touch_pad_solution/readme_en.md): It is the reference design manual for the ESP32 touch sensor system.
 
 - **Technical Support**  
     - If you need technical support regarding ESP32-Sense Kit, please submit a [new issue](https://github.com/espressif/esp-iot-solution/issues) referring to the ESP32-Sense Project.
+
+- **How to buy**  
+    - WeChat Account: espressif_systems  
+    - [Espressif Shop](https://espressif.taobao.com/)  
 
 ## 3. Preparation
 
