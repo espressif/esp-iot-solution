@@ -62,20 +62,24 @@ const char *joylink_json_upload_str = \
 #ifdef CLOUD_ALINK
 typedef struct  light_dev {
     uint32_t errorcode;
-    uint32_t power;
+    uint32_t on_off;
     uint32_t work_mode;
-    uint32_t hue;
-    uint32_t saturation;
     uint32_t luminance;
+    uint32_t color_temp;
+    uint32_t red;
+    uint32_t green;
+    uint32_t blue;
 } light_dev_t;
 
 static light_dev_t g_light_info = {
-    .errorcode  = 0x00,
-    .power      = 0x01,
-    .work_mode  = 0x02,
-    .hue        = 0x10,
-    .saturation = 0x20,
-    .luminance  = 0x50,
+    .errorcode         = 0x00,
+    .on_off            = 0x01,
+    .work_mode         = 0x02,
+    .luminance         = 0x50,
+    .color_temp        = 0xbb8,
+    .red               = 0x20,
+    .green             = 0x20,
+    .blue              = 0x20,
 };
 
 /**
@@ -143,11 +147,13 @@ static alink_err_t alink_report_data(int ms_wait)
     alink_err_t ret = 0;
     char *up_cmd = (char *)calloc(1, ALINK_DATA_LEN);
 
-    device_data_pack(up_cmd, "Switch", g_light_info.power);
+    device_data_pack(up_cmd, "Switch", g_light_info.on_off);
     device_data_pack(up_cmd, "WorkMode", g_light_info.work_mode);
-    device_data_pack(up_cmd, "Hue", g_light_info.hue);
-    device_data_pack(up_cmd, "Saturation", g_light_info.hue);
     device_data_pack(up_cmd, "Luminance", g_light_info.luminance);
+    device_data_pack(up_cmd, "ColorTemperature", g_light_info.color_temp);
+    device_data_pack(up_cmd, "Red", g_light_info.red);
+    device_data_pack(up_cmd, "Green", g_light_info.green);
+    device_data_pack(up_cmd, "Blue", g_light_info.blue);
 
     ret = alink_write(up_cmd, strlen(up_cmd) + 1, ms_wait);
     free(up_cmd);
@@ -424,20 +430,23 @@ esp_err_t cloud_read(int ms_wait)
     } else if (!strcmp(method_str, "setDeviceStatus")) {
         ALINK_LOGV("setDeviceStatus: %s", down_cmd);
         device_data_parse(down_cmd, "ErrorCode", &(g_light_info.errorcode));
-        device_data_parse(down_cmd, "Switch", &(g_light_info.power));
+        device_data_parse(down_cmd, "Switch", &(g_light_info.on_off));
         device_data_parse(down_cmd, "WorkMode", &(g_light_info.work_mode));
-        device_data_parse(down_cmd, "Hue", &(g_light_info.hue));
-        device_data_parse(down_cmd, "Saturation", &(g_light_info.saturation));
-        device_data_parse(down_cmd, "Luminance", &(g_light_info.luminance));
+        device_data_parse(down_cmd, "Luminance", &(g_light_info.luminance));        
+        device_data_parse(down_cmd, "ColorTemperature", &(g_light_info.color_temp));
+        device_data_parse(down_cmd, "Red", &(g_light_info.red));
+        device_data_parse(down_cmd, "Green", &(g_light_info.green));
+        device_data_parse(down_cmd, "Blue", &(g_light_info.blue));
 
-        ALINK_LOGI("read: errorcode:%d, switch: %d, work_mode: %d, hue: %d, saturation: %d, luminance: %d",
-                   g_light_info.errorcode, g_light_info.power, g_light_info.work_mode,
-                   g_light_info.hue, g_light_info.saturation, g_light_info.luminance);
+        ALINK_LOGI("read: errorcode:%d, switch:%d, work_mode:%d, luminance:%d, color_temperature:%d, red:%d, green:%d, blue:%d",
+                   g_light_info.errorcode, g_light_info.on_off, g_light_info.work_mode,
+                   g_light_info.luminance, g_light_info.color_temp, g_light_info.red, g_light_info.green, g_light_info.blue);
 
-        if (g_light_info.power == 0) {
-            light_set(g_light_handle, 0, 0, 0);
+        if (g_light_info.on_off == 0) {
+            light_set(g_light_handle, 0, 0, 0, 2700, 0);
         } else {
-            light_set(g_light_handle, g_light_info.hue, g_light_info.saturation, g_light_info.luminance);
+            light_set(g_light_handle, g_light_info.red, g_light_info.green, g_light_info.blue, 
+                g_light_info.color_temp, g_light_info.luminance);
         }
     }
 

@@ -532,7 +532,7 @@ menu "IoT Example - smart_device"
         config SMART_LIGHT_PWM_CHANNEL_NUM
         int "LEDC channel number"
         range 3 5
-        default 3
+        default 5
         help
             To set the number of PWM channel
         
@@ -592,7 +592,7 @@ menu "IoT Example - smart_device"
             config SMART_LIGHT_PWM_UNIT3_LEDC_IO
             int "GPIO number for PWM unit[3]"
             range 0 34
-            default 20
+            default 21
             help
                 To set the output GPIO number for LEDC
         endmenu        
@@ -608,7 +608,7 @@ menu "IoT Example - smart_device"
             config SMART_LIGHT_PWM_UNIT4_LEDC_IO
             int "GPIO number for PWM unit[4]"
             range 0 34
-            default 21
+            default 22
             help
                 To set the output GPIO number for LEDC
         endmenu    
@@ -636,7 +636,7 @@ menu "IoT Example - smart_device"
         menu "Product Info"
         config ALINK_INFO_NAME
         string "NAME"
-        default alink_product
+        default ESP-LIGHT-DEMO-V5
         
         config ALINK_INFO_VERSION
         string "VERSION"
@@ -644,23 +644,23 @@ menu "IoT Example - smart_device"
         
         config ALINK_INFO_MODEL
         string "MODEL"
-        default ALINKTEST_LIVING_LIGHT_ALINK_TEST
+        default ESPRESSIF_LIVING_LIGHT_ESP_LIGHT_DEMO_V5
         
         config ALINK_INFO_KEY
         string "KEY"
-        default 5gPFl8G4GyFZ1fPWk20m
+        default cQuVDLWcZGQQ0DhTnxdw
         
         config ALINK_INFO_SECRET
         string "SECRET"
-        default ngthgTlZ65bX5LpViKIWNsDPhOf2As9ChnoL9gQb
+        default 015ZCHua82UtbZSOJBalB9LUIZonvvgT1ePdzNis
         
         config ALINK_INFO_KEY_SANDBOX
         string "KEY SANDBOX"
-        default dpZZEpm9eBfqzK7yVeLq
+        default 10n0NikaekN0IZ0fAcD0
         
         config ALINK_INFO_SECRET_SANDBOX
         string "SECRET SANDBOX"
-        default THnfRRsU5vu6g6m9X6uFyAjUWflgZ0iyGjdEneKm
+        default 19n2KDP5TYW7nKY5Bw9ArE4VBzU4IO6RpuiIFQdA
      
         config ALINK_INFO_KEY_DEVICE
         string "KEY DEVICE"
