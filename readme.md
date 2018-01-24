@@ -19,7 +19,7 @@
 ---
 
 
-## Evaluation board series
+## Evaluation Board Series
 
 * [ESP32_ULP_EB_V1 Evaluation Board](./documents/evaluation_boards/readme_en.md) [[中文]](./documents/evaluation_boards/readme_cn.md)
 * [ESP32-Sense kit Board](./documents/evaluation_boards/readme_en.md) [[中文]](./documents/evaluation_boards/readme_cn.md)
@@ -29,7 +29,7 @@
 
 ---
 
-## ESP32 IOT Example list:
+## ESP32 IoT Example List:
 * [ESP32 Pedestrian Flow Monitoring introduction](examples/check_pedestrian_flow) 
     - The example demonstrates how to use ESP32 to calculate pedestrian flow in the Wi-Fi sniffer mode. 
     - Keywords: __WiFi sniffer OneNet MQTT__
@@ -39,7 +39,7 @@
 
 
 * [Ethernet-WiFi data transmission](examples/eth2wifi)
-    - An example that enable Ethernet-to-WiFi data forwarding function. 
+    - An example that enables Ethernet-to-WiFi data forwarding function. 
     - Keywords: __Ethernet WiFi__
 
 
