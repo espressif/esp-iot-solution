@@ -19,7 +19,7 @@ ESP32-Sense 开发套件用于评估和开发 ESP32 触摸传感器功能。评�
     - [ESP32-Sense 项目工程](../../examples/touch_pad_evb) 是 ESP32-Sense 开发套件对应的软件工程文件。下载程序到主板即可使用触摸功能。
 
 - **硬件手册**  
-    - ESP32-Sense 开发套件的硬件原理图，PCB 文件，BOM 等文件参考 [乐鑫官网](http://espressif.com/zh-hans/support/download/documents?keys=+硬件资源)。
+    - ESP32-Sense 开发套件的硬件原理图，PCB 文件，BOM 等文件参考 [乐鑫官网](http://espressif.com/zh-hans/support/download/documents?keys=参考设计)。
     - ESP-Prog 的介绍请参考文档 [ESP-Prog 介绍](./ESP-Prog_guide_cn.md)。
 
 - **其他参考资料**  
@@ -32,7 +32,7 @@ ESP32-Sense 开发套件用于评估和开发 ESP32 触摸传感器功能。评�
 
 - **购买方式**  
     - 微信公众号： espressif_systems  
-    - [淘宝商铺](https://espressif.taobao.com/)   
+    - [商务咨询](http://www.espressif.com/en/company/contact/pre-sale-questions-crm)
 
 ## 3. 开发板操作
 

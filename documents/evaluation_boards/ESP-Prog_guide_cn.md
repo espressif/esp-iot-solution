@@ -18,17 +18,17 @@ ESP-Prog 可使用排线与用户板连接，连接器可选 2.54 mm 和 1.27 mm
 
 ESP-Prog 的整体功能框图：  
 
-<div align="center"><img src="../_static/esp-prog/block.jpg" width = "650" alt="block" align=center /></div>
+<div align="center"><img src="../_static/esp-prog/block.png" width = "650" alt="block" align=center /></div>
 
 ## 3. 硬件介绍
 
 下图总体介绍 ESP-Prog 板子上各功能的位置。  
 
-<div align="center"><img src="../_static/esp-prog/modules.jpg" width = "650" alt="modules" align=center /></div>
+<div align="center"><img src="../_static/esp-prog/modules.png" width = "650" alt="modules" align=center /></div>
 
 ### 3.1. PCB 布局和尺寸
 
-下面是 ESP-Prog 的 PCB 设计图，介绍了板子尺寸和接口的丝印标注。ESP-Prog 硬件原理图，PCB 文件，BOM 等文件参考 [乐鑫官网](http://espressif.com/zh-hans/support/download/documents?keys=+硬件资源)。  
+下面是 ESP-Prog 的 PCB 设计图，介绍了板子尺寸和接口的丝印标注。ESP-Prog 硬件原理图，PCB 文件，BOM 等文件参考 [乐鑫官网硬件参考设计](http://espressif.com/zh-hans/support/download/documents?keys=参考设计)。  
 
 - Top side  
 
@@ -111,9 +111,9 @@ IO0 是 ESP8266 和 ESP32 的 Boot 模式选择管脚，芯片上电后 IO0 做�
 
 - [乐鑫官网](http://www.espressif.com)
 
-- **购买方式**：微信公众号： espressif_systems ，[淘宝商铺](https://espressif.taobao.com/)   
+- **购买方式**：espressif_systems (微信公众号)，[商务咨询](http://www.espressif.com/en/company/contact/pre-sale-questions-crm)   
 
-- [ESP-Prog PCB 文件](http://espressif.com/zh-hans/support/download/documents?keys=+硬件资源)
+- [ESP-Prog PCB 文件](http://espressif.com/zh-hans/support/download/documents?keys=参考设计)
 
 - [ESP32 JTAG 调试使用介绍](https://esp-idf.readthedocs.io/en/latest/api-guides/jtag-debugging/index.html#)
 
