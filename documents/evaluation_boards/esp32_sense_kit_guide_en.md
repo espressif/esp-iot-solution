@@ -22,7 +22,7 @@ The following image shows the whole ESP32-Sense development kit.
     - [ESP32-Sense Project](../../examples/touch_pad_evb) contains the programs for ESP32-Sense Kit that can be downloaded to the development board to enable touch sensor function.
 
 - **Hardware Manuals**  
-    - Please refer to [Espressif website](http://espressif.com/en/support/download/documents?keys=+Hardware+Resources) for the hardware resources including schematics, PCB reference design, BOM and other files.
+    - Please refer to [Espressif website](http://espressif.com/en/support/download/documents?keys=Reference+Design) for the hardware resources including schematics, PCB reference design, BOM and other files.
     - Please refer to [ESP-Prog](./ESP-Prog_guide_en.md) for the introduction to the debugger.
 
 - **Related Resources**  
@@ -35,7 +35,7 @@ The following image shows the whole ESP32-Sense development kit.
 
 - **How to buy**  
     - WeChat Account: espressif_systems  
-    - [Espressif Shop](https://espressif.taobao.com/)  
+    - [Purchase consulting](http://www.espressif.com/en/company/contact/pre-sale-questions-crm)
 
 ## 3. Preparation
 

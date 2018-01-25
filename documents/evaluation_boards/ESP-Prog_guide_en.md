@@ -16,17 +16,17 @@ Given that the power supply voltage may vary on different user boards, either of
 
 ESP-Prog's overall functional block diagram is displayed below:  
 
-<div align="center"><img src="../_static/esp-prog/block.jpg" width = "650" alt="block" align=center /></div>  
+<div align="center"><img src="../_static/esp-prog/block.png" width = "650" alt="block" align=center /></div>  
 
 ## 3. Hardware Introduction
 
 The figure below describes the areas of each function on the ESP-Prog board.  
 
-<div align="center"><img src="../_static/esp-prog/modules.jpg" width = "650" alt="modules" align=center /></div>  
+<div align="center"><img src="../_static/esp-prog/modules.png" width = "650" alt="modules" align=center /></div>  
 
 ### 3.1. PCB Layout and Dimensions
 
-ESP-Prog's PCB layout is displayed below, showing the board's dimensions and its interface markings. Please refer to [Espressif website](http://espressif.com/en/support/download/documents?keys=+Hardware+Resources) for the hardware resources including schematics, PCB reference design, BOM and other files.  
+ESP-Prog's PCB layout is displayed below, showing the board's dimensions and its interface markings. Please refer to [Espressif website](http://espressif.com/en/support/download/documents?keys=Reference+Design) for the hardware resources including schematics, PCB reference design, BOM and other files.  
 
 - Top side  
 
@@ -109,9 +109,9 @@ Pin IO0 can be set to select ESP8266's and ESP32's boot modes. This pin can be u
 
 - [Espressif's Official Website](https://espressif.com)
 
-- **How to buy**: WeChat Account: espressif_systems, [Espressif Shop](https://espressif.taobao.com/)  
+- **How to buy**: espressif_systems (WeChat Account), [Purchase consulting](http://www.espressif.com/en/company/contact/pre-sale-questions-crm)  
 
-- [ESP-Prog schematics, PCB reference design, BOM](http://espressif.com/en/support/download/documents?keys=+Hardware+Resources)
+- [ESP-Prog schematics, PCB reference design, BOM](http://espressif.com/en/support/download/documents?keys=Reference+Design)
 
 - [Introduction to the ESP32 JTAG Debugging](https://esp-idf.readthedocs.io/en/latest/api-guides/jtag-debugging/index.html#)
 
