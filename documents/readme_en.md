@@ -5,6 +5,7 @@
 * [Deep-sleep low power solutions](low_power_solution/readme_en.md)
     * [Current Consumption Test for ESP32 in Deep sleep](low_power_solution/deep-sleep_current_test_en.md)
     * [ESP32 Low-Power Management Overview](low_power_solution/esp32_lowpower_solution_en.md)
+    * [ESP32 ULP Co-processor and Assembly Environment Setup](./low_power_solution/esp32_ulp_co-processor_and_assembly_environment_setup_en.md)
 * [Light-sleep low power solutions overview](DFS_and_light_sleep/readme_en.md)
     * [ESP32 DFS test manual](./DFS_and_light_sleep/DFS_test_manual_en.md)
     * [ESP32 Light-sleep features](./DFS_and_light_sleep/light_sleep_performance_en.md)

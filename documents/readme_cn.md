@@ -5,6 +5,7 @@
 * [Deep-sleep 低功耗方案设计](low_power_solution/readme_cn.md)
     * [RTC IO 唤醒 Deep Sleep 时功耗测试](low_power_solution/deep-sleep_current_test_cn.md)
     * [ESP32 低功耗方案设计](low_power_solution/esp32_lowpower_solution_cn.md)
+    * [ESP32 的 ULP 协处理器简介和汇编编译环境设置](./low_power_solution/esp32_ulp_co-processor_and_assembly_environment_setup_cn.md)
 * [Light-sleep 低功耗方案概述](DFS_and_light_sleep/readme_cn.md)
     * __ESP32 DFS 功能测试指南__ (中文文档即将发布)
     * __ESP32 Light-sleep 特性__ (中文文档即将发布)
