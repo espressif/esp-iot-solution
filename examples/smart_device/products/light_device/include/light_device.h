@@ -24,13 +24,9 @@ typedef enum {
 
 light_dev_handle_t light_init();
 
-esp_err_t light_set(light_dev_handle_t light_dev, uint32_t hue, uint32_t saturation, uint32_t brightness);
+esp_err_t light_set(light_dev_handle_t light_dev, uint32_t red, uint32_t green, uint32_t blue, uint32_t color_temp, uint32_t luminance);
 
-uint32_t light_hue_get(light_dev_handle_t light_dev);
-
-uint32_t light_saturation_get(light_dev_handle_t light_dev);
-
-uint32_t light_brightness_get(light_dev_handle_t light_dev);
+esp_err_t light_get(light_dev_handle_t light_dev, uint32_t *red, uint32_t *green, uint32_t *blue, uint32_t *color_temp, uint32_t *luminance);
 
 esp_err_t light_net_status_write(light_dev_handle_t light_dev, light_net_status_t net_status);
 #endif

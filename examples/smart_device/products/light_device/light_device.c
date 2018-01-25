@@ -54,9 +54,11 @@ static const light_conf_t LIGHT_PWM_UNIT[IOT_LIGHT_CHANNEL_NUM] = {
 };
 
 typedef struct {
-    uint32_t hue;
-    uint32_t saturation;
-    uint32_t brightness;
+    uint32_t red;
+    uint32_t green;
+    uint32_t blue;
+    uint32_t color_temp;
+    uint32_t luminance;
 } light_param_t;
 
 typedef struct {
@@ -75,11 +77,11 @@ light_dev_handle_t light_init()
     }
 
     if (iot_param_load(IOT_LIGHT_NAME_SPACE, IOT_LIGHT_PARAM_KEY, &(light_dev->light_param)) != ESP_OK) {
-        light_set(light_dev, 0, 0, 0);
+        light_set(light_dev, 0, 0, 0, 2700, 0);
     }
     else {
-        light_set(light_dev, light_dev->light_param.hue, \
-            light_dev->light_param.saturation, light_dev->light_param.brightness);
+        light_set(light_dev, light_dev->light_param.red, light_dev->light_param.green, 
+            light_dev->light_param.blue, light_dev->light_param.color_temp, light_dev->light_param.luminance);
     }
 
     light_net_status_write(light_dev, LIGHT_STA_DISCONNECTED);
@@ -97,80 +99,40 @@ static esp_err_t light_state_write(light_handle_t light_handle, uint32_t duty[])
     return ESP_OK;
 }
 
-esp_err_t light_hsb2rgb(uint32_t hue, uint32_t saturation, uint32_t brightness,
-                  uint32_t *red, uint32_t *green, uint32_t *blue)
-{
-    uint16_t hi = (hue / 60) % 6;
-    uint16_t F = 100 * hue / 60 - 100 * hi;
-    uint16_t P = brightness * (100 - saturation) / 100;
-    uint16_t Q = brightness * (10000 - F * saturation) / 10000;
-    uint16_t T = brightness * (10000 - saturation * (100 - F)) / 10000;
-
-    switch (hi) {
-    case 0:
-        *red = brightness;
-        *green = T;
-        *blue = P;
-        break;
-
-    case 1:
-        *red = Q;
-        *green = brightness;
-        *blue = P;
-        break;
-
-    case 2:
-        *red = P;
-        *green = brightness;
-        *blue = T;
-        break;
-
-    case 3:
-        *red = P;
-        *green = Q;
-        *blue = brightness;
-        break;
-
-    case 4:
-        *red = T;
-        *green = P;
-        *blue = brightness;
-        break;
-
-    case 5:
-        *red = brightness;
-        *green = P;
-        *blue = Q;
-        break;
-
-    default:
-        return ESP_FAIL;
-    }
-
-    *red   = *red * 255 / 100;
-    *green = *green * 255 / 100;
-    *blue  = *blue * 255 / 100;
-    return ESP_OK;
-}
-
-esp_err_t light_set(light_dev_handle_t light_dev, uint32_t hue, uint32_t saturation, uint32_t brightness)
+esp_err_t light_set(light_dev_handle_t light_dev, uint32_t red, uint32_t green, uint32_t blue, uint32_t color_temp, uint32_t luminance)
 {
     if (light_dev ==NULL) {
         return ESP_FAIL;
     }
 
-    uint32_t red, green, blue;
-    light_hsb2rgb(hue, saturation, brightness, &red, &green, &blue);
-    uint32_t duty[IOT_LIGHT_CHANNEL_NUM] = {red * LIGHT_FULL_DUTY / 255, 
-        green * LIGHT_FULL_DUTY / 255, blue * LIGHT_FULL_DUTY / 255};
+    uint32_t duty[IOT_LIGHT_CHANNEL_NUM] = {red * LIGHT_FULL_DUTY / 255, green * LIGHT_FULL_DUTY / 255, 
+    blue * LIGHT_FULL_DUTY / 255, (color_temp-2700) * LIGHT_FULL_DUTY / (6500-2700), luminance * LIGHT_FULL_DUTY / 100};
 
     light_device_t* light_dev_tmp = (light_device_t*)light_dev;
-    light_dev_tmp->light_param.hue = hue;
-    light_dev_tmp->light_param.saturation = saturation;
-    light_dev_tmp->light_param.brightness = brightness;
+    light_dev_tmp->light_param.red = red;
+    light_dev_tmp->light_param.green= green;
+    light_dev_tmp->light_param.blue = blue;
+    light_dev_tmp->light_param.color_temp = color_temp;
+    light_dev_tmp->light_param.luminance = luminance;
 
     iot_param_save(IOT_LIGHT_NAME_SPACE, IOT_LIGHT_PARAM_KEY, &light_dev_tmp->light_param, sizeof(light_param_t));
     return light_state_write(light_dev_tmp->light_handle, duty);
+}
+
+esp_err_t light_get(light_dev_handle_t light_dev, uint32_t *red, uint32_t *green, uint32_t *blue, uint32_t *color_temp, uint32_t *luminance)
+{
+    light_device_t* light_dev_tmp = (light_device_t*)light_dev;
+    esp_err_t ret = iot_param_load(IOT_LIGHT_NAME_SPACE, IOT_LIGHT_PARAM_KEY, &(light_dev_tmp->light_param));
+
+    if (ret == ESP_OK) {
+        *red = light_dev_tmp->light_param.red;
+        *green = light_dev_tmp->light_param.green;
+        *blue = light_dev_tmp->light_param.blue;
+        *color_temp = light_dev_tmp->light_param.color_temp;
+        *luminance = light_dev_tmp->light_param.luminance;
+    }
+
+    return ret;
 }
 
 esp_err_t light_net_status_write(light_dev_handle_t light_dev, light_net_status_t net_status)
@@ -189,10 +151,10 @@ esp_err_t light_net_status_write(light_dev_handle_t light_dev, light_net_status_
             
         case LIGHT_CLOUD_CONNECTED:
             if (iot_param_load(IOT_LIGHT_NAME_SPACE, IOT_LIGHT_PARAM_KEY, &(light_dev_tmp->light_param)) != ESP_OK) {
-                light_set(light_dev_tmp, 0, 0, 0);
+                light_set(light_dev_tmp, 0, 0, 0, 2700, 0);
             } else {
-                light_set(light_dev_tmp, light_dev_tmp->light_param.hue,
-                    light_dev_tmp->light_param.saturation, light_dev_tmp->light_param.brightness); 
+                light_set(light_dev_tmp, light_dev_tmp->light_param.red, light_dev_tmp->light_param.green, 
+                    light_dev_tmp->light_param.blue, light_dev_tmp->light_param.color_temp, light_dev_tmp->light_param.luminance); 
             }
             break;
             
@@ -203,21 +165,4 @@ esp_err_t light_net_status_write(light_dev_handle_t light_dev, light_net_status_
     return ESP_OK;
 }
 
-uint32_t light_hue_get(light_dev_handle_t light_dev)
-{
-    light_device_t* light_dev_tmp = (light_device_t*)light_dev;
-    return light_dev_tmp->light_param.hue;
-}
-
-uint32_t light_saturation_get(light_dev_handle_t light_dev)
-{
-    light_device_t* light_dev_tmp = (light_device_t*)light_dev;
-    return light_dev_tmp->light_param.saturation;
-}
-
-uint32_t light_brightness_get(light_dev_handle_t light_dev)
-{
-    light_device_t* light_dev_tmp = (light_device_t*)light_dev;
-    return light_dev_tmp->light_param.brightness;
-}
 
