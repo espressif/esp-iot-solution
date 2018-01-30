@@ -36,10 +36,10 @@ POSSIBILITY OF SUCH DAMAGE.
  */
 
 
-#include "Adafruit_GFX_AS.h"
+#include "Adafruit_GFX.h"
 #include "iot_lcd.h"
 #include "spi_lcd.h"
-#include "fonts/font7s.h"
+#include "font7s.h"
 
 #include "esp_partition.h"
 #include "esp_log.h"
@@ -61,7 +61,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define SWAPBYTES(i) ((i>>8) | (i<<8))
 static const char* TAG = "LCD";
 
-CEspLcd::CEspLcd(lcd_conf_t* lcd_conf, int height, int width, bool dma_en, int dma_word_size) : Adafruit_GFX_AS(width, height)
+CEspLcd::CEspLcd(lcd_conf_t* lcd_conf, int height, int width, bool dma_en, int dma_word_size) : Adafruit_GFX(width, height)
 {
     m_height = height;
     m_width  = width;
@@ -344,26 +344,26 @@ void CEspLcd::setRotation(uint8_t m)
     uint8_t data = 0;
     rotation = m % 4;  //Can't be more than 3
     switch (rotation) {
-        case 0:
-            data = MADCTL_MX | MADCTL_BGR;
-            _width = m_width;
-            _height = m_height;
-            break;
-        case 1:
-            data = MADCTL_MV | MADCTL_BGR;
-            _width = m_height;
-            _height = m_width;
-            break;
-        case 2:
-            data = MADCTL_MY | MADCTL_BGR;
-            _width = m_width;
-            _height = m_height;
-            break;
-        case 3:
-            data = MADCTL_MX | MADCTL_MY | MADCTL_MV | MADCTL_BGR;
-            _width = m_height;
-            _height = m_width;
-            break;
+    case 0:
+        data = MADCTL_MX | MADCTL_BGR;
+        _width = m_width;
+        _height = m_height;
+        break;
+    case 1:
+        data = MADCTL_MV | MADCTL_BGR;
+        _width = m_height;
+        _height = m_width;
+        break;
+    case 2:
+        data = MADCTL_MY | MADCTL_BGR;
+        _width = m_width;
+        _height = m_height;
+        break;
+    case 3:
+        data = MADCTL_MX | MADCTL_MY | MADCTL_MV | MADCTL_BGR;
+        _width = m_height;
+        _height = m_width;
+        break;
     }
     transmitCmdData(LCD_MADCTL, data, 1);
 }
@@ -447,15 +447,15 @@ int CEspLcd::drawUnicodeSevSeg(uint16_t uniCode, uint16_t x, uint16_t y, uint8_t
     int trans_points = point_num > dma_buf_size ? dma_buf_size : point_num;
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < w; j++) {
-            line = *(flash_address + w*i+j);
-            for(int m = 0; m < 8; m++) {
-                if ((line >> (7-m)) & 0x1) {
+            line = *(flash_address + w * i + j);
+            for (int m = 0; m < 8; m++) {
+                if ((line >> (7 - m)) & 0x1) {
                     data_buf[idx++] = SWAPBYTES(textcolor);
                 } else {
                     data_buf[idx++] = SWAPBYTES(textbgcolor);
                 }
 
-                if(idx >= trans_points) {
+                if (idx >= trans_points) {
                     transmitData((uint8_t*) (data_buf), trans_points * sizeof(uint16_t));
                     point_num -= trans_points;
                     idx = 0;
@@ -494,3 +494,111 @@ int CEspLcd::drawNumberSevSeg(int long_num, uint16_t poX, uint16_t poY, uint8_t 
     return drawStringSevSeg(tmp, poX, poY, size);
 }
 
+int CEspLcd::write_char(uint8_t c)
+{
+    if (!gfxFont) { // 'Classic' built-in font
+        if (c == '\n') {                       // Newline?
+            cursor_x  = 0;                     // Reset x to zero,
+            cursor_y += textsize * 8;          // advance y one line
+        }
+        else if (c != '\r') {                  // Ignore carriage returns
+            if (wrap && ((cursor_x + textsize * 6) > _width)) { // Off right?
+                cursor_x  = 0;                 // Reset x to zero,
+                cursor_y += textsize * 8;      // advance y one line
+            }
+            drawChar(cursor_x, cursor_y, c, textcolor, textbgcolor, textsize);
+            cursor_x += textsize * 6;          // Advance x one char
+        }
+    }
+
+    else {
+        if (c == '\n') {
+            cursor_x  = 0;
+            cursor_y += (int16_t)textsize * (uint8_t)gfxFont->yAdvance;
+        }
+        else if (c != '\r') {
+            uint8_t first = gfxFont->first;
+            if ((c >= first) && (c <= (uint8_t)gfxFont->last)) {
+
+                GFXglyph *glyph = &(((GFXglyph *)gfxFont->glyph))[c - first];
+                uint8_t   w     = glyph->width,
+                          h     = glyph->height;
+
+                if ((w > 0) && (h > 0)) {                // Is there an associated bitmap?
+                    int16_t xo = (int8_t)glyph->xOffset; // sic
+                    if (wrap && ((cursor_x + textsize * (xo + w)) > _width)) {
+                        cursor_x  = 0;
+                        cursor_y += (int16_t)textsize * (uint8_t)gfxFont->yAdvance;
+                    }
+                    drawChar(cursor_x, cursor_y, c, textcolor, textbgcolor, textsize);
+                }
+                cursor_x += (uint8_t)glyph->xAdvance * (int16_t)textsize;
+            }
+        }
+    }
+    return cursor_x;
+}
+
+int CEspLcd::drawString(const char *string, uint16_t x, uint16_t y)
+{
+    uint16_t xPlus = x;
+    setCursor(xPlus, y);
+    while (*string) {
+        xPlus = write_char(*string);        // write_char string char-by-char                 
+        setCursor(xPlus, y);       // increment cursor
+        string++;                      // Move cursor right
+    }
+    return xPlus;
+}
+
+int CEspLcd::drawNumber(int long_num, uint16_t poX, uint16_t poY)
+{
+    char tmp[10];
+    if (long_num < 0) {
+        snprintf(tmp, sizeof(tmp), "%d", long_num);
+    } else {
+        snprintf(tmp, sizeof(tmp), "%u", long_num);
+    }
+    return drawString(tmp, poX, poY);
+}
+
+int CEspLcd::drawFloat(float floatNumber, uint8_t decimal, uint16_t poX, uint16_t poY)
+{
+    unsigned int temp = 0;
+    float decy = 0.0;
+    float rounding = 0.5;
+    float eep = 0.000001;
+    uint16_t xPlus = 0;
+
+    if (floatNumber - 0.0 < eep) {
+        xPlus       = drawString("-", poX, poY);
+        floatNumber = -floatNumber;
+        poX         = xPlus;
+    }
+
+    for (unsigned char i = 0; i < decimal; ++i) {
+        rounding /= 10.0;
+    }
+    
+    floatNumber += rounding;
+    temp         = (long)floatNumber;
+    xPlus        = drawNumber(temp, poX, poY);
+    poX          = xPlus;
+
+    if (decimal > 0) {
+        xPlus = drawString(".", poX, poY);
+        poX   = xPlus;                                       /* Move cursor right   */
+    } else {
+        return poX;
+    }
+
+    decy = floatNumber - temp;
+    for (unsigned char i = 0; i < decimal; i++) {
+        decy *= 10;                                         /* For the next decimal*/
+        temp  = decy;                                        /* Get the decimal     */
+        xPlus = drawNumber(temp, poX, poY);
+        poX   = xPlus;                                       /* Move cursor right   */
+        decy -= temp;
+    }
+    return poX;
+}

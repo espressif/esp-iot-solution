@@ -91,8 +91,9 @@ typedef struct {
 } lcd_dc_t;
 
 #ifdef __cplusplus
-#include "Adafruit_GFX_AS.h"
-class CEspLcd: public Adafruit_GFX_AS
+#include "Adafruit_GFX.h"
+
+class CEspLcd: public Adafruit_GFX
 {
 private:
     spi_device_handle_t spi_wr = NULL;
@@ -242,6 +243,14 @@ public:
      * @brief write 7-segment number
      */
     int drawNumberSevSeg(int long_num, uint16_t poX, uint16_t poY, uint8_t size);
+
+    int write_char(uint8_t c);
+
+    int drawString(const char *string, uint16_t x, uint16_t y);
+
+    int drawNumber(int long_num, uint16_t poX, uint16_t poY);
+
+    int drawFloat(float floatNumber, uint8_t decimal, uint16_t poX, uint16_t poY);
 };
 
 #endif

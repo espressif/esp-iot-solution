@@ -2,10 +2,12 @@
 # "main" pseudo-component makefile.
 #
 # (Uses default behaviour of compiling all source files in directory, adding 'include' to include path.)
+CXXFLAGS += -D__AVR_ATtiny85__
 
-ifdef CONFIG_IOT_LCD_ENABLE
-COMPONENT_ADD_INCLUDEDIRS := include
-COMPONENT_SRCDIRS := .
+ifdef CONFIG_IOT_EINK_ENABLE
+COMPONENT_ADD_INCLUDEDIRS := include Adafruit-GFX-Library/Fonts Adafruit-GFX-Library
+COMPONENT_SRCDIRS := . Adafruit-GFX-Library
+
 else
 # Disable component
 COMPONENT_ADD_INCLUDEDIRS :=
