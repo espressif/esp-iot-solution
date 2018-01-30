@@ -182,9 +182,14 @@ static void tp_slide_pos_cb(void *arg)
     uint8_t non0_cnt = 0;
     uint32_t pos = 0;
     uint16_t *tp_val = tp_slide->tp_val; 
+
+    for (int i = 0; i < tp_slide->tp_num; i++) {
+        iot_tp_read(tp_slide->tp_handles[i], &tp_val[i]);
+    }
+
     for (int i = 0; i < tp_slide->tp_num; i++) {
         // read filtered value
-        iot_tp_read(tp_slide->tp_handles[i], &tp_val[i]);
+//        iot_tp_read(tp_slide->tp_handles[i], &tp_val[i]);
         tp_dev_t *tp = (tp_dev_t*) tp_slide->tp_handles[i];
         uint16_t norm_val;
         if (tp->thresh_abs > 0) {
@@ -581,6 +586,14 @@ esp_err_t iot_tp_set_threshold(const tp_handle_t tp_handle, uint32_t threshold)
     tp_dev_t* tp_dev = (tp_dev_t*) tp_handle;
     ERR_ASSERT(TAG, touch_pad_config(tp_dev->touch_pad_num, threshold));
     tp_dev->threshold = threshold;
+    return ESP_OK;
+}
+
+esp_err_t iot_tp_get_threshold(const tp_handle_t tp_handle, uint32_t *threshold)
+{
+    POINT_ASSERT(TAG, tp_handle);
+    tp_dev_t* tp_dev = (tp_dev_t*) tp_handle;
+    *threshold = tp_dev->threshold;
     return ESP_OK;
 }
 

@@ -64,6 +64,11 @@ esp_err_t CTouchPad::set_threshold(uint32_t threshold)
     return iot_tp_set_threshold(m_tp_handle, threshold);
 }
 
+esp_err_t CTouchPad::get_threshold(uint32_t *threshold)
+{
+    return iot_tp_get_threshold(m_tp_handle, threshold);
+}
+
 esp_err_t CTouchPad::set_filter(uint32_t filter_value)
 {
     return iot_tp_set_filter(m_tp_handle, filter_value);
