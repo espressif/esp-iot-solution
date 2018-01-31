@@ -1,8 +1,8 @@
-
 [[中文]](./readme_cn.md)
 
 # Application Demo of Watering Machine Based on ESP32 ULP Co-processor 
 Tag: esp32 ulp adc rtc_gpio
+
 ## 1. Introduction
 The ESP32 integrates a ULP co-processor that consumes minimal power. It can function independently when the CPU functions normally or is in the Deep-Sleep mode. The ULP coprocessor features a built-in ADC controller and I2C controller. It supports normal mode and Deep-Sleep mode. It can also wake up the CPU and send interrupts to the CPU. For more features of the ESP32 ULP co-processor, please see [ESP32 Technical Reference Manual](http://espressif.com/sites/default/files/documentation/esp32_technical_reference_manual_en.pdf).
 
@@ -17,7 +17,7 @@ The ULP coprocessor sleeps for most of the time. It wakes up periodically, and e
 
 #### 3.1 Hardware Schematics
 
-The hardware schematics is designed using Kicad. The principle based on that an 47 kΩ resistor is connected in series with the soil, which acts as a variable resistor. The soil moisture is evaluated by measuring the voltage of the soil. The measured resistance of soil varies from 20 kΩ to 100 kΩ as the moisture of the soil declines.
+The hardware schematics is designed using Kicad. The principle is that an 47 kΩ resistor is connected in series with the soil, which acts as a variable resistor. The soil moisture is evaluated by measuring the voltage of the soil. The measured resistance of soil varies from 20 kΩ to 100 kΩ as the moisture of the soil declines.
 
 > Note: A 10 kΩ pull-up resistor, R41, is connected to GPIO34 of ESP32_ULP_EVB1. It is recommended that users remove this resistor since it won't be used in the measurement of soil voltage and may cause leakage currents.
 
@@ -58,13 +58,13 @@ The compiling environment is now set up. Make a copy of `sdkconfig.defaults` und
 
 #### 4.3 Demo Process
 
-After the ESP32 is powered on, configure the RTC GPIO related to the ULP coprocessor and the period of the sleep state. After the ULP coprocessor wakes up, the soil resistance is measured through running the ADC instruction. If a sensor error is detected, the CPU is woken up to flash the LED indicator. Users can customize other ways of error handling for that (for example, linking ESP32 to the cloud and report the error). If the soil moisture falls within an normal range, then the chip continues to sleep so as to reduce power consumption. If the humidity is below the set threshold, then the RTC GPIO is enabled to control the pump to water the plant.
+After the ESP32 is powered on, configure the RTC GPIO related to the ULP coprocessor and the period of the sleep state. After the ULP coprocessor wakes up, the soil resistance is measured through running the ADC instruction. If a sensor error is detected, the CPU is woken up to flash the LED indicator. Users can customize other ways of error handling for that (for example, linking ESP32 to the cloud and report the error). If the soil moisture falls within an normal range, then the chip continues to sleep so as to reduce power consumption. If the moisture is below the set threshold, then the RTC GPIO is enabled to control the pump to water the plant.
 
-![](../../../documents/_static/ulp_demo/10.png)
+![](../../../documents/_static/ulp_demo/s16.png)
 
 #### 4.4 Codes
 
-The sample code for this demo can be found in [espressif/esp-iot-solution](https://github.com/espressif/esp-iot-solution.git). Execute the command `* git clone  --recursive https://github.com/espressif/esp-iot-solution.git` to acquire the code.
+The sample code for this demo can be found in [espressif/esp-iot-solution](https://github.com/espressif/esp-iot-solution.git). Execute the command ` git clone  --recursive https://github.com/espressif/esp-iot-solution.git` to acquire the code.
 
 Below is part of the compiling code, which is divided into three parts: ADC sampling, RTC GPIO control and polling CPU wakeup. 
 Sample Code One is the ADC sampling code, meant for multiple ADC samplings of the soil voltage and calculating the average value. 
