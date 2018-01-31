@@ -74,10 +74,19 @@
     - Keywords: __ULP Deep-sleep  Built-in-Sensor TemperatureSensor Assembly__
 
 
-
 * [ESP32 ULP Co-processor Watering Example](examples/ulp_examples/ulp_watering_device)
     - An example of implementing the ESP32 ULP co-processor in a watering device.
-    - Keywords: __ULP Deep-sleep  Built-in-Sensor Assembly__
+    - Keywords: __ULP Deep-sleep  SAR-ADC RTC-GPIO Assembly__
+
+
+* [ESP32 ULP Co-processor SAR-ADC Example](examples/ulp_examples/ulp_adc)
+    - An example of using SAR_ADC to read NTC thermistor voltage and calculate temperature in ULP mode.
+    - Keywords: __ULP Deep-sleep  SAR-ADC  Assembly__
+
+
+* [ESP32 ULP Co-processor BitBang I2C Example](examples/ulp_examples/ulp_i2c_bitbang)
+    -  An example of using RTC-GPIO bitbanged I2C to read BH1750 light sensor in ULP mode.
+    - Keywords: __ULP Deep-sleep  RTC-GPIO  BITBANG  I2C  Assembly__
 
 ---
 
