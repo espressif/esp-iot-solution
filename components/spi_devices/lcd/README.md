@@ -1,6 +1,6 @@
 ##TFT LCD Example Code for ESP32##
 
-This example is based on [Adafruit’s Library](https://github.com/adafruit/Adafruit_ILI9341) for ILI9341. This component can display<br />
+This example is based on [Adafruit’s Library](https://github.com/adafruit/Adafruit-GFX-Library.git) for ILI9341. This component can display<br />
 1. Text<br />
 2. Bitmap Images<br />
 3. Shapes<br />
@@ -16,9 +16,9 @@ LCD has Serial & Parallel Interfaces, esp-wrover-kit is designed for Serial SPI 
 **Additional files required for the GUI** 
 
 `components\lcd` folder<br />
-1. `Adafruit_GFX_AS.cpp`: Used for drawing shapes & characters on the screen<br /> 
-2. `Adafruit_lcd_fast_as.cpp`: Used for drawing pixels and some lines on the screen, and this subclass overrides most of the superclass methods in  `Adafruit_GFX_AS.cpp`<br />
-3. `Font files`: It is the bitmap for various sizes of fonts (Prefer to only #include your desired fonts to save space)<br />
+1. `Adafruit-GFX-Library`: Adafruit-GFX-Library<br /> 
+2. `Adafruit_lcd_fast_as.cpp`: Used for drawing pixels and some lines on the screen, and this subclass overrides most of the superclass methods in  `Adafruit_GFX.cpp`<br />
+3. `Adafruit-GFX-Library/Font files`: It is the bitmap for various sizes of fonts (Prefer to only #include your desired fonts to save space)<br />
 4. `spi_lcd.c` : It has some SPI structures & functions which use the spi_master driver for sending out the data as required by Adafruit Libraries.
 
 > Note: To reduce the number of pins between the LCD & ESP32<br />

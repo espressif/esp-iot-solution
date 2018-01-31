@@ -16,7 +16,7 @@
  Note: If not using ESP WROVER KIT, Users must change the pins by setting macro in file spi_ili.c
 
  To change the fonts style include the header of your desired font from the "component/includes" folder
- and simply pass the address of its GFXfont to setFontStyle API
+ and simply pass the address of its GFXfont to setFont API
 */
 
 /*C Includes*/
@@ -33,7 +33,7 @@
 /*SPI Includes*/
 #include "driver/spi_master.h"
 #include "iot_lcd.h"
-#include "Adafruit_GFX_AS.h"
+#include "Adafruit_GFX.h"
 #include "image.h"
 #include "lcd_image.h"
 
@@ -43,10 +43,11 @@
 #include "esp_event_loop.h"
 
 /*Include desired font here*/
-#include "fonts/FreeSans9pt7b.h"
-#include "fonts/FreeMono9pt7b.h"
-#include "fonts/FreeSerif9pt7b.h"
-#include "fonts/FreeSerifItalic9pt7b.h"
+#define PROGMEM
+#include "FreeSans9pt7b.h"
+#include "FreeMono9pt7b.h"
+#include "FreeSerif9pt7b.h"
+#include "FreeSerifItalic9pt7b.h"
 #include "unity.h"
 
 static CEspLcd* tft_obj = NULL;
@@ -56,7 +57,7 @@ float target_room_temperature = 23.5;
 
 int color(uint8_t r, uint8_t g, uint8_t b)
 {
-    return ((r&248)|g>>5) << 8 | ((g&28)<<3|b>>3);
+    return ((r & 248) | g >> 5) << 8 | ((g & 28) << 3 | b >> 3);
 }
 
 int drawPlaceholder(CEspLcd* tft, int x, int y, int width, int height, int bordercolor, const char* headertext, int header_text_offset, const GFXfont* font)
@@ -66,13 +67,13 @@ int drawPlaceholder(CEspLcd* tft, int x, int y, int width, int height, int borde
 
     tft->drawRoundRect(x, y, width, height, 3, bordercolor);
     if (font) {
-        tft->setFontStyle(font);
+        tft->setFont(font);
         tft->drawString(headertext, x + header_text_offset, y + 1 + 14);
     } else {
         tft->drawString(headertext, x + header_text_offset, y + 1);
     }
     tft->drawFastHLine(x, y + headersize, width, bordercolor);
-    tft->setFontStyle(NULL);
+    tft->setFont(NULL);
     return y + headersize;
 }
 const GFXfont* title_font = &FreeSerif9pt7b;
@@ -81,7 +82,7 @@ const GFXfont* num_font = &FreeSerif9pt7b;
 
 void update_huminity(CEspLcd* tft, int hum)
 {
-    tft->setFontStyle(num_font);
+    tft->setFont(num_font);
     char dtmp[10];
     memset(dtmp, 0, sizeof(dtmp));
     sprintf(dtmp, "%d %%", hum);
@@ -106,12 +107,12 @@ void drawWireFrame(CEspLcd* tft)
     tft->setTextColor(COLOR_GREEN, COLOR_BLACK);
     //Target placeholder
     drawPlaceholder(tft, 0, 28, 136, 78, COLOR_RED, "Temperature", 30, title_font);
-    tft->setFontStyle(NULL);
+    tft->setFont(NULL);
     //Temperatures placeholder
     int placeholderbody = drawPlaceholder(tft, 138, 0, 180, 106, COLOR_RED, "Sensor", 60, title_font);
 
     tft->setTextColor(COLOR_WHITE, COLOR_BLACK);
-    tft->setFontStyle(num_font);
+    tft->setFont(num_font);
     tft->drawBitmap(150, placeholderbody + 5 , (uint16_t*)water_pic_35, 35, 35);
     update_huminity(tft, 68);
 
@@ -122,7 +123,7 @@ void drawWireFrame(CEspLcd* tft)
     placeholderbody = drawPlaceholder(tft, 0, 140, 319, 97, COLOR_RED, "STATUS", 110, title_font);
 
     tft->setTextColor(COLOR_WHITE, COLOR_BLACK);
-    tft->setFontStyle(NULL);
+    tft->setFont(NULL);
     tft->drawString("WiFi   : ", 6, placeholderbody + 2);
     tft->drawString("Signal : ", 6, placeholderbody + 22);
     tft->drawString("Status : ", 6, placeholderbody + 42);
@@ -134,7 +135,7 @@ void setupUI(CEspLcd* tft)
     tft->fillScreen(COLOR_BLACK);
 
     tft->drawBitmap(0, 0, Status_320_240, 320, 240);
-    vTaskDelay(1000/portTICK_PERIOD_MS);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
 
     while (1) {
         tft->fillRect(0, 0, 320, 240, COLOR_BLUE);
@@ -145,12 +146,12 @@ void setupUI(CEspLcd* tft)
 
         tft->invertDisplay(1);
         tft->drawBitmap(0, 0, Status_320_240, 320, 240);
-        vTaskDelay(500/portTICK_PERIOD_MS);
+        vTaskDelay(500 / portTICK_PERIOD_MS);
         tft->fillScreen(COLOR_BLACK);
         tft->drawBitmap(0, 0, esp_logo, 137, 26);
         drawWireFrame(tft);
         drawTargetTemp(tft, target_room_temperature);
-        vTaskDelay(500/portTICK_PERIOD_MS);
+        vTaskDelay(500 / portTICK_PERIOD_MS);
 
         break;
     }
@@ -259,12 +260,12 @@ typedef struct
 
 
 extern "C" void demo_lcd_init()
-{	
-    if(lcd_data_queue == NULL) {
+{
+    if (lcd_data_queue == NULL) {
         lcd_data_queue = xQueueCreate(10, sizeof(lcd_data_t));
     }
-	/*Initialize LCD*/
-	lcd_conf_t lcd_pins = {
+    /*Initialize LCD*/
+    lcd_conf_t lcd_pins = {
         .lcd_model    = LCD_MOD_AUTO_DET,
         .pin_num_miso = GPIO_NUM_25,
         .pin_num_mosi = GPIO_NUM_23,
@@ -278,11 +279,11 @@ extern "C" void demo_lcd_init()
         .bckl_active_level = 0,
         .spi_host = HSPI_HOST,
     };
-    
-	if(tft_obj == NULL) {
-	    tft_obj = new CEspLcd(&lcd_pins);
-	}
-	setupUI(tft_obj);
+
+    if (tft_obj == NULL) {
+        tft_obj = new CEspLcd(&lcd_pins);
+    }
+    setupUI(tft_obj);
 }
 
 void lcd_update_task(void* arg)
@@ -291,21 +292,21 @@ void lcd_update_task(void* arg)
     while (1) {
         int ret = xQueueReceive(lcd_data_queue, &data, portMAX_DELAY);
         if (ret == pdTRUE) {
-            switch(data.type) {
-                case LCD_DATA_TEMP:
-                    printf("val recv: %f\n", data.temp);
-                    drawTargetTemp(tft_obj, data.temp);
-                    break;
-                case LCD_DATA_HUM:
-                    printf("recv hum: %d\n", data.hum);
-                    update_huminity(tft_obj, data.hum);
-                    break;
-                case LCD_DATA_BRI:
-                    printf("recv bri: %f\n", data.brightness);
-                    update_brightness(tft_obj, data.brightness);
-                    break;
-                default:
-                    printf("data type error: %d\n", data.type);
+            switch (data.type) {
+            case LCD_DATA_TEMP:
+                printf("val recv: %f\n", data.temp);
+                drawTargetTemp(tft_obj, data.temp);
+                break;
+            case LCD_DATA_HUM:
+                printf("recv hum: %d\n", data.hum);
+                update_huminity(tft_obj, data.hum);
+                break;
+            case LCD_DATA_BRI:
+                printf("recv bri: %f\n", data.brightness);
+                update_brightness(tft_obj, data.brightness);
+                break;
+            default:
+                printf("data type error: %d\n", data.type);
             }
         }
     }
@@ -319,7 +320,7 @@ void demo_sensor_read_task(void* arg)
     float bh1750_data, bh1750_data_last = 0;
     lcd_data_t data;
 
-    while(1) {
+    while (1) {
         printf("\n********HTS221 HUMIDITY&TEMPERATURE SENSOR********\n");
         iot_hts221_get_humidity(hts221, &humidity);
         printf("humidity value is: %2.2f\n", (float)humidity / 10);
@@ -353,7 +354,7 @@ void demo_sensor_read_task(void* arg)
             xQueueSend(lcd_data_queue, &data, portMAX_DELAY);
             bh1750_data_last = bh1750_data;
         }
-        vTaskDelay(2000/portTICK_PERIOD_MS);
+        vTaskDelay(2000 / portTICK_PERIOD_MS);
     }
 }
 
@@ -361,7 +362,7 @@ TEST_CASE("LCD thermostat test", "[lcd_demo][iot]")
 {
     i2c_sensor_init();
     demo_lcd_init();
-    xTaskCreate(lcd_update_task, "lcd_update_task", 2048*2, NULL, 10, NULL);
+    xTaskCreate(lcd_update_task, "lcd_update_task", 2048 * 2, NULL, 10, NULL);
     xTaskCreate(demo_sensor_read_task, "demo_sensor_read_task", 2048, NULL, 10, NULL);
 }
 
