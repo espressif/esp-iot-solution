@@ -1,4 +1,4 @@
-[[EN]](./readme_en.md)
+(English version will be released soon)
 
 # ULP ADC Example
 
