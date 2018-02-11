@@ -1,0 +1,96 @@
+menu "ESPILICAM Configuration"
+
+config USE_LCD
+    bool "use lcd"
+    default y
+    help
+        whether use camera with lcd screen.
+
+config WIFI_SSID
+    string "WiFi SSID"
+    default ""
+    help
+        SSID (network name) for the demo to connect to.
+
+config WIFI_PASSWORD
+    string "WiFi Password"
+    default ""
+    help
+        Password for your network.
+
+config XCLK_FREQ
+    int "XCLK Frequency"
+    default "8000000"
+    help
+        The XCLK Frequency in Herz.
+
+menu "Pin Configuration"
+    config HW_LCD_MISO_GPIO
+        int "HW_LCD_MISO_GPIO"
+        default "12"
+    config HW_LCD_MOSI_GPIO
+        int "HW_LCD_MOSI_GPIO"
+        default "13"
+    config HW_LCD_CLK_GPIO
+        int "HW_LCD_CLK_GPIO"
+        default "14"
+    config HW_LCD_CS_GPIO
+        int "HW_LCD_CS_GPIO"
+        default "15"
+    config HW_LCD_DC_GPIO
+        int "HW_LCD_DC_GPIO"
+        default "2"
+    config HW_LCD_RESET_GPIO
+        int "HW_LCD_RESET_GPIO"
+        default "33"
+    config HW_LCD_BL_GPIO
+        int "HW_LCD_BL_GPIO"
+        default "3"
+    config D0
+        int "D0"
+        default "4"
+    config D1
+        int "D1"
+        default "5"
+    config D2
+        int "D2"
+        default "18"
+    config D3
+        int "D3"
+        default "19"
+    config D4
+        int "D4"
+        default "36"
+    config D5
+        int "D5"
+        default "39"
+    config D6
+        int "D6"
+        default "34"
+    config D7
+        int "D7"
+        default "35"
+    config XCLK
+        int "XCLK"
+        default "21"
+    config PCLK
+        int "PCLK"
+        default "22"
+    config VSYNC
+        int "VSYNC"
+        default "25"
+    config HREF
+        int "HREF"
+        default "23"
+    config SDA
+        int "SDA"
+        default "26"
+    config SCL
+        int "SCL"
+        default "27"
+    config RESET
+        int "RESET"
+        default "0"
+endmenu
+
+endmenu
