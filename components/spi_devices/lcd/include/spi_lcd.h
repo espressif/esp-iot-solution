@@ -38,7 +38,7 @@ extern "C" {
  * @param spi_wr_dev Pointer to the SPI handler for sending the data
  * @return lcd id
  */
-uint32_t lcd_init(lcd_conf_t* lcd_conf, spi_device_handle_t *spi_wr_dev, lcd_dc_t *dc);
+uint32_t lcd_init(lcd_conf_t* lcd_conf, spi_device_handle_t *spi_wr_dev, lcd_dc_t *dc, int dma_chan);
 
 /*Used by adafruit functions to send data*/
 void lcd_send_uint16_r(spi_device_handle_t spi, const uint16_t data, int32_t repeats, lcd_dc_t *dc);

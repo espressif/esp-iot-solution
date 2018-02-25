@@ -22,12 +22,14 @@
  *
  */
 #include "xpt2046_obj.h"
+#include "driver/gpio.h"
 
 CXpt2046::CXpt2046(xpt_conf_t * xpt_conf, int w, int h, float xfactor, float yfactor, int xoffset, int yoffset)
 {
     iot_xpt2046_init(xpt_conf, &m_spi);
     m_pressed = false;
     m_rotation = 0;
+    m_io_irq = xpt_conf->pin_num_irq;
     m_offset_x = xoffset;
     m_offset_y = yoffset;
     m_width = w;
@@ -39,6 +41,11 @@ CXpt2046::CXpt2046(xpt_conf_t * xpt_conf, int w, int h, float xfactor, float yfa
 bool CXpt2046::is_pressed()
 {
     return m_pressed;
+}
+
+int CXpt2046::get_irq()
+{
+    return gpio_get_level((gpio_num_t) m_io_irq);
 }
 
 int CXpt2046::get_sample(uint8_t command)
@@ -75,6 +82,7 @@ void CXpt2046::sample()
                          + ((aveY - samples[i].y) * (aveY - samples[i].y));
     }
 
+    // sort by distance
     for (int i = 0; i < XPT2046_SMPSIZE - 1; i++) {
         for (int j = 0; j < XPT2046_SMPSIZE - 1; j++) {
             if (samples[j].y > samples[j + 1].y) {
@@ -90,13 +98,13 @@ void CXpt2046::sample()
 
     int tx = 0;
     int ty = 0;
-    for (int i = 0; i < (XPT2046_SMPSIZE >> 1); i++) {
+    for (int i = 0; i < (XPT2046_SMPSIZE / 2); i++) {
         tx += samples[distances[i].x].x;
         ty += samples[distances[i].x].y;
     }
 
-    m_pos.x = tx / (XPT2046_SMPSIZE >> 1);
-    m_pos.y = ty / (XPT2046_SMPSIZE >> 1);
+    m_pos.x = tx / (XPT2046_SMPSIZE / 2);
+    m_pos.y = ty / (XPT2046_SMPSIZE / 2);
 }
 
 void CXpt2046::set_rotation(int r)

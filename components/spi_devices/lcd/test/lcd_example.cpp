@@ -115,6 +115,7 @@ extern "C" void esp_draw()
         .rst_active_level = 0,
         .bckl_active_level = 0,
         .spi_host = HSPI_HOST,
+        .init_spi_bus = true,
     };
 
     if (lcd_obj == NULL) {

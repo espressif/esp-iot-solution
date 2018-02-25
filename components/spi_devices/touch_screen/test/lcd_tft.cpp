@@ -23,7 +23,7 @@
  */
 #include "lwip/api.h"
 #include "bitmap.h"
-#include "include/app_touch.h"
+#include "app_touch.h"
 #include "iot_lcd.h"
 
 typedef struct
@@ -82,18 +82,19 @@ void clear_screen()
 void lcd_tft_init()
 {
     lcd_conf_t lcd_pins = {
-        .lcd_model = LCD_MOD_ST7789, //LCD_MOD_ILI9341,//LCD_MOD_ST7789,
-        .pin_num_miso = CONFIG_HW_LCD_MISO_GPIO,
-        .pin_num_mosi = CONFIG_HW_LCD_MOSI_GPIO,
-        .pin_num_clk = CONFIG_HW_LCD_CLK_GPIO,
-        .pin_num_cs = CONFIG_HW_LCD_CS_GPIO,
-        .pin_num_dc = CONFIG_HW_LCD_DC_GPIO,
-        .pin_num_rst = CONFIG_HW_LCD_RESET_GPIO,
-        .pin_num_bckl = CONFIG_HW_LCD_BL_GPIO,
+        .lcd_model = LCD_MOD_ILI9341,
+        .pin_num_miso = CONFIG_UT_LCD_MISO_GPIO,
+        .pin_num_mosi = CONFIG_UT_LCD_MOSI_GPIO,
+        .pin_num_clk = CONFIG_UT_LCD_CLK_GPIO,
+        .pin_num_cs = CONFIG_UT_LCD_CS_GPIO,
+        .pin_num_dc = CONFIG_UT_LCD_DC_GPIO,
+        .pin_num_rst = CONFIG_UT_LCD_RESET_GPIO,
+        .pin_num_bckl = CONFIG_UT_LCD_BL_GPIO,
         .clk_freq = 10 * 1000 * 1000,
         .rst_active_level = 0,
         .bckl_active_level = 1,
         .spi_host = HSPI_HOST,
+        .init_spi_bus = true,
     };
 
     /*Initialize SPI Handler*/

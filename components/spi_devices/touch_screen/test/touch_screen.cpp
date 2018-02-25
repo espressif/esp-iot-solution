@@ -27,7 +27,7 @@
 #include "nvs_flash.h"
 #include "esp_event_loop.h"
 #include "freertos/event_groups.h"
-#include "include/app_touch.h"
+#include "app_touch.h"
 
 static const char* TAG = "TOUCH_SCREEN";
 
@@ -101,8 +101,14 @@ void xpt2046_touch_init(void)
 {
     xpt_conf_t xpt_conf = {
         .pin_num_cs = GPIO_NUM_26,
+        .pin_num_irq = GPIO_NUM_4,
         .clk_freq = 1 * 1000 * 1000,
         .spi_host = HSPI_HOST,
+        .pin_num_miso = -1,        /*!<MasterIn, SlaveOut pin*/
+        .pin_num_mosi = -1,        /*!<MasterOut, SlaveIn pin*/
+        .pin_num_clk = -1,         /*!<SPI Clock pin*/
+        .dma_chan = 1,
+        .init_spi_bus = false,
     };
     if (xpt == NULL) {
         xpt = new CXpt2046(&xpt_conf, 320, 240);

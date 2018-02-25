@@ -140,7 +140,7 @@ void lcd_data(spi_device_handle_t spi, const uint8_t *data, int len, lcd_dc_t *d
     assert(ret == ESP_OK);              // Should have had no issues.
 }
 
-uint32_t lcd_init(lcd_conf_t* lcd_conf, spi_device_handle_t *spi_wr_dev, lcd_dc_t *dc)
+uint32_t lcd_init(lcd_conf_t* lcd_conf, spi_device_handle_t *spi_wr_dev, lcd_dc_t *dc, int dma_chan)
 {
 
     //Initialize non-SPI GPIOs
@@ -157,15 +157,17 @@ uint32_t lcd_init(lcd_conf_t* lcd_conf, spi_device_handle_t *spi_wr_dev, lcd_dc_
         vTaskDelay(100 / portTICK_RATE_MS);
     }
 
-    //Initialize SPI Bus for LCD
-    spi_bus_config_t buscfg = {
-        .miso_io_num = lcd_conf->pin_num_miso,
-        .mosi_io_num = lcd_conf->pin_num_mosi,
-        .sclk_io_num = lcd_conf->pin_num_clk,
-        .quadwp_io_num = -1,
-        .quadhd_io_num = -1,
-    };
-    spi_bus_initialize(lcd_conf->spi_host, &buscfg, 1);
+    if (lcd_conf->init_spi_bus) {
+        //Initialize SPI Bus for LCD
+        spi_bus_config_t buscfg = {
+            .miso_io_num = lcd_conf->pin_num_miso,
+            .mosi_io_num = lcd_conf->pin_num_mosi,
+            .sclk_io_num = lcd_conf->pin_num_clk,
+            .quadwp_io_num = -1,
+            .quadhd_io_num = -1,
+        };
+        spi_bus_initialize(lcd_conf->spi_host, &buscfg, dma_chan);
+    }
 
     spi_device_interface_config_t devcfg = {
         // Use low speed to read ID.

@@ -61,7 +61,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define SWAPBYTES(i) ((i>>8) | (i<<8))
 static const char* TAG = "LCD";
 
-CEspLcd::CEspLcd(lcd_conf_t* lcd_conf, int height, int width, bool dma_en, int dma_word_size) : Adafruit_GFX(width, height)
+CEspLcd::CEspLcd(lcd_conf_t* lcd_conf, int height, int width, bool dma_en, int dma_word_size, int dma_chan) : Adafruit_GFX(width, height)
 {
     m_height = height;
     m_width  = width;
@@ -69,6 +69,7 @@ CEspLcd::CEspLcd(lcd_conf_t* lcd_conf, int height, int width, bool dma_en, int d
     dma_mode = dma_en;
     dma_buf_size = dma_word_size;
     spi_mux = xSemaphoreCreateRecursiveMutex();
+    m_dma_chan = dma_chan;
     setSpiBus(lcd_conf);
 }
 
@@ -82,7 +83,7 @@ void CEspLcd::setSpiBus(lcd_conf_t *lcd_conf)
 {
     cmd_io = (gpio_num_t) lcd_conf->pin_num_dc;
     dc.dc_io = cmd_io;
-    id.id = lcd_init(lcd_conf, &spi_wr, &dc);
+    id.id = lcd_init(lcd_conf, &spi_wr, &dc, m_dma_chan);
     id.mfg_id = (id.id >> (8 * 1)) & 0xff ;
     id.lcd_driver_id = (id.id >> (8 * 2)) & 0xff;
     id.lcd_id = (id.id >> (8 * 3)) & 0xff;

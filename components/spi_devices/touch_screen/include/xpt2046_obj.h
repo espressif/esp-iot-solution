@@ -43,9 +43,16 @@ typedef struct position {
 } position;
 
 typedef struct {
-    uint8_t pin_num_cs; /*!<SPI Chip Select Pin*/
-    int clk_freq; /*!< spi clock frequency */
+    int8_t pin_num_cs;          /*!<SPI Chip Select Pin*/
+    int8_t pin_num_irq;         /*!< Touch screen IRQ pin */
+    int clk_freq;               /*!< spi clock frequency */
     spi_host_device_t spi_host; /*!< spi host index*/
+
+    int8_t pin_num_miso;        /*!<MasterIn, SlaveOut pin*/
+    int8_t pin_num_mosi;        /*!<MasterOut, SlaveIn pin*/
+    int8_t pin_num_clk;         /*!<SPI Clock pin*/
+    uint8_t dma_chan;
+    bool init_spi_bus;          /*!< Whether to initialize SPI bus */
 } xpt_conf_t;
 
 #ifdef __cplusplus
@@ -97,6 +104,7 @@ private:
     int m_offset_y;
     int m_width;
     int m_height;
+    int m_io_irq;
 
 public:
     /**
@@ -140,6 +148,8 @@ public:
      *     - bool is pressed
      */
     bool is_pressed(void);
+    int get_irq();
+
 
     /**
      * @brief   set rotation
