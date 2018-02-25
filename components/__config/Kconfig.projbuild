@@ -6,6 +6,12 @@ menu "IoT Solution settings"
                 default y
                 help
                     "Select this one to enable audio DAC component"
+                    
+            config IOT_IR_ENABLE
+                bool "IR(remote controller) DEVICE ENABLE"
+                default y
+                help
+                    "Select this to enable the IR remote controller component"
             config IOT_TOUCH_ENABLE
                 bool "TOUCH_DEVICE_ENABLE(based on touch sensor)"
                 default y

@@ -2,7 +2,7 @@
 # Automatically generated file; DO NOT EDIT.
 # Espressif IoT Development Framework Configuration
 #
-
+CONFIG_TASK_WDT=n
 #
 # IoT Solution settings
 #
@@ -16,6 +16,7 @@
 #
 CONFIG_IOT_DAC_AUDIO_ENABLE=y
 CONFIG_IOT_TOUCH_ENABLE=y
+CONFIG_IOT_IR_ENABLE=y
 CONFIG_IOT_ULP_ENABLE=y
 CONFIG_IOT_BUTTON_ENABLE=y
 CONFIG_IOT_DEBUG_ENABLE=y
