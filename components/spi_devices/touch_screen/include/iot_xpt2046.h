@@ -1,29 +1,18 @@
-/*
- * ESPRESSIF MIT License
- *
- * Copyright (c) 2018 <ESPRESSIF SYSTEMS (SHANGHAI) PTE LTD>
- *
- * Permission is hereby granted for use on ESPRESSIF SYSTEMS products only, in which case,
- * it is free of charge, to any person obtaining a copy of this software and associated
- * documentation files (the "Software"), to deal in the Software without restriction, including
- * without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the Software is furnished
- * to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all copies or
- * substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
- * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
- * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
- * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
- * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- *
- */
+// Copyright 2015-2016 Espressif Systems (Shanghai) PTE LTD
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 
-#ifndef _XPT2046_H
-#define _XPT2046_H
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+#ifndef _IOT_XPT2046_H
+#define _IOT_XPT2046_H
 
 #include "string.h"
 #include "stdio.h"
@@ -56,40 +45,6 @@ typedef struct {
 } xpt_conf_t;
 
 #ifdef __cplusplus
-extern "C"
-{
-#endif
-
-/**
- * @brief   xpt2046 device initlize
- *
- * @param   xpt_conf pointer of xpt_conf_t
- * @param   spi pointer of spi_device_handle_t
- *
- * @return
- *     - void
- */
-void iot_xpt2046_init(xpt_conf_t * xpt_conf, spi_device_handle_t * spi);
-
-/**
- * @brief   read xpt2046 data
- *
- * @param   spi spi_handle_t
- * @param   command command of read data
- * @param   len command len
- *
- * @return
- *     - int x position
- */
-uint16_t iot_xpt2046_readdata(spi_device_handle_t spi, const uint8_t command,
-                              int len);
-
-#ifdef __cplusplus
-}
-#endif
-
-#ifdef __cplusplus
-
 class CXpt2046
 {
 
