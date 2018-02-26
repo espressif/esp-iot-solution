@@ -22,7 +22,7 @@ Design and implementation of the touch sensor system is a complex process and th
     * [3.2. Notes on Designs with ESP32 Devices](#32-notes-on-designs-with-esp32-devices)
     * [3.3. PCB Layout Guidelines](#33-pcb-layout-guidelines)
 - [4. Touch Sensor Firmware Design Guidelines](#4-touch-sensor-firmware-design-guidelines)
-    * [4.1. The Impact of Wi-Fi on Touch Sensor](#41-the-impact-of-wi-fi-on-touch-sensor)
+    * [4.1. The Impact of Wi-Fi Enabling on Touch Sensor](#41-the-impact-of-wi-wi-enabling-on-touch-sensor)
     * [4.2. Jitter Filter Solution](#42-jitter-filter-solution)
     * [4.3. Self-Calibration Solution](#43-self-calibration-solution)
     * [4.4. Touch Button Firmware Design](#44-touch-button-firmware-design)
@@ -611,9 +611,9 @@ This chapter provides general guidelines for the touch sensor firmware design th
 
 ### 4.1. The Impact of Wi-Fi Enabling on Touch Sensor
 
-The Wi-Fi transceiver needs about 300 mA current, and frequent packet transmission introduces pressure on the power system and consequently affects the system's sensitivity. Since the touch sensor is sensitive to power supply, enabling Wi-Fi functionality will affect the stability of touch sensor reading. The noise introduced by the power supply is periodic, and can be filtered out with filtering algorithms.
+The Wi-Fi transceiver needs about 300 mA current, and frequent packet transmission introduces pressure on the power system and consequently affects the system's sensitivity. Since the touch sensor is sensitive to power supply, enabling Wi-Fi functionality will affect the stability of touch sensor reading. However, the noise introduced by the power supply is periodic, and can be filtered out with filtering algorithms.
 
-The following table shows the standard deviation of the readings on each touch channel when Wi-Fi is on or off (the larger the value, the larger the data dispersion). It can be concluded that if Wi-Fi is enabled, the standard deviation of readings will increase; if filter is enabled, the standard deviation of readings will decrease. As a result, the filter mode is recommended.
+The following table shows the standard deviation of the readings on each touch channel when Wi-Fi is on or off (the larger the value, the lower the stability of the touch sensor). It can be concluded that if Wi-Fi is enabled, the standard deviation of readings will increase; if filter is enabled, the standard deviation of readings will decrease. As a result, the filter mode is recommended.
 
 |Touch channel|Wi-Fi off & reading|Wi-Fi on & reading|Wi-Fi off & filter reading (10 ms)|Wi-Fi on & filter reading (10 ms)|
 |:---:|:---:|:---:|:---:|:---:|
@@ -621,7 +621,9 @@ The following table shows the standard deviation of the readings on each touch c
 |T1|1.43|2.06|0.50|0.73|
 |T2|0.97|1.15|0.64|0.49|
 
-The Wi-Fi function is power-consuming. Enabling Wi-Fi will decrease the the touch sensor reading capability, with a maximum decrease rate of 1.2%. The decrease rate on each channel follows the order of 0.5% < (TOUCH 5 ~ TOUCH 9) < 1% < (TOUCH 0 ~ TOUCH 4) < 1.5%.
+The Wi-Fi function not only affects the stability of the touch sensor, but also decreases the touch sensor's reading capability, with a maximum decrease rate of 1.2%. The decrease rate on each channel follows the order of 0.5% < TOUCH 5 ~ TOUCH 9 < 1% < TOUCH 0 ~ TOUCH 4 < 1.2%.
+
+> **Notice:** In typical touch sensor designs, trigger threshold will be calculated upon the initialization of the touch sensor. For precise calculation of the trigger threshold, please read the touch sensor after initializing the Wi-Fi functionality.
 
 ### 4.2. Jitter Filter Solution
 
