@@ -189,6 +189,7 @@ void app_lcd_init()
         .rst_active_level = 0,
         .bckl_active_level = 0,
         .spi_host = HSPI_HOST,
+        .init_spi_bus = true,
     };
 
     /*Initialize SPI Handler*/

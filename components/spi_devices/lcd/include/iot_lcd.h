@@ -62,17 +62,18 @@ typedef enum {
  */
 typedef struct {
     lcd_model_t lcd_model;
-    uint8_t pin_num_miso;        /*!<MasterIn, SlaveOut pin*/
-    uint8_t pin_num_mosi;        /*!<MasterOut, SlaveIn pin*/
-    uint8_t pin_num_clk;         /*!<SPI Clock pin*/
-    uint8_t pin_num_cs;          /*!<SPI Chip Select Pin*/
-    uint8_t pin_num_dc;          /*!<Pin to select Data or Command for LCD*/
-    uint8_t pin_num_rst;         /*!<Pin to hardreset LCD*/
-    uint8_t pin_num_bckl;        /*!<Pin for adjusting Backlight- can use PWM/DAC too*/
+    int8_t pin_num_miso;        /*!<MasterIn, SlaveOut pin*/
+    int8_t pin_num_mosi;        /*!<MasterOut, SlaveIn pin*/
+    int8_t pin_num_clk;         /*!<SPI Clock pin*/
+    int8_t pin_num_cs;          /*!<SPI Chip Select Pin*/
+    int8_t pin_num_dc;          /*!<Pin to select Data or Command for LCD*/
+    int8_t pin_num_rst;         /*!<Pin to hardreset LCD*/
+    int8_t pin_num_bckl;        /*!<Pin for adjusting Backlight- can use PWM/DAC too*/
     int clk_freq;                /*!< spi clock frequency */
     uint8_t rst_active_level;    /*!< reset pin active level */
     uint8_t bckl_active_level;   /*!< back-light active level */
     spi_host_device_t spi_host;  /*!< spi host index*/
+    bool init_spi_bus;
 } lcd_conf_t;
 
 /**
@@ -100,6 +101,7 @@ private:
     uint8_t tabcolor;
     bool dma_mode;
     int dma_buf_size;
+    uint8_t m_dma_chan;
     uint16_t m_height;
     uint16_t m_width;
     SemaphoreHandle_t spi_mux;
@@ -117,7 +119,7 @@ private:
     void _fastSendRep(uint16_t val, int rep_num);
 public:
     lcd_id_t id;
-    CEspLcd(lcd_conf_t* lcd_conf, int height = LCD_TFTHEIGHT, int width = LCD_TFTWIDTH, bool dma_en = true, int dma_word_size = 1024);
+    CEspLcd(lcd_conf_t* lcd_conf, int height = LCD_TFTHEIGHT, int width = LCD_TFTWIDTH, bool dma_en = true, int dma_word_size = 1024, int dma_chan = 1);
     ~CEspLcd();
     /**
      * @brief init spi bus and lcd screen
