@@ -27,6 +27,9 @@
     - An example for the ESP32 touch sensor development kit, ESP32-Sense, which is used to evaluate and develop ESP32 touch sensor system.
     - Keywords: __TouchSensor ESP32-Sense__
 
+* [ESP32 Lowpower EVB Example](./lowpower_evb)
+    - An example to show how to use ESP32 lowpower framework to build applications with ESP32 lowpower evaluating board.
+    - Keywords: __ESP32_Lowpower_EVB ULP Deepsleep Lowpower__
 
 * [ESP32 ULP Co-processor Reads Hall Sensor Example](./ulp_examples/ulp_hall_sensor)
     - It provides an example of the ESP32 ULP co-processor reading the on-chip Hall sensor in low-power mode.

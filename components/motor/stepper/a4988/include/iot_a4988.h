@@ -103,6 +103,7 @@ public:
      * @param instant whether to switch to the current speed directly,
      *        if false, the driver would increase the speed gradually
      * @return ESP_OK if success
+     *         ESP_ERR_TIMEOUT if operation timeout
      */
     esp_err_t step(int steps, TickType_t ticks_to_wait = portMAX_DELAY, bool instant = false);
 
