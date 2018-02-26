@@ -11,12 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-
-
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 #include <esp_types.h>
@@ -25,7 +21,7 @@ extern "C"
 #include "esp_log.h"
 #include "esp_err.h"
 #include "driver/rmt.h"
-#include "ir_nec.h"
+#include "iot_ir.h"
 #include "freertos/ringbuf.h"
 
 
