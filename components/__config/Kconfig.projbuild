@@ -6,7 +6,7 @@ menu "IoT Solution settings"
                 default y
                 help
                     "Select this one to enable audio DAC component"
-                    
+                   
             config IOT_IR_ENABLE
                 bool "IR(remote controller) DEVICE ENABLE"
                 default y
@@ -341,6 +341,14 @@ menu "IoT Solution settings"
                 help
                     "Select this one to enable weekly timer component"                      
                     
+        endmenu
+        
+        menu "Motor Devices"
+            config IOT_STEPPER_A4988_ENABLE 
+                bool "Stepp Motor A4988 driver Enable"
+                default y
+                help
+                    "Select this to enable the Stepper Motor A4988 driver"
         endmenu
         
         menu "I2C devices"
