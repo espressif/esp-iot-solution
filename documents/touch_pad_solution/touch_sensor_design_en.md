@@ -22,7 +22,7 @@ Design and implementation of the touch sensor system is a complex process and th
     * [3.2. Notes on Designs with ESP32 Devices](#32-notes-on-designs-with-esp32-devices)
     * [3.3. PCB Layout Guidelines](#33-pcb-layout-guidelines)
 - [4. Touch Sensor Firmware Design Guidelines](#4-touch-sensor-firmware-design-guidelines)
-    * [4.1. The Impact of Wi-Fi Enabling on Touch Sensor](#41-the-impact-of-wi-wi-enabling-on-touch-sensor)
+    * [4.1. The Impact of Wi-Fi Enabling on Touch Sensor](#41-the-impact-of-wi-fi-enabling-on-touch-sensor)
     * [4.2. Jitter Filter Solution](#42-jitter-filter-solution)
     * [4.3. Self-Calibration Solution](#43-self-calibration-solution)
     * [4.4. Touch Button Firmware Design](#44-touch-button-firmware-design)
@@ -623,7 +623,8 @@ The following table shows the standard deviation of the readings on each touch c
 
 The Wi-Fi function not only affects the stability of the touch sensor, but also decreases the touch sensor's reading capability, with a maximum decrease rate of 1.2%. The decrease rate on each channel follows the order of 0.5% < TOUCH 5 ~ TOUCH 9 < 1% < TOUCH 0 ~ TOUCH 4 < 1.2%.
 
-> **Notice:** In typical touch sensor designs, trigger threshold will be calculated upon the initialization of the touch sensor. For precise calculation of the trigger threshold, please read the touch sensor after initializing the Wi-Fi functionality.
+> **<mark>⚠️ Notice:</mark>**   
+In typical touch sensor designs, trigger threshold will be calculated upon the initialization of the touch sensor. For more accurate calculation of the trigger threshold, please read the touch sensor after initializing the Wi-Fi functionality.
 
 ### 4.2. Jitter Filter Solution
 
