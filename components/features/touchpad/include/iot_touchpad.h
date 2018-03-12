@@ -122,6 +122,8 @@ touch_pad_t iot_tp_num_get(tp_handle_t tp_handle);
   */
 esp_err_t iot_tp_set_threshold(tp_handle_t tp_handle, uint32_t threshold);
 
+esp_err_t iot_tp_get_threshold(const tp_handle_t tp_handle, uint32_t *threshold);
+
 /**
   * @brief  set the filter value of touchpad
   *
@@ -343,6 +345,7 @@ public:
       */
     esp_err_t set_threshold(uint32_t threshold);
 
+    esp_err_t get_threshold(uint32_t *threshold);
     /**
       * @brief  set the filter value of touchpad
       *

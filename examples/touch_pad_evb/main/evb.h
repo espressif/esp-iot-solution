@@ -19,15 +19,94 @@
 #include "driver/adc.h"
 #include "iot_led.h"
 
-#define COVER_DEBUG  0
-#if COVER_DEBUG
-#define TOUCHPAD_THRES_PERCENT  990
-#define TOUCHPAD_SPRING_THRESH_PERCENT    980
+#define SCOPE_DEBUG               0     /**< 1: Use Serial Digital Scope to debug the Touch Sensor */
+
+/* Daughter board plastic cover thickness setting */
+#define COVER_THICK_SPRING_BUTTON 3     /**< Spring Button 0 mm ~ 3 mm */
+#define COVER_THICK_LINEAR_SLIDER 0     /**< Linear Slider 0 mm ~ 1 mm */
+#define COVER_THICK_MATRIX_BUTTON 0     /**< Matrix Button 0 mm ~ 1 mm */
+#define COVER_THICK_DUPLEX_SLIDER 0     /**< Duplex Slider 0 mm ~ 1 mm */
+#define COVER_THICK_TOUCH_WHEEL   0     /**< Touch Wheel   0 mm ~ 1 mm */
+
+/*
+ * Spring Button threshold settings. This define is millesimal.
+ * if define n, the trigger threshold is (no_touch_value * n / 1000).
+ * */
+#if COVER_THICK_SPRING_BUTTON == 0                  /**< No Cover */
+    #define SPRING_BUTTON_THRESH_PERCENT  870       /**< Threshold */
+    #define SPRING_BUTTON_FILTER_VALUE    150
+#elif COVER_THICK_SPRING_BUTTON <= 1                /*!< Plastic cover thickness is 0 ~ 1 mm */
+    #define SPRING_BUTTON_THRESH_PERCENT  970
+    #define SPRING_BUTTON_FILTER_VALUE    50
+#elif COVER_THICK_SPRING_BUTTON <= 2                /*!< Plastic cover thickness is 1 ~ 2 mm */
+    #define SPRING_BUTTON_THRESH_PERCENT  980
+    #define SPRING_BUTTON_FILTER_VALUE    20
+#elif COVER_THICK_SPRING_BUTTON <= 3                /*!< Plastic cover thickness is 2 ~ 3 mm */
+    #define SPRING_BUTTON_THRESH_PERCENT  985
+    #define SPRING_BUTTON_FILTER_VALUE    20
 #else
-#define TOUCHPAD_THRES_PERCENT  900
-#define TOUCHPAD_SPRING_THRESH_PERCENT    980
+    #error "Invalid setting of plastic cover thickness."
 #endif
-#define TOUCHPAD_FILTER_VALUE   10
+
+/*
+ * Linear slider threshold settings. This define is millesimal.
+ * if define n, the trigger threshold is (no_touch_value * n / 1000).
+ * */
+#if COVER_THICK_LINEAR_SLIDER == 0                  /**< No Cover */
+    #define LINEAR_SLIDER_THRESH_PERCENT  800
+    #define LINEAR_SLIDER_FILTER_VALUE    20
+    #define TOUCH_SLIDE_PAD_SCALE         5
+#elif COVER_THICK_LINEAR_SLIDER <= 1                /*!< Plastic cover thickness is 0 ~ 1 mm */
+    #define LINEAR_SLIDER_THRESH_PERCENT  980
+    #define LINEAR_SLIDER_FILTER_VALUE    20
+    #define TOUCH_SLIDE_PAD_SCALE         5
+#else
+    #error "Invalid setting of plastic cover thickness."
+#endif
+
+/*
+ * Matrix Button threshold settings. This define is millesimal.
+ * if define n, the trigger threshold is (no_touch_value * n / 1000).
+ * */
+#if COVER_THICK_MATRIX_BUTTON == 0                  /**< No Cover */
+    #define MATRIX_BUTTON_THRESH_PERCENT  950
+    #define MATRIX_BUTTON_FILTER_VALUE    50
+#elif COVER_THICK_MATRIX_BUTTON <= 1                /*!< Plastic cover thickness is 0 ~ 1 mm */
+    #define MATRIX_BUTTON_THRESH_PERCENT  980
+    #define MATRIX_BUTTON_FILTER_VALUE    20
+#else
+    #error "Invalid setting of plastic cover thickness."
+#endif
+
+/*
+ * Duplex Slider threshold settings. This define is millesimal.
+ * if define n, the trigger threshold is (no_touch_value * n / 1000).
+ * */
+#if COVER_THICK_DUPLEX_SLIDER == 0                  /**< No Cover */
+    #define DUPLEX_SLIDER_THRESH_PERCENT  850
+    #define DUPLEX_SLIDER_FILTER_VALUE    20
+    #define TOUCH_SEQ_SLIDE_PAD_SCALE     5
+#elif COVER_THICK_DUPLEX_SLIDER <= 1                /*!< Plastic cover thickness is 0 ~ 1 mm */
+    #define DUPLEX_SLIDER_THRESH_PERCENT  990
+    #define DUPLEX_SLIDER_FILTER_VALUE    20
+    #define TOUCH_SEQ_SLIDE_PAD_SCALE     5
+#else
+    #error "Invalid setting of plastic cover thickness."
+#endif
+
+/*
+ * Touch Wheel threshold settings. This define is millesimal.
+ * if define n, the trigger threshold is (no_touch_value * n / 1000).
+ * */
+#if COVER_THICK_TOUCH_WHEEL == 0                  /**< No Cover */
+    #define TOUCH_WHEEL_THRESH_PERCENT  800
+    #define TOUCH_WHEEL_FILTER_VALUE    20
+#elif COVER_THICK_TOUCH_WHEEL <= 1                /*!< Plastic cover thickness is 0 ~ 1 mm */
+    #define TOUCH_WHEEL_THRESH_PERCENT  980
+    #define TOUCH_WHEEL_FILTER_VALUE    20
+#else
+    #error "Invalid setting of plastic cover thickness."
+#endif
 
 #ifdef __cplusplus
 extern QueueHandle_t q_touch;
@@ -38,13 +117,8 @@ extern "C" {
 #define ADC1_TEST_CHANNEL (ADC1_CHANNEL_7)
 
 #define I2C_MASTER_NUM I2C_NUM_0
-#if CONFIG_TOUCH_EB_V3
 #define I2C_MASTER_SDA_IO GPIO_NUM_22
 #define I2C_MASTER_SCL_IO GPIO_NUM_23
-#else
-#define I2C_MASTER_SDA_IO GPIO_NUM_21
-#define I2C_MASTER_SCL_IO GPIO_NUM_19
-#endif
 #define I2C_MASTER_FREQ_HZ 100000
 
 enum {
@@ -94,7 +168,14 @@ void ch450_dev_init();
 void evb_adc_init();
 int  evb_adc_get_mode();
 
-void evb_led_init();
+/*
+ * RGB conponent API
+ */
+void evb_rgb_led_init();
+void evb_rgb_led_clear();
+uint8_t evb_rgb_led_color_get();
+void evb_rgb_led_set(uint8_t color, uint8_t bright_percent);
+void evb_rgb_led_get(uint8_t color, uint8_t *bright_percent);
 
 /*
  * Touch button APIs

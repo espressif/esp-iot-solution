@@ -1,17 +1,12 @@
 menu "IoT Touch EB settings"
     choice TOUCH_EB_VERSION
-        bool "Touch EB version"
-        default TOUCH_EB_V2
+        bool "ESP32-Sense EB version"
+        default TOUCH_EB_V3
         help
-          select the TOUCH_EB hardware version
+          select the Touch EB(ESP32-Sense Kit) hardware version
 
-    config TOUCH_EB_V1
-        bool "TOUCH_EB_V1"
-    config TOUCH_EB_V2
-        bool "TOUCH_EB_V2"
     config TOUCH_EB_V3
         bool "TOUCH_EB_V3"
     endchoice
-
 
 endmenu

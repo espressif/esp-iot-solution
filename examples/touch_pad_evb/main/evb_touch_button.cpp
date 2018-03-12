@@ -15,58 +15,20 @@
 #include "freertos/queue.h"
 #include "esp_log.h"
 #include "iot_touchpad.h"
-#include "iot_led.h"
 #include "evb.h"
 
 static const char *TAG = "touch_button";
-#if CONFIG_TOUCH_EB_V1
-extern CLED *led[4];
-#define TOUCH_BUTTON_0  TOUCH_PAD_NUM0
-#define TOUCH_BUTTON_1  TOUCH_PAD_NUM2
-#define TOUCH_BUTTON_2  TOUCH_PAD_NUM3
-#elif CONFIG_TOUCH_EB_V2
-#define TOUCH_BUTTON_0  TOUCH_PAD_NUM0
-#define TOUCH_BUTTON_1  TOUCH_PAD_NUM2
-#define TOUCH_BUTTON_2  TOUCH_PAD_NUM3
-#elif CONFIG_TOUCH_EB_V3
+
 #define TOUCH_BUTTON_0  TOUCH_PAD_NUM8
-#define TOUCH_BUTTON_1  TOUCH_PAD_NUM4
-#define TOUCH_BUTTON_2  TOUCH_PAD_NUM2
-#endif
+#define TOUCH_BUTTON_1  TOUCH_PAD_NUM6
+#define TOUCH_BUTTON_2  TOUCH_PAD_NUM4
+
 void evb_touch_button_handle(int idx, int type)
 {
+	uint8_t color = 0;
+	uint8_t bright_percent = 0;
     ESP_LOGI(TAG, "single tp evt[%d]", idx);
-#if CONFIG_TOUCH_EB_V1
-    for (int i = 0; i < 4; i++) {
-        if (i == idx) {
-            led[i]->toggle();
-        } else if (idx > 0) {
-            led[i]->off();
-        }
-    }
-    ch450_write_dig(0, idx);
-    ch450_write_dig(1, -1);
-    ch450_write_dig(2, -1);
-    ch450_write_dig(3, -1);
-    ch450_write_dig(4, -1);
-    ch450_write_dig(5, -1);
-#elif CONFIG_TOUCH_EB_V2
-    idx = idx == TOUCH_BUTTON_0 ? 0 :
-          idx == TOUCH_BUTTON_1 ? 1 :
-          idx == TOUCH_BUTTON_2 ? 2 : 0;
-    ch450_write_dig(2, -1);
-    ch450_write_dig(3, -1);
-    if (type == TOUCH_EVT_TYPE_SINGLE_PUSH) {
-        ch450_write_dig(0, idx);
-        ch450_write_dig(1, -1);
 
-    } else if (type == TOUCH_EVT_TYPE_SINGLE_RELEASE) {
-        ch450_write_dig(1, idx);
-        ch450_write_dig(0, -1);
-    } else {
-
-    }
-#elif CONFIG_TOUCH_EB_V3
     idx = idx == TOUCH_BUTTON_0 ? 0 :
           idx == TOUCH_BUTTON_1 ? 1 :
           idx == TOUCH_BUTTON_2 ? 2 : 0;
@@ -75,14 +37,15 @@ void evb_touch_button_handle(int idx, int type)
     if (type == TOUCH_EVT_TYPE_SINGLE_PUSH) {
         ch450_write_dig(5, idx);
         ch450_write_dig(4, -1);
-
+        // Set RGB LED info
+        color = evb_rgb_led_color_get();
+        evb_rgb_led_get(color, &bright_percent);
+        evb_rgb_led_clear();
+        evb_rgb_led_set(idx, bright_percent);
     } else if (type == TOUCH_EVT_TYPE_SINGLE_RELEASE) {
         ch450_write_dig(4, idx);
         ch450_write_dig(5, -1);
-    } else {
-
     }
-#endif
 }
 
 static void push_cb(void *arg)
@@ -110,9 +73,9 @@ static void release_cb(void *arg)
 void evb_touch_button_init()
 {
     //single touch
-    CTouchPad* tp_dev0 = new CTouchPad(TOUCH_BUTTON_0, TOUCHPAD_THRES_PERCENT, 0, TOUCHPAD_FILTER_VALUE);
-    CTouchPad* tp_dev1 = new CTouchPad(TOUCH_BUTTON_1, TOUCHPAD_THRES_PERCENT, 0, TOUCHPAD_FILTER_VALUE);
-    CTouchPad* tp_dev2 = new CTouchPad(TOUCH_BUTTON_2, TOUCHPAD_THRES_PERCENT, 0, TOUCHPAD_FILTER_VALUE);
+    CTouchPad* tp_dev0 = new CTouchPad(TOUCH_BUTTON_0, LINEAR_SLIDER_THRESH_PERCENT, 0, LINEAR_SLIDER_FILTER_VALUE);
+    CTouchPad* tp_dev1 = new CTouchPad(TOUCH_BUTTON_1, LINEAR_SLIDER_THRESH_PERCENT, 0, LINEAR_SLIDER_FILTER_VALUE);
+    CTouchPad* tp_dev2 = new CTouchPad(TOUCH_BUTTON_2, LINEAR_SLIDER_THRESH_PERCENT, 0, LINEAR_SLIDER_FILTER_VALUE);
     tp_dev0->add_cb(TOUCHPAD_CB_PUSH, push_cb, tp_dev0);
     tp_dev1->add_cb(TOUCHPAD_CB_PUSH, push_cb, tp_dev1);
     tp_dev2->add_cb(TOUCHPAD_CB_PUSH, push_cb, tp_dev2);
