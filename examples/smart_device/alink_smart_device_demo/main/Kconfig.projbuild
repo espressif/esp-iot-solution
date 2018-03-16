@@ -46,17 +46,31 @@ menu "IoT Example - smart_device"
                 depends on SMART_PLUG_POWER_METER_ENABLE
                 config SMART_PLUG_PM_CF_IO
                     depends on SMART_PLUG_POWER_METER_ENABLE
-                    int "Power meter GPIO number for CF pin"
+                    int "GPIO number for power meter CF pin"
                     default 25
                     help
                         To set the GPIO number for CF pin of power meter.
+                config SMART_PLUG_PM_CF_PCNT_UNIT_NUM
+                    depends on SMART_PLUG_POWER_METER_ENABLE
+                    int "PCNT uint number for CF pin"
+                    range 0 7
+                    default 0
+                    help
+                        To set PCNT uint number for CF pin of power meter.
                 config SMART_PLUG_PM_CFI_IO
                     depends on SMART_PLUG_POWER_METER_ENABLE
-                    int "Power meter GPIO number for CFI pin"
+                    int "GPIO number for power meter CFI pin"
                     default 26
                     help
-                        To set the GPIO number for CF pin of power meter.
-                        This pin defines the output on CF pin is current or voltage.
+                        To set the GPIO number for CFI pin of power meter.
+                        This pin defines the output on CFI pin is current or voltage.
+                config SMART_PLUG_PM_CFI_PCNT_UNIT_NUM
+                    depends on SMART_PLUG_POWER_METER_ENABLE
+                    int "PCNT uint number for CFI pin"
+                    range 0 7
+                    default 1
+                    help
+                        To set PCNT uint number for CFI pin of power meter.
                 config SMART_PLUG_PM_POWER_COEF
                     depends on SMART_PLUG_POWER_METER_ENABLE
                     int "Power-frequency coefficient for power meter"
@@ -77,7 +91,20 @@ menu "IoT Example - smart_device"
                     default 102961
                     help
                         Voltage-frequency coefficient for voltage value read from power meter.
-                        Voltage = frequency * coefficient         
+                        Voltage = frequency * coefficient
+                config SMART_PLUG_PM_MODE_SEL_PIN
+                    depends on SMART_PLUG_POWER_METER_ENABLE
+                    int "GPIO number for power meter mode select pin"
+                    default 17
+                    help
+                        To set the GPIO number for select pin of power meter.
+                config SMART_PLUG_PM_MODE_SEL_PIN_LEVEL
+                    depends on SMART_PLUG_POWER_METER_ENABLE
+                    int "Power meter mode select pin level"
+                    range 0 1
+                    default 0
+                    help
+                        To set the select pin level of power meter.
             endmenu
             
         menu "Main button"

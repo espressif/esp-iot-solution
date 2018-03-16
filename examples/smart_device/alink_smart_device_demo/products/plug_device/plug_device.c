@@ -263,17 +263,17 @@ plug_handle_t plug_init(SemaphoreHandle_t xSemWriteInfo)
     /* create a power meter object */
     pm_config_t pm_conf = {
         .power_io_num      = PM_CF_IO_NUM,
-        .power_pcnt_unit   = PCNT_UNIT_0,
+        .power_pcnt_unit   = PM_CF_PCNT_UNIT_NUM,
         .power_ref_param   = PM_POWER_PARAM,
         .voltage_io_num    = PM_CFI_IO_NUM,
-        .voltage_pcnt_unit = PCNT_UNIT_1,
+        .voltage_pcnt_unit = PM_CFI_PCNT_UNIT_NUM,
         .voltage_ref_param = PM_VOLTAGE_PARAM,
         .current_io_num    = PM_CFI_IO_NUM,
-        .current_pcnt_unit = PCNT_UNIT_1,
+        .current_pcnt_unit = PM_CFI_PCNT_UNIT_NUM,
         .current_ref_param = PM_CURRENT_PARAM,
-        .sel_io_num = 17,
-        .sel_level = 0,
-        .pm_mode = PM_SINGLE_VOLTAGE
+        .sel_io_num        = PM_MODE_SEL_PIN,
+        .sel_level         = PM_MODE_SEL_PIN_LEVEL,
+        .pm_mode           = PM_SINGLE_VOLTAGE
     };
     plug_dev->pm_handle = iot_powermeter_create(pm_conf);
     xTaskCreate(powermeter_task, "powermeter_task", 2048, plug_dev, 5, NULL);

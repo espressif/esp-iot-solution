@@ -30,12 +30,18 @@
 #if CONFIG_SMART_PLUG_DEVICE
 #define PLUG_NAME_SPACE                       CONFIG_SMART_PLUG_NAME_SPACE
 #define PLUG_PARAM_KEY                        CONFIG_SMART_PLUG_PARAM_KEY
+
 #define PLUG_POWER_METER_ENABLE               CONFIG_SMART_PLUG_POWER_METER_ENABLE
 #define PM_CF_IO_NUM                          CONFIG_SMART_PLUG_PM_CF_IO
+#define PM_CF_PCNT_UNIT_NUM                   CONFIG_SMART_PLUG_PM_CF_PCNT_UNIT_NUM
 #define PM_CFI_IO_NUM                         CONFIG_SMART_PLUG_PM_CFI_IO
+#define PM_CFI_PCNT_UNIT_NUM                  CONFIG_SMART_PLUG_PM_CFI_PCNT_UNIT_NUM
 #define PM_POWER_PARAM                        CONFIG_SMART_PLUG_PM_POWER_COEF
 #define PM_CURRENT_PARAM                      CONFIG_SMART_PLUG_PM_CURRENT_COEF
 #define PM_VOLTAGE_PARAM                      CONFIG_SMART_PLUG_PM_VOLTAGE_COEF
+#define PM_MODE_SEL_PIN                       CONFIG_SMART_PLUG_PM_MODE_SEL_PIN
+#define PM_MODE_SEL_PIN_LEVEL                 CONFIG_SMART_PLUG_PM_MODE_SEL_PIN_LEVEL
+
 #define BUTTON_IO_NUM_MAIN                    CONFIG_SMART_PLUG_MAIN_BUTTON_IO
 #define BUTTON_ACTIVE_LEVEL                   CONFIG_SMART_PLUG_MAIN_BUTTON_ACT_LEVEL
 #define NET_LED_NUM                           CONFIG_SMART_PLUG_NET_STATUS_LED_IO
@@ -88,12 +94,18 @@
 #else
 #define PLUG_NAME_SPACE                       "socket"
 #define PLUG_PARAM_KEY                        "socket_param"
+
 #define PLUG_POWER_METER_ENABLE               (1)
 #define PM_CF_IO_NUM                          (25)
+#define PM_CF_PCNT_UNIT_NUM                   (0)
 #define PM_CFI_IO_NUM                         (26)
+#define PM_CFI_PCNT_UNIT_NUM                  (1)
 #define PM_POWER_PARAM                        (1293699)
 #define PM_CURRENT_PARAM                      (13670)
 #define PM_VOLTAGE_PARAM                      (102961)
+#define PM_MODE_SEL_PIN                       (17)
+#define PM_MODE_SEL_PIN_LEVEL                 (0)
+
 #define BUTTON_IO_NUM_MAIN                    (4)
 #define BUTTON_ACTIVE_LEVEL                   (0)
 #define NET_LED_NUM                           GPIO_NUM_19

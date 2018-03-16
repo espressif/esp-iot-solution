@@ -45,7 +45,7 @@ typedef struct {
     pcnt_unit_t current_pcnt_unit;      /**< pulse count unit of current pin */
     uint32_t current_ref_param;         /**< reference value to calculate actual current value */
     uint8_t sel_io_num;                 /**< gpio number of mode select pin */
-    uint8_t sel_level;                  /**< the gpio level you wang to set to mode select pin */
+    uint8_t sel_level;                  /**< the gpio level you want to set to mode select pin */
     pm_mode_t pm_mode;                  /**< mode of power meter refer to struct pm_mode_t */
 } pm_config_t;
 
