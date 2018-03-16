@@ -36,6 +36,9 @@ static const char* STEPPER_A4988_TAG = "stepper_a4988";
 
 #define STEPPER_CNT_H  10000
 #define STEPPER_CNT_L  -10000
+#define STEPPER_LEDC_DUTY  2000
+#define STEPPER_LEDC_INIT_BITS LEDC_TIMER_13_BIT
+#define STEPPER_LEDC_INIT_FREQ 2000
 
 typedef struct {
     int step_io;
@@ -110,8 +113,8 @@ CA4988Stepper::CA4988Stepper(int step_io, int dir_io, int number_of_steps, ledc_
     m_stepper = pstepper;
 
     ledc_timer_config_t ledc_timer;
-    ledc_timer.duty_resolution = LEDC_TIMER_13_BIT; // resolution of PWM duty
-    ledc_timer.freq_hz = 2000;                     // frequency of PWM signal
+    ledc_timer.duty_resolution = STEPPER_LEDC_INIT_BITS; // resolution of PWM duty
+    ledc_timer.freq_hz = STEPPER_LEDC_INIT_FREQ;                     // frequency of PWM signal
     ledc_timer.speed_mode = pstepper->ledc_mode;           // timer mode
     ledc_timer.timer_num = pstepper->ledc_timer;            // timer index
     ledc_timer_config(&ledc_timer);
@@ -202,7 +205,7 @@ esp_err_t CA4988Stepper::run(int dir)
     } else {
         gpio_set_level((gpio_num_t)pstepper->dir_io, 0);
     }
-    ledc_set_duty(pstepper->ledc_mode, pstepper->ledc_channel, 2000);
+    ledc_set_duty(pstepper->ledc_mode, pstepper->ledc_channel, STEPPER_LEDC_DUTY);
     ledc_update_duty(pstepper->ledc_mode, pstepper->ledc_channel);
     xSemaphoreGive(pstepper->mux);
     return ESP_OK;
@@ -233,7 +236,7 @@ esp_err_t CA4988Stepper::step(int steps, TickType_t ticks_to_wait)
     xSemaphoreTake(pstepper->sem, 0);
     pcnt_intr_enable(pstepper->pcnt_unit);
 
-    ledc_set_duty(pstepper->ledc_mode, pstepper->ledc_channel, 2000);
+    ledc_set_duty(pstepper->ledc_mode, pstepper->ledc_channel, STEPPER_LEDC_DUTY);
     ledc_update_duty(pstepper->ledc_mode, pstepper->ledc_channel);
 
     BaseType_t res = xSemaphoreTake(pstepper->sem, ticks_to_wait);
