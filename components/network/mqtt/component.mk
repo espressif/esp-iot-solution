@@ -7,8 +7,8 @@
 # please read the SDK documents if you need to do this.
 #
 ifdef CONFIG_IOT_MQTT_ENABLE
-COMPONENT_ADD_INCLUDEDIRS := include
-COMPONENT_SRCDIRS := espmqtt
+COMPONENT_ADD_INCLUDEDIRS := include espmqtt/lib/include
+COMPONENT_SRCDIRS := espmqtt espmqtt/lib
 else
 # Disable component
 COMPONENT_ADD_INCLUDEDIRS :=

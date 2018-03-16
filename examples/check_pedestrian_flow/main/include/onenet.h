@@ -7,7 +7,7 @@
 */
 #ifndef __ONENET_H__
 #define __ONENET_H__
-
+#include "mqtt_client.h"
 #define ONENET_HOST         "183.230.40.39"
 #define ONENET_PORT         (6002)
 
@@ -30,16 +30,8 @@ enum mqtt_save_data_type {
     data_type_float  = 0x07
 };
 
-void connected_cb(void *self, void *params);
+void onenet_start(esp_mqtt_client_handle_t client);
 
-void disconnected_cb(void *self, void *params);
-
-void reconnect_cb(void *self, void *params);
-
-void subscribe_cb(void *self, void *params);
-
-void publish_cb(void *self, void *params);
-
-void data_cb(void *self, void *params);
+void onenet_stop(esp_mqtt_client_handle_t client);
 
 #endif /* __ONENET_H__ */

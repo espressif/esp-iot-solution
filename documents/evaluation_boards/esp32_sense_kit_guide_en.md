@@ -95,11 +95,11 @@ The divided resistance on the motherboard is 10 KΩ. The table below lists the d
 
 |Daughterboard|Divided resistance (Kohm)|ADC reading (Min)|ADC reading (Max)|
 |:---:|:---:|:---:|:---:|
-|Spring button|0|0|120|
-|Linear slider|4.7|935|1175|
-|Matrix button|10|1530|1770|
-|Duplex slider|33|2400|2620|
-|Wheel slider|47|2630|2810|  
+|Spring button|0|0|250|
+|Linear slider|4.7|805|1305|
+|Matrix button|10|1400|1900|
+|Duplex slider|19.1|1916|2416|
+|Wheel slider|47|2471|2971|  
 
 ## 5. Application Programs
 
