@@ -18,7 +18,7 @@ typedef void* light_dev_handle_t;
 
 typedef enum {
     LIGHT_STA_DISCONNECTED,
-    LIGHT_CONNECTING_CLOUD,    
+    LIGHT_CLOUD_DISCONNECTED,    
     LIGHT_CLOUD_CONNECTED,
 } light_net_status_t;
 

@@ -74,7 +74,7 @@ void cloud_start_task(void *arg)
         xSemWriteInfo = xSemaphoreCreateBinary();
     }
 
-    cloud_init();
+    cloud_init(xSemWriteInfo);
     xTaskCreate(read_task_test, "read_task_test", 1024 * 4, NULL, 9, NULL);
     xTaskCreate(write_task_test, "write_task_test", 1024 * 4, NULL, 4, NULL);
     vTaskDelete(NULL);

@@ -105,8 +105,13 @@ esp_err_t light_set(light_dev_handle_t light_dev, uint32_t red, uint32_t green, 
         return ESP_FAIL;
     }
 
-    uint32_t duty[IOT_LIGHT_CHANNEL_NUM] = {red * LIGHT_FULL_DUTY / 255, green * LIGHT_FULL_DUTY / 255, 
+    uint32_t duty_all[5] = {red * LIGHT_FULL_DUTY / 255, green * LIGHT_FULL_DUTY / 255, 
     blue * LIGHT_FULL_DUTY / 255, (color_temp-2700) * LIGHT_FULL_DUTY / (6500-2700), luminance * LIGHT_FULL_DUTY / 100};
+
+    uint32_t duty[IOT_LIGHT_CHANNEL_NUM] = {0};
+    for (int i = 0; i < IOT_LIGHT_CHANNEL_NUM; i++) {
+        duty[i] = duty_all[i];
+    }
 
     light_device_t* light_dev_tmp = (light_device_t*)light_dev;
     light_dev_tmp->light_param.red = red;
@@ -147,6 +152,12 @@ esp_err_t light_net_status_write(light_dev_handle_t light_dev, light_net_status_
             iot_light_breath_write(light_dev_tmp->light_handle, IOT_CHANNEL_ID_R, 4000);
             iot_light_duty_write(light_dev_tmp->light_handle, IOT_CHANNEL_ID_G, 0, LIGHT_SET_DUTY_DIRECTLY);
             iot_light_duty_write(light_dev_tmp->light_handle, IOT_CHANNEL_ID_B, 0, LIGHT_SET_DUTY_DIRECTLY);
+            break;
+
+        case LIGHT_CLOUD_DISCONNECTED:
+            iot_light_breath_write(light_dev_tmp->light_handle, IOT_CHANNEL_ID_B, 4000);
+            iot_light_duty_write(light_dev_tmp->light_handle, IOT_CHANNEL_ID_G, 0, LIGHT_SET_DUTY_DIRECTLY);
+            iot_light_duty_write(light_dev_tmp->light_handle, IOT_CHANNEL_ID_R, 0, LIGHT_SET_DUTY_DIRECTLY);
             break;
             
         case LIGHT_CLOUD_CONNECTED:

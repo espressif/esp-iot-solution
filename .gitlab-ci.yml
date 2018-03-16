@@ -32,9 +32,10 @@ build:
     - cd ../oled_screen_module
     - make defconfig
     - make -j8
-    - cd ../smart_device
+    - cd ../smart_device/alink_smart_device_demo
     - make defconfig
     - make -j8
+    - cd ..
     - cd ../empty_project
     - make defconfig
     - make -j8
