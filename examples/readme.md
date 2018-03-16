@@ -58,6 +58,9 @@
     - Keywords: __ULP Deep-sleep  RTC-GPIO  BITBANG  I2C  Assembly__
 
 
+* [ESP32 ULP Co-processor BitBang SPI Example](examples/ulp_examples/ulp_spi)
+    -  An example of using RTC-GPIO bitbanged SPI to read MS5611 sensor in ULP mode.
+    - Keywords: __ULP Deep-sleep  RTC-GPIO  BITBANG  SPI  Assembly__
 
 ---
 

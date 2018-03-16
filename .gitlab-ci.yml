@@ -50,6 +50,9 @@ build:
     - cd ../ulp_tsens
     - make defconfig
     - make -j8
+    - cd ../ulp_spi
+    - make defconfig
+    - make -j8
     - cd ../ulp_hall_sensor
     - make defconfig
     - make -j8

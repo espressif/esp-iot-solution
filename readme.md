@@ -83,11 +83,13 @@
     - An example of using SAR_ADC to read NTC thermistor voltage and calculate temperature in ULP mode.
     - Keywords: __ULP Deep-sleep  SAR-ADC  Assembly__
 
-
 * [ESP32 ULP Co-processor BitBang I2C Example](examples/ulp_examples/ulp_i2c_bitbang)
     -  An example of using RTC-GPIO bitbanged I2C to read BH1750 light sensor in ULP mode.
     - Keywords: __ULP Deep-sleep  RTC-GPIO  BITBANG  I2C  Assembly__
 
+* [ESP32 ULP Co-processor BitBang SPI Example](examples/ulp_examples/ulp_spi)
+    -  An example of using RTC-GPIO bitbanged SPI to read MS5611 sensor in ULP mode.
+    - Keywords: __ULP Deep-sleep  RTC-GPIO  BITBANG  SPI  Assembly__
 ---
 
 ## Components
