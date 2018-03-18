@@ -344,6 +344,11 @@ menu "IoT Solution settings"
         endmenu
         
         menu "Motor Devices"
+            config IOT_SERVO_ENABLE 
+                bool "Servo motor driver Enable"
+                default y
+                help
+                    "Select this to enable the servo motor driver"
             config IOT_STEPPER_A4988_ENABLE 
                 bool "Stepp Motor A4988 driver Enable"
                 default y
