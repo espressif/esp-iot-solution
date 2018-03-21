@@ -15,11 +15,11 @@
 
     <img src="../../documents/_static/example/alink_demo/alink_settings.png" width = "300" alt="alink_settings" align=center />
 
-  * 在 `IoT Example -> smart_device` 下可以选择设备类型，并配置该设备的相关参数和 ALINK 设备信息。
+  * 在 `IoT Example - smart_device` 下可以选择设备类型，并配置该设备的相关参数和 ALINK 设备信息。
 
     <img src="../../documents/_static/example/alink_demo/smart_device_config.png" width = "300" alt="smart_device_config" align=center />
 
-如需运行当前 demo，请使用默认参数即可。
+注：使用默认参数时，是一个 smart light 的 demo，若需要使用 smart plug 的demo，进入 `Device type` 选择 `smart plug` 即可。
 
 ## 3. demo 使用流程
 
@@ -56,6 +56,8 @@
 
     <img src="../../documents/_static/example/alink_demo/enable_device.png" width = "300" alt="enable_device" align=center />
     <img src="../../documents/_static/example/alink_demo/control_panel.png" width = "300" alt="control_panel" align=center />
+
+注：若使用 smart plug demo 时，APP 端使用名字叫做 `ESP-PLUG-DEMO-V5` 的设备，该设备在`插座排插`类别下可以找到。
 
 ## 4. 热点配网
 

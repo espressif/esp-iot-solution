@@ -15,6 +15,10 @@
 #define _IOT_OTA_H_
 #include "esp_system.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
   * @brief  start ota, you have call esp_restart to run the new app
   *
@@ -28,4 +32,9 @@
   *     - others: fail
   */
 esp_err_t iot_ota_start(const char *server_ip, uint16_t server_port, const char *file_dir, uint32_t ticks_to_wait);
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif

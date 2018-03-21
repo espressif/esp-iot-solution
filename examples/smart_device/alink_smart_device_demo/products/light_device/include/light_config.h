@@ -14,6 +14,10 @@
 #define _IOT_LIGHT_CONFIG_H_
 #include "sdkconfig.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #if CONFIG_SMART_LIGHT_DEVICE
 #define IOT_LIGHT_NAME_SPACE          CONFIG_SMART_LIGHT_NAME_SPACE
 #define IOT_LIGHT_PARAM_KEY           CONFIG_SMART_LIGHT_PARAM_KEY
@@ -78,6 +82,10 @@
 #define IOT_CHANNEL_ID_B    2
 #define IOT_CHANNEL_ID_CW   3
 #define IOT_CHANNEL_ID_WW   4
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 
