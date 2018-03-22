@@ -18,6 +18,7 @@
 #include "esp_log.h"
 #include "driver/ledc.h"
 #include "driver/pcnt.h"
+#include "freertos/timers.h"
 
 /**
  *
@@ -69,11 +70,13 @@ class CA4988Stepper
 {
 private:
     void* m_stepper;
+
     /**
      * prevent copy constructing
      */
     CA4988Stepper(const CA4988Stepper&);
     CA4988Stepper& operator =(const CA4988Stepper&);
+
 public:
     /**
      * @brief Constructor for CA4988Stepper class
@@ -97,22 +100,27 @@ public:
      * @brief To turn the motor a specific number of steps.
      * @param steps The number of steps to turn, negative or positive values determine the direction
      * @param ticks_to_wait block time for this function
+     * @param instant whether to switch to the current speed directly,
+     *        if false, the driver would increase the speed gradually
      * @return ESP_OK if success
      */
-    esp_err_t step(int steps, TickType_t ticks_to_wait = portMAX_DELAY);
+    esp_err_t step(int steps, TickType_t ticks_to_wait = portMAX_DELAY, bool instant = false);
 
     /**
      * @brief Make the motor run towards a direction.
      * @param dir the direction to run, positive or negative values.
+     * @param instant whether to switch to the current speed directly,
+     *        if false, the driver would increase the speed gradually
      * @return ESP_OK if success
      */
-    esp_err_t run(int dir);
+    esp_err_t run(int dir, bool instant = false);
 
     /**
      * @brief Stop the motor
+     * @param instant whether to stop the motor immediately
      * @return ESP_OK if success
      */
-    esp_err_t stop();
+    esp_err_t stop(bool instant = true);
 
     /**
      * @brief Wait the steps to finish
@@ -121,11 +129,32 @@ public:
     esp_err_t wait();
 
     /**
-     * @brief Set the speed, in RPM
+     * @brief Set the target speed, in RPM
+     * @param rpm Rounds per minute
+     * @param instant whether to change the frequency directly
+     * @return ESP_OK if success
+     */
+    esp_err_t setSpeedRpm(int rpm, bool instant = false);
+
+    /**
+     * @brief Set the speed, immediately
      * @param rpm Rounds per minute
      * @return ESP_OK if success
      */
-    esp_err_t setSpeedRpm(int rpm);
+    esp_err_t setSpeedRpmCur(int rpm);
+
+    /**
+     * @brief Get the current motor speed, in rpm
+     * @return rpm
+     */
+    int getSpeedRpm();
+
+    /**
+     * @brief Get the target speed, in rpm
+     * @note After setting the target speed, the driver might increase the current speed gradually
+     * @return target rpm
+     */
+    int getSpeedRpmTarget();
 
     /**
      * @brief Destructor function of CA4988Stepper object
