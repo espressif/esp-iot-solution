@@ -331,6 +331,9 @@ esp_err_t iot_hts221_get_humidity(hts221_handle_t sensor, int16_t *humidity)
     h_t_out = (int16_t)(((uint16_t)buffer[1]) << 8) | (uint16_t)buffer[0];
     
     tmp_32 = ((int32_t)(h_t_out - h0_t0_out)) * ((int32_t)(h1_rh - h0_rh) * 10);
+    if (h1_t0_out - h0_t0_out == 0) {
+        return ESP_FAIL;
+    }
     *humidity = tmp_32/(int32_t)(h1_t0_out - h0_t0_out)  + h0_rh * 10;
     if(*humidity > 1000) {
         *humidity = 1000;
@@ -368,6 +371,9 @@ esp_err_t iot_hts221_get_temperature(hts221_handle_t sensor, int16_t *temperatur
     t_out = (((uint16_t)buffer[1]) << 8) | (uint16_t)buffer[0]; 
 
     tmp_32 = ((uint32_t)(t_out - t0_out)) * ((uint32_t)(t1_degc - t0_degc) * 10);
+    if ((t1_out - t0_out) == 0) {
+        return ESP_FAIL;
+    }
     *temperature = tmp_32 / (t1_out - t0_out) + t0_degc * 10;
     return ESP_OK;
 }
