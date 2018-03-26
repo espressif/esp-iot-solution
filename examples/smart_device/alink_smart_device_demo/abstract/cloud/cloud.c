@@ -273,10 +273,3 @@ esp_err_t cloud_write(int ms_wait)
     return ESP_OK;
 }
 
-int cloud_sys_net_is_ready(void)
-{
-#ifdef CLOUD_ALINK
-    return platform_sys_net_is_ready();
-#endif
-    return -1;
-}

@@ -1,31 +1,23 @@
-/*
-  * ESPRESSIF MIT License
-  *
-  * Copyright (c) 2017 <ESPRESSIF SYSTEMS (SHANGHAI) PTE LTD>
-  *
-  * Permission is hereby granted for use on ESPRESSIF SYSTEMS products only, in which case,
-  * it is free of charge, to any person obtaining a copy of this software and associated
-  * documentation files (the "Software"), to deal in the Software without restriction, including
-  * without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
-  * and/or sell copies of the Software, and to permit persons to whom the Software is furnished
-  * to do so, subject to the following conditions:
-  *
-  * The above copyright notice and this permission notice shall be included in all copies or
-  * substantial portions of the Software.
-  *
-  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-  * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-  * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-  *
-  */
+/* Smart device Example
+
+   For other examples please check:
+   https://github.com/espressif/esp-iot-solution/tree/master/examples
+
+   This example code is in the Public Domain (or CC0 licensed, at your option.)
+
+   Unless required by applicable law or agreed to in writing, this
+   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+   CONDITIONS OF ANY KIND, either express or implied.
+ */
 
 #ifndef _IOT_PLUG_CONFIG_H_
 #define _IOT_PLUG_CONFIG_H_
 #include "sdkconfig.h"
 #include "driver/gpio.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #if CONFIG_SMART_PLUG_DEVICE
 #define PLUG_NAME_SPACE                       CONFIG_SMART_PLUG_NAME_SPACE
@@ -157,5 +149,9 @@
 #endif
 #endif
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif
+

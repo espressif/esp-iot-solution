@@ -17,6 +17,10 @@
 #include "freertos/semphr.h"
 #include "sdkconfig.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #if CONFIG_CLOUD_ALINK
 #define CLOUD_ALINK
 
@@ -52,8 +56,42 @@
 #define CLOUD_JOYLINK
 #endif
 
+/**
+  * @brief  cloud initialize
+  *
+  * @param  xSemWriteInfo semaphore for control post data
+  *
+  * @return
+  *     - ESP_OK: succeed
+  *     - ESP_FAIL: fail
+  */
 esp_err_t cloud_init(SemaphoreHandle_t xSemWriteInfo);
+
+/**
+  * @brief  receive data from cloud
+  *
+  * @param  ms_wait reveive block time (ms)
+  *
+  * @return 
+  *     - ESP_OK: succeed
+  *     - ESP_FAIL: fail
+  */
 esp_err_t cloud_read(int ms_wait);
+
+/**
+  * @brief  send data to cloud
+  *
+  * @param  ms_wait send block time (ms)
+  *
+  * @return 
+  *     - ESP_OK: succeed
+  *     - ESP_FAIL: fail
+  */
 esp_err_t cloud_write(int ms_wait);
-int cloud_sys_net_is_ready(void);
+
+#ifdef __cplusplus
+}
 #endif
+
+#endif
+

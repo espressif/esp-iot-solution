@@ -15,11 +15,11 @@ The configuration of the Alink embed project can be modified at `make menuconfig
 
     <img src="../../documents/_static/example/alink_demo/alink_settings.png" width = "300" alt="alink_settings" align=center />
 
-  * Go to `IoT Example -> smart_device`, select the `Device type`, configure the device's parameters and the Alink parameters for this device.
+  * Go to `IoT Example - smart_device`, select the `Device type`, configure the device's parameters and the Alink parameters for this device.
 
     <img src="../../documents/_static/example/alink_demo/smart_device_config.png" width = "300" alt="smart_device_config" align=center />
 
-To run the current demo, please use the default parameters.
+Note：This is a smart light demo if use default parameters. If you want to use smart plug demo, you need to set `Device type` as `smart plug`.
 
 ## 3. How to complete the Auto Configuaration
 
@@ -56,6 +56,8 @@ To run the current demo, please use the default parameters.
 
     <img src="../../documents/_static/example/alink_demo/enable_device.png" width = "300" alt="enable_device" align=center />
     <img src="../../documents/_static/example/alink_demo/control_panel.png" width = "300" alt="control_panel" align=center />
+
+Note：If use smart plug demo, APP choose the device named `ESP-PLUG-DEMO-V5`, which can be found in category named `插座排插（plug）`.
 
 ## 4. How to complete the Hotspot Configuration
 

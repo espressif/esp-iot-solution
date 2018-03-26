@@ -1,29 +1,25 @@
-/*
-  * ESPRESSIF MIT License
-  *
-  * Copyright (c) 2017 <ESPRESSIF SYSTEMS (SHANGHAI) PTE LTD>
-  *
-  * Permission is hereby granted for use on ESPRESSIF SYSTEMS products only, in which case,
-  * it is free of charge, to any person obtaining a copy of this software and associated
-  * documentation files (the "Software"), to deal in the Software without restriction, including
-  * without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
-  * and/or sell copies of the Software, and to permit persons to whom the Software is furnished
-  * to do so, subject to the following conditions:
-  *
-  * The above copyright notice and this permission notice shall be included in all copies or
-  * substantial portions of the Software.
-  *
-  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-  * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-  * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-  *
-  */
+/* Smart device Example
+
+   For other examples please check:
+   https://github.com/espressif/esp-iot-solution/tree/master/examples
+
+   This example code is in the Public Domain (or CC0 licensed, at your option.)
+
+   Unless required by applicable law or agreed to in writing, this
+   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+   CONDITIONS OF ANY KIND, either express or implied.
+ */
 
 #ifndef _IOT_PLUG_DEVICE_H_
 #define _IOT_PLUG_DEVICE_H_
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/semphr.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef void* plug_handle_t;
 
@@ -53,10 +49,11 @@ typedef struct {
 /**
   * @brief  plug device initilize
   *
+  * @param  xSemWriteInfo semaphore for control post data
   *
   * @return the handle of the plug
   */
-plug_handle_t plug_init();
+plug_handle_t plug_init(SemaphoreHandle_t xSemWriteInfo);
 
 /**
   * @brief  get power meter parameters, include power, current, and voltage
@@ -68,7 +65,7 @@ plug_handle_t plug_init();
   *
   * @return 
   *     - ESP_OK: succeed
-  *     - ESP_FAIL: failed
+  *     - ESP_FAIL: fail
   */
 esp_err_t plug_powermeter_read(plug_handle_t plug_handle, uint32_t *power, uint32_t *current, uint32_t *voltage);
 
@@ -76,12 +73,12 @@ esp_err_t plug_powermeter_read(plug_handle_t plug_handle, uint32_t *power, uint3
   * @brief  set the state of plug
   *
   * @param  plug_handle handle of the plug
-  * @param  state
-  * @param  unit_id
+  * @param  state on or off
+  * @param  unit_id plug unit id
   *
   * @return 
   *     - ESP_OK: succeed
-  *     - ESP_FAIL: failed
+  *     - ESP_FAIL: fail
   */
 esp_err_t plug_state_write(plug_handle_t plug_handle, plug_status_t state, uint8_t unit_id);
 
@@ -90,11 +87,11 @@ esp_err_t plug_state_write(plug_handle_t plug_handle, plug_status_t state, uint8
   *
   * @param  plug_handle handle of the plug
   * @param  state_ptr the state would be returned here
-  * @param  unit_id
+  * @param  unit_id plug unit id
   *
   * @return 
   *     - ESP_OK: succeed
-  *     - ESP_FAIL: failed
+  *     - ESP_FAIL: fail
   */
 esp_err_t plug_state_read(plug_handle_t plug_handle, plug_status_t* state_ptr, uint8_t unit_id);
 
@@ -102,11 +99,16 @@ esp_err_t plug_state_read(plug_handle_t plug_handle, plug_status_t* state_ptr, u
   * @brief  set the net status of plug
   *
   * @param  plug_handle handle of the plug
-  * @param  net_sta the status of net or server connect
+  * @param  net_sta the status of network or server connect
   *
   * @return 
   *     - ESP_OK: succeed
-  *     - ESP_FAIL: failed
+  *     - ESP_FAIL: fail
   */
 esp_err_t plug_net_status_write(plug_handle_t plug_handle, plug_net_status_t net_status);
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif

@@ -13,6 +13,11 @@
 // limitations under the License.
 #ifndef _IOT_PARAM_H_
 #define _IOT_PARAM_H_
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
   * @brief  save param to flash with protect
   *
@@ -39,5 +44,9 @@ esp_err_t iot_param_save(const char* namespace, const char* key, void* param, ui
   *     - others: fail
   */
 esp_err_t iot_param_load(const char* namespace, const char* key, void* dest);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
