@@ -130,6 +130,10 @@ private:
     inline void transmitCmd(uint8_t cmd);
     void _fastSendBuf(const uint16_t* buf, int point_num, bool swap = true);
     void _fastSendRep(uint16_t val, int rep_num);
+    /**
+     * @brief Avoid using it, Internal use for main class drawChar API
+     */
+    void drawBitmapFont(int16_t x, int16_t y, uint8_t w, uint8_t h, const uint16_t *bitmap);
 public:
     lcd_id_t id;
     CEspLcd(lcd_conf_t* lcd_conf, int height = LCD_TFTHEIGHT, int width = LCD_TFTWIDTH, bool dma_en = true, int dma_word_size = 1024, int dma_chan = 1);
@@ -186,11 +190,19 @@ public:
      */
     esp_err_t drawBitmapFromFlashPartition(int16_t x, int16_t y, int16_t w, int16_t h, esp_partition_t* data_partition,
             int data_offset = 0, int malloc_pixal_size = 1024, bool swap_bytes_en = true);
-    /**
-     * @brief Avoid using it, Internal use for main class drawChar API
-     */
-    void drawBitmapFont(int16_t x, int16_t y, uint8_t w, uint8_t h, const uint16_t *bitmap);
 
+    /**
+     * @brief print single char
+     * @param poX position X
+     * @param poY position Y
+     * @param c Single character
+     * @param color Foreground Font color
+
+
+     * @param bg Background Font color
+     * @param size Font size
+     */
+    void drawChar(int16_t x, int16_t y, unsigned char c, uint16_t color, uint16_t bg, uint8_t size);
 
     /**
      * @brief Draw a Vertical line
