@@ -125,14 +125,9 @@ The divided resistance on the motherboard is 10 KΩ. The table below lists the d
 ```
 
 ### 5.1. Configure Settings
-When using overlays of different thicknesses, the touch threshold needs to be adjusted. Touch threshold is positively correlated with the system sensitivity. The higher the touch threshold, the better the sensitivity. However, if the touch threshold is set too high, a touch response may occur even when there is no touch event. The lower the touch threshold, the lower the sensitivity. If the touch threshold is set too low, the touch response may be slow, or even fail to happen.  
+When using overlays of different thicknesses or materials, users need to reset the change rate of touch readings on each channel, that is, the sensitivity. This parameter is calculated from the pulse count value. The calculation formula is: (Non-touch value - Touch value) / Non-touch value, where "Non-touch value" refers to the pulse count value when there is no touch event, and "Touch value" refers to the pulse count value when a touch event occurs. Users need to take a measurement and obtain these two values.    
+When the system is initialized, the touch threshold is automatically calculated from the change rate of touch readings. The touch threshold is directly proportional to the change rate. When the change rate is set, users can write it into [evb.h](../../examples/touch_pad_evb/main/evb.h) file.  
 
-You can set the touch threshold in [evb.h](../../examples/touch_pad_evb/main/evb.h) within ESP32-Sense Project. Two examples are given below:   
-
-```
-#define TOUCHPAD_THRES_PERCENT 980         //The touch threshold is set to 980, indicating that a touch reading change rate of >2% can be identified.
-#define TOUCHPAD_SPRING_THRESH_PERCENT 970 //The touch threshold is set to 970, indicating that a touch reading change rate of >3% can be identified.
-```
 ### 5.2. Demo
 
 |<div align="center"><img src="../_static/touch_eb/touch_spring.jpg" width = "300" alt="touch_spring" align="center" /></div>|<div align="center"><img src="../_static/touch_eb/touch_matrix.jpg" width = "300" alt="touch matrix" align="center" /></div>|

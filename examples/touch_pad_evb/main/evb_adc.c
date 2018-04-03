@@ -46,21 +46,41 @@ static const char* TAG = "evb_adc";
 #define TOUCH_CIRCLE_THRESH_LOWER    2471
 #define TOUCH_CIRCLE_THRESH_UPPER    2971
 
+static void check_efuse()
+{
+    //Check TP is burned into eFuse
+    if (esp_adc_cal_check_efuse(ESP_ADC_CAL_VAL_EFUSE_TP) == ESP_OK) {
+        ESP_LOGD(TAG, "eFuse Two Point: Supported");
+    } else {
+        ESP_LOGD(TAG, "eFuse Two Point: NOT supported");
+    }
+
+    //Check Vref is burned into eFuse
+    if (esp_adc_cal_check_efuse(ESP_ADC_CAL_VAL_EFUSE_VREF) == ESP_OK) {
+        ESP_LOGD(TAG, "eFuse Vref: Supported");
+    } else {
+        ESP_LOGD(TAG, "eFuse Vref: NOT supported");
+    }
+}
+
 void evb_adc_init(void)
 {
-    adc1_config_width(ADC_WIDTH_12Bit);
-    adc1_config_channel_atten(ADC1_TEST_CHANNEL, ADC_ATTEN_11db);
+    check_efuse();
+    adc1_config_width(ADC_WIDTH_BIT_12);
+    adc1_config_channel_atten(ADC1_TEST_CHANNEL, ADC_ATTEN_DB_11);
 }
 
 int evb_adc_get_mode(void)
 {
     esp_adc_cal_characteristics_t characteristics;
-    esp_adc_cal_get_characteristics(V_REF, ADC_ATTEN_11db, ADC_WIDTH_12Bit, &characteristics);
+    esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN_DB_11, ADC_WIDTH_BIT_12, V_REF, &characteristics);
 
     while (1) {
-        uint32_t voltage = adc1_to_voltage(ADC1_TEST_CHANNEL, &characteristics);
+        uint32_t adc_reading = adc1_get_raw((adc1_channel_t)ADC1_TEST_CHANNEL);
+        //Convert adc_reading to voltage in mV
+        uint32_t voltage = esp_adc_cal_raw_to_voltage(adc_reading, &characteristics);
         ESP_LOGI(TAG, "ADC read voltage: %d mV", voltage);
-        if (voltage < TOUCH_SLIDE_THRESH_UPPER && voltage > TOUCH_SLIDE_THRESH_LOWER) {
+        if (voltage < TOUCH_SLIDE_THRESH_UPPER && voltage >= TOUCH_SLIDE_THRESH_LOWER) {
             ESP_LOGI(TAG, "Daughter Board is Linear Slider");
             return TOUCH_EVB_MODE_SLIDE;
         } else if (voltage < TOUCH_MATRIX_THRESH_UPPER && voltage > TOUCH_MATRIX_THRESH_LOWER) {
@@ -76,7 +96,8 @@ int evb_adc_get_mode(void)
             ESP_LOGI(TAG, "Daughter Board is Duplex Slider");
             return TOUCH_EVB_MODE_SEQ_SLIDE;
         } else {
-            ESP_LOGE(TAG, "Unexpected ADC value...");
+            ESP_LOGE(TAG, "Don't find daughter Board...");
+            vTaskDelay(1000 / portTICK_RATE_MS);
         }
     }
 }

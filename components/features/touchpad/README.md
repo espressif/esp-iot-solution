@@ -5,8 +5,7 @@
 
 * A touchpad device is defined by:
 	* touchpad number(refer to comments of touch_pad_t for touchpad number and gpio number pair) 
-	* thres_percent which decide the sensitivity of touchpad (range from 0 to 999)
-	* filter value which decide the smallest time interval of two touchpad triggers
+	* sensitivity which defines the sensitivity of touchpad (range from 0 to 1.0)
 
 * A touchpad device can provide:
 	* iot_tp_add_cb to add callback functions to three different events
@@ -14,7 +13,7 @@
 	* iot_tp_add_custom_cb to add callback function to a custom press duration
 	* iot_tp_read to get the sample value of touchpad
 	* iot_tp_num_get to get the touchpad number of the touchpad device
-	* iot_tp_set_threshold/filter to set the threshold value or filter value  mode of the touchpad
+	* iot_tp_set_threshold to set the threshold value of the touchpad
 
 * To use the touchpad device, you need to:
 	* create a touchpad object return by iot_tp_create()
@@ -38,14 +37,12 @@
 	* create a gesture sensor by gesture_sensor_create()
 	* call gesture_sensor_add_cb to set the callback function of gesture sensor and callback function will be called if any type of gesture is recognized (refer to enum gesture_type_t)
 
-### NOTE:
-> Don't delete the same tp_handle more than once and you'd better to set the handle to NULL after calling iot_tp_delete()
+* TouchSensor tune tool `DataScope`.
+	* Monitor the data of each touch channel
+	* Determine the threshold for each channel.
+	* Evaluate the touch system's touch performance (sensitivity, SNR, stability, channel coupling)
+	* "DataScope" tool can be downloaded from Espressif's official website.
 
-> For thres_percent, you can refer to follow cases:
-* If the pads are touched directly, set thres_percent to 700~800
-* If the pads are isolated by pcb board(about 1mm thickness), set thre_percent to 950
-* If the pads are isolated by pcb board(about 1mm thickness) and a plastic plate(about 2mm thickness), set thre_percent to 990
-
-> For filter_value, you can refer to follow cases:
-* If response time is not important, set filter_value to 100~150
-* If the touch event should response as fast as possible, set filter_value to 30~50
+>***NOTE***:
+* ***For hardware and firmware design guidelines on ESP32 touch sensor system, please refer to [Touch Sensor Application Note](https://github.com/espressif/esp-iot-solution/blob/master/documents/touch_pad_solution/touch_sensor_design_en.md), where you may find comprehensive information on how to design and implement touch sensing applications, such as linear slider, wheel slider, matrix buttons and spring buttons.***
+* ***Don't delete the same tp_handle more than once and you'd better set the handle to NULL after calling iot_tp_delete()***

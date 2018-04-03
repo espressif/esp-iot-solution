@@ -1,12 +1,52 @@
-menu "IoT Touch EB settings"
+menu "IoT Example - Touch Sensor settings"
     choice TOUCH_EB_VERSION
-        bool "ESP32-Sense EB version"
+        bool "Select ESP32-Sense Kit version"
         default TOUCH_EB_V3
         help
           select the Touch EB(ESP32-Sense Kit) hardware version
-
+          
     config TOUCH_EB_V3
-        bool "TOUCH_EB_V3"
+        bool "TOUCH EB V3"
+    config TOUCH_EB_V2
+        bool "TOUCH EB V2"
     endchoice
-
+			
+ 	menu "Plastic cover thickness setting"
+		config COVER_THICK_SPRING_BUTTON
+			int "Spring button plastic cover thickness (0 mm~3 mm)"
+			range 0 3
+			default 3
+			help 
+			    Supports plastic cover from 0 mm to 3 mm thickness
+			    
+		config COVER_THICK_LINEAR_SLIDER
+			int "Linear slider plastic cover thickness (0 mm~1 mm)"
+			range 0 1
+			default 0
+			help
+			    Supports plastic cover from 0 mm to 1 mm thickness
+		
+		config COVER_THICK_DUPLEX_SLIDER
+			int "Duplex slider plastic cover thickness (0 mm~1 mm)"
+			range 0 1
+			default 0
+			help
+			    Supports plastic cover from 0 mm to 1 mm thickness
+			    
+        config COVER_THICK_TOUCH_WHEEL
+			int "Touch wheel plastic cover thickness (0 mm~1 mm)"
+			range 0 1
+			default 0
+			help
+			    Supports plastic cover from 0 mm to 1 mm thickness
+        
+        config COVER_THICK_MATRIX_BUTTON
+        	int "Matrix button plastic cover thickness (0 mm~1 mm)"
+        	range 0 1
+        	default 0
+        	help
+        		Supports plastic cover from 0 mm to 1 mm thickness
+      	help
+          	Please select the daughter board plastic cover thickness that be used.
+    endmenu
 endmenu

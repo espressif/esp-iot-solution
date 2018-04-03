@@ -73,9 +73,9 @@ static void release_cb(void *arg)
 void evb_touch_button_init()
 {
     //single touch
-    CTouchPad* tp_dev0 = new CTouchPad(TOUCH_BUTTON_0, LINEAR_SLIDER_THRESH_PERCENT, 0, LINEAR_SLIDER_FILTER_VALUE);
-    CTouchPad* tp_dev1 = new CTouchPad(TOUCH_BUTTON_1, LINEAR_SLIDER_THRESH_PERCENT, 0, LINEAR_SLIDER_FILTER_VALUE);
-    CTouchPad* tp_dev2 = new CTouchPad(TOUCH_BUTTON_2, LINEAR_SLIDER_THRESH_PERCENT, 0, LINEAR_SLIDER_FILTER_VALUE);
+    CTouchPad* tp_dev0 = new CTouchPad(TOUCH_BUTTON_0, TOUCH_BUTTON_MAX_CHANGE_RATE_0);
+    CTouchPad* tp_dev1 = new CTouchPad(TOUCH_BUTTON_1, TOUCH_BUTTON_MAX_CHANGE_RATE_1);
+    CTouchPad* tp_dev2 = new CTouchPad(TOUCH_BUTTON_2, TOUCH_BUTTON_MAX_CHANGE_RATE_2);
     tp_dev0->add_cb(TOUCHPAD_CB_PUSH, push_cb, tp_dev0);
     tp_dev1->add_cb(TOUCHPAD_CB_PUSH, push_cb, tp_dev1);
     tp_dev2->add_cb(TOUCHPAD_CB_PUSH, push_cb, tp_dev2);

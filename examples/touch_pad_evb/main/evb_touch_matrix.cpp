@@ -15,7 +15,6 @@
 #include "freertos/queue.h"
 #include "esp_log.h"
 #include "iot_touchpad.h"
-#include "print_to_scope.h"
 #include "evb.h"
 
 static const char *TAG = "touch_matrix";
@@ -96,34 +95,21 @@ static void app_matrix_serial_cb(void *arg, uint8_t x, uint8_t y)
     xQueueSend(q_touch, &evt, portMAX_DELAY);
 }
 
-#if SCOPE_DEBUG
-static void scope_task(void *paramater)
-{
-    uint16_t data[4];
-    while (1) {
-        touch_pad_read_filtered(TOUCH_MATRIX_X_0, &data[0]);
-        touch_pad_read_filtered(TOUCH_MATRIX_X_1, &data[1]);
-        touch_pad_read_filtered(TOUCH_MATRIX_Y_0, &data[2]);
-        touch_pad_read_filtered(TOUCH_MATRIX_Y_1, &data[3]);
-        print_to_scope(1, data);
-        vTaskDelay(50 / portTICK_RATE_MS);
-    }
-}
-#endif
-
 void evb_touch_matrix_init()
 {
     //matrix touch
     const touch_pad_t x_tps[] = { TOUCH_MATRIX_X_0, TOUCH_MATRIX_X_1, TOUCH_MATRIX_X_2 };
     const touch_pad_t y_tps[] = { TOUCH_MATRIX_Y_0, TOUCH_MATRIX_Y_1, TOUCH_MATRIX_Y_2 };
-    const uint16_t *thresh = NULL;
+    const float thresh[] = {TOUCH_MATRIX_MAX_CHANGE_RATE_X0,
+                            TOUCH_MATRIX_MAX_CHANGE_RATE_X1,
+                            TOUCH_MATRIX_MAX_CHANGE_RATE_X2,
+                            TOUCH_MATRIX_MAX_CHANGE_RATE_Y0,
+                            TOUCH_MATRIX_MAX_CHANGE_RATE_Y1,
+                            TOUCH_MATRIX_MAX_CHANGE_RATE_Y2 };
     CTouchPadMatrix *tp_matrix = new CTouchPadMatrix(sizeof(x_tps) / sizeof(x_tps[0]), sizeof(y_tps) / sizeof(y_tps[0]),
-            x_tps, y_tps, MATRIX_BUTTON_THRESH_PERCENT, thresh, MATRIX_BUTTON_FILTER_VALUE);
+            x_tps, y_tps, thresh);
     tp_matrix->add_cb(TOUCHPAD_CB_PUSH, app_matrix_cb, (void*) "push_event");
     tp_matrix->add_cb(TOUCHPAD_CB_RELEASE, app_matrix_release_cb, (void*) "release_event");
     tp_matrix->set_serial_trigger(1, 1000, app_matrix_serial_cb,  (void*) "serial_event");
-#if SCOPE_DEBUG
-    xTaskCreate(scope_task, "scope", 1024*4, NULL, 3, NULL);
-#endif
 }
 
