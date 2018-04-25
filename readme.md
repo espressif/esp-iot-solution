@@ -84,11 +84,11 @@
     - Keywords: __ULP Deep-sleep  SAR-ADC  Assembly__
 
 * [ESP32 ULP Co-processor BitBang I2C Example](examples/ulp_examples/ulp_i2c_bitbang)
-    -  An example of using RTC-GPIO bitbanged I2C to read BH1750 light sensor in ULP mode.
+    - An example of using RTC-GPIO bitbanged I2C to read BH1750 light sensor in ULP mode.
     - Keywords: __ULP Deep-sleep  RTC-GPIO  BITBANG  I2C  Assembly__
 
 * [ESP32 ULP Co-processor BitBang SPI Example](examples/ulp_examples/ulp_spi)
-    -  An example of using RTC-GPIO bitbanged SPI to read MS5611 sensor in ULP mode.
+    - An example of using RTC-GPIO bitbanged SPI to read MS5611 sensor in ULP mode.
     - Keywords: __ULP Deep-sleep  RTC-GPIO  BITBANG  SPI  Assembly__
 ---
 
@@ -115,7 +115,7 @@
 [BME280](./components/i2c_devices/sensor/bme280) - Driver and example of reading BME280, which is an pressure and temperature Sensor.<br>
 ### I2C Devices
 [AT24C02](./components/i2c_devices/others/at24c02) - Driver and example of driving AT24C02, which is an eeprom storage.<br>
-[CH450](./components/i2c_devices/others/ch450) - Driver and example of driving AT24C02, which is a 7-segment LED driver.<br>
+[CH450](./components/i2c_devices/others/ch450) - Driver and example of driving CH450, which is a 7-segment LED driver.<br>
 [IS31FL3XXX](./components/i2c_devices/others/is31fl3xxx) - Driver and example of driving is31fl3xxx series chips, which are light effect LED driver chips.<br>
 [MCP23017](./components/i2c_devices/others/mcp23017) - Driver and example of using mcp23017, which is a 16-bit I/O expander.<br>
 [SSD1306](./components/i2c_devices/others/ssd1306) - Driver and example of using ssd1306, which is a 132 x 64 dot matrix OLED/PLED segment driver chip.<br>
