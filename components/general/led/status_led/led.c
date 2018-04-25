@@ -87,13 +87,13 @@ static esp_err_t gpio_ledc_bind(ledc_timer_t timer_num, ledc_channel_t channel, 
 static esp_err_t led_level_set(led_handle_t led_handle, uint8_t level)
 {
     led_dev_t* led_dev = (led_dev_t*) led_handle;
-    if ((level & 0x01) ^ led_dev->dark_level) {
+    if (level) {
         if (led_dev->mode == LED_NIGHT_MODE) {
             ERR_ASSERT(TAG, gpio_ledc_bind(LED_NORMAL_TIMER, LED_NIGHT_MODE_CHANNEL, led_dev->io_num, 
                         g_night_duty * LED_BRIGHT_DUTY / 100, LED_SPEED_MODE));
         }
         else {
-            gpio_set_level(led_dev->io_num, ~(led_dev->dark_level));
+            gpio_set_level(led_dev->io_num, (~(led_dev->dark_level)) & 0x1);
             gpio_matrix_out(led_dev->io_num, SIG_GPIO_OUT_IDX, 0, 0);
         }
     }

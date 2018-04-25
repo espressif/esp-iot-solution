@@ -13,11 +13,12 @@
 // limitations under the License.
 #ifndef _IOT_OTA_H_
 #define _IOT_OTA_H_
-#include "esp_system.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#include "esp_system.h"
+
 
 /**
   * @brief  start ota, you have call esp_restart to run the new app
@@ -33,8 +34,16 @@ extern "C" {
   */
 esp_err_t iot_ota_start(const char *server_ip, uint16_t server_port, const char *file_dir, uint32_t ticks_to_wait);
 
+/**
+ * @brief start OTA via the given URL to the file
+ * @param url the URL string point to the file address
+ * @param ticks_to_wait set timeout
+ *     - ESP_OK: succeed
+ *     - others: fail
+ */
+esp_err_t iot_ota_start_url(const char *url, uint32_t ticks_to_wait);
+
 #ifdef __cplusplus
 }
 #endif
-
 #endif

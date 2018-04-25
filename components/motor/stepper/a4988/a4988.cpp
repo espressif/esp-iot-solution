@@ -181,7 +181,7 @@ CA4988Stepper::CA4988Stepper(int step_io, int dir_io, int number_of_steps, ledc_
     pcnt.counter_h_lim = STEPPER_CNT_H;
     pcnt.counter_l_lim = STEPPER_CNT_L;
     pcnt_unit_config(&pcnt);
-    pcnt_install_isr_service(0);
+    pcnt_isr_service_install(0);
     pcnt_isr_handler_add(pstepper->pcnt_unit, stepper_pcnt_intr_handler, (void*)this->m_stepper);
 
     // Set signal input and output
