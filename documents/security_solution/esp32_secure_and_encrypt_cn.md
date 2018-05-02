@@ -39,6 +39,8 @@
 * 正常使用情况下， bootloader image 只能烧写一次，partition table 和 app images 可以重复烧写
 * 秘钥必须保密，一旦泄露 secure boot 将失去作用
 * 用于 OTA 的 image 必须进行秘钥签名，OTA 时会使用公钥进行验证
+* __`在默认设置下， bootloader的从0x1000地址开始，最大长度为 28KB（bootloader)。如果发现 Secure Boot 发送错误, 请先检查是否因为 Bootloader 地址过大。 通过在menuconfig中调整Bootloader的log等级，可以有效降低编译后的Bootloader大小。`__
+
 
 ### 可重复烧写 bootloader
 * 默认情况下 bootloader image 只能烧写一次，在产品中强烈建议这样做，因为 bootloader image 可以重新烧写的情况下可以通过修改 bootloader 跳过后续 image 的验证过程，这样 secure boot 就失去作用
@@ -47,10 +49,8 @@
     1. make menuconfig 中选择 "secure bootloader mode"->"Reflashable"
     2. 按“使用步骤”一节步骤2和3生成公钥与秘钥
     3. 运行指令 "make bootloader" ，一个 256-bit secure boot key 会根据用于签名的私钥计算出，命令行会打印两个后续步骤，按循序执行：
-    
         * 将 PC 端生成的 secure boot key 烧入 efuse 中的命令
         * 将编译好的带有预计算出的 secure digest 的 bootloader image 烧写到 flash 中
-	
     4. 从“使用步骤”一节的步骤6继续执行
 
 # Flash Encryption
@@ -90,7 +90,6 @@
 * 当 FLASH_CRYPT_CNT 有（0,2,4,6,8）位被烧写为1时，bootloader 会对 flash 中的内容进行加密
 * 当 FLASH_CRYPT_CNT 有（1,3,5,7）位被烧写为1时，bootloader 知道 flash 的内容已经过加密，直接读取 flash 中的数据解密后使用
 * FLASH_CRYPT_CNT 的变化过程：
-	
     1. 没有使能 flash 加密时，永远是0
     2. 使能了 flash 加密，在第一次 boot 时 bootloader 发现它的值是 0x00，于是知道 flash 中的数据还未加密，利用硬件随机数生成器产生 key，然后加密 flash，最后将它的最低位置1（取值为0x01）
     3. 后续 boot 时，bootloader 发现它的值是 0x01，知道 flash 中的数据已加密，可以解密后直接使用
@@ -188,26 +187,22 @@
 * 由芯片端自动随机生成secure boot 与 flash encrypton 密钥，并写入芯片 efuse 中, 密钥写入后，对应的efuse block会被设置为读写保护状态，软件与工具都无法读取出密钥。
 * 所有编译出的 images 都按正常情况烧写，芯片会在第一次 boot 时进行配置。
 * 通过 make menuconfig 配置 secure boot 和 flash encryption, 按照第一、二节介绍的步骤执行即可，具体操作步骤如下，如果了解第一、二节的内容，可以跳过：
-
     1. 随机生成RSA密钥文件：
-	
+
         ```
         espsecure.py generate_signing_key secure_boot_signing_key.pem
         or
         openssl ecparam -name prime256v1 -genkey -noout -out secure_boot_signing_key.pem
         ```
-	
     2. 在menuconfig中，选择Sign binaries during build, 并指定刚才生成的密钥路径, 如下图。
-	
+        <br>
         <img src="../_static/secure_encrypt/menuconfig_02.png" width = "300" alt="touchpad_temp1" align=center />
-
     3. 分别编译bootloader与应用代码
 	
         ```
         make bootloader 
         make
         ```
-
     4. 使用 esptool 将编译生成的bin文件写入flash对应地址, 以example中hellow-world工程为例：
 	
         ```
@@ -216,9 +211,7 @@
         app.bin        -->  0x10000
         python $IDF_PATH/components/esptool_py/esptool/esptool.py --chip esp32 --port /dev/cu.SLAB_USBtoUART --baud 1152000 --before default_reset --after no_reset write_flash -z --flash_mode dio --flash_freq 40m --flash_size detect 0x1000 $IDS_PATH/esp-idf/examples/get-started/hello_world/build/bootloader/bootloader.bin 0xf000 $IDF_PATH/esp-idf/examples/get-started/hello_world/build/phy_init_data.bin 0x10000 $IDF_PATH/examples/get-started/hello_world/build/hello-world.bin 0x8000 $IDF_PATH/examples/get-started/hello_world/build/partitions_singleapp.bin
         ```
-	
-	> 以上命令仅是示例代码，请在使用时，替换其中的文件路径以及所选参数，包括串口、波特率、SPI模式和频率等。
-	
+	    > 以上命令仅是示例代码，请在使用时，替换其中的文件路径以及所选参数，包括串口、波特率、SPI模式和频率等。
     5. 我们也可以使用window平台的下载工具来完成工厂下载。需要在配置文件中，关闭工具的security功能，这样工具端就不会操作security相关特性，完全由硬件和bootloader来完成初始化：
 	
         ```
@@ -227,27 +220,20 @@
         [FLASH ENCRYPTION]
         flash_encryption_en = False
         ```
-	
-    <img src="../_static/secure_encrypt/download_frame_02.png" width = "500" alt="download frame" align=center />
-	
-    > 注意： 
-    > 修改并保存参数前，请先关闭下载工具，配置文件修改完成并保存后，再开启运行下载工具。
-
+        > 注意： 
+        > 修改并保存参数前，请先关闭下载工具，配置文件修改完成并保存后，再开启运行下载工具。
+        <img src="../_static/secure_encrypt/download_frame_02.png" width = "500" alt="download frame" align=center />
     6. 或者我们可以通过下载工具的combine功能，将多个bin文件打包为一个文件，再由工厂flash烧录器烧录进flash进行批量生产。
         * 选择bin文件并制定flash中的地址
         * 选中 ‘DoNotChgBin’ 选项，这样工具不会对bin文件的配置(SPI模式速率等)进行任何修改。
         * 点击 ‘CombineBin' 按键，生产合并后的bin文件。
         * 在 ‘combine’ 文件夹下，生成 target.bin，将其烧写到 Flash 的 0x0 地址即可。
         * 工具只会对填写的最大地址范围内的空白区域填充 0xff。并将文件按地址组合。
-	
+        <br>
         <img src="../_static/secure_encrypt/combine_01.png" width = "300" alt="download frame" align=center />
-	
     7. 下载完成后，需要运行一次程序，使bootloader完成security相关特性的初始化，包括AES密钥的随机生成并写入EFUSE，以及对明文的flash进行首次加密。
-		
         > 请误在首次启动完成前，将芯片断电，以免造成芯片无法启动的情况。
 		
-
-	
 * `注意事项`：
     * 用于签名的私钥需要保密，如果泄漏，app.bin有被伪造的可能性。
     * 使用者不能遗失私钥，必须使用私钥用于对 OTA app 签名(如果有OTA功能)。
@@ -262,7 +248,6 @@
 * 使用下载工具应用 secure boot 和 flash encryption，这时用户只需要的在 make menuconfig 中选择“enable secure boot in bootloader”并设置公钥/秘钥路径即可
 * 下载工具在运行时，会随机产生 secure boot 与 flash encryption 密钥, 并烧写到对应的 EFUSE 位置中。
 * 操作步骤：
-	
     1. 随机生成RSA密钥文件，用于签名固件：
 
         ```
@@ -271,46 +256,43 @@
         openssl ecparam -name prime256v1 -genkey -noout -out secure_boot_signing_key.pem
         ```
     2. 在menuconfig中，选择Sign binaries during build, 并指定刚才生成的密钥路径, 如下图。
-	
+        <br>
         <img src="../_static/secure_encrypt/menuconfig_02.png" width = "300" alt="touchpad_temp1" align=center />
-    
     3. 分别编译bootloader与应用代码
 	
         ```
         make bootloader
         make
         ```
-	
     4. 设置下载工具的安全配置文件
 	
-    ```
-    [DEBUG MODE]
-    debug_enable = False                #关闭debug模式，工具随机生成密钥。否则根据pem文件产生相同密钥
-    debug_pem_path =                    #debug模式下，设置证书地址，用于生成可重复烧写的密钥
-    [SECURE BOOT]
-    secure_boot_en = True               #开启secure boot功能
-    burn_secure_boot_key = True         #使能secure boot key烧写
-    secure_boot_force_write = False     #是否不检查secure boot key block，强制烧写key
-    secure_boot_rw_protect = True       #开启secure boot key区域的读写保护
-    [FLASH ENCRYPTION]
-    flash_encryption_en = True          #开启flash加密功能
-    burn_flash_encryption_key = True    #使能flash encrypt key烧写
-    flash_encrypt_force_write = False   #是否不检查flash encrypt key block，强制烧写key
-    flash_encrypt_rw_protect = True     #开启flash encrypt key区域的读写保护
-    [AES KEY]
-    aes_key_en = False                  #目前未实现，仅保留该选项
-    burn_aes_key = False                #目前未实现，仅保留该选项
-    [DISABLE FUNC]
-    jtag_disable = True                 #是否关闭JTAG调试功能
-    dl_encrypt_disable = True           #是否关闭下载模式下flash加密功能
-    dl_decrypt_disable = True           #是否关闭下载模式下flash解密功能
-    dl_cache_disable = True             #是否关闭下载模式下的flash cache功能
-    ```
-    > 注意： 
-    > 修改并保存参数前，请先关闭下载工具，配置文件修改完成并保存后，再开启运行下载工具。
-	
+        ```
+        [DEBUG MODE]
+        debug_enable = False                #关闭debug模式，工具随机生成密钥。否则根据pem文件产生相同密钥
+        debug_pem_path =                    #debug模式下，设置证书地址，用于生成可重复烧写的密钥
+        [SECURE BOOT]
+        secure_boot_en = True               #开启secure boot功能
+        burn_secure_boot_key = True         #使能secure boot key烧写
+        secure_boot_force_write = False     #是否不检查secure boot key block，强制烧写key
+        secure_boot_rw_protect = True       #开启secure boot key区域的读写保护
+        [FLASH ENCRYPTION]
+        flash_encryption_en = True          #开启flash加密功能
+        burn_flash_encryption_key = True    #使能flash encrypt key烧写
+        flash_encrypt_force_write = False   #是否不检查flash encrypt key block，强制烧写key
+        flash_encrypt_rw_protect = True     #开启flash encrypt key区域的读写保护
+        [AES KEY]
+        aes_key_en = False                  #目前未实现，仅保留该选项
+        burn_aes_key = False                #目前未实现，仅保留该选项
+        [DISABLE FUNC]
+        jtag_disable = True                 #是否关闭JTAG调试功能
+        dl_encrypt_disable = True           #是否关闭下载模式下flash加密功能
+        dl_decrypt_disable = True           #是否关闭下载模式下flash解密功能
+        dl_cache_disable = True             #是否关闭下载模式下的flash cache功能
+        ```
+        > 注意： 
+        > 修改并保存参数前，请先关闭下载工具，配置文件修改完成并保存后，再开启运行下载工具。
     5. 使用下载工具进行下载，若不希望工具修改任何配置参数(比如flash 频率和模式)，请勾选‘DoNotChgBin’选项。下载工具会更具配置文件的设置，在下载过程中完成固件加密下载和密钥随机生成与烧写。
-	
+        <br>
         <img src="../_static/secure_encrypt/download_frame_new.png" width = "250" alt="download frame" align=center />
 
 * `注意事项`: 
@@ -323,58 +305,51 @@
 1. make menuconfig 中使能 secure boot 和 flash encrypt，“Secure bootloader mode”选择“Reflashable”，并设置你的公钥/私钥.pem文件路径
 2. 编译 bootloader 并生成 secure boot key：
 
-```
-make bootloader
-```
+    ```
+    make bootloader
+    ```
+3. 使用 key 和 bootloader 计算带 digest 的 bootloader
 
-3. 使用 key 和 bootloader 计算 带 digest 的 bootloader
-
-```
-python $IDF_PATH/components/esptool_py/esptool/espsecure.py digest_secure_bootloader --keyfile ./build/bootloader/secure_boot_key.bin -o ./build/bootloader/bootloader_with_digest.bin ./build/bootloader/bootloader.bin
-```
-
+    ```
+    python $IDF_PATH/components/esptool_py/esptool/espsecure.py digest_secure_bootloader --keyfile ./build/bootloader/secure_boot_key.bin -o ./build/bootloader/bootloader_with_digest.bin ./build/bootloader/bootloader.bin
+    ```
 4. 编译 partition_table 与 app
 
-```
-make partition_table
-make app
-```
-
+    ```
+    make partition_table
+    make app
+    ```
 5. 加密三个 bin 文件
 
-```
-python $IDF_PATH/components/esptool_py/esptool/espsecure.py encrypt_flash_data --keyfile flash_encrypt_key.bin --address 0x0 -o build/bootloader/bootloader_digest_encrypt.bin build/bootloader/bootloader_with_digest.bi
-python $IDF_PATH/components/esptool_py/esptool/espsecure.py encrypt_flash_data --keyfile flash_encrypt_key.bin --address 0x8000 -o build/partitions_singleapp_encrypt.bin build/partitions_singleapp.bin
-python $IDF_PATH/components/esptool_py/esptool/espsecure.py encrypt_flash_data --keyfile flash_encrypt_key.bin --address 0x10000 -o build/iot_encrypt.bin build/iot.bin
-```
-
+    ```
+    python $IDF_PATH/components/esptool_py/esptool/espsecure.py encrypt_flash_data --keyfile flash_encrypt_key.bin --address 0x0 -o build/bootloader/bootloader_digest_encrypt.bin build/bootloader/bootloader_with_digest.bi
+    python $IDF_PATH/components/esptool_py/esptool/espsecure.py encrypt_flash_data --keyfile flash_encrypt_key.bin --address 0x8000 -o build/partitions_singleapp_encrypt.bin build/partitions_singleapp.bin
+    python $IDF_PATH/components/esptool_py/esptool/espsecure.py encrypt_flash_data --keyfile flash_encrypt_key.bin --address 0x10000 -o build/iot_encrypt.bin build/iot.bin
+    ```
 6. 烧写三个加密后的 bin 文件
 
-```
-python $IDF_PATH/components/esptool_py/esptool/esptool.py --baud 1152000 write_flash 0x0 build/bootloader/bootloader_digest_encrypt.bin
-python $IDF_PATH/components/esptool_py/esptool/esptool.py --baud 1152000 write_flash 0x8000 build/partitions_singleapp_encrypt.bin
-python $IDF_PATH/components/esptool_py/esptool/esptool.py --baud 1152000 write_flash 0x10000 build/iot_encrypt.bin
-```
+    ```
+    python $IDF_PATH/components/esptool_py/esptool/esptool.py --baud 1152000 write_flash 0x0 build/bootloader/bootloader_digest_encrypt.bin
+    python $IDF_PATH/components/esptool_py/esptool/esptool.py --baud 1152000 write_flash 0x8000 build/partitions_singleapp_encrypt.bin
+    python $IDF_PATH/components/esptool_py/esptool/esptool.py --baud 1152000 write_flash 0x10000 build/iot_encrypt.bin
+    ```
+7. 将 flash_encryption_key 烧入 efuse (仅在第一次boot前烧写):
 
-7. 将 flash_encryption_key 烧入 efuse （仅在第一次boot前烧写）：
+    ```
+    python $IDF_PATH/components/esptool_py/esptool/espefuse.py burn_key flash_encryption flash_encrypt_key.bin
+    ```
+8. 将 secure boot key 烧入efuse（仅在第一次boot前烧写）:
 
-```
-python $IDF_PATH/components/esptool_py/esptool/espefuse.py burn_key flash_encryption flash_encrypt_key.bin
-```
-
-8. 将 secure boot key 烧入efuse（仅在第一次boot前烧写）：
-
-```
-python $IDF_PATH/components/esptool_py/esptool/espefuse.py burn_key secure_boot ./build/bootloader/secure_boot_key.bin
-```
-
+    ```
+    python $IDF_PATH/components/esptool_py/esptool/espefuse.py burn_key secure_boot ./build/bootloader/secure_boot_key.bin
+    ```
 9. 烧写 efuse 中的控制标志（仅在第一次boot前烧写）
 
-```
-python $IDF_PATH/components/esptool_py/esptool/espefuse.py burn_efuse ABS_DONE_0
-python $IDF_PATH/components/esptool_py/esptool/espefuse.py burn_efuse FLASH_CRYPT_CNT
-python $IDF_PATH/components/esptool_py/esptool/espefuse.py burn_efuse FLASH_CRYPT_CONFIG 0xf
-python $IDF_PATH/components/esptool_py/esptool/espefuse.py burn_efuse DISABLE_DL_ENCRYPT
-python $IDF_PATH/components/esptool_py/esptool/espefuse.py burn_efuse DISABLE_DL_DECRYPT
-python $IDF_PATH/components/esptool_py/esptool/espefuse.py burn_efuse DISABLE_DL_CACHE
-```
+    ```
+    python $IDF_PATH/components/esptool_py/esptool/espefuse.py burn_efuse ABS_DONE_0
+    python $IDF_PATH/components/esptool_py/esptool/espefuse.py burn_efuse FLASH_CRYPT_CNT
+    python $IDF_PATH/components/esptool_py/esptool/espefuse.py burn_efuse FLASH_CRYPT_CONFIG 0xf
+    python $IDF_PATH/components/esptool_py/esptool/espefuse.py burn_efuse DISABLE_DL_ENCRYPT
+    python $IDF_PATH/components/esptool_py/esptool/espefuse.py burn_efuse DISABLE_DL_DECRYPT
+    python $IDF_PATH/components/esptool_py/esptool/espefuse.py burn_efuse DISABLE_DL_CACHE
+    ```
