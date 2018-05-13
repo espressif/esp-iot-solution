@@ -30,7 +30,7 @@ extern "C" {
   *     - ESP_OK: succeed
   *     - others: fail
   */
-esp_err_t iot_param_save(const char* namespace, const char* key, void* param, uint16_t len);
+esp_err_t iot_param_save(const char* name_space, const char* key, void* param, uint16_t len);
 
 /**
   * @brief  read param from flash
@@ -43,10 +43,9 @@ esp_err_t iot_param_save(const char* namespace, const char* key, void* param, ui
   *     - ESP_OK: succeed
   *     - others: fail
   */
-esp_err_t iot_param_load(const char* namespace, const char* key, void* dest);
+esp_err_t iot_param_load(const char* name_space, const char* key, void* dest);
 
 #ifdef __cplusplus
 }
 #endif
-
 #endif

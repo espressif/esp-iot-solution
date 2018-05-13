@@ -7,6 +7,10 @@
 #ifndef _MQTT_CLIENT_H_
 #define _MQTT_CLIENT_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
@@ -88,4 +92,7 @@ esp_err_t esp_mqtt_client_unsubscribe(esp_mqtt_client_handle_t client, const cha
 int esp_mqtt_client_publish(esp_mqtt_client_handle_t client, const char *topic, const char *data, int len, int qos, int retain);
 esp_err_t esp_mqtt_client_destroy(esp_mqtt_client_handle_t client);
 
+#ifdef __cplusplus
+}
+#endif
 #endif
