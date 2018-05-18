@@ -376,7 +376,7 @@ menu "IoT Solution settings"
                 bool "CH450 ENABLE"
                 default y
                 help
-                    "Select this one to enable CH450 device"                      
+                    "Select this one to enable CH450 device" 
             config IOT_IS31FL3XXX_ENABLE
                 bool "IS31FL3XXX ENABLE"
                 default y
@@ -424,6 +424,11 @@ menu "IoT Solution settings"
                 default y
                 help
                     "Select this one to enable VEML6040 device component"                    
+            config IOT_HDC2010_ENABLE
+                bool "SENSOR_HDC2010_ENABLE"
+                default y
+                help
+                    "Select this one to enable HDC2010 device component"                    
 
         endmenu
         
