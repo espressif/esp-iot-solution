@@ -418,7 +418,12 @@ menu "IoT Solution settings"
                 bool "SENSOR_MVH3004D_ENABLE"
                 default y
                 help
-                    "Select this one to enable MVH3004D device component"                     
+                    "Select this one to enable MVH3004D device component"        
+            config IOT_VEML6040_ENABLE
+                bool "SENSOR_VEML6040_ENABLE"
+                default y
+                help
+                    "Select this one to enable VEML6040 device component"                    
 
         endmenu
         
