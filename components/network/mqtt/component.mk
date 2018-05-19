@@ -6,6 +6,15 @@
 # lib(subdirectory_name).a in the build directory. This behaviour is entirely configurable,
 # please read the SDK documents if you need to do this.
 #
+
+# componet standalone mode
+ifndef CONFIG_IOT_SOLUTION_EMBED   
+
+COMPONENT_ADD_INCLUDEDIRS := include espmqtt/lib/include
+COMPONENT_SRCDIRS := espmqtt espmqtt/lib
+
+else
+
 ifdef CONFIG_IOT_MQTT_ENABLE
 COMPONENT_ADD_INCLUDEDIRS := include espmqtt/lib/include
 COMPONENT_SRCDIRS := espmqtt espmqtt/lib
@@ -14,4 +23,6 @@ else
 COMPONENT_ADD_INCLUDEDIRS :=
 COMPONENT_ADD_LDFLAGS :=
 COMPONENT_SRCDIRS :=
+endif
+
 endif

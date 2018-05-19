@@ -1,4 +1,7 @@
 menu "IoT Solution settings"
+    config IOT_SOLUTION_EMBED
+        bool
+        default y
     menu "IoT Components Management"
         menu "General functions"
             config IOT_DAC_AUDIO_ENABLE
