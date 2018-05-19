@@ -377,6 +377,11 @@ menu "IoT Solution settings"
                 default y
                 help
                     "Select this one to enable CH450 device" 
+            config IOT_HT16C21_ENABLE
+                bool "HT16C21 ENABLE"
+                default y
+                help
+                    "Select this one to enable HT16C21 device"                      
             config IOT_IS31FL3XXX_ENABLE
                 bool "IS31FL3XXX ENABLE"
                 default y
@@ -429,7 +434,6 @@ menu "IoT Solution settings"
                 default y
                 help
                     "Select this one to enable HDC2010 device component"                    
-
         endmenu
         
         menu "SPI devices"

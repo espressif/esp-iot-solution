@@ -15,9 +15,9 @@
 #define _IOT_I2C_BUS_H_
 #include "driver/i2c.h"
 
-
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 typedef void* i2c_bus_handle_t;
@@ -55,11 +55,11 @@ esp_err_t iot_i2c_bus_delete(i2c_bus_handle_t bus);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_i2c_bus_cmd_begin(i2c_bus_handle_t bus, i2c_cmd_handle_t cmd, portBASE_TYPE ticks_to_wait);
+esp_err_t iot_i2c_bus_cmd_begin(i2c_bus_handle_t bus, i2c_cmd_handle_t cmd,
+portBASE_TYPE ticks_to_wait);
 #ifdef __cplusplus
 }
 #endif
-
 
 #ifdef __cplusplus
 /**
@@ -74,7 +74,7 @@ private:
      * prevent copy constructing
      */
     CI2CBus(const CI2CBus&);
-    CI2CBus& operator = (const CI2CBus&);
+    CI2CBus& operator =(const CI2CBus&);
 public:
     /**
      * @brief Constructor for CI2CBus class
@@ -85,7 +85,8 @@ public:
      * @param i2c_mode mode for I2C bus
      *
      */
-    CI2CBus(i2c_port_t i2c_port, gpio_num_t scl_io, gpio_num_t sda_io, int clk_hz = 100000, i2c_mode_t i2c_mode = I2C_MODE_MASTER);
+    CI2CBus(i2c_port_t i2c_port, gpio_num_t scl_io, gpio_num_t sda_io,
+            int clk_hz = 100000, i2c_mode_t i2c_mode = I2C_MODE_MASTER);
 
     /**
      * @brief Destructor function of CI2CBus class
@@ -112,7 +113,6 @@ public:
     i2c_bus_handle_t get_bus_handle();
 };
 #endif
-
 
 #endif
 
