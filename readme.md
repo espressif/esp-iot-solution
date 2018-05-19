@@ -96,29 +96,36 @@
 
 ### Features
 [TouchPad](./components/features/touchpad) - Driver and example of using different types of touch pad.<br>
+[Infrared](./components/features/infrared) - Driver and framework of using infrared remote control.<br>
 ### General fucntions
 [Button](./components/general/button) - Driver and example of using buttons and keys.<br>
 [Debugs](./components/general/debugs) - Provides different commands for debugging via UART.<br>
 [LED](./components/general/led) - Driver and example of using LED, which provides such APIs as to blink with different frequency.<br>
 [Light](./components/general/light) - Driver and example of using PWM to drive a light, which provides such APIs as to control several channels of LED.<br>
 [OTA](./components/general/ota) - Driver and example of upgrading firmware from the given URL.<br>
-[param](./components/general/param) - Driver and example of saving and loading data via NVS flash.<br>
+[Param](./components/general/param) - Driver and example of saving and loading data via NVS flash.<br>
 [Power Meter](./components/general/power_meter) - Driver and example of a single-phase energy meter such as BL0937 or HLW8012.<br>
 [Relay](./components/general/relay) - Driver and example of a relay with different driving modes.<br>
 [Weekly timer](./components/general/weekly_timer) - Driver and example of a weekly timer to trigger events at some certain moment in each week.<br>
 ### I2C Sensors
-[BH1750](./components/i2c_devices/sensor/bh1750) - Driver and example of reading BH1750 light sensor (GY-30 module).<br>
-[HTS221](./components/i2c_devices/sensor/hts221) - Driver and example of reading HTS221 temperature and humidity sensor.<br>
-[MVH3004D](./components/i2c_devices/sensor/mvh3004d) - Driver and example of reading MVH3004D temperature and humidity sensor.<br>
-[LIS2DH12](./components/i2c_devices/sensor/lis2dh12) - Driver and example of reading LIS2DH12, which is a 3-axis accelerometer.<br>
 [APDS9960](./components/i2c_devices/sensor/apds9960) - Driver and example of reading APDS9960, which is an ambient light photo Sensor.<br>
+[BH1750](./components/i2c_devices/sensor/bh1750) - Driver and example of reading BH1750 light sensor (GY-30 module).<br>
 [BME280](./components/i2c_devices/sensor/bme280) - Driver and example of reading BME280, which is an pressure and temperature Sensor.<br>
+[HDC2010](./components/i2c_devices/sensor/hdc2010) - Driver and example of reading HDC2010, which is a low power temperature and humidity sensor.<br>
+[HTS221](./components/i2c_devices/sensor/hts221) - Driver and example of reading HTS221 temperature and humidity sensor.<br>
+[LIS2DH12](./components/i2c_devices/sensor/lis2dh12) - Driver and example of reading LIS2DH12, which is a 3-axis accelerometer.<br>
+[MVH3004D](./components/i2c_devices/sensor/mvh3004d) - Driver and example of reading MVH3004D temperature and humidity sensor.<br>
+[VEML6040](./components/i2c_devices/sensor/veml6040) - Driver and example of reading VEML6040, which is a light UV sensor.<br>
 ### I2C Devices
 [AT24C02](./components/i2c_devices/others/at24c02) - Driver and example of driving AT24C02, which is an eeprom storage.<br>
 [CH450](./components/i2c_devices/others/ch450) - Driver and example of driving CH450, which is a 7-segment LED driver.<br>
+[HT16C21](./components/i2c_devices/others/ht16c21) - Driver and example of driving HT16C21, which is a LED driver.<br>
 [IS31FL3XXX](./components/i2c_devices/others/is31fl3xxx) - Driver and example of driving is31fl3xxx series chips, which are light effect LED driver chips.<br>
 [MCP23017](./components/i2c_devices/others/mcp23017) - Driver and example of using mcp23017, which is a 16-bit I/O expander.<br>
 [SSD1306](./components/i2c_devices/others/ssd1306) - Driver and example of using ssd1306, which is a 132 x 64 dot matrix OLED/PLED segment driver chip.<br>
+### Motor
+[Servo](./components/motor/servo) - Driver and example of driving servo motors.<br>
+[A4988](./components/motor/stepper/a4988) - Driver and example of driving A4988, which is a stepper motor driver.<br>
 ### Network Abstract
 [MQTT](./components/network/mqtt) - Driver and example of using MQTT client, which is a light-weight IoT protocol.<br>
 [TCP](./components/network/tcp) - API and example of using TCP server and client in C++.<br>
@@ -127,6 +134,7 @@
 ### SPI Devices
 [E-ink display](./components/spi_devices/epaper) - API and example of driving and controlling SPI E-ink screen.<br>
 [LCD screen](./components/spi_devices/lcd) - API and example of driving and controlling SPI LCD.<br>
+[XPT2046 Touch screen](./components/spi_devices/touch_screen) - API and example of driving and controlling SPI Touch Screen.<br>
 ### WiFi Abstract
 [ESP-TOUCH for smart-config](./components/wifi/smart_config) - Abstract APIs and example of configuring devices via esp-touch.<br>
 [WiFi connection abstract APIs](./components/wifi/wifi_conn) - Abstract APIs and example of WiFi station connecting to router.<br>
