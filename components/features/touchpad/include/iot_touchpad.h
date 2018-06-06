@@ -31,26 +31,49 @@ typedef enum {
     TOUCHPAD_CB_PUSH = 0,        /**< touch pad push callback */
     TOUCHPAD_CB_RELEASE,         /**< touch pad release callback */
     TOUCHPAD_CB_TAP,             /**< touch pad quick tap callback */
+    TOUCHPAD_CB_SLIDE,           /**< touch pad slide type callback */
     TOUCHPAD_CB_MAX,
 } tp_cb_type_t;
 
 /**
-  * @brief  create touchpad device
+  * @brief  Enable scope debug function. Print the touch sensor raw data to "DataScope" tool via UART.
+  *         "DataScope" tool is touch sensor tune tool. User can monitor the data of each touch channel,
+  *         evaluate the touch system's touch performance (sensitivity, SNR, stability, channel coupling)
+  *         and determine the threshold for each channel.
   *
-  * @param  touch_pad_num refer to struct touch_pad_t
-  * @param  thres_percent touchpad would be active if the sample value decay to thres_percent 1/1000
-  * @param  absolute value of threshold for pad
-  * @param  filter_value filter time of touchpad
+  * @attention 1. Choose a UART port that will only be used for scope debug.
+  * @attention 2. Use this feature only during the testing phase.
+  * @attention 3. "DataScope" tool can be downloaded from Espressif's official website.
+  *
+  * @param  uart_num The uart port to send touch sensor raw data.
+  * @param  tx_io_num set UART TXD IO.
+  * @param  rx_io_num set UART RXD IO.
+  * @param  baud_rate set debug port baud rate.
   *
   * @return
-  *     NULL: fail
+  *     - ESP_OK: succeed
+  *     - ESP_FAIL: the param uart_num is error
   */
-tp_handle_t iot_tp_create(touch_pad_t touch_pad_num, uint16_t thres_percent, uint16_t thresh_abs, uint32_t filter_value);
+esp_err_t iot_tp_scope_debug_init(uint8_t uart_num, int tx_io_num, int rx_io_num, int baud_rate);
+
+/**
+  * @brief  create single button device
+  *
+  * @param  touch_pad_num refer to struct touch_pad_t
+  * @param  sensitivity The max change rate of the reading value when a touch occurs.
+  *         i.e., (non-trigger value - trigger value) / non-trigger value.
+  *         Decreasing this threshold appropriately gives higher sensitivity.
+  *         If the value is less than 0.1 (10%), leave at least 4 decimal places.
+  *
+  * @return
+  *     tp_handle_t: Touch pad handle.
+  */
+tp_handle_t iot_tp_create(touch_pad_t touch_pad_num, float sensitivity);
 
 /**
   * @brief  delete touchpad device
   *
-  * @param  tp_handle
+  * @param  tp_handle Touch pad handle.
   *
   * @return
   *     - ESP_OK: succeed
@@ -61,7 +84,7 @@ esp_err_t iot_tp_delete(tp_handle_t tp_handle);
 /**
   * @brief  add callback function
   *
-  * @param  tp_handle
+  * @param  tp_handle Touch pad handle.
   * @param  cb_type the type of callback to be added
   * @param  cb the callback function
   * @param  arg the argument of callback function
@@ -75,7 +98,7 @@ esp_err_t iot_tp_add_cb(tp_handle_t tp_handle, tp_cb_type_t cb_type, tp_cb cb, v
 /**
   * @brief  set serial tigger
   *
-  * @param  tp_handle
+  * @param  tp_handle Touch pad handle.
   * @param  trigger_thres_sec serial event would trigger after trigger_thres_sec seconds
   * @param  interval_ms evetn would trigger every interval_ms
   * @param  cb the callback function
@@ -90,7 +113,7 @@ esp_err_t iot_tp_set_serial_trigger(tp_handle_t tp_handle, uint32_t trigger_thre
 /**
   * @brief  add custom callback function
   *
-  * @param  tp_handle
+  * @param  tp_handle Touch pad handle.
   * @param  press_sec the callback function would be called pointed seconds
   * @param  cb the callback function
   * @param  arg the argument of callback function
@@ -104,42 +127,64 @@ esp_err_t iot_tp_add_custom_cb(tp_handle_t tp_handle, uint32_t press_sec, tp_cb 
 /**
   * @brief  get the number of a touchpad
   *
-  * @param  tp_handle
+  * @param  tp_handle Touch pad handle.
   *
   * @return  touchpad number
   */
 touch_pad_t iot_tp_num_get(tp_handle_t tp_handle);
 
 /**
-  * @brief  set the threshold of touchpad
+  * @brief  Set the trigger threshold of touchpad.
   *
-  * @param  tp_handle
+  * @param  tp_handle Touch pad handle.
+  * @param  threshold Should be less than the max change rate of touch.
+  *
+  * @return
+  *     - ESP_OK: succeed
+  *     - ESP_FAIL: the param tp_handle is NULL
+  */
+esp_err_t iot_tp_set_threshold(tp_handle_t tp_handle, float threshold);
+
+/**
+  * @brief  Get the trigger threshold of touchpad.
+  *
+  * @param  tp_handle Touch pad handle.
   * @param  threshold value
   *
   * @return
   *     - ESP_OK: succeed
   *     - ESP_FAIL: the param tp_handle is NULL
   */
-esp_err_t iot_tp_set_threshold(tp_handle_t tp_handle, uint32_t threshold);
-
-esp_err_t iot_tp_get_threshold(const tp_handle_t tp_handle, uint32_t *threshold);
+esp_err_t iot_tp_get_threshold(const tp_handle_t tp_handle, float *threshold);
 
 /**
-  * @brief  set the filter value of touchpad
+  * @brief  Get the IIR filter interval of touch sensor when touching.
   *
-  * @param  tp_handle
-  * @param  filter_value
+  * @param  tp_handle Touch pad handle.
+  * @param  filter_ms
   *
   * @return
   *     - ESP_OK: succeed
   *     - ESP_FAIL: the param tp_handle is NULL
   */
-esp_err_t iot_tp_set_filter(tp_handle_t tp_handle, uint32_t filter_value);
+esp_err_t iot_tp_get_touch_filter_interval(const tp_handle_t tp_handle, uint32_t *filter_ms);
 
 /**
-  * @brief  get sample value of the touchpad
+  * @brief  Get the IIR filter interval of touch sensor when idle.
   *
-  * @param  tp_handle
+  * @param  tp_handle Touch pad handle.
+  * @param  filter_ms
+  *
+  * @return
+  *     - ESP_OK: succeed
+  *     - ESP_FAIL: the param tp_handle is NULL
+  */
+esp_err_t iot_tp_get_idle_filter_interval(const tp_handle_t tp_handle, uint32_t *filter_ms);
+
+/**
+  * @brief  Get filtered touch sensor counter value from IIR filter process.
+  *
+  * @param  tp_handle Touch pad handle.
   * @param  touch_value_ptr pointer to the value read 
   *
   * @return
@@ -149,26 +194,40 @@ esp_err_t iot_tp_set_filter(tp_handle_t tp_handle, uint32_t filter_value);
 esp_err_t iot_tp_read(tp_handle_t tp_handle, uint16_t *touch_value_ptr);
 
 /**
-  * @brief  create touchpad slide device
+  * @brief  Get raw touch sensor counter value from IIR filter process.
+  *
+  * @param  tp_handle Touch pad handle.
+  * @param  touch_value_ptr pointer to the value read
+  *
+  * @return
+  *     - ESP_OK: succeed
+  *     - ESP_FAIL: the param tp_handle is NULL
+  */
+esp_err_t tp_read_raw(const tp_handle_t tp_handle, uint16_t *touch_value_ptr);
+
+/**
+  * @brief  Create touchpad slide device.
   *
   * @param  num number of touchpads the slide uses
   * @param  tps the array of touchpad num
-  * @param  pos_scale the position scale of each pad
-  * @param  thres_percent touchpad would be active if the sample value decay to thres_percent
-  * @param  thresh_abs absolute value array of threshold for each pad.
-  * @param  filter_value filter time of touchpad
+  * @param  pos_range Set the range of the slide position. (0 ~ 255)
+  * @param  p_sensitivity Data list, the list stores the max change rate of the reading value when a touch occurs.
+  *         i.e., (non-trigger value - trigger value) / non-trigger value.
+  *         Decreasing this threshold appropriately gives higher sensitivity.
+  *         If the value is less than 0.1 (10%), leave at least 4 decimal places.
   *
   * @return
-  *     NULL: fail
+  *     NULL: error of input parameter
+  *     tp_slide_handle_t: slide handle
   */
-tp_slide_handle_t iot_tp_slide_create(uint8_t num, const touch_pad_t *tps, uint32_t pos_scale, uint16_t thres_percent, const uint16_t* thresh_abs, uint32_t filter_value);
+tp_slide_handle_t iot_tp_slide_create(uint8_t num, const touch_pad_t *tps, uint8_t pos_range, const float *p_sensitivity);
 
 /**
-  * @brief  get relative position
+  * @brief  Get relative position of touch.
   *
   * @param  tp_slide_handle
   *
-  * @return  relative position of your touch on slide
+  * @return  relative position of your touch on slide. The range is 0 ~  pos_range.
   */
 uint8_t iot_tp_slide_position(tp_slide_handle_t tp_slide_handle);
 
@@ -190,14 +249,17 @@ esp_err_t iot_tp_slide_delete(tp_slide_handle_t tp_slide_handle);
   * @param  y_num number of touch sensor on y axis
   * @param  x_tps the array of touch sensor num on x axis
   * @param  y_tps the array of touch sensor num on y axis
-  * @param  thres_percent touchpad would be active if the sample value decay to thres_percent
-  * @param  thresh_abs threshold value list of each pad.
-  * @param  filter_value filter time of touchpad
+  * @param  p_sensitivity Data list(x list + y list), the list stores the max change rate of the reading value
+  *         when a touch occurs. i.e., (non-trigger value - trigger value) / non-trigger value.
+  *         Decreasing this threshold appropriately gives higher sensitivity.
+  *         If the value is less than 0.1 (10%), leave at least 4 decimal places.
   *
   * @return
-  *     NULL: fail
+  *     NULL: error of input parameter
+  *     tp_matrix_handle_t: matrix handle
   */
-tp_matrix_handle_t iot_tp_matrix_create(uint8_t x_num, uint8_t y_num, const touch_pad_t *x_tps, const touch_pad_t *y_tps, uint16_t thres_percent, const uint16_t *thresh_abs, uint32_t filter_value);
+tp_matrix_handle_t iot_tp_matrix_create(uint8_t x_num, uint8_t y_num, const touch_pad_t *x_tps, \
+        const touch_pad_t *y_tps, const float *p_sensitivity);
 
 /**
   * @brief  delete touchpad matrix device
@@ -220,7 +282,7 @@ esp_err_t iot_tp_matrix_delete(tp_matrix_handle_t tp_matrix_hd);
   *
   * @return
   *     - ESP_OK: succeed
-  *     - ESP_FAIL: fail
+  *     - ESP_FAIL: error of input parameter
   */
 esp_err_t iot_tp_matrix_add_cb(tp_matrix_handle_t tp_matrix_hd, tp_cb_type_t cb_type, tp_matrix_cb cb, void *arg);
 
@@ -234,7 +296,7 @@ esp_err_t iot_tp_matrix_add_cb(tp_matrix_handle_t tp_matrix_hd, tp_cb_type_t cb_
   *
   * @return
   *     - ESP_OK: succeed
-  *     - ESP_FAIL: fail
+  *     - ESP_FAIL: error of input parameter
   */
 esp_err_t iot_tp_matrix_add_custom_cb(tp_matrix_handle_t tp_matrix_hd, uint32_t press_sec, tp_matrix_cb cb, void *arg);
 
@@ -249,7 +311,7 @@ esp_err_t iot_tp_matrix_add_custom_cb(tp_matrix_handle_t tp_matrix_hd, uint32_t 
   *
   * @return
   *     - ESP_OK: succeed
-  *     - ESP_FAIL: fail
+  *     - ESP_FAIL: error of input parameter
   */
 esp_err_t iot_tp_matrix_set_serial_trigger(tp_matrix_handle_t tp_matrix_hd, uint32_t trigger_thres_sec, uint32_t interval_ms, tp_matrix_cb cb, void *arg);
 
@@ -259,8 +321,6 @@ esp_err_t iot_tp_matrix_set_serial_trigger(tp_matrix_handle_t tp_matrix_hd, uint
 #endif
 
 #ifdef __cplusplus
-#define DEFAULT_THRES_PERCENT   950
-#define DEFAULT_FILTER_MS       100
 
 /**
  * class of touchpad
@@ -280,10 +340,13 @@ public:
       * @brief  constructor of CTouchPad
       *
       * @param  touch_pad_num refer to struct touch_pad_t
-      * @param  thres_percent touchpad would be active if the sample value decay to thres_percent 1/1000
-      * @param  filter_value filter time of touchpad
+      * @param  sensitivity stores the max change rate of the reading value when a touch occurs.
+      *         i.e., (non-trigger value - trigger value) / non-trigger value.
+      *         Decreasing this threshold appropriately gives higher sensitivity.
+      *         If the value is less than 0.1 (10%), leave at least 4 decimal places.
+      *
       */
-    CTouchPad(touch_pad_t touch_pad_num, uint16_t thres_percent = DEFAULT_THRES_PERCENT, uint16_t thresh_abs = 0, uint32_t filter_value = DEFAULT_FILTER_MS);
+    CTouchPad(touch_pad_t touch_pad_num, float sensitivity = 0.2);
     
     ~CTouchPad();
 
@@ -335,7 +398,18 @@ public:
     touch_pad_t tp_num();
 
     /**
-      * @brief  set the threshold of touchpad
+      * @brief  Set the trigger threshold of touchpad.
+      *
+      * @param  threshold Should be less than the max change rate of touch.
+      *
+      * @return
+      *     - ESP_OK: succeed
+      *     - ESP_FAIL: the param tp_handle is NULL
+      */
+    esp_err_t set_threshold(float threshold);
+
+    /**
+      * @brief  Get the trigger threshold of touchpad.
       *
       * @param  threshold value
       *
@@ -343,22 +417,10 @@ public:
       *     - ESP_OK: succeed
       *     - ESP_FAIL: the param tp_handle is NULL
       */
-    esp_err_t set_threshold(uint32_t threshold);
-
-    esp_err_t get_threshold(uint32_t *threshold);
-    /**
-      * @brief  set the filter value of touchpad
-      *
-      * @param  filter_value
-      *
-      * @return
-      *     - ESP_OK: succeed
-      *     - ESP_FAIL: the param tp_handle is NULL
-      */
-    esp_err_t set_filter(uint32_t filter_value);
+    esp_err_t get_threshold(float *threshold);
 
     /**
-      * @brief  get sample value of the touchpad
+      * @brief  get filtered touch sensor counter value by IIR filter.
       *
       * @return sample value
       */
@@ -384,18 +446,20 @@ public:
       *
       * @param  num number of touchpads the slide uses
       * @param  tps the array of touchpad num
-      * @param  pos_scale the position scale of each pad
-      * @param  thres_percent touchpad would be active if the sample value decay to thres_percent
-      * @param  filter_value filter time of touchpad
+      * @param  pos_range the position range of each pad, Must be a multiple of (num-1).
+      * @param  p_sensitivity  Data list(x list + y list), the list stores change rate of the reading
+      *         value when a touch occurs. i.e., (non-trigger value - trigger value) / non-trigger value.
+      *         Decreasing this threshold appropriately gives higher sensitivity.
+      *         If the value is less than 0.1 (10%), leave at least 4 decimal places.
       */
-    CTouchPadSlide(uint8_t num, const touch_pad_t *tps, uint32_t pos_scale = 2, uint16_t threshold = DEFAULT_THRES_PERCENT, const uint16_t *thresh_abs = NULL, uint32_t filter_value = DEFAULT_FILTER_MS);
+    CTouchPadSlide(uint8_t num, const touch_pad_t *tps, uint32_t pos_range = 50,  const float *p_sensitivity = NULL);
     
     ~CTouchPadSlide();
 
     /**
-      * @brief  get relative position
+      * @brief  Get relative position of touch.
       *
-      * @return  relative position of your touch on slide
+      * @return  relative position of touch on slide. The range is 0 ~  pos_range.
       */
     uint8_t get_position();
 };
@@ -421,11 +485,13 @@ public:
       * @param  y_num number of touch sensor on y axis
       * @param  x_tps the array of touch sensor num on x axis
       * @param  y_tps the array of touch sensor num on y axis
-      * @param  thres_percent touchpad would be active if the sample value decay to thres_percent
-      * @param  filter_value filter time of touchpad
+      * @param  p_sensitivity Data list(x list + y list), the list stores the change rate of the reading
+      *         value when a touch occurs. i.e., (non-trigger value - trigger value) / non-trigger value.
+      *         Decreasing this threshold appropriately gives higher sensitivity.
+      *         If the value is less than 0.1 (10%), leave at least 4 decimal places.
       *
       */
-    CTouchPadMatrix(uint8_t x_num, uint8_t y_num, const touch_pad_t *x_tps, const touch_pad_t *y_tps, uint16_t threshold = DEFAULT_THRES_PERCENT, const uint16_t *thresh_abs = NULL, uint32_t filter_value = DEFAULT_FILTER_MS);
+    CTouchPadMatrix(uint8_t x_num, uint8_t y_num, const touch_pad_t *x_tps, const touch_pad_t *y_tps, const float *p_sensitivity = NULL);
     
     ~CTouchPadMatrix();
 

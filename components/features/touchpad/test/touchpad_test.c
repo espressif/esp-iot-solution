@@ -28,8 +28,7 @@
 #define PROXIMITY_SENSOR_TEST   0
 #define GESTURE_SENSOR_TEST     0
 
-#define TOUCHPAD_THRES_PERCENT  950
-#define TOUCHPAD_FILTER_VALUE   150
+#define TOUCHPAD_THRES_PERCENT  0.20
 static const char* TAG = "touchpad_test";
 
 #if SINGLE_TOUCHPAD_TEST
@@ -79,11 +78,13 @@ static void press_5s_cb(void *arg)
 
 #if TOUCHPAD_SLIDE_TEST
 const touch_pad_t tps[] = {0, 2, 3, 4, 5, 6, 7, 8, 0, 4, 7, 2, 5, 8, 3, 6};
+const uint16_t thresh[] = {  0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2 };
 #endif
 
 #if TOUCHPAD_MATRIX_TEST
 const touch_pad_t x_tps[] = {0, 2, 3, 4, 8};
 const touch_pad_t y_tps[] = {5, 6, 7};
+const uint16_t thresh[] = {  0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2 };
 
 static void tp_matrix_cb(void *arg, uint8_t x, uint8_t y)
 {
@@ -136,8 +137,8 @@ void gest_cb(void *arg, gesture_type_t type)
 void tp_test()
 {
 #if SINGLE_TOUCHPAD_TEST
-    tp_dev0 = iot_tp_create(TOUCH_PAD_NUM8, TOUCHPAD_THRES_PERCENT, 0, TOUCHPAD_FILTER_VALUE);
-    tp_dev1 = iot_tp_create(TOUCH_PAD_NUM9, TOUCHPAD_THRES_PERCENT, 0, TOUCHPAD_FILTER_VALUE);
+    tp_dev0 = iot_tp_create(TOUCH_PAD_NUM8, TOUCHPAD_THRES_PERCENT);
+    tp_dev1 = iot_tp_create(TOUCH_PAD_NUM9, TOUCHPAD_THRES_PERCENT);
     
     iot_tp_add_cb(tp_dev0, TOUCHPAD_CB_TAP, tap_cb, tp_dev0);
     iot_tp_add_cb(tp_dev0, TOUCHPAD_CB_PUSH, push_cb, tp_dev0);
@@ -160,7 +161,7 @@ void tp_test()
 
 #if TOUCHPAD_SLIDE_TEST
     uint8_t num = sizeof(tps) / sizeof(tps[0]);
-    tp_slide_handle_t tp_slide = iot_tp_slide_create(num, tps, 2,TOUCHPAD_THRES_PERCENT, NULL, TOUCHPAD_FILTER_VALUE);
+    tp_slide_handle_t tp_slide = iot_tp_slide_create(num, tps, 255, thresh);
     while (1) {
         uint8_t pos = iot_tp_slide_position(tp_slide);
         printf("%d\n", pos);
@@ -170,7 +171,7 @@ void tp_test()
 
 #if TOUCHPAD_MATRIX_TEST
     tp_matrix_handle_t tp_matrix = iot_tp_matrix_create(sizeof(x_tps)/sizeof(x_tps[0]), sizeof(y_tps)/sizeof(y_tps[0]),
-                                                                x_tps, y_tps, TOUCHPAD_THRES_PERCENT, NULL, TOUCHPAD_FILTER_VALUE);
+                                                                x_tps, y_tps, thresh);
     iot_tp_matrix_add_cb(tp_matrix, TOUCHPAD_CB_PUSH, tp_matrix_cb, "push_event");
     iot_tp_matrix_add_cb(tp_matrix, TOUCHPAD_CB_RELEASE, tp_matrix_cb, "release_event");
     iot_tp_matrix_add_cb(tp_matrix, TOUCHPAD_CB_TAP, tp_matrix_cb, "tap_event");

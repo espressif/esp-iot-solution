@@ -122,14 +122,9 @@ ESP32 IoT Solution 工程下的 [ESP32-Sense 项目](../../examples/touch_pad_ev
 ```
 
 ### 5.1. 参数配置
-当使用不同厚度的盖板时，需要调节触摸触摸阈值。触摸阈值直接反映为触摸的灵敏度。触摸阈值越高，灵敏度越高，阈值过高会出现手指未接触按键时即发生触摸响应。触摸阈值越低，灵敏度越低，阈值过低会出现触摸无反馈或触摸延迟。  
-通过 ESP32-Sense 工程中的 [evb.h](../../examples/touch_pad_evb/main/evb.h) 文件调节触摸阈值。  
-下面是触摸阈值设置的示例：  
+当使用不同厚度或不同材质的盖板时，需要重新设置各通道触摸变化率参数，即灵敏度。各通道触摸变化率是由脉冲计数值计算得到。计算公式为：(Non-touch value - Touch value) / Non-touch value。“Non-touch value” 是指不触摸时通道的脉冲计数值。“Touch value” 是指正常触摸时通道的脉冲计数值。这两个参数需要用户测量得出。系统初始化时，由触摸变化率自动计算出触摸阈值，触摸阈值与触摸变化率成正比关系。  
+触摸变化率确定后，填写到 ESP32-Sense 工程中的 [evb.h](../../examples/touch_pad_evb/main/evb.h) 文件。  
 
-```
-#define TOUCHPAD_THRES_PERCENT 980         //触摸阈值 980，识别 >2% 的触摸读数变化率
-#define TOUCHPAD_SPRING_THRESH_PERCENT 970 //弹簧子板触摸阈值 970，识别 >3% 的触摸读数变化率
-```
 ### 5.2. 效果展示
 
 

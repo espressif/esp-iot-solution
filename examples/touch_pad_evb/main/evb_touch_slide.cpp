@@ -15,7 +15,6 @@
 #include "freertos/queue.h"
 #include "driver/gpio.h"
 #include "iot_touchpad.h"
-#include "print_to_scope.h"
 #include "evb.h"
 
 static const char *TAG = "touch_slide";
@@ -29,9 +28,9 @@ static CTouchPadSlide *tp_slide = NULL;
 #define TOUCH_SLIDE_5 TOUCH_PAD_NUM0
 #define TOUCH_SLIDE_LED_NUM_0   3
 #define TOUCH_SLIDE_LED_NUM_1   4
+#define TOUCH_SLIDE_LED_NUM_2   5
 #define TOUCH_SLIDE_PAD_NUM     6
-#define TOUCH_SLIDE_MAX_POS   \
-    ((TOUCH_SLIDE_PAD_NUM - 1) * TOUCH_SLIDE_PAD_SCALE)
+#define TOUCH_SLIDE_MAX_POS     TOUCH_SLIDE_PAD_RANGE
 
 void evb_touch_slide_handle(int pos)
 {
@@ -44,25 +43,18 @@ void evb_touch_slide_handle(int pos)
         ch450_write_dig(2, -1);
         ch450_write_dig(3, -1);
         ch450_write_dig(TOUCH_SLIDE_LED_NUM_0, pos % 10);
-        ch450_write_dig(TOUCH_SLIDE_LED_NUM_1, pos / 10);
+        ch450_write_dig(TOUCH_SLIDE_LED_NUM_1, pos%100/10);
+        ch450_write_dig(TOUCH_SLIDE_LED_NUM_2, pos/100);
         evb_rgb_led_set(evb_rgb_led_color_get(), pos*100/TOUCH_SLIDE_MAX_POS);
     }
 }
 
 static void scope_task(void *paramater)
 {
-    uint16_t data[4];
     uint8_t pos = 0;
     while (1) {
         pos = tp_slide->get_position();
         evb_touch_slide_handle(pos);
-#if SCOPE_DEBUG
-        touch_pad_read_filtered(TOUCH_SLIDE_1, &data[0]);
-        touch_pad_read_filtered(TOUCH_SLIDE_2, &data[1]);
-        touch_pad_read_filtered(TOUCH_SLIDE_3, &data[2]);
-        touch_pad_read_filtered(TOUCH_SLIDE_4, &data[3]);
-        print_to_scope(1, data);
-#endif
         vTaskDelay(50 / portTICK_RATE_MS);
     }
 }
@@ -71,9 +63,16 @@ void evb_touch_slide_init_then_run()
 {
     evb_touch_button_init();
     //slide touch
+    const float variation[] = { TOUCH_SLIDE_MAX_CHANGE_RATE_0,
+                                TOUCH_SLIDE_MAX_CHANGE_RATE_1,
+                                TOUCH_SLIDE_MAX_CHANGE_RATE_2,
+                                TOUCH_SLIDE_MAX_CHANGE_RATE_3,
+                                TOUCH_SLIDE_MAX_CHANGE_RATE_4,
+                                TOUCH_SLIDE_MAX_CHANGE_RATE_5 };
+
     const touch_pad_t tps[] = { TOUCH_SLIDE_0, TOUCH_SLIDE_1, TOUCH_SLIDE_2,
             TOUCH_SLIDE_3, TOUCH_SLIDE_4, TOUCH_SLIDE_5 };
     tp_slide = new CTouchPadSlide(sizeof(tps) / sizeof(TOUCH_PAD_NUM4),
-    		tps, TOUCH_SLIDE_PAD_SCALE, LINEAR_SLIDER_THRESH_PERCENT, NULL, LINEAR_SLIDER_FILTER_VALUE);
+    		tps, TOUCH_SLIDE_PAD_RANGE, variation);
     xTaskCreate(scope_task, "scope", 1024*4, NULL, 3, NULL);
 }

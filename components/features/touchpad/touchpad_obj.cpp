@@ -17,9 +17,9 @@
 #include "iot_touchpad.h"
 #include "esp_log.h"
 
-CTouchPad::CTouchPad(touch_pad_t touch_pad_num, uint16_t thres_percent, uint16_t thresh_abs, uint32_t filter_value)
+CTouchPad::CTouchPad(touch_pad_t touch_pad_num, float sensitivity)
 {
-    m_tp_handle = iot_tp_create(touch_pad_num, thres_percent, thresh_abs, filter_value);
+    m_tp_handle = iot_tp_create(touch_pad_num, sensitivity);
 }
 
 CTouchPad::~CTouchPad()
@@ -48,19 +48,14 @@ touch_pad_t CTouchPad::tp_num()
     return iot_tp_num_get(m_tp_handle);
 }
 
-esp_err_t CTouchPad::set_threshold(uint32_t threshold)
+esp_err_t CTouchPad::set_threshold(float threshold)
 {
     return iot_tp_set_threshold(m_tp_handle, threshold);
 }
 
-esp_err_t CTouchPad::get_threshold(uint32_t *threshold)
+esp_err_t CTouchPad::get_threshold(float *threshold)
 {
     return iot_tp_get_threshold(m_tp_handle, threshold);
-}
-
-esp_err_t CTouchPad::set_filter(uint32_t filter_value)
-{
-    return iot_tp_set_filter(m_tp_handle, filter_value);
 }
 
 uint16_t CTouchPad::value()
@@ -70,9 +65,9 @@ uint16_t CTouchPad::value()
     return tp_value;
 }
 
-CTouchPadSlide::CTouchPadSlide(uint8_t num, const touch_pad_t *tps, uint32_t pos_scale, uint16_t thres_percent, const uint16_t *thresh_abs, uint32_t filter_value)
+CTouchPadSlide::CTouchPadSlide(uint8_t num, const touch_pad_t *tps, uint32_t pos_range, const float *p_sensitivity)
 {
-    m_tp_slide_handle = iot_tp_slide_create(num, tps, pos_scale, thres_percent, thresh_abs, filter_value);
+    m_tp_slide_handle = iot_tp_slide_create(num, tps, pos_range, p_sensitivity);
 }
 
 CTouchPadSlide::~CTouchPadSlide()
@@ -86,9 +81,10 @@ uint8_t CTouchPadSlide::get_position()
     return iot_tp_slide_position(m_tp_slide_handle);
 }
 
-CTouchPadMatrix::CTouchPadMatrix(uint8_t x_num, uint8_t y_num, const touch_pad_t *x_tps, const touch_pad_t *y_tps, const uint16_t thres_percent, const uint16_t *thresh_abs, uint32_t filter_value)
+CTouchPadMatrix::CTouchPadMatrix(uint8_t x_num, uint8_t y_num, const touch_pad_t *x_tps, \
+        const touch_pad_t *y_tps, const float *p_sensitivity)
 {
-    m_tp_matrix = iot_tp_matrix_create(x_num, y_num, x_tps, y_tps, thres_percent, thresh_abs, filter_value);
+    m_tp_matrix = iot_tp_matrix_create(x_num, y_num, x_tps, y_tps, p_sensitivity);
 }
 
 CTouchPadMatrix::~CTouchPadMatrix()

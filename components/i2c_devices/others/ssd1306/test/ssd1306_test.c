@@ -33,8 +33,7 @@
 
 #define	OLED_SHOW_LEFT_TOUCH		9
 #define OLED_SHOW_RIGHT_TOUCH		8
-#define TOUCHPAD_THRES_PERCENT  	950
-#define TOUCHPAD_FILTER_INTERVAL  	10
+#define TOUCHPAD_THRES_PERCENT  	0.20
 static const char* TAG = "ssd1306 test";
 
 #define POWER_CNTL_IO   			19
@@ -169,10 +168,8 @@ static void ssd1306_test()
     xTaskCreate(&ssd1306_test_task, "ssd1306_test_task", 2048 * 2, NULL, 5,
             NULL);
 
-    touchpad_dev0 = iot_tp_create(OLED_SHOW_LEFT_TOUCH,
-    TOUCHPAD_THRES_PERCENT, 0, TOUCHPAD_FILTER_INTERVAL);
-    touchpad_dev1 = iot_tp_create(OLED_SHOW_RIGHT_TOUCH,
-    TOUCHPAD_THRES_PERCENT, 0, TOUCHPAD_FILTER_INTERVAL);
+    touchpad_dev0 = iot_tp_create(OLED_SHOW_LEFT_TOUCH, TOUCHPAD_THRES_PERCENT);
+    touchpad_dev1 = iot_tp_create(OLED_SHOW_RIGHT_TOUCH, TOUCHPAD_THRES_PERCENT);
 
     iot_tp_add_cb(touchpad_dev0, TOUCHPAD_CB_RELEASE, tap_cb, touchpad_dev0);
     iot_tp_add_cb(touchpad_dev1, TOUCHPAD_CB_RELEASE, tap_cb, touchpad_dev1);

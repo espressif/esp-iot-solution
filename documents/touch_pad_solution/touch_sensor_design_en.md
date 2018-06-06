@@ -123,7 +123,7 @@ The figure below illustrates a typical development flow of an ESP32 capacitive t
 |**Mechanical design**|**Decide on the placement of touch electrodes and the material for the overlay (the overlay's material and thickness affect the system's sensitivity).**|
 |Firmware development|The design can use polling or interrupts when designing a sensing system. ESP32 provides a variety of reference routines that contain filtering algorithm.|
 |**Threshold tuning**|**Set an appropriate trigger threshold according to the hardware environment, in order to avoid inadvertent touch and ensure a strong sensitivity. Use sensor self-calibration if required.**|
-|Design validation|Since the sensing system's performance is closely related to the surrounding environment, testing the system's sensitivity and stability is recommended.|
+|Design validation|Since the sensing system's performance is closely related to the surrounding environment, the system's sensitivity, stability, signal-to-noise ratio, channel coupling and other performance indicators should be tested on an actual product.|
 
 ### 1.3. Terminology
 
@@ -135,9 +135,13 @@ The figure below illustrates a typical development flow of an ESP32 capacitive t
 
 **Pulse count value**: The internal circuit of ESP32 touch sensor charges and discharges the channel capacitor. The number of charges/discharges is the same as that of pulses in the same period of time. The count value is inversely proportional to the total capacitance.
 
-**Sensitivity**: It is the change rate of the reading value when a touch occurs, i.e., (non-trigger value - trigger value) / non-trigger value * 100%. Sensor sensitivity depends on the board layout, overlay characteristics, and the parameter settings in firmware.
+**Sensitivity**: It is the change rate of the reading value when a touch occurs, i.e., (non-trigger value - trigger value) / non-trigger value * 100%. Sensor sensitivity depends on the board layout, overlay characteristics, and the parameter settings in firmware. The system sensitivity should be improved in the design, and the sensitivity of a highly-stable touch system should be greater than 3%. Sensitivity is one of the system performance parameters.
 
-**Stability**: It is the dispersion of the touch sensor readings. It can be expressed as standard deviation. Sensor stability depends on the board layout, overlay characteristics, and the parameter settings in firmware.
+**Stability**: It is the dispersion of the touch sensor readings. It can be expressed as standard deviation. Sensor stability depends on the board layout, overlay characteristics, and the parameter settings in firmware. Stability is one of the system performance parameters.
+
+**Signal-to-noise ratio (SNR)**: It is the ratio of the amount of touch reading change to the noise level of the channel when it is idle. The SNR should be improved in the design, and the SNR of a highly-stable touch system should be greater than 5:1. SNR is one of the system performance parameters.
+
+**Channel coupling**: Channel coupling occurs when two touch channel traces are adjacent and without hatched ground. Specifically, when a touch event occurs, the pulse count value of the adjacent channel changes. Channel coupling should be reduced in the design, and the amount of coupled data should not exceed the touch threshold of the channel. Channel coupling is one of the system performance parameters.
 
 **Measurement time**: It is the time required to complete the touch sensor measurement process.
 
@@ -225,7 +229,7 @@ Relationship between all the above-mentioned factors is described below.
 
 #### 2.3.3. FSM Description
 
-Users can read the pulse counts (OUT) on each touch sensor channel in real time, and know whether there is a touch according to the change in the pulse counts (OUT). The continuous pooling the channels costs CPU overhead. ESP32 supports touch detection by configuring hardware registers. The hardware periodically detects the pulse counts. If the number of pulse counts exceed the set threshold, a hardware interrupt will be generated to notify the application layer that a certain touch sensor channel may be triggered.
+Users can read the pulse counts (OUT) on each touch sensor channel in real time, and know whether there is a touch according to the change in the OUT. The continuous pooling is flexible and  supports various software algorithms. However, it also costs CPU overhead. ESP32 supports touch detection by configuring hardware registers. The hardware periodically detects the pulse counts. If the number of pulse counts exceeds the set threshold, a hardware interrupt will be generated to notify the application layer that a certain touch sensor channel may be triggered.
 
 The internal hardware logic includes a Finite-State Machine (FSM) that performs sequence detection as described in the [*Internal Structure*](#231-internal-structure) of the touch sensor. Software can operate the FSM through dedicated registers. The internal structure of the FSM is shown in the figure below.
 
@@ -249,7 +253,7 @@ The FSM regards the touch pads as “touched”, if the number of counted pulses
 
 The ESP32 touch sensor driver contains Infinite Impulse Response (IIR) filter function, which allows users to read the filtered pulse counts. The IIR Filter produces a similar step response to the RC filter. The IIR filter attenuates high-frequency noise and ignores low-frequency signals. The figure below shows the waveform of a finger touch response. 
 
-Users can set the sampling period of the IIR filter through an API. Longer period yields more stable reading, and hysteresis as well. The recommended filter period is in the range of 10 ms to 25 ms. The following figures show a correlation between the filter performance and the hysteresis when the sampling period is set to 10 ms and 20 ms, respectively. The yellow lines indicate the filtered readings, while the red lines indicate the unfiltered readings.
+Users can set the sampling period of the IIR filter through an API. Longer period yields more stable reading, and hysteresis as well. The following figures show a correlation between the filter performance and the hysteresis when the sampling period is set to 10 ms and 20 ms, respectively. The yellow lines indicate the filtered readings, while the red lines indicate the unfiltered readings.
 
 |<img src="../_static/touch_pad/IIR_10ms_touch.png" width = "420" alt="IIR_10ms_touch" align=center />|<img src="../_static/touch_pad/IIR_20ms_touch.png" width = "400" alt="IIR_20ms_touch" align=center />|
 |:---:|:---:|
@@ -274,7 +278,7 @@ Filter-related APIs:
 
 #### 2.4.2. Setting Measure Time
 
-The ESP32 internal touch sensor circuit measures the total capacitance on the touch sensor channel periodically. The measurement time and measurement interval are configurable. During measurement, the internal current source of the touch sensor periodically charges and discharges the capacitance on the touch pin. The voltage at the touch pin swings between reference voltage high (drefH) to reference voltage low (drefL). The voltage stays stable when no measurement takes place, and its logic level is set by register (TIE_OPT).
+The ESP32 internal touch sensor circuit can be set to periodically measure the total capacitance on the touch sensor channel. The measurement time and measurement interval are configurable. During measurement, the internal current source of the touch sensor periodically charges and discharges the capacitance on the touch pin. The voltage at the touch pin swings between reference voltage high (drefH) to reference voltage low (drefL). The voltage stays stable when no measurement takes place, and its logic level is set by register (TIE_OPT).
 
 The following figure shows a voltage waveform at a touch pin, captured by an oscilloscope. The time parameter is set to: sleep_cycle = 0x1000, meas_cycle = 0xFFFF (see API function `touch_pad_set_meas_time` below).
 
@@ -288,7 +292,7 @@ Related APIs:
 
 #### 2.4.3. Setting Charge/Discharge Voltage Range
 
-The last section mentioned the charging/discharging voltage threshold of the internal circuit of the touch sensor, and the high voltage attenuation value (HATTEN). These voltage parameters are configurable. The smaller the threshold, the greater the pulse count value. However, a threshold that is too small will reduce reading stability. On the contrary, an appropriate threshold can improve the stability.
+The last section mentioned the charging/discharging voltage threshold of the internal circuit of the touch sensor, and the high voltage attenuation value (HATTEN). These voltage parameters are configured by users. The smaller the threshold, the greater the pulse count value. However, a threshold that is too small will reduce reading stability. On the contrary, an appropriate threshold can improve the stability.
 
 The following figures show the charging/discharging voltage waveform with different threshold parameters, captured by an oscilloscope.
 
@@ -300,16 +304,7 @@ The parameters are: refh = 2.4V, refl = 0.8V, atten = 0.5V
 
 <img src="../_static/touch_pad/charging_discharging_voltage_waveform2.png" width = "800" alt="charging_discharging_voltage_waveform2" align=center />
 
-The voltage parameters affect the system's stability and sensitivity. The greater the voltage threshold range, the stronger the anti-interference ability of the system. The recommended voltage parameters are (refh = 2.7V, refl = 0.5V, atten = 0V) or (refh = 2.4V, refl = 0.8V, atten = 0V). If the reference voltage high (drefH) is within the allowable range of the supply voltage, the attenuation value should be set to atten = 0V. 
-
-The following table lists the data measured on the touch test board, including the standard deviation of readings without a finger touch, and the change rate of readings caused by touch.
-
-| Voltage parameters refh / refl / atten (V) | Standard deviation of readings (V) | Change rate of readings [%] |
-|:----:|:----:|:----:|
-|2.7 / 0.5 / 0|1.14|73.3|
-|2.4 / 0.8 / 0|1.35|69.3|
-|2.7 / 0.8 / 0|1.77|71.4|
-|2.4 / 0.8 / 0.5|2.87|68.9|
+The voltage parameters affect the system's stability and sensitivity. The greater the voltage threshold range, the stronger the anti-interference ability of the system, and the smaller the pulse count value. The voltage parameters (refh = 2.7V, refl = 0.5V, atten = 1V) suit most designs. 
 
 Related APIs:
 
@@ -393,6 +388,12 @@ Overlay materials must have good mechanical contact with the touch electrodes. T
 - Gaps  
 In some applications, there should be gaps between the overlay and the touch electrodes. In such case, compressed metal springs can be used to connect them.
 
+##### 3.1.1.4 Overlay Coating
+
+In product design, the overlay may be surface treated, such as electroplating, filming, etc. Users can select the best way of treatment that benefits the touch sensitivity the most, with the principle of parallel plate capacitors in mind.
+
+For example, adding a conductive coating within the touch area (contacted by finger) of the overlay can increase touch sensitivity and improve the user experience. Whether it is a slight touch or an improperly-positioned touch, as long as the finger touches the conductive area, a large area of electric field can be formed with the touch electrode to produce a touch activation.
+
 ### 3.2. Notes on Designs with ESP32 Devices
 
 #### 3.2.1. Pin Assignment
@@ -462,9 +463,10 @@ FR4-based PCB designs perform well with board thicknesses ranging from 0.5 mm to
 Trace routing is one of the key factors that affect the parasitic capacitance. Shorter and narrower traces reduce the parasitic capacitance. The following are general guidelines to routing traces:
 
 - The trace length should not exceed 300 mm
-- The trace width (W) can not be larger than 0.18 mm (7 mil)
+- The trace width (W) should not be larger than 0.18 mm (7 mil)
 - The alignment angle (R) should not be less than 90°
-- The sensor-to-ground gap (S) should not be less than 1 mm
+- The trace-to-ground gap (S) should be in the range of 0.5 mm to 1 mm
+- The sensor-to-ground gap should be in the range of 1 mm to 2 mm
 - The electrode diameter (D) should be in the range of 8 mm to 15 mm
 - Hatched ground should be added around the electrodes and traces
 
@@ -522,9 +524,10 @@ If the LED is placed close to the touch sensor (within 4-mm distance), and if ei
 
 Ground fill refers to a large area of copper used as reference ground to isolate interferences. The ground fill can be solid or hatched. Ground fill is one of the most important steps in touch sensor design. The following are general guidelines to adding a ground fill:
 
-- Ground fill is a tradeoff between enhancing anti-interference ability and maintaining high sensitivity
-- Add hatched ground around the touch electrode. Do not add ground fill on the opposite side of the electrode if there are no interference sources.
-- Add ground fill at least 1 mm away from the touch sensor network.
+- Hatched ground is a tradeoff between enhancing anti-interference ability and maintaining high sensitivity
+- Add hatched ground around the touch electrodes. Do not add ground fill on the opposite side of the electrode if there are no interference sources.
+- Add ground fill at least 1 mm away from the touch electrodes.
+- Add ground fill at least 0.5 mm away from the touch traces.
 - Typical hatching for the ground fill is 19% (5 mil line, 50 mil spacing).
 - Do not add a solid ground within 10 mm of the touch electrodes or traces
 
@@ -604,6 +607,16 @@ An m×n matrix requires m+n touch sensors. A matrix button design consists of tw
 - The air gap between segments is 0.5 mm.
 
 <img src="../_static/touch_pad/matrix_button.png" width = "400" alt="matrix_button" align=center />
+
+#### 3.3.14 Touch Spring Design
+
+Touch springs are used as touch electrodes in many touch designs to connect the overlay with the PCB main board. The selection of the spring in the design will affect the touch performance. Take the following into considerations when designing with touch springs:
+
+- The installation height of the spring should be greater than 5 mm.
+- The diameter of the spring should not be less than 10 mm.
+- Springs with metal plate have the highest sensitivity, followed by horn-shaped ones and straight-shaped ones.
+- The distance between adjacent spring buttons should not be less than 10 mm.
+- The spring-to-ground gap should not be less than 1 mm.
 
 ## 4. Touch Sensor Firmware Design Guidelines
 

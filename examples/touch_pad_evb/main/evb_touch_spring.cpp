@@ -15,7 +15,6 @@
 #include "freertos/queue.h"
 #include "esp_log.h"
 #include "iot_touchpad.h"
-#include "print_to_scope.h"
 #include "iot_led.h"
 #include "evb.h"
 
@@ -31,7 +30,7 @@ static const char *TAG = "touch_spring";
 #define TOUCH_LED_IDX_0  4
 #define TOUCH_LED_IDX_1  3
 
-static CTouchPad *tp_dev[6] = {0};
+static CTouchPad *tp_dev[10] = {0};
 
 void evb_touch_spring_led_toggle(int idx)
 {
@@ -79,30 +78,15 @@ static void spring_push_cb(void *arg)
     xQueueSend(q_touch, &evt, portMAX_DELAY);
 }
 
-#if SCOPE_DEBUG
-static void scope_task(void *paramater)
-{
-    uint16_t data[4];
-    while (1) {
-        for (int i=0; i<3; i++) {
-            data[i] = tp_dev[i]->value();
-        }
-        tp_dev[0]->get_threshold((uint32_t *)&data[3]);
-        print_to_scope(1, data);
-        vTaskDelay(50 / portTICK_RATE_MS);
-    }
-}
-#endif
-
 void evb_touch_spring_init()
 {
     //single touch
-    tp_dev[0] = new CTouchPad(TOUCH_BUTTON_0, SPRING_BUTTON_THRESH_PERCENT, 0, SPRING_BUTTON_FILTER_VALUE);
-    tp_dev[1] = new CTouchPad(TOUCH_BUTTON_1, SPRING_BUTTON_THRESH_PERCENT, 0, SPRING_BUTTON_FILTER_VALUE);
-    tp_dev[2] = new CTouchPad(TOUCH_BUTTON_2, SPRING_BUTTON_THRESH_PERCENT, 0, SPRING_BUTTON_FILTER_VALUE);
-    tp_dev[3] = new CTouchPad(TOUCH_BUTTON_3, SPRING_BUTTON_THRESH_PERCENT, 0, SPRING_BUTTON_FILTER_VALUE);
-    tp_dev[4] = new CTouchPad(TOUCH_BUTTON_4, SPRING_BUTTON_THRESH_PERCENT, 0, SPRING_BUTTON_FILTER_VALUE);
-    tp_dev[5] = new CTouchPad(TOUCH_BUTTON_5, SPRING_BUTTON_THRESH_PERCENT, 0, SPRING_BUTTON_FILTER_VALUE);
+    tp_dev[0] = new CTouchPad(TOUCH_BUTTON_0, SPRING_BUTTON_MAX_CHANGE_RATE_0);
+    tp_dev[1] = new CTouchPad(TOUCH_BUTTON_1, SPRING_BUTTON_MAX_CHANGE_RATE_1);
+    tp_dev[2] = new CTouchPad(TOUCH_BUTTON_2, SPRING_BUTTON_MAX_CHANGE_RATE_2);
+    tp_dev[3] = new CTouchPad(TOUCH_BUTTON_3, SPRING_BUTTON_MAX_CHANGE_RATE_3);
+    tp_dev[4] = new CTouchPad(TOUCH_BUTTON_4, SPRING_BUTTON_MAX_CHANGE_RATE_4);
+    tp_dev[5] = new CTouchPad(TOUCH_BUTTON_5, SPRING_BUTTON_MAX_CHANGE_RATE_5);
 
     tp_dev[0]->add_cb(TOUCHPAD_CB_PUSH, spring_push_cb, tp_dev[0]);
     tp_dev[1]->add_cb(TOUCHPAD_CB_PUSH, spring_push_cb, tp_dev[1]);
@@ -110,8 +94,4 @@ void evb_touch_spring_init()
     tp_dev[3]->add_cb(TOUCHPAD_CB_PUSH, spring_push_cb, tp_dev[3]);
     tp_dev[4]->add_cb(TOUCHPAD_CB_PUSH, spring_push_cb, tp_dev[4]);
     tp_dev[5]->add_cb(TOUCHPAD_CB_PUSH, spring_push_cb, tp_dev[5]);
-
-#if SCOPE_DEBUG
-    xTaskCreate(scope_task, "scope", 1024*4, NULL, 3, NULL);
-#endif
 }
