@@ -225,7 +225,7 @@ button_handle_t iot_button_create(gpio_num_t gpio_num, button_active_t active_le
     gpio_config_t gpio_conf;
     gpio_conf.intr_type = GPIO_INTR_ANYEDGE;
     gpio_conf.mode = GPIO_MODE_INPUT;
-    gpio_conf.pin_bit_mask = (1 << gpio_num);
+    gpio_conf.pin_bit_mask = (1ULL << gpio_num);
     gpio_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
     gpio_conf.pull_up_en = GPIO_PULLUP_ENABLE;
     gpio_config(&gpio_conf);
