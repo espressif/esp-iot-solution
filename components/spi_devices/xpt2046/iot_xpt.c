@@ -13,7 +13,6 @@
 // limitations under the License.
 #include "iot_xpt2046.h"
 #include "driver/gpio.h"
-#include "iot_xpt_priv.h"
 
 void iot_xpt2046_init(xpt_conf_t * xpt_conf, spi_device_handle_t * spi)
 {

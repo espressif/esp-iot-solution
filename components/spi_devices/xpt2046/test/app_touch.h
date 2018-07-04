@@ -11,8 +11,11 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 #ifndef _IOT_APP_TOUCH_TFT_H_
 #define _IOT_APP_TOUCH_TFT_H_
+
+#include "iot_xpt2046.h"
 
 void lcd_display_top_right();
 
@@ -31,6 +34,8 @@ void lcd_display_point(int x, int y);
 void clear_screen();
 
 void lcd_tft_init(void);
+
+position get_screen_position(position pos);
 
 void xpt2046_touch_init(void);
 

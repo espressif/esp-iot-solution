@@ -11,8 +11,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#ifndef _IOT_XPT2046_H
-#define _IOT_XPT2046_H
+
+#ifndef _XPT2046_H
+#define _XPT2046_H
 
 #include "string.h"
 #include "stdio.h"
@@ -24,7 +25,8 @@
 
 #define TOUCH_CMD_X       0xD0
 #define TOUCH_CMD_Y       0x90
-#define XPT2046_SMPSIZE   20
+#define XPT2046_SMPSIZE   10
+#define XPT2046_SMP_MAX   4095
 
 typedef struct position {
     int x;
@@ -32,19 +34,50 @@ typedef struct position {
 } position;
 
 typedef struct {
-    int8_t pin_num_cs;          /*!<SPI Chip Select Pin*/
+    int8_t pin_num_cs;          /*!< SPI Chip Select Pin*/
     int8_t pin_num_irq;         /*!< Touch screen IRQ pin */
     int clk_freq;               /*!< spi clock frequency */
     spi_host_device_t spi_host; /*!< spi host index*/
 
-    int8_t pin_num_miso;        /*!<MasterIn, SlaveOut pin*/
-    int8_t pin_num_mosi;        /*!<MasterOut, SlaveIn pin*/
-    int8_t pin_num_clk;         /*!<SPI Clock pin*/
+    int8_t pin_num_miso;        /*!< MasterIn, SlaveOut pin*/
+    int8_t pin_num_mosi;        /*!< MasterOut, SlaveIn pin*/
+    int8_t pin_num_clk;         /*!< SPI Clock pin*/
     uint8_t dma_chan;
     bool init_spi_bus;          /*!< Whether to initialize SPI bus */
 } xpt_conf_t;
 
 #ifdef __cplusplus
+extern "C"
+{
+#endif
+
+/**
+ * @brief   xpt2046 device initlize
+ *
+ * @param   xpt_conf pointer of xpt_conf_t
+ * @param   spi pointer of spi_device_handle_t
+ */
+void iot_xpt2046_init(xpt_conf_t * xpt_conf, spi_device_handle_t * spi);
+
+/**
+ * @brief   read xpt2046 data
+ *
+ * @param   spi spi_handle_t
+ * @param   command command of read data
+ * @param   len command len
+ *
+ * @return
+ *     - read data
+ */
+uint16_t iot_xpt2046_readdata(spi_device_handle_t spi, const uint8_t command,
+                              int len);
+
+#ifdef __cplusplus
+}
+#endif
+
+#ifdef __cplusplus
+
 class CXpt2046
 {
 
@@ -53,111 +86,64 @@ private:
     position m_pos;
     bool m_pressed;
     int m_rotation;
-    float m_xfactor;
-    float m_yfactor;
-    int m_offset_x;
-    int m_offset_y;
-    int m_width;
-    int m_height;
     int m_io_irq;
+    SemaphoreHandle_t _spi_mux = NULL;
 
 public:
     /**
      * @brief   constructor of CXpt2046
      *
      * @param   xpt_conf point of xpt_conf_t
-     * @param   w width
-     * @param   h height
+     * @param   rotation screen rotation
      */
-    CXpt2046(xpt_conf_t * xpt_conf, int w, int h, float xfactor = 0.071006,
-             float yfactor = 0.086557, int xoffset = -24, int yoffset = -13);
+    CXpt2046(xpt_conf_t * xpt_conf, int rotation = 0);
 
     /**
-     * @brief   get position struct
+     * @brief   get raw position struct(raw data)
      *
-     * @return
-     *     - position position of pressed
+     * @return 
+     *     - position of pressed
      */
-    position getposition(void);
-
-    /**
-     * @brief   read position of pressed point
-     *
-     * @return
-     *     - int x position
-     */
-    int x(void);
-
-    /**
-     * @brief   read position of pressed point
-     *
-     * @return
-     *     - int y position
-     */
-    int y(void);
+    position get_raw_position(void);
 
     /**
      * @brief   read whether pressed
      *
-     * @return
-     *     - bool is pressed
+     * @return 
+     *     - true pressed
+     *     - false not pressed
      */
     bool is_pressed(void);
-    int get_irq();
 
+    /**
+     * @brief   read irq pin value
+     *
+     * @return 
+     *     - value of irq pin value
+     */
+    int get_irq();
 
     /**
      * @brief   set rotation
-     *
-     * touch self:
-     *------------------------> (height)
-     *|
-     *|
-     *|
-     *|
-     *|
-     *|
-     *V(width)
-     * we make a rotate while use x() or y() function
-     *
-     * @return
-     *     - void
+     * 
+     * @param   rotation screen rotation value, eg:0,1,2,3
      */
-    void set_rotation(int r);
+    void set_rotation(int rotation);
 
     /**
-     * @brief   get sample data
+     * @brief   get sample value
      *
      * @param   command command of sample
      *
      * @return
-     *     - int sample data x of y
+     *     - sample value
      */
     int get_sample(uint8_t command);
 
     /**
      * @brief   sample and calculator
-     *
-     * @return
-     *     - void
      */
     void sample(void);
-
-    /**
-     * @brief   calibration touch device
-     *
-     * @return
-     *     - void
-     */
-    void calibration(void);
-
-    /**
-     * @brief   set offset
-     *
-     * @return
-     *     - void
-     */
-    void set_offset(float xfactor, float yfactor, int x_offset, int y_offset);
 
 };
 #endif

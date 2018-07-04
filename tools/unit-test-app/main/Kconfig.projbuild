@@ -58,4 +58,13 @@ menu "IoT unit-test settings"
             default "5"
     endmenu
 
+    menu "XPT2046 Pin Configuration"
+        config XPT2046_CS_GPIO
+            int "XPT2046_CS_GPIO"
+            default "32"
+        config XPT2046_IRQ_GPIO
+            int "XPT2046_IRQ_GPIO"
+            default "33"
+    endmenu
+
 endmenu
