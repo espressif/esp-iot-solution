@@ -39,6 +39,10 @@ build:
     - cd ../empty_project
     - make defconfig
     - make -j8
+    - cd ../hmi/ugfx_example
+    - make defconfig
+    - make -j8
+    - cd ../
     - cd ../touch_pad_evb
     - make defconfig
     - make -j8

@@ -23,7 +23,7 @@
         }
 
 #define PARAM_ERR_ASSERT(tag, param, ret)  PARAM_CHECK(tag, (param) == ESP_OK, ret)
-#define PARAM_POINT_ASSERT(tag, param, ret)	PARAM_CHECK(tag, (param) != NULL, ret)
+#define PARAM_POINT_ASSERT(tag, param, ret) PARAM_CHECK(tag, (param) != NULL, ret)
 
 static const char* TAG = "param";
 

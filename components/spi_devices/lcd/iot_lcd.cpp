@@ -40,7 +40,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "iot_lcd.h"
 #include "spi_lcd.h"
 #include "font7s.h"
-#include "glcdfont.h"
 
 #include "esp_partition.h"
 #include "esp_log.h"
@@ -80,6 +79,16 @@ CEspLcd::~CEspLcd()
     vSemaphoreDelete(spi_mux);
 }
 
+void CEspLcd::acquireBus()
+{
+    xSemaphoreTakeRecursive(spi_mux, portMAX_DELAY);
+}
+
+void CEspLcd::releaseBus()
+{
+    xSemaphoreGiveRecursive(spi_mux);
+}
+
 void CEspLcd::setSpiBus(lcd_conf_t *lcd_conf)
 {
     cmd_io = (gpio_num_t) lcd_conf->pin_num_dc;
@@ -90,7 +99,7 @@ void CEspLcd::setSpiBus(lcd_conf_t *lcd_conf)
     id.lcd_id = (id.id >> (8 * 3)) & 0xff;
 }
 
-inline void CEspLcd::setAddrWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1)
+void CEspLcd::setAddrWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1)
 {
     xSemaphoreTakeRecursive(spi_mux, portMAX_DELAY);
     transmitCmdData(LCD_CASET, MAKEWORD(x0 >> 8, x0 & 0xFF, x1 >> 8, x1 & 0xFF));
@@ -99,32 +108,40 @@ inline void CEspLcd::setAddrWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16
     xSemaphoreGiveRecursive(spi_mux);
 }
 
-inline void CEspLcd::transmitData(uint16_t data)
+void CEspLcd::transmitData(uint16_t data)
 {
     xSemaphoreTakeRecursive(spi_mux, portMAX_DELAY);
     lcd_data(spi_wr, (uint8_t *)&data, 2, &dc);
     xSemaphoreGiveRecursive(spi_mux);
 }
-inline void CEspLcd::transmitCmdData(uint8_t cmd, uint32_t data)
+
+void CEspLcd::transmitData(uint8_t data)
+{
+    xSemaphoreTakeRecursive(spi_mux, portMAX_DELAY);
+    lcd_data(spi_wr, (uint8_t *)&data, 1, &dc);
+    xSemaphoreGiveRecursive(spi_mux);
+}
+
+void CEspLcd::transmitCmdData(uint8_t cmd, uint32_t data)
 {
     xSemaphoreTakeRecursive(spi_mux, portMAX_DELAY);
     lcd_cmd(spi_wr, cmd, &dc);
     lcd_data(spi_wr, (uint8_t *)&data, 4, &dc);
     xSemaphoreGiveRecursive(spi_mux);
 }
-inline void CEspLcd::transmitData(uint16_t data, int32_t repeats)
+void CEspLcd::transmitData(uint16_t data, int32_t repeats)
 {
     xSemaphoreTakeRecursive(spi_mux, portMAX_DELAY);
     lcd_send_uint16_r(spi_wr, data, repeats, &dc);
     xSemaphoreGiveRecursive(spi_mux);
 }
-inline void CEspLcd::transmitData(uint8_t* data, int length)
+void CEspLcd::transmitData(uint8_t* data, int length)
 {
     xSemaphoreTakeRecursive(spi_mux, portMAX_DELAY);
     lcd_data(spi_wr, (uint8_t *)data, length, &dc);
     xSemaphoreGiveRecursive(spi_mux);
 }
-inline void CEspLcd::transmitCmd(uint8_t cmd)
+void CEspLcd::transmitCmd(uint8_t cmd)
 {
     xSemaphoreTakeRecursive(spi_mux, portMAX_DELAY);
     lcd_cmd(spi_wr, cmd, &dc);
@@ -154,7 +171,7 @@ void CEspLcd::drawPixel(int16_t x, int16_t y, uint16_t color)
     }
     xSemaphoreTakeRecursive(spi_mux, portMAX_DELAY);
     setAddrWindow(x, y, x + 1, y + 1);
-    transmitData(SWAPBYTES(color));
+    transmitData((uint16_t) SWAPBYTES(color));
     xSemaphoreGiveRecursive(spi_mux);
 }
 
@@ -603,131 +620,4 @@ int CEspLcd::drawFloat(float floatNumber, uint8_t decimal, uint16_t poX, uint16_
         decy -= temp;
     }
     return poX;
-}
-
-void CEspLcd::drawChar(int16_t x, int16_t y, unsigned char c, uint16_t color, uint16_t bg, uint8_t size)
-{
-    uint16_t swapped_foregnd_color = SWAPBYTES(color);  //SWAP earlier, or use SPI LSB first mode
-    uint16_t swapped_backgnd_color = SWAPBYTES(bg);
-
-    if(!gfxFont) { // 'Classic' built-in font
-
-        if((x >= _width)            || // Clip right
-           (y >= _height)           || // Clip bottom
-           ((x + 6 * size - 1) < 0) || // Clip left
-           ((y + 8 * size - 1) < 0))   // Clip top
-            return;
-
-        if(!_cp437 && (c >= 176)) c++; // Handle 'classic' charset behavior
-
-        //Check if bg!=color which is a flag for transperant backgrounds in our case
-        if(color != bg) {
-            //Make a premade bmp canvas and push the entire char canvas to the screen
-            uint16_t bmp[8][5];
-            for (uint8_t i = 0; i < 5; i++) { // Char bitmap = 5 columns
-                uint8_t line = font[c * 5 + i];
-                for (uint8_t j = 0; j < 8; j++, line >>= 1) {
-                    if(line & 1) {
-                        if(size == 1) {
-                            bmp[j][i] = swapped_foregnd_color;
-                            //drawPixel(x+i, y+j, color); //The Old Adafruit way
-                        }
-                        else {
-                            fillRect(x+i*size, y+j*size, size, size, color); //not as fast... set font size = 1 for speed
-                        }
-                    }
-                    else {
-                        bmp[j][i] = swapped_backgnd_color;
-                    }
-                }
-            }
-
-            if(size == 1) {
-                uint16_t bmp_arr[40];
-                for (uint8_t cnt = 0; cnt < 40; cnt++) {
-                    bmp_arr[cnt] = (bmp[(uint8_t)(cnt / 5)][(uint8_t)(cnt % 5)]); //5*8 Matrix to 40 element Array
-                }
-                drawBitmapFont(x, y, 5, 8, bmp_arr); //Speeds up fonts instead of using drawPixel
-            }
-        }
-
-        //If user wants transperant background, check for transperancy flag which is (color == bg)
-        else if(color == bg) {
-            //Can't speedup fonts since no pushing pre-made canvas not possible, the fonts printed by this loop will be slow
-            for (uint8_t i = 0; i < 5; i++) { // Char bitmap = 5 columns
-                uint8_t line = font[c * 5 + i];
-                for (uint8_t j = 0; j < 8; j++, line >>= 1) {
-                    if(line & 1) {
-                        if(size == 1) {
-                            drawPixel(x+i, y+j, color); //The Old Adafruit way
-                        }
-                        else {
-                            fillRect(x+i*size, y+j*size, size, size, color); //not as fast... set font size = 1 for speed
-                        }
-                    }
-                }
-            }
-        }
-    }
-    else {
-        // Custom font
-        // Character is assumed previously filtered by write_char() to eliminate
-        // newlines, returns, non-printable characters, etc.  Calling
-        // drawChar() directly with 'bad' characters of font may cause mayhem!
-
-        c -= (uint8_t)gfxFont->first;
-        GFXglyph *glyph  = &(((GFXglyph *)(gfxFont->glyph))[c]);
-        uint8_t  *bitmap = (uint8_t *)(gfxFont->bitmap);
-
-        uint16_t bo = glyph->bitmapOffset;
-        uint8_t  w  = glyph->width,
-                 h  = glyph->height;
-        int8_t   xo = glyph->xOffset,
-                 yo = glyph->yOffset;
-        uint8_t  xx, yy, bits = 0, bit = 0;
-        int16_t  xo16 = 0, yo16 = 0;
-
-        if(size > 1) {
-            xo16 = xo;
-            yo16 = yo;
-        }
-        if(color != bg) {
-            uint16_t bmp[w+5][h+5]; //w*h plus some extra space
-            for(yy=0; yy<h; yy++) {
-                for(xx=0; xx<w; xx++) {
-                    if(!(bit++ & 7)) {
-                        bits = bitmap[bo++];
-                    }
-
-                    if(bits & 0x80) {
-                        if(size == 1) {
-                            //drawPixel(x+xo+xx, y+yo+yy, color); //Old adafruit way
-                            bmp[yy][xx] = swapped_foregnd_color;
-                        }
-                        else {
-                            fillRect(x+(xo16+xx)*size, y+(yo16+yy)*size, size, size, color);
-                        }
-                    }
-
-                    if(!(bits & 0x80)) {
-                        bmp[yy][xx] = swapped_backgnd_color;
-                    }
-                    bits <<= 1;
-                }
-            }
-
-            if (size == 1) {
-                uint16_t bmp_arr[w*h];
-                for (uint8_t cnt = 0; cnt < w*h; cnt++) {
-                    bmp_arr[cnt] = (bmp[(uint8_t)(cnt / w)][(uint8_t)(cnt % w)]);
-                }
-                drawBitmapFont(x+xo, y+yo, w, h, bmp_arr); //Speeds up fonts instead of using drawPixel
-            }
-        }
-
-        else if(color == bg) {
-            //Unimplemented: Transparent bg for custom fonts
-            ESP_LOGE("LCD", "Custom fonts with transparent bg not supported yet\n");
-        }
-    } // End classic vs custom font
 }
