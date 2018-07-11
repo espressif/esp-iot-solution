@@ -90,6 +90,11 @@ menu "IoT Solution settings"
                 default n
                 help
                     "Select this one to enable ULP monitor device"
+            config IOT_LOWPOWER_APP_FRAMEWORK_ENABLE
+                bool "LOWPOWER_APP_FRAMEWORK_ENABLE"
+                default n
+                help
+                    "Select this one to enable lowpower application framework"
             config IOT_BUTTON_ENABLE
                 bool "BUTTON_DEVICE_ENABLE"
                 default y

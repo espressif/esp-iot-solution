@@ -25,7 +25,6 @@ extern "C" {
 #include "driver/pcnt.h"
 #include "soc/ledc_struct.h"
 #include "iot_a4988.h"
-#include "iot_resource.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
@@ -151,7 +150,7 @@ CA4988Stepper::CA4988Stepper(int step_io, int dir_io, int number_of_steps, ledc_
     ledc_timer.timer_num = pstepper->ledc_timer;           // timer index
     ledc_timer_config(&ledc_timer);
 
-    ledc_channel_config_t ledc_ch = {0};
+    ledc_channel_config_t ledc_ch;
     ledc_ch.channel    = pstepper->ledc_channel;
     ledc_ch.duty       = 0;
     ledc_ch.gpio_num   = pstepper->step_io;
@@ -263,7 +262,6 @@ esp_err_t CA4988Stepper::setSpeedRpmCur(int rpm)
 esp_err_t CA4988Stepper::wait()
 {
     stepper_dev_t *pstepper = (stepper_dev_t*) m_stepper;
-    BaseType_t res = pdFALSE;
     xSemaphoreTake(pstepper->mux, portMAX_DELAY);
     if (pstepper->steps_left != 0) {
         xSemaphoreTake(pstepper->sem, portMAX_DELAY);
@@ -349,6 +347,9 @@ esp_err_t CA4988Stepper::step(int steps, TickType_t ticks_to_wait, bool instant)
 
     BaseType_t res = xSemaphoreTake(pstepper->sem, ticks_to_wait);
     xSemaphoreGive(pstepper->mux);
+    if (res == pdFALSE) {
+        return ESP_ERR_TIMEOUT;
+    }
     return ESP_OK;
 }
 

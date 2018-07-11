@@ -17,6 +17,10 @@
 #include "esp_smartconfig.h"
 #include "esp_wifi.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @brief Get smartconfig status
  * @return Smartconfig status
@@ -47,5 +51,9 @@ esp_err_t iot_sc_start(uint32_t ticks_to_wait);
  * @brief Smartconfig stop
  */
 void sc_stop();
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

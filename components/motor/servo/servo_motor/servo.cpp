@@ -58,7 +58,7 @@ CServo::CServo(int servo_io, int max_angle, int min_width_us, int max_width_us, 
     ledc_timer.timer_num = m_timer;            // timer index
     ledc_timer_config(&ledc_timer);
 
-    ledc_channel_config_t ledc_ch = {0};
+    ledc_channel_config_t ledc_ch;
     ledc_ch.channel    = m_chn;
     ledc_ch.duty       = 0;          //todo: set init angle
     ledc_ch.gpio_num   = servo_io;

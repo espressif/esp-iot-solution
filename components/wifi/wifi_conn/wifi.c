@@ -58,6 +58,7 @@ static esp_err_t wifi_event_handler(void *ctx, system_event_t *event)
         case SYSTEM_EVENT_STA_DISCONNECTED:
             s_wifi_sta_st = WIFI_STATUS_STA_DISCONNECTED;
             ESP_LOGI(TAG, "SYSTEM_EVENT_STA_DISCONNECTED\n");
+            esp_wifi_connect();
             // Clear event bit so WiFi task knows the disconnect-event
             xEventGroupClearBits(s_wifi_event_group, WIFI_CONNECTED_EVT);
             break;

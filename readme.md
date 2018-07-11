@@ -53,7 +53,10 @@
     - It provides a framework for a ESP32 smart device (smart plug, smart light, etc) to connect and communicate with a cloud service.
     - Keywords: __SmartLight SmartPlug Alink Joylink__
 
-
+* [ESP32 Lowpower EVB Example](examples/lowpower_evb)
+    - An example to show how to use ESP32 lowpower framework to build applications with ESP32 lowpower evaluating board.
+    - Keywords: __ESP32_Lowpower_EVB ULP Deepsleep Lowpower__
+    
 * [ESP32 Touch Sensor Example](examples/touch_pad_evb)
     - An example for the ESP32 touch sensor development kit, ESP32-Sense, which is used to evaluate and develop ESP32 touch sensor system.
     - Keywords: __TouchSensor ESP32-Sense__
@@ -97,6 +100,8 @@
 ### Features
 [TouchPad](./components/features/touchpad) - Driver and example of using different types of touch pad.<br>
 [Infrared](./components/features/infrared) - Driver and framework of using infrared remote control.<br>
+### Framework
+[Lowpower_framework](./components/framework/lowpower_framework) - Development framework for lowpower applications.<br>
 ### General fucntions
 [Button](./components/general/button) - Driver and example of using buttons and keys.<br>
 [Debugs](./components/general/debugs) - Provides different commands for debugging via UART.<br>
