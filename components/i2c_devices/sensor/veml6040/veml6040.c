@@ -114,8 +114,8 @@ esp_err_t iot_veml6040_set_mode(veml6040_handle_t sensor, veml6040_config_t * de
     uint8_t cmd_buf = 0;
     veml6040_dev_t* dev = (veml6040_dev_t*) sensor;
     cmd_buf = device_info->integration_time << 4
-            | device_info->trigger << 3
-            | device_info->mode << 2
+            | device_info->trigger << 2
+            | device_info->mode << 1
             | device_info->switch_en;
     dev->config.integration_time = device_info->integration_time;
     dev->config.trigger          = device_info->trigger;
