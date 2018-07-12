@@ -68,7 +68,7 @@
 * 数据传输完成处理
 
 低功耗软件框架流程图如下图所示。  
-![](../../../documents/_static/lowpower_evb/workflow_of_framwork.png)
+![](../../documents/_static/lowpower_evb/workflow_of_framwork.png)
 
 ### 2.2 文件与接口说明
 此 demo 的主要文件结构如下：
@@ -98,12 +98,12 @@
     │   │   ├── component.mk
     │   │   ├── include
     │   │   │   └── lowpower_evb_ulp_opt.h
-    │   │   └── ulp                           // ULP 读取传感器的实现
-    │   │       ├── bh1750.S                  // 亮度传感器 BH1750 的操作
-    │   │       ├── hts221.S                  // 温湿度传感器 HTS221 的操作
-    │   │       ├── i2c_dev.S                 // 程序运行入口
-    │   │       ├── i2c.S                     // I2C 驱动（软件模拟）
-    │   │       └── stack.S                   // 堆栈实现
+    │   │   └── ulp                             // ULP 读取传感器的实现
+    │   │       ├── bh1750.S                    // 亮度传感器 BH1750 的操作
+    │   │       ├── hts221.S                    // 温湿度传感器 HTS221 的操作
+    │   │       ├── i2c_dev.S                   // 程序运行入口
+    │   │       ├── i2c.S                       // I2C 驱动（软件模拟）
+    │   │       └── stack.S                     // 堆栈实现
     │   └── lowpower_evb_wifi                   // Wi-Fi 配置与连接
     │       ├── lowpower_evb_wifi.cpp
     │       ├── component.mk
@@ -117,7 +117,7 @@
     ├── readme_cn.md
     ├── readme.md
     ├── sdkconfig.defaults
-    └── sensor_server.py                      // 简易服务器搭建脚本
+    └── sensor_server.py                        // 简易服务器搭建脚本
 
 ### 2.3 基于低功耗软件框架的 Demo 设计
 为了帮助用户快速熟悉低功耗软件框架，本工程专门准备了一个 demo，对框架流程中的各个部分进行实现，主要包括：
@@ -136,7 +136,7 @@
 
 #### 2.3.2 Wi-Fi 配置与连接
 Wi-Fi 的配置使用乐鑫自主研发的 ESP Touch 进行配网。在本 demo 中，为了使设备重启后能够自动连接上之前配置过的网络，我们在完成 Wi-Fi 配置后会将配置信息保存到 flash 中。这样，设备在每次重启后都先从 flash 读取配置信息，若已存在配置信息，则直接连接到相应的 AP；若不存在配置信息，则自动进入 Smartconfig 进行配网，具体实现的流程图如下所示：  
-![](../../../documents/_static/lowpower_evb/wifi_config.png)     
+![](../../documents/_static/lowpower_evb/wifi_config.png)  
 本设计使用 Wi-Fi 指示灯来指示配网的过程：进入 Smartconfig 时指示灯快速闪烁，Wi-Fi 连接成功后，指示灯常亮。  
 若用户需要重新进入配网（例如要将设备连接到另一个路由器）上，本 demo 中设计了一个按键（WakeUp 按键）来触发进入配网的操作，该按键触发后，首先清除 flash 中的相关配置信息，然后重启设备。此时，由于设备重启后从 flash 中读取 Wi-Fi 配置信息不存，将自动进入配网模式。需要注意的是该按键需要在设备处于唤醒状态时才能触发配网。 
 用户在开发时也可以修改成自己的配网方式。
@@ -153,9 +153,8 @@ ULP 协处理器有一套专属的汇编指令来进行程序的编写，在编�
 #### 2.3.5 上传数据至服务器
 设备可将数据上传至服务器，允许服务器对上传的数据进行保存、查看与分析。在本 demo 中，设备会将获取的传感器数据上传到指定服务器。  
 为了避免主 CPU 长时间运行，本 demo 将设备连接超时时间设置为 10s。因此，设备在连接超时后进入 deep sleep，等待下一次醒来。这里，我们使用 Network 指示灯来显示连接状态：在尝试连接的过程中指示灯快速闪烁、连接成功后指示灯常亮。注意，设备连接服务器之前需连接至 Wi-Fi。  
-服务器端收到数据后会打印出来，如下图所示：
-
-![](../../../documents/_static/lowpower_evb/sensor_server_data.png)  
+服务器端收到数据后会打印出来，如下图所示：  
+![](../../documents/_static/lowpower_evb/sensor_server_data.png)  
 在本 demo 中，数据发送完成后，设备会在墨水屏上显示上传的最后一组数据（作为墨水屏的参考设计）。用户可根据实际需求，修改数据发送完毕后的处理。
 
 #### 2.3.6 睡眠与唤醒

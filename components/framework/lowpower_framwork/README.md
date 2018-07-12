@@ -4,4 +4,4 @@
 * When use this framework, user just need to register the relevant callback functions, and start the framework.
 
 * The workflow of this framework is as shown in the following figure  
-![](../../../documents/_static/battery_eb/workflow_of_framwork.png)  
+![](../../../documents/_static/lowpower_evb/workflow_of_framwork.png)  
