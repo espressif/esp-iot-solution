@@ -47,7 +47,7 @@ The ULP co-processor can only be developed in assembly and compiled using the to
 The ULP co-processor assembly enviroment is set up now.
 
 #### 3.2 Windows
-1. Install download the Windows all-in-one toolchain & MSYS2 zip file. Please refer to [standard setup of toolchain for windows](http://esp-idf.readthedocs.io/en/latest/get-started/windows-setup.html).
+1. Install download the Windows all-in-one toolchain & MSYS2 zip file. Please refer to [standard setup of toolchain for windows](http://docs.espressif.com/projects/esp-idf/en/latest/get-started/windows-setup.html).
 2. Download [ULP toolchain](https://github.com/espressif/binutils-esp32ulp/wiki#downloads).
 3. Unzlip the ULP toolchain `esp32ulp-elf-binutils-win32-...` into MSYS2's `opt` directory. `C:\msys32\opt` directory is recommended, since it also contains the ESP32 toolchain `xtensa-esp32-elf`.
 4. Open `esp32_toolchain.sh` file in `C:\msys32\etc\profile.d` directory for editing and add the path to the `bin` directory of the toolchain to the `PATH` environment variable, as shown below:  
@@ -75,13 +75,13 @@ ULP_S_SOURCES = $(COMPONENT_PATH)/ulp/ulp_source_file.S
 ULP_EXP_DEP_OBJECTS := main.o
 include $(IDF_PATH)/components/ulp/component_ulp_common.mk
 ```
-Each line is explained in [Compiling ULP Code](http://esp-idf.readthedocs.io/en/latest/api-guides/ulp.html#compiling-ulp-code).
+Each line is explained in [Compiling ULP Code](http://docs.espressif.com/projects/esp-idf/en/latest/api-guides/ulp.html#compiling-ulp-code).
 
 3. Build the application as usual (e.g. make app).
 
 ## 5. Assembly Instructions
 
-There are 24 assembly instructions for the ULP co-processor that are documented in details in [ULP coprocessor instruction set](http://esp-idf.readthedocs.io/en/latest/api-guides/ulp_instruction_set.html).
+There are 24 assembly instructions for the ULP co-processor that are documented in details in [ULP coprocessor instruction set](http://docs.espressif.com/projects/esp-idf/en/latest/api-guides/ulp_instruction_set.html).
 
 #### Algorithm and logical instructions
 * Algorithm instructions: ADD (add to register), SUB (subtract from register)
@@ -131,4 +131,4 @@ You can find some ULP co-processor examples within [esp-iot-solution](https://gi
 
 ## 7. Related Documents
 * [Low Power Solution](https://github.com/espressif/esp-iot-solution/tree/master/documents/low_power_solution)
-* [ULP Co-processor Programming](https://esp-idf.readthedocs.io/en/latest/api-guides/ulp.html)
+* [ULP Co-processor Programming](https://docs.espressif.com/projects/esp-idf/en/latest/api-guides/ulp.html)

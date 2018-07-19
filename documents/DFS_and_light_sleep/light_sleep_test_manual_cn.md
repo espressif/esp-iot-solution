@@ -4,7 +4,7 @@
 
 - **1. 工具链的安装**
 
-esp-iot-solution 使用 esp-idf 同一套工具链, 所以如果你的平台上能够编译 esp-idf 中的 example, 则工具链无须重复安装. 工具链的详细安装步骤可以在 [ESP-IDF Programming Guide](https://esp-idf.readthedocs.io/en/latest/get-started/index.html) 找到, 这里与不多加描述.
+esp-iot-solution 使用 esp-idf 同一套工具链, 所以如果你的平台上能够编译 esp-idf 中的 example, 则工具链无须重复安装. 工具链的详细安装步骤可以在 [ESP-IDF Programming Guide](https://docs.espressif.com/projects/esp-idf/en/latest/get-started/index.html) 找到, 这里与不多加描述.
 
 - **2. 测试代码下载**
 

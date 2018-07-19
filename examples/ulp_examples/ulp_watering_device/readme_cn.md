@@ -33,9 +33,9 @@ ULP 协处理器大部分时间处于睡眠状态，定时唤醒后，通过 SAR
 ![](../../../documents/_static/ulp_demo/e_1.jpg)
 
 ## 4.软件部分
-ESP32 的 C 语言编译环境安装和配置参照 [链接地址](https://esp-idf.readthedocs.io/en/latest/get-started/index.html#setup-toolchain)，另外 ULP 协处理器目前只支持汇编编程，所以还需要安装汇编工具链，下面介绍汇编工具链的安装和配置。
+ESP32 的 C 语言编译环境安装和配置参照 [链接地址](https://docs.espressif.com/projects/esp-idf/en/latest/get-started/index.html#setup-toolchain)，另外 ULP 协处理器目前只支持汇编编程，所以还需要安装汇编工具链，下面介绍汇编工具链的安装和配置。
 #### 4.1 汇编环境的配置
-ULP 协处理器配置汇编编译工具链，只需两步即可安装配置完毕，下面给出 ubuntu 操作系统下配置的步骤，或者点击 [链接地址](http://esp-idf.readthedocs.io/en/latest/api-guides/ulp.html) 获得更多 ULP 编程信息
+ULP 协处理器配置汇编编译工具链，只需两步即可安装配置完毕，下面给出 ubuntu 操作系统下配置的步骤，或者点击 [链接地址](http://docs.espressif.com/projects/esp-idf/en/latest/api-guides/ulp.html) 获得更多 ULP 编程信息
 >* 第一步, 下载工具链 `binutils-esp32ulp toolchain`  [链接地址]( https://github.com/espressif/binutils-esp32ulp/wiki#downloads), 解压到需要安装的目录
 >* 第二步，添加工具链的 `bin` 目录到系统环境变量 `PATH` 中。例如我的解压目录是 `/opt/esp32ulp-elf-binutils` 那么添加 `export PATH=/opt/esp32ulp-elf-binutils/bin:$PATH` 这一行到 /home 目录的隐藏文件 `.bashrc` 文件最后一行，保存关闭文件并使用命令 `source .bashrc` 使上述环境变量生效
 
