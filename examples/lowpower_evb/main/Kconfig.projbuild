@@ -80,7 +80,6 @@ menu "Lowpower EVB settings"
 
     config READ_SENSOR_INTERVAL
 		int "Read sensor interval(ms)"
-		range 0 65535
 		default 200
 		help
 		    "Set read sensor interval"

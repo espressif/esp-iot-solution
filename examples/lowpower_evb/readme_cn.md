@@ -174,10 +174,13 @@ ULP 协处理器有一套专属的汇编指令来进行程序的编写，在编�
 | 电流测量位置 | 测试条件 | 电流值 | 测试方法 | 备注 |
 |---|---|---|---|---|
 |3.3V-3.3V_ESP32|deep sleep（GPIO 唤醒）|10 uA|在程序启动之后不做其他操作，将唤醒方式设定为 GPIO 唤醒，然后进入 Deep-sleep 模式，测量电流值。| 其中，Reset Protect 芯片 5 uA + ESP32-WROOM-32 5 uA |
-|3.3V-3.3V_ESP32|deep sleep （ULP 唤醒）|2.8 mA|将唤醒方式设定为 ULP 唤醒，然后进入 Deep-sleep 模式，ULP 此时正在运行。| / |
+|3.3V-3.3V_ESP32|deep sleep （ULP 唤醒）|1.8 mA|将唤醒方式设定为 ULP 唤醒，然后进入 Deep-sleep 模式，ULP 此时正在运行。| / |
 |3.3V-PER_3.3V|两个传感器工作| 1.6 mA |控制 IO27 将传感器供电打开| / |
 |3.3V-PER_3.3V|两个传感器和墨水屏工作| 9.2 mA |控制 IO27 将传感器供电打开，控制 IO14 将墨水屏供电打开| / |
 |DCVCC-SUFVCC|deep sleep（GPIO 唤醒）|20 uA|在程序启动之后不做其他操作，将唤醒方式设定为 GPIO 唤醒，然后进入 Deep-sleep 模式，测量电流值。| 其中， Reset Protect 芯片 5 uA + ESP32-WROOM-32 5uA + DC-DC 部分 10 uA |
-|DCVCC-SUFVCC|deep sleep（ULP 唤醒）|4.4 mA|将唤醒方式设定为 ULP 唤醒，然后进入 Deep-sleep 模式，ULP 此时正在运行，且读取传感器数据。| / |
+|DCVCC-SUFVCC|deep sleep（ULP 唤醒）|3.4 mA|将唤醒方式设定为 ULP 唤醒，然后进入 Deep-sleep 模式，ULP 此时正在运行，且读取传感器数据。| / |
 |CHVBA-VBA|将电池和 USB 都接上| 电流值会随着电量变化而变化 |直接测量| / |
 |EXT5V-CH5V|将电池和 USB 都接上| 电流值会随着电量变化而变化 |直接测量| / |
+
+如果 ULP 一直持续运行，模组部分的电流是 1.8 mA，可以利用 ULP 的定时睡眠功能，来进一步降低功耗。在本 demo 中可以通过 menuconfig 中的 `Read sensor interval(ms)` 选项设置 ULP 醒来读取传感器的时间间隔，这个时间设置得越长，平均功耗就会越低，电池能够使用的时间也越长，相应地读取的数据也会较少，客户在设置这个参数时可以根据实际的使用环境与要求设置一个合理的值。下图为 ULP 在读取数据时模组的电流波形，读取周期为 200 ms，在读取传感器时平均电流约为 1.8 mA，读取传感器完成后进入睡眠，睡眠时平均电流仅为 5 uA。  
+![](../../documents/_static/lowpower_evb/ulp_read_sensor_current.png)

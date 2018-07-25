@@ -12,7 +12,9 @@
 
 #include "soc/rtc_cntl_reg.h"
 #include "soc/rtc_io_reg.h"
+#include "soc/rtc.h"
 #include "soc/soc.h"
+#include "soc/sens_reg.h"
 #include "driver/rtc_io.h"
 #include "esp32/ulp.h"
 #include "lowpower_evb_ulp.h"
@@ -46,9 +48,10 @@ void set_ulp_read_value_number(uint16_t value_number)
     ulp_value_number = value_number;
 }
 
-void set_ulp_read_interval(uint16_t time_ms)
+void set_ulp_read_interval(uint32_t time_ms)
 {
-    ulp_read_interval = time_ms;
+    const uint32_t sleep_cycles = rtc_clk_slow_freq_get_hz() * time_ms / 1000;
+    REG_WRITE(SENS_ULP_CP_SLEEP_CYC0_REG, sleep_cycles);
 }
 
 void get_ulp_hts221_humidity(float hum[], uint16_t value_num)

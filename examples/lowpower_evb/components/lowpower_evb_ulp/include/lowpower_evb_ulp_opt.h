@@ -40,9 +40,9 @@ void set_ulp_read_value_number(uint16_t value_number);
 /**
  * @brief set interval of ulp read sensor.
  *
- * @value_number value number.
+ * @time_ms time interval(ms).
  */
-void set_ulp_read_interval(uint16_t time_ms);
+void set_ulp_read_interval(uint32_t time_ms);
 
 /**
  * @brief get humidity value from RTC memory.
