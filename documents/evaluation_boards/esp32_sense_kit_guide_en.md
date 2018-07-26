@@ -14,7 +14,7 @@ The following image shows the whole ESP32-Sense development kit.
 ## 2. Related Resources
 
 - **Set up Software Environment**  
-    - [ESP-IDF](https://github.com/espressif/esp-idf) is the SDK for ESP32. You can refer to [Get Started](https://esp-idf.readthedocs.io/en/latest/get-started/index.html) for how to set up the ESP32 software environment.
+    - [ESP-IDF](https://github.com/espressif/esp-idf) is the SDK for ESP32. You can refer to [Get Started](https://docs.espressif.com/projects/esp-idf/en/latest/get-started/index.html) for how to set up the ESP32 software environment.
     - [ESP-Prog](./ESP-Prog_guide_en.md) is the debugger for ESP32 that features download and debugging functions.
 
 - **ESP32 IoT Solution**  
@@ -27,7 +27,7 @@ The following image shows the whole ESP32-Sense development kit.
 
 - **Related Resources**  
     - [Espressif website](https://espressif.com)
-    - [ESP32 programming guide](https://esp-idf.readthedocs.io/en/latest/index.html): It hosts extensive documentation for ESP-IDF ranging from hardware guides to API reference.   
+    - [ESP32 programming guide](https://docs.espressif.com/projects/esp-idf/en/latest/index.html): It hosts extensive documentation for ESP-IDF ranging from hardware guides to API reference.   
     - [ESP32 touch sensor design](../touch_pad_solution/readme_en.md): It is the reference design manual for the ESP32 touch sensor system.
 
 - **Technical Support**  

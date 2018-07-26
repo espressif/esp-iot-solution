@@ -153,7 +153,7 @@ The figure below illustrates a typical development flow of an ESP32 capacitive t
 
 **Debounce**: Touch threshold and hysteresis have certain ranges. The designer should set appropriate thresholds to reject spurious touch signals. For a consecutive debounce number of scan samples, a finger touch is reported only if the difference count is greater than touch threshold + hysteresis.
 
-**API**: Is the Application Programming Interface for the ESP touch sensor. The core functions are provided by [ESP-IDF](https://github.com/espressif/esp-idf) and documented in [Touch Sensor API Reference](https://esp-idf.readthedocs.io/en/latest/api-reference/peripherals/touch_pad.html). The API extension is avialable as [touchpad component](../../components/features/touchpad).
+**API**: Is the Application Programming Interface for the ESP touch sensor. The core functions are provided by [ESP-IDF](https://github.com/espressif/esp-idf) and documented in [Touch Sensor API Reference](https://docs.espressif.com/projects/esp-idf/en/latest/api-reference/peripherals/touch_pad.html). The API extension is avialable as [touchpad component](../../components/features/touchpad).
 
 ## 2. Introduction to the ESP32 Touch Sensor System
 
@@ -272,8 +272,8 @@ The two figures below show the comparison between the filter performances when t
 
 Filter-related APIs:
 
-* [`esp_err_t touch_pad_filter_start(uint32_t filter_period_ms)`](https://esp-idf.readthedocs.io/en/latest/api-reference/peripherals/touch_pad.html#_CPPv222touch_pad_filter_start8uint32_t)
-* [`esp_err_t touch_pad_read_filtered(touch_pad_t touch_num, uint16_t *touch_value)`](https://esp-idf.readthedocs.io/en/latest/api-reference/peripherals/touch_pad.html#_CPPv223touch_pad_read_filtered11touch_pad_tP8uint16_t)
+* [`esp_err_t touch_pad_filter_start(uint32_t filter_period_ms)`](https://docs.espressif.com/projects/esp-idf/en/latest/api-reference/peripherals/touch_pad.html#_CPPv222touch_pad_filter_start8uint32_t)
+* [`esp_err_t touch_pad_read_filtered(touch_pad_t touch_num, uint16_t *touch_value)`](https://docs.espressif.com/projects/esp-idf/en/latest/api-reference/peripherals/touch_pad.html#_CPPv223touch_pad_read_filtered11touch_pad_tP8uint16_t)
 
 
 #### 2.4.2. Setting Measure Time
@@ -288,7 +288,7 @@ The following figure shows a voltage waveform at a touch pin, captured by an osc
 
 Related APIs:
 
-* [`esp_err_t touch_pad_set_meas_time(uint16_t sleep_cycle, uint16_t meas_cycle)`](https://esp-idf.readthedocs.io/en/latest/api-reference/peripherals/touch_pad.html#_CPPv223touch_pad_set_meas_time8uint16_t8uint16_t)
+* [`esp_err_t touch_pad_set_meas_time(uint16_t sleep_cycle, uint16_t meas_cycle)`](https://docs.espressif.com/projects/esp-idf/en/latest/api-reference/peripherals/touch_pad.html#_CPPv223touch_pad_set_meas_time8uint16_t8uint16_t)
 
 #### 2.4.3. Setting Charge/Discharge Voltage Range
 
@@ -308,7 +308,7 @@ The voltage parameters affect the system's stability and sensitivity. The greate
 
 Related APIs:
 
-* [`esp_err_t touch_pad_set_voltage(touch_high_volt_t refh, touch_low_volt_t refl, touch_volt_atten_t atten)`](https://esp-idf.readthedocs.io/en/latest/api-reference/peripherals/touch_pad.html#_CPPv221touch_pad_set_voltage17touch_high_volt_t16touch_low_volt_t18touch_volt_atten_t)
+* [`esp_err_t touch_pad_set_voltage(touch_high_volt_t refh, touch_low_volt_t refl, touch_volt_atten_t atten)`](https://docs.espressif.com/projects/esp-idf/en/latest/api-reference/peripherals/touch_pad.html#_CPPv221touch_pad_set_voltage17touch_high_volt_t16touch_low_volt_t18touch_volt_atten_t)
 
 #### 2.4.4. Setting Charge/Discharge Speed
 
@@ -316,7 +316,7 @@ Use the following API to set the current of the touch sensor‘s current source 
 
 Related APIs:
 
-* [`esp_err_t touch_pad_set_cnt_mode(touch_pad_t touch_num, touch_cnt_slope_t slope, touch_tie_opt_t opt)`](https://esp-idf.readthedocs.io/en/latest/api-reference/peripherals/touch_pad.html#_CPPv222touch_pad_set_cnt_mode11touch_pad_t17touch_cnt_slope_t15touch_tie_opt_t)
+* [`esp_err_t touch_pad_set_cnt_mode(touch_pad_t touch_num, touch_cnt_slope_t slope, touch_tie_opt_t opt)`](https://docs.espressif.com/projects/esp-idf/en/latest/api-reference/peripherals/touch_pad.html#_CPPv222touch_pad_set_cnt_mode11touch_pad_t17touch_cnt_slope_t15touch_tie_opt_t)
 
 #### 2.4.5. Reading Values
 
@@ -324,7 +324,7 @@ Users can read the pulse count value through the following API. The `touch_value
 
 Related APIs:
 
-* [`esp_err_t touch_pad_read(touch_pad_t touch_num, uint16_t * touch_value)`](https://esp-idf.readthedocs.io/en/latest/api-reference/peripherals/touch_pad.html#_CPPv214touch_pad_read11touch_pad_tP8uint16_t)
+* [`esp_err_t touch_pad_read(touch_pad_t touch_num, uint16_t * touch_value)`](https://docs.espressif.com/projects/esp-idf/en/latest/api-reference/peripherals/touch_pad.html#_CPPv214touch_pad_read11touch_pad_tP8uint16_t)
 
 #### 2.4.6. Touch-triggered Interrupts
 
@@ -334,7 +334,7 @@ The interrupt trigger mode and the delayed reading mode can be used together to 
 
 Related APIs:
 
-* [`esp_err_t touch_pad_isr_register(intr_handler_t fn, void* arg)`](https://esp-idf.readthedocs.io/en/latest/api-reference/peripherals/touch_pad.html#_CPPv222touch_pad_isr_register14intr_handler_tPv)
+* [`esp_err_t touch_pad_isr_register(intr_handler_t fn, void* arg)`](https://docs.espressif.com/projects/esp-idf/en/latest/api-reference/peripherals/touch_pad.html#_CPPv222touch_pad_isr_register14intr_handler_tPv)
 
 
 ## 3. Touch Sensor System Mechanical and Hardware Design
@@ -812,5 +812,5 @@ tp_matrix_handle_t tp_matrix = iot_tp_matrix_create(sizeof(x_tps)/sizeof(x_tps[0
 
 * [ESP32-Sense Touch Sensor Development Kit](../evaluation_boards/readme_en.md)
 * [Touch Sensor software example](../../examples/touch_pad_evb)
-* ESP32 Programming Guide, [Touch Sensor API Reference](https://esp-idf.readthedocs.io/en/latest/api-reference/peripherals/touch_pad.html)
+* ESP32 Programming Guide, [Touch Sensor API Reference](https://docs.espressif.com/projects/esp-idf/en/latest/api-reference/peripherals/touch_pad.html)
 * [ESP32 Technical Reference Manual](https://espressif.com/sites/default/files/documentation/esp32_technical_reference_manual_en.pdf), see section *Capacitive Touch Sensor*

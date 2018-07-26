@@ -166,4 +166,4 @@ We created a task to test DFS, and result are as follows:
 |   160MHz  |         28.46mA     |
 |   240MHz  |         39.95mA     |
 
-More informations about DFS, please Visit [Power Management](http://esp-idf.readthedocs.io/en/latest/api-reference/system/power_management.html)
+More informations about DFS, please Visit [Power Management](http://docs.espressif.com/projects/esp-idf/en/latest/api-reference/system/power_management.html)

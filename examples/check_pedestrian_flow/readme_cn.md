@@ -5,15 +5,15 @@
 在得到基本的人流量数据后，ESP32 设备通过 MQTT 将数据发送至 OneNET 物联网平台，得到最终的人流量变化曲线图，可以方便用户从云端进行数据处理和监控。
 
 ## 1. 开发环境搭建
-关于 ESP32 开发，比如编译，烧录等，请参考[乐鑫官方文档](http://espressif.com/zh-hans/support/download/overview)和 [ESP32 快速入门指南](http://esp-idf.readthedocs.io/en/latest/get-started/index.html)。
+关于 ESP32 开发，比如编译，烧录等，请参考[乐鑫官方文档](http://espressif.com/zh-hans/support/download/overview)和 [ESP32 快速入门指南](http://docs.espressif.com/projects/esp-idf/en/latest/get-started/index.html)。
 
 ### 1.1 ESP32 硬件准备
 
-- [ESP32-DevKitC 开发板](http://esp-idf.readthedocs.io/en/latest/hw-reference/modules-and-boards.html#esp32-core-board-v2-esp32-devkitc)或 [ESP-WROVER-KIT 开发板](http://esp-idf.readthedocs.io/en/latest/hw-reference/modules-and-boards.html#esp-wrover-kit) 皆可。
+- [ESP32-DevKitC 开发板](http://docs.espressif.com/projects/esp-idf/en/latest/hw-reference/modules-and-boards.html#esp32-core-board-v2-esp32-devkitc)或 [ESP-WROVER-KIT 开发板](http://docs.espressif.com/projects/esp-idf/en/latest/hw-reference/modules-and-boards.html#esp-wrover-kit) 皆可。
 
 - 路由器/AP（可以连接外网）
 
-- PC，如果不是 Linux 系统，可参考 [ESP32 快速入门指南](http://esp-idf.readthedocs.io/en/latest/get-started/index.html)搭建虚拟机和编译器环境。
+- PC，如果不是 Linux 系统，可参考 [ESP32 快速入门指南](http://docs.espressif.com/projects/esp-idf/en/latest/get-started/index.html)搭建虚拟机和编译器环境。
 
 - 串口线
 
@@ -84,7 +84,7 @@ $ git submodule update --init
 
 根据官方的说明，不同的平台下载对应的编译器。
 
-编译器下载: [https://esp-idf.readthedocs.io/en/latest/get-started/index.html](https://esp-idf.readthedocs.io/en/latest/get-started/index.html)
+编译器下载: [https://docs.espressif.com/projects/esp-idf/en/latest/get-started/index.html](https://docs.espressif.com/projects/esp-idf/en/latest/get-started/index.html)
 
 #### 1.3.3 OneNet 对接 Demo 获取
 

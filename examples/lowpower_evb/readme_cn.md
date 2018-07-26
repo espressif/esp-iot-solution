@@ -15,8 +15,8 @@
 	* 脚本在使用时需要传入 1 个参数：服务器使用的端口号。例如 `python sensor_server.py 8000`。
 
 ### 1.2 配置编译环境
-* 安装和配置 ESP32 的 C 语言编译环境，请参照 [链接地址](https://esp-idf.readthedocs.io/zh_CN/latest/get-started/index.html)。  
-* 安装和配置 ULP 的汇编编译工具链，请参照 [链接地址](http://esp-idf.readthedocs.io/en/latest/api-guides/ulp.html)。
+* 安装和配置 ESP32 的 C 语言编译环境，请参照 [链接地址](https://docs.espressif.com/projects/esp-idf/zh_CN/latest/get-started/index.html)。  
+* 安装和配置 ULP 的汇编编译工具链，请参照 [链接地址](http://docs.espressif.com/projects/esp-idf/en/latest/api-guides/ulp.html)。
 
 ### 1.3 编译下载
 请前往 **menuconfig** 菜单，进入 `Lowpower EVB settings` 进行以下配置：  
