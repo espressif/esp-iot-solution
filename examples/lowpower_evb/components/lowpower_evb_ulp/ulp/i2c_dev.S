@@ -23,10 +23,6 @@
     .global value_number
 value_number:
     .long 0
-
-    .global read_interval
-read_interval:
-    .long 0
    
     .global sample_counter
 sample_counter:
@@ -45,11 +41,6 @@ stackEnd:
     .global entry
 entry:
     move r3, stackEnd
-
-    move r2, read_interval                  // Wait some time (uint:ms)
-    ld r2, r2, 0
-    psr
-    jump waitMs
    
     psr
     jump Task_HTS221
