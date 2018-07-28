@@ -274,7 +274,7 @@ extern "C" void demo_lcd_init()
         .pin_num_dc   = GPIO_NUM_21,
         .pin_num_rst  = GPIO_NUM_18,
         .pin_num_bckl = GPIO_NUM_5,
-        .clk_freq     = 40000000,
+        .clk_freq     = 30000000,
         .rst_active_level = 0,
         .bckl_active_level = 0,
         .spi_host = HSPI_HOST,

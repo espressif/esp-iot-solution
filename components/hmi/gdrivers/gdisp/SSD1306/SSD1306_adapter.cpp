@@ -144,3 +144,76 @@ void board_lcd_set_backlight(uint16_t data)
 {
     /* Code here*/
 }
+
+#if CONFIG_LVGL_USE_CUSTOM_DRIVER
+
+/* lvgl include */
+#include "lvgl_disp_config.h"
+#include "iot_lvgl.h"
+
+/*Write the internal buffer (VDB) to the display. 'lv_flush_ready()' has to be called when finished*/
+void ex_disp_flush(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_color_t * color_p)
+{
+    lcd_obj->draw_bitmap((uint8_t)x1, (uint8_t)y1, (uint8_t *)color_p, (uint8_t)(x2-x1+1), (uint8_t)(y2-y1+1));
+    /* IMPORTANT!!!
+     * Inform the graphics library that you are ready with the flushing*/
+    lv_flush_ready();
+}
+
+/*Fill an area with a color on the display*/
+void ex_disp_fill(int32_t x1, int32_t y1, int32_t x2, int32_t y2, lv_color_t color)
+{
+    lcd_obj->fill_rectangle_screen((uint8_t)x1, (uint8_t)y1, (uint8_t)(x2), (uint8_t)(y2), (uint8_t)color.full);
+}
+
+/*Write pixel map (e.g. image) to the display*/
+void ex_disp_map(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_color_t * color_p)
+{
+    lcd_obj->draw_bitmap((uint8_t)x1, (uint8_t)y1, (uint8_t *)color_p, (uint8_t)(x2-x1+1), (uint8_t)(y2-y1+1));
+}
+
+void lvgl_lcd_display_init()
+{
+    /*Initialize LCD*/
+    i2c_bus = new CI2CBus(I2C_NUM_1, (gpio_num_t)CONFIG_LVGL_LCD_SCL_GPIO, (gpio_num_t)CONFIG_LVGL_LCD_SDA_GPIO);
+
+    if(lcd_obj == NULL) {
+        lcd_obj = new CLcdAdapter(i2c_bus);
+    }
+
+    lv_disp_drv_t disp_drv;                         /*Descriptor of a display driver*/
+    lv_disp_drv_init(&disp_drv);                    /*Basic initialization*/
+
+    // switch(CONFIG_LVGL_DISP_ROTATE){
+    //     default:
+    //     case 0:
+    //         lcd_obj->writeCmd(0x36);
+    //         lcd_obj->writeData(0x00|0x00);
+    //         break;
+    //     case 1:
+    //         lcd_obj->writeCmd(0x36);
+    //         lcd_obj->writeData(0xA0|0x00);
+    //         break;
+    //     case 2:
+    //         lcd_obj->writeCmd(0x36);
+    //         lcd_obj->writeData(0xC0|0x00);
+    //         break;
+    //     case 3:
+    //         lcd_obj->writeCmd(0x36);
+    //         lcd_obj->writeData(0x60|0x00);
+    //         break;
+    // }
+
+    /* Set up the functions to access to your display */
+    if (LV_VDB_SIZE != 0) {
+        disp_drv.disp_flush = ex_disp_flush;            /*Used in buffered mode (LV_VDB_SIZE != 0  in lv_conf.h)*/
+    } else if (LV_VDB_SIZE == 0) {
+        disp_drv.disp_fill = ex_disp_fill;              /*Used in unbuffered mode (LV_VDB_SIZE == 0  in lv_conf.h)*/
+        disp_drv.disp_map = ex_disp_map;                /*Used in unbuffered mode (LV_VDB_SIZE == 0  in lv_conf.h)*/
+    }
+
+    /* Finally register the driver */
+    lv_disp_drv_register(&disp_drv);
+}
+
+#endif // CONFIG_LVGL_USE_CUSTOM_DRIVER

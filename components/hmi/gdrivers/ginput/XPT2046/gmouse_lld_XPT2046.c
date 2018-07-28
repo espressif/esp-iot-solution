@@ -35,7 +35,6 @@ static bool_t touch_get_xyz(GMouse *m, GMouseReading *pdr)
         pdr->z = 1;                        // Set to Z_MAX as we are pressed
 
         aquire_bus(m);
-
         read_value(m, CMD_X);              // Dummy read - disable PenIRQ
         pdr->x = read_value(m, CMD_X);     // Read X-Value
 

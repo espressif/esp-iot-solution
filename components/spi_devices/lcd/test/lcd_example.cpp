@@ -111,7 +111,7 @@ extern "C" void esp_draw()
         .pin_num_dc   = GPIO_NUM_21,
         .pin_num_rst  = GPIO_NUM_18,
         .pin_num_bckl = GPIO_NUM_5,
-        .clk_freq     = 40 * 1000 * 1000,
+        .clk_freq     = 20 * 1000 * 1000,
         .rst_active_level = 0,
         .bckl_active_level = 0,
         .spi_host = HSPI_HOST,

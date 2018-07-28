@@ -68,7 +68,6 @@ static bool_t read_xyz(GMouse *m, GMouseReading *pdr)
     // Assume not touched.
     pdr->buttons = 0;
     pdr->z = 0;
-
     aquire_bus(m);
 
     // Only take a reading if we are touched.
