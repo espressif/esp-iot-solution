@@ -137,7 +137,7 @@ private:
 public:
     lcd_id_t id;
     CEspLcd(lcd_conf_t* lcd_conf, int height = LCD_TFTHEIGHT, int width = LCD_TFTWIDTH, bool dma_en = true, int dma_word_size = 1024, int dma_chan = 1);
-    ~CEspLcd();
+    virtual ~CEspLcd();
     /**
      * @brief init spi bus and lcd screen
      * @param lcd_conf LCD parameters
