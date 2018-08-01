@@ -621,3 +621,30 @@ int CEspLcd::drawFloat(float floatNumber, uint8_t decimal, uint16_t poX, uint16_
     }
     return poX;
 }
+
+size_t CEspLcd::printf(const char *format, ...)
+{
+    char loc_buf[64];
+    char * temp = loc_buf;
+    va_list arg;
+    va_list copy;
+    va_start(arg, format);
+    va_copy(copy, arg);
+    size_t len = vsnprintf(NULL, 0, format, arg);
+    va_end(copy);
+    if(len >= sizeof(loc_buf)) {
+        temp = new char[len+1];
+        if(temp == NULL) {
+            return 0;
+        }
+    }
+    len = vsnprintf(temp, len+1, format, arg);
+    for (int i = 0; i < len; i++) {
+        write_char((uint8_t)temp[i]);
+    }
+    va_end(arg);
+    if(len > 64){
+        delete[] temp;
+    }
+    return len;
+}
