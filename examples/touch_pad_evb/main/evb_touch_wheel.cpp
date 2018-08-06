@@ -82,4 +82,14 @@ void evb_touch_wheel_init_then_run()
     tp_wheel = new CTouchPadSlide(sizeof(tps) / sizeof(TOUCH_PAD_NUM4),
             tps, TOUCH_WHEEL_PAD_RANGE, variation);
     xTaskCreate(scope_task, "scope", 1024*4, NULL, 3, NULL);
+#ifdef CONFIG_DATA_SCOPE_DEBUG
+    tune_dev_comb_t ch_comb = {};
+    ch_comb.dev_comb = TUME_CHAR_SLIDE;
+    ch_comb.ch_num_h = 1;
+    ch_comb.ch_num_l = sizeof(tps) / sizeof(TOUCH_SLIDE_0);
+    for(int i=0; i<ch_comb.ch_num_l; i++) {
+        ch_comb.ch[i] = tps[i];
+    }
+    tune_tool_add_device_setting(&ch_comb);
+#endif
 }

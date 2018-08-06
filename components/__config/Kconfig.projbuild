@@ -24,65 +24,76 @@ menu "IoT Solution settings"
                 menu "Touch Sensor"
                 depends on IOT_TOUCH_ENABLE
                     config DATA_SCOPE_DEBUG
-                        bool "DataScope debug (Touch sensor tuning tool)"
+                        bool "Data scope debug (ESP-Tuning Tool)"
                         default n
                         help
-                        	Enable scope debug function. Print the touch sensor raw data to "Data Scope" tool via UART.
-          	 				"Data Scope" tool is touch sensor tune tool. User can monitor the data of each touch channel,
-           					evaluate the touch system's touch performance (sensitivity, SNR, stability, channel coupling)
-           					and determine the threshold for each channel.
-           					attention 1. Choose a UART port that will only be used for scope debug.
-  							attention 2. Use this feature only during the testing phase.
-  							attention 3. "Data Scope" tool can be downloaded from Espressif's official website.
-                        	
-                        menu "DataScope port setting"
+                            Enable scope debug function. Print the touch sensor raw data to ESP-Tuning tool via UART.
+                            ESP-Tuning tool is touch sensor tune tool. User can monitor the data of each touch channel,
+                            evaluate the touch system's touch performance (sensitivity, SNR, stability, channel coupling)
+                            and determine the threshold for each channel.
+                            attention 1. Choose a UART port that will only be used for scope debug.
+                            attention 2. Use this feature only during the testing phase.
+                            attention 3. ESP-Tuning tool can be downloaded from Espressif's official website.
+
+                        menu "Data scope port setting"
                         depends on DATA_SCOPE_DEBUG
-                        	choice SCOPE_PORT_NUM
-                        		bool "Uart number (debug port)"
-                        		default SCOPE_PORT_NUM_UART1
-                        		help 
-                        			Choose a UART port that will only be used for scope debug. UART0 or UART1 or UART2.
-                        		config SCOPE_PORT_NUM_UART0
-                        			bool "UART0"
-                        		config SCOPE_PORT_NUM_UART1
-                        			bool "UART1"
-                    			config SCOPE_PORT_NUM_UART2
-                    				bool "UART2"
-                    		endchoice
-                    			config SCOPE_DEBUG_PORT_NUM
-                    				int
-                    				default 0 if SCOPE_PORT_NUM_UART0
-		                        	default 1 if SCOPE_PORT_NUM_UART1
-		                        	default 2 if SCOPE_PORT_NUM_UART2
-                        	
-                        	choice SCOPE_PORT_BAUD_RATE
-						    	bool "Baud rate (debug port)"
-						        default SCOPE_PORT_BAUD_RATE_256000
-						        help
-						          	Set the same parameters on the tool side.
-						        config SCOPE_PORT_BAUD_RATE_115200
-						        	bool "115200 (baud rate)"
-						        config SCOPE_PORT_BAUD_RATE_256000
-						        	bool "256000 (baud rate)"
-						        config SCOPE_PORT_BAUD_RATE_1152000
-						        	bool "1152000 (baud rate)"
-						    endchoice
-                        	config SCOPE_DEBUG_BAUD_RATE
-		                        int 
-		                        default 115200  if SCOPE_PORT_BAUD_RATE_115200
-		                        default 256000  if SCOPE_PORT_BAUD_RATE_256000
-		                        default 1152000 if SCOPE_PORT_BAUD_RATE_1152000
-		                    
-		                    config SCOPE_DEBUG_UART_TXD_IO
-		                    	int "Uart TXD IO number"
-		                    	range 0 34
-		                    	default 17
-		                    	
-		                    config SCOPE_DEBUG_UART_RXD_IO
-		                    	int "Uart RXD IO number"
-		                    	range 0 39
-		                    	default 16
-	                    endmenu
+                            config SCOPE_DEBUG_TASK_PRIORITY
+                                int "Scope debug task priority"
+                                range 0 25
+                                default 5
+
+                            choice SCOPE_PORT_NUM
+                                bool "Uart number (debug port)"
+                                default SCOPE_PORT_NUM_UART0
+                                help 
+                                    Choose a UART port that will only be used for scope debug. UART0 or UART1 or UART2.
+                                config SCOPE_PORT_NUM_UART0
+                                    bool "UART0"
+                                config SCOPE_PORT_NUM_UART1
+                                    bool "UART1"
+                                config SCOPE_PORT_NUM_UART2
+                                    bool "UART2"
+                            endchoice
+                                config SCOPE_DEBUG_PORT_NUM
+                                    int
+                                    default 0 if SCOPE_PORT_NUM_UART0
+                                    default 1 if SCOPE_PORT_NUM_UART1
+                                    default 2 if SCOPE_PORT_NUM_UART2
+                            
+                            choice SCOPE_PORT_BAUD_RATE
+                                bool "Baud rate (debug port)"
+                                default SCOPE_PORT_BAUD_RATE_921600
+                                help
+                                      Set the same parameters on the tool side.
+                                config SCOPE_PORT_BAUD_RATE_115200
+                                    bool "115200 (baud rate)"
+                                config SCOPE_PORT_BAUD_RATE_256000
+                                    bool "256000 (baud rate)"
+                                config SCOPE_PORT_BAUD_RATE_460800
+                                    bool "460800 (baud rate)"
+                                config SCOPE_PORT_BAUD_RATE_921600
+                                    bool "921600 (baud rate)[Default]"
+                                config SCOPE_PORT_BAUD_RATE_1152000
+                                    bool "1152000 (baud rate)"
+                            endchoice
+                            config SCOPE_DEBUG_BAUD_RATE
+                                int 
+                                default 115200  if SCOPE_PORT_BAUD_RATE_115200
+                                default 256000  if SCOPE_PORT_BAUD_RATE_256000
+                                default 460800  if SCOPE_PORT_BAUD_RATE_460800
+                                default 921600  if SCOPE_PORT_BAUD_RATE_921600
+                                default 1152000 if SCOPE_PORT_BAUD_RATE_1152000
+                            
+                            config SCOPE_DEBUG_UART_TXD_IO
+                                int "Uart TXD IO number"
+                                range 0 34
+                                default 1
+                                
+                            config SCOPE_DEBUG_UART_RXD_IO
+                                int "Uart RXD IO number"
+                                range 0 39
+                                default 3
+                        endmenu
                 endmenu
                 
             config IOT_ULP_ENABLE
@@ -165,7 +176,7 @@ menu "IoT Solution settings"
                         config STATUS_LED_QUICK_BLINK_CHANNEL_7
                             bool "channel 7" 
                         config STATUS_LED_QUICK_BLINK_CHANNEL_DEF
-                            bool "channel default(0)"                                 
+                            bool "channel default(0)"
                     endchoice
                     config STATUS_LED_QUICK_BLINK_CHANNEL
                         int 
@@ -192,7 +203,7 @@ menu "IoT Solution settings"
                         config STATUS_LED_QUICK_BLINK_TIMER_3
                             bool "TIMER 3"       
                         config STATUS_LED_QUICK_BLINK_TIMER_DEF
-                            bool "TIMER default(0)"                                            
+                            bool "TIMER default(0)"
                     endchoice
                     config STATUS_LED_QUICK_BLINK_TIMER
                         int 
@@ -227,7 +238,7 @@ menu "IoT Solution settings"
                         config STATUS_LED_SLOW_BLINK_CHANNEL_7
                             bool "channel 7"  
                         config STATUS_LED_SLOW_BLINK_CHANNEL_DEF
-                            bool "channel default(1)"                                                  
+                            bool "channel default(1)"
                     endchoice
                     config STATUS_LED_SLOW_BLINK_CHANNEL
                         int 
@@ -254,7 +265,7 @@ menu "IoT Solution settings"
                         config STATUS_LED_SLOW_BLINK_TIMER_3
                             bool "TIMER 3"     
                         config STATUS_LED_SLOW_BLINK_TIMER_DEF
-                            bool "TIMER default(1)"                                              
+                            bool "TIMER default(1)"
                     endchoice
                     config STATUS_LED_SLOW_BLINK_TIMER
                         int 
@@ -293,7 +304,7 @@ menu "IoT Solution settings"
                             config STATUS_LED_NIGHT_MODE_CHANNEL_7
                                 bool "channel 7"      
                             config STATUS_LED_NIGHT_MODE_CHANNEL_DEF
-                                bool "channel default(2)"                                                  
+                                bool "channel default(2)"
                         endchoice
                         config STATUS_LED_NIGHT_MODE_CHANNEL
                             int 
@@ -321,7 +332,7 @@ menu "IoT Solution settings"
                             config STATUS_LED_NIGHT_MODE_TIMER_3
                                 bool "TIMER 3"    
                             config STATUS_LED_NIGHT_MODE_TIMER_DEF
-                                bool "TIMER default(2)"                                                   
+                                bool "TIMER default(2)"
                         endchoice
                         config STATUS_LED_NIGHT_MODE_TIMER
                             int 
@@ -412,7 +423,7 @@ menu "IoT Solution settings"
                 bool "WEEKLY TIMER ENABLE"
                 default n
                 help
-                    "Select this one to enable weekly timer component"                      
+                    "Select this one to enable weekly timer component"
                     
         endmenu
         
@@ -444,7 +455,7 @@ menu "IoT Solution settings"
                 bool "BME280 ENABLE"
                 default y
                 help
-                    "Select this one to enable BME280 device"                    
+                    "Select this one to enable BME280 device"
             config IOT_CH450_ENABLE
                 bool "CH450 ENABLE"
                 default y
@@ -454,17 +465,17 @@ menu "IoT Solution settings"
                 bool "HT16C21 ENABLE"
                 default y
                 help
-                    "Select this one to enable HT16C21 device"                      
+                    "Select this one to enable HT16C21 device"
             config IOT_IS31FL3XXX_ENABLE
                 bool "IS31FL3XXX ENABLE"
                 default y
                 help
-                    "Select this one to enable IS31FL3XXX device"                       
+                    "Select this one to enable IS31FL3XXX device"
             config IOT_MCP23017_ENABLE
                 bool "MCP23017 ENABLE"
                 default y
                 help
-                    "Select this one to enable MCP23017 device"                   
+                    "Select this one to enable MCP23017 device"
             config IOT_OLED_ENABLE
                 bool "OLED_DEV_ENABLE(SSD1306)"
                 default y
@@ -486,27 +497,27 @@ menu "IoT Solution settings"
                 bool "SENSOR_HTS221_ENABLE"
                 default y
                 help
-                    "Select this one to enable HTS221 device component"                       
+                    "Select this one to enable HTS221 device component"
             config IOT_LIS2DH12_ENABLE
                 bool "SENSOR_LIS2DH12_ENABLE"
                 default y
                 help
-                    "Select this one to enable LIS2DH12 device component"                      
+                    "Select this one to enable LIS2DH12 device component"
             config IOT_MVH3004D_ENABLE
                 bool "SENSOR_MVH3004D_ENABLE"
                 default y
                 help
-                    "Select this one to enable MVH3004D device component"        
+                    "Select this one to enable MVH3004D device component"
             config IOT_VEML6040_ENABLE
                 bool "SENSOR_VEML6040_ENABLE"
                 default y
                 help
-                    "Select this one to enable VEML6040 device component"                    
+                    "Select this one to enable VEML6040 device component"
             config IOT_HDC2010_ENABLE
                 bool "SENSOR_HDC2010_ENABLE"
                 default y
                 help
-                    "Select this one to enable HDC2010 device component"                    
+                    "Select this one to enable HDC2010 device component"
         endmenu
         
         menu "SPI devices"
@@ -519,12 +530,12 @@ menu "IoT Solution settings"
                 bool "SPI_E-INK_ENABLE"
                 default y
                 help
-                    "Select this one to enable SPI E-INK SCREEN device"        
+                    "Select this one to enable SPI E-INK SCREEN device"
             config IOT_TOUCH_SCREEN_ENABLE
                 bool "SPI_TOUCH_SCERRN_ENABLE"
                 default y
                 help
-                    "Select this one to enable SPI TOUCH SCREEN device"                   
+                    "Select this one to enable SPI TOUCH SCREEN device"
         endmenu
         
         
@@ -624,12 +635,12 @@ menu "IoT Solution settings"
                 bool "TCP_CLASS_ENABLE"
                 default y
                 help
-                    "Select this one to enable TCP class component"  
+                    "Select this one to enable TCP class component"
             config IOT_UDP_CLASS_ENABLE
                 bool "UDP_CLASS_ENABLE"
                 default y
                 help
-                    "Select this one to enable UDP class component"              
+                    "Select this one to enable UDP class component"
             
         endmenu
         
@@ -638,7 +649,7 @@ menu "IoT Solution settings"
                 bool "ALINK_ENABLE"
                 default n
                 help
-                    "Select this one to enable ALINK EMBED component"   
+                    "Select this one to enable ALINK EMBED component"
                 menu "ALINK_SETTINGS"
                 depends on IOT_ALINK_ENABLE
                     choice ALINK_VERSION
@@ -660,7 +671,7 @@ menu "IoT Solution settings"
                     config ALINK_VERSION
                         int
                         default 0 if ALINK_VERSION_EMBED
-                        default 1 if ALINK_VERSION_SDS                    
+                        default 1 if ALINK_VERSION_SDS
                     config ALINK_WRITE_NOT_BUFFER
                         bool "Remove the buffer space for reporting data"
                         default 0
@@ -794,7 +805,7 @@ menu "IoT Solution settings"
             #    bool "JOYLINK_ENABLE"
             #    default n
             #    help
-            #        "Select this one to enable JOYLINK component"    
+            #        "Select this one to enable JOYLINK component"
         endmenu
         
         menu "WiFi abstract"
@@ -807,7 +818,7 @@ menu "IoT Solution settings"
                 bool "WIFI_ABSTRACT_ENABLE"
                 default y
                 help
-                    "Select this one to enable WiFi abstract component"                                  
+                    "Select this one to enable WiFi abstract component"
         endmenu
 
     endmenu

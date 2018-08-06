@@ -111,5 +111,19 @@ void evb_touch_matrix_init()
     tp_matrix->add_cb(TOUCHPAD_CB_PUSH, app_matrix_cb, (void*) "push_event");
     tp_matrix->add_cb(TOUCHPAD_CB_RELEASE, app_matrix_release_cb, (void*) "release_event");
     tp_matrix->set_serial_trigger(1, 1000, app_matrix_serial_cb,  (void*) "serial_event");
+#ifdef CONFIG_DATA_SCOPE_DEBUG
+    tune_dev_comb_t ch_comb = {};
+    ch_comb.dev_comb = TUNE_CHAR_MATRIX;
+    ch_comb.ch_num_h = sizeof(x_tps) / sizeof(x_tps[0]);
+    ch_comb.ch_num_l = sizeof(y_tps) / sizeof(y_tps[0]);
+    for(int i=0; i<ch_comb.ch_num_h+ch_comb.ch_num_l; i++) {
+        if(i<ch_comb.ch_num_h) {
+            ch_comb.ch[i] = x_tps[i];
+        } else {
+            ch_comb.ch[i] = y_tps[i-(sizeof(x_tps) / sizeof(x_tps[0]))];
+        }
+    }
+    tune_tool_add_device_setting(&ch_comb);
+#endif
 }
 

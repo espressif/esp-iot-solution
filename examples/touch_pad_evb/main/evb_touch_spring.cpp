@@ -94,4 +94,17 @@ void evb_touch_spring_init()
     tp_dev[3]->add_cb(TOUCHPAD_CB_PUSH, spring_push_cb, tp_dev[3]);
     tp_dev[4]->add_cb(TOUCHPAD_CB_PUSH, spring_push_cb, tp_dev[4]);
     tp_dev[5]->add_cb(TOUCHPAD_CB_PUSH, spring_push_cb, tp_dev[5]);
+#ifdef CONFIG_DATA_SCOPE_DEBUG
+    tune_dev_comb_t ch_comb = {};
+    ch_comb.dev_comb = TUNE_CHAR_BUTTON;
+    ch_comb.ch_num_h = 1;
+    ch_comb.ch_num_l = 6;
+    ch_comb.ch[0] = TOUCH_BUTTON_0;
+    ch_comb.ch[1] = TOUCH_BUTTON_1;
+    ch_comb.ch[2] = TOUCH_BUTTON_2;
+    ch_comb.ch[3] = TOUCH_BUTTON_3;
+    ch_comb.ch[4] = TOUCH_BUTTON_4;
+    ch_comb.ch[5] = TOUCH_BUTTON_5;
+    tune_tool_add_device_setting(&ch_comb);
+#endif
 }

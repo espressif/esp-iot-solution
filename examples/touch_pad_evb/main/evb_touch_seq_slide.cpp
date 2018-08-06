@@ -106,4 +106,14 @@ void evb_touch_seq_slide_init_then_run()
             TOUCH_SLIDE_11, TOUCH_SLIDE_12, TOUCH_SLIDE_13, TOUCH_SLIDE_14, TOUCH_SLIDE_15 };
     tp_slide = new CTouchPadSlide(sizeof(tps) / sizeof(TOUCH_PAD_NUM4), tps, TOUCH_SEQ_SLIDE_PAD_RANGE, variation);
     xTaskCreate(scope_task, "scope", 1024*4, NULL, 3, NULL);
+#ifdef CONFIG_DATA_SCOPE_DEBUG
+    tune_dev_comb_t ch_comb = {};
+    ch_comb.dev_comb = TUME_CHAR_SLIDE;
+    ch_comb.ch_num_h = 1;
+    ch_comb.ch_num_l = sizeof(tps) / sizeof(TOUCH_SLIDE_0);
+    for(int i=0; i<ch_comb.ch_num_l; i++) {
+        ch_comb.ch[i] = tps[i];
+    }
+    tune_tool_add_device_setting(&ch_comb);
+#endif
 }

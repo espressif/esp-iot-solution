@@ -10,6 +10,7 @@
    CONDITIONS OF ANY KIND, either express or implied.
  */
 #include <stdio.h>
+#include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
@@ -136,4 +137,7 @@ extern "C" void app_main()
     ESP_ERROR_CHECK( nvs_flash_init() );
     initialise_wifi();
     xTaskCreate(evb_touch_init, "touch init", 1024*8, NULL, 3, NULL);
+#ifdef CONFIG_DATA_SCOPE_DEBUG
+    touch_tune_tool_init();
+#endif
 }

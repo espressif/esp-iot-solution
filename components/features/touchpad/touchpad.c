@@ -24,7 +24,14 @@
 #include <string.h>
 #include <time.h>
 #include "esp_log.h"
+#include "esp_wifi.h"
+#include "tcpip_adapter.h"
 #include "iot_touchpad.h"
+#include "sdkconfig.h"
+
+#ifdef CONFIG_DATA_SCOPE_DEBUG
+#include "touch_tune_tool.h"
+#endif
 
 #define IOT_CHECK(tag, a, ret)  if(!(a)) {                                             \
         ESP_LOGE(tag,"%s:%d (%s)", __FILE__, __LINE__, __FUNCTION__);      \
@@ -32,7 +39,7 @@
         }
 
 #define ERR_ASSERT(tag, param)  IOT_CHECK(tag, (param) == ESP_OK, ESP_FAIL)
-#define POINT_ASSERT(tag, param)	IOT_CHECK(tag, (param) != NULL, ESP_FAIL)
+#define POINT_ASSERT(tag, param)    IOT_CHECK(tag, (param) != NULL, ESP_FAIL)
 #define RES_ASSERT(tag, res, ret)   IOT_CHECK(tag, (res) != pdFALSE, ret)
 #define TIMER_CALLBACK_MAX_WAIT_TICK    (0)
 /*************Fixed Parameters********************/
@@ -53,7 +60,7 @@
 #define TOUCHPAD_BASELINE_RESET_THRESHOLD_PERCENT   0.20    /**< 20%; If the touch data exceed this threshold
                                                                  for 'RESET_COUNT_THRESHOLD' times, then reset baseline to raw data. */
 #define TOUCHPAD_SLIDER_TRIGGER_THRESHOLD_PERCENT   0.50    /**< 50%; This is slider type triggering threshold, should large than noise threshold.
-                                                                 when diff-value exceed this threshold, a sliding operation has occurred. */
+                                                                 when diff-value exceeded this threshold, a sliding operation has occurred. */
 typedef struct tp_custom_cb tp_custom_cb_t;
 typedef enum {
     TOUCHPAD_STATE_IDLE = 0,
@@ -101,7 +108,7 @@ typedef struct {
     uint32_t serial_interval_ms;//Continuously triggered counting parameters.
     xTimerHandle serial_tmr;    //A timer that continuously triggers actions.
     tp_cb_t serial_cb;          //A callback.
-    tp_cb_t* cb_group[TOUCHPAD_CB_MAX]; //Stores global variables for each channel parameter.
+    tp_cb_t *cb_group[TOUCHPAD_CB_MAX]; //Stores global variables for each channel parameter.
     tp_custom_cb_t *custom_cbs; //User-defined callback function.
 } tp_dev_t;
 
@@ -114,7 +121,7 @@ typedef struct {
     tp_handle_t *tp_handles;
 } tp_slide_t;
 
-struct tp_custom_cb{
+struct tp_custom_cb {
     tp_cb cb;
     void *arg;
     TimerHandle_t tmr;
@@ -142,7 +149,7 @@ typedef struct {
     tp_handle_t *y_tps;
     tp_matrix_arg_t *matrix_args;
     tp_matrix_arg_t *matrix_args_y;
-    tp_matrix_cb_t* cb_group[TOUCHPAD_CB_MAX];
+    tp_matrix_cb_t *cb_group[TOUCHPAD_CB_MAX];
     tp_matrix_cus_cb_t *custom_cbs;
     tp_matrix_cb_t serial_cb;
     uint32_t serial_thres_sec;
@@ -169,12 +176,10 @@ struct tp_matrix_cus_cb {
 };
 
 #define SLIDE_POS_INF   ((1 << 8) - 1)      // Record time of last touch, used to eliminate jitter
-static const char* TAG = "touchpad";        // Debug tag in esp log
+static const char *TAG = "touchpad";        // Debug tag in esp log
 static bool g_init_flag = false;            // Judge if initialized the global setting of touch.
-static tp_dev_t* tp_group[TOUCH_PAD_MAX];   // Buffer of each button.
+static tp_dev_t *tp_group[TOUCH_PAD_MAX];   // Buffer of each button.
 static xSemaphoreHandle s_tp_mux = NULL;
-
-extern int iot_tp_print_to_scope(float *data, unsigned char channel_num);
 
 /* IIR filter for silder position. */
 static uint32_t _slider_filter_iir(uint32_t in_now, uint32_t out_last, uint32_t k)
@@ -191,7 +196,7 @@ static uint32_t _slider_filter_iir(uint32_t in_now, uint32_t out_last, uint32_t 
 static void tp_slide_pos_cb(void *arg)
 {
     tp_dev_t *tp_dev = NULL;
-    tp_slide_t* tp_slide = (tp_slide_t*) arg;
+    tp_slide_t *tp_slide = (tp_slide_t *) arg;
     float val_sum = 0;
     float pos = 0;
     float weight_sum = 0;
@@ -201,7 +206,7 @@ static void tp_slide_pos_cb(void *arg)
     static uint32_t slide_pos_last = 0;
 
     for (int i = 0; i < tp_slide->tp_num; i++) {
-        tp_dev = (tp_dev_t*) tp_slide->tp_handles[i];
+        tp_dev = (tp_dev_t *) tp_slide->tp_handles[i];
         weight_sum += tp_dev->slide_trigger_thr;
         tp_slide->calc_val[i] = tp_dev->diff_rate - tp_dev->slide_trigger_thr; //Calculate the actual change of each key.
         if (tp_slide->calc_val[i] < 0) {
@@ -209,7 +214,7 @@ static void tp_slide_pos_cb(void *arg)
         }
     }
     for (int i = 0; i < tp_slide->tp_num; i++) {
-        tp_dev = (tp_dev_t*) tp_slide->tp_handles[i];
+        tp_dev = (tp_dev_t *) tp_slide->tp_handles[i];
         tp_slide->calc_val[i] = tp_slide->calc_val[i] * weight_sum / tp_dev->slide_trigger_thr; //Weights each key element, unifying the rate of change.
     }
     // Find out the three bigger and continuous data.
@@ -259,12 +264,12 @@ static void tp_slide_pos_cb(void *arg)
         if (0 == tp_slide->calc_val[max_idx - 1]) {
             // return the corresponding position.
             pos = ((max_idx + 1) * tp_slide->calc_val[max_idx + 1] + (max_idx) * tp_slide->calc_val[max_idx])
-                    * tp_slide->pos_scale;
+                  * tp_slide->pos_scale;
             slide_pos_temp = (uint32_t) (pos / val_sum);
         } else if (0 == tp_slide->calc_val[max_idx + 1]) {
             // return the corresponding position.
             pos = ((max_idx - 1) * tp_slide->calc_val[max_idx - 1] + (max_idx) * tp_slide->calc_val[max_idx])
-                    * tp_slide->pos_scale;
+                  * tp_slide->pos_scale;
             slide_pos_temp = (uint32_t) (pos / val_sum);
         } else {
             // slide_pos_temp = tp_slide->slide_pos;
@@ -272,20 +277,33 @@ static void tp_slide_pos_cb(void *arg)
     } else {
         // return the corresponding position.
         pos = ((max_idx - 1) * tp_slide->calc_val[max_idx - 1] + (max_idx) * tp_slide->calc_val[max_idx]
-                + (max_idx + 1) * tp_slide->calc_val[max_idx + 1]) * tp_slide->pos_scale;
+               + (max_idx + 1) * tp_slide->calc_val[max_idx + 1]) * tp_slide->pos_scale;
         slide_pos_temp = (uint32_t) (pos / val_sum);
     }
     // Improve the precision of the operation.
     slide_pos_last = slide_pos_last == 0 ? ((uint16_t) slide_pos_temp << 4) : slide_pos_last;
     slide_pos_last = _slider_filter_iir((slide_pos_temp << 4), slide_pos_last, SLDER_POS_FILTER_FACTOR_DEFAULT);
     tp_slide->slide_pos = ((slide_pos_last + 8) >> 4);
+
+#ifdef CONFIG_DATA_SCOPE_DEBUG
+    tune_dev_data_t dev_data = {0};
+    for (int i = 0; i < tp_slide->tp_num; i++) {
+        tp_dev = (tp_dev_t *) tp_slide->tp_handles[i];
+        dev_data.ch = tp_dev->touch_pad_num;
+        dev_data.baseline = tp_dev->baseline;
+        dev_data.diff = tp_slide->calc_val[i] * tp_dev->baseline;
+        dev_data.raw = tp_dev->baseline - tp_dev->diff_rate * tp_dev->baseline;
+        dev_data.status = tp_slide->slide_pos;
+        tune_tool_set_device_data(&dev_data);
+    }
+#endif
 }
 
 /* check and run the hooked callback function */
-static inline void callback_exec(tp_dev_t* tp_dev, tp_cb_type_t cb_type)
+static inline void callback_exec(tp_dev_t *tp_dev, tp_cb_type_t cb_type)
 {
     if (tp_dev->cb_group[cb_type] != NULL) {
-        tp_cb_t* cb_info = tp_dev->cb_group[cb_type];
+        tp_cb_t *cb_info = tp_dev->cb_group[cb_type];
         cb_info->cb(cb_info->arg);
     }
 }
@@ -293,7 +311,7 @@ static inline void callback_exec(tp_dev_t* tp_dev, tp_cb_type_t cb_type)
 /* check and run the hooked callback function */
 static void tp_serial_timer_cb(TimerHandle_t xTimer)
 {
-    tp_dev_t *tp_dev = (tp_dev_t*) pvTimerGetTimerID(xTimer);
+    tp_dev_t *tp_dev = (tp_dev_t *) pvTimerGetTimerID(xTimer);
     if (tp_dev->serial_cb.cb != NULL) {
         tp_dev->serial_cb.cb(tp_dev->serial_cb.arg);
     }
@@ -301,13 +319,13 @@ static void tp_serial_timer_cb(TimerHandle_t xTimer)
 
 static void tp_custom_timer_cb(TimerHandle_t xTimer)
 {
-    tp_custom_cb_t* custom_cb = (tp_custom_cb_t*) pvTimerGetTimerID(xTimer);
+    tp_custom_cb_t *custom_cb = (tp_custom_cb_t *) pvTimerGetTimerID(xTimer);
     custom_cb->tp_dev->state = TOUCHPAD_STATE_PRESS;
     custom_cb->cb(custom_cb->arg);
 }
 
 /* reset all the customed event timers */
-static inline void tp_custom_reset_cb_tmrs(tp_dev_t* tp_dev)
+static inline void tp_custom_reset_cb_tmrs(tp_dev_t *tp_dev)
 {
     tp_custom_cb_t *custom_cb = tp_dev->custom_cbs;
     while (custom_cb != NULL) {
@@ -319,7 +337,7 @@ static inline void tp_custom_reset_cb_tmrs(tp_dev_t* tp_dev)
 }
 
 /* stop all the customed event timers */
-static inline void tp_custom_stop_cb_tmrs(tp_dev_t* tp_dev)
+static inline void tp_custom_stop_cb_tmrs(tp_dev_t *tp_dev)
 {
     tp_custom_cb_t *custom_cb = tp_dev->custom_cbs;
     while (custom_cb != NULL) {
@@ -335,13 +353,11 @@ void filter_read_cb(uint16_t raw_data[], uint16_t filtered_data[])
 {
     int16_t diff_data = 0;
     int8_t action_flag = -1;   // If action, increase the filter interval.
-    float scope_data[TOUCH_PAD_MAX] = { 0 };
-    tp_dev_t* slide_trigger_dev = NULL;
-
+    tp_dev_t *slide_trigger_dev = NULL;
     // Main loop to check every channel raw data.
     for (int i = 0; i < TOUCH_PAD_MAX; i++) {
         if (tp_group[i] != NULL) {
-            tp_dev_t* tp_dev = tp_group[i];
+            tp_dev_t *tp_dev = tp_group[i];
             // Use raw data calculate the diff data. Buttons respond fastly. Frequent button ok.
             diff_data = (int16_t) tp_dev->baseline - (int16_t) raw_data[i];
             tp_dev->diff_rate = (float) diff_data / (float) tp_dev->baseline;
@@ -426,8 +442,17 @@ void filter_read_cb(uint16_t raw_data[], uint16_t filtered_data[])
             // Check if the button also is slider element. All kind of slider. a button meanwhile is a slider.
             if (tp_dev->diff_rate > tp_dev->slide_trigger_thr && tp_dev->button_type >= TOUCHPAD_LINEAR_SLIDER) {
                 slide_trigger_dev = tp_dev;
+            } else if (tp_dev->button_type < TOUCHPAD_LINEAR_SLIDER) {
+#ifdef CONFIG_DATA_SCOPE_DEBUG
+                tune_dev_data_t dev_data = {0};
+                dev_data.ch = i;
+                dev_data.raw = raw_data[i];
+                dev_data.baseline = tp_dev->baseline;
+                dev_data.diff = diff_data;
+                dev_data.status = (tp_dev->state == TOUCHPAD_STATE_PUSH || tp_dev->state == TOUCHPAD_STATE_PRESS) ? 1 : 0;
+                tune_tool_set_device_data(&dev_data);
+#endif
             }
-            scope_data[i] = (float) raw_data[i];
         }
     }
     // Check the button status and to change the filter period.
@@ -440,10 +465,6 @@ void filter_read_cb(uint16_t raw_data[], uint16_t filtered_data[])
         // if the pad is slide and raw data exceed noise th, it should update position.
         callback_exec(slide_trigger_dev, TOUCHPAD_CB_SLIDE);
     }
-#ifdef CONFIG_DATA_SCOPE_DEBUG
-    // Send touch sensor raw data to PC tool via UART.
-    iot_tp_print_to_scope(scope_data, TOUCH_PAD_MAX);
-#endif
 }
 
 /* Creat a button element, init the element parameter */
@@ -457,10 +478,6 @@ tp_handle_t iot_tp_create(touch_pad_t touch_pad_num, float sensitivity)
         s_tp_mux = xSemaphoreCreateMutex();
         IOT_CHECK(TAG, s_tp_mux != NULL, NULL);
         g_init_flag = true;
-#ifdef CONFIG_DATA_SCOPE_DEBUG
-        iot_tp_scope_debug_init(CONFIG_SCOPE_DEBUG_PORT_NUM, CONFIG_SCOPE_DEBUG_UART_TXD_IO,
-                CONFIG_SCOPE_DEBUG_UART_RXD_IO, CONFIG_SCOPE_DEBUG_BAUD_RATE);
-#endif
         touch_pad_init();
         touch_pad_set_voltage(TOUCH_HVOLT_2V7, TOUCH_LVOLT_0V5, TOUCH_HVOLT_ATTEN_1V);
         touch_pad_filter_start(TOUCHPAD_FILTER_TOUCH_PERIOD);
@@ -482,14 +499,14 @@ tp_handle_t iot_tp_create(touch_pad_t touch_pad_num, float sensitivity)
     touch_pad_config(touch_pad_num, 0);
     vTaskDelay(20 / portTICK_PERIOD_MS);    // Wait system into stable status.
     for (int i = 0; i < 3; i++) {
-            touch_pad_read(touch_pad_num, &tp_val);
-            avg += tp_val;
-            ++num;
+        touch_pad_read(touch_pad_num, &tp_val);
+        avg += tp_val;
+        ++num;
     }
     tp_val = avg / num; // Calculate the initial value.
     ESP_LOGD(TAG, "tp[%d] initial value: %d\n", touch_pad_num, tp_val);
     // Init the status variable for the touch pad.
-    tp_dev_t* tp_dev = (tp_dev_t*) calloc(1, sizeof(tp_dev_t));
+    tp_dev_t *tp_dev = (tp_dev_t *) calloc(1, sizeof(tp_dev_t));
     tp_dev->filter_value = TOUCHPAD_FILTER_TOUCH_PERIOD;
     tp_dev->touch_pad_num = touch_pad_num;
     tp_dev->sum_ms = 0;
@@ -512,11 +529,30 @@ tp_handle_t iot_tp_create(touch_pad_t touch_pad_num, float sensitivity)
                    Noise threshold %.4f;\n\r\
                    Hysteresis threshold %.4f;\n\r\
                    Baseline reset threshold %.4f;\n\r\
-                   Baseline reset count threshold %d;\n\r",\
-                   tp_dev->touchChange, tp_dev->baseline, tp_dev->touch_thr,tp_dev->debounce_th,tp_dev->noise_thr,\
-                   tp_dev->hysteresis_thr, tp_dev->baseline_reset_thr, tp_dev->bl_reset_count_th);
+                   Baseline reset count threshold %d;\n\r", \
+             tp_dev->touchChange, tp_dev->baseline, tp_dev->touch_thr, tp_dev->debounce_th, tp_dev->noise_thr, \
+             tp_dev->hysteresis_thr, tp_dev->baseline_reset_thr, tp_dev->bl_reset_count_th);
     tp_group[touch_pad_num] = tp_dev;   // TouchPad device add to list.
     xSemaphoreGive(s_tp_mux);
+#ifdef CONFIG_DATA_SCOPE_DEBUG
+    tune_dev_info_t dev_info = {0};
+    dev_info.dev_cid = TUNE_CID_ESP32;
+    dev_info.dev_ver = TUNE_VERSION_V0;
+    esp_wifi_get_mac(ESP_IF_WIFI_STA, dev_info.dev_mac);
+    tune_tool_set_device_info(&dev_info);
+
+    tune_dev_parameter_t dev_para = {0};
+    dev_para.filter_period = TOUCHPAD_FILTER_IDLE_PERIOD;
+    dev_para.debounce_ms = TOUCHPAD_STATE_SWITCH_DEBOUNCE;
+    dev_para.base_reset_cnt = TOUCHPAD_BASELINE_RESET_COUNT_THRESHOLD;
+    dev_para.base_update_cnt = TOUCHPAD_BASELINE_UPDATE_COUNT_THRESHOLD;
+    dev_para.touch_th = TOUCHPAD_TOUCH_THRESHOLD_PERCENT * 100;
+    dev_para.noise_th = TOUCHPAD_NOISE_THRESHOLD_PERCENT * 100;
+    dev_para.hys_th = TOUCHPAD_HYSTERESIS_THRESHOLD_PERCENT * 100;
+    dev_para.base_reset_th = TOUCHPAD_BASELINE_RESET_THRESHOLD_PERCENT * 100;
+    dev_para.base_slider_th = TOUCHPAD_SLIDER_TRIGGER_THRESHOLD_PERCENT * 100;
+    tune_tool_set_device_parameter(&dev_para);
+#endif
     return (tp_handle_t) tp_dev;
 }
 
@@ -524,7 +560,7 @@ tp_handle_t iot_tp_create(touch_pad_t touch_pad_num, float sensitivity)
 esp_err_t iot_tp_delete(tp_handle_t tp_handle)
 {
     POINT_ASSERT(TAG, tp_handle);
-    tp_dev_t* tp_dev = (tp_dev_t*) tp_handle;
+    tp_dev_t *tp_dev = (tp_dev_t *) tp_handle;
     tp_group[tp_dev->touch_pad_num] = NULL;
     for (int i = 0; i < TOUCHPAD_CB_MAX; i++) {
         if (tp_dev->cb_group[i] != NULL) {
@@ -557,12 +593,12 @@ esp_err_t iot_tp_add_cb(tp_handle_t tp_handle, tp_cb_type_t cb_type, tp_cb cb, v
     POINT_ASSERT(TAG, tp_handle);
     POINT_ASSERT(TAG, cb);
     IOT_CHECK(TAG, cb_type < TOUCHPAD_CB_MAX, ESP_FAIL);
-    tp_dev_t* tp_dev = (tp_dev_t*) tp_handle;
+    tp_dev_t *tp_dev = (tp_dev_t *) tp_handle;
     if (tp_dev->cb_group[cb_type] != NULL) {
         ESP_LOGW(TAG, "This type of touchpad callback function has already been added!");
         return ESP_FAIL;
     }
-    tp_cb_t* cb_info = (tp_cb_t*) calloc(1, sizeof(tp_cb_t));
+    tp_cb_t *cb_info = (tp_cb_t *) calloc(1, sizeof(tp_cb_t));
     POINT_ASSERT(TAG, cb_info);
     cb_info->cb = cb;
     cb_info->arg = arg;
@@ -577,7 +613,7 @@ esp_err_t iot_tp_set_serial_trigger(tp_handle_t tp_handle, uint32_t trigger_thre
     POINT_ASSERT(TAG, cb);
     IOT_CHECK(TAG, trigger_thres_sec != 0, ESP_FAIL);
     IOT_CHECK(TAG, interval_ms > portTICK_RATE_MS, ESP_FAIL);
-    tp_dev_t* tp_dev = (tp_dev_t*) tp_handle;
+    tp_dev_t *tp_dev = (tp_dev_t *) tp_handle;
     if (tp_dev->serial_tmr == NULL) {
         tp_dev->serial_tmr = xTimerCreate("serial_tmr", interval_ms / portTICK_RATE_MS, pdTRUE, tp_dev, tp_serial_timer_cb);
         POINT_ASSERT(TAG, tp_dev->serial_tmr);
@@ -596,8 +632,8 @@ esp_err_t iot_tp_add_custom_cb(tp_handle_t tp_handle, uint32_t press_sec, tp_cb 
     POINT_ASSERT(TAG, tp_handle);
     POINT_ASSERT(TAG, cb);
     IOT_CHECK(TAG, press_sec != 0, ESP_FAIL);
-    tp_dev_t* tp_dev = (tp_dev_t*) tp_handle;
-    tp_custom_cb_t* cb_new = (tp_custom_cb_t*) calloc(1, sizeof(tp_custom_cb_t));
+    tp_dev_t *tp_dev = (tp_dev_t *) tp_handle;
+    tp_custom_cb_t *cb_new = (tp_custom_cb_t *) calloc(1, sizeof(tp_custom_cb_t));
     POINT_ASSERT(TAG, cb_new);
     cb_new->cb = cb;
     cb_new->arg = arg;
@@ -615,14 +651,14 @@ esp_err_t iot_tp_add_custom_cb(tp_handle_t tp_handle, uint32_t press_sec, tp_cb 
 
 touch_pad_t iot_tp_num_get(const tp_handle_t tp_handle)
 {
-    tp_dev_t* tp_dev = (tp_dev_t*) tp_handle;
+    tp_dev_t *tp_dev = (tp_dev_t *) tp_handle;
     return tp_dev->touch_pad_num;
 }
 
 esp_err_t iot_tp_set_threshold(const tp_handle_t tp_handle, float threshold)
 {
     POINT_ASSERT(TAG, tp_handle);
-    tp_dev_t* tp_dev = (tp_dev_t*) tp_handle;
+    tp_dev_t *tp_dev = (tp_dev_t *) tp_handle;
     ERR_ASSERT(TAG, touch_pad_config(tp_dev->touch_pad_num, threshold));
     // updata all the threshold and other related value.
     tp_dev->touch_thr = threshold;
@@ -636,7 +672,7 @@ esp_err_t iot_tp_set_threshold(const tp_handle_t tp_handle, float threshold)
 esp_err_t iot_tp_get_threshold(const tp_handle_t tp_handle, float *threshold)
 {
     POINT_ASSERT(TAG, tp_handle);
-    tp_dev_t* tp_dev = (tp_dev_t*) tp_handle;
+    tp_dev_t *tp_dev = (tp_dev_t *) tp_handle;
     *threshold = tp_dev->touch_thr;
     return ESP_OK;
 }
@@ -658,24 +694,24 @@ esp_err_t iot_tp_get_idle_filter_interval(const tp_handle_t tp_handle, uint32_t 
 esp_err_t iot_tp_read(const tp_handle_t tp_handle, uint16_t *touch_value_ptr)
 {
     POINT_ASSERT(TAG, tp_handle);
-    tp_dev_t* tp_dev = (tp_dev_t*) tp_handle;
+    tp_dev_t *tp_dev = (tp_dev_t *) tp_handle;
     return touch_pad_read_filtered(tp_dev->touch_pad_num, touch_value_ptr);
 }
 
 esp_err_t tp_read_raw(const tp_handle_t tp_handle, uint16_t *touch_value_ptr)
 {
     POINT_ASSERT(TAG, tp_handle);
-    tp_dev_t* tp_dev = (tp_dev_t*) tp_handle;
+    tp_dev_t *tp_dev = (tp_dev_t *) tp_handle;
     return touch_pad_read_raw_data(tp_dev->touch_pad_num, touch_value_ptr);
 }
 
 tp_slide_handle_t iot_tp_slide_create(uint8_t num, const touch_pad_t *tps, uint8_t pos_range,
-        const float *p_sensitivity)
+                                      const float *p_sensitivity)
 {
     IOT_CHECK(TAG, tps != NULL, NULL);
     IOT_CHECK(TAG, pos_range >= num, NULL);
 
-    tp_slide_t* tp_slide = (tp_slide_t*) calloc(1, sizeof(tp_slide_t));
+    tp_slide_t *tp_slide = (tp_slide_t *) calloc(1, sizeof(tp_slide_t));
     IOT_CHECK(TAG, tp_slide != NULL, NULL);
     IOT_CHECK(TAG, p_sensitivity != NULL, NULL);
     tp_slide->tp_num = num;
@@ -684,7 +720,7 @@ tp_slide_handle_t iot_tp_slide_create(uint8_t num, const touch_pad_t *tps, uint8
     tp_slide->pos_range = (float) pos_range;
     tp_slide->slide_pos = SLIDE_POS_INF;
     tp_slide->calc_val = (float *) calloc(tp_slide->tp_num, sizeof(float));
-    tp_slide->tp_handles = (tp_handle_t*) calloc(num, sizeof(tp_handle_t));
+    tp_slide->tp_handles = (tp_handle_t *) calloc(num, sizeof(tp_handle_t));
     if (tp_slide->tp_handles == NULL) {
         ESP_LOGE(TAG, "touchpad slide calloc error!");
         free(tp_slide);
@@ -705,21 +741,21 @@ tp_slide_handle_t iot_tp_slide_create(uint8_t num, const touch_pad_t *tps, uint8
     }
     float temp = 0;
     for (int i = 0; i < num; i++) {
-        tp_dev_t* tp_dev = tp_slide->tp_handles[i];
+        tp_dev_t *tp_dev = tp_slide->tp_handles[i];
         tp_dev->button_type = TOUCHPAD_LINEAR_SLIDER;
         tp_dev->slide_trigger_thr = tp_dev->touch_thr * TOUCHPAD_SLIDER_TRIGGER_THRESHOLD_PERCENT;
         ESP_LOGD(TAG, "Set touch [%d] slide trigger threshold is %.4f", tp_dev->touch_pad_num,
-                tp_dev->slide_trigger_thr);
+                 tp_dev->slide_trigger_thr);
         iot_tp_add_cb(tp_slide->tp_handles[i], TOUCHPAD_CB_SLIDE, tp_slide_pos_cb, tp_slide);
         temp += tp_dev->slide_trigger_thr;
     }
-    return (tp_slide_handle_t*) tp_slide;
+    return (tp_slide_handle_t *) tp_slide;
 }
 
 esp_err_t iot_tp_slide_delete(tp_slide_handle_t tp_slide_handle)
 {
     POINT_ASSERT(TAG, tp_slide_handle);
-    tp_slide_t *tp_slide = (tp_slide_t*) tp_slide_handle;
+    tp_slide_t *tp_slide = (tp_slide_t *) tp_slide_handle;
     for (int i = 0; i < tp_slide->tp_num; i++) {
         if (tp_slide->tp_handles[i]) {
             iot_tp_delete(tp_slide->tp_handles[i]);
@@ -740,12 +776,12 @@ esp_err_t iot_tp_slide_delete(tp_slide_handle_t tp_slide_handle)
 uint8_t iot_tp_slide_position(tp_slide_handle_t tp_slide_handle)
 {
     IOT_CHECK(TAG, tp_slide_handle != NULL, SLIDE_POS_INF);
-    tp_slide_t *tp_slide = (tp_slide_t*) tp_slide_handle;
+    tp_slide_t *tp_slide = (tp_slide_t *) tp_slide_handle;
     return (uint8_t) tp_slide->slide_pos;
 }
 
 // reset all the cumstom timers of matrix object
-static inline void matrix_reset_cb_tmrs(tp_matrix_t* tp_matrix)
+static inline void matrix_reset_cb_tmrs(tp_matrix_t *tp_matrix)
 {
     tp_matrix_cus_cb_t *custom_cb = tp_matrix->custom_cbs;
     while (custom_cb != NULL) {
@@ -757,7 +793,7 @@ static inline void matrix_reset_cb_tmrs(tp_matrix_t* tp_matrix)
 }
 
 // stop all the cumstom timers of matrix object
-static inline void matrix_stop_cb_tmrs(tp_matrix_t* tp_matrix)
+static inline void matrix_stop_cb_tmrs(tp_matrix_t *tp_matrix)
 {
     tp_matrix_cus_cb_t *custom_cb = tp_matrix->custom_cbs;
     while (custom_cb != NULL) {
@@ -770,7 +806,7 @@ static inline void matrix_stop_cb_tmrs(tp_matrix_t* tp_matrix)
 
 static void tp_matrix_push_cb(void *arg)
 {
-    tp_matrix_arg_t *matrix_arg = (tp_matrix_arg_t*) arg;
+    tp_matrix_arg_t *matrix_arg = (tp_matrix_arg_t *) arg;
     tp_matrix_t *tp_matrix = matrix_arg->tp_matrix;
     int x_idx, y_idx;
     tp_dev_t *tp_dev;
@@ -778,12 +814,12 @@ static void tp_matrix_push_cb(void *arg)
     if (tp_matrix->active_state != TOUCHPAD_STATE_IDLE) {
         return;
     }
-    if(matrix_arg->type == TOUCHPAD_MATRIX_ROW) {   // this is the 'x' index of pad.
+    if (matrix_arg->type == TOUCHPAD_MATRIX_ROW) {  // this is the 'x' index of pad.
         x_idx = matrix_arg->tp_idx;
         for (int j = 0; j < tp_matrix->y_num; j++) {
-            tp_dev = (tp_dev_t*) tp_matrix->y_tps[j];
+            tp_dev = (tp_dev_t *) tp_matrix->y_tps[j];
             ESP_LOGD(TAG, "y[%d] tp[%d] thresh: %02f; diff data: %02f; state: %d", j,
-                    tp_dev->touch_pad_num, tp_dev->touch_thr, tp_dev->diff_rate, tp_dev->state);
+                     tp_dev->touch_pad_num, tp_dev->touch_thr, tp_dev->diff_rate, tp_dev->state);
             if (tp_dev->state == TOUCHPAD_STATE_PUSH) {
                 if (idx < 0) {
                     // this is the 'y' index
@@ -795,12 +831,12 @@ static void tp_matrix_push_cb(void *arg)
                 }
             }
         }
-    } else if(matrix_arg->type == TOUCHPAD_MATRIX_COLUMN) { // this is the 'y' index of pad.
+    } else if (matrix_arg->type == TOUCHPAD_MATRIX_COLUMN) { // this is the 'y' index of pad.
         y_idx = matrix_arg->tp_idx;
         for (int j = 0; j < tp_matrix->x_num; j++) {
-            tp_dev = (tp_dev_t*) tp_matrix->x_tps[j];
+            tp_dev = (tp_dev_t *) tp_matrix->x_tps[j];
             ESP_LOGD(TAG, "x[%d] tp[%d] thresh: %02f; diff data: %02f; state: %d", j,
-                    tp_dev->touch_pad_num, tp_dev->touch_thr, tp_dev->diff_rate, tp_dev->state);
+                     tp_dev->touch_pad_num, tp_dev->touch_thr, tp_dev->diff_rate, tp_dev->state);
             if (tp_dev->state == TOUCHPAD_STATE_PUSH) {
                 if (idx < 0) {
                     // this is the 'x' index
@@ -821,19 +857,19 @@ static void tp_matrix_push_cb(void *arg)
         tp_matrix->active_state = TOUCHPAD_STATE_PUSH;
         tp_matrix->active_idx = idx;
         if (tp_matrix->cb_group[TOUCHPAD_CB_PUSH] != NULL) {
-            tp_matrix_cb_t* cb_info = tp_matrix->cb_group[TOUCHPAD_CB_PUSH];
+            tp_matrix_cb_t *cb_info = tp_matrix->cb_group[TOUCHPAD_CB_PUSH];
             cb_info->cb(cb_info->arg, idx / tp_matrix->y_num, idx % tp_matrix->y_num);
         }
         matrix_reset_cb_tmrs(tp_matrix);
         if (tp_matrix->serial_tmr != NULL) {
-            xTimerChangePeriod(tp_matrix->serial_tmr, tp_matrix->serial_thres_sec*1000 / portTICK_RATE_MS, portMAX_DELAY);
+            xTimerChangePeriod(tp_matrix->serial_tmr, tp_matrix->serial_thres_sec * 1000 / portTICK_RATE_MS, portMAX_DELAY);
         }
     }
 }
 
 static void tp_matrix_release_cb(void *arg)
 {
-    tp_matrix_arg_t *matrix_arg = (tp_matrix_arg_t*) arg;
+    tp_matrix_arg_t *matrix_arg = (tp_matrix_arg_t *) arg;
     tp_matrix_t *tp_matrix = matrix_arg->tp_matrix;
 
     // Check release action only with x index.
@@ -846,7 +882,7 @@ static void tp_matrix_release_cb(void *arg)
         tp_matrix->active_state = TOUCHPAD_STATE_IDLE;
         uint8_t idx = tp_matrix->active_idx;
         if (tp_matrix->cb_group[TOUCHPAD_CB_RELEASE] != NULL) {
-            tp_matrix_cb_t* cb_info = tp_matrix->cb_group[TOUCHPAD_CB_RELEASE];
+            tp_matrix_cb_t *cb_info = tp_matrix->cb_group[TOUCHPAD_CB_RELEASE];
             cb_info->cb(cb_info->arg, idx / tp_matrix->y_num, idx % tp_matrix->y_num);
         }
         matrix_stop_cb_tmrs(tp_matrix);
@@ -858,7 +894,7 @@ static void tp_matrix_release_cb(void *arg)
 
 static void tp_matrix_tap_cb(void *arg)
 {
-    tp_matrix_arg_t *matrix_arg = (tp_matrix_arg_t*) arg;
+    tp_matrix_arg_t *matrix_arg = (tp_matrix_arg_t *) arg;
     tp_matrix_t *tp_matrix = matrix_arg->tp_matrix;
     // make sure this is the same active sensor
     if (matrix_arg->type != TOUCHPAD_MATRIX_ROW \
@@ -868,7 +904,7 @@ static void tp_matrix_tap_cb(void *arg)
     if (tp_matrix->active_state == TOUCHPAD_STATE_PUSH) {
         uint8_t idx = tp_matrix->active_idx;
         if (tp_matrix->cb_group[TOUCHPAD_CB_TAP] != NULL) {
-            tp_matrix_cb_t* cb_info = tp_matrix->cb_group[TOUCHPAD_CB_TAP];
+            tp_matrix_cb_t *cb_info = tp_matrix->cb_group[TOUCHPAD_CB_TAP];
             cb_info->cb(cb_info->arg, idx / tp_matrix->y_num, idx % tp_matrix->y_num);
         }
     }
@@ -876,7 +912,7 @@ static void tp_matrix_tap_cb(void *arg)
 
 static void tp_matrix_cus_tmr_cb(TimerHandle_t xTimer)
 {
-    tp_matrix_cus_cb_t *tp_matrix_cb = (tp_matrix_cus_cb_t*) pvTimerGetTimerID(xTimer);
+    tp_matrix_cus_cb_t *tp_matrix_cb = (tp_matrix_cus_cb_t *) pvTimerGetTimerID(xTimer);
     tp_matrix_t *tp_matrix = tp_matrix_cb->tp_matrix;
     if (tp_matrix->active_state != TOUCHPAD_STATE_IDLE) {
         tp_matrix->active_state = TOUCHPAD_STATE_PRESS;
@@ -887,7 +923,7 @@ static void tp_matrix_cus_tmr_cb(TimerHandle_t xTimer)
 
 static void tp_matrix_serial_trigger_cb(TimerHandle_t xTimer)
 {
-    tp_matrix_t *tp_matrix = (tp_matrix_t*) pvTimerGetTimerID(xTimer);
+    tp_matrix_t *tp_matrix = (tp_matrix_t *) pvTimerGetTimerID(xTimer);
     if (tp_matrix->active_state != TOUCHPAD_STATE_IDLE) {
         tp_matrix->active_state = TOUCHPAD_STATE_PRESS;
         uint8_t idx = tp_matrix->active_idx;
@@ -897,27 +933,27 @@ static void tp_matrix_serial_trigger_cb(TimerHandle_t xTimer)
 }
 
 tp_matrix_handle_t iot_tp_matrix_create(uint8_t x_num, uint8_t y_num, const touch_pad_t *x_tps, \
-        const touch_pad_t *y_tps, const float *p_sensitivity)
+                                        const touch_pad_t *y_tps, const float *p_sensitivity)
 {
     IOT_CHECK(TAG, x_num != 0 && x_num < TOUCH_PAD_MAX, NULL);
     IOT_CHECK(TAG, y_num != 0 && y_num < TOUCH_PAD_MAX, NULL);
-    tp_matrix_t *tp_matrix = (tp_matrix_t*) calloc(1, sizeof(tp_matrix_t));
+    tp_matrix_t *tp_matrix = (tp_matrix_t *) calloc(1, sizeof(tp_matrix_t));
     IOT_CHECK(TAG, tp_matrix != NULL, NULL);
     IOT_CHECK(TAG, p_sensitivity != NULL, NULL);
-    tp_matrix->x_tps = (tp_handle_t*) calloc(x_num, sizeof(tp_handle_t));
+    tp_matrix->x_tps = (tp_handle_t *) calloc(x_num, sizeof(tp_handle_t));
     if (tp_matrix->x_tps == NULL) {
         ESP_LOGE(TAG, "create touchpad matrix error! no available memory!");
         free(tp_matrix);
         return NULL;
     }
-    tp_matrix->y_tps = (tp_handle_t*) calloc(y_num, sizeof(tp_handle_t));
+    tp_matrix->y_tps = (tp_handle_t *) calloc(y_num, sizeof(tp_handle_t));
     if (tp_matrix->y_tps == NULL) {
         ESP_LOGE(TAG, "create touchpad matrix error! no available memory!");
         free(tp_matrix->x_tps);
         free(tp_matrix);
         return NULL;
     }
-    tp_matrix->matrix_args = (tp_matrix_arg_t*) calloc(x_num + y_num, sizeof(tp_matrix_arg_t));
+    tp_matrix->matrix_args = (tp_matrix_arg_t *) calloc(x_num + y_num, sizeof(tp_matrix_arg_t));
     if (tp_matrix->matrix_args == NULL) {
         ESP_LOGE(TAG, "create touchpad matrix error! no available memory!");
         free(tp_matrix->x_tps);
@@ -952,12 +988,12 @@ tp_matrix_handle_t iot_tp_matrix_create(uint8_t x_num, uint8_t y_num, const touc
         if (tp_matrix->y_tps[i] == NULL) {
             goto CREATE_ERR;
         }
-        tp_matrix->matrix_args[i+x_num].tp_matrix = tp_matrix;
-        tp_matrix->matrix_args[i+x_num].tp_idx = i;
-        tp_matrix->matrix_args[i+x_num].type = TOUCHPAD_MATRIX_COLUMN;
-        iot_tp_add_cb(tp_matrix->y_tps[i], TOUCHPAD_CB_PUSH, tp_matrix_push_cb, &tp_matrix->matrix_args[i+x_num]);
-        iot_tp_add_cb(tp_matrix->y_tps[i], TOUCHPAD_CB_RELEASE, tp_matrix_release_cb, &tp_matrix->matrix_args[i+x_num]);
-        iot_tp_add_cb(tp_matrix->y_tps[i], TOUCHPAD_CB_TAP, tp_matrix_tap_cb, &tp_matrix->matrix_args[i+x_num]);
+        tp_matrix->matrix_args[i + x_num].tp_matrix = tp_matrix;
+        tp_matrix->matrix_args[i + x_num].tp_idx = i;
+        tp_matrix->matrix_args[i + x_num].type = TOUCHPAD_MATRIX_COLUMN;
+        iot_tp_add_cb(tp_matrix->y_tps[i], TOUCHPAD_CB_PUSH, tp_matrix_push_cb, &tp_matrix->matrix_args[i + x_num]);
+        iot_tp_add_cb(tp_matrix->y_tps[i], TOUCHPAD_CB_RELEASE, tp_matrix_release_cb, &tp_matrix->matrix_args[i + x_num]);
+        iot_tp_add_cb(tp_matrix->y_tps[i], TOUCHPAD_CB_TAP, tp_matrix_tap_cb, &tp_matrix->matrix_args[i + x_num]);
     }
     tp_matrix->active_state = TOUCHPAD_STATE_IDLE;
     return (tp_matrix_handle_t)tp_matrix;
@@ -987,7 +1023,7 @@ CREATE_ERR:
 esp_err_t iot_tp_matrix_delete(tp_matrix_handle_t tp_matrix_hd)
 {
     POINT_ASSERT(TAG, tp_matrix_hd);
-    tp_matrix_t *tp_matrix = (tp_matrix_t*) tp_matrix_hd;
+    tp_matrix_t *tp_matrix = (tp_matrix_t *) tp_matrix_hd;
     for (int i = 0; i < tp_matrix->x_num; i++) {
         if (tp_matrix->x_tps[i] != NULL) {
             iot_tp_delete(tp_matrix->x_tps[i]);
@@ -1033,12 +1069,12 @@ esp_err_t iot_tp_matrix_add_cb(tp_matrix_handle_t tp_matrix_hd, tp_cb_type_t cb_
     POINT_ASSERT(TAG, tp_matrix_hd);
     POINT_ASSERT(TAG, cb);
     IOT_CHECK(TAG, cb_type < TOUCHPAD_CB_MAX, ESP_FAIL);
-    tp_matrix_t *tp_matrix = (tp_matrix_t*) tp_matrix_hd;
+    tp_matrix_t *tp_matrix = (tp_matrix_t *) tp_matrix_hd;
     if (tp_matrix->cb_group[cb_type] != NULL) {
         ESP_LOGW(TAG, "This type of touchpad callback function has already been added!");
         return ESP_FAIL;
     }
-    tp_matrix_cb_t* cb_info = (tp_matrix_cb_t*) calloc(1, sizeof(tp_matrix_cb_t));
+    tp_matrix_cb_t *cb_info = (tp_matrix_cb_t *) calloc(1, sizeof(tp_matrix_cb_t));
     POINT_ASSERT(TAG, cb_info);
     cb_info->cb = cb;
     cb_info->arg = arg;
@@ -1051,8 +1087,8 @@ esp_err_t iot_tp_matrix_add_custom_cb(tp_matrix_handle_t tp_matrix_hd, uint32_t 
     POINT_ASSERT(TAG, tp_matrix_hd);
     POINT_ASSERT(TAG, cb);
     IOT_CHECK(TAG, press_sec != 0, ESP_FAIL);
-    tp_matrix_t *tp_matrix = (tp_matrix_t*) tp_matrix_hd;
-    tp_matrix_cus_cb_t *cb_new = (tp_matrix_cus_cb_t*) calloc(1, sizeof(tp_matrix_cus_cb_t));
+    tp_matrix_t *tp_matrix = (tp_matrix_t *) tp_matrix_hd;
+    tp_matrix_cus_cb_t *cb_new = (tp_matrix_cus_cb_t *) calloc(1, sizeof(tp_matrix_cus_cb_t));
     POINT_ASSERT(TAG, cb_new);
     cb_new->tmr = xTimerCreate("custom_tmr", press_sec * 1000 / portTICK_RATE_MS, pdFALSE, cb_new, tp_matrix_cus_tmr_cb);
     if (cb_new->tmr == NULL) {
@@ -1074,13 +1110,12 @@ esp_err_t iot_tp_matrix_set_serial_trigger(tp_matrix_handle_t tp_matrix_hd, uint
     POINT_ASSERT(TAG, cb);
     IOT_CHECK(TAG, trigger_thres_sec != 0, ESP_FAIL);
     IOT_CHECK(TAG, interval_ms >= portTICK_PERIOD_MS, ESP_FAIL);
-    tp_matrix_t *tp_matrix = (tp_matrix_t*) tp_matrix_hd;
+    tp_matrix_t *tp_matrix = (tp_matrix_t *) tp_matrix_hd;
     tp_matrix->serial_cb.cb = cb;
     tp_matrix->serial_cb.arg = arg;
     tp_matrix->serial_thres_sec = trigger_thres_sec;
     tp_matrix->serial_interval_ms = interval_ms;
-    tp_matrix->serial_tmr = xTimerCreate("serial_tmr", trigger_thres_sec*1000 / portTICK_RATE_MS, pdFALSE, tp_matrix, tp_matrix_serial_trigger_cb);
+    tp_matrix->serial_tmr = xTimerCreate("serial_tmr", trigger_thres_sec * 1000 / portTICK_RATE_MS, pdFALSE, tp_matrix, tp_matrix_serial_trigger_cb);
     POINT_ASSERT(TAG, tp_matrix->serial_tmr);
     return ESP_OK;
 }
-
