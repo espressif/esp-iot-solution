@@ -6,7 +6,7 @@
 ## 1. 低功耗开发板套件使用简介
 一套完整的开发套件包含以下几部分：
   
-  * 开发板（ESP32_BATTERY_EB V2）  
+  * 开发板（ESP32-MeshKit-Sense）  
   * 下载器（ESP-Prog）  
   * 墨水屏（非必须）  
   * 锂电池（可通过 USB 供电，非必须）  
@@ -14,7 +14,7 @@
 <img src="../../documents/_static/lowpower_evb/low_power_evb_kit.png" width = "600">  
 
 ### 1.1 开发板
-开发板的各个组成部分如下图所示，硬件设计请查看[硬件手册](https://github.com/espressif/esp-iot-solution/blob/master/documents/evaluation_boards/esp32_battery_eb_cn.md)。  
+开发板的各个组成部分如下图所示，硬件设计请查看[硬件手册](https://github.com/espressif/esp-iot-solution/blob/master/documents/evaluation_boards/ESP32-MeshKit-Sense_cn.md)。  
 
 <img src="../../documents/_static/lowpower_evb/low_power_evb.png" width = "600">  
 

@@ -1,6 +1,12 @@
+(English version will be released soon)
+
+# ESP32-MeshKit-Sense 硬件设计指南
+
+---
+
 # 1. 产品概述
 
-ESP32_BATTERY_EB 是一款以乐鑫 ESP32 模组为核心的开发板，连接了温湿度传感器、环境亮度传感器、屏幕等外设，主要用于检测模组在正常工作或睡眠状态下，连接各个外设时的电流情况。
+ESP32-MeshKit-Sense 是一款以乐鑫 ESP32 模组为核心的开发板，集成了温湿度传感器、环境亮度传感器等外设，并且可外接屏幕，主要用于检测模组在正常工作或睡眠状态下，连接各个外设时的电流情况。
 
 关于 ESP32 详细信息，请参考文档[《ESP32 技术规格书》](https://www.espressif.com/sites/default/files/documentation/esp32_datasheet_cn.pdf)。 
 
