@@ -1,4 +1,4 @@
-(English version will be released soon)
+[[EN]](./ESP32-MeshKit-Sense_guide_en.md)
 
 # ESP32-MeshKit-Sense 硬件设计指南
 
