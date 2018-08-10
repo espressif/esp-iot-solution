@@ -97,7 +97,7 @@ This section details the steps for running this demo.
 		* Wi-Fi indicator light on: Device is in Wake-up mode. Now press Wakeup button, the Wi-Fi indicator should start blinking rapidly, which indicates that the device has now entered Network Configuration mode.
 		* Wi-Fi indicator light off: Device is in Sleep mode. Now press Wakeup button to wake up the device, the Wi-Fi indicator light should turn on. Then press Wakeup button again, the Wi-Fi indicator should start blinking rapidly, which indicates that the device has now entered Network Configuration mode.
 3. Connect mobile phones to the corresponding routers and start the network configuration app. After the network is configured successfully, the Wi-Fi indicator light turns on, which shows that the device has been successfully connected to the router.
-4. If the device is woken up not from Deep-sleep mode, but, for example, as a result of restart or reset, the device enters Deep-sleep mode and then gets woken up by a ULP, GPIO or Timer, depending on the `Wake up type` setting:
+4. If the device is woken up not from Deep-sleep mode, but, for example, as a result of restart or reset, the device enters Deep-sleep mode and then gets woken up by a ULP, GPIO or Timer, depending on the `Wake up type` setting:
 	* GPIO Wake-up - the device wakes up if the Wakeup button is pressed. After that, the device's CPU reads sensor data via I2C interface.
 	* Timer Wake-up - the device automatically wakes up after a specified time interval. After that, the device's CPU reads sensor data via I2C interface.
 	* ULP Wake-up - the device wakes up after ULP has finished reading sensor data for a certain number of times, which is specified in `Read sensor value number`. After that, the device's CPU reads sensor data from ULP.
@@ -113,7 +113,7 @@ This section details the steps for running this demo.
 
 ### 3.1  Overview of Low Power Software Framework
 
-The software framework of Espressif Low Power Solution offers a typical application flow by combining the Deep-sleep design with other functions. For the code-level implementation of the framework, please refer to the folder: `esp-iot-solution/components/framework/lowpower_framework`. This framework eliminates the need to design your own flows. All you have to do is call the corresponding functions for their designs, which helps you greatly save on development time and costs.
+The software framework of Espressif Low Power Solution offers a typical application flow by combining the Deep-sleep design with other functions. For the code-level implementation of the framework, please refer to the folder: `esp-iot-solution/components/framework/lowpower_framework`. This framework eliminates the need to design your own flows. All you have to do is call the corresponding functions for their designs, which helps you greatly save on development time and costs.
 
 The software framework for Espressif Low Power Solution mainly consists of:
 
@@ -215,7 +215,7 @@ The ULP co-processor has its own specialized assembly instructions for programmi
 There are two ways for obtaining sensor data：
 
 * From ULP -  After waking up, the CPU accesses the ULP memory and obtains the sensor data readings collected by the ULP co-processor during the device's deep sleep. This procedure greatly lowers power consumption as the data gets captured from ULP while the chip stays in deep sleep. In this demo, ULP will wake up the host CPU after reading the data for the number of times specified in `Read sensor value number`.
-* From CPU - After waking up, the CPU accesses reads the sensor data by using I2C interface. In this case, only the current values can be read after the device wakes up. This is more suitable for applications that require the status data occasionally. With this method, the power consumption of the device can be lowered to no more than 20-30 μA in total (the current of ESP32 module is only 5 uA), as the device stays in deep sleep with all the peripherals not running except for the power supply and ESP32 module. However, only the GPIO Wake-up and Timer Wake-up are supported here.
+* From CPU - After waking up, the CPU reads the sensor data by using I2C interface. In this case, only the current values can be read after the device wakes up. This is more suitable for applications that require the status data occasionally. With this method, the power consumption of the device can be lowered to no more than 20-30 μA in total (the current of ESP32 module is only 5 uA), as the device stays in deep sleep with all the peripherals not running except for the power supply and ESP32 module. However, only the GPIO Wake-up and Timer Wake-up are supported here.
 
 #### 3.3.5 Uploading Data to Server
 
@@ -243,7 +243,7 @@ Pins for the power measurements of different parts of the board are all led out.
 * CHVBA-VBA: battery charging current
 * EXT5V-CH5V: the current at the USB port during the battery charging
 
-The table below lists the current measurement results for different parts：
+The table below lists the current measurement results for different parts：
 
 | Part | Condition | Current | Description | Note |
 |------|-----------|---------|-------------|------|
@@ -253,9 +253,9 @@ The table below lists the current measurement results for different parts：
 |3.3V-PER_3.3V   | Two sensors and E-ink are running | 9.2 mA | Providing power supply to sensors by controlling IO27 and provide power supply to E-ink by controlling IO14. | / |
 |DCVCC-SUFVCC    | Deep sleep (GPIO Wake-up enabled) | 20 uA  | The measurement is performed when the device enters deep sleep and waits to be woken up by GPIO (no other actions). | 5 uA (Reset Protect chip) + 5 uA (ESP32-WROOM-32) + DC-DC conversion (10 uA) |
 |DCVCC-SUFVCC    | Deep sleep (ULP Wake-up enabled)  | 3.4 mA | The measurement is performed when the device enters deep sleep while the ULP stays awake and reads the sensor data. | / |
-|CHVBA-VBA       | Both the battery and USB port are connected| The power consumption changes according to the battery power |Please measure directly. | / |
-|EXT5V-CH5V      | Both the battery and USB port are connected| The power consumption changes according to the battery power | Please measure directly. | / |
+|CHVBA-VBA       | Both the battery and USB port are connected| The power consumption changes according to the battery power | Please measure directly. | / |
+|EXT5V-CH5V      | Both the battery and USB port are connected| The power consumption changes according to the battery power | Please measure directly. | / |
 
-The power consumption of the module is 1.8 mA when the ULP stays awake. However, the power consumption could be further lowered with the timed sleep function. In this demo, please set the time interval of ULP reading sensor data using the `Read sensor interval(ms)` option in menuconfig. Note that, the longer the interval, the lower the average power consumption and the longer the battery life. Correspondingly, the data readings by the ULP are also less frequent. You may determine a reasonable time interval according to your specific requirements. The figure below demonstrates the module's current waveform when the ULP performs data readings. Also you may find that the data reading interval is 200 ms, the average current during ULP sensor reading is 1.8 mA, and the average current in Sleep mode after ULP sensor reading is 5 uA.
+The power consumption of the module is 1.8 mA when the ULP stays awake. However, the power consumption could be further lowered with the timed sleep function. In this demo, please set the time interval of ULP reading sensor data using the `Read sensor interval(ms)` option in menuconfig. Note that, the longer the interval, the lower the average power consumption and the longer the battery life. Correspondingly, the data readings by the ULP are also less frequent. You may determine a reasonable time interval according to your specific requirements. The figure below demonstrates the module's current waveform when the ULP performs data readings. Also you may find that the data reading interval is 200 ms, the average current during ULP sensor reading is 1.8 mA, and the average current in Sleep mode after ULP sensor reading is 5 uA.
 
 <img src="../../documents/_static/lowpower_evb/ulp_read_sensor_current.png" width = "600"> 
