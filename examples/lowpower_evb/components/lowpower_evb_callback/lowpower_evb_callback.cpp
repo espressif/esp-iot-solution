@@ -65,24 +65,51 @@ static const char *TAG = "lowpower_evb_callback";
 #define ENABLE_EPAPER
 #endif
 
+/* low voltage protect */
+#define VOLTAGE_PROTECT_THRESHOLD  (2800)  /* 2800 mV */
+
 static float supply_voltage = 0;
 static float humidity[READ_SENSOR_VALUE_NUM]={0};
 static float temperature[READ_SENSOR_VALUE_NUM]={0};
 static float luminance[READ_SENSOR_VALUE_NUM]={0};
 
-esp_err_t lowpower_evb_init_cb()
+static void low_vol_protect_task(void *arg)
 {
-#ifdef ENABLE_EPAPER
-    /* initialize epaper */
-    epaper_display_init();
-#endif
-
     /* initialize ADC */
     adc_init();
+
+    while(1) {
+        uint32_t voltage_mv = adc_get_supply_voltage();
+        supply_voltage = (float)voltage_mv / 1000;
+        /* if supply voltage is lower than voltage protect threshold, enter deep-sleep mode */
+        if (voltage_mv < VOLTAGE_PROTECT_THRESHOLD) {
+            ESP_LOGI(TAG, "supply voltage is too low (<2.8V), enter deep-sleep");
+            vTaskDelay(1000 / portTICK_RATE_MS);
+            esp_sleep_enable_timer_wakeup(3 * 1000 * 1000);
+            esp_deep_sleep_start();
+        }
+        vTaskDelay(1000 / portTICK_RATE_MS);
+    }
+}
+
+static void low_vol_protect_start()
+{
+    xTaskCreate(low_vol_protect_task, "low_vol_protect_task", 2048, NULL, 5, NULL);
+}
+
+esp_err_t lowpower_evb_init_cb()
+{
+    low_vol_protect_start();
+    
     /* initialize wifi config start button */
     button_init();
     /* initialize wifi and network led */
     status_led_init();
+
+#ifdef ENABLE_EPAPER
+    /* initialize epaper */
+    epaper_display_init();
+#endif
     
 #ifdef ULP_WAKE_UP
     rtc_sensor_power_on();

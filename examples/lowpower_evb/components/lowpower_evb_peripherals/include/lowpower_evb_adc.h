@@ -28,9 +28,9 @@ void adc_init();
   * @brief get supply voltage.
   *
   * @return 
-  *     - the value of sulpply_voltage. uint:V
+  *     - the value of sulpply_voltage. uint:mV
   */
-float adc_get_supply_voltage();
+uint32_t adc_get_supply_voltage();
 
 #ifdef __cplusplus
 }
