@@ -308,6 +308,11 @@ esp_err_t send_data_done_cb(void)
 esp_err_t start_deep_sleep_cb(void)
 {
     ESP_LOGI(TAG, "start deep sleep");
+    
+    /* the GPIO led used is rtc IO, and its status is not fixed in deep-sleep mode,
+     * so we need to hold the io level before enter deep-sleep mode.
+     */
+    led_io_rtc_hold_en();
 
 #ifdef ULP_WAKE_UP
     ESP_LOGI(TAG, "use ulp or gpio%d to wake up", GPIO_WAKE_UP_IO);

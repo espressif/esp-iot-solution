@@ -40,14 +40,34 @@ void wifi_led_slow_blink();
 void wifi_led_on();
 
 /**
+ * @brief set WiFi led status as always off.
+ */
+void wifi_led_off();
+
+/**
  * @brief set network led status as quick blink.
  */
 void network_led_quick_blink();
 
 /**
+ * @brief set network led status as slow blink.
+ */
+void network_led_slow_blink();
+
+/**
  * @brief set network led status as always on.
  */
 void network_led_on();
+
+/**
+ * @brief set network led status as always off.
+ */
+void network_led_off();
+
+/**
+ * @brief latch led IO value, should be called before enter deep-sleep.
+ */
+void led_io_rtc_hold_en();
 
 #ifdef __cplusplus
 }
