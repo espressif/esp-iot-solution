@@ -125,7 +125,9 @@ The software framework for Espressif Low Power Solution mainly consists of:
 
 Please see the flow chart below:
 
-<img src="../../documents/_static/lowpower_evb/workflow_of_framwork.png" width = "800"> 
+<img src="../../documents/_static/lowpower_evb/workflow_of_framwork.png">
+
+> The "ULP Running", which can be seen in the figure above in the dotted box, only occurs when the ULP Wake-up is enabled as the wake-up source. For details, please see Section 3.3.
 
 ### 3.2 Documents and Interface
 
@@ -232,6 +234,10 @@ To provide a reference design for E-ink, the last set of the uploaded data will 
 #### 3.3.6 Sleep and Wake Up
 
 Sleep and Wake-up are usually the last programs to be performed as CPU will stop running when device enters deep sleep. At this point, the device waits to be woken up to start all over again, which is quite similar to the reboot mechanism. Now you need to set the Wake-up types (namely, Timer Wake-up, GPIO Wake-up and ULP Wake-up) before the device enters deep sleep, awaiting wake-up signals.
+
+When the chip is in Deep-sleep mode, the ULP can be configured to go into sleep right after it has completed its routine. Then it waits to be waken up by a timer. The demo below shows the process of ULP running and waking up:
+
+<img src="../../documents/_static/lowpower_evb/ulp_sleep.png">
 
 ## 4. Power Measurement of the Low Power Development Board
 
