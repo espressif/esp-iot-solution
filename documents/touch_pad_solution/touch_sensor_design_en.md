@@ -603,8 +603,9 @@ If the application requires a high number of buttons and there are no enough IO 
   
 An m×n matrix requires m+n touch sensors. A matrix button design consists of two groups of capacitive sensors: Row sensors and Column sensors, as shown below:
 
->- The button diameter is between 8 mm and 15 mm, typically 12 mm.
+- The button diameter is between 8 mm and 15 mm, typically 12 mm.
 - The air gap between segments is 0.5 mm.
+- Each matrix button represents the combination of multiple touch channels. It's required that the whole area of a touch button be covered by your figure when a touch takes place. Besides, electroplated conductive coating can be applied to the touch area of the overlay to improve user experience.
 
 <img src="../_static/touch_pad/matrix_button.png" width = "400" alt="matrix_button" align=center />
 
@@ -617,6 +618,17 @@ Touch springs are used as touch electrodes in many touch designs to connect the 
 - Springs with metal plate have the highest sensitivity, followed by horn-shaped ones and straight-shaped ones.
 - The distance between adjacent spring buttons should not be less than 10 mm.
 - The spring-to-ground gap should not be less than 1 mm.
+
+#### 3.3.15. ITO Button Design
+ITO (Indium Tin Oxide) can be used to create touch button in touch sensor designs built around ESP32, for its properties of transparency and conductivity. This material can be sprayed on the surface of LCD overlay, thus making a touch screen.   
+
+- The PCB button design guidelines can also be applied when designing the size/shape of the ITO touch button. 
+- The electrical resistivity of ITO material is relatively high. Therefore, it's recommended that ITO trace should be replaced with other materials, if possible.
+- The touch sensitivity is greatly affected by the electrical resistance of touch channel (including the trace and the pad), which shall not exceed 2 KΩ to ensure an acceptable sensitivity. Also, the electrical resistance of the ITO trace increases significantly with the trace length, so the ITO trace shall be kept as short as possible in designs.
+- The count value of the TouchPad channel is affected when the LCD screen is used. Therefore, the touch performance (measured by sensitivity and SNR) should be evaluated when the LCD is in use.
+- More ground fill around the ITO touch button reduces the interference introduced by LCD as well as the touch sensitivity. Therefore, tradeoff among reducing interference and increasing sensitivity should be made accordingly in actual product designs. 
+
+
 
 ## 4. Touch Sensor Firmware Design Guidelines
 
