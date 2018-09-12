@@ -772,36 +772,57 @@ static void tp_matrix_push_cb(void *arg)
 {
     tp_matrix_arg_t *matrix_arg = (tp_matrix_arg_t*) arg;
     tp_matrix_t *tp_matrix = matrix_arg->tp_matrix;
-    // this is the 'x' index of pad(only 'x' pads have event callback functions)
-    int x_idx = matrix_arg->tp_idx;
+    int x_idx, y_idx;
     tp_dev_t *tp_dev;
     int idx = -1;
     if (tp_matrix->active_state != TOUCHPAD_STATE_IDLE) {
         return;
     }
-    for (int j = 0; j < tp_matrix->y_num; j++) {
-        tp_dev = (tp_dev_t*) tp_matrix->y_tps[j];
-        ESP_LOGD(TAG, "y[%d] tp[%d] thresh: %02f; diff data: %02f; state: %d", j,
-                tp_dev->touch_pad_num, tp_dev->touch_thr, tp_dev->diff_rate, tp_dev->state);
-        if (tp_dev->state == TOUCHPAD_STATE_PUSH) {
-            if (idx < 0) {
-                // this is the 'y' index
-                idx = x_idx * tp_matrix->y_num + j;
-                ESP_LOGD(TAG, "matrix idx: %d", idx);
-            } else {
-                // to make sure only one sensor is touched.
-                return;
+    if(matrix_arg->type == TOUCHPAD_MATRIX_ROW) {   // this is the 'x' index of pad.
+        x_idx = matrix_arg->tp_idx;
+        for (int j = 0; j < tp_matrix->y_num; j++) {
+            tp_dev = (tp_dev_t*) tp_matrix->y_tps[j];
+            ESP_LOGD(TAG, "y[%d] tp[%d] thresh: %02f; diff data: %02f; state: %d", j,
+                    tp_dev->touch_pad_num, tp_dev->touch_thr, tp_dev->diff_rate, tp_dev->state);
+            if (tp_dev->state == TOUCHPAD_STATE_PUSH) {
+                if (idx < 0) {
+                    // this is the 'y' index
+                    idx = x_idx * tp_matrix->y_num + j;
+                    ESP_LOGD(TAG, "matrix idx: %d", idx);
+                } else {
+                    // to make sure only one sensor is touched.
+                    return;
+                }
             }
         }
+    } else if(matrix_arg->type == TOUCHPAD_MATRIX_COLUMN) { // this is the 'y' index of pad.
+        y_idx = matrix_arg->tp_idx;
+        for (int j = 0; j < tp_matrix->x_num; j++) {
+            tp_dev = (tp_dev_t*) tp_matrix->x_tps[j];
+            ESP_LOGD(TAG, "x[%d] tp[%d] thresh: %02f; diff data: %02f; state: %d", j,
+                    tp_dev->touch_pad_num, tp_dev->touch_thr, tp_dev->diff_rate, tp_dev->state);
+            if (tp_dev->state == TOUCHPAD_STATE_PUSH) {
+                if (idx < 0) {
+                    // this is the 'x' index
+                    idx = j * tp_matrix->y_num + y_idx;
+                    ESP_LOGD(TAG, "matrix idx: %d", idx);
+                } else {
+                    // to make sure only one sensor is touched.
+                    return;
+                }
+            }
+        }
+    } else {
+        ESP_LOGE(TAG, "matrix cb err");
     }
+
     // find only one active pad
     if (idx >= 0) {
         tp_matrix->active_state = TOUCHPAD_STATE_PUSH;
-        // this is the active 'y' index
         tp_matrix->active_idx = idx;
         if (tp_matrix->cb_group[TOUCHPAD_CB_PUSH] != NULL) {
             tp_matrix_cb_t* cb_info = tp_matrix->cb_group[TOUCHPAD_CB_PUSH];
-            cb_info->cb(cb_info->arg, x_idx, idx % tp_matrix->y_num);
+            cb_info->cb(cb_info->arg, idx / tp_matrix->y_num, idx % tp_matrix->y_num);
         }
         matrix_reset_cb_tmrs(tp_matrix);
         if (tp_matrix->serial_tmr != NULL) {
@@ -814,10 +835,13 @@ static void tp_matrix_release_cb(void *arg)
 {
     tp_matrix_arg_t *matrix_arg = (tp_matrix_arg_t*) arg;
     tp_matrix_t *tp_matrix = matrix_arg->tp_matrix;
-    // tp_idx is the 'x' index of pad(only 'x' pads have event callback functions)
-    if (matrix_arg->tp_idx != tp_matrix->active_idx / tp_matrix->y_num) {
+
+    // Check release action only with x index.
+    if (matrix_arg->type != TOUCHPAD_MATRIX_ROW \
+            && matrix_arg->tp_idx != tp_matrix->active_idx / tp_matrix->y_num) {
         return;
     }
+
     if (tp_matrix->active_state != TOUCHPAD_STATE_IDLE) {
         tp_matrix->active_state = TOUCHPAD_STATE_IDLE;
         uint8_t idx = tp_matrix->active_idx;
@@ -837,7 +861,8 @@ static void tp_matrix_tap_cb(void *arg)
     tp_matrix_arg_t *matrix_arg = (tp_matrix_arg_t*) arg;
     tp_matrix_t *tp_matrix = matrix_arg->tp_matrix;
     // make sure this is the same active sensor
-    if (matrix_arg->tp_idx != tp_matrix->active_idx / tp_matrix->y_num) {
+    if (matrix_arg->type != TOUCHPAD_MATRIX_ROW \
+            && matrix_arg->tp_idx != tp_matrix->active_idx / tp_matrix->y_num) {
         return;
     }
     if (tp_matrix->active_state == TOUCHPAD_STATE_PUSH) {
@@ -892,7 +917,7 @@ tp_matrix_handle_t iot_tp_matrix_create(uint8_t x_num, uint8_t y_num, const touc
         free(tp_matrix);
         return NULL;
     }
-    tp_matrix->matrix_args = (tp_matrix_arg_t*) calloc(x_num, sizeof(tp_matrix_arg_t));
+    tp_matrix->matrix_args = (tp_matrix_arg_t*) calloc(x_num + y_num, sizeof(tp_matrix_arg_t));
     if (tp_matrix->matrix_args == NULL) {
         ESP_LOGE(TAG, "create touchpad matrix error! no available memory!");
         free(tp_matrix->x_tps);
@@ -913,7 +938,7 @@ tp_matrix_handle_t iot_tp_matrix_create(uint8_t x_num, uint8_t y_num, const touc
         }
         tp_matrix->matrix_args[i].tp_matrix = tp_matrix;
         tp_matrix->matrix_args[i].tp_idx = i;
-        // only add callback event to 'x' pads
+        tp_matrix->matrix_args[i].type = TOUCHPAD_MATRIX_ROW;
         iot_tp_add_cb(tp_matrix->x_tps[i], TOUCHPAD_CB_PUSH, tp_matrix_push_cb, tp_matrix->matrix_args + i);
         iot_tp_add_cb(tp_matrix->x_tps[i], TOUCHPAD_CB_RELEASE, tp_matrix_release_cb, tp_matrix->matrix_args + i);
         iot_tp_add_cb(tp_matrix->x_tps[i], TOUCHPAD_CB_TAP, tp_matrix_tap_cb, tp_matrix->matrix_args + i);
@@ -927,12 +952,18 @@ tp_matrix_handle_t iot_tp_matrix_create(uint8_t x_num, uint8_t y_num, const touc
         if (tp_matrix->y_tps[i] == NULL) {
             goto CREATE_ERR;
         }
+        tp_matrix->matrix_args[i+x_num].tp_matrix = tp_matrix;
+        tp_matrix->matrix_args[i+x_num].tp_idx = i;
+        tp_matrix->matrix_args[i+x_num].type = TOUCHPAD_MATRIX_COLUMN;
+        iot_tp_add_cb(tp_matrix->y_tps[i], TOUCHPAD_CB_PUSH, tp_matrix_push_cb, &tp_matrix->matrix_args[i+x_num]);
+        iot_tp_add_cb(tp_matrix->y_tps[i], TOUCHPAD_CB_RELEASE, tp_matrix_release_cb, &tp_matrix->matrix_args[i+x_num]);
+        iot_tp_add_cb(tp_matrix->y_tps[i], TOUCHPAD_CB_TAP, tp_matrix_tap_cb, &tp_matrix->matrix_args[i+x_num]);
     }
     tp_matrix->active_state = TOUCHPAD_STATE_IDLE;
     return (tp_matrix_handle_t)tp_matrix;
 
 CREATE_ERR:
-    ESP_LOGE(TAG, "touchpad matrix creaete error!");
+    ESP_LOGE(TAG, "touchpad matrix create error!");
     for (int i = 0; i < x_num; i++) {
         if (tp_matrix->x_tps[i] != NULL) {
             iot_tp_delete(tp_matrix->x_tps[i]);
