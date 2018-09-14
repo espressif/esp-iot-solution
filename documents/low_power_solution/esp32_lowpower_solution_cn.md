@@ -40,7 +40,7 @@
 * 程序流程：
     1. 芯片 boot 后读取传感器数据，发出警报或者上传数据；
     2. 调用 rtc_gpio_pulldown_en(MY_RTC_WAKEUP_IO) 函数或 rtc_gpio_pullup_en(MY_RTC_WAKEUP_IO) 函数，设置内部下拉或上拉类型；
-    3. 调用 esp_deep_sleep_enable_ext0_wakeup(MY_RTC_WAKEUP_IO, WAKEUP_IO_LEVEL) 函数或 esp_deep_sleep_enable_ext1_wakeup(WAKEUP_PIN_MASK, WAKEUP_TYPE) 函数，设置从 Deep-sleep 模式下唤醒的 RTC GPIO 电压条件；[^1]
+    3. 调用 esp_deep_sleep_enable_ext0_wakeup(MY_RTC_WAKEUP_IO, WAKEUP_IO_LEVEL) 函数或 esp_deep_sleep_enable_ext1_wakeup(WAKEUP_PIN_MASK, WAKEUP_TYPE) 函数，设置从 Deep-sleep 模式下唤醒的 RTC GPIO 电压条件；
     4. 调用 esp_deep_sleep_start() 函数进入 Deep-sleep 模式。
 * 此场景充分利用了 ESP32 的低功耗，但是对传感器要求较高，需要具有 GPIO 触发功能。
 
@@ -55,7 +55,7 @@
     2. 调用 ulp_process_macros_and_load() 函数，将汇编程序代码拷贝至 RTC_SLOW_MEMORY；
     3. 调用 ulp_run(ADDRESS) 函数启动 ULP 协处理器，执行 RTC_SLOW_MEMORY 中的代码；
     4. 调用 esp_deep_sleep_start() 函数，进入 Deep-sleep 模式。
-* 为了使用户更方便地使用 ULP 协处理器进行数据采集与存储，我们专门在 IoT Solution 中增加了 ulp_monitor 模块，用户可直接调用 C 函数运行协处理器。ulp_monitor 模块的使用流程如下:[^2]
+* 为了使用户更方便地使用 ULP 协处理器进行数据采集与存储，我们专门在 IoT Solution 中增加了 ulp_monitor 模块，用户可直接调用 C 函数运行协处理器。ulp_monitor 模块的使用流程如下:[^1]
     1. 芯片 boot 后，从 RTC_SLOW_MEMORY 读取 ULP 协处理器在芯片 Deep-sleep 模式期间采集的数据，并上传数据；
     2. 调用 ulp_monitor_init(ULP_PROGRAM_ADDR, ULP_DATA_ADDR) 函数，设置 ULP 协处理器的程序运行地址与数据保存地址；
     3. 调用 ulp_add_adc_monitor 函数或 ulp_add_temprature_monitor 函数，添加 ULP 协处理器采集的数据类型和唤醒条件（可同时添加）；
@@ -71,7 +71,7 @@
 
 * 程序流程：
 	1. 芯片 boot 后运行用户交互与控制程序；
-	2. 设置作为唤醒源的 touchpad；[^3]
+	2. 设置作为唤醒源的 touchpad；[^2]
 	3. 调用 esp_deep_sleep_enable_touchpad_wakeup() 函数使能 touchpad 唤醒 ，然后调用 esp_deep_sleep_start() 函数进入 Deep-sleep 模式。
 
 # Deep-sleep 支持不同唤醒源时的功耗情况
@@ -83,7 +83,7 @@
 
     <img src="../_static/low_power/esp32_deepsleep_timer_current.png" width = "500" alt="esp32_deepsleep_timer_current" align=center />
 
-* 	支持 RTC IO 唤醒时，Deep-sleep 模式下的平均电流约为 6 uA；[^4]
+* 	支持 RTC IO 唤醒时，Deep-sleep 模式下的平均电流约为 6 uA；[^3]
 
     <img src="../_static/low_power/esp32_deepsleep_rtcio_current.png" width = "500" alt="esp32_deepsleep_rtcio_current" align=center />
 
@@ -99,10 +99,8 @@
 
 关于 deep_sleep 电流测试可以参考 RTC IO 和 TouchPad 覆盖[测试结果](./deep-sleep_current_test_cn.md)
 
-[^1]: 由于在 Deep-sleep 模式下调用 esp_deep_sleep_enable_ext0_wakeup() 函数需要打开 RTC 外设，这会额外产生 100 mA 左右的电流消耗，而调用 esp_deep_sleep_enable_ext1_wakeup() 函数则不需要打开 RTC 外设，所以建议全部使用 esp_deep_sleep_enable_ext1_wakeup()。
+[^1]: 具体可查看 ulp_monitor 模块的 readme.md 和 ulp_monitor_test.c 文件。
 
-[^2]: 具体可查看 ulp_monitor 模块的 readme.md 和 ulp_monitor_test.c 文件。
+[^2]: 包括初始化与设置阈值，具体可查看 IoT Solution 中的 Touchpad 方案。
 
-[^3]: 包括初始化与设置阈值，具体可查看 IoT Solution 中的 Touchpad 方案。
-
-[^4]: 这里采用了 esp_deep_sleep_enable_ext1_wakeup() 函数。
+[^3]: 这里采用了 esp_deep_sleep_enable_ext1_wakeup() 函数。

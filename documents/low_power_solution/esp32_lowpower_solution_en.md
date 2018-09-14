@@ -40,7 +40,7 @@
 * Logical flow
     1. ESP32 will read the abnormal data collected by the sensors, and trigger an alarm or upload data accordingly;
     2. Call function rtc_gpio_pulldown_en(MY_RTC_WAKEUP_IO) or rtc_gpio_pullup_en(MY_RTC_WAKEUP_IO) and complete the pull-up or pull-down settings for the RTC GPIO;
-    3. Call function esp_deep_sleep_enable_ext0_wakeup(MY_RTC_WAKEUP_IO, WAKEUP_IO_LEVEL) or esp_deep_sleep_enable_ext1_wakeup(WAKEUP_PIN_MASK, WAKEUP_TYPE) and set the specific RTC GPIO, which functions as the wake-up source of ESP32 during deep sleep, to be high-level triggered or low-level triggered;[^1]
+    3. Call function esp_deep_sleep_enable_ext0_wakeup(MY_RTC_WAKEUP_IO, WAKEUP_IO_LEVEL) or esp_deep_sleep_enable_ext1_wakeup(WAKEUP_PIN_MASK, WAKEUP_TYPE) and set the specific RTC GPIO, which functions as the wake-up source of ESP32 during deep sleep, to be high-level triggered or low-level triggered;
     4. Call function esp_deep_sleep_start() to enter Deep-sleep mode.
 
 * In this scenario, ESP32 can achieve minimal power consumption, but will impose a higher requirement on sensors, i.e., the sensors must support GPIO trigger function.
@@ -56,7 +56,7 @@
     3. Call function ulp_run(ADDRESS) to start the ULP co-processor and execute the assembly codes stored in the RTC slow memory;
     4. Call function esp_deep_sleep_start() to enter Deep-sleep mode.
 
-* ULP co-processor enables more convenient data acquisition and data storage. In this IoT Solution, we have specifically added a ulp_monitor module, with which the user can easily start the ULP co-processor by directly calling a .c function: [^2]
+* ULP co-processor enables more convenient data acquisition and data storage. In this IoT Solution, we have specifically added a ulp_monitor module, with which the user can easily start the ULP co-processor by directly calling a .c function: [^1]
     1. ESP32 will read the data collected by the ULP co-processor during deep sleep from the RTC slow memory after booting, and upload them;
     2. Call function iot_ulp_monitor_init(ULP_PROGRAM_ADDR, ULP_DATA_ADDR) to set the addresses for ULP co-processor's program execution and data storage;
     3. Call function iot_ulp_add_adc_monitor or iot_ulp_add_temprature_monitor to set the type of the data collected by the ULP co-processor and the wake-up conditions (these settings can be added at the same time);
@@ -72,7 +72,7 @@
 
 * Logical flow:
 	1. ESP32 executes the user interaction and control programs after booting;
-	2. Configure the specified touchpad enabled as the wake-up source;[^3]
+	2. Configure the specified touchpad enabled as the wake-up source;[^2]
 	3. Call function esp_deep_sleep_enable_touchpad_wakeup() to enable the touchpad as the wake-up source, and then call function esp_deep_sleep_start() to enter Deep-sleep mode.
 
 # Power consumption of ESP32 in Deep-sleep mode with different wake-up sources enabled
@@ -84,7 +84,7 @@
 
     <img src="../_static/low_power/esp32_deepsleep_timer_current.png" width = "500" alt="esp32_deepsleep_timer_current" align=center />
 
-* In Deep-sleep mode, the average current of ESP32, with the RTC IO enabled as the wake-up source, is about 6 uA:[^4]
+* In Deep-sleep mode, the average current of ESP32, with the RTC IO enabled as the wake-up source, is about 6 uA:[^3]
 
     <img src="../_static/low_power/esp32_deepsleep_rtcio_current.png" width = "500" alt="esp32_deepsleep_rtcio_current" align=center />
 
@@ -96,11 +96,9 @@
 
     <img src="../_static/low_power/touchpad.png" width = "500" alt="touchpad_deepsleep_current" align=center />
 
-[^1]: During deep sleep, the use of esp_deep_sleep_enable_ext0_wakeup() requires the support of RTC peripherals, which consumes additional 100 mA, while esp_deep_sleep_enable_ext1_wakeup() needs no RTC peripherals. In this case, esp_deep_sleep_enable_ext1_wakeup() is recommended at all times.
+[^1]: For details on how to use the ulp_monitor module, please see the related readme.md and ulp_monitor_test.c files.
 
-[^2]: For details on how to use the ulp_monitor module, please see the related readme.md and ulp_monitor_test.c files.
+[^2]: Such as the initialization and threshold settings. For details, please see the Touchpad chapter in this IoT Solution.
 
-[^3]: Such as the initialization and threshold settings. For details, please see the Touchpad chapter in this IoT Solution.
-
-[^4]: Function esp_deep_sleep_enable_ext1_wakeup() is used in the test.
+[^3]: Function esp_deep_sleep_enable_ext1_wakeup() is used in the test.
 
