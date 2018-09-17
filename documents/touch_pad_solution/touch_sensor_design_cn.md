@@ -48,7 +48,11 @@ ESP32 不仅提供核心的 Wi-Fi 和蓝牙功能，还集成了丰富的外设�
 
     * [4.6. 触摸矩阵键盘软件设计](#46-触摸矩阵键盘软件设计)  
 
-- [5. 开发套件及相关资源](#5-开发套件及相关资源)  
+- [5. 触摸传感器调试](#5-触摸传感器调试)  
+
+    * [5.1. ESP-Tuning Tool](#51-esp-tuning-tool)  
+
+- [6. 开发套件及相关资源](#6-开发套件及相关资源)  
 
 
 ## 1. 触摸按键简介
@@ -807,7 +811,13 @@ tp_matrix_handle_t tp_matrix = iot_tp_matrix_create(sizeof(x_tps)/sizeof(x_tps[0
 
 **注意：**由于矩阵按键驱动方式的限制，同时只能按一个触摸按键。当多个触摸按键同时按下时不会有触摸事件触发，当一个触摸按键正被触摸时，触摸其他触摸按键不会有事件触发。
 
-## 5. 开发套件及相关资源
+## 5. 触摸传感器调试
+
+### 5.1 ESP-Tuning Tool
+
+在 Touchpad 传感器设计过程中，您需要监控 Touchpad 传感器数据（如原始计数值、基线值和计数差值），**评估触摸产品的性能（灵敏度，信噪比，通道干扰）**，以进行调校和调试。ESP-Tuning Tool 是用于调试 Touchpad 传感器性能的专用工具。有关 ESP-Tuning Tool 使用，请查阅 [ESP-Tuning Tool 使用手册](esp_tuning_tool_user_guide_cn.md)。
+
+## 6. 开发套件及相关资源
 
 * [ESP32-Sense 触摸传感器开发套件介绍](../evaluation_boards/readme_cn.md)    
 
