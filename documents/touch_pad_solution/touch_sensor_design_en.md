@@ -28,7 +28,9 @@ Design and implementation of the touch sensor system is a complex process and th
     * [4.4. Touch Button Firmware Design](#44-touch-button-firmware-design)
     * [4.5. Touch Slider Firmware Design](#45-touch-slider-firmware-design)
     * [4.6. Matrix Touch Button Firmware Design](#46-matrix-touch-button-firmware-design)
-- [5. Related Documents and Resources](#5-related=documents-and-resources)
+- [5. Touch Sensor Debugging](#5-touch-sensor-debugging)
+    * [5.1. ESP-Tuning Tool](#51-esp-tuning-tool)
+- [6. Related Documents and Resources](#6-related-documents-and-resources)
 
 
 ## 1. Introduction to Touch Sensor System
@@ -820,7 +822,12 @@ tp_matrix_handle_t tp_matrix = iot_tp_matrix_create(sizeof(x_tps)/sizeof(x_tps[0
 
 **Notice:** For a matrix touch design, only one button can be touched at a time. Touching multiple buttons at the same time will not trigger a touch event. When a button is being touched, touching the other buttons will not trigger touch events.
 
-## 5. Related Documents and Resources
+## 5. Touch Sensor Debugging
+
+### 5.1. ESP-Tuning Tool
+For a good touchpad sensor design, it is necessary to monitor touchpad sensor readings, such as raw count value, baseline value and deviation of the count value, for calibration and debugging, and, most importantly, for **evaluating the touch system performance in terms of Sensitivity, SNR (Signal-to-noise ratio) and Channel Coupling**. ESP-Tuning Tool is specially designed to debug and optimize touchpad sensor performance. For more details about how to use this tool, please refer to [ESP-Tuning Tool User Guide](esp_tuning_tool_user_guide_en.md).
+
+## 6. Related Documents and Resources
 
 * [ESP32-Sense Touch Sensor Development Kit](../evaluation_boards/readme_en.md)
 * [Touch Sensor software example](../../examples/touch_pad_evb)
