@@ -13,6 +13,7 @@
     * [ESP32 Light-sleep features]
     * [ESP32 Light-sleep test manua]
 * [Touch Sensor Application Note](./documents/touch_pad_solution/touch_sensor_design_en.md) [[中文]](./documents/touch_pad_solution/touch_sensor_design_cn.md)
+	* [ESP-Tuning Tool User Guide](./documents/touch_pad_solution/esp_tuning_tool_user_guide_en.md) [[中文]](./documents/touch_pad_solution/esp_tuning_tool_user_guide_cn.md)
 * [Security and Factory Flow](./documents/security_solution/readme_en.md) [[中文]](./documents/security_solution/readme_cn.md)
     * [ESP32 secure and encrypt]
     * [Download Tool GUI Instruction]
