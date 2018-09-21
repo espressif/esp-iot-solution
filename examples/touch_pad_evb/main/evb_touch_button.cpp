@@ -82,5 +82,16 @@ void evb_touch_button_init()
     tp_dev0->add_cb(TOUCHPAD_CB_RELEASE, release_cb, tp_dev0);
     tp_dev1->add_cb(TOUCHPAD_CB_RELEASE, release_cb, tp_dev1);
     tp_dev2->add_cb(TOUCHPAD_CB_RELEASE, release_cb, tp_dev2);
+
+#ifdef CONFIG_DATA_SCOPE_DEBUG
+    tune_dev_comb_t ch_comb = {};
+    ch_comb.dev_comb = TUNE_CHAR_BUTTON;
+    ch_comb.ch_num_h = 1;
+    ch_comb.ch_num_l = 3;
+    ch_comb.ch[0] = TOUCH_BUTTON_0;
+    ch_comb.ch[1] = TOUCH_BUTTON_1;
+    ch_comb.ch[2] = TOUCH_BUTTON_2;
+    tune_tool_add_device_setting(&ch_comb);
+#endif
 }
 
