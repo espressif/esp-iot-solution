@@ -94,9 +94,13 @@ void lcd_spi_pre_transfer_callback(spi_transaction_t *t)
     gpio_set_level((int)dc->dc_io, (int)dc->dc_level);
 }
 
+static SemaphoreHandle_t _spi_mux = NULL;
 static esp_err_t _lcd_spi_send(spi_device_handle_t spi, spi_transaction_t* t)
 {
-    return spi_device_transmit(spi, t); //Transmit!
+    xSemaphoreTake(_spi_mux, portMAX_DELAY);
+    esp_err_t res = spi_device_transmit(spi, t); //Transmit!
+    xSemaphoreGive(_spi_mux);
+    return res;
 }
 
 void lcd_cmd(spi_device_handle_t spi, const uint8_t cmd, lcd_dc_t *dc)
@@ -132,6 +136,9 @@ void lcd_data(spi_device_handle_t spi, const uint8_t *data, int len, lcd_dc_t *d
 uint32_t lcd_init(lcd_conf_t* lcd_conf, spi_device_handle_t *spi_wr_dev, lcd_dc_t *dc, int dma_chan)
 {
 
+    if (_spi_mux == NULL) {
+        _spi_mux = xSemaphoreCreateMutex();
+    }
     //Initialize non-SPI GPIOs
     gpio_pad_select_gpio(lcd_conf->pin_num_dc);
     gpio_set_direction(lcd_conf->pin_num_dc, GPIO_MODE_OUTPUT);
@@ -173,7 +180,7 @@ uint32_t lcd_init(lcd_conf_t* lcd_conf, spi_device_handle_t *spi_wr_dev, lcd_dc_
 
     // Use high speed to write LCD
     devcfg.clock_speed_hz = lcd_conf->clk_freq;
-    devcfg.flags = SPI_DEVICE_HALFDUPLEX;
+    // devcfg.flags = SPI_DEVICE_HALFDUPLEX;
     spi_bus_add_device(lcd_conf->spi_host, &devcfg, spi_wr_dev);
 
     int cmd = 0;

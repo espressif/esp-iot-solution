@@ -10,3 +10,6 @@
 [submodule "Adafruit-GFX-Library"]
 	path = components/spi_devices/lcd/Adafruit-GFX-Library
 	url = https://github.com/adafruit/Adafruit-GFX-Library.git
+[submodule "components/hmi/ugfx_gui/ugfx"]
+	path = components/hmi/ugfx_gui/ugfx
+	url = https://git.ugfx.io/ugfx/ugfx.git

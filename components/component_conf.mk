@@ -16,5 +16,7 @@ IOT_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/platforms
 IOT_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/motor/stepper
 IOT_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/motor/servo
 IOT_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/framework
+IOT_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/i2s_devices
+IOT_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/hmi
 
 EXTRA_COMPONENT_DIRS += $(IOT_COMPONENT_DIRS)

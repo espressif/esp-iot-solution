@@ -517,7 +517,13 @@ menu "IoT Solution settings"
                 bool "SENSOR_HDC2010_ENABLE"
                 default y
                 help
-                    "Select this one to enable HDC2010 device component"
+                    "Select this one to enable HDC2010 device component"                    
+            config IOT_FT5X06_ENABLE
+                bool "SENSOR_FT5X06_ENABLE"
+                default y
+                help
+                    "Select this one to enable FT5X06 device component"
+
         endmenu
         
         menu "SPI devices"
@@ -536,6 +542,30 @@ menu "IoT Solution settings"
                 default y
                 help
                     "Select this one to enable SPI TOUCH SCREEN device"
+        endmenu
+        
+        menu "I2S devices"
+            config IOT_LCD_NT35510_ENABLE
+                bool "I2S_LCD_NT35510_ENABLE"
+                default y
+                help
+                    "Select this one to enable NT35510 LCD device"      
+            config IOT_LCD_ILI9806_ENABLE
+                bool "I2S_LCD_ILI9806_ENABLE"
+                default y
+                help
+                    "Select this one to enable ILI9806 LCD device"   
+
+            choice LCD_BITEMODE_CHOOSE
+                bool "Choose Bit Mode"
+                    default BIT_MODE_16BIT
+
+                config BIT_MODE_16BIT
+                    bool "16_BIT_MODE"
+                config BIT_MODE_8BIT
+                    bool "8_BIT_MODE"
+
+            endchoice
         endmenu
         
         
@@ -806,6 +836,443 @@ menu "IoT Solution settings"
             #    default n
             #    help
             #        "Select this one to enable JOYLINK component"
+        endmenu
+        
+        menu "HMI Components"
+
+            config UGFX_GUI_ENABLE
+                bool "uGFX GUI Enable"
+                default n
+                help 
+                    "Select to enable uGFX driver component"
+
+            menu "uGFX Settings"
+                depends on UGFX_GUI_ENABLE
+
+                config UGFX_PROJ_RESOURCE_PATH
+                string "uGFX Resource File Path Under Project"
+                default resource/include
+                help
+                    Select UGFX resource file path under project, default is $(PROJECT_PATH)/source/include
+                    Usually the UGFX system would need some extra header file for custom resources
+                
+                    
+                config UGFX_USE_CUSTOM_DRIVER
+                    bool "Use Custom Driver Defined By Users"
+                    default n
+                    help 
+                        Select to use your own LCD driver. Instead, the driver in ugfx_driver will be used.
+                        Sometimes the driver need to be modified or re-written, users can choose this option and 
+                        define their own driver in an independent component. 
+
+                config UGFX_CUSTOM_DRIVER_COMPONENT_NAME
+                    string "uGFX Custom Driver Component Name"
+                    depends on UGFX_USE_CUSTOM_DRIVER
+                    default "ugfx_custom_driver"
+                    help
+                        Sometimes the driver need to be modified or re-written, users can choose this option and 
+                        define their own driver in an independent component. 
+                        Set this path to the cumtom board driver under project path, 
+                        default path is $(PROJECT_PATH)/ugfx_custom_driver
+                    
+                config UGFX_CUSTOM_DRIVER_KEEP_OPTIONS
+                    bool "uGFX Custom Driver Keep The Same Options"
+                    depends on UGFX_USE_CUSTOM_DRIVER
+                    default y
+                    help
+                        Sometimes the driver need to be modified or re-written, users can choose this option and 
+                        define their own driver in an independent component. 
+                        Select this to enable the same options as the default driver
+                    
+                config UGFX_USE_CONFIGURED_OPTIONS
+                    bool
+                    default y if !UGFX_USE_CUSTOM_DRIVER
+                    default y if UGFX_CUSTOM_DRIVER_KEEP_OPTIONS
+                    default n
+                                         
+                config UGFX_DRIVER_TOUCH_SCREEN_ENABLE
+                    bool "uGFX Touch Screen Enable"
+                    default y
+                    help 
+                        "Select to enable uGFX touch screen"
+
+                choice UGFX_DRIVER_MODE
+                    bool "Display Driver Mode"
+                    default UGFX_LCD_DRIVER_FRAMEBUFFER_MODE
+
+                    config UGFX_LCD_DRIVER_FRAMEBUFFER_MODE
+                        bool "Select uGFX Driver Framebuffer Mode"
+                    config UGFX_LCD_DRIVER_API_MODE
+                        bool "Select uGFX Driver API Mode" 
+
+                endchoice
+                
+                config UGFX_DRIVER_AUTO_FLUSH_ENABLE
+                    depends on UGFX_LCD_DRIVER_FRAMEBUFFER_MODE
+                    bool "uGFX Driver Auto Flush Enable"
+                    default y
+                    help 
+                        "Select to enable uGFX screen auto flush for framebuffer mode"
+                        
+                config UGFX_DRIVER_AUTO_FLUSH_INTERVAL
+                    depends on UGFX_LCD_DRIVER_FRAMEBUFFER_MODE
+                    int "uGFX Driver Auto Flush Interval(ms)"
+                    range 0 500
+                    default 200
+                    help 
+                        "Select to set the minimum screen flush interval for framebuffer mode"
+
+                choice UGFX_DISP_ROTATE
+                    bool "Choose Screen Rotate"
+                    default UGFX_DISP_ROTATE_90
+
+                    config UGFX_DISP_ROTATE_0
+                        bool "GDISP_ROTATE_0"
+
+                    config UGFX_DISP_ROTATE_90
+                        bool "GDISP_ROTATE_90"
+
+                    config UGFX_DISP_ROTATE_180
+                        bool "GDISP_ROTATE_180"
+
+                    config UGFX_DISP_ROTATE_270
+                        bool "GDISP_ROTATE_270"
+                        
+                endchoice
+                
+                menu "Config Driver"
+                    depends on UGFX_USE_CONFIGURED_OPTIONS
+                       
+                    choice UGFX_DRIVER_TOUCH_SCREEN
+                        bool "Choose Touch Screen Driver"
+                        depends on UGFX_DRIVER_TOUCH_SCREEN_ENABLE
+                        
+                        config UGFX_DRIVER_TOUCH_XPT2046
+                            bool "XPT2046"
+
+                        config UGFX_DRIVER_TOUCH_FT5X06
+                            bool "FT5X06"
+                        
+                    endchoice
+                
+                    menu "XPT2046 Touch Screen Pin Configuration"
+                        depends on UGFX_DRIVER_TOUCH_XPT2046
+
+                        config UGFX_TOUCH_CS_GPIO
+                            int "uGFX Touch CS GPIO"
+                            range 0 39
+                            default 32
+                        config UGFX_TOUCH_IRQ_GPIO
+                            int "uGFX Touch IRQ GPIO"
+                            range 0 39
+                            default 33
+
+                    endmenu
+                
+                    menu "FT5X06 Touch Screen Pin Configuration"
+                        depends on UGFX_DRIVER_TOUCH_FT5X06
+
+                        config UGFX_TOUCH_IIC_NUM
+                            int "uGFX Touch IIC Num"
+                            range 0 1
+                            default 0
+                        config UGFX_TOUCH_SCL_GPIO
+                            int "uGFX Touch SCL GPIO"
+                            range 0 39
+                            default 3
+                        config UGFX_TOUCH_SDA_GPIO
+                            int "uGFX Touch SDA GPIO"
+                            range 0 39
+                            default 1
+
+                    endmenu
+                    
+                    choice UGFX_DRIVER_SCREEN
+                        depends on UGFX_USE_CONFIGURED_OPTIONS
+                        prompt "Choose Screen Driver"
+                        default UGFX_DRIVER_ST7789
+                        help
+                            CHOOSE SCREEN DRIVER.
+                        
+                        config UGFX_DRIVER_ILI9341
+                            bool "ILI9341"
+                        config UGFX_DRIVER_SSD1306
+                            bool "SSD1306"
+                        config UGFX_DRIVER_ST7789
+                            bool "ST7789"
+                        config UGFX_DRIVER_NT35510
+                            bool "NT35510"
+                        #config UGFX_DRIVER_EPAPER
+                        #    bool "EPAPER"
+
+                    endchoice
+
+                    menu "ST7789 Screen Pin Configuration"
+                        depends on UGFX_DRIVER_ST7789
+
+                        config UGFX_LCD_MISO_GPIO
+                            int "uGFX LCD MISO GPIO"
+                            range 0 39
+                            default 27
+                        config UGFX_LCD_MOSI_GPIO
+                            int "uGFX LCD MOSI GPIO"
+                            range 0 39
+                            default 21
+                        config UGFX_LCD_CLK_GPIO
+                            int "uGFX LCD CLK GPIO"
+                            range 0 39
+                            default 22
+                        config UGFX_LCD_CS_GPIO
+                            int "uGFX LCD CS GPIO"
+                            range 0 39
+                            default 5
+                        config UGFX_LCD_DC_GPIO
+                            int "uGFX LCD DC GPIO"
+                            range 0 39
+                            default 19
+                        config UGFX_LCD_RESET_GPIO
+                            int "uGFX LCD RESET GPIO"
+                            range 0 39
+                            default 18
+                        config UGFX_LCD_BL_GPIO
+                            int "uGFX LCD BL GPIO"
+                            range 0 39
+                            default 23
+
+                    endmenu
+
+                    menu "ILI9341 Screen Pin Configuration"
+                        depends on UGFX_DRIVER_ILI9341
+
+                        config UGFX_LCD_MISO_GPIO
+                            int "uGFX LCD MISO GPIO"
+                            range 0 39
+                            default 27
+                        config UGFX_LCD_MOSI_GPIO
+                            int "uGFX LCD MOSI GPIO"
+                            range 0 39
+                            default 21
+                        config UGFX_LCD_CLK_GPIO
+                            int "uGFX LCD CLK GPIO"
+                            range 0 39
+                            default 22
+                        config UGFX_LCD_CS_GPIO
+                            int "uGFX LCD CS GPIO"
+                            range 0 39
+                            default 5
+                        config UGFX_LCD_DC_GPIO
+                            int "uGFX LCD DC GPIO"
+                            range 0 39
+                            default 19
+                        config UGFX_LCD_RESET_GPIO
+                            int "uGFX LCD RESET GPIO"
+                            range 0 39
+                            default 18
+                        config UGFX_LCD_BL_GPIO
+                            int "uGFX LCD BL GPIO"
+                            range 0 39
+                            default 23
+
+                    endmenu
+                    
+                    menu "NT35510 Screen Pin Configuration"
+                        depends on UGFX_DRIVER_NT35510
+
+                        #choice UGFX_LCD_BITE_MODE_CHOOSE
+                        #    bool "uGFX LCD Choose Bit Mode"
+                        #        default UGFX_LCD_BIT_MODE_16BIT
+                        #
+                        #    config UGFX_LCD_BIT_MODE_16BIT
+                        #        bool "uGFX LCD 16 BIT MODE"
+                        #    config UGFX_LCD_BIT_MODE_8BIT
+                        #        bool "uGFX LCD 8 BIT MODE"
+                        #
+                        #endchoice
+
+                        config UGFX_LCD_I2S_NUM
+                            #int "uGFX LCD I2S NUM"
+                            int
+                            range 0 0
+                            default 0
+                        config UGFX_LCD_WR_GPIO
+                            int "uGFX LCD WR GPIO"
+                            range 0 39
+                            default 18
+                        config UGFX_LCD_RS_GPIO
+                            int "uGFX LCD RS GPIO"
+                            range 0 39
+                            default 5
+                        config UGFX_LCD_D0_GPIO
+                            int "uGFX LCD D0 GPIO"
+                            range 0 39
+                            default 19
+                        config UGFX_LCD_D1_GPIO
+                            int "uGFX LCD D1 GPIO"
+                            range 0 39
+                            default 21
+                        config UGFX_LCD_D2_GPIO
+                            int "uGFX LCD D2 GPIO"
+                            range 0 39
+                            default 0
+                        config UGFX_LCD_D3_GPIO
+                            int "uGFX LCD D3 GPIO"
+                            range 0 39
+                            default 22
+                        config UGFX_LCD_D4_GPIO
+                            int "uGFX LCD D4 GPIO"
+                            range 0 39
+                            default 23
+                        config UGFX_LCD_D5_GPIO
+                            int "uGFX LCD D5 GPIO"
+                            range 0 39
+                            default 33
+                        config UGFX_LCD_D6_GPIO
+                            int "uGFX LCD D6 GPIO"
+                            range 0 39
+                            default 32
+                        config UGFX_LCD_D7_GPIO
+                            int "uGFX LCD D7 GPIO"
+                            range 0 39
+                            default 27
+                        config UGFX_LCD_D8_GPIO
+                            depends on BIT_MODE_16BIT
+                            int "uGFX LCD D8 GPIO"
+                            range 0 39
+                            default 25
+                        config UGFX_LCD_D9_GPIO
+                            depends on BIT_MODE_16BIT
+                            int "uGFX LCD D9 GPIO"
+                            range 0 39
+                            default 26
+                        config UGFX_LCD_D10_GPIO
+                            depends on BIT_MODE_16BIT
+                            int "uGFX LCD D10 GPIO"
+                            range 0 39
+                            default 12
+                        config UGFX_LCD_D11_GPIO
+                            depends on BIT_MODE_16BIT
+                            int "uGFX LCD D11 GPIO"
+                            range 0 39
+                            default 13
+                        config UGFX_LCD_D12_GPIO
+                            depends on BIT_MODE_16BIT
+                            int "uGFX LCD D12 GPIO"
+                            range 0 39
+                            default 14
+                        config UGFX_LCD_D13_GPIO
+                            depends on BIT_MODE_16BIT
+                            int "uGFX LCD D13 GPIO"
+                            range 0 39
+                            default 15
+                        config UGFX_LCD_D14_GPIO
+                            depends on BIT_MODE_16BIT
+                            int "uGFX LCD D14 GPIO"
+                            range 0 39
+                            default 2
+                        config UGFX_LCD_D15_GPIO
+                            depends on BIT_MODE_16BIT
+                            int "uGFX LCD D15 GPIO"
+                            range 0 39
+                            default 4
+
+                    endmenu
+
+                    menu "SSD1306 Screen Pin Configuration"
+                        depends on UGFX_DRIVER_SSD1306
+
+                        config UGFX_LCD_SCL_GPIO
+                            int "uGFX LCD SCL GPIO"
+                            range 0 39
+                            default 4
+                        config UGFX_LCD_SDA_GPIO
+                            int "uGFX LCD SDA GPIO"
+                            range 0 39
+                            default 17
+                            
+                    endmenu
+
+                    config ILI9341_UGFX_DRIVER_SCREEN_WIDTH
+                        depends on UGFX_DRIVER_ILI9341
+                        int "uGFX Screen Width (pixels)"
+                        range 0 5000
+                        default 240
+                        help
+                            "uGFX Screen Width (pixels)"
+
+                    config ILI9341_UGFX_DRIVER_SCREEN_HEIGHT
+                        depends on UGFX_DRIVER_ILI9341
+                        int "uGFX Screen Height (pixels)"
+                        range 0 5000
+                        default 320
+                        help
+                            "uGFX Screen Height (pixels)"
+
+                    config SSD1306_UGFX_DRIVER_SCREEN_WIDTH
+                        depends on UGFX_DRIVER_SSD1306
+                        int "uGFX Screen Width (pixels)"
+                        range 0 5000
+                        default 64
+                        help
+                            "uGFX Screen Width (pixels)"
+
+                    config SSD1306_UGFX_DRIVER_SCREEN_HEIGHT
+                        depends on UGFX_DRIVER_SSD1306
+                        int "uGFX Screen Height (pixels)"
+                        range 0 5000
+                        default 128
+                        help
+                            "uGFX Screen Height (pixels)"
+
+                    config ST7789_UGFX_DRIVER_SCREEN_WIDTH
+                        depends on UGFX_DRIVER_ST7789
+                        int "uGFX Screen Width (pixels)"
+                        range 0 5000
+                        default 240
+                        help
+                            "uGFX Screen Width (pixels)"
+
+                    config ST7789_UGFX_DRIVER_SCREEN_HEIGHT
+                        depends on UGFX_DRIVER_ST7789
+                        int "uGFX Screen Height (pixels)"
+                        range 0 5000
+                        default 320
+                        help
+                            "uGFX Screen Height (pixels)"
+                            
+                    config NT35510_UGFX_DRIVER_SCREEN_WIDTH
+                        depends on UGFX_DRIVER_NT35510
+                        int "uGFX Screen Width (pixels)"
+                        range 0 5000
+                        default 480
+                        help
+                            "uGFX Screen Width (pixels)"
+                            
+                    config NT35510_UGFX_DRIVER_SCREEN_HEIGHT
+                        depends on UGFX_DRIVER_NT35510
+                        int "uGFX Screen Height (pixels)"
+                        range 0 5000
+                        default 800
+                        help
+                            "uGFX Screen Height (pixels)"
+                            
+                    config UGFX_DRIVER_SCREEN_WIDTH
+                        int
+                        default ILI9341_UGFX_DRIVER_SCREEN_WIDTH if  UGFX_DRIVER_ILI9341
+                        default SSD1306_UGFX_DRIVER_SCREEN_WIDTH if  UGFX_DRIVER_SSD1306
+                        default ST7789_UGFX_DRIVER_SCREEN_WIDTH  if  UGFX_DRIVER_ST7789
+                        default NT35510_UGFX_DRIVER_SCREEN_WIDTH if  UGFX_DRIVER_NT35510
+                            
+                    config UGFX_DRIVER_SCREEN_HEIGHT
+                        int
+                        default ILI9341_UGFX_DRIVER_SCREEN_HEIGHT if  UGFX_DRIVER_ILI9341
+                        default SSD1306_UGFX_DRIVER_SCREEN_HEIGHT if  UGFX_DRIVER_SSD1306
+                        default ST7789_UGFX_DRIVER_SCREEN_HEIGHT  if  UGFX_DRIVER_ST7789
+                        default NT35510_UGFX_DRIVER_SCREEN_HEIGHT if  UGFX_DRIVER_NT35510
+
+                endmenu
+
+            endmenu
+
         endmenu
         
         menu "WiFi abstract"
