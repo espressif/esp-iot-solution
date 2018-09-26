@@ -1,10 +1,11 @@
 #ifndef _COM_GUI_LVGL_H
 #define _COM_GUI_LVGL_H
 
-// #pragma once
+#ifdef CONFIG_LVGL_GUI_ENABLE
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 #include "sdkconfig.h"
@@ -17,5 +18,7 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
+
+#endif /* CONFIG_LVGL_GUI_ENABLE */
 
 #endif /* _GUI_LVGL_H */

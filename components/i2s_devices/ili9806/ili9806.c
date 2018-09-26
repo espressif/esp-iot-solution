@@ -27,12 +27,12 @@ void iot_ili9806_set_orientation(ili9806_handle_t ili9806_handle, lcd_orientatio
     i2s_lcd_handle_t i2s_lcd_handle = device->i2s_lcd_handle;
     switch (orientation) {
     case LCD_DISP_ROTATE_0:
-        iot_i2s_lcd_write_reg(((ili9806_dev_t *)ili9806_handle)->i2s_lcd_handle, ILI9806_MADCTL, 0x00 | 0x00);
+        iot_i2s_lcd_write_reg(i2s_lcd_handle, ILI9806_MADCTL, 0x00 | 0x00);
         device->xset_cmd = ILI9806_CASET;
         device->yset_cmd = ILI9806_RASET;
         break;
     case LCD_DISP_ROTATE_90:
-        iot_i2s_lcd_write_reg(((ili9806_dev_t *)ili9806_handle)->i2s_lcd_handle, ILI9806_MADCTL, 0xA0 | 0x00);
+        iot_i2s_lcd_write_reg(i2s_lcd_handle, ILI9806_MADCTL, 0xA0 | 0x00);
         swap = device->x_size;
         device->x_size = device->y_size;
         device->y_size = swap;
@@ -40,12 +40,12 @@ void iot_ili9806_set_orientation(ili9806_handle_t ili9806_handle, lcd_orientatio
         device->yset_cmd = ILI9806_CASET;
         break;
     case LCD_DISP_ROTATE_180:
-        iot_i2s_lcd_write_reg(((ili9806_dev_t *)ili9806_handle)->i2s_lcd_handle, ILI9806_MADCTL, 0xC0 | 0x00);
+        iot_i2s_lcd_write_reg(i2s_lcd_handle, ILI9806_MADCTL, 0xC0 | 0x00);
         device->xset_cmd = ILI9806_CASET;
         device->yset_cmd = ILI9806_RASET;
         break;
     case LCD_DISP_ROTATE_270:
-        iot_i2s_lcd_write_reg(((ili9806_dev_t *)ili9806_handle)->i2s_lcd_handle, ILI9806_MADCTL, 0x60 | 0x00);
+        iot_i2s_lcd_write_reg(i2s_lcd_handle, ILI9806_MADCTL, 0x60 | 0x00);
         swap = device->x_size;
         device->x_size = device->y_size;
         device->y_size = swap;
@@ -53,7 +53,7 @@ void iot_ili9806_set_orientation(ili9806_handle_t ili9806_handle, lcd_orientatio
         device->yset_cmd = ILI9806_CASET;
         break;
     default:
-        iot_i2s_lcd_write_reg(((ili9806_dev_t *)ili9806_handle)->i2s_lcd_handle, ILI9806_MADCTL, 0x00 | 0x00);
+        iot_i2s_lcd_write_reg(i2s_lcd_handle, ILI9806_MADCTL, 0x00 | 0x00);
         device->xset_cmd = ILI9806_CASET;
         device->yset_cmd = ILI9806_RASET;
         break;
@@ -108,10 +108,9 @@ void iot_ili9806_draw_bmp(ili9806_handle_t ili9806_handle, uint16_t *bmp, uint16
 
 void iot_ili9806_put_char(ili9806_handle_t ili9806_handle, uint8_t *str, uint16_t x, uint16_t y, uint16_t x_size, uint16_t y_size, uint16_t wcolor, uint16_t bcolor)
 {
-    uint8_t *pdata = str;
     uint16_t *pbuf;
+    uint8_t *pdata = str;
     ili9806_dev_t *device = (ili9806_dev_t *)ili9806_handle;
-    i2s_lcd_handle_t i2s_lcd_handle = device->i2s_lcd_handle;
     for (int i = 0; i < y_size; i++) {
         pbuf = device->lcd_buf + (x + (i + y) * device->x_size);
         for (int j = 0; j < x_size / 8; j++) {
@@ -131,10 +130,9 @@ void iot_ili9806_put_char(ili9806_handle_t ili9806_handle, uint8_t *str, uint16_
 
 void inline iot_ili9806_asc8x16_to_men(ili9806_handle_t ili9806_handle, char str, uint16_t x, uint16_t y, uint16_t wcolor, uint16_t bcolor)
 {
-    uint8_t *pdata = font_asc8x16 + (str - ' ') * 16;
     uint16_t *pbuf;
+    uint8_t *pdata = font_asc8x16 + (str - ' ') * 16;
     ili9806_dev_t *device = (ili9806_dev_t *)ili9806_handle;
-    i2s_lcd_handle_t i2s_lcd_handle = device->i2s_lcd_handle;
     for (int i = 0; i < 16; i++) {
         pbuf = device->lcd_buf + (x + (i + y) * device->x_size);
         for (int k = 0; k < 8; k++) {
@@ -152,7 +150,6 @@ void inline iot_ili9806_asc8x16_to_men(ili9806_handle_t ili9806_handle, char str
 void iot_ili9806_put_asc8x16(ili9806_handle_t ili9806_handle, char str, uint16_t x, uint16_t y, uint16_t wcolor, uint16_t bcolor)
 {
     ili9806_dev_t *device = (ili9806_dev_t *)ili9806_handle;
-    i2s_lcd_handle_t i2s_lcd_handle = device->i2s_lcd_handle;
     iot_ili9806_asc8x16_to_men(ili9806_handle, str, x, y, wcolor, bcolor);
     iot_ili9806_refresh(ili9806_handle);
 }
@@ -162,7 +159,6 @@ void iot_ili9806_put_string8x16(ili9806_handle_t ili9806_handle, char *str, uint
     uint32_t x_ofsset = 0;
     uint32_t y_offset = 0;
     ili9806_dev_t *device = (ili9806_dev_t *)ili9806_handle;
-    i2s_lcd_handle_t i2s_lcd_handle = device->i2s_lcd_handle;
     while (*str != '\0') {
         iot_ili9806_asc8x16_to_men(ili9806_handle, *str, x + x_ofsset, y + y_offset, wcolor, bcolor);
         x_ofsset = x_ofsset + 8;

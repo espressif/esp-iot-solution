@@ -111,6 +111,20 @@ void iot_nt35510_fill_area(nt35510_handle_t nt35510_handle, uint16_t color, uint
     }
 }
 
+void iot_nt35510_fill_rect(nt35510_handle_t nt35510_handle, uint16_t color, uint16_t x, uint16_t y, uint16_t x_size, uint16_t y_size)
+{
+    nt35510_dev_t *device = (nt35510_dev_t *)nt35510_handle;
+    i2s_lcd_handle_t i2s_lcd_handle = device->i2s_lcd_handle;
+    uint16_t *p = device->lcd_buf;
+    iot_nt35510_set_box(nt35510_handle, x, y, x_size, y_size);
+    for(int i = 0; i < x_size; i++) {
+        p[i] = color;
+    }
+    for(int i = 0; i < y_size; i++) {
+        iot_i2s_lcd_write(i2s_lcd_handle, device->lcd_buf, x_size * device->pix);
+    }
+}
+
 void iot_nt35510_draw_bmp(nt35510_handle_t nt35510_handle, uint16_t *bmp, uint16_t x, uint16_t y, uint16_t x_size, uint16_t y_size)
 {
     nt35510_dev_t *device = (nt35510_dev_t *)nt35510_handle;
@@ -121,10 +135,9 @@ void iot_nt35510_draw_bmp(nt35510_handle_t nt35510_handle, uint16_t *bmp, uint16
 
 void iot_nt35510_put_char(nt35510_handle_t nt35510_handle, uint8_t *str, uint16_t x, uint16_t y, uint16_t x_size, uint16_t y_size, uint16_t wcolor, uint16_t bcolor)
 {
+    uint16_t *pbuf;
     uint8_t *pdata = str;
     nt35510_dev_t *device = (nt35510_dev_t *)nt35510_handle;
-    i2s_lcd_handle_t i2s_lcd_handle = device->i2s_lcd_handle;
-    uint16_t *pbuf;
     for (int i = 0; i < y_size; i++) {
         pbuf = device->lcd_buf + (x + (i + y) * device->x_size);
         for (int j = 0; j < x_size / 8; j++) {
@@ -142,12 +155,11 @@ void iot_nt35510_put_char(nt35510_handle_t nt35510_handle, uint8_t *str, uint16_
     iot_nt35510_refresh(nt35510_handle);
 }
 
-void inline iot_nt35510_asc8x16_to_men(nt35510_handle_t nt35510_handle, char str, uint16_t x, uint16_t y, uint16_t wcolor, uint16_t bcolor)
+void iot_nt35510_asc8x16_to_men(nt35510_handle_t nt35510_handle, char str, uint16_t x, uint16_t y, uint16_t wcolor, uint16_t bcolor)
 {
-    uint8_t *pdata = font_asc8x16 + (str - ' ') * 16;
-    nt35510_dev_t *device = (nt35510_dev_t *)nt35510_handle;
-    i2s_lcd_handle_t i2s_lcd_handle = device->i2s_lcd_handle;
     uint16_t *pbuf;
+    uint8_t *pdata = (uint8_t *)(font_asc8x16 + (str - ' ') * 16);
+    nt35510_dev_t *device = (nt35510_dev_t *)nt35510_handle;
     for (int i = 0; i < 16; i++) {
         pbuf = device->lcd_buf + (x + (i + y) * device->x_size);
         for (int k = 0; k < 8; k++) {
@@ -173,7 +185,6 @@ void iot_nt35510_put_string8x16(nt35510_handle_t nt35510_handle, char *str, uint
     uint32_t x_ofsset = 0;
     uint32_t y_offset = 0;
     nt35510_dev_t *device = (nt35510_dev_t *)nt35510_handle;
-    i2s_lcd_handle_t i2s_lcd_handle = device->i2s_lcd_handle;
     while (*str != '\0') {
         iot_nt35510_asc8x16_to_men(nt35510_handle, *str, x + x_ofsset, y + y_offset, wcolor, bcolor);
         x_ofsset = x_ofsset + 8;
@@ -589,6 +600,8 @@ nt35510_handle_t iot_nt35510_create(uint16_t x_size, uint16_t y_size, i2s_port_t
     memset(device, 0, sizeof(nt35510_dev_t));
     device->x_size = x_size;
     device->y_size = y_size;
+    device->xset_cmd = NT35510_CASET;
+    device->yset_cmd = NT35510_RASET;
     device->pix = sizeof(uint16_t);
     uint16_t *p = malloc(sizeof(uint16_t) * y_size);
     if (p == NULL) {

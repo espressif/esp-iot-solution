@@ -41,6 +41,8 @@ public:
     }
 };
 
+#ifdef CONFIG_UGFX_GUI_ENABLE
+
 void board_touch_init()
 {
     xpt_conf_t xpt_conf;
@@ -59,6 +61,8 @@ void board_touch_init()
     }
 }
 
+#endif
+
 bool board_touch_is_pressed()
 {
     return xpt->is_pressed();
@@ -69,11 +73,10 @@ int board_touch_get_position(int port)
     return xpt->get_sample(port);
 }
 
-#if CONFIG_LVGL_USE_CUSTOM_DRIVER
+#ifdef CONFIG_LVGL_GUI_ENABLE
 
 /* lvgl include */
 #include "lvgl_indev_config.h"
-#include "iot_lvgl.h"
 
 static const char *TAG = "TOUCH_SCREEN";
 
@@ -90,52 +93,52 @@ void touch_calibration(int width, int height, int rotation)
     m_width = width;
     m_height = height;
 
-    ESP_LOGI(TAG, "please input top-left button...");
+    ESP_LOGD(TAG, "please input top-left button...");
 
     while (!xpt->is_pressed()) {
         vTaskDelay(50 / portTICK_RATE_MS);
     };
     xPot[0] = xpt->get_raw_position().x;
     yPot[0] = xpt->get_raw_position().y;
-    ESP_LOGI(TAG, "X:%d; Y:%d.", xPot[0], yPot[0]);
+    ESP_LOGD(TAG, "X:%d; Y:%d.", xPot[0], yPot[0]);
 
     vTaskDelay(500 / portTICK_RATE_MS);
-    ESP_LOGI(TAG, "please input top-right button...");
+    ESP_LOGD(TAG, "please input top-right button...");
 
     while (!xpt->is_pressed()) {
         vTaskDelay(50 / portTICK_RATE_MS);
     };
     xPot[1] = xpt->get_raw_position().x;
     yPot[1] = xpt->get_raw_position().y;
-    ESP_LOGI(TAG, "X:%d; Y:%d.", xPot[1], yPot[1]);
+    ESP_LOGD(TAG, "X:%d; Y:%d.", xPot[1], yPot[1]);
 
     vTaskDelay(500 / portTICK_RATE_MS);
-    ESP_LOGI(TAG, "please input bottom-right button...");
+    ESP_LOGD(TAG, "please input bottom-right button...");
 
     while (!xpt->is_pressed()) {
         vTaskDelay(50 / portTICK_RATE_MS);
     };
     xPot[2] = xpt->get_raw_position().x;
     yPot[2] = xpt->get_raw_position().y;
-    ESP_LOGI(TAG, "X:%d; Y:%d.", xPot[2], yPot[2]);
+    ESP_LOGD(TAG, "X:%d; Y:%d.", xPot[2], yPot[2]);
 
     vTaskDelay(500 / portTICK_RATE_MS);
-    ESP_LOGI(TAG, "please input bottom-left button...");
+    ESP_LOGD(TAG, "please input bottom-left button...");
 
     while (!xpt->is_pressed()) {
         vTaskDelay(50 / portTICK_RATE_MS);
     };
     xPot[3] = xpt->get_raw_position().x;
     yPot[3] = xpt->get_raw_position().y;
-    ESP_LOGI(TAG, "X:%d; Y:%d.", xPot[3], yPot[3]);
+    ESP_LOGD(TAG, "X:%d; Y:%d.", xPot[3], yPot[3]);
 
     px[0] = (xPot[0] + xPot[1]) / 2;
     py[0] = (yPot[0] + yPot[3]) / 2;
 
     px[1] = (xPot[2] + xPot[3]) / 2;
     py[1] = (yPot[2] + yPot[1]) / 2;
-    ESP_LOGI(TAG, "X:%d; Y:%d.", px[0], py[0]);
-    ESP_LOGI(TAG, "X:%d; Y:%d.", px[1], py[1]);
+    ESP_LOGD(TAG, "X:%d; Y:%d.", px[0], py[0]);
+    ESP_LOGD(TAG, "X:%d; Y:%d.", px[1], py[1]);
 
     xFactor = (float)m_height / (px[1] - px[0]);
     yFactor = (float)m_width / (py[1] - py[0]);
@@ -143,7 +146,7 @@ void touch_calibration(int width, int height, int rotation)
     _offset_x = (int16_t)m_height - ((float)px[1] * xFactor);
     _offset_y = (int16_t)m_width - ((float)py[1] * yFactor);
 
-    ESP_LOGI(TAG, "xFactor:%f, yFactor:%f, Offset X:%d; Y:%d.", xFactor, yFactor, _offset_x, _offset_y);
+    ESP_LOGD(TAG, "xFactor:%f, yFactor:%f, Offset X:%d; Y:%d.", xFactor, yFactor, _offset_x, _offset_y);
 }
 
 position get_screen_position(position pos)
@@ -162,25 +165,21 @@ position get_screen_position(position pos)
     } else if (y < 0) {
         y = 0;
     }
-    switch (CONFIG_LVGL_DISP_ROTATE) {
-    default:
-    case 0:
-        m_pos.x = LV_HOR_RES - x;
-        m_pos.y = y;
-        break;
-    case 1:
-        m_pos.x = LV_HOR_RES - y;
-        m_pos.y = LV_VER_RES - x;
-        break;
-    case 2:
-        m_pos.x = x;
-        m_pos.y = LV_VER_RES - y;
-        break;
-    case 3:
-        m_pos.x = y;
-        m_pos.y = x;
-        break;
-    }
+
+#ifdef CONFIG_LVGL_DISP_ROTATE_0
+    m_pos.x = LV_HOR_RES - x;
+    m_pos.y = y;
+#elif defined(CONFIG_LVGL_DISP_ROTATE_90)
+    m_pos.x = LV_HOR_RES - y;
+    m_pos.y = LV_VER_RES - x;
+#elif defined(CONFIG_LVGL_DISP_ROTATE_180)
+    m_pos.x = x;
+    m_pos.y = LV_VER_RES - y;
+#elif defined(CONFIG_LVGL_DISP_ROTATE_270)
+    m_pos.x = y;
+    m_pos.y = x;
+#endif
+
     return m_pos;
 }
 
@@ -234,4 +233,4 @@ void lvgl_indev_init()
     lv_indev_drv_register(&indev_drv); /*Finally register the driver*/
 }
 
-#endif // CONFIG_LVGL_USE_CUSTOM_DRIVER
+#endif /* CONFIG_LVGL_GUI_ENABLE */

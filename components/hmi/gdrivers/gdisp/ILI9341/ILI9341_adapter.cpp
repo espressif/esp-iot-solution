@@ -34,12 +34,11 @@
 /* uGFX Config Include */
 #include "sdkconfig.h"
 
-class CEspLcdAdapter: public CEspLcd
+class CEspLcdAdapter : public CEspLcd
 {
 public:
     const uint16_t *pFrameBuffer = NULL;
-    CEspLcdAdapter(lcd_conf_t *lcd_conf, int height = LCD_TFTHEIGHT, int width = LCD_TFTWIDTH, bool dma_en = true, int dma_word_size = 1024, int dma_chan = 1):
-        CEspLcd(lcd_conf, height, width, dma_en, dma_word_size, dma_chan)
+    CEspLcdAdapter(lcd_conf_t *lcd_conf, int height = LCD_TFTHEIGHT, int width = LCD_TFTWIDTH, bool dma_en = true, int dma_word_size = 1024, int dma_chan = 1) : CEspLcd(lcd_conf, height, width, dma_en, dma_word_size, dma_chan)
     {
         /* Code here*/
     }
@@ -93,19 +92,21 @@ void board_lcd_flush_task(void *arg)
 }
 #endif /* CONFIG_UGFX_DRIVER_AUTO_FLUSH_ENABLE */
 
+#ifdef CONFIG_UGFX_GUI_ENABLE
+
 void board_lcd_init()
 {
     /*Initialize LCD*/
     lcd_conf_t lcd_pins = {
-        .lcd_model    = LCD_MOD_AUTO_DET,
+        .lcd_model = LCD_MOD_AUTO_DET,
         .pin_num_miso = CONFIG_UGFX_LCD_MISO_GPIO,
         .pin_num_mosi = CONFIG_UGFX_LCD_MOSI_GPIO,
-        .pin_num_clk  = CONFIG_UGFX_LCD_CLK_GPIO,
-        .pin_num_cs   = CONFIG_UGFX_LCD_CS_GPIO,
-        .pin_num_dc   = CONFIG_UGFX_LCD_DC_GPIO,
-        .pin_num_rst  = CONFIG_UGFX_LCD_RESET_GPIO,
+        .pin_num_clk = CONFIG_UGFX_LCD_CLK_GPIO,
+        .pin_num_cs = CONFIG_UGFX_LCD_CS_GPIO,
+        .pin_num_dc = CONFIG_UGFX_LCD_DC_GPIO,
+        .pin_num_rst = CONFIG_UGFX_LCD_RESET_GPIO,
         .pin_num_bckl = CONFIG_UGFX_LCD_BL_GPIO,
-        .clk_freq     = 32 * 1000 * 1000,
+        .clk_freq = 32 * 1000 * 1000,
         .rst_active_level = 0,
         .bckl_active_level = 1,
         .spi_host = HSPI_HOST,
@@ -115,7 +116,7 @@ void board_lcd_init()
     if (lcd_obj == NULL) {
         lcd_obj = new CEspLcdAdapter(&lcd_pins);
     }
-    lcd_obj->writeCmdData(ILI9341_MEMACCESS_REG, 0x80 | 0x08);   // as default rotate
+    lcd_obj->writeCmdData(ILI9341_MEMACCESS_REG, 0x80 | 0x08); // as default rotate
 
 #if CONFIG_UGFX_DRIVER_AUTO_FLUSH_ENABLE
     // For framebuffer mode and flush
@@ -125,6 +126,8 @@ void board_lcd_init()
     xTaskCreate(board_lcd_flush_task, "flush_task", 1500, NULL, 5, NULL);
 #endif
 }
+
+#endif
 
 void board_lcd_flush(int16_t x, int16_t y, const uint16_t *bitmap, int16_t w, int16_t h)
 {
@@ -202,16 +205,15 @@ void board_lcd_set_orientation(uint16_t orientation)
     }
 }
 
-#if CONFIG_LVGL_USE_CUSTOM_DRIVER
+#ifdef CONFIG_LVGL_GUI_ENABLE
 
 /* lvgl include */
 #include "lvgl_disp_config.h"
-#include "iot_lvgl.h"
 
 /*Write the internal buffer (VDB) to the display. 'lv_flush_ready()' has to be called when finished*/
-void ex_disp_flush(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_color_t * color_p)
+void ex_disp_flush(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_color_t *color_p)
 {
-    lcd_obj->drawBitmap((int16_t)x1, (int16_t)y1, (const uint16_t *)color_p, (int16_t)(x2-x1+1), (int16_t)(y2-y1+1));
+    lcd_obj->drawBitmap((int16_t)x1, (int16_t)y1, (const uint16_t *)color_p, (int16_t)(x2 - x1 + 1), (int16_t)(y2 - y1 + 1));
     /* IMPORTANT!!!
      * Inform the graphics library that you are ready with the flushing*/
     lv_flush_ready();
@@ -220,71 +222,71 @@ void ex_disp_flush(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_colo
 /*Fill an area with a color on the display*/
 void ex_disp_fill(int32_t x1, int32_t y1, int32_t x2, int32_t y2, lv_color_t color)
 {
-    lcd_obj->fillRect((int16_t)x1, (int16_t)y1, (int16_t)(x2-x1+1), (int16_t)(y2-y1+1), (uint16_t)color.full);
+    lcd_obj->fillRect((int16_t)x1, (int16_t)y1, (int16_t)(x2 - x1 + 1), (int16_t)(y2 - y1 + 1), (uint16_t)color.full);
+    // ESP_LOGI("lvgl_example", "fill: x1 %d; y1 %d; w %d; h %d;", x1, y1, x2-x1+1, y2-y1+1);
 }
 
 /*Write pixel map (e.g. image) to the display*/
-void ex_disp_map(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_color_t * color_p)
+void ex_disp_map(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_color_t *color_p)
 {
-    lcd_obj->drawBitmap((int16_t)x1, (int16_t)y1, (const uint16_t *)color_p, (int16_t)(x2-x1+1), (int16_t)(y2-y1+1));
+    lcd_obj->drawBitmap((int16_t)x1, (int16_t)y1, (const uint16_t *)color_p, (int16_t)(x2 - x1 + 1), (int16_t)(y2 - y1 + 1));
+    // ESP_LOGI("lvgl_example", "map: x1 %d; y1 %d; w %d; h %d;", x1, y1, x2-x1+1, y2-y1+1);
 }
 
 void lvgl_lcd_display_init()
 {
-	/*Initialize LCD*/
-	lcd_conf_t lcd_pins = {
-        .lcd_model    = LCD_MOD_AUTO_DET,
+    /*Initialize LCD*/
+    lcd_conf_t lcd_pins = {
+        .lcd_model = LCD_MOD_AUTO_DET,
         .pin_num_miso = CONFIG_LVGL_LCD_MISO_GPIO,
         .pin_num_mosi = CONFIG_LVGL_LCD_MOSI_GPIO,
-        .pin_num_clk  = CONFIG_LVGL_LCD_CLK_GPIO,
-        .pin_num_cs   = CONFIG_LVGL_LCD_CS_GPIO,
-        .pin_num_dc   = CONFIG_LVGL_LCD_DC_GPIO,
-        .pin_num_rst  = CONFIG_LVGL_LCD_RESET_GPIO,
+        .pin_num_clk = CONFIG_LVGL_LCD_CLK_GPIO,
+        .pin_num_cs = CONFIG_LVGL_LCD_CS_GPIO,
+        .pin_num_dc = CONFIG_LVGL_LCD_DC_GPIO,
+        .pin_num_rst = CONFIG_LVGL_LCD_RESET_GPIO,
         .pin_num_bckl = CONFIG_LVGL_LCD_BL_GPIO,
-        .clk_freq     = 32 * 1000 * 1000,
+        .clk_freq = 32 * 1000 * 1000,
         .rst_active_level = 0,
         .bckl_active_level = 1,
         .spi_host = HSPI_HOST,
         .init_spi_bus = true,
     };
 
-    if(lcd_obj == NULL) {
-        lcd_obj = new CEspLcdAdapter(&lcd_pins);
+    if (lcd_obj == NULL) {
+        lcd_obj = new CEspLcdAdapter(&lcd_pins, LV_VER_RES, LV_HOR_RES);
     }
 
-    lv_disp_drv_t disp_drv;                         /*Descriptor of a display driver*/
-    lv_disp_drv_init(&disp_drv);                    /*Basic initialization*/
-    
-    switch(CONFIG_LVGL_DISP_ROTATE) {
-        default:
-        case 0:
-            board_lcd_write_cmd(0x36);
-            board_lcd_write_data_byte(0x80|0x08);
-        break;
-        case 1:
-            board_lcd_write_cmd(0x36);
-            board_lcd_write_data_byte(0x20|0x08);
-        break;
-        case 2:
-            board_lcd_write_cmd(0x36);
-            board_lcd_write_data_byte(0x40|0x08);
-        break;
-        case 3:
-            board_lcd_write_cmd(0x36);
-            board_lcd_write_data_byte(0xE0|0x08);
-        break;
-    }
+    lv_disp_drv_t disp_drv;      /*Descriptor of a display driver*/
+    lv_disp_drv_init(&disp_drv); /*Basic initialization*/
+
+#ifdef CONFIG_LVGL_DISP_ROTATE_0
+    board_lcd_write_cmd(ILI9341_MEMACCESS_REG);
+    board_lcd_write_data_byte(0x80 | 0x08);
+    ESP_LOGI("lvgl_example", "CONFIG_LVGL_DISP_ROTATE_0");
+#elif defined(CONFIG_LVGL_DISP_ROTATE_90)
+    board_lcd_write_cmd(ILI9341_MEMACCESS_REG);
+    board_lcd_write_data_byte(0x20 | 0x08);
+    ESP_LOGI("lvgl_example", "CONFIG_LVGL_DISP_ROTATE_90");
+#elif defined(CONFIG_LVGL_DISP_ROTATE_180)
+    board_lcd_write_cmd(ILI9341_MEMACCESS_REG);
+    board_lcd_write_data_byte(0x40 | 0x08);
+    ESP_LOGI("lvgl_example", "CONFIG_LVGL_DISP_ROTATE_180");
+#elif defined(CONFIG_LVGL_DISP_ROTATE_270)
+    board_lcd_write_cmd(ILI9341_MEMACCESS_REG);
+    board_lcd_write_data_byte(0xE0 | 0x08);
+    ESP_LOGI("lvgl_example", "CONFIG_LVGL_DISP_ROTATE_270");
+#endif
 
     /* Set up the functions to access to your display */
     if (LV_VDB_SIZE != 0) {
-        disp_drv.disp_flush = ex_disp_flush;            /*Used in buffered mode (LV_VDB_SIZE != 0  in lv_conf.h)*/
+        disp_drv.disp_flush = ex_disp_flush; /*Used in buffered mode (LV_VDB_SIZE != 0  in lv_conf.h)*/
     } else if (LV_VDB_SIZE == 0) {
-        disp_drv.disp_fill = ex_disp_fill;              /*Used in unbuffered mode (LV_VDB_SIZE == 0  in lv_conf.h)*/
-        disp_drv.disp_map = ex_disp_map;                /*Used in unbuffered mode (LV_VDB_SIZE == 0  in lv_conf.h)*/
+        disp_drv.disp_fill = ex_disp_fill; /*Used in unbuffered mode (LV_VDB_SIZE == 0  in lv_conf.h)*/
+        disp_drv.disp_map = ex_disp_map;   /*Used in unbuffered mode (LV_VDB_SIZE == 0  in lv_conf.h)*/
     }
 
     /* Finally register the driver */
     lv_disp_drv_register(&disp_drv);
 }
 
-#endif // CONFIG_LVGL_USE_CUSTOM_DRIVER
+#endif /* CONFIG_LVGL_GUI_ENABLE */

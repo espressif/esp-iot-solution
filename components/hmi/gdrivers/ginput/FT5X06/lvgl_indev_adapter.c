@@ -16,7 +16,7 @@
 #include "sdkconfig.h"
 #include "esp_log.h"
 
-#if CONFIG_LVGL_USE_CUSTOM_DRIVER
+#ifdef CONFIG_LVGL_GUI_ENABLE
 
 /*C Includes*/
 #include <stdio.h>
@@ -35,26 +35,21 @@
 /* FT5x06 Include */
 #include "FT5x06.h"
 
-#define I2C_NUM    CONFIG_LVGL_TOUCH_IIC_NUM
-#define I2C_SCL    CONFIG_LVGL_TOUCH_IIC_SCL_GPIO
-#define I2C_SDA    CONFIG_LVGL_TOUCH_IIC_SDA_GPIO
-
 static ft5x06_handle_t dev = NULL;
-static int m_rotation = 1;
 
-static void write_reg(uint8_t reg, uint8_t val) 
+static void write_reg(uint8_t reg, uint8_t val)
 {
     iot_ft5x06_write(dev, reg, 1, &val);
 }
 
-static uint8_t read_byte(uint8_t reg) 
+static uint8_t read_byte(uint8_t reg)
 {
     uint8_t data;
     iot_ft5x06_read(dev, reg, 1, &data);
     return data;
 }
 
-static uint16_t read_word(uint8_t reg) 
+static uint16_t read_word(uint8_t reg)
 {
     uint8_t data[2];
     uint16_t result;
@@ -77,27 +72,22 @@ bool ex_tp_read(lv_indev_data_t *data)
         data->state = LV_INDEV_STATE_PR;
 
         // Rescale X,Y if we are using self-calibration
-        switch(CONFIG_LVGL_DISP_ROTATE) {
-        default:
-        case 0:
-            data->point.x = data->point.x;
-            data->point.y = data->point.y;
-            break;
-        case 1:
-            t = data->point.x;
-            data->point.x = LV_HOR_RES - 1 - data->point.y;
-            data->point.y = t;
-            break;
-        case 2:
-            data->point.x = LV_HOR_RES - 1 - data->point.x;
-            data->point.y = LV_VER_RES - 1 - data->point.y;
-            break;
-        case 3:
-            t = data->point.y;
-            data->point.y = LV_VER_RES - 1 - data->point.x;
-            data->point.x = t;
-            break;
-        }
+
+#ifdef CONFIG_LVGL_DISP_ROTATE_0
+        data->point.x = data->point.x;
+        data->point.y = data->point.y;
+#elif defined(CONFIG_LVGL_DISP_ROTATE_90)
+        t = data->point.x;
+        data->point.x = LV_HOR_RES - 1 - data->point.y;
+        data->point.y = t;
+#elif defined(CONFIG_LVGL_DISP_ROTATE_180)
+        data->point.x = LV_HOR_RES - 1 - data->point.x;
+        data->point.y = LV_VER_RES - 1 - data->point.y;
+#elif defined(CONFIG_LVGL_DISP_ROTATE_270)
+        t = data->point.y;
+        data->point.y = LV_VER_RES - 1 - data->point.x;
+        data->point.x = t;
+#endif
     }
     return false;
 }
@@ -109,13 +99,13 @@ void lvgl_indev_init()
     i2c_bus_handle_t i2c_bus = NULL;
     i2c_config_t conf = {
         .mode = I2C_MODE_MASTER,
-        .sda_io_num = I2C_SDA,
+        .sda_io_num = CONFIG_LVGL_TOUCH_SDA_GPIO,
         .sda_pullup_en = GPIO_PULLUP_ENABLE,
-        .scl_io_num = I2C_SCL,
+        .scl_io_num = CONFIG_LVGL_TOUCH_SCL_GPIO,
         .scl_pullup_en = GPIO_PULLUP_ENABLE,
         .master.clk_speed = 200000,
     };
-    i2c_bus = iot_i2c_bus_create(I2C_NUM, &conf);
+    i2c_bus = iot_i2c_bus_create(CONFIG_LVGL_TOUCH_IIC_NUM, &conf);
     dev = iot_ft5x06_create(i2c_bus, FT5X06_ADDR_DEF);
 
     // Init default values. (From NHD-3.5-320240MF-ATXL-CTP-1 datasheet)
@@ -146,13 +136,13 @@ void lvgl_indev_init()
     // Timer to enter 'idle' when in 'Monitor' (ms)
     write_reg(FT5x06_ID_G_PERIODMONITOR, 0x28);
 
-    lv_indev_drv_t indev_drv;                       /*Descriptor of an input device driver*/
-    lv_indev_drv_init(&indev_drv);                  /*Basic initialization*/
+    lv_indev_drv_t indev_drv;      /*Descriptor of an input device driver*/
+    lv_indev_drv_init(&indev_drv); /*Basic initialization*/
 
-    indev_drv.type = LV_INDEV_TYPE_POINTER;         /*The touchpad is pointer type device*/
-    indev_drv.read = ex_tp_read;                    /*Library ready your touchpad via this function*/
-    
-    lv_indev_drv_register(&indev_drv);              /*Finally register the driver*/
+    indev_drv.type = LV_INDEV_TYPE_POINTER; /*The touchpad is pointer type device*/
+    indev_drv.read = ex_tp_read;            /*Library ready your touchpad via this function*/
+
+    lv_indev_drv_register(&indev_drv); /*Finally register the driver*/
 }
 
-#endif
+#endif /* CONFIG_LVGL_GUI_ENABLE */

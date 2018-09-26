@@ -8,6 +8,8 @@
 /* uGFX Config Includes */
 #include "sdkconfig.h"
 
+#ifdef CONFIG_UGFX_GUI_ENABLE
+
 /* uGFX Includes */
 #include "gos_freertos_priv.h"
 #include "gfx.h"
@@ -83,3 +85,5 @@ const GMouseVMT const GMOUSE_DRIVER_VMT[1] = {{
 };
 
 #endif /* GFX_USE_GINPUT && GINPUT_NEED_MOUSE */
+
+#endif /* CONFIG_UGFX_GUI_ENABLE */

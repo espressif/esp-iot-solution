@@ -83,6 +83,17 @@ void iot_nt35510_fill_screen(nt35510_handle_t nt35510_handle, uint16_t color);
 void iot_nt35510_fill_area(nt35510_handle_t nt35510_handle, uint16_t color, uint16_t x, uint16_t y);
 
 /**
+ * @brief fill the area of screen with color
+ * 
+ * @param nt35510_handle the handle of nt35510
+ * @param color Color to be filled
+ * @param x start coordinate
+ * @param y start coordinate
+ * @param x_size area width
+ * @param y_size area height
+ */
+void iot_nt35510_fill_rect(nt35510_handle_t nt35510_handle, uint16_t color, uint16_t x, uint16_t y, uint16_t x_size, uint16_t y_size);
+/**
  * @brief Print an array of pixels: Used to display pictures usually
  * 
  * @param nt35510_handle the handle of nt35510
@@ -118,7 +129,7 @@ void iot_nt35510_put_char(nt35510_handle_t nt35510_handle, uint8_t *str, uint16_
  * @param wcolor ascll color
  * @param bcolor background color
  */
-void inline iot_nt35510_asc8x16_to_men(nt35510_handle_t nt35510_handle, char str, uint16_t x, uint16_t y, uint16_t wcolor, uint16_t bcolor);
+void iot_nt35510_asc8x16_to_men(nt35510_handle_t nt35510_handle, char str, uint16_t x, uint16_t y, uint16_t wcolor, uint16_t bcolor);
 
 /**
  * @brief print ascll to nt35510
@@ -167,4 +178,5 @@ nt35510_handle_t iot_nt35510_create(uint16_t x_size, uint16_t y_size, i2s_port_t
 #ifdef __cplusplus
 }
 #endif
-#endif
+
+#endif /* _IOT_NT35510_H_ */
