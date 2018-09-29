@@ -1019,6 +1019,26 @@ menu "IoT Solution settings"
                     menu "ST7789 Screen Pin Configuration"
                         depends on UGFX_DRIVER_ST7789
 
+                        choice UGFX_LCD_SPI_SELECT
+                            prompt "Select SPI Port"
+                            default UGFX_LCD_HSPI
+                        
+                            config UGFX_LCD_HSPI
+                                bool "Select HSPI"
+
+                            config UGFX_LCD_VSPI
+                                bool "Select VSPI"
+
+                        endchoice
+                        config UGFX_LCD_SPI_NUM
+                            int
+                            default 1 if  UGFX_LCD_HSPI
+                            default 2 if  UGFX_LCD_VSPI
+                        config UGFX_LCD_SPI_CLOCK
+                            int "uGFX LCD SPI Clock"
+                            range 0 40000000
+                            default 20000000
+
                         config UGFX_LCD_MISO_GPIO
                             int "uGFX LCD MISO GPIO"
                             range 0 39
@@ -1052,6 +1072,26 @@ menu "IoT Solution settings"
 
                     menu "ILI9341 Screen Pin Configuration"
                         depends on UGFX_DRIVER_ILI9341
+
+                        choice UGFX_LCD_SPI_SELECT
+                            prompt "Select SPI Port"
+                            default UGFX_LCD_HSPI
+                        
+                            config UGFX_LCD_HSPI
+                                bool "Select HSPI"
+
+                            config UGFX_LCD_VSPI
+                                bool "Select VSPI"
+
+                        endchoice
+                        config UGFX_LCD_SPI_NUM
+                            int
+                            default 1 if  UGFX_LCD_HSPI
+                            default 2 if  UGFX_LCD_VSPI
+                        config UGFX_LCD_SPI_CLOCK
+                            int "uGFX LCD SPI Clock"
+                            range 0 40000000
+                            default 20000000
 
                         config UGFX_LCD_MISO_GPIO
                             int "uGFX LCD MISO GPIO"
@@ -1098,10 +1138,22 @@ menu "IoT Solution settings"
                         #
                         #endchoice
 
+                        choice UGFX_LCD_I2S_SELECT
+                            prompt "Select I2S Port"
+                            default UGFX_LCD_I2S0
+                        
+                            config UGFX_LCD_I2S0
+                                bool "Select I2S0"
+
+                            config UGFX_LCD_I2S1
+                                bool "Select I2S1"
+
+                        endchoice
                         config UGFX_LCD_I2S_NUM
-                            int "uGFX LCD I2S NUM"
-                            range 0 0
-                            default 0
+                            int
+                            default 0 if  UGFX_LCD_I2S0
+                            default 1 if  UGFX_LCD_I2S1
+
                         config UGFX_LCD_WR_GPIO
                             int "uGFX LCD WR GPIO"
                             range 0 39
@@ -1188,6 +1240,10 @@ menu "IoT Solution settings"
                     menu "SSD1306 Screen Pin Configuration"
                         depends on UGFX_DRIVER_SSD1306
 
+                        config UGFX_LCD_IIC_NUM
+                            int "uGFX LCD IIC Num"
+                            range 0 1
+                            default 0
                         config UGFX_LCD_SCL_GPIO
                             int "uGFX LCD SCL GPIO"
                             range 0 39
@@ -1329,9 +1385,9 @@ menu "IoT Solution settings"
                     default LVGL_LCD_DRIVER_FRAMEBUFFER_MODE
 
                     config LVGL_LCD_DRIVER_FRAMEBUFFER_MODE
-                        bool "Select LittlevGL Driver Framebuffer Mode"
+                        bool "Select LittlevGL Driver Buffered Mode"
                     config LVGL_LCD_DRIVER_API_MODE
-                        bool "Select LittlevGL Driver API Mode" 
+                        bool "Select LittlevGL Driver Unbuffered Mode" 
 
                 endchoice
                                         
@@ -1438,6 +1494,26 @@ menu "IoT Solution settings"
                     menu "ST7789 Screen Pin Configuration"
                         depends on LVGL_DRIVER_ST7789
 
+                        choice LVGL_LCD_SPI_SELECT
+                            prompt "Select SPI Port"
+                            default LVGL_LCD_HSPI
+                        
+                            config LVGL_LCD_HSPI
+                                bool "Select HSPI"
+
+                            config LVGL_LCD_VSPI
+                                bool "Select VSPI"
+
+                        endchoice
+                        config LVGL_LCD_SPI_NUM
+                            int
+                            default 1 if  LVGL_LCD_HSPI
+                            default 2 if  LVGL_LCD_VSPI
+                        config LVGL_LCD_SPI_CLOCK
+                            int "LittlevGL LCD SPI Clock"
+                            range 0 40000000
+                            default 20000000
+
                         config LVGL_LCD_MISO_GPIO
                             int "LittlevGL LCD MISO GPIO"
                             range 0 39
@@ -1471,6 +1547,26 @@ menu "IoT Solution settings"
 
                     menu "ILI9341 Screen Pin Configuration"
                         depends on LVGL_DRIVER_ILI9341
+
+                        choice LVGL_LCD_SPI_SELECT
+                            prompt "Select SPI Port"
+                            default LVGL_LCD_HSPI
+                        
+                            config LVGL_LCD_HSPI
+                                bool "Select HSPI"
+
+                            config LVGL_LCD_VSPI
+                                bool "Select VSPI"
+
+                        endchoice
+                        config LVGL_LCD_SPI_NUM
+                            int
+                            default 1 if  LVGL_LCD_HSPI
+                            default 2 if  LVGL_LCD_VSPI
+                        config LVGL_LCD_SPI_CLOCK
+                            int "LittlevGL LCD SPI Clock"
+                            range 0 40000000
+                            default 20000000
 
                         config LVGL_LCD_MISO_GPIO
                             int "LittlevGL LCD MISO GPIO"
@@ -1517,10 +1613,22 @@ menu "IoT Solution settings"
                         #
                         #endchoice
 
+                        choice LVGL_LCD_I2S_SELECT
+                            prompt "Select I2S Port"
+                            default LVGL_LCD_I2S0
+                        
+                            config LVGL_LCD_I2S0
+                                bool "Select I2S0"
+
+                            config LVGL_LCD_I2S1
+                                bool "Select I2S1"
+
+                        endchoice
                         config LVGL_LCD_I2S_NUM
-                            int "LittlevGL LCD I2S NUM"
-                            range 0 1
-                            default 0
+                            int
+                            default 0 if  LVGL_LCD_I2S0
+                            default 1 if  LVGL_LCD_I2S1
+
                         config LVGL_LCD_WR_GPIO
                             int "LittlevGL LCD WR GPIO"
                             range 0 39
@@ -1607,6 +1715,10 @@ menu "IoT Solution settings"
                     menu "SSD1306 Screen Pin Configuration"
                         depends on LVGL_DRIVER_SSD1306
 
+                        config LVGL_LCD_IIC_NUM
+                            int "LittlevGL LCD IIC Num"
+                            range 0 1
+                            default 0
                         config LVGL_LCD_SCL_GPIO
                             int "LittlevGL LCD SCL GPIO"
                             range 0 39

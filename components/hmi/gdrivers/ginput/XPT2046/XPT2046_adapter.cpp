@@ -49,7 +49,7 @@ void board_touch_init()
     xpt_conf.pin_num_cs = CONFIG_UGFX_TOUCH_CS_GPIO;   /*!<SPI Chip Select Pin*/
     xpt_conf.pin_num_irq = CONFIG_UGFX_TOUCH_IRQ_GPIO; /*!< Touch screen IRQ pin */
     xpt_conf.clk_freq = 1 * 1000 * 1000;               /*!< spi clock frequency */
-    xpt_conf.spi_host = HSPI_HOST;                     /*!< spi host index*/
+    xpt_conf.spi_host = (spi_host_device_t)CONFIG_UGFX_LCD_SPI_NUM;                     /*!< spi host index*/
     xpt_conf.pin_num_miso = -1;                        /*!<MasterIn, SlaveOut pin*/
     xpt_conf.pin_num_mosi = -1;                        /*!<MasterOut, SlaveIn pin*/
     xpt_conf.pin_num_clk = -1;                         /*!<SPI Clock pin*/
@@ -190,24 +190,22 @@ bool ex_tp_read(lv_indev_data_t *data)
     position pos = get_screen_position(xpt->get_raw_position());
     data->point.x = pos.x;
     data->point.y = pos.y;
-    // ESP_LOGI(TAG, "X:%d; Y:%d.", pos.x, pos.y);
     return false;
 }
 
-/* Input device interface */
-/* Initialize your touchpad */
+/* Input device interface，Initialize your touchpad */
 void lvgl_indev_init()
 {
     xpt_conf_t xpt_conf = {
         .pin_num_cs = CONFIG_LVGL_TOUCH_CS_GPIO,   /*!<SPI Chip Select Pin*/
         .pin_num_irq = CONFIG_LVGL_TOUCH_IRQ_GPIO, /*!< Touch screen IRQ pin */
         .clk_freq = 1 * 1000 * 1000,               /*!< spi clock frequency */
-        .spi_host = HSPI_HOST,                     /*!< spi host index */
+        .spi_host = (spi_host_device_t)CONFIG_LVGL_LCD_SPI_NUM,                     /*!< spi host index */
         .pin_num_miso = -1,                        /*!<MasterIn, SlaveOut pin*/
         .pin_num_mosi = -1,                        /*!<MasterOut, SlaveIn pin*/
         .pin_num_clk = -1,                         /*!<SPI Clock pin*/
         .dma_chan = 1,
-        .init_spi_bus = false, /*!< Whether to initialize SPI bus */
+        .init_spi_bus = false,                     /*!< Whether to initialize SPI bus */
     };
 
     if (xpt == NULL) {
@@ -224,13 +222,13 @@ void lvgl_indev_init()
     m_height = 240;
 #endif
 
-    lv_indev_drv_t indev_drv;      /*Descriptor of an input device driver*/
-    lv_indev_drv_init(&indev_drv); /*Basic initialization*/
+    lv_indev_drv_t indev_drv;               /*Descriptor of an input device driver*/
+    lv_indev_drv_init(&indev_drv);          /*Basic initialization*/
 
     indev_drv.type = LV_INDEV_TYPE_POINTER; /*The touchpad is pointer type device*/
     indev_drv.read = ex_tp_read;            /*Library ready your touchpad via this function*/
 
-    lv_indev_drv_register(&indev_drv); /*Finally register the driver*/
+    lv_indev_drv_register(&indev_drv);      /*Finally register the driver*/
 }
 
 #endif /* CONFIG_LVGL_GUI_ENABLE */

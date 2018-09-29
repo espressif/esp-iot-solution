@@ -95,7 +95,7 @@ void board_lcd_flush_task(void *arg)
 void board_lcd_init()
 {
     /*Initialize LCD*/
-    i2c_bus = new CI2CBus(I2C_NUM_1, (gpio_num_t)CONFIG_UGFX_LCD_SCL_GPIO, (gpio_num_t)CONFIG_UGFX_LCD_SDA_GPIO);
+    i2c_bus = new CI2CBus((i2c_port_t)CONFIG_UGFX_LCD_IIC_NUM, (gpio_num_t)CONFIG_UGFX_LCD_SCL_GPIO, (gpio_num_t)CONFIG_UGFX_LCD_SDA_GPIO);
 
     if (lcd_obj == NULL) {
         lcd_obj = new CLcdAdapter(i2c_bus);
@@ -173,7 +173,7 @@ void ex_disp_map(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_color_
 void lvgl_lcd_display_init()
 {
     /*Initialize LCD*/
-    i2c_bus = new CI2CBus(I2C_NUM_1, (gpio_num_t)CONFIG_LVGL_LCD_SCL_GPIO, (gpio_num_t)CONFIG_LVGL_LCD_SDA_GPIO);
+    i2c_bus = new CI2CBus((i2c_port_t)CONFIG_LVGL_LCD_IIC_NUM, (gpio_num_t)CONFIG_LVGL_LCD_SCL_GPIO, (gpio_num_t)CONFIG_LVGL_LCD_SDA_GPIO);
 
     if (lcd_obj == NULL) {
         lcd_obj = new CLcdAdapter(i2c_bus);
@@ -181,26 +181,6 @@ void lvgl_lcd_display_init()
 
     lv_disp_drv_t disp_drv;      /*Descriptor of a display driver*/
     lv_disp_drv_init(&disp_drv); /*Basic initialization*/
-
-    // switch(CONFIG_LVGL_DISP_ROTATE){
-    //     default:
-    //     case 0:
-    //         lcd_obj->writeCmd(0x36);
-    //         lcd_obj->writeData(0x00|0x00);
-    //         break;
-    //     case 1:
-    //         lcd_obj->writeCmd(0x36);
-    //         lcd_obj->writeData(0xA0|0x00);
-    //         break;
-    //     case 2:
-    //         lcd_obj->writeCmd(0x36);
-    //         lcd_obj->writeData(0xC0|0x00);
-    //         break;
-    //     case 3:
-    //         lcd_obj->writeCmd(0x36);
-    //         lcd_obj->writeData(0x60|0x00);
-    //         break;
-    // }
 
     /* Set up the functions to access to your display */
     if (LV_VDB_SIZE != 0) {

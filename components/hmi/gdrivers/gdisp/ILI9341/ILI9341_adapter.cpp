@@ -106,10 +106,10 @@ void board_lcd_init()
         .pin_num_dc = CONFIG_UGFX_LCD_DC_GPIO,
         .pin_num_rst = CONFIG_UGFX_LCD_RESET_GPIO,
         .pin_num_bckl = CONFIG_UGFX_LCD_BL_GPIO,
-        .clk_freq = 32 * 1000 * 1000,
+        .clk_freq = CONFIG_UGFX_LCD_SPI_CLOCK,
         .rst_active_level = 0,
         .bckl_active_level = 1,
-        .spi_host = HSPI_HOST,
+        .spi_host = (spi_host_device_t)CONFIG_UGFX_LCD_SPI_NUM,
         .init_spi_bus = true,
     };
 
@@ -223,14 +223,12 @@ void ex_disp_flush(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_colo
 void ex_disp_fill(int32_t x1, int32_t y1, int32_t x2, int32_t y2, lv_color_t color)
 {
     lcd_obj->fillRect((int16_t)x1, (int16_t)y1, (int16_t)(x2 - x1 + 1), (int16_t)(y2 - y1 + 1), (uint16_t)color.full);
-    // ESP_LOGI("lvgl_example", "fill: x1 %d; y1 %d; w %d; h %d;", x1, y1, x2-x1+1, y2-y1+1);
 }
 
 /*Write pixel map (e.g. image) to the display*/
 void ex_disp_map(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_color_t *color_p)
 {
     lcd_obj->drawBitmap((int16_t)x1, (int16_t)y1, (const uint16_t *)color_p, (int16_t)(x2 - x1 + 1), (int16_t)(y2 - y1 + 1));
-    // ESP_LOGI("lvgl_example", "map: x1 %d; y1 %d; w %d; h %d;", x1, y1, x2-x1+1, y2-y1+1);
 }
 
 void lvgl_lcd_display_init()
@@ -245,10 +243,10 @@ void lvgl_lcd_display_init()
         .pin_num_dc = CONFIG_LVGL_LCD_DC_GPIO,
         .pin_num_rst = CONFIG_LVGL_LCD_RESET_GPIO,
         .pin_num_bckl = CONFIG_LVGL_LCD_BL_GPIO,
-        .clk_freq = 32 * 1000 * 1000,
+        .clk_freq = CONFIG_LVGL_LCD_SPI_CLOCK,
         .rst_active_level = 0,
         .bckl_active_level = 1,
-        .spi_host = HSPI_HOST,
+        .spi_host = (spi_host_device_t)CONFIG_LVGL_LCD_SPI_NUM,
         .init_spi_bus = true,
     };
 
