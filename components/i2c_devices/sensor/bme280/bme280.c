@@ -440,7 +440,7 @@ float iot_bme280_read_pressure(bme280_handle_t dev)
         return ESP_FAIL;
     }
 
-    if (iot_bme280_read(dev, BME280_REGISTER_TEMPDATA, 3, data) == ESP_FAIL) {
+    if (iot_bme280_read(dev, BME280_REGISTER_PRESSUREDATA, 3, data) == ESP_FAIL) {
         return ESP_FAIL;
     }
 
@@ -469,7 +469,7 @@ float iot_bme280_read_pressure(bme280_handle_t dev)
     var2 = (((int64_t) device->data_t.dig_p8) * p) >> 19;
 
     p = ((p + var1 + var2) >> 8) + (((int64_t) device->data_t.dig_p7) << 4);
-    return ((float) p / 256.0);
+    return ((p >>8) / 100.0);
 }
 
 float iot_bme280_read_humidity(bme280_handle_t dev)
