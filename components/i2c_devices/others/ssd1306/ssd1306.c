@@ -59,7 +59,7 @@ esp_err_t iot_ssd1306_write_byte(ssd1306_handle_t dev, uint8_t chData,
     }
     i2c_master_write_byte(cmd, chData, ACK_CHECK_EN);
     i2c_master_stop(cmd);
-    ret = i2c_master_cmd_begin(OLED_IIC_NUM, cmd, 1000 / portTICK_RATE_MS);
+    ret = iot_i2c_bus_cmd_begin(device->bus, cmd, 1000 / portTICK_RATE_MS);
     i2c_cmd_link_delete(cmd);
 #endif
     return ret;
