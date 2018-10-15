@@ -84,7 +84,7 @@ static void pic_slide_tset(void)
 {
     uint16_t *raw = NULL;
     uint16_t *buf = NULL;
-    uint16_t pox, poy;
+    uint16_t pox = 0;
     float stepx = 1.0;
     float stepy = 1.0;
     float k = 1.0;
@@ -93,7 +93,6 @@ static void pic_slide_tset(void)
     uint16_t leny = 0;
     uint16_t len = 0;
     uint16_t offsetx = 0;
-    uint16_t offsety = 0;
     uint16_t i, j;
     uint16_t idx = 0;
     uint16_t idy = 0;
@@ -126,7 +125,7 @@ static void pic_slide_tset(void)
     iot_nt35510_set_orientation(nt35510_handle, LCD_DISP_ROTATE_270);
     iot_nt35510_fill_screen(nt35510_handle, 0xaefc);
     xTaskCreate(touch_task, "touch_task", 2048 * 2, NULL, 10, NULL);
-    iot_nt35510_draw_bmp(nt35510_handle, gImage_pic, 0, 0, 480, 800);
+    iot_nt35510_draw_bmp(nt35510_handle, (uint16_t *)gImage_pic, 0, 0, 480, 800);
     int refresh = 1;
     while (1) {
         if (touch_info.touch_point == 1) {
@@ -138,7 +137,7 @@ static void pic_slide_tset(void)
             }
         } else {
             if (refresh == 1) {
-                iot_nt35510_draw_bmp(nt35510_handle, gImage_pic, 0, 0, 480, 800);
+                iot_nt35510_draw_bmp(nt35510_handle, (uint16_t *)gImage_pic, 0, 0, 480, 800);
                 refresh = 0;
                 continue;
             }
@@ -152,7 +151,6 @@ static void pic_slide_tset(void)
         leny = stepy * 480;
         len = stepy * 800;
         k = 1.0 / stepy;
-        offsety = (480 - leny) / 2;
         stepx = 1.0 * (800 - len) / leny;
         i = 0;
         while (1) {
@@ -164,7 +162,7 @@ static void pic_slide_tset(void)
             lenx = stepx * i + len;
             m = 1.0 * 800 / lenx;
             offsetx = (800 - lenx) / 2;
-            raw = &(gImage_pic[idy * 800 * 2]);
+            raw = (uint16_t *)&(gImage_pic[idy * 800 * 2]);
             buf = &(device->lcd_buf[offsetx]);
             for (int i = 0; i < 500; i++) {
                 device->lcd_buf[i] = 0xaefb;

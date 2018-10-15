@@ -69,7 +69,6 @@ LLDSPEC bool_t gdisp_lld_init(GDisplay *g)
 
     // Release the bus
     release_bus(g);
-
     /* Turn on the back-light */
     set_backlight(g, GDISP_INITIAL_BACKLIGHT);
 

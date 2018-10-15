@@ -8,6 +8,8 @@
 /* uGFX Config Includes */
 #include "sdkconfig.h"
 
+#ifdef CONFIG_UGFX_GUI_ENABLE
+
 /* uGFX Includes */
 #include "gos_freertos_priv.h"
 #include "gfx.h"
@@ -35,7 +37,6 @@ static bool_t touch_get_xyz(GMouse *m, GMouseReading *pdr)
         pdr->z = 1;                        // Set to Z_MAX as we are pressed
 
         aquire_bus(m);
-
         read_value(m, CMD_X);              // Dummy read - disable PenIRQ
         pdr->x = read_value(m, CMD_X);     // Read X-Value
 
@@ -84,3 +85,5 @@ const GMouseVMT const GMOUSE_DRIVER_VMT[1] = {{
 };
 
 #endif /* GFX_USE_GINPUT && GINPUT_NEED_MOUSE */
+
+#endif /* CONFIG_UGFX_GUI_ENABLE */

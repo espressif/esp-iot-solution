@@ -42,6 +42,9 @@ build:
     - cd ../hmi/ugfx_example
     - make defconfig
     - make -j8
+    - cd ../lvgl_example
+    - make defconfig
+    - make -j8
     - cd ../
     - cd ../touch_pad_evb
     - make defconfig
