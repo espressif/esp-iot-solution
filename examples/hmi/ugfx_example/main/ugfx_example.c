@@ -42,8 +42,6 @@
 #include "rom/ets_sys.h"
 #include "rom/crc.h"
 
-static const char *TAG = "uGFX_example";
-
 /******************************************************************************
  * FunctionName : app_main
  * Description  : entry of user application, init user function here

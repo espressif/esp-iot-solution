@@ -87,7 +87,7 @@ private:
     bool m_pressed;
     int m_rotation;
     int m_io_irq;
-    SemaphoreHandle_t _spi_mux = NULL;
+    SemaphoreHandle_t m_spi_mux = NULL;
 
 public:
     /**

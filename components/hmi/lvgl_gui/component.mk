@@ -16,7 +16,7 @@ COMPONENT_SRCDIRS := . \
     $(LVGLLIB)/lv_draw \
     $(LVGLLIB)/lv_hal \
     $(LVGLLIB)/lv_misc \
-    $(LVGLLIB)/lv_misc/lv_fonts \
+    $(LVGLLIB)/lv_fonts \
     $(LVGLLIB)/lv_objx \
     $(LVGLLIB)/lv_themes \
 
@@ -27,7 +27,7 @@ COMPONENT_ADD_INCLUDEDIRS := . \
     $(LVGLLIB)/lv_draw \
     $(LVGLLIB)/lv_hal \
     $(LVGLLIB)/lv_misc \
-    $(LVGLLIB)/lv_misc/lv_fonts \
+    $(LVGLLIB)/lv_fonts \
     $(LVGLLIB)/lv_objx \
     $(LVGLLIB)/lv_themes \
 
@@ -38,7 +38,7 @@ COMPONENT_PRIV_INCLUDEDIRS +=  . \
     $(LVGLLIB)/lv_draw \
     $(LVGLLIB)/lv_hal \
     $(LVGLLIB)/lv_misc \
-    $(LVGLLIB)/lv_misc/lv_fonts \
+    $(LVGLLIB)/lv_fonts \
     $(LVGLLIB)/lv_objx \
     $(LVGLLIB)/lv_themes \
 

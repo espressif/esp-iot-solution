@@ -291,7 +291,7 @@ static esp_err_t i2s_lcd_driver_install(i2s_port_t i2s_num)
 
 i2s_lcd_handle_t i2s_lcd_create(i2s_port_t i2s_num, i2s_lcd_config_t *pin_conf)
 {
-    I2S_CHECK((i2s_num < I2S_NUM_MAX), "i2s_num error", ESP_ERR_INVALID_ARG);
+    I2S_CHECK((i2s_num < I2S_NUM_MAX), "i2s_num error", NULL);
     i2s_lcd_t* i2s_lcd = (i2s_lcd_t*) calloc(1, sizeof(i2s_lcd_t));
     i2s_lcd->i2s_lcd_conf = *pin_conf;
     i2s_lcd->i2s_port = i2s_num;
@@ -311,7 +311,7 @@ i2s_lcd_handle_t i2s_lcd_create(i2s_port_t i2s_num, i2s_lcd_config_t *pin_conf)
     gpio_conf.pull_up_en = 0;
     gpio_conf.intr_type = GPIO_INTR_DISABLE;
     if (gpio_config(&gpio_conf) != ESP_OK) {
-        return ESP_FAIL;
+        return NULL;
     }
     data_idx = (i2s_num == I2S_NUM_0) ? I2S0O_DATA_OUT8_IDX : I2S1O_DATA_OUT8_IDX;
     for (int i = 0; i < pin_conf->data_width; i++) {

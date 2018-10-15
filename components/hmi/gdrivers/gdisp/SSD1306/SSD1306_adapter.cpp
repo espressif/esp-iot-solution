@@ -170,7 +170,7 @@ void ex_disp_map(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_color_
     lcd_obj->draw_bitmap((uint8_t)x1, (uint8_t)y1, (uint8_t *)color_p, (uint8_t)(x2 - x1 + 1), (uint8_t)(y2 - y1 + 1));
 }
 
-void lvgl_lcd_display_init()
+lv_disp_drv_t lvgl_lcd_display_init()
 {
     /*Initialize LCD*/
     i2c_bus = new CI2CBus((i2c_port_t)CONFIG_LVGL_LCD_IIC_NUM, (gpio_num_t)CONFIG_LVGL_LCD_SCL_GPIO, (gpio_num_t)CONFIG_LVGL_LCD_SDA_GPIO);
@@ -192,6 +192,7 @@ void lvgl_lcd_display_init()
 
     /* Finally register the driver */
     lv_disp_drv_register(&disp_drv);
+    return disp_drv;
 }
 
 #endif /* CONFIG_LVGL_GUI_ENABLE */

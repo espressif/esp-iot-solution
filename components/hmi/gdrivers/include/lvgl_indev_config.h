@@ -12,7 +12,7 @@ extern "C"
 /**
  * @brief Initialize input device
  */
-void lvgl_indev_init();
+lv_indev_drv_t lvgl_indev_init();
 
 #ifdef __cplusplus
 }

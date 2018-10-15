@@ -27,28 +27,45 @@
 /* lvgl includes */
 #include "iot_lvgl.h"
 
+/* lvgl test includes */
+#include "lv_test_theme.h"
+
 /* esp includes */
 #include "esp_log.h"
 
-static const char *TAG = "example_lvgl";
+#if CONFIG_LVGL_DRIVER_SCREEN_WIDTH <= 350
+    #define LVGL_EXAMPLE
+#else
+    #define LVGL_TEST_THEME
+#endif
+
 static TimerHandle_t lvgl_timer;
 static TimerHandle_t lvgl_tick_timer;
 
+#ifdef LVGL_EXAMPLE
+static const char *TAG = "example_lvgl";
 static lv_obj_t *chart = NULL;
 static lv_obj_t *gauge = NULL;
 static lv_chart_series_t *series = NULL;
+#endif
 
 //lv_task_handler should be called periodically around 10ms
 static void IRAM_ATTR lvgl_task_time_callback(TimerHandle_t xTimer)
 {
+    /* Periodically call this function.
+     * The timing is not critical but should be between 1..10 ms */
     lv_task_handler();
 }
 
 static void IRAM_ATTR lv_tick_task_callback(TimerHandle_t xTimer)
 {
+    /* Initialize a Timer for 1 ms period and
+     * in its interrupt call
+     * lv_tick_inc(1); */
     lv_tick_inc(1);
 }
 
+#ifdef LVGL_EXAMPLE
 static lv_res_t on_led_switch_toggled(lv_obj_t *sw)
 {
     ESP_LOGI(TAG, "Hello");
@@ -118,9 +135,10 @@ static void user_task(void *pvParameter)
         value = esp_random() % 100;
         lv_chart_set_next(chart, series, value);
         lv_gauge_set_value(gauge, 0, value);
-        vTaskDelay(100 / portTICK_PERIOD_MS);
+        vTaskDelay(500 / portTICK_PERIOD_MS);
     }
 }
+#endif
 
 /******************************************************************************
  * FunctionName : app_main
@@ -147,7 +165,7 @@ extern "C" void app_main()
     lvgl_lcd_display_init();	           /*Initialize your display*/
 
     /* Input device interface */
-    lvgl_indev_init();                     /*Initialize your indev*/
+    lv_indev_drv_t indevdrv = lvgl_indev_init();    /*Initialize your indev*/
 
     lvgl_timer = xTimerCreate(
         "lv_task",
@@ -157,6 +175,11 @@ extern "C" void app_main()
         lvgl_task_time_callback);          //timer callback
     xTimerStart(lvgl_timer, 0);
 
+    vTaskDelay(20 / portTICK_PERIOD_MS);    // wait for execute lv_task_handler, avoid 'error'
+
+    lvgl_calibrate_mouse(indevdrv);
+
+#ifdef LVGL_EXAMPLE
     littlevgl_demo();
     xTaskCreate(
         user_task,   //Task Function
@@ -165,4 +188,10 @@ extern "C" void app_main()
         NULL,        //Parameters
         1,           //Priority
         NULL);       //Task Handler
+#endif
+
+#ifdef LVGL_TEST_THEME
+    lv_theme_t *th = lv_theme_alien_init(100, NULL);
+    lv_test_theme_1(th);
+#endif
 }

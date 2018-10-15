@@ -20,6 +20,9 @@ CXpt2046::CXpt2046(xpt_conf_t * xpt_conf, int rotation)
     m_pressed = false;
     m_rotation = rotation;
     m_io_irq = xpt_conf->pin_num_irq;
+    if (m_spi_mux == NULL) {
+        m_spi_mux = xSemaphoreCreateRecursiveMutex();
+    }
 }
 
 bool CXpt2046::is_pressed()
@@ -50,7 +53,10 @@ position CXpt2046::get_raw_position()
 
 int CXpt2046::get_sample(uint8_t command)
 {
-    return iot_xpt2046_readdata(m_spi, command, 1);
+    xSemaphoreTakeRecursive(m_spi_mux, portMAX_DELAY);
+    int data = iot_xpt2046_readdata(m_spi, command, 1);
+    xSemaphoreGiveRecursive(m_spi_mux);
+    return data;
 }
 
 void CXpt2046::sample()
