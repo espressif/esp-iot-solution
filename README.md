@@ -20,7 +20,6 @@
 
 ---
 
-
 ## Evaluation Board Series
 
 * [ESP32_ULP_EB_V1 Evaluation Board](./documents/evaluation_boards/readme_en.md) [[中文]](./documents/evaluation_boards/readme_cn.md)
@@ -32,23 +31,33 @@
 ---
 
 ## ESP32 IoT Example List:
-* [ESP32 Pedestrian Flow Monitoring introduction](examples/check_pedestrian_flow) 
-    - The example demonstrates how to use ESP32 to calculate pedestrian flow in the Wi-Fi sniffer mode. 
+
+* [ESP32 AWS IOT Example](examples/aws_iot_demo)
+    - The example demonstrates how to use AWS IOT on ESP32.
+    - Keywords: __AWS IOT__
+
+* [ESP32 Pedestrian Flow Monitoring introduction](examples/check_pedestrian_flow)
+    - The example demonstrates how to use ESP32 to calculate pedestrian flow in the Wi-Fi sniffer mode.
     - Keywords: __WiFi sniffer OneNet MQTT__
 
 * [ESP32 Empty Project](examples/empty_project)
     - It provides a framework for users to develop any projects.
 
-
 * [Ethernet-WiFi data transmission](examples/eth2wifi)
-    - An example that enables Ethernet-to-WiFi data forwarding function. 
+    - An example that enables Ethernet-to-WiFi data forwarding function.
     - Keywords: __Ethernet WiFi__
 
-
 * [ESP32 OLED screen panel](examples/oled_screen_module)
-    - The example demonstrates how to use ESP32 to drive a OLED screen and to read sensor in low power mode. 
+    - The example demonstrates how to use ESP32 to drive a OLED screen and to read sensor in low power mode.
     - Keywords: __SSD1306 Deep-sleep BH1750__
 
+* [ESP32 LittlevGL GUI Example](examples/hmi/lvgl_example)
+    - The example demonstrates how to use LittlevGL embedded GUI library on ESP32.
+    - Keywords: __LittlevGL embedded GUI__
+
+* [ESP32 uGFX GUI Example](examples/hmi/ugfx_example)
+    - The example demonstrates how to use uGFX embedded GUI library on ESP32.
+    - Keywords: __uGFX embedded GUI__
 
 * [ESP32 Smart Device to Cloud Framework](examples/smart_device)
     - It provides a framework for a ESP32 smart device (smart plug, smart light, etc) to connect and communicate with a cloud service.
@@ -57,31 +66,26 @@
 * [ESP32 Lowpower EVB Example](examples/lowpower_evb)
     - An example to show how to use ESP32 lowpower framework to build applications with ESP32 lowpower evaluating board.
     - Keywords: __ESP32_Lowpower_EVB ULP Deepsleep Lowpower__
-    
+
 * [ESP32 Touch Sensor Example](examples/touch_pad_evb)
     - An example for the ESP32 touch sensor development kit, ESP32-Sense, which is used to evaluate and develop ESP32 touch sensor system.
     - Keywords: __TouchSensor ESP32-Sense__
-
 
 * [ESP32 ULP Co-processor Reads Hall Sensor Example](examples/ulp_examples/ulp_hall_sensor)
     - It provides an example of the ESP32 ULP co-processor reading the on-chip Hall sensor in low-power mode.
     - Keywords: __ULP Deep-sleep  Built-in-Sensor HallSensor Assembly__
 
-
 * [ESP32 ULP Co-processor Operates RTC GPIO Example](examples/ulp_examples/ulp_rtc_gpio)
     - An example of operating RTC GPIO with the ESP32 ULP co-processor.
     - Keywords: __ULP Deep-sleep  RTC-GPIO Assembly__
-
 
 * [ESP32 ULP Co-processor Reads Temperature Sensor Example](examples/ulp_examples/ulp_tsens)
     - An example of the ESP32 ULP co-processor reading the on-chip temperature sensor in low-power mode.
     - Keywords: __ULP Deep-sleep  Built-in-Sensor TemperatureSensor Assembly__
 
-
 * [ESP32 ULP Co-processor Watering Example](examples/ulp_examples/ulp_watering_device)
     - An example of implementing the ESP32 ULP co-processor in a watering device.
     - Keywords: __ULP Deep-sleep  SAR-ADC RTC-GPIO Assembly__
-
 
 * [ESP32 ULP Co-processor SAR-ADC Example](examples/ulp_examples/ulp_adc)
     - An example of using SAR_ADC to read NTC thermistor voltage and calculate temperature in ULP mode.
@@ -94,16 +98,24 @@
 * [ESP32 ULP Co-processor BitBang SPI Example](examples/ulp_examples/ulp_spi)
     - An example of using RTC-GPIO bitbanged SPI to read MS5611 sensor in ULP mode.
     - Keywords: __ULP Deep-sleep  RTC-GPIO  BITBANG  SPI  Assembly__
+
 ---
 
 ## Components
 
 ### Features
+
+[DAC Audio](./components/features/dac_audio) - Driver and example of using DAC Audio.<br>
+[ULP Monitor](./components/features/ulp_monitor) - Provides some APIs for running simple ulp program in deep sleep.<br>
 [TouchPad](./components/features/touchpad) - Driver and example of using different types of touch pad.<br>
 [Infrared](./components/features/infrared) - Driver and framework of using infrared remote control.<br>
+
 ### Framework
+
 [Lowpower_framework](./components/framework/lowpower_framework) - Development framework for lowpower applications.<br>
+
 ### General fucntions
+
 [Button](./components/general/button) - Driver and example of using buttons and keys.<br>
 [Debugs](./components/general/debugs) - Provides different commands for debugging via UART.<br>
 [LED](./components/general/led) - Driver and example of using LED, which provides such APIs as to blink with different frequency.<br>
@@ -113,42 +125,66 @@
 [Power Meter](./components/general/power_meter) - Driver and example of a single-phase energy meter such as BL0937 or HLW8012.<br>
 [Relay](./components/general/relay) - Driver and example of a relay with different driving modes.<br>
 [Weekly timer](./components/general/weekly_timer) - Driver and example of a weekly timer to trigger events at some certain moment in each week.<br>
+
+### HMI
+
+[LittlevGL](./components/hmi/lvgl_gui) - Driver of using LittlevGL embedded GUI library.<br>
+[uGFX](./components/hmi/ugfx_gui) - Driver and example of using uGFX embedded GUI library.<br>
+
 ### I2C Sensors
+
 [APDS9960](./components/i2c_devices/sensor/apds9960) - Driver and example of reading APDS9960, which is an ambient light photo Sensor.<br>
 [BH1750](./components/i2c_devices/sensor/bh1750) - Driver and example of reading BH1750 light sensor (GY-30 module).<br>
 [BME280](./components/i2c_devices/sensor/bme280) - Driver and example of reading BME280, which is an pressure and temperature Sensor.<br>
+[FT5X06](./components/i2c_devices/sensor/ft5x06) - Driver and example of reading FT5X06, which is a touch Sensor.<br>
 [HDC2010](./components/i2c_devices/sensor/hdc2010) - Driver and example of reading HDC2010, which is a low power temperature and humidity sensor.<br>
 [HTS221](./components/i2c_devices/sensor/hts221) - Driver and example of reading HTS221 temperature and humidity sensor.<br>
 [LIS2DH12](./components/i2c_devices/sensor/lis2dh12) - Driver and example of reading LIS2DH12, which is a 3-axis accelerometer.<br>
 [MVH3004D](./components/i2c_devices/sensor/mvh3004d) - Driver and example of reading MVH3004D temperature and humidity sensor.<br>
 [VEML6040](./components/i2c_devices/sensor/veml6040) - Driver and example of reading VEML6040, which is a light UV sensor.<br>
+
 ### I2C Devices
+
 [AT24C02](./components/i2c_devices/others/at24c02) - Driver and example of driving AT24C02, which is an eeprom storage.<br>
 [CH450](./components/i2c_devices/others/ch450) - Driver and example of driving CH450, which is a 7-segment LED driver.<br>
 [HT16C21](./components/i2c_devices/others/ht16c21) - Driver and example of driving HT16C21, which is a LED driver.<br>
 [IS31FL3XXX](./components/i2c_devices/others/is31fl3xxx) - Driver and example of driving is31fl3xxx series chips, which are light effect LED driver chips.<br>
 [MCP23017](./components/i2c_devices/others/mcp23017) - Driver and example of using mcp23017, which is a 16-bit I/O expander.<br>
 [SSD1306](./components/i2c_devices/others/ssd1306) - Driver and example of using ssd1306, which is a 132 x 64 dot matrix OLED/PLED segment driver chip.<br>
+
+### I2S Devices
+
+[ILI9806](./components/i2c_devices/others/ili9806) - Driver and example of driving ILI9806 LCD.<br>
+[NT35510](./components/i2c_devices/others/nt35510) - Driver and example of driving NT35510 LCD.<br>
+
 ### Motor
+
 [Servo](./components/motor/servo) - Driver and example of driving servo motors.<br>
 [A4988](./components/motor/stepper/a4988) - Driver and example of driving A4988, which is a stepper motor driver.<br>
+
 ### Network Abstract
+
 [MQTT](./components/network/mqtt) - Driver and example of using MQTT client, which is a light-weight IoT protocol.<br>
 [TCP](./components/network/tcp) - API and example of using TCP server and client in C++.<br>
 [UDP](./components/network/udp) - API and example of using UDP in C++.<br>
 [Alink](./components/platform/alink) - API and example of connecting and communicating with Alink cloud service.<br>
+
 ### SPI Devices
+
 [E-ink display](./components/spi_devices/epaper) - API and example of driving and controlling SPI E-ink screen.<br>
 [LCD screen](./components/spi_devices/lcd) - API and example of driving and controlling SPI LCD.<br>
 [XPT2046 Touch screen](./components/spi_devices/touch_screen) - API and example of driving and controlling SPI Touch Screen.<br>
+
 ### WiFi Abstract
+
 [ESP-TOUCH for smart-config](./components/wifi/smart_config) - Abstract APIs and example of configuring devices via esp-touch.<br>
 [WiFi connection abstract APIs](./components/wifi/wifi_conn) - Abstract APIs and example of WiFi station connecting to router.<br>
 
 ---
+
 ## <h2 id="preparation">Preparation</h2>
 
-* To clone this repository by 
+* To clone this repository by
 
     ```
     git clone --recursive https://github.com/espressif/esp-iot-solution
@@ -159,7 +195,7 @@
     ```
     git submodule update --init --recursive
     ```
-    
+
 * Set IOT_SOLUTION_PATH, for example:
 
     ```
@@ -193,7 +229,7 @@
     `Note: In this way, the build system will replace the IDF_PATH with the directory of idf repository in submodule during the build process.`
 
     If you don't want the replacement to happen(which means to use the ESP_IDF value from your system environment), you can modify as the following Makefile does:
-  
+
     ```
     PROJECT_NAME := empty_project
     #If IOT_SOLUTION_PATH is not defined, use relative path as default value
@@ -207,10 +243,11 @@
     ```
     EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/the_one_you_want_to_use
     ```
+
 * `Components control`: Usually we don't need all the device drivers to be compiled into our project, we can choose the necessary ones in menuconfig:
 
     ```
-    make menuconfig --> IoT Solution settings --> IoT Components Management 
+    make menuconfig --> IoT Solution settings --> IoT Components Management
     ```
 
     Those components that are not enabled, will not be compiled into the project, which alos means, you need to enable the components you would like to use.
@@ -218,6 +255,7 @@
 ---
 
 ## Framework
+
 * `components`
     * small drivers of different divices like button and LED
     * drivers of sensors
@@ -254,11 +292,10 @@
         └── unit-test-app
     ```
 
-
-
 ---
 
 ## Usage
+
 * This code is based on esp-idf project.
 * This repository contains esp-idf code as submodule.
 * To clone this repository by **git clone --recurisve https://github.com/espressif/esp-iot-solution.git**
@@ -278,18 +315,20 @@ Exit miniterm by typing Ctrl-].
 * To flash and monitor output in one pass, you can run: `make flash monitor`
 * You can use unit-test in esp-iot-solution to test all the components.
 
---- 
+---
 
 ## <h2 id="unit-test">Unit-test</h2>
+
 [back to top](#preparation)
 
 ### To use uint-test, follow these steps:
+
 * Change to the directory of unit-test-app
 
     ```
     cd YOUR_IOT_SOLUTION_PATH/tools/unit-test-app
     ```
-	
+
 * Use the default sdkconfig and compile unit-test-app by `make IOT_TEST_ALL=1 -j8`
 
     ```
@@ -320,42 +359,43 @@ Exit miniterm by typing Ctrl-].
 
 * You need to send the index of the unit you want to test by uart. Test code of the unit you select will be run
 
-
 ---
 
 ## <h2 id="example">Example</h2>
+
 [back to top](#preparation)
 
 ### To run the Examples projects, follow the steps below:
-* Change the directory to example 
+
+* Change the directory to example
 * choose one example project you want to run, we take smart_device here.
 * Change the directory to the example project under example directory, take smart_device example as example here:
-        
+
     ```
     cd YOUR_IOT_SOLUTION_PATH/example/smart_device
     ```
-       
-* Run `make menuconfig` to set the project parameters in 
-    
+
+* Run `make menuconfig` to set the project parameters in
+
     ```
     make menuconfig --> IoT Example - smart_device
     ```
-    
+
 * Run `make` to compile the project, or `make flash` to compile and flash the module.
 
 ---
 
 ## <h2 id="empty_project">Empty project</h2>
+
 [back to top](#preparation)
 
 * You can start your own appliction code base on the empty-project.
 * By default, you just need to run `make` under the example/smart_device directory. The makefile will set all the path by default.
 * Meanwhile, you can copy the example project to anywhere you want, in this case, you will have to set the `IOT_SOLUTION_PATH` so that the build system shall know where to find the code and link the files.
-* Set iot path:(replace 'YOUR_PATH' below), you can also add `IOT_SOLUTION_PATH ` to your environment PATH 
-        
+* Set iot path:(replace 'YOUR_PATH' below), you can also add `IOT_SOLUTION_PATH ` to your environment PATH
+
     ```
         export IOT_SOLUTION_PATH = "YOUR_PATH/esp-iot-solution"
     ```
 
 ---
-

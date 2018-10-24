@@ -1,5 +1,4 @@
-
-[[EN]](./esp32_lowpower_solution_en.md) 
+[[EN]](./esp32_lowpower_solution_en.md)
 
 # ESP32 低功耗方案概述
 
@@ -19,6 +18,7 @@
 # 低功耗场景
 
 ## 定时数据采集与上报（例如器械状态监控器）
+
 * 此场景使用 ESP32 定时采集传感器的数据并上传数据，可使用 Deep-sleep 定时器作为唤醒源。ESP32 采集数据并上传后，设置唤醒源为定时器并进入 Deep-sleep 模式，而后唤醒后再采集数据并上传，如此循环。
 * 逻辑流程图：
     <br>
@@ -99,7 +99,7 @@
 
 关于 deep_sleep 电流测试可以参考 RTC IO 和 TouchPad 覆盖[测试结果](./deep-sleep_current_test_cn.md)
 
-[^1]: 具体可查看 ulp_monitor 模块的 readme.md 和 ulp_monitor_test.c 文件。
+[^1]: 具体可查看 ulp_monitor 模块的 README.md 和 ulp_monitor_test.c 文件。
 
 [^2]: 包括初始化与设置阈值，具体可查看 IoT Solution 中的 Touchpad 方案。
 

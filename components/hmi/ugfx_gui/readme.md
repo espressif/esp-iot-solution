@@ -1,1 +1,0 @@
-[[中文]](../../../documents/hmi_solution/ugfx/ugfx_solution.md)/[[EN]]((../../../documents/hmi_solution/ugfx/ugfx_solution.md))

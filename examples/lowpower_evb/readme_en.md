@@ -1,7 +1,7 @@
-[[中文]](./readme_cn.md) 
+[[中文]](./readme_cn.md)
 
-# User Guide for Developing Low Power Applications 
- 
+# User Guide for Developing Low Power Applications
+
 In order to help customers get familiar with the development of low-power applications, we have designed a low-power application demo (as a reference design) based on our ESP32-MeshKit-Sense development board and Espressif Low Power Software Framework.
 
 This document first describes the hardware requirement, software design and the usage of this demo, then provides information on how to measure the power consumption of the board in different modes, and presents the measuring results.
@@ -36,7 +36,7 @@ Jumper caps can be used at 5 places on the board. Please find the table below de
 ### 1.2 Downloader
 
 The detailed user guide can be found in [ESP-Prog Guide](https://github.com/espressif/esp-iot-solution/blob/master/documents/evaluation_boards/ESP-Prog_guide_en.md).
-  
+
 As the current version of dev board cannot be powered up by ESP-Prog, a jumper cap should be used to connect IO0_ON/OFF, as shown in the figure below.
 
 <img src="../../documents/_static/lowpower_evb/esp_prog_download_header.png" width = "600">
@@ -71,7 +71,7 @@ The lithium battery is also an optional external device, which can be used when 
 * To install and configure the toolchain for ULP, please refer to [this link](http://docs.espressif.com/projects/esp-idf/en/latest/api-guides/ulp.html)
 
 ### 2.3 Complier Download
- 
+
 Please go to **menuconfig**, and configure the following parameters under `Lowpower EVB settings`:
 
 * `Set lowpower evb task stack size`: configure the stack size of the task.
@@ -175,7 +175,7 @@ See the main structure of the demo below.
     │   └── main.cpp
     ├── Makefile
     ├── readme_cn.md
-    ├── readme.md
+    ├── README.md
     ├── sdkconfig.defaults
     └── sensor_server.py                        // The script to build a simple server
 
@@ -199,13 +199,13 @@ This part mainly focuses on the initialization of the peripherals to be used. Fo
 #### 3.3.2 Wi-Fi Configuration and Connection
 
 The network configuration can be done with ESP-Touch, a technology developed by Espressif. In this demo, the network configuration information is stored in flash, so the device can use this information to automatically connect to the pre-configured network after rebooting. More specifically, the device always reads the network configuration information from the flash each time it reboots. If the device finds an existing configuration information, it directly connects to the previously configured access point (AP). Otherwise, the device enters `Smartconfig` and starts the network configuration process. Please see the details below:
-  
+
 <img src="../../documents/_static/lowpower_evb/wifi_config.png">   
 
 In this demo, the Wi-Fi indicator light shows the status of network configuration: (a) blinks when Smartconfig is triggered, (b) stays on when the device is successfully connected to the network.
-   
+
 If you want to re-configure the network (for example, connect the device to another router), a WakeUp button has been designed for this demo to trigger the network configuration process. Pressing this button will erase the network configuration information stored in flash and reboot the device. After that, the device automatically enters the network configuration mode, since it cannot read any configuration information from flash. Please note that network configuration can only be triggered with this button while the device is not sleeping.
- 
+
 You can also design your own methods for triggering network configuration.
 
 #### 3.3.3 Importing Programs to ULP
@@ -227,7 +227,7 @@ In this demo, the device connection timeout is set to 10 seconds to reduce the h
 
 The data received by the server will be printed as shown in the figure below:
 
-<img src="../../documents/_static/lowpower_evb/sensor_server_data.png" width = "800"> 
+<img src="../../documents/_static/lowpower_evb/sensor_server_data.png" width = "800">
 
 To provide a reference design for E-ink, the last set of the uploaded data will be displayed in E-ink after the data transmission in this demo. You can modify the steps after the data transmission based on your specific requirements.
 
@@ -264,4 +264,4 @@ The table below lists the current measurement results for different parts：
 
 The power consumption of the module is 1.8 mA when the ULP stays awake. However, the power consumption could be further lowered with the timed sleep function. In this demo, please set the time interval of ULP reading sensor data using the `Read sensor interval(ms)` option in menuconfig. Note that, the longer the interval, the lower the average power consumption and the longer the battery life. Correspondingly, the data readings by the ULP are also less frequent. You may determine a reasonable time interval according to your specific requirements. The figure below demonstrates the module's current waveform when the ULP performs data readings. Also you may find that the data reading interval is 200 ms, the average current during ULP sensor reading is 1.8 mA, and the average current in Sleep mode after ULP sensor reading is 5 uA.
 
-<img src="../../documents/_static/lowpower_evb/ulp_read_sensor_current.png" width = "600"> 
+<img src="../../documents/_static/lowpower_evb/ulp_read_sensor_current.png" width = "600">

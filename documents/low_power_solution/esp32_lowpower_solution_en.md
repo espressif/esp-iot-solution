@@ -1,5 +1,4 @@
-
-[[中文]](./esp32_lowpower_solution_cn.md) 
+[[中文]](./esp32_lowpower_solution_cn.md)
 
 # ESP32 Low-Power Management Overview
 
@@ -19,6 +18,7 @@
 # Low-Power Application Scenarios
 
 ## Timed data acquisition and reporting (e.g., instrument status monitors)
+
 * In this scenario, ESP32 is used to periodically collect sensor data and upload them. Timers can be used as the wake-up source in this case. To be more specific, ESP32 will collect and upload sensor data, set timers as the wake-up source, enter Deep-sleep mode, and collect and upload sensor data again when coming out of deep sleep...
 * Logical flow diagram：
     <br>
@@ -96,9 +96,8 @@
 
     <img src="../_static/low_power/touchpad.png" width = "500" alt="touchpad_deepsleep_current" align=center />
 
-[^1]: For details on how to use the ulp_monitor module, please see the related readme.md and ulp_monitor_test.c files.
+[^1]: For details on how to use the ulp_monitor module, please see the related README.md and ulp_monitor_test.c files.
 
 [^2]: Such as the initialization and threshold settings. For details, please see the Touchpad chapter in this IoT Solution.
 
 [^3]: Function esp_deep_sleep_enable_ext1_wakeup() is used in the test.
-

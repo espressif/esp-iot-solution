@@ -18,7 +18,7 @@ The following image shows the whole ESP32-Sense development kit.
     - [ESP-Prog](./ESP-Prog_guide_en.md) is the debugger for ESP32 that features download and debugging functions.
 
 - **ESP32 IoT Solution**  
-    - [ESP32 IoT Solution](../../readme.md) project is based on ESP-IDF and contains multiple projects. Please refer to [Build system and dependency](../../readme.md#build-system-and-dependency) for how to set up and compile the programs.
+    - [ESP32 IoT Solution](../../README.md) project is based on ESP-IDF and contains multiple projects. Please refer to [Build system and dependency](../../README.md#build-system-and-dependency) for how to set up and compile the programs.
     - [ESP32-Sense Project](../../examples/touch_pad_evb) contains the programs for ESP32-Sense Kit that can be downloaded to the development board to enable touch sensor function.
 
 - **Hardware Manuals**  
@@ -77,7 +77,7 @@ The display unit includes three segment displays and an RGB circuit. The debug u
 
 - **Power Management System**  
 The mini USB and ESP-Prog can both be the power supply for ESP32-Sense Kit. They do not interfere with each other thanks to the protection diode. The mini USB can only serve as the power supply, while ESP-Prog also supports automatic firmware downloading. The figure below shows the schematics of the power management system.   
-     
+
 <div align="center"><img src="../_static/touch_eb/board_pwr_supply.png" width = "700" alt="board_pwr_supply" align=center /></div>  
 
 - **Display Unit**  
