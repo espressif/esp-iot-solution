@@ -424,7 +424,12 @@ menu "IoT Solution settings"
                 default n
                 help
                     "Select this one to enable weekly timer component"
-                    
+
+            config IOT_ADC_ENABLE
+                bool "ADC_DEVICE_ENABLE"
+                default y
+                help
+                    "Select this one to enable ADC device"
         endmenu
         
         menu "Motor Devices"
