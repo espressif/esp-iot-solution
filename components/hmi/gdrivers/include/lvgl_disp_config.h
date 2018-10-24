@@ -12,7 +12,7 @@ extern "C"
 /**
  * @brief Initialize display
  */
-void lvgl_lcd_display_init();
+lv_disp_drv_t lvgl_lcd_display_init();
 
 #ifdef __cplusplus
 }

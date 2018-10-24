@@ -29,8 +29,10 @@
 #include "iot_i2c_bus.h"
 
 /* lvgl includes */
-#include "lvgl_indev_config.h"
 #include "iot_lvgl.h"
+
+/* lvgl calibration includes */
+#include "lv_calibration.h"
 
 /* FT5x06 Include */
 #include "FT5x06.h"
@@ -59,42 +61,51 @@ static uint16_t read_word(uint8_t reg)
 }
 
 /*Function pointer to read data. Return 'true' if there is still data to be read (buffered)*/
-bool ex_tp_read(lv_indev_data_t *data)
+static bool ex_tp_read(lv_indev_data_t *data)
 {
-    int16_t t;
+    static lv_coord_t x = 0xFFFF, y = 0xFFFF;
     data->state = LV_INDEV_STATE_REL;
+    // please be sure that your touch driver every time return old (last clcked) value. 
+    data->point.x = x;
+    data->point.y = y;
     // Only take a reading if we are touched.
     if ((read_byte(FT5x06_TOUCH_POINTS) & 0x07)) {
 
         /* Get the X, Y, values */
-        data->point.x = (int16_t)(read_word(FT5x06_TOUCH1_XH) & 0x0fff);
-        data->point.y = (int16_t)read_word(FT5x06_TOUCH1_YH);
+        data->point.x = (lv_coord_t)(read_word(FT5x06_TOUCH1_XH) & 0x0fff);
+        data->point.y = (lv_coord_t)read_word(FT5x06_TOUCH1_YH);
         data->state = LV_INDEV_STATE_PR;
 
-        // Rescale X,Y if we are using self-calibration
-
-#ifdef CONFIG_LVGL_DISP_ROTATE_0
-        data->point.x = data->point.x;
-        data->point.y = data->point.y;
-#elif defined(CONFIG_LVGL_DISP_ROTATE_90)
-        t = data->point.x;
-        data->point.x = LV_HOR_RES - 1 - data->point.y;
-        data->point.y = t;
-#elif defined(CONFIG_LVGL_DISP_ROTATE_180)
-        data->point.x = LV_HOR_RES - 1 - data->point.x;
-        data->point.y = LV_VER_RES - 1 - data->point.y;
-#elif defined(CONFIG_LVGL_DISP_ROTATE_270)
-        t = data->point.y;
-        data->point.y = LV_VER_RES - 1 - data->point.x;
-        data->point.x = t;
-#endif
+        // Apply calibration, rotation
+        // Transform the co-ordinates
+        if (lvgl_calibration_transform(&(data->point))) {
+            lv_coord_t t;
+            // Rescale X,Y if we are using self-calibration
+            #ifdef CONFIG_LVGL_DISP_ROTATE_0
+                data->point.x = data->point.x;
+                data->point.y = data->point.y;
+            #elif defined(CONFIG_LVGL_DISP_ROTATE_90)
+                t = data->point.x;
+                data->point.x = LV_HOR_RES - 1 - data->point.y;
+                data->point.y = t;
+            #elif defined(CONFIG_LVGL_DISP_ROTATE_180)
+                data->point.x = LV_HOR_RES - 1 - data->point.x;
+                data->point.y = LV_VER_RES - 1 - data->point.y;
+            #elif defined(CONFIG_LVGL_DISP_ROTATE_270)
+                t = data->point.y;
+                data->point.y = LV_VER_RES - 1 - data->point.x;
+                data->point.x = t;
+            #endif
+            x = data->point.x;
+            y = data->point.y;
+        }
     }
     return false;
 }
 
 /* Input device interface */
 /* Initialize your touchpad */
-void lvgl_indev_init()
+lv_indev_drv_t lvgl_indev_init()
 {
     i2c_bus_handle_t i2c_bus = NULL;
     i2c_config_t conf = {
@@ -143,6 +154,7 @@ void lvgl_indev_init()
     indev_drv.read = ex_tp_read;            /*Library ready your touchpad via this function*/
 
     lv_indev_drv_register(&indev_drv); /*Finally register the driver*/
+    return indev_drv;
 }
 
 #endif /* CONFIG_LVGL_GUI_ENABLE */

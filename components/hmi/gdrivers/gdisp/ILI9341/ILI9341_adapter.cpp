@@ -231,7 +231,7 @@ void ex_disp_map(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_color_
     lcd_obj->drawBitmap((int16_t)x1, (int16_t)y1, (const uint16_t *)color_p, (int16_t)(x2 - x1 + 1), (int16_t)(y2 - y1 + 1));
 }
 
-void lvgl_lcd_display_init()
+lv_disp_drv_t lvgl_lcd_display_init()
 {
     /*Initialize LCD*/
     lcd_conf_t lcd_pins = {
@@ -285,6 +285,7 @@ void lvgl_lcd_display_init()
 
     /* Finally register the driver */
     lv_disp_drv_register(&disp_drv);
+    return disp_drv;
 }
 
 #endif /* CONFIG_LVGL_GUI_ENABLE */
