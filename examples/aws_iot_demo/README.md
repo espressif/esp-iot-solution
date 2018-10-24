@@ -6,7 +6,7 @@
 
 在运行工程前，我们需要正确配置 AWS IOT ：
 
-- 正确配置 esp-iot-solution 和 示例工程，可参考：[Setting Up ESP-IOT-Solution](https://gitlab.espressif.cn:6688/rd/esp-iot-solution/blob/master/readme.md)中 `Preparation` 部分
+- 正确配置 esp-iot-solution 和 示例工程，可参考：[Setting Up ESP-IOT-Solution](../../README.md)中 `Preparation` 部分
   - 拉取最新的 esp-iot-solution
   - 保证能够正确编译一个工程
 - 正确配置 AWS 事物模块：事物、证书、策略

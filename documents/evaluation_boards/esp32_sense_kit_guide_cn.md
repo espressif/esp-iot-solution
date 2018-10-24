@@ -15,7 +15,7 @@ ESP32-Sense 开发套件用于评估和开发 ESP32 触摸传感器功能。评�
     - [ESP-Prog](./ESP-Prog_guide_cn.md) 是 ESP32 调试工具，有下载和 Jtag 调试功能。
 
 - **ESP32 IoT 应用方案**  
-    - [ESP32 IoT Solution](../../readme.md) 基于 ESP-IDF 开发，包含多种应用解决方案。文档 [build-system-and-dependency](../../readme.md#build-system-and-dependency) 介绍了如何编译解决方案。
+    - [ESP32 IoT Solution](../../README.md) 基于 ESP-IDF 开发，包含多种应用解决方案。文档 [build-system-and-dependency](../../README.md#build-system-and-dependency) 介绍了如何编译解决方案。
     - [ESP32-Sense 项目工程](../../examples/touch_pad_evb) 是 ESP32-Sense 开发套件对应的软件工程文件。下载程序到主板即可使用触摸功能。
 
 - **硬件手册**  
@@ -79,7 +79,7 @@ ESP32-Sense 开发套件上 Mini USB 和 ESP-Prog 均可供电，两者之间有
 - **显示电路**  
 ESP32-Sense 开发套件的主板上有显示单元，可直观地反馈触摸动作。三个数码管分别显示被触摸按键的位置和触摸动作的持续时间。数码管驱动芯片为 CH455G，使用 I2C 接口控制。RGB 灯用于触摸时的颜色反馈。用户滑动滑条，RGB 灯的颜色会相应变化。  
 下图是显示单元的硬件原理图：  
-  
+
 <div align="center"><img src="../_static/touch_eb/board_7seg_display.png" width = "700" alt="board_7seg_display" align=center /></div>  
 <div align="center"><img src="../_static/touch_eb/board_rgb_module.png" width = "700" alt="board_rgb_module" align=center /></div>  
 
