@@ -1825,6 +1825,11 @@ menu "IoT Solution settings"
                 default y
                 help
                     "Select this one to enable WiFi abstract component"
+            config IOT_ESPNOW_ENABLE
+                bool "IOT_ESPNOW_ENABLE"
+                default y
+                help
+                    "Select this one to enable espnow component"
         endmenu
 
     endmenu
