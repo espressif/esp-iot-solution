@@ -524,6 +524,11 @@ menu "IoT Solution settings"
                 help
                     "Select this one to enable FT5X06 device component"
 
+            config IOT_MPU6050_ENABLE
+                bool "SENSOR_MPU6050_ENABLE"
+                default y
+                help
+                    "Select this one to enable MPU6050 device component"
         endmenu
         
         menu "SPI devices"
