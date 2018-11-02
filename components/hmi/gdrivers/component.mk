@@ -37,19 +37,35 @@ ifdef CONFIG_UGFX_GUI_ENABLE
         COMPONENT_ADD_INCLUDEDIRS += ./gdisp/NT35510
         endif
 
-        #Input driver 
+        #Input driver
+        #Touch driver
         ifdef CONFIG_UGFX_DRIVER_TOUCH_SCREEN_ENABLE
 
             ifdef CONFIG_UGFX_DRIVER_TOUCH_XPT2046
-            COMPONENT_SRCDIRS += ./ginput/XPT2046
-            COMPONENT_ADD_INCLUDEDIRS += ./ginput/XPT2046
+            COMPONENT_SRCDIRS += ./ginput/touch/XPT2046
+            COMPONENT_ADD_INCLUDEDIRS += ./ginput/touch/XPT2046
             endif
 
             ifdef CONFIG_UGFX_DRIVER_TOUCH_FT5X06
-            COMPONENT_SRCDIRS += ./ginput/FT5X06
-            COMPONENT_ADD_INCLUDEDIRS += ./ginput/FT5X06
+            COMPONENT_SRCDIRS += ./ginput/touch/FT5X06
+            COMPONENT_ADD_INCLUDEDIRS += ./ginput/touch/FT5X06
             endif
             
+        endif
+
+        #Toggle driver
+        ifdef CONFIG_UGFX_DRIVER_TOGGLE_ENABLE
+
+            ifdef CONFIG_UGFX_DRIVER_TOGGLE_BUTTON
+            COMPONENT_SRCDIRS += ./ginput/toggle/button
+            COMPONENT_ADD_INCLUDEDIRS += ./ginput/toggle/button
+            endif
+
+            ifdef CONFIG_UGFX_DRIVER_TOGGLE_TOUCHPAD
+            COMPONENT_SRCDIRS += ./ginput/toggle/touchpad
+            COMPONENT_ADD_INCLUDEDIRS += ./ginput/toggle/touchpad
+            endif
+
         endif
             
     endif
@@ -84,19 +100,35 @@ else
             COMPONENT_ADD_INCLUDEDIRS += ./gdisp/NT35510
             endif
 
-            #Input driver 
+            #Input driver
+            #Touch driver
             ifdef CONFIG_LVGL_DRIVER_TOUCH_SCREEN_ENABLE
 
                 ifdef CONFIG_LVGL_DRIVER_TOUCH_XPT2046
-                COMPONENT_SRCDIRS += ./ginput/XPT2046
-                COMPONENT_ADD_INCLUDEDIRS += ./ginput/XPT2046
+                COMPONENT_SRCDIRS += ./ginput/touch/XPT2046
+                COMPONENT_ADD_INCLUDEDIRS += ./ginput/touch/XPT2046
                 endif
 
                 ifdef CONFIG_LVGL_DRIVER_TOUCH_FT5X06
-                COMPONENT_SRCDIRS += ./ginput/FT5X06
-                COMPONENT_ADD_INCLUDEDIRS += ./ginput/FT5X06
+                COMPONENT_SRCDIRS += ./ginput/touch/FT5X06
+                COMPONENT_ADD_INCLUDEDIRS += ./ginput/touch/FT5X06
                 endif
                 
+            endif
+
+            #Toggle driver
+            ifdef CONFIG_LVGL_DRIVER_TOGGLE_ENABLE
+
+                ifdef CONFIG_LVGL_DRIVER_TOGGLE_BUTTON
+                COMPONENT_SRCDIRS += ./ginput/toggle/button
+                COMPONENT_ADD_INCLUDEDIRS += ./ginput/toggle/button
+                endif
+
+                ifdef CONFIG_LVGL_DRIVER_TOGGLE_TOUCHPAD
+                COMPONENT_SRCDIRS += ./ginput/toggle/touchpad
+                COMPONENT_ADD_INCLUDEDIRS += ./ginput/toggle/touchpad
+                endif
+
             endif
                 
         endif
