@@ -67,6 +67,12 @@ ifdef CONFIG_UGFX_GUI_ENABLE
             endif
 
         endif
+
+        #Audio driver
+        ifdef CONFIG_UGFX_DRIVER_AUDIO_ENABLE
+        COMPONENT_SRCDIRS += ./gaudio/dac_audio
+        COMPONENT_ADD_INCLUDEDIRS += ./gaudio/dac_audio
+        endif
             
     endif
 

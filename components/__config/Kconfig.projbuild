@@ -938,6 +938,12 @@ menu "IoT Solution settings"
                     help
                         "Select to enable uGFX Toggle input device"
 
+                config UGFX_DRIVER_AUDIO_ENABLE
+                    bool "uGFX Audio Enable"
+                    default n
+                    help
+                        "Select to enable uGFX Audio"
+
                 choice UGFX_DRIVER_MODE
                     prompt "Display Driver Mode"
                     default UGFX_LCD_DRIVER_FRAMEBUFFER_MODE
