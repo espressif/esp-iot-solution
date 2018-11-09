@@ -55,10 +55,11 @@ esp_err_t iot_espnow_deinit(void);
  *     - ESP_FAIL
  */
 esp_err_t iot_espnow_add_peer_base(const uint8_t dest_addr[ESP_NOW_ETH_ALEN],
-                                   bool default_encrypt, const uint8_t lmk[ESP_NOW_KEY_LEN]);
-#define iot_espnow_add_peer(dest_addr, lmk)            iot_espnow_add_peer_base(dest_addr, false, lmk)
-#define iot_espnow_add_peer_no_encrypt(dest_addr)      iot_espnow_add_peer_base(dest_addr, false, NULL)
-#define iot_espnow_add_peer_default_encrypt(dest_addr) iot_espnow_add_peer_base(dest_addr, true, NULL)
+                                   bool default_encrypt, const uint8_t lmk[ESP_NOW_KEY_LEN],
+                                   wifi_interface_t interface, int8_t channel);
+#define iot_espnow_add_peer(dest_addr, lmk, interface, channel)            iot_espnow_add_peer_base(dest_addr, false, lmk, interface, channel)
+#define iot_espnow_add_peer_no_encrypt(dest_addr, interface, channel)      iot_espnow_add_peer_base(dest_addr, false, NULL, interface, channel)
+#define iot_espnow_add_peer_default_encrypt(dest_addr, interface, channel) iot_espnow_add_peer_base(dest_addr, true, NULL, interface, channel)
 
 /**
  * @brief  delete a peer from espnow peer list.

@@ -29,11 +29,10 @@ static const char* TAG = "iot_espnow";
 #define SEND_CB_OK               BIT0
 #define SEND_CB_FAIL             BIT1
 
-#define IOT_ESPNOW_INTERFACE     ESP_IF_WIFI_STA
 #define ESPNOW_ERCV_QUEUE_NUM    10
 
-#define IOT_ESPNOW_PMK "pmk1234567890123"
-#define IOT_ESPNOW_LMK "lmk1234567890123"
+#define IOT_ESPNOW_PMK_DEFAULT CONFIG_IOT_ESPNOW_PMK
+#define IOT_ESPNOW_LMK_DEFAULT "lmk1234567890123"
 
 static bool g_iot_espnow_inited = false;
 static EventGroupHandle_t g_event_group = NULL;
@@ -41,6 +40,7 @@ static xQueueHandle s_espnow_queue = NULL;
 static const uint8_t g_bcast_mac[ESP_NOW_ETH_ALEN] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 
 typedef struct {
+    uint8_t addr[ESP_NOW_ETH_ALEN];
     uint8_t *data;
     int data_len;
 } espnow_data_t;
@@ -62,11 +62,13 @@ static void iot_espnow_recv_cb(const uint8_t *mac_addr, const uint8_t *data, int
         if(xQueueReceive(s_espnow_queue, (void *)&prev_data, 0) == pdTRUE) {
             free(prev_data.data);
         }
+        ESP_LOGW(TAG, "espnow recv queue is full...");
     }
 
     espnow_data_t recv_data;
     recv_data.data = (uint8_t *)calloc(1, len);
-    memcpy(recv_data.data, data, len);    
+    memcpy(recv_data.data, data, len);
+    memcpy(recv_data.addr, mac_addr, ESP_NOW_ETH_ALEN);
     recv_data.data_len = len;
     if(xQueueSend(s_espnow_queue, (void *)&recv_data, 0) != pdTRUE) {
         free(recv_data.data);
@@ -87,7 +89,7 @@ esp_err_t iot_espnow_init(void)
     ESP_ERROR_CHECK(esp_now_init());
     ESP_ERROR_CHECK(esp_now_register_send_cb(iot_espnow_send_cb));
     ESP_ERROR_CHECK(esp_now_register_recv_cb(iot_espnow_recv_cb));
-    ESP_ERROR_CHECK(esp_now_set_pmk((uint8_t *)IOT_ESPNOW_PMK));
+    ESP_ERROR_CHECK(esp_now_set_pmk((uint8_t *)IOT_ESPNOW_PMK_DEFAULT));
 
     g_iot_espnow_inited = true;
     return ESP_OK;
@@ -111,7 +113,8 @@ esp_err_t iot_espnow_deinit(void)
 }
 
 esp_err_t iot_espnow_add_peer_base(const uint8_t dest_addr[ESP_NOW_ETH_ALEN],
-                                   bool default_encrypt, const uint8_t lmk[ESP_NOW_KEY_LEN])
+                                   bool default_encrypt, const uint8_t lmk[ESP_NOW_KEY_LEN],
+                                   wifi_interface_t interface, int8_t channel)
 {
     static SemaphoreHandle_t s_addpeer_mutex = NULL;
 
@@ -125,23 +128,31 @@ esp_err_t iot_espnow_add_peer_base(const uint8_t dest_addr[ESP_NOW_ETH_ALEN],
         ESP_ERROR_CHECK(esp_now_del_peer(dest_addr));
     }
 
-    esp_err_t ret                  = ESP_OK;
-    uint8_t pri_channel            = 0;
-    wifi_second_chan_t sec_channel = 0;
-    ESP_ERROR_CHECK(esp_wifi_get_channel(&pri_channel, &sec_channel));
-    ESP_LOGI(TAG, "espnow add peer, channel: %d", pri_channel);
+    esp_err_t ret = ESP_OK;
+    uint8_t pri_channel = 0;
+    if (channel < 0) {
+        wifi_second_chan_t sec_channel = 0;
+        ESP_ERROR_CHECK(esp_wifi_get_channel(&pri_channel, &sec_channel));
+        ESP_LOGI(TAG, "espnow add peer, channel: %d", pri_channel);
+    } else {
+        pri_channel = channel;
+    }
 
     esp_now_peer_info_t *peer = calloc(1, sizeof(esp_now_peer_info_t));
+    peer->ifidx               = interface;
     peer->channel             = pri_channel;
-    peer->ifidx               = IOT_ESPNOW_INTERFACE;
 
     if (!memcmp(dest_addr, g_bcast_mac, ESP_NOW_ETH_ALEN)) {
+        if (default_encrypt) {
+            ESP_LOGW(TAG, "broadcast addr cannot enable encryption");
+        }
         /**< broadcast addr cannot encrypt */
         peer->encrypt = false;
     } else {
         if (default_encrypt) {
+            ESP_LOGI(TAG, "Set default key...%s", IOT_ESPNOW_LMK_DEFAULT);
             peer->encrypt = true;
-            memcpy(peer->lmk, IOT_ESPNOW_LMK, ESP_NOW_KEY_LEN);
+            memcpy(peer->lmk, IOT_ESPNOW_LMK_DEFAULT, ESP_NOW_KEY_LEN);
         } else if (lmk) {
             peer->encrypt = true;
             memcpy(peer->lmk, lmk, ESP_NOW_KEY_LEN);
@@ -188,7 +199,7 @@ size_t iot_espnow_recv(uint8_t src_addr[ESP_NOW_ETH_ALEN],
         ESP_LOGE(TAG, "espnow read fail");
         return ESP_FAIL;
     }
-
+    memcpy(src_addr, espnow_recv_data.addr, ESP_NOW_ETH_ALEN);
     memcpy(data, espnow_recv_data.data, espnow_recv_data.data_len);    
     free(espnow_recv_data.data);
     return espnow_recv_data.data_len;
@@ -209,11 +220,10 @@ size_t iot_espnow_send(const uint8_t dest_addr[ESP_NOW_ETH_ALEN],
     }
 
     xEventGroupClearBits(g_event_group, SEND_CB_OK | SEND_CB_FAIL);
-
     /**< espnow send and wait cb */
     ret = esp_now_send(dest_addr, (uint8_t *)data, data_len);
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "espnow send fail");
+        ESP_LOGE(TAG, "espnow send fail: %d", ret);
         goto EXIT;
     }
 

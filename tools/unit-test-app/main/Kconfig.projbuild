@@ -35,22 +35,10 @@ menu "IoT unit-test settings"
     endmenu
 
     menu "ESPNOW testcase"
-        config ESPNOW_SENDER
-            bool "Set esp32 as espnow sender"
-            default y
-            help
-                "Set esp32 as espnow sender"
-        config PEER_ADDR
-            depends on ESPNOW_SENDER
-            string "Destination MAC address"
-            default "30aea445f2a0"
-            help
-                "Destination MAC address"
-        config ESPNOW_RECEIVER
-            bool "Set esp32 as espnow receiver"
-            default n
-            help
-                "Set esp32 as espnow receiver"
+        config ESPNOW_LMK
+            string "Set ESPNOW LMK"
+            default "lmk1234567890123"
+        
     endmenu
     
     menu "TouchTFT Pin Configuration"
