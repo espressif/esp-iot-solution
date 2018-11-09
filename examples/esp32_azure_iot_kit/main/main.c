@@ -285,7 +285,7 @@ void mpu6050_read_task(void* pvParameters)
     while (1) {
         iot_mpu6050_get_acce(mpu6050_dev, &acce);
         iot_mpu6050_get_gyro(mpu6050_dev, &gyro);
-        iot_mpu6050_complimentory_filter(&acce, &gyro, &complimentary_angle);
+        iot_mpu6050_complimentory_filter(mpu6050_dev, &acce, &gyro, &complimentary_angle);
         vTaskDelay(5 / portTICK_RATE_MS);
     }
 }
