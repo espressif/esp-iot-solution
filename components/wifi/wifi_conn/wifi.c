@@ -71,7 +71,14 @@ static esp_err_t wifi_event_handler(void *ctx, system_event_t *event)
 
 esp_err_t iot_wifi_setup(wifi_mode_t wifi_mode)
 {
-    nvs_flash_init();
+    // Initialize NVS
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        ESP_ERROR_CHECK( nvs_flash_erase() );
+        ret = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK( ret );
+
 #if DEBUG_EN
     esp_log_level_set(TAG, ESP_LOG_DEBUG);
 #endif

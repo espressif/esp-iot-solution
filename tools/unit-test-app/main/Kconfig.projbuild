@@ -1,4 +1,16 @@
 menu "IoT unit-test settings"
+    menu "OTA Test"
+        config OTA_SERVER_IP
+            string "Enter HTTP server IP or domain"
+            default ""
+        config OTA_SERVER_PORT
+            int "Enter HTTP server port"
+            default 80
+        config OTA_SERVER_URI
+            string "Enter OTA file path"
+            default "/ota.bin"
+    endmenu
+    
     menu "WiFi config"
         config AP_SSID
             string "Enter SSID of router to connect to"

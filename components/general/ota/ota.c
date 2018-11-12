@@ -16,6 +16,7 @@
 #include "freertos/task.h"
 #include "freertos/timers.h"
 #include "freertos/semphr.h"
+#include "freertos/portmacro.h"
 
 #include "esp_system.h"
 #include "lwip/sockets.h"
@@ -38,11 +39,17 @@
 #define POINT_ASSERT(tag, param, ret)    IOT_CHECK(tag, (param) != NULL, (ret))
 #define ERR_ASSERT(tag, param, ret)  IOT_CHECK(tag, (param) == ESP_OK, (ret))
 
+static portMUX_TYPE ota_spinlock = portMUX_INITIALIZER_UNLOCKED;
+#define IOT_OTA_ENTER_CRITICAL()        portENTER_CRITICAL(&ota_spinlock)
+#define IOT_OTA_EXIT_CRITICAL()         portEXIT_CRITICAL(&ota_spinlock)
+
 static xSemaphoreHandle g_ota_mux = NULL;
 static const char* TAG = "OTA";
 static bool g_ota_timeout;
 #define HTTP_STARTER_STR "http://"
 #define HTTPS_STARTER_STR "https://"
+static int ota_cur_len = 0;
+static int ota_total_length = 0;
 
 static esp_err_t connect_http_server(const char *server_ip, uint16_t server_port, int socket_id)
 {
@@ -83,51 +90,105 @@ static void download_timer_cb(TimerHandle_t xTimer)
 {
     int socket_id = (int) pvTimerGetTimerID(xTimer);
     g_ota_timeout = true;
-    if (socket_id != -1) {
+    if (socket_id >= 0) {
         close(socket_id);
     }
+}
+
+#define CONTENT_LEN_STR  "Content-Length: "
+static int ota_get_content_length(uint8_t* data_buf)
+{
+    char* ptr = strstr((const char*)data_buf, CONTENT_LEN_STR);
+    int length = -1;
+    if (ptr) {
+        ptr = ptr + strlen(CONTENT_LEN_STR);
+        length = atoi(ptr);
+    }
+    return length;
 }
 
 static esp_err_t ota_download(int socket_id, esp_ota_handle_t ota_handle)
 {
     IOT_CHECK(TAG, socket_id != -1, ESP_ERR_INVALID_ARG);
-    bool resp_start = false;
-    uint8_t data_buff[BUFF_SIZE];
-    int total_len = 0;
     esp_err_t ret = ESP_OK;
+    bool resp_start = false;
+    uint8_t* data_buff = (uint8_t*) calloc(1, BUFF_SIZE);
+    if (data_buff == NULL) {
+        ret = ESP_FAIL;
+        ESP_LOGE(TAG, "OTA no enought memory for data buffer");
+        goto EXIT;
+    }
+    int total_len = 0;
     for (;;) {
         memset(data_buff, 0, BUFF_SIZE);
         int recv_len = recv(socket_id, data_buff, BUFF_SIZE, 0);
         if (recv_len < 0) {
-            return ESP_FAIL;
+            ESP_LOGE(TAG, "recv_len < 0");
+            ret = ESP_FAIL;
         }
         if (recv_len > 0 && !resp_start) {
             int data_len = 0;
+            int content_len = ota_get_content_length(data_buff);
+            if (content_len > 0) {
+                ESP_LOGD(TAG, "Content length: %d", content_len);
+                ota_total_length = content_len;
+            } else {
+                continue;
+            }
             resp_start = erase_http_header(data_buff, recv_len, &data_len);
             ret = esp_ota_write(ota_handle, data_buff, data_len);
-            IOT_CHECK(TAG, ret == ESP_OK, ESP_FAIL);
+            if (ret != ESP_OK) {
+                ret = ESP_FAIL;
+                ESP_LOGE(TAG, "OTA write data error.");
+                goto EXIT;
+            }
             total_len += data_len;
         } else if (recv_len > 0 && resp_start) {
             ret = esp_ota_write(ota_handle, data_buff, recv_len);
-            IOT_CHECK(TAG, ret == ESP_OK, ESP_FAIL);
+            if (ret != ESP_OK) {
+                ret = ESP_FAIL;
+                ESP_LOGE(TAG, "OTA write data error.");
+                goto EXIT;
+            }
             total_len += recv_len;
-        } else if (recv_len == 0) {
+            ota_cur_len = total_len;
+        } else if (recv_len == 0 && ota_cur_len == ota_total_length && ota_total_length > 0) {
             if (!g_ota_timeout) {
-                ESP_LOGI(TAG, "all packets received, total length:%d", total_len);
+                ESP_LOGD(TAG, "all packets received, total length: %d / %d", total_len, ota_total_length);
             } else {
-                return ESP_ERR_TIMEOUT;
+                ESP_LOGE(TAG, "OTA timeout!");
+                ret = ESP_ERR_TIMEOUT;
+                goto EXIT;
             }
             break;
         } else {
             ESP_LOGE(TAG, "Unexpected recv result");
         }
-        ESP_LOGI(TAG, "Have written image length %d", total_len);
+        ESP_LOGD(TAG, "Have written image length %d / %d", total_len, ota_total_length);
     }
-    return ESP_OK; 
+    EXIT:
+    if (data_buff) {
+        free(data_buff);
+        data_buff = NULL;
+    }
+    return ret;
+}
+
+int iot_ota_get_ratio()
+{
+    int ret = -1;
+    IOT_OTA_ENTER_CRITICAL();
+    if (ota_total_length > 0) {
+        ret = ota_cur_len * 100 / ota_total_length;
+    }
+    IOT_OTA_EXIT_CRITICAL();
+    return ret;
 }
 
 esp_err_t iot_ota_start(const char *server_ip, uint16_t server_port, const char *file_dir, uint32_t ticks_to_wait)
 {
+    ota_cur_len = 0;
+    ota_total_length = 0;
     TimerHandle_t ota_timer = NULL;
     int socket_id = -1;
     esp_err_t ret = ESP_FAIL;
@@ -180,8 +241,9 @@ esp_err_t iot_ota_start(const char *server_ip, uint16_t server_port, const char 
     };
     struct addrinfo *res;
     ESP_LOGI(TAG, "Running DNS lookup for %s...", server_ip);
-    char port_str[20];
-    sprintf(port_str, "%d", server_port);
+    char *port_str = NULL;
+    asprintf(&port_str, "%d", server_port);
+
     int err = getaddrinfo(server_ip, port_str, &hints, &res);
     if (err != 0 || res == NULL) {
         ESP_LOGI(TAG, "DNS lookup failed err=%d res=%p", err, res);
@@ -245,7 +307,9 @@ esp_err_t iot_ota_start(const char *server_ip, uint16_t server_port, const char 
     ret = ota_download(socket_id, upgrade_handle);
     OTA_CHECK(TAG, "ota data download error!", ret, OTA_FINISH);
     //Stop timer since downloading has finished.
-    xTimerStop(ota_timer, ticks_to_wait / portTICK_PERIOD_MS);
+    if (ota_timer) {
+        xTimerStop(ota_timer, ticks_to_wait / portTICK_PERIOD_MS);
+    }
     ret = esp_ota_end(upgrade_handle);
     upgrade_handle = 0;
     OTA_CHECK(TAG, "ota end error!", ret, OTA_FINISH);
@@ -257,6 +321,10 @@ OTA_FINISH:
     if (server_addr) {
         free(server_addr);
         server_addr = NULL;
+    }
+    if (port_str) {
+        free(port_str);
+        port_str = NULL;
     }
     if (upgrade_handle != 0) {
         esp_ota_end(upgrade_handle);

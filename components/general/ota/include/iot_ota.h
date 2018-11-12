@@ -43,6 +43,15 @@ esp_err_t iot_ota_start(const char *server_ip, uint16_t server_port, const char 
  */
 esp_err_t iot_ota_start_url(const char *url, uint32_t ticks_to_wait);
 
+
+/**
+ * @brief get OTA progress status
+ * return
+ *     - -1 OTA not started
+ *     - others(>0) OTA progress (0 - 100 %)
+ */
+int iot_ota_get_ratio();
+
 #ifdef __cplusplus
 }
 #endif
