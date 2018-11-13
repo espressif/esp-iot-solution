@@ -46,6 +46,13 @@ menu "IoT unit-test settings"
                 "Set listening port for TCP server"
     endmenu
 
+    menu "ESPNOW testcase"
+        config ESPNOW_LMK
+            string "Set ESPNOW LMK"
+            default "lmk1234567890123"
+        
+    endmenu
+    
     menu "TouchTFT Pin Configuration"
         config UT_LCD_MISO_GPIO
             int "UT_LCD_MISO_GPIO"
