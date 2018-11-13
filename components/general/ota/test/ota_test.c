@@ -20,9 +20,9 @@
 #include "iot_wifi_conn.h"
 #include "unity.h"
 
-#define OTA_SERVER_IP      "192.168.1.3"
-#define OTA_SERVER_PORT    8070
-#define OTA_FILE_NAME      "/Desktop/iot.bin"
+#define OTA_SERVER_IP      CONFIG_OTA_SERVER_IP
+#define OTA_SERVER_PORT    CONFIG_OTA_SERVER_PORT
+#define OTA_FILE_NAME      CONFIG_OTA_SERVER_URI
 #define TAG     "OTA_TEST"
 
 #define AP_SSID     CONFIG_AP_SSID
@@ -41,8 +41,12 @@ void ota_test()
     iot_wifi_connect(AP_SSID, AP_PASSWORD, portMAX_DELAY);
     ESP_LOGI(TAG, "free heap size before ota: %d", esp_get_free_heap_size());
     xTaskCreate(ota_task, "ota_task", 1024 * 8, NULL, 5, NULL);
-    iot_ota_start(OTA_SERVER_IP, OTA_SERVER_PORT, OTA_FILE_NAME, 5000 / portTICK_RATE_MS);
-    vTaskDelay(10000 / portTICK_RATE_MS);
+    while (iot_ota_get_ratio() < 100) {
+        ESP_LOGI(TAG, "OTA progress: %d %%", iot_ota_get_ratio());
+        vTaskDelay(500 / portTICK_RATE_MS);
+    }
+    ESP_LOGI(TAG, "OTA done: %d %%", iot_ota_get_ratio());
+    vTaskDelay(1000 / portTICK_RATE_MS);
     ESP_LOGI(TAG, "free heap size after ota: %d", esp_get_free_heap_size());
     esp_restart();
 } 
