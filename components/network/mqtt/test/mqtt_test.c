@@ -149,7 +149,6 @@ void mqtt_test()
 {
     ESP_LOGI(MQTT_TAG, "[APP] Startup..");
     ESP_LOGI(MQTT_TAG, "[APP] Free memory: %d bytes", system_get_free_heap_size());
-//    ESP_LOGI(MQTT_TAG, "[APP] SDK version: %s, Build time: %s", system_get_sdk_version(), BUID_TIME);
     mqtt_test_sem = xSemaphoreCreateBinary();
     nvs_flash_init();
     wifi_conn_init();

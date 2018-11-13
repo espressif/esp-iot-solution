@@ -590,81 +590,98 @@ menu "IoT Solution settings"
                     "Select this one to enable MQTT component"  
             menu "MQTT"
             depends on IOT_MQTT_ENABLE
-            # This is actually also handled in the ESP32 startup code, not only in FreeRTOS.
-            config MQTT_PROTOCOL_311
-                bool "MQTT Protocol version 3.1.1"
-                default y
-                help
-                    If disable, it will use MQTT protocol version 3.1
-            
-            config MQTT_SECURITY_ON
-                bool "Enable MQTT over SSL"
-                default n
-                help
-                    Enable MQTT Over SSL
-            
-            config MQTT_PRIORITY
-                int "MQTT Task Priority"
-                range 1 15
-                default 5
-            
-            config MQTT_LOG_ERROR_ON
-                bool "Enable MQTT Debug message"
-                default y
-                help
-                    Disable it will redurce memory and run faster
-            config MQTT_LOG_WARN_ON
-                bool "Enable MQTT Warning message"
-                default y
-                help
-                    Disable it will redurce memory and run faster
-            config MQTT_LOG_INFO_ON
-                bool "Enable MQTT Info message"
-                default y
-                help
-                    Disable it will redurce memory and run faster
-            config MQTT_RECONNECT_TIMEOUT
-                int "Reconnect timeout (in second)"
-                range 10 16535
-                default 60
-            
-            config MQTT_QUEUE_BUFFER_SIZE_WORD
-                int "Outbox queue buffer size in word (4 bytes)"
-                range 256 4096
-                default 1024
-            
-            config MQTT_BUFFER_SIZE_BYTE
-                int "Network buffer size for MQTT in byte"
-                range 128 4096
-                default 1024
-            
-            config MQTT_MAX_HOST_LEN
-                int "Maximum host name len - in byte"
-                range 32 256
-                default 64
-            
-            config MQTT_MAX_CLIENT_LEN
-                int "Maximum client id len - in byte"
-                range 4 128
-                default 32
-            
-            config MQTT_MAX_USERNAME_LEN
-                int "Maximum mqtt username len - in byte"
-                range 4 128
-                default 32
-            
-            config MQTT_MAX_PASSWORD_LEN
-                int "Maximum mqtt password len - in byte"
-                range 4 128
-                default 32
-            config MQTT_MAX_LWT_TOPIC
-                int "Maximum mqtt lwt topic len - in byte"
-                range 4 128
-                default 32
-            config MQTT_MAX_LWT_MSG
-                int "Maximum mqtt lwt message len - in byte"
-                range 4 128
-                default 32
+                config MQTT_PROTOCOL_311
+                    bool "Enable MQTT protocol 3.1.1"
+                    default y
+                    help
+                        If not, this library will use MQTT protocol 3.1
+                
+                config MQTT_TRANSPORT_SSL
+                    bool "Enable MQTT over SSL"
+                    default y
+                    help
+                        Enable MQTT transport over SSL with mbedtls
+                
+                config MQTT_TRANSPORT_WEBSOCKET
+                    bool "Enable MQTT over Websocket"
+                    default y
+                    help
+                        Enable MQTT transport over Websocket.
+                
+                config MQTT_TRANSPORT_WEBSOCKET_SECURE
+                    bool "Enable MQTT over Websocket Secure"
+                    default y
+                    depends on MQTT_TRANSPORT_WEBSOCKET
+                    depends on MQTT_TRANSPORT_SSL
+                    help
+                        Enable MQTT transport over Websocket Secure.
+                
+                config MQTT_USE_CUSTOM_CONFIG
+                    bool "MQTT Using custom configurations"
+                    default n
+                    help
+                        Custom MQTT configurations.
+                
+                config MQTT_TCP_DEFAULT_PORT
+                    int "Default MQTT over TCP port"
+                    default 1883
+                    depends on MQTT_USE_CUSTOM_CONFIG
+                    help
+                        Default MQTT over TCP port
+                
+                config MQTT_SSL_DEFAULT_PORT
+                    int "Default MQTT over SSL port"
+                    default 8883
+                    depends on MQTT_USE_CUSTOM_CONFIG
+                    depends on MQTT_TRANSPORT_SSL
+                    help
+                        Default MQTT over SSL port
+                        
+                config MQTT_WS_DEFAULT_PORT
+                    int "Default MQTT over Websocket port"
+                    default 80
+                    depends on MQTT_USE_CUSTOM_CONFIG
+                    depends on MQTT_TRANSPORT_WEBSOCKET
+                    help
+                        Default MQTT over Websocket port
+                
+                config MQTT_WSS_DEFAULT_PORT
+                    int "Default MQTT over Websocket Secure port"
+                    default 443
+                    depends on MQTT_USE_CUSTOM_CONFIG
+                    depends on MQTT_TRANSPORT_WEBSOCKET
+                    depends on MQTT_TRANSPORT_WEBSOCKET_SECURE
+                    help
+                        Default MQTT over Websocket Secure port
+                
+                config MQTT_BUFFER_SIZE
+                    int "Default MQTT Buffer Size"
+                    default 1024
+                    depends on MQTT_USE_CUSTOM_CONFIG
+                    help
+                        This buffer size using for both transmit and receive
+                
+                config MQTT_TASK_STACK_SIZE
+                    int "MQTT task stack size"
+                    default 6144
+                    depends on MQTT_USE_CUSTOM_CONFIG
+                    help
+                        MQTT task stack size
+                
+                config MQTT_TASK_CORE_SELECTION_ENABLED
+                    bool "Enable MQTT task core selection"
+                    default false
+                    help
+                        This will enable core selection
+                        
+                choice
+                    depends on MQTT_TASK_CORE_SELECTION_ENABLED
+                    prompt "Core to use ?"
+                    config MQTT_USE_CORE_0
+                          bool "Core 0"
+                    config MQTT_USE_CORE_1
+                          bool "Core 1"
+                 endchoice
             
             endmenu
             #--------------------------------------------
