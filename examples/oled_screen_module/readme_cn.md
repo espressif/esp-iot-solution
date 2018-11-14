@@ -117,17 +117,30 @@ VDD33 为 LDO VOUT 3.3V 端，做为 ESP32、外设、 flash 电源；VDD33\_Per
 
 执行以下指令进行编译配置，如串口号和串口下载速度可以在 `Serial flasher config` 这一菜单选项中进行配置（如果不需配置, 可跳过这一步）。
 
+Make:
 ```
     cd YOUR_IOT_SOLUTION_PATH/examples/oled_screen_module
     make menuconfig
+```
+
+CMake:
+```
+    cd YOUR_IOT_SOLUTION_PATH/examples/oled_screen_module
+    idf.py menuconfig
 ```
 
 * 编译，烧写与运行
 
 执行下面指令，编译 oled\_screen\_module，以下命令中的 flash 是下载命令，monitor 表示开启系统打印，可根据实际情况选择添加。
 
+Make:
 ```
     make flash monitor
+```
+
+CMake:
+```
+    idf.py flash monitor
 ```
 
 > 注：下载程序时，如果无法自动开始下载，可以尝试手动进入下载模式。下载固件完成后，按开发板上的 reset 键重新运行程序，可以查看串口打印。

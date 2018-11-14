@@ -38,8 +38,14 @@ ULP 协处理器配置汇编编译工具链，只需两步即可安装配置完�
 
 ##### 4.2 配置编译烧录
 至此，汇编编译环境就安装好了，在 [esp-iot-solution](https://github.com/espressif/esp-iot-solution) /examples/ulp_hall_sensor/ 目录下依次运行以下命令，进行 default config 配置并编译、烧录程序。
+
+Make:
 >* make defconfig
 >* make all -j8 && make flash monitor
+
+CMake
+>* idf.py defconfig
+>* idf.py flash monitor
 
 ## 5. 软件分析
 ULP 协处理器没有内置读霍尔传感器相关的汇编指令，所以我们需要设置相关寄存器来读取片内霍尔传感器。

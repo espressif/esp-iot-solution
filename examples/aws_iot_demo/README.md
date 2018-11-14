@@ -18,15 +18,15 @@
 
       您的 AWS IOT 帐户具有唯一终端主机名。要找到它，请打开 AWS IOT 控制台，然后单击左下方的“设置”按钮。端点主机名显示在此页面的“自定义端点”标题下。
 
-      之后我们在电脑终端运行 `make menuconfig` 并进入 `component config` -> `Amazon Web Service IoT Config` -> `AWS IoT MQTT Hostname`，在这里我们输入上一步找到的主机名。
+      之后我们在电脑终端运行 `make menuconfig`(Make) 或者 `idf.py menuconfig`(CMake) 并进入 `component config` -> `Amazon Web Service IoT Config` -> `AWS IoT MQTT Hostname`，在这里我们输入上一步找到的主机名。
   - 设置客户端 ID
 
-      在电脑终端中运行 `make menuconfig`，在 `Example Configuration` 下，设置 `AWS IOT Client ID` 的值
+      在电脑终端中运行 `make menuconfig`(Make) 或者 `idf.py menuconfig`(CMake)，在 `Example Configuration` 下，设置 `AWS IOT Client ID` 的值
   - 本地验证证书是否配置正确
 
       运行 `openssl s_client -showcerts -connect hostname:8883 < /dev/null` 命令去验证证书是否正确
 - 正确配置 ESP32 网络连接
-  - 在电脑终端运行 `make menuconfig` 命令，在 `Example Configuration` 目录中配置 `WiFi SSID` 和 `WiFi Password`
+  - 在电脑终端运行 `make menuconfig`(Make) 或者 `idf.py menuconfig`(CMake) 命令，在 `Example Configuration` 目录中配置 `WiFi SSID` 和 `WiFi Password`
 
 # 监视来自设备的数据
 

@@ -9,7 +9,7 @@
   * Aliyun App (beta): [Download it here](https://open.aliplus.com/download/?spm=0.0.0.0.7OBTZm)
 
 ## 2. How to configure parameters
-The configuration of the Alink embed project can be modified at `make menuconfig`:
+The configuration of the Alink embed project can be modified at `make menuconfig`(Make) or `idf.py menuconfig`(CMake):
 
   * Go to `IoT Solution settings -> IoT Components Management -> Platforms and Clouds -> ALINK ENABLE -> ALINK_SETTINGS`, select the version of Alink (embed or SDS), and configure the key parameters of the Alink SDK, such as the connection timeout,  the priority level for key tasks, the size of the used stack, the log level and so on.
 

@@ -36,9 +36,9 @@ IRQ | 33
 ## Run the Example
 
 - Open Terminal and navigate to the directory `examples/hmi/ugfx_minesweeper`
-- Run `make defconfig` to apply the default configuration
-- Run `make menuconfig` to set up the flashing-related configuration
-- Run `make -j8 flash` to build the example and flash it to the device
+- Run `make defconfig`(Make) or `idf.py defconfig`(CMake) to apply the default configuration
+- Run `make menuconfig`(Make) or `idf.py menuconfig`(CMake) to set up the flashing-related configuration
+- Run `make -j8 flash`(Make) or `idf.py flash`(CMake) to build the example and flash it to the device
 
 ## Example Demonstration
 

@@ -1,17 +1,18 @@
-
 stages:
   - build
 
 before_script:
   - export PATH="/opt/xtensa-esp32-elf/bin:$PATH"
   - export PATH="/opt/esp32ulp-elf-binutils/bin:$PATH"
+  - export PATH="$CI_PROJECT_DIR/submodule/esp-idf/tools:$PATH"
+  - python -m pip install --user -r $IDF_PATH/requirements.txt
   - mkdir -p ~/.ssh
   - chmod 700 ~/.ssh
   - echo -n $GITLAB_KEY > ~/.ssh/id_rsa_base64
   - base64 --decode --ignore-garbage ~/.ssh/id_rsa_base64 > ~/.ssh/id_rsa
   - chmod 600 ~/.ssh/id_rsa
   - echo -e "Host gitlab.espressif.cn\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
-  - git submodule update --init --recursive
+  - git submodule update -f --init --recursive
 
 variables:
   IDF_PATH: "$CI_PROJECT_DIR/submodule/esp-idf"
@@ -25,30 +26,30 @@ build:
   script:
     - cd examples/check_pedestrian_flow
     - make defconfig
-    - make -j8
+    - idf.py build
     - cd ../eth2wifi
     - make defconfig
-    - make -j8
+    - idf.py build
     - cd ../oled_screen_module
     - make defconfig
-    - make -j8
+    - idf.py build
     - cd ../smart_device/alink_smart_device_demo
     - make defconfig
-    - make -j8
+    - idf.py build
     - cd ..
     - cd ../empty_project
     - make defconfig
-    - make -j8
+    - idf.py build
     - cd ../hmi/ugfx_example
     - make defconfig
-    - make -j8
+    - idf.py build
     - cd ../lvgl_example
     - make defconfig
-    - make -j8
+    - idf.py build
     - cd ../
     - cd ../touch_pad_evb
     - make defconfig
-    - make -j8
+    - idf.py build
     - cd ../ulp_examples/ulp_watering_device
     - make defconfig
     - make -j8
@@ -67,4 +68,5 @@ build:
     - cd ../../../tools/unit-test-app
     - make defconfig
     - make IOT_TEST_ALL=1 -j8
+
 

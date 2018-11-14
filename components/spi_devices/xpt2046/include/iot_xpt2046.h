@@ -19,7 +19,6 @@
 #include "stdio.h"
 #include "driver/gpio.h"
 #include "driver/spi_master.h"
-#include "esp_partition.h"
 #include "freertos/semphr.h"
 #include "esp_log.h"
 

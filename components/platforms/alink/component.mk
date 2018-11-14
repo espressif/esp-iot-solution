@@ -6,7 +6,7 @@
 ifndef CONFIG_IOT_SOLUTION_EMBED   
 
 COMPONENT_ADD_INCLUDEDIRS := esp32-alink/include esp32-alink/adaptation/include
-COMPONENT_SRCDIRS := esp32-alink/adaptation esp32-alink/application
+COMPONENT_SRCDIRS := adaptation esp32-alink/application
 ifdef CONFIG_ALINK_VERSION_EMBED
 LIBS := alink_agent tfspal
 endif

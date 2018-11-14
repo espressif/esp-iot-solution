@@ -46,7 +46,7 @@ It takes only two steps to configure the ULP coprocessor toolchain. Below is an 
 >* Step One: Download [binutils-esp32ulp toolchain](https://github.com/espressif/binutils-esp32ulp/wiki#downloads), and extract the toolchain into a directory for installation.
 >* Step Two: Add the path to the `bin` directory of the toolchain to the `PATH` environment variable. For example, if the toolchain is extracted into the directory `/opt/esp32ulp-elf-binutils`, then add the line `export PATH=/opt/esp32ulp-elf-binutils/bin:$PATH` at the end of the hidden file `.bashrc` under the directory `/home`. Save the file and run the command `source .bashrc` to enable the environment variable. 
 
-The compiling environment is now set up. Make a copy of `sdkconfig.defaults` under the directory `ulp_watering_device/` and rename it as `sdkconfig`. When running the compiling command `make all -j8 && make flash monitor` in programming the codes, the toolchain will be called to compile codes in assembly. 
+The compiling environment is now set up. Make a copy of `sdkconfig.defaults` under the directory `ulp_watering_device/` and rename it as `sdkconfig`. When running the compiling command `make all -j8 && make flash monitor`(Make) or `idf.py flash monitor`(CMake) in programming the codes, the toolchain will be called to compile codes in assembly. 
 
 #### 4.2 Pin Function
 
