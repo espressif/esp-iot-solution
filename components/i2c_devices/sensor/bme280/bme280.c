@@ -469,7 +469,8 @@ float iot_bme280_read_pressure(bme280_handle_t dev)
     var2 = (((int64_t) device->data_t.dig_p8) * p) >> 19;
 
     p = ((p + var1 + var2) >> 8) + (((int64_t) device->data_t.dig_p7) << 4);
-    return ((p >>8) / 100.0);
+    p = p >> 8; // /256
+    return ((float) p / 100);
 }
 
 float iot_bme280_read_humidity(bme280_handle_t dev)
