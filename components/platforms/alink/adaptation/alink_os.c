@@ -270,5 +270,7 @@ void platform_msleep(_IN_ uint32_t ms)
 
 uint32_t platform_get_time_ms(void)
 {
-    return system_get_time() / 1000;
+    struct timeval now;
+    gettimeofday(&now, NULL);
+    return (now.tv_sec * 1000000 + now.tv_usec) / 1000;
 }
