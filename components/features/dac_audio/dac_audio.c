@@ -58,9 +58,18 @@ esp_err_t iot_dac_audio_delete(dac_audio_handle_t dac_audio, bool delete_i2s)
 
 esp_err_t iot_dac_audio_play(dac_audio_handle_t dac_audio, const uint8_t* data, int length, TickType_t ticks_to_wait)
 {
+    esp_err_t ret;
+    size_t write_len = 0;
+    size_t total_len = length;
     dac_audio_t *dac = (dac_audio_t*) dac_audio;
-    i2s_write_bytes(dac->i2s_num, (const char*) data, length, ticks_to_wait);
-    return ESP_OK;
+    while(1) {
+        ret = i2s_write(dac->i2s_num, (const char*) data + length - total_len, total_len, &write_len, ticks_to_wait);
+        total_len -= write_len;
+        if(total_len == 0 || ret != ESP_OK) {
+            break;
+        }
+    }
+    return ret;
 }
 
 
