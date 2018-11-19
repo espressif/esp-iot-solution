@@ -41,7 +41,7 @@ The OLED screen also uses the I2C interface. The development of the OLED driver 
 
 ### 2.2 Configuration and Downloading
 
-Please refer to [[readme]](./../../readme.md#preparation)
+Please refer to [[readme]](./../../README.md#preparation)
 
 ### 2.3 Operating
 
