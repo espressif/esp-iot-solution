@@ -180,7 +180,7 @@ uint32_t lcd_init(lcd_conf_t* lcd_conf, spi_device_handle_t *spi_wr_dev, lcd_dc_
 
     // Use high speed to write LCD
     devcfg.clock_speed_hz = lcd_conf->clk_freq;
-    // devcfg.flags = SPI_DEVICE_HALFDUPLEX;
+    devcfg.flags = SPI_DEVICE_HALFDUPLEX;
     spi_bus_add_device(lcd_conf->spi_host, &devcfg, spi_wr_dev);
 
     int cmd = 0;
