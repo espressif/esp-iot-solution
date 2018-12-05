@@ -1,4 +1,4 @@
-[[EN]](readme_en.md) 
+[[EN]](readme_en.md)
 
 ## 解决方案
 
@@ -11,6 +11,7 @@
     * __ESP32 Light-sleep 特性__ (中文文档即将发布)
     * [ESP32 Light-sleep 测试指南](./DFS_and_light_sleep/light_sleep_test_manual_cn.md)
 * [触摸传感器方案设计](touch_pad_solution/touch_sensor_design_cn.md)
+* [ESP32 HMI 方案](hmi_solution/README.md)
 * [ESP32 芯片加密方案设计](security_solution/readme_cn.md)
     * [ESP32 安全方案](security_solution/esp32_secure_and_encrypt_cn.md)
     * __下载工具介绍__ (中文文档即将发布)

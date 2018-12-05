@@ -1,4 +1,4 @@
-[[中文]](readme_cn.md) 
+[[中文]](readme_cn.md)
 
 ## Solutions
 
@@ -11,6 +11,7 @@
     * [ESP32 Light-sleep features](./DFS_and_light_sleep/light_sleep_performance_en.md)
     * __ESP32 Light-sleep test manual__ (English version is about to release)
 * [Touch Sensor Application Note](touch_pad_solution/touch_sensor_design_en.md)
+* [ESP32 HMI solutions](hmi_solution/README.md)
 * [Security and Factory Flow](security_solution/readme_en.md)
     * __ESP32 secure and encrypt__ (English version is about to release)
     * [Download Tool GUI Instruction](security_solution/download_tool_en.md)

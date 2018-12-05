@@ -1,3 +1,5 @@
+[[EN]](littlevgl_guide_en.md)
+
 # LittlevGL Guide
 
 ## LittlevGL 简介
@@ -47,7 +49,7 @@ LittlevGL 具有以下特点：
 ### 图形对象
 
 在 LittlevGL 中，用户界面的基本构建单位是对象。例如：
-- Button(按钮)
+- Button（按钮）
 - Label（标签）
 - Image（图像）
 - List（列表）
@@ -69,7 +71,7 @@ LittlevGL 具有以下特点：
 
 2. 特殊属性
 
-    对象具有与其类型有关的特殊属性。例如：滑块具有：
+    对象具有与其类型有关的特殊属性。例如，滑块具有：
     - 最小、最大值
     - 当前值
     - 回调函数
@@ -89,7 +91,7 @@ LittlevGL 具有以下特点：
 
     如果更改了父对象的位置，则子对象将与父对象一起移动。因此，所有位置都与父对象相关。因此（0,0）坐标意味着对象将独立于父对象的位置，始终在父对象的左上角。
 
-<div align="center"><img src="../_static/hmi_solution/littlevgl/par_child1.jpg" width = "700" alt="style-built-in" align=center /></div>  
+<div align="center"><img src="../../_static/hmi_solution/littlevgl/par_child1.jpg" width = "700" alt="style-built-in" align=center /></div>  
 
 <div align="center">图 1. 共同移动</div>  
 
@@ -97,7 +99,7 @@ LittlevGL 具有以下特点：
 
     如果子对象部分或完全脱离其父对象，那么在父对象外面的部分将不可见。
 
-<div align="center"><img src="../_static/hmi_solution/littlevgl/par_child3.jpg" width = "700" alt="style-built-in" align=center /></div>  
+<div align="center"><img src="../../_static/hmi_solution/littlevgl/par_child3.jpg" width = "700" alt="style-built-in" align=center /></div>  
 
 <div align="center">图 2. 仅在父对象中可见</div>  
 
@@ -105,7 +107,14 @@ LittlevGL 具有以下特点：
 
 在 LittlevGL 中，可以在运行时动态创建和删除对象。这意味着只有当前创建的对象占用 RAM。例如：如果您需要图表，则可以在需要时创建图表，并在使用图表后删除。
 
-每个对象类型都有自己的创建函数和一个统一的原型（样式等）。它需要两个参数：指向父对象的指针，以及指向相同类型的对象的指针（可选）。如果第二个参数不为 NULL，则到新创建的对象将复制此指针所指向的对象。要创建 Screen，请将父对象指针设置为 NULL。创建函数的返回值是指向创建的对象的指针。独立于对象类型，使用公共类型 `lv_obj_t`。稍后可以使用此指针来设置或获取对象的属性。创建函数如下所示：
+每个对象类型都有自己的创建函数和一个统一的原型（样式等）。它需要两个参数：
+
+- 指向父对象的指针
+- 指向相同类型的对象的指针（可选）
+
+如果第二个参数不为 NULL，则到新创建的对象将复制此指针所指向的对象。
+
+要创建 Screen，请将父对象指针设置为 NULL。创建函数的返回值是指向创建的对象的指针。独立于对象类型，使用公共类型 `lv_obj_t`。稍后可以使用此指针来设置或获取对象的属性。创建函数如下所示：
 
 `lv_obj_t * lv_type_create(lv_obj_t * parent, lv_obj_t * copy);`
 
@@ -115,9 +124,9 @@ LittlevGL 具有以下特点：
 
 #### 图层
 
-先创建的对象（及其子对象）将先绘制，最后创建的对象将在其兄弟对象（都有相同的父对象）中位于顶部。这样就可以在同一级别的对象之间计算顺序。例如：可以通过创建 2 个对象（可以是透明的）添加图层，首先是 “A”，然后是 “B”。'A' 和它的子对象都处在下一层中，可以被 'B' 和它的子对象覆盖。
+先创建的对象（及其子对象）将先绘制，最后创建的对象将在其兄弟对象（都有相同的父对象）中位于顶部。这样就可以在同一级别的对象之间计算顺序。例如：可以通过创建 2 个对象（可以是透明的）添加图层，首先是 “A”，然后是 “B”。“A” 和它的子对象都处在下一层中，可以被 “B” 和它的子对象覆盖。
 
-<div align="center"><img src="../_static/hmi_solution/littlevgl/par_child4.jpg" width = "700" alt="style-built-in" align=center /></div>  
+<div align="center"><img src="../../_static/hmi_solution/littlevgl/par_child4.jpg" width = "700" alt="style-built-in" align=center /></div>  
 
 <div align="center">图 3. 图层</div>  
 
@@ -128,49 +137,51 @@ LittlevGL 具有以下特点：
 #### 样式属性
 
 样式有 5 个主要部分：公共的、主体、文字、图像和线条。对象将使用与其类型相关的字段。例如：线条不使用 `letter_space`。要查看对象类型使用哪些字段，请查阅[文档](https://littlevgl.com/object-types)。样式结构体的字段如下：
+
 - 公共属性
-    - glass 1：禁止继承这个样式（如果一个样式是透明的，可以设置这个属性以便子对象使用其他的样式）
+    - **glass 1**：禁止继承这个样式（如果一个样式是透明的，可以设置这个属性以便子对象使用其他的样式）
+    
 - 主体属性
 
     由类似矩形的对象使用：
-    - body.empty 不填充矩形（只是绘制边框和/或阴影）
-    - body.main_color 主颜色
-    - body.grad_color 渐变色
-    - body.radius 转角半径
-    - body.opa 不透明度
-    - body.border.color 边框颜色
-    - body.border.width 边框宽度
-    - body.border.part 边框显示位置(`LV_BORDER_LEFT/RIGHT/TOP/BOTTOM/FULL`)
-    - body.border.opa 边界不透明度
-    - body.shadow.color 阴影颜色
-    - body.shadow.width 阴影宽度
-    - body.shadow.type 阴影类型
-    - body.padding.hor 水平内边距
-    - body.padding.ver 垂直内边距
-    - body.padding.inner 内边距
+    - **body.empty** 不填充矩形（只是绘制边框和/或阴影）
+    - **body.main_color** 主颜色
+    - **body.grad_color** 渐变色
+    - **body.radius** 转角半径
+    - **body.opa** 不透明度
+    - **body.border.color** 边框颜色
+    - **body.border.width** 边框宽度
+    - **body.border.part** 边框显示位置 (`LV_BORDER_LEFT/RIGHT/TOP/BOTTOM/FULL`)
+    - **body.border.opa** 边界不透明度
+    - **body.shadow.color** 阴影颜色
+    - **body.shadow.width** 阴影宽度
+    - **body.shadow.type** 阴影类型
+    - **body.padding.hor** 水平内边距
+    - **body.padding.ver** 垂直内边距
+    - **body.padding.inner** 内边距
 
 - 文本属性
 
     由显示文本的对象使用：
-    - text.color 文本颜色
-    - text.font 文本所使用的字体
-    - text.opa 文本不透明度
-    - text.letter_space 字间距
-    - text.line_space 行间距
+    - **text.color** 文本颜色
+    - **text.font** 文本所使用的字体
+    - **text.opa** 文本不透明度
+    - **text.letter_space** 字间距
+    - **text.line_space** 行间距
 
 - 图像属性
 
     由类似图像的对象或对象上的图标使用：
-    - image.color 基于像素亮度的图像重新着色的颜色
-    - image.intense 重新着色强度
-    - image.opa 图像不透明度
+    - **image.color** 基于像素亮度的图像重新着色的颜色
+    - **image.intense** 重新着色强度
+    - **image.opa** 图像不透明度
 
 - 线条属性
 
     由包含线条或线状元素的对象使用：
-    - line.color 线条颜色
-    - line.width 线条宽度
-    - line.opa 线条不透明度
+    - **line.color** 线条颜色
+    - **line.width** 线条宽度
+    - **line.opa** 线条不透明度
 
 #### 使用样式
 
@@ -179,19 +190,19 @@ LittlevGL 具有以下特点：
 如果对象只有一个样式，比如标签：可以使用 `lv_label_set_style(label1, &style)` 函数设置新样式。如果对象有很多样式（如按钮每个状态有 5 个样式），则可以使用 `lv_btn_set_style(obj，LV_BTN_STYLE _...，＆rel_style)` 函数设置新样式。如果对象的样式为 NULL，则其样式将继承其父对象的样式。如果修改由一个或多个对象使用的样式，则必须通知对象有关样式的更改。有两种方式通知对象：
 
 ```
-void lv_obj_refresh_style(lv_obj_t * obj);		/*Notify an object about its style is modified*/
-void lv_obj_report_style_mod(void * style);		/*Notify all object if a style is modified.(NULL to notify all objects)*/
+void lv_obj_refresh_style(lv_obj_t * obj);		/*Notify an object of the style modification*/
+void lv_obj_report_style_mod(void * style);		/*Notify all objects of the style modification. Use NULL to notify all objects*/
 ```
 
 #### 内置样式
 
 LittlevGL 库中有几种内置样式：
 
-<div align="center"><img src="../_static/hmi_solution/littlevgl/style-built-in.jpg" width = "700" alt="Built-in styles" align=center /></div>  
+<div align="center"><img src="../../_static/hmi_solution/littlevgl/style-built-in.jpg" width = "700" alt="Built-in styles" align=center /></div>  
 
 <div align="center">图 4. 内置样式</div>  
 
-如上图所示，有用于 Screen、按钮的普通样式和美化样式以及透明样式。`lv_style_transp`、`lv_style_transp_fit` 和 `lv_style_transp_tight` 仅在填充方面有所不同：对于 `lv_style_transp_tight`，所有填充都为零;对于 `lv_style_transp_fit`，只有 `hor` 和 `ver` 填充为零。
+如上图所示，有用于 Screen、按钮的普通样式和美化样式以及透明样式。`lv_style_transp`、`lv_style_transp_fit` 和 `lv_style_transp_tight` 仅在填充方面有所不同：对于 `lv_style_transp_tight`，所有填充都为零；对于 `lv_style_transp_fit`，只有 `hor` 和 `ver` 填充为零。
 
 内置样式是全局 `lv_style_t` 变量，因此您可以直接使用它们，例如： `lv_btn_set_style(obj，LV_BTN_STYLE_REL，＆lv_style_btn_rel)`。
 
@@ -199,20 +210,20 @@ LittlevGL 库中有几种内置样式：
 
 #### 动画样式
 
-您可以使用 `lv_style_anim_create(＆anim)` 函数为样式设置动画。在调用此函数之前，您必须初始化 `lv_style_anim_t` 变量。动画会将 从 `style_1` 样式淡化到 `style_2` 样式。
+您可以使用 `lv_style_anim_create(＆anim)` 函数为样式设置动画。在调用此函数之前，您必须初始化 `lv_style_anim_t` 变量。动画会将从 `style_1` 样式淡化到 `style_2` 样式。
 
 #### 样式示例
 
 以下示例演示了上述样式用法：
 
-<div align="center"><img src="../_static/hmi_solution/littlevgl/style-example.jpg" width = "700" alt="Style example" align=center /></div>  
+<div align="center"><img src="../../_static/hmi_solution/littlevgl/style-example.jpg" width = "700" alt="Style example" align=center /></div>  
 
 <div align="center">图 5. 样式示例</div>  
 
 ```
 /*Create a style*/
 static lv_style_t style1;
-lv_style_copy(&style1, &lv_style_plain);    /*Copy a built-in style to initialize the new style*/
+lv_style_copy(&style1, &lv_style_plain);    /*Copy a built-in style to initialize a new style*/
 style1.body.main_color = LV_COLOR_WHITE;
 style1.body.grad_color = LV_COLOR_BLUE;
 style1.body.radius = 10;
@@ -257,10 +268,10 @@ theme.btn.ina       /*Inactive button style*/
 颜色模块处理所有颜色相关的功能，例如：改变颜色深度、从十六进制代码创建颜色、颜色深度之间的转换、混合颜色等。
 
 以下变量类型由颜色模块定义：
-- `lv_color1_t` 存储单色。为了兼容性，它还有 R，G，B 字段，但它们总是相同的（1字节）
-- `lv_color8_t` 存储 8 位颜色（1字节），R（3 位），G（3 位），B（2 位）
-- `lv_color16_t` 存储 16 位颜色（2字节），R（5 位），G（6 位），B（5 位）
-- `lv_color24_t` 存储 24 位颜色（4 字节），R（8位），G（8位），B（8位）
+- `lv_color1_t` 存储单色。为了兼容性，它还有 R，G，B 字段，但它们总是相同的（1 字节）
+- `lv_color8_t` 存储 8 位颜色（1 字节），R（3 位），G（3 位），B（2 位）
+- `lv_color16_t` 存储 16 位颜色（2 字节），R（5 位），G（6 位），B（5 位）
+- `lv_color24_t` 存储 24 位颜色（4 字节），R（8 位），G（8 位），B（8 位）
 - `lv_color_t` 根据颜色深度设置为 `color1/8/16/24_t`
 - `lv_color_int_t` 根据颜色深度设置为 `uint8_t`，`uint16_t` 或 `uint32_t` 类型。用于从普通数字构建颜色数组
 - `lv_opa_t` 使用 `uint8_t` 类型来描述不透明度
@@ -271,20 +282,20 @@ theme.btn.ina       /*Inactive button style*/
 - `blue`： blue channel
 - `red + green + blue`
 
-可以通过设置定义在 `lv_conf.h` 中的 `LV_COLOR_DEPTH` 为 1（单色），8,16 或 24 来设置当前颜色深度。
+可以通过设置定义在 `lv_conf.h` 中的 `LV_COLOR_DEPTH` 为 1（单色），8，16 或 24 来设置当前颜色深度。
 
 为了描述不透明度，`lv_opa_t` 类型被创建为 `uint8_t` 的包装器：
 - `LV_OPA_TRANSP` 值为：0 表示完全透明
 - `LV_OPA_10` 值为：25，表示仅覆盖一点颜色
 - `LV_OPA_20~OPA_80` 依次变化
-- `LV_OPA_90` 值为：229，表示完全覆盖附近的颜色
+- `LV_OPA_90` 值为：229，表示近乎完全覆颜色
 - `LV_OPA_COVER` 值为：255，表示完全覆盖颜色
 
 ### 字体
 
 在 LittlevGL 中，字体是位图和其他描述符（用于存储字母（字形）的图像和一些附加信息）。字体存储在 `lv_font_t` 变量中，可以在样式的 `text.font` 字段中设置。
 
-字体具有 bpp（Bit-Per-Pixel）特性，bpp 用于描述字体中像素的位数。像素值确定像素的不透明度。使用这种方式字母的图像（特别是在边缘上）可以是平滑和均匀的。bpp 值可以取 1,2,4 和 8（值越高意味着更好的效果）。bpp 还会影响存储字体所需的内存大小。例如：与 bpp=1 相比，bpp=4 使字体的内存大小增加 4 倍。
+字体具有 bpp（Bit-Per-Pixel）特性，bpp 用于描述字体中像素的位数。像素值确定像素的不透明度。使用这种方式字母的图像（特别是在边缘上）可以是平滑和均匀的。bpp 值可以取 1，2，4 和 8（值越高意味着更好的效果）。bpp 还会影响存储字体所需的内存大小。例如：与 bpp=1 相比，bpp=4 使字体的内存大小增加 4 倍。
 
 #### 内置字体
 
@@ -294,7 +305,7 @@ theme.btn.ina       /*Inactive button style*/
 - 30 px
 - 40 px
 
-可以使用 1,2,4 或 8 值来使能字体以设置其 bpp（例如 `USE_LV_FONT_DEJAVU_20 4`）。内置字体在每种 bpp 中都有多个字符集：
+可以使用 1，2，4 或 8 值来使能字体以设置其 bpp（例如 `USE_LV_FONT_DEJAVU_20 4`）。内置字体在每种 bpp 中都有多个字符集：
 - ASCII（Unicode 32..126）
 - Latin supplement（Unicode 160..255）
 - Cyrillic（Unicode 1024..1279）
@@ -316,17 +327,17 @@ LittlevGL 支持 `UTF-8` 编码的 `Unicode` 字符。需要配置编辑器以�
 
 以下列表显示了 LittlevGL 现有的符号：
 
-<div align="center"><img src="../_static/hmi_solution/littlevgl/symbols.jpg" width = "800" alt="Symbol fonts" align=center /></div>  
+<div align="center"><img src="../../_static/hmi_solution/littlevgl/symbols.jpg" width = "800" alt="Symbol fonts" align=center /></div>  
 
 <div align="center">图 6. 符号字体</div>  
 
 #### 添加字体
 
-如果要向库中添加新字体，可以使用在线字体转换器工具。从 TTF 文件创建一个 C 数组，将其复制到项目中。可以指定高度、字符范围和 bpp。您可以枚举字符以仅将它们包含在最终字体中（可选）。要使用生成的字体，请使用 `LV_FONT_DECLAER(my_font_name)` 函数声明它。
+如果要向库中添加新字体，可以使用[在线字体转换器工具](https://littlevgl.com/ttf-font-to-c-array)。从 TTF 文件创建一个 C 数组，将其复制到项目中。可以指定高度、字符范围和 bpp。您可以枚举字符以仅将它们包含在最终字体中（可选）。要使用生成的字体，请使用 `LV_FONT_DECLAER(my_font_name)` 函数声明它。
 
 ### 动画
 
-可以使用动画函数在开始值和结束值之间自动更改变量（动画），动画函数的原型是 `void func(void * var, int32_t value)`。通过定期调用动画函数（使用相应的参数）来产生动画。要创建动画，您必须初始化 `lv_anim_t` 变量（ `lv_anim.h` 中有模板）：
+可以使用动画函数在开始值和结束值之间自动更改变量（动画），动画函数的原型是 `void func(void * var, int32_t value)`。通过定期调用动画函数（使用相应的参数）来产生动画。要创建动画，您必须初始化 `lv_anim_t` 变量（`lv_anim.h` 中有模板）。
 
 您可以确定动画的路径。在大多数简单的情况下，它是线性变化的。目前有两条内置路径：
 - `lv_anim_path_linear` 线性动画
@@ -334,7 +345,7 @@ LittlevGL 支持 `UTF-8` 编码的 `Unicode` 字符。需要配置编辑器以�
 
 默认情况下，您可以设置动画时间。使用 `lv_anim_speed_to_time(speed, start, end)` 函数可以计算以一定速度从起始点到达结束点所需的时间（以毫秒为单位）。例如：`anim_speed_to_time(20, 0, 100)` 将返回 5000（毫秒）。
 
-可以同时在同一个变量上应用多个不同的动画。但是只有一个动画可以与给定的变量和函数对一起存在。您可以通过 `lv_anim_del(var, func)` 删除动画以及动画变量和动画函数。
+可以同时在同一个变量上应用多个不同的动画。但是只有一个动画可以与给定的变量和函数对一起存在。您可以通过 `lv_anim_del(var, func)` 删除动画变量和动画函数。
 
 ### 输入设备
 
@@ -343,13 +354,13 @@ LittlevGL 支持 `UTF-8` 编码的 `Unicode` 字符。需要配置编辑器以�
 ### 对象组
 
 可以对对象进行分组，以便在没有触摸板或鼠标的情况下轻松控制它们。它允许你使用以下输入设备在对象之间移动：
-- 键盘或键盘
+- 键盘或辅助键盘
 - 硬件按钮
 - 编码器
 
 首先，您必须使用 `lv_groupt_t *group = lv_group_create()` 函数创建一个对象组，并使用 `lv_group_add_obj(group, obj)` 函数向对象组中添加对象。在一个对象组中总是有一个处于选中状态的对象。所有按钮事件都将通知给当前处于选中状态的对象。
 
-`LV_INDEV_TYPE_KEYPAD` 类型的输入设备才能在对象组中的对象之间移动（更改处于选中状态的对象）并与它们交互。可以在该类型的输入设备的读取函数中告诉 LittlevGL 库按下或释放的哪个键。此外，您必须使用 `lv_indev_set_group(indev, group)` 函数将对象组与输入设备绑定。在读取函数中可以使用一些特殊的控制字符：
+`LV_INDEV_TYPE_KEYPAD` 类型的输入设备才能在对象组中的对象之间移动（更改处于选中状态的对象）并与它们交互。可以在该类型的输入设备的读取函数中告诉 LittlevGL 库按下或释放哪个键。此外，您必须使用 `lv_indev_set_group(indev, group)` 函数将对象组与输入设备绑定。在读取函数中可以使用一些特殊的控制字符：
 - `LV_GROUP_KEY_NEXT` 移动到下一个对象
 - `LV_GROUP_KEY_PREV` 移动到上一个对象
 - `LV_GROUP_KEY_UP` 递增当前值、向上移动或单击选中的对象（例如：向上移动意味着选择上面的列表元素）
@@ -359,7 +370,7 @@ LittlevGL 支持 `UTF-8` 编码的 `Unicode` 字符。需要配置编辑器以�
 - `LV_GROUP_KEY_ENTER` 单击当前选中的对象或选中的元素（例如：list 元素）
 - `LV_GROUP_KEY_ESC` 退出当前选中的对象（例如：下拉列表）
 
-选中对象的样式由函数修改。默认情况下，它会使对象的颜色变为橙色，但也可以使用 `void lv_group_set_style_mod_cb(group, style_mod_cb)` 函数在每个对象组中指定自己的样式更新函数。`style_mod_cb` 需要一个 `lv_style_t *` 参数，该参数是选中对象样式的副本。在回调函数中，可以将一些颜色混合到当前颜色，并修改参数但不允许设置修改大小相关的属性（如 letter_space，padding 等）
+选中对象的样式由函数修改。默认情况下，它会使对象的颜色变为橙色，但也可以使用 `void lv_group_set_style_mod_cb(group, style_mod_cb)` 函数在每个对象组中指定自己的样式更新函数。`style_mod_cb` 需要一个 `lv_style_t *` 参数，该参数是选中对象样式的副本。在回调函数中，可以将一些颜色混合到当前颜色，并修改参数但不允许设置修改大小相关的属性（如 letter_space，padding 等）。
 
 ### 绘图和渲染
 
@@ -373,7 +384,7 @@ LittlevGL 支持 `UTF-8` 编码的 `Unicode` 字符。需要配置编辑器以�
 
 2. Buffered
 
-    缓存模式（Buffered）类似于双缓存。然而，LittlevGL 的 Buffered 绘制算法仅使用一个帧缓冲区（显示器）和一个称为虚拟显示缓冲区（VDB）的小型图形缓冲区。对于 VDB 大小，屏幕大小的 1/10 通常就足够了。例如：使用 16 位颜色的 320×240 屏幕，仅需要额外的 15kB RAM。
+    缓存模式（Buffered）类似于双缓存。然而，LittlevGL 的 Buffered 绘制算法仅使用一个帧缓冲区（显示器）和一个称为虚拟显示缓冲区（VDB）的小型图形缓冲区。对于 VDB 大小，屏幕大小的 1/10 通常就足够了。例如：使用 16 位颜色的 320×240 屏幕，仅需要额外的 15 KB RAM。
 
     使用缓存模式绘制时不会出现闪烁，因为图像首先在内存（VDB）中创建，因此可以使用滚动，拖动和动画。此外，它还可以使用其他图形效果，如抗锯齿、透明度（不透明度）和阴影。通过在 `lv_conf.h` 中设置 `LV_VDB_SIZE`>`LV_HOR_RES` 并注册 `disp_flush` 函数使用缓存模式。
 
@@ -381,7 +392,7 @@ LittlevGL 支持 `UTF-8` 编码的 `Unicode` 字符。需要配置编辑器以�
 
 3. Buffered vs Unbuffered
 
-    请记住，使用无缓存模式绘制的速度并不一定比使用缓存快。在渲染过程中，某个像素可能会被多次重写（例如：背景，按钮，文本按序渲染）。在无缓存模式下，LittlevGL 库需要多次访问外部存储器或显示控制器，这比写入/读取内部 RAM 慢。
+    请记住，使用无缓存模式绘制的速度并不一定比使用缓存快。在渲染过程中，某个像素可能会被多次重绘（例如：背景，按钮，文本按序渲染）。在无缓存模式下，LittlevGL 库需要多次访问外部存储器或显示控制器，这比写入/读取内部 RAM 慢。
 
     下表总结了两种绘制方法之间的差异：
 
@@ -389,15 +400,15 @@ LittlevGL 支持 `UTF-8` 编码的 `Unicode` 字符。需要配置编辑器以�
 |:---:|:---:|:---:|
 | Memory usage | No extra | >1/10 screen |
 | Quality | Flickering | Flawless |
-| Antialaissing | Not supported | Supported |
-| Transparency | Not supported | Supperted |
-| Shadows | Not supported | Supperted |
+| Anti-aliasing | Not supported | Supported |
+| Transparency | Not supported | Supported |
+| Shadows | Not supported | Supported |
 
 #### 抗锯齿
 
 在 `lv_conf.h` 中使能 `LV_ANTIALIAS` 打开抗锯齿功能。但仅在缓存模式 `(LV_VDB_SIZE>LV_HOR_RES)` 中支持抗锯齿。抗锯齿算法通过填充一些半透明像素（具有不透明度的像素）使线条和曲线（包括具有半径的角落）更平滑且均匀。
 
-如字体部分所述，可以使用更高 bpp(Bit-Per-Pixel) 的字体来抗锯齿。这样，字体的像素不仅可以是 0 或 1，而且可以是半透明的。支持的 bpp-s 分别为 1,2,4 和 8。但 bpp 较高的字体需要更多的 ROM。
+如字体部分所述，可以使用更高 bpp (Bit-Per-Pixel) 的字体来抗锯齿。这样，字体的像素不仅可以是 0 或 1，而且可以是半透明的。支持的 bpp-s 分别为 1，2，4 和 8。但 bpp 较高的字体需要更多的 ROM。
 
 ### Little 控件介绍
 
@@ -413,7 +424,7 @@ LittlevGL 支持 `UTF-8` 编码的 `Unicode` 字符。需要配置编辑器以�
 
 可以通过函数设置坐标、对象大小、对齐方式、父对象等。对齐方式有：
 
-<div align="center"><img src="../_static/hmi_solution/littlevgl/align.jpg" width = "800" alt="Alignment Types" align=center /></div>  
+<div align="center"><img src="../../_static/hmi_solution/littlevgl/align.jpg" width = "800" alt="Alignment Types" align=center /></div>  
 
 <div align="center">图 7. 对齐方式</div>  
 
@@ -441,17 +452,17 @@ LittlevGL 支持 `UTF-8` 编码的 `Unicode` 字符。需要配置编辑器以�
 - 外部存储的文件（如在 SD 卡上）
 - 带符号的文字
 
-要从 PNG，JPG 或 BMP 图像生成像素数组，请使用[在线图像转换器工具](https://littlevgl.com/image-to-c-array)，并使用其指针设置转换后的图像： `lv_img_set_src(img1，＆converted_img_var);`
+要从 PNG，JPG 或 BMP 图像生成像素数组，请使用[在线图像转换器工具](https://littlevgl.com/image-to-c-array)，并使用其指针设置转换后的图像： `lv_img_set_src(img1，＆converted_img_var);`。
 
-要使用外部文件，您还需要使用在线转换器工具转换图像文件，但现在应选择二进制输出格式。要了解如何处理 LittlevGL 的外部图像文件，请查看[教程](https://github.com/littlevgl/lv_examples/tree/master/lv_tutorial/6_images)。
+要使用外部文件，您还需要使用[在线转换器工具](https://littlevgl.com/image-to-c-array)转换图像文件，但现在应选择二进制输出格式。要了解如何处理 LittlevGL 的外部图像文件，请查看[教程](https://github.com/littlevgl/lv_examples/tree/master/lv_tutorial/6_images)。
 
-您也可以使用定义在 `lv_symbol_def.h` 中的符号。在这种情况下，图像将根据样式中指定的字体呈现为文本。它可以使用轻量级单色“字母”而不是真实图像。您可以像这样使用符号： `lv_img_set_src(img1，SYMBOL_OK);`
+您也可以使用定义在 `lv_symbol_def.h` 中的符号。在这种情况下，图像将根据样式中指定的字体呈现为文本。它可以使用轻量级单色“字母”而不是真实图像。您可以像这样使用符号： `lv_img_set_src(img1，SYMBOL_OK);`。
 
 #### Line (lv_line)
 
 线对象能够在一组点之间绘制直线。这些点必须存储在 `lv_point_t` 数组中，并通过 `lv_line_set_points（lines，point_array，point_num）` 函数传递给对象。
 
-可以根据点自动设置线对象的大小。您可以使用 `lv_line_set_auto_size（line，true）` 函数使能自动设置对象大小。 如果使能，那么当设置点时，对象的宽度和高度将根据最大值（`max.x` 和 `max.y`）进行更改。默认情况下使能自动设置对象大小。
+可以根据点自动设置线对象的大小。您可以使用 `lv_line_set_auto_size（line，true）` 函数使能自动设置对象大小。如果使能，那么当设置点时，对象的宽度和高度将根据最大值（`max.x` 和 `max.y`）进行更改。默认情况下使能自动设置对象大小。
 
 #### Container (lv_cont)
 
@@ -467,7 +478,7 @@ LittlevGL 支持 `UTF-8` 编码的 `Unicode` 字符。需要配置编辑器以�
 - `LV_CONT_LAYOUT_PRETTY`：尽可能将对象放在一行中。在子对象之间平均划分每行。顶部间距为 `pad.ver`，行间距为 `pad.inner`
 - `LV_CONT_LAYOUT_GRID`：与 `PRETTY LAYOUT` 类似，但不是平均划分一行，而是子对象之间间距为 `pad.hor`
 
-您可以使能自动调整功能，该功能会自动设置容器大小以包括所有子对象。在左侧和右侧间距保持为 `pad.hor`，在顶部和底部间距保持为 `pad.ver`。可以使用 l`v_cont_set_fit（cont，true，true）` 函数使能水平、垂直或双向自动调整。第二个参数是水平方向，第三个参数是垂直方向。
+您可以使能自动调整功能，该功能会自动设置容器大小以包括所有子对象。在左侧和右侧间距保持为 `pad.hor`，在顶部和底部间距保持为 `pad.ver`。可以使用 `lv_cont_set_fit（cont，true，true）` 函数使能水平、垂直或双向自动调整。第二个参数是水平方向，第三个参数是垂直方向。
 
 #### Page (lv_page)
 
@@ -514,7 +525,7 @@ Line Meter 对象包含一些绘制比例的径向线。使用 `lv_lmeter_set_va
 
 使用 `lv_lmeter_set_range（lmeter，min，max）` 函数设置线路表的范围，使用 `lv_lmeter_set_scale（lmeter，angle，line_num）` 函数设置刻度的角度和线数量。默认角度为 240，默认线数量为 31。
 
-<div align="center"><img src="../_static/hmi_solution/littlevgl/line-meter-lv_lmeter.jpg" width = "800" alt="Line meter" align=center /></div>  
+<div align="center"><img src="../../_static/hmi_solution/littlevgl/line-meter-lv_lmeter.jpg" width = "800" alt="Line meter" align=center /></div>  
 
 <div align="center">图 8. Line meter</div>  
 
@@ -522,7 +533,7 @@ Line Meter 对象包含一些绘制比例的径向线。使用 `lv_lmeter_set_va
 
 仪表是带刻度标签和针头的对象。您可以使用 `lv_gauge_set_scale（gauge，angle，line_num，label_cnt）` 函数来调整角度以及刻度线和标签的数量。默认设置为：220 度角，6 个刻度标签和 21 条线。
 
-仪表可以显示多个针头。使用 `lv_gauge_set_needle_count（gauge，needle_num，color_array）` 函数设置针数和每个针的颜色数组。（数组必须是静态或全局变量）
+仪表可以显示多个针头。使用 `lv_gauge_set_needle_count（gauge，needle_num，color_array）` 函数设置针数和每个针的颜色数组（数组必须是静态或全局变量）。
 
 要设置临界值，请使用 `lv_gauge_set_critical_value（gauge，value）`。在临界值之后，刻度颜色将变为 `line.color`。（默认值：80）仪表的范围可以通过 `lv_gauge_set_range(gauge, min, max)` 函数设置。
 
@@ -531,36 +542,36 @@ Line Meter 对象包含一些绘制比例的径向线。使用 `lv_lmeter_set_va
 图表具有类似矩形的背景，具有水平和垂直分割线。您可以通过 `lv_chart_add_series(chart, color)` 函数向图表添加任意数量的数据源。数据源为 `lv_chart_series_t` 结构，该结构包含所选颜色和数据数组。
 
 您有几个选项来设置数据源：
-- 在数组中手动​​设置值，如 `ser1->points[3] = 7`，并使用 `lv_chart_refresh(chart)` 刷新图表。
-- 使用 `lv_chart_set_next(chart, ser, value)` 函数将所有数据移至左侧，并在最右侧位置设置新数据。
-- 使用以下命令将所有点初始化为给定值： `lv_chart_init_points(chart, ser, value)`
-- 使用以下命令设置数组中的所有点： `lv_chart_set_points(chart, ser, value_array)`
+- 在数组中手动​​设置值，如 `ser1->points[3] = 7`，并使用 `lv_chart_refresh(chart)` 刷新图表
+- 使用 `lv_chart_set_next(chart, ser, value)` 函数将所有数据移至左侧，并在最右侧位置设置新数据
+- 使用以下命令将所有点初始化为给定值：`lv_chart_init_points(chart, ser, value)`
+- 使用以下命令设置数组中的所有点：`lv_chart_set_points(chart, ser, value_array)`
 
 有四种数据显示类型：
-- `LV_CHART_TYPE_NONE`：不显示点。如果您想添加自己的绘制方法，可以使用它。
+- `LV_CHART_TYPE_NONE`：不显示点。如果您想添加自己的绘制方法，可以使用它
 - `LV_CHART_TYPE_LINE`：在点之间绘制线条
 - `LV_CHART_TYPE_COL`：绘制列
 - `LV_CHART_TYPE_POINT`：绘制点
 
-您可以使用 `lv_chart_set_type(chart, TYPE)` 函数指定显示类型。 `LV_CHART_TYPE_LINE | LV_CHART_TYPE_POINT` 类型可用于绘制线和点。
+您可以使用 `lv_chart_set_type(chart, TYPE)` 函数指定显示类型。`LV_CHART_TYPE_LINE | LV_CHART_TYPE_POINT` 类型可用于绘制线和点。
 
 #### Led (lv_led)
 
-LED 是矩形（或圆形）的对象。 您可以使用 `lv_led_set_bright(led, bright)` 设置亮度。 亮度应介于0（最暗）和255（最亮）之间。
+LED 是矩形（或圆形）的对象。您可以使用 `lv_led_set_bright(led, bright)` 设置亮度。亮度应介于 0（最暗）和 255（最亮）之间。
 
-使用 `lv_led_on(led)` 和 `lv_led_off(led)` 函数将亮度设置为预定义的 ON 或 OFF 值。 `lv_led_toggle(led) ` 在 ON 和 OFF 状态之间切换。
+使用 `lv_led_on(led)` 和 `lv_led_off(led)` 函数将亮度设置为预定义的 ON 或 OFF 值。`lv_led_toggle(led) ` 在 ON 和 OFF 状态之间切换。
 
 #### Message box (lv_mbox)
 
 消息框充当弹出窗口。它们是由背景，文本和按钮构成的。背景是一个容器对象，使能垂直方向自动调整以确保文本和按钮始终可见。
 
-使用 `lv_mbox_set_text(mbox, "My text")` 函数设置文本。要添加按钮，请使用 `lv_mbox_add_btns(mbox, btn_str, action)` 函数。 在这里你可以指定按钮文本，并添加一个释放按钮时的回调函数。使用 `lv_mbox_start_auto_close(mbox, delay)` 函数可以在延时 delay 毫秒后自动关闭消息框。使用 `lv_mbox_stop_auto_close(mbox)` 函数将禁用开始自动关闭。使用 `lv_mbox_set_anim_time（mbox，anim_time）` 函数调整动画时间。
+使用 `lv_mbox_set_text(mbox, "My text")` 函数设置文本。要添加按钮，请使用 `lv_mbox_add_btns(mbox, btn_str, action)` 函数。 在这里你可以指定按钮文本，并添加一个释放按钮时的回调函数。使用 `lv_mbox_start_auto_close(mbox, delay)` 函数可以在延时 `delay` 毫秒后自动关闭消息框。使用 `lv_mbox_stop_auto_close(mbox)` 函数将禁用开始自动关闭。使用 `lv_mbox_set_anim_time（mbox，anim_time）` 函数调整动画时间。
 
 #### Text area (lv_ta)
 
-文本区域是一个带有标签和光标的页面。 您可以使用以下方法将文本或字符插入当前光标位置：
+文本区域是一个带有标签和光标的页面。您可以使用以下方法将文本或字符插入当前光标位置：
 - `lv_ta_add_char（ta，'c'）;`
-- `lv_ta_add_text（ta，“insret this text”）;`
+- `lv_ta_add_text（ta，“insert this text”）;`
 
 使用 `lv_ta_set_text(ta, "New text")` 函数更改整个文本。使用 `lv_ta_del()` 函数删除当前光标位置左侧的字符。
 
@@ -615,7 +626,7 @@ map 的声明看起来像 `const char * map [] = {“btn1”，“btn2”，“b
 - bit 5 禁用按钮
 - bit 4 隐藏按钮
 - bit 3 没有长按功能的按钮
-- bit 2..0 相对宽度与同一行中的按钮相比。 [1..7]
+- bit 2..0 相对宽度：与同一行中的按钮相比。 [1..7]
 
 在 map 中使用“\n”进行换行：`{“btn1”，“btn2”，“\ n”，“btn3”，“”}`。每行重新计算按钮的宽度。
 
@@ -625,13 +636,13 @@ map 的声明看起来像 `const char * map [] = {“btn1”，“btn2”，“b
 
 正如它的名字所示，键盘对象提供了一个键盘来写文本。您可以为键盘指定文本区域以将单击的字符放在那里。调用 `lv_kb_set_ta(kb, ta)` 函数指定文本区域。
 
-键盘包含 “Ok” 和 “Hide” 按钮。可以调用 `lv_kb_set_ok_action(kb, action)` 和 `lv_kb_set_hide_action(kb, action)` 函数指定 `ok` 和 `hide` 按钮的回调函数。
+键盘包含“Ok”和“Hide”按钮。可以调用 `lv_kb_set_ok_action(kb, action)` 和 `lv_kb_set_hide_action(kb, action)` 函数指定 `ok` 和 `hide` 按钮的回调函数。
 
-指定的文本区域的光标可以由键盘管理：当键盘被指定时，前一个文本区域的光标将被隐藏，将显示新的光标。单击“OK”或“Hide”也将隐藏光标。游标管理器功能由 `lv_kb_set_cursor_manage(kb, true)` 使能。默认值不使用键盘管理。
+指定的文本区域的光标可以由键盘管理：当键盘被指定时，前一个文本区域的光标将被隐藏，将显示新的光标。单击“OK”或“Hide”也将隐藏光标。光标管理器功能由 `lv_kb_set_cursor_manage(kb, true)` 使能。默认值不使用键盘管理。
 
 键盘有两种模式：
 - LV_KB_MODE_TEXT：显示字母，数字和特殊字符
-- LV_KB_MODE_NUM：显示数字，+/-  符号和点
+- LV_KB_MODE_NUM：显示数字，+/- 符号和点
 
 调用 `lv_kb_set_mode(kb, mode)` 函数设置模式。默认值为 `LV_KB_MODE_TEXT`。
 
@@ -639,9 +650,9 @@ map 的声明看起来像 `const char * map [] = {“btn1”，“btn2”，“b
 
 #### List (lv_list)
 
-列表是由背景页面和按钮组成的。按钮包含可选的图标式图像（也可以是符号）和标签。当列表变得足够长时，它可以滚动。根据对象宽度将按钮的宽度设置为最大。按钮的高度根据内容自动调整
+列表是由背景页面和按钮组成的。按钮包含可选的图标式图像（也可以是符号）和标签。当列表变得足够长时，它可以滚动。根据对象宽度将按钮的宽度设置为最大。按钮的高度根据内容自动调整。
 
-可以使用 `lv_list_add(list, "U:/img", "Text", rel_action)` 函数添加新的列表元素或使用 `lv_list_add(list, SYMBOL_EDIT, "Edit text")`函数添加带符号图标的列表元素。该函数返回一个指向已创建的按钮的指针，以允许进一步配置。
+可以使用 `lv_list_add(list, "U:/img", "Text", rel_action)` 函数添加新的列表元素或使用 `lv_list_add(list, SYMBOL_EDIT, "Edit text")` 函数添加带符号图标的列表元素。该函数返回一个指向已创建的按钮的指针，以允许进一步配置。
 
 使用 `lv_list_get_btn_label（list_btn）` 函数和 `lv_list_get_btn_img（list_btn）` 函数来获取标签和列表按钮的图像。
 
@@ -653,27 +664,27 @@ map 的声明看起来像 `const char * map [] = {“btn1”，“btn2”，“b
 
 下拉列表允许您从选项列表中选择一个选项。下拉列表默认关闭，显示当前选定的文本。如果单击它，将打开此列表并显示所有选项。
 
-将选项列作为字符串使用 `lv_ddlist_set_options（ddlist，options）` 函数传递给下拉列表。选项应以 `\n` 分隔。例如：“First\nSecond\nThird”。
+将选项作为字符串使用 `lv_ddlist_set_options（ddlist，options）` 函数传递给下拉列表。选项应以 `\n` 分隔。例如：“First\nSecond\nThird”。
 
 使用 `lv_ddlist_set_selected（ddlist，id）` 函数手动选择一个选项，其中 id 是选项的索引。使用 `lv_ddlist_set_action（ddlist，my_action）` 函数设置回调函数。
 
-默认情况下，列表的高度会自动调整以显示所有选项。 使用 `lv_ddlist_set_fix_height（ddlist，h）` 函数设置固定高度。
+默认情况下，列表的高度会自动调整以显示所有选项。使用 `lv_ddlist_set_fix_height（ddlist，h）` 函数设置固定高度。
 
-宽度也会自动调整。使用 `lv_ddlist_set_hor_fit（ddlist，false）` 函数，并使用 `lv_obj_set_width（ddlist，width）` 函数手动设置宽度
+宽度也会自动调整。使用 `lv_ddlist_set_hor_fit（ddlist，false）` 函数，并使用 `lv_obj_set_width（ddlist，width）` 函数手动设置宽度。
 
-与具有固定高度的页面类似，下拉列表支持各种滚动条显示模式。可以使用` lv_ddlist_set_sb_mode（ddlist，LV_SB_MODE _...）` 函数设置
+与具有固定高度的页面类似，下拉列表支持各种滚动条显示模式。可以使用` lv_ddlist_set_sb_mode（ddlist，LV_SB_MODE _...）` 函数设置。
 
 Drop Dawn List 打开/关闭动画时间由 `lv_ddlist_set_anim_time（ddlist，anim_time）` 函数设置。
 
 #### Roller (lv_roller)
 
-Roller 允许您通过简单地滚动从选项列表中选择一个选项。 其功能类似于下拉列表
+Roller 允许您通过简单地滚动从选项列表中选择一个选项。其功能类似于下拉列表。
 
-使用 `lv_roller_set_options(roller, options)` 函数设置选项列表。 其中第二个参数为字符串，以 `\n` 分隔。 例如：“First\nSecond\nThird”。使用 `lv_roller_set_selected（roller，id）`函数 手动选择一个选项，其中 id 是选项的索引。使用 `lv_roller_set_action（roller，my_action）` 函数设置回调函数。使用 `lv_roller_set_visible_row_count（roller，row_cnt）` 函数调整滚轴的高度，以设置可见选项的数量。
+使用 `lv_roller_set_options(roller, options)` 函数设置选项列表。其中第二个参数为字符串，以 `\n` 分隔。例如：“First\nSecond\nThird”。使用 `lv_roller_set_selected（roller，id）` 函数手动选择一个选项，其中 id 是选项的索引。使用 `lv_roller_set_action（roller，my_action）` 函数设置回调函数。使用 `lv_roller_set_visible_row_count（roller，row_cnt）` 函数调整滚轴的高度，以设置可见选项的数量。
 
-Roller 的宽度自动调整。 可以使用 `lv_roller_set_hor_fit（roller，false）` 函数禁止自动调整，并使用 `lv_obj_set_width(roller, width)` 函数手动设置宽度。Roller 的打开/关闭动画时间由 `lv_roller_set_anim_time（roller，anim_time）` 函数调整。
+Roller 的宽度自动调整。可以使用 `lv_roller_set_hor_fit（roller，false）` 函数禁止自动调整，并使用 `lv_obj_set_width(roller, width)` 函数手动设置宽度。Roller 的打开/关闭动画时间由 `lv_roller_set_anim_time（roller，anim_time）` 函数调整。
 
-<div align="center"><img src="../_static/hmi_solution/littlevgl/roller-lv_roller.jpg" width = "800" alt="Roller" align=center /></div>  
+<div align="center"><img src="../../_static/hmi_solution/littlevgl/roller-lv_roller.jpg" width = "800" alt="Roller" align=center /></div>  
 
 <div align="center">图 9. Roller</div>  
 
@@ -704,7 +715,7 @@ Check Box 对象是基于按钮的，其中包含一个按钮和一个标签，�
 开关可用于打开/关闭某些东西。可以通过以下方式更改开关的状态：
 - 点击
 - 滑动
-- `lv_sw_on（sw）`和 `lv_sw_off（sw）` 函数。
+- `lv_sw_on（sw）`和 `lv_sw_off（sw）` 函数
 
 当用户使用开关时，可以使用 `lv_sw_set_action（sw，my_action）` 函数设置回调函数。
 
@@ -717,7 +728,7 @@ iot-solution 中已经做了一些驱动适配，驱动路径： `components/hmi
 1. 搭建 iot-solution 环境：[Preparation](https://github.com/espressif/esp-iot-solution#preparation)
 2. 在工程源代码中添加头文件 `#include "iot_lvgl.h"`
 3. 在 `menuconfig` 中使能 LittlevGL GUI （`IoT Solution settings > IoT Components Management > HMI components > GUI Library Select > LittlevGL GUI Enable`）
-4. 在 `menuconfig` 中进行 LittlevGL GUI [相关配置](#ugfx-配置) （`IoT Solution settings > IoT Components Management > HMI components > LittlevGL Settings`）
+4. 在 `menuconfig` 中进行 LittlevGL GUI [相关配置](#littlevgl-配置) （`IoT Solution settings > IoT Components Management > HMI components > LittlevGL Settings`）
 5. 根据示例工程 `lvgl_example` 所示完成 LittlevGL 的初始化
 6. 根据实际工程进行 GUI 的开发
 
@@ -727,15 +738,15 @@ iot-solution 中已经做了一些驱动适配，驱动路径： `components/hmi
 
 1. 在 `menuconfig` 中进行 LittlevGL 配置
 
-    对于部分使用频率较高的配置选项，将其添加到 `menuconfig` 中以便于配置。例如：驱动配置、触摸屏使能、屏幕分辨率、旋转方向等。LittlevGL 配置菜单位于 `IoT Solution settings > IoT Components Management > HMI components > LittlevGL Settings`
+    对于部分使用频率较高的配置选项，将其添加到 `menuconfig` 中以便于配置。例如：驱动配置、触摸屏使能、屏幕分辨率、旋转方向等。LittlevGL 配置菜单位于 `IoT Solution settings > IoT Components Management > HMI components > LittlevGL Settings`。
 
 2. 修改 `lv_conf.h` 文件进行 LittlevGL 配置
 
-    μGFX 的所有项目的特定选项都在文件 `lv_conf.h` 中定义，该文件必须由用户提供（在 iot-solution 中，文件在 `esp-iot-solution/components/hmi/lvgl_gui/lv_conf.h`）。
+    LittlevGL 所有项目的特定选项都在文件 `lv_conf.h` 中定义，该文件在 `esp-iot-solution/components/hmi/lvgl_gui/lv_conf.h`，用户可自行修改。
 
 `menuconfig` 中 LittlevGL 的配置选项，如下图所示：
 
-<div align="center"><img src="../_static/hmi_solution/littlevgl/lvgl_menuconfig.jpg" width = "700" alt="lvgl_menuconfig" align=center /></div>  
+<div align="center"><img src="../../_static/hmi_solution/littlevgl/lvgl_menuconfig.jpg" width = "700" alt="lvgl_menuconfig" align=center /></div>  
 
 <div align="center">图 10. LittlevGL menuconfig</div>  
 
