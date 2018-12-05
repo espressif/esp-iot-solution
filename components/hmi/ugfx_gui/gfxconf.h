@@ -316,7 +316,7 @@
 //    #define GKEYBOARD_DRIVER_LIST                    GKEYBOARDVMT_Win32, GKEYBOARDVMT_Win32
 //    #define GKEYBOARD_LAYOUT_OFF                     FALSE
 //        #define GKEYBOARD_LAYOUT_SCANCODE2_US        FALSE
-//#define GINPUT_NEED_TOGGLE                           TRUE
+#define GINPUT_NEED_TOGGLE                           CONFIG_UGFX_DRIVER_TOGGLE_ENABLE
 //#define GINPUT_NEED_DIAL                             FALSE
 
 

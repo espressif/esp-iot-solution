@@ -932,6 +932,12 @@ menu "IoT Solution settings"
                     help 
                         "Select to enable uGFX touch screen"
 
+                config UGFX_DRIVER_TOGGLE_ENABLE
+                    bool "uGFX Toggle Input Device Enable"
+                    default n
+                    help
+                        "Select to enable uGFX Toggle input device"
+
                 choice UGFX_DRIVER_MODE
                     prompt "Display Driver Mode"
                     default UGFX_LCD_DRIVER_FRAMEBUFFER_MODE
@@ -978,6 +984,46 @@ menu "IoT Solution settings"
                 
                 menu "Config Driver"
                     depends on UGFX_USE_CONFIGURED_OPTIONS
+
+                    choice UGFX_DRIVER_TOGGLE
+                        prompt "Choose Toggle Input Driver"
+                        depends on UGFX_DRIVER_TOGGLE_ENABLE
+
+                        config UGFX_DRIVER_TOGGLE_BUTTON
+                            bool "BUTTON"
+
+                        config UGFX_DRIVER_TOGGLE_TOUCHPAD
+                            bool "TOUCHPAD"
+
+                    endchoice
+
+                    menu "Button Toggle Input Device Configuration"
+                        depends on UGFX_DRIVER_TOGGLE_BUTTON
+
+                        config UGFX_TOGGLE_BUTTON_GPIO1
+                            int "uGFX Toggle Button Num 1's GPIO"
+                            range 0 39
+                            default 4
+                        config UGFX_TOGGLE_BUTTON_GPIO2
+                            int "uGFX Toggle Button Num 2's GPIO"
+                            range 0 39
+                            default 15
+
+                    endmenu
+
+                    menu "TouchPad Toggle Input Device Configuration"
+                        depends on UGFX_DRIVER_TOGGLE_TOUCHPAD
+
+                        config UGFX_TOGGLE_TOUCHPAD_NUM1
+                            int "uGFX Toggle TouchPad Num 1"
+                            range 0 10
+                            default 3
+                        config UGFX_TOGGLE_TOUCHPAD_NUM2
+                            int "uGFX Toggle TouchPad Num 2"
+                            range 0 10
+                            default 9
+
+                    endmenu
                        
                     choice UGFX_DRIVER_TOUCH_SCREEN
                         prompt "Choose Touch Screen Driver"
@@ -1407,6 +1453,12 @@ menu "IoT Solution settings"
                     help 
                         "Select to enable LittlevGL touch screen"
 
+                config LVGL_DRIVER_TOGGLE_ENABLE
+                    bool "LittlevGL Toggle Input Device Enable"
+                    default n
+                    help
+                        "Select to enable LittlevGL Toggle input device"
+
                 choice LVGL_DRIVER_MODE
                     prompt "Display Driver Mode"
                     default LVGL_LCD_DRIVER_FRAMEBUFFER_MODE
@@ -1453,6 +1505,46 @@ menu "IoT Solution settings"
 
                 menu "Config Driver"
                     depends on LVGL_USE_CONFIGURED_OPTIONS
+
+                    choice LVGL_DRIVER_TOGGLE
+                        prompt "Choose Toggle Input Driver"
+                        depends on LVGL_DRIVER_TOGGLE_ENABLE
+
+                        config LVGL_DRIVER_TOGGLE_BUTTON
+                            bool "BUTTON"
+
+                        config LVGL_DRIVER_TOGGLE_TOUCHPAD
+                            bool "TOUCHPAD"
+
+                    endchoice
+
+                    menu "Button Toggle Input Device Configuration"
+                        depends on LVGL_DRIVER_TOGGLE_BUTTON
+
+                        config LVGL_TOGGLE_BUTTON_GPIO1
+                            int "LittlevGL Toggle Button Num 1's GPIO"
+                            range 0 39
+                            default 4
+                        config LVGL_TOGGLE_BUTTON_GPIO2
+                            int "LittlevGL Toggle Button Num 2's GPIO"
+                            range 0 39
+                            default 15
+
+                    endmenu
+
+                    menu "TouchPad Toggle Input Device Configuration"
+                        depends on LVGL_DRIVER_TOGGLE_TOUCHPAD
+
+                        config LVGL_TOGGLE_TOUCHPAD_NUM1
+                            int "LittlevGL Toggle TouchPad Num 1"
+                            range 0 10
+                            default 3
+                        config LVGL_TOGGLE_TOUCHPAD_NUM2
+                            int "LittlevGL Toggle TouchPad Num 2"
+                            range 0 10
+                            default 9
+
+                    endmenu
                        
                     choice LVGL_DRIVER_TOUCH_SCREEN
                         prompt "Choose Touch Screen Driver"
