@@ -1,23 +1,25 @@
-# uGFX Guide
+[[EN]](ugfx_guide_en.md)
 
-## uGFX 简介
+# μGFX Guide
 
-1. 什么是 uGFX？
+## μGFX 简介
 
-    [μGFX](https://ugfx.io/) 是用于显示屏和触摸屏的轻量级嵌入式 GUI 库，可构建全功能嵌入式 GUI。该库非常小并且速度很快，因为每个未使用的功能都被禁用并且不会链接到已完成的二进制文件中。uGFX 具有以下优点：
+1. 什么是 μGFX？
+
+    [μGFX](https://ugfx.io/) 是用于显示屏和触摸屏的轻量级嵌入式 GUI 库，可构建全功能嵌入式 GUI。该库非常小并且速度很快，因为每个未使用的功能都被禁用并且不会链接到已完成的二进制文件中。μGFX 具有以下优点：
     - 轻量级
     - 模块化
     - 便携式
     - 完全开源
     - 开发活跃
 
-2. uGFX 库提供完整的解决方案
+2. μGFX 库提供完整的解决方案
 
     μGFX 被设计为用于嵌入式显示屏和触摸屏最小、最快、最先进的 GUI 库。具有以下特点：
     - 小巧轻便
     - 完全可定制和可扩展
     - 高度便携
-    - 支持所有显示类型：单色灰度，全彩色显示
+    - 支持所有显示类型：单色、灰度、全彩色显示
     - 支持硬件加速
     - 超过 50 个即用型驱动程序
     - 用 C 语言编写，可以与 C++ 一起使用
@@ -32,15 +34,15 @@
 
     μGFX-Studio 可在 Windows，Linux 和 Mac OS X 上运行。μGFX-Studio 目前还未完全开放。
 
-### uGFX 模块
+### μGFX 模块
 
-uGFX 库包含以下模块：
+μGFX 库包含以下模块：
  - [GWIN](#gwin)
     - GWIN 模块使用其他模块，并将它们组合成一个完整的 GUI 工具包。它提供了按钮、复选框、列表等图形控件。
  - GAUDIO
-    - GAUDIO提供用于处理音频输入和输出的 API。该模块提供内置解码器，也允许使用外部编解码器。
+    - GAUDIO 提供用于处理音频输入和输出的 API。该模块提供内置解码器，也允许使用外部编解码器。
  - GFILE
-    - GFILE 提供独立于操作系统的读写文件的方式，无论它们是存储在 RAM，FLASH，SD 卡还是主机操作系统文件系统中。
+    - GFILE 提供独立于操作系统的读写文件的方式，无论它们是存储在 RAM，FLASH，SD 卡还是主机操作系统自带的文件系统中。
  - GOS
     - GOS 是在 μGFX 和底层系统之间构建抽象层的模块。底层系统可以是 RTOS，如 ChibiOS 或 FreeRTOS，也可以只是裸机系统。
  - [GDISP](#gdisp)
@@ -87,71 +89,75 @@ GDISP 模块包含：
 
 ### License
 
-espressif 已经获得 uGFX 的商业许可，使用 espressif 系列芯片的用户，可以免费使用 uGFX 提供的驱动和服务。有关 uGFX License 请查阅 [License](https://ugfx.io/license.html)。
+Espressif 已经获得 μGFX 的商业许可，使用 Espressif 系列芯片的用户，可以免费使用 μGFX 提供的驱动和服务。有关 µGFX License 请查阅 [License](https://ugfx.io/license.html)。
 
-## uGFX 使用
+## µGFX 使用
 
 iot-solution 中已经做了一些驱动适配，驱动路径： `components/hmi/gdrivers`。
 
-在基于 iot-solution 的工程中使用 uGFX 的步骤：
+在基于 iot-solution 的工程中使用 µGFX 的步骤：
 
 1. 搭建 iot-solution 环境：[Preparation](https://github.com/espressif/esp-iot-solution#preparation)
 2. 在工程源代码中添加头文件 `#include "iot_ugfx.h"`
-3. 在 `menuconfig` 中使能 uGFX GUI （`IoT Solution settings > IoT Components Management > HMI components > uGFX GUI Enable`）
-4. 在 `menuconfig` 中进行 uGFX GUI [相关配置](#ugfx-配置) （`IoT Solution settings > IoT Components Management > HMI components > uGFX Settings`）
-5. 根据示例工程 `ugfx_example` 所示完成 uGFX 的初始化
+3. 在 `menuconfig` 中使能 µGFX GUI （`IoT Solution settings > IoT Components Management > HMI components > uGFX GUI Enable`）
+4. 在 `menuconfig` 中进行 µGFX GUI [相关配置](#µgfx-配置) （`IoT Solution settings > IoT Components Management > HMI components > uGFX Settings`）
+5. 根据示例工程 `ugfx_example` 所示完成 µGFX 的初始化
 6. 根据实际工程进行 GUI 的开发
 
-uGFX 相关 [API Reference](https://api.ugfx.io/)
+µGFX 相关 [API Reference](https://api.ugfx.io/)
 
-### uGFX 配置
+### µGFX 配置
 
-在 iot-solution 中进行 uGFX 配置主要有两种方式：
+在 iot-solution 中进行 µGFX 配置主要有两种方式：
 
-1. 在 `menuconfig` 中进行 uGFX 配置
+1. 在 `menuconfig` 中进行 µGFX 配置
 
-    对于部分使用频率较高的配置选项，将其添加到 `menuconfig` 中以便于配置。例如：驱动配置、触摸屏使能、屏幕分辨率、旋转方向等。uGFX 配置菜单位于 `IoT Solution settings > IoT Components Management > HMI components > uGFX Settings`
-2. 修改 `gfxconf.h` 文件进行 uGFX 配置
+    对于部分使用频率较高的配置选项，将其添加到 `menuconfig` 中以便于配置。例如：驱动配置、触摸屏使能、屏幕分辨率、旋转方向等。µGFX 配置菜单位于 `IoT Solution settings > IoT Components Management > HMI components > uGFX Settings`。
+    
+2. 修改 `gfxconf.h` 文件进行 µGFX 配置
 
-    μGFX 的所有项目的特定选项都在文件 `gfxconf.h` 中定义，该文件必须由用户提供（在 iot-solution 中，文件在 `esp-iot-solution/components/hmi/gdrivers/include/gfxconf.h`）。在每个部分中，第一个选项为启用或禁用整个模块。该部分以下所有子选项仅在启用模块时生效。详细的 `gfxconf.h` 文件说明，请看 [Configuration](https://wiki.ugfx.io/index.php/Configuration)。
+    μGFX 的所有项目的特定选项都在文件 `gfxconf.h` 中定义，该文件在 `esp-iot-solution/components/hmi/gdrivers/include/gfxconf.h`，用户可自行修改。在每个部分中，第一个选项为启用或禁用整个模块。该部分以下所有子选项仅在启用模块时生效。详细的 `gfxconf.h` 文件说明，请看 [Configuration](https://wiki.ugfx.io/index.php/Configuration)。
 
-`menuconfig` 中 uGFX 的配置选项，如下图所示：
+`menuconfig` 中 µGFX 的配置选项，如下图所示：
 
-<div align="center"><img src="../_static/ugfx/ugfx_menuconfig.jpg" width = "700" alt="ugfx_menuconfig" align=center /></div>  
+<div align="center"><img src="../../_static/ugfx/ugfx_menuconfig.jpg" width = "700" alt="ugfx_menuconfig" align=center /></div>  
 
-<div align="center">图 1. uGFX menuconfig</div>  
+<div align="center">图 1. µGFX menuconfig</div>  
 
 1. 驱动配置
 
-    在 uGFX Settings 菜单中可以选择显示屏和触摸屏的驱动。路径：`Config Driver->Choose Touch Screen Driver` 和 `Config Driver->Choose Screen Driver`。
+    在 µGFX Settings 菜单中可以选择显示屏和触摸屏的驱动。路径：`Config Driver->Choose Touch Screen Driver` 和 `Config Driver->Choose Screen Driver`。
+    
 2. 触摸屏使能
 
-    在 uGFX Settings 菜单中可以选择显示屏和触摸屏的驱动。路径：`uGFX Touch Screen Enable`。
+    在 µGFX Settings 菜单中可以选择使能或禁止触摸屏。路径：`uGFX Touch Screen Enable`。
+    
 3. 屏幕分辨率
 
-    在 uGFX Settings 菜单中可以选择显示屏的屏幕分辨率。路径：`Config Driver->uGFX Screen Width (pixels)` 和 `Config Driver->uGFX Screen Height (pixels)`。
+    在 µGFX Settings 菜单中可以选择显示屏的屏幕分辨率。路径：`Config Driver->uGFX Screen Width (pixels)` 和 `Config Driver->uGFX Screen Height (pixels)`。
+    
 4. 旋转方向
 
-    在 uGFX Settings 菜单中可以选择显示屏旋转的方向。路径：`Choose Screen Rotate`。
+    在 µGFX Settings 菜单中可以选择显示屏旋转的方向。路径：`Choose Screen Rotate`。
 
 ### 显示驱动模式
 
-uGFX 显示驱动程序可以属于以下三种模式之一。与桌面图形处理器不同，嵌入式 LCD 通常具有不同的访问模式，这意味着传统的图形库根本不支持它们。某些图形控制器在不同情况下可能需要不同的模式。
+µGFX 显示驱动程序可以属于以下三种模式之一。与桌面图形处理器不同，嵌入式 LCD 通常具有不同的访问模式，这意味着传统的图形库根本不支持它们。某些图形控制器在不同情况下可能需要不同的模式。
 
 1. Framebuffer 模式
 
-    这是大多数图形库支持的模式，最适合高级图形处理器。它要求图形硬件提供一个帧缓冲器，它是一块 RAM，可以作为 CPU 的普通存储器进行像素寻址。然后，图形硬件通过查看 CPU 对帧缓冲区所做的更改来在后台更新显示。这也是 uGFX 中支持的硬件类型。
+    这是大多数图形库支持的模式，最适合高级图形处理器。它要求图形硬件提供一个帧缓冲器，它是一块 RAM，可以作为 CPU 的普通存储器进行像素寻址。然后，图形硬件通过查看 CPU 对帧缓冲区所做的更改来在后台更新显示。这也是 µGFX 中支持的硬件类型。
 
-    许多其他图形库试图通过将系统 RAM 分配给虚拟帧缓冲区然后提供同步调用以将帧缓冲区刷新到真实显示屏来支持其他类型的硬件。这里有一些问题，例如：
-    - 它分配了大量的系统 RAM，这通常是嵌入式环境中的宝贵资源，并且
+    许多其他图形库试图通过将系统 RAM 分配给虚拟帧缓冲区，然后提供同步调用，以将帧缓冲区刷新到真实显示屏，来支持其他类型的硬件。这里有一些问题，例如：
+    - 它分配了大量的系统 RAM，这通常是嵌入式环境中的宝贵资源，并且；
     - 同步调用通常非常低效，因为必须更新整个显示屏或必须进行差异比较。
 
-    可能存在需要同步的其他原因（例如：仅允许在垂直刷新期间更新显示），因此 uGFX 仍支持同步调用。但建议您不要使用此模式，除非您的图形硬件支持本地帧缓冲。
+    可能存在需要同步的其他原因（例如：仅允许在垂直刷新期间更新显示），因此 µGFX 仍支持同步调用。但建议您不要使用此模式，除非您的图形硬件支持本地帧缓冲。
 
-    需要实现的函数:
+    需要实现的函数：
     - `board_init()` - 初始化帧缓冲区并返回其地址和显示属性
 
-    可选的函数:
+    可选的函数：
     - `board_flush()` - 将帧缓冲区刷新（同步）到显示屏
     - `board_backlight()` - 调整显示屏背光
     - `board_contrast()` - 调整显示对比度
@@ -165,17 +171,17 @@ uGFX 显示驱动程序可以属于以下三种模式之一。与桌面图形处
 
     通常不支持从显示屏读取，如果是，则使用相同的窗口方法。
 
-    由于显示屏不是 RAM 可寻址的，且物理连接通常是通过慢速总线（至少与 RAM 寻址相比），如 SPI，I2C 或字节并行，因此读写速度可能很慢。这意味着绘图操作的效率非常重要，并且与帧缓冲相比，需要使用完全不同的绘图方法。uGFX 自动处理所有这些差异。
+    由于显示屏不是 RAM 可寻址的，且物理连接通常是通过慢速总线（至少与 RAM 寻址相比），如 SPI，I2C 或字节并行，因此读写速度可能很慢。这意味着绘图操作的效率非常重要，并且与帧缓冲相比，需要使用完全不同的绘图方法。µGFX 自动处理所有这些差异。
 
     这些控制器无法实现仅软件屏幕旋转（与帧缓冲区不同）。需要一些硬件支持。通过旋转光标在绘图窗口中移动的方式，或通过相对于内部帧缓冲旋转显示屏本身，有两种可能的方法。根据策略，如果控制器支持两者，我们更喜欢实现第一种方法。此首选项允许保留现有显示内容，旋转仅影响新的绘图操作（对最终用户应用程序更灵活）。
 
-    需要实现的函数:
+    需要实现的函数：
     - `gdisp_lld_init()` - 初始化控制器和显示
     - `gdisp_lld_write_start()` - 启动窗口写入操作
     - `gdisp_lld_write_color()` - 将一个像素发送到当前位置的当前窗口
     - `gdisp_lld_write_stop()` - 停止窗口写操作
 
-    可选的函数:
+    可选的函数：
     - `gdisp_lld_write_pos()` - 在写入窗口内设置当前位置（提高绘图效率）
     - `gdisp_lld_read_start()` - 启动窗口化读取操作
     - `gdisp_lld_read_color()` - 从当前位置的当前窗口读取一个像素
@@ -183,7 +189,7 @@ uGFX 显示驱动程序可以属于以下三种模式之一。与桌面图形处
     - `gdisp_lld_set_clip()` - 设置硬件剪辑区域。所有的写入都被剪切到此区域（无论当前窗口如何）
     - `gdisp_lld_control()` - 处理背光，对比度，屏幕旋转方向和驱动程序特定的控制命令
     - `gdisp_lld_query()` - 查询一些驱动程序特定的变量值
-    - 任意 Point and Block 模式函数，如下所述。
+    - 任意 Point and Block 模式函数（如下所述）
 
 3. Point and Block 模式
 
@@ -191,16 +197,16 @@ uGFX 显示驱动程序可以属于以下三种模式之一。与桌面图形处
 
     驱动程序可以将此模式中的函数混合到上面的 Window 模式中。如果在 Window 模式驱动程序中提供了特定的画点，填充块或图像填充块函数，则它将优先于上面的一般 Window 模式调用。当这样的调用混合时，驱动程序仍然被认为是一个 Window 模式驱动程序。例如：控制器可以有更有效的画点命令，其可以优先于 Window 模式中单像素写入方式使用。
 
-    需要实现的函数:
+    需要实现的函数：
     - `gdisp_lld_init()` - 初始化控制器和显示
     - `gdisp_lld_draw_pixel()` - 设置一个像素
 
-    可选的函数:
+    可选的函数：
     - `gdisp_lld_fill_area()` - 用颜色填充块
     - `gdisp_lld_blit_area()` - 从像素数组中填充块
     - `gdisp_lld_vertical_scroll()` - 向上或向下滚动显示屏的窗口区域
     - `gdisp_lld_get_pixel_color()` - 获取单个像素的颜色
-    - `gdisp_lld_set_clip()` - 设置硬件剪辑区域。所有的写入都被剪切到此区域。
+    - `gdisp_lld_set_clip()` - 设置硬件剪辑区域。所有的写入都被剪切到此区域
     - `gdisp_lld_control()` - 处理背光，对比度，屏幕旋转方向和驱动程序特定的控制命令
     - `gdisp_lld_query()` - 查询一些驱动程序特定的变量值
 
@@ -212,7 +218,7 @@ uGFX 显示驱动程序可以属于以下三种模式之一。与桌面图形处
 
     例：`font_t font = gdispOpenFont("DejaVuSans32_aa");`
 
-    > 如果找不到指定的字体名称，将使用配置文件中最后一个启用的字体。`gdispOpenFont("*");` 表示使用第一个启用的字体。
+    > 如果找不到指定的字体名称，将使用配置文件中最后一个启用的字体。`gdispOpenFont("*");` 表示打开第一个启用的字体。
 
     如果您不再需要字体，则应调用 `gdispCloseFont(font)` 函数以释放所有已分配的资源。
 
@@ -241,11 +247,11 @@ uGFX 显示驱动程序可以属于以下三种模式之一。与桌面图形处
 
     调用 `gwinSetFont(GHandle gh, font_t font)` 函数设置某个 GUI 元素的字体。
 
-4. uGFX 现有字体
+4. µGFX 现有字体
 
-    可以通过 μGFX 显示 `.ttf` 或 `.bdf` 格式的字体。但是，uGFX 已经添加了一写不同大小和版本的字体，可以涵盖大多数工程。使用字体名称作为 `gdispOpenFont()` 函数的参数。
+    可以通过 μGFX 显示 `.ttf` 或 `.bdf` 格式的字体。但是，µGFX 已经添加了一些不同大小和版本的字体，可以涵盖大多数工程。使用字体名称作为 `gdispOpenFont()` 函数的参数。
 
-    请注意，必须在配置文件中启用这些字体。UI 字体由 μGFX 开发人员创建，以提供默认字体。UI 字体位于 GFX 许可下，因此如果合适，应优先使用其他字体。其他字体属于各自的许可证。
+    请注意，必须在配置文件中启用这些字体。UI 字体由 μGFX 开发人员创建的默认字体。
 
 | **Font** | **Font name** |
 |:----:|:----:|
@@ -279,13 +285,13 @@ uGFX 显示驱动程序可以属于以下三种模式之一。与桌面图形处
 
 GDISP 模块带有内置图像解码器。解码器允许它打开各种格式的图像并显示它。由于 GFILE 模块在内部使用，因此图像可以存储在不同的位置上，例如内部闪存或外部存储器，如 SD 卡。
 
-图像解码器需要使用 RAM 来解码和显示图像。尽管 uGFX 的图像处理程序是从零开始编写以尽可能较少的使用 RAM，但对于 RAM 有限的微控制器，仍应谨慎选择要使用的图像格式。与大多数其他图像解码器一样，图像处理程序不分配 RAM 来存储完整的解压缩位图，而是在需要显示图像时再次对图像进行解码。因此，唯一使用 RAM 的是：
+图像解码器需要使用 RAM 来解码和显示图像。尽管 µGFX 的图像处理程序是从零开始编写以尽可能较少的使用 RAM，但对于 RAM 有限的微控制器，仍应谨慎选择要使用的图像格式。与大多数其他图像解码器一样，图像处理程序不分配 RAM 来存储完整的解压缩位图，而是在需要显示图像时再次对图像进行解码。因此，唯一使用 RAM 的是：
  - 一些 RAM 用于保存图像本身的信息，通常为 200 到 300 个字节。打开图像时保持此 RAM。对于某些具有特定图像格式的图像（具有调色板等），它可能略有不同。
- - 在解码过程中分配的 RAM，并在解码完成后释放。GIF 图像格式需要大约 12KB 的 RAM 来解码图像。BMP 和 NATIVE 图像不需要任何额外的 RAM 进行解码。
- - 如果您决定缓存图像，则完整解码图像需要 RAM。对于低内存微处理器，不应考虑这一点。例如：在每像素 2 个字节的显示屏上缓存 320x240 图像将需要 150KB 的 RAM （加上正常的解码 RAM ）。
+ - 在解码过程中分配的 RAM，并在解码完成后释放。GIF 图像格式需要大约 12 KB 的 RAM 来解码图像。BMP 和 NATIVE 图像不需要任何额外的 RAM 进行解码。
+ - 如果您决定缓存图像，则完整解码图像需要 RAM。对于低内存微处理器，不应考虑这一点。例如：在每像素 2 个字节的显示屏上缓存 320x240 图像将需要 150 KB 的 RAM （加上正常的解码 RAM ）。
  - 堆栈空间。如果在尝试解码图像时遇到异常，则可能需要增加可用堆栈空间。某些图像格式需要几百字节的堆栈空间来解码图像。
 
-uGFX 的图像解码器是从零开始编写的而没有采用现有的解码库，以保持图像解码器尽可能精简和一致。uGFX 目前的解码器比其他可用的解码库所使用的 RAM 少很多。
+µGFX 的图像解码器是从零开始编写的而没有采用现有的解码库，以保持图像解码器尽可能精简和一致。µGFX 目前的解码器比其他可用的解码库所使用的 RAM 少很多。
 
 #### 缓存
 
@@ -293,7 +299,7 @@ uGFX 的图像解码器是从零开始编写的而没有采用现有的解码库
 
 如果需要缓存图像，则必须先打开图像，然后才能显示图像。当关闭图像时，它将释放解码器使用的所有内存，包括缓存的图像。
 
-调用缓存函数并不能保证能正确缓存图像。例如：当没有足够的 RAM 可用，则不会缓存图像。在这种情况下，由于缓存完全是可选的，因此在调用绘图函数时仍然可以通过从闪存中重新读取、解码图像进行绘制。
+调用缓存函数并不能保证正确缓存图像。例如：当没有足够的 RAM 可用，则不会缓存图像。在这种情况下，由于缓存完全是可选的，因此在调用绘图函数时仍然可以通过从闪存中重新读取、解码图像进行绘制。
 
 #### ROMFS 文件系统下的图像文件
 
@@ -303,7 +309,7 @@ ROMFS - 在代码本身中存储文件的文件系统（通常在 ROM/FLASH 中�
 
 首先进入 file2c 工具所在目录下，运行 make 命令，之后运行 `./file2c -dcs image_flie header_flie`，请替换 `image_flie`，`header_flie` 为真实的文件名。
 
-在工程的 `romfs_files.h` 文件中添加该头文件。便可使用该图像。
+在工程的 `romfs_files.h` 文件中添加该头文件，便可使用该图像。
 
 #### 图像格式
 
@@ -352,11 +358,11 @@ int main(void) {
 }
 ```
 
-有关详细介绍请查阅 [Images](https://wiki.ugfx.io/index.php/Images)
+有关详细介绍，请查阅 [Images](https://wiki.ugfx.io/index.php/Images)。
 
 ### 默认控件介绍
 
-uGFX GUI 的所有默认控件都在 GWIN 模块中，如上 [GWIN](#gwin) 中所示，包含有 Windows、Widgets、Containers 三大部分。
+µGFX GUI 的所有默认控件都在 GWIN 模块中，如上 [GWIN](#gwin) 中所示，包含有 Windows、Widgets、Containers 三大部分。
 
 #### Windows
 
@@ -369,7 +375,7 @@ Window 是最基本的 GWIN 元素。所有其他元素（Widgets，Containers�
 
 因此，Window 是完全被动的元素。它不接受任何类型的输入。
 
-这些是当前实现的 Windows：
+以下是当前实现的 Windows：
 
 1. Console
 
@@ -392,7 +398,7 @@ Widget 基于 Window。除了 Window 的功能外，它还实现了以下功能�
 - Widget 可以覆盖其绘图函数。例如：有预定义的按钮绘制可绘制为圆形按钮、图像按钮、箭头按钮等，还有普通的按钮绘制函数
 - Widget 支持样式。通过更改样式，您可以改变用于绘制控件的颜色，类似于在 Windows 和 Linux 中应用颜色方案的方式
 
-这些是当前实现的 Widgets：
+以下是当前实现的 Widgets：
 
 1. Label
 
@@ -416,7 +422,7 @@ Widget 基于 Window。除了 Window 的功能外，它还实现了以下功能�
 
     下图显示了列表控件的默认绘图方式。请注意，此时您可以使用所需的自定义渲染函数替换它们。左侧的第一个列表是显示滚动条的普通单选列表。中间的第二个列表是多选列表 - 也带有滚动条。右侧的第三个图像显示了一个列表，其中的图像在列表条目文本的前面绘制。这是一个没有滚动条的多选列表，因为所有列表项都可以显示在列表的空间内。
 
-    <div align="center"><img src="../_static/ugfx/ugfx_gwin_list.jpg" width = "700" alt="ugfx_gwin_list" align=center /></div>  
+    <div align="center"><img src="../../_static/ugfx/ugfx_gwin_list.jpg" width = "700" alt="ugfx_gwin_list" align=center /></div>  
 
     <div align="center">图 2. List Widget</div>  
 
@@ -454,9 +460,9 @@ Widgets 示例： `/esp-iot-solution/components/hmi/ugfx_gui/ugfx/demos/modules/
 
 #### Containers
 
-Container 基于 Widget。Container 的主要特性是它可以包含子 Windows。其中，子 Window 继承了父 Window 的属性。
+Container 基于 Widget。Container 的主要特性是它可以包含子 Window。其中，子 Window 继承了父 Window 的属性。
 
-这些是当前实现的 Containers：
+以下是当前实现的 Container：
 
 1. Container
 
@@ -491,4 +497,4 @@ Container 基于 Widget。Container 的主要特性是它可以包含子 Windows
  - 配置文件中尚未启用相应的解码器
  - 图像无法打开
  - 图像解码器无法分配足够的内存
- - 从文件加载图像时，可能已达到最大文件句柄数并且打开文件失败。在这种情况下，请在配置文件中增加 `GFILE_MAX_GFILES` 或关闭不再需要的已打开文件。
+ - 从文件加载图像时，可能已达到最大文件句柄数并且打开文件失败。在这种情况下，请在配置文件中增加 `GFILE_MAX_GFILES` 或关闭不再需要的已打开文件
