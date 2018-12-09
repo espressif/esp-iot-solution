@@ -31,7 +31,7 @@ extern "C" void app_lcd_init(uint8_t m_clk_freq)
 {
     static bool first = true;              //use this flag, avoid spi init repeat.
     lcd_conf_t lcd_pins = {
-        .lcd_model = LCD_MOD_ST7789,
+        .lcd_model = LCD_MOD_AUTO_DET,
         .pin_num_miso = CONFIG_LCD_MISO_GPIO,
         .pin_num_mosi = CONFIG_LCD_MOSI_GPIO,
         .pin_num_clk  = CONFIG_LCD_CLK_GPIO,
