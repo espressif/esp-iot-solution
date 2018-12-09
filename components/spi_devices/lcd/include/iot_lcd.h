@@ -14,6 +14,7 @@
 #ifndef _IOT_LCD_H_
 #define _IOT_LCD_H_
 /*This is the Adafruit subclass graphics file*/
+#define PROGMEM
 
 #include "string.h"
 #include "stdio.h"

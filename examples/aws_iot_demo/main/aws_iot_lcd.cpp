@@ -12,7 +12,7 @@
 
 /*SPI & LCD Driver Includes*/
 #include "iot_lcd.h"
-#include "fonts/FreeSans9pt7b.h"
+#include "FreeSans9pt7b.h"
 #include "iot_wifi_conn.h"
 #include "aws_iot_demo.h"
 #include "image.h"
@@ -86,7 +86,7 @@ void app_lcd_task(void* arg)
                     tft->drawString("Status: Connected to AWS...", 5, 30);
                     //Prepare title fonts
                     char str_print[20];
-                    tft->setFontStyle(&FreeSans9pt7b);
+                    tft->setFont(&FreeSans9pt7b);
                     tft->setTextColor(COLOR_GREENYELLOW, COLOR_ESP_BKGD);
                     tft->drawFastHLine(0, 45, 320, COLOR_YELLOW);
                     sprintf(str_print, "Subscribing to %s", SUBSCRIBE_TOPIC);
@@ -95,7 +95,7 @@ void app_lcd_task(void* arg)
                     sprintf(str_print, "Publishing to %s", PUBLISH_TOPIC);
                     tft->drawString(str_print, 5, 162);
                     //Back to normal fonts
-                    tft->setFontStyle(NULL);
+                    tft->setFont(NULL);
                     tft->setTextColor(COLOR_WHITE, COLOR_ESP_BKGD);
                     break;
                 case LCD_EVT_PUB_CB:
