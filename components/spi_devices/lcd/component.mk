@@ -11,7 +11,7 @@ COMPONENT_SRCDIRS := . Adafruit-GFX-Library
 
 else
 
-ifdef CONFIG_IOT_EINK_ENABLE
+ifdef CONFIG_IOT_LCD_ENABLE
 COMPONENT_ADD_INCLUDEDIRS := include Adafruit-GFX-Library/Fonts Adafruit-GFX-Library
 COMPONENT_SRCDIRS := . Adafruit-GFX-Library
 

@@ -30,7 +30,7 @@
 #include "apps/sntp/sntp.h"
 /*SPI & LCD Driver Includes*/
 #include "iot_lcd.h"
-#include "fonts/FreeSans9pt7b.h"
+#include "FreeSans9pt7b.h"
 /*AWS includes*/
 #include "aws_iot_config.h"
 #include "aws_iot_log.h"
