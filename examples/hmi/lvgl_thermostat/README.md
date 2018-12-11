@@ -36,4 +36,6 @@ IRQ | 33
 
 ## 示例结果
 
-<div align="center"><img src="../../../documents/_static/hmi_solution/littlevgl/thermostat.jpg" width = "700" alt="thermostat" align=center /></div>  
+[示例视频](http://demo.iot.espressif.cn:8887/cmp/demo/lvgl_thermostat.mp4)
+
+<div align="center"><img src="../../../documents/_static/hmi_solution/littlevgl/thermostat.jpg" width = "400" alt="thermostat" align=center /></div>  

@@ -276,6 +276,8 @@ void guiEventLoop(void)
         // Get an event
         pe = geventEventWait(&gl, 0);
         switch (pe->type) {
+            /* Todo: */
         }
+        vTaskDelay(20 / portTICK_PERIOD_MS);
     }
 }

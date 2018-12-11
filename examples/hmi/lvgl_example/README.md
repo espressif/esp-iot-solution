@@ -1,8 +1,8 @@
-# ESP32 LittlevGL 咖啡机示例
+# ESP32 LittlevGL 控件示例
 
 ## 示例环境
 
-- 硬件：ESP32_LCD_EB_V1 开发板、屏幕（2.8 inch、240*320 pixel、 ILI9341 LCD + XPT2046 Touch）
+- 硬件：ESP32_LCD_EB_V1 开发板、屏幕（2.8 inch、240*320 pixel、ILI9341 LCD + XPT2046 Touch）
 - 软件：[esp-iot-solution](https://github.com/espressif/esp-iot-solution)、[LittlevGL GUI](https://littlevgl.com/)
 
 - 环境搭建：[README.md](../../../README.md#preparation)
@@ -29,13 +29,11 @@ IRQ | 33
 
 ## 运行示例
 
-- 进入到 `examples/hmi/lvgl_coffee` 目录下
+- 进入到 `examples/hmi/lvgl_example` 目录下
 - 运行 `make defconfig` 使用默认配置
 - 运行 `make menuconfig` 进行烧录相关配置
 - 运行 `make -j8 flash` 编译、烧录程序到设备
 
 ## 示例结果
 
-[示例视频](http://demo.iot.espressif.cn:8887/cmp/demo/lvgl_coffee.mp4)
-
-<div align="center"><img src="../../../documents/_static/hmi_solution/littlevgl/lvgl_coffee.jpg" width = "400" alt="lvgl_coffee" align=center /></div>  
+<div align="center"><img src="../../../documents/_static/hmi_solution/littlevgl/tft_zen.jpg" width = "700" alt="tft_zen" align=center /></div>  

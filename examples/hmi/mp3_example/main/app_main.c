@@ -12,6 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/*
+                           +---------------+
+                           |               |
+                           |      HMI      |
+                           |               |
+                           +----^-----+----+
+                                |     |
+                                |     |
+                                |     |
+                                |     |
+                                |     |
++---------------+          +----+-----v----+           +--------------+
+|               |          |               |           |              |
+|    SD-Card    +---------->     ESP32     +----------->   DAC-Audio  |
+|               |          |               |           |              |
++---------------+          +---------------+           +--------------+
+*/
 /* component includes */
 #include <stdio.h>
 
@@ -49,6 +66,7 @@
 #define CONTROL_CURRENT -1
 #define CONTROL_NEXT -2
 #define CONTROL_PREV -3
+#define MAX_PLAY_FILE_NUM 20
 
 #define TAG "mp3_example"
 #define USE_ADF_TO_PLAY CONFIG_USE_ADF_PLAY
@@ -73,11 +91,11 @@
 static lv_obj_t *current_music;
 static lv_obj_t *button[3];
 static lv_obj_t *img[3];
-static lv_obj_t *list_music[20];
+static lv_obj_t *list_music[MAX_PLAY_FILE_NUM];
 
 /* Image and music resource */
 static uint8_t filecount = 0;
-static char directory[20][100];
+static char directory[MAX_PLAY_FILE_NUM][100];
 static bool play = false;
 void *img_src[] = {SYMBOL_PREV, SYMBOL_PLAY, SYMBOL_NEXT, SYMBOL_PAUSE};
 
@@ -133,7 +151,8 @@ static lv_res_t audio_next_prev(lv_obj_t *obj)
         // prev song
 #if USE_ADF_TO_PLAY
         ESP_LOGI(TAG, "[ * ] [Set] touch tap event");
-        audio_pipeline_terminate(pipeline);
+        audio_pipeline_stop(pipeline);
+        audio_pipeline_wait_for_stop(pipeline);
         ESP_LOGI(TAG, "[ * ] Stopped, advancing to the prev song");
 #endif
         get_file(CONTROL_PREV);
@@ -147,7 +166,8 @@ static lv_res_t audio_next_prev(lv_obj_t *obj)
         // next song
 #if USE_ADF_TO_PLAY
         ESP_LOGI(TAG, "[ * ] [Set] touch tap event");
-        audio_pipeline_terminate(pipeline);
+        audio_pipeline_stop(pipeline);
+        audio_pipeline_wait_for_stop(pipeline);
         ESP_LOGI(TAG, "[ * ] Stopped, advancing to the next song");
 #endif
         get_file(CONTROL_NEXT);
@@ -226,10 +246,12 @@ static lv_res_t theme_change_action(lv_obj_t *roller)
 
 static lv_res_t play_list(lv_obj_t *obj)
 {
-    for (uint8_t i = 0; i < 20; i++) {
+    for (uint8_t i = 0; i < MAX_PLAY_FILE_NUM; i++) {
         if (obj == list_music[i]) {
 #if USE_ADF_TO_PLAY
-            audio_pipeline_terminate(pipeline);
+            audio_pipeline_stop(pipeline);
+            audio_pipeline_wait_for_stop(pipeline);
+            // audio_pipeline_terminate(pipeline);
 #endif
             get_file(i);
 #if USE_ADF_TO_PLAY
@@ -300,13 +322,6 @@ static void littlevgl_mp3(void)
     ESP_LOGI("LvGL", "app_main last: %d", esp_get_free_heap_size());
 }
 
-static void user_task(void *pvParameter)
-{
-    while (1) {
-        vTaskDelay(500 / portTICK_PERIOD_MS);
-    }
-}
-
 static void sdmmc_init()
 {
     sdmmc_card_t *card;
@@ -371,12 +386,14 @@ static void read_content(const char *path, uint8_t *filecount)
     while (1) {
         de = readdir(dir);
         if (!de) {
-            return;
+            break;
         } else if (de->d_type == DT_REG) {
             if (strstr(de->d_name, ".mp3") || strstr(de->d_name, ".MP3")) {
                 sprintf(directory[*filecount], "%s/%s", path, de->d_name);
                 printf("%s\n", directory[*filecount]);
-                (*filecount)++;
+                if ((*filecount)++ >= MAX_PLAY_FILE_NUM) {
+                    break;
+                }
             }
         } else if (de->d_type == DT_DIR) {
             sprintf(nextpath, "%s/%s", path, de->d_name);
@@ -525,6 +542,9 @@ static void audio_sdcard_task(void *para)
 *******************************************************************************/
 void app_main()
 {
+    /* Initialize LittlevGL GUI */
+    lvgl_init();
+
     ESP_LOGI(TAG, "[APP] Free memory: %d bytes", esp_get_free_heap_size());
     sdmmc_init();
     read_content("/sdcard", &filecount);
@@ -539,9 +559,6 @@ void app_main()
     gpio_set_pull_mode((gpio_num_t)13, GPIO_PULLUP_ONLY); // D3, needed in 4- and 1- line modes
     xTaskCreate(audio_sdcard_task, "audio_sdcard_task", 1024 * 5, NULL, 4, NULL);
 #endif
-
-    /* Initialize LittlevGL GUI */
-    lvgl_init();
 
     /* mp3 example */
     littlevgl_mp3();
