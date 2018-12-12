@@ -62,7 +62,7 @@ typedef portBASE_TYPE		threadpriority_t;
 /* FreeRTOS will allocate the stack when creating the thread */
 #define DECLARE_THREAD_STACK(name, sz)	uint8_t name[1]
 #define DECLARE_THREAD_FUNCTION(fnName, param)	threadreturn_t fnName(void *param)
-#define THREAD_RETURN(retval)
+#define THREAD_RETURN(retval) vTaskDelete(NULL)
 
 typedef xSemaphoreHandle		gfxSem;
 typedef xSemaphoreHandle		gfxMutex;
