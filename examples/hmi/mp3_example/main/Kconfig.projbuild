@@ -1,0 +1,9 @@
+menu "IoT Example - LittlevGL MP3 Example"
+
+config USE_ADF_PLAY
+    bool "Use esp-adf to play song"
+    default n
+    help
+        use esp-adf to play song.
+
+endmenu
