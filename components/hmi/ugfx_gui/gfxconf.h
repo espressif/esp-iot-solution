@@ -354,9 +354,9 @@
 ///////////////////////////////////////////////////////////////////////////
 // GAUDIO                                                                //
 ///////////////////////////////////////////////////////////////////////////
-// #define GFX_USE_GAUDIO                               FALSE
-    // #define GAUDIO_NEED_PLAY                         FALSE
-    // #define GAUDIO_NEED_RECORD                       FALSE
+#define GFX_USE_GAUDIO                               CONFIG_UGFX_DRIVER_AUDIO_ENABLE
+    #define GAUDIO_NEED_PLAY                         CONFIG_UGFX_DRIVER_AUDIO_ENABLE
+//    #define GAUDIO_NEED_RECORD                       FALSE
 
 ///////////////////////////////////////////////////////////////////////////
 // GMISC                                                                 //
