@@ -101,14 +101,14 @@ static bool touch_save_calibration(const void *buf, size_t sz)
     return (res == ESP_OK);
 }
 
-static bool touch_load_calibration(void *buf, size_t sz)
+static bool touch_load_calibration(void *buf)
 {
     esp_err_t res = ESP_FAIL;
     res = iot_param_load((const char *)TOUCH_CAL_VAL_NAMESPACE, (const char *)TOUCH_CAL_VAL_KEY, (void *)buf);
     return (res == ESP_OK);
 }
 
-static bool touch_erase_calibration(void *buf, size_t sz)
+static bool touch_erase_calibration()
 {
     esp_err_t res = ESP_FAIL;
     res = iot_param_erase((const char *)TOUCH_CAL_VAL_NAMESPACE, (const char *)TOUCH_CAL_VAL_KEY);
@@ -331,10 +331,10 @@ bool lvgl_calibration_transform(lv_point_t *data)
     return calibrated;
 }
 
-bool lvgl_calibrate_mouse(lv_indev_drv_t indev_drv)
+bool lvgl_calibrate_mouse(lv_indev_drv_t indev_drv, bool recalibrate)
 {
     esp_err_t err = nvs_flash_init();
-    if (err == ESP_ERR_NVS_NO_FREE_PAGES) {
+    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         // NVS partition was truncated and needs to be erased
         // Retry nvs_flash_init
         ESP_ERROR_CHECK(nvs_flash_erase());
@@ -343,7 +343,7 @@ bool lvgl_calibrate_mouse(lv_indev_drv_t indev_drv)
     ESP_ERROR_CHECK( err );
     vTaskDelay(CALIBRATION_POLL_PERIOD / portTICK_PERIOD_MS);   //Wait until nvs is stable， otherwise will cause exception
 
-    if (touch_load_calibration(&caldata, sizeof(GMouseCalibration))) {
+    if (!recalibrate && touch_load_calibration(&caldata)) {
         calibrated = true;
         return ESP_OK;
     }

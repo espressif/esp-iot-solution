@@ -29,53 +29,46 @@
 /* ESP32 includes */
 #include "esp_log.h"
 
-#define TAG "coffee_lvgl";
+/**********************
+ *      MACROS
+ **********************/
+#define TAG "coffee_lvgl"
 #define LV_ANIM_RESOLUTION 1024
 #define LV_ANIM_RES_SHIFT 10
 
-static TimerHandle_t lvgl_timer;
-static TimerHandle_t lvgl_tick_timer;
-
-static lv_obj_t *tabview = NULL;
+/**********************
+ *  STATIC VARIABLES
+ **********************/
+/* TabView Object */
 static int8_t tab_id = 0;
-
+static lv_obj_t *tabview = NULL;
 static lv_obj_t *tab[3] = {NULL};
 
+/* Button Object */
 static lv_obj_t *prebtn[3] = {NULL};
 static lv_obj_t *nextbtn[3] = {NULL};
+static lv_obj_t *playbtn[3] = {NULL};
+
+/* Label and slider Object */
 static lv_obj_t *coffee_label[3] = {NULL};
 static lv_obj_t *sweet_slider[3] = {NULL};
 static lv_obj_t *weak_sweet[3] = {NULL};
 static lv_obj_t *strong_sweet[3] = {NULL};
-static lv_obj_t *playbtn[3] = {NULL};
+
 static lv_obj_t *play_arc[3] = {NULL};
 static lv_obj_t *precent_label[3] = {NULL};
 
+/**********************
+ *  IMAGE DECLARE
+ **********************/
 LV_IMG_DECLARE(coffee_bean);
 LV_IMG_DECLARE(coffee_cup);
 LV_IMG_DECLARE(coffee_flower);
 
+/* Image and txt resource */
 const void *btn_img[] = {SYMBOL_PREV, SYMBOL_PLAY, SYMBOL_NEXT, SYMBOL_PAUSE};
 const void *wp_img[] = {&coffee_bean, &coffee_cup, &coffee_flower};
 const char *coffee_type[] = {"RISTRETTO", "ESPRESSO", "AMERICANO"};
-
-static void create_tab(lv_obj_t *parent, uint8_t wp_img_id, uint8_t coffee_type_id, uint8_t id);
-
-// lv_task_handler should be called periodically around 10ms
-static void IRAM_ATTR lvgl_task_time_callback(TimerHandle_t xTimer)
-{
-    /* Periodically call this function.
-     * The timing is not critical but should be between 1..10 ms */
-    lv_task_handler();
-}
-
-static void IRAM_ATTR lv_tick_task_callback(TimerHandle_t xTimer)
-{
-    /* Initialize a Timer for 1 ms period and
-     * in its interrupt call
-     * lv_tick_inc(1); */
-    lv_tick_inc(1);
-}
 
 static lv_res_t prebtn_action(lv_obj_t *btn)
 {
@@ -119,12 +112,12 @@ static void play_callback(lv_obj_t *obj)
     lv_tabview_set_sliding(tabview, true); /* must not sliding when play animation */
 }
 
-void lv_play_arc_set_endangle(lv_obj_t *obj, lv_coord_t x)
+static void lv_play_arc_set_endangle(lv_obj_t *obj, lv_coord_t x)
 {
     lv_arc_set_angles(obj, 0, x);
 }
 
-int32_t play_arc_anim_path_linear(const lv_anim_t *a)
+static int32_t play_arc_anim_path_linear(const lv_anim_t *a)
 {
     /* Calculate the current step */
 
@@ -390,39 +383,8 @@ static void user_task(void *pvParameter)
 *******************************************************************************/
 extern "C" void app_main()
 {
-    /* LittlevGL work fine only when CONFIG_FREERTOS_HZ is 1000HZ */
-    assert(CONFIG_FREERTOS_HZ == 1000);
-
-    /* Initialize LittlevGL */
-    lv_init();
-
-    /* Initialize a Timer for 1 ms period and in its interrupt call */
-    lvgl_tick_timer = xTimerCreate(
-                          "lv_tickinc_task",
-                          1 / portTICK_PERIOD_MS, // period time
-                          pdTRUE,                 // auto load
-                          (void *)NULL,           // timer parameter
-                          lv_tick_task_callback); // timer callback
-    xTimerStart(lvgl_tick_timer, 0);
-
-    /* Display interface */
-    lvgl_lcd_display_init(); /*Initialize your display*/
-
-    /* Input device interface */
-    lv_indev_drv_t indevdrv = lvgl_indev_init(); /*Initialize your indev*/
-
-    lvgl_timer = xTimerCreate(
-                     "lv_task",
-                     10 / portTICK_PERIOD_MS,  // period time
-                     pdTRUE,                   // auto load
-                     (void *)NULL,             // timer parameter
-                     lvgl_task_time_callback); // timer callback
-    xTimerStart(lvgl_timer, 0);
-
-    vTaskDelay(20 / portTICK_PERIOD_MS); // wait for execute lv_task_handler, avoid 'error'
-
-    /* calibrate touch screen */
-    lvgl_calibrate_mouse(indevdrv);
+    /* Initialize LittlevGL GUI */
+    lvgl_init();
 
     /* coffee demo */
     littlevgl_coffee();
@@ -434,4 +396,7 @@ extern "C" void app_main()
         NULL,        // Parameters
         1,           // Priority
         NULL);       // Task Handler
+
+    ESP_LOGI(TAG, "[APP] IDF version: %s", esp_get_idf_version());
+    ESP_LOGI(TAG, "[APP] Free memory: %d bytes", esp_get_free_heap_size());
 }

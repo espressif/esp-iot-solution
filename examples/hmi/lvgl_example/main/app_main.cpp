@@ -33,37 +33,25 @@
 /* esp includes */
 #include "esp_log.h"
 
+/**********************
+ *      MACROS
+ **********************/
 #if CONFIG_LVGL_DRIVER_SCREEN_WIDTH <= 350
     #define LVGL_EXAMPLE
 #else
     #define LVGL_TEST_THEME
 #endif
+#define TAG "example_lvgl"
 
-static TimerHandle_t lvgl_timer;
-static TimerHandle_t lvgl_tick_timer;
-
+/**********************
+ *  STATIC VARIABLES
+ **********************/
 #ifdef LVGL_EXAMPLE
-static const char *TAG = "example_lvgl";
+/* LVGL Object */
 static lv_obj_t *chart = NULL;
 static lv_obj_t *gauge = NULL;
 static lv_chart_series_t *series = NULL;
 #endif
-
-//lv_task_handler should be called periodically around 10ms
-static void IRAM_ATTR lvgl_task_time_callback(TimerHandle_t xTimer)
-{
-    /* Periodically call this function.
-     * The timing is not critical but should be between 1..10 ms */
-    lv_task_handler();
-}
-
-static void IRAM_ATTR lv_tick_task_callback(TimerHandle_t xTimer)
-{
-    /* Initialize a Timer for 1 ms period and
-     * in its interrupt call
-     * lv_tick_inc(1); */
-    lv_tick_inc(1);
-}
 
 #ifdef LVGL_EXAMPLE
 static lv_res_t on_led_switch_toggled(lv_obj_t *sw)
@@ -148,39 +136,13 @@ static void user_task(void *pvParameter)
 *******************************************************************************/
 extern "C" void app_main()
 {
-    /* Initialize LittlevGL */
-    lv_init();
-
-    /* Tick interface， Initialize a Timer for 1 ms period and in its interrupt call*/
-    // esp_register_freertos_tick_hook(lv_tick_task_callback);
-    lvgl_tick_timer = xTimerCreate(
-        "lv_tickinc_task",
-        1 / portTICK_PERIOD_MS,            //period time
-        pdTRUE,                            //auto load
-        (void *)NULL,                      //timer parameter
-        lv_tick_task_callback);            //timer callback
-    xTimerStart(lvgl_tick_timer, 0);
-
-    /* Display interface */
-    lvgl_lcd_display_init();	           /*Initialize your display*/
-
-    /* Input device interface */
-    lv_indev_drv_t indevdrv = lvgl_indev_init();    /*Initialize your indev*/
-
-    lvgl_timer = xTimerCreate(
-        "lv_task",
-        10 / portTICK_PERIOD_MS,           //period time
-        pdTRUE,                            //auto load
-        (void *)NULL,                      //timer parameter
-        lvgl_task_time_callback);          //timer callback
-    xTimerStart(lvgl_timer, 0);
-
-    vTaskDelay(20 / portTICK_PERIOD_MS);    // wait for execute lv_task_handler, avoid 'error'
-
-    lvgl_calibrate_mouse(indevdrv);
+    /* Initialize LittlevGL GUI */
+    lvgl_init();
 
 #ifdef LVGL_EXAMPLE
+    /* littlevgl demo */
     littlevgl_demo();
+
     xTaskCreate(
         user_task,   //Task Function
         "user_task", //Task Name
@@ -194,4 +156,7 @@ extern "C" void app_main()
     lv_theme_t *th = lv_theme_alien_init(100, NULL);
     lv_test_theme_1(th);
 #endif
+
+    ESP_LOGI(TAG, "[APP] IDF version: %s", esp_get_idf_version());
+    ESP_LOGI(TAG, "[APP] Free memory: %d bytes", esp_get_free_heap_size());
 }

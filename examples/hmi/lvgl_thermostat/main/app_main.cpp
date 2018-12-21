@@ -34,13 +34,15 @@
 #include "nvs_flash.h"
 #include "sdkconfig.h"
 
+/**********************
+ *      MACROS
+ **********************/
 #define TAG "thermostat"
 
 /**********************
  *  STATIC VARIABLES
  **********************/
-static TimerHandle_t lvgl_timer;
-static TimerHandle_t lvgl_tick_timer;
+/* LVGL Object */
 static lv_obj_t *holder_page;
 static lv_obj_t *model_page;
 static lv_obj_t *cont_page;
@@ -48,12 +50,15 @@ static lv_obj_t *wp;
 static lv_obj_t *temperature;
 static lv_obj_t *img[3];
 static lv_obj_t *slider;
+
+/* Style Object */
 static lv_style_t style_wp;
 static lv_style_t style_btn_rel;
 static lv_style_t style_btn_pr;
 static lv_style_t style_btn_tgl_rel;
 static lv_style_t style_btn_tgl_pr;
 static lv_style_t style_btn_min_plus_rel;
+
 static float temperature_num = 21.5;
 
 /**********************
@@ -72,17 +77,6 @@ static lv_res_t vacation_click(lv_obj_t *btn);
 static lv_res_t minus_click(lv_obj_t *btn);
 static lv_res_t plus_click(lv_obj_t *btn);
 static lv_res_t slider_action(lv_obj_t *slider);
-
-//lv_task_handler should be called periodically around 10ms
-static void IRAM_ATTR lvgl_task_time_callback(TimerHandle_t xTimer)
-{
-    lv_task_handler();
-}
-
-static void IRAM_ATTR lv_tick_task_callback(TimerHandle_t xTimer)
-{
-    lv_tick_inc(1);
-}
 
 static void littlevgl_thermostat(void)
 {
@@ -369,45 +363,12 @@ static lv_res_t slider_action(lv_obj_t *slider)
 *******************************************************************************/
 extern "C" void app_main()
 {
-    /* LittlevGL work fine only when CONFIG_FREERTOS_HZ is 1000HZ */
-    assert(CONFIG_FREERTOS_HZ == 1000);
-
-    ESP_LOGI(TAG, "before init: %d", esp_get_free_heap_size());
-    /* Initialize LittlevGL */
-    lv_init();
-    ESP_LOGI(TAG, "after init: %d", esp_get_free_heap_size());
-
-    /* Tick interface. Initialize a Timer for 1 ms period and in its interrupt call*/
-    lvgl_tick_timer = xTimerCreate(
-                          "lv_tickinc_task",
-                          1 / portTICK_PERIOD_MS, //period time
-                          pdTRUE,                 //auto load
-                          (void *)NULL,           //timer parameter
-                          lv_tick_task_callback); //timer callback
-    xTimerStart(lvgl_tick_timer, 0);
-
-    /* Display interface */
-    lvgl_lcd_display_init(); /*Initialize your display*/
-
-    /* Input device interface */
-    lv_indev_drv_t indevdrv = lvgl_indev_init(); /*Initialize your input device*/
-
-    lvgl_timer = xTimerCreate(
-                     "lv_task",
-                     10 / portTICK_PERIOD_MS,  //period time
-                     pdTRUE,                   //auto load
-                     (void *)NULL,             //timer parameter
-                     lvgl_task_time_callback); //timer callback
-    xTimerStart(lvgl_timer, 0);
-    ESP_LOGI(TAG, "lvgl init complete: %d", esp_get_free_heap_size());
-
-    vTaskDelay(20 / portTICK_PERIOD_MS); // wait for execute lv_task_handler, avoid 'error'
-
-    // calibrate touch screen
-    lvgl_calibrate_mouse(indevdrv);
+    /* Initialize LittlevGL GUI */
+    lvgl_init();
 
     // thermostat initialize
     littlevgl_thermostat();
 
-    ESP_LOGI(TAG, "app_main last: %d", esp_get_free_heap_size());
+    ESP_LOGI(TAG, "[APP] IDF version: %s", esp_get_idf_version());
+    ESP_LOGI(TAG, "[APP] Free memory: %d bytes", esp_get_free_heap_size());
 }
