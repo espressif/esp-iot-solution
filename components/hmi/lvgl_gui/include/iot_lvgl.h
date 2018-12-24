@@ -22,6 +22,15 @@ extern "C"
 /* lvgl calibration includes */
 #include "lv_calibration.h"
 
+/**********************
+ * GLOBAL PROTOTYPES
+ **********************/
+
+/**
+ * @brief Initialize LittlevGL GUI 
+ */
+void lvgl_init();
+
 #ifdef __cplusplus
 }
 #endif

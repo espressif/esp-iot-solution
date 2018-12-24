@@ -43,6 +43,14 @@
 #include "iot_lvgl.h"
 #include "lv_calibration.h"
 
+/**********************
+ *      MACROS
+ **********************/
+#define CONTROL_CURRENT -1
+#define CONTROL_NEXT -2
+#define CONTROL_PREV -3
+
+#define TAG "mp3_example"
 #define USE_ADF_TO_PLAY CONFIG_USE_ADF_PLAY
 
 #if USE_ADF_TO_PLAY
@@ -56,38 +64,27 @@
 #include "fatfs_stream.h"
 #include "esp_peripherals.h"
 #include "periph_sdcard.h"
-
-static audio_pipeline_handle_t pipeline;
-static audio_element_handle_t i2s_stream_writer, mp3_decoder;
 #endif
 
-#define CONTROL_CURRENT -1
-#define CONTROL_NEXT -2
-#define CONTROL_PREV -3
-#define TAG "mp3_example"
-
-static TimerHandle_t lvgl_timer;
-static TimerHandle_t lvgl_tick_timer;
-
-static char directory[20][100];
-static uint8_t filecount = 0;
-
+/**********************
+ *  STATIC VARIABLES
+ **********************/
+/* LVGL Object */
 static lv_obj_t *current_music;
 static lv_obj_t *button[3];
 static lv_obj_t *img[3];
 static lv_obj_t *list_music[20];
+
+/* Image and music resource */
+static uint8_t filecount = 0;
+static char directory[20][100];
+static bool play = false;
 void *img_src[] = {SYMBOL_PREV, SYMBOL_PLAY, SYMBOL_NEXT, SYMBOL_PAUSE};
 
-//lv_task_handler should be called periodically around 10ms
-static void IRAM_ATTR lvgl_task_time_callback(TimerHandle_t xTimer)
-{
-    lv_task_handler();
-}
-
-static void IRAM_ATTR lv_tick_task_callback(TimerHandle_t xTimer)
-{
-    lv_tick_inc(1);
-}
+#if USE_ADF_TO_PLAY
+static audio_pipeline_handle_t pipeline;
+static audio_element_handle_t i2s_stream_writer, mp3_decoder;
+#endif
 
 static FILE *get_file(int next_file)
 {
@@ -144,6 +141,7 @@ static lv_res_t audio_next_prev(lv_obj_t *obj)
         audio_pipeline_run(pipeline);
 #endif
         lv_img_set_src(img[1], img_src[3]);
+        play = true;
     } else if (obj == button[1]) {
     } else if (obj == button[2]) {
         // next song
@@ -157,6 +155,7 @@ static lv_res_t audio_next_prev(lv_obj_t *obj)
         audio_pipeline_run(pipeline);
 #endif
         lv_img_set_src(img[1], img_src[3]);
+        play = true;
     }
     return LV_RES_OK;
 }
@@ -182,7 +181,6 @@ static lv_res_t audio_control(lv_obj_t *obj)
         break;
     }
 #else
-    static bool play = false;
     play ? lv_img_set_src(img[1], img_src[1]) : lv_img_set_src(img[1], img_src[3]);
     play = !play;
 #endif
@@ -238,13 +236,14 @@ static lv_res_t play_list(lv_obj_t *obj)
             audio_pipeline_run(pipeline);
 #endif
             lv_img_set_src(img[1], img_src[3]);
+            play = true;
             break;
         }
     }
     return LV_RES_OK;
 }
 
-static void littlevgl_demo(void)
+static void littlevgl_mp3(void)
 {
     lv_obj_t *scr = lv_obj_create(NULL, NULL);
     lv_scr_load(scr);
@@ -307,10 +306,10 @@ static void user_task(void *pvParameter)
         vTaskDelay(500 / portTICK_PERIOD_MS);
     }
 }
-sdmmc_card_t *card;
 
-void sdmmc_init()
+static void sdmmc_init()
 {
+    sdmmc_card_t *card;
     ESP_LOGI(TAG, "Initializing SD card");
     ESP_LOGI(TAG, "Using SDMMC peripheral");
     sdmmc_host_t host = SDMMC_HOST_DEFAULT();
@@ -363,10 +362,11 @@ void sdmmc_init()
     sdmmc_card_print_info(stdout, card);
 }
 
-void read_content(const char *path, uint8_t *filecount)
+static void read_content(const char *path, uint8_t *filecount)
 {
     char nextpath[100];
     struct dirent *de;
+    *filecount = 0;
     DIR *dir = opendir(path);
     while (1) {
         de = readdir(dir);
@@ -399,7 +399,7 @@ static int my_sdcard_read_cb(audio_element_handle_t el, char *buf, int len, Tick
     return read_len;
 }
 
-void audio_sdcard_task(void *para)
+static void audio_sdcard_task(void *para)
 {
     ESP_LOGI(TAG, "[ 1 ] Mount sdcard");
     // Initialize peripherals management
@@ -525,15 +525,11 @@ void audio_sdcard_task(void *para)
 *******************************************************************************/
 void app_main()
 {
-    /* LittlevGL only work fine when CONFIG_FREERTOS_HZ is 1000HZ */
-    assert(CONFIG_FREERTOS_HZ == 1000);
-    ESP_LOGI("LvGL", "before init: %d", esp_get_free_heap_size());
+    ESP_LOGI(TAG, "[APP] Free memory: %d bytes", esp_get_free_heap_size());
     sdmmc_init();
-    TaskHandle_t task;
-    filecount = 0;
     read_content("/sdcard", &filecount);
     esp_vfs_fat_sdmmc_unmount();
-    printf("%d\n", filecount);
+    ESP_LOGI(TAG, "[APP] Music File Count: %d", filecount);
 
 #if USE_ADF_TO_PLAY
     gpio_set_pull_mode((gpio_num_t)15, GPIO_PULLUP_ONLY); // CMD, needed in 4- and 1- line modes
@@ -544,39 +540,12 @@ void app_main()
     xTaskCreate(audio_sdcard_task, "audio_sdcard_task", 1024 * 5, NULL, 4, NULL);
 #endif
 
-    /* Initialize LittlevGL */
-    lv_init();
+    /* Initialize LittlevGL GUI */
+    lvgl_init();
 
-    /* Initialize a Timer for 1 ms period and in its interrupt call */
-    lvgl_tick_timer = xTimerCreate(
-                          "lv_tickinc_task",
-                          1 / portTICK_PERIOD_MS, //period time
-                          pdTRUE,                 //auto load
-                          (void *)NULL,           //timer parameter
-                          lv_tick_task_callback); //timer callback
-    xTimerStart(lvgl_tick_timer, 0);
+    /* mp3 example */
+    littlevgl_mp3();
 
-    /* Display interface */
-    lvgl_lcd_display_init(); /*Initialize your display*/
-
-    /* Input device interface */
-    lv_indev_drv_t indevdrv = lvgl_indev_init(); /*Initialize your indev*/
-
-    lvgl_timer = xTimerCreate(
-                     "lv_task",
-                     10 / portTICK_PERIOD_MS,  //period time
-                     pdTRUE,                   //auto load
-                     (void *)NULL,             //timer parameter
-                     lvgl_task_time_callback); //timer callback
-    xTimerStart(lvgl_timer, 0);
-
-    vTaskDelay(20 / portTICK_PERIOD_MS); // wait for execute lv_task_handler, avoid 'error'
-
-    // calibrate touch
-    lvgl_calibrate_mouse(indevdrv);
-
-    // mp3 example
-    littlevgl_demo();
-
-    ESP_LOGI("LvGL", "app_main last: %d", esp_get_free_heap_size());
+    ESP_LOGI(TAG, "[APP] IDF version: %s", esp_get_idf_version());
+    ESP_LOGI(TAG, "[APP] Free memory: %d bytes", esp_get_free_heap_size());
 }

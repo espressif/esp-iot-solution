@@ -28,14 +28,21 @@ extern "C" {
  **********************/
 
 /**
- * Calibration Mouse
- * @param th pointer to a lv_indev_drv_t
+ * @brief Calibration Mouse
+ * 
+ * @param indev_drv pointer to a lv_indev_drv_t
+ * @param recalibrate Whether to recalibrate， true: recalibrate，false not
+ * 
+ * @return Whether the calibration is successful
  */
-bool lvgl_calibrate_mouse(lv_indev_drv_t indev_drv);
+bool lvgl_calibrate_mouse(lv_indev_drv_t indev_drv, bool recalibrate);
 
 /**
- * Transform Mouse data
- * @param th pointer to a lv_point_t
+ * @brief Transform Mouse data
+ * 
+ * @param data pointer to a lv_point_t
+ * 
+ * @return Whether the transform is successful
  */
 bool lvgl_calibration_transform(lv_point_t *data);
 
