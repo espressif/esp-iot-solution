@@ -27,6 +27,24 @@ LED | 23
 CS(Touch) | 32
 IRQ | 33
 
+## 系统框图
+                               +---------------+
+                               |               |
+                               |      HMI      |
+                               |               |
+                               +----^-----+----+
+                                    |     |
+                                    |     |
+                                    |     |
+                                    |     |
+                                    |     |
+    +---------------+          +----+-----v----+           +--------------+
+    |               |          |               |           |              |
+    |    SD-Card    +---------->     ESP32     +----------->   DAC-Audio  |
+    |               |          |               |           |              |
+    +---------------+          +---------------+           +--------------+
+
+
 ## 运行示例
 
 - 进入到 `examples/hmi/lvgl_example` 目录下
@@ -36,9 +54,14 @@ IRQ | 33
 
 ### 使用 ESP-ADF 播放 MP3 音频文件
 
-- 根据 [Get Started](https://docs.espressif.com/projects/esp-adf/en/latest/get-started/index.html) 搭建 ESP-ADF 开发环境
+- 根据 [Get Started](https://docs.espressif.com/projects/esp-adf/en/latest/get-started/index.html) 搭建 ESP-ADF 开发环境、Example 中使用了 ADF_PATH 环境变量
 - 运行 `make menuconfig` 选择使用 ADF 播放音频文件，目录：`IoT Example - LittlevGL MP3 Example->Use esp-adf to play song`
 - 保存配置并运行 `make -j8 flash` 编译、烧录程序到设备
+
+#### SD-Card、Audio 使用
+
+- 音频文件目前只支持 MP3 格式的，MP3 文件可以放置在 SD-Card 的根目录下或者二级目录下，在当前 Example 支持最多 20 个音频文件
+- 喇叭可以连接到 ESP32_LCD_EB_V1 开发板的两个音频输出端口上，分别为左声道、右声道
 
 ## 示例结果
 
