@@ -154,8 +154,8 @@
 
 ### I2S Devices
 
-[ILI9806](./components/i2c_devices/others/ili9806) - Driver and example of driving ILI9806 LCD.<br>
-[NT35510](./components/i2c_devices/others/nt35510) - Driver and example of driving NT35510 LCD.<br>
+[ILI9806](./components/i2s_devices/ili9806) - Driver and example of driving ILI9806 LCD.<br>
+[NT35510](./components/i2s_devices/nt35510) - Driver and example of driving NT35510 LCD.<br>
 
 ### Motor
 
@@ -167,13 +167,13 @@
 [MQTT](./components/network/mqtt) - Driver and example of using MQTT client, which is a light-weight IoT protocol.<br>
 [TCP](./components/network/tcp) - API and example of using TCP server and client in C++.<br>
 [UDP](./components/network/udp) - API and example of using UDP in C++.<br>
-[Alink](./components/platform/alink) - API and example of connecting and communicating with Alink cloud service.<br>
+[Alink](./components/platforms/alink) - API and example of connecting and communicating with Alink cloud service.<br>
 
 ### SPI Devices
 
 [E-ink display](./components/spi_devices/epaper) - API and example of driving and controlling SPI E-ink screen.<br>
 [LCD screen](./components/spi_devices/lcd) - API and example of driving and controlling SPI LCD.<br>
-[XPT2046 Touch screen](./components/spi_devices/touch_screen) - API and example of driving and controlling SPI Touch Screen.<br>
+[XPT2046 Touch screen](./components/spi_devices/xpt2046) - API and example of driving and controlling SPI Touch Screen.<br>
 
 ### WiFi Abstract
 
