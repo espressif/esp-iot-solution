@@ -47,7 +47,7 @@ IRQ | 33
 
 ## 运行示例
 
-- 进入到 `examples/hmi/lvgl_example` 目录下
+- 进入到 `examples/hmi/mp3_example` 目录下
 - 运行 `make defconfig` 使用默认配置
 - 运行 `make menuconfig` 进行烧录相关配置
 - 运行 `make -j8 flash` 编译、烧录程序到设备
