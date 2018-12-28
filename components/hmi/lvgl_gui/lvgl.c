@@ -54,8 +54,10 @@ void lvgl_init()
     /* Display interface */
     lvgl_lcd_display_init(); /* Initialize your display */
 
+#if defined(CONFIG_LVGL_DRIVER_TOUCH_SCREEN_ENABLE) || defined(CONFIG_LVGL_DRIVER_TOGGLE_ENABLE)
     /* Input device interface */
     lv_indev_drv_t indevdrv = lvgl_indev_init(); /* Initialize your indev */
+#endif
 
     /* lv_task_handler should be called periodically around 10ms */
     TimerHandle_t lvgl_timer = xTimerCreate(
@@ -66,6 +68,10 @@ void lvgl_init()
                                    lvgl_task_time_callback); // timer callback
     xTimerStart(lvgl_timer, 0);
 
+    vTaskDelay(100 / portTICK_PERIOD_MS);
+
+#ifdef CONFIG_LVGL_DRIVER_TOUCH_SCREEN_ENABLE
     /* Calibrate touch screen */
     lvgl_calibrate_mouse(indevdrv, false);
+#endif
 }
