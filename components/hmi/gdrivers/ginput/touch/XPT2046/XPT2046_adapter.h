@@ -28,6 +28,8 @@
 /* SPI Includes */
 #include "iot_xpt2046.h"
 
+#define XPT2046_CLK_FREQ (2 * 1000 * 1000)
+
 #ifdef __cplusplus
 extern "C" {
 #endif

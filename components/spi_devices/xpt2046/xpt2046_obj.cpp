@@ -54,7 +54,7 @@ position CXpt2046::get_raw_position()
 int CXpt2046::get_sample(uint8_t command)
 {
     xSemaphoreTakeRecursive(m_spi_mux, portMAX_DELAY);
-    int data = iot_xpt2046_readdata(m_spi, command, 1);
+    int data = iot_xpt2046_readdata(m_spi, command);
     xSemaphoreGiveRecursive(m_spi_mux);
     return data;
 }

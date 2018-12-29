@@ -48,7 +48,7 @@ void board_touch_init()
     xpt_conf_t xpt_conf;
     xpt_conf.pin_num_cs = CONFIG_UGFX_TOUCH_CS_GPIO;   /*!<SPI Chip Select Pin*/
     xpt_conf.pin_num_irq = CONFIG_UGFX_TOUCH_IRQ_GPIO; /*!< Touch screen IRQ pin */
-    xpt_conf.clk_freq = 1 * 1000 * 1000;               /*!< spi clock frequency */
+    xpt_conf.clk_freq = XPT2046_CLK_FREQ;               /*!< spi clock frequency */
     xpt_conf.spi_host = (spi_host_device_t)CONFIG_UGFX_LCD_SPI_NUM;                     /*!< spi host index*/
     xpt_conf.pin_num_miso = -1;                        /*!<MasterIn, SlaveOut pin*/
     xpt_conf.pin_num_mosi = -1;                        /*!<MasterOut, SlaveIn pin*/
@@ -124,7 +124,7 @@ lv_indev_drv_t lvgl_indev_init()
     xpt_conf_t xpt_conf = {
         .pin_num_cs = CONFIG_LVGL_TOUCH_CS_GPIO,   /*!<SPI Chip Select Pin*/
         .pin_num_irq = CONFIG_LVGL_TOUCH_IRQ_GPIO, /*!< Touch screen IRQ pin */
-        .clk_freq = 1 * 1000 * 1000,               /*!< spi clock frequency */
+        .clk_freq = XPT2046_CLK_FREQ,               /*!< spi clock frequency */
         .spi_host = (spi_host_device_t)CONFIG_LVGL_LCD_SPI_NUM,                     /*!< spi host index */
         .pin_num_miso = -1,                        /*!<MasterIn, SlaveOut pin*/
         .pin_num_mosi = -1,                        /*!<MasterOut, SlaveIn pin*/
