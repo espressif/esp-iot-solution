@@ -69,8 +69,7 @@ void iot_xpt2046_init(xpt_conf_t * xpt_conf, spi_device_handle_t * spi);
  * @return
  *     - read data
  */
-uint16_t iot_xpt2046_readdata(spi_device_handle_t spi, const uint8_t command,
-                              int len);
+uint16_t iot_xpt2046_readdata(spi_device_handle_t spi, const uint8_t command);
 
 #ifdef __cplusplus
 }
