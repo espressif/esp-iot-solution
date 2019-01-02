@@ -178,6 +178,7 @@
 ### WiFi Abstract
 
 [ESP-TOUCH for smart-config](./components/wifi/smart_config) - Abstract APIs and example of configuring devices via esp-touch.<br>
+[Blufi abstract APIs](./components/wifi/iot_blufi) - Abstract APIs and example of configuring devices via blufi.<br>
 [WiFi connection abstract APIs](./components/wifi/wifi_conn) - Abstract APIs and example of WiFi station connecting to router.<br>
 
 ---
