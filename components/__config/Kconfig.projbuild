@@ -1111,8 +1111,25 @@ menu "IoT Solution settings"
                         endchoice
                         config UGFX_LCD_SPI_NUM
                             int
-                            default 1 if  UGFX_LCD_HSPI
-                            default 2 if  UGFX_LCD_VSPI
+                            default 1 if UGFX_LCD_HSPI
+                            default 2 if UGFX_LCD_VSPI
+                        
+                        choice UGFX_BCKL_ACTIVE_LEVEL_OPTIONAL
+                            prompt "Select Backlight Active Level"
+                            default UGFX_BCKL_ACTIVE_LEVEL_HIGH
+
+                            config UGFX_BCKL_ACTIVE_LEVEL_LOW
+                                bool "Backlight Active Low"
+                        
+                            config UGFX_BCKL_ACTIVE_LEVEL_HIGH
+                                bool "Backlight Active High"
+
+                        endchoice
+                        config UGFX_BCKL_ACTIVE_LEVEL
+                            int
+                            default 0 if UGFX_BCKL_ACTIVE_LEVEL_LOW
+                            default 1 if UGFX_BCKL_ACTIVE_LEVEL_HIGH
+
                         config UGFX_LCD_SPI_CLOCK
                             int "uGFX LCD SPI Clock"
                             range 0 40000000
@@ -1165,8 +1182,25 @@ menu "IoT Solution settings"
                         endchoice
                         config UGFX_LCD_SPI_NUM
                             int
-                            default 1 if  UGFX_LCD_HSPI
-                            default 2 if  UGFX_LCD_VSPI
+                            default 1 if UGFX_LCD_HSPI
+                            default 2 if UGFX_LCD_VSPI
+                        
+                        choice UGFX_BCKL_ACTIVE_LEVEL_OPTIONAL
+                            prompt "Select Backlight Active Level"
+                            default UGFX_BCKL_ACTIVE_LEVEL_HIGH
+
+                            config UGFX_BCKL_ACTIVE_LEVEL_LOW
+                                bool "Backlight Active Low"
+                        
+                            config UGFX_BCKL_ACTIVE_LEVEL_HIGH
+                                bool "Backlight Active High"
+
+                        endchoice
+                        config UGFX_BCKL_ACTIVE_LEVEL
+                            int
+                            default 0 if UGFX_BCKL_ACTIVE_LEVEL_LOW
+                            default 1 if UGFX_BCKL_ACTIVE_LEVEL_HIGH
+
                         config UGFX_LCD_SPI_CLOCK
                             int "uGFX LCD SPI Clock"
                             range 0 40000000
@@ -1230,8 +1264,8 @@ menu "IoT Solution settings"
                         endchoice
                         config UGFX_LCD_I2S_NUM
                             int
-                            default 0 if  UGFX_LCD_I2S0
-                            default 1 if  UGFX_LCD_I2S1
+                            default 0 if UGFX_LCD_I2S0
+                            default 1 if UGFX_LCD_I2S1
 
                         config UGFX_LCD_WR_GPIO
                             int "uGFX LCD WR GPIO"
@@ -1400,17 +1434,17 @@ menu "IoT Solution settings"
                             
                     config UGFX_DRIVER_SCREEN_WIDTH
                         int
-                        default ILI9341_UGFX_DRIVER_SCREEN_WIDTH if  UGFX_DRIVER_ILI9341
-                        default SSD1306_UGFX_DRIVER_SCREEN_WIDTH if  UGFX_DRIVER_SSD1306
-                        default ST7789_UGFX_DRIVER_SCREEN_WIDTH  if  UGFX_DRIVER_ST7789
-                        default NT35510_UGFX_DRIVER_SCREEN_WIDTH if  UGFX_DRIVER_NT35510
+                        default ILI9341_UGFX_DRIVER_SCREEN_WIDTH if UGFX_DRIVER_ILI9341
+                        default SSD1306_UGFX_DRIVER_SCREEN_WIDTH if UGFX_DRIVER_SSD1306
+                        default ST7789_UGFX_DRIVER_SCREEN_WIDTH  if UGFX_DRIVER_ST7789
+                        default NT35510_UGFX_DRIVER_SCREEN_WIDTH if UGFX_DRIVER_NT35510
                             
                     config UGFX_DRIVER_SCREEN_HEIGHT
                         int
-                        default ILI9341_UGFX_DRIVER_SCREEN_HEIGHT if  UGFX_DRIVER_ILI9341
-                        default SSD1306_UGFX_DRIVER_SCREEN_HEIGHT if  UGFX_DRIVER_SSD1306
-                        default ST7789_UGFX_DRIVER_SCREEN_HEIGHT  if  UGFX_DRIVER_ST7789
-                        default NT35510_UGFX_DRIVER_SCREEN_HEIGHT if  UGFX_DRIVER_NT35510
+                        default ILI9341_UGFX_DRIVER_SCREEN_HEIGHT if UGFX_DRIVER_ILI9341
+                        default SSD1306_UGFX_DRIVER_SCREEN_HEIGHT if UGFX_DRIVER_SSD1306
+                        default ST7789_UGFX_DRIVER_SCREEN_HEIGHT  if UGFX_DRIVER_ST7789
+                        default NT35510_UGFX_DRIVER_SCREEN_HEIGHT if UGFX_DRIVER_NT35510
 
                 endmenu
 
@@ -1632,8 +1666,25 @@ menu "IoT Solution settings"
                         endchoice
                         config LVGL_LCD_SPI_NUM
                             int
-                            default 1 if  LVGL_LCD_HSPI
-                            default 2 if  LVGL_LCD_VSPI
+                            default 1 if LVGL_LCD_HSPI
+                            default 2 if LVGL_LCD_VSPI
+                        
+                        choice LVGL_BCKL_ACTIVE_LEVEL_OPTIONAL
+                            prompt "Select Backlight Active Level"
+                            default LVGL_BCKL_ACTIVE_LEVEL_HIGH
+
+                            config LVGL_BCKL_ACTIVE_LEVEL_LOW
+                                bool "Backlight Active Low"
+                        
+                            config LVGL_BCKL_ACTIVE_LEVEL_HIGH
+                                bool "Backlight Active High"
+
+                        endchoice
+                        config LVGL_BCKL_ACTIVE_LEVEL
+                            int
+                            default 0 if LVGL_BCKL_ACTIVE_LEVEL_LOW
+                            default 1 if LVGL_BCKL_ACTIVE_LEVEL_HIGH
+
                         config LVGL_LCD_SPI_CLOCK
                             int "LittlevGL LCD SPI Clock"
                             range 0 40000000
@@ -1686,8 +1737,25 @@ menu "IoT Solution settings"
                         endchoice
                         config LVGL_LCD_SPI_NUM
                             int
-                            default 1 if  LVGL_LCD_HSPI
-                            default 2 if  LVGL_LCD_VSPI
+                            default 1 if LVGL_LCD_HSPI
+                            default 2 if LVGL_LCD_VSPI
+                        
+                        choice LVGL_BCKL_ACTIVE_LEVEL_OPTIONAL
+                            prompt "Select Backlight Active Level"
+                            default LVGL_BCKL_ACTIVE_LEVEL_HIGH
+
+                            config LVGL_BCKL_ACTIVE_LEVEL_LOW
+                                bool "Backlight Active Low"
+                        
+                            config LVGL_BCKL_ACTIVE_LEVEL_HIGH
+                                bool "Backlight Active High"
+
+                        endchoice
+                        config LVGL_BCKL_ACTIVE_LEVEL
+                            int
+                            default 0 if LVGL_BCKL_ACTIVE_LEVEL_LOW
+                            default 1 if LVGL_BCKL_ACTIVE_LEVEL_HIGH
+
                         config LVGL_LCD_SPI_CLOCK
                             int "LittlevGL LCD SPI Clock"
                             range 0 40000000
@@ -1751,8 +1819,8 @@ menu "IoT Solution settings"
                         endchoice
                         config LVGL_LCD_I2S_NUM
                             int
-                            default 0 if  LVGL_LCD_I2S0
-                            default 1 if  LVGL_LCD_I2S1
+                            default 0 if LVGL_LCD_I2S0
+                            default 1 if LVGL_LCD_I2S1
 
                         config LVGL_LCD_WR_GPIO
                             int "LittlevGL LCD WR GPIO"
@@ -1921,17 +1989,17 @@ menu "IoT Solution settings"
                             
                     config LVGL_DRIVER_SCREEN_WIDTH
                         int
-                        default ILI9341_LVGL_DRIVER_SCREEN_WIDTH if  LVGL_DRIVER_ILI9341
-                        default SSD1306_LVGL_DRIVER_SCREEN_WIDTH if  LVGL_DRIVER_SSD1306
-                        default ST7789_LVGL_DRIVER_SCREEN_WIDTH  if  LVGL_DRIVER_ST7789
-                        default NT35510_LVGL_DRIVER_SCREEN_WIDTH if  LVGL_DRIVER_NT35510
+                        default ILI9341_LVGL_DRIVER_SCREEN_WIDTH if LVGL_DRIVER_ILI9341
+                        default SSD1306_LVGL_DRIVER_SCREEN_WIDTH if LVGL_DRIVER_SSD1306
+                        default ST7789_LVGL_DRIVER_SCREEN_WIDTH  if LVGL_DRIVER_ST7789
+                        default NT35510_LVGL_DRIVER_SCREEN_WIDTH if LVGL_DRIVER_NT35510
                             
                     config LVGL_DRIVER_SCREEN_HEIGHT
                         int
-                        default ILI9341_LVGL_DRIVER_SCREEN_HEIGHT if  LVGL_DRIVER_ILI9341
-                        default SSD1306_LVGL_DRIVER_SCREEN_HEIGHT if  LVGL_DRIVER_SSD1306
-                        default ST7789_LVGL_DRIVER_SCREEN_HEIGHT  if  LVGL_DRIVER_ST7789
-                        default NT35510_LVGL_DRIVER_SCREEN_HEIGHT if  LVGL_DRIVER_NT35510
+                        default ILI9341_LVGL_DRIVER_SCREEN_HEIGHT if LVGL_DRIVER_ILI9341
+                        default SSD1306_LVGL_DRIVER_SCREEN_HEIGHT if LVGL_DRIVER_SSD1306
+                        default ST7789_LVGL_DRIVER_SCREEN_HEIGHT  if LVGL_DRIVER_ST7789
+                        default NT35510_LVGL_DRIVER_SCREEN_HEIGHT if LVGL_DRIVER_NT35510
 
                 endmenu
 

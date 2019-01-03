@@ -104,7 +104,7 @@ void board_lcd_init()
         .pin_num_bckl = CONFIG_UGFX_LCD_BL_GPIO,
         .clk_freq = CONFIG_UGFX_LCD_SPI_CLOCK,
         .rst_active_level = 0,
-        .bckl_active_level = 1,
+        .bckl_active_level = CONFIG_UGFX_BCKL_ACTIVE_LEVEL,
         .spi_host = (spi_host_device_t)CONFIG_UGFX_LCD_SPI_NUM,
         .init_spi_bus = true,
     };
@@ -241,7 +241,7 @@ lv_disp_drv_t lvgl_lcd_display_init()
         .pin_num_bckl = CONFIG_LVGL_LCD_BL_GPIO,
         .clk_freq = CONFIG_LVGL_LCD_SPI_CLOCK,
         .rst_active_level = 0,
-        .bckl_active_level = 1,
+        .bckl_active_level = CONFIG_LVGL_BCKL_ACTIVE_LEVEL,
         .spi_host = (spi_host_device_t)CONFIG_LVGL_LCD_SPI_NUM,
         .init_spi_bus = true,
     };
