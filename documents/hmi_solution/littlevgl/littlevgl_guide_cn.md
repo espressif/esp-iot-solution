@@ -428,17 +428,17 @@ LittlevGL 支持 `UTF-8` 编码的 `Unicode` 字符。需要配置编辑器以�
 
 <div align="center">图 7. 对齐方式</div>  
 
-当您使用 `lv_obj_create（NULL，NULL）`函数创建 Screen 时，可以使用 `lv_scr_load（screen1）` 加载它。使用 `lv_scr_act（）`函数将返回指向当前 Screen 的指针。
+当您使用 `lv_obj_create(NULL，NULL)`函数创建 Screen 时，可以使用 `lv_scr_load(screen1)` 加载它。使用 `lv_scr_act()`函数将返回指向当前 Screen 的指针。
 
 自动生成的两层图层：
 - 顶层
 - 系统层
 
-它们是独立于 Screen 对象的，因此创建一个对象时，将会在 Screen 上显示。顶层位于 Screen 上的每个对象上方，系统层也位于顶层之上。您可以在顶层自由添加任何弹出窗口。但是系统层限于系统级事物（例如鼠标光标将在这里移动）。使用 `lv_layer_top（）` 和 `lv_layer_sys（）` 函数将返回指向顶层或系统层的指针。
+它们是独立于 Screen 对象的，因此创建一个对象时，将会在 Screen 上显示。顶层位于 Screen 上的每个对象上方，系统层也位于顶层之上。您可以在顶层自由添加任何弹出窗口。但是系统层限于系统级事物（例如鼠标光标将在这里移动）。使用 `lv_layer_top()` 和 `lv_layer_sys()` 函数将返回指向顶层或系统层的指针。
 
 #### Label (lv_label)
 
-标签是用于显示文本的基本对象，文本大小没有限制。可以使用 `lv_label_set_text（）` 函数修改的文本。标签对象的大小可以自动扩展到文本大小，或者可以选择以下方式：
+标签是用于显示文本的基本对象，文本大小没有限制。可以使用 `lv_label_set_text()` 函数修改的文本。标签对象的大小可以自动扩展到文本大小，或者可以选择以下方式：
 - `LV_LABEL_LONG_EXPAND`： 将对象大小扩展为文本大小
 - `LV_LABEL_LONG_BREAK`： 保持对象宽度，展开对象高度
 - `LV_LABEL_LONG_DOTS`： 保持对象大小，截取文本并在最后一行写入点
@@ -460,9 +460,9 @@ LittlevGL 支持 `UTF-8` 编码的 `Unicode` 字符。需要配置编辑器以�
 
 #### Line (lv_line)
 
-线对象能够在一组点之间绘制直线。这些点必须存储在 `lv_point_t` 数组中，并通过 `lv_line_set_points（lines，point_array，point_num）` 函数传递给对象。
+线对象能够在一组点之间绘制直线。这些点必须存储在 `lv_point_t` 数组中，并通过 `lv_line_set_points(lines，point_array，point_num)` 函数传递给对象。
 
-可以根据点自动设置线对象的大小。您可以使用 `lv_line_set_auto_size（line，true）` 函数使能自动设置对象大小。如果使能，那么当设置点时，对象的宽度和高度将根据最大值（`max.x` 和 `max.y`）进行更改。默认情况下使能自动设置对象大小。
+可以根据点自动设置线对象的大小。您可以使用 `lv_line_set_auto_size(line，true)` 函数使能自动设置对象大小。如果使能，那么当设置点时，对象的宽度和高度将根据最大值（`max.x` 和 `max.y`）进行更改。默认情况下使能自动设置对象大小。
 
 #### Container (lv_cont)
 
@@ -478,7 +478,7 @@ LittlevGL 支持 `UTF-8` 编码的 `Unicode` 字符。需要配置编辑器以�
 - `LV_CONT_LAYOUT_PRETTY`：尽可能将对象放在一行中。在子对象之间平均划分每行。顶部间距为 `pad.ver`，行间距为 `pad.inner`
 - `LV_CONT_LAYOUT_GRID`：与 `PRETTY LAYOUT` 类似，但不是平均划分一行，而是子对象之间间距为 `pad.hor`
 
-您可以使能自动调整功能，该功能会自动设置容器大小以包括所有子对象。在左侧和右侧间距保持为 `pad.hor`，在顶部和底部间距保持为 `pad.ver`。可以使用 `lv_cont_set_fit（cont，true，true）` 函数使能水平、垂直或双向自动调整。第二个参数是水平方向，第三个参数是垂直方向。
+您可以使能自动调整功能，该功能会自动设置容器大小以包括所有子对象。在左侧和右侧间距保持为 `pad.hor`，在顶部和底部间距保持为 `pad.ver`。可以使用 `lv_cont_set_fit(cont，true，true)` 函数使能水平、垂直或双向自动调整。第二个参数是水平方向，第三个参数是垂直方向。
 
 #### Page (lv_page)
 
@@ -498,9 +498,9 @@ LittlevGL 支持 `UTF-8` 编码的 `Unicode` 字符。需要配置编辑器以�
 
 窗口是最复杂的容器类对象之一。它们由两个主要部分构成：顶部的标题容器和标题下面的内容页面。
 
-在标题容器上有标题，可以通过以下方式修改：`lv_win_set_title（win，“New title”）`。标题始终继承标题容器的样式。
+在标题容器上有标题，可以通过以下方式修改：`lv_win_set_title(win，“New title”)`。标题始终继承标题容器的样式。
 
-您可以使用以下命令在标题的右侧添加控制按钮：`lv_win_add_btn（win，“U：/ close”，my_close_action）`。第二个参数是图像文件路径，第三个参数是释放按钮时的回调函数。您可以将符号用作图像，如：`lv_win_add_btn（win，SYMBOL_CLOSE，my_close_action）`。
+您可以使用以下命令在标题的右侧添加控制按钮：`lv_win_add_btn(win，“U：/ close”，my_close_action)`。第二个参数是图像文件路径，第三个参数是释放按钮时的回调函数。您可以将符号用作图像，如：`lv_win_add_btn(win，SYMBOL_CLOSE，my_close_action)`。
 
 #### Tab view (lv_tabview)
 
@@ -509,21 +509,21 @@ LittlevGL 支持 `UTF-8` 编码的 `Unicode` 字符。需要配置编辑器以�
 要选择标签，您可以：
 - 在标题部分单击它
 - 水平滑动
-- 使用 `lv_tabview_set_tab_act（tabview，id，anim_en）` 函数
+- 使用 `lv_tabview_set_tab_act(tabview，id，anim_en)` 函数
 
-使用 `lv_tabview_set_sliding（tabview，false）` 函数禁用手动滑动，动画时间可以使用 `lv_tabview_set_anim_time（tabview，anim_time）` 函数调整。使用 `lv_tabview_set_tab_load_action（tabview，action）` 函数给选项卡添加回调函数。
+使用 `lv_tabview_set_sliding(tabview，false)` 函数禁用手动滑动，动画时间可以使用 `lv_tabview_set_anim_time(tabview，anim_time)` 函数调整。使用 `lv_tabview_set_tab_load_action(tabview，action)` 函数给选项卡添加回调函数。
 
 #### Bar (lv_bar)
 
 Bar 对象有两个主要部分：一个背景，它是对象本身，一个游标，其形状类似于背景，但其宽度/高度可以调整。根据宽度/高度比，Bar 的方向可以是垂直的或水平的。
 
-可以通过以下方式设置值：`lv_bar_set_value（bar，new_value）`。该值在范围（最小值和最大值）中，可以使用以下值修改范围：`lv_bar_set_range（bar，min，max）`。默认范围是：1~100。使用 `lv_bar_set_value_anim（bar，new_value，anim_time）` 函数可以设置从当前值改变到设置的值的动画时间。
+可以通过以下方式设置值：`lv_bar_set_value(bar，new_value)`。该值在范围（最小值和最大值）中，可以使用以下值修改范围：`lv_bar_set_range(bar，min，max)`。默认范围是：1~100。使用 `lv_bar_set_value_anim(bar，new_value，anim_time)` 函数可以设置从当前值改变到设置的值的动画时间。
 
 #### Line meter (lv_lmeter)
 
-Line Meter 对象包含一些绘制比例的径向线。使用 `lv_lmeter_set_value（lmeter，new_value）` 函数设置值时，刻度的比例部分将重新着色。
+Line Meter 对象包含一些绘制比例的径向线。使用 `lv_lmeter_set_value(lmeter，new_value)` 函数设置值时，刻度的比例部分将重新着色。
 
-使用 `lv_lmeter_set_range（lmeter，min，max）` 函数设置线路表的范围，使用 `lv_lmeter_set_scale（lmeter，angle，line_num）` 函数设置刻度的角度和线数量。默认角度为 240，默认线数量为 31。
+使用 `lv_lmeter_set_range(lmeter，min，max)` 函数设置线路表的范围，使用 `lv_lmeter_set_scale(lmeter，angle，line_num)` 函数设置刻度的角度和线数量。默认角度为 240，默认线数量为 31。
 
 <div align="center"><img src="../../_static/hmi_solution/littlevgl/line-meter-lv_lmeter.jpg" width = "800" alt="Line meter" align=center /></div>  
 
@@ -531,11 +531,11 @@ Line Meter 对象包含一些绘制比例的径向线。使用 `lv_lmeter_set_va
 
 #### Gauge (lv_gauge)
 
-仪表是带刻度标签和针头的对象。您可以使用 `lv_gauge_set_scale（gauge，angle，line_num，label_cnt）` 函数来调整角度以及刻度线和标签的数量。默认设置为：220 度角，6 个刻度标签和 21 条线。
+仪表是带刻度标签和针头的对象。您可以使用 `lv_gauge_set_scale(gauge，angle，line_num，label_cnt)` 函数来调整角度以及刻度线和标签的数量。默认设置为：220 度角，6 个刻度标签和 21 条线。
 
-仪表可以显示多个针头。使用 `lv_gauge_set_needle_count（gauge，needle_num，color_array）` 函数设置针数和每个针的颜色数组（数组必须是静态或全局变量）。
+仪表可以显示多个针头。使用 `lv_gauge_set_needle_count(gauge，needle_num，color_array)` 函数设置针数和每个针的颜色数组（数组必须是静态或全局变量）。
 
-要设置临界值，请使用 `lv_gauge_set_critical_value（gauge，value）`。在临界值之后，刻度颜色将变为 `line.color`。（默认值：80）仪表的范围可以通过 `lv_gauge_set_range(gauge, min, max)` 函数设置。
+要设置临界值，请使用 `lv_gauge_set_critical_value(gauge，value)`。在临界值之后，刻度颜色将变为 `line.color`。（默认值：80）仪表的范围可以通过 `lv_gauge_set_range(gauge, min, max)` 函数设置。
 
 #### Chart (lv_chart)
 
@@ -565,13 +565,13 @@ LED 是矩形（或圆形）的对象。您可以使用 `lv_led_set_bright(led, 
 
 消息框充当弹出窗口。它们是由背景，文本和按钮构成的。背景是一个容器对象，使能垂直方向自动调整以确保文本和按钮始终可见。
 
-使用 `lv_mbox_set_text(mbox, "My text")` 函数设置文本。要添加按钮，请使用 `lv_mbox_add_btns(mbox, btn_str, action)` 函数。 在这里你可以指定按钮文本，并添加一个释放按钮时的回调函数。使用 `lv_mbox_start_auto_close(mbox, delay)` 函数可以在延时 `delay` 毫秒后自动关闭消息框。使用 `lv_mbox_stop_auto_close(mbox)` 函数将禁用开始自动关闭。使用 `lv_mbox_set_anim_time（mbox，anim_time）` 函数调整动画时间。
+使用 `lv_mbox_set_text(mbox, "My text")` 函数设置文本。要添加按钮，请使用 `lv_mbox_add_btns(mbox, btn_str, action)` 函数。 在这里你可以指定按钮文本，并添加一个释放按钮时的回调函数。使用 `lv_mbox_start_auto_close(mbox, delay)` 函数可以在延时 `delay` 毫秒后自动关闭消息框。使用 `lv_mbox_stop_auto_close(mbox)` 函数将禁用开始自动关闭。使用 `lv_mbox_set_anim_time(mbox，anim_time)` 函数调整动画时间。
 
 #### Text area (lv_ta)
 
 文本区域是一个带有标签和光标的页面。您可以使用以下方法将文本或字符插入当前光标位置：
-- `lv_ta_add_char（ta，'c'）;`
-- `lv_ta_add_text（ta，“insert this text”）;`
+- `lv_ta_add_char(ta，'c');`
+- `lv_ta_add_text(ta，“insert this text”);`
 
 使用 `lv_ta_set_text(ta, "New text")` 函数更改整个文本。使用 `lv_ta_del()` 函数删除当前光标位置左侧的字符。
 
@@ -590,7 +590,7 @@ LED 是矩形（或圆形）的对象。您可以使用 `lv_led_set_bright(led, 
 
 你可以使用 `LV_CURSOR_HIDDEN` 隐藏光标。
 
-使用　`lv_ta_set_one_line（ta，true）` 函数设置文本区域为一行。使用 `lv_ta_set_pwd_mode（ta，true）` 函数使能密码模式。
+使用　`lv_ta_set_one_line(ta，true)` 函数设置文本区域为一行。使用 `lv_ta_set_pwd_mode(ta，true)` 函数使能密码模式。
 
 #### Button (lv_btn)
 
@@ -607,17 +607,17 @@ LED 是矩形（或圆形）的对象。您可以使用 `lv_led_set_bright(led, 
 - `LV_BTN_STATE_TGL_PR`：切换按下状态
 - `LV_BTN_STATE_INA`：禁用状态
 
-可以使用 `lv_btn_set_toggle(btn, true)` 函数将按钮设置为触发按钮。在这种情况下，在释放时，按钮进入切换释放状态。可以使用 `lv_btn_set_state（btn，LV_BTN_STATE_TGL_REL）` 函数手动设置按钮的状态。
+可以使用 `lv_btn_set_toggle(btn, true)` 函数将按钮设置为触发按钮。在这种情况下，在释放时，按钮进入切换释放状态。可以使用 `lv_btn_set_state(btn，LV_BTN_STATE_TGL_REL)` 函数手动设置按钮的状态。
 
-按钮只能通过 `lv_btn_set_state（）` 函数手动进入禁用状态。在禁用状态下，不会调用任何操作。
+按钮只能通过 `lv_btn_set_state()` 函数手动进入禁用状态。在禁用状态下，不会调用任何操作。
 
 与容器类似，按钮也有布局和自动调整：
-- `lv_btn_set_layout（btn，LV_LAYOUT _...）` 设置布局。默认为 `LV_LAYOUT_CENTER`。因此，如果添加标签，它将自动与中间对齐。
-- `lv_btn_set_fit（btn，hor_en，ver_en）` 可以根据子对象自动设置按钮宽度、高度。
+- `lv_btn_set_layout(btn，LV_LAYOUT _...)` 设置布局。默认为 `LV_LAYOUT_CENTER`。因此，如果添加标签，它将自动与中间对齐。
+- `lv_btn_set_fit(btn，hor_en，ver_en)` 可以根据子对象自动设置按钮宽度、高度。
 
 #### Button matrix (lv_btnm)
 
-Button Matrix 对象可以根据描述符字符串数组显示多个按钮，称为 map。您可以使用 `lv_btnm_set_map（btnm，my_map）` 指定 map。
+Button Matrix 对象可以根据描述符字符串数组显示多个按钮，称为 map。您可以使用 `lv_btnm_set_map(btnm，my_map)` 指定 map。
 
 map 的声明看起来像 `const char * map [] = {“btn1”，“btn2”，“btn3”，“”}`。请注意，最后一个元素必须是空字符串！
 
@@ -630,7 +630,7 @@ map 的声明看起来像 `const char * map [] = {“btn1”，“btn2”，“b
 
 在 map 中使用“\n”进行换行：`{“btn1”，“btn2”，“\ n”，“btn3”，“”}`。每行重新计算按钮的宽度。
 
-使用 `lv_btnm_set_action（btnm，btnm_action）` 函数指定释放按钮时的回调函数。
+使用 `lv_btnm_set_action(btnm，btnm_action)` 函数指定释放按钮时的回调函数。
 
 #### Keyboard (lv_kb)
 
@@ -646,7 +646,7 @@ map 的声明看起来像 `const char * map [] = {“btn1”，“btn2”，“b
 
 调用 `lv_kb_set_mode(kb, mode)` 函数设置模式。默认值为 `LV_KB_MODE_TEXT`。
 
-可以调用 `lv_kb_set_map（kb，map）` 为键盘指定新的映射（布局）。它的工作方式类似于按钮矩阵，因此控件字符可以添加到布局中设置按钮宽度和其他属性。请记住，使用以下关键字将与原始映射具有相同的效果：`SYMBOL_OK`，`SYMBOL_CLOSE`，`SYMBOL_LEFT`，`SYMBOL_RIGHT`，`ABC`，`abc`，`Enter`，`Del`，`＃1`，`+/-`。
+可以调用 `lv_kb_set_map(kb，map)` 为键盘指定新的映射（布局）。它的工作方式类似于按钮矩阵，因此控件字符可以添加到布局中设置按钮宽度和其他属性。请记住，使用以下关键字将与原始映射具有相同的效果：`SYMBOL_OK`，`SYMBOL_CLOSE`，`SYMBOL_LEFT`，`SYMBOL_RIGHT`，`ABC`，`abc`，`Enter`，`Del`，`＃1`，`+/-`。
 
 #### List (lv_list)
 
@@ -654,35 +654,35 @@ map 的声明看起来像 `const char * map [] = {“btn1”，“btn2”，“b
 
 可以使用 `lv_list_add(list, "U:/img", "Text", rel_action)` 函数添加新的列表元素或使用 `lv_list_add(list, SYMBOL_EDIT, "Edit text")` 函数添加带符号图标的列表元素。该函数返回一个指向已创建的按钮的指针，以允许进一步配置。
 
-使用 `lv_list_get_btn_label（list_btn）` 函数和 `lv_list_get_btn_img（list_btn）` 函数来获取标签和列表按钮的图像。
+使用 `lv_list_get_btn_label(list_btn)` 函数和 `lv_list_get_btn_img(list_btn)` 函数来获取标签和列表按钮的图像。
 
-在按钮的释放操作中，您可以调用 `lv_list_get_btn_label(list_btn)` 函数获取按钮的文本。要删除列表元素，只需在 `lv_list_add（）` 的返回值上调用 `lv_obj_del（）` 函数。可以调用 `lv_list_up（list）` 和 `lv_list_down（list）` 函数在列表中手动移动。
+在按钮的释放操作中，您可以调用 `lv_list_get_btn_label(list_btn)` 函数获取按钮的文本。要删除列表元素，只需在 `lv_list_add()` 的返回值上调用 `lv_obj_del()` 函数。可以调用 `lv_list_up(list)` 和 `lv_list_down(list)` 函数在列表中手动移动。
 
-可以使用 `lv_list_focus(btn, anim_en)` 直接选中按钮。上/下/焦点移动的动画时间可以通过以下方式设置：`lv_list_set_anim_time（list，anim_time）`。
+可以使用 `lv_list_focus(btn, anim_en)` 直接选中按钮。上/下/焦点移动的动画时间可以通过以下方式设置：`lv_list_set_anim_time(list，anim_time)`。
 
 #### Drop down list (lv_ddlist)
 
 下拉列表允许您从选项列表中选择一个选项。下拉列表默认关闭，显示当前选定的文本。如果单击它，将打开此列表并显示所有选项。
 
-将选项作为字符串使用 `lv_ddlist_set_options（ddlist，options）` 函数传递给下拉列表。选项应以 `\n` 分隔。例如：“First\nSecond\nThird”。
+将选项作为字符串使用 `lv_ddlist_set_options(ddlist，options)` 函数传递给下拉列表。选项应以 `\n` 分隔。例如：“First\nSecond\nThird”。
 
-使用 `lv_ddlist_set_selected（ddlist，id）` 函数手动选择一个选项，其中 id 是选项的索引。使用 `lv_ddlist_set_action（ddlist，my_action）` 函数设置回调函数。
+使用 `lv_ddlist_set_selected(ddlist，id)` 函数手动选择一个选项，其中 id 是选项的索引。使用 `lv_ddlist_set_action(ddlist，my_action)` 函数设置回调函数。
 
-默认情况下，列表的高度会自动调整以显示所有选项。使用 `lv_ddlist_set_fix_height（ddlist，h）` 函数设置固定高度。
+默认情况下，列表的高度会自动调整以显示所有选项。使用 `lv_ddlist_set_fix_height(ddlist，h)` 函数设置固定高度。
 
-宽度也会自动调整。使用 `lv_ddlist_set_hor_fit（ddlist，false）` 函数，并使用 `lv_obj_set_width（ddlist，width）` 函数手动设置宽度。
+宽度也会自动调整。使用 `lv_ddlist_set_hor_fit(ddlist，false)` 函数，并使用 `lv_obj_set_width(ddlist，width)` 函数手动设置宽度。
 
-与具有固定高度的页面类似，下拉列表支持各种滚动条显示模式。可以使用` lv_ddlist_set_sb_mode（ddlist，LV_SB_MODE _...）` 函数设置。
+与具有固定高度的页面类似，下拉列表支持各种滚动条显示模式。可以使用` lv_ddlist_set_sb_mode(ddlist，LV_SB_MODE _...)` 函数设置。
 
-Drop Dawn List 打开/关闭动画时间由 `lv_ddlist_set_anim_time（ddlist，anim_time）` 函数设置。
+Drop Dawn List 打开/关闭动画时间由 `lv_ddlist_set_anim_time(ddlist，anim_time)` 函数设置。
 
 #### Roller (lv_roller)
 
 Roller 允许您通过简单地滚动从选项列表中选择一个选项。其功能类似于下拉列表。
 
-使用 `lv_roller_set_options(roller, options)` 函数设置选项列表。其中第二个参数为字符串，以 `\n` 分隔。例如：“First\nSecond\nThird”。使用 `lv_roller_set_selected（roller，id）` 函数手动选择一个选项，其中 id 是选项的索引。使用 `lv_roller_set_action（roller，my_action）` 函数设置回调函数。使用 `lv_roller_set_visible_row_count（roller，row_cnt）` 函数调整滚轴的高度，以设置可见选项的数量。
+使用 `lv_roller_set_options(roller, options)` 函数设置选项列表。其中第二个参数为字符串，以 `\n` 分隔。例如：“First\nSecond\nThird”。使用 `lv_roller_set_selected(roller，id)` 函数手动选择一个选项，其中 id 是选项的索引。使用 `lv_roller_set_action(roller，my_action)` 函数设置回调函数。使用 `lv_roller_set_visible_row_count(roller，row_cnt)` 函数调整滚轴的高度，以设置可见选项的数量。
 
-Roller 的宽度自动调整。可以使用 `lv_roller_set_hor_fit（roller，false）` 函数禁止自动调整，并使用 `lv_obj_set_width(roller, width)` 函数手动设置宽度。Roller 的打开/关闭动画时间由 `lv_roller_set_anim_time（roller，anim_time）` 函数调整。
+Roller 的宽度自动调整。可以使用 `lv_roller_set_hor_fit(roller，false)` 函数禁止自动调整，并使用 `lv_obj_set_width(roller, width)` 函数手动设置宽度。Roller 的打开/关闭动画时间由 `lv_roller_set_anim_time(roller，anim_time)` 函数调整。
 
 <div align="center"><img src="../../_static/hmi_solution/littlevgl/roller-lv_roller.jpg" width = "800" alt="Roller" align=center /></div>  
 
@@ -692,32 +692,32 @@ Roller 的宽度自动调整。可以使用 `lv_roller_set_hor_fit（roller，fa
 
 Check Box 对象是基于按钮的，其中包含一个按钮和一个标签，用于实现经典复选框。
 
-使用 `lv_cb_set_text（cb，“New text”）` 函数修改文本。使用 `lv_cb_set_action(cb, action)` 函数设置回调函数。可以使用 `lv_cb_set_checked(cb, state)` 函数手动选中或取消选中。
+使用 `lv_cb_set_text(cb，“New text”)` 函数修改文本。使用 `lv_cb_set_action(cb, action)` 函数设置回调函数。可以使用 `lv_cb_set_checked(cb, state)` 函数手动选中或取消选中。
 
 #### Slider (lv_slider)
 
 滑条对象看起来像增加了一个旋钮的 Bar。可以拖动旋钮来设置值。滑块也可以是垂直的或水平的。
 
-使用 `lv_slider_set_value（slider，new_value）` 函数设置初始值或使用 `lv_slider_set_value_anim（slider，new_value，anim_time）` 函数设置动画时间。
+使用 `lv_slider_set_value(slider，new_value)` 函数设置初始值或使用 `lv_slider_set_value_anim(slider，new_value，anim_time)` 函数设置动画时间。
 
-可以使用 `lv_slider_set_range（slider，min，max）` 函数指定范围（最小值，最大值）。
+可以使用 `lv_slider_set_range(slider，min，max)` 函数指定范围（最小值，最大值）。
 
-当用户设置新的值时，可以通过 `lv_slider_set_action（slider，my_action）` 函数设置回调函数。
+当用户设置新的值时，可以通过 `lv_slider_set_action(slider，my_action)` 函数设置回调函数。
 
 旋钮有两种方式放置：
 - 在最小/最大值的背景内
 - 在最小/最大值的边缘上
 
-使用 `lv_slider_set_knob_in（slider，true / false）` 函数在这两种之间进行选择。（默认值是 `knob_in == false`）
+使用 `lv_slider_set_knob_in(slider，true / false)` 函数在这两种之间进行选择。（默认值是 `knob_in == false`）
 
 #### Switch (lv_sw)
 
 开关可用于打开/关闭某些东西。可以通过以下方式更改开关的状态：
 - 点击
 - 滑动
-- `lv_sw_on（sw）`和 `lv_sw_off（sw）` 函数
+- `lv_sw_on(sw)`和 `lv_sw_off(sw)` 函数
 
-当用户使用开关时，可以使用 `lv_sw_set_action（sw，my_action）` 函数设置回调函数。
+当用户使用开关时，可以使用 `lv_sw_set_action(sw，my_action` 函数设置回调函数。
 
 ## LittlevGL 使用
 

@@ -1,3 +1,5 @@
+[[EN]](./hmi_workflow_en.md)
+
 # HMI WorkFlow
 
 ## 概述
@@ -9,29 +11,26 @@
 - 硬件资源
 
     * LCD 接口：SPI、I2S
-
-- 系统性能
-
     * 外部存储器 Cache
 
-- 图形库
+- 软件资源
 
-    * μGFX
-    * LittlevGL
+    * μGFX 图形库
+    * LittlevGL 图形库
 
 ## ESP32 图形库特性
 
 * 多国语言支持
 * 易移植外设驱动架构
-* 完整的特性列表
 * 丰富的 GUI 例程
-* 绘制 UI 工具或 PC 模拟器
+* 绘制 UI 工具 (μGFX) 
+* PC 模拟器 (LittlevGL)
 
 ## μGFX 介绍
 
 - 2D 图像库
     * 丰富的绘图 API
-    * 图像显示功能（bmp、jpeg、png、gif）
+    * 图像显示功能 (bmp、jpeg、png、gif)
     * Alpha 混合
 - 多种字体
     * 可导入用户字体
@@ -50,20 +49,20 @@
 
 <div align="center"><img src="../_static/hmi_solution/ugfx/500px-Architecture2.png" width = "500" alt="500px-Architecture2" align=center /></div>
 
-### μGFX 开发平台基本结构和开发方法
+### μGFX 开发步骤
 
 1. 准备资源
 
     图片/字体等资源
+    
+2. 代码转换
 
-2. UI 原型设计
+    将资源文件（图片/字体）转换为代码或者存储在外部存储器
 
-    将 GUI 的原型通过 PS 或 μGFX-Studio 等软件呈现出来
+3. UI 原型设计
 
-3. 代码转换
-
-    将资源文件转换为代码或者存储在外部存储器
-
+    将 UI 的原型通过 PS 或 μGFX-Studio 等软件呈现出来
+    
 4. ESP32 平台选择
 
 5. 基于 [ESP32 μGFX](https://github.com/espressif/esp-iot-solution/tree/master/components/hmi/ugfx_gui) 库进行移植、相关驱动开发
@@ -118,19 +117,19 @@
 
 <div align="center"><img src="../_static/hmi_solution/littlevgl/sys.jpg" width = "500" alt="sys" align=center /></div>
 
-### LittlevGL 开发平台基本结构和开发方法
+### LittlevGL 开发步骤
 
 1. 准备资源
 
     图片/字体等资源
+    
+2. 代码转换
 
-2. UI 原型设计
+    将资源文件（图片/字体）转换为代码或者存储在外部存储器
 
-    将 GUI 的原型通过 PS 等软件呈现出来
+3. UI 原型设计
 
-3. 代码转换
-
-    将资源文件转换为代码或者存储在外部存储器
+    将 UI 的原型通过 PS 等软件呈现出来
 
 4. ESP32 平台选择
 
@@ -162,26 +161,22 @@
 
 [演示视频](http://demo.iot.espressif.cn:8887/cmp/demo/demo1.mp4)
 
-## 总结
-
-- ESP32 为用户界面应用开发提供了：
-    * 强大的 CPU 处理能力及其丰富的外设接口
-    * 多个图形库供开发工程师选择
-- ESP32 用户界面设计方案可广泛应用于：
-    * 便携或穿戴式消费电子产品，智能楼宇和工业控制器、智能家电、个人医疗设备、保健点医疗设备，车载电子等
-
 ## 开发示例说明
 
-本节将描述 mp3_example 的界面开发过程（在这里将不进行 ESP-ADF 相关介绍和使用）
+本节将以 [mp3_example](../../examples/hmi/mp3_example/README.md) 为例具体说明 HMI 界面开发过程（在这里将不进行 [ESP-ADF](https://github.com/espressif/esp-adf) 相关介绍和使用）
 
 1. 准备资源
 
-    - 在 mp3_example 中我们使用的字体为系统默认字体: DejaVu 字体、20 px; 
-    - 并使用内置符号字体：SYMBOL_AUDIO、SYMBOL_LIST、SYMBOL_SETTINGS、SYMBOL_PREV、SYMBOL_PLAY、SYMBOL_NEXT、SYMBOL_PAUSE; 
+    - 在 mp3_example 中我们使用的字体为系统默认字体: DejaVu 字体、20 px； 
+    - 并使用内置符号字体：SYMBOL_AUDIO、SYMBOL_LIST、SYMBOL_SETTINGS、SYMBOL_PREV、SYMBOL_PLAY、SYMBOL_NEXT、SYMBOL_PAUSE。
     
     所以，我们不要额外准备字体、图片等资源文件。
 
-2. UI 原型设计
+2. 代码转换
+
+    因为在 mp3_example 中未使用外部资源，所以不需要进行资源转换。
+
+3. UI 原型设计
 
     这里我们只进行页面简要框架设计：
 
@@ -203,14 +198,11 @@
         +--------播放控制页面-----------+     +-----------歌曲选择页面--------+     +-----------设置页面-----------+ 
 
 
-    - 主要包含 3 个页面：播放控制页面、歌曲选择页面、设置页面; 通过点击屏幕顶部的 3 个按钮进行切换，按钮上显示意义相近的符号
-    - 播放控制页面： 显示当前选择的 mp3 文件名称; 上/下一曲、播放/暂停按钮，按钮上显示意义相近的符号
-    - 歌曲选择页面： 该页面中显示从 SD-Card 中读取的 MP3 文件名称列表，在每一个列表项前都显示一个音乐符号
-    - 设置页面： 设置页面中显示设置项以及对应可选的参数，在 mp3_example 中只进行主题设置
-
-3. 代码转换
-
-    因为在 mp3_example 中未使用外部的资源，所以不需要进行资源转换;
+	主要包含 3 个页面：播放控制页面、歌曲选择页面、设置页面；通过点击屏幕顶部的 3 个按钮进行切换，按钮上显示意义相近的符号。
+	
+    - 播放控制页面：显示当前选择的 mp3 文件名称；上/下一曲、播放/暂停按钮，按钮上显示意义相近的符号
+    - 歌曲选择页面：该页面中显示从 SD-Card 中读取的 MP3 文件名称列表，在每一个列表项前都显示一个音乐符号
+    - 设置页面：设置页面中显示设置项以及对应可选的参数，在 mp3_example 中只进行主题设置
 
 4. ESP32 平台选择
 
@@ -218,17 +210,17 @@
 
 5. 基于 [ESP32 LittlevGL](https://github.com/espressif/esp-iot-solution/tree/master/components/hmi/lvgl_gui) 库进行移植、相关驱动开发
 
-    mp3_example 使用的 LittlevGL GUI 已经移植到 [esp-iot-solution](https://github.com/espressif/esp-iot-solution)，mp3_example 中使用外部设备为：2.8 inch、240*320 pixel、 ILI9341 显示屏 和 XPT2046 触摸屏，这两者的驱动在 [esp-iot-solution](https://github.com/espressif/esp-iot-solution) 中都有提供，无需再次移植; 若选择其他型号的显示屏或者显示屏，需要进行相关驱动开发;
+    mp3_example 使用的 LittlevGL GUI 已经移植到 [esp-iot-solution](https://github.com/espressif/esp-iot-solution)，mp3_example 中使用外部设备为：2.8 inch、240*320 pixel、 ILI9341 显示屏 和 XPT2046 触摸屏，这两者的驱动在 [esp-iot-solution](https://github.com/espressif/esp-iot-solution) 中都有提供，无需再次移植；若选择其他型号的显示屏或者触摸屏，需要进行相关驱动开发。
 
 6. 使用 PC 模拟器开发应用程序（可选）
 
-    在该示例开发过程中没有使用 LittlevGL PC 模拟器进行开发，如果需要使用 PC 模拟器，可以参考 [PC Simulator](https://docs.littlevgl.com/#PC-simulator) 
+    在该示例开发过程中没有使用 LittlevGL PC 模拟器进行开发，如果需要使用 PC 模拟器，可以参考 [PC Simulator](https://docs.littlevgl.com/#PC-simulator) 。
 
 7. 应用代码开发
 
-    >本节只介绍界面相关开发, 涉及到的其余相关外设使用不进行介绍
+    > 本节只介绍界面相关开发，涉及到的其余相关外设使用不进行介绍。
 
-    - 主体框架：考虑到 mp3_example 中的三个主页面以及通过 3 个按钮进行切换，选择 tabview 进行三个页面的管理最为合适，在 tabview 中添加三个子页面并且为每个页面的按钮指定 1 个符号字体：
+    - 主体框架：考虑到 mp3_example 中的三个主页面以及通过 3 个按钮进行切换，选择 [tabview](littlevgl/littlevgl_guide_cn.md#tab-view-lv_tabview) 进行三个页面的管理最为合适，在 tabview 中添加三个子页面并且为每个页面的按钮指定 1 个符号字体：
     ```
     /* LittlevGL GUI 初始化，相关显示屏以及触摸屏初始化 */
     lvgl_init();
@@ -246,7 +238,7 @@
     lv_obj_t *tab3 = lv_tabview_add_tab(tabview, SYMBOL_SETTINGS);
     ```
 
-    - 播放控制页面： 显示当前选择的 mp3 文件名称; 上/下一曲、播放/暂停按钮，这些控件我们通过 1 个 container 进行管理：
+    - 播放控制页面： 显示当前选择的 mp3 文件名称；上/下一曲、播放/暂停按钮，这些控件我们通过 1 个 [container](littlevgl/littlevgl_guide_cn.md#container-lv_cont) 进行管理：
         ```
         /* container 创建 */
         lv_obj_t *cont = lv_cont_create(tab1, NULL);
@@ -255,7 +247,7 @@
         lv_obj_set_size(cont, LV_HOR_RES - 20, LV_VER_RES - 85);
         lv_cont_set_fit(cont, false, false);
         ```
-        - 当前播放音频文件名称显示，使用 1 个 label 控件进行显示，显示内容可动态编辑：
+        - 当前播放音频文件名称显示，使用 1 个 [label](littlevgl/littlevgl_guide_cn.md#label-lv_label) 控件进行显示，显示内容可动态编辑：
             ```
             /* label 创建 */
             lv_obj_t *current_music = lv_label_create(cont, NULL);
@@ -303,7 +295,7 @@
             lv_btn_set_action(button[2], LV_BTN_ACTION_CLICK, audio_next_prev);
             ```
 
-    - 歌曲选择页面: 显示 MP3 文件名称列表，在子页面添加 list 控件即可：
+    - 歌曲选择页面：显示 MP3 文件名称列表，在子页面添加 [list](littlevgl/littlevgl_guide_cn.md#list-lv_list) 控件即可：
         ```
         /* list 创建、大小设置 */
         lv_obj_t *list = lv_list_create(tab2, NULL);
@@ -315,7 +307,7 @@
         }
         ```
     
-    - 设置页面：主题设置，需要添加 1 个 label 显示设置内容，1 个 roller 显示可选项
+    - 设置页面：主题设置，需要添加 1 个 label 显示设置内容，1 个 [roller](littlevgl/littlevgl_guide_cn.md#roller-lv_roller) 显示可选项
         ```
         /* label 创建、显示内容设置 */
         lv_obj_t *theme_label = lv_label_create(tab3, NULL);
@@ -428,4 +420,12 @@
 
 8. 调试运行
 
-    根据 [README.md](../../examples/hmi/mp3_example/README.md) 进行编译、下载在实际设备上运行，对出现的问题进行相关记录，并在代码中进行相关修改、再次调试。
+    根据 [README.md](../../examples/hmi/mp3_example/mp3_example_cn.md) 进行编译、下载，然后在实际设备上运行，对出现的问题进行相关记录，并在代码中进行相关修改、再次调试。
+    
+## 总结
+
+- ESP32 为用户界面应用开发提供了：
+    * 强大的 CPU 处理能力及其丰富的外设接口
+    * μGFX 和 LittlevGL 图形库供开发工程师选择
+- ESP32 用户界面设计方案可广泛应用于：
+    * 便携或穿戴式消费电子产品，智能楼宇和工业控制器、智能家电、个人医疗设备、保健点医疗设备，车载电子等

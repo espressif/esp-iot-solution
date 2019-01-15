@@ -6,11 +6,11 @@
 
 # 1. 概述
 
-ESP32-LCD-EB 是一款以乐鑫 ESP32 模组为核心的 HMI（人机交互） 开发板，可外接屏幕，并且集成了 SD-Card、DAC-Audio 等外设，主要用于进行 HMI 相关开发与评估。
+ESP32-LCD-EB 是一款以乐鑫 ESP32 模组为核心的 HMI（人机交互）开发板，可外接屏幕，并且集成了 SD-Card、DAC-Audio 等外设，主要用于 HMI 相关开发与评估。
 
-[HMI Example](../../examples/hmi/) 这里提供了一些 HMI 相关的示例可在 ESP32-LCD-EB 开发板上运行。
+[HMI Example](../../examples/hmi/) 这里提供的一些 HMI 示例可在 ESP32-LCD-EB 开发板上运行。
 
-关于 ESP32 详细信息，请参考文档[《ESP32 系列芯片技术规格书》](https://www.espressif.com/sites/default/files/documentation/esp32_datasheet_cn.pdf)。
+关于 ESP32 详细信息，请参考文档[《ESP32 系列芯片技术规格书》](https://www.espressif.com/sites/default/files/documentation/esp32_datasheet_cn.pdf)。 
 
 <img src="../../documents/_static/lcd_eb/esp32_lcd_eb.jpg" width = "800">
 
@@ -25,11 +25,11 @@ ESP32-LCD-EB 开发板的系统框图如下所示：
 
 ## 2.2 PCB 布局  
 
-ESP32-LCD-EB 开发板的 PCB 布局如下所示： 
+ESP32-LCD-EB 开发板的 PCB 布局如下所示：  
 
 <img src="../../documents/_static/lcd_eb/esp32_lcd_eb_pcb.jpg" width = "800">
 
-表 1: PCB 部件功能说明
+表 1：PCB 部件功能说明
 
 PCB 部件   | 说明
 ------    | ------
@@ -59,11 +59,13 @@ USB 供电管理模块电路图如下所示：
 
 ## 3.3 屏幕连接模块
 
-开发板采用两种不同的连接插座，可以将不同屏幕接至 ESP32-LCD-EB 开发板上，以实现 ESP32 模组对屏幕的操作。有这些接口可供选择使用： SPI 串行接口、8 位并行接口、16 位并行接口。
+开发板采用两种不同的连接插座，可以将不同屏幕接至 ESP32-LCD-EB 开发板上，以实现 ESP32 模组对屏幕的操作。以下接口可供选择使用：SPI 串行接口、8 位并行接口、16 位并行接口。
 
 外接屏幕电路原理图如下所示：
 
-<img src="../../documents/_static/lcd_eb/connect_module.jpg" width = "800">
+<img src="../../documents/_static/lcd_eb/serial_screen_module.jpg" width = "800">
+
+<img src="../../documents/_static/lcd_eb/parallel_screen_module.jpg" width = "800">
 
 ## 3.4 SD-Card、DAC-Audio 外设模块
 
@@ -72,4 +74,3 @@ USB 供电管理模块电路图如下所示：
 SD-Card、DAC-Audio 外设模块电路原理图如下所示：
 
 <img src="../../documents/_static/lcd_eb/sd_card_dac_module.jpg" width = "800">
-
