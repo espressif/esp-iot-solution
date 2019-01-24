@@ -151,8 +151,7 @@ static lv_res_t audio_next_prev(lv_obj_t *obj)
         // prev song
 #if USE_ADF_TO_PLAY
         ESP_LOGI(TAG, "[ * ] [Set] touch tap event");
-        audio_pipeline_stop(pipeline);
-        audio_pipeline_wait_for_stop(pipeline);
+        audio_pipeline_terminate(pipeline);
         ESP_LOGI(TAG, "[ * ] Stopped, advancing to the prev song");
 #endif
         get_file(CONTROL_PREV);
@@ -166,8 +165,7 @@ static lv_res_t audio_next_prev(lv_obj_t *obj)
         // next song
 #if USE_ADF_TO_PLAY
         ESP_LOGI(TAG, "[ * ] [Set] touch tap event");
-        audio_pipeline_stop(pipeline);
-        audio_pipeline_wait_for_stop(pipeline);
+        audio_pipeline_terminate(pipeline);
         ESP_LOGI(TAG, "[ * ] Stopped, advancing to the next song");
 #endif
         get_file(CONTROL_NEXT);
