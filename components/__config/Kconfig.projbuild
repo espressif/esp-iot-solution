@@ -533,7 +533,13 @@ menu "IoT Solution settings"
                 bool "SENSOR_MPU6050_ENABLE"
                 default y
                 help
-                    "Select this one to enable MPU6050 device component"
+                    "Select this one to enable MPU6050 device component
+
+            config IOT_MAG3110_ENABLE
+                bool "SENSOR_MAG3110_ENABLE"
+                default y
+                help
+                    "Select this one to enable MAG3110 device component""
         endmenu
         
         menu "SPI devices"

@@ -15,6 +15,7 @@
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include "esp_log.h"
+#include <math.h>
 #include "esp_system.h"
 #include "iot_button.h"
 #include "iot_i2c_bus.h"
@@ -23,6 +24,7 @@
 #include "iot_ssd1306.h"
 #include "ssd1306_fonts.h"
 #include "iot_mpu6050.h"
+#include "iot_mag3110.h"
 
 #define I2C_MASTER_SCL_IO           26          /*!< gpio number for I2C master clock */
 #define I2C_MASTER_SDA_IO           25          /*!< gpio number for I2C master data  */
@@ -40,6 +42,7 @@ static bh1750_handle_t bh1750_dev = NULL;
 static hts221_handle_t hts221_dev = NULL;
 static ssd1306_handle_t ssd1306_dev = NULL;
 static mpu6050_handle_t mpu6050_dev = NULL;
+static mag3110_handle_t mag3110_dev = NULL;
 
 static xQueueHandle q_page_num;
 static uint8_t g_page_num = 0;
@@ -47,6 +50,7 @@ static uint8_t g_page_num = 0;
 static mpu6050_acce_value_t acce;
 static mpu6050_gyro_value_t gyro;
 static complimentary_angle_t complimentary_angle;
+static mag3110_raw_values_t magno;
 
 static const char *TAG = "esp32_azure_kit_main";
 
@@ -59,7 +63,7 @@ typedef struct {
 void page_btn_tap_cb()
 {
     g_page_num++;
-    if (g_page_num >= 4) {
+    if (g_page_num >= 5) {
         g_page_num = 0;
     }
     xQueueSend(q_page_num, &g_page_num, 0);
@@ -135,6 +139,14 @@ void mpu6050_init()
     iot_mpu6050_set_gyro_fs(mpu6050_dev, GYRO_FS_500DPS);
 }
 
+void mag3110_init()
+{
+    mag3110_dev = iot_mag3110_create(i2c_bus, MAG3110_I2C_ADDRESS);
+   // iot_mag3110_mode_set(mag3110_dev,stand_by_mode);
+    iot_mag3110_mode_set(mag3110_dev,active_raw_mode);
+
+}
+
 void dev_init()
 {
     page_button_init();
@@ -143,6 +155,7 @@ void dev_init()
     hts221_init();
     ssd1306_init();
     mpu6050_init();
+    mag3110_init();
 }
 
 esp_err_t ssd1306_show_data(ssd1306_handle_t dev , sensor_data_t sensor_data)
@@ -206,7 +219,7 @@ void ssd1306_show_acce_data(void)
     iot_ssd1306_draw_string(ssd1306_dev, 70, 32, (const uint8_t *) data_str, 16, 1);
     sprintf(data_str, "%.2f", acce.acce_z);
     iot_ssd1306_draw_string(ssd1306_dev, 70, 48, (const uint8_t *) data_str, 16, 1);
-    
+
     iot_ssd1306_refresh_gram(ssd1306_dev);
 }
 
@@ -249,6 +262,29 @@ void ssd1306_show_complimentary_angle(void)
     iot_ssd1306_refresh_gram(ssd1306_dev);
 }
 
+/* show magnetometer data */
+void ssd1306_show_magnetometer_data(void)
+{
+    char data_str[10] = {0};
+    
+    iot_mag3110_get_magneticfield(mag3110_dev, &magno);
+    iot_ssd1306_draw_string(ssd1306_dev, 0, 16, (const uint8_t *) "magno_x:", 16, 1);
+    iot_ssd1306_draw_string(ssd1306_dev, 0, 32, (const uint8_t *) "magno_y:", 16, 1);
+    iot_ssd1306_draw_string(ssd1306_dev, 0, 48, (const uint8_t *) "magno_z:", 16, 1);
+    ESP_LOGI(TAG, "magno_x:%d, magno_y:%d, magno_z:%d", magno.magno_x, magno.magno_y, magno.magno_z);
+
+
+    sprintf(data_str, "%d", magno.magno_x);
+    iot_ssd1306_draw_string(ssd1306_dev, 70, 16, (const uint8_t *) data_str, 16, 1);
+    sprintf(data_str, "%d", magno.magno_y);
+    iot_ssd1306_draw_string(ssd1306_dev, 70, 32, (const uint8_t *) data_str, 16, 1);
+    sprintf(data_str, "%d", magno.magno_z);
+    iot_ssd1306_draw_string(ssd1306_dev, 70, 48, (const uint8_t *) data_str, 16, 1); 
+    
+    
+    iot_ssd1306_refresh_gram(ssd1306_dev);
+}
+
 void ssd1306_show_task(void* pvParameters)
 {
     uint8_t page_num = 0;
@@ -271,6 +307,9 @@ void ssd1306_show_task(void* pvParameters)
             case 3:
                 ssd1306_show_complimentary_angle();
                 break;
+             case 4:
+                 ssd1306_show_magnetometer_data();
+                break;
             default:
                 break;
         }
@@ -286,9 +325,11 @@ void mpu6050_read_task(void* pvParameters)
         iot_mpu6050_get_acce(mpu6050_dev, &acce);
         iot_mpu6050_get_gyro(mpu6050_dev, &gyro);
         iot_mpu6050_complimentory_filter(mpu6050_dev, &acce, &gyro, &complimentary_angle);
+
         vTaskDelay(5 / portTICK_RATE_MS);
     }
 }
+
 
 void app_main()
 {
@@ -297,5 +338,6 @@ void app_main()
     q_page_num = xQueueCreate(10, sizeof(uint8_t));
     xTaskCreate(ssd1306_show_task, "ssd1306_show_task", 2048 * 2, NULL, 5,NULL);
     xTaskCreate(mpu6050_read_task, "mpu6050_read_task", 2048 * 2, NULL, 5,NULL);
+  
 }
 
