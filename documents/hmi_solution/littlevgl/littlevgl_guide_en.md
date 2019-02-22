@@ -496,18 +496,18 @@ You can set coordinates, object sizes, alignment types, parent objects, etc. The
 
 <div align="center">Figure 7. Alignment types</div>  
 
-Use the function `lv_obj_create（NULL，NULL）` to create a screen and load it with `lv_scr_load（screen1`. The function `lv_scr_act（）` returns a pointer to the current screen.
+Use the function `lv_obj_create(NULL，NULL)` to create a screen and load it with `lv_scr_load(screen1)`. The function `lv_scr_act()` returns a pointer to the current screen.
 
 There are two automatically generated layers:
 
 - Top layer
 - System layer
 
-These layers are independent of screens, so objects created on the layers will be shown on every screen. The top layer is above objects on the screen. The system layer is above the top layer. You can add pop-up windows to the top layer. However, the system layer is restricted to system level items (e.g. mouse cursor). The functions `lv_layer_top（）` and `lv_layer_sys（）` return a pointer to the top and system layers respectively.
+These layers are independent of screens, so objects created on the layers will be shown on every screen. The top layer is above objects on the screen. The system layer is above the top layer. You can add pop-up windows to the top layer. However, the system layer is restricted to system level items (e.g. mouse cursor). The functions `lv_layer_top()` and `lv_layer_sys()` return a pointer to the top and system layers respectively.
 
 #### Label (lv_label)
 
-Labels are the basic objects to display text of any size. You can use the function `lv_label_set_text（）` to modify text. The size of the label object can be automatically expanded to the text size, or the text can be manipulated according to the following long mode policies:
+Labels are the basic objects to display text of any size. You can use the function `lv_label_set_text()` to modify text. The size of the label object can be automatically expanded to the text size, or the text can be manipulated according to the following long mode policies:
 
 - `LV_LABEL_LONG_EXPAND`: Expand the object size to the text size
 - `LV_LABEL_LONG_BREAK`: Keep the object width and expand the object height
@@ -531,9 +531,9 @@ You can also use a symbol defined in `lv_symbol_def.h`. In this case, the image 
 
 #### Line (lv_line)
 
-The line objects are capable of drawing straight lines between a set of points. The points have to be stored in a `lv_point_t` array, and passed to the object with the function `lv_line_set_points（lines，point_array，point_num）`.
+The line objects are capable of drawing straight lines between a set of points. The points have to be stored in a `lv_point_t` array, and passed to the object with the function `lv_line_set_points(lines，point_array，point_num)`.
 
-The size of a line object can be set to adjust automatically, according to its points. The object width and height will be changed according to the max. x and max. y coordinates among the points. You can enable it with the function `lv_line_set_auto_size（line，true）`. The auto size is enabled by default. 
+The size of a line object can be set to adjust automatically, according to its points. The object width and height will be changed according to the max. x and max. y coordinates among the points. You can enable it with the function `lv_line_set_auto_size(line，true)`. The auto size is enabled by default. 
 
 #### Container (lv_cont)
 
@@ -568,7 +568,7 @@ The available layout options are:
 - `LV_CONT_LAYOUT_PRETTY`: Put as many objects in one row as possible. Divide the space in each line equally between the children. Keep `pad.ver` space above and `pad.inner` space between lines  
 - `LV_CONT_LAYOUT_GRID`: Similar to the *PRETTY* layout, but do not equally divide the space in each line, and instead keep `pad.hor` space between the children
 
-You can enable the auto fit feature which automatically sets the container size to include all children. It will keep `pad.hor` space on the left and right, and `pad.ver` above and below. The auto fit can be enabled horizontally, vertically or in both directions with the function `lv_cont_set_fit（cont，true，true）`. The second parameter is for horizontal auto fit and the third parameter is for vertical auto fit.
+You can enable the auto fit feature which automatically sets the container size to include all children. It will keep `pad.hor` space on the left and right, and `pad.ver` above and below. The auto fit can be enabled horizontally, vertically or in both directions with the function `lv_cont_set_fit(cont，true，true)`. The second parameter is for horizontal auto fit and the third parameter is for vertical auto fit.
 
 #### Page (lv_page)
 
@@ -589,11 +589,11 @@ The release and press actions can be assigned to the page with `lv_page_set_rel_
 
 Window is one of the most complex container-like objects. It consists of two parts: A header container at the top and a page container below the header.
 
-The header container has a title which can be modified by `lv_win_set_title（win，“New title”）`. The title always inherits the style of the header container.
+The header container has a title which can be modified by `lv_win_set_title(win，“New title”)`. The title always inherits the style of the header container.
 
-You can add control buttons to the right side of the header with `lv_win_add_btn（win，“U：/ close”，my_close_action）`. The second parameter is an image file path, and the third parameter is the function to call when the buttons are released. You can use symbols as images as well, for example: `lv_win_add_btn（win，SYMBOL_CLOSE，my_close_action）`.
+You can add control buttons to the right side of the header with `lv_win_add_btn(win，“U：/ close”，my_close_action)`. The second parameter is an image file path, and the third parameter is the function to call when the buttons are released. You can use symbols as images as well, for example: `lv_win_add_btn(win，SYMBOL_CLOSE，my_close_action)`.
 
-#### Tab View (lv_tabview)
+#### Tab view (lv_tabview)
 
 The tab view object can be used to organize the content in tabs. You can add a new tab with the function `lv_tabview_add_tab(tabview, "Tab name")`. It returns a pointer to a page object where you can add content to the tab. 
 
@@ -601,32 +601,32 @@ To select a tab, do the following:
 
 - Click on its header part
 - Slide horizontally
-- Use the function `lv_tabview_set_tab_act（tabview，id，anim_en）`
+- Use the function `lv_tabview_set_tab_act(tabview，id，anim_en)`
 
-Manual sliding can be disabled with the function `lv_tabview_set_sliding（tabview，false）`.
+Manual sliding can be disabled with the function `lv_tabview_set_sliding(tabview，false)`.
 
-The animation time can be adjusted with the function `lv_tabview_set_anim_time（tabview，anim_time）`.
+The animation time can be adjusted with the function `lv_tabview_set_anim_time(tabview，anim_time)`.
 
-A callback function can be assigned to a tab load event with the function `lv_tabview_set_tab_load_action（tabview，action）`.
+A callback function can be assigned to a tab load event with the function `lv_tabview_set_tab_load_action(tabview，action)`.
 
 #### Bar (lv_bar)
 
 The Bar object has two parts: A background which is the object itself, and an indicator with its shape similar to the background but having adjustable width/height. The orientation of the bar can be vertical or horizontal according to the width/height ratio.
 
-A new value can be set by `lv_bar_set_value（bar，new_value）`.
+A new value can be set by `lv_bar_set_value(bar，new_value)`.
 
-The value is interpreted in range (minimum and maximum values), which can be modified with `lv_bar_set_range（bar，min，max）`.
+The value is interpreted in range (minimum and maximum values), which can be modified with `lv_bar_set_range(bar，min，max)`.
 
-The default range is: 1~100. To set the animation time from the current value to the desired value, use the function `lv_bar_set_value_anim（bar，new_value，anim_time）`.
+The default range is: 1~100. To set the animation time from the current value to the desired value, use the function `lv_bar_set_value_anim(bar，new_value，anim_time)`.
 
 #### Line Meter (lv_lmeter)
 
-The line meter object includes some radial lines which draw a scale. When setting a new value with `lv_lmeter_set_value（lmeter，new_value）`, the proportional part of the scale will be recolored.
+The line meter object includes some radial lines which draw a scale. When setting a new value with `lv_lmeter_set_value(lmeter，new_value)`, the proportional part of the scale will be recolored.
 
-The function `lv_lmeter_set_range（lmeter，min，max）` sets the range for the line meter.
+The function `lv_lmeter_set_range(lmeter，min，max)` sets the range for the line meter.
 
 
-You can set the angle of the scale and the number of the lines with the function `lv_lmeter_set_scale（lmeter，angle，line_num）`. The default angle is 240 and the default line number is 31.
+You can set the angle of the scale and the number of the lines with the function `lv_lmeter_set_scale(lmeter，angle，line_num)`. The default angle is 240 and the default line number is 31.
 
 <div align="center"><img src="../../_static/hmi_solution/littlevgl/line-meter-lv_lmeter.jpg" width = "800" alt="Line meter" align=center /></div>  
 
@@ -634,11 +634,11 @@ You can set the angle of the scale and the number of the lines with the function
 
 #### Gauge (lv_gauge)
 
-Gauge is a meter with scale labels and needles. You can use the function `lv_gauge_set_scale（gauge，angle，line_num，label_cnt）` to adjust the scale angle and the number of scale lines and labels. The default settings are: 220 degree angle, 6 scale table and 21 lines.
+Gauge is a meter with scale labels and needles. You can use the function `lv_gauge_set_scale(gauge，angle，line_num，label_cnt)` to adjust the scale angle and the number of scale lines and labels. The default settings are: 220 degree angle, 6 scale table and 21 lines.
 
-The gauge can have more than one needle. Use the function `lv_gauge_set_needle_count（gauge，needle_num，color_array）` to set the number of needles and an array with colors for each needle (The array must be a static or global variable).
+The gauge can have more than one needle. Use the function `lv_gauge_set_needle_count(gauge，needle_num，color_array)` to set the number of needles and an array with colors for each needle (The array must be a static or global variable).
 
-To set a critical value use `lv_gauge_set_critical_value（gauge，value）`. After the critical value (default: 80), the scale color will change to `line.color`. The range of the gauge can be specified by `lv_gauge_set_range(gauge, min, max)`.
+To set a critical value use `lv_gauge_set_critical_value(gauge，value)`. After the critical value (default: 80), the scale color will change to `line.color`. The range of the gauge can be specified by `lv_gauge_set_range(gauge, min, max)`.
 
 #### Chart (lv_chart)
 
@@ -678,14 +678,14 @@ With `lv_mbox_start_auto_close(mbox, delay)` the message box can be closed autom
 
 The function `lv_mbox_stop_auto_close(mbox)` stops the auto close.
 
-The animation time can be adjusted by `lv_mbox_set_anim_time（mbox，anim_time）`.
+The animation time can be adjusted by `lv_mbox_set_anim_time(mbox，anim_time)`.
 
 #### Text Area (lv_ta)
 
 The text area is a page with a label and a cursor on it. You can insert text or characters at the current cursor position with the functions:
 
-- `lv_ta_add_char（ta，'c'）;`
-- `lv_ta_add_text（ta，“insert this text”）;`
+- `lv_ta_add_char(ta，'c');`
+- `lv_ta_add_text(ta，“insert this text”);`
 
 To change the whole text use the function `lv_ta_set_text(ta, "New text")`, and to delete a character on the left of the current cursor position use the function `lv_ta_del()`.
 
@@ -706,9 +706,9 @@ You can set the following cursor types with the function `lv_ta_set_cursor_type(
 
 You can use `LV_CURSOR_HIDDEN` to hide the cursor.
 
-The text area can be configured to run in one line with the function `lv_ta_set_one_line（ta，true）`.
+The text area can be configured to run in one line with the function `lv_ta_set_one_line(ta，true)`.
 
-The text area supports password mode, which can be enabled with the function `lv_ta_set_pwd_mode（ta，true）`.
+The text area supports password mode, which can be enabled with the function `lv_ta_set_pwd_mode(ta，true)`.
 
 #### Button (lv_btn)
 
@@ -729,18 +729,18 @@ Buttons can be in any of the five possible states:
 - `LV_BTN_STATE_TGL_PR`: toggled pressed state
 - `LV_BTN_STATE_INA`: inactive state
 
-Buttons can be configured as toggle buttons with `lv_btn_set_toggle(btn, true)`. In this case, the button goes to the toggled released state upon release. You can set the button's state manually by `lv_btn_set_state（btn，LV_BTN_STATE_TGL_REL）`.
+Buttons can be configured as toggle buttons with `lv_btn_set_toggle(btn, true)`. In this case, the button goes to the toggled released state upon release. You can set the button's state manually by `lv_btn_set_state(btn，LV_BTN_STATE_TGL_REL)`.
 
-A button can go to an inactive state only manually by `lv_btn_set_state（）`. In this state, no actions will be called.
+A button can go to an inactive state only manually by `lv_btn_set_state()`. In this state, no actions will be called.
 
 Similar to containers, buttons also have layouts and auto fit features:
 
-- `lv_btn_set_layout（btn，LV_LAYOUT _...）`: Can be used to set a layout. The default is `LV_LAYOUT_CENTER`. If you add a label, it gets automatically aligned to the middle.
-- `lv_btn_set_fit（btn，hor_en，ver_en)`: use it to set the button width and/or height automatically according to the children.
+- `lv_btn_set_layout(btn，LV_LAYOUT _...)`: Can be used to set a layout. The default is `LV_LAYOUT_CENTER`. If you add a label, it gets automatically aligned to the middle.
+- `lv_btn_set_fit(btn，hor_en，ver_en)`: use it to set the button width and/or height automatically according to the children.
 
 #### Button Matrix (lv_btnm)
 
-The button matrix object can display multiple buttons according to a descriptor string array which is called *map*. You can specify the map with `lv_btnm_set_map（btnm，my_map）`.
+The button matrix object can display multiple buttons according to a descriptor string array which is called *map*. You can specify the map with `lv_btnm_set_map(btnm，my_map)`.
 
 Declaration of a map looks like `const char * map [] = {“btn1”，“btn2”，“btn3”，“”}`. Note that the last element must be an empty string!
 
@@ -754,7 +754,7 @@ The first character of a string can be a control character to specify some attri
 
 Use “\n” in the map to insert a line break: `{“btn1”，“btn2”，“\ n”，“btn3”，“”}`. The width of buttons is recalculated in every line.
 
-The function `lv_btnm_set_action（btnm，btnm_action）` specifies which action to call when a button is released.
+The function `lv_btnm_set_action(btnm，btnm_action)` specifies which action to call when a button is released.
 
 #### Keyboard (lv_kb)
 
@@ -770,7 +770,7 @@ The keyboards have two modes:
 
 To set the mode, use the function `lv_kb_set_mode(kb, mode)`.
 
-You can specify a new map (layout) for the keyboard with `lv_kb_set_map（kb，map）`. It works like the button matrix, so control characters can be added to the layout to set button properties. Keep in mind using the following keyboards will have the same effect as with the original map: `SYMBOL_OK`, `SYMBOL_CLOSE`, `SYMBOL_LEFT`, `SYMBOL_RIGHT`, `ABC`, `abc`, `Enter`, `Del`, `＃1`, `+/-`.
+You can specify a new map (layout) for the keyboard with `lv_kb_set_map(kb，map)`. It works like the button matrix, so control characters can be added to the layout to set button properties. Keep in mind using the following keyboards will have the same effect as with the original map: `SYMBOL_OK`, `SYMBOL_CLOSE`, `SYMBOL_LEFT`, `SYMBOL_RIGHT`, `ABC`, `abc`, `Enter`, `Del`, `＃1`, `+/-`.
 
 #### List (lv_list)
 
@@ -778,35 +778,35 @@ List consists of a background page and buttons. Buttons can have a label and an 
 
 You can add new list elements with `lv_list_add(list, "U:/img", "Text", rel_action)` or add the list elements with symbol icons using `lv_list_add(list, SYMBOL_EDIT, "Edit text")`. The function returns a pointer to the created buttons for further configuration.
 
-You can use `lv_list_get_btn_label（list_btn）` and `lv_list_get_btn_img（list_btn）` to get the table and image of a list button.
+You can use `lv_list_get_btn_label(list_btn)` and `lv_list_get_btn_img(list_btn)` to get the table and image of a list button.
 
-On the release action of a button, you can get the button's text with `lv_list_get_btn_label(list_btn)`. To delete a list element use `lv_obj_del（）` on the return value from `lv_list_add（）`. You can navigate the list manually with `lv_list_up（list）` and `lv_list_down（list）`.
+On the release action of a button, you can get the button's text with `lv_list_get_btn_label(list_btn)`. To delete a list element use `lv_obj_del()` on the return value from `lv_list_add()`. You can navigate the list manually with `lv_list_up(list)` and `lv_list_down(list)`.
 
-You can focus on a button directly using `lv_list_focus(btn, anim_en)`. The animation time of up/down/focus movements can be set with `lv_list_set_anim_time（list，anim_time）`.
+You can focus on a button directly using `lv_list_focus(btn, anim_en)`. The animation time of up/down/focus movements can be set with `lv_list_set_anim_time(list，anim_time)`.
 
 #### Drop Down List (lv_ddlist)
 
 Drop down lists allow you to select one option from a list given options. It is closed by default and only displays the currently selected text. If you click on it, a list drops down and display all its options.
 
-The options are passed to the drop down list as a string with the function `lv_ddlist_set_options（ddlist，options）`. The options should be separated by `\n`, for example, "First\nSecond\nThird".
+The options are passed to the drop down list as a string with the function `lv_ddlist_set_options(ddlist，options)`. The options should be separated by `\n`, for example, "First\nSecond\nThird".
 
-You can select an option manually with `lv_ddlist_set_selected（ddlist，id）`, where id is the index of an option. A callback function can be specified with `lv_ddlist_set_action（ddlist，my_action）`.
+You can select an option manually with `lv_ddlist_set_selected(ddlist，id)`, where id is the index of an option. A callback function can be specified with `lv_ddlist_set_action(ddlist，my_action)`.
 
-By default, the list height is automatically adjusted to show all options. The function `lv_ddlist_set_fix_height（ddlist，h）` sets a fixed height for the opened list.
+By default, the list height is automatically adjusted to show all options. The function `lv_ddlist_set_fix_height(ddlist，h)` sets a fixed height for the opened list.
 
-The width is also adjusted automatically. To disable this feature use the function `lv_ddlist_set_hor_fit（ddlist，false）` and manually set the width with `lv_obj_set_width（ddlist，width）`.
+The width is also adjusted automatically. To disable this feature use the function `lv_ddlist_set_hor_fit(ddlist，false)` and manually set the width with `lv_obj_set_width(ddlist，width)`.
 
-Similar to the page with fixed height, the drop down list supports various scrollbar display modes. It can be set with `lv_ddlist_set_sb_mode（ddlist，LV_SB_MODE _...）`.
+Similar to the page with fixed height, the drop down list supports various scrollbar display modes. It can be set with `lv_ddlist_set_sb_mode(ddlist，LV_SB_MODE _...)`.
 
-The open/close animation time for the drop down list can be adjusted by `lv_ddlist_set_anim_time（ddlist，anim_time）`.
+The open/close animation time for the drop down list can be adjusted by `lv_ddlist_set_anim_time(ddlist，anim_time)`.
 
 #### Roller (lv_roller)
 
 Roller allows you to select one option by rotating the wheel to the desired option. This object is similar to the drop down list.
 
-The options are passed to the roller as a string with `lv_roller_set_options(roller, options)`. The options should be separated by `\n`. For example, "First\nSecond\nThird". You can select an option manually with `lv_roller_set_selected（roller，id）`, where id is the index of an option. A callback functions can be specified with `lv_roller_set_action（roller，my_action）`. The roller's height can be adjusted with `lv_roller_set_visible_row_count（roller，row_cnt）` to set the number of visible options.
+The options are passed to the roller as a string with `lv_roller_set_options(roller, options)`. The options should be separated by `\n`. For example, "First\nSecond\nThird". You can select an option manually with `lv_roller_set_selected(roller，id)`, where id is the index of an option. A callback functions can be specified with `lv_roller_set_action(roller，my_action)`. The roller's height can be adjusted with `lv_roller_set_visible_row_count(roller，row_cnt)` to set the number of visible options.
 
-Roller width is adjusted automatically. To disable this feature use the function `lv_roller_set_hor_fit（roller，false）` and set the width manually with `lv_obj_set_width(roller, width)`. Roller open/close animation time can be adjusted by `lv_roller_set_anim_time（roller，anim_time）`.
+Roller width is adjusted automatically. To disable this feature use the function `lv_roller_set_hor_fit(roller，false)` and set the width manually with `lv_obj_set_width(roller, width)`. Roller open/close animation time can be adjusted by `lv_roller_set_anim_time(roller，anim_time)`.
 
 <div align="center"><img src="../../_static/hmi_solution/littlevgl/roller-lv_roller.jpg" width = "800" alt="Roller" align=center /></div>  
 
@@ -816,24 +816,24 @@ Roller width is adjusted automatically. To disable this feature use the function
 
 The check box element consists of a button background with a button bullet and a label to create a classical check box. 
 
-The text can be modified with the function `lv_cb_set_text（cb，“New text”）`. An action can be assigned by `lv_cb_set_action(cb, action)`. You can manually check or uncheck the check box with `lv_cb_set_checked(cb, state)`.
+The text can be modified with the function `lv_cb_set_text(cb，“New text”)`. An action can be assigned by `lv_cb_set_action(cb, action)`. You can manually check or uncheck the check box with `lv_cb_set_checked(cb, state)`.
 
 #### Slider (lv_slider)
 
 The slider object looks like a bar with a knob, which can be dragged to set a desired value. The slider can be either vertical or horizontal.
 
-To set an initial value use the function `lv_slider_set_value（slider，new_value）`. You can also use `lv_slider_set_value_anim（slider，new_value，anim_time）` to set the value with an animation.
+To set an initial value use the function `lv_slider_set_value(slider，new_value)`. You can also use `lv_slider_set_value_anim(slider，new_value，anim_time)` to set the value with an animation.
 
-To specify the range (min, max values), use the function `lv_slider_set_range（slider，min，max）`.
+To specify the range (min, max values), use the function `lv_slider_set_range(slider，min，max)`.
 
-When users set a new value, a callback function can be specified with `lv_slider_set_action（slider，my_action）`.
+When users set a new value, a callback function can be specified with `lv_slider_set_action(slider，my_action)`.
 
 The knob can be placed in two ways:
 
 - Inside the background on min/max values
 - On the edges on min/max values
 
-To switch between these two ways use the function `lv_slider_set_knob_in（slider，true / false）` (the default value is `knob_in == false`).
+To switch between these two ways use the function `lv_slider_set_knob_in(slider，true/false)` (the default value is `knob_in == false`).
 
 #### Switch (lv_sw)
 
@@ -841,9 +841,9 @@ Switch can be used to turn an object on or off. The switch state can be changed 
 
 - Clicking
 - Sliding
-- The functions `lv_sw_on（sw）` and `lv_sw_off（sw）` for *on* and *off* positions respectively
+- The functions `lv_sw_on(sw)` and `lv_sw_off(sw)` for *on* and *off* positions respectively
 
-A callback function for this switch can be specified with `lv_sw_set_action（sw，my_action）`.
+A callback function for this switch can be specified with `lv_sw_set_action(sw，my_action)`.
 
 ## Getting Started With LittlevGL
 
