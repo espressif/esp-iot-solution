@@ -2033,6 +2033,11 @@ menu "IoT Solution settings"
                         "primary master key is used to encrypt local master key"
                 
                 endmenu
+            config IOT_BLUFI_ABSTRACT_ENABLE
+                bool "BLUFI_ABSTRACT_ENABLE"
+                default n
+                help
+                    "Select this one to enable blufi abstract component"
         endmenu
 
     endmenu
