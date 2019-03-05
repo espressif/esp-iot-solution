@@ -79,6 +79,10 @@
     - An example of operating RTC GPIO with the ESP32 ULP co-processor.
     - Keywords: __ULP Deep-sleep  RTC-GPIO Assembly__
 
+* [ESP32 ULP Co-processor Send RTC Interrupt](examples/ulp_examples/ulp_send_interrupt)
+    - An example of ESP32 ULP co-processor sending RTC interrupt.
+    - Keywords: __ULP RTC-Interrupt Assembly__
+
 * [ESP32 ULP Co-processor Reads Temperature Sensor Example](examples/ulp_examples/ulp_tsens)
     - An example of the ESP32 ULP co-processor reading the on-chip temperature sensor in low-power mode.
     - Keywords: __ULP Deep-sleep  Built-in-Sensor TemperatureSensor Assembly__
