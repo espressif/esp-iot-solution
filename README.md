@@ -71,6 +71,10 @@
     - An example for the ESP32 touch sensor development kit, ESP32-Sense, which is used to evaluate and develop ESP32 touch sensor system.
     - Keywords: __TouchSensor ESP32-Sense__
 
+* [ESP32 ULP Co-processor Detect Brownout Example](examples/ulp_examples/ulp_detect_brownout)
+    - An example of using SAR_ADC to read voltage of VDD33 pin with the ESP32 ULP co-processor and determine if a brownout happened.
+    - Keywords: __ULP Deep-sleep  Brownout  Assembly__
+
 * [ESP32 ULP Co-processor Reads Hall Sensor Example](examples/ulp_examples/ulp_hall_sensor)
     - It provides an example of the ESP32 ULP co-processor reading the on-chip Hall sensor in low-power mode.
     - Keywords: __ULP Deep-sleep  Built-in-Sensor HallSensor Assembly__
