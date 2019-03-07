@@ -355,7 +355,7 @@ esp_err_t iot_hts221_get_temperature(hts221_handle_t sensor, int16_t *temperatur
     int16_t t0_out, t1_out, t_out, t0_degc_x8_u16, t1_degc_x8_u16;
     int16_t t0_degc, t1_degc;
     uint8_t buffer[4], tmp_8;
-    uint32_t tmp_32;
+    int32_t tmp_32;
     iot_hts221_read(sensor, HTS221_T0_DEGC_X8, 2, buffer);
     iot_hts221_read(sensor, HTS221_T0_T1_DEGC_H2, 1, &tmp_8);
     t0_degc_x8_u16 = (((uint16_t)(tmp_8 & 0x03)) << 8) | ((uint16_t)buffer[0]);  
@@ -370,11 +370,11 @@ esp_err_t iot_hts221_get_temperature(hts221_handle_t sensor, int16_t *temperatur
     iot_hts221_read(sensor, HTS221_TEMP_OUT_L_REG, 2, buffer);
     t_out = (((uint16_t)buffer[1]) << 8) | (uint16_t)buffer[0]; 
 
-    tmp_32 = ((uint32_t)(t_out - t0_out)) * ((uint32_t)(t1_degc - t0_degc) * 10);
+    tmp_32 = ((int32_t)(t_out - t0_out)) * ((int32_t)(t1_degc - t0_degc) * 10);
     if ((t1_out - t0_out) == 0) {
         return ESP_FAIL;
     }
-    *temperature = tmp_32 / (t1_out - t0_out) + t0_degc * 10;
+    *temperature = tmp_32 / (int32_t)(t1_out - t0_out) + t0_degc * 10;
     return ESP_OK;
 }
 
