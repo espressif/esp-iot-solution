@@ -89,7 +89,7 @@ $ git submodule update --init
 #### 1.3.3 OneNet 对接 Demo 获取
 
 ```
-$ git clone --recuesive https://github.com/espressif/esp-iot-solution.git
+$ git clone --recursive https://github.com/espressif/esp-iot-solution.git
 $ git submodule update --init
 ```
 
