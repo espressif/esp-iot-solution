@@ -18,55 +18,34 @@
 #include "freertos/FreeRTOSConfig.h"
 #include "freertos/semphr.h"
 #include "freertos/task.h"
+#include "gfx_types.h"
 
 extern portMUX_TYPE lockMux_priv;
 /*===========================================================================*/
 /* Type definitions                                                          */
 /*===========================================================================*/
 
-/* Additional types are required when FreeRTOS 7.x is used */
-#if !defined(tskKERNEL_VERSION_MAJOR) && !tskKERNEL_VERSION_MAJOR == 8
-	typedef signed char					int8_t
-	typedef unsigned char				uint8_t
-	typedef signed int					int16_t
-	typedef unsigned int				uint16_t
-	typedef signed long int				int32_t
-	typedef unsigned long int			uint32_t
-	typedef signed long long int		int64_t
-	typedef unsigned long long int		uint64_t
-#endif
+#define gDelayNone			0
+#define gDelayForever		((gDelay)-1)
+typedef gU32				gDelay;
+typedef portTickType		gTicks;
+typedef gI32				gSemcount;
+typedef void				gThreadreturn;
+typedef portBASE_TYPE		gThreadpriority;
 
-/**
- * bool_t,
- * int8_t, uint8_t,
- * int16_t, uint16_t,
- * int32_t, uint32_t,
- * size_t
- * TRUE, FALSE
- * are already defined by FreeRTOS
- */
-#define TIME_IMMEDIATE		0
-#define TIME_INFINITE		((delaytime_t)-1)
-typedef int8_t				bool_t;
-typedef uint32_t			delaytime_t;
-typedef portTickType		systemticks_t;
-typedef int32_t				semcount_t;
-typedef void				threadreturn_t;
-typedef portBASE_TYPE		threadpriority_t;
-
-#define MAX_SEMAPHORE_COUNT	((semcount_t)(((unsigned long)((semcount_t)(-1))) >> 1))
-#define LOW_PRIORITY		0
-#define NORMAL_PRIORITY		configMAX_PRIORITIES/2
-#define HIGH_PRIORITY		configMAX_PRIORITIES-1
+#define gSemMaxCount			((gSemcount)(((unsigned long)((gSemcount)(-1))) >> 1))
+#define gThreadpriorityLow		0
+#define gThreadpriorityNormal	configMAX_PRIORITIES/2
+#define gThreadpriorityHigh		configMAX_PRIORITIES-1
 
 /* FreeRTOS will allocate the stack when creating the thread */
-#define DECLARE_THREAD_STACK(name, sz)	uint8_t name[1]
-#define DECLARE_THREAD_FUNCTION(fnName, param)	threadreturn_t fnName(void *param)
-#define THREAD_RETURN(retval) vTaskDelete(NULL)
+#define GFX_THREAD_STACK(name, sz)			gU8 name[1]
+#define GFX_THREAD_FUNCTION(fnName, param)	gThreadreturn fnName(void *param)
+#define gfxThreadReturn(retval)				return
 
-typedef xSemaphoreHandle		gfxSem;
-typedef xSemaphoreHandle		gfxMutex;
-typedef xTaskHandle				gfxThreadHandle;
+typedef xSemaphoreHandle		gSem;
+typedef xSemaphoreHandle		gMutex;
+typedef xTaskHandle				gThread;
 
 /*===========================================================================*/
 /* Function declarations.                                                    */
@@ -82,32 +61,30 @@ extern "C" {
 #define gfxFree(ptr)				vPortFree(ptr)
 #define gfxYield()					taskYIELD()
 #define gfxSystemTicks()			xTaskGetTickCount()
-#define gfxMillisecondsToTicks(ms)	((systemticks_t)((ms) / portTICK_PERIOD_MS))
-#define gfxTicksToMilliseconds(ticks)	(ticks * portTICK_PERIOD_MS)
+#define gfxMillisecondsToTicks(ms)	((gTicks)((ms) / portTICK_PERIOD_MS))
+#define gfxSystemLock()				portENTER_CRITICAL(&lockMux_priv)
+#define gfxSystemUnlock()			portEXIT_CRITICAL(&lockMux_priv)
 
-#define gfxSystemLock()             portENTER_CRITICAL(&lockMux_priv)
-#define gfxSystemUnlock()           portEXIT_CRITICAL(&lockMux_priv)
-
-void gfxMutexInit(gfxMutex* s);
+void gfxMutexInit(gMutex* s);
 #define gfxMutexDestroy(pmutex)		vSemaphoreDelete(*(pmutex))
 #define gfxMutexEnter(pmutex)		xSemaphoreTake(*(pmutex),portMAX_DELAY)
 #define gfxMutexExit(pmutex)		xSemaphoreGive(*(pmutex))
 
-void *gfxRealloc(void *ptr, size_t oldsz, size_t newsz);
-void gfxSleepMilliseconds(delaytime_t ms);
-void gfxSleepMicroseconds(delaytime_t ms);
+void *gfxRealloc(void *ptr, gMemSize oldsz, gMemSize newsz);
+void gfxSleepMilliseconds(gDelay ms);
+void gfxSleepMicroseconds(gDelay ms);
 
-void gfxSemInit(gfxSem* psem, semcount_t val, semcount_t limit);
+void gfxSemInit(gSem* psem, gSemcount val, gSemcount limit);
 #define gfxSemDestroy(psem)			vSemaphoreDelete(*(psem))
-bool_t gfxSemWait(gfxSem* psem, delaytime_t ms);
-bool_t gfxSemWaitI(gfxSem* psem);
-void gfxSemSignal(gfxSem* psem);
-void gfxSemSignalI(gfxSem* psem);
-gfxThreadHandle gfxThreadCreate(void *stackarea, size_t stacksz, threadpriority_t prio, DECLARE_THREAD_FUNCTION((*fn),p), void *param);
+gBool gfxSemWait(gSem* psem, gDelay ms);
+gBool gfxSemWaitI(gSem* psem);
+void gfxSemSignal(gSem* psem);
+void gfxSemSignalI(gSem* psem);
+gThread gfxThreadCreate(void *stackarea, gMemSize stacksz, gThreadpriority prio, GFX_THREAD_FUNCTION((*fn),p), void *param);
 
 #define gfxThreadMe()				xTaskGetCurrentTaskHandle()
 #if INCLUDE_eTaskGetState == 1
-	threadreturn_t gfxThreadWait(gfxThreadHandle thread);
+	gThreadreturn gfxThreadWait(gThread thread);
 #endif
 #define gfxThreadClose(thread)
 
