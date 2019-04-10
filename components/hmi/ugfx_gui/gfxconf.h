@@ -29,6 +29,12 @@
 #include "freertos/FreeRTOS.h"
 
 ///////////////////////////////////////////////////////////////////////////
+// GFX - Compatibility options                                           //
+///////////////////////////////////////////////////////////////////////////
+//#define GFX_COMPAT_V2                                GFXON
+//#define GFX_COMPAT_OLDCOLORS                         GFXON
+
+///////////////////////////////////////////////////////////////////////////
 // GOS - One of these must be defined, preferably in your Makefile       //
 ///////////////////////////////////////////////////////////////////////////
 // #define GFX_USE_OS_CHIBIOS                           FALSE
@@ -67,6 +73,7 @@
     // #define GFX_OS_CALL_UGFXMAIN                     FALSE
     // #define GFX_OS_UGFXMAIN_STACKSIZE                0
     // #define GFX_EMULATE_MALLOC                       FALSE
+    // #define GFX_MEM_LT64K                            FALSE
 
 
 ///////////////////////////////////////////////////////////////////////////
@@ -311,6 +318,10 @@
     // #define GINPUT_TOUCH_USER_CALIBRATION_LOAD       TRUE
     // #define GINPUT_TOUCH_USER_CALIBRATION_SAVE       TRUE
     // #define GMOUSE_DRIVER_LIST                       GMOUSEVMT_Win32, GMOUSEVMT_Win32
+    // #define GINPUT_TOUCH_CALIBRATION_FONT1           "* Double"
+    // #define GINPUT_TOUCH_CALIBRATION_FONT2           "* Narrow"
+    // #define GINPUT_TOUCH_CALIBRATION_TITLE           "Calibration"
+    // #define GINPUT_TOUCH_CALIBRATION_ERROR           "Calibration Failed!"
 // #define GINPUT_NEED_KEYBOARD                         TRUE
     // #define GINPUT_KEYBOARD_POLL_PERIOD              200
     // #define GKEYBOARD_DRIVER_LIST                    GKEYBOARDVMT_Win32, GKEYBOARDVMT_Win32

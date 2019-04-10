@@ -12,6 +12,7 @@ UGFXLIB = ugfx
 COMPONENT_ADD_INCLUDEDIRS := .\
     ./include \
     $(UGFXLIB) \
+    $(UGFXLIB)/src \
 
 COMPONENT_PRIV_INCLUDEDIRS +=  .\
     ./include \
