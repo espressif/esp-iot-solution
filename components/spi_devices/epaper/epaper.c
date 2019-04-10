@@ -18,8 +18,6 @@
 #include <math.h>
 #include "driver/gpio.h"
 #include "driver/spi_master.h"
-#include "driver/i2c.h"
-#include "iot_i2c_bus.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"

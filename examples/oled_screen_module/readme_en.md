@@ -117,17 +117,30 @@ After downloading all the submodules, you can compile and run the oled_screen_mo
 
 Run the following command to configure the serial port settings. Set the port number and download speed by configuring `Serial flasher config` option.
 
+Make:
 ```
     cd YOUR_IOT_SOLUTION_PATH/examples/oled_screen_module
     make menuconfig
+```
+
+CMake:
+```
+    cd YOUR_IOT_SOLUTION_PATH/examples/oled_screen_module
+    idf.py menuconfig
 ```
 
 * Compile, download and run the program.
 
 Run the following command to compile `oled_screen_module`. `flash` in the command enables downloading, while the optional `monitor` enables system printing.
 
+Make:
 ```
     make flash monitor
+```
+
+CMake:
+```
+    idf.py flash monitor
 ```
 
 > Note: If the program cannot be downloaded automatically, you can download it mannually. After downloading, press the reset button on the board to run the program and check the logs on the serial port.

@@ -9,7 +9,7 @@
   * 阿里智能厂测包：下载请点击[这里](https://open.aliplus.com/download/?spm=0.0.0.0.7OBTZm)
 
 ## 2. 相关配置
-可以通过 `make menuconfig` 修改 Alink embed 工程的一些相关配置： 
+可以通过 `make menuconfig`(Make) 或者 `idf.py menuconfig`(CMake) 修改 Alink embed 工程的一些相关配置： 
 
   * 在 `IoT Solution settings -> IoT Components Management -> Platforms and Clouds -> ALINK ENABLE -> ALINK_SETTINGS` 下可以选择 Alink 的版本（embed 或 sds），并配置 Alink sdk 内部的一些关键参数，例如连接路由的超时时间，一些关键任务的优先级和使用的栈空间的大小，log 等级等等。
 

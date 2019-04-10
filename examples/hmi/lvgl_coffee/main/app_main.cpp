@@ -343,7 +343,7 @@ static void create_tab(lv_obj_t *parent, uint8_t wp_img_id, uint8_t coffee_type_
     lv_obj_animate(precent_label[id], LV_ANIM_FLOAT_BOTTOM | LV_ANIM_OUT, 400, 0, NULL);                                           /* animation of hide the object */
 }
 
-static void tabview_lod_action(lv_obj_t *tabview, uint16_t tab_action_id)
+static void tabview_load_action(lv_obj_t *tabview, uint16_t tab_action_id)
 {
     tab_id = tab_action_id;
 }
@@ -359,7 +359,7 @@ static void littlevgl_coffee(void)
     tab[0] = lv_tabview_add_tab(tabview, "RIS"); /* add RIS tab */
     tab[1] = lv_tabview_add_tab(tabview, "ESP"); /* add ESP tab */
     tab[2] = lv_tabview_add_tab(tabview, "AME"); /* add AME tab */
-    lv_tabview_set_tab_load_action(tabview, tabview_lod_action);
+    lv_tabview_set_tab_load_action(tabview, tabview_load_action);
     lv_obj_set_protect(tabview, LV_PROTECT_PARENT | LV_PROTECT_POS | LV_PROTECT_FOLLOW);
     lv_tabview_set_anim_time(tabview, 0);
 

@@ -54,15 +54,15 @@ IRQ | 33
 ## Run the Example
 
 - Open Terminal and navigate to the directory `examples/hmi/mp3_example`
-- Run `make defconfig` to apply the default configuration
-- Run `make menuconfig` to set up the flashing-related configuration
-- Run `make -j8 flash` to build the example and flash it to the device
+- Run `make defconfig`(Make) or `idf.py defconfig`(CMake) to apply the default configuration
+- Run `make menuconfig`(Make) or `idf.py menuconfig`(CMake) to set up the flashing-related configuration
+- Run `make -j8 flash`(Make) or `idf.py flash`(CMake) to build the example and flash it to the device
 
 ### Play MP3 files with ESP-ADF
 
 - Build ESP-ADF development environment according to [Get Started](https://docs.espressif.com/projects/esp-adf/en/latest/get-started/index.html). The environment variable `ADF_PATH` is used in the example.
-- Run `make menuconfig` and select ADF for playing the audio files. To do this, please go to `IoT Example - LittlevGL MP3 Example->Use esp-adf to play song`.
-- Save the configuration and run `make -j8 flash` to build the example and flash it to the device.
+- Run `make menuconfig`(Make) or `idf.py menuconfig`(CMake) and select ADF for playing the audio files. To do this, please go to `IoT Example - LittlevGL MP3 Example->Use esp-adf to play song`.
+- Save the configuration and run `make -j8 flash`(Make) or `idf.py flash`(CMake) to build the example and flash it to the device.
 
 #### SD-Card and audio related notes
 

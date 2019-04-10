@@ -39,7 +39,7 @@ ULP 协处理器配置汇编编译工具链，只需两步即可安装配置完�
 >* 第一步, 下载工具链 `binutils-esp32ulp toolchain`  [链接地址]( https://github.com/espressif/binutils-esp32ulp/wiki#downloads), 解压到需要安装的目录
 >* 第二步，添加工具链的 `bin` 目录到系统环境变量 `PATH` 中。例如我的解压目录是 `/opt/esp32ulp-elf-binutils` 那么添加 `export PATH=/opt/esp32ulp-elf-binutils/bin:$PATH` 这一行到 /home 目录的隐藏文件 `.bashrc` 文件最后一行，保存关闭文件并使用命令 `source .bashrc` 使上述环境变量生效
 
-至此，汇编编译环境就安装好了，将 ulp_watering_device/ 目录下的 sdkconfig.defaults 复制一份改名为 sdkconfig，然后在工程中使用 make all -j8 && make flash monitor 编译命令时，会自动调用汇编工具链编译汇编代码。
+至此，汇编编译环境就安装好了，将 ulp_watering_device/ 目录下的 sdkconfig.defaults 复制一份改名为 sdkconfig，然后在工程中使用 `make all -j8 && make flash monitor`(Make) 或者 `idf.py flash monitor`(CMake) 编译命令时，会自动调用汇编工具链编译汇编代码。
 
 #### 4.2 管脚使用
 

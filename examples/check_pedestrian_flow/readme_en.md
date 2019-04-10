@@ -121,9 +121,14 @@ $ export PATH=/opt/xtensa-esp32-elf/bin/:$PATH
 
 After success of compilation, the program will be downloaded and executed automatically.
 
+Make:
 ```
 $ make flash monitor
+```
 
+CMake:
+```
+$ idf.py flash monitor
 ```
 
 ## 2. Result Demonstration

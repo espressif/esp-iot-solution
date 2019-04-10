@@ -54,15 +54,15 @@ IRQ | 33
 ## 运行示例
 
 - 进入到 `examples/hmi/mp3_example` 目录下
-- 运行 `make defconfig` 使用默认配置
-- 运行 `make menuconfig` 进行烧录相关配置
-- 运行 `make -j8 flash` 编译、烧录程序到设备
+- 运行 `make defconfig`(Make) 或者 `idf.py defconfig`(CMake) 使用默认配置
+- 运行 `make menuconfig`(Make) 或者 `idf.py menuconfig`(CMake) 进行烧录相关配置
+- 运行 `make -j8 flash`(Make) 或者 `idf.py flash`(CMake) 编译、烧录程序到设备
 
 ### 使用 ESP-ADF 播放 MP3 音频文件
 
 - 根据 [Get Started](https://docs.espressif.com/projects/esp-adf/en/latest/get-started/index.html) 搭建 ESP-ADF 开发环境、Example 中使用了 ADF_PATH 环境变量
-- 运行 `make menuconfig` 选择使用 ADF 播放音频文件，目录：`IoT Example - LittlevGL MP3 Example->Use esp-adf to play song`
-- 保存配置并运行 `make -j8 flash` 编译、烧录程序到设备
+- 运行 `make menuconfig`(Make) 或者 `idf.py menuconfig`(CMake) 选择使用 ADF 播放音频文件，目录：`IoT Example - LittlevGL MP3 Example->Use esp-adf to play song`
+- 保存配置并运行 `make -j8 flash`(Make) 或者 `idf.py flash`(CMake) 编译、烧录程序到设备
 
 #### SD-Card、Audio 使用
 

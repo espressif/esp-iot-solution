@@ -37,9 +37,9 @@ D7 | 27 | D15 | 4
 ## 运行示例
 
 - 进入到 `examples/hmi/ugfx_example` 目录下
-- 运行 `make defconfig` 使用默认配置
-- 运行 `make menuconfig` 进行烧录相关配置
-- 运行 `make -j8 flash` 编译、烧录程序到设备
+- 运行 `make defconfig`(Make) 或者 `idf.py defconfig`(CMake) 使用默认配置
+- 运行 `make menuconfig`(Make) 或者 `idf.py menuconfig`(CMake) 进行烧录相关配置
+- 运行 `make -j8 flash`(Make) 或者 `idf.py flash`(CMake) 编译、烧录程序到设备
 
 ## 示例结果
 

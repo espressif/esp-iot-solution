@@ -39,8 +39,14 @@ The installation and configuration of the assembly toolchain in the ULP co-proce
 
 ##### 4.2 Default Config, Compile and Download
 At this point, the installation of the assembly language environment is complete. To also complete the default config and start compiling and downloading programs, execute the following commands at [esp-iot-solution](https://github.com/espressif/esp-iot-solution)/examples/ulp_hall_sensor/ in sequence. 
+
+Make:
 >* make defconfig
 >* make all -j8 && make flash monitor
+
+CMake
+>* idf.py defconfig
+>* idf.py flash monitor
 
 ## 5. Software Analysis
 The ULP co-processor does not have built-in assembly instructions that read the Hall sensor, so we need to set up registers to read the on-chip Hall sensor.

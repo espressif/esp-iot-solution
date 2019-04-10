@@ -1,6 +1,6 @@
 # Ethernet to WiFi data forwarding demo
 
-The demo can enable ethernet to WiFi data forwarding function. You can choose Ethernet to WiFi station or Ethernet to WiFi softap via ```make menuconfig```.
+The demo can enable ethernet to WiFi data forwarding function. You can choose Ethernet to WiFi station or Ethernet to WiFi softap via `make menuconfig`(Make) or `idf.py menuconfig`(CMake).
 
 ### Ethernet to wifi station data forwarding demo
 It's like a wireless adapter. You can connect the ESP32 with PC through ethernet, and the PC can access the Internet, if esp32 wifi station connected the router which can access the Internet.

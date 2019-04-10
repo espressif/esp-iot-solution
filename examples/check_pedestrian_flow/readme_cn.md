@@ -117,9 +117,14 @@ $ export PATH=/opt/xtensa-esp32-elf/bin/:$PATH
 
 编译成功后，会自动烧写程序，同时自动运行程序。
 
+Make:
 ```
 $ make flash monitor
+```
 
+CMake:
+```
+$ idf.py flash monitor
 ```
 
 ## 2. 结果展示

@@ -17,11 +17,11 @@
 #include "soc/sens_reg.h"
 #include "driver/rtc_io.h"
 #include "esp32/ulp.h"
-#include "lowpower_evb_ulp.h"
+#include "ulp_lowpower_evb_ulp.h"
 #include "lowpower_evb_ulp_opt.h"
 
-extern const uint8_t ulp_main_bin_start[] asm("_binary_lowpower_evb_ulp_bin_start");
-extern const uint8_t ulp_main_bin_end[]   asm("_binary_lowpower_evb_ulp_bin_end");
+extern const uint8_t ulp_main_bin_start[] asm("_binary_ulp_lowpower_evb_ulp_bin_start");
+extern const uint8_t ulp_main_bin_end[]   asm("_binary_ulp_lowpower_evb_ulp_bin_end");
 
 /* This function is called once after power-on reset, to load ULP program into
  * RTC memory.

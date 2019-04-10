@@ -3,7 +3,7 @@
 # project subdirectory.
 #
 
-PROJECT_NAME := empty_project
+PROJECT_NAME := touch_pad_evb
 #If IOT_SOLUTION_PATH is not defined, use relative path as default value
 IOT_SOLUTION_PATH ?= $(abspath $(shell pwd)/../../)
  

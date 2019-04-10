@@ -20,8 +20,14 @@ ULP 协处理器配置汇编编译工具链，只需两步即可安装配置完�
 
 #### 2.2 配置编译烧录
 至此，汇编编译环境就安装好了，在 ulp_i2c_bitbang/ 目录下依次运行以下命令，进行 default config 配置并编译、烧录程序。
+
+Make:
 >* make defconfig
 >* make all -j8 && make flash monitor
+
+CMake
+>* idf.py defconfig
+>* idf.py flash monitor
 
 ## 3. stack.S 堆栈宏说明
 由于当前 ULP 协处理器汇编环境没有实现关于子函数的调用和返回堆栈保存等操作，需要用户来实现和构造这部分。所以在四个通用寄存器中我们牺牲 R3 寄存器用来当做栈指针，实现了 4 个关于堆栈操作的宏 PUSH、POP、PSR、RET，以上的宏在 stack.S 汇编文件中。
