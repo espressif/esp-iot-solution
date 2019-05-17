@@ -901,3 +901,25 @@ There are two ways to configure LittlevGL in iot-solution:
     The LittlevGL Settings menu allows you to add the customized driver components to the LittlevGL build path: `Use Custom Driver Defined By Users`. If added, only the customized drivers will be built, and all the driver components provided by iot-solution will not be built at that point.
 
 ## FAQs
+
+1. ``.dram0.bss' will not fit in region `dram0_0_seg'` or `region `dram0_0_seg' overflowed by 10072 bytes`
+
+    Due to the LittlevGL update, the amount of `.bss` code has been added. If this problem occurs during compilation, you can disable unused themes, fonts, and objects in the `lv_conf.h` file. For example, if only the default theme is used in the program, then we can disable other themes:
+    
+    ```c
+    /*================
+    *  THEME USAGE
+    *================*/
+    #define LV_THEME_LIVE_UPDATE    0       /*1: Allow theme switching at run time. Uses 8..10 kB of RAM*/
+
+    #define USE_LV_THEME_TEMPL      0       /*Just for test*/
+    #define USE_LV_THEME_DEFAULT    1       /*Built mainly from the built-in styles. Consumes very few RAM*/
+    #define USE_LV_THEME_ALIEN      0       /*Dark futuristic theme*/
+    #define USE_LV_THEME_NIGHT      0       /*Dark elegant theme*/
+    #define USE_LV_THEME_MONO       0       /*Mono color theme for monochrome displays*/
+    #define USE_LV_THEME_MATERIAL   0       /*Flat theme with bold colors and light shadows*/
+    #define USE_LV_THEME_ZEN        0       /*Peaceful, mainly light theme */
+    #define USE_LV_THEME_NEMO       0       /*Water-like theme based on the movie "Finding Nemo"*/
+    ```
+
+    Similarly, we can disable other unused features.

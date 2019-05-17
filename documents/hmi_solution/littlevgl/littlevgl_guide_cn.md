@@ -775,3 +775,25 @@ iot-solution 中已经做了一些驱动适配，驱动路径： `components/hmi
     在 LittlevGL Settings 菜单中可以将自定义的驱动组件添加到 LittlevGL 的编译路径中（此时只编译自定义的驱动，不编译 iot-solution 提供的驱动组件），路径：`Use Custom Driver Defined By Users`。
 
 ## FAQs
+
+1. ``.dram0.bss' will not fit in region `dram0_0_seg'` 或 `region `dram0_0_seg' overflowed by 10072 bytes`
+
+    由于 LittlevGL 更新，增加了 `.bss` 代码量，如果编译时出现这个问题，可以在 `lv_conf.h` 文件中，将没有使用的主题(theme)、字体(font)、对象(objects)关掉，例如：程序中只使用默认主题，那么我们可以将其他的主题都关掉：
+    
+    ```c
+    /*================
+    *  THEME USAGE
+    *================*/
+    #define LV_THEME_LIVE_UPDATE    0       /*1: Allow theme switching at run time. Uses 8..10 kB of RAM*/
+
+    #define USE_LV_THEME_TEMPL      0       /*Just for test*/
+    #define USE_LV_THEME_DEFAULT    1       /*Built mainly from the built-in styles. Consumes very few RAM*/
+    #define USE_LV_THEME_ALIEN      0       /*Dark futuristic theme*/
+    #define USE_LV_THEME_NIGHT      0       /*Dark elegant theme*/
+    #define USE_LV_THEME_MONO       0       /*Mono color theme for monochrome displays*/
+    #define USE_LV_THEME_MATERIAL   0       /*Flat theme with bold colors and light shadows*/
+    #define USE_LV_THEME_ZEN        0       /*Peaceful, mainly light theme */
+    #define USE_LV_THEME_NEMO       0       /*Water-like theme based on the movie "Finding Nemo"*/
+    ```
+
+    类似，我们可以将其他不使用功能关掉。
