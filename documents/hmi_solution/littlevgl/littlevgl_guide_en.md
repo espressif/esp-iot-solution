@@ -20,6 +20,14 @@ LittlevGL has the following features:
  - Written in C for maximum compatibility (C++ compatible)
  - Simulator: supports embedded GUI design on PC without embedded hardware
 
+ ## Using with an operating system
+
+LittlevGL is not thread-safe. Despite it, it's quite simple to use LittlevGL inside an operating system.
+
+The simple scenario is to don't use the operating system's tasks but use `lv_tasks`. An `_lv_task_` is a function called periodically in `lv_task_handler`. In the `_lv_task_` you can get the state of the sensors, buffers etc and call LittlevGL functions to refresh the GUI. To create an `_lv_task_` use: `lv_task_create(my_func, period_ms, LV_TASK_PRIO_LOWEST/LOW/MID/HIGH/HIGHEST, custom_ptr)`
+
+If you need to use other task or threads you need one mutex which should be taken before calling `lv_task_handler` and released after it. In addition, you have to use to that mutex in other tasks and threads around every LittlevGL (`lv_...`) related code. This way you can use LittlevGL in a real multitasking environment. Just use a mutex to avoid concurrent calling of LittlevGL functions.
+
 ## Contents
 
 - [Graphical Objects](#graphical-objects)
