@@ -19,6 +19,14 @@ LittlevGL 具有以下特点：
  - 用 C 语言编写：具备很好的兼容性（兼容 C++）
  - 模拟器：在没有嵌入式硬件的情况下，可在 PC 上进行嵌入式 GUI 设计
 
+## 操作系统中使用
+
+LittlevGL 不是线程安全的。尽管如此，在操作系统中使用 LittlevGL 仍然非常简单。
+
+简单的方法是不使用操作系统的任务，而是使用 `lv_tasks`。`_lv_task_` 是 `lv_task_handler` 中定期调用的函数。在 `_lv_task_` 中，您可以获取传感器，缓冲区等的状态，并调用 LittlevGL 函数来刷新 GUI。调用 `lv_task_create（my_func，period_ms，LV_TASK_PRIO_LOWEST/LOW/MID/HIGH/HIGHEST，custom_ptr）` 函数创建 `_lv_task_` 
+
+如果您需要使用其他任务或线程，则需要一个互斥锁，在调用 `lv_task_handler` 之前应该获取它并在之后释放。此外，您必须在每个调用 LittlevGL（`lv _...`） 相关函数的任务和线程中使用该互斥锁。这样，您就可以在真正的多任务环境中使用 LittlevGL 只需使用互斥锁即可避免并发调用 LittlevGL 函数。
+
 ## LittlevGL 介绍
 
 - [图形对象](#图形对象)
