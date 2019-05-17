@@ -5,7 +5,7 @@
 ## 示例环境
 
 - 硬件：
-	* [ESP32\_LCD\_EB\_V1](../../../documents/evaluation_boards/ESP32_LCD_EB_guide_cn.md) 开发板（该示例需要搭配使用 [ESP32 DevKitC](https://docs.espressif.com/projects/esp-idf/en/latest/hw-reference/modules-and-boards.html#esp32-devkitc-v4) 开发板）
+	* [ESP32\_LCD\_EB\_V1](../../../documents/evaluation_boards/ESP32_LCDKit_guide_cn.md) 开发板（该示例需要搭配使用 [ESP32 DevKitC](https://docs.espressif.com/projects/esp-idf/en/latest/hw-reference/modules-and-boards.html#esp32-devkitc-v4) 开发板）
 	* 屏幕（2.8 inch、240*320 pixel、 ILI9341 LCD + XPT2046 Touch）
 - 软件：
 	* [esp-iot-solution](https://github.com/espressif/esp-iot-solution)
@@ -67,7 +67,7 @@ IRQ | 33
 #### SD-Card、Audio 使用
 
 - 音频文件目前只支持 MP3 格式，MP3 文件可以放置在 SD-Card 的根目录下或者二级目录下，当前 Example 支持最多 20 个音频文件
-- 喇叭可以连接到 ESP32_LCD_EB_V1 开发板的两个音频输出端口上，分别为左声道、右声道
+- 喇叭可以连接到 ESP32_LCDKit_V1 开发板的两个音频输出端口上，分别为左声道、右声道
 
 ## 示例结果
 
