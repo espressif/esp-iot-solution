@@ -5,7 +5,7 @@
 ## 示例环境
 
 - 硬件：
-	* [ESP32\_LCD\_EB\_V1](../../../documents/evaluation_boards/ESP32_LCD_EB_guide_cn.md) 开发板（该示例需要搭配使用带 wrover 模组的 [ESP32 DevKitC](https://docs.espressif.com/projects/esp-idf/en/latest/hw-reference/modules-and-boards.html#esp32-devkitc-v4) 开发板）
+	* [ESP32\_LCD\_EB\_V1](../../../documents/evaluation_boards/ESP32_LCDKit_guide_cn.md) 开发板（该示例需要搭配使用带 wrover 模组的 [ESP32 DevKitC](https://docs.espressif.com/projects/esp-idf/en/latest/hw-reference/modules-and-boards.html#esp32-devkitc-v4) 开发板）
 	* 屏幕（4.3 inch、480*800 pixel、NT35510 LCD + FT5X06 Touch）
 - 软件：
 	* [esp-iot-solution](https://github.com/espressif/esp-iot-solution)

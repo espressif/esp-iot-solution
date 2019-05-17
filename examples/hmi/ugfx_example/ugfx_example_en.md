@@ -5,7 +5,7 @@
 ## What You Need
 
 - Hardware:
-	* 1 x [ESP32\_LCD\_EB\_V1](../../../documents/evaluation_boards/ESP32_LCD_EB_guide_en.md) development board (for this example, it has to be used with the [ESP32_DevKitC](https://docs.espressif.com/projects/esp-idf/en/latest/hw-reference/modules-and-boards.html#esp32-devkitc-v4) development board)
+	* 1 x [ESP32\_LCD\_EB\_V1](../../../documents/evaluation_boards/ESP32_LCDKit_guide_en.md) development board (for this example, it has to be used with the [ESP32_DevKitC](https://docs.espressif.com/projects/esp-idf/en/latest/hw-reference/modules-and-boards.html#esp32-devkitc-v4) development board)
 	* 1 x display (4.3 inches, 480x800 pixels, NT35510 LCD + FT5X06 Touchscreen)
 - Software:
 	* [esp-iot-solution](https://github.com/espressif/esp-iot-solution)
