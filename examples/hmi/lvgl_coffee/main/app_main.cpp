@@ -343,9 +343,10 @@ static void create_tab(lv_obj_t *parent, uint8_t wp_img_id, uint8_t coffee_type_
     lv_obj_animate(precent_label[id], LV_ANIM_FLOAT_BOTTOM | LV_ANIM_OUT, 400, 0, NULL);                                           /* animation of hide the object */
 }
 
-static void tabview_load_action(lv_obj_t *tabview, uint16_t tab_action_id)
+static lv_res_t tabview_load_action(lv_obj_t *tabview, uint16_t tab_action_id)
 {
     tab_id = tab_action_id;
+    return LV_RES_OK;
 }
 
 static void littlevgl_coffee(void)
