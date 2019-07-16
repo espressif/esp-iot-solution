@@ -206,7 +206,7 @@
 
 4. ESP32 平台选择
 
-    在 mp3_example 中使用 LittlevGL GUI 库进行开发，对内存资源要求低，所以选择 [ESP32 DevKitC](https://docs.espressif.com/projects/esp-idf/en/latest/hw-reference/modules-and-boards.html#esp32-devkitc-v4) 开发板搭配 [ESP-WROOM32](https://docs.espressif.com/projects/esp-idf/en/latest/hw-reference/modules-and-boards.html#esp32-wroom-32) 模组进行开发
+    在 mp3_example 中使用 LittlevGL GUI 库进行开发，对内存资源要求低，所以选择 [ESP32 DevKitC](https://docs.espressif.com/projects/esp-idf/en/stable/hw-reference/modules-and-boards.html#esp32-devkitc-v4) 开发板搭配 [ESP-WROOM32](https://docs.espressif.com/projects/esp-idf/en/stable/hw-reference/modules-and-boards.html#esp32-wroom-32) 模组进行开发
 
 5. 基于 [ESP32 LittlevGL](https://github.com/espressif/esp-iot-solution/tree/master/components/hmi/lvgl_gui) 库进行移植、相关驱动开发
 

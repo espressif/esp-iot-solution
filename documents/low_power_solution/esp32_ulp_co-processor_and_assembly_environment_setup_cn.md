@@ -33,7 +33,7 @@ ULP 协处理器的主要特性有：
 ## 3. 配置 ULP 协处理器编译环境
 ULP 协处理器目前只支持汇编开发，我们提供了三种不同平台（Linux，Windows，MacOS）的 ULP 协处理器编译环境的设置方法。
 
-需说明：在安装汇编工具链之前，我们默认你已经安装和配置好 ESP32 ESP-IDF C 语言编译工具链，[安装参考链接](https://docs.espressif.com/projects/esp-idf/en/latest/get-started/index.html#setup-toolchain)。
+需说明：在安装汇编工具链之前，我们默认你已经安装和配置好 ESP32 ESP-IDF C 语言编译工具链，[安装参考链接](https://docs.espressif.com/projects/esp-idf/en/stable/get-started/index.html#setup-toolchain)。
 
 #### 3.1 Linux
 Linux 下配置编译环境比较简单，只需要下载汇编编译工具链，解压到安装目录中，再添加环境变量即可完成设置。
@@ -41,7 +41,7 @@ Linux 下配置编译环境比较简单，只需要下载汇编编译工具链�
 2. 解压到要安装的目录,添加工具链的 `bin` 目录到环境变量 `PATH` 中。例如，解压目录是 `/opt/esp32ulp-elf-binutils` 那么添加 `export PATH=/opt/esp32ulp-elf-binutils/bin:$PATH` 这一行到 `.bashrc` 文件中，运行 `source .bashrc` 使上述环境变量生效，这样，ULP 的汇编环境就设置完毕了。
 
 #### 3.2 Windows
-首先安装 Windows / MSYS2 下的 C 编译工具链可参考[说明链接]( http://docs.espressif.com/projects/esp-idf/en/latest/get-started/windows-setup.html) ，之后再安装 ULP 协处理器[编译工具链链接]( https://github.com/espressif/binutils-esp32ulp/wiki#downloads)
+首先安装 Windows / MSYS2 下的 C 编译工具链可参考[说明链接]( https://docs.espressif.com/projects/esp-idf/en/stable/get-started/windows-setup.html) ，之后再安装 ULP 协处理器[编译工具链链接]( https://github.com/espressif/binutils-esp32ulp/wiki#downloads)
 1. 解压 ULP 工具链 `esp32ulp-elf-binutils-win32-...` 到 MSYS2 的 `opt` 目录中，一般建议使用 `C:\msys32\opt` 目录，因为 `ESP32 toolchain xtensa-esp32-elf` 也在这个目录下。
 
 2. 打开位于目录 `C:\msys32\etc\profile.d` 下的 `esp32_toolchain.sh` 文件，把 ULP 工具链的 `bin/`目录添加到 path 中，设置例如：
@@ -62,7 +62,7 @@ MacOS 平台编译设置几乎是和 Linux 一样的，但需下载 MacOS 平台
 如果把 ULP 汇编代码编译为应用组件的一部分，必须采取以下步骤：
 
 1. ULP 的代码是汇编写的，并且文件后缀格式是.S, 这些汇编文件必须放在一个单独的目录中，例如 ulp/
-2. 修改 makefile 添加如下内容，一些详细的定义在 [Compiling ULP code](http://docs.espressif.com/projects/esp-idf/en/latest/api-guides/ulp.html#compiling-ulp-code) 可以找到解释。
+2. 修改 makefile 添加如下内容，一些详细的定义在 [Compiling ULP code](https://docs.espressif.com/projects/esp-idf/en/stable/api-guides/ulp.html#compiling-ulp-code) 可以找到解释。
 ```
 ULP_APP_NAME ?= ulp_$(COMPONENT_NAME)
 ULP_S_SOURCES = $(COMPONENT_PATH)/ulp/ulp_source_file.S
@@ -72,7 +72,7 @@ include $(IDF_PATH)/components/ulp/component_ulp_common.mk
 3. 至此，可以编译包含 ULP 协处理器汇编代码的应用程序了。
 
 ## 5. ULP 协处理器的汇编指令
-汇编指令目前有 24 条，在 [ULP coprocessor instruction set](http://docs.espressif.com/projects/esp-idf/en/latest/api-guides/ulp_instruction_set.html#add-add-to-register) 获得更详细的说明。 
+汇编指令目前有 24 条，在 [ULP coprocessor instruction set](https://docs.espressif.com/projects/esp-idf/en/stable/api-guides/ulp_instruction_set.html#add-add-to-register) 获得更详细的说明。 
 
 ##### 算数与逻辑类运算的指令
 * 算数指令：加 ADD，减 SUB
@@ -122,4 +122,4 @@ include $(IDF_PATH)/components/ulp/component_ulp_common.mk
 
 ## 7. 引用文档
 * [ESP-IOT-SOLUTION 的低功耗方案文档]( https://github.com/espressif/esp-iot-solution/tree/master/documents/low_power_solution)
-* [ULP coprocessor programming]( https://docs.espressif.com/projects/esp-idf/en/latest/api-guides/ulp.html)
+* [ULP coprocessor programming]( https://docs.espressif.com/projects/esp-idf/en/stable/api-guides/ulp.html)

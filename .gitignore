@@ -6,3 +6,37 @@ build/
 *.d
 *.old
 *.cproject
+
+# vscode setting
+.vscode/
+
+# eclipse setting
+.settings
+
+# MacOS directory files
+.DS_Store
+
+# Doc build artifacts
+docs/*/_build/
+docs/*/doxygen-warning-log.txt
+docs/*/sphinx-warning-log.txt
+docs/*/sphinx-warning-log-sanitized.txt
+docs/*/xml/
+docs/*/xml_in/
+docs/*/man/
+docs/doxygen_sqlite3.db
+
+# Example project files
+examples/**/sdkconfig
+examples/**/sdkconfig.old
+examples/**/build
+
+# Unit test app files
+tools/unit-test-app/sdkconfig
+tools/unit-test-app/sdkconfig.old
+tools/unit-test-app/build
+tools/unit-test-app/builds
+tools/unit-test-app/output
+
+# ESP-IDF library 
+build

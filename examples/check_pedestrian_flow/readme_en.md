@@ -7,11 +7,11 @@ Pedestrian flow monitoring plays an important role in security, shopping malls, 
 After getting the basic pedestrian flow data, ESP32 sends the data to the OneNET IoT platform based on the MQTT protocol to generate a line chart of the pedestrian flow. Users can then access the data from the cloud.
 
 ## 1. Environment Setup
-**For details on compilation and programming of ESP32, please refer to Espressif's [official documents](http://espressif.com/zh-hans/support/download/overview) and [ESP-IDF Getting Started Guide](http://docs.espressif.com/projects/esp-idf/en/latest/get-started/index.html).**
+**For details on compilation and programming of ESP32, please refer to Espressif's [official documents](http://espressif.com/zh-hans/support/download/overview) and [ESP-IDF Getting Started Guide](https://docs.espressif.com/projects/esp-idf/en/stable/get-started/index.html).**
 
 ### 1.1 Hardware Preparation
 
-- [ESP32-DevKitC](http://docs.espressif.com/projects/esp-idf/en/latest/hw-reference/modules-and-boards.html#esp32-core-board-v2-esp32-devkitc) or [ESP-WROVER-KIT](http://docs.espressif.com/projects/esp-idf/en/latest/hw-reference/modules-and-boards.html#esp-wrover-kit) 
+- [ESP32-DevKitC](https://docs.espressif.com/projects/esp-idf/en/stable/hw-reference/modules-and-boards.html#esp32-core-board-v2-esp32-devkitc) or [ESP-WROVER-KIT](https://docs.espressif.com/projects/esp-idf/en/stable/hw-reference/modules-and-boards.html#esp-wrover-kit) 
 
 - Router/AP（which can be connected to the internet）
 
@@ -88,7 +88,7 @@ $ git submodule update --init
 
 #### 1.3.2 Acquiring ESP-IDF Compiler
 
-Please refer to [ESP-IDF Getting Started Guide](https://docs.espressif.com/projects/esp-idf/en/latest/get-started/index.html) to download the compiler.
+Please refer to [ESP-IDF Getting Started Guide](https://docs.espressif.com/projects/esp-idf/en/stable/get-started/index.html) to download the compiler.
 
 #### 1.3.3 Acquiring Demo Code
 

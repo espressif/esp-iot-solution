@@ -222,7 +222,7 @@
 
 ## <h2 id="preparation">Preparation(CMake)</h2>
 
-* Add to PATH the path to the tools directory inside the IDF_PATH directory.[Add IDF_PATH & idf.py PATH to User Profile(CMake)](https://docs.espressif.com/projects/esp-idf/en/latest/get-started-cmake/add-idf_path-to-profile.html)
+* Add to PATH the path to the tools directory inside the IDF_PATH directory.[Add IDF_PATH & idf.py PATH to User Profile(CMake)](https://docs.espressif.com/projects/esp-idf/en/stable/get-started-cmake/add-idf_path-to-profile.html)
 * To clone this repository by
 
     ```

@@ -113,7 +113,7 @@ Pin IO0 can be set to select ESP8266's and ESP32's boot modes. This pin can be u
 
 - [ESP-Prog schematics, PCB reference design, BOM](http://espressif.com/en/support/download/documents?keys=Reference+Design)
 
-- [Introduction to the ESP32 JTAG Debugging](https://docs.espressif.com/projects/esp-idf/en/latest/api-guides/jtag-debugging/index.html#)
+- [Introduction to the ESP32 JTAG Debugging](https://docs.espressif.com/projects/esp-idf/en/stable/api-guides/jtag-debugging/index.html#)
 
 - [ Flash Download Tools (ESP8266 & ESP32)](http://espressif.com/en/support/download/other-tools)
 

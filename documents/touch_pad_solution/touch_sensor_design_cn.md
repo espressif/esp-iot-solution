@@ -174,7 +174,7 @@ ESP32 不仅提供核心的 Wi-Fi 和蓝牙功能，还集成了丰富的外设�
 
 **触摸去抖**：正常使用触摸按键时，阈值与触摸延迟在一定的范围内变化。通过设置合适的参数，可过滤掉假的触摸信号。
 
-**API**：指的是触摸传感器 API，核心函数可在 [ESP-IDF](https://github.com/espressif/esp-idf) 中查看，具体介绍在 [触摸传感器 API 参考](https://docs.espressif.com/projects/esp-idf/en/latest/api-reference/peripherals/touch_pad.html) 中查看，API 扩展可在 [触摸传感器组件](../../components/features/touchpad) 中查看。
+**API**：指的是触摸传感器 API，核心函数可在 [ESP-IDF](https://github.com/espressif/esp-idf) 中查看，具体介绍在 [触摸传感器 API 参考](https://docs.espressif.com/projects/esp-idf/en/stable/api-reference/peripherals/touch_pad.html) 中查看，API 扩展可在 [触摸传感器组件](../../components/features/touchpad) 中查看。
 
 ## 2. 触摸传感器介绍
 
@@ -291,9 +291,9 @@ ESP32 触摸传感器驱动包含无限脉冲响应滤波器（IIR）功能，�
 
 滤波器相关 API 说明：
 
-* [`esp_err_t touch_pad_filter_start(uint32_t filter_period_ms)`](https://docs.espressif.com/projects/esp-idf/en/latest/api-reference/peripherals/touch_pad.html#_CPPv222touch_pad_filter_start8uint32_t)
+* [`esp_err_t touch_pad_filter_start(uint32_t filter_period_ms)`](https://docs.espressif.com/projects/esp-idf/en/stable/api-reference/peripherals/touch_pad.html#_CPPv222touch_pad_filter_start8uint32_t)
 
-* [`esp_err_t touch_pad_read_filtered(touch_pad_t touch_num, uint16_t *touch_value)`](https://docs.espressif.com/projects/esp-idf/en/latest/api-reference/peripherals/touch_pad.html#_CPPv223touch_pad_read_filtered11touch_pad_tP8uint16_t)
+* [`esp_err_t touch_pad_read_filtered(touch_pad_t touch_num, uint16_t *touch_value)`](https://docs.espressif.com/projects/esp-idf/en/stable/api-reference/peripherals/touch_pad.html#_CPPv223touch_pad_read_filtered11touch_pad_tP8uint16_t)
 
 #### 2.4.2. 测量时间设置
 
@@ -306,7 +306,7 @@ ESP32 内部触摸传感器电路可配置为周期性测量模式。测量时�
 
 相关 API 说明：
 
-* [`esp_err_t touch_pad_set_meas_time(uint16_t sleep_cycle, uint16_t meas_cycle)`](https://docs.espressif.com/projects/esp-idf/en/latest/api-reference/peripherals/touch_pad.html#_CPPv223touch_pad_set_meas_time8uint16_t8uint16_t)
+* [`esp_err_t touch_pad_set_meas_time(uint16_t sleep_cycle, uint16_t meas_cycle)`](https://docs.espressif.com/projects/esp-idf/en/stable/api-reference/peripherals/touch_pad.html#_CPPv223touch_pad_set_meas_time8uint16_t8uint16_t)
 
 #### 2.4.3. 充放电压门限设置
 
@@ -325,14 +325,14 @@ ESP32 内部触摸传感器电路可配置为周期性测量模式。测量时�
 
 相关 API 说明：
 
-* [`esp_err_t touch_pad_set_voltage(touch_high_volt_t refh, touch_low_volt_t refl, touch_volt_atten_t atten)`](https://docs.espressif.com/projects/esp-idf/en/latest/api-reference/peripherals/touch_pad.html#_CPPv221touch_pad_set_voltage17touch_high_volt_t16touch_low_volt_t18touch_volt_atten_t)
+* [`esp_err_t touch_pad_set_voltage(touch_high_volt_t refh, touch_low_volt_t refl, touch_volt_atten_t atten)`](https://docs.espressif.com/projects/esp-idf/en/stable/api-reference/peripherals/touch_pad.html#_CPPv221touch_pad_set_voltage17touch_high_volt_t16touch_low_volt_t18touch_volt_atten_t)
 
 #### 2.4.4. 设置充放电电流
 通过下面接口设置触摸传感器内部电流源的电流大小，改变电容的充放电速率。高的充放电电流会增加抗干扰能力，建议选择 TOUCH_PAD_SLOPE_7。
 
 相关 API 说明：
 
-* [`esp_err_t touch_pad_set_cnt_mode(touch_pad_t touch_num, touch_cnt_slope_t slope, touch_tie_opt_t opt)`](https://docs.espressif.com/projects/esp-idf/en/latest/api-reference/peripherals/touch_pad.html#_CPPv222touch_pad_set_cnt_mode11touch_pad_t17touch_cnt_slope_t15touch_tie_opt_t)
+* [`esp_err_t touch_pad_set_cnt_mode(touch_pad_t touch_num, touch_cnt_slope_t slope, touch_tie_opt_t opt)`](https://docs.espressif.com/projects/esp-idf/en/stable/api-reference/peripherals/touch_pad.html#_CPPv222touch_pad_set_cnt_mode11touch_pad_t17touch_cnt_slope_t15touch_tie_opt_t)
 
 
 #### 2.4.5. 读取数据
@@ -340,7 +340,7 @@ ESP32 内部触摸传感器电路可配置为周期性测量模式。测量时�
 
 相关 API 说明：
 
-* [`esp_err_t touch_pad_read(touch_pad_t touch_num, uint16_t * touch_value)`](https://docs.espressif.com/projects/esp-idf/en/latest/api-reference/peripherals/touch_pad.html#_CPPv214touch_pad_read11touch_pad_tP8uint16_t)
+* [`esp_err_t touch_pad_read(touch_pad_t touch_num, uint16_t * touch_value)`](https://docs.espressif.com/projects/esp-idf/en/stable/api-reference/peripherals/touch_pad.html#_CPPv214touch_pad_read11touch_pad_tP8uint16_t)
 
 #### 2.4.6. 中断触发
 ESP32 触摸传感器支持中断触发模式，触发阈值可配置。中断模式可代替循环读取脉冲计数值模式，节省软件资源。 <br>
@@ -348,7 +348,7 @@ ESP32 触摸传感器支持中断触发模式，触发阈值可配置。中断�
 
 相关 API 说明：
 
-* [`esp_err_t touch_pad_isr_register(intr_handler_t fn, void* arg)`](https://docs.espressif.com/projects/esp-idf/en/latest/api-reference/peripherals/touch_pad.html#_CPPv222touch_pad_isr_register14intr_handler_tPv)
+* [`esp_err_t touch_pad_isr_register(intr_handler_t fn, void* arg)`](https://docs.espressif.com/projects/esp-idf/en/stable/api-reference/peripherals/touch_pad.html#_CPPv222touch_pad_isr_register14intr_handler_tPv)
 
 ## 3. 触摸传感器机械和硬件设计
 
@@ -826,6 +826,6 @@ tp_matrix_handle_t tp_matrix = iot_tp_matrix_create(sizeof(x_tps)/sizeof(x_tps[0
 
 * [触摸传感器开发程序示例](../../examples/touch_pad_evb)  
 
-* ESP32 编程指南，[触摸传感器 API 参考](https://docs.espressif.com/projects/esp-idf/en/latest/api-reference/peripherals/touch_pad.html)  
+* ESP32 编程指南，[触摸传感器 API 参考](https://docs.espressif.com/projects/esp-idf/en/stable/api-reference/peripherals/touch_pad.html)  
 
 * [《ESP32 技术参考手册》](https://espressif.com/sites/default/files/documentation/esp32_technical_reference_manual_cn.pdf)，章节*电容式触摸传感器*  
