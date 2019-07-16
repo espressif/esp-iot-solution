@@ -67,8 +67,8 @@ The lithium battery is also an optional external device, which can be used when 
 
 ### 2.2 Compiling Environment Configuration
 
-* To install and configure the C compiling environment for the development of ESP32 products, please refer to [this link](https://docs.espressif.com/projects/esp-idf/en/latest/get-started/index.html)
-* To install and configure the toolchain for ULP, please refer to [this link](http://docs.espressif.com/projects/esp-idf/en/latest/api-guides/ulp.html)
+* To install and configure the C compiling environment for the development of ESP32 products, please refer to [this link](https://docs.espressif.com/projects/esp-idf/en/stable/get-started/index.html)
+* To install and configure the toolchain for ULP, please refer to [this link](https://docs.espressif.com/projects/esp-idf/en/stable/api-guides/ulp.html)
 
 ### 2.3 Complier Download
 

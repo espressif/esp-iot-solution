@@ -56,7 +56,7 @@
 
 ### 2.2 配置编译环境
 * 安装和配置 ESP32 的 C 语言编译环境，请参照 [链接地址](https://docs.espressif.com/projects/esp-idf/zh_CN/latest/get-started/index.html)。  
-* 安装和配置 ULP 的汇编编译工具链，请参照 [链接地址](http://docs.espressif.com/projects/esp-idf/en/latest/api-guides/ulp.html)。
+* 安装和配置 ULP 的汇编编译工具链，请参照 [链接地址](https://docs.espressif.com/projects/esp-idf/en/stable/api-guides/ulp.html)。
 
 ### 2.3 编译下载
 请前往 **menuconfig** 菜单，进入 `Lowpower EVB settings` 进行以下配置：  

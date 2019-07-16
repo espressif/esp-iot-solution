@@ -3,7 +3,7 @@
 
 ### 1. 硬件连接
 
-参考 [ESP32 技术手册](https://www.espressif.com/sites/default/files/documentation/esp32_technical_reference_manual_en.pdf) ，ULP 的 [ADC](https://docs.espressif.com/projects/esp-idf/en/latest/api-guides/ulp_instruction_set.html#adc-do-measurement-with-adc) 指令可以选择的 ADC 通道及 GPIO 引脚如下图所示：
+参考 [ESP32 技术手册](https://www.espressif.com/sites/default/files/documentation/esp32_technical_reference_manual_en.pdf) ，ULP 的 [ADC](https://docs.espressif.com/projects/esp-idf/en/stable/api-guides/ulp_instruction_set.html#adc-do-measurement-with-adc) 指令可以选择的 ADC 通道及 GPIO 引脚如下图所示：
 
 <div align=center>
 <img src="../../../documents/_static/ulp_detect_brownout/ulp_adc_chn.png" width="600">

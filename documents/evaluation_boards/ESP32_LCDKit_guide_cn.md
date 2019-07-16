@@ -46,7 +46,7 @@ DAC-Audio 模块 | 连接喇叭播放音频，包含音频功率放大器
 
 ## 3.1 ESP32 DevKitC 开发板连接模块
 
-使用 ESP32-LCDKit 开发板进行 HMI 相关开发时需要搭配使用 [ESP32 DevKitC 开发板](https://docs.espressif.com/projects/esp-idf/en/latest/hw-reference/modules-and-boards.html#esp32-devkitc-v4)。
+使用 ESP32-LCDKit 开发板进行 HMI 相关开发时需要搭配使用 [ESP32 DevKitC 开发板](https://docs.espressif.com/projects/esp-idf/en/stable/hw-reference/modules-and-boards.html#esp32-devkitc-v4)。
 
 ESP32-LCDKit 开发板与 ESP32 DevKitC 开发板连接模块电路原理图如下所示：
 

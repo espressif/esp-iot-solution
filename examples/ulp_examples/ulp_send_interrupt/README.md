@@ -1,6 +1,6 @@
 # ULP 中断发送程序
 
-该示例展示了当 ULP 通过 [WAKE](https://docs.espressif.com/projects/esp-idf/en/latest/api-guides/ulp_instruction_set.html#wake-wake-up-the-chip) 指令向 RTC 控制器发送中断信号时，主程序该如何配置中断处理函数以响应该中断信号。
+该示例展示了当 ULP 通过 [WAKE](https://docs.espressif.com/projects/esp-idf/en/stable/api-guides/ulp_instruction_set.html#wake-wake-up-the-chip) 指令向 RTC 控制器发送中断信号时，主程序该如何配置中断处理函数以响应该中断信号。
 
 根据 ULP 的 WAKE 指令说明：
 

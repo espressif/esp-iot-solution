@@ -39,10 +39,10 @@ The hardware schematics is designed using Kicad. The principle is that an 47 kΩ
 ![](../../../documents/_static/ulp_demo/e_1.jpg)
 
 ## 4. Software Preparation
-For details of the C language compiling environment setup and configuration of ESP32, please refer to [ESP-IDF Getting Started](https://docs.espressif.com/projects/esp-idf/en/latest/get-started/index.html#setup-toolchain). The ULP co-processor currently supports assembly programming only. So the users will also need to install the ULP coprocessor toolchain. The following introduces the installation and configuration of the ULP coprocessor toolchain.
+For details of the C language compiling environment setup and configuration of ESP32, please refer to [ESP-IDF Getting Started](https://docs.espressif.com/projects/esp-idf/en/stable/get-started/index.html#setup-toolchain). The ULP co-processor currently supports assembly programming only. So the users will also need to install the ULP coprocessor toolchain. The following introduces the installation and configuration of the ULP coprocessor toolchain.
 
 #### 4.1 Configuration of Compiling Environment 
-It takes only two steps to configure the ULP coprocessor toolchain. Below is an introduction to the steps for configuring the environment in ubuntu. For more information on ULP coprocessor programming, please see [ULP Coprocessor Programming](http://docs.espressif.com/projects/esp-idf/en/latest/api-guides/ulp.html).
+It takes only two steps to configure the ULP coprocessor toolchain. Below is an introduction to the steps for configuring the environment in ubuntu. For more information on ULP coprocessor programming, please see [ULP Coprocessor Programming](https://docs.espressif.com/projects/esp-idf/en/stable/api-guides/ulp.html).
 >* Step One: Download [binutils-esp32ulp toolchain](https://github.com/espressif/binutils-esp32ulp/wiki#downloads), and extract the toolchain into a directory for installation.
 >* Step Two: Add the path to the `bin` directory of the toolchain to the `PATH` environment variable. For example, if the toolchain is extracted into the directory `/opt/esp32ulp-elf-binutils`, then add the line `export PATH=/opt/esp32ulp-elf-binutils/bin:$PATH` at the end of the hidden file `.bashrc` under the directory `/home`. Save the file and run the command `source .bashrc` to enable the environment variable. 
 

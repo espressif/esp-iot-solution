@@ -199,7 +199,7 @@ This section uses an [mp3_example](../../examples/hmi/mp3_example/README_en.md) 
 
 4. Select the project-specific ESP32 module.
 
-   As the LittlevGL GUI library requires minimum memory, you can select the [ESP-WROOM32](https://docs.espressif.com/projects/esp-idf/en/latest/hw-reference/modules-and-boards.html#esp32-wroom-32) module and mount it on the [ESP32 DevKitC](https://docs.espressif.com/projects/esp-idf/en/latest/hw-reference/modules-and-boards.html#esp32-devkitc-v4) development board.
+   As the LittlevGL GUI library requires minimum memory, you can select the [ESP-WROOM32](https://docs.espressif.com/projects/esp-idf/en/stable/hw-reference/modules-and-boards.html#esp32-wroom-32) module and mount it on the [ESP32 DevKitC](https://docs.espressif.com/projects/esp-idf/en/stable/hw-reference/modules-and-boards.html#esp32-devkitc-v4) development board.
 
 5. Port the [ESP32 LittlevGL](https://github.com/espressif/esp-iot-solution/tree/master/components/hmi/lvgl_gui) library to your project, or port your project-related resources to [esp-iot-solution](https://github.com/espressif/esp-iot-solution) if you choose to use it, and develop related drivers.
 

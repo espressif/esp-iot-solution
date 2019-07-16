@@ -16,9 +16,9 @@ Before sending us a Pull Request, please consider this list of points:
 
 * Is the contribution entirely your own work, or already licensed under an Apache License 2.0 compatible Open Source License? If not then we unfortunately cannot accept it.
 
-* Does any new code conform to the esp-idf : [Style Guide](http://docs.espressif.com/projects/esp-idf/en/latest/contribute/style-guide.html)?
+* Does any new code conform to the esp-idf : [Style Guide](http://docs.espressif.com/projects/esp-idf/en/stable/contribute/style-guide.html)?
 
-* Does the code documentation follow requirements in :doc: [documenting-code](http://docs.espressif.com/projects/esp-idf/en/latest/contribute/documenting-code.html)?
+* Does the code documentation follow requirements in :doc: [documenting-code](http://docs.espressif.com/projects/esp-idf/en/stable/contribute/documenting-code.html)?
 
 * Is the code adequately commented for people to understand how it is structured?
 
@@ -40,4 +40,4 @@ If this process passes, it will be merged onto the public github repository.
 Legal Part
 ----------
 
-Before a contribution can be accepted, you will need to sign our : [contributor-agreement](http://docs.espressif.com/projects/esp-idf/en/latest/contribute/contributor-agreement.html). You will be prompted for this automatically as part of the Pull Request process.
+Before a contribution can be accepted, you will need to sign our : [contributor-agreement](http://docs.espressif.com/projects/esp-idf/en/stable/contribute/contributor-agreement.html). You will be prompted for this automatically as part of the Pull Request process.
