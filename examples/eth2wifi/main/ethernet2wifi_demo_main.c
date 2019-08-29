@@ -33,6 +33,10 @@
 #include "eth_phy/phy_tlk110.h"
 #define DEFAULT_ETHERNET_PHY_CONFIG phy_tlk110_default_ethernet_config
 #endif
+#ifdef CONFIG_PHY_IP101
+#include "eth_phy/phy_ip101.h"
+#define DEFAULT_ETHERNET_PHY_CONFIG phy_ip101_default_ethernet_config
+#endif
 
 static const char* TAG = "eth2wifi_demo";
 
@@ -197,13 +201,15 @@ static void initialise_ethernet(void)
     config.phy_addr = CONFIG_PHY_ADDRESS;
     config.gpio_config = eth_gpio_config_rmii;
     config.tcpip_input = tcpip_adapter_eth_input_sta_output;
+    config.promiscuous_enable = true;
 
 #ifdef CONFIG_PHY_USE_POWER_PIN
     /* Replace the default 'power enable' function with an example-specific
        one that toggles a power GPIO. */
     config.phy_power_enable = phy_device_power_enable_via_gpio;
 #endif
-    esp_eth_init_internal(&config);
+    
+    esp_eth_init(&config);
     esp_eth_enable();
 }
 
@@ -291,6 +297,8 @@ void app_main()
         ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK( ret );
+
+    tcpip_adapter_init();
     
     eth_queue_handle = xQueueCreate(CONFIG_DMA_RX_BUF_NUM, sizeof(tcpip_adapter_eth_input_t));
     xTaskCreate(eth_task, "eth_task", 2048, NULL, (tskIDLE_PRIORITY + 2), NULL);

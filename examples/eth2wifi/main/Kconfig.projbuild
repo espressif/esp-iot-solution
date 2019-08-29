@@ -11,6 +11,11 @@ config PHY_TLK110
     help
         Select this to use the TI TLK110 PHY
 
+config PHY_IP101
+    bool "IP101"
+    help
+        IP101 is a single port 10/100 MII/RMII/TP/Fiber Fast Ethernet Transceiver.
+
 config PHY_LAN8720
     bool "Microchip LAN8720 PHY"
     help
