@@ -419,7 +419,7 @@ The adjacent pins should not be assigned high-frequency signals such as SPI，I2
 
 <img src="../_static/touch_pad/module_copper_layer.png" width = "300" alt="module_copper_layer" align=center />
 
-> Note: T0 (GPIO0) can function both as a touch sensor pin and a download pin. The download function should not affect the touch function. Use a jumper cap or resistor to select download function for debugging, or touch function for manufacturing.
+> Note: T1 (GPIO0) can function both as a touch sensor pin and a download pin. The download function should not affect the touch function. Use a jumper cap or resistor to select download function for debugging, or touch function for manufacturing.
 
 #### 3.2.3. Power Domains
 
