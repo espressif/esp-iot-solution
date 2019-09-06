@@ -218,7 +218,7 @@ esp_err_t iot_hdc2010_set_humidity_threshold(hdc2010_handle_t sensor, float humi
 esp_err_t iot_hdc2010_set_reset_and_drdy(hdc2010_handle_t sensor, hdc2010_reset_and_drdy_t * config)
 {
     uint8_t config_data = 0;
-    config_data |= config->heat_en << 7;
+    config_data |= config->soft_res << 7;
     config_data |= config->output_rate << 4;
     config_data |= config->heat_en << 3;
     config_data |= config->int_en << 2;
