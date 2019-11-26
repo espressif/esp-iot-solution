@@ -11,7 +11,7 @@
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-
+//
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
@@ -48,7 +48,7 @@ extern "C" {
 #define MAG3110_OUT_Z_MSB_REG	0x05
 #define MAG3110_OUT_Z_LSB_REG	0x06
 #define MAG3110_WHO_AM_I_REG	0x07    // Chip ID
-#define MAG3110_SYSMOD_REG		0x08
+#define MAG3110_SYSMOD_REG	0x08
 #define MAG3110_OFF_X_MSB_REG	0x09
 #define MAG3110_OFF_X_LSB_REG	0x0A
 #define MAG3110_OFF_Y_MSB_REG	0x0B
@@ -56,8 +56,8 @@ extern "C" {
 #define MAG3110_OFF_Z_MSB_REG	0x0D
 #define MAG3110_OFF_Z_LSB_REG	0x0E
 #define MAG3110_DIE_TEMP_REG	0x0F
-#define MAG3110_CTRL_REG1		0x10
-#define MAG3110_CTRL_REG2		0x11
+#define MAG3110_CTRL_REG1	0x10
+#define MAG3110_CTRL_REG2	0x11
 
 /* Data ready statuses */
 #define MAG3110_DR_STATUS_ZYXOW     (1 << 7) /* X, Y, Z Data Overwrite */
@@ -69,9 +69,9 @@ extern "C" {
 #define MAG3110_DR_STATUS_YDR       (1 << 1) /* Y-axis new Data Available */
 #define MAG3110_DR_STATUS_XDR       (1 << 0) /* X-axis new Data Available */
 
-#define MAG3110_CTRL_REG1_FR    BIT2    // Fast Read - not implemented 
-#define MAG3110_CTRL_REG1_TM    BIT1    // Trigger Measurement - not implemented 
-#define MAG3110_CTRL_REG1_AC    BIT0
+#define MAG3110_CTRL_REG1_FR    	  BIT2  // Fast Read - not implemented 
+#define MAG3110_CTRL_REG1_TM    	  BIT1  // Trigger Measurement - not implemented 
+#define MAG3110_CTRL_REG1_AC   		  BIT0
 
 #define MAG3110_CTRL_REG2_AUTO_MRST_EN    BIT7
 #define MAG3110_CTRL_REG2_RAW             BIT5
@@ -111,29 +111,29 @@ typedef enum {
     MAG3110_DR_OSR_1000_64  = 6,	/* Output Rate 10.00 Hz, Over Sample Ratio 64  */
     MAG3110_DR_OSR_0500_128 = 7,	/* Output Rate  5.00 Hz, Over Sample Ratio 128 */
     MAG3110_DR_OSR_2000_16  = 8,	/* Output Rate 20.00 Hz, Over Sample Ratio 16  */
-	MAG3110_DR_OSR_1000_32  = 9,	/* Output Rate 10.00 Hz, Over Sample Ratio 32  */
-	MAG3110_DR_OSR_0500_64	= 10,	/* Output Rate  5.00 Hz, Over Sample Ratio 64  */
-	MAG3110_DR_OSR_0250_128	= 11,	/* Output Rate  2.50 Hz, Over Sample Ratio 128 */
+    MAG3110_DR_OSR_1000_32  = 9,	/* Output Rate 10.00 Hz, Over Sample Ratio 32  */
+    MAG3110_DR_OSR_0500_64  = 10,	/* Output Rate  5.00 Hz, Over Sample Ratio 64  */
+    MAG3110_DR_OSR_0250_128 = 11,	/* Output Rate  2.50 Hz, Over Sample Ratio 128 */
     MAG3110_DR_OSR_1000_16  = 12,	/* Output Rate 10.00 Hz, Over Sample Ratio 16  */
-	MAG3110_DR_OSR_0500_32	= 13,	/* Output Rate  5.00 Hz, Over Sample Ratio 32  */
-	MAG3110_DR_OSR_0250_64	= 14,	/* Output Rate  2.50 Hz, Over Sample Ratio 64  */
-	MAG3110_DR_OSR_0125_128	= 15,	/* Output Rate  1.25 Hz, Over Sample Ratio 128 */
-    MAG3110_DR_OSR_0500_16	= 16,	/* Output Rate  5.00 Hz, Over Sample Ratio 16  */
-	MAG3110_DR_OSR_0250_32	= 17,	/* Output Rate  2.50 Hz, Over Sample Ratio 32  */
-	MAG3110_DR_OSR_0125_64	= 18,	/* Output Rate  1.25 Hz, Over Sample Ratio 64  */
-	MAG3110_DR_OSR_0063_128	= 19,	/* Output Rate  0.63 Hz, Over Sample Ratio 128 */
+    MAG3110_DR_OSR_0500_32  = 13,	/* Output Rate  5.00 Hz, Over Sample Ratio 32  */
+    MAG3110_DR_OSR_0250_64  = 14,	/* Output Rate  2.50 Hz, Over Sample Ratio 64  */
+    MAG3110_DR_OSR_0125_128 = 15,	/* Output Rate  1.25 Hz, Over Sample Ratio 128 */
+    MAG3110_DR_OSR_0500_16  = 16,	/* Output Rate  5.00 Hz, Over Sample Ratio 16  */
+    MAG3110_DR_OSR_0250_32  = 17,	/* Output Rate  2.50 Hz, Over Sample Ratio 32  */
+    MAG3110_DR_OSR_0125_64  = 18,	/* Output Rate  1.25 Hz, Over Sample Ratio 64  */
+    MAG3110_DR_OSR_0063_128 = 19,	/* Output Rate  0.63 Hz, Over Sample Ratio 128 */
     MAG3110_DR_OSR_0250_16  = 20,	/* Output Rate  2.50 Hz, Over Sample Ratio 16  */
-	MAG3110_DR_OSR_0125_32	= 21,	/* Output Rate  1.25 Hz, Over Sample Ratio 32  */
-	MAG3110_DR_OSR_0063_64	= 22,	/* Output Rate  0.63 Hz, Over Sample Ratio 64  */
-	MAG3110_DR_OSR_0031_128	= 23,	/* Output Rate  0.31 Hz, Over Sample Ratio 128 */
+    MAG3110_DR_OSR_0125_32  = 21,	/* Output Rate  1.25 Hz, Over Sample Ratio 32  */
+    MAG3110_DR_OSR_0063_64  = 22,	/* Output Rate  0.63 Hz, Over Sample Ratio 64  */
+    MAG3110_DR_OSR_0031_128 = 23,	/* Output Rate  0.31 Hz, Over Sample Ratio 128 */
     MAG3110_DR_OSR_0125_16  = 24,	/* Output Rate  1.25 Hz, Over Sample Ratio 16  */ 
-	MAG3110_DR_OSR_0063_32	= 25,	/* Output Rate  0.63 Hz, Over Sample Ratio 32  */
-	MAG3110_DR_OSR_0031_64	= 26,	/* Output Rate  0.31 Hz, Over Sample Ratio 64  */
-	MAG3110_DR_OSR_0016_128	= 27,	/* Output Rate  0.16 Hz, Over Sample Ratio 128 */
+    MAG3110_DR_OSR_0063_32  = 25,	/* Output Rate  0.63 Hz, Over Sample Ratio 32  */
+    MAG3110_DR_OSR_0031_64  = 26,	/* Output Rate  0.31 Hz, Over Sample Ratio 64  */
+    MAG3110_DR_OSR_0016_128 = 27,	/* Output Rate  0.16 Hz, Over Sample Ratio 128 */
     MAG3110_DR_OSR_0063_16  = 28,	/* Output Rate  0.63 Hz, Over Sample Ratio 16  */ 
-	MAG3110_DR_OSR_0031_32	= 29,	/* Output Rate  0.31 Hz, Over Sample Ratio 32  */
-	MAG3110_DR_OSR_0016_64	= 30,	/* Output Rate  0.16 Hz, Over Sample Ratio 64  */
-	MAG3110_DR_OSR_0008_128	= 31	/* Output Rate  0.08 Hz, Over Sample Ratio 128 */
+    MAG3110_DR_OSR_0031_32  = 29,	/* Output Rate  0.31 Hz, Over Sample Ratio 32  */
+    MAG3110_DR_OSR_0016_64  = 30,	/* Output Rate  0.16 Hz, Over Sample Ratio 64  */
+    MAG3110_DR_OSR_0008_128 = 31	/* Output Rate  0.08 Hz, Over Sample Ratio 128 */
 } mag3110_oversampling_data_rate;
 
 typedef void* mag3110_handle_t;

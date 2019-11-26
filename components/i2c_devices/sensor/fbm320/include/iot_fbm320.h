@@ -48,10 +48,10 @@ extern "C" {
 #define FBM320_READ_MEAS_REG_L	0xF7
 #define FBM320_READ_MEAS_REG_XL	0xF8
 #define FBM320_SOFTRESET_REG    0xE0
-#define FBM320_CHIP_ID_REG	    0x6B
-#define FBM320_VERSION_REG	    0xA5
+#define FBM320_CHIP_ID_REG	0x6B
+#define FBM320_VERSION_REG	0xA5
 
-#define FBM320_MEAS_TEMP		        0x2E /* 2.5ms wait for measurement */
+#define FBM320_MEAS_TEMP                0x2E /* 2.5ms wait for measurement */
 #define FBM320_MEAS_PRESS_OVERSAMP_0	0x34 /* 2.5ms wait for measurement */
 #define FBM320_MEAS_PRESS_OVERSAMP_1	0x74 /* 3.7ms wait for measurement */
 #define FBM320_MEAS_PRESS_OVERSAMP_2	0xB4 /* 6ms wait for measurement */
