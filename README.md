@@ -150,6 +150,8 @@
 [LIS2DH12](./components/i2c_devices/sensor/lis2dh12) - Driver and example of reading LIS2DH12, which is a 3-axis accelerometer.<br>
 [MVH3004D](./components/i2c_devices/sensor/mvh3004d) - Driver and example of reading MVH3004D temperature and humidity sensor.<br>
 [VEML6040](./components/i2c_devices/sensor/veml6040) - Driver and example of reading VEML6040, which is a light UV sensor.<br>
+[FBM320](./components/i2c_devices/sensor/fbm320) - Driver and example of reading FBM320, which is barometer pressure sensor.<br>
+[MAG3110](./components/i2c_devices/sensor/mag3110) - Driver and example of reading MAG3110, which is a magnetometer.<br>
 
 ### I2C Devices
 
