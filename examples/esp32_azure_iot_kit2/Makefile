@@ -6,8 +6,6 @@
 PROJECT_NAME := esp32_azure_iot_kit
 #If IOT_SOLUTION_PATH is not defined, use relative path as default value
 IOT_SOLUTION_PATH ?= $(abspath $(shell pwd)/../../)
-
-EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components
  
 include $(IOT_SOLUTION_PATH)/Makefile
 include $(IDF_PATH)/make/project.mk

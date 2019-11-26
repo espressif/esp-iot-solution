@@ -544,6 +544,18 @@ menu "IoT Solution settings"
                 default y
                 help
                     "Select this one to enable MPU6050 device component"
+            
+            config IOT_MAG3110_ENABLE
+                bool "SENSOR_MAG3110_ENABLE"
+                default y
+                help
+                    "Select this one to enable MAG3110 device component"
+            
+            config IOT_FBM320_ENABLE
+                bool "SENSOR_FBM320_ENABLE"
+                default y
+                help
+                    "Select this one to enable FBM320 device component"
         endmenu
         
         menu "SPI devices"

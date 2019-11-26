@@ -11,7 +11,6 @@
  */
 
 #include <stdio.h>
-#include <math.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
@@ -24,8 +23,6 @@
 #include "iot_ssd1306.h"
 #include "ssd1306_fonts.h"
 #include "iot_mpu6050.h"
-#include "iot_mag3110.h"
-#include "iot_fbm320.h"
 
 #define I2C_MASTER_SCL_IO           26          /*!< gpio number for I2C master clock */
 #define I2C_MASTER_SDA_IO           25          /*!< gpio number for I2C master data  */
@@ -43,8 +40,6 @@ static bh1750_handle_t bh1750_dev = NULL;
 static hts221_handle_t hts221_dev = NULL;
 static ssd1306_handle_t ssd1306_dev = NULL;
 static mpu6050_handle_t mpu6050_dev = NULL;
-static mag3110_handle_t mag3110_dev = NULL;
-static fbm320_handle_t fbm320_dev = NULL;
 
 static xQueueHandle q_page_num;
 static uint8_t g_page_num = 0;
@@ -52,9 +47,6 @@ static uint8_t g_page_num = 0;
 static mpu6050_acce_value_t acce;
 static mpu6050_gyro_value_t gyro;
 static complimentary_angle_t complimentary_angle;
-
-static mag3110_values_t magneto;
-static fbm320_values_t baro;
 
 static const char *TAG = "esp32_azure_kit_main";
 
@@ -67,7 +59,7 @@ typedef struct {
 void page_btn_tap_cb()
 {
     g_page_num++;
-    if (g_page_num >= 6) {
+    if (g_page_num >= 4) {
         g_page_num = 0;
     }
     xQueueSend(q_page_num, &g_page_num, 0);
@@ -143,18 +135,6 @@ void mpu6050_init()
     iot_mpu6050_set_gyro_fs(mpu6050_dev, GYRO_FS_500DPS);
 }
 
-void mag3110_init()
-{
-    mag3110_dev = iot_mag3110_create(i2c_bus, MAG3110_I2C_ADDRESS);
-    iot_mag3110_init(mag3110_dev);
-}
-
-void fbm320_init()
-{
-	fbm320_dev = iot_fbm320_create(i2c_bus, FBM320_I2C_ADDRESS);
-	iot_fbm320_init(fbm320_dev);
-}
-
 void dev_init()
 {
     page_button_init();
@@ -163,8 +143,6 @@ void dev_init()
     hts221_init();
     ssd1306_init();
     mpu6050_init();
-    mag3110_init();
-    fbm320_init();
 }
 
 esp_err_t ssd1306_show_data(ssd1306_handle_t dev , sensor_data_t sensor_data)
@@ -271,51 +249,6 @@ void ssd1306_show_complimentary_angle(void)
     iot_ssd1306_refresh_gram(ssd1306_dev);
 }
 
-/* show magnetometer data */
-void ssd1306_show_magnetometer_data(void)
-{
-    char data_str[10] = {0};
-
-    iot_mag3110_get_data(mag3110_dev, &magneto);
-    iot_ssd1306_draw_string(ssd1306_dev, 0, 16, (const uint8_t *) "Mag_x:", 16, 1);
-    iot_ssd1306_draw_string(ssd1306_dev, 0, 32, (const uint8_t *) "Mag_y:", 16, 1);
-    iot_ssd1306_draw_string(ssd1306_dev, 0, 48, (const uint8_t *) "Mag_z:", 16, 1);
-    ESP_LOGI(TAG, "magneto_x:%d, magneto_y:%d, magneto_z:%d", magneto.X, magneto.Y, magneto.Z);
-
-    sprintf(data_str, "%d", magneto.X);
-    iot_ssd1306_draw_string(ssd1306_dev, 70, 16, (const uint8_t *) data_str, 16, 1);
-    sprintf(data_str, "%d", magneto.Y);
-    iot_ssd1306_draw_string(ssd1306_dev, 70, 32, (const uint8_t *) data_str, 16, 1);
-    sprintf(data_str, "%d", magneto.Z);
-    iot_ssd1306_draw_string(ssd1306_dev, 70, 48, (const uint8_t *) data_str, 16, 1);
-
-
-    iot_ssd1306_refresh_gram(ssd1306_dev);
-}
-
-/* show barometer data */
-void ssd1306_show_barometer_data(void)
-{
-    char data_str[10] = {0};
-
-    iot_fbm320_get_data(fbm320_dev, &baro);
-    iot_ssd1306_draw_string(ssd1306_dev, 0, 16, (const uint8_t *) "Temp:", 16, 1);
-    iot_ssd1306_draw_string(ssd1306_dev, 0, 32, (const uint8_t *) "Pres:", 16, 1);
-    iot_ssd1306_draw_string(ssd1306_dev, 0, 48, (const uint8_t *) "Alti:", 16, 1);
-	ESP_LOGI(TAG, "temperature: %.1f, pressure: %d, altitude: %d",
-			 baro.temperature, baro.pressure, baro.altitude);
-
-    sprintf(data_str, "%.1f", baro.temperature);
-    iot_ssd1306_draw_string(ssd1306_dev, 60, 16, (const uint8_t *) data_str, 16, 1);
-    sprintf(data_str, "%d", baro.pressure);
-    iot_ssd1306_draw_string(ssd1306_dev, 60, 32, (const uint8_t *) data_str, 16, 1);
-    sprintf(data_str, "%d", baro.altitude);
-    iot_ssd1306_draw_string(ssd1306_dev, 60, 48, (const uint8_t *) data_str, 16, 1);
-
-
-    iot_ssd1306_refresh_gram(ssd1306_dev);
-}
-
 void ssd1306_show_task(void* pvParameters)
 {
     uint8_t page_num = 0;
@@ -338,12 +271,6 @@ void ssd1306_show_task(void* pvParameters)
             case 3:
                 ssd1306_show_complimentary_angle();
                 break;
-            case 4:
-				ssd1306_show_magnetometer_data();
-				break;
-            case 5:
-				ssd1306_show_barometer_data();
-				break;
             default:
                 break;
         }
