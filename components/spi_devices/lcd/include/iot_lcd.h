@@ -69,6 +69,7 @@ typedef enum {
     LCD_MOD_ILI9341 = 0,
     LCD_MOD_ST7789 = 1,
     LCD_MOD_AUTO_DET = 3,
+    LCD_MOD_ST7789_MODE3_240x240 = 4,
 } lcd_model_t;
 
 /**
@@ -113,6 +114,7 @@ class CEspLcd: public Adafruit_GFX
 private:
     spi_device_handle_t spi_wr = NULL;
     uint8_t tabcolor;
+    lcd_model_t m_lcd_model;
     bool dma_mode;
     int dma_buf_size;
     uint8_t m_dma_chan;

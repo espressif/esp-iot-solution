@@ -66,6 +66,7 @@ CEspLcd::CEspLcd(lcd_conf_t* lcd_conf, int height, int width, bool dma_en, int d
     m_height = height;
     m_width  = width;
     tabcolor = 0;
+    m_lcd_model = lcd_conf->lcd_model;
     dma_mode = dma_en;
     dma_buf_size = dma_word_size;
     spi_mux = xSemaphoreCreateRecursiveMutex();
@@ -354,7 +355,7 @@ void CEspLcd::scrollTo(uint16_t y)
 {
     xSemaphoreTakeRecursive(spi_mux, portMAX_DELAY);
     transmitCmd(0x37);
-    transmitData(y);
+    transmitData((uint16_t)(SWAPBYTES(y)));
     xSemaphoreGiveRecursive(spi_mux);
 }
 
@@ -364,22 +365,42 @@ void CEspLcd::setRotation(uint8_t m)
     rotation = m % 4;  //Can't be more than 3
     switch (rotation) {
     case 0:
-        data = MADCTL_MX | MADCTL_BGR;
+        if (m_lcd_model == LCD_MOD_ST7789_MODE3_240x240) {
+            scrollTo(0);
+            data = MADCTL_BGR;
+        } else {
+            data = MADCTL_MX | MADCTL_BGR;
+        }
         _width = m_width;
         _height = m_height;
         break;
     case 1:
-        data = MADCTL_MV | MADCTL_BGR;
+        if (m_lcd_model == LCD_MOD_ST7789_MODE3_240x240) {
+            scrollTo(0);
+            data = MADCTL_MV | MADCTL_MX | MADCTL_BGR;
+        } else {
+            data = MADCTL_MV | MADCTL_BGR;
+        }
         _width = m_height;
         _height = m_width;
         break;
     case 2:
-        data = MADCTL_MY | MADCTL_BGR;
+        if (m_lcd_model == LCD_MOD_ST7789_MODE3_240x240) {
+            scrollTo(80);
+            data = MADCTL_MY | MADCTL_MX | MADCTL_BGR;
+        } else {
+            data = MADCTL_MY | MADCTL_BGR;
+        }
         _width = m_width;
         _height = m_height;
         break;
     case 3:
-        data = MADCTL_MX | MADCTL_MY | MADCTL_MV | MADCTL_BGR;
+        if (m_lcd_model == LCD_MOD_ST7789_MODE3_240x240) {
+            scrollTo(80);
+            data = MADCTL_MY | MADCTL_MV | MADCTL_BGR;
+        } else {
+            data = MADCTL_MX | MADCTL_MY | MADCTL_MV | MADCTL_BGR;
+        }
         _width = m_height;
         _height = m_width;
         break;

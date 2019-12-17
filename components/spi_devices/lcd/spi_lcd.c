@@ -165,10 +165,15 @@ uint32_t lcd_init(lcd_conf_t* lcd_conf, spi_device_handle_t *spi_wr_dev, lcd_dc_
         spi_bus_initialize(lcd_conf->spi_host, &buscfg, dma_chan);
     }
 
+    int mode = 0;
+    if (lcd_conf->lcd_model == LCD_MOD_ST7789_MODE3_240x240) {
+        mode = 3;
+    }
+
     spi_device_interface_config_t devcfg = {
         // Use low speed to read ID.
         .clock_speed_hz = 1 * 1000 * 1000,     //Clock out frequency
-        .mode = 0,                                //SPI mode 0
+        .mode = mode,                                //SPI mode 0
         .spics_io_num = lcd_conf->pin_num_cs,     //CS pin
         .queue_size = 7,                          //We want to be able to queue 7 transactions at a time
         .pre_cb = lcd_spi_pre_transfer_callback,  //Specify pre-transfer callback to handle D/C line
@@ -186,6 +191,8 @@ uint32_t lcd_init(lcd_conf_t* lcd_conf, spi_device_handle_t *spi_wr_dev, lcd_dc_
     int cmd = 0;
     const lcd_init_cmd_t* lcd_init_cmds = NULL;
     if(lcd_conf->lcd_model == LCD_MOD_ST7789) {
+        lcd_init_cmds = st7789_init_cmds;
+    } else if(lcd_conf->lcd_model == LCD_MOD_ST7789_MODE3_240x240) {
         lcd_init_cmds = st7789_init_cmds;
     } else if(lcd_conf->lcd_model == LCD_MOD_ILI9341) {
         lcd_init_cmds = ili_init_cmds;
