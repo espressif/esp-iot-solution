@@ -16,13 +16,14 @@
 #include <esp_types.h>
 
 #include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 #include "freertos/queue.h"
 #include "freertos/xtensa_api.h"
 #include "soc/dport_reg.h"
-#include "rom/lldesc.h"
+#include "esp32/rom/lldesc.h"
 #include "driver/gpio.h"
 #include "iot_i2s_lcd.h"
-#include "esp_intr.h"
+#include "esp_intr_alloc.h"
 #include "esp_err.h"
 #include "esp_log.h"
 
