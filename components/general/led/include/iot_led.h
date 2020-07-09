@@ -144,7 +144,13 @@ uint8_t iot_led_night_duty_read();
 #endif
 
 #ifdef __cplusplus
-#include "iot_controllable_obj.h"
+class CControllable
+{
+public:
+    virtual esp_err_t on() = 0;
+    virtual esp_err_t off() = 0;
+    virtual ~CControllable() = 0;
+};
 
 /**
  * class of status led

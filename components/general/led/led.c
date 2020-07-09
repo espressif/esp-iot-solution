@@ -60,7 +60,7 @@ typedef struct {
 static esp_err_t led_ledctimer_set(ledc_timer_t timer_num, uint32_t freq_hz, ledc_mode_t speed_mode)
 {
     ledc_timer_config_t ledc_timer = {
-        .bit_num = LED_TIMER_BIT,
+        .duty_resolution = LED_TIMER_BIT,
         .freq_hz = freq_hz,
         .speed_mode = speed_mode,
         .timer_num = timer_num

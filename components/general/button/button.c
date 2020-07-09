@@ -20,6 +20,7 @@
 #include "driver/gpio.h"
 #include "iot_button.h"
 #include "esp_timer.h"
+#include "sdkconfig.h"
 
 #define USE_ESP_TIMER   CONFIG_BUTTON_USE_ESP_TIMER
 #if USE_ESP_TIMER
@@ -253,15 +254,15 @@ esp_err_t iot_button_delete(button_handle_t btn_handle)
     gpio_set_intr_type(btn->io_num, GPIO_INTR_DISABLE);
     gpio_isr_handler_remove(btn->io_num);
 
-    button_free_tmr(&btn->tap_rls_cb.tmr);
-    button_free_tmr(&btn->tap_psh_cb.tmr);
-    button_free_tmr(&btn->tap_short_cb.tmr);
-    button_free_tmr(&btn->press_serial_cb.tmr);
+    button_free_tmr((esp_timer_handle_t*)&(btn->tap_rls_cb.tmr));
+    button_free_tmr((esp_timer_handle_t*)&(btn->tap_psh_cb.tmr));
+    button_free_tmr((esp_timer_handle_t*)&(btn->tap_short_cb.tmr));
+    button_free_tmr((esp_timer_handle_t*)&(btn->press_serial_cb.tmr));
 
     button_cb_t *pcb = btn->cb_head;
     while (pcb != NULL) {
         button_cb_t *cb_next = pcb->next_cb;
-        button_free_tmr(&pcb->tmr);
+        button_free_tmr((esp_timer_handle_t*)&pcb->tmr);
         free(pcb);
         pcb = cb_next;
     }
