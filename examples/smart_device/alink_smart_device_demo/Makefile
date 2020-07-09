@@ -4,8 +4,14 @@
 #
 
 PROJECT_NAME := smart_device
-#If IOT_SOLUTION_PATH is not defined, use relative path as default value
-IOT_SOLUTION_PATH ?= $(abspath $(shell pwd)/../../)
 
-include $(IOT_SOLUTION_PATH)/Makefile
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/general/button
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/general/light
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/general/param
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/general/power_meter
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/general/relay
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/general/led
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/features/touchpad
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/platforms
+
 include $(IDF_PATH)/make/project.mk

@@ -2,7 +2,7 @@
 # CMakeLists in this exact order for cmake to work correctly
 cmake_minimum_required(VERSION 3.5)
 
-set(EXTRA_COMPONENT_DIRS ${EXTRA_COMPONENT_DIRS} 
+set(EXTRA_COMPONENT_DIRS 
                          $ENV{IOT_SOLUTION_PATH}/components/i2c_devices/i2c_bus
                          $ENV{IOT_SOLUTION_PATH}/components/i2c_devices/others
                          $ENV{IOT_SOLUTION_PATH}/components/i2c_devices/sensor

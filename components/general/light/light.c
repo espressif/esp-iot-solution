@@ -108,7 +108,7 @@ light_handle_t iot_light_create(ledc_timer_t timer, ledc_mode_t speed_mode, uint
         .timer_num = timer,
         .speed_mode = speed_mode,
         .freq_hz = freq_hz,
-        .bit_num = timer_bit
+        .duty_resolution = timer_bit
     };
     ERR_ASSERT(TAG, ledc_timer_config( &timer_conf), NULL);
     light_t* light_ptr = (light_t*)calloc(1, sizeof(light_t) + sizeof(light_channel_t*) * channel_num);
@@ -231,7 +231,7 @@ esp_err_t iot_light_blink_starte(light_handle_t light_handle, uint32_t channel_m
         .timer_num = light->ledc_timer,
         .speed_mode = light->mode,
         .freq_hz = 1000 / period_ms,
-        .bit_num = LEDC_TIMER_10_BIT,
+        .duty_resolution = LEDC_TIMER_10_BIT,
     };
     ERR_ASSERT(TAG, ledc_timer_config( &timer_conf), ESP_FAIL);
     for (int i = 0; i < light->channel_num; i++) {
@@ -257,7 +257,7 @@ esp_err_t iot_light_blink_stop(light_handle_t light_handle)
         .timer_num = light->ledc_timer,
         .speed_mode = light->mode,
         .freq_hz = light->freq_hz,
-        .bit_num = light->timer_bit,
+        .duty_resolution = light->timer_bit,
     };
     ERR_ASSERT(TAG, ledc_timer_config( &timer_conf), ESP_FAIL);
     for (int i = 0; i < light->channel_num; i++) {

@@ -104,7 +104,13 @@ esp_err_t iot_relay_delete(relay_handle_t relay_handle);
 #endif
 
 #ifdef __cplusplus
-#include "iot_controllable_obj.h"
+class CControllable
+{
+public:
+    virtual esp_err_t on() = 0;
+    virtual esp_err_t off() = 0;
+    virtual ~CControllable() = 0;
+};
 
 /**
  * class of relay
