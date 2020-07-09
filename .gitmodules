@@ -2,9 +2,6 @@
 [submodule "components/network/mqtt/espmqtt"]
 	path = components/network/mqtt/espmqtt
 	url = https://github.com/tuanpmt/espmqtt.git
-[submodule "components/platforms/alink/esp32-alink"]
-	path = components/platforms/alink/esp32-alink
-	url = https://github.com/espressif/esp32-alink.git
 [submodule "Adafruit-GFX-Library"]
 	path = components/spi_devices/lcd/Adafruit-GFX-Library
 	url = https://github.com/adafruit/Adafruit-GFX-Library.git
