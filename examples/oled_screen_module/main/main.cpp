@@ -13,11 +13,11 @@
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include <stdio.h>
-#include "apps/sntp/sntp.h"
+#include "esp_sntp.h"
 #include "esp_event_loop.h"
 #include "esp_log.h"
 #include "esp_attr.h"
-#include "esp_deep_sleep.h"
+#include "esp_sleep.h"
 #include "driver/gpio.h"
 #include "driver/touch_pad.h"
 #include "iot_touchpad.h"
@@ -219,7 +219,7 @@ static void application_init()
     tp_right->add_custom_cb(2, touch_press_2s_cb, tp_right);
 
     // Set deep-sleep wake-up mode
-    esp_deep_sleep_enable_touchpad_wakeup();
+    esp_sleep_enable_touchpad_wakeup();
 }
 
 

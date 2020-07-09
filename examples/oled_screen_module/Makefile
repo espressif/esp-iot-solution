@@ -4,8 +4,11 @@
 #
 
 PROJECT_NAME := screen_demo
-#If IOT_SOLUTION_PATH is not defined, use relative path as default value
-IOT_SOLUTION_PATH ?= $(abspath $(shell pwd)/../../)
- 
-include $(IOT_SOLUTION_PATH)/Makefile
+
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/i2c_devices/i2c_bus
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/i2c_devices/others
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/i2c_devices/sensor
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/features/touchpad
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/wifi/wifi_conn
+
 include $(IDF_PATH)/make/project.mk
