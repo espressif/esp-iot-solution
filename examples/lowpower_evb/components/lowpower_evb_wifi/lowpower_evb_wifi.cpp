@@ -46,23 +46,23 @@ void button_init()
     iot_button_set_evt_cb(btn_handle, BUTTON_CB_TAP, button_tap_cb, NULL);
 }
 
-static void sc_check_status(void* arg)
-{
-    while(1) {
-        ESP_LOGI(TAG, "sc status: %d", iot_sc_get_status());
-        vTaskDelay(300/portTICK_PERIOD_MS);
-        if(iot_sc_get_status() == SC_STATUS_LINK_OVER) {
-            break;
-        }
-    }
-    vTaskDelete(NULL);
-}
+// static void sc_check_status(void* arg)
+// {
+//     while(1) {
+//         ESP_LOGI(TAG, "sc status: %d", iot_sc_get_status());
+//         vTaskDelay(300/portTICK_PERIOD_MS);
+//         if(iot_sc_get_status() == SC_STATUS_LINK_OVER) {
+//             break;
+//         }
+//     }
+//     vTaskDelete(NULL);
+// }
 
 void lowpower_evb_wifi_config()
 {
     esp_err_t res;
     iot_sc_setup(SC_TYPE_ESPTOUCH, WIFI_MODE_STA, 0);
-    xTaskCreate(sc_check_status, "sc_check_status", 1024*2, NULL, 5, NULL);
+    // xTaskCreate(sc_check_status, "sc_check_status", 1024*2, NULL, 5, NULL);
     
     res = iot_sc_start(60*1000 / portTICK_PERIOD_MS);
 

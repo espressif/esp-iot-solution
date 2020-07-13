@@ -16,6 +16,7 @@
 #include "esp_system.h"
 #include "esp_log.h"
 #include "lowpower_framework.h"
+#include "esp_sleep.h"
 
 static const char* TAG = "lowpower_framework";
 #define GOTO_EXIT_IF_FAIL(FUNC, LOG, EXIT)  if(FUNC != ESP_OK) {    \

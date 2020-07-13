@@ -108,7 +108,6 @@ esp_err_t iot_sc_setup(smartconfig_type_t sc_type, wifi_mode_t wifi_mode, bool f
 
 void sc_stop()
 {
-    s_sc_status = SC_STATUS_WAIT;
     if (s_sc_event_group) {
         xEventGroupSetBits(s_sc_event_group, SC_STOP_REQ_EVT);
     }
@@ -121,7 +120,6 @@ esp_err_t iot_sc_start(uint32_t ticks_to_wait)
         return ESP_ERR_TIMEOUT;
     }
     xEventGroupClearBits(s_sc_event_group, SC_STOP_REQ_EVT);
-    s_sc_status = SC_STATUS_WAIT;
     ESP_ERROR_CHECK( esp_event_handler_register(SC_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL) );
     esp_wifi_start();
     smartconfig_start_config_t cfg = SMARTCONFIG_START_CONFIG_DEFAULT();

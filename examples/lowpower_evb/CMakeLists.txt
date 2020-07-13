@@ -2,17 +2,20 @@
 # CMakeLists in this exact order for cmake to work correctly
 cmake_minimum_required(VERSION 3.5)
 
-#If IOT_SOLUTION_PATH is not defined, use relative path as default value
-set(IOT_SOLUTION_PATH "$ENV{IOT_SOLUTION_PATH}")
-if(NOT IOT_SOLUTION_PATH)
-    # Documentation says you should set IOT_SOLUTION_PATH in your environment, but we
-    # can infer it relative to PROJECT_PATH directory if it's not set.
-    get_filename_component(IOT_SOLUTION_PATH "${PROJECT_PATH}/../.." ABSOLUTE)
-endif()
-file(TO_CMAKE_PATH "${IOT_SOLUTION_PATH}" IOT_SOLUTION_PATH)
-set(ENV{IOT_SOLUTION_PATH} ${IOT_SOLUTION_PATH})
+set(EXTRA_COMPONENT_DIRS 
+                         $ENV{IOT_SOLUTION_PATH}/components/wifi/wifi_conn
+                         $ENV{IOT_SOLUTION_PATH}/components/wifi/smart_config
+                         $ENV{IOT_SOLUTION_PATH}/components/network/tcp
+                         $ENV{IOT_SOLUTION_PATH}/components/general/led
+                         $ENV{IOT_SOLUTION_PATH}/components/general/button
+                         $ENV{IOT_SOLUTION_PATH}/components/general/param
+                         $ENV{IOT_SOLUTION_PATH}/components/spi_devices/epaper
+                         $ENV{IOT_SOLUTION_PATH}/components/i2c_devices/i2c_bus
+                         $ENV{IOT_SOLUTION_PATH}/components/i2c_devices/sensor/hts221
+                         $ENV{IOT_SOLUTION_PATH}/components/i2c_devices/sensor/bh1750
+                         $ENV{IOT_SOLUTION_PATH}/components/framework/lowpower_framework
+                        )
 
-include($ENV{IOT_SOLUTION_PATH}/CMakeLists.txt)
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 
 project(lowpower_evb_demo)

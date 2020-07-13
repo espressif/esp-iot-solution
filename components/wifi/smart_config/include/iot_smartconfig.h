@@ -25,7 +25,7 @@ extern "C" {
  * @brief Get smartconfig status
  * @return Smartconfig status
  */
-smartconfig_status_t iot_sc_get_status();
+// smartconfig_status_t iot_sc_get_status();
 
 /**
   * @brief  SmartConfig initialize.
