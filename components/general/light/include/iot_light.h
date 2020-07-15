@@ -132,13 +132,13 @@ esp_err_t iot_light_blink_stop(light_handle_t light_handle);
 #endif
 
 #ifdef __cplusplus
-class CControllable
-{
-public:
-    virtual esp_err_t on() = 0;
-    virtual esp_err_t off() = 0;
-    virtual ~CControllable() = 0;
-};
+// class CControllable
+// {
+// public:
+//     virtual esp_err_t on() = 0;
+//     virtual esp_err_t off() = 0;
+//     virtual ~CControllable() = 0;
+// };
 
 /**
  * class of light with at most 5 pwm channels
@@ -151,7 +151,7 @@ public:
  * my_light.green.duty((my_light.get_full_duty() / 3));
  * my_light.blue.duty((my_light.get_full_duty() / 2));
  */
-class CLight: public CControllable
+class CLight
 {
 private:
     /**

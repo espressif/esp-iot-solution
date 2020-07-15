@@ -144,13 +144,13 @@ uint8_t iot_led_night_duty_read();
 #endif
 
 #ifdef __cplusplus
-class CControllable
-{
-public:
-    virtual esp_err_t on() = 0;
-    virtual esp_err_t off() = 0;
-    virtual ~CControllable() = 0;
-};
+// class CControllable
+// {
+// public:
+//     virtual esp_err_t on() = 0;
+//     virtual esp_err_t off() = 0;
+//     virtual ~CControllable() = 0;
+// };
 
 /**
  * class of status led
@@ -161,7 +161,7 @@ public:
  * CLED::blink_freq_write(10, 2);
  * delete my_led;
  */
-class CLED: public CControllable
+class CLED
 {
 private:
     led_handle_t m_led_handle;
