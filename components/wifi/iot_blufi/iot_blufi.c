@@ -39,7 +39,7 @@
 #include "mbedtls/aes.h"
 #include "mbedtls/dhm.h"
 #include "mbedtls/md5.h"
-#include "rom/crc.h"
+#include "esp32/rom/crc.h"
 #include "iot_blufi.h"
 
 static const char *TAG = "iot_blufi";

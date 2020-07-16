@@ -1,0 +1,90 @@
+menu "I2C devices"
+    config IOT_APDS9960_ENABLE
+        bool "APDS9960 ENABLE"
+        default y
+        help
+            "Select this one to enable APDS9960 device"   
+    config IOT_AT24C02_ENABLE
+        bool "AT24C02 ENABLE"
+        default y
+        help
+            "Select this one to enable AT24C02 device"
+    config IOT_BME280_ENABLE
+        bool "BME280 ENABLE"
+        default y
+        help
+            "Select this one to enable BME280 device"
+    config IOT_CH450_ENABLE
+        bool "CH450 ENABLE"
+        default y
+        help
+            "Select this one to enable CH450 device" 
+    config IOT_HT16C21_ENABLE
+        bool "HT16C21 ENABLE"
+        default y
+        help
+            "Select this one to enable HT16C21 device"
+    config IOT_IS31FL3XXX_ENABLE
+        bool "IS31FL3XXX ENABLE"
+        default y
+        help
+            "Select this one to enable IS31FL3XXX device"
+    config IOT_MCP23017_ENABLE
+        bool "MCP23017 ENABLE"
+        default y
+        help
+            "Select this one to enable MCP23017 device"
+    config IOT_OLED_ENABLE
+        bool "OLED_DEV_ENABLE(SSD1306)"
+        default y
+        help
+            "Select this one to enable OLED device component"
+        menu "OLED device"
+            depends on OLED_ENABLE 
+        endmenu     
+        
+    #------------------
+    #--  I2C sensor --- 
+    #------------------            
+    config IOT_BH1750_ENABLE
+        bool "SENSOR_BH1750_ENABLE"
+        default y
+        help
+            "Select this one to enable BH1750 device component"  
+    config IOT_HTS221_ENABLE
+        bool "SENSOR_HTS221_ENABLE"
+        default y
+        help
+            "Select this one to enable HTS221 device component"
+    config IOT_LIS2DH12_ENABLE
+        bool "SENSOR_LIS2DH12_ENABLE"
+        default y
+        help
+            "Select this one to enable LIS2DH12 device component"
+    config IOT_MVH3004D_ENABLE
+        bool "SENSOR_MVH3004D_ENABLE"
+        default y
+        help
+            "Select this one to enable MVH3004D device component"
+    config IOT_VEML6040_ENABLE
+        bool "SENSOR_VEML6040_ENABLE"
+        default y
+        help
+            "Select this one to enable VEML6040 device component"
+    config IOT_HDC2010_ENABLE
+        bool "SENSOR_HDC2010_ENABLE"
+        default y
+        help
+            "Select this one to enable HDC2010 device component"                    
+    config IOT_FT5X06_ENABLE
+        bool "SENSOR_FT5X06_ENABLE"
+        default y
+        help
+            "Select this one to enable FT5X06 device component"
+
+    config IOT_MPU6050_ENABLE
+        bool "SENSOR_MPU6050_ENABLE"
+        default y
+        help
+            "Select this one to enable MPU6050 device component"
+endmenu

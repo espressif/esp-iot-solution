@@ -29,8 +29,8 @@
 #define HEAD_RIGHT    4
 #define MODE_AUTO   (1)
 
-extern void srand (unsigned int seed);
-extern int random (void);
+// extern void srand (unsigned int seed);
+// extern int random (void);
 
 typedef void (*fill_pixel_func_t)(int x, int y, uint8_t duty);
 

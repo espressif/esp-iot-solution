@@ -20,7 +20,7 @@ extern "C" {
 #include <stdlib.h>
 #include "esp_log.h"
 #include "esp_err.h"
-#include "rom/gpio.h"
+#include "esp32/rom/gpio.h"
 #include "driver/ledc.h"
 #include "driver/pcnt.h"
 #include "soc/ledc_struct.h"

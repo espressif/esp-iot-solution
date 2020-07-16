@@ -151,7 +151,7 @@ void CEspLcd::transmitCmd(uint8_t cmd)
 void CEspLcd::transmitCmdData(uint8_t cmd, const uint8_t data, uint8_t numDataByte)
 {
     xSemaphoreTakeRecursive(spi_mux, portMAX_DELAY);
-    lcd_cmd(spi_wr, (const uint8_t) cmd, &dc);
+    lcd_cmd(spi_wr, cmd, &dc);
     lcd_data(spi_wr, &data, 1, &dc);
     xSemaphoreGiveRecursive(spi_mux);
 }
@@ -504,7 +504,7 @@ int CEspLcd::drawStringSevSeg(const char *string, uint16_t poX, uint16_t poY, ui
 
 int CEspLcd::drawNumberSevSeg(int long_num, uint16_t poX, uint16_t poY, uint8_t size)
 {
-    char tmp[10];
+    char tmp[16];
     if (long_num < 0) {
         snprintf(tmp, sizeof(tmp), "%d", long_num);
     } else {
@@ -572,7 +572,7 @@ int CEspLcd::drawString(const char *string, uint16_t x, uint16_t y)
 
 int CEspLcd::drawNumber(int long_num, uint16_t poX, uint16_t poY)
 {
-    char tmp[10];
+    char tmp[16];
     if (long_num < 0) {
         snprintf(tmp, sizeof(tmp), "%d", long_num);
     } else {

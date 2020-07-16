@@ -19,10 +19,10 @@
 #include "freertos/queue.h"
 #include "freertos/xtensa_api.h"
 #include "soc/dport_reg.h"
-#include "rom/lldesc.h"
+#include "esp32/rom/lldesc.h"
 #include "driver/gpio.h"
 #include "iot_i2s_lcd.h"
-#include "esp_intr.h"
+#include "esp_intr_alloc.h"
 #include "esp_err.h"
 #include "esp_log.h"
 
@@ -80,7 +80,7 @@ typedef struct {
 static const char *I2S_TAG = "IOT_I2S";
 static i2s_obj_t *p_i2s_obj[I2S_NUM_MAX] = {0};
 static i2s_dev_t *I2S[I2S_NUM_MAX] = {&I2S0, &I2S1};
-static portMUX_TYPE i2s_spinlock[I2S_NUM_MAX] = {portMUX_INITIALIZER_UNLOCKED, portMUX_INITIALIZER_UNLOCKED};
+// static portMUX_TYPE i2s_spinlock[I2S_NUM_MAX] = {portMUX_INITIALIZER_UNLOCKED, portMUX_INITIALIZER_UNLOCKED};
 
 static esp_err_t i2s_isr_register(i2s_port_t i2s_num, int intr_alloc_flags, void (*fn)(void *), void *arg, i2s_isr_handle_t *handle)
 {

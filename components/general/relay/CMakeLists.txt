@@ -1,7 +1,6 @@
 
 
-set(COMPONENT_SRCS "relay.c"
-                    "relay_obj.cpp")
+set(COMPONENT_SRCS "relay.c")
 
 set(COMPONENT_ADD_INCLUDEDIRS "include")
 

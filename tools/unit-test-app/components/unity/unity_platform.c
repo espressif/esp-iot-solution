@@ -3,12 +3,13 @@
 #include <ctype.h>
 #include <stdio.h>
 #include "unity.h"
-#include "rom/ets_sys.h"
-#include "rom/uart.h"
+#include "esp32/rom/ets_sys.h"
+#include "esp32/rom/uart.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
 #include "soc/cpu.h"
+#include "esp32/clk.h"
 
 #define unity_printf ets_printf
 
@@ -90,7 +91,7 @@ static void unity_run_single_test_by_index_parse(const char* filter, int index_m
         unity_run_single_test_by_index(test_index - 1);
         uint32_t end;
         RSR(CCOUNT, end);
-        uint32_t ms = (end - start) / (XT_CLOCK_FREQ / 1000);
+        uint32_t ms = (end - start) / (esp_clk_cpu_freq() / 1000);
         printf("Test ran in %dms\n", ms);
     }
 }

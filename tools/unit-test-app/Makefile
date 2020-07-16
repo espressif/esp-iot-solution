@@ -6,7 +6,24 @@
 PROJECT_NAME := unit-test-app
 #If IOT_SOLUTION_PATH is not defined, use relative path as default value
 IOT_SOLUTION_PATH ?= $(abspath $(shell pwd)/../../)
-include $(IOT_SOLUTION_PATH)/Makefile
+
+IOT_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components
+IOT_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/features
+IOT_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/general
+IOT_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/wifi
+IOT_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/spi_devices
+IOT_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/i2c_devices
+IOT_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/i2c_devices/sensor
+IOT_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/i2c_devices/others
+IOT_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/network
+IOT_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/platforms
+IOT_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/motor/stepper
+IOT_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/motor/servo
+IOT_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/framework
+IOT_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/i2s_devices
+# IOT_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/hmi
+
+EXTRA_COMPONENT_DIRS += $(IOT_COMPONENT_DIRS)
 
 #Do not touch the code below
 IOT_COMPONENT_DIRS += $(abspath $(shell pwd)/components)
@@ -26,5 +43,11 @@ else
 endif
 
 include $(IDF_PATH)/make/project.mk
+
+list-components:
+	echo TEST_COMPONENTS=$(TEST_COMPONENTS) 
+	echo IOT_COMPONENTS=$(IOT_COMPONENTS) 
+	echo TEST_COMPONENTS_LIST=$(TEST_COMPONENTS_LIST)
+
 print_flash_cmd:
 	echo $(ESPTOOL_WRITE_FLASH_OPTIONS) $(ESPTOOL_ALL_FLASH_ARGS) | sed -e 's:'$(PWD)/build/'::g'

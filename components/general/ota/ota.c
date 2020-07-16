@@ -359,7 +359,7 @@ esp_err_t iot_ota_start_url(const char *url, uint32_t ticks_to_wait)
     p_start = strstr(url, HTTP_STARTER_STR);
     if (p_start == NULL) {
         p_start = strstr(url, HTTPS_STARTER_STR);
-        p_start = (p_start != NULL) ? (p_start + strlen(HTTPS_STARTER_STR)) : url;
+        p_start = (p_start != NULL) ? (p_start + strlen(HTTPS_STARTER_STR)) : (char*)url;
     } else {
         p_start += strlen(HTTP_STARTER_STR);
     }
@@ -399,7 +399,7 @@ esp_err_t iot_ota_start_url(const char *url, uint32_t ticks_to_wait)
     ESP_LOGI(TAG, "port: %d", port);
     p_start = p_end;
     char* file_path = NULL;
-    if (p_start > 0 && (url_len > (int) (p_start - url))) {
+    if (p_start != NULL && (url_len > (int) (p_start - url))) {
         asprintf(&file_path, "%s", p_start);
         ESP_LOGI(TAG, "file path: %s", file_path);
     } else {

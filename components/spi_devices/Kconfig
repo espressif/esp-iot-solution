@@ -1,0 +1,17 @@
+menu "SPI devices"
+    config IOT_LCD_ENABLE
+        bool "SPI_LCD_ENABLE"
+        default y
+        help
+            "Select this one to enable SPI LCD device" 
+    config IOT_EINK_ENABLE
+        bool "SPI_E-INK_ENABLE"
+        default y
+        help
+            "Select this one to enable SPI E-INK SCREEN device"
+    config IOT_TOUCH_SCREEN_ENABLE
+        bool "SPI_TOUCH_SCERRN_ENABLE"
+        default y
+        help
+            "Select this one to enable SPI TOUCH SCREEN device"
+endmenu

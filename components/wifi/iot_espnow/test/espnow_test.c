@@ -147,7 +147,6 @@ static void espnow_send_handle_task(void *arg)
 
 static void espnow_recv_handle_task(void *arg)
 {
-    int send_resp = (int) arg;
     uint8_t mac_addr[ESP_NOW_ETH_ALEN] = { 0 };
     uint8_t *recv_data = calloc(1, RECV_MAX_DATA_LEN);
 

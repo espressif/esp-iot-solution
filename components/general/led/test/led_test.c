@@ -14,6 +14,7 @@
 #include "esp_system.h"
 #include "esp_log.h"
 #include "iot_led.h"
+#include "unity.h"
 
 #define LED_IO_NUM_0    16
 #define LED_IO_NUM_1    17
@@ -46,4 +47,9 @@ void led_test()
     iot_led_state_write(led_1, LED_SLOW_BLINK);
     ets_delay_us(5 * 1000 * 1000);
     iot_led_mode_write(led_0, LED_NORMAL_MODE);
+}
+
+TEST_CASE("led test", "[led][iot]")
+{
+    led_test();
 }

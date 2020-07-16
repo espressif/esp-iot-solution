@@ -1,0 +1,23 @@
+menu "I2S devices"
+    config IOT_LCD_NT35510_ENABLE
+        bool "I2S_LCD_NT35510_ENABLE"
+        default y
+        help
+            "Select this one to enable NT35510 LCD device"      
+    config IOT_LCD_ILI9806_ENABLE
+        bool "I2S_LCD_ILI9806_ENABLE"
+        default y
+        help
+            "Select this one to enable ILI9806 LCD device"   
+
+    choice LCD_BITEMODE_CHOOSE
+        bool "Choose Bit Mode"
+            default BIT_MODE_16BIT
+
+        config BIT_MODE_16BIT
+            bool "16_BIT_MODE"
+        config BIT_MODE_8BIT
+            bool "8_BIT_MODE"
+
+    endchoice
+endmenu

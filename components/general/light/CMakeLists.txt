@@ -1,7 +1,6 @@
 
 
-set(COMPONENT_SRCS "light.c"
-                    "light_obj.cpp")
+set(COMPONENT_SRCS "light.c")
 
 set(COMPONENT_ADD_INCLUDEDIRS "include")
 

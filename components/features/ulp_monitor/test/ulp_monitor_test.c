@@ -14,7 +14,7 @@
 #include <string.h>
 #include "esp_system.h"
 #include "esp_log.h"
-#include "esp_deep_sleep.h"
+#include "esp_sleep.h"
 #include "iot_ulp_monitor.h"
 #include <time.h>
 #include <sys/time.h>
@@ -33,7 +33,7 @@ static RTC_DATA_ATTR struct timeval sleep_enter_time;
 
 void ulp_monitor_test()
 {
-    if (esp_deep_sleep_get_wakeup_cause() == ESP_DEEP_SLEEP_WAKEUP_ULP) {
+    if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_ULP) {
          struct timeval now;
         gettimeofday(&now, NULL);
         int sleep_time_ms = (now.tv_sec - sleep_enter_time.tv_sec) * 1000 + (now.tv_usec - sleep_enter_time.tv_usec) / 1000;

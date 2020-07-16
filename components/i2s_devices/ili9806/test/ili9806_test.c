@@ -98,7 +98,6 @@ static void gauss_blur(int idx, uint16_t *src, uint16_t *dst)
     uint16_t *pre2 = pre1 - 854;
     uint16_t *next1 = now + 854;
     uint16_t *next2 = next1 + 854;
-    uint16_t px = 0;
     uint32_t r, g, b;
     uint16_t *buf = dst + OFFSET_X + OFFSET_Y * 854;
     uint32_t *tab = blur_tab_5x5[idx];
@@ -174,9 +173,9 @@ void gauss_blur_test(void)
     iot_ili9806_set_orientation(ili9806_handle, LCD_DISP_ROTATE_270);
     xTaskCreate(touch_task, "touch_task", 2048, NULL, 10, NULL);
     uint16_t *buff = ili9806->lcd_buf;
-    uint16_t *pic = gImage_pic3;
+    uint16_t *pic = (uint16_t*)gImage_pic3;
     iot_ili9806_draw_bmp(ili9806_handle, pic, 0, 0, 480, 854);
-    gauss_blur(8, gImage_pic3, buff);
+    gauss_blur(8, pic, buff);
     while (1) {
         if (touch_info.touch_point) {
             iot_ili9806_draw_bmp(ili9806_handle, buff, 0, 0, 480, 854);

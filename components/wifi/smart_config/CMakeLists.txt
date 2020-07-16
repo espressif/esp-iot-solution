@@ -1,17 +1,6 @@
 
-# componet standalone mode
-if(NOT CONFIG_IOT_SOLUTION_EMBED)
-    set(COMPONENT_SRCS "smart_config.c")
-    set(COMPONENT_ADD_INCLUDEDIRS ". include")
-else()
-    if(CONFIG_IOT_SMARTCONFIG_ABSTRACT_ENABLE)
-        set(COMPONENT_SRCS "smart_config.c")
-        set(COMPONENT_ADD_INCLUDEDIRS ". include")
-    else()
-        set(COMPONENT_SRCS "")
-        set(COMPONENT_ADD_INCLUDEDIRS "")
-        message(STATUS "Building empty smart_config component due to configuration")
-    endif()
-endif()
+set(COMPONENT_SRCS "smart_config.c")
+set(COMPONENT_ADD_INCLUDEDIRS ". include")
+
 
 register_component()

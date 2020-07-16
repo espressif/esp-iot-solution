@@ -15,7 +15,7 @@
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include <stdio.h>
-#include "apps/sntp/sntp.h"
+#include "lwip/apps/sntp.h"
 #include "esp_event_loop.h"
 #include "esp_log.h"
 #include "esp_attr.h"

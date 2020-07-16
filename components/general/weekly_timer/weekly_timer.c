@@ -19,7 +19,7 @@
 #include "esp_system.h"
 #include "esp_log.h"
 #include "iot_weekly_timer.h"
-#include "apps/sntp/sntp.h"
+#include "lwip/apps/sntp.h"
 
 #define IOT_CHECK(tag, a, ret)  if(!(a)) {                                 \
         ESP_LOGE(tag,"%s:%d (%s)", __FILE__, __LINE__, __FUNCTION__);      \
