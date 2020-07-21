@@ -1,11 +1,3 @@
-
-
-set(COMPONENT_SRCS "ft5x06.c")
-
-set(COMPONENT_ADD_INCLUDEDIRS ". include")
-
-
-# requirements can't depend on config
-set(COMPONENT_REQUIRES i2c_bus)
-
-register_component()
+idf_component_register(SRCS "ft5x06.c"
+                        INCLUDE_DIRS include
+                        PRIV_REQUIRES i2c_bus)

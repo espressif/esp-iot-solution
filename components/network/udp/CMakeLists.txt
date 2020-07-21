@@ -1,6 +1,2 @@
-
-
-set(COMPONENT_SRCS "iot_udp.cpp")
-set(COMPONENT_ADD_INCLUDEDIRS ". include")
-
-register_component()
+idf_component_register(SRCS "iot_udp.cpp"
+                        INCLUDE_DIRS include)

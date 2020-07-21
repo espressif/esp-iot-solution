@@ -1,6 +1,2 @@
-
-
-set(COMPONENT_SRCS "a4988.cpp")
-set(COMPONENT_ADD_INCLUDEDIRS ". include")
-
-register_component()
+idf_component_register(SRCS "a4988.cpp"
+                        INCLUDE_DIRS include)

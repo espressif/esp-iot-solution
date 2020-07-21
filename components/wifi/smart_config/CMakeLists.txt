@@ -1,6 +1,2 @@
-
-set(COMPONENT_SRCS "smart_config.c")
-set(COMPONENT_ADD_INCLUDEDIRS ". include")
-
-
-register_component()
+idf_component_register(SRCS "smart_config.c"
+                        INCLUDE_DIRS include)

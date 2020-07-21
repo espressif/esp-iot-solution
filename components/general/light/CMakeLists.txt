@@ -1,8 +1,2 @@
-
-
-set(COMPONENT_SRCS "light.c")
-
-set(COMPONENT_ADD_INCLUDEDIRS "include")
-
-
-register_component()
+idf_component_register(SRCS "light.c"
+                        INCLUDE_DIRS include)

@@ -1,8 +1,2 @@
-
-
-set(COMPONENT_SRCS "power_meter.c")
-
-set(COMPONENT_ADD_INCLUDEDIRS "include")
-
-
-register_component()
+idf_component_register(SRCS "power_meter.c"
+                        INCLUDE_DIRS include)

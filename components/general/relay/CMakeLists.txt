@@ -1,8 +1,2 @@
-
-
-set(COMPONENT_SRCS "relay.c")
-
-set(COMPONENT_ADD_INCLUDEDIRS "include")
-
-
-register_component()
+idf_component_register(SRCS "relay.c"
+                        INCLUDE_DIRS include)
