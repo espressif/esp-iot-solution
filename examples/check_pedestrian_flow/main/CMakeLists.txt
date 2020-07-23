@@ -1,6 +1,3 @@
-set(COMPONENT_SRCS "app_main.c"
-                    "onenet.c")
-
-set(COMPONENT_ADD_INCLUDEDIRS ". include")
-
-register_component()
+idf_component_register(SRCS "app_main.c" "onenet.c"
+                    INCLUDE_DIRS include
+                    PRIV_REQUIRES  )

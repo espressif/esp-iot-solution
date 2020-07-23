@@ -21,11 +21,19 @@
 #include "iot_led.h"
 #include "evb.h"
 
-#define CHANNEL_R_IO   ((gpio_num_t)18)
-#define CHANNEL_G_IO   ((gpio_num_t)21)
-#define CHANNEL_B_IO   ((gpio_num_t)19)
+static char *TAG = "evb_rgb_led";
 
-static CLight *light = NULL;
+#define CHANNEL_R_IO   ((gpio_num_t)25)
+#define CHANNEL_G_IO   ((gpio_num_t)26)
+#define CHANNEL_B_IO   ((gpio_num_t)27)
+
+#define CHANNEL_ID_R 0
+#define CHANNEL_ID_G 1
+#define CHANNEL_ID_B 2
+
+#define LIGHT_FULL_DUTY ((1 << LEDC_TIMER_13_BIT) - 1)
+
+static light_handle_t light = NULL;
 static uint8_t g_rgb_color = 0;		    //0:red; 1:green; 2:blue;
 static uint8_t g_bright_percent_r = 0;	//0 ~ 100
 static uint8_t g_bright_percent_g = 0;	//0 ~ 100
@@ -34,9 +42,9 @@ static uint8_t g_bright_percent_b = 0;	//0 ~ 100
 /* Clear all RGB color */
 void evb_rgb_led_clear()
 {
-    light->blue.duty(0, LIGHT_SET_DUTY_DIRECTLY);
-    light->green.duty(0, LIGHT_SET_DUTY_DIRECTLY);
-    light->red.duty(0, LIGHT_SET_DUTY_DIRECTLY);
+    iot_light_duty_write(light, CHANNEL_ID_R, 0, LIGHT_SET_DUTY_DIRECTLY);
+    iot_light_duty_write(light, CHANNEL_ID_G, 0, LIGHT_SET_DUTY_DIRECTLY);
+    iot_light_duty_write(light, CHANNEL_ID_B, 0, LIGHT_SET_DUTY_DIRECTLY);
     g_bright_percent_r = 0;
     g_bright_percent_g = 0;
     g_bright_percent_b = 0;
@@ -54,17 +62,17 @@ void evb_rgb_led_set(uint8_t color, uint8_t bright_percent)
     g_rgb_color = color;
     switch (color) {
         case 0:
-            light->red.duty(light->get_full_duty() / 100 * bright_percent,
+            iot_light_duty_write(light, CHANNEL_ID_R, LIGHT_FULL_DUTY / 100 * bright_percent,
                     LIGHT_SET_DUTY_DIRECTLY);
             g_bright_percent_r = bright_percent;
             break;
         case 1:
-            light->green.duty(light->get_full_duty() / 100 * bright_percent,
+            iot_light_duty_write(light, CHANNEL_ID_G, LIGHT_FULL_DUTY / 100 * bright_percent,
                     LIGHT_SET_DUTY_DIRECTLY);
             g_bright_percent_g = bright_percent;
             break;
         case 2:
-            light->blue.duty(light->get_full_duty() / 100 * bright_percent,
+            iot_light_duty_write(light, CHANNEL_ID_B, LIGHT_FULL_DUTY / 100 * bright_percent,
                     LIGHT_SET_DUTY_DIRECTLY);
             g_bright_percent_b = bright_percent;
             break;
@@ -100,9 +108,18 @@ void evb_rgb_led_init()
 {
     // Init RGB component.
     if (light == NULL) {
-        light = new CLight(LIGHT_CH_NUM_3);
+        light = iot_light_create(LEDC_TIMER_0, LEDC_LOW_SPEED_MODE, 1000, 3, LEDC_TIMER_13_BIT);
+        if (NULL == light)
+        {
+            ESP_LOGE(TAG, "light create failed!");
+        }
+        
     }
-    light->red.init(CHANNEL_R_IO, LEDC_CHANNEL_0);
-    light->green.init(CHANNEL_G_IO, LEDC_CHANNEL_1);
-    light->blue.init(CHANNEL_B_IO, LEDC_CHANNEL_2);
+    iot_light_channel_regist(light, CHANNEL_ID_R, CHANNEL_R_IO, LEDC_CHANNEL_0);
+    iot_light_channel_regist(light, CHANNEL_ID_G, CHANNEL_G_IO, LEDC_CHANNEL_1);
+    iot_light_channel_regist(light, CHANNEL_ID_B, CHANNEL_B_IO, LEDC_CHANNEL_2);
+
+    iot_light_duty_write(light, CHANNEL_ID_R, 600, LIGHT_SET_DUTY_DIRECTLY);
+    iot_light_duty_write(light, CHANNEL_ID_G, 600, LIGHT_SET_DUTY_DIRECTLY);
+    iot_light_duty_write(light, CHANNEL_ID_B, 600, LIGHT_SET_DUTY_DIRECTLY);
 }

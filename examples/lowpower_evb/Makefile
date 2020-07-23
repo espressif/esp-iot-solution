@@ -5,6 +5,9 @@
 
 PROJECT_NAME := lowpower_evb_demo
 
+#If IOT_SOLUTION_PATH is not defined, use relative path as default value
+IOT_SOLUTION_PATH ?= $(abspath $(shell pwd)/../../)
+
 EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/wifi/wifi_conn
 EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/wifi/smart_config
 EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/network/tcp

@@ -1,12 +1,10 @@
 
-set(COMPONENT_SRCS "lowpower_evb_adc.cpp"
+set(srcs "lowpower_evb_adc.cpp"
                     "lowpower_evb_epaper.cpp"
                     "lowpower_evb_power.cpp"
                     "lowpower_evb_sensor.cpp"
                     "lowpower_evb_status_led.cpp")
 
-set(COMPONENT_ADD_INCLUDEDIRS ". include")
-
-set(COMPONENT_REQUIRES esp_adc_cal epaper hts221 ulp led bh1750)
-
-register_component()
+idf_component_register(SRCS "${srcs}"
+                        INCLUDE_DIRS "." "include"
+                        REQUIRES  esp_adc_cal epaper i2c_bus hts221 ulp led bh1750)
