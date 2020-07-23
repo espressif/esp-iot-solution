@@ -1,5 +1,3 @@
-set(COMPONENT_SRCS "example2.c")
-
-set(COMPONENT_ADD_INCLUDEDIRS ". include")
-
-register_component()
+idf_component_register(SRCS "example2.c"
+                    INCLUDE_DIRS "." "include"
+                    PRIV_REQUIRES  )
