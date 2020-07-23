@@ -21,10 +21,5 @@ ULP_EXP_DEP_OBJECTS := main.o
 # 4. Include build rules for ULP program 
 include $(IDF_PATH)/components/ulp/component_ulp_common.mk
 #
-# Link object files and generate map file
-$(ULP_ELF): $(ULP_OBJECTS) $(ULP_LD_SCRIPT)
-	$(summary) ULP_LD $(patsubst $(PWD)/%,%,$(CURDIR))/$@
-	$(ULP_LD) -o $@ -A elf32-esp32ulp -Map=$(ULP_MAP) -T $(ULP_LD_SCRIPT) $(ULP_OBJECTS)
-#
 # End of ULP support additions to component makefile.
 #
