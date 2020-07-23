@@ -13,6 +13,7 @@
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include <stdio.h>
+#include <string.h>
 #include "esp_sntp.h"
 #include "esp_event_loop.h"
 #include "esp_log.h"
@@ -30,6 +31,10 @@
 
 #define AP_SSID      CONFIG_AP_SSID
 #define AP_PASSWORD  CONFIG_AP_PASSWORD
+
+#define OLED_IIC_SCL_NUM            (gpio_num_t)4       /*!< gpio number for I2C master clock IO4*/
+#define OLED_IIC_SDA_NUM            (gpio_num_t)17      /*!< gpio number for I2C master data IO17*/
+#define OLED_IIC_NUM                I2C_NUM_0           /*!< I2C number >*/
 
 //Power control
 #define POWER_CNTL_IO              ((gpio_num_t) 19)
@@ -235,9 +240,10 @@ static void obtain_time(void)
     initialize_sntp();
     // wait for time to be set
     time_t now = 0;
-    struct tm timeinfo = { 0 };
+    struct tm timeinfo;
     int retry = 0;
     const int retry_count = 10;
+    memset(&timeinfo, 0, sizeof(struct tm));
     while(timeinfo.tm_year < (2016 - 1900) && ++retry < retry_count) {
         vTaskDelay(2000 / portTICK_PERIOD_MS);
         time(&now);
