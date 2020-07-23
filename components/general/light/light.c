@@ -30,24 +30,6 @@ static const char* TAG = "light";
 #define POINT_ASSERT(tag, param)	IOT_CHECK(tag, (param) != NULL, ESP_FAIL)
 #define LIGHT_NUM_MAX   4
 
-typedef struct {
-    gpio_num_t io_num;
-    ledc_mode_t mode;
-    ledc_channel_t channel; 
-    TimerHandle_t timer;
-    int breath_period;
-    uint32_t next_duty;
-} light_channel_t;
-
-typedef struct {
-    uint8_t channel_num;
-    ledc_mode_t mode;
-    ledc_timer_t ledc_timer;
-    uint32_t full_duty;
-    uint32_t freq_hz;
-    ledc_timer_bit_t timer_bit;
-    light_channel_t* channel_group[0];
-} light_t;
 
 static light_t* g_light_group[LIGHT_NUM_MAX];
 static bool g_fade_installed = false;
@@ -111,7 +93,7 @@ light_handle_t iot_light_create(ledc_timer_t timer, ledc_mode_t speed_mode, uint
         .duty_resolution = timer_bit
     };
     ERR_ASSERT(TAG, ledc_timer_config( &timer_conf), NULL);
-    light_t* light_ptr = (light_t*)calloc(1, sizeof(light_t) + sizeof(light_channel_t*) * channel_num);
+    light_handle_t light_ptr = (light_t*)calloc(1, sizeof(light_t) + sizeof(light_channel_t*) * channel_num);
     light_ptr->channel_num = channel_num;
     light_ptr->ledc_timer = timer;
     light_ptr->full_duty = (1 << timer_bit) - 1;
@@ -127,7 +109,7 @@ light_handle_t iot_light_create(ledc_timer_t timer, ledc_mode_t speed_mode, uint
             break;
         }
     }
-    return (light_handle_t)light_ptr;
+    return light_ptr;
 }
 
 esp_err_t iot_light_delete(light_handle_t light_handle)

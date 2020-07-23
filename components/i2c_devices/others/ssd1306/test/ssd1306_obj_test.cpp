@@ -20,6 +20,11 @@
 #include "iot_i2c_bus.h"
 #include "iot_ssd1306.h"
 
+#define OLED_IIC_SCL_NUM            (gpio_num_t)4       /*!< gpio number for I2C master clock IO4*/
+#define OLED_IIC_SDA_NUM            (gpio_num_t)17      /*!< gpio number for I2C master data IO17*/
+#define OLED_IIC_NUM                I2C_NUM_0           /*!< I2C number >*/
+#define OLED_IIC_FREQ_HZ            100000              /*!< I2C colock frequency >*/
+
 #define POWER_CNTL_IO   			19
 
 extern  "C" {

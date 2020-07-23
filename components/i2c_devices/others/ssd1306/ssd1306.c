@@ -17,6 +17,18 @@
 #include <time.h>
 #include <sys/time.h>
 
+//I2C
+#define OLED_IIC_FREQ_HZ            100000              /*!< I2C colock frequency >*/
+#define OLED_IIC_TX_BUF_DISABLE     0                   /*!< I2C Tx buffer disable >*/
+#define OLED_IIC_RX_BUF_DISABLE     0                   /*!< I2C Rx buffer disable >*/
+
+#define WRITE_BIT                   I2C_MASTER_WRITE    /*!< I2C master write */
+#define READ_BIT                    I2C_MASTER_READ     /*!< I2C master read */
+#define ACK_CHECK_EN                1                   /*!< I2C master will check ack from slave*/
+#define ACK_CHECK_DIS               0                   /*!< I2C master will not check ack from slave */
+#define ACK_VAL                     0x0                 /*!< I2C ack value */
+#define NACK_VAL                    0x1                 /*!< I2C nack value */
+
 typedef struct {
     i2c_bus_handle_t bus;
     uint16_t dev_addr;

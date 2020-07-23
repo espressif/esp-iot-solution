@@ -77,20 +77,7 @@ extern "C"
 #define __SSD1306_DIN_SET()         GPIO_OUTPUT_SET(SSD1306_DIN_NUM, 1)
 #define __SSD1306_DIN_CLR()         GPIO_OUTPUT_SET(SSD1306_DIN_NUM, 0)
 
-//I2C
-#define OLED_IIC_SCL_NUM            (gpio_num_t)4       /*!< gpio number for I2C master clock IO4*/
-#define OLED_IIC_SDA_NUM            (gpio_num_t)17      /*!< gpio number for I2C master data IO17*/
-#define OLED_IIC_NUM                I2C_NUM_0           /*!< I2C number >*/
-#define OLED_IIC_FREQ_HZ            100000              /*!< I2C colock frequency >*/
-#define OLED_IIC_TX_BUF_DISABLE     0                   /*!< I2C Tx buffer disable >*/
-#define OLED_IIC_RX_BUF_DISABLE     0                   /*!< I2C Rx buffer disable >*/
 
-#define WRITE_BIT                   I2C_MASTER_WRITE    /*!< I2C master write */
-#define READ_BIT                    I2C_MASTER_READ     /*!< I2C master read */
-#define ACK_CHECK_EN                1                   /*!< I2C master will check ack from slave*/
-#define ACK_CHECK_DIS               0                   /*!< I2C master will not check ack from slave */
-#define ACK_VAL                     0x0                 /*!< I2C ack value */
-#define NACK_VAL                    0x1                 /*!< I2C nack value */
 
 typedef void* ssd1306_handle_t;                         /*handle of ssd1306*/
 
