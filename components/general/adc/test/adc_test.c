@@ -13,6 +13,8 @@
 // limitations under the License.
 #include "esp_system.h"
 #include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "iot_adc.h"
 #include "unity.h"
 
@@ -26,8 +28,14 @@ static adc_handle_t adc_dev = NULL;
 void adc_test()
 {
     adc_dev = iot_adc_create(EVB_ADC_UNIT, EVB_ADC_CHANNEL, EVB_ADC_ATTEN, EVB_ADC_BIT_WIDTH);
-    uint32_t voltage_mv = iot_adc_get_voltage(adc_dev);
-    printf("Voltage obtained by ADC: %d mV\n", voltage_mv);
+
+    for (size_t i = 0; i < 16; i++) {
+        uint32_t voltage_mv = iot_adc_get_voltage(adc_dev);
+        printf("Voltage obtained by ADC: %d mV\n", voltage_mv);
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+    }
+
+    iot_adc_delete(adc_dev);
 }
 
 TEST_CASE("ADC test", "[adc][iot]")

@@ -33,13 +33,23 @@ static const char* SERVO_TAG = "servo";
         return (ret_val); \
     }
 
-#define SERVO_LEDC_INIT_BITS LEDC_TIMER_15_BIT
+#define SERVO_LEDC_INIT_BITS LEDC_TIMER_10_BIT
 #define SERVO_LEDC_INIT_FREQ (50)
 #define SERVO_DUTY_MIN_US    (500)
 #define SERVO_DUTY_MAX_US    (2500)
 #define SERVO_SEC_TO_US      (1000000)
 
-CServo::CServo(int servo_io, int max_angle, int min_width_us, int max_width_us, ledc_channel_t chn, ledc_mode_t speed_mode, ledc_timer_t tim_idx)
+static ledc_channel_t m_chn;
+static ledc_mode_t m_mode;
+static ledc_timer_t m_timer;
+static int m_full_duty;
+static int m_freq;
+static float m_angle;
+static uint32_t m_max_angle;
+static uint32_t m_min_us;
+static uint32_t m_max_us;
+
+esp_err_t iot_servo_init(int servo_io, int max_angle, int min_width_us, int max_width_us, ledc_channel_t chn, ledc_mode_t speed_mode, ledc_timer_t tim_idx)
 {
     m_chn = chn;
     m_mode = speed_mode;
@@ -65,9 +75,10 @@ CServo::CServo(int servo_io, int max_angle, int min_width_us, int max_width_us, 
     ledc_ch.speed_mode = m_mode;
     ledc_ch.timer_sel  = m_timer;
     ledc_channel_config(&ledc_ch);
+    return ESP_OK;
 }
 
-esp_err_t CServo::write(float angle)
+esp_err_t iot_servo_write(float angle)
 {
     m_angle = angle;
     float angle_us = angle / m_max_angle * (m_max_us - m_min_us) + m_min_us;
@@ -79,9 +90,6 @@ esp_err_t CServo::write(float angle)
     return ESP_OK;
 }
 
-CServo::~CServo()
-{
-}
 
 #ifdef __cplusplus
 }

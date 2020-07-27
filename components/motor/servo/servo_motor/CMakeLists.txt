@@ -1,2 +1,2 @@
-idf_component_register(SRCS "servo.cpp"
+idf_component_register(SRCS "servo.c"
                         INCLUDE_DIRS include)

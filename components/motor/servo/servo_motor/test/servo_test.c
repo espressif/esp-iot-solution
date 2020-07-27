@@ -21,6 +21,16 @@
 #include "iot_servo.h"
 #include "unity.h"
 
+
+#define SERVO_GPIO 25
+
 TEST_CASE("Servo_motor test", "[servo][iot]")
 {
+    iot_servo_init(SERVO_GPIO, 180, 500, 2500, LEDC_CHANNEL_0, LEDC_HIGH_SPEED_MODE, LEDC_TIMER_0);
+
+    for (size_t i = 0; i < 18; i++) {
+        ESP_LOGI("servo", "aet angle: %d", 10 * i);
+        iot_servo_write(10 * i);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
 }

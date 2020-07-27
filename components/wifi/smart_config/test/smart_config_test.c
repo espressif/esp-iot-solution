@@ -19,15 +19,13 @@
 #include "freertos/event_groups.h"
 #include "freertos/semphr.h"
 #include "unity.h"
-
-#define SMART_CONFIG_TEST_EN 1
-#if SMART_CONFIG_TEST_EN
-
+#include "nvs_flash.h"
 
 void sc_test()
 {
+    ESP_ERROR_CHECK( nvs_flash_init() );
     esp_err_t res;
-    iot_sc_setup(SC_TYPE_ESPTOUCH, WIFI_MODE_STA, 0);
+    iot_sc_setup(SC_TYPE_ESPTOUCH_AIRKISS, WIFI_MODE_STA, 0);
     while (1) {
         res = iot_sc_start(20000 / portTICK_PERIOD_MS);
         if (res == ESP_OK) {
@@ -39,12 +37,9 @@ void sc_test()
             printf("smart config stopped\n");
         }
     }
-
 }
 
 TEST_CASE("ESPTOUCH test", "[esptouch][iot]")
 {
     sc_test();
 }
-
-#endif

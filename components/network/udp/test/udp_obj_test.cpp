@@ -44,7 +44,7 @@ static void wifi_connect()
 extern "C" void udp_client_obj_test()
 {
     CUdpConn client;
-    const char* data = "test1234567";
+    const char* data = "message from client";
     uint8_t recv_buf[100];
 
     tcpip_adapter_ip_info_t ipconfig;
@@ -54,11 +54,10 @@ extern "C" void udp_client_obj_test()
     size_t nAddrLen = sizeof(remoteAddr);
     client.SetTimeout(1);
     while (1) {
-        client.SendTo(data, strlen(data), ipconfig.ip.addr, 7777);
+        client.SendTo(data, strlen(data)+1, ipconfig.ip.addr, 7777);
         int len = client.RecvFrom(recv_buf, sizeof(recv_buf), (struct sockaddr*) &remoteAddr, &nAddrLen);
         if (len > 0) {
-            ESP_LOGI(TAG_CLI, "recv len: %d", len);
-            ESP_LOGI(TAG_CLI, "data: %s", recv_buf);
+            ESP_LOGI(TAG_CLI, "recv len: %d data: %s", len, recv_buf);
             ESP_LOGI(TAG_CLI, "ip: %s", inet_ntoa(remoteAddr.sin_addr));
         }
         vTaskDelay(2000 / portTICK_PERIOD_MS);
@@ -78,13 +77,13 @@ extern "C" void udp_server_obj_test(void* arg)
     while (1) {
         int ret = server.RecvFrom(recv_data, sizeof(recv_data), (struct sockaddr*) &remoteAddr, &nAddrLen);
         if (ret > 0) {
-            ESP_LOGI(TAG_SRV, "recv: %s", recv_data);
-            ESP_LOGI(TAG_CLI, "ip: %s: %d", inet_ntoa(remoteAddr.sin_addr), remoteAddr.sin_port);
+            ESP_LOGI(TAG_SRV, "recv len: %d data: %s", ret, recv_data);
+            ESP_LOGI(TAG_SRV, "ip: %s: %d", inet_ntoa(remoteAddr.sin_addr), remoteAddr.sin_port);
 
-            const char* resp = "server reponse...\n";
-            server.SendTo(resp, strlen(resp), 0, (struct sockaddr*) &remoteAddr);
+            const char* resp = "message from server";
+            server.SendTo(resp, strlen(resp)+1, 0, (struct sockaddr*) &remoteAddr);
         } else {
-            ESP_LOGI(TAG_SRV, "timeout...");
+            ESP_LOGW(TAG_SRV, "timeout...");
         }
         ESP_LOGI(TAG_SRV, "heap: %d", esp_get_free_heap_size());
     }

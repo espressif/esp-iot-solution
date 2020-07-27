@@ -84,7 +84,9 @@ static void IRAM_ATTR stepper_pcnt_intr_handler(void *arg)
             }
             dev->steps_left = 0;
             dev->rpm = 0;
-            xTimerStopFromISR(dev->tmr, &HPTaskAwoken);
+            if (dev->tmr){
+                xTimerStopFromISR(dev->tmr, &HPTaskAwoken);
+            }
             xSemaphoreGiveFromISR(dev->sem, &HPTaskAwoken);
         } else {
             int steps = dev->steps_left >= STEPPER_CNT_H ? STEPPER_CNT_H - 1 : dev->steps_left;
@@ -150,7 +152,7 @@ CA4988Stepper::CA4988Stepper(int step_io, int dir_io, int number_of_steps, ledc_
     ledc_timer.timer_num = pstepper->ledc_timer;           // timer index
     ledc_timer_config(&ledc_timer);
 
-    ledc_channel_config_t ledc_ch;
+    ledc_channel_config_t ledc_ch={0};
     ledc_ch.channel    = pstepper->ledc_channel;
     ledc_ch.duty       = 0;
     ledc_ch.gpio_num   = pstepper->step_io;

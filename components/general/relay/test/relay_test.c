@@ -40,22 +40,27 @@ void relay_test()
             .ctl_io_num = RELAY_1_D_IO_NUM,
         },
     };
+
     relay_0 = iot_relay_create(relay_io_0, RELAY_CLOSE_HIGH, RELAY_DFLIP_CONTROL, RELAY_IO_RTC);
     relay_1 = iot_relay_create(relay_io_1, RELAY_CLOSE_HIGH, RELAY_DFLIP_CONTROL, RELAY_IO_RTC);
-    iot_relay_state_write(relay_0, RELAY_STATUS_CLOSE);
-    iot_relay_state_write(relay_1, RELAY_STATUS_OPEN);
-    ESP_LOGI(TAG, "relay0 state:%d", iot_relay_state_read(relay_0));
-    ESP_LOGI(TAG, "relay1 state:%d", iot_relay_state_read(relay_1));
-    vTaskDelay(1 / portTICK_RATE_MS);
-    iot_relay_state_write(relay_0, RELAY_STATUS_OPEN);
-    iot_relay_state_write(relay_1, RELAY_STATUS_CLOSE);
-    ESP_LOGI(TAG, "relay0 state:%d", iot_relay_state_read(relay_0));
-    ESP_LOGI(TAG, "relay1 state:%d", iot_relay_state_read(relay_1));
-    vTaskDelay(1 / portTICK_RATE_MS);
-    iot_relay_state_write(relay_0, RELAY_STATUS_CLOSE);
-    iot_relay_state_write(relay_1, RELAY_STATUS_OPEN);
-    ESP_LOGI(TAG, "relay0 state:%d", iot_relay_state_read(relay_0));
-    ESP_LOGI(TAG, "relay1 state:%d", iot_relay_state_read(relay_1));
+
+    for (size_t i = 0; i < 8; i++)
+    {
+        iot_relay_state_write(relay_0, RELAY_STATUS_OPEN);
+        iot_relay_state_write(relay_1, RELAY_STATUS_OPEN);
+        ESP_LOGI(TAG, "relay0 state:%d", iot_relay_state_read(relay_0));
+        ESP_LOGI(TAG, "relay1 state:%d", iot_relay_state_read(relay_1));
+        vTaskDelay(1000 / portTICK_RATE_MS);
+        iot_relay_state_write(relay_0, RELAY_STATUS_CLOSE);
+        iot_relay_state_write(relay_1, RELAY_STATUS_CLOSE);
+        ESP_LOGI(TAG, "relay0 state:%d", iot_relay_state_read(relay_0));
+        ESP_LOGI(TAG, "relay1 state:%d", iot_relay_state_read(relay_1));
+        vTaskDelay(1000 / portTICK_RATE_MS);
+    }
+    
+    iot_relay_delete(relay_0);
+    iot_relay_delete(relay_1);
+    
 }
 
 TEST_CASE("Relay test", "[relay][iot]")
