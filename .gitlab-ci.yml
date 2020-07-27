@@ -23,49 +23,35 @@ build:
     - iot
   image: $CI_DOCKER_REGISTRY/esp32-ci-env
   script:
-    - cd examples/check_pedestrian_flow
-    - make defconfig
-    - idf.py build
-    - cd ../eth2wifi
-    - make defconfig
-    - idf.py build
-    - cd ../oled_screen_module
-    - make defconfig
-    - idf.py build
-    - cd ../smart_device/alink_smart_device_demo
-    - make defconfig
-    - idf.py build
-    - cd ..
-    - cd ../empty_project
-    - make defconfig
-    - idf.py build
-    - cd ../hmi/ugfx_example
-    - make defconfig
-    - idf.py build
-    - cd ../lvgl_example
-    - make defconfig
-    - idf.py build
-    - cd ../
-    - cd ../touch_pad_evb
-    - make defconfig
-    - idf.py build
-    - cd ../ulp_examples/ulp_watering_device
-    - make defconfig
-    - make -j8
-    - cd ../ulp_rtc_gpio
-    - make defconfig
-    - make -j8
-    - cd ../ulp_tsens
-    - make defconfig
-    - make -j8
-    - cd ../ulp_spi
-    - make defconfig
-    - make -j8
-    - cd ../ulp_hall_sensor
-    - make defconfig
-    - make -j8
-    - cd ../../../tools/unit-test-app
-    - make defconfig
-    - make IOT_TEST_ALL=1 -j8
+    - echo "set -e" >> _ci_build.sh
+    - echo "set -u" >> _ci_build.sh
+    - echo "project_list=( \\" >> _ci_build.sh
+    - echo "examples/check_pedestrian_flow \\" >> _ci_build.sh
+    - echo "examples/empty_project \\" >> _ci_build.sh
+    - echo "examples/eth2wifi \\" >> _ci_build.sh
+    - echo "examples/lowpower_evb \\" >> _ci_build.sh
+    - echo "examples/oled_screen_module \\" >> _ci_build.sh
+    - echo "examples/touch_pad_evb \\" >> _ci_build.sh
+    - echo "examples/ulp_examples/ulp_adc \\" >> _ci_build.sh
+    - echo "examples/ulp_examples/ulp_detect_brownout \\" >> _ci_build.sh
+    - echo "examples/ulp_examples/ulp_hall_sensor \\" >> _ci_build.sh
+    - echo "examples/ulp_examples/ulp_i2c_bitbang \\" >> _ci_build.sh
+    - echo "examples/ulp_examples/ulp_rtc_gpio \\" >> _ci_build.sh
+    - echo "examples/ulp_examples/ulp_send_interrupt \\" >> _ci_build.sh
+    - echo "examples/ulp_examples/ulp_spi \\" >> _ci_build.sh
+    - echo "examples/ulp_examples/ulp_tsens \\" >> _ci_build.sh
+    - echo "examples/ulp_examples/ulp_watering_device \\" >> _ci_build.sh
+    - echo ")" >> _ci_build.sh
+    - echo "old_path="$PWD"" >> _ci_build.sh
+    - echo "for dir in \${project_list[@]};" >> _ci_build.sh
+    - echo "do" >> _ci_build.sh
+    - echo "    cd \$dir" >> _ci_build.sh
+    - echo "    make defconfig && make -j8" >> _ci_build.sh
+    - echo "    cd \$old_path" >> _ci_build.sh
+    - echo "done" >> _ci_build.sh
+    - cat _ci_build.sh
+    - bash _ci_build.sh
+    - cd tools/unit-test-app
+    - make defconfig && make IOT_TEST_ALL=1 -j8
 
 

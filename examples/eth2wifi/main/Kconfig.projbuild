@@ -2,25 +2,33 @@ menu "IoT Example - Ethernet to WiFi Demo Configuration"
 
 choice PHY_MODEL
     prompt "Ethernet PHY"
-    default CONFIG_PHY_TLK110
+    default CONFIG_PHY_IP101
     help
         Select the PHY driver to use for the example.
-
-config PHY_TLK110
-    bool "TI TLK110 PHY"
-    help
-        Select this to use the TI TLK110 PHY
 
 config PHY_IP101
     bool "IP101"
     help
         IP101 is a single port 10/100 MII/RMII/TP/Fiber Fast Ethernet Transceiver.
+        Goto http://www.icplus.com.tw/pp-IP101G.html for more information about it.
 
 config PHY_LAN8720
     bool "Microchip LAN8720 PHY"
     help
-        Select this to use the Microchip LAN8720 PHY
+        LAN8720A is a small footprint RMII 10/100 Ethernet Transceiver with HP Auto-MDIX Support.
+        Goto https://www.microchip.com/LAN8720A for more information about it.
 
+config PHY_RTL8201
+    bool "RTL8201/SR8201"
+    help
+        RTL8201F/SR8201F is a single port 10/100Mb Ethernet Transceiver with auto MDIX.
+        Goto http://www.corechip-sz.com/productsview.asp?id=22 for more information about it.
+
+config PHY_DP83848
+    bool "DP83848"
+    help
+        DP83848 is a single port 10/100Mb/s Ethernet Physical Layer Transceiver.
+        Goto http://www.ti.com/product/DP83848J for more information about it.
 endchoice
 
 config PHY_ADDRESS
@@ -30,17 +38,9 @@ config PHY_ADDRESS
     help
         Select the PHY Address (0-31) for the hardware configuration and PHY model.
 
-config PHY_USE_POWER_PIN
-    bool "Use PHY Power (enable/disable) pin"
-    default y
-    help
-        Use a GPIO "power pin" to power the PHY on/off during operation.
-        Consult the example README for more details
-
 config PHY_POWER_PIN
     int "PHY Power GPIO"
     default 17
-    depends on PHY_USE_POWER_PIN
     help
         GPIO number to use for powering on/off the PHY.
 
@@ -58,14 +58,14 @@ config PHY_SMI_MDIO_PIN
 
 config ETH_TO_STATION_MODE
     bool "WiFi station mode"
-    default y
+    default n
     help
         If set, it is ethernet to wifi station forwarding data; 
         otherwise,it is ethernet to wifi softap forwarding data.
 
 config DEMO_SSID
     string "The SSID for demo"
-    default "DEMO_TEST"
+    default "ESP32-ETH2WiFi"
        
 config DEMO_PASSWORD
     string "The PASSWORD for demo"

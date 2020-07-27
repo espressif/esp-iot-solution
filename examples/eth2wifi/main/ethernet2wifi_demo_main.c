@@ -14,84 +14,34 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-#include "esp_event_loop.h"
 #include "esp_event.h"
+#include "esp_event_loop.h"
 #include "esp_log.h"
 
 #include "esp_eth.h"
 
+#include "esp_private/wifi.h"
 #include "esp_wifi.h"
-#include "esp_wifi_internal.h"
 
 #include "nvs_flash.h"
 
-#ifdef CONFIG_PHY_LAN8720
-#include "eth_phy/phy_lan8720.h"
-#define DEFAULT_ETHERNET_PHY_CONFIG phy_lan8720_default_ethernet_config
-#endif
-#ifdef CONFIG_PHY_TLK110
-#include "eth_phy/phy_tlk110.h"
-#define DEFAULT_ETHERNET_PHY_CONFIG phy_tlk110_default_ethernet_config
-#endif
-#ifdef CONFIG_PHY_IP101
-#include "eth_phy/phy_ip101.h"
-#define DEFAULT_ETHERNET_PHY_CONFIG phy_ip101_default_ethernet_config
-#endif
-
 static const char* TAG = "eth2wifi_demo";
 
-#define PIN_PHY_POWER CONFIG_PHY_POWER_PIN
-#define PIN_SMI_MDC   CONFIG_PHY_SMI_MDC_PIN
-#define PIN_SMI_MDIO  CONFIG_PHY_SMI_MDIO_PIN
+#define FLOW_CONTROL_QUEUE_TIMEOUT_MS (100)
+#define FLOW_CONTROL_QUEUE_LENGTH (40)
+#define FLOW_CONTROL_WIFI_SEND_TIMEOUT_MS (100)
 
 typedef struct {
-    void* buffer;
-    uint16_t len;
-    void* eb;
-} tcpip_adapter_eth_input_t;
+    void* packet;
+    uint16_t length;
+} flow_control_msg_t;
 
 static bool mac_is_set = false;
 static xQueueHandle eth_queue_handle;
 static bool wifi_is_connected = false;
 static bool ethernet_is_connected = false;
 static uint8_t eth_mac[6];
-
-#ifdef CONFIG_PHY_USE_POWER_PIN
-/* This replaces the default PHY power on/off function with one that
-   also uses a GPIO for power on/off.
-
-   If this GPIO is not connected on your device (and PHY is always powered), you can use the default PHY-specific power
-   on/off function rather than overriding with this one.
- */
-static void phy_device_power_enable_via_gpio(bool enable)
-{
-    assert(DEFAULT_ETHERNET_PHY_CONFIG.phy_power_enable);
-
-    if (!enable) {
-        /* Do the PHY-specific power_enable(false) function before powering down */
-        DEFAULT_ETHERNET_PHY_CONFIG.phy_power_enable(false);
-    }
-
-    gpio_pad_select_gpio(PIN_PHY_POWER);
-    gpio_set_direction(PIN_PHY_POWER, GPIO_MODE_OUTPUT);
-
-    if (enable == true) {
-        gpio_set_level(PIN_PHY_POWER, 1);
-        ESP_LOGD(TAG, "phy_device_power_enable(TRUE)");
-    } else {
-        gpio_set_level(PIN_PHY_POWER, 0);
-        ESP_LOGD(TAG, "power_enable(FALSE)");
-    }
-
-    // Allow the power up/down to take effect, min 300us
-    vTaskDelay(1);
-
-    if (enable) {
-        /* Run the PHY-specific power on operations now the PHY has power */
-        DEFAULT_ETHERNET_PHY_CONFIG.phy_power_enable(true);
-    }
-}
-#endif
+static esp_eth_handle_t s_eth_handle = NULL;
 
 static void ethernet2wifi_mac_status_set(bool status)
 {
@@ -103,73 +53,72 @@ static bool ethernet2wifi_mac_status_get(void)
     return mac_is_set;
 }
 
-static void eth_gpio_config_rmii(void)
+static esp_err_t pkt_eth2wifi(esp_eth_handle_t handle, uint8_t* buffer, uint32_t len)
 {
-    // RMII data pins are fixed:
-    // TXD0 = GPIO19
-    // TXD1 = GPIO22
-    // TX_EN = GPIO21
-    // RXD0 = GPIO25
-    // RXD1 = GPIO26
-    // CLK == GPIO0
-    phy_rmii_configure_data_interface_pins();
-    // MDC is GPIO 23, MDIO is GPIO 18
-    phy_rmii_smi_configure_pins(PIN_SMI_MDC, PIN_SMI_MDIO);
-}
+    esp_err_t ret = ESP_OK;
+    flow_control_msg_t msg = {
+        .packet = buffer,
+        .length = len,
+    };
 
-static esp_err_t tcpip_adapter_eth_input_sta_output(void* buffer, uint16_t len, void* eb)
-{
-    tcpip_adapter_eth_input_t msg;
-
-    msg.buffer = buffer;
-    msg.len = len;
-    msg.eb = eb;
-
-    if (xQueueSend(eth_queue_handle, &msg, portMAX_DELAY) != pdTRUE) {
-        return ESP_FAIL;
+    if (xQueueSend(eth_queue_handle, &msg, pdMS_TO_TICKS(FLOW_CONTROL_QUEUE_TIMEOUT_MS)) != pdTRUE) {
+        ESP_LOGE(TAG, "Send flow control message failed or timeout");
+        free(buffer);
+        ret = ESP_FAIL;
     }
 
-    return ESP_OK;
+    return ret;
 }
 
 static void eth_task(void* pvParameter)
 {
-    tcpip_adapter_eth_input_t msg;
-
+    flow_control_msg_t msg;
+    int res = 0;
+    uint32_t timeout = 0;
     for (;;) {
         if (xQueueReceive(eth_queue_handle, &msg, (portTickType)portMAX_DELAY) == pdTRUE) {
-            if (msg.len > 0) {
-                if (!ethernet2wifi_mac_status_get()) {
-                    memcpy(eth_mac, (uint8_t*)msg.buffer + 6, sizeof(eth_mac));
-                    ESP_ERROR_CHECK(esp_wifi_start());
+            timeout = 0;
+            if (msg.length) {
+                do {
+                    if (!ethernet2wifi_mac_status_get()) {
+                        memcpy(eth_mac, (uint8_t*)msg.packet + 6, sizeof(eth_mac));
+                        ESP_ERROR_CHECK(esp_wifi_start());
 #ifdef CONFIG_ETH_TO_STATION_MODE
-                    esp_wifi_set_mac(WIFI_IF_STA, eth_mac);
-                    esp_wifi_connect();
+                        esp_wifi_set_mac(WIFI_IF_STA, eth_mac);
+                        esp_wifi_connect();
 #else
-                    esp_wifi_set_mac(WIFI_IF_AP, eth_mac);
+                        esp_wifi_set_mac(WIFI_IF_AP,eth_mac);
 #endif
-                    ethernet2wifi_mac_status_set(true);
-                }
-
-                if (wifi_is_connected) {
+                        ethernet2wifi_mac_status_set(true);
+                    }
+                    vTaskDelay(pdMS_TO_TICKS(timeout));
+                    timeout += 2;
+                    if (wifi_is_connected) {
 #ifdef CONFIG_ETH_TO_STATION_MODE
-                    esp_wifi_internal_tx(ESP_IF_WIFI_STA, msg.buffer, msg.len - 4);
+                        res = esp_wifi_internal_tx(ESP_IF_WIFI_STA, msg.packet, msg.length);
 #else
-                    esp_wifi_internal_tx(ESP_IF_WIFI_AP, msg.buffer, msg.len - 4);
+                        res = esp_wifi_internal_tx(ESP_IF_WIFI_AP, msg.packet, msg.length);
 #endif
+                    }
+                } while (res && timeout < FLOW_CONTROL_WIFI_SEND_TIMEOUT_MS);
+                if (res != ESP_OK) {
+                    ESP_LOGE(TAG, "WiFi send packet failed: %d", res);
                 }
             }
 
-            esp_eth_free_rx_buf(msg.buffer);
+            free(msg.packet);
         }
     }
+    vTaskDelete(NULL);
 }
 
 static void initialise_wifi(void)
 {
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_wifi_init_internal(&cfg));
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+    ESP_ERROR_CHECK(tcpip_adapter_clear_default_wifi_handlers());
     ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
+
 #ifdef CONFIG_ETH_TO_STATION_MODE
     wifi_config_t wifi_config = {
         .sta = {
@@ -186,6 +135,7 @@ static void initialise_wifi(void)
             .password = CONFIG_DEMO_PASSWORD,
             .ssid_len = strlen(CONFIG_DEMO_SSID),
             .max_connection = 1,
+            .authmode = WIFI_AUTH_WPA2_PSK,
         },
     };
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
@@ -195,28 +145,43 @@ static void initialise_wifi(void)
 
 static void initialise_ethernet(void)
 {
-    eth_config_t config = DEFAULT_ETHERNET_PHY_CONFIG;
-    
-    /* Set the PHY address in the example configuration */
-    config.phy_addr = CONFIG_PHY_ADDRESS;
-    config.gpio_config = eth_gpio_config_rmii;
-    config.tcpip_input = tcpip_adapter_eth_input_sta_output;
-    config.promiscuous_enable = true;
+    eth_mac_config_t mac_config = ETH_MAC_DEFAULT_CONFIG();
+    eth_phy_config_t phy_config = ETH_PHY_DEFAULT_CONFIG();
 
-#ifdef CONFIG_PHY_USE_POWER_PIN
-    /* Replace the default 'power enable' function with an example-specific
-       one that toggles a power GPIO. */
-    config.phy_power_enable = phy_device_power_enable_via_gpio;
+    /* Set the PHY address in the example configuration */
+    phy_config.phy_addr = CONFIG_PHY_ADDRESS;
+    phy_config.reset_gpio_num = CONFIG_PHY_POWER_PIN;
+
+    mac_config.smi_mdc_gpio_num = CONFIG_PHY_SMI_MDC_PIN;
+    mac_config.smi_mdio_gpio_num = CONFIG_PHY_SMI_MDIO_PIN;
+    esp_eth_mac_t* mac = esp_eth_mac_new_esp32(&mac_config);
+    assert(mac);
+
+#if CONFIG_PHY_IP101
+    esp_eth_phy_t* phy = esp_eth_phy_new_ip101(&phy_config);
+#elif CONFIG_PHY_LAN8720
+    esp_eth_phy_t* phy = esp_eth_phy_new_lan8720(&phy_config);
+#elif CONFIG_PHY_RTL8201
+    esp_eth_phy_t* phy = esp_eth_phy_new_rtl8201(&phy_config);
+#elif CONFIG_PHY_DP83848
+    esp_eth_phy_t* phy = esp_eth_phy_new_dp83848(&phy_config);
 #endif
-    
-    esp_eth_init(&config);
-    esp_eth_enable();
+    assert(phy);
+
+    esp_eth_config_t config = ETH_DEFAULT_CONFIG(mac, phy);
+    config.stack_input = pkt_eth2wifi;
+    ESP_ERROR_CHECK(esp_eth_driver_install(&config, &s_eth_handle));
+    esp_eth_ioctl(s_eth_handle, ETH_CMD_S_PROMISCUOUS, (void*)true);
+    ESP_ERROR_CHECK(esp_eth_start(s_eth_handle));
 }
 
 static esp_err_t tcpip_adapter_sta_input_eth_output(void* buffer, uint16_t len, void* eb)
 {
     if (ethernet_is_connected) {
-        esp_eth_tx(buffer, len);
+        if (esp_eth_transmit(s_eth_handle, buffer, len) != ESP_OK) {
+            ESP_LOGE(TAG, "Ethernet send packet failed");
+        }
+        //ESP_LOG_BUFFER_HEX("output", buffer,len);
     }
 
     esp_wifi_internal_free_rx_buffer(eb);
@@ -226,84 +191,103 @@ static esp_err_t tcpip_adapter_sta_input_eth_output(void* buffer, uint16_t len, 
 static esp_err_t tcpip_adapter_ap_input_eth_output(void* buffer, uint16_t len, void* eb)
 {
     if (ethernet_is_connected) {
-        esp_eth_tx(buffer, len);
+        if (esp_eth_transmit(s_eth_handle, buffer, len) != ESP_OK) {
+            ESP_LOGE(TAG, "Ethernet send packet failed");
+        }
     }
 
     esp_wifi_internal_free_rx_buffer(eb);
     return ESP_OK;
 }
 
-static esp_err_t event_handler(void* ctx, system_event_t* event)
+static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
 {
-    switch (event->event_id) {
-        case SYSTEM_EVENT_STA_START:
-            printf("SYSTEM_EVENT_STA_START\r\n");
+    if (event_base == WIFI_EVENT) {
+        switch (event_id) {
+        case WIFI_EVENT_STA_START:
+            printf("WIFI_EVENT_STA_START\n");
             break;
-
-        case SYSTEM_EVENT_STA_CONNECTED:
-            printf("SYSTEM_EVENT_STA_CONNECTED\r\n");
+        case WIFI_EVENT_STA_CONNECTED:
+            printf("WIFI_EVENT_STA_CONNECTED\n");
             wifi_is_connected = true;
-
             esp_wifi_internal_reg_rxcb(ESP_IF_WIFI_STA, (wifi_rxcb_t)tcpip_adapter_sta_input_eth_output);
             break;
-
-        case SYSTEM_EVENT_STA_GOT_IP:
-            printf("SYSTEM_EVENT_STA_GOT_IP\r\n");
-            break;
-
-        case SYSTEM_EVENT_STA_DISCONNECTED:
-            printf("SlYSTEM_EVENT_STA_DISCONNECTED\r\n");
+        case WIFI_EVENT_STA_DISCONNECTED:
+            printf("WIFI_EVENT_STA_DISCONNECTED\n");
             wifi_is_connected = false;
             esp_wifi_internal_reg_rxcb(ESP_IF_WIFI_STA, NULL);
             esp_wifi_connect();
             break;
-
-        case SYSTEM_EVENT_AP_STACONNECTED:
-            printf("SYSTEM_EVENT_AP_STACONNECTED\r\n");
+        case WIFI_EVENT_AP_STACONNECTED:
+            printf("WIFI_EVENT_AP_STACONNECTED\n");
             wifi_is_connected = true;
-
             esp_wifi_internal_reg_rxcb(ESP_IF_WIFI_AP, (wifi_rxcb_t)tcpip_adapter_ap_input_eth_output);
             break;
-
-        case SYSTEM_EVENT_AP_STADISCONNECTED:
-            printf("SYSTEM_EVENT_AP_STADISCONNECTED\r\n");
+        case WIFI_EVENT_AP_STADISCONNECTED:
+            printf("WIFI_EVENT_AP_STADISCONNECTED\n");
             wifi_is_connected = false;
             esp_wifi_internal_reg_rxcb(ESP_IF_WIFI_AP, NULL);
             break;
-
-        case SYSTEM_EVENT_ETH_CONNECTED:
-            printf("SYSTEM_EVENT_ETH_CONNECTED\r\n");
-            ethernet_is_connected = true;
-            break;
-
-        case SYSTEM_EVENT_ETH_DISCONNECTED:
-            printf("SYSTEM_EVENT_ETH_DISCONNECTED\r\n");
-            ethernet2wifi_mac_status_set(false);
-            ethernet_is_connected = false;
-            break;
-
         default:
             break;
+        }
+    } else if (event_base == ETH_EVENT) {
+        switch (event_id) {
+        case ETHERNET_EVENT_CONNECTED:
+            printf("ETHERNET_EVENT_CONNECTED\n");
+            ethernet_is_connected = true;
+            esp_eth_ioctl(s_eth_handle, ETH_CMD_G_MAC_ADDR, eth_mac);
+            //#ifdef CONFIG_ETH_TO_STATION_MODE
+            //            esp_wifi_set_mac(WIFI_IF_STA, eth_mac);
+            //            ESP_LOGI(TAG, "mac: " MACSTR, MAC2STR(eth_mac));
+            //#else
+            //            esp_wifi_set_mac(WIFI_IF_AP, eth_mac);
+            //#endif
+            //            ESP_ERROR_CHECK(esp_wifi_start());
+            //#ifdef CONFIG_ETH_TO_STATION_MODE
+            //            ESP_ERROR_CHECK(esp_wifi_connect());
+            //#endif
+            break;
+        case ETHERNET_EVENT_DISCONNECTED:
+            printf("ETHERNET_EVENT_DISCONNECTED\n");
+            ethernet2wifi_mac_status_set(false);
+            ethernet_is_connected = false;
+            ESP_ERROR_CHECK(esp_wifi_stop());
+            break;
+        default:
+            break;
+        }
+    } else if (event_base == IP_EVENT) {
+        switch (event_id) {
+        case IP_EVENT_STA_GOT_IP:
+            printf("IP_EVENT_STA_GOT_IP\n");
+            break;
+        default:
+            break;
+        }
+    } else {
+        ESP_LOGE(TAG, "Unknow event %s", event_base);
     }
-
-    return ESP_OK;
 }
 
 void app_main()
 {
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-        ESP_ERROR_CHECK( nvs_flash_erase() );
+        ESP_ERROR_CHECK(nvs_flash_erase());
         ret = nvs_flash_init();
     }
-    ESP_ERROR_CHECK( ret );
+    ESP_ERROR_CHECK(ret);
 
     tcpip_adapter_init();
-    
-    eth_queue_handle = xQueueCreate(CONFIG_DMA_RX_BUF_NUM, sizeof(tcpip_adapter_eth_input_t));
+
+    eth_queue_handle = xQueueCreate(FLOW_CONTROL_QUEUE_LENGTH, sizeof(flow_control_msg_t));
     xTaskCreate(eth_task, "eth_task", 2048, NULL, (tskIDLE_PRIORITY + 2), NULL);
-    
-    esp_event_loop_init(event_handler, NULL);
+
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    ESP_ERROR_CHECK(esp_event_handler_register(ETH_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
 
     initialise_ethernet();
 
