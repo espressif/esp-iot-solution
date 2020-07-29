@@ -1,57 +1,54 @@
 stages:
   - build
 
+variables:
+  IOT_SOLUTION_PATH: "$CI_PROJECT_DIR"
+
 before_script:
-  - export PATH="/opt/xtensa-esp32-elf/bin:$PATH"
-  - export PATH="/opt/esp32ulp-elf-binutils/bin:$PATH"
-  - export PATH="$CI_PROJECT_DIR/submodule/esp-idf/tools:$PATH"
+  # add gitlab ssh key
+#   - ssh-keygen -f "/home/gitlab-runner/.ssh/known_hosts" -R [gitlab.espressif.cn]:27227
   - mkdir -p ~/.ssh
   - chmod 700 ~/.ssh
   - echo -n $GITLAB_KEY > ~/.ssh/id_rsa_base64
   - base64 --decode --ignore-garbage ~/.ssh/id_rsa_base64 > ~/.ssh/id_rsa
   - chmod 600 ~/.ssh/id_rsa
   - echo -e "Host gitlab.espressif.cn\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
-  - git submodule update -f --init --recursive
+  - git --version
+  - git submodule update --init --recursive
 
-variables:
-  IDF_PATH: "$CI_PROJECT_DIR/submodule/esp-idf"
-  IOT_SOLUTION_PATH: "$CI_PROJECT_DIR"
-
-build:
+.build_template: &build_template
   stage: build
+  image: espressif/idf:release-v4.0
   tags:
-    - iot
-  image: $CI_DOCKER_REGISTRY/esp32-ci-env
+    - build
+  variables:
+    BATCH_BUILD: "1"
+    V: "0"
+
+.build_examples_template: &build_examples_template
+  <<: *build_template
+  artifacts:
+    when: always
+    paths:
+      - $BUILD_PATH/*/*/build/*.bin
+      - $BUILD_PATH/*/*/build/*.elf
+      - $BUILD_PATH/*/*/build/*.map
+      - $BUILD_PATH/*/*/build/download.config
+      - $BUILD_PATH/*/*/build/bootloader/*.bin
+      - $LOG_PATH
+    expire_in: 1 week
+  variables:
+    IDF_CI_BUILD: "1"
+    LOG_PATH: "$CI_PROJECT_DIR/log_examples"
+    BUILD_PATH: "$CI_PROJECT_DIR/build_examples"
   script:
-    - echo "set -e" >> _ci_build.sh
-    - echo "set -u" >> _ci_build.sh
-    - echo "project_list=( \\" >> _ci_build.sh
-    - echo "examples/check_pedestrian_flow \\" >> _ci_build.sh
-    - echo "examples/empty_project \\" >> _ci_build.sh
-    - echo "examples/eth2wifi \\" >> _ci_build.sh
-    - echo "examples/lowpower_evb \\" >> _ci_build.sh
-    - echo "examples/oled_screen_module \\" >> _ci_build.sh
-    - echo "examples/touch_pad_evb \\" >> _ci_build.sh
-    - echo "examples/ulp_examples/ulp_adc \\" >> _ci_build.sh
-    - echo "examples/ulp_examples/ulp_detect_brownout \\" >> _ci_build.sh
-    - echo "examples/ulp_examples/ulp_hall_sensor \\" >> _ci_build.sh
-    - echo "examples/ulp_examples/ulp_i2c_bitbang \\" >> _ci_build.sh
-    - echo "examples/ulp_examples/ulp_rtc_gpio \\" >> _ci_build.sh
-    - echo "examples/ulp_examples/ulp_send_interrupt \\" >> _ci_build.sh
-    - echo "examples/ulp_examples/ulp_spi \\" >> _ci_build.sh
-    - echo "examples/ulp_examples/ulp_tsens \\" >> _ci_build.sh
-    - echo "examples/ulp_examples/ulp_watering_device \\" >> _ci_build.sh
-    - echo ")" >> _ci_build.sh
-    - echo "old_path="$PWD"" >> _ci_build.sh
-    - echo "for dir in \${project_list[@]};" >> _ci_build.sh
-    - echo "do" >> _ci_build.sh
-    - echo "    cd \$dir" >> _ci_build.sh
-    - echo "    make defconfig && make -j8" >> _ci_build.sh
-    - echo "    cd \$old_path" >> _ci_build.sh
-    - echo "done" >> _ci_build.sh
-    - cat _ci_build.sh
-    - bash _ci_build.sh
-    - cd tools/unit-test-app
-    - make defconfig && make IOT_TEST_ALL=1 -j8
+    # it's not possible to build 100% out-of-tree and have the "artifacts"
+    # mechanism work, but this is the next best thing
+    - rm -rf ${BUILD_PATH}
+    - mkdir ${BUILD_PATH}
+    - mkdir -p ${LOG_PATH}
+    # build some of examples
+    - ${IOT_SOLUTION_PATH}/tools/ci/build_examples.sh "${CI_JOB_NAME}"
 
-
+build_examples_00:
+  <<: *build_examples_template
