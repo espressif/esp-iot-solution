@@ -167,7 +167,7 @@ static void wifi_connect_success()
     wifi_connect_timer_delete();
 
     lv_label_set_text(connectedap, (char *)ap_list[current_ap].ssid);
-    char data[15] = {0};
+    char data[64] = {0};
     sprintf(data, "%d", ap_list[current_ap].rssi);
     lv_label_set_text(connectedaprssi, data);
     sprintf(data, "%02x%02x%02x%02x%02x%02x", current_apbssid[0], current_apbssid[1], current_apbssid[2], current_apbssid[3], current_apbssid[4], current_apbssid[5]);

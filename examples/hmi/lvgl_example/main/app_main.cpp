@@ -92,7 +92,7 @@ static void littlevgl_demo(void)
     lv_obj_align(gauge, NULL, LV_ALIGN_CENTER, 0, 0);
     lv_gauge_set_value(gauge, 0, 50);
 
-    char name[10];
+    char name[16];
     int i;
     lv_obj_t *labels[3];
     lv_obj_t *switches[3];

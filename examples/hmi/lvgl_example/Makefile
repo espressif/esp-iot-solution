@@ -8,5 +8,12 @@ PROJECT_NAME := lvgl_example
 #If IOT_SOLUTION_PATH is not defined, use relative path as default value
 IOT_SOLUTION_PATH ?= $(abspath $(shell pwd)/../../../)
  
-include $(IOT_SOLUTION_PATH)/Makefile
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/general/param
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/spi_devices
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/hmi/lvgl_gui
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/hmi/gdrivers
+
+EXTRA_COMPONENT_DIRS += $(IOT_COMPONENT_DIRS)
+
 include $(IDF_PATH)/make/project.mk
