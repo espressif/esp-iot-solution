@@ -12,5 +12,10 @@ ADF_VER := $(shell cd ${ADF_PATH} && git describe --always --tags --dirty)
 EXTRA_COMPONENT_DIRS += $(ADF_PATH)/components/
 CPPFLAGS := -D ADF_VER=\"$(ADF_VER)\"
 
-include $(IOT_SOLUTION_PATH)/Makefile
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/general/param
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/spi_devices
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/hmi/lvgl_gui
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/hmi/gdrivers
+
 include $(IDF_PATH)/make/project.mk
