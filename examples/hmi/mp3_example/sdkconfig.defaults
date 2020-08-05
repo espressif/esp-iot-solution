@@ -3,7 +3,7 @@
 # Espressif IoT Development Framework Configuration
 #
 
-CONFIG_IOT_PARAM_ENABLE=y
+
 
 #
 # SPI devices

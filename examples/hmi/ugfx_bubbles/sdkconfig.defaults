@@ -10,19 +10,11 @@ CONFIG_TOOLPREFIX="xtensa-esp32-elf-"
 CONFIG_PYTHON="python"
 CONFIG_MAKE_WARN_UNDEFINED_VARIABLES=y
 
-#
-# IoT Solution settings
-#
-CONFIG_IOT_SOLUTION_EMBED=y
 
 #
 # IoT Components Management
 #
 
-#
-# Status LED
-#
-CONFIG_IOT_PARAM_ENABLE=y
 
 #
 # I2C devices

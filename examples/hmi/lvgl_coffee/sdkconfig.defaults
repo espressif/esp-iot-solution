@@ -1,8 +1,7 @@
 #
 # IoT Solution settings
 #
-CONFIG_IOT_SOLUTION_EMBED=y
-CONFIG_IOT_PARAM_ENABLE=y
+
 
 #
 # SPI devices
