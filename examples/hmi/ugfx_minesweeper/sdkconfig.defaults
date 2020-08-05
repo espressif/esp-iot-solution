@@ -3,15 +3,7 @@
 # Espressif IoT Development Framework Configuration
 #
 
-#
-# IoT Solution settings
-#
-CONFIG_IOT_SOLUTION_EMBED=y
 
-#
-# Status LED
-#
-CONFIG_IOT_PARAM_ENABLE=y
 
 #
 # SPI devices
