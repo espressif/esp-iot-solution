@@ -1,8 +1,4 @@
-
-set(COMPONENT_SRCS "gui.c"
-                    "main.c"
-                    "ugfx_keyboard.c")
-
-set(COMPONENT_ADD_INCLUDEDIRS ".")
-
-register_component()
+idf_component_register(SRCS "gui.c"
+                            "main.c"
+                            "ugfx_keyboard.c"
+                        INCLUDE_DIRS ".")
