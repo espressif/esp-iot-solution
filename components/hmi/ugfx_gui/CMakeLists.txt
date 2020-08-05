@@ -26,13 +26,6 @@ else()
                 "ugfx/src/gwin")
 
 
-
-    # if(CONFIG_UGFX_USE_CUSTOM_DRIVER)    
-    #     set(COMPONENT_REQUIRES $(call dequote,$(CONFIG_UGFX_CUSTOM_DRIVER_COMPONENT_NAME)))
-    # else()
-    #     set(COMPONENT_REQUIRES gdrivers)
-    # endif()
-
     set(priv_incdirs ${COMPONENT_PRIV_INCLUDEDIRS} ${CMAKE_SOURCE_DIR}/${CONFIG_UGFX_PROJ_RESOURCE_PATH})
 
 endif()
@@ -43,4 +36,4 @@ idf_component_register(SRCS "${srcs}"
                     PRIV_INCLUDE_DIRS "${priv_incdirs}"
                     REQUIRES gdrivers param)
 
-target_compile_options(${COMPONENT_LIB} PRIVATE -Wno-error=duplicate-decl-specifier -Wno-error=misleading-indentation)
+target_compile_options(${COMPONENT_LIB} INTERFACE -Wno-error=duplicate-decl-specifier -Wno-error=misleading-indentation)

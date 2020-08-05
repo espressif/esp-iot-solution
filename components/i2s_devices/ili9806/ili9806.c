@@ -131,7 +131,7 @@ void iot_ili9806_put_char(ili9806_handle_t ili9806_handle, uint8_t *str, uint16_
 void inline iot_ili9806_asc8x16_to_men(ili9806_handle_t ili9806_handle, char str, uint16_t x, uint16_t y, uint16_t wcolor, uint16_t bcolor)
 {
     uint16_t *pbuf;
-    uint8_t *pdata = (uint8_t*)font_asc8x16 + (str - ' ') * 16;
+    uint8_t *pdata = get_font_asc8x16() + (str - ' ') * 16;
     ili9806_dev_t *device = (ili9806_dev_t *)ili9806_handle;
     for (int i = 0; i < 16; i++) {
         pbuf = device->lcd_buf + (x + (i + y) * device->x_size);

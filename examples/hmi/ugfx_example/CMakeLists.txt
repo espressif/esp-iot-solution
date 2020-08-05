@@ -13,6 +13,7 @@ set(EXTRA_COMPONENT_DIRS
                         $ENV{IOT_SOLUTION_PATH}/components
                         $ENV{IOT_SOLUTION_PATH}/components/general/param
                         $ENV{IOT_SOLUTION_PATH}/components/spi_devices
+                        $ENV{IOT_SOLUTION_PATH}/components/hmi/lvgl_gui
                         $ENV{IOT_SOLUTION_PATH}/components/hmi/ugfx_gui
                         $ENV{IOT_SOLUTION_PATH}/components/hmi/gdrivers
                         $ENV{IOT_SOLUTION_PATH}/components/i2c_devices/i2c_bus

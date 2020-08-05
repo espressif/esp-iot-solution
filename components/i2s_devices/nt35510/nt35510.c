@@ -158,7 +158,7 @@ void iot_nt35510_put_char(nt35510_handle_t nt35510_handle, uint8_t *str, uint16_
 void iot_nt35510_asc8x16_to_men(nt35510_handle_t nt35510_handle, char str, uint16_t x, uint16_t y, uint16_t wcolor, uint16_t bcolor)
 {
     uint16_t *pbuf;
-    uint8_t *pdata = (uint8_t *)(font_asc8x16 + (str - ' ') * 16);
+    uint8_t *pdata = (uint8_t *)(get_font_asc8x16() + (str - ' ') * 16);
     nt35510_dev_t *device = (nt35510_dev_t *)nt35510_handle;
     for (int i = 0; i < 16; i++) {
         pbuf = device->lcd_buf + (x + (i + y) * device->x_size);

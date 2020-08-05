@@ -9,7 +9,8 @@ ifdef CONFIG_UGFX_GUI_ENABLE
 
         # gdisp/framebuffer/gdisp_lld_framebuffer.c
         CFLAGS += -Wno-error=duplicate-decl-specifier \
-	                    -Wno-error=misleading-indentation
+                    -Wno-error=misleading-indentation \
+                    -Wno-discarded-qualifiers
         COMPONENT_SRCDIRS := 
         COMPONENT_ADD_INCLUDEDIRS := . \
             ./include \

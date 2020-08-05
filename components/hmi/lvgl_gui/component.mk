@@ -8,7 +8,7 @@ COMPONENT_ADD_INCLUDEDIRS :=
 COMPONENT_SRCDIRS := 
 else
 LVGLLIB = lvgl
-
+CFLAGS += -Wno-cast-function-type -Wno-error=narrowing
 COMPONENT_SRCDIRS := . \
     ./include \
     $(LVGLLIB) \
@@ -21,17 +21,6 @@ COMPONENT_SRCDIRS := . \
     $(LVGLLIB)/lv_themes \
 
 COMPONENT_ADD_INCLUDEDIRS := . \
-    ./include \
-    $(LVGLLIB) \
-    $(LVGLLIB)/lv_core \
-    $(LVGLLIB)/lv_draw \
-    $(LVGLLIB)/lv_hal \
-    $(LVGLLIB)/lv_misc \
-    $(LVGLLIB)/lv_fonts \
-    $(LVGLLIB)/lv_objx \
-    $(LVGLLIB)/lv_themes \
-
-COMPONENT_PRIV_INCLUDEDIRS +=  . \
     ./include \
     $(LVGLLIB) \
     $(LVGLLIB)/lv_core \
