@@ -200,6 +200,6 @@ endif()
 
 idf_component_register(SRCS "${srcs}"
                         INCLUDE_DIRS "${incs}"
-                        REQUIRES ugfx_gui nt35510 ssd1306 lcd xpt2046 ft5x06 touchpad)
+                        REQUIRES ugfx_gui nt35510 lcd_common ssd1306 lcd xpt2046 ft5x06 touchpad)
 
 target_compile_options(${COMPONENT_LIB} PRIVATE -Wno-error=duplicate-decl-specifier -Wno-error=misleading-indentation)

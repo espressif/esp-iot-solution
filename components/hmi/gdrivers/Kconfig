@@ -373,16 +373,16 @@ menu "HMI Components"
             menu "NT35510 Screen Pin Configuration"
                 depends on UGFX_DRIVER_NT35510
 
-                #choice UGFX_LCD_BITE_MODE_CHOOSE
-                #    prompt "uGFX LCD Choose Bit Mode"
-                #        default UGFX_LCD_BIT_MODE_16BIT
-                #
-                #    config UGFX_LCD_BIT_MODE_16BIT
-                #        bool "uGFX LCD 16 BIT MODE"
-                #    config UGFX_LCD_BIT_MODE_8BIT
-                #        bool "uGFX LCD 8 BIT MODE"
-                #
-                #endchoice
+                choice UGFX_LCD_BITE_MODE_CHOOSE
+                    prompt "uGFX LCD Choose Bit Mode"
+                        default UGFX_LCD_BIT_MODE_16BIT
+                
+                    config UGFX_LCD_BIT_MODE_16BIT
+                        bool "uGFX LCD 16 BIT MODE"
+                    config UGFX_LCD_BIT_MODE_8BIT
+                        bool "uGFX LCD 8 BIT MODE"
+                
+                endchoice
 
                 choice UGFX_LCD_I2S_SELECT
                     prompt "Select I2S Port"
@@ -441,42 +441,42 @@ menu "HMI Components"
                     range 0 39
                     default 27
                 config UGFX_LCD_D8_GPIO
-                    depends on BIT_MODE_16BIT
+                    depends on UGFX_LCD_BIT_MODE_16BIT
                     int "uGFX LCD D8 GPIO"
                     range 0 39
                     default 25
                 config UGFX_LCD_D9_GPIO
-                    depends on BIT_MODE_16BIT
+                    depends on UGFX_LCD_BIT_MODE_16BIT
                     int "uGFX LCD D9 GPIO"
                     range 0 39
                     default 26
                 config UGFX_LCD_D10_GPIO
-                    depends on BIT_MODE_16BIT
+                    depends on UGFX_LCD_BIT_MODE_16BIT
                     int "uGFX LCD D10 GPIO"
                     range 0 39
                     default 12
                 config UGFX_LCD_D11_GPIO
-                    depends on BIT_MODE_16BIT
+                    depends on UGFX_LCD_BIT_MODE_16BIT
                     int "uGFX LCD D11 GPIO"
                     range 0 39
                     default 13
                 config UGFX_LCD_D12_GPIO
-                    depends on BIT_MODE_16BIT
+                    depends on UGFX_LCD_BIT_MODE_16BIT
                     int "uGFX LCD D12 GPIO"
                     range 0 39
                     default 14
                 config UGFX_LCD_D13_GPIO
-                    depends on BIT_MODE_16BIT
+                    depends on UGFX_LCD_BIT_MODE_16BIT
                     int "uGFX LCD D13 GPIO"
                     range 0 39
                     default 15
                 config UGFX_LCD_D14_GPIO
-                    depends on BIT_MODE_16BIT
+                    depends on UGFX_LCD_BIT_MODE_16BIT
                     int "uGFX LCD D14 GPIO"
                     range 0 39
                     default 2
                 config UGFX_LCD_D15_GPIO
-                    depends on BIT_MODE_16BIT
+                    depends on UGFX_LCD_BIT_MODE_16BIT
                     int "uGFX LCD D15 GPIO"
                     range 0 39
                     default 4
