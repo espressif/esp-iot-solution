@@ -6,7 +6,6 @@ variables:
 
 before_script:
   # add gitlab ssh key
-#   - ssh-keygen -f "/home/gitlab-runner/.ssh/known_hosts" -R [gitlab.espressif.cn]:27227
   - mkdir -p ~/.ssh
   - chmod 700 ~/.ssh
   - echo -n $GITLAB_KEY > ~/.ssh/id_rsa_base64

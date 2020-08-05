@@ -63,7 +63,7 @@ FAILED_EXAMPLES=""
 RESULT_ISSUES=22  # magic number result code for issues found
 LOG_SUSPECTED=${LOG_PATH}/common_log.txt
 touch ${LOG_SUSPECTED}
-LIST_OF_EXAMPLES=($(find ./examples -path './examples/hmi' -prune -o -type f -name Makefile -print | sort))
+LIST_OF_EXAMPLES=($(find ./examples -type f -name Makefile | sort))
 NUM_OF_EXAMPLES=${#LIST_OF_EXAMPLES[@]}  # count number of examples
 [ -z ${NUM_OF_EXAMPLES} ] && die "NUM_OF_EXAMPLES is bad"
 
