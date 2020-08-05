@@ -8,5 +8,10 @@ PROJECT_NAME := ugfx_bubbles
 #If IOT_SOLUTION_PATH is not defined, use relative path as default value
 IOT_SOLUTION_PATH ?= $(abspath $(shell pwd)/../../../)
  
-include $(IOT_SOLUTION_PATH)/Makefile
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/general/param
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/spi_devices
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/hmi/ugfx_gui
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/hmi/gdrivers
+
 include $(IDF_PATH)/make/project.mk

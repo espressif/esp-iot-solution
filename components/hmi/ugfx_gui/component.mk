@@ -14,10 +14,10 @@ COMPONENT_ADD_INCLUDEDIRS := .\
     $(UGFXLIB) \
     $(UGFXLIB)/src \
 
-COMPONENT_PRIV_INCLUDEDIRS +=  .\
-    ./include \
-    $(UGFXLIB) \
-    $(UGFXLIB)/src \
+# COMPONENT_PRIV_INCLUDEDIRS +=  .\
+#     ./include \
+#     $(UGFXLIB) \
+#     $(UGFXLIB)/src \
 
 ifdef CONFIG_UGFX_USE_CUSTOM_DRIVER
 COMPONENT_DEPENDS += $(call dequote,$(CONFIG_UGFX_CUSTOM_DRIVER_COMPONENT_NAME))
@@ -26,4 +26,7 @@ COMPONENT_DEPENDS += gdrivers
 endif
 
 COMPONENT_EXTRA_INCLUDES += $(PROJECT_PATH)/$(call dequote,$(CONFIG_UGFX_PROJ_RESOURCE_PATH))  
+
+CFLAGS += -Wno-error=duplicate-decl-specifier \
+            -Wno-error=misleading-indentation
 endif  #CONFIG_UGFX_GUI_ENABLE

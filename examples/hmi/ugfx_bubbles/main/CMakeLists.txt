@@ -1,7 +1,4 @@
-
-set(COMPONENT_SRCS "main.c"
-                    "ugfx_bubble.c")
-
-set(COMPONENT_ADD_INCLUDEDIRS ".")
-
-register_component()
+idf_component_register(SRCS "main.c"
+                            "ugfx_bubble.c"
+                        INCLUDE_DIRS "."
+                        PRIV_REQUIRES  )
