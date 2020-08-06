@@ -1,10 +1,11 @@
 # ESP32 基于 Wi-Fi Sniffer 的人流量检测及 OneNET 数据云端统计
- 
+
 [ESP32](http://espressif.com/zh-hans/products/hardware/esp32/overview) 是一颗低功耗、高集成度、性能稳定的 Wi-Fi/BLE 芯片，是物联网开发的首选设备。人流量监控在安保，商场，旅游等诸多行业具有重要作用。我们利用 ESP32 Wi-Fi 的混杂接收模式，接受全部可以获得的空中包，然后对其解析，筛选得到周围无线设备发送的 Probe Request 帧，通过对 Probe Request 帧的来源和强度进行分析和汇总，从而计算出周围一定区域内的设备设备使用量（人流量）。  
 
 在得到基本的人流量数据后，ESP32 设备通过 MQTT 将数据发送至 OneNET 物联网平台，得到最终的人流量变化曲线图，可以方便用户从云端进行数据处理和监控。
 
 ## 1. 开发环境搭建
+
 关于 ESP32 开发，比如编译，烧录等，请参考[乐鑫官方文档](http://espressif.com/zh-hans/support/download/overview)和 [ESP32 快速入门指南](https://docs.espressif.com/projects/esp-idf/en/stable/get-started/index.html)。
 
 ### 1.1 ESP32 硬件准备
@@ -15,7 +16,7 @@
 
 - PC，如果不是 Linux 系统，可参考 [ESP32 快速入门指南](https://docs.espressif.com/projects/esp-idf/en/stable/get-started/index.html)搭建虚拟机和编译器环境。
 
-- 串口线
+- USB 线
 
 
 ### 1.2 OneNet 平台准备
@@ -24,108 +25,97 @@
 
 #### 1.2.2 登录账号，创建产品。
 
-在登录后的页面，点击右上角的**开发者中心**，创建物联网产品。
+在登录后的页面，点击右上角的 `开发者中心` ，选择` 全部产品 -> 多协议接入` 。
 
-<img src="../../documents/_static/check_pedestrian_flow/创建产品.png" width = "700" alt="esp32_station_current" align=center />
+![protocol](../../documents/_static/check_pedestrian_flow/protocol.png)
 
-填写产品信息，技术参数建议按照以下方式填写：
+然后选择 `添加产品` 后填入一些产品信息，如下示例：
 
-- 操作系统选择“其他”，填写 freertos。
-- 网络运营商选择“移动”。
-- 设备接入方式选择“公开协议”。
-- 联网方式选择 “wifi”。
-- 模组选择“其他”。
-- 设备接入协议选择 “MQTT”。
+![add-product](../../documents/_static/check_pedestrian_flow/add-product.png)
 
-点击“确定”按钮，完成产品创建。   
+设备接入协议应选择 “MQTT（旧版）”，完成后点击 `确定` 按钮，完成产品创建，同时将产生一个**产品 ID**, 在后面的程序中将用到。
 
-<img src="../../documents/_static/check_pedestrian_flow/选区_011.png" width = "500" alt="esp32_station_current" align=center />
-
-同时将产生一个**产品 ID**, 在后面的程序交互中将用到。
-
-<img src="../../documents/_static/check_pedestrian_flow/选区_013.png" width = "700" alt="esp32_station_current" align=center />
+![product-id](../../documents/_static/check_pedestrian_flow/product-id.png)
 
 #### 1.2.3 产品下面创建设备
 
-点击产品进入，点击添加设备。
+从左侧菜单进入 `设备列表` ，然后点击 `添加设备` ，填入设备信息。
 
-<img src="../../documents/_static/check_pedestrian_flow/选区_012.png" width = "500" alt="esp32_station_current" align=center />
+![add-device](../../documents/_static/check_pedestrian_flow/add-device.png)
 
-**鉴权信息**会在后面的程序交互中用到。
-创建完设备后，将生成**设备 ID**，会在以后的程序交互中用到。
+创建完设备后，将生成设备 ID
 
-<img src="../../documents/_static/check_pedestrian_flow/选区_014.png" width = "700" alt="esp32_station_current" align=center />
+![device-id](../../documents/_static/check_pedestrian_flow/device-id.png)
+
+这里的 **设备 ID** 和上面填入的 **鉴权信息** 一起会在后面的程序中用到。
 
 #### 1.2.4 为设备创建应用
 
-设备的应用可以对设备上传的数据进行统计和展示，点击创建应用，选择独立应用，选择产品及名称，点击创建。  
+到这里就已经足够让设备连上 OneNET， 接下来是为了更好的数据展示效果，设备的应用可以对设备上传的数据进行统计和展示。同样从左侧菜单进入 `应用管理` 然后点击 ”添加应用“
 
-<img src="../../documents/_static/check_pedestrian_flow/选区_015.png" width = "500" alt="esp32_station_current" align=center />
+![add-application](../../documents/_static/check_pedestrian_flow/add-application.png)
+
+添加完后，可以在 `应用管理` 页面看到已创建的应用。
 
 #### 1.2.5 进入创建的应用
-因为我们需要展示人流量的变化数据，因此在这里选择“折线图”，然后对坐标轴进行设置，得到一个大体的应用框架。
 
-<img src="../../documents/_static/check_pedestrian_flow/选区_016.png" width = "700" alt="esp32_station_current" align=center />
+点击应用的图标，进入应用，然后点击 `编辑应用` 。
+
+![application-configure](../../documents/_static/check_pedestrian_flow/application-configure.png)
+
+因为我们需要展示人流量的变化数据，因此在这里选择“折线图”，选择好数据流，然后在 `样式` 中对坐标轴进行设置，得到一个大体的应用框架。
 
 至此，平台端工作完毕。
 
 ### 1.3 设备端环境搭建
 
-#### 1.3.1 ESP-IDF SDK 获取
-此 SDK 可以保证 ESP32 正常启动，良好工作。
+#### 1.3.1 获取 Demo 代码
 
-```
-$ git clone https://github.com/espressif/esp-idf.git
-$ cd esp-idf
-$ git submodule update --init
-```
+相关的代码被存放在了 esp-iot-solution 仓库中，运行下面的命令克隆到本地
 
-#### 1.3.2 ESP-IDF 编译器获取
-
-根据官方的说明，不同的平台下载对应的编译器。
-
-编译器下载: [https://docs.espressif.com/projects/esp-idf/en/stable/get-started/index.html](https://docs.espressif.com/projects/esp-idf/en/stable/get-started/index.html)
-
-#### 1.3.3 OneNet 对接 Demo 获取
-
-```
-$ git clone --recursive https://github.com/espressif/esp-iot-solution.git
-$ git submodule update --init
+```shell
+git clone --recursive https://github.com/espressif/esp-iot-solution.git
+git submodule update --init
 ```
 
-#### 1.3.4 导出 ESP-IDF 和 编译器路径
+我们需要的示例代码在 `esp-iot-solution/examples/check_pedestrian_flow` 位置
 
-根据自己的目录结构导出 esp-idf 和 xtensa 编译器，这样才能编译整个 demo, 如:
+#### 1.3.2 设置环境变量
 
-```
-$ cd ESP32_Check_Pedestrian-flow
-$ export IDF_PATH=~/esp/esp-idf
-$ export PATH=/opt/xtensa-esp32-elf/bin/:$PATH
-```
+执行下面命令设置环境变量：
 
-#### 1.3.5 make menuconfig 配置
-
-- Serial flasher config - Default serial port // 配置烧写串口
-- Demo Configuration - WiFi Configuration - WiFi SSID // 配置连接路由器/AP 的 SSID
-- Demo Configuration - WiFi Configuration - WiFi Password // 配置路由器/AP 的密码
-- Demo Configuration - OneNET Configuration - ONENET_DEVICE_ID // mqtt client id
-- Demo Configuration - OneNET Configuration - ONENET_PROJECT_ID // mqtt username
-- Demo Configuration - OneNET Configuration - ONENET_AUTH_INFO // mqtt password
-- Demo Configuration - OneNET Configuration - ONENET_DATA_STREAM // 自定义数据流名称
-
-#### 1.3.6 编译 && 运行
-
-编译成功后，会自动烧写程序，同时自动运行程序。
-
-Make:
-```
-$ make flash monitor
+```shell
+export IDF_PATH=~/esp/esp-idf
+. ~/esp/esp-idf/export.sh
 ```
 
-CMake:
+注意命令中需要换成自己的 esp-idf 路径，另外本次实验中使用的 esp-idf 是 release/v3.3 版本。 
+
+#### 1.3.3 make menuconfig 配置
+
+执行
+
+```shell
+cd examples/check_pedestrian_flow
+make menuconfig
 ```
-$ idf.py flash monitor
+
+打开配置菜单，在 `Demo Configuration > WiFi Configuration` 中配置路由器的信息，在 `Demo Configuration > OneNET Configuration` 中配置 OneNET 相关参数：
+
+- ONENET_DEVICE_ID： 设备ID
+- ONENET_PROJECT_ID ： 产品ID
+- ONENET_AUTH_INFO ： 鉴权信息
+- ONENET_DATA_STREAM ： 数据流名称，可自定义
+
+#### 1.3.4 编译 && 运行
+
+执行
+
+```shell
+make flash monitor
 ```
+
+编译成功后，会自动烧写并运行程序。
 
 ## 2. 结果展示
 
@@ -133,7 +123,6 @@ $ idf.py flash monitor
 
 ```
 ... // 一些启动信息
-
 I (136) wifi: wifi firmware version: 59e5fab
 I (136) wifi: config NVS flash: enabled
 I (136) wifi: config nano formating: disabled
@@ -202,11 +191,11 @@ MAC: 0x3E.0x97.0x88.0x49.0x37.0xD7, The time is: 36010, The rssi = -63
 
 **注意: 程序默认是 10 分钟上报一次数据，OneNet 平台要想看到曲线，需等待 10 分钟。**
 
-<img src="../../documents/_static/check_pedestrian_flow/曲线.png" width = "700" alt="esp32_station_current" align=center />
+![show](../../documents/_static/check_pedestrian_flow/show.png)
 
 ## 3. Demo 中一些分析和说明
 
-### 3.1 Probe Request 包分析  
+### 3.1 Probe Request 包分析 
 
 Probe Request 包属于 802.11 标准，其基本帧结构如下：   
 
@@ -241,7 +230,7 @@ Probe Request 包属于 802.11 标准，其基本帧结构如下：
          }
     }
     ```    
-  
+
 - 重复设备过滤  
 
  在抓到的包中，有相当一部分是来自于同一设备的 Probe Request 包，因此需要剔除。  
@@ -293,7 +282,7 @@ Probe Request 包属于 802.11 标准，其基本帧结构如下：
 人流量是指在一定区域内单位时间的人流总数，因此我们以 10 分钟为侦测区间，通过对在 10 分钟内的所有人数进行计算来获得人流量。
 在 10 分钟后将链表清空，开始下一阶段的监控。整个统计流程如下：  
 
-<img src="../../documents/_static/check_pedestrian_flow/流程图.jpg" width = "300" alt="esp32_station_current" align=center /> 
+<img src="../../documents/_static/check_pedestrian_flow/diagram.jpg" width = "300" alt="esp32_station_current" align=center /> 
 
 ## 4. 总结
 
