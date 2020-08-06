@@ -36,4 +36,5 @@ idf_component_register(SRCS "${srcs}"
                     PRIV_INCLUDE_DIRS "${priv_incdirs}"
                     REQUIRES gdrivers param)
 
-target_compile_options(${COMPONENT_LIB} INTERFACE -Wno-error=duplicate-decl-specifier -Wno-error=misleading-indentation)
+# In order to reduce the warning, turn off all warnings of UGFX
+target_compile_options(${COMPONENT_LIB} INTERFACE -w)

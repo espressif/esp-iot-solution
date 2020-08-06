@@ -79,13 +79,13 @@ static GFXINLINE void touch_save_calibration(GMouse *m, const void *buf, size_t 
 {
     iot_param_save((const char *)TOUCH_CAL_VAL_NAMESPACE, (const char *) TOUCH_CAL_VAL_KEY, (void *) buf, sz);
 }
-static GFXINLINE bool touch_load_calibration(GMouse *m, void *buf, size_t sz)
+static GFXINLINE gBool touch_load_calibration(GMouse *m, void *buf, size_t sz)
 {
     esp_err_t res = iot_param_load((const char *)TOUCH_CAL_VAL_NAMESPACE, (const char *) TOUCH_CAL_VAL_KEY, (void *) buf);
     return (res == ESP_OK);
 }
 
-static GFXINLINE bool touch_erase_calibration(GMouse *m, void *buf, size_t sz)
+static GFXINLINE gBool touch_erase_calibration(GMouse *m, void *buf, size_t sz)
 {
     esp_err_t res = iot_param_erase((const char *)TOUCH_CAL_VAL_NAMESPACE, (const char *) TOUCH_CAL_VAL_KEY);
     return (res == ESP_OK);

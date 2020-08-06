@@ -8,8 +8,8 @@ ifdef CONFIG_UGFX_GUI_ENABLE
     ifndef CONFIG_UGFX_USE_CUSTOM_DRIVER
 
         # gdisp/framebuffer/gdisp_lld_framebuffer.c
-        CFLAGS += -Wno-error=duplicate-decl-specifier \
-                    -Wno-error=misleading-indentation \
+        CFLAGS += -Wno-duplicate-decl-specifier \
+                    -Wno-misleading-indentation \
                     -Wno-discarded-qualifiers
         COMPONENT_SRCDIRS := 
         COMPONENT_ADD_INCLUDEDIRS := . \
@@ -84,6 +84,8 @@ ifdef CONFIG_UGFX_GUI_ENABLE
 else
 
     ifdef CONFIG_LVGL_GUI_ENABLE
+        CFLAGS += -Wno-cast-function-type -Wno-narrowing
+        CXXFLAGS += -Wno-cast-function-type -Wno-narrowing
 
         ifndef CONFIG_LVGL_USE_CUSTOM_DRIVER
             COMPONENT_SRCDIRS := 

@@ -27,6 +27,7 @@ endif
 
 COMPONENT_EXTRA_INCLUDES += $(PROJECT_PATH)/$(call dequote,$(CONFIG_UGFX_PROJ_RESOURCE_PATH))  
 
-CFLAGS += -Wno-error=duplicate-decl-specifier \
-            -Wno-error=misleading-indentation
+# In order to reduce the warning, turn off all warnings of UGFX
+CFLAGS += -w
+CXXFLAGS += -w
 endif  #CONFIG_UGFX_GUI_ENABLE

@@ -286,17 +286,17 @@ static void sokobanCalcTouchRegion(uint16_t y, int16_t x)
     if (sokobanGameOver) {
         return;
     }
-    if (x >= SOKOBAN_TOUCH_WIDTH_X && y >= 0 && x < gdispGetWidth() - SOKOBAN_TOUCH_WIDTH_X && y < SOKOBAN_TOUCH_WIDTH_Y) {
+    if (x >= SOKOBAN_TOUCH_WIDTH_X && x < gdispGetWidth() - SOKOBAN_TOUCH_WIDTH_X && y < SOKOBAN_TOUCH_WIDTH_Y) {
         // Up
         sokobanMakeTurn(0, -1);
     } else if (x >= SOKOBAN_TOUCH_WIDTH_X && y >= gdispGetHeight() - SOKOBAN_TOUCH_WIDTH_Y && x < gdispGetWidth() - SOKOBAN_TOUCH_WIDTH_X && y < gdispGetHeight()) {
         // Down
         sokobanMakeTurn(0, 1);
-    } else if (x >= 0 && y >= 0 && x < SOKOBAN_TOUCH_WIDTH_X && y < gdispGetHeight()) {
+    } else if (x >= 0 && x < SOKOBAN_TOUCH_WIDTH_X && y < gdispGetHeight()) {
         // Left
         sokobanMakeTurn(-1, 0);
-    } else if (x >= gdispGetWidth() - SOKOBAN_TOUCH_WIDTH_X && y >= 0 && x < gdispGetWidth() && y < gdispGetHeight()) {
-        if (x >= gdispGetWidth() - 30 && y >= 0 && x < gdispGetWidth() && y < 30) {
+    } else if (x >= gdispGetWidth() - SOKOBAN_TOUCH_WIDTH_X && x < gdispGetWidth() && y < gdispGetHeight()) {
+        if (x >= gdispGetWidth() - 30 && x < gdispGetWidth() && y < 30) {
             // Reset/Restart lvl
             initField();
             gwinRedraw(mainWin);

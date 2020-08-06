@@ -8,7 +8,8 @@ COMPONENT_ADD_INCLUDEDIRS :=
 COMPONENT_SRCDIRS := 
 else
 LVGLLIB = lvgl
-CFLAGS += -Wno-cast-function-type -Wno-error=narrowing
+CFLAGS += -Wno-cast-function-type -Wno-narrowing
+CXXFLAGS += -Wno-cast-function-type -Wno-narrowing
 COMPONENT_SRCDIRS := . \
     ./include \
     $(LVGLLIB) \
