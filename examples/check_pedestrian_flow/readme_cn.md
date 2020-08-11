@@ -89,7 +89,7 @@ export IDF_PATH=~/esp/esp-idf
 . ~/esp/esp-idf/export.sh
 ```
 
-注意命令中需要换成自己的 esp-idf 路径，另外本次实验中使用的 esp-idf 是 release/v3.3 版本。 
+注意命令中需要换成自己的 esp-idf 路径，另外本次实验中使用的 esp-idf 是 v4.0.1 版本。 
 
 #### 1.3.3 make menuconfig 配置
 
@@ -203,7 +203,7 @@ Probe Request 包属于 802.11 标准，其基本帧结构如下：
 
 通过 wireshark 抓包获得 Probe Request 包如下：  
 
-<img src="../../documents/_static/check_pedestrian_flow/wireshark包.jpg" width = "800" alt="esp32_station_current" align=center />
+<img src="../../documents/_static/check_pedestrian_flow/wireshark_packet.jpg" width = "800" alt="esp32_station_current" align=center />
 
 可以从包中看到该帧的类型 “Subtype : 4”, 信号强度和 MAC 地址等信息。
 

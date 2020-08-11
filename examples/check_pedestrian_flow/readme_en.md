@@ -81,7 +81,7 @@ The application is now set up on OneNET Platform.
 The ESP-IDF SDK will ensure the normal functioning of ESP32. Run the following command on your terminal to download the ESP-IDF SDK.
 
 ```
-$ git clone https://github.com/espressif/esp-idf.git
+$ git clone -b v4.0.1 --recursive https://github.com/espressif/esp-idf.git
 $ cd esp-idf
 $ git submodule update --init
 ```
@@ -218,7 +218,7 @@ Probe Request packets are standard 802.11 packets with a basic frame structure a
 
 Probe Request Packets captured using wireshark：  
 
-<img src="../../documents/_static/check_pedestrian_flow/wireshark包.jpg" width = "800" alt="esp32_station_current" align=center />
+<img src="../../documents/_static/check_pedestrian_flow/wireshark_packet.jpg" width = "800" alt="esp32_station_current" align=center />
 
 The packet information shows the frame type, “Subtype: 4” in this case, the signal strength, and the MAC address, etc. 
 
