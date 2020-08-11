@@ -1,11 +1,5 @@
-config IOT_ESPNOW_ENABLE
-bool "IOT_ESPNOW_ENABLE"
-default y
-help
-    "Select this one to enable espnow component"
     
-menu IOT_ESPNOW_OPTIONS
-    depends on IOT_ESPNOW_ENABLE
+menu "IOT_ESPNOW_OPTIONS"
     config IOT_ESPNOW_PMK
     string "ESPNOW primary master key"
     default "pmk1234567890123"
