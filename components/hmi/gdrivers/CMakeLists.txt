@@ -202,4 +202,4 @@ idf_component_register(SRCS "${srcs}"
                         INCLUDE_DIRS "${incs}"
                         REQUIRES lvgl_gui ugfx_gui nt35510 lcd_common ssd1306 lcd xpt2046 ft5x06 touchpad)
 
-target_compile_options(${COMPONENT_LIB} PRIVATE $<$<COMPILE_LANGUAGE:C>:-Wno-duplicate-decl-specifier> -Wno-misleading-indentation $<$<COMPILE_LANGUAGE:C>:-Wno-discarded-qualifiers>)
+target_compile_options(${COMPONENT_LIB} INTERFACE $<$<COMPILE_LANGUAGE:C>:-Wno-duplicate-decl-specifier> -Wno-misleading-indentation $<$<COMPILE_LANGUAGE:C>:-Wno-discarded-qualifiers>)

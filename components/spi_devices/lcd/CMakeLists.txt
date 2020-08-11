@@ -17,5 +17,5 @@ idf_component_register(SRCS "${srcs}"
                         INCLUDE_DIRS "${incs}"
                         PRIV_REQUIRES  spi_flash)
 
-target_compile_options(${COMPONENT_LIB} PRIVATE -Wno-unused-const-variable)
+target_compile_options(${COMPONENT_LIB} PRIVATE -Wno-unused-const-variable -Wno-strict-aliasing)
 add_compile_options(-D__AVR_ATtiny85__ )

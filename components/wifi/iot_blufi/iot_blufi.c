@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#ifdef CONFIG_BT_ENABLED
+
 /* c includes */
 #include <stdio.h>
 #include <stdlib.h>
@@ -605,3 +607,5 @@ esp_err_t iot_blufi_stop(bool release_ble)
 
     return ESP_OK;
 }
+
+#endif /**< CONFIG_BT_ENABLED */
