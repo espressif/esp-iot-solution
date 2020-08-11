@@ -152,7 +152,7 @@ CA4988Stepper::CA4988Stepper(int step_io, int dir_io, int number_of_steps, ledc_
     ledc_timer.timer_num = pstepper->ledc_timer;           // timer index
     ledc_timer_config(&ledc_timer);
 
-    ledc_channel_config_t ledc_ch={0};
+    ledc_channel_config_t ledc_ch;
     ledc_ch.channel    = pstepper->ledc_channel;
     ledc_ch.duty       = 0;
     ledc_ch.gpio_num   = pstepper->step_io;
