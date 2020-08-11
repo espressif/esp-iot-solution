@@ -13,7 +13,7 @@ menu "Power meter"
         default 1 if USE_PCNT_CHANNEL_1
     choice POWER_METER_VALUE_MULTIPLE_CHOICE
         bool "To choose different value accuracy"
-        default VALUW_MULTIPLE_100
+        default VALUE_MULTIPLE_100
         config VALUE_MULTIPLE_1
             bool "read_value = (int)real_value"
         config VALUE_MULTIPLE_10
