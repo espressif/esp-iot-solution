@@ -1,0 +1,16 @@
+
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/features
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/general
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/wifi
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/spi_devices
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/i2c_devices
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/i2c_devices/sensor
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/i2c_devices/others
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/network
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/platforms
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/motor/stepper
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/motor/servo
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/framework
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/i2s_devices
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/hmi
