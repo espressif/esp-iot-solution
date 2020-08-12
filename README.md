@@ -2,6 +2,14 @@
 
 ---
 
+## Versions
+
+| ESP-IoT-Solution Version | Based ESP-IDF Version | Overview|
+|:--:|:--:|--|
+| [release/v1.1](https://github.com/espressif/esp-iot-solution/tree/release/v1.1) | [v4.0.1](https://github.com/espressif/esp-idf/tree/v4.0.1) |[Overview](https://github.com/espressif/esp-iot-solution/tree/release/v1.1#esp32-iot-solution-overview)|
+| [release/v1.0](https://github.com/espressif/esp-iot-solution/tree/release/v1.0) | [v3.2.2](https://github.com/espressif/esp-idf/tree/v3.2.2) |[Overview](https://github.com/espressif/esp-iot-solution/tree/release/v1.0#esp32-iot-solution-overview)|
+| [master](https://github.com/espressif/esp-iot-solution) | [v3.2.2](https://github.com/espressif/esp-idf/tree/v3.2.2) |[Overview](https://github.com/espressif/esp-iot-solution#esp32-iot-solution-overview)|
+
 ## Solutions
 
 * [Deep-sleep low power solutions](./documents/low_power_solution/readme_en.md) [[中文]](./documents/low_power_solution/readme_cn.md)
