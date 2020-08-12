@@ -93,7 +93,7 @@ Please refer to [ESP-IDF Getting Started Guide](https://docs.espressif.com/proje
 #### 1.3.3 Acquiring Demo Code
 
 ```
-$ git clone --recursive https://github.com/espressif/esp-iot-solution.git
+$ git clone -b release/v1.1 --recursive https://github.com/espressif/esp-iot-solution.git
 $ git submodule update --init
 ```
 

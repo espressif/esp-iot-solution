@@ -269,14 +269,14 @@ void touchpad_wakeup_test(void)
 * 可以直接递归获取仓库代码, 这样将会自动初始化需要的所有子模块：
 
     ```
-    git clone --recursive https://github.com/espressif/esp-iot-solution.git
+    git clone -b release/v1.1 --recursive https://github.com/espressif/esp-iot-solution.git
 
     ```
 
 * 也可以手动进行：
 
     ```
-    git clone https://github.com/espressif/esp-iot-solution.git
+    git clone -b release/v1.1 https://github.com/espressif/esp-iot-solution.git
     ```
 
 * 然后切换到项目根目录执行指令, 下载本项目依赖的一些其它子模块:

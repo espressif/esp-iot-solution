@@ -11,7 +11,7 @@ esp-iot-solution 使用 esp-idf 同一套工具链, 所以如果你的平台上�
 你需要将完整的 esp-iot-solution 工程下载下来, 才能进行测试. 使用如下指令:
 
 ```
-1.    $ git clone https://github.com/espressif/esp-iot-solution.git
+1.    $ git clone -b release/v1.1 https://github.com/espressif/esp-iot-solution.git
 2.    $ cd esp-iot-solution
 3.    $ git submodule update --init --recursive
 ```
