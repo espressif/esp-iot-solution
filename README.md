@@ -2,6 +2,8 @@
 
 ---
 
+> release/v1.0 based on ESP-IDF v3.2.2
+
 ## Solutions
 
 * [Deep-sleep low power solutions](./documents/low_power_solution/readme_en.md) [[中文]](./documents/low_power_solution/readme_cn.md)
