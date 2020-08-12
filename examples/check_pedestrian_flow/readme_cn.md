@@ -74,7 +74,7 @@
 相关的代码被存放在了 esp-iot-solution 仓库中，运行下面的命令克隆到本地
 
 ```shell
-git clone --recursive https://github.com/espressif/esp-iot-solution.git
+git clone -b release/v1.1 --recursive https://github.com/espressif/esp-iot-solution.git
 git submodule update --init
 ```
 

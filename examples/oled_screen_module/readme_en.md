@@ -94,13 +94,13 @@ Run the following commands to download the iot-solution repository.
 * You can use the `recursive` option to automatically initialize all the submodules.
 
     ```
-    git clone --recursive https://github.com/espressif/esp-iot-solution.git
+    git clone -b release/v1.1 --recursive https://github.com/espressif/esp-iot-solution.git
     ```
 
 * You can also initialize the submodules manually, by first running:
 
     ```
-    git clone https://github.com/espressif/esp-iot-solution.git
+    git clone -b release/v1.1 https://github.com/espressif/esp-iot-solution.git
     ```
 
   - Then, switch to the root directory of the program and run the following command to get all the other dependent submodules.

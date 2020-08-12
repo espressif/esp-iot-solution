@@ -270,13 +270,13 @@ Execute the commands to download the esp-iot-solution project code:
 * Users can directly get the lib code via recursion, which will automatically initialize all the required sub-modules.
 
     ```
-    git clone --recursive https://github.com/espressif/esp-iot-solution.git
+    git clone -b release/v1.1 --recursive https://github.com/espressif/esp-iot-solution.git
     ```
 
 * Users can also get the lib code manually：
 
     ```
-    git clone https://github.com/espressif/esp-iot-solution.git
+    git clone -b release/v1.1 https://github.com/espressif/esp-iot-solution.git
     ```
 
 * Then change path to the project root directory to execute commands and download sub-modules that the project needs:
