@@ -309,7 +309,7 @@ To use uint-test, follow these steps:
 * `Add-on project`: If you want to use those drivers and build your project base on the framework, you need to include the IoT components into your project's `Makefile`.
 
     ```
-    include $(IOT_SOLUTION_PATH)/Makefile
+    include $(IOT_SOLUTION_PATH)/component.mk
     include $(IDF_PATH)/make/project.mk
     ```
 
