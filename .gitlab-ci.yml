@@ -1,5 +1,6 @@
 stages:
   - build
+  - deploy
 
 variables:
   IOT_SOLUTION_PATH: "$CI_PROJECT_DIR"
@@ -51,3 +52,25 @@ before_script:
 
 build_examples_00:
   <<: *build_examples_template
+
+push_to_github:
+  stage: deploy
+  only:
+    - master
+    - /^release\/v/
+#  when: on_success
+  image: $CI_DOCKER_REGISTRY/esp32-ci-env
+  variables:
+    GIT_STRATEGY: clone
+  before_script:
+    - echo "skip default before_script"
+  script:
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - echo -n $GH_PUSH_KEY > ~/.ssh/id_rsa_base64
+    - base64 --decode --ignore-garbage ~/.ssh/id_rsa_base64 > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - echo -e "Host github.com\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
+    - git remote remove github &>/dev/null || true
+    - git remote add github git@github.com:espressif/esp-iot-solution.git
+    - ${IOT_SOLUTION_PATH}/tools/ci/push_to_github.sh
