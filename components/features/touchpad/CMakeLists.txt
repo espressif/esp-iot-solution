@@ -1,7 +1,7 @@
 set(srcs "touchpad_obj.cpp" "touchpad.c")
 set(incs "include")
 
-if(CONFIG_IOT_TOUCH_ENABLE)
+if(CONFIG_DATA_SCOPE_DEBUG)
     set(srcs "${srcs}" "scope_debug/touch_tune_tool.c")
     set(incs "${incs}" "scope_debug")
 endif()

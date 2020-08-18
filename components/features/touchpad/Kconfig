@@ -1,0 +1,73 @@
+menu "Touch Sensor"
+    config DATA_SCOPE_DEBUG
+        bool "Data scope debug (ESP-Tuning Tool)"
+        default n
+        help
+            Enable scope debug function. Print the touch sensor raw data to ESP-Tuning tool via UART.
+            ESP-Tuning tool is touch sensor tune tool. User can monitor the data of each touch channel,
+            evaluate the touch system's touch performance (sensitivity, SNR, stability, channel coupling)
+            and determine the threshold for each channel.
+            attention 1. Choose a UART port that will only be used for scope debug.
+            attention 2. Use this feature only during the testing phase.
+            attention 3. ESP-Tuning tool can be downloaded from Espressif's official website.
+
+        menu "Data scope port setting"
+        depends on DATA_SCOPE_DEBUG
+            config SCOPE_DEBUG_TASK_PRIORITY
+                int "Scope debug task priority"
+                range 0 25
+                default 5
+
+            choice SCOPE_PORT_NUM
+                bool "Uart number (debug port)"
+                default SCOPE_PORT_NUM_UART0
+                help 
+                    Choose a UART port that will only be used for scope debug. UART0 or UART1 or UART2.
+                config SCOPE_PORT_NUM_UART0
+                    bool "UART0"
+                config SCOPE_PORT_NUM_UART1
+                    bool "UART1"
+                config SCOPE_PORT_NUM_UART2
+                    bool "UART2"
+            endchoice
+                config SCOPE_DEBUG_PORT_NUM
+                    int
+                    default 0 if SCOPE_PORT_NUM_UART0
+                    default 1 if SCOPE_PORT_NUM_UART1
+                    default 2 if SCOPE_PORT_NUM_UART2
+            
+            choice SCOPE_PORT_BAUD_RATE
+                bool "Baud rate (debug port)"
+                default SCOPE_PORT_BAUD_RATE_921600
+                help
+                        Set the same parameters on the tool side.
+                config SCOPE_PORT_BAUD_RATE_115200
+                    bool "115200 (baud rate)"
+                config SCOPE_PORT_BAUD_RATE_256000
+                    bool "256000 (baud rate)"
+                config SCOPE_PORT_BAUD_RATE_460800
+                    bool "460800 (baud rate)"
+                config SCOPE_PORT_BAUD_RATE_921600
+                    bool "921600 (baud rate)[Default]"
+                config SCOPE_PORT_BAUD_RATE_1152000
+                    bool "1152000 (baud rate)"
+            endchoice
+            config SCOPE_DEBUG_BAUD_RATE
+                int 
+                default 115200  if SCOPE_PORT_BAUD_RATE_115200
+                default 256000  if SCOPE_PORT_BAUD_RATE_256000
+                default 460800  if SCOPE_PORT_BAUD_RATE_460800
+                default 921600  if SCOPE_PORT_BAUD_RATE_921600
+                default 1152000 if SCOPE_PORT_BAUD_RATE_1152000
+            
+            config SCOPE_DEBUG_UART_TXD_IO
+                int "Uart TXD IO number"
+                range 0 34
+                default 1
+                
+            config SCOPE_DEBUG_UART_RXD_IO
+                int "Uart RXD IO number"
+                range 0 39
+                default 3
+        endmenu
+endmenu
