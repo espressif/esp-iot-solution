@@ -52,6 +52,8 @@ before_script:
 
 build_examples_00:
   <<: *build_examples_template
+  script:
+    - echo "skip build examples"
 
 push_to_github:
   stage: deploy
