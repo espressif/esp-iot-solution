@@ -528,12 +528,12 @@ esp_err_t pwm_audio_init(const pwm_audio_config_t *cfg)
     config.clk_src = TIMER_SRC_CLK_APB;  /* ESP32-S2 specific control bit !!!*/
 #endif
     res = timer_init(handle->config.tg_num, handle->config.timer_num, &config);
-    PWM_AUDIO_CHECK(ESP_OK == res, "Timer group configuration failed", ESP_ERR_INVALID_ARG);
+    PWM_AUDIO_CHECK(ESP_OK == res, "Timer group configuration failed", ESP_FAIL);
     timer_isr_register(handle->config.tg_num, handle->config.timer_num, timer_group_isr, NULL, ESP_INTR_FLAG_IRAM, NULL);
 
     /**< set a initial parameter */
     res = pwm_audio_set_param(16000, 8, 2);
-    PWM_AUDIO_CHECK(ESP_OK == res, "Set parameter failed", ESP_ERR_INVALID_ARG);
+    PWM_AUDIO_CHECK(ESP_OK == res, "Set parameter failed", ESP_FAIL);
 
     pwm_audio_set_volume(0);
 

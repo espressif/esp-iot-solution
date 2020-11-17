@@ -132,7 +132,7 @@ esp_err_t dac_audio_stop(void)
     return ESP_OK;
 }
 
-esp_err_t dac_audio_write(uint8_t *write_buff, size_t play_len, size_t *bytes_written, TickType_t ticks_to_wait)
+esp_err_t dac_audio_write(uint8_t *inbuf, size_t len, size_t *bytes_written, TickType_t ticks_to_wait)
 {
     DAC_AUDIO_CHECK(NULL != inbuf, "Pointer of buffer is invalid", ESP_ERR_INVALID_ARG);
     DAC_AUDIO_CHECK(0 != len, "Length of data is 0", ESP_ERR_INVALID_ARG);
