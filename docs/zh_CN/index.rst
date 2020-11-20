@@ -76,8 +76,11 @@ IoT solution project integrate different kinds of cloud platforms Compatible wit
    输入设备 <input_device/index>
    GUI <gui/index>
    音频 <audio/index>
+   HMI <hmi_solution/index>
+   安全 <security_solution/index>
    示例程序 <examples/index>
    贡献代码 <contribute/index>
+
 
 
 
