@@ -28,7 +28,7 @@ esp-iot-solution 中的屏幕驱动支持如下屏幕：
 接口负责与屏幕完成基本的命令和数据的读写，屏幕控制器驱动负责通过接口驱动来完成屏幕的显示，一个屏幕控制器驱动可以灵活地调用不同的接口驱动以实现硬件上不同的接口。
 下面是驱动结构框图：
 
-.. figure:: ../_static/screen_driver_structure.jpg
+.. figure:: ../../_static/display/screen_driver_structure.jpg
    :align: center
 
    屏幕驱动结构框图
@@ -50,17 +50,17 @@ esp-iot-solution 中的屏幕驱动支持如下屏幕：
 由于不同屏幕的 GRAM 排布方式的不尽相同，尤其对于不可像素寻址的屏幕来说，一个字节控制了多个像素点时，有多种排布的方式。
 下面列举几种排布方式
 
-.. figure:: ../_static/screen_driver_RGB565.png
+.. figure:: ../../_static/display/screen_driver_RGB565.png
    :align: center
 
    RGB565 GRAM 结构
 
-.. figure:: ../_static/screen_driver_mono.png
+.. figure:: ../../_static/display/screen_driver_mono.png
    :align: center
 
    MONO GRAM 结构
 
-.. figure:: ../_static/screen_driver_gray.png
+.. figure:: ../../_static/display/screen_driver_gray.png
    :align: center
 
    GRAY GRAM 结构
