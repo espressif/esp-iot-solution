@@ -15,6 +15,7 @@
 #include <string.h>
 #include "esp_log.h"
 #include "iot_sensor.h"
+#include "i2c_bus.h"
 
 const char *TAG = "SENSOR_HUB";
 
@@ -112,7 +113,42 @@ static iot_sensor_config_t sensor_config_default = {
     .task_code = NULL,
 };
 
+sensor_info_t s_sensor_info[] = {
+#ifdef CONFIG_SENSOR_INCLUDED_HUMITURE
+    { "SHT31", "Humi/Temp sensor", SENSOR_SHT3X_ID, (const uint8_t *)"\x44\x45" },
+    { "HTS221", "Humi/Temp sensor", SENSOR_DHT11_ID, (const uint8_t *)"\x5f" },
+#endif
+#ifdef CONFIG_SENSOR_INCLUDED_IMU
+    { "MPU6050", "Gyro/Acce sensor", SENSOR_MPU6050_ID, (const uint8_t *)"\x69\x68" },
+    { "LIS2DH", "Acce sensor", SENSOR_LIS2DH12_ID, (const uint8_t *)"\x19\x18" },
+#endif
+#ifdef CONFIG_SENSOR_INCLUDED_LIGHT
+    { "BH1750", "Light Intensity sensor", SENSOR_BH1750_ID, (const uint8_t *)"\x23" },
+    { "VEML6040", "Light Color sensor", SENSOR_VEML6040_ID, (const uint8_t *)"\x10" },
+    { "VEML6075", "Light UV sensor", SENSOR_VEML6075_ID, (const uint8_t *)"\x10" },
+#endif
+};
+
+static int s_sensor_info_length = sizeof(s_sensor_info)/sizeof(sensor_info_t);
+
 /******************************************Private Functions*********************************************/
+static sensor_info_t* find_sensor_info(uint8_t i2c_address) {
+    sensor_info_t* last_matched_info = NULL;
+    int counter = 0; 
+    for(int i = 0; i < s_sensor_info_length; i++) {
+        for(int j = 0; s_sensor_info[i].addrs[j] != '\0'; j++) {
+            if(s_sensor_info[i].addrs[j] == i2c_address) {
+                counter++;
+                last_matched_info = &s_sensor_info[i];
+                ESP_LOGI(TAG,"address 0x%0x might be %s (%s)\n", i2c_address, s_sensor_info[i].name, s_sensor_info[i].desc);
+                break;
+            }
+        }
+    }
+    ESP_LOGI(TAG,"address 0x%0x found %d matched info\n", i2c_address, counter);
+    return last_matched_info;
+}
+
 static iot_sensor_impl_t *find_sensor_implementations(int sensor_type)
 {
     int count = sizeof(sensor_implementations) / sizeof(iot_sensor_impl_t);
@@ -260,7 +296,6 @@ static void sensor_humiture_task(void *arg)
     }
 }
 #endif
-
 
 static TaskFunction_t find_sensor_task_code(int sensor_type)
 {
@@ -494,6 +529,24 @@ esp_err_t iot_sensor_delete(sensor_handle_t *p_sensor_handle)
     free(sensor);
     *p_sensor_handle = NULL;
     return ESP_OK;
+}
+
+uint8_t iot_sensor_scan(bus_handle_t bus, sensor_info_t* buf[], uint8_t num)
+{
+    /* first call to get the num for space allocation*/
+    uint8_t num_attached = i2c_bus_scan(bus, NULL, 0);
+    uint8_t num_valid = 0;
+    uint8_t* addrs = malloc(num_attached);
+    /* second call to get the addresses*/
+    i2c_bus_scan(bus, addrs, num);
+    for (size_t i = 0; i < num; i++) {
+        sensor_info_t* matched_info = find_sensor_info(*(addrs+i));
+        if (matched_info == NULL) continue;
+        if (buf != NULL && num_valid < num) *(buf+num_valid) = matched_info;
+        num_valid++;
+    }
+    free(addrs);
+    return num_valid;
 }
 
 esp_err_t iot_sensor_handler_register(sensor_handle_t sensor_handle, sensor_event_handler_t handler, sensor_event_handler_instance_t *context)

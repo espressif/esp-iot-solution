@@ -73,6 +73,13 @@ typedef enum {
 #endif
 } sensor_id_t;
 
+typedef struct {
+    const char* name;
+    const char* desc;
+    sensor_id_t sensor_id;
+    const uint8_t *addrs;
+}sensor_info_t;
+
 typedef enum {
     DEFAULT_MODE,
     POLLING_MODE,
@@ -217,6 +224,18 @@ esp_err_t iot_sensor_resume(sensor_handle_t sensor_handle);
  *     - ESP_FAIL Fail
  */
 esp_err_t iot_sensor_delete(sensor_handle_t *p_sensor_handle);
+
+
+/**
+ * @brief Scan for valid sensors attached on bus
+ * 
+ * @param bus bus handle
+ * @param buf Pointer to a buffer to save sensors' information, if NULL no information will be saved.
+ * @param num Maximum number of sensor information to save, invalid if buf set to NULL, 
+ * latter sensors will be discarded if num less-than the total number found on the bus.
+ * @return uint8_t total number of valid sensors found on the bus 
+ */
+uint8_t iot_sensor_scan(bus_handle_t bus, sensor_info_t* buf[], uint8_t num);
 
 /**
  * @brief Register a event handler to a sensor's event with sensor_handle.
