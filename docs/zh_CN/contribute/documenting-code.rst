@@ -369,7 +369,7 @@ Will define a substitution for the tag {\IDF_TARGET_TX_PIN}, which would be repl
 Put it all together
 -------------------
 
-Once documentation is ready, follow instruction in :doc:`../api-reference/template` and create a single file, that will merge all individual pieces of prepared documentation. Finally add a link to this file to respective ``.. toctree::`` in ``index.rst`` file located in ``/docs`` folder or subfolders.
+Once documentation is ready, follow instruction in `API Documentation Template <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/template.html>`_ and create a single file, that will merge all individual pieces of prepared documentation. Finally add a link to this file to respective ``.. toctree::`` in ``index.rst`` file located in ``/docs`` folder or subfolders.
 
 
 OK, but I am new to Sphinx!
@@ -548,11 +548,6 @@ We love it even better, if it is well documented, so we can quickly make it run 
 Go ahead, contribute your code and documentation!
 
 
-Related Documents
------------------
-
-* :doc:`../api-reference/template`
-* :doc:`add-ons-reference`
 
 
 .. _espressif/esp-idf: https://github.com/espressif/esp-idf/

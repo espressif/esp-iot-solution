@@ -39,13 +39,10 @@ iot-solution 编码规范
     #ifndef _IOT_I2C_BUS_H_
     #define _IOT_I2C_BUS_H_
 
-
     #endif
 
 
-  
-
-* 函数声明添加 `extern "C" ` 修饰，支持 C/C++ 混合编程：
+-  函数声明添加 extern "C" 修饰，支持 C/C++ 混合编程：
 
 .. code:: c
 
