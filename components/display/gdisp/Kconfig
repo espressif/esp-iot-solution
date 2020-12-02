@@ -1,0 +1,345 @@
+menu "LCD Drivers"
+
+    choice LCD_DRIVER_SCREEN_CONTROLLER
+        prompt "Choose Screen Driver"
+        default LCD_DRIVER_SCREEN_CONTROLLER_ILI9341
+        help
+            Choose screen controller.
+
+        config LCD_DRIVER_SCREEN_CONTROLLER_ILI9341
+            bool "ILI9341"
+        config LCD_DRIVER_SCREEN_CONTROLLER_SSD1306
+            bool "SSD1306"
+        config LCD_DRIVER_SCREEN_CONTROLLER_ST7789
+            bool "ST7789"
+        config LCD_DRIVER_SCREEN_CONTROLLER_ST7796
+            bool "ST7796"
+        config LCD_DRIVER_SCREEN_CONTROLLER_NT35510
+            bool "NT35510"
+        config LCD_DRIVER_SCREEN_CONTROLLER_ILI9806
+            bool "ILI9806"
+        config LCD_DRIVER_SCREEN_CONTROLLER_ILI9486
+            bool "ILI9486"
+        config LCD_DRIVER_SCREEN_CONTROLLER_SSD1351
+            bool "SSD1351"
+        config LCD_DRIVER_SCREEN_CONTROLLER_SSD1322
+            bool "SSD1322"
+
+    endchoice
+
+    choice LCD_DRIVER_INTERFACE
+        prompt "Choose Screen Driver Interface"
+        default LCD_DRIVER_INTERFACE_I2C if LCD_DRIVER_SCREEN_CONTROLLER_SSD1306
+        default LCD_DRIVER_INTERFACE_I2S if LCD_DRIVER_SCREEN_CONTROLLER_NT35510 || LCD_DRIVER_SCREEN_CONTROLLER_ILI9806
+        default LCD_DRIVER_INTERFACE_SPI if LCD_DRIVER_SCREEN_CONTROLLER_ST7789 || LCD_DRIVER_SCREEN_CONTROLLER_ILI9341
+        default LCD_DRIVER_INTERFACE_SPI
+        help
+            Choose interface for lcd driver
+
+        config LCD_DRIVER_INTERFACE_SPI
+            bool "SPI"
+            help
+                Display controller interface SPI
+    
+        config LCD_DRIVER_INTERFACE_I2C
+            bool "I2C"
+            help
+                Display controller interface I2C
+        config LCD_DRIVER_INTERFACE_I2S
+            bool "I2S"
+            help
+                Display controller interface I2S
+    endchoice
+
+    menu "SPI Screen Configuration"
+        depends on LCD_DRIVER_INTERFACE_SPI
+
+        choice LCD_SPI_SELECT
+            prompt "Select SPI Port"
+            default LCD_SPI_HSPI
+
+            config LCD_SPI_HSPI
+                bool "Select HSPI"
+
+            config LCD_SPI_VSPI
+                bool "Select VSPI"
+
+        endchoice
+        config LCD_SPI_HOST
+            int
+            default 1 if LCD_SPI_HSPI
+            default 2 if LCD_SPI_VSPI
+
+        config LCD_SPI_CLOCK_FREQ
+            int "LCD SPI Clock"
+            range 0 40000000
+            default 20000000
+
+        config LCD_SPI_MISO_PIN
+            int "LCD MISO PIN"
+            range -1 39 if IDF_TARGET_ESP32
+            range -1 46 if IDF_TARGET_ESP32S2
+            default 27
+        config LCD_SPI_MOSI_PIN
+            int "LCD MOSI PIN"
+            range -1 39 if IDF_TARGET_ESP32
+            range -1 46 if IDF_TARGET_ESP32S2
+            default 21
+        config LCD_SPI_CLK_PIN
+            int "LCD CLK PIN"
+            range -1 39 if IDF_TARGET_ESP32
+            range -1 46 if IDF_TARGET_ESP32S2
+            default 22
+        config LCD_SPI_CS_PIN
+            int "LCD CS PIN"
+            range -1 39 if IDF_TARGET_ESP32
+            range -1 46 if IDF_TARGET_ESP32S2
+            default 5
+        config LCD_SPI_DC_PIN
+            int "LCD DC PIN"
+            range -1 39 if IDF_TARGET_ESP32
+            range -1 46 if IDF_TARGET_ESP32S2
+            default 19
+    endmenu
+
+    menu "I2S Screen Configuration"
+        depends on LCD_DRIVER_INTERFACE_I2S
+
+        choice I2S_LCD_BITEMODE_CHOOSE
+            bool "Choose I2S Bit Mode"
+            default I2S_BIT_MODE_16BIT
+    
+            config I2S_BIT_MODE_16BIT
+                bool "16_BIT_MODE"
+            config I2S_BIT_MODE_8BIT
+                bool "8_BIT_MODE"
+    
+        endchoice
+        config LCD_I2S_BITWIDTH
+            int
+            default 8 if I2S_BIT_MODE_8BIT
+            default 16 if I2S_BIT_MODE_16BIT
+
+        choice LCD_I2S_SELECT
+            prompt "Select I2S Port"
+            default LCD_I2S0
+
+            config LCD_I2S0
+                bool "Select I2S0"
+
+            config LCD_I2S1
+                depends on IDF_TARGET_ESP32
+                bool "Select I2S1"
+
+        endchoice
+        config LCD_I2S_PORT_NUM
+            int
+            default 0 if LCD_I2S0
+            default 1 if LCD_I2S1
+
+        config LCD_I2S_WR_PIN
+            int "LCD WR GPIO"
+            range -1 39 if IDF_TARGET_ESP32
+            range -1 46 if IDF_TARGET_ESP32S2
+            default 18
+        config LCD_I2S_RS_PIN
+            int "LCD RS GPIO"
+            range -1 39 if IDF_TARGET_ESP32
+            range -1 46 if IDF_TARGET_ESP32S2
+            default 5
+        config LCD_I2S_D0_PIN
+            int "LCD D0 GPIO"
+            range -1 39 if IDF_TARGET_ESP32
+            range -1 46 if IDF_TARGET_ESP32S2
+            default 19
+        config LCD_I2S_D1_PIN
+            int "LCD D1 GPIO"
+            range -1 39 if IDF_TARGET_ESP32
+            range -1 46 if IDF_TARGET_ESP32S2
+            default 21
+        config LCD_I2S_D2_PIN
+            int "LCD D2 GPIO"
+            range -1 39 if IDF_TARGET_ESP32
+            range -1 46 if IDF_TARGET_ESP32S2
+            default 0
+        config LCD_I2S_D3_PIN
+            int "LCD D3 GPIO"
+            range -1 39 if IDF_TARGET_ESP32
+            range -1 46 if IDF_TARGET_ESP32S2
+            default 22
+        config LCD_I2S_D4_PIN
+            int "LCD D4 GPIO"
+            range -1 39 if IDF_TARGET_ESP32
+            range -1 46 if IDF_TARGET_ESP32S2
+            default 23
+        config LCD_I2S_D5_PIN
+            int "LCD D5 GPIO"
+            range -1 39 if IDF_TARGET_ESP32
+            range -1 46 if IDF_TARGET_ESP32S2
+            default 33
+        config LCD_I2S_D6_PIN
+            int "LCD D6 GPIO"
+            range -1 39 if IDF_TARGET_ESP32
+            range -1 46 if IDF_TARGET_ESP32S2
+            default 32
+        config LCD_I2S_D7_PIN
+            int "LCD D7 GPIO"
+            range -1 39 if IDF_TARGET_ESP32
+            range -1 46 if IDF_TARGET_ESP32S2
+            default 27
+        config LCD_I2S_D8_PIN
+            depends on I2S_BIT_MODE_16BIT
+            int "LCD D8 GPIO"
+            range -1 39 if IDF_TARGET_ESP32
+            range -1 46 if IDF_TARGET_ESP32S2
+            default 25
+        config LCD_I2S_D9_PIN
+            depends on I2S_BIT_MODE_16BIT
+            int "LCD D9 GPIO"
+            range -1 39 if IDF_TARGET_ESP32
+            range -1 46 if IDF_TARGET_ESP32S2
+            default 26
+        config LCD_I2S_D10_PIN
+            depends on I2S_BIT_MODE_16BIT
+            int "LCD D10 GPIO"
+            range -1 39 if IDF_TARGET_ESP32
+            range -1 46 if IDF_TARGET_ESP32S2
+            default 12
+        config LCD_I2S_D11_PIN
+            depends on I2S_BIT_MODE_16BIT
+            int "LCD D11 GPIO"
+            range -1 39 if IDF_TARGET_ESP32
+            range -1 46 if IDF_TARGET_ESP32S2
+            default 13
+        config LCD_I2S_D12_PIN
+            depends on I2S_BIT_MODE_16BIT
+            int "LCD D12 GPIO"
+            range -1 39 if IDF_TARGET_ESP32
+            range -1 46 if IDF_TARGET_ESP32S2
+            default 14
+        config LCD_I2S_D13_PIN
+            depends on I2S_BIT_MODE_16BIT
+            int "LCD D13 GPIO"
+            range -1 39 if IDF_TARGET_ESP32
+            range -1 46 if IDF_TARGET_ESP32S2
+            default 15
+        config LCD_I2S_D14_PIN
+            depends on I2S_BIT_MODE_16BIT
+            int "LCD D14 GPIO"
+            range -1 39 if IDF_TARGET_ESP32
+            range -1 46 if IDF_TARGET_ESP32S2
+            default 2
+        config LCD_I2S_D15_PIN
+            depends on I2S_BIT_MODE_16BIT
+            int "LCD D15 GPIO"
+            range -1 39 if IDF_TARGET_ESP32
+            range -1 46 if IDF_TARGET_ESP32S2
+            default 4
+
+    endmenu
+
+    menu "I2C Screen Configuration"
+        depends on LCD_DRIVER_INTERFACE_I2C
+
+        config LCD_I2C_PORT_NUM
+            int "LCD IIC Num"
+            range 0 1
+            default 0
+        config LCD_I2C_CLOCK_FREQ
+            int "LCD IIC clock frequency"
+            range 100000 400000
+            default 100000
+        config LCD_I2C_SCL_PIN
+            int "LCD SCL GPIO"
+            range 0 39
+            default 4
+        config LCD_I2C_SDA_PIN
+            int "LCD SDA GPIO"
+            range 0 39
+            default 5
+        config LCD_I2C_ADDRESS
+            hex "LCD IIC address"
+            range 0x00 0xFF
+            default 0x3C if LCD_DRIVER_SCREEN_CONTROLLER_SSD1306
+            default 0
+    endmenu
+
+    config LCD_DRIVER_SCREEN_WIDTH
+        int "Screen width pixels"
+        range 1 1000
+        default 240 if LCD_DRIVER_INTERFACE_SPI
+        default 480 if LCD_DRIVER_INTERFACE_I2S
+        default 128 if LCD_DRIVER_INTERFACE_I2C
+        default 240
+
+    config LCD_DRIVER_SCREEN_HEIGHT
+        int "Screen height pixels"
+        range 1 1000
+        default 320 if LCD_DRIVER_INTERFACE_SPI
+        default 800 if LCD_DRIVER_INTERFACE_I2S
+        default 64  if LCD_DRIVER_INTERFACE_I2C
+        default 320
+
+    config LCD_RESET_PIN
+        int "LCD RESET PIN"
+        range -1 39 if IDF_TARGET_ESP32
+        range -1 46 if IDF_TARGET_ESP32S2
+        default 18 if LCD_DRIVER_INTERFACE_SPI
+        default -1
+
+    config LCD_BL_PIN
+        int "LCD BL PIN"
+        range -1 39 if IDF_TARGET_ESP32
+        range -1 46 if IDF_TARGET_ESP32S2
+        default 23 if LCD_DRIVER_INTERFACE_SPI
+        default -1
+
+    choice LCD_BCKL_ACTIVE_LEVEL_OPTIONAL
+        prompt "Select Backlight Active Level"
+        default LCD_BCKL_ACTIVE_LEVEL_HIGH
+
+        config LCD_BCKL_ACTIVE_LEVEL_LOW
+            bool "Low"
+
+        config LCD_BCKL_ACTIVE_LEVEL_HIGH
+            bool "High"
+    endchoice
+    config LCD_BCKL_ACTIVE_LEVEL
+        int
+        default 0 if LCD_BCKL_ACTIVE_LEVEL_LOW
+        default 1 if LCD_BCKL_ACTIVE_LEVEL_HIGH
+    
+    choice LCD_DIRECTION_CHOICE
+        prompt "Select screen ratate direction"
+        default LCD_DIR_LRTB
+        config LCD_DIR_LRTB
+            bool "Left to Right, Top to Bottom"
+        config LCD_DIR_LRBT
+            bool "Left to Right, Bottom to Top"
+        config LCD_DIR_RLTB
+            bool "Right to Left, Top to Bottom"
+        config LCD_DIR_RLBT
+            bool "Right to Left, Bottom to Top"
+        config LCD_DIR_TBLR
+            bool "Top to Bottom, Left to Right"
+        config LCD_DIR_BTLR
+            bool "Bottom to Top, Left to Right"
+        config LCD_DIR_TBRL
+            bool "Top to Bottom, Right to Left"
+        config LCD_DIR_BTRL
+            bool "Bottom to Top, Right to Left"
+
+    endchoice
+    config LCD_DIRECTION
+        int
+        range 0 7
+        default 0 if LCD_DIR_LRTB
+        default 1 if LCD_DIR_LRBT
+        default 2 if LCD_DIR_RLTB
+        default 3 if LCD_DIR_RLBT
+        default 4 if LCD_DIR_TBLR
+        default 5 if LCD_DIR_BTLR
+        default 6 if LCD_DIR_TBRL
+        default 7 if LCD_DIR_BTRL
+
+endmenu
