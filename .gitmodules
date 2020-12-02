@@ -1,4 +1,3 @@
-[submodule "Adafruit-GFX-Library"]
-[submodule "components/hmi/lvgl_gui/lvgl"]
+[submodule "components/gui/lvgl_gui/lvgl"]
 	path = components/gui/lvgl_gui/lvgl
-	url = https://github.com/littlevgl/lvgl.git
+	url = https://github.com/lvgl/lvgl.git
