@@ -1,9 +1,10 @@
 
-安全
+GUI
 *************************
 
 .. toctree::
     :maxdepth: 1
 
-    secure<esp32_secure_and_encrypt>
+    LVGL GUI <lvgl_gui>
+
 
