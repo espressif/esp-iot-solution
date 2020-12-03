@@ -1,4 +1,3 @@
-
 Introduction to the ESP32 ULP Co-processor and Assembly Environment Setup
 =========================================================================
 
@@ -99,7 +98,7 @@ The ULP co-processor assembly enviroment is set up now.
 5. Save the file and restart MSYS2 console.
 
 Now you should be able to compile ULP programs, e.g.
-`ulp\_adc <https://github.com/espressif/esp-idf/tree/dec4a868d0303f53b438125b1b087f2f5e44a575/examples/system/ulp_adc>`__.
+:example:`system/ulp_adc`
 
 3.3 MacOS
 ^^^^^^^^^

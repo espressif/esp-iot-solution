@@ -1,5 +1,3 @@
-`[EN] <./esp32_ulp_co-processor_and_assembly_environment_setup_en.md>`__
-
 ESP32 的 ULP 协处理器简介和汇编编译环境设置
 ===========================================
 
@@ -95,8 +93,7 @@ Linux(x64) <https://github.com/espressif/binutils-esp32ulp/wiki#downloads>`__
        export PATH="$PATH:/opt/xtensa-esp32-elf/bin:/opt/esp32ulp-elf-binutils/bin"
 
 3. 保存文件并重新打开 MSYS2 控制台。
-4. 设置到此完成，你可以编译 ULP 协处理器的例程了，可尝试编译 `ULP
-   ADC <https://github.com/espressif/esp-idf/tree/dec4a868d0303f53b438125b1b087f2f5e44a575/examples/system/ulp_adc>`__
+4. 设置到此完成，你可以编译 ULP 协处理器的例程了，可尝试编译 :example:`system/ulp_adc`
    例子。
 
 3.3 MacOS
