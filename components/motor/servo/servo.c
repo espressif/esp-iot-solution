@@ -1,9 +1,9 @@
-// Copyright 2015-2016 Espressif Systems (Shanghai) PTE LTD
+// Copyright 2020 Espressif Systems (Shanghai) Co. Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-
+//
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
@@ -42,8 +42,10 @@ static uint32_t calculate_duty(float angle)
 
 esp_err_t servo_init(const servo_config_t *config)
 {
+    esp_err_t ret;
+
     SERVO_CHECK(NULL != config, "Pointer of config is invalid", ESP_ERR_INVALID_ARG);
-    SERVO_CHECK(config->channel_number >= 0 && config->channel_number <= LEDC_CHANNEL_MAX, "Servo channel number out the range", ESP_ERR_INVALID_ARG);
+    SERVO_CHECK(config->channel_number > 0 && config->channel_number <= LEDC_CHANNEL_MAX, "Servo channel number out the range", ESP_ERR_INVALID_ARG);
     SERVO_CHECK(config->freq <= 1000 && config->freq >= 50, "Servo pwm frequency out the range", ESP_ERR_INVALID_ARG);
 
     uint64_t pin_mask = 0;
@@ -58,7 +60,6 @@ esp_err_t servo_init(const servo_config_t *config)
         ch_mask |= _ch_mask;
     }
 
-    esp_err_t ret;
     g_full_duty = (1 << SERVO_LEDC_INIT_BITS) - 1;
     g_cfg = *config;
 
@@ -100,7 +101,7 @@ esp_err_t servo_deinit(void)
 
 esp_err_t servo_write_angle(uint8_t channel, float angle)
 {
-    SERVO_CHECK(channel <= LEDC_CHANNEL_MAX, "Servo channel number too large", ESP_ERR_INVALID_ARG);
+    SERVO_CHECK(channel < LEDC_CHANNEL_MAX, "Servo channel number too large", ESP_ERR_INVALID_ARG);
 
     esp_err_t ret;
     uint32_t duty = calculate_duty(angle);
@@ -114,7 +115,7 @@ esp_err_t servo_write_angle(uint8_t channel, float angle)
 
 esp_err_t servo_read_angle(uint8_t channel, float *angle)
 {
-    SERVO_CHECK(channel <= LEDC_CHANNEL_MAX, "Servo channel number too large", ESP_ERR_INVALID_ARG);
+    SERVO_CHECK(channel < LEDC_CHANNEL_MAX, "Servo channel number too large", ESP_ERR_INVALID_ARG);
 
     *angle = g_angle[channel];
     return ESP_OK;

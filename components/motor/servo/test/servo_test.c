@@ -1,9 +1,9 @@
-// Copyright 2015-2016 Espressif Systems (Shanghai) PTE LTD
+// Copyright 2020 Espressif Systems (Shanghai) Co. Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-
+//
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 #include <stdio.h>
 #include <string.h>
 #include "freertos/FreeRTOS.h"
@@ -73,8 +74,8 @@ TEST_CASE("Servo_motor test", "[servo][iot]")
         },
         .channel_number = 8,
     } ;
+    TEST_ASSERT(ESP_OK == servo_init(&servo_cfg));
 
-    servo_init(&servo_cfg);
     size_t i;
     uint8_t times = 2;
     while (times--) {
@@ -90,7 +91,7 @@ TEST_CASE("Servo_motor test", "[servo][iot]")
             servo_write_angle(7, 10 * i);
             vTaskDelay(50 / portTICK_PERIOD_MS);
         }
-        for (; i >0; i--) {
+        for (; i > 0; i--) {
             ESP_LOGI("servo", "aet angle: %d", 10 * i);
             servo_write_angle(0, 10 * i);
             servo_write_angle(1, 10 * i);
