@@ -3,7 +3,7 @@
 	url = https://github.com/adafruit/Adafruit-GFX-Library.git
 [submodule "components/hmi/ugfx_gui/ugfx"]
 	path = components/hmi/ugfx_gui/ugfx
-	url = https://git.ugfx.io/ugfx/ugfx.git
+	url = http://git.ugfx.io/ugfx/ugfx.git
 [submodule "components/hmi/lvgl_gui/lvgl"]
 	path = components/hmi/lvgl_gui/lvgl
 	url = https://github.com/littlevgl/lvgl.git
