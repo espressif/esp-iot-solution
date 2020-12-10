@@ -7,6 +7,6 @@
 .. toctree::
     :maxdepth: 1
 
-    屏幕驱动 <screen>
-    数码管驱动 <digit_tube>
+    显示屏 <screen>
+    数码管 <digit_tube>
 
