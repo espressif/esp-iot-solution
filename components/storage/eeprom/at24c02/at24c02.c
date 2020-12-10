@@ -12,130 +12,92 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include <stdio.h>
-#include "driver/i2c.h"
-#include "iot_i2c_bus.h"
-#include "iot_at24c02.h"
+#include "at24c02.h"
+#include "esp_log.h"
+
+static const char *TAG = "at24c02";
 
 typedef struct {
-    i2c_bus_handle_t bus;
-    uint16_t dev_addr;
+    i2c_bus_device_handle_t i2c_dev;
+    uint8_t dev_addr;
 } at24c02_dev_t;
 
-at24c02_handle_t iot_at24c02_create(i2c_bus_handle_t bus, uint16_t dev_addr)
+at24c02_handle_t at24c02_create(i2c_bus_handle_t bus, uint8_t dev_addr)
 {
-    at24c02_dev_t* dev = (at24c02_dev_t*) calloc(1, sizeof(at24c02_dev_t));
-    dev->bus = bus;
+    if (bus == NULL) {
+        return NULL;
+    }
+    at24c02_dev_t *dev = (at24c02_dev_t *) calloc(1, sizeof(at24c02_dev_t));
+    dev->i2c_dev = i2c_bus_device_create(bus, dev_addr, i2c_bus_get_current_clk_speed(bus));
+    if (dev->i2c_dev == NULL) {
+        free(dev);
+        return NULL;
+    }
     dev->dev_addr = dev_addr;
     return (at24c02_handle_t) dev;
 }
 
-esp_err_t iot_at24c02_delete(at24c02_handle_t dev, bool del_bus)
+esp_err_t at24c02_delete(at24c02_handle_t *device)
 {
-    at24c02_dev_t* device = (at24c02_dev_t*) dev;
-    if (del_bus) {
-        iot_i2c_bus_delete(device->bus);
-        device->bus = NULL;
+    if ( device == NULL || *device == NULL) {
+        return ESP_FAIL;
     }
-    free(device);
+    at24c02_dev_t *dev = (at24c02_dev_t *)(*device);
+    i2c_bus_device_delete(&dev->i2c_dev);
+    free(dev);
+    *device = NULL;
     return ESP_OK;
 }
 
-esp_err_t iot_at24c02_write_byte(at24c02_handle_t dev, uint8_t addr,
-        uint8_t data)
+esp_err_t at24c02_write_byte(at24c02_handle_t device, uint8_t addr, uint8_t data)
 {
-    //start-device_addr-word_addr-data-stop
-    esp_err_t ret;
-    at24c02_dev_t* device = (at24c02_dev_t*) dev;
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (device->dev_addr << 1) | WRITE_BIT,
-            ACK_CHECK_EN);
-    i2c_master_write_byte(cmd, addr, ACK_CHECK_EN);
-    i2c_master_write_byte(cmd, data, ACK_CHECK_EN);
-    i2c_master_stop(cmd);
-    ret = iot_i2c_bus_cmd_begin(device->bus, cmd, 1000 / portTICK_RATE_MS);
-    i2c_cmd_link_delete(cmd);
-    return ret;
+    at24c02_dev_t *dev = (at24c02_dev_t *) device;
+    return i2c_bus_write_byte(dev->i2c_dev, addr, data);
 }
 
-esp_err_t iot_at24c02_write(at24c02_handle_t dev, uint8_t start_addr,
-        uint8_t write_num, uint8_t *data_buf)
+esp_err_t at24c02_write(at24c02_handle_t device, uint8_t start_addr, uint8_t write_num, uint8_t *data_buf)
 {
-    uint32_t i = 0;
-    i2c_cmd_handle_t cmd;
-    esp_err_t ret = ESP_FAIL;
-    uint32_t writeNum = write_num;
-    at24c02_dev_t* device = (at24c02_dev_t*) dev;
-    if (data_buf != NULL) {
-        for (uint32_t j = 0; j < write_num; j += 8) {
-            cmd = i2c_cmd_link_create();
-            i2c_master_start(cmd);
-            i2c_master_write_byte(cmd, (device->dev_addr << 1) | WRITE_BIT,
-                    ACK_CHECK_EN);
-            i2c_master_write_byte(cmd, start_addr, ACK_CHECK_EN);
-            for (i = j; i < ((writeNum >= 8) ? 8 : writeNum); i++) {
-                i2c_master_write_byte(cmd, data_buf[i], ACK_CHECK_EN);
-                vTaskDelay(100 / portTICK_RATE_MS);
-            }
-            i2c_master_stop(cmd);
-            ret = iot_i2c_bus_cmd_begin(device->bus, cmd, 1000 / portTICK_RATE_MS);
-            i2c_cmd_link_delete(cmd);
+    at24c02_dev_t *dev = (at24c02_dev_t *) device;
 
-            writeNum -= 8;              //write num count
-            if (ret == ESP_FAIL) {
-                return ret;
-            }
-        }
+    if (write_num > 8) {
+        ESP_LOGW(TAG, "must write_num <= 8, extra bytes will overwrite from byte 0 in this 8B page");
     }
-    return ret;
+
+    return i2c_bus_write_bytes(dev->i2c_dev, start_addr, write_num, data_buf);
 }
 
-esp_err_t iot_at24c02_read_byte(at24c02_handle_t dev, uint8_t addr,
-        uint8_t *data)
+esp_err_t at24c02_read_byte(at24c02_handle_t device, uint8_t addr, uint8_t *data)
 {
-    //start-device_addr-word_addr-start-device_addr-data-stop; no_ack of end data
-    esp_err_t ret;
-    at24c02_dev_t* device = (at24c02_dev_t*) dev;
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (device->dev_addr << 1) | WRITE_BIT,
-            ACK_CHECK_EN);
-    i2c_master_write_byte(cmd, addr, ACK_CHECK_EN);
-
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (device->dev_addr << 1) | READ_BIT,
-            ACK_CHECK_EN);
-    i2c_master_read_byte(cmd, data, NACK_VAL);
-    i2c_master_stop(cmd);
-    ret = iot_i2c_bus_cmd_begin(device->bus, cmd, 1000 / portTICK_RATE_MS);
-    i2c_cmd_link_delete(cmd);
-    return ret;
+    at24c02_dev_t *dev = (at24c02_dev_t *) device;
+    return i2c_bus_read_byte(dev->i2c_dev, addr, data);
 }
 
-esp_err_t iot_at24c02_read(at24c02_handle_t dev, uint8_t start_addr,
-        uint8_t read_num, uint8_t *data_buf)
+esp_err_t at24c02_read(at24c02_handle_t device, uint8_t start_addr, uint8_t read_num, uint8_t *data_buf)
 {
-    uint32_t i = 0;
-    esp_err_t ret = ESP_FAIL;
-    if (data_buf != NULL) {
-        at24c02_dev_t* device = (at24c02_dev_t*) dev;
-        i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-        i2c_master_start(cmd);
-        i2c_master_write_byte(cmd, (device->dev_addr << 1) | WRITE_BIT,
-                ACK_CHECK_EN);
-        i2c_master_write_byte(cmd, start_addr, ACK_CHECK_EN);
-
-        i2c_master_start(cmd);
-        i2c_master_write_byte(cmd, (device->dev_addr << 1) | READ_BIT,
-                ACK_CHECK_EN);
-        for (i = 0; i < read_num - 1; i++) {
-            i2c_master_read_byte(cmd, &data_buf[i], ACK_VAL);
-        }
-        i2c_master_read_byte(cmd, &data_buf[i], NACK_VAL);
-        i2c_master_stop(cmd);
-        ret = iot_i2c_bus_cmd_begin(device->bus, cmd, 1000 / portTICK_RATE_MS);
-        i2c_cmd_link_delete(cmd);
-    }
-    return ret;
+    at24c02_dev_t *dev = (at24c02_dev_t *) device;
+    return i2c_bus_read_bytes(dev->i2c_dev, start_addr, read_num, data_buf);
 }
 
+esp_err_t at24c02_write_bit(at24c02_handle_t device, uint8_t addr, uint8_t bit_num, uint8_t data)
+{
+    at24c02_dev_t *dev = (at24c02_dev_t *) device;
+    return i2c_bus_write_bit(dev->i2c_dev, addr, bit_num, data);
+}
+
+esp_err_t at24c02_write_bits(at24c02_handle_t device, uint8_t addr, uint8_t bit_start, uint8_t length, uint8_t data)
+{
+    at24c02_dev_t *dev = (at24c02_dev_t *) device;
+    return i2c_bus_write_bits(dev->i2c_dev, addr, bit_start, length, data);
+}
+
+esp_err_t at24c02_read_bit(at24c02_handle_t device, uint8_t addr, uint8_t bit_num, uint8_t *data)
+{
+    at24c02_dev_t *dev = (at24c02_dev_t *) device;
+    return i2c_bus_read_bit(dev->i2c_dev, addr, bit_num, data);
+}
+
+esp_err_t at24c02_read_bits(at24c02_handle_t device, uint8_t addr, uint8_t bit_start, uint8_t length, uint8_t *data)
+{
+    at24c02_dev_t *dev = (at24c02_dev_t *) device;
+    return i2c_bus_read_bits(dev->i2c_dev, addr, bit_start, length, data);
+}

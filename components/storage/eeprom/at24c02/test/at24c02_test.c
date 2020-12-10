@@ -18,23 +18,20 @@
 #include "unity.h"
 #include "esp_log.h"
 #include "driver/i2c.h"
-#include "iot_at24c02.h"
-#include "iot_i2c_bus.h"
+#include "at24c02.h"
 
-#define I2C_MASTER_SCL_IO           21          /*!< gpio number for I2C master clock IO21*/
-#define I2C_MASTER_SDA_IO           15          /*!< gpio number for I2C master data  IO15*/
-#define I2C_MASTER_NUM              I2C_NUM_1   /*!< I2C port number for master dev */
+#define I2C_MASTER_SCL_IO           22          /*!< gpio number for I2C master clock IO21*/
+#define I2C_MASTER_SDA_IO           21          /*!< gpio number for I2C master data  IO15*/
+#define I2C_MASTER_NUM              I2C_NUM_1   /*!< I2C port number for master device */
 #define I2C_MASTER_TX_BUF_DISABLE   0           /*!< I2C master do not need buffer */
 #define I2C_MASTER_RX_BUF_DISABLE   0           /*!< I2C master do not need buffer */
 #define I2C_MASTER_FREQ_HZ          100000      /*!< I2C master clock frequency */
 
 static i2c_bus_handle_t i2c_bus = NULL;
-static at24c02_handle_t dev = NULL;
+static at24c02_handle_t at24c02 = NULL;
+static const char *TAG = "at24c02";
 
-/**
- * @brief i2c master initialization
- */
-static void i2c_bus_init()
+void at24c02_init()
 {
     i2c_config_t conf;
     conf.mode = I2C_MODE_MASTER;
@@ -43,64 +40,129 @@ static void i2c_bus_init()
     conf.scl_io_num = I2C_MASTER_SCL_IO;
     conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
     conf.master.clk_speed = I2C_MASTER_FREQ_HZ;
-    i2c_bus = iot_i2c_bus_create(I2C_MASTER_NUM, &conf);
+    i2c_bus = i2c_bus_create(I2C_MASTER_NUM, &conf);
+    at24c02 = at24c02_create(i2c_bus, AT24C02_I2C_ADDRESS_DEFAULT);
 }
 
-void at24c02_init()
+void at24c02_deinit()
 {
-    i2c_bus_init();
-    dev = iot_at24c02_create(i2c_bus, 0x50);
+    at24c02_delete(&at24c02);
+    i2c_bus_delete(&i2c_bus);
 }
 
-void at24c02_test_task(void* pvParameters)
+void at24c02_test_byte_write_read()
 {
-    uint8_t ret = 1;
-    int cnt = 2;
+    uint8_t cnt = 5;
     while (cnt--) {
-        /****One data Test****/
-        iot_at24c02_write_byte(dev, 0x20, 0x55);
-        vTaskDelay(100 / portTICK_RATE_MS);
-
-        iot_at24c02_read_byte(dev, 0x20, &ret);
-        printf("Value of Address 0x20 Last:%x\n", ret);
-
-        iot_at24c02_write_byte(dev, 0x20, 0x23);
-        vTaskDelay(100 / portTICK_RATE_MS);
-
-        iot_at24c02_read_byte(dev, 0x20, &ret);
-        printf("Value of Address 0x20:%x\n", ret);
-
-        /****** some data Test ****/
-        uint8_t data[5] = { 0x10, 0x11, 0x12, 0x13, 0x14 };
-        iot_at24c02_write(dev, 0x20, sizeof(data), data);
-        vTaskDelay(100 / portTICK_RATE_MS);
-
-        iot_at24c02_read(dev, 0x20, sizeof(data), data);
-        printf("Value start Address 0x20 Last:%x,%x,%x,%x,%x,\n", data[0],
-                data[1], data[2], data[3], data[4]);
-
-        uint8_t data1[5] = { 0x22, 0x23, 0x24, 0x25, 0x26 };
-        iot_at24c02_write(dev, 0x20, sizeof(data1), data1);
-        vTaskDelay(100 / portTICK_RATE_MS);
-
-        iot_at24c02_read(dev, 0x20, sizeof(data1), data1);
-        printf("Value start Address 0x20:%x,%x,%x,%x,%x,\n", data1[0], data1[1],
-                data1[2], data1[3], data1[4]);
+        /****One Byte Test****/
+        uint8_t data0 = cnt;
+        TEST_ASSERT(ESP_OK == at24c02_write_byte(at24c02, cnt, data0));
+        ESP_LOGI(TAG, "write data of address %u :%u",cnt, data0);
+        vTaskDelay(50 / portTICK_RATE_MS);
+        uint8_t data0_read = 0;
+        TEST_ASSERT(ESP_OK == at24c02_read_byte(at24c02, cnt, &data0_read));
+        ESP_LOGI(TAG, "read data of address %u :%u",cnt, data0_read);
+        TEST_ASSERT_EQUAL_UINT8(data0, data0_read);
     }
-    iot_at24c02_delete(dev, true);
-    vTaskDelete(NULL);
 }
 
-void at24c02_test()
+void at24c02_test_bytes_write_read()
+{
+    uint8_t cnt = 5;
+    while (cnt--) {
+        /****** multi Byte Test ****/
+        uint8_t data[5] = {0x00};
+        for (size_t i = 0; i < 5; i++) {
+            data[i] = cnt + i;
+        }
+        TEST_ASSERT(ESP_OK == at24c02_write(at24c02, cnt, sizeof(data), data));
+        ESP_LOGI(TAG, "write data start from address %u: %u,%u,%u,%u,%u",cnt, data[0],
+                data[1], data[2], data[3], data[4]);
+        vTaskDelay(50 / portTICK_RATE_MS);
+        uint8_t data_read[5] = {0x00};
+        TEST_ASSERT(ESP_OK == at24c02_read(at24c02, cnt, sizeof(data_read), data_read));
+        ESP_LOGI(TAG, "read data start from address %u: %u,%u,%u,%u,%u",cnt, data_read[0],
+                data_read[1], data_read[2], data_read[3], data_read[4]);
+        TEST_ASSERT_EQUAL_UINT8_ARRAY(data, data_read, 5);
+    }
+}
+
+void at24c02_test_bit_write_read()
+{
+    uint8_t cnt = 5;
+    while (cnt--) {
+        /****** operate Bit and Bits Test ****/
+        uint8_t data2 = cnt + 20;
+        uint8_t data2_read = 0;
+        TEST_ASSERT(ESP_OK == at24c02_write_byte(at24c02, cnt, 0x00));
+        vTaskDelay(50 / portTICK_RATE_MS);
+        ESP_LOGI(TAG, "write byte of address %u %x",cnt, 0x00);
+        for (size_t i = 0; i < 8; i++) {
+            TEST_ASSERT(ESP_OK == at24c02_write_bit(at24c02, cnt, i, (data2 >> i)&0x01));
+            ESP_LOGI(TAG, "write bit of address %u:bit%u = %u",cnt, i, (data2 >> i)&0x01);
+            data2_read = 0;
+            vTaskDelay(50 / portTICK_RATE_MS);
+            TEST_ASSERT(ESP_OK == at24c02_read_bit(at24c02, cnt, i, &data2_read));
+            ESP_LOGI(TAG, "read bit of address %u:bit%u = %u",cnt, i, data2_read);
+            data2_read = 0;
+            TEST_ASSERT(ESP_OK == at24c02_read_byte(at24c02, cnt, &data2_read));
+            ESP_LOGI(TAG, "read byte of address %u :%u",cnt, data2_read);
+        }
+        TEST_ASSERT_EQUAL_UINT8(data2, data2_read);
+    }
+}
+
+void at24c02_test_bits_write_read()
+{
+    uint8_t cnt = 5;
+    while (cnt--) {
+        /****** operate Bit and Bits Test ****/
+        uint8_t data2 = cnt + 20;
+        uint8_t data2_read = 0;
+        TEST_ASSERT(ESP_OK == at24c02_write_byte(at24c02, cnt, 0x00));
+        vTaskDelay(50 / portTICK_RATE_MS);
+        ESP_LOGI(TAG, "write byte of address %u %x",cnt, 0x00);
+        for (size_t i = 0; i < 2; i++) {
+            TEST_ASSERT(ESP_OK == at24c02_write_bits(at24c02, cnt, i*4+3, 4, ((data2>>(i*4))&0x0f)));
+            ESP_LOGI(TAG, "write bits from address %u:bit%u = %u",cnt, i*4, ((data2>>(i*4))&0x0f));
+            data2_read = 0;
+            vTaskDelay(50 / portTICK_RATE_MS);
+            TEST_ASSERT(ESP_OK == at24c02_read_bits(at24c02, cnt, i*4+3, 4, &data2_read));
+            ESP_LOGI(TAG, "read bits of address %u:bit%u = %u",cnt, i*4, data2_read);
+            data2_read = 0;
+            TEST_ASSERT(ESP_OK == at24c02_read_byte(at24c02, cnt, &data2_read));
+            ESP_LOGI(TAG, "read byte of address %u :%u",cnt, data2_read);
+        }
+        TEST_ASSERT_EQUAL_UINT8(data2, data2_read);
+    }
+}
+
+TEST_CASE("at24c02 byte operations", "[at24c02][eeprom][i2c_bus][storage]")
 {
     at24c02_init();
-    xTaskCreate(at24c02_test_task, "at24c02_test_task", 1024 * 2, NULL, 10,
-            NULL);
+    at24c02_test_byte_write_read();
+    at24c02_deinit();
 }
 
-TEST_CASE("Device at24c02 test", "[at24c02][iot][device]")
+TEST_CASE("at24c02 bytes operations", "[at24c02][eeprom][i2c_bus][storage]")
 {
-    at24c02_test();
+    at24c02_init();
+    at24c02_test_bytes_write_read();
+    at24c02_deinit();
+}
+
+TEST_CASE("at24c02 bit operations", "[at24c02][eeprom][i2c_bus][storage]")
+{
+    at24c02_init();
+    at24c02_test_bit_write_read();
+    at24c02_deinit();
+}
+
+TEST_CASE("at24c02 bits operations", "[at24c02][eeprom][i2c_bus][storage]")
+{
+    at24c02_init();
+    at24c02_test_bits_write_read();
+    at24c02_deinit();
 }
 
 #endif
