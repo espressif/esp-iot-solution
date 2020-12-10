@@ -1,3 +1,3 @@
-idf_component_register(SRCS "apds9960.c" "apds9960_obj.cpp"
+idf_component_register(SRCS "apds9960.c"
                         INCLUDE_DIRS include
-                        REQUIRES i2c_bus)
+                        REQUIRES bus)

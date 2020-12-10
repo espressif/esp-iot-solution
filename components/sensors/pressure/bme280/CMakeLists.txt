@@ -1,3 +1,3 @@
-idf_component_register(SRCS "bme280.c" "bme280_obj.cpp"
+idf_component_register(SRCS "bme280.c"
                         INCLUDE_DIRS include
-                        REQUIRES i2c_bus)
+                        REQUIRES bus)

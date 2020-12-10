@@ -11,14 +11,14 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 #include <stdio.h>
 #include "unity.h"
 #include "esp_log.h"
-#include "driver/i2c.h"
-#include "iot_i2c_bus.h"
-#include "iot_apds9960.h"
 #include "esp_system.h"
+#include "apds9960.h"
 
+#define APDS9960_VL_IO                       (gpio_num_t)19
 #define APDS9960_I2C_MASTER_SCL_IO           (gpio_num_t)21          /*!< gpio number for I2C master clock */
 #define APDS9960_I2C_MASTER_SDA_IO           (gpio_num_t)22          /*!< gpio number for I2C master data  */
 #define APDS9960_I2C_MASTER_NUM              I2C_NUM_1   /*!< I2C port number for master dev */
@@ -29,23 +29,22 @@
 i2c_bus_handle_t i2c_bus = NULL;
 apds9960_handle_t apds9960 = NULL;
 
-void gpio_init(void)
+static void apds9960_gpio_vl_init(void)
 {
     gpio_config_t cfg;
-    cfg.pin_bit_mask = BIT19;
+    cfg.pin_bit_mask = BIT(APDS9960_VL_IO);
     cfg.intr_type = 0;
     cfg.mode = GPIO_MODE_OUTPUT;
     cfg.pull_down_en = 0;
     cfg.pull_up_en = 0;
-
     gpio_config(&cfg);
-    gpio_set_level(19, 0);
+    gpio_set_level(APDS9960_VL_IO, 0);
 }
 
 /**
  * @brief i2c master initialization
  */
-static void i2c_sensor_apds9960_init()
+static void apds9960_test_init()
 {
     int i2c_master_port = APDS9960_I2C_MASTER_NUM;
     i2c_config_t conf;
@@ -55,15 +54,15 @@ static void i2c_sensor_apds9960_init()
     conf.scl_io_num = APDS9960_I2C_MASTER_SCL_IO;
     conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
     conf.master.clk_speed = APDS9960_I2C_MASTER_FREQ_HZ;
-    i2c_bus = iot_i2c_bus_create(i2c_master_port, &conf);
-    apds9960 = iot_apds9960_create(i2c_bus, APDS9960_I2C_ADDRESS);
+    i2c_bus = i2c_bus_create(i2c_master_port, &conf);
+    apds9960 = apds9960_create(i2c_bus, APDS9960_I2C_ADDRESS);
 }
 
-static void apds9960_test_func()
+static void apds9960_test_gesture()
 {
     int cnt = 0;
-    while (cnt < 5) {
-        uint8_t gesture = iot_apds9960_read_gesture(apds9960);
+    while (cnt < 10) {
+        uint8_t gesture = apds9960_read_gesture(apds9960);
         if (gesture == APDS9960_DOWN) {
             printf("gesture APDS9960_DOWN*********************!\n");
         } else if (gesture == APDS9960_UP) {
@@ -75,22 +74,18 @@ static void apds9960_test_func()
             printf("gesture APDS9960_RIGHT*********************!\n");
             cnt++;
         }
-        vTaskDelay(100 / portTICK_RATE_MS);
+        //vTaskDelay(100 / portTICK_RATE_MS);
     }
-    iot_apds9960_delete(apds9960, true);
-}
-
-static void apds9960_test()
-{
-    gpio_init();
-    i2c_sensor_apds9960_init();
-    iot_apds9960_gesture_init(apds9960);
-    vTaskDelay(1000 / portTICK_RATE_MS);
-    apds9960_test_func();
 }
 
 TEST_CASE("Sensor apds9960 test", "[apds9960][iot][sensor]")
 {
-    apds9960_test();
+    apds9960_gpio_vl_init();
+    apds9960_test_init();
+    apds9960_gesture_init(apds9960);
+    vTaskDelay(1000 / portTICK_RATE_MS);
+    apds9960_test_func();
+    apds9960_delete(&apds9960);
+    i2c_bus_delete(&i2c_bus);
 }
 

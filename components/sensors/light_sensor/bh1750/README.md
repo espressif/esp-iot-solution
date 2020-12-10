@@ -11,10 +11,10 @@
     * no need to add external pull-up resistors, driver will enable internal pull-up resistors.
 * Bh1750 measurement mode:
     * one-time mode: bh1750 just measure only one time when receieved the one time measurement command, so you need to send this command when you want to get intensity value every time
-    * continuouly mode: bh1750 will measure continuouly when receieved the continuously measurement command, so you just need to send this command once, and than call `iot_bh1750_get_data()` to get intensity value repeatedly.
-* You can aslo call `iot_bh1750_get_light_intensity()` to get intensity value, the working process of this function is as followed:
+    * continuouly mode: bh1750 will measure continuouly when receieved the continuously measurement command, so you just need to send this command once, and than call `bh1750_get_data()` to get intensity value repeatedly.
+* You can aslo call `bh1750_get_light_intensity()` to get intensity value, the working process of this function is as followed:
     * send measurement command
     * delay longer than measurement time
     * get intensity value
 # Notice:
-* Bh1750 has different measurement time in different measurement mode, and also, measurement time can be changed by call `iot_bh1750_change_measure_time()`
+* Bh1750 has different measurement time in different measurement mode, and also, measurement time can be changed by call `bh1750_change_measure_time()`

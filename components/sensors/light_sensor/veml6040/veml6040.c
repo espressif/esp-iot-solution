@@ -12,18 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include <stdio.h>
-#include "driver/i2c.h"
-#include "iot_i2c_bus.h"
-#include "iot_veml6040.h"
-#include "esp_log.h"
 #include <math.h>
+#include <string.h>
+#include "veml6040.h"
 
-#define WRITE_BIT             I2C_MASTER_WRITE  /*!< I2C master write */
-#define READ_BIT              I2C_MASTER_READ   /*!< I2C master read */
-#define ACK_CHECK_EN          0x1               /*!< I2C master will check ack from slave*/
-#define ACK_CHECK_DIS         0x0               /*!< I2C master will not check ack from slave */
-#define ACK_VAL               0x0               /*!< I2C ack value */
-#define NACK_VAL              0x1               /*!< I2C nack value */
 //CMD
 #define VEML6040_SET_CMD      0x00
 #define VEML6040_READ_REG     0x08
@@ -39,117 +31,116 @@
 #define VEML6040_GSENS_1280MS 0.007865
 
 typedef struct {
-    i2c_bus_handle_t bus;
-    uint16_t dev_addr;
+    i2c_bus_device_handle_t i2c_dev;
+    uint8_t dev_addr;
     veml6040_config_t config;
 } veml6040_dev_t;
 
 static const char *TAG = "veml6040";
 
-veml6040_handle_t iot_veml6040_create(i2c_bus_handle_t bus, uint16_t dev_addr)
+veml6040_handle_t veml6040_create(i2c_bus_handle_t bus, uint8_t dev_addr)
 {
-    veml6040_dev_t* sensor = (veml6040_dev_t*) calloc(1, sizeof(veml6040_dev_t));
-    sensor->bus = bus;
-    sensor->dev_addr = dev_addr;
-    sensor->config.integration_time = VEML6040_INTEGRATION_TIME_DEFAULT;
-    sensor->config.mode = VEML6040_MODE_DEFAULT;
-    sensor->config.trigger = VEML6040_TRIGGER_DEFAULT;
-    sensor->config.switch_en = VEML6040_SWITCH_DEFAULT;
-    iot_veml6040_set_mode(sensor, &sensor->config);
-    return (veml6040_handle_t) sensor;
+    veml6040_dev_t *sens = (veml6040_dev_t *) calloc(1, sizeof(veml6040_dev_t));
+    sens->i2c_dev = i2c_bus_device_create(bus, dev_addr, i2c_bus_get_current_clk_speed(bus));
+    if (sens->i2c_dev == NULL) {
+        free(sens);
+        return NULL;
+    }
+    sens->dev_addr = dev_addr;
+    return (veml6040_handle_t) sens;
 }
 
-esp_err_t iot_veml6040_delete(veml6040_handle_t sensor, bool del_bus)
+esp_err_t veml6040_delete(veml6040_handle_t *sensor)
 {
-    veml6040_dev_t* device = (veml6040_dev_t*) sensor;
-    if (del_bus) {
-        iot_i2c_bus_delete(device->bus);
-        device->bus = NULL;
+    if (*sensor == NULL) {
+        return ESP_OK;
     }
-    free(device);
+    veml6040_dev_t *sens = (veml6040_dev_t *)(*sensor);
+    i2c_bus_device_delete(&sens->i2c_dev);
+    free(sens);
+    *sensor = NULL;
     return ESP_OK;
 }
 
-static esp_err_t iot_veml6040_write(veml6040_handle_t sensor, uint8_t config_val)
+static int veml6040_read(veml6040_handle_t sensor, uint8_t cmd_code)
 {
-    esp_err_t ret;
-    veml6040_dev_t* device = (veml6040_dev_t*) sensor;
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (device->dev_addr << 1) | WRITE_BIT, ACK_CHECK_EN);
-    i2c_master_write_byte(cmd, VEML6040_SET_CMD, ACK_CHECK_EN);
-    i2c_master_write_byte(cmd, config_val, ACK_CHECK_EN);
-    i2c_master_write_byte(cmd, 0, ACK_CHECK_EN);
-    i2c_master_stop(cmd);
-    ret = iot_i2c_bus_cmd_begin(device->bus, cmd, 1000 / portTICK_RATE_MS);
-    i2c_cmd_link_delete(cmd);
+    if (sensor == NULL) {
+        return ESP_FAIL;
+    }
+    uint8_t data_buf[2] = {0x00, 0x00};
+    veml6040_dev_t *sens = (veml6040_dev_t *) sensor;
+    esp_err_t ret = i2c_bus_read_bytes(sens->i2c_dev, cmd_code, 2, data_buf);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "READ ERROR,ERROR ID:%d", ret);
+        return VEML6040_I2C_ERR_RES;
+    }
+    return *(uint16_t *)data_buf;
+}
+
+esp_err_t veml6040_set_mode(veml6040_handle_t sensor, veml6040_config_t *device_info)
+{
+    if (sensor == NULL) {
+        return ESP_FAIL;
+    }
+    veml6040_dev_t *sens = (veml6040_dev_t *) sensor;
+    uint8_t cmd_buf[2] = {0x00};
+    cmd_buf[0] = device_info->integration_time << 4
+                 | device_info->trigger << 2
+                 | device_info->mode << 1
+                 | device_info->switch_en;
+    sens->config.integration_time = device_info->integration_time;
+    sens->config.trigger          = device_info->trigger;
+    sens->config.mode             = device_info->mode;
+    sens->config.switch_en        = device_info->switch_en;
+    cmd_buf[1] = 0x00;
+    esp_err_t ret = i2c_bus_write_bytes(sens->i2c_dev, VEML6040_SET_CMD, 2, cmd_buf);
     return ret;
 }
 
-static int iot_veml6040_read(veml6040_handle_t sensor, uint8_t cmd_code)
+esp_err_t veml6040_get_mode(veml6040_handle_t sensor, veml6040_config_t *device_info)
 {
-    esp_err_t ret;
-    uint8_t data_low = 0;
-    uint8_t data_high = 0;
-    veml6040_dev_t* device = (veml6040_dev_t*) sensor;
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (device->dev_addr << 1) | WRITE_BIT, ACK_CHECK_EN);
-    i2c_master_write_byte(cmd, cmd_code, ACK_CHECK_EN);
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (device->dev_addr << 1) | READ_BIT, ACK_CHECK_EN);
-    i2c_master_read_byte(cmd, &data_low, ACK_VAL);
-    i2c_master_read_byte(cmd, &data_high, ACK_VAL);
-    i2c_master_stop(cmd);
-    ret = iot_i2c_bus_cmd_begin(device->bus, cmd, 1000 / portTICK_RATE_MS);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "READ ERROR,ERROR ID:%d", ret);
+    if (sensor == NULL) {
+        return ESP_FAIL;
     }
-    i2c_cmd_link_delete(cmd);
-    return (ret == ESP_OK) ? (data_low | (data_high << 8)) : VEML6040_I2C_ERR_RES;
+    veml6040_dev_t *sens = (veml6040_dev_t *) sensor;
+    uint8_t data_buf[2] = {0x00};
+    esp_err_t ret = i2c_bus_read_bytes(sens->i2c_dev, VEML6040_SET_CMD, 2, data_buf);
+    if (ret != ESP_OK) {
+        return ret;
+    }
+    sens->config.integration_time = device_info->integration_time = (data_buf[0] & 0x70) >> 4;
+    sens->config.trigger          = device_info->trigger = (data_buf[0] & 0x04) >> 2;
+    sens->config.mode             = device_info->mode = (data_buf[0] & 0x02) >> 1;
+    sens->config.switch_en        = device_info->switch_en = (data_buf[0] & 0x01);
+    return ret;
 }
 
-esp_err_t iot_veml6040_set_mode(veml6040_handle_t sensor, veml6040_config_t * device_info)
+int veml6040_get_red(veml6040_handle_t sensor)
 {
-    uint8_t cmd_buf = 0;
-    veml6040_dev_t* dev = (veml6040_dev_t*) sensor;
-    cmd_buf = device_info->integration_time << 4
-            | device_info->trigger << 2
-            | device_info->mode << 1
-            | device_info->switch_en;
-    dev->config.integration_time = device_info->integration_time;
-    dev->config.trigger          = device_info->trigger;
-    dev->config.mode             = device_info->mode;
-    dev->config.switch_en        = device_info->switch_en;
-    return iot_veml6040_write(sensor, cmd_buf);
+    return veml6040_read(sensor, VEML6040_READ_REG);
 }
 
-int iot_veml6040_get_red(veml6040_handle_t sensor)
+int veml6040_get_green(veml6040_handle_t sensor)
 {
-    return iot_veml6040_read(sensor, VEML6040_READ_REG);
+    return veml6040_read(sensor, VEML6040_READ_GREEN);
 }
 
-int iot_veml6040_get_green(veml6040_handle_t sensor)
+int veml6040_get_blue(veml6040_handle_t sensor)
 {
-    return iot_veml6040_read(sensor, VEML6040_READ_GREEN);
+    return veml6040_read(sensor, VEML6040_READ_BLUE);
 }
 
-int iot_veml6040_get_blue(veml6040_handle_t sensor)
+int veml6040_get_white(veml6040_handle_t sensor)
 {
-    return iot_veml6040_read(sensor, VEML6040_READ_BLUE);
+    return veml6040_read(sensor, VEML6040_READ_WHITE);
 }
 
-int iot_veml6040_get_white(veml6040_handle_t sensor)
-{
-    return iot_veml6040_read(sensor, VEML6040_READ_WHITE);
-}
-
-float iot_veml6040_get_lux(veml6040_handle_t sensor)
+float veml6040_get_lux(veml6040_handle_t sensor)
 {
     uint16_t sensorValue;
     float ambientLightInLux;
-    veml6040_dev_t* dev = (veml6040_dev_t*) sensor;
-    sensorValue = iot_veml6040_get_green(sensor);
+    veml6040_dev_t *dev = (veml6040_dev_t *) sensor;
+    sensorValue = veml6040_get_green(sensor);
     switch (dev->config.integration_time) {
         case VEML6040_INTEGRATION_TIME_40MS:
             ambientLightInLux = sensorValue * VEML6040_GSENS_40MS;
@@ -176,15 +167,80 @@ float iot_veml6040_get_lux(veml6040_handle_t sensor)
     return ambientLightInLux;
 }
 
-float iot_veml6040_get_cct(veml6040_handle_t sensor, float offset)
+float veml6040_get_cct(veml6040_handle_t sensor, float offset)
 {
     uint16_t red, blue, green;
     float cct, ccti;
-    red   = iot_veml6040_get_red(sensor);
-    green = iot_veml6040_get_green(sensor);
-    blue  = iot_veml6040_get_blue(sensor);
+    red   = veml6040_get_red(sensor);
+    green = veml6040_get_green(sensor);
+    blue  = veml6040_get_blue(sensor);
     ccti  = ((float) red - (float) blue) / (float) green;
     ccti  = ccti + offset;
     cct   = 4278.6 * pow(ccti, -1.2455);
     return cct;
 }
+
+#ifdef CONFIG_SENSOR_LIGHT_INCLUDED_VEML6040
+
+static veml6040_handle_t veml6040 = NULL;
+static bool is_init = false;
+
+esp_err_t light_sensor_veml6040_init(i2c_bus_handle_t i2c_bus)
+{
+    if (is_init || !i2c_bus) {
+        return ESP_FAIL;
+    }
+    veml6040 = veml6040_create(i2c_bus, VEML6040_I2C_ADDRESS);
+    if (!veml6040) {
+        return ESP_FAIL;
+    }
+    veml6040_config_t veml6040_info;
+    memset(&veml6040_info, 0, sizeof(veml6040_info));
+    veml6040_info.integration_time = VEML6040_INTEGRATION_TIME_160MS;
+    veml6040_info.mode = VEML6040_MODE_AUTO;
+    veml6040_info.trigger = VEML6040_TRIGGER_DIS;
+    veml6040_info.switch_en = VEML6040_SWITCH_EN;
+    esp_err_t ret = veml6040_set_mode(veml6040, &veml6040_info);
+    if (ret != ESP_OK) {
+        return ESP_FAIL;
+    }
+    is_init = true;
+    return ESP_OK;
+}
+
+esp_err_t light_sensor_veml6040_deinit(void)
+{
+    if (!is_init) {
+        return ESP_FAIL;
+    }
+    esp_err_t ret = veml6040_delete(&veml6040);
+
+    if (ret != ESP_OK) {
+        return ESP_FAIL;
+    }
+    is_init = false;
+    return ESP_OK;
+}
+
+esp_err_t light_sensor_veml6040_test(void)
+{
+    if (!is_init) {
+        return ESP_FAIL;
+    }
+    return ESP_OK;
+}
+
+esp_err_t light_sensor_veml6040_acquire_rgbw(float *r, float *g, float *b, float *w)
+{
+    if (!is_init) {
+        return ESP_FAIL;
+    }
+    /*TODO:should more carefully*/
+    *r = veml6040_get_red(veml6040);
+    *g = veml6040_get_green(veml6040);
+    *b = veml6040_get_blue(veml6040);
+    *w = veml6040_get_white(veml6040);
+    return ESP_OK;
+}
+
+#endif
