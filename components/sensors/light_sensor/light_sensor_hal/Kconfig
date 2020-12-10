@@ -1,0 +1,11 @@
+menu "Light Sensor Hal Options"
+    config SENSOR_LIGHT_INCLUDED_BH1750
+        bool "include BH1750 driver"
+        default y
+    config SENSOR_LIGHT_INCLUDED_VEML6040
+        bool "include VEML6040 driver"
+        default y
+    config SENSOR_LIGHT_INCLUDED_VEML6075
+        bool "include VEML6075 driver"
+        default y
+endmenu

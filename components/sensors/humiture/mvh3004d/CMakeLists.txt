@@ -1,3 +1,3 @@
-idf_component_register(SRCS "mvh3004d.c" "mvh3004d_obj.cpp"
+idf_component_register(SRCS "mvh3004d.c"
                         INCLUDE_DIRS include
-                        REQUIRES i2c_bus)
+                        REQUIRES bus)

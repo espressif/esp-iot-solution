@@ -1,3 +1,3 @@
-idf_component_register(SRCS "bh1750.c" "bh1750_obj.cpp"
+idf_component_register(SRCS "bh1750.c"
                         INCLUDE_DIRS include
-                        REQUIRES i2c_bus)
+                        REQUIRES bus)

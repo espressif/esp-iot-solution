@@ -1,0 +1,8 @@
+menu "IMU Hal Options"
+    config SENSOR_IMU_INCLUDED_MPU6050
+        bool "include MPU6050 driver"
+        default y
+    config SENSOR_IMU_INCLUDED_LIS2DH12
+        bool "include LIS2DH12 driver"
+        default y
+endmenu
