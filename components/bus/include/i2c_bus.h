@@ -40,79 +40,79 @@ i2c_bus_handle_t i2c_bus_create(i2c_port_t port, const i2c_config_t *conf);
 /**
  * @brief Delete and release the I2C bus resource.
  *
- * @param bus Point to the I2C bus handle, if delete succeed handle will set to NULL.
+ * @param p_bus_handle Point to the I2C bus handle, if delete succeed handle will set to NULL.
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t i2c_bus_delete(i2c_bus_handle_t *bus);
+esp_err_t i2c_bus_delete(i2c_bus_handle_t *p_bus_handle);
 
 /**
  * @brief Scan i2c devices attached on i2c bus
  *
- * @param bus I2C bus handle
+ * @param bus_handle I2C bus handle
  * @param buf Pointer to a buffer to save devices' address, if NULL no address will be saved.
  * @param num Maximum number of addresses to save, invalid if buf set to NULL,
  * higer addresses will be discarded if num less-than the total number found on the I2C bus.
  * @return uint8_t Total number of devices found on the I2C bus
  */
-uint8_t i2c_bus_scan(i2c_bus_handle_t bus, uint8_t *buf, uint8_t num);
+uint8_t i2c_bus_scan(i2c_bus_handle_t bus_handle, uint8_t *buf, uint8_t num);
 
 /**
  * @brief Get current active clock speed.
  * 
- * @param bus I2C bus handle
+ * @param bus_handle I2C bus handle
  * @return uint32_t 
  */
-uint32_t i2c_bus_get_current_clk_speed(i2c_bus_handle_t bus);
+uint32_t i2c_bus_get_current_clk_speed(i2c_bus_handle_t bus_handle);
 
 /**
  * @brief Get created device number of the bus.
  * 
- * @param bus I2C bus handle
+ * @param bus_handle I2C bus handle
  * @return uint8_t 
  */
-uint8_t i2c_bus_get_created_device_num(i2c_bus_handle_t bus);
+uint8_t i2c_bus_get_created_device_num(i2c_bus_handle_t bus_handle);
 
 /**
  * @brief Create an I2C device on specific bus.
  *        Dynamic configuration must be enable to achieve multiple devices with different configs on a single bus.
  *        menuconfig:Bus Options->I2C Bus Options->enable dynamic configuration
  * 
- * @param bus Point to the I2C bus handle
- * @param device_addr device i2c address
+ * @param bus_handle Point to the I2C bus handle
+ * @param dev_addr i2c device address
  * @param clk_speed i2c clock frequency
  * @return i2c_bus_device_handle_t return a device handle if created successfully, return NULL if failed.
  */
-i2c_bus_device_handle_t i2c_bus_device_create(i2c_bus_handle_t bus, uint8_t device_addr, uint32_t clk_speed);
+i2c_bus_device_handle_t i2c_bus_device_create(i2c_bus_handle_t bus_handle, uint8_t dev_addr, uint32_t clk_speed);
 
 /**
  * @brief Delete and release the I2C device resource, i2c_bus_device_delete should be used in pairs with i2c_bus_device_create.
  *
- * @param device Point to the I2C device handle, if delete succeed handle will set to NULL.
+ * @param p_dev_handle Point to the I2C device handle, if delete succeed handle will set to NULL.
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t i2c_bus_device_delete(i2c_bus_device_handle_t *device);
+esp_err_t i2c_bus_device_delete(i2c_bus_device_handle_t *p_dev_handle);
 
 /**
  * @brief Read single byte from i2c device with 8-bit internal register/memory address
  *
- * @param device I2C device handle
+ * @param dev_handle I2C device handle
  * @param mem_address The internal reg/mem address to read from, I2C_NO_INTERNAL_ADDRESS if none.
  * @param data Pointer to a buffer to save the data that was read
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t i2c_bus_read_byte(i2c_bus_device_handle_t device, uint8_t mem_address, uint8_t *data);
+esp_err_t i2c_bus_read_byte(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, uint8_t *data);
 
 /**
  * @brief Read multi bytes from i2c device with 8-bit internal register/memory address.
  * If internal reg/mem address is 16-bit, please refer i2c_bus_read_reg16
  *
- * @param device I2C device handle
+ * @param dev_handle I2C device handle
  * @param mem_address The internal reg/mem address to read from, I2C_NO_INTERNAL_ADDRESS if none.
  * @param data_len Number of bytes to read
  * @param data Pointer to a buffer to save the data that was read
@@ -120,12 +120,12 @@ esp_err_t i2c_bus_read_byte(i2c_bus_device_handle_t device, uint8_t mem_address,
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t i2c_bus_read_bytes(i2c_bus_device_handle_t device, uint8_t mem_address, size_t data_len, uint8_t *data);
+esp_err_t i2c_bus_read_bytes(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, size_t data_len, uint8_t *data);
 
 /**
  * @brief Read single bit of a byte from i2c device with 8-bit internal register/memory address
  *
- * @param device I2C device handle
+ * @param dev_handle I2C device handle
  * @param mem_address The internal reg/mem address to read from, I2C_NO_INTERNAL_ADDRESS if none.
  * @param bit_num The bit number 0 - 7 to read
  * @param data Pointer to a buffer to save the data that was read. *data == 0 -> bit = 0, *data !=0 -> bit = 1.
@@ -133,12 +133,12 @@ esp_err_t i2c_bus_read_bytes(i2c_bus_device_handle_t device, uint8_t mem_address
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t i2c_bus_read_bit(i2c_bus_device_handle_t device, uint8_t mem_address, uint8_t bit_num, uint8_t *data);
+esp_err_t i2c_bus_read_bit(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, uint8_t bit_num, uint8_t *data);
 
 /**
  * @brief Read multiple bits of a byte from i2c device with 8-bit internal register/memory address
  *
- * @param device I2C device handle
+ * @param dev_handle I2C device handle
  * @param mem_address The internal reg/mem address to read from, I2C_NO_INTERNAL_ADDRESS if none.
  * @param bit_start The bit to start from, 0 - 7, MSB at 0
  * @param length The number of bits to read, 1 - 8
@@ -147,25 +147,25 @@ esp_err_t i2c_bus_read_bit(i2c_bus_device_handle_t device, uint8_t mem_address, 
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t i2c_bus_read_bits(i2c_bus_device_handle_t device, uint8_t mem_address, uint8_t bit_start, uint8_t length, uint8_t *data);
+esp_err_t i2c_bus_read_bits(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, uint8_t bit_start, uint8_t length, uint8_t *data);
 
 /**
  * @brief Write single byte to i2c device with 8-bit internal register/memory address
  *
- * @param device I2C device handle
+ * @param dev_handle I2C device handle
  * @param mem_address The internal reg/mem address to write to, I2C_NO_INTERNAL_ADDRESS if none.
  * @param data The byte to write.
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t i2c_bus_write_byte(i2c_bus_device_handle_t device, uint8_t mem_address, uint8_t data);
+esp_err_t i2c_bus_write_byte(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, uint8_t data);
 
 /**
  * @brief Write multiple byte to i2c device with 8-bit internal register/memory address
  * If internal reg/mem address is 16-bit, please refer i2c_bus_write_reg16
  *
- * @param device I2C device handle
+ * @param dev_handle I2C device handle
  * @param mem_address The internal reg/mem address to write to, I2C_NO_INTERNAL_ADDRESS if none.
  * @param data_len Number of bytes to write
  * @param data Pointer to the bytes to write.
@@ -173,12 +173,12 @@ esp_err_t i2c_bus_write_byte(i2c_bus_device_handle_t device, uint8_t mem_address
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t i2c_bus_write_bytes(i2c_bus_device_handle_t device, uint8_t mem_address, size_t data_len, uint8_t *data);
+esp_err_t i2c_bus_write_bytes(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, size_t data_len, uint8_t *data);
 
 /**
  * @brief Write single bit of a byte to an i2c device with 8-bit internal register/memory address
  *
- * @param device I2C device handle
+ * @param dev_handle I2C device handle
  * @param mem_address The internal reg/mem address to write to, I2C_NO_INTERNAL_ADDRESS if none.
  * @param bit_num The bit number 0 - 7 to write
  * @param data The bit to write, data == 0 means set bit = 0, data !=0 means set bit = 1.
@@ -186,12 +186,12 @@ esp_err_t i2c_bus_write_bytes(i2c_bus_device_handle_t device, uint8_t mem_addres
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t i2c_bus_write_bit(i2c_bus_device_handle_t device, uint8_t mem_address, uint8_t bit_num, uint8_t data);
+esp_err_t i2c_bus_write_bit(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, uint8_t bit_num, uint8_t data);
 
 /**
  * @brief Write multiple bits of a byte to an i2c device with 8-bit internal register/memory address
  *
- * @param device I2C device handle
+ * @param dev_handle I2C device handle
  * @param mem_address The internal reg/mem address to write to, I2C_NO_INTERNAL_ADDRESS if none.
  * @param bit_start The bit to start from, 0 - 7, MSB at 0
  * @param length The number of bits to write, 1 - 8
@@ -200,14 +200,14 @@ esp_err_t i2c_bus_write_bit(i2c_bus_device_handle_t device, uint8_t mem_address,
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t i2c_bus_write_bits(i2c_bus_device_handle_t device, uint8_t mem_address, uint8_t bit_start, uint8_t length, uint8_t data);
+esp_err_t i2c_bus_write_bits(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, uint8_t bit_start, uint8_t length, uint8_t data);
 
 /**************************************** Public Functions (Low level)*********************************************/
 
 /**
  * @brief Write date to an i2c device with 16-bit internal reg/mem address
  *
- * @param device I2C device handle
+ * @param dev_handle I2C device handle
  * @param mem_address The internal 16-bit reg/mem address to write to, I2C_NO_INTERNAL_ADDRESS if none.
  * @param data_len Number of bytes to write
  * @param data Pointer to the bytes to write.
@@ -215,12 +215,12 @@ esp_err_t i2c_bus_write_bits(i2c_bus_device_handle_t device, uint8_t mem_address
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t i2c_bus_write_reg16(i2c_bus_device_handle_t device, uint16_t mem_address, size_t data_len, uint8_t *data);
+esp_err_t i2c_bus_write_reg16(i2c_bus_device_handle_t dev_handle, uint16_t mem_address, size_t data_len, uint8_t *data);
 
 /**
  * @brief Read date from i2c device with 16-bit internal reg/mem address
  *
- * @param device I2C device handle
+ * @param dev_handle I2C device handle
  * @param mem_address The internal 16-bit reg/mem address to read from, I2C_NO_INTERNAL_ADDRESS if none.
  * @param data_len Number of bytes to read
  * @param data Pointer to a buffer to save the data that was read
@@ -228,7 +228,7 @@ esp_err_t i2c_bus_write_reg16(i2c_bus_device_handle_t device, uint16_t mem_addre
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t i2c_bus_read_reg16(i2c_bus_device_handle_t device, uint16_t mem_address, size_t data_len, uint8_t *data);
+esp_err_t i2c_bus_read_reg16(i2c_bus_device_handle_t dev_handle, uint16_t mem_address, size_t data_len, uint8_t *data);
 
 #ifdef __cplusplus
 }
