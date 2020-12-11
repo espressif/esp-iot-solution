@@ -38,7 +38,7 @@ extern "C" {
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_xpt2046_init(lcd_touch_config_t *xpt_conf);
+esp_err_t iot_xpt2046_init(touch_panel_config_t *xpt_conf);
 
 /**
  * @brief Deinitial touch panel
@@ -93,7 +93,7 @@ esp_err_t iot_xpt2046_get_rawdata(uint16_t *x, uint16_t *y);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail 
  */
-esp_err_t iot_xpt2046_calibration_run(const lcd_driver_fun_t *screen, bool recalibrate);
+esp_err_t iot_xpt2046_calibration_run(const scr_driver_fun_t *screen, bool recalibrate);
 
 /**
  * @brief Start a sample for screen

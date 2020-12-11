@@ -20,7 +20,7 @@
 
 static const char *TAG = "FT5x06";
 
-#define FT5X06_CHECK(a, str, ret)  if(!(a)) {                                   \
+#define TOUCH_CHECK(a, str, ret)  if(!(a)) {                                   \
         ESP_LOGE(TAG,"%s:%d (%s):%s", __FILE__, __LINE__, __FUNCTION__, str);   \
         return (ret);                                                           \
     }
@@ -125,7 +125,7 @@ typedef struct {
 
 static ft5x06_dev_t g_dev;
 
-static esp_err_t iot_ft5x06_calibration_run(const lcd_driver_fun_t *screen, bool recalibrate);
+static esp_err_t iot_ft5x06_calibration_run(const scr_driver_fun_t *screen, bool recalibrate);
 
 touch_driver_fun_t ft5x06_driver_fun = {
     .init = iot_ft5x06_init,
@@ -210,9 +210,10 @@ static uint8_t ft5x06_read_fw_ver(ft5x06_dev_t *dev)
     return (ver);
 }
 
-esp_err_t iot_ft5x06_init(lcd_touch_config_t *config)
+esp_err_t iot_ft5x06_init(touch_panel_config_t *config)
 {
-    FT5X06_CHECK(NULL != config, "Pointer invalid", ESP_ERR_INVALID_ARG);
+    TOUCH_CHECK(NULL != config, "Pointer invalid", ESP_ERR_INVALID_ARG);
+    TOUCH_CHECK(TOUCH_IFACE_I2C == config->iface_type, "Interface type not support", ESP_ERR_INVALID_ARG);
 
     i2c_bus_handle_t i2c_bus = NULL;
     i2c_config_t conf = {
@@ -224,7 +225,7 @@ esp_err_t iot_ft5x06_init(lcd_touch_config_t *config)
         .master.clk_speed = config->iface_i2c.clk_freq,
     };
     i2c_bus = i2c_bus_create(config->iface_i2c.i2c_port, &conf);
-    FT5X06_CHECK(NULL != i2c_bus, "i2c bus create failed", ESP_FAIL);
+    TOUCH_CHECK(NULL != i2c_bus, "i2c bus create failed", ESP_FAIL);
 
     if (config->pin_num_int >= 0) {
         gpio_pad_select_gpio(config->pin_num_int);
@@ -269,7 +270,7 @@ esp_err_t iot_ft5x06_init(lcd_touch_config_t *config)
 
     // Timer to enter 'idle' when in 'Monitor' (ms)
     ret |= ft5x06_write_reg(dev, FT5X0X_REG_PERIODMONITOR, 0x28);
-    FT5X06_CHECK(ESP_OK == ret, "ft5x06 write reg failed", ESP_FAIL);
+    TOUCH_CHECK(ESP_OK == ret, "ft5x06 write reg failed", ESP_FAIL);
 
     ESP_LOGI(TAG, "Initial successful | GPIO INT:%d | GPIO SDA:%d | GPIO SCL:%d | ADDR:0x%x | dir:%d",
              config->pin_num_int, config->iface_i2c.pin_num_sda, config->iface_i2c.pin_num_scl, config->iface_i2c.i2c_addr, config->direction);
@@ -347,7 +348,7 @@ static void ft5x06_apply_rotate(uint16_t *x, uint16_t *y)
 
 esp_err_t iot_ft5x06_sample(touch_info_t *info)
 {
-    FT5X06_CHECK(NULL != info, "Pointer invalid", ESP_FAIL);
+    TOUCH_CHECK(NULL != info, "Pointer invalid", ESP_FAIL);
 
     uint8_t data[4] = {0};
     ft5x06_dev_t *dev = &g_dev;
@@ -377,7 +378,7 @@ esp_err_t iot_ft5x06_sample(touch_info_t *info)
     return ESP_OK;
 }
 
-static esp_err_t iot_ft5x06_calibration_run(const lcd_driver_fun_t *screen, bool recalibrate)
+static esp_err_t iot_ft5x06_calibration_run(const scr_driver_fun_t *screen, bool recalibrate)
 {
     (void)screen;
     (void)recalibrate;

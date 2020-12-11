@@ -19,7 +19,7 @@
 
 static const char *TAG = "NS2016";
 
-#define NS2016_CHECK(a, str, ret)  if(!(a)) {                                      \
+#define TOUCH_CHECK(a, str, ret)  if(!(a)) {                                      \
         ESP_LOGE(TAG,"%s:%d (%s):%s", __FILE__, __LINE__, __FUNCTION__, str);   \
         return (ret);                                                                   \
     }
@@ -88,7 +88,7 @@ static uint16_t ns2016_readdata(ns2016_dev_t *dev, const uint8_t command)
     ret |= iot_i2c_bus_cmd_begin(dev->bus, cmd, 500 / portTICK_RATE_MS);
     i2c_cmd_link_delete(cmd);
 
-    NS2016_CHECK(ret == ESP_OK, "read data failed", 0xffff);
+    TOUCH_CHECK(ret == ESP_OK, "read data failed", 0xffff);
     return (rx_data[0] << 8 | rx_data[1]) >> 4;
 }
 
@@ -104,9 +104,10 @@ static esp_err_t ns2016_get_sample(uint8_t command, uint16_t *out_data)
     return ESP_FAIL;
 }
 
-esp_err_t iot_ns2016_init(lcd_touch_config_t *config)
+esp_err_t iot_ns2016_init(touch_panel_config_t *config)
 {
-    NS2016_CHECK(NULL != config, "Pointer invalid", ESP_ERR_INVALID_ARG);
+    TOUCH_CHECK(NULL != config, "Pointer invalid", ESP_ERR_INVALID_ARG);
+    TOUCH_CHECK(TOUCH_IFACE_I2C == config->iface_type, "Interface type not support", ESP_ERR_INVALID_ARG);
 
     if (config->pin_num_int >= 0) {
         gpio_pad_select_gpio(config->pin_num_int);
@@ -123,7 +124,7 @@ esp_err_t iot_ns2016_init(lcd_touch_config_t *config)
     };
     i2c_bus_handle_t i2c_bus = NULL;
     i2c_bus = i2c_bus_create(config->iface_i2c.i2c_port, &conf);
-    NS2016_CHECK(NULL != i2c_bus, "i2c bus create failed", ESP_FAIL);
+    TOUCH_CHECK(NULL != i2c_bus, "i2c bus create failed", ESP_FAIL);
     g_touch_dev.bus = i2c_bus;
     g_touch_dev.dev_addr = config->iface_i2c.i2c_addr;
     g_touch_dev.width = config->width;
@@ -175,9 +176,9 @@ esp_err_t iot_ns2016_get_rawdata(uint16_t *x, uint16_t *y)
 
     for (int i = 0; i < NS2016_SMP_SIZE; i++) {
         ret = ns2016_get_sample(NS2016_TOUCH_CMD_X, &(samples[i].x));
-        NS2016_CHECK(ret == ESP_OK, "X sample failed", ESP_FAIL);
+        TOUCH_CHECK(ret == ESP_OK, "X sample failed", ESP_FAIL);
         ret = ns2016_get_sample(NS2016_TOUCH_CMD_Y, &(samples[i].y));
-        NS2016_CHECK(ret == ESP_OK, "Y sample failed", ESP_FAIL);
+        TOUCH_CHECK(ret == ESP_OK, "Y sample failed", ESP_FAIL);
 
         aveX += samples[i].x;
         aveY += samples[i].y;
@@ -241,7 +242,7 @@ esp_err_t iot_ns2016_sample(touch_info_t *info)
     esp_err_t ret;
     uint16_t x, y;
     ret = iot_ns2016_get_rawdata(&x, &y);
-    NS2016_CHECK(ret == ESP_OK, "Get raw data failed", ESP_FAIL);
+    TOUCH_CHECK(ret == ESP_OK, "Get raw data failed", ESP_FAIL);
 
     info->curx[0] = 0;
     info->cury[0] = 0;
@@ -275,7 +276,7 @@ esp_err_t iot_ns2016_sample(touch_info_t *info)
     return ESP_OK;
 }
 
-esp_err_t iot_ns2016_calibration_run(const lcd_driver_fun_t *screen, bool recalibrate)
+esp_err_t iot_ns2016_calibration_run(const scr_driver_fun_t *screen, bool recalibrate)
 {
     return touch_calibration_run(screen, iot_ns2016_is_pressed, iot_ns2016_get_rawdata, recalibrate);
 }

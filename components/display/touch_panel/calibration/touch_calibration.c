@@ -15,7 +15,7 @@
 #include "math.h"
 #include "param_save.h"
 #include "nvs_flash.h"
-#include "iot_lcd.h"
+#include "screen_driver.h"
 #include "lcd_paint.h"
 
 static const char* TAG = "Touch calibration";
@@ -46,8 +46,8 @@ typedef struct {
 static Calibration_t g_caldata;
 static bool g_calibrated = false;
 
-static lcd_driver_fun_t lcd;
-static lcd_info_t lcd_info;
+static scr_driver_fun_t lcd;
+static scr_info_t lcd_info;
 static int (*g_touch_is_pressed)(void) = NULL;
 static esp_err_t (*g_touch_read_rawdata)(uint16_t *x, uint16_t *y) = NULL;
 
@@ -180,7 +180,7 @@ static void calibration_calculate(const point_t *cross, const point_t *points)
  * @param recalibrate Is calibration mandatory
  * @return esp_err_t 
  */
-esp_err_t touch_calibration_run(const lcd_driver_fun_t *screen,
+esp_err_t touch_calibration_run(const scr_driver_fun_t *screen,
                                 int (*func_is_pressed)(void),
                                 esp_err_t (*func_read_rawdata)(uint16_t *x, uint16_t *y),
                                 bool recalibrate)
@@ -217,8 +217,8 @@ esp_err_t touch_calibration_run(const lcd_driver_fun_t *screen,
      * So read current direction of screen and backup it.
      */
     lcd.get_info(&lcd_info);
-    lcd_dir_t old_dir = lcd_info.dir;
-    lcd.set_direction(LCD_DIR_LRTB);
+    scr_dir_t old_dir = lcd_info.dir;
+    lcd.set_direction(SCR_DIR_LRTB);
 
     uint8_t index = 0;
     lcd.get_info(&lcd_info);

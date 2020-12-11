@@ -33,7 +33,7 @@ extern "C"
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_ft5x06_init(lcd_touch_config_t * config);
+esp_err_t iot_ft5x06_init(touch_panel_config_t * config);
 
 /**
  * @brief Deinitial touch panel

@@ -18,11 +18,10 @@
 
 static const char *TAG = "XPT2046";
 
-#define XPT2046_CHECK(a, str, ret)  if(!(a)) {                                      \
+#define TOUCH_CHECK(a, str, ret)  if(!(a)) {                                      \
         ESP_LOGE(TAG,"%s:%d (%s):%s", __FILE__, __LINE__, __FUNCTION__, str);   \
         return (ret);                                                                   \
     }
-
 
 #define XPT2046_TOUCH_CMD_X       0xD0
 #define XPT2046_TOUCH_CMD_Y       0x90
@@ -50,7 +49,6 @@ typedef struct {
 
 static xpt2046_dev_t g_dev = {0};
 
-
 touch_driver_fun_t xpt2046_driver_fun = {
     .init = iot_xpt2046_init,
     .deinit = iot_xpt2046_deinit,
@@ -59,7 +57,6 @@ touch_driver_fun_t xpt2046_driver_fun = {
     .is_pressed = iot_xpt2046_is_pressed,
     .read_info = iot_xpt2046_sample,
 };
-
 
 static uint16_t xpt2046_readdata(spi_device_handle_t spi, const uint8_t command)
 {
@@ -76,7 +73,7 @@ static uint16_t xpt2046_readdata(spi_device_handle_t spi, const uint8_t command)
         .command_bits = 8,
     };
     esp_err_t ret = spi_device_transmit(spi, (spi_transaction_t *)&t);
-    XPT2046_CHECK(ret == ESP_OK, "read data failed", 0xffff);
+    TOUCH_CHECK(ret == ESP_OK, "read data failed", 0xffff);
     return (t.base.rx_data[0] << 8 | t.base.rx_data[1]) >> 3;
 }
 
@@ -92,9 +89,10 @@ static esp_err_t xpt2046_get_sample(uint8_t command, uint16_t *out_data)
     return ESP_FAIL;
 }
 
-esp_err_t iot_xpt2046_init(lcd_touch_config_t *config)
+esp_err_t iot_xpt2046_init(touch_panel_config_t *config)
 {
-    XPT2046_CHECK(NULL != config, "Pointer invalid", ESP_ERR_INVALID_ARG);
+    TOUCH_CHECK(NULL != config, "Pointer invalid", ESP_ERR_INVALID_ARG);
+    TOUCH_CHECK(TOUCH_IFACE_SPI == config->iface_type, "Interface type not support", ESP_ERR_INVALID_ARG);
 
     esp_err_t ret;
 
@@ -109,7 +107,7 @@ esp_err_t iot_xpt2046_init(lcd_touch_config_t *config)
             .quadhd_io_num = -1,
         };
         ret = spi_bus_initialize(config->iface_spi.spi_host, &buscfg, config->iface_spi.dma_chan);
-        XPT2046_CHECK(ESP_OK == ret, "spi bus initialize failed", ESP_FAIL);
+        TOUCH_CHECK(ESP_OK == ret, "spi bus initialize failed", ESP_FAIL);
     }
     g_dev.spi_host = config->iface_spi.spi_host;
 
@@ -128,7 +126,7 @@ esp_err_t iot_xpt2046_init(lcd_touch_config_t *config)
 
     devcfg.flags = SPI_DEVICE_HALFDUPLEX;
     ret = spi_bus_add_device(config->iface_spi.spi_host, &devcfg, &g_dev.spi_dev);
-    XPT2046_CHECK(ESP_OK == ret, "spi bus add device failed", ESP_FAIL);
+    TOUCH_CHECK(ESP_OK == ret, "spi bus add device failed", ESP_FAIL);
 
     iot_xpt2046_set_direction(config->direction);
     g_dev.io_irq = config->pin_num_int;
@@ -189,9 +187,9 @@ esp_err_t iot_xpt2046_get_rawdata(uint16_t *x, uint16_t *y)
 
     for (int i = 0; i < XPT2046_SMP_SIZE; i++) {
         ret = xpt2046_get_sample(XPT2046_TOUCH_CMD_X, &(samples[i].x));
-        XPT2046_CHECK(ret == ESP_OK, "X sample failed", ESP_FAIL);
+        TOUCH_CHECK(ret == ESP_OK, "X sample failed", ESP_FAIL);
         ret = xpt2046_get_sample(XPT2046_TOUCH_CMD_Y, &(samples[i].y));
-        XPT2046_CHECK(ret == ESP_OK, "Y sample failed", ESP_FAIL);
+        TOUCH_CHECK(ret == ESP_OK, "Y sample failed", ESP_FAIL);
 
         aveX += samples[i].x;
         aveY += samples[i].y;
@@ -255,7 +253,7 @@ esp_err_t iot_xpt2046_sample(touch_info_t *info)
     esp_err_t ret;
     uint16_t x, y;
     ret = iot_xpt2046_get_rawdata(&x, &y);
-    XPT2046_CHECK(ret == ESP_OK, "Get raw data failed", ESP_FAIL);
+    TOUCH_CHECK(ret == ESP_OK, "Get raw data failed", ESP_FAIL);
 
     info->curx[0] = 0;
     info->cury[0] = 0;
@@ -289,7 +287,7 @@ esp_err_t iot_xpt2046_sample(touch_info_t *info)
     return ESP_OK;
 }
 
-esp_err_t iot_xpt2046_calibration_run(const lcd_driver_fun_t *screen, bool recalibrate)
+esp_err_t iot_xpt2046_calibration_run(const scr_driver_fun_t *screen, bool recalibrate)
 {
     return touch_calibration_run(screen, iot_xpt2046_is_pressed, iot_xpt2046_get_rawdata, recalibrate);
 }

@@ -19,7 +19,7 @@ extern "C"
 {
 #endif
 
-#include "iot_lcd.h"
+#include "screen_driver.h"
 
 /**
  * @brief Start run touch panel calibration
@@ -30,7 +30,7 @@ extern "C"
  * @param recalibrate Is calibration mandatory
  * @return esp_err_t 
  */
-esp_err_t touch_calibration_run(const lcd_driver_fun_t *screen,
+esp_err_t touch_calibration_run(const scr_driver_fun_t *screen,
                                 int (*func_is_pressed)(void),
                                 esp_err_t (*func_read_rawdata)(uint16_t *x, uint16_t *y),
                                 bool recalibrate);
