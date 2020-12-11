@@ -79,10 +79,10 @@ spi_bus_handle_t spi_bus_create(spi_host_device_t host_id, gpio_num_t miso_io_nu
     return (spi_bus_handle_t)&s_spi_bus[index];
 }
 
-esp_err_t spi_bus_delete(spi_bus_handle_t *bus_handle)
+esp_err_t spi_bus_delete(spi_bus_handle_t *p_bus_handle)
 {
-    SPI_BUS_CHECK((NULL != bus_handle) && (NULL != *bus_handle), "Handle error", ESP_ERR_INVALID_ARG);
-    _spi_bus_t *spi_bus = (_spi_bus_t *)(*bus_handle);
+    SPI_BUS_CHECK((NULL != p_bus_handle) && (NULL != *p_bus_handle), "Handle error", ESP_ERR_INVALID_ARG);
+    _spi_bus_t *spi_bus = (_spi_bus_t *)(*p_bus_handle);
 
     if (!spi_bus->is_init) {
         ESP_LOGW(TAG, "spi_bus%d has been de-inited", spi_bus->host_id);
@@ -93,7 +93,7 @@ esp_err_t spi_bus_delete(spi_bus_handle_t *bus_handle)
     SPI_BUS_CHECK(ESP_OK == ret, "spi bus delete failed", ESP_FAIL);
     ESP_LOGI(TAG, "SPI%d bus delete", spi_bus->host_id + 1);
     memset(spi_bus, 0, sizeof(_spi_bus_t));
-    *bus_handle = NULL;
+    *p_bus_handle = NULL;
     return ESP_OK;
 }
 
@@ -136,29 +136,27 @@ spi_bus_device_handle_t spi_bus_device_create(spi_bus_device_handle_t bus_handle
     return (spi_bus_device_handle_t)spi_dev;
 }
 
-esp_err_t spi_bus_device_delete(spi_bus_device_handle_t *device_handle)
+esp_err_t spi_bus_device_delete(spi_bus_device_handle_t *p_dev_handle)
 {
-    SPI_BUS_CHECK((NULL != device_handle) && (NULL != *device_handle), "Pointer error", ESP_ERR_INVALID_ARG);
-    _spi_device_t *spi_dev = (_spi_device_t *)(*device_handle);
+    SPI_BUS_CHECK((NULL != p_dev_handle) && (NULL != *p_dev_handle), "Pointer error", ESP_ERR_INVALID_ARG);
+    _spi_device_t *spi_dev = (_spi_device_t *)(*p_dev_handle);
     _spi_bus_t *spi_bus = (_spi_bus_t *)(spi_dev->spi_bus);
-
     SPI_DEVICE_MUTEX_TAKE(spi_dev, ESP_FAIL);
     esp_err_t ret = spi_bus_remove_device(spi_dev->handle);
     SPI_DEVICE_MUTEX_GIVE(spi_dev, ESP_FAIL);
     SPI_BUS_CHECK(ESP_OK == ret, "spi bus delete device failed", ret);
-
     vSemaphoreDelete(spi_dev->mutex);
     ESP_LOGI(TAG, "SPI%d device removed, CS=%d", spi_bus->host_id + 1, spi_dev->conf.spics_io_num);
     free(spi_dev);
-    *device_handle = NULL;
+    *p_dev_handle = NULL;
     return ESP_OK;
 }
 
 /* this function should lable with inline*/
-inline static esp_err_t _spi_device_polling_transmit(spi_bus_device_handle_t device_handle, spi_transaction_t *trans)
+inline static esp_err_t _spi_device_polling_transmit(spi_bus_device_handle_t dev_handle, spi_transaction_t *trans)
 {
-    SPI_BUS_CHECK(NULL != device_handle, "Pointer error", ESP_ERR_INVALID_ARG);
-    _spi_device_t *spi_dev = (_spi_device_t *)(device_handle);
+    SPI_BUS_CHECK(NULL != dev_handle, "Pointer error", ESP_ERR_INVALID_ARG);
+    _spi_device_t *spi_dev = (_spi_device_t *)(dev_handle);
     esp_err_t ret;
     SPI_DEVICE_MUTEX_TAKE(spi_dev, ESP_FAIL);
     ret = spi_device_polling_transmit(spi_dev->handle, trans);
@@ -166,7 +164,7 @@ inline static esp_err_t _spi_device_polling_transmit(spi_bus_device_handle_t dev
     return ret;
 }
 
-esp_err_t spi_bus_transfer_byte(spi_bus_device_handle_t device_handle, uint8_t data_out, uint8_t *data_in)
+esp_err_t spi_bus_transfer_byte(spi_bus_device_handle_t dev_handle, uint8_t data_out, uint8_t *data_in)
 {
     esp_err_t ret;
     spi_transaction_t trans = {
@@ -176,7 +174,7 @@ esp_err_t spi_bus_transfer_byte(spi_bus_device_handle_t device_handle, uint8_t d
             [0] = data_out
         }
     };
-    ret = _spi_device_polling_transmit(device_handle, &trans);
+    ret = _spi_device_polling_transmit(dev_handle, &trans);
     SPI_BUS_CHECK(ret == ESP_OK, "spi transfer byte failed", ret);
 
     if (data_in) {
@@ -186,7 +184,7 @@ esp_err_t spi_bus_transfer_byte(spi_bus_device_handle_t device_handle, uint8_t d
     return ESP_OK;
 }
 
-esp_err_t spi_bus_transfer_bytes(spi_bus_device_handle_t device_handle, const uint8_t *data_out, uint8_t *data_in, uint32_t data_len)
+esp_err_t spi_bus_transfer_bytes(spi_bus_device_handle_t dev_handle, const uint8_t *data_out, uint8_t *data_in, uint32_t data_len)
 {
     esp_err_t ret;
     spi_transaction_t trans = {
@@ -203,13 +201,13 @@ esp_err_t spi_bus_transfer_bytes(spi_bus_device_handle_t device_handle, const ui
         trans.rx_buffer = data_in;
     }
 
-    ret = _spi_device_polling_transmit(device_handle, &trans);
+    ret = _spi_device_polling_transmit(dev_handle, &trans);
     SPI_BUS_CHECK(ret == ESP_OK, "spi transfer bytes failed", ret);
 
     return ESP_OK;
 }
 
-esp_err_t spi_bus_transfer_reg16(spi_bus_device_handle_t device_handle, uint16_t data_out, uint16_t *data_in)
+esp_err_t spi_bus_transfer_reg16(spi_bus_device_handle_t dev_handle, uint16_t data_out, uint16_t *data_in)
 {
     esp_err_t ret;
     spi_transaction_t trans = {
@@ -221,7 +219,7 @@ esp_err_t spi_bus_transfer_reg16(spi_bus_device_handle_t device_handle, uint16_t
             [1] = data_out & 0xff,
         }
     };
-    ret = _spi_device_polling_transmit(device_handle, &trans);
+    ret = _spi_device_polling_transmit(dev_handle, &trans);
     SPI_BUS_CHECK(ret == ESP_OK, "spi transfer reg16 failed", ret);
 
     if (data_in) {
@@ -231,7 +229,7 @@ esp_err_t spi_bus_transfer_reg16(spi_bus_device_handle_t device_handle, uint16_t
     return ESP_OK;
 }
 
-esp_err_t spi_bus_transfer_reg32(spi_bus_device_handle_t device_handle, uint32_t data_out, uint32_t *data_in)
+esp_err_t spi_bus_transfer_reg32(spi_bus_device_handle_t dev_handle, uint32_t data_out, uint32_t *data_in)
 {
     esp_err_t ret;
     spi_transaction_t trans = {
@@ -245,7 +243,7 @@ esp_err_t spi_bus_transfer_reg32(spi_bus_device_handle_t device_handle, uint32_t
             [3] = data_out & 0xff
         }
     };
-    ret = _spi_device_polling_transmit(device_handle, &trans);
+    ret = _spi_device_polling_transmit(dev_handle, &trans);
     SPI_BUS_CHECK(ret == ESP_OK, "spi transfer reg32 failed", ret);
 
     if (data_in) {

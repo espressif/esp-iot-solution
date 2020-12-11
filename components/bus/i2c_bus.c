@@ -77,8 +77,8 @@ static i2c_bus_t s_i2c_bus[I2C_NUM_MAX];
 
 static esp_err_t i2c_driver_reinit(i2c_port_t port, const i2c_config_t *conf);
 static esp_err_t i2c_driver_deinit(i2c_port_t port);
-static esp_err_t i2c_bus_write_reg8(i2c_bus_device_handle_t device, uint8_t mem_address, size_t data_len, uint8_t *data);
-static esp_err_t i2c_bus_read_reg8(i2c_bus_device_handle_t device, uint8_t mem_address, size_t data_len, uint8_t *data);
+static esp_err_t i2c_bus_write_reg8(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, size_t data_len, uint8_t *data);
+static esp_err_t i2c_bus_read_reg8(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, size_t data_len, uint8_t *data);
 inline static bool i2c_config_compare(i2c_port_t port, const i2c_config_t *conf);
 /**************************************** Public Functions (Application level)*********************************************/
 
@@ -105,10 +105,10 @@ i2c_bus_handle_t i2c_bus_create(i2c_port_t port, const i2c_config_t *conf)
     return (i2c_bus_handle_t)&s_i2c_bus[port];
 }
 
-esp_err_t i2c_bus_delete(i2c_bus_handle_t *bus)
+esp_err_t i2c_bus_delete(i2c_bus_handle_t *p_bus)
 {
-    I2C_BUS_CHECK(*bus != NULL, "pointer = NULL error", ESP_FAIL);
-    i2c_bus_t *i2c_bus = (i2c_bus_t *)(*bus);
+    I2C_BUS_CHECK(p_bus != NULL && *p_bus != NULL, "pointer = NULL error", ESP_FAIL);
+    i2c_bus_t *i2c_bus = (i2c_bus_t *)(*p_bus);
     I2C_BUS_INIT_CHECK(i2c_bus->is_init, ESP_FAIL);
     I2C_BUS_MUTEX_TAKE_MAX_DELAY(i2c_bus->mutex, ESP_ERR_TIMEOUT);
 
@@ -121,14 +121,14 @@ esp_err_t i2c_bus_delete(i2c_bus_handle_t *bus)
     esp_err_t ret = i2c_driver_deinit(i2c_bus->i2c_port);
     I2C_BUS_CHECK(ret == ESP_OK, "deinit error", ret);
     vSemaphoreDelete(i2c_bus->mutex);
-    *bus = NULL;
+    *p_bus = NULL;
     return ESP_OK;
 }
 
-uint8_t i2c_bus_scan(i2c_bus_handle_t bus, uint8_t *buf, uint8_t num)
+uint8_t i2c_bus_scan(i2c_bus_handle_t bus_handle, uint8_t *buf, uint8_t num)
 {
-    I2C_BUS_CHECK(bus != NULL, "Handle error", 0);
-    i2c_bus_t *i2c_bus = (i2c_bus_t *)bus;
+    I2C_BUS_CHECK(bus_handle != NULL, "Handle error", 0);
+    i2c_bus_t *i2c_bus = (i2c_bus_t *)bus_handle;
     I2C_BUS_INIT_CHECK(i2c_bus->is_init, 0);
     uint8_t device_count = 0;
     I2C_BUS_MUTEX_TAKE_MAX_DELAY(i2c_bus->mutex, 0);
@@ -146,33 +146,34 @@ uint8_t i2c_bus_scan(i2c_bus_handle_t bus, uint8_t *buf, uint8_t num)
             }
             device_count++;
         }
+
         i2c_cmd_link_delete(cmd);
     }
     I2C_BUS_MUTEX_GIVE(i2c_bus->mutex, 0);
     return device_count;
 }
 
-uint32_t i2c_bus_get_current_clk_speed(i2c_bus_handle_t bus)
+uint32_t i2c_bus_get_current_clk_speed(i2c_bus_handle_t bus_handle)
 {
-    I2C_BUS_CHECK(bus != NULL, "Null Bus Handle", 0);
-    i2c_bus_t *i2c_bus = (i2c_bus_t *)bus;
+    I2C_BUS_CHECK(bus_handle != NULL, "Null Bus Handle", 0);
+    i2c_bus_t *i2c_bus = (i2c_bus_t *)bus_handle;
     I2C_BUS_INIT_CHECK(i2c_bus->is_init, 0);
     return i2c_bus->conf_active.master.clk_speed;
 }
 
-uint8_t i2c_bus_get_created_device_num(i2c_bus_handle_t bus)
+uint8_t i2c_bus_get_created_device_num(i2c_bus_handle_t bus_handle)
 {
-    I2C_BUS_CHECK(bus != NULL, "Null Bus Handle", 0);
-    i2c_bus_t *i2c_bus = (i2c_bus_t *)bus;
+    I2C_BUS_CHECK(bus_handle != NULL, "Null Bus Handle", 0);
+    i2c_bus_t *i2c_bus = (i2c_bus_t *)bus_handle;
     I2C_BUS_INIT_CHECK(i2c_bus->is_init, 0);
     return i2c_bus->ref_counter;
 }
 
-i2c_bus_device_handle_t i2c_bus_device_create(i2c_bus_handle_t bus, uint8_t dev_addr, uint32_t clk_speed)
+i2c_bus_device_handle_t i2c_bus_device_create(i2c_bus_handle_t bus_handle, uint8_t dev_addr, uint32_t clk_speed)
 {
-    I2C_BUS_CHECK(bus != NULL, "Null Bus Handle", NULL);
+    I2C_BUS_CHECK(bus_handle != NULL, "Null Bus Handle", NULL);
     I2C_BUS_CHECK(clk_speed <= 400000, "clk_speed must <= 400000", NULL);
-    i2c_bus_t *i2c_bus = (i2c_bus_t *)bus;
+    i2c_bus_t *i2c_bus = (i2c_bus_t *)bus_handle;
     I2C_BUS_INIT_CHECK(i2c_bus->is_init, NULL);
     i2c_bus_device_t *i2c_device = calloc(1, sizeof(i2c_bus_device_t));
     I2C_BUS_CHECK(i2c_device != NULL, "calloc memory failed", NULL);
@@ -186,41 +187,41 @@ i2c_bus_device_handle_t i2c_bus_device_create(i2c_bus_handle_t bus, uint8_t dev_
     return (i2c_bus_device_handle_t)i2c_device;
 }
 
-esp_err_t i2c_bus_device_delete(i2c_bus_device_handle_t *device)
+esp_err_t i2c_bus_device_delete(i2c_bus_device_handle_t *p_dev_handle)
 {
-    I2C_BUS_CHECK(device != NULL, "Null Device Handle", ESP_FAIL);
-    i2c_bus_device_t *i2c_device = (i2c_bus_device_t *)(*device);
+    I2C_BUS_CHECK(p_dev_handle != NULL && *p_dev_handle != NULL, "Null Device Handle", ESP_FAIL);
+    i2c_bus_device_t *i2c_device = (i2c_bus_device_t *)(*p_dev_handle);
     I2C_BUS_MUTEX_TAKE_MAX_DELAY(i2c_device->i2c_bus->mutex, ESP_ERR_TIMEOUT);
     i2c_device->i2c_bus->ref_counter--;
     I2C_BUS_MUTEX_GIVE(i2c_device->i2c_bus->mutex, ESP_FAIL);
     free(i2c_device);
-    *device = NULL;
+    *p_dev_handle = NULL;
     return ESP_OK;
 }
 
-esp_err_t i2c_bus_read_bytes(i2c_bus_device_handle_t device, uint8_t mem_address, size_t data_len, uint8_t *data)
+esp_err_t i2c_bus_read_bytes(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, size_t data_len, uint8_t *data)
 {
-    return i2c_bus_read_reg8(device, mem_address, data_len, data);
+    return i2c_bus_read_reg8(dev_handle, mem_address, data_len, data);
 }
 
-esp_err_t i2c_bus_read_byte(i2c_bus_device_handle_t device, uint8_t mem_address, uint8_t *data)
+esp_err_t i2c_bus_read_byte(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, uint8_t *data)
 {
-    return i2c_bus_read_reg8(device, mem_address, 1, data);
+    return i2c_bus_read_reg8(dev_handle, mem_address, 1, data);
 }
 
-esp_err_t i2c_bus_read_bit(i2c_bus_device_handle_t device, uint8_t mem_address, uint8_t bit_num, uint8_t *data)
+esp_err_t i2c_bus_read_bit(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, uint8_t bit_num, uint8_t *data)
 {
-    uint8_t byte;
-    esp_err_t ret = i2c_bus_read_reg8(device, mem_address, 1, &byte);
+    uint8_t byte = 0;
+    esp_err_t ret = i2c_bus_read_reg8(dev_handle, mem_address, 1, &byte);
     *data = byte & (1 << bit_num);
     *data = (*data != 0) ? 1 : 0;
     return ret;
 }
 
-esp_err_t i2c_bus_read_bits(i2c_bus_device_handle_t device, uint8_t mem_address, uint8_t bit_start, uint8_t length, uint8_t *data)
+esp_err_t i2c_bus_read_bits(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, uint8_t bit_start, uint8_t length, uint8_t *data)
 {
-    uint8_t byte;
-    esp_err_t ret = i2c_bus_read_byte(device, mem_address, &byte);
+    uint8_t byte = 0;
+    esp_err_t ret = i2c_bus_read_byte(dev_handle, mem_address, &byte);
 
     if (ret != ESP_OK) {
         return ret;
@@ -233,33 +234,33 @@ esp_err_t i2c_bus_read_bits(i2c_bus_device_handle_t device, uint8_t mem_address,
     return ret;
 }
 
-esp_err_t i2c_bus_write_byte(i2c_bus_device_handle_t device, uint8_t mem_address, uint8_t data)
+esp_err_t i2c_bus_write_byte(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, uint8_t data)
 {
-    return i2c_bus_write_reg8(device, mem_address, 1, &data);
+    return i2c_bus_write_reg8(dev_handle, mem_address, 1, &data);
 }
 
-esp_err_t i2c_bus_write_bytes(i2c_bus_device_handle_t device, uint8_t mem_address, size_t data_len, uint8_t *data)
+esp_err_t i2c_bus_write_bytes(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, size_t data_len, uint8_t *data)
 {
-    return i2c_bus_write_reg8(device, mem_address, data_len, data);
+    return i2c_bus_write_reg8(dev_handle, mem_address, data_len, data);
 }
 
-esp_err_t i2c_bus_write_bit(i2c_bus_device_handle_t device, uint8_t mem_address, uint8_t bit_num, uint8_t data)
+esp_err_t i2c_bus_write_bit(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, uint8_t bit_num, uint8_t data)
 {
-    uint8_t byte;
-    esp_err_t ret = i2c_bus_read_byte(device, mem_address, &byte);
+    uint8_t byte = 0;
+    esp_err_t ret = i2c_bus_read_byte(dev_handle, mem_address, &byte);
 
     if (ret != ESP_OK) {
         return ret;
     }
 
     byte = (data != 0) ? (byte | (1 << bit_num)) : (byte & ~(1 << bit_num));
-    return i2c_bus_write_byte(device, mem_address, byte);
+    return i2c_bus_write_byte(dev_handle, mem_address, byte);
 }
 
-esp_err_t i2c_bus_write_bits(i2c_bus_device_handle_t device, uint8_t mem_address, uint8_t bit_start, uint8_t length, uint8_t data)
+esp_err_t i2c_bus_write_bits(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, uint8_t bit_start, uint8_t length, uint8_t data)
 {
-    uint8_t byte;
-    esp_err_t ret = i2c_bus_read_byte(device, mem_address, &byte);
+    uint8_t byte = 0;
+    esp_err_t ret = i2c_bus_read_byte(dev_handle, mem_address, &byte);
 
     if (ret != ESP_OK) {
         return ret;
@@ -270,7 +271,7 @@ esp_err_t i2c_bus_write_bits(i2c_bus_device_handle_t device, uint8_t mem_address
     data &= mask;                     // zero all non-important bits in data
     byte &= ~(mask);                  // zero all important bits in existing byte
     byte |= data;                     // combine data with existing byte
-    return i2c_bus_write_byte(device, mem_address, byte);
+    return i2c_bus_write_byte(dev_handle, mem_address, byte);
 }
 
 /**
@@ -304,10 +305,10 @@ inline static esp_err_t i2c_master_cmd_begin_with_conf(i2c_port_t i2c_num, i2c_c
 }
 
 /**************************************** Public Functions (Low level)*********************************************/
-static esp_err_t i2c_bus_read_reg8(i2c_bus_device_handle_t device, uint8_t mem_address, size_t data_len, uint8_t *data)
+static esp_err_t i2c_bus_read_reg8(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, size_t data_len, uint8_t *data)
 {
     I2C_BUS_CHECK(data != NULL, "data pointer error", ESP_FAIL);
-    i2c_bus_device_t *i2c_device = (i2c_bus_device_t *)device;
+    i2c_bus_device_t *i2c_device = (i2c_bus_device_t *)dev_handle;
     I2C_BUS_INIT_CHECK(i2c_device->i2c_bus->is_init, ESP_FAIL);
     I2C_BUS_MUTEX_TAKE(i2c_device->i2c_bus->mutex, ESP_ERR_TIMEOUT);
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
@@ -328,10 +329,10 @@ static esp_err_t i2c_bus_read_reg8(i2c_bus_device_handle_t device, uint8_t mem_a
     return ret;
 }
 
-esp_err_t i2c_bus_read_reg16(i2c_bus_device_handle_t device, uint16_t mem_address, size_t data_len, uint8_t *data)
+esp_err_t i2c_bus_read_reg16(i2c_bus_device_handle_t dev_handle, uint16_t mem_address, size_t data_len, uint8_t *data)
 {
     I2C_BUS_CHECK(data != NULL, "data pointer error", ESP_FAIL);
-    i2c_bus_device_t *i2c_device = (i2c_bus_device_t *)device;
+    i2c_bus_device_t *i2c_device = (i2c_bus_device_t *)dev_handle;
     I2C_BUS_INIT_CHECK(i2c_device->i2c_bus->is_init, ESP_FAIL);
     uint8_t memAddress8[2];
     memAddress8[0] = (uint8_t)((mem_address >> 8) & 0x00FF);
@@ -355,10 +356,10 @@ esp_err_t i2c_bus_read_reg16(i2c_bus_device_handle_t device, uint16_t mem_addres
     return ret;
 }
 
-static esp_err_t i2c_bus_write_reg8(i2c_bus_device_handle_t device, uint8_t mem_address, size_t data_len, uint8_t *data)
+static esp_err_t i2c_bus_write_reg8(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, size_t data_len, uint8_t *data)
 {
     I2C_BUS_CHECK(data != NULL, "data pointer error", ESP_FAIL);
-    i2c_bus_device_t *i2c_device = (i2c_bus_device_t *)device;
+    i2c_bus_device_t *i2c_device = (i2c_bus_device_t *)dev_handle;
     I2C_BUS_INIT_CHECK(i2c_device->i2c_bus->is_init, ESP_FAIL);
     I2C_BUS_MUTEX_TAKE(i2c_device->i2c_bus->mutex, ESP_ERR_TIMEOUT);
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
@@ -377,10 +378,10 @@ static esp_err_t i2c_bus_write_reg8(i2c_bus_device_handle_t device, uint8_t mem_
     return ret;
 }
 
-esp_err_t i2c_bus_write_reg16(i2c_bus_device_handle_t device, uint16_t mem_address, size_t data_len, uint8_t *data)
+esp_err_t i2c_bus_write_reg16(i2c_bus_device_handle_t dev_handle, uint16_t mem_address, size_t data_len, uint8_t *data)
 {
     I2C_BUS_CHECK(data != NULL, "data pointer error", ESP_FAIL);
-    i2c_bus_device_t *i2c_device = (i2c_bus_device_t *)device;
+    i2c_bus_device_t *i2c_device = (i2c_bus_device_t *)dev_handle;
     I2C_BUS_INIT_CHECK(i2c_device->i2c_bus->is_init, ESP_FAIL);
     uint8_t memAddress8[2];
     memAddress8[0] = (uint8_t)((mem_address >> 8) & 0x00FF);
