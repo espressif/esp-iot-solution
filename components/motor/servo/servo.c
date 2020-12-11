@@ -27,10 +27,9 @@ static const char *TAG = "servo";
 
 #define SERVO_LEDC_INIT_BITS LEDC_TIMER_10_BIT
 
-static uint32_t g_full_duty;
-static servo_config_t g_cfg;
-static float g_angle[LEDC_CHANNEL_MAX];
-
+static uint32_t g_full_duty = 0;
+static servo_config_t g_cfg = {0};
+static float g_angle[LEDC_CHANNEL_MAX] = {0};
 
 static uint32_t calculate_duty(float angle)
 {
@@ -43,11 +42,9 @@ static uint32_t calculate_duty(float angle)
 esp_err_t servo_init(const servo_config_t *config)
 {
     esp_err_t ret;
-
     SERVO_CHECK(NULL != config, "Pointer of config is invalid", ESP_ERR_INVALID_ARG);
     SERVO_CHECK(config->channel_number > 0 && config->channel_number <= LEDC_CHANNEL_MAX, "Servo channel number out the range", ESP_ERR_INVALID_ARG);
     SERVO_CHECK(config->freq <= 1000 && config->freq >= 50, "Servo pwm frequency out the range", ESP_ERR_INVALID_ARG);
-
     uint64_t pin_mask = 0;
     uint32_t ch_mask = 0;
     for (size_t i = 0; i < config->channel_number; i++) {
@@ -59,33 +56,31 @@ esp_err_t servo_init(const servo_config_t *config)
         pin_mask |= _pin_mask;
         ch_mask |= _ch_mask;
     }
-
     g_full_duty = (1 << SERVO_LEDC_INIT_BITS) - 1;
     g_cfg = *config;
-
-    ledc_timer_config_t ledc_timer;
-    ledc_timer.clk_cfg = LEDC_AUTO_CLK;
-    ledc_timer.duty_resolution = SERVO_LEDC_INIT_BITS;     // resolution of PWM duty
-    ledc_timer.freq_hz = config->freq;                     // frequency of PWM signal
-    ledc_timer.speed_mode = config->speed_mode;            // timer mode
-    ledc_timer.timer_num = config->timer_number;           // timer index
+    ledc_timer_config_t ledc_timer = {
+        .clk_cfg = LEDC_AUTO_CLK,
+        .duty_resolution = SERVO_LEDC_INIT_BITS,     // resolution of PWM duty
+        .freq_hz = config->freq,                     // frequency of PWM signal
+        .speed_mode = config->speed_mode,            // timer mode
+        .timer_num = config->timer_number            // timer index
+    };
     ret = ledc_timer_config(&ledc_timer);
     SERVO_CHECK(ESP_OK == ret, "ledc timer configuration failed", ESP_FAIL);
-
     for (size_t i = 0; i < config->channel_number; i++) {
-        ledc_channel_config_t ledc_ch;
-        ledc_ch.intr_type = LEDC_INTR_DISABLE;
-        ledc_ch.channel    = config->channels.ch[i];
-        ledc_ch.duty       = calculate_duty(0);
-        ledc_ch.gpio_num   = config->channels.servo_pin[i];
-        ledc_ch.speed_mode = config->speed_mode;
-        ledc_ch.timer_sel  = config->timer_number;
-        ledc_ch.hpoint     = 0;
+        ledc_channel_config_t ledc_ch = {
+            .intr_type  = LEDC_INTR_DISABLE,
+            .channel    = config->channels.ch[i],
+            .duty       = calculate_duty(0),
+            .gpio_num   = config->channels.servo_pin[i],
+            .speed_mode = config->speed_mode,
+            .timer_sel  = config->timer_number,
+            .hpoint     = 0
+        };
         ret = ledc_channel_config(&ledc_ch);
         SERVO_CHECK(ESP_OK == ret, "ledc channel configuration failed", ESP_FAIL);
         g_angle[i] = 0.0f;
     }
-
     return ESP_OK;
 }
 
@@ -102,13 +97,11 @@ esp_err_t servo_deinit(void)
 esp_err_t servo_write_angle(uint8_t channel, float angle)
 {
     SERVO_CHECK(channel < LEDC_CHANNEL_MAX, "Servo channel number too large", ESP_ERR_INVALID_ARG);
-
     esp_err_t ret;
     uint32_t duty = calculate_duty(angle);
     ledc_set_duty(g_cfg.speed_mode, (ledc_channel_t)channel, duty);
     ret = ledc_update_duty(g_cfg.speed_mode, (ledc_channel_t)channel);
     SERVO_CHECK(ESP_OK == ret, "write servo angle failed", ESP_FAIL);
-
     g_angle[channel] = angle;
     return ESP_OK;
 }
@@ -116,7 +109,6 @@ esp_err_t servo_write_angle(uint8_t channel, float angle)
 esp_err_t servo_read_angle(uint8_t channel, float *angle)
 {
     SERVO_CHECK(channel < LEDC_CHANNEL_MAX, "Servo channel number too large", ESP_ERR_INVALID_ARG);
-
     *angle = g_angle[channel];
     return ESP_OK;
 }

@@ -1,4 +1,4 @@
-// Copyright 2020 Espressif Systems (Shanghai) Co. Ltd.
+// Copyright 2020-2021 Espressif Systems (Shanghai) Co. Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,15 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef _IOT_SERVO_H_
-#define _IOT_SERVO_H_
+#ifndef _SERVO_H_
+#define _SERVO_H_
 
 #include "esp_err.h"
 #include "driver/ledc.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /**
  * @brief Configuration of servo motor channel
@@ -46,6 +42,10 @@ typedef struct {
     uint8_t channel_number;    /**< Total channel number */
 } servo_config_t;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @brief Initialize ledc to control the servo
  * 
@@ -69,7 +69,7 @@ esp_err_t servo_deinit(void);
 /**
  * @brief Set the servo motor to a certain angle
  * 
- * @param channel LEDC channel (0-7), select from ledc_channel_t
+ * @param channel LEDC channel, select from ledc_channel_t
  * @param angle The angle to go
  * 
  * @return
@@ -81,7 +81,7 @@ esp_err_t servo_write_angle(uint8_t channel, float angle);
 /**
  * @brief Read current angle of one channel 
  * 
- * @param channel LEDC channel (0-7), select from ledc_channel_t
+ * @param channel LEDC channel, select from ledc_channel_t
  * @param angle Current angle of the channel
  * 
  * @return
