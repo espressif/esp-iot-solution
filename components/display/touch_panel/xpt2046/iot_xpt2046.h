@@ -19,13 +19,8 @@
 extern "C" {
 #endif
 
-#include "string.h"
-#include "stdio.h"
-#include "driver/gpio.h"
-#include "driver/spi_master.h"
-#include "freertos/semphr.h"
 #include "esp_log.h"
-#include "iot_touch.h"
+#include "touch_panel.h"
 
 
 
@@ -38,7 +33,7 @@ extern "C" {
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_xpt2046_init(touch_panel_config_t *xpt_conf);
+esp_err_t iot_xpt2046_init(const touch_panel_config_t *xpt_conf);
 
 /**
  * @brief Deinitial touch panel

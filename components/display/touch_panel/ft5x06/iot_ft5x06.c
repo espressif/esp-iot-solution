@@ -210,7 +210,7 @@ static uint8_t ft5x06_read_fw_ver(ft5x06_dev_t *dev)
     return (ver);
 }
 
-esp_err_t iot_ft5x06_init(touch_panel_config_t *config)
+esp_err_t iot_ft5x06_init(const touch_panel_config_t *config)
 {
     TOUCH_CHECK(NULL != config, "Pointer invalid", ESP_ERR_INVALID_ARG);
     TOUCH_CHECK(TOUCH_IFACE_I2C == config->iface_type, "Interface type not support", ESP_ERR_INVALID_ARG);

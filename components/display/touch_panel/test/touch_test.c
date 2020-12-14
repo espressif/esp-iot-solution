@@ -13,8 +13,8 @@
 // limitations under the License.
 #include "freertos/FreeRTOS.h"
 #include "screen_driver.h"
-#include "iot_touch.h"
-#include "lcd_paint.h"
+#include "touch_panel.h"
+#include "basic_painter.h"
 #include "unity.h"
 
 static const char *TAG = "TOUCH LCD TEST";
@@ -71,8 +71,8 @@ TEST_CASE("Touch XPT2016 test", "[touch_panel][iot]")
     TEST_ASSERT(ESP_OK == touch_panel_init(TOUCH_CONTROLLER_XPT2046, &touch_cfg, &touch));
     touch.calibration_run(&lcd, true);
 
-    iot_paint_init(&lcd);
-    iot_paint_clear(COLOR_WHITE);
+    painter_init(&lcd);
+    painter_clear(COLOR_WHITE);
 
     while (1) {
         touch_info_t touch_info;
@@ -146,8 +146,8 @@ TEST_CASE("Touch NS2016 test", "[touch_panel][iot]")
     TEST_ASSERT(ESP_OK == touch_panel_init(TOUCH_CONTROLLER_NS2016, &touch_cfg, &touch));
     touch.calibration_run(&lcd, true);
 
-    iot_paint_init(&lcd);
-    iot_paint_clear(COLOR_WHITE);
+    painter_init(&lcd);
+    painter_clear(COLOR_WHITE);
 
     while (1) {
         touch_info_t touch_info;
@@ -220,8 +220,8 @@ TEST_CASE("Touch FT5x06 test", "[touch_panel][iot]")
     TEST_ASSERT(ESP_OK == touch_panel_init(TOUCH_CONTROLLER_FT5X06, &touch_cfg, &touch));
     touch.calibration_run(&lcd, true);
 
-    iot_paint_init(&lcd);
-    iot_paint_clear(COLOR_WHITE);
+    painter_init(&lcd);
+    painter_clear(COLOR_WHITE);
 
     while (1) {
         touch_info_t touch_info;

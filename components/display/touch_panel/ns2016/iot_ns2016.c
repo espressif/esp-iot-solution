@@ -104,7 +104,7 @@ static esp_err_t ns2016_get_sample(uint8_t command, uint16_t *out_data)
     return ESP_FAIL;
 }
 
-esp_err_t iot_ns2016_init(touch_panel_config_t *config)
+esp_err_t iot_ns2016_init(const touch_panel_config_t *config)
 {
     TOUCH_CHECK(NULL != config, "Pointer invalid", ESP_ERR_INVALID_ARG);
     TOUCH_CHECK(TOUCH_IFACE_I2C == config->iface_type, "Interface type not support", ESP_ERR_INVALID_ARG);

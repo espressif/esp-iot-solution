@@ -16,7 +16,7 @@
 #include "param_save.h"
 #include "nvs_flash.h"
 #include "screen_driver.h"
-#include "lcd_paint.h"
+#include "basic_painter.h"
 
 static const char* TAG = "Touch calibration";
 
@@ -68,15 +68,14 @@ static esp_err_t touch_load_calibration(void *buf)
 
 static void _draw_touch_Point(uint16_t x, uint16_t y, uint16_t color)
 {
-    iot_paint_draw_line(x - 14, y, x + 15, y, color); //horizontal line
-    iot_paint_draw_line(x, y - 14, x, y + 15, color); //vertical line
+    painter_draw_line(x - 14, y, x + 15, y, color); //horizontal line
+    painter_draw_line(x, y - 14, x, y + 15, color); //vertical line
     lcd.draw_pixel(x + 1, y + 1, color);
     lcd.draw_pixel(x - 1, y + 1, color);
     lcd.draw_pixel(x + 1, y - 1, color);
     lcd.draw_pixel(x - 1, y - 1, color);
-    iot_paint_draw_circle(x, y, 8, color); //circular
+    painter_draw_circle(x, y, 8, color); //circular
 }
-
 
 static void _get_point(int8_t index, point_t *cross, point_t *point)
 {
@@ -194,7 +193,7 @@ esp_err_t touch_calibration_run(const scr_driver_fun_t *screen,
     g_touch_is_pressed = func_is_pressed;
     g_touch_read_rawdata = func_read_rawdata;
     lcd = *screen;
-    ret = iot_paint_init(&lcd);
+    ret = painter_init(&lcd);
     CALIBRATION_CHECK(ESP_OK == ret, "Initial failed", ESP_FAIL);
 
     ret = nvs_flash_init();
@@ -248,8 +247,8 @@ esp_err_t touch_calibration_run(const scr_driver_fun_t *screen,
 
     while (calibrate_error)
     {
-        iot_paint_clear(COLOR_WHITE);
-        iot_paint_draw_string(0, 0, "Please press the center of the circle in turn", &Font12, COLOR_BLUE);
+        painter_clear(COLOR_WHITE);
+        painter_draw_string(0, 0, "Please press the center of the circle in turn", &Font12, COLOR_BLUE);
 
         _get_point(index, cross, &points[index]);
         index++;
@@ -270,7 +269,7 @@ esp_err_t touch_calibration_run(const scr_driver_fun_t *screen,
         calibrate_error = (points[3].x - cross[3].x) * (points[3].x - cross[3].x) 
             + (points[3].y - cross[3].y) * (points[3].y - cross[3].y);
         if (calibrate_error > (uint32_t)GMOUSE_FINGER_CALIBRATE_ERROR * (uint32_t)GMOUSE_FINGER_CALIBRATE_ERROR) {
-            iot_paint_draw_string(10, h/2, "Calibration Failed!", &Font16, COLOR_RED);
+            painter_draw_string(10, h/2, "Calibration Failed!", &Font16, COLOR_RED);
             ESP_LOGW(TAG, "Touch Calibration failed!");
             g_calibrated = false;
             index = 0;
@@ -280,13 +279,13 @@ esp_err_t touch_calibration_run(const scr_driver_fun_t *screen,
             calibrate_error = 0;
             ESP_LOGI(TAG, "/ XL = (%f)X + (%f)Y + (%f)", g_caldata.ax, g_caldata.bx, g_caldata.cx);
             ESP_LOGI(TAG, "\\ YL = (%f)X + (%f)Y + (%f)", g_caldata.ay, g_caldata.by, g_caldata.cy);
-            iot_paint_draw_string(30, h/2, "Successful", &Font16, COLOR_BLUE);
+            painter_draw_string(30, h/2, "Successful", &Font16, COLOR_BLUE);
             touch_save_calibration(&g_caldata, sizeof(Calibration_t));
             vTaskDelay(2000 / portTICK_PERIOD_MS);
         }
     }
     ESP_LOGI(TAG, "Touch Calibration successful");
-    iot_paint_clear(COLOR_WHITE);
+    painter_clear(COLOR_WHITE);
     lcd.set_direction(old_dir);
     return ESP_OK;
 }

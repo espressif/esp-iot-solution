@@ -21,7 +21,7 @@ extern "C"
 
 #include "driver/i2c.h"
 #include "i2c_bus.h"
-#include "iot_touch.h"
+#include "touch_panel.h"
 
 
 /**
@@ -33,7 +33,7 @@ extern "C"
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_ft5x06_init(touch_panel_config_t * config);
+esp_err_t iot_ft5x06_init(const touch_panel_config_t * config);
 
 /**
  * @brief Deinitial touch panel

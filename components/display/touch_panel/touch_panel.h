@@ -147,7 +147,7 @@ typedef struct {
 } touch_panel_config_t;
 
 typedef struct {
-    esp_err_t (*init)(touch_panel_config_t *config);
+    esp_err_t (*init)(const touch_panel_config_t *config);
     esp_err_t (*deinit)(bool free_bus);
     esp_err_t (*calibration_run)(const scr_driver_fun_t *screen, bool recalibrate);
     esp_err_t (*set_direction)(touch_dir_t dir);
