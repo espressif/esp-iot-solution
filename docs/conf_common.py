@@ -30,18 +30,22 @@ builddir = builddir
 if 'BUILDDIR' in os.environ:
     builddir = os.environ['BUILDDIR']
 
+def call_with_python(cmd):
+    # using sys.executable ensures that the scripts are called with the same Python interpreter
+    if os.system('{} {}'.format(sys.executable, cmd)) != 0:
+        raise RuntimeError('{} failed'.format(cmd))
+
 # Call Doxygen to get XML files from the header files
-#print("Calling Doxygen to generate latest XML files")
-#if os.system("doxygen ../Doxyfile") != 0:
-#    raise RuntimeError('Doxygen call failed')
+print("Calling Doxygen to generate latest XML files")
+if os.system("doxygen ../Doxyfile") != 0:
+   raise RuntimeError('Doxygen call failed')
 
 # Doxygen has generated XML files in 'xml' directory.
 # Copy them to 'xml_in', only touching the files which have changed.
-#copy_if_modified('xml/', 'xml_in/')
+copy_if_modified('xml/', 'xml_in/')
 
 # Generate 'api_name.inc' files using the XML files by Doxygen
-#if os.system('python ../gen-dxd.py') != 0:
-#    raise RuntimeError('gen-dxd.py failed')
+call_with_python('../gen-dxd.py')
 
 # Generate 'kconfig.inc' file from components' Kconfig files
 #kconfig_inc_path = '{}/inc/kconfig.inc'.format(builddir)
@@ -56,6 +60,15 @@ if 'BUILDDIR' in os.environ:
 #    raise RuntimeError('gen_esp_err_to_name.py failed')
 #copy_if_modified(esp_err_inc_path + '.in', esp_err_inc_path)
 
+# Generate version-related includes
+#
+# (Note: this is in a function as it needs to access configuration to get the language)
+def generate_version_specific_includes(app):
+    print("Generating version-specific includes...")
+    version_tmpdir = '{}/version_inc'.format(builddir)
+    call_with_python('../gen-version-specific-includes.py {} {}'.format(app.config.language, version_tmpdir))
+    copy_if_modified(version_tmpdir, '{}/inc'.format(builddir))
+
 # http://stackoverflow.com/questions/12772927/specifying-an-online-image-in-sphinx-restructuredtext-format
 # 
 suppress_warnings = ['image.nonlocal_uri']
@@ -68,12 +81,14 @@ suppress_warnings = ['image.nonlocal_uri']
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = [
+extensions = ['breathe',
                    'link-roles',
                    'sphinxcontrib.blockdiag',
                    'sphinxcontrib.seqdiag',
                    'sphinxcontrib.actdiag',
-                   'sphinxcontrib.nwdiag'
+                   'sphinxcontrib.nwdiag',
+                   'sphinxcontrib.rackdiag',
+                   'sphinxcontrib.packetdiag'
                   ]
 
 # Set up font for blockdiag, nwdiag, rackdiag and packetdiag
@@ -159,7 +174,6 @@ exclude_patterns = ['_build','README.md']
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
-
 
 # A list of ignored prefixes for module index sorting.
 #modindex_common_prefix = []
@@ -340,3 +354,4 @@ if not on_rtd:  # only import and set the theme if we're building docs locally
 # https://github.com/rtfd/sphinx_rtd_theme/pull/432
 def setup(app):
     app.add_stylesheet('theme_overrides.css')
+    # generate_version_specific_includes(app)
