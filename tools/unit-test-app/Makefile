@@ -9,6 +9,7 @@ IOT_SOLUTION_PATH ?= $(abspath $(shell pwd)/../../)
 
 IOT_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components
 IOT_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/features
+IOT_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/features/touchpad
 IOT_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/general
 IOT_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/wifi
 IOT_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/spi_devices
