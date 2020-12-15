@@ -24,7 +24,7 @@ extern "C"
  *     - ESP_OK Success
  *     - ESP_ERR_TIMEOUT Operation timeout
  */
-esp_err_t lvgl_init(lcd_driver_fun_t *lcd_drv, touch_driver_fun_t *touch_drv);
+esp_err_t lvgl_init(scr_driver_t *lcd_drv, touch_panel_driver_t *touch_drv);
 
 #ifdef __cplusplus
 }

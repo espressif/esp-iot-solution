@@ -22,10 +22,9 @@
 
 static const char *TAG = "lvgl_gui";
 
-
 typedef struct {
-    lcd_driver_fun_t *lcd_drv;
-    touch_driver_fun_t *touch_drv;
+    scr_driver_t *lcd_drv;
+    touch_panel_driver_t *touch_drv;
 } lvgl_drv_t;
 
 // wait for execute lv_task_handler and lv_tick_inc to avoid some widget don't refresh.
@@ -94,7 +93,7 @@ static void gui_task(void *args)
     }
 }
 
-esp_err_t lvgl_init(lcd_driver_fun_t *lcd_drv, touch_driver_fun_t *touch_drv)
+esp_err_t lvgl_init(scr_driver_t *lcd_drv, touch_panel_driver_t *touch_drv)
 {
     /* If you want to use a task to create the graphic, you NEED to create a Pinned task
       * Otherwise there can be problem such as memory corruption and so on.

@@ -22,13 +22,8 @@
  *====================*/
 
 /* Maximal horizontal and vertical resolution to support by the library.*/
-#if (defined CONFIG_LCD_DIR_LRTB) || (defined CONFIG_LCD_DIR_LRBT) || (defined CONFIG_LCD_DIR_RLTB) || (defined CONFIG_LCD_DIR_RLBT)
-#define LV_HOR_RES_MAX          (CONFIG_LCD_DRIVER_SCREEN_WIDTH)
-#define LV_VER_RES_MAX          (CONFIG_LCD_DRIVER_SCREEN_HEIGHT)
-#else
-#define LV_HOR_RES_MAX          (CONFIG_LCD_DRIVER_SCREEN_HEIGHT)
-#define LV_VER_RES_MAX          (CONFIG_LCD_DRIVER_SCREEN_WIDTH)
-#endif
+#define LV_HOR_RES_MAX          (854)
+#define LV_VER_RES_MAX          (854)
 
 
 /* Color depth:

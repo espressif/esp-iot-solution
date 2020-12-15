@@ -27,8 +27,11 @@
 
 static const char *TAG = "lvgl adapter";
 
-static lcd_driver_fun_t lcd_obj;
-static touch_driver_fun_t touch_obj;
+static scr_driver_t lcd_obj;
+static touch_panel_driver_t touch_obj;
+
+static uint16_t g_screen_width = 240;
+static uint16_t g_screen_height = 320;
 
 /*Write the internal buffer (VDB) to the display. 'lv_flush_ready()' has to be called when finished*/
 static void ex_disp_flush(lv_disp_drv_t *drv, const lv_area_t *area, lv_color_t *color_map)
@@ -40,12 +43,12 @@ static void ex_disp_flush(lv_disp_drv_t *drv, const lv_area_t *area, lv_color_t 
     lv_disp_flush_ready(drv);
 }
 
-#define DISP_BUF_SIZE  (LV_HOR_RES_MAX * 64)
+#define DISP_BUF_SIZE  (g_screen_width * 64)
 #define SIZE_TO_PIXEL(v) ((v) / sizeof(lv_color_t))
 #define PIXEL_TO_SIZE(v) ((v) * sizeof(lv_color_t))
 #define BUFFER_NUMBER (2)
 
-esp_err_t lvgl_display_init(lcd_driver_fun_t *driver)
+esp_err_t lvgl_display_init(scr_driver_t *driver)
 {
     if (NULL == driver) {
         ESP_LOGE(TAG, "Pointer of lcd driver is invalid");
@@ -53,9 +56,15 @@ esp_err_t lvgl_display_init(lcd_driver_fun_t *driver)
     }
 
     lcd_obj = *driver;
+    scr_info_t info;
+    lcd_obj.get_info(&info);
+    g_screen_width = info.width;
+    g_screen_height = info.height;
 
     lv_disp_drv_t disp_drv;      /*Descriptor of a display driver*/
     lv_disp_drv_init(&disp_drv); /*Basic initialization*/
+    disp_drv.hor_res = g_screen_width;
+    disp_drv.ver_res = g_screen_height;
 
     disp_drv.flush_cb = ex_disp_flush; /*Used in buffered mode (LV_VDB_SIZE != 0  in lv_conf.h)*/
 
@@ -103,12 +112,12 @@ esp_err_t lvgl_display_init(lcd_driver_fun_t *driver)
 static bool ex_tp_read(struct _lv_indev_drv_t *indev_drv, lv_indev_data_t *data)
 {
     data->state = LV_INDEV_STATE_REL;
+    touch_panel_points_t points;
+    touch_obj.read_point_data(&points);
     // please be sure that your touch driver every time return old (last clcked) value.
-    if (touch_obj.is_pressed()) {
-        touch_info_t info;
-        touch_obj.read_info(&info);
-        int32_t x = info.curx[0];
-        int32_t y = info.cury[0];
+    if (TOUCH_EVT_PRESS == points.event) {
+        int32_t x = points.curx[0];
+        int32_t y = points.cury[0];
         data->point.x = x;
         data->point.y = y;
         data->state = LV_INDEV_STATE_PR;
@@ -117,7 +126,7 @@ static bool ex_tp_read(struct _lv_indev_drv_t *indev_drv, lv_indev_data_t *data)
 }
 
 /* Input device interface，Initialize your touchpad */
-esp_err_t lvgl_indev_init(touch_driver_fun_t *driver)
+esp_err_t lvgl_indev_init(touch_panel_driver_t *driver)
 {
     if (NULL == driver) {
         ESP_LOGE(TAG, "Pointer of touch driver is invalid");

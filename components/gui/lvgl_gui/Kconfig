@@ -1048,9 +1048,10 @@ menu "LVGL configuration"
             default y
         config LVGL_FEATURE_USE_GPU
             bool "Enable GPU interface (only enabled 'gpu_fill_cb' and 'gpu_blend_cb' in the disp. drv."
-            default y
+            default n
         config LVGL_FEATURE_USE_GPU_STM32_DMA2D
             bool "Enable STM32 DMA2D."
+            default n
         config LVGL_FEATURE_USE_FILESYSTEM
             bool "Enable file system (might be required for images."
             default y
