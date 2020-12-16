@@ -10,8 +10,11 @@ IOT_SOLUTION_PATH ?= $(abspath $(shell pwd)/../../../)
  
 EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components
 EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/general/param
-EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/spi_devices
-EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/hmi/lvgl_gui
-EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/hmi/gdrivers
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/bus
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/gui/ginput/touch
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/gui/lvgl_gui
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/gui/gdisp
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/gui/lcd_paint
+
 
 include $(IDF_PATH)/make/project.mk
