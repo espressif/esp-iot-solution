@@ -1,15 +1,24 @@
 menu "Sensor Hub Options"
 
+    menu "Hal Options"
+        config SENSOR_IMU_INCLUDED_MPU6050
+            bool "include MPU6050 driver"
+            default y
+        config SENSOR_IMU_INCLUDED_LIS2DH12
+            bool "include LIS2DH12 driver"
+            default y
+    endmenu
+
     menu "Sensor Build Options"
         config SENSOR_INCLUDED_IMU
             bool "include imu sensor driver in sensor hub"
             default y
         config SENSOR_INCLUDED_HUMITURE
             bool "include humiture sensor driver in sensor hub"
-            default y
+            default n
         config SENSOR_INCLUDED_LIGHT
             bool "include light sensor driver in sensor hub"
-            default y
+            default n
     endmenu
 
     menu "Sensor Task Options"
@@ -44,11 +53,11 @@ menu "Sensor Hub Options"
             default 4096
         config SENSOR_DEFAULT_HANDLER
             bool "enable sensor default handler"
-            default n
+            default y
         config SENSOR_DEFAULT_HANDLER_DATA
             bool "print data in sensor default handler"
             depends on SENSOR_DEFAULT_HANDLER
-            default y if SENSOR_DEFAULT_HANDLER
+            default n
     endmenu
 
 endmenu

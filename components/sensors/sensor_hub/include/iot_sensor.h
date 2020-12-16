@@ -16,10 +16,9 @@
 #define _IOT_SENSOR_H_
 
 #include "esp_err.h"
-#include "iot_sensor_event.h"
 
 #ifdef CONFIG_SENSOR_INCLUDED_IMU
-#include "imu_hal.h"
+#include "hal/imu_hal.h"
 #endif
 
 #ifdef CONFIG_SENSOR_INCLUDED_LIGHT
@@ -30,31 +29,21 @@
 #include "humiture_hal.h"
 #endif
 
+#include "iot_sensor_event.h"
+#include "iot_sensor_type.h"
+
 /* Defines for registering/unregistering event handlers */
-#define SENSOR_EVENT_ANY_ID ESP_EVENT_ANY_ID                      /**< register handler for any event id */
-#define SENSOR_ID_MASK 0X0F
-#define SENSOR_ID_OFFSET 4
-extern const char *SENSOR_TYPE_STRING[];
 
 /* SENSORS IMU EVENTS BASE */
 ESP_EVENT_DECLARE_BASE(SENSOR_IMU_EVENTS);
 ESP_EVENT_DECLARE_BASE(SENSOR_HUMITURE_EVENTS);
 ESP_EVENT_DECLARE_BASE(SENSOR_LIGHTSENSOR_EVENTS);
 
-typedef void *bus_handle_t;
 typedef void *sensor_handle_t;
 typedef void *sensor_event_handler_instance_t;
 typedef const char *sensor_event_base_t; /**< unique pointer to a subsystem that exposes events */
 /**< function called when an event is posted to the queue */
 typedef void (*sensor_event_handler_t)(void *event_handler_arg, sensor_event_base_t event_base, int32_t event_id, void *event_data);
-
-typedef enum {
-    NULL_ID,
-    HUMITURE_ID,
-    IMU_ID,                     /*gyro or acc*/
-    LIGHT_SENSOR_ID,
-    SENSOR_TYPE_MAX,
-} sensor_type_t;
 
 typedef enum {
 #ifdef CONFIG_SENSOR_INCLUDED_HUMITURE
@@ -63,8 +52,8 @@ typedef enum {
     SENSOR_HTS221_ID = (HUMITURE_ID << SENSOR_ID_OFFSET) | HTS221_ID,
 #endif
 #ifdef CONFIG_SENSOR_INCLUDED_IMU
-    SENSOR_MPU6050_ID = (IMU_ID << SENSOR_ID_OFFSET) | MPU6050_ID,
-    SENSOR_LIS2DH12_ID = (IMU_ID << SENSOR_ID_OFFSET) | LIS2DH12_ID,
+    SENSOR_MPU6050_ID = ((IMU_ID << SENSOR_ID_OFFSET) | MPU6050_ID),
+    SENSOR_LIS2DH12_ID = ((IMU_ID << SENSOR_ID_OFFSET) | LIS2DH12_ID),
 #endif
 #ifdef CONFIG_SENSOR_INCLUDED_LIGHT
     SENSOR_BH1750_ID = (LIGHT_SENSOR_ID << SENSOR_ID_OFFSET) | BH1750_ID,
@@ -78,101 +67,19 @@ typedef struct {
     const char* desc;
     sensor_id_t sensor_id;
     const uint8_t *addrs;
-}sensor_info_t;
-
-typedef enum {
-    DEFAULT_MODE,
-    POLLING_MODE,
-    INTERRUPT_MODE,
-    SENSOR_MODE_MAX,
-} sensor_mode_t;
-
-extern const char *SENSOR_MODE_STRING[];
-
-#ifndef AXIS3_T
-typedef union {
-    struct {
-        float x;
-        float y;
-        float z;
-    };
-    float axis[3];
-} axis3_t;
-#endif
-
-#ifndef RGBW_T
-typedef struct {
-    float r;
-    float g;
-    float b;
-    float w;
-} rgbw_t;
-#endif
-
-#ifndef UV_T
-typedef struct {
-    float uv;
-    float uva;
-    float uvb;
-} uv_t;
-#endif
+} sensor_info_t;
 
 typedef struct {
-    uint64_t        timestamp;              /* timestamp */
-    uint8_t         sensor_id;              /* sensor id */
-    uint8_t         reserved0;              /* reserved for future use*/
-    uint16_t        min_delay;              /*  minimum delay between two events, 0-65535, unit: ms*/
-    union {
-        axis3_t              acce;          /* Accelerometer.       unit: G          */
-        axis3_t              gyro;          /* Gyroscope.           unit: dps        */
-        axis3_t              mag;           /* Magnetometer.        unit: Gauss      */
-        float                temperature;   /* Temperature.         unit: dCelsius    */
-        float                humidity;      /* Relative humidity.   unit: percentage  */
-        float                baro;          /* Pressure.            unit: pascal (Pa) */
-        float                light;         /* Light.               unit: lux         */
-        rgbw_t               rgbw;          /* Color.               unit: lux         */
-        uv_t                 uv;            /* UV.                  unit: lux         */
-        float                proximity;     /* Distance.            unit: centimeters */
-        float                hr;            /* Heat rate.           unit: HZ          */
-        float                tvoc;          /* TVOC.                unit: permillage  */
-        float                noise;         /* Noise Loudness.      unit: HZ          */
-        float                step;          /* Step sensor.         unit: 1           */
-        float                force;         /* Force sensor.        unit: mN          */
-        float                current;       /* Current sensor       unit: mA          */
-        float                voltage;        /* Voltage sensor       unit: mV          */
-        float                data[4];       /*for general use*/
-    } data;
-    /*total size of sensor date is 8B+4B+4*4B=28B*/
-} sensor_data_t;
-
-// SENSORS EVENTS ID
-typedef enum {
-    SENSOR_STARTED,
-    SENSOR_SUSPENDED,
-    SENSOR_RESUMED,
-    SENSOR_STOPPED,
-    SENSOR_EVENT_COMMON_END = 9, /*max common events id*/
-} sensor_event_id_t;
-
-typedef enum {
-    SENSOR_ACCE_DATA_READY = 10,    /*IMU BASE*/
-    SENSOR_GYRO_DATA_READY,    /*IMU BASE*/
-    SENSOR_MAG_DATA_READY,
-    SENSOR_TEMP_DATA_READY,    /*HIMITURE BASE*/
-    SENSOR_HUMI_DATA_READY,    /*HIMITURE BASE*/
-    SENSOR_BARO_DATA_READY,
-    SENSOR_LIGHT_DATA_READY,    /*LIGHTSENSOR BASE*/
-    SENSOR_RGBW_DATA_READY,    /*LIGHTSENSOR BASE*/
-    SENSOR_UV_DATA_READY,    /*LIGHTSENSOR BASE*/
-    SENSOR_PROXI_DATA_READY,
-    SENSOR_CURRENT_DATA_READY,
-    SENSOR_VOLTAGE_DATA_READY,
-    SENSOR_HR_DATA_READY,
-    SENSOR_TVOC_DATA_READY,
-    SENSOR_NOISE_DATA_READY,
-    SENSOR_STEP_DATA_READY,
-    SENSOR_FORCE_DATA_READY,
-} sensor_data_event_id_t;
+    bus_handle_t bus;
+    sensor_mode_t mode;
+    uint16_t min_delay;
+    const char *task_name;                      /**< name of the sensor task; if NULL,a dedicated task is not created for sensor*/
+    UBaseType_t task_priority;                  /**< priority of the sensor task, ignored if task name is NULL */
+    uint32_t task_stack_size;                   /**< stack size of the sensor task, ignored if task name is NULL */
+    BaseType_t task_core_id;                    /**< core to which the sensor task is pinned to,*/
+    int intr_pin;                                /*!< interrupt pin */
+    int intr_type;                               /*!< interrupt type */
+} iot_sensor_config_t;
 
 #ifdef __cplusplus
 extern "C"
@@ -181,8 +88,6 @@ extern "C"
 
 /**
  * @brief Create a sensor instance with specified sensor_id and desired parameters.
- * if create suceed, sensor will start to acquire data with desired mode and post events in min_delay(ms) intervals
- * SENSOR_STARTED event will be posted if succeed.
  *
  * @param bus i2c/spi bus handle the sensor attached to.
  * @param sensor_id sensor's id declared in sensor_id_t.
@@ -190,33 +95,34 @@ extern "C"
  * @param min_delay minimum delay from the next read event.(1ms ~ 65535ms)
  * @return sensor_handle_t return sensor handle if succeed, NULL if failed.
  */
-sensor_handle_t iot_sensor_create(bus_handle_t bus, sensor_id_t sensor_id, sensor_mode_t mode, uint16_t min_delay);
+esp_err_t iot_sensor_create(sensor_id_t sensor_id, const iot_sensor_config_t *config, sensor_handle_t *handle);
 
 /**
  * @brief Suspend sensor acquire process and set it to sleep mode
- * SENSOR_SUSPENDED event will be posted if succeed.
+  * if create suceed, sensor will start to acquire data with desired mode and post events in min_delay(ms) intervals
+ * SENSOR_STARTED event will be posted if succeed.
  *
  * @param sensor_handle sensor handle for operation
  * @return esp_err_t
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_sensor_suspend(sensor_handle_t sensor_handle);
+esp_err_t iot_sensor_start(sensor_handle_t sensor_handle);
 
 /**
  * @brief Suspend sensor acquire process and set it to sleep mode
- * SENSOR_RESUMED event will be posted if succeed.
+ * SENSOR_STOPED event will be posted if succeed.
  *
  * @param sensor_handle sensor handle for operation
  * @return esp_err_t
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_sensor_resume(sensor_handle_t sensor_handle);
+esp_err_t iot_sensor_stop(sensor_handle_t sensor_handle);
 
 /**
  * @brief Delete and release the sensor resource.
- * SENSOR_STOPPED event will be posted if succeed.
+ * SENSOR_DELETED event will be posted if succeed.
  *
  * @param p_sensor_handle point to sensor handle, will set to NULL if delete suceed.
  * @return esp_err_t
@@ -224,7 +130,6 @@ esp_err_t iot_sensor_resume(sensor_handle_t sensor_handle);
  *     - ESP_FAIL Fail
  */
 esp_err_t iot_sensor_delete(sensor_handle_t *p_sensor_handle);
-
 
 /**
  * @brief Scan for valid sensors attached on bus
