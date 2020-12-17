@@ -72,14 +72,15 @@ typedef struct {
 
 typedef struct {
     bus_handle_t bus;                           /*!< i2c/spi bus handle*/
-    sensor_mode_t mode;                         /*!< acquire mode detiled in sensor_mode_t*/
-    uint16_t min_delay;                         /*!< minimum acquisition interval*/
-    const char *task_name;                      /**< name of the sensor task; if NULL,a dedicated task is not created for sensor*/
-    UBaseType_t task_priority;                  /**< priority of the sensor task, ignored if task name is NULL */
-    uint32_t task_stack_size;                   /**< stack size of the sensor task, ignored if task name is NULL */
-    BaseType_t task_core_id;                    /**< core to which the sensor task is pinned to,*/
-    int intr_pin;                               /*!< interrupt pin */
-    int intr_type;                              /*!< interrupt type*/
+    sensor_mode_t mode;                         /*!< set acquire mode detiled in sensor_mode_t*/
+    float range;                                /*!< set measuring range*/
+    uint16_t min_delay;                         /*!< set minimum acquisition interval*/
+    const char *task_name;                      /**< set name of the sensor task; if NULL,a dedicated task is not created for sensor*/
+    UBaseType_t task_priority;                  /**< set priority of the sensor task, ignored if task name is NULL */
+    uint32_t task_stack_size;                   /**< set stack size of the sensor task, ignored if task name is NULL */
+    BaseType_t task_core_id;                    /**< set core to which the sensor task is pinned to,*/
+    int intr_pin;                               /*!< set interrupt pin */
+    int intr_type;                              /*!< set interrupt type*/
 } sensor_config_t;
 
 #ifdef __cplusplus

@@ -47,6 +47,10 @@ const char *SENSOR_MODE_STRING[] = {"MODE_DEFAULT", "MODE_POLLING", "MODE_INTERR
     }
 
 #define ESP_INTR_FLAG_DEFAULT 0
+#define ISR_STATE_INVALID NULL
+#define ISR_STATE_INITIALIZED 0x01
+#define ISR_STATE_INACTIVE ISR_STATE_INITIALIZED
+#define ISR_STATE_ACTIVE (ISR_STATE_INITIALIZED | (0x01 << 1))
 
 /*event group related*/
 #define SENSORS_NUM_MAX 20 /*max num is 23*/
@@ -88,7 +92,11 @@ typedef struct {
     const char *event_base;
     uint32_t event_bit;
     TaskHandle_t task_handle;
-    TimerHandle_t timer_handle;
+    int intr_pin;                   /*!< set interrupt pin */
+    union {
+        TimerHandle_t timer_handle; /*polling mode*/
+        int32_t isr_state;          /*interrupt mode*/
+    };
 } _iot_sensor_t;
 
 typedef struct _iot_sensor_slist_t {
@@ -205,12 +213,13 @@ static const char *sensor_find_event_base(int sensor_type)
 
 static esp_err_t sensor_add_node(_iot_sensor_t *p_sensor)
 {
+    _iot_sensor_slist_t *node = calloc(1, sizeof(_iot_sensor_slist_t));
+    SENSOR_CHECK(node != NULL, "calloc node failed", ESP_ERR_NO_MEM);
+
     /*create a default event group if have not created*/
     if (s_event_group == NULL) {
         s_event_group = xEventGroupCreate();
     }
-
-    _iot_sensor_slist_t *node = calloc(1, sizeof(_iot_sensor_slist_t));
 
     /*take a not used event bit*/
     uint32_t i = 0;
@@ -272,7 +281,7 @@ static void sensor_default_task(void *arg)
     int64_t acquire_time = 0;
     ESP_LOGI(TAG, "task: sensor_default_task created!");
 
-    while (1) {
+    while (arg) { /*arg == NULL is invalid, task will be deleted*/
         if (s_task_wait_bits == 0) {
             vTaskDelay(100 / portTICK_RATE_MS);
             continue;
@@ -318,8 +327,8 @@ static void sensors_timer_cb(TimerHandle_t xTimer)
 static void IRAM_ATTR sensors_intr_isr_handler(void *arg)
 {
     portBASE_TYPE task_woken = pdFALSE;
-    uint32_t *event_bit = (uint32_t *)(arg);
-    xEventGroupSetBitsFromISR(s_event_group, (0x01 << (*event_bit)), &task_woken);
+    uint32_t event_bit = (uint32_t )(arg);
+    xEventGroupSetBitsFromISR(s_event_group, (0x01 << event_bit), &task_woken);
 
     //Switch context if necessary
     if (task_woken == pdTRUE) {
@@ -339,8 +348,9 @@ static TimerHandle_t sensor_polling_mode_init(const char *const pcTimerName, uin
     return timer_handle;
 }
 
-static esp_err_t sensor_intr_mode_init(int pin, gpio_int_type_t intr_type, void *arg)
+static esp_err_t sensor_intr_mode_init(int pin, gpio_int_type_t intr_type)
 {
+    SENSOR_CHECK((pin != 0) && (intr_type != 0), "sensor intr pin/type invalid", ESP_ERR_INVALID_ARG);
     gpio_config_t io_conf = {
         //interrupt of rising edge
         .intr_type = intr_type,
@@ -357,26 +367,36 @@ static esp_err_t sensor_intr_mode_init(int pin, gpio_int_type_t intr_type, void 
     //install gpio isr service
     gpio_set_intr_type(pin, intr_type);
     gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
-    //hook isr handler for specific gpio pin
-    gpio_isr_handler_add(pin, sensors_intr_isr_handler, arg);
     return ESP_OK;
+}
+
+static inline esp_err_t sensor_intr_isr_add(int pin, void *arg)
+{
+    return gpio_isr_handler_add(pin, sensors_intr_isr_handler, arg);
+}
+
+static inline esp_err_t sensor_intr_isr_remove(int pin)
+{
+    return gpio_isr_handler_remove(pin);
 }
 
 /******************************************Public Functions*********************************************/
 esp_err_t iot_sensor_create(sensor_id_t sensor_id, const sensor_config_t *config, sensor_handle_t *p_sensor_handle)
 {
-    SENSOR_CHECK(config != NULL, "config can not be NULL", ESP_FAIL);
-    SENSOR_CHECK(p_sensor_handle != NULL, "p_sensor_handle can not be NULL", ESP_FAIL);
+    SENSOR_CHECK(config != NULL, "config can not be NULL", ESP_ERR_INVALID_ARG);
+    SENSOR_CHECK(p_sensor_handle != NULL, "p_sensor_handle can not be NULL", ESP_ERR_INVALID_ARG);
     esp_err_t ret = ESP_FAIL;
     /*copy first for safety operation*/
     sensor_config_t config_copy = *config;
     /*search for driver based on sensor_id*/
     _iot_sensor_t *sensor = (_iot_sensor_t *)calloc(1, sizeof(_iot_sensor_t));
+    SENSOR_CHECK(sensor != NULL, "calloc node failed", ESP_ERR_NO_MEM);
     sensor->type = (sensor_type_t)(sensor_id >> 4 & SENSOR_ID_MASK);
     sensor->sensor_id = sensor_id;
     sensor->bus = config_copy.bus;
     sensor->mode = config_copy.mode;
     sensor->min_delay = config_copy.min_delay;
+    sensor->intr_pin = config_copy.intr_pin;
     sensor->impl = sensor_find_impl(sensor->type);
     sensor->event_base = sensor_find_event_base(sensor->type);
     SENSOR_CHECK_GOTO(sensor->impl != NULL && sensor->event_base != NULL, "no driver found !!", cleanup_sensor);
@@ -384,6 +404,15 @@ esp_err_t iot_sensor_create(sensor_id_t sensor_id, const sensor_config_t *config
     /*create a new sensor*/
     sensor->driver_handle = sensor->impl->create(sensor->bus, (sensor->sensor_id & SENSOR_ID_MASK));
     SENSOR_CHECK_GOTO(sensor->driver_handle != NULL, "sensor create failed", cleanup_sensor);
+    /*config sensor work mode*/
+    ret = sensor->impl->control(sensor->driver_handle, COMMAND_SET_MODE, (void *)(config_copy.mode));
+    SENSOR_CHECK_GOTO(ret != ESP_FAIL, "set sensor mode failed !!", cleanup_sensor);
+    /*config sensor measuring range*/
+    ret = sensor->impl->control(sensor->driver_handle, COMMAND_SET_RANGE, (void *)(config_copy.range));
+    SENSOR_CHECK_GOTO(ret != ESP_FAIL, "set sensor range failed !!", cleanup_sensor);
+    /*config sensor work mode*/
+    ret = sensor->impl->control(sensor->driver_handle, COMMAND_SET_ODR, (void *)(config_copy.min_delay));
+    SENSOR_CHECK_GOTO(ret != ESP_FAIL, "set sensor odr failed !!", cleanup_sensor);
     /*test if sensor is valid*/
     ret = sensor->impl->control(sensor->driver_handle, COMMAND_SELF_TEST, NULL);
     SENSOR_CHECK_GOTO(ret == ESP_OK, "sensor test failed !!", cleanup_sensor);
@@ -401,8 +430,9 @@ esp_err_t iot_sensor_create(sensor_id_t sensor_id, const sensor_config_t *config
             break;
 
         case MODE_INTERRUPT:
-            ret = sensor_intr_mode_init(config_copy.intr_pin, config_copy.intr_type, (void *)(sensor->event_bit));
+            ret = sensor_intr_mode_init(config_copy.intr_pin, config_copy.intr_type);
             SENSOR_CHECK_GOTO(ret == ESP_OK, "sensor intr init failed", cleanup_sensor_node);
+            sensor->isr_state = ISR_STATE_INITIALIZED;
             break;
 
         default:
@@ -423,7 +453,7 @@ esp_err_t iot_sensor_create(sensor_id_t sensor_id, const sensor_config_t *config
         if (config_copy.task_stack_size == 0) {
             config_copy.task_stack_size = SENSOR_DEFAULT_TASK_STACK_SIZE;
         }
-
+        //TODO:mutilple task not supported
         BaseType_t task_created = xTaskCreatePinnedToCore(sensor_default_task, config_copy.task_name, config_copy.task_stack_size,
                                   NULL, config_copy.task_priority, &sensor->task_handle, config_copy.task_core_id);
         SENSOR_CHECK_GOTO(task_created == pdPASS, "create dedicated sensor task failed", cleanup_sensor_node);
@@ -465,12 +495,24 @@ cleanup_sensor_node:
 
 esp_err_t iot_sensor_stop(sensor_handle_t sensor_handle)
 {
-    SENSOR_CHECK(sensor_handle != NULL, "sensor handle can not be NULL", ESP_FAIL);
+    SENSOR_CHECK(sensor_handle != NULL, "sensor handle can not be NULL", ESP_ERR_INVALID_ARG);
     _iot_sensor_t *sensor = (_iot_sensor_t *)sensor_handle;
-    SENSOR_CHECK(sensor->timer_handle != NULL, "sensor timmer handle can not be NULL", ESP_FAIL);
+    SENSOR_CHECK(sensor->timer_handle != NULL, "sensor timmer handle can not be NULL", ESP_ERR_INVALID_ARG);
 
-    BaseType_t pdreturn = xTimerStop(sensor->timer_handle, portMAX_DELAY);
-    SENSOR_CHECK(pdreturn == pdTRUE, "sensor stop failed", ESP_FAIL);
+    switch (sensor->mode) {
+        case MODE_POLLING:
+            SENSOR_CHECK(pdTRUE == xTimerStop(sensor->timer_handle, portMAX_DELAY), "sensor stop failed", ESP_FAIL);
+            break;
+
+        case MODE_INTERRUPT:
+            SENSOR_CHECK(ESP_OK == sensor_intr_isr_remove(sensor->intr_pin), "sensor stop failed", ESP_FAIL);
+            sensor->isr_state = ISR_STATE_INACTIVE;
+            break;
+        default:
+            SENSOR_CHECK( false, "sensor stop failed", ESP_ERR_NOT_SUPPORTED);
+            break;
+    }
+
     sensor_data_t sensor_data;
     memset(&sensor_data, 0, sizeof(sensor_data_t));
     sensor_data.sensor_id = sensor->sensor_id;
@@ -493,12 +535,24 @@ esp_err_t iot_sensor_stop(sensor_handle_t sensor_handle)
 
 esp_err_t iot_sensor_start(sensor_handle_t sensor_handle)
 {
-    SENSOR_CHECK(sensor_handle != NULL, "sensor handle can not be NULL", ESP_FAIL);
+    SENSOR_CHECK(sensor_handle != NULL, "sensor handle can not be NULL", ESP_ERR_INVALID_ARG);
     _iot_sensor_t *sensor = (_iot_sensor_t *)sensor_handle;
-    SENSOR_CHECK(sensor->timer_handle != NULL, "sensor timmer handle can not be NULL", ESP_FAIL);
+    SENSOR_CHECK(sensor->timer_handle != NULL, "sensor timmer_handle/isr_state can not be NULL", ESP_ERR_INVALID_ARG);
 
-    BaseType_t pdreturn = xTimerStart(sensor->timer_handle, portMAX_DELAY);
-    SENSOR_CHECK(pdreturn == pdTRUE, "sensor start failed", ESP_FAIL);
+    switch (sensor->mode) {
+        case MODE_POLLING:
+            SENSOR_CHECK(pdTRUE == xTimerStart(sensor->timer_handle, portMAX_DELAY), "sensor start failed", ESP_FAIL);
+            break;
+
+        case MODE_INTERRUPT:
+            SENSOR_CHECK(ESP_OK == sensor_intr_isr_add(sensor->intr_pin, ((void *)sensor->event_bit)), "sensor start failed", ESP_FAIL);
+            sensor->isr_state = ISR_STATE_ACTIVE;
+            break;
+        default:
+            SENSOR_CHECK( false, "sensor start failed", ESP_ERR_NOT_SUPPORTED);
+            break;
+    }
+
     sensor_data_t sensor_data;
     memset(&sensor_data, 0, sizeof(sensor_data_t));
     sensor_data.sensor_id = sensor->sensor_id;
@@ -521,19 +575,29 @@ esp_err_t iot_sensor_start(sensor_handle_t sensor_handle)
 
 esp_err_t iot_sensor_delete(sensor_handle_t *p_sensor_handle)
 {
-    SENSOR_CHECK(p_sensor_handle != NULL && *p_sensor_handle != NULL, "sensor handle can not be NULL", ESP_FAIL);
+    SENSOR_CHECK(p_sensor_handle != NULL && *p_sensor_handle != NULL, "sensor handle can not be NULL", ESP_ERR_INVALID_ARG);
     _iot_sensor_t *sensor = (_iot_sensor_t *)(*p_sensor_handle);
-    SENSOR_CHECK(sensor->timer_handle != NULL, "sensor timmer handle can not be NULL", ESP_FAIL);
-    /*stop timmer trigger*/
-    BaseType_t pdreturn = xTimerStop(sensor->timer_handle, portMAX_DELAY);
-    SENSOR_CHECK(pdreturn == pdTRUE, "sensor stop failed", ESP_FAIL);
+    SENSOR_CHECK(sensor->timer_handle != NULL, "sensor timmer handle can not be NULL", ESP_ERR_INVALID_ARG);
+
+    switch (sensor->mode) {
+        case MODE_POLLING:
+            SENSOR_CHECK(pdTRUE == xTimerDelete(sensor->timer_handle, portMAX_DELAY), "sensor delete failed", ESP_FAIL);
+            sensor->timer_handle = NULL;
+            break;
+
+        case MODE_INTERRUPT:
+            SENSOR_CHECK(ESP_OK == sensor_intr_isr_remove(sensor->intr_pin), "sensor delete failed", ESP_FAIL);
+            sensor->isr_state = ISR_STATE_INACTIVE;
+            break;
+
+        default:
+            SENSOR_CHECK( false, "sensor delete failed", ESP_ERR_NOT_SUPPORTED);
+            break;
+    }
+
     /*remove from sensor list*/
     esp_err_t ret = sensor_remove_node(sensor);
     SENSOR_CHECK(ret == ESP_OK, "sensor node remove failed", ret);
-    /*delete the timmer*/
-    pdreturn = xTimerDelete(sensor->timer_handle, portMAX_DELAY);
-    SENSOR_CHECK(pdreturn == pdTRUE, "sensor timer delete failed", ESP_FAIL);
-    sensor->timer_handle = NULL;
 
     /*set sensor to sleep mode then delete the driver*/
     ret = sensor->impl->control(sensor->driver_handle, COMMAND_SET_POWER,  (void *)POWER_MODE_SLEEP);
@@ -603,9 +667,9 @@ uint8_t iot_sensor_scan(bus_handle_t bus, sensor_info_t *buf[], uint8_t num)
 
 esp_err_t iot_sensor_handler_register(sensor_handle_t sensor_handle, sensor_event_handler_t handler, sensor_event_handler_instance_t *context)
 {
-    SENSOR_CHECK(context != NULL, "context can not be NULL", ESP_FAIL);
-    SENSOR_CHECK(handler != NULL, "handler can not be NULL", ESP_FAIL);
-    SENSOR_CHECK(sensor_handle != NULL, "sensor handle can not be NULL", ESP_FAIL);
+    SENSOR_CHECK(context != NULL, "context can not be NULL", ESP_ERR_INVALID_ARG);
+    SENSOR_CHECK(handler != NULL, "handler can not be NULL", ESP_ERR_INVALID_ARG);
+    SENSOR_CHECK(sensor_handle != NULL, "sensor handle can not be NULL", ESP_ERR_INVALID_ARG);
     _iot_sensor_t *sensor = (_iot_sensor_t *)sensor_handle;
     SENSOR_CHECK(sensor->event_base != NULL, "sensor event_base can not be NULL", ESP_FAIL);
     ESP_ERROR_CHECK(sensors_event_handler_instance_register(sensor->event_base, ESP_EVENT_ANY_ID, handler, NULL, context));
@@ -614,8 +678,8 @@ esp_err_t iot_sensor_handler_register(sensor_handle_t sensor_handle, sensor_even
 
 esp_err_t iot_sensor_handler_unregister(sensor_handle_t sensor_handle, sensor_event_handler_instance_t context)
 {
-    SENSOR_CHECK(context != NULL, "context can not be NULL", ESP_FAIL);
-    SENSOR_CHECK(sensor_handle != NULL, "sensor handle can not be NULL", ESP_FAIL);
+    SENSOR_CHECK(context != NULL, "context can not be NULL", ESP_ERR_INVALID_ARG);
+    SENSOR_CHECK(sensor_handle != NULL, "sensor handle can not be NULL", ESP_ERR_INVALID_ARG);
     _iot_sensor_t *sensor = (_iot_sensor_t *)sensor_handle;
     SENSOR_CHECK(sensor->event_base != NULL, "sensor event_base can not be NULL", ESP_FAIL);
     ESP_ERROR_CHECK(sensors_event_handler_instance_unregister(sensor->event_base, ESP_EVENT_ANY_ID, context));
@@ -624,8 +688,8 @@ esp_err_t iot_sensor_handler_unregister(sensor_handle_t sensor_handle, sensor_ev
 
 esp_err_t iot_sensor_handler_register_with_type(sensor_type_t sensor_type, int32_t event_id, sensor_event_handler_t handler, sensor_event_handler_instance_t *context)
 {
-    SENSOR_CHECK(context != NULL, "context can not be NULL", ESP_FAIL);
-    SENSOR_CHECK(handler != NULL, "handler can not be NULL", ESP_FAIL);
+    SENSOR_CHECK(context != NULL, "context can not be NULL", ESP_ERR_INVALID_ARG);
+    SENSOR_CHECK(handler != NULL, "handler can not be NULL", ESP_ERR_INVALID_ARG);
 
     switch (sensor_type) {
         case NULL_ID:
@@ -655,7 +719,7 @@ esp_err_t iot_sensor_handler_register_with_type(sensor_type_t sensor_type, int32
 
 esp_err_t iot_sensor_handler_unregister_with_type(sensor_type_t sensor_type, int32_t event_id, sensor_event_handler_instance_t context)
 {
-    SENSOR_CHECK(context != NULL, "context can not be NULL", ESP_FAIL);
+    SENSOR_CHECK(context != NULL, "context can not be NULL", ESP_ERR_INVALID_ARG);
 
     switch (sensor_type) {
         case NULL_ID:
