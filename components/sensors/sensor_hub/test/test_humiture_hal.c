@@ -15,7 +15,7 @@
 #include "unity.h"
 #include "driver/i2c.h"
 #include "i2c_bus.h"
-#include "hal/imu_hal.h"
+#include "hal/humiture_hal.h"
 #include "esp_system.h"
 
 #define I2C_MASTER_SCL_IO           22          /*!< gpio number for I2C master clock */
@@ -24,11 +24,11 @@
 #define I2C_MASTER_FREQ_HZ          100000      /*!< I2C master clock frequency */
 
 static i2c_bus_handle_t i2c_bus = NULL;
-static sensor_imu_handle_t imu_handle = NULL;
-static imu_id_t IMU_ID_TEST = MPU6050_ID;
-//static imu_id_t IMU_ID_TEST = LIS2DH12_ID;
+static sensor_humiture_handle_t humiture_handle = NULL;
+static humiture_id_t HUMITURE_ID_TEST = SHT3X_ID;
+//static humiture_id_t HUMITURE_ID_TEST = HTS221_ID;
 
-static void imu_test_get_data()
+static void humiture_test_get_data()
 {
     int cnt = 10;
     i2c_config_t conf = {
@@ -40,26 +40,30 @@ static void imu_test_get_data()
         .master.clk_speed = I2C_MASTER_FREQ_HZ,
     };
     i2c_bus = i2c_bus_create(I2C_MASTER_NUM, &conf);
-    imu_handle = imu_create(i2c_bus, IMU_ID_TEST);
+    TEST_ASSERT(NULL != i2c_bus);
+    humiture_handle = humiture_create(i2c_bus, HUMITURE_ID_TEST);
+    TEST_ASSERT(NULL != humiture_handle);
     vTaskDelay(100 / portTICK_RATE_MS);
-    TEST_ASSERT(ESP_OK == imu_test(imu_handle));
+    TEST_ASSERT(ESP_OK == humiture_test(humiture_handle));
 
     while (cnt--) {
-        sensor_data_t acce = {0};
-        sensor_data_t gyro = {0};
-        printf("\n************* imu sensor************\n");
-        imu_acquire_acce(imu_handle, &acce);
-        printf("acce_x:%.2f, acce_y:%.2f, acce_z:%.2f\n", acce.acce.x, acce.acce.y, acce.acce.z);
-        imu_acquire_gyro(imu_handle, &gyro);
-        printf("gyro_x:%.2f, gyro_y:%.2f, gyro_z:%.2f\n", gyro.gyro.x, gyro.gyro.y, gyro.gyro.z);
+        float humidity = 0.0;
+        float temperature = 0.0;
+        printf("\n************* humiture sensor ************\n");
+        humiture_acquire_humidity(humiture_handle, &humidity);
+        printf("humidity:%.2f\n", humidity);
+        humiture_acquire_temperature(humiture_handle, &temperature);
+        printf("temperature:%.2f\n", temperature);
         printf("**************************************************\n");
         vTaskDelay(1000 / portTICK_RATE_MS);
     }
-    imu_delete(&imu_handle);
+    humiture_delete(&humiture_handle);
+    TEST_ASSERT(NULL == humiture_handle);
     i2c_bus_delete(&i2c_bus);
+    TEST_ASSERT(NULL == i2c_bus);
 }
 
-TEST_CASE("Sensor imu test get data [1000ms]", "[imu_handle][iot][sensor]")
+TEST_CASE("Sensor humidity hal test get data [1000ms]", "[humiture_hal][iot][sensor_hal]")
 {
-    imu_test_get_data();
+    humiture_test_get_data();
 }

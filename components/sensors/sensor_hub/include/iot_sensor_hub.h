@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef _IOT_SENSOR_H_
-#define _IOT_SENSOR_H_
+#ifndef _IOT_SENSOR_HUB_H_
+#define _IOT_SENSOR_HUB_H_
 
 #include "esp_err.h"
 
@@ -22,17 +22,15 @@
 #endif
 
 #ifdef CONFIG_SENSOR_INCLUDED_LIGHT
-#include "light_sensor_hal.h"
+#include "hal/light_sensor_hal.h"
 #endif
 
 #ifdef CONFIG_SENSOR_INCLUDED_HUMITURE
-#include "humiture_hal.h"
+#include "hal/humiture_hal.h"
 #endif
 
-#include "iot_sensor_event.h"
-#include "iot_sensor_type.h"
-
-/* Defines for registering/unregistering event handlers */
+#include "sensor_event.h"
+#include "sensor_type.h"
 
 /* SENSORS IMU EVENTS BASE */
 ESP_EVENT_DECLARE_BASE(SENSOR_IMU_EVENTS);
@@ -42,13 +40,16 @@ ESP_EVENT_DECLARE_BASE(SENSOR_LIGHTSENSOR_EVENTS);
 typedef void *sensor_handle_t;
 typedef void *sensor_event_handler_instance_t;
 typedef const char *sensor_event_base_t; /**< unique pointer to a subsystem that exposes events */
+
 /**< function called when an event is posted to the queue */
 typedef void (*sensor_event_handler_t)(void *event_handler_arg, sensor_event_base_t event_base, int32_t event_id, void *event_data);
+
+extern const char *SENSOR_TYPE_STRING[];
+extern const char *SENSOR_MODE_STRING[];
 
 typedef enum {
 #ifdef CONFIG_SENSOR_INCLUDED_HUMITURE
     SENSOR_SHT3X_ID = (HUMITURE_ID << SENSOR_ID_OFFSET) | SHT3X_ID,
-    SENSOR_DHT11_ID = (HUMITURE_ID << SENSOR_ID_OFFSET) | DHT11_ID,
     SENSOR_HTS221_ID = (HUMITURE_ID << SENSOR_ID_OFFSET) | HTS221_ID,
 #endif
 #ifdef CONFIG_SENSOR_INCLUDED_IMU
@@ -70,16 +71,16 @@ typedef struct {
 } sensor_info_t;
 
 typedef struct {
-    bus_handle_t bus;
-    sensor_mode_t mode;
-    uint16_t min_delay;
+    bus_handle_t bus;                           /*!< i2c/spi bus handle*/
+    sensor_mode_t mode;                         /*!< acquire mode detiled in sensor_mode_t*/
+    uint16_t min_delay;                         /*!< minimum acquisition interval*/
     const char *task_name;                      /**< name of the sensor task; if NULL,a dedicated task is not created for sensor*/
     UBaseType_t task_priority;                  /**< priority of the sensor task, ignored if task name is NULL */
     uint32_t task_stack_size;                   /**< stack size of the sensor task, ignored if task name is NULL */
     BaseType_t task_core_id;                    /**< core to which the sensor task is pinned to,*/
-    int intr_pin;                                /*!< interrupt pin */
-    int intr_type;                               /*!< interrupt type */
-} iot_sensor_config_t;
+    int intr_pin;                               /*!< interrupt pin */
+    int intr_type;                              /*!< interrupt type*/
+} sensor_config_t;
 
 #ifdef __cplusplus
 extern "C"
@@ -87,20 +88,21 @@ extern "C"
 #endif
 
 /**
- * @brief Create a sensor instance with specified sensor_id and desired parameters.
- *
- * @param bus i2c/spi bus handle the sensor attached to.
- * @param sensor_id sensor's id declared in sensor_id_t.
- * @param mode modes declared in sensor_mode_t.
- * @param min_delay minimum delay from the next read event.(1ms ~ 65535ms)
- * @return sensor_handle_t return sensor handle if succeed, NULL if failed.
+ * @brief Create a sensor instance with specified sensor_id and desired configurations.
+ * 
+ * @param sensor_id sensor's id detailed in sensor_id_t.
+ * @param config sensor's configurations detailed in sensor_config_t
+ * @param p_sensor_handle return sensor handle if succeed, NULL if failed.
+ * @return esp_err_t
+ *     - ESP_OK Success
+ *     - ESP_FAIL Fail
  */
-esp_err_t iot_sensor_create(sensor_id_t sensor_id, const iot_sensor_config_t *config, sensor_handle_t *handle);
+esp_err_t iot_sensor_create(sensor_id_t sensor_id, const sensor_config_t *config, sensor_handle_t *p_sensor_handle);
 
 /**
- * @brief Suspend sensor acquire process and set it to sleep mode
-  * if create suceed, sensor will start to acquire data with desired mode and post events in min_delay(ms) intervals
- * SENSOR_STARTED event will be posted if succeed.
+ * @brief start sensor acquisition, post data ready events when data acquired.
+ * if start succeed, sensor will start to acquire data with desired mode and post events in min_delay(ms) intervals
+ * SENSOR_STARTED event will be posted.
  *
  * @param sensor_handle sensor handle for operation
  * @return esp_err_t
@@ -110,8 +112,8 @@ esp_err_t iot_sensor_create(sensor_id_t sensor_id, const iot_sensor_config_t *co
 esp_err_t iot_sensor_start(sensor_handle_t sensor_handle);
 
 /**
- * @brief Suspend sensor acquire process and set it to sleep mode
- * SENSOR_STOPED event will be posted if succeed.
+ * @brief stop sensor acquisition, and stop post data events.
+ * if stop succeed, SENSOR_STOPED event will be posted.
  *
  * @param sensor_handle sensor handle for operation
  * @return esp_err_t
@@ -121,8 +123,8 @@ esp_err_t iot_sensor_start(sensor_handle_t sensor_handle);
 esp_err_t iot_sensor_stop(sensor_handle_t sensor_handle);
 
 /**
- * @brief Delete and release the sensor resource.
- * SENSOR_DELETED event will be posted if succeed.
+ * @brief delete and release the sensor resource.
+ * if delete succeed, SENSOR_DELETED event will be posted.
  *
  * @param p_sensor_handle point to sensor handle, will set to NULL if delete suceed.
  * @return esp_err_t

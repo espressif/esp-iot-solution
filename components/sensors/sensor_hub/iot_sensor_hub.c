@@ -14,7 +14,7 @@
 
 #include <string.h>
 #include "esp_log.h"
-#include "iot_sensor.h"
+#include "iot_sensor_hub.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -23,8 +23,8 @@
 #include "driver/gpio.h"
 
 static const char *TAG = "SENSOR_HUB";
-static const char *SENSOR_TYPE_STRING[] = {"NULL", "HUMITURE", "IMU", "LIGHTSENSOR"};
-static const char *SENSOR_MODE_STRING[] = {"MODE_DEFAULT", "MODE_POLLING", "MODE_INTERRUPT"};
+const char *SENSOR_TYPE_STRING[] = {"NULL", "HUMITURE", "IMU", "LIGHTSENSOR"};
+const char *SENSOR_MODE_STRING[] = {"MODE_DEFAULT", "MODE_POLLING", "MODE_INTERRUPT"};
 
 #define SENSOR_CHECK(a, str, ret) if(!(a)) { \
         ESP_LOGE(TAG,"%s:%d (%s):%s", __FILE__, __LINE__, __FUNCTION__, str); \
@@ -71,8 +71,8 @@ static TaskHandle_t s_sensor_task_handle = NULL;
 ESP_EVENT_DEFINE_BASE(SENSOR_IMU_EVENTS);
 ESP_EVENT_DEFINE_BASE(SENSOR_HUMITURE_EVENTS);
 ESP_EVENT_DEFINE_BASE(SENSOR_LIGHTSENSOR_EVENTS);
-static sensor_event_handler_instance_t s_sensor_default_handler_instance = NULL;
 #ifdef CONFIG_SENSOR_DEFAULT_HANDLER
+static sensor_event_handler_instance_t s_sensor_default_handler_instance = NULL;
 static void sensor_default_event_handler(void *handler_args, esp_event_base_t base, int32_t id, void *event_data);
 #endif
 
@@ -131,7 +131,7 @@ static iot_sensor_impl_t s_sensor_impls[] = {
 static sensor_info_t s_sensor_info[] = {
 #ifdef CONFIG_SENSOR_INCLUDED_HUMITURE
     { "SHT31", "Humi/Temp sensor", SENSOR_SHT3X_ID, (const uint8_t *)"\x44\x45" },
-    { "HTS221", "Humi/Temp sensor", SENSOR_DHT11_ID, (const uint8_t *)"\x5f" },
+    { "HTS221", "Humi/Temp sensor", SENSOR_HTS221_ID, (const uint8_t *)"\x5f" },
 #endif
 #ifdef CONFIG_SENSOR_INCLUDED_IMU
     { "MPU6050", "Gyro/Acce sensor", SENSOR_MPU6050_ID, (const uint8_t *)"\x69\x68" },
@@ -266,9 +266,9 @@ static int64_t sensor_get_timestamp_us()
 static void sensor_default_task(void *arg)
 {
     struct sensor_slist_head_t *p_sensor_list_head = (struct sensor_slist_head_t *)(arg);
-    EventBits_t uxBits;
-    sensor_data_group_t sensor_data_group;
-    _iot_sensor_slist_t *node;
+    EventBits_t uxBits = 0;
+    sensor_data_group_t sensor_data_group = {0};
+    _iot_sensor_slist_t *node = NULL;
     int64_t acquire_time = 0;
     ESP_LOGI(TAG, "task: sensor_default_task created!");
 
@@ -363,13 +363,13 @@ static esp_err_t sensor_intr_mode_init(int pin, gpio_int_type_t intr_type, void 
 }
 
 /******************************************Public Functions*********************************************/
-esp_err_t iot_sensor_create(sensor_id_t sensor_id, const iot_sensor_config_t *config, sensor_handle_t *handle)
+esp_err_t iot_sensor_create(sensor_id_t sensor_id, const sensor_config_t *config, sensor_handle_t *p_sensor_handle)
 {
     SENSOR_CHECK(config != NULL, "config can not be NULL", ESP_FAIL);
-    SENSOR_CHECK(handle != NULL, "handle can not be NULL", ESP_FAIL);
+    SENSOR_CHECK(p_sensor_handle != NULL, "p_sensor_handle can not be NULL", ESP_FAIL);
     esp_err_t ret = ESP_FAIL;
     /*copy first for safety operation*/
-    iot_sensor_config_t config_copy = *config;
+    sensor_config_t config_copy = *config;
     /*search for driver based on sensor_id*/
     _iot_sensor_t *sensor = (_iot_sensor_t *)calloc(1, sizeof(_iot_sensor_t));
     sensor->type = (sensor_type_t)(sensor_id >> 4 & SENSOR_ID_MASK);
@@ -449,15 +449,17 @@ esp_err_t iot_sensor_create(sensor_id_t sensor_id, const iot_sensor_config_t *co
                 SENSOR_MODE_STRING[sensor->mode],
                 sensor->min_delay);
 
-    *handle = (sensor_handle_t)sensor;
+    *p_sensor_handle = (sensor_handle_t)sensor;
     return ESP_OK;
 
 cleanup_sensor:
     free(sensor);
+    *p_sensor_handle = NULL;
     return ESP_FAIL;
 cleanup_sensor_node:
     sensor_remove_node(sensor);
     free(sensor);
+    *p_sensor_handle = NULL;
     return ESP_FAIL;
 }
 
@@ -551,7 +553,7 @@ esp_err_t iot_sensor_delete(sensor_handle_t *p_sensor_handle)
     ret = sensors_event_post(sensor->event_base, sensor_data.event_id, &sensor_data, sizeof(sensor_data_t), portMAX_DELAY);
 
     if (ESP_OK != ret) {
-        ESP_LOGW(TAG, "sensor event post failed = %s, or eventloop not initialized", esp_err_to_name(ret));
+        ESP_LOGI(TAG, "sensor event post failed = %s, or eventloop not initialized", esp_err_to_name(ret));
     }
 
     /*free the resource then set handle to NULL*/

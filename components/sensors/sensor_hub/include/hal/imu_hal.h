@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef _IMU_H_
-#define _IMU_H_
+#ifndef _IMU_HAL_H_
+#define _IMU_HAL_H_
 
 #include "i2c_bus.h"
 #include "esp_err.h"
-#include "iot_sensor_type.h"
+#include "sensor_type.h"
 
 typedef void *bus_handle_t;
 typedef void *sensor_imu_handle_t;
@@ -63,26 +63,26 @@ esp_err_t imu_delete(sensor_imu_handle_t *sensor);
 esp_err_t imu_test(sensor_imu_handle_t sensor);
 
 /**
- * @brief Acquire imu sensor accelerometer result one time.
- *
- * @param sensor imu sensor handle to operate
- * @param sensor_data result data (unit:g)
- * @return esp_err_t
+ * @brief Acquire imu sensor accelerometer result one time. 
+ * 
+ * @param sensor imu sensor handle to operate 
+ * @param acce result data (unit:g)
+ * @return esp_err_t 
  *     - ESP_OK Success
- *     - ESP_FAIL Fail
+ *     - ESP_FAIL Fail 
 */
-esp_err_t imu_acquire_acce(sensor_imu_handle_t sensor, sensor_data_t *sensor_data);
+esp_err_t imu_acquire_acce(sensor_imu_handle_t sensor, axis3_t* acce);
 
 /**
  * @brief Acquire imu sensor gyroscope result one time.
- *
- * @param sensor imu sensor handle to operate
- * @param sensor_data result data (unit:dps)
- * @return esp_err_t
+ * 
+ * @param sensor imu sensor handle to operate 
+ * @param gyro result data (unit:dps)
+ * @return esp_err_t 
  *     - ESP_OK Success
- *     - ESP_FAIL Fail
+ *     - ESP_FAIL Fail 
 */
-esp_err_t imu_acquire_gyro(sensor_imu_handle_t sensor, sensor_data_t *sensor_data);
+esp_err_t imu_acquire_gyro(sensor_imu_handle_t sensor, axis3_t* gyro);
 
 /**
  * @brief Set sensor to sleep mode.
@@ -104,8 +104,26 @@ esp_err_t imu_sleep(sensor_imu_handle_t sensor);
 */
 esp_err_t imu_wakeup(sensor_imu_handle_t sensor);
 
+/**
+ * @brief acquire a group of sensor data
+ * 
+ * @param sensor imu sensor handle to operate
+ * @param data_group acquired data
+ * @return esp_err_t
+ *     - ESP_OK Success
+ *     - ESP_FAIL Fail
+ */
 esp_err_t imu_acquire(sensor_imu_handle_t sensor, sensor_data_group_t *data_group);
 
+/**
+ * @brief control sensor mode with control commands and args
+ * 
+ * @param sensor imu sensor handle to operate
+ * @param cmd control commands detailed in sensor_command_t
+ * @param args control commands args
+ *     - ESP_OK Success
+ *     - ESP_FAIL Fail
+ */
 esp_err_t imu_control(sensor_imu_handle_t sensor, sensor_command_t cmd, void *args);
 
 #ifdef __cplusplus
