@@ -189,7 +189,6 @@ static tp_dev_t *tp_group[TOUCH_PAD_MAX];   // Buffer of each button.
 static xSemaphoreHandle s_tp_mux = NULL;
 static SLIST_HEAD(tp_custom_list_head, tp_custom_list_t) tp_custom_list = SLIST_HEAD_INITIALIZER(tp_custom_list);
 
-extern int iot_tp_print_to_scope(float *data, unsigned char channel_num);
 static esp_err_t tp_remove_nodes(tp_handle_t tp_handle);
 static esp_err_t tp_insert_node(tp_custom_cb_t *tp_custom);
 
