@@ -27,8 +27,8 @@ ESP32 低功耗方案概述
 
 * 程序流程：
     1. 芯片 boot 后读取传感器数据，并将数据上传；
-    2. 调用 esp_deep_sleep_enable_timer_wakeup(sleep_time_us) 函数，设置 Deep-sleep 时间；
-    3. 调用 esp_deep_sleep_start() 函数，进入 Deep-sleep 模式。
+    2. 调用 ``esp_deep_sleep_enable_timer_wakeup(sleep_time_us)`` 函数，设置 Deep-sleep 时间；
+    3. 调用 ``esp_deep_sleep_start()`` 函数，进入 Deep-sleep 模式。
 * 此场景需要周期性唤醒 ESP32，不能充分利用 ESP32 的低功耗性能，但优势在于可以进行复杂的传感器数据采集。
 
 支持 GPIO 触发的异常数据采集（例如烟雾报警器）
@@ -44,9 +44,9 @@ ESP32 低功耗方案概述
 
 * 程序流程：
     1. 芯片 boot 后读取传感器数据，发出警报或者上传数据；
-    2. 调用 rtc_gpio_pulldown_en(MY_RTC_WAKEUP_IO) 函数或 rtc_gpio_pullup_en(MY_RTC_WAKEUP_IO) 函数，设置内部下拉或上拉类型；
-    3. 调用 esp_deep_sleep_enable_ext0_wakeup(MY_RTC_WAKEUP_IO, WAKEUP_IO_LEVEL) 函数或 esp_deep_sleep_enable_ext1_wakeup(WAKEUP_PIN_MASK, WAKEUP_TYPE) 函数，设置从 Deep-sleep 模式下唤醒的 RTC GPIO 电压条件；
-    4. 调用 esp_deep_sleep_start() 函数进入 Deep-sleep 模式。
+    2. 调用 ``rtc_gpio_pulldown_en(MY_RTC_WAKEUP_IO)`` 函数或 ``rtc_gpio_pullup_en(MY_RTC_WAKEUP_IO)`` 函数，设置内部下拉或上拉类型；
+    3. 调用 ``esp_deep_sleep_enable_ext0_wakeup(MY_RTC_WAKEUP_IO, WAKEUP_IO_LEVEL)`` 函数或 ``esp_deep_sleep_enable_ext1_wakeup(WAKEUP_PIN_MASK, WAKEUP_TYPE)`` 函数，设置从 Deep-sleep 模式下唤醒的 RTC GPIO 电压条件；
+    4. 调用 ``esp_deep_sleep_start()`` 函数进入 Deep-sleep 模式。
 * 此场景充分利用了 ESP32 的低功耗，但是对传感器要求较高，需要具有 GPIO 触发功能。
 
 数据采集或异常检测（不支持 GPIO 触发、不需要频繁上传数据）
@@ -60,15 +60,15 @@ ESP32 低功耗方案概述
 
 * 用户可根据 ULP 指令集，自行编写需要 ULP 协处理器在 Deep-sleep 模式下执行的汇编代码，完整流程如下：
     1. 芯片 boot 后，从 RTC_SLOW_MEMORY 读取芯片在 Deep-sleep 模式期间，ULP 协处理器采集的数据，并上传数据；
-    2. 调用 ulp_process_macros_and_load() 函数，将汇编程序代码拷贝至 RTC_SLOW_MEMORY；
-    3. 调用 ulp_run(ADDRESS) 函数启动 ULP 协处理器，执行 RTC_SLOW_MEMORY 中的代码；
-    4. 调用 esp_deep_sleep_start() 函数，进入 Deep-sleep 模式。
-* 为了使用户更方便地使用 ULP 协处理器进行数据采集与存储，我们专门在 IoT Solution 中增加了 ulp_monitor 模块，用户可直接调用 C 函数运行协处理器。ulp_monitor 模块的使用流程如下:[^1]
+    2. 调用 ``ulp_process_macros_and_load()`` 函数，将汇编程序代码拷贝至 ``RTC_SLOW_MEMORY``；
+    3. 调用 ``ulp_run(ADDRESS)`` 函数启动 ULP 协处理器，执行 ``RTC_SLOW_MEMORY`` 中的代码；
+    4. 调用 ``esp_deep_sleep_start()`` 函数，进入 Deep-sleep 模式。
+* 为了使用户更方便地使用 ULP 协处理器进行数据采集与存储，我们专门在 IoT Solution 中增加了 ulp_monitor 模块，用户可直接调用 C 函数运行协处理器。ulp_monitor 模块的使用流程如下:[1]_
     1. 芯片 boot 后，从 RTC_SLOW_MEMORY 读取 ULP 协处理器在芯片 Deep-sleep 模式期间采集的数据，并上传数据；
-    2. 调用 ulp_monitor_init(ULP_PROGRAM_ADDR, ULP_DATA_ADDR) 函数，设置 ULP 协处理器的程序运行地址与数据保存地址；
-    3. 调用 ulp_add_adc_monitor 函数或 ulp_add_temprature_monitor 函数，添加 ULP 协处理器采集的数据类型和唤醒条件（可同时添加）；
-    4. 调用 ulp_monitor_start 函数设置测量频率，并启动 ULP 协处理器；
-    5. 调用 esp_deep_sleep_start() 函数，进入 Deep-sleep 模式。目前，ULP 协处理只支持片上温度传感器和 ADC 数据的采集。
+    2. 调用 ``ulp_monitor_init(ULP_PROGRAM_ADDR, ULP_DATA_ADDR)`` 函数，设置 ULP 协处理器的程序运行地址与数据保存地址；
+    3. 调用 ``ulp_add_adc_monitor`` 函数或 ``ulp_add_temprature_monitor`` 函数，添加 ULP 协处理器采集的数据类型和唤醒条件（可同时添加）；
+    4. 调用 ``ulp_monitor_start`` 函数设置测量频率，并启动 ULP 协处理器；
+    5. 调用 ``esp_deep_sleep_start()`` 函数，进入 Deep-sleep 模式。目前，ULP 协处理只支持片上温度传感器和 ADC 数据的采集。
 * 此场景的优势在于可以在低功耗情况下频繁地采集数据，从而降低对传感器的要求。
 
 使用 Touchpad 触摸/GPIO 按键唤醒的用户交互场景（如控制面板）
@@ -82,8 +82,8 @@ ESP32 低功耗方案概述
 
 * 程序流程：
 	1. 芯片 boot 后运行用户交互与控制程序；
-	2. 设置作为唤醒源的 touchpad；[^2]
-	3. 调用 esp_deep_sleep_enable_touchpad_wakeup() 函数使能 touchpad 唤醒 ，然后调用 esp_deep_sleep_start() 函数进入 Deep-sleep 模式。
+	2. 设置作为唤醒源的 touchpad；[2]_
+	3. 调用 ``esp_deep_sleep_enable_touchpad_wakeup()`` 函数使能 touchpad 唤醒 ，然后调用 ``esp_deep_sleep_start()`` 函数进入 Deep-sleep 模式。
 
 Deep-sleep 支持不同唤醒源时的功耗情况
 -----------------------------------------
@@ -98,7 +98,7 @@ Deep-sleep 支持不同唤醒源时的功耗情况
 .. figure:: ../../_static/low_power/esp32_deepsleep_timer_current.png
    :align: center
 
-* 	支持 RTC IO 唤醒时，Deep-sleep 模式下的平均电流约为 6 uA；[^3]
+* 	支持 RTC IO 唤醒时，Deep-sleep 模式下的平均电流约为 6 uA；[3]_
 
 .. figure:: ../../_static/low_power/esp32_deepsleep_rtcio_current.png
    :align: center
@@ -113,12 +113,9 @@ Deep-sleep 支持不同唤醒源时的功耗情况
 .. figure:: ../../_static/low_power/touchpad.png
    :align: center
 
-关于 deep_sleep 唤醒方式的配置, 可以参考 IOT-Solution 中 Test Case 或 [电流测试板使用简介](../evaluation_boards/esp32_ulp_eb_cn.md)
 
-关于 deep_sleep 电流测试可以参考 RTC IO 和 TouchPad 覆盖[测试结果](./deep-sleep_current_test_cn.md)
+.. [1] 具体可查看 ulp_monitor 模块的 README.md 和 ulp_monitor_test.c 文件。
 
-[^1]: 具体可查看 ulp_monitor 模块的 README.md 和 ulp_monitor_test.c 文件。
+.. [2] 包括初始化与设置阈值，具体可查看 IoT Solution 中的 Touchpad 方案。
 
-[^2]: 包括初始化与设置阈值，具体可查看 IoT Solution 中的 Touchpad 方案。
-
-[^3]: 这里采用了 esp_deep_sleep_enable_ext1_wakeup() 函数。
+.. [3] 这里采用了 esp_deep_sleep_enable_ext1_wakeup() 函数。

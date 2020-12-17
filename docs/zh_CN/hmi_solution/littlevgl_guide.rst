@@ -83,7 +83,7 @@ LittlevGL 介绍
 Label（标签） - Image（图像） - List（列表） - Chart（图表） - Text
 area（文本块）
 
-`查看 LittlevGL 中已有的对象 <https://littlevgl.com/object-types>`__
+`查看 LittlevGL 中已有的对象 <https://lvgl.io/demos>`__
 
 对象属性
 ^^^^^^^^
@@ -192,7 +192,7 @@ NULL。创建函数的返回值是指向创建的对象的指针。独立于对�
 
 样式有 5
 个主要部分：公共的、主体、文字、图像和线条。对象将使用与其类型相关的字段。例如：线条不使用
-``letter_space``\ 。要查看对象类型使用哪些字段，请查阅\ `文档 <https://littlevgl.com/object-types>`__\ 。样式结构体的字段如下：
+``letter_space``\ 。要查看对象类型使用哪些字段，请查阅\ `文档 <https://lvgl.io/demos>`__\ 。样式结构体的字段如下：
 
 -  公共属性
 
@@ -249,7 +249,7 @@ NULL。创建函数的返回值是指向创建的对象的指针。独立于对�
 使用样式
 ^^^^^^^^
 
-每种对象类型都有一个单独的函数设置样式。对象使用的样式和样式属性在\ `文档 <https://littlevgl.com/object-types>`__\ 中可找到。
+每种对象类型都有一个单独的函数设置样式。对象使用的样式和样式属性在\ `文档 <https://lvgl.io/demos>`__\ 中可找到。
 
 如果对象只有一个样式，比如标签：可以使用
 ``lv_label_set_style(label1, &style)``
@@ -1103,8 +1103,7 @@ LittlevGL 配置
 FAQs
 ----
 
-1. \`\ ``.dram0.bss' will not fit in region``\ dram0\_0\_seg'\ ``或``\ region
-   ``dram0_0_seg' overflowed by 10072 bytes``
+1. ``.dram0.bss`` will not fit in :literal:`region dram0\_0\_seg` or :literal:`region dram0_0_seg` overflowed by 10072 bytes
 
    由于 LittlevGL 更新，增加了 ``.bss``
    代码量，如果编译时出现这个问题，可以在 ``lv_conf.h``

@@ -112,11 +112,11 @@ directory of the toolchain to the ``PATH`` environment variable.
 4. Compiling ULP code
 ---------------------
 
-Follow the steps below to compile ULP code as part of a component: 1.
-ULP code, written in assembly, must be added to one or more files with
-.S extension. These files must be placed into a separate directory
-inside component directory, for instance ulp/. 2. Modify the component
-makefile, adding the following:
+Follow the steps below to compile ULP code as part of a component:
+
+1.ULP code, written in assembly, must be added to one or more files with  .S extension . These files must be placed into a separate directory inside component directory, for instance ulp/. 
+
+2. Modify the component makefile, adding the following:
 
 ::
 

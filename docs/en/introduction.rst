@@ -23,13 +23,6 @@ Contents
     * Instruction of some different solutions
 
 
-
-- examples:
-
-    * Example project using this framework
-
-
-
 - tools:
 
     * Different tools and scripts

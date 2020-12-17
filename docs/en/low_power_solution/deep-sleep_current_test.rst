@@ -9,14 +9,12 @@ Description
 
 -  **Purpose**: measure the current consumptions of ESP32 in Deep\_sleep
    mode, under different wake-up setups;
--  **Tool**: ESP32\_ULP\_EB V1 evaluation board. For details on how to
-   use this board and complete configuation, please refer to `User Guide
-   to ESP32\_ULP\_EB <../evaluation_boards/esp32_ulp_eb_en.md>`__;
+-  **Tool**: ESP32\_ULP\_EB V1 evaluation board. 
 -  **Scope**: The current consumption of all the RTC GPIOs and touchpads
    of ESP32 are measured in this test, except for RTC GPIO\_37 and RTC
    GPIO\_38.
 
-*``Notes: GPIO_37 and GPIO_38 are not tested here, becuase these two pads are not led out to the pin header of the board.``*
+.. note:: GPIO_37 and GPIO_38 are not tested here, becuase these two pads are not led out to the pin header of the board.
 
 RTC GPIO
 --------
@@ -49,7 +47,7 @@ from deep sleep.
    -  when the GPIO is configured as low-level triggered, a 10 kΩ
       pull-up resistor should be used;
 
-*``Notes: To achieve lower power consumption, external resistors, instead of internal ones, are recommanded in this case.``*
+.. Note:: To achieve lower power consumption, external resistors, instead of internal ones, are recommanded in this case.
 
 **Test Result**
 
@@ -145,29 +143,29 @@ from deep sleep.
 -  The current consumptions of the chip in EXT1 mode are about 1 uA
    lower than that in EXT0 mode.
 
-+-------------------+-----------+
-| Pad Num           | Current   |
-+===================+===========+
-| Pad0 (GPIO\_4)    | 37.3 uA   |
-+-------------------+-----------+
-| Pad1 (GPIO\_0)    | 35.7 uA   |
-+-------------------+-----------+
-| Pad2 (GPIO\_2)    | 36.6 uA   |
-+-------------------+-----------+
-| Pad3 (GPIO\_15)   | 35.6 uA   |
-+-------------------+-----------+
-| Pad4 (GPIO\_13)   | 36.5 uA   |
-+-------------------+-----------+
-| Pad5 (GPIO\_12)   | 36.1 uA   |
-+-------------------+-----------+
-| Pad6 (GPIO\_14)   | 36.7 uA   |
-+-------------------+-----------+
-| Pad7 (GPIO\_27)   | 35.7 uA   |
-+-------------------+-----------+
-| Pad8 (GPIO\_33)   | 36.7 uA   |
-+-------------------+-----------+
-| Pad9 (GPIO\_32)   | 36.3 uA   |
-+-------------------+-----------+
++-------------------+-----------------------+
+| Pad Num           | Current               |
++===================+=======================+
+| Pad0 (GPIO\_4)    | 37.3 uA               |
++-------------------+-----------------------+
+| Pad1 (GPIO\_0)    | 35.7 uA               |
++-------------------+-----------------------+
+| Pad2 (GPIO\_2)    | 36.6 uA               |
++-------------------+-----------------------+
+| Pad3 (GPIO\_15)   | 35.6 uA               |
++-------------------+-----------------------+
+| Pad4 (GPIO\_13)   | 36.5 uA               |
++-------------------+-----------------------+
+| Pad5 (GPIO\_12)   | 36.1 uA               |
++-------------------+-----------------------+
+| Pad6 (GPIO\_14)   | 36.7 uA               |
++-------------------+-----------------------+
+| Pad7 (GPIO\_27)   | 35.7 uA               |
++-------------------+-----------------------+
+| Pad8 (GPIO\_33)   | 36.7 uA               |
++-------------------+-----------------------+
+| Pad9 (GPIO\_32)   | 36.3 uA               |
++-------------------+-----------------------+
 
 Touchpad
 --------
@@ -185,28 +183,28 @@ deep sleep.
 
 -  **Wake-up source: touchpad**
 
-+-------------------+-----------+
-| Pad Num           | Current   |
-+===================+===========+
-| Pad0 (GPIO\_4)    | 37.3 uA   |
-+-------------------+-----------+
-| Pad1 (GPIO\_0)    | 35.7 uA   |
-+-------------------+-----------+
-| Pad2 (GPIO\_2)    | 36.6 uA   |
-+-------------------+-----------+
-| Pad3 (GPIO\_15)   | 35.6 uA   |
-+-------------------+-----------+
-| Pad4 (GPIO\_13)   | 36.5 uA   |
-+-------------------+-----------+
-| Pad5 (GPIO\_12)   | 36.1 uA   |
-+-------------------+-----------+
-| Pad6 (GPIO\_14)   | 36.7 uA   |
-+-------------------+-----------+
-| Pad7 (GPIO\_27)   | 35.7 uA   |
-+-------------------+-----------+
-| Pad8 (GPIO\_33)   | 36.7 uA   |
-+-------------------+-----------+
-| Pad9 (GPIO\_32)   | 36.3 uA   |
-+-------------------+-----------+
++-------------------+-------------------------+
+| Pad Num           | Current                 |
++===================+=========================+
+| Pad0 (GPIO\_4)    | 37.3 uA                 |
++-------------------+-------------------------+
+| Pad1 (GPIO\_0)    | 35.7 uA                 |
++-------------------+-------------------------+
+| Pad2 (GPIO\_2)    | 36.6 uA                 |
++-------------------+-------------------------+
+| Pad3 (GPIO\_15)   | 35.6 uA                 |
++-------------------+-------------------------+
+| Pad4 (GPIO\_13)   | 36.5 uA                 |
++-------------------+-------------------------+
+| Pad5 (GPIO\_12)   | 36.1 uA                 |
++-------------------+-------------------------+
+| Pad6 (GPIO\_14)   | 36.7 uA                 |
++-------------------+-------------------------+
+| Pad7 (GPIO\_27)   | 35.7 uA                 |
++-------------------+-------------------------+
+| Pad8 (GPIO\_33)   | 36.7 uA                 |
++-------------------+-------------------------+
+| Pad9 (GPIO\_32)   | 36.3 uA                 |
++-------------------+-------------------------+
 
-*``Notes: touch_pad_set_meas_time can be used to adjust the charging/discharging cycle and the detection period of the touch sensor accordingly, so as to optimize the response time and achieve even lower power consumption.``*
+.. Note:: touch_pad_set_meas_time can be used to adjust the charging/discharging cycle and the detection period of the touch sensor accordingly, so as to optimize the response time and achieve even lower power consumption.

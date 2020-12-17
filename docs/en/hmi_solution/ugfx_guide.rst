@@ -204,30 +204,14 @@ There are two ways to configure µGFX in iot-solution:
 
 The figure below shows the µGFX configuration options in ``menuconfig``.
 
-.. raw:: html
-
-   <div align="center">
-
-.. raw:: html
-
-   </div>
-
-.. raw:: html
-
-   <div align="center">
-
-Figure 1. µGFX menuconfig
-
-.. raw:: html
-
-   </div>
+.. figure:: ../../_static/hmi_solution/ugfx/ugfx_menuconfig.jpg
+    :align: center
 
 1. Configure drivers
 
    In the µGFX Settings menu, you can configure the drivers for displays
    and touchscreens. To do this, please go to
-   ``Config Driver->Choose Touch Screen Driver`` and
-   ``Config Driver->Choose Screen Driver``.
+   ``Config Driver->Choose Touch Screen Driver`` and ``Config Driver->Choose Screen Driver``.
 
 2. Enable touchscreens
 
@@ -400,8 +384,7 @@ Set fonts
    drawing functions before you take a look at the different GWIN
    system.
 
-   If a font is no longer needed, call the function
-   ``gdispCloseFont(font)`` to release the allocated resources.
+   If a font is no longer needed, call the function ``gdispCloseFont(font)`` to release the allocated resources.
 
 2. Set default fonts
 
@@ -741,26 +724,10 @@ Here are the current available widgets：
     drawn in front of the item text. It is a multi selection list
     without a scrollbar since all the list items fit the visible space.
 
-    .. raw:: html
+   .. figure:: ../../_static/hmi_solution/ugfx/ugfx_gwin_list.jpg
+    :align: center
 
-       <div align="center">
-
-    .. raw:: html
-
-       </div>
-
-    .. raw:: html
-
-       <div align="center">
-
-    Figure 2. List Widget
-
-    .. raw:: html
-
-       </div>
-
-    You can ensure that an item is visible in the list by using
-    ``gwinListViewItem()``.
+   You can ensure that an item is visible in the list by using ``gwinListViewItem()``.
 
 6.  Slider
 

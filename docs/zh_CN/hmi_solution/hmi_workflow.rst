@@ -80,8 +80,7 @@ ESP32 图形库特性
 
 4. ESP32 平台选择
 
-5. 基于 `ESP32
-   μGFX <https://github.com/espressif/esp-iot-solution/tree/master/components/hmi/ugfx_gui>`__
+5. 基于 `ESP32 μGFX <https://github.com/espressif/esp-iot-solution/tree/master/components/hmi/ugfx_gui>`__
    库进行移植、相关驱动开发
 
 6. 基于 μGFX-Studio 平台开发应用程序（可选）
@@ -100,7 +99,7 @@ ESP32 图形库特性
 
 2. 字体资源处理
 
-   通过\ `在线字体转换工具 <https://ugfx.io/font-converter>`__\ 将
+   通过\ `在线字体转换工具 <https://ugfx.io/font-converter>`_ 将
    ``*.ttf`` 字体资源生成相应的 ``.c`` 文件
 
 使用 μGFX-Studio 开发应用程序
@@ -116,10 +115,6 @@ ESP32 图形库特性
 .. figure:: ../../_static/hmi_solution/ugfx/ugfx_studio.jpg
     :align: center
 
-μGFX 例程演示视频
-~~~~~~~~~~~~~~~~~
-
-`演示视频 <http://demo.iot.espressif.cn:8887/cmp/demo/demo2.mp4>`__
 
 LittlevGL 介绍
 --------------
@@ -195,15 +190,12 @@ LittlevGL 开发步骤
 -  模拟器可运行在 Linux、Windows、Mac OS
 -  支持 Eclipse
 
-LittlevGL 例程演示视频
-~~~~~~~~~~~~~~~~~~~~~~
 
-`演示视频 <http://demo.iot.espressif.cn:8887/cmp/demo/demo1.mp4>`__
 
 开发示例说明
 ------------
 
-本节将以 `mp3\_example <../../examples/hmi/mp3_example/README.md>`__
+本节将以一个MP3开发
 为例具体说明 HMI 界面开发过程（在这里将不进行
 `ESP-ADF <https://github.com/espressif/esp-adf>`__ 相关介绍和使用）
 
@@ -285,8 +277,7 @@ LittlevGL 例程演示视频
 
    -  主体框架：考虑到 mp3\_example 中的三个主页面以及通过 3
       个按钮进行切换，选择
-      `tabview <littlevgl/littlevgl_guide_cn.md#tab-view-lv_tabview>`__
-      进行三个页面的管理最为合适，在 tabview
+      :doc:`tableview <littlevgl_guide>` 进行三个页面的管理最为合适，在 tabview
       中添加三个子页面并且为每个页面的按钮指定 1 个符号字体： 
       ::
       
@@ -307,9 +298,7 @@ LittlevGL 例程演示视频
         
 
    -  播放控制页面： 显示当前选择的 mp3
-      文件名称；上/下一曲、播放/暂停按钮，这些控件我们通过 1 个
-      `container <littlevgl/littlevgl_guide_cn.md#container-lv_cont>`__
-      进行管理：
+      文件名称；上/下一曲、播放/暂停按钮，这些控件我们通过 1 个 :doc:`container <littlevgl_guide>` 进行管理：
       ::
 
           /* container 创建 */
@@ -319,7 +308,7 @@ LittlevGL 例程演示视频
           lv_obj_set_size(cont, LV_HOR_RES - 20, LV_VER_RES - 85);
           lv_cont_set_fit(cont, false, false);
 
-      - 当前播放音频文件名称显示，使用 1 个 [label](littlevgl/littlevgl_guide_cn.md#label-lv_label) 控件进行显示，显示内容可动态编辑：
+      - 当前播放音频文件名称显示，使用 1 个 :doc:`label <littlevgl_guide>` 控件进行显示，显示内容可动态编辑：
 
       ::
 
@@ -501,8 +490,7 @@ LittlevGL 例程演示视频
 
 8. 调试运行
 
-   根据 `README.md <examples/hmi/mp3_example/mp3_example_cn.md>`__
-   进行编译、下载，然后在实际设备上运行，对出现的问题进行相关记录，并在代码中进行相关修改、再次调试。
+   编译、下载，然后在实际设备上运行，对出现的问题进行相关记录，并在代码中进行相关修改、再次调试。
 
 总结
 ----

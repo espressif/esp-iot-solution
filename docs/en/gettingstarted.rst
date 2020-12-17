@@ -3,24 +3,23 @@ Getting Started
 
 
 
-Quick Start
--------------
+Development Board Overviews
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  .. toctree::
+    :maxdepth: 1
+    
+    ESP-Prog <../hw-reference/ESP-Prog_guide>
+    ESP-LCDKit <../hw-reference/ESP32_LCDKit_guide>
+    ESP32-SenseKit <../hw-reference/esp32_sense_kit_guide>
+    ESP-MeshKit <../hw-reference/ESP32-MeshKit-Sense_guide>
 
-Hardware
-~~~~~~~~~~~~
-
-* [ESP32_ULP_EB_V1 Evaluation Board](./documents/evaluation_boards/readme_en.md) [[中文]](./documents/evaluation_boards/readme_cn.md)
-* [ESP32-Sense kit Board](./documents/evaluation_boards/readme_en.md) [[中文]](./documents/evaluation_boards/readme_cn.md)
-    * [ESP32 Touch Sensor development kit](./documents/evaluation_boards/ESP32-MeshKit-Sense_guide_en.md)[[中文]](./documents/evaluation_boards/ESP32-MeshKit-Sense_guide_cn.md)
-* [ESP-Prog board](./documents/evaluation_boards/readme_en.md) [[中文]](./documents/evaluation_boards/readme_cn.md)
-    * [Firmware download and JTAG debug tool](./documents/evaluation_boards/ESP-Prog_guide_en.md)[[中文]](./documents/evaluation_boards/ESP-Prog_guide_cn.md)
 
 Setting up Development Environment
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-1. [Install ESP-IDF v4.0.1 Step By Step](https://docs.espressif.com/projects/esp-idf/en/v4.0.1/get-started/index.html#installation-step-by-step)
+1. `Install ESP-IDF v4.0.1 Step By Step <https://docs.espressif.com/projects/esp-idf/en/v4.0.1/get-started/index.html#installation-step-by-step>`_
 
->Current branch based on ESP-IDF `v4.0.1`
+.. note:: Current branch based on ESP-IDF `v4.0.1`
 
 2. Get ESP-IoT-Solution
 

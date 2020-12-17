@@ -33,7 +33,8 @@ LittlevGL has the following features:
 -  Simulator: supports embedded GUI design on PC without embedded
    hardware
 
-## Using with an operating system
+Using with an operating system
+----------------------------------
 
 LittlevGL is not thread-safe. Despite it, it's quite simple to use
 LittlevGL inside an operating system.
@@ -100,88 +101,59 @@ interface are objects. For example:
 -  Chart
 -  Text area
 
-`Click to check all the existing object
-types. <https://littlevgl.com/object-types>`__
+`Click to check all the existing object types. <https://lvgl.io/demos>`__
 
 Object Attributes
 ^^^^^^^^^^^^^^^^^
 
 1. Basic attributes
 
-The objects have the following basic attributes which are independent of
-object types: - Position - Size - Parent - Drag enable - Click enable,
-etc.
+   The objects have the following basic attributes which are independent of
+   object types: - Position - Size - Parent - Drag enable - Click enable,
+   etc.
 
 2. Specific attributes
 
-Each object type has its specific attributes.
+   Each object type has its specific attributes.
 
-For example a slider has the following attributes: - Min. and max.
-values - Current value - Callback function for new value set - Styles
+   For example a slider has the following attributes: - Min. and max.
+   values - Current value - Callback function for new value set - Styles
 
 Object's Working Mechanisms
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 -  Parent-child structure
 
-A parent can be thought of as a container for its children. Each object
-has only one parent object (except screens), but a parent object can
-have an unlimited number of children.
+   A parent can be thought of as a container for its children. Each object
+   has only one parent object (except screens), but a parent object can
+   have an unlimited number of children.
 
 -  Screen
 
-A screen is a special object which does not have a parent object. By
-default, LittlevGL creates and loads one screen. To get the currently
-active screen, use the function ``lv_scr_act()``. A screen can be
-created with any object type.
+   A screen is a special object which does not have a parent object. By
+   default, LittlevGL creates and loads one screen. To get the currently
+   active screen, use the function ``lv_scr_act()``. A screen can be
+   created with any object type.
 
 -  Moving together
 
-If the position of a parent is changed, its children will move with the
-parent. Therefore, all positions are relative to a parent. So the (0,0)
-coordinates mean that the objects will remain in the top left-hand
-corner of a parent, regardless of the position of a parent.
+   If the position of a parent is changed, its children will move with the
+   parent. Therefore, all positions are relative to a parent. So the (0,0)
+   coordinates mean that the objects will remain in the top left-hand
+   corner of a parent, regardless of the position of a parent.
 
-.. raw:: html
-
-   <div align="center">
-
-.. raw:: html
-
-   </div>
-
-.. raw:: html
-
-   <div align="center">
-
-Figure 1. Moving together
-
-.. raw:: html
-
-   </div>
+.. figure:: ../../_static/hmi_solution/littlevgl/par_child1.jpg
+    :align: center
+    :alt: Figure 1. Moving together
 
 -  Visibility only on a parent
 
-If a child is partially or totally out of its parent borders, its
-outside parts will not be visible.
+   If a child is partially or totally out of its parent borders, its
+   outside parts will not be visible.
 
-.. raw:: html
-
-   <div align="center">
-
-.. raw:: html
-
-   </div>
-
-.. raw:: html
-
-   <div align="center">
-
-Figure 2. Visibility only on a parent
-
-.. raw:: html
-
-   </div>
+.. figure:: ../../_static/hmi_solution/littlevgl/par_child3.jpg
+    :align: center
+    :alt: Figure 2. Visibility only on a parent
 
 Create/delete Objects
 ^^^^^^^^^^^^^^^^^^^^^
@@ -230,23 +202,9 @@ For example, layers can be added by creating two objects (which can be
 transparent): 'A' and then 'B'. Object 'A' and any other objects on it
 will be covered by 'B' and its children.
 
-.. raw:: html
-
-   <div align="center">
-
-.. raw:: html
-
-   </div>
-
-.. raw:: html
-
-   <div align="center">
-
-Figure 3. Layers
-
-.. raw:: html
-
-   </div>
+.. figure:: ../../_static/hmi_solution/littlevgl/par_child4.jpg
+    :align: center
+    :alt: Figure 3. Layers
 
 Styles
 ~~~~~~
@@ -274,7 +232,7 @@ An object uses fields related to its type. For example, lines do not use
 ``letter_space``.
 
 To see which fields are used by an object type, please refer to the
-`documentation <https://littlevgl.com/object-types>`__.
+`documentation <https://lvgl.io/demos>`__.
 
 The fields of a style structure are as follows:
 
@@ -331,7 +289,7 @@ Using Styles
 
 Every object type has a unique function for setting its styles. The
 styles and the style properties used by an object type are described in
-the `documentation <https://littlevgl.com/object-types>`__.
+the `documentation <https://lvgl.io/demos>`__.
 
 If an object has only one state, such as a label, the function
 ``lv_label_set_style(label1, &style)`` can be used to set a style.
@@ -358,23 +316,9 @@ Built-in Styles
 
 There are several built-in styles in the LittlevGL library:
 
-.. raw:: html
-
-   <div align="center">
-
-.. raw:: html
-
-   </div>
-
-.. raw:: html
-
-   <div align="center">
-
-Figure 4. Built-in styles
-
-.. raw:: html
-
-   </div>
+.. figure:: ../../_static/hmi_solution/littlevgl/style-built-in.jpg
+    :align: center
+    :alt: Figure 4. Built-in styles
 
 As the figure above shows, there are various styles for screens and
 buttons:
@@ -412,23 +356,9 @@ Style Example
 
 The example below demonstrates the style usage.
 
-.. raw:: html
-
-   <div align="center">
-
-.. raw:: html
-
-   </div>
-
-.. raw:: html
-
-   <div align="center">
-
-Figure 5. Style example
-
-.. raw:: html
-
-   </div>
+.. figure:: ../../_static/hmi_solution/littlevgl/style-example.jpg
+    :align: center
+    :alt: Figure 5.Style example
 
 ::
 
@@ -464,8 +394,7 @@ Themes
 
 A theme is a style collection which contains the required styles for
 every object type. For example, 5 styles for buttons to describe their 5
-possible states. Check the `available
-themes <https://littlevgl.com/themes>`__.
+possible states. Check the `available themes <https://littlevgl.com/themes>`__.
 
 In technical terms, a theme is a structure variable which contains
 multiple ``lv_style_t *`` fields.
@@ -605,23 +534,9 @@ used without ``UTF-8`` support as well.
 
 The list below shows the available symbols:
 
-.. raw:: html
-
-   <div align="center">
-
-.. raw:: html
-
-   </div>
-
-.. raw:: html
-
-   <div align="center">
-
-Figure 6. Symbol fonts
-
-.. raw:: html
-
-   </div>
+.. figure:: ../../_static/hmi_solution/littlevgl/symbols.jpg
+    :align: center
+    :alt: Figure 6. Symbol Fonts
 
 Add New Font
 ^^^^^^^^^^^^
@@ -741,51 +656,51 @@ Buffered and Unbuffered Drawing
 
 1. Unbuffered drawing
 
-The unbuffered drawing method puts the pixels directly on the display
-(frame buffer). Therefore, during the drawing process, some flickering
-might be visible, as the background is drawn before the objects on it.
-For this reason, this method is not suitable when scrolling, dragging,
-or when animation is used.
+   The unbuffered drawing method puts the pixels directly on the display
+   (frame buffer). Therefore, during the drawing process, some flickering
+   might be visible, as the background is drawn before the objects on it.
+   For this reason, this method is not suitable when scrolling, dragging,
+   or when animation is used.
 
-However, the obvious advantage is that it has the smallest memory
-footprint, since no extra graphic buffer is required. To use the
-unbuffered drawing, set ``LV_VDB_SIZE`` to 0 in ``lv_conf.h`` and
-register the functions ``disp_map`` and ``disp_fill``.
+   However, the obvious advantage is that it has the smallest memory
+   footprint, since no extra graphic buffer is required. To use the
+   unbuffered drawing, set ``LV_VDB_SIZE`` to 0 in ``lv_conf.h`` and
+   register the functions ``disp_map`` and ``disp_fill``.
 
 2. Buffered drawing
 
-The buffered drawing method is similar to double buffering. However,
-LittlevGL's buffered drawing algorithm uses only one frame buffer
-(display) and a small graphical buffer, called Virtual Display Buffer
-(VDB). For the VDB size, 1/10 of the screen size is typically enough.
-For a 320 × 240 screen with 16-bit colors, it only requires additional
-15 KB of RAM.
+   The buffered drawing method is similar to double buffering. However,
+   LittlevGL's buffered drawing algorithm uses only one frame buffer
+   (display) and a small graphical buffer, called Virtual Display Buffer
+   (VDB). For the VDB size, 1/10 of the screen size is typically enough.
+   For a 320 × 240 screen with 16-bit colors, it only requires additional
+   15 KB of RAM.
 
-With buffered drawing there is no flickering, as the image gets rendered
-in the memory (VDB) before being displayed. As a result, this method is
-perfect for scrolling, dragging and applying animation. In addition,
-buffer drawing enables the use of other graphical effects, such as
-anti-aliasing, transparency (opacity) and shadows. To use buffered
-drawing, set ``LV_VDB_SIZE`` > ``LV_HOR_RES`` in ``lv_conf.h`` and
-register the function ``disp_flush``.
+   With buffered drawing there is no flickering, as the image gets rendered
+   in the memory (VDB) before being displayed. As a result, this method is
+   perfect for scrolling, dragging and applying animation. In addition,
+   buffer drawing enables the use of other graphical effects, such as
+   anti-aliasing, transparency (opacity) and shadows. To use buffered
+   drawing, set ``LV_VDB_SIZE`` > ``LV_HOR_RES`` in ``lv_conf.h`` and
+   register the function ``disp_flush``.
 
-In buffered mode you can use *double VDB* to execute rendering in one
-VDB in parallel with copying pixels to your frame buffer. In order to
-reduce CPU usage, use DMA or other hardware acceleration for copying, so
-that it can operate in the background. To enable this feature, please
-set ``LV_VDB_DOUBLE`` in ``lv_conf.h`` to 1.
+   In buffered mode you can use *double VDB* to execute rendering in one
+   VDB in parallel with copying pixels to your frame buffer. In order to
+   reduce CPU usage, use DMA or other hardware acceleration for copying, so
+   that it can operate in the background. To enable this feature, please
+   set ``LV_VDB_DOUBLE`` in ``lv_conf.h`` to 1.
 
 3. Buffered vs. Unbuffered drawing
 
-Keep in mind that unbuffered drawing is not necessarily faster. During
-the rendering process, pixels can be overwritten multiple times (e.g. it
-may take several iterations of rendering while objects are being
-overlaid). For the unbuffered mode, the library needs to access external
-memory or a display controller several times, which is slower than
-writing/reading the internal RAM.
+   Keep in mind that unbuffered drawing is not necessarily faster. During
+   the rendering process, pixels can be overwritten multiple times (e.g. it
+   may take several iterations of rendering while objects are being
+   overlaid). For the unbuffered mode, the library needs to access external
+   memory or a display controller several times, which is slower than
+   writing/reading the internal RAM.
 
-The following table summarizes the differences between the two drawing
-methods:
+   The following table summarizes the differences between the two drawing
+   methods:
 
 +-----------------+----------------------+--------------------+
 |                 | Unbuffered Drawing   | Buffered Drawing   |
@@ -831,23 +746,9 @@ Base Object contains the most basic attributes of objects:
 You can set coordinates, object sizes, alignment types, parent objects,
 etc. The alignment types are shown below.
 
-.. raw:: html
-
-   <div align="center">
-
-.. raw:: html
-
-   </div>
-
-.. raw:: html
-
-   <div align="center">
-
-Figure 7. Alignment types
-
-.. raw:: html
-
-   </div>
+.. figure:: ../../_static/hmi_solution/littlevgl/align.jpg
+    :align: center
+    :alt: Figure 7. Alignment tyoes
 
 Use the function ``lv_obj_create(NULL，NULL)`` to create a screen and
 load it with ``lv_scr_load(screen1)``. The function ``lv_scr_act()``
@@ -1099,23 +1000,9 @@ You can set the angle of the scale and the number of the lines with the
 function ``lv_lmeter_set_scale(lmeter，angle，line_num)``. The default
 angle is 240 and the default line number is 31.
 
-.. raw:: html
-
-   <div align="center">
-
-.. raw:: html
-
-   </div>
-
-.. raw:: html
-
-   <div align="center">
-
-Figure 8. Line meter
-
-.. raw:: html
-
-   </div>
+.. figure:: ../../_static/hmi_solution/littlevgl/line-meter-lv_lmeter.jpg
+    :align: center
+    :alt: Figure 8. Line meter
 
 Gauge (lv\_gauge)
 ^^^^^^^^^^^^^^^^^
@@ -1428,23 +1315,9 @@ manually with ``lv_obj_set_width(roller, width)``. Roller open/close
 animation time can be adjusted by
 ``lv_roller_set_anim_time(roller，anim_time)``.
 
-.. raw:: html
-
-   <div align="center">
-
-.. raw:: html
-
-   </div>
-
-.. raw:: html
-
-   <div align="center">
-
-Figure 9. Roller
-
-.. raw:: html
-
-   </div>
+.. figure:: ../../_static/hmi_solution/littlevgl/roller-lv_roller.jpg
+    :align: center
+    :alt: Figure 9. Roller
 
 Check Box (lv\_cb)
 ^^^^^^^^^^^^^^^^^^
@@ -1542,23 +1415,9 @@ There are two ways to configure LittlevGL in iot-solution:
 The figure below shows the LittlevGL configuration options in
 ``menuconfig``.
 
-.. raw:: html
-
-   <div align="center">
-
-.. raw:: html
-
-   </div>
-
-.. raw:: html
-
-   <div align="center">
-
-Figure 10. LittlevGL menuconfig
-
-.. raw:: html
-
-   </div>
+.. figure:: ../../_static/hmi_solution/littlevgl/lvgl_menuconfig.jpg
+    :align: center
+    :alt: Figure 10. LittleVGL menuconfig
 
 1. Configure drivers
 
@@ -1604,8 +1463,7 @@ Figure 10. LittlevGL menuconfig
 FAQs
 ----
 
-1. \`\ ``.dram0.bss' will not fit in region``\ dram0\_0\_seg'\ ``or``\ region
-   ``dram0_0_seg' overflowed by 10072 bytes``
+1. ``.dram0.bss`` will not fit in :literal:`region dram0\_0\_seg` or :literal:`region dram0_0_seg` overflowed by 10072 bytes
 
    Due to the LittlevGL update, the amount of ``.bss`` code has been
    added. If this problem occurs during compilation, you can disable

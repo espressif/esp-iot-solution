@@ -1,14 +1,14 @@
 Force-light-sleep mode
 ===========================
 
-Light-sleep is another power saving mode. In Light-sleep mode, CPUs, digital peripherals and most of the RAM are clock-gated, and supply voltage is reduced. Upon exit from Light-sleep, peripherals and CPUs resume operation, their internal state is preserved. By calling `esp_err_t esp_light_sleep_start()`, application can enter light sleep mode.
+Light-sleep is another power saving mode. In Light-sleep mode, CPUs, digital peripherals and most of the RAM are clock-gated, and supply voltage is reduced. Upon exit from Light-sleep, peripherals and CPUs resume operation, their internal state is preserved. By calling ``esp_err_t esp_light_sleep_start()``, application can enter light sleep mode.
 
 This document gives a brief introduction of the ESP32's current consumption during Light-sleep mode and the results are as follows.
 
 Sleep time
 --------------
 
-First we have a test about the time to enter sleep. We set a GPIO(GPIO18 in this case) from high to low level before we call `esp_light_sleep_start` to start the light-sleep mode. As shown below, after about **200us**, the chip completely goes to Light-sleep. 
+First we have a test about the time to enter sleep. We set a GPIO(GPIO18 in this case) from high to low level before we call ``esp_light_sleep_start`` to start the light-sleep mode. As shown below, after about **200us**, the chip completely goes to Light-sleep. 
 
 .. figure:: ../../_static/DFS_and_light_sleep/pic1.svg.png
    :align: center
@@ -53,4 +53,4 @@ Finally, the current during sleep was tested. We can wake the chip up from Light
 |     timer    |             0.79mA               |
 +--------------+----------------------------------+
 
-Before enter Light-sleep, Those GPIO who powered by VDD3P3_CPU should be all disabled. otherwise, the current will be higher(about 1.5mA) due to GPIO leakage current.
+Before enter Light-sleep, Those GPIO who powered by **VDD3P3_CPU** should be all disabled. otherwise, the current will be higher(about 1.5mA) due to GPIO leakage current.
