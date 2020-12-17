@@ -74,7 +74,7 @@ typedef struct {
     bus_handle_t bus;                           /*!< i2c/spi bus handle*/
     sensor_mode_t mode;                         /*!< set acquire mode detiled in sensor_mode_t*/
     float range;                                /*!< set measuring range*/
-    uint16_t min_delay;                         /*!< set minimum acquisition interval*/
+    uint32_t min_delay;                         /*!< set minimum acquisition interval*/
     const char *task_name;                      /**< set name of the sensor task; if NULL,a dedicated task is not created for sensor*/
     UBaseType_t task_priority;                  /**< set priority of the sensor task, ignored if task name is NULL */
     uint32_t task_stack_size;                   /**< set stack size of the sensor task, ignored if task name is NULL */

@@ -86,7 +86,7 @@ typedef struct {
     sensor_type_t type;
     sensor_id_t sensor_id;
     sensor_mode_t mode;
-    uint16_t min_delay;
+    uint32_t min_delay;
     sensor_driver_handle_t driver_handle;
     iot_sensor_impl_t *impl;
     const char *event_base;
@@ -336,7 +336,7 @@ static void IRAM_ATTR sensors_intr_isr_handler(void *arg)
     }
 }
 
-static TimerHandle_t sensor_polling_mode_init(const char *const pcTimerName, uint16_t min_delay, void *arg)
+static TimerHandle_t sensor_polling_mode_init(const char *const pcTimerName, uint32_t min_delay, void *arg)
 {
     TimerHandle_t timer_handle = xTimerCreate(pcTimerName, (min_delay / portTICK_RATE_MS), pdTRUE, arg, sensors_timer_cb);
 
@@ -408,7 +408,7 @@ esp_err_t iot_sensor_create(sensor_id_t sensor_id, const sensor_config_t *config
     ret = sensor->impl->control(sensor->driver_handle, COMMAND_SET_MODE, (void *)(config_copy.mode));
     SENSOR_CHECK_GOTO(ret != ESP_FAIL, "set sensor mode failed !!", cleanup_sensor);
     /*config sensor measuring range*/
-    ret = sensor->impl->control(sensor->driver_handle, COMMAND_SET_RANGE, (void *)(config_copy.range));
+    ret = sensor->impl->control(sensor->driver_handle, COMMAND_SET_RANGE, &(config_copy.range));
     SENSOR_CHECK_GOTO(ret != ESP_FAIL, "set sensor range failed !!", cleanup_sensor);
     /*config sensor work mode*/
     ret = sensor->impl->control(sensor->driver_handle, COMMAND_SET_ODR, (void *)(config_copy.min_delay));

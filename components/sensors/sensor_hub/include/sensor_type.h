@@ -105,7 +105,7 @@ typedef struct {
     int64_t                  timestamp;     /*! timestamp */
     uint8_t                  sensor_id;     /*! sensor id */
     int32_t                  event_id;      /*! reserved for future use*/
-    uint16_t                 min_delay;     /*!  minimum delay between two events, 0-65535, unit: ms*/
+    uint32_t                 min_delay;     /*!  minimum delay between two events, unit: ms*/
     union {
         axis3_t              acce;          /*! Accelerometer.       unit: G          */
         axis3_t              gyro;          /*! Gyroscope.           unit: dps        */
@@ -126,7 +126,6 @@ typedef struct {
         float                voltage;       /*! Voltage sensor       unit: mV          */
         float                data[4];       /*!for general use*/
     };
-    /*!total size of sensor date is 8B+4B+4*4B=28B*/
 } sensor_data_t;
 
 typedef struct {
