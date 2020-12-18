@@ -26,6 +26,8 @@ static const char *TAG = "servo";
     }
 
 #define SERVO_LEDC_INIT_BITS LEDC_TIMER_10_BIT
+#define SERVO_FREQ_MIN       50
+#define SERVO_FREQ_MAX       400
 
 static uint32_t g_full_duty = 0;
 static servo_config_t g_cfg = {0};
@@ -44,7 +46,7 @@ esp_err_t servo_init(const servo_config_t *config)
     esp_err_t ret;
     SERVO_CHECK(NULL != config, "Pointer of config is invalid", ESP_ERR_INVALID_ARG);
     SERVO_CHECK(config->channel_number > 0 && config->channel_number <= LEDC_CHANNEL_MAX, "Servo channel number out the range", ESP_ERR_INVALID_ARG);
-    SERVO_CHECK(config->freq <= 1000 && config->freq >= 50, "Servo pwm frequency out the range", ESP_ERR_INVALID_ARG);
+    SERVO_CHECK(config->freq <= SERVO_FREQ_MAX && config->freq >= SERVO_FREQ_MIN, "Servo pwm frequency out the range", ESP_ERR_INVALID_ARG);
     uint64_t pin_mask = 0;
     uint32_t ch_mask = 0;
     for (size_t i = 0; i < config->channel_number; i++) {
