@@ -62,10 +62,11 @@ ESP-IOT-Solution contains peripheral drivers and code frameworks for the develop
    Introduction <introduction>
    Get Started <gettingstarted>
    Basic Component <basic/index>
-   Display <display/index>
+   Display<display/index>
    Audio <audio/index>
    GUI <gui/index>
    Input Device <input_device/index>
    Sensors <sensors/index>
+   Motor <motor/index>
    Security&Encryption <security_solution/index>
    Contribute <contribute/index>
