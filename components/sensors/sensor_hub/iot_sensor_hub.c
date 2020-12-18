@@ -36,16 +36,6 @@ const char *SENSOR_MODE_STRING[] = {"MODE_DEFAULT", "MODE_POLLING", "MODE_INTERR
         goto lable; \
     }
 
-#define SENSOR_MUTEX_TAKE(mutex, ret) if (!xSemaphoreTake(mutex, SENSOR_MUTEX_TICKS_TO_WAIT)) { \
-        ESP_LOGE(TAG, "%s:%d (%s):sensor take mutex timeout, max wait = %d ms", __FILE__, __LINE__, __FUNCTION__, SENSOR_MUTEX_TICKS_TO_WAIT); \
-        return (ret); \
-    }
-
-#define SENSOR_MUTEX_GIVE(mutex, ret) if (!xSemaphoreGive(mutex)) { \
-        ESP_LOGE(TAG, "%s:%d (%s):sensor give mutex failed", __FILE__, __LINE__, __FUNCTION__); \
-        return (ret); \
-    }
-
 #define ESP_INTR_FLAG_DEFAULT 0
 #define ISR_STATE_INVALID NULL
 #define ISR_STATE_INITIALIZED 0x01
@@ -57,11 +47,13 @@ const char *SENSOR_MODE_STRING[] = {"MODE_DEFAULT", "MODE_POLLING", "MODE_INTERR
 #define BIT23_KILL_WAITING_TASK (0x01 << 23)
 #define BIT22_COMMON_DATA_READY (0x01 << 22)
 
-static EventGroupHandle_t s_event_group = NULL;
-static uint32_t s_task_wait_bits = BIT23_KILL_WAITING_TASK;
-
 /*default sensor task related*/
+static EventGroupHandle_t s_event_group = NULL;
+static uint32_t s_sensor_wait_bits = BIT23_KILL_WAITING_TASK;
 static TaskHandle_t s_sensor_task_handle = NULL;
+static SemaphoreHandle_t s_sensor_node_mutex = NULL;    /* mutex to achive thread-safe*/
+#define SENSOR_NODE_MUTEX_TICKS_TO_WAIT 200
+
 #ifdef CONFIG_SENSOR_TASK_PRIORITY
 #define SENSOR_DEFAULT_TASK_PRIORITY CONFIG_SENSOR_TASK_PRIORITY /*will be overwrite if PRIORITY_INHERIT enable*/
 #else
@@ -70,6 +62,7 @@ static TaskHandle_t s_sensor_task_handle = NULL;
 #define SENSOR_DEFAULT_TASK_NAME "SENSOR_HUB"
 #define SENSOR_DEFAULT_TASK_STACK_SIZE CONFIG_SENSOR_TASK_STACK_SIZE
 #define SENSOR_DEFAULT_TASK_CORE_ID 0
+#define SENSOR_DEFAULT_TASK_DELETE_TIMEOUT_MS 1000
 
 /*event loop related*/
 ESP_EVENT_DEFINE_BASE(SENSOR_IMU_EVENTS);
@@ -211,58 +204,77 @@ static const char *sensor_find_event_base(int sensor_type)
     return event_base;
 }
 
-static esp_err_t sensor_add_node(_iot_sensor_t *p_sensor)
+static inline esp_err_t sensor_take_event_bit(uint32_t *p_bit)
 {
-    _iot_sensor_slist_t *node = calloc(1, sizeof(_iot_sensor_slist_t));
-    SENSOR_CHECK(node != NULL, "calloc node failed", ESP_ERR_NO_MEM);
-
-    /*create a default event group if have not created*/
-    if (s_event_group == NULL) {
-        s_event_group = xEventGroupCreate();
-    }
-
-    /*take a not used event bit*/
+    SENSOR_CHECK(p_bit != NULL, "pointer can not be NULL", ESP_ERR_INVALID_ARG);
+    SENSOR_CHECK(s_event_group != NULL, "s_event_group can not be NULL", ESP_ERR_INVALID_STATE);
+    /*take a free event bit*/
     uint32_t i = 0;
 
     for (; i < SENSORS_NUM_MAX; i++) {
-        if (((s_task_wait_bits >> i) & 0x01) == false) {
-            s_task_wait_bits |= (0x01 << i);
+        if (((s_sensor_wait_bits >> i) & 0x01) == false) {
+            s_sensor_wait_bits |= (0x01 << i);
             break;
         }
     }
 
     if (i >= SENSORS_NUM_MAX) {
-        free(node);
-        ESP_LOGE(TAG, "take event bits failed!");
         return ESP_FAIL;
     }
 
-    p_sensor->event_bit = i;
+    *p_bit = i;
+    return ESP_OK;
+}
 
+static inline esp_err_t sensor_give_event_bit(uint32_t bit)
+{
+    SENSOR_CHECK(s_event_group != NULL, "s_event_group can not be NULL", ESP_ERR_INVALID_STATE);
+
+    /*give back a used event bit*/
+    if (bit >= SENSORS_NUM_MAX) {
+        return ESP_FAIL;
+    }
+
+    s_sensor_wait_bits &= ~(0x00000001 << bit);
+    return ESP_OK;
+}
+
+static esp_err_t sensor_add_node(_iot_sensor_t *p_sensor)
+{
+    SENSOR_CHECK(p_sensor != NULL, "sensor pointer can not be NULL", ESP_ERR_INVALID_ARG);
+    SENSOR_CHECK(s_event_group != NULL, "s_event_group can not be NULL", ESP_ERR_INVALID_STATE);
+    _iot_sensor_slist_t *node = calloc(1, sizeof(_iot_sensor_slist_t));
+    SENSOR_CHECK(node != NULL, "calloc node failed", ESP_ERR_NO_MEM);
+
+    uint32_t event_bit = 0;
+    SENSOR_CHECK_GOTO(pdTRUE == xSemaphoreTake(s_sensor_node_mutex, SENSOR_NODE_MUTEX_TICKS_TO_WAIT), "take semaphore timeout", cleanupnode);
+    SENSOR_CHECK_GOTO(ESP_OK == sensor_take_event_bit(&event_bit), "take event bit failed", cleanupnode);
+    p_sensor->event_bit = event_bit;
     node->p_sensor = p_sensor;
     SLIST_INSERT_HEAD(&s_sensor_slist_head, node, next);
+    SENSOR_CHECK_GOTO(pdTRUE == xSemaphoreGive(s_sensor_node_mutex), "give semaphore failed", cleanupnode);
+
     return ESP_OK;
+
+cleanupnode:
+    free(node);
+    return ESP_FAIL;
 }
 
 static esp_err_t sensor_remove_node(_iot_sensor_t *p_sensor)
 {
+    SENSOR_CHECK(p_sensor != NULL, "sensor pointer can not be NULL", ESP_ERR_INVALID_ARG);
     _iot_sensor_slist_t *node;
+    SENSOR_CHECK(pdTRUE == xSemaphoreTake(s_sensor_node_mutex, SENSOR_NODE_MUTEX_TICKS_TO_WAIT), "take semaphore timeout", ESP_ERR_TIMEOUT);
     SLIST_FOREACH(node, &s_sensor_slist_head, next) {
         if (node->p_sensor == p_sensor) {
-            /*give back a used event bit*/
-            uint32_t i = p_sensor->event_bit;
-
-            if (i >= SENSORS_NUM_MAX) {
-                ESP_LOGE(TAG, "give back event bits failed!");
-                return ESP_FAIL;
-            }
-
-            s_task_wait_bits &= ~(0x00000001 << i);
+            SENSOR_CHECK(ESP_OK == sensor_give_event_bit(p_sensor->event_bit), "give event bit failed", ESP_FAIL);
             SLIST_REMOVE(&s_sensor_slist_head, node, _iot_sensor_slist_t, next);
             free(node);
             break;
         }
     }
+    SENSOR_CHECK(pdTRUE == xSemaphoreGive(s_sensor_node_mutex), "give semaphore failed", ESP_FAIL);
     return ESP_OK;
 }
 
@@ -282,17 +294,13 @@ static void sensor_default_task(void *arg)
     ESP_LOGI(TAG, "task: sensor_default_task created!");
 
     while (arg) { /*arg == NULL is invalid, task will be deleted*/
-        if (s_task_wait_bits == 0) {
-            vTaskDelay(100 / portTICK_RATE_MS);
-            continue;
-        }
-
-        uxBits = xEventGroupWaitBits(s_event_group, s_task_wait_bits, true, false, portMAX_DELAY);
+        uxBits = xEventGroupWaitBits(s_event_group, s_sensor_wait_bits, true, false, portMAX_DELAY);
 
         if ((uxBits & BIT23_KILL_WAITING_TASK) != 0) { /*task delete event*/
             break;
         }
 
+        xSemaphoreTake(s_sensor_node_mutex, portMAX_DELAY);
         SLIST_FOREACH(node, p_sensor_list_head, next) {
             if ((uxBits >> (node->p_sensor->event_bit)) & 0x01) {
                 node->p_sensor->impl->acquire(node->p_sensor->driver_handle, &sensor_data_group);
@@ -307,6 +315,7 @@ static void sensor_default_task(void *arg)
                 }
             }
         }
+        xSemaphoreGive(s_sensor_node_mutex);
     }
 
     /*set task handle to NULL*/
@@ -338,6 +347,7 @@ static void IRAM_ATTR sensors_intr_isr_handler(void *arg)
 
 static TimerHandle_t sensor_polling_mode_init(const char *const pcTimerName, uint32_t min_delay, void *arg)
 {
+    SENSOR_CHECK((pcTimerName != NULL) && (min_delay != 0), "sensor polling mode init failed", NULL);
     TimerHandle_t timer_handle = xTimerCreate(pcTimerName, (min_delay / portTICK_RATE_MS), pdTRUE, arg, sensors_timer_cb);
 
     if (timer_handle == NULL) {
@@ -372,11 +382,13 @@ static esp_err_t sensor_intr_mode_init(int pin, gpio_int_type_t intr_type)
 
 static inline esp_err_t sensor_intr_isr_add(int pin, void *arg)
 {
+    SENSOR_CHECK((pin != 0) && (arg != NULL), "sensor intr args invalid", ESP_ERR_INVALID_ARG);
     return gpio_isr_handler_add(pin, sensors_intr_isr_handler, arg);
 }
 
 static inline esp_err_t sensor_intr_isr_remove(int pin)
 {
+    SENSOR_CHECK(pin != 0, "sensor intr pin invalid", ESP_ERR_INVALID_ARG);
     return gpio_isr_handler_remove(pin);
 }
 
@@ -404,19 +416,27 @@ esp_err_t iot_sensor_create(sensor_id_t sensor_id, const sensor_config_t *config
     /*create a new sensor*/
     sensor->driver_handle = sensor->impl->create(sensor->bus, (sensor->sensor_id & SENSOR_ID_MASK));
     SENSOR_CHECK_GOTO(sensor->driver_handle != NULL, "sensor create failed", cleanup_sensor);
-    /*config sensor work mode*/
+    /*config sensor work mode, not supported case will be skiped*/
     ret = sensor->impl->control(sensor->driver_handle, COMMAND_SET_MODE, (void *)(config_copy.mode));
-    SENSOR_CHECK_GOTO(ret != ESP_FAIL, "set sensor mode failed !!", cleanup_sensor);
-    /*config sensor measuring range*/
+    SENSOR_CHECK_GOTO(ESP_OK == ret || ESP_ERR_NOT_SUPPORTED == ret, "set sensor mode failed !!", cleanup_sensor);
+    /*config sensor measuring range, not supported case will be skiped*/
     ret = sensor->impl->control(sensor->driver_handle, COMMAND_SET_RANGE, &(config_copy.range));
-    SENSOR_CHECK_GOTO(ret != ESP_FAIL, "set sensor range failed !!", cleanup_sensor);
-    /*config sensor work mode*/
+    SENSOR_CHECK_GOTO(ESP_OK == ret || ESP_ERR_NOT_SUPPORTED == ret, "set sensor range failed !!", cleanup_sensor);
+    /*config sensor work mode, not supported case will be skiped*/
     ret = sensor->impl->control(sensor->driver_handle, COMMAND_SET_ODR, (void *)(config_copy.min_delay));
-    SENSOR_CHECK_GOTO(ret != ESP_FAIL, "set sensor odr failed !!", cleanup_sensor);
-    /*test if sensor is valid*/
+    SENSOR_CHECK_GOTO(ESP_OK == ret || ESP_ERR_NOT_SUPPORTED == ret, "set sensor odr failed !!", cleanup_sensor);
+    /*test if sensor is valid, can not be skiped*/
     ret = sensor->impl->control(sensor->driver_handle, COMMAND_SELF_TEST, NULL);
     SENSOR_CHECK_GOTO(ret == ESP_OK, "sensor test failed !!", cleanup_sensor);
-    /*add sensor to list*/
+
+    /*create a default event group if have not created*/
+    if (s_event_group == NULL) {
+        s_event_group = xEventGroupCreate();
+        s_sensor_node_mutex = xSemaphoreCreateMutex();
+        SENSOR_CHECK(s_sensor_node_mutex != NULL, "sensor_node xSemaphoreCreateMutex failed", ESP_FAIL);
+    }
+
+    /*add sensor to list, event_bit will be set internal*/
     ret = sensor_add_node(sensor);
     SENSOR_CHECK_GOTO(ret == ESP_OK, "add sensor node to list failed !!", cleanup_sensor);
 
@@ -439,25 +459,13 @@ esp_err_t iot_sensor_create(sensor_id_t sensor_id, const sensor_config_t *config
             break;
     }
 
-    /*attach sensor to default task if task_name == NULL*/
-    if (config_copy.task_name == NULL) {
-        /*create a default sensor task if not created*/
-        if (s_sensor_task_handle == NULL) {
-            BaseType_t task_created = xTaskCreatePinnedToCore(sensor_default_task, SENSOR_DEFAULT_TASK_NAME, SENSOR_DEFAULT_TASK_STACK_SIZE,
-                                      ((void *)(&s_sensor_slist_head)), SENSOR_DEFAULT_TASK_PRIORITY, &s_sensor_task_handle, SENSOR_DEFAULT_TASK_CORE_ID);
-            SENSOR_CHECK_GOTO(task_created == pdPASS, "create default sensor task failed", cleanup_sensor_node);
-        }
-        config_copy.task_name = SENSOR_DEFAULT_TASK_NAME;
-        sensor->task_handle = s_sensor_task_handle;
-    } else { /*if task_name != NULL, creat a new task */
-        if (config_copy.task_stack_size == 0) {
-            config_copy.task_stack_size = SENSOR_DEFAULT_TASK_STACK_SIZE;
-        }
-        //TODO:mutilple task not supported
-        BaseType_t task_created = xTaskCreatePinnedToCore(sensor_default_task, config_copy.task_name, config_copy.task_stack_size,
-                                  NULL, config_copy.task_priority, &sensor->task_handle, config_copy.task_core_id);
-        SENSOR_CHECK_GOTO(task_created == pdPASS, "create dedicated sensor task failed", cleanup_sensor_node);
+    /*create a default sensor task if not created*/
+    if (s_sensor_task_handle == NULL) {
+        BaseType_t task_created = xTaskCreatePinnedToCore(sensor_default_task, SENSOR_DEFAULT_TASK_NAME, SENSOR_DEFAULT_TASK_STACK_SIZE,
+                                    ((void *)(&s_sensor_slist_head)), SENSOR_DEFAULT_TASK_PRIORITY, &s_sensor_task_handle, SENSOR_DEFAULT_TASK_CORE_ID);
+        SENSOR_CHECK_GOTO(task_created == pdPASS, "create default sensor task failed", cleanup_sensor_node);
     }
+    sensor->task_handle = s_sensor_task_handle;
 
     /*regist default event handler for message print*/
 #ifdef CONFIG_SENSOR_DEFAULT_HANDLER_DATA
@@ -473,7 +481,7 @@ esp_err_t iot_sensor_create(sensor_id_t sensor_id, const sensor_config_t *config
 #endif
 
     ESP_LOGI(TAG, "Sensor created, Task name = %s, Type = %s, Sensor ID = %d, Mode = %s, Min Delay = %d ms",
-                config_copy.task_name,
+                SENSOR_DEFAULT_TASK_NAME,
                 SENSOR_TYPE_STRING[sensor->type],
                 sensor->sensor_id,
                 SENSOR_MODE_STRING[sensor->mode],
@@ -526,8 +534,8 @@ esp_err_t iot_sensor_stop(sensor_handle_t sensor_handle)
 
     ret = sensor->impl->control(sensor->driver_handle, COMMAND_SET_POWER, (void *)POWER_MODE_SLEEP);
 
-    if (ESP_OK != ret) {
-        ESP_LOGW(TAG, "sensor set power ret = %s, set failed or not supported", esp_err_to_name(ret));
+    if (ESP_OK != ret && ESP_ERR_NOT_SUPPORTED != ret) { /*not supported case will be skip*/
+        ESP_LOGW(TAG, "sensor set power failed ret = %s", esp_err_to_name(ret));
     }
 
     return ESP_OK;
@@ -566,8 +574,8 @@ esp_err_t iot_sensor_start(sensor_handle_t sensor_handle)
 
     ret = sensor->impl->control(sensor->driver_handle, COMMAND_SET_POWER,  (void *)POWER_MODE_WAKEUP);
 
-    if (ESP_OK != ret) {
-        ESP_LOGW(TAG, "sensor set power ret = %s, set failed or not supported", esp_err_to_name(ret));
+    if (ESP_OK != ret && ESP_ERR_NOT_SUPPORTED != ret) { /*not supported case will be skip*/
+        ESP_LOGW(TAG, "sensor set power failed ret = %s", esp_err_to_name(ret));
     }
 
     return ESP_OK;
@@ -602,39 +610,41 @@ esp_err_t iot_sensor_delete(sensor_handle_t *p_sensor_handle)
     /*set sensor to sleep mode then delete the driver*/
     ret = sensor->impl->control(sensor->driver_handle, COMMAND_SET_POWER,  (void *)POWER_MODE_SLEEP);
 
-    if (ESP_OK != ret) {
-        ESP_LOGW(TAG, "sensor set power ret = %s, set failed or not supported", esp_err_to_name(ret));
+    if (ESP_OK != ret && ESP_ERR_NOT_SUPPORTED != ret) { /*not supported case will be skip*/
+        ESP_LOGW(TAG, "sensor set power failed ret = %s", esp_err_to_name(ret));
     }
 
     ret = sensor->impl->delete (&sensor->driver_handle);
     SENSOR_CHECK(ret == ESP_OK && sensor->driver_handle == NULL, "sensor driver delete failed", ret);
-    /*send a deleted event*/
-    sensor_data_t sensor_data;
-    memset(&sensor_data, 0, sizeof(sensor_data_t));
-    sensor_data.sensor_id = sensor->sensor_id;
-    sensor_data.timestamp = sensor_get_timestamp_us();
-    sensor_data.event_id = SENSOR_DELETED;
-    ret = sensors_event_post(sensor->event_base, sensor_data.event_id, &sensor_data, sizeof(sensor_data_t), portMAX_DELAY);
-
-    if (ESP_OK != ret) {
-        ESP_LOGI(TAG, "sensor event post failed = %s, or eventloop not initialized", esp_err_to_name(ret));
-    }
 
     /*free the resource then set handle to NULL*/
     free(sensor);
     *p_sensor_handle = NULL;
 
     /*if no event bits to wait, delete the default sensor task*/
-    if (s_task_wait_bits == BIT23_KILL_WAITING_TASK) {
+    if (s_sensor_wait_bits == BIT23_KILL_WAITING_TASK) {
         xEventGroupSetBits(s_event_group, BIT23_KILL_WAITING_TASK); /*set bit to delete the task*/
-#ifdef CONFIG_SENSOR_DEFAULT_HANDLER
+        int timerout_counter = 0;/*wait for task deleted*/
+        int  timerout_counter_step = 50;
+        while (s_sensor_task_handle) {
+            ESP_LOGW(TAG, "......waitting for sensor default task deleted.....");
+            vTaskDelay(timerout_counter_step / portTICK_RATE_MS);
+            timerout_counter += timerout_counter_step;
+            if (timerout_counter >= SENSOR_DEFAULT_TASK_DELETE_TIMEOUT_MS) return ESP_ERR_TIMEOUT;
+        }
+        /*delete default event group*/
+        if (s_event_group != NULL) vEventGroupDelete(s_event_group);
+        s_event_group = NULL;
+        /*delete default mutex group*/
+        if (s_sensor_node_mutex != NULL) vSemaphoreDelete(s_sensor_node_mutex);
+        s_sensor_node_mutex = NULL;
 
+#ifdef CONFIG_SENSOR_DEFAULT_HANDLER
         if (s_sensor_default_handler_instance != NULL) {
             /*unregist default event handler*/
             sensors_event_handler_instance_unregister(ESP_EVENT_ANY_BASE, ESP_EVENT_ANY_ID, s_sensor_default_handler_instance);
             s_sensor_default_handler_instance = NULL;
         }
-
 #endif
     }
 
@@ -770,12 +780,6 @@ static void sensor_default_event_handler(void *handler_args, esp_event_base_t ba
 
         case SENSOR_STOPED:
             ESP_LOGI(TAG, "Timestamp = %llu - %s SENSOR_STOPED",
-                     sensor_data->timestamp,
-                     SENSOR_TYPE_STRING[sensor_type]);
-            break;
-
-        case SENSOR_DELETED:
-            ESP_LOGI(TAG, "Timestamp = %llu - %s SENSOR_DELETED",
                      sensor_data->timestamp,
                      SENSOR_TYPE_STRING[sensor_type]);
             break;

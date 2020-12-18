@@ -76,7 +76,6 @@ typedef enum {
 typedef enum {
     SENSOR_STARTED,                 /*!sensor started, data acquire will be started*/
     SENSOR_STOPED,                  /*!sensor stoped, data acquire will be stoped*/
-    SENSOR_DELETED,                 /*!sensor deleted*/
     SENSOR_EVENT_COMMON_END = 9,    /*!max common events id*/
 } sensor_event_id_t;
 

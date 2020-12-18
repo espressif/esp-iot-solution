@@ -75,10 +75,6 @@ typedef struct {
     sensor_mode_t mode;                         /*!< set acquire mode detiled in sensor_mode_t*/
     float range;                                /*!< set measuring range*/
     uint32_t min_delay;                         /*!< set minimum acquisition interval*/
-    const char *task_name;                      /**< set name of the sensor task; if NULL,a dedicated task is not created for sensor*/
-    UBaseType_t task_priority;                  /**< set priority of the sensor task, ignored if task name is NULL */
-    uint32_t task_stack_size;                   /**< set stack size of the sensor task, ignored if task name is NULL */
-    BaseType_t task_core_id;                    /**< set core to which the sensor task is pinned to,*/
     int intr_pin;                               /*!< set interrupt pin */
     int intr_type;                              /*!< set interrupt type*/
 } sensor_config_t;
@@ -125,7 +121,6 @@ esp_err_t iot_sensor_stop(sensor_handle_t sensor_handle);
 
 /**
  * @brief delete and release the sensor resource.
- * if delete succeed, SENSOR_DELETED event will be posted.
  *
  * @param p_sensor_handle point to sensor handle, will set to NULL if delete suceed.
  * @return esp_err_t

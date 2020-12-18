@@ -56,11 +56,6 @@ static void sensor_event_handler(void *handler_args, esp_event_base_t base, int3
                      sensor_data->timestamp,
                      SENSOR_TYPE_STRING[sensor_type]);
             break;
-        case SENSOR_DELETED:
-            ESP_LOGI(TAG, "Timestamp = %llu - %s SENSOR_DELETED",
-                     sensor_data->timestamp,
-                     SENSOR_TYPE_STRING[sensor_type]);
-            break;
         case SENSOR_HUMI_DATA_READY:
             ESP_LOGI(TAG, "Timestamp = %llu - SENSOR_HUMI_DATA_READY - "
                      "humiture=%.2f",
@@ -125,8 +120,7 @@ static void imu_test_get_data()
     sensor_config_t sensor_conf = {
         .bus = i2c_bus,
         .mode = MODE_POLLING,
-        .min_delay = 200,
-        .task_name = NULL                     /**< name of the event loop task; if NULL,a dedicated task is not created for sensor*/
+        .min_delay = 200,                   /**< name of the event loop task; if NULL,a dedicated task is not created for sensor*/
     };
 
     TEST_ASSERT(ESP_OK == iot_sensor_create(SENSOR_ID_1, &sensor_conf, &imu_handle));
