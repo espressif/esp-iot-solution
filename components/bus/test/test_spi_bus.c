@@ -26,11 +26,16 @@
 void spi_bus_init_deinit_test()
 {
     spi_bus_handle_t bus_handle = NULL;
-    bus_handle = spi_bus_create(SPI2_HOST, SPI_MISO_IO, SPI_MOSI_IO, SPI_SCK_IO);
+    spi_config_t bus_conf = {
+        .miso_io_num = SPI_MISO_IO,
+        .mosi_io_num = SPI_MOSI_IO,
+        .sclk_io_num = SPI_SCK_IO,
+    };
+    bus_handle = spi_bus_create(SPI2_HOST, &bus_conf);
     TEST_ASSERT(bus_handle != NULL);
     TEST_ASSERT(ESP_OK == spi_bus_delete(&bus_handle));
     TEST_ASSERT(bus_handle == NULL);
-    bus_handle = spi_bus_create(SPI3_HOST, SPI_MISO_IO, SPI_MOSI_IO, SPI_SCK_IO);
+    bus_handle = spi_bus_create(SPI3_HOST, &bus_conf);
     TEST_ASSERT(bus_handle != NULL);
     TEST_ASSERT(ESP_OK == spi_bus_delete(&bus_handle));
     TEST_ASSERT(bus_handle == NULL);
@@ -40,10 +45,22 @@ void spi_bus_init_deinit_test()
 void spi_bus_transfer_test()
 {
     spi_bus_handle_t bus_handle = NULL;
-    bus_handle = spi_bus_create(SPI2_HOST, SPI_MISO_IO, SPI_MOSI_IO, SPI_SCK_IO);
+    spi_config_t bus_conf = {
+        .miso_io_num = SPI_MISO_IO,
+        .mosi_io_num = SPI_MOSI_IO,
+        .sclk_io_num = SPI_SCK_IO,
+    };
+
+    spi_device_config_t device_conf = {
+        .cs_io_num = NULL_SPI_CS_PIN,
+        .mode = 0,
+        .clock_speed_hz = 20 * 1000 * 1000,
+    };
+
+    bus_handle = spi_bus_create(SPI2_HOST, &bus_conf);
     TEST_ASSERT(bus_handle != NULL);
     spi_bus_device_handle_t device_handle = NULL;
-    device_handle = spi_bus_device_create(bus_handle, NULL_SPI_CS_PIN, 0, 20 * 1000 * 1000);
+    device_handle = spi_bus_device_create(bus_handle, &device_conf);
     TEST_ASSERT(device_handle != NULL);
 
     printf("************byte transfer test***************\n");
