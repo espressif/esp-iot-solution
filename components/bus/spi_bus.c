@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Espressif Systems (Shanghai) PTE LTD
+// Copyright 2020-2021 Espressif Systems (Shanghai) PTE LTD
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -42,6 +42,11 @@ static _spi_bus_t s_spi_bus[2];
         return (ret);                                                                   \
     }
 
+#define SPI_BUS_CHECK_GOTO(a, str, lable) if(!(a)) { \
+        ESP_LOGE(TAG,"%s:%d (%s):%s", __FILE__, __LINE__, __FUNCTION__, str); \
+        goto lable; \
+    }
+
 #define SPI_DEVICE_MUTEX_TAKE(p_spi_dev, ret) if (!xSemaphoreTake((p_spi_dev)->mutex, ESP_SPI_MUTEX_TICKS_TO_WAIT)) { \
         ESP_LOGE(TAG, "spi device(%d) take mutex timeout, max wait = %d ticks", (int32_t)((p_spi_dev)->handle), ESP_SPI_MUTEX_TICKS_TO_WAIT); \
         return (ret); \
@@ -52,19 +57,14 @@ static _spi_bus_t s_spi_bus[2];
         return (ret); \
     }
 
-#define MSB_32_SET(out, in) { uint8_t * d = (uint8_t *)&(in); (out) = d[3] | (d[2] << 8) | (d[1] << 16) | (d[0] << 24); }
-#define MSB_24_SET(out, in) { uint8_t * d = (uint8_t *)&(in); (out) = d[2] | (d[1] << 8) | (d[0] << 16); }
-#define MSB_16_SET(out, in) { (out) = (((in) & 0xFF00) >> 8) | (((in) & 0xFF) << 8); }
-#define MSB_PIX_SET(out, in) { uint8_t * d = (uint8_t *)&(in); (out) = d[1] | (d[0] << 8) | (d[3] << 16) | (d[2] << 24); }
-
-spi_bus_handle_t spi_bus_create(spi_host_device_t host_id, gpio_num_t miso_io_num, gpio_num_t mosi_io_num, gpio_num_t sclk_io_num)
+spi_bus_handle_t spi_bus_create(spi_host_device_t host_id, const spi_config_t *bus_conf)
 {
     SPI_BUS_CHECK(SPI1_HOST < host_id && host_id <= SPI3_HOST, "Invalid spi host_id", NULL);
     uint8_t index = host_id - 1; //find related index
     spi_bus_config_t buscfg = {
-        .miso_io_num = miso_io_num,
-        .mosi_io_num = mosi_io_num,
-        .sclk_io_num = sclk_io_num,
+        .miso_io_num = bus_conf->miso_io_num,
+        .mosi_io_num = bus_conf->mosi_io_num,
+        .sclk_io_num = bus_conf->sclk_io_num,
         .quadwp_io_num = -1,
         .quadhd_io_num = -1,
         .max_transfer_sz = 1024,
@@ -86,7 +86,7 @@ esp_err_t spi_bus_delete(spi_bus_handle_t *p_bus_handle)
 
     if (!spi_bus->is_init) {
         ESP_LOGW(TAG, "spi_bus%d has been de-inited", spi_bus->host_id);
-        return ESP_FAIL;
+        return ESP_ERR_INVALID_STATE;
     }
 
     esp_err_t ret = spi_bus_free(spi_bus->host_id);
@@ -97,7 +97,7 @@ esp_err_t spi_bus_delete(spi_bus_handle_t *p_bus_handle)
     return ESP_OK;
 }
 
-spi_bus_device_handle_t spi_bus_device_create(spi_bus_device_handle_t bus_handle, gpio_num_t cs_io_num, uint8_t mode, int clock_speed_hz)
+spi_bus_device_handle_t spi_bus_device_create(spi_bus_device_handle_t bus_handle, const spi_device_config_t *device_conf)
 {
     SPI_BUS_CHECK(NULL != bus_handle, "Pointer error", NULL);
     _spi_bus_t *spi_bus = (_spi_bus_t *)bus_handle;
@@ -107,33 +107,25 @@ spi_bus_device_handle_t spi_bus_device_create(spi_bus_device_handle_t bus_handle
         .command_bits = 0,
         .address_bits = 0,
         .dummy_bits = 0,
-        .clock_speed_hz = clock_speed_hz,
+        .clock_speed_hz = device_conf->clock_speed_hz,
         .duty_cycle_pos = 128,      //50% duty cycle
-        .mode = mode,
-        .spics_io_num = cs_io_num,
+        .mode = device_conf->mode,
+        .spics_io_num = device_conf->cs_io_num,
         .cs_ena_posttrans = 3,      //Keep the CS low 3 cycles after transaction, to stop slave from missing the last bit when CS has less propagation delay than CLK
         .queue_size = 3
     };
     esp_err_t ret = spi_bus_add_device(spi_bus->host_id, &devcfg, &spi_dev->handle);
-
-    if (ESP_OK != ret) {
-        free(spi_dev);
-        ESP_LOGE(TAG, "add spi device failed");
-        return NULL;
-    }
-
+    SPI_BUS_CHECK_GOTO(ESP_OK == ret, "add spi device failed", cleanup_device);
     spi_dev->mutex = xSemaphoreCreateMutex();
-
-    if (NULL == spi_dev->mutex) {
-        free(spi_dev);
-        ESP_LOGE(TAG, "spi device create mutex failed");
-        return NULL;
-    }
-
+    SPI_BUS_CHECK_GOTO(NULL != spi_dev->mutex, "spi device create mutex failed", cleanup_device);
     spi_dev->spi_bus = bus_handle;
     memcpy(&spi_dev->conf, &devcfg, sizeof(spi_device_interface_config_t));
-    ESP_LOGI(TAG, "SPI%d bus device added, CS=%d Mode=%u Speed=%d", spi_bus->host_id + 1, cs_io_num, mode, clock_speed_hz);
+    ESP_LOGI(TAG, "SPI%d bus device added, CS=%d Mode=%u Speed=%d", spi_bus->host_id + 1, device_conf->cs_io_num, device_conf->mode, device_conf->clock_speed_hz);
     return (spi_bus_device_handle_t)spi_dev;
+
+cleanup_device:
+    free(spi_dev);
+    return NULL;
 }
 
 esp_err_t spi_bus_device_delete(spi_bus_device_handle_t *p_dev_handle)

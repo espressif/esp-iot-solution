@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Espressif Systems (Shanghai) PTE LTD
+// Copyright 2020-2021 Espressif Systems (Shanghai) PTE LTD
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -107,7 +107,7 @@ i2c_bus_handle_t i2c_bus_create(i2c_port_t port, const i2c_config_t *conf)
 
 esp_err_t i2c_bus_delete(i2c_bus_handle_t *p_bus)
 {
-    I2C_BUS_CHECK(p_bus != NULL && *p_bus != NULL, "pointer = NULL error", ESP_FAIL);
+    I2C_BUS_CHECK(p_bus != NULL && *p_bus != NULL, "pointer = NULL error", ESP_ERR_INVALID_ARG);
     i2c_bus_t *i2c_bus = (i2c_bus_t *)(*p_bus);
     I2C_BUS_INIT_CHECK(i2c_bus->is_init, ESP_FAIL);
     I2C_BUS_MUTEX_TAKE_MAX_DELAY(i2c_bus->mutex, ESP_ERR_TIMEOUT);
@@ -189,7 +189,7 @@ i2c_bus_device_handle_t i2c_bus_device_create(i2c_bus_handle_t bus_handle, uint8
 
 esp_err_t i2c_bus_device_delete(i2c_bus_device_handle_t *p_dev_handle)
 {
-    I2C_BUS_CHECK(p_dev_handle != NULL && *p_dev_handle != NULL, "Null Device Handle", ESP_FAIL);
+    I2C_BUS_CHECK(p_dev_handle != NULL && *p_dev_handle != NULL, "Null Device Handle", ESP_ERR_INVALID_ARG);
     i2c_bus_device_t *i2c_device = (i2c_bus_device_t *)(*p_dev_handle);
     I2C_BUS_MUTEX_TAKE_MAX_DELAY(i2c_device->i2c_bus->mutex, ESP_ERR_TIMEOUT);
     i2c_device->i2c_bus->ref_counter--;
@@ -286,8 +286,7 @@ esp_err_t i2c_bus_write_bits(i2c_bus_device_handle_t dev_handle, uint8_t mem_add
  * @param i2c_num I2C port number
  * @param cmd_handle I2C command handler
  * @param ticks_to_wait maximum wait ticks.
- *
- * @param conf 
+ * @param conf pointer to I2C parameter settings
  * @return esp_err_t 
  */
 inline static esp_err_t i2c_master_cmd_begin_with_conf(i2c_port_t i2c_num, i2c_cmd_handle_t cmd_handle, TickType_t ticks_to_wait, const i2c_config_t *conf)
@@ -307,9 +306,9 @@ inline static esp_err_t i2c_master_cmd_begin_with_conf(i2c_port_t i2c_num, i2c_c
 /**************************************** Public Functions (Low level)*********************************************/
 static esp_err_t i2c_bus_read_reg8(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, size_t data_len, uint8_t *data)
 {
-    I2C_BUS_CHECK(data != NULL, "data pointer error", ESP_FAIL);
+    I2C_BUS_CHECK(data != NULL, "data pointer error", ESP_ERR_INVALID_ARG);
     i2c_bus_device_t *i2c_device = (i2c_bus_device_t *)dev_handle;
-    I2C_BUS_INIT_CHECK(i2c_device->i2c_bus->is_init, ESP_FAIL);
+    I2C_BUS_INIT_CHECK(i2c_device->i2c_bus->is_init, ESP_ERR_INVALID_STATE);
     I2C_BUS_MUTEX_TAKE(i2c_device->i2c_bus->mutex, ESP_ERR_TIMEOUT);
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
 
@@ -331,9 +330,9 @@ static esp_err_t i2c_bus_read_reg8(i2c_bus_device_handle_t dev_handle, uint8_t m
 
 esp_err_t i2c_bus_read_reg16(i2c_bus_device_handle_t dev_handle, uint16_t mem_address, size_t data_len, uint8_t *data)
 {
-    I2C_BUS_CHECK(data != NULL, "data pointer error", ESP_FAIL);
+    I2C_BUS_CHECK(data != NULL, "data pointer error", ESP_ERR_INVALID_ARG);
     i2c_bus_device_t *i2c_device = (i2c_bus_device_t *)dev_handle;
-    I2C_BUS_INIT_CHECK(i2c_device->i2c_bus->is_init, ESP_FAIL);
+    I2C_BUS_INIT_CHECK(i2c_device->i2c_bus->is_init, ESP_ERR_INVALID_STATE);
     uint8_t memAddress8[2];
     memAddress8[0] = (uint8_t)((mem_address >> 8) & 0x00FF);
     memAddress8[1] = (uint8_t)(mem_address & 0x00FF);
@@ -358,9 +357,9 @@ esp_err_t i2c_bus_read_reg16(i2c_bus_device_handle_t dev_handle, uint16_t mem_ad
 
 static esp_err_t i2c_bus_write_reg8(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, size_t data_len, uint8_t *data)
 {
-    I2C_BUS_CHECK(data != NULL, "data pointer error", ESP_FAIL);
+    I2C_BUS_CHECK(data != NULL, "data pointer error", ESP_ERR_INVALID_ARG);
     i2c_bus_device_t *i2c_device = (i2c_bus_device_t *)dev_handle;
-    I2C_BUS_INIT_CHECK(i2c_device->i2c_bus->is_init, ESP_FAIL);
+    I2C_BUS_INIT_CHECK(i2c_device->i2c_bus->is_init, ESP_ERR_INVALID_STATE);
     I2C_BUS_MUTEX_TAKE(i2c_device->i2c_bus->mutex, ESP_ERR_TIMEOUT);
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
     i2c_master_start(cmd);
@@ -380,9 +379,9 @@ static esp_err_t i2c_bus_write_reg8(i2c_bus_device_handle_t dev_handle, uint8_t 
 
 esp_err_t i2c_bus_write_reg16(i2c_bus_device_handle_t dev_handle, uint16_t mem_address, size_t data_len, uint8_t *data)
 {
-    I2C_BUS_CHECK(data != NULL, "data pointer error", ESP_FAIL);
+    I2C_BUS_CHECK(data != NULL, "data pointer error", ESP_ERR_INVALID_ARG);
     i2c_bus_device_t *i2c_device = (i2c_bus_device_t *)dev_handle;
-    I2C_BUS_INIT_CHECK(i2c_device->i2c_bus->is_init, ESP_FAIL);
+    I2C_BUS_INIT_CHECK(i2c_device->i2c_bus->is_init, ESP_ERR_INVALID_STATE);
     uint8_t memAddress8[2];
     memAddress8[0] = (uint8_t)((mem_address >> 8) & 0x00FF);
     memAddress8[1] = (uint8_t)(mem_address & 0x00FF);
@@ -406,8 +405,8 @@ esp_err_t i2c_bus_write_reg16(i2c_bus_device_handle_t dev_handle, uint16_t mem_a
 /**************************************** Private Functions*********************************************/
 static esp_err_t i2c_driver_reinit(i2c_port_t port, const i2c_config_t *conf)
 {
-    I2C_BUS_CHECK(port < I2C_NUM_MAX, "i2c port error", ESP_FAIL);
-    I2C_BUS_CHECK(conf != NULL, "pointer = NULL error", ESP_FAIL);
+    I2C_BUS_CHECK(port < I2C_NUM_MAX, "i2c port error", ESP_ERR_INVALID_ARG);
+    I2C_BUS_CHECK(conf != NULL, "pointer = NULL error", ESP_ERR_INVALID_ARG);
 
     if (s_i2c_bus[port].is_init) {
         i2c_driver_delete(port);
@@ -426,8 +425,8 @@ static esp_err_t i2c_driver_reinit(i2c_port_t port, const i2c_config_t *conf)
 
 static esp_err_t i2c_driver_deinit(i2c_port_t port)
 {
-    I2C_BUS_CHECK(port < I2C_NUM_MAX, "i2c port error", ESP_FAIL);
-    I2C_BUS_CHECK(s_i2c_bus[port].is_init == true, "i2c not inited", ESP_FAIL);
+    I2C_BUS_CHECK(port < I2C_NUM_MAX, "i2c port error", ESP_ERR_INVALID_ARG);
+    I2C_BUS_CHECK(s_i2c_bus[port].is_init == true, "i2c not inited", ESP_ERR_INVALID_STATE);
     i2c_driver_delete(port); //always return ESP_OK
     s_i2c_bus[port].is_init = false;
     ESP_LOGI(TAG,"i2c%d bus deinited",port);

@@ -21,6 +21,18 @@
 typedef void *spi_bus_handle_t;
 typedef void *spi_bus_device_handle_t;
 
+typedef struct {
+    gpio_num_t miso_io_num; /*!GPIO pin for Master In Slave Out (=spi_q) signal, or -1 if not used.*/
+    gpio_num_t mosi_io_num; /*!GPIO pin for Master Out Slave In (=spi_d) signal, or -1 if not used.*/
+    gpio_num_t sclk_io_num; /*!GPIO pin for Spi CLocK signal, or -1 if not used*/
+}spi_config_t;
+
+typedef struct {
+    gpio_num_t cs_io_num; /*!GPIO pin to select this device (CS), or -1 if not used*/
+    uint8_t mode; /*!modes (0,1,2,3) that correspond to the four possible clocking configurations*/
+    int clock_speed_hz; /*!spi clock speed, divisors of 80MHz, in Hz. See ``SPI_MASTER_FREQ_*`*/
+}spi_device_config_t;
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -28,14 +40,12 @@ extern "C"
 
 /**
  * @brief Create and initialize a spi bus and return the spi bus handle
- *
+ * 
  * @param host_id SPI peripheral that controls this bus, SPI2_HOST or SPI3_HOST
- * @param miso_io_num GPIO pin for Master In Slave Out (=spi_q) signal, or -1 if not used.
- * @param mosi_io_num GPIO pin for Master Out Slave In (=spi_d) signal, or -1 if not used.
- * @param sclk_io_num GPIO pin for Spi CLocK signal, or -1 if not used.
+ * @param bus_conf spi bus configurations details in spi_config_t
  * @return spi_bus_handle_t handle for spi bus operation.
  */
-spi_bus_handle_t spi_bus_create(spi_host_device_t host_id, gpio_num_t miso_io_num, gpio_num_t mosi_io_num, gpio_num_t sclk_io_num);
+spi_bus_handle_t spi_bus_create(spi_host_device_t host_id, const spi_config_t *bus_conf);
 
 /**
  * @brief Deinitialize and delete the spi bus
@@ -51,12 +61,10 @@ esp_err_t spi_bus_delete(spi_bus_handle_t *p_bus_handle);
  * @brief Create and add a device on the spi bus.
  *
  * @param bus_handle handle for spi bus operation.
- * @param cs_io_num GPIO pin to select this device (CS), or -1 if not used
- * @param mode spi mode, modes (0,1,2,3) that correspond to the four possible clocking configurations
- * @param clock_speed_hz spi clock speed, divisors of 80MHz, in Hz. See ``SPI_MASTER_FREQ_*``.
+ * @param device_conf spi device configurations details in spi_device_config_t
  * @return spi_bus_device_handle_t handle for device operation. eg, using for transfer.
  */
-spi_bus_device_handle_t spi_bus_device_create(spi_bus_handle_t bus_handle, gpio_num_t cs_io_num, uint8_t mode, int clock_speed_hz);
+spi_bus_device_handle_t spi_bus_device_create(spi_bus_handle_t bus_handle, const spi_device_config_t *device_conf);
 
 /**
  * @brief Deinitialize and remove the device from spi bus.
