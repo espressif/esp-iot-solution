@@ -1,0 +1,35 @@
+menu "Board Options"
+    
+    choice BOARD_TARGET
+        prompt "Choose Target Board"
+
+        config BOARD_ESP32_DEVKITC_V4
+            bool "Devkitc-V4 With Esp32 Onboard From Espressif"
+        config BOARD_ESP32_MESHKIT_SENSE
+            bool "Meshkit Sense With Esp32 Onboard From Espressif"
+        config BOARD_ESP32S2_SAOLA_1
+            bool "Saola With Esp32S2 Onboard From Espressif"
+    endchoice
+
+    menu "Devkitc-V4 Board Options"
+        visible if BOARD_ESP32_DEVKITC_V4
+
+        orsource "./esp32-devkitc-v4/Kconfig.in"
+        #source "{absolute path}/esp32-devkitc-v4/Kconfig.in" # v4.0 Backwards compatibility
+    endmenu
+
+    menu "Saola Board Options"
+        visible if BOARD_ESP32S2_SAOLA_1
+
+        orsource "./esp32s2-saola-1/Kconfig.in"
+        #source "{absolute path}/esp32s2-saola-1/Kconfig.in" # v4.0 Backwards compatibility
+    endmenu
+
+    menu "Meshkit Sense Board Options"
+        visible if BOARD_ESP32_MESHKIT_SENSE
+
+        orsource "./esp32-meshkit-sense/Kconfig.in"
+        #source "{absolute path}/esp32-meshkit-sense/Kconfig.in" # v4.0 Backwards compatibility
+    endmenu
+
+endmenu
