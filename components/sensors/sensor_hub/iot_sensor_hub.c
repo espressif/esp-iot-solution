@@ -677,7 +677,6 @@ uint8_t iot_sensor_scan(bus_handle_t bus, sensor_info_t *buf[], uint8_t num)
 
 esp_err_t iot_sensor_handler_register(sensor_handle_t sensor_handle, sensor_event_handler_t handler, sensor_event_handler_instance_t *context)
 {
-    SENSOR_CHECK(context != NULL, "context can not be NULL", ESP_ERR_INVALID_ARG);
     SENSOR_CHECK(handler != NULL, "handler can not be NULL", ESP_ERR_INVALID_ARG);
     SENSOR_CHECK(sensor_handle != NULL, "sensor handle can not be NULL", ESP_ERR_INVALID_ARG);
     _iot_sensor_t *sensor = (_iot_sensor_t *)sensor_handle;
@@ -698,7 +697,6 @@ esp_err_t iot_sensor_handler_unregister(sensor_handle_t sensor_handle, sensor_ev
 
 esp_err_t iot_sensor_handler_register_with_type(sensor_type_t sensor_type, int32_t event_id, sensor_event_handler_t handler, sensor_event_handler_instance_t *context)
 {
-    SENSOR_CHECK(context != NULL, "context can not be NULL", ESP_ERR_INVALID_ARG);
     SENSOR_CHECK(handler != NULL, "handler can not be NULL", ESP_ERR_INVALID_ARG);
 
     switch (sensor_type) {
