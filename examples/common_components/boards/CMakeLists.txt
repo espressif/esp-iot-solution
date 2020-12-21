@@ -7,6 +7,8 @@ elseif(CONFIG_BOARD_ESP32_MESHKIT_SENSE)
     set(boards_dir "esp32-meshkit-sense")
 elseif(CONFIG_BOARD_ESP32S2_SAOLA_1)
     set(boards_dir "esp32s2-saola-1")
+elseif(CONFIG_BOARD_ESP32_LCDKIT)
+    set(boards_dir "esp32-lcdkit")
 endif()
 
 message(STATUS "-----------Board Info---------")
