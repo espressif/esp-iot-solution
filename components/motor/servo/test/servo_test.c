@@ -30,6 +30,14 @@
 #define SERVO_CH5_PIN 12
 #define SERVO_CH6_PIN 13
 #define SERVO_CH7_PIN 15
+#define SERVO_CH8_PIN 2
+#define SERVO_CH9_PIN 0
+#define SERVO_CH10_PIN 4
+#define SERVO_CH11_PIN 5
+#define SERVO_CH12_PIN 18
+#define SERVO_CH13_PIN 19
+#define SERVO_CH14_PIN 21
+#define SERVO_CH15_PIN 22
 #elif CONFIG_IDF_TARGET_ESP32S2
 #define SERVO_CH0_PIN 1
 #define SERVO_CH1_PIN 2
@@ -41,13 +49,19 @@
 #define SERVO_CH7_PIN 8
 #endif
 
+static void _set_angle(ledc_mode_t speed_mode, float angle)
+{
+    for (size_t i = 0; i < 8; i++) {
+        servo_write_angle(speed_mode, i, angle);
+    }
+}
+
 TEST_CASE("Servo_motor test", "[servo][iot]")
 {
-    servo_config_t servo_cfg = {
+    servo_config_t servo_cfg_ls = {
         .max_angle = 180,
         .min_width_us = 500,
         .max_width_us = 2500,
-        .speed_mode = LEDC_LOW_SPEED_MODE,
         .freq = 50,
         .timer_number = LEDC_TIMER_0,
         .channels = {
@@ -74,35 +88,68 @@ TEST_CASE("Servo_motor test", "[servo][iot]")
         },
         .channel_number = 8,
     } ;
-    TEST_ASSERT(ESP_OK == servo_init(&servo_cfg));
+    TEST_ASSERT(ESP_OK == servo_init(LEDC_LOW_SPEED_MODE, &servo_cfg_ls));
+
+/**
+ * Only ESP32 has the high speed mode
+ */
+#ifdef CONFIG_IDF_TARGET_ESP32
+    servo_config_t servo_cfg_hs = {
+        .max_angle = 180,
+        .min_width_us = 500,
+        .max_width_us = 2500,
+        .freq = 100,
+        .timer_number = LEDC_TIMER_0,
+        .channels = {
+            .servo_pin = {
+                SERVO_CH8_PIN,
+                SERVO_CH9_PIN,
+                SERVO_CH10_PIN,
+                SERVO_CH11_PIN,
+                SERVO_CH12_PIN,
+                SERVO_CH13_PIN,
+                SERVO_CH14_PIN,
+                SERVO_CH15_PIN,
+            },
+            .ch = {
+                LEDC_CHANNEL_0,
+                LEDC_CHANNEL_1,
+                LEDC_CHANNEL_2,
+                LEDC_CHANNEL_3,
+                LEDC_CHANNEL_4,
+                LEDC_CHANNEL_5,
+                LEDC_CHANNEL_6,
+                LEDC_CHANNEL_7,
+            },
+        },
+        .channel_number = 8,
+    } ;
+    TEST_ASSERT(ESP_OK == servo_init(LEDC_HIGH_SPEED_MODE, &servo_cfg_hs));
+#endif
 
     size_t i;
-    uint8_t times = 2;
-    while (times--) {
-        for (i = 0; i <= 18; i++) {
-            ESP_LOGI("servo", "aet angle: %d", 10 * i);
-            servo_write_angle(0, 10 * i);
-            servo_write_angle(1, 10 * i);
-            servo_write_angle(2, 10 * i);
-            servo_write_angle(3, 10 * i);
-            servo_write_angle(4, 10 * i);
-            servo_write_angle(5, 10 * i);
-            servo_write_angle(6, 10 * i);
-            servo_write_angle(7, 10 * i);
-            vTaskDelay(50 / portTICK_PERIOD_MS);
-        }
-        for (; i > 0; i--) {
-            ESP_LOGI("servo", "aet angle: %d", 10 * i);
-            servo_write_angle(0, 10 * i);
-            servo_write_angle(1, 10 * i);
-            servo_write_angle(2, 10 * i);
-            servo_write_angle(3, 10 * i);
-            servo_write_angle(4, 10 * i);
-            servo_write_angle(5, 10 * i);
-            servo_write_angle(6, 10 * i);
-            servo_write_angle(7, 10 * i);
-            vTaskDelay(50 / portTICK_PERIOD_MS);
-        }
+    float angle_ls, angle_hs;
+    for (i = 0; i <= 180; i++) {
+        _set_angle(LEDC_LOW_SPEED_MODE, i);
+#ifdef CONFIG_IDF_TARGET_ESP32
+        _set_angle(LEDC_HIGH_SPEED_MODE, (180 - i));
+#endif
+        vTaskDelay(50 / portTICK_PERIOD_MS);
+        servo_read_angle(LEDC_LOW_SPEED_MODE, 0, &angle_ls);
+#ifdef CONFIG_IDF_TARGET_ESP32
+        servo_read_angle(LEDC_HIGH_SPEED_MODE, 0, &angle_hs);
+#endif
+
+#ifdef CONFIG_IDF_TARGET_ESP32
+        ESP_LOGI("servo", "[%d|%.2f], [%d|%.2f]", i, angle_ls, (180 - i), angle_hs);
+#else
+        ESP_LOGI("servo", "[%d|%.2f]", i, angle_ls);
+        (void)angle_hs;
+#endif
     }
-    servo_deinit();
+
+    servo_deinit(LEDC_LOW_SPEED_MODE);
+#ifdef CONFIG_IDF_TARGET_ESP32
+    servo_deinit(LEDC_HIGH_SPEED_MODE);
+#endif
 }
