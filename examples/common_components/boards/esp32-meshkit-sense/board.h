@@ -23,6 +23,8 @@
 #define _ENABLE 1
 #define _DISABLE 0
 #define _UNDEFINE
+#define _POSITIVE 1
+#define _NEGATIVE 0
 
 /**
  * Resource ID on Board,
@@ -65,6 +67,17 @@ typedef void* board_res_handle_t;
 
 #define BOARD_IO_I2C0_SCL 32
 #define BOARD_IO_I2C0_SDA 33
+
+#define BOARD_LED_NUM 4
+#define BOARD_IO_LED_1 BOARD_IO_LED_NETWORK_P
+#define BOARD_IO_LED_2 BOARD_IO_LED_WIFI_N
+#define BOARD_IO_LED_3 BOARD_IO_LED_BAT_GREEN_P
+#define BOARD_IO_LED_4 BOARD_IO_LED_BAT_RED_P
+
+#define BOARD_LED_POLARITY_1 _POSITIVE
+#define BOARD_LED_POLARITY_2 _NEGATIVE
+#define BOARD_LED_POLARITY_3 _POSITIVE
+#define BOARD_LED_POLARITY_4 _POSITIVE
 
 //TODO:check it when release
 //#define BOARD_IO_SCREEN_DOUT SENSOR_VIN
@@ -163,6 +176,31 @@ esp_err_t iot_board_screen_set_power(bool on_off);
  * @return false screen is not power on 
  */
 bool iot_board_screen_get_power(void);
+
+/**
+ * @brief set led state
+ * 
+ * @param gpio_num led gpio num defined in iot_board.h 
+ * @param turn_on true if turn on the LED, false is turn off the LED
+ * @return esp_err_t 
+ */
+esp_err_t iot_board_led_set_state(int gpio_num, bool turn_on);
+
+/**
+ * @brief set all led state
+ * 
+ * @param turn_on true if turn on the LED, false is turn off the LED
+ * @return esp_err_t 
+ */
+esp_err_t iot_board_led_all_set_state(bool turn_on);
+
+/**
+ * @brief toggle led state
+ * 
+ * @param gpio_num led gpio num defined in iot_board.h 
+ * @return esp_err_t 
+ */
+esp_err_t iot_board_led_toggle_state(int gpio_num);
 
 #ifdef __cplusplus
 }

@@ -123,6 +123,7 @@ esp_err_t iot_board_init(void)
     }
     esp_err_t ret = board_gpio_init();
     BOARD_CHECK(ret == ESP_OK, "gpio init failed", ret);
+    iot_board_led_all_set_state(false);
 
     ret = board_i2c_bus_init();
     BOARD_CHECK(ret == ESP_OK, "i2c init failed", ret);
@@ -231,4 +232,59 @@ bool iot_board_screen_get_power(void)
         return 0;
     }
     return gpio_get_level(BOARD_IO_POWER_ON_SCREEN_N);
+}
+
+static int s_led_io[BOARD_LED_NUM]={BOARD_IO_LED_1, BOARD_IO_LED_2, BOARD_IO_LED_3, BOARD_IO_LED_4};
+static int s_led_polarity[BOARD_LED_NUM]={BOARD_LED_POLARITY_1, BOARD_LED_POLARITY_2, BOARD_LED_POLARITY_3, BOARD_LED_POLARITY_4};
+static bool s_led_state[BOARD_LED_NUM]={0};
+
+esp_err_t iot_board_led_set_state(int gpio_num, bool if_on)
+{
+    int i = 0;
+
+    for (i = 0; i < BOARD_LED_NUM; i++){
+        if (s_led_io[i]==gpio_num) {
+            break;
+        }
+    }
+
+    if (i >= BOARD_LED_NUM) {
+        ESP_LOGE(TAG, "GPIO %d is not a valid LED io = %d", gpio_num, i);
+        return ESP_FAIL;
+    }
+
+    if (!s_led_polarity[i]) { /*check led polarity*/
+        if_on = !if_on;
+    }
+
+    gpio_set_level(gpio_num, if_on);
+    return ESP_OK;
+}
+
+esp_err_t iot_board_led_all_set_state(bool if_on)
+{
+    for (size_t i = 0; i < BOARD_LED_NUM; i++){
+        iot_board_led_set_state(s_led_io[i], if_on);
+    }
+    return ESP_OK;
+}
+
+esp_err_t iot_board_led_toggle_state(int gpio_num)
+{
+    int i = 0;
+
+    for (i = 0; i < BOARD_LED_NUM; i++){
+        if (s_led_io[i]==gpio_num) {
+            break;
+        }
+    }
+
+    if (i >= BOARD_LED_NUM) {
+        ESP_LOGE(TAG, "GPIO %d is not a valid LED io", gpio_num);
+        return ESP_FAIL;
+    }
+
+    s_led_state[i]=!s_led_state[i];
+    iot_board_led_set_state(gpio_num, s_led_state[i]);
+    return ESP_OK;
 }
