@@ -110,9 +110,9 @@ void app_main(void)
     sensor_info_t* sensor_infos[10];
     sensor_handle_t sensor_handle[10] = {NULL};
     sensor_config_t sensor_config = {
-        .bus = i2c0_bus_handle, /*the bus sensors will be attached to*/
+        .bus = i2c0_bus_handle, /*which bus sensors will connect to*/
         .mode = MODE_POLLING, /*data acquire mode*/
-        .min_delay = SENSOR_PERIOD /*data acquire mode*/
+        .min_delay = SENSOR_PERIOD /*data acquire period*/
     };
     int num = iot_sensor_scan(i2c0_bus_handle, sensor_infos, 10); /*scan for valid sensors based on active i2c address*/
     for (size_t i = 0; i < num && i<10; i++) {

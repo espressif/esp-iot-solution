@@ -1,0 +1,10 @@
+menu "Sensor Monitor Example"
+    config SENSOR_EXAMPLE_PERIOD
+        int "sensor min delay(ms)"
+        range 0 65535
+        default 200
+    config SENSOR_EXAMPLE_THRESHOLD
+        int "led state toggle threshold"
+        range 150 1000
+        default 300
+endmenu
