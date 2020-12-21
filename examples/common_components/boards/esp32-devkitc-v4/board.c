@@ -71,8 +71,8 @@ static esp_err_t board_spi_bus_init(void)
     };
     s_spi2_bus_handle = spi_bus_create(SPI2_HOST, &bus_conf);
     BOARD_CHECK(s_spi2_bus_handle != NULL, "spi_bus2 creat failed", ESP_FAIL);
-    return ESP_OK;
 #endif
+    return ESP_OK;
 }
 
 static esp_err_t board_spi_bus_deinit(void)
