@@ -7,5 +7,4 @@ DFS and Light Sleep
 
     DFS test manual <DFS_test_manual>
     light_sleep_performance <light_sleep_performance>
-    light_sleep_test_manual <light_sleep_test_manual>
 

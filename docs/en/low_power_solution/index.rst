@@ -1,4 +1,4 @@
-Lowpower solution
+Low-Power solution
 *************************
 
 .. toctree::

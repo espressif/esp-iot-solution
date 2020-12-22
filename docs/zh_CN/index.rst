@@ -4,6 +4,8 @@ ESP-IoT-Solution  编程指南
 
 这里是乐鑫 ESP-IoT-Solution 开发框架 (`esp-iot-solution <https://github.com/espressif/esp-iot-solution>`_) 的文档。
 
+IoT solution内包含多种传感器和外设的使用，支持多种网络协议，可与多个云平台对接，方便用户进行物联网应用开发。
+
 ==================  ==================  ==================
 |入门指南|_          |动态调频|_          |超低功耗|_
 ------------------  ------------------  ------------------
@@ -17,9 +19,9 @@ ESP-IoT-Solution  编程指南
 ------------------  ------------------  ------------------
 `GUI 实例`_          `音频应用`_          `HMI 方案`_
 ------------------  ------------------  ------------------
-|安全方案|_          |示例程序|_          |贡献代码|_
+|安全方案|_          |贡献代码|_
 ------------------  ------------------  ------------------
-`安全方案`_          `示例程序`_          `贡献代码`_
+`安全方案`_          `贡献代码`_
 ==================  ==================  ==================
 
 
@@ -53,16 +55,9 @@ ESP-IoT-Solution  编程指南
 .. |安全方案| image:: ../_static/security_solution.png
 .. _安全方案: security_solution/index.html
 
-.. |示例程序| image:: ../_static/example.png
-.. _示例程序: examples/index.html
-
 .. |贡献代码| image:: ../_static/contribute.png
 .. _贡献代码: contribute/index.html
 
-.. role:: bolditalics
-   :class: bolditalics
-
-IoT solution project integrate different kinds of cloud platforms Compatible with different communication protocols Support different types of IoT devices 
 
 .. toctree::
    :hidden:
@@ -78,7 +73,6 @@ IoT solution project integrate different kinds of cloud platforms Compatible wit
    音频 <audio/index>
    HMI <hmi_solution/index>
    安全 <security_solution/index>
-   示例程序 <examples/index>
    贡献代码 <contribute/index>
 
 

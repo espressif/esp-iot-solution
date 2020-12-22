@@ -4,6 +4,8 @@ ESP-IoT-Solution  Programming Guide
 
 This is the documentation for Espressif Iot Solution Development Framework(`esp-iot-solution <https://github.com/espressif/esp-iot-solution>`_).
 
+IoT solution project integrate different kinds of cloud platforms Compatible with different communication protocols Support different types of IoT devices 
+
 ==================  ==================  ==================
  |Get Started|_       |Light Sleep|_      |Low Power|_
 ------------------  ------------------  ------------------
@@ -17,9 +19,9 @@ This is the documentation for Espressif Iot Solution Development Framework(`esp-
 ------------------  ------------------  ------------------
  `GUI`_               `Audio`_            `HMI Solution`_
 ------------------  ------------------  ------------------
- |Security|_           |Examples|_        |Contribute|_
+ |Security|_          |Contribute|_
 ------------------  ------------------  ------------------
- `Security`_           `Examples`_        `Contribute`_
+ `Security`_          `Contribute`_
 ==================  ==================  ==================
 
 
@@ -53,16 +55,9 @@ This is the documentation for Espressif Iot Solution Development Framework(`esp-
 .. |Security| image:: ../_static/security_solution.png
 .. _Security: security_solution/index.html
 
-.. |Examples| image:: ../_static/example.png
-.. _Examples: examples/index.html
-
 .. |Contribute| image:: ../_static/contribute.png
 .. _Contribute: contribute/index.html
 
-.. role:: bolditalics
-   :class: bolditalics
-
-IoT solution project integrate different kinds of cloud platforms Compatible with different communication protocols Support different types of IoT devices 
 
 .. toctree::
    :hidden:
@@ -78,7 +73,6 @@ IoT solution project integrate different kinds of cloud platforms Compatible wit
    Audio <audio/index>
    HMI <hmi_solution/index>
    Security <security_solution/index>
-   Examples <examples/index>
    Contribute <contribute/index>
 
 

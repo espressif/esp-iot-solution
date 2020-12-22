@@ -59,14 +59,9 @@ ESP32 GUI Library Features
 
 μGFX Architecture
 ~~~~~~~~~~~~~~~~~
+.. figure:: ../../_static/hmi_solution/ugfx/500px-Architecture2.png
+    :align: center
 
-.. raw:: html
-
-   <div align="center">
-
-.. raw:: html
-
-   </div>
 
 μGFX Development Steps
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -99,19 +94,18 @@ File preparation
 
 1. Graphics
 
-Convert ``png`` files to ``.h`` files with the command
-``./file2c -dcs romfs_img_ugfx.png romfs_img_ugfx.h``.
+   Convert ``png`` files to ``.h`` files with the command
+   ``./file2c -dcs romfs_img_ugfx.png romfs_img_ugfx.h``.
 
 2. Font
 
-Convert ``*.ttf`` fonts to ``.c`` files with the `online font
-converter <https://ugfx.io/font-converter>`__.
+   Convert ``*.ttf`` fonts to ``.c`` files with the `online font
+   converter <https://ugfx.io/font-converter>`__.
 
 Application development with μGFX-Studio
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 μGFX-Studio has the following features:
-
 -  Compatible with Microsoft Windows
 -  Drag'n'drop UI design
 -  Allows to create multiple display pages
@@ -119,20 +113,9 @@ Application development with μGFX-Studio
 -  Import your images with ImageManager
 -  Custom drawing methods
 
-.. raw:: html
+.. figure:: ../../_static/hmi_solution/ugfx/ugfx_studio.jpg
+    :align: center
 
-   <div align="center">
-
-.. raw:: html
-
-   </div>
-
-μGFX Demo video
-~~~~~~~~~~~~~~~
-
-Click on the `demo
-video <http://demo.iot.espressif.cn:8887/cmp/demo/demo2.mp4>`__ for
-detailed demonstration.
 
 LittlevGL at a Glance
 ---------------------
@@ -150,32 +133,17 @@ LittlevGL at a Glance
 
    -  Support for custom GUI widgets
 
-.. raw:: html
+.. figure:: ../../_static/hmi_solution/littlevgl/obj_types.jpg
+    :align: center
 
-   <div align="center">
+.. figure:: ../../_static/hmi_solution/littlevgl/lv_theme_intro.png
+    :align: center
 
-.. raw:: html
-
-   </div>
-
-.. raw:: html
-
-   <div align="center">
-
-.. raw:: html
-
-   </div>
 
 LittlevGL Architecture
 ~~~~~~~~~~~~~~~~~~~~~~
-
-.. raw:: html
-
-   <div align="center">
-
-.. raw:: html
-
-   </div>
+.. figure:: ../../_static/hmi_solution/littlevgl/sys.jpg
+    :align: center
 
 LittlevGL Development Steps
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -207,13 +175,13 @@ File preparation
 
 1. Graphics
 
-Convert graphics to ``.c`` files with the `online image
-converter <https://littlevgl.com/image-to-c-array>`__.
+   Convert graphics to ``.c`` files with the `online image
+   converter <https://littlevgl.com/image-to-c-array>`__.
 
 2. Font
 
-Convert ``*.ttf`` fonts to ``.c`` files with the `online font
-converter <https://littlevgl.com/ttf-font-to-c-array>`__.
+   Convert ``*.ttf`` fonts to ``.c`` files with the `online font
+   converter <https://littlevgl.com/ttf-font-to-c-array>`__.
 
 Application development with the LittlevGL simulator
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -225,43 +193,35 @@ The simulator has the following features:
 -  Compatible with Linux, Windows, and MacOS.
 -  Supports the development of the simulator with Eclipse.
 
-LittlevGL Demo video
-~~~~~~~~~~~~~~~~~~~~
-
-Click on the `demo
-video <http://demo.iot.espressif.cn:8887/cmp/demo/demo1.mp4>`__ for
-detailed demonstration.
 
 Detailed Development Steps
 --------------------------
 
-This section uses an
-`mp3\_example <../../examples/hmi/mp3_example/README_en.md>`__ based on
-`esp-iot-solution <https://github.com/espressif/esp-iot-solution>`__ to
+This section uses a mp3 example  to
 describe the HMI development steps in more
 details（\ `ESP-ADF <https://github.com/espressif/esp-adf>`__ will not
 be introduced here).
 
 1. Prepare files.
 
-There is no need to prepare your own font and graphics files because
-this example uses a default font and built-in symbols.
+   There is no need to prepare your own font and graphics files because
+   this example uses a default font and built-in symbols.
 
--  **Default font**: DejaVu (20 px)
--  **Built-in symbol**: SYMBOL\_AUDIO, SYMBOL\_LIST, SYMBOL\_SETTINGS,
-   SYMBOL\_PREV, SYMBOL\_PLAY, SYMBOL\_NEXT, SYMBOL\_PAUSE
+   -  **Default font**: DejaVu (20 px)
+   -  **Built-in symbol**: SYMBOL\_AUDIO, SYMBOL\_LIST, SYMBOL\_SETTINGS,
+      SYMBOL\_PREV, SYMBOL\_PLAY, SYMBOL\_NEXT, SYMBOL\_PAUSE
 
 2. Convert the files to code.
 
-This step can be skipped since no files outside of
-`esp-iot-solution <https://github.com/espressif/esp-iot-solution>`__ are
-used in this example.
+   This step can be skipped since no files outside of
+   `esp-iot-solution <https://github.com/espressif/esp-iot-solution>`__ are
+   used in this example.
 
 3. Design a UI prototype.
 
-Below is the basic framework for the mp3 example.
+   Below is the basic framework for the mp3 example.
 
-::
+   ::
 
         +---------+---------+---------+     +---------+---------+---------+     +---------+---------+---------+
         |         |         |         |     |         |         |         |     |         |         |         |
@@ -280,24 +240,22 @@ Below is the basic framework for the mp3 example.
 
         +--------Song-playing Interface-----------+     +-----------Song-selecting Interface--------+     +-----------Setting Interface-----------+ 
 
-As shown above, the UI prototype consists of three interfaces. You can
-switch between them by tapping on the corresponding buttons at the top.
+   As shown above, the UI prototype consists of three interfaces. You can
+   switch between them by tapping on the corresponding buttons at the top.
 
-::
+   - **Song-playing interface**: displays the name of the currently selected mp3 file; the bottom row has three buttons - the previous song, play/pause, next song.
 
-    - **Song-playing interface**: displays the name of the currently selected mp3 file; the bottom row has three buttons - the previous song, play/pause, next song.
+      - **Song-selecting interface**: shows the list of all mp3 files on the inserted SD-Card with a music symbol in front of each file.
 
-    - **Song-selecting interface**: shows the list of all mp3 files on the inserted SD-Card with a music symbol in front of each file.
-
-    - **Setting interface**: displays the available settings; only the *theme* setting is supported currently.
+      - **Setting interface**: displays the available settings; only the *theme* setting is supported currently.
 
 4. Select the project-specific ESP32 module.
 
-As the LittlevGL GUI library requires minimum memory, you can select the
-`ESP-WROOM32 <https://docs.espressif.com/projects/esp-idf/en/stable/hw-reference/modules-and-boards.html#esp32-wroom-32>`__
-module and mount it on the `ESP32
-DevKitC <https://docs.espressif.com/projects/esp-idf/en/stable/hw-reference/modules-and-boards.html#esp32-devkitc-v4>`__
-development board.
+   As the LittlevGL GUI library requires minimum memory, you can select the
+   `ESP-WROOM32 <https://docs.espressif.com/projects/esp-idf/en/stable/hw-reference/modules-and-boards.html#esp32-wroom-32>`__
+   module and mount it on the `ESP32
+   DevKitC <https://docs.espressif.com/projects/esp-idf/en/stable/hw-reference/modules-and-boards.html#esp32-devkitc-v4>`__
+   development board.
 
 5. Port the `ESP32
    LittlevGL <https://github.com/espressif/esp-iot-solution/tree/master/components/hmi/lvgl_gui>`__
@@ -305,13 +263,13 @@ development board.
    `esp-iot-solution <https://github.com/espressif/esp-iot-solution>`__
    if you choose to use it, and develop related drivers.
 
-The mp3 example is built with
-`esp-iot-solution <https://github.com/espressif/esp-iot-solution>`__ to
-which LittlevGL GUI has already been ported. Similarly, there is no need
-to port screen drivers, as
-`esp-iot-solution <https://github.com/espressif/esp-iot-solution>`__
-already includes the drivers for the external screens used in this
-example:
+   The mp3 example is built with
+   `esp-iot-solution <https://github.com/espressif/esp-iot-solution>`__ to
+   which LittlevGL GUI has already been ported. Similarly, there is no need
+   to port screen drivers, as
+   `esp-iot-solution <https://github.com/espressif/esp-iot-solution>`__
+   already includes the drivers for the external screens used in this
+   example:
 
 -  ILI9341 display screen (2.8 inches, 240x320 pixels)
 -  XPT2046 touchscreen
@@ -321,22 +279,19 @@ accordingly.
 
 6. Develop applications with a PC simulator (optional).
 
-The LittlevGL PC simulator is not used in this example. If you want to
-use it, please refer to `PC
-Simulator <https://docs.littlevgl.com/#PC-simulator>`__.
+   The LittlevGL PC simulator is not used in this example. If you want to
+   use it, please refer to `PC Simulator <https://docs.littlevgl.com/#PC-simulator>`__.
 
 7. Develop application code.
 
+   .. note::
        This section focuses on the HMI-related development. Other
        related peripherals, such as DAC-Audio, SD-Card, are not covered
        here.
 
-   -  `Tabview <littlevgl/littlevgl_guide_en.md#tab-view-lv_tabview>`__
-      is perfect for switching between the three interfaces by clicking
-      on the corresponding buttons. For this, add three tabs in tabview
-      and assign a symbol to each tab. 
+   -  A :doc:`tableview <littlevgl_guide>` is perfect for switching between the three interfaces by clicking on the corresponding buttons. For this, add three tabs in tabview and assign a symbol to each tab. 
       ::
-      
+
           /* Initialize LittlevGL GUI along with the related display and touchscreens */
           lvgl_init();
 
@@ -354,8 +309,7 @@ Simulator <https://docs.littlevgl.com/#PC-simulator>`__.
           lv_obj_t *tab3 = lv_tabview_add_tab(tabview, SYMBOL_SETTINGS);
 
    -  Song-playing interface： Labels and buttons can be used here;
-      they can be managed by a
-      `container <littlevgl/littlevgl_guide_cn.md#container-lv_cont>`__：
+      they can be managed by a A :doc:`container <littlevgl_guide>`：
       ::
 
           /* Create a container */
@@ -365,56 +319,56 @@ Simulator <https://docs.littlevgl.com/#PC-simulator>`__.
           lv_obj_set_size(cont, LV_HOR_RES - 20, LV_VER_RES - 85);
           lv_cont_set_fit(cont, false, false);
 
-      - A [label](littlevgl/littlevgl_guide_en.md#label-lv_label) can be used to display the name of the currently played song. Set the label to update the name when a new song starts to play.``
+      -  A :doc:`label <littlevgl_guide>` can be used to display the name of the currently played song. Set the label to update the name when a new song starts to play.
 
-      ::
+         ::
 
-          /* Create a label */
-          lv_obj_t *current_music = lv_label_create(cont, NULL);
-          /* Set label long mode */
-          lv_label_set_long_mode(current_music, LV_LABEL_LONG_ROLL);
+            /* Create a label */
+            lv_obj_t *current_music = lv_label_create(cont, NULL);
+             /* Set label long mode */
+             lv_label_set_long_mode(current_music, LV_LABEL_LONG_ROLL);
 
-          /* Set the label position, size and alignment  */
-          lv_obj_set_pos(current_music, 50, 20);
-          lv_obj_set_width(current_music, 200);
-          lv_obj_align(current_music, cont, LV_ALIGN_IN_TOP_MID, 0, 20); /* Align to LV_ALIGN_IN_TOP_MID */
+             /* Set the label position, size and alignment  */
+             lv_obj_set_pos(current_music, 50, 20);
+             lv_obj_set_width(current_music, 200);
+             lv_obj_align(current_music, cont, LV_ALIGN_IN_TOP_MID, 0, 20); /* Align to LV_ALIGN_IN_TOP_MID */
 
-          /* Set the text to be displayed by the label */
-          lv_label_set_text(current_music, "mp3 file name");
-          ```
+             /* Set the text to be displayed by the label */
+             lv_label_set_text(current_music, "mp3 file name");
+             ```
 
       -  Related buttons:
 
-      ::
+         ::
 
-          /* Symbols */
-          void *img_src[] = {SYMBOL_PREV, SYMBOL_PLAY, SYMBOL_NEXT, SYMBOL_PAUSE};
-          
-          /* Create 3 buttons */
-          for (uint8_t i = 0; i < 3; i++) {
-            button[i] = lv_btn_create(cont, NULL);
+             /* Symbols */
+             void *img_src[] = {SYMBOL_PREV, SYMBOL_PLAY, SYMBOL_NEXT, SYMBOL_PAUSE};
 
-          /* Set the button size*/
-          lv_obj_set_size(button[i], 50, 50);
+             /* Create 3 buttons */
+             for (uint8_t i = 0; i < 3; i++) {
+               button[i] = lv_btn_create(cont, NULL);
 
-          /* Create the button-related images */
-          img[i] = lv_img_create(button[i], NULL);
+             /* Set the button size*/
+             lv_obj_set_size(button[i], 50, 50);
 
-          /* Set the symbols to be displayed */
-          lv_img_set_src(img[i], img_src[i]);
+             /* Create the button-related images */
+             img[i] = lv_img_create(button[i], NULL);
 
-          }
+             /* Set the symbols to be displayed */
+             lv_img_set_src(img[i], img_src[i]);
 
-          /* Set the button position and alignment */
-          lv_obj_align(button[0], cont, LV_ALIGN_IN_LEFT_MID, 35, 20);
-          for (uint8_t i = 1; i < 3; i++) {
-            lv_obj_align(button[i], button[i - 1], LV_ALIGN_OUT_RIGHT_MID, 40, 0);
-          }
+             }
 
-          /*  Assign actions to the buttons */
-          lv_btn_set_action(button[0], LV_BTN_ACTION_CLICK, audio_next_prev);
-          lv_btn_set_action(button[1], LV_BTN_ACTION_CLICK, audio_control);
-          lv_btn_set_action(button[2], LV_BTN_ACTION_CLICK, audio_next_prev);
+             /* Set the button position and alignment */
+             lv_obj_align(button[0], cont, LV_ALIGN_IN_LEFT_MID, 35, 20);
+             for (uint8_t i = 1; i < 3; i++) {
+               lv_obj_align(button[i], button[i - 1], LV_ALIGN_OUT_RIGHT_MID, 40, 0);
+             }
+
+             /*  Assign actions to the buttons */
+             lv_btn_set_action(button[0], LV_BTN_ACTION_CLICK, audio_next_prev);
+             lv_btn_set_action(button[1], LV_BTN_ACTION_CLICK, audio_control);
+             lv_btn_set_action(button[2], LV_BTN_ACTION_CLICK, audio_next_prev);
 
    -  Song-selecting interface：Use a
       `list <littlevgl/littlevgl_guide_en.md#list-lv_list>`__ to display
@@ -548,10 +502,7 @@ Simulator <https://docs.littlevgl.com/#PC-simulator>`__.
 
 8. Debug and run the project
 
-   Build the project, and download it to your device in accordance with
-   `README.md <../../examples/hmi/mp3_example/mp3_example_en.md>`__.
-   After that, run the project on your device and document any possible
-   issues as a reference to modify the code and debug the project.
+   Build the project, and download it to your device. After that, run the project on your device and document any possible issues as a reference to modify the code and debug the project.
 
 Summary
 -------

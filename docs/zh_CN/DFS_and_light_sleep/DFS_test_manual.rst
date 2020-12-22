@@ -12,14 +12,13 @@ Configuration
 1 Enable Power management
 **************************
 
-First of all, we should enable power management function by enalbing `PM_ENABLE` option in menuconfig.
-
-`make menuconfig -->Componment config -->Power Management`
+First of all, we should enable power management function by enabling ``PM_ENABLE`` option in menuconfig.
+``make menuconfig -->Componment config -->Power Management``
 
 2 Enable DFS
 **************
 
-In application codes, wen can call `esp_pm_configure()` to enable DFS.
+In application codes, wen can call ``esp_pm_configure()`` to enable DFS.
 
 For example:
 
@@ -41,7 +40,7 @@ For example:
 3 Initialize a lock handle
 ******************************
 
-When DFS feature is enabled, call `esp_pm_lock_create` to initialize a lock handle with a certain power management parameter.
+When DFS feature is enabled, call ``esp_pm_lock_create`` to initialize a lock handle with a certain power management parameter.
 
 .. code:: c
 
@@ -57,7 +56,7 @@ When DFS feature is enabled, call `esp_pm_lock_create` to initialize a lock hand
 4 Switch CPU's frequency
 ****************************
 
-If a lock handle was acquire by `esp_pm_lock_acquire`, CPU's frequency switched(ESP_PM_APB_FREQ_MAX and ESP_PM_CPU_FREQ_MAX type of lock have the same effect). Locks are recursive, so if `esp_pm_lock_acquire` is called a number of times, `esp_pm_lock_release` has to be called the same number of times in order to actually release the lock.
+If a lock handle was acquire by ``esp_pm_lock_acquire``, CPU's frequency switched(ESP_PM_APB_FREQ_MAX and ESP_PM_CPU_FREQ_MAX type of lock have the same effect). Locks are recursive, so if ``esp_pm_lock_acquire`` is called a number of times, ``esp_pm_lock_release`` has to be called the same number of times in order to actually release the lock.
 
 .. code:: c
 
@@ -72,9 +71,9 @@ If a lock handle was acquire by `esp_pm_lock_acquire`, CPU's frequency switched(
 Attentions
 ---------------
 
-If `esp_pm_lock_acquire` returns ESP_OK, the CPU's frequency will switch to the `max_cpu_freq`. Before `esp_pm_lock_release` is called, the frequency will not change. If `esp_pm_lock_release` returned ESP_OK, however, the CPU's freq will not immediately switched to `min_cpu_freq`, the CPU's frequency will switch to `min_cpu_freq` only after all task are suspended. Some examples bellow.
+If ``esp_pm_lock_acquire`` returns ESP_OK, the CPU's frequency will switch to the ``max_cpu_freq``. Before ``esp_pm_lock_release`` is called, the frequency will not change. If ``esp_pm_lock_release`` returned ESP_OK, however, the CPU's freq will not immediately switched to ``min_cpu_freq``, the CPU's frequency will switch to ``min_cpu_freq`` only after all task are suspended. Some examples bellow.
 
-`For the sake of simplicity, we assume that there is only one task`
+**For the sake of simplicity, we assume that there is only one task**
 
 .. code:: c
 
@@ -100,7 +99,7 @@ If `esp_pm_lock_acquire` returns ESP_OK, the CPU's frequency will switch to the 
 
 - during the delay time in line 4, the CPU's frequency will be 240MHz
 - the code in line 8 and line 10 will be executed at 240MHz
-- during the delay time in line 9 and line 11, the CPU's frequency will switch to 40MHz(RTC_CPU_FREQ_XTAL)
+- during the delay time in line 9 and line 11, the CPU's frequency will switch to `40MHz(RTC_CPU_FREQ_XTAL)`
 
 
 Here is a test to prove this. First, configure LEDC to output 5KHz PWM signal and chosse APB clock as timer clock. So, if chip enter power save mode, the APB clock will switch to 40MHz, and the LEDC's frequency will reduce to half of the original one(2.5kHz). The first picture shows the LEDC waveform when executing code line 3 to line 4, meanwhile, the second one shows the waveform when executing code from line 5 to line 6.
@@ -133,7 +132,7 @@ After pm_lock are released, when task is suspended, LEDC's frequency becomes to 
 5 REF_TICK
 -------------
 
-Normally, APB frequency is 80MHz, when system goes into lower power mode, APB frequency will switch to 40MHz(RTC_CPU_FREQ_XTAL). This will affect the peripheral who's clock source is APB clock. But some peripherals can use REF_TICK as clock source. these peripherals can work even when APB frequency is changing. These peripherals are listed below:
+Normally, APB frequency is 80MHz, when system goes into lower power mode, APB frequency will switch to `40MHz(RTC_CPU_FREQ_XTAL)`. This will affect the peripheral who's clock source is APB clock. But some peripherals can use REF_TICK as clock source. these peripherals can work even when APB frequency is changing. These peripherals are listed below:
 
 - UART
 - LEDC
@@ -180,4 +179,4 @@ We created a task to test DFS, and result are as follows:
 |   240MHz  |         39.95mA     |
 +-----------+---------------------+
 
-More informations about DFS, please Visit [Power Management](http://docs.espressif.com/projects/esp-idf/en/stable/api-reference/system/power_management.html)
+More informations about DFS, please Visit `Power Management <http://docs.espressif.com/projects/esp-idf/en/stable/api-reference/system/power_management.html>`_

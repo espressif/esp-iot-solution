@@ -124,41 +124,28 @@ Flash Encryption
 ~~~~~~~~
 
 -  使能 flash encryption 后，使用物理手段（如串口）从 SPI flash
-   中读取的数据都是经过加密的，大部分数据无法恢复出真实数据
+   中读取的数据都是经过加密的，大部分数据无法恢复出真实数据。
 -  flash encryption 使用 256-bit AES key 加密 flash 数据，key
-   保存在芯片的 efuse 中，生成之后变成软件读写保护
+   保存在芯片的 efuse 中，生成之后变成软件读写保护。
 -  用户烧写 flash 时烧写的是数据明文，第一次 boot 时，软件 bootloader
-   会对 flash 中的数据在原处加密
--  一般使用情况下一共有4次机会通过串口烧写 flash ，通过 OTA 更新 flash
-   数据没有次数限制。开发阶段可以在 menuconfig
-   中设置无烧写次数限制，但不要在产品中这么做
+   会对 flash 中的数据在原处加密。
+-  一般使用情况下一共有4次机会通过串口烧写 flash ，通过 OTA 更新 flash数据没有次数限制。开发阶段可以在 menuconfig中设置无烧写次数限制，但不要在产品中这么做。
 
 使用步骤
 ~~~~~~~~
 
-1. make menuconfig 中选择 "Security features"->"Enable flash encryption
-   on boot"
-2. 按通常操作编译出 bootloader, partition table 和 app image 并烧写到
-   flash 中
-3. 第一次 boot 时 flash 中被指定加密的数据被加密（大的 partition
-   加密过程可能需要花费超过1分钟） ，之后就可以正常使用被加密的 flash
-   数据
+1. make menuconfig 中选择 "Security features"->"Enable flash encryption on boot"
+2. 按通常操作编译出 bootloader, partition table 和 app image 并烧写到 flash 中
+3. 第一次 boot 时 flash 中被指定加密的数据被加密（大的 partition加密过程可能需要花费超过1分钟） ，之后就可以正常使用被加密的flash数据。
 
 加密过程（第一次 boot 时进行）
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-1. bootloader 读取到 efuse 中的 FLASH\_CRYPT\_CNT
-   为0，于是利用硬件随机数生成器产生加密用的 key ，此 key 被保存在 efuse
-   中，对于软件是读写保护的
+1. bootloader 读取到 efuse 中的 FLASH\_CRYPT\_CNT 为0，于是利用硬件随机数生成器产生加密用的 key ，此 key 被保存在 efuse 中，对于软件是读写保护的。
 2. bootloader 对所有需要被加密的 partition 在 flash 中原处加密
-3. 默认情况下 efuse 中的 DISABLE\_DL\_ENCRYPT, DISABLE\_DL\_DECRYPT 和
-   DISABLE\_DL\_CACHE 会被烧写为1，这样 UART bootloader
-   时就不能读取到解密后的 flash 数据
-4. efuse 中的 FLASH\_CRYPT\_CONFIG 被烧写成 0xf，此标志用于决定加密 key
-   的多少位被用于计算每一个 flash 块（32字节）对应的秘钥，设置为 0xf
-   时使用所有256位
-5. efuse 中的 FLASH\_CRYPT\_CNT 被烧写成 0x01，此标志用于 flash
-   烧写次数限制以及加密控制，详见“FLASH\_CRYPT\_CNT”一节
+3. 默认情况下 efuse 中的 DISABLE\_DL\_ENCRYPT, DISABLE\_DL\_DECRYPT 和 DISABLE\_DL\_CACHE 会被烧写为1，这样 UART bootloader 时就不能读取到解密后的 flash 数据
+4. efuse 中的 FLASH\_CRYPT\_CONFIG 被烧写成 0xf，此标志用于决定加密 key 的多少位被用于计算每一个 flash 块（32字节）对应的秘钥，设置为 0xf 时使用所有256位
+5. efuse 中的 FLASH\_CRYPT\_CNT 被烧写成 0x01，此标志用于 flash 烧写次数限制以及加密控制，详见“FLASH\_CRYPT\_CNT”一节
 6. bootloader 将自己重启，从加密的 flash 执行软件 bootloader
 
 串口重烧 flash （3次重烧机会）
@@ -166,32 +153,20 @@ Flash Encryption
 
 -  串口重烧 flash 过程
 
-   1. make menuconfig 中选择 "Security features"->"Enable flash
-      encryption on boot"
-   2. 编译工程，将所有之前加密的 images （包括 bootloader）烧写到 flash
-      中
-   3. 在 esp-idf 的 components/esptool\_py/esptool 路径下使用命令
-      espefuse.py burn\_efuse FLASH\_CRYPT\_CNT 烧写 efuse 中的
-      FLASH\_CRYPT\_CNT
-   4. 重启设备，bootloader 根据 FLASH\_CRYPT\_CNT 的值重新加密 flash
-      数据
+   1. make menuconfig 中选择 "Security features"->"Enable flash encryption on boot"
+   2. 编译工程，将所有之前加密的 images （包括 bootloader）烧写到 flash 中。
+   3. 在 esp-idf 的 components/esptool\_py/esptool 路径下使用命令 ``espefuse.py burn\_efuse FLASH\_CRYPT\_CNT`` 烧写 efuse 中的 FLASH\_CRYPT\_CNT
+   4. 重启设备，bootloader 根据 FLASH\_CRYPT\_CNT 的值重新加密 flash 数据。
 
--  若用户确定不再需要通过串口重烧 flash，可以在 esp-idf 的
-   components/esptool\_py/esptool 路径下使用命令 espefuse.py --port PORT
-   write\_protect\_efuse FLASH\_CRYPT\_CNT 将 FLASH\_CRYPT\_CNT
-   设置为读写保护（注意此步骤必须在 bootloader 已经完成对 flash
-   加密后进行）
+-  若用户确定不再需要通过串口重烧 flash，可以在 esp-idf 的 ``components/esptool\_py/esptool`` 路径下使用命令 ``espefuse.py --port PORT write\_protect\_efuse FLASH\_CRYPT\_CNT 将 FLASH\_CRYPT\_CNT``
+   设置为读写保护（注意此步骤必须在 bootloader 已经完成对 flash 加密后进行）
 
 FLASH\_CRYPT\_CNT
 ~~~~~~~~~~~~~~~~~
 
--  FLASH\_CRYPT\_CNT 是 flash 加密方案中非常重要的控制标志，它是 8-bit
-   的值，它的值一方面决定 flash 中的值是否马上需要加密，另一方面控制
-   flash 烧写次数限制
--  当 FLASH\_CRYPT\_CNT 有（0,2,4,6,8）位被烧写为1时，bootloader 会对
-   flash 中的内容进行加密
--  当 FLASH\_CRYPT\_CNT 有（1,3,5,7）位被烧写为1时，bootloader 知道
-   flash 的内容已经过加密，直接读取 flash 中的数据解密后使用
+-  FLASH\_CRYPT\_CNT 是 flash 加密方案中非常重要的控制标志，它是 8-bit 的值，它的值一方面决定 flash 中的值是否马上需要加密，另一方面控制 flash 烧写次数限制。
+-  当 FLASH\_CRYPT\_CNT 有（0,2,4,6,8）位被烧写为1时，bootloader 会对 flash 中的内容进行加密。
+-  当 FLASH\_CRYPT\_CNT 有（1,3,5,7）位被烧写为1时，bootloader 知道 flash 的内容已经过加密，直接读取 flash 中的数据解密后使用。
 -  FLASH\_CRYPT\_CNT 的变化过程：
 
    1.  没有使能 flash 加密时，永远是0
@@ -238,10 +213,10 @@ FLASH\_CRYPT\_CNT
 
    -  flash 中的可执行应用程序代码
    -  存储在 flash 中的只读数据
-   -  任何通过 API esp\_spi\_flash\_mmap() 读取的数据
+   -  任何通过 ``API esp\_spi\_flash\_mmap()`` 读取的数据
    -  由 ROM bootloader 读取的软件 bootloader image 数据
 
--  如果调用 API esp\_partition\_read()读取被加密区域的数据，则读取的
+-  如果调用 API ``esp\_partition\_read()`` 读取被加密区域的数据，则读取的
    flash 数据是经过解密后的数据
 
 哪些方式读到不解密的数据（无法使用的脏数据）
@@ -253,11 +228,11 @@ FLASH\_CRYPT\_CNT
 软件写入加密数据
 ~~~~~~~~~~~~~~~~
 
--  调用 API esp\_partition\_write() 时，只有写到被加密的 partition
+-  调用 API ``esp\_partition\_write()`` 时，只有写到被加密的 partition
    的数据才会被加密
--  函数 esp\_spi\_flash\_write() 根据参数 write\_encrypted 是否被设为
+-  函数 ``esp\_spi\_flash\_write()`` 根据参数 ``write\_encrypted`` 是否被设为
    true 决定是否对数据加密
--  ROM 函数 esp\_rom\_spiflash\_write\_encrypted() 将加密后的数据写入
+-  ROM 函数 ``esp\_rom\_spiflash\_write\_encrypted()`` 将加密后的数据写入
    flash 中，而 SPIWrite() 将不加密的数据写入到 flash 中
 
 Secure Boot 与 Flash Encryption 流程图
@@ -280,7 +255,6 @@ Windows平台的下载工具
 *********************
 
 -  乐鑫提供windows平台的下载工具，能够在工厂生产环境中批量烧写固件
--  点击\ `这里 <./download_tool_en.md>`__\ ，阅读生产下载固件的说明文档。
 -  生产下载工具的配置文件在 configure 文件夹内，涉及安全特性的配置在security.conf 中，目前涉及的配置内容如下表：
 
 +--------------------------------+----------------------------------------------------------------------------------------------------------+-----------+
