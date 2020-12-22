@@ -1,0 +1,9 @@
+menu "WAV Player Configuration"
+
+    config STORAGE_SDCARD
+        bool "STORAGE SDCARD"
+        default n
+        help
+            Audio files in SD card, if it is not selected, the file in flash will be used
+
+endmenu
