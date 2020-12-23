@@ -25,6 +25,7 @@ typedef struct {
     gpio_num_t miso_io_num; /*!GPIO pin for Master In Slave Out (=spi_q) signal, or -1 if not used.*/
     gpio_num_t mosi_io_num; /*!GPIO pin for Master Out Slave In (=spi_d) signal, or -1 if not used.*/
     gpio_num_t sclk_io_num; /*!GPIO pin for Spi CLocK signal, or -1 if not used*/
+    int max_transfer_sz; /*!<Maximum length of bytes available to send, if < 4096, 4096 will be set*/
 }spi_config_t;
 
 typedef struct {

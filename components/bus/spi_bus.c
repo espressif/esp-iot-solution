@@ -67,7 +67,7 @@ spi_bus_handle_t spi_bus_create(spi_host_device_t host_id, const spi_config_t *b
         .sclk_io_num = bus_conf->sclk_io_num,
         .quadwp_io_num = -1,
         .quadhd_io_num = -1,
-        .max_transfer_sz = 1024,
+        .max_transfer_sz = bus_conf->max_transfer_sz,
     };
     int dma_chan = host_id; //set dma channel equals to host_id by default
     esp_err_t ret = spi_bus_initialize(host_id, &buscfg, dma_chan);
