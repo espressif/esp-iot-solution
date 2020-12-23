@@ -22,29 +22,34 @@ extern "C" {
 #include "esp_err.h"
 #include "i2s_lcd_driver.h"
 #include "i2c_bus.h"
-#include "driver/spi_master.h"
+#include "spi_bus.h"
 
+/**
+ * @brief SPI interface configuration
+ * 
+ */
 typedef struct {
-    int8_t pin_num_miso;         /*!< MasterIn, SlaveOut pin */
-    int8_t pin_num_mosi;         /*!< MasterOut, SlaveIn pin */
-    int8_t pin_num_clk;          /*!< SPI Clock pin*/
+    spi_bus_handle_t spi_bus;    /*!< Handle of spi bus */
     int8_t pin_num_cs;           /*!< SPI Chip Select Pin*/
     int8_t pin_num_dc;           /*!< Pin to select Data or Command for LCD */
     int clk_freq;                /*!< SPI clock frequency */
-    spi_host_device_t spi_host;  /*!< SPI host index */
-    int dma_chan;                /*!< DMA channel used */
-    bool init_spi_bus;           /*!< Whether to initialize SPI host */
     bool swap_data;              /*!< Whether to swap data */
 } iface_spi_config_t;
 
+/**
+ * @brief I2C interface configuration
+ * 
+ */
 typedef struct {
-    i2c_port_t i2c_num;          /*!< I2C port number */
-    int8_t sda_io_num;           /*!< GPIO number for I2C sda signal */
-    int8_t scl_io_num;           /*!< GPIO number for I2C scl signal */
+    i2c_bus_handle_t i2c_bus;    /*!< Handle of i2c bus */
     uint32_t clk_speed;          /*!< I2C clock frequency for master mode, (no higher than 1MHz for now) */
     uint16_t slave_addr;         /*!< I2C slave address */
 } iface_i2c_config_t;
 
+/**
+ * @brief Type of screen interface
+ * 
+ */
 typedef enum {
     SCREEN_IFACE_I2C,            /*!< I2C interface */
     SCREEN_IFACE_8080,           /*!< 8080 parallel interface */
@@ -74,6 +79,7 @@ typedef struct {
  * 
  * @return
  *      - ESP_OK on success
+ *      - ESP_ERR_INVALID_ARG   Arguments is NULL.
  *      - ESP_FAIL Initialize failed
  *      - ESP_ERR_NO_MEM: Cannot allocate memory.
  */
@@ -86,6 +92,7 @@ esp_err_t scr_iface_create(scr_iface_type_t type, void *config, scr_iface_driver
  * 
  * @return
  *      - ESP_OK on success
+ *      - ESP_ERR_INVALID_ARG   Arguments is NULL.
  */
 esp_err_t scr_iface_delete(const scr_iface_driver_fun_t *driver);
 

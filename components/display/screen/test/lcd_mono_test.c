@@ -56,10 +56,19 @@ static void contrast_test(esp_err_t (*set_contrast)(uint8_t v))
 
 TEST_CASE("Screen SSD1306 I2C test", "[screen][iot]")
 {
+    i2c_config_t i2c_conf = {
+        .mode = I2C_MODE_MASTER,
+        .sda_io_num = 12,
+        .sda_pullup_en = GPIO_PULLUP_ENABLE,
+        .scl_io_num = 32,
+        .scl_pullup_en = GPIO_PULLUP_ENABLE,
+        .master.clk_speed = 100000,
+    };
+    i2c_bus_handle_t i2c_bus = i2c_bus_create(I2C_NUM_0, &i2c_conf);
+    TEST_ASSERT_NOT_NULL(i2c_bus);
+
     iface_i2c_config_t iface_cfg = {
-        .i2c_num = I2C_NUM_0,
-        .sda_io_num = 6,
-        .scl_io_num = 7,
+        .i2c_bus = i2c_bus,
         .clk_speed = 100000,
         .slave_addr = 0x3C,
     };
@@ -90,14 +99,24 @@ TEST_CASE("Screen SSD1306 I2C test", "[screen][iot]")
 
     scr_deinit(&lcd);
     scr_iface_delete(iface_drv);
+    i2c_bus_delete(&i2c_bus);
 }
 
 TEST_CASE("Screen SSD1307 I2C test", "[screen][iot]")
 {
-    iface_i2c_config_t iface_cfg = {
-        .i2c_num = I2C_NUM_0,
+    i2c_config_t i2c_conf = {
+        .mode = I2C_MODE_MASTER,
         .sda_io_num = 6,
+        .sda_pullup_en = GPIO_PULLUP_ENABLE,
         .scl_io_num = 7,
+        .scl_pullup_en = GPIO_PULLUP_ENABLE,
+        .master.clk_speed = 100000,
+    };
+    i2c_bus_handle_t i2c_bus = i2c_bus_create(I2C_NUM_0, &i2c_conf);
+    TEST_ASSERT_NOT_NULL(i2c_bus);
+
+    iface_i2c_config_t iface_cfg = {
+        .i2c_bus = i2c_bus,
         .clk_speed = 100000,
         .slave_addr = 0x3D,
     };
@@ -127,20 +146,25 @@ TEST_CASE("Screen SSD1307 I2C test", "[screen][iot]")
 
     scr_deinit(&lcd);
     scr_iface_delete(iface_drv);
+    i2c_bus_delete(&i2c_bus);
 }
 
 TEST_CASE("Screen SSD1322 SPI test", "[screen][iot]")
 {
+    spi_config_t spi_cfg = {
+        .miso_io_num = -1,
+        .mosi_io_num = 37,
+        .sclk_io_num = 38,
+        .max_transfer_sz = 320 * 480,
+    };
+    spi_bus_handle_t spi_bus = spi_bus_create(2, &spi_cfg);
+    TEST_ASSERT_NOT_NULL(spi_bus);
+
     iface_spi_config_t spi_lcd_cfg = {
-        .pin_num_miso = 36,
-        .pin_num_mosi = 37,
-        .pin_num_clk = 38,
+        .spi_bus = spi_bus,
         .pin_num_cs = 41,
         .pin_num_dc = 35,
         .clk_freq = 5000000,
-        .spi_host = 2,
-        .dma_chan = 2,
-        .init_spi_bus = 1,
         .swap_data = false,
     };
 
@@ -190,6 +214,7 @@ TEST_CASE("Screen SSD1322 SPI test", "[screen][iot]")
 
     scr_deinit(&lcd);
     scr_iface_delete(iface_drv);
+    spi_bus_delete(&spi_bus);
 }
 
 static const unsigned char bmp_image_128_64[1024] = {

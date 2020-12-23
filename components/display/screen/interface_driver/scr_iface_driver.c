@@ -34,7 +34,6 @@ typedef struct {
     scr_iface_driver_fun_t iface_drv;
 } iface_i2s_handle_t;
 
-
 static esp_err_t _i2s_lcd_write_data(void *handle, uint16_t data)
 {
     iface_i2s_handle_t *iface_i2s = __containerof(handle, iface_i2s_handle_t, iface_drv);
@@ -78,49 +77,36 @@ static esp_err_t _i2s_lcd_release(void *handle)
 #define ACK_CHECK_DIS               0                   /*!< I2C master will not check ack from slave */
 
 typedef struct {
-    i2c_bus_handle_t i2c_bus;
-    uint16_t dev_addr;
+    i2c_bus_device_handle_t i2c_dev;
     scr_iface_driver_fun_t iface_drv;
 } iface_i2c_handle_t;
 
 static esp_err_t i2c_lcd_driver_init(const iface_i2c_config_t *cfg, iface_i2c_handle_t *out_iface_i2c)
 {
-    i2c_config_t conf;
-    conf.mode = I2C_MODE_MASTER;
-    conf.sda_io_num = cfg->sda_io_num;
-    conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
-    conf.scl_io_num = cfg->scl_io_num;
-    conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
-    conf.master.clk_speed = cfg->clk_speed;
-    out_iface_i2c->i2c_bus = i2c_bus_create(cfg->i2c_num, &conf);
-    LCD_IFACE_CHECK(NULL != out_iface_i2c->i2c_bus, "I2C bus initial failed", ESP_FAIL);
-    out_iface_i2c->dev_addr = cfg->slave_addr;
+    i2c_bus_device_handle_t i2c_dev = i2c_bus_device_create(cfg->i2c_bus, cfg->slave_addr, cfg->clk_speed);
+    LCD_IFACE_CHECK(NULL != i2c_dev, "I2C bus initial failed", ESP_FAIL);
+    out_iface_i2c->i2c_dev = i2c_dev;
     return ESP_OK;
 }
 
 static esp_err_t i2c_lcd_driver_deinit(iface_i2c_handle_t *iface_i2c)
 {
-    i2c_bus_delete(&iface_i2c->i2c_bus);
+    i2c_bus_device_delete(&iface_i2c->i2c_dev);
     return ESP_OK;
 }
 
-static esp_err_t i2c_lcd_write_byte(i2c_bus_handle_t bus, uint16_t dev_addr, uint8_t ctrl, uint8_t data)
+static esp_err_t i2c_lcd_write_byte(i2c_bus_device_handle_t i2c_dev, uint8_t ctrl, uint8_t data)
 {
     esp_err_t ret;
 
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (dev_addr << 1) | I2C_MASTER_WRITE, ACK_CHECK_EN);
-    i2c_master_write_byte(cmd, ctrl, ACK_CHECK_EN);
-    i2c_master_write_byte(cmd, data, ACK_CHECK_EN);
-    i2c_master_stop(cmd);
-    ret = iot_i2c_bus_cmd_begin(bus, cmd, 1000 / portTICK_RATE_MS);
-    i2c_cmd_link_delete(cmd);
+    uint8_t buffer[2];
+    buffer[0] = ctrl;
+    buffer[1] = data;
+    ret = i2c_bus_write_bytes(i2c_dev, NULL_I2C_MEM_ADDR, 2, buffer);
     if (ESP_OK != ret) {
         ESP_LOGE(TAG, "i2c send failed [%s]", esp_err_to_name(ret));
         return ESP_FAIL;
     }
-
     return ESP_OK;
 }
 
@@ -128,30 +114,22 @@ static esp_err_t i2c_lcd_write_cmd(void *handle, uint16_t cmd)
 {
     iface_i2c_handle_t *iface_i2c = __containerof(handle, iface_i2c_handle_t, iface_drv);
     uint8_t v = cmd;
-    return i2c_lcd_write_byte(iface_i2c->i2c_bus, iface_i2c->dev_addr, SSD1306_WRITE_CMD, v);
+    return i2c_lcd_write_byte(iface_i2c->i2c_dev, SSD1306_WRITE_CMD, v);
 }
 
 static esp_err_t i2c_lcd_write_data(void *handle, uint16_t data)
 {
     iface_i2c_handle_t *iface_i2c = __containerof(handle, iface_i2c_handle_t, iface_drv);
     uint8_t v = data;
-    return i2c_lcd_write_byte(iface_i2c->i2c_bus, iface_i2c->dev_addr, SSD1306_WRITE_DAT, v);
+    return i2c_lcd_write_byte(iface_i2c->i2c_dev, SSD1306_WRITE_DAT, v);
 }
 
 static esp_err_t i2c_lcd_write(void *handle, const uint8_t *data, uint32_t length)
 {
     iface_i2c_handle_t *iface_i2c = __containerof(handle, iface_i2c_handle_t, iface_drv);
     esp_err_t ret;
-
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (iface_i2c->dev_addr << 1) | I2C_MASTER_WRITE, ACK_CHECK_EN);
-    i2c_master_write_byte(cmd, SSD1306_WRITE_DAT, ACK_CHECK_EN);
-    i2c_master_write(cmd, (uint8_t *)data, length, ACK_CHECK_EN);
-    i2c_master_stop(cmd);
-    ret = iot_i2c_bus_cmd_begin(iface_i2c->i2c_bus, cmd, 1000 / portTICK_RATE_MS);
+    ret = i2c_bus_write_bytes(iface_i2c->i2c_dev, SSD1306_WRITE_DAT, length, (uint8_t *)data);
     LCD_IFACE_CHECK(ESP_OK == ret, "i2C send failed", ESP_FAIL);
-    i2c_cmd_link_delete(cmd);
     return ESP_OK;
 }
 
@@ -176,108 +154,64 @@ static esp_err_t i2c_lcd_release(void *handle)
 #define LCD_DATA_LEV  (1)
 
 typedef struct {
-    spi_device_handle_t g_spi_wr_dev;
-    int8_t g_pin_num_dc;
+    spi_bus_device_handle_t spi_wr_dev;
+    int8_t pin_num_dc;
     uint8_t swap_data;
-    spi_host_device_t g_spi_host;
-    uint8_t init_spi_bus;
     scr_iface_driver_fun_t iface_drv;
 } iface_spi_handle_t;
 
 static esp_err_t spi_lcd_driver_init(const iface_spi_config_t *cfg, iface_spi_handle_t *out_iface_spi)
 {
-    LCD_IFACE_CHECK(GPIO_IS_VALID_GPIO(cfg->pin_num_miso), "gpio miso invalid", ESP_ERR_INVALID_ARG);
-    LCD_IFACE_CHECK(GPIO_IS_VALID_OUTPUT_GPIO(cfg->pin_num_mosi), "gpio mosi invalid", ESP_ERR_INVALID_ARG);
-    LCD_IFACE_CHECK(GPIO_IS_VALID_OUTPUT_GPIO(cfg->pin_num_clk), "gpio clk invalid", ESP_ERR_INVALID_ARG);
     LCD_IFACE_CHECK(GPIO_IS_VALID_OUTPUT_GPIO(cfg->pin_num_cs), "gpio cs invalid", ESP_ERR_INVALID_ARG);
     LCD_IFACE_CHECK(GPIO_IS_VALID_OUTPUT_GPIO(cfg->pin_num_dc), "gpio dc invalid", ESP_ERR_INVALID_ARG);
-
-    esp_err_t ret;
 
     //Initialize non-SPI GPIOs
     gpio_pad_select_gpio(cfg->pin_num_dc);
     gpio_set_direction(cfg->pin_num_dc, GPIO_MODE_OUTPUT);
-    out_iface_spi->g_pin_num_dc = cfg->pin_num_dc;
-    out_iface_spi->g_spi_host = cfg->spi_host;
-    out_iface_spi->init_spi_bus = cfg->init_spi_bus;
+    out_iface_spi->pin_num_dc = cfg->pin_num_dc;
     out_iface_spi->swap_data = cfg->swap_data;
 
-    if (cfg->init_spi_bus) {
-        //Initialize SPI Bus for LCD
-        spi_bus_config_t buscfg = {
-            .miso_io_num = cfg->pin_num_miso,
-            .mosi_io_num = cfg->pin_num_mosi,
-            .sclk_io_num = cfg->pin_num_clk,
-            .quadwp_io_num = -1,
-            .quadhd_io_num = -1,
-            .max_transfer_sz = 240 * 420 * 2,
-        };
-        ret = spi_bus_initialize(cfg->spi_host, &buscfg, cfg->dma_chan);
-        LCD_IFACE_CHECK(ESP_OK == ret, "spi bus initialize failed", ESP_FAIL);
-    }
-
-    spi_device_interface_config_t devcfg = {
+    spi_device_config_t devcfg = {
         .clock_speed_hz = cfg->clk_freq,     //Clock out frequency
-        .mode = 0,                                //SPI mode 0
-        .spics_io_num = cfg->pin_num_cs,     //CS pin
-        .queue_size = 16,                    //We want to be able to queue 7 transactions at a time
-        .flags = SPI_DEVICE_HALFDUPLEX,
+        .mode = 0,                           //SPI mode 0
+        .cs_io_num = cfg->pin_num_cs,        //CS pin
     };
-    ret = spi_bus_add_device(cfg->spi_host, &devcfg, &(out_iface_spi->g_spi_wr_dev));
-    LCD_IFACE_CHECK(ESP_OK == ret, "spi bus initialize failed", ESP_FAIL);
+    out_iface_spi->spi_wr_dev = spi_bus_device_create(cfg->spi_bus, &devcfg);
+    LCD_IFACE_CHECK(NULL != out_iface_spi->spi_wr_dev, "spi device initialize failed", ESP_FAIL);
 
     return ESP_OK;
 }
 
 static esp_err_t spi_lcd_driver_deinit(iface_spi_handle_t *iface_spi)
 {
-    spi_bus_remove_device(iface_spi->g_spi_wr_dev);
-
-    // TODO: how to free the device more convenient
-    if (iface_spi->init_spi_bus) {
-        spi_bus_free(iface_spi->g_spi_host);
-    }
-
+    spi_bus_device_delete(&iface_spi->spi_wr_dev);
     return ESP_OK;
 }
 
 static esp_err_t spi_lcd_driver_acquire(void *handle)
 {
-    iface_spi_handle_t *iface_spi = __containerof(handle, iface_spi_handle_t, iface_drv);
-    return spi_device_acquire_bus(iface_spi->g_spi_wr_dev, portMAX_DELAY);
+    return ESP_ERR_NOT_SUPPORTED;
 }
 
 static esp_err_t spi_lcd_driver_release(void *handle)
 {
-    iface_spi_handle_t *iface_spi = __containerof(handle, iface_spi_handle_t, iface_drv);
-    spi_device_release_bus(iface_spi->g_spi_wr_dev);
-    return ESP_OK;
+    return ESP_ERR_NOT_SUPPORTED;
 }
 
-static esp_err_t _lcd_spi_rw(spi_device_handle_t spi, const uint8_t *input, uint8_t *output, uint32_t length)
+static esp_err_t _lcd_spi_rw(spi_bus_device_handle_t spi, const uint8_t *output, uint8_t *input, uint32_t length)
 {
     LCD_IFACE_CHECK(0 != length, "Length should not be 0", ESP_ERR_INVALID_ARG);
-    spi_transaction_t t = {0};
-    if (NULL != input) {
-        t.length = 8 * length;
-        t.tx_buffer = input;
-    }
-    if (NULL != output) {
-        t.rxlength = 8 * length;
-        t.rx_buffer = output;
-    }
-
-    return spi_device_transmit(spi, &t); //Transmit!
+    return spi_bus_transfer_bytes(spi, output, input, length);
 }
 
 static esp_err_t spi_lcd_driver_write_cmd(void *handle, uint16_t value)
 {
     iface_spi_handle_t *iface_spi = __containerof(handle, iface_spi_handle_t, iface_drv);
     esp_err_t ret;
-    gpio_set_level(iface_spi->g_pin_num_dc, LCD_CMD_LEV);
+    gpio_set_level(iface_spi->pin_num_dc, LCD_CMD_LEV);
     uint8_t data = value;
-    ret = _lcd_spi_rw(iface_spi->g_spi_wr_dev, &data, NULL, 1);
-    gpio_set_level(iface_spi->g_pin_num_dc, LCD_DATA_LEV);
+    ret = _lcd_spi_rw(iface_spi->spi_wr_dev, &data, NULL, 1);
+    gpio_set_level(iface_spi->pin_num_dc, LCD_DATA_LEV);
     LCD_IFACE_CHECK(ESP_OK == ret, "Send cmd failed", ESP_FAIL);
     return ESP_OK;
 }
@@ -287,7 +221,7 @@ static esp_err_t spi_lcd_driver_write_data(void *handle, uint16_t value)
     iface_spi_handle_t *iface_spi = __containerof(handle, iface_spi_handle_t, iface_drv);
     esp_err_t ret;
     uint8_t data = value;
-    ret = _lcd_spi_rw(iface_spi->g_spi_wr_dev, &data, NULL, 1);
+    ret = _lcd_spi_rw(iface_spi->spi_wr_dev, &data, NULL, 1);
     LCD_IFACE_CHECK(ESP_OK == ret, "Send cmd failed", ESP_FAIL);
     return ESP_OK;
 }
@@ -296,7 +230,7 @@ static esp_err_t spi_lcd_driver_read(void *handle, uint8_t *data, uint32_t lengt
 {
     iface_spi_handle_t *iface_spi = __containerof(handle, iface_spi_handle_t, iface_drv);
     esp_err_t ret;
-    ret = _lcd_spi_rw(iface_spi->g_spi_wr_dev, NULL, data, length);
+    ret = _lcd_spi_rw(iface_spi->spi_wr_dev, NULL, data, length);
     LCD_IFACE_CHECK(ESP_OK == ret, "Read data failed", ESP_FAIL);
     return ESP_OK;
 }
@@ -317,7 +251,7 @@ static esp_err_t spi_lcd_driver_write(void *handle, uint8_t *data, uint32_t leng
             p++;
         }
     }
-    ret = _lcd_spi_rw(iface_spi->g_spi_wr_dev, data, NULL, length);
+    ret = _lcd_spi_rw(iface_spi->spi_wr_dev, data, NULL, length);
 
     /**
      * @brief swap data to restore the order of data
@@ -340,6 +274,9 @@ static esp_err_t spi_lcd_driver_write(void *handle, uint8_t *data, uint32_t leng
 /*********************************************************/
 esp_err_t scr_iface_create(scr_iface_type_t type, void *config, scr_iface_driver_fun_t **out_driver)
 {
+    LCD_IFACE_CHECK(NULL != config, "Pointer of config is invalid", ESP_ERR_INVALID_ARG);
+    LCD_IFACE_CHECK(NULL != out_driver, "Pointer of driver is invalid", ESP_ERR_INVALID_ARG);
+
     switch (type) {
     case SCREEN_IFACE_8080: {
         iface_i2s_handle_t *iface_i2s = heap_caps_malloc(sizeof(iface_i2s_handle_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
@@ -412,6 +349,8 @@ esp_err_t scr_iface_create(scr_iface_type_t type, void *config, scr_iface_driver
 
 esp_err_t scr_iface_delete(const scr_iface_driver_fun_t *driver)
 {
+    LCD_IFACE_CHECK(NULL != driver, "Pointer of driver is invalid", ESP_ERR_INVALID_ARG);
+
     switch (driver->type) {
     case SCREEN_IFACE_8080: {
         iface_i2s_handle_t *iface_i2s = __containerof(driver, iface_i2s_handle_t, iface_drv);

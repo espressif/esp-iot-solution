@@ -57,7 +57,7 @@ typedef enum {
        |
        Y
     */
-    SCR_DIR_LRTB,   /**< From left to right then from top to bottom */
+    SCR_DIR_LRTB,   /**< From left to right then from top to bottom, this consider as the original direction of the screen */
 
     /*  Y
         |
@@ -109,6 +109,10 @@ typedef enum {
     SCR_SWAP_XY  = 0x80,
 } scr_dir_t;
 
+/**
+ * @brief The types of colors that can be displayed on the screen
+ * 
+ */
 typedef enum {
     SCR_COLOR_TYPE_MONO,
     SCR_COLOR_TYPE_GRAY,
@@ -137,6 +141,10 @@ typedef enum {
 
 } scr_controller_t;
 
+/**
+ * @brief configuration of screen controller
+ * 
+ */
 typedef struct {
     scr_iface_driver_fun_t *iface_drv;   /*!< Interface driver for screen */
     int8_t pin_num_rst;                  /*!< Pin to hardreset LCD*/
@@ -148,6 +156,10 @@ typedef struct {
     scr_dir_t rotate;                    /*!< Screen rotate direction */
 } scr_controller_config_t;
 
+/**
+ * @brief Information of screen
+ * 
+ */
 typedef struct {
     uint16_t width;                      /*!< Current screen width, it may change when apply to rotate */
     uint16_t height;                     /*!< Current screen height, it may change when apply to rotate */
@@ -176,11 +188,12 @@ typedef struct {
  * @brief Initialize a screen
  * 
  * @param controller Screen controller to initialize
- * @param lcd_conf configuration of screen
+ * @param lcd_conf configuration of screen, see scr_controller_config_t
  * @param out_screen Pointer to a screen driver
  * 
  * @return
  *      - ESP_OK on success
+ *      - ESP_ERR_INVALID_ARG   Arguments is NULL.
  *      - ESP_FAIL Initialize failed
  *      - ESP_ERR_NOT_FOUND: Screen controller was not found.
  */
@@ -193,6 +206,7 @@ esp_err_t scr_init(scr_controller_t controller, const scr_controller_config_t *l
  * 
  * @return
  *      - ESP_OK on success
+ *      - ESP_ERR_INVALID_ARG   Arguments is NULL.
  *      - ESP_FAIL Deinitialize failed
  */
 esp_err_t scr_deinit(const scr_driver_fun_t *screen);

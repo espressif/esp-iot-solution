@@ -241,7 +241,7 @@ static void lcd_rotate_bitmap_test(void)
         ESP_LOGI(TAG, "Screen name:%s | width:%d | height:%d", lcd_info.name, lcd_info.width, lcd_info.height);
 
         memcpy(pixels, gImage_img_120x39, (120 * 39) * sizeof(uint16_t));
-        lcd.draw_bitmap(0, 0, 120, 39, (uint16_t*)pixels);
+        lcd.draw_bitmap(0, 0, 120, 39, (uint16_t *)pixels);
         vTaskDelay(2000 / portTICK_PERIOD_MS);
     }
     heap_caps_free(pixels);
@@ -261,7 +261,7 @@ static void lcd_speed_test(void)
 
     const uint16_t color_table[] = {COLOR_RED, COLOR_GREEN, COLOR_BLUE, COLOR_YELLOW};
     uint32_t times = 256;
-    
+
     uint64_t s;
     uint64_t t1 = 0;
     for (int i = 0; i < times; i++) {
@@ -291,18 +291,27 @@ static void lcd_speed_test(void)
     heap_caps_free(pixels);
 }
 
-TEST_CASE("Screen ILI9806 8080 test", "[screen][iot]")
+
+static scr_iface_driver_fun_t *get_8080_iface(void)
 {
     i2s_lcd_config_t i2s_lcd_cfg = {
         .data_width  = 16,
         .pin_data_num = {
-            16, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-            // 19, 21, 0, 22, 23, 33, 32, 27, 25, 26, 12, 13, 14, 15, 2, 4,
+#ifdef CONFIG_IDF_TARGET_ESP32
+            19, 21, 0, 22, 23, 33, 32, 27, 25, 26, 12, 13, 14, 15, 2, 4,
+#else
+            16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1,
             // 1, 10, 2, 11, 3, 12, 4, 13, 5, 14, 6, 15, 7, 16, 8, 17,
+#endif
         },
-        .pin_num_cs = 45,
+        .pin_num_cs = -1,
+#ifdef CONFIG_IDF_TARGET_ESP32
+        .pin_num_wr = 18,
+        .pin_num_rs = 5,
+#else
         .pin_num_wr = 34,
         .pin_num_rs = 33,
+#endif
         .clk_freq = 20000000,
         .i2s_port = I2S_NUM_0,
         .buffer_size = 32000,
@@ -311,10 +320,20 @@ TEST_CASE("Screen ILI9806 8080 test", "[screen][iot]")
 
     scr_iface_driver_fun_t *iface_drv_i2s;
     TEST_ASSERT(ESP_OK == scr_iface_create(SCREEN_IFACE_8080, &i2s_lcd_cfg, &iface_drv_i2s));
+    return iface_drv_i2s;
+}
+
+TEST_CASE("Screen ILI9806 8080 test", "[screen][iot]")
+{
+    scr_iface_driver_fun_t *iface_drv = get_8080_iface();
     scr_controller_config_t lcd_cfg = {0};
-    lcd_cfg.iface_drv = iface_drv_i2s,
+    lcd_cfg.iface_drv = iface_drv,
     lcd_cfg.pin_num_rst = -1,
+#ifdef CONFIG_IDF_TARGET_ESP32
     lcd_cfg.pin_num_bckl = -1,
+#else
+    lcd_cfg.pin_num_bckl = 21,
+#endif
     lcd_cfg.rst_active_level = 0,
     lcd_cfg.bckl_active_level = 1,
     lcd_cfg.width = 480;
@@ -329,33 +348,20 @@ TEST_CASE("Screen ILI9806 8080 test", "[screen][iot]")
     lcd_speed_test();
 
     scr_deinit(&lcd);
-    scr_iface_delete(iface_drv_i2s);
+    scr_iface_delete(iface_drv);
 }
 
 TEST_CASE("Screen RM68210 8080 test", "[screen][iot]")
 {
-    i2s_lcd_config_t i2s_lcd_cfg = {
-        .data_width  = 16,
-        .pin_data_num = {
-            // 16, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-            // 19, 21, 0, 22, 23, 33, 32, 27, 25, 26, 12, 13, 14, 15, 2, 4,
-            1, 10, 2, 11, 3, 12, 4, 13, 5, 14, 6, 15, 7, 16, 8, 17,
-        },
-        .pin_num_cs = -1,
-        .pin_num_wr = 34,
-        .pin_num_rs = 33,
-        .clk_freq = 20000000,
-        .i2s_port = I2S_NUM_0,
-        .buffer_size = 32000,
-        .swap_data = false,
-    };
-
-    scr_iface_driver_fun_t *iface_drv_i2s;
-    TEST_ASSERT(ESP_OK == scr_iface_create(SCREEN_IFACE_8080, &i2s_lcd_cfg, &iface_drv_i2s));
+    scr_iface_driver_fun_t *iface_drv = get_8080_iface();
     scr_controller_config_t lcd_cfg = {0};
-    lcd_cfg.iface_drv = iface_drv_i2s,
+    lcd_cfg.iface_drv = iface_drv,
     lcd_cfg.pin_num_rst = -1,
+#ifdef CONFIG_IDF_TARGET_ESP32
     lcd_cfg.pin_num_bckl = -1,
+#else
+    lcd_cfg.pin_num_bckl = 21,
+#endif
     lcd_cfg.rst_active_level = 0,
     lcd_cfg.bckl_active_level = 1,
     lcd_cfg.width = 480;
@@ -370,21 +376,25 @@ TEST_CASE("Screen RM68210 8080 test", "[screen][iot]")
     lcd_speed_test();
 
     scr_deinit(&lcd);
-    scr_iface_delete(iface_drv_i2s);
+    scr_iface_delete(iface_drv);
 }
 
 TEST_CASE("Screen ILI9341 SPI test", "[screen][iot]")
 {
+    spi_config_t spi_cfg = {
+        .miso_io_num = -1,
+        .mosi_io_num = 21,
+        .sclk_io_num = 22,
+        .max_transfer_sz = 320 * 480,
+    };
+    spi_bus_handle_t spi_bus = spi_bus_create(2, &spi_cfg);
+    TEST_ASSERT_NOT_NULL(spi_bus);
+
     iface_spi_config_t spi_lcd_cfg = {
-        .pin_num_miso = -1,
-        .pin_num_mosi = 38,
-        .pin_num_clk = 39,
-        .pin_num_cs = 37,
-        .pin_num_dc = 40,
-        .clk_freq = 40000000,
-        .spi_host = 2,
-        .dma_chan = 2,
-        .init_spi_bus = 1,
+        .spi_bus = spi_bus,
+        .pin_num_cs = 5,
+        .pin_num_dc = 19,
+        .clk_freq = 20000000,
         .swap_data = true,
     };
 
@@ -393,8 +403,8 @@ TEST_CASE("Screen ILI9341 SPI test", "[screen][iot]")
 
     scr_controller_config_t lcd_cfg = {0};
     lcd_cfg.iface_drv = iface_drv,
-    lcd_cfg.pin_num_rst = 0,
-    lcd_cfg.pin_num_bckl = -1,
+    lcd_cfg.pin_num_rst = 18,
+    lcd_cfg.pin_num_bckl = 23,
     lcd_cfg.rst_active_level = 0,
     lcd_cfg.bckl_active_level = 1,
     lcd_cfg.width = 240;
@@ -410,22 +420,27 @@ TEST_CASE("Screen ILI9341 SPI test", "[screen][iot]")
 
     scr_deinit(&lcd);
     scr_iface_delete(iface_drv);
+    spi_bus_delete(&spi_bus);
 }
 
 TEST_CASE("Screen SSD1351 SPI test", "[screen][iot]")
 {
-    iface_spi_config_t spi_lcd_cfg = {0};
-    spi_lcd_cfg.pin_num_miso = -1;
-    spi_lcd_cfg.pin_num_mosi = 38;
-    spi_lcd_cfg.pin_num_clk = 39;
-    spi_lcd_cfg.pin_num_cs = 42;
-    spi_lcd_cfg.pin_num_dc = 40;
-    spi_lcd_cfg.clk_freq = 10000000;
-    spi_lcd_cfg.spi_host = 2;
-    spi_lcd_cfg.dma_chan = 2;
-    spi_lcd_cfg.init_spi_bus = 1;
-    spi_lcd_cfg.swap_data = true;
+    spi_config_t spi_cfg = {
+        .miso_io_num = -1,
+        .mosi_io_num = 38,
+        .sclk_io_num = 39,
+        .max_transfer_sz = 320 * 480,
+    };
+    spi_bus_handle_t spi_bus = spi_bus_create(2, &spi_cfg);
+    TEST_ASSERT_NOT_NULL(spi_bus);
 
+    iface_spi_config_t spi_lcd_cfg = {
+        .spi_bus = spi_bus,
+        .pin_num_cs = 42,
+        .pin_num_dc = 40,
+        .clk_freq = 10000000,
+        .swap_data = true,
+    };
     scr_iface_driver_fun_t *iface_drv;
     TEST_ASSERT(ESP_OK == scr_iface_create(SCREEN_IFACE_SPI, &spi_lcd_cfg, &iface_drv));
 
@@ -448,8 +463,8 @@ TEST_CASE("Screen SSD1351 SPI test", "[screen][iot]")
 
     scr_deinit(&lcd);
     scr_iface_delete(iface_drv);
+    spi_bus_delete(&spi_bus);
 }
-
 
 static const unsigned char gImage_img_120x39[9360] =  { /* 0X00,0X10,0X78,0X00,0X27,0X00,0X01,0X1B, */
     0X9D, 0XFF, 0X7D, 0XFF, 0X1D, 0XFF, 0XFD, 0XFE, 0X1E, 0XFF, 0X1E, 0XFF, 0X1D, 0XFF, 0X1C, 0XFF,

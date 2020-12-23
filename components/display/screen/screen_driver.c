@@ -158,6 +158,7 @@ esp_err_t scr_init(scr_controller_t controller, const scr_controller_config_t *l
 
 esp_err_t scr_deinit(const scr_driver_fun_t *screen)
 {
+    LCD_CHECK(NULL != screen, "Pointer of screen is invalid", ESP_ERR_INVALID_ARG);
     esp_err_t ret;
     ret = screen->deinit();
     return ret;
