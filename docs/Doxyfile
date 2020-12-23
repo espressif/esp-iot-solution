@@ -35,6 +35,7 @@ INPUT = \
     ../../components/audio/dac_audio/include/dac_audio.h \
     ../../components/display/screen/screen_driver.h \
     ../../components/display/screen/interface_driver/scr_interface_driver.h \
+    ../../components/display/touch_panel/touch_panel.h \
 
 ## Get warnings for functions that have no documentation for their parameters or return value
 ##
