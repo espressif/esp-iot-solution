@@ -24,11 +24,10 @@ static const char *TAG = "screen driver";
         return (ret);                                                           \
     }
 
-
 /**
  * Define screen instance
  */
-/**< Color screen */
+/**< Colorful screen */
 #ifdef CONFIG_LCD_DRIVER_SCREEN_CONTROLLER_ILI9341
 extern scr_driver_fun_t lcd_ili9341_default_driver;
 #endif
@@ -68,6 +67,9 @@ extern scr_driver_fun_t lcd_ssd1322_default_driver;
 
 esp_err_t scr_init(scr_controller_t controller, const scr_controller_config_t *lcd_conf, scr_driver_fun_t *out_screen)
 {
+    LCD_CHECK(NULL != lcd_conf, "Pointer of config is invalid", ESP_ERR_INVALID_ARG);
+    LCD_CHECK(NULL != out_screen, "Pointer of screen is invalid", ESP_ERR_INVALID_ARG);
+
     esp_err_t ret = ESP_OK;
     switch (controller) {
 #ifdef CONFIG_LCD_DRIVER_SCREEN_CONTROLLER_ILI9341

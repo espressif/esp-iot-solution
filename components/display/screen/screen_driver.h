@@ -21,25 +21,25 @@
 extern "C" {
 #endif
 
-// Color definitions, RGB565 format          R ,  G ,  B
-#define COLOR_BLACK       0x0000      /*   0,   0,   0 */
-#define COLOR_NAVY        0x000F      /*   0,   0, 128 */
-#define COLOR_DARKGREEN   0x03E0      /*   0, 128,   0 */
-#define COLOR_DARKCYAN    0x03EF      /*   0, 128, 128 */
-#define COLOR_MAROON      0x7800      /* 128,   0,   0 */
-#define COLOR_PURPLE      0x780F      /* 128,   0, 128 */
-#define COLOR_OLIVE       0x7BE0      /* 128, 128,   0 */
-#define COLOR_LIGHTGREY   0xC618      /* 192, 192, 192 */
-#define COLOR_DARKGREY    0x7BEF      /* 128, 128, 128 */
-#define COLOR_BLUE        0x001F      /*   0,   0, 255 */
-#define COLOR_GREEN       0x07E0      /*   0, 255,   0 */
-#define COLOR_CYAN        0x07FF      /*   0, 255, 255 */
-#define COLOR_RED         0xF800      /* 255,   0,   0 */
-#define COLOR_MAGENTA     0xF81F      /* 255,   0, 255 */
-#define COLOR_YELLOW      0xFFE0      /* 255, 255,   0 */
-#define COLOR_WHITE       0xFFFF      /* 255, 255, 255 */
-#define COLOR_ORANGE      0xFD20      /* 255, 165,   0 */
-#define COLOR_GREENYELLOW 0xAFE5      /* 173, 255,  47 */
+/* Color definitions, RGB565 format */
+#define COLOR_BLACK       0x0000
+#define COLOR_NAVY        0x000F
+#define COLOR_DARKGREEN   0x03E0
+#define COLOR_DARKCYAN    0x03EF
+#define COLOR_MAROON      0x7800
+#define COLOR_PURPLE      0x780F
+#define COLOR_OLIVE       0x7BE0
+#define COLOR_LIGHTGREY   0xC618
+#define COLOR_DARKGREY    0x7BEF
+#define COLOR_BLUE        0x001F
+#define COLOR_GREEN       0x07E0
+#define COLOR_CYAN        0x07FF
+#define COLOR_RED         0xF800
+#define COLOR_MAGENTA     0xF81F
+#define COLOR_YELLOW      0xFFE0
+#define COLOR_WHITE       0xFFFF
+#define COLOR_ORANGE      0xFD20
+#define COLOR_GREENYELLOW 0xAFE5
 #define COLOR_PINK        0xF81F
 #define COLOR_SILVER      0xC618
 #define COLOR_GRAY        0x8410
@@ -50,7 +50,7 @@ extern "C" {
 
 /**
  * @brief Define all screen direction
- * 
+ *
  */
 typedef enum {
     /* @---> X
@@ -103,10 +103,10 @@ typedef enum {
 
     SCR_DIR_MAX,
 
-    /** Another way to represent rotation with 3 bit*/
-    SCR_MIRROR_X = 0x40,
-    SCR_MIRROR_Y = 0x20,
-    SCR_SWAP_XY  = 0x80,
+    /* Another way to represent rotation with 3 bit*/
+    SCR_MIRROR_X = 0x40, /**< Mirror X-axis */
+    SCR_MIRROR_Y = 0x20, /**< Mirror Y-axis */
+    SCR_SWAP_XY  = 0x80, /**< Swap XY axis */
 } scr_dir_t;
 
 /**
@@ -114,17 +114,17 @@ typedef enum {
  * 
  */
 typedef enum {
-    SCR_COLOR_TYPE_MONO,
-    SCR_COLOR_TYPE_GRAY,
-    SCR_COLOR_TYPE_RGB565,
+    SCR_COLOR_TYPE_MONO,     /**< The screen is monochrome */
+    SCR_COLOR_TYPE_GRAY,     /**< The screen is gray */
+    SCR_COLOR_TYPE_RGB565,   /**< The screen is colorful */
 } scr_color_type_t;
 
 /**
  * @brief All supported screen controllers
- * 
+ *
  */
 typedef enum {
-    /**< color screen */
+    /* color screen */
     SCREEN_CONTROLLER_ILI9341,
     SCREEN_CONTROLLER_ILI9806,
     SCREEN_CONTROLLER_ILI9486,
@@ -134,7 +134,7 @@ typedef enum {
     SCREEN_CONTROLLER_ST7796,
     SCREEN_CONTROLLER_SSD1351,
 
-    /**< monochrome screen */
+    /* monochrome screen */
     SCREEN_CONTROLLER_SSD1306,
     SCREEN_CONTROLLER_SSD1307,
     SCREEN_CONTROLLER_SSD1322,
@@ -171,26 +171,114 @@ typedef struct {
 
 /**
  * @brief Define a screen common function
- * 
+ *
  */
 typedef struct {
-    esp_err_t (*init)(const scr_controller_config_t *lcd_conf);                                     /*!< Initialize LCD screen */
-    esp_err_t (*deinit)(void);                                                                      /*!< Deinitialize LCD screen */
-    esp_err_t (*set_direction)(scr_dir_t dir);                                                      /*!< Control lcd scan direction */
-    esp_err_t (*set_window)(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1);                    /*!< Set a window area */
-    esp_err_t (*write_ram_data)(uint16_t color);                                                    /*!< Write a GRAM data */
-    esp_err_t (*draw_pixel)(uint16_t x, uint16_t y, uint16_t color);                                /*!< Draw a pixel on screen */
-    esp_err_t (*draw_bitmap)(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t *bitmap);     /*!< Draw a bitmap on screen */
-    esp_err_t (*get_info)(scr_info_t *info);                                                        /*!< Get information of screen */
+    /**
+    * @brief Initialize screen
+    * @attention If you have been called function scr_init() that will call this function automatically, and should not be called it again.
+    *
+    * @param lcd_conf Pointer to a structure with lcd config arguments.
+    *
+    * @return
+    *      - ESP_OK on success
+    *      - ESP_FAIL Driver not installed
+    */
+    esp_err_t (*init)(const scr_controller_config_t *lcd_conf);
+
+    /**
+    * @brief Deinitialize screen
+    *
+    * @return
+    *      - ESP_OK on success
+    *      - ESP_FAIL Deinitialize failed
+    *      - ESP_ERR_NOT_SUPPORTED unsupported
+    */
+    esp_err_t (*deinit)(void);
+
+    /**
+    * @brief Set screen direction of rotation
+    *
+    * @param dir Pointer to a scr_dir_t structure.
+    *
+    * @return
+    *      - ESP_OK on success
+    *      - ESP_FAIL Failed
+    */
+    esp_err_t (*set_direction)(scr_dir_t dir);
+
+    /**
+    * @brief Set screen window
+    *
+    * @param x0 Starting point in X direction
+    * @param y0 Starting point in Y direction
+    * @param x1 End point in X direction
+    * @param y1 End point in Y direction
+    *
+    * @return
+    *      - ESP_OK on success
+    *      - ESP_FAIL Failed
+    */
+    esp_err_t (*set_window)(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1);
+
+    /**
+    * @brief Write a RAM data
+    *
+    * @param color New color of a pixel
+    *
+    * @return
+    *      - ESP_OK on success
+    *      - ESP_FAIL Failed
+    */
+    esp_err_t (*write_ram_data)(uint16_t color);
+
+    /**
+    * @brief Draw one pixel in screen with color
+    *
+    * @param x X co-ordinate of set orientation
+    * @param y Y co-ordinate of set orientation
+    * @param color New color of the pixel
+    *
+    * @return
+    *      - ESP_OK on success
+    *      - ESP_FAIL Failed
+    */
+    esp_err_t (*draw_pixel)(uint16_t x, uint16_t y, uint16_t color);
+
+    /**
+    * @brief Fill the pixels on LCD screen with bitmap
+    *
+    * @param x Starting point in X direction
+    * @param y Starting point in Y direction
+    * @param w width of image in bitmap array
+    * @param h height of image in bitmap array
+    * @param bitmap pointer to bitmap array
+    *
+    * @return
+    *      - ESP_OK on success
+    *      - ESP_FAIL Failed
+    */
+    esp_err_t (*draw_bitmap)(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t *bitmap);
+
+    /**
+    * @brief Get screen information
+    *
+    * @param info Pointer to a scr_info_t structure.
+    *
+    * @return
+    *      - ESP_OK on success
+    *      - ESP_FAIL Failed
+    */
+    esp_err_t (*get_info)(scr_info_t *info);
 } scr_driver_fun_t;
 
 /**
  * @brief Initialize a screen
- * 
+ *
  * @param controller Screen controller to initialize
  * @param lcd_conf configuration of screen, see scr_controller_config_t
  * @param out_screen Pointer to a screen driver
- * 
+ *
  * @return
  *      - ESP_OK on success
  *      - ESP_ERR_INVALID_ARG   Arguments is NULL.
@@ -201,9 +289,9 @@ esp_err_t scr_init(scr_controller_t controller, const scr_controller_config_t *l
 
 /**
  * @brief Deinitialize a screen
- * 
+ *
  * @param screen screen driver to deinitialize
- * 
+ *
  * @return
  *      - ESP_OK on success
  *      - ESP_ERR_INVALID_ARG   Arguments is NULL.

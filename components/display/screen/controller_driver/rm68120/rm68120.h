@@ -123,4 +123,4 @@ esp_err_t lcd_rm68120_draw_bitmap(uint16_t x, uint16_t y, uint16_t w, uint16_t h
 }
 #endif
 
-#endif /* _IOT_NT35510_H_ */
+#endif /* _IOT_RM68120_H_ */
