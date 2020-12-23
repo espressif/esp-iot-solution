@@ -115,9 +115,8 @@ static const char *TAG = "FT5x06";
 
 
 typedef struct {
-    i2c_bus_handle_t bus;
+    i2c_bus_device_handle_t i2c_dev;
     int pin_num_int;
-    uint8_t dev_addr;
     touch_dir_t direction;
     uint16_t width;
     uint16_t height;
@@ -138,58 +137,17 @@ touch_driver_fun_t ft5x06_driver_fun = {
 
 static esp_err_t iot_ft5x06_read(ft5x06_dev_t *dev, uint8_t start_addr, uint8_t read_num, uint8_t *data_buf)
 {
-    esp_err_t ret = ESP_FAIL;
-
-    if (data_buf != NULL) {
-        i2c_cmd_handle_t cmd = NULL;
-        cmd = i2c_cmd_link_create();
-        i2c_master_start(cmd);
-        i2c_master_write_byte(cmd, (dev->dev_addr << 1) | WRITE_BIT, ACK_CHECK_EN);
-        i2c_master_write_byte(cmd, start_addr, ACK_CHECK_EN);
-        i2c_master_stop(cmd);
-        ret = iot_i2c_bus_cmd_begin(dev->bus, cmd, 500 / portTICK_RATE_MS);
-        i2c_cmd_link_delete(cmd);
-
-        if (ret != ESP_OK) {
-            return ESP_FAIL;
-        }
-
-        cmd = i2c_cmd_link_create();
-        i2c_master_start(cmd);
-        i2c_master_write_byte(cmd, (dev->dev_addr << 1) | READ_BIT, ACK_CHECK_EN);
-
-        if (read_num > 1) {
-            i2c_master_read(cmd, data_buf, read_num - 1, ACK_VAL);
-        }
-
-        i2c_master_read_byte(cmd, &data_buf[read_num - 1], NACK_VAL);
-        i2c_master_stop(cmd);
-        ret = iot_i2c_bus_cmd_begin(dev->bus, cmd, 500 / portTICK_RATE_MS);
-        i2c_cmd_link_delete(cmd);
-    }
-
-    return ret;
+    return i2c_bus_read_bytes(dev->i2c_dev, start_addr, read_num, data_buf);
 }
 
 static esp_err_t iot_ft5x06_write(ft5x06_dev_t *dev, uint8_t start_addr, uint8_t write_num, uint8_t *data_buf)
 {
-    esp_err_t ret = ESP_FAIL;
+    esp_err_t ret;
 
-    if (data_buf != NULL) {
-        i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-        i2c_master_start(cmd);
-        i2c_master_write_byte(cmd, (dev->dev_addr << 1) | WRITE_BIT, ACK_CHECK_EN);
-        i2c_master_write_byte(cmd, start_addr, ACK_CHECK_EN);
-        i2c_master_write(cmd, data_buf, write_num, ACK_CHECK_EN);
-        i2c_master_stop(cmd);
-        ret = iot_i2c_bus_cmd_begin(dev->bus, cmd, 500 / portTICK_RATE_MS);
-        i2c_cmd_link_delete(cmd);
-    }
-
+    ret = i2c_bus_write_bytes(dev->i2c_dev, start_addr, write_num, data_buf);
     if (ESP_OK != ret) {
         ESP_LOGI(TAG, "i2c error %s", esp_err_to_name(ret));
     }
-
     return ret;
 }
 
@@ -215,25 +173,15 @@ esp_err_t iot_ft5x06_init(const touch_panel_config_t *config)
     TOUCH_CHECK(NULL != config, "Pointer invalid", ESP_ERR_INVALID_ARG);
     TOUCH_CHECK(TOUCH_IFACE_I2C == config->iface_type, "Interface type not support", ESP_ERR_INVALID_ARG);
 
-    i2c_bus_handle_t i2c_bus = NULL;
-    i2c_config_t conf = {
-        .mode = I2C_MODE_MASTER,
-        .sda_io_num = config->iface_i2c.pin_num_sda,
-        .sda_pullup_en = GPIO_PULLUP_ENABLE,
-        .scl_io_num = config->iface_i2c.pin_num_scl,
-        .scl_pullup_en = GPIO_PULLUP_ENABLE,
-        .master.clk_speed = config->iface_i2c.clk_freq,
-    };
-    i2c_bus = i2c_bus_create(config->iface_i2c.i2c_port, &conf);
-    TOUCH_CHECK(NULL != i2c_bus, "i2c bus create failed", ESP_FAIL);
+    i2c_bus_device_handle_t i2c_dev = i2c_bus_device_create(config->iface_i2c.i2c_bus, config->iface_i2c.i2c_addr, config->iface_i2c.clk_freq);
+    TOUCH_CHECK(NULL != i2c_dev, "i2c bus create failed", ESP_FAIL);
 
     if (config->pin_num_int >= 0) {
         gpio_pad_select_gpio(config->pin_num_int);
         gpio_set_direction(config->pin_num_int, GPIO_MODE_INPUT);
     }
 
-    g_dev.bus = i2c_bus;
-    g_dev.dev_addr = config->iface_i2c.i2c_addr;
+    g_dev.i2c_dev = i2c_dev;
     g_dev.pin_num_int = config->pin_num_int;
     g_dev.width = config->width;
     g_dev.height = config->height;
@@ -272,16 +220,14 @@ esp_err_t iot_ft5x06_init(const touch_panel_config_t *config)
     ret |= ft5x06_write_reg(dev, FT5X0X_REG_PERIODMONITOR, 0x28);
     TOUCH_CHECK(ESP_OK == ret, "ft5x06 write reg failed", ESP_FAIL);
 
-    ESP_LOGI(TAG, "Initial successful | GPIO INT:%d | GPIO SDA:%d | GPIO SCL:%d | ADDR:0x%x | dir:%d",
-             config->pin_num_int, config->iface_i2c.pin_num_sda, config->iface_i2c.pin_num_scl, config->iface_i2c.i2c_addr, config->direction);
+    ESP_LOGI(TAG, "Initial successful | GPIO INT:%d | ADDR:0x%x | dir:%d",
+             config->pin_num_int, config->iface_i2c.i2c_addr, config->direction);
     return ret;
 }
 
-esp_err_t iot_ft5x06_deinit(bool free_bus)
+esp_err_t iot_ft5x06_deinit(void)
 {
-    if (0 != free_bus) {
-        i2c_bus_delete(&g_dev.bus);
-    }
+    i2c_bus_device_delete(&g_dev.i2c_dev);
     return ESP_OK;
 }
 

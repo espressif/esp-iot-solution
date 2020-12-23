@@ -44,7 +44,7 @@ esp_err_t iot_xpt2046_init(const touch_panel_config_t *xpt_conf);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_xpt2046_deinit(bool free_bus);
+esp_err_t iot_xpt2046_deinit(void);
 
 /**
  * @brief Check if there is a press

@@ -37,13 +37,11 @@ esp_err_t iot_ns2016_init(const touch_panel_config_t *xpt_conf);
 /**
  * @brief Deinitial touch panel
  * 
- * @param free_bus Is free bus
- * 
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_ns2016_deinit(bool free_bus);
+esp_err_t iot_ns2016_deinit(void);
 
 /**
  * @brief Check if there is a press

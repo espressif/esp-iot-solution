@@ -38,13 +38,11 @@ esp_err_t iot_ft5x06_init(const touch_panel_config_t * config);
 /**
  * @brief Deinitial touch panel
  * 
- * @param free_bus Is free bus
- * 
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_ft5x06_deinit(bool free_bus);
+esp_err_t iot_ft5x06_deinit(void);
 
 /**
  * @brief Check if there is a press

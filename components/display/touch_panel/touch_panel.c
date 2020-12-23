@@ -35,6 +35,9 @@ extern touch_driver_fun_t ns2016_driver_fun;
 
 esp_err_t touch_panel_init(touch_controller_t controller, const touch_panel_config_t *conf, touch_driver_fun_t *out_driver)
 {
+    TOUCH_CHECK(NULL != conf, "Pointer of config is invalid", ESP_ERR_INVALID_ARG);
+    TOUCH_CHECK(NULL != out_driver, "Pointer of Touch driver is invalid", ESP_ERR_INVALID_ARG);
+
     esp_err_t ret = ESP_OK;
     switch (controller) {
 #ifdef CONFIG_TOUCH_DRIVER_FT5X06
@@ -69,7 +72,8 @@ esp_err_t touch_panel_init(touch_controller_t controller, const touch_panel_conf
 
 esp_err_t touch_panel_deinit(const touch_driver_fun_t *touch)
 {
+    TOUCH_CHECK(NULL != touch, "Pointer of Touch driver is invalid", ESP_ERR_INVALID_ARG);
     esp_err_t ret;
-    ret = touch->deinit(true);
+    ret = touch->deinit();
     return ret;
 }

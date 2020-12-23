@@ -23,8 +23,10 @@ static const char *TAG = "XPT2046";
         return (ret);                                                                   \
     }
 
-#define XPT2046_TOUCH_CMD_X       0xD0
-#define XPT2046_TOUCH_CMD_Y       0x90
+#define XPT2046_TOUCH_CMD_X   0xD0
+#define XPT2046_TOUCH_CMD_Y   0x90
+#define XPT2046_TOUCH_CMD_Z1  0b10110000
+#define XPT2046_TOUCH_CMD_Z2  0b11000000
 #define XPT2046_SMP_SIZE  8
 
 #define TOUCH_SAMPLE_MAX 4000
@@ -36,11 +38,7 @@ typedef struct {
 } position_t;
 
 typedef struct {
-    spi_host_device_t spi_host;
-    spi_device_handle_t spi_dev;
-    bool is_init_spi_bus;
-    SemaphoreHandle_t spi_mux;
-
+    spi_bus_device_handle_t spi_dev;
     int io_irq;
     touch_dir_t direction;
     uint16_t width;
@@ -58,23 +56,16 @@ touch_driver_fun_t xpt2046_driver_fun = {
     .read_info = iot_xpt2046_sample,
 };
 
-static uint16_t xpt2046_readdata(spi_device_handle_t spi, const uint8_t command)
+static uint16_t xpt2046_readdata(spi_bus_device_handle_t spi, const uint8_t command)
 {
-    /**
-     * Half duplex mode is not compatible with DMA when both writing and reading phases exist.
-     * try to use command and address field to replace the write phase.
-    */
-    spi_transaction_ext_t t = {
-        .base = {
-            .flags = SPI_TRANS_VARIABLE_CMD | SPI_TRANS_USE_RXDATA,
-            .cmd = command,
-            .rxlength = 2 * 8, // Total data length received, in bits
-        },
-        .command_bits = 8,
-    };
-    esp_err_t ret = spi_device_transmit(spi, (spi_transaction_t *)&t);
+    uint8_t rev[3];
+    uint8_t send[3];
+    send[0] = command;
+    send[1] = 0xff;
+    send[2] = 0xff;
+    esp_err_t ret = spi_bus_transfer_bytes(spi, send, rev, 3);
     TOUCH_CHECK(ret == ESP_OK, "read data failed", 0xffff);
-    return (t.base.rx_data[0] << 8 | t.base.rx_data[1]) >> 3;
+    return (rev[1] << 8 | rev[2]) >> 3;
 }
 
 static esp_err_t xpt2046_get_sample(uint8_t command, uint16_t *out_data)
@@ -94,39 +85,20 @@ esp_err_t iot_xpt2046_init(const touch_panel_config_t *config)
     TOUCH_CHECK(NULL != config, "Pointer invalid", ESP_ERR_INVALID_ARG);
     TOUCH_CHECK(TOUCH_IFACE_SPI == config->iface_type, "Interface type not support", ESP_ERR_INVALID_ARG);
 
-    esp_err_t ret;
-
-    g_dev.is_init_spi_bus = config->iface_spi.init_spi_bus;
-    if (g_dev.is_init_spi_bus) {
-        //Initialize SPI Bus for LCD
-        spi_bus_config_t buscfg = {
-            .miso_io_num = config->iface_spi.pin_num_miso,
-            .mosi_io_num = config->iface_spi.pin_num_mosi,
-            .sclk_io_num = config->iface_spi.pin_num_clk,
-            .quadwp_io_num = -1,
-            .quadhd_io_num = -1,
-        };
-        ret = spi_bus_initialize(config->iface_spi.spi_host, &buscfg, config->iface_spi.dma_chan);
-        TOUCH_CHECK(ESP_OK == ret, "spi bus initialize failed", ESP_FAIL);
-    }
-    g_dev.spi_host = config->iface_spi.spi_host;
-
     //Initialize non-SPI GPIOs
     if (config->pin_num_int >= 0) {
         gpio_pad_select_gpio(config->pin_num_int);
         gpio_set_direction(config->pin_num_int, GPIO_MODE_INPUT);
     }
 
-    spi_device_interface_config_t devcfg = {
+    spi_device_config_t devcfg = {
         .clock_speed_hz = config->iface_spi.clk_freq, //Clock out frequency
-        .mode = 0,                            //SPI mode 0
-        .spics_io_num = config->iface_spi.pin_num_cs, //CS pin
-        .queue_size = 7,                      //We want to be able to queue 7 transactions at a time
+        .mode = 0,                                    //SPI mode 0
+        .cs_io_num = config->iface_spi.pin_num_cs,    //CS pin
     };
 
-    devcfg.flags = SPI_DEVICE_HALFDUPLEX;
-    ret = spi_bus_add_device(config->iface_spi.spi_host, &devcfg, &g_dev.spi_dev);
-    TOUCH_CHECK(ESP_OK == ret, "spi bus add device failed", ESP_FAIL);
+    g_dev.spi_dev = spi_bus_device_create(config->iface_spi.spi_bus, &devcfg);
+    TOUCH_CHECK(NULL != g_dev.spi_dev, "spi bus add device failed", ESP_FAIL);
 
     iot_xpt2046_set_direction(config->direction);
     g_dev.io_irq = config->pin_num_int;
@@ -136,40 +108,34 @@ esp_err_t iot_xpt2046_init(const touch_panel_config_t *config)
     uint16_t temp;
     xpt2046_get_sample(XPT2046_TOUCH_CMD_X, &temp);
 
-    /** TODO: Dealing with thread safety issues. Others have similar problems
-     */
-    if (g_dev.spi_mux == NULL) {
-        g_dev.spi_mux = xSemaphoreCreateRecursiveMutex();
-    } else {
-        ESP_LOGE(TAG, "touch spi_mux already init");
-    }
-
     ESP_LOGI(TAG, "Touch panel size width: %d, height: %d", g_dev.width, g_dev.height);
     ESP_LOGI(TAG, "Initial successful | GPIO INT:%d | GPIO CS:%d | dir:%d", config->pin_num_int, config->iface_spi.pin_num_cs, config->direction);
 
     return ESP_OK;
 }
 
-esp_err_t iot_xpt2046_deinit(bool free_bus)
+esp_err_t iot_xpt2046_deinit(void)
 {
-    vSemaphoreDelete(g_dev.spi_mux);
-    g_dev.spi_mux = NULL;
-    spi_bus_remove_device(g_dev.spi_dev);
-
-    if ((0 != free_bus) && (g_dev.is_init_spi_bus)) {
-        spi_bus_free(g_dev.spi_host);
-    }
-
+    spi_bus_device_delete(&g_dev.spi_dev);
     return ESP_OK;
 }
 
 int iot_xpt2046_is_pressed(void)
 {
-    if (g_dev.io_irq >= 0) {
-        return (gpio_get_level(g_dev.io_irq) ? 0 : 1);
+    /**
+     * @note There are two ways to determine weather the touch panel is pressed
+     * 1. Read the IRQ line of touch controller
+     * 2. Read value of z axis
+     * Only the second method is used here, so the IRQ line is not used.
+     */
+    uint16_t z;
+    esp_err_t ret = xpt2046_get_sample(XPT2046_TOUCH_CMD_Z1, &z);
+    TOUCH_CHECK(ret == ESP_OK, "Z sample failed", 0);
+    if (z > 80) { /** If z more than  80, it is considered as pressed */
+        return 1;
     }
 
-    return 1;
+    return 0;
 }
 
 esp_err_t iot_xpt2046_set_direction(touch_dir_t dir)
@@ -252,13 +218,18 @@ esp_err_t iot_xpt2046_sample(touch_info_t *info)
 {
     esp_err_t ret;
     uint16_t x, y;
-    ret = iot_xpt2046_get_rawdata(&x, &y);
-    TOUCH_CHECK(ret == ESP_OK, "Get raw data failed", ESP_FAIL);
-
     info->curx[0] = 0;
     info->cury[0] = 0;
     info->event = TOUCH_EVT_RELEASE;
     info->point_num = 0;
+
+    int state = iot_xpt2046_is_pressed();
+    if (0 == state) {
+        return ESP_OK;
+    }
+
+    ret = iot_xpt2046_get_rawdata(&x, &y);
+    TOUCH_CHECK(ret == ESP_OK, "Get raw data failed", ESP_FAIL);
 
     /**< If the data is not in the normal range, it is considered that it is not pressed */
     if ((x < TOUCH_SAMPLE_MIN) || (x > TOUCH_SAMPLE_MAX) ||
@@ -282,7 +253,7 @@ esp_err_t iot_xpt2046_sample(touch_info_t *info)
 
     info->curx[0] = x;
     info->cury[0] = y;
-    info->event = iot_xpt2046_is_pressed();
+    info->event = state;
     info->point_num = 1;
     return ESP_OK;
 }

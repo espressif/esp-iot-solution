@@ -33,6 +33,9 @@ static const char *TAG = "NS2016";
 
 #define NS2016_TOUCH_CMD_X   0xC0
 #define NS2016_TOUCH_CMD_Y   0xD0
+#define NS2016_TOUCH_CMD_Z1  0xE0
+#define NS2016_TOUCH_CMD_Z2  0xF0
+
 #define NS2016_SMP_SIZE  4
 
 #define TOUCH_SAMPLE_MAX 4000
@@ -43,18 +46,15 @@ typedef struct {
     uint16_t y;
 } position_t;
 
-
 typedef struct {
-    i2c_bus_handle_t bus;
+    i2c_bus_device_handle_t i2c_dev;
     int pin_num_int;
-    uint8_t dev_addr;
     touch_dir_t direction;
     uint16_t width;
     uint16_t height;
 } ns2016_dev_t;
 
 static ns2016_dev_t g_touch_dev;
-
 
 touch_driver_fun_t ns2016_driver_fun = {
     .init = iot_ns2016_init,
@@ -67,27 +67,11 @@ touch_driver_fun_t ns2016_driver_fun = {
 
 static uint16_t ns2016_readdata(ns2016_dev_t *dev, const uint8_t command)
 {
-    esp_err_t ret;
+    esp_err_t ret = ESP_OK;
     uint8_t rx_data[2];
 
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (dev->dev_addr << 1) | WRITE_BIT, ACK_CHECK_EN);
-    i2c_master_write_byte(cmd, command, ACK_CHECK_EN);
-    i2c_master_stop(cmd);
-    ret = iot_i2c_bus_cmd_begin(dev->bus, cmd, 500 / portTICK_RATE_MS);
-    i2c_cmd_link_delete(cmd);
-
-    cmd = i2c_cmd_link_create();
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (dev->dev_addr << 1) | READ_BIT, ACK_CHECK_EN);
-    i2c_master_read_byte(cmd, &rx_data[0], ACK_VAL);
-    i2c_master_read_byte(cmd, &rx_data[1], NACK_VAL);
-    i2c_master_stop(cmd);
-    ret |= iot_i2c_bus_cmd_begin(dev->bus, cmd, 500 / portTICK_RATE_MS);
-    i2c_cmd_link_delete(cmd);
-
+    ret |= i2c_bus_write_byte(dev->i2c_dev, NULL_I2C_MEM_ADDR, command);
+    ret |= i2c_bus_read_bytes(dev->i2c_dev, NULL_I2C_MEM_ADDR, 2, rx_data);
     TOUCH_CHECK(ret == ESP_OK, "read data failed", 0xffff);
     return (rx_data[0] << 8 | rx_data[1]) >> 4;
 }
@@ -114,19 +98,9 @@ esp_err_t iot_ns2016_init(const touch_panel_config_t *config)
         gpio_set_direction(config->pin_num_int, GPIO_MODE_INPUT);
     }
 
-    i2c_config_t conf = {
-        .mode = I2C_MODE_MASTER,
-        .sda_io_num = config->iface_i2c.pin_num_sda,
-        .sda_pullup_en = GPIO_PULLUP_ENABLE,
-        .scl_io_num = config->iface_i2c.pin_num_scl,
-        .scl_pullup_en = GPIO_PULLUP_ENABLE,
-        .master.clk_speed = config->iface_i2c.clk_freq,
-    };
-    i2c_bus_handle_t i2c_bus = NULL;
-    i2c_bus = i2c_bus_create(config->iface_i2c.i2c_port, &conf);
-    TOUCH_CHECK(NULL != i2c_bus, "i2c bus create failed", ESP_FAIL);
-    g_touch_dev.bus = i2c_bus;
-    g_touch_dev.dev_addr = config->iface_i2c.i2c_addr;
+    i2c_bus_device_handle_t i2c_dev = i2c_bus_device_create(config->iface_i2c.i2c_bus, config->iface_i2c.i2c_addr, config->iface_i2c.clk_freq);
+    TOUCH_CHECK(NULL != i2c_dev, "i2c bus device create failed", ESP_FAIL);
+    g_touch_dev.i2c_dev = i2c_dev;
     g_touch_dev.width = config->width;
     g_touch_dev.height = config->height;
 
@@ -137,28 +111,34 @@ esp_err_t iot_ns2016_init(const touch_panel_config_t *config)
     ns2016_get_sample(NS2016_TOUCH_CMD_X, &temp);
 
     ESP_LOGI(TAG, "Touch panel size width: %d, height: %d", g_touch_dev.width, g_touch_dev.height);
-    ESP_LOGI(TAG, "Initial successful | GPIO INT:%d | GPIO SDA:%d | GPIO SCL:%d | ADDR:0x%x | dir:%d",
-             config->pin_num_int, config->iface_i2c.pin_num_sda, config->iface_i2c.pin_num_scl, config->iface_i2c.i2c_addr, config->direction);
+    ESP_LOGI(TAG, "Initial successful | GPIO INT:%d | ADDR:0x%x | dir:%d",
+             config->pin_num_int, config->iface_i2c.i2c_addr, config->direction);
 
     return ESP_OK;
 }
 
-esp_err_t iot_ns2016_deinit(bool free_bus)
+esp_err_t iot_ns2016_deinit(void)
 {
-    if (0 != free_bus) {
-        i2c_bus_delete(&g_touch_dev.bus);
-    }
-
+    i2c_bus_device_delete(&g_touch_dev.i2c_dev);
     return ESP_OK;
 }
 
 int iot_ns2016_is_pressed(void)
 {
-    if (g_touch_dev.pin_num_int >= 0) {
-        return (gpio_get_level(g_touch_dev.pin_num_int) ? 0 : 1);
+    /**
+     * @note There are two ways to determine weather the touch panel is pressed
+     * 1. Read the IRQ line of touch controller
+     * 2. Read value of z axis
+     * Only the second method is used here, so the IRQ line is not used.
+     */
+    uint16_t z;
+    esp_err_t ret = ns2016_get_sample(NS2016_TOUCH_CMD_Z1, &z);
+    TOUCH_CHECK(ret == ESP_OK, "Z sample failed", 0);
+    if (z > 80) { /** If z more than  80, it is considered as pressed */
+        return 1;
     }
 
-    return 1;
+    return 0;
 }
 
 esp_err_t iot_ns2016_set_direction(touch_dir_t dir)
@@ -241,13 +221,19 @@ esp_err_t iot_ns2016_sample(touch_info_t *info)
 {
     esp_err_t ret;
     uint16_t x, y;
-    ret = iot_ns2016_get_rawdata(&x, &y);
-    TOUCH_CHECK(ret == ESP_OK, "Get raw data failed", ESP_FAIL);
 
     info->curx[0] = 0;
     info->cury[0] = 0;
     info->event = TOUCH_EVT_RELEASE;
     info->point_num = 0;
+
+    int state = iot_ns2016_is_pressed();
+    if (0 == state) {
+        return ESP_OK;
+    }
+
+    ret = iot_ns2016_get_rawdata(&x, &y);
+    TOUCH_CHECK(ret == ESP_OK, "Get raw data failed", ESP_FAIL);
 
     /**< If the data is not in the normal range, it is considered that it is not pressed */
     if ((x < TOUCH_SAMPLE_MIN) || (x > TOUCH_SAMPLE_MAX) ||
@@ -271,7 +257,7 @@ esp_err_t iot_ns2016_sample(touch_info_t *info)
 
     info->curx[0] = x;
     info->cury[0] = y;
-    info->event = iot_ns2016_is_pressed();
+    info->event = state;
     info->point_num = 1;
     return ESP_OK;
 }
