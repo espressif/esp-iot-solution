@@ -32,7 +32,7 @@ extern "C"
  * same i2c port, following parameter will override the previous one.
  *
  * @param port I2C port number
- * @param conf Pointer to I2C parameters
+ * @param conf Pointer to I2C bus configuration
  * @return i2c_bus_handle_t Return the I2C bus handle if created successfully, return NULL if failed.
  */
 i2c_bus_handle_t i2c_bus_create(i2c_port_t port, const i2c_config_t *conf);
@@ -81,7 +81,7 @@ uint8_t i2c_bus_get_created_device_num(i2c_bus_handle_t bus_handle);
  * 
  * @param bus_handle Point to the I2C bus handle
  * @param dev_addr i2c device address
- * @param clk_speed i2c clock frequency
+ * @param clk_speed device specified clock frequency the i2c_bus will switch to during each transfer. 0 if use current bus speed.
  * @return i2c_bus_device_handle_t return a device handle if created successfully, return NULL if failed.
  */
 i2c_bus_device_handle_t i2c_bus_device_create(i2c_bus_handle_t bus_handle, uint8_t dev_addr, uint32_t clk_speed);
