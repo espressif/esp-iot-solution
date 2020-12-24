@@ -64,6 +64,7 @@ IoT solution内包含多种传感器和外设的使用，支持多种网络协�
 
    简介 <introduction>
    入门指南 <gettingstarted>
+   基础组件 <basic/index>
    动态调频 <DFS_and_light_sleep/index>
    低功耗方案 <low_power_solution/index>
    传感器 <sensors/index>
