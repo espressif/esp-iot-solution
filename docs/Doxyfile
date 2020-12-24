@@ -25,6 +25,8 @@ INPUT = \
     ../../components/bus/include/i2c_bus.h \
     ../../components/bus/include/spi_bus.h \
     ../../components/bus/include/i2s_lcd_driver.h
+    ../../components/sensors/sensor_hub/include/sensor_type.h \
+    ../../components/sensors/sensor_hub/include/iot_sensor_hub.h \
 
 
 ## Get warnings for functions that have no documentation for their parameters or return value

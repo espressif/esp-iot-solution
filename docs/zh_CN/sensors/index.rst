@@ -5,7 +5,7 @@
 .. toctree::
     :maxdepth: 1
 
-    Sensor HUB <sensor_hub>
+    Sensor Hub <sensor_hub>
     温湿度 <humiture>
     惯性测量 <imu>
     光照 <light_sensor>

@@ -32,10 +32,12 @@
 #include "sensor_event.h"
 #include "sensor_type.h"
 
+/** @cond **/
 /* SENSORS IMU EVENTS BASE */
 ESP_EVENT_DECLARE_BASE(SENSOR_IMU_EVENTS);
 ESP_EVENT_DECLARE_BASE(SENSOR_HUMITURE_EVENTS);
 ESP_EVENT_DECLARE_BASE(SENSOR_LIGHTSENSOR_EVENTS);
+/** @endcond **/
 
 typedef void *sensor_handle_t;  /*!< sensor handle*/
 typedef void *sensor_event_handler_instance_t;  /*!< sensor event handler handle*/
@@ -46,6 +48,10 @@ typedef void (*sensor_event_handler_t)(void *event_handler_arg, sensor_event_bas
 extern const char *SENSOR_TYPE_STRING[];
 extern const char *SENSOR_MODE_STRING[];
 
+/**
+ * @brief sensor id
+ * 
+ */
 typedef enum {
 #ifdef CONFIG_SENSOR_INCLUDED_HUMITURE
     SENSOR_SHT3X_ID = (HUMITURE_ID << SENSOR_ID_OFFSET) | SHT3X_ID, /*!< sht3x id*/
@@ -62,6 +68,10 @@ typedef enum {
 #endif
 } sensor_id_t;
 
+/**
+ * @brief sensor information type
+ * 
+ */
 typedef struct {
     const char* name;  /*!< sensor name*/
     const char* desc;  /*!< sensor descriptive message*/
@@ -69,6 +79,10 @@ typedef struct {
     const uint8_t *addrs;  /*!< sensor address list*/
 } sensor_info_t;
 
+/**
+ * @brief sensor initialization parameter
+ * 
+ */
 typedef struct {
     bus_handle_t bus;                           /*!< i2c/spi bus handle*/
     sensor_mode_t mode;                         /*!< set acquire mode detiled in sensor_mode_t*/
