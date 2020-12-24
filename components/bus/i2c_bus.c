@@ -85,6 +85,8 @@ inline static bool i2c_config_compare(i2c_port_t port, const i2c_config_t *conf)
 i2c_bus_handle_t i2c_bus_create(i2c_port_t port, const i2c_config_t *conf)
 {
     I2C_BUS_CHECK(port < I2C_NUM_MAX, "I2C port error", NULL);
+    I2C_BUS_CHECK(conf != NULL, "pointer = NULL error", NULL);
+    I2C_BUS_CHECK(conf->mode == I2C_MODE_MASTER, "i2c_bus only supports master mode", NULL);
 
     if (s_i2c_bus[port].is_init) {
         /**if i2c_bus has been inited and configs not changed, return the handle directly**/
