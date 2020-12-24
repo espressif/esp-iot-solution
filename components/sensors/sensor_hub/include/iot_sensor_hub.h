@@ -37,37 +37,36 @@ ESP_EVENT_DECLARE_BASE(SENSOR_IMU_EVENTS);
 ESP_EVENT_DECLARE_BASE(SENSOR_HUMITURE_EVENTS);
 ESP_EVENT_DECLARE_BASE(SENSOR_LIGHTSENSOR_EVENTS);
 
-typedef void *sensor_handle_t;
-typedef void *sensor_event_handler_instance_t;
-typedef const char *sensor_event_base_t; /**< unique pointer to a subsystem that exposes events */
+typedef void *sensor_handle_t;  /*!< sensor handle*/
+typedef void *sensor_event_handler_instance_t;  /*!< sensor event handler handle*/
+typedef const char *sensor_event_base_t; /*!< unique pointer to a subsystem that exposes events */
 
-/**< function called when an event is posted to the queue */
-typedef void (*sensor_event_handler_t)(void *event_handler_arg, sensor_event_base_t event_base, int32_t event_id, void *event_data);
+typedef void (*sensor_event_handler_t)(void *event_handler_arg, sensor_event_base_t event_base, int32_t event_id, void *event_data); /*!< function called when an event is posted to the queue */
 
 extern const char *SENSOR_TYPE_STRING[];
 extern const char *SENSOR_MODE_STRING[];
 
 typedef enum {
 #ifdef CONFIG_SENSOR_INCLUDED_HUMITURE
-    SENSOR_SHT3X_ID = (HUMITURE_ID << SENSOR_ID_OFFSET) | SHT3X_ID,
-    SENSOR_HTS221_ID = (HUMITURE_ID << SENSOR_ID_OFFSET) | HTS221_ID,
+    SENSOR_SHT3X_ID = (HUMITURE_ID << SENSOR_ID_OFFSET) | SHT3X_ID, /*!< sht3x id*/
+    SENSOR_HTS221_ID = (HUMITURE_ID << SENSOR_ID_OFFSET) | HTS221_ID, /*!< hts221 id*/
 #endif
 #ifdef CONFIG_SENSOR_INCLUDED_IMU
-    SENSOR_MPU6050_ID = ((IMU_ID << SENSOR_ID_OFFSET) | MPU6050_ID),
-    SENSOR_LIS2DH12_ID = ((IMU_ID << SENSOR_ID_OFFSET) | LIS2DH12_ID),
+    SENSOR_MPU6050_ID = ((IMU_ID << SENSOR_ID_OFFSET) | MPU6050_ID), /*!< imu sensor mpu6050 id*/
+    SENSOR_LIS2DH12_ID = ((IMU_ID << SENSOR_ID_OFFSET) | LIS2DH12_ID), /*!< imu sensor lis2dh12 id*/
 #endif
 #ifdef CONFIG_SENSOR_INCLUDED_LIGHT
-    SENSOR_BH1750_ID = (LIGHT_SENSOR_ID << SENSOR_ID_OFFSET) | BH1750_ID,
-    SENSOR_VEML6040_ID = (LIGHT_SENSOR_ID << SENSOR_ID_OFFSET) | VEML6040_ID,
-    SENSOR_VEML6075_ID = (LIGHT_SENSOR_ID << SENSOR_ID_OFFSET) | VEML6075_ID,
+    SENSOR_BH1750_ID = (LIGHT_SENSOR_ID << SENSOR_ID_OFFSET) | BH1750_ID, /*!< light sensor bh1750 id*/
+    SENSOR_VEML6040_ID = (LIGHT_SENSOR_ID << SENSOR_ID_OFFSET) | VEML6040_ID, /*!< light color sensor veml6040 id*/
+    SENSOR_VEML6075_ID = (LIGHT_SENSOR_ID << SENSOR_ID_OFFSET) | VEML6075_ID, /*!< light uv sensor veml6075 id*/
 #endif
 } sensor_id_t;
 
 typedef struct {
-    const char* name;
-    const char* desc;
-    sensor_id_t sensor_id;
-    const uint8_t *addrs;
+    const char* name;  /*!< sensor name*/
+    const char* desc;  /*!< sensor descriptive message*/
+    sensor_id_t sensor_id;  /*!< sensor id*/
+    const uint8_t *addrs;  /*!< sensor address list*/
 } sensor_info_t;
 
 typedef struct {
