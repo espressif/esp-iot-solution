@@ -117,7 +117,7 @@ static void i2c_master_write_test(void)
     };
     i2c_bus_handle_t i2c0_bus = i2c_bus_create(I2C_MASTER_NUM, &conf);
     TEST_ASSERT(i2c0_bus != NULL);
-    i2c_bus_device_handle_t i2c_device1 = i2c_bus_device_create(i2c0_bus, ESP_SLAVE_ADDR, I2C_MASTER_FREQ_HZ);
+    i2c_bus_device_handle_t i2c_device1 = i2c_bus_device_create(i2c0_bus, ESP_SLAVE_ADDR, 0);
     TEST_ASSERT(i2c_device1 != NULL);
 
     unity_wait_for_signal("i2c slave init finish");
@@ -198,7 +198,7 @@ static void master_read_slave_test(void)
     };
     i2c_bus_handle_t i2c0_bus = i2c_bus_create(I2C_MASTER_NUM, &conf);
     TEST_ASSERT(i2c0_bus != NULL);
-    i2c_bus_device_handle_t i2c_device1 = i2c_bus_device_create(i2c0_bus, ESP_SLAVE_ADDR, I2C_MASTER_FREQ_HZ);
+    i2c_bus_device_handle_t i2c_device1 = i2c_bus_device_create(i2c0_bus, ESP_SLAVE_ADDR, 0);
     TEST_ASSERT(i2c_device1 != NULL);
 
     unity_wait_for_signal("i2c slave init finish");

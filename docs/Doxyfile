@@ -21,7 +21,9 @@ PROJECT_NAME = "ESP IoT Solution Guide"
 ## and used to include in API reference documentation
 
 INPUT = \
-    ../../components/gui/lvgl_gui/include/iot_lvgl.h
+    ../../components/gui/lvgl_gui/include/iot_lvgl.h \
+    ../../components/bus/include/i2c_bus.h \
+    ../../components/bus/include/spi_bus.h \
 
 
 ## Get warnings for functions that have no documentation for their parameters or return value

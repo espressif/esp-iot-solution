@@ -17,20 +17,27 @@
 #include "driver/spi_master.h"
 #include "driver/gpio.h"
 
-#define NULL_SPI_CS_PIN -1
-typedef void *spi_bus_handle_t;
-typedef void *spi_bus_device_handle_t;
+#define NULL_SPI_CS_PIN -1 /*!< set cs_io_num to NULL_SPI_CS_PIN if spi device has no CP pin */
+typedef void *spi_bus_handle_t; /*!< spi bus handle */
+typedef void *spi_bus_device_handle_t; /*!< spi device handle */
 
+/**
+ * spi bus initialization parameters.
+ * */
 typedef struct {
-    gpio_num_t miso_io_num; /*!GPIO pin for Master In Slave Out (=spi_q) signal, or -1 if not used.*/
-    gpio_num_t mosi_io_num; /*!GPIO pin for Master Out Slave In (=spi_d) signal, or -1 if not used.*/
-    gpio_num_t sclk_io_num; /*!GPIO pin for Spi CLocK signal, or -1 if not used*/
+    gpio_num_t miso_io_num; /*!< GPIO pin for Master In Slave Out (=spi_q) signal, or -1 if not used.*/
+    gpio_num_t mosi_io_num; /*!< GPIO pin for Master Out Slave In (=spi_d) signal, or -1 if not used.*/
+    gpio_num_t sclk_io_num; /*!< GPIO pin for Spi CLocK signal, or -1 if not used*/
+    int max_transfer_sz; /*!< <Maximum length of bytes available to send, if < 4096, 4096 will be set*/
 }spi_config_t;
 
+/**
+ * spi device initialization parameters.
+ * */
 typedef struct {
-    gpio_num_t cs_io_num; /*!GPIO pin to select this device (CS), or -1 if not used*/
-    uint8_t mode; /*!modes (0,1,2,3) that correspond to the four possible clocking configurations*/
-    int clock_speed_hz; /*!spi clock speed, divisors of 80MHz, in Hz. See ``SPI_MASTER_FREQ_*`*/
+    gpio_num_t cs_io_num; /*!< GPIO pin to select this device (CS), or -1 if not used*/
+    uint8_t mode; /*!< modes (0,1,2,3) that correspond to the four possible clocking configurations*/
+    int clock_speed_hz; /*!< spi clock speed, divisors of 80MHz, in Hz. See ``SPI_MASTER_FREQ_*`*/
 }spi_device_config_t;
 
 #ifdef __cplusplus

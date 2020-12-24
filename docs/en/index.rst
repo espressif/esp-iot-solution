@@ -64,6 +64,7 @@ IoT solution project integrate different kinds of cloud platforms Compatible wit
 
    Introduction <introduction>
    Get Started <gettingstarted>
+   Basic Component <basic/index>
    DFS & Light Sleep <DFS_and_light_sleep/index>
    Low Power <low_power_solution/index>
    Sensors <sensors/index>

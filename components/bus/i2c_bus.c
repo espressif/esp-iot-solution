@@ -85,6 +85,8 @@ inline static bool i2c_config_compare(i2c_port_t port, const i2c_config_t *conf)
 i2c_bus_handle_t i2c_bus_create(i2c_port_t port, const i2c_config_t *conf)
 {
     I2C_BUS_CHECK(port < I2C_NUM_MAX, "I2C port error", NULL);
+    I2C_BUS_CHECK(conf != NULL, "pointer = NULL error", NULL);
+    I2C_BUS_CHECK(conf->mode == I2C_MODE_MASTER, "i2c_bus only supports master mode", NULL);
 
     if (s_i2c_bus[port].is_init) {
         /**if i2c_bus has been inited and configs not changed, return the handle directly**/
@@ -180,7 +182,12 @@ i2c_bus_device_handle_t i2c_bus_device_create(i2c_bus_handle_t bus_handle, uint8
     I2C_BUS_MUTEX_TAKE_MAX_DELAY(i2c_bus->mutex, NULL);
     i2c_device->dev_addr = dev_addr;
     i2c_device->conf = i2c_bus->conf_active;
-    i2c_device->conf.master.clk_speed = clk_speed;
+
+    /*if clk_speed == 0, current active clock speed will be used, else set a specified value*/
+    if (clk_speed != 0) {
+        i2c_device->conf.master.clk_speed = clk_speed;
+    }
+
     i2c_device->i2c_bus = i2c_bus;
     i2c_bus->ref_counter++;
     I2C_BUS_MUTEX_GIVE(i2c_bus->mutex, NULL);
@@ -293,6 +300,7 @@ inline static esp_err_t i2c_master_cmd_begin_with_conf(i2c_port_t i2c_num, i2c_c
 {
     esp_err_t ret;
 #ifdef CONFIG_I2C_BUS_DYNAMIC_CONFIG
+    /*if configs changed, i2c driver will reinit with new configuration*/
     if (conf != NULL && false == i2c_config_compare(i2c_num, conf)) {
         ret = i2c_driver_reinit(i2c_num, conf);
         I2C_BUS_CHECK(ret == ESP_OK, "reinit error", ret);
