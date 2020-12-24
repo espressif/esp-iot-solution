@@ -18,10 +18,10 @@ def setup(app):
     rev = get_github_rev()
 
     # links to files or folders on the GitHub
-    baseurl = 'https://github.com/espressif/esp-idf'
-    app.add_role('idf', autolink('{}/tree/{}/%s'.format(baseurl, rev)))
-    app.add_role('idf_file', autolink('{}/blob/{}/%s'.format(baseurl, rev)))
-    app.add_role('idf_raw', autolink('{}/raw/{}/%s'.format(baseurl, rev)))
+    baseurl = 'https://github.com/espressif/esp-iot-solution'
+    app.add_role('iot-solution', autolink('{}/tree/{}/%s'.format(baseurl, rev)))
+    app.add_role('iot-solution_file', autolink('{}/blob/{}/%s'.format(baseurl, rev)))
+    app.add_role('iot-solution_raw', autolink('{}/raw/{}/%s'.format(baseurl, rev)))
     app.add_role('component', autolink('{}/tree/{}/components/%s'.format(baseurl, rev)))
     app.add_role('component_file', autolink('{}/blob/{}/components/%s'.format(baseurl, rev)))
     app.add_role('component_raw', autolink('{}/raw/{}/components/%s'.format(baseurl, rev)))
