@@ -1,9 +1,9 @@
 入门指南
 =================
 
+:link_to_translation:`en:[English]`
 
-
-Development Board Overviews
+开发板简介
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   .. toctree::
     :maxdepth: 1
@@ -14,36 +14,36 @@ Development Board Overviews
     ESP-MeshKit <../hw-reference/ESP32-MeshKit-Sense_guide>
 
 
-Setting up Development Environment
+配置开发环境
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-1. `Install ESP-IDF v4.0.1 Step By Step <https://docs.espressif.com/projects/esp-idf/en/v4.0.1/get-started/index.html#installation-step-by-step>`_
+1. `安装IDF v4.0.1 <https://docs.espressif.com/projects/esp-idf/en/v4.0.1/get-started/index.html#installation-step-by-step>`_
 
-.. note:: Current branch based on ESP-IDF `v4.0.1`
+.. note:: 目前使用的IDF版本为 `v4.0.1`
 
-2. Get ESP-IoT-Solution
+2. 获取 ESP-IoT-Solution
 
 .. code:: shell
 
     git clone --recursive https://github.com/espressif/esp-iot-solution
 
-3. Initialize the Submodules
+3. 初始化子模块
 
 .. code:: shell
 
     git submodule update --init --recursive
 
-4. Set up the Environment Variables
+4. 设置环境变量
 
 .. code:: shell
 
     export IOT_SOLUTION_PATH=~/esp/esp-iot-solution
 
-Creating Your Project (CMake)
+创建工程 (CMake)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-* We can regard IoT solution project as a platform that contains different device drivers and features
-* `Add-on project`: If you want to use those drivers and build your project base on the framework, you need to include the IoT components into your project's `CMakeLists.txt`.
+* IoT solution 中的工程可以被看做是包含各种设备和驱动的综合平台。
+* `Add-on project`: 如果你想利用这些驱动的固件创建自己的工程文件，你需要将IoT组件加入到你的工程文件目录下的 `CMakeLists.txt` 中。
 
 .. code:: 
 
@@ -55,18 +55,18 @@ Creating Your Project (CMake)
     project(empty-project)
 
 
-* `Stand-alone component`: if you just want to pick one of the component and put it into your existing project, you just need to copy the single component to your project components directory. But you can also append the component list in your project's `CMakeLists.txt` like this:
+* `Stand-alone component`: 如果你想要将某个组件放入已有的工程文件中，你只需要单独将某个组件复制到工程目录下存放组件的文件夹中。你也可以通过将组件列表链接到你的工程中的 `CMakeLists.txt` 来实现:
 
 .. code:: 
 
     set(EXTRA_COMPONENT_DIRS "${EXTRA_COMPONENT_DIRS} ${IOT_SOLUTION_PATH}/components/{component_you_choose}")
 
 
-Creating Your Project (Legacy GNU Make)
+创建工程 (Legacy GNU Make)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-* We can regard IoT solution project as a platform that contains different device drivers and features
-* `Add-on project`: If you want to use those drivers and build your project base on the framework, you need to include the IoT components into your project's `Makefile`.
+* IoT solution 中的工程可以被看做是包含各种设备和驱动的综合平台。
+* `Add-on project`: 如果你想利用这些驱动的固件创建自己的工程文件，你需要将IoT组件加入到你的工程文件目录下的 `Makefile` 中。
 
 .. code:: 
 
@@ -74,7 +74,7 @@ Creating Your Project (Legacy GNU Make)
     include $(IDF_PATH)/make/project.mk
 
 
-* `Stand-alone component`: if you just want to pick one of the component and put it into your existing project, you just need to copy the single component to your project components directory. But you can also append the component list in your project Makefile like this:
+* `Stand-alone component`: 如果你想要将某个组件放入已有的工程文件中，你只需要单独将某个组件复制到工程目录下存放组件的文件夹中。你也可以通过将组件列表链接到你的工程中的 `Makefile` 来实现:
 
 .. code:: 
 

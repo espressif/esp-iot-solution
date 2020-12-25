@@ -1,11 +1,13 @@
 
-hmi
+HMI
 *************************
+
+:link_to_translation:`en:[English]`
 
 .. toctree::
     :maxdepth: 1
 
-    hmi workflow<hmi_workflow>
-    little vgl<littlevgl_guide>
-    ugfx<ugfx_guide>
+    HMI Workflow<hmi_workflow>
+    LittlevGL<littlevgl_guide>
+    uGFX<ugfx_guide>
 

@@ -1,9 +1,7 @@
-`[EN] <./ESP32-MeshKit-Sense_guide_en.md>`__
-
 ESP32-MeshKit-Sense 硬件设计指南
 ================================
 
-
+:link_to_translation:`en:[English]`
 
 1. 产品概述
 --------------------------------

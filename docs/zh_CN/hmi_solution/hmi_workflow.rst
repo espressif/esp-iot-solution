@@ -1,7 +1,7 @@
-`[EN] <./hmi_workflow_en.md>`__
-
 HMI WorkFlow
 ============
+
+:link_to_translation:`en:[English]`
 
 概述
 ----

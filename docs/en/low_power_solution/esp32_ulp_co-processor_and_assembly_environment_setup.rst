@@ -1,6 +1,8 @@
 Introduction to the ESP32 ULP Co-processor and Assembly Environment Setup
 =========================================================================
 
+:link_to_translation:`zh_CN:[中文]`
+
 This document introduces the ESP32 ULP co-processor and provides a
 walkthrough for setting up the assesmbly environment.
 

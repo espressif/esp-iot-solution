@@ -1,8 +1,7 @@
-`[EN] <./ESP32_LCDKit_guide_en.md>`__
-
 ESP32-LCDKit 开发板介绍
 =======================
 
+:link_to_translation:`en:[English]`
 
 1. 概述
 -------------------------

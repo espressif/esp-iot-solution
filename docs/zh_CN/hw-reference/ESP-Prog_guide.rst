@@ -1,8 +1,7 @@
-`[EN] <./ESP-Prog_guide_en.md>`__
-
 ESP-Prog 下载与调试板介绍
 =========================
 
+:link_to_translation:`en:[English]`
 
 
 1. 概述

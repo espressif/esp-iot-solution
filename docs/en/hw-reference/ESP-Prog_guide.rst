@@ -1,9 +1,7 @@
-`[中文] <./ESP-Prog_guide_cn.md>`__
-
 Introduction to the ESP-Prog Board
 ==================================
 
-
+:link_to_translation:`zh_CN:[中文]`
 
 
 1. Overview

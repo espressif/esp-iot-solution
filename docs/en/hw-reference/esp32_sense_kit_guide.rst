@@ -1,9 +1,7 @@
-`[中文] <./esp32_sense_kit_guide_cn.md>`__
-
 Guide for ESP32-Sense Development Kit
 =====================================
 
-
+:link_to_translation:`zh_CN:[中文]`
 
 1. Overview
 -----------

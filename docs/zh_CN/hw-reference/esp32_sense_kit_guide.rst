@@ -1,7 +1,7 @@
-`[EN] <./esp32_sense_kit_guide_en.md>`__
-
 ESP32 触摸功能开发套件
 ======================
+
+:link_to_translation:`en:[English]`
 
 1. 概述
 -------

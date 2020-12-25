@@ -1,6 +1,8 @@
 ESP32 深度睡眠模式功耗测试
 =============================
 
+:link_to_translation:`en:[English]`
+
 ESP32 拥有 18 个 RTC IO 和 10 个 TouchPad, 每一个 RTC IO 和 TouchPad 经过配置都可以将芯片从 deep_sleep 模式中唤醒, 从而可以实现低功耗方案。
 
 概述

@@ -2,6 +2,8 @@
 ESP32 低功耗方案概述
 =========================
 
+:link_to_translation:`en:[English]`
+
 * ESP32 在内置 Deep-sleep 低功耗模式、RTC 外设和 ULP 协处理器的支持下，可以满足多种应用场景下的低功耗需求。当 ESP32 进入 Deep-sleep 模式时，所有由 APB_CLK 驱动的外设、CPU 和 RAM 将掉电；RTC_CLK 继续工作；RTC 控制器、RTC 外设、ULP 协处理器、RTC 快速内存和 RTC 慢速内存可以不掉电，具体取决于 App 中的唤醒源设置。
 * 资源包括：
     * RTC 外设 – 包括片上温度传感器、ADC、RTC GPIO 和 touchpad；
