@@ -3,7 +3,7 @@ Sensor Hub
 
 
 API Reference
---------
+-------------
 
 .. include:: /_build/inc/sensor_type.inc
 
