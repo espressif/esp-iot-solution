@@ -19,14 +19,17 @@
 #include "esp_err.h"
 #include "sensor_type.h"
 
-typedef void *bus_handle_t;
-typedef void *sensor_light_handle_t;
+typedef void *sensor_light_handle_t; /*!< light sensor handle*/
 
+/**
+ * @brief light sensor id, used for light_sensor_create
+ * 
+ */
 typedef enum {
-    BH1750_ID = 0x01,
-    VEML6040_ID,
-    VEML6075_ID,
-    LIGHT_MAX_ID,
+    BH1750_ID = 0x01, /*!< BH1750 light sensor id*/
+    VEML6040_ID, /*!< VEML6040 light sensor id*/
+    VEML6075_ID, /*!< VEML6075 light sensor id*/
+    LIGHT_MAX_ID, /*!< max light sensor id*/
 } light_sensor_id_t;
 
 #ifdef __cplusplus
@@ -72,6 +75,7 @@ esp_err_t light_sensor_test(sensor_light_handle_t sensor);
  * @return esp_err_t
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
+ *     - ESP_ERR_NOT_SUPPORTED Function not supported on this sensor
 */
 esp_err_t light_sensor_acquire_light(sensor_light_handle_t sensor, float *lux);
 
@@ -84,6 +88,7 @@ esp_err_t light_sensor_acquire_light(sensor_light_handle_t sensor, float *lux);
  * @return esp_err_t
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
+ *     - ESP_ERR_NOT_SUPPORTED Function not supported on this sensor
 */
 esp_err_t light_sensor_acquire_rgbw(sensor_light_handle_t sensor, rgbw_t *rgbw);
 
@@ -96,6 +101,7 @@ esp_err_t light_sensor_acquire_rgbw(sensor_light_handle_t sensor, rgbw_t *rgbw);
  * @return esp_err_t
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
+ *     - ESP_ERR_NOT_SUPPORTED Function not supported on this sensor
 */
 esp_err_t light_sensor_acquire_uv(sensor_light_handle_t sensor, uv_t *uv);
 
@@ -106,6 +112,7 @@ esp_err_t light_sensor_acquire_uv(sensor_light_handle_t sensor, uv_t *uv);
  * @return esp_err_t
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
+ *     - ESP_ERR_NOT_SUPPORTED Function not supported on this sensor
 */
 esp_err_t light_sensor_sleep(sensor_light_handle_t sensor);
 
@@ -116,6 +123,7 @@ esp_err_t light_sensor_sleep(sensor_light_handle_t sensor);
  * @return esp_err_t
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
+ *     - ESP_ERR_NOT_SUPPORTED Function not supported on this sensor
 */
 esp_err_t light_sensor_wakeup(sensor_light_handle_t sensor);
 
@@ -138,6 +146,7 @@ esp_err_t light_sensor_acquire(sensor_light_handle_t sensor, sensor_data_group_t
  * @param args control commands args
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
+ *     - ESP_ERR_NOT_SUPPORTED Function not supported on this sensor
  */
 esp_err_t light_sensor_control(sensor_light_handle_t sensor, sensor_command_t cmd, void *args);
 

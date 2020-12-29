@@ -49,22 +49,22 @@ extern const char *SENSOR_TYPE_STRING[];
 extern const char *SENSOR_MODE_STRING[];
 
 /**
- * @brief sensor id
+ * @brief sensor id, used for iot_sensor_create
  * 
  */
 typedef enum {
 #ifdef CONFIG_SENSOR_INCLUDED_HUMITURE
-    SENSOR_SHT3X_ID = (HUMITURE_ID << SENSOR_ID_OFFSET) | SHT3X_ID, /*!< sht3x id*/
-    SENSOR_HTS221_ID = (HUMITURE_ID << SENSOR_ID_OFFSET) | HTS221_ID, /*!< hts221 id*/
+    SENSOR_SHT3X_ID = (HUMITURE_ID << SENSOR_ID_OFFSET) | SHT3X_ID, /*!< sht3x sensor id*/
+    SENSOR_HTS221_ID = (HUMITURE_ID << SENSOR_ID_OFFSET) | HTS221_ID, /*!< hts221 sensor id*/
 #endif
 #ifdef CONFIG_SENSOR_INCLUDED_IMU
-    SENSOR_MPU6050_ID = ((IMU_ID << SENSOR_ID_OFFSET) | MPU6050_ID), /*!< imu sensor mpu6050 id*/
-    SENSOR_LIS2DH12_ID = ((IMU_ID << SENSOR_ID_OFFSET) | LIS2DH12_ID), /*!< imu sensor lis2dh12 id*/
+    SENSOR_MPU6050_ID = ((IMU_ID << SENSOR_ID_OFFSET) | MPU6050_ID), /*!< mpu6050 sensor id*/
+    SENSOR_LIS2DH12_ID = ((IMU_ID << SENSOR_ID_OFFSET) | LIS2DH12_ID), /*!< lis2dh12 sensor id*/
 #endif
 #ifdef CONFIG_SENSOR_INCLUDED_LIGHT
-    SENSOR_BH1750_ID = (LIGHT_SENSOR_ID << SENSOR_ID_OFFSET) | BH1750_ID, /*!< light sensor bh1750 id*/
-    SENSOR_VEML6040_ID = (LIGHT_SENSOR_ID << SENSOR_ID_OFFSET) | VEML6040_ID, /*!< light color sensor veml6040 id*/
-    SENSOR_VEML6075_ID = (LIGHT_SENSOR_ID << SENSOR_ID_OFFSET) | VEML6075_ID, /*!< light uv sensor veml6075 id*/
+    SENSOR_BH1750_ID = (LIGHT_SENSOR_ID << SENSOR_ID_OFFSET) | BH1750_ID, /*!< bh1750 sensor id*/
+    SENSOR_VEML6040_ID = (LIGHT_SENSOR_ID << SENSOR_ID_OFFSET) | VEML6040_ID, /*!< veml6040 sensor id*/
+    SENSOR_VEML6075_ID = (LIGHT_SENSOR_ID << SENSOR_ID_OFFSET) | VEML6075_ID, /*!< veml6075 sensor id*/
 #endif
 } sensor_id_t;
 

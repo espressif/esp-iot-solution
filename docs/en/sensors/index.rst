@@ -10,4 +10,4 @@ Sensors
     IMU sensor <imu>
     Light Sensor <light_sensor>
     Pressure sensor <pressure>
-
+    Gesture sensor <gesture>

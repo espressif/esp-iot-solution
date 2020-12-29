@@ -18,13 +18,16 @@
 #include "i2c_bus.h"
 #include "sensor_type.h"
 
-typedef void *bus_handle_t;
-typedef void *sensor_humiture_handle_t;
+typedef void *sensor_humiture_handle_t; /*!< humiture sensor handle*/
 
+/**
+ * @brief humiture sensor id, used for humiture_create
+ * 
+ */
 typedef enum {
-    SHT3X_ID = 0x01,
-    HTS221_ID,
-    HUMITURE_MAX_ID,
+    SHT3X_ID = 0x01, /*!< sht3x humiture sensor id*/
+    HTS221_ID, /*!< hts221 humiture sensor id*/
+    HUMITURE_MAX_ID, /*!< max humiture sensor id*/
 } humiture_id_t;
 
 #ifdef __cplusplus
@@ -70,6 +73,7 @@ esp_err_t humiture_test(sensor_humiture_handle_t sensor);
  * @return esp_err_t
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
+ *     - ESP_ERR_NOT_SUPPORTED Function not supported on this sensor
 */
 esp_err_t humiture_acquire_humidity(sensor_humiture_handle_t sensor, float *humidity);
 
@@ -81,6 +85,7 @@ esp_err_t humiture_acquire_humidity(sensor_humiture_handle_t sensor, float *humi
  * @return esp_err_t
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
+ *     - ESP_ERR_NOT_SUPPORTED Function not supported on this sensor
 */
 esp_err_t humiture_acquire_temperature(sensor_humiture_handle_t sensor, float *sensor_data);
 
@@ -91,6 +96,7 @@ esp_err_t humiture_acquire_temperature(sensor_humiture_handle_t sensor, float *s
  * @return esp_err_t
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
+ *     - ESP_ERR_NOT_SUPPORTED Function not supported on this sensor
 */
 esp_err_t humiture_sleep(sensor_humiture_handle_t sensor);
 
@@ -101,6 +107,7 @@ esp_err_t humiture_sleep(sensor_humiture_handle_t sensor);
  * @return esp_err_t
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
+ *     - ESP_ERR_NOT_SUPPORTED Function not supported on this sensor
 */
 esp_err_t humiture_wakeup(sensor_humiture_handle_t sensor);
 
@@ -123,6 +130,7 @@ esp_err_t humiture_acquire(sensor_humiture_handle_t sensor, sensor_data_group_t 
  * @param args control commands args
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
+ *     - ESP_ERR_NOT_SUPPORTED Function not supported on this sensor
  */
 esp_err_t humiture_control(sensor_humiture_handle_t sensor, sensor_command_t cmd, void *args);
 

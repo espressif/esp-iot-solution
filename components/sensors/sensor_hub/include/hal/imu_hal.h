@@ -19,13 +19,16 @@
 #include "esp_err.h"
 #include "sensor_type.h"
 
-typedef void *bus_handle_t;
-typedef void *sensor_imu_handle_t;
+typedef void *sensor_imu_handle_t; /*!< imu sensor handle*/
 
+/**
+ * @brief imu sensor id, used for imu_create
+ * 
+ */
 typedef enum {
-    MPU6050_ID = 0x01,
-    LIS2DH12_ID,
-    IMU_MAX_ID,
+    MPU6050_ID = 0x01, /*!< MPU6050 imu sensor id*/
+    LIS2DH12_ID, /*!< LIS2DH12 imu sensor id*/
+    IMU_MAX_ID, /*!< max imu sensor id*/
 } imu_id_t;
 
 #ifdef __cplusplus
@@ -70,6 +73,7 @@ esp_err_t imu_test(sensor_imu_handle_t sensor);
  * @return esp_err_t 
  *     - ESP_OK Success
  *     - ESP_FAIL Fail 
+ *     - ESP_ERR_NOT_SUPPORTED Function not supported on this sensor
 */
 esp_err_t imu_acquire_acce(sensor_imu_handle_t sensor, axis3_t* acce);
 
@@ -81,6 +85,7 @@ esp_err_t imu_acquire_acce(sensor_imu_handle_t sensor, axis3_t* acce);
  * @return esp_err_t 
  *     - ESP_OK Success
  *     - ESP_FAIL Fail 
+ *     - ESP_ERR_NOT_SUPPORTED Function not supported on this sensor
 */
 esp_err_t imu_acquire_gyro(sensor_imu_handle_t sensor, axis3_t* gyro);
 
@@ -91,6 +96,7 @@ esp_err_t imu_acquire_gyro(sensor_imu_handle_t sensor, axis3_t* gyro);
  * @return esp_err_t
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
+ *     - ESP_ERR_NOT_SUPPORTED Function not supported on this sensor
 */
 esp_err_t imu_sleep(sensor_imu_handle_t sensor);
 
@@ -101,6 +107,7 @@ esp_err_t imu_sleep(sensor_imu_handle_t sensor);
  * @return esp_err_t
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
+ *     - ESP_ERR_NOT_SUPPORTED Function not supported on this sensor
 */
 esp_err_t imu_wakeup(sensor_imu_handle_t sensor);
 
@@ -123,6 +130,7 @@ esp_err_t imu_acquire(sensor_imu_handle_t sensor, sensor_data_group_t *data_grou
  * @param args control commands args
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
+ *     - ESP_ERR_NOT_SUPPORTED Function not supported on this sensor
  */
 esp_err_t imu_control(sensor_imu_handle_t sensor, sensor_command_t cmd, void *args);
 

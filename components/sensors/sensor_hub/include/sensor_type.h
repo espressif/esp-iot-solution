@@ -61,11 +61,11 @@ typedef struct {
  * 
  */
 typedef enum {
-    NULL_ID,
+    NULL_ID, /*!< NULL */
     HUMITURE_ID, /*!< humidity or temperature sensor */
     IMU_ID, /*!< gyro or acc sensor */
     LIGHT_SENSOR_ID, /*!< light illumination or uv or color sensor */
-    SENSOR_TYPE_MAX,
+    SENSOR_TYPE_MAX, /*!< max sensor type */
 } sensor_type_t;
 
 /**
@@ -78,7 +78,7 @@ typedef enum {
     COMMAND_SET_ODR, /*!< set output rate */
     COMMAND_SET_POWER, /*!< set power mode */
     COMMAND_SELF_TEST, /*!< sensor self test */
-    COMMAND_MAX
+    COMMAND_MAX /*!< max sensor command */
 } sensor_command_t;
 
 /**
@@ -88,7 +88,7 @@ typedef enum {
 typedef enum {
     POWER_MODE_WAKEUP, /*!< wakeup from sleep */
     POWER_MODE_SLEEP, /*!< set to sleep */
-    POWER_MAX
+    POWER_MAX /*!< max sensor power mode */
 } sensor_power_mode_t;
 
 /**
@@ -99,7 +99,7 @@ typedef enum {
     MODE_DEFAULT, /*!< default work mode */
     MODE_POLLING, /*!< polling acquire with a interval time */
     MODE_INTERRUPT, /*!< interrupt mode, acquire data when interrupt comes */
-    MODE_MAX,
+    MODE_MAX, /*!< max sensor mode */
 } sensor_mode_t;
 
 /**
@@ -174,7 +174,7 @@ typedef struct {
  */
 typedef struct {
     uint8_t number; /*!< effective data number */
-    sensor_data_t sensor_data[SENSOR_DATA_GROUP_MAX_NUM]; /*!< data buffer number */
+    sensor_data_t sensor_data[SENSOR_DATA_GROUP_MAX_NUM]; /*!< data buffer */
 } sensor_data_group_t;
 
 /** @cond **/

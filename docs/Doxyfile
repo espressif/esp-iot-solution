@@ -27,6 +27,9 @@ INPUT = \
     ../../components/bus/include/i2s_lcd_driver.h
     ../../components/sensors/sensor_hub/include/sensor_type.h \
     ../../components/sensors/sensor_hub/include/iot_sensor_hub.h \
+    ../../components/sensors/sensor_hub/include/hal/humiture_hal.h \
+    ../../components/sensors/sensor_hub/include/hal/imu_hal.h \
+    ../../components/sensors/sensor_hub/include/hal/light_sensor_hal.h \
 
 
 ## Get warnings for functions that have no documentation for their parameters or return value
