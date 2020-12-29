@@ -19,7 +19,7 @@ extern "C"
 {
 #endif
 #include "driver/i2c.h"
-#include "iot_i2c_bus.h"
+#include "i2c_bus.h"
 
 #define HT16C21_I2C_ADDRESS_DEFAULT   (0x70)
 
@@ -83,7 +83,7 @@ typedef struct config {
     uint8_t  adjustment_voltage; //Range 0x00 to 0x0F
 } ht16c21_config_t;
 
-typedef void* ht16c21_handle_t;
+typedef void *ht16c21_handle_t;
 
 /**
  * @brief   Create and initialization device object and return a device handle
@@ -100,13 +100,12 @@ ht16c21_handle_t iot_ht16c21_create(i2c_bus_handle_t bus, uint8_t dev_addr);
  * @brief   Delete and release a device object
  *
  * @param   dev object handle of ht16c21
- * @param   del_bus Whether to delete the I2C bus
  *
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_ht16c21_delete(ht16c21_handle_t dev, bool del_bus);
+esp_err_t iot_ht16c21_delete(ht16c21_handle_t dev);
 
 /**
  * @brief   Write command or data to ht16c21
@@ -139,8 +138,8 @@ esp_err_t iot_ht16c21_ram_write_byte(ht16c21_handle_t dev, uint8_t address, uint
  *
  * @param   dev object handle of ht16c21
  * @param   address RAM address
- * @param   *buf data value pointer
- * @param   *buf data value len
+ * @param   buf data value pointer
+ * @param   len data value len
  *
  * @return
  *     - ESP_OK Success
@@ -153,7 +152,7 @@ esp_err_t iot_ht16c21_ram_write(ht16c21_handle_t dev, uint8_t address, uint8_t *
  *
  * @param   dev object handle of ht16c21
  * @param   address RAM address
- * @param   buf data value
+ * @param   data data value
  *
  * @return
  *     - ESP_OK Success
@@ -166,8 +165,8 @@ esp_err_t iot_ht16c21_ram_read_byte(ht16c21_handle_t dev, uint8_t address, uint8
  *
  * @param   dev object handle of ht16c21
  * @param   address RAM address
- * @param   *buf data value pointer
- * @param   *buf data value len
+ * @param   buf data value pointer
+ * @param   len data value len
  *
  * @return
  *     - ESP_OK Success
@@ -185,7 +184,7 @@ esp_err_t iot_ht16c21_ram_read(ht16c21_handle_t dev, uint8_t address, uint8_t *b
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_ht16c21_init(ht16c21_handle_t dev, ht16c21_config_t*  ht16c21_conf);
+esp_err_t iot_ht16c21_init(ht16c21_handle_t dev, ht16c21_config_t *ht16c21_conf);
 
 #endif
 

@@ -14,10 +14,8 @@
 #ifndef _IOT_IS31FL3218_H_
 #define _IOT_IS31FL3218_H_
 
-#include "driver/i2c.h"
-#include "iot_i2c_bus.h"
+#include "i2c_bus.h"
 
-#define DBG_TEST(s) printf("[%s %d] "s"\r\n",__func__, __LINE__);
 
 #ifdef __cplusplus
 extern "C" {
@@ -35,12 +33,20 @@ extern "C" {
     } \
 } while(0)
 
+/**
+ * @brief IS31FL3218 mode
+ * 
+ */
 typedef enum {
     IS31FL3218_MODE_SHUTDOWN = 0, /**< Software shutdown mode */
     IS31FL3218_MODE_NORMAL,       /**< Normal operation */
     IS31FL3218_MODE_MAX,
 } is31fl3218_mode_t;
 
+/**
+ * @brief Register of IS31FL3218
+ * 
+ */
 typedef enum {
     IS31FL3218_REG_SHUTDOWN = 0x00,                         /*0 First state or BR/EDR scan 1*/
     IS31FL3218_REG_PWM_1 = 0x01,
@@ -94,19 +100,6 @@ esp_err_t iot_is31fl3218_set_mode(is31fl3218_handle_t fxled, is31fl3218_mode_t m
 esp_err_t iot_is31fl3218_reset_register(is31fl3218_handle_t fxled);
 
 /**
- * @brief set I2S port and enable PWM channel
- *
- * @param fxled  led dev handle
- * @param info  init param
- *
- * @return
- *     - ESP_OK Success
- *     - ESP_FAIL error
- *     - ESP_ERR_TIMEOUT  timeout
- */
-esp_err_t iot_is31fl3218_init(is31fl3218_handle_t fxled);
-
-/**
  * @brief set PWM duty for every channel
  * @param fxled  led dev handle
  * @param ch_bit set the pwm channel bit if you want change duty, BIT0 ~ BIT17 means PWM1 ~ PWM18
@@ -131,19 +124,6 @@ esp_err_t iot_is31fl3218_channel_set(is31fl3218_handle_t fxled, uint32_t ch_bit,
 esp_err_t iot_is31fl3218_write_pwm_regs(is31fl3218_handle_t fxled, uint8_t* duty, int len);
 
 /**
- * @brief Write device register
- * @param fxled  led dev handle
- * @param reg_addr register address
- * @param data pointer to data
- * @param data_num data number
- * @return
- *     - ESP_OK Success
- *     - ESP_FAIL error
- *     - ESP_ERR_TIMEOUT  timeout
- */
-esp_err_t iot_is31fl3218_write(is31fl3218_handle_t fxled, is31fl3218_reg_t reg_addr, uint8_t *data, uint8_t data_num);
-
-/**
  * @brief Create and init sensor object and return a led handle
  *
  * @param bus I2C bus object handle
@@ -156,72 +136,15 @@ is31fl3218_handle_t iot_is31fl3218_create(i2c_bus_handle_t bus);
 /**
  * @brief Delete and release a LED object
  * @param sensor object handle of is31fl3218
- * @param del_bus Whether to delete the I2C bus
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_is31fl3218_delete(is31fl3218_handle_t fxled, bool del_bus);
+esp_err_t iot_is31fl3218_delete(is31fl3218_handle_t fxled);
 
 #ifdef __cplusplus
 }
 #endif
 
-#ifdef __cplusplus
-/**
- * class of is31fl3218 fxled driver
- */
-class CIs31fl3218
-{
-private:
-    is31fl3218_handle_t m_led_handle;
-    CI2CBus *bus;
-
-    /**
-     * prevent copy constructing
-     */
-    CIs31fl3218(const CIs31fl3218&);
-    CIs31fl3218& operator = (const CIs31fl3218&);
-public:
-    /**
-     * @brief Constructor for CIs31fl3218 class
-     * @param p_i2c_bus pointer to CI2CBus object
-     */
-    CIs31fl3218(CI2CBus *p_i2c_bus);
-
-    /**
-     * @brief Destructor of CIs31fl3218 class
-     */
-    ~CIs31fl3218();
-
-    /**
-     * @brief Set pwm duty cycle for different channels
-     * @param ch_bit 18bit value, to mask the channels
-     * @param duty duty cycle value, from 0 to 0xff
-     * return
-     *     - ESP_OK Success
-     *     - ESP_ERR_INVALID_ARG Parameter error
-     *     - ESP_FAIL Sending command error, slave doesn't ACK the transfer.
-     *     - ESP_ERR_INVALID_STATE I2C driver not installed or not in master mode.
-     *     - ESP_ERR_TIMEOUT Operation timeout because the bus is busy.
-     */
-    esp_err_t set_duty(uint32_t ch_bit, uint8_t duty);
-
-    /**
-     * @brief Set pwm duty cycle from buffer, fill buffer values to pwm duty registers
-     * @param duty buffer pointer of duty values
-     * @param len buffer length
-     * @return
-     *     - ESP_OK Success
-     *     - ESP_ERR_INVALID_ARG Parameter error
-     *     - ESP_FAIL Sending command error, slave doesn't ACK the transfer.
-     *     - ESP_ERR_INVALID_STATE I2C driver not installed or not in master mode.
-     *     - ESP_ERR_TIMEOUT Operation timeout because the bus is busy.
-     */
-    esp_err_t write_duty_regs(uint8_t* duty, int len);
-
-
-};
-#endif
 #endif
 

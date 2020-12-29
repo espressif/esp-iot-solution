@@ -17,7 +17,7 @@
 #include "driver/i2c.h"
 #include "iot_is31fl3218.h"
 #include "iot_is31fl3736.h"
-#include "led_12_8_image.h"
+// #include "led_12_8_image.h"
 
 #define I2C_MASTER_SCL_IO    21        /*!< gpio number for I2C master clock */
 #define I2C_MASTER_SDA_IO    15        /*!< gpio number for I2C master data  */
@@ -25,6 +25,18 @@
 #define I2C_MASTER_TX_BUF_DISABLE   0  /*!< I2C master do not need buffer */
 #define I2C_MASTER_RX_BUF_DISABLE   0  /*!< I2C master do not need buffer */
 #define I2C_MASTER_FREQ_HZ    400000   /*!< I2C master clock frequency */
+
+static const uint8_t image_e[12] = {
+    0x1f, 0x15, 0x15,0x0
+};
+
+static const uint8_t image_s[12] = {
+    0x17, 0x15, 0x1d,0x0
+};
+
+static const uint8_t image_p[12] = {
+    0x1f, 0x05, 0x07,0x0
+};
 
 static i2c_bus_handle_t i2c_bus = NULL;
 static is31fl3736_handle_t led3736 = NULL;
@@ -43,8 +55,9 @@ void led_dev_init()
     conf.scl_io_num = I2C_MASTER_SCL_IO;
     conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
     conf.master.clk_speed = I2C_MASTER_FREQ_HZ;
-    i2c_bus = iot_i2c_bus_create(i2c_master_port, &conf);
+    i2c_bus = i2c_bus_create(i2c_master_port, &conf);
     led3736 = iot_is31fl3736_create(i2c_bus, GPIO_NUM_32, 0, 0, 0XCF);
+    TEST_ASSERT_NOT_NULL(led3736);
 }
 
 esp_err_t is31fl3736_send_buf(i2c_port_t i2c_port, uint8_t x, uint8_t y, char *c, uint8_t duty, uint8_t* buf)
