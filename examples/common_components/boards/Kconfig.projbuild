@@ -9,6 +9,8 @@ menu "Board Options"
             bool "Meshkit Sense With Esp32 Onboard From Espressif"
         config BOARD_ESP32S2_SAOLA_1
             bool "Saola With Esp32S2 Onboard From Espressif"
+        config BOARD_ESP32_LCDKIT
+            bool "Board ESP32-LCDKit_V1.1"
     endchoice
 
     menu "Devkitc-V4 Board Options"

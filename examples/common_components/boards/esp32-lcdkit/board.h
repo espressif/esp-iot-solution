@@ -16,16 +16,21 @@
 #define _IOT_BOARD_H_
 
 #include "esp_err.h"
+#include "i2c_bus.h"
+#include "spi_bus.h"
 
 /*ENABLE Initialization Process in _board_init(void)*/
 #define _ENABLE 1
 #define _DISABLE 0
 #define _UNDEFINE
+typedef void* board_res_handle_t;
 
 /*Definations of Board*/
 #define BOARD_NAME "ESP32-LCDKit"
 #define BOARD_VENDOR "Espressif"
 #define BOARD_URL "null"
+
+#define CONFIG_BOARD_SPI2_INIT 1
 
 /**
  * Resource ID on Board,
@@ -52,7 +57,7 @@ typedef enum {
 
 /**< Screen inrerface pins */
 #define BOARD_LCD_SPI_HOST 1
-#define BOARD_LCD_SPI_CLOCK_FREQ 40000000
+#define BOARD_LCD_SPI_CLOCK_FREQ 20000000
 #define BOARD_LCD_SPI_MISO_PIN BOARD_IO_SPI2_MISO
 #define BOARD_LCD_SPI_MOSI_PIN BOARD_IO_SPI2_MOSI
 #define BOARD_LCD_SPI_CLK_PIN BOARD_IO_SPI2_SCK
