@@ -1,5 +1,5 @@
-iot-solution 编码规范
-=====================
+esp-iot-solution 编码规范
+=========================
 
 总体原则
 --------
@@ -7,7 +7,7 @@ iot-solution 编码规范
 -  简洁明了，结构清晰
 -  统一风格，易于维护
 -  充分注释，易于理解
--  继承 ESP-IDF 已有规范
+-  `继承 ESP-IDF 已有规范 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/contribute/style-guide.html>`_
 -  继承第三方代码已有规范
 
 目录结构
@@ -136,9 +136,9 @@ iot-solution 编码规范
 +============================+==============================================================+===========================================================================+
 | iot\_type\_xxx             | iot\_sensor\_xxx; iot\_board\_xxx; iot\_storage\_...         | 高度抽象的 iot 组件                                                       |
 +----------------------------+--------------------------------------------------------------+---------------------------------------------------------------------------+
-| type\_subtype\_xxx         | sensor\_imu\_xxx; sensor\_light\_xxx; storage\_eeprom\_xxx   | 对一类外设的抽象                                                          |
+| type\_xxx                  | imu\_xxx; light\_xxx; eeprom\_xxx                            | 对一类外设的抽象                                                          |
 +----------------------------+--------------------------------------------------------------+---------------------------------------------------------------------------+
-| name\_xxx                  | mpu6050\_xxx;                                                | 底层 driver，由于可能来自第三方，不约说函数名，建议以模块名作为同一前缀   |
+| name\_xxx                  | mpu6050\_xxx;                                                | 底层 driver，由于可能来自第三方，不约束函数名                             |
 +----------------------------+--------------------------------------------------------------+---------------------------------------------------------------------------+
 | xxx\_creat / xxx\_delete   |                                                              | 创建和销毁                                                                |
 +----------------------------+--------------------------------------------------------------+---------------------------------------------------------------------------+
@@ -197,17 +197,25 @@ iot-solution 编码规范
 
 -  使用加\ ``snake_case``\ 格式加 ``_t`` 后缀
 
-``c   typedef int signed_32_bit_t;``
+.. code:: c
+
+    typedef int signed_32_bit_t;
 
 -  枚举应通过 typedef 通过以下方式定义
 
-``c   typedef enum   {       MODULE_FOO_ONE,       MODULE_FOO_TWO,       MODULE_FOO_THREE   } module_foo_t;``
+.. code:: c
+
+    typedef enum { 
+        MODULE_FOO_ONE,
+        MODULE_FOO_TWO,
+        MODULE_FOO_THREE 
+    } module_foo_t;
 
 格式和排版规范
 --------------
 
 该部分继承 `ESP-IDF
-规范 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/contribute/style-guide.html>`__\ ，来自袁明富的翻译。
+规范 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/contribute/style-guide.html>`_
 
 1. 缩进
 ~~~~~~~
