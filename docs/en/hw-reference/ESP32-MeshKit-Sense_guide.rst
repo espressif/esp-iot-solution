@@ -1,8 +1,7 @@
-`[中文] <./ESP32-MeshKit-Sense_guide_cn.md>`__
-
 ESP32-MeshKit-Sense Hardware Design Guidelines
 ==============================================
 
+:link_to_translation:`zh_CN:[中文]`
 
 1. Overview
 -------------------

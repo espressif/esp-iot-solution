@@ -1,8 +1,7 @@
-`[中文] <./ESP32_LCDKit_guide_cn.md>`__
-
 ESP32-LCDKit
 ======================
 
+:link_to_translation:`zh_CN:[中文]`
 
 1. Overview
 ------------------------------

@@ -2,9 +2,11 @@
 显示
 *************************
 
+:link_to_translation:`en:[English]`
+
 .. toctree::
     :maxdepth: 1
 
-    Screen <screen>
-    Digit Tube <digit_tube>
+    屏幕驱动 <screen>
+    数码管驱动 <digit_tube>
 

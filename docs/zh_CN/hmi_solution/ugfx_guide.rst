@@ -1,7 +1,7 @@
-`[EN] <ugfx_guide_en.md>`__
-
 μGFX Guide
 ==========
+
+:link_to_translation:`en:[English]`
 
 μGFX 简介
 ---------

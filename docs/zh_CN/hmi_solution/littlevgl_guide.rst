@@ -1,7 +1,7 @@
-`[EN] <littlevgl_guide_en.md>`__
-
 LittlevGL Guide
 ===============
+
+:link_to_translation:`en:[English]`
 
 LittlevGL 简介
 --------------

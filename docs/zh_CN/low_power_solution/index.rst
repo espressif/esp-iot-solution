@@ -1,6 +1,8 @@
 低功耗方案
 *************************
 
+:link_to_translation:`en:[English]`
+
 .. toctree::
     :maxdepth: 1
 
