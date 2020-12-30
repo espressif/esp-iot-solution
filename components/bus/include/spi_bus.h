@@ -50,7 +50,7 @@ extern "C"
  * 
  * @param host_id SPI peripheral that controls this bus, SPI2_HOST or SPI3_HOST
  * @param bus_conf spi bus configurations details in spi_config_t
- * @return spi_bus_handle_t handle for spi bus operation.
+ * @return spi_bus_handle_t handle for spi bus operation, NULL if failed.
  */
 spi_bus_handle_t spi_bus_create(spi_host_device_t host_id, const spi_config_t *bus_conf);
 
@@ -59,8 +59,9 @@ spi_bus_handle_t spi_bus_create(spi_host_device_t host_id, const spi_config_t *b
  *
  * @param p_bus_handle pointer to spi bus handle, if delete succeed handle will set to NULL.
  * @return esp_err_t
- *     - ESP_OK Success
+ *     - ESP_ERR_INVALID_ARG   if parameter is invalid
  *     - ESP_FAIL Fail
+ *     - ESP_OK Success
  */
 esp_err_t spi_bus_delete(spi_bus_handle_t *p_bus_handle);
 
@@ -69,7 +70,7 @@ esp_err_t spi_bus_delete(spi_bus_handle_t *p_bus_handle);
  *
  * @param bus_handle handle for spi bus operation.
  * @param device_conf spi device configurations details in spi_device_config_t
- * @return spi_bus_device_handle_t handle for device operation. eg, using for transfer.
+ * @return spi_bus_device_handle_t handle for device operation, NULL if failed.
  */
 spi_bus_device_handle_t spi_bus_device_create(spi_bus_handle_t bus_handle, const spi_device_config_t *device_conf);
 
@@ -78,8 +79,9 @@ spi_bus_device_handle_t spi_bus_device_create(spi_bus_handle_t bus_handle, const
  *
  * @param p_dev_handle pointer to device handle, if delete succeed handle will set to NULL.
  * @return esp_err_t
- *     - ESP_OK Success
+ *     - ESP_ERR_INVALID_ARG   if parameter is invalid
  *     - ESP_FAIL Fail
+ *     - ESP_OK Success
  */
 esp_err_t spi_bus_device_delete(spi_bus_device_handle_t *p_dev_handle);
 
@@ -90,8 +92,9 @@ esp_err_t spi_bus_device_delete(spi_bus_device_handle_t *p_dev_handle);
  * @param data_out data will send to device.
  * @param data_in pointer to receive buffer, set NULL to skip receive phase.
  * @return esp_err_t
- *     - ESP_OK Success
- *     - ESP_FAIL Fail
+ *     - ESP_ERR_INVALID_ARG   if parameter is invalid
+ *     - ESP_ERR_TIMEOUT       if bus is busy
+ *     - ESP_OK                on success
  */
 esp_err_t spi_bus_transfer_byte(spi_bus_device_handle_t dev_handle, uint8_t data_out, uint8_t *data_in);
 
@@ -103,10 +106,27 @@ esp_err_t spi_bus_transfer_byte(spi_bus_device_handle_t dev_handle, uint8_t data
  * @param data_in pointer to receive buffer, set NULL to skip receive phase.
  * @param data_len number of bytes will transfer.
  * @return esp_err_t
- *     - ESP_OK Success
- *     - ESP_FAIL Fail
+ *     - ESP_ERR_INVALID_ARG   if parameter is invalid
+ *     - ESP_ERR_TIMEOUT       if bus is busy
+ *     - ESP_OK                on success
  */
 esp_err_t spi_bus_transfer_bytes(spi_bus_device_handle_t dev_handle, const uint8_t *data_out, uint8_t *data_in, uint32_t data_len);
+
+/**************************************** Public Functions (Low level)*********************************************/
+
+/**
+ * @brief Send a polling transaction, wait for it to complete, and return the result
+ *        @note
+ *        Only call this function when ``spi_bus_transfer_xx`` do not meet the requirements
+ * 
+ * @param dev_handle handle for device operation.
+ * @param p_trans Description of transaction to execute
+ * @return esp_err_t 
+ *     - ESP_ERR_INVALID_ARG   if parameter is invalid
+ *     - ESP_ERR_TIMEOUT       if bus is busy
+ *     - ESP_OK                on success
+ */
+esp_err_t spi_bus_transmit_begin(spi_bus_device_handle_t dev_handle, spi_transaction_t *p_trans);
 
 /**
  * @brief Transfer one 16-bit value with the device. using msb by default.
@@ -116,8 +136,9 @@ esp_err_t spi_bus_transfer_bytes(spi_bus_device_handle_t dev_handle, const uint8
  * @param data_out data will send to device.
  * @param data_in pointer to receive buffer, set NULL to skip receive phase.
  * @return esp_err_t
- *     - ESP_OK Success
- *     - ESP_FAIL Fail
+ *     - ESP_ERR_INVALID_ARG   if parameter is invalid
+ *     - ESP_ERR_TIMEOUT       if bus is busy
+ *     - ESP_OK                on success
  */
 esp_err_t spi_bus_transfer_reg16(spi_bus_device_handle_t dev_handle, uint16_t data_out, uint16_t *data_in);
 
@@ -129,8 +150,9 @@ esp_err_t spi_bus_transfer_reg16(spi_bus_device_handle_t dev_handle, uint16_t da
  * @param data_out data will send to device.
  * @param data_in pointer to receive buffer, set NULL to skip receive phase.
  * @return esp_err_t
- *     - ESP_OK Success
- *     - ESP_FAIL Fail
+ *     - ESP_ERR_INVALID_ARG   if parameter is invalid
+ *     - ESP_ERR_TIMEOUT       if bus is busy
+ *     - ESP_OK                on success
  */
 esp_err_t spi_bus_transfer_reg32(spi_bus_device_handle_t dev_handle, uint32_t data_out, uint32_t *data_in);
 

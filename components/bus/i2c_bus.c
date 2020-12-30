@@ -39,7 +39,7 @@ typedef struct {
 typedef struct {
     uint8_t dev_addr;   /*device address*/
     i2c_config_t conf;    /*!<I2C active configuration */
-    i2c_bus_t *i2c_bus;
+    i2c_bus_t *i2c_bus;    /*!<I2C bus*/
 } i2c_bus_device_t;
 
 static const char *TAG = "i2c_bus";
@@ -246,7 +246,7 @@ esp_err_t i2c_bus_write_byte(i2c_bus_device_handle_t dev_handle, uint8_t mem_add
     return i2c_bus_write_reg8(dev_handle, mem_address, 1, &data);
 }
 
-esp_err_t i2c_bus_write_bytes(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, size_t data_len, uint8_t *data)
+esp_err_t i2c_bus_write_bytes(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, size_t data_len, const uint8_t *data)
 {
     return i2c_bus_write_reg8(dev_handle, mem_address, data_len, data);
 }
@@ -312,8 +312,22 @@ inline static esp_err_t i2c_master_cmd_begin_with_conf(i2c_port_t i2c_num, i2c_c
 }
 
 /**************************************** Public Functions (Low level)*********************************************/
+
+esp_err_t i2c_bus_cmd_begin(i2c_bus_device_handle_t dev_handle, i2c_cmd_handle_t cmd)
+{
+    I2C_BUS_CHECK(dev_handle != NULL, "device handle error", ESP_ERR_INVALID_ARG);
+    I2C_BUS_CHECK(cmd != NULL, "I2C command error", ESP_ERR_INVALID_ARG);
+    i2c_bus_device_t *i2c_device = (i2c_bus_device_t *)dev_handle;
+    I2C_BUS_INIT_CHECK(i2c_device->i2c_bus->is_init, ESP_ERR_INVALID_STATE);
+    I2C_BUS_MUTEX_TAKE(i2c_device->i2c_bus->mutex, ESP_ERR_TIMEOUT);
+    esp_err_t ret = i2c_master_cmd_begin_with_conf(i2c_device->i2c_bus->i2c_port, cmd, I2C_BUS_TICKS_TO_WAIT, &i2c_device->conf);
+    I2C_BUS_MUTEX_GIVE(i2c_device->i2c_bus->mutex, ESP_FAIL);
+    return ret;
+}
+
 static esp_err_t i2c_bus_read_reg8(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, size_t data_len, uint8_t *data)
 {
+    I2C_BUS_CHECK(dev_handle != NULL, "device handle error", ESP_ERR_INVALID_ARG);
     I2C_BUS_CHECK(data != NULL, "data pointer error", ESP_ERR_INVALID_ARG);
     i2c_bus_device_t *i2c_device = (i2c_bus_device_t *)dev_handle;
     I2C_BUS_INIT_CHECK(i2c_device->i2c_bus->is_init, ESP_ERR_INVALID_STATE);
@@ -338,6 +352,7 @@ static esp_err_t i2c_bus_read_reg8(i2c_bus_device_handle_t dev_handle, uint8_t m
 
 esp_err_t i2c_bus_read_reg16(i2c_bus_device_handle_t dev_handle, uint16_t mem_address, size_t data_len, uint8_t *data)
 {
+    I2C_BUS_CHECK(dev_handle != NULL, "device handle error", ESP_ERR_INVALID_ARG);
     I2C_BUS_CHECK(data != NULL, "data pointer error", ESP_ERR_INVALID_ARG);
     i2c_bus_device_t *i2c_device = (i2c_bus_device_t *)dev_handle;
     I2C_BUS_INIT_CHECK(i2c_device->i2c_bus->is_init, ESP_ERR_INVALID_STATE);
@@ -365,6 +380,7 @@ esp_err_t i2c_bus_read_reg16(i2c_bus_device_handle_t dev_handle, uint16_t mem_ad
 
 static esp_err_t i2c_bus_write_reg8(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, size_t data_len, uint8_t *data)
 {
+    I2C_BUS_CHECK(dev_handle != NULL, "device handle error", ESP_ERR_INVALID_ARG);
     I2C_BUS_CHECK(data != NULL, "data pointer error", ESP_ERR_INVALID_ARG);
     i2c_bus_device_t *i2c_device = (i2c_bus_device_t *)dev_handle;
     I2C_BUS_INIT_CHECK(i2c_device->i2c_bus->is_init, ESP_ERR_INVALID_STATE);
@@ -387,6 +403,7 @@ static esp_err_t i2c_bus_write_reg8(i2c_bus_device_handle_t dev_handle, uint8_t 
 
 esp_err_t i2c_bus_write_reg16(i2c_bus_device_handle_t dev_handle, uint16_t mem_address, size_t data_len, uint8_t *data)
 {
+    I2C_BUS_CHECK(dev_handle != NULL, "device handle error", ESP_ERR_INVALID_ARG);
     I2C_BUS_CHECK(data != NULL, "data pointer error", ESP_ERR_INVALID_ARG);
     i2c_bus_device_t *i2c_device = (i2c_bus_device_t *)dev_handle;
     I2C_BUS_INIT_CHECK(i2c_device->i2c_bus->is_init, ESP_ERR_INVALID_STATE);
