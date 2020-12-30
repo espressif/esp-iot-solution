@@ -102,9 +102,12 @@ esp_err_t i2c_bus_device_delete(i2c_bus_device_handle_t *p_dev_handle);
  * @param dev_handle I2C device handle
  * @param mem_address The internal reg/mem address to read from, set to NULL_I2C_MEM_ADDR if no internal address.
  * @param data Pointer to a buffer to save the data that was read
- * @return
+ * @return esp_err_t 
  *     - ESP_OK Success
- *     - ESP_FAIL Fail
+ *     - ESP_ERR_INVALID_ARG Parameter error
+ *     - ESP_FAIL Sending command error, slave doesn't ACK the transfer.
+ *     - ESP_ERR_INVALID_STATE I2C driver not installed or not in master mode.
+ *     - ESP_ERR_TIMEOUT Operation timeout because the bus is busy.
  */
 esp_err_t i2c_bus_read_byte(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, uint8_t *data);
 
@@ -116,9 +119,12 @@ esp_err_t i2c_bus_read_byte(i2c_bus_device_handle_t dev_handle, uint8_t mem_addr
  * @param mem_address The internal reg/mem address to read from, set to NULL_I2C_MEM_ADDR if no internal address.
  * @param data_len Number of bytes to read
  * @param data Pointer to a buffer to save the data that was read
- * @return
+ * @return esp_err_t 
  *     - ESP_OK Success
- *     - ESP_FAIL Fail
+ *     - ESP_ERR_INVALID_ARG Parameter error
+ *     - ESP_FAIL Sending command error, slave doesn't ACK the transfer.
+ *     - ESP_ERR_INVALID_STATE I2C driver not installed or not in master mode.
+ *     - ESP_ERR_TIMEOUT Operation timeout because the bus is busy.
  */
 esp_err_t i2c_bus_read_bytes(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, size_t data_len, uint8_t *data);
 
@@ -129,9 +135,12 @@ esp_err_t i2c_bus_read_bytes(i2c_bus_device_handle_t dev_handle, uint8_t mem_add
  * @param mem_address The internal reg/mem address to read from, set to NULL_I2C_MEM_ADDR if no internal address.
  * @param bit_num The bit number 0 - 7 to read
  * @param data Pointer to a buffer to save the data that was read. *data == 0 -> bit = 0, *data !=0 -> bit = 1.
- * @return
+ * @return esp_err_t 
  *     - ESP_OK Success
- *     - ESP_FAIL Fail
+ *     - ESP_ERR_INVALID_ARG Parameter error
+ *     - ESP_FAIL Sending command error, slave doesn't ACK the transfer.
+ *     - ESP_ERR_INVALID_STATE I2C driver not installed or not in master mode.
+ *     - ESP_ERR_TIMEOUT Operation timeout because the bus is busy.
  */
 esp_err_t i2c_bus_read_bit(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, uint8_t bit_num, uint8_t *data);
 
@@ -143,9 +152,12 @@ esp_err_t i2c_bus_read_bit(i2c_bus_device_handle_t dev_handle, uint8_t mem_addre
  * @param bit_start The bit to start from, 0 - 7, MSB at 0
  * @param length The number of bits to read, 1 - 8
  * @param data Pointer to a buffer to save the data that was read
- * @return
+ * @return esp_err_t 
  *     - ESP_OK Success
- *     - ESP_FAIL Fail
+ *     - ESP_ERR_INVALID_ARG Parameter error
+ *     - ESP_FAIL Sending command error, slave doesn't ACK the transfer.
+ *     - ESP_ERR_INVALID_STATE I2C driver not installed or not in master mode.
+ *     - ESP_ERR_TIMEOUT Operation timeout because the bus is busy.
  */
 esp_err_t i2c_bus_read_bits(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, uint8_t bit_start, uint8_t length, uint8_t *data);
 
@@ -155,9 +167,12 @@ esp_err_t i2c_bus_read_bits(i2c_bus_device_handle_t dev_handle, uint8_t mem_addr
  * @param dev_handle I2C device handle
  * @param mem_address The internal reg/mem address to write to, set to NULL_I2C_MEM_ADDR if no internal address.
  * @param data The byte to write.
- * @return
+ * @return esp_err_t 
  *     - ESP_OK Success
- *     - ESP_FAIL Fail
+ *     - ESP_ERR_INVALID_ARG Parameter error
+ *     - ESP_FAIL Sending command error, slave doesn't ACK the transfer.
+ *     - ESP_ERR_INVALID_STATE I2C driver not installed or not in master mode.
+ *     - ESP_ERR_TIMEOUT Operation timeout because the bus is busy.
  */
 esp_err_t i2c_bus_write_byte(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, uint8_t data);
 
@@ -169,11 +184,14 @@ esp_err_t i2c_bus_write_byte(i2c_bus_device_handle_t dev_handle, uint8_t mem_add
  * @param mem_address The internal reg/mem address to write to, set to NULL_I2C_MEM_ADDR if no internal address.
  * @param data_len Number of bytes to write
  * @param data Pointer to the bytes to write.
- * @return
+ * @return esp_err_t 
  *     - ESP_OK Success
- *     - ESP_FAIL Fail
+ *     - ESP_ERR_INVALID_ARG Parameter error
+ *     - ESP_FAIL Sending command error, slave doesn't ACK the transfer.
+ *     - ESP_ERR_INVALID_STATE I2C driver not installed or not in master mode.
+ *     - ESP_ERR_TIMEOUT Operation timeout because the bus is busy.
  */
-esp_err_t i2c_bus_write_bytes(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, size_t data_len, uint8_t *data);
+esp_err_t i2c_bus_write_bytes(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, size_t data_len, const uint8_t *data);
 
 /**
  * @brief Write single bit of a byte to an i2c device with 8-bit internal register/memory address
@@ -182,9 +200,12 @@ esp_err_t i2c_bus_write_bytes(i2c_bus_device_handle_t dev_handle, uint8_t mem_ad
  * @param mem_address The internal reg/mem address to write to, set to NULL_I2C_MEM_ADDR if no internal address.
  * @param bit_num The bit number 0 - 7 to write
  * @param data The bit to write, data == 0 means set bit = 0, data !=0 means set bit = 1.
- * @return
+ * @return esp_err_t 
  *     - ESP_OK Success
- *     - ESP_FAIL Fail
+ *     - ESP_ERR_INVALID_ARG Parameter error
+ *     - ESP_FAIL Sending command error, slave doesn't ACK the transfer.
+ *     - ESP_ERR_INVALID_STATE I2C driver not installed or not in master mode.
+ *     - ESP_ERR_TIMEOUT Operation timeout because the bus is busy.
  */
 esp_err_t i2c_bus_write_bit(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, uint8_t bit_num, uint8_t data);
 
@@ -196,13 +217,36 @@ esp_err_t i2c_bus_write_bit(i2c_bus_device_handle_t dev_handle, uint8_t mem_addr
  * @param bit_start The bit to start from, 0 - 7, MSB at 0
  * @param length The number of bits to write, 1 - 8
  * @param data The bits to write.
- * @return
+ * @return esp_err_t 
  *     - ESP_OK Success
- *     - ESP_FAIL Fail
+ *     - ESP_ERR_INVALID_ARG Parameter error
+ *     - ESP_FAIL Sending command error, slave doesn't ACK the transfer.
+ *     - ESP_ERR_INVALID_STATE I2C driver not installed or not in master mode.
+ *     - ESP_ERR_TIMEOUT Operation timeout because the bus is busy.
  */
 esp_err_t i2c_bus_write_bits(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, uint8_t bit_start, uint8_t length, uint8_t data);
 
 /**************************************** Public Functions (Low level)*********************************************/
+
+/**
+ * @brief I2C master send queued commands create by ``i2c_cmd_link_create`` .
+ *        This function will trigger sending all queued commands.
+ *        The task will be blocked until all the commands have been sent out.
+ *        If I2C_BUS_DYNAMIC_CONFIG enable, i2c_bus will dynamically check configs and re-install i2c driver before each transfer,
+ *        hence multiple devices with different configs on a single bus can be supported.
+ *        @note
+ *        Only call this function when ``i2c_bus_read/write_xx`` do not meet the requirements
+ * 
+ * @param dev_handle I2C device handle
+ * @param cmd I2C command handler
+ * @return esp_err_t 
+ *     - ESP_OK Success
+ *     - ESP_ERR_INVALID_ARG Parameter error
+ *     - ESP_FAIL Sending command error, slave doesn't ACK the transfer.
+ *     - ESP_ERR_INVALID_STATE I2C driver not installed or not in master mode.
+ *     - ESP_ERR_TIMEOUT Operation timeout because the bus is busy.
+ */
+esp_err_t i2c_bus_cmd_begin(i2c_bus_device_handle_t dev_handle, i2c_cmd_handle_t cmd);
 
 /**
  * @brief Write date to an i2c device with 16-bit internal reg/mem address
@@ -211,9 +255,12 @@ esp_err_t i2c_bus_write_bits(i2c_bus_device_handle_t dev_handle, uint8_t mem_add
  * @param mem_address The internal 16-bit reg/mem address to write to, set to NULL_I2C_MEM_ADDR if no internal address.
  * @param data_len Number of bytes to write
  * @param data Pointer to the bytes to write.
- * @return
+ * @return esp_err_t 
  *     - ESP_OK Success
- *     - ESP_FAIL Fail
+ *     - ESP_ERR_INVALID_ARG Parameter error
+ *     - ESP_FAIL Sending command error, slave doesn't ACK the transfer.
+ *     - ESP_ERR_INVALID_STATE I2C driver not installed or not in master mode.
+ *     - ESP_ERR_TIMEOUT Operation timeout because the bus is busy.
  */
 esp_err_t i2c_bus_write_reg16(i2c_bus_device_handle_t dev_handle, uint16_t mem_address, size_t data_len, uint8_t *data);
 
@@ -224,9 +271,12 @@ esp_err_t i2c_bus_write_reg16(i2c_bus_device_handle_t dev_handle, uint16_t mem_a
  * @param mem_address The internal 16-bit reg/mem address to read from, set to NULL_I2C_MEM_ADDR if no internal address.
  * @param data_len Number of bytes to read
  * @param data Pointer to a buffer to save the data that was read
- * @return
+ * @return esp_err_t 
  *     - ESP_OK Success
- *     - ESP_FAIL Fail
+ *     - ESP_ERR_INVALID_ARG Parameter error
+ *     - ESP_FAIL Sending command error, slave doesn't ACK the transfer.
+ *     - ESP_ERR_INVALID_STATE I2C driver not installed or not in master mode.
+ *     - ESP_ERR_TIMEOUT Operation timeout because the bus is busy.
  */
 esp_err_t i2c_bus_read_reg16(i2c_bus_device_handle_t dev_handle, uint16_t mem_address, size_t data_len, uint8_t *data);
 

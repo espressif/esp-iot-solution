@@ -199,6 +199,13 @@ esp_err_t spi_bus_transfer_bytes(spi_bus_device_handle_t dev_handle, const uint8
     return ESP_OK;
 }
 
+ /**************************************** Public Functions (Low level)*********************************************/
+
+esp_err_t spi_bus_transmit_begin(spi_bus_device_handle_t dev_handle, spi_transaction_t *p_trans)
+{
+    return _spi_device_polling_transmit(dev_handle, p_trans);
+}
+
 esp_err_t spi_bus_transfer_reg16(spi_bus_device_handle_t dev_handle, uint16_t data_out, uint16_t *data_in)
 {
     esp_err_t ret;
