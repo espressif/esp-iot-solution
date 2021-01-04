@@ -24,6 +24,7 @@ INPUT = \
     ../../components/gui/lvgl_gui/include/iot_lvgl.h \
     ../../components/bus/include/i2c_bus.h \
     ../../components/bus/include/spi_bus.h \
+    ../../components/bus/include/i2s_lcd_driver.h
 
 
 ## Get warnings for functions that have no documentation for their parameters or return value
