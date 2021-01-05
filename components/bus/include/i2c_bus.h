@@ -16,6 +16,7 @@
 #include "driver/i2c.h"
 
 #define NULL_I2C_MEM_ADDR 0xFF /*!< set mem_address to NULL_I2C_MEM_ADDR if i2c device has no internal address during read/write */
+#define NULL_I2C_DEV_ADDR 0xFF /*!< invalid i2c device address */
 typedef void *i2c_bus_handle_t; /*!< i2c bus handle */
 typedef void *i2c_bus_device_handle_t; /*!< i2c device handle */
 
@@ -95,6 +96,14 @@ i2c_bus_device_handle_t i2c_bus_device_create(i2c_bus_handle_t bus_handle, uint8
  *     - ESP_FAIL Fail
  */
 esp_err_t i2c_bus_device_delete(i2c_bus_device_handle_t *p_dev_handle);
+
+/**
+ * @brief Get device's I2C address
+ * 
+ * @param dev_handle I2C device handle
+ * @return uint8_t I2C address, return NULL_I2C_DEV_ADDR if dev_handle is invalid.
+ */
+uint8_t i2c_bus_device_get_address(i2c_bus_device_handle_t dev_handle);
 
 /**
  * @brief Read single byte from i2c device with 8-bit internal register/memory address
@@ -262,7 +271,7 @@ esp_err_t i2c_bus_cmd_begin(i2c_bus_device_handle_t dev_handle, i2c_cmd_handle_t
  *     - ESP_ERR_INVALID_STATE I2C driver not installed or not in master mode.
  *     - ESP_ERR_TIMEOUT Operation timeout because the bus is busy.
  */
-esp_err_t i2c_bus_write_reg16(i2c_bus_device_handle_t dev_handle, uint16_t mem_address, size_t data_len, uint8_t *data);
+esp_err_t i2c_bus_write_reg16(i2c_bus_device_handle_t dev_handle, uint16_t mem_address, size_t data_len, const uint8_t *data);
 
 /**
  * @brief Read date from i2c device with 16-bit internal reg/mem address
