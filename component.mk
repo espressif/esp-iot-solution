@@ -1,16 +1,17 @@
-
 EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components
-EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/features
-EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/general
-EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/wifi
-EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/spi_devices
-EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/i2c_devices
-EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/i2c_devices/sensor
-EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/i2c_devices/others
-EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/network
-EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/platforms
-EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/motor/stepper
-EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/motor/servo
-EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/framework
-EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/i2s_devices
-EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/hmi
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/examples/common_components
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/bus
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/button
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/display
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/display/digital_tube
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/expander/io_expander
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/gui
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/led
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/motor
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/sensors/gesture
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/sensors/humiture
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/sensors/imu
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/sensors/light_sensor
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/sensors/pressure
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/storage
+

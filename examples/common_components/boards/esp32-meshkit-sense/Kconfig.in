@@ -1,0 +1,26 @@
+if BOARD_ESP32_MESHKIT_SENSE
+
+    config BOARD_I2C0_INIT
+        bool "init i2c0 during board init"
+        default y
+        help
+            if enable, i2c0 will be initialized with default configuration during board init,
+            then, you can use iot_board_get_handle to get the bus handle.
+    config BOARD_SPI2_INIT
+        bool "init spi2 during board init"
+        default n
+        help
+            if yes, spi2 will be initialized with default configuration during board init,
+            then, you can use iot_board_get_handle to get the bus handle.
+    config BOARD_POWER_SENSOR
+        bool "power on sensors during board init"
+        default y
+        help
+            if enable, sensors' power switch will be on during board init.
+    config BOARD_POWER_SCREEN
+        bool "power on screen during board init"
+        default y
+        help
+            if enable, screen's power switch will be on during board init.
+
+endif #BOARD_ESP32_MESHKIT_SENSE

@@ -1,19 +1,22 @@
 
 add_compile_options(-fdiagnostics-color=always)
 
-set(EXTRA_COMPONENT_DIRS  ${EXTRA_COMPONENT_DIRS}
-                        $ENV{IOT_SOLUTION_PATH}/components
-                        $ENV{IOT_SOLUTION_PATH}/components/features
-                        $ENV{IOT_SOLUTION_PATH}/components/general
-                        $ENV{IOT_SOLUTION_PATH}/components/wifi
-                        $ENV{IOT_SOLUTION_PATH}/components/spi_devices
-                        $ENV{IOT_SOLUTION_PATH}/components/i2c_devices
-                        $ENV{IOT_SOLUTION_PATH}/components/i2c_devices/sensor
-                        $ENV{IOT_SOLUTION_PATH}/components/i2c_devices/others
-                        $ENV{IOT_SOLUTION_PATH}/components/network
-                        $ENV{IOT_SOLUTION_PATH}/components/platforms
-                        $ENV{IOT_SOLUTION_PATH}/components/motor/stepper
-                        $ENV{IOT_SOLUTION_PATH}/components/motor/servo
-                        $ENV{IOT_SOLUTION_PATH}/components/framework
-                        $ENV{IOT_SOLUTION_PATH}/components/i2s_devices
-                        $ENV{IOT_SOLUTION_PATH}/components/hmi )
+list(APPEND EXTRA_COMPONENT_DIRS 
+                                "$ENV{IOT_SOLUTION_PATH}/components"
+                                "$ENV{IOT_SOLUTION_PATH}/examples/common_components"
+                                "$ENV{IOT_SOLUTION_PATH}/components/bus"
+                                "$ENV{IOT_SOLUTION_PATH}/components/button"
+                                "$ENV{IOT_SOLUTION_PATH}/components/display"
+                                "$ENV{IOT_SOLUTION_PATH}/components/display/digital_tube"
+                                "$ENV{IOT_SOLUTION_PATH}/components/expander/io_expander"
+                                "$ENV{IOT_SOLUTION_PATH}/components/gui"
+                                "$ENV{IOT_SOLUTION_PATH}/components/led"
+                                "$ENV{IOT_SOLUTION_PATH}/components/motor"
+                                "$ENV{IOT_SOLUTION_PATH}/components/sensors/gesture"
+                                "$ENV{IOT_SOLUTION_PATH}/components/sensors/humiture"
+                                "$ENV{IOT_SOLUTION_PATH}/components/sensors/imu"
+                                "$ENV{IOT_SOLUTION_PATH}/components/sensors/light_sensor"
+                                "$ENV{IOT_SOLUTION_PATH}/components/sensors/pressure"
+                                "$ENV{IOT_SOLUTION_PATH}/components/storage"
+                                )
+

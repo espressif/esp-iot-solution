@@ -3,17 +3,6 @@
 
 :link_to_translation:`en:[English]`
 
-开发板简介
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  .. toctree::
-    :maxdepth: 1
-    
-    ESP-Prog <../hw-reference/ESP-Prog_guide>
-    ESP-LCDKit <../hw-reference/ESP32_LCDKit_guide>
-    ESP32-SenseKit <../hw-reference/esp32_sense_kit_guide>
-    ESP-MeshKit <../hw-reference/ESP32-MeshKit-Sense_guide>
-
-
 配置开发环境
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
