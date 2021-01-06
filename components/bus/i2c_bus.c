@@ -77,7 +77,7 @@ static i2c_bus_t s_i2c_bus[I2C_NUM_MAX];
 
 static esp_err_t i2c_driver_reinit(i2c_port_t port, const i2c_config_t *conf);
 static esp_err_t i2c_driver_deinit(i2c_port_t port);
-static esp_err_t i2c_bus_write_reg8(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, size_t data_len, uint8_t *data);
+static esp_err_t i2c_bus_write_reg8(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, size_t data_len, const uint8_t *data);
 static esp_err_t i2c_bus_read_reg8(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, size_t data_len, uint8_t *data);
 inline static bool i2c_config_compare(i2c_port_t port, const i2c_config_t *conf);
 /**************************************** Public Functions (Application level)*********************************************/
@@ -204,6 +204,13 @@ esp_err_t i2c_bus_device_delete(i2c_bus_device_handle_t *p_dev_handle)
     free(i2c_device);
     *p_dev_handle = NULL;
     return ESP_OK;
+}
+
+uint8_t i2c_bus_device_get_address(i2c_bus_device_handle_t dev_handle)
+{
+    I2C_BUS_CHECK(dev_handle != NULL, "device handle error", NULL_I2C_DEV_ADDR);
+    i2c_bus_device_t *i2c_device = (i2c_bus_device_t *)dev_handle;
+    return i2c_device->dev_addr;
 }
 
 esp_err_t i2c_bus_read_bytes(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, size_t data_len, uint8_t *data)
@@ -378,7 +385,7 @@ esp_err_t i2c_bus_read_reg16(i2c_bus_device_handle_t dev_handle, uint16_t mem_ad
     return ret;
 }
 
-static esp_err_t i2c_bus_write_reg8(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, size_t data_len, uint8_t *data)
+static esp_err_t i2c_bus_write_reg8(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, size_t data_len, const uint8_t *data)
 {
     I2C_BUS_CHECK(dev_handle != NULL, "device handle error", ESP_ERR_INVALID_ARG);
     I2C_BUS_CHECK(data != NULL, "data pointer error", ESP_ERR_INVALID_ARG);
@@ -401,7 +408,7 @@ static esp_err_t i2c_bus_write_reg8(i2c_bus_device_handle_t dev_handle, uint8_t 
     return ret;
 }
 
-esp_err_t i2c_bus_write_reg16(i2c_bus_device_handle_t dev_handle, uint16_t mem_address, size_t data_len, uint8_t *data)
+esp_err_t i2c_bus_write_reg16(i2c_bus_device_handle_t dev_handle, uint16_t mem_address, size_t data_len, const uint8_t *data)
 {
     I2C_BUS_CHECK(dev_handle != NULL, "device handle error", ESP_ERR_INVALID_ARG);
     I2C_BUS_CHECK(data != NULL, "data pointer error", ESP_ERR_INVALID_ARG);

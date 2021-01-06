@@ -64,9 +64,9 @@ Example:
 
 .. note::
 
-    对于某些特殊应用场景，例如::
+    对于某些特殊应用场景，例如:
 
-    1. 当寄存器地址为 16 位时，可以使用 :cpp:func:`i2c_bus_write_reg16` 或 :cpp:func:`i2c_bus_write_reg16` 进行读写操作；
+    1. 当寄存器地址为 16 位时，可以使用 :cpp:func:`i2c_bus_read_reg16` 或 :cpp:func:`i2c_bus_write_reg16` 进行读写操作；
     2. 对于需要跳过地址阶段，或者需要增加命令阶段的设备，可以使用 :cpp:func:`i2c_bus_cmd_begin` 结合 `I2C command link <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/i2c.html?highlight=i2c#communication-as-master>`_ 进行操作。
 
 spi\_bus 使用方法
