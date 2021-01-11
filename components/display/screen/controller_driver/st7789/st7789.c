@@ -77,39 +77,79 @@ scr_driver_fun_t lcd_st7789_default_driver = {
     .get_info = lcd_st7789_get_info,
 };
 
-/*
- This struct stores a bunch of command values to be initialized for ILI9341
-*/
-typedef struct {
-    uint8_t cmd;
-    uint8_t data[16];
-    uint8_t databytes; //No of data in data; bit 7 = delay after set; 0xFF = end of cmds.
-} lcd_init_cmd_t;
+static void lcd_st7789_init_reg(void)
+{
+    LCD_WRITE_CMD(0x3A);
+    LCD_WRITE_DATA(0x05);
 
+    LCD_WRITE_CMD(0xB2);
+    LCD_WRITE_DATA(0x0C);
+    LCD_WRITE_DATA(0x0C);
+    LCD_WRITE_DATA(0x00);
+    LCD_WRITE_DATA(0x33);
+    LCD_WRITE_DATA(0x33);
 
-DRAM_ATTR static const lcd_init_cmd_t st7789_init_cmds[] = {
-    {0xC0, {0x00}, 1},           //LCMCTRL: LCM Control [2C] //sumpremely related to 0x36, MADCTL
-    {0xC2, {0x01, 0xFF}, 2},     //VDVVRHEN: VDV and VRH Command Enable [01 FF]
-    {0xC3, {0x13}, 1},           //VRHS: VRH Set VAP=???, VAN=-??? [0B]
-    {0xC4, {0x20}, 1},           //VDVS: VDV Set [20]
-    {0xC6, {0x0F}, 1},           //FRCTRL2: Frame Rate control in normal mode [0F]
-    {0xCA, {0x0F}, 1},           //REGSEL2 [0F]
-    {0xC8, {0x08}, 1},           //REGSEL1 [08]
-    {0x55, {0xB0}, 1},           //WRCACE  [00]
-    {0x36, {0x00}, 1},
-    {0x3A, {0x55}, 1},             //this says 0x05
-    {0xB1, {0x40, 0x02, 0x14}, 3}, //sync setting not reqd
-    {0x26, {0x01}, 1},
-    {0x2A, {0x00, 0x00, 0x00, 0xEF}, 4},
-    {0x2B, {0x00, 0x00, 0x01, 0x3F}, 4},
-    {0x2C, {0x00}, 1},
-    {0xE0, {0xD0, 0x00, 0x05, 0x0E, 0x15, 0x0D, 0x37, 0x43, 0x47, 0x09, 0x15, 0x12, 0x16, 0x19}, 14},    //PVGAMCTRL: Positive Voltage Gamma control
-    {0xE1, {0xD0, 0x00, 0x05, 0x0D, 0x0C, 0x06, 0x2D, 0x44, 0x40, 0x0E, 0x1C, 0x18, 0x16, 0x19}, 14},    //NVGAMCTRL: Negative Voltage Gamma control
-    {0x11, {0}, 0x80},
-    {0x29, {0}, 0x80},
-    {0, {0}, 0xff},
-};
+    LCD_WRITE_CMD(0xB7);  //Gate Control
+    LCD_WRITE_DATA(0x35);
 
+    LCD_WRITE_CMD(0xBB);  //VCOM Setting
+    LCD_WRITE_DATA(0x19);
+
+    LCD_WRITE_CMD(0xC0); //LCM Control     
+    LCD_WRITE_DATA(0x2C);
+
+    LCD_WRITE_CMD(0xC2);  //VDV and VRH Command Enable
+    LCD_WRITE_DATA(0x01);
+    LCD_WRITE_CMD(0xC3);  //VRH Set
+    LCD_WRITE_DATA(0x12);
+    LCD_WRITE_CMD(0xC4);  //VDV Set
+    LCD_WRITE_DATA(0x20);
+
+    LCD_WRITE_CMD(0xC6);  //Frame Rate Control in Normal Mode
+    LCD_WRITE_DATA(0x0F);
+    
+    LCD_WRITE_CMD(0xD0);  // Power Control 1
+    LCD_WRITE_DATA(0xA4);
+    LCD_WRITE_DATA(0xA1);
+
+    LCD_WRITE_CMD(0xE0);  //Positive Voltage Gamma Control
+    LCD_WRITE_DATA(0xD0);
+    LCD_WRITE_DATA(0x04);
+    LCD_WRITE_DATA(0x0D);
+    LCD_WRITE_DATA(0x11);
+    LCD_WRITE_DATA(0x13);
+    LCD_WRITE_DATA(0x2B);
+    LCD_WRITE_DATA(0x3F);
+    LCD_WRITE_DATA(0x54);
+    LCD_WRITE_DATA(0x4C);
+    LCD_WRITE_DATA(0x18);
+    LCD_WRITE_DATA(0x0D);
+    LCD_WRITE_DATA(0x0B);
+    LCD_WRITE_DATA(0x1F);
+    LCD_WRITE_DATA(0x23);
+
+    LCD_WRITE_CMD(0xE1);  //Negative Voltage Gamma Control
+    LCD_WRITE_DATA(0xD0);
+    LCD_WRITE_DATA(0x04);
+    LCD_WRITE_DATA(0x0C);
+    LCD_WRITE_DATA(0x11);
+    LCD_WRITE_DATA(0x13);
+    LCD_WRITE_DATA(0x2C);
+    LCD_WRITE_DATA(0x3F);
+    LCD_WRITE_DATA(0x44);
+    LCD_WRITE_DATA(0x51);
+    LCD_WRITE_DATA(0x2F);
+    LCD_WRITE_DATA(0x1F);
+    LCD_WRITE_DATA(0x1F);
+    LCD_WRITE_DATA(0x20);
+    LCD_WRITE_DATA(0x23);
+
+    LCD_WRITE_CMD(0x21);  //Display Inversion On
+
+    LCD_WRITE_CMD(0x11);  //Sleep Out
+
+    LCD_WRITE_CMD(0x29);  //Display On
+}
 
 esp_err_t lcd_st7789_init(const scr_controller_config_t *lcd_conf)
 {
@@ -136,18 +176,7 @@ esp_err_t lcd_st7789_init(const scr_controller_config_t *lcd_conf)
     g_lcd_handle.original_width = lcd_conf->width;
     g_lcd_handle.original_height = lcd_conf->height;
 
-    // Send all the commands
-    int cmd = 0;
-    while (st7789_init_cmds[cmd].databytes != 0xff) {
-        cmd++;
-        ret = LCD_WRITE_CMD(st7789_init_cmds[cmd].cmd);
-        if (st7789_init_cmds[cmd].databytes & 0x80) {
-            vTaskDelay(100 / portTICK_RATE_MS);
-            continue;
-        }
-        ret |= LCD_WRITE(st7789_init_cmds[cmd].data, st7789_init_cmds[cmd].databytes & 0x1F);
-        LCD_CHECK(ESP_OK == ret, "Write lcd register encounter error", ESP_FAIL);
-    }
+    lcd_st7789_init_reg();
 
     // Enable backlight
     if (lcd_conf->pin_num_bckl >= 0) {
