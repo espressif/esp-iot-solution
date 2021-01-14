@@ -715,7 +715,7 @@ If touch sensor *i* is in the non-touch state, then use the current readings for
 
 Steps:
 
-1. During system initialization, acquire *m* readings from each touch sensor, and calculate all touch sensors' β<sub>i</sub> (= AVG'<sub>0</sub> / Eval'<sub>i0</sub>), a fixed value not subject to changes in time.
+1. During system initialization, acquire *m* readings from each touch sensor, and calculate all touch sensors' β<sub>i</sub> (= Eval'<sub>i0</sub> - AVG'<sub>0</sub>), a fixed value not subject to changes in time.
 
     Eval'<sub>i</sub> = (val<sub>0</sub> + val<sub>1</sub> + ... + val<sub>(m-1)</sub>) / m, where val<sub>j</sub> is the j-th reading from the touch sensor.
 
