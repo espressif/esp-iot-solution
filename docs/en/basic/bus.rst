@@ -2,7 +2,7 @@ Bus Component
 ==============
 
 API Reference
---------
+--------------
 
 .. include:: /_build/inc/i2c_bus.inc
 

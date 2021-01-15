@@ -24,7 +24,7 @@ INPUT = \
     ../../components/gui/lvgl_gui/include/iot_lvgl.h \
     ../../components/bus/include/i2c_bus.h \
     ../../components/bus/include/spi_bus.h \
-    ../../components/bus/include/i2s_lcd_driver.h
+    ../../components/bus/include/i2s_lcd_driver.h \
     ../../components/sensors/sensor_hub/include/sensor_type.h \
     ../../components/sensors/sensor_hub/include/iot_sensor_hub.h \
     ../../components/sensors/sensor_hub/include/hal/humiture_hal.h \
