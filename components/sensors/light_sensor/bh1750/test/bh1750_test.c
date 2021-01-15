@@ -28,15 +28,22 @@ static bh1750_handle_t bh1750 = NULL;
 
 static void bh1750_test_init()
 {
-    i2c_config_t conf;
-    conf.mode = I2C_MODE_MASTER;
-    conf.sda_io_num = I2C_MASTER_SDA_IO;
-    conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
-    conf.scl_io_num = I2C_MASTER_SCL_IO;
-    conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
-    conf.master.clk_speed = I2C_MASTER_FREQ_HZ;
+    i2c_config_t conf = {
+        .mode = I2C_MODE_MASTER,
+        .sda_io_num = I2C_MASTER_SDA_IO,
+        .sda_pullup_en = GPIO_PULLUP_ENABLE,
+        .scl_io_num = I2C_MASTER_SCL_IO,
+        .scl_pullup_en = GPIO_PULLUP_ENABLE,
+        .master.clk_speed = I2C_MASTER_FREQ_HZ,
+    };
     i2c_bus = i2c_bus_create(I2C_MASTER_NUM, &conf);
     bh1750 = bh1750_create(i2c_bus, BH1750_I2C_ADDRESS_DEFAULT);
+}
+
+static void bh1750_test_deinit()
+{
+    bh1750_delete(&bh1750);
+    i2c_bus_delete(&i2c_bus);
 }
 
 static void bh1750_test_get_data()
@@ -78,6 +85,5 @@ TEST_CASE("Sensor BH1750 test", "[bh1750][iot][sensor]")
 {
     bh1750_test_init();
     bh1750_test_get_data();
-    bh1750_delete(&bh1750);
-    i2c_bus_delete(&i2c_bus);
+    bh1750_test_deinit();
 }

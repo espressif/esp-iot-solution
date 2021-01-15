@@ -31,13 +31,14 @@ static sht3x_handle_t sht3x = NULL;
  */
 static void sht3x_init_test()
 {
-    i2c_config_t conf;
-    conf.mode = I2C_MODE_MASTER;
-    conf.sda_io_num = I2C_MASTER_SDA_IO;
-    conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
-    conf.scl_io_num = I2C_MASTER_SCL_IO;
-    conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
-    conf.master.clk_speed = I2C_MASTER_FREQ_HZ;
+    i2c_config_t conf = {
+        .mode = I2C_MODE_MASTER,
+        .sda_io_num = I2C_MASTER_SDA_IO,
+        .sda_pullup_en = GPIO_PULLUP_ENABLE,
+        .scl_io_num = I2C_MASTER_SCL_IO,
+        .scl_pullup_en = GPIO_PULLUP_ENABLE,
+        .master.clk_speed = I2C_MASTER_FREQ_HZ,
+    };
     i2c_bus = i2c_bus_create(I2C_MASTER_NUM, &conf);
     sht3x = sht3x_create(i2c_bus, SHT3x_ADDR_PIN_SELECT_VSS);
     sht3x_set_measure_mode(sht3x, SHT3x_PER_2_MEDIUM);  /*!< here read data in periodic mode*/

@@ -47,15 +47,22 @@ static void apds9960_gpio_vl_init(void)
 static void apds9960_test_init()
 {
     int i2c_master_port = APDS9960_I2C_MASTER_NUM;
-    i2c_config_t conf;
-    conf.mode = I2C_MODE_MASTER;
-    conf.sda_io_num = APDS9960_I2C_MASTER_SDA_IO;
-    conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
-    conf.scl_io_num = APDS9960_I2C_MASTER_SCL_IO;
-    conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
-    conf.master.clk_speed = APDS9960_I2C_MASTER_FREQ_HZ;
+    i2c_config_t conf = {
+        .mode = I2C_MODE_MASTER,
+        .sda_io_num = APDS9960_I2C_MASTER_SDA_IO,
+        .sda_pullup_en = GPIO_PULLUP_ENABLE,
+        .scl_io_num = APDS9960_I2C_MASTER_SCL_IO,
+        .scl_pullup_en = GPIO_PULLUP_ENABLE,
+        .master.clk_speed = APDS9960_I2C_MASTER_FREQ_HZ,
+    };
     i2c_bus = i2c_bus_create(i2c_master_port, &conf);
     apds9960 = apds9960_create(i2c_bus, APDS9960_I2C_ADDRESS);
+}
+
+static void apds9960_test_deinit()
+{
+    apds9960_delete(&apds9960);
+    i2c_bus_delete(&i2c_bus);
 }
 
 static void apds9960_test_gesture()
@@ -85,7 +92,6 @@ TEST_CASE("Sensor apds9960 test", "[apds9960][iot][sensor]")
     apds9960_gesture_init(apds9960);
     vTaskDelay(1000 / portTICK_RATE_MS);
     apds9960_test_func();
-    apds9960_delete(&apds9960);
-    i2c_bus_delete(&i2c_bus);
+    apds9960_test_deinit();
 }
 

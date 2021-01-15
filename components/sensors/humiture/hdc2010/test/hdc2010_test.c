@@ -32,13 +32,14 @@ static const char *TAG = "hdc2010";
 
 void hdc2010_init_test()
 {
-    i2c_config_t conf;
-    conf.mode = I2C_MODE_MASTER;
-    conf.sda_io_num = HDC2010_I2C_MASTER_SDA_IO;
-    conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
-    conf.scl_io_num = HDC2010_I2C_MASTER_SCL_IO;
-    conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
-    conf.master.clk_speed = HDC2010_I2C_MASTER_FREQ_HZ;
+    i2c_config_t conf = {
+        .mode = I2C_MODE_MASTER,
+        .sda_io_num = HDC2010_I2C_MASTER_SDA_IO,
+        .sda_pullup_en = GPIO_PULLUP_ENABLE,
+        .scl_io_num = HDC2010_I2C_MASTER_SCL_IO,
+        .scl_pullup_en = GPIO_PULLUP_ENABLE,
+        .master.clk_speed = HDC2010_I2C_MASTER_FREQ_HZ,
+    };
     i2c_bus = i2c_bus_create(HDC2010_I2C_MASTER_NUM, &conf);
     hdc2010 = hdc2010_create(i2c_bus, HDC2010_ADDR_PIN_SELECT_GND);
 }

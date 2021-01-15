@@ -31,15 +31,22 @@ static lis2dh12_handle_t lis2dh12 = NULL;
  */
 static void lis2dh12_test_init()
 {
-    i2c_config_t conf;
-    conf.mode = I2C_MODE_MASTER;
-    conf.sda_io_num = I2C_MASTER_SDA_IO;
-    conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
-    conf.scl_io_num = I2C_MASTER_SCL_IO;
-    conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
-    conf.master.clk_speed = I2C_MASTER_FREQ_HZ;
+    i2c_config_t conf = {
+        .mode = I2C_MODE_MASTER,
+        .sda_io_num = I2C_MASTER_SDA_IO,
+        .sda_pullup_en = GPIO_PULLUP_ENABLE,
+        .scl_io_num = I2C_MASTER_SCL_IO,
+        .scl_pullup_en = GPIO_PULLUP_ENABLE,
+        .master.clk_speed = I2C_MASTER_FREQ_HZ,
+    };
     i2c_bus = i2c_bus_create(I2C_MASTER_NUM, &conf);
     lis2dh12 = lis2dh12_create(i2c_bus, LIS2DH12_I2C_ADDRESS);
+}
+
+static void lis2dh12_test_deinit()
+{
+    lis2dh12_delete(&lis2dh12);
+    i2c_bus_delete(&i2c_bus);
 }
 
 static void lis2dh12_test_get_data(void)
@@ -104,6 +111,5 @@ TEST_CASE("Sensor lis2dh12 test get data [1000ms]", "[lis2dh12][iot][sensor]")
     lis2dh12_test_init();
     vTaskDelay(1000 / portTICK_RATE_MS);
     lis2dh12_test_get_data();
-    lis2dh12_delete(&lis2dh12);
-    i2c_bus_delete(&i2c_bus);
+    lis2dh12_test_deinit();
 }
