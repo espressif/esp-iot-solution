@@ -513,8 +513,10 @@ esp_err_t iot_sensor_stop(sensor_handle_t sensor_handle)
             break;
 
         case MODE_INTERRUPT:
-            SENSOR_CHECK(ESP_OK == sensor_intr_isr_remove(sensor->intr_pin), "sensor stop failed", ESP_FAIL);
-            sensor->isr_state = ISR_STATE_INACTIVE;
+            if (sensor->isr_state == ISR_STATE_ACTIVE){
+                SENSOR_CHECK(ESP_OK == sensor_intr_isr_remove(sensor->intr_pin), "sensor stop failed", ESP_FAIL);
+                sensor->isr_state = ISR_STATE_INACTIVE;
+            }
             break;
         default:
             SENSOR_CHECK( false, "sensor stop failed", ESP_ERR_NOT_SUPPORTED);
@@ -553,8 +555,10 @@ esp_err_t iot_sensor_start(sensor_handle_t sensor_handle)
             break;
 
         case MODE_INTERRUPT:
-            SENSOR_CHECK(ESP_OK == sensor_intr_isr_add(sensor->intr_pin, ((void *)sensor->event_bit)), "sensor start failed", ESP_FAIL);
-            sensor->isr_state = ISR_STATE_ACTIVE;
+            if (sensor->isr_state == ISR_STATE_INITIALIZED){
+                SENSOR_CHECK(ESP_OK == sensor_intr_isr_add(sensor->intr_pin, ((void *)sensor->event_bit)), "sensor start failed", ESP_FAIL);
+                sensor->isr_state = ISR_STATE_ACTIVE;
+            }
             break;
         default:
             SENSOR_CHECK( false, "sensor start failed", ESP_ERR_NOT_SUPPORTED);
@@ -594,8 +598,10 @@ esp_err_t iot_sensor_delete(sensor_handle_t *p_sensor_handle)
             break;
 
         case MODE_INTERRUPT:
-            SENSOR_CHECK(ESP_OK == sensor_intr_isr_remove(sensor->intr_pin), "sensor delete failed", ESP_FAIL);
-            sensor->isr_state = ISR_STATE_INACTIVE;
+            if (sensor->isr_state == ISR_STATE_ACTIVE){
+                SENSOR_CHECK(ESP_OK == sensor_intr_isr_remove(sensor->intr_pin), "sensor delete failed", ESP_FAIL);
+                sensor->isr_state = ISR_STATE_INACTIVE;
+            }
             break;
 
         default:
