@@ -64,7 +64,7 @@ static const char *PWM_AUDIO_NOT_INITIALIZED  = "PWM AUDIO Uninitialized";
 #define VOLUME_0DB          (16)
 
 /**
- * Debug Configuration 
+ * Debug Configuration
  **/
 #define ISR_DEBUG 0  /**< INDEBUG SWITCH */
 #define ISR_DEBUG_IO_MASK 0x8000
@@ -363,7 +363,8 @@ static void IRAM_ATTR timer_group_isr(void *para)
     /**
      * Send semaphore when buffer free is more than BUFFER_MIN_SIZE
      */
-    if (0 == rb->is_give && rb_get_free(rb) > BUFFER_MIN_SIZE) {
+    uint32_t free_size = rb_get_free(rb);
+    if (0 == rb->is_give && free_size > BUFFER_MIN_SIZE) {
         /**< The execution time of the following code is 2.71 microsecond */
         rb->is_give = 1; /**< To prevent multiple give semaphores */
         BaseType_t xHigherPriorityTaskWoken;
@@ -515,7 +516,7 @@ esp_err_t pwm_audio_init(const pwm_audio_config_t *cfg)
                              channel[handle->ledc_channel[CHANNEL_RIGHT_INDEX].channel].conf1.val;
 
     /**
-     * Select and initialize basic parameters of the timer 
+     * Select and initialize basic parameters of the timer
      */
     timer_config_t config = {0};
     config.divider = 16;
@@ -735,6 +736,7 @@ esp_err_t IRAM_ATTR pwm_audio_write(uint8_t *inbuf, size_t inbuf_len, size_t *by
 
         } else {
             res = ESP_FAIL;
+            ESP_LOGD(TAG, "tg config=%x\n", handle->timg_dev->hw_timer[handle->config.timer_num].config.val);
         }
 
         if ((xTaskGetTickCount() - start_ticks) >= ticks_to_wait) {
@@ -757,6 +759,8 @@ esp_err_t pwm_audio_start(void)
     /**< timer enable interrupt */
     portENTER_CRITICAL_SAFE(&timer_spinlock);
     handle->timg_dev->int_ena.val |= BIT(handle->config.timer_num);
+    handle->timg_dev->hw_timer[handle->config.timer_num].config.enable = 1;
+    handle->timg_dev->hw_timer[handle->config.timer_num].config.alarm_en = TIMER_ALARM_EN; /** Make sure the interrupt is enabled*/
     handle->timg_dev->hw_timer[handle->config.timer_num].config.level_int_en = 1;
     portEXIT_CRITICAL_SAFE(&timer_spinlock);
 
@@ -773,6 +777,7 @@ esp_err_t pwm_audio_stop(void)
     /**< just disable timer ,keep pwm output to reduce switching nosie */
     /**< timer disable interrupt */
     portENTER_CRITICAL_SAFE(&timer_spinlock);
+    handle->timg_dev->hw_timer[handle->config.timer_num].config.enable = 0;
     handle->timg_dev->int_ena.val &= (~BIT(handle->config.timer_num));
     handle->timg_dev->hw_timer[handle->config.timer_num].config.level_int_en = 0;
     portEXIT_CRITICAL_SAFE(&timer_spinlock);
