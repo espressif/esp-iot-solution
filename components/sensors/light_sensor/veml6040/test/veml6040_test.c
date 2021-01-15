@@ -29,15 +29,22 @@ static veml6040_handle_t veml6040 = NULL;
 
 static void veml6040_test_init()
 {
-    i2c_config_t conf;
-    conf.mode = I2C_MODE_MASTER;
-    conf.sda_io_num = VEML6040_I2C_MASTER_SDA_IO;
-    conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
-    conf.scl_io_num = VEML6040_I2C_MASTER_SCL_IO;
-    conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
-    conf.master.clk_speed = VEML6040_I2C_MASTER_FREQ_HZ;
+    i2c_config_t conf = {
+        .mode = I2C_MODE_MASTER,
+        .sda_io_num = VEML6040_I2C_MASTER_SDA_IO,
+        .sda_pullup_en = GPIO_PULLUP_ENABLE,
+        .scl_io_num = VEML6040_I2C_MASTER_SCL_IO,
+        .scl_pullup_en = GPIO_PULLUP_ENABLE,
+        .master.clk_speed = VEML6040_I2C_MASTER_FREQ_HZ,
+    };
     i2c_bus = i2c_bus_create(VEML6040_I2C_MASTER_NUM, &conf);
     veml6040 = veml6040_create(i2c_bus, VEML6040_I2C_ADDRESS);
+}
+
+static void veml6040_test_deinit()
+{
+    veml6040_delete(&veml6040);
+    i2c_bus_delete(&i2c_bus);
 }
 
 static void veml6040_test_set_mode()
@@ -78,9 +85,8 @@ static void veml6040_test_get_date()
 TEST_CASE("Sensor veml6040 test", "[veml6040][iot][sensor]")
 {
     veml6040_test_init();
-    veml6040_test_set_mode()
+    veml6040_test_set_mode();
     veml6040_test_get_date();
-    veml6040_delete(&veml6040);
-    i2c_bus_delete(&i2c_bus);
+    veml6040_test_deinit();
 }
 
