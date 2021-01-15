@@ -1,8 +1,0 @@
-menu "Humiture Hal Options"
-    config SENSOR_HUMITURE_INCLUDED_SHT3X
-        bool "include SHT3X driver"
-        default y
-    config SENSOR_HUMITURE_INCLUDED_HTS221
-        bool "include HTS221 driver"
-        default y
-endmenu

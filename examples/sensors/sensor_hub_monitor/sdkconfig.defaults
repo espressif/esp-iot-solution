@@ -1,0 +1,83 @@
+#
+# Sensor Hub Options
+#
+
+#
+# Sensor Hal Options
+#
+
+#
+# IMU Hal Options
+#
+CONFIG_SENSOR_IMU_INCLUDED_MPU6050=y
+CONFIG_SENSOR_IMU_INCLUDED_LIS2DH12=y
+# end of IMU Hal Options
+
+#
+# Humiture Hal Options
+#
+CONFIG_SENSOR_HUMITURE_INCLUDED_SHT3X=y
+CONFIG_SENSOR_HUMITURE_INCLUDED_HTS221=y
+# end of Humiture Hal Options
+
+#
+# Light Sensor Hal Options
+#
+CONFIG_SENSOR_LIGHT_INCLUDED_BH1750=y
+CONFIG_SENSOR_LIGHT_INCLUDED_VEML6040=y
+CONFIG_SENSOR_LIGHT_INCLUDED_VEML6075=y
+# end of Light Sensor Hal Options
+# end of Sensor Hal Options
+
+#
+# Sensor Build Options
+#
+CONFIG_SENSOR_INCLUDED_IMU=y
+CONFIG_SENSOR_INCLUDED_HUMITURE=y
+CONFIG_SENSOR_INCLUDED_LIGHT=y
+# end of Sensor Build Options
+
+#
+# Sensor Task Options
+#
+CONFIG_SENSOR_TASK_PRIORITY_INHERIT=y
+CONFIG_SENSOR_TASK_STACK_SIZE=2048
+# end of Sensor Task Options
+
+#
+# Sensor Event Loop Options
+#
+CONFIG_SENSORS_EVENT_TASK_PRIORITY_INHERIT=y
+CONFIG_SENSOR_EVENT_LOOP_AUTO=y
+CONFIG_SENSORS_EVENT_QUEUE_SIZE=32
+CONFIG_SENSORS_EVENT_STACK_SIZE=4096
+# CONFIG_SENSOR_DEFAULT_HANDLER is not set
+# end of Sensor Event Loop Options
+# end of Sensor Hub Options
+
+#
+# Board Options
+#
+CONFIG_BOARD_ESP32_DEVKITC_V4=y
+# CONFIG_BOARD_ESP32_MESHKIT_SENSE is not set
+# CONFIG_BOARD_ESP32S2_SAOLA_1 is not set
+
+#
+# Devkitc-V4 Board Options
+#
+
+#
+# Board Init Options
+#
+CONFIG_BOARD_I2C0_INIT=y
+# CONFIG_BOARD_SPI2_INIT is not set
+# end of Board Init Options
+# end of Devkitc-V4 Board Options
+# end of Board Options
+
+#
+# Sensor Monitor Example
+#
+CONFIG_SENSOR_EXAMPLE_PERIOD=200
+# end of Sensor Monitor Example
+
