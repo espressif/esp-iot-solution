@@ -103,6 +103,17 @@ typedef enum {
 } sensor_mode_t;
 
 /**
+ * @brief sensor acquire range
+ * 
+ */
+typedef enum {
+    RANGE_DEFAULT, /*!< default range */
+    RANGE_MIN, /*!< minimum range for high-speed or high-precision*/
+    RANGE_MEDIUM, /*!< medium range for general use*/
+    RANGE_MAX, /*!< maximum range for full scale*/
+} sensor_range_t;
+
+/**
  * @brief sensor general events
  * 
  */

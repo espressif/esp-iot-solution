@@ -420,7 +420,7 @@ esp_err_t iot_sensor_create(sensor_id_t sensor_id, const sensor_config_t *config
     ret = sensor->impl->control(sensor->driver_handle, COMMAND_SET_MODE, (void *)(config_copy.mode));
     SENSOR_CHECK_GOTO(ESP_OK == ret || ESP_ERR_NOT_SUPPORTED == ret, "set sensor mode failed !!", cleanup_sensor);
     /*config sensor measuring range, not supported case will be skiped*/
-    ret = sensor->impl->control(sensor->driver_handle, COMMAND_SET_RANGE, &(config_copy.range));
+    ret = sensor->impl->control(sensor->driver_handle, COMMAND_SET_RANGE, (void *)(config_copy.range));
     SENSOR_CHECK_GOTO(ESP_OK == ret || ESP_ERR_NOT_SUPPORTED == ret, "set sensor range failed !!", cleanup_sensor);
     /*config sensor work mode, not supported case will be skiped*/
     ret = sensor->impl->control(sensor->driver_handle, COMMAND_SET_ODR, (void *)(config_copy.min_delay));

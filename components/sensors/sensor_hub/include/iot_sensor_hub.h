@@ -86,7 +86,7 @@ typedef struct {
 typedef struct {
     bus_handle_t bus;                           /*!< i2c/spi bus handle*/
     sensor_mode_t mode;                         /*!< set acquire mode detiled in sensor_mode_t*/
-    float range;                                /*!< set measuring range*/
+    sensor_range_t range;                       /*!< set measuring range*/
     uint32_t min_delay;                         /*!< set minimum acquisition interval*/
     int intr_pin;                               /*!< set interrupt pin */
     int intr_type;                              /*!< set interrupt type*/
