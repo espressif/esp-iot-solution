@@ -13,8 +13,8 @@
 // limitations under the License.
 
 #include "esp_log.h"
-#include "iot_xpt2046.h"
-#include "iot_ft5x06.h"
+#include "xpt2046.h"
+#include "ft5x06.h"
 
 static const char *TAG = "touch panel driver";
 
@@ -24,41 +24,34 @@ static const char *TAG = "touch panel driver";
     }
 
 #ifdef CONFIG_TOUCH_DRIVER_XPT2046
-extern touch_driver_fun_t xpt2046_driver_fun;
+extern touch_panel_driver_t xpt2046_default_driver;
 #endif
 #ifdef CONFIG_TOUCH_DRIVER_FT5X06
-extern touch_driver_fun_t ft5x06_driver_fun;
+extern touch_panel_driver_t ft5x06_default_driver;
 #endif
 #ifdef CONFIG_TOUCH_DRIVER_NS2016
-extern touch_driver_fun_t ns2016_driver_fun;
+extern touch_panel_driver_t ns2016_default_driver;
 #endif
 
-esp_err_t touch_panel_init(touch_controller_t controller, const touch_panel_config_t *conf, touch_driver_fun_t *out_driver)
+esp_err_t touch_panel_find_driver(touch_panel_controller_t controller, touch_panel_driver_t *out_driver)
 {
-    TOUCH_CHECK(NULL != conf, "Pointer of config is invalid", ESP_ERR_INVALID_ARG);
     TOUCH_CHECK(NULL != out_driver, "Pointer of Touch driver is invalid", ESP_ERR_INVALID_ARG);
 
     esp_err_t ret = ESP_OK;
     switch (controller) {
 #ifdef CONFIG_TOUCH_DRIVER_FT5X06
-    case TOUCH_CONTROLLER_FT5X06:
-        ret = ft5x06_driver_fun.init(conf);
-        TOUCH_CHECK(ESP_OK == ret, "Initialize ft5x06 failed", ESP_FAIL);
-        *out_driver = ft5x06_driver_fun;
+    case TOUCH_PANEL_CONTROLLER_FT5X06:
+        *out_driver = ft5x06_default_driver;
         break;
 #endif
 #ifdef CONFIG_TOUCH_DRIVER_XPT2046
-    case TOUCH_CONTROLLER_XPT2046:
-        ret = xpt2046_driver_fun.init(conf);
-        TOUCH_CHECK(ESP_OK == ret, "Initialize xpt2046 failed", ESP_FAIL);
-        *out_driver = xpt2046_driver_fun;
+    case TOUCH_PANEL_CONTROLLER_XPT2046:
+        *out_driver = xpt2046_default_driver;
         break;
 #endif
 #ifdef CONFIG_TOUCH_DRIVER_NS2016
-    case TOUCH_CONTROLLER_NS2016:
-        ret = ns2016_driver_fun.init(conf);
-        TOUCH_CHECK(ESP_OK == ret, "Initialize ns2016 failed", ESP_FAIL);
-        *out_driver = ns2016_driver_fun;
+    case TOUCH_PANEL_CONTROLLER_NS2016:
+        *out_driver = ns2016_default_driver;
         break;
 #endif
     default:
@@ -67,13 +60,5 @@ esp_err_t touch_panel_init(touch_controller_t controller, const touch_panel_conf
         break;
     }
 
-    return ret;
-}
-
-esp_err_t touch_panel_deinit(const touch_driver_fun_t *touch)
-{
-    TOUCH_CHECK(NULL != touch, "Pointer of Touch driver is invalid", ESP_ERR_INVALID_ARG);
-    esp_err_t ret;
-    ret = touch->deinit();
     return ret;
 }

@@ -16,7 +16,6 @@
 
 #include "painter_fonts.h"
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -30,14 +29,46 @@ extern "C" {
  *      - ESP_OK on success
  *      - ESP_FAIL Failed
  */
-esp_err_t painter_init(scr_driver_fun_t *driver);
+esp_err_t painter_init(scr_driver_t *driver);
+
+/**
+ * @brief Set point color
+ * 
+ * @param color point color
+ * 
+ */
+void painter_set_point_color(uint16_t color);
+
+/**
+ * @brief Get point color
+ * 
+ * @return point color
+ * 
+ */
+uint16_t painter_get_point_color(void);
+
+/**
+ * @brief Set background color
+ * 
+ * @param color background color
+ * 
+ */
+void painter_set_back_color(uint16_t color);
+
+/**
+ * @brief Get background color
+ * 
+ * @return background color
+ * 
+ */
+uint16_t painter_get_back_color(void);
 
 /**
  * @brief Clear screen to one color
  * 
  * @param color Set the screen to this color
  */
-void painter_clear(int color);
+void painter_clear(uint16_t color);
 
 /**
  * @brief Draw a character on screen
@@ -48,7 +79,7 @@ void painter_clear(int color);
  * @param font Pointer to a font
  * @param color Color to display
  */
-void painter_draw_char(int x, int y, char ascii_char, const font_t* font, int color);
+void painter_draw_char(int x, int y, char ascii_char, const font_t* font, uint16_t color);
 
 /**
  * @brief Draw a string on screen
@@ -59,7 +90,7 @@ void painter_draw_char(int x, int y, char ascii_char, const font_t* font, int co
  * @param font Pointer to a font
  * @param color Color to display
  */
-void painter_draw_string(int x, int y, const char* text, const font_t* font, int color);
+void painter_draw_string(int x, int y, const char* text, const font_t* font, uint16_t color);
 
 /**
  * @brief Draw a number on screen
@@ -71,7 +102,7 @@ void painter_draw_string(int x, int y, const char* text, const font_t* font, int
  * @param font Pointer to a font
  * @param color Color to display
  */
-void painter_draw_num(int x, int y, uint32_t num, uint8_t len, const font_t *font, int color);
+void painter_draw_num(int x, int y, uint32_t num, uint8_t len, const font_t *font, uint16_t color);
 
 /**
  * @brief Draw a float number on screen
@@ -84,7 +115,7 @@ void painter_draw_num(int x, int y, uint32_t num, uint8_t len, const font_t *fon
  * @param font Pointer to a font
  * @param color Color to display
  */
-void painter_draw_float(int x, int y, uint32_t num, uint8_t len, uint8_t point, const font_t *font, int color);
+void painter_draw_float(int x, int y, uint32_t num, uint8_t len, uint8_t point, const font_t *font, uint16_t color);
 
 /**
  * @brief Draw a image on screen
@@ -105,7 +136,7 @@ void painter_draw_image(int x, int y, int width, int height, uint16_t *img);
  * @param line_length length of line
  * @param color Color to display
  */
-void painter_draw_horizontal_line(int x, int y, int line_length, int color);
+void painter_draw_horizontal_line(int x, int y, int line_length, uint16_t color);
 
 /**
  * @brief Draw a vertical line on screen
@@ -115,7 +146,7 @@ void painter_draw_horizontal_line(int x, int y, int line_length, int color);
  * @param line_length length of line
  * @param color Color to display
  */
-void painter_draw_vertical_line(int x, int y, int line_length, int color);
+void painter_draw_vertical_line(int x, int y, int line_length, uint16_t color);
 
 /**
  * @brief draw a line on sccreen
@@ -126,7 +157,7 @@ void painter_draw_vertical_line(int x, int y, int line_length, int color);
  * @param y1 End point in Y direction
  * @param color Color to display
  */
-void painter_draw_line(int x0, int y0, int x1, int y1, int color);
+void painter_draw_line(int x0, int y0, int x1, int y1, uint16_t color);
 
 /**
  * @brief draw a rectangle on sccreen
@@ -137,7 +168,7 @@ void painter_draw_line(int x0, int y0, int x1, int y1, int color);
  * @param y1 End point in Y direction
  * @param color Color to display
  */
-void painter_draw_rectangle(int x0, int y0, int x1, int y1, int color);
+void painter_draw_rectangle(int x0, int y0, int x1, int y1, uint16_t color);
 
 /**
  * @brief draw a filled rectangle on sccreen
@@ -148,7 +179,7 @@ void painter_draw_rectangle(int x0, int y0, int x1, int y1, int color);
  * @param y1 End point in Y direction
  * @param color Color to display
  */
-void painter_draw_filled_rectangle(int x0, int y0, int x1, int y1, int color);
+void painter_draw_filled_rectangle(int x0, int y0, int x1, int y1, uint16_t color);
 
 /**
  * @brief Draw a hollow circle on screen
@@ -158,7 +189,7 @@ void painter_draw_filled_rectangle(int x0, int y0, int x1, int y1, int color);
  * @param radius radius of circle
  * @param color Color to display
  */
-void painter_draw_circle(int x, int y, int radius, int color);
+void painter_draw_circle(int x, int y, int radius, uint16_t color);
 
 /**
  * @brief Draw a filled circle on screen
@@ -168,7 +199,7 @@ void painter_draw_circle(int x, int y, int radius, int color);
  * @param radius radius of circle
  * @param color Color to display
  */
-void painter_draw_filled_circle(int x, int y, int radius, int color);
+void painter_draw_filled_circle(int x, int y, int radius, uint16_t color);
 
 
 #ifdef __cplusplus

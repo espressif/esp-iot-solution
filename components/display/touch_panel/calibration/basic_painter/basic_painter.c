@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
+# include <stdlib.h>
 #include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -29,7 +29,7 @@ static const char *TAG = "basic painter";
 typedef struct {
     uint16_t point_color;
     uint16_t back_color;
-    scr_driver_fun_t lcd;
+    scr_driver_t lcd;
 
     int16_t window_x1;     ///< Dirty tracking window minimum x
     int16_t window_y1;     ///< Dirty tracking window minimum y
@@ -40,9 +40,9 @@ typedef struct {
 
 static uint16_t g_point_color = COLOR_BLACK;
 static uint16_t g_back_color  = COLOR_WHITE;
-static scr_driver_fun_t g_lcd;
+static scr_driver_t g_lcd;
 
-esp_err_t painter_init(scr_driver_fun_t *driver)
+esp_err_t painter_init(scr_driver_t *driver)
 {
     g_lcd = *driver;
     return ESP_OK;
@@ -68,7 +68,7 @@ uint16_t painter_get_back_color(void)
     return g_back_color;
 }
 
-void painter_clear(int color)
+void painter_clear(uint16_t color)
 {
     PAINTER_CHECK(NULL != g_lcd.init, "paint not initial");
     scr_info_t info;
@@ -87,7 +87,7 @@ void painter_clear(int color)
     free(buffer);
 }
 
-void painter_draw_char(int x, int y, char ascii_char, const font_t *font, int color)
+void painter_draw_char(int x, int y, char ascii_char, const font_t *font, uint16_t color)
 {
     PAINTER_CHECK(ascii_char >= ' ', "ACSII code invalid");
     PAINTER_CHECK(NULL != font, "Font pointer invalid");
@@ -116,7 +116,7 @@ void painter_draw_char(int x, int y, char ascii_char, const font_t *font, int co
     }
 }
 
-void painter_draw_string(int x, int y, const char *text, const font_t *font, int color)
+void painter_draw_string(int x, int y, const char *text, const font_t *font, uint16_t color)
 {
     PAINTER_CHECK(NULL != text, "string pointer invalid");
     PAINTER_CHECK(NULL != font, "Font pointer invalid");
@@ -145,33 +145,15 @@ void painter_draw_string(int x, int y, const char *text, const font_t *font, int
     }
 }
 
-static int8_t my_i2a(int32_t in_num, char *out_str)
-{
-    uint8_t remainder;
-    uint8_t len = 0;
-
-    if (NULL == out_str) {
-        return 0;
-    }
-
-    do {
-        remainder = in_num % 10;
-        in_num = in_num / 10;
-        *(out_str++) = remainder + '0';
-        len++;
-    } while (in_num);
-
-    return len;
-}
-
-void painter_draw_num(int x, int y, uint32_t num, uint8_t len, const font_t *font, int color)
+void painter_draw_num(int x, int y, uint32_t num, uint8_t len, const font_t *font, uint16_t color)
 {
     PAINTER_CHECK(len < 10, "The length of the number is too long");
     PAINTER_CHECK(NULL != font, "Font pointer invalid");
-    char buf[10];
+    char buf[10]={0};
     int8_t num_len;
 
-    num_len = my_i2a(num, buf);
+    itoa(num, buf, 10);
+    num_len = strlen(buf);
     x += (font->Width * (len - 1));
 
     for (size_t i = 0; i < len; i++) {
@@ -191,7 +173,7 @@ void painter_draw_image(int x, int y, int width, int height, uint16_t *img)
     g_lcd.draw_bitmap(x, y, width, height, img);
 }
 
-void painter_draw_horizontal_line(int x, int y, int line_length, int color)
+void painter_draw_horizontal_line(int x, int y, int line_length, uint16_t color)
 {
     int i;
 
@@ -200,7 +182,7 @@ void painter_draw_horizontal_line(int x, int y, int line_length, int color)
     }
 }
 
-void painter_draw_vertical_line(int x, int y, int line_length, int color)
+void painter_draw_vertical_line(int x, int y, int line_length, uint16_t color)
 {
     int i;
 
@@ -209,20 +191,20 @@ void painter_draw_vertical_line(int x, int y, int line_length, int color)
     }
 }
 
-void painter_draw_line(int x1, int y1, int x2, int y2, int color)
+void painter_draw_line(int x1, int y1, int x2, int y2, uint16_t color)
 {
     uint16_t t;
     int xerr = 0, yerr = 0, delta_x, delta_y, distance;
     int incx, incy, uRow, uCol;
-    delta_x = x2 - x1; //计算坐标增量
+    delta_x = x2 - x1; 
     delta_y = y2 - y1;
     uRow = x1;
     uCol = y1;
 
     if (delta_x > 0) {
-        incx = 1;    //设置单步方向
+        incx = 1;    //set direction
     } else if (delta_x == 0) {
-        incx = 0;    //垂直线
+        incx = 0;    //vertical line
     } else {
         incx = -1;
         delta_x = -delta_x;
@@ -231,20 +213,20 @@ void painter_draw_line(int x1, int y1, int x2, int y2, int color)
     if (delta_y > 0) {
         incy = 1;
     } else if (delta_y == 0) {
-        incy = 0;    //水平线
+        incy = 0;    //horizontal line
     } else {
         incy = -1;
         delta_y = -delta_y;
     }
 
     if (delta_x > delta_y) {
-        distance = delta_x;    //选取基本增量坐标轴
+        distance = delta_x;
     } else {
         distance = delta_y;
     }
 
-    for (t = 0; t <= distance + 1; t++) { //画线输出
-        g_lcd.draw_pixel(uRow, uCol, color); //画点
+    for (t = 0; t <= distance + 1; t++) {
+        g_lcd.draw_pixel(uRow, uCol, color);
         xerr += delta_x ;
         yerr += delta_y ;
 
@@ -260,7 +242,7 @@ void painter_draw_line(int x1, int y1, int x2, int y2, int color)
     }
 }
 
-void painter_draw_rectangle(int x0, int y0, int x1, int y1, int color)
+void painter_draw_rectangle(int x0, int y0, int x1, int y1, uint16_t color)
 {
     int min_x, min_y, max_x, max_y;
     min_x = x1 > x0 ? x0 : x1;
@@ -274,7 +256,7 @@ void painter_draw_rectangle(int x0, int y0, int x1, int y1, int color)
     painter_draw_vertical_line(max_x, min_y, max_y - min_y + 1, color);
 }
 
-void painter_draw_filled_rectangle(int x0, int y0, int x1, int y1, int color)
+void painter_draw_filled_rectangle(int x0, int y0, int x1, int y1, uint16_t color)
 {
     int min_x, min_y, max_x, max_y;
     int i;
@@ -288,7 +270,7 @@ void painter_draw_filled_rectangle(int x0, int y0, int x1, int y1, int color)
     }
 }
 
-void painter_draw_circle(int x, int y, int radius, int color)
+void painter_draw_circle(int x, int y, int radius, uint16_t color)
 {
     /* Bresenham algorithm */
     int x_pos = -radius;
@@ -317,7 +299,7 @@ void painter_draw_circle(int x, int y, int radius, int color)
     } while (x_pos <= 0);
 }
 
-void painter_draw_filled_circle(int x, int y, int radius, int color)
+void painter_draw_filled_circle(int x, int y, int radius, uint16_t color)
 {
     /* Bresenham algorithm */
     int x_pos = -radius;

@@ -1,9 +1,9 @@
-// Copyright 2015-2020 Espressif Systems (Shanghai) PTE LTD
+// Copyright 2020 Espressif Systems (Shanghai) Co. Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-
+//
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
@@ -14,7 +14,7 @@
 #include <stdio.h>
 #include "driver/i2c.h"
 #include "i2c_bus.h"
-#include "iot_ft5x06.h"
+#include "ft5x06.h"
 #include "esp_log.h"
 #include "string.h"
 
@@ -24,7 +24,6 @@ static const char *TAG = "FT5x06";
         ESP_LOGE(TAG,"%s:%d (%s):%s", __FILE__, __LINE__, __FUNCTION__, str);   \
         return (ret);                                                           \
     }
-
 
 #define WRITE_BIT          (I2C_MASTER_WRITE)       /*!< I2C master write */
 #define READ_BIT           (I2C_MASTER_READ)        /*!< I2C master read */
@@ -112,35 +111,32 @@ static const char *TAG = "FT5x06";
 #define FT5X0X_REG_ERR                    0xa9
 #define FT5X0X_REG_CLB                    0xaa
 
-
-
 typedef struct {
     i2c_bus_device_handle_t i2c_dev;
     int pin_num_int;
-    touch_dir_t direction;
+    touch_panel_dir_t direction;
     uint16_t width;
     uint16_t height;
 } ft5x06_dev_t;
 
 static ft5x06_dev_t g_dev;
 
-static esp_err_t iot_ft5x06_calibration_run(const scr_driver_fun_t *screen, bool recalibrate);
+static esp_err_t ft5x06_calibration_run(const scr_driver_t *screen, bool recalibrate);
 
-touch_driver_fun_t ft5x06_driver_fun = {
-    .init = iot_ft5x06_init,
-    .deinit = iot_ft5x06_deinit,
-    .calibration_run = iot_ft5x06_calibration_run,
-    .set_direction = iot_ft5x06_set_direction,
-    .is_pressed = iot_ft5x06_is_press,
-    .read_info = iot_ft5x06_sample,
+touch_panel_driver_t ft5x06_default_driver = {
+    .init = ft5x06_init,
+    .deinit = ft5x06_deinit,
+    .calibration_run = ft5x06_calibration_run,
+    .set_direction = ft5x06_set_direction,
+    .read_point_data = ft5x06_sample,
 };
 
-static esp_err_t iot_ft5x06_read(ft5x06_dev_t *dev, uint8_t start_addr, uint8_t read_num, uint8_t *data_buf)
+static esp_err_t ft5x06_read(ft5x06_dev_t *dev, uint8_t start_addr, uint8_t read_num, uint8_t *data_buf)
 {
     return i2c_bus_read_bytes(dev->i2c_dev, start_addr, read_num, data_buf);
 }
 
-static esp_err_t iot_ft5x06_write(ft5x06_dev_t *dev, uint8_t start_addr, uint8_t write_num, uint8_t *data_buf)
+static esp_err_t ft5x06_write(ft5x06_dev_t *dev, uint8_t start_addr, uint8_t write_num, uint8_t *data_buf)
 {
     esp_err_t ret;
 
@@ -153,12 +149,12 @@ static esp_err_t iot_ft5x06_write(ft5x06_dev_t *dev, uint8_t start_addr, uint8_t
 
 static esp_err_t ft5x06_write_reg(ft5x06_dev_t *dev, uint8_t reg, uint8_t val)
 {
-    return iot_ft5x06_write(dev, reg, 1, &val);
+    return ft5x06_write(dev, reg, 1, &val);
 }
 
 static esp_err_t ft5x06_read_reg(ft5x06_dev_t *dev, uint8_t reg, uint8_t *val)
 {
-    return iot_ft5x06_read(dev, reg, 1, val);
+    return ft5x06_read(dev, reg, 1, val);
 }
 
 static uint8_t ft5x06_read_fw_ver(ft5x06_dev_t *dev)
@@ -168,12 +164,13 @@ static uint8_t ft5x06_read_fw_ver(ft5x06_dev_t *dev)
     return (ver);
 }
 
-esp_err_t iot_ft5x06_init(const touch_panel_config_t *config)
+esp_err_t ft5x06_init(const touch_panel_config_t *config)
 {
     TOUCH_CHECK(NULL != config, "Pointer invalid", ESP_ERR_INVALID_ARG);
-    TOUCH_CHECK(TOUCH_IFACE_I2C == config->iface_type, "Interface type not support", ESP_ERR_INVALID_ARG);
+    TOUCH_CHECK(TOUCH_PANEL_IFACE_I2C == config->interface_type, "Interface type not support", ESP_ERR_INVALID_ARG);
+    TOUCH_CHECK(NULL == g_dev.i2c_dev, "Already initialize", ESP_ERR_INVALID_STATE);
 
-    i2c_bus_device_handle_t i2c_dev = i2c_bus_device_create(config->iface_i2c.i2c_bus, config->iface_i2c.i2c_addr, config->iface_i2c.clk_freq);
+    i2c_bus_device_handle_t i2c_dev = i2c_bus_device_create(config->interface_i2c.i2c_bus, config->interface_i2c.i2c_addr, config->interface_i2c.clk_freq);
     TOUCH_CHECK(NULL != i2c_dev, "i2c bus create failed", ESP_FAIL);
 
     if (config->pin_num_int >= 0) {
@@ -185,7 +182,7 @@ esp_err_t iot_ft5x06_init(const touch_panel_config_t *config)
     g_dev.pin_num_int = config->pin_num_int;
     g_dev.width = config->width;
     g_dev.height = config->height;
-    iot_ft5x06_set_direction(config->direction);
+    ft5x06_set_direction(config->direction);
 
     esp_err_t ret = ESP_OK;
     ft5x06_dev_t *dev = &g_dev;
@@ -221,23 +218,27 @@ esp_err_t iot_ft5x06_init(const touch_panel_config_t *config)
     TOUCH_CHECK(ESP_OK == ret, "ft5x06 write reg failed", ESP_FAIL);
 
     ESP_LOGI(TAG, "Initial successful | GPIO INT:%d | ADDR:0x%x | dir:%d",
-             config->pin_num_int, config->iface_i2c.i2c_addr, config->direction);
+             config->pin_num_int, config->interface_i2c.i2c_addr, config->direction);
     return ret;
 }
 
-esp_err_t iot_ft5x06_deinit(void)
+esp_err_t ft5x06_deinit(void)
 {
     i2c_bus_device_delete(&g_dev.i2c_dev);
+    memset(&g_dev, 0, sizeof(ft5x06_dev_t));
     return ESP_OK;
 }
 
-esp_err_t iot_ft5x06_set_direction(touch_dir_t dir)
+esp_err_t ft5x06_set_direction(touch_panel_dir_t dir)
 {
+    if (TOUCH_DIR_MAX < dir) {
+        dir >>= 5;
+    }
     g_dev.direction = dir;
     return ESP_OK;
 }
 
-int iot_ft5x06_is_press(void)
+int ft5x06_is_press(void)
 {
     uint8_t points;
     ft5x06_read_reg(&g_dev, FT5x06_TOUCH_POINTS, &points);
@@ -292,9 +293,10 @@ static void ft5x06_apply_rotate(uint16_t *x, uint16_t *y)
     }
 }
 
-esp_err_t iot_ft5x06_sample(touch_info_t *info)
+esp_err_t ft5x06_sample(touch_panel_points_t *info)
 {
     TOUCH_CHECK(NULL != info, "Pointer invalid", ESP_FAIL);
+    TOUCH_CHECK(NULL != g_dev.i2c_dev, "Uninitialized", ESP_ERR_INVALID_STATE);
 
     uint8_t data[4] = {0};
     ft5x06_dev_t *dev = &g_dev;
@@ -302,14 +304,14 @@ esp_err_t iot_ft5x06_sample(touch_info_t *info)
     ft5x06_read_reg(dev, FT5x06_TOUCH_POINTS, &info->point_num);
     info->point_num &= 0x07;
 
-    if (info->point_num > 0 && info->point_num <= 5) {
-        uint16_t x[5];
-        uint16_t y[5];
+    if (info->point_num > 0 && info->point_num <= TOUCH_MAX_POINT_NUMBER) {
+        uint16_t x[TOUCH_MAX_POINT_NUMBER];
+        uint16_t y[TOUCH_MAX_POINT_NUMBER];
 
         for (size_t i = 0; i < info->point_num; i++) {
-            iot_ft5x06_read(dev, (FT5x06_TOUCH1_XH + i * 6), 2, data);
+            ft5x06_read(dev, (FT5x06_TOUCH1_XH + i * 6), 2, data);
             x[i] = 0x0fff & ((uint16_t)(data[0]) << 8 | data[1]);
-            iot_ft5x06_read(dev, (FT5x06_TOUCH1_YH + i * 6), 2, data);
+            ft5x06_read(dev, (FT5x06_TOUCH1_YH + i * 6), 2, data);
             y[i] = ((uint16_t)(data[0]) << 8 | data[1]);
             ft5x06_apply_rotate(&x[i], &y[i]);
         }
@@ -318,13 +320,15 @@ esp_err_t iot_ft5x06_sample(touch_info_t *info)
 
         info->event = TOUCH_EVT_PRESS;
     } else {
+        info->curx[0] = 0;
+        info->cury[0] = 0;
         info->event = TOUCH_EVT_RELEASE;
     }
 
     return ESP_OK;
 }
 
-static esp_err_t iot_ft5x06_calibration_run(const scr_driver_fun_t *screen, bool recalibrate)
+static esp_err_t ft5x06_calibration_run(const scr_driver_t *screen, bool recalibrate)
 {
     (void)screen;
     (void)recalibrate;

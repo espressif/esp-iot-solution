@@ -24,7 +24,6 @@ static const char* TAG = "param save";
         goto label; \
     }
 
-
 esp_err_t param_save(const char* space_name, const char* key, void *param, uint16_t len)
 {
     esp_err_t ret = ESP_ERR_INVALID_ARG;
@@ -89,4 +88,3 @@ ERASE_FINISH:
 OPEN_FAIL:
     return ret;
 }
-

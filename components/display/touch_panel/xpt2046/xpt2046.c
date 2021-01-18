@@ -1,9 +1,9 @@
-// Copyright 2015-2020 Espressif Systems (Shanghai) PTE LTD
+// Copyright 2020 Espressif Systems (Shanghai) Co. Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-
+//
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
@@ -11,8 +11,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+#include <string.h>
 #include "esp_log.h"
-#include "iot_xpt2046.h"
+#include "xpt2046.h"
 #include "driver/gpio.h"
 #include "touch_calibration.h"
 
@@ -32,6 +33,8 @@ static const char *TAG = "XPT2046";
 #define TOUCH_SAMPLE_MAX 4000
 #define TOUCH_SAMPLE_MIN 100
 
+#define XPT2046_THRESHOLD_Z CONFIG_TOUCH_PANEL_THRESHOLD_PRESS
+
 typedef struct {
     uint16_t x;
     uint16_t y;
@@ -40,20 +43,19 @@ typedef struct {
 typedef struct {
     spi_bus_device_handle_t spi_dev;
     int io_irq;
-    touch_dir_t direction;
+    touch_panel_dir_t direction;
     uint16_t width;
     uint16_t height;
 } xpt2046_dev_t;
 
 static xpt2046_dev_t g_dev = {0};
 
-touch_driver_fun_t xpt2046_driver_fun = {
-    .init = iot_xpt2046_init,
-    .deinit = iot_xpt2046_deinit,
-    .calibration_run = iot_xpt2046_calibration_run,
-    .set_direction = iot_xpt2046_set_direction,
-    .is_pressed = iot_xpt2046_is_pressed,
-    .read_info = iot_xpt2046_sample,
+touch_panel_driver_t xpt2046_default_driver = {
+    .init = xpt2046_init,
+    .deinit = xpt2046_deinit,
+    .calibration_run = xpt2046_calibration_run,
+    .set_direction = xpt2046_set_direction,
+    .read_point_data = xpt2046_sample,
 };
 
 static uint16_t xpt2046_readdata(spi_bus_device_handle_t spi, const uint8_t command)
@@ -80,10 +82,11 @@ static esp_err_t xpt2046_get_sample(uint8_t command, uint16_t *out_data)
     return ESP_FAIL;
 }
 
-esp_err_t iot_xpt2046_init(const touch_panel_config_t *config)
+esp_err_t xpt2046_init(const touch_panel_config_t *config)
 {
     TOUCH_CHECK(NULL != config, "Pointer invalid", ESP_ERR_INVALID_ARG);
-    TOUCH_CHECK(TOUCH_IFACE_SPI == config->iface_type, "Interface type not support", ESP_ERR_INVALID_ARG);
+    TOUCH_CHECK(TOUCH_PANEL_IFACE_SPI == config->interface_type, "Interface type not support", ESP_ERR_INVALID_ARG);
+    TOUCH_CHECK(NULL == g_dev.spi_dev, "Already initialize", ESP_ERR_INVALID_STATE);
 
     //Initialize non-SPI GPIOs
     if (config->pin_num_int >= 0) {
@@ -92,15 +95,15 @@ esp_err_t iot_xpt2046_init(const touch_panel_config_t *config)
     }
 
     spi_device_config_t devcfg = {
-        .clock_speed_hz = config->iface_spi.clk_freq, //Clock out frequency
+        .clock_speed_hz = config->interface_spi.clk_freq, //Clock out frequency
         .mode = 0,                                    //SPI mode 0
-        .cs_io_num = config->iface_spi.pin_num_cs,    //CS pin
+        .cs_io_num = config->interface_spi.pin_num_cs,    //CS pin
     };
 
-    g_dev.spi_dev = spi_bus_device_create(config->iface_spi.spi_bus, &devcfg);
+    g_dev.spi_dev = spi_bus_device_create(config->interface_spi.spi_bus, &devcfg);
     TOUCH_CHECK(NULL != g_dev.spi_dev, "spi bus add device failed", ESP_FAIL);
 
-    iot_xpt2046_set_direction(config->direction);
+    xpt2046_set_direction(config->direction);
     g_dev.io_irq = config->pin_num_int;
     g_dev.width = config->width;
     g_dev.height = config->height;
@@ -109,18 +112,19 @@ esp_err_t iot_xpt2046_init(const touch_panel_config_t *config)
     xpt2046_get_sample(XPT2046_TOUCH_CMD_X, &temp);
 
     ESP_LOGI(TAG, "Touch panel size width: %d, height: %d", g_dev.width, g_dev.height);
-    ESP_LOGI(TAG, "Initial successful | GPIO INT:%d | GPIO CS:%d | dir:%d", config->pin_num_int, config->iface_spi.pin_num_cs, config->direction);
+    ESP_LOGI(TAG, "Initial successful | GPIO INT:%d | GPIO CS:%d | dir:%d", config->pin_num_int, config->interface_spi.pin_num_cs, config->direction);
 
     return ESP_OK;
 }
 
-esp_err_t iot_xpt2046_deinit(void)
+esp_err_t xpt2046_deinit(void)
 {
     spi_bus_device_delete(&g_dev.spi_dev);
+    memset(&g_dev, 0, sizeof(xpt2046_dev_t));
     return ESP_OK;
 }
 
-int iot_xpt2046_is_pressed(void)
+int xpt2046_is_pressed(void)
 {
     /**
      * @note There are two ways to determine weather the touch panel is pressed
@@ -131,20 +135,23 @@ int iot_xpt2046_is_pressed(void)
     uint16_t z;
     esp_err_t ret = xpt2046_get_sample(XPT2046_TOUCH_CMD_Z1, &z);
     TOUCH_CHECK(ret == ESP_OK, "Z sample failed", 0);
-    if (z > 80) { /** If z more than  80, it is considered as pressed */
+    if (z > XPT2046_THRESHOLD_Z) { /** If z more than threshold, it is considered as pressed */
         return 1;
     }
 
     return 0;
 }
 
-esp_err_t iot_xpt2046_set_direction(touch_dir_t dir)
+esp_err_t xpt2046_set_direction(touch_panel_dir_t dir)
 {
+    if (TOUCH_DIR_MAX < dir) {
+        dir >>= 5;
+    }
     g_dev.direction = dir;
     return ESP_OK;
 }
 
-esp_err_t iot_xpt2046_get_rawdata(uint16_t *x, uint16_t *y)
+esp_err_t xpt2046_get_rawdata(uint16_t *x, uint16_t *y)
 {
     position_t samples[XPT2046_SMP_SIZE];
     esp_err_t ret;
@@ -214,8 +221,11 @@ static void xpt2046_apply_rotate(uint16_t *x, uint16_t *y)
     }
 }
 
-esp_err_t iot_xpt2046_sample(touch_info_t *info)
+esp_err_t xpt2046_sample(touch_panel_points_t *info)
 {
+    TOUCH_CHECK(NULL != info, "Pointer invalid", ESP_FAIL);
+    TOUCH_CHECK(NULL != g_dev.spi_dev, "Uninitialized", ESP_ERR_INVALID_STATE);
+
     esp_err_t ret;
     uint16_t x, y;
     info->curx[0] = 0;
@@ -223,12 +233,12 @@ esp_err_t iot_xpt2046_sample(touch_info_t *info)
     info->event = TOUCH_EVT_RELEASE;
     info->point_num = 0;
 
-    int state = iot_xpt2046_is_pressed();
+    int state = xpt2046_is_pressed();
     if (0 == state) {
         return ESP_OK;
     }
 
-    ret = iot_xpt2046_get_rawdata(&x, &y);
+    ret = xpt2046_get_rawdata(&x, &y);
     TOUCH_CHECK(ret == ESP_OK, "Get raw data failed", ESP_FAIL);
 
     /**< If the data is not in the normal range, it is considered that it is not pressed */
@@ -253,13 +263,12 @@ esp_err_t iot_xpt2046_sample(touch_info_t *info)
 
     info->curx[0] = x;
     info->cury[0] = y;
-    info->event = state;
+    info->event = state ? TOUCH_EVT_PRESS : TOUCH_EVT_RELEASE;
     info->point_num = 1;
     return ESP_OK;
 }
 
-esp_err_t iot_xpt2046_calibration_run(const scr_driver_fun_t *screen, bool recalibrate)
+esp_err_t xpt2046_calibration_run(const scr_driver_t *screen, bool recalibrate)
 {
-    return touch_calibration_run(screen, iot_xpt2046_is_pressed, iot_xpt2046_get_rawdata, recalibrate);
+    return touch_calibration_run(screen, xpt2046_is_pressed, xpt2046_get_rawdata, recalibrate);
 }
-

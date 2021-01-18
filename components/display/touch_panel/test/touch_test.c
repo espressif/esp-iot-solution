@@ -1,9 +1,9 @@
-// Copyright 2015-2020 Espressif Systems (Shanghai) PTE LTD
+// Copyright 2020 Espressif Systems (Shanghai) Co. Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-
+//
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
@@ -19,8 +19,8 @@
 
 static const char *TAG = "TOUCH LCD TEST";
 
-static touch_driver_fun_t touch;
-static scr_driver_fun_t lcd;
+static touch_panel_driver_t touch;
+static scr_driver_t lcd;
 
 TEST_CASE("Touch XPT2046 test", "[touch_panel][iot]")
 {
@@ -33,7 +33,7 @@ TEST_CASE("Touch XPT2046 test", "[touch_panel][iot]")
     spi_bus_handle_t spi_bus = spi_bus_create(2, &spi_cfg);
     TEST_ASSERT_NOT_NULL(spi_bus);
 
-    iface_spi_config_t spi_lcd_cfg = {
+    scr_interface_spi_config_t spi_lcd_cfg = {
         .spi_bus = spi_bus,
         .pin_num_cs = 5,
         .pin_num_dc = 19,
@@ -41,11 +41,11 @@ TEST_CASE("Touch XPT2046 test", "[touch_panel][iot]")
         .swap_data = true,
     };
 
-    scr_iface_driver_fun_t *iface_drv;
-    TEST_ASSERT(ESP_OK == scr_iface_create(SCREEN_IFACE_SPI, &spi_lcd_cfg, &iface_drv));
+    scr_interface_driver_t *interface_drv;
+    TEST_ASSERT(ESP_OK == scr_interface_create(SCREEN_IFACE_SPI, &spi_lcd_cfg, &interface_drv));
 
     scr_controller_config_t lcd_cfg = {0};
-    lcd_cfg.iface_drv = iface_drv,
+    lcd_cfg.interface_drv = interface_drv,
     lcd_cfg.pin_num_rst = 18,
     lcd_cfg.pin_num_bckl = 23,
     lcd_cfg.rst_active_level = 0,
@@ -53,29 +53,32 @@ TEST_CASE("Touch XPT2046 test", "[touch_panel][iot]")
     lcd_cfg.width = 240;
     lcd_cfg.height = 320;
     lcd_cfg.rotate = SCR_DIR_LRBT;
-    TEST_ASSERT(ESP_OK == scr_init(SCREEN_CONTROLLER_ILI9341, &lcd_cfg, &lcd));
+    TEST_ASSERT(ESP_OK == scr_find_driver(SCREEN_CONTROLLER_ILI9341, &lcd));
+    lcd.init(&lcd_cfg);
 
     touch_panel_config_t touch_cfg = {
-        .iface_spi = {
+        .interface_spi = {
             .spi_bus = spi_bus,
             .pin_num_cs = 32,
             .clk_freq = 10000000,
         },
-        .iface_type = TOUCH_IFACE_SPI,
+        .interface_type = TOUCH_PANEL_IFACE_SPI,
         .pin_num_int = 33,
         .direction = TOUCH_DIR_LRTB,
         .width = 240,
         .height = 320,
     };
-    TEST_ASSERT(ESP_OK == touch_panel_init(TOUCH_CONTROLLER_XPT2046, &touch_cfg, &touch));
+    TEST_ASSERT(ESP_OK == touch_panel_find_driver(TOUCH_PANEL_CONTROLLER_XPT2046, &touch));
+    TEST_ASSERT(ESP_OK == touch.init(&touch_cfg));
+    TEST_ASSERT(ESP_ERR_INVALID_STATE == touch.init(&touch_cfg));
     touch.calibration_run(&lcd, true);
 
     painter_init(&lcd);
     painter_clear(COLOR_WHITE);
 
     while (1) {
-        touch_info_t touch_info;
-        touch.read_info(&touch_info);
+        touch_panel_points_t touch_info;
+        touch.read_point_data(&touch_info);
         for (int i = 0; i < touch_info.point_num; i++) {
             ESP_LOGI(TAG, "touch point %d: (%d, %d)", i, touch_info.curx[i], touch_info.cury[i]);
         }
@@ -94,9 +97,9 @@ TEST_CASE("Touch XPT2046 test", "[touch_panel][iot]")
         }
     }
 
-    touch_panel_deinit(&touch);
-    scr_deinit(&lcd);
-    scr_iface_delete(iface_drv);
+    touch.deinit();
+    lcd.deinit();
+    scr_interface_delete(interface_drv);
     spi_bus_delete(&spi_bus);
 }
 
@@ -111,7 +114,7 @@ TEST_CASE("Touch NS2016 test", "[touch_panel][iot]")
     spi_bus_handle_t spi_bus = spi_bus_create(2, &spi_cfg);
     TEST_ASSERT_NOT_NULL(spi_bus);
 
-    iface_spi_config_t spi_lcd_cfg = {
+    scr_interface_spi_config_t spi_lcd_cfg = {
         .spi_bus = spi_bus,
         .pin_num_cs = 37,
         .pin_num_dc = 41,
@@ -119,11 +122,11 @@ TEST_CASE("Touch NS2016 test", "[touch_panel][iot]")
         .swap_data = true,
     };
 
-    scr_iface_driver_fun_t *iface_drv;
-    TEST_ASSERT(ESP_OK == scr_iface_create(SCREEN_IFACE_SPI, &spi_lcd_cfg, &iface_drv));
+    scr_interface_driver_t *interface_drv;
+    TEST_ASSERT(ESP_OK == scr_interface_create(SCREEN_IFACE_SPI, &spi_lcd_cfg, &interface_drv));
 
     scr_controller_config_t lcd_cfg = {0};
-    lcd_cfg.iface_drv = iface_drv,
+    lcd_cfg.interface_drv = interface_drv,
     lcd_cfg.pin_num_rst = -1,
     lcd_cfg.pin_num_bckl = -1,
     lcd_cfg.rst_active_level = 0,
@@ -131,7 +134,8 @@ TEST_CASE("Touch NS2016 test", "[touch_panel][iot]")
     lcd_cfg.width = 240;
     lcd_cfg.height = 320;
     lcd_cfg.rotate = SCR_DIR_LRTB;
-    TEST_ASSERT(ESP_OK == scr_init(SCREEN_CONTROLLER_ILI9341, &lcd_cfg, &lcd));
+    TEST_ASSERT(ESP_OK == scr_find_driver(SCREEN_CONTROLLER_ILI9341, &lcd));
+    lcd.init(&lcd_cfg);
 
     i2c_config_t i2c_conf = {
         .mode = I2C_MODE_MASTER,
@@ -144,26 +148,28 @@ TEST_CASE("Touch NS2016 test", "[touch_panel][iot]")
     i2c_bus_handle_t i2c_bus = i2c_bus_create(I2C_NUM_0, &i2c_conf);
 
     touch_panel_config_t touch_cfg = {
-        .iface_i2c = {
+        .interface_i2c = {
             .i2c_bus = i2c_bus,
             .clk_freq = 100000,
             .i2c_addr = 0x48,
         },
-        .iface_type = TOUCH_IFACE_I2C,
+        .interface_type = TOUCH_PANEL_IFACE_I2C,
         .pin_num_int = 33,
         .direction = TOUCH_DIR_LRTB,
         .width = 240,
         .height = 320,
     };
-    TEST_ASSERT(ESP_OK == touch_panel_init(TOUCH_CONTROLLER_NS2016, &touch_cfg, &touch));
+    TEST_ASSERT(ESP_OK == touch_panel_find_driver(TOUCH_PANEL_CONTROLLER_NS2016, &touch));
+    TEST_ASSERT(ESP_OK == touch.init(&touch_cfg));
+    TEST_ASSERT(ESP_ERR_INVALID_STATE == touch.init(&touch_cfg));
     touch.calibration_run(&lcd, true);
 
     painter_init(&lcd);
     painter_clear(COLOR_WHITE);
 
     while (1) {
-        touch_info_t touch_info;
-        touch.read_info(&touch_info);
+        touch_panel_points_t touch_info;
+        touch.read_point_data(&touch_info);
         for (int i = 0; i < touch_info.point_num; i++) {
             ESP_LOGI(TAG, "touch point %d: (%d, %d)", i, touch_info.curx[i], touch_info.cury[i]);
         }
@@ -181,9 +187,9 @@ TEST_CASE("Touch NS2016 test", "[touch_panel][iot]")
             vTaskDelay(50 / portTICK_RATE_MS);
         }
     }
-    touch_panel_deinit(&touch);
-    scr_deinit(&lcd);
-    scr_iface_delete(iface_drv);
+    touch.deinit();
+    lcd.deinit();
+    scr_interface_delete(interface_drv);
     spi_bus_delete(&spi_bus);
 }
 
@@ -203,10 +209,10 @@ TEST_CASE("Touch FT5x06 test", "[touch_panel][iot]")
         .swap_data = false,
     };
 
-    scr_iface_driver_fun_t *iface_drv;
-    TEST_ASSERT(ESP_OK == scr_iface_create(SCREEN_IFACE_8080, &i2s_lcd_cfg, &iface_drv));
+    scr_interface_driver_t *interface_drv;
+    TEST_ASSERT(ESP_OK == scr_interface_create(SCREEN_IFACE_8080, &i2s_lcd_cfg, &interface_drv));
     scr_controller_config_t lcd_cfg = {0};
-    lcd_cfg.iface_drv = iface_drv,
+    lcd_cfg.interface_drv = interface_drv,
     lcd_cfg.pin_num_rst = -1,
     lcd_cfg.pin_num_bckl = 21,
     lcd_cfg.rst_active_level = 0,
@@ -214,7 +220,8 @@ TEST_CASE("Touch FT5x06 test", "[touch_panel][iot]")
     lcd_cfg.width = 480;
     lcd_cfg.height = 800;
     lcd_cfg.rotate = SCR_DIR_LRTB;
-    TEST_ASSERT(ESP_OK == scr_init(SCREEN_CONTROLLER_RM68120, &lcd_cfg, &lcd));
+    TEST_ASSERT(ESP_OK == scr_find_driver(SCREEN_CONTROLLER_RM68120, &lcd));
+    lcd.init(&lcd_cfg);
 
     i2c_config_t i2c_conf = {
         .mode = I2C_MODE_MASTER,
@@ -227,26 +234,28 @@ TEST_CASE("Touch FT5x06 test", "[touch_panel][iot]")
     i2c_bus_handle_t i2c_bus = i2c_bus_create(I2C_NUM_0, &i2c_conf);
 
     touch_panel_config_t touch_cfg = {
-        .iface_i2c = {
+        .interface_i2c = {
             .i2c_bus = i2c_bus,
             .clk_freq = 100000,
             .i2c_addr = 0x38,
         },
-        .iface_type = TOUCH_IFACE_I2C,
+        .interface_type = TOUCH_PANEL_IFACE_I2C,
         .pin_num_int = -1,
         .direction = TOUCH_DIR_LRTB,
         .width = 800,
         .height = 480,
     };
-    TEST_ASSERT(ESP_OK == touch_panel_init(TOUCH_CONTROLLER_FT5X06, &touch_cfg, &touch));
+    TEST_ASSERT(ESP_OK == touch_panel_find_driver(TOUCH_PANEL_CONTROLLER_FT5X06, &touch));
+    TEST_ASSERT(ESP_OK == touch.init(&touch_cfg));
+    TEST_ASSERT(ESP_ERR_INVALID_STATE == touch.init(&touch_cfg));
     touch.calibration_run(&lcd, true);
 
     painter_init(&lcd);
     painter_clear(COLOR_WHITE);
 
     while (1) {
-        touch_info_t touch_info;
-        touch.read_info(&touch_info);
+        touch_panel_points_t touch_info;
+        touch.read_point_data(&touch_info);
         for (int i = 0; i < touch_info.point_num; i++) {
             ESP_LOGI(TAG, "touch point %d: (%d, %d)", i, touch_info.curx[i], touch_info.cury[i]);
         }
@@ -264,7 +273,7 @@ TEST_CASE("Touch FT5x06 test", "[touch_panel][iot]")
             vTaskDelay(50 / portTICK_RATE_MS);
         }
     }
-    touch_panel_deinit(&touch);
-    scr_deinit(&lcd);
-    scr_iface_delete(iface_drv);
+    touch.deinit();
+    lcd.deinit();
+    scr_interface_delete(interface_drv);
 }

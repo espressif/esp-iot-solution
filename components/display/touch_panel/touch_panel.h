@@ -12,19 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef _IOT_LCD_TOUCH_H
-#define _IOT_LCD_TOUCH_H
+#ifndef _IOT_TOUCH_PANEL_H
+#define _IOT_TOUCH_PANEL_H
+
+#include "esp_log.h"
+#include "screen_driver.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include "driver/gpio.h"
-#include "driver/spi_master.h"
-#include "driver/i2c.h"
-#include "freertos/semphr.h"
-#include "esp_log.h"
-#include "screen_driver.h"
+/**
+ * max point number on touch panel
+ */
+#define TOUCH_MAX_POINT_NUMBER (5)
 
 /**
  * @brief Touch events
@@ -33,18 +34,18 @@ extern "C" {
 typedef enum {
     TOUCH_EVT_RELEASE = 0x0,  /*!< Release event */
     TOUCH_EVT_PRESS   = 0x1,  /*!< Press event */
-} touch_evt_t;
+} touch_panel_event_t;
 
 /**
  * @brief Information of touch panel
  * 
  */
 typedef struct {
-    touch_evt_t event;   /*!< Event of touch */
-    uint8_t point_num;   /*!< Touch point number */
-    uint16_t curx[5];    /*!< Current x coordinate */
-    uint16_t cury[5];    /*!< Current y coordinate */
-} touch_info_t;
+    touch_panel_event_t event;   /*!< Event of touch */
+    uint8_t point_num;           /*!< Touch point number */
+    uint16_t curx[TOUCH_MAX_POINT_NUMBER];            /*!< Current x coordinate */
+    uint16_t cury[TOUCH_MAX_POINT_NUMBER];            /*!< Current y coordinate */
+} touch_panel_points_t;
 
 /**
  * @brief Define all screen direction
@@ -105,12 +106,12 @@ typedef enum {
     TOUCH_MIRROR_X = 0x40, /**< Mirror X-axis */
     TOUCH_MIRROR_Y = 0x20, /**< Mirror Y-axis */
     TOUCH_SWAP_XY  = 0x80, /**< Swap XY axis */
-} touch_dir_t;
+} touch_panel_dir_t;
 
 typedef enum {
-    TOUCH_IFACE_I2C,            /*!< I2C interface */
-    TOUCH_IFACE_SPI,            /*!< SPI interface */
-} touch_iface_type_t;
+    TOUCH_PANEL_IFACE_I2C,            /*!< I2C interface */
+    TOUCH_PANEL_IFACE_SPI,            /*!< SPI interface */
+} touch_panel_interface_type_t;
 
 /**
  * @brief All supported touch panel controllers
@@ -118,12 +119,12 @@ typedef enum {
  */
 typedef enum {
     /* Capacitive touch panel */
-    TOUCH_CONTROLLER_FT5X06,
+    TOUCH_PANEL_CONTROLLER_FT5X06,
 
     /* Resistance touch panel */
-    TOUCH_CONTROLLER_XPT2046,
-    TOUCH_CONTROLLER_NS2016,
-} touch_controller_t;
+    TOUCH_PANEL_CONTROLLER_XPT2046,
+    TOUCH_PANEL_CONTROLLER_NS2016,
+} touch_panel_controller_t;
 
 /**
  * @brief Configuration of touch panel
@@ -137,21 +138,21 @@ typedef struct {
             i2c_bus_handle_t i2c_bus;    /*!< Handle of i2c bus */
             int clk_freq;                /*!< i2c clock frequency */
             uint8_t i2c_addr;            /*!< screen i2c slave adddress */
-        } iface_i2c;
+        } interface_i2c;
 
         /** SPI interface */
         struct {
             spi_bus_handle_t spi_bus;    /*!< Handle of spi bus */
             int8_t pin_num_cs;           /*!< SPI Chip Select Pin */
             int clk_freq;                /*!< spi clock frequency */
-        } iface_spi;
+        } interface_spi;
     };
 
-    touch_iface_type_t iface_type;   /*!< Interface bus type, see touch_iface_type_t struct */
-    int8_t pin_num_int;              /*!< Interrupt pin of touch panel. NOTE: Now this line is not used, you can set to -1 and no connection with hardware*/
-    touch_dir_t direction;           /*!< Rotate direction */
-    uint16_t width;                  /*!< touch panel width */
-    uint16_t height;                 /*!< touch panel height */
+    touch_panel_interface_type_t interface_type;   /*!< Interface bus type, see touch_interface_type_t struct */
+    int8_t pin_num_int;                            /*!< Interrupt pin of touch panel. NOTE: Now this line is not used, you can set to -1 and no connection with hardware */
+    touch_panel_dir_t direction;                   /*!< Rotate direction */
+    uint16_t width;                                /*!< touch panel width */
+    uint16_t height;                               /*!< touch panel height */
 } touch_panel_config_t;
 
 /**
@@ -183,14 +184,14 @@ typedef struct {
     /**
     * @brief Start run touch panel calibration
     *
-    * @param screen LCD driver for display prompts
-    * @param recalibrate Is calibration mandatory, set true to force calibration
+    * @param screen Screen driver for display prompts
+    * @param recalibrate Is mandatory, set true to force calibrate
     *
     * @return
     *     - ESP_OK Success
     *     - ESP_FAIL Fail
     */
-    esp_err_t (*calibration_run)(const scr_driver_fun_t *screen, bool recalibrate);
+    esp_err_t (*calibration_run)(const scr_driver_t *screen, bool recalibrate);
 
     /**
     * @brief Set touch rotate rotation
@@ -201,55 +202,32 @@ typedef struct {
     *     - ESP_OK Success
     *     - ESP_FAIL Fail
     */
-    esp_err_t (*set_direction)(touch_dir_t dir);
+    esp_err_t (*set_direction)(touch_panel_dir_t dir);
 
     /**
-    * @brief Check if there is a press
+    * @brief Get current touch information, see struct touch_panel_points_t
     *
-    * @return
-    *      - 0 Not press
-    *      - 1 pressed
-    */
-    int (*is_pressed)(void);
-
-    /**
-    * @brief Get current touch information, see struct touch_info_t
-    *
-    * @param info a pointer of touch_info_t contained touch information.
+    * @param point a pointer of touch_panel_points_t contained touch information.
     *
     * @return
     *     - ESP_OK Success
     *     - ESP_FAIL Fail
     */
-    esp_err_t (*read_info)(touch_info_t *info);
-} touch_driver_fun_t;
+    esp_err_t (*read_point_data)(touch_panel_points_t *point);
+} touch_panel_driver_t;
 
 /**
- * @brief Initialize a screen
+ * @brief Find a touch panel controller driver
  * 
  * @param controller Touch panel controller to initialize
- * @param conf configuration of touch panel, see touch_panel_config_t
- * @param driver Pointer to a touch driver
+ * @param out_driver Pointer to a touch driver
  * 
  * @return
  *      - ESP_OK on success
  *      - ESP_ERR_INVALID_ARG   Arguments is NULL.
- *      - ESP_FAIL Initialize failed
  *      - ESP_ERR_NOT_FOUND: Touch panel controller was not found.
  */
-esp_err_t touch_panel_init(touch_controller_t controller, const touch_panel_config_t *conf, touch_driver_fun_t *driver);
-
-/**
- * @brief Deinitialize a screen
- * 
- * @param touch Touch driver to deinitialize
- * 
- * @return
- *      - ESP_OK on success
- *      - ESP_ERR_INVALID_ARG   Arguments is NULL.
- *      - ESP_FAIL Deinitialize failed
- */
-esp_err_t touch_panel_deinit(const touch_driver_fun_t *touch);
+esp_err_t touch_panel_find_driver(touch_panel_controller_t controller, touch_panel_driver_t *out_driver);
 
 #ifdef __cplusplus
 }

@@ -1,9 +1,9 @@
-// Copyright 2015-2020 Espressif Systems (Shanghai) PTE LTD
+// Copyright 2020 Espressif Systems (Shanghai) Co. Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-
+//
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
@@ -25,7 +25,7 @@ static const char* TAG = "Touch calibration";
         return (ret);                                                           \
     }
 
-#define GMOUSE_FINGER_CALIBRATE_ERROR   14
+#define GMOUSE_FINGER_CALIBRATE_ERROR   CONFIG_TOUCH_PANEL_MAX_CALIBRATE_ERROR
 #define TOUCH_CAL_VAL_NAMESPACE "DefLvglParam"
 #define TOUCH_CAL_VAL_KEY "DefTouchCalVal"
 
@@ -45,12 +45,9 @@ typedef struct {
 
 static Calibration_t g_caldata;
 static bool g_calibrated = false;
-
-static scr_driver_fun_t lcd;
-static scr_info_t lcd_info;
+static scr_driver_t g_lcd;
 static int (*g_touch_is_pressed)(void) = NULL;
 static esp_err_t (*g_touch_read_rawdata)(uint16_t *x, uint16_t *y) = NULL;
-
 
 static esp_err_t touch_save_calibration(const void *buf, size_t sz)
 {
@@ -70,10 +67,10 @@ static void _draw_touch_Point(uint16_t x, uint16_t y, uint16_t color)
 {
     painter_draw_line(x - 14, y, x + 15, y, color); //horizontal line
     painter_draw_line(x, y - 14, x, y + 15, color); //vertical line
-    lcd.draw_pixel(x + 1, y + 1, color);
-    lcd.draw_pixel(x - 1, y + 1, color);
-    lcd.draw_pixel(x + 1, y - 1, color);
-    lcd.draw_pixel(x - 1, y - 1, color);
+    g_lcd.draw_pixel(x + 1, y + 1, color);
+    g_lcd.draw_pixel(x - 1, y + 1, color);
+    g_lcd.draw_pixel(x + 1, y - 1, color);
+    g_lcd.draw_pixel(x - 1, y - 1, color);
     painter_draw_circle(x, y, 8, color); //circular
 }
 
@@ -170,6 +167,17 @@ static void calibration_calculate(const point_t *cross, const point_t *points)
                 + c2 * ((float)points[0].x * (float)points[1].y - (float)points[1].x * (float)points[0].y)) / dx;
 }
 
+static void show_prompt_with_dir(uint16_t x, uint16_t y, const char *str, const font_t *font, uint16_t color, scr_dir_t dir)
+{
+    g_lcd.set_direction(dir);
+    uint16_t c = painter_get_point_color();
+    painter_set_point_color(color);
+    painter_draw_string(x, y, str, font, color);
+    painter_set_point_color(c);
+    /** Aftershow prompt, Set screen to original direction */
+    g_lcd.set_direction(SCR_DIR_LRTB);
+}
+
 /**
  * @brief Start run touch panel calibration
  * 
@@ -179,7 +187,7 @@ static void calibration_calculate(const point_t *cross, const point_t *points)
  * @param recalibrate Is calibration mandatory
  * @return esp_err_t 
  */
-esp_err_t touch_calibration_run(const scr_driver_fun_t *screen,
+esp_err_t touch_calibration_run(const scr_driver_t *screen,
                                 int (*func_is_pressed)(void),
                                 esp_err_t (*func_read_rawdata)(uint16_t *x, uint16_t *y),
                                 bool recalibrate)
@@ -192,8 +200,8 @@ esp_err_t touch_calibration_run(const scr_driver_fun_t *screen,
 
     g_touch_is_pressed = func_is_pressed;
     g_touch_read_rawdata = func_read_rawdata;
-    lcd = *screen;
-    ret = painter_init(&lcd);
+    g_lcd = *screen;
+    ret = painter_init(&g_lcd);
     CALIBRATION_CHECK(ESP_OK == ret, "Initial failed", ESP_FAIL);
 
     ret = nvs_flash_init();
@@ -215,12 +223,11 @@ esp_err_t touch_calibration_run(const scr_driver_fun_t *screen,
      * Restore screen display rotate to original for corresponding raw data of touch panel. 
      * So read current direction of screen and backup it.
      */
-    lcd.get_info(&lcd_info);
+    scr_info_t lcd_info;
+    g_lcd.get_info(&lcd_info);
     scr_dir_t old_dir = lcd_info.dir;
-    lcd.set_direction(SCR_DIR_LRTB);
 
     uint8_t index = 0;
-    lcd.get_info(&lcd_info);
     uint32_t w = lcd_info.width;
     uint32_t h = lcd_info.height;
     point_t cross[4];
@@ -248,7 +255,7 @@ esp_err_t touch_calibration_run(const scr_driver_fun_t *screen,
     while (calibrate_error)
     {
         painter_clear(COLOR_WHITE);
-        painter_draw_string(0, 0, "Please press the center of the circle in turn", &Font12, COLOR_BLUE);
+        show_prompt_with_dir(0, 0, "Please press the center of the circle in turn", &Font12, COLOR_BLUE, old_dir);
 
         _get_point(index, cross, &points[index]);
         index++;
@@ -269,8 +276,8 @@ esp_err_t touch_calibration_run(const scr_driver_fun_t *screen,
         calibrate_error = (points[3].x - cross[3].x) * (points[3].x - cross[3].x) 
             + (points[3].y - cross[3].y) * (points[3].y - cross[3].y);
         if (calibrate_error > (uint32_t)GMOUSE_FINGER_CALIBRATE_ERROR * (uint32_t)GMOUSE_FINGER_CALIBRATE_ERROR) {
-            painter_draw_string(10, h/2, "Calibration Failed!", &Font16, COLOR_RED);
-            ESP_LOGW(TAG, "Touch Calibration failed!");
+            show_prompt_with_dir(10, h/2, "Calibration Failed!", &Font16, COLOR_RED, old_dir);
+            ESP_LOGW(TAG, "Touch Calibration failed! Error=%d", calibrate_error);
             g_calibrated = false;
             index = 0;
             vTaskDelay(2000 / portTICK_PERIOD_MS);
@@ -279,13 +286,13 @@ esp_err_t touch_calibration_run(const scr_driver_fun_t *screen,
             calibrate_error = 0;
             ESP_LOGI(TAG, "/ XL = (%f)X + (%f)Y + (%f)", g_caldata.ax, g_caldata.bx, g_caldata.cx);
             ESP_LOGI(TAG, "\\ YL = (%f)X + (%f)Y + (%f)", g_caldata.ay, g_caldata.by, g_caldata.cy);
-            painter_draw_string(30, h/2, "Successful", &Font16, COLOR_BLUE);
+            show_prompt_with_dir(30, h/2, "Successful", &Font16, COLOR_BLUE, old_dir);
             touch_save_calibration(&g_caldata, sizeof(Calibration_t));
             vTaskDelay(2000 / portTICK_PERIOD_MS);
         }
     }
     ESP_LOGI(TAG, "Touch Calibration successful");
     painter_clear(COLOR_WHITE);
-    lcd.set_direction(old_dir);
+    g_lcd.set_direction(old_dir);
     return ESP_OK;
 }
