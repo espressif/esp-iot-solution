@@ -89,7 +89,7 @@ static const char *TAG = "lcd ssd1306";
 #define SSD1306_HIGHER_ADDRESS  (SSD1306_CMD_SET_HIGHER_COLUMN_ADDR + ((SSD1306_COLUMN_ADDR&0xf0)>>4))
 
 typedef struct {
-    scr_iface_driver_fun_t *iface_drv;
+    scr_interface_driver_t *iface_drv;
     uint16_t original_width;
     uint16_t original_height;
     uint16_t width;
@@ -103,11 +103,11 @@ static ssd1306_dev_t g_lcd_handle;
  * This header file is only used to redefine the function to facilitate the call.
  * It can only be placed in this position, not in the head of the file.
  */
-#include "iface_drv_def.h"
+#include "interface_drv_def.h"
 
 static esp_err_t lcd_ssd1306_write_ram_data(uint16_t color);
 
-scr_driver_fun_t lcd_ssd1306_default_driver = {
+scr_driver_t lcd_ssd1306_default_driver = {
     .init = lcd_ssd1306_init,
     .deinit = lcd_ssd1306_deinit,
     .set_direction = lcd_ssd1306_set_rotate,
@@ -131,7 +131,7 @@ esp_err_t lcd_ssd1306_init(const scr_controller_config_t *lcd_conf)
         gpio_set_level(lcd_conf->pin_num_rst, (~(lcd_conf->rst_active_level)) & 0x1);
         vTaskDelay(100 / portTICK_RATE_MS);
     }
-    g_lcd_handle.iface_drv = lcd_conf->iface_drv;
+    g_lcd_handle.interface_drv = lcd_conf->interface_drv;
     g_lcd_handle.original_width = lcd_conf->width;
     g_lcd_handle.original_height = lcd_conf->height;
 

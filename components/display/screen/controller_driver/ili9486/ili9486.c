@@ -44,7 +44,7 @@ static const char *TAG = "ILI9486";
 #define LCD_BPP  16
 
 typedef struct {
-    scr_iface_driver_fun_t *iface_drv;
+    scr_interface_driver_t *iface_drv;
     uint16_t original_width;
     uint16_t original_height;
     uint16_t width;
@@ -58,9 +58,9 @@ static ili9486_dev_t g_lcd_handle;
  * This header file is only used to redefine the function to facilitate the call.
  * It can only be placed in this position, not in the head of the file.
  */
-#include "iface_drv_def.h"
+#include "interface_drv_def.h"
 
-scr_driver_fun_t lcd_ili9486_default_driver = {
+scr_driver_t lcd_ili9486_default_driver = {
     .init = lcd_ili9486_init,
     .deinit = lcd_ili9486_deinit,
     .set_direction = lcd_ili9486_set_rotation,
@@ -77,12 +77,12 @@ static void lcd_ili9486_init_reg(void);
 esp_err_t lcd_ili9486_init(const scr_controller_config_t *lcd_conf)
 {
     LCD_CHECK(NULL != lcd_conf, "config pointer invalid", ESP_ERR_INVALID_ARG);
-    LCD_CHECK((NULL != lcd_conf->iface_drv->write_cmd && \
-               NULL != lcd_conf->iface_drv->write_data && \
-               NULL != lcd_conf->iface_drv->write && \
-               NULL != lcd_conf->iface_drv->read && \
-               NULL != lcd_conf->iface_drv->bus_acquire && \
-               NULL != lcd_conf->iface_drv->bus_release),
+    LCD_CHECK((NULL != lcd_conf->interface_drv->write_cmd && \
+               NULL != lcd_conf->interface_drv->write_data && \
+               NULL != lcd_conf->interface_drv->write && \
+               NULL != lcd_conf->interface_drv->read && \
+               NULL != lcd_conf->interface_drv->bus_acquire && \
+               NULL != lcd_conf->interface_drv->bus_release),
               "Interface driver invalid", ESP_ERR_INVALID_ARG);
 
     esp_err_t ret;
@@ -97,7 +97,7 @@ esp_err_t lcd_ili9486_init(const scr_controller_config_t *lcd_conf)
         vTaskDelay(100 / portTICK_RATE_MS);
     }
 
-    g_lcd_handle.iface_drv = lcd_conf->iface_drv;
+    g_lcd_handle.interface_drv = lcd_conf->interface_drv;
     g_lcd_handle.original_width = lcd_conf->width;
     g_lcd_handle.original_height = lcd_conf->height;
 

@@ -44,7 +44,7 @@ static const char *TAG = "lcd ili9806";
 #define LCD_BPP  16
 
 typedef struct {
-    scr_iface_driver_fun_t *iface_drv;
+    scr_interface_driver_t *iface_drv;
     uint16_t original_width;
     uint16_t original_height;
     uint16_t width;
@@ -53,8 +53,8 @@ typedef struct {
 } ili9806_dev_t;
 
 static ili9806_dev_t g_lcd_handle;
-#include "iface_drv_def.h"
-scr_driver_fun_t lcd_ili9806_default_driver = {
+#include "interface_drv_def.h"
+scr_driver_t lcd_ili9806_default_driver = {
     .init = lcd_ili9806_init,
     .deinit = lcd_ili9806_deinit,
     .set_direction = lcd_ili9806_set_rotation,
@@ -72,12 +72,12 @@ static void lcd_ili9806_init_reg(void);
 esp_err_t lcd_ili9806_init(const scr_controller_config_t *lcd_conf)
 {
     LCD_CHECK(NULL != lcd_conf, "config pointer invalid", ESP_ERR_INVALID_ARG);
-    LCD_CHECK((NULL != lcd_conf->iface_drv->write_cmd && \
-               NULL != lcd_conf->iface_drv->write_data && \
-               NULL != lcd_conf->iface_drv->write && \
-               NULL != lcd_conf->iface_drv->read && \
-               NULL != lcd_conf->iface_drv->bus_acquire && \
-               NULL != lcd_conf->iface_drv->bus_release),
+    LCD_CHECK((NULL != lcd_conf->interface_drv->write_cmd && \
+               NULL != lcd_conf->interface_drv->write_data && \
+               NULL != lcd_conf->interface_drv->write && \
+               NULL != lcd_conf->interface_drv->read && \
+               NULL != lcd_conf->interface_drv->bus_acquire && \
+               NULL != lcd_conf->interface_drv->bus_release),
               "Interface driver invalid", ESP_ERR_INVALID_ARG);
     esp_err_t ret;
 
@@ -91,7 +91,7 @@ esp_err_t lcd_ili9806_init(const scr_controller_config_t *lcd_conf)
         vTaskDelay(100 / portTICK_RATE_MS);
     }
 
-    g_lcd_handle.iface_drv = lcd_conf->iface_drv;
+    g_lcd_handle.interface_drv = lcd_conf->interface_drv;
     g_lcd_handle.original_width = lcd_conf->width;
     g_lcd_handle.original_height = lcd_conf->height;
 

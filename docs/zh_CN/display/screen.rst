@@ -253,3 +253,7 @@ esp-iot-solution 中的屏幕驱动支持如下屏幕：
 
 API Reference
 -----------------
+
+.. include:: /_build/inc/screen_driver.inc
+
+.. include:: /_build/inc/scr_interface_driver.inc

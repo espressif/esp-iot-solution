@@ -12,20 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef _IFACE_DRV_DEF_H_
-#define _IFACE_DRV_DEF_H_
+#ifndef _INTERFACE_DRV_DEF_H_
+#define _INTERFACE_DRV_DEF_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /**< Define the function of interface instance */
-#define LCD_WRITE_CMD(cmd) g_lcd_handle.iface_drv->write_cmd(g_lcd_handle.iface_drv, (cmd))
-#define LCD_WRITE_DATA(data) g_lcd_handle.iface_drv->write_data(g_lcd_handle.iface_drv, (data))
-#define LCD_WRITE(data, length) g_lcd_handle.iface_drv->write(g_lcd_handle.iface_drv, (data), (length))
-#define LCD_READ(data, length) g_lcd_handle.iface_drv->read(g_lcd_handle.iface_drv, (data), (length))
-#define LCD_IFACE_ACQUIRE() g_lcd_handle.iface_drv->bus_acquire(g_lcd_handle.iface_drv)
-#define LCD_IFACE_RELEASE() g_lcd_handle.iface_drv->bus_release(g_lcd_handle.iface_drv)
+#define LCD_WRITE_CMD(cmd)      g_lcd_handle.interface_drv->write_cmd(g_lcd_handle.interface_drv, (cmd))
+#define LCD_WRITE_DATA(data)    g_lcd_handle.interface_drv->write_data(g_lcd_handle.interface_drv, (data))
+#define LCD_WRITE(data, length) g_lcd_handle.interface_drv->write(g_lcd_handle.interface_drv, (data), (length))
+#define LCD_READ(data, length)  g_lcd_handle.interface_drv->read(g_lcd_handle.interface_drv, (data), (length))
+#define LCD_IFACE_ACQUIRE()     g_lcd_handle.interface_drv->bus_acquire(g_lcd_handle.interface_drv)
+#define LCD_IFACE_RELEASE()     g_lcd_handle.interface_drv->bus_release(g_lcd_handle.interface_drv)
 
 static inline esp_err_t LCD_WRITE_REG(uint16_t cmd, uint16_t data)
 {
