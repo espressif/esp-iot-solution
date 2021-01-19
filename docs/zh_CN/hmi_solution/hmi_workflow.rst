@@ -1,3 +1,5 @@
+:orphan:
+
 HMI WorkFlow
 ============
 
@@ -80,8 +82,7 @@ ESP32 图形库特性
 
 4. ESP32 平台选择
 
-5. 基于 `ESP32 μGFX <https://github.com/espressif/esp-iot-solution/tree/master/components/hmi/ugfx_gui>`__
-   库进行移植、相关驱动开发
+5. 基于 ESP32 μGFX 库进行移植、相关驱动开发
 
 6. 基于 μGFX-Studio 平台开发应用程序（可选）
 
@@ -160,9 +161,7 @@ LittlevGL 开发步骤
 
 4. ESP32 平台选择
 
-5. 基于 `ESP32
-   LittlevGL <https://github.com/espressif/esp-iot-solution/tree/master/components/hmi/lvgl_gui>`__
-   库进行移植、相关驱动开发
+5. 基于 ESP32 LittlevGL 库进行移植、相关驱动开发
 
 6. 使用 PC 模拟器开发应用程序（可选）
 
@@ -254,15 +253,13 @@ LittlevGL 开发步骤
    `ESP-WROOM32 <https://docs.espressif.com/projects/esp-idf/en/stable/hw-reference/modules-and-boards.html#esp32-wroom-32>`__
    模组进行开发
 
-5. 基于 `ESP32
-   LittlevGL <https://github.com/espressif/esp-iot-solution/tree/master/components/hmi/lvgl_gui>`__
-   库进行移植、相关驱动开发
+5. 基于 ESP32 LittlevGL 库进行移植、相关驱动开发
 
    mp3\_example 使用的 LittlevGL GUI 已经移植到
-   `esp-iot-solution <https://github.com/espressif/esp-iot-solution>`__\ ，mp3\_example
+   `esp-iot-solution <https:404>`__\ ，mp3\_example
    中使用外部设备为：2.8 inch、240\*320 pixel、 ILI9341 显示屏 和
    XPT2046 触摸屏，这两者的驱动在
-   `esp-iot-solution <https://github.com/espressif/esp-iot-solution>`__
+   `esp-iot-solution <https:404>`__
    中都有提供，无需再次移植；若选择其他型号的显示屏或者触摸屏，需要进行相关驱动开发。
 
 6. 使用 PC 模拟器开发应用程序（可选）

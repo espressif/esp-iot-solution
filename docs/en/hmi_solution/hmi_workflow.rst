@@ -1,3 +1,5 @@
+:orphan:
+
 HMI WorkFlow
 ============
 
@@ -71,7 +73,7 @@ ESP32 GUI Library Features
 1. Prepare graphics and font-related files.
 
 2. If you use files outside of
-   `esp-iot-solution <https://github.com/espressif/esp-iot-solution>`__,
+   `esp-iot-solution <https:404>`__,
    you need to convert them to code or to store them in external memory.
 
 3. Design a UI prototype with such software as PS or
@@ -80,9 +82,9 @@ ESP32 GUI Library Features
 4. Select the project-specific ESP32 module.
 
 5. Port the `ESP32
-   μGFX <https://github.com/espressif/esp-iot-solution/tree/master/components/hmi/ugfx_gui>`__
+   μGFX <https:404/tree/master/components/hmi/ugfx_gui>`__
    library to your project, or port your project-related resources to
-   `esp-iot-solution <https://github.com/espressif/esp-iot-solution>`__
+   `esp-iot-solution <https:404>`__
    if you choose to use it, and develop related drivers.
 
 6. Develop applications with μGFX-Studio (optional).
@@ -153,7 +155,7 @@ LittlevGL Development Steps
 1. Prepare graphics and font related files.
 
 2. If you use the files outside of
-   `esp-iot-solution <https://github.com/espressif/esp-iot-solution>`__,
+   `esp-iot-solution <https:404>`__,
    you need to convert them to code or to store them in external memory.
 
 3. Design a UI prototype with such software as PS.
@@ -161,9 +163,9 @@ LittlevGL Development Steps
 4. Select the project-specific ESP32 module.
 
 5. Port the `ESP32
-   LittlevGL <https://github.com/espressif/esp-iot-solution/tree/master/components/hmi/lvgl_gui>`__
+   LittlevGL <https:404/tree/master/components/hmi/lvgl_gui>`__
    library to your project, or port your project-related resources to
-   `esp-iot-solution <https://github.com/espressif/esp-iot-solution>`__
+   `esp-iot-solution <https:404>`__
    if you choose to use it, and develop related drivers.
 
 6. Develop applications with the PC simulator (optional).
@@ -216,7 +218,7 @@ be introduced here).
 2. Convert the files to code.
 
    This step can be skipped since no files outside of
-   `esp-iot-solution <https://github.com/espressif/esp-iot-solution>`__ are
+   `esp-iot-solution <https:404>`__ are
    used in this example.
 
 3. Design a UI prototype.
@@ -260,16 +262,16 @@ be introduced here).
    development board.
 
 5. Port the `ESP32
-   LittlevGL <https://github.com/espressif/esp-iot-solution/tree/master/components/hmi/lvgl_gui>`__
+   LittlevGL <https:404/tree/master/components/hmi/lvgl_gui>`__
    library to your project, or port your project-related resources to
-   `esp-iot-solution <https://github.com/espressif/esp-iot-solution>`__
+   `esp-iot-solution <https:404>`__
    if you choose to use it, and develop related drivers.
 
    The mp3 example is built with
-   `esp-iot-solution <https://github.com/espressif/esp-iot-solution>`__ to
+   `esp-iot-solution <https:404>`__ to
    which LittlevGL GUI has already been ported. Similarly, there is no need
    to port screen drivers, as
-   `esp-iot-solution <https://github.com/espressif/esp-iot-solution>`__
+   `esp-iot-solution <https:404>`__
    already includes the drivers for the external screens used in this
    example:
 

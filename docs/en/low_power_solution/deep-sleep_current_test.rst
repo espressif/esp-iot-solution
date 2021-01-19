@@ -1,3 +1,5 @@
+:orphan:
+
 Current Consumption Test for ESP32 in Deep sleep
 ================================================
 

@@ -1,3 +1,5 @@
+:orphan:
+
 µGFX Guide
 ==========
 
@@ -159,7 +161,7 @@ Get started with µGFX
 
 The Espressif's iot-solution offers drivers adapted to µGFX. You can
 find them by going to
-`esp-iot-solution <https://github.com/espressif/esp-iot-solution>`__.
+`esp-iot-solution <https:404>`__.
 The drivers are stored at the following path:
 ``components/hmi/gdrivers``.
 
@@ -167,7 +169,7 @@ Below is a step-by-step guide on how to use µGFX for the projects based
 on iot-solution:
 
 1. Build the iot-solution environment:
-   `Preparation <https://github.com/espressif/esp-iot-solution#preparation>`__.
+   `Preparation <https:404#preparation>`__.
 2. Add the header file ``#include "iot_ugfx.h"`` to the project source
    code.
 3. Enable µGFX GUI with ``menuconfig``

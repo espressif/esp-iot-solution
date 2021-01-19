@@ -163,22 +163,22 @@ linkcheck:
 
 gh-linkcheck:
 	@echo "Checking for hardcoded GitHub links"
-	@if (find ../ -name '*.rst' | xargs grep \
-		'https://github.com/espressif/esp-idf/tree\|https://github.com/espressif/esp-idf/blob\|https://github.com/espressif/esp-idf/raw'\
+	@if (find ../ -name '*.rst' | xargs grep -n \
+		'https://github.com/espressif/esp-iot-solution/tree\|https://github.com/espressif/esp-iot-solution/blob\|https://github.com/espressif/esp-iot-solution/raw'\
 		); \
 	then \
 		echo "WARNINIG: Some .rst files contain hardcoded Github links."; \
 		echo "Please check above output and replace links with one of the following:"; \
-		echo "- :idf:\`dir\` - points to directory inside ESP-IDF"; \
-		echo "- :idf_file:\`file\` - points to file inside ESP-IDF"; \
-		echo "- :idf_raw:\`file\` - points to raw view of the file inside ESP-IDF"; \
-		echo "- :component:\`dir\` - points to directory inside ESP-IDF components dir"; \
-		echo "- :component_file:\`file\` - points to file inside ESP-IDF components dir"; \
-		echo "- :component_raw:\`file\` - points to raw view of the file inside ESP-IDF"; \
+		echo "- :iot-solution:\`dir\` - points to directory inside ESP-IOT-SOLUTION"; \
+		echo "- :iot-solution_file:\`file\` - points to file inside ESP-IOT-SOLUTION"; \
+		echo "- :iot-solution_raw:\`file\` - points to raw view of the file inside ESP-IOT-SOLUTION"; \
+		echo "- :component:\`dir\` - points to directory inside ESP-IOT-SOLUTION components dir"; \
+		echo "- :component_file:\`file\` - points to file inside ESP-IOT-SOLUTION components dir"; \
+		echo "- :component_raw:\`file\` - points to raw view of the file inside ESP-IOT-SOLUTION"; \
 		echo "  components dir"; \
-		echo "- :example:\`dir\` - points to directory inside ESP-IDF examples dir"; \
-		echo "- :example_file:\`file\` - points to file inside ESP-IDF examples dir"; \
-		echo "- :example_raw:\`file\` - points to raw view of the file inside ESP-IDF"; \
+		echo "- :example:\`dir\` - points to directory inside ESP-IOT-SOLUTION examples dir"; \
+		echo "- :example_file:\`file\` - points to file inside ESP-IOT-SOLUTION examples dir"; \
+		echo "- :example_raw:\`file\` - points to raw view of the file inside ESP-IOT-SOLUTION"; \
 		echo "  examples dir"; \
 		echo "These link types will point to the correct GitHub version automatically"; \
 		exit 1; \

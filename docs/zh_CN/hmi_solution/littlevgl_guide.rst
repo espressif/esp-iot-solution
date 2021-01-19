@@ -1,3 +1,5 @@
+:orphan:
+
 LittlevGL Guide
 ===============
 
@@ -1032,7 +1034,7 @@ iot-solution 中已经做了一些驱动适配，驱动路径：
 在基于 iot-solution 的工程中使用 LittlevGL 的步骤：
 
 1. 搭建 iot-solution
-   环境：\ `Preparation <https://github.com/espressif/esp-iot-solution#preparation>`__
+   环境：\ `Preparation <https:404#preparation>`__
 2. 在工程源代码中添加头文件 ``#include "iot_lvgl.h"``
 3. 在 ``menuconfig`` 中使能 LittlevGL GUI
    （\ ``IoT Solution settings > IoT Components Management > HMI components > GUI Library Select > LittlevGL GUI Enable``\ ）

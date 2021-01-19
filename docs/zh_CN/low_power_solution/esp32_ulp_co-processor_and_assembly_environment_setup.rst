@@ -1,3 +1,5 @@
+:orphan:
+
 ESP32 的 ULP 协处理器简介和汇编编译环境设置
 ===========================================
 
@@ -190,7 +192,7 @@ I2C 通讯指令
 ---------------------
 
 在
-`esp-iot-solution <https://github.com/espressif/esp-iot-solution/tree/master/examples/ulp_examples>`__
+`esp-iot-solution <https:404/tree/master/examples/ulp_examples>`__
 目录下目前有一些 ULP 协处理器使用的例子供参考
 
 +-------+-------------------------+------------------------------------------------------------+
@@ -209,7 +211,7 @@ I2C 通讯指令
 -----------
 
 -  `ESP-IOT-SOLUTION
-   的低功耗方案文档 <https://github.com/espressif/esp-iot-solution/tree/master/documents/low_power_solution>`__
+   的低功耗方案文档 <https:404/tree/master/documents/low_power_solution>`__
 -  `ULP coprocessor
    programming <https://docs.espressif.com/projects/esp-idf/en/stable/api-guides/ulp.html>`__
 

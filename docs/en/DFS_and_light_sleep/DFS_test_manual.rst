@@ -11,6 +11,7 @@ Configuration
 
 1 Enable Power management
 **************************
+:orphan:
 
 First of all, we should enable power management function by enabling ``PM_ENABLE`` option in menuconfig.
 ``make menuconfig -->Componment config -->Power Management``
