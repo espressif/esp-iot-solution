@@ -17,7 +17,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
-#include "servo.h"
+#include "iot_servo.h"
 #include "unity.h"
 #include "sdkconfig.h"
 
@@ -52,7 +52,7 @@
 static void _set_angle(ledc_mode_t speed_mode, float angle)
 {
     for (size_t i = 0; i < 8; i++) {
-        servo_write_angle(speed_mode, i, angle);
+        iot_servo_write_angle(speed_mode, i, angle);
     }
 }
 
@@ -88,7 +88,7 @@ TEST_CASE("Servo_motor test", "[servo][iot]")
         },
         .channel_number = 8,
     } ;
-    TEST_ASSERT(ESP_OK == servo_init(LEDC_LOW_SPEED_MODE, &servo_cfg_ls));
+    TEST_ASSERT(ESP_OK == iot_servo_init(LEDC_LOW_SPEED_MODE, &servo_cfg_ls));
 
 /**
  * Only ESP32 has the high speed mode
@@ -124,7 +124,7 @@ TEST_CASE("Servo_motor test", "[servo][iot]")
         },
         .channel_number = 8,
     } ;
-    TEST_ASSERT(ESP_OK == servo_init(LEDC_HIGH_SPEED_MODE, &servo_cfg_hs));
+    TEST_ASSERT(ESP_OK == iot_servo_init(LEDC_HIGH_SPEED_MODE, &servo_cfg_hs));
 #endif
 
     size_t i;
@@ -135,9 +135,9 @@ TEST_CASE("Servo_motor test", "[servo][iot]")
         _set_angle(LEDC_HIGH_SPEED_MODE, (180 - i));
 #endif
         vTaskDelay(50 / portTICK_PERIOD_MS);
-        servo_read_angle(LEDC_LOW_SPEED_MODE, 0, &angle_ls);
+        iot_servo_read_angle(LEDC_LOW_SPEED_MODE, 0, &angle_ls);
 #ifdef CONFIG_IDF_TARGET_ESP32
-        servo_read_angle(LEDC_HIGH_SPEED_MODE, 0, &angle_hs);
+        iot_servo_read_angle(LEDC_HIGH_SPEED_MODE, 0, &angle_hs);
 #endif
 
 #ifdef CONFIG_IDF_TARGET_ESP32
@@ -148,8 +148,8 @@ TEST_CASE("Servo_motor test", "[servo][iot]")
 #endif
     }
 
-    servo_deinit(LEDC_LOW_SPEED_MODE);
+    iot_servo_deinit(LEDC_LOW_SPEED_MODE);
 #ifdef CONFIG_IDF_TARGET_ESP32
-    servo_deinit(LEDC_HIGH_SPEED_MODE);
+    iot_servo_deinit(LEDC_HIGH_SPEED_MODE);
 #endif
 }

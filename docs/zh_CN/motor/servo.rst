@@ -71,4 +71,4 @@
 API Reference
 -------------
 
-.. include:: /_build/inc/servo.inc
+.. include:: /_build/inc/iot_servo.inc

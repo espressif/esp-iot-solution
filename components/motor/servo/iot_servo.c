@@ -15,7 +15,7 @@
 #include "esp_log.h"
 #include "esp_err.h"
 #include "driver/ledc.h"
-#include "servo.h"
+#include "iot_servo.h"
 
 static const char *TAG = "servo";
 
@@ -49,7 +49,7 @@ static float calculate_angle(ledc_mode_t speed_mode, uint32_t duty)
     return angle;
 }
 
-esp_err_t servo_init(ledc_mode_t speed_mode, const servo_config_t *config)
+esp_err_t iot_servo_init(ledc_mode_t speed_mode, const servo_config_t *config)
 {
     esp_err_t ret;
     SERVO_CHECK(NULL != config, "Pointer of config is invalid", ESP_ERR_INVALID_ARG);
@@ -95,7 +95,7 @@ esp_err_t servo_init(ledc_mode_t speed_mode, const servo_config_t *config)
     return ESP_OK;
 }
 
-esp_err_t servo_deinit(ledc_mode_t speed_mode)
+esp_err_t iot_servo_deinit(ledc_mode_t speed_mode)
 {
     SERVO_CHECK(speed_mode < LEDC_SPEED_MODE_MAX, "LEDC speed mode invalid", ESP_ERR_INVALID_ARG);
     for (size_t i = 0; i < g_cfg[speed_mode].channel_number; i++) {
@@ -106,20 +106,20 @@ esp_err_t servo_deinit(ledc_mode_t speed_mode)
     return ESP_OK;
 }
 
-esp_err_t servo_write_angle(ledc_mode_t speed_mode, uint8_t channel, float angle)
+esp_err_t iot_servo_write_angle(ledc_mode_t speed_mode, uint8_t channel, float angle)
 {
     SERVO_CHECK(speed_mode < LEDC_SPEED_MODE_MAX, "LEDC speed mode invalid", ESP_ERR_INVALID_ARG);
     SERVO_CHECK(channel < LEDC_CHANNEL_MAX, "LEDC channel number too large", ESP_ERR_INVALID_ARG);
     SERVO_CHECK(angle >= 0.0f, "Angle can't to be negative", ESP_ERR_INVALID_ARG);
     esp_err_t ret;
     uint32_t duty = calculate_duty(speed_mode, angle);
-    ledc_set_duty(speed_mode, (ledc_channel_t)channel, duty);
-    ret = ledc_update_duty(speed_mode, (ledc_channel_t)channel);
+    ret = ledc_set_duty(speed_mode, (ledc_channel_t)channel, duty);
+    ret |= ledc_update_duty(speed_mode, (ledc_channel_t)channel);
     SERVO_CHECK(ESP_OK == ret, "write servo angle failed", ESP_FAIL);
     return ESP_OK;
 }
 
-esp_err_t servo_read_angle(ledc_mode_t speed_mode, uint8_t channel, float *angle)
+esp_err_t iot_servo_read_angle(ledc_mode_t speed_mode, uint8_t channel, float *angle)
 {
     SERVO_CHECK(speed_mode < LEDC_SPEED_MODE_MAX, "LEDC speed mode invalid", ESP_ERR_INVALID_ARG);
     SERVO_CHECK(channel < LEDC_CHANNEL_MAX, "LEDC channel number too large", ESP_ERR_INVALID_ARG);

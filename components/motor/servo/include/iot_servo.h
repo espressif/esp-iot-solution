@@ -57,7 +57,7 @@ extern "C" {
  *     - ESP_ERR_INVALID_ARG Parameter error
  *     - ESP_FAIL Configure ledc failed
  */
-esp_err_t servo_init(ledc_mode_t speed_mode, const servo_config_t *config);
+esp_err_t iot_servo_init(ledc_mode_t speed_mode, const servo_config_t *config);
 
 /**
  * @brief Deinitialize ledc for servo
@@ -67,7 +67,7 @@ esp_err_t servo_init(ledc_mode_t speed_mode, const servo_config_t *config);
  * @return
  *     - ESP_OK Success
  */
-esp_err_t servo_deinit(ledc_mode_t speed_mode);
+esp_err_t iot_servo_deinit(ledc_mode_t speed_mode);
 
 /**
  * @brief Set the servo motor to a certain angle
@@ -82,7 +82,7 @@ esp_err_t servo_deinit(ledc_mode_t speed_mode);
  *     - ESP_OK Success
  *     - ESP_ERR_INVALID_ARG Parameter error
  */
-esp_err_t servo_write_angle(ledc_mode_t speed_mode, uint8_t channel, float angle);
+esp_err_t iot_servo_write_angle(ledc_mode_t speed_mode, uint8_t channel, float angle);
 
 /**
  * @brief Read current angle of one channel 
@@ -95,7 +95,7 @@ esp_err_t servo_write_angle(ledc_mode_t speed_mode, uint8_t channel, float angle
  *     - ESP_OK Success
  *     - ESP_ERR_INVALID_ARG Parameter error
  */
-esp_err_t servo_read_angle(ledc_mode_t speed_mode, uint8_t channel, float *angle);
+esp_err_t iot_servo_read_angle(ledc_mode_t speed_mode, uint8_t channel, float *angle);
 
 #ifdef __cplusplus
 }
