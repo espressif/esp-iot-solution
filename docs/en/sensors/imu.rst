@@ -1,4 +1,2 @@
-IMU Sensor
-=============
 
-This text will introduce some inertial sensor, like LIS2DH12, MPU6050.
+.. include:: ../../zh_CN/sensors/imu.rst

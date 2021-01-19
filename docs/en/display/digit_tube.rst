@@ -1,2 +1,2 @@
-Digit Tube Driver
-==================
+
+.. include:: ../../zh_CN/display/digit_tube.rst

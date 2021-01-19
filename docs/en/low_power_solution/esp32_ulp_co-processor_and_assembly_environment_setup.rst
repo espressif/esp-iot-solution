@@ -1,3 +1,5 @@
+:orphan:
+
 Introduction to the ESP32 ULP Co-processor and Assembly Environment Setup
 =========================================================================
 
@@ -199,7 +201,7 @@ CPU waking instructions
 -----------
 
 You can find some ULP co-processor examples within
-`esp-iot-solution <https://github.com/espressif/esp-iot-solution/tree/master/examples/ulp_examples>`__.
+`esp-iot-solution <https:404/tree/master/examples/ulp_examples>`__.
 More examples will be added later.
 
 +-------+-------------------------+---------------------------------------------------------------------------+
@@ -218,7 +220,7 @@ More examples will be added later.
 --------------------
 
 -  `Low Power
-   Solution <https://github.com/espressif/esp-iot-solution/tree/master/documents/low_power_solution>`__
+   Solution <https:404/tree/master/documents/low_power_solution>`__
 -  `ULP Co-processor
    Programming <https://docs.espressif.com/projects/esp-idf/en/stable/api-guides/ulp.html>`__
 

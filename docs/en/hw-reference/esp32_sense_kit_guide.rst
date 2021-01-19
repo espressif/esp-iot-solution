@@ -47,7 +47,7 @@ The following image shows the whole ESP32-Sense development kit.
 -  **Technical Support**
 
    -  If you need technical support regarding ESP32-Sense Kit, please
-      submit a `new issue <https://github.com/espressif/esp-iot-solution/issues>`__
+      submit a `new issue <https:404/issues>`__
       referring to the ESP32-Sense Project.
 
 -  **How to buy**

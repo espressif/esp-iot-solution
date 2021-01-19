@@ -1,3 +1,5 @@
+:orphan:
+
 Force-light-sleep mode
 ===========================
 

@@ -41,7 +41,7 @@ ESP32-Sense 开发套件用于评估和开发 ESP32触摸传感器功能。评�
 
    -  若在 ESP32-Sense 开发套件使用时遇到问题，请在 ESP32-Sense
       工程中提交
-      `issue <https://github.com/espressif/esp-iot-solution/issues>`__。
+      `issue <https:404/issues>`__。
 
 -  **购买方式**
 

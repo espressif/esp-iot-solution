@@ -3,27 +3,23 @@ ESP-IoT-Solution  Programming Guide
 
 :link_to_translation:`zh_CN:[中文]`
 
-This is the documentation for Espressif Iot Solution Development Framework(`esp-iot-solution <https://github.com/espressif/esp-iot-solution>`_).
+This is the documentation for Espressif IoT Solution Development Framework(`esp-iot-solution <https:404>`_).
 
-IoT solution project integrate different kinds of cloud platforms Compatible with different communication protocols Support different types of IoT devices 
+ESP-IOT-Solution contains peripheral drivers and code frameworks for the development of IoT system, which can work as extra components of ESP-IDF and much easier to start.
 
-==================  ==================  ==================
- |Get Started|_       |Light Sleep|_      |Low Power|_
-------------------  ------------------  ------------------
- `Get Started`_       `Light Sleep`_      `Low Power`_
-------------------  ------------------  ------------------
- |Sensors|_           |Display|_          |Input Device|_
-------------------  ------------------  ------------------
- `Sensors`_           `Display`_          `Input Device`_
-------------------  ------------------  ------------------
- |GUI|_               |Audio|_            |HMI Solution|_
-------------------  ------------------  ------------------
- `GUI`_               `Audio`_            `HMI Solution`_
-------------------  ------------------  ------------------
- |Security|_          |Contribute|_
-------------------  ------------------  ------------------
- `Security`_          `Contribute`_
-==================  ==================  ==================
+===============================  ===============================  ===============================
+ |Get Started|_                   |Display|_                       |Audio|_
+-------------------------------  -------------------------------  -------------------------------
+ `Get Started`_                   `Display`_                       `Audio`_
+-------------------------------  -------------------------------  -------------------------------
+ |GUI|_                           |Input|_                         |Sensors|_
+-------------------------------  -------------------------------  -------------------------------
+ `GUI`_                           `Input`_                         `Sensors`_
+-------------------------------  -------------------------------  -------------------------------
+ |Security&Encryption|_           |Contribute|_
+-------------------------------  -------------------------------  -------------------------------
+ `Security&Encryption`_           `Contribute`_
+===============================  ===============================  ===============================
 
 
 .. |Get Started| image:: ../_static/get-started.png
@@ -41,8 +37,8 @@ IoT solution project integrate different kinds of cloud platforms Compatible wit
 .. |Display| image:: ../_static/display.png
 .. _Display: display/index.html
 
-.. |Input Device| image:: ../_static/input_device.png
-.. _Input Device: input_device/index.html
+.. |Input| image:: ../_static/input_device.png
+.. _Input: input_device/index.html
 
 .. |GUI| image:: ../_static/gui.png
 .. _GUI: gui/index.html
@@ -53,8 +49,8 @@ IoT solution project integrate different kinds of cloud platforms Compatible wit
 .. |HMI Solution| image:: ../_static/hmi_solution.png
 .. _HMI Solution: hmi_solution/index.html
 
-.. |Security| image:: ../_static/security_solution.png
-.. _Security: security_solution/index.html
+.. |Security&Encryption| image:: ../_static/security_solution.png
+.. _Security&Encryption: security_solution/index.html
 
 .. |Contribute| image:: ../_static/contribute.png
 .. _Contribute: contribute/index.html
@@ -66,17 +62,10 @@ IoT solution project integrate different kinds of cloud platforms Compatible wit
    Introduction <introduction>
    Get Started <gettingstarted>
    Basic Component <basic/index>
-   DFS & Light Sleep <DFS_and_light_sleep/index>
-   Low Power <low_power_solution/index>
-   Sensors <sensors/index>
-   Display<display/index>
-   Input Device <input_device/index>
-   GUI <gui/index>
+   Display <display/index>
    Audio <audio/index>
-   HMI <hmi_solution/index>
-   Security <security_solution/index>
+   GUI <gui/index>
+   Input Device <input_device/index>
+   Sensors <sensors/index>
+   Security&Encryption <security_solution/index>
    Contribute <contribute/index>
-
-
-
-

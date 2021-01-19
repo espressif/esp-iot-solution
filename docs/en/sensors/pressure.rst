@@ -1,4 +1,2 @@
-Pressure Sensor
-=================
 
-This text will introduce some pressure sensor, like BME280.
+.. include:: ../../zh_CN/sensors/pressure.rst
