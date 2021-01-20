@@ -35,7 +35,6 @@
 #endif
 #endif
 
-
 static const char *TAG = "pwm_audio";
 
 #define PWM_AUDIO_CHECK(a, str, ret_val)                          \
@@ -76,23 +75,21 @@ typedef struct {
     volatile uint32_t size;            /**< Buffer size */
     volatile uint32_t is_give;         /**< semaphore give flag */
     SemaphoreHandle_t semaphore_rb;    /**< Semaphore for ringbuffer */
-} ringBuf;
-typedef ringBuf *ringbuf_handle_t;
+} ringbuf_handle_t;
 
 typedef struct {
     pwm_audio_config_t    config;                          /**< pwm audio config struct */
     ledc_channel_config_t ledc_channel[PWM_AUDIO_CH_MAX];  /**< ledc channel config */
     ledc_timer_config_t   ledc_timer;                      /**< ledc timer config  */
     timg_dev_t            *timg_dev;                       /**< timer group register pointer */
-    ringbuf_handle_t      ringbuf;                         /**< audio ringbuffer pointer */
+    ringbuf_handle_t      *ringbuf;                        /**< audio ringbuffer pointer */
     uint32_t              channel_mask;                    /**< channel gpio mask */
     uint32_t              channel_set_num;                 /**< channel audio set number */
     int32_t               framerate;                       /*!< frame rates in Hz */
     int32_t               bits_per_sample;                 /*!< bits per sample (8, 16, 32) */
     int32_t               volume;                          /*!< the volume(-VOLUME_0DB ~ VOLUME_0DB) */
     pwm_audio_status_t status;
-} pwm_audio_handle;
-typedef pwm_audio_handle *pwm_audio_handle_t;
+} pwm_audio_data_t;
 
 /**< ledc some register pointer */
 static volatile uint32_t *g_ledc_left_conf0_val  = NULL;
@@ -103,14 +100,14 @@ static volatile uint32_t *g_ledc_right_conf1_val = NULL;
 static volatile uint32_t *g_ledc_right_duty_val  = NULL;
 
 /**< pwm audio handle pointer */
-static pwm_audio_handle_t g_pwm_audio_handle = NULL;
+static pwm_audio_data_t *g_pwm_audio_handle = NULL;
 
 static portMUX_TYPE timer_spinlock = portMUX_INITIALIZER_UNLOCKED;
 
 /**
  * Ringbuffer for pwm audio
  */
-static esp_err_t rb_destroy(ringbuf_handle_t rb)
+static esp_err_t rb_destroy(ringbuf_handle_t *rb)
 {
     if (rb == NULL) {
         return ESP_ERR_INVALID_ARG;
@@ -128,20 +125,20 @@ static esp_err_t rb_destroy(ringbuf_handle_t rb)
     rb = NULL;
     return ESP_OK;
 }
-static ringbuf_handle_t rb_create(uint32_t size)
+static ringbuf_handle_t* rb_create(uint32_t size)
 {
     if (size < (BUFFER_MIN_SIZE << 2)) {
         ESP_LOGE(TAG, "Invalid buffer size, Minimum = %d", (int32_t)(BUFFER_MIN_SIZE << 2));
         return NULL;
     }
 
-    ringbuf_handle_t rb = NULL;
+    ringbuf_handle_t *rb = NULL;
     char *buf = NULL;
 
     do {
         bool _success =
             (
-                (rb             = heap_caps_malloc(sizeof(ringBuf), MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL)) &&
+                (rb             = heap_caps_malloc(sizeof(ringbuf_handle_t), MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL)) &&
                 (buf            = heap_caps_malloc(size, MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL))   &&
                 (rb->semaphore_rb   = xSemaphoreCreateBinary())
 
@@ -163,7 +160,7 @@ static ringbuf_handle_t rb_create(uint32_t size)
     return NULL;
 }
 
-static uint32_t IRAM_ATTR rb_get_count(ringbuf_handle_t rb)
+static uint32_t IRAM_ATTR rb_get_count(ringbuf_handle_t *rb)
 {
     uint32_t tail = rb->tail;
 
@@ -174,19 +171,19 @@ static uint32_t IRAM_ATTR rb_get_count(ringbuf_handle_t rb)
     return (rb->size - (tail - rb->head));
 }
 
-static uint32_t IRAM_ATTR rb_get_free(ringbuf_handle_t rb)
+static uint32_t IRAM_ATTR rb_get_free(ringbuf_handle_t *rb)
 {
     /** < Free a byte to judge the ringbuffer direction */
     return (rb->size - rb_get_count(rb) - 1);
 }
 
-static esp_err_t rb_flush(ringbuf_handle_t rb)
+static esp_err_t rb_flush(ringbuf_handle_t *rb)
 {
     rb->tail = rb->head = 0;
     return ESP_OK;
 }
 
-static esp_err_t IRAM_ATTR rb_read_byte(ringbuf_handle_t rb, uint8_t *outdata)
+static esp_err_t IRAM_ATTR rb_read_byte(ringbuf_handle_t *rb, uint8_t *outdata)
 {
     uint32_t tail = rb->tail;
 
@@ -208,7 +205,7 @@ static esp_err_t IRAM_ATTR rb_read_byte(ringbuf_handle_t rb, uint8_t *outdata)
     return ESP_OK;
 }
 
-static esp_err_t rb_write_byte(ringbuf_handle_t rb, const uint8_t indata)
+static esp_err_t rb_write_byte(ringbuf_handle_t *rb, const uint8_t indata)
 {
     // Calculate next head
     uint32_t next_head = rb->head + 1;
@@ -227,7 +224,7 @@ static esp_err_t rb_write_byte(ringbuf_handle_t rb, const uint8_t indata)
     return ESP_OK;
 }
 
-static esp_err_t rb_wait_semaphore(ringbuf_handle_t rb, TickType_t ticks_to_wait)
+static esp_err_t rb_wait_semaphore(ringbuf_handle_t *rb, TickType_t ticks_to_wait)
 {
     rb->is_give = 0; /**< As long as it's written, it's allowed to give semaphore again */
 
@@ -262,7 +259,7 @@ static inline void ledc_set_right_duty_fast(uint32_t duty_val)
  */
 static void IRAM_ATTR timer_group_isr(void *para)
 {
-    pwm_audio_handle_t handle = g_pwm_audio_handle;
+    pwm_audio_data_t *handle = g_pwm_audio_handle;
 
     if (handle == NULL) {
         return;
@@ -295,7 +292,7 @@ static void IRAM_ATTR timer_group_isr(void *para)
 
     static uint8_t wave_h, wave_l;
     static uint16_t value;
-    ringbuf_handle_t rb = handle->ringbuf;
+    ringbuf_handle_t *rb = handle->ringbuf;
 #if (1==ISR_DEBUG)
     GPIO.out_w1ts = ISR_DEBUG_IO_MASK;
 #endif
@@ -381,7 +378,7 @@ static void IRAM_ATTR timer_group_isr(void *para)
 
 esp_err_t pwm_audio_get_status(pwm_audio_status_t *status)
 {
-    pwm_audio_handle_t handle = g_pwm_audio_handle;
+    pwm_audio_data_t *handle = g_pwm_audio_handle;
     PWM_AUDIO_CHECK(NULL != handle, PWM_AUDIO_NOT_INITIALIZED, ESP_ERR_INVALID_STATE);
     *status = handle->status;
     return ESP_OK;
@@ -389,7 +386,7 @@ esp_err_t pwm_audio_get_status(pwm_audio_status_t *status)
 
 esp_err_t pwm_audio_get_param(int *rate, int *bits, int *ch)
 {
-    pwm_audio_handle_t handle = g_pwm_audio_handle;
+    pwm_audio_data_t *handle = g_pwm_audio_handle;
     PWM_AUDIO_CHECK(NULL != handle, PWM_AUDIO_NOT_INITIALIZED, ESP_ERR_INVALID_STATE);
 
     if (NULL != rate) {
@@ -419,11 +416,11 @@ esp_err_t pwm_audio_init(const pwm_audio_config_t *cfg)
     ESP_LOGI(TAG, "timer: %d:%d | left io: %d | right io: %d | resolution: %dBIT",
              cfg->tg_num, cfg->timer_num, cfg->gpio_num_left, cfg->gpio_num_right, cfg->duty_resolution);
 
-    pwm_audio_handle_t handle = NULL;
+    pwm_audio_data_t *handle = NULL;
 
-    handle = heap_caps_malloc(sizeof(pwm_audio_handle), MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL);
+    handle = heap_caps_malloc(sizeof(pwm_audio_data_t), MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL);
     PWM_AUDIO_CHECK(handle != NULL, PWM_AUDIO_ALLOC_ERROR, ESP_ERR_NO_MEM);
-    memset(handle, 0, sizeof(pwm_audio_handle));
+    memset(handle, 0, sizeof(pwm_audio_data_t));
 
     handle->ringbuf = rb_create(cfg->ringbuf_len);
     PWM_AUDIO_CHECK(handle->ringbuf != NULL, PWM_AUDIO_ALLOC_ERROR, ESP_ERR_NO_MEM);
@@ -552,7 +549,7 @@ esp_err_t pwm_audio_set_param(int rate, ledc_timer_bit_t bits, int ch)
     PWM_AUDIO_CHECK(bits == 32 || bits == 16 || bits == 8, " Unsupported Bit width, only support 8, 16, 32", ESP_ERR_INVALID_ARG);
     PWM_AUDIO_CHECK(ch <= 2 && ch >= 1, "Unsupported channel number, only support mono and stereo", ESP_ERR_INVALID_ARG);
 
-    pwm_audio_handle_t handle = g_pwm_audio_handle;
+    pwm_audio_data_t *handle = g_pwm_audio_handle;
 
     handle->framerate = rate;
     handle->bits_per_sample = bits;
@@ -577,7 +574,7 @@ esp_err_t pwm_audio_set_sample_rate(int rate)
     PWM_AUDIO_CHECK(g_pwm_audio_handle->status != PWM_AUDIO_STATUS_BUSY, PWM_AUDIO_STATUS_ERROR, ESP_ERR_INVALID_ARG);
     PWM_AUDIO_CHECK(rate <= SAMPLE_RATE_MAX && rate >= SAMPLE_RATE_MIN, PWM_AUDIO_FRAMERATE_ERROR, ESP_ERR_INVALID_ARG);
 
-    pwm_audio_handle_t handle = g_pwm_audio_handle;
+    pwm_audio_data_t *handle = g_pwm_audio_handle;
     handle->framerate = rate;
     uint32_t divider = handle->timg_dev->hw_timer[handle->config.timer_num].config.divider;
     res = timer_set_alarm_value(handle->config.tg_num, handle->config.timer_num, (TIMER_BASE_CLK / divider) / handle->framerate);
@@ -586,7 +583,7 @@ esp_err_t pwm_audio_set_sample_rate(int rate)
 
 esp_err_t pwm_audio_set_volume(int8_t volume)
 {
-    pwm_audio_handle_t handle = g_pwm_audio_handle;
+    pwm_audio_data_t *handle = g_pwm_audio_handle;
     PWM_AUDIO_CHECK(NULL != handle, PWM_AUDIO_NOT_INITIALIZED, ESP_ERR_INVALID_STATE);
     if (volume < 0) {
         PWM_AUDIO_CHECK(-volume <= VOLUME_0DB, "Volume is too small", ESP_ERR_INVALID_ARG);
@@ -600,7 +597,7 @@ esp_err_t pwm_audio_set_volume(int8_t volume)
 
 esp_err_t pwm_audio_get_volume(int8_t *volume)
 {
-    pwm_audio_handle_t handle = g_pwm_audio_handle;
+    pwm_audio_data_t *handle = g_pwm_audio_handle;
     PWM_AUDIO_CHECK(NULL != handle, PWM_AUDIO_NOT_INITIALIZED, ESP_ERR_INVALID_STATE);
     PWM_AUDIO_CHECK(NULL != volume, PWM_AUDIO_PARAM_ADDR_ERROR, ESP_ERR_INVALID_ARG);
     *volume = handle->volume;
@@ -610,13 +607,13 @@ esp_err_t pwm_audio_get_volume(int8_t *volume)
 esp_err_t IRAM_ATTR pwm_audio_write(uint8_t *inbuf, size_t inbuf_len, size_t *bytes_written, TickType_t ticks_to_wait)
 {
     esp_err_t res = ESP_OK;
-    pwm_audio_handle_t handle = g_pwm_audio_handle;
+    pwm_audio_data_t *handle = g_pwm_audio_handle;
     PWM_AUDIO_CHECK(NULL != handle, PWM_AUDIO_NOT_INITIALIZED, ESP_ERR_INVALID_STATE);
     PWM_AUDIO_CHECK(inbuf != NULL && bytes_written != NULL, "Invalid pointer", ESP_ERR_INVALID_ARG);
     PWM_AUDIO_CHECK(inbuf_len != 0, "Length should not be zero", ESP_ERR_INVALID_ARG);
 
     *bytes_written = 0;
-    ringbuf_handle_t rb = handle->ringbuf;
+    ringbuf_handle_t *rb = handle->ringbuf;
     TickType_t start_ticks = xTaskGetTickCount();
 
     while (inbuf_len) {
@@ -750,7 +747,7 @@ esp_err_t IRAM_ATTR pwm_audio_write(uint8_t *inbuf, size_t inbuf_len, size_t *by
 esp_err_t pwm_audio_start(void)
 {
     esp_err_t res;
-    pwm_audio_handle_t handle = g_pwm_audio_handle;
+    pwm_audio_data_t *handle = g_pwm_audio_handle;
     PWM_AUDIO_CHECK(NULL != handle, PWM_AUDIO_NOT_INITIALIZED, ESP_ERR_INVALID_STATE);
     PWM_AUDIO_CHECK(handle->status == PWM_AUDIO_STATUS_IDLE, PWM_AUDIO_STATUS_ERROR, ESP_ERR_INVALID_STATE);
 
@@ -770,7 +767,7 @@ esp_err_t pwm_audio_start(void)
 
 esp_err_t pwm_audio_stop(void)
 {
-    pwm_audio_handle_t handle = g_pwm_audio_handle;
+    pwm_audio_data_t *handle = g_pwm_audio_handle;
     PWM_AUDIO_CHECK(NULL != handle, PWM_AUDIO_NOT_INITIALIZED, ESP_ERR_INVALID_STATE);
     PWM_AUDIO_CHECK(handle->status == PWM_AUDIO_STATUS_BUSY, PWM_AUDIO_STATUS_ERROR, ESP_ERR_INVALID_STATE);
 
@@ -790,7 +787,7 @@ esp_err_t pwm_audio_stop(void)
 
 esp_err_t pwm_audio_deinit(void)
 {
-    pwm_audio_handle_t handle = g_pwm_audio_handle;
+    pwm_audio_data_t *handle = g_pwm_audio_handle;
     PWM_AUDIO_CHECK(handle != NULL, PWM_AUDIO_PARAM_ADDR_ERROR, ESP_FAIL);
 
     handle->status = PWM_AUDIO_STATUS_UN_INIT;
