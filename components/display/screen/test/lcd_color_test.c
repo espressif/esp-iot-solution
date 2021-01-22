@@ -21,18 +21,16 @@
 
 static const char *TAG = "lcd test";
 
-static scr_driver_t lcd;
-static scr_info_t lcd_info;
-
-static void screen_clear(int color)
+static void screen_clear(scr_driver_t *lcd, int color)
 {
-    lcd.get_info(&lcd_info);
+    scr_info_t lcd_info;
+    lcd->get_info(&lcd_info);
 
     uint16_t *buffer = malloc(lcd_info.width * sizeof(uint16_t));
     if (NULL == buffer) {
         for (size_t y = 0; y < lcd_info.height; y++) {
             for (size_t x = 0; x < lcd_info.width; x++) {
-                lcd.draw_pixel(x, y, color);
+                lcd->draw_pixel(x, y, color);
             }
         }
     } else {
@@ -41,7 +39,7 @@ static void screen_clear(int color)
         }
 
         for (int y = 0; y < lcd_info.height; y++) {
-            lcd.draw_bitmap(0, y, lcd_info.width, 1, buffer);
+            lcd->draw_bitmap(0, y, lcd_info.width, 1, buffer);
         }
 
         free(buffer);
@@ -116,9 +114,10 @@ static uint16_t rgb888_to_565(uint8_t r, uint8_t g, uint8_t b)
     return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
 }
 
-static void screen_color_line(uint16_t *buffer, size_t length, uint8_t mode)
+static void screen_color_line(scr_driver_t *lcd, uint16_t *buffer, size_t length, uint8_t mode)
 {
-    lcd.get_info(&lcd_info);
+    scr_info_t lcd_info;
+    lcd->get_info(&lcd_info);
     uint8_t r, g, b;
     uint16_t w = lcd_info.width;
     uint16_t h = lcd_info.height;
@@ -159,17 +158,18 @@ static void screen_color_line(uint16_t *buffer, size_t length, uint8_t mode)
         for (size_t x = 0; x < w; x++) {
             buffer[x] = color;
         }
-        lcd.draw_bitmap(0, y, lcd_info.width, 1, buffer);
+        lcd->draw_bitmap(0, y, lcd_info.width, 1, buffer);
     }
 }
 
-static void lcd_color_test(void)
+static void lcd_color_test(scr_driver_t *lcd)
 {
-    TEST_ASSERT(ESP_OK == lcd.get_info(&lcd_info));
+    scr_info_t lcd_info;
+    TEST_ASSERT(ESP_OK == lcd->get_info(&lcd_info));
 
     const uint16_t color_table[] = {COLOR_RED, COLOR_GREEN, COLOR_BLUE, COLOR_YELLOW};
     for (int c = 0; c < sizeof(color_table) / sizeof(uint16_t); c++) {
-        screen_clear(color_table[c]);
+        screen_clear(lcd, color_table[c]);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 
@@ -177,49 +177,65 @@ static void lcd_color_test(void)
     TEST_ASSERT_NOT_NULL(buffer);
 
     for (size_t i = 0; i < 6; i++) {
-        screen_color_line(buffer, lcd_info.width, i);
+        screen_color_line(lcd, buffer, lcd_info.width, i);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
     free(buffer);
 }
 
-static void lcd_draw_pixel_test(void)
+static void lcd_write_ram_data_test(scr_driver_t *lcd)
 {
-    TEST_ASSERT(ESP_OK == lcd.get_info(&lcd_info));
-    screen_clear(COLOR_WHITE);
+    scr_info_t lcd_info;
+    TEST_ASSERT(ESP_OK == lcd->get_info(&lcd_info));
+    screen_clear(lcd, COLOR_WHITE);
 
     uint16_t c = COLOR_ESP_BKGD;
-    for (size_t y = 0; y < lcd_info.height; y++) {
-        lcd.draw_pixel(0, y, c);
-        lcd.draw_pixel(1, y, c);
-        lcd.draw_pixel(lcd_info.width - 1, y, c);
-        lcd.draw_pixel(lcd_info.width - 2, y, c);
-        vTaskDelay(10 / portTICK_PERIOD_MS);
-    }
-    for (size_t x = 0; x < lcd_info.width; x++) {
-        lcd.draw_pixel(x, 0, c);
-        lcd.draw_pixel(x, 1, c);
-        lcd.draw_pixel(x, lcd_info.height - 1, c);
-        lcd.draw_pixel(x, lcd_info.height - 2, c);
+    lcd->set_window(0, 0, 50, 50);
+    for (size_t i = 0; i < 2500; i++) {
+        lcd->write_ram_data(c);
         vTaskDelay(10 / portTICK_PERIOD_MS);
     }
 }
 
-static void lcd_rotate_pixel_test(void)
+static void lcd_draw_pixel_test(scr_driver_t *lcd)
 {
-    TEST_ASSERT(ESP_OK == lcd.get_info(&lcd_info));
-    screen_clear(COLOR_WHITE);
+    scr_info_t lcd_info;
+    TEST_ASSERT(ESP_OK == lcd->get_info(&lcd_info));
+    screen_clear(lcd, COLOR_WHITE);
+
+    uint16_t c = COLOR_ESP_BKGD;
+    for (size_t y = 0; y < lcd_info.height; y++) {
+        lcd->draw_pixel(0, y, c);
+        lcd->draw_pixel(1, y, c);
+        lcd->draw_pixel(lcd_info.width - 1, y, c);
+        lcd->draw_pixel(lcd_info.width - 2, y, c);
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+    }
+    for (size_t x = 0; x < lcd_info.width; x++) {
+        lcd->draw_pixel(x, 0, c);
+        lcd->draw_pixel(x, 1, c);
+        lcd->draw_pixel(x, lcd_info.height - 1, c);
+        lcd->draw_pixel(x, lcd_info.height - 2, c);
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+    }
+}
+
+static void lcd_rotate_pixel_test(scr_driver_t *lcd)
+{
+    scr_info_t lcd_info;
+    TEST_ASSERT(ESP_OK == lcd->get_info(&lcd_info));
+    screen_clear(lcd, COLOR_WHITE);
 
     uint16_t c = COLOR_ESP_BKGD;
     for (size_t i = 0; i < 8; i++) {
-        lcd.set_direction(i);
-        lcd.get_info(&lcd_info);
-        screen_clear(COLOR_WHITE);
+        lcd->set_direction(i);
+        lcd->get_info(&lcd_info);
+        screen_clear(lcd, COLOR_WHITE);
         ESP_LOGI(TAG, "Screen name:%s | width:%d | height:%d", lcd_info.name, lcd_info.width, lcd_info.height);
 
         for (size_t y = 0; y < 20; y++) {
             for (size_t x = 0; x < 50; x++) {
-                lcd.draw_pixel(x, y, c);
+                lcd->draw_pixel(x, y, c);
                 vTaskDelay(5 / portTICK_PERIOD_MS);
             }
         }
@@ -228,28 +244,30 @@ static void lcd_rotate_pixel_test(void)
 
 static const unsigned char gImage_img_120x39[];
 
-static void lcd_rotate_bitmap_test(void)
+static void lcd_rotate_bitmap_test(scr_driver_t *lcd)
 {
-    TEST_ASSERT(ESP_OK == lcd.get_info(&lcd_info));
+    scr_info_t lcd_info;
+    TEST_ASSERT(ESP_OK == lcd->get_info(&lcd_info));
 
     uint16_t *pixels = heap_caps_malloc((120 * 39) * sizeof(uint16_t), MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL);
     TEST_ASSERT_NOT_NULL(pixels);
     for (size_t i = 0; i < 8; i++) {
-        lcd.set_direction(i);
-        lcd.get_info(&lcd_info);
-        screen_clear(COLOR_WHITE);
+        lcd->set_direction(i);
+        lcd->get_info(&lcd_info);
+        screen_clear(lcd, COLOR_WHITE);
         ESP_LOGI(TAG, "Screen name:%s | width:%d | height:%d", lcd_info.name, lcd_info.width, lcd_info.height);
 
         memcpy(pixels, gImage_img_120x39, (120 * 39) * sizeof(uint16_t));
-        lcd.draw_bitmap(0, 0, 120, 39, (uint16_t *)pixels);
+        lcd->draw_bitmap(0, 0, 120, 39, (uint16_t *)pixels);
         vTaskDelay(2000 / portTICK_PERIOD_MS);
     }
     heap_caps_free(pixels);
 }
 
-static void lcd_speed_test(void)
+static void lcd_speed_test(scr_driver_t *lcd)
 {
-    TEST_ASSERT(ESP_OK == lcd.get_info(&lcd_info));
+    scr_info_t lcd_info;
+    TEST_ASSERT(ESP_OK == lcd->get_info(&lcd_info));
 
     uint32_t w = 240, h = 240;
     w = lcd_info.width < w ? lcd_info.width : w;
@@ -269,7 +287,7 @@ static void lcd_speed_test(void)
             pixels[j] = color_table[i % 4];
         }
         s = esp_timer_get_time();
-        lcd.draw_bitmap(0, 0, w, h, pixels);
+        lcd->draw_bitmap(0, 0, w, h, pixels);
         t1 += (esp_timer_get_time() - s);
     }
     t1 = t1 / 1000;
@@ -291,7 +309,6 @@ static void lcd_speed_test(void)
     heap_caps_free(pixels);
 }
 
-
 static scr_interface_driver_t *get_8080_iface(void)
 {
     i2s_lcd_config_t i2s_lcd_cfg = {
@@ -300,8 +317,8 @@ static scr_interface_driver_t *get_8080_iface(void)
 #ifdef CONFIG_IDF_TARGET_ESP32
             19, 21, 0, 22, 23, 33, 32, 27, 25, 26, 12, 13, 14, 15, 2, 4,
 #else
-            16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1,
-            // 1, 10, 2, 11, 3, 12, 4, 13, 5, 14, 6, 15, 7, 16, 8, 17,
+            // 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1,
+            1, 10, 2, 11, 3, 12, 4, 13, 5, 14, 6, 15, 7, 16, 8, 17,
 #endif
         },
         .pin_num_cs = -1,
@@ -309,8 +326,8 @@ static scr_interface_driver_t *get_8080_iface(void)
         .pin_num_wr = 18,
         .pin_num_rs = 5,
 #else
-        .pin_num_wr = 34,
-        .pin_num_rs = 33,
+        .pin_num_wr = 33,
+        .pin_num_rs = 38,
 #endif
         .clk_freq = 20000000,
         .i2s_port = I2S_NUM_0,
@@ -323,30 +340,39 @@ static scr_interface_driver_t *get_8080_iface(void)
     return iface_drv_i2s;
 }
 
+static void lcd_colorful_test_all(scr_driver_t *lcd)
+{
+    lcd_color_test(lcd);
+    lcd_write_ram_data_test(lcd);
+    lcd_draw_pixel_test(lcd);
+    lcd_rotate_pixel_test(lcd);
+    lcd_rotate_bitmap_test(lcd);
+    lcd_speed_test(lcd);
+}
+
 TEST_CASE("Screen ILI9806 8080 test", "[screen][iot]")
 {
+    scr_driver_t lcd;
     scr_interface_driver_t *iface_drv = get_8080_iface();
     scr_controller_config_t lcd_cfg = {0};
     lcd_cfg.interface_drv = iface_drv;
     lcd_cfg.pin_num_rst = -1;
 #ifdef CONFIG_IDF_TARGET_ESP32
-    lcd_cfg.pin_num_bckl = -1,
+    lcd_cfg.pin_num_bckl = -1;
 #else
-    lcd_cfg.pin_num_bckl = 21,
+    lcd_cfg.pin_num_bckl = 21;
 #endif
-    lcd_cfg.rst_active_level = 0,
-    lcd_cfg.bckl_active_level = 1,
+    lcd_cfg.rst_active_level = 0;
+    lcd_cfg.bckl_active_level = 1;
+    lcd_cfg.offset_hor = 0;
+    lcd_cfg.offset_ver = 0;
     lcd_cfg.width = 480;
     lcd_cfg.height = 854;
     lcd_cfg.rotate = SCR_DIR_LRBT;
     TEST_ASSERT(ESP_OK == scr_find_driver(SCREEN_CONTROLLER_ILI9806, &lcd));
     TEST_ASSERT(ESP_OK == lcd.init(&lcd_cfg));
 
-    lcd_color_test();
-    lcd_draw_pixel_test();
-    lcd_rotate_pixel_test();
-    lcd_rotate_bitmap_test();
-    lcd_speed_test();
+    lcd_colorful_test_all(&lcd);
 
     lcd.deinit();
     scr_interface_delete(iface_drv);
@@ -354,28 +380,27 @@ TEST_CASE("Screen ILI9806 8080 test", "[screen][iot]")
 
 TEST_CASE("Screen RM68210 8080 test", "[screen][iot]")
 {
+    scr_driver_t lcd;
     scr_interface_driver_t *iface_drv = get_8080_iface();
     scr_controller_config_t lcd_cfg = {0};
     lcd_cfg.interface_drv = iface_drv;
     lcd_cfg.pin_num_rst = -1;
 #ifdef CONFIG_IDF_TARGET_ESP32
-    lcd_cfg.pin_num_bckl = -1,
+    lcd_cfg.pin_num_bckl = -1;
 #else
-    lcd_cfg.pin_num_bckl = 21,
+    lcd_cfg.pin_num_bckl = -1;
 #endif
-    lcd_cfg.rst_active_level = 0,
-    lcd_cfg.bckl_active_level = 1,
+    lcd_cfg.rst_active_level = 0;
+    lcd_cfg.bckl_active_level = 1;
+    lcd_cfg.offset_hor = 0;
+    lcd_cfg.offset_ver = 0;
     lcd_cfg.width = 480;
     lcd_cfg.height = 800;
     lcd_cfg.rotate = SCR_DIR_LRBT;
     TEST_ASSERT(ESP_OK == scr_find_driver(SCREEN_CONTROLLER_RM68120, &lcd));
     TEST_ASSERT(ESP_OK == lcd.init(&lcd_cfg));
 
-    lcd_color_test();
-    lcd_draw_pixel_test();
-    lcd_rotate_pixel_test();
-    lcd_rotate_bitmap_test();
-    lcd_speed_test();
+    lcd_colorful_test_all(&lcd);
 
     lcd.deinit();
     scr_interface_delete(iface_drv);
@@ -383,6 +408,7 @@ TEST_CASE("Screen RM68210 8080 test", "[screen][iot]")
 
 TEST_CASE("Screen ILI9341 SPI test", "[screen][iot]")
 {
+    scr_driver_t lcd;
     spi_config_t spi_cfg = {
         .miso_io_num = -1,
         .mosi_io_num = 21,
@@ -417,11 +443,7 @@ TEST_CASE("Screen ILI9341 SPI test", "[screen][iot]")
     TEST_ASSERT(ESP_OK == scr_find_driver(SCREEN_CONTROLLER_ILI9341, &lcd));
     TEST_ASSERT(ESP_OK == lcd.init(&lcd_cfg));
 
-    lcd_color_test();
-    lcd_draw_pixel_test();
-    lcd_rotate_pixel_test();
-    lcd_rotate_bitmap_test();
-    lcd_speed_test();
+    lcd_colorful_test_all(&lcd);
 
     lcd.deinit();
     scr_interface_delete(iface_drv);
@@ -474,6 +496,7 @@ TEST_CASE("Screen ST7789 SPI test", "[screen][iot]")
 
 TEST_CASE("Screen SSD1351 SPI test", "[screen][iot]")
 {
+    scr_driver_t lcd;
     spi_config_t spi_cfg = {
         .miso_io_num = -1,
         .mosi_io_num = 38,
@@ -507,11 +530,7 @@ TEST_CASE("Screen SSD1351 SPI test", "[screen][iot]")
     TEST_ASSERT(ESP_OK == scr_find_driver(SCREEN_CONTROLLER_SSD1351, &lcd));
     TEST_ASSERT(ESP_OK == lcd.init(&lcd_cfg));
 
-    lcd_color_test();
-    lcd_draw_pixel_test();
-    lcd_rotate_pixel_test();
-    lcd_rotate_bitmap_test();
-    lcd_speed_test();
+    lcd_colorful_test_all(&lcd);
 
     lcd.deinit();
     scr_interface_delete(iface_drv);

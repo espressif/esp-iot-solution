@@ -18,6 +18,7 @@
 #include "esp_log.h"
 #include "driver/gpio.h"
 #include "screen_driver.h"
+#include "screen_utility.h"
 #include "ssd1307.h"
 
 static const char *TAG = "ssd1307";
@@ -88,16 +89,7 @@ static const char *TAG = "ssd1307";
 #define SSD1307_LOWER_ADDRESS   (SSD1307_CMD_SET_LOWER_COLUMN_ADDR + (SSD1307_COLUMN_ADDR&0x0f))
 #define SSD1307_HIGHER_ADDRESS  (SSD1307_CMD_SET_HIGHER_COLUMN_ADDR + ((SSD1307_COLUMN_ADDR&0xf0)>>4))
 
-typedef struct {
-    scr_interface_driver_t *iface_drv;
-    uint16_t original_width;
-    uint16_t original_height;
-    uint16_t width;
-    uint16_t height;
-    scr_dir_t dir;
-} ssd1307_dev_t;
-
-static ssd1307_dev_t g_lcd_handle;
+static scr_handle_t g_lcd_handle;
 
 /**
  * This header file is only used to redefine the function to facilitate the call.
@@ -136,6 +128,8 @@ esp_err_t lcd_ssd1307_init(const scr_controller_config_t *lcd_conf)
     g_lcd_handle.interface_drv = lcd_conf->interface_drv;
     g_lcd_handle.original_width = lcd_conf->width;
     g_lcd_handle.original_height = lcd_conf->height;
+    g_lcd_handle.offset_hor = lcd_conf->offset_hor;
+    g_lcd_handle.offset_ver = lcd_conf->offset_ver;
 
     LCD_WRITE_CMD(0xAE); //--turn off oled panel
     LCD_WRITE_CMD(0x00); //---set low column address
@@ -172,7 +166,7 @@ esp_err_t lcd_ssd1307_init(const scr_controller_config_t *lcd_conf)
 
 esp_err_t lcd_ssd1307_deinit(void)
 {
-    memset(&g_lcd_handle, 0, sizeof(ssd1307_dev_t));
+    memset(&g_lcd_handle, 0, sizeof(scr_handle_t));
     return ESP_OK;
 }
 

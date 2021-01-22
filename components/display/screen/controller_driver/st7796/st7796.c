@@ -18,6 +18,7 @@
 #include "esp_log.h"
 #include "driver/gpio.h"
 #include "screen_driver.h"
+#include "screen_utility.h"
 #include "st7796.h"
 
 static const char *TAG = "lcd st7796";
@@ -31,6 +32,9 @@ static const char *TAG = "lcd st7796";
 #define LCD_NAME "ST7796"
 #define LCD_BPP  16
 
+#define ST7796_RESOLUTION_HOR 320
+#define ST7796_RESOLUTION_VER 480
+
 /** commands of ST7796 */
 #define LCD_SWRESET 0x01  // Software Reset
 #define LCD_RDDID   0x04  // Read Display ID
@@ -40,7 +44,7 @@ static const char *TAG = "lcd st7796";
 #define LCD_PASET   0x2B  // Row Address Set
 #define LCD_RAMWR   0x2C  // Memory Writ
 #define LCD_RAMRD   0x2E  // Memory Read
-#define LCD_MADCTL  0x36  // Memory Data Access Contro
+#define LCD_MADCTL  0x36  // Memory Data Access Control
 
 /* MADCTL Defines */
 #define MADCTL_MY  0x80
@@ -50,16 +54,7 @@ static const char *TAG = "lcd st7796";
 #define MADCTL_RGB 0x08
 #define MADCTL_MH  0x04
 
-typedef struct {
-    scr_interface_driver_t *iface_drv;
-    uint16_t original_width;
-    uint16_t original_height;
-    uint16_t width;
-    uint16_t height;
-    scr_dir_t dir;
-} lcd_handle_t;
-
-static lcd_handle_t g_lcd_handle;
+static scr_handle_t g_lcd_handle;
 
 /**
  * This header file is only used to redefine the function to facilitate the call.
@@ -83,6 +78,8 @@ static esp_err_t lcd_st7796_reg_config(void);
 
 esp_err_t lcd_st7796_init(const scr_controller_config_t *lcd_conf)
 {
+    LCD_CHECK(lcd_conf->width <= ST7796_RESOLUTION_HOR, "Width greater than maximum", ESP_ERR_INVALID_ARG);
+    LCD_CHECK(lcd_conf->height <= ST7796_RESOLUTION_VER, "Height greater than maximum", ESP_ERR_INVALID_ARG);
     LCD_CHECK(NULL != lcd_conf, "config pointer invalid", ESP_ERR_INVALID_ARG);
     LCD_CHECK((NULL != lcd_conf->interface_drv->write_cmd && \
                NULL != lcd_conf->interface_drv->write_data && \
@@ -105,6 +102,8 @@ esp_err_t lcd_st7796_init(const scr_controller_config_t *lcd_conf)
     g_lcd_handle.interface_drv = lcd_conf->interface_drv;
     g_lcd_handle.original_width = lcd_conf->width;
     g_lcd_handle.original_height = lcd_conf->height;
+    g_lcd_handle.offset_hor = lcd_conf->offset_hor;
+    g_lcd_handle.offset_ver = lcd_conf->offset_ver;
 
     // Send all the commands
     ret = lcd_st7796_reg_config();
@@ -125,7 +124,7 @@ esp_err_t lcd_st7796_init(const scr_controller_config_t *lcd_conf)
 
 esp_err_t lcd_st7796_deinit(void)
 {
-    memset(&g_lcd_handle, 0, sizeof(lcd_handle_t));
+    memset(&g_lcd_handle, 0, sizeof(scr_handle_t));
     return ESP_OK;
 }
 
@@ -205,6 +204,7 @@ esp_err_t lcd_st7796_set_window(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t 
     LCD_CHECK((x1 < g_lcd_handle.width) && (y1 < g_lcd_handle.height), "The set coordinates exceed the screen size", ESP_ERR_INVALID_ARG);
     LCD_CHECK((x0 <= x1) && (y0 <= y1), "Window coordinates invalid", ESP_ERR_INVALID_ARG);
     esp_err_t ret = ESP_OK;
+    scr_utility_apply_offset(&g_lcd_handle, ST7796_RESOLUTION_HOR, ST7796_RESOLUTION_VER, &x0, &y0, &x1, &y1);
 
     ret |= LCD_WRITE_CMD(LCD_CASET);
     ret |= LCD_WRITE_DATA(x0 >> 8);

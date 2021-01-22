@@ -18,6 +18,7 @@
 #include "esp_log.h"
 #include "driver/gpio.h"
 #include "screen_driver.h"
+#include "screen_utility.h"
 #include "ili9341.h"
 
 static const char *TAG = "lcd ili9341";
@@ -49,16 +50,10 @@ static const char *TAG = "lcd ili9341";
 #define MADCTL_RGB 0x08
 #define MADCTL_MH  0x04
 
-typedef struct {
-    scr_interface_driver_t *iface_drv;
-    uint16_t original_width;
-    uint16_t original_height;
-    uint16_t width;
-    uint16_t height;
-    scr_dir_t dir;
-} lcd_handle_t;
+#define ILI9341_RESOLUTION_HOR 240
+#define ILI9341_RESOLUTION_VER 320
 
-static lcd_handle_t g_lcd_handle;
+static scr_handle_t g_lcd_handle;
 
 /**
  * This header file is only used to redefine the function to facilitate the call.
@@ -86,8 +81,7 @@ typedef struct {
     uint8_t databytes; //No of data in data; bit 7 = delay after set; 0xFF = end of cmds.
 } lcd_init_cmd_t;
 
-
-DRAM_ATTR static const lcd_init_cmd_t ili_init_cmds[] = {
+static const lcd_init_cmd_t ili_init_cmds[] = {
     {0xCF, {0x00, 0x83, 0x30}, 3},
     {0xED, {0x64, 0x03, 0x12, 0x81}, 4},
     {0xE8, {0x85, 0x01, 0x79}, 3},
@@ -115,9 +109,10 @@ DRAM_ATTR static const lcd_init_cmd_t ili_init_cmds[] = {
     {0, {0}, 0xff},
 };
 
-
 esp_err_t lcd_ili9341_init(const scr_controller_config_t *lcd_conf)
 {
+    LCD_CHECK(lcd_conf->width <= ILI9341_RESOLUTION_HOR, "Width greater than maximum", ESP_ERR_INVALID_ARG);
+    LCD_CHECK(lcd_conf->height <= ILI9341_RESOLUTION_VER, "Height greater than maximum", ESP_ERR_INVALID_ARG);
     LCD_CHECK(NULL != lcd_conf, "config pointer invalid", ESP_ERR_INVALID_ARG);
     LCD_CHECK((NULL != lcd_conf->interface_drv->write_cmd && \
                NULL != lcd_conf->interface_drv->write_data && \
@@ -126,7 +121,6 @@ esp_err_t lcd_ili9341_init(const scr_controller_config_t *lcd_conf)
                NULL != lcd_conf->interface_drv->bus_acquire && \
                NULL != lcd_conf->interface_drv->bus_release),
               "Interface driver invalid", ESP_ERR_INVALID_ARG);
-
     esp_err_t ret;
 
     // Reset the display
@@ -142,6 +136,8 @@ esp_err_t lcd_ili9341_init(const scr_controller_config_t *lcd_conf)
     g_lcd_handle.interface_drv = lcd_conf->interface_drv;
     g_lcd_handle.original_width = lcd_conf->width;
     g_lcd_handle.original_height = lcd_conf->height;
+    g_lcd_handle.offset_hor = lcd_conf->offset_hor;
+    g_lcd_handle.offset_ver = lcd_conf->offset_ver;
 
     int cmd = 0;
     // Send all the commands
@@ -172,7 +168,7 @@ esp_err_t lcd_ili9341_init(const scr_controller_config_t *lcd_conf)
 
 esp_err_t lcd_ili9341_deinit(void)
 {
-    memset(&g_lcd_handle, 0, sizeof(lcd_handle_t));
+    memset(&g_lcd_handle, 0, sizeof(scr_handle_t));
     return ESP_OK;
 }
 
@@ -252,6 +248,7 @@ esp_err_t lcd_ili9341_set_window(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t
     LCD_CHECK((x1 < g_lcd_handle.width) && (y1 < g_lcd_handle.height), "The set coordinates exceed the screen size", ESP_ERR_INVALID_ARG);
     LCD_CHECK((x0 <= x1) && (y0 <= y1), "Window coordinates invalid", ESP_ERR_INVALID_ARG);
     esp_err_t ret = ESP_OK;
+    scr_utility_apply_offset(&g_lcd_handle, ILI9341_RESOLUTION_HOR, ILI9341_RESOLUTION_VER, &x0, &y0, &x1, &y1);
 
     ret |= LCD_WRITE_CMD(LCD_CASET);
     ret |= LCD_WRITE_DATA(x0 >> 8);

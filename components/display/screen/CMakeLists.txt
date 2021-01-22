@@ -12,8 +12,8 @@ set(SCREEN_DIR "controller_driver/ili9341"
             "controller_driver/ssd1322"
             )
 
-idf_component_register(SRC_DIRS "${SCREEN_DIR}" "interface_driver" "."
+idf_component_register(SRC_DIRS "${SCREEN_DIR}" "screen_utility" "interface_driver" "."
                         INCLUDE_DIRS "${SCREEN_DIR}" "interface_driver" "."
-                        PRIV_INCLUDE_DIRS "priv_include"
+                        PRIV_INCLUDE_DIRS "screen_utility"
                         REQUIRES bus
                         )

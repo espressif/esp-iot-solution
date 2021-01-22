@@ -18,6 +18,7 @@
 #include "esp_log.h"
 #include "driver/gpio.h"
 #include "screen_driver.h"
+#include "screen_utility.h"
 #include "ssd1322.h"
 
 static const char *TAG = "lcd ssd1322";
@@ -65,16 +66,7 @@ static const char *TAG = "lcd ssd1322";
 #define LCD_NAME "OLED SSD1322"
 #define LCD_BPP  SSD1322_BITS_PER_PIXEL
 
-typedef struct {
-    scr_interface_driver_t *iface_drv;
-    uint16_t original_width;
-    uint16_t original_height;
-    uint16_t width;
-    uint16_t height;
-    scr_dir_t dir;
-} ssd1322_dev_t;
-
-static ssd1322_dev_t g_lcd_handle;
+static scr_handle_t g_lcd_handle;
 
 /**
  * This header file is only used to redefine the function to facilitate the call.
@@ -111,6 +103,8 @@ esp_err_t lcd_ssd1322_init(const scr_controller_config_t *lcd_conf)
     g_lcd_handle.interface_drv = lcd_conf->interface_drv;
     g_lcd_handle.original_width = lcd_conf->width;
     g_lcd_handle.original_height = lcd_conf->height;
+    g_lcd_handle.offset_hor = lcd_conf->offset_hor;
+    g_lcd_handle.offset_ver = lcd_conf->offset_ver;
 
     LCD_WRITE_CMD(SSD1322_SETCOMMANDLOCK);// 0xFD
     LCD_WRITE_DATA(0x12);// Unlock OLED driver IC
@@ -179,7 +173,7 @@ esp_err_t lcd_ssd1322_init(const scr_controller_config_t *lcd_conf)
 
 esp_err_t lcd_ssd1322_deinit(void)
 {
-    memset(&g_lcd_handle, 0, sizeof(ssd1322_dev_t));
+    memset(&g_lcd_handle, 0, sizeof(scr_handle_t));
     return ESP_OK;
 }
 
