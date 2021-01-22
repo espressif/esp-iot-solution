@@ -69,4 +69,5 @@ ESP-IOT-Solution contains peripheral drivers and code frameworks for the develop
    Sensors <sensors/index>
    Motor <motor/index>
    Security&Encryption <security_solution/index>
+   Other Resources <others/index>
    Contribute <contribute/index>
