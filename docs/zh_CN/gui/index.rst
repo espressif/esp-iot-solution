@@ -1,5 +1,4 @@
-
-GUI
+图形界面
 *************************
 
 :link_to_translation:`en:[English]`
@@ -7,6 +6,6 @@ GUI
 .. toctree::
     :maxdepth: 1
 
-    LVGL GUI <lvgl_gui>
+    LVGL 图形库 <lvgl_gui>
 
 
