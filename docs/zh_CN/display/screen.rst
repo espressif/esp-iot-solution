@@ -1,255 +1,264 @@
-屏幕驱动
-===============
+显示屏
+===========
 
-esp-iot-solution 中的屏幕驱动支持如下屏幕：
+在许多的应用中需要显示信息给用户，显示屏是很重要的一个显示设备。ESP32 支持驱动包括 I2C、8080 并口和 SPI 接口的屏幕，分辨率可达 800 x 480，已支持下表中的屏幕控制器型号：
 
-+--------------+------------+------------+-----------+
-| Color type   |   8080     |      SPI   |    I2C    |
-+==============+============+============+===========+
-|              |  NT35510   |   ILI9341  |           |
-|   COLOR      +------------+------------+-----------+
-|              |  ILI9806   |    ST7789  |           |
-|              +------------+------------+-----------+
-|              |  ILI9486   |   SSD1351  |           |
-+--------------+------------+------------+-----------+
-|              |            |            |  SSD1306  |
-|    MONO      +------------+------------+-----------+
-|              |            |            |  SSD1307  |
-|              +------------+------------+-----------+
-|              |            |  IL91874   |           |
-+--------------+------------+------------+-----------+
++------------+------------+
+|    Color   | Monochrome |
++============+============+
+|  NT35510   |   SSD1306  |
++------------+------------+
+|  ILI9806   |   SSD1307  |
++------------+------------+
+|  ILI9486   |   SSD1322  |
++------------+------------+
+|  RM68120   |            |
++------------+------------+
+|  ILI9341   |            |
++------------+------------+
+|  ST7789    |            |
++------------+------------+
+|  ST7796    |            |
++------------+------------+
+|  SSD1351   |            |
++------------+------------+
 
-驱动同时支持 ESP32 和 ESP32-S2 芯片
+.. note:: 8080 接口使用的是 ESP32 I2S 的 LCD 模式实现，故下文中有时也称之为 ``I2S 接口``。
 
 驱动结构
 ----------
 
-为了更加符合一个屏幕控制芯片拥有多个接口的实际情况，将屏幕驱动程序划分为 ``接口驱动`` 和 ``屏幕控制器驱动`` 两部分。
-接口负责与屏幕完成基本的命令和数据的读写，屏幕控制器驱动负责通过接口驱动来完成屏幕的显示，一个屏幕控制器驱动可以灵活地调用不同的接口驱动以实现硬件上不同的接口。
-下面是驱动结构框图：
-
-.. figure:: ../../_static/display/screen_driver_structure.jpg
+.. figure:: ../../_static/display/screen_driver_structure.png
    :align: center
+   :width: 500px
 
    屏幕驱动结构框图
 
-按照屏幕可显示的色彩来区分屏幕有助于屏幕接口的抽象，因为屏幕的色彩决定了屏幕内部的 GRAM 对应屏幕像素的排布方式。下面分三种色彩类型进行讨论。
+为了更加符合一个屏幕控制芯片拥有多个接口的实际情况，将屏幕驱动程序划分为 ``接口驱动`` 和 ``屏幕控制器驱动`` 两部分。
 
-- 彩色，大部分支持彩色的屏幕同时支持 RGB888, RGB666, RGB565 等颜色格式，为了方便简单，这里仅对 RGB565 进行了支持。这种颜色的屏幕特点在于以下两点：
+- 接口驱动：完成基本的命令和数据的读写
+- 屏幕控制器驱动：通过接口驱动来完成屏幕的显示
 
-    * 可按照像素点寻址
-    * 一个半字仅控制一个像素
+在程序设计上，一个屏幕控制器驱动可以通过调用不同的接口驱动以实现切换硬件上不同的接口。
 
-- 单色，这种屏幕通常尺寸不大，并且通常需要一个缓存来实现像素点寻址
-
-    * 不可按照像素点寻址
-    * 一个字节控制着 8 个像素点
-
-- 灰度，与单色屏幕大部分相同，不同的是灰度需要多个位来控制，但是依旧是一个字节控制着多个像素点（应该也存在灰度超过或等于8位的屏幕，目前没有碰到）
-
-由于不同屏幕的 GRAM 排布方式的不尽相同，尤其对于不可像素寻址的屏幕来说，一个字节控制了多个像素点时，有多种排布的方式。
-下面列举几种排布方式
+屏幕的分类
+----------
+对屏幕进行分类的讨论将有助于我们对驱动的理解，这里按照屏幕可显示的色彩来分类，而不是按照 OLED、LCD 等屏幕的面板材料来分类。
+在一般情况下，屏幕显示的色彩决定了 bpp(bits per pixel)，而 bpp 的不同导致程序的处理方式有一些不同，下面更直观地列举几种 GRAM 映射到像素点的方式：
 
 .. figure:: ../../_static/display/screen_driver_RGB565.png
    :align: center
+   :width: 600px
 
-   RGB565 GRAM 结构
+   bpp=16 GRAM 结构
 
 .. figure:: ../../_static/display/screen_driver_mono.png
    :align: center
+   :width: 600px
 
-   MONO GRAM 结构
+   bpp=1 GRAM 结构
 
 .. figure:: ../../_static/display/screen_driver_gray.png
    :align: center
+   :width: 600px
 
-   GRAY GRAM 结构
+   bpp=4 GRAM 结构
 
-在驱动中只是原封不动的将数据写入屏幕，并没有将数据按照不同的屏幕重新组织，所以选用不同的屏幕时，某些驱动函数的参数含义不一致，应该按照实际使用的屏幕的 GRAM 排布方式来组织参数数据。
+从上面的图中可以看出，大概可以分为两类：
+
+- bpp >= 8，通常是支持 RGB888, RGB666, RGB565 等编码的彩色屏幕。
+- bpp < 8，通常是单色的屏幕，可能是黑白的，也可能是灰阶的。
+
+bpp < 8 时，一个字节映射到了多个像素，无法直接地控制单个像素。这时，驱动不支持 :c:func:`draw_pixel` 函数，且 :c:func:`set_window` 的参数也将受到限制。bpp >= 8 时，则可以轻松地访问单个像素。
+
+在驱动中是直接将数据写入屏幕，并没有将数据按照不同的屏幕重新组织，所以选用不同的屏幕时，应该按照实际使用屏幕的 GRAM 排布方式来组织数据。
+
+.. attention:: 对于彩色屏幕，驱动仅支持 RGB565 颜色编码
 
 接口驱动
 -----------
 
-一个屏幕控制器通常拥有多种的接口，在 ESP32 上通常使用的是 ``8080(8bit/16bit)``、``SPI`` 和 ``I2C`` 这三种接口，其中 8080 接口使用的是 ESP32 的 I2S 实现，故下文中也称之为 ``I2S 接口``。
+一个屏幕控制器通常拥有多种的接口，在 ESP32 上通常使用 ``8080 并口``、``SPI`` 和 ``I2C`` 这三种接口来与屏幕连接，可以在配置屏幕时选用其中一个接口。
 
-为了实现灵活地切换不同的接口，对接口驱动向上的接口统一抽象为如下一些函数：
+为了方便在屏幕控制器驱动中统一使用这些接口，在 :component_file:`display/screen/screen_utility/interface_drv_def.h` 中定义了所拥有的接口，以更简单的参数来调用接口驱动。
 
-.. code:: c
-
-    typedef struct {
-        esp_err_t (*init)(const lcd_config_t *lcd);
-        esp_err_t (*deinit)(bool free_bus);
-        esp_err_t (*write_cmd)(uint16_t cmd);
-        esp_err_t (*write_data)(uint16_t data);
-        esp_err_t (*write)(const uint8_t *data, uint32_t length);
-        esp_err_t (*read)(uint8_t *data, uint32_t length);
-        esp_err_t (*bus_acquire)(void);
-        esp_err_t (*bus_release)(void);
-    }lcd_iface_driver_fun_t;
-
-每种接口的驱动分别对上面的函数进行了对应实现，例如 SPI 接口：
-
-.. code:: c
-
-    lcd_iface_driver_fun_t g_lcd_spi_iface_default_driver = {
-        .init = spi_lcd_driver_init,
-        .deinit = spi_lcd_driver_deinit,
-        .write_cmd = spi_lcd_driver_write_cmd,
-        .write_data = spi_lcd_driver_write_data,
-        .write = spi_lcd_driver_write,
-        .read = spi_lcd_driver_read,
-        .bus_acquire = spi_lcd_driver_acquire,
-        .bus_release = spi_lcd_driver_release,
-    };
-
-每个接口驱动都定义了一个接口驱动结构体将其进行抽象，便于上层切换不同的接口驱动。需要注意的是 :c:func:`write_cmd` 和 :c:func:`write_data` 在不同接口下参数含义不完全相同。
-
-- 当使用 I2S 接口时，该参数 16 位全有效
-- 当使用 SPI 或者 I2C 接口时，该参数仅低 8 位有效
-
-另外，为了统一使用这些接口，在 ``lcd_low_driver.h`` 中通过宏，定义了所拥有的接口：
-
-.. code:: c
-
-    /**< Define the function of interface instance */
-    #define LCD_IFACE_INIT(v) g_iface_driver->init((v))
-    #define LCD_IFACE_DEINIT(v) g_iface_driver->deinit((v))
-    #define LCD_WRITE_CMD(v) g_iface_driver->write_cmd((v))
-    #define LCD_WRITE_DATA(v) g_iface_driver->write_data((v))
-    #define LCD_WRITE(v, l) g_iface_driver->write((v), (l))
-    #define LCD_READ(v, l) g_iface_driver->read((v), (l))
-    #define LCD_IFACE_ACQUIRE() g_iface_driver->bus_acquire()
-    #define LCD_IFACE_RELEASE() g_iface_driver->bus_release()
-
-不同的屏幕控制器驱动都是通过这些宏调用接口驱动，通过在 menuconfig 中的配置可快速切换不同的接口。
+.. note:: 由于大部分屏幕是大端模式，而 ESP32 是小端模式，在所使用的接口驱动中会根据 ``swap_data`` 配置可选地进行大小端转换。**需要特别注意的是：** 当使用 SPI 接口时，由于 IDF 的 SPI 驱动内部没有提供该功能，将直接对传入数据进行转换，所以传入的数据 **必须** 存放在 RAM 中。
 
 屏幕控制器驱动
 ----------------
 
-这部分根据不同的屏幕控制器分别实现显示等功能，为了方便地移植到不同 GUI 库，将不同屏幕的一部分通用函数进行了抽象。对于一些屏幕的特殊功能，需要自行调用其特定的函数完成。
+这部分根据不同的屏幕控制器分别实现显示等功能，为了方便地移植到不同 GUI 库，将屏幕的一部分通用函数用 :cpp:type:`scr_driver_t` 进行了抽象。对于一些屏幕的非通用功能，需要自行调用其特定的函数完成。
 
-下面是抽象的通用接口函数：
+对于这些通用函数，由于屏幕控制器本身的功能不尽相同，并不是所有的屏幕都全部实现了，例如：对于 bpp<8 的屏幕不支持 :c:func:`draw_pixel` 函数。调用不支持的函数将返回 :cpp:enumerator:`ESP_ERR_NOT_SUPPORTED`。
 
-.. code:: c
+显示方向
+^^^^^^^^^
 
-    typedef struct {
-        esp_err_t (*init)(const lcd_config_t *lcd_conf);                                            /*!< initialize LCD screen */
-        esp_err_t (*deinit)(void);                                                            /*!< deinitialize LCD screen */
-        esp_err_t (*set_direction)(lcd_dir_t dir);                                            /*!< control lcd scan direction */
-        esp_err_t (*set_window)(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1);          /*!<  */
-        esp_err_t (*write_ram_data)(uint16_t color);                                                         /*!<  */
-        esp_err_t (*draw_pixel)(uint16_t x, uint16_t y, uint16_t color);                                     /*!<  */
-        esp_err_t (*draw_bitmap)(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t *bitmap);
-        esp_err_t (*get_info)(lcd_info_t *info);
-        xSemaphoreHandle lcd_driver_lock;                                                                         /*!<  */
-    }lcd_driver_fun_t;
+这里设置的屏幕显示方向是完全由屏幕硬件实现的，这个功能在不同的屏幕控制器上会有差异。
+一共有 8 种可能的显示方向，显示器可以旋转 0°、90°、180° 或 270°，也可以从顶部或底部查看，默认方向为 0° 和顶部查看。
+这些 4×2=8 个不同的显示方向也可以表示为 3 个二进制开关的组合：X-mirroring、Y-mirroring 和 X/Y swapping。
 
-对于上面的这些函数，并不是所有的屏幕都实现了，例如单色屏幕无法在无缓存区的情况下完成 :c:func:`draw_pixel` 函数。当某个屏幕不支持某函数时，该函数会返回 ``ESP_ERR_NOT_SUPPORTED``。
+下面列出的全部的 8 种组合显示的方向。如果显示方向不正常，请查看下表中的配置开关让它正常工作。
 
-另外值得注意的是，在调用 :c:func:`init` 时，会自动调用接口驱动初始化，而无需用户额外调用。
+==================  ======================  ====================  ===========================
+|original|           0                      |mirror_y|             SCR_MIRROR_Y             
+                     [SCR_DIR_LRTB]                                [SCR_DIR_LRBT]
+------------------  ----------------------  --------------------  ---------------------------
+|mirror_x|           SCR_MIRROR_X           |mirror_xy|            SCR_MIRROR_X|             
+                     [SCR_DIR_RLTB]                                SCR_MIRROR_Y 
+                                                                   [SCR_DIR_RLBT]
+------------------  ----------------------  --------------------  ---------------------------
+|swap_xy|            SCR_SWAP_XY            |swap_xy_mirror_y|     SCR_SWAP_XY|
+                     [SCR_DIR_TBLR]                                SCR_MIRROR_Y  
+                                                                   [SCR_DIR_BTLR]
+------------------  ----------------------  --------------------  ---------------------------
+|swap_xy_mirror_x|   SCR_SWAP_XY|           |swap_xy_mirror_xy|    SCR_SWAP_XY|
+                     SCR_MIRROR_X                                  SCR_MIRROR_X|
+                     [SCR_DIR_TBRL]                                SCR_MIRROR_Y  
+                                                                   [SCR_DIR_BTRL]
+==================  ======================  ====================  ===========================
+
+.. |original| image:: ../../_static/display/original.png
+              :height: 50px
+              :width: 100px
+
+.. |mirror_y| image:: ../../_static/display/mirror_y.png
+              :height: 50px
+              :width: 100px
+.. |mirror_x| image:: ../../_static/display/mirror_x.png
+              :height: 50px
+              :width: 100px
+.. |mirror_xy| image:: ../../_static/display/mirror_xy.png
+              :height: 50px
+              :width: 100px
+
+.. |swap_xy| image:: ../../_static/display/swap_xy.png
+              :height: 100px
+              :width: 50px
+.. |swap_xy_mirror_x| image:: ../../_static/display/swap_xy_mirror_x.png
+              :height: 100px
+              :width: 50px
+.. |swap_xy_mirror_y| image:: ../../_static/display/swap_xy_mirror_y.png
+              :height: 100px
+              :width: 50px
+.. |swap_xy_mirror_xy| image:: ../../_static/display/swap_xy_mirror_xy.png
+              :height: 100px
+              :width: 50px
+
+屏幕的显示方向并不是所有的屏幕控制器都是一样的实现，通常是以下的情况：
+
+    - 对于彩色屏幕，支持 8 个方向的旋转
+    - 对于单色屏幕，如 SSD1306 等屏幕来说，只支持 :cpp:enum::`scr_dir_t` 中定义的前 4 个方向，即不支持交换 XY 轴。
+
+.. note:: 
+    显示方向还和使用的屏幕面板有关系，你可能会发现两种异常的情况：
+
+    - 显示方向设置为 :cpp:enumerator:`SCR_DIR_LRTB`，屏幕却不是按照上表中对应的显示方向，这可能是因为在屏幕面板上的走线对 X/Y 方向上进行了镜像，这时应该根据实际情况调整旋转以得到期望的显示方向。
+    - 旋转了屏幕后，显示内容不见了，这可能是因为屏幕面板的分辨率小于屏幕控制器的分辨率，导致旋转后显示区域没有完全落在屏幕面板上，这时应考虑设置正确的显示区域偏移。
+
+显示区域的偏移
+^^^^^^^^^^^^^^^^^^
+
+在一些小尺寸的屏幕上，通常其可视区域分辨率是小于所用屏幕控制器的分辨率。下面是一个示例图：
+
+.. image:: ../../_static/display/screen_offset.png
+    :align: center
+    :width: 350px
+
+图中 ``Controller window`` 是屏幕控制器的显示窗口，分辨率为 240\*320，``Panel window`` 是屏幕面板窗口，分辨率为 135\*240，可视的区域为屏幕面板区域。可以看出显示区域在水平方向上偏移了 52 个像素，在垂直方向上偏移了 40 个像素。
+
+当屏幕逆时针旋转 90° 后（如下图），变成水平方向上偏移了 40 个像素，在垂直方向上偏移了 53 个像素。
+
+.. image:: ../../_static/display/screen_offset_rotate.png
+    :align: center
+    :width: 420px
+
+屏幕控制器驱动会帮你自动根据屏幕的旋转来改变偏移的值，保持正确的显示区域。你需要做的是在 :cpp:type:`scr_controller_config_t` 中正确配置屏幕在 ``SCR_DIR_LRTB`` 方向时的偏移和屏幕面板尺寸。
+
+.. note:: 
+
+    - 显示偏移仅支持 bpp >= 8 的屏幕。
+    - 当屏幕控制器是可选分辨率的时候，发现偏移不对可能是因为选择的分辨率与实际不符，此时应该修改程序，如： ILI9806 可尝试修改 ``ili9806.c`` 中的 ``ILI9806_RESOLUTION_VER`` 为实际的分辨率。
 
 应用示例
 ------------
 
-初始化一个屏幕
-*****************
+初始化屏幕
+^^^^^^^^^^^
 
 .. code:: c
 
-    extern lcd_driver_fun_t lcd_st7789_default_driver;
-    static lcd_driver_fun_t *lcd_driver = &lcd_st7789_default_driver;
+    scr_driver_t g_lcd; // A screen driver
+    esp_err_t ret = ESP_OK;
 
-    lcd_config_t lcd_conf = {
-    #ifdef CONFIG_LCD_DRIVER_INTERFACE_I2C
-            .iface_i2c = {
-                .pin_num_sda = CONFIG_LCD_I2C_SDA_PIN,
-                .pin_num_scl = CONFIG_LCD_I2C_SCL_PIN,
-                .clk_freq = CONFIG_LCD_I2C_CLOCK_FREQ,
-                .i2c_port = CONFIG_LCD_I2C_PORT_NUM,
-                .i2c_addr = CONFIG_LCD_I2C_ADDRESS,
-            },
-    #endif
-    #ifdef CONFIG_LCD_DRIVER_INTERFACE_SPI
-            .iface_spi = {
-                .pin_num_miso = CONFIG_LCD_SPI_MISO_PIN,
-                .pin_num_mosi = CONFIG_LCD_SPI_MOSI_PIN,
-                .pin_num_clk = CONFIG_LCD_SPI_CLK_PIN,
-                .pin_num_cs = CONFIG_LCD_SPI_CS_PIN,
-                .pin_num_dc = CONFIG_LCD_SPI_DC_PIN,
-                .clk_freq = CONFIG_LCD_SPI_CLOCK_FREQ,
-                .spi_host = CONFIG_LCD_SPI_HOST,
-                .dma_chan = 2,
-                .init_spi_bus = true,
-            },
-    #endif
-    #ifdef CONFIG_LCD_DRIVER_INTERFACE_I2S
-            .iface_8080 = {
-                .data_width = CONFIG_I2S_LCD_BITWIDTH,
-                .pin_data_num = {
-                    CONFIG_LCD_I2S_D0_PIN,
-                    CONFIG_LCD_I2S_D1_PIN,
-                    CONFIG_LCD_I2S_D2_PIN,
-                    CONFIG_LCD_I2S_D3_PIN,
-                    CONFIG_LCD_I2S_D4_PIN,
-                    CONFIG_LCD_I2S_D5_PIN,
-                    CONFIG_LCD_I2S_D6_PIN,
-                    CONFIG_LCD_I2S_D7_PIN,
-    #if CONFIG_I2S_LCD_BITWIDTH > 8
-                    CONFIG_LCD_I2S_D8_PIN,
-                    CONFIG_LCD_I2S_D9_PIN,
-                    CONFIG_LCD_I2S_D10_PIN,
-                    CONFIG_LCD_I2S_D11_PIN,
-                    CONFIG_LCD_I2S_D12_PIN,
-                    CONFIG_LCD_I2S_D13_PIN,
-                    CONFIG_LCD_I2S_D14_PIN,
-                    CONFIG_LCD_I2S_D15_PIN,
-    #endif
-                },
-                .pin_num_wr = CONFIG_LCD_I2S_WR_PIN,
-                .pin_num_rd = -1,
-                .pin_num_rs = CONFIG_LCD_I2S_RS_PIN,
-                .i2s_port = CONFIG_LCD_I2S_PORT_NUM,
-            },
-    #endif
-            .pin_num_rst = CONFIG_IOT_LCD_PIN_RST,
-            .pin_num_bckl = CONFIG_IOT_LCD_PIN_BCKL,
-            .rst_active_level = 0,
-            .bckl_active_level = CONFIG_LCD_BCKL_ACTIVE_LEVEL,
-            .width = LCD_WIDTH,
-            .height = LCD_HEIGHT,
-            .rotate = LCD_DIRECTION,
-        };
-        lcd_driver->init(&lcd_conf);
+    /** Initialize 16bit 8080 interface */
+    i2s_lcd_config_t i2s_lcd_cfg = {
+        .data_width  = 16,
+        .pin_data_num = {
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
+        },
+        .pin_num_cs = 45,
+        .pin_num_wr = 34,
+        .pin_num_rs = 33,
+        .clk_freq = 20000000,
+        .i2s_port = I2S_NUM_0,
+        .buffer_size = 32000,
+        .swap_data = false,
+    };
+    scr_interface_driver_t *iface_drv;
+    scr_interface_create(SCREEN_IFACE_8080, &i2s_lcd_cfg, &iface_drv);
 
+    /** Find screen driver for ILI9806 */
+    ret = scr_find_driver(SCREEN_CONTROLLER_ILI9806, &g_lcd);
+    if (ESP_OK != ret) {
+        return;
+        ESP_LOGE(TAG, "screen find failed");
+    }
 
-设置屏幕的旋转
-*****************
+    /** Configure screen controller */
+    scr_controller_config_t lcd_cfg = {
+        .interface_drv = iface_drv,
+        .pin_num_rst = -1,      // The reset pin is not connected
+        .pin_num_bckl = -1,     // The backlight pin is not connected
+        .rst_active_level = 0,
+        .bckl_active_level = 1,
+        .offset_hor = 0,
+        .offset_ver = 0,
+        .width = 480,
+        .height = 854,
+        .rotate = SCR_DIR_LRBT,
+    };
 
-屏幕旋转函数在使用不同的屏幕时不完全一样。对于彩色屏幕都是一样的，支持 8 个方向的旋转；对于单色屏幕 SSD1306 等屏幕来说，只支持 lcd_dir_t 中定义的前 4 个方向；对于一些电子墨水屏则完全不支持屏幕的旋转。
+    /** Initialize ILI9806 screen */
+    g_lcd.init(&lcd_cfg);
 
-另外这里设置的屏幕旋转是完全由屏幕硬件控制的，与 GUI 库中软件实现的屏幕旋转并不是一个概念。
+.. note::
 
-设置屏幕旋转非常简单，示例如下：
+    默认情况下只打开了 ILI9341 屏幕的驱动，如果要使用其他的驱动，需要在 ``menuconfig -> Component config -> LCD Drivers -> Select Screen Controller`` 中使能对应屏幕驱动
+
+显示图像
+^^^^^^^^^^^
 
 .. code:: c
 
-    lcd_driver->set_direction(LCD_DIR_LRTB);
+    /** Draw a red point at position (10, 20) */
+    lcd.draw_pixel(10, 20, COLOR_RED);
 
-
-设置屏幕显示窗口
-*******************
-
-写入屏幕 GRAM 数据
-*********************
-
-绘制像素点
-**************
-
-绘制位图
-**************
+    /** Draw a bitmap */
+    lcd.draw_bitmap(0, 0, width_of_pic, height_of_pic, pic_data);
 
 获取屏幕信息
-****************
+^^^^^^^^^^^^^
+
+.. code:: c
+
+    scr_info_t lcd_info;
+    lcd.get_info(&lcd_info);
+    ESP_LOGI(TAG, "Screen name:%s | width:%d | height:%d", lcd_info.name, lcd_info.width, lcd_info.height);
 
 API Reference
 -----------------
+
+.. include:: /_build/inc/screen_driver.inc
+
+.. include:: /_build/inc/scr_interface_driver.inc

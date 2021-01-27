@@ -58,7 +58,7 @@ static esp_err_t board_spi_bus_init(void)
         .miso_io_num = BOARD_IO_SPI2_MISO,
         .mosi_io_num = BOARD_IO_SPI2_MOSI,
         .sclk_io_num = BOARD_IO_SPI2_SCK,
-        .max_transfer_sz = 320*240 + 10,
+        .max_transfer_sz = 2*320*240 + 10,
     };
     s_spi2_bus_handle = spi_bus_create(SPI2_HOST, &bus_conf);
     BOARD_CHECK(s_spi2_bus_handle != NULL, "spi_bus2 creat failed", ESP_FAIL);
