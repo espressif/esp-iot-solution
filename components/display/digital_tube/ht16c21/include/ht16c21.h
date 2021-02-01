@@ -56,12 +56,14 @@ typedef enum {
     HT16C21_FRAME_80HZ = 0x00, /*!< Frame frequency is set to 80Hz.*/
     HT16C21_FRAME_160HZ = 0x01, /*!< Frame frequency is set to 160Hz.*/
 } ht16c21_frame_frequency_t;
+
 typedef enum {
     HT16C21_BLINKING_OFF = 0x00, /*!< Blinking function is switched off.*/
     HT16C21_BLINKING_2HZ = 0x01, /*!< Blinking function is set to 2HZ.*/
     HT16C21_BLINKING_1HZ = 0x02, /*!< Blinking function is set to 1HZ.*/
     HT16C21_BLINKING_5HZ = 0x03, /*!< Blinking function is set to 0.5HZ.*/
 } ht16c21_blinking_frequency_t;
+
 typedef enum {
     HT16C21_VLCD_PIN_VOL_ADJ_OFF = 0x00, /*!<  The Segment/VLCD pin is set as the VLCD pin. Disable the internal voltage adjustment function
         One external resister must be connected between VLCD pin and VDD pin to determine the bias voltage,and internal voltage follower (OP4)
@@ -95,6 +97,18 @@ typedef void *ht16c21_handle_t;
  *     - device object handle of ht16c21
  */
 ht16c21_handle_t ht16c21_create(i2c_bus_handle_t bus, uint8_t dev_addr);
+
+/**
+ * @brief   config ht16c21 param
+ *
+ * @param   dev object handle of ht16c21
+ * @param   ht16c21_conf ht16c21 configuration info
+ *
+ * @return
+ *     - ESP_OK Success
+ *     - ESP_FAIL Fail
+ */
+esp_err_t ht16c21_param_config(ht16c21_handle_t dev, ht16c21_config_t *ht16c21_conf);
 
 /**
  * @brief   Delete and release a device object
@@ -173,18 +187,6 @@ esp_err_t ht16c21_ram_read_byte(ht16c21_handle_t dev, uint8_t address, uint8_t *
  *     - ESP_FAIL Fail
  */
 esp_err_t ht16c21_ram_read(ht16c21_handle_t dev, uint8_t address, uint8_t *buf, uint8_t len);
-
-/**
- * @brief   init ht16c21
- *
- * @param   dev object handle of ht16c21
- * @param   ht16c21_conf ht16c21 configuration info
- *
- * @return
- *     - ESP_OK Success
- *     - ESP_FAIL Fail
- */
-esp_err_t ht16c21_init(ht16c21_handle_t dev, ht16c21_config_t *ht16c21_conf);
 
 #endif
 

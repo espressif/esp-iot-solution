@@ -106,7 +106,7 @@ esp_err_t ht16c21_ram_read(ht16c21_handle_t dev, uint8_t address, uint8_t *buf, 
     return ret;
 }
 
-esp_err_t ht16c21_init(ht16c21_handle_t dev, ht16c21_config_t *ht16c21_conf)
+esp_err_t ht16c21_param_config(ht16c21_handle_t dev, ht16c21_config_t *ht16c21_conf)
 {
     esp_err_t ret = ESP_OK;
     HT_CHECK(NULL != dev, "Handle is invalid", ESP_ERR_INVALID_ARG);

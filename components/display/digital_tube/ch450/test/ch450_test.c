@@ -25,13 +25,14 @@ TEST_CASE("I2C CH450 test", "[ch450][iot][led]")
 {
     i2c_bus_handle_t i2c_bus = NULL;
     ch450_handle_t seg = NULL;
-    i2c_config_t conf;
-    conf.mode = I2C_MODE_MASTER;
-    conf.sda_io_num = I2C_MASTER_SDA_IO;
-    conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
-    conf.scl_io_num = I2C_MASTER_SCL_IO;
-    conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
-    conf.master.clk_speed = I2C_MASTER_FREQ_HZ;
+    i2c_config_t conf = {
+        .mode = I2C_MODE_MASTER,
+        .sda_io_num = I2C_MASTER_SDA_IO,
+        .sda_pullup_en = GPIO_PULLUP_ENABLE,
+        .scl_io_num = I2C_MASTER_SCL_IO,
+        .scl_pullup_en = GPIO_PULLUP_ENABLE,
+        .master.clk_speed = I2C_MASTER_FREQ_HZ,
+    };
     i2c_bus = i2c_bus_create(I2C_MASTER_NUM, &conf);
     TEST_ASSERT_NOT_NULL(i2c_bus);
     seg = ch450_create(i2c_bus);

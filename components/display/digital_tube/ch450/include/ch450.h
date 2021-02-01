@@ -53,7 +53,7 @@ ch450_handle_t ch450_create(i2c_bus_handle_t bus);
 /**
  * @brief Delete and release a device object
  *
- * @param sensor object handle of ch450
+ * @param dev object handle of ch450
  *
  * @return
  *     - ESP_OK Success

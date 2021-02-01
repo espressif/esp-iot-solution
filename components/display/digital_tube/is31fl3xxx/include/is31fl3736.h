@@ -109,6 +109,30 @@ typedef enum {
 typedef void* is31fl3736_handle_t;
 
 /**
+ * @brief Create and init is31fl3736 slave device
+ * @param bus I2C bus object handle
+ * @param rst_io reset IO number
+ * @param addr1 strap value of addr1 pin
+ * @param addr2 strap value of addr2 pin
+ * @param cur_val current value
+ * @return
+ *     - NULL Fail
+ *     - Others Success
+ */
+is31fl3736_handle_t is31fl3736_create(i2c_bus_handle_t bus, gpio_num_t rst_io, is31fl3736_addr_pin_t addr1, is31fl3736_addr_pin_t addr2, uint8_t cur_val);
+
+/**
+ * @brief Delete and release a is31fl3736 object
+ *
+ * @param fxled object handle of is31fl3736
+ *
+ * @return
+ *     - ESP_OK Success
+ *     - ESP_FAIL Fail
+ */
+esp_err_t is31fl3736_delete(is31fl3736_handle_t fxled);
+
+/**
  * @brief the chip ADDR1 & ADDR2 decition the slave iic addr.
  *
  * @param addr1_pin  refer to hardware connect
@@ -231,30 +255,6 @@ esp_err_t is31fl3736_hw_reset(is31fl3736_handle_t fxled);
  *     - ESP_FAIL error
  */
 esp_err_t is31fl3736_write_page(is31fl3736_handle_t fxled, uint8_t page_num);
-
-/**
- * @brief Create and init is31fl3736 slave device
- * @param bus I2C bus object handle
- * @param rst_io reset IO number
- * @param addr1 strap value of addr1 pin
- * @param addr2 strap value of addr2 pin
- * @param cur_val current value
- * @return
- *     - NULL Fail
- *     - Others Success
- */
-is31fl3736_handle_t is31fl3736_create(i2c_bus_handle_t bus, gpio_num_t rst_io, is31fl3736_addr_pin_t addr1, is31fl3736_addr_pin_t addr2, uint8_t cur_val);
-
-/**
- * @brief Delete and release a is31fl3736 object
- *
- * @param fxled object handle of is31fl3736
- *
- * @return
- *     - ESP_OK Success
- *     - ESP_FAIL Fail
- */
-esp_err_t is31fl3736_delete(is31fl3736_handle_t fxled);
 
 /**
  * @brief Write is31fl3736 device register

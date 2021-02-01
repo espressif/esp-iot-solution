@@ -79,6 +79,25 @@ typedef enum {
 typedef void* is31fl3218_handle_t;
 
 /**
+ * @brief Create and init sensor object and return a led handle
+ *
+ * @param bus I2C bus object handle
+ * @return
+ *     - NULL Fail
+ *     - Others Success
+ */
+is31fl3218_handle_t is31fl3218_create(i2c_bus_handle_t bus);
+
+/**
+ * @brief Delete and release a LED object
+ * @param sensor object handle of is31fl3218
+ * @return
+ *     - ESP_OK Success
+ *     - ESP_FAIL Fail
+ */
+esp_err_t is31fl3218_delete(is31fl3218_handle_t fxled);
+
+/**
  * @brief The Shutdown Register sets software shutdown mode of IS31FL3218.
  * @param fxled  led dev handle
  * @param mode  shutdown mode or Normal
@@ -122,25 +141,6 @@ esp_err_t is31fl3218_channel_set(is31fl3218_handle_t fxled, uint32_t ch_bit, uin
  *     - ESP_ERR_TIMEOUT  timeout
  */
 esp_err_t is31fl3218_write_pwm_regs(is31fl3218_handle_t fxled, uint8_t* duty, int len);
-
-/**
- * @brief Create and init sensor object and return a led handle
- *
- * @param bus I2C bus object handle
- * @return
- *     - NULL Fail
- *     - Others Success
- */
-is31fl3218_handle_t is31fl3218_create(i2c_bus_handle_t bus);
-
-/**
- * @brief Delete and release a LED object
- * @param sensor object handle of is31fl3218
- * @return
- *     - ESP_OK Success
- *     - ESP_FAIL Fail
- */
-esp_err_t is31fl3218_delete(is31fl3218_handle_t fxled);
 
 #ifdef __cplusplus
 }
