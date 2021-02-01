@@ -35,10 +35,6 @@ INPUT = \
     ../../components/audio/dac_audio/include/dac_audio.h \
     ../../components/display/screen/screen_driver.h \
     ../../components/display/screen/interface_driver/scr_interface_driver.h \
-    ../../components/display/digital_tube/is31fl3xxx/include/iot_is31fl3218.h \
-    ../../components/display/digital_tube/is31fl3xxx/include/iot_is31fl3736.h \
-    ../../components/display/digital_tube/ht16c21/include/iot_ht16c21.h \
-    ../../components/display/digital_tube/ch450/include/iot_ch450.h \
 
 ## Get warnings for functions that have no documentation for their parameters or return value
 ##
