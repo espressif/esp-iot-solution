@@ -67,6 +67,7 @@ ESP-IoT-Solution 包含物联网系统中开发中常用外设的驱动程序和
    图形界面 <gui/index>
    输入设备 <input_device/index>
    传感器集 <sensors/index>
+   存储方案 <storage/index>
    电机驱动 <motor/index>
    安全&加密 <security_solution/index>
    其它资源 <others/index>
