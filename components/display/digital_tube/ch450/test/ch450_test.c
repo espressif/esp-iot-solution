@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include <stdio.h>
-#include "iot_ch450.h"
+#include "ch450.h"
 #include "unity.h"
 
 #define I2C_MASTER_NUM 0
@@ -34,16 +34,16 @@ TEST_CASE("I2C CH450 test", "[ch450][iot][led]")
     conf.master.clk_speed = I2C_MASTER_FREQ_HZ;
     i2c_bus = i2c_bus_create(I2C_MASTER_NUM, &conf);
     TEST_ASSERT_NOT_NULL(i2c_bus);
-    seg = iot_ch450_create(i2c_bus);
+    seg = ch450_create(i2c_bus);
     TEST_ASSERT_NOT_NULL(seg);
 
     for (size_t i = 0; i < 10; i++) {
         for (size_t index = 0; index < 6; index++) {
-            iot_ch450_write_num(seg, index, i);
+            ch450_write_num(seg, index, i);
         }
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
-    iot_ch450_delete(seg);
+    ch450_delete(seg);
     i2c_bus_delete(&i2c_bus);
 }
 

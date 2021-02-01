@@ -14,7 +14,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "esp_log.h"
-#include "iot_ht16c21.h"
+#include "ht16c21.h"
 #include "i2c_bus.h"
 
 static const char *TAG = "HT16C21";
@@ -29,7 +29,7 @@ typedef struct {
     uint8_t dev_addr;
 } ht16c21_dev_t;
 
-ht16c21_handle_t iot_ht16c21_create(i2c_bus_handle_t bus, uint8_t dev_addr)
+ht16c21_handle_t ht16c21_create(i2c_bus_handle_t bus, uint8_t dev_addr)
 {
     ht16c21_dev_t *seg = (ht16c21_dev_t *) calloc(1, sizeof(ht16c21_dev_t));
     HT_CHECK(NULL != seg, "Memory for ht16c21 is not enough", NULL);
@@ -43,7 +43,7 @@ ht16c21_handle_t iot_ht16c21_create(i2c_bus_handle_t bus, uint8_t dev_addr)
     return (ht16c21_handle_t) seg;
 }
 
-esp_err_t iot_ht16c21_delete(ht16c21_handle_t dev)
+esp_err_t ht16c21_delete(ht16c21_handle_t dev)
 {
     HT_CHECK(NULL != dev, "Handle is invalid", ESP_ERR_INVALID_ARG);
     ht16c21_dev_t *seg = (ht16c21_dev_t *) dev;
@@ -52,7 +52,7 @@ esp_err_t iot_ht16c21_delete(ht16c21_handle_t dev)
     return ESP_OK;
 }
 
-esp_err_t iot_ht16c21_write_cmd(ht16c21_handle_t dev, ht16c21_cmd_t hd16c21_cmd, uint8_t val)
+esp_err_t ht16c21_write_cmd(ht16c21_handle_t dev, ht16c21_cmd_t hd16c21_cmd, uint8_t val)
 {
     HT_CHECK(NULL != dev, "Handle is invalid", ESP_ERR_INVALID_ARG);
     ht16c21_dev_t *seg = (ht16c21_dev_t *) dev;
@@ -60,13 +60,13 @@ esp_err_t iot_ht16c21_write_cmd(ht16c21_handle_t dev, ht16c21_cmd_t hd16c21_cmd,
     return ret;
 }
 
-esp_err_t iot_ht16c21_ram_write_byte(ht16c21_handle_t dev, uint8_t address, uint8_t buf)
+esp_err_t ht16c21_ram_write_byte(ht16c21_handle_t dev, uint8_t address, uint8_t buf)
 {
     HT_CHECK(NULL != dev, "Handle is invalid", ESP_ERR_INVALID_ARG);
-    return iot_ht16c21_ram_write(dev, address, &buf, 1);
+    return ht16c21_ram_write(dev, address, &buf, 1);
 }
 
-esp_err_t iot_ht16c21_ram_write(ht16c21_handle_t dev, uint8_t address, uint8_t *buf, uint8_t len)
+esp_err_t ht16c21_ram_write(ht16c21_handle_t dev, uint8_t address, uint8_t *buf, uint8_t len)
 {
     HT_CHECK(NULL != dev, "Handle is invalid", ESP_ERR_INVALID_ARG);
     ht16c21_dev_t *seg = (ht16c21_dev_t *) dev;
@@ -83,13 +83,13 @@ esp_err_t iot_ht16c21_ram_write(ht16c21_handle_t dev, uint8_t address, uint8_t *
     return ret;
 }
 
-esp_err_t iot_ht16c21_ram_read_byte(ht16c21_handle_t dev, uint8_t address, uint8_t *data)
+esp_err_t ht16c21_ram_read_byte(ht16c21_handle_t dev, uint8_t address, uint8_t *data)
 {
     HT_CHECK(NULL != dev, "Handle is invalid", ESP_ERR_INVALID_ARG);
-    return iot_ht16c21_ram_read(dev, address, data, 1);
+    return ht16c21_ram_read(dev, address, data, 1);
 }
 
-esp_err_t iot_ht16c21_ram_read(ht16c21_handle_t dev, uint8_t address, uint8_t *buf, uint8_t len)
+esp_err_t ht16c21_ram_read(ht16c21_handle_t dev, uint8_t address, uint8_t *buf, uint8_t len)
 {
     HT_CHECK(NULL != dev, "Handle is invalid", ESP_ERR_INVALID_ARG);
     ht16c21_dev_t *seg = (ht16c21_dev_t *) dev;
@@ -106,15 +106,15 @@ esp_err_t iot_ht16c21_ram_read(ht16c21_handle_t dev, uint8_t address, uint8_t *b
     return ret;
 }
 
-esp_err_t iot_ht16c21_init(ht16c21_handle_t dev, ht16c21_config_t *ht16c21_conf)
+esp_err_t ht16c21_init(ht16c21_handle_t dev, ht16c21_config_t *ht16c21_conf)
 {
     esp_err_t ret = ESP_OK;
     HT_CHECK(NULL != dev, "Handle is invalid", ESP_ERR_INVALID_ARG);
-    ret |= iot_ht16c21_write_cmd(dev, HT16C21_CMD_DRIMO, ht16c21_conf->duty_bias);
-    ret |= iot_ht16c21_write_cmd(dev, HT16C21_CMD_SYSMO, ht16c21_conf->oscillator_display);
-    ret |= iot_ht16c21_write_cmd(dev, HT16C21_CMD_FRAME, ht16c21_conf->frame_frequency);
-    ret |= iot_ht16c21_write_cmd(dev, HT16C21_CMD_BLINK, ht16c21_conf->blinking_frequency);
-    ret |= iot_ht16c21_write_cmd(dev, HT16C21_CMD_IVA, ht16c21_conf->pin_and_voltage | ht16c21_conf->adjustment_voltage);
+    ret |= ht16c21_write_cmd(dev, HT16C21_CMD_DRIMO, ht16c21_conf->duty_bias);
+    ret |= ht16c21_write_cmd(dev, HT16C21_CMD_SYSMO, ht16c21_conf->oscillator_display);
+    ret |= ht16c21_write_cmd(dev, HT16C21_CMD_FRAME, ht16c21_conf->frame_frequency);
+    ret |= ht16c21_write_cmd(dev, HT16C21_CMD_BLINK, ht16c21_conf->blinking_frequency);
+    ret |= ht16c21_write_cmd(dev, HT16C21_CMD_IVA, ht16c21_conf->pin_and_voltage | ht16c21_conf->adjustment_voltage);
     HT_CHECK(ESP_OK == ret, "initialize failed", ESP_FAIL);
     return ESP_OK;
 }

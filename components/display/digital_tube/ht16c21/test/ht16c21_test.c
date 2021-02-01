@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include <stdio.h>
-#include "iot_ht16c21.h"
+#include "ht16c21.h"
 #include "i2c_bus.h"
 #include "unity.h"
 
@@ -38,7 +38,7 @@ TEST_CASE("I2C HT16C21 test", "[ht16c21][iot][led]")
     conf.master.clk_speed = I2C_MASTER_FREQ_HZ;
     i2c_bus = i2c_bus_create(I2C_MASTER_NUM, &conf);
     TEST_ASSERT_NOT_NULL(i2c_bus);
-    seg = iot_ht16c21_create(i2c_bus, HT16C21_I2C_ADDRESS_DEFAULT);
+    seg = ht16c21_create(i2c_bus, HT16C21_I2C_ADDRESS_DEFAULT);
     TEST_ASSERT_NOT_NULL(seg);
     
     ht16c21_conf.duty_bias = HT16C21_4DUTY_3BIAS;
@@ -47,10 +47,10 @@ TEST_CASE("I2C HT16C21 test", "[ht16c21][iot][led]")
     ht16c21_conf.blinking_frequency = HT16C21_BLINKING_OFF;
     ht16c21_conf.pin_and_voltage = HT16C21_VLCD_PIN_VOL_ADJ_ON;
     ht16c21_conf.adjustment_voltage = 0;
-    TEST_ASSERT(ESP_OK == iot_ht16c21_init(seg, &ht16c21_conf));
-    iot_ht16c21_ram_write(seg, 0x00, lcd_data, 8);
+    TEST_ASSERT(ESP_OK == ht16c21_init(seg, &ht16c21_conf));
+    ht16c21_ram_write(seg, 0x00, lcd_data, 8);
 
-    iot_ht16c21_delete(seg);
+    ht16c21_delete(seg);
     i2c_bus_delete(&i2c_bus);
 }
 

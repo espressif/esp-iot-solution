@@ -11,8 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#ifndef __IOT_HT16C21_H__
-#define __IOT_HT16C21_H__
+#ifndef __HT16C21_H__
+#define __HT16C21_H__
 
 #ifdef __cplusplus
 extern "C"
@@ -94,7 +94,7 @@ typedef void *ht16c21_handle_t;
  * @return
  *     - device object handle of ht16c21
  */
-ht16c21_handle_t iot_ht16c21_create(i2c_bus_handle_t bus, uint8_t dev_addr);
+ht16c21_handle_t ht16c21_create(i2c_bus_handle_t bus, uint8_t dev_addr);
 
 /**
  * @brief   Delete and release a device object
@@ -105,7 +105,7 @@ ht16c21_handle_t iot_ht16c21_create(i2c_bus_handle_t bus, uint8_t dev_addr);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_ht16c21_delete(ht16c21_handle_t dev);
+esp_err_t ht16c21_delete(ht16c21_handle_t dev);
 
 /**
  * @brief   Write command or data to ht16c21
@@ -118,7 +118,7 @@ esp_err_t iot_ht16c21_delete(ht16c21_handle_t dev);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_ht16c21_write_cmd(ht16c21_handle_t dev, ht16c21_cmd_t hd16c21_cmd, uint8_t val);
+esp_err_t ht16c21_write_cmd(ht16c21_handle_t dev, ht16c21_cmd_t hd16c21_cmd, uint8_t val);
 
 /**
  * @brief   Write RAM or byte data to ht16c21
@@ -131,7 +131,7 @@ esp_err_t iot_ht16c21_write_cmd(ht16c21_handle_t dev, ht16c21_cmd_t hd16c21_cmd,
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_ht16c21_ram_write_byte(ht16c21_handle_t dev, uint8_t address, uint8_t buf);
+esp_err_t ht16c21_ram_write_byte(ht16c21_handle_t dev, uint8_t address, uint8_t buf);
 
 /**
  * @brief   Write RAM or data to ht16c21
@@ -145,7 +145,7 @@ esp_err_t iot_ht16c21_ram_write_byte(ht16c21_handle_t dev, uint8_t address, uint
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_ht16c21_ram_write(ht16c21_handle_t dev, uint8_t address, uint8_t *buf, uint8_t len);
+esp_err_t ht16c21_ram_write(ht16c21_handle_t dev, uint8_t address, uint8_t *buf, uint8_t len);
 
 /**
  * @brief   Read RAM or byte data to ht16c21
@@ -158,7 +158,7 @@ esp_err_t iot_ht16c21_ram_write(ht16c21_handle_t dev, uint8_t address, uint8_t *
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_ht16c21_ram_read_byte(ht16c21_handle_t dev, uint8_t address, uint8_t *data);
+esp_err_t ht16c21_ram_read_byte(ht16c21_handle_t dev, uint8_t address, uint8_t *data);
 
 /**
  * @brief   Read RAM or data to ht16c21
@@ -172,7 +172,7 @@ esp_err_t iot_ht16c21_ram_read_byte(ht16c21_handle_t dev, uint8_t address, uint8
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_ht16c21_ram_read(ht16c21_handle_t dev, uint8_t address, uint8_t *buf, uint8_t len);
+esp_err_t ht16c21_ram_read(ht16c21_handle_t dev, uint8_t address, uint8_t *buf, uint8_t len);
 
 /**
  * @brief   init ht16c21
@@ -184,7 +184,7 @@ esp_err_t iot_ht16c21_ram_read(ht16c21_handle_t dev, uint8_t address, uint8_t *b
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_ht16c21_init(ht16c21_handle_t dev, ht16c21_config_t *ht16c21_conf);
+esp_err_t ht16c21_init(ht16c21_handle_t dev, ht16c21_config_t *ht16c21_conf);
 
 #endif
 

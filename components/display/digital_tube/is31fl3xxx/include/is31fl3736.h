@@ -11,9 +11,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#ifndef _IOT_IS31FL3736_H_
-#define _IOT_IS31FL3736_H_
-#include "iot_is31fl3736_reg.h"
+#ifndef _IS31FL3736_H_
+#define _IS31FL3736_H_
+#include "is31fl3736_reg.h"
 #include "i2c_bus.h"
 
 #ifdef __cplusplus
@@ -116,7 +116,7 @@ typedef void* is31fl3736_handle_t;
  *
  * @return the iic salve addr
  */
-uint8_t iot_is31fl3736_get_i2c_addr(is31fl3736_addr_pin_t addr1_pin, is31fl3736_addr_pin_t addr2_pin);
+uint8_t is31fl3736_get_i2c_addr(is31fl3736_addr_pin_t addr1_pin, is31fl3736_addr_pin_t addr2_pin);
 
 /**
  * @brief The Configuration mode of IS31FL3736.
@@ -126,7 +126,7 @@ uint8_t iot_is31fl3736_get_i2c_addr(is31fl3736_addr_pin_t addr1_pin, is31fl3736_
  *     - ESP_OK Success
  *     - ESP_FAIL error
  */
-esp_err_t iot_is31fl3736_set_mode(is31fl3736_handle_t fxled, is31fl3736_mode_t mode);
+esp_err_t is31fl3736_set_mode(is31fl3736_handle_t fxled, is31fl3736_mode_t mode);
 
 /**
  * @brief The Global Current Control Register modulates all CSx (x=1~8) DC current.
@@ -136,7 +136,7 @@ esp_err_t iot_is31fl3736_set_mode(is31fl3736_handle_t fxled, is31fl3736_mode_t m
  *     - ESP_OK Success
  *     - ESP_FAIL error
  */
-esp_err_t iot_is31fl3736_set_global_current(is31fl3736_handle_t fxled, uint8_t curr_value);
+esp_err_t is31fl3736_set_global_current(is31fl3736_handle_t fxled, uint8_t curr_value);
 
 /**
  * @brief SWy Pull-Up Resistor and CSx Pull-Down Resistor Selection.
@@ -147,7 +147,7 @@ esp_err_t iot_is31fl3736_set_global_current(is31fl3736_handle_t fxled, uint8_t c
  *     - ESP_OK Success
  *     - ESP_FAIL error
  */
-esp_err_t iot_is31fl3736_set_resistor(is31fl3736_handle_t fxled, is31fl3736_res_type_t type, is31fl3736_res_t res_val);
+esp_err_t is31fl3736_set_resistor(is31fl3736_handle_t fxled, is31fl3736_res_type_t type, is31fl3736_res_t res_val);
 
 /**
  * @brief contorl the LED matrix.
@@ -159,7 +159,7 @@ esp_err_t iot_is31fl3736_set_resistor(is31fl3736_handle_t fxled, is31fl3736_res_
  *     - ESP_OK Success
  *     - ESP_FAIL error
  */
-esp_err_t iot_is31fl3736_set_led_matrix(is31fl3736_handle_t fxled, uint16_t cs_x_bit, uint16_t sw_y_bit, is31fl3736_led_stau_t status);
+esp_err_t is31fl3736_set_led_matrix(is31fl3736_handle_t fxled, uint16_t cs_x_bit, uint16_t sw_y_bit, is31fl3736_led_stau_t status);
 
 /**
  * @brief contorl the LED matrix.
@@ -171,7 +171,7 @@ esp_err_t iot_is31fl3736_set_led_matrix(is31fl3736_handle_t fxled, uint16_t cs_x
  *     - ESP_OK Success
  *     - ESP_FAIL error
  */
-esp_err_t iot_is31fl3736_set_pwm_duty_matrix(is31fl3736_handle_t fxled, uint16_t cs_x_bit, uint16_t sw_y_bit, uint8_t duty);
+esp_err_t is31fl3736_set_pwm_duty_matrix(is31fl3736_handle_t fxled, uint16_t cs_x_bit, uint16_t sw_y_bit, uint8_t duty);
 
 /**
  * @brief in PWM mode change duty.
@@ -182,7 +182,7 @@ esp_err_t iot_is31fl3736_set_pwm_duty_matrix(is31fl3736_handle_t fxled, uint16_t
  *     - ESP_OK Success
  *     - ESP_FAIL error
  */
-esp_err_t iot_is31fl3736_set_channel_duty(is31fl3736_handle_t fxled, uint8_t pwm_ch, uint8_t duty);
+esp_err_t is31fl3736_set_channel_duty(is31fl3736_handle_t fxled, uint8_t pwm_ch, uint8_t duty);
 
 /**
  * @brief in PWM mode change duty.
@@ -193,7 +193,7 @@ esp_err_t iot_is31fl3736_set_channel_duty(is31fl3736_handle_t fxled, uint8_t pwm
  *     - ESP_OK Success
  *     - ESP_FAIL error
  */
-esp_err_t iot_is31fl3736_set_breath_mode(is31fl3736_handle_t fxled, uint8_t pwm_ch, is31fl3736_auto_breath_mode_t mode);
+esp_err_t is31fl3736_set_breath_mode(is31fl3736_handle_t fxled, uint8_t pwm_ch, is31fl3736_auto_breath_mode_t mode);
 
 /**
  * @brief set the auto breath mode detail.
@@ -202,7 +202,7 @@ esp_err_t iot_is31fl3736_set_breath_mode(is31fl3736_handle_t fxled, uint8_t pwm_
  *     - ESP_OK Success
  *     - ESP_FAIL error
  */
-esp_err_t iot_is31fl3736_update_auto_breath(is31fl3736_handle_t fxled);
+esp_err_t is31fl3736_update_auto_breath(is31fl3736_handle_t fxled);
 
 /**
  * @brief Reset all register to POR state.
@@ -211,7 +211,7 @@ esp_err_t iot_is31fl3736_update_auto_breath(is31fl3736_handle_t fxled);
  *     - ESP_OK Success
  *     - ESP_FAIL error
  */
-esp_err_t iot_is31fl3736_reset_reg(is31fl3736_handle_t fxled);
+esp_err_t is31fl3736_reset_reg(is31fl3736_handle_t fxled);
 
 /**
  * @brief Change SDB io status to reset IC.
@@ -220,7 +220,7 @@ esp_err_t iot_is31fl3736_reset_reg(is31fl3736_handle_t fxled);
  * @return
  *     - ESP_OK Success
  */
-esp_err_t iot_is31fl3736_hw_reset(is31fl3736_handle_t fxled);
+esp_err_t is31fl3736_hw_reset(is31fl3736_handle_t fxled);
 
 /**
  * @brief Ready to write reg page.
@@ -230,7 +230,7 @@ esp_err_t iot_is31fl3736_hw_reset(is31fl3736_handle_t fxled);
  *     - ESP_OK Success
  *     - ESP_FAIL error
  */
-esp_err_t iot_is31fl3736_write_page(is31fl3736_handle_t fxled, uint8_t page_num);
+esp_err_t is31fl3736_write_page(is31fl3736_handle_t fxled, uint8_t page_num);
 
 /**
  * @brief Create and init is31fl3736 slave device
@@ -243,7 +243,7 @@ esp_err_t iot_is31fl3736_write_page(is31fl3736_handle_t fxled, uint8_t page_num)
  *     - NULL Fail
  *     - Others Success
  */
-is31fl3736_handle_t iot_is31fl3736_create(i2c_bus_handle_t bus, gpio_num_t rst_io, is31fl3736_addr_pin_t addr1, is31fl3736_addr_pin_t addr2, uint8_t cur_val);
+is31fl3736_handle_t is31fl3736_create(i2c_bus_handle_t bus, gpio_num_t rst_io, is31fl3736_addr_pin_t addr1, is31fl3736_addr_pin_t addr2, uint8_t cur_val);
 
 /**
  * @brief Delete and release a is31fl3736 object
@@ -254,7 +254,7 @@ is31fl3736_handle_t iot_is31fl3736_create(i2c_bus_handle_t bus, gpio_num_t rst_i
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_is31fl3736_delete(is31fl3736_handle_t fxled);
+esp_err_t is31fl3736_delete(is31fl3736_handle_t fxled);
 
 /**
  * @brief Write is31fl3736 device register
@@ -266,7 +266,7 @@ esp_err_t iot_is31fl3736_delete(is31fl3736_handle_t fxled);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_is31fl3736_write(is31fl3736_handle_t fxled, uint8_t reg_addr, uint8_t *data, uint8_t data_num);
+esp_err_t is31fl3736_write(is31fl3736_handle_t fxled, uint8_t reg_addr, uint8_t *data, uint8_t data_num);
 
 /**
  * @brief Write is31fl3736 device register
@@ -277,7 +277,7 @@ esp_err_t iot_is31fl3736_write(is31fl3736_handle_t fxled, uint8_t reg_addr, uint
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_is31fl3736_fill_buf(is31fl3736_handle_t fxled, uint8_t duty, uint8_t* buf);
+esp_err_t is31fl3736_fill_buf(is31fl3736_handle_t fxled, uint8_t duty, uint8_t* buf);
 
 #ifdef __cplusplus
 }

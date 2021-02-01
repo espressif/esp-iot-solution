@@ -11,8 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#ifndef _IOT_IS31FL3218_H_
-#define _IOT_IS31FL3218_H_
+#ifndef _IS31FL3218_H_
+#define _IS31FL3218_H_
 
 #include "i2c_bus.h"
 
@@ -87,7 +87,7 @@ typedef void* is31fl3218_handle_t;
  *     - ESP_FAIL error
  *     - ESP_ERR_TIMEOUT  timeout
  */
-esp_err_t iot_is31fl3218_set_mode(is31fl3218_handle_t fxled, is31fl3218_mode_t mode);
+esp_err_t is31fl3218_set_mode(is31fl3218_handle_t fxled, is31fl3218_mode_t mode);
 
 /**
  * @brief IS31FL3218 will reset all registers to default value.
@@ -97,7 +97,7 @@ esp_err_t iot_is31fl3218_set_mode(is31fl3218_handle_t fxled, is31fl3218_mode_t m
  *     - ESP_FAIL error
  *     - ESP_ERR_TIMEOUT  timeout
  */
-esp_err_t iot_is31fl3218_reset_register(is31fl3218_handle_t fxled);
+esp_err_t is31fl3218_reset_register(is31fl3218_handle_t fxled);
 
 /**
  * @brief set PWM duty for every channel
@@ -109,7 +109,7 @@ esp_err_t iot_is31fl3218_reset_register(is31fl3218_handle_t fxled);
  *     - ESP_FAIL error
  *     - ESP_ERR_TIMEOUT  timeout
  */
-esp_err_t iot_is31fl3218_channel_set(is31fl3218_handle_t fxled, uint32_t ch_bit, uint8_t duty);
+esp_err_t is31fl3218_channel_set(is31fl3218_handle_t fxled, uint32_t ch_bit, uint8_t duty);
 
 /**
  * @brief Update PWM duty value with values in a buffer
@@ -121,7 +121,7 @@ esp_err_t iot_is31fl3218_channel_set(is31fl3218_handle_t fxled, uint32_t ch_bit,
  *     - ESP_FAIL error
  *     - ESP_ERR_TIMEOUT  timeout
  */
-esp_err_t iot_is31fl3218_write_pwm_regs(is31fl3218_handle_t fxled, uint8_t* duty, int len);
+esp_err_t is31fl3218_write_pwm_regs(is31fl3218_handle_t fxled, uint8_t* duty, int len);
 
 /**
  * @brief Create and init sensor object and return a led handle
@@ -131,7 +131,7 @@ esp_err_t iot_is31fl3218_write_pwm_regs(is31fl3218_handle_t fxled, uint8_t* duty
  *     - NULL Fail
  *     - Others Success
  */
-is31fl3218_handle_t iot_is31fl3218_create(i2c_bus_handle_t bus);
+is31fl3218_handle_t is31fl3218_create(i2c_bus_handle_t bus);
 
 /**
  * @brief Delete and release a LED object
@@ -140,7 +140,7 @@ is31fl3218_handle_t iot_is31fl3218_create(i2c_bus_handle_t bus);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_is31fl3218_delete(is31fl3218_handle_t fxled);
+esp_err_t is31fl3218_delete(is31fl3218_handle_t fxled);
 
 #ifdef __cplusplus
 }

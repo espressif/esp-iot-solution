@@ -15,8 +15,8 @@
 #include <stdio.h>
 #include "unity.h"
 #include "driver/i2c.h"
-#include "iot_is31fl3218.h"
-#include "iot_is31fl3736.h"
+#include "is31fl3218.h"
+#include "is31fl3736.h"
 // #include "led_12_8_image.h"
 
 #define I2C_MASTER_SCL_IO    21        /*!< gpio number for I2C master clock */
@@ -56,13 +56,13 @@ void led_dev_init()
     conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
     conf.master.clk_speed = I2C_MASTER_FREQ_HZ;
     i2c_bus = i2c_bus_create(i2c_master_port, &conf);
-    led3736 = iot_is31fl3736_create(i2c_bus, GPIO_NUM_32, 0, 0, 0XCF);
+    led3736 = is31fl3736_create(i2c_bus, GPIO_NUM_32, 0, 0, 0XCF);
     TEST_ASSERT_NOT_NULL(led3736);
 }
 
 esp_err_t is31fl3736_send_buf(i2c_port_t i2c_port, uint8_t x, uint8_t y, char *c, uint8_t duty, uint8_t* buf)
 {
-    iot_is31fl3736_fill_buf(led3736, duty, buf);
+    is31fl3736_fill_buf(led3736, duty, buf);
     return ESP_OK;
 }
 
@@ -118,7 +118,7 @@ void is31f13736_test_task(void* pvParameters)
     int i = 11;
     char c = 'e';
     static uint8_t dir = 0;
-    iot_is31fl3736_write_page(led3736, IS31FL3736_PAGE(1));
+    is31fl3736_write_page(led3736, IS31FL3736_PAGE(1));
     extern void initGame(void*);
     initGame(&fill_pixel);
     //xTaskCreate(is32f13xxx_bar_task, "is32f13xxx_bar_task", 2048, NULL, 10, NULL);
@@ -163,7 +163,7 @@ void fill_pixel(int x, int y, uint8_t duty)
         return;
     }
     uint8_t reg = x * 2 + y * 0x10;
-    iot_is31fl3736_write(led3736, reg, &duty, 1);
+    is31fl3736_write(led3736, reg, &duty, 1);
 }
 
 void is31f13736_test()

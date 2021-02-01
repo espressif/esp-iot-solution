@@ -11,11 +11,11 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#ifndef _IOT_CH450_H_
-#define _IOT_CH450_H_
+#ifndef _CH450_H_
+#define _CH450_H_
 
 #include "esp_log.h"
-#include "iot_ch450.h"
+#include "ch450.h"
 #include "i2c_bus.h"
 
 #ifdef __cplusplus
@@ -48,7 +48,7 @@ typedef void *ch450_handle_t;
  *     - NULL Fail
  *     - Others Success
  */
-ch450_handle_t iot_ch450_create(i2c_bus_handle_t bus);
+ch450_handle_t ch450_create(i2c_bus_handle_t bus);
 
 /**
  * @brief Delete and release a device object
@@ -59,7 +59,7 @@ ch450_handle_t iot_ch450_create(i2c_bus_handle_t bus);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_ch450_delete(ch450_handle_t dev);
+esp_err_t ch450_delete(ch450_handle_t dev);
 
 /**
  * @brief write register of ch450
@@ -72,7 +72,7 @@ esp_err_t iot_ch450_delete(ch450_handle_t dev);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_ch450_write(ch450_handle_t dev, ch450_cmd_t ch450_cmd, uint8_t val);
+esp_err_t ch450_write(ch450_handle_t dev, ch450_cmd_t ch450_cmd, uint8_t val);
 
 /**
  * @brief Write number to 7-segment device
@@ -85,7 +85,7 @@ esp_err_t iot_ch450_write(ch450_handle_t dev, ch450_cmd_t ch450_cmd, uint8_t val
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_ch450_write_num(ch450_handle_t dev, uint8_t seg_idx, uint8_t val);
+esp_err_t ch450_write_num(ch450_handle_t dev, uint8_t seg_idx, uint8_t val);
 
 #ifdef __cplusplus
 }

@@ -14,7 +14,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "esp_log.h"
-#include "iot_ch450.h"
+#include "ch450.h"
 #include "i2c_bus.h"
 
 static const char *TAG = "CH450";
@@ -54,7 +54,7 @@ typedef struct {
     i2c_bus_device_handle_t i2c_dev;
 } ch450_dev_t;
 
-ch450_handle_t iot_ch450_create(i2c_bus_handle_t bus)
+ch450_handle_t ch450_create(i2c_bus_handle_t bus)
 {
     CH450_CHECK(NULL != bus, "handle of i2c bus is invalid", NULL);
     ch450_dev_t *seg = (ch450_dev_t *) calloc(1, sizeof(ch450_dev_t));
@@ -67,15 +67,15 @@ ch450_handle_t iot_ch450_create(i2c_bus_handle_t bus)
 
     seg->i2c_dev = i2c_dev;
     /** Set ch450 to display and disable keyboard */
-    esp_err_t ret = iot_ch450_write(seg, CH450_SYS, CH450_SYS_DISP_MASK);
+    esp_err_t ret = ch450_write(seg, CH450_SYS, CH450_SYS_DISP_MASK);
     if (ESP_OK != ret) {
-        iot_ch450_delete((ch450_handle_t)seg);
+        ch450_delete((ch450_handle_t)seg);
         CH450_CHECK(false, "Configure system parameter failed", NULL);
     }
     return (ch450_handle_t) seg;
 }
 
-esp_err_t iot_ch450_delete(ch450_handle_t dev)
+esp_err_t ch450_delete(ch450_handle_t dev)
 {
     CH450_CHECK(NULL != dev, "handle is invalid", ESP_ERR_INVALID_ARG);
     ch450_dev_t *seg = (ch450_dev_t *) dev;
@@ -84,7 +84,7 @@ esp_err_t iot_ch450_delete(ch450_handle_t dev)
     return ESP_OK;
 }
 
-esp_err_t iot_ch450_write(ch450_handle_t dev, ch450_cmd_t ch450_cmd, uint8_t val)
+esp_err_t ch450_write(ch450_handle_t dev, ch450_cmd_t ch450_cmd, uint8_t val)
 {
     CH450_CHECK(NULL != dev, "handle is invalid", ESP_ERR_INVALID_ARG);
     ch450_dev_t *seg = (ch450_dev_t *) dev;
@@ -98,11 +98,11 @@ esp_err_t iot_ch450_write(ch450_handle_t dev, ch450_cmd_t ch450_cmd, uint8_t val
     return ret;
 }
 
-esp_err_t iot_ch450_write_num(ch450_handle_t dev, uint8_t seg_idx, uint8_t val)
+esp_err_t ch450_write_num(ch450_handle_t dev, uint8_t seg_idx, uint8_t val)
 {
     CH450_CHECK(NULL != dev, "handle is invalid", ESP_ERR_INVALID_ARG);
     ch450_cmd_t seg_cmd = CH450_SEG_2 + seg_idx * 2;
     CH450_CHECK(val < 10, "Value should be less than 10", ESP_ERR_INVALID_ARG);
-    return iot_ch450_write(dev, seg_cmd, ch450_digit[val]);
+    return ch450_write(dev, seg_cmd, ch450_digit[val]);
 }
 

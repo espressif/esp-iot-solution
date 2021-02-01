@@ -13,8 +13,8 @@
 // limitations under the License.
 #include <stdio.h>
 #include "driver/i2c.h"
-#include "iot_is31fl3218.h"
-#include "iot_is31fl3736.h"
+#include "is31fl3218.h"
+#include "is31fl3736.h"
 #include "i2c_bus.h"
 #include "unity.h"
 
@@ -43,7 +43,7 @@ void fxled_is31fl3218_init()
     conf.master.clk_speed = I2C_MASTER_FREQ_HZ;
     i2c_bus = i2c_bus_create(I2C_MASTER_NUM, &conf);
     if(fxled ==NULL) {
-        fxled = iot_is31fl3218_create(i2c_bus);
+        fxled = is31fl3218_create(i2c_bus);
     }
     TEST_ASSERT_NOT_NULL(fxled);
 }
@@ -53,12 +53,12 @@ void is31f13218_test()
     fxled_is31fl3218_init();
 
     uint8_t i=0,j=255/10;
-    ESP_ERROR_CHECK( iot_is31fl3218_channel_set(fxled, IS31FL3218_CH_NUM_MAX_MASK, 0) );
+    ESP_ERROR_CHECK( is31fl3218_channel_set(fxled, IS31FL3218_CH_NUM_MAX_MASK, 0) );
     int cnt = 0;
     printf("enter loop\n");
     uint8_t duty_data[18] = {0};
     while(1){
-        iot_is31fl3218_write_pwm_regs(fxled, duty_data, sizeof(duty_data));
+        is31fl3218_write_pwm_regs(fxled, duty_data, sizeof(duty_data));
         vTaskDelay(20 / portTICK_RATE_MS);
         if (++i > IS31FL3218_CH_NUM_MAX - 1) {
             i = 0;
@@ -83,16 +83,16 @@ void is31f13218_test()
             if ((ch_mask >> i) & 0x1) {
                 if (dcnt >= 4) {
                     int duty = 5 - (dcnt - i);
-                    iot_is31fl3218_channel_set(fxled, IS31FL3218_CH_BIT(i), 0xff * duty / 5);
+                    is31fl3218_channel_set(fxled, IS31FL3218_CH_BIT(i), 0xff * duty / 5);
                 } else {
                     int duty = 5 - (dcnt - i);
                     if (duty < 0) {
                         duty += 16;
                     }
-                    iot_is31fl3218_channel_set(fxled, IS31FL3218_CH_BIT(i), 0xff * duty / 5);
+                    is31fl3218_channel_set(fxled, IS31FL3218_CH_BIT(i), 0xff * duty / 5);
                 }
             } else {
-                iot_is31fl3218_channel_set(fxled, IS31FL3218_CH_BIT(i), 0);
+                is31fl3218_channel_set(fxled, IS31FL3218_CH_BIT(i), 0);
             }
         }
         ch_mask = ch_mask << 1;
@@ -101,13 +101,13 @@ void is31f13218_test()
         if (dcnt > 17) {
             dcnt = 0;
             if (cnt++ > 4) {
-                iot_is31fl3218_channel_set(fxled, 0xfffff, 0xff * 0 / 5);
+                is31fl3218_channel_set(fxled, 0xfffff, 0xff * 0 / 5);
                 break;
             }
         }
     }
 
-    iot_is31fl3218_delete(fxled);
+    is31fl3218_delete(fxled);
     i2c_bus_delete(&i2c_bus);
     fxled = NULL;
     printf("heap: %d\n", esp_get_free_heap_size());
