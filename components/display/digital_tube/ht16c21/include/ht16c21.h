@@ -11,15 +11,15 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#ifndef __IOT_HT16C21_H__
-#define __IOT_HT16C21_H__
+#ifndef __HT16C21_H__
+#define __HT16C21_H__
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
 #include "driver/i2c.h"
-#include "iot_i2c_bus.h"
+#include "i2c_bus.h"
 
 #define HT16C21_I2C_ADDRESS_DEFAULT   (0x70)
 
@@ -56,12 +56,14 @@ typedef enum {
     HT16C21_FRAME_80HZ = 0x00, /*!< Frame frequency is set to 80Hz.*/
     HT16C21_FRAME_160HZ = 0x01, /*!< Frame frequency is set to 160Hz.*/
 } ht16c21_frame_frequency_t;
+
 typedef enum {
     HT16C21_BLINKING_OFF = 0x00, /*!< Blinking function is switched off.*/
     HT16C21_BLINKING_2HZ = 0x01, /*!< Blinking function is set to 2HZ.*/
     HT16C21_BLINKING_1HZ = 0x02, /*!< Blinking function is set to 1HZ.*/
     HT16C21_BLINKING_5HZ = 0x03, /*!< Blinking function is set to 0.5HZ.*/
 } ht16c21_blinking_frequency_t;
+
 typedef enum {
     HT16C21_VLCD_PIN_VOL_ADJ_OFF = 0x00, /*!<  The Segment/VLCD pin is set as the VLCD pin. Disable the internal voltage adjustment function
         One external resister must be connected between VLCD pin and VDD pin to determine the bias voltage,and internal voltage follower (OP4)
@@ -83,7 +85,7 @@ typedef struct config {
     uint8_t  adjustment_voltage; //Range 0x00 to 0x0F
 } ht16c21_config_t;
 
-typedef void* ht16c21_handle_t;
+typedef void *ht16c21_handle_t;
 
 /**
  * @brief   Create and initialization device object and return a device handle
@@ -94,19 +96,30 @@ typedef void* ht16c21_handle_t;
  * @return
  *     - device object handle of ht16c21
  */
-ht16c21_handle_t iot_ht16c21_create(i2c_bus_handle_t bus, uint8_t dev_addr);
+ht16c21_handle_t ht16c21_create(i2c_bus_handle_t bus, uint8_t dev_addr);
 
 /**
- * @brief   Delete and release a device object
+ * @brief   config ht16c21 param
  *
  * @param   dev object handle of ht16c21
- * @param   del_bus Whether to delete the I2C bus
+ * @param   ht16c21_conf ht16c21 configuration info
  *
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_ht16c21_delete(ht16c21_handle_t dev, bool del_bus);
+esp_err_t ht16c21_param_config(ht16c21_handle_t dev, ht16c21_config_t *ht16c21_conf);
+
+/**
+ * @brief   Delete and release a device object
+ *
+ * @param   dev object handle of ht16c21
+ *
+ * @return
+ *     - ESP_OK Success
+ *     - ESP_FAIL Fail
+ */
+esp_err_t ht16c21_delete(ht16c21_handle_t dev);
 
 /**
  * @brief   Write command or data to ht16c21
@@ -119,7 +132,7 @@ esp_err_t iot_ht16c21_delete(ht16c21_handle_t dev, bool del_bus);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_ht16c21_write_cmd(ht16c21_handle_t dev, ht16c21_cmd_t hd16c21_cmd, uint8_t val);
+esp_err_t ht16c21_write_cmd(ht16c21_handle_t dev, ht16c21_cmd_t hd16c21_cmd, uint8_t val);
 
 /**
  * @brief   Write RAM or byte data to ht16c21
@@ -132,60 +145,48 @@ esp_err_t iot_ht16c21_write_cmd(ht16c21_handle_t dev, ht16c21_cmd_t hd16c21_cmd,
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_ht16c21_ram_write_byte(ht16c21_handle_t dev, uint8_t address, uint8_t buf);
+esp_err_t ht16c21_ram_write_byte(ht16c21_handle_t dev, uint8_t address, uint8_t buf);
 
 /**
  * @brief   Write RAM or data to ht16c21
  *
  * @param   dev object handle of ht16c21
  * @param   address RAM address
- * @param   *buf data value pointer
- * @param   *buf data value len
+ * @param   buf data value pointer
+ * @param   len data value len
  *
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_ht16c21_ram_write(ht16c21_handle_t dev, uint8_t address, uint8_t *buf, uint8_t len);
+esp_err_t ht16c21_ram_write(ht16c21_handle_t dev, uint8_t address, uint8_t *buf, uint8_t len);
 
 /**
  * @brief   Read RAM or byte data to ht16c21
  *
  * @param   dev object handle of ht16c21
  * @param   address RAM address
- * @param   buf data value
+ * @param   data data value
  *
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_ht16c21_ram_read_byte(ht16c21_handle_t dev, uint8_t address, uint8_t *data);
+esp_err_t ht16c21_ram_read_byte(ht16c21_handle_t dev, uint8_t address, uint8_t *data);
 
 /**
  * @brief   Read RAM or data to ht16c21
  *
  * @param   dev object handle of ht16c21
  * @param   address RAM address
- * @param   *buf data value pointer
- * @param   *buf data value len
+ * @param   buf data value pointer
+ * @param   len data value len
  *
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_ht16c21_ram_read(ht16c21_handle_t dev, uint8_t address, uint8_t *buf, uint8_t len);
-
-/**
- * @brief   init ht16c21
- *
- * @param   dev object handle of ht16c21
- * @param   ht16c21_conf ht16c21 configuration info
- *
- * @return
- *     - ESP_OK Success
- *     - ESP_FAIL Fail
- */
-esp_err_t iot_ht16c21_init(ht16c21_handle_t dev, ht16c21_config_t*  ht16c21_conf);
+esp_err_t ht16c21_ram_read(ht16c21_handle_t dev, uint8_t address, uint8_t *buf, uint8_t len);
 
 #endif
 

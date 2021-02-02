@@ -11,8 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#ifndef _IOT_IS31FL3736_REG_H_
-#define _IOT_IS31FL3736_REG_H_
+#ifndef _IS31FL3736_REG_H_
+#define _IS31FL3736_REG_H_
 
 #ifndef BIT
 #define BIT(x) (1 << (x))

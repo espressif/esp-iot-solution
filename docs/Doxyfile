@@ -36,7 +36,6 @@ INPUT = \
     ../../components/display/screen/screen_driver.h \
     ../../components/display/screen/interface_driver/scr_interface_driver.h \
 
-
 ## Get warnings for functions that have no documentation for their parameters or return value
 ##
 WARN_NO_PARAMDOC = YES

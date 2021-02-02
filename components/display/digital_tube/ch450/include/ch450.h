@@ -11,19 +11,21 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#ifndef _IOT_CH450_H_
-#define _IOT_CH450_H_
+#ifndef _CH450_H_
+#define _CH450_H_
+
+#include "esp_log.h"
+#include "ch450.h"
+#include "i2c_bus.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-#include <stdio.h>
-#include <string.h>
-#include "driver/i2c.h"
-#include "esp_log.h"
-#include "iot_ch450.h"
-#include "iot_i2c_bus.h"
-typedef void* ch450_handle_t;
 
+/**
+ * @brief Commands
+ * 
+ */
 typedef enum {
     CH450_SEG_2 = 0x64,
     CH450_SEG_3 = 0x66,
@@ -35,6 +37,8 @@ typedef enum {
     CH450_READ = 0x4F,
 } ch450_cmd_t;
 
+typedef void *ch450_handle_t;
+
 /**
  * @brief Create and init sensor object and return a sensor handle
  *
@@ -44,19 +48,18 @@ typedef enum {
  *     - NULL Fail
  *     - Others Success
  */
-ch450_handle_t iot_ch450_create(i2c_bus_handle_t bus);
+ch450_handle_t ch450_create(i2c_bus_handle_t bus);
 
 /**
  * @brief Delete and release a device object
  *
- * @param sensor object handle of ch450
- * @param del_bus Whether to delete the I2C bus
+ * @param dev object handle of ch450
  *
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_ch450_delete(ch450_handle_t dev, bool del_bus);
+esp_err_t ch450_delete(ch450_handle_t dev);
 
 /**
  * @brief write register of ch450
@@ -69,7 +72,7 @@ esp_err_t iot_ch450_delete(ch450_handle_t dev, bool del_bus);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_ch450_write(ch450_handle_t dev, ch450_cmd_t ch450_cmd, uint8_t val);
+esp_err_t ch450_write(ch450_handle_t dev, ch450_cmd_t ch450_cmd, uint8_t val);
 
 /**
  * @brief Write number to 7-segment device
@@ -82,7 +85,7 @@ esp_err_t iot_ch450_write(ch450_handle_t dev, ch450_cmd_t ch450_cmd, uint8_t val
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_ch450_write_num(ch450_handle_t dev, uint8_t seg_idx, uint8_t val);
+esp_err_t ch450_write_num(ch450_handle_t dev, uint8_t seg_idx, uint8_t val);
 
 #ifdef __cplusplus
 }

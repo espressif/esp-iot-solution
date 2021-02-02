@@ -11,16 +11,14 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#ifndef _IOT_IS31FL3736_H_
-#define _IOT_IS31FL3736_H_
-#include "iot_is31fl3736_reg.h"
-#include "iot_i2c_bus.h"
+#ifndef _IS31FL3736_H_
+#define _IS31FL3736_H_
+#include "is31fl3736_reg.h"
+#include "i2c_bus.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#define DBG_TEST(s) printf("[%s %d] "s"\r\n",__func__, __LINE__);
 
 #define IS31FL3736_CH_BIT(i) ((uint16_t)0x1<<i) /*!< i == channel : 0 ~ max */
 /*!< c: return the BIT num that you want control; o: selected channel num from BIT(0)  */
@@ -111,6 +109,30 @@ typedef enum {
 typedef void* is31fl3736_handle_t;
 
 /**
+ * @brief Create and init is31fl3736 slave device
+ * @param bus I2C bus object handle
+ * @param rst_io reset IO number
+ * @param addr1 strap value of addr1 pin
+ * @param addr2 strap value of addr2 pin
+ * @param cur_val current value
+ * @return
+ *     - NULL Fail
+ *     - Others Success
+ */
+is31fl3736_handle_t is31fl3736_create(i2c_bus_handle_t bus, gpio_num_t rst_io, is31fl3736_addr_pin_t addr1, is31fl3736_addr_pin_t addr2, uint8_t cur_val);
+
+/**
+ * @brief Delete and release a is31fl3736 object
+ *
+ * @param fxled object handle of is31fl3736
+ *
+ * @return
+ *     - ESP_OK Success
+ *     - ESP_FAIL Fail
+ */
+esp_err_t is31fl3736_delete(is31fl3736_handle_t fxled);
+
+/**
  * @brief the chip ADDR1 & ADDR2 decition the slave iic addr.
  *
  * @param addr1_pin  refer to hardware connect
@@ -118,7 +140,7 @@ typedef void* is31fl3736_handle_t;
  *
  * @return the iic salve addr
  */
-uint8_t iot_is31fl3736_get_i2c_addr(is31fl3736_addr_pin_t addr1_pin, is31fl3736_addr_pin_t addr2_pin);
+uint8_t is31fl3736_get_i2c_addr(is31fl3736_addr_pin_t addr1_pin, is31fl3736_addr_pin_t addr2_pin);
 
 /**
  * @brief The Configuration mode of IS31FL3736.
@@ -128,7 +150,7 @@ uint8_t iot_is31fl3736_get_i2c_addr(is31fl3736_addr_pin_t addr1_pin, is31fl3736_
  *     - ESP_OK Success
  *     - ESP_FAIL error
  */
-esp_err_t iot_is31fl3736_set_mode(is31fl3736_handle_t fxled, is31fl3736_mode_t mode);
+esp_err_t is31fl3736_set_mode(is31fl3736_handle_t fxled, is31fl3736_mode_t mode);
 
 /**
  * @brief The Global Current Control Register modulates all CSx (x=1~8) DC current.
@@ -138,7 +160,7 @@ esp_err_t iot_is31fl3736_set_mode(is31fl3736_handle_t fxled, is31fl3736_mode_t m
  *     - ESP_OK Success
  *     - ESP_FAIL error
  */
-esp_err_t iot_is31fl3736_set_global_current(is31fl3736_handle_t fxled, uint8_t curr_value);
+esp_err_t is31fl3736_set_global_current(is31fl3736_handle_t fxled, uint8_t curr_value);
 
 /**
  * @brief SWy Pull-Up Resistor and CSx Pull-Down Resistor Selection.
@@ -149,7 +171,7 @@ esp_err_t iot_is31fl3736_set_global_current(is31fl3736_handle_t fxled, uint8_t c
  *     - ESP_OK Success
  *     - ESP_FAIL error
  */
-esp_err_t iot_is31fl3736_set_resistor(is31fl3736_handle_t fxled, is31fl3736_res_type_t type, is31fl3736_res_t res_val);
+esp_err_t is31fl3736_set_resistor(is31fl3736_handle_t fxled, is31fl3736_res_type_t type, is31fl3736_res_t res_val);
 
 /**
  * @brief contorl the LED matrix.
@@ -161,7 +183,7 @@ esp_err_t iot_is31fl3736_set_resistor(is31fl3736_handle_t fxled, is31fl3736_res_
  *     - ESP_OK Success
  *     - ESP_FAIL error
  */
-esp_err_t iot_is31fl3736_set_led_matrix(is31fl3736_handle_t fxled, uint16_t cs_x_bit, uint16_t sw_y_bit, is31fl3736_led_stau_t status);
+esp_err_t is31fl3736_set_led_matrix(is31fl3736_handle_t fxled, uint16_t cs_x_bit, uint16_t sw_y_bit, is31fl3736_led_stau_t status);
 
 /**
  * @brief contorl the LED matrix.
@@ -173,7 +195,7 @@ esp_err_t iot_is31fl3736_set_led_matrix(is31fl3736_handle_t fxled, uint16_t cs_x
  *     - ESP_OK Success
  *     - ESP_FAIL error
  */
-esp_err_t iot_is31fl3736_set_pwm_duty_matrix(is31fl3736_handle_t fxled, uint16_t cs_x_bit, uint16_t sw_y_bit, uint8_t duty);
+esp_err_t is31fl3736_set_pwm_duty_matrix(is31fl3736_handle_t fxled, uint16_t cs_x_bit, uint16_t sw_y_bit, uint8_t duty);
 
 /**
  * @brief in PWM mode change duty.
@@ -184,7 +206,7 @@ esp_err_t iot_is31fl3736_set_pwm_duty_matrix(is31fl3736_handle_t fxled, uint16_t
  *     - ESP_OK Success
  *     - ESP_FAIL error
  */
-esp_err_t iot_is31fl3736_set_channel_duty(is31fl3736_handle_t fxled, uint8_t pwm_ch, uint8_t duty);
+esp_err_t is31fl3736_set_channel_duty(is31fl3736_handle_t fxled, uint8_t pwm_ch, uint8_t duty);
 
 /**
  * @brief in PWM mode change duty.
@@ -195,7 +217,7 @@ esp_err_t iot_is31fl3736_set_channel_duty(is31fl3736_handle_t fxled, uint8_t pwm
  *     - ESP_OK Success
  *     - ESP_FAIL error
  */
-esp_err_t iot_is31fl3736_set_breath_mode(is31fl3736_handle_t fxled, uint8_t pwm_ch, is31fl3736_auto_breath_mode_t mode);
+esp_err_t is31fl3736_set_breath_mode(is31fl3736_handle_t fxled, uint8_t pwm_ch, is31fl3736_auto_breath_mode_t mode);
 
 /**
  * @brief set the auto breath mode detail.
@@ -204,7 +226,7 @@ esp_err_t iot_is31fl3736_set_breath_mode(is31fl3736_handle_t fxled, uint8_t pwm_
  *     - ESP_OK Success
  *     - ESP_FAIL error
  */
-esp_err_t iot_is31fl3736_update_auto_breath(is31fl3736_handle_t fxled);
+esp_err_t is31fl3736_update_auto_breath(is31fl3736_handle_t fxled);
 
 /**
  * @brief Reset all register to POR state.
@@ -213,7 +235,7 @@ esp_err_t iot_is31fl3736_update_auto_breath(is31fl3736_handle_t fxled);
  *     - ESP_OK Success
  *     - ESP_FAIL error
  */
-esp_err_t iot_is31fl3736_reset_reg(is31fl3736_handle_t fxled);
+esp_err_t is31fl3736_reset_reg(is31fl3736_handle_t fxled);
 
 /**
  * @brief Change SDB io status to reset IC.
@@ -222,7 +244,7 @@ esp_err_t iot_is31fl3736_reset_reg(is31fl3736_handle_t fxled);
  * @return
  *     - ESP_OK Success
  */
-esp_err_t iot_is31fl3736_hw_reset(is31fl3736_handle_t fxled);
+esp_err_t is31fl3736_hw_reset(is31fl3736_handle_t fxled);
 
 /**
  * @brief Ready to write reg page.
@@ -232,41 +254,7 @@ esp_err_t iot_is31fl3736_hw_reset(is31fl3736_handle_t fxled);
  *     - ESP_OK Success
  *     - ESP_FAIL error
  */
-esp_err_t iot_is31fl3736_write_page(is31fl3736_handle_t fxled, uint8_t page_num);
-
-/**
- * @brief Change SDB io status to reset IC.
- * @param fxled object handle of is31fl3736
- * @return
- *     - ESP_OK Success
- *     - ESP_FAIL error
- */
-esp_err_t iot_is31fl3736_init(is31fl3736_handle_t fxled);
-
-/**
- * @brief Create and init is31fl3736 slave device
- * @param bus I2C bus object handle
- * @param rst_io reset IO number
- * @param addr1 strap value of addr1 pin
- * @param addr2 strap value of addr2 pin
- * @param cur_val current value
- * @return
- *     - NULL Fail
- *     - Others Success
- */
-is31fl3736_handle_t iot_is31fl3736_create(i2c_bus_handle_t bus, gpio_num_t rst_io, is31fl3736_addr_pin_t addr1, is31fl3736_addr_pin_t addr2, uint8_t cur_val);
-
-/**
- * @brief Delete and release a is31fl3736 object
- *
- * @param fxled object handle of is31fl3736
- * @param del_bus Whether to delete the I2C bus
- *
- * @return
- *     - ESP_OK Success
- *     - ESP_FAIL Fail
- */
-esp_err_t iot_is31fl3736_delete(is31fl3736_handle_t fxled, bool del_bus);
+esp_err_t is31fl3736_write_page(is31fl3736_handle_t fxled, uint8_t page_num);
 
 /**
  * @brief Write is31fl3736 device register
@@ -278,7 +266,7 @@ esp_err_t iot_is31fl3736_delete(is31fl3736_handle_t fxled, bool del_bus);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_is31fl3736_write(is31fl3736_handle_t fxled, uint8_t reg_addr, uint8_t *data, uint8_t data_num);
+esp_err_t is31fl3736_write(is31fl3736_handle_t fxled, uint8_t reg_addr, uint8_t *data, uint8_t data_num);
 
 /**
  * @brief Write is31fl3736 device register
@@ -289,83 +277,10 @@ esp_err_t iot_is31fl3736_write(is31fl3736_handle_t fxled, uint8_t reg_addr, uint
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_is31fl3736_fill_buf(is31fl3736_handle_t fxled, uint8_t duty, uint8_t* buf);
+esp_err_t is31fl3736_fill_buf(is31fl3736_handle_t fxled, uint8_t duty, uint8_t* buf);
 
 #ifdef __cplusplus
 }
-#endif
-
-#ifdef __cplusplus
-/**
- * class of is31fl3736 fxled driver
- */
-class CIs31fl3736
-{
-private:
-    is31fl3736_handle_t m_led_handle;
-    CI2CBus *bus;
-
-    /**
-     * prevent copy constructing
-     */
-    CIs31fl3736(const CIs31fl3736&);
-    CIs31fl3736& operator = (const CIs31fl3736&);
-public:
-    /**
-     * @brief Constructor function of CIs31fl3736 class
-     * @param p_i2c_bus pointer to CI2CBus object
-     * @param rst_io gpio index for reset pin
-     * @param addr1 connection of addr pin1
-     * @param addr2 connection of addr pin2
-     * @param cur_val global current value for led driver
-     */
-    CIs31fl3736(CI2CBus *p_i2c_bus, gpio_num_t rst_io, is31fl3736_addr_pin_t addr1, is31fl3736_addr_pin_t addr2,
-                uint8_t cur_val);
-
-    /**
-     * @brief Destructor function of CIs31fl3736 class
-     */
-    ~CIs31fl3736();
-
-    /**
-     * @brief write slave device register
-     * @param reg_addr address for slave register
-     * @param data pointer to data buffer
-     * @param data_num data length to write
-     * @return
-     *     - ESP_OK Success
-     *     - ESP_ERR_INVALID_ARG Parameter error
-     *     - ESP_FAIL Sending command error, slave doesn't ACK the transfer.
-     *     - ESP_ERR_INVALID_STATE I2C driver not installed or not in master mode.
-     *     - ESP_ERR_TIMEOUT Operation timeout because the bus is busy.
-     */
-    esp_err_t write_reg(uint8_t reg_addr, uint8_t *data, uint8_t data_num);
-
-    /**
-     * @brief fill led matrix
-     * @param duty duty cycle value
-     * @param buf buffer that save the bit mask of raws in led matrix
-     * return
-     *     - ESP_OK Success
-     *     - ESP_ERR_INVALID_ARG Parameter error
-     *     - ESP_FAIL Sending command error, slave doesn't ACK the transfer.
-     *     - ESP_ERR_INVALID_STATE I2C driver not installed or not in master mode.
-     *     - ESP_ERR_TIMEOUT Operation timeout because the bus is busy.
-     */
-    esp_err_t fill_matrix(uint8_t duty, uint8_t* buf);
-
-    /**
-     * @brief set page number to operate
-     * @param page_num page number
-     * @return
-     *     - ESP_OK Success
-     *     - ESP_ERR_INVALID_ARG Parameter error
-     *     - ESP_FAIL Sending command error, slave doesn't ACK the transfer.
-     *     - ESP_ERR_INVALID_STATE I2C driver not installed or not in master mode.
-     *     - ESP_ERR_TIMEOUT Operation timeout because the bus is busy.
-     */
-    esp_err_t set_page(uint8_t page_num);
-};
 #endif
 
 #endif
