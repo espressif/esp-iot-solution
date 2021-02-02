@@ -3,7 +3,7 @@ ESP-IoT-Solution  Programming Guide
 
 :link_to_translation:`zh_CN:[中文]`
 
-This is the documentation for Espressif IoT Solution Development Framework(`esp-iot-solution <https:404>`_).
+This is the documentation for ESP-IoT-Solution Development Framework(`esp-iot-solution <https:404>`_).
 
 ESP-IOT-Solution contains peripheral drivers and code frameworks for the development of IoT system, which can work as extra components of ESP-IDF and much easier to start.
 
@@ -59,7 +59,6 @@ ESP-IOT-Solution contains peripheral drivers and code frameworks for the develop
 .. toctree::
    :hidden:
 
-   Introduction <introduction>
    Get Started <gettingstarted>
    Basic Component <basic/index>
    Display<display/index>
