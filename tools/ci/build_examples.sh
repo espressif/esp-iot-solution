@@ -58,12 +58,26 @@ export V=0 # only build verbose if there's an error
 
 shopt -s lastpipe # Workaround for Bash to use variables in loops (http://mywiki.wooledge.org/BashFAQ/024)
 
+function find_examples() {
+    LIST_OF_EXAMPLES=($(find ./examples -type d -name main | sort))
+    local INDEX=0
+    for FN in "${LIST_OF_EXAMPLES[@]}";
+    do
+        if [[ $FN =~ "build/" ]]
+        then
+            unset LIST_OF_EXAMPLES[INDEX]
+        fi
+        INDEX=$(( $INDEX + 1 ))
+    done
+}
+
 RESULT=0
 FAILED_EXAMPLES=""
 RESULT_ISSUES=22  # magic number result code for issues found
 LOG_SUSPECTED=${LOG_PATH}/common_log.txt
 touch ${LOG_SUSPECTED}
-LIST_OF_EXAMPLES=($(find ./examples -type f -name Makefile | sort))
+LIST_OF_EXAMPLES=[]
+find_examples
 NUM_OF_EXAMPLES=${#LIST_OF_EXAMPLES[@]}  # count number of examples
 [ -z ${NUM_OF_EXAMPLES} ] && die "NUM_OF_EXAMPLES is bad"
 
@@ -123,15 +137,16 @@ function build_example () {
         local BUILDLOG=${LOG_PATH}/example_${ID}_log.txt
         echo " " > ${BUILDLOG}
 
-        make defconfig >>${BUILDLOG} 2>&1
-        make all -j8 >>${BUILDLOG} 2>&1
-        ( make print_flash_cmd | tail -n 1 >build/download.config ) >>${BUILDLOG} 2>&1 ||
-        {
-            RESULT=$?; FAILED_EXAMPLES+=" ${EXAMPLE_NAME}" ;
-        }
+        # make defconfig >>${BUILDLOG} 2>&1
+        # make all -j8 >>${BUILDLOG} 2>&1
+        # ( make print_flash_cmd | tail -n 1 >build/download.config ) >>${BUILDLOG} 2>&1 ||
+        # {
+        #     RESULT=$?; FAILED_EXAMPLES+=" ${EXAMPLE_NAME}" ;
+        # }
 
-        rm -r build >/dev/null &&
-        rm sdkconfig >/dev/null &&
+        # rm -r build >/dev/null &&
+        # rm sdkconfig >/dev/null &&
+        idf.py fullclean
         idf.py build >>${BUILDLOG} 2>&1 
 
         cat ${BUILDLOG}
