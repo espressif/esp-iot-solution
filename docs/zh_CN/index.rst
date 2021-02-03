@@ -5,7 +5,7 @@ ESP-IoT-Solution  编程指南
 
 这里是乐鑫 ESP-IoT-Solution 开发框架 （`esp-iot-solution <https:404>`_） 的文档中心。
 
-ESP-IoT-Solution 包含物联网系统中开发中常用外设的驱动程序和代码框架，可作为 `ESP-IDF <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/index.html>`_ 的补充组件，方便用户实现更简单的开发。
+ESP-IoT-Solution 包含物联网系统开发中常用的外设驱动和代码框架，可作为 `ESP-IDF <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/index.html>`_ 的补充组件，方便用户实现更简单的开发。
 
 ==================  ==================  ==================
 |入门指南|_           |显示设备|_            |音频设备|_
@@ -59,8 +59,7 @@ ESP-IoT-Solution 包含物联网系统中开发中常用外设的驱动程序和
 .. toctree::
    :hidden:
 
-   简介 <introduction>
-   入门指南 <gettingstarted>
+   快速入门 <gettingstarted>
    基础组件 <basic/index>
    显示设备 <display/index>
    音频设备 <audio/index>
