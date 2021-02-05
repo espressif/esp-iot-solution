@@ -34,14 +34,14 @@ void led_indicator_init()
         .mode = LED_GPIO_MODE,
     };
 
-    led_handle_0 = iot_led_indicator_create(LED_IO_NUM_0, &config);
+    led_handle_0 = led_indicator_create(LED_IO_NUM_0, &config);
     TEST_ASSERT_NOT_NULL(led_handle_0);
-    TEST_ASSERT(led_handle_0 == iot_led_indicator_get_handle(LED_IO_NUM_0)); //test get handle
+    TEST_ASSERT(led_handle_0 == led_indicator_get_handle(LED_IO_NUM_0)); //test get handle
 }
 
 void led_indicator_deinit()
 {
-    esp_err_t ret = iot_led_indicator_delete(&led_handle_0);
+    esp_err_t ret = led_indicator_delete(&led_handle_0);
     TEST_ASSERT(ret == ESP_OK);
     TEST_ASSERT_NULL(led_handle_0);
 }
@@ -49,58 +49,58 @@ void led_indicator_deinit()
 void led_indicator_gpio_mode_test_all()
 {
     ESP_LOGI(TAG, "connecting.....");
-    esp_err_t ret = iot_led_indicator_start(led_handle_0, connecting);
+    esp_err_t ret = led_indicator_start(led_handle_0, connecting);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(4000 / portTICK_RATE_MS);
-    ret = iot_led_indicator_stop(led_handle_0, connecting);
+    ret = led_indicator_stop(led_handle_0, connecting);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(1000 / portTICK_RATE_MS);
 
     ESP_LOGI(TAG, "connected.....");
-    ret = iot_led_indicator_start(led_handle_0, connected);
+    ret = led_indicator_start(led_handle_0, connected);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(4000 / portTICK_RATE_MS);
-    ret = iot_led_indicator_stop(led_handle_0, connected);
+    ret = led_indicator_stop(led_handle_0, connected);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(1000 / portTICK_RATE_MS);
 
     ESP_LOGI(TAG, "reconnecting.....");
-    ret = iot_led_indicator_start(led_handle_0, reconnecting);
+    ret = led_indicator_start(led_handle_0, reconnecting);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(4000 / portTICK_RATE_MS);
-    ret = iot_led_indicator_stop(led_handle_0, reconnecting);
+    ret = led_indicator_stop(led_handle_0, reconnecting);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(1000 / portTICK_RATE_MS);
 
     ESP_LOGI(TAG, "updating.....");
-    ret = iot_led_indicator_start(led_handle_0, updating);
+    ret = led_indicator_start(led_handle_0, updating);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(4000 / portTICK_RATE_MS);
-    ret = iot_led_indicator_stop(led_handle_0, updating);
+    ret = led_indicator_stop(led_handle_0, updating);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(1000 / portTICK_RATE_MS);
 
     ESP_LOGI(TAG, "factory_reset.....");
-    ret = iot_led_indicator_start(led_handle_0, factory_reset);
+    ret = led_indicator_start(led_handle_0, factory_reset);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(4000 / portTICK_RATE_MS);
-    ret = iot_led_indicator_stop(led_handle_0, factory_reset);
+    ret = led_indicator_stop(led_handle_0, factory_reset);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(1000 / portTICK_RATE_MS);
 
     ESP_LOGI(TAG, "provisioning.....");
-    ret = iot_led_indicator_start(led_handle_0, provisioning);
+    ret = led_indicator_start(led_handle_0, provisioning);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(4000 / portTICK_RATE_MS);
-    ret = iot_led_indicator_stop(led_handle_0, provisioning);
+    ret = led_indicator_stop(led_handle_0, provisioning);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(1000 / portTICK_RATE_MS);
 
     ESP_LOGI(TAG, "provisioned.....");
-    ret = iot_led_indicator_start(led_handle_0, provisioned);
+    ret = led_indicator_start(led_handle_0, provisioned);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(4000 / portTICK_RATE_MS);
-    ret = iot_led_indicator_stop(led_handle_0, provisioned);
+    ret = led_indicator_stop(led_handle_0, provisioned);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(1000 / portTICK_RATE_MS);
 
@@ -117,24 +117,24 @@ TEST_CASE("blink test all in order", "[led][indicator]")
 void led_indicator_gpio_mode_preempt()
 {
     ESP_LOGI(TAG, "connecting.....");
-    esp_err_t ret = iot_led_indicator_start(led_handle_0, connecting);
+    esp_err_t ret = led_indicator_start(led_handle_0, connecting);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(3000 / portTICK_RATE_MS);
 
 
     ESP_LOGI(TAG, "factory_reset.....");
-    ret = iot_led_indicator_start(led_handle_0, factory_reset); //higer priority than connecting
+    ret = led_indicator_start(led_handle_0, factory_reset); //higer priority than connecting
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(3000 / portTICK_RATE_MS);
 
     ESP_LOGI(TAG, "factory_reset stop");
-    ret = iot_led_indicator_stop(led_handle_0, factory_reset); //then switch to low priority
+    ret = led_indicator_stop(led_handle_0, factory_reset); //then switch to low priority
     TEST_ASSERT(ret == ESP_OK);
     ESP_LOGI(TAG, "connecting.....");
     vTaskDelay(3000 / portTICK_RATE_MS);
 
     ESP_LOGI(TAG, "connecting stop");
-    ret = iot_led_indicator_stop(led_handle_0, connecting);
+    ret = led_indicator_stop(led_handle_0, connecting);
     TEST_ASSERT(ret == ESP_OK);
 }
 
@@ -152,26 +152,26 @@ void led_indicator_all_init()
         .mode = LED_GPIO_MODE,
     };
 
-    led_handle_0 = iot_led_indicator_create(LED_IO_NUM_0, &config);
+    led_handle_0 = led_indicator_create(LED_IO_NUM_0, &config);
     TEST_ASSERT_NOT_NULL(led_handle_0);
-    led_handle_1 = iot_led_indicator_create(LED_IO_NUM_1, &config);
+    led_handle_1 = led_indicator_create(LED_IO_NUM_1, &config);
     TEST_ASSERT_NOT_NULL(led_handle_1);
-    led_handle_2 = iot_led_indicator_create(LED_IO_NUM_2, &config);
+    led_handle_2 = led_indicator_create(LED_IO_NUM_2, &config);
     TEST_ASSERT_NOT_NULL(led_handle_2);
-    TEST_ASSERT(led_handle_0 == iot_led_indicator_get_handle(LED_IO_NUM_0)); //test get handle
-    TEST_ASSERT(led_handle_1 == iot_led_indicator_get_handle(LED_IO_NUM_1)); //test get handle
-    TEST_ASSERT(led_handle_2 == iot_led_indicator_get_handle(LED_IO_NUM_2)); //test get handle
+    TEST_ASSERT(led_handle_0 == led_indicator_get_handle(LED_IO_NUM_0)); //test get handle
+    TEST_ASSERT(led_handle_1 == led_indicator_get_handle(LED_IO_NUM_1)); //test get handle
+    TEST_ASSERT(led_handle_2 == led_indicator_get_handle(LED_IO_NUM_2)); //test get handle
 }
 
 void led_indicator_all_deinit()
 {
-    esp_err_t ret = iot_led_indicator_delete(&led_handle_0);
+    esp_err_t ret = led_indicator_delete(&led_handle_0);
     TEST_ASSERT(ret == ESP_OK);
     TEST_ASSERT_NULL(led_handle_0);
-    ret = iot_led_indicator_delete(&led_handle_1);
+    ret = led_indicator_delete(&led_handle_1);
     TEST_ASSERT(ret == ESP_OK);
     TEST_ASSERT_NULL(led_handle_1);
-    ret = iot_led_indicator_delete(&led_handle_2);
+    ret = led_indicator_delete(&led_handle_2);
     TEST_ASSERT(ret == ESP_OK);
     TEST_ASSERT_NULL(led_handle_2);
 }
@@ -183,56 +183,56 @@ void led_indicator_gpio_mode_three_led()
     led_indicator_handle_t led_system = led_handle_2;
 
     ESP_LOGI(TAG, "provisioning.....");
-    esp_err_t ret = iot_led_indicator_start(provision, provisioning);
+    esp_err_t ret = led_indicator_start(provision, provisioning);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(4000 / portTICK_RATE_MS);
 
     ESP_LOGI(TAG, "provisioned.....");
-    ret = iot_led_indicator_stop(provision, provisioning);
+    ret = led_indicator_stop(provision, provisioning);
     TEST_ASSERT(ret == ESP_OK);
-    ret = iot_led_indicator_start(provision, provisioned);
+    ret = led_indicator_start(provision, provisioned);
     TEST_ASSERT(ret == ESP_OK);
 
     ESP_LOGI(TAG, "connecting.....");
-    ret = iot_led_indicator_start(led_connect, connecting);
+    ret = led_indicator_start(led_connect, connecting);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(4000 / portTICK_RATE_MS);
 
     ESP_LOGI(TAG, "connected.....");
-    ret = iot_led_indicator_stop(led_connect, connecting);
+    ret = led_indicator_stop(led_connect, connecting);
     TEST_ASSERT(ret == ESP_OK);
-    ret = iot_led_indicator_start(led_connect, connected);
+    ret = led_indicator_start(led_connect, connected);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(4000 / portTICK_RATE_MS);
 
     ESP_LOGI(TAG, "lost connection");
-    ret = iot_led_indicator_stop(led_connect, connected);
+    ret = led_indicator_stop(led_connect, connected);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(1000 / portTICK_RATE_MS);
 
     ESP_LOGI(TAG, "reconnecting.....");
-    ret = iot_led_indicator_start(led_connect, reconnecting);
+    ret = led_indicator_start(led_connect, reconnecting);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(4000 / portTICK_RATE_MS);
 
     ESP_LOGI(TAG, "reconnected.....");
-    ret = iot_led_indicator_stop(led_connect, reconnecting);
+    ret = led_indicator_stop(led_connect, reconnecting);
     TEST_ASSERT(ret == ESP_OK);
-    ret = iot_led_indicator_start(led_connect, connected);
+    ret = led_indicator_start(led_connect, connected);
     TEST_ASSERT(ret == ESP_OK);
 
     ESP_LOGI(TAG, "updating.....");
-    ret = iot_led_indicator_start(led_system, updating);
+    ret = led_indicator_start(led_system, updating);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(4000 / portTICK_RATE_MS);
-    ret = iot_led_indicator_stop(led_system, updating);
+    ret = led_indicator_stop(led_system, updating);
     TEST_ASSERT(ret == ESP_OK);
 
     ESP_LOGI(TAG, "factory_reset.....");
-    ret = iot_led_indicator_start(led_system, factory_reset);
+    ret = led_indicator_start(led_system, factory_reset);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(4000 / portTICK_RATE_MS);
-    ret = iot_led_indicator_stop(led_system, factory_reset);
+    ret = led_indicator_stop(led_system, factory_reset);
     TEST_ASSERT(ret == ESP_OK);
 
     ESP_LOGI(TAG, "test all condition done.....");

@@ -340,7 +340,7 @@ static void _blink_list_runner(xTimerHandle xTimer)
     }
 }
 
-led_indicator_handle_t iot_led_indicator_create(int io_num, const led_indicator_config_t* config)
+led_indicator_handle_t led_indicator_create(int io_num, const led_indicator_config_t* config)
 {
     LED_INDICATOR_CHECK(config != NULL, "invalid config pointer", NULL);
     char timmer_name[16] = {'\0'};
@@ -399,7 +399,7 @@ cleanup_all:
     return NULL;
 }
 
-led_indicator_handle_t iot_led_indicator_get_handle(int io_num)
+led_indicator_handle_t led_indicator_get_handle(int io_num)
 {
     _led_indicator_slist_t *node;
     SLIST_FOREACH(node, &s_led_indicator_slist_head, next) {
@@ -410,7 +410,7 @@ led_indicator_handle_t iot_led_indicator_get_handle(int io_num)
     return NULL;
 }
 
-esp_err_t iot_led_indicator_delete(led_indicator_handle_t* p_handle)
+esp_err_t led_indicator_delete(led_indicator_handle_t* p_handle)
 {
     LED_INDICATOR_CHECK(p_handle != NULL && *p_handle != NULL, "invalid p_handle", ESP_ERR_INVALID_ARG);
     _led_indicator_t *p_led_indicator = (_led_indicator_t *)(*p_handle);
@@ -443,7 +443,7 @@ esp_err_t iot_led_indicator_delete(led_indicator_handle_t* p_handle)
     return ESP_OK;
 }
 
-esp_err_t iot_led_indicator_start(led_indicator_handle_t handle, const led_indicator_blink_step_t blink_steps[])
+esp_err_t led_indicator_start(led_indicator_handle_t handle, const led_indicator_blink_step_t blink_steps[])
 {
     LED_INDICATOR_CHECK(handle != NULL && blink_steps != NULL, "invalid p_handle", ESP_ERR_INVALID_ARG);
     int index = _blink_list_find(blink_steps);
@@ -462,7 +462,7 @@ esp_err_t iot_led_indicator_start(led_indicator_handle_t handle, const led_indic
     return ESP_OK;
 }
 
-esp_err_t iot_led_indicator_stop(led_indicator_handle_t handle, const led_indicator_blink_step_t blink_steps[])
+esp_err_t led_indicator_stop(led_indicator_handle_t handle, const led_indicator_blink_step_t blink_steps[])
 {
     LED_INDICATOR_CHECK(handle != NULL && blink_steps != NULL, "invalid p_handle", ESP_ERR_INVALID_ARG);
     int index = _blink_list_find(blink_steps);

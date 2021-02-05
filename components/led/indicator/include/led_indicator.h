@@ -90,7 +90,7 @@ typedef void* led_indicator_handle_t; /*!< led indicator operation handle */
  * @param config configuration of the led, eg. gpio level when led off
  * @return led_indicator_handle_t handle of the led indicator, NULL if create failed.
  */
-led_indicator_handle_t iot_led_indicator_create(int io_num, const led_indicator_config_t* config);
+led_indicator_handle_t led_indicator_create(int io_num, const led_indicator_config_t* config);
 
 /**
  * @brief get the handle of created led_indicator with gpio number
@@ -98,7 +98,7 @@ led_indicator_handle_t iot_led_indicator_create(int io_num, const led_indicator_
  * @param io_num  gpio number of the led
  * @return led_indicator_handle_t handle of the created led indicator, NULL if not created
  */
-led_indicator_handle_t iot_led_indicator_get_handle(int io_num);
+led_indicator_handle_t led_indicator_get_handle(int io_num);
 
 /**
  * @brief delete the led indicator and release resource
@@ -109,7 +109,7 @@ led_indicator_handle_t iot_led_indicator_get_handle(int io_num);
  *     - ESP_FAIL Fail
  *     - ESP_OK Success
  */
-esp_err_t iot_led_indicator_delete(led_indicator_handle_t* p_handle);
+esp_err_t led_indicator_delete(led_indicator_handle_t* p_handle);
 
 /**
  * @brief start a blink group, if 
@@ -121,7 +121,7 @@ esp_err_t iot_led_indicator_delete(led_indicator_handle_t* p_handle);
  *     - ESP_ERR_NOT_FOUND no predefined blink_steps found
  *     - ESP_OK Success
  */
-esp_err_t iot_led_indicator_start(led_indicator_handle_t handle, const led_indicator_blink_step_t blink_steps[]);
+esp_err_t led_indicator_start(led_indicator_handle_t handle, const led_indicator_blink_step_t blink_steps[]);
 
 /**
  * @brief stop a blink group
@@ -133,7 +133,7 @@ esp_err_t iot_led_indicator_start(led_indicator_handle_t handle, const led_indic
  *     - ESP_ERR_NOT_FOUND no predefined blink_steps found
  *     - ESP_OK Success
  */
-esp_err_t iot_led_indicator_stop(led_indicator_handle_t handle, const led_indicator_blink_step_t blink_steps[]);
+esp_err_t led_indicator_stop(led_indicator_handle_t handle, const led_indicator_blink_step_t blink_steps[]);
 
 
 #endif
