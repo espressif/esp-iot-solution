@@ -14,10 +14,23 @@
 #include <stdio.h>
 #include "mcp23017.h"
 #include "i2c_bus.h"
+#include "esp_log.h"
 
 #define MCP23017_PORT_A_BYTE(x)         (x & 0xFF)                      //get pin of GPIOA
 #define MCP23017_PORT_B_BYTE(x)         (x >> 8)                        //get pin of GPIOB
 #define MCP23017_PORT_AB_WORD(buff)     (buff[0] | (buff[1] << 8))      //get pin of GPIOA and pin of GPIOB
+
+static const char *TAG = "mcp23017";
+
+#define MCP23017_CHECK(a, str, ret) if(!(a)) { \
+        ESP_LOGE(TAG,"%s:%d (%s):%s", __FILE__, __LINE__, __FUNCTION__, str); \
+        return (ret); \
+    }
+
+#define MCP23017_CHECK_GOTO(a, str, lable) if(!(a)) { \
+        ESP_LOGE(TAG,"%s:%d (%s):%s", __FILE__, __LINE__, __FUNCTION__, str); \
+        goto lable; \
+    }
 
 /**
  * @brief register address when iocon.bank == 0 (default)
@@ -77,7 +90,7 @@ mcp23017_handle_t mcp23017_create(i2c_bus_handle_t bus, uint8_t dev_addr)
         return NULL;
     }
 
-    p_device->i2c_dev = i2c_bus_device_create(bus, dev_addr, NULL);
+    p_device->i2c_dev = i2c_bus_device_create(bus, dev_addr, 0);
 
     if (p_device->i2c_dev == NULL) {
         free(p_device);
@@ -90,10 +103,7 @@ mcp23017_handle_t mcp23017_create(i2c_bus_handle_t bus, uint8_t dev_addr)
 
 esp_err_t mcp23017_delete(mcp23017_handle_t *p_dev)
 {
-    if (p_dev == NULL || *p_dev == NULL) {
-        return ESP_ERR_INVALID_ARG;
-    }
-
+    MCP23017_CHECK(p_dev != NULL && *p_dev != NULL, "invalid arg", ESP_ERR_INVALID_ARG)
     mcp23017_dev_t *p_device = (mcp23017_dev_t *)(*p_dev);
     i2c_bus_device_delete(&p_device->i2c_dev);
     free(p_device);
@@ -104,10 +114,7 @@ esp_err_t mcp23017_delete(mcp23017_handle_t *p_dev)
 esp_err_t mcp23017_write(mcp23017_handle_t dev, uint8_t reg_start_addr,
                          uint8_t reg_num, uint8_t *data_buf)
 {
-    if (dev == NULL || data_buf == NULL) {
-        return ESP_ERR_INVALID_ARG;
-    }
-
+    MCP23017_CHECK(dev != NULL && data_buf != NULL, "invalid arg", ESP_ERR_INVALID_ARG)
     esp_err_t ret = ESP_FAIL;
     mcp23017_dev_t *p_device = (mcp23017_dev_t *) dev;
 
@@ -125,10 +132,7 @@ esp_err_t mcp23017_write(mcp23017_handle_t dev, uint8_t reg_start_addr,
 esp_err_t mcp23017_read(mcp23017_handle_t dev, uint8_t reg_start_addr,
                         uint8_t reg_num, uint8_t *data_buf)
 {
-    if (dev == NULL || data_buf == NULL) {
-        return ESP_ERR_INVALID_ARG;
-    }
-
+    MCP23017_CHECK(dev != NULL && data_buf != NULL, "invalid arg", ESP_ERR_INVALID_ARG)
     esp_err_t ret = ESP_FAIL;
     mcp23017_dev_t *p_device = (mcp23017_dev_t *) dev;
 
@@ -152,10 +156,7 @@ esp_err_t mcp23017_set_pullup(mcp23017_handle_t dev, uint16_t pins)
 esp_err_t mcp23017_interrupt_en(mcp23017_handle_t dev, uint16_t pins,
                                 bool intr_mode, uint16_t defaultValue)
 {
-    if (dev == NULL) {
-        return ESP_ERR_INVALID_ARG;
-    }
-
+    MCP23017_CHECK(dev != NULL, "invalid arg", ESP_ERR_INVALID_ARG)
     mcp23017_dev_t *p_device = (mcp23017_dev_t *) dev;
 
     //write register REG_GPINTENA(pins) REG_GPINTENB(pins) DEFVALA(0) DEFVALB(0) INTCONA(0) INTCONB(0)
@@ -191,10 +192,7 @@ esp_err_t mcp23017_interrupt_en(mcp23017_handle_t dev, uint16_t pins,
 
 esp_err_t mcp23017_interrupt_disable(mcp23017_handle_t dev, uint16_t pins)
 {
-    if (dev == NULL) {
-        return ESP_ERR_INVALID_ARG;
-    }
-
+    MCP23017_CHECK(dev != NULL, "invalid arg", ESP_ERR_INVALID_ARG)
     mcp23017_dev_t *p_device = (mcp23017_dev_t *) dev;
     //write register REG_GPINTENA(pins) REG_GPINTENB(pins) DEFVALA(0) DEFVALB(0) INTCONA(0) INTCONB(0)
     uint8_t data[] = { MCP23017_PORT_A_BYTE(p_device->intEnabledPins & ~pins),
@@ -213,10 +211,7 @@ esp_err_t mcp23017_interrupt_disable(mcp23017_handle_t dev, uint16_t pins)
 esp_err_t mcp23017_set_interrupt_polarity(mcp23017_handle_t dev,
         mcp23017_gpio_port_t gpio, uint8_t chLevel)
 {
-    if (dev == NULL) {
-        return ESP_ERR_INVALID_ARG;
-    }
-
+    MCP23017_CHECK(dev != NULL, "invalid arg", ESP_ERR_INVALID_ARG)
     mcp23017_dev_t *p_device = (mcp23017_dev_t *) dev;
 
     uint8_t getIOCON = {
@@ -246,10 +241,7 @@ esp_err_t mcp23017_set_interrupt_polarity(mcp23017_handle_t dev,
 
 esp_err_t mcp23017_set_seque_mode(mcp23017_handle_t dev, uint8_t isSeque)
 {
-    if (dev == NULL) {
-        return ESP_ERR_INVALID_ARG;
-    }
-
+    MCP23017_CHECK(dev != NULL, "invalid arg", ESP_ERR_INVALID_ARG)
     mcp23017_dev_t *p_device = (mcp23017_dev_t *) dev;
 
     uint8_t getIOCON = { MCP23017_REG_IOCONA };
@@ -274,10 +266,7 @@ esp_err_t mcp23017_set_seque_mode(mcp23017_handle_t dev, uint8_t isSeque)
 esp_err_t mcp23017_mirror_interrupt(mcp23017_handle_t dev, uint8_t mirror,
                                     mcp23017_gpio_port_t gpio)
 {
-    if (dev == NULL) {
-        return ESP_ERR_INVALID_ARG;
-    }
-
+    MCP23017_CHECK(dev != NULL, "invalid arg", ESP_ERR_INVALID_ARG)
     mcp23017_dev_t *p_device = (mcp23017_dev_t *) dev;
 
     uint8_t getIOCON = {
@@ -309,10 +298,7 @@ esp_err_t mcp23017_mirror_interrupt(mcp23017_handle_t dev, uint8_t mirror,
 esp_err_t mcp23017_set_io_dir(mcp23017_handle_t dev, uint8_t value,
                               mcp23017_gpio_port_t gpio)
 {
-    if (dev == NULL) {
-        return ESP_ERR_INVALID_ARG;
-    }
-
+    MCP23017_CHECK(dev != NULL, "invalid arg", ESP_ERR_INVALID_ARG)
     mcp23017_dev_t *p_device = (mcp23017_dev_t *) dev;
 
     return i2c_bus_write_byte(p_device->i2c_dev,
@@ -323,10 +309,7 @@ esp_err_t mcp23017_set_io_dir(mcp23017_handle_t dev, uint8_t value,
 esp_err_t mcp23017_write_io(mcp23017_handle_t dev, uint8_t value,
                             mcp23017_gpio_port_t gpio)
 {
-    if (dev == NULL) {
-        return ESP_ERR_INVALID_ARG;
-    }
-
+    MCP23017_CHECK(dev != NULL, "invalid arg", ESP_ERR_INVALID_ARG)
     mcp23017_dev_t *p_device = (mcp23017_dev_t *) dev;
 
     return i2c_bus_write_byte(p_device->i2c_dev,
@@ -336,10 +319,7 @@ esp_err_t mcp23017_write_io(mcp23017_handle_t dev, uint8_t value,
 
 uint8_t mcp23017_read_io(mcp23017_handle_t dev, mcp23017_gpio_port_t gpio)
 {
-    if (dev == NULL) {
-        return ESP_ERR_INVALID_ARG;
-    }
-
+    MCP23017_CHECK(dev != NULL, "invalid arg", 0)
     mcp23017_dev_t *p_device = (mcp23017_dev_t *) dev;
 
     uint8_t data = 0;
@@ -351,12 +331,8 @@ uint8_t mcp23017_read_io(mcp23017_handle_t dev, mcp23017_gpio_port_t gpio)
 
 uint16_t mcp23017_get_int_pin(mcp23017_handle_t dev)
 {
-    if (dev == NULL) {
-        return ESP_ERR_INVALID_ARG;
-    }
-
+    MCP23017_CHECK(dev != NULL, "invalid arg", 0)
     mcp23017_dev_t *p_device = (mcp23017_dev_t *) dev;
-
     uint16_t pinValues = 0;
 
     if (p_device->intEnabledPins != 0) {
@@ -382,12 +358,8 @@ uint16_t mcp23017_get_int_pin(mcp23017_handle_t dev)
 
 uint16_t mcp23017_get_int_flag(mcp23017_handle_t dev)
 {
-    if (dev == NULL) {
-        return ESP_ERR_INVALID_ARG;
-    }
-
+    MCP23017_CHECK(dev != NULL, "invalid arg", 0)
     mcp23017_dev_t *p_device = (mcp23017_dev_t *) dev;
-
     uint8_t intfpins[2] = { 0 };
     uint8_t getIntPins[] = { MCP23017_REG_INTFA };
     uint16_t pinIntfValues = 0;
@@ -398,12 +370,8 @@ uint16_t mcp23017_get_int_flag(mcp23017_handle_t dev)
 
 esp_err_t mcp23017_check_present(mcp23017_handle_t dev)
 {
-    if (dev == NULL) {
-        return ESP_ERR_INVALID_ARG;
-    }
-
+    MCP23017_CHECK(dev != NULL, "invalid arg", ESP_ERR_INVALID_ARG)
     mcp23017_dev_t *p_device = (mcp23017_dev_t *) dev;
-
     uint8_t lastregValue = 0x00;
     uint8_t regValue = 0x00;
     i2c_bus_read_byte(p_device->i2c_dev, MCP23017_REG_INTCONA, &lastregValue);
