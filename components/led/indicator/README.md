@@ -24,3 +24,57 @@
 > `LEDC_CHANNEL_0`, `LEDC_CHANNEL_1`, `LEDC_CHANNEL_2`, `LEDC_CHANNEL_3` has been `used` by this module.
 
 > Don't call iot_led_delete() `more than once` for the same led_handle and you'd better to set the led_hanle to `NULL` after `iot_led_delete`. 
+
+
+
+## 小米 LED 指示灯规范
+
+https://iot.mi.com/new/doc/standard/embedded-standard/embedded-development-standard
+
+| 状态             | 闪烁方式                  | 对应net命令的结果 |
+| ---------------- | ------------------------- | ----------------- |
+| 等待快连中       | 黄灯闪烁（黄0.1s 灭0.2s） | uap               |
+| 成功连接到路由器 | 蓝灯长亮                  | local 或cloud     |
+| 掉线重连中       | 蓝灯闪烁（蓝0.1s 灭0.2s） | offline           |
+| 升级中           | 黄灯慢闪（黄0.2s 灭0.8s） | updating          |
+| 配网功能关闭     | 灯灭                      | unprov            |
+|                  |                           |                   |
+|                  |                           |                   |
+
+| 状态             | 单色LED闪烁方式                    | 对应net命令   |
+| ---------------- | ---------------------------------- | ------------- |
+| 等待快连中       | 慢闪（亮0.2s灭0.8s）               | uap           |
+| 成功连接到路由器 | 长亮                               | local 或cloud |
+| 掉线重连中       | 快闪（亮0.1s灭0.2s）               | offline       |
+| 升级中           | 双闪（亮0.05s灭0.1s亮0.05s灭0.8s） | updating      |
+| 配网功能关闭     | 灯灭                               | unprov        |
+|                  |                                    |               |
+
+阿里智能插座
+
+| 状态                                         | 默认LED显示                                                  |
+| :------------------------------------------- | :----------------------------------------------------------- |
+| 配网模式                                     | 插座LED反复闪烁，亮0.8秒，灭0.8秒。                          |
+| 恢复出厂设置                                 | 插座LED反复闪烁，亮0.2秒，灭0.2秒。                          |
+| 连接AP 超时/连接AP 认证失败（超时时间2分钟） | 插座LED反复闪烁的模式更改为，亮0.5秒、灭0.5秒，闪烁两分钟之后停止闪烁。停止闪烁之后，如果插座配电使能则LED灯点亮，否则LED灯灭掉。 |
+| 连接AP成功、尝试连云                         | 插座LED反复闪烁，亮0.8 秒，灭0.8秒，然后开始尝试连接云端。   |
+| 连云失败                                     | 连接云端失败后，需要再次尝试连接，其间LED的显示与"连接AP成功、尝试连云"模式一样。 |
+| 连云成功                                     | 当设备连接云端成功，则停止LED闪烁，若插座配电打开则LED点亮，若插座配电未打开则LED灭掉。 |
+
+Rainmaker Parameters
+
+|Name|Type|Data Type|UI Type|Properties|Min, Max, Step|
+| :-----: | :------: | :------: | :------: | :------: |:------: |
+|Name|esp.param.name|String|Read, Write|1, 32, -|
+|Power|esp.param.power|Bool|esp.ui.toggle|Read, Write|
+|Brightness|esp.param.brightness|Int|esp.ui.slider|Read, Write|0, 100, 1|
+|Color Temperature|esp.param.cct|Int|esp.ui.slider|Read, Write|2700, 6500, 100|
+|Hue|esp.param.hue|Int|esp.ui.slider|Read, Write|0, 360, 1|
+|Saturation|esp.param.saturation|Int|esp.ui.slider|Read, Write|0, 100, 1|
+|Intensity|esp.param.intensity|Int|esp.ui.slider|Read, Write|0, 100, 1|
+|Speed|esp.param.speed|Int|esp.ui.slider|Read, Write|0, 5, 1|
+|Direction|esp.param.direction|Int|esp.ui.dropdown|Read, Write|0, 1, 1|
+|Temperature|esp.param.temperature|Float||Read|
+|OTA URL|esp.param.ota_url|String||Write|
+|OTA Status|esp.param.ota_status|String||Read|
+|OTA Info|esp.param.ota_info|String||Read|
