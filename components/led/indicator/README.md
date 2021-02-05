@@ -1,80 +1,80 @@
-# Component: led
+## LED 指示灯
 
-* This component defines an led as a well encapsulated object.
+LED 指示灯是最简单的输出外设之一，可以通过不同形式的闪烁指示系统当前的工作状态。ESP-IoT-Solution 提供的 LED 指示灯组件具有以下功能：
 
-* An led device is defined by:
-	* `GPIO number` on which the led is attached
-	* `dark_level` which decided by peripheral hardware
+* 支持定义多组闪烁方式
+* 支持定义闪烁优先级
+* 支持创建多个指示灯
 
-* An led device can provide:
-	* `LED_OFF`, `LED_ON`, `LED_QUICK_BLINK` and `LED_SLOW_BLINK` four states which can be set by calling iot_led_state_write()
-	* `LED_NORMAL_MODE` and `LED_NIGHT_MODE` two modes which can be set by calling iot_led_mode_write()
-	* iot_led_state_read() or iot_led_mode_read() can be called to get the current state or mode of the led
-    * iot_led_update_blink_freq() can be called to change the blink frequency of all the leds
-    * iot_led_night_duty_write() can be called to set the duty of led in night mode
+### 使用方法
 
-* To use the led device, you need to:
-	* call iot_led_setup to initialize ledc timers and set the frequency of quick_blink and slow_blink
-	* create a led device object by iot_led_create()
-	* to free the led object, you can call iot_led_delete() to delete the object and free the memory
+#### 预定义闪烁方式
 
-### NOTE:
-> `LEDC_TIMER_0`, `LEDC_TIMER_1` and `LEDC_TIMER_2` has been `used` by this module.
+闪烁步骤结构体 led_indicator_blink_step_t 定义了该步骤的类型、指示灯状态和状态持续时间。多个步骤组合成一个闪烁方式，不同的闪烁方式标识不同的系统状态。
 
-> `LEDC_CHANNEL_0`, `LEDC_CHANNEL_1`, `LEDC_CHANNEL_2`, `LEDC_CHANNEL_3` has been `used` by this module.
+例 1 . 定义一个循环闪烁：亮 0.05 S，灭 0.1 S，开始之后一直循环。
 
-> Don't call iot_led_delete() `more than once` for the same led_handle and you'd better to set the led_hanle to `NULL` after `iot_led_delete`. 
+```
+const led_indicator_blink_step_t test_blink_loop[] = {
+    {LED_BLINK_HOLD, LED_STATE_ON, 50},               // step1: turn on LED 50 ms
+    {LED_BLINK_HOLD, LED_STATE_OFF, 100},             // step2: turn off LED 100 ms
+    {LED_BLINK_LOOP, 0, 0},                           // step3: loop from step1
+};
+```
 
+例 2 . 定义一个循环闪烁：亮 0.05 S，灭 0.1 S，亮 0.15 S，灭 0.1 S，执行完毕灯熄灭。
 
+```
+const led_indicator_blink_step_t test_blink_one_time[] = {
+    {LED_BLINK_HOLD, LED_STATE_ON, 50},               // step1: turn on LED 50 ms
+    {LED_BLINK_HOLD, LED_STATE_OFF, 100},             // step2: turn off LED 100 ms
+    {LED_BLINK_HOLD, LED_STATE_ON, 150},              // step3: turn on LED 150 ms
+    {LED_BLINK_HOLD, LED_STATE_OFF, 100},             // step4: turn off LED 100 ms
+    {LED_BLINK_STOP, 0, 0},                           // step5: stop blink (off)
+};
+```
 
-## 小米 LED 指示灯规范
+#### 预定义闪烁优先级
 
-https://iot.mi.com/new/doc/standard/embedded-standard/embedded-development-standard
+对于同一个指示灯，高优先级闪烁可以打断正在进行的低优先级闪烁，当高优先级闪烁结束，低优先级闪烁恢复执行。可以通过修改闪烁列表数组 led_indicator_blink_lists 成员的顺序调整闪烁的优先级，该数组中指数越小的成员执行优先级越高。
 
-| 状态             | 闪烁方式                  | 对应net命令的结果 |
-| ---------------- | ------------------------- | ----------------- |
-| 等待快连中       | 黄灯闪烁（黄0.1s 灭0.2s） | uap               |
-| 成功连接到路由器 | 蓝灯长亮                  | local 或cloud     |
-| 掉线重连中       | 蓝灯闪烁（蓝0.1s 灭0.2s） | offline           |
-| 升级中           | 黄灯慢闪（黄0.2s 灭0.8s） | updating          |
-| 配网功能关闭     | 灯灭                      | unprov            |
-|                  |                           |                   |
-|                  |                           |                   |
+例 3 . 在以下示例中 test_blink_one_time 比 test_blink_loop 优先级高，可优先闪烁。
 
-| 状态             | 单色LED闪烁方式                    | 对应net命令   |
-| ---------------- | ---------------------------------- | ------------- |
-| 等待快连中       | 慢闪（亮0.2s灭0.8s）               | uap           |
-| 成功连接到路由器 | 长亮                               | local 或cloud |
-| 掉线重连中       | 快闪（亮0.1s灭0.2s）               | offline       |
-| 升级中           | 双闪（亮0.05s灭0.1s亮0.05s灭0.8s） | updating      |
-| 配网功能关闭     | 灯灭                               | unprov        |
-|                  |                                    |               |
+```
+led_indicator_blink_step_t const * led_indicator_blink_lists[] = {
+    test_blink_one_time,    //smaller index has the higher priority
+    test_blink_loop,
+}
+```
 
-阿里智能插座
+#### 控制指示灯闪烁
 
-| 状态                                         | 默认LED显示                                                  |
-| :------------------------------------------- | :----------------------------------------------------------- |
-| 配网模式                                     | 插座LED反复闪烁，亮0.8秒，灭0.8秒。                          |
-| 恢复出厂设置                                 | 插座LED反复闪烁，亮0.2秒，灭0.2秒。                          |
-| 连接AP 超时/连接AP 认证失败（超时时间2分钟） | 插座LED反复闪烁的模式更改为，亮0.5秒、灭0.5秒，闪烁两分钟之后停止闪烁。停止闪烁之后，如果插座配电使能则LED灯点亮，否则LED灯灭掉。 |
-| 连接AP成功、尝试连云                         | 插座LED反复闪烁，亮0.8 秒，灭0.8秒，然后开始尝试连接云端。   |
-| 连云失败                                     | 连接云端失败后，需要再次尝试连接，其间LED的显示与"连接AP成功、尝试连云"模式一样。 |
-| 连云成功                                     | 当设备连接云端成功，则停止LED闪烁，若插座配电打开则LED点亮，若插座配电未打开则LED灭掉。 |
+创建一个指示灯：指定一个 IO 和一组配置信息创建一个指示灯
 
-Rainmaker Parameters
+```
+led_indicator_config_t config = {
+    .off_level = 0,                              // attach led positive side to esp32 gpio pin
+    .mode = LED_GPIO_MODE,
+};
+led_indicator_handle_t led_handle = led_indicator_create(8, &config); // attach to gpio 8
+```
 
-|Name|Type|Data Type|UI Type|Properties|Min, Max, Step|
-| :-----: | :------: | :------: | :------: | :------: |:------: |
-|Name|esp.param.name|String|Read, Write|1, 32, -|
-|Power|esp.param.power|Bool|esp.ui.toggle|Read, Write|
-|Brightness|esp.param.brightness|Int|esp.ui.slider|Read, Write|0, 100, 1|
-|Color Temperature|esp.param.cct|Int|esp.ui.slider|Read, Write|2700, 6500, 100|
-|Hue|esp.param.hue|Int|esp.ui.slider|Read, Write|0, 360, 1|
-|Saturation|esp.param.saturation|Int|esp.ui.slider|Read, Write|0, 100, 1|
-|Intensity|esp.param.intensity|Int|esp.ui.slider|Read, Write|0, 100, 1|
-|Speed|esp.param.speed|Int|esp.ui.slider|Read, Write|0, 5, 1|
-|Direction|esp.param.direction|Int|esp.ui.dropdown|Read, Write|0, 1, 1|
-|Temperature|esp.param.temperature|Float||Read|
-|OTA URL|esp.param.ota_url|String||Write|
-|OTA Status|esp.param.ota_status|String||Read|
-|OTA Info|esp.param.ota_info|String||Read|
+开始/停止闪烁：控制指示灯开启/停止指定闪烁，函数调用后立刻返回，内部由定时器控制闪烁流程。同一个指示灯可以开启多种闪烁，将根据闪烁优先级依次执行。
+
+```
+led_indicator_start(led_handle, test_blink_loop); // call to start, the function not block
+
+/*
+*......
+*/
+
+led_indicator_stop(led_handle, test_blink_loop); // call stop
+```
+
+删除指示灯：您也可以在不需要进一步操作时，删除指示灯以释放资源
+
+```
+led_indicator_delete(&led_handle);
+```
+
+> 该组件支持线程安全操作，您可使用全局变量共享 LED 指示灯的操作句柄 led_indicator_handle_t，也可以使用 led_indicator_get_handle 在其它线程通过 LED 的 IO 号获取句柄以进行操作。
