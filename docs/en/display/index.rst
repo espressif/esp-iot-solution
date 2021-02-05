@@ -9,4 +9,5 @@ Display
 
     Screen <screen>
     Digit Tube <digit_tube>
+    LED lndicator <led_indicator>
 
