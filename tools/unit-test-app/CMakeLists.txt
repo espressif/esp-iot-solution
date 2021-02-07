@@ -11,6 +11,9 @@ endif()
 
 include($ENV{IOT_SOLUTION_PATH}/component.cmake)
 
+set(EXTRA_COMPONENT_DIRS "$ENV{IDF_PATH}/examples/cxx/experimental/experimental_cpp_component/"
+                         "$ENV{IDF_PATH}/examples/peripherals/rmt/ir_protocols/components")
+
 add_compile_options(-fdiagnostics-color=always)
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(unit-test-app)
