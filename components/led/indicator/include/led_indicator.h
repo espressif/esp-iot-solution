@@ -52,7 +52,7 @@ typedef struct {
 } led_indicator_blink_step_t;
 
 /**
- * @brief defined LED indicator blink steps
+ * @brief predefined LED indicator blink steps
  * 
  */
 extern const led_indicator_blink_step_t connecting[]; /**< connecting to AP (or Cloud) */
@@ -69,7 +69,6 @@ extern const led_indicator_blink_step_t provisioned[]; /**< provision done */
  */
 typedef enum {
     LED_GPIO_MODE,        /**< blink with max brightness*/
-    LED_PWM_MODE,         /**< brightness gradient */ 
 }led_indicator_mode_t;
 
 /**
@@ -112,7 +111,8 @@ led_indicator_handle_t led_indicator_get_handle(int io_num);
 esp_err_t led_indicator_delete(led_indicator_handle_t* p_handle);
 
 /**
- * @brief start a blink group, if 
+ * @brief start a new blink_steps on the led indicator. if mutiple blink_steps started simultaneously,
+ * it will be executed according to priority.
  * 
  * @param handle led indicator handle
  * @param blink_steps predefined blink steps
@@ -124,7 +124,7 @@ esp_err_t led_indicator_delete(led_indicator_handle_t* p_handle);
 esp_err_t led_indicator_start(led_indicator_handle_t handle, const led_indicator_blink_step_t blink_steps[]);
 
 /**
- * @brief stop a blink group
+ * @brief stop a blink_steps. you can stop a blink_steps at any time, no matter it is executing or waiting to be executed.
  * 
  * @param handle led indicator handle
  * @param blink_steps predefined blink steps

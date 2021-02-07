@@ -372,10 +372,6 @@ led_indicator_handle_t led_indicator_create(int io_num, const led_indicator_conf
             }
             break;
 
-        case LED_PWM_MODE:         /**< brightness gradient */
-            LED_INDICATOR_CHECK_GOTO(false, "pwm mode not supported yet", cleanup_all);
-            break;
-
         default:
             LED_INDICATOR_CHECK_GOTO(false, "mode not supported", cleanup_all);
             break;
@@ -425,10 +421,6 @@ esp_err_t led_indicator_delete(led_indicator_handle_t* p_handle)
             BaseType_t ret = xTimerDelete(p_led_indicator->h_timer, portMAX_DELAY);
             LED_INDICATOR_CHECK(ret == pdPASS, "led timmer delete failed", ESP_FAIL);
             }
-            break;
-
-        case LED_PWM_MODE:
-            LED_INDICATOR_CHECK(false, "pwm mode not supported yet", ESP_ERR_NOT_SUPPORTED);
             break;
 
         default:
