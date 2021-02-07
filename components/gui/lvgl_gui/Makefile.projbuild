@@ -1,7 +1,0 @@
-$(shell sed -i '405c // static inline lv_color_t lv_color_hex(uint32_t c){' $(IOT_SOLUTION_PATH)/components/hmi/lvgl_gui/lvgl/lv_misc/lv_color.h)
-$(shell sed -i '406c //     return LV_COLOR_HEX(c);' $(IOT_SOLUTION_PATH)/components/hmi/lvgl_gui/lvgl/lv_misc/lv_color.h)
-$(shell sed -i '407c // }' $(IOT_SOLUTION_PATH)/components/hmi/lvgl_gui/lvgl/lv_misc/lv_color.h)
-
-$(shell sed -i '409c // static inline lv_color_t lv_color_hex3(uint32_t c){' $(IOT_SOLUTION_PATH)/components/hmi/lvgl_gui/lvgl/lv_misc/lv_color.h)
-$(shell sed -i '410c //     return LV_COLOR_HEX3(c);' $(IOT_SOLUTION_PATH)/components/hmi/lvgl_gui/lvgl/lv_misc/lv_color.h)
-$(shell sed -i '411c // }' $(IOT_SOLUTION_PATH)/components/hmi/lvgl_gui/lvgl/lv_misc/lv_color.h)

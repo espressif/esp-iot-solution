@@ -12,40 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/* component includes */
 #include <stdio.h>
-
-/* freertos includes */
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "freertos/timers.h"
-#include "freertos/semphr.h"
 #include "freertos/queue.h"
 #include "freertos/event_groups.h"
 #include "esp_freertos_hooks.h"
-
-/* esp includes */
-#include "sdkconfig.h"
 #include "esp_log.h"
-#include "esp_err.h"
 #include "esp_wifi.h"
-#include "esp_event_loop.h"
-
-/* Param Include */
-#include "iot_param.h"
+#include "esp_event.h"
 #include "nvs_flash.h"
+#include "board.h"
+#include "lvgl_gui.h"
 
-/* lvgl includes */
-#include "iot_lvgl.h"
-
-/*********************
- *      DEFINES
- *********************/
-#define SYMBOL_EYE_ON "\xEF\x81\xAE"
-#define SYMBOL_EYE_OFF "\xEF\x81\xB0"
 
 #define TAG "lvgl_wificonfig"
-#define WIFI_CONNECT_TIMEOUT 10000
+#define WIFI_CONNECT_TIMEOUT 20000
 #define WIFI_SCAN_TIMEOUT 10000
 
 /**********************
@@ -53,666 +35,475 @@
  **********************/
 /** @brief Description of an WiFi AP */
 typedef struct {
-    uint8_t ssid[33]; /**< SSID of AP */
-    int8_t rssi;      /**< signal strength of AP */
-} ap_list_t;
-
-typedef enum {
-    LVGL_WIFI_CONFIG_SCAN = 0,
-    LVGL_WIFI_CONFIG_SCAN_DONE,
-    LVGL_WIFI_CONFIG_CONNECT_SUCCESS,
-    LVGL_WIFI_CONFIG_CONNECT_FAIL,
-    LVGL_WIFI_CONFIG_TRY_CONNECT,
-} wifi_config_event_t;
+    uint8_t bssid[6];                     /**< MAC address of AP */
+    char ssid[33];                        /**< SSID of AP */
+    uint8_t primary;                      /**< channel of AP */
+    wifi_second_chan_t second;            /**< secondary channel of AP */
+    int8_t  rssi;                         /**< signal strength of AP */
+    wifi_auth_mode_t authmode;            /**< authmode of AP */
+} ap_info_t;
 
 typedef struct {
-    wifi_config_event_t event;
-    void *ctx;
+    uint16_t apCount;
+    ap_info_t *ap_info_list;
+    uint16_t current_ap;
+    const char *current_pwd;
 } wifi_config_data_t;
+
+static wifi_config_data_t wifi_config_data;
 
 /**********************
  *  STATIC VARIABLES
  **********************/
 LV_FONT_DECLARE(password_eye_20);
 
-static lv_obj_t *connectedap        = NULL;
-static lv_obj_t *connectedaprssi    = NULL;
-static lv_obj_t *connectedapbssid   = NULL;
-static lv_obj_t *connectedapchannel = NULL;
 
-static lv_obj_t *wifi_connect_cont  = NULL;
-static lv_obj_t *connect_label      = NULL;
-static lv_obj_t *passlabel          = NULL;
-static lv_obj_t *passkb             = NULL;
-static lv_obj_t *preload            = NULL;
-static lv_obj_t *pass_eye           = NULL;
-static lv_obj_t *img_eye            = NULL;
-static lv_obj_t *pass               = NULL;
-
-static lv_obj_t *wifi_list_cont     = NULL;
-static lv_obj_t *wifilist           = NULL;
-static lv_obj_t * *list_ap          = NULL;
-static lv_obj_t *scan_label         = NULL;
-
-static void *img_src[] = {SYMBOL_EYE_OFF, SYMBOL_EYE_ON};
+static lv_obj_t *g_preload           = NULL;
+static lv_obj_t *g_wifi_config_label = NULL;
+static lv_obj_t *g_contain           = NULL;
+static lv_obj_t *g_wifi_list         = NULL;
+static lv_obj_t *kb                  = NULL;
+static lv_obj_t *btn_connect         = NULL;
+static lv_obj_t *pwd_ta              = NULL;
+static lv_obj_t *g_pswd_page         = NULL;
+static lv_obj_t *g_ap_page           = NULL;
 
 /* FreeRTOS event group to signal when we are connected & ready to make a request */
-static EventGroupHandle_t wifi_event_group  = NULL;
-static xQueueHandle g_event_queue_handle    = NULL;
+static EventGroupHandle_t g_wifi_event_group  = NULL;
 
 /** The event group allows multiple bits for each event,
  * but we only care about one event - are we connected to the AP with an IP? */
-const int CONNECTED_BIT = BIT0;
+static const uint32_t LVGL_WIFI_CONFIG_CONNECTED       = BIT0;
+static const uint32_t LVGL_WIFI_CONFIG_SCAN            = BIT1;
+static const uint32_t LVGL_WIFI_CONFIG_SCAN_DONE       = BIT2;
+static const uint32_t LVGL_WIFI_CONFIG_CONNECT_FAIL    = BIT4;
+static const uint32_t LVGL_WIFI_CONFIG_TRY_CONNECT     = BIT5;
 
-/* wifi infomation */
-static uint16_t apCount         = 0;
-static uint16_t current_ap      = 0;
-static ap_list_t *ap_list       = NULL;
-static char current_appass[64]  = {0};
-static char current_apbssid[6]  = {0};
-static uint8_t current_apchannel = 0;
 
-static esp_timer_handle_t g_wifi_connect_timer  = NULL;
-static esp_timer_handle_t g_wifi_scan_timer     = NULL;
+static esp_timer_handle_t g_wifi_timeout_timer  = NULL;
 
-/**********************
- *  STATIC PROTOTYPES
- **********************/
-static void wifi_connect_timer_delete(void);
-static void wifi_try_connect(void);
-static void input_password();
 
-/**********************
- *   STATIC FUNCTIONS
- **********************/
-static void lv_object_delete(lv_obj_t *object)
+static char *wifi_auth_mode_to_str(wifi_auth_mode_t mode)
 {
-    if (object != NULL) {
-        lv_obj_del(object);
-        object = NULL;
+    switch (mode) {
+    case WIFI_AUTH_OPEN : return "OPEN";
+    case WIFI_AUTH_WEP: return "WEP";
+    case WIFI_AUTH_WPA_PSK: return "WPA_PSK";
+    case WIFI_AUTH_WPA2_PSK: return "WPA2_PSK";
+    case WIFI_AUTH_WPA_WPA2_PSK: return "WPA_WPA2_PSK";
+    case WIFI_AUTH_WPA2_ENTERPRISE: return "WPA2_ENTERPRISE";
+    case WIFI_AUTH_WPA3_PSK: return "WPA3_PSK";
+    case WIFI_AUTH_WPA2_WPA3_PSK: return "WPA2_WPA3_PSK";
+    default:
+        break;
     }
+    return "auth mode error";
 }
 
-/**
- * Called when the button is pressed on the mbox
- * @param btn pointer to the button
- * @param txt pointer to the button txt
- * @return
- */
-static lv_res_t mbox_action(lv_obj_t *btn, const char *txt)
+static void wifi_timeout_timer_create(esp_timer_cb_t callback, const char *name, uint32_t time_ms)
 {
-    ESP_LOGI(TAG, "[ * ] mbox action， btn: %s", txt);
-    lv_obj_t *mbox = lv_mbox_get_from_btn(btn);
-
-    if (!strcmp(txt, "Retry")) {
-        wifi_try_connect();
-    } else if (!strcmp(txt, "ReInput")) {
-        input_password();
-        lv_ta_set_text(pass, current_appass);
-    } else if (!strcmp(txt, "Cancel")) {
-        lv_object_delete(connect_label);
-        lv_object_delete(wifi_connect_cont);
-        lv_object_delete(wifilist);
-        lv_object_delete(wifi_list_cont);
-    }
-
-    lv_object_delete(mbox);
-    return LV_RES_OK;
-}
-
-static void wifi_connect_success()
-{
-    ESP_LOGI(TAG, "[ * ] wifi connect success");
-
-    wifi_connect_timer_delete();
-
-    lv_label_set_text(connectedap, (char *)ap_list[current_ap].ssid);
-    char data[64] = {0};
-    sprintf(data, "%d", ap_list[current_ap].rssi);
-    lv_label_set_text(connectedaprssi, data);
-    sprintf(data, "%02x%02x%02x%02x%02x%02x", current_apbssid[0], current_apbssid[1], current_apbssid[2], current_apbssid[3], current_apbssid[4], current_apbssid[5]);
-    lv_label_set_text(connectedapbssid, data);
-    sprintf(data, "%d", current_apchannel);
-    lv_label_set_text(connectedapchannel, data);
-    lv_object_delete(preload);
-    lv_object_delete(connect_label);
-    lv_object_delete(wifi_connect_cont);
-    lv_object_delete(wifilist);
-    lv_object_delete(wifi_list_cont);
-}
-
-static void wifi_connect_fail()
-{
-    ESP_LOGI(TAG, "[ * ] wifi connect fail");
-    /*Add styles*/
-    static lv_style_t bg;
-    static lv_style_t btn_bg;
-    lv_style_copy(&bg, &lv_style_pretty);
-    lv_style_copy(&btn_bg, &lv_style_pretty);
-    bg.body.padding.hor = 20;
-    bg.body.padding.ver = 20;
-    bg.body.padding.inner = 20;
-    bg.body.main_color = LV_COLOR_BLACK;
-    bg.body.grad_color = LV_COLOR_MAROON;
-    bg.text.color = LV_COLOR_WHITE;
-
-    btn_bg.body.padding.hor = 10;
-    btn_bg.body.padding.ver = 5;
-    btn_bg.body.padding.inner = 40;
-    btn_bg.body.empty = 1;
-    btn_bg.body.border.color = LV_COLOR_WHITE;
-    btn_bg.text.color = LV_COLOR_WHITE;
-
-    static lv_style_t btn_rel;
-    lv_style_copy(&btn_rel, &lv_style_btn_rel);
-    btn_rel.body.empty = 1;
-    btn_rel.body.border.color = LV_COLOR_WHITE;
-
-    /*Add buttons and modify text*/
-    static const char *mboxbtns[] = {"ReInput", "Cancel", ""};
-    lv_obj_t *mbox = lv_mbox_create(lv_scr_act(), NULL);
-    lv_mbox_add_btns(mbox, mboxbtns, NULL);
-    lv_mbox_set_text(mbox, "Wi-Fi Connect Fail!");
-    lv_obj_set_width(mbox, LV_HOR_RES / 4 * 3);
-    lv_mbox_set_style(mbox, LV_MBOX_STYLE_BTN_REL, &btn_rel);
-    lv_mbox_set_style(mbox, LV_MBOX_STYLE_BTN_BG, &btn_bg);
-    lv_mbox_set_style(mbox, LV_MBOX_STYLE_BG, &bg);
-    lv_obj_align(mbox, NULL, LV_ALIGN_CENTER, 0, -20);
-    lv_mbox_set_action(mbox, mbox_action);
-
-    lv_label_set_text(connectedap, "NULL");
-    lv_label_set_text(connectedaprssi, "NULL");
-    lv_label_set_text(connectedapbssid, "NULL");
-    lv_label_set_text(connectedapchannel, "NULL");
-
-    lv_object_delete(preload);
-    lv_object_delete(connect_label);
-}
-
-static void wifi_connect_timeout_cb(void *timer)
-{
-    ESP_LOGI(TAG, "[ * ] wifi connect timeout");
-    wifi_config_data_t event_data = {0};
-    event_data.event = LVGL_WIFI_CONFIG_CONNECT_FAIL;
-    xQueueSend(g_event_queue_handle, &event_data, portMAX_DELAY);
-}
-
-static void wifi_connect_timer_delete(void)
-{
-    ESP_LOGI(TAG, "[ * ] wifi connect timer delete");
-    if (g_wifi_connect_timer) {
-        esp_timer_stop(g_wifi_connect_timer);
-        esp_timer_delete(g_wifi_connect_timer);
-        g_wifi_connect_timer = NULL;
-    }
-}
-
-static void wifi_connect_timer_create(void)
-{
-    ESP_LOGI(TAG, "[ * ] wifi connect timer create");
     esp_timer_create_args_t timer_conf = {
-        .callback = wifi_connect_timeout_cb,
-        .name = "connect_timeout"
+        .callback = callback,
+        .name = name
     };
-
-    esp_timer_create(&timer_conf, &g_wifi_connect_timer);
-
-    esp_timer_start_once(g_wifi_connect_timer, WIFI_CONNECT_TIMEOUT * 1000U);
+    if (NULL != g_wifi_timeout_timer) {
+        ESP_LOGE(TAG, "Creat failed, timeout timer has been created");
+        return;
+    }
+    ESP_LOGI(TAG, "start timer: %s", name);
+    esp_timer_create(&timer_conf, &g_wifi_timeout_timer);
+    esp_timer_start_once(g_wifi_timeout_timer, time_ms * 1000U);
 }
 
-static void wifi_try_connect(void)
+static void wifi_timeout_timer_delete(void)
 {
-    ESP_LOGI(TAG, "[ * ] wifi try connect");
-    connect_label = lv_label_create(wifi_connect_cont, NULL);
-    char data[64] = {0};
-    sprintf(data, "%s Connecting...", (char *)ap_list[current_ap].ssid);
-    lv_label_set_text(connect_label, data);
-    lv_obj_align(connect_label, NULL, LV_ALIGN_CENTER, 0, -80);
-    
-    /* wifi connect preload create */
-    preload = lv_preload_create(wifi_connect_cont, NULL);
-    lv_obj_set_size(preload, 80, 80);
-    lv_obj_align(preload, NULL, LV_ALIGN_CENTER, 0, 0);
-
-    wifi_config_data_t event_data = {0};
-    event_data.event = LVGL_WIFI_CONFIG_TRY_CONNECT;
-    xQueueSend(g_event_queue_handle, &event_data, portMAX_DELAY);
-    wifi_connect_timer_create();
-}
-
-/**
- * Called when the ok button is pressed on the keyboard
- * @param keyboard pointer to the keyboard
- * @return
- */
-static lv_res_t keyboard_ok_action(lv_obj_t *keyboard)
-{
-    ESP_LOGI(TAG, "[ * ] keyboard ok action");
-    strcpy(current_appass, lv_ta_get_text(pass));
-
-    /* wifi try to connect AP */
-    wifi_try_connect();
-
-    lv_object_delete(img_eye);
-    lv_object_delete(pass_eye);
-    lv_object_delete(passlabel);
-    lv_object_delete(pass);
-    lv_object_delete(passkb);
-
-    /* LV_RES_INV because the object is deleted */
-    return LV_RES_INV;
-}
-
-/**
- * Called when the close button is pressed on the keyboard
- * @param keyboard pointer to the keyboard
- * @return
- */
-static lv_res_t keyboard_hide_action(lv_obj_t *keyboard)
-{
-    (void)keyboard; /*Unused*/
-    ESP_LOGI(TAG, "[ * ] keyboard hide action");
-
-#if USE_LV_ANIMATION
-    lv_obj_animate(passkb, LV_ANIM_FLOAT_BOTTOM | LV_ANIM_OUT, 300, 0, (void (*)(lv_obj_t *))lv_obj_del);
-    passkb = NULL;
-    return LV_RES_OK;
-#else
-    lv_object_delete(passkb);
-    
-    /* LV_RES_INV because the object is deleted */
-    return LV_RES_INV;
-#endif
-}
-
-/**
- * Called when the page of text_area is released
- * @param text_area pointer to the text_area
- * @return
- */
-static lv_res_t keyboard_open_close(lv_obj_t *text_area)
-{
-    (void)text_area; /*Unused*/
-    ESP_LOGI(TAG, "[ * ] keyboard open close");
-
-    lv_obj_t *parent = lv_obj_get_parent(lv_obj_get_parent(text_area)); /*Test area is on the scrollable part of the page but we need the page itself*/
-
-    if (passkb) {
-        return keyboard_hide_action(passkb);
-    } else {
-
-        /* password keyboard create */
-        passkb = lv_kb_create(parent, NULL);
-        lv_obj_set_height(passkb, LV_VER_RES / 3 * 2);
-        lv_obj_align(passkb, NULL, LV_ALIGN_IN_BOTTOM_MID, 0, 0);
-        lv_kb_set_ta(passkb, pass);
-        lv_kb_set_hide_action(passkb, keyboard_hide_action);
-        lv_kb_set_ok_action(passkb, keyboard_ok_action);
-
-#if USE_LV_ANIMATION
-        lv_obj_animate(passkb, LV_ANIM_FLOAT_BOTTOM | LV_ANIM_IN, 300, 0, NULL);
-#endif
-        return LV_RES_OK;
+    if (g_wifi_timeout_timer) {
+        esp_timer_stop(g_wifi_timeout_timer);
+        esp_timer_delete(g_wifi_timeout_timer);
+        g_wifi_timeout_timer = NULL;
     }
 }
 
-/**
- * Called when the button is clicked on password
- * @param obj pointer to the button
- * @return
- */
-static lv_res_t pass_eye_action(lv_obj_t *obj)
+
+static void preload_create(void)
 {
-    static bool off = true;
-    off = !off;
-    if (off) {
-        lv_img_set_src(img_eye, img_src[0]);
-        lv_ta_set_pwd_mode(pass, true);
-    } else {
-        lv_img_set_src(img_eye, img_src[1]);
-        lv_ta_set_pwd_mode(pass, false);
+    /* wifi scan preload create */
+    g_preload = lv_spinner_create(g_contain, NULL);
+    lv_obj_set_size(g_preload, 100, 100);
+    lv_obj_align(g_preload, NULL, LV_ALIGN_CENTER, 0, 0);
+}
+
+static void preload_delete(void)
+{
+    if (NULL != g_preload) {
+        lv_obj_del(g_preload);
+        g_preload = NULL;
     }
-    return LV_RES_OK;
 }
 
-static void input_password()
+
+/**!<  ----------- */
+
+static void wifi_connect_fail(void)
 {
-    ESP_LOGI(TAG, "[ * ] keyboard input password");
-    passlabel = lv_label_create(wifi_connect_cont, NULL);
-    char data[64] = {0};
-    sprintf(data, "%s Password:", (char *)ap_list[current_ap].ssid);
-    lv_label_set_text(passlabel, data);
-    lv_obj_align(passlabel, NULL, LV_ALIGN_IN_TOP_MID, 0, 5);
-
-    /* password text area create */
-    pass = lv_ta_create(wifi_connect_cont, NULL);
-    lv_obj_set_height(pass, 35);
-    lv_ta_set_one_line(pass, true);
-    lv_ta_set_pwd_mode(pass, true);
-    lv_ta_set_text(pass, "");
-    lv_obj_align(pass, NULL, LV_ALIGN_IN_TOP_MID, 0, 30);
-    lv_page_set_rel_action(pass, keyboard_open_close);
-
-    /* password eye imgbtn create */
-    pass_eye = lv_btn_create(wifi_connect_cont, NULL);
-    lv_obj_set_size(pass_eye, 30, 30);
-    img_eye = lv_img_create(pass_eye, NULL);
-    lv_img_set_src(img_eye, img_src[0]);
-    lv_btn_set_action(pass_eye, LV_BTN_ACTION_CLICK, pass_eye_action);
-    lv_obj_align(pass_eye, pass, LV_ALIGN_IN_RIGHT_MID, 0, 0);
-
-    /* password keyboard create */
-    passkb = lv_kb_create(wifi_connect_cont, NULL);
-    lv_obj_set_height(passkb, LV_VER_RES / 3 * 2);
-    lv_obj_align(passkb, NULL, LV_ALIGN_IN_BOTTOM_MID, 0, 0);
-    lv_kb_set_ta(passkb, pass);
-    lv_kb_set_hide_action(passkb, keyboard_hide_action);
-    lv_kb_set_ok_action(passkb, keyboard_ok_action);
+    preload_delete();
+    ESP_LOGW(TAG, "connect failed");
 }
 
-/**
- * Called when the item in wifi list is clicked
- * @param obj pointer to the wifi list
- * @return
- */
-static lv_res_t wifiap_list_action(lv_obj_t *obj)
+static void wifi_connect_success(void)
 {
-    ESP_LOGI(TAG, "[ * ] wifiap list action");
-    for (uint8_t i = 0; i < apCount; i++) {
-        if (obj == list_ap[i]) {
-            current_ap = i;
+    preload_delete();
+    lv_obj_del(g_pswd_page);
+    g_pswd_page = NULL;
 
-            /* wifi connect container create */
-            wifi_connect_cont = lv_cont_create(lv_scr_act(), NULL);
-            lv_obj_set_size(wifi_connect_cont, LV_HOR_RES, LV_VER_RES);
-            lv_cont_set_fit(wifi_connect_cont, false, false);
+    lv_obj_t *btn = lv_list_get_btn_selected(g_wifi_list);
+    lv_btn_set_checkable(btn, false);
+    static lv_style_t style_btn;
+    lv_style_init(&style_btn);
+    lv_style_set_bg_color(&style_btn, LV_STATE_DEFAULT, LV_COLOR_BLUE);
+    lv_obj_add_style(btn, LV_BTN_PART_MAIN, &style_btn);
 
-            input_password();
+}
 
-            break;
+static void pswd_page_click_connect_cb(lv_obj_t *obj, lv_event_t event)
+{
+    if (LV_EVENT_CLICKED == event) {
+        const char *pwd = lv_textarea_get_text(pwd_ta);
+        printf("pwd=%s\n", pwd);
+        lv_obj_t *wifi_btn = lv_list_get_btn_selected(g_wifi_list);
+        int32_t index = lv_list_get_btn_index(g_wifi_list, wifi_btn);
+        wifi_config_data.current_ap = index;
+        wifi_config_data.current_pwd = pwd;
+        preload_create();
+        xEventGroupSetBits(g_wifi_event_group, LVGL_WIFI_CONFIG_TRY_CONNECT);
+    }
+}
+
+static void pswd_page_click_cancel_cb(lv_obj_t *obj, lv_event_t event)
+{
+    if (LV_EVENT_CLICKED == event) {
+
+        lv_obj_del(g_pswd_page);
+        g_pswd_page = NULL;
+    }
+}
+
+static void ta_event_cb(lv_obj_t *ta, lv_event_t event)
+{
+    if (event == LV_EVENT_CLICKED) {
+        /* Focus on the clicked text area */
+        if (kb != NULL) {
+            lv_keyboard_set_textarea(kb, ta);
         }
     }
-    return LV_RES_OK;
+
+    else if (event == LV_EVENT_INSERT) {
+        const char *str = lv_event_get_data();
+        if (str[0] == '\n') {
+            ESP_LOGI(TAG, "Ready");
+        }
+    }
+}
+
+static void kb_event_cb(lv_obj_t *kb, lv_event_t event)
+{
+    lv_keyboard_def_event_cb(kb, event);
+
+    if (LV_EVENT_VALUE_CHANGED == event) {
+        const char *pwd = lv_textarea_get_text(pwd_ta);
+        if (strlen(pwd) >= 8) {
+            lv_btn_set_state(btn_connect, LV_BTN_STATE_RELEASED);
+        } else {
+            lv_btn_set_state(btn_connect, LV_BTN_STATE_DISABLED);
+        }
+    }
+
+    if (LV_EVENT_APPLY == event || LV_EVENT_CANCEL == event) {
+        // lv_obj_del(kb);
+        // kb = NULL;
+        if (LV_EVENT_APPLY == event && LV_BTN_STATE_DISABLED != lv_btn_get_state(btn_connect)) {
+            /* send clicked event to simulate button clicked */
+            pswd_page_click_connect_cb(NULL, LV_EVENT_CLICKED);
+        }
+    }
+}
+
+static void ap_page_click_connect_cb(lv_obj_t *obj, lv_event_t event)
+{
+    if (LV_EVENT_CLICKED == event) {
+
+        g_pswd_page = lv_cont_create(g_contain, NULL);
+        lv_obj_set_size(g_pswd_page, lv_obj_get_width(g_contain), lv_obj_get_height(g_contain));
+
+        /* Create a label and position it above the text box */
+        lv_obj_t *wifi_btn = lv_list_get_btn_selected(g_wifi_list);
+        int32_t index = lv_list_get_btn_index(g_wifi_list, wifi_btn);
+
+        lv_obj_t *pwd_label = lv_label_create(g_pswd_page, NULL);
+        lv_label_set_text_fmt(pwd_label, "%s Password:", wifi_config_data.ap_info_list[index].ssid);
+        lv_obj_align(pwd_label, NULL, LV_ALIGN_IN_TOP_MID, 0, 0);
+
+
+        /* Create the password box */
+        pwd_ta = lv_textarea_create(g_pswd_page, NULL);
+        lv_obj_align(pwd_ta, NULL, LV_ALIGN_IN_TOP_MID, 0, 22);
+        lv_textarea_set_text(pwd_ta, "");
+        lv_textarea_set_pwd_mode(pwd_ta, true);
+        lv_textarea_set_one_line(pwd_ta, true);
+        lv_textarea_set_cursor_hidden(pwd_ta, true);
+        lv_obj_set_event_cb(pwd_ta, ta_event_cb);
+
+        lv_obj_t *label;
+        lv_obj_t *btn_cancel = lv_btn_create(g_pswd_page, NULL);
+        lv_obj_set_size(btn_cancel, (80), (30));
+        lv_obj_set_event_cb(btn_cancel, pswd_page_click_cancel_cb);
+        lv_obj_align(btn_cancel, pwd_ta, LV_ALIGN_OUT_BOTTOM_MID, -80, 5);
+        label = lv_label_create(btn_cancel, NULL);
+        lv_label_set_text(label, "Canael");
+
+        btn_connect = lv_btn_create(g_pswd_page, NULL);
+        lv_obj_set_size(btn_connect, (80), (30));
+        lv_obj_set_event_cb(btn_connect, pswd_page_click_connect_cb);
+        lv_obj_align(btn_connect, pwd_ta, LV_ALIGN_OUT_BOTTOM_MID, 80, 5);
+        lv_btn_set_state(btn_connect, LV_BTN_STATE_DISABLED);
+        label = lv_label_create(btn_connect, NULL);
+        lv_label_set_text(label, "Connect");
+
+        /* Create a keyboard */
+        kb = lv_keyboard_create(g_pswd_page, NULL);
+        lv_obj_set_size(kb,  lv_obj_get_width(g_pswd_page), lv_obj_get_height(g_pswd_page) - 95);
+        lv_obj_align(kb, NULL, LV_ALIGN_IN_BOTTOM_MID, 0, 0);
+        lv_obj_set_event_cb(kb, kb_event_cb);
+        lv_keyboard_set_textarea(kb, pwd_ta); /* Focus it on one of the text areas to start */
+        lv_keyboard_set_cursor_manage(kb, true); /* Automatically show/hide cursors on text areas */
+
+        /* delete ap info page */
+        lv_obj_del(g_ap_page);
+        g_ap_page = NULL;
+    }
+}
+
+static void ap_page_click_cancel_cb(lv_obj_t *obj, lv_event_t event)
+{
+    if (LV_EVENT_CLICKED == event) {
+
+        lv_obj_del(g_ap_page);
+        g_ap_page = NULL;
+    }
+}
+
+static void click_wifi_list_cb(lv_obj_t *obj, lv_event_t event)
+{
+    if (LV_EVENT_CLICKED == event) {
+        lv_obj_t *wifi_btn = lv_list_get_btn_selected(g_wifi_list);
+        int32_t index = lv_list_get_btn_index(g_wifi_list, wifi_btn);
+
+        if (NULL != g_ap_page) {
+            lv_obj_del(g_ap_page);
+            g_ap_page = NULL;
+        }
+
+        g_ap_page = lv_page_create(g_contain, NULL);
+        lv_obj_set_size(g_ap_page, lv_obj_get_width(g_contain) - 20, lv_obj_get_height(g_contain) / 2);
+        lv_obj_align(g_ap_page, NULL, LV_ALIGN_IN_BOTTOM_MID, 0, -5);
+
+        lv_obj_t *ssid_label = lv_label_create(g_ap_page, NULL);
+        lv_obj_set_width(ssid_label, lv_obj_get_width(g_ap_page));
+        lv_obj_align(ssid_label, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+        char info_str[128] = {0};
+        sprintf(info_str, "SSID: %s\nRSSI: %d\nAuth: %s",
+                wifi_config_data.ap_info_list[index].ssid,
+                wifi_config_data.ap_info_list[index].rssi,
+                wifi_auth_mode_to_str(wifi_config_data.ap_info_list[index].authmode)
+               );
+        lv_label_set_text(ssid_label, info_str);
+        lv_label_set_align(ssid_label, LV_LABEL_ALIGN_LEFT);
+
+        lv_obj_t *label;
+        lv_obj_t *btn_cancel = lv_btn_create(g_ap_page, NULL);
+        lv_obj_set_size(btn_cancel, (80), (30));
+        lv_obj_set_event_cb(btn_cancel, ap_page_click_cancel_cb);
+        lv_obj_align(btn_cancel, NULL, LV_ALIGN_IN_BOTTOM_LEFT, 0, 0);
+        label = lv_label_create(btn_cancel, NULL);
+        lv_label_set_text(label, "Canael");
+
+        lv_obj_t *btn_connect = lv_btn_create(g_ap_page, NULL);
+        lv_obj_set_size(btn_connect, (80), (30));
+        lv_obj_set_event_cb(btn_connect, ap_page_click_connect_cb);
+        lv_obj_align(btn_connect, NULL, LV_ALIGN_IN_BOTTOM_RIGHT, 0, 0);
+        label = lv_label_create(btn_connect, NULL);
+        lv_label_set_text(label, "Connect");
+    }
 }
 
 static void wifi_scan_timeout_cb(void *timer)
 {
-    ESP_LOGI(TAG, "[ * ] wifi scan timeout");
-
-    lv_object_delete(preload);
-    lv_object_delete(wifi_list_cont);
+    preload_delete();
+    lv_label_set_text(g_wifi_config_label, "Wi-Fi Config");
+    ESP_LOGW(TAG, "scan timeout");
 }
 
-static void wifi_scan_timer_delete(void)
+static void wifi_scan_done(void)
 {
-    ESP_LOGI(TAG, "[ * ] wifi scan timer delete");
-    if (g_wifi_scan_timer) {
-        esp_timer_stop(g_wifi_scan_timer);
-        esp_timer_delete(g_wifi_scan_timer);
-        g_wifi_scan_timer = NULL;
+    wifi_timeout_timer_delete();
+    preload_delete();
+    lv_label_set_text(g_wifi_config_label, "Wi-Fi Config");
+    wifi_config_data_t *data = &wifi_config_data;
+
+    lv_obj_t *list_btn;
+    for (uint8_t i = 0; i < data->apCount; i++) {
+        list_btn = lv_list_add_btn(g_wifi_list, LV_SYMBOL_WIFI, (char *)data->ap_info_list[i].ssid);
+        lv_obj_set_event_cb(list_btn, click_wifi_list_cb);
     }
 }
 
-static void wifi_scan_timer_create(void)
+static void start_wifi_scan(void)
 {
-    ESP_LOGI(TAG, "[ * ] wifi scan timer create");
-    esp_timer_create_args_t timer_conf = {
-        .callback = wifi_scan_timeout_cb,
-        .name = "scan_timeout"
-    };
-
-    esp_timer_create(&timer_conf, &g_wifi_scan_timer);
-
-    esp_timer_start_once(g_wifi_scan_timer, WIFI_SCAN_TIMEOUT * 1000U);
+    lv_label_set_text(g_wifi_config_label, "Scaning...");
+    preload_create();
+    wifi_timeout_timer_create(wifi_scan_timeout_cb, "scan timer", WIFI_SCAN_TIMEOUT);
 }
 
-static void wifi_scan_done(wifi_config_data_t event_data)
-{
-    wifi_scan_timer_delete();
-
-    lv_object_delete(preload);
-    lv_object_delete(scan_label);
-
-    wifilist = lv_list_create(wifi_list_cont, NULL);
-    lv_obj_set_size(wifilist, LV_HOR_RES, LV_VER_RES);
-    ap_list = (ap_list_t *)event_data.ctx;
-    list_ap = (lv_obj_t * *)realloc(list_ap, apCount * sizeof(lv_obj_t *));
-    for (uint8_t i = 0; i < apCount; i++) {
-        list_ap[i] = lv_list_add(wifilist, SYMBOL_WIFI, (char *)ap_list[i].ssid, wifiap_list_action);
-    }
-}
-
-static void refresh_wifi_list(void *param)
-{
-    ESP_LOGI(TAG, "[ * ] refresh wifi list");
-
-    /* wifi list container create */
-    wifi_list_cont = lv_cont_create(lv_scr_act(), NULL);
-    lv_obj_set_size(wifi_list_cont, LV_HOR_RES, LV_VER_RES);
-    lv_cont_set_fit(wifi_list_cont, false, false);
-
-    /* wifi scan label create */
-    scan_label = lv_label_create(wifi_list_cont, NULL);
-    lv_label_set_text(scan_label, "Scaning...");
-    lv_obj_align(scan_label, NULL, LV_ALIGN_CENTER, 0, -80);
-
-    /* wifi scan preload create */
-    preload = lv_preload_create(wifi_list_cont, NULL);
-    lv_obj_set_size(preload, 80, 80);
-    lv_obj_align(preload, NULL, LV_ALIGN_CENTER, 0, 0);
-    
-    wifi_scan_timer_create();
-}
-
-/**
- * Called when the wifi scan is clicked
- * @param obj pointer to the wifi scan btn
- * @return
- */
-static lv_res_t wifi_scan_action(lv_obj_t *obj)
+static void wifi_scan_start(void)
 {
     ESP_LOGI(TAG, "[ * ] wifi scan");
-    if (lv_sw_get_state(obj)) {
-        wifi_config_data_t event_data = {0};
-        event_data.event = LVGL_WIFI_CONFIG_SCAN;
-        xQueueSend(g_event_queue_handle, &event_data, portMAX_DELAY);
-
-        lv_sw_off(obj);
-    }
-    return LV_RES_OK;
+    xEventGroupSetBits(g_wifi_event_group, LVGL_WIFI_CONFIG_SCAN);
 }
 
-static void littlevgl_wificonfig(void)
+static void littlevgl_wificonfig_init(void)
 {
     ESP_LOGI(TAG, "[ * ] littlevgl wificonfig");
-    lv_font_add(&password_eye_20, &lv_font_dejavu_20);
-    lv_theme_set_current(lv_theme_zen_init(100, NULL));
-
-    lv_obj_t *tabview = lv_tabview_create(lv_scr_act(), NULL);
-    lv_obj_set_size(tabview, LV_HOR_RES + 16, LV_VER_RES + 90);
-    lv_obj_set_pos(tabview, -8, -60);
-
-    lv_obj_t *tab1 = lv_tabview_add_tab(tabview, SYMBOL_WIFI);
-    lv_tabview_set_tab_act(tabview, 0, false);
-    lv_obj_set_protect(tabview, LV_PROTECT_PARENT | LV_PROTECT_POS | LV_PROTECT_FOLLOW);
-    lv_tabview_set_anim_time(tabview, 0);
-    lv_page_set_sb_mode(tab1, LV_SB_MODE_OFF);
-    lv_obj_set_protect(tab1, LV_PROTECT_PARENT | LV_PROTECT_POS | LV_PROTECT_FOLLOW);
-    lv_page_set_scrl_fit(tab1, false, false);       /* It must not be automatically sized to allow all children to participate. */
-    lv_page_set_scrl_height(tab1, LV_VER_RES + 20); /* Set height of the scrollable part of a page */
 
     /* wifi config container create */
-    lv_obj_t *cont = lv_cont_create(tab1, NULL);
-    lv_obj_set_size(cont, LV_HOR_RES, LV_VER_RES);
-    lv_cont_set_fit(cont, false, false);
+    g_contain = (lv_scr_act());
 
     /* wifi config label create */
-    lv_obj_t *wifi_config_label = lv_label_create(cont, NULL);
-    lv_label_set_text(wifi_config_label, "Wi-Fi Config");
-    lv_obj_align(wifi_config_label, cont, LV_ALIGN_IN_TOP_MID, 0, 5); /*Align to LV_ALIGN_IN_TOP_MID*/
+    g_wifi_config_label = lv_label_create(g_contain, NULL);
+    lv_label_set_text(g_wifi_config_label, "Wi-Fi Config");
+    lv_obj_align(g_wifi_config_label, g_contain, LV_ALIGN_IN_TOP_MID, 0, 0);
 
-    /* wifi scan label create */
-    lv_obj_t *scan_sw_label = lv_label_create(cont, NULL);
-    lv_label_set_text(scan_sw_label, "Wi-Fi Scan");
-    lv_obj_align(scan_sw_label, cont, LV_ALIGN_IN_TOP_MID, -50, 35); /*Align to LV_ALIGN_IN_TOP_MID*/
+    g_wifi_list = lv_list_create(g_contain, NULL);
+    lv_obj_set_size(g_wifi_list, lv_obj_get_width(g_contain), lv_obj_get_height(g_contain) - lv_obj_get_height(g_wifi_config_label));
+    lv_obj_align(g_wifi_list, NULL, LV_ALIGN_IN_TOP_LEFT, 0, lv_obj_get_height(g_wifi_config_label));
 
-    /* wifi scan btn create */
-    lv_obj_t *scan_sw = lv_sw_create(cont, NULL);
-    lv_sw_set_action(scan_sw, wifi_scan_action);
-    lv_obj_align(scan_sw, cont, LV_ALIGN_IN_TOP_MID, 50, 30);
-
-    /* wifi connect ap label create */
-    lv_obj_t *connectedap_label = lv_label_create(cont, NULL);
-    lv_label_set_text(connectedap_label, "Connected AP:");
-    lv_obj_align(connectedap_label, cont, LV_ALIGN_IN_TOP_MID, -60, 75); /*Align to LV_ALIGN_IN_TOP_MID*/
-
-    /* wifi connect ap */
-    connectedap = lv_label_create(cont, NULL);
-    lv_label_set_text(connectedap, "NULL");
-    lv_obj_align(connectedap, cont, LV_ALIGN_IN_TOP_MID, 40, 75); /*Align to LV_ALIGN_IN_TOP_MID*/
-
-    /* wifi connect ap rssi label create */
-    lv_obj_t *aprssi_label = lv_label_create(cont, NULL);
-    lv_label_set_text(aprssi_label, "        AP RSSI:");
-    lv_obj_align(aprssi_label, cont, LV_ALIGN_IN_TOP_MID, -60, 115); /*Align to LV_ALIGN_IN_TOP_MID*/
-
-    /* wifi connect ap rssi */
-    connectedaprssi = lv_label_create(cont, NULL);
-    lv_label_set_text(connectedaprssi, "NULL");
-    lv_obj_align(connectedaprssi, cont, LV_ALIGN_IN_TOP_MID, 40, 115); /*Align to LV_ALIGN_IN_TOP_MID*/
-
-    /* wifi connect ap bssid label create */
-    lv_obj_t *bssid_label = lv_label_create(cont, NULL);
-    lv_label_set_text(bssid_label, "          BSSID:");
-    lv_obj_align(bssid_label, cont, LV_ALIGN_IN_TOP_MID, -60, 155); /*Align to LV_ALIGN_IN_TOP_MID*/
-
-    /* wifi connect ap bssid */
-    connectedapbssid = lv_label_create(cont, NULL);
-    lv_label_set_text(connectedapbssid, "NULL");
-    lv_obj_align(connectedapbssid, cont, LV_ALIGN_IN_TOP_MID, 40, 155); /*Align to LV_ALIGN_IN_TOP_MID*/
-
-    /* wifi connect ap channel label create */
-    lv_obj_t *channel_label = lv_label_create(cont, NULL);
-    lv_label_set_text(channel_label, "      CHANNEL:");
-    lv_obj_align(channel_label, cont, LV_ALIGN_IN_TOP_MID, -60, 195); /*Align to LV_ALIGN_IN_TOP_MID*/
-
-    /* wifi connect ap channel */
-    connectedapchannel = lv_label_create(cont, NULL);
-    lv_label_set_text(connectedapchannel, "NULL");
-    lv_obj_align(connectedapchannel, cont, LV_ALIGN_IN_TOP_MID, 40, 195); /*Align to LV_ALIGN_IN_TOP_MID*/
 }
 
-static esp_err_t net_event_handler(void *ctx, system_event_t *event)
+static void net_event_handler(void *arg, esp_event_base_t event_base,
+                              int32_t event_id, void *event_data)
 {
-    wifi_mode_t mode;
-    static ap_list_t *ap_list = NULL;
     static int s_disconnected_handshake_count = 0;
     static int s_disconnected_unknown_count = 0;
 
-    switch (event->event_id) {
-    case SYSTEM_EVENT_STA_START:
-        esp_wifi_connect();
-        break;
-    case SYSTEM_EVENT_STA_GOT_IP: {
-        xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
-        esp_wifi_get_mode(&mode);
-        wifi_config_data_t event_data = {0};
-        event_data.event = LVGL_WIFI_CONFIG_CONNECT_SUCCESS;
-        xQueueSend(g_event_queue_handle, &event_data, portMAX_DELAY);
-        strcpy((char *)current_apbssid, (char *)event->event_info.connected.bssid);
-
-        wifi_second_chan_t second = 0;
-        esp_wifi_get_channel(&current_apchannel, &second);
-        break;
-    }
-    case SYSTEM_EVENT_STA_CONNECTED:
-        s_disconnected_unknown_count = 0;
-        s_disconnected_handshake_count = 0;
-        break;
-    case SYSTEM_EVENT_STA_DISCONNECTED: {
-        uint8_t sta_conn_state = 0;
-        system_event_sta_disconnected_t *disconnected = &event->event_info.disconnected;
-        switch (disconnected->reason) {
-        case WIFI_REASON_ASSOC_TOOMANY:
-            ESP_LOGW(TAG, "WIFI_REASON_ASSOC_TOOMANY Disassociated because AP is unable to handle all currently associated STAs");
-            ESP_LOGW(TAG, "The number of connected devices on the router exceeds the limit");
-
-            sta_conn_state = 1;
+    if (event_base == WIFI_EVENT) {
+        switch (event_id) {
+        case WIFI_EVENT_STA_START:
 
             break;
+        case WIFI_EVENT_STA_CONNECTED:
+            s_disconnected_unknown_count = 0;
+            s_disconnected_handshake_count = 0;
+            wifi_event_sta_connected_t *sta_connected = event_data;
+            ESP_LOGI(TAG, "connected ssid: %s", sta_connected->ssid);
+            break;
+        case WIFI_EVENT_STA_DISCONNECTED: {
+            uint8_t sta_conn_state = 0;
+            wifi_event_sta_disconnected_t *disconnected = event_data;
+            switch (disconnected->reason) {
+            case WIFI_REASON_ASSOC_TOOMANY:
+                ESP_LOGW(TAG, "WIFI_REASON_ASSOC_TOOMANY Disassociated because AP is unable to handle all currently associated STAs");
+                ESP_LOGW(TAG, "The number of connected devices on the router exceeds the limit");
 
-        case WIFI_REASON_MIC_FAILURE:              /**< disconnected reason code 14 */
-        case WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT:   /**< disconnected reason code 15 */
-        case WIFI_REASON_GROUP_KEY_UPDATE_TIMEOUT: /**< disconnected reason code 16 */
-        case WIFI_REASON_IE_IN_4WAY_DIFFERS:       /**< disconnected reason code 17 */
-        case WIFI_REASON_HANDSHAKE_TIMEOUT:        /**< disconnected reason code 204 */
-            ESP_LOGW(TAG, "Wi-Fi 4-way handshake failed, count: %d", s_disconnected_handshake_count);
+                sta_conn_state = 1;
 
-            if (++s_disconnected_handshake_count >= 3) {
-                ESP_LOGW(TAG, "Router password error");
-                sta_conn_state = 2;
+                break;
+
+            case WIFI_REASON_MIC_FAILURE:              /**< disconnected reason code 14 */
+            case WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT:   /**< disconnected reason code 15 */
+            case WIFI_REASON_GROUP_KEY_UPDATE_TIMEOUT: /**< disconnected reason code 16 */
+            case WIFI_REASON_IE_IN_4WAY_DIFFERS:       /**< disconnected reason code 17 */
+            case WIFI_REASON_HANDSHAKE_TIMEOUT:        /**< disconnected reason code 204 */
+                ESP_LOGW(TAG, "Wi-Fi 4-way handshake failed, count: %d", s_disconnected_handshake_count);
+
+                if (++s_disconnected_handshake_count >= 3) {
+                    ESP_LOGW(TAG, "Router password error");
+                    sta_conn_state = 2;
+                }
+                break;
+
+            default:
+                if (++s_disconnected_unknown_count > 10) {
+                    ESP_LOGW(TAG, "Router password error");
+                    sta_conn_state = 3;
+                }
+                break;
             }
-            break;
 
+            if (sta_conn_state == 0) {
+                ESP_ERROR_CHECK(esp_wifi_connect());
+            }
+            xEventGroupSetBits(g_wifi_event_group, LVGL_WIFI_CONFIG_CONNECT_FAIL);
+            break;
+        }
+        case WIFI_EVENT_SCAN_DONE: {
+            wifi_event_sta_scan_done_t *scan_done_data = event_data;
+            uint16_t apCount = scan_done_data->number;
+            if (apCount == 0) {
+                ESP_LOGI(TAG, "[ * ] Nothing AP found");
+                break;
+            }
+
+            wifi_ap_record_t *wifi_ap_list = (wifi_ap_record_t *)malloc(sizeof(wifi_ap_record_t) * apCount);
+            if (!wifi_ap_list) {
+                ESP_LOGE(TAG, "[ * ] malloc error, wifi_ap_list is NULL");
+                break;
+            }
+            ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&apCount, wifi_ap_list));
+
+            wifi_config_data.apCount = apCount;
+            wifi_config_data.ap_info_list = (ap_info_t *)malloc(apCount * sizeof(ap_info_t));
+            if (!wifi_config_data.ap_info_list) {
+                ESP_LOGE(TAG, "[ * ] realloc error, ap_info_list is NULL");
+                break;
+            }
+            for (int i = 0; i < apCount; ++i) {
+                wifi_config_data.ap_info_list[i].rssi = wifi_ap_list[i].rssi;
+                wifi_config_data.ap_info_list[i].authmode = wifi_ap_list[i].authmode;
+                memcpy(wifi_config_data.ap_info_list[i].ssid, wifi_ap_list[i].ssid, sizeof(wifi_ap_list[i].ssid));
+            }
+            xEventGroupSetBits(g_wifi_event_group, LVGL_WIFI_CONFIG_SCAN_DONE);
+            esp_wifi_scan_stop();
+            free(wifi_ap_list);
+            break;
+        }
         default:
-            if (++s_disconnected_unknown_count > 10) {
-                ESP_LOGW(TAG, "Router password error");
-                sta_conn_state = 3;
-            }
             break;
         }
-
-        if (sta_conn_state == 0) {
-            ESP_ERROR_CHECK(esp_wifi_connect());
-        }
-        xEventGroupClearBits(wifi_event_group, CONNECTED_BIT);
-        break;
+    } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
+        xEventGroupSetBits(g_wifi_event_group, LVGL_WIFI_CONFIG_CONNECTED);
     }
-    case SYSTEM_EVENT_AP_START:
-        esp_wifi_get_mode(&mode);
-        break;
-    case SYSTEM_EVENT_SCAN_DONE: {
-        esp_wifi_scan_get_ap_num(&apCount);
-        if (apCount == 0) {
-            ESP_LOGI(TAG, "[ * ] Nothing AP found");
-            break;
-        }
-
-        wifi_ap_record_t *wifi_ap_list = (wifi_ap_record_t *)malloc(sizeof(wifi_ap_record_t) * apCount);
-        if (!wifi_ap_list) {
-            ESP_LOGE(TAG, "[ * ] malloc error, wifi_ap_list is NULL");
-            break;
-        }
-        ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&apCount, wifi_ap_list));
-
-        ap_list = (ap_list_t *)realloc(ap_list, apCount * sizeof(ap_list_t));
-        if (!ap_list) {
-            ESP_LOGE(TAG, "[ * ] realloc error, ap_list is NULL");
-            break;
-        }
-        for (int i = 0; i < apCount; ++i) {
-            ap_list[i].rssi = wifi_ap_list[i].rssi;
-            memcpy(ap_list[i].ssid, wifi_ap_list[i].ssid, sizeof(wifi_ap_list[i].ssid));
-        }
-        wifi_config_data_t event_data = {0};
-        event_data.event = LVGL_WIFI_CONFIG_SCAN_DONE;
-        event_data.ctx = ap_list;
-        xQueueSend(g_event_queue_handle, &event_data, portMAX_DELAY);
-        esp_wifi_scan_stop();
-        free(wifi_ap_list);
-        break;
-    }
-    default:
-        break;
-    }
-    return ESP_OK;
 }
 
 static void initialise_wifi(void)
 {
-    tcpip_adapter_init();
-    wifi_event_group = xEventGroupCreate();
-    ESP_ERROR_CHECK(esp_event_loop_init(net_event_handler, NULL));
+    g_wifi_event_group = xEventGroupCreate();
+
+    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    esp_netif_create_default_wifi_sta();
+
+    esp_event_handler_instance_t instance_any_id;
+    esp_event_handler_instance_t instance_got_ip;
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
+                    ESP_EVENT_ANY_ID,
+                    &net_event_handler,
+                    NULL,
+                    &instance_any_id));
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT,
+                    IP_EVENT_STA_GOT_IP,
+                    &net_event_handler,
+                    NULL,
+                    &instance_got_ip));
+
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
     ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
@@ -720,15 +511,15 @@ static void initialise_wifi(void)
     ESP_ERROR_CHECK(esp_wifi_start());
 }
 
-static void wifi_config_event_cb(void *event)
+static void wifi_config_event_task(void *args)
 {
-    wifi_config_data_t event_data = {0};
     while (1) {
-        if (xQueueReceive(g_event_queue_handle, &event_data, portMAX_DELAY) != pdPASS) {
-            continue;
-        }
+        EventBits_t uxBits;
+        uxBits = xEventGroupWaitBits(g_wifi_event_group,
+                                     (LVGL_WIFI_CONFIG_SCAN | LVGL_WIFI_CONFIG_SCAN_DONE | LVGL_WIFI_CONFIG_CONNECTED | LVGL_WIFI_CONFIG_CONNECT_FAIL | LVGL_WIFI_CONFIG_TRY_CONNECT),
+                                     pdTRUE, pdFALSE, portMAX_DELAY);
 
-        switch (event_data.event) {
+        switch (uxBits) {
         case LVGL_WIFI_CONFIG_SCAN: {
             wifi_scan_config_t scanConf = {
                 .ssid = NULL,
@@ -737,29 +528,29 @@ static void wifi_config_event_cb(void *event)
                 .show_hidden = false
             };
             ESP_ERROR_CHECK(esp_wifi_scan_start(&scanConf, false));
-
-            refresh_wifi_list(NULL);
+            start_wifi_scan();
             break;
         }
         case LVGL_WIFI_CONFIG_SCAN_DONE: {
-            ESP_LOGI(TAG, "[ * ] running refresh wifi list：%d\n", apCount);
-            wifi_scan_done(event_data);
+            ESP_LOGI(TAG, "[ * ] running refresh wifi list：%d\n", wifi_config_data.apCount);
+            wifi_scan_done();
             break;
         }
-        case LVGL_WIFI_CONFIG_CONNECT_SUCCESS:
+        case LVGL_WIFI_CONFIG_CONNECTED:
             wifi_connect_success();
             break;
 
         case LVGL_WIFI_CONFIG_CONNECT_FAIL:
+            esp_wifi_disconnect();
             wifi_connect_fail();
             break;
 
         case LVGL_WIFI_CONFIG_TRY_CONNECT: {
             wifi_config_t sta_config = {0};
-            strcpy((char *)sta_config.sta.ssid, (char *)ap_list[current_ap].ssid);
-            strcpy((char *)sta_config.sta.password, (char *)current_appass);
-            ESP_LOGI(TAG, "[ * ] Select SSID：%s", (char *)ap_list[current_ap].ssid);
-            ESP_LOGI(TAG, "[ * ] Input Password：%s", (char *)current_appass);
+            strcpy((char *)sta_config.sta.ssid, wifi_config_data.ap_info_list[wifi_config_data.current_ap].ssid);
+            strcpy((char *)sta_config.sta.password, wifi_config_data.current_pwd);
+            ESP_LOGI(TAG, "[ * ] Select SSID：%s", sta_config.sta.ssid);
+            ESP_LOGI(TAG, "[ * ] Input Password：%s", sta_config.sta.password);
             esp_wifi_set_config(ESP_IF_WIFI_STA, &sta_config);
             esp_wifi_disconnect();
             esp_wifi_connect();
@@ -780,15 +571,6 @@ static void wifi_config_event_cb(void *event)
 *******************************************************************************/
 void app_main()
 {
-    /* Initialize LittlevGL GUI */
-    lvgl_init();
-
-    /* wifi config example */
-    littlevgl_wificonfig();
-
-    g_event_queue_handle = xQueueCreate(10, sizeof(wifi_config_data_t));
-    xTaskCreate(wifi_config_event_cb, "wifi_config_event_cb", 2048, NULL, 4, NULL);
-
     /* Initialize NVS */
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -796,9 +578,64 @@ void app_main()
         ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK(ret);
-    
+
+    iot_board_init();
+    spi_bus_handle_t spi2_bus = iot_board_get_handle(BOARD_SPI2_ID);
+
+    scr_driver_t lcd_drv;
+    touch_panel_driver_t touch_drv;
+    scr_interface_spi_config_t spi_lcd_cfg = {
+        .spi_bus = spi2_bus,
+        .pin_num_cs = BOARD_LCD_SPI_CS_PIN,
+        .pin_num_dc = BOARD_LCD_SPI_DC_PIN,
+        .clk_freq = BOARD_LCD_SPI_CLOCK_FREQ,
+        .swap_data = true,
+    };
+
+    scr_interface_driver_t *iface_drv;
+    scr_interface_create(SCREEN_IFACE_SPI, &spi_lcd_cfg, &iface_drv);
+
+    scr_controller_config_t lcd_cfg = {
+        .interface_drv = iface_drv,
+        .pin_num_rst = 18,
+        .pin_num_bckl = 23,
+        .rst_active_level = 0,
+        .bckl_active_level = 1,
+        .offset_hor = 0,
+        .offset_ver = 0,
+        .width = 240,
+        .height = 320,
+        .rotate = SCR_DIR_TBLR,
+    };
+    scr_find_driver(SCREEN_CONTROLLER_ILI9341, &lcd_drv);
+    lcd_drv.init(&lcd_cfg);
+
+    touch_panel_config_t touch_cfg = {
+        .interface_spi = {
+            .spi_bus = spi2_bus,
+            .pin_num_cs = BOARD_TOUCH_SPI_CS_PIN,
+            .clk_freq = 10000000,
+        },
+        .interface_type = TOUCH_PANEL_IFACE_SPI,
+        .pin_num_int = -1,
+        .direction = TOUCH_DIR_TBLR,
+        .width = 240,
+        .height = 320,
+    };
+    touch_panel_find_driver(TOUCH_PANEL_CONTROLLER_XPT2046, &touch_drv);
+    touch_drv.init(&touch_cfg);
+    touch_drv.calibration_run(&lcd_drv, false);
+    /* Initialize LittlevGL GUI */
+    lvgl_init(&lcd_drv, &touch_drv);
+
+    littlevgl_wificonfig_init();
+
     /* initialise wifi */
     initialise_wifi();
+    xTaskCreate(wifi_config_event_task, "config_task", 2048, NULL, 4, NULL);
+
+    vTaskDelay(pdMS_TO_TICKS(1000));
+    wifi_scan_start();
 
     ESP_LOGI(TAG, "[APP] IDF version: %s", esp_get_idf_version());
     ESP_LOGI(TAG, "[APP] Free memory: %d bytes", esp_get_free_heap_size());
