@@ -132,7 +132,7 @@ esp_err_t iot_light_delete(light_handle_t light_handle)
             goto FREE_MEM;
         }
     }
-    ledc_fade_func_uninstall(0);
+    ledc_fade_func_uninstall();
     g_fade_installed = false;
 FREE_MEM:
     free(light_handle);
