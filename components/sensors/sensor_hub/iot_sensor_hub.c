@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <string.h>
+#include <sys/queue.h>
 #include "esp_log.h"
 #include "iot_sensor_hub.h"
 
