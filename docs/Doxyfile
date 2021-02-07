@@ -35,6 +35,7 @@ INPUT = \
     ../../components/display/screen/screen_driver.h \
     ../../components/display/screen/interface_driver/scr_interface_driver.h \
     ../../components/display/touch_panel/touch_panel.h \
+    ../../components/led/indicator/include/led_indicator.h \
 
 ## Get warnings for functions that have no documentation for their parameters or return value
 ##
