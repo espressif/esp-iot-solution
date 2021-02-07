@@ -42,7 +42,7 @@ static const char *TAG = "led_indicator";
  * @brief connecting to AP (or Cloud)
  * 
  */
-const led_indicator_blink_step_t connecting[] = {
+static const blink_step_t connecting[] = {
     {LED_BLINK_HOLD, LED_STATE_ON, 200},
     {LED_BLINK_HOLD, LED_STATE_OFF, 800},
     {LED_BLINK_LOOP, 0, 0},
@@ -52,7 +52,7 @@ const led_indicator_blink_step_t connecting[] = {
  * @brief connected to AP (or Cloud) succeed
  * 
  */
-const led_indicator_blink_step_t connected[] = {
+static const blink_step_t connected[] = {
     {LED_BLINK_HOLD, LED_STATE_ON, 1000},
     {LED_BLINK_LOOP, 0, 0},
 };
@@ -61,7 +61,7 @@ const led_indicator_blink_step_t connected[] = {
  * @brief reconnecting to AP (or Cloud), if lose connection 
  * 
  */
-const led_indicator_blink_step_t reconnecting[] = {
+static const blink_step_t reconnecting[] = {
     {LED_BLINK_HOLD, LED_STATE_ON, 100},
     {LED_BLINK_HOLD, LED_STATE_OFF, 200},
     {LED_BLINK_LOOP, 0, 0},
@@ -71,7 +71,7 @@ const led_indicator_blink_step_t reconnecting[] = {
  * @brief updating software
  * 
  */
-const led_indicator_blink_step_t updating[] = {
+static const blink_step_t updating[] = {
     {LED_BLINK_HOLD, LED_STATE_ON, 50},
     {LED_BLINK_HOLD, LED_STATE_OFF, 100},
     {LED_BLINK_HOLD, LED_STATE_ON, 50},
@@ -83,7 +83,7 @@ const led_indicator_blink_step_t updating[] = {
  * @brief restoring factory settings
  * 
  */
-const led_indicator_blink_step_t factory_reset[] = {
+static const blink_step_t factory_reset[] = {
     {LED_BLINK_HOLD, LED_STATE_ON, 200},
     {LED_BLINK_HOLD, LED_STATE_OFF, 200},
     {LED_BLINK_LOOP, 0, 0},
@@ -93,7 +93,7 @@ const led_indicator_blink_step_t factory_reset[] = {
  * @brief provisioning
  * 
  */
-const led_indicator_blink_step_t provisioning[] = {
+static const blink_step_t provisioning[] = {
     {LED_BLINK_HOLD, LED_STATE_ON, 500},
     {LED_BLINK_HOLD, LED_STATE_OFF, 500},
     {LED_BLINK_LOOP, 0, 0},
@@ -103,23 +103,24 @@ const led_indicator_blink_step_t provisioning[] = {
  * @brief provision done
  * 
  */
-const led_indicator_blink_step_t provisioned[] = {
+static const blink_step_t provisioned[] = {
     {LED_BLINK_HOLD, LED_STATE_OFF, 1000},
     {LED_BLINK_STOP, 0, 0},
 };
 
 /**
- * @brief The blink lists with smaller index has the higher priority
- * eg. factory_reset priority is higher than updating
+ * @brief led indicator blink lists, the index like BLINK_FACTORY_RESET defined the priority of the blink
+ * 
  */
-led_indicator_blink_step_t const * led_indicator_blink_lists[] = {
-    factory_reset,
-    updating,
-    connected,
-    provisioned,
-    reconnecting,
-    connecting,
-    provisioning,
+blink_step_t const * led_indicator_blink_lists[] = {
+    [BLINK_FACTORY_RESET] = factory_reset,
+    [BLINK_UPDATING] = updating,
+    [BLINK_CONNECTED] = connected,
+    [BLINK_PROVISIONED] = provisioned,
+    [BLINK_RECONNECTING] = reconnecting,
+    [BLINK_CONNECTING] = connecting,
+    [BLINK_PROVISIONING] = provisioning,
+    [BLINK_MAX] = NULL,
 };
 
 /* Led blink_steps handling machine implementation */
@@ -130,8 +131,6 @@ led_indicator_blink_step_t const * led_indicator_blink_lists[] = {
  * 
  */
 typedef struct {
-    bool is_init; /*!< if led driver is inited */
-    bool disable; /*!< disable the led, default enable*/
     bool off_level; /*!< gpio level during led turn off */
     int io_num; /*!< gpio number of the led indicator */
     led_indicator_mode_t mode; /*!< led work mode, eg. gpio or pwm mode */
@@ -228,7 +227,7 @@ static bool _led_gpio_deinit(int io_num)
  * @param state target state
  * @return esp_err_t 
  */
-static esp_err_t _led_set_state(int io_num, bool off_level, led_indicator_state_t state)
+static esp_err_t _led_set_state(int io_num, bool off_level, blink_step_state_t state)
 {
     uint32_t level = 0;
 
@@ -246,24 +245,6 @@ static esp_err_t _led_set_state(int io_num, bool off_level, led_indicator_state_
     }
 
     return gpio_set_level(io_num, level);
-}
-
-
-/**
- * @brief return blink steps index in led_indicator_blink_lists
- * 
- * @param blink_steps predefined blink steps
- * @return int index in led_indicator_blink_lists
- */
-static int _blink_list_find(const led_indicator_blink_step_t blink_steps[])
-{
-    for(size_t index = 0; index < BLINK_LIST_NUM; index++) {
-        if(led_indicator_blink_lists[index] == blink_steps) {
-            return index; 
-        }
-    }
-
-    return NULL_ACTIVE_BLINK;
 }
 
 /**
@@ -302,7 +283,7 @@ static void _blink_list_runner(xTimerHandle xTimer)
 
         int active_blink = p_led_indicator->active_blink;
         int active_step = p_led_indicator->p_blink_steps[active_blink];
-        const led_indicator_blink_step_t *p_blink_step = &led_indicator_blink_lists[active_blink][active_step];
+        const blink_step_t *p_blink_step = &led_indicator_blink_lists[active_blink][active_step];
 
         p_led_indicator->p_blink_steps[active_blink] += 1;
 
@@ -347,7 +328,6 @@ led_indicator_handle_t led_indicator_create(int io_num, const led_indicator_conf
     snprintf(timmer_name, sizeof(timmer_name) - 1, "%s%02x", "led_tmr_", io_num);
     _led_indicator_t *p_led_indicator = (_led_indicator_t *)calloc(1, sizeof(_led_indicator_t));
     LED_INDICATOR_CHECK(p_led_indicator != NULL, "calloc memory failed", NULL);
-    p_led_indicator->disable = false;
     p_led_indicator->off_level = config->off_level;
     p_led_indicator->io_num = io_num;
     p_led_indicator->mode = config->mode;
@@ -377,7 +357,6 @@ led_indicator_handle_t led_indicator_create(int io_num, const led_indicator_conf
             break;
     }
 
-    p_led_indicator->is_init = true;
     _led_indicator_add_node(p_led_indicator);
     return (led_indicator_handle_t)p_led_indicator;
 
@@ -435,38 +414,32 @@ esp_err_t led_indicator_delete(led_indicator_handle_t* p_handle)
     return ESP_OK;
 }
 
-esp_err_t led_indicator_start(led_indicator_handle_t handle, const led_indicator_blink_step_t blink_steps[])
+esp_err_t led_indicator_start(led_indicator_handle_t handle, led_indicator_blink_type_t blink_type)
 {
-    LED_INDICATOR_CHECK(handle != NULL && blink_steps != NULL, "invalid p_handle", ESP_ERR_INVALID_ARG);
-    int index = _blink_list_find(blink_steps);
-    LED_INDICATOR_CHECK( index >= 0, "no blink list found", ESP_ERR_NOT_FOUND);
+    LED_INDICATOR_CHECK(handle != NULL && blink_type >= 0 && blink_type < BLINK_MAX, "invalid p_handle", ESP_ERR_INVALID_ARG);
+    LED_INDICATOR_CHECK(led_indicator_blink_lists[blink_type] != NULL, "undefined blink_type", ESP_ERR_INVALID_ARG);
     _led_indicator_t *p_led_indicator = (_led_indicator_t *)handle;
-
     xSemaphoreTake(p_led_indicator->mutex, portMAX_DELAY);
-    p_led_indicator->p_blink_steps[index] = 0;
+    p_led_indicator->p_blink_steps[blink_type] = 0;
     _blink_list_switch(p_led_indicator);
     xSemaphoreGive(p_led_indicator->mutex);
 
-    if(p_led_indicator->active_blink == index) { //re-run from first step
+    if(p_led_indicator->active_blink == blink_type) { //re-run from first step
         _blink_list_runner(p_led_indicator->h_timer);
     }
 
     return ESP_OK;
 }
 
-esp_err_t led_indicator_stop(led_indicator_handle_t handle, const led_indicator_blink_step_t blink_steps[])
+esp_err_t led_indicator_stop(led_indicator_handle_t handle, led_indicator_blink_type_t blink_type)
 {
-    LED_INDICATOR_CHECK(handle != NULL && blink_steps != NULL, "invalid p_handle", ESP_ERR_INVALID_ARG);
-    int index = _blink_list_find(blink_steps);
-    LED_INDICATOR_CHECK( index >= 0, "no blink list found", ESP_ERR_NOT_FOUND);
+    LED_INDICATOR_CHECK(handle != NULL && blink_type >= 0 && blink_type < BLINK_MAX, "invalid p_handle", ESP_ERR_INVALID_ARG);
+    LED_INDICATOR_CHECK(led_indicator_blink_lists[blink_type] != NULL, "undefined blink_type", ESP_ERR_INVALID_ARG);
     _led_indicator_t *p_led_indicator = (_led_indicator_t *)handle;
-
     xSemaphoreTake(p_led_indicator->mutex, portMAX_DELAY);
-    p_led_indicator->p_blink_steps[index] = LED_BLINK_STOP;
+    p_led_indicator->p_blink_steps[blink_type] = LED_BLINK_STOP;
     _blink_list_switch(p_led_indicator); //stop and swith to next blink steps
     xSemaphoreGive(p_led_indicator->mutex);
-
     _blink_list_runner(p_led_indicator->h_timer);
-
     return ESP_OK;
 }

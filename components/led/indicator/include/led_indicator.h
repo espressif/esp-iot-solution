@@ -28,8 +28,8 @@
  */
 typedef enum {
     LED_STATE_OFF = 0, /**< turn off the led */ 
-    LED_STATE_ON = 1, /**< turn on the led */ 
-} led_indicator_state_t;
+    LED_STATE_ON = 1,  /**< turn on the led */ 
+} blink_step_state_t;
 
 /**
  * @brief actions in this type
@@ -37,8 +37,8 @@ typedef enum {
  */
 typedef enum {
     LED_BLINK_STOP = -1, /**< stop the blink */ 
-    LED_BLINK_HOLD, /**< hold the on-off state */ 
-    LED_BLINK_LOOP, /**< loop from first step */ 
+    LED_BLINK_HOLD,      /**< hold the on-off state */ 
+    LED_BLINK_LOOP,      /**< loop from first step */ 
 } blink_step_type_t;
 
 /**
@@ -46,22 +46,10 @@ typedef enum {
  * 
  */
 typedef struct {
-    blink_step_type_t type;          /**< actions is this step */ 
-    led_indicator_state_t on_off;    /**< hold on or off, set NULL if not LED_BLINK_HOLD*/ 
+    blink_step_type_t type;          /**< action type in this step */ 
+    blink_step_state_t on_off;       /**< hold on or off, set NULL if not LED_BLINK_HOLD*/ 
     uint32_t hold_time_ms;           /**< hold time(ms), set NULL if not LED_BLINK_HOLD,*/ 
-} led_indicator_blink_step_t;
-
-/**
- * @brief predefined LED indicator blink steps
- * 
- */
-extern const led_indicator_blink_step_t connecting[]; /**< connecting to AP (or Cloud) */
-extern const led_indicator_blink_step_t connected[]; /**<  connected to AP (or Cloud) succeed */
-extern const led_indicator_blink_step_t reconnecting[]; /**< reconnecting to AP (or Cloud), if lose connection */ 
-extern const led_indicator_blink_step_t updating[]; /**< updating software */ 
-extern const led_indicator_blink_step_t factory_reset[]; /**< restoring factory settings */ 
-extern const led_indicator_blink_step_t provisioning[]; /**< provisioning */ 
-extern const led_indicator_blink_step_t provisioned[]; /**< provision done */ 
+} blink_step_t;
 
 /**
  * @brief led indicator blink mode, as a member of led_indicator_config_t
@@ -79,6 +67,21 @@ typedef struct {
     bool off_level; /*!< gpio level of turn off. 0 if attach led positive side to esp32 gpio pin, 1 if attach led negative side*/
     led_indicator_mode_t mode; /*!< led work mode, eg. gpio or pwm mode */
 }led_indicator_config_t;
+
+/**
+ * @brief The blink type with smaller index has the higher priority
+ * eg. BLINK_FACTORY_RESET priority is higher than BLINK_UPDATING
+ */
+typedef enum {
+    BLINK_FACTORY_RESET,           /**< restoring factory settings */
+    BLINK_UPDATING,                /**< updating software */ 
+    BLINK_CONNECTED,               /**< connected to AP (or Cloud) succeed */
+    BLINK_PROVISIONED,             /**< provision done */ 
+    BLINK_CONNECTING,              /**< connecting to AP (or Cloud) */
+    BLINK_RECONNECTING,            /**< reconnecting to AP (or Cloud), if lose connection */ 
+    BLINK_PROVISIONING,            /**< provisioning */ 
+    BLINK_MAX,                     /**< INVALIED type */ 
+} led_indicator_blink_type_t;
 
 typedef void* led_indicator_handle_t; /*!< led indicator operation handle */
 
@@ -111,29 +114,28 @@ led_indicator_handle_t led_indicator_get_handle(int io_num);
 esp_err_t led_indicator_delete(led_indicator_handle_t* p_handle);
 
 /**
- * @brief start a new blink_steps on the led indicator. if mutiple blink_steps started simultaneously,
+ * @brief start a new blink_type on the led indicator. if mutiple blink_type started simultaneously,
  * it will be executed according to priority.
  * 
  * @param handle led indicator handle
- * @param blink_steps predefined blink steps
+ * @param blink_type predefined blink type
  * @return esp_err_t
  *     - ESP_ERR_INVALID_ARG   if parameter is invalid
- *     - ESP_ERR_NOT_FOUND no predefined blink_steps found
+ *     - ESP_ERR_NOT_FOUND no predefined blink_type found
  *     - ESP_OK Success
  */
-esp_err_t led_indicator_start(led_indicator_handle_t handle, const led_indicator_blink_step_t blink_steps[]);
+esp_err_t led_indicator_start(led_indicator_handle_t handle, led_indicator_blink_type_t blink_type);
 
 /**
- * @brief stop a blink_steps. you can stop a blink_steps at any time, no matter it is executing or waiting to be executed.
+ * @brief stop a blink_type. you can stop a blink_type at any time, no matter it is executing or waiting to be executed.
  * 
  * @param handle led indicator handle
- * @param blink_steps predefined blink steps
+ * @param blink_type predefined blink type
  * @return esp_err_t
  *     - ESP_ERR_INVALID_ARG   if parameter is invalid
- *     - ESP_ERR_NOT_FOUND no predefined blink_steps found
+ *     - ESP_ERR_NOT_FOUND no predefined blink_type found
  *     - ESP_OK Success
  */
-esp_err_t led_indicator_stop(led_indicator_handle_t handle, const led_indicator_blink_step_t blink_steps[]);
-
+esp_err_t led_indicator_stop(led_indicator_handle_t handle, led_indicator_blink_type_t blink_type);
 
 #endif

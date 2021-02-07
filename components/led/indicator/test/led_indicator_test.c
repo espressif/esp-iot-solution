@@ -49,58 +49,58 @@ void led_indicator_deinit()
 void led_indicator_gpio_mode_test_all()
 {
     ESP_LOGI(TAG, "connecting.....");
-    esp_err_t ret = led_indicator_start(led_handle_0, connecting);
+    esp_err_t ret = led_indicator_start(led_handle_0, BLINK_CONNECTING);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(4000 / portTICK_RATE_MS);
-    ret = led_indicator_stop(led_handle_0, connecting);
+    ret = led_indicator_stop(led_handle_0, BLINK_CONNECTING);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(1000 / portTICK_RATE_MS);
 
     ESP_LOGI(TAG, "connected.....");
-    ret = led_indicator_start(led_handle_0, connected);
+    ret = led_indicator_start(led_handle_0, BLINK_CONNECTED);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(4000 / portTICK_RATE_MS);
-    ret = led_indicator_stop(led_handle_0, connected);
+    ret = led_indicator_stop(led_handle_0, BLINK_CONNECTED);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(1000 / portTICK_RATE_MS);
 
     ESP_LOGI(TAG, "reconnecting.....");
-    ret = led_indicator_start(led_handle_0, reconnecting);
+    ret = led_indicator_start(led_handle_0, BLINK_RECONNECTING);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(4000 / portTICK_RATE_MS);
-    ret = led_indicator_stop(led_handle_0, reconnecting);
+    ret = led_indicator_stop(led_handle_0, BLINK_RECONNECTING);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(1000 / portTICK_RATE_MS);
 
     ESP_LOGI(TAG, "updating.....");
-    ret = led_indicator_start(led_handle_0, updating);
+    ret = led_indicator_start(led_handle_0, BLINK_UPDATING);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(4000 / portTICK_RATE_MS);
-    ret = led_indicator_stop(led_handle_0, updating);
+    ret = led_indicator_stop(led_handle_0, BLINK_UPDATING);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(1000 / portTICK_RATE_MS);
 
     ESP_LOGI(TAG, "factory_reset.....");
-    ret = led_indicator_start(led_handle_0, factory_reset);
+    ret = led_indicator_start(led_handle_0, BLINK_FACTORY_RESET);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(4000 / portTICK_RATE_MS);
-    ret = led_indicator_stop(led_handle_0, factory_reset);
+    ret = led_indicator_stop(led_handle_0, BLINK_FACTORY_RESET);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(1000 / portTICK_RATE_MS);
 
     ESP_LOGI(TAG, "provisioning.....");
-    ret = led_indicator_start(led_handle_0, provisioning);
+    ret = led_indicator_start(led_handle_0, BLINK_PROVISIONING);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(4000 / portTICK_RATE_MS);
-    ret = led_indicator_stop(led_handle_0, provisioning);
+    ret = led_indicator_stop(led_handle_0, BLINK_PROVISIONING);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(1000 / portTICK_RATE_MS);
 
     ESP_LOGI(TAG, "provisioned.....");
-    ret = led_indicator_start(led_handle_0, provisioned);
+    ret = led_indicator_start(led_handle_0, BLINK_PROVISIONED);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(4000 / portTICK_RATE_MS);
-    ret = led_indicator_stop(led_handle_0, provisioned);
+    ret = led_indicator_stop(led_handle_0, BLINK_PROVISIONED);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(1000 / portTICK_RATE_MS);
 
@@ -117,24 +117,24 @@ TEST_CASE("blink test all in order", "[led][indicator]")
 void led_indicator_gpio_mode_preempt()
 {
     ESP_LOGI(TAG, "connecting.....");
-    esp_err_t ret = led_indicator_start(led_handle_0, connecting);
+    esp_err_t ret = led_indicator_start(led_handle_0, BLINK_CONNECTING);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(3000 / portTICK_RATE_MS);
 
 
     ESP_LOGI(TAG, "factory_reset.....");
-    ret = led_indicator_start(led_handle_0, factory_reset); //higer priority than connecting
+    ret = led_indicator_start(led_handle_0, BLINK_FACTORY_RESET); //higer priority than connecting
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(3000 / portTICK_RATE_MS);
 
     ESP_LOGI(TAG, "factory_reset stop");
-    ret = led_indicator_stop(led_handle_0, factory_reset); //then switch to low priority
+    ret = led_indicator_stop(led_handle_0, BLINK_FACTORY_RESET); //then switch to low priority
     TEST_ASSERT(ret == ESP_OK);
     ESP_LOGI(TAG, "connecting.....");
     vTaskDelay(3000 / portTICK_RATE_MS);
 
     ESP_LOGI(TAG, "connecting stop");
-    ret = led_indicator_stop(led_handle_0, connecting);
+    ret = led_indicator_stop(led_handle_0, BLINK_CONNECTING);
     TEST_ASSERT(ret == ESP_OK);
 }
 
@@ -183,56 +183,56 @@ void led_indicator_gpio_mode_three_led()
     led_indicator_handle_t led_system = led_handle_2;
 
     ESP_LOGI(TAG, "provisioning.....");
-    esp_err_t ret = led_indicator_start(provision, provisioning);
+    esp_err_t ret = led_indicator_start(provision, BLINK_PROVISIONING);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(4000 / portTICK_RATE_MS);
 
     ESP_LOGI(TAG, "provisioned.....");
-    ret = led_indicator_stop(provision, provisioning);
+    ret = led_indicator_stop(provision, BLINK_PROVISIONING);
     TEST_ASSERT(ret == ESP_OK);
-    ret = led_indicator_start(provision, provisioned);
+    ret = led_indicator_start(provision, BLINK_PROVISIONED);
     TEST_ASSERT(ret == ESP_OK);
 
     ESP_LOGI(TAG, "connecting.....");
-    ret = led_indicator_start(led_connect, connecting);
+    ret = led_indicator_start(led_connect, BLINK_CONNECTING);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(4000 / portTICK_RATE_MS);
 
     ESP_LOGI(TAG, "connected.....");
-    ret = led_indicator_stop(led_connect, connecting);
+    ret = led_indicator_stop(led_connect, BLINK_CONNECTING);
     TEST_ASSERT(ret == ESP_OK);
-    ret = led_indicator_start(led_connect, connected);
+    ret = led_indicator_start(led_connect, BLINK_CONNECTED);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(4000 / portTICK_RATE_MS);
 
     ESP_LOGI(TAG, "lost connection");
-    ret = led_indicator_stop(led_connect, connected);
+    ret = led_indicator_stop(led_connect, BLINK_CONNECTED);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(1000 / portTICK_RATE_MS);
 
     ESP_LOGI(TAG, "reconnecting.....");
-    ret = led_indicator_start(led_connect, reconnecting);
+    ret = led_indicator_start(led_connect, BLINK_RECONNECTING);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(4000 / portTICK_RATE_MS);
 
     ESP_LOGI(TAG, "reconnected.....");
-    ret = led_indicator_stop(led_connect, reconnecting);
+    ret = led_indicator_stop(led_connect, BLINK_RECONNECTING);
     TEST_ASSERT(ret == ESP_OK);
-    ret = led_indicator_start(led_connect, connected);
+    ret = led_indicator_start(led_connect, BLINK_CONNECTED);
     TEST_ASSERT(ret == ESP_OK);
 
     ESP_LOGI(TAG, "updating.....");
-    ret = led_indicator_start(led_system, updating);
+    ret = led_indicator_start(led_system, BLINK_UPDATING);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(4000 / portTICK_RATE_MS);
-    ret = led_indicator_stop(led_system, updating);
+    ret = led_indicator_stop(led_system, BLINK_UPDATING);
     TEST_ASSERT(ret == ESP_OK);
 
     ESP_LOGI(TAG, "factory_reset.....");
-    ret = led_indicator_start(led_system, factory_reset);
+    ret = led_indicator_start(led_system, BLINK_FACTORY_RESET);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(4000 / portTICK_RATE_MS);
-    ret = led_indicator_stop(led_system, factory_reset);
+    ret = led_indicator_stop(led_system, BLINK_FACTORY_RESET);
     TEST_ASSERT(ret == ESP_OK);
 
     ESP_LOGI(TAG, "test all condition done.....");
