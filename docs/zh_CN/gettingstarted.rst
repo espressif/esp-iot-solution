@@ -3,15 +3,15 @@
 
 :link_to_translation:`en:[English]`
 
-本文档旨在指导用户搭建 ESP-IoT-Solution（Espressif IoT Solution）开发环境，通过一个简单的示例展示如何使用 ESP-IoT-Solution 搭建环境、创建工程、编译和下载固件至 ESP32 / ESP32-S 开发板等步骤。
+本文档旨在指导用户搭建 ESP-IoT-Solution (Espressif IoT Solution) 开发环境，通过一个简单的示例展示如何使用 ESP-IoT-Solution 搭建环境、创建工程、编译和下载固件至 ESP32/ESP32-S 系列开发板等步骤。
 
 ESP-IoT-Solution 简介
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-ESP-IoT-Solution 包含物联网系统开发中常用的外设驱动和代码框架，可作为 ESP-IDF 的补充组件，方便用户实现更简单的开发，内容如下：
+ESP-IoT-Solution 包含物联网系统开发中常用的外设驱动和代码框架，可作为 ESP-IDF 的补充组件，方便用户实现更简单的开发，其中包含的内容如下：
 
-- 包含传感器、显示屏、音频设备、输入设备、执行机构等设备驱动；
-- 包含低功耗、安全加密、存储方案等代码框架或说明文档；
+- 传感器、显示屏、音频设备、输入设备、执行机构等设备驱动；
+- 低功耗、安全加密、存储方案等代码框架或说明文档；
 - 从实际应用的角度出发，为乐鑫开源解决方案提供了入口指引。
 
 ESP-IoT-Solution 版本
@@ -34,36 +34,36 @@ ESP-IoT-Solution 版本
 ESP-IDF 简介
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-ESP-IDF 是乐鑫为 ESP32 / ESP32-S2 提供的物联网开发框架:
+ESP-IDF 是乐鑫为 ESP32/ESP32-S2 提供的物联网开发框架：
 
 - ESP-IDF 包含一系列库及头文件，提供了基于 ESP32/ESP32-S2 构建软件项目所需的核心组件;
 - ESP-IDF 还提供了开发和量产过程中最常用的工具及功能，例如：构建、烧录、调试和测量等。
 
-.. 注解::
+.. Note::
 
     详情请查阅：`ESP-IDF 编程指南`_。
 
 
-ESP32 / ESP32-S 简介
+ESP32/ESP32-S 简介
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-您可以选择任意 ESP32 / ESP32-S 开发板使用 ESP-IoT-Solution，或者选择 `板级支持组件 <./basic/boards.html>`_ 中支持的开发板快速开始。
+您可以选择任意 ESP32/ESP32-S 系列开发板使用 ESP-IoT-Solution，或者选择 `板级支持组件 <./basic/boards.html>`_ 中支持的开发板快速开始。
 
-ESP32 / ESP32-S 系列 SoC 支持以下功能 :sup:`1`：
+ESP32/ESP32-S 系列 SoC 支持以下功能：
 
 - 2.4 GHz Wi-Fi
 - 蓝牙
-- 高性能单核、双核处理器，运行频率可达 240 Mhz
+- 高性能单核、双核处理器，运行频率可达 240 MHz
 - 超低功耗协处理器
 - 多种外设，包括 GPIO、I2C、I2S、SPI、UART、SDIO、RMT、LEDC PWM、Ethernet、TWAI、Touch、USB OTG 等
 - 丰富的内存资源，内部 RAM 可达 520 KB，同时支持扩展 PSRAM
 - 支持硬件加密等安全功能
 
-ESP32 / ESP32-S 系列 SoC 采用 40 nm 工艺制成，具有最佳的功耗性能、射频性能、稳定性、通用性和可靠性，适用于各种应用场景和不同功耗需求。
+ESP32/ESP32-S 系列 SoC 采用 40 nm 工艺制成，具有最佳的功耗性能、射频性能、稳定性、通用性和可靠性，适用于各种应用场景和不同功耗需求。
 
-.. 注解::
+.. Note::
 
-    :sup:`1` 不同系列配置不同，详情请查阅 `ESP 产品选型工具`_
+    不同系列 SoC 配置不同，详情请查阅 `ESP 产品选型工具`_。
 
 
 配置开发环境
@@ -72,8 +72,7 @@ ESP32 / ESP32-S 系列 SoC 采用 40 nm 工艺制成，具有最佳的功耗性�
 1. 安装 ESP-IDF
 *******************
 
-由于 ESP-IoT-Solution 依赖 ESP-IDF 的基础功能和编译工具，因此首先需要参考 `ESP-IDF 详细安装步骤`_ 完成 ESP-IDF 开发环境的搭建，
-请注意不同的 `ESP-IoT-Solution 版本`_ 依赖的 ESP-IDF 版本可能不同，例如 release/v2.0 版本依赖 v4.2 版本的 ESP-IDF。
+由于 ESP-IoT-Solution 依赖 ESP-IDF 的基础功能和编译工具，因此首先需要参考 `ESP-IDF 详细安装步骤`_ 完成 ESP-IDF 开发环境的搭建。请注意，不同 `ESP-IoT-Solution 版本`_ 依赖的 ESP-IDF 版本可能不同，例如 release/v2.0 版本依赖 v4.2 版本的 ESP-IDF。
 
 2. 获取 ESP-IoT-Solution
 *****************************
@@ -90,7 +89,7 @@ ESP32 / ESP32-S 系列 SoC 采用 40 nm 工艺制成，具有最佳的功耗性�
 
     git clone -b release/v2.0 --recursive https://github.com/espressif/esp-iot-solution
 
-对于其它版本，请将 ``release/v2.0`` 替换成目标分支名
+对于其它版本，请将 ``release/v2.0`` 替换成目标分支名。
 
 使用 ESP-IoT-Solution 组件
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -117,9 +116,9 @@ ESP32 / ESP32-S 系列 SoC 采用 40 nm 工艺制成，具有最佳的功耗性�
 
 方法 3. 复制 ESP-IoT-Solution 指定组件到工程目录: 直接将该组件和其依赖的组件，复制粘贴至工程的 ``components`` 文件夹。
 
-.. 注解::
+.. Note::
 
-    ESP-IoT-Solution 推荐使用以 CMake 为基础的编译系统（IDF V4.0 及以后版本默认编译系统），如果需要使用 GNU Make 编译系统，可以参考 `老版本 GNU Make <https://docs.espressif.com/projects/esp-idf/en/release-v4.2/esp32/api-guides/build-system-legacy.html>`_ 。
+    ESP-IoT-Solution 推荐使用以 CMake 为基础的编译系统（IDF v4.0 及以后版本默认编译系统），如果需要使用 GNU Make 编译系统可参考 `老版本 GNU Make <https://docs.espressif.com/projects/esp-idf/en/release-v4.2/esp32/api-guides/build-system-legacy.html>`_。
 
 编译和下载
 ~~~~~~~~~~~~~~~~
@@ -159,7 +158,7 @@ ESP32 / ESP32-S 系列 SoC 采用 40 nm 工艺制成，具有最佳的功耗性�
 
         export IOT_SOLUTION_PATH=~/esp/esp-iot-solution
 
-.. 注解::
+.. Note::
 
     以上方法设置的环境变量，仅对当前终端有效，如果打开新终端，请重新执行以上步骤。
 
@@ -187,7 +186,7 @@ ESP-IDF 同时支持 ``esp32``、``esp32s2`` 等多款芯片，因此需要在�
 
     idf.py -p PORT build flash
 
-请将 PORT 替换为当前使用的端口号，Windows 系统串口号一般为 ``COMx``，Linux 系统串口号一般为 ``/dev/ttyUSBx``，macOS 串口号一般为 ``/dev/cu.``
+请将 PORT 替换为当前使用的端口号，Windows 系统串口号一般为 ``COMx``，Linux 系统串口号一般为 ``/dev/ttyUSBx``，macOS 串口号一般为 ``/dev/cu.``。
 
 4. 串口打印 log
 *******************
@@ -198,11 +197,11 @@ ESP-IDF 同时支持 ``esp32``、``esp32s2`` 等多款芯片，因此需要在�
 
     idf.py -p PORT monitor
 
-请将 ``PORT`` 替换为当前使用的端口号，Windows 系统串口号一般为 ``COMx``，Linux 系统串口号一般为 ``/dev/ttyUSBx``，macOS 串口号一般为 ``/dev/cu.``
+请将 ``PORT`` 替换为当前使用的端口号，Windows 系统串口号一般为 ``COMx``，Linux 系统串口号一般为 ``/dev/ttyUSBx``，macOS 串口号一般为 ``/dev/cu.``。
 
 相关文档
 ~~~~~~~~~~~~~~~~
 
-- `ESP-IDF 详细安装步骤 <https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32/get-started/index.html#get-started-get-prerequisites>`_
-- `ESP-IDF 编程指南 <https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32/get-started/index.html>`_
-- `ESP 产品选型工具 <http://products.espressif.com/>`_
+- `ESP-IDF 详细安装步骤 <https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32/get-started/index.html#get-started-get-prerequisites>`_。
+- `ESP-IDF 编程指南 <https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32/get-started/index.html>`_。
+- `ESP 产品选型工具 <http://products.espressif.com/>`_。
