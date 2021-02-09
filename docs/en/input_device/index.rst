@@ -8,4 +8,3 @@ Input Device
 
     Button <button>
     Touch Panel <touch_panel>
-    ADC <adc>

@@ -1,2 +1,1 @@
-Button
-========
+.. include:: ../../zh_CN/input_device/button.rst
