@@ -93,7 +93,7 @@ static void wifi_stop(void)
 /* set power-save mode(modem-sleep mode). */
 static void moden_sleep_start(void) 
 {
-    esp_wifi_set_ps(WIFI_PS_MODEM);   
+    esp_wifi_set_ps(WIFI_PS_MIN_MODEM);   
 }
 
 /* exit modem-sleep mode and enter normal mode */

@@ -1,0 +1,27 @@
+menu "Touch Screen Driver"
+    menu "Choose Touch Screen Driver"
+        config TOUCH_DRIVER_XPT2046
+            bool "XPT2046"
+            default n
+        config TOUCH_DRIVER_FT5X06
+            bool "FT5X06"
+            default y
+        config TOUCH_DRIVER_NS2016
+            bool "NS2016"
+            default n
+    endmenu
+
+    config TOUCH_PANEL_MAX_CALIBRATE_ERROR
+        int "Calibrate Max Error"
+        range 10 1000
+        default 100
+        help 
+            Only used to verify calibration parameter for the resister touch panel. Consider as a failure when the square of the error is greater than TOUCH_PANEL_MAX_CALIBRATE_ERROR.
+
+    config TOUCH_PANEL_THRESHOLD_PRESS
+        int "Press Threshold"
+        range 64 1024
+        default 150
+        help 
+            Only used to judge whether to press for the resister touch panel.
+endmenu

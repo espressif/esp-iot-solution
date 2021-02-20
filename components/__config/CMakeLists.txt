@@ -1,2 +1,0 @@
-
-register_config_only_component()

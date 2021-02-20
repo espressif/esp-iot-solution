@@ -4,20 +4,16 @@
 
 ## What You Need
 
-- Hardware: 
-	* 1 x [ESP32\_LCD\_EB\_V1](../../../documents/evaluation_boards/ESP32_LCDKit_guide_en.md) HMI development board (for this example, it has to be used with the [ESP32_DevKitC](https://docs.espressif.com/projects/esp-idf/en/stable/hw-reference/modules-and-boards.html#esp32-devkitc-v4) development board)
+- Hardware:
+	* 1 x [ESP32\_LCD\_EB\_V1](https://github.com/espressif/esp-dev-kits/blob/master/esp32-lcdkit/docs/ESP32_LCDKit_guide_en.md) HMI development board (for this example, it has to be used with the [ESP32_DevKitC](https://docs.espressif.com/projects/esp-idf/en/stable/hw-reference/modules-and-boards.html#esp32-devkitc-v4) development board)
 	* 1 x display (2.8 inches, 240x320 pixels, ILI9341 LCD + XPT2046 Touchscreen)
 - Software: 
 	* [esp-iot-solution](https://github.com/espressif/esp-iot-solution)
-	* [LittlevGL GUI](https://littlevgl.com/)
-
-- Setup: see [README.md](../../../README.md#preparation)
-
-For detailed information on LittlevGL and related configuration, please refer to [LittlevGL Guide](../../../documents/hmi_solution/littlevgl/littlevgl_guide_en.md).
+	* [LittlevGL GUI](https://lvgl.io/)
 
 See the connection image below:
 
-<div align="center"><img src="../../../documents/_static/hmi_solution/lcd_connect.jpg" width = "700" alt="lcd_connect" align=center /></div>  
+<div align="center"><img src="../../../docs/_static/hmi_solution/lcd_connect.jpg" width = "700" alt="lcd_connect" align=center /></div>  
 
 The pins to be connected:
 
@@ -42,6 +38,4 @@ IRQ | 33
 
 ## Example Demonstration
 
-Click on the [demo video](http://demo.iot.espressif.cn:8887/cmp/demo/lvgl_thermostat.mp4) for detailed demonstration.
-
-<div align="center"><img src="../../../documents/_static/hmi_solution/littlevgl/thermostat.jpg" width = "400" alt="thermostat" align=center /></div>  
+<div align="center"><img src="../../../docs/_static/hmi_solution/littlevgl/thermostat.jpg" width = "400" alt="thermostat" align=center /></div>  

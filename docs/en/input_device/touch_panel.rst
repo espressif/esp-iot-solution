@@ -1,0 +1,1 @@
+.. include:: ../../zh_CN/input_device/touch_panel.rst

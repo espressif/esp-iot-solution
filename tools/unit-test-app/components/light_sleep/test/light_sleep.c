@@ -124,7 +124,7 @@ TEST_CASE("Light_sleep touch_pad wakeup test", "[light_sleep][iot]")
     printf("During light_sleep, touch 'TP3' pad to wake_up system\n");
     gpio_disable();
     touch_pad_wakeup_init();
-    esp_light_sleep_start();
+    esp_light_sleep_start();bn,
 }
 
 TEST_CASE("Light_sleep time wakeup test", "[light_sleep][iot]")
