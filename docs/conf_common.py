@@ -282,7 +282,7 @@ latex_elements = {
 
 # The name of an image file (relative to this directory) to place at the top of
 # the title page.
-latex_logo = "../_static/cover_page_pdf.jpg"
+latex_logo = "../_static/espressif2.pdf"
 
 # For "manual" documents, if this is true, then toplevel headings are parts,
 # not chapters.
