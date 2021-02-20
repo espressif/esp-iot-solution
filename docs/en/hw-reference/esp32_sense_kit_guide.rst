@@ -1,3 +1,5 @@
+:orphan:
+
 Guide for ESP32-Sense Development Kit
 =====================================
 

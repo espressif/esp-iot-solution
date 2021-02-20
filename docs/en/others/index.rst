@@ -7,4 +7,4 @@ Other Resources
 .. toctree::
     :maxdepth: 1
 
-    GPIO 扩展<io_expander>
+    GPIO Expander<io_expander>

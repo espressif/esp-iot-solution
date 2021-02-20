@@ -1,3 +1,5 @@
+[![Documentation Status](https://readthedocs.com/projects/espressif-esp-iot-solution/badge/?version=latest)](https://docs.espressif.com/projects/espressif-esp-iot-solution/en/latest/?badge=latest)
+
 ## Espressif IoT Solution Overview
 
 * [中文版](./README_CN.md)
@@ -12,14 +14,14 @@ ESP-IoT-Solution contains following contents:
 
 ## Documentation Center
 
-- 中文：https://docs.espressif.com/projects/esp-iot-solution/zh_CN
-- English:https://docs.espressif.com/projects/esp-iot-solution/en
+- 中文：https://docs.espressif.com/projects/espressif-esp-iot-solution/zh_CN
+- English:https://docs.espressif.com/projects/espressif-esp-iot-solution/en
 
 ## Versions
 
 | ESP-IoT-Solution | Dependent ESP-IDF |  Major Change                                          |    User Guide                                                             | Support State  |
 | :--------------: | :---------------: | :----------------------------------------------------: | :-----------------------------------------------------------------------: | -------------- |
-|      master      |   release/v4.3    |  code structure change, add support for ESP32-S2       | [Docs online](https://docs.espressif.com/projects/esp-iot-solution/zh_CN) | active, new feature develop |
+|      master      |   release/v4.3    |  code structure change, add support for ESP32-S2       | [Docs online](https://docs.espressif.com/projects/espressif-esp-iot-solution/zh_CN) | active, new feature develop |
 |   release/v1.1   |      v4.0.1       |  IDF version update, remove no longer supported code   | [v1.1 Overview](https://github.com/espressif/esp-iot-solution/tree/release/v1.1#esp32-iot-solution-overview) |limited support |
 |   release/v1.0   |      v3.2.2       |  legacy version                                        | [v1.0 Overview](https://github.com/espressif/esp-iot-solution/tree/release/v1.0#esp32-iot-solution-overview) | archived |
 
@@ -124,7 +126,7 @@ Add `IOT_SOLUTION_PATH` environment variables:
 
 ### Resources
 
-- Documentation for the latest version:https://docs.espressif.com/projects/esp-iot-solution/ . This documentation is built from the [docs directory](./docs) of this repository.
+- Documentation for the latest version:https://docs.espressif.com/projects/espressif-esp-iot-solution/ . This documentation is built from the [docs directory](./docs) of this repository.
 - ESP-IDF Programming Guide: https://docs.espressif.com/projects/esp-idf/zh_CN . Please refer to the version ESP-IoT-solution depends on.
 - The [esp32.com forum](https://esp32.com/) is a place to ask questions and find community resources.
 - [Check the Issues section on github]((https://github.com/espressif/esp-iot-solution/issues)) if you find a bug or have a feature request. Please check existing Issues before opening a new one.

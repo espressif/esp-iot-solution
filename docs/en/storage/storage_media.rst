@@ -1,3 +1,1 @@
-
-Storage Media
-================
+.. include:: ../../zh_CN/storage/storage_media.rst
