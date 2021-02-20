@@ -1,0 +1,46 @@
+menu "IoT Button"
+    
+    config BUTTON_PERIOD_TIME_MS
+        int "BUTTON PERIOD TIME (MS)"
+        range 2 20
+        default 5
+        help
+            "Button scan interval"
+
+    config BUTTON_DEBOUNCE_TICKS
+        int "BUTTON DEBOUNCE TICKS"
+        range 1 8
+        default 2
+
+    config BUTTON_SHORT_PRESS_TIME_MS
+        int "BUTTON SHORT PRESS TIME (MS)"
+        range 50 800
+        default 180
+
+    config BUTTON_LONG_PRESS_TIME_MS
+        int "BUTTON LONG PRESS TIME (MS)"
+        range 500 5000
+        default 1500
+
+    config ADC_BUTTON_MAX_CHANNEL
+        int "ADC BUTTON MAX CHANNEL"
+        range 1 5
+        default 3
+        help
+            "Maximum number of channels for ADC buttons"
+
+    config ADC_BUTTON_MAX_BUTTON_PER_CHANNEL
+        int "ADC BUTTON MAX BUTTON PER CHANNEL"
+        range 1 10
+        default 8
+        help
+            "Maximum number of buttons per channel"
+
+    config ADC_BUTTON_SAMPLE_TIMES
+        int "ADC BUTTON SAMPLE TIMES"
+        range 1 4
+        default 1
+        help
+            "Number of samples per scan"
+
+endmenu

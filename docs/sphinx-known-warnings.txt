@@ -1,0 +1,13 @@
+# File contains known/allowed Sphinx warnings.
+#
+# Build will fail if sphinx-warning-log.txt contains any lines
+# which are not in this file. Lines are pre-sanitized by
+# check_doc_warnings.sh to remove formatting, paths, line numbers.
+#
+# Warnings in this file must be in the same overall order as the log file.
+#
+
+#
+# Breathe known issue: https://github.com/michaeljones/breathe/issues/405
+# Sphinx known issue: https://github.com/sphinx-doc/sphinx/pull/5901
+#

@@ -1,5 +1,5 @@
 #include "lv_conf.h"
-#include "lvgl/lv_draw/lv_draw_img.h"
+#include "lv_draw/lv_draw_img.h"
 
 const uint8_t lv_snow_map[] = {
 #if LV_COLOR_DEPTH == 16 && LV_COLOR_16_SWAP == 0
@@ -251,7 +251,7 @@ lv_img_dsc_t lv_snow = {
   .header.always_zero = 0,
   .header.w = 320,
   .header.h = 240,
-  .data_size = 76800 * LV_COLOR_SIZE / 8,
+  .data_size = 320 * 240 * LV_COLOR_SIZE / 8,
   .header.cf = LV_IMG_CF_TRUE_COLOR,
   .data = lv_snow_map,
 };

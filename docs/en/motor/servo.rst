@@ -1,0 +1,1 @@
+.. include:: ../../zh_CN/motor/servo.rst

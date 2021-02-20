@@ -1,0 +1,21 @@
+menu "Example Configuration"
+
+    choice SELECT_LVGL_DEMO
+        bool "Choose LVGL Demo to Run"
+            default LV_DEMO_WIDGETS
+
+        config LV_DEMO_BENCHMARK
+            bool "LV_DEMO_BENCHMARK"
+        config LV_DEMO_PRINTER
+            bool "LV_DEMO_PRINTER"
+        config LV_DEMO_WIDGETS
+            bool "LV_DEMO_WIDGETS"
+        config LV_EX_GET_STARTED
+            bool "LV_EX_GET_STARTED"
+        config LV_DEMO_STRESS
+            bool "LV_DEMO_STRESS"
+        config LV_EX_STYLE
+            bool "LV_EX_STYLE"
+    endchoice
+
+endmenu

@@ -1,0 +1,6 @@
+menu "Sensor Monitor Example"
+    config SENSOR_EXAMPLE_PERIOD
+        int "sensor min delay(ms)"
+        range 0 65535
+        default 200
+endmenu
