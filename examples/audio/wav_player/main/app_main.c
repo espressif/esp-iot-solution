@@ -35,9 +35,10 @@ typedef struct {
     int32_t Subchunk2Size;
 } wav_header_t;
 
+#ifdef CONFIG_STORAGE_SDCARD
 static char **g_file_list = NULL;
 static uint16_t g_file_num = 0;
-
+#endif
 
 static esp_err_t play_wav(const char *filepath)
 {
