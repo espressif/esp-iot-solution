@@ -8,4 +8,3 @@
 
     按键 <button>
     触摸屏 <touch_panel>
-    模拟输出 <adc>
