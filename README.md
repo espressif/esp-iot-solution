@@ -1,63 +1,68 @@
-## ESP-IoT-Solution 概述
+## Espressif IoT Solution Overview
 
-ESP-IoT-Solution 包含物联网系统开发中常用的外设驱动和代码框架，可作为 ESP-IDF 的补充组件，方便用户实现更简单的开发，内容如下：
+* [中文版](./README_CN.md)
 
-- 包含传感器、显示屏、音频设备、输入设备、执行机构等设备驱动；
-- 包含低功耗、安全加密、存储方案等代码框架或说明文档；
-- 从实际应用的角度出发，为乐鑫开源解决方案提供了入口指引。
+ESP-IoT-Solution contains device drivers and code frameworks for the development of IoT system, which works as extra components of ESP-IDF and much easier to start.
 
-### 在线文档：
+ESP-IoT-Solution contains following contents:
 
-- 中文文档：https://docs.espressif.com/projects/esp-iot-solution/zh_CN
-- English Docs: https://docs.espressif.com/projects/esp-iot-solution/en
+* Device drivers for sensors, display, audio, input, actuators, etc.
+* Framework and documentation for Low power, security, storage, etc.
+* Guide for espressif open source solutions from practical application point.
 
-### 版本信息：
+## Documentation Center
 
-| ESP-IoT-Solution | 依赖的 ESP-IDF |                  主要变更                   |            文档              |        支持状态        |
-| :--------------: | :------------: | :--------------------------------: |:------------------------------: | ---------------------- |
-|      master      |     master     |      基于 release/v2.0 分支添加新功能       | [Docs online](https://docs.espressif.com/projects/esp-iot-solution/zh_CN) | 新功能开发分支         |
-|   release/v2.0   |      v4.2      |           结构变更，支持 ESP32-S2           | [Docs online](https://docs.espressif.com/projects/esp-iot-solution/zh_CN) | 稳定分支，已有功能维护 |
-|   release/v1.1   |     v4.0.1     | IDF 版本更新，删除已经移动到其它仓库的代码  | [v1.1 Overview](https://github.com/espressif/esp-iot-solution/tree/release/v1.1#esp32-iot-solution-overview) | 有限维护 |
-|   release/v1.0   |     v3.2.2     | 基础版本，2020.02.10 之前的 master 分支备份 | [v1.0 Overview](https://github.com/espressif/esp-iot-solution/tree/release/v1.0#esp32-iot-solution-overview) | 停止维护  |
+- 中文：https://docs.espressif.com/projects/esp-iot-solution/zh_CN
+- English:https://docs.espressif.com/projects/esp-iot-solution/en
+
+## Versions
+
+| ESP-IoT-Solution | Dependent ESP-IDF |  Major Change                                          |    User Guide                                                             | Support State  |
+| :--------------: | :---------------: | :----------------------------------------------------: | :-----------------------------------------------------------------------: | -------------- |
+|      master      |   release/v4.3    |  code structure change, add support for ESP32-S2       | [Docs online](https://docs.espressif.com/projects/esp-iot-solution/zh_CN) | active, new feature develop |
+|   release/v1.1   |      v4.0.1       |  IDF version update, remove no longer supported code   | [v1.1 Overview](https://github.com/espressif/esp-iot-solution/tree/release/v1.1#esp32-iot-solution-overview) |limited support |
+|   release/v1.0   |      v3.2.2       |  legacy version                                        | [v1.0 Overview](https://github.com/espressif/esp-iot-solution/tree/release/v1.0#esp32-iot-solution-overview) | archived |
 
 
-## 快速参考
+## Quick Reference
 
-### 硬件准备
+### Development Board
 
-您可以选择任意 ESP32 / ESP32-S 开发板使用 ESP-IoT-Solution，或者选择[板级支持组件](./examples/common_components/boards)中支持的开发板快速开始。
+You can choose any of the ESP32/ESP32-S series development boards to use ESP-IoT-Solution, or choose one of the boards supported in [boards component](./examples/common_components/boards) to quick start.
 
-ESP32 / ESP32-S 系列 SoC 采用 40 nm 工艺制成，具有最佳的功耗性能、射频性能、稳定性、通用性和可靠性，适用于各种应用场景和不同功耗需求。
+Powered by 40 nm technology, ESP32/ESP32-S series SOC provides a robust, highly integrated platform, which helps meet the continuous demands for efficient power usage, compact design, security, high performance, and reliability.
 
-### 环境搭建
+### Setup Build Environment
 
-#### 安装 ESP-IDF 开发环境
+#### Setup ESP-IDF Environment
 
-由于 ESP-IoT-Solution 依赖 ESP-IDF 的基础功能和编译工具，因此首先需要参考 ESP-IDF 详细安装步骤 完成 ESP-IDF 开发环境的搭建。
+ESP-IoT-Solution is developed based on ESP-IDF functions and tools, so ESP-IDF development environment must be setup first, you can refer [Setting up Development Environment](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html#setting-up-development-environment) for the detailed steps.
 
-请注意不同的 ESP-IoT-Solution 版本 依赖的 ESP-IDF 版本可能不同，例如 release/v2.0 版本依赖 v4.2 版本的 ESP-IDF。
+Please note that different versions of ESP-IoT-Solution may depend on different versions of ESP-IDF, please refer to [Versions](#Versions) for details.
 
-#### 获取 ESP-IoT-Solution 源码
+#### Get ESP-IoT-Solution
 
-如果选择 `master` 版本，可使用以下指令获取代码：
+* If select the `master` version, open terminal, and run the following command:
 
-```
-git clone --recursive https://github.com/espressif/esp-iot-solution
-```
+    ```
+    git clone --recursive https://github.com/espressif/esp-iot-solution
+    ```
 
-如果选择 `release/v2.0` 版本，可使用以下指令获取代码：
+* If select the `release/v1.1` version, open terminal, and run the following command:
 
-```
-git clone -b release/v2.0 --recursive https://github.com/espressif/esp-iot-solution
-```
+    ```
+    git clone -b release/v1.1 --recursive https://github.com/espressif/esp-iot-solution
+    ```
 
-对于其它版本，请将 `release/v2.0` 替换成目标分支名
+For other versions, replace `release/v1.1` with the target branch name
 
-### 使用 ESP-IoT-Solution 组件
+#### Create Your Project
 
-您可以参考以下几种方法使用 ESP-IoT-Solution 中的组件：
+You can use the components of ESP-IoT-Solution in the following methods:
 
-**方法 1**. 添加 ESP-IoT-Solution 所有组件到工程目录：可直接在工程的 CMakeLists.txt 中添加以下代码：
+**Method 1**. Add all components' PATH of ESP-IoT-Solution to the project 
+
+Add the following code directly to the project's CMakeLists.txt:
 
 ```
 cmake_minimum_required(VERSION 3.5)
@@ -68,41 +73,59 @@ include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(empty-project)
 ```
 
-**方法 2**. 添加 ESP-IoT-Solution 指定组件到工程目录：可直接在工程的 CMakeLists.txt 中添加以下代码：
+**Method 2**. Add specified components' PATH of ESP-IoT-Solution to the project
+
+Add the following code directly to the project's CMakeLists.txt, please add the `REQUIRES` components also:
 
 ```
 set(EXTRA_COMPONENT_DIRS "${EXTRA_COMPONENT_DIRS} ${IOT_SOLUTION_PATH}/components/{component_you_choose}")
 ```
 
-**方法 3**. 复制 ESP-IoT-Solution 指定组件到工程目录：直接将该组件和其依赖的组件，复制粘贴至工程的 components 文件夹。
+**Method 3**. Copy specified components of ESP-IoT-solution to the project's `components` directory
 
->注解:
->ESP-IoT-Solution 推荐使用以 CMake 为基础的编译系统（IDF V4.0 及以后版本默认编译系统），如果>需要使用 GNU Make 编译系统，可以参考 老版本 GNU Make 。
+Please copy the `REQUIRES` components together.
 
-### 设置环境变量
+> Note:
+>CMake based build system is recommended (default in IDF v4.0 and later). If using GNU Make, you can refer [legacy build system based on GNU Make](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/build-system-legacy.html).
 
-添加 `IOT_SOLUTION_PATH` 环境变量：
+#### Set up the environment variables
 
-Windows 在 CMD 窗口运行：
+Add `ESP-IDF` environment variables:
 
-```
-set IOT_SOLUTION_PATH=C:\esp\esp-iot-solution
-```
+* For Windows CMD terminal, run the following command:
 
-Linux 和 macOS 在终端运行：
+    ```
+    %userprofile%\esp\esp-idf\export.bat
+    ```
 
-```
-export IOT_SOLUTION_PATH=~/esp/esp-iot-solution
-```
+* For Linux or macOS terminal, run the following command:
 
-> 注解：
->   1. 请将路径替换成实际安装路径；
->   2. 以上方法设置的环境变量，仅对当前终端有效，如终端变更，请重新执行以上步骤。
+    ```
+    . $HOME/esp/esp-idf/export.sh
+    ```
 
-### 其它参考资源
+Add `IOT_SOLUTION_PATH` environment variables:
 
-- 最新版的文档：https://docs.espressif.com/projects/esp-iot-solution/zh_CN ，该文档是由本仓库 [docs](./docs) 目录 构建得到；
-- ESP-IDF 编程指南 https://docs.espressif.com/projects/esp-idf/zh_CN ，请切换到 ESP-IoT-Solution 依赖的版本；
-- 可以前往 [esp32.com](www.esp32.com) 论坛 提问，挖掘社区资源；
-- 如果你在使用中发现了错误或者需要新的功能，请先查看 [GitHub Issues](https://github.com/espressif/esp-iot-solution/issues)，确保该问题不会被重复提交；
-- 如果你有兴趣为 ESP-IoT-Solution 作贡献，请先阅读[贡献指南](./CONTRIBUTING.rst)。
+* For Windows CMD terminal, run the following command:
+
+    ```
+    set IOT_SOLUTION_PATH=C:\esp\esp-iot-solution
+    ```
+
+* For Linux or macOS terminal, run the following command:
+
+    ```
+    export IOT_SOLUTION_PATH=~/esp/esp-iot-solution
+    ```
+
+> Note:
+>   1. Please replace the example path with your actual installation path.
+>   2. The environment variables set above only valid for the current terminal. please re-run the command if open new terminal.
+
+### Resources
+
+- Documentation for the latest version:https://docs.espressif.com/projects/esp-iot-solution/ . This documentation is built from the [docs directory](./docs) of this repository.
+- ESP-IDF Programming Guide: https://docs.espressif.com/projects/esp-idf/zh_CN . Please refer to the version ESP-IoT-solution depends on.
+- The [esp32.com forum](https://esp32.com/) is a place to ask questions and find community resources.
+- [Check the Issues section on github]((https://github.com/espressif/esp-iot-solution/issues)) if you find a bug or have a feature request. Please check existing Issues before opening a new one.
+- If you're interested in contributing to ESP-IDF, please check the [Contributions Guide](./CONTRIBUTING.rst).
