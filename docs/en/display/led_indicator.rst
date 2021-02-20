@@ -1,2 +1,1 @@
-LED Indicator
-==================
+.. include:: ../../zh_CN/display/led_indicator.rst

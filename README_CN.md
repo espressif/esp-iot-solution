@@ -1,3 +1,5 @@
+[![Documentation Status](https://readthedocs.com/projects/espressif-esp-iot-solution-zh-cn/badge/?version=latest)](https://docs.espressif.com/projects/espressif-esp-iot-solution/zh_CN/latest/?badge=latest)
+
 ## Espressif IoT Solution 概述
 
 * [English Version](./README.md)
@@ -12,14 +14,14 @@ ESP-IoT-Solution 包含的内容如下:
 
 ## 文档中心
 
-- 中文：https://docs.espressif.com/projects/esp-iot-solution/zh_CN
-- English:https://docs.espressif.com/projects/esp-iot-solution/en
+- 中文：https://docs.espressif.com/projects/espressif-esp-iot-solution/zh_CN
+- English:https://docs.espressif.com/projects/espressif-esp-iot-solution/en
 
 ## 版本信息
 
 | ESP-IoT-Solution | 依赖的 ESP-IDF |                  主要变更              |            文档              |        支持状态        |
 | :--------------: | :------------: | :----------------------------------: |:------------------------------: | ---------------------- |
-|      master      |   release/v4.3 |      代码结构变更，增加支持 ESP32-S2     | [Docs online](https://docs.espressif.com/projects/esp-iot-solution/zh_CN) | 新功能开发分支         |
+|      master      |   release/v4.3 |      代码结构变更，增加支持 ESP32-S2     | [Docs online](https://docs.espressif.com/projects/espressif-esp-iot-solution/zh_CN) | 新功能开发分支         |
 |   release/v1.1   |     v4.0.1     | IDF 版本更新，删除已经移动到其它仓库的代码  | [v1.1 Overview](https://github.com/espressif/esp-iot-solution/tree/release/v1.1#esp32-iot-solution-overview) | 有限维护 |
 |   release/v1.0   |     v3.2.2     | 历史版本                               | [v1.0 Overview](https://github.com/espressif/esp-iot-solution/tree/release/v1.0#esp32-iot-solution-overview) | 备份，停止维护  |
 
@@ -119,7 +121,7 @@ set(EXTRA_COMPONENT_DIRS "${EXTRA_COMPONENT_DIRS} ${IOT_SOLUTION_PATH}/component
 
 ### 其它参考资源
 
-- 最新版的文档：https://docs.espressif.com/projects/esp-iot-solution/zh_CN ，该文档是由本仓库 [docs](./docs) 目录 构建得到；
+- 最新版的文档：https://docs.espressif.com/projects/espressif-esp-iot-solution/zh_CN ，该文档是由本仓库 [docs](./docs) 目录 构建得到；
 - ESP-IDF 编程指南 https://docs.espressif.com/projects/esp-idf/zh_CN ，请参考 ESP-IoT-Solution 依赖的版本；
 - 可以前往 [esp32.com](www.esp32.com) 论坛 提问，挖掘社区资源；
 - 如果你在使用中发现了错误或者需要新的功能，请先查看 [GitHub Issues](https://github.com/espressif/esp-iot-solution/issues)，确保该问题不会被重复提交；

@@ -1,3 +1,1 @@
-
-File System
-==============
+.. include:: ../../zh_CN/storage/file_system.rst

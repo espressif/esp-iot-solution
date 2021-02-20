@@ -1,3 +1,5 @@
+:orphan:
+
 ESP32-MeshKit-Sense Hardware Design Guidelines
 ==============================================
 
@@ -85,6 +87,7 @@ the hardware schematics for them.
 
 3.1.1 Power Supply Management Module
 ##########################################
+:orphan:
 
 The development board can be powered by battery and the AP5056 power
 supply management chip can be used to charge the battery. The AP5056 is

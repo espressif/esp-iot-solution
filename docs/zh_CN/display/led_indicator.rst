@@ -102,7 +102,7 @@ LED 指示灯是最简单的输出外设之一，可以通过不同形式的闪�
 
     led_indicator_delete(&led_handle);
 
-.. 注解::
+.. Note::
 
     该组件支持线程安全操作，您可使用全局变量共享 LED 指示灯的操作句柄 ``led_indicator_handle_t``，也可以使用 :cpp:type:`led_indicator_get_handle` 在其它线程通过 LED 的 IO 号获取句柄以进行操作。
 
