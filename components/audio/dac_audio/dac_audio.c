@@ -156,7 +156,7 @@ esp_err_t dac_audio_init(dac_audio_config_t *cfg)
     i2s_config.mode = I2S_MODE_MASTER |  I2S_MODE_TX | I2S_MODE_DAC_BUILT_IN;
     i2s_config.sample_rate =  cfg->sample_rate;
     i2s_config.bits_per_sample = cfg->bits_per_sample;
-    i2s_config.communication_format = I2S_COMM_FORMAT_I2S_MSB;
+    i2s_config.communication_format = I2S_COMM_FORMAT_STAND_MSB;
     if (I2S_DAC_CHANNEL_RIGHT_EN == cfg->dac_mode) {
         i2s_config.channel_format = I2S_CHANNEL_FMT_ALL_RIGHT;
     } else if (I2S_DAC_CHANNEL_LEFT_EN == cfg->dac_mode) {
