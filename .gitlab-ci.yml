@@ -18,7 +18,7 @@ before_script:
 
 .build_template: &build_template
   stage: build
-  image: espressif/idf:release-v4.0
+  image: espressif/idf:release-v4.3
   tags:
     - build
   variables:
@@ -52,8 +52,6 @@ before_script:
 
 build_examples_00:
   <<: *build_examples_template
-  script:
-    - echo "skip build examples"
 
 build_docs:
   stage: build
