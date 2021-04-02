@@ -255,7 +255,6 @@ static esp_err_t _led_set_state(int io_num, bool off_level, blink_step_state_t s
 static void _blink_list_switch(_led_indicator_t *p_led_indicator)
 {
     p_led_indicator->active_blink = NULL_ACTIVE_BLINK; //stop active blink
-    _led_set_state(p_led_indicator->io_num, p_led_indicator->off_level, LED_STATE_OFF); //turn off the led
     for(size_t index = 0; index < BLINK_LIST_NUM; index ++) //find the first incomplete blink
     {
         if (p_led_indicator->p_blink_steps[index] != LED_BLINK_STOP)
