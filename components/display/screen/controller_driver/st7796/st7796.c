@@ -267,7 +267,7 @@ esp_err_t lcd_st7796_draw_bitmap(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
 static esp_err_t lcd_st7796_reg_config(void)
 {
     LCD_WRITE_CMD(0x11);        //Sleep Out
-    vTaskDelay(pdMS_TO_TICKS(200));
+    vTaskDelay(pdMS_TO_TICKS(100));
     LCD_WRITE_CMD(0xf0);
     LCD_WRITE_DATA(0xc3);           //enable command 2 part 1
     LCD_WRITE_CMD(0xf0);
@@ -315,7 +315,7 @@ static esp_err_t lcd_st7796_reg_config(void)
 
     LCD_WRITE_CMD(0xf0); LCD_WRITE_DATA(0x3c);
     LCD_WRITE_CMD(0xf0); LCD_WRITE_DATA(0x69);
-    vTaskDelay(pdMS_TO_TICKS(100));
+    vTaskDelay(pdMS_TO_TICKS(10));
     LCD_WRITE_CMD(0x29); //Display ON
 
     return ESP_OK;

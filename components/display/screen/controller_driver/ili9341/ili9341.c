@@ -72,42 +72,7 @@ scr_driver_t lcd_ili9341_default_driver = {
     .get_info = lcd_ili9341_get_info,
 };
 
-/*
- This struct stores a bunch of command values to be initialized for ILI9341
-*/
-typedef struct {
-    uint8_t cmd;
-    uint8_t data[16];
-    uint8_t databytes; //No of data in data; bit 7 = delay after set; 0xFF = end of cmds.
-} lcd_init_cmd_t;
-
-static const lcd_init_cmd_t ili_init_cmds[] = {
-    {0xCF, {0x00, 0x83, 0x30}, 3},
-    {0xED, {0x64, 0x03, 0x12, 0x81}, 4},
-    {0xE8, {0x85, 0x01, 0x79}, 3},
-    {0xCB, {0x39, 0x2C, 0x00, 0x34, 0x02}, 5},
-    {0xF7, {0x20}, 1},
-    {0xEA, {0x00, 0x00}, 2},
-    {0xC0, {0x26}, 1},
-    {0xC1, {0x11}, 1},
-    {0xC5, {0x35, 0x3E}, 2},
-    {0xC7, {0xBE}, 1},
-    {0x36, {0x28}, 1},
-    {0x3A, {0x55}, 1},
-    {0xB1, {0x00, 0x1B}, 2},
-    {0xF2, {0x08}, 1},
-    {0x26, {0x01}, 1},
-    {0xE0, {0x1F, 0x1A, 0x18, 0x0A, 0x0F, 0x06, 0x45, 0X87, 0x32, 0x0A, 0x07, 0x02, 0x07, 0x05, 0x00}, 15},
-    {0XE1, {0x00, 0x25, 0x27, 0x05, 0x10, 0x09, 0x3A, 0x78, 0x4D, 0x05, 0x18, 0x0D, 0x38, 0x3A, 0x1F}, 15},
-    {0x2A, {0x00, 0x00, 0x00, 0xEF}, 4},
-    {0x2B, {0x00, 0x00, 0x01, 0x3f}, 4},
-    {0x2C, {0}, 0},
-    {0xB7, {0x07}, 1},
-    {0xB6, {0x0A, 0x82, 0x27, 0x00}, 4},
-    {0x11, {0}, 0x80},
-    {0x29, {0}, 0x80},
-    {0, {0}, 0xff},
-};
+static esp_err_t lcd_ili9341_init_reg(void);
 
 esp_err_t lcd_ili9341_init(const scr_controller_config_t *lcd_conf)
 {
@@ -139,22 +104,8 @@ esp_err_t lcd_ili9341_init(const scr_controller_config_t *lcd_conf)
     g_lcd_handle.offset_hor = lcd_conf->offset_hor;
     g_lcd_handle.offset_ver = lcd_conf->offset_ver;
 
-    int cmd = 0;
-    // Send all the commands
-    while (ili_init_cmds[cmd].databytes != 0xff) {
-        cmd++;
-        ret = LCD_WRITE_CMD(ili_init_cmds[cmd].cmd);
-        if (ili_init_cmds[cmd].databytes & 0x80) {
-            vTaskDelay(100 / portTICK_RATE_MS);
-            continue;
-        }
-        if (ili_init_cmds[cmd].databytes & 0x1F) {
-            for (size_t i = 0; i < (ili_init_cmds[cmd].databytes & 0x1F); i++) {
-                ret |= LCD_WRITE_DATA(ili_init_cmds[cmd].data[i]);
-            }
-        }
-        LCD_CHECK(ESP_OK == ret, "Write lcd register encounter error", ESP_FAIL);
-    }
+    ret = lcd_ili9341_init_reg();
+    LCD_CHECK(ESP_OK == ret, "Write lcd register encounter error", ESP_FAIL);
 
     // Enable backlight
     if (lcd_conf->pin_num_bckl >= 0) {
@@ -304,5 +255,136 @@ esp_err_t lcd_ili9341_draw_bitmap(uint16_t x, uint16_t y, uint16_t w, uint16_t h
     ret = LCD_WRITE((uint8_t *)bitmap, 2 * len);
     LCD_IFACE_RELEASE();
     LCD_CHECK(ESP_OK == ret, "lcd write ram data failed", ESP_FAIL);
+    return ESP_OK;
+}
+
+static esp_err_t lcd_ili9341_init_reg(void)
+{
+    //SOFTWARE RESET
+    LCD_WRITE_CMD(0x01);
+    vTaskDelay(pdMS_TO_TICKS(100));
+
+    //POWER CONTROL A
+    LCD_WRITE_CMD(0xCB);
+    LCD_WRITE_DATA(0x39);
+    LCD_WRITE_DATA(0x2C);
+    LCD_WRITE_DATA(0x00);
+    LCD_WRITE_DATA(0x34);
+    LCD_WRITE_DATA(0x02);
+
+    //POWER CONTROL B
+    LCD_WRITE_CMD(0xCF);
+    LCD_WRITE_DATA(0x00);
+    LCD_WRITE_DATA(0xC1);
+    LCD_WRITE_DATA(0x30);
+
+    //DRIVER TIMING CONTROL A
+    LCD_WRITE_CMD(0xE8);
+    LCD_WRITE_DATA(0x85);
+    LCD_WRITE_DATA(0x00);
+    LCD_WRITE_DATA(0x78);
+
+    //DRIVER TIMING CONTROL B
+    LCD_WRITE_CMD(0xEA);
+    LCD_WRITE_DATA(0x00);
+    LCD_WRITE_DATA(0x00);
+
+    //POWER ON SEQUENCE CONTROL
+    LCD_WRITE_CMD(0xED);
+    LCD_WRITE_DATA(0x64);
+    LCD_WRITE_DATA(0x03);
+    LCD_WRITE_DATA(0x12);
+    LCD_WRITE_DATA(0x81);
+
+    //PUMP RATIO CONTROL
+    LCD_WRITE_CMD(0xF7);
+    LCD_WRITE_DATA(0x20);
+
+    //POWER CONTROL,VRH[5:0]
+    LCD_WRITE_CMD(0xC0);
+    LCD_WRITE_DATA(0x23);
+
+    //POWER CONTROL,SAP[2:0];BT[3:0]
+    LCD_WRITE_CMD(0xC1);
+    LCD_WRITE_DATA(0x10);
+
+    //VCM CONTROL
+    LCD_WRITE_CMD(0xC5);
+    LCD_WRITE_DATA(0x3E);
+    LCD_WRITE_DATA(0x28);
+
+    //VCM CONTROL 2
+    LCD_WRITE_CMD(0xC7);
+    LCD_WRITE_DATA(0x86);
+
+    //MEMORY ACCESS CONTROL
+    LCD_WRITE_CMD(0x36);
+    LCD_WRITE_DATA(0x48);
+
+    //PIXEL FORMAT
+    LCD_WRITE_CMD(0x3A);
+    LCD_WRITE_DATA(0x55);
+
+    //FRAME RATIO CONTROL, STANDARD RGB COLOR
+    LCD_WRITE_CMD(0xB1);
+    LCD_WRITE_DATA(0x00);
+    LCD_WRITE_DATA(0x18);
+
+    //DISPLAY FUNCTION CONTROL
+    LCD_WRITE_CMD(0xB6);
+    LCD_WRITE_DATA(0x08);
+    LCD_WRITE_DATA(0x82);
+    LCD_WRITE_DATA(0x27);
+
+    //3GAMMA FUNCTION DISABLE
+    LCD_WRITE_CMD(0xF2);
+    LCD_WRITE_DATA(0x00);
+
+    //GAMMA CURVE SELECTED
+    LCD_WRITE_CMD(0x26);
+    LCD_WRITE_DATA(0x01);
+
+    //POSITIVE GAMMA CORRECTION
+    LCD_WRITE_CMD(0xE0);
+    LCD_WRITE_DATA(0x0F);
+    LCD_WRITE_DATA(0x31);
+    LCD_WRITE_DATA(0x2B);
+    LCD_WRITE_DATA(0x0C);
+    LCD_WRITE_DATA(0x0E);
+    LCD_WRITE_DATA(0x08);
+    LCD_WRITE_DATA(0x4E);
+    LCD_WRITE_DATA(0xF1);
+    LCD_WRITE_DATA(0x37);
+    LCD_WRITE_DATA(0x07);
+    LCD_WRITE_DATA(0x10);
+    LCD_WRITE_DATA(0x03);
+    LCD_WRITE_DATA(0x0E);
+    LCD_WRITE_DATA(0x09);
+    LCD_WRITE_DATA(0x00);
+
+    //NEGATIVE GAMMA CORRECTION
+    LCD_WRITE_CMD(0xE1);
+    LCD_WRITE_DATA(0x00);
+    LCD_WRITE_DATA(0x0E);
+    LCD_WRITE_DATA(0x14);
+    LCD_WRITE_DATA(0x03);
+    LCD_WRITE_DATA(0x11);
+    LCD_WRITE_DATA(0x07);
+    LCD_WRITE_DATA(0x31);
+    LCD_WRITE_DATA(0xC1);
+    LCD_WRITE_DATA(0x48);
+    LCD_WRITE_DATA(0x08);
+    LCD_WRITE_DATA(0x0F);
+    LCD_WRITE_DATA(0x0C);
+    LCD_WRITE_DATA(0x31);
+    LCD_WRITE_DATA(0x36);
+    LCD_WRITE_DATA(0x0F);
+
+    //EXIT SLEEP
+    LCD_WRITE_CMD(0x11);
+    vTaskDelay(pdMS_TO_TICKS(120));
+
+    //TURN ON DISPLAY
+    LCD_WRITE_CMD(0x29);
     return ESP_OK;
 }
