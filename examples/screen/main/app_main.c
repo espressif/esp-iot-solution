@@ -265,7 +265,7 @@ void app_main(void)
         ESP_LOGE(TAG, "screen find failed");
     }
     scr_controller_config_t lcd_cfg = {
-        .iface_drv = iface_drv,
+        .interface_drv = iface_drv,
         .pin_num_rst = BOARD_LCD_I2S_RESET_PIN,
         .pin_num_bckl = BOARD_LCD_I2S_BL_PIN,
         .rst_active_level = 0,
