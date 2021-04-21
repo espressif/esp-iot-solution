@@ -1,8 +1,7 @@
 
 file(GLOB_RECURSE srcs lvgl/src/*.c)
 
-list(APPEND srcs "lvgl_gui.c"
-                "lvgl_adapter.c")
+list(APPEND srcs "lvgl_gui.c")
 
 set(incdirs "."
             "lvgl"

@@ -89,6 +89,7 @@ void app_main()
     /* Initialize LittlevGL GUI */
     lvgl_init(&lcd_drv, &touch_drv);
 
+    lvgl_acquire();
 #ifdef CONFIG_LV_DEMO_BENCHMARK
     lv_demo_benchmark();
 #elif defined CONFIG_LV_DEMO_PRINTER
@@ -102,6 +103,7 @@ void app_main()
 #elif defined CONFIG_LV_EX_STYLE
     lv_ex_style_1();
 #endif
+    lvgl_release();
 
     ESP_LOGI(TAG, "[APP] IDF version: %s", esp_get_idf_version());
     ESP_LOGI(TAG, "[APP] Free memory: %d bytes", esp_get_free_heap_size());
