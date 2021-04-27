@@ -17,7 +17,7 @@ ESP-IoT-Solution 包含物联网系统开发中常用的外设驱动和代码框
 ESP-IoT-Solution 版本
 **************************
 
-不同版本的 ESP-IoT-Solution 说明如下 ：
+不同版本的 ESP-IoT-Solution 说明如下：
 
 +-----------------------+---------------------+--------------------------------------------+----------------+
 | ESP-IoT-Solution 版本 | 对应的 ESP-IDF 版本 |                  主要变更                  |    支持状态    |
@@ -39,7 +39,7 @@ ESP-IDF 是乐鑫为 ESP32/ESP32-S2 提供的物联网开发框架：
 
 .. Note::
 
-    详情请查阅：`ESP-IDF 编程指南`_。
+    详情请查阅：`ESP-IDF 编程指南 <https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32/index.html>`__。
 
 
 ESP32/ESP32-S 简介
@@ -61,7 +61,7 @@ ESP32/ESP32-S 系列 SoC 采用 40 nm 工艺制成，具有最佳的功耗性能
 
 .. Note::
 
-    不同系列 SoC 配置不同，详情请查阅 `ESP 产品选型工具`_。
+    不同系列 SoC 配置不同，详情请查阅 `ESP 产品选型工具 <http://products.espressif.com:8000/#/product-selector>`_。
 
 
 配置开发环境
@@ -70,7 +70,7 @@ ESP32/ESP32-S 系列 SoC 采用 40 nm 工艺制成，具有最佳的功耗性能
 1. 安装 ESP-IDF
 *******************
 
-由于 ESP-IoT-Solution 依赖 ESP-IDF 的基础功能和编译工具，因此首先需要参考 `ESP-IDF 详细安装步骤`_ 完成 ESP-IDF 开发环境的搭建。请注意，不同版本的 ESP-IoT-Solution 依赖的 ESP-IDF 版本可能不同，请参考 `ESP-IoT-Solution 版本`_ 进行选择。
+由于 ESP-IoT-Solution 依赖 ESP-IDF 的基础功能和编译工具，因此首先需要参考 `ESP-IDF 详细安装步骤 <https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32/get-started/index.html#get-started-get-prerequisites>`_ 完成 ESP-IDF 开发环境的搭建。请注意，不同版本的 ESP-IoT-Solution 依赖的 ESP-IDF 版本可能不同，请参考 `ESP-IoT-Solution 版本`_ 进行选择。
 
 2. 获取 ESP-IoT-Solution
 *****************************
@@ -109,7 +109,7 @@ ESP32/ESP32-S 系列 SoC 采用 40 nm 工艺制成，具有最佳的功耗性能
 
     .. code:: 
 
-        set(EXTRA_COMPONENT_DIRS "${EXTRA_COMPONENT_DIRS} ${IOT_SOLUTION_PATH}/components/{component_you_choose}")
+        set(EXTRA_COMPONENT_DIRS "${EXTRA_COMPONENT_DIRS} $ENV{IOT_SOLUTION_PATH}/components/{component_you_choose}")
         #请将{component_you_choose} 替换为组件名称，如果有多个组件，可重复该命令
 
 方法 3. 复制 ESP-IoT-Solution 指定组件到工程目录: 直接将该组件和其依赖的组件，复制粘贴至工程的 ``components`` 文件夹。
@@ -140,7 +140,7 @@ ESP32/ESP32-S 系列 SoC 采用 40 nm 工艺制成，具有最佳的功耗性能
 
         . $HOME/esp/esp-idf/export.sh
     
-    请将以上指令中的路径，替换成实际安装路径
+    请将以上指令中的路径，替换成实际安装路径。
 
 * 添加 IOT_SOLUTION_PATH 环境变量：
 
@@ -163,13 +163,13 @@ ESP32/ESP32-S 系列 SoC 采用 40 nm 工艺制成，具有最佳的功耗性能
 2. 设置编译目标
 ********************
 
-ESP-IDF 同时支持 ``esp32``、``esp32s2`` 等多款芯片，因此需要在编译代码之前设置的编译目标芯片（默认编译目标为 esp32），例如设置编译目标为 ``esp32s2``：
+ESP-IDF 同时支持 ``esp32``、``esp32s2`` 等多款芯片，因此需要在编译代码之前设置的编译目标芯片（默认编译目标为 ``esp32``），例如设置编译目标为 ``esp32s2``：
 
 .. code:: shell
 
     idf.py set-target esp32s2
 
-对于 ESP-IoT-Solution 中基于 `板级支持组件`_ 开发的 example，还可以使用 ``menuconfig`` 在 ``Board Options->Choose Target Board`` 中选择一个目标开发板：
+对于 ESP-IoT-Solution 中基于 `板级支持组件 <./basic/boards.html>`_ 开发的 example，还可以使用 ``menuconfig`` 在 ``Board Options -> Choose Target Board`` 中选择一个目标开发板：
 
 .. code:: shell
 
@@ -200,6 +200,6 @@ ESP-IDF 同时支持 ``esp32``、``esp32s2`` 等多款芯片，因此需要在�
 相关文档
 ~~~~~~~~~~~~~~~~
 
-- `ESP-IDF 详细安装步骤 <https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32/get-started/index.html#get-started-get-prerequisites>`_。
-- `ESP-IDF 编程指南 <https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32/get-started/index.html>`_。
-- `ESP 产品选型工具 <http://products.espressif.com/>`_。
+- `ESP-IDF 详细安装步骤 <https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32/get-started/index.html#get-started-get-prerequisites>`_
+- `ESP-IDF 编程指南 <https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32/get-started/index.html>`__
+- `ESP 产品选型工具 <http://products.espressif.com:8000/#/product-selector>`_
