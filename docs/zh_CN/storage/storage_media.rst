@@ -1,5 +1,6 @@
 存储媒介
 ==========
+:link_to_translation:`en:[English]`
 
 已支持存储媒介列表：
 
@@ -8,9 +9,9 @@
 +=================================================================================================================+==========================+==========================+======+==========+======================+=========================================================================================================================+======+
 | `SPI Flash <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/spi_flash.html>`_ | 可与代码共用，无附加成本 | 参数存储、文本、图像存储 | MB   | SPI      | 40/80 MHz 4线        | `SPI Flash Driver <https://github.com/espressif/esp-idf/tree/master/components/spi_flash>`_                             |      |
 +-----------------------------------------------------------------------------------------------------------------+--------------------------+--------------------------+------+----------+----------------------+-------------------------------------------------------------------------------------------------------------------------+------+
-| `SD Card <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/sdmmc.html>`_       | 大容量、可插拔           | 声音、视频文件存储       | GB   | SDIO/SPI | 20/40 MHz 1线/4线    | `SD/SDIO/MMC Driver <https://github.com/espressif/esp-idf/blob/526f682/components/driver/include/driver/sdmmc_host.h>`_ | \*1  |
+| `SD Card <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/sdmmc.html>`_       | 大容量、可插拔           | 声音、视频文件存储       | GB   | SDIO/SPI | 20/40 MHz 1线/4线    | `SD/SDIO/MMC Driver <https://github.com/espressif/esp-idf/blob/526f682/components/driver/include/driver/sdmmc_host.h>`__| \*1  |
 +-----------------------------------------------------------------------------------------------------------------+--------------------------+--------------------------+------+----------+----------------------+-------------------------------------------------------------------------------------------------------------------------+------+
-| `eMMC <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/sdmmc.html>`_          | 大容量、高速读写         | 声音、视频文件存储       | GB   | SDIO     | 20/40 MHz 1线/4线/8线| `SD/SDIO/MMC Driver <https://github.com/espressif/esp-idf/blob/526f682/components/driver/include/driver/sdmmc_host.h>`_ | \*2  |
+| `eMMC <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/sdmmc.html>`_          | 大容量、高速读写         | 声音、视频文件存储       | GB   | SDIO     | 20/40 MHz 1线/4线/8线| `SD/SDIO/MMC Driver <https://github.com/espressif/esp-idf/blob/526f682/components/driver/include/driver/sdmmc_host.h>`__| \*2  |
 +-----------------------------------------------------------------------------------------------------------------+--------------------------+--------------------------+------+----------+----------------------+-------------------------------------------------------------------------------------------------------------------------+------+
 | EEPROM_                                                                                                         | 可按字节寻址，低成本     | 参数存储                 | MB   | I2C      | 100 ~ 400 KHz        | :component:`eeprom <storage/eeprom>`                                                                                    |      |
 +-----------------------------------------------------------------------------------------------------------------+--------------------------+--------------------------+------+----------+----------------------+-------------------------------------------------------------------------------------------------------------------------+------+
@@ -31,7 +32,7 @@ Flash 芯片支持双线 (DOUT/DIO) 和四线 (QOUT/QIO) 操作模式，可通�
 
 **参考文档：**
 
-* `SPI Flash API <https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32/api-reference/storage/spi_flash.html>`_。
+* `SPI Flash API <https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32/api-reference/storage/spi_flash.html>`_
 
 
 SD Card
@@ -44,7 +45,7 @@ ESP-IDF 中的 ``SD/SDIO/MMC Driver`` 基于 SD 卡的两种访问模式进行�
 **参考文档：**
 
 * `SD/SDIO/MMC 驱动 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/sdmmc.html>`_：支持 SDIO 和 SPI 两种传输模式；
-* `SDMMC 主机驱动 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/sdmmc_host.html>`_：SDIO 模式；
+* `SDMMC 主机驱动 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/sdmmc_host.html>`__：SDIO 模式；
 * `SD SPI 主机驱动 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/sdspi_host.html#sd-spi-host-driver>`_：SPI 模式；
 * 使用 SPI 或 1-bit 模式，请注意 `引脚上拉需求 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/sd_pullup_requirements.html>`_。
 
@@ -56,20 +57,20 @@ ESP-IDF 中的 ``SD/SDIO/MMC Driver`` 基于 SD 卡的两种访问模式进行�
 eMMC
 -----------
 
-eMMC (embedded MMC) 内存芯片与 SD 卡具有相似的协议，可以使用与 SD 卡相同的驱动程序 `SD/SDIO/MMC 驱动`_。但是需要注意的是，eMMC 芯片仅能使用 SDIO 模式，不支持 SPI 模式。eMMC 目前在 8 线模式下支持默认速率 20 MHz 和高速 40 MHz，在 4 线模式下支持高速 40 MHz DDR 模式。
+eMMC (embedded MMC) 内存芯片与 SD 卡具有相似的协议，可以使用与 SD 卡相同的驱动程序 `SD/SDIO/MMC 驱动 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/sdmmc.html>`_。但是需要注意的是，eMMC 芯片仅能使用 SDIO 模式，不支持 SPI 模式。eMMC 目前在 8 线模式下支持默认速率 20 MHz 和高速 40 MHz，在 4 线模式下支持高速 40 MHz DDR 模式。
 
 eMMC 一般以芯片的形式焊接到主板上，相比 SD 卡集成度更高，适用于可穿戴设备等，具有大容量存储需求同时对系统集成度有一定要求的场景。
 
 **参考文档：**
 
-* `SD/SDIO/MMC 驱动`_；
+* `SD/SDIO/MMC 驱动 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/sdmmc.html>`__；
 * `已支持的 eMMC 速度模式 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/sdmmc_host.html#supported-speed-modes>`_。
 
 
 EEPROM
 ---------
 
-EEPROM（如 `AT24C0X 系列 <http://ww1.microchip.com/downloads/en/devicedoc/doc0180.pdf>`_）是 1024-16384 位的串行电可擦写存储器（通过控制引脚电平可也运行在只读模式），它的存储空间一般按照 ``word`` 进行分布，每个 ``word`` 包含 ``8 bit`` 空间。EEPROM 可按字节寻址，读写操作简单，特别适合于保存配置参数等，经过优化也可应用于对功耗和可靠性等有一定要求的工业和商业场景。
+EEPROM（如 `AT24C0X 系列 <http://ww1.microchip.com/downloads/en/devicedoc/doc0180.pdf>`_）是 1024-16384 位的串行电可擦写存储器（通过控制引脚电平也可运行在只读模式），它的存储空间一般按照 ``word`` 进行分布，每个 ``word`` 包含 ``8-bit`` 空间。EEPROM 可按字节寻址，读写操作简单，特别适合于保存配置参数等，经过优化也可应用于对功耗和可靠性等有一定要求的工业和商业场景。
 
 **已适配的 EEPROM 芯片:**
 

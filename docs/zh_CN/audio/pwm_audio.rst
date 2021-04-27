@@ -1,5 +1,6 @@
 PWM 音频
 ==============
+:link_to_translation:`en:[English]`
 
 PWM 音频功能使用 ESP32 内部的 LEDC 外设产生 PWM 播放音频，无需使用外部的音频 Codec 芯片，适用于对音质要求不高而对成本敏感的应用。
 
@@ -10,7 +11,7 @@ PWM 音频功能使用 ESP32 内部的 LEDC 外设产生 PWM 播放音频，无�
  - 允许使用任意具有输出功能的 GPIO 作为音频输出管脚
  - 支持 8 ~ 10 位的 PWM 分辨率
  - 支持立体声
- - 支持 8 KHz ~ 48 KHz 采样率
+ - 支持 8 ~ 48 KHz 采样率
 
 结构
 -----
@@ -67,7 +68,7 @@ PWM 频率
         pwm_audio_write(audio_data, length, &written, 1000 / portTICK_PERIOD_MS);
     }
 
-API Reference
+API 参考
 -------------
 
 .. include:: /_build/inc/pwm_audio.inc

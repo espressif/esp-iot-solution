@@ -1,1 +1,81 @@
-.. include:: ../../zh_CN/storage/storage_media.rst
+Storage Media
+=================
+:link_to_translation:`zh_CN:[中文]`
+
+The supported storage media is listed in the following table:
+
++-----------------------------------------------------------------------------------------------------------------+----------------------------------------+----------------------------------+------+--------------+----------------------+-------------------------------------------------------------------------------------------------------------------------+--------+
+| Name                                                                                                            | Key features                           | Application scenario             | Size | Transmission | Speed                | Driver                                                                                                                  | Note   |
++=================================================================================================================+========================================+==================================+======+==============+======================+=========================================================================================================================+========+
+| `SPI Flash <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/spi_flash.html>`_ | Can be shared with code, no extra cost | Store parameters, text or images | MB   | SPI          | 40/80 MHz 4-line     | `SPI Flash Driver <https://github.com/espressif/esp-idf/tree/master/components/spi_flash>`_                             |        |
++-----------------------------------------------------------------------------------------------------------------+----------------------------------------+----------------------------------+------+--------------+----------------------+-------------------------------------------------------------------------------------------------------------------------+--------+
+| `SD Card <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/sdmmc.html>`_       | Large capacity, pluggable              | Store audio or video files       | GB   | SDIO/SPI     | 20/40 MHz 1/4-line   | `SD/SDIO/MMC Driver <https://github.com/espressif/esp-idf/blob/526f682/components/driver/include/driver/sdmmc_host.h>`__|  1     |
++-----------------------------------------------------------------------------------------------------------------+----------------------------------------+----------------------------------+------+--------------+----------------------+-------------------------------------------------------------------------------------------------------------------------+--------+
+| `eMMC <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/sdmmc.html>`_          | Large capacity, high-speed read/write  | Store audio or video files       | GB   | SDIO         | 20/40 MHz 1/4/8-line | `SD/SDIO/MMC Driver <https://github.com/espressif/esp-idf/blob/526f682/components/driver/include/driver/sdmmc_host.h>`__|  2     |
++-----------------------------------------------------------------------------------------------------------------+----------------------------------------+----------------------------------+------+--------------+----------------------+-------------------------------------------------------------------------------------------------------------------------+--------+
+| EEPROM_                                                                                                         | Can address by byte, low cost          | Store parameters                 | MB   | I2C          | 100 ~ 400 KHz        | :component:`eeprom <storage/eeprom>`                                                                                    |        |
++-----------------------------------------------------------------------------------------------------------------+----------------------------------------+----------------------------------+------+--------------+----------------------+-------------------------------------------------------------------------------------------------------------------------+--------+
+
+.. Note::
+
+    1. Only SPI mode is supported for ESP32-S2
+    2. Not supported for ESP32-S2
+
+SPI Flash
+-----------
+
+By default, the ESP32/ESP32-S/ESP32-C series chips use NOR flash to store and access users' code and data. The flash can be integrated into the module or chip and is typically 4 MB, 8 MB or 16 MB. For ESP-IDF v4.0 and later versions, the SPI flash component not only supports read and write operations to the main flash, but can also connect to an another external flash for data storage.
+
+Flash can be partitioned using the `partition table <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/partition-tables.html>`_. Based on functions of the partition table, flash can not only be used to store the binary code generated by users, but can also act as a non-volatile storage (NVS) to store application programming parameters. On top of that, specific flash areas can be mounted to a file system (e.g., FatFS) to store text, images and other files.
+
+The flash chip supports 2-line (DOUT/DIO) and 4-line (QOUT/QIO) operation modes and can be configured to work in 40 MHz or 80 MHz modes. Since the main flash chip can be used directly for data storage without needs for additional memory chips, it is particularly suitable for cost-sensitive applications with small capacity requirements (MB) and high integration needs.
+
+**Related documents:**
+
+* `SPI Flash API <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/spi_flash.html>`_
+
+
+SD Card
+-----------
+
+The ESP32 supports using either the SDIO or SPI interface to access SD cards. The SDIO interface supports 1/4/8-line modes and supports both the default rate of 20 MHz and the high-speed rate of 40 MHz. Please note that this interface occupies at least 6 GPIOs and only uses `fixed pins <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/sdmmc_host.html#sdmmc-host-driver>`_. The SPI interface can assign any IO for SD cards via the GPIO matrix and supports accessing multiple SD cards via CS pins. In hardware design level, the SPI interface is more flexible for development, but with lower access rate than that of the SDIO interface.
+
+The ``SD/SDIO/MMC Driver`` in ESP-IDF is wrapped at the protocol layer based on the two access modes of the SD card, and provides the initialization interface and protocol-layer APIs for the SD card. The SD card, with features as large capacity and being pluggable, is widely used in application scenarios with large storage needs such as smart speaker, electronic album and etc.
+
+**Related documents:**
+
+* `SD/SDIO/MMC Driver <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/sdmmc.html>`_: supports both SDIO and SPI transmission modes;
+* `SDMMC Host Driver <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/sdmmc_host.html>`__: supports SDIO mode;
+* `SD SPI Host Driver <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/sdspi_host.html#sd-spi-host-driver>`_: supports SPI mode;
+* When using SPI or 1-bit modes, please pay special attention to `Pull-up Requirements of Pins <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/sd_pullup_requirements.html>`_.
+
+**Examples:**
+
+* `storage/sd_card <https://github.com/espressif/esp-idf/tree/526f682/examples/storage/sd_card>`_: access the SD card which uses FAT file system.
+
+
+eMMC
+-----------
+
+The eMMC (embedded MMC) memory chip uses the similar protocol to SD cards and can use the same driver `SD/SDIO/MMC Driver <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/sdmmc.html>`_ as SD cards. However, please note that the eMMC chip can only use SDIO mode and does not support SPI mode. Currently, the eMMC chip supports the default rate of 20 MHz and high-speed rate of 40 MHz in 8-line mode, and supports high-speed rate of 40 MHz in 4-line DDR mode.
+
+The eMMC is generally soldered to the main board as a chip, which is more integrated than SD cards, and is suitable for wearable devices and other scenarios with high storage needs and certain requirements for system integration in the meantime.
+
+**Related documents:**
+
+* `SD/SDIO/MMC Driver <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/sdmmc.html>`__;
+* `Supported eMMC Speed Modes <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/sdmmc_host.html#supported-speed-modes>`_.
+
+
+EEPROM
+---------
+
+EEPROM (e.g., `AT24C0X series <http://ww1.microchip.com/downloads/en/devicedoc/doc0180.pdf>`_) is a 1024-16384 bits of serial erasable memory, which can also operate in read-only mode by configuring pin levels. Generally, its storage space is distributed by ``word``, with each ``word`` containing ``8-bit`` spaces. The EEPROM supports byte addressing and is easy to read and write, making it especially suitable for saving configuration parameters and etc. On top of that, it can also be used in industrial and commercial scenarios with requirements for power consumption and reliability after being optimized.
+
+**Adapted EEPROM chips:**
+
++------------+-----------------------+------+--------+----------------------------------------------------------------------------------------------------------------+----------------------------------------------+
+|    Name    |         Function      | Bus  | Vendor |                                                     Datasheet                                                  |                     Driver                   |
++============+=======================+======+========+================================================================================================================+==============================================+
+| AT24C01/02 | 1024/2048 bits EEPROM | I2C  | Atmel  | `Datasheet <http://ww1.microchip.com/downloads/en/devicedoc/atmel-8871f-seeprom-at24c01d-02d-datasheet.pdf>`__ | :component:`eeprom <storage/eeprom/at24c02>` |
++------------+-----------------------+------+--------+----------------------------------------------------------------------------------------------------------------+----------------------------------------------+

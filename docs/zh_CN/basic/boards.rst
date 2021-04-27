@@ -3,6 +3,8 @@
 板级支持组件 (Boards)
 ======================
 
+:link_to_translation:`en:[English]`
+
 本文档主要介绍板级支持组件 (Boards) 的使用方法，该组件作为示例程序的公共组件，可向应用程序提供统一的引脚宏定义和与硬件无关的初始化操作，基于板级支持开发的应用程序可以同时兼容不同的开发板，具体功能如下：
 
 1. 提供统一的引脚资源宏定义
@@ -16,9 +18,9 @@ Boards 组件的结构如下：
     :align: center
     :width: 70%
 
-    Boards component diagram
+    Boards 组件结构框图
 
-* Boards 组件中包含多个以开发板名称命名的文件夹，以及组件的 ``CMakeLists.txt`` 和 ``Kconfig.projbuild``，因此 ``Boards`` 的配置项将在显示在 ``menuconfig`` 的顶级目录；
+* Boards 组件中包含多个以开发板名称命名的文件夹，以及组件的 ``CMakeLists.txt`` 和 ``Kconfig.projbuild``，因此 ``Boards`` 的配置项将显示在 ``menuconfig`` 的顶级目录；
 * 开发板文件夹必须包含 ``board.h`` 和 ``board.c``，非必须文件包括 ``kconfig.in`` 等，该文件提供了该开发板特有的配置项。
 
 
@@ -179,7 +181,7 @@ Boards 组件的结构如下：
 已适配 IDF 版本
 ---------------
 
--  ESP-IDF v4.0 及以上版本。
+- ESP-IDF v4.0 及以上版本。
 
 已适配芯片
 ----------

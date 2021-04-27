@@ -7,6 +7,6 @@
 .. toctree::
     :maxdepth: 1
 
-    PWM Audio <pwm_audio>
-    DAC Audio <dac_audio>
+    PWM 音频 <pwm_audio>
+    DAC 音频 <dac_audio>
 
