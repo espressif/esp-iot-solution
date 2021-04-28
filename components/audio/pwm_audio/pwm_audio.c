@@ -29,11 +29,7 @@
 #include "pwm_audio.h"
 #include "sdkconfig.h"
 
-#ifndef CONFIG_IDF_TARGET_ESP32S2
-#ifndef CONFIG_IDF_TARGET_ESP32
-#error No defined idf target esp32 or esp32s2
-#endif
-#endif
+#if (CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32)
 
 static const char *TAG = "pwm_audio";
 
@@ -812,3 +808,5 @@ esp_err_t pwm_audio_deinit(void)
     g_pwm_audio_handle = NULL;
     return ESP_OK;
 }
+
+#endif
