@@ -1,8 +1,8 @@
 
 Other Resources
 *****************
+:link_to_translation:`zh_CN:[中文]`
 
-:link_to_translation:`en:[English]`
 
 .. toctree::
     :maxdepth: 1

@@ -1,7 +1,7 @@
 Get Started
 =================
 
-:link_to_translation:`en:[English]`
+:link_to_translation:`zh_CN:[中文]`
 
 This document is intended to help you set up the development environment for ESP-IoT-Solution (Espressif IoT Solution). After that, a simple example will show you how to use ESP-IoT-Solution to set up environment, create a project, build and flash firmware onto an ESP32/ESP32-S series board, etc.
 
