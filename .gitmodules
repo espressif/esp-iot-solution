@@ -3,4 +3,4 @@
 	url = https://github.com/lvgl/lvgl.git
 [submodule "examples/hmi/lvgl_example/components/lv_examples/lv_examples"]
 	path = examples/hmi/lvgl_example/components/lv_examples/lv_examples
-	url = https://github.com/littlevgl/lv_examples.git
+	url = https://github.com/lvgl/lv_examples.git
