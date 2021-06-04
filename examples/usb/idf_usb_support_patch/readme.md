@@ -8,8 +8,10 @@
 4. Run command below
 
 ```
-git checkout 94118efe64c72
-git apply --check usb_support_workaround.patch
-git am --signoff < usb_support_workaround.patch
+git fetch
+git checkout c13afea635ade
+git submodule update --init --recursive
+git apply --check usb_support_workaround_0526.patch
+git am --signoff < usb_support_workaround_0526.patch
 git submodule update --init --recursive
 ```
