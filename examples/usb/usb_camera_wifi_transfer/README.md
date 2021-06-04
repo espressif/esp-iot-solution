@@ -35,12 +35,16 @@
     ```
     . $HOME/esp/esp-idf/export.sh
     ```
-3. 根据摄像头配置描述符，[修改 example 配置项](../../../components/usb/uvc_stream/README.md)
-4. 设置编译目标为 `esp32-s2`
+3. 添加 ESP-IOT-SOLUTION 环境变量，Linux 方法如下，其它平台请查阅 [readme](../../../README_CN.md)
+    ```
+    export IOT_SOLUTION_PATH=$HOME/esp/esp-iot-solution
+    ```
+4. 根据摄像头配置描述符，[修改摄像头配置项](../../../components/usb/uvc_stream/README.md)
+5. 设置编译目标为 `esp32-s2`
     ```
     idf.py set-target esp32s2
     ```
-5. 编译、下载、查看输出
+6. 编译、下载、查看输出
     ```
     idf.py build flash monitor
     ```
