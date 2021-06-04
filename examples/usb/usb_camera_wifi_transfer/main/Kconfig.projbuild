@@ -1,0 +1,17 @@
+menu "USB Camera Demo"
+
+    config USE_PSRAM
+        bool "Use Psram As Picture Buffer"
+        default true
+
+    choice PIC_SIZE
+        prompt "Picture Size"
+        default SIZE_320_240
+
+        config SIZE_320_240
+            bool "320*240"
+        config SIZE_640_480
+            bool "640*480"
+    endchoice
+
+endmenu
