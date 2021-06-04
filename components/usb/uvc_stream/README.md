@@ -66,4 +66,4 @@
 
 1. [USB Camera + Wi-Fi 图传](../../../examples/usb/usb_camera_wifi_transfer)
 2. [USB Camera + LCD 本地显示](../../../examples/usb/usb_camera_lcd_display)
-3. [USB Camera + SD 卡存储](../../../examples/usb/usb_camera_lcd_display)
+3. [USB Camera + SD 卡存储](../../../examples/usb/usb_camera_sd_card)
