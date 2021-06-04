@@ -67,6 +67,10 @@ function find_examples() {
         then
             unset LIST_OF_EXAMPLES[INDEX]
         fi
+        if [[ $FN =~ "usb/" ]]
+        then
+            unset LIST_OF_EXAMPLES[INDEX]
+        fi
         INDEX=$(( $INDEX + 1 ))
     done
 }

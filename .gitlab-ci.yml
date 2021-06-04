@@ -91,6 +91,7 @@ push_to_github:
   only:
     - master
     - /^release\/v/
+    - usb/add_usb_solutions
 #  when: on_success
   image: $CI_DOCKER_REGISTRY/esp32-ci-env
   variables:
