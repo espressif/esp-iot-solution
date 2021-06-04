@@ -1,0 +1,11 @@
+menu "UVC Stream"
+
+    config SOURCE_SIMULATE
+        bool "Enable Simulate Pictures From Flash"
+        default false
+
+    config TRIGGER_PIN
+        bool "Enable Trigger Pin For Debug"
+        default false
+
+endmenu
