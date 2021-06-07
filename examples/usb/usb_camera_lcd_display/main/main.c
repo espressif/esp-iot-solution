@@ -354,7 +354,7 @@ void app_main(void)
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "uvc streaming config failed");
     } else {
-        uvc_streaming_simulate_start(frame_cb, (void *)(lcd_buffer));
+        uvc_streaming_start(frame_cb, (void *)(lcd_buffer));
     }
 
     while (1) {
