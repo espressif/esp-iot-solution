@@ -37,6 +37,9 @@ extern scr_driver_t lcd_ili9486_default_driver;
 #ifdef CONFIG_LCD_DRIVER_SCREEN_CONTROLLER_ILI9806
 extern scr_driver_t lcd_ili9806_default_driver;
 #endif
+#ifdef CONFIG_LCD_DRIVER_SCREEN_CONTROLLER_ILI9488
+extern scr_driver_t lcd_ili9488_default_driver;
+#endif
 #ifdef CONFIG_LCD_DRIVER_SCREEN_CONTROLLER_NT35510
 extern scr_driver_t lcd_nt35510_default_driver;
 #endif
@@ -45,6 +48,9 @@ extern scr_driver_t lcd_rm68120_default_driver;
 #endif
 #ifdef CONFIG_LCD_DRIVER_SCREEN_CONTROLLER_SSD1351
 extern scr_driver_t lcd_ssd1351_default_driver;
+#endif
+#ifdef CONFIG_LCD_DRIVER_SCREEN_CONTROLLER_SSD1963
+extern scr_driver_t lcd_ssd1963_default_driver;
 #endif
 #ifdef CONFIG_LCD_DRIVER_SCREEN_CONTROLLER_ST7789
 extern scr_driver_t lcd_st7789_default_driver;
@@ -86,6 +92,11 @@ esp_err_t scr_find_driver(scr_controller_t controller, scr_driver_t *out_screen)
         *out_screen = lcd_ili9486_default_driver;
         break;
 #endif
+#ifdef CONFIG_LCD_DRIVER_SCREEN_CONTROLLER_ILI9488
+    case SCREEN_CONTROLLER_ILI9488:
+        *out_screen = lcd_ili9488_default_driver;
+        break;
+#endif
 #ifdef CONFIG_LCD_DRIVER_SCREEN_CONTROLLER_NT35510
     case SCREEN_CONTROLLER_NT35510:
         *out_screen = lcd_nt35510_default_driver;
@@ -109,6 +120,11 @@ esp_err_t scr_find_driver(scr_controller_t controller, scr_driver_t *out_screen)
 #ifdef CONFIG_LCD_DRIVER_SCREEN_CONTROLLER_SSD1351
     case SCREEN_CONTROLLER_SSD1351:
         *out_screen = lcd_ssd1351_default_driver;
+        break;
+#endif
+#ifdef CONFIG_LCD_DRIVER_SCREEN_CONTROLLER_SSD1963
+    case SCREEN_CONTROLLER_SSD1963:
+        *out_screen = lcd_ssd1963_default_driver;
         break;
 #endif
 

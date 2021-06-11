@@ -10,6 +10,9 @@ menu "LCD Drivers"
         config LCD_DRIVER_SCREEN_CONTROLLER_ILI9806
             bool "ILI9806"
             default n
+        config LCD_DRIVER_SCREEN_CONTROLLER_ILI9488
+            bool "ILI9488"
+            default n
         config LCD_DRIVER_SCREEN_CONTROLLER_NT35510
             bool "NT35510"
             default n
@@ -18,6 +21,9 @@ menu "LCD Drivers"
             default n
         config LCD_DRIVER_SCREEN_CONTROLLER_SSD1351
             bool "SSD1351"
+            default n
+        config LCD_DRIVER_SCREEN_CONTROLLER_SSD1963
+            bool "SSD1963"
             default n
         config LCD_DRIVER_SCREEN_CONTROLLER_ST7789
             bool "ST7789"
