@@ -255,7 +255,6 @@ static esp_err_t _led_set_state(int io_num, bool off_level, blink_step_state_t s
 static void _blink_list_switch(_led_indicator_t *p_led_indicator)
 {
     p_led_indicator->active_blink = NULL_ACTIVE_BLINK; //stop active blink
-    _led_set_state(p_led_indicator->io_num, p_led_indicator->off_level, LED_STATE_OFF); //turn off the led
     for(size_t index = 0; index < BLINK_LIST_NUM; index ++) //find the first incomplete blink
     {
         if (p_led_indicator->p_blink_steps[index] != LED_BLINK_STOP)
@@ -327,13 +326,13 @@ led_indicator_handle_t led_indicator_create(int io_num, const led_indicator_conf
     char timmer_name[16] = {'\0'};
     snprintf(timmer_name, sizeof(timmer_name) - 1, "%s%02x", "led_tmr_", io_num);
     _led_indicator_t *p_led_indicator = (_led_indicator_t *)calloc(1, sizeof(_led_indicator_t));
-    LED_INDICATOR_CHECK(p_led_indicator != NULL, "calloc memory failed", NULL);
+    LED_INDICATOR_CHECK(p_led_indicator != NULL, "calloc indicator memory failed", NULL);
     p_led_indicator->off_level = config->off_level;
     p_led_indicator->io_num = io_num;
     p_led_indicator->mode = config->mode;
     p_led_indicator->active_blink = NULL_ACTIVE_BLINK;
     p_led_indicator->p_blink_steps = (int *)calloc(BLINK_LIST_NUM, sizeof(int));
-    LED_INDICATOR_CHECK_GOTO(p_led_indicator->p_blink_steps != NULL, "calloc memory failed 2", cleanup_indicator);
+    LED_INDICATOR_CHECK_GOTO(p_led_indicator->p_blink_steps != NULL, "calloc blink_steps memory failed", cleanup_indicator);
     p_led_indicator->mutex = xSemaphoreCreateMutex();
     LED_INDICATOR_CHECK_GOTO(p_led_indicator->mutex != NULL, "create mutex failed", cleanup_indicator_blinkstep);
     
@@ -440,6 +439,10 @@ esp_err_t led_indicator_stop(led_indicator_handle_t handle, led_indicator_blink_
     p_led_indicator->p_blink_steps[blink_type] = LED_BLINK_STOP;
     _blink_list_switch(p_led_indicator); //stop and swith to next blink steps
     xSemaphoreGive(p_led_indicator->mutex);
-    _blink_list_runner(p_led_indicator->h_timer);
+
+    if(p_led_indicator->active_blink == blink_type) { //re-run from first step
+        _blink_list_runner(p_led_indicator->h_timer);
+    }
+
     return ESP_OK;
 }
