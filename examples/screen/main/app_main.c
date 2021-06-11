@@ -253,7 +253,7 @@ void app_main(void)
         .clk_freq = 20000000,
         .i2s_port = I2S_NUM_0,
         .buffer_size = 32000,
-        .swap_data = false,
+        .swap_data = true,
     };
 
     scr_interface_driver_t *iface_drv;

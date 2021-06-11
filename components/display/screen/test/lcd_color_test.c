@@ -406,6 +406,34 @@ TEST_CASE("Screen RM68210 8080 test", "[screen][iot]")
     scr_interface_delete(iface_drv);
 }
 
+TEST_CASE("Screen SSD1963 8080 test", "[screen][iot]")
+{
+    scr_driver_t lcd;
+    scr_interface_driver_t *iface_drv = get_8080_iface();
+    scr_controller_config_t lcd_cfg = {0};
+    lcd_cfg.interface_drv = iface_drv;
+    lcd_cfg.pin_num_rst = -1;
+#ifdef CONFIG_IDF_TARGET_ESP32
+    lcd_cfg.pin_num_bckl = -1;
+#else
+    lcd_cfg.pin_num_bckl = -1;
+#endif
+    lcd_cfg.rst_active_level = 0;
+    lcd_cfg.bckl_active_level = 1;
+    lcd_cfg.offset_hor = 0;
+    lcd_cfg.offset_ver = 0;
+    lcd_cfg.width = 800;
+    lcd_cfg.height = 480;
+    lcd_cfg.rotate = SCR_DIR_LRTB;
+    TEST_ASSERT(ESP_OK == scr_find_driver(SCREEN_CONTROLLER_SSD1963, &lcd));
+    TEST_ASSERT(ESP_OK == lcd.init(&lcd_cfg));
+
+    lcd_colorful_test_all(&lcd);
+
+    lcd.deinit();
+    scr_interface_delete(iface_drv);
+}
+
 TEST_CASE("Screen ILI9341 SPI test", "[screen][iot]")
 {
     scr_driver_t lcd;
