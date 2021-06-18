@@ -27,6 +27,7 @@
 #include "esp_rom_gpio.h"
 #include "hal/usbh_ll.h"
 #include "hcd.h"
+#include "usb_private.h"
 #include "esp_log.h"
 #include "uvc_stream.h"
 #include "uvc_debug.h"
@@ -53,8 +54,8 @@ const char *TAG = "UVC_STREAM";
 #define USB_EP_CTRL_DEFAULT_MPS              64       //Default MPS(max payload size) of Endpoint 0
 #define USB_EP_ISOC_MAX_MPS                  512      //Max MPS ESP32-S2/S3 can handle
 #define CTRL_TRANSFER_DATA_MAX_BYTES         256      //Max data length assumed in control transfer
-#define NUM_ISOC_STREAM_IRPS                 4        //Number of isochronous stream IRPs created for continuous enqueue
-#define NUM_PACKETS_PER_IRP                  5        //Number of packets in each isochronous stream IRP
+#define NUM_ISOC_STREAM_URBS                 4        //Number of isochronous stream URBS created for continuous enqueue
+#define NUM_PACKETS_PER_URB_URB              5        //Number of packets in each isochronous stream URB
 #define UVC_EVENT_QUEUE_LEN                  30       //UVC event queue length 
 #define FRAME_MAX_INTERVAL                   2000000  //Specified in 100 ns units, General max frame interval (5 FPS)
 #define FRAME_MIN_INTERVAL                   333333   //General min frame interval (30 FPS)
@@ -492,54 +493,51 @@ static esp_err_t _usb_port_get_speed(hcd_port_handle_t port_hdl, usb_speed_t *po
     return ret;
 }
 
-/*------------------------------------------------ USB IRP Code ----------------------------------------------------*/
+/*------------------------------------------------ USB URB Code ----------------------------------------------------*/
 
-usb_irp_t *_usb_irp_alloc(int num_iso_packets, size_t packet_data_buffer_size, void *context)
+urb_t *_usb_urb_alloc(int num_isoc_packets, size_t packet_data_buffer_size, void *context)
 {
-    //Allocate list of IRPs
-    usb_irp_t *irp = heap_caps_calloc(1, sizeof(usb_irp_t) + (num_iso_packets * sizeof(usb_iso_packet_desc_t)), MALLOC_CAP_DEFAULT);
+    //Allocate list of URBS
+    urb_t *urb = heap_caps_calloc(1, sizeof(urb_t) + (num_isoc_packets * sizeof(usb_isoc_packet_desc_t)), MALLOC_CAP_DEFAULT);
 
-    if (NULL == irp) {
-        ESP_LOGE(TAG, "irp alloc failed");
+    if (NULL == urb) {
+        ESP_LOGE(TAG, "urb alloc failed");
         return NULL;
     }
 
-    //Allocate data buffer for each IRP and assign them
+    //Allocate data buffer for each URB and assign them
     uint8_t *data_buffer = NULL;
 
-    if (num_iso_packets) {
-        /* ISOC irp */
-        data_buffer = heap_caps_calloc(num_iso_packets, packet_data_buffer_size, MALLOC_CAP_DMA);
+    if (num_isoc_packets) {
+        /* ISOC urb */
+        data_buffer = heap_caps_calloc(num_isoc_packets, packet_data_buffer_size, MALLOC_CAP_DMA);
     } else {
-        /* no ISOC irp */
+        /* no ISOC urb */
         data_buffer = heap_caps_calloc(1, packet_data_buffer_size, MALLOC_CAP_DMA);
     }
 
     if (NULL == data_buffer) {
-        ESP_LOGE(TAG, "irp data_buffer alloc failed");
+        ESP_LOGE(TAG, "urb data_buffer alloc failed");
         return NULL;
     }
 
-    irp->context = context;
-    irp->data_buffer = data_buffer;
-    irp->num_iso_packets = num_iso_packets;
+    //Initialize URB and underlying transfer structure. Need to cast to dummy due to const fields
+    usb_transfer_dummy_t *transfer_dummy = (usb_transfer_dummy_t *)&urb->transfer;
+    transfer_dummy->data_buffer = data_buffer;
+    transfer_dummy->num_isoc_packets = num_isoc_packets;
+    transfer_dummy->context = context;
 
-    for (size_t i = 0; i < num_iso_packets; i++) {
-        //We need to initialize each individual isoc packet descriptor of the IRP
-        irp->iso_packet_desc[i].length = packet_data_buffer_size;
-    }
-
-    ESP_LOGD(TAG, "irp alloced");
-    return irp;
+    ESP_LOGD(TAG, "urb alloced");
+    return urb;
 }
 
-void _usb_irp_free(usb_irp_t *irp)
+void _usb_urb_free(urb_t *urb)
 {
-    //Free data buffers of each IRP
-    heap_caps_free(irp->data_buffer);
-    //Free the IRP list
-    heap_caps_free(irp);
-    ESP_LOGD(TAG, "irp free");
+    //Free data buffers of each URB
+    heap_caps_free(urb->transfer.data_buffer);
+    //Free the URB list
+    heap_caps_free(urb);
+    ESP_LOGD(TAG, "urb free");
 }
 
 /*------------------------------------------------ USB Pipe Code ----------------------------------------------------*/
@@ -569,7 +567,7 @@ static void _default_pipe_event_process(hcd_pipe_handle_t pipe_handle, hcd_pipe_
     assert(pipe_handle != NULL);
 
     switch (pipe_event) {
-        case HCD_PIPE_EVENT_IRP_DONE:
+        case HCD_PIPE_EVENT_URB_DONE:
             break;
 
         case HCD_PIPE_EVENT_INVALID:
@@ -580,8 +578,8 @@ static void _default_pipe_event_process(hcd_pipe_handle_t pipe_handle, hcd_pipe_
             ESP_LOGW(TAG, "line %u Pipe: default HCD_PIPE_EVENT_ERROR_XFER", __LINE__);
             break;
 
-        case HCD_PIPE_EVENT_ERROR_IRP_NOT_AVAIL:
-            ESP_LOGW(TAG, "line %u Pipe: default HCD_PIPE_EVENT_ERROR_IRP_NOT_AVAIL", __LINE__);
+        case HCD_PIPE_EVENT_ERROR_URB_NOT_AVAIL:
+            ESP_LOGW(TAG, "line %u Pipe: default HCD_PIPE_EVENT_ERROR_URB_NOT_AVAIL", __LINE__);
             break;
 
         case HCD_PIPE_EVENT_ERROR_OVERFLOW:
@@ -607,40 +605,40 @@ static void _stream_pipe_event_process(hcd_pipe_handle_t pipe_handle, hcd_pipe_e
     bool enqueue_flag = if_enqueue;
 
     switch (pipe_event) {
-        case HCD_PIPE_EVENT_IRP_DONE: {
-            usb_irp_t *done_irp = hcd_irp_dequeue(pipe_handle);
+        case HCD_PIPE_EVENT_URB_DONE: {
+            urb_t *urb_done = hcd_urb_dequeue(pipe_handle);
 
-            if (done_irp == NULL) {
+            if (urb_done == NULL) {
                 enqueue_flag = false;
                 break;
             }
 
-            TRIGGER_IRP_DEQUEUE();
-            _uvc_stream_handle_t *strmh = (_uvc_stream_handle_t *)(done_irp->context);
+            TRIGGER_URB_DEQUEUE();
+            _uvc_stream_handle_t *strmh = (_uvc_stream_handle_t *)(urb_done->transfer.context);
             size_t index = 0;
 
-            for (size_t i = 0; i < done_irp->num_iso_packets; i++) {
-                if (done_irp->iso_packet_desc[i].status != USB_TRANSFER_STATUS_COMPLETED) {
-                    ESP_LOGV(TAG, "line:%u bad iso transct status %d", __LINE__, done_irp->iso_packet_desc[i].status);
+            for (size_t i = 0; i < urb_done->transfer.num_isoc_packets; i++) {
+                if (urb_done->transfer.isoc_packet_desc[i].status != USB_TRANSFER_STATUS_COMPLETED) {
+                    ESP_LOGV(TAG, "line:%u bad iso transct status %d", __LINE__, urb_done->transfer.isoc_packet_desc[i].status);
                     continue;
                 }
 
-                uint8_t *simplebuffer = done_irp->data_buffer + (index * s_uvc_dev.isoc_ep_mps);
+                uint8_t *simplebuffer = urb_done->transfer.data_buffer + (index * s_uvc_dev.isoc_ep_mps);
                 ++index;
-                _uvc_process_payload(strmh, simplebuffer, (done_irp->iso_packet_desc[i].actual_length));
+                _uvc_process_payload(strmh, simplebuffer, (urb_done->transfer.isoc_packet_desc[i].actual_num_bytes));
             }
 
             if (enqueue_flag) {
-                esp_err_t ret = hcd_irp_enqueue(pipe_handle, done_irp);
+                esp_err_t ret = hcd_urb_enqueue(pipe_handle, urb_done);
 
                 if (ret != ESP_OK) {
-                    ESP_LOGW(TAG, "line:%u IRP ENQUEUE FAILED %s", __LINE__, esp_err_to_name(ret));
+                    ESP_LOGW(TAG, "line:%u URB ENQUEUE FAILED %s", __LINE__, esp_err_to_name(ret));
                 }
 
-                TRIGGER_IRP_ENQUEUE();
+                TRIGGER_URB_ENQUEUE();
             }
 
-            ESP_LOGV(TAG, "line %u Pipe: iso HCD_PIPE_EVENT_IRP_DONE", __LINE__);
+            ESP_LOGV(TAG, "line %u Pipe: iso HCD_PIPE_EVENT_URB_DONE", __LINE__);
             break;
         }
 
@@ -652,8 +650,8 @@ static void _stream_pipe_event_process(hcd_pipe_handle_t pipe_handle, hcd_pipe_e
             ESP_LOGW(TAG, "line %u Pipe: iso HCD_PIPE_EVENT_ERROR_XFER", __LINE__);
             break;
 
-        case HCD_PIPE_EVENT_ERROR_IRP_NOT_AVAIL:
-            ESP_LOGW(TAG, "line %u Pipe: iso HCD_PIPE_EVENT_ERROR_IRP_NOT_AVAIL", __LINE__);
+        case HCD_PIPE_EVENT_ERROR_URB_NOT_AVAIL:
+            ESP_LOGW(TAG, "line %u Pipe: iso HCD_PIPE_EVENT_ERROR_URB_NOT_AVAIL", __LINE__);
             break;
 
         case HCD_PIPE_EVENT_ERROR_OVERFLOW:
@@ -787,30 +785,30 @@ static esp_err_t _stream_pipe_event_wait_until_num(hcd_pipe_handle_t expected_pi
 static esp_err_t _usb_set_device_addr(hcd_pipe_handle_t pipe_handle, uint8_t dev_addr)
 {
     UVC_CHECK(pipe_handle != NULL, "pipe_handle can't be NULL", ESP_ERR_INVALID_ARG);
-    //malloc IRP for default control
-    usb_irp_t *irp_ctrl = _usb_irp_alloc(0, sizeof(usb_ctrl_req_t), NULL);
-    UVC_CHECK(irp_ctrl != NULL, "alloc irp failed", ESP_ERR_NO_MEM);
+    //malloc URB for default control
+    urb_t *urb_ctrl = _usb_urb_alloc(0, sizeof(usb_ctrl_req_t), NULL);
+    UVC_CHECK(urb_ctrl != NULL, "alloc urb failed", ESP_ERR_NO_MEM);
 
     //STD: Set ADDR
-    USB_CTRL_REQ_INIT_SET_ADDR((usb_ctrl_req_t *)irp_ctrl->data_buffer, dev_addr);
-    irp_ctrl->num_bytes = 0; //No data stage
+    USB_CTRL_REQ_INIT_SET_ADDR((usb_ctrl_req_t *)urb_ctrl->transfer.data_buffer, dev_addr);
+    urb_ctrl->transfer.num_bytes = 0; //No data stage
     //Enqueue it
     ESP_LOGI(TAG, "Set Device Addr = %u", dev_addr);
-    esp_err_t ret = hcd_irp_enqueue(pipe_handle, irp_ctrl);
-    UVC_CHECK_GOTO(ESP_OK == ret, "irp enqueue failed", free_irp_);
-    ret = _default_pipe_event_wait_until(pipe_handle, HCD_PIPE_EVENT_IRP_DONE, portMAX_DELAY);
-    UVC_CHECK_GOTO(ESP_OK == ret, "irp event error", free_irp_);
-    usb_irp_t *irp_done = hcd_irp_dequeue(pipe_handle);
-    UVC_CHECK_GOTO(irp_done == irp_ctrl, "irp status: not same", free_irp_);
-    UVC_CHECK_GOTO(USB_TRANSFER_STATUS_COMPLETED == irp_done->status, "irp status: not complete", free_irp_);
+    esp_err_t ret = hcd_urb_enqueue(pipe_handle, urb_ctrl);
+    UVC_CHECK_GOTO(ESP_OK == ret, "urb enqueue failed", free_urb_);
+    ret = _default_pipe_event_wait_until(pipe_handle, HCD_PIPE_EVENT_URB_DONE, portMAX_DELAY);
+    UVC_CHECK_GOTO(ESP_OK == ret, "urb event error", free_urb_);
+    urb_t *urb_done = hcd_urb_dequeue(pipe_handle);
+    UVC_CHECK_GOTO(urb_done == urb_ctrl, "urb status: not same", free_urb_);
+    UVC_CHECK_GOTO(USB_TRANSFER_STATUS_COMPLETED == urb_done->transfer.status, "urb status: not complete", free_urb_);
     ret = hcd_pipe_update_dev_addr(pipe_handle, dev_addr);
-    UVC_CHECK_GOTO(ESP_OK == ret, "default pipe update address failed", free_irp_);
+    UVC_CHECK_GOTO(ESP_OK == ret, "default pipe update address failed", free_urb_);
     ret = hcd_pipe_update_mps(pipe_handle, USB_EP_CTRL_DEFAULT_MPS);
-    UVC_CHECK_GOTO(ESP_OK == ret, "default pipe update MPS failed", free_irp_);
+    UVC_CHECK_GOTO(ESP_OK == ret, "default pipe update MPS failed", free_urb_);
     ESP_LOGI(TAG, "Set Device Addr Done");
 
-free_irp_:
-    _usb_irp_free(irp_ctrl);
+free_urb_:
+    _usb_urb_free(urb_ctrl);
     return ret;
 }
 
@@ -818,25 +816,25 @@ static esp_err_t _usb_set_device_config(hcd_pipe_handle_t pipe_handle, uint16_t 
 {
     UVC_CHECK(pipe_handle != NULL, "pipe_handle can't be NULL", ESP_ERR_INVALID_ARG);
     UVC_CHECK(configuration != 0, "configuration can't be 0", ESP_ERR_INVALID_ARG);
-    //malloc IRP for default control
-    usb_irp_t *irp_ctrl = _usb_irp_alloc(0, sizeof(usb_ctrl_req_t), NULL);
-    UVC_CHECK(irp_ctrl != NULL, "alloc irp failed", ESP_ERR_NO_MEM);
+    //malloc URB for default control
+    urb_t *urb_ctrl = _usb_urb_alloc(0, sizeof(usb_ctrl_req_t), NULL);
+    UVC_CHECK(urb_ctrl != NULL, "alloc urb failed", ESP_ERR_NO_MEM);
 
-    USB_CTRL_REQ_INIT_SET_CONFIG((usb_ctrl_req_t *)irp_ctrl->data_buffer, configuration);
-    irp_ctrl->num_bytes = 0; //No data stage
+    USB_CTRL_REQ_INIT_SET_CONFIG((usb_ctrl_req_t *)urb_ctrl->transfer.data_buffer, configuration);
+    urb_ctrl->transfer.num_bytes = 0; //No data stage
     //Enqueue it
     ESP_LOGI(TAG, "Set Device Configuration = %u", configuration);
-    esp_err_t ret = hcd_irp_enqueue(pipe_handle, irp_ctrl);
-    UVC_CHECK_GOTO(ESP_OK == ret, "irp enqueue failed", free_irp_);
-    ret = _default_pipe_event_wait_until(pipe_handle, HCD_PIPE_EVENT_IRP_DONE, portMAX_DELAY);
-    UVC_CHECK_GOTO(ESP_OK == ret, "irp event error", free_irp_);
-    usb_irp_t *irp_done = hcd_irp_dequeue(pipe_handle);
-    UVC_CHECK_GOTO(irp_done == irp_ctrl, "irp status: not same", free_irp_);
-    UVC_CHECK_GOTO(USB_TRANSFER_STATUS_COMPLETED == irp_done->status, "irp status: not complete", free_irp_);
+    esp_err_t ret = hcd_urb_enqueue(pipe_handle, urb_ctrl);
+    UVC_CHECK_GOTO(ESP_OK == ret, "urb enqueue failed", free_urb_);
+    ret = _default_pipe_event_wait_until(pipe_handle, HCD_PIPE_EVENT_URB_DONE, portMAX_DELAY);
+    UVC_CHECK_GOTO(ESP_OK == ret, "urb event error", free_urb_);
+    urb_t *urb_done = hcd_urb_dequeue(pipe_handle);
+    UVC_CHECK_GOTO(urb_done == urb_ctrl, "urb status: not same", free_urb_);
+    UVC_CHECK_GOTO(USB_TRANSFER_STATUS_COMPLETED == urb_done->transfer.status, "urb status: not complete", free_urb_);
     ESP_LOGI(TAG, "Set Device Configuration Done");
 
-free_irp_:
-    _usb_irp_free(irp_ctrl);
+free_urb_:
+    _usb_urb_free(urb_ctrl);
     return ret;
 }
 
@@ -844,80 +842,80 @@ static esp_err_t _usb_set_device_interface(hcd_pipe_handle_t pipe_handle, uint16
 {
     UVC_CHECK(pipe_handle != NULL, "pipe_handle can't be NULL", ESP_ERR_INVALID_ARG);
     UVC_CHECK(interface != 0, "interface can't be 0", ESP_ERR_INVALID_ARG);
-    //malloc IRP for default control
-    usb_irp_t *irp_ctrl = _usb_irp_alloc(0, sizeof(usb_ctrl_req_t), NULL);
-    UVC_CHECK(irp_ctrl != NULL, "alloc irp failed", ESP_ERR_NO_MEM);
+    //malloc URB for default control
+    urb_t *urb_ctrl = _usb_urb_alloc(0, sizeof(usb_ctrl_req_t), NULL);
+    UVC_CHECK(urb_ctrl != NULL, "alloc urb failed", ESP_ERR_NO_MEM);
 
-    USB_CTRL_REQ_INIT_SET_INTERFACE((usb_ctrl_req_t *)irp_ctrl->data_buffer, interface, interface_alt);
-    irp_ctrl->num_bytes = 0;
+    USB_CTRL_REQ_INIT_SET_INTERFACE((usb_ctrl_req_t *)urb_ctrl->transfer.data_buffer, interface, interface_alt);
+    urb_ctrl->transfer.num_bytes = 0;
     //Enqueue it
     ESP_LOGI(TAG, "Set Device Interface = %u, Alt = %u", interface, interface_alt);
-    esp_err_t ret = hcd_irp_enqueue(pipe_handle, irp_ctrl);
-    UVC_CHECK_GOTO(ESP_OK == ret, "irp enqueue failed", free_irp_);
-    ret = _default_pipe_event_wait_until(pipe_handle, HCD_PIPE_EVENT_IRP_DONE, portMAX_DELAY);
-    UVC_CHECK_GOTO(ESP_OK == ret, "irp event error", free_irp_);
-    usb_irp_t *irp_done = hcd_irp_dequeue(pipe_handle);
-    UVC_CHECK_GOTO(irp_done == irp_ctrl, "irp status: not same", free_irp_);
-    UVC_CHECK_GOTO(USB_TRANSFER_STATUS_COMPLETED == irp_done->status, "irp status: not complete", free_irp_);
+    esp_err_t ret = hcd_urb_enqueue(pipe_handle, urb_ctrl);
+    UVC_CHECK_GOTO(ESP_OK == ret, "urb enqueue failed", free_urb_);
+    ret = _default_pipe_event_wait_until(pipe_handle, HCD_PIPE_EVENT_URB_DONE, portMAX_DELAY);
+    UVC_CHECK_GOTO(ESP_OK == ret, "urb event error", free_urb_);
+    urb_t *urb_done = hcd_urb_dequeue(pipe_handle);
+    UVC_CHECK_GOTO(urb_done == urb_ctrl, "urb status: not same", free_urb_);
+    UVC_CHECK_GOTO(USB_TRANSFER_STATUS_COMPLETED == urb_done->transfer.status, "urb status: not complete", free_urb_);
     ESP_LOGI(TAG, "Set Device Interface Done");
 
-free_irp_:
-    _usb_irp_free(irp_ctrl);
+free_urb_:
+    _usb_urb_free(urb_ctrl);
     return ret;
 }
 
 static esp_err_t _uvc_vs_commit_control(hcd_pipe_handle_t pipe_handle, uvc_stream_ctrl_t *ctrl_set, uvc_stream_ctrl_t *ctrl_probed)
 {
     assert(ctrl_set != NULL);
-    //malloc IRP for default control
-    usb_irp_t *irp_ctrl = _usb_irp_alloc(0, sizeof(usb_ctrl_req_t) + CTRL_TRANSFER_DATA_MAX_BYTES, NULL);
-    UVC_CHECK(irp_ctrl != NULL, "alloc irp failed", ESP_ERR_NO_MEM);
+    //malloc URB for default control
+    urb_t *urb_ctrl = _usb_urb_alloc(0, sizeof(usb_ctrl_req_t) + CTRL_TRANSFER_DATA_MAX_BYTES, NULL);
+    UVC_CHECK(urb_ctrl != NULL, "alloc urb failed", ESP_ERR_NO_MEM);
 
-    usb_irp_t *irp_done = NULL;
+    urb_t *urb_done = NULL;
 
     ESP_LOGI(TAG, "SET_CUR Probe");
-    USB_CTRL_UVC_PROBE_SET_REQ((usb_ctrl_req_t *)irp_ctrl->data_buffer);
-    _uvc_stream_ctrl_to_buf((irp_ctrl->data_buffer + sizeof(usb_ctrl_req_t)), ((usb_ctrl_req_t *)irp_ctrl->data_buffer)->wLength, ctrl_set);
-    irp_ctrl->num_bytes = ((usb_ctrl_req_t *)irp_ctrl->data_buffer)->wLength;
-    esp_err_t ret = hcd_irp_enqueue(pipe_handle, irp_ctrl);
-    UVC_CHECK_GOTO(ESP_OK == ret, "irp enqueue failed", free_irp_);
-    ret = _default_pipe_event_wait_until(pipe_handle, HCD_PIPE_EVENT_IRP_DONE, portMAX_DELAY);
-    UVC_CHECK_GOTO(ESP_OK == ret, "irp event error", free_irp_);
-    irp_done = hcd_irp_dequeue(pipe_handle);
-    UVC_CHECK_GOTO(irp_done == irp_ctrl, "irp status: not same", free_irp_);
-    UVC_CHECK_GOTO(USB_TRANSFER_STATUS_COMPLETED == irp_done->status, "irp status: not complete", free_irp_);
+    USB_CTRL_UVC_PROBE_SET_REQ((usb_ctrl_req_t *)urb_ctrl->transfer.data_buffer);
+    _uvc_stream_ctrl_to_buf((urb_ctrl->transfer.data_buffer + sizeof(usb_ctrl_req_t)), ((usb_ctrl_req_t *)urb_ctrl->transfer.data_buffer)->wLength, ctrl_set);
+    urb_ctrl->transfer.num_bytes = ((usb_ctrl_req_t *)urb_ctrl->transfer.data_buffer)->wLength;
+    esp_err_t ret = hcd_urb_enqueue(pipe_handle, urb_ctrl);
+    UVC_CHECK_GOTO(ESP_OK == ret, "urb enqueue failed", free_urb_);
+    ret = _default_pipe_event_wait_until(pipe_handle, HCD_PIPE_EVENT_URB_DONE, portMAX_DELAY);
+    UVC_CHECK_GOTO(ESP_OK == ret, "urb event error", free_urb_);
+    urb_done = hcd_urb_dequeue(pipe_handle);
+    UVC_CHECK_GOTO(urb_done == urb_ctrl, "urb status: not same", free_urb_);
+    UVC_CHECK_GOTO(USB_TRANSFER_STATUS_COMPLETED == urb_done->transfer.status, "urb status: not complete", free_urb_);
     ESP_LOGI(TAG, "SET_CUR Probe Done");
 
     ESP_LOGI(TAG, "GET_CUR Probe");
-    USB_CTRL_UVC_PROBE_GET_REQ((usb_ctrl_req_t *)irp_ctrl->data_buffer);
-    irp_ctrl->num_bytes = USB_EP_CTRL_DEFAULT_MPS; //IN should be integer multiple of MPS
-    ret = hcd_irp_enqueue(pipe_handle, irp_ctrl);
-    UVC_CHECK_GOTO(ESP_OK == ret, "irp enqueue failed", free_irp_);
-    ret = _default_pipe_event_wait_until(pipe_handle, HCD_PIPE_EVENT_IRP_DONE, portMAX_DELAY);
-    UVC_CHECK_GOTO(ESP_OK == ret, "irp event error", free_irp_);
-    irp_done = hcd_irp_dequeue(pipe_handle);
-    UVC_CHECK_GOTO(irp_done == irp_ctrl, "irp status: not same", free_irp_);
-    UVC_CHECK_GOTO(USB_TRANSFER_STATUS_COMPLETED == irp_done->status, "irp status: not complete", free_irp_);
-    UVC_CHECK_GOTO((irp_done->actual_num_bytes >= ((usb_ctrl_req_t *)irp_ctrl->data_buffer)->wLength), "irp status: data overflow", free_irp_);
-    _buf_to_uvc_stream_ctrl((irp_done->data_buffer + sizeof(usb_ctrl_req_t)), ((usb_ctrl_req_t *)irp_done->data_buffer)->wLength, ctrl_probed);
+    USB_CTRL_UVC_PROBE_GET_REQ((usb_ctrl_req_t *)urb_ctrl->transfer.data_buffer);
+    urb_ctrl->transfer.num_bytes = USB_EP_CTRL_DEFAULT_MPS; //IN should be integer multiple of MPS
+    ret = hcd_urb_enqueue(pipe_handle, urb_ctrl);
+    UVC_CHECK_GOTO(ESP_OK == ret, "urb enqueue failed", free_urb_);
+    ret = _default_pipe_event_wait_until(pipe_handle, HCD_PIPE_EVENT_URB_DONE, portMAX_DELAY);
+    UVC_CHECK_GOTO(ESP_OK == ret, "urb event error", free_urb_);
+    urb_done = hcd_urb_dequeue(pipe_handle);
+    UVC_CHECK_GOTO(urb_done == urb_ctrl, "urb status: not same", free_urb_);
+    UVC_CHECK_GOTO(USB_TRANSFER_STATUS_COMPLETED == urb_done->transfer.status, "urb status: not complete", free_urb_);
+    UVC_CHECK_GOTO((urb_done->transfer.actual_num_bytes >= ((usb_ctrl_req_t *)urb_ctrl->transfer.data_buffer)->wLength), "urb status: data overflow", free_urb_);
+    _buf_to_uvc_stream_ctrl((urb_done->transfer.data_buffer + sizeof(usb_ctrl_req_t)), ((usb_ctrl_req_t *)urb_done->transfer.data_buffer)->wLength, ctrl_probed);
     _uvc_stream_ctrl_printf(stdout, ctrl_probed);
-    ESP_LOGI(TAG, "GET_CUR Probe Done, actual_num_bytes:%d", irp_done->actual_num_bytes);
+    ESP_LOGI(TAG, "GET_CUR Probe Done, actual_num_bytes:%d", urb_done->transfer.actual_num_bytes);
 
     ESP_LOGI(TAG, "SET_CUR COMMIT");
-    USB_CTRL_UVC_COMMIT_REQ((usb_ctrl_req_t *)irp_ctrl->data_buffer);
-    _uvc_stream_ctrl_to_buf((irp_ctrl->data_buffer + sizeof(usb_ctrl_req_t)), ((usb_ctrl_req_t *)irp_ctrl->data_buffer)->wLength, ctrl_probed);
-    irp_ctrl->num_bytes = ((usb_ctrl_req_t *)irp_ctrl->data_buffer)->wLength;
-    ret = hcd_irp_enqueue(pipe_handle, irp_ctrl);
-    UVC_CHECK_GOTO(ESP_OK == ret, "irp enqueue failed", free_irp_);
-    ret = _default_pipe_event_wait_until(pipe_handle, HCD_PIPE_EVENT_IRP_DONE, portMAX_DELAY);
-    UVC_CHECK_GOTO(ESP_OK == ret, "irp event error", free_irp_);
-    irp_done = hcd_irp_dequeue(pipe_handle);
-    UVC_CHECK_GOTO(irp_done == irp_ctrl, "irp status: not same", free_irp_);
-    UVC_CHECK_GOTO(USB_TRANSFER_STATUS_COMPLETED == irp_done->status, "irp status: not complete", free_irp_);
+    USB_CTRL_UVC_COMMIT_REQ((usb_ctrl_req_t *)urb_ctrl->transfer.data_buffer);
+    _uvc_stream_ctrl_to_buf((urb_ctrl->transfer.data_buffer + sizeof(usb_ctrl_req_t)), ((usb_ctrl_req_t *)urb_ctrl->transfer.data_buffer)->wLength, ctrl_probed);
+    urb_ctrl->transfer.num_bytes = ((usb_ctrl_req_t *)urb_ctrl->transfer.data_buffer)->wLength;
+    ret = hcd_urb_enqueue(pipe_handle, urb_ctrl);
+    UVC_CHECK_GOTO(ESP_OK == ret, "urb enqueue failed", free_urb_);
+    ret = _default_pipe_event_wait_until(pipe_handle, HCD_PIPE_EVENT_URB_DONE, portMAX_DELAY);
+    UVC_CHECK_GOTO(ESP_OK == ret, "urb event error", free_urb_);
+    urb_done = hcd_urb_dequeue(pipe_handle);
+    UVC_CHECK_GOTO(urb_done == urb_ctrl, "urb status: not same", free_urb_);
+    UVC_CHECK_GOTO(USB_TRANSFER_STATUS_COMPLETED == urb_done->transfer.status, "urb status: not complete", free_urb_);
     ESP_LOGI(TAG, "SET_CUR COMMIT Done");
 
-free_irp_:
-    _usb_irp_free(irp_ctrl);
+free_urb_:
+    _usb_urb_free(urb_ctrl);
     return ret;
 }
 
@@ -1242,17 +1240,21 @@ static void _usb_processing_task(void *arg)
     //Enum done,start the periodic pipe task
     vTaskDelay(pdMS_TO_TICKS(50));
 
-    usb_irp_t *stream_irps[NUM_ISOC_STREAM_IRPS] = {NULL};
+    urb_t *stream_urbs[NUM_ISOC_STREAM_URBS] = {NULL};
 
-    for (int i = 0; i < NUM_ISOC_STREAM_IRPS; i++) {
-        stream_irps[i] = _usb_irp_alloc(NUM_PACKETS_PER_IRP, uvc_dev->isoc_ep_mps, stream_hdl);
-        assert(stream_irps[i] != NULL);
+    for (int i = 0; i < NUM_ISOC_STREAM_URBS; i++) {
+        stream_urbs[i] = _usb_urb_alloc(NUM_PACKETS_PER_URB_URB, uvc_dev->isoc_ep_mps, stream_hdl);
+        assert(stream_urbs[i] != NULL);
+        for (size_t j = 0; j < NUM_PACKETS_PER_URB_URB; j++) {
+            //We need to initialize each individual isoc packet descriptor of the URB
+            stream_urbs[i]->transfer.isoc_packet_desc[j].num_bytes = uvc_dev->isoc_ep_mps;
+        }
     }
 
     ESP_LOGI(TAG, "Camera Start Streaming");
 
-    for (int i = 0; i < NUM_ISOC_STREAM_IRPS; i++) {
-        ret = hcd_irp_enqueue(stream_pipe_hdl, stream_irps[i]);
+    for (int i = 0; i < NUM_ISOC_STREAM_URBS; i++) {
+        ret = hcd_urb_enqueue(stream_pipe_hdl, stream_urbs[i]);
         assert(ESP_OK == ret);
     }
 
@@ -1279,7 +1281,7 @@ static void _usb_processing_task(void *arg)
 
             case USER_EVENT:
                 if (evt_msg._event.user_cmd == STREAM_SUSPEND) {
-                    _stream_pipe_event_wait_until_num(stream_pipe_hdl, HCD_PIPE_EVENT_IRP_DONE, NUM_ISOC_STREAM_IRPS, portMAX_DELAY, true);
+                    _stream_pipe_event_wait_until_num(stream_pipe_hdl, HCD_PIPE_EVENT_URB_DONE, NUM_ISOC_STREAM_URBS, portMAX_DELAY, true);
                     _usb_set_device_interface(dflt_pipe_hdl, uvc_dev->interface, 0);
                     ESP_LOGD(TAG, "Stream suspended!");
                     xEventGroupSetBits(uvc_dev->event_group, USB_STREAM_SUSPEND_DONE);
@@ -1290,8 +1292,8 @@ static void _usb_processing_task(void *arg)
                     assert(ESP_OK == ret);
                     _usb_set_device_interface(dflt_pipe_hdl, uvc_dev->interface, uvc_dev->interface_alt);
 
-                    for (int i = 0; i < NUM_ISOC_STREAM_IRPS; i++) {
-                        ret = hcd_irp_enqueue(stream_pipe_hdl, stream_irps[i]);
+                    for (int i = 0; i < NUM_ISOC_STREAM_URBS; i++) {
+                        ret = hcd_urb_enqueue(stream_pipe_hdl, stream_urbs[i]);
                         assert(ESP_OK == ret);
                     }
 
@@ -1312,8 +1314,8 @@ static void _usb_processing_task(void *arg)
         }
     }
 
-    for (int i = 0; i < NUM_ISOC_STREAM_IRPS; i++) {
-        _usb_irp_free(stream_irps[i]);
+    for (int i = 0; i < NUM_ISOC_STREAM_URBS; i++) {
+        _usb_urb_free(stream_urbs[i]);
     }
 
     uvc_stream_stop(stream_hdl);
