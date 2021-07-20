@@ -43,7 +43,7 @@
     export IOT_SOLUTION_PATH=$HOME/esp/esp-iot-solution
     ```
 4. 根据摄像头配置描述符，[修改摄像头配置项](../../../components/usb/uvc_stream/README.md)
-5. 设置编译目标为 `esp32-s2`
+5. 设置编译目标为 `esp32-s2` 或 `esp32s3`
     ```
     idf.py set-target esp32s2
     ```

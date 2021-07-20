@@ -36,20 +36,32 @@ typedef struct {
 
 static esp_err_t _i2s_lcd_write_data(void *handle, uint16_t data)
 {
+#ifndef CONFIG_IDF_TARGET_ESP32S3
     interface_i2s_handle_t *interface_i2s = __containerof(handle, interface_i2s_handle_t, interface_drv);
     return i2s_lcd_write_data(interface_i2s->i2s_lcd_handle, data);
+#else
+    return ESP_ERR_NOT_SUPPORTED;
+#endif
 }
 
 static esp_err_t _i2s_lcd_write_cmd(void *handle, uint16_t cmd)
 {
+#ifndef CONFIG_IDF_TARGET_ESP32S3
     interface_i2s_handle_t *interface_i2s = __containerof(handle, interface_i2s_handle_t, interface_drv);
     return i2s_lcd_write_cmd(interface_i2s->i2s_lcd_handle, cmd);
+#else
+    return ESP_ERR_NOT_SUPPORTED;
+#endif
 }
 
 static esp_err_t _i2s_lcd_write(void *handle, const uint8_t *data, uint32_t length)
 {
+#ifndef CONFIG_IDF_TARGET_ESP32S3
     interface_i2s_handle_t *interface_i2s = __containerof(handle, interface_i2s_handle_t, interface_drv);
     return i2s_lcd_write(interface_i2s->i2s_lcd_handle, data, length);
+#else
+    return ESP_ERR_NOT_SUPPORTED;
+#endif
 }
 
 static esp_err_t _i2s_lcd_read(void *handle, uint8_t *data, uint32_t length)
@@ -59,14 +71,22 @@ static esp_err_t _i2s_lcd_read(void *handle, uint8_t *data, uint32_t length)
 
 static esp_err_t _i2s_lcd_acquire(void *handle)
 {
+#ifndef CONFIG_IDF_TARGET_ESP32S3
     interface_i2s_handle_t *interface_i2s = __containerof(handle, interface_i2s_handle_t, interface_drv);
     return i2s_lcd_acquire(interface_i2s->i2s_lcd_handle);
+#else
+    return ESP_ERR_NOT_SUPPORTED;
+#endif
 }
 
 static esp_err_t _i2s_lcd_release(void *handle)
 {
+#ifndef CONFIG_IDF_TARGET_ESP32S3
     interface_i2s_handle_t *interface_i2s = __containerof(handle, interface_i2s_handle_t, interface_drv);
     return i2s_lcd_release(interface_i2s->i2s_lcd_handle);
+#else
+    return ESP_ERR_NOT_SUPPORTED;
+#endif
 }
 
 /**--------------------- I2C interface driver ----------------------*/
@@ -279,6 +299,7 @@ esp_err_t scr_interface_create(scr_interface_type_t type, void *config, scr_inte
 
     switch (type) {
     case SCREEN_IFACE_8080: {
+#ifndef CONFIG_IDF_TARGET_ESP32S3
         interface_i2s_handle_t *interface_i2s = heap_caps_malloc(sizeof(interface_i2s_handle_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
         LCD_IFACE_CHECK(NULL != interface_i2s, "memory of iface i2s is not enough", ESP_ERR_NO_MEM);
         interface_i2s->i2s_lcd_handle = i2s_lcd_driver_init((i2s_lcd_config_t *)config);
@@ -297,6 +318,9 @@ esp_err_t scr_interface_create(scr_interface_type_t type, void *config, scr_inte
         interface_i2s->interface_drv.bus_release = _i2s_lcd_release;
 
         *out_driver = &interface_i2s->interface_drv;
+#else
+        return ESP_ERR_NOT_SUPPORTED;
+#endif
     } break;
     case SCREEN_IFACE_SPI: {
         interface_spi_handle_t *interface_spi = heap_caps_malloc(sizeof(interface_spi_handle_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);

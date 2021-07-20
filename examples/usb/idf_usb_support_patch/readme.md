@@ -8,7 +8,7 @@
 
 ```
 git pull
-git checkout 8e3e65a47b
+git checkout 166c30e7b2ed1d
 git submodule update --init --recursive
 ```
 
