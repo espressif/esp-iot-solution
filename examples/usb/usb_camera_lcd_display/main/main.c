@@ -22,6 +22,7 @@
 #include "soc/efuse_reg.h"
 #include "esp_heap_caps.h"
 #include "esp_log.h"
+#include "esp_spiffs.h"
 
 #include "spi_bus.h"
 #include "st7789.h"
@@ -68,6 +69,20 @@
 #define BOARD_LCD_SPI_RESET_PIN 0
 #define BOARD_LCD_SPI_BL_PIN 21
 #define BOARD_LCD_TYPE SCREEN_CONTROLLER_ILI9341
+#elif CONFIG_BOARD_EXPERIMENT_S3
+/**< Screen SPI Interface pins */
+#define BOARD_LCD_SPI_HOST SPI2_HOST
+#define BOARD_LCD_SPI_CLOCK_FREQ 80000000
+#define BOARD_LCD_SPI_MISO_PIN 40
+#define BOARD_LCD_SPI_MOSI_PIN 38
+#define BOARD_LCD_SPI_CLK_PIN 39
+#define BOARD_LCD_SPI_CS_PIN 37
+#define BOARD_LCD_SPI_DC_PIN 41
+#define BOARD_LCD_SPI_RESET_PIN -1
+#define BOARD_LCD_SPI_BL_PIN 21
+#define BOARD_LCD_TYPE SCREEN_CONTROLLER_ST7789
+#define BOARD_LCD_ST7789_DIR_MIRROR
+#define BOARD_LCD_ST7789_INVERT
 #endif
 
 /* USB PIN fixed in esp32-s2, can not use io matrix */
@@ -276,8 +291,19 @@ static void frame_cb(uvc_frame_t *frame, void *ptr)
     }
 }
 
+#if CONFIG_IDF_TARGET_ESP32S3
+static void usb_otg_router_to_internal_phy()
+{
+    uint32_t *usb_phy_sel_reg = (uint32_t *)(0x60008000 + 0x120);
+    *usb_phy_sel_reg |= BIT(19) | BIT(20);
+}
+#endif
+
 void app_main(void)
 {
+#if CONFIG_IDF_TARGET_ESP32S3
+    usb_otg_router_to_internal_phy();
+#endif
     /* Initialize lcd driver for display, the driver comes from esp-iot-solution,
     for test only, users can implement their driver for a specified lcd controller*/
     lcd_init();

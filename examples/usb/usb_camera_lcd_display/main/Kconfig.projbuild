@@ -12,7 +12,9 @@ menu "USB Camera Demo"
             bool "esp32-s2 kaluga with st7789"
 
         config BOARD_EXPERIMENT
-            bool "experiment board with ili9341" 
+            bool "experiment board with ili9341"
+        config BOARD_EXPERIMENT_S3
+            bool "experiment board S3 with st7789"
     endchoice
 
     choice PIC_SIZE

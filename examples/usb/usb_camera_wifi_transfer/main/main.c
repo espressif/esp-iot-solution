@@ -152,8 +152,19 @@ static void frame_cb(uvc_frame_t *frame, void *ptr)
     }
 }
 
+#if CONFIG_IDF_TARGET_ESP32S3
+static void usb_otg_router_to_internal_phy()
+{
+    uint32_t *usb_phy_sel_reg = (uint32_t *)(0x60008000 + 0x120);
+    *usb_phy_sel_reg |= BIT(19) | BIT(20);
+}
+#endif
+
 void app_main(void)
 {
+#if CONFIG_IDF_TARGET_ESP32S3
+    usb_otg_router_to_internal_phy();
+#endif
     /* create eventgroup for task sync */
     s_evt_handle = xEventGroupCreate();
     if (s_evt_handle == NULL) {
