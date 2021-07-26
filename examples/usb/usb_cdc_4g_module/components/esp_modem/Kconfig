@@ -1,0 +1,32 @@
+menu "ESP-MODEM"
+
+    config MODEM_USB_OUT_EP_ADDR
+        hex "Modem USB CDC OUT endpoint address"
+        default 0x01
+        range 0x01 0x0f
+        help
+            USB OUT endpoint address (eg.0x01) used for send AT/data to device
+
+    config MODEM_USB_IN_EP_ADDR
+        hex "Modem USB CDC IN endpoint address"
+        default 0x81
+        range 0x81 0x8f
+        help
+            USB IN endpoint address (eg.0x81) used for recive data from device
+
+    config MODEM_LEGACY_API
+        bool "Enable Legacy API"
+        default y
+        help
+            Set to true if the original pppos_client API from the example's internal
+            component should be used.....
+
+    config MODEM_PPP_APN
+        string "Local netif hostname"
+        default 'internet'
+        depends on MODEM_LEGACY_API
+        help
+            APN (Access Point Name), a logical name of a network
+            the modem connects to in the PPP mode
+
+endmenu

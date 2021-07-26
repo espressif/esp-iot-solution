@@ -19,7 +19,8 @@ git submodule update --init --recursive
    ```
    idf_component_register(SRCS "hcd.c"
                        INCLUDE_DIRS "private_include"
-                       PRIV_INCLUDE_DIRS "")
+                       PRIV_INCLUDE_DIRS ""
+                       PRIV_REQUIRES hal driver)
    ```
 
 2. **Fix ESP32-S2 PRE-ECO Chip Bug**, add `ets_delay_us(10)` before `spi_hal_user_start(hal)` in function `spi_new_trans` of file `esp-idf/components/driver/spi_master.c`:

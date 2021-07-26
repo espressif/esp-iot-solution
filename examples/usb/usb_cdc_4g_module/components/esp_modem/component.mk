@@ -1,0 +1,11 @@
+COMPONENT_ADD_INCLUDEDIRS := include
+COMPONENT_PRIV_INCLUDEDIRS := private_include
+COMPONENT_SRCDIRS := src
+
+ifndef CONFIG_MODEM_LEGACY_API
+    COMPONENT_OBJEXCLUDE += src/esp_modem_compat.o
+endif
+
+ifdef CONFIG_MODEM_LEGACY_API
+	COMPONENT_ADD_INCLUDEDIRS += include_compat
+endif
