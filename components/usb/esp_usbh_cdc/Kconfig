@@ -1,0 +1,13 @@
+menu "USB Host CDC"
+
+    config CDC_SYNC_WITH_AT
+        bool "Check AT command before usb first transfer"
+        default n
+    config USB_TASK_BASE_PRIORITY
+        int "USB task base priority"
+        default 5
+    config CDC_USE_TRACE_FACILITY
+        bool "Trace internal memory status"
+        default n
+
+endmenu
