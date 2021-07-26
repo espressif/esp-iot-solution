@@ -1,0 +1,67 @@
+menu "4G Modem Configuration"
+
+    menu "gpio config"
+
+        config LED_RED_SYSTEM_GPIO
+            int "System status led (red) gpio"
+            default 15
+        config LED_BLUE_WIFI_GPIO
+            int "Wi-Fi status led (blue) gpio"
+            default 17
+        config LED_GREEN_4GMODEM_GPIO
+            int "Modem status led (green) gpio"
+            default 16
+        config MODEM_POWER_GPIO
+            int "Modem power control gpio"
+            default 12
+        config MODEM_RESET_GPIO
+            int "Modem reset control gpio"
+            default 13
+    endmenu
+
+    menu "WiFi soft AP"
+
+        config EXAMPLE_WIFI_SSID
+            string "WiFi SSID"
+            default "esp_4g_router"
+            help
+                SSID (network name) for the example to connect to.
+
+        config EXAMPLE_WIFI_PASSWORD
+            string "WiFi Password"
+            default "12345678"
+            help
+                WiFi password (WPA or WPA2) for the example to use.
+        config EXAMPLE_WIFI_CHANNEL
+            int "WiFi Channel"
+            range 1 13
+            default 13
+            help
+                WiFi channel (network channel) for the example to use.
+
+        config EXAMPLE_MAX_STA_CONN
+            int "Maximal STA connections"
+            default 5
+            help
+                Max number of the STA connects to AP.
+    endmenu
+
+    config MODEM_DIAL_RERTY_TIMES
+        int "Retry times during dial"
+        default 5
+        help 
+            Set retry times waitting for modem link with carrier base station
+
+    config DUMP_SYSTEM_STATUS
+        bool "Dump system task status"
+        default n
+        help
+            Dump system task status, stack left, cpu load, etc.
+
+    config EXAMPLE_MODEM_PPP_APN
+        string "Set Modem APN"
+        default "internet"
+        help
+            Set APN (Access Point Name), a logical name to choose data network 
+
+endmenu
