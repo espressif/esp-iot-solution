@@ -3,19 +3,19 @@ menu "4G Modem Configuration"
     menu "gpio config"
 
         config LED_RED_SYSTEM_GPIO
-            int "System status led (red) gpio"
+            int "System status led (red) gpio, set 0 if not use"
             default 15
         config LED_BLUE_WIFI_GPIO
-            int "Wi-Fi status led (blue) gpio"
+            int "Wi-Fi status led (blue) gpio, set 0 if not use"
             default 17
         config LED_GREEN_4GMODEM_GPIO
-            int "Modem status led (green) gpio"
+            int "Modem status led (green) gpio, set 0 if not use"
             default 16
         config MODEM_POWER_GPIO
-            int "Modem power control gpio"
+            int "Modem power control gpio, set 0 if not use"
             default 12
         config MODEM_RESET_GPIO
-            int "Modem reset control gpio"
+            int "Modem reset control gpio, set 0 if not use"
             default 13
     endmenu
 

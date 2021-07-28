@@ -92,7 +92,7 @@ static esp_err_t modem_board_reset(esp_modem_dce_t *dce)
     modem_board_t *board = __containerof(dce, modem_board_t, parent);
     ESP_LOGI(TAG, "modem_board_reset!");
     dce->handle_line = modem_board_handle_powerup;
-    board->reset_pin->pulse(board->reset_pin);
+    if(board->reset_pin) board->reset_pin->pulse(board->reset_pin);
     return ESP_OK;
 }
 
@@ -101,7 +101,7 @@ static esp_err_t modem_board_power_up(esp_modem_dce_t *dce)
     modem_board_t *board = __containerof(dce, modem_board_t, parent);
     ESP_LOGI(TAG, "modem_board_power_up!");
     dce->handle_line = modem_board_handle_powerup;
-    board->power_pin->pulse(board->power_pin);
+    if(board->power_pin) board->power_pin->pulse(board->power_pin);
     return ESP_OK;
 }
 
@@ -111,7 +111,7 @@ static esp_err_t modem_board_power_down(esp_modem_dce_t *dce)
     ESP_LOGI(TAG, "modem_board_power_down!");
     /* power down sequence (typical values for SIM7600 Toff=min2.5s, Toff-status=26s) */
     dce->handle_line = modem_board_handle_powerup;
-    board->power_pin->pulse_special(board->power_pin, 3000, 26000);
+    if(board->power_pin) board->power_pin->pulse_special(board->power_pin, 3000, 26000);
     return ESP_OK;
 }
 
@@ -127,7 +127,7 @@ static esp_err_t my_recov(esp_modem_recov_resend_t *retry_cmd, esp_err_t err, in
         } else if (timeouts < 3) {
             // try to reset with GPIO if resend didn't help
             ESP_LOGI(TAG, "Restart to connect modem........");
-            led_indicator_start(led_system_handle, BLINK_FACTORY_RESET);
+            if(led_system_handle) led_indicator_start(led_system_handle, BLINK_FACTORY_RESET);
             modem_board_t *board = __containerof(dce, modem_board_t, parent);
             board->reset(dce);
             esp_restart(); //restart system
@@ -172,8 +172,8 @@ err:
 static esp_err_t modem_board_deinit(esp_modem_dce_t *dce)
 {
     modem_board_t *board = __containerof(dce, modem_board_t, parent);
-    board->power_pin->destroy(board->power_pin);
-    board->reset_pin->destroy(board->reset_pin);
+    if(board->power_pin) board->power_pin->destroy(board->power_pin);
+    if(board->reset_pin) board->reset_pin->destroy(board->reset_pin);
     esp_err_t err = esp_modem_command_list_deinit(&board->parent);
     if (err == ESP_OK) {
         free(dce);
@@ -188,10 +188,10 @@ static esp_modem_dce_t *modem_board_create(esp_modem_dce_config_t *config)
     ESP_MODEM_EXAMPLE_CHECK(board, "failed to allocate board-sim7600 object", err);
     ESP_MODEM_EXAMPLE_CHECK(esp_modem_dce_init(&board->parent, config) == ESP_OK, "Failed to init sim7600", err);
     // /* power on sequence (typical values for SIM7600 Ton=500ms, Ton-status=16s) */
-    board->power_pin = esp_modem_recov_gpio_new(MODEM_POWER_GPIO, MODEM_POWER_GPIO_INACTIVE_LEVEL,
+    if(MODEM_POWER_GPIO) board->power_pin = esp_modem_recov_gpio_new(MODEM_POWER_GPIO, MODEM_POWER_GPIO_INACTIVE_LEVEL,
                                                 MODEM_POWER_GPIO_ACTIVE_MS, MODEM_POWER_GPIO_INACTIVE_MS);
     // /* reset sequence (typical values for SIM7600 Treset=200ms, wait 10s after reset */
-    board->reset_pin = esp_modem_recov_gpio_new(MODEM_RESET_GPIO, MODEM_RESET_GPIO_INACTIVE_LEVEL,
+    if(MODEM_RESET_GPIO) board->reset_pin = esp_modem_recov_gpio_new(MODEM_RESET_GPIO, MODEM_RESET_GPIO_INACTIVE_LEVEL,
                                                 MODEM_RESET_GPIO_ACTIVE_MS, MODEM_RESET_GPIO_INACTIVE_MS);
     board->parent.deinit = modem_board_deinit;
     board->reset = modem_board_reset;
@@ -228,13 +228,13 @@ static void on_modem_event(void *arg, esp_event_base_t event_base,
             ESP_LOGI(TAG, "Main DNS: " IPSTR, IP2STR(&dns_info.ip.u_addr.ip4));
             esp_netif_get_dns_info(netif, ESP_NETIF_DNS_BACKUP, &dns_info);
             ESP_LOGI(TAG, "Backup DNS: " IPSTR, IP2STR(&dns_info.ip.u_addr.ip4));
-            led_indicator_start(led_4g_handle, BLINK_CONNECTED);
+            if(led_4g_handle) led_indicator_start(led_4g_handle, BLINK_CONNECTED);
             xEventGroupSetBits(connection_events, CONNECT_BIT);
 
         } else if (event_id == IP_EVENT_PPP_LOST_IP) {
             ESP_LOGI(TAG, "Modem Disconnect from PPP Server");
-            led_indicator_stop(led_4g_handle, BLINK_CONNECTED);
-            led_indicator_start(led_4g_handle, BLINK_CONNECTING);
+            if(led_4g_handle) led_indicator_stop(led_4g_handle, BLINK_CONNECTED);
+            if(led_4g_handle) led_indicator_start(led_4g_handle, BLINK_CONNECTING);
             xEventGroupSetBits(connection_events, DISCONNECT_BIT);
         } else if (event_id == IP_EVENT_GOT_IP6) {
             ESP_LOGI(TAG, "GOT IPv6 event!");
@@ -258,14 +258,14 @@ static void on_modem_event(void *arg, esp_event_base_t event_base,
         switch (event_id) {
             case WIFI_EVENT_AP_STACONNECTED:
                 if (++active_station_num > 0) {
-                    led_indicator_start(led_wifi_handle, BLINK_CONNECTED);
+                    if(led_wifi_handle) led_indicator_start(led_wifi_handle, BLINK_CONNECTED);
                 }
                 //ESP_LOGI(TAG, "station "MACSTR" join, AID=%d", MAC2STR(event->mac), event->aid);
             break;
             case WIFI_EVENT_AP_STADISCONNECTED:
                 if (--active_station_num == 0) {
-                    led_indicator_stop(led_wifi_handle, BLINK_CONNECTED);
-                    led_indicator_start(led_wifi_handle, BLINK_CONNECTING);
+                    if(led_wifi_handle) led_indicator_stop(led_wifi_handle, BLINK_CONNECTED);
+                    if(led_wifi_handle) led_indicator_start(led_wifi_handle, BLINK_CONNECTING);
                 }
                 //ESP_LOGI(TAG, "station "MACSTR" join, AID=%d", MAC2STR(event->mac), event->aid);
             break;
@@ -275,8 +275,8 @@ static void on_modem_event(void *arg, esp_event_base_t event_base,
     } else if (event_base == NETIF_PPP_STATUS) {
         ESP_LOGI(TAG, "PPP netif event! %d", event_id);
         if (event_id == NETIF_PPP_ERRORCONNECT) {
-            led_indicator_stop(led_4g_handle, BLINK_CONNECTED);
-            led_indicator_start(led_4g_handle, BLINK_CONNECTING);
+            if(led_4g_handle) led_indicator_stop(led_4g_handle, BLINK_CONNECTED);
+            if(led_4g_handle) led_indicator_start(led_4g_handle, BLINK_CONNECTING);
             xEventGroupSetBits(connection_events, DISCONNECT_BIT);
         }
     }
@@ -289,9 +289,9 @@ esp_netif_t *modem_board_init(modem_config_t *config)
         .mode = LED_GPIO_MODE,
     };
 
-    led_system_handle = led_indicator_create(LED_RED_SYSTEM_GPIO, &led_config);
-    led_wifi_handle = led_indicator_create(LED_BLUE_WIFI_GPIO, &led_config);
-    led_4g_handle = led_indicator_create(LED_GREEN_4GMODEM_GPIO, &led_config);
+    if(LED_RED_SYSTEM_GPIO) led_system_handle = led_indicator_create(LED_RED_SYSTEM_GPIO, &led_config);
+    if(LED_BLUE_WIFI_GPIO) led_wifi_handle = led_indicator_create(LED_BLUE_WIFI_GPIO, &led_config);
+    if(LED_GREEN_4GMODEM_GPIO) led_4g_handle = led_indicator_create(LED_GREEN_4GMODEM_GPIO, &led_config);
 
     EventGroupHandle_t connection_events = xEventGroupCreate();
 
@@ -320,10 +320,10 @@ esp_netif_t *modem_board_init(modem_config_t *config)
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, on_modem_event, connection_events));
     ESP_ERROR_CHECK(esp_event_handler_register(NETIF_PPP_STATUS, ESP_EVENT_ANY_ID, on_modem_event, connection_events));
 
-    led_indicator_stop(led_4g_handle, BLINK_CONNECTED);
-    led_indicator_start(led_4g_handle, BLINK_CONNECTING);
-    led_indicator_stop(led_wifi_handle, BLINK_CONNECTED);
-    led_indicator_start(led_wifi_handle, BLINK_CONNECTING);
+    if(led_4g_handle) led_indicator_stop(led_4g_handle, BLINK_CONNECTED);
+    if(led_4g_handle) led_indicator_start(led_4g_handle, BLINK_CONNECTING);
+    if(led_wifi_handle) led_indicator_stop(led_wifi_handle, BLINK_CONNECTED);
+    if(led_wifi_handle) led_indicator_start(led_wifi_handle, BLINK_CONNECTING);
 
     ESP_ERROR_CHECK(esp_modem_default_attach(dte, dce, ppp_netif));
     ESP_ERROR_CHECK(esp_modem_default_start(dte));
@@ -336,10 +336,10 @@ esp_netif_t *modem_board_init(modem_config_t *config)
         ret = esp_modem_start_ppp(dte);
     } while ( ret != ESP_OK && --dial_retry_times > 0 );
 
-    if (ret != ESP_OK) {
-        led_indicator_start(led_4g_handle, BLINK_CONNECTED);
+    if (ret == ESP_OK) {
+        if(led_4g_handle) led_indicator_start(led_4g_handle, BLINK_CONNECTED);
     } else {
-        led_indicator_start(led_system_handle, BLINK_CONNECTED);//solid red, internal error
+        if(led_system_handle) led_indicator_start(led_system_handle, BLINK_CONNECTED);//solid red, internal error
     }
 
     /* Wait for the first connection */
