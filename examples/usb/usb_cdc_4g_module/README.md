@@ -168,7 +168,7 @@
 	```
     E (60772) esp-netif_lwip-ppp: pppos_input_tcpip failed with -1
 	```
-	以上错误信息可能在调试中出现，原因是 USB 通信存在阻塞，或发送 ringbuffer 较小，具体可以参考 [github issue-7205](https://github.com/espressif/esp-idf/issues/7205) 。
+	以上错误信息可能在调试中出现，原因是 RAM 空间较小导致通信时多次尝试申请内存，可添加并开启 PSRAM 解决该问题 (配置为 80M 时钟，并选择将 Wi-Fi 和 LWIP 优先申请到 PSRAM 中)
 
 ## 性能参数
 
@@ -184,3 +184,12 @@
 
 > **4G Cat.1 理论峰值下载速率 10 Mbps，峰值上传速率 5 Mbps**
 > 实际通信速率受运营商网络、测试软件、Wi-Fi 干扰情况、终端连接数影响，以实际使用为准
+
+**性能优化**
+
+1. 检查模组和运营商支持情况，如果对吞吐率有要求，请选择 `FDD` 制式模组和运营商；
+2. 将 `APN` 修改为运营商提供的名称 `menuconfig -> 4G Modem Configuration -> Set Modem APN`， 例如，当使用中国移动普通 4G 卡可改为 `cmnet`；
+3. 将 ESP32-Sx CPU 配置为 240MHz（`Component config → ESP32S2-specific → CPU frequency`），如支持双核请同时打开双核；
+4. ESP32-Sx 添加并使能 PSRAM（`Component config → ESP32S2-specific → Support for external`），并提高 PSRAM 时钟频率 (`Component config → ESP32S2-specific → Support for external → SPI RAM config → Set RAM clock speed`) 选择 80MHz。并在该目录下打开 `Try to allocate memories of WiFi and LWIP in SPIRAM firstly.`；
+5. 将 FreeRTOS Tick 频率 `Component config → FreeRTOS → Tick rate` 提高到 `1000 Hz`；
+6. 其它应用层优化。
