@@ -63,8 +63,6 @@ static led_indicator_handle_t led_wifi_handle = NULL;
 static led_indicator_handle_t led_4g_handle = NULL;
 static int active_station_num = 0;
 
-#define MODEM_EVENT_TASK_PRIORITY   4
-#define MODEM_EVENT_TASK_STACK_SIZE 3072
 
 typedef struct {
     esp_modem_dce_t parent;
@@ -207,11 +205,16 @@ err:
     return NULL;
 }
 
+struct ip_event_arg_t {
+    esp_modem_dte_t *dte;
+    EventGroupHandle_t events_handle;
+};
+
 static void on_modem_event(void *arg, esp_event_base_t event_base,
                            int32_t event_id, void *event_data)
 {
-    EventGroupHandle_t connection_events = arg;
     if (event_base == IP_EVENT) {
+        struct ip_event_arg_t *p_ip_event_arg = (struct ip_event_arg_t *)arg;
         ESP_LOGI(TAG, "IP event! %d", event_id);
         if (event_id == IP_EVENT_PPP_GOT_IP) {
             esp_netif_dns_info_t dns_info;
@@ -229,13 +232,17 @@ static void on_modem_event(void *arg, esp_event_base_t event_base,
             esp_netif_get_dns_info(netif, ESP_NETIF_DNS_BACKUP, &dns_info);
             ESP_LOGI(TAG, "Backup DNS: " IPSTR, IP2STR(&dns_info.ip.u_addr.ip4));
             if(led_4g_handle) led_indicator_start(led_4g_handle, BLINK_CONNECTED);
-            xEventGroupSetBits(connection_events, CONNECT_BIT);
-
+            xEventGroupClearBits(p_ip_event_arg->events_handle, DISCONNECT_BIT);
+            xEventGroupSetBits(p_ip_event_arg->events_handle, CONNECT_BIT);
         } else if (event_id == IP_EVENT_PPP_LOST_IP) {
             ESP_LOGI(TAG, "Modem Disconnect from PPP Server");
             if(led_4g_handle) led_indicator_stop(led_4g_handle, BLINK_CONNECTED);
             if(led_4g_handle) led_indicator_start(led_4g_handle, BLINK_CONNECTING);
-            xEventGroupSetBits(connection_events, DISCONNECT_BIT);
+            xEventGroupClearBits(p_ip_event_arg->events_handle, CONNECT_BIT);
+            xEventGroupSetBits(p_ip_event_arg->events_handle, DISCONNECT_BIT);
+            esp_modem_stop_ppp(p_ip_event_arg->dte);
+            esp_modem_start_ppp(p_ip_event_arg->dte);
+            ESP_LOGW(TAG, "Lost IP, Restart PPP");
         } else if (event_id == IP_EVENT_GOT_IP6) {
             ESP_LOGI(TAG, "GOT IPv6 event!");
             ip_event_got_ip6_t *event = (ip_event_got_ip6_t *)event_data;
@@ -275,9 +282,7 @@ static void on_modem_event(void *arg, esp_event_base_t event_base,
     } else if (event_base == NETIF_PPP_STATUS) {
         ESP_LOGI(TAG, "PPP netif event! %d", event_id);
         if (event_id == NETIF_PPP_ERRORCONNECT) {
-            if(led_4g_handle) led_indicator_stop(led_4g_handle, BLINK_CONNECTED);
-            if(led_4g_handle) led_indicator_start(led_4g_handle, BLINK_CONNECTING);
-            xEventGroupSetBits(connection_events, DISCONNECT_BIT);
+            //TODO:
         }
     }
 }
@@ -301,8 +306,8 @@ esp_netif_t *modem_board_init(modem_config_t *config)
     dte_config.tx_buffer_size = config->tx_buffer_size; //tx ringbuffer for usb transfer
     dte_config.event_queue_size = config->event_queue_size;
     dte_config.line_buffer_size = config->line_buffer_size;
-    dte_config.event_task_stack_size = MODEM_EVENT_TASK_STACK_SIZE; //task to handle usb rx data
-    dte_config.event_task_priority = MODEM_EVENT_TASK_PRIORITY; //task to handle usb rx data
+    dte_config.event_task_stack_size = config->event_task_stack_size; //task to handle usb rx data
+    dte_config.event_task_priority = config->event_task_priority; //task to handle usb rx data
     esp_modem_dce_config_t dce_config = ESP_MODEM_DCE_DEFAULT_CONFIG(CONFIG_EXAMPLE_MODEM_PPP_APN);
     dce_config.populate_command_list = true;
     esp_netif_config_t ppp_netif_config = ESP_NETIF_DEFAULT_PPP();
@@ -315,10 +320,14 @@ esp_netif_t *modem_board_init(modem_config_t *config)
     esp_netif_t *ppp_netif = esp_netif_new(&ppp_netif_config);
     assert(ppp_netif != NULL);
 
-    ESP_ERROR_CHECK(esp_modem_set_event_handler(dte, on_modem_event, ESP_EVENT_ANY_ID, connection_events));
-    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, on_modem_event, connection_events));
-    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, on_modem_event, connection_events));
-    ESP_ERROR_CHECK(esp_event_handler_register(NETIF_PPP_STATUS, ESP_EVENT_ANY_ID, on_modem_event, connection_events));
+    struct ip_event_arg_t ip_event_arg;
+    ip_event_arg.dte = dte;
+    ip_event_arg.events_handle = connection_events;
+
+    ESP_ERROR_CHECK(esp_modem_set_event_handler(dte, on_modem_event, ESP_EVENT_ANY_ID, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, on_modem_event, &ip_event_arg));
+    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, on_modem_event, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_register(NETIF_PPP_STATUS, ESP_EVENT_ANY_ID, on_modem_event, NULL));
 
     if(led_4g_handle) led_indicator_stop(led_4g_handle, BLINK_CONNECTED);
     if(led_4g_handle) led_indicator_start(led_4g_handle, BLINK_CONNECTING);
@@ -332,7 +341,7 @@ esp_netif_t *modem_board_init(modem_config_t *config)
     int dial_retry_times = CONFIG_MODEM_DIAL_RERTY_TIMES;
 
     do {
-        vTaskDelay(pdMS_TO_TICKS(3000));
+        vTaskDelay(pdMS_TO_TICKS(3500));
         ret = esp_modem_start_ppp(dte);
     } while ( ret != ESP_OK && --dial_retry_times > 0 );
 
@@ -343,16 +352,6 @@ esp_netif_t *modem_board_init(modem_config_t *config)
     }
 
     /* Wait for the first connection */
-    EventBits_t bits;
-    do {
-        bits = xEventGroupWaitBits(connection_events, (CONNECT_BIT | DISCONNECT_BIT), pdTRUE, pdFALSE, portMAX_DELAY);
-        if (bits&DISCONNECT_BIT) {
-            // restart the PPP mode in DTE
-            ESP_ERROR_CHECK(esp_modem_stop_ppp(dte));
-            ESP_ERROR_CHECK(esp_modem_start_ppp(dte));
-            ESP_LOGW(TAG, "Restart PPP");
-        }
-    } while ((bits&CONNECT_BIT) == 0);
-
+    xEventGroupWaitBits(connection_events, CONNECT_BIT, pdFALSE, pdTRUE, portMAX_DELAY);
     return ppp_netif;
 }
