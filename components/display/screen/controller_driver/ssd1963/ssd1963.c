@@ -295,16 +295,16 @@ static void lcd_ssd1963_init_reg(void)
     LCD_WRITE_DATA(0x20);       //24-bit mode
     LCD_WRITE_DATA(0x00);       //TFT
     LCD_WRITE_DATA((SSD1963_RESOLUTION_HOR - 1) >> 8); //set LCD horizontal pixel number
-    LCD_WRITE_DATA(SSD1963_RESOLUTION_HOR - 1);
+    LCD_WRITE_DATA((SSD1963_RESOLUTION_HOR - 1) & 0xff);
     LCD_WRITE_DATA((SSD1963_RESOLUTION_VER - 1) >> 8); //set LCD vertical pixel number
-    LCD_WRITE_DATA(SSD1963_RESOLUTION_VER - 1);
+    LCD_WRITE_DATA((SSD1963_RESOLUTION_VER - 1) & 0xff);
     LCD_WRITE_DATA(0x00);       //RGB
 
     LCD_WRITE_CMD(0xB4);        //Set horizontal period
     LCD_WRITE_DATA((SSD_HT - 1) >> 8);
-    LCD_WRITE_DATA(SSD_HT - 1);
+    LCD_WRITE_DATA((SSD_HT - 1) & 0xff);
     LCD_WRITE_DATA(SSD_HPS >> 8);
-    LCD_WRITE_DATA(SSD_HPS);
+    LCD_WRITE_DATA((SSD_HPS) & 0xff);
     LCD_WRITE_DATA(SSD_HOR_PULSE_WIDTH - 1);
     LCD_WRITE_DATA(0x00);
     LCD_WRITE_DATA(0x00);
@@ -312,9 +312,9 @@ static void lcd_ssd1963_init_reg(void)
 
     LCD_WRITE_CMD(0xB6);        //Set vertical period
     LCD_WRITE_DATA((SSD_VT - 1) >> 8);
-    LCD_WRITE_DATA(SSD_VT - 1);
+    LCD_WRITE_DATA((SSD_VT - 1) & 0xff);
     LCD_WRITE_DATA(SSD_VPS >> 8);
-    LCD_WRITE_DATA(SSD_VPS);
+    LCD_WRITE_DATA((SSD_VPS) & 0xff);
     LCD_WRITE_DATA(SSD_VER_FRONT_PORCH - 1);
     LCD_WRITE_DATA(0x00);
     LCD_WRITE_DATA(0x00);
@@ -323,7 +323,7 @@ static void lcd_ssd1963_init_reg(void)
     LCD_WRITE_DATA(0x03);   //16-bit(565 format) data for 16bpp
 
     LCD_WRITE_CMD(0x29);    //display on
-    
+
     LCD_WRITE_CMD(0xD0);
     LCD_WRITE_DATA(0x00);   //disable
 

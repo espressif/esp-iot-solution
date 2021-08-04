@@ -46,6 +46,12 @@ static esp_err_t _i2s_lcd_write_cmd(void *handle, uint16_t cmd)
     return i2s_lcd_write_cmd(interface_i2s->i2s_lcd_handle, cmd);
 }
 
+static esp_err_t _i2s_lcd_write_command(void *handle, const uint8_t *cmd, uint32_t length)
+{
+    interface_i2s_handle_t *interface_i2s = __containerof(handle, interface_i2s_handle_t, interface_drv);
+    return i2s_lcd_write_command(interface_i2s->i2s_lcd_handle, cmd, length);
+}
+
 static esp_err_t _i2s_lcd_write(void *handle, const uint8_t *data, uint32_t length)
 {
     interface_i2s_handle_t *interface_i2s = __containerof(handle, interface_i2s_handle_t, interface_drv);
@@ -290,6 +296,7 @@ esp_err_t scr_interface_create(scr_interface_type_t type, void *config, scr_inte
 
         interface_i2s->interface_drv.type        = type;
         interface_i2s->interface_drv.write_cmd   = _i2s_lcd_write_cmd;
+        interface_i2s->interface_drv.write_command = _i2s_lcd_write_command;
         interface_i2s->interface_drv.write_data  = _i2s_lcd_write_data;
         interface_i2s->interface_drv.write       = _i2s_lcd_write;
         interface_i2s->interface_drv.read        = _i2s_lcd_read;

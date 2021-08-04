@@ -63,6 +63,7 @@ typedef enum {
 typedef struct {
     scr_interface_type_t type;                                                  /*!< Interface bus type, see scr_interface_type_t struct */
     esp_err_t (*write_cmd)(void *handle, uint16_t cmd);                         /*!< Function to write a command */
+    esp_err_t (*write_command)(void *handle, const uint8_t *cmd, uint32_t length);      /*!< Function to write command */
     esp_err_t (*write_data)(void *handle, uint16_t data);                       /*!< Function to write a data */
     esp_err_t (*write)(void *handle, const uint8_t *data, uint32_t length);     /*!< Function to write a block data */
     esp_err_t (*read)(void *handle, uint8_t *data, uint32_t length);            /*!< Function to read a block data */
