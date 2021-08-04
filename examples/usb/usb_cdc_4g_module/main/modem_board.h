@@ -29,7 +29,7 @@ extern "C"
         .tx_buffer_size = 1024*15,   \
         .event_queue_size = 30,      \
         .line_buffer_size = 1496,    \
-        .event_task_priority = CONFIG_USB_TASK_BASE_PRIORITY,\ //same as usb base priority
+        .event_task_priority = CONFIG_USB_TASK_BASE_PRIORITY,\
         .event_task_stack_size = 3072\
     }
 

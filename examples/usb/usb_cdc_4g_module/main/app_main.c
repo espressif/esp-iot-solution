@@ -147,6 +147,9 @@ void app_main(void)
     modem_wifi_config.ssid = CONFIG_EXAMPLE_WIFI_SSID;
     esp_netif_t *ap_netif  = modem_wifi_init(WIFI_MODE_AP);
     assert(ap_netif != NULL);
+    esp_netif_dns_info_t dns;
+    ESP_ERROR_CHECK(esp_netif_get_dns_info(ppp_netif, ESP_NETIF_DNS_MAIN, &dns));
+    ESP_ERROR_CHECK(modem_wifi_set_dhcps(ap_netif, dns.ip.u_addr.ip4.addr));
     ESP_ERROR_CHECK(modem_wifi_set(&modem_wifi_config));
     ESP_ERROR_CHECK(modem_wifi_napt_enable());
 
