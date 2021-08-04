@@ -44,6 +44,15 @@ menu "4G Modem Configuration"
             default 5
             help
                 Max number of the STA connects to AP.
+        config EXAMPLE_MANUAL_DNS
+            bool "config main dns address"
+            default n
+            help
+                Config main dns address manully, using dns address from ppp by default
+        config EXAMPLE_MANUAL_DNS_ADDR
+            string  "main dns address"
+            default "114.114.114.114"
+            depends on EXAMPLE_MANUAL_DNS
     endmenu
 
     config MODEM_DIAL_RERTY_TIMES
@@ -62,6 +71,5 @@ menu "4G Modem Configuration"
         string "Set Modem APN"
         default "internet"
         help
-            Set APN (Access Point Name), a logical name to choose data network 
-
+            Set APN (Access Point Name), a logical name to choose data network
 endmenu

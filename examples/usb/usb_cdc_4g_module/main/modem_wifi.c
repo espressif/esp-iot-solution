@@ -50,6 +50,20 @@ static void event_handler(void *arg, esp_event_base_t event_base,
     }
 }
 
+esp_err_t modem_wifi_ap_init(void)
+{
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+
+    /* Register our event handler for Wi-Fi, IP and Provisioning related events */
+    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
+
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
+    ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_FLASH));
+
+    return esp_wifi_start();
+}
+
 esp_netif_t *modem_wifi_init(wifi_mode_t mode)
 {
     esp_netif_t *wifi_netif = NULL;

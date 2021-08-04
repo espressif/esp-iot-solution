@@ -39,11 +39,12 @@ typedef struct {
         .max_connection = 10                 \
     }
 
-esp_netif_t *modem_wifi_init(wifi_mode_t mode);
+esp_err_t modem_wifi_ap_init(void);
 esp_err_t modem_wifi_set(modem_wifi_config_t *config);
 esp_err_t modem_wifi_napt_enable();
 esp_err_t modem_wifi_sta_connected(uint32_t wait_ms);
 esp_err_t modem_wifi_set_dhcps(esp_netif_t *netif, uint32_t addr);
+esp_netif_t *modem_wifi_init(wifi_mode_t mode); //will abandoned
 
 #ifdef __cplusplus
 }
