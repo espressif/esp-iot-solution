@@ -30,7 +30,9 @@ extern "C" {
  * @brief CDC ports available to setup
  */
 typedef enum{
-    TINYUSB_CDC_ACM_0 = 0x0
+    TINYUSB_CDC_ACM_0 = 0x0,
+    TINYUSB_CDC_ACM_1,
+    TINYUSB_CDC_TOTAL
 }tinyusb_cdcacm_itf_t;
 
 /* Callbacks and events

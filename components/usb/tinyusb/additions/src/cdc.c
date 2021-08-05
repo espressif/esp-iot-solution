@@ -18,6 +18,7 @@
 #include "esp_log.h"
 #include "tusb.h"
 #include "cdc.h"
+#include "tusb_cdc_acm.h"
 #include "sdkconfig.h"
 
 static const char *TAG = "tusb_cdc";
@@ -38,7 +39,7 @@ static esp_err_t cdc_interface_check(int itf)
     if (tinyusb_cdc_initialized(itf)) {
         return ESP_OK;
     } else {
-        ESP_LOGE(TAG, "Interface is not initialized. Use `tinyusb_cdc_init` for initialization");
+        ESP_LOGE(TAG, "Interface %d is not initialized. Use `tinyusb_cdc_init` for initialization", itf);
         return ESP_ERR_INVALID_STATE;
     }
 }
@@ -126,7 +127,7 @@ static esp_err_t tusb_cdc_deinit_data(int itf)
 esp_err_t tinyusb_cdc_init(int itf, const tinyusb_config_cdc_t *cfg)
 {
     ESP_LOGD(TAG, "CDC initialization...");
-    if (itf != 0) {
+    if (itf >= TINYUSB_CDC_TOTAL) {
         ESP_LOGE(TAG, "There is not CDC no.%d", itf);
         return ESP_ERR_INVALID_ARG;
     }
@@ -144,7 +145,7 @@ esp_err_t tinyusb_cdc_init(int itf, const tinyusb_config_cdc_t *cfg)
 
 esp_err_t tinyusb_cdc_deinit(int itf)
 {
-    if (itf != 0) {
+    if (itf >= TINYUSB_CDC_TOTAL) {
         ESP_LOGE(TAG, "There is not CDC no.%d", itf);
         return ESP_ERR_INVALID_ARG;
     }

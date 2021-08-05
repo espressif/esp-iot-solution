@@ -18,6 +18,7 @@
 static const char *TAG = "tusb_desc";
 static tusb_desc_device_t s_descriptor;
 static char *s_str_descriptor[USB_STRING_DESCRIPTOR_ARRAY_SIZE];
+static uint8_t *s_config_descriptor = NULL;
 #define MAX_DESC_BUF_SIZE 32
 
 #if CFG_TUD_HID //HID Report Descriptor
@@ -70,7 +71,7 @@ uint8_t const *tud_descriptor_device_cb(void)
 uint8_t const *tud_descriptor_configuration_cb(uint8_t index)
 {
     (void)index; // for multiple configurations
-    return desc_configuration;
+    return s_config_descriptor;
 }
 
 static uint16_t _desc_str[MAX_DESC_BUF_SIZE];
@@ -173,6 +174,23 @@ void tusb_set_descriptor(tusb_desc_device_t *dev_desc, const char **str_desc)
     tusb_desc_set = true;
 }
 
+void tusb_set_config_descriptor(const uint8_t *config_desc)
+{
+    size_t length = 0;
+    const uint8_t *config_descriptor = NULL; 
+    if (config_desc == NULL) {
+        config_descriptor = desc_configuration;
+        ESP_LOGI(TAG, "using default config desc");
+    } else {
+        config_descriptor = config_desc;
+        ESP_LOGI(TAG, "using custom config desc");
+    }
+    length = (config_descriptor[3]<<8) + config_descriptor[2];
+    ESP_LOGI(TAG, "config desc size=%d", length);
+    s_config_descriptor = realloc(s_config_descriptor, length);
+    memcpy(s_config_descriptor, config_descriptor, length);
+}
+
 tusb_desc_device_t *tusb_get_active_desc(void)
 {
     return &s_descriptor;
@@ -187,5 +205,7 @@ void tusb_clear_descriptor(void)
 {
     memset(&s_descriptor, 0, sizeof(s_descriptor));
     memset(&s_str_descriptor, 0, sizeof(s_str_descriptor));
+    free(s_config_descriptor);
+    s_config_descriptor = NULL;
     tusb_desc_set = false;
 }

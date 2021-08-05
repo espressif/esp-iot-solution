@@ -135,7 +135,13 @@ menu "TinyUSB Stack"
                 default n
                 help
                     Enable TinyUSB CDC feature.
-
+            config TINYUSB_CDC_PORT_NUM
+                depends on TINYUSB_CDC_ENABLED
+                int "Number of Serial (CDC) Port"
+                default 1
+                range 1 2
+                help
+                    Number of Serial (CDC) Port.
             config TINYUSB_CDC_RX_BUFSIZE
                 depends on TINYUSB_CDC_ENABLED
                 int "CDC FIFO size of RX channel"
@@ -151,7 +157,7 @@ menu "TinyUSB Stack"
                     CDC FIFO size of TX channel.
         endmenu # "Communication Device Class"
 
-        menu "Communication Device Class (CDC)"
+        menu "Human Interface Device Class (HID)"
             config TINYUSB_HID_ENABLED
                 bool "Enable TinyUSB HID feature"
                 default n
@@ -164,7 +170,7 @@ menu "TinyUSB Stack"
                 depends on TINYUSB_HID_ENABLED
                 help
                     HID FIFO size
-        endmenu # ""
+        endmenu # "Human Interface Device Class"
     endif # TINYUSB
 
 endmenu # "TinyUSB Stack"

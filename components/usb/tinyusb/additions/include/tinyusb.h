@@ -73,6 +73,7 @@ extern "C" {
 typedef struct {
     tusb_desc_device_t *descriptor; /*!< Pointer to a device descriptor */
     const char **string_descriptor; /*!< Pointer to an array of string descriptors */
+    const uint8_t *config_descriptor;     /*!< Pointer to config descriptors */
     bool external_phy;              /*!< Should USB use an external PHY */
 } tinyusb_config_t;
 

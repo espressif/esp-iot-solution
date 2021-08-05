@@ -73,6 +73,7 @@ esp_err_t tinyusb_driver_install(const tinyusb_config_t *config)
     dev_descriptor = config->descriptor ? config->descriptor : &descriptor_kconfig;
     string_descriptor = config->string_descriptor ? config->string_descriptor : descriptor_str_kconfig;
 
+    tusb_set_config_descriptor(config->config_descriptor); //if NULL, using default descriptor config by menuconfig
     tusb_set_descriptor(dev_descriptor, string_descriptor);
 
     ESP_RETURN_ON_FALSE(tusb_init(), ESP_FAIL, TAG, "Init TinyUSB stack failed");
