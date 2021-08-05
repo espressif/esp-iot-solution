@@ -1,9 +1,10 @@
-version: "1.0.0" # Component version, required only for components pushed to the service
+version: "1.1.0" # Component version, required only for components pushed to the service
 targets: # List of supported targets (optional, if missing all targets are considered to be supported)
   - esp32s2
+  - esp32s3
 description: ESP32-S2 TinyUSB Addtions # Description (optional)
 url: https://github.com/iot-components/tinyusb # Original repository (optional)
 dependencies:
   # Required IDF version
   idf:
-    version: ">=4.3"
+    version: ">=4.4"
