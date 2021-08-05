@@ -130,7 +130,7 @@ bool tud_msc_test_unit_ready_cb(uint8_t lun)
         return false;
     }
 
-    if (ejected[lun]) {
+    if (_logical_disk_ejected()) {
         // Set 0x3a for media not present.
         tud_msc_set_sense(lun, SCSI_SENSE_NOT_READY, 0x3A, 0x00);
         return false;
