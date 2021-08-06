@@ -138,6 +138,12 @@ static void esp_handle_usb_data(esp_modem_dte_internal_t *esp_dte)
     //printf("length = %d\n", length);
 }
 
+static void usb_event_cd(void *arg)
+{
+    TaskHandle_t *p_usb_event_hdl = (TaskHandle_t *)arg;
+    xTaskNotifyGive(*p_usb_event_hdl);
+}
+
 /**
  * @brief USB Event Task Entry
  *
@@ -150,16 +156,14 @@ static void usb_event_task_entry(void *param)
     if (bits & ESP_MODEM_STOP_BIT) {
         vTaskDelete(NULL);
     }
-
+    size_t length = 0;
     while (xEventGroupGetBits(esp_dte->process_group) & ESP_MODEM_START_BIT) {
         /* Drive the event loop */
+        ulTaskNotifyTake(true, 1);//unblock as soon as possiable
         esp_event_loop_run(esp_dte->event_loop_hdl, pdMS_TO_TICKS(0));
-        size_t length = 0;
         usbh_cdc_get_buffered_data_len(&length);
-        if (length >= 1) {
+        if (length >= 2) {
             esp_handle_usb_data(esp_dte);
-        } else {
-            vTaskDelay(1);
         }
     }
     vTaskDelete(NULL);
@@ -393,6 +397,8 @@ esp_modem_dte_t *esp_modem_dte_new(const esp_modem_dte_config_t *config)
         .bulk_out_ep = &bulk_out_ep_desc,
         .rx_buffer_size = config->rx_buffer_size,
         .tx_buffer_size = config->tx_buffer_size,
+        .rx_callback = usb_event_cd,
+        .rx_callback_arg = &esp_dte->uart_event_task_hdl,
     };
 
     res = usbh_cdc_driver_install(&cdc_config);
