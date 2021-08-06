@@ -112,6 +112,18 @@ menu "TinyUSB Stack"
                 default "Espressif HID Device"
                 help
                     Name of the HID device
+            config TINYUSB_DESC_NET_STRING
+                depends on TINYUSB_NET_ENABLED
+                string "NET Device String"
+                default "Espressif NET Device"
+                help
+                    Name of the NET device.
+            config TINYUSB_DESC_MAC_STRING
+                depends on TINYUSB_NET_ENABLED
+                string "MAC String"
+                default ""
+                help
+                    STRID_MAC.
         endmenu # "Descriptor configuration"
 
         menu "Massive Storage Class (MSC)"
@@ -171,6 +183,44 @@ menu "TinyUSB Stack"
                 help
                     HID FIFO size
         endmenu # "Human Interface Device Class"
+
+        menu "USB Network Class (RNDIS, ECM)"
+        
+            config TINYUSB_NET_ENABLED
+                bool "Enable TinyUSB NET driver"
+                default n
+                help
+                    Enable USB NET TinyUSB driver.
+
+            config TINYUSB_RNDIS_VENDOR
+                string "USB Vendor"
+                default "TinyUSB"
+                depends on TINYUSB_NET_ENABLED
+                help
+                    Vendor description.
+
+            choice TINYUSB_NET
+                prompt "Choose a network communication standard"
+                default TINYUSB_NET_RNDIS
+                depends on TINYUSB_NET_ENABLED
+                help
+                    RNDIS and CDC-ECM
+                    - Windows only works with RNDIS
+                    - MacOS only works with CDC-ECM
+                    - Linux will work on both
+
+                config TINYUSB_NET_RNDIS
+                    bool "RNDIS"
+                    help
+                        RNDIS.
+                config TINYUSB_NET_ECM
+                    bool "CDC-ECM"
+                    help
+                        CDC-ECM.
+            endchoice
+
+
+        endmenu # "usb network"
     endif # TINYUSB
 
 endmenu # "TinyUSB Stack"

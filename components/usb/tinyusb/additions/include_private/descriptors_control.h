@@ -22,13 +22,35 @@
  * Same VID/PID with different interface e.g MSC (first), then CDC (later) will possibly cause system error on PC.
  *
  * Auto ProductID layout's Bitmap:
- *   [MSB]         HID | MSC | CDC          [LSB]
+ *   [MSB]       NET | VENDOR | MIDI | HID | MSC | CDC          [LSB]
  */
-#define EPNUM_MSC 0x03
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+//------------- EndPoint Descriptor -------------//
+enum {
+    EPNUM_DEFAULT = 0,
+#   if CFG_TUD_NET
+    EPNUM_NET_NOTIF,
+    EPNUM_NET_DATA,
+#   endif
+
+#   if CFG_TUD_CDC
+    EPNUM_CDC_NOTIF,
+    EPNUM_CDC_DATA,
+#   endif
+
+#   if CFG_TUD_MSC
+    EPNUM_MSC_DATA,
+#   endif
+
+#   if CFG_TUD_HID
+    EPNUM_HID_DATA,
+#   endif
+};
+
 //------------- HID Report Descriptor -------------//
 #if CFG_TUD_HID
 enum {
@@ -39,8 +61,13 @@ enum {
 
 //------------- Configuration Descriptor -------------//
 enum {
+#   if CFG_TUD_NET
+    ITF_NUM_NET = 0,
+    ITF_NUM_NET_DATA,
+#   endif
+
 #   if CFG_TUD_CDC
-    ITF_NUM_CDC = 0,
+    ITF_NUM_CDC,
     ITF_NUM_CDC_DATA,
 #   endif
 
@@ -55,9 +82,30 @@ enum {
     ITF_NUM_TOTAL
 };
 
+//------------- STRID -------------//
 enum {
-    TUSB_DESC_TOTAL_LEN = TUD_CONFIG_DESC_LEN + CFG_TUD_CDC * TUD_CDC_DESC_LEN + CFG_TUD_MSC * TUD_MSC_DESC_LEN +
-                       CFG_TUD_HID * TUD_HID_DESC_LEN
+    STRID_LANGID = 0,
+    STRID_MANUFACTURER,
+    STRID_PRODUCT,
+    STRID_SERIAL,
+    STRID_CDC_INTERFACE,
+    STRID_NET_INTERFACE,
+    STRID_MSC_INTERFACE,
+    STRID_HID_INTERFACE,
+    STRID_MAC,
+    
+};
+
+enum {
+    TUSB_DESC_TOTAL_LEN = TUD_CONFIG_DESC_LEN + 
+                          TUD_CDC_DESC_LEN * CFG_TUD_CDC + 
+                          TUD_RNDIS_DESC_LEN * CFG_TUD_NET + 
+                          TUD_MSC_DESC_LEN * CFG_TUD_MSC + 
+                          TUD_HID_DESC_LEN * CFG_TUD_HID,
+
+    ALT_CONFIG_TOTAL_LEN = TUD_CONFIG_DESC_LEN + 
+                           TUD_CDC_ECM_DESC_LEN * CFG_TUD_NET + 
+                           TUD_CDC_DESC_LEN * CFG_TUD_CDC
 };
 
 bool tusb_desc_set;

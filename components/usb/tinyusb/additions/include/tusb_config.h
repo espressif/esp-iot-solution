@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include <stdbool.h>
 #include "tusb_option.h"
 #include "sdkconfig.h"
 
@@ -52,6 +53,10 @@ extern "C" {
 
 #ifndef CONFIG_TINYUSB_CUSTOM_CLASS_ENABLED
 #   define CONFIG_TINYUSB_CUSTOM_CLASS_ENABLED 0
+#endif
+
+#ifndef CONFIG_TINYUSB_NET_ENABLED
+#   define CONFIG_TINYUSB_NET_ENABLED 0
 #endif
 
 #define CFG_TUSB_RHPORT0_MODE       OPT_MODE_DEVICE | OPT_MODE_FULL_SPEED
@@ -92,6 +97,10 @@ extern "C" {
 #define CFG_TUD_HID                 CONFIG_TINYUSB_HID_ENABLED
 #define CFG_TUD_MIDI                CONFIG_TINYUSB_MIDI_ENABLED
 #define CFG_TUD_CUSTOM_CLASS        CONFIG_TINYUSB_CUSTOM_CLASS_ENABLED
+#define CFG_TUD_NET                 CONFIG_TINYUSB_NET_ENABLED
+
+/* TODO: will be removed if upstream feat: Add net xmit status cb for application can block to get it #1001*/
+__attribute__((weak)) void tud_network_idle_status_change_cb(bool idle);
 
 #ifdef __cplusplus
 }
