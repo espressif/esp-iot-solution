@@ -30,8 +30,8 @@
 #include <stdint.h>
 
 /* FreeRTOS includes. */
-#include "FreeRTOS.h"
-#include "task.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 /* Utils includes. */
 #include "FreeRTOS_CLI.h"
@@ -45,6 +45,8 @@ one of the application files:
 #ifndef configAPPLICATION_PROVIDES_cOutputBuffer
 	#define configAPPLICATION_PROVIDES_cOutputBuffer 0
 #endif
+
+PRIVILEGED_DATA portMUX_TYPE xCLIMux = portMUX_INITIALIZER_UNLOCKED;
 
 typedef struct xCOMMAND_INPUT_LIST
 {
@@ -102,6 +104,12 @@ buffer needs to be placed at a fixed address (rather than by the linker). */
 
 /*-----------------------------------------------------------*/
 
+void FreeRTOS_CLICreatMux(void)
+{
+	vPortCPUInitializeMutex( &xCLIMux );
+}
+/*-----------------------------------------------------------*/
+
 BaseType_t FreeRTOS_CLIRegisterCommand( const CLI_Command_Definition_t * const pxCommandToRegister )
 {
 static CLI_Definition_List_Item_t *pxLastCommandInList = &xRegisteredCommands;
@@ -117,7 +125,7 @@ BaseType_t xReturn = pdFAIL;
 
 	if( pxNewListItem != NULL )
 	{
-		taskENTER_CRITICAL();
+		taskENTER_CRITICAL( &xCLIMux );
 		{
 			/* Reference the command being registered from the newly created
 			list item. */
@@ -134,7 +142,7 @@ BaseType_t xReturn = pdFAIL;
 			/* Set the end of list marker to the new list item. */
 			pxLastCommandInList = pxNewListItem;
 		}
-		taskEXIT_CRITICAL();
+		taskEXIT_CRITICAL( &xCLIMux );
 
 		xReturn = pdPASS;
 	}

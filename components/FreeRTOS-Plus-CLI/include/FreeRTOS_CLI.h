@@ -28,6 +28,8 @@
 #ifndef COMMAND_INTERPRETER_H
 #define COMMAND_INTERPRETER_H
 
+#include "freertos/FreeRTOS.h"
+
 /* The prototype to which callback functions used to process command line
 commands must comply.  pcWriteBuffer is a buffer into which the output from
 executing the command can be written, xWriteBufferLen is the length, in bytes of
@@ -47,6 +49,14 @@ typedef struct xCOMMAND_LINE_INPUT
 
 /* For backward compatibility. */
 #define xCommandLineInput CLI_Command_Definition_t
+#define configCOMMAND_INT_MAX_OUTPUT_SIZE 500
+
+/*
+ * Create a Mux.
+ *
+ * Note: Must be called before FreeRTOS_CLIProcessCommand.
+ */
+void FreeRTOS_CLICreatMux(void);
 
 /*
  * Register the command passed in using the pxCommandToRegister parameter.

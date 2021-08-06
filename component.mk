@@ -17,3 +17,4 @@ EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/sensors/light_sensor
 EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/sensors/pressure
 EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/storage
 EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/storage/eeprom
+EXTRA_COMPONENT_DIRS += $(IOT_SOLUTION_PATH)/components/FreeRTOS_CLI
