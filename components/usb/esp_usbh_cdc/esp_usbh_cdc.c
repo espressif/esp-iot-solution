@@ -94,8 +94,8 @@ static TaskHandle_t s_port_task_hdl = NULL;
 static TaskHandle_t s_dflt_pipe_task_hdl = NULL;
 static TaskHandle_t s_bulk_in_pipe_task_hdl = NULL;
 static TaskHandle_t s_bulk_out_pipe_task_hdl = NULL;
-static int s_in_buffered_data_len = 0;
-static int s_out_buffered_data_len = 0;
+volatile static int s_in_buffered_data_len = 0;
+volatile static int s_out_buffered_data_len = 0;
 
 /**
  * @brief hard-coded enum steps
@@ -855,6 +855,7 @@ void usbh_cdc_print_buffer_msg(void)
     ESP_LOGI(TAG, "usb transfer Max packet size, out = %d, in = %d\n", s_bulkbuf_out_max, s_bulkbuf_in_max);
     ESP_LOGI(TAG, "USBH CDC Ringbuffer Dump:");
     ESP_LOGI(TAG, "usb ringbuffer size, out = %d, in = %d", s_ringbuf_out_size, s_ringbuf_in_size);
+    ESP_LOGI(TAG, "usb ringbuffer load, out = %d, in = %d", s_out_buffered_data_len, s_in_buffered_data_len);
     ESP_LOGI(TAG, "usb ringbuffer High water mark, out = %d, in = %d", s_ringbuf_out_max, s_ringbuf_in_max);
 }
 #endif
