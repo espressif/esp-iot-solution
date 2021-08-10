@@ -16,7 +16,7 @@ message(STATUS "IDF_TARGET = ${IDF_TARGET}")
 message(STATUS "Board DIR = ${boards_dir}")
 message(STATUS "---------Board Info End---------")
 
-
-idf_component_register( SRC_DIRS "${boards_dir}"
-                        INCLUDE_DIRS "${boards_dir}"
+#The SRC_DIRS order cannot be changed, otherwise weak functions may not be overridden
+idf_component_register( SRC_DIRS "${boards_dir}" "."
+                        INCLUDE_DIRS "${boards_dir}" "."
                         REQUIRES bus)
