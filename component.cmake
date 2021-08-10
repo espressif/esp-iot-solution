@@ -21,5 +21,6 @@ list(APPEND EXTRA_COMPONENT_DIRS
                                 "$ENV{IOT_SOLUTION_PATH}/components/sensors/pressure"
                                 "$ENV{IOT_SOLUTION_PATH}/components/storage"
                                 "$ENV{IOT_SOLUTION_PATH}/components/storage/eeprom"
+                                "$ENV{IOT_SOLUTION_PATH}/components/FreeRTOS_CLI"
                                 )
 
