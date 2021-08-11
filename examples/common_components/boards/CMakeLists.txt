@@ -9,6 +9,8 @@ elseif(CONFIG_BOARD_ESP32S2_SAOLA_1)
     set(boards_dir "esp32s2-saola-1")
 elseif(CONFIG_BOARD_ESP32_LCDKIT)
     set(boards_dir "esp32-lcdkit")
+elseif(CONFIG_BOARD_ESP32S3_USB_OTG_EV)
+    set(boards_dir "esp32s3_usb_otg_ev")
 endif()
 
 message(STATUS "-----------Board Info---------")
@@ -19,4 +21,4 @@ message(STATUS "---------Board Info End---------")
 #The SRC_DIRS order cannot be changed, otherwise weak functions may not be overridden
 idf_component_register( SRC_DIRS "${boards_dir}" "."
                         INCLUDE_DIRS "${boards_dir}" "."
-                        REQUIRES bus)
+                        REQUIRES bus button esp_adc_cal nvs_flash)
