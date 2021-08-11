@@ -103,6 +103,20 @@ menu "TinyUSB"
 
     endmenu
 
+    config USB_HID_ENABLED
+        bool "Enable USB HID TinyUSB driver"
+        default n
+        depends on USB_ENABLED
+        help
+            Enable USB HID TinyUSB driver.
+
+    config USB_HID_BUFSIZE
+        int "HID FIFO size"
+        default 64
+        depends on USB_HID_ENABLED
+        help
+            HID FIFO size
+
     config USB_MSC_ENABLED
         bool "Enable USB MSC TinyUSB driver"
         default n

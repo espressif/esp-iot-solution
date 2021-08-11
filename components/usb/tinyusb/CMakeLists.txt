@@ -1,5 +1,6 @@
 idf_build_get_property(target IDF_TARGET)
-idf_component_register(REQUIRES esp_rom freertos vfs soc)
+idf_component_register(REQUIRES esp_rom freertos vfs soc
+                        PRIV_REQUIRES fatfs)
 
 if(CONFIG_USB_ENABLED)
 
@@ -26,18 +27,20 @@ if(CONFIG_USB_ENABLED)
                              ORIG_INCLUDE_PATH)
   set(includes_private
       # tusb:
-      "${COMPONENT_DIR}/tinyusb/hw/bsp/"
-      "${COMPONENT_DIR}/tinyusb/src/"
-      "${COMPONENT_DIR}/tinyusb/src/device"
+      "${IDF_PATH}/components/tinyusb/tinyusb/hw/bsp/"
+      "${IDF_PATH}/components/tinyusb/tinyusb/src/"
+      "${IDF_PATH}/components/tinyusb/tinyusb/src/device"
       # espressif:
-      "${COMPONENT_DIR}/additions/include_private"
+      #"${COMPONENT_DIR}/additions/include_private"
+      "${IDF_PATH}/components/fatfs/src"
       )
 
   set(includes_public
       # tusb:
       "${FREERTOS_ORIG_INCLUDE_PATH}"
-      "${COMPONENT_DIR}/tinyusb/src/"
+      "${IDF_PATH}/components/tinyusb/tinyusb/src/"
       # espressif:
+      "${COMPONENT_DIR}/additions/include_private"
       "${COMPONENT_DIR}/additions/include")
   set(srcs
       # espressif:
@@ -46,16 +49,16 @@ if(CONFIG_USB_ENABLED)
       "${COMPONENT_DIR}/additions/src/tusb_tasks.c"
       "${COMPONENT_DIR}/additions/src/usb_descriptors.c"
       # tusb:
-      "${COMPONENT_DIR}/tinyusb/src/portable/espressif/${tusb_family}/dcd_${tusb_family}.c"
-      "${COMPONENT_DIR}/tinyusb/src/class/cdc/cdc_device.c"
-      "${COMPONENT_DIR}/tinyusb/src/class/hid/hid_device.c"
-      "${COMPONENT_DIR}/tinyusb/src/class/midi/midi_device.c"
-      "${COMPONENT_DIR}/tinyusb/src/class/msc/msc_device.c"
-      "${COMPONENT_DIR}/tinyusb/src/class/vendor/vendor_device.c"
-      "${COMPONENT_DIR}/tinyusb/src/common/tusb_fifo.c"
-      "${COMPONENT_DIR}/tinyusb/src/device/usbd_control.c"
-      "${COMPONENT_DIR}/tinyusb/src/device/usbd.c"
-      "${COMPONENT_DIR}/tinyusb/src/tusb.c")
+      "${IDF_PATH}/components/tinyusb/tinyusb/src/portable/espressif/${tusb_family}/dcd_${tusb_family}.c"
+      "${IDF_PATH}/components/tinyusb/tinyusb/src/class/cdc/cdc_device.c"
+      "${IDF_PATH}/components/tinyusb/tinyusb/src/class/hid/hid_device.c"
+      "${IDF_PATH}/components/tinyusb/tinyusb/src/class/midi/midi_device.c"
+      "${IDF_PATH}/components/tinyusb/tinyusb/src/class/msc/msc_device.c"
+      "${IDF_PATH}/components/tinyusb/tinyusb/src/class/vendor/vendor_device.c"
+      "${IDF_PATH}/components/tinyusb/tinyusb/src/common/tusb_fifo.c"
+      "${IDF_PATH}/components/tinyusb/tinyusb/src/device/usbd_control.c"
+      "${IDF_PATH}/components/tinyusb/tinyusb/src/device/usbd.c"
+      "${IDF_PATH}/components/tinyusb/tinyusb/src/tusb.c")
   # cdc stuff if turned on
   if(CONFIG_USB_CDC_ENABLED)
     list(APPEND srcs
@@ -63,6 +66,16 @@ if(CONFIG_USB_ENABLED)
         "${COMPONENT_DIR}/additions/src/tusb_cdc_acm.c"
          "${COMPONENT_DIR}/additions/src/tusb_console.c"
          "${COMPONENT_DIR}/additions/src/vfs_tinyusb.c")
+  endif()
+
+  if(CONFIG_USB_HID_ENABLED)
+    list(APPEND srcs
+        "${COMPONENT_DIR}/additions/src/tusb_hid.c")
+  endif()
+
+  if(CONFIG_USB_MSC_ENABLED)
+    list(APPEND srcs
+        "${COMPONENT_DIR}/additions/src/tusb_msc.c")
   endif()
 
   ### tinyusb lib ###
