@@ -49,12 +49,12 @@ typedef enum {
 #define BOARD_MCU_RAM_USER_SIZE "384KB"
 
 /* Free pins */
-#define BOARD_IO_FREE_1 45
-#define BOARD_IO_FREE_2 46
-#define BOARD_IO_FREE_3 48
-#define BOARD_IO_FREE_4 26
-#define BOARD_IO_FREE_5 47
-#define BOARD_IO_FREE_6 3
+#define BOARD_IO_FREE_45 45
+#define BOARD_IO_FREE_46 46
+#define BOARD_IO_FREE_48 48 //esp32s2 not support
+#define BOARD_IO_FREE_26 26
+#define BOARD_IO_FREE_47 47 //esp32s2 not support
+#define BOARD_IO_FREE_3 3
 
 /*Definations of Button*/
 #define BOARD_IO_BUTTON_OK 0
@@ -72,8 +72,8 @@ typedef enum {
 #define BOARD_IO_USB_DP 20
 #define BOARD_IO_USB_DN 19
 
-#define BOARD_IO_I2C0_SCL BOARD_IO_FREE_3
-#define BOARD_IO_I2C0_SDA BOARD_IO_FREE_4
+#define BOARD_IO_I2C0_SCL BOARD_IO_FREE_48
+#define BOARD_IO_I2C0_SDA BOARD_IO_FREE_26
 
 #define BOARD_IO_SPI3_SCK 36
 #define BOARD_IO_SPI3_MOSI 35

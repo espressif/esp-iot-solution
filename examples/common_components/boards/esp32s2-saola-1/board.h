@@ -50,6 +50,38 @@ typedef enum {
 #define BOARD_IO_SPI2_MOSI 35
 #define BOARD_IO_SPI2_MISO 37
 
+/* Free pins */
+#define BOARD_IO_FREE_1 1
+#define BOARD_IO_FREE_2 2
+#define BOARD_IO_FREE_3 3
+#define BOARD_IO_FREE_4 4
+#define BOARD_IO_FREE_5 5
+#define BOARD_IO_FREE_6 6
+#define BOARD_IO_FREE_7 7
+#define BOARD_IO_FREE_8 8
+#define BOARD_IO_FREE_9 9
+#define BOARD_IO_FREE_12 12
+#define BOARD_IO_FREE_13 13
+#define BOARD_IO_FREE_14 14
+#define BOARD_IO_FREE_15 15
+#define BOARD_IO_FREE_16 16
+#define BOARD_IO_FREE_17 17
+
+#define BOARD_IO_FREE_18 18
+#define BOARD_IO_FREE_19 19
+#define BOARD_IO_FREE_20 20
+#define BOARD_IO_FREE_21 21
+#define BOARD_IO_FREE_26 26
+#define BOARD_IO_FREE_33 33
+#define BOARD_IO_FREE_34 34
+#define BOARD_IO_FREE_38 38
+#define BOARD_IO_FREE_39 39
+#define BOARD_IO_FREE_40 40
+#define BOARD_IO_FREE_41 41
+#define BOARD_IO_FREE_42 42
+#define BOARD_IO_FREE_45 45
+#define BOARD_IO_FREE_46 46
+
 /*Definations of Peripheral*/
 #define BOARD_I2C0_MODE I2C_MODE_MASTER
 #define BOARD_I2C0_SPEED (100000)
