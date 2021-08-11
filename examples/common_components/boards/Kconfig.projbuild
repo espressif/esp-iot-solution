@@ -50,4 +50,55 @@ menu "Board Options"
         #source "{absolute path}/esp32s3_usb_otg_ev/Kconfig.in" # v4.0 Backwards compatibility
     endmenu
 
+    menu "Board Wi-Fi Settings"
+
+        config BOARD_WIFI_SSID
+            string "WiFi STA SSID"
+            default ""
+            help
+            WiFi SSID (network name) to connect to or empty for Off.
+
+        config BOARD_WIFI_PASSWORD
+            string "WiFi STA Password"
+            default ""
+            help
+            WiFi Password if WEP/WPA/WPA2 or empty if Open.
+
+        config BOARD_WIFI_AP_SSID
+            string "WiFi AP SSID"
+            default "ESP32S3-OTG"
+            help
+            AP SSID (network name) to create or empty for Off.
+
+        config BOARD_WIFI_AP_PASSWORD
+            string "WiFi AP Password"
+            default ""
+            help
+            AP password for WPA2 or empty for Open.
+
+        config BOARD_MAX_STA_CONN
+            int "WiFi AP Maximal STA connections"
+            default 3
+            help
+            Max number of the STA connects to AP.
+
+        config BOARD_WIFI_AP_CHANNEL
+            int "WiFi AP Channel"
+            default 6
+            help
+            AP channel for better connection performance.
+
+        config BOARD_SERVER_IP
+            string "WiFi AP IP Address"
+            default "192.168.4.1"
+            help
+                IP address that the ESP will assign to it's AP interface. You can use this IP to connect to the camera after flashing.
+
+        config BOARD_MAXIMUM_RETRY
+            int "Maximum retry"
+            default 5
+            help
+            Set the Maximum retry to avoid station reconnecting to the AP unlimited when the AP is really inexistent.
+    endmenu
+
 endmenu

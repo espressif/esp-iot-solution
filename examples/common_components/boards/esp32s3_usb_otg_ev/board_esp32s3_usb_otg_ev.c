@@ -19,7 +19,6 @@
 #include "esp_log.h"
 #include "i2c_bus.h"
 #include "spi_bus.h"
-#include "board_wifi.h"
 #include "board.h"
 
 static const char *TAG = "Board";
@@ -260,10 +259,6 @@ esp_err_t iot_board_init(void)
 #if CONFIG_IDF_TARGET_ESP32S3
     /* router USB PHY from USB-JTAG-Serial to USB OTG */
     usb_otg_router_to_internal_phy();
-#endif
-
-#ifdef CONFIG_BOARD_WIFI_INIT
-    app_wifi_main();
 #endif
 
     esp_err_t ret = board_gpio_init();

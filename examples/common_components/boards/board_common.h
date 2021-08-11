@@ -76,6 +76,13 @@ esp_err_t iot_board_deinit(void);
 bool iot_board_is_init(void);
 
 /**
+ * @brief init esp32xx Wi-Fi with configs from menuconfig, deinit currentlly not supported
+ * 
+ * @return esp_err_t 
+ */
+esp_err_t iot_board_wifi_init(void);
+
+/**
  * @brief Using resource's ID declared in board_res_id_t to get board level resource's handle
  * 
  * @param id Resource's ID declared in board_res_id_t
