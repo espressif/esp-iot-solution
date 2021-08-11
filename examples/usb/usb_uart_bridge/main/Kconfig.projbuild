@@ -1,0 +1,7 @@
+menu "USB UART Bridge Demo"
+
+    config UART_AUTO_DOWNLOAD
+        bool "Enable auto download, if enable please attach io0 and rst"
+        default y
+
+endmenu
