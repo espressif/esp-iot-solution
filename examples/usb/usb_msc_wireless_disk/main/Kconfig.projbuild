@@ -1,0 +1,34 @@
+menu "USB MSC Device Demo"
+
+    choice STORAGE_MEDIA
+        prompt "Storage Media"
+        default USE_INTERNAL_FLASH
+
+        config USE_INTERNAL_FLASH
+            bool "Use Internal Flash"
+
+        config USE_EXTERNAL_SDCARD
+            bool "Use External SDCard" 
+    endchoice
+
+    choice SDCARD_INTERFACE
+        prompt "SD Card Interface"
+        depends on USE_EXTERNAL_SDCARD
+        default SDCARD_INTFC_SPI
+
+        config SDCARD_INTFC_SPI
+            bool "Use SPI interface"
+
+        config SDCARD_INTFC_SDIO
+            bool "Use SDIO interface" 
+    endchoice
+
+    config WIFI_HTTP_ACCESS
+        bool "enable wifi http file server access"
+        default y
+
+    config DISK_BLOCK_SIZE
+        int "disk block size used for format"
+        default 512
+
+endmenu
