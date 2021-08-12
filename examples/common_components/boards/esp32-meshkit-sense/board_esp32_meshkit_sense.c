@@ -21,11 +21,6 @@ static const char *TAG = "Board";
 static bool s_board_is_init = false;
 static bool s_board_gpio_isinit = false;
 
-#define BOARD_CHECK(a, str, ret) if(!(a)) { \
-        ESP_LOGE(TAG,"%s:%d (%s):%s", __FILE__, __LINE__, __FUNCTION__, str); \
-        return (ret); \
-    }
-
 /****Private board level API ****/
 static i2c_bus_handle_t s_i2c0_bus_handle = NULL;
 static i2c_bus_handle_t s_spi2_bus_handle = NULL;
@@ -42,10 +37,9 @@ static esp_err_t board_i2c_bus_init(void)
         .master.clk_speed = BOARD_I2C0_SPEED,
     };
     i2c_bus_handle_t handle = i2c_bus_create(I2C_NUM_0, &board_i2c_conf);
-    BOARD_CHECK(handle != NULL, "i2c_bus creat failed", ESP_FAIL);
+    BOARD_CHECK(handle != NULL, "i2c_bus create failed", ESP_FAIL);
     s_i2c0_bus_handle = handle;
-#else
-    s_i2c0_bus_handle = NULL;
+    ESP_LOGI(TAG, "i2c_bus 0 create succeed");
 #endif
     return ESP_OK;
 }
@@ -68,7 +62,8 @@ static esp_err_t board_spi_bus_init(void)
         .sclk_io_num = BOARD_IO_SPI2_SCK,
     };
     s_spi2_bus_handle = spi_bus_create(SPI2_HOST, &bus_conf);
-    BOARD_CHECK(s_spi2_bus_handle != NULL, "spi_bus2 creat failed", ESP_FAIL);
+    BOARD_CHECK(s_spi2_bus_handle != NULL, "spi_bus2 create failed", ESP_FAIL);
+    ESP_LOGI(TAG, "spi_bus 2 create succeed");
 #endif
     return ESP_OK;
 }
@@ -100,10 +95,13 @@ static esp_err_t board_gpio_init(void)
     io_conf.pull_up_en = 0;
     //configure GPIO with the given settings
     esp_err_t ret = gpio_config(&io_conf);
-    if (ret == ESP_OK) {
-        s_board_gpio_isinit = true;
+    if (ret != ESP_OK) {
+        ESP_LOGW(TAG, "gpio init failed");
+        return ret;
     }
-    return ret;
+    s_board_gpio_isinit = true;
+    ESP_LOGI(TAG, "gpio init succeed");
+    return ESP_OK;
 }
 
 static esp_err_t board_gpio_deinit(void)
@@ -180,7 +178,7 @@ bool iot_board_is_init(void)
     return s_board_is_init;
 }
 
-board_res_handle_t iot_board_get_handle(board_res_id_t id)
+board_res_handle_t iot_board_get_handle(int id)
 {
     board_res_handle_t handle;
     switch (id)
@@ -188,17 +186,14 @@ board_res_handle_t iot_board_get_handle(board_res_id_t id)
     case BOARD_I2C0_ID:
         handle = (board_res_handle_t)s_i2c0_bus_handle;
         break;
+    case BOARD_SPI2_ID:
+        handle = (board_res_handle_t)s_spi2_bus_handle;
+        break;
     default:
         handle = NULL;
         break;
     }
     return handle;
-}
-
-char* iot_board_get_info()
-{
-    static char* info = BOARD_NAME;
-    return info;
 }
 
 /****Extended board level API ****/

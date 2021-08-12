@@ -15,13 +15,7 @@
 #define _IOT_BOARD_H_
 
 #include "esp_err.h"
-#include "i2c_bus.h"
-#include "spi_bus.h"
-
-/*ENABLE Initialization Process in iot_board_init(void)*/
-#define _ENABLE 1
-#define _DISABLE 0
-#define _UNDEFINE
+#include "board_common.h"
 
 /**
  * Resource ID on Board,
@@ -32,8 +26,6 @@ typedef enum {
     BOARD_I2C0_ID,
     BOARD_SPI2_ID,
 }board_res_id_t;
-
-typedef void* board_res_handle_t;
 
 /*Definations of Board*/
 #define BOARD_NAME "ESP32-S2-Saola-1"
@@ -58,60 +50,42 @@ typedef void* board_res_handle_t;
 #define BOARD_IO_SPI2_MOSI 35
 #define BOARD_IO_SPI2_MISO 37
 
+/* Free pins */
+#define BOARD_IO_FREE_1 1
+#define BOARD_IO_FREE_2 2
+#define BOARD_IO_FREE_3 3
+#define BOARD_IO_FREE_4 4
+#define BOARD_IO_FREE_5 5
+#define BOARD_IO_FREE_6 6
+#define BOARD_IO_FREE_7 7
+#define BOARD_IO_FREE_8 8
+#define BOARD_IO_FREE_9 9
+#define BOARD_IO_FREE_12 12
+#define BOARD_IO_FREE_13 13
+#define BOARD_IO_FREE_14 14
+#define BOARD_IO_FREE_15 15
+#define BOARD_IO_FREE_16 16
+#define BOARD_IO_FREE_17 17
+
+#define BOARD_IO_FREE_18 18
+#define BOARD_IO_FREE_19 19
+#define BOARD_IO_FREE_20 20
+#define BOARD_IO_FREE_21 21
+#define BOARD_IO_FREE_26 26
+#define BOARD_IO_FREE_33 33
+#define BOARD_IO_FREE_34 34
+#define BOARD_IO_FREE_38 38
+#define BOARD_IO_FREE_39 39
+#define BOARD_IO_FREE_40 40
+#define BOARD_IO_FREE_41 41
+#define BOARD_IO_FREE_42 42
+#define BOARD_IO_FREE_45 45
+#define BOARD_IO_FREE_46 46
+
 /*Definations of Peripheral*/
 #define BOARD_I2C0_MODE I2C_MODE_MASTER
 #define BOARD_I2C0_SPEED (100000)
 #define BOARD_I2C0_SCL_PULLUP_EN _ENABLE
 #define BOARD_I2C0_SDA_PULLUP_EN _ENABLE
-
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-
-/**
- * @brief Board level init.
- *        Peripherals can be chosen through menuconfig, which will be initialized with default configurations during iot_board_init.
- *        After board init, initialized peripherals can be referenced by handles directly.
- * 
- * @return esp_err_t 
- */
-esp_err_t iot_board_init(void);
-
-/**
- * @brief Board level deinit.
- *        After board deinit, initialized peripherals will be deinit and related handles will be set to NULL.
- * 
- * @return esp_err_t 
- */
-esp_err_t iot_board_deinit(void);
-
-/**
- * @brief Check if board is initialized 
- * 
- * @return true if board is initialized
- * @return false if board is not initialized
- */
-bool iot_board_is_init(void);
-
-/**
- * @brief Using resource's ID declared in board_res_id_t to get board level resource's handle
- * 
- * @param id Resource's ID declared in board_res_id_t
- * @return board_res_handle_t Resource's handle
- * if no related handle,NULL will be returned
- */
-board_res_handle_t iot_board_get_handle(board_res_id_t id);
-
-/**
- * @brief Get board information
- * 
- * @return String include BOARD_NAME etc. 
- */
-char* iot_board_get_info();
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* _IOT_BOARD_H_ */

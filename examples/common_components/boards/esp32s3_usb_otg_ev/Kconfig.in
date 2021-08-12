@@ -1,0 +1,22 @@
+if BOARD_ESP32S3_USB_OTG_EV
+
+    config BOARD_I2C0_INIT
+        bool "init i2c0 during board init"
+        default n
+        help
+            if enable, i2c0 will be initialized with default configuration during board init,
+            then, you can use iot_board_get_handle to get the bus handle.
+    config BOARD_SPI3_INIT
+        bool "init spi3 during board init"
+        default y
+        help
+            if yes, spi3 will be initialized with default configuration during board init,
+            then, you can use iot_board_get_handle to get the bus handle.
+    config BOARD_SPI2_INIT
+        bool "init spi2 during board init"
+        default y
+        help
+            if yes, spi2 will be initialized with default configuration during board init,
+            then, you can use iot_board_get_handle to get the bus handle.
+
+endif

@@ -164,7 +164,7 @@ Boards 组件的结构如下：
     * @return board_res_handle_t Resource's handle
     * if no related handle,NULL will be returned
     */
-    board_res_handle_t iot_board_get_handle(board_res_id_t id);
+    board_res_handle_t iot_board_get_handle(int id);
 
     /**
     * @brief Get board information
