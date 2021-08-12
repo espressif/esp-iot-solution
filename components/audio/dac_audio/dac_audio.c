@@ -12,17 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "sdkconfig.h"
+#ifdef CONFIG_IDF_TARGET_ESP32
+
 #include <stdio.h>
 #include <string.h>
 #include "esp_log.h"
 #include "driver/i2s.h"
 #include "dac_audio.h"
-#include "sdkconfig.h"
 
-/**
- * @attention "I2S DAC only support ESP32"
- */
-#ifdef CONFIG_IDF_TARGET_ESP32
 static const char *TAG = "DAC audio";
 
 #define DAC_AUDIO_CHECK(a, str, ret_val)                          \
