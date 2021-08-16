@@ -57,7 +57,7 @@
 
 ### 编译示例代码
 
-1. 确认 `ESP-IDF` 环境成功搭建，并按照说明文件切换到指定 commit [idf_usb_support_patch](../../usb/idf_usb_support_patch/readme.md)
+1. 确认 `ESP-IDF` 环境成功搭建，并按照说明文件切换到指定 commit [idf_usb_support_patch](../../../usb/idf_usb_support_patch/readme.md)
 
 2. 确认已经完整下载 `ESP-IOT-SOLUTION` 仓库，并切换到 `usb/add_usb_solutions` 分支
 
