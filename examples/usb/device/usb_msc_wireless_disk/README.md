@@ -21,7 +21,7 @@ Using ESP32-Sx as a USB Disk with Wireless accessibility. HTTP file server be us
 
 ### Build Example
 
-1. Make sure `ESP-IDF` installed successfully, and checkout to specified commit [idf_usb_support_patch](../../usb/idf_usb_support_patch/readme.md)
+1. Make sure `ESP-IDF` installed successfully, and checkout to specified commit [idf_usb_support_patch](../../../usb/idf_usb_support_patch/readme.md)
 
 2. Clone `ESP-IOT-SOLUTION` repository, and checkout to branch `usb/add_usb_solutions`
 
