@@ -30,16 +30,16 @@
 
 该示例代码需要额外添加 `2M` `PSRAM`，可使用基于 `ESP32-S2-WROVER` 模组的 `ESP32-S2-Saola-1` `ESP32-S2-Kaluga-1` 等开发板：
 
-1. 确认 ESP-IDF 环境成功搭建，并按照说明文件添加补丁 [usb_support_workaround.patch](../../usb/idf_usb_support_patch/readme.md)
+1. 确认 ESP-IDF 环境成功搭建，并按照说明文件添加补丁 [usb_support_workaround.patch](../../../usb/idf_usb_support_patch/readme.md)
 2. 添加 ESP-IDF 环境变量，Linux 方法如下，其它平台请查阅 [Set up the environment variables](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html#step-4-set-up-the-environment-variables)
     ```
     . $HOME/esp/esp-idf/export.sh
     ```
-3. 添加 ESP-IOT-SOLUTION 环境变量，Linux 方法如下，其它平台请查阅 [readme](../../../README_CN.md)
+3. 添加 ESP-IOT-SOLUTION 环境变量，Linux 方法如下，其它平台请查阅 [readme](../../../../README_CN.md)
     ```
     export IOT_SOLUTION_PATH=$HOME/esp/esp-iot-solution
     ```
-4. 根据摄像头配置描述符，[修改摄像头配置项](../../../components/usb/uvc_stream/README.md)
+4. 根据摄像头配置描述符，[修改摄像头配置项](../../../../components/usb/uvc_stream/README.md)
 5. 设置编译目标为 `esp32-s2` 或 `esp32s3`
     ```
     idf.py set-target esp32s2
