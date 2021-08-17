@@ -40,25 +40,27 @@ static const char *TAG = "USB_HCDC";
 #define PORT_TASK_NAME "port"
 #define PORT_TASK_PRIORITY (USB_TASK_BASE_PRIORITY+4)
 #define PORT_TASK_STACK_SIZE 3072
-#define PORT_TASK_CORE 0
+#define PORT_TASK_CORE CONFIG_USB_TASK_CORE_ID
 
 #define DFLT_PIPE_TASK_NAME "dflt"
 #define DFLT_PIPE_TASK_PRIORITY (USB_TASK_BASE_PRIORITY+3)
 #define DFLT_PIPE_TASK_STACK_SIZE 3072
-#define DFLT_PIPE_TASK_CORE 0
+#define DFLT_PIPE_TASK_CORE CONFIG_USB_TASK_CORE_ID
 
 #define BULK_IN_PIPE_TASK_NAME "bulk-in"
 #define BULK_IN_PIPE_TASK_PRIORITY (USB_TASK_BASE_PRIORITY)
 #define BULK_IN_PIPE_TASK_STACK_SIZE 3072
-#define BULK_IN_PIPE_TASK_CORE 0
+#define BULK_IN_PIPE_TASK_CORE CONFIG_USB_TASK_CORE_ID
 
 #define BULK_OUT_PIPE_TASK_NAME "bulk-out"
 #define BULK_OUT_PIPE_TASK_PRIORITY (USB_TASK_BASE_PRIORITY+1)
 #define BULK_OUT_PIPE_TASK_STACK_SIZE 3072
-#define BULK_OUT_PIPE_TASK_CORE 0
+#define BULK_OUT_PIPE_TASK_CORE CONFIG_USB_TASK_CORE_ID
 
-#define BUFFER_SIZE_BULK_OUT (64*24)
-#define BUFFER_SIZE_BULK_IN (64*24)
+#define BULK_OUT_URB_NUM CONFIG_CDC_BULK_OUT_URB_NUM
+#define BULK_IN_URB_NUM CONFIG_CDC_BULK_IN_URB_NUM
+#define BUFFER_SIZE_BULK_OUT CONFIG_CDC_BULK_OUT_URB_BUFFER_SIZE
+#define BUFFER_SIZE_BULK_IN CONFIG_CDC_BULK_IN_URB_BUFFER_SIZE
 #define PORT_TASK_KILL_BIT           BIT1
 #define DFLT_PIPE_TASK_KILL_BIT      BIT2
 #define BULK_IN_PIPE_TASK_KILL_BIT   BIT3
@@ -92,8 +94,8 @@ static TaskHandle_t s_port_task_hdl = NULL;
 static TaskHandle_t s_dflt_pipe_task_hdl = NULL;
 static TaskHandle_t s_bulk_in_pipe_task_hdl = NULL;
 static TaskHandle_t s_bulk_out_pipe_task_hdl = NULL;
-static int s_in_buffered_data_len = 0;
-static int s_out_buffered_data_len = 0;
+volatile static int s_in_buffered_data_len = 0;
+volatile static int s_out_buffered_data_len = 0;
 
 /**
  * @brief hard-coded enum steps
@@ -363,7 +365,8 @@ static void dflt_pipe_task(void *arg)
                     ESP_ERROR_CHECK(hcd_urb_enqueue(dflt_pipe_hdl, done_urb));
                 } else if (stage == ENUM_STAGE_SET_CONFIG) {
                     ESP_LOGI(TAG, "Config is set");
-                    //Set active
+#ifdef CONFIG_CDC_SEND_DTE_ACTIVE
+                    //Set DTE active
                     stage = ENUM_STAGE_SET_LINE_STATE;
                     USB_CTRL_REQ_CDC_SET_LINE_STATE((usb_ctrl_req_t *)data_buffer, 0, 1, 0);
                     done_urb->transfer.num_bytes = 0; //No data stage
@@ -371,8 +374,10 @@ static void dflt_pipe_task(void *arg)
                     ESP_ERROR_CHECK(hcd_urb_enqueue(dflt_pipe_hdl, done_urb));
                 } else if (stage == ENUM_STAGE_SET_LINE_STATE) {
                     ESP_LOGI(TAG, "Line state is set");
+#else
                     xTaskNotifyGive(s_bulk_out_pipe_task_hdl);
                     xTaskNotifyGive(s_bulk_in_pipe_task_hdl);
+#endif
                 } else {
                     ESP_LOGW(TAG, "line %u Pipe: default undefined stage", __LINE__);
                 }
@@ -439,23 +444,27 @@ static void bulk_out_pipe_task(void *arg)
     hcd_pipe_handle_t pipe_hdl;
     hcd_pipe_alloc(s_port_hdl, &pipe_config, &pipe_hdl);
     assert(pipe_hdl != NULL);
-
-    urb_t *urb = heap_caps_calloc(1, sizeof(urb_t), MALLOC_CAP_DEFAULT);
-    assert(NULL != urb);
-    uint8_t *data_buffer = heap_caps_malloc(BUFFER_SIZE_BULK_OUT, MALLOC_CAP_DMA);
-    assert(NULL != data_buffer);
-    //Initialize URB and underlying transfer structure. Need to cast to dummy due to const fields
-    usb_transfer_dummy_t *transfer_dummy = (usb_transfer_dummy_t *)&urb->transfer;
-    transfer_dummy->data_buffer = data_buffer;
-
     size_t num_bytes_to_send = 0;
-#ifdef CONFIG_CDC_SYNC_WITH_AT
-    num_bytes_to_send = 4;
-    memcpy(data_buffer, "AT\r\n", num_bytes_to_send); //check AT respond for some modem
-#endif
-    urb->transfer.num_bytes = num_bytes_to_send;
-    hcd_urb_enqueue(pipe_hdl, urb);
-    ESP_LOGV(TAG, "ST %d: %.*s", urb->transfer.num_bytes, urb->transfer.num_bytes, urb->transfer.data_buffer);
+    urb_t *urb_out[BULK_OUT_URB_NUM] = {NULL};
+
+    for (size_t i = 0; i < BULK_OUT_URB_NUM; i++) {
+        urb_t *urb = heap_caps_calloc(1, sizeof(urb_t), MALLOC_CAP_INTERNAL);
+        assert(NULL != urb);
+        urb_out[i] = urb;
+        uint8_t *data_buffer = heap_caps_malloc(BUFFER_SIZE_BULK_OUT, MALLOC_CAP_DMA);
+        assert(NULL != data_buffer);
+        //Initialize URB and underlying transfer structure. Need to cast to dummy due to const fields
+        usb_transfer_dummy_t *transfer_dummy = (usb_transfer_dummy_t *)&urb->transfer;
+        transfer_dummy->data_buffer = data_buffer;
+
+    #ifdef CONFIG_CDC_SYNC_WITH_AT
+        num_bytes_to_send = 4;
+        memcpy(data_buffer, "AT\r\n", num_bytes_to_send); //check AT respond for some modem
+    #endif
+        urb->transfer.num_bytes = num_bytes_to_send;
+        hcd_urb_enqueue(pipe_hdl, urb);
+        ESP_LOGV(TAG, "ST %d: %.*s", urb->transfer.num_bytes, urb->transfer.num_bytes, urb->transfer.data_buffer);
+    }
 
     while (!(xEventGroupGetBits(s_usb_event_group) & BULK_OUT_PIPE_TASK_KILL_BIT)) {
         if (xQueueReceive(pipe_evt_queue, &pipe_evt, portMAX_DELAY) != pdTRUE) {
@@ -477,7 +486,7 @@ static void bulk_out_pipe_task(void *arg)
                 esp_err_t ret = ESP_FAIL;
 
                 while (ESP_OK != ret) {
-                    ret = usb_out_ringbuf_pop(urb->transfer.data_buffer, BUFFER_SIZE_BULK_OUT, &num_bytes_to_send, 50 / portTICK_PERIOD_MS);
+                    ret = usb_out_ringbuf_pop(done_urb->transfer.data_buffer, BUFFER_SIZE_BULK_OUT, &num_bytes_to_send, 50 / portTICK_PERIOD_MS);
 
                     if (xEventGroupGetBits(s_usb_event_group) & BULK_OUT_PIPE_TASK_KILL_BIT) {
                         ret = ESP_FAIL;
@@ -487,12 +496,12 @@ static void bulk_out_pipe_task(void *arg)
                 }
 
                 if (ESP_OK == ret) {
-                    urb->transfer.num_bytes = num_bytes_to_send;
+                    done_urb->transfer.num_bytes = num_bytes_to_send;
 #ifdef CONFIG_CDC_USE_TRACE_FACILITY
                     s_bulkbuf_out_max = num_bytes_to_send>s_bulkbuf_out_max?num_bytes_to_send:s_bulkbuf_out_max;
 #endif
-                    hcd_urb_enqueue(pipe_hdl, urb);
-                    ESP_LOGV(TAG, "ST %d: %.*s", urb->transfer.num_bytes, urb->transfer.num_bytes, urb->transfer.data_buffer);
+                    hcd_urb_enqueue(pipe_hdl, done_urb);
+                    ESP_LOGV(TAG, "ST %d: %.*s", done_urb->transfer.num_bytes, done_urb->transfer.num_bytes, done_urb->transfer.data_buffer);
                 } else {
                     ESP_LOGE(TAG, "buil_out skip enqueue urb");
                 }
@@ -534,8 +543,10 @@ static void bulk_out_pipe_task(void *arg)
     xEventGroupClearBits(s_usb_event_group, BULK_OUT_PIPE_TASK_KILL_BIT);
     hcd_pipe_command(pipe_hdl, HCD_PIPE_CMD_HALT);
     hcd_pipe_free(pipe_hdl);
-    free(urb->transfer.data_buffer);
-    free(urb);
+    for (size_t i = 0; i < BULK_OUT_URB_NUM; i++) {
+        free(urb_out[i]->transfer.data_buffer);
+        free(urb_out[i]);
+    }
     vQueueDelete(pipe_evt_queue);
     vTaskDelete(NULL);
 }
@@ -564,15 +575,20 @@ static void bulk_in_pipe_task(void *arg)
     hcd_pipe_alloc(s_port_hdl, &pipe_config, &pipe_hdl);
     assert(pipe_hdl != NULL);
 
-    urb_t *urb = heap_caps_calloc(1, sizeof(urb_t), MALLOC_CAP_DEFAULT);
-    assert(NULL != urb);
-    uint8_t *data_buffer = heap_caps_malloc(BUFFER_SIZE_BULK_IN, MALLOC_CAP_DMA);
-    assert(NULL != data_buffer);
-    //Initialize URB and underlying transfer structure. Need to cast to dummy due to const fields
-    usb_transfer_dummy_t *transfer_dummy = (usb_transfer_dummy_t *)&urb->transfer;
-    transfer_dummy->data_buffer = data_buffer;
-    transfer_dummy->num_bytes = BUFFER_SIZE_BULK_IN;
-    hcd_urb_enqueue(pipe_hdl, urb);
+    urb_t *urb_in[BULK_IN_URB_NUM] = {NULL};
+
+    for (size_t i = 0; i < BULK_IN_URB_NUM; i++) {
+        urb_t *urb = heap_caps_calloc(1, sizeof(urb_t), MALLOC_CAP_INTERNAL);
+        assert(NULL != urb);
+        urb_in[i] = urb;
+        uint8_t *data_buffer = heap_caps_malloc(BUFFER_SIZE_BULK_IN, MALLOC_CAP_DMA);
+        assert(NULL != data_buffer);
+        //Initialize URB and underlying transfer structure. Need to cast to dummy due to const fields
+        usb_transfer_dummy_t *transfer_dummy = (usb_transfer_dummy_t *)&urb->transfer;
+        transfer_dummy->data_buffer = data_buffer;
+        transfer_dummy->num_bytes = BUFFER_SIZE_BULK_IN;
+        hcd_urb_enqueue(pipe_hdl, urb);
+    }
 
     while (!(xEventGroupGetBits(s_usb_event_group) & BULK_IN_PIPE_TASK_KILL_BIT)) {
         if (xQueueReceive(pipe_evt_queue, &pipe_evt, portMAX_DELAY) != pdTRUE) {
@@ -601,7 +617,7 @@ static void bulk_in_pipe_task(void *arg)
                     }
                 }
 
-                hcd_urb_enqueue(pipe_hdl, urb);
+                hcd_urb_enqueue(pipe_hdl, done_urb);
                 break;
             }
 
@@ -638,8 +654,10 @@ static void bulk_in_pipe_task(void *arg)
     xEventGroupClearBits(s_usb_event_group, BULK_IN_PIPE_TASK_KILL_BIT);
     hcd_pipe_command(pipe_hdl, HCD_PIPE_CMD_HALT);
     hcd_pipe_free(pipe_hdl);
-    free(urb->transfer.data_buffer);
-    free(urb);
+    for (size_t i = 0; i < BULK_IN_URB_NUM; i++) {
+        free(urb_in[i]->transfer.data_buffer);
+        free(urb_in[i]);
+    }
     vQueueDelete(pipe_evt_queue);
     vTaskDelete(NULL);
 }
@@ -725,18 +743,16 @@ esp_err_t usbh_cdc_driver_install(const usbh_cdc_config_t *config)
     xTaskNotifyGive(s_port_task_hdl);
 
 #ifdef CONFIG_CDC_SYNC_WITH_AT
-    ESP_LOGI(TAG, "Waitting 4G_moudle AT response");
-
-    while (xEventGroupGetBits(s_usb_event_group) & USB_TASK_INIT_COMPLETED_BIT) {
-        ESP_LOGI(TAG, "Waitting 4G_moudle AT response");
+    ESP_LOGI(TAG, "Waitting 4G_moudle AT respond...");
+    while (!(xEventGroupGetBits(s_usb_event_group) & USB_TASK_INIT_COMPLETED_BIT)) {
         vTaskDelay(50 / portTICK_PERIOD_MS);
     }
-
+    ESP_LOGI(TAG, "4G_moudle AT responded !");
 #else
     xEventGroupSetBits(s_usb_event_group, USB_TASK_INIT_COMPLETED_BIT);
 #endif
 
-    ESP_LOGI(TAG, "usb driver install suceed");
+    ESP_LOGI(TAG, "usb driver install succeed");
     return ESP_OK;
 }
 
@@ -840,6 +856,7 @@ void usbh_cdc_print_buffer_msg(void)
     ESP_LOGI(TAG, "usb transfer Max packet size, out = %d, in = %d\n", s_bulkbuf_out_max, s_bulkbuf_in_max);
     ESP_LOGI(TAG, "USBH CDC Ringbuffer Dump:");
     ESP_LOGI(TAG, "usb ringbuffer size, out = %d, in = %d", s_ringbuf_out_size, s_ringbuf_in_size);
+    ESP_LOGI(TAG, "usb ringbuffer load, out = %d, in = %d", s_out_buffered_data_len, s_in_buffered_data_len);
     ESP_LOGI(TAG, "usb ringbuffer High water mark, out = %d, in = %d", s_ringbuf_out_max, s_ringbuf_in_max);
 }
 #endif

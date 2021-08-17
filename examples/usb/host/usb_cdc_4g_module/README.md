@@ -22,28 +22,40 @@
 
 ## 硬件准备
 
-**已支持 ESP 芯片型号：** **ESP32-S2**、**ESP32-S3** （建议使用集成 4MB 及以上 Flash，2MB 及以上 PSRAM 的模组或芯片）
+**已支持 ESP 芯片型号：** 
+* ESP32-S2
+* ESP32-S3
 
-> 示例程序默认不开启 PSRAM，用户可自行添加测试，理论上增大缓冲区大小可以提高数据平均吞吐率
+> 建议使用集成 4MB 及以上 Flash，2MB 及以上 PSRAM 的 ESP 模组或芯片。示例程序默认不开启 PSRAM，用户可自行添加测试，理论上增大缓冲区大小可以提高数据平均吞吐率
 
-**已测试 4G Cat.1 模组型号：** **中移 ML302**
+**已测试 4G Cat.1 模组型号：** 
+* 中移 ML302
+* 合宙 Air724UG
+* 移远 EC600N
+
+> 以上模组有不同子型号，不同型号支持的通信制式可能略有区别，不同制式支持的运营商不同，上下行速率也不同。例如 LTE-FDD 5(UL)/10(DL), LTE-TDD 1(UL)/8(DL)
 
 **其它 4G Cat.1 模组适配方法：**
 
-1. 确认 4G 模组是否支持 USB CDC 模式传输；
+1. 确认 4G 模组是否支持 USB Fullspeed 通信模式
+2. 确认 4G 模组是否支持 USB PPP 拨号上网；
+3. 确认 4G SIM 卡为激活状态，并开启了上网功能；
+4. 确认已按照**硬件接线**连接必要信号线；
+5. 确认 4G 模组 USB PPP 接口输入端点 （IN）和 输出端点（OUT） 地址，并在 `menuconfig` 中修改以下选项： 
 
-2. 确认 4G SIM 卡为激活状态，并开启了上网功能；
-
-3. 确认已按照**硬件接线**连接必要信号线；
-
-4. 确认 4G 模组 USB CDC 输入端点 （IN）和 输出端点（OUT） 地址，默认 OUT 地址为 `0x01`，默认 IN 地址为 `0x81`，如待适配模组使用不同的端点地址，请在 `menuconfig` 中修改以下选项： 
-
+   * 选择自定义 4G Modem 开发板：
    ```
-   Component config → ESP-MODEM → Modem USB CDC IN endpoint address
-                                → Modem USB CDC OUT endpoint address
+   Component config → ESP-MODEM → Choose Modem Board → User Defined
+                                
+   ```
+   * 配置自定义 4G Modem 开发板端点地址：
+   ```
+   Component config → ESP-MODEM → USB CDC endpoint address config
+                                        → Modem USB CDC IN endpoint address
+                                        → Modem USB CDC OUT endpoint address
    ```
 
-5. 控制台输出 log，确认默认 `AT` 指令能够执行；
+6. 控制台输出 log，确认 `AT` 指令能够执行；
 
 > 不同 Cat.1 芯片平台支持的 AT 基础指令大致相同，但可能存在部分特殊指令，需要自行支持
 
@@ -85,13 +97,15 @@
     export IOT_SOLUTION_PATH=$HOME/esp/esp-iot-solution
     ```
 
-5. 按照 Cat.1 模组特殊要求完成代码修改
-
-6. 设置编译目标为 `esp32s2` 或 `esp32s3`
+5. 设置编译目标为 `esp32s2` 或 `esp32s3`
 
     ```bash
     idf.py set-target esp32s2
     ```
+
+6. 选择 Cat.1 模组型号 `Menuconfig → Component config → ESP-MODEM → Choose Modem Board`，如果所选型号未在该列表，请参照 `其它 4G Cat.1 模组适配方法`，自行配置模组端点信息进行适配
+
+    ![choose_modem](./_static/choose_modem.png)
 
 7. 编译、下载、查看输出
 
@@ -174,6 +188,7 @@
 
 * ESP32-S2 ，CPU 240Mhz
 * 4MB flash，无 PSRAM
+* ML302-DNLM 模组开发板
 * 中国移动 4G 上网卡
 * 办公室正常使用环境
 

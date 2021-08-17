@@ -1,11 +1,33 @@
 menu "USB Host CDC"
 
     config CDC_SYNC_WITH_AT
-        bool "Check AT command before usb first transfer"
+        bool "Check AT command before bulk transfer"
         default n
+    config CDC_SEND_DTE_ACTIVE
+        bool "Set control line state during init"
+        default y
+    config USB_TASK_CORE_ID
+        int "usb task core_id"
+        default 0
     config USB_TASK_BASE_PRIORITY
-        int "USB task base priority"
+        int "usb task base priority"
         default 5
+    config CDC_BULK_IN_URB_NUM
+        int "cdc bulk_in urb num"
+        default 2
+    config CDC_BULK_OUT_URB_NUM
+        int "cdc bulk_out urb num"
+        default 2
+    config CDC_BULK_IN_URB_BUFFER_SIZE
+        int "cdc bulk_in urb buffer size"
+        default 1536
+        help
+            buffer size of each bulk_in urb, should be multiple of endpoint mps
+    config CDC_BULK_OUT_URB_BUFFER_SIZE
+        int "cdc bulk_out urb buffer size"
+        default 1536
+        help
+            buffer size of each bulk_out urb
     config CDC_USE_TRACE_FACILITY
         bool "Trace internal memory status"
         default n
