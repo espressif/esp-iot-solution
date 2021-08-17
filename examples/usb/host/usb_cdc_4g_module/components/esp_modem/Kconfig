@@ -1,18 +1,42 @@
 menu "ESP-MODEM"
 
-    config MODEM_USB_OUT_EP_ADDR
-        hex "Modem USB CDC OUT endpoint address"
-        default 0x01
-        range 0x01 0x0f
-        help
-            USB OUT endpoint address (eg.0x01) used for send AT/data to device
+    choice MODEM_TARGET
+        prompt "Choose Modem Board"
+        default MODEM_TARGET_ML302
 
-    config MODEM_USB_IN_EP_ADDR
-        hex "Modem USB CDC IN endpoint address"
-        default 0x81
-        range 0x81 0x8f
-        help
-            USB IN endpoint address (eg.0x81) used for recive data from device
+        config MODEM_TARGET_ML302
+            bool "ML302"
+        config MODEM_TARGET_AIR724UG
+            bool "AIR724UG"
+        config MODEM_TARGET_EC600N
+            bool "EC600N"
+        config MODEM_TARGET_USER
+            bool "User Defined"
+    endchoice
+
+    menu "USB CDC endpoint address config"
+        visible if MODEM_TARGET_USER
+        
+        config MODEM_USB_OUT_EP_ADDR
+            hex "Modem USB CDC OUT endpoint address"
+            default 0x01 if MODEM_TARGET_ML302
+            default 0x03 if MODEM_TARGET_AIR724UG
+            default 0x0f if  MODEM_TARGET_EC600N
+            default 0x01 if MODEM_TARGET_USER
+            range 0x01 0x7f
+            help
+                USB OUT endpoint address (eg.0x01) used for send AT/data to device
+    
+        config MODEM_USB_IN_EP_ADDR
+            hex "Modem USB CDC IN endpoint address"
+            default 0x81 if MODEM_TARGET_ML302
+            default 0x84 if MODEM_TARGET_AIR724UG
+            default 0x86 if  MODEM_TARGET_EC600N
+            default 0x81 if MODEM_TARGET_USER
+            range 0x81 0x8f
+            help
+                USB IN endpoint address (eg.0x81) used for recive data from device
+    endmenu
 
     config MODEM_LEGACY_API
         bool "Enable Legacy API"

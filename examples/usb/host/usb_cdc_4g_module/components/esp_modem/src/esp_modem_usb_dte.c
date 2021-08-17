@@ -141,6 +141,7 @@ static void esp_handle_usb_data(esp_modem_dte_internal_t *esp_dte)
 static void usb_event_cd(void *arg)
 {
     TaskHandle_t *p_usb_event_hdl = (TaskHandle_t *)arg;
+    if (*p_usb_event_hdl == NULL) return;
     xTaskNotifyGive(*p_usb_event_hdl);
 }
 

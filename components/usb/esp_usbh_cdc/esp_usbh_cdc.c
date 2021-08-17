@@ -743,16 +743,16 @@ esp_err_t usbh_cdc_driver_install(const usbh_cdc_config_t *config)
     xTaskNotifyGive(s_port_task_hdl);
 
 #ifdef CONFIG_CDC_SYNC_WITH_AT
-    ESP_LOGI(TAG, "Waitting 4G_moudle AT response...");
+    ESP_LOGI(TAG, "Waitting 4G_moudle AT respond...");
     while (!(xEventGroupGetBits(s_usb_event_group) & USB_TASK_INIT_COMPLETED_BIT)) {
         vTaskDelay(50 / portTICK_PERIOD_MS);
     }
-    ESP_LOGI(TAG, "4G_moudle AT responsed !");
+    ESP_LOGI(TAG, "4G_moudle AT responded !");
 #else
     xEventGroupSetBits(s_usb_event_group, USB_TASK_INIT_COMPLETED_BIT);
 #endif
 
-    ESP_LOGI(TAG, "usb driver install suceed");
+    ESP_LOGI(TAG, "usb driver install succeed");
     return ESP_OK;
 }
 
