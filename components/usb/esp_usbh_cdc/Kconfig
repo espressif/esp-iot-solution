@@ -1,8 +1,11 @@
 menu "USB Host CDC"
 
     config CDC_SYNC_WITH_AT
-        bool "Check AT command before usb first transfer"
+        bool "Check AT command before bulk transfer"
         default n
+    config CDC_SEND_DTE_ACTIVE
+        bool "Set control line state during init"
+        default y
     config USB_TASK_CORE_ID
         int "usb task core_id"
         default 0

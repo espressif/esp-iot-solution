@@ -365,7 +365,8 @@ static void dflt_pipe_task(void *arg)
                     ESP_ERROR_CHECK(hcd_urb_enqueue(dflt_pipe_hdl, done_urb));
                 } else if (stage == ENUM_STAGE_SET_CONFIG) {
                     ESP_LOGI(TAG, "Config is set");
-                    //Set active
+#ifdef CONFIG_CDC_SEND_DTE_ACTIVE
+                    //Set DTE active
                     stage = ENUM_STAGE_SET_LINE_STATE;
                     USB_CTRL_REQ_CDC_SET_LINE_STATE((usb_ctrl_req_t *)data_buffer, 0, 1, 0);
                     done_urb->transfer.num_bytes = 0; //No data stage
@@ -373,8 +374,10 @@ static void dflt_pipe_task(void *arg)
                     ESP_ERROR_CHECK(hcd_urb_enqueue(dflt_pipe_hdl, done_urb));
                 } else if (stage == ENUM_STAGE_SET_LINE_STATE) {
                     ESP_LOGI(TAG, "Line state is set");
+#else
                     xTaskNotifyGive(s_bulk_out_pipe_task_hdl);
                     xTaskNotifyGive(s_bulk_in_pipe_task_hdl);
+#endif
                 } else {
                     ESP_LOGW(TAG, "line %u Pipe: default undefined stage", __LINE__);
                 }
@@ -740,13 +743,11 @@ esp_err_t usbh_cdc_driver_install(const usbh_cdc_config_t *config)
     xTaskNotifyGive(s_port_task_hdl);
 
 #ifdef CONFIG_CDC_SYNC_WITH_AT
-    ESP_LOGI(TAG, "Waitting 4G_moudle AT response");
-
-    while (xEventGroupGetBits(s_usb_event_group) & USB_TASK_INIT_COMPLETED_BIT) {
-        ESP_LOGI(TAG, "Waitting 4G_moudle AT response");
+    ESP_LOGI(TAG, "Waitting 4G_moudle AT response...");
+    while (!(xEventGroupGetBits(s_usb_event_group) & USB_TASK_INIT_COMPLETED_BIT)) {
         vTaskDelay(50 / portTICK_PERIOD_MS);
     }
-
+    ESP_LOGI(TAG, "4G_moudle AT responsed !");
 #else
     xEventGroupSetBits(s_usb_event_group, USB_TASK_INIT_COMPLETED_BIT);
 #endif
