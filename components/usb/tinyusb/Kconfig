@@ -124,6 +124,12 @@ menu "TinyUSB Stack"
                 default ""
                 help
                     STRID_MAC.
+            config TINYUSB_DESC_BTH_STRING
+                depends on TINYUSB_BTH_ENABLED
+                string "BTH String"
+                default "Espressif BTH Device"
+                help
+                    Name of the BTH device.
         endmenu # "Descriptor configuration"
 
         menu "Massive Storage Class (MSC)"
@@ -194,7 +200,7 @@ menu "TinyUSB Stack"
 
             config TINYUSB_RNDIS_VENDOR
                 string "USB Vendor"
-                default "TinyUSB"
+                default "Espressif Incorporated"
                 depends on TINYUSB_NET_ENABLED
                 help
                     Vendor description.
@@ -218,9 +224,23 @@ menu "TinyUSB Stack"
                     help
                         CDC-ECM.
             endchoice
-
-
         endmenu # "usb network"
+
+        menu "Bluetooth Host Class (BTH)"
+            config TINYUSB_BTH_ENABLED
+                bool "Enable TinyUSB BTH feature"
+                default n
+                help
+                    Enable TinyUSB BTH feature. 
+
+            config TINYUSB_BTH_ISO_ALT_COUNT
+                depends on TINYUSB_BTH_ENABLED
+                int "BTH ISO ALT COUNT"
+                default 0
+                help
+                    BTH ISO ALT COUNT.
+        endmenu # "Bluetooth Host Device Class"
+
     endif # TINYUSB
 
 endmenu # "TinyUSB Stack"

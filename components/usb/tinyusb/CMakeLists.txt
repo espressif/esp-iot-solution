@@ -30,6 +30,7 @@ if(CONFIG_TINYUSB)
         "${IDF_PATH}/components/tinyusb/tinyusb/hw/bsp/"
         "${IDF_PATH}/components/tinyusb/tinyusb/src/"
         "${IDF_PATH}/components/tinyusb/tinyusb/src/device"
+        "${IDF_PATH}/components/tinyusb/tinyusb/src/class/bth"
         #"additions/include_private"
         )
 
@@ -83,8 +84,15 @@ if(CONFIG_TINYUSB)
 
     if(CONFIG_TINYUSB_NET_ENABLED)
       list(APPEND srcs
+          "additions/src/tusb_net.c"
           "additions/tusb/src/class/net/net_device.c"
           "additions/tusb/src/lib/networking/rndis_reports.c")
+    endif()
+
+    if(CONFIG_TINYUSB_BTH_ENABLED)
+      list(APPEND srcs
+          "additions/src/tusb_bth.c"
+          "${IDF_PATH}/components/tinyusb/tinyusb/src/class/bth/bth_device.c")
     endif()
 
 endif() # CONFIG_TINYUSB
@@ -92,7 +100,7 @@ endif() # CONFIG_TINYUSB
 idf_component_register(SRCS ${srcs}
                        INCLUDE_DIRS ${includes_public}
                        PRIV_INCLUDE_DIRS ${includes_private}
-                       PRIV_REQUIRES "vfs" "fatfs"
+                       PRIV_REQUIRES "vfs" "fatfs" "bt"
                        )
 
 if(CONFIG_TINYUSB)

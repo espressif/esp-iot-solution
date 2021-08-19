@@ -80,6 +80,10 @@ tusb_desc_device_t descriptor_kconfig = {
     .bDeviceClass = TUSB_CLASS_MISC,
     .bDeviceSubClass = MISC_SUBCLASS_COMMON,
     .bDeviceProtocol = MISC_PROTOCOL_IAD,
+#elif CFG_TUD_BTH
+    .bDeviceClass = TUSB_CLASS_WIRELESS_CONTROLLER,
+    .bDeviceSubClass = TUD_BT_APP_SUBCLASS,
+    .bDeviceProtocol = TUD_BT_PROTOCOL_PRIMARY_CONTROLLER,
 #else
     .bDeviceClass = 0x00,
     .bDeviceSubClass = 0x00,
@@ -116,35 +120,25 @@ tusb_desc_strarray_device_t descriptor_str_kconfig = {
     CONFIG_TINYUSB_DESC_PRODUCT_STRING,      // 2: Product
     CONFIG_TINYUSB_DESC_SERIAL_STRING,       // 3: Serials, should use chip ID
 
-#if CONFIG_TINYUSB_CDC_ENABLED
-    CONFIG_TINYUSB_DESC_CDC_STRING,          // 4: CDC Interface
-#else
-    "",
+#if CFG_TUD_CDC
+    CONFIG_TINYUSB_DESC_CDC_STRING,          // CDC Interface
 #endif
 
-#if CONFIG_TINYUSB_USB_NET_ENABLED
-    CONFIG_TINYUSB_DESC_NET_STRING,          // 5: NET Interface
-#else
-    "",
+#if CFG_TUD_NET
+    CONFIG_TINYUSB_DESC_NET_STRING,          // NET Interface
+    CONFIG_TINYUSB_DESC_MAC_STRING,          // MAC
 #endif
 
-#if CONFIG_TINYUSB_MSC_ENABLED
-    CONFIG_TINYUSB_DESC_MSC_STRING,          // 6: MSC Interface
-#else
-    "",
+#if CFG_TUD_MSC
+    CONFIG_TINYUSB_DESC_MSC_STRING,          // MSC Interface
 #endif
 
-#if CONFIG_TINYUSB_HID_ENABLED
-    CONFIG_TINYUSB_DESC_HID_STRING           // 7: HIDs
-#else
-    "",
+#if CFG_TUD_HID
+    CONFIG_TINYUSB_DESC_HID_STRING           // HIDs
 #endif
 
-#if CONFIG_TINYUSB_USB_NET_ENABLED
-    CONFIG_TINYUSB_DESC_MAC_STRING,          // 8: MAC
-#else
-    "",
+#if CFG_TUD_BTH
+    CONFIG_TINYUSB_DESC_BTH_STRING,          // BTH
 #endif
-
 };
 /* End of Kconfig driven Descriptor */

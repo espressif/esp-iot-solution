@@ -32,6 +32,11 @@ extern "C" {
 //------------- EndPoint Descriptor -------------//
 enum {
     EPNUM_DEFAULT = 0,
+#   if CFG_TUD_BTH
+    EPNUM_BT_EVT,
+    EPNUM_BT_BULK_OUT,
+#   endif
+
 #   if CFG_TUD_NET
     EPNUM_NET_NOTIF,
     EPNUM_NET_DATA,
@@ -51,6 +56,10 @@ enum {
 #   endif
 };
 
+#if ((CFG_TUD_BTH * 2) + (CFG_TUD_NET * 2) + (CFG_TUD_CDC * 2) + CFG_TUD_MSC + CFG_TUD_HID) > 4
+#error "USB endpoint number not be more than 5"
+#endif
+
 //------------- HID Report Descriptor -------------//
 #if CFG_TUD_HID
 enum {
@@ -61,8 +70,13 @@ enum {
 
 //------------- Configuration Descriptor -------------//
 enum {
+#   if CFG_TUD_BTH
+    ITF_NUM_BTH = 0,
+    ITF_NUM_BTH_DATA,
+#   endif
+
 #   if CFG_TUD_NET
-    ITF_NUM_NET = 0,
+    ITF_NUM_NET,
     ITF_NUM_NET_DATA,
 #   endif
 
@@ -88,12 +102,22 @@ enum {
     STRID_MANUFACTURER,
     STRID_PRODUCT,
     STRID_SERIAL,
+#if CFG_TUD_CDC
     STRID_CDC_INTERFACE,
+#endif
+#if CFG_TUD_NET
     STRID_NET_INTERFACE,
-    STRID_MSC_INTERFACE,
-    STRID_HID_INTERFACE,
     STRID_MAC,
-    
+#endif
+#if CFG_TUD_MSC
+    STRID_MSC_INTERFACE,
+#endif
+#if CFG_TUD_HID
+    STRID_HID_INTERFACE,
+#endif
+#if CFG_TUD_BTH
+    STRID_BTH_INTERFACE,
+#endif
 };
 
 enum {
@@ -101,7 +125,8 @@ enum {
                           TUD_CDC_DESC_LEN * CFG_TUD_CDC + 
                           TUD_RNDIS_DESC_LEN * CFG_TUD_NET + 
                           TUD_MSC_DESC_LEN * CFG_TUD_MSC + 
-                          TUD_HID_DESC_LEN * CFG_TUD_HID,
+                          TUD_HID_DESC_LEN * CFG_TUD_HID +
+                          TUD_BTH_DESC_LEN * CFG_TUD_BTH,
 
     ALT_CONFIG_TOTAL_LEN = TUD_CONFIG_DESC_LEN + 
                            TUD_CDC_ECM_DESC_LEN * CFG_TUD_NET + 

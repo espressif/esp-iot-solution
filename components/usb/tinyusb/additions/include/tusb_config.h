@@ -59,6 +59,11 @@ extern "C" {
 #   define CONFIG_TINYUSB_NET_ENABLED 0
 #endif
 
+#ifndef CONFIG_TINYUSB_BTH_ENABLED
+#   define CONFIG_TINYUSB_BTH_ENABLED 0
+#   define CONFIG_TINYUSB_BTH_ISO_ALT_COUNT 0
+#endif
+
 #define CFG_TUSB_RHPORT0_MODE       OPT_MODE_DEVICE | OPT_MODE_FULL_SPEED
 #define CFG_TUSB_OS                 OPT_OS_FREERTOS
 
@@ -91,6 +96,9 @@ extern "C" {
 // HID buffer size Should be sufficient to hold ID (if any) + Data
 #define CFG_TUD_HID_BUFSIZE         CONFIG_TINYUSB_HID_BUFSIZE
 
+// Number of BTH ISO alternatives
+#define CFG_TUD_BTH_ISO_ALT_COUNT   CONFIG_TINYUSB_BTH_ISO_ALT_COUNT
+
 // Enabled device class driver
 #define CFG_TUD_CDC                 CONFIG_TINYUSB_CDC_PORT_NUM
 #define CFG_TUD_MSC                 CONFIG_TINYUSB_MSC_ENABLED
@@ -98,6 +106,7 @@ extern "C" {
 #define CFG_TUD_MIDI                CONFIG_TINYUSB_MIDI_ENABLED
 #define CFG_TUD_CUSTOM_CLASS        CONFIG_TINYUSB_CUSTOM_CLASS_ENABLED
 #define CFG_TUD_NET                 CONFIG_TINYUSB_NET_ENABLED
+#define CFG_TUD_BTH                 CONFIG_TINYUSB_BTH_ENABLED
 
 /* TODO: will be removed if upstream feat: Add net xmit status cb for application can block to get it #1001*/
 __attribute__((weak)) void tud_network_idle_status_change_cb(bool idle);

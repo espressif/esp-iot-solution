@@ -49,12 +49,10 @@
 
 #include "FreeRTOS_CLI.h"
 
+#include "tinyusb.h"
 #include "cmd_wifi.h"
 
-#include "tusb_cdc_acm.h"
-
 #define cliNEW_LINE    "\r\n"
-#define ITF_NUM_CDC    0
 
 char* null_password = "";
 
@@ -62,6 +60,7 @@ char* null_password = "";
 static BaseType_t prvTaskStatusCommand( char *pcWriteBuffer, size_t xWriteBufferLen, const char *pcCommandString );
 #endif
 
+#if CFG_TUD_NET
 static BaseType_t prvStationCommand( char *pcWriteBuffer, size_t xWriteBufferLen, const char *pcCommandString );
 
 static BaseType_t prvScanCommand( char *pcWriteBuffer, size_t xWriteBufferLen, const char *pcCommandString );
@@ -71,6 +70,7 @@ static BaseType_t prvAPCommand( char *pcWriteBuffer, size_t xWriteBufferLen, con
 static BaseType_t prvSetWiFiModeCommand( char *pcWriteBuffer, size_t xWriteBufferLen, const char *pcCommandString );
 
 static BaseType_t prvSmartConfigCommand( char *pcWriteBuffer, size_t xWriteBufferLen, const char *pcCommandString );
+#endif /* CFG_TUD_NET */
 
 static BaseType_t prvRamCommand( char *pcWriteBuffer, size_t xWriteBufferLen, const char *pcCommandString );
 
@@ -89,6 +89,7 @@ static const CLI_Command_Definition_t xTaskStatus =
 };
 #endif
 
+#if CFG_TUD_NET
 /* Structure that defines the "sta" command line command. */
 static const CLI_Command_Definition_t xStationCommand =
 {
@@ -133,6 +134,7 @@ static const CLI_Command_Definition_t xSmartConfigCommand =
 	prvSmartConfigCommand, /* The function to run. */
 	1 /* No parameters are expected. */
 };
+#endif /* CFG_TUD_NET */
 
 /* Structure that defines the "ram" command line command. */
 static const CLI_Command_Definition_t xRamCommand =
@@ -171,11 +173,13 @@ void vRegisterCLICommands( void )
 #if CONFIG_FREERTOS_USE_STATS_FORMATTING_FUNCTIONS
 	FreeRTOS_CLIRegisterCommand( &xTaskStatus );
 #endif
+#if CFG_TUD_NET
 	FreeRTOS_CLIRegisterCommand( &xAPCommand );
 	FreeRTOS_CLIRegisterCommand( &xStationCommand );
 	FreeRTOS_CLIRegisterCommand( &xSetWiFiModeCommand );
 	FreeRTOS_CLIRegisterCommand( &xSmartConfigCommand );
 	FreeRTOS_CLIRegisterCommand( &xScanCommand );
+#endif /* CFG_TUD_NET */
 	FreeRTOS_CLIRegisterCommand( &xRamCommand );
 	FreeRTOS_CLIRegisterCommand( &xRestartCommand );
 	FreeRTOS_CLIRegisterCommand( &xGetVersionCommand );
@@ -208,9 +212,10 @@ static BaseType_t prvTaskStatusCommand( char *pcWriteBuffer, size_t xWriteBuffer
 #endif
 /*-----------------------------------------------------------*/
 
+#if CFG_TUD_NET
 static BaseType_t prvStationCommand( char *pcWriteBuffer, size_t xWriteBufferLen, const char *pcCommandString )
 {
-	char *pc1, *pc2, *pc3, *pc4, *pc5, pc6;
+	char *pc1, *pc2, *pc3, *pc4, *pc5, *pc6;
 	BaseType_t xLength1, xLength2, xLength3, xLength4, xLength5, xLength6;
 
 	/* Remove compile time warnings about unused parameters, and check the
@@ -225,7 +230,7 @@ static BaseType_t prvStationCommand( char *pcWriteBuffer, size_t xWriteBufferLen
 	pc6 = ( char * ) FreeRTOS_CLIGetParameter
 								(
 									pcCommandString,    /* The command string itself. */
-									6,                  /* Return the first parameter. */
+									6,                  /* Return the Sixth parameter. */
 									&xLength6           /* Store the parameter string length. */
 								);
 
@@ -233,7 +238,7 @@ static BaseType_t prvStationCommand( char *pcWriteBuffer, size_t xWriteBufferLen
 	pc5 = ( char * ) FreeRTOS_CLIGetParameter
 								(
 									pcCommandString,    /* The command string itself. */
-									5,                  /* Return the first parameter. */
+									5,                  /* Return the fifth parameter. */
 									&xLength5           /* Store the parameter string length. */
 								);
 
@@ -241,7 +246,7 @@ static BaseType_t prvStationCommand( char *pcWriteBuffer, size_t xWriteBufferLen
 	pc4 = ( char * ) FreeRTOS_CLIGetParameter
 								(
 									pcCommandString,    /* The command string itself. */
-									4,                  /* Return the first parameter. */
+									4,                  /* Return the fourth parameter. */
 									&xLength4           /* Store the parameter string length. */
 								);
 
@@ -249,7 +254,7 @@ static BaseType_t prvStationCommand( char *pcWriteBuffer, size_t xWriteBufferLen
 	pc3 = ( char * ) FreeRTOS_CLIGetParameter
 								(
 									pcCommandString,    /* The command string itself. */
-									3,                  /* Return the second parameter. */
+									3,                  /* Return the third parameter. */
 									&xLength3           /* Store the parameter string length. */
 								);
 
@@ -257,7 +262,7 @@ static BaseType_t prvStationCommand( char *pcWriteBuffer, size_t xWriteBufferLen
 	pc2 = ( char * ) FreeRTOS_CLIGetParameter
 								(
 									pcCommandString,    /* The command string itself. */
-									2,                  /* Return the first parameter. */
+									2,                  /* Return the second parameter. */
 									&xLength2           /* Store the parameter string length. */
 								);
 
@@ -265,7 +270,7 @@ static BaseType_t prvStationCommand( char *pcWriteBuffer, size_t xWriteBufferLen
 	pc1 = ( char * ) FreeRTOS_CLIGetParameter
 								(
 									pcCommandString,    /* The command string itself. */
-									1,                  /* Return the second parameter. */
+									1,                  /* Return the first parameter. */
 									&xLength1           /* Store the parameter string length. */
 								);
 
@@ -525,6 +530,7 @@ static BaseType_t prvSmartConfigCommand( char *pcWriteBuffer, size_t xWriteBuffe
 	return pdFALSE;
 }
 /*-----------------------------------------------------------*/
+#endif /* CFG_TUD_NET */
 
 static BaseType_t prvRamCommand( char *pcWriteBuffer, size_t xWriteBufferLen, const char *pcCommandString )
 {
