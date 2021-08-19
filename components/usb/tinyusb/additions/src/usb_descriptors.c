@@ -13,9 +13,17 @@
 // limitations under the License.
 
 #include "usb_descriptors.h"
+#include "descriptors_control.h"
 #include "sdkconfig.h"
 
-#define USB_TUSB_PID (0x4000 | _PID_MAP(CDC, 0) | _PID_MAP(MSC, 1) | _PID_MAP(HID, 2) | _PID_MAP(MIDI, 3))
+/* A combination of interfaces must have a unique product id, since PC will save device driver after the first plug.
+ * Same VID/PID with different interface e.g MSC (first), then CDC (later) will possibly cause system error on PC.
+ *
+ * Auto ProductID layout's Bitmap:
+ *   [MSB]       NET | VENDOR | MIDI | HID | MSC | CDC          [LSB]
+ */
+#define USB_TUSB_PID (0x4000 | _PID_MAP(CDC, 0) | _PID_MAP(MSC, 1) | _PID_MAP(HID, 2) | \
+                     _PID_MAP(MIDI, 3) | _PID_MAP(VENDOR, 4) | _PID_MAP(NET, 5) )
 
 /**** TinyUSB default ****/
 tusb_desc_device_t descriptor_tinyusb = {
@@ -103,7 +111,7 @@ tusb_desc_device_t descriptor_kconfig = {
 
 tusb_desc_strarray_device_t descriptor_str_kconfig = {
     // array of pointer to string descriptors
-    (char[]){0x09, 0x04},                // 0: is supported language is English (0x0409)
+    (char[]){0x09, 0x04},                    // 0: is supported language is English (0x0409)
     CONFIG_TINYUSB_DESC_MANUFACTURER_STRING, // 1: Manufacturer
     CONFIG_TINYUSB_DESC_PRODUCT_STRING,      // 2: Product
     CONFIG_TINYUSB_DESC_SERIAL_STRING,       // 3: Serials, should use chip ID
@@ -114,14 +122,26 @@ tusb_desc_strarray_device_t descriptor_str_kconfig = {
     "",
 #endif
 
+#if CONFIG_TINYUSB_USB_NET_ENABLED
+    CONFIG_TINYUSB_DESC_NET_STRING,          // 5: NET Interface
+#else
+    "",
+#endif
+
 #if CONFIG_TINYUSB_MSC_ENABLED
-    CONFIG_TINYUSB_DESC_MSC_STRING,          // 5: MSC Interface
+    CONFIG_TINYUSB_DESC_MSC_STRING,          // 6: MSC Interface
 #else
     "",
 #endif
 
 #if CONFIG_TINYUSB_HID_ENABLED
-    CONFIG_TINYUSB_DESC_HID_STRING           // 6: HIDs
+    CONFIG_TINYUSB_DESC_HID_STRING           // 7: HIDs
+#else
+    "",
+#endif
+
+#if CONFIG_TINYUSB_USB_NET_ENABLED
+    CONFIG_TINYUSB_DESC_MAC_STRING,          // 8: MAC
 #else
     "",
 #endif
