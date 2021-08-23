@@ -92,28 +92,33 @@ void painter_draw_char(int x, int y, char ascii_char, const font_t *font, uint16
     PAINTER_CHECK(ascii_char >= ' ', "ACSII code invalid");
     PAINTER_CHECK(NULL != font, "Font pointer invalid");
     int i, j;
-    int x0 = x;
     uint16_t char_size = font->Height * (font->Width / 8 + (font->Width % 8 ? 1 : 0));
     unsigned int char_offset = (ascii_char - ' ') * char_size;
     const unsigned char *ptr = &font->table[char_offset];
+    uint16_t buf[18 * 25];
+    PAINTER_CHECK(font->Height * font->Width * sizeof(uint16_t) <= sizeof(buf), "Font size is too large");
+    int ox = 0;
+    int oy = 0;
 
+    for (i = 0; i < font->Width * font->Height; i++) {
+        buf[i] = g_back_color;
+    }
     for (j = 0; j < char_size; j++) {
         uint8_t temp = ptr[j];
         for (i = 0; i < 8; i++) {
             if (temp & 0x80) {
-                g_lcd.draw_pixel(x, y, g_point_color);
-            } else {
-                g_lcd.draw_pixel(x, y, g_back_color);
+                buf[ox + (font->Width * oy)] = g_point_color;
             }
             temp <<= 1;
-            x++;
-            if ((x - x0) == font->Width) {
-                x = x0;
-                y++;
+            ox++;
+            if (ox == font->Width) {
+                ox = 0;
+                oy++;
                 break;
             }
         }
     }
+    g_lcd.draw_bitmap(x, y, font->Width, font->Height, buf);         // Draw NxN char
 }
 
 void painter_draw_string(int x, int y, const char *text, const font_t *font, uint16_t color)
@@ -149,7 +154,7 @@ void painter_draw_num(int x, int y, uint32_t num, uint8_t len, const font_t *fon
 {
     PAINTER_CHECK(len < 10, "The length of the number is too long");
     PAINTER_CHECK(NULL != font, "Font pointer invalid");
-    char buf[10]={0};
+    char buf[10] = {0};
     int8_t num_len;
 
     itoa(num, buf, 10);
@@ -196,7 +201,7 @@ void painter_draw_line(int x1, int y1, int x2, int y2, uint16_t color)
     uint16_t t;
     int xerr = 0, yerr = 0, delta_x, delta_y, distance;
     int incx, incy, uRow, uCol;
-    delta_x = x2 - x1; 
+    delta_x = x2 - x1;
     delta_y = y2 - y1;
     uRow = x1;
     uCol = y1;

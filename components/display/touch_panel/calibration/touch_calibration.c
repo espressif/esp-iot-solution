@@ -286,7 +286,7 @@ esp_err_t touch_calibration_run(const scr_driver_t *screen,
             calibrate_error = 0;
             ESP_LOGI(TAG, "/ XL = (%f)X + (%f)Y + (%f)", g_caldata.ax, g_caldata.bx, g_caldata.cx);
             ESP_LOGI(TAG, "\\ YL = (%f)X + (%f)Y + (%f)", g_caldata.ay, g_caldata.by, g_caldata.cy);
-            show_prompt_with_dir(30, h/2, "Successful", &Font16, COLOR_BLUE, old_dir);
+            show_prompt_with_dir((w/2)-(Font16.Width*5), (h/2)+Font16.Height, "Successful", &Font16, COLOR_BLUE, old_dir);
             touch_save_calibration(&g_caldata, sizeof(Calibration_t));
             vTaskDelay(2000 / portTICK_PERIOD_MS);
         }
