@@ -6,8 +6,9 @@ This example shows how to set up ESP32-S chip to work as a USB Dongle Device.
 
 Supports the following functions:
 
-* Support Host to surf the Internet wirelessly via USB
-* Support Host to communicate and control ESP32-S series devices via USB
+* Support Host to surf the Internet wirelessly via USB-RNDIS
+* Add BLE devices via USB-BTH, support scan, broadcast, connect and other functions
+* Support Host to communicate and control ESP32-S series devices via USB-CDC or UART
 * Support multiple system、Wi-Fi control commands
 * Support hot swap
 
@@ -43,16 +44,16 @@ Refer to `soc/usb_pins.h` to find the real GPIO number of **USBPHY_DP_NUM** and 
 
 * ESP32-S2-Saola
 
-<img src=".\_static\ESP32-S2.jpg" alt="ESP32-S2" style="zoom: 15%;" />
+<img src="./_static/ESP32-S2.jpg" alt="ESP32-S2" style="zoom: 15%;" />
 
 * ESP32-S3 DevKitC
 
-<img src=".\_static\ESP32-S3.jpg" alt="ESP32-S3" style="zoom:25%;" />
+<img src="./_static/ESP32-S3.jpg" alt="ESP32-S3" style="zoom:25%;" />
 
-### 2.3 Build and Flash
+### 2.3 Software Required
 
 * Confirm that the ESP-IDF environment is successfully set up
-* To add ESP-IDF environment variables, the Linux method is as follows. For other platforms, please refer to [Set up the environment variables](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index .html#step-4-set-up-the-environment-variables)
+* To add ESP-IDF environment variables, the Linux method is as follows. For other platforms, please refer to [Set up the environment variables](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html#step-4-set-up-the-environment-variables)
 
     ```
     . $HOME/esp/esp-idf/export.sh
@@ -64,11 +65,33 @@ Refer to `soc/usb_pins.h` to find the real GPIO number of **USBPHY_DP_NUM** and 
     idf.py set-target esp32s2
     ```
 
-* build、flash、monitor
+### 2.4 Project Configuration
 
-    ```
-    idf.py -p (PORT) build flash monitor
-    ```
+![tinyusb_config](./_static/tinyusb_config.png)
+
+![uart_config](./_static/uart_config.png)
+
+Currently USB-Dongle supports the following four combination options
+
+| RNDIS | BTH  | CDC  | UART |
+| :---: | :--: | :--: | :--: |
+|   √   |      |      |  √   |
+|   √   |      |  √   |      |
+|   √   |  √   |      |  √   |
+|       |  √   |      |  √   |
+
+* UART is disabled by default when CDC is enabled
+* The project enables RNDIS and CDC by default
+* You can select USB Device through `component config -> TinyUSB Stack`
+* When RNDIS and BTH are enabled at the same time, it is recommended to disable CDC, use UART to send commands, and configure the serial port through `Example Configuration`
+
+>Due to current hardware limitations, the number of EndPoints cannot exceed a certain number, so RNDIS, BTH, and CDC are not supported at the same time.
+
+### 2.5 build & flash & monitor
+
+```
+idf.py -p (PORT) build flash monitor
+```
 
 (Replace PORT with the name of the serial port to use.)
 
@@ -76,25 +99,27 @@ Refer to `soc/usb_pins.h` to find the real GPIO number of **USBPHY_DP_NUM** and 
 
 
 
-After the system is running, Linux will add a USB Ethernet device and a USB ACM device.
-
-view the USB Ethernet device through th e following command
+After the system is running, Linux will add the USB device, you can use the following command to view the USB device
 
 ```
 ifconfig -a
 ```
 
-<img src=".\_static\ifconfig.png" alt="ifconfig" style="zoom: 80%;" />
-
-view the USB ACM device through the following command
+<img src="./_static/ifconfig.png" alt="ifconfig" style="zoom: 80%;" />
 
 ```
-ls /dev/tty*
+hciconfig
 ```
 
-![ACM](.\_static\ACM.png)
+![hciconfig](./_static/hciconfig.png)
 
-You can communicate with the development board through the USB ACM port.
+```
+ls /dev/ttyACM*
+```
+
+![ACM](./_static/ACM.png)
+
+You can communicate with the development board through the USB ACM port or UART.
 
 view the currently supported commands and usage through the help command.
 
@@ -122,7 +147,7 @@ sta -s <ssid> -p [<password>]
     >
     >ifconfig ethxxx up    
 
-### [2. smartconfig network configuration](./Commands.md#5startsmart)
+### [2. smartconfig network configuration](./Commands.md#5smartconfig)
 
 (1) Hardware Required
 
@@ -153,3 +178,5 @@ smartconfig 1
 ## 4.Command introduction
 
 [Commands](./Commands.md)
+
+Note: Wi-Fi commands can only be used when USB Network Class is enabled
