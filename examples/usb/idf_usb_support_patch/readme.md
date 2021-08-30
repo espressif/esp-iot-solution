@@ -8,22 +8,13 @@
 
 ```
 git pull
-git checkout 166c30e7b2ed1d
+git checkout b63ec47238fd6a
 git submodule update --init --recursive
 ```
 
 ## Modify some IDF Files
 
-1. Make some internal headers public, `esp-idf/components/usb/CMakeLists.txt` line:8 add `private_include` to `INCLUDE_DIRS`:
-
-   ```
-   idf_component_register(SRCS "hcd.c"
-                       INCLUDE_DIRS "private_include"
-                       PRIV_INCLUDE_DIRS ""
-                       PRIV_REQUIRES hal driver)
-   ```
-
-2. **Fix ESP32-S2 PRE-ECO Chip Bug**, add `ets_delay_us(10)` before `spi_hal_user_start(hal)` in function `spi_new_trans` of file `esp-idf/components/driver/spi_master.c`:
+1. **Fix ESP32-S2 PRE-ECO Chip Bug**, add `ets_delay_us(10)` before `spi_hal_user_start(hal)` in function `spi_new_trans` of file `esp-idf/components/driver/spi_master.c`:
 
    ```c
    ets_delay_us(10);
