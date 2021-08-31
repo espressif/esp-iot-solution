@@ -13,6 +13,9 @@
  *      See the License for the specific language governing permissions and
  *      limitations under the License.
  */
+#include "tinyusb.h"
+
+#if CFG_TUD_NET
 
 #include <stdio.h>
 #include <stdint.h>
@@ -35,10 +38,8 @@
 #include "esp_smartconfig.h"
 #include "esp_private/wifi.h"
 
-#include "tinyusb.h"
-#include "tusb_cdc_acm.h"
-
-#define ITF_NUM_CDC    0
+#include "tusb_net.h"
+#include "data_back.h"
 
 static const char *TAG = "rndis_wifi";
 
@@ -58,8 +59,6 @@ esp_netif_t *sta_netif;
 const DRAM_ATTR uint8_t tud_network_mac_address[6] = {0x02,0x02,0x84,0x6A,0x96,0x00};
 bool s_wifi_is_connected = false;
 
-esp_err_t pkt_wifi2usb(void *buffer, uint16_t len, void *eb);
-
 static void scan_done_handler(void* arg, esp_event_base_t event_base,
                               int32_t event_id, void* event_data)
 {
@@ -73,8 +72,7 @@ static void scan_done_handler(void* arg, esp_event_base_t event_base,
     if (!sta_number) {
         ESP_LOGE(TAG, "No AP found");
         lenth = sprintf(scan_buf, "\r\nNo AP found\r\n>");
-        tinyusb_cdcacm_write_queue(ITF_NUM_CDC, (uint8_t*)scan_buf, lenth);
-        tinyusb_cdcacm_write_flush(ITF_NUM_CDC, 0);
+        esp_data_back(scan_buf, lenth, ENABLE_FLUSH);
         free(scan_buf);
         return;
     }
@@ -83,8 +81,7 @@ static void scan_done_handler(void* arg, esp_event_base_t event_base,
     if (ap_list_buffer == NULL) {
         ESP_LOGE(TAG, "Failed to malloc buffer to print scan results");
         lenth = sprintf(scan_buf, "\r\nFailed to malloc\r\n>");
-        tinyusb_cdcacm_write_queue(ITF_NUM_CDC, (uint8_t*)scan_buf, lenth);
-        tinyusb_cdcacm_write_flush(ITF_NUM_CDC, 0);
+        esp_data_back(scan_buf, lenth, ENABLE_FLUSH);
         free(scan_buf);
         return;
     }
@@ -93,12 +90,11 @@ static void scan_done_handler(void* arg, esp_event_base_t event_base,
         for(i=0; i<sta_number; i++) {
             ESP_LOGI(TAG, "[%s][rssi=%d]", ap_list_buffer[i].ssid, ap_list_buffer[i].rssi);
             lenth = sprintf(scan_buf, "\r\n[%s][rssi=%d]", ap_list_buffer[i].ssid, ap_list_buffer[i].rssi);
-            tinyusb_cdcacm_write_queue(ITF_NUM_CDC, (uint8_t*)scan_buf, lenth);
+            esp_data_back(scan_buf, lenth, DISABLE_FLUSH);
         }
     }
     lenth = sprintf(scan_buf, "\r\n>");
-    tinyusb_cdcacm_write_queue(ITF_NUM_CDC, (uint8_t*)scan_buf, lenth);
-    tinyusb_cdcacm_write_flush(ITF_NUM_CDC, 1);
+    esp_data_back(scan_buf, lenth, ENABLE_FLUSH);
     free(scan_buf);
     free(ap_list_buffer);
     ESP_LOGI(TAG, "sta scan done");
@@ -163,8 +159,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
         memcpy(password, evt->password, sizeof(evt->password));
         ESP_LOGI(TAG, "SSID:%s    PASSWORD:%s", ssid, password);
         lenth = sprintf(wifi_event_buf, "SSID:%s,PASSWORD:%s\r\n", ssid, password);
-        tinyusb_cdcacm_write_queue(ITF_NUM_CDC, (uint8_t*)wifi_event_buf, lenth);
-        tinyusb_cdcacm_write_flush(ITF_NUM_CDC, 0);
+        esp_data_back(wifi_event_buf, lenth, ENABLE_FLUSH);
 
         if (evt->type == SC_TYPE_ESPTOUCH_V2) {
             ESP_ERROR_CHECK( esp_smartconfig_get_rvd_data(rvd_data, sizeof(rvd_data)) );
@@ -323,16 +318,14 @@ esp_err_t wifi_cmd_query(void)
         esp_wifi_get_config(WIFI_IF_AP, &cfg);
         ESP_LOGI(TAG, "AP mode, %s %s", cfg.ap.ssid, cfg.ap.password);
         size_t lenth = sprintf(query_buf, "AP mode:%s,%s\r\n", cfg.ap.ssid, cfg.ap.password);
-        tinyusb_cdcacm_write_queue(ITF_NUM_CDC, (uint8_t*)query_buf, lenth);
-        tinyusb_cdcacm_write_flush(ITF_NUM_CDC, 0);
+        esp_data_back(query_buf, lenth, ENABLE_FLUSH);
     } else if (WIFI_MODE_STA == mode) {
         int bits = xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT, 0, 1, 0);
         if (bits & CONNECTED_BIT) {
             esp_wifi_get_config(WIFI_IF_STA, &cfg);
             ESP_LOGI(TAG, "STA mode: %s,%d,%d,%d", cfg.sta.ssid, cfg.sta.channel, cfg.sta.listen_interval, cfg.sta.threshold.authmode);
             size_t lenth = sprintf(query_buf, "STA mode:%s,%d,%d,%d\r\n", cfg.sta.ssid, cfg.sta.channel, cfg.sta.listen_interval, cfg.sta.threshold.authmode);
-            tinyusb_cdcacm_write_queue(ITF_NUM_CDC, (uint8_t*)query_buf, lenth);
-            tinyusb_cdcacm_write_flush(ITF_NUM_CDC, 0);
+            esp_data_back(query_buf, lenth, ENABLE_FLUSH);
         } else {
             ESP_LOGI(TAG, "sta mode, disconnected");
         }
@@ -360,8 +353,7 @@ static void smartconfig_task(void * parm)
         if(uxBits & ESPTOUCH_DONE_BIT) {
             ESP_LOGI(TAG, "smartconfig over");
             size_t lenth = sprintf(sm_buf, "OK\r\n>");
-            tinyusb_cdcacm_write_queue(ITF_NUM_CDC, (uint8_t*)sm_buf, lenth);
-            tinyusb_cdcacm_write_flush(ITF_NUM_CDC, 0);
+            esp_data_back(sm_buf, lenth, ENABLE_FLUSH);
             esp_smartconfig_stop();
             smart_config = false;
             ESP_LOGI(TAG, "free the buffer taken by smartconfig");
@@ -434,3 +426,4 @@ void initialise_wifi(void)
     initialized = true;
 }
 
+#endif /* CFG_TUD_NET */

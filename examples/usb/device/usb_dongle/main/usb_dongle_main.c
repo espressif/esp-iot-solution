@@ -18,105 +18,40 @@
 #include "nvs_flash.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "freertos/semphr.h"
-#include "lwip/ip_addr.h"
-#include "lwip/netif.h"
 
 #include "esp_log.h"
 #include "esp_err.h"
-#include "esp_wifi.h"
-#include "esp_private/wifi.h"
 #include "sdkconfig.h"
-
-
-#ifdef CONFIG_HEAP_TRACING
-#include "esp_heap_trace.h"
-#endif
-
-#include "tinyusb.h"
-#include "tusb_cdc_acm.h"
 
 #include "cmd_wifi.h"
 
-SemaphoreHandle_t semp;
+#include "tinyusb.h"
+#include "tusb_net.h"
+#include "tusb_bth.h"
 
-#ifdef CONFIG_HEAP_TRACING
-#define NUM_RECORDS 100
-static heap_trace_record_t trace_record[NUM_RECORDS]; // This buffer must be in internal RAM
+#if CFG_TUD_CDC
+#include "tusb_cdc_acm.h"
+static uint8_t buf[CONFIG_TINYUSB_CDC_RX_BUFSIZE + 1];
+void Command_Parse(char* Cmd);
+#elif CONFIG_UART_ENABLE
+void initialise_uart(void);
 #endif
 
-static const char *TAG = "USB_Dongle_WiFi";
-static uint8_t buf[CONFIG_TINYUSB_CDC_RX_BUFSIZE + 1];
-extern bool s_wifi_is_connected;
+#ifdef CONFIG_HEAP_TRACING
+#include "esp_heap_trace.h"
+#define NUM_RECORDS 100
+static heap_trace_record_t trace_record[NUM_RECORDS]; // This buffer must be in internal RAM
+#endif /* CONFIG_HEAP_TRACING */
 
-extern void Command_Parse(char* Cmd);
+static const char *TAG = "USB_Dongle";
 
 /*
  * Register commands that can be used with FreeRTOS+CLI through the UDP socket.
  * The commands are defined in CLI-commands.c.
  */
-extern void vRegisterCLICommands( void );
+void vRegisterCLICommands(void);
 
-
-bool tud_network_recv_cb(const uint8_t *src, uint16_t size)
-{
-  if (s_wifi_is_connected) {
-    esp_wifi_internal_tx(ESP_IF_WIFI_STA, src, size);
-  }
-  tud_network_recv_renew();
-  return true;
-}
-
-uint16_t tud_network_xmit_cb(uint8_t *dst, void *ref, uint16_t arg)
-{
-  uint16_t len = arg;
-
-  /* traverse the "pbuf chain"; see ./lwip/src/core/pbuf.c for more info */
-  memcpy(dst, ref, len);
-  return len;
-}
-
-void tud_network_init_cb(void)
-{
-    /* TODO */
-}
-
-bool tud_network_wait_xmit(uint32_t ms)
-{
-  if (xSemaphoreTake(semp, ms/portTICK_PERIOD_MS) == pdTRUE) {
-    xSemaphoreGive(semp);
-    return true;
-  }
-  return false;
-}
-
-void tud_network_idle_status_change_cb(bool enable)
-{
-    if (enable == true) {
-      xSemaphoreGive(semp);
-    } else {
-      xSemaphoreTake(semp, 0);
-    }
-}
-
-esp_err_t pkt_wifi2usb(void *buffer, uint16_t len, void *eb)
-{
-    if (!tud_ready()) {
-      esp_wifi_internal_free_rx_buffer(eb);
-      return ERR_USE;
-    }
-    
-    if (tud_network_wait_xmit(100)) {
-      /* if the network driver can accept another packet, we make it happen */
-      if (tud_network_can_xmit()) {
-          tud_network_xmit(buffer, len);
-      }
-    }
-
-    esp_wifi_internal_free_rx_buffer(eb);
-    return ESP_OK;
-}
-
+#if CFG_TUD_CDC
 void tinyusb_cdc_rx_callback(int itf, cdcacm_event_t *event)
 {
     /* initialization */
@@ -138,6 +73,7 @@ void tinyusb_cdc_line_state_changed_callback(int itf, cdcacm_event_t *event)
     int rst = event->line_state_changed_data.rts;
     ESP_LOGI(TAG, "Line state changed! itf:%d dtr:%d, rst:%d", itf, dtr, rst);
 }
+#endif /* CFG_TUD_CDC */
 
 void app_main(void)
 {
@@ -147,9 +83,17 @@ void app_main(void)
         ESP_ERROR_CHECK(nvs_flash_erase());
         ret = nvs_flash_init();
     }
-    ESP_ERROR_CHECK( ret );
+    ESP_ERROR_CHECK(ret);
 
-    vSemaphoreCreateBinary(semp);
+#if CFG_TUD_NET
+    tusb_net_init();
+    initialise_wifi();
+#endif /* CFG_TUD_NET */
+
+#if CFG_TUD_BTH
+    // init ble controller
+    tusb_bth_init();
+#endif /* CFG_TUD_BTH */
 
     ESP_LOGI(TAG, "USB initialization");
 
@@ -159,6 +103,7 @@ void app_main(void)
 
     ESP_ERROR_CHECK(tinyusb_driver_install(&tusb_cfg));
 
+#if CFG_TUD_CDC
     tinyusb_config_cdcacm_t amc_cfg = {
         .usb_dev = TINYUSB_USBDEV_0,
         .cdc_port = TINYUSB_CDC_ACM_0,
@@ -170,9 +115,16 @@ void app_main(void)
     };
 
     ESP_ERROR_CHECK(tusb_cdc_acm_init(&amc_cfg));
+#elif CONFIG_UART_ENABLE
+    initialise_uart();
+#endif /* CFG_TUD_CDC */
+
     ESP_LOGI(TAG, "USB initialization DONE");
 
-    initialise_wifi();
+#ifdef CONFIG_HEAP_TRACING
+    heap_trace_init_standalone(trace_record, NUM_RECORDS);
+    heap_trace_start(HEAP_TRACE_LEAKS);
+#endif
     
     /* Register commands with the FreeRTOS+CLI command interpreter. */
     vRegisterCLICommands();
