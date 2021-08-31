@@ -23,9 +23,14 @@
 #include "tusb_bth.h"
 
 #define BUFFER_SIZE_MAX  256
+#define LE_READ_BUFF_SIZE                  0x2002
+#define HCI_H4_CMD_PREAMBLE_SIZE           (4)
+#define UINT16_TO_STREAM(p, u16) {*(p)++ = (uint8_t)(u16); *(p)++ = (uint8_t)((u16) >> 8);}
+#define UINT8_TO_STREAM(p, u8)   {*(p)++ = (uint8_t)(u8);}
 
 static const char *TAG = "tusb_bth";
 static uint16_t acl_buf_size_max = 0;
+uint8_t * p_acl_buf = NULL;
 
 void ble_controller_init(void) {
     esp_err_t ret;
@@ -68,16 +73,6 @@ static int host_rcv_pkt(uint8_t *data, uint16_t len)
         uint8_t *hci_buf = (uint8_t *)malloc(len);
         memcpy(hci_buf, data +1 , act_len);
         ESP_LOGI(TAG, "evt_data from controller, evt_data_length: %d :", act_len);
-        if(hci_buf[0] == 0x0e && hci_buf[1] == 0x07 
-        && hci_buf[3] == 0x02 && hci_buf[4] == 0x20) {
-            // LE Read Buffer size command complete event
-            uint16_t* size_p = NULL;
-            uint16_t cmd_value;
-            size_p = (uint8_t*)(&cmd_value);
-            *size_p = hci_buf[6];
-            *(size_p+1) = hci_buf[7];
-            acl_buf_size_max = *size_p;
-        }
         tud_bt_event_send(hci_buf, act_len);
         free(hci_buf);
     } else if(data[0] == HCIT_TYPE_ACL_DATA) { // acl data from controller
@@ -95,10 +90,50 @@ static esp_vhci_host_callback_t vhci_host_cb = {
     host_rcv_pkt
 };
 
+static int host_rcv_pkt_test (uint8_t *data, uint16_t len) {
+    
+    ESP_LOGI(TAG, "host_rcv_pkt_test evt_data_length: %d :", len);
+    if(data[1] == 0x0e && data[2] == 0x07 
+        && data[4] == 0x02 && data[5] == 0x20) {
+        // LE Read Buffer size command complete event
+        uint16_t* size_p = NULL;
+        uint16_t cmd_value;
+        size_p = (uint8_t*)(&cmd_value);
+        *size_p = data[7];
+        *(size_p+1) = data[8];
+        acl_buf_size_max = *size_p;
+        ESP_LOGI(TAG, "acl_buf_size_max: %d", acl_buf_size_max);
+    }
+    if (!acl_buf_size_max) {
+        acl_buf_size_max = BUFFER_SIZE_MAX;
+    }
+
+    p_acl_buf = (uint8_t *)malloc(acl_buf_size_max + 1);
+    esp_vhci_host_register_callback(&vhci_host_cb);
+    return 0;
+}
+
+uint16_t make_cmd_le_read_buff_size(uint8_t *buf)
+{
+    UINT8_TO_STREAM (buf, HCIT_TYPE_COMMAND);
+    UINT16_TO_STREAM (buf, LE_READ_BUFF_SIZE);
+    UINT8_TO_STREAM (buf, 0);
+    return HCI_H4_CMD_PREAMBLE_SIZE;
+}
+
+static esp_vhci_host_callback_t vhci_host_cb_test = {
+    controller_rcv_pkt_ready,
+    host_rcv_pkt_test
+};
+
 void tusb_bth_init(void)
 {
     ble_controller_init();
-    esp_vhci_host_register_callback(&vhci_host_cb);
+    // register vhci_host_cb_test, test le read buffer size
+    esp_vhci_host_register_callback(&vhci_host_cb_test);
+    uint8_t buf[6];
+    uint16_t sz = make_cmd_le_read_buff_size(buf);
+    esp_vhci_host_send_packet(buf, sz);
 }
 
 //--------------------------------------------------------------------+
@@ -131,11 +166,6 @@ static uint16_t write_offset = 0;
 static uint16_t acl_data_length = 0;
 void tud_bt_acl_data_received_cb(void *acl_data, uint16_t data_len)
 {
-    if (!acl_buf_size_max) {
-        acl_buf_size_max = BUFFER_SIZE_MAX;
-    }
-
-    uint8_t *hci_data_buf = (uint8_t *)malloc(acl_buf_size_max + 1);
 
     // if acl_data is long data
     if(!prepare_write) {
@@ -143,17 +173,17 @@ void tud_bt_acl_data_received_cb(void *acl_data, uint16_t data_len)
         acl_data_length = *(((uint16_t * )acl_data) + 1);
         if(acl_data_length > data_len) {
             prepare_write = true;
-            hci_data_buf[0] = HCIT_TYPE_ACL_DATA;
-            memcpy(hci_data_buf + 1, acl_data, data_len);
+            p_acl_buf[0] = HCIT_TYPE_ACL_DATA;
+            memcpy(p_acl_buf + 1, acl_data, data_len);
             write_offset = data_len + 1;
         } else {
-            hci_data_buf[0] = HCIT_TYPE_ACL_DATA;
-            memcpy(hci_data_buf + 1, acl_data, data_len);
+            p_acl_buf[0] = HCIT_TYPE_ACL_DATA;
+            memcpy(p_acl_buf + 1, acl_data, data_len);
             ESP_LOGI(TAG, "short acl_data from host, will send to controller, length: %d", (data_len + 1));
-            esp_vhci_host_send_packet(hci_data_buf, data_len + 1);
+            esp_vhci_host_send_packet(p_acl_buf, data_len + 1);
         }
     } else {
-        memcpy(hci_data_buf + write_offset, acl_data, data_len);
+        memcpy(p_acl_buf + write_offset, acl_data, data_len);
         write_offset += data_len;
         if(acl_data_length > write_offset) {
             ESP_LOGI(TAG, "Remaining bytes: %d", (acl_data_length - write_offset));
@@ -161,9 +191,9 @@ void tud_bt_acl_data_received_cb(void *acl_data, uint16_t data_len)
         }
         ESP_LOGI(TAG, "long acl_data from host, will send to controller, length: %d", (data_len + 1));
         prepare_write = false;
-        esp_vhci_host_send_packet(hci_data_buf, data_len + write_offset);
+        esp_vhci_host_send_packet(p_acl_buf, data_len + write_offset);
     }
-    free(hci_data_buf);
+    //free(hci_data_buf);
 }
 
 // Called when event sent with tud_bt_event_send() was delivered to BT stack.
