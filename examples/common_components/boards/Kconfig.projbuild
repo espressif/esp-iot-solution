@@ -11,6 +11,8 @@ menu "Board Options"
             bool "Saola With Esp32S2 Onboard From Espressif"
         config BOARD_ESP32_LCDKIT
             bool "Board ESP32-LCDKit_V1.1"
+        config BOARD_ESP32_M5STACK
+            bool "Board ESP32-M5Stack"
     endchoice
 
     menu "Devkitc-V4 Board Options"
@@ -32,6 +34,13 @@ menu "Board Options"
 
         orsource "./esp32-meshkit-sense/Kconfig.in"
         #source "{absolute path}/esp32-meshkit-sense/Kconfig.in" # v4.0 Backwards compatibility
+    endmenu
+
+    menu "M5Stack Board Options"
+        visible if BOARD_ESP32_M5STACK
+
+        orsource "./esp32-m5stack/Kconfig.in"
+        #source "{absolute path}/esp32-m5stack/Kconfig.in" # v4.0 Backwards compatibility
     endmenu
 
 endmenu

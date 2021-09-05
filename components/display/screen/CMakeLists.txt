@@ -1,5 +1,6 @@
 
 set(SCREEN_DIR "controller_driver/ili9341"
+            "controller_driver/ili9342"
             "controller_driver/st7789"
             "controller_driver/st7796"
             "controller_driver/nt35510"
