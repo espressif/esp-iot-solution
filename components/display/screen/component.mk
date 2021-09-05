@@ -5,6 +5,7 @@
 
 
 SCREEN_DIR = controller_driver/ili9341 \
+            controller_driver/ili9342 \
             controller_driver/st7789 \
             controller_driver/st7796 \
             controller_driver/nt35510 \
@@ -14,7 +15,7 @@ SCREEN_DIR = controller_driver/ili9341 \
             controller_driver/ssd1351 \
             controller_driver/rm68120 \
             controller_driver/ssd1306 \
-            controller_driver/ssd1307 \
+            controller_driver/ssd1307	 \
             controller_driver/ssd1322 \
             controller_driver/ssd1963
 

@@ -144,7 +144,7 @@ static void lcd_speed_test(scr_driver_t *lcd)
     scr_info_t lcd_info;
     lcd->get_info(&lcd_info);
 
-    uint32_t w = 240, h = 240;
+    uint32_t w = 320, h = 240;
     w = lcd_info.width < w ? lcd_info.width : w;
     h = lcd_info.height < h ? lcd_info.height : h;
 
@@ -193,7 +193,12 @@ void app_main(void)
     esp_err_t ret = ESP_OK;
 #if USE_SPI_SCREEN
     iot_board_init();
+
+#if defined(CONFIG_BOARD_ESP32_M5STACK)
+    spi_bus_handle_t spi_bus = iot_board_get_handle(BOARD_SPI3_ID);
+#else
     spi_bus_handle_t spi_bus = iot_board_get_handle(BOARD_SPI2_ID);
+#endif
 
     scr_interface_spi_config_t spi_lcd_cfg = {
         .spi_bus = spi_bus,
@@ -205,7 +210,11 @@ void app_main(void)
 
     scr_interface_driver_t *iface_drv;
     scr_interface_create(SCREEN_IFACE_SPI, &spi_lcd_cfg, &iface_drv);
+#if defined(CONFIG_BOARD_ESP32_M5STACK)
+    ret = scr_find_driver(SCREEN_CONTROLLER_ILI9342, &g_lcd);
+#else
     ret = scr_find_driver(SCREEN_CONTROLLER_ILI9341, &g_lcd);
+#endif
     if (ESP_OK != ret) {
         return;
         ESP_LOGE(TAG, "screen find failed");
@@ -219,9 +228,15 @@ void app_main(void)
         .bckl_active_level = 1,
         .offset_hor = 0,
         .offset_ver = 0,
+#if defined(CONFIG_BOARD_ESP32_M5STACK)
+        .width = 320,
+        .height = 240,
+        .rotate = SCR_DIR_LRTB,
+#else
         .width = 240,
         .height = 320,
         .rotate = SCR_DIR_BTRL,
+#endif
     };
     ret = g_lcd.init(&lcd_cfg);
 #else

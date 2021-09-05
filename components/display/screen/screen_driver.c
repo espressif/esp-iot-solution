@@ -31,6 +31,9 @@ static const char *TAG = "screen driver";
 #ifdef CONFIG_LCD_DRIVER_SCREEN_CONTROLLER_ILI9341
 extern scr_driver_t lcd_ili9341_default_driver;
 #endif
+#ifdef CONFIG_LCD_DRIVER_SCREEN_CONTROLLER_ILI9342
+extern scr_driver_t lcd_ili9342_default_driver;
+#endif
 #ifdef CONFIG_LCD_DRIVER_SCREEN_CONTROLLER_ILI9486
 extern scr_driver_t lcd_ili9486_default_driver;
 #endif
@@ -80,6 +83,11 @@ esp_err_t scr_find_driver(scr_controller_t controller, scr_driver_t *out_screen)
 #ifdef CONFIG_LCD_DRIVER_SCREEN_CONTROLLER_ILI9341
     case SCREEN_CONTROLLER_ILI9341:
         *out_screen = lcd_ili9341_default_driver;
+        break;
+#endif
+#ifdef CONFIG_LCD_DRIVER_SCREEN_CONTROLLER_ILI9342
+    case SCREEN_CONTROLLER_ILI9342:
+        *out_screen = lcd_ili9342_default_driver;
         break;
 #endif
 #ifdef CONFIG_LCD_DRIVER_SCREEN_CONTROLLER_ILI9806

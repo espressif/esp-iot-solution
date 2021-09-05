@@ -4,6 +4,9 @@ menu "LCD Drivers"
         config LCD_DRIVER_SCREEN_CONTROLLER_ILI9341
             bool "ILI9341"
             default y
+        config LCD_DRIVER_SCREEN_CONTROLLER_ILI9342
+            bool "ILI9342"
+            default y
         config LCD_DRIVER_SCREEN_CONTROLLER_ILI9486
             bool "ILI9486"
             default n
