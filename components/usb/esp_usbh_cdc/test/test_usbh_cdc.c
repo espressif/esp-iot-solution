@@ -20,8 +20,8 @@
 #define IN_RINGBUF_SIZE (1024 * 16)
 #define OUT_RINGBUF_SIZE (1024 * 16)
 
-static usb_desc_ep_t bulk_out_ep_desc = {
-    .bLength = sizeof(usb_desc_ep_t),
+static usb_ep_desc_t bulk_out_ep_desc = {
+    .bLength = sizeof(usb_ep_desc_t),
     .bDescriptorType = USB_B_DESCRIPTOR_TYPE_ENDPOINT,
     .bEndpointAddress = 0x01,       //EP 1 OUT
     .bmAttributes = USB_BM_ATTRIBUTES_XFER_BULK,
@@ -29,8 +29,8 @@ static usb_desc_ep_t bulk_out_ep_desc = {
     .bInterval = 0,
 };
 
-static usb_desc_ep_t bulk_in_ep_desc = {
-    .bLength = sizeof(usb_desc_ep_t),
+static usb_ep_desc_t bulk_in_ep_desc = {
+    .bLength = sizeof(usb_ep_desc_t),
     .bDescriptorType = USB_B_DESCRIPTOR_TYPE_ENDPOINT,
     .bEndpointAddress = 0x81,       //EP 2 IN
     .bmAttributes = USB_BM_ATTRIBUTES_XFER_BULK,

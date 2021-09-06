@@ -18,7 +18,7 @@
 #include <string.h>
 #include <time.h>
 #include <sys/time.h>
-#include "usb.h"
+#include "usb/usb_types_stack.h"
 #include "libuvc_def.h"
 
 #ifdef __cplusplus

@@ -28,8 +28,8 @@ typedef void(*usbh_cdc_cb_t)(void *arg);
  * @brief usb host cdc configuration type
  */
 typedef struct usbh_cdc_config{
-    usb_desc_ep_t *bulk_in_ep;       /*!< usb in endpoint descriptor */
-    usb_desc_ep_t *bulk_out_ep;      /*!< usb out endpoint descriptor */
+    usb_ep_desc_t *bulk_in_ep;       /*!< usb in endpoint descriptor */
+    usb_ep_desc_t *bulk_out_ep;      /*!< usb out endpoint descriptor */
     int rx_buffer_size;              /*!< usb in ringbuffer size */
     int tx_buffer_size;              /*!< usb out ringbuffer size */
     usbh_cdc_cb_t rx_callback;       /*!< packet receive callback, should not block */

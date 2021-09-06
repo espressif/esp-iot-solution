@@ -9,8 +9,8 @@
 1. 使用 `usbh_cdc_driver_install` 配置并启动 USB 任务，初始化参数如下所示，在示例基础上一般只需修改端点地址 `bEndpointAddress` 即可;
 
     ```
-    static usb_desc_ep_t bulk_out_ep_desc = {
-        .bLength = sizeof(usb_desc_ep_t),
+    static usb_ep_desc_t bulk_out_ep_desc = {
+        .bLength = sizeof(usb_ep_desc_t),
         .bDescriptorType = USB_B_DESCRIPTOR_TYPE_ENDPOINT,
         .bEndpointAddress = 0x01,       //EP 1 OUT
         .bmAttributes = USB_BM_ATTRIBUTES_XFER_BULK,
@@ -18,8 +18,8 @@
         .bInterval = 0,
     };
 
-    static usb_desc_ep_t bulk_in_ep_desc = {
-        .bLength = sizeof(usb_desc_ep_t),
+    static usb_ep_desc_t bulk_in_ep_desc = {
+        .bLength = sizeof(usb_ep_desc_t),
         .bDescriptorType = USB_B_DESCRIPTOR_TYPE_ENDPOINT,
         .bEndpointAddress = 0x81,       //EP 2 IN
         .bmAttributes = USB_BM_ATTRIBUTES_XFER_BULK,
