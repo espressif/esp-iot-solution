@@ -144,7 +144,12 @@ static void lcd_speed_test(scr_driver_t *lcd)
     scr_info_t lcd_info;
     lcd->get_info(&lcd_info);
 
+#if defined(CONFIG_BOARD_ESP32_M5STACK)
     uint32_t w = 320, h = 240;
+#else
+    uint32_t w = 240, h = 240;
+#endif
+
     w = lcd_info.width < w ? lcd_info.width : w;
     h = lcd_info.height < h ? lcd_info.height : h;
 
