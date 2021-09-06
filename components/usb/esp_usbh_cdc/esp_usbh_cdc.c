@@ -26,6 +26,7 @@
 #include "esp_log.h"
 #include "hal/usbh_ll.h"
 #include "hcd.h"
+#include "usb/usb_types_stack.h"
 #include "usb_private.h"
 #include "esp_usbh_cdc.h"
 
@@ -78,8 +79,8 @@ static int s_ringbuf_in_max = 0;
 #endif
 
 static EventGroupHandle_t s_usb_event_group = NULL;
-static usb_desc_ep_t s_bulk_in_ep;
-static usb_desc_ep_t s_bulk_out_ep;
+static usb_ep_desc_t s_bulk_in_ep;
+static usb_ep_desc_t s_bulk_out_ep;
 static usb_speed_t s_port_speed = 0;
 
 static RingbufHandle_t in_ringbuf_handle = NULL;
@@ -113,7 +114,7 @@ typedef enum {
  *
  */
 #define USB_CTRL_REQ_CDC_SET_LINE_STATE(ctrl_req_ptr, itf, dtr, rts) ({  \
-        (ctrl_req_ptr)->bRequestType = 0x21;   \
+        (ctrl_req_ptr)->bmRequestType = 0x21;   \
         (ctrl_req_ptr)->bRequest = 0x22;    \
         (ctrl_req_ptr)->wValue = (rts ? 2 : 0) | (dtr ? 1 : 0); \
         (ctrl_req_ptr)->wIndex =  itf;    \
@@ -282,10 +283,6 @@ static void port_task(void *arg)
                 abort();
                 break;
 
-            case HCD_PORT_EVENT_SUDDEN_DISCONN:
-                ESP_LOGW(TAG, "line %u HCD_PORT_EVENT_SUDDEN_DISCONN", __LINE__);
-                break;
-
             case HCD_PORT_EVENT_NONE:
                 break;
 
@@ -329,14 +326,14 @@ static void dflt_pipe_task(void *arg)
     ESP_LOGI(TAG, "Pipe Default Created");
 
     //malloc URB for default control
-    uint8_t *data_buffer = heap_caps_malloc(sizeof(usb_ctrl_req_t) + CTRL_TRANSFER_DATA_MAX_BYTES, MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    uint8_t *data_buffer = heap_caps_malloc(sizeof(usb_setup_packet_t) + CTRL_TRANSFER_DATA_MAX_BYTES, MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
     urb_t *urb_ctrl = heap_caps_calloc(1, sizeof(urb_t), MALLOC_CAP_DEFAULT);
     //Initialize URB and underlying transfer structure. Need to cast to dummy due to const fields
     usb_transfer_dummy_t *transfer_dummy = (usb_transfer_dummy_t *)&urb_ctrl->transfer;
     transfer_dummy->data_buffer = data_buffer;
     //STD: Set ADDR
     cdc_enum_stage_t stage = ENUM_STAGE_SET_ADDR;
-    USB_CTRL_REQ_INIT_SET_ADDR((usb_ctrl_req_t *)data_buffer, 1);
+    USB_SETUP_PACKET_INIT_SET_ADDR((usb_setup_packet_t *)data_buffer, 1);
     urb_ctrl->transfer.num_bytes = 0; //No data stage
     //Enqueue it
     ESP_LOGI(TAG, "1. Set Device Addr = %u", 1);
@@ -359,7 +356,7 @@ static void dflt_pipe_task(void *arg)
                     hcd_pipe_update_dev_addr(dflt_pipe_hdl, 1);
                     //Goto set config stage
                     stage = ENUM_STAGE_SET_CONFIG;
-                    USB_CTRL_REQ_INIT_SET_CONFIG((usb_ctrl_req_t *)data_buffer, 1);//only one configuration
+                    USB_SETUP_PACKET_INIT_SET_CONFIG((usb_setup_packet_t *)data_buffer, 1);//only one configuration
                     done_urb->transfer.num_bytes = 0; //No data stage
                     ESP_LOGI(TAG, "2. Sending set_config = %u", 1);
                     ESP_ERROR_CHECK(hcd_urb_enqueue(dflt_pipe_hdl, done_urb));
@@ -368,7 +365,7 @@ static void dflt_pipe_task(void *arg)
 #ifdef CONFIG_CDC_SEND_DTE_ACTIVE
                     //Set DTE active
                     stage = ENUM_STAGE_SET_LINE_STATE;
-                    USB_CTRL_REQ_CDC_SET_LINE_STATE((usb_ctrl_req_t *)data_buffer, 0, 1, 0);
+                    USB_CTRL_REQ_CDC_SET_LINE_STATE((usb_setup_packet_t *)data_buffer, 0, 1, 0);
                     done_urb->transfer.num_bytes = 0; //No data stage
                     ESP_LOGI(TAG, "3. Sending set_line state itf= %u dtr=%d rts=%d", 0, 1, 0);
                     ESP_ERROR_CHECK(hcd_urb_enqueue(dflt_pipe_hdl, done_urb));
@@ -384,10 +381,6 @@ static void dflt_pipe_task(void *arg)
 
                 break;
             }
-
-            case HCD_PIPE_EVENT_INVALID:
-                ESP_LOGW(TAG, "line %u Pipe: default HCD_PIPE_EVENT_INVALID", __LINE__);
-                break;
 
             case HCD_PIPE_EVENT_ERROR_XFER:
                 ESP_LOGW(TAG, "line %u Pipe: default HCD_PIPE_EVENT_ERROR_XFER", __LINE__);
@@ -509,10 +502,6 @@ static void bulk_out_pipe_task(void *arg)
                 break;
             }
 
-            case HCD_PIPE_EVENT_INVALID:
-                ESP_LOGW(TAG, "line %u Pipe: bulk_out HCD_PIPE_EVENT_INVALID", __LINE__);
-                break;
-
             case HCD_PIPE_EVENT_ERROR_XFER:
                 ESP_LOGW(TAG, "line %u Pipe: bulk_out HCD_PIPE_EVENT_ERROR_XFER", __LINE__);
                 break;
@@ -620,10 +609,6 @@ static void bulk_in_pipe_task(void *arg)
                 hcd_urb_enqueue(pipe_hdl, done_urb);
                 break;
             }
-
-            case HCD_PIPE_EVENT_INVALID:
-                ESP_LOGW(TAG, "line %u Pipe: in HCD_PIPE_EVENT_INVALID", __LINE__);
-                break;
 
             case HCD_PIPE_EVENT_ERROR_XFER:
                 ESP_LOGW(TAG, "line %u Pipe: in HCD_PIPE_EVENT_ERROR_XFER", __LINE__);

@@ -340,8 +340,8 @@ static esp_err_t esp_modem_dte_deinit(esp_modem_dte_t *dte)
     return ESP_OK;
 }
 
-static usb_desc_ep_t bulk_out_ep_desc = {
-    .bLength = sizeof(usb_desc_ep_t),
+static usb_ep_desc_t bulk_out_ep_desc = {
+    .bLength = sizeof(usb_ep_desc_t),
     .bDescriptorType = USB_B_DESCRIPTOR_TYPE_ENDPOINT,
     .bEndpointAddress = CONFIG_MODEM_USB_OUT_EP_ADDR,       //EP OUT
     .bmAttributes = USB_BM_ATTRIBUTES_XFER_BULK,
@@ -349,8 +349,8 @@ static usb_desc_ep_t bulk_out_ep_desc = {
     .bInterval = 0,
 };
 
-static usb_desc_ep_t bulk_in_ep_desc = {
-    .bLength = sizeof(usb_desc_ep_t),
+static usb_ep_desc_t bulk_in_ep_desc = {
+    .bLength = sizeof(usb_ep_desc_t),
     .bDescriptorType = USB_B_DESCRIPTOR_TYPE_ENDPOINT,
     .bEndpointAddress = CONFIG_MODEM_USB_IN_EP_ADDR,       //EP IN
     .bmAttributes = USB_BM_ATTRIBUTES_XFER_BULK,

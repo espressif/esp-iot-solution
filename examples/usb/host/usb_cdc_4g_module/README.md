@@ -114,16 +114,6 @@
     idf.py build flash monitor
     ```
 
-8. 错误处理：
-    如果编译时输出 `fatal error: usb.h: No such file or directory`，请将 `esp-idf/components/usb/CMakeLists.txt` 按照以下修改:
-
-    ```
-    idf_component_register(SRCS "hcd.c"
-                        INCLUDE_DIRS "private_include"
-                        PRIV_INCLUDE_DIRS ""
-                        PRIV_REQUIRES hal driver)
-    ```
-
 ## 使用说明
 
 **Wi-Fi 名称和密码：**
