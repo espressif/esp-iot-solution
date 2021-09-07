@@ -11,5 +11,6 @@ sphinxcontrib-actdiag==2.0.0
 sphinxcontrib-nwdiag==2.0.0
 sphinxcontrib-wavedrom==2.0.0
 nwdiag==2.0.0
+docutils<0.17
 recommonmark
 future>=0.16.0 # for ../tools/gen_esp_err_to_name.py
