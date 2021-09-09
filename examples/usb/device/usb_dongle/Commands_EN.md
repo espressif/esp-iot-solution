@@ -1,10 +1,10 @@
-### 命令介绍
+### Command Set
 
 #### 1.help
 
 **Function:**
 
-列出所有注册的命令
+List all registered commands.
 
 **Command:**
 
@@ -34,7 +34,7 @@ version: Get version of chip and SDK
 
 **Function:**
 
-设置 AP 模式、查询 AP 设置
+Set/get softAP configuration.
 
 **Set Command:**
 
@@ -55,15 +55,15 @@ AP mode:Soft_AP,espressif
 >
 ```
 
-Note：
+Note:
 
->password 为可选项，若不配置默认不加密
+>password is optional. If you didn't set any password, then the ESP softAP will be set into the open mode.
 
 #### 3.sta
 
 **Function:**
 
-启动 Station 模式、查询所连接 AP 信息 
+Set station mode, query the information of the AP it connected to.
 
 **Set Command:**
 
@@ -96,13 +96,13 @@ sta
 |       7        | WIFI_AUTH_WPA2_WPA3_PSK   |
 |       8        | WIFI_AUTH_WAPI_PSK        |
 
-Note：
+Note:
 
->password 为可选项
+>password is optional. 
 
 **Function:**
 
-断开与 AP 的连接
+Disconnect from AP.
 
 **Set Command:**
 
@@ -121,17 +121,17 @@ OK
 
 **Function:**
 
-设置 WiFi 模式
+Set Wi-Fi mode.
 
 **Command:**
 
-* 设置 Station 模式
+* Set Station mode
 
     ```
     mode sta
     ```
 
-* 设置 AP 模式
+* Set AP mode
 
     ```
     mode ap
@@ -141,7 +141,7 @@ OK
 
 **Function:**
 
-* 开启 SmartConfig 配网
+* Start SmartConfig to connect to target AP.
 
     **Command:**
 
@@ -157,7 +157,7 @@ OK
     >
     ```
 
-* 关闭 SmartConfig 配网
+* Stop SmartConfig.
 
     **Command:**
 
@@ -174,32 +174,32 @@ OK
 
     Note:
 
-    >使用 `smartconfig 1` 命令开启 SmartConfig 配网并成功连接后，不需要再使用 `smartconfig 0` 命令来关闭 SmartConfig 配网
+    > After called `smartconfig 1` command, if the ESP device connects to the target AP successfully, then you don't need to call `smartconfig 0` to stop SmartConfig.
     >
-    >`smartconfig 0` 命令只需要在 SmartConfig 配网失败时进行调用
+    >`smartconfig 0` command only needs to be called, when the SmartConfig fails.
 
-配网步骤：
+SmartConfig steps:
 
->* 下载 ESPTOUCH APP ：[Android source code](https://github.com/EspressifApp/EsptouchForAndroid)    [iOS source code](https://github.com/EspressifApp/EsptouchForIOS) 
->* 确保你的手机连接至目标 AP（2.4GHz）
->* 打开 ESPTOUCH APP 输入 password 并确认
->* PC 端通过 USB 端口发送 `smartconfig 1` 命令
+>* Download ESPTOUCH APP to your phone: [Android source code](https://github.com/EspressifApp/EsptouchForAndroid)    [iOS source code](https://github.com/EspressifApp/EsptouchForIOS) 
+>* Connect your phone to the target AP (2.4GHz).
+>* Open ESPTOUCH APP, input AP's password.
+>* PC sends command `smartconfig 1` to USB port to start SmartConfig.
 
 #### 6.scan
 
 **Function:**
 
-扫描 AP 并列出对应 SSID 以及 RSSI
+Scan APs, list their SSID and RSSI.
 
 **Command:**
 
-* 扫描特定 AP
+* Scan a specific AP.
 
     ```
     scan <SSID>
     ```
 
-* 扫描所有 AP
+* Scan all APs nearby.
 
     ```
     scan
@@ -217,7 +217,7 @@ OK
 
 **Function:**
 
-获取当前剩余内存大小以及系统运行期间最小时内存大小
+Get the size of available heap, and get the minimum heap that has ever been available.
 
 **Command:**
 
@@ -236,7 +236,7 @@ free heap size: 132612, min heap size: 116788
 
 **Function:**
 
-重启系统
+Restart the system.
 
 **Command:**
 
@@ -248,7 +248,7 @@ restart
 
 **Function:**
 
-获取当前 IDF 版本以及芯片信息
+Get the ESP-IDF and chip version.
 
 **Command:**
 

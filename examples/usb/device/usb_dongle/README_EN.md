@@ -6,15 +6,15 @@ This example shows how to set up ESP32-S chip to work as a USB Dongle Device.
 
 Supports the following functions:
 
-* Support Host to surf the Internet wirelessly via USB-RNDIS
-* Add BLE devices via USB-BTH, support scan, broadcast, connect and other functions
-* Support Host to communicate and control ESP32-S series devices via USB-CDC or UART
-* Support multiple system、Wi-Fi control commands
-* Support hot swap
+* Support Host to surf the Internet wirelessly via USB-RNDIS.
+* Add BLE devices via USB-BTH, support scan, broadcast, connect and other functions.
+* Support Host to communicate and control ESP32-S series devices via USB-CDC or UART.
+* Support system commands and Wi-Fi control commands. It uses FreeRTOS-Plus-CLI interfaces, so it is easy to add more commands.
+* Support hot swap.
 
 ## 2.How to use example
 
-### 2.1 Hardware Required
+### 2.1 Hardware Preparation
 
 Any ESP boards that have USB-OTG supported.
 
@@ -22,7 +22,7 @@ Any ESP boards that have USB-OTG supported.
 
 * ESP32-S3
 
-### 2.2 Common Pin Assignments
+### 2.2 Hardware Connection
 
 Pin assignment is only needed for ESP chips that have an USB-OTG peripheral. If your board doesn't have a USB connector connected to the USB-OTG dedicated GPIOs, you may have to DIY a cable and connect **D+** and **D-** to the pins listed below.
 
@@ -50,19 +50,21 @@ Refer to `soc/usb_pins.h` to find the real GPIO number of **USBPHY_DP_NUM** and 
 
 <img src="./_static/ESP32-S3.jpg" alt="ESP32-S3" style="zoom:25%;" />
 
-### 2.3 Software Required
+### 2.3 Software Preparation
 
 * Confirm that the ESP-IDF environment is successfully set up
-* To add ESP-IDF environment variables, the Linux method is as follows. For other platforms, please refer to [Set up the environment variables](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html#step-4-set-up-the-environment-variables)
+* To add ESP-IDF environment variables. If you are using Linux OS, you can follow below steps. If you are using other OS, please refer to [Set up the environment variables](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html#step-4-set-up-the-environment-variables).
 
     ```
-    . $HOME/esp/esp-idf/export.sh
+    >. $HOME/esp/esp-idf/export.sh
+    >
     ```
 
 * Set the compilation target to `esp32s2` or `esp32s3`
 
     ```
-    idf.py set-target esp32s2
+    >idf.py set-target esp32s2
+    >
     ```
 
 ### 2.4 Project Configuration
@@ -71,7 +73,7 @@ Refer to `soc/usb_pins.h` to find the real GPIO number of **USBPHY_DP_NUM** and 
 
 ![uart_config](./_static/uart_config.png)
 
-Currently USB-Dongle supports the following four combination options
+Currently USB-Dongle supports the following four combination options.
 
 | RNDIS | BTH  | CDC  | UART |
 | :---: | :--: | :--: | :--: |
@@ -80,56 +82,72 @@ Currently USB-Dongle supports the following four combination options
 |   √   |  √   |      |  √   |
 |       |  √   |      |  √   |
 
-* UART is disabled by default when CDC is enabled
-* The project enables RNDIS and CDC by default
-* You can select USB Device through `component config -> TinyUSB Stack`
-* When RNDIS and BTH are enabled at the same time, it is recommended to disable CDC, use UART to send commands, and configure the serial port through `Example Configuration`
+* UART is disabled by default when CDC is enabled.
+* The project enables RNDIS and CDC by default.
+* You can select USB Device through `component config -> TinyUSB Stack`.
+* When RNDIS and BTH are enabled at the same time, it is recommended to disable CDC, use UART to send commands, and configure the serial port through `Example Configuration`.
 
->Due to current hardware limitations, the number of EndPoints cannot exceed a certain number, so RNDIS, BTH, and CDC are not supported at the same time.
+>Due to current hardware limitations, the number of EndPoints cannot exceed a certain number, so RNDIS, BTH, and CDC should not be all enabled at the same time.
 
 ### 2.5 build & flash & monitor
 
-```
-idf.py -p (PORT) build flash monitor
-```
-
-(Replace PORT with the name of the serial port to use.)
-
-(To exit the serial monitor, type `Ctrl-]`.)
-
-
-
-After the system is running, Linux will add the USB device, you can use the following command to view the USB device
+You can use the following command to build and flash the firmware.
 
 ```
-ifconfig -a
+>idf.py -p (PORT) build flash monitor
+>
 ```
 
-<img src="./_static/ifconfig.png" alt="ifconfig" style="zoom: 80%;" />
+ * Replace ``(PORT)`` with the actual name of your serial port.
 
-```
-hciconfig
-```
+ * To exit the serial monitor, type `Ctrl-]`.
 
-![hciconfig](./_static/hciconfig.png)
+### 2.6 User Guide
 
-```
-ls /dev/ttyACM*
-```
+1. After completing above preparation, you can connect PC and your ESP device with USB cable.
 
-![ACM](./_static/ACM.png)
+2. You can see a USB network card and a bluetooth device on your PC.
 
-You can communicate with the development board through the USB ACM port or UART.
+    * Show network devices
 
-view the currently supported commands and usage through the help command.
+    ```
+    >ifconfig -a
+    >
+    ```
 
-## 3.Way of distribution network
+    <img src="./_static/ifconfig.png" alt="ifconfig" style="zoom: 80%;" />
 
-You can choose any of the following methods to configure the network
+    * Show bluetooth device
 
-### [1. Use the `sta` command to directly connect to the corresponding AP](./Commands.md#3sta)
+    ```
+    >hciconfig
+    >
+    ```
 
-**Example**
+    ![hciconfig](./_static/hciconfig.png)
+
+    Show USB-CDC device
+
+    ```
+    >ls /dev/ttyACM*
+    >
+    ```
+
+    ![ACM](./_static/ACM.png)
+
+3. The PC can communicate with the ESP board through the USB ACM port or UART. And you can use ``help`` command to view all commands supported.
+
+5. If USB-RNDIS is enabled, you can connect ESP device to AP by commands.
+    * [Connect to target AP by sta command](./Commands_EN.md#3sta)
+    * [Connect to target AP by startsmart command (SmartConfig)](./Commands_EN.md#5smartconfig)
+
+## 3. Connect to a Wi-Fi AP
+
+The example provides two methods to connect ESP device to a Wi-Fi AP.
+
+### [Method 1. Connect to target AP by `sta` command](./Commands_EN.md#3sta)
+
+**Command Example**
 
 ```
 sta -s <ssid> -p [<password>]
@@ -141,13 +159,30 @@ sta -s <ssid> -p [<password>]
 
 * When the USB Dongle network is switched, the network device needs to be reloaded
 
-    >ifconfig                           //find USB Ethernet name
+    >find USB Ethernet name
     >
-    >ifconfig ethxxx down 
+    >```
+    >>ifconfig
+    >>
+    >```
     >
-    >ifconfig ethxxx up    
+    >unload USB Ethernet 
+    >
+    >```
+    >>ifconfig <USB Ethernet name> down
+    >>
+    >```
+    >
+    >reload USB Ethernet 
+    >
+    >```
+    >>ifconfig <USB Ethernet name> up
+    >>
+    >```
+    >
+    >* `USB Ethernet name` is the name of the queried network device
 
-### [2. smartconfig network configuration](./Commands.md#5smartconfig)
+### [Method 2. Connect to target AP by startsmart command (SmartConfig)](./Commands_EN.md#5smartconfig)
 
 (1) Hardware Required
 
@@ -169,14 +204,31 @@ smartconfig 1
 
 * When the USB Dongle network is switched, the network device needs to be reloaded
 
-    >ifconfig                           //find USB Ethernet name
+    >find USB Ethernet name
     >
-    >ifconfig ethxxx down 
+    >```
+    >>ifconfig
+    >>
+    >```
     >
-    >ifconfig ethxxx up    
+    >unload USB Ethernet 
+    >
+    >```
+    >>ifconfig <USB Ethernet name> down
+    >>
+    >```
+    >
+    >reload USB Ethernet 
+    >
+    >```
+    >>ifconfig <USB Ethernet name> up
+    >>
+    >```
+    >
+    >* `USB Ethernet name` is the name of the queried network device
 
 ## 4.Command introduction
 
-[Commands](./Commands.md)
+[Commands](./Commands_EN.md)
 
 Note: Wi-Fi commands can only be used when USB Network Class is enabled
