@@ -394,24 +394,6 @@ static esp_err_t _usb_port_event_wait(hcd_port_handle_t expected_port_hdl,
     return ESP_OK;
 }
 
-
-static void _hcd_force_conn_state(bool connected, TickType_t delay_ticks)
-{
-    vTaskDelay(delay_ticks);
-    usb_wrap_dev_t *wrap = &USB_WRAP;
-    if (connected) {
-        //Swap back to internal PHY that is connected to a device
-        wrap->otg_conf.phy_sel = 0;
-    } else {
-        //Set external PHY input signals to fixed voltage levels mimicking a disconnected state
-        esp_rom_gpio_connect_in_signal(GPIO_MATRIX_CONST_ZERO_INPUT, USB_EXTPHY_VP_IDX, false);
-        esp_rom_gpio_connect_in_signal(GPIO_MATRIX_CONST_ZERO_INPUT, USB_EXTPHY_VM_IDX, false);
-        esp_rom_gpio_connect_in_signal(GPIO_MATRIX_CONST_ONE_INPUT, USB_EXTPHY_RCV_IDX, false);
-        //Swap to the external PHY
-        wrap->otg_conf.phy_sel = 1;
-    }
-}
-
 static hcd_port_handle_t _usb_port_init(void *context, void *callback_arg)
 {
     UVC_CHECK(context != NULL && callback_arg != NULL, "invalid args", NULL);
@@ -452,10 +434,9 @@ static hcd_port_handle_t _usb_port_init(void *context, void *callback_arg)
 
 port_reset_err:
     hcd_port_command(port_hdl, HCD_PORT_CMD_DISABLE);
-    _hcd_force_conn_state(false, pdMS_TO_TICKS(100));
+    hcd_port_command(port_hdl, HCD_PORT_CMD_POWER_OFF);
     _usb_port_event_wait(port_hdl, HCD_PORT_EVENT_DISCONNECTION, portMAX_DELAY);
     _usb_port_event_process(port_hdl, HCD_PORT_EVENT_DISCONNECTION);
-    hcd_port_command(port_hdl, HCD_PORT_CMD_POWER_OFF);
 port_power_err:
     hcd_port_deinit(port_hdl);
 port_init_err:
@@ -468,12 +449,11 @@ static esp_err_t _usb_port_deinit(hcd_port_handle_t port_hdl)
     esp_err_t ret;
     ret = hcd_port_command(port_hdl, HCD_PORT_CMD_DISABLE);
     UVC_CHECK(ESP_OK == ret, "port disable failed", ESP_FAIL);
-    ESP_LOGW(TAG, "Waiting for USB Hardware disconnection\n");
-    _hcd_force_conn_state(false, pdMS_TO_TICKS(100));
-    ret = _usb_port_event_wait(port_hdl, HCD_PORT_EVENT_DISCONNECTION, portMAX_DELAY);
-    _usb_port_event_process(port_hdl, HCD_PORT_EVENT_DISCONNECTION);
     ret = hcd_port_command(port_hdl, HCD_PORT_CMD_POWER_OFF);
     UVC_CHECK(ESP_OK == ret, "Port POWER_OFF failed", ESP_FAIL);
+    ESP_LOGW(TAG, "Waiting for USB Hardware disconnection\n");
+    ret = _usb_port_event_wait(port_hdl, HCD_PORT_EVENT_DISCONNECTION, portMAX_DELAY);
+    _usb_port_event_process(port_hdl, HCD_PORT_EVENT_DISCONNECTION);
     ret = hcd_port_deinit(port_hdl);
     ESP_ERROR_CHECK(ret);
     UVC_CHECK(ESP_OK == ret, "port deinit failed", ESP_FAIL);
@@ -703,7 +683,10 @@ static esp_err_t _default_pipe_event_wait_until(hcd_pipe_handle_t expected_pipe_
             break;
         }
 
-        if (PORT_EVENT == evt_msg._type) {
+        if (USER_EVENT == evt_msg._type) {
+            ESP_LOGW(TAG, "Got unexpected user event");
+            ret = ESP_ERR_NOT_FOUND;
+        } else if (PORT_EVENT == evt_msg._type) {
             _usb_port_event_process(evt_msg._handle.port_hdl, evt_msg._event.port_event);
             ret = ESP_ERR_NOT_FOUND;
         } else {
@@ -741,7 +724,10 @@ static esp_err_t _stream_pipe_event_wait_until_num(hcd_pipe_handle_t expected_pi
             break;
         }
 
-        if (PORT_EVENT == evt_msg._type) {
+        if (USER_EVENT == evt_msg._type) {
+            ESP_LOGW(TAG, "Got unexpected user event");
+            ret = ESP_ERR_NOT_FOUND;
+        } else if (PORT_EVENT == evt_msg._type) {
             _usb_port_event_process(evt_msg._handle.port_hdl, evt_msg._event.port_event);
             ret = ESP_ERR_NOT_FOUND;
         } else {
@@ -1146,7 +1132,7 @@ uvc_error_t uvc_stream_start(_uvc_stream_handle_t *strmh, uvc_frame_callback_t *
 uvc_error_t uvc_stream_stop(_uvc_stream_handle_t *strmh)
 {
     if (strmh->running == 0) {
-        ESP_LOGW(TAG, "line:%u UVC_ERROR_BUSY", __LINE__);
+        ESP_LOGW(TAG, "line:%u UVC_ERROR_INVALID_PARAM", __LINE__);
         return UVC_ERROR_INVALID_PARAM;
     }
     strmh->running = 0;
@@ -1450,7 +1436,7 @@ esp_err_t uvc_streaming_start(uvc_frame_callback_t *cb, void *user_ptr)
 
 esp_err_t uvc_streaming_suspend(void)
 {
-    if (!(xEventGroupGetBits(s_uvc_dev.event_group) & USB_STREAM_INIT_DONE)) {
+    if (!s_uvc_dev.event_group || !(xEventGroupGetBits(s_uvc_dev.event_group) & USB_STREAM_INIT_DONE)) {
         ESP_LOGW(TAG, "UVC Streaming not started");
         return ESP_ERR_INVALID_STATE;
     }
@@ -1474,7 +1460,7 @@ esp_err_t uvc_streaming_suspend(void)
 
 esp_err_t uvc_streaming_resume(void)
 {
-    if (!(xEventGroupGetBits(s_uvc_dev.event_group) & USB_STREAM_INIT_DONE)) {
+    if (!s_uvc_dev.event_group || !(xEventGroupGetBits(s_uvc_dev.event_group) & USB_STREAM_INIT_DONE)) {
         ESP_LOGW(TAG, "UVC Streaming not started");
         return ESP_ERR_INVALID_STATE;
     }
@@ -1498,7 +1484,7 @@ esp_err_t uvc_streaming_resume(void)
 
 esp_err_t uvc_streaming_stop(void)
 {
-    if (!(xEventGroupGetBits(s_uvc_dev.event_group) & USB_STREAM_INIT_DONE)) {
+    if (!s_uvc_dev.event_group || !(xEventGroupGetBits(s_uvc_dev.event_group) & USB_STREAM_INIT_DONE)) {
         ESP_LOGW(TAG, "UVC Streaming not started");
         return ESP_ERR_INVALID_STATE;
     }
