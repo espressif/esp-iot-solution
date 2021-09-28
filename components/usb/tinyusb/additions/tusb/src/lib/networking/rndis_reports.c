@@ -234,6 +234,32 @@ static void rndis_handle_set_msg(void)
   return;
 }
 
+void rndis_indicate_status(int status)
+{
+  rndis_indicate_status_t *c;
+  c = (rndis_indicate_status_t *)encapsulated_buffer;
+  c->MessageType = REMOTE_NDIS_INDICATE_STATUS_MSG;
+  c->MessageLength = sizeof(rndis_indicate_status_t);
+  c->Status = status;
+  c->StatusBufferLength = 0;
+  c->StatusBufferOffset = 0;
+  rndis_report();
+}
+
+void rndis_disconnect(void)
+{
+  int status = RNDIS_STATUS_MEDIA_DISCONNECT;
+
+  rndis_indicate_status(status);
+}
+
+void rndis_connect(void)
+{
+  int status = RNDIS_STATUS_MEDIA_CONNECT;
+
+  rndis_indicate_status(status);
+}
+
 void rndis_class_set_handler(uint8_t *data, int size)
 {
   encapsulated_buffer = data;
