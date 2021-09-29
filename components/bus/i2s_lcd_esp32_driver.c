@@ -20,6 +20,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
+#include "freertos/semphr.h"
 #include "esp_heap_caps.h"
 #include "esp32/rom/lldesc.h"
 #include "soc/dport_access.h"

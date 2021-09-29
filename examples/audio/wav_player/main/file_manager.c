@@ -26,16 +26,16 @@
 #include "sdmmc_cmd.h"
 #include "file_manager.h"
 
-#ifdef CONFIG_IDF_TARGET_ESP32
-#include "driver/sdmmc_host.h"
-#endif
-
 static const char *TAG = "file manager";
 
 static const char *partition_label = "audio";
 
 #define FLN_MAX CONFIG_FATFS_MAX_LFN
 
+#ifdef CONFIG_STORAGE_SDCARD
+#ifdef CONFIG_IDF_TARGET_ESP32
+#include "driver/sdmmc_host.h"
+#endif
 // #define USE_SPI_MODE /* To enable SPI mode, uncomment this line*/
 
 // ESP32-S2 doesn't have an SD Host peripheral, always use SPI:
@@ -147,6 +147,7 @@ esp_err_t fm_sdcard_init(void)
     sdmmc_card_print_info(stdout, card);
     return ESP_OK;
 }
+#endif
 
 esp_err_t fm_spiffs_init(void)
 {

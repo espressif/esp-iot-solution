@@ -20,7 +20,6 @@
 #include "esp_log.h"
 #include "mpu6050.h"
 
-static const char *TAG = "MPU6050";
 
 #define WRITE_BIT  I2C_MASTER_WRITE /*!< I2C master write */
 #define READ_BIT   I2C_MASTER_READ  /*!< I2C master read */
@@ -330,6 +329,7 @@ esp_err_t mpu6050_complimentory_filter(mpu6050_handle_t sensor, mpu6050_acce_val
 /***sensors hal interface****/
 #ifdef CONFIG_SENSOR_IMU_INCLUDED_MPU6050
 
+static const char *TAG = "MPU6050";
 static mpu6050_handle_t mpu6050 = NULL;
 static bool is_init = false;
 

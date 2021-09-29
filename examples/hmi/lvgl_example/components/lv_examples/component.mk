@@ -2,7 +2,7 @@
 # Component Makefile
 #
 
-CFLAGS += -DLV_LVGL_H_INCLUDE_SIMPLE
+CFLAGS += -DLV_LVGL_H_INCLUDE_SIMPLE -w -Wno-cast-function-type -Wno-unused-function
 
 COMPONENT_SRCDIRS := lv_examples           \
     lv_examples/assets                     \
