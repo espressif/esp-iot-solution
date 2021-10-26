@@ -1,0 +1,103 @@
+{
+    "examples": [{
+            "name": "wav_player",
+            "buildsystem": [
+                "cmake",
+                "make"
+            ],
+            "targets": [
+                "esp32",
+                "esp32s2",
+                "esp32s3"
+            ]
+        },
+        {
+            "name": "check_pedestrian_flow",
+            "buildsystem": [
+                "cmake",
+                "make"
+            ],
+            "targets": [
+                "esp32",
+                "esp32s2",
+                "esp32s3",
+                "esp32c3"
+            ]
+        },
+        {
+            "name": "lvgl_coffee",
+            "buildsystem": [
+                "cmake",
+                "make"
+            ],
+            "targets": [
+                "esp32",
+                "esp32s2"
+            ]
+        },
+        {
+            "name": "lvgl_example",
+            "buildsystem": [
+                "cmake",
+                "make"
+            ],
+            "targets": [
+                "esp32",
+                "esp32s2"
+            ]
+        },
+        {
+            "name": "lvgl_thermostat",
+            "buildsystem": [
+                "cmake",
+                "make"
+            ],
+            "targets": [
+                "esp32",
+                "esp32s2"
+            ]
+        },
+        {
+            "name": "lvgl_wificonfig",
+            "buildsystem": [
+                "cmake",
+                "make"
+            ],
+            "targets": [
+                "esp32",
+                "esp32s2"
+            ]
+        },
+        {
+            "name": "screen",
+            "buildsystem": [
+                "cmake",
+                "make"
+            ],
+            "targets": [
+                "esp32",
+                "esp32s2"
+            ]
+        },
+        {
+            "name": "sensor_control_led",
+            "buildsystem": [
+                "cmake"
+            ],
+            "targets": [
+                "esp32",
+                "esp32s2"
+            ]
+        },
+        {
+            "name": "sensor_hub_monitor",
+            "buildsystem": [
+                "cmake"
+            ],
+            "targets": [
+                "esp32",
+                "esp32s2"
+            ]
+        }
+    ]
+}

@@ -30,28 +30,38 @@ before_script:
   artifacts:
     when: always
     paths:
-      - $BUILD_PATH/*/*/build/*.bin
-      - $BUILD_PATH/*/*/build/*.elf
-      - $BUILD_PATH/*/*/build/*.map
-      - $BUILD_PATH/*/*/build/download.config
-      - $BUILD_PATH/*/*/build/bootloader/*.bin
-      - $LOG_PATH
+      - $BUILD_PATH/*/*/*/build/*.bin
+      - $BUILD_PATH/*/*/*/build/*/*.bin
+      - $BUILD_PATH/*/*/*/build/*.json
+      - $BUILD_PATH/*.json
+      - $LOG_PATH/*
     expire_in: 1 week
   variables:
     IDF_CI_BUILD: "1"
     LOG_PATH: "$CI_PROJECT_DIR/log_examples"
     BUILD_PATH: "$CI_PROJECT_DIR/build_examples"
+    SIZE_INFO_LOCATION: "$CI_PROJECT_DIR/log_examples/size_info.txt"
+    PEDANTIC_CFLAGS: ""
+    PEDANTIC_CXXFLAGS: ""
   script:
     # it's not possible to build 100% out-of-tree and have the "artifacts"
     # mechanism work, but this is the next best thing
     - rm -rf ${BUILD_PATH}
-    - mkdir ${BUILD_PATH}
-    - mkdir -p ${LOG_PATH}
     # build some of examples
-    - ${IOT_SOLUTION_PATH}/tools/ci/build_examples.sh "${CI_JOB_NAME}"
+    - python ${IOT_SOLUTION_PATH}/tools/ci/genarate_build_json.py
+    - ${IOT_SOLUTION_PATH}/tools/ci/build_examples.sh
 
-build_examples_00:
+build_examples_00_with_idf_v4.2:
   <<: *build_examples_template
+  image: espressif/idf:release-v4.2
+
+build_examples_00_with_idf_v4.3:
+  <<: *build_examples_template
+  image: espressif/idf:release-v4.3
+
+build_examples_00_with_idf_master:
+  <<: *build_examples_template
+  image: espressif/idf:latest
 
 build_docs:
   stage: build

@@ -40,6 +40,19 @@ static char **g_file_list = NULL;
 static uint16_t g_file_num = 0;
 #endif
 
+#ifdef CONFIG_IDF_TARGET_ESP32
+#define GPIO_AUDIO_OUTPUT_L 25
+#define GPIO_AUDIO_OUTPUT_R 26
+#elif defined CONFIG_IDF_TARGET_ESP32S2
+#define GPIO_AUDIO_OUTPUT_L 0
+#define GPIO_AUDIO_OUTPUT_R 1
+#elif defined CONFIG_IDF_TARGET_ESP32S3
+#define GPIO_AUDIO_OUTPUT_L 13
+#define GPIO_AUDIO_OUTPUT_R 14
+#else
+
+#endif
+
 static esp_err_t play_wav(const char *filepath)
 {
     FILE *fd = NULL;
@@ -121,9 +134,9 @@ void app_main()
 
     pwm_audio_config_t pac;
     pac.duty_resolution    = LEDC_TIMER_10_BIT;
-    pac.gpio_num_left      = 25;
+    pac.gpio_num_left      = GPIO_AUDIO_OUTPUT_L;
     pac.ledc_channel_left  = LEDC_CHANNEL_0;
-    pac.gpio_num_right     = 26;
+    pac.gpio_num_right     = GPIO_AUDIO_OUTPUT_R;
     pac.ledc_channel_right = LEDC_CHANNEL_1;
     pac.ledc_timer_sel     = LEDC_TIMER_0;
     pac.tg_num             = TIMER_GROUP_0;

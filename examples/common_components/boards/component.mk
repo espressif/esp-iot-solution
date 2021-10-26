@@ -14,9 +14,8 @@ endif
 
 COMPONENT_ADD_INCLUDEDIRS := $(COMPONENT_SRCDIRS)
 
-$(COMPONENT_SRCDIRS)/board.o:
-	@echo "-----------Board Info---------"
-	@echo "IDF_TARGET = $(IDF_TARGET)"
-	@echo "Board DIR = $(COMPONENT_SRCDIRS)"
-	@echo "---------Board Info End---------"
-
+# $(COMPONENT_SRCDIRS)/board.o:
+# 	@echo "-----------Board Info---------"
+# 	@echo "IDF_TARGET = $(IDF_TARGET)"
+# 	@echo "Board DIR = $(COMPONENT_SRCDIRS)"
+# 	@echo "---------Board Info End---------"
