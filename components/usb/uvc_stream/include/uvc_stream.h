@@ -78,7 +78,9 @@ esp_err_t uvc_streaming_start(uvc_frame_callback_t *cb, void *user_ptr);
  * 
  * @return
  *         ESP_ERR_INVALID_STATE not inited
+ *         ESP_FAIL suspend failed
  *         ESP_OK suspend suceed
+ *         ESP_ERR_TIMEOUT suspend wait timeout
  */
 esp_err_t uvc_streaming_suspend(void);
 
@@ -87,7 +89,9 @@ esp_err_t uvc_streaming_suspend(void);
  * 
  * @return
  *         ESP_ERR_INVALID_STATE not inited
+ *         ESP_FAIL resume failed
  *         ESP_OK resume suceed
+ *         ESP_ERR_TIMEOUT resume wait timeout
  */
 esp_err_t uvc_streaming_resume(void);
 
@@ -97,6 +101,7 @@ esp_err_t uvc_streaming_resume(void);
  * @return 
  *         ESP_ERR_INVALID_STATE not inited
  *         ESP_OK stop suceed
+ *         ESP_ERR_TIMEOUT stop wait timeout
  */
 esp_err_t uvc_streaming_stop(void);
 
