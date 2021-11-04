@@ -18,6 +18,7 @@
 #include "unity.h"
 #include "esp_system.h"
 #include "esp_heap_caps.h"
+#include "hal/usb_hal.h"
 #include "uvc_stream.h"
 #include "esp_log.h"
 
@@ -82,6 +83,11 @@ static void frame_cb(uvc_frame_t *frame, void *ptr)
 
 TEST_CASE("test uvc streaming", "[usb][uvc_stream]")
 {
+    /* using internal PHY */
+    usb_hal_context_t hal = {
+        .use_external_phy = false
+    };
+    usb_hal_init(&hal);
     /* malloc double buffer for usb payload, xfer_buffer_size >= frame_buffer_size*/
     uint8_t *xfer_buffer_a = (uint8_t *)_malloc(DEMO_XFER_BUFFER_SIZE);
     TEST_ASSERT(xfer_buffer_a != NULL);
@@ -110,26 +116,27 @@ TEST_CASE("test uvc streaming", "[usb][uvc_stream]")
         .frame_buffer_size = DEMO_XFER_BUFFER_SIZE,
         .frame_buffer = frame_buffer,
     };
+    size_t test_count = 20;
+    for (size_t i = 0; i < test_count; i++) {
+        /* pre-config UVC driver with params from known USB Camera Descriptors*/
+        TEST_ASSERT_EQUAL(ESP_OK, uvc_streaming_config(&uvc_config));
 
-    /* pre-config UVC driver with params from known USB Camera Descriptors*/
-    TEST_ASSERT_EQUAL(ESP_OK, uvc_streaming_config(&uvc_config));
+        /* Start camera IN stream with pre-configs, uvc driver will create multi-tasks internal
+        to handle usb data from different pipes, and user's callback will be called after new frame ready. */
+        TEST_ASSERT_EQUAL(ESP_OK, uvc_streaming_start(frame_cb, NULL));
+        vTaskDelay(2000 / portTICK_PERIOD_MS);
 
-    /* Start camera IN stream with pre-configs, uvc driver will create multi-tasks internal
-    to handle usb data from different pipes, and user's callback will be called after new frame ready. */
-    TEST_ASSERT_EQUAL(ESP_OK, uvc_streaming_start(frame_cb, NULL));
-    vTaskDelay(3000 / portTICK_PERIOD_MS);
+        /* test streaming suspend */
+        TEST_ASSERT_EQUAL(ESP_OK, uvc_streaming_suspend());
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
 
-    /* test streaming suspend */
-    TEST_ASSERT_EQUAL(ESP_OK, uvc_streaming_suspend());
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
+        /* test streaming resume */
+        TEST_ASSERT_EQUAL(ESP_OK, uvc_streaming_resume());
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
 
-    /* test streaming resume */
-    TEST_ASSERT_EQUAL(ESP_OK, uvc_streaming_resume());
-    vTaskDelay(3000 / portTICK_PERIOD_MS);
-
-    /* test streaming stop */
-    TEST_ASSERT_EQUAL(ESP_OK, uvc_streaming_stop());
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+        /* test streaming stop */
+        TEST_ASSERT_EQUAL(ESP_OK, uvc_streaming_stop());
+    }
 
     _free(xfer_buffer_a);
     _free(xfer_buffer_b);

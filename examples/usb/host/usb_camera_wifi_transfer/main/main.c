@@ -142,7 +142,7 @@ static void frame_cb(uvc_frame_t *frame, void *ptr)
             s_fb.timestamp.tv_sec = frame->sequence;
             xEventGroupSetBits(s_evt_handle, BIT1_NEW_FRAME_START);
             ESP_LOGV(TAG, "send frame = %u",frame->sequence);
-            xEventGroupWaitBits(s_evt_handle, BIT2_NEW_FRAME_END, true, true, portMAX_DELAY);
+            xEventGroupWaitBits(s_evt_handle, BIT2_NEW_FRAME_END, true, true, pdTICKS_TO_MS(1000));
             ESP_LOGV(TAG, "send frame done = %u",frame->sequence);
             break;
         default:
@@ -152,19 +152,9 @@ static void frame_cb(uvc_frame_t *frame, void *ptr)
     }
 }
 
-#if CONFIG_IDF_TARGET_ESP32S3
-static void usb_otg_router_to_internal_phy()
-{
-    uint32_t *usb_phy_sel_reg = (uint32_t *)(0x60008000 + 0x120);
-    *usb_phy_sel_reg |= BIT(19) | BIT(20);
-}
-#endif
 
 void app_main(void)
 {
-#if CONFIG_IDF_TARGET_ESP32S3
-    usb_otg_router_to_internal_phy();
-#endif
     /* create eventgroup for task sync */
     s_evt_handle = xEventGroupCreate();
     if (s_evt_handle == NULL) {
