@@ -25,6 +25,7 @@
 #include "soc/gpio_pins.h"
 #include "soc/gpio_sig_map.h"
 #include "esp_rom_gpio.h"
+#include "hal/usb_hal.h"
 #include "hal/usbh_ll.h"
 #include "hcd.h"
 #include "usb/usb_types_stack.h"
@@ -418,6 +419,11 @@ static hcd_port_handle_t _usb_port_init(void *context, void *callback_arg)
     UVC_CHECK(context != NULL && callback_arg != NULL, "invalid args", NULL);
     esp_err_t ret = ESP_OK;
     hcd_port_handle_t port_hdl = NULL;
+
+    usb_hal_context_t hal = {
+        .use_external_phy = false
+    };
+    usb_hal_init(&hal);
 
     hcd_config_t hcd_config = {
         .intr_flags = ESP_INTR_FLAG_LEVEL2,

@@ -1,19 +1,13 @@
 ## UVC Stream 组件说明
 
-`uvc_stream` 是基于 `UVC` 协议开发的简易版 USB 摄像头驱动，支持 `MJPEG` 视频流请求、接收、图像帧处理。用户可通过简单的 API 接口控制视频流启动、暂停、重启、和停止操作。通过注册回调函数，可在得到完整图像帧时，对图像数据进行个性化处理。
+`UVC Stream` 是基于 `UVC` 协议开发的 USB 摄像头驱动，用户可使用 ESP32-S2/ESP32-S3 作为 USB 主机，请求和并连续接收 USB 摄像头 `MJPEG` 图像帧。配合 `ESP-IOT-Solution` 图像解码或网络传输组件，可以实现屏幕显示或 IPC 等应用。
 
-
->**本代码目前仅用于 USB Host UVC 功能测试，不建议基于此开发量产产品，原因如下：**
->* **存在已知或潜在的 Bug**：
->  1. 本代码缺少完整的枚举过程、摄像头配置、错误处理等机制；
->  2. 本代码基于的 ESP-IDF 的 USB Host 底层驱动存在潜在的 bug 和 API 变更的风险；
->* **UVC 后期开发计划**：
->  1. ESP-IDF 计划基于 libuvc 移植 USB 摄像头框架，稳定性和兼容性更高。
+用户可通过简单的 API 接口控制视频流启动、暂停、重启、和停止操作。通过注册回调函数，可在得到完整图像帧时，对图像数据进行应用层处理。
 
 ### 开发环境准备
 
 1. 搭建 ESP-IDF `master` 分支开发环境：[installation-step-by-step](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s2/get-started/index.html#installation-step-by-step)
-2. 按照说明文件添加 ESP-IDF 补丁：[usb_support_workaround.patch](../../../examples/usb/idf_usb_support_patch)
+2. 搭建 `ESP-IOT-Solution` 环境：[Setup ESP-IOT-Solution Environment](../../../README.md)
 
 ### 硬件准备
 
@@ -24,10 +18,10 @@
 
 * USB 摄像头
 
-  1. 摄像头必须兼容 USB1.1 全速模式
-  2. 摄像头需要自带 MJPEG 压缩
-  3. 摄像头支持设置接口为 wMaxPacketSize 为 512
-  4. 图像数据流 USB 传输总带宽应小于 4 Mbps （500 KB/s）
+  1. 摄像头必须兼容 `USB1.1` 全速模式
+  2. 摄像头需要自带 `MJPEG` 压缩
+  3. 摄像头支持设置接口 `Max Packet Size` 为 `512`
+  4. 图像数据流 USB 传输总带宽应小于 `4 Mbps` （500 KB/s）
   5. 分辨率等要求详见示例程序说明文件
 
 ### UVC Stream API 使用说明

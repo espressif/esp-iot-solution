@@ -226,19 +226,9 @@ static void frame_cb_sdcard(uvc_frame_t *frame, void *ptr)
     }
 }
 
-#if CONFIG_IDF_TARGET_ESP32S3
-static void usb_otg_router_to_internal_phy()
-{
-    uint32_t *usb_phy_sel_reg = (uint32_t *)(0x60008000 + 0x120);
-    *usb_phy_sel_reg |= BIT(19) | BIT(20);
-}
-#endif
 
 void app_main(void)
 {
-#if CONFIG_IDF_TARGET_ESP32S3
-    usb_otg_router_to_internal_phy();
-#endif
     /* Initialize SD Card driver for frames saving */
     sdcard_fat_init(&mount_card);
     if (mount_card == NULL) {
