@@ -332,7 +332,7 @@ static void lcd_nt35510_init_reg(void)
     LCD_WRITE_REG(0xd132, 0x0003);
     LCD_WRITE_REG(0xd133, 0x00cc);
 
-    // Setting Gamma 2.2 Correction for Green (Positive)
+    // Gamma 2.2 Correction for Green (Positive)
     LCD_WRITE_REG(0xd200, 0x0000);
     LCD_WRITE_REG(0xd201, 0x005d);
     LCD_WRITE_REG(0xd202, 0x0000);
@@ -386,7 +386,7 @@ static void lcd_nt35510_init_reg(void)
     LCD_WRITE_REG(0xd232, 0x0003);
     LCD_WRITE_REG(0xd233, 0x00cc);
 
-    // Setting Gamma 2.2 Correction for Blue (Positive)
+    // Gamma 2.2 Correction for Blue (Positive)
     LCD_WRITE_REG(0xd300, 0x0000);
     LCD_WRITE_REG(0xd301, 0x005d);
     LCD_WRITE_REG(0xd302, 0x0000);
@@ -440,7 +440,7 @@ static void lcd_nt35510_init_reg(void)
     LCD_WRITE_REG(0xd332, 0x0003);
     LCD_WRITE_REG(0xd333, 0x00cc);
 
-    // Setting Gamma 2.2 Correction for Red (Negative)    
+    // Gamma 2.2 Correction for Red (Negative)    
     LCD_WRITE_REG(0xd400, 0x0000);
     LCD_WRITE_REG(0xd401, 0x005d);
     LCD_WRITE_REG(0xd402, 0x0000);
@@ -494,7 +494,7 @@ static void lcd_nt35510_init_reg(void)
     LCD_WRITE_REG(0xd432, 0x0003);
     LCD_WRITE_REG(0xd433, 0x00cc);
 
-    // Setting Gamma 2.2 Correction for Green (Negative)
+    // Gamma 2.2 Correction for Green (Negative)
     LCD_WRITE_REG(0xd500, 0x0000);
     LCD_WRITE_REG(0xd501, 0x005d);
     LCD_WRITE_REG(0xd502, 0x0000);
@@ -548,7 +548,7 @@ static void lcd_nt35510_init_reg(void)
     LCD_WRITE_REG(0xd532, 0x0003);
     LCD_WRITE_REG(0xd533, 0x00cc);
 
-    // Setting Gamma 2.2 Correction for Blue (Negative)
+    // Gamma 2.2 Correction for Blue (Negative)
     LCD_WRITE_REG(0xd600, 0x0000);
     LCD_WRITE_REG(0xd601, 0x005d);
     LCD_WRITE_REG(0xd602, 0x0000);
