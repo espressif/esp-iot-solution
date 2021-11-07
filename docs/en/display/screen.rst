@@ -217,9 +217,9 @@ Initialize the Screen
 
     /** Find screen driver for ILI9806 */
     ret = scr_find_driver(SCREEN_CONTROLLER_ILI9806, &g_lcd);
-    if (ESP_OK != ret) {
-        return;
+    if (ESP_OK != ret) {        
         ESP_LOGE(TAG, "screen find failed");
+        return;
     }
 
     /** Configure screen controller */
