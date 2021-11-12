@@ -47,13 +47,32 @@ ESP BOARD          USB CONNECTOR (type A)
 
 ### 2.3 软件准备
 
-1. 确认 ESP-IDF 环境成功搭建。
-2. 添加 ESP-IDF 环境变量，Linux 方法如下，其它平台请查阅 [设置环境变量](https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32/get-started/index.html#get-started-set-up-env)。
+1. 确认 ESP-IDF 环境成功搭建，并按照以下命令回退到指定 commit。
     ```
-    >. $HOME/esp/esp-idf/export.sh
+    >git pull
+    >git reset --hard 5f38b766a8
+    >git submodule update --init --recursive
     >
     ```
-3. 设置编译目标为 `esp32s2` 或 `esp32s3`。
+    
+2. 添加 ESP-IDF 环境变量，Linux 方法如下，其它平台请查阅 [设置环境变量](https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32/get-started/index.html#get-started-set-up-env)。
+    ```
+    >cd esp-idf
+    >./install.sh
+    >. ./export.sh
+    >
+    ```
+    
+3. 确认已经完整下载  `ESP-IOT-SOLUTION` 仓库，并切换到 `usb/add_usb_solutions` 分支
+
+    ```
+    >git clone -b usb/add_usb_solutions --recursive https://github.com/espressif/esp-iot-solution
+    >cd esp-iot-solution/example/usb/device/usb_dongle
+    >
+    ```
+
+4. 设置编译目标为 `esp32s2` 或 `esp32s3`。
+
     ```
     >idf.py set-target esp32s2
     >
@@ -128,6 +147,8 @@ ESP BOARD          USB CONNECTOR (type A)
     ![ACM](./_static/ACM.png)
 
 3. 通过 USB-CDC 或者 UART 与 ESP 设备进行通信，使用 help 命令来查看目前所支持的所有指令
+
+    >与 ESP 设备进行通信时命令末尾需加上 LF（\n）
 
 4. 若使能 USB-RNDIS，则可通过指令来控制 ESP 设备进行配网操作
 

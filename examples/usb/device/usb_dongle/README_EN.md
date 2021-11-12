@@ -52,14 +52,32 @@ Refer to `soc/usb_pins.h` to find the real GPIO number of **USBPHY_DP_NUM** and 
 
 ### 2.3 Software Preparation
 
-* Confirm that the ESP-IDF environment is successfully set up
-* To add ESP-IDF environment variables. If you are using Linux OS, you can follow below steps. If you are using other OS, please refer to [Set up the environment variables](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html#step-4-set-up-the-environment-variables).
+* Confirm that the ESP-IDF environment is successfully set up, and fall back to the specified commit.
 
     ```
-    >. $HOME/esp/esp-idf/export.sh
+    >git pull
+    >git reset --hard 5f38b766a8
+    >git submodule update --init --recursive
     >
     ```
 
+* To add ESP-IDF environment variables. If you are using Linux OS, you can follow below steps. If you are using other OS, please refer to [Set up the environment variables](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html#step-4-set-up-the-environment-variables).
+
+    ```
+    >cd esp-idf
+    >./install.sh
+    >. ./export.sh
+    >
+    ```
+
+* Confirm that the `ESP-IOT-SOLUTION` repository has been completely downloaded, and switch to the `usb/add_usb_solutions` branch.
+
+    ```
+    >git clone -b usb/add_usb_solutions --recursive https://github.com/espressif/esp-iot-solution
+    >cd esp-iot-solution/example/usb/device/usb_dongle
+    >
+    ```
+    
 * Set the compilation target to `esp32s2` or `esp32s3`
 
     ```
@@ -137,7 +155,9 @@ You can use the following command to build and flash the firmware.
 
 3. The PC can communicate with the ESP board through the USB ACM port or UART. And you can use ``help`` command to view all commands supported.
 
-5. If USB-RNDIS is enabled, you can connect ESP device to AP by commands.
+    > When communicating with ESP device, add **LF(\n)** at the end of the command
+
+4. If USB-RNDIS is enabled, you can connect ESP device to AP by commands.
     * [Connect to target AP by sta command](./Commands_EN.md#3sta)
     * [Connect to target AP by startsmart command (SmartConfig)](./Commands_EN.md#5smartconfig)
 
