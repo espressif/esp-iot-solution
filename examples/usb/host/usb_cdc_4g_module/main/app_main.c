@@ -19,7 +19,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
-
+#include "driver/gpio.h"
 #include "esp_system.h"
 #include "esp_log.h"
 #include "esp_spi_flash.h"
@@ -89,8 +89,9 @@ static void _system_dump()
 
         previousTaskData->ulRunTimeCounter = taskRunTime;
     }
-    ESP_LOGI(TAG, "Free heap=%d bigst=%d, internal=%d bigst=%d",
+    ESP_LOGI(TAG, "Free heap=%d Free mini=%d bigst=%d, internal=%d bigst=%d",
                         heap_caps_get_free_size(MALLOC_CAP_DEFAULT), heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT),
+                        heap_caps_get_minimum_free_size(MALLOC_CAP_DEFAULT),
                         heap_caps_get_free_size(MALLOC_CAP_8BIT | MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL), 
                         heap_caps_get_largest_free_block(MALLOC_CAP_8BIT | MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL));
     previousTotalRunTime = totalRunTime;
@@ -101,20 +102,19 @@ static void _system_dump()
 }
 #endif
 
-#if CONFIG_IDF_TARGET_ESP32S3
-static void usb_otg_router_to_internal_phy()
-{
-    uint32_t *usb_phy_sel_reg = (uint32_t *)(0x60008000 + 0x120);
-    *usb_phy_sel_reg |= BIT(19) | BIT(20);
-}
-#endif
 
 void app_main(void)
 {
-#if CONFIG_IDF_TARGET_ESP32S3
-    /* router USB PHY from USB-JTAG-Serial to USB OTG */
-    usb_otg_router_to_internal_phy();
-#endif
+    ESP_LOGW(TAG, "Force reset 4g board");
+    gpio_config_t io_config = {
+            .pin_bit_mask = BIT64(MODEM_RESET_GPIO),
+            .mode = GPIO_MODE_OUTPUT
+    };
+    gpio_config(&io_config);
+    gpio_set_level(MODEM_RESET_GPIO, 0);
+    vTaskDelay(pdMS_TO_TICKS(500));
+    gpio_set_level(MODEM_RESET_GPIO, 1);
+
     /* Initialize NVS for Wi-Fi storage */
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -129,7 +129,7 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
     /* Waitting for modem powerup */
-    vTaskDelay(pdMS_TO_TICKS(250));
+    vTaskDelay(pdMS_TO_TICKS(3000));
     ESP_LOGI(TAG, "====================================");
     ESP_LOGI(TAG, "     ESP 4G Cat.1 Wi-Fi Router");
     ESP_LOGI(TAG, "====================================");
@@ -164,7 +164,7 @@ void app_main(void)
 #ifdef CONFIG_DUMP_SYSTEM_STATUS
     while (1) {
         _system_dump();
-        vTaskDelay(3000);
+        vTaskDelay(pdMS_TO_TICKS(3000));
     }
 #endif
 }
