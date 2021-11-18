@@ -31,6 +31,7 @@
 #include "esp_modem_dce_common_commands.h"
 #include "led_indicator.h"
 #include "modem_board.h"
+#include "esp_usbh_cdc.h"
 
 #define ESP_MODEM_EXAMPLE_CHECK(a, str, goto_tag, ...)                                \
     do                                                                                \
@@ -42,11 +43,6 @@
         }                                                                             \
     } while (0)
 
-#define LED_RED_SYSTEM_GPIO                 CONFIG_LED_RED_SYSTEM_GPIO
-#define LED_BLUE_WIFI_GPIO                  CONFIG_LED_BLUE_WIFI_GPIO
-#define LED_GREEN_4GMODEM_GPIO              CONFIG_LED_GREEN_4GMODEM_GPIO
-#define MODEM_POWER_GPIO                    CONFIG_MODEM_POWER_GPIO
-#define MODEM_RESET_GPIO                    CONFIG_MODEM_RESET_GPIO
 #define MODEM_POWER_GPIO_INACTIVE_LEVEL     1
 #define MODEM_POWER_GPIO_ACTIVE_MS          500
 #define MODEM_POWER_GPIO_INACTIVE_MS        8000
@@ -94,6 +90,20 @@ static esp_err_t modem_board_reset(esp_modem_dce_t *dce)
     return ESP_OK;
 }
 
+esp_err_t modem_board_force_reset(void)
+{
+    ESP_LOGW(TAG, "Force reset system");
+    gpio_config_t io_config = {
+            .pin_bit_mask = BIT64(MODEM_RESET_GPIO),
+            .mode = GPIO_MODE_OUTPUT
+    };
+    gpio_config(&io_config);
+    gpio_set_level(MODEM_RESET_GPIO, 0);
+    vTaskDelay(pdMS_TO_TICKS(200));
+    esp_restart();
+    return ESP_OK;
+}
+
 static esp_err_t modem_board_power_up(esp_modem_dce_t *dce)
 {
     modem_board_t *board = __containerof(dce, modem_board_t, parent);
@@ -109,7 +119,7 @@ static esp_err_t modem_board_power_down(esp_modem_dce_t *dce)
     ESP_LOGI(TAG, "modem_board_power_down!");
     /* power down sequence (typical values for SIM7600 Toff=min2.5s, Toff-status=26s) */
     dce->handle_line = modem_board_handle_powerup;
-    if(board->power_pin) board->power_pin->pulse_special(board->power_pin, 3000, 26000);
+    if(board->power_pin) board->power_pin->pulse_special(board->power_pin, 1000, 2600);
     return ESP_OK;
 }
 
@@ -249,7 +259,6 @@ static void on_modem_event(void *arg, esp_event_base_t event_base,
             ESP_LOGI(TAG, "Got IPv6 address " IPV6STR, IPV62STR(event->ip6_info.ip));
         }
     } else if (event_base == ESP_MODEM_EVENT) {
-        ESP_LOGI(TAG, "Modem event! %d", event_id);
         switch (event_id) {
             case ESP_MODEM_EVENT_PPP_START:
                 ESP_LOGI(TAG, "Modem PPP Started");
@@ -258,6 +267,7 @@ static void on_modem_event(void *arg, esp_event_base_t event_base,
                 ESP_LOGI(TAG, "Modem PPP Stopped");
                 break;
             default:
+                ESP_LOGW(TAG, "Modem event! %d", event_id);
                 break;
         }
     } else if (event_base == WIFI_EVENT) {
@@ -300,7 +310,7 @@ esp_netif_t *modem_board_init(modem_config_t *config)
 
     EventGroupHandle_t connection_events = xEventGroupCreate();
 
-    // init the DTE
+    // init the USB DTE
     esp_modem_dte_config_t dte_config = ESP_MODEM_DTE_DEFAULT_CONFIG();
     dte_config.rx_buffer_size = config->rx_buffer_size; //rx ringbuffer for usb transfer
     dte_config.tx_buffer_size = config->tx_buffer_size; //tx ringbuffer for usb transfer
@@ -324,7 +334,7 @@ esp_netif_t *modem_board_init(modem_config_t *config)
     ip_event_arg.dte = dte;
     ip_event_arg.events_handle = connection_events;
 
-    ESP_ERROR_CHECK(esp_modem_set_event_handler(dte, on_modem_event, ESP_EVENT_ANY_ID, NULL));
+    ESP_ERROR_CHECK(esp_modem_set_event_handler(dte, on_modem_event, ESP_EVENT_ANY_ID, &ip_event_arg));
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, on_modem_event, &ip_event_arg));
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, on_modem_event, NULL));
     ESP_ERROR_CHECK(esp_event_handler_register(NETIF_PPP_STATUS, ESP_EVENT_ANY_ID, on_modem_event, NULL));
@@ -338,17 +348,22 @@ esp_netif_t *modem_board_init(modem_config_t *config)
     ESP_ERROR_CHECK(esp_modem_default_start(dte));
 
     esp_err_t ret = ESP_OK;
+    vTaskDelay(pdMS_TO_TICKS(2000));
+    ret = esp_modem_start_ppp(dte);
     int dial_retry_times = CONFIG_MODEM_DIAL_RERTY_TIMES;
-
-    do {
-        vTaskDelay(pdMS_TO_TICKS(3500));
+    while ( ret != ESP_OK && --dial_retry_times > 0 ) {
+        ret = esp_modem_stop_ppp(dte);
+        vTaskDelay(pdMS_TO_TICKS(2000));
         ret = esp_modem_start_ppp(dte);
-    } while ( ret != ESP_OK && --dial_retry_times > 0 );
+        ESP_LOGI(TAG, "re-start ppp, retry=%d", dial_retry_times);
+    };
 
     if (ret == ESP_OK) {
         if(led_4g_handle) led_indicator_start(led_4g_handle, BLINK_CONNECTED);
     } else {
         if(led_system_handle) led_indicator_start(led_system_handle, BLINK_CONNECTED);//solid red, internal error
+        ESP_LOGE(TAG, "4G modem dial failed");
+        esp_restart();
     }
 
     /* Wait for the first connection */

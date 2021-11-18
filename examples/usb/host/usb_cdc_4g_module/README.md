@@ -1,146 +1,231 @@
-## USB CDC 4G Module 示例程序说明
+* [中文版本](README_cn.md)
 
-该示例程序可实现 ESP32-S 系列 SoC (已支持 ESP32-S2，ESP32-S3) 作为 USB 主机驱动 4G Cat.1 模组拨号上网，同时可开启 ESP32-S Wi-Fi AP 功能，分享互联网给物联网设备或手持设备，实现低成本 “中高速” 互联网接入。
+# USB CDC 4G Module
 
-**已实现功能：**
+This example demonstrates the ESP32-S2, ESP32-S3 series SoC as a USB host to dial-up 4G Cat.1 through PPP to access the Internet, with the help of ESP32-SX Wi-Fi softAP function, share the Internet with IoT devices or mobile devices. Realize low-cost "medium-high-speed" Internet access.
 
-* USB CDC 主机接口通信
-* 兼容主流 4G 模组 AT 指令
-* PPP 拨号上网
-* Wi-Fi 热点分享
-* 4G 模组状态管理
-* 状态指示灯
+**Features Supported:**
+
+* USB CDC host communication
+* Compatible with mainstream 4G module AT commands
+* PPP dial-up
+* Wi-Fi hotspot
+* 4G module status management
+* Status led indicator
 
 ![ESP32S2_USB_4g_moudle](./_static/esp32s2_cdc_4g_moudle.png)
 
-* [Demo 视频](https://b23.tv/8flUAS)
+* [Demo video](https://b23.tv/8flUAS)
 
-**本代码目前仅用于 USB CDC 功能测试，不建议基于此开发量产产品，原因如下：**
+## Hardware requirement
 
-1. 本代码缺少完整的枚举过程、错误处理等机制；
-2. 本代码基于的 ESP-IDF 的 USB Host 底层驱动存在潜在的 bug 和 API 变更的风险；
+**Supported ESP Soc:** 
 
-## 硬件准备
-
-**已支持 ESP 芯片型号：** 
 * ESP32-S2
 * ESP32-S3
 
-> 建议使用集成 4MB 及以上 Flash，2MB 及以上 PSRAM 的 ESP 模组或芯片。示例程序默认不开启 PSRAM，用户可自行添加测试，理论上增大缓冲区大小可以提高数据平均吞吐率
+> We recommend using ESP modules or chips that integrate 4MB above Flash, and 2MB above PSRAM. The example does not enable PSRAM by default, but users can add to tests by themselves. In theory, increasing the Wi-Fi buffer size can increase the average data throughput rate.
 
-**已测试 4G Cat.1 模组型号：** 
-* 中移 ML302
-* 合宙 Air724UG
-* 移远 EC600N
+**Supported 4G Cat.1 Module:** 
+
+* ML302-DNLM/CNLM
+* Air724UG-NFM
+* EC600N-CNLA-N05
+* EC600N-CNLC-N06
 * SIMCom A7600C1
 
-> 以上模组有不同子型号，不同型号支持的通信制式可能略有区别，不同制式支持的运营商不同，上下行速率也不同。例如 LTE-FDD 5(UL)/10(DL), LTE-TDD 1(UL)/8(DL)
+> There are different submodels of the above modules. The communication stands may be different. For example, LTE-FDD 5(UL)/10(DL), LTE-TDD 1(UL)/8(DL). And endpoint address may different also, if you encounter problems, try modifying parameters using a custom device mode.
 
-**其它 4G Cat.1 模组适配方法：**
+**Hardware wiring:**
 
-1. 确认 4G 模组是否支持 USB Fullspeed 通信模式
-2. 确认 4G 模组是否支持 USB PPP 拨号上网；
-3. 确认 4G SIM 卡为激活状态，并开启了上网功能；
-4. 确认已按照**硬件接线**连接必要信号线；
-5. 确认 4G 模组 USB PPP 接口输入端点 （IN）和 输出端点（OUT） 地址，并在 `menuconfig` 中修改以下选项： 
+Default GPIO as follows:
 
-   * 选择自定义 4G Modem 开发板：
+|        Functions         |  GPIO   |     Notes     |
+| :----------------------: | :-----: | :-----------: |
+|    **USB D+ (green)**    | **20**  | **Necessary** |
+|    **USB D- (white)**    | **19**  | **Necessary** |
+|     **GND (black)**      | **GND** | **Necessary** |
+|      **+5V (red)**       | **+5V** | **Necessary** |
+|   Modem Power Control    |   12    | Not Necessary |
+| **Modem Reset Control**  | **13**  | **Necessary** |
+| System Status LED (red)  |   15    | Not Necessary |
+| Wi-Fi Status LED (blue)  |   17    | Not Necessary |
+| Modem Status LED (green) |   16    | Not Necessary |
+
+> User can change GPIO in `menuconfig -> 4G Modem Configuration -> gpio config`
+
+## User Guide
+
+**Wi-Fi SSID and Password:**
+
+User can modify SSID and Password in `menuconfig -> 4G Modem Configuration -> WiFi soft AP `
+
+1. Default Wi-Fi: `esp_4g_router`
+2. Default Password: `12345678`
+
+**LED Indicator Status:**
+
+|     Indicator     |    Blink    |                Status                 |
+| :---------------: | :---------: | :-----------------------------------: |
+| **System (Red)**  | extinguish  |                  NA                   |
+|                   | quick blink |           restart 4G Modem            |
+|                   |    solid    | internal error(check SIM card please) |
+| **Wi-Fi (Blue)**  | extinguish  |                  NA                   |
+|                   | slow blink  |     waiting for device connection     |
+|                   |    solid    |           device connected            |
+| **Modem (Green)** | extinguish  |                  NA                   |
+|                   | slow blink  |    waiting for internet connection    |
+|                   |    solid    |          internet connected           |
+
+## How to build example
+
+> You can also download then burn the firmware we have build. Download address: https://esp32.com/viewtopic.php?f=22&t=24468
+
+1. Confirm that the `ESP-IDF` environment is successfully set up, and switch to the `release/v4.4` branch
+
+2. Confirm that the `ESP-IOT-SOLUTION` repository has been completely downloaded, and switch to the `usb/add_usb_solutions` branch
+
+    ```bash
+    git clone -b usb/add_usb_solutions --recursive https://github.com/espressif/esp-iot-solution
+    ```
+
+3. Add the `ESP-IDF` environment variable, the Linux method is as follows, other platforms please refer [Set up the environment variables](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html#step-4-set-up-the-environment-variables)
+
+    ```bash
+    . $HOME/esp/esp-idf/export.sh
+    ```
+
+4. Add the `ESP-IOT-SOLUTION` environment variable, the Linux method is as follows:
+
+    ```bash
+    export IOT_SOLUTION_PATH=$HOME/esp/esp-iot-solution
+    ```
+
+5. Set the IDF build target to `esp32s2` or `esp32s3`
+
+    ```bash
+    idf.py set-target esp32s2
+    ```
+
+6. Select the Cat.1 module model `Menuconfig → Component config → ESP-MODEM → Choose Modem Board`, if the your module is not in the list, please refer to `Other 4G Cat.1 Module Adaptation Methods` to configure.
+
+    ![choose_modem](./_static/choose_modem.png)
+
+7. Build, download, check log output
+
+    ```bash
+    idf.py build flash monitor
+    ```
+
+**Log**
+
+```
+I (0) cpu_start: Starting scheduler on APP CPU.
+W (385) main: Force reset 4g board
+I (389) gpio: GPIO[13]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 
+I (3915) main: ====================================
+I (3915) main:      ESP 4G Cat.1 Wi-Fi Router
+I (3915) main: ====================================
+| I (3920) gpio: GPIO[15] | InputEn: 0 | OutputEn: 1 | OpenDrain: 0 | Pullup: 0 | Pulldown: 0 | Intr:0 |
+| I (3929) gpio: GPIO[17] | InputEn: 0 | OutputEn: 1 | OpenDrain: 0 | Pullup: 0 | Pulldown: 0 | Intr:0 |
+| I (3939) gpio: GPIO[16] | InputEn: 0 | OutputEn: 1 | OpenDrain: 0 | Pullup: 0 | Pulldown: 0 | Intr:0 |
+I (3998) USB_HCDC: usb driver install succeed
+I (3998) USB_HCDC: Waitting Device Connection
+I (4028) USB_HCDC: USB Port=1 init succeed
+I (4028) USB_HCDC: Waitting USB Connection
+I (4028) USB_HCDC: Port power: ON
+I (4281) USB_HCDC: line 263 HCD_PORT_EVENT_CONNECTION
+I (4281) USB_HCDC: Resetting Port
+I (4341) USB_HCDC: Port reset succeed
+I (4341) USB_HCDC: Getting Port Speed
+I (4341) USB_HCDC: Port speed = 1
+I (4343) USB_HCDC: USB Speed: full-speed
+I (4347) USB_HCDC: Set Device Addr = 1
+I (4352) USB_HCDC: Set Device Addr Done
+I (4356) USB_HCDC: Set Device Configuration = 1
+I (4362) USB_HCDC: Set Device Configuration Done
+I (4367) USB_HCDC: Creating bulk in pipe
+I (4371) USB_HCDC: Creating bulk out pipe
+I (4378) USB_HCDC: Device Connected
+| I (4380) gpio: GPIO[12] | InputEn: 0 | OutputEn: 1 | OpenDrain: 0 | Pullup: 0 | Pulldown: 0 | Intr:0 |
+| I (4390) gpio: GPIO[13] | InputEn: 0 | OutputEn: 1 | OpenDrain: 0 | Pullup: 0 | Pulldown: 0 | Intr:0 |
+I (7375) modem_board: Modem PPP Started
+I (7376) modem_board: re-start ppp, retry=1
+I (7386) esp-netif_lwip-ppp: Connected
+I (7386) esp-netif_lwip-ppp: Name Server1: 114.114.114.114
+I (7387) esp-netif_lwip-ppp: Name Server2: 0.0.0.0
+I (7391) modem_board: IP event! 6
+I (7395) modem_board: Modem Connected to PPP Server
+I (7401) modem_board: ppp ip: 10.250.188.169, mask: 255.255.255.255, gw: 192.168.0.1
+I (7409) modem_board: Main DNS: 114.114.114.114
+I (7415) modem_board: Backup DNS: 0.0.0.0
+I (7420) main: ap dns addr(auto): 114.114.114.114
+I (7425) pp: pp rom version: e7ae62f
+I (7429) net80211: net80211 rom version: e7ae62f
+I (7435) wifi:wifi driver task: 600fee20, prio:23, stack:6656, core=0
+I (7440) system_api: Base MAC address is not set
+I (7446) system_api: read default base MAC address from EFUSE
+I (7462) wifi:wifi firmware version: cca42a5
+I (7462) wifi:wifi certification version: v7.0
+I (7462) wifi:config NVS flash: enabled
+I (7464) wifi:config nano formating: disabled
+I (7468) wifi:Init data frame dynamic rx buffer num: 32
+I (7473) wifi:Init management frame dynamic rx buffer num: 32
+I (7478) wifi:Init management short buffer num: 32
+I (7483) wifi:Init dynamic tx buffer num: 32
+I (7487) wifi:Init static tx FG buffer num: 2
+I (7491) wifi:Init static rx buffer size: 1600
+I (7495) wifi:Init static rx buffer num: 10
+I (7499) wifi:Init dynamic rx buffer num: 32
+I (7503) wifi_init: tcpip mbox: 32
+I (7507) wifi_init: udp mbox: 6
+I (7511) wifi_init: tcp mbox: 6
+I (7515) wifi_init: tcp tx win: 5744
+I (7519) wifi_init: tcp rx win: 5744
+I (7523) wifi_init: tcp mss: 1440
+I (7527) wifi_init: WiFi IRAM OP enabled
+I (7532) wifi_init: WiFi RX IRAM OP enabled
+I (7537) wifi_init: LWIP IRAM OP enabled
+I (7542) phy_init: phy_version 302,291a31f,Oct 22 2021,19:22:08
+I (7596) wifi:mode : softAP (7c:df:a1:e0:32:cd)
+I (7598) wifi:Total power save buffer number: 16
+I (7598) wifi:Init max length of beacon: 752/752
+I (7598) wifi:Init max length of beacon: 752/752
+I (7607) wifi:Total power save buffer number: 16
+I (7607) modem_wifi: softap ssid: esp_4g_router password: 12345678
+I (7613) modem_wifi: NAT is enabled
+```
+
+## Other 4G Cat.1 module adaptation methods
+
+1. Confirm whether the 4G module **supports USB Fullspeed mode**;
+2. Confirm whether the 4G module **supports USB PPP dial-up interface**;
+3. Confirm that the **4G SIM card is activated** and the Internet access is turned on;
+4. Confirm that the **necessary signal wires have been connected** in accordance with the hardware wiring;
+5. Confirm the module's PPP interface input endpoint (IN) and output endpoint (OUT) addresses, and modify the following options in `menuconfig`: 
+
+   * Choose a `User Defined` board:
    ```
    Component config → ESP-MODEM → Choose Modem Board → User Defined
                                 
    ```
-   * 配置自定义 4G Modem 开发板端点地址：
+   * Configure the endpoint address of 4G Modem:
    ```
    Component config → ESP-MODEM → USB CDC endpoint address config
                                         → Modem USB CDC IN endpoint address
                                         → Modem USB CDC OUT endpoint address
    ```
 
-6. 控制台输出 log，确认 `AT` 指令能够执行；
+6. Check outputs log to confirm that the `AT` command can be executed;
 
-> 不同 Cat.1 芯片平台支持的 AT 基础指令大致相同，但可能存在部分特殊指令，需要自行支持
+> The basic AT commands supported by different Cat.1 chip platforms are roughly the same, but there may be some special commands that need to be supported by users.
 
-**硬件接线**
 
-默认 GPIO 配置如下，用户也可在 `menuconfig -> 4G Modem Configuration -> gpio config` 中配置。 
+## Debugging method 
 
-|           功能           |  GPIO   |        说明         |
-| :----------------------: | :-----: | :-----------------: |
-|    **USB D+ (green)**    | **20**  |      **必要**       |
-|    **USB D- (white)**    | **19**  |      **必要**       |
-|     **GND (black)**      | **GND** |      **必要**       |
-|      **+5V (red)**       | **+5V** |      **必要**       |
-|   Modem Power Control    |   12    | 4G 模组自动开机模式 |
-| **Modem Reset Control**  | **13**  |      **必要**       |
-| System Status LED (red)  |   15    |       非必要        |
-| Wi-Fi Status LED (blue)  |   17    |       非必要        |
-| Modem Status LED (green) |   16    |       非必要        |
+**1. Debugging mode**
 
-## 编译示例代码
-
-1. 确认 `ESP-IDF` 环境成功搭建，并按照说明文件切换到指定 commit [idf_usb_support_patch](../../../usb/idf_usb_support_patch/readme.md)
-
-2. 确认已经完整下载 `ESP-IOT-SOLUTION` 仓库，并切换到 `usb/add_usb_solutions` 分支
-
-    ```bash
-    git clone -b usb/add_usb_solutions --recursive https://github.com/espressif/esp-iot-solution
-    ```
-
-3. 添加 `ESP-IDF` 环境变量，Linux 方法如下，其它平台请查阅 [Set up the environment variables](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html#step-4-set-up-the-environment-variables)
-
-    ```bash
-    $HOME/esp/esp-idf/export.sh
-    ```
-
-4. 添加 `ESP-IOT-SOLUTION` 环境变量，Linux 方法如下:
-
-    ```bash
-    export IOT_SOLUTION_PATH=$HOME/esp/esp-iot-solution
-    ```
-
-5. 设置编译目标为 `esp32s2` 或 `esp32s3`
-
-    ```bash
-    idf.py set-target esp32s2
-    ```
-
-6. 选择 Cat.1 模组型号 `Menuconfig → Component config → ESP-MODEM → Choose Modem Board`，如果所选型号未在该列表，请参照 `其它 4G Cat.1 模组适配方法`，自行配置模组端点信息进行适配
-
-    ![choose_modem](./_static/choose_modem.png)
-
-7. 编译、下载、查看输出
-
-    ```bash
-    idf.py build flash monitor
-    ```
-
-## 使用说明
-
-**Wi-Fi 名称和密码：**
-
-可在 `menuconfig` 的 `4G Modem Configuration → WiFi soft AP ` 中修改 Wi-Fi 配置信息
-
-1. 默认 Wi-Fi 名为 `esp_4g_router`
-2. 默认密码为 `12345678`
-
-**指示灯说明：**
-
-|        指示灯         | 闪烁 |              说明              |
-| :-------------------: | :--: | :----------------------------: |
-|  **系统指示灯 (红)**  | 熄灭 |               无               |
-|                       | 慢闪 |            电量不足            |
-|                       | 快闪 |         重启 Modem 中          |
-|                       | 常量 | 内部错误 (请检查 SIM 卡后重启) |
-| **Wi-Fi 指示灯 (蓝)** | 熄灭 |               无               |
-|                       | 慢闪 |          等待设备连接          |
-|                       | 常亮 |           设备已连接           |
-| **Modem 指示灯 (绿)** | 熄灭 |               无               |
-|                       | 慢闪 |         等待互联网连接         |
-|                       | 常量 |          互联网已连接          |
-
-**调试信息说明：**
-
-1. 可在 `menuconfig` 打开 `4G Modem Configuration -> Dump system task status` 选项打印 task 详细信息，也可打开 `Component config → USB Host CDC ->Trace internal memory status ` 选项打印 usb 内部 buffer 使用信息。
+Enable the `4G Modem Configuration -> Dump system task status` option in `menuconfig` to print task detailed information, or open the `Component config → USB Host CDC ->Trace internal memory status` option to print usb internal buffer usage information.
 
 	```
     I (79530) main: Task dump
@@ -168,34 +253,32 @@
     I (79618) USB_HCDC: usb ringbuffer size, out = 15360, in = 15360
     I (79625) USB_HCDC: usb ringbuffer High water mark, out = 46, in = 48
 	```
-2. 系统调试
 
-	```
-    E (60772) esp-netif_lwip-ppp: pppos_input_tcpip failed with -1
-	```
-	以上错误信息可能在调试中出现，原因是 RAM 空间较小导致通信时多次尝试申请内存，可添加并开启 PSRAM 解决该问题 (配置为 80M 时钟，并选择将 Wi-Fi 和 LWIP 优先申请到 PSRAM 中)
+**2. Performance optimization**
 
-## 性能参数
+1. If there is a requirement for throughput, please select the `FDD` standard module and operator;
+2. Modify `APN` to the name provided by the operator `menuconfig -> 4G Modem Configuration -> Set Modem APN`, for example, when using China Mobile's ordinary 4G card, it can be changed to `cmnet`;
+3. Configure ESP32-Sx CPU to 240MHz (`Component config → ESP32S2-specific → CPU frequency`), if it supports dual cores, please turn on both cores at the same time;
+4. Add and enable PSRAM (`Component config → ESP32S2-specific → Support for external`), and increase the PSRAM clock frequency (`Component config → ESP32S2-specific → Support for external → SPI RAM config → Set RAM clock speed`) select 80MHz. And open `Try to allocate memories of WiFi and LWIP in SPIRAM firstly.` in this directory;
+5. Increase the FreeRTOS Tick frequency `Component config → FreeRTOS → Tick rate` to `1000 Hz`;
+6. Optimization of other application layers.
 
-* ESP32-S2 ，CPU 240Mhz
-* 4MB flash，无 PSRAM
-* ML302-DNLM 模组开发板
-* 中国移动 4G 上网卡
-* 办公室正常使用环境
+## Performance test
 
-| 测试项 |   峰值   |   平均   |
-| :----: | :------: | :------: |
-|  下载  |  6.4 Mbps  |  4 Mbps  |
-|  上传  | 5 Mbps | 2 Mbps |
+**Test environment:**
 
-> **4G Cat.1 理论峰值下载速率 10 Mbps，峰值上传速率 5 Mbps**
-> 实际通信速率受运营商网络、测试软件、Wi-Fi 干扰情况、终端连接数影响，以实际使用为准
+* ESP32-S2, CPU 240 MHz
+* 4 MB flash, no PSRAM
+* ML302-DNLM module
+* China Mobile 4G SIM card
+* Normal office environment
 
-**性能优化**
+**Test result:**
 
-1. 检查模组和运营商支持情况，如果对吞吐率有要求，请选择 `FDD` 制式模组和运营商；
-2. 将 `APN` 修改为运营商提供的名称 `menuconfig -> 4G Modem Configuration -> Set Modem APN`， 例如，当使用中国移动普通 4G 卡可改为 `cmnet`；
-3. 将 ESP32-Sx CPU 配置为 240MHz（`Component config → ESP32S2-specific → CPU frequency`），如支持双核请同时打开双核；
-4. ESP32-Sx 添加并使能 PSRAM（`Component config → ESP32S2-specific → Support for external`），并提高 PSRAM 时钟频率 (`Component config → ESP32S2-specific → Support for external → SPI RAM config → Set RAM clock speed`) 选择 80MHz。并在该目录下打开 `Try to allocate memories of WiFi and LWIP in SPIRAM firstly.`；
-5. 将 FreeRTOS Tick 频率 `Component config → FreeRTOS → Tick rate` 提高到 `1000 Hz`；
-6. 其它应用层优化。
+| Test item |   Peak   | Average |
+| :-------: | :------: | :-----: |
+| Download  | 6.4 Mbps | 4 Mbps  |
+|  Upload   |  5 Mbps  | 2 Mbps  |
+
+> **4G Cat.1 theoretical peak download rate is 10 Mbps, peak upload rate is 5 Mbps**
+> The actual communication rate is affected by the operator's network, test software, Wi-Fi interference, and the number of terminal connections, etc.

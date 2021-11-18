@@ -85,6 +85,7 @@ static esp_err_t esp_modem_post_attach_init(esp_netif_t * esp_netif, void * args
     // // to notify the modem layer when switching modes
     esp_netif_ppp_config_t ppp_config = {
             .ppp_error_event_enabled = true,
+            .ppp_phase_event_enabled = true,
     };
     esp_netif_ppp_set_params(esp_netif, &ppp_config);
 

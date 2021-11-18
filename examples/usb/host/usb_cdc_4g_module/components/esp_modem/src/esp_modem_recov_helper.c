@@ -118,7 +118,6 @@ esp_modem_recov_gpio_t *esp_modem_recov_gpio_new(int gpio_num, int inactive_leve
     };
     gpio_config(&io_config);
     gpio_set_level(gpio_num, inactive_level);
-    gpio_set_level(gpio_num, inactive_level);
 
     esp_modem_recov_gpio_t * pin = calloc(1, sizeof(esp_modem_recov_gpio_t));
     ESP_MODEM_ERR_CHECK(pin, "failed to allocate pin structure", err);

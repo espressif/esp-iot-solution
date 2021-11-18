@@ -2,14 +2,16 @@ menu "ESP-MODEM"
 
     choice MODEM_TARGET
         prompt "Choose Modem Board"
-        default MODEM_TARGET_ML302
+        default MODEM_TARGET_ML302_DNLM
 
-        config MODEM_TARGET_ML302
-            bool "ML302"
-        config MODEM_TARGET_AIR724UG
-            bool "AIR724UG"
-        config MODEM_TARGET_EC600N
-            bool "EC600N"
+        config MODEM_TARGET_ML302_DNLM
+            bool "ML302-DNLM/CNLM"
+        config MODEM_TARGET_AIR724UG_NFM
+            bool "AIR724UG-NFM"
+        config MODEM_TARGET_EC600N_CNLA_N05
+            bool "EC600NCNLA-N05"
+        config MODEM_TARGET_EC600N_CNLC_N06
+            bool "EC600NCNLC-N06"
         config MODEM_TARGET_A7600C1
             bool "A7600C1"
         config MODEM_TARGET_USER
@@ -21,9 +23,10 @@ menu "ESP-MODEM"
         
         config MODEM_USB_OUT_EP_ADDR
             hex "Modem USB CDC OUT endpoint address"
-            default 0x01 if MODEM_TARGET_ML302
-            default 0x03 if MODEM_TARGET_AIR724UG
-            default 0x0f if  MODEM_TARGET_EC600N
+            default 0x01 if MODEM_TARGET_ML302_DNLM
+            default 0x03 if MODEM_TARGET_AIR724UG_NFM
+            default 0x0f if MODEM_TARGET_EC600N_CNLA_N05
+            default 0x0a if MODEM_TARGET_EC600N_CNLC_N06
             default 0x0a if MODEM_TARGET_A7600C1
             default 0x01 if MODEM_TARGET_USER
             range 0x01 0x7f
@@ -32,9 +35,10 @@ menu "ESP-MODEM"
     
         config MODEM_USB_IN_EP_ADDR
             hex "Modem USB CDC IN endpoint address"
-            default 0x81 if MODEM_TARGET_ML302
-            default 0x84 if MODEM_TARGET_AIR724UG
-            default 0x86 if  MODEM_TARGET_EC600N
+            default 0x81 if MODEM_TARGET_ML302_DNLM
+            default 0x84 if MODEM_TARGET_AIR724UG_NFM
+            default 0x86 if  MODEM_TARGET_EC600N_CNLA_N05
+            default 0x81 if  MODEM_TARGET_EC600N_CNLC_N06
             default 0x81 if MODEM_TARGET_A7600C1
             default 0x81 if MODEM_TARGET_USER
             range 0x81 0x8f

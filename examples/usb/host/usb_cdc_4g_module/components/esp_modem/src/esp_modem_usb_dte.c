@@ -70,7 +70,7 @@ esp_err_t esp_modem_set_rx_cb(esp_modem_dte_t *dte, esp_modem_on_receive receive
  *      - ESP_OK on success
  *      - ESP_FAIL on error
  */
-static esp_err_t esp_dte_handle_line(esp_modem_dte_internal_t *esp_dte)
+IRAM_ATTR static esp_err_t esp_dte_handle_line(esp_modem_dte_internal_t *esp_dte)
 {
     esp_err_t err = ESP_FAIL;
     esp_modem_dce_t *dce = esp_dte->parent.dce;
@@ -96,7 +96,7 @@ err:
     return err;
 }
 
-static void esp_handle_usb_data(esp_modem_dte_internal_t *esp_dte)
+IRAM_ATTR static void esp_handle_usb_data(esp_modem_dte_internal_t *esp_dte)
 {
     size_t length = 0;
     usbh_cdc_get_buffered_data_len(&length);
@@ -114,7 +114,7 @@ static void esp_handle_usb_data(esp_modem_dte_internal_t *esp_dte)
             // continue reading as long as the modem is in MODEM_STATE_PROCESSING, checking for the pattern
             while (length < max && esp_dte->buffer[length-1] != '\n' &&
                    esp_dte->parent.dce->state == ESP_MODEM_STATE_PROCESSING) {
-                bytes = usbh_cdc_read_bytes(esp_dte->buffer + length, 1, pdMS_TO_TICKS(100));
+                bytes = usbh_cdc_read_bytes(esp_dte->buffer + length, 1, 1);
                 length += bytes;
                 ESP_LOGV("esp-modem: debug_data", "Continuous read in non-data mode: length: %d char: %x", length, esp_dte->buffer[length-1]);
             }
@@ -125,7 +125,6 @@ static void esp_handle_usb_data(esp_modem_dte_internal_t *esp_dte)
             /* Send new line to handle if handler registered */
             esp_dte_handle_line(esp_dte);
         }
-        //printf("cmd length = %d\n", length);
         return;
     }
     length = MIN(esp_dte->line_buffer_size, length);
@@ -135,10 +134,9 @@ static void esp_handle_usb_data(esp_modem_dte_internal_t *esp_dte)
         ESP_LOG_BUFFER_HEXDUMP("esp-modem-dte: ppp_input", esp_dte->buffer, length, ESP_LOG_VERBOSE);
         esp_dte->receive_cb(esp_dte->buffer, length, esp_dte->receive_cb_ctx);
     }
-    //printf("length = %d\n", length);
 }
 
-static void usb_event_cd(void *arg)
+static void _usb_recv_date_cb(void *arg)
 {
     TaskHandle_t *p_usb_event_hdl = (TaskHandle_t *)arg;
     if (*p_usb_event_hdl == NULL) return;
@@ -150,7 +148,7 @@ static void usb_event_cd(void *arg)
  *
  * @param param task parameter
  */
-static void usb_event_task_entry(void *param)
+static void _usb_data_recv_task(void *param)
 {
     esp_modem_dte_internal_t *esp_dte = (esp_modem_dte_internal_t *)param;
     EventBits_t bits = xEventGroupWaitBits(esp_dte->process_group, (ESP_MODEM_START_BIT|ESP_MODEM_STOP_BIT), pdFALSE, pdFALSE, portMAX_DELAY);
@@ -160,11 +158,11 @@ static void usb_event_task_entry(void *param)
     size_t length = 0;
     while (xEventGroupGetBits(esp_dte->process_group) & ESP_MODEM_START_BIT) {
         /* Drive the event loop */
-        ulTaskNotifyTake(true, 1);//unblock as soon as possiable
-        esp_event_loop_run(esp_dte->event_loop_hdl, pdMS_TO_TICKS(0));
         usbh_cdc_get_buffered_data_len(&length);
-        if (length >= 2) {
+        if (length > 0) {
             esp_handle_usb_data(esp_dte);
+        } else {
+            ulTaskNotifyTake(true, 1);//unblock as soon as possiable
         }
     }
     vTaskDelete(NULL);
@@ -217,10 +215,6 @@ static int esp_modem_dte_send_data(esp_modem_dte_t *dte, const char *data, uint3
         ESP_LOGD(TAG, "Not sending data in transition mode");
         return -1;
     }
-    if (esp_dte->parent.dce->mode == ESP_MODEM_TRANSITION_MODE) {
-        ESP_LOGD(TAG, "Not sending data in transition mode");
-        return -1;
-    }
     ESP_LOG_BUFFER_HEXDUMP("esp-modem-dte: ppp_output", data, length, ESP_LOG_VERBOSE);
 
     return usbh_cdc_write_bytes((const uint8_t*)data, length);
@@ -245,23 +239,16 @@ static esp_err_t esp_modem_dte_send_wait(esp_modem_dte_t *dte, const char *data,
 {
     ESP_MODEM_ERR_CHECK(data, "data is NULL", err_param);
     ESP_MODEM_ERR_CHECK(prompt, "prompt is NULL", err_param);
-    //esp_modem_dte_internal_t *esp_dte = __containerof(dte, esp_modem_dte_internal_t, parent);
-    // We'd better disable pattern detection here for a moment in case prompt string contains the pattern character
-    //uart_disable_pattern_det_intr(esp_dte->uart_port);
-    // uart_disable_rx_intr(esp_dte->uart_port);
-    ESP_MODEM_ERR_CHECK(usbh_cdc_write_bytes((const uint8_t*)data, length) >= 0, "uart write bytes failed", err_write);
+    ESP_MODEM_ERR_CHECK(usbh_cdc_write_bytes((const uint8_t*)data, length) >= 0, "uart write bytes failed", err_param);
     uint32_t len = strlen(prompt);
     uint8_t *buffer = calloc(len + 1, sizeof(uint8_t));
-    int res = usbh_cdc_read_bytes(buffer, len, pdMS_TO_TICKS(timeout));
-    ESP_MODEM_ERR_CHECK(res >= len, "wait prompt [%s] timeout", err, prompt);
+    int ret = usbh_cdc_read_bytes(buffer, len, pdMS_TO_TICKS(timeout));
+    ESP_MODEM_ERR_CHECK(ret >= len, "wait prompt [%s] timeout", err, prompt);
     ESP_MODEM_ERR_CHECK(!strncmp(prompt, (const char *)buffer, len), "get wrong prompt: %s", err, buffer);
     free(buffer);
-    //uart_enable_pattern_det_baud_intr(esp_dte->uart_port, '\n', 1, MIN_PATTERN_INTERVAL, MIN_POST_IDLE, MIN_PRE_IDLE);
     return ESP_OK;
 err:
     free(buffer);
-err_write:
-    //uart_enable_pattern_det_baud_intr(esp_dte->uart_port, '\n', 1, MIN_PATTERN_INTERVAL, MIN_POST_IDLE, MIN_PRE_IDLE);
 err_param:
     return ESP_FAIL;
 }
@@ -340,23 +327,12 @@ static esp_err_t esp_modem_dte_deinit(esp_modem_dte_t *dte)
     return ESP_OK;
 }
 
-static usb_ep_desc_t bulk_out_ep_desc = {
-    .bLength = sizeof(usb_ep_desc_t),
-    .bDescriptorType = USB_B_DESCRIPTOR_TYPE_ENDPOINT,
-    .bEndpointAddress = CONFIG_MODEM_USB_OUT_EP_ADDR,       //EP OUT
-    .bmAttributes = USB_BM_ATTRIBUTES_XFER_BULK,
-    .wMaxPacketSize = 64,           //MPS of 64 bytes
-    .bInterval = 0,
-};
+extern esp_err_t modem_board_force_reset(void);
 
-static usb_ep_desc_t bulk_in_ep_desc = {
-    .bLength = sizeof(usb_ep_desc_t),
-    .bDescriptorType = USB_B_DESCRIPTOR_TYPE_ENDPOINT,
-    .bEndpointAddress = CONFIG_MODEM_USB_IN_EP_ADDR,       //EP IN
-    .bmAttributes = USB_BM_ATTRIBUTES_XFER_BULK,
-    .wMaxPacketSize = 64,           //MPS of 64 bytes
-    .bInterval = 0,
-};
+static void _usb_disconn_cb(void* arg)
+{
+    modem_board_force_reset();
+}
 
 /**
  * @brief Create and init Modem DTE object
@@ -364,7 +340,7 @@ static usb_ep_desc_t bulk_in_ep_desc = {
  */
 esp_modem_dte_t *esp_modem_dte_new(const esp_modem_dte_config_t *config)
 {
-    esp_err_t res;
+    esp_err_t ret;
     /* malloc memory for esp_dte object */
     esp_modem_dte_internal_t *esp_dte = calloc(1, sizeof(esp_modem_dte_internal_t));
     ESP_MODEM_ERR_CHECK(esp_dte, "calloc esp_dte failed", err_dte_mem);
@@ -372,9 +348,6 @@ esp_modem_dte_t *esp_modem_dte_new(const esp_modem_dte_config_t *config)
     esp_dte->line_buffer_size = config->line_buffer_size;
     esp_dte->buffer = calloc(1, config->line_buffer_size);
     ESP_MODEM_ERR_CHECK(esp_dte->buffer, "calloc line memory failed", err_line_mem);
-    /* Set attributes */
-    esp_dte->uart_port = config->port_num;
-    esp_dte->parent.flow_ctrl = config->flow_control;
     /* Bind methods */
     esp_dte->parent.send_cmd = esp_modem_dte_send_cmd;
     esp_dte->parent.send_data = esp_modem_dte_send_data;
@@ -386,7 +359,10 @@ esp_modem_dte_t *esp_modem_dte_new(const esp_modem_dte_config_t *config)
     /* Create Event loop */
     esp_event_loop_args_t loop_args = {
         .queue_size = ESP_MODEM_EVENT_QUEUE_SIZE,
-        .task_name = NULL
+        .task_name = "modem_evt_loop_task",
+        .task_priority = config->event_task_priority,
+        .task_stack_size = config->event_task_stack_size,
+        .task_core_id = 0,
     };
     ESP_MODEM_ERR_CHECK(esp_event_loop_create(&loop_args, &esp_dte->event_loop_hdl) == ESP_OK, "create event loop failed", err_eloop);
     /* Create semaphore */
@@ -394,26 +370,28 @@ esp_modem_dte_t *esp_modem_dte_new(const esp_modem_dte_config_t *config)
     ESP_MODEM_ERR_CHECK(esp_dte->process_group, "create process semaphore failed", err_sem);
 
     usbh_cdc_config_t cdc_config = {
-        .bulk_in_ep = &bulk_in_ep_desc,
-        .bulk_out_ep = &bulk_out_ep_desc,
+        .bulk_in_ep_addr = CONFIG_MODEM_USB_IN_EP_ADDR,
+        .bulk_out_ep_addr = CONFIG_MODEM_USB_OUT_EP_ADDR,
         .rx_buffer_size = config->rx_buffer_size,
         .tx_buffer_size = config->tx_buffer_size,
-        .rx_callback = usb_event_cd,
+        .rx_callback = _usb_recv_date_cb,
         .rx_callback_arg = &esp_dte->uart_event_task_hdl,
+        .disconn_callback = _usb_disconn_cb,
     };
 
-    res = usbh_cdc_driver_install(&cdc_config);
-    ESP_MODEM_ERR_CHECK(res == ESP_OK, "usb driver install failed", err_usb_config);
-
+    ret = usbh_cdc_driver_install(&cdc_config);
+    ESP_MODEM_ERR_CHECK(ret == ESP_OK, "usb driver install failed", err_usb_config);
+    ret = usbh_cdc_wait_connect(portMAX_DELAY);
+    ESP_MODEM_ERR_CHECK(ret == ESP_OK, "usb connect timeout", err_usb_config);
     /* Create UART Event task */
-    BaseType_t ret = xTaskCreate(usb_event_task_entry,             //Task Entry
-                                 "usb_event",              //Task Name
-                                 config->event_task_stack_size,           //Task Stack Size(Bytes)
+    BaseType_t base_ret = xTaskCreate (_usb_data_recv_task,             //Task Entry
+                                 "usb_data_recv",              //Task Name
+                                 3072,           //Task Stack Size(Bytes)
                                  esp_dte,                           //Task Parameter
-                                 config->event_task_priority,             //Task Priority
-                                 & (esp_dte->uart_event_task_hdl)   //Task Handler
+                                 CONFIG_USB_TASK_BASE_PRIORITY,             //Task Priority
+                                 &(esp_dte->uart_event_task_hdl)   //Task Handler
                                 );
-    ESP_MODEM_ERR_CHECK(ret == pdTRUE, "create uart event task failed", err_tsk_create);
+    ESP_MODEM_ERR_CHECK(base_ret == pdTRUE, "create uart event task failed", err_tsk_create);
 
     return &(esp_dte->parent);
     /* Error handling */
