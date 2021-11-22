@@ -1,16 +1,9 @@
 **Don't Need Patch in This version, but some IDF files need to be modified**
 
-## Update IDF to Latest Version
+## Setup `release/v4.4` ESP-IDF
 
-1. Install latest `master` branch [ESP-IDF](https://github.com/espressif/esp-idf)
-2. CD in to ESP-IDF folder
-3. Run command below
+* Please Install latest `release/v4.4` branch [ESP-IDF](https://github.com/espressif/esp-idf/tree/release/v4.4), you can refer [ESP-IDF(release/v4.4) Installation Step by Step](https://docs.espressif.com/projects/esp-idf/en/release-v4.4/esp32s3/get-started/index.html#installation-step-by-step)
 
-```
-git pull
-git checkout d5f58ab13551cd8
-git submodule update --init --recursive
-```
 
 ## Modify some IDF Files
 

@@ -1,0 +1,13 @@
+menu "USB HID Device Demo"
+
+    choice HID_SUBCLASS
+        prompt "hid device subclass"
+        default SUBCLASS_MOUSE
+
+        config SUBCLASS_MOUSE
+            bool "mouse" 
+        config SUBCLASS_KEYBOARD
+            bool "keyboard"
+    endchoice
+
+endmenu
