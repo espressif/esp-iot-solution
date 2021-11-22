@@ -45,3 +45,7 @@ tools/unit-test-app/output
 
 # ESP-IDF library 
 build
+
+# Local ENV
+.envrc
+dependencies.lock

@@ -18,5 +18,11 @@ if BOARD_ESP32S3_USB_OTG_EV
         help
             if yes, spi2 will be initialized with default configuration during board init,
             then, you can use iot_board_get_handle to get the bus handle.
+    config BOARD_BTN_INIT
+        bool "init buttons during board init"
+        default n
+        help
+            if yes, button related gpios will be configured, iot_button will be created,
+            you can use iot_board_get_handle to get the button handle.
 
 endif

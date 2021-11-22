@@ -212,6 +212,7 @@ static esp_err_t board_adc_deinit()
 
 static esp_err_t board_button_init()
 {
+#ifdef CONFIG_BOARD_BTN_INIT
     button_config_t cfg = {
         .type = BUTTON_TYPE_GPIO,
         .gpio_button_config = {
@@ -233,6 +234,7 @@ static esp_err_t board_button_init()
     cfg.gpio_button_config.gpio_num = BOARD_IO_BUTTON_MENU;
     s_btn_menu_hdl = iot_button_create(&cfg);
     BOARD_CHECK(s_btn_menu_hdl != NULL, "button menu create failed", ESP_FAIL);
+#endif
     return ESP_OK;
 }
 
@@ -241,13 +243,6 @@ static esp_err_t board_button_deinit()
     return ESP_OK;//TODO:
 }
 
-#if CONFIG_IDF_TARGET_ESP32S3
-static void usb_otg_router_to_internal_phy()
-{
-    uint32_t *usb_phy_sel_reg = (uint32_t *)(0x60008000 + 0x120);
-    *usb_phy_sel_reg |= BIT(19) | BIT(20);
-}
-#endif
 
 /****General board level API ****/
 esp_err_t iot_board_init(void)
@@ -255,11 +250,6 @@ esp_err_t iot_board_init(void)
     if(s_board_is_init) {
         return ESP_OK;
     }
-
-#if CONFIG_IDF_TARGET_ESP32S3
-    /* router USB PHY from USB-JTAG-Serial to USB OTG */
-    usb_otg_router_to_internal_phy();
-#endif
 
     esp_err_t ret = board_gpio_init();
     BOARD_CHECK(ret == ESP_OK, "gpio init failed", ret);
