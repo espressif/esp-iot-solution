@@ -51,7 +51,7 @@ static const char *TAG = "USB_HCDC";
 #define CDC_EVENT_QUEUE_LEN                  16
 #define DATA_EVENT_QUEUE_LEN                 32
 #define CTRL_TRANSFER_DATA_MAX_BYTES         256      //Just assume that will only IN/OUT 256 bytes in ctrl pipe
-#define TIMEOUT_USB_RINGBUF_MS               20       //Timeout for Ring Buffer push
+#define TIMEOUT_USB_RINGBUF_MS               200       //Timeout for Ring Buffer push
 
 #define USB_TASK_BASE_PRIORITY CONFIG_USB_TASK_BASE_PRIORITY
 
@@ -807,6 +807,7 @@ static inline void _processing_out_pipe(hcd_pipe_handle_t pipe_hdl, bool if_dequ
             break;
         }
     }
+    assert(next_urb != NULL);
 
     size_t num_bytes_to_send = 0;
     ret = usb_out_ringbuf_pop(next_urb->transfer.data_buffer, BUFFER_SIZE_BULK_OUT, &num_bytes_to_send, 0);

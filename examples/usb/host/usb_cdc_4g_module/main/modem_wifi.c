@@ -107,7 +107,7 @@ esp_err_t modem_wifi_set(modem_wifi_config_t *config)
 
     if (config->mode & WIFI_MODE_AP) {
         wifi_cfg.ap.max_connection = config->max_connection;
-        wifi_cfg.ap.authmode = WIFI_AUTH_WPA2_PSK;//strlen(password) < 8 ? WIFI_AUTH_OPEN : WIFI_AUTH_WPA2_PSK;
+        wifi_cfg.ap.authmode = strlen(config->password) < 8 ? WIFI_AUTH_OPEN : WIFI_AUTH_WPA2_PSK;
         wifi_cfg.ap.channel = config->channel;
         strlcpy((char *)wifi_cfg.ap.ssid, config->ssid, sizeof(wifi_cfg.ap.ssid));
         strlcpy((char *)wifi_cfg.ap.password, config->password, sizeof(wifi_cfg.ap.password));
@@ -133,6 +133,8 @@ esp_err_t modem_wifi_set_dhcps(esp_netif_t *netif, uint32_t addr)
     esp_netif_dns_info_t dns;
     dns.ip.u_addr.ip4.addr = addr;
     dns.ip.type = IPADDR_TYPE_V4;
+    dhcps_offer_t dhcps_dns_value = OFFER_DNS;
+    ESP_ERROR_CHECK(esp_netif_dhcps_option(netif, ESP_NETIF_OP_SET, ESP_NETIF_DOMAIN_NAME_SERVER, &dhcps_dns_value, sizeof(dhcps_dns_value)));
     ESP_ERROR_CHECK(esp_netif_set_dns_info(netif, ESP_NETIF_DNS_MAIN, &dns));
     return ESP_OK;
 }
