@@ -92,7 +92,7 @@ static esp_err_t modem_board_reset(esp_modem_dce_t *dce)
 
 esp_err_t modem_board_force_reset(void)
 {
-    ESP_LOGW(TAG, "Force reset system");
+    ESP_LOGE(TAG, "Force reset system");
     gpio_config_t io_config = {
             .pin_bit_mask = BIT64(MODEM_RESET_GPIO),
             .mode = GPIO_MODE_OUTPUT
@@ -138,7 +138,6 @@ static esp_err_t my_recov(esp_modem_recov_resend_t *retry_cmd, esp_err_t err, in
             if(led_system_handle) led_indicator_start(led_system_handle, BLINK_FACTORY_RESET);
             modem_board_t *board = __containerof(dce, modem_board_t, parent);
             board->reset(dce);
-            esp_restart(); //restart system
         } else {
             // otherwise power-cycle the board
             modem_board_t *board = __containerof(dce, modem_board_t, parent);
@@ -290,9 +289,12 @@ static void on_modem_event(void *arg, esp_event_base_t event_base,
             break;
         }
     } else if (event_base == NETIF_PPP_STATUS) {
-        ESP_LOGI(TAG, "PPP netif event! %d", event_id);
-        if (event_id == NETIF_PPP_ERRORCONNECT) {
-            //TODO:
+        if(event_id < NETIF_PP_PHASE_OFFSET) {
+            ESP_LOGE(TAG, "PPP netif event = %d", event_id);
+            ESP_LOGE(TAG, "Just Force restart!");
+            esp_restart();
+        } else {
+            ESP_LOGW(TAG, "PPP netif event = %d", event_id);
         }
     }
 }
@@ -314,7 +316,6 @@ esp_netif_t *modem_board_init(modem_config_t *config)
     esp_modem_dte_config_t dte_config = ESP_MODEM_DTE_DEFAULT_CONFIG();
     dte_config.rx_buffer_size = config->rx_buffer_size; //rx ringbuffer for usb transfer
     dte_config.tx_buffer_size = config->tx_buffer_size; //tx ringbuffer for usb transfer
-    dte_config.event_queue_size = config->event_queue_size;
     dte_config.line_buffer_size = config->line_buffer_size;
     dte_config.event_task_stack_size = config->event_task_stack_size; //task to handle usb rx data
     dte_config.event_task_priority = config->event_task_priority; //task to handle usb rx data
@@ -363,6 +364,7 @@ esp_netif_t *modem_board_init(modem_config_t *config)
     } else {
         if(led_system_handle) led_indicator_start(led_system_handle, BLINK_CONNECTED);//solid red, internal error
         ESP_LOGE(TAG, "4G modem dial failed");
+        ESP_LOGE(TAG, "Force restart!");
         esp_restart();
     }
 

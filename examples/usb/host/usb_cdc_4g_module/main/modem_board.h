@@ -32,9 +32,8 @@ extern "C"
     {                                \
         .rx_buffer_size = 1024*15,   \
         .tx_buffer_size = 1024*15,   \
-        .event_queue_size = 30,      \
         .line_buffer_size = 1600,    \
-        .event_task_priority = CONFIG_USB_TASK_BASE_PRIORITY,\
+        .event_task_priority = CONFIG_USB_TASK_BASE_PRIORITY + 3,\
         .event_task_stack_size = 3072\
     }
 
@@ -42,7 +41,6 @@ extern "C"
 typedef struct {
     int rx_buffer_size;             /*!< USB RX Buffer Size */
     int tx_buffer_size;             /*!< USB TX Buffer Size */
-    int event_queue_size;           /*!< USB Event Queue Size */
     int line_buffer_size;           /*!< Line buffer size for command mode */
     int event_task_priority;        /*!< USB Event/Data Handler Task Priority*/
     int event_task_stack_size;      /*!< USB Event/Data Handler Task Stack Size*/

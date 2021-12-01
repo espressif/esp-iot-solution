@@ -158,11 +158,12 @@ static void _usb_data_recv_task(void *param)
     size_t length = 0;
     while (xEventGroupGetBits(esp_dte->process_group) & ESP_MODEM_START_BIT) {
         /* Drive the event loop */
+        esp_event_loop_run(esp_dte->event_loop_hdl, pdMS_TO_TICKS(0));//no block
         usbh_cdc_get_buffered_data_len(&length);
         if (length > 0) {
             esp_handle_usb_data(esp_dte);
         } else {
-            ulTaskNotifyTake(true, 1);//unblock as soon as possiable
+            ulTaskNotifyTake(true, 1);//yield to other task, but unblock as soon as possiable
         }
     }
     vTaskDelete(NULL);
@@ -359,10 +360,7 @@ esp_modem_dte_t *esp_modem_dte_new(const esp_modem_dte_config_t *config)
     /* Create Event loop */
     esp_event_loop_args_t loop_args = {
         .queue_size = ESP_MODEM_EVENT_QUEUE_SIZE,
-        .task_name = "modem_evt_loop_task",
-        .task_priority = config->event_task_priority,
-        .task_stack_size = config->event_task_stack_size,
-        .task_core_id = 0,
+        .task_name = NULL,
     };
     ESP_MODEM_ERR_CHECK(esp_event_loop_create(&loop_args, &esp_dte->event_loop_hdl) == ESP_OK, "create event loop failed", err_eloop);
     /* Create semaphore */
@@ -386,9 +384,9 @@ esp_modem_dte_t *esp_modem_dte_new(const esp_modem_dte_config_t *config)
     /* Create UART Event task */
     BaseType_t base_ret = xTaskCreate (_usb_data_recv_task,             //Task Entry
                                  "usb_data_recv",              //Task Name
-                                 3072,           //Task Stack Size(Bytes)
+                                 config->event_task_stack_size,           //Task Stack Size(Bytes)
                                  esp_dte,                           //Task Parameter
-                                 CONFIG_USB_TASK_BASE_PRIORITY,             //Task Priority
+                                 config->event_task_priority,             //Task Priority, must higher than USB Task
                                  &(esp_dte->uart_event_task_hdl)   //Task Handler
                                 );
     ESP_MODEM_ERR_CHECK(base_ret == pdTRUE, "create uart event task failed", err_tsk_create);
