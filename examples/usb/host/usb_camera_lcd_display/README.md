@@ -1,64 +1,73 @@
-## USB Camera LCD Display Demo 说明
+[中文版本](./README.md)
 
-该示例程序通过 `ESP32-S2` 或 `ESP32-S3` 系列 USB 主机功能，实现对 USB 摄像头 `MJPEG` 数据流读取、本地解码、屏幕刷新，支持以下功能：
+## USB Camera + LCD Display Example
 
-* 支持 USB Camera 数据流获取和解析
-* 支持 JPEG 本地软件解码
-* 支持 LCD 屏幕显示
+This example implements USB camera `MJPEG` stream reading, JPEG decoding, and screen refresh via the `ESP32-S2` or `ESP32-S3` series USB host function, and supports the following functions.
 
-### 硬件准备
+* Support USB Camera data stream reading
+* Support JPEG decoding
+* Support LCD screen display
 
-* USB 摄像头选型需要满足的参数（2021.03）：
+### Hardware Requirement
 
-    1. 摄像头兼容 USB1.1 全速模式
-    2. 摄像头自带 MJPEG 压缩
-    3. 摄像头支持设置端点`wMaxPacketSize`为`512`
-    4. MJPEG 支持 **320*240** 分辨率
-    5. MJPEG 支持设置帧率到 15 帧/s
+You can use any `ESP32-S2` or `ESP32-S3` development board with [esp-iot-solution supported screen](https://docs.espressif.com/projects/espressif-esp-iot-solution/en/latest/display/screen.html)
 
-* USB 摄像头硬件接线：
-  1. USB 摄像头 VBUS 请使用 5V 电源独立供电，亦可使用 IO 控制 VBUS 通断
-  2. UBS 摄像头 D+ D- 数据线请按常规差分信号标准走线
-  3. USB 摄像头 D+ (绿线) 接 ESP32-S2/S3 GPIO20
-  4. USB 摄像头 D- (白线) 接 ESP32-S2/S3 GPIO19
+**Parameters to be met for USB camera:**
 
-### 编译示例代码
+1. Camera compatible with USB1.1 full-speed mode
+2. Camera comes with MJPEG compression
+3. The camera supports setting the interface Max Packet Size to `512`
+4. MJPEG support **320*240** resolution
+5. MJPEG supports setting frame rates up to 15 fps
 
-示例代码基于 `esp32-s2-kaluga` 开发板编写，可按以下过程直接编译烧写：
+**USB camera hardware wiring:**
 
-1. 添加 ESP-IDF 环境变量，Linux 方法如下，其它平台请查阅 [Set up the environment variables](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html#step-4-set-up-the-environment-variables)
+ 1. Please use 5V power supply for USB camera VBUS, or use IO to control VBUS ON/OFF.
+ 2. USB camera D+ D- data line please follow the regular differential signal standard alignment
+ 3. USB Camera D+ (green wire) to ESP32-S2/S3 GPIO20
+ 4. USB Camera D- (white wire) to ESP32-S2/S3 GPIO19
+
+### Build Example
+
+The example code can be used with development boards such as `ESP32-S2-Kaluga-1` based on the `ESP32-S2-WROVER` module.
+
+1. Set up the `ESP-IDF` environment variables,you can refer [Set up the environment variables](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html#step-4-set-up-the-environment-variables), Linux can using:
+
+    ```bash
+    $HOME/esp/esp-idf/export.sh
     ```
-    . $HOME/esp/esp-idf/export.sh
-    ```
-2. 添加 ESP-IOT-SOLUTION 环境变量，Linux 方法如下，其它平台请查阅 [readme](../../../../README_CN.md)
-    ```
+2. Set up the `ESP-IOT-SOLUTION` environment variables,you can refer [readme](../../../../README.md), Linux can using:
+
+    ```bash
     export IOT_SOLUTION_PATH=$HOME/esp/esp-iot-solution
     ```
-3. 根据摄像头配置描述符，[修改摄像头配置项](../../../../components/usb/uvc_stream/README.md)
-4. 设置编译目标为 `esp32s2` 或 `esp32s3`
-    ```
+3. According to the camera configuration descriptor, [Modify camera configuration items](../../../../components/usb/uvc_stream/README.md)
+4.  Set build target to `esp32s2` or `esp32s3`
+
+    ```bash
     idf.py set-target esp32s2
     ```
-5. 编译、下载、查看输出
-    ```
+
+5. Build, Flash, check log
+
+    ```bash
     idf.py build flash monitor
     ```
 
-## 使用说明
+### How to Use
 
-1. 注意 LCD 屏幕和摄像头接口接线即可
-2. 屏幕默认直接输出摄像头图像
-3. 用户可通过使能 `boot animation` 开启开机动画，验证 LCD 屏幕是否能够成功点亮
+1. Just pay attention to the LCD screen and camera interface wiring
+2. Screen will refresh camera outputs by default
+3. You can verify that the LCD function by enabling `boot animation` in menuconfig
 
-## 性能参数
+### Performance Parameters
 
-**ESP32-S2 240Mhz**：
+**ESP32-S2 240Mhz**:
 
-| 典型分辨率  | USB 典型传输帧率 | JPEG 最大解码+显示帧率* |
+| Typical resolution  | USB Typical Transfer Frame Rate | JPEG maximum decoding + display frame rate* |
 | :-----: | :--------------: | :----------------------: |
 | 320*240 |        15        |           ~12            |
 | 160*120 |        30        |           ~28            |
-|         |                  |                          |
 
-1. *JPEG 解码+ 显示帧率随 CPU 负载波动
-2. 其它分辨率以实际测试为准，或按照解码时间和分辨率正相关估算
+1. JPEG decoding + display frame rate fluctuates with CPU load
+2. Other resolutions are subject to actual testing or estimated according to the positive correlation between decoding time and resolution
