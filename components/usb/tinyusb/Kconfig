@@ -118,12 +118,6 @@ menu "TinyUSB Stack"
                 default "Espressif NET Device"
                 help
                     Name of the NET device.
-            config TINYUSB_DESC_MAC_STRING
-                depends on TINYUSB_NET_ENABLED
-                string "MAC String"
-                default ""
-                help
-                    STRID_MAC.
             config TINYUSB_DESC_BTH_STRING
                 depends on TINYUSB_BTH_ENABLED
                 string "BTH String"

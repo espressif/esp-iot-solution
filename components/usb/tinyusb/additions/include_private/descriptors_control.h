@@ -130,7 +130,10 @@ enum {
 
     ALT_CONFIG_TOTAL_LEN = TUD_CONFIG_DESC_LEN + 
                            TUD_CDC_ECM_DESC_LEN * CFG_TUD_NET + 
-                           TUD_CDC_DESC_LEN * CFG_TUD_CDC
+                           TUD_CDC_DESC_LEN * CFG_TUD_CDC +
+                           TUD_MSC_DESC_LEN * CFG_TUD_MSC + 
+                           TUD_HID_DESC_LEN * CFG_TUD_HID +
+                           TUD_BTH_DESC_LEN * CFG_TUD_BTH
 };
 
 bool tusb_desc_set;
