@@ -14,6 +14,7 @@
 
 #include "esp_log.h"
 #include "descriptors_control.h"
+#include "dfu_device.h"
 
 static const char *TAG = "tusb_desc";
 static tusb_desc_device_t s_descriptor;
@@ -27,6 +28,8 @@ uint8_t const desc_hid_report[] = {
     TUD_HID_REPORT_DESC_MOUSE(HID_REPORT_ID(REPORT_ID_MOUSE))
 };
 #endif
+
+#define FUNC_ATTRS (DFU_ATTR_CAN_UPLOAD | DFU_ATTR_CAN_DOWNLOAD | DFU_ATTR_MANIFESTATION_TOLERANT)
 
 uint8_t const desc_configuration[] = {
 #if CONFIG_TINYUSB_NET_ECM
@@ -62,6 +65,12 @@ uint8_t const desc_configuration[] = {
     // Interface number, string index, protocol, report descriptor len, EP In address, size & polling interval
     TUD_HID_DESCRIPTOR(ITF_NUM_HID, STRID_HID_INTERFACE, HID_PROTOCOL_NONE, sizeof(desc_hid_report), (0x80 | EPNUM_HID_DATA), 16, 10)
 #endif
+
+#if CFG_TUD_DFU
+    // Interface number, Alternate count, starting string index, attributes, detach timeout, transfer size
+    TUD_DFU_DESCRIPTOR(ITF_NUM_DFU, DFU_ALT_COUNT, STRID_DFU_INTERFACE, FUNC_ATTRS, 1000, CFG_TUD_DFU_XFER_BUFSIZE),
+#endif
+
 };
 
 // =============================================================================

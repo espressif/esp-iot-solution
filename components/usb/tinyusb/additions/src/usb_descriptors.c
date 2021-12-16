@@ -140,5 +140,11 @@ tusb_desc_strarray_device_t descriptor_str_kconfig = {
 #if CFG_TUD_BTH
     CONFIG_TINYUSB_DESC_BTH_STRING,          // BTH
 #endif
+
+#if CFG_TUD_DFU
+    "FLASH",                       // 4: DFU Partition 1
+    "EEPROM",                      // 5: DFU Partition 2
+#endif
+
 };
 /* End of Kconfig driven Descriptor */
