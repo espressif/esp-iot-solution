@@ -47,10 +47,10 @@ ESP BOARD          USB CONNECTOR (type A)
 
 ### 2.3 软件准备
 
-1. 确认 ESP-IDF 环境成功搭建，并按照以下命令回退到指定 commit。
+1. 确认 ESP-IDF 环境成功搭建。
     ```
-    >git pull
-    >git reset --hard 5f38b766a8
+    >git checkout release/v4.4
+    >git pull origin release/v4.4
     >git submodule update --init --recursive
     >
     ```
