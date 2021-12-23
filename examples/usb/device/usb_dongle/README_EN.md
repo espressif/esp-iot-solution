@@ -52,11 +52,11 @@ Refer to `soc/usb_pins.h` to find the real GPIO number of **USBPHY_DP_NUM** and 
 
 ### 2.3 Software Preparation
 
-* Confirm that the ESP-IDF environment is successfully set up, and fall back to the specified commit.
+* Confirm that the ESP-IDF environment is successfully set up.
 
     ```
-    >git pull
-    >git reset --hard 5f38b766a8
+    >git checkout release/v4.4
+    >git pull origin release/v4.4
     >git submodule update --init --recursive
     >
     ```
