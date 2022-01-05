@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include "esp_log.h"
-#include "board.h"
+#include "iot_board.h"
 #include "iot_sensor_hub.h"
 
 #define SENSOR_PERIOD CONFIG_SENSOR_EXAMPLE_PERIOD

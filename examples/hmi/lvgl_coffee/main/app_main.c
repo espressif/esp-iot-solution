@@ -22,7 +22,7 @@
 #include "freertos/semphr.h"
 #include "freertos/queue.h"
 #include "freertos/event_groups.h"
-#include "board.h"
+#include "iot_board.h"
 
 /* LVGL includes */
 #include "lvgl_gui.h"

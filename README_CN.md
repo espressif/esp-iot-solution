@@ -77,7 +77,7 @@ project(empty-project)
 **方法 2**. 添加 ESP-IoT-Solution 指定组件到工程目录：可直接在工程的 CMakeLists.txt 中添加以下代码：
 
 ```
-set(EXTRA_COMPONENT_DIRS "${EXTRA_COMPONENT_DIRS} ${IOT_SOLUTION_PATH}/components/{component_you_choose}")
+set(EXTRA_COMPONENT_DIRS "${EXTRA_COMPONENT_DIRS} $ENV{IOT_SOLUTION_PATH}/components/{component_you_choose}")
 ```
 
 **方法 3**. 复制 ESP-IoT-Solution 指定组件到工程目录：直接将该组件和其依赖的组件，复制粘贴至工程的 components 文件夹。

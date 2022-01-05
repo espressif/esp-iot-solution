@@ -80,7 +80,7 @@ project(empty-project)
 Add the following code directly to the project's CMakeLists.txt, please add the `REQUIRES` components also:
 
 ```
-set(EXTRA_COMPONENT_DIRS "${EXTRA_COMPONENT_DIRS} ${IOT_SOLUTION_PATH}/components/{component_you_choose}")
+set(EXTRA_COMPONENT_DIRS "${EXTRA_COMPONENT_DIRS} $ENV{IOT_SOLUTION_PATH}/components/{component_you_choose}")
 ```
 
 **Method 3**. Copy specified components of ESP-IoT-solution to the project's `components` directory

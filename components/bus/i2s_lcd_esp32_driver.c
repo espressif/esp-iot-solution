@@ -16,6 +16,7 @@
 #if CONFIG_IDF_TARGET_ESP32
 
 #include <stdio.h>
+#include <inttypes.h>
 #include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -33,6 +34,12 @@
 #include "hal/gpio_ll.h"
 #include "esp_log.h"
 #include "i2s_lcd_driver.h"
+
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+#include "esp_private/periph_ctrl.h"
+#else
+#include "driver/periph_ctrl.h"
+#endif
 
 static const char *TAG = "ESP32_I2S_LCD";
 
@@ -399,7 +406,7 @@ static esp_err_t lcd_dma_config(i2s_lcd_obj_t *i2s_lcd_obj, uint32_t max_dma_buf
     i2s_lcd_obj->dma_node_cnt = (i2s_lcd_obj->dma_buffer_size) / i2s_lcd_obj->dma_node_buffer_size; // Number of DMA nodes
     i2s_lcd_obj->dma_half_node_cnt = i2s_lcd_obj->dma_node_cnt / 2;
 
-    ESP_LOGI(TAG, "lcd_buffer_size: %d, lcd_dma_size: %d, lcd_dma_node_cnt: %d", i2s_lcd_obj->dma_buffer_size, i2s_lcd_obj->dma_node_buffer_size, i2s_lcd_obj->dma_node_cnt);
+    ESP_LOGI(TAG, "lcd_buffer_size: %"PRIu32", lcd_dma_size: %"PRIu32", lcd_dma_node_cnt: %"PRIu32"", i2s_lcd_obj->dma_buffer_size, i2s_lcd_obj->dma_node_buffer_size, i2s_lcd_obj->dma_node_cnt);
 
     i2s_lcd_obj->dma    = (lldesc_t *)heap_caps_calloc(i2s_lcd_obj->dma_node_cnt, sizeof(lldesc_t), MALLOC_CAP_DMA | MALLOC_CAP_8BIT);
     i2s_lcd_obj->dma_buffer = (uint8_t *)heap_caps_calloc(i2s_lcd_obj->dma_buffer_size, sizeof(uint8_t), MALLOC_CAP_DMA | MALLOC_CAP_8BIT);

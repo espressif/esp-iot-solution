@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include "esp_log.h"
-#include "board.h"
+#include "iot_board.h"
 #include "iot_sensor_hub.h"
 
 #define LIGHT_SENSOR_ID SENSOR_BH1750_ID

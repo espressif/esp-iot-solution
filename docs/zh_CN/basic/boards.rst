@@ -20,9 +20,17 @@ Boards 组件的结构如下：
 
     Boards 组件结构框图
 
-* Boards 组件中包含多个以开发板名称命名的文件夹，以及组件的 ``CMakeLists.txt`` 和 ``Kconfig.projbuild``，因此 ``Boards`` 的配置项将显示在 ``menuconfig`` 的顶级目录；
-* 开发板文件夹必须包含 ``board.h`` 和 ``board.c``，非必须文件包括 ``kconfig.in`` 等，该文件提供了该开发板特有的配置项。
+* Boards 组件中包含以下内容：
 
+    * ``board_common.h``，包含了公有 API 的函数声明
+    * ``board_common.c``，包含了对公有 API 的函数实现（虚函数）
+    * ``Kconfig.projbuild``，包含了公有的配置项
+
+* 以开发板名称命名的子文件夹包含以下内容：
+
+    * ``iot_board.h`` 提供了开发板的引脚资源定义，该开发板特有的自定义 API 函数声明
+    * ``board.c`` 提供了公有 API 的用户实现（默认虚函数），自定义 API 函数实现
+    * ``kconfig.in``，提供了该开发板特有的自定义配置项。
 
 .. note::
 
@@ -49,7 +57,7 @@ Boards 组件的结构如下：
         }
 
         /*get the i2c0 bus handle with a board_res_id,
-        BOARD_I2C0_ID is declared in board_res_id_t in each board.h*/
+        BOARD_I2C0_ID is declared in board_res_id_t in each iot_board.h*/
         bus_handle_t i2c0_bus_handle = (bus_handle_t)iot_board_get_handle(BOARD_I2C0_ID);
         if (i2c0_bus_handle == NULL) {
             goto error;
@@ -69,7 +77,7 @@ Boards 组件的结构如下：
 基于 ``Boards`` 开发的应用程序，可以使用以下方法切换和配置开发板：
 
 1. 选择目标开发板：在 ``menuconfig->Board Options->Choose Target Board`` 中选择一个开发板；
-2. 配置开发板参数：``xxxx Board Options`` 中包含当前开发板提供的配置项，例如配置是否在开发板初始化期间初始化 ``i2c_bus``、启动时传感器外设的供电状态等。可配置项由该开发板的维护者指定；
+2. 配置开发板参数：``Board Common Options`` 中包含公有的开发板配置项，例如配置是否在开发板初始化期间初始化 ``i2c_bus``; ``XXX Board Options`` 中包含了该开发板特有的配置项，例如切换开发板供电状态等。
 3. 使用 ``idf.py build flash monitor`` 重新编译并下载代码。
 
 .. note::
@@ -95,6 +103,12 @@ Boards 组件的结构如下：
  |esp32s2-saola|_          
 ----------------------------   ---------------------------
  `esp32s2-saola`_          
+----------------------------   ---------------------------
+       ESP32-S3 开发板    
+----------------------------------------------------------
+ |esp32s3-devkitc-v1|_           |esp32s3_usb_otg_ev|_ 
+----------------------------   ---------------------------
+ `esp32s3-devkitc-v1`_           |esp32s3_usb_otg_ev|_ 
 ============================   ===========================
 
 .. |esp32-devkitc| image:: ../../_static/esp32-devkitc-v4-front.png
@@ -109,6 +123,12 @@ Boards 组件的结构如下：
 .. |esp32s2-saola| image:: ../../_static/esp32s2-saola.png
 .. _esp32s2-saola: https://docs.espressif.com/projects/esp-idf/en/latest/esp32s2/hw-reference/esp32s2/user-guide-saola-1-v1.2.html
 
+.. |esp32s3-devkitc-v1| image:: ../../_static/esp32-s3-devkitc-1-v1-isometric.png
+.. _esp32s3-devkitc-v1: https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/hw-reference/esp32s3/user-guide-devkitc-1.html
+
+.. |esp32s3_usb_otg_ev| image:: ../../_static/pic_product_esp32_s3_otg.png
+.. _esp32s3_usb_otg_ev: https://docs.espressif.com/projects/espressif-esp-dev-kits/en/latest/esp32s3/esp32-s3-usb-otg/index.html
+
 添加新的开发板
 ----------------
 
@@ -116,75 +136,29 @@ Boards 组件的结构如下：
 
 添加开发板过程：
 
-1. 按照 :ref:`组件文件结构 <boards_component>` 准备必要的 ``board.h`` 和 ``board.c``，可参考 :ref:`boards_common_api`；
-2. 按照需求在 ``kconfig.in`` 添加该开发板特有的配置项；
-3. 将开发板信息添加到 ``Kconfig.projbuild``，供用户选择；
-4. 将开发板目录添加到 ``CMakeLists.txt``，使其能被编译系统索引。如果需要支持老的 ``make`` 编译系统，请同时修改 ``component.mk``。
+1. 按照 :ref:`组件文件结构 <boards_component>` 准备必要的 ``iot_board.h``；
+2. 按照需求在 ``board_xxx.c`` 添加该开发板特有的函数实现，或对公有的弱函数进行覆盖；
+3. 按照需求在 ``kconfig.in`` 添加该开发板特有的配置项；
+4. 将开发板信息添加到 ``Kconfig.projbuild``，供用户选择；
+5. 将开发板目录添加到 ``CMakeLists.txt``，使其能被编译系统索引。如果需要支持老的 ``make`` 编译系统，请同时修改 ``component.mk``。
 
 .. note::
 
     可复制 ``Boards`` 中已添加的开发板文件夹，通过简单修改完成开发板的添加。
 
-.. _boards_common_api:
-
-必须实现的 API
-+++++++++++++++++
-
-.. code:: c
-
-    /**
-    * @brief Board level init.
-    *        Peripherals can be chosen through menuconfig, which will be initialized with default configurations during iot_board_init.
-    *        After board init, initialized peripherals can be referenced by handles directly.
-    * 
-    * @return esp_err_t 
-    */
-    esp_err_t iot_board_init(void);
-
-    /**
-    * @brief Board level deinit.
-    *        After board deinit, initialized peripherals will be deinit and related handles will be set to NULL.
-    * 
-    * @return esp_err_t 
-    */
-    esp_err_t iot_board_deinit(void);
-
-    /**
-    * @brief Check if board is initialized 
-    * 
-    * @return true if board is initialized
-    * @return false if board is not initialized
-    */
-    bool iot_board_is_init(void);
-
-    /**
-    * @brief Using resource's ID declared in board_res_id_t to get board level resource's handle
-    * 
-    * @param id Resource's ID declared in board_res_id_t
-    * @return board_res_handle_t Resource's handle
-    * if no related handle,NULL will be returned
-    */
-    board_res_handle_t iot_board_get_handle(board_res_id_t id);
-
-    /**
-    * @brief Get board information
-    * 
-    * @return String include BOARD_NAME etc. 
-    */
-    char* iot_board_get_info();
-
 组件依赖
 ---------
 
-- 公共依赖项：bus 组件。
+- 公共依赖项：bus, button, led_strip
 
 已适配 IDF 版本
 ---------------
 
-- ESP-IDF v4.0 及以上版本。
+- ESP-IDF v4.4 及以上版本。
 
 已适配芯片
 ----------
 
 -  ESP32
 -  ESP32-S2
+-  ESP32-S3

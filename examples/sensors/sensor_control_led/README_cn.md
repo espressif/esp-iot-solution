@@ -6,7 +6,7 @@
 
 ### 硬件需求
 
-1. 本示例默认使用 `common_components/boards` 组件中包含的 `esp32-meshkit-sense` 开发板，您也可根据 `examples/common_components/boards/esp32-meshkit-sense/board.h` 中的开发板引脚定义使用任意 `ESP32` 或 `ESP32S2` 开发板实现; 
+1. 本示例默认使用 `common_components/boards` 组件中包含的 `esp32-meshkit-sense` 开发板，您也可根据 `examples/common_components/boards/esp32-meshkit-sense/iot_board.h` 中的开发板引脚定义使用任意 `ESP32` 或 `ESP32S2` 开发板实现; 
 2. 本示例默认使用 `sensor_hub` 中已支持光线传感器 `BH1750` ( `sensor_id = SENSOR_BH1750_ID` ) 进行实验，您可以直接切换 `sensor_hub` 中支持的其它光线传感器，或按照接口定义自行实现新的光线传感器。
 
 3. 传感器接线图：

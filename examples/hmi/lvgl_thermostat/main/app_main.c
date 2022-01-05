@@ -18,7 +18,7 @@
 #include "freertos/task.h"
 #include "esp_log.h"
 #include "nvs_flash.h"
-#include "board.h"
+#include "iot_board.h"
 #include "lvgl_gui.h"
 
 #define TAG "thermostat"
