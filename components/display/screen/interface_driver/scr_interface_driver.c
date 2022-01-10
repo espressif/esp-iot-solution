@@ -162,7 +162,7 @@ typedef struct {
 
 static esp_err_t spi_lcd_driver_init(const scr_interface_spi_config_t *cfg, interface_spi_handle_t *out_interface_spi)
 {
-    LCD_IFACE_CHECK(GPIO_IS_VALID_OUTPUT_GPIO(cfg->pin_num_cs), "gpio cs invalid", ESP_ERR_INVALID_ARG);
+    LCD_IFACE_CHECK(GPIO_IS_VALID_OUTPUT_GPIO(cfg->pin_num_cs)||cfg->pin_num_cs==-1, "gpio cs invalid", ESP_ERR_INVALID_ARG);
     LCD_IFACE_CHECK(GPIO_IS_VALID_OUTPUT_GPIO(cfg->pin_num_dc), "gpio dc invalid", ESP_ERR_INVALID_ARG);
 
     //Initialize non-SPI GPIOs
