@@ -105,7 +105,21 @@ uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid)
     if ( index == 0) {
         memcpy(&_desc_str[1], s_str_descriptor[0], 2);
         chr_count = 1;
-    } else {
+    }  
+#if CONFIG_TINYUSB_NET_ECM
+    else if (STRID_MAC == index)
+    {
+        // Convert MAC address into UTF-16
+
+        for (unsigned i=0; i<sizeof(tud_network_mac_address); i++)
+        {
+        _desc_str[1+chr_count++] = "0123456789ABCDEF"[(tud_network_mac_address[i] >> 4) & 0xf];
+        _desc_str[1+chr_count++] = "0123456789ABCDEF"[(tud_network_mac_address[i] >> 0) & 0xf];
+        }
+    } 
+#endif
+    else 
+    {
         // Convert ASCII string into UTF-16
 
         if ( index >= sizeof(s_str_descriptor) / sizeof(s_str_descriptor[0]) ) {

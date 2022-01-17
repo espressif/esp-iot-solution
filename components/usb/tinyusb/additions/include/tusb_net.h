@@ -40,6 +40,10 @@ esp_err_t pkt_wifi2usb(void *buffer, uint16_t len, void *eb);
  */
 void tusb_net_init(void);
 
+void ecm_close(void);
+
+void ecm_open(void);
+
 #ifdef __cplusplus
 }
 #endif

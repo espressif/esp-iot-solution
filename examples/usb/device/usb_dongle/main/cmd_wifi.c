@@ -47,11 +47,11 @@
 #define NET_CONNECT() rndis_connect()
 #define NET_DISCONNECT() rndis_disconnect()
 #else
-#define NET_CONNECT()
-#define NET_DISCONNECT()
+#define NET_CONNECT()  ecm_open()
+#define NET_DISCONNECT()  ecm_close()
 #endif
 
-static const char *TAG = "rndis_wifi";
+static const char *TAG = "esp_network";
 
 static TaskHandle_t Smart_Config_Handle = NULL;
 

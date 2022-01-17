@@ -228,6 +228,34 @@ uint16_t netd_open(uint8_t rhport, tusb_desc_interface_t const * itf_desc, uint1
   return drv_len;
 }
 
+void ecm_close(void)
+{
+  printf("Ecm close\n");
+  tusb_control_request_t notify_data =
+  {
+    .bmRequestType = 0xA1,
+    .bRequest = 0 /* NETWORK_CONNECTION aka NetworkConnection */,
+    .wValue = 0 /* Disconnected */,
+    .wLength = 0,
+  };
+  notify_data.wIndex = _netd_itf.itf_num;
+  netd_report((uint8_t *)&notify_data, sizeof(notify_data));
+}
+
+void ecm_open(void)
+{
+  printf("Ecm OPEN\n");
+  tusb_control_request_t notify_data =
+  {
+    .bmRequestType = 0xA1,
+    .bRequest = 0 /* NETWORK_CONNECTION aka NetworkConnection */,
+    .wValue = 1 /* Connected */,
+    .wLength = 0,
+  };
+  notify_data.wIndex = _netd_itf.itf_num;
+  netd_report((uint8_t *)&notify_data, sizeof(notify_data));
+}
+
 static void ecm_report(bool nc)
 {
   notify.ecm_buf = (nc) ? ecm_notify_nc : ecm_notify_csc;

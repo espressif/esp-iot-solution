@@ -126,7 +126,7 @@ tusb_desc_strarray_device_t descriptor_str_kconfig = {
 
 #if CFG_TUD_NET
     CONFIG_TINYUSB_DESC_NET_STRING,          // NET Interface
-    CONFIG_TINYUSB_DESC_MAC_STRING,          // MAC
+    "",                                      // MAC
 #endif
 
 #if CFG_TUD_MSC
