@@ -39,7 +39,17 @@
 #include "esp_private/wifi.h"
 
 #include "tusb_net.h"
+#include "tinyusb.h"
 #include "data_back.h"
+
+#ifdef CONFIG_TINYUSB_NET_RNDIS
+#include "rndis_protocol.h"
+#define NET_CONNECT() rndis_connect()
+#define NET_DISCONNECT() rndis_disconnect()
+#else
+#define NET_CONNECT()
+#define NET_DISCONNECT()
+#endif
 
 static const char *TAG = "rndis_wifi";
 
@@ -232,10 +242,14 @@ esp_err_t wifi_cmd_sta_join(const char* ssid, const char* pass)
         strlcpy((char*) wifi_config.sta.password, pass, sizeof(wifi_config.sta.password));
     }
 
+    // disconnect USB 
+    NET_DISCONNECT();
+
     if (bits & CONNECTED_BIT) {
         reconnect = false;
         xEventGroupClearBits(wifi_event_group, CONNECTED_BIT);
         ESP_ERROR_CHECK( esp_wifi_disconnect() );
+
         xEventGroupWaitBits(wifi_event_group, DISCONNECTED_BIT, 0, 1, portTICK_RATE_MS);
     }
 
@@ -245,6 +259,9 @@ esp_err_t wifi_cmd_sta_join(const char* ssid, const char* pass)
     esp_wifi_connect();
 
     xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT, 0, 1, 5000/portTICK_RATE_MS);
+
+    // connect USB 
+    NET_CONNECT();
 
     return ESP_OK;
 }
@@ -256,7 +273,10 @@ esp_err_t wif_cmd_disconnect_wifi(void)
         reconnect = false;
         xEventGroupClearBits(wifi_event_group, CONNECTED_BIT);
         ESP_ERROR_CHECK( esp_wifi_disconnect() );
+
         xEventGroupWaitBits(wifi_event_group, DISCONNECTED_BIT, 0, 1, portTICK_RATE_MS);
+        // disconnect USB 
+        NET_DISCONNECT();
         return ESP_OK;
     }
     return ESP_FAIL;
@@ -344,12 +364,20 @@ static void smartconfig_task(void * parm)
     ESP_ERROR_CHECK(esp_smartconfig_set_type(SC_TYPE_ESPTOUCH));
     smartconfig_start_config_t cfg = SMARTCONFIG_START_CONFIG_DEFAULT();
     wif_cmd_disconnect_wifi();
+
+    // disconnect USB 
+    NET_DISCONNECT();
+
     ESP_ERROR_CHECK(esp_smartconfig_start(&cfg));
     while (1) {
         uxBits = xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT | ESPTOUCH_DONE_BIT, true, false, portMAX_DELAY);
         if(uxBits & CONNECTED_BIT) {
             ESP_LOGI(TAG, "WiFi Connected to ap");
         }
+
+        // connect USB 
+        NET_CONNECT();
+        
         if(uxBits & ESPTOUCH_DONE_BIT) {
             ESP_LOGI(TAG, "smartconfig over");
             size_t lenth = sprintf(sm_buf, "OK\r\n>");

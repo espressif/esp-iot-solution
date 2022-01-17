@@ -302,6 +302,12 @@ typedef struct {
 	uint32_t		rxbad;
 } usb_eth_stat_t;
 
+//void rndis_indicate_status(int status);
+
+void rndis_disconnect(void);
+
+void rndis_connect(void);
+
 #endif /* _RNDIS_H */
 
 /** @} */
