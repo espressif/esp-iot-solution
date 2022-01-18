@@ -59,9 +59,9 @@ build_examples_00_with_idf_v4.3:
   <<: *build_examples_template
   image: espressif/idf:release-v4.3
 
-build_examples_00_with_idf_master:
+build_examples_00_with_idf_v4.4:
   <<: *build_examples_template
-  image: espressif/idf:latest
+  image: espressif/idf:release-v4.4
 
 build_docs:
   stage: build
