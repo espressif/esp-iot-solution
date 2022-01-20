@@ -567,6 +567,16 @@ esp_err_t i2s_lcd_write_cmd(i2s_lcd_handle_t handle, uint16_t cmd)
     return ESP_OK;
 }
 
+esp_err_t i2s_lcd_write_command(i2s_lcd_handle_t handle, const uint8_t *cmd, uint32_t length)
+{
+    i2s_lcd_driver_t *i2s_lcd_drv = (i2s_lcd_driver_t *)handle;
+    I2S_CHECK(NULL != i2s_lcd_drv, "handle pointer invalid", ESP_ERR_INVALID_ARG);
+    gpio_set_level(i2s_lcd_drv->rs_io_num, LCD_CMD_LEV);
+    i2s_lcd_drv->i2s_write_data_func(i2s_lcd_drv->i2s_lcd_obj, (uint8_t *)cmd, length);
+    gpio_set_level(i2s_lcd_drv->rs_io_num, LCD_DATA_LEV);
+    return ESP_OK;
+}
+
 esp_err_t i2s_lcd_write(i2s_lcd_handle_t handle, const uint8_t *data, uint32_t length)
 {
     i2s_lcd_driver_t *i2s_lcd_drv = (i2s_lcd_driver_t *)handle;
