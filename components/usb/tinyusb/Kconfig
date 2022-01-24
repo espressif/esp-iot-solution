@@ -235,6 +235,21 @@ menu "TinyUSB Stack"
                     BTH ISO ALT COUNT.
         endmenu # "Bluetooth Host Device Class"
 
+        menu "Firmware Upgrade Class (DFU)"
+            config TINYUSB_DFU_ENABLED
+                bool "Enable TinyUSB DFU feature"
+                default n
+                help
+                    Enable TinyUSB DFU feature. 
+
+            config TINYUSB_DFU_BUFSIZE
+                depends on TINYUSB_DFU_ENABLED
+                int "DFU XFER BUFFSIZE"
+                default 512
+                help
+                    DFU XFER BUFFSIZE.
+        endmenu # "Firmware Upgrade Class"
+
     endif # TINYUSB
 
 endmenu # "TinyUSB Stack"

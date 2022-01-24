@@ -4,8 +4,9 @@
 
 本示例程序演示 ESP32-S 系列芯片如何实现 USB Dongle 设备功能，支持以下功能：
 
-* 支持 Host 主机通过 USB-RNDIS 无线上网
+* 支持 Host 主机通过 USB-ECM/RNDIS 无线上网
 * 支持 Host 主机通过 USB-BTH 进行 BLE 扫描、广播、配对、连接、绑定以及读写数据
+* 支持 Host 主机通过 USB-DFU 进行设备升级
 * 支持 Host 主机通过 USB-CDC、UART 对 ESP32-S 系列设备进行通信和控制
 * 支持多种 system、Wi-Fi 控制命令，使用 FreeRTOS-Plus-CLI 命令行接口，易拓展更多命令
 * 支持热插拔
@@ -86,19 +87,20 @@ ESP BOARD          USB CONNECTOR (type A)
 
 目前 USB-Dongle 支持以下四种组合选项：
 
-| USB-RNDIS | USB-BTH | USB-CDC | UART |
-| :-------: | :-----: | :-----: | :--: |
-|     √     |         |         |  √   |
-|     √     |         |    √    |      |
-|     √     |    √    |         |  √   |
-|           |    √    |         |  √   |
+| USB-ECM/RNDIS | USB-BTH | USB-CDC | UART | USB-DFU |
+| :-----------: | :-----: | :-----: | :--: | :-----: |
+|       √       |         |         |  √   |    √    |
+|       √       |         |    √    |      |    √    |
+|       √       |    √    |         |  √   |    √    |
+|               |    √    |         |  √   |    √    |
 
-* 本软件默认使能 RNDIS、CDC。
+* 本软件默认使能 ECM、CDC。
 * UART 默认在 CDC 使能时禁用。
+* UART 可以用于命令通讯，与此同时，你也可以用于蓝牙通讯。
 * 可以通过 `component config -> TinyUSB Stack` 选择 USB 设备。
-* 同时使能 RNDIS 和 BTH 时，建议禁用 CDC，采用 UART 发送命令，可以通过 `Example Configuration` 进行串口配置。
+* 同时使能 RNDIS/ECM 和 BTH 时，建议禁用 CDC，采用 UART 发送命令，可以通过 `Example Configuration` 进行串口配置。
 
->由于目前硬件限制，EndPoint 不能超过一定数量，故不支持 RNDIS、BTH、CDC 同时使能。
+>由于目前硬件限制，EndPoint 不能超过一定数量，故不支持 ECM/RNDIS、BTH、CDC 同时使能。
 
 ### 2.5 固件编译&烧录
 
@@ -150,10 +152,37 @@ ESP BOARD          USB CONNECTOR (type A)
 
     >与 ESP 设备进行通信时命令末尾需加上 LF（\n）
 
-4. 若使能 USB-RNDIS，则可通过指令来控制 ESP 设备进行配网操作
+4. 若使能 USB-ECM/RNDIS，则可通过指令来控制 ESP 设备进行配网操作
 
 * [通过 sta 命令来连接至对应路由器](./Commands.md#3sta)
 * [通过 startsmart 命令开启 smartconfig 配网](./Commands.md#5smartconfig)
+
+### 2.7 网络设备常见问题
+
+- #### Windows
+
+Windows 平台只支持 RNDIS， USB ECM 无法识别
+
+- #### MAC
+
+MAC 平台只支持 ECM，USB RNDIS 无法识别
+
+- #### Linux
+
+Linux 平台同时支持 ECM 和 RNDIS，不过使用 RNDIS 时，如果切换不同的路由器，Linux 下的网络设备并不会主动重新获取 IP。
+
+如果使用嵌入式 Linux， 没有显示网络设备，可能是在内核中没有使能上述两个模块，在 Linux 内核中使能如下两个配置项，分别用于支持 CDC-ECM 和 RNDIS。
+
+```
+Device Drivers   --->
+	Network Device Support --->
+		Usb Network Adapters --->
+			Multi-purpose USB Networking Framework --->
+				CDC Ethernet Support
+				Host For RDNIS and ActiveSync Devices
+```
+
+如果确定使能上述模块依然无法看到网络设备，请通过 `dmesg` 命令查看内核信息， 确定 Linux 内核中是否有探测到 ESP32-S USB 网络设备，以及是否有错误打印信息。
 
 ## 3. 配置连接 Wi-Fi 网络
 
@@ -170,31 +199,6 @@ sta -s <ssid> -p [<password>]
 **说明**
 
 * `password` 为选填参数。
-
-* 当设备已经连接到一个路由器，但您需要切换连接到其他路由器时，则需要重新加载网卡设备，在执行配网命令后执行以下操作：
-
-    >查询 USB Ethernet name
-    >
-    >```
-    >>ifconfig
-    >>
-    >```
-    >
-    >卸载 USB 网卡
-    >
-    >```
-    >>ifconfig <USB Ethernet name> down
-    >>
-    >```
-    >
-    >装载 USB 网卡 
-    >
-    >```
-    >>ifconfig <USB Ethernet name> up
-    >>
-    >```
-    >
-    >* `USB Ethernet name` 为查询出来的网卡名称
 
 ### [方法 2. 通过 smartconfig 连接至 Wi-Fi 路由器](./Commands.md#5smartconfig)
 
@@ -214,35 +218,57 @@ sta -s <ssid> -p [<password>]
 smartconfig 1
 ```
 
-**说明**
-
-* 当设备已经连接到一个路由器，但您需要切换连接到其他路由器时，则需要重新加载网卡设备，在执行配网命令后执行以下操作：
-
-    >查询 USB Ethernet name
-    >
-    >```
-    >>ifconfig
-    >>
-    >```
-    >
-    >卸载 USB 网卡
-    >
-    >```
-    >>ifconfig <USB Ethernet name> down
-    >>
-    >```
-    >
-    >装载 USB 网卡 
-    >
-    >```
-    >>ifconfig <USB Ethernet name> up
-    >>
-    >```
-    >
-    >* `USB Ethernet name` 为查询出来的网卡名称
-
 ## 4. 命令说明
 
 [Command](./Commands.md)
 
 注意：Wi-Fi 相关命令只有在 USB Network Class 使能时才可以使用. 
+
+## 5. 如何使用 USB-DFU 对设备升级
+
+在使用  DFU 对设备升级之前，请确保已经在配置项中使能了  DFU 功能
+
+```
+component config → TinyUSB Stack→ Use TinyUSB Stack → Firmware Upgrade Class (DFU) → Enable TinyUSB DFU feature
+```
+
+#### Ubuntu
+
+在 Ubuntu 环境下首先需要安装 DFU 工具
+
+```
+sudo apt install dfu-util
+```
+
+使用如下命令进行升级操作
+
+```
+sudo dfu-util -d <VendorID> -a 0 -D <OTA_BIN_PATH>
+```
+
+其中：
+
+1. VendorID 为 USB vendor ID, 缺省为 0x303A
+2. OTA_BIN_PATH 为需要升级的固件
+
+#### Windows
+
+1. 在 Windows 平台首先需要下载 [dfu-util](http://dfu-util.sourceforge.net/releases/dfu-util-0.9-win64.zip)。
+
+2. dfu-util 使用 libusb 访问 USB 设备，这要求我们需要在 Windows 上安装 WinUSB 驱动，可以使用 [Zadig 工具](http://zadig.akeo.ie/) 安装。
+
+3. 打开命令行窗口， 将 dfu-util.exe 拖进去，然后执行如下命令进行升级操作
+
+   ```
+   dfu-util.exe -d <VendorID> -a 0 -D <OTA_BIN_PATH>
+   ```
+
+   其中：
+
+   1. VendorID 为 USB vendor ID, 缺省为 0x303A
+   2. OTA_BIN_PATH 为需要升级的固件
+
+#### 常见问题和错误
+
+1.  各平台 dfu-util 工具安装错误的问题请参考[此链接](https://support.particle.io/hc/en-us/articles/360039251394-Installing-DFU-util) 。
+2. dfu-util 执行时打印 “No DFU capable USB device available”， 这说明 dfu-util 没有探测到 ESP32-S 芯片的 DFU 设备，请确保在配置项已经使能 DFU 功能。在 Ubuntu 中，请确保使用了管理员权限操作。

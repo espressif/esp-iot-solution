@@ -6,9 +6,10 @@ This example shows how to set up ESP32-S chip to work as a USB Dongle Device.
 
 Supports the following functions:
 
-* Support Host to surf the Internet wirelessly via USB-RNDIS.
+* Support Host to surf the Internet wirelessly via USB-ECM/RNDIS.
 * Add BLE devices via USB-BTH, support scan, broadcast, connect and other functions.
 * Support Host to communicate and control ESP32-S series devices via USB-CDC or UART.
+* Support Host to upgrade device using USB-DFU.
 * Support system commands and Wi-Fi control commands. It uses FreeRTOS-Plus-CLI interfaces, so it is easy to add more commands.
 * Support hot swap.
 
@@ -93,19 +94,20 @@ Refer to `soc/usb_pins.h` to find the real GPIO number of **USBPHY_DP_NUM** and 
 
 Currently USB-Dongle supports the following four combination options.
 
-| RNDIS | BTH  | CDC  | UART |
-| :---: | :--: | :--: | :--: |
-|   √   |      |      |  √   |
-|   √   |      |  √   |      |
-|   √   |  √   |      |  √   |
-|       |  √   |      |  √   |
+| ECM/RNDIS | BTH  | CDC  | UART | DFU  |
+| :-------: | :--: | :--: | :--: | :--: |
+|     √     |      |      |  √   |  √   |
+|     √     |      |  √   |      |  √   |
+|     √     |  √   |      |  √   |  √   |
+|           |  √   |      |  √   |  √   |
 
 * UART is disabled by default when CDC is enabled.
-* The project enables RNDIS and CDC by default.
+* UART can be used for command communication, and you can also use Bluetooth for communication.
+* The project enables ECM and CDC by default.
 * You can select USB Device through `component config -> TinyUSB Stack`.
-* When RNDIS and BTH are enabled at the same time, it is recommended to disable CDC, use UART to send commands, and configure the serial port through `Example Configuration`.
+* When ECM/RNDIS and BTH are enabled at the same time, it is recommended to disable CDC, use UART to send commands, and configure the serial port through `Example Configuration`.
 
->Due to current hardware limitations, the number of EndPoints cannot exceed a certain number, so RNDIS, BTH, and CDC should not be all enabled at the same time.
+>Due to current hardware limitations, the number of EndPoints cannot exceed a certain number, so ECM/RNDIS, BTH, and CDC should not be all enabled at the same time.
 
 ### 2.5 build & flash & monitor
 
@@ -161,6 +163,33 @@ You can use the following command to build and flash the firmware.
     * [Connect to target AP by sta command](./Commands_EN.md#3sta)
     * [Connect to target AP by startsmart command (SmartConfig)](./Commands_EN.md#5smartconfig)
 
+### 2.7 Common network device Problems
+
+#### Windows
+
+Windows platform only supports RNDIS, USB ECM is not recognized.
+
+#### MAC
+
+MAC platform only supports ECM, USB RNDIS is not recognized.
+
+#### Linux
+
+Linux platform support both ECM and RNDIS. Howerver, if  RNDIS is used, network devices in Linux do not proactively obtain IP addresses when switching between different routers.
+
+If embedded Linux is used and network devices are not displayed, the preceding two modules may not be enabled in the kernel. The following two configuration items are enabled in the Linux kernel to support CDC-ECM and RNDIS respectively.
+
+```
+Device Drivers   --->
+	Network Device Support --->
+		Usb Network Adapters --->
+			Multi-purpose USB Networking Framework --->
+				CDC Ethernet Support
+				Host For RDNIS and ActiveSync Devices
+```
+
+If you are sure that the network device cannot be seen after the preceding modules are enabled, run the `dmesg` command to view the kernel information to check whether ESP32-S USB network devices are detected in the Linux kernel and whether error messages are displayed.
+
 ## 3. Connect to a Wi-Fi AP
 
 The example provides two methods to connect ESP device to a Wi-Fi AP.
@@ -177,30 +206,6 @@ sta -s <ssid> -p [<password>]
 
 * `password` is optional
 
-* When the USB Dongle network is switched, the network device needs to be reloaded
-
-    >find USB Ethernet name
-    >
-    >```
-    >>ifconfig
-    >>
-    >```
-    >
-    >unload USB Ethernet 
-    >
-    >```
-    >>ifconfig <USB Ethernet name> down
-    >>
-    >```
-    >
-    >reload USB Ethernet 
-    >
-    >```
-    >>ifconfig <USB Ethernet name> up
-    >>
-    >```
-    >
-    >* `USB Ethernet name` is the name of the queried network device
 
 ### [Method 2. Connect to target AP by startsmart command (SmartConfig)](./Commands_EN.md#5smartconfig)
 
@@ -220,35 +225,58 @@ Download ESPTOUCH APP from app store: [Android source code](https://github.com/E
 smartconfig 1
 ```
 
-**Notes**
-
-* When the USB Dongle network is switched, the network device needs to be reloaded
-
-    >find USB Ethernet name
-    >
-    >```
-    >>ifconfig
-    >>
-    >```
-    >
-    >unload USB Ethernet 
-    >
-    >```
-    >>ifconfig <USB Ethernet name> down
-    >>
-    >```
-    >
-    >reload USB Ethernet 
-    >
-    >```
-    >>ifconfig <USB Ethernet name> up
-    >>
-    >```
-    >
-    >* `USB Ethernet name` is the name of the queried network device
-
 ## 4.Command introduction
 
 [Commands](./Commands_EN.md)
 
 Note: Wi-Fi commands can only be used when USB Network Class is enabled
+
+## 5. How to use USB-DFU to upgrade device
+
+Before using DFU to upgrade ES[32-S device, ensure that the DFU feature has been enabled in the configuration item.
+
+```
+component config → TinyUSB Stack→ Use TinyUSB Stack → Firmware Upgrade Class (DFU) → Enable TinyUSB DFU feature
+```
+
+#### Ubuntu 
+
+You need to install the DFU tool first in Ubuntu.
+
+```
+sudo apt install dfu-util
+```
+
+Run the following command to upgrade.
+
+```
+sudo dfu-util -d <VendorID> -a 0 -D <OTA_BIN_PATH>
+```
+
+**Notes**
+
+- VendorID is USB vendor ID, the default value 0x303A
+- OTA_BIN_PATH is the upgrade firmware
+
+#### Windows
+
+1. On Windows you need to download [dfu-util](http://dfu-util.sourceforge.net/releases/dfu-util-0.9-win64.zip) first.
+
+2. `dfu-util` uses libusb to access the device. You have to register on Windows the device with the WinUSB driver. Installation using [Zadig](http://zadig.akeo.ie/) tool is recommended.
+
+3. Open the command window, run the following commands using `dfu-util.exe`.
+
+   ```
+   dfu-util.exe -d <VendorID> -a 0 -D <OTA_BIN_PATH>
+   ```
+
+   **Notes**
+
+   - VendorID is USB vendor ID, the default value 0x303A
+   - OTA_BIN_PATH is the upgrade firmware
+
+#### Common problems
+
+1. Please refer to [this link](https://support.particle.io/hc/en-us/articles/360039251394-Installing-DFU-util) for the installation error of `dfu-util` tool on each platform.
+2. "No DFU capable USB device available" means `dfu-util` does not detect the DFU device of the ESP32-S chip. Ensure that the DFU feature is enabled in the configuration item.
+   In Linux platform, make sure you are using administrator rights.

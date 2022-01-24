@@ -93,6 +93,9 @@ enum {
     ITF_NUM_HID,
 #   endif
 
+#   if CFG_TUD_DFU
+    ITF_NUM_DFU,
+#   endif
     ITF_NUM_TOTAL
 };
 
@@ -118,7 +121,13 @@ enum {
 #if CFG_TUD_BTH
     STRID_BTH_INTERFACE,
 #endif
+#if CFG_TUD_DFU
+    STRID_DFU_INTERFACE,
+#endif
 };
+
+#define DFU_ALT_COUNT   2
+#define TUD_DFU_DESC_LEN(_alt_count)    (9 + (_alt_count) * 9)
 
 enum {
     TUSB_DESC_TOTAL_LEN = TUD_CONFIG_DESC_LEN + 
@@ -133,7 +142,8 @@ enum {
                            TUD_CDC_DESC_LEN * CFG_TUD_CDC +
                            TUD_MSC_DESC_LEN * CFG_TUD_MSC + 
                            TUD_HID_DESC_LEN * CFG_TUD_HID +
-                           TUD_BTH_DESC_LEN * CFG_TUD_BTH
+                           TUD_BTH_DESC_LEN * CFG_TUD_BTH +
+                           TUD_DFU_DESC_LEN(DFU_ALT_COUNT) * CFG_TUD_DFU
 };
 
 bool tusb_desc_set;
