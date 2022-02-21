@@ -798,7 +798,7 @@ static esp_err_t _usb_set_device_addr(hcd_pipe_handle_t pipe_handle, uint8_t dev
 
     //STD: Set ADDR
     USB_SETUP_PACKET_INIT_SET_ADDR((usb_setup_packet_t *)urb_ctrl->transfer.data_buffer, dev_addr);
-    urb_ctrl->transfer.num_bytes = 0; //No data stage
+    urb_ctrl->transfer.num_bytes = sizeof(usb_setup_packet_t); //No data stage
     //Enqueue it
     ESP_LOGI(TAG, "Set Device Addr = %u", dev_addr);
     esp_err_t ret = hcd_urb_enqueue(pipe_handle, urb_ctrl);
@@ -831,7 +831,7 @@ static esp_err_t _usb_set_device_config(hcd_pipe_handle_t pipe_handle, uint16_t 
     UVC_CHECK(urb_ctrl != NULL, "alloc urb failed", ESP_ERR_NO_MEM);
 
     USB_SETUP_PACKET_INIT_SET_CONFIG((usb_setup_packet_t *)urb_ctrl->transfer.data_buffer, configuration);
-    urb_ctrl->transfer.num_bytes = 0; //No data stage
+    urb_ctrl->transfer.num_bytes = sizeof(usb_setup_packet_t); //No data stage
     //Enqueue it
     ESP_LOGI(TAG, "Set Device Configuration = %u", configuration);
     esp_err_t ret = hcd_urb_enqueue(pipe_handle, urb_ctrl);
@@ -860,7 +860,7 @@ static esp_err_t _usb_set_device_interface(hcd_pipe_handle_t pipe_handle, uint16
     UVC_CHECK(urb_ctrl != NULL, "alloc urb failed", ESP_ERR_NO_MEM);
 
     USB_SETUP_PACKET_INIT_SET_INTERFACE((usb_setup_packet_t *)urb_ctrl->transfer.data_buffer, interface, interface_alt);
-    urb_ctrl->transfer.num_bytes = 0;
+    urb_ctrl->transfer.num_bytes = sizeof(usb_setup_packet_t);
     //Enqueue it
     ESP_LOGI(TAG, "Set Device Interface = %u, Alt = %u", interface, interface_alt);
     esp_err_t ret = hcd_urb_enqueue(pipe_handle, urb_ctrl);
@@ -892,7 +892,7 @@ static esp_err_t _uvc_vs_commit_control(hcd_pipe_handle_t pipe_handle, uvc_strea
     ESP_LOGI(TAG, "SET_CUR Probe");
     USB_CTRL_UVC_PROBE_SET_REQ((usb_setup_packet_t *)urb_ctrl->transfer.data_buffer);
     _uvc_stream_ctrl_to_buf((urb_ctrl->transfer.data_buffer + sizeof(usb_setup_packet_t)), ((usb_setup_packet_t *)urb_ctrl->transfer.data_buffer)->wLength, ctrl_set);
-    urb_ctrl->transfer.num_bytes = ((usb_setup_packet_t *)urb_ctrl->transfer.data_buffer)->wLength;
+    urb_ctrl->transfer.num_bytes = sizeof(usb_setup_packet_t) + ((usb_setup_packet_t *)urb_ctrl->transfer.data_buffer)->wLength;
     esp_err_t ret = hcd_urb_enqueue(pipe_handle, urb_ctrl);
     UVC_CHECK_GOTO(ESP_OK == ret, "urb enqueue failed", free_urb_);
     ret = _default_pipe_event_wait_until(pipe_handle, HCD_PIPE_EVENT_URB_DONE, pdMS_TO_TICKS(500));
@@ -920,7 +920,7 @@ static esp_err_t _uvc_vs_commit_control(hcd_pipe_handle_t pipe_handle, uvc_strea
     ESP_LOGI(TAG, "SET_CUR COMMIT");
     USB_CTRL_UVC_COMMIT_REQ((usb_setup_packet_t *)urb_ctrl->transfer.data_buffer);
     _uvc_stream_ctrl_to_buf((urb_ctrl->transfer.data_buffer + sizeof(usb_setup_packet_t)), ((usb_setup_packet_t *)urb_ctrl->transfer.data_buffer)->wLength, ctrl_probed);
-    urb_ctrl->transfer.num_bytes = ((usb_setup_packet_t *)urb_ctrl->transfer.data_buffer)->wLength;
+    urb_ctrl->transfer.num_bytes = sizeof(usb_setup_packet_t) + ((usb_setup_packet_t *)urb_ctrl->transfer.data_buffer)->wLength;
     ret = hcd_urb_enqueue(pipe_handle, urb_ctrl);
     UVC_CHECK_GOTO(ESP_OK == ret, "urb enqueue failed", free_urb_);
     ret = _default_pipe_event_wait_until(pipe_handle, HCD_PIPE_EVENT_URB_DONE, pdMS_TO_TICKS(500));

@@ -670,7 +670,7 @@ static esp_err_t _usb_set_device_addr(hcd_pipe_handle_t pipe_handle, uint8_t dev
 
     //STD: Set ADDR
     USB_SETUP_PACKET_INIT_SET_ADDR((usb_setup_packet_t *)urb_ctrl->transfer.data_buffer, dev_addr);
-    urb_ctrl->transfer.num_bytes = 0; //No data stage
+    urb_ctrl->transfer.num_bytes = sizeof(usb_setup_packet_t); //No data stage
     //Enqueue it
     ESP_LOGI(TAG, "Set Device Addr = %u", dev_addr);
     esp_err_t ret = hcd_urb_enqueue(pipe_handle, urb_ctrl);
@@ -703,7 +703,7 @@ static esp_err_t _usb_set_device_config(hcd_pipe_handle_t pipe_handle, uint16_t 
     CDC_CHECK(urb_ctrl != NULL, "alloc urb failed", ESP_ERR_NO_MEM);
 
     USB_SETUP_PACKET_INIT_SET_CONFIG((usb_setup_packet_t *)urb_ctrl->transfer.data_buffer, configuration);
-    urb_ctrl->transfer.num_bytes = 0; //No data stage
+    urb_ctrl->transfer.num_bytes = sizeof(usb_setup_packet_t); //No data stage
     //Enqueue it
     ESP_LOGI(TAG, "Set Device Configuration = %u", configuration);
     esp_err_t ret = hcd_urb_enqueue(pipe_handle, urb_ctrl);
@@ -732,7 +732,7 @@ static esp_err_t _usb_set_device_line_state(hcd_pipe_handle_t pipe_handle, bool 
     CDC_CHECK(urb_ctrl != NULL, "alloc urb failed", ESP_ERR_NO_MEM);
 
     USB_CTRL_REQ_CDC_SET_LINE_STATE((usb_setup_packet_t *)urb_ctrl->transfer.data_buffer, 0, dtr, rts);
-    urb_ctrl->transfer.num_bytes = 0; //No data stage
+    urb_ctrl->transfer.num_bytes = sizeof(usb_setup_packet_t); //No data stage
     //Enqueue it
     ESP_LOGI(TAG, "Set Device Line State: dtr %d, rts %d", dtr, rts);
     esp_err_t ret = hcd_urb_enqueue(pipe_handle, urb_ctrl);
