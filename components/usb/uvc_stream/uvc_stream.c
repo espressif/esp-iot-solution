@@ -414,22 +414,29 @@ static esp_err_t _usb_port_event_wait(hcd_port_handle_t expected_port_hdl,
     return ret;
 }
 
+static usb_phy_handle_t s_phy_handle = NULL;
+
 static hcd_port_handle_t _usb_port_init(void *context, void *callback_arg)
 {
     UVC_CHECK(context != NULL && callback_arg != NULL, "invalid args", NULL);
     esp_err_t ret = ESP_OK;
     hcd_port_handle_t port_hdl = NULL;
 
-    usb_hal_context_t hal = {
-        .use_external_phy = false
+    usb_phy_config_t phy_config = {
+        .controller = USB_PHY_CTRL_OTG,
+        .target = USB_PHY_TARGET_INT,
+        .otg_mode = USB_OTG_MODE_HOST,
+        .otg_speed = USB_PHY_SPEED_UNDEFINED,   //In Host mode, the speed is determined by the connected device
+        .gpio_conf = NULL,
     };
-    usb_hal_init(&hal);
+    ret = usb_new_phy(&phy_config, &s_phy_handle);
+    UVC_CHECK(ESP_OK == ret, "USB PHY init failed", NULL);
 
     hcd_config_t hcd_config = {
         .intr_flags = ESP_INTR_FLAG_LEVEL2,
     };
     ret = hcd_install(&hcd_config);
-    UVC_CHECK(ESP_OK == ret, "HCD Install failed", NULL);
+    UVC_CHECK_GOTO(ESP_OK == ret, "HCD Install failed", hcd_init_err);
 
     hcd_port_config_t port_cfg = {
         .fifo_bias = HCD_PORT_FIFO_BIAS_BALANCED,
@@ -446,6 +453,8 @@ static hcd_port_handle_t _usb_port_init(void *context, void *callback_arg)
 
 port_init_err:
     hcd_uninstall();
+hcd_init_err:
+    usb_del_phy(s_phy_handle);
     return NULL;
 }
 
@@ -477,6 +486,12 @@ static esp_err_t _usb_port_deinit(hcd_port_handle_t port_hdl)
 
     if (ESP_OK != ret) {
         ESP_LOGW(TAG, "hcd uninstall failed");
+    }
+
+    ret = usb_del_phy(s_phy_handle);
+
+    if (ESP_OK != ret) {
+        ESP_LOGW(TAG, "phy delete failed");
     }
 
     return ret;

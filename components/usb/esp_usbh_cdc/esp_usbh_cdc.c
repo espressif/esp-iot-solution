@@ -30,6 +30,7 @@
 #include "hcd.h"
 #include "usb/usb_types_stack.h"
 #include "usb_private.h"
+#include "esp_private/usb_phy.h"
 #include "esp_usbh_cdc.h"
 
 #define CDC_CHECK(a, str, ret) if(!(a)) { \
@@ -346,6 +347,8 @@ static bool _usb_pipe_callback(hcd_pipe_handle_t pipe_handle, hcd_pipe_event_t p
 
 /************************************************************* USB Port API ***********************************************************/
 
+static usb_phy_handle_t s_phy_handle = NULL;
+
 /**
  * @brief Initialize USB controler and USB port
  * 
@@ -361,16 +364,21 @@ static hcd_port_handle_t _usb_port_init(void *context, hcd_port_callback_t callb
     hcd_port_handle_t port_hdl = NULL;
 
     /* Router internal USB PHY to usb-otg instead of usb-serial-jtag (if it has) */
-    usb_hal_context_t hal = {
-        .use_external_phy = false
+    usb_phy_config_t phy_config = {
+        .controller = USB_PHY_CTRL_OTG,
+        .target = USB_PHY_TARGET_INT,
+        .otg_mode = USB_OTG_MODE_HOST,
+        .otg_speed = USB_PHY_SPEED_UNDEFINED,   //In Host mode, the speed is determined by the connected device
+        .gpio_conf = NULL,
     };
-    usb_hal_init(&hal);
+    ret = usb_new_phy(&phy_config, &s_phy_handle);
+    CDC_CHECK(ESP_OK == ret, "USB PHY init failed", NULL);
     /* Initialize USB Peripheral */
     hcd_config_t hcd_config = {
         .intr_flags = ESP_INTR_FLAG_LEVEL2,
     };
     ret = hcd_install(&hcd_config);
-    CDC_CHECK(ESP_OK == ret, "HCD Install failed", NULL);
+    CDC_CHECK_GOTO(ESP_OK == ret, "HCD Install failed", hcd_init_err);
 
     //TODO: create a usb port task to handle event
     /* Initialize USB Port */
@@ -388,6 +396,8 @@ static hcd_port_handle_t _usb_port_init(void *context, hcd_port_callback_t callb
 
 port_init_err:
     hcd_uninstall();
+hcd_init_err:
+    usb_del_phy(s_phy_handle);
     return NULL;
 }
 
@@ -461,7 +471,10 @@ static esp_err_t _usb_port_deinit(hcd_port_handle_t port_hdl)
     if (ESP_OK != ret) {
         ESP_LOGW(TAG, "hcd uninstall failed");
     }
-
+    ret = usb_del_phy(s_phy_handle);
+    if (ESP_OK != ret) {
+        ESP_LOGW(TAG, "phy delete failed");
+    }
     ESP_LOGI(TAG, "USB Port=%d deinit succeed", USB_PORT_NUM);
     return ret;
 }
