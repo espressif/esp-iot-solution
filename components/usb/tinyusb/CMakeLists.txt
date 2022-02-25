@@ -40,6 +40,7 @@ if(CONFIG_TINYUSB)
         "additions/include_private"
         "additions/tusb/src/lib/networking"
         "additions/tusb/src/class/dfu"
+        "additions/tusb/src/class/vendor"
         # The FreeRTOS API include convention in tinyusb is different from esp-idf
         "${freertos_component_dir}/include/freertos"
         )
@@ -54,6 +55,11 @@ if(CONFIG_TINYUSB)
         "${IDF_PATH}/components/tinyusb/tinyusb/src/common/tusb_fifo.c"
         "${IDF_PATH}/components/tinyusb/tinyusb/src/device/usbd_control.c"
         "${IDF_PATH}/components/tinyusb/tinyusb/src/tusb.c"
+        #"${IDF_PATH}/components/tinyusb/tinyusb/src/device/usbd.c"
+        #"${IDF_PATH}/components/tinyusb/additions/src/descriptors_control.c"
+        #"${IDF_PATH}/components/tinyusb/additions/src/tinyusb.c"
+        #"${IDF_PATH}/components/tinyusb/additions/src/tusb_tasks.c"
+        #"${IDF_PATH}/components/tinyusb/additions/src/usb_descriptors.c"
         "additions/src/usbd.c"
         "additions/src/descriptors_control.c"
         "additions/src/tinyusb.c"
@@ -64,14 +70,14 @@ if(CONFIG_TINYUSB)
     # when no builtin class driver is enabled, an uint8_t data compared with `BUILTIN_DRIVER_COUNT` will always be false
     set_source_files_properties("tinyusb/src/device/usbd.c" PROPERTIES COMPILE_FLAGS "-Wno-type-limits")
 
-    if(CONFIG_TINYUSB_CDC_ENABLED)
+    if(CONFIG_TINYUSB_CDCACM_ENABLED)
         list(APPEND srcs
             "additions/src/cdc.c"
             "additions/src/tusb_cdc_acm.c"
             "additions/src/tusb_console.c"
             "additions/src/vfs_tinyusb.c"
             )
-    endif() # CONFIG_TINYUSB_CDC_ENABLED
+    endif() # CONFIG_TINYUSB_CDCACM_ENABLED
 
     if(CONFIG_TINYUSB_HID_ENABLED)
       list(APPEND srcs
@@ -102,6 +108,11 @@ if(CONFIG_TINYUSB)
           "additions/tusb/src/class/dfu/dfu_device.c")
     endif()
 
+    if(CONFIG_TINYUSB_WEBUSB_ENABLED)
+      list(APPEND srcs
+        "additions/src/tusb_webusb.c"
+        "additions/tusb/src/class/vendor/vendor_device.c")
+    endif()
 endif() # CONFIG_TINYUSB
 
 idf_component_register(SRCS ${srcs}

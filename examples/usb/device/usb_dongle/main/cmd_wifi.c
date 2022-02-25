@@ -185,6 +185,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
         ESP_ERROR_CHECK( esp_wifi_set_config(WIFI_IF_STA, &wifi_config) );
         esp_wifi_connect();
     } else if (event_base == SC_EVENT && event_id == SC_EVENT_SEND_ACK_DONE) {
+        ESP_LOGI(TAG, "Send ACK done");
         xEventGroupSetBits(wifi_event_group, ESPTOUCH_DONE_BIT);
         esp_wifi_internal_reg_rxcb(ESP_IF_WIFI_STA, pkt_wifi2usb);
         s_wifi_is_connected = true;
@@ -250,7 +251,7 @@ esp_err_t wifi_cmd_sta_join(const char* ssid, const char* pass)
         xEventGroupClearBits(wifi_event_group, CONNECTED_BIT);
         ESP_ERROR_CHECK( esp_wifi_disconnect() );
 
-        xEventGroupWaitBits(wifi_event_group, DISCONNECTED_BIT, 0, 1, portTICK_RATE_MS);
+        xEventGroupWaitBits(wifi_event_group, DISCONNECTED_BIT, 0, 1, 1000/portTICK_RATE_MS);
     }
 
     reconnect = true;
@@ -258,12 +259,19 @@ esp_err_t wifi_cmd_sta_join(const char* ssid, const char* pass)
     ESP_ERROR_CHECK( esp_wifi_set_config(WIFI_IF_STA, &wifi_config) );
     esp_wifi_connect();
 
-    xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT, 0, 1, 5000/portTICK_RATE_MS);
+    EventBits_t status = xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT, 0, 1, 5000/portTICK_RATE_MS);
 
-    // connect USB 
-    NET_CONNECT();
+    if (status & CONNECTED_BIT) {
+        printf("connect success\n");
+        // connect USB 
+        NET_CONNECT();
 
-    return ESP_OK;
+        return ESP_OK;
+    }
+
+    printf("Connect fail\n");
+    reconnect = false;
+    return ESP_FAIL;
 }
 
 esp_err_t wif_cmd_disconnect_wifi(void)

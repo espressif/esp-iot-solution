@@ -29,7 +29,7 @@
 #include "tusb_net.h"
 #include "tusb_bth.h"
 
-#if CFG_TUD_CDC
+#if CFG_TUD_CDCACM
 #include "tusb_cdc_acm.h"
 static uint8_t buf[CONFIG_TINYUSB_CDC_RX_BUFSIZE + 1];
 void Command_Parse(char* Cmd);
@@ -51,7 +51,7 @@ static const char *TAG = "USB_Dongle";
  */
 void vRegisterCLICommands(void);
 
-#if CFG_TUD_CDC
+#if CFG_TUD_CDCACM
 void tinyusb_cdc_rx_callback(int itf, cdcacm_event_t *event)
 {
     /* initialization */
@@ -73,7 +73,7 @@ void tinyusb_cdc_line_state_changed_callback(int itf, cdcacm_event_t *event)
     int rst = event->line_state_changed_data.rts;
     ESP_LOGI(TAG, "Line state changed! itf:%d dtr:%d, rst:%d", itf, dtr, rst);
 }
-#endif /* CFG_TUD_CDC */
+#endif /* CFG_TUD_CDCACM */
 
 void app_main(void)
 {
@@ -103,7 +103,7 @@ void app_main(void)
 
     ESP_ERROR_CHECK(tinyusb_driver_install(&tusb_cfg));
 
-#if CFG_TUD_CDC
+#if CFG_TUD_CDCACM
     tinyusb_config_cdcacm_t amc_cfg = {
         .usb_dev = TINYUSB_USBDEV_0,
         .cdc_port = TINYUSB_CDC_ACM_0,
@@ -117,7 +117,7 @@ void app_main(void)
     ESP_ERROR_CHECK(tusb_cdc_acm_init(&amc_cfg));
 #elif CONFIG_UART_ENABLE
     initialise_uart();
-#endif /* CFG_TUD_CDC */
+#endif /* CFG_TUD_CDCACM */
 
     ESP_LOGI(TAG, "USB initialization DONE");
 

@@ -23,9 +23,9 @@
 
 static const char *TAG = "tusb_cdc";
 
-#define CDC_INTF_NUM            CFG_TUD_CDC // number of cdc blocks
+#define CDC_INTF_NUM            CFG_TUD_CDCACM // number of cdc blocks
 
-static esp_tusb_cdc_t *cdc_obj[CDC_INTF_NUM] = {};
+static esp_tusb_cdc_t *cdc_obj[CFG_TUD_CDCACM] = {};
 
 /* Common CDC functions
    ********************************************************************* */

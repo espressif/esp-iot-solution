@@ -9,6 +9,7 @@
 * 支持 Host 主机通过 USB-DFU 进行设备升级
 * 支持 Host 主机通过 USB-CDC、UART 对 ESP32-S 系列设备进行通信和控制
 * 支持多种 system、Wi-Fi 控制命令，使用 FreeRTOS-Plus-CLI 命令行接口，易拓展更多命令
+* 支持使用 USB webusb / 串口 / smartconfig 等多种配网方式
 * 支持热插拔
 
 ## 2. 如何使用示例
@@ -85,14 +86,14 @@ ESP BOARD          USB CONNECTOR (type A)
 
 ![uart_config](./_static/uart_config.png)
 
-目前 USB-Dongle 支持以下四种组合选项：
+目前 USB-Dongle 支持如下最大组合选项：
 
-| USB-ECM/RNDIS | USB-BTH | USB-CDC | UART | USB-DFU |
-| :-----------: | :-----: | :-----: | :--: | :-----: |
-|       √       |         |         |  √   |    √    |
-|       √       |         |    √    |      |    √    |
-|       √       |    √    |         |  √   |    √    |
-|               |    √    |         |  √   |    √    |
+| USB-ECM/RNDIS | USB-BTH | USB-CDC | UART | USB-DFU | WEBUSB |
+| :-----------: | :-----: | :-----: | :--: | :-----: | ------ |
+|       √       |         |         |  √   |    √    | √      |
+|       √       |         |    √    |      |    √    |        |
+|       √       |    √    |         |  √   |         |        |
+|               |    √    |         |  √   |    √    |        |
 
 * 本软件默认使能 ECM、CDC。
 * UART 默认在 CDC 使能时禁用。
@@ -248,7 +249,7 @@ sudo dfu-util -d <VendorID> -a 0 -D <OTA_BIN_PATH>
 
 其中：
 
-1. VendorID 为 USB vendor ID, 缺省为 0x303A
+1. VendorID 为 USB vendor ID, 缺省为 0xcafe
 2. OTA_BIN_PATH 为需要升级的固件
 
 #### Windows
@@ -265,10 +266,56 @@ sudo dfu-util -d <VendorID> -a 0 -D <OTA_BIN_PATH>
 
    其中：
 
-   1. VendorID 为 USB vendor ID, 缺省为 0x303A
+   1. VendorID 为 USB vendor ID, 缺省为 0xcafe
    2. OTA_BIN_PATH 为需要升级的固件
 
 #### 常见问题和错误
 
 1.  各平台 dfu-util 工具安装错误的问题请参考[此链接](https://support.particle.io/hc/en-us/articles/360039251394-Installing-DFU-util) 。
 2. dfu-util 执行时打印 “No DFU capable USB device available”， 这说明 dfu-util 没有探测到 ESP32-S 芯片的 DFU 设备，请确保在配置项已经使能 DFU 功能。在 Ubuntu 中，请确保使用了管理员权限操作。
+
+## 6. WebUSB
+
+WebUSB 是一种通过网页访问 USB 设备的方法，在 usb_dongle 项目中，我们使用 WebUSB 给 ESP32-S 设备配网.
+
+>  WebUSB 目前主要是 Chrome 浏览器支持，其他浏览器请参考[此链接](https://developer.mozilla.org/en-US/docs/Web/API/USB#browser_compatibility) 。
+
+在使用  webusb 进行配网之前，请确保已经在配置项中使能了  webusb 功能。
+
+```
+component config → TinyUSB Stack→ Use TinyUSB Stack → WebUSB → Enable TinyUSB WebUSB feature
+```
+
+#### Linux 支持
+
+Linux 默认并不允许用户打开 USB 设备，通过将 Vendor 和 Product ID 分配给 plugdev 组的方式，可以让普通用户访问 USB 设备。在 /etc/udev/rules.d/ 目录下创建一个新的 .rules 文件
+
+```
+SUBSYSTEM=="usb", ATTR{idVendor}=="XXXX", ATTR{idProduct}=="XXXX", GROUP="plugdev"
+```
+
+其中：
+
+1. 替换 XXXX 为实际的 USB vendor 和 Product ID, 其中 vendor ID 缺省为 0xcafe， Product ID 缺省为 0x4012
+
+Windows 和 Mac 平台请参考[链接](https://web.dev/build-for-webusb/#platform-specific-considerations) 。
+
+#### 使用方法
+
+1. 确定电脑已经按照对应平台步骤能够访问 USB 设备
+2. 配置项开启 WebUSB 功能后编译烧录固件，随后将 ESP32-S 设备插入电脑的 USB 接口
+3. Chrome 浏览器会弹出 USB 设备插入的通知，点击通知，即可自动打开对应网址（如果没有弹出，则可以收到输入网址，默认的网址名称是： https://example.tinyusb.org/webusb-serial/）
+4. 点击 “Connect” 按钮，选择 tinyUSB 设备并连接，此时按钮会变为 “Disconnect”。如果此时没有显示设备，请确保驱动正确安装，可以在 Chrome 中输入`about://device-log`，查看是否出现 tinyUSB 设备信息。
+5. 第一行输入  SSID ，输入完成后按回车，此时会收到 “Received SSID” 的打印
+6. 第二行输入 Password，输入完成后按回车，此时会收到 “Received password” 的打印
+7. ESP32-S 执行配网操作，配网成功后，会打印 “Connect success”；如果失败，则会打印 “Connect fail”。
+8. 如果需要重新配网，点击 “Disconnect” 按钮断开连接，然后重新从第四步开始执行。
+
+#### 常见问题
+
+1. 如果在`about://device-log`中看到 “Failed to open /dev/bus/usb/XX: Operation not permitted”，说明 Chrome 没有访问 USB 设备的权限。
+2.  WebUSB 开启后本身需要占用 2 个 endpoint，而 ESP32-S 系列支持的 endpoint 有限，请确保按照组合选项进行配置。
+
+#### 已知问题
+
+1. Chrome 不支持对 WebUSB 设置的本地地址（file:///）进行通知，需要手动在浏览器输入此链接，详见 WebUSB 官方的[说明](https://github.com/WICG/webusb/issues/216)。

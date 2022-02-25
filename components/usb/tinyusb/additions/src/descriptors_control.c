@@ -44,6 +44,12 @@ uint8_t const desc_configuration[] = {
     // Interface number, string index, attributes, event endpoint, event endpoint size, interval, data in, data out, data endpoint size, iso endpoint sizes
     TUD_BTH_DESCRIPTOR(ITF_NUM_BTH, 0 /* STRID_BTH_INTERFACE */, (0x80 | EPNUM_BT_EVT), 16, 1, (0x80 | EPNUM_BT_BULK_OUT), EPNUM_BT_BULK_OUT, 64, 0, 9, 17, 25, 33, 49),
 #endif
+
+#if CFG_TUD_CDC
+    // Interface number, string index, EP notification address and size, EP data address (out, in) and size.
+    TUD_CDC_DESCRIPTOR(ITF_NUM_CDC, STRID_CDC_INTERFACE, (0x80 | EPNUM_CDC_NOTIF), 8, EPNUM_CDC_DATA, (0x80 | EPNUM_CDC_DATA), 64),
+#endif
+
 #if CFG_TUD_NET
 #if CONFIG_TINYUSB_NET_ECM
     // Interface number, description string index, MAC address string index, EP notification address and size, EP data address (out, in), and size, max segment size.
@@ -53,10 +59,12 @@ uint8_t const desc_configuration[] = {
     TUD_RNDIS_DESCRIPTOR(ITF_NUM_NET, STRID_NET_INTERFACE, (0x80 | EPNUM_NET_NOTIF), 8, EPNUM_NET_DATA, (0x80 | EPNUM_NET_DATA), CFG_TUD_NET_ENDPOINT_SIZE),
 #endif
 #endif
-#if CFG_TUD_CDC
-    // Interface number, string index, EP notification address and size, EP data address (out, in) and size.
-    TUD_CDC_DESCRIPTOR(ITF_NUM_CDC, STRID_CDC_INTERFACE, (0x80 | EPNUM_CDC_NOTIF), 8, EPNUM_CDC_DATA, (0x80 | EPNUM_CDC_DATA), 64),
+
+#if CFG_TUD_VENDOR
+    // Interface number, string index, EP Out & IN address, EP size
+    TUD_VENDOR_DESCRIPTOR(ITF_NUM_VENDOR, STRID_WEBUSB_INTERFACE, EPNUM_VENDOR, 0x80 | EPNUM_VENDOR, 64),
 #endif
+
 #if CFG_TUD_MSC
     // Interface number, string index, EP Out & EP In address, EP size
     TUD_MSC_DESCRIPTOR(ITF_NUM_MSC, STRID_MSC_INTERFACE, EPNUM_MSC_DATA, (0x80 | EPNUM_MSC_DATA), 64), // highspeed 512

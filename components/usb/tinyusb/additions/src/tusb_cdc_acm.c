@@ -127,6 +127,7 @@ void tud_cdc_rx_cb(uint8_t itf)
 // Invoked when line coding is change via SET_LINE_CODING
 void tud_cdc_line_coding_cb(uint8_t itf, cdc_line_coding_t const *p_line_coding)
 {
+    printf("This is tets............................\n");
     esp_tusb_cdcacm_t *acm = get_acm(itf);
     if (acm) {
         tusb_cdcacm_callback_t cb = acm->callback_line_coding_changed;

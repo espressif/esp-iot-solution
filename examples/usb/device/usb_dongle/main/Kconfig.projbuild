@@ -1,7 +1,7 @@
 menu "Example Configuration"
 
     config UART_ENABLE
-        depends on !TINYUSB_CDC_ENABLED
+        depends on !TINYUSB_CDCACM_ENABLED
         bool "Use Uart to Communication"
         default y
         help
