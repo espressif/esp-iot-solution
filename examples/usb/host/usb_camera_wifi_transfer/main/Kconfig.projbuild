@@ -2,7 +2,7 @@ menu "USB Camera Demo"
 
     config USE_PSRAM
         bool "Use Psram As Picture Buffer"
-        default true
+        default y
 
     choice PIC_SIZE
         prompt "Picture Size"

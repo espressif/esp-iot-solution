@@ -1,11 +1,27 @@
 menu "UVC Stream"
 
+    config CTRL_TRANSFER_DATA_MAX_BYTES
+        int "Max control transfer data size (Bytes)"
+        range 64 2048
+        default 600
+    config UVC_GET_DEVICE_DESC
+        bool "Get camera device descriptor during emum"
+        default y
+    config UVC_GET_CONFIG_DESC
+        bool "Get camera config descriptor during emum"
+        default y
+    config UVC_PRINT_DESC_VERBOSE
+        bool "Print camera more descriptor info"
+        default n
+    config UVC_PRINT_PROBE_RESULT
+        bool "Print video cur probe result"
+        default y
     config SOURCE_SIMULATE
         bool "Enable Simulate Pictures From Flash"
-        default false
+        default n
 
     config TRIGGER_PIN
         bool "Enable Trigger Pin For Debug"
-        default false
+        default n
 
 endmenu

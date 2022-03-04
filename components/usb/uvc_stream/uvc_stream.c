@@ -29,6 +29,8 @@
 #include "hal/usbh_ll.h"
 #include "hcd.h"
 #include "usb/usb_types_stack.h"
+#include "usb/usb_helpers.h"
+#include "esp_private/usb_phy.h"
 #include "usb_private.h"
 #include "esp_log.h"
 #include "uvc_stream.h"
@@ -53,14 +55,17 @@ const char *TAG = "UVC_STREAM";
  */
 #define USB_PORT_NUM                         1        //Default port number
 #define USB_DEVICE_ADDR                      1        //Default UVC device address
+#define USB_ENUM_CONFIG_INDEX                0        //Index of the first configuration of the device
+#define USB_ENUM_SHORT_DESC_REQ_LEN          8        //Number of bytes to request when getting a short descriptor (just enough to get bMaxPacketSize0 or wTotalLength)
 #define USB_EP_CTRL_DEFAULT_MPS              64       //Default MPS(max payload size) of Endpoint 0
 #define USB_EP_ISOC_MAX_MPS                  512      //Max MPS ESP32-S2/S3 can handle
-#define CTRL_TRANSFER_DATA_MAX_BYTES         256      //Max data length assumed in control transfer
+#define CTRL_TRANSFER_DATA_MAX_BYTES         CONFIG_CTRL_TRANSFER_DATA_MAX_BYTES //Max data length assumed in control transfer
 #define NUM_ISOC_STREAM_URBS                 4        //Number of isochronous stream URBS created for continuous enqueue
 #define NUM_PACKETS_PER_URB_URB              5        //Number of packets in each isochronous stream URB
 #define UVC_EVENT_QUEUE_LEN                  30       //UVC event queue length 
 #define FRAME_MAX_INTERVAL                   2000000  //Specified in 100 ns units, General max frame interval (5 FPS)
 #define FRAME_MIN_INTERVAL                   333333   //General min frame interval (30 FPS)
+#define TIMEOUT_USB_CTRL_XFER_MS             5000      //Timeout for USB control transfer
 
 /**
  * @brief Task for USB I/O request and payload processing,
@@ -803,6 +808,90 @@ static esp_err_t _default_pipe_event_wait_until(hcd_pipe_handle_t expected_pipe_
 }
 
 /*------------------------------------------------ USB Control Process Code ----------------------------------------------------*/
+#ifdef CONFIG_UVC_GET_DEVICE_DESC
+static esp_err_t _usb_get_dev_desc(hcd_pipe_handle_t pipe_handle, usb_device_desc_t *device_desc)
+{
+    UVC_CHECK(pipe_handle != NULL, "pipe_handle can't be NULL", ESP_ERR_INVALID_ARG);
+    //malloc URB for default control
+    urb_t *urb_ctrl = _usb_urb_alloc(0, sizeof(usb_setup_packet_t) + CTRL_TRANSFER_DATA_MAX_BYTES, NULL);
+    UVC_CHECK(urb_ctrl != NULL, "alloc urb failed", ESP_ERR_NO_MEM);
+    urb_t *urb_done = NULL;
+    ESP_LOGI(TAG, "get device desc");
+    USB_SETUP_PACKET_INIT_GET_DEVICE_DESC((usb_setup_packet_t *)urb_ctrl->transfer.data_buffer);
+    urb_ctrl->transfer.num_bytes = sizeof(usb_setup_packet_t) + usb_round_up_to_mps(sizeof(usb_device_desc_t), USB_EP_CTRL_DEFAULT_MPS);
+    esp_err_t ret = hcd_urb_enqueue(pipe_handle, urb_ctrl);
+    UVC_CHECK_GOTO(ESP_OK == ret, "urb enqueue failed", free_urb_);
+    ret = _default_pipe_event_wait_until(pipe_handle, HCD_PIPE_EVENT_URB_DONE, pdMS_TO_TICKS(TIMEOUT_USB_CTRL_XFER_MS));
+    UVC_CHECK_GOTO(ESP_OK == ret, "urb event error", flush_urb_);
+    urb_done = hcd_urb_dequeue(pipe_handle);
+    UVC_CHECK_GOTO(urb_done == urb_ctrl, "urb status: not same", free_urb_);
+    UVC_CHECK_GOTO(USB_TRANSFER_STATUS_COMPLETED == urb_done->transfer.status, "urb status: not complete", free_urb_);
+    UVC_CHECK_GOTO((urb_done->transfer.actual_num_bytes <= sizeof(usb_setup_packet_t) + sizeof(usb_device_desc_t)), "urb status: data overflow", free_urb_);
+    ESP_LOGI(TAG, "get device desc, actual_num_bytes:%d", urb_done->transfer.actual_num_bytes);
+    usb_device_desc_t *dev_desc = (usb_device_desc_t *)(urb_done->transfer.data_buffer + sizeof(usb_setup_packet_t));
+    if (device_desc != NULL ) *device_desc = *dev_desc;
+    usb_print_device_descriptor(dev_desc);
+    goto free_urb_;
+
+flush_urb_:
+    _usb_pipe_flush(pipe_handle, 1);
+free_urb_:
+    _usb_urb_free(urb_ctrl);
+    return ret;
+}
+#endif
+
+#ifdef CONFIG_UVC_GET_CONFIG_DESC
+extern void _print_uvc_class_descriptors_cb(const usb_standard_desc_t *desc);
+static esp_err_t _usb_get_config_desc(hcd_pipe_handle_t pipe_handle, usb_config_desc_t **config_desc)
+{
+    (void)config_desc;
+    UVC_CHECK(pipe_handle != NULL, "pipe_handle can't be NULL", ESP_ERR_INVALID_ARG);
+    //malloc URB for default control
+    urb_t *urb_ctrl = _usb_urb_alloc(0, sizeof(usb_setup_packet_t) + CTRL_TRANSFER_DATA_MAX_BYTES, NULL);
+    UVC_CHECK(urb_ctrl != NULL, "alloc urb failed", ESP_ERR_NO_MEM);
+    urb_t *urb_done = NULL;
+    ESP_LOGI(TAG, "get short config desc");
+    USB_SETUP_PACKET_INIT_GET_CONFIG_DESC((usb_setup_packet_t *)urb_ctrl->transfer.data_buffer, USB_ENUM_CONFIG_INDEX, USB_ENUM_SHORT_DESC_REQ_LEN);
+    urb_ctrl->transfer.num_bytes = sizeof(usb_setup_packet_t) + usb_round_up_to_mps(sizeof(usb_config_desc_t), USB_EP_CTRL_DEFAULT_MPS);
+    esp_err_t ret = hcd_urb_enqueue(pipe_handle, urb_ctrl);
+    UVC_CHECK_GOTO(ESP_OK == ret, "urb enqueue failed", free_urb_);
+    ret = _default_pipe_event_wait_until(pipe_handle, HCD_PIPE_EVENT_URB_DONE, pdMS_TO_TICKS(TIMEOUT_USB_CTRL_XFER_MS));
+    UVC_CHECK_GOTO(ESP_OK == ret, "urb event error", flush_urb_);
+    urb_done = hcd_urb_dequeue(pipe_handle);
+    UVC_CHECK_GOTO(urb_done == urb_ctrl, "urb status: not same", free_urb_);
+    UVC_CHECK_GOTO(USB_TRANSFER_STATUS_COMPLETED == urb_done->transfer.status, "urb status: not complete", free_urb_);
+    UVC_CHECK_GOTO((urb_done->transfer.actual_num_bytes <= sizeof(usb_setup_packet_t) + sizeof(usb_config_desc_t)), "urb status: data overflow", free_urb_);
+    ESP_LOGI(TAG, "get config desc, actual_num_bytes:%d", urb_done->transfer.actual_num_bytes);
+    usb_config_desc_t *cfg_desc = (usb_config_desc_t *)(urb_done->transfer.data_buffer + sizeof(usb_setup_packet_t));
+    uint16_t full_config_length = cfg_desc->wTotalLength;
+    if (cfg_desc->wTotalLength > CTRL_TRANSFER_DATA_MAX_BYTES) {
+        ESP_LOGE(TAG, "Configuration descriptor larger than control transfer max length");
+        goto free_urb_;
+    }
+    ESP_LOGI(TAG, "get full config desc");
+    USB_SETUP_PACKET_INIT_GET_CONFIG_DESC((usb_setup_packet_t *)urb_ctrl->transfer.data_buffer, USB_ENUM_CONFIG_INDEX, full_config_length);
+    urb_ctrl->transfer.num_bytes = sizeof(usb_setup_packet_t) + usb_round_up_to_mps(full_config_length, USB_EP_CTRL_DEFAULT_MPS);
+    ret = hcd_urb_enqueue(pipe_handle, urb_ctrl);
+    UVC_CHECK_GOTO(ESP_OK == ret, "urb enqueue failed", free_urb_);
+    ret = _default_pipe_event_wait_until(pipe_handle, HCD_PIPE_EVENT_URB_DONE, pdMS_TO_TICKS(TIMEOUT_USB_CTRL_XFER_MS));
+    UVC_CHECK_GOTO(ESP_OK == ret, "urb event error", flush_urb_);
+    urb_done = hcd_urb_dequeue(pipe_handle);
+    UVC_CHECK_GOTO(urb_done == urb_ctrl, "urb status: not same", free_urb_);
+    UVC_CHECK_GOTO(USB_TRANSFER_STATUS_COMPLETED == urb_done->transfer.status, "urb status: not complete", free_urb_);
+    UVC_CHECK_GOTO((urb_done->transfer.actual_num_bytes <= sizeof(usb_setup_packet_t) + full_config_length), "urb status: data overflow", free_urb_);
+    ESP_LOGI(TAG, "get full config desc, actual_num_bytes:%d", urb_done->transfer.actual_num_bytes);
+    cfg_desc = (usb_config_desc_t *)(urb_done->transfer.data_buffer + sizeof(usb_setup_packet_t));
+    usb_print_config_descriptor(cfg_desc, _print_uvc_class_descriptors_cb);
+    goto free_urb_;
+
+flush_urb_:
+    _usb_pipe_flush(pipe_handle, 1);
+free_urb_:
+    _usb_urb_free(urb_ctrl);
+    return ret;
+}
+#endif
 
 static esp_err_t _usb_set_device_addr(hcd_pipe_handle_t pipe_handle, uint8_t dev_addr)
 {
@@ -818,7 +907,7 @@ static esp_err_t _usb_set_device_addr(hcd_pipe_handle_t pipe_handle, uint8_t dev
     ESP_LOGI(TAG, "Set Device Addr = %u", dev_addr);
     esp_err_t ret = hcd_urb_enqueue(pipe_handle, urb_ctrl);
     UVC_CHECK_GOTO(ESP_OK == ret, "urb enqueue failed", free_urb_);
-    ret = _default_pipe_event_wait_until(pipe_handle, HCD_PIPE_EVENT_URB_DONE, pdMS_TO_TICKS(500));
+    ret = _default_pipe_event_wait_until(pipe_handle, HCD_PIPE_EVENT_URB_DONE, pdMS_TO_TICKS(TIMEOUT_USB_CTRL_XFER_MS));
     UVC_CHECK_GOTO(ESP_OK == ret, "urb event error", flush_urb_);
     urb_t *urb_done = hcd_urb_dequeue(pipe_handle);
     UVC_CHECK_GOTO(urb_done == urb_ctrl, "urb status: not same", free_urb_);
@@ -851,7 +940,7 @@ static esp_err_t _usb_set_device_config(hcd_pipe_handle_t pipe_handle, uint16_t 
     ESP_LOGI(TAG, "Set Device Configuration = %u", configuration);
     esp_err_t ret = hcd_urb_enqueue(pipe_handle, urb_ctrl);
     UVC_CHECK_GOTO(ESP_OK == ret, "urb enqueue failed", free_urb_);
-    ret = _default_pipe_event_wait_until(pipe_handle, HCD_PIPE_EVENT_URB_DONE, pdMS_TO_TICKS(500));
+    ret = _default_pipe_event_wait_until(pipe_handle, HCD_PIPE_EVENT_URB_DONE, pdMS_TO_TICKS(TIMEOUT_USB_CTRL_XFER_MS));
     UVC_CHECK_GOTO(ESP_OK == ret, "urb event error", flush_urb_);
     urb_t *urb_done = hcd_urb_dequeue(pipe_handle);
     UVC_CHECK_GOTO(urb_done == urb_ctrl, "urb status: not same", free_urb_);
@@ -880,7 +969,7 @@ static esp_err_t _usb_set_device_interface(hcd_pipe_handle_t pipe_handle, uint16
     ESP_LOGI(TAG, "Set Device Interface = %u, Alt = %u", interface, interface_alt);
     esp_err_t ret = hcd_urb_enqueue(pipe_handle, urb_ctrl);
     UVC_CHECK_GOTO(ESP_OK == ret, "urb enqueue failed", free_urb_);
-    ret = _default_pipe_event_wait_until(pipe_handle, HCD_PIPE_EVENT_URB_DONE, pdMS_TO_TICKS(500));
+    ret = _default_pipe_event_wait_until(pipe_handle, HCD_PIPE_EVENT_URB_DONE, pdMS_TO_TICKS(TIMEOUT_USB_CTRL_XFER_MS));
     UVC_CHECK_GOTO(ESP_OK == ret, "urb event error", flush_urb_);
     urb_t *urb_done = hcd_urb_dequeue(pipe_handle);
     UVC_CHECK_GOTO(urb_done == urb_ctrl, "urb status: not same", free_urb_);
@@ -910,7 +999,7 @@ static esp_err_t _uvc_vs_commit_control(hcd_pipe_handle_t pipe_handle, uvc_strea
     urb_ctrl->transfer.num_bytes = sizeof(usb_setup_packet_t) + ((usb_setup_packet_t *)urb_ctrl->transfer.data_buffer)->wLength;
     esp_err_t ret = hcd_urb_enqueue(pipe_handle, urb_ctrl);
     UVC_CHECK_GOTO(ESP_OK == ret, "urb enqueue failed", free_urb_);
-    ret = _default_pipe_event_wait_until(pipe_handle, HCD_PIPE_EVENT_URB_DONE, pdMS_TO_TICKS(500));
+    ret = _default_pipe_event_wait_until(pipe_handle, HCD_PIPE_EVENT_URB_DONE, pdMS_TO_TICKS(TIMEOUT_USB_CTRL_XFER_MS));
     UVC_CHECK_GOTO(ESP_OK == ret, "urb event error", flush_urb_);
     urb_done = hcd_urb_dequeue(pipe_handle);
     UVC_CHECK_GOTO(urb_done == urb_ctrl, "urb status: not same", free_urb_);
@@ -922,14 +1011,16 @@ static esp_err_t _uvc_vs_commit_control(hcd_pipe_handle_t pipe_handle, uvc_strea
     urb_ctrl->transfer.num_bytes = USB_EP_CTRL_DEFAULT_MPS; //IN should be integer multiple of MPS
     ret = hcd_urb_enqueue(pipe_handle, urb_ctrl);
     UVC_CHECK_GOTO(ESP_OK == ret, "urb enqueue failed", free_urb_);
-    ret = _default_pipe_event_wait_until(pipe_handle, HCD_PIPE_EVENT_URB_DONE, pdMS_TO_TICKS(500));
+    ret = _default_pipe_event_wait_until(pipe_handle, HCD_PIPE_EVENT_URB_DONE, pdMS_TO_TICKS(TIMEOUT_USB_CTRL_XFER_MS));
     UVC_CHECK_GOTO(ESP_OK == ret, "urb event error", flush_urb_);
     urb_done = hcd_urb_dequeue(pipe_handle);
     UVC_CHECK_GOTO(urb_done == urb_ctrl, "urb status: not same", free_urb_);
     UVC_CHECK_GOTO(USB_TRANSFER_STATUS_COMPLETED == urb_done->transfer.status, "urb status: not complete", free_urb_);
-    UVC_CHECK_GOTO((urb_done->transfer.actual_num_bytes >= ((usb_setup_packet_t *)urb_ctrl->transfer.data_buffer)->wLength), "urb status: data overflow", free_urb_);
+    UVC_CHECK_GOTO((urb_done->transfer.actual_num_bytes <= sizeof(usb_setup_packet_t) + ((usb_setup_packet_t *)urb_ctrl->transfer.data_buffer)->wLength), "urb status: data overflow", free_urb_);
     _buf_to_uvc_stream_ctrl((urb_done->transfer.data_buffer + sizeof(usb_setup_packet_t)), ((usb_setup_packet_t *)urb_done->transfer.data_buffer)->wLength, ctrl_probed);
+#ifdef CONFIG_UVC_PRINT_PROBE_RESULT
     _uvc_stream_ctrl_printf(stdout, ctrl_probed);
+#endif
     ESP_LOGI(TAG, "GET_CUR Probe Done, actual_num_bytes:%d", urb_done->transfer.actual_num_bytes);
 
     ESP_LOGI(TAG, "SET_CUR COMMIT");
@@ -938,7 +1029,7 @@ static esp_err_t _uvc_vs_commit_control(hcd_pipe_handle_t pipe_handle, uvc_strea
     urb_ctrl->transfer.num_bytes = sizeof(usb_setup_packet_t) + ((usb_setup_packet_t *)urb_ctrl->transfer.data_buffer)->wLength;
     ret = hcd_urb_enqueue(pipe_handle, urb_ctrl);
     UVC_CHECK_GOTO(ESP_OK == ret, "urb enqueue failed", free_urb_);
-    ret = _default_pipe_event_wait_until(pipe_handle, HCD_PIPE_EVENT_URB_DONE, pdMS_TO_TICKS(500));
+    ret = _default_pipe_event_wait_until(pipe_handle, HCD_PIPE_EVENT_URB_DONE, pdMS_TO_TICKS(TIMEOUT_USB_CTRL_XFER_MS));
     UVC_CHECK_GOTO(ESP_OK == ret, "urb event error", flush_urb_);
     urb_done = hcd_urb_dequeue(pipe_handle);
     UVC_CHECK_GOTO(urb_done == urb_ctrl, "urb status: not same", free_urb_);
@@ -1336,6 +1427,14 @@ static void _usb_processing_task(void *arg)
                                 // UVC enum process
                                 ret = _usb_set_device_addr(pipe_hdl_dflt, uvc_dev->dev_addr);
                                 UVC_CHECK_GOTO(ESP_OK == ret, "Set device address failed", usb_driver_reset_);
+#ifdef CONFIG_UVC_GET_DEVICE_DESC
+                                ret = _usb_get_dev_desc(pipe_hdl_dflt, NULL);
+                                UVC_CHECK_GOTO(ESP_OK == ret, "Get device descriptor failed", usb_driver_reset_);
+#endif
+#ifdef CONFIG_UVC_GET_CONFIG_DESC
+                                ret = _usb_get_config_desc(pipe_hdl_dflt, NULL);
+                                UVC_CHECK_GOTO(ESP_OK == ret, "Get config descriptor failed", usb_driver_reset_);
+#endif
                                 ret = _usb_set_device_config(pipe_hdl_dflt, uvc_dev->configuration);
                                 UVC_CHECK_GOTO(ESP_OK == ret, "Set device configuration failed", usb_driver_reset_);
                                 ret = _uvc_vs_commit_control(pipe_hdl_dflt, &uvc_dev->ctrl_set, &uvc_dev->ctrl_probed);

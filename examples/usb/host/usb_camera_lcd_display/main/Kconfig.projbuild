@@ -2,7 +2,7 @@ menu "USB Camera Demo"
 
     config USE_PSRAM
         bool "Use Psram As Picture Buffer"
-        default false
+        default n
 
     choice DEVELOP_BOARD
         prompt "Develop Board"
@@ -40,6 +40,6 @@ menu "USB Camera Demo"
     config BOOT_ANIMATION
         depends on SIZE_320_240
         bool "enable boot animation"
-        default false
+        default n
 
 endmenu

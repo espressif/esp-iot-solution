@@ -1,5 +1,10 @@
 menu "USB Host CDC"
-
+    config CDC_GET_DEVICE_DESC
+        bool "Get device descriptor during emum"
+        default y
+    config CDC_GET_CONFIG_DESC
+        bool "Get config descriptor during emum"
+        default y
     config CDC_SEND_DTE_ACTIVE
         bool "Set control line state during init"
         default y
@@ -15,6 +20,10 @@ menu "USB Host CDC"
         default 5
         help
             usb task base priority, usb task = base + 2, cdc task = base + 1
+    config CTRL_TRANSFER_DATA_MAX_BYTES
+        int "Max control transfer data size (Bytes)"
+        range 64 2048
+        default 256
     config CDC_BULK_IN_URB_NUM
         int "cdc bulk_in urb num"
         default 2
