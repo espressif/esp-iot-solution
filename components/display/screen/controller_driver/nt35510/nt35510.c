@@ -253,21 +253,32 @@ esp_err_t lcd_nt35510_draw_bitmap(uint16_t x, uint16_t y, uint16_t w, uint16_t h
 
 static void lcd_nt35510_init_reg(void)
 {
-    LCD_WRITE_CMD_16B(0x0100); // Software Reset
+    // Software Reset
+    LCD_WRITE_CMD_16B(0x0100);
     vTaskDelay(10 / portTICK_RATE_MS);
+
+     // Partial mode on
     LCD_WRITE_CMD_16B(0x1200);
+
+    // Enable manufacturer command set, select page 1
     LCD_WRITE_REG_16B(0xf000, 0x0055);
     LCD_WRITE_REG_16B(0xf001, 0x00aa);
     LCD_WRITE_REG_16B(0xf002, 0x0052);
     LCD_WRITE_REG_16B(0xf003, 0x0008);
     LCD_WRITE_REG_16B(0xf004, 0x0001);
 
+    // VGML and VGSP voltages (regulator output voltage VGMP/VGSP for positive gamma divider)
     LCD_WRITE_REG_16B(0xbc01, 0x0086);
     LCD_WRITE_REG_16B(0xbc02, 0x006a);
+
+    // VGML and VGSP voltages (regulator output voltage VGMP/VGSP for negative gamma divider)
     LCD_WRITE_REG_16B(0xbd01, 0x0086);
     LCD_WRITE_REG_16B(0xbd02, 0x006a);
+
+    // VCOM Offset Voltage
     LCD_WRITE_REG_16B(0xbe01, 0x0067);
 
+    // Gamma 2.2 Correction for Red (Positive)
     LCD_WRITE_REG_16B(0xd100, 0x0000);
     LCD_WRITE_REG_16B(0xd101, 0x005d);
     LCD_WRITE_REG_16B(0xd102, 0x0000);
@@ -321,6 +332,7 @@ static void lcd_nt35510_init_reg(void)
     LCD_WRITE_REG_16B(0xd132, 0x0003);
     LCD_WRITE_REG_16B(0xd133, 0x00cc);
 
+    // Gamma 2.2 Correction for Green (Positive)
     LCD_WRITE_REG_16B(0xd200, 0x0000);
     LCD_WRITE_REG_16B(0xd201, 0x005d);
     LCD_WRITE_REG_16B(0xd202, 0x0000);
@@ -374,6 +386,7 @@ static void lcd_nt35510_init_reg(void)
     LCD_WRITE_REG_16B(0xd232, 0x0003);
     LCD_WRITE_REG_16B(0xd233, 0x00cc);
 
+    // Gamma 2.2 Correction for Blue (Positive)
     LCD_WRITE_REG_16B(0xd300, 0x0000);
     LCD_WRITE_REG_16B(0xd301, 0x005d);
     LCD_WRITE_REG_16B(0xd302, 0x0000);
@@ -427,6 +440,7 @@ static void lcd_nt35510_init_reg(void)
     LCD_WRITE_REG_16B(0xd332, 0x0003);
     LCD_WRITE_REG_16B(0xd333, 0x00cc);
 
+    // Gamma 2.2 Correction for Red (Negative)    
     LCD_WRITE_REG_16B(0xd400, 0x0000);
     LCD_WRITE_REG_16B(0xd401, 0x005d);
     LCD_WRITE_REG_16B(0xd402, 0x0000);
@@ -480,6 +494,7 @@ static void lcd_nt35510_init_reg(void)
     LCD_WRITE_REG_16B(0xd432, 0x0003);
     LCD_WRITE_REG_16B(0xd433, 0x00cc);
 
+    // Gamma 2.2 Correction for Green (Negative)
     LCD_WRITE_REG_16B(0xd500, 0x0000);
     LCD_WRITE_REG_16B(0xd501, 0x005d);
     LCD_WRITE_REG_16B(0xd502, 0x0000);
@@ -533,6 +548,7 @@ static void lcd_nt35510_init_reg(void)
     LCD_WRITE_REG_16B(0xd532, 0x0003);
     LCD_WRITE_REG_16B(0xd533, 0x00cc);
 
+    // Gamma 2.2 Correction for Blue (Negative)
     LCD_WRITE_REG_16B(0xd600, 0x0000);
     LCD_WRITE_REG_16B(0xd601, 0x005d);
     LCD_WRITE_REG_16B(0xd602, 0x0000);
@@ -586,54 +602,77 @@ static void lcd_nt35510_init_reg(void)
     LCD_WRITE_REG_16B(0xd632, 0x0003);
     LCD_WRITE_REG_16B(0xd633, 0x00cc);
 
+    // BT5 Power Control for VGLX
     LCD_WRITE_REG_16B(0xba00, 0x0024);
     LCD_WRITE_REG_16B(0xba01, 0x0024);
     LCD_WRITE_REG_16B(0xba02, 0x0024);
 
+    // BT4 Power Control for VGH
     LCD_WRITE_REG_16B(0xb900, 0x0024);
     LCD_WRITE_REG_16B(0xb901, 0x0024);
     LCD_WRITE_REG_16B(0xb902, 0x0024);
 
+    // Enable manufacturer command set, select page 0
     LCD_WRITE_REG_16B(0xf000, 0x0055);
     LCD_WRITE_REG_16B(0xf001, 0x00aa);
     LCD_WRITE_REG_16B(0xf002, 0x0052);
     LCD_WRITE_REG_16B(0xf003, 0x0008);
     LCD_WRITE_REG_16B(0xf004, 0x0000);
 
+    // Display Option Control
     LCD_WRITE_REG_16B(0xb100, 0x00cc);
-    LCD_WRITE_REG_16B(0xB500, 0x0050);
 
-    LCD_WRITE_REG_16B(0xbc00, 0x0005);
-    LCD_WRITE_REG_16B(0xbc01, 0x0005);
-    LCD_WRITE_REG_16B(0xbc02, 0x0005);
+    // Display Resolution Control
+    LCD_WRITE_REG_16B(0xB500, 0x0050); // 480RGB X 800
 
-    LCD_WRITE_REG_16B(0xb800, 0x0001);
-    LCD_WRITE_REG_16B(0xb801, 0x0003);
-    LCD_WRITE_REG_16B(0xb802, 0x0003);
-    LCD_WRITE_REG_16B(0xb803, 0x0003);
+    // Inversion Driving Control
+    // 000: Column inversion
+    // 001: 1-dot inversion
+    // 010: 2-dot inversion
+    // 011: 3-dot inversion
+    // 100: 4-dot inversion
+    // 101: Zigzag inversion
+    LCD_WRITE_REG_16B(0xbc00, 0x0005); // Normal mode
+    LCD_WRITE_REG_16B(0xbc01, 0x0005); // Idle mode
+    LCD_WRITE_REG_16B(0xbc02, 0x0005); // Partial mode
 
-    LCD_WRITE_REG_16B(0xbd02, 0x0007);
-    LCD_WRITE_REG_16B(0xbd03, 0x0031);
-    LCD_WRITE_REG_16B(0xbe02, 0x0007);
-    LCD_WRITE_REG_16B(0xbe03, 0x0031);
-    LCD_WRITE_REG_16B(0xbf02, 0x0007);
-    LCD_WRITE_REG_16B(0xbf03, 0x0031);
+    // EQ Control Function for Source Driver 
+    LCD_WRITE_REG_16B(0xb800, 0x0001); // EQ mode 1
+    LCD_WRITE_REG_16B(0xb801, 0x0003); // Normal mode, 0.5us per step = 1.5 us
+    LCD_WRITE_REG_16B(0xb802, 0x0003); // Idle mode, 0.5us per step = 1.5 us
+    LCD_WRITE_REG_16B(0xb803, 0x0003); // Partial mode, 0.5us per step = 1.5 us
 
+    // Display Timing Control
+    LCD_WRITE_REG_16B(0xbd02, 0x0007); // Normal mode
+    LCD_WRITE_REG_16B(0xbd03, 0x0031); // Normal mode
+    LCD_WRITE_REG_16B(0xbe02, 0x0007); // Idle mode
+    LCD_WRITE_REG_16B(0xbe03, 0x0031); // Idle mode
+    LCD_WRITE_REG_16B(0xbf02, 0x0007); // Parial mode
+    LCD_WRITE_REG_16B(0xbf03, 0x0031); // Parial mode
+
+    // Undocumented registers
     LCD_WRITE_REG_16B(0xff00, 0x00aa);
     LCD_WRITE_REG_16B(0xff01, 0x0055);
     LCD_WRITE_REG_16B(0xff02, 0x0025);
     LCD_WRITE_REG_16B(0xff03, 0x0001);
 
+    // Undocumented registers
     LCD_WRITE_REG_16B(0xf304, 0x0011);
     LCD_WRITE_REG_16B(0xf306, 0x0010);
     LCD_WRITE_REG_16B(0xf308, 0x0000);
 
-    LCD_WRITE_REG_16B(0x3500, 0x0000);
-    LCD_WRITE_REG_16B(0x3A00, 0x0005);
-    //Display On
+    // Tearing effect line on
+    LCD_WRITE_REG_16B(0x3500, 0x0000); // Only v-blanking information
+
+    // Interface Pixel Format
+    LCD_WRITE_REG_16B(0x3A00, 0x0005); //  I80 16-bit per pixel
+
+    // Display On
     LCD_WRITE_CMD_16B(0x2900);
+
     // Out sleep
     LCD_WRITE_CMD_16B(0x1100);
+
     // Write continue
     LCD_WRITE_CMD_16B(0x2C00);
 }
