@@ -21,7 +21,7 @@ endif()
 
 #ESP-IDF USB component HCD level API default to private now,
 #to use uvc_stream, related API must manually set to public.
-idf_component_register(SRCS uvc_stream.c
+idf_component_register(SRCS uvc_stream.c descriptor.c
                     INCLUDE_DIRS "include" "${IDF_PATH}/components/usb/private_include"
                     EMBED_FILES ${embed_files}
                     REQUIRES usb)
