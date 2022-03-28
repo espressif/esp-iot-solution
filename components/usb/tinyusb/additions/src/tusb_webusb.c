@@ -197,14 +197,12 @@ static void webusb_task(void *pvParameters)
         uint8_t buf;
         uint32_t count = tud_vendor_read(&buf, 1);
         if (count != 1) {
-          printf("error len: %d\n", count);
+          ESP_LOGI(TAG, "error len: %d", count);
         }
-
-        //printf("%x \n", buf);
 
         if (is_ssid) {         // ssid
           if (buf == '\r') {
-            printf("Done\n");
+            ESP_LOGI(TAG, "Done\n");
             ssid[str_index] = '\0';
             tud_vendor_write("Received ssid\r\n", strlen("Received ssid\r\n"));
             is_ssid = false;
@@ -218,14 +216,14 @@ static void webusb_task(void *pvParameters)
             is_ssid = true;
             str_index = 0;
             tud_vendor_write("Received pwd\r\n", strlen("Received pwd\r\n"));
-            printf("\r\nReceived ssid:%s\r\n", ssid);
-            printf("\r\nReceived pwd: %s\r\n", pwd);
+            ESP_LOGI(TAG, "\r\nReceived ssid:%s\r\n", ssid);
+            ESP_LOGI(TAG, "\r\nReceived pwd: %s\r\n", pwd);
             ret = wifi_cmd_sta_join(ssid, pwd);
             if (ret == ESP_OK) {
-              printf("connect success\n");
+              ESP_LOGI(TAG, "connect success\n");
               tud_vendor_write("Connect success\r\n", strlen("Connect success\r\n"));
             } else {
-              printf("connect fail\n");
+              ESP_LOGI(TAG, "connect fail\n");
               tud_vendor_write("Connect fail\r\n", strlen("Connect fail\r\n"));
             }
             continue;
@@ -290,7 +288,7 @@ bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control_requ
 
   switch (request->bmRequestType_bit.type)
   {
-    printf("bmRequestType_bit:%d\n", request->bmRequestType_bit.type);
+    ESP_LOGI(TAG, "bmRequestType_bit:%d\n", request->bmRequestType_bit.type);
     case TUSB_REQ_TYPE_VENDOR:
       switch (request->bRequest)
       {
@@ -319,7 +317,7 @@ bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control_requ
     case TUSB_REQ_TYPE_CLASS:
       if (request->bRequest == 0x22)
       {
-        printf("wValue:%d\n", request->wValue);
+        ESP_LOGI(TAG, "wValue:%d\n", request->wValue);
         // Webserial simulate the CDC_REQUEST_SET_CONTROL_LINE_STATE (0x22) to connect and disconnect.
         web_serial_connected = (request->wValue != 0);
 

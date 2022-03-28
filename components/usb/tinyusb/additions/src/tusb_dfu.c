@@ -60,15 +60,6 @@
 
 static char* TAG = "esp_dfu";
 
-//--------------------------------------------------------------------+
-// MACRO CONSTANT TYPEDEF PROTYPES
-//--------------------------------------------------------------------+
-const char* upload_image[2]=
-{
-  "Hello world from TinyUSB DFU! - Partition 0",
-  "Hello world from TinyUSB DFU! - Partition 1"
-};
-
 #define BUFFSIZE CONFIG_TINYUSB_DFU_BUFSIZE
 /*an ota data write buffer ready to write to the flash*/
 static char ota_write_data[BUFFSIZE + 1] = { 0 };
@@ -78,6 +69,9 @@ static const esp_partition_t *update_partition = NULL;
 static int binary_file_length = 0;
 /*deal with all receive packet*/
 static bool image_header_was_checked = false;
+
+static esp_partition_t *ota_partition;
+static uint32_t current_index = 0;
 
 static esp_err_t ota_start(uint8_t* ota_write_data, uint32_t data_read)
 {
@@ -170,6 +164,38 @@ static esp_err_t ota_complete(void)
     }
     ESP_LOGI(TAG, "OTA done, please restart system!");
     return ESP_OK;
+}
+
+static uint16_t upload_bin(uint8_t* data, uint16_t length)
+{
+  uint16_t read_size = length;
+  if (ota_partition == NULL) {
+    ota_partition = esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_APP_OTA_MIN, NULL);
+    if (ota_partition == NULL) {
+      ESP_LOGE(TAG, "not found ota_0");
+      return 0;
+    }
+    ESP_LOGI(TAG, "Bin size: %d, addr: %p", ota_partition->size, ota_partition->address);
+  }
+  if (current_index > ota_partition->size) {
+    ESP_LOGI(TAG, "read error %d,%d\n", current_index, ota_partition->size);
+    return 0;
+  }
+
+  if (current_index == ota_partition->size) {   // upload done
+    ESP_LOGI(TAG, "Upload done");
+    current_index = 0;
+    free(ota_partition);
+    ota_partition = NULL;
+    return 0;
+  } else if (current_index + read_size > ota_partition->size) {     // the last data
+    read_size = ota_partition->size - current_index;
+  }
+  ESP_ERROR_CHECK(esp_partition_read(ota_partition, current_index, data, read_size));
+
+  current_index += read_size;
+
+  return read_size;
 }
 
 //--------------------------------------------------------------------+
@@ -274,8 +300,8 @@ uint16_t tud_dfu_upload_cb(uint8_t alt, uint16_t block_num, uint8_t* data, uint1
   (void) block_num;
   (void) length;
   ESP_LOGI(TAG, "upload data,block_num: %d,length: %d\n", block_num, length);
-  uint16_t const xfer_len = (uint16_t) strlen(upload_image[alt]);
-  memcpy(data, upload_image[alt], xfer_len);
+
+  uint16_t xfer_len = upload_bin(data, length);
 
   return xfer_len;
 }
@@ -290,6 +316,6 @@ void tud_dfu_abort_cb(uint8_t alt)
 // Invoked when a DFU_DETACH request is received
 void tud_dfu_detach_cb(void)
 {
-  ESP_LOGI(TAG, "Host detach, we should probably reboot\r\n");
-  esp_restart();
+  ESP_LOGI(TAG, "Host detach, upload/download done\r\n");
+  //esp_restart();
 }

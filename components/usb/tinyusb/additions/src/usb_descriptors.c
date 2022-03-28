@@ -24,10 +24,10 @@ tusb_desc_strarray_device_t descriptor_str_tinyusb = {
     "TinyUSB",            // 1: Manufacturer
     "TinyUSB Device",     // 2: Product
     "123456",             // 3: Serials, should use chip ID
-    //"TinyUSB CDC",        // 4: CDC Interface
-    "TinyUSB WebUSB",   
-    "TinyUSB MSC",        // 5: MSC Interface
-    "TinyUSB HID"         // 6: HID
+    "TinyUSB CDC",        // 4: CDC Interface
+    "TinyUSB WebUSB",     // 5. Webusb
+    "TinyUSB MSC",        // 6: MSC Interface
+    "TinyUSB HID"         // 7: HID
 };
 /* End of TinyUSB default */
 
@@ -97,7 +97,7 @@ tusb_desc_strarray_device_t descriptor_str_kconfig = {
 #endif
 
 #if CFG_TUD_VENDOR
-    "TinyUSB WebUSB",                        // Vendor Interface
+    "TinyUSB vendor",                        // Vendor Interface
 #endif
 
 #if CFG_TUD_MSC

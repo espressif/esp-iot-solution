@@ -134,7 +134,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
         }
         xEventGroupClearBits(wifi_event_group, CONNECTED_BIT);
         xEventGroupSetBits(wifi_event_group, DISCONNECTED_BIT);
-        printf("DISCONNECTED_BIT\r\n");
+        ESP_LOGI(TAG, "DISCONNECTED_BIT\r\n");
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_CONNECTED) {
         if (smart_config == false) {
             ESP_LOGI(TAG, "Wi-Fi STA connected");
@@ -142,7 +142,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
             s_wifi_is_connected = true;
             xEventGroupClearBits(wifi_event_group, DISCONNECTED_BIT);
             xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
-            printf("CONNECTED_BIT\r\n");
+            ESP_LOGI(TAG, "CONNECTED_BIT\r\n");
         }
     } else if (event_base == SC_EVENT && event_id == SC_EVENT_SCAN_DONE) {
         ESP_LOGI(TAG, "Scan done");
@@ -262,14 +262,14 @@ esp_err_t wifi_cmd_sta_join(const char* ssid, const char* pass)
     EventBits_t status = xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT, 0, 1, 5000/portTICK_RATE_MS);
 
     if (status & CONNECTED_BIT) {
-        printf("connect success\n");
+        ESP_LOGI(TAG, "connect success\n");
         // connect USB 
         NET_CONNECT();
 
         return ESP_OK;
     }
 
-    printf("Connect fail\n");
+    ESP_LOGE(TAG, "Connect fail\n");
     reconnect = false;
     return ESP_FAIL;
 }
@@ -403,11 +403,11 @@ esp_err_t wifi_cmd_start_smart_config(void)
 {
     if (wifi_start) {
         if (smart_config) {
-            printf("SmartConfig Task is Created\r\n");
+            ESP_LOGE(TAG, "SmartConfig Task is Created\r\n");
             return ESP_FAIL;
         }
         xTaskCreate(smartconfig_task, "smartconfig_task", 4096, NULL, 3, &Smart_Config_Handle);
-        printf("Smart Config Task Create Success\r\n");
+        ESP_LOGI(TAG, "Smart Config Task Create Success\r\n");
         smart_config = true;
         return ESP_OK;
     }
@@ -422,7 +422,7 @@ esp_err_t wifi_cmd_stop_smart_config(void)
         smart_config = false;
         ESP_LOGI(TAG, "free the buffer taken by smartconfig");
         vTaskDelete(Smart_Config_Handle);
-        printf("delete OK\r\n");
+        ESP_LOGI(TAG, "delete OK\r\n");
         return ESP_OK;
     }
     return ESP_FAIL;

@@ -227,10 +227,10 @@ smartconfig 1
 
 ## 5. 如何使用 USB-DFU 对设备升级
 
-在使用  DFU 对设备升级之前，请确保已经在配置项中使能了  DFU 功能
+在使用 DFU 对设备升级之前，请确保已经在配置项中使能了 DFU 功能
 
 ```
-component config → TinyUSB Stack→ Use TinyUSB Stack → Firmware Upgrade Class (DFU) → Enable TinyUSB DFU feature
+component config -> TinyUSB Stack -> Use TinyUSB Stack -> Firmware Upgrade Class (DFU) -> Enable TinyUSB DFU feature
 ```
 
 #### Ubuntu
@@ -249,8 +249,19 @@ sudo dfu-util -d <VendorID> -a 0 -D <OTA_BIN_PATH>
 
 其中：
 
-1. VendorID 为 USB vendor ID, 缺省为 0xcafe
+1. VendorID 为 USB vendor ID, 缺省为 0x303A
 2. OTA_BIN_PATH 为需要升级的固件
+
+使用如下命令进行上传操作，默认会把 OTA_0 分区读取出来
+
+```
+sudo dfu-util -d <VendorID> -a 0 -U <OTA_BIN_PATH> 
+```
+
+其中：
+
+1. VendorID 为 USB vendor ID, 缺省为 0x303A
+2. OTA_BIN_PATH 从设备读取固件保存的文件名
 
 #### Windows
 
@@ -258,7 +269,7 @@ sudo dfu-util -d <VendorID> -a 0 -D <OTA_BIN_PATH>
 
 2. dfu-util 使用 libusb 访问 USB 设备，这要求我们需要在 Windows 上安装 WinUSB 驱动，可以使用 [Zadig 工具](http://zadig.akeo.ie/) 安装。
 
-3. 打开命令行窗口， 将 dfu-util.exe 拖进去，然后执行如下命令进行升级操作
+3. 打开命令行窗口，将 dfu-util.exe 拖进去，然后执行如下命令进行升级操作
 
    ```
    dfu-util.exe -d <VendorID> -a 0 -D <OTA_BIN_PATH>
@@ -280,10 +291,10 @@ WebUSB 是一种通过网页访问 USB 设备的方法，在 usb_dongle 项目�
 
 >  WebUSB 目前主要是 Chrome 浏览器支持，其他浏览器请参考[此链接](https://developer.mozilla.org/en-US/docs/Web/API/USB#browser_compatibility) 。
 
-在使用  webusb 进行配网之前，请确保已经在配置项中使能了  webusb 功能。
+在使用 webusb 进行配网之前，请确保已经在配置项中使能了 webusb 功能。
 
 ```
-component config → TinyUSB Stack→ Use TinyUSB Stack → WebUSB → Enable TinyUSB WebUSB feature
+component config -> TinyUSB Stack -> Use TinyUSB Stack -> WebUSB -> Enable TinyUSB WebUSB feature
 ```
 
 #### Linux 支持
@@ -296,14 +307,14 @@ SUBSYSTEM=="usb", ATTR{idVendor}=="XXXX", ATTR{idProduct}=="XXXX", GROUP="plugde
 
 其中：
 
-1. 替换 XXXX 为实际的 USB vendor 和 Product ID, 其中 vendor ID 缺省为 0xcafe， Product ID 缺省为 0x4012
+1. 替换 XXXX 为实际的 USB vendor 和 Product ID, 其中 vendor ID 缺省为 0x303A， Product ID 缺省为 0x4012
 
 Windows 和 Mac 平台请参考[链接](https://web.dev/build-for-webusb/#platform-specific-considerations) 。
 
 #### 使用方法
 
 1. 确定电脑已经按照对应平台步骤能够访问 USB 设备
-2. 配置项开启 WebUSB 功能后编译烧录固件，随后将 ESP32-S 设备插入电脑的 USB 接口
+2. 在配置项中开启 WebUSB 并将 Vendor ID 改为 0xcafe（因为 tinyUSB 测试网页只支持此 Vendor ID）， 编译烧录固件，随后将 ESP32-S 设备插入电脑的 USB 接口
 3. Chrome 浏览器会弹出 USB 设备插入的通知，点击通知，即可自动打开对应网址（如果没有弹出，则可以收到输入网址，默认的网址名称是： https://example.tinyusb.org/webusb-serial/）
 4. 点击 “Connect” 按钮，选择 tinyUSB 设备并连接，此时按钮会变为 “Disconnect”。如果此时没有显示设备，请确保驱动正确安装，可以在 Chrome 中输入`about://device-log`，查看是否出现 tinyUSB 设备信息。
 5. 第一行输入  SSID ，输入完成后按回车，此时会收到 “Received SSID” 的打印
@@ -318,4 +329,4 @@ Windows 和 Mac 平台请参考[链接](https://web.dev/build-for-webusb/#platfo
 
 #### 已知问题
 
-1. Chrome 不支持对 WebUSB 设置的本地地址（file:///）进行通知，需要手动在浏览器输入此链接，详见 WebUSB 官方的[说明](https://github.com/WICG/webusb/issues/216)。
+1. Chrome 不支持对 WebUSB 设置的本地地址（`file:///`）进行通知，需要手动在浏览器输入此链接，详见 WebUSB 官方的[说明](https://github.com/WICG/webusb/issues/216)。
