@@ -16,45 +16,7 @@
 #include "descriptors_control.h"
 #include "sdkconfig.h"
 
-/* A combination of interfaces must have a unique product id, since PC will save device driver after the first plug.
- * Same VID/PID with different interface e.g MSC (first), then CDC (later) will possibly cause system error on PC.
- *
- * Auto ProductID layout's Bitmap:
- *   [MSB]       NET | VENDOR | MIDI | HID | MSC | CDC          [LSB]
- */
-#define USB_TUSB_PID (0x4000 | _PID_MAP(CDC, 0) | _PID_MAP(MSC, 1) | _PID_MAP(HID, 2) | \
-                     _PID_MAP(MIDI, 3) | _PID_MAP(VENDOR, 4) | _PID_MAP(NET, 5) )
-
-/**** TinyUSB default ****/
-tusb_desc_device_t descriptor_tinyusb = {
-    .bLength = sizeof(descriptor_tinyusb),
-    .bDescriptorType = TUSB_DESC_DEVICE,
-    .bcdUSB = 0x0200,
-
-#if CFG_TUD_CDC
-    // Use Interface Association Descriptor (IAD) for CDC
-    // As required by USB Specs IAD's subclass must be common class (2) and protocol must be IAD (1)
-    .bDeviceClass = TUSB_CLASS_MISC,
-    .bDeviceSubClass = MISC_SUBCLASS_COMMON,
-    .bDeviceProtocol = MISC_PROTOCOL_IAD,
-#else
-    .bDeviceClass = 0x00,
-    .bDeviceSubClass = 0x00,
-    .bDeviceProtocol = 0x00,
-#endif
-
-    .bMaxPacketSize0 = CFG_TUD_ENDPOINT0_SIZE,
-
-    .idVendor = 0xCafe,
-    .idProduct = USB_TUSB_PID,
-    .bcdDevice = 0x0100,
-
-    .iManufacturer = 0x01,
-    .iProduct = 0x02,
-    .iSerialNumber = 0x03,
-
-    .bNumConfigurations = 0x01
-};
+#define USB_TUSB_PID 0x4012
 
 tusb_desc_strarray_device_t descriptor_str_tinyusb = {
     // array of pointer to string descriptors
@@ -63,8 +25,9 @@ tusb_desc_strarray_device_t descriptor_str_tinyusb = {
     "TinyUSB Device",     // 2: Product
     "123456",             // 3: Serials, should use chip ID
     "TinyUSB CDC",        // 4: CDC Interface
-    "TinyUSB MSC",        // 5: MSC Interface
-    "TinyUSB HID"         // 6: HID
+    "TinyUSB WebUSB",     // 5. Webusb
+    "TinyUSB MSC",        // 6: MSC Interface
+    "TinyUSB HID"         // 7: HID
 };
 /* End of TinyUSB default */
 
@@ -72,7 +35,11 @@ tusb_desc_strarray_device_t descriptor_str_tinyusb = {
 tusb_desc_device_t descriptor_kconfig = {
     .bLength = sizeof(descriptor_kconfig),
     .bDescriptorType = TUSB_DESC_DEVICE,
+#if CFG_TUD_VENDOR
+    .bcdUSB = 0x0210,
+#else
     .bcdUSB = 0x0200,
+#endif
 
 #if CFG_TUD_CDC
     // Use Interface Association Descriptor (IAD) for CDC
@@ -127,6 +94,10 @@ tusb_desc_strarray_device_t descriptor_str_kconfig = {
 #if CFG_TUD_NET
     CONFIG_TINYUSB_DESC_NET_STRING,          // NET Interface
     "",                                      // MAC
+#endif
+
+#if CFG_TUD_VENDOR
+    "TinyUSB vendor",                        // Vendor Interface
 #endif
 
 #if CFG_TUD_MSC

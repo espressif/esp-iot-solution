@@ -236,7 +236,7 @@ Note: Wi-Fi commands can only be used when USB Network Class is enabled
 Before using DFU to upgrade ES[32-S device, ensure that the DFU feature has been enabled in the configuration item.
 
 ```
-component config → TinyUSB Stack→ Use TinyUSB Stack → Firmware Upgrade Class (DFU) → Enable TinyUSB DFU feature
+component config -> TinyUSB Stack -> Use TinyUSB Stack -> Firmware Upgrade Class (DFU) -> Enable TinyUSB DFU feature
 ```
 
 #### Ubuntu 
@@ -257,6 +257,17 @@ sudo dfu-util -d <VendorID> -a 0 -D <OTA_BIN_PATH>
 
 - VendorID is USB vendor ID, the default value 0x303A
 - OTA_BIN_PATH is the upgrade firmware
+
+Run the following command to upload.
+
+```
+sudo dfu-util -d <VendorID> -a 0 -U <OTA_BIN_PATH>
+```
+
+**Notes**
+
+- VendorID is USB vendor ID, the default value 0x303A
+- Read firmware from device into OTA_BIN_PATH
 
 #### Windows
 

@@ -25,7 +25,7 @@
  */
 
 #include "tusb_option.h"
-#if CFG_TUD_DFU
+#if  CFG_TUD_DFU
   #include "dfu_device.h"
 #endif
 
@@ -35,7 +35,6 @@
 #include "device/usbd.h"
 #include "device/usbd_pvt.h"
 #include "device/dcd.h"
-
 
 #ifndef CFG_TUD_TASK_QUEUE_SZ
 #define CFG_TUD_TASK_QUEUE_SZ   16
@@ -191,7 +190,7 @@ static usbd_class_driver_t const _usbd_driver[] =
   },
   #endif
 
-  #if CFG_TUD_DFU
+#if CFG_TUD_DFU
   {
     DRIVER_NAME("DFU")
     .init             = dfu_moded_init,
@@ -201,7 +200,7 @@ static usbd_class_driver_t const _usbd_driver[] =
     .xfer_cb          = NULL,
     .sof              = NULL
   },
-  #endif
+#endif
 
   #if CFG_TUD_NET
   {
@@ -904,6 +903,9 @@ static void mark_interface_endpoint(uint8_t ep2drv[][2], uint8_t const* p_desc, 
     p_desc = tu_desc_next(p_desc);
   }
 }
+#if CFG_TUD_VENDOR
+extern uint8_t const * _tud_descriptor_bos_cb(void);
+#endif
 
 // return descriptor's buffer and update desc_len
 static bool process_get_descriptor(uint8_t rhport, tusb_control_request_t const * p_request)
@@ -933,14 +935,15 @@ static bool process_get_descriptor(uint8_t rhport, tusb_control_request_t const 
     }
     break;
 
+ #if CFG_TUD_VENDOR
     case TUSB_DESC_BOS:
     {
       TU_LOG2(" BOS\r\n");
 
       // requested by host if USB > 2.0 ( i.e 2.1 or 3.x )
-      if (!tud_descriptor_bos_cb) return false;
+      if (!_tud_descriptor_bos_cb) return false;
 
-      tusb_desc_bos_t const* desc_bos = (tusb_desc_bos_t const*) tud_descriptor_bos_cb();
+      tusb_desc_bos_t const* desc_bos = (tusb_desc_bos_t const*) _tud_descriptor_bos_cb();
 
       uint16_t total_len;
       // Use offsetof to avoid pointer to the odd/misaligned address
@@ -949,6 +952,7 @@ static bool process_get_descriptor(uint8_t rhport, tusb_control_request_t const 
       return tud_control_xfer(rhport, p_request, (void*) desc_bos, total_len);
     }
     break;
+ #endif
 
     case TUSB_DESC_CONFIGURATION:
     {
