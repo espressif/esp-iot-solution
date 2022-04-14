@@ -1,0 +1,20 @@
+name: Push components to Espressif Component Service
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  upload_components:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+        with:
+          submodules: 'recursive'
+      - name: Upload components to component service
+        uses: espressif/github-actions/upload_components@master
+        with:
+          directories: "components/button"
+          namespace: "espressif"
+          api_token: ${{ secrets.IDF_COMPONENT_API_TOKEN }}
