@@ -98,6 +98,59 @@
                 "esp32",
                 "esp32s2"
             ]
+        },
+        {
+            "name": "basic",
+            "buildsystem": [
+                "cmake"
+            ],
+            "targets": [
+                "esp32",
+                "esp32s2",
+                "esp32s3"
+            ]
+        },
+        {
+            "name": "pic_server",
+            "buildsystem": [
+                "cmake"
+            ],
+            "targets": [
+                "esp32",
+                "esp32s2",
+                "esp32s3"
+            ]
+        },
+        {
+            "name": "test_framerate",
+            "buildsystem": [
+                "cmake"
+            ],
+            "targets": [
+                "esp32",
+                "esp32s2",
+                "esp32s3"
+            ]
+        },
+        {
+            "name": "video_stream_server",
+            "buildsystem": [
+                "cmake"
+            ],
+            "targets": [
+                "esp32",
+                "esp32s2",
+                "esp32s3"
+            ]
+        },
+        {
+            "name": "examples",
+            "buildsystem": [
+                "cmake",
+                "make"
+            ],
+            "targets": [
+            ]
         }
     ]
 }

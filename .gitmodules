@@ -4,3 +4,6 @@
 [submodule "examples/hmi/lvgl_example/components/lv_examples/lv_examples"]
 	path = examples/hmi/lvgl_example/components/lv_examples/lv_examples
 	url = https://github.com/lvgl/lv_examples.git
+[submodule "examples/camera/camera_components/esp32-camera"]
+	path = examples/camera/camera_components/esp32-camera
+	url = https://github.com/espressif/esp32-camera
