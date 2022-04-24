@@ -144,6 +144,15 @@
             ]
         },
         {
+            "name": "video_recorder",
+            "buildsystem": [
+                "cmake"
+            ],
+            "targets": [
+                "esp32s3"
+            ]
+        },
+        {
             "name": "examples",
             "buildsystem": [
                 "cmake",
