@@ -28,6 +28,10 @@ typedef struct {
     const char *password;
     size_t channel;
     size_t max_connection;
+    size_t ssid_hidden;
+    wifi_auth_mode_t authmode;
+    wifi_bandwidth_t bandwidth;
+    wifi_interface_t ifx;
 } modem_wifi_config_t;
 
 #define MODEM_WIFI_DEFAULT_CONFIG()          \
@@ -39,12 +43,14 @@ typedef struct {
         .max_connection = 10                 \
     }
 
+esp_err_t modem_netif_get_sta_list(esp_netif_sta_list_t *netif_sta_list);
 esp_err_t modem_wifi_ap_init(void);
 esp_err_t modem_wifi_set(modem_wifi_config_t *config);
 esp_err_t modem_wifi_napt_enable();
 esp_err_t modem_wifi_sta_connected(uint32_t wait_ms);
 esp_err_t modem_wifi_set_dhcps(esp_netif_t *netif, uint32_t addr);
 esp_netif_t *modem_wifi_init(wifi_mode_t mode); //will abandoned
+esp_err_t modem_netif_updata_sta_list();
 
 #ifdef __cplusplus
 }

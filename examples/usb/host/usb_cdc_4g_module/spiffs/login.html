@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0">
+    <title>ESP-Router</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" href="./img/favicon.ico">
+</head>
+
+<body>
+<div class="home-base">
+    <div class="header-base">
+        <img class="header-logo" src="./img/logoBlack.png">
+    </div>
+    <div class="login-base">
+        <div class="login-content">
+            <div class="iconfont icon-luyouqi content-router"></div>
+            <div class="login-title">设备登录</div>
+            <div class="flex flex-jcc">
+                <div class="password-base flex">
+                    <div class="iconfont icon-mimasuo pwd-one"></div>
+                    <input class="pwd-two" placeholder="请输入密码">
+                    <div class="iconfont icon-eye pwd-thr"></div>
+                </div>
+            </div>
+            <div class="flex flex-jcc">
+                <div class="forgot-pwd flex">
+                    <input class="forgot-one" type="checkbox" id="forgot" name="sel"/>
+                    <span class="forgot-two">记住密码</span>
+                </div>
+            </div>
+            <div class="login-btn flex flex-jcc">
+                <button class="save-btn" onclick="login()">登录</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="js/login.js"></script>
+<script>
+  // initHash();
+  // window.addEventListener('hashchange', function() {
+  //   initHash();
+  // })
+</script>
+</body>
+
+</html>

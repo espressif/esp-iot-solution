@@ -39,6 +39,17 @@ menu "4G Modem Configuration"
             help
                 WiFi channel (network channel) for the example to use.
 
+        choice 
+            prompt "WiFi Bandwidth"
+            default WIFI_BANDWIFTH_40
+
+            config WIFI_BANDWIFTH_20
+                bool "20MHz"
+            config WIFI_BANDWIFTH_40
+                bool "40MHz"
+        endchoice
+
+
         config EXAMPLE_MAX_STA_CONN
             int "Maximal STA connections"
             default 5
@@ -53,6 +64,37 @@ menu "4G Modem Configuration"
             string  "main dns address"
             default "114.114.114.114"
             depends on EXAMPLE_MANUAL_DNS
+    endmenu
+
+    menu "Web router config"
+
+        config EXAMPLE_ENABLE_WEB_ROUTER
+            bool "Open web configuration"
+            default n
+            help
+                Open the web router, you can configure the system parameters
+
+        config EXAMPLE_WEB_MOUNT_POINT  
+            string "Website mount point in VFS"
+            default "/spiffs"
+            depends on EXAMPLE_ENABLE_WEB_ROUTER
+            help
+                Specify the mount point in VFS.
+
+        config EXAMPLE_WEB_USERNAME
+            string "Default login username "
+            default "esp32"
+            depends on EXAMPLE_ENABLE_WEB_ROUTER
+            help
+                Default username for logging in to the server.
+
+        config EXAMPLE_WEB_PASSWORD
+            string "Default login password"
+            default "12345678"
+            depends on EXAMPLE_ENABLE_WEB_ROUTER
+            help
+                Default password for logging in to the server.
+
     endmenu
 
     config MODEM_DIAL_RERTY_TIMES

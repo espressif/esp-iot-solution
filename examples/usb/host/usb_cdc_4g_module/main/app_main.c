@@ -26,15 +26,42 @@
 #include "nvs_flash.h"
 #include "nvs.h"
 #include "esp_netif.h"
-
 #include "modem_board.h"
 #include "modem_wifi.h"
+#include "modem_http_config.h"
 
 #ifdef CONFIG_CDC_USE_TRACE_FACILITY
 #include "esp_usbh_cdc.h"
 #endif
 
 static const char *TAG = "main";
+
+#ifdef CONFIG_EXAMPLE_ENABLE_WEB_ROUTER
+    /**
+     * @brief Basic Settings：ssid, password, if_hide_ssid, auth_mode
+     * 
+     */
+    static char user_ssid[36] = CONFIG_EXAMPLE_WIFI_SSID;
+    static char user_password[36] = CONFIG_EXAMPLE_WIFI_PASSWORD;
+    static char user_hide_ssid[8] = "false";
+    static char user_auth_mode[16] = "WPA_WPA2_PSK";
+    static size_t user_ssid_size = sizeof(user_ssid);
+    static size_t user_password_size = sizeof(user_password);
+    static size_t user_hide_ssid_size = sizeof(user_hide_ssid);
+    static size_t user_auth_mode_size = sizeof(user_auth_mode);
+    /**
+     * @brief Advanced Settings: Bandwidth, Signal Channel
+     * 
+     */
+    static char user_channel[4] = "";
+    static size_t user_channel_size = sizeof(user_channel);
+    #ifdef CONFIG_WIFI_BANDWIFTH_20
+    static char user_bandwidth[4] = "20";
+    #else 
+    static char user_bandwidth[4] = "40";
+    #endif
+    static size_t user_bandwidth_size = sizeof(user_bandwidth);
+#endif
 
 #ifdef CONFIG_DUMP_SYSTEM_STATUS
 #define TASK_MAX_COUNT 32
@@ -102,6 +129,47 @@ static void _system_dump()
 }
 #endif
 
+#ifdef CONFIG_EXAMPLE_ENABLE_WEB_ROUTER
+static void nvs_get_str_log(esp_err_t err,char *key,char *value){
+    switch (err) {
+    case ESP_OK:
+        printf("%s = %s\n",key, value);
+        break;
+    case ESP_ERR_NVS_NOT_FOUND:
+        printf("%s is not initialized yet!\n",key);
+        break;
+    default :
+        printf("Error (%s) reading!\n", esp_err_to_name(err));
+    }
+}
+
+static esp_err_t init_nvs(void){
+    nvs_handle_t my_handle; 
+    esp_err_t err = nvs_open("memory", NVS_READWRITE, &my_handle);
+    if (err != ESP_OK) {
+        printf("Error (%s) opening NVS handle!\n", esp_err_to_name(err));
+        return ESP_FAIL;
+    } else {
+        printf("Reading restart counter from NVS ... ");
+        //int32_t restart_counter = 0; // value will default to 0, if not set yet in NVS
+        err = nvs_get_str(my_handle, "user_ssid", user_ssid,&user_ssid_size);
+        nvs_get_str_log(err,"user_ssid",user_ssid);
+        err = nvs_get_str(my_handle, "user_password",user_password,&user_password_size);
+        nvs_get_str_log(err,"user_password",user_password);
+        err = nvs_get_str(my_handle, "user_hide_ssid",user_hide_ssid,&user_hide_ssid_size);
+        nvs_get_str_log(err,"user_hide_ssid",user_hide_ssid);
+        err = nvs_get_str(my_handle, "user_auth_mode",user_auth_mode,&user_auth_mode_size);
+        nvs_get_str_log(err,"user_auth_mode",user_auth_mode);
+        err = nvs_get_str(my_handle, "user_channel",user_channel,&user_channel_size);
+        nvs_get_str_log(err,"user_channel",user_channel);
+        err = nvs_get_str(my_handle, "user_bandwidth",user_bandwidth,&user_bandwidth_size);
+        nvs_get_str_log(err,"user_bandwidth",user_bandwidth);
+        nvs_close(my_handle);
+    }
+    return ESP_OK;
+}
+#endif
+
 
 void app_main(void)
 {
@@ -139,12 +207,47 @@ void app_main(void)
     esp_netif_t *ppp_netif = modem_board_init(&modem_config);
     assert(ppp_netif != NULL);
 
+#ifdef CONFIG_EXAMPLE_ENABLE_WEB_ROUTER
+    sprintf(user_channel,"%d",CONFIG_EXAMPLE_WIFI_CHANNEL);
+    init_nvs();
+    modem_http_config_init();
+    modem_wifi_config_t modem_wifi_config = MODEM_WIFI_DEFAULT_CONFIG();
+    modem_wifi_config.max_connection = CONFIG_EXAMPLE_MAX_STA_CONN;
+    modem_wifi_config.ssid = user_ssid;
+    modem_wifi_config.password = user_password;
+    modem_wifi_config.max_connection = 5;
+    if ( !strcmp(user_auth_mode,"OPEN") )
+        modem_wifi_config.authmode = WIFI_AUTH_OPEN;
+    else if ( !strcmp(user_auth_mode,"WEP") )
+        modem_wifi_config.authmode = WIFI_AUTH_WEP;
+    else if ( !strcmp(user_auth_mode,"WPA2_PSK") )
+        modem_wifi_config.authmode = WIFI_AUTH_WPA2_PSK;
+    else if ( !strcmp(user_auth_mode,"WPA_WPA2_PSK") )
+        modem_wifi_config.authmode = WIFI_AUTH_WPA_WPA2_PSK;
+    else
+        ESP_LOGE(TAG,"User_auth_mode %s is not define",user_auth_mode);
+    modem_wifi_config.channel = atoi(user_channel);
+    if (strcmp(user_hide_ssid, "false") !=0 ){
+        modem_wifi_config.ssid_hidden = 1;
+    }
+    if(!strcmp(user_bandwidth,"20")){
+        modem_wifi_config.bandwidth=WIFI_BW_HT20;
+    }else{
+        modem_wifi_config.bandwidth=WIFI_BW_HT40;
+    }
+#else
     /* Initialize Wi-Fi. Start Wi-Fi AP */
     modem_wifi_config_t modem_wifi_config = MODEM_WIFI_DEFAULT_CONFIG();
     modem_wifi_config.max_connection = CONFIG_EXAMPLE_MAX_STA_CONN;
     modem_wifi_config.channel = CONFIG_EXAMPLE_WIFI_CHANNEL;
     modem_wifi_config.password = CONFIG_EXAMPLE_WIFI_PASSWORD;
     modem_wifi_config.ssid = CONFIG_EXAMPLE_WIFI_SSID;
+    #ifdef CONFIG_WIFI_BANDWIFTH_20
+        modem_wifi_config.bandwidth = WIFI_BW_HT20;
+    #else
+        modem_wifi_config.bandwidth = WIFI_BW_HT40;
+    #endif
+#endif    
     esp_netif_t *ap_netif = esp_netif_create_default_wifi_ap();
     assert(ap_netif != NULL);
 #if CONFIG_EXAMPLE_MANUAL_DNS

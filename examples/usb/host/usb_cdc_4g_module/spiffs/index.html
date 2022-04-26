@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0">
+  <title>ESP-Router</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="./img/favicon.ico">
+</head>
+
+<body>
+  <div class="home-base">
+    <div class="header-base">
+      <img class="header-logo" src="./img/logoBlack.png">
+    </div>
+    <div class="content-base flex">
+      <div class="left-base">
+<!--        <div class="left-title">系统菜单</div>-->
+        <ul>
+          <li>
+            <a href="station.html" class="content">系统状态</a>
+          </li>
+          <li>
+            <a href="">网络设置</a>
+          </li>
+          <li>
+            <a href="wlan.html">WLAN设置</a>
+          </li>
+          <li>
+            <a href="">流量统计</a>
+          </li>
+          <li>
+            <a href="">系统管理</a>
+          </li>
+        </ul>
+      </div>
+      <div class="right-base"></div>
+    </div>
+  </div>
+  <script src="js/index.js"></script>
+  <script>
+    initHash();
+    window.addEventListener('hashchange', function() {
+      initHash();
+    })
+  </script>
+</body>
+
+</html>
