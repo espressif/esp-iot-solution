@@ -2,7 +2,7 @@
 
 # USB CDC 4G Module
 
-This example demonstrates the ESP32-S2, ESP32-S3 series SoC as a USB host to dial-up 4G Cat.1 through PPP to access the Internet, with the help of ESP32-SX Wi-Fi softAP function, share the Internet with IoT devices or mobile devices. Realize low-cost "medium-high-speed" Internet access.
+This example demonstrates the ESP32-S2, ESP32-S3 series SoC as a USB host to dial-up 4G Cat.1 through PPP to access the Internet, with the help of ESP32-SX Wi-Fi softAP function, share the Internet with IoT devices or mobile devices. Realize low-cost "medium-high-speed" Internet access.It is also equipped with a router management interface, which allows you to configure the router online and view the information of connected devices.
 
 **Features Supported:**
 
@@ -11,6 +11,7 @@ This example demonstrates the ESP32-S2, ESP32-S3 series SoC as a USB host to dia
 * PPP dial-up
 * Wi-Fi hotspot
 * 4G module status management
+* Router management interface
 * Status led indicator
 
 ![ESP32S2_USB_4g_moudle](./_static/esp32s2_cdc_4g_moudle.png)
@@ -76,6 +77,18 @@ User can modify SSID and Password in `menuconfig -> 4G Modem Configuration -> Wi
 | **Modem (Green)** | extinguish  |                  NA                   |
 |                   | slow blink  |    waiting for internet connection    |
 |                   |    solid    |          internet connected           |
+
+**Router management interface**
+You can configure whether to open the router management interface in `4G Modem Configuration → Web router config ` of `menuconfig`, and change the login account and password of the router management interface.
+
+1. The default login account is `esp32`.
+2. The default password is `12345678`.
+3. Search `192.168.4.1` on the webpage to enter the router background
+4. Currently supported features.
+    * Support account login authentication
+    * Support modify hotspot name, password, invisible or not, channel, bandwidth, security mode
+    * Support to view the current connected device information, note the host name, a key to kick out the device
+    * Support to view the network status and network time of the device
 
 ## How to build example
 

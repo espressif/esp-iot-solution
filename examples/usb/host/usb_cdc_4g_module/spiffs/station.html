@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <script src="js/jquery.min.js"></script>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0"
+    />
+    <title>ESP-Router</title>
+    <style>
+      span{display: inline} 
+      p{display: inline}
+    </style>
+    <!-- <link rel="stylesheet" href="css/style.css" /> -->
+    <link rel="icon" href="./img/favicon.ico" />
+    <script>
+      const baseurl = window.location.origin;
+      var Ajax = {
+        get: function (url, callback) {
+          // XMLHttpRequest对象用于在后台与服务器交换数据
+          console.log("456789");
+          var xhr = new XMLHttpRequest();
+          xhr.open("GET", url, false);
+          xhr.setRequestHeader("Content-Type", "application/json");
+          xhr.onreadystatechange = function () {
+            if (xhr.readyState === 4) {
+              if (xhr.status === 200 || xhr.status === 304) {
+                console.log(xhr.responseText);
+                callback(xhr.responseText);
+              } else {
+                console.log(xhr.responseText);
+              }
+            }
+          };
+          xhr.send();
+        },
+        put: function (url, data, callback) {
+          var xhr = new XMLHttpRequest();
+          xhr.open("put", url, true);
+          xhr.setRequestHeader("Content-Type", "application/json");
+          xhr.onreadystatechange = function () {
+            if (xhr.readyState === 4) {
+              if (xhr.status === 200 || xhr.status === 304) {
+                console.log(xhr.responseText);
+                callback(xhr.responseText);
+              } else {
+                console.log(xhr.responseText);
+              }
+            }
+          };
+          xhr.send(JSON.stringify(data));
+        },
+        post: function (url, data, callback) {
+          var xhr = new XMLHttpRequest();
+          xhr.open("POST", url, true);
+          // 添加http头，发送信息至服务器时内容编码类型
+          xhr.setRequestHeader("Content-Type", "application/json");
+          xhr.onreadystatechange = function () {
+            console.log("1: ", xhr.readyState);
+            console.log("2: ", xhr.status);
+            console.log("3: ", xhr.responseText);
+            if (xhr.readyState === 4) {
+              if (xhr.status === 200 || xhr.status === 304) {
+                callback(xhr.responseText);
+              }
+            }
+          };
+          xhr.send(JSON.stringify(data));
+        },
+      };
+    </script>
+    <script>
+
+      $(document).on("click", ".edit", function () {
+        var val = $(this).val();
+        console.log(val);
+        if (val == "确认") {
+          var mac = $(this).parent().parent("tr").children("#mac").html();
+          console.log(mac);
+          var name = $(this)
+            .parent()
+            .parent("tr")
+            .children("#name")
+            .children("input")
+            .val();
+          console.log(name);
+          Ajax.post(
+            `${baseurl}/system/station_state/change_name`,
+            { name_str: name, mac_str: mac },
+            function (res) {
+              console.log("修改主机名：", res);
+            }
+          );
+
+          $(this)
+            .parent()
+            .parent("tr")
+            .children("#name")
+            .children("input")
+            .attr("readonly", "readonly"); 
+        } else {
+          $(this)
+            .parent()
+            .parent("tr")
+            .children("#name")
+            .children("input")
+            .removeAttr("readonly"); 
+        }
+        $(this).val(val == "编辑" ? "确认" : "编辑");
+      });
+
+      $(document).on("click", ".delete", function () {
+        var val = $(this).val();
+        console.log(val);
+        if (val == "确认") {
+          var mac2 = $(this).parent().parent("tr").children("#mac").html();
+          console.log(mac2);
+          Ajax.post(
+            `${baseurl}/system/station_state/delete_device`,
+            { mac_str: mac2 },
+            function (res) {
+              console.log("删除主机：", res);
+            }
+          );
+        }
+        $(this).val(val == "删除" ? "确认" : "删除");
+      });
+
+      var count=1;
+      var json_old='';
+      function load() {
+        setTimeout(load,4*1000);
+        console.log('页面第'+count+'次加载')
+        count++;
+        var change_flag=false
+        Ajax.get(`${baseurl}/system/station_state`,function(res){
+          console.log('获取基本信息： ', res)
+          obj = JSON.parse(res)
+          if(obj.station_list.toString() != json_old){
+            change_flag=true
+          }
+          json_old = obj.station_list.toString()
+          console.log('json_old',json_old);
+        });
+        console.log(obj)
+
+        document.getElementById('connected').innerHTML = obj.station_list.length;
+        document.getElementById('connection_remaining').innerHTML = 10 - obj.station_list.length;
+        var online_time=obj.now_time/1000000;
+        var h = Math.floor(online_time / 3600 );
+        var m = Math.floor((online_time /60 % 60));
+        var s = Math.floor((online_time % 60));
+        document.getElementById('connection_time').innerHTML = h +'小时'+ m +'分钟'+ s +'秒';
+
+        if(change_flag==true){ 
+        console.log("change")
+        div1 = document.getElementById("div1");
+        var tab = "<table id='datatable' border=1 width=600>";
+        tab +=
+          "<tr><td>主机名</td>\
+          <td>mac地址</td>\
+          \<td>IP地址</td>\
+          <td>连接时间</td>\
+          <td>允许上网</td>\
+          <td>操作</td>\
+          </tr>";
+          console.log(obj)
+        for (var i = 0; i < obj.station_list.length; i++) {
+          tab += "<tr>";
+          if (obj.station_list[i].name_str == undefined || obj.station_list[i].name_str == "") {
+            tab +=
+              "<td id=name><input type='text' readonly='readonly' value='" +
+              (i+1) +
+              "'/>" +
+              "</td>";
+          } else {
+            tab +=
+              "<td id=name><input type='text' readonly='readonly' value='" +
+              obj.station_list[i].name_str +
+              "'/>" +
+              "</td>";
+          }
+          tab += "<td id = 'mac'  >" + obj.station_list[i].mac_str + "</td>";
+          tab += "<td id = 'ip'>" + obj.station_list[i].ip_str + "</td>";
+          var online_time=(obj.now_time - obj.station_list[i].online_time_s)/1000000;
+          var h = Math.floor(online_time / 3600 );
+          var m = Math.floor((online_time /60 % 60));
+          var s = Math.floor((online_time % 60));
+          tab +=
+            "<td id = 'time'>" + h +"小时"+ m +"分钟"+ s +"秒"+ "</td>";
+          tab += '<td><input type="checkbox"  name="cb" checked=true ></td>';
+          tab +=
+            "<td>" +
+            "<input type='button' class='edit'  value='编辑'/><input type='button' class='delete' value='删除'/>" +
+            "</td>";
+          tab += "</tr>";
+        }
+        console.log(tab);
+        tab += "</table>";
+        div1.innerHTML = tab;
+      }else{
+        var tb = document.getElementById('datatable');
+        for (var i = 0; i < obj.station_list.length; i++) {
+          var online_time=(obj.now_time - obj.station_list[i].online_time_s)/1000000;
+          var h = Math.floor(online_time / 3600 );
+          var m = Math.floor((online_time /60 % 60));
+          var s = Math.floor((online_time % 60));
+          tb.rows[i+1].cells[3].innerHTML = h +"小时"+ m +"分钟"+ s +"秒";
+        }
+      }
+    }
+    </script>
+  </head>
+
+  <body onload="load();">
+    <div class="home-base">
+      <div class="header-base">
+        <img class="header-logo" src="./img/logoBlack.png" />
+      </div>
+    </div>
+    <div class="left-base">
+      <!--        <div class="left-title">系统菜单</div>-->
+      <ul>
+        <li>
+          <a href="station.html" class="content">系统状态</a>
+        </li>
+        <li>
+          <a href="">网络设置</a>
+        </li>
+        <li>
+          <a href="wlan.html">WLAN设置</a>
+        </li>
+        <li>
+          <a href="">流量统计</a>
+        </li>
+        <li>
+          <a href="">系统管理</a>
+        </li>
+      </ul>
+    </div>
+
+    <h3 id='basic'>
+      <span>移动数据:</span>
+      <p id='Mobile data'>正常</p>
+      <br></br>
+      <span>2.4GHz Wi-Fi:</span>
+      <p id='wifi'>正常</p>
+    </h3>
+    <h3 id='status'>
+      <span>电量情况:</span>
+      <p id='electricity'>95%</p>
+      <br></br>
+      <span>已连接数:</span>
+      <p id='connected'>1</p>
+      <br></br>
+      <span>连接持续时间:</span>
+      <p id='connection_time'>1</p>
+      <br></br>
+      <span>剩余连接数:</span>
+      <p id='connection_remaining'>1</p>
+    </h3>
+
+    <div id="div1"></div>
+  </body>
+</html>
