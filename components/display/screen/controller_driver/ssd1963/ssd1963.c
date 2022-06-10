@@ -87,7 +87,7 @@ esp_err_t lcd_ssd1963_init(const scr_controller_config_t *lcd_conf)
     LCD_CHECK(lcd_conf->width <= SSD1963_RESOLUTION_HOR, "Width greater than maximum", ESP_ERR_INVALID_ARG);
     LCD_CHECK(lcd_conf->height <= SSD1963_RESOLUTION_VER, "Height greater than maximum", ESP_ERR_INVALID_ARG);
     LCD_CHECK(NULL != lcd_conf, "config pointer invalid", ESP_ERR_INVALID_ARG);
-    LCD_CHECK((NULL != lcd_conf->interface_drv->write_cmd && \
+    LCD_CHECK((NULL != lcd_conf->interface_drv->write_command && \
                NULL != lcd_conf->interface_drv->write_data && \
                NULL != lcd_conf->interface_drv->write && \
                NULL != lcd_conf->interface_drv->read && \

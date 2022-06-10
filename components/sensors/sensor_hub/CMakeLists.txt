@@ -9,4 +9,4 @@ list(APPEND requires bh1750 veml6040 veml6075)
 
 idf_component_register(SRC_DIRS "." "hal"
                         INCLUDE_DIRS "include"
-                        REQUIRES "${requires}")
+                        REQUIRES "${requires}" "esp_timer")

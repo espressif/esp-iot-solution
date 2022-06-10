@@ -16,6 +16,7 @@
 #include <sys/queue.h>
 #include "esp_log.h"
 #include "iot_sensor_hub.h"
+#include "esp_timer.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"

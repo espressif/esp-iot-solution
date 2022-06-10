@@ -23,6 +23,10 @@
 #include "freertos/semphr.h"
 #include "esp_heap_caps.h"
 #include "esp32/rom/lldesc.h"
+#include "esp32/rom/gpio.h"
+#if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0))
+#include "esp_private/periph_ctrl.h"
+#endif
 #include "soc/dport_access.h"
 #include "soc/dport_reg.h"
 #include "soc/i2s_struct.h"
@@ -36,6 +40,11 @@ static const char *TAG = "ESP32_I2S_LCD";
         ESP_LOGE(TAG,"%s:%d (%s):%s", __FILE__, __LINE__, __FUNCTION__, str);       \
         return (ret);                                                                   \
     }
+
+#if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0))
+#define ets_delay_us esp_rom_delay_us
+#define portTICK_RATE_MS portTICK_PERIOD_MS
+#endif
 
 #define LCD_CAM_DMA_NODE_BUFFER_MAX_SIZE  (4000) // 4-byte aligned
 #define LCD_DATA_MAX_WIDTH (24)  /*!< Maximum width of LCD data bus */
