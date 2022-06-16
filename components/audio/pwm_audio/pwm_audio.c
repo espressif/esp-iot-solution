@@ -275,7 +275,7 @@ static void IRAM_ATTR timer_group_isr(void *para)
     /* Clear the interrupt */
     // uint32_t st = timer_ll_get_intr_status(handle->timg_dev);
     // if (st & (1UL << handle->config.timer_num)) {
-    timer_ll_clear_intr_status(handle->timg_dev, (1UL << handle->config.timer_num));
+    timer_ll_clear_intr_status(handle->timg_dev, handle->config.timer_num);
     // }
     /* After the alarm has been triggered
         we need enable it again, so it is triggered the next time */

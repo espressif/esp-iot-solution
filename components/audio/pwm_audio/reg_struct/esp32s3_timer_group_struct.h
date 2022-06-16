@@ -563,19 +563,19 @@ static inline void timer_ll_enable_counter(_timg_dev_t *hw, uint32_t timer_num, 
 }
 
 __attribute__((always_inline))
-static inline void timer_ll_enable_intr(_timg_dev_t *hw, uint32_t mask, bool en)
+static inline void timer_ll_enable_intr(_timg_dev_t *hw, uint32_t timer_num, bool en)
 {
     if (en) {
-        hw->int_ena_timers.val |= mask;
+        hw->int_ena_timers.val |= BIT(timer_num);
     } else {
-        hw->int_ena_timers.val &= ~mask;
+        hw->int_ena_timers.val &= ~BIT(timer_num);
     }
 }
 
 __attribute__((always_inline))
-static inline void timer_ll_clear_intr_status(_timg_dev_t *hw, uint32_t mask)
+static inline void timer_ll_clear_intr_status(_timg_dev_t *hw, uint32_t timer_num)
 {
-    hw->int_clr_timers.val = mask;
+    hw->int_clr_timers.val = BIT(timer_num);
 }
 
 static inline uint32_t timer_ll_get_intr_status(_timg_dev_t *hw)

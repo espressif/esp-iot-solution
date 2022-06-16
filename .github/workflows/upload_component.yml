@@ -15,6 +15,6 @@ jobs:
       - name: Upload components to component service
         uses: espressif/github-actions/upload_components@master
         with:
-          directories: "components/button"
+          directories: "components/button;components/audio/pwm_audio"
           namespace: "espressif"
           api_token: ${{ secrets.IDF_COMPONENT_API_TOKEN }}
