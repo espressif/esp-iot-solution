@@ -113,6 +113,6 @@ void app_main()
             esp_camera_fb_return(pic);
         }
 
-        vTaskDelay(2000 / portTICK_RATE_MS);
+        vTaskDelay(pdMS_TO_TICKS(2000));
     }
 }

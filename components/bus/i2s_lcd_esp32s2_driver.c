@@ -22,7 +22,13 @@
 #include "freertos/semphr.h"
 #include "esp_log.h"
 #include "driver/gpio.h"
+#include "esp32s2/rom/gpio.h"
+#if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0))
+#include "esp_private/periph_ctrl.h"
+#endif
+#include "soc/gpio_periph.h"
 #include "driver/i2s.h"
+#include "soc/i2s_struct.h"
 #include "esp_heap_caps.h"
 #include "esp32s2/rom/lldesc.h"
 #include "soc/system_reg.h"
@@ -38,6 +44,11 @@ static const char *TAG = "ESP32S2_I2S_LCD";
 
 #define LCD_CAM_DMA_NODE_BUFFER_MAX_SIZE  (4000) // 4-byte aligned
 #define LCD_DATA_MAX_WIDTH (24)  /*!< Maximum width of LCD data bus */
+
+#if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0))
+#define ets_delay_us esp_rom_delay_us
+#define portTICK_RATE_MS portTICK_PERIOD_MS
+#endif
 
 typedef struct {
     uint32_t dma_buffer_size;

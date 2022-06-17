@@ -28,6 +28,11 @@ static const char *TAG = "screen interface";
         return (ret);                                                           \
     }
 
+#if (CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S3)
+#define SOC_SUPPORT_8080_IFACE 1
+#endif
+
+#ifdef SOC_SUPPORT_8080_IFACE
 /**--------------------- I2S interface driver ----------------------*/
 typedef struct {
     i2s_lcd_handle_t i2s_lcd_handle;
@@ -38,12 +43,6 @@ static esp_err_t _i2s_lcd_write_data(void *handle, uint16_t data)
 {
     interface_i2s_handle_t *interface_i2s = __containerof(handle, interface_i2s_handle_t, interface_drv);
     return i2s_lcd_write_data(interface_i2s->i2s_lcd_handle, data);
-}
-
-static esp_err_t _i2s_lcd_write_cmd(void *handle, uint16_t cmd)
-{
-    interface_i2s_handle_t *interface_i2s = __containerof(handle, interface_i2s_handle_t, interface_drv);
-    return i2s_lcd_write_cmd(interface_i2s->i2s_lcd_handle, cmd);
 }
 
 static esp_err_t _i2s_lcd_write_command(void *handle, const uint8_t *cmd, uint32_t length)
@@ -74,6 +73,7 @@ static esp_err_t _i2s_lcd_release(void *handle)
     interface_i2s_handle_t *interface_i2s = __containerof(handle, interface_i2s_handle_t, interface_drv);
     return i2s_lcd_release(interface_i2s->i2s_lcd_handle);
 }
+#endif
 
 /**--------------------- I2C interface driver ----------------------*/
 #define SSD1306_WRITE_CMD           0x00
@@ -116,10 +116,11 @@ static esp_err_t i2c_lcd_write_byte(i2c_bus_device_handle_t i2c_dev, uint8_t ctr
     return ESP_OK;
 }
 
-static esp_err_t i2c_lcd_write_cmd(void *handle, uint16_t cmd)
+static esp_err_t i2c_lcd_write_command(void *handle, const uint8_t *cmd, uint32_t length)
 {
+    (void)length;// TODO: In most cases, the length is 1
     interface_i2c_handle_t *interface_i2c = __containerof(handle, interface_i2c_handle_t, interface_drv);
-    uint8_t v = cmd;
+    uint8_t v = *cmd;
     return i2c_lcd_write_byte(interface_i2c->i2c_dev, SSD1306_WRITE_CMD, v);
 }
 
@@ -168,7 +169,7 @@ typedef struct {
 
 static esp_err_t spi_lcd_driver_init(const scr_interface_spi_config_t *cfg, interface_spi_handle_t *out_interface_spi)
 {
-    LCD_IFACE_CHECK(GPIO_IS_VALID_OUTPUT_GPIO(cfg->pin_num_cs)||cfg->pin_num_cs==-1, "gpio cs invalid", ESP_ERR_INVALID_ARG);
+    LCD_IFACE_CHECK(GPIO_IS_VALID_OUTPUT_GPIO(cfg->pin_num_cs) || cfg->pin_num_cs == -1, "gpio cs invalid", ESP_ERR_INVALID_ARG);
     LCD_IFACE_CHECK(GPIO_IS_VALID_OUTPUT_GPIO(cfg->pin_num_dc), "gpio dc invalid", ESP_ERR_INVALID_ARG);
 
     //Initialize non-SPI GPIOs
@@ -210,13 +211,12 @@ static esp_err_t _lcd_spi_rw(spi_bus_device_handle_t spi, const uint8_t *output,
     return spi_bus_transfer_bytes(spi, output, input, length);
 }
 
-static esp_err_t spi_lcd_driver_write_cmd(void *handle, uint16_t value)
+static esp_err_t spi_lcd_driver_write_command(void *handle, const uint8_t *cmd, uint32_t length)
 {
     interface_spi_handle_t *interface_spi = __containerof(handle, interface_spi_handle_t, interface_drv);
     esp_err_t ret;
     gpio_set_level(interface_spi->pin_num_dc, LCD_CMD_LEV);
-    uint8_t data = value;
-    ret = _lcd_spi_rw(interface_spi->spi_wr_dev, &data, NULL, 1);
+    ret = _lcd_spi_rw(interface_spi->spi_wr_dev, cmd, NULL, length);
     gpio_set_level(interface_spi->pin_num_dc, LCD_DATA_LEV);
     LCD_IFACE_CHECK(ESP_OK == ret, "Send cmd failed", ESP_FAIL);
     return ESP_OK;
@@ -284,6 +284,7 @@ esp_err_t scr_interface_create(scr_interface_type_t type, void *config, scr_inte
     LCD_IFACE_CHECK(NULL != out_driver, "Pointer of driver is invalid", ESP_ERR_INVALID_ARG);
 
     switch (type) {
+#ifdef SOC_SUPPORT_8080_IFACE
     case SCREEN_IFACE_8080: {
         interface_i2s_handle_t *interface_i2s = heap_caps_malloc(sizeof(interface_i2s_handle_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
         LCD_IFACE_CHECK(NULL != interface_i2s, "memory of iface i2s is not enough", ESP_ERR_NO_MEM);
@@ -295,7 +296,6 @@ esp_err_t scr_interface_create(scr_interface_type_t type, void *config, scr_inte
         }
 
         interface_i2s->interface_drv.type        = type;
-        interface_i2s->interface_drv.write_cmd   = _i2s_lcd_write_cmd;
         interface_i2s->interface_drv.write_command = _i2s_lcd_write_command;
         interface_i2s->interface_drv.write_data  = _i2s_lcd_write_data;
         interface_i2s->interface_drv.write       = _i2s_lcd_write;
@@ -305,6 +305,7 @@ esp_err_t scr_interface_create(scr_interface_type_t type, void *config, scr_inte
 
         *out_driver = &interface_i2s->interface_drv;
     } break;
+#endif
     case SCREEN_IFACE_SPI: {
         interface_spi_handle_t *interface_spi = heap_caps_malloc(sizeof(interface_spi_handle_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
         LCD_IFACE_CHECK(NULL != interface_spi, "memory of iface spi is not enough", ESP_ERR_NO_MEM);
@@ -316,7 +317,7 @@ esp_err_t scr_interface_create(scr_interface_type_t type, void *config, scr_inte
         }
 
         interface_spi->interface_drv.type        = type;
-        interface_spi->interface_drv.write_cmd   = spi_lcd_driver_write_cmd;
+        interface_spi->interface_drv.write_command = spi_lcd_driver_write_command;
         interface_spi->interface_drv.write_data  = spi_lcd_driver_write_data;
         interface_spi->interface_drv.write       = spi_lcd_driver_write;
         interface_spi->interface_drv.read        = spi_lcd_driver_read;
@@ -337,7 +338,7 @@ esp_err_t scr_interface_create(scr_interface_type_t type, void *config, scr_inte
         }
 
         interface_i2c->interface_drv.type        = type;
-        interface_i2c->interface_drv.write_cmd   = i2c_lcd_write_cmd;
+        interface_i2c->interface_drv.write_command = i2c_lcd_write_command;
         interface_i2c->interface_drv.write_data  = i2c_lcd_write_data;
         interface_i2c->interface_drv.write       = i2c_lcd_write;
         interface_i2c->interface_drv.read        = i2c_lcd_read;
@@ -359,11 +360,13 @@ esp_err_t scr_interface_delete(const scr_interface_driver_t *driver)
     LCD_IFACE_CHECK(NULL != driver, "Pointer of driver is invalid", ESP_ERR_INVALID_ARG);
 
     switch (driver->type) {
+#ifdef SOC_SUPPORT_8080_IFACE
     case SCREEN_IFACE_8080: {
         interface_i2s_handle_t *interface_i2s = __containerof(driver, interface_i2s_handle_t, interface_drv);
         i2s_lcd_driver_deinit(interface_i2s->i2s_lcd_handle);
         heap_caps_free(interface_i2s);
     } break;
+#endif
     case SCREEN_IFACE_SPI: {
         interface_spi_handle_t *interface_spi = __containerof(driver, interface_spi_handle_t, interface_drv);
         spi_lcd_driver_deinit(interface_spi);

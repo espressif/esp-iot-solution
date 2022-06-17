@@ -283,7 +283,9 @@ void app_main()
     lvgl_init(&lcd_drv, &touch_drv);
 
     // thermostat initialize
+    lvgl_acquire();
     littlevgl_thermostat();
+    lvgl_release();
 
     ESP_LOGI(TAG, "[APP] IDF version: %s", esp_get_idf_version());
     ESP_LOGI(TAG, "[APP] Free memory: %d bytes", esp_get_free_heap_size());

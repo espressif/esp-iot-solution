@@ -270,7 +270,7 @@ static void _blink_list_switch(_led_indicator_t *p_led_indicator)
  * 
  * @param xTimer handle of the timmer instance
  */
-static void _blink_list_runner(xTimerHandle xTimer)
+static void _blink_list_runner(TimerHandle_t xTimer)
 {
     _led_indicator_t * p_led_indicator = (_led_indicator_t *)pvTimerGetTimerID(xTimer);
     bool leave = false;
@@ -286,9 +286,9 @@ static void _blink_list_runner(xTimerHandle xTimer)
 
         p_led_indicator->p_blink_steps[active_blink] += 1;
 
-        if (pdFALSE == xSemaphoreTake(p_led_indicator->mutex, (100 / portTICK_RATE_MS))) {
+        if (pdFALSE == xSemaphoreTake(p_led_indicator->mutex, pdMS_TO_TICKS(100))) {
             ESP_LOGW(TAG, "blinks runner blockTime expired, try repairing...");
-            xTimerChangePeriod(p_led_indicator->h_timer, (100 / portTICK_RATE_MS), 0);
+            xTimerChangePeriod(p_led_indicator->h_timer, pdMS_TO_TICKS(100), 0);
             xTimerStart(p_led_indicator->h_timer, 0);
             break;
         }
@@ -307,7 +307,7 @@ static void _blink_list_runner(xTimerHandle xTimer)
                     _led_set_state(p_led_indicator->io_num, p_led_indicator->off_level, p_blink_step->on_off);
                     if (p_blink_step->hold_time_ms == 0)
                     break;
-                    xTimerChangePeriod(p_led_indicator->h_timer, (p_blink_step->hold_time_ms / portTICK_RATE_MS), 0);
+                    xTimerChangePeriod(p_led_indicator->h_timer, pdMS_TO_TICKS(p_blink_step->hold_time_ms), 0);
                     xTimerStart(p_led_indicator->h_timer, 0);
                     leave=true;
                 break;
@@ -346,7 +346,7 @@ led_indicator_handle_t led_indicator_create(int io_num, const led_indicator_conf
             {
             bool ininted = _led_gpio_init(p_led_indicator->io_num);
             LED_INDICATOR_CHECK_GOTO(ininted != false, "init led gpio failed", cleanup_all);
-            p_led_indicator->h_timer = xTimerCreate(timmer_name, (100 / portTICK_RATE_MS), pdFALSE, (void *)p_led_indicator, _blink_list_runner);
+            p_led_indicator->h_timer = xTimerCreate(timmer_name, (pdMS_TO_TICKS(100)), pdFALSE, (void *)p_led_indicator, _blink_list_runner);
             LED_INDICATOR_CHECK_GOTO(p_led_indicator->h_timer != NULL, "led timmer create failed", cleanup_all);
             }
             break;

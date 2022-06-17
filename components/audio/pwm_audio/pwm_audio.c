@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#define _SOC_TIMG_STRUCT_H_ // to exclude `timer_group_struct.h` file
+
 #include <stdio.h>
 #include <string.h>
 #include "freertos/FreeRTOS.h"
@@ -19,18 +21,25 @@
 #include "freertos/task.h"
 #include "driver/ledc.h"
 #include "esp_err.h"
-#include "esp_timer.h"
 #include "esp_log.h"
 #include "esp_heap_caps.h"
 #include "driver/timer.h"
-#include "soc/timer_group_struct.h"
 #include "soc/ledc_struct.h"
 #include "soc/ledc_reg.h"
 #include "pwm_audio.h"
 #include "sdkconfig.h"
 
-#if (CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S3)
+#if (CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32C3)
 
+#ifdef CONFIG_IDF_TARGET_ESP32
+#include "reg_struct/esp32_timer_group_struct.h"
+#elif defined CONFIG_IDF_TARGET_ESP32S2
+#include "reg_struct/esp32s2_timer_group_struct.h"
+#elif defined CONFIG_IDF_TARGET_ESP32S3
+#include "reg_struct/esp32s3_timer_group_struct.h"
+#elif defined CONFIG_IDF_TARGET_ESP32C3
+#include "reg_struct/esp32c3_timer_group_struct.h"
+#endif
 static const char *TAG = "pwm_audio";
 
 #define PWM_AUDIO_CHECK(a, str, ret_val)                          \
@@ -58,6 +67,10 @@ static const char *PWM_AUDIO_NOT_INITIALIZED  = "PWM AUDIO Uninitialized";
 #define CHANNEL_RIGHT_MASK  (0x02)
 #define VOLUME_0DB          (16)
 
+#ifndef TIMER_BASE_CLK
+#define TIMER_BASE_CLK 80000000
+#endif
+
 /**
  * Debug Configuration
  **/
@@ -77,7 +90,7 @@ typedef struct {
     pwm_audio_config_t    config;                          /**< pwm audio config struct */
     ledc_channel_config_t ledc_channel[PWM_AUDIO_CH_MAX];  /**< ledc channel config */
     ledc_timer_config_t   ledc_timer;                      /**< ledc timer config  */
-    timg_dev_t            *timg_dev;                       /**< timer group register pointer */
+    _timg_dev_t            *timg_dev;                       /**< timer group register pointer */
     ringbuf_handle_t      *ringbuf;                        /**< audio ringbuffer pointer */
     uint32_t              channel_mask;                    /**< channel gpio mask */
     uint32_t              channel_set_num;                 /**< channel audio set number */
@@ -249,7 +262,6 @@ static inline void ledc_set_right_duty_fast(uint32_t duty_val)
     *g_ledc_right_conf1_val |= 0x80000000;
 }
 
-
 /*
  * Timer group ISR handler
  */
@@ -261,12 +273,13 @@ static void IRAM_ATTR timer_group_isr(void *para)
         return;
     }
     /* Clear the interrupt */
-    if (REG_GET_BIT(TIMG_INT_ST_TIMERS_REG(handle->config.timer_num), BIT(handle->config.timer_num))) {
-        REG_SET_BIT(TIMG_INT_CLR_TIMERS_REG(handle->config.timer_num), BIT(handle->config.timer_num));
-    }
+    // uint32_t st = timer_ll_get_intr_status(handle->timg_dev);
+    // if (st & (1UL << handle->config.timer_num)) {
+    timer_ll_clear_intr_status(handle->timg_dev, handle->config.timer_num);
+    // }
     /* After the alarm has been triggered
         we need enable it again, so it is triggered the next time */
-    REG_SET_BIT(TIMG_T0CONFIG_REG(handle->config.timer_num), TIMG_T0_ALARM_EN_M);
+    timer_ll_enable_alarm(handle->timg_dev, handle->config.timer_num, 1);
 
     static uint8_t wave_h, wave_l;
     static uint16_t value;
@@ -423,9 +436,9 @@ esp_err_t pwm_audio_init(const pwm_audio_config_t *cfg)
 
     /**< Get timer group register pointer */
     if (cfg->tg_num == TIMER_GROUP_0) {
-        handle->timg_dev = &TIMERG0;
+        handle->timg_dev = TIMERG0;
     } else {
-        handle->timg_dev = &TIMERG1;
+        handle->timg_dev = TIMERG1;
     }
 
     /**
@@ -539,7 +552,7 @@ esp_err_t pwm_audio_set_param(int rate, ledc_timer_bit_t bits, int ch)
     timer_set_counter_value(handle->config.tg_num, handle->config.timer_num, 0x00000000ULL);
 
     /* Configure the alarm value and the interrupt on alarm. */
-    uint32_t divider = REG_GET_FIELD(TIMG_T0CONFIG_REG(handle->config.timer_num), TIMG_T0_DIVIDER);
+    uint32_t divider = timer_ll_get_clock_prescale(handle->timg_dev, handle->config.timer_num);
     timer_set_alarm_value(handle->config.tg_num, handle->config.timer_num, (TIMER_BASE_CLK / divider) / handle->framerate);
     // timer_enable_intr(handle->config.tg_num, handle->config.timer_num);
     return res;
@@ -554,7 +567,7 @@ esp_err_t pwm_audio_set_sample_rate(int rate)
 
     pwm_audio_data_t *handle = g_pwm_audio_handle;
     handle->framerate = rate;
-    uint32_t divider = REG_GET_FIELD(TIMG_T0CONFIG_REG(handle->config.timer_num), TIMG_T0_DIVIDER);
+    uint32_t divider = timer_ll_get_clock_prescale(handle->timg_dev, handle->config.timer_num);
     res = timer_set_alarm_value(handle->config.tg_num, handle->config.timer_num, (TIMER_BASE_CLK / divider) / handle->framerate);
     return res;
 }
@@ -733,12 +746,9 @@ esp_err_t pwm_audio_start(void)
 
     /**< timer enable interrupt */
     portENTER_CRITICAL_SAFE(&timer_spinlock);
-    REG_SET_BIT(TIMG_INT_ENA_TIMERS_REG(handle->config.timer_num), BIT(handle->config.timer_num));
-    REG_SET_BIT(TIMG_T0CONFIG_REG(handle->config.timer_num), TIMG_T0_EN_M);
-    REG_SET_BIT(TIMG_T0CONFIG_REG(handle->config.timer_num), TIMG_T0_ALARM_EN_M);
-#ifdef TIMG_T0_LEVEL_INT_EN_M
-    REG_SET_BIT(TIMG_T0CONFIG_REG(handle->config.timer_num), TIMG_T0_LEVEL_INT_EN_M);
-#endif
+    timer_ll_enable_intr(handle->timg_dev, handle->config.timer_num, 1);
+    timer_ll_enable_counter(handle->timg_dev, handle->config.timer_num, 1);
+    timer_ll_enable_alarm(handle->timg_dev, handle->config.timer_num, 1); /** Make sure the interrupt is enabled*/
     portEXIT_CRITICAL_SAFE(&timer_spinlock);
 
     res = timer_start(handle->config.tg_num, handle->config.timer_num);
@@ -754,12 +764,8 @@ esp_err_t pwm_audio_stop(void)
     /**< just disable timer ,keep pwm output to reduce switching nosie */
     /**< timer disable interrupt */
     portENTER_CRITICAL_SAFE(&timer_spinlock);
-    REG_CLR_BIT(TIMG_INT_ENA_TIMERS_REG(handle->config.timer_num), BIT(handle->config.timer_num));
-    REG_CLR_BIT(TIMG_T0CONFIG_REG(handle->config.timer_num), TIMG_T0_EN_M);
-    REG_CLR_BIT(TIMG_T0CONFIG_REG(handle->config.timer_num), TIMG_T0_ALARM_EN_M);
-#ifdef TIMG_T0_LEVEL_INT_EN_M
-    REG_CLR_BIT(TIMG_T0CONFIG_REG(handle->config.timer_num), TIMG_T0_LEVEL_INT_EN_M);
-#endif
+    timer_ll_enable_intr(handle->timg_dev, handle->config.timer_num, 0);
+    timer_ll_enable_counter(handle->timg_dev, handle->config.timer_num, 0);
     portEXIT_CRITICAL_SAFE(&timer_spinlock);
 
     // timer_pause(handle->config.tg_num, handle->config.timer_num);

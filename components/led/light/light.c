@@ -143,7 +143,7 @@ esp_err_t iot_light_channel_regist(light_handle_t light_handle, uint8_t channel_
 {
     light_t* light = (light_t*)light_handle;
     POINT_ASSERT(TAG, light_handle);
-    IOT_CHECK(TAG, channel_idx < light->channel_num, FAIL);
+    IOT_CHECK(TAG, channel_idx < light->channel_num, ESP_FAIL);
     if (light->channel_group[channel_idx] != NULL) {
         ESP_LOGE(TAG, "this channel index has been registered");
         return ESP_FAIL;
@@ -184,7 +184,7 @@ esp_err_t iot_light_breath_write(light_handle_t light_handle, uint8_t channel_id
 {
     light_t* light = (light_t*)light_handle;
     POINT_ASSERT(TAG, light_handle);
-    IOT_CHECK(TAG, channel_id < light->channel_num, FAIL);
+    IOT_CHECK(TAG, channel_id < light->channel_num, ESP_FAIL);
     POINT_ASSERT(TAG, light->channel_group[channel_id]);
     light_channel_t* l_chn = light->channel_group[channel_id];
     if (l_chn->breath_period != breath_period_ms) {

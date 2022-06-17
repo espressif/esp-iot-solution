@@ -25,6 +25,7 @@
 #include "esp32s3/rom/lldesc.h"
 #include "esp32s3/rom/gpio.h"
 #include "driver/gpio.h"
+#include "soc/gpio_periph.h"
 #include "soc/system_reg.h"
 #include "soc/lcd_cam_struct.h"
 #include "soc/lcd_cam_reg.h"
@@ -42,6 +43,11 @@ static const char *TAG = "ESP32S3_LCD";
     }
 
 #define LCD_CAM_DMA_NODE_BUFFER_MAX_SIZE  (4000)
+
+#if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0))
+#define ets_delay_us esp_rom_delay_us
+#define portTICK_RATE_MS portTICK_PERIOD_MS
+#endif
 
 typedef struct {
     uint32_t dma_buffer_size;

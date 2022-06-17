@@ -19,6 +19,11 @@
 extern "C" {
 #endif
 
+#if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0))
+#define gpio_pad_select_gpio esp_rom_gpio_pad_select_gpio
+#define portTICK_RATE_MS portTICK_PERIOD_MS
+#endif
+
 /**< Define the function of interface instance */
 #define LCD_WRITE_COMMAND(data, length) g_lcd_handle.interface_drv->write_command(g_lcd_handle.interface_drv, (data), (length))
 #define LCD_WRITE(data, length) g_lcd_handle.interface_drv->write(g_lcd_handle.interface_drv, (data), (length))

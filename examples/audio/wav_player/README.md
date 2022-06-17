@@ -6,23 +6,24 @@ This example will show how to configure and operate the LEDC peripheral to play 
 
 ### Hardware Required
 
-* A development board with ESP32 SoC (e.g., ESP32-DevKitC, ESP-WROVER-KIT, etc.)
+* A development board with ESP32, ESP32-S2, ESP32-S3 or ESP32-C3 SoC (e.g., ESP32-DevKitC, ESP-S2-Saola, ESP32-S3-DevKitC-1, etc.)
 * A USB cable for power supply and programming
 
 The following is the hardware connection:
 
-|hardware|GPIO|
+|SoC|GPIO|
 |:---:|:---:|
-|speaker(R)|GPIO25|
-|speaker(L)|GPIO26|
+|ESP32|speaker(R) ----- GPIO25<br />speaker(L) ------- GPIO26|
+|ESP32S2|speaker(R) ----- GPIO1<br />speaker(L) ------- GPIO2|
+|ESP32S3|speaker(R) ----- GPIO1<br />speaker(L) ------- GPIO2|
+|ESP32C3|speaker(R) ----- GPIO1<br />speaker(L) ------- GPIO2|
 
-If you have ESP32-LCDKit board, just plug the speakers into the socket on the board.
 
-If you only have ESP32-DevKitC board, connect two speakers to gpio of ESP32 directly, as shown in the figure below. The volume of this connection will sound small.
+You can connect two speakers to gpio of the SoC directly, as shown in the figure below. The volume of this connection will sound small.
 
 ```
              47R
-GPIO25 +----/\/\/\----+
+GPIOX +----/\/\/\----+
                       |    
                       | /|
                      +-+ |   Speaker
@@ -33,7 +34,7 @@ GPIO25 +----/\/\/\----+
                       +--------------+ GND
 
              47R
-GPIO26 +----/\/\/\----+
+GPIOX +----/\/\/\----+
                       |    
                       | /|
                      +-+ |   Speaker

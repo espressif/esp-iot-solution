@@ -1,16 +1,15 @@
 #ifndef _COM_GUI_LVGL_H
 #define _COM_GUI_LVGL_H
 
+#include "lv_conf.h"
+#include "lvgl.h"
+#include "touch_panel.h"
+#include "screen_driver.h"
+
 #ifdef __cplusplus
 extern "C"
 {
 #endif
-
-#include "sdkconfig.h"
-
-#include "lv_conf.h"
-#include "lvgl.h"
-#include "lvgl_adapter.h"
 
 /**
  * @brief Initialize lvgl and register driver to lvgl
@@ -26,9 +25,22 @@ extern "C"
  */
 esp_err_t lvgl_init(scr_driver_t *lcd_drv, touch_panel_driver_t *touch_drv);
 
+/**
+ * @brief Acquire lock for LVGL
+ * 
+ * @note If you wish to call any lvgl function from other threads/tasks you should lock on the very same semaphore
+ * 
+ */
+void lvgl_acquire(void);
+
+/**
+ * @brief Release lock for LVGL
+ * 
+ */
+void lvgl_release(void);
+
 #ifdef __cplusplus
 }
 #endif
-
 
 #endif /* _COM_GUI_LVGL_H */

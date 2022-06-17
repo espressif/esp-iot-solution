@@ -528,21 +528,29 @@ static void wifi_config_event_task(void *args)
                 .show_hidden = false
             };
             ESP_ERROR_CHECK(esp_wifi_scan_start(&scanConf, false));
+            lvgl_acquire();
             start_wifi_scan();
+            lvgl_release();
             break;
         }
         case LVGL_WIFI_CONFIG_SCAN_DONE: {
             ESP_LOGI(TAG, "[ * ] running refresh wifi list：%d\n", wifi_config_data.apCount);
+            lvgl_acquire();
             wifi_scan_done();
+            lvgl_release();
             break;
         }
         case LVGL_WIFI_CONFIG_CONNECTED:
+            lvgl_acquire();
             wifi_connect_success();
+            lvgl_release();
             break;
 
         case LVGL_WIFI_CONFIG_CONNECT_FAIL:
             esp_wifi_disconnect();
+            lvgl_acquire();
             wifi_connect_fail();
+            lvgl_release();
             break;
 
         case LVGL_WIFI_CONFIG_TRY_CONNECT: {
@@ -628,7 +636,9 @@ void app_main()
     /* Initialize LittlevGL GUI */
     lvgl_init(&lcd_drv, &touch_drv);
 
+    lvgl_acquire();
     littlevgl_wificonfig_init();
+    lvgl_release();
 
     /* initialise wifi */
     initialise_wifi();
