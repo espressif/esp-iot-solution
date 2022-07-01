@@ -39,8 +39,8 @@ typedef struct Button {
     uint8_t         debounce_cnt: 3;
     uint8_t         active_level: 1;
     uint8_t         button_level: 1;
-    uint8_t         (*hal_button_Level)(void *usr_data);
-    void            *usr_data;
+    uint8_t         (*hal_button_Level)(void *hardware_data);
+    void            *hardware_data;
     button_type_t   type;
     button_cb_t     cb[BUTTON_EVENT_MAX];
     struct Button   *next;
@@ -63,7 +63,7 @@ static bool g_is_timer_running = false;
   */
 static void button_handler(button_dev_t *btn)
 {
-    uint8_t read_gpio_level = btn->hal_button_Level(btn->usr_data);
+    uint8_t read_gpio_level = btn->hal_button_Level(btn->hardware_data);
 
     /** ticks counter working.. */
     if ((btn->state) > 0) {
@@ -163,13 +163,13 @@ static void button_cb(void *args)
     }
 }
 
-static button_dev_t *button_create_com(uint8_t active_level, uint8_t (*hal_get_key_state)(void *usr_data), void *usr_data)
+static button_dev_t *button_create_com(uint8_t active_level, uint8_t (*hal_get_key_state)(void *hardware_data), void *hardware_data)
 {
     BTN_CHECK(NULL != hal_get_key_state, "Function pointer is invalid", NULL);
 
     button_dev_t *btn = (button_dev_t *) calloc(1, sizeof(button_dev_t));
     BTN_CHECK(NULL != btn, "Button memory alloc failed", NULL);
-    btn->usr_data = usr_data;
+    btn->hardware_data = hardware_data;
     btn->event = BUTTON_NONE_PRESS;
     btn->active_level = active_level;
     btn->hal_button_Level = hal_get_key_state;
@@ -259,10 +259,10 @@ esp_err_t iot_button_delete(button_handle_t btn_handle)
     button_dev_t *btn = (button_dev_t *)btn_handle;
     switch (btn->type) {
     case BUTTON_TYPE_GPIO:
-        ret = button_gpio_deinit((int)(btn->usr_data));
+        ret = button_gpio_deinit((int)(btn->hardware_data));
         break;
     case BUTTON_TYPE_ADC:
-        ret = button_adc_deinit(ADC_BUTTON_SPLIT_CHANNEL(btn->usr_data), ADC_BUTTON_SPLIT_INDEX(btn->usr_data));
+        ret = button_adc_deinit(ADC_BUTTON_SPLIT_CHANNEL(btn->hardware_data), ADC_BUTTON_SPLIT_INDEX(btn->hardware_data));
         break;
     default:
         break;
