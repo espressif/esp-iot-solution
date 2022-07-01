@@ -21,7 +21,7 @@
 extern "C" {
 #endif
 
-typedef void (* button_cb_t)(void *);
+typedef void (* button_cb_t)(void *, void *);
 typedef void *button_handle_t;
 
 /**
@@ -87,12 +87,13 @@ esp_err_t iot_button_delete(button_handle_t btn_handle);
  * @param btn_handle A button handle to register
  * @param event Button event
  * @param cb Callback function.
+ * @param usr_data user data
  *
  * @return
  *      - ESP_OK on success
  *      - ESP_ERR_INVALID_ARG   Arguments is invalid.
  */
-esp_err_t iot_button_register_cb(button_handle_t btn_handle, button_event_t event, button_cb_t cb);
+esp_err_t iot_button_register_cb(button_handle_t btn_handle, button_event_t event, button_cb_t cb, void *usr_data);
 
 /**
  * @brief Unregister the button event callback function.
