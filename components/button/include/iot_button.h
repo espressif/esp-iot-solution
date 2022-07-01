@@ -87,12 +87,14 @@ esp_err_t iot_button_delete(button_handle_t btn_handle);
  * @param btn_handle A button handle to register
  * @param event Button event
  * @param cb Callback function.
+ * @param data user data
  *
  * @return
  *      - ESP_OK on success
  *      - ESP_ERR_INVALID_ARG   Arguments is invalid.
  */
-esp_err_t iot_button_register_cb(button_handle_t btn_handle, button_event_t event, button_cb_t cb);
+esp_err_t iot_button_register_cb(button_handle_t btn_handle, button_event_t event, button_cb_t cb, void *data);
+
 
 /**
  * @brief Unregister the button event callback function.
@@ -123,6 +125,14 @@ button_event_t iot_button_get_event(button_handle_t btn_handle);
  * @return button pressed times. For example, double-click return 2, triple-click return 3, etc.
  */
 uint8_t iot_button_get_repeat(button_handle_t btn_handle);
+
+/**
+ * @brief Get user data
+ *
+ * @param btn_handle Button handle
+ * @return user data
+ */
+void* iot_button_get_user_data(button_handle_t btn_handle);
 
 #ifdef __cplusplus
 }

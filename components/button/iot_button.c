@@ -41,6 +41,7 @@ typedef struct Button {
     uint8_t         button_level: 1;
     uint8_t         (*hal_button_Level)(void *usr_data);
     void            *usr_data;
+    void            *data;
     button_type_t   type;
     button_cb_t     cb[BUTTON_EVENT_MAX];
     struct Button   *next;
@@ -272,12 +273,13 @@ esp_err_t iot_button_delete(button_handle_t btn_handle)
     return ESP_OK;
 }
 
-esp_err_t iot_button_register_cb(button_handle_t btn_handle, button_event_t event, button_cb_t cb)
+esp_err_t iot_button_register_cb(button_handle_t btn_handle, button_event_t event, button_cb_t cb, void *data)
 {
     BTN_CHECK(NULL != btn_handle, "Pointer of handle is invalid", ESP_ERR_INVALID_ARG);
     BTN_CHECK(event < BUTTON_EVENT_MAX, "event is invalid", ESP_ERR_INVALID_ARG);
     button_dev_t *btn = (button_dev_t *) btn_handle;
     btn->cb[event] = cb;
+    btn->data = data;
     return ESP_OK;
 }
 
@@ -302,4 +304,10 @@ uint8_t iot_button_get_repeat(button_handle_t btn_handle)
     BTN_CHECK(NULL != btn_handle, "Pointer of handle is invalid", 0);
     button_dev_t *btn = (button_dev_t *) btn_handle;
     return btn->repeat;
+}
+
+void* iot_button_get_user_data(button_handle_t btn_handle) {
+    BTN_CHECK(NULL != btn_handle, "Pointer of handle is invalid", 0);
+    button_dev_t *btn = (button_dev_t *) btn_handle;
+    return btn->data;
 }
