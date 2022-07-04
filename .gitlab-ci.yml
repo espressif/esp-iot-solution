@@ -84,6 +84,8 @@ build_docs:
     expire_in: 1 mos
   script:
     - source /opt/pyenv/activate && pyenv global 3.6.10
+    - pip install "setuptools<57.5.0"
+    - pip install "funcparserlib==0.3.6"
     - /opt/pyenv/pyenv-1.2.16/versions/3.6.10/bin/python -m pip install --user -r docs/requirements.txt
     - cd docs
     - ./check_lang_folder_sync.sh
