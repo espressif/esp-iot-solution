@@ -7,3 +7,6 @@
 [submodule "examples/camera/camera_components/esp32-camera"]
 	path = examples/camera/camera_components/esp32-camera
 	url = https://github.com/espressif/esp32-camera
+[submodule "examples/decompress/xz_compressed_ota/bootloader_components"]
+	path = examples/decompress/xz_compressed_ota/bootloader_components
+	url = https://github.com/espressif/esp-bootloader-plus.git
