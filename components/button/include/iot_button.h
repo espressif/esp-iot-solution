@@ -28,8 +28,14 @@ typedef void *button_handle_t;
  * @brief Button events
  *
  */
-typedef enum {
-    BUTTON_PRESS_DOWN = 0,
+#ifdef __cplusplus
+typedef enum button_event_e : int { //C++ Definition
+#else
+typedef enum button_event_e {  //C Definition
+#endif
+	BUTTON_PRESS_INVALID = -1, //to enforce signed int also in C.
+	BUTTON_PRESS_NORMAL = 0,
+    BUTTON_PRESS_DOWN,
     BUTTON_PRESS_UP,
     BUTTON_PRESS_REPEAT,
     BUTTON_SINGLE_CLICK,
@@ -92,6 +98,7 @@ esp_err_t iot_button_delete(button_handle_t btn_handle);
  * @return
  *      - ESP_OK on success
  *      - ESP_ERR_INVALID_ARG   Arguments is invalid.
+ *      - ESP_ERR_INVALID_STATE the Callback is already registered. No free Space for another Callback.
  */
 esp_err_t iot_button_register_cb(button_handle_t btn_handle, button_event_t event, button_cb_t cb, void *usr_data);
 
