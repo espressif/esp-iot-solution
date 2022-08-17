@@ -292,6 +292,19 @@ esp_err_t iot_button_unregister_cb(button_handle_t btn_handle, button_event_t ev
     return ESP_OK;
 }
 
+size_t iot_button_count_cb(button_handle_t btn_handle)
+{
+    BTN_CHECK(NULL != btn_handle, "Pointer of handle is invalid", ESP_ERR_INVALID_ARG);
+    button_dev_t *btn = (button_dev_t *) btn_handle;
+	size_t ret = 0;
+    for (size_t i = 0; i < BUTTON_EVENT_MAX; i++) {
+    	if(btn->cb[i]) ret++;
+    }
+    return ret;
+}
+
+
+
 button_event_t iot_button_get_event(button_handle_t btn_handle)
 {
     BTN_CHECK(NULL != btn_handle, "Pointer of handle is invalid", BUTTON_NONE_PRESS);

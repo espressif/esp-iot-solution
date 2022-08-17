@@ -107,6 +107,17 @@ esp_err_t iot_button_register_cb(button_handle_t btn_handle, button_event_t even
  */
 esp_err_t iot_button_unregister_cb(button_handle_t btn_handle, button_event_t event);
 
+
+
+/**
+ * @brief how many Callbacks are still registered.
+ *
+ * @param btn_handle A button handle to unregister
+ *
+ * @return 0 if no callbacks registered, or 1 .. (BUTTON_EVENT_MAX-1) for the number of Registered Buttons.
+ */
+size_t iot_button_count_cb(button_handle_t btn_handle);
+
 /**
  * @brief Get button event
  *
