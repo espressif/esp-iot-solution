@@ -153,6 +153,24 @@
             ]
         },
         {
+            "name": "xz_compressed_ota",
+            "buildsystem": [
+                "cmake"
+            ],
+            "targets": [
+                "esp32c3"
+            ]
+        },
+        {
+            "name": "xz_decompress_file",
+            "buildsystem": [
+                "cmake"
+            ],
+            "targets": [
+                "esp32c3"
+            ]
+        },
+        {
             "name": "examples",
             "buildsystem": [
                 "cmake",
