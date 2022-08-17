@@ -1,0 +1,86 @@
+menu "Example Configuration"
+    choice CONFIG_EXAMPLE_DOWNLOAD_MODE
+        prompt "Download Mode"
+        default EXAMPLE_HTTP_DOWNLOAD
+        help
+            Select the communication method for downloading compressed firmware.
+
+        config EXAMPLE_HTTP_DOWNLOAD
+            bool "Http Download"
+            help
+                Use Http(WiFi/Eth) to download compressed image.
+        
+        config EXAMPLE_BLE_DOWNLOAD
+            bool "BLE Download"
+            select BT_ENABLED
+            help
+                Use BLE to download compressed image.
+    endchoice
+    
+    config EXAMPLE_FIRMWARE_UPG_URL
+        string "Firmware Upgrade URL"
+        default "https://192.168.2.106:8070/hello-world.bin"
+        depends on EXAMPLE_HTTP_DOWNLOAD
+        help
+            URL of server which hosts the firmware image.
+
+    config EXAMPLE_SKIP_COMMON_NAME_CHECK
+        bool "Skip server certificate CN fieldcheck"
+        default y
+        depends on EXAMPLE_HTTP_DOWNLOAD
+        help
+            This allows you to skip the validation of OTA server certificate CN field.
+
+    config EXAMPLE_OTA_RECV_TIMEOUT
+        int "OTA Receive Timeout"
+        default 5000
+        depends on EXAMPLE_HTTP_DOWNLOAD
+        help
+            Maximum time for reception
+
+    config EXAMPLE_APP_ENCRY_ENABLED
+        bool "Enable compressed app encryption"
+        default n
+        help
+            This allows you to encrypt the compressed app bin.
+
+    config APP_ENCRY_KEY
+        string "The encryption key."
+        default "encryption_key.bin"
+        depends on EXAMPLE_APP_ENCRY_ENABLED
+        
+    choice CONFIG_EXAMPLE_APP_ENCTY_TYPE
+        prompt "APP Entryption Type"
+        default EXAMPLE_USE_AES128
+        depends on EXAMPLE_APP_ENCRY_ENABLED
+        help
+            Select the algorithm to encrypt.
+
+        config EXAMPLE_USE_AES128
+            bool "AES128"
+            help
+                Use AES128 to encry compressed app bin.
+    endchoice
+
+    choice APP_ENCRY_KEY_STORE_LOACTION
+        bool "The location used to store encrypt key"
+        depends on EXAMPLE_APP_ENCRY_ENABLED
+        default AES_KEY_STORE_IN_FLASH
+        help
+            Chose the location to store the encrypt key.
+
+        config AES_KEY_STORE_IN_FLASH
+            bool "AES Entrypt Key Store in Flash"
+    
+        config AES_KEY_STORE_IN_EFUSE
+            bool "AES Entrypt Key Store in Efuse"
+        
+    endchoice
+
+    config EXAMPLE_CLEAR_STORAGE_IF_CHECK_FAILED
+        bool "Clear the storage partition if OTA header check fail"
+        default n
+        help
+            Verify the stored compressed data. If the verification fails, enable this optin will clear some data of the compressed partition
+            to avoid checking the compressed data again in the bootloader.
+endmenu
