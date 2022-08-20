@@ -28,8 +28,8 @@ static const char *TAG = "Board";
 
 static esp_adc_cal_characteristics_t *adc1_chars = NULL;
 
-#if CONFIG_IDF_TARGET_ESP32S2
-static const adc_bits_width_t BOARD_ADC_WIDTH = ADC_WIDTH_BIT_13;
+#if CONFIG_IDF_TARGET_ESP32S3
+static const adc_bits_width_t BOARD_ADC_WIDTH = ADC_WIDTH_BIT_12;
 #endif
 static const adc_atten_t BOARD_ADC_ATTEN = ADC_ATTEN_DB_11;
 static const adc_unit_t BOARD_ADC_UNIT = ADC_UNIT_1;
@@ -53,14 +53,14 @@ static button_handle_t s_btn_menu_hdl = NULL;
 
 static void _check_efuse(void)
 {
-#if CONFIG_IDF_TARGET_ESP32S2
-    if (esp_adc_cal_check_efuse(ESP_ADC_CAL_VAL_EFUSE_TP) == ESP_OK) {
+#if CONFIG_IDF_TARGET_ESP32S3
+	if (esp_adc_cal_check_efuse(ESP_ADC_CAL_VAL_EFUSE_TP) == ESP_OK) {
         printf("eFuse Two Point: Supported\n");
     } else {
         printf("Cannot retrieve eFuse Two Point calibration values. Default calibration values will be used.\n");
     }
 #else
-#error "This example is configured for ESP32S2."
+#error "This example is configured for ESP32S3."
 #endif
 }
 
