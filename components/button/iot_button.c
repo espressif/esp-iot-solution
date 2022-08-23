@@ -56,6 +56,7 @@ static bool g_is_timer_running = false;
 #define DEBOUNCE_TICKS    CONFIG_BUTTON_DEBOUNCE_TICKS //MAX 8
 #define SHORT_TICKS       (CONFIG_BUTTON_SHORT_PRESS_TIME_MS /TICKS_INTERVAL)
 #define LONG_TICKS        (CONFIG_BUTTON_LONG_PRESS_TIME_MS /TICKS_INTERVAL)
+#define SERIAL_TICKS      (CONFIG_BUTTON_SERIAL_TIME_MS /TICKS_INTERVAL)
 
 #define CALL_EVENT_CB(ev)   if(btn->cb[ev])btn->cb[ev](btn, btn->usr_data)
 
@@ -145,8 +146,11 @@ static void button_handler(button_dev_t *btn)
     case 5:
         if (btn->button_level == btn->active_level) {
             //continue hold trigger
-            btn->event = (uint8_t)BUTTON_LONG_PRESS_HOLD;
-            CALL_EVENT_CB(BUTTON_LONG_PRESS_HOLD);
+            if (btn->ticks > SERIAL_TICKS) {
+                btn->event = (uint8_t)BUTTON_LONG_PRESS_HOLD;
+                CALL_EVENT_CB(BUTTON_LONG_PRESS_HOLD);
+                btn->ticks = 0;
+            }
         } else { //releasd
             btn->event = (uint8_t)BUTTON_PRESS_UP;
             CALL_EVENT_CB(BUTTON_PRESS_UP);
