@@ -1,0 +1,75 @@
+menu "LightBulb Driver Config"
+
+    menu "Drivers"
+        config ENABLE_PWM_DRIVER
+            bool "Enable PWM interface"
+            default "y"
+            help
+                Enable PWM output.
+
+        config ENABLE_SM2135E_DRIVER
+            bool "Enable sm2135e interface"
+            default "y"
+            help
+                Enable SM2135E output.
+
+        config ENABLE_SM2135EH_DRIVER
+            bool "Enable sm2135eh interface"
+            default "y"
+            help
+                Enable SM2135eh output.
+
+        config ENABLE_SM2x35EGH_DRIVER
+            bool "Enable sm2x35egh(sm2235egh sm2335egh) interface"
+            default "y"
+            help
+                Enable SM2x35egh output.
+
+        config ENABLE_BP5758D_DRIVER
+            bool "Enable bp5758d interface"
+            default "y"
+            help
+                Enable BP5758d output.
+
+        config ENABLE_WS2812_DRIVER
+            bool "Enable ws2812 interface"
+            default "y"
+            help
+                Enable ws2812 output.
+    endmenu
+
+    config ENABLE_DITHERING_CHECK
+            bool "Enable dithering check and try to fix"
+            default "y"
+            help
+                Dithering check and fix.
+
+    menu "Debug Log Config"
+        config ENABLE_LIGHTBULB_DEBUG_LOG_OUTPUT
+            bool "Enable Lightbulb debug log output"
+            default "n"
+            help
+                Enable Lightbulb debug log.
+
+        config ENABLE_DRIVER_DEBUG_LOG_OUTPUT
+            bool "Enable driver debug log output"
+            default "n"
+            help
+                Enable driver debug log.
+
+        choice LIGHTBULB_CHECK_LOG_DEFAULT_LEVEL
+            bool "Default LIGHTBULB_CHECK func print log level"
+            default LIGHTBULB_CHECK_DEFAULT_LEVEL_2
+            help
+                The verbosity of the log output, if you need to save flash size please lower the output level.
+            
+            config LIGHTBULB_CHECK_DEFAULT_LEVEL_1
+                bool "Level 1, Print very little log"
+            config LIGHTBULB_CHECK_DEFAULT_LEVEL_2
+                bool "Level 2, Print basic log"
+            config LIGHTBULB_CHECK_DEFAULT_LEVEL_3
+                bool "Level 3, Print detail log"
+        endchoice
+    endmenu
+    
+endmenu
