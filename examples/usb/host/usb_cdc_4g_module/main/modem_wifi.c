@@ -29,40 +29,17 @@
 #include "modem_http_config.h"
 #include "modem_wifi.h"
 
-static const char* TAG = "modem_wifi";
+#ifdef CONFIG_EXAMPLE_ENABLE_WEB_ROUTER
+#include "modem_http_config.h"
+#endif
 
-esp_err_t modem_netif_updata_sta_list()
-{
-    esp_netif_sta_list_t netif_sta_list = { 0 };
-    wifi_sta_list_t sta_list = { 0 };
-    ESP_ERROR_CHECK(esp_wifi_ap_get_sta_list(&sta_list));
-    ESP_ERROR_CHECK(esp_netif_get_sta_list(&sta_list, &netif_sta_list));
-    for (int i = 0; i < netif_sta_list.num; i++) {
-        ESP_LOGI(TAG, "netif_sta mac is " MACSTR ",ip is " IPSTR " ",
-            MAC2STR(netif_sta_list.sta[i].mac),
-            IP2STR(&netif_sta_list.sta[i].ip));
-    }
-
-    ESP_ERROR_CHECK(modem_http_sta_list_updata(&netif_sta_list));
-    return ESP_OK;
-}
+static const char *TAG = "modem_wifi";
 
 /* Event handler for catching system events */
-static void event_handler(void* arg, esp_event_base_t event_base,
-    int event_id, void* event_data)
+static void event_handler(void *arg, esp_event_base_t event_base, int event_id, void *event_data)
 {
-    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_AP_STADISCONNECTED) {
-        wifi_event_ap_stadisconnected_t* event = (wifi_event_ap_stadisconnected_t*)event_data;
-        ESP_LOGI(TAG, "station " MACSTR " leave, AID=%d",
-            MAC2STR(event->mac), event->aid);
-        ESP_ERROR_CHECK(modem_netif_updata_sta_list());
-    } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_AP_STACONNECTED) {
-        wifi_event_ap_staconnected_t* event = (wifi_event_ap_staconnected_t*)event_data;
-        ESP_LOGI(TAG, "station " MACSTR " join, AID=%d",
-            MAC2STR(event->mac), event->aid);
-    } else if (event_base == IP_EVENT && event_id == IP_EVENT_AP_STAIPASSIGNED) {
-        ESP_LOGI(TAG, "Get ip addr updata");
-        ESP_ERROR_CHECK(modem_netif_updata_sta_list());
+    if (event_base == IP_EVENT && event_id == IP_EVENT_AP_STAIPASSIGNED) {
+        ESP_LOGI(TAG, "Get IP addr");
     }
 }
 
@@ -72,7 +49,6 @@ esp_err_t modem_wifi_ap_init(void)
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
     /* Register our event handler for Wi-Fi, IP and Provisioning related events */
-    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
     ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_FLASH));
@@ -80,9 +56,9 @@ esp_err_t modem_wifi_ap_init(void)
     return esp_wifi_start();
 }
 
-esp_netif_t* modem_wifi_init(wifi_mode_t mode)
+esp_netif_t *modem_wifi_init(wifi_mode_t mode)
 {
-    esp_netif_t* wifi_netif = NULL;
+    esp_netif_t *wifi_netif = NULL;
 
     if (mode & WIFI_MODE_STA) {
         wifi_netif = esp_netif_create_default_wifi_sta();
@@ -105,7 +81,7 @@ esp_netif_t* modem_wifi_init(wifi_mode_t mode)
     return wifi_netif;
 }
 
-esp_err_t modem_wifi_set(modem_wifi_config_t* config)
+esp_err_t modem_wifi_set(modem_wifi_config_t *config)
 {
     if (config == NULL || config->ssid == NULL || config->password == NULL) {
         return ESP_ERR_INVALID_ARG;
@@ -114,8 +90,8 @@ esp_err_t modem_wifi_set(modem_wifi_config_t* config)
     wifi_config_t wifi_cfg = { 0 };
 
     if (config->mode & WIFI_MODE_STA) {
-        strlcpy((char*)wifi_cfg.sta.ssid, config->ssid, sizeof(wifi_cfg.sta.ssid));
-        strlcpy((char*)wifi_cfg.sta.password, config->password, sizeof(wifi_cfg.sta.password));
+        strlcpy((char *)wifi_cfg.sta.ssid, config->ssid, sizeof(wifi_cfg.sta.ssid));
+        strlcpy((char *)wifi_cfg.sta.password, config->password, sizeof(wifi_cfg.sta.password));
         ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_cfg));
 
         ESP_LOGI(TAG, "sta ssid: %s password: %s", config->ssid, config->password);
@@ -125,8 +101,8 @@ esp_err_t modem_wifi_set(modem_wifi_config_t* config)
         wifi_cfg.ap.max_connection = config->max_connection;
         wifi_cfg.ap.authmode = config->authmode;
         wifi_cfg.ap.channel = config->channel;
-        strlcpy((char*)wifi_cfg.ap.ssid, config->ssid, sizeof(wifi_cfg.ap.ssid));
-        strlcpy((char*)wifi_cfg.ap.password, config->password, sizeof(wifi_cfg.ap.password));
+        strlcpy((char *)wifi_cfg.ap.ssid, config->ssid, sizeof(wifi_cfg.ap.ssid));
+        strlcpy((char *)wifi_cfg.ap.password, config->password, sizeof(wifi_cfg.ap.password));
         wifi_cfg.ap.ssid_hidden = config->ssid_hidden;
         ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_cfg));
         ESP_ERROR_CHECK(esp_wifi_set_bandwidth(ESP_IF_WIFI_AP, config->bandwidth));
@@ -144,7 +120,7 @@ esp_err_t modem_wifi_napt_enable()
     return ESP_OK;
 }
 
-esp_err_t modem_wifi_set_dhcps(esp_netif_t* netif, uint32_t addr)
+esp_err_t modem_wifi_set_dhcps(esp_netif_t *netif, uint32_t addr)
 {
     esp_netif_dns_info_t dns;
     dns.ip.u_addr.ip4.addr = addr;

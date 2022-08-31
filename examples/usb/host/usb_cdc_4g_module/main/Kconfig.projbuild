@@ -52,7 +52,7 @@ menu "4G Modem Configuration"
 
         config EXAMPLE_MAX_STA_CONN
             int "Maximal STA connections"
-            default 5
+            default 10
             help
                 Max number of the STA connects to AP.
         config EXAMPLE_MANUAL_DNS
@@ -82,7 +82,7 @@ menu "4G Modem Configuration"
                 Specify the mount point in VFS.
 
         config EXAMPLE_WEB_USERNAME
-            string "Default login username "
+            string "Default login username"
             default "esp32"
             depends on EXAMPLE_ENABLE_WEB_ROUTER
             help
