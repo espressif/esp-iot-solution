@@ -65,9 +65,11 @@ function baseSetting() {
   var baseArray1 = document.getElementsByClassName('header-title-one')
   var base1 = baseArray1[0]
   base1.style.color = '#000'
+  base1.style.cursor = 'auto'
   var baseArray = document.getElementsByClassName('header-title-two')
   var base = baseArray[0]
   base.style.color = '#888888'
+  base.style.cursor = 'pointer'
   var baseShow = document.getElementById('baseShow')
   baseShow.style.display = 'block'
   var highShow = document.getElementById('highShow')
@@ -78,8 +80,10 @@ function advanceSetting() {
   console.log('点击高级设置')
   var base1 = document.querySelector('.header-title-one')
   base1.style.color = '#888888'
+  base1.style.cursor = 'pointer'
   var base = document.querySelector('.header-title-two')
   base.style.color = '#000'
+  base.style.cursor = 'auto'
   var baseShow = document.getElementById('baseShow')
   baseShow.style.display = 'none'
   var highShow = document.getElementById('highShow')

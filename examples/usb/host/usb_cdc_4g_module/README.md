@@ -14,7 +14,7 @@ This example demonstrates the ESP32-S2, ESP32-S3 series SoC as a USB host to dia
 * Router management interface
 * Status led indicator
 
-![ESP32S2_USB_4g_moudle](./_static/esp32s2_cdc_4g_moudle.png)
+![ESP32-S2_USB_4g_moudle](./_static/esp32s2_cdc_4g_moudle.png)
 
 * [Demo video](https://b23.tv/8flUAS)
 
@@ -295,3 +295,72 @@ Enable the `4G Modem Configuration -> Dump system task status` option in `menuco
 
 > **4G Cat.1 theoretical peak download rate is 10 Mbps, peak upload rate is 5 Mbps**
 > The actual communication rate is affected by the operator's network, test software, Wi-Fi interference, and the number of terminal connections, etc.
+
+## Performance test
+
+### ESP32-S3 4G Internet access rate test
+
+### Test Tools
+* Tripod
+* One cell phone
+* One ESP32-S3-DevKitC-1 development boards
+* One charging device
+* Speed measuring software
+* Cat.1 Module
+
+### Test version
+
+* IDF v4.4
+
+### Test environment
+
+Outdoor open environment in the park
+
+### Test method
+
+* Fix ESP32-S3-DevkitC-1 on the tripod, vertical ground up, about 1.2m height from the ground
+
+* Development board connection Cat.1 module, using the phone to connect to the development board hotspot
+
+* Testers stand at 2m from the tripod and use speed measurement software to test the up and down speed
+### Test results
+| chip model | distance | test result Mbits/s |
+| :------: | :--: | :-------------------: |
+| ESP32-S3 | 2m | Downstream: 8.15 Upstream: 4.12 |
+
+### ESP32-S3 NAPT Rate Test
+
+### Test Tools
+
+* Tripod
+* Two cell phones
+* Two ESP32-S3-DevKitC-1 development boards
+* One charging device
+* Speed measuring software
+
+### Test version
+
+* IDF v4.4
+
+### Test environment
+
+Outdoor open environment in the park
+
+### Test method
+
+```mermaid
+graph LR
+  	Phone:STA -- connection --> ESP32-S3:AP&STA -- connection --> Phone:AP
+  	Phone:STA -- Client --> iperf[iperf test] -- Server --> Phone:AP
+```
+
+* the microcontroller is fixed on the tripod, vertical ground up, about 1.2m from the ground height
+
+* Two cell phones, one cell phone with hotspot as server, use ESP32-S3 development board to connect to the cell phone hotspot, and turn on AP to the other cell phone as client
+
+* Two testers stand 2m away from the tripod and use the iperf test tool to test the upstream and downstream speeds between the two phones twice, and take the average of the two tests as the test result
+
+### Test results
+| chip model | distance | test result Mbits/s |
+| :--------: | :------: | :-----------------: |
+| ESP32-S3 | 2m | Downstream: 4.48 Upstream: 4.56 |
