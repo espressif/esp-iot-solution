@@ -28,7 +28,7 @@ typedef void * i2s_lcd_handle_t; /** Handle of i2s lcd driver */
 
 /**
  * @brief Configuration of i2s lcd mode
- * 
+ *
  */
 typedef struct {
     int8_t data_width;           /*!< Parallel data width, 16bit or 8bit available */
@@ -43,7 +43,7 @@ typedef struct {
 } i2s_lcd_config_t;
 
 /**
- * @brief Initilize i2s lcd driver. 
+ * @brief Initilize i2s lcd driver.
  *
  * @param config configuration of i2s
  *
@@ -52,10 +52,10 @@ typedef struct {
 i2s_lcd_handle_t i2s_lcd_driver_init(const i2s_lcd_config_t *config);
 
 /**
- * @brief Deinit i2s lcd driver. 
- * 
+ * @brief Deinit i2s lcd driver.
+ *
  * @param handle i2s lcd driver handle to deinitilize
- * 
+ *
  * @return
  *      - ESP_OK on success
  *      - ESP_ERR_INVALID_ARG handle is invalid
@@ -64,10 +64,10 @@ esp_err_t i2s_lcd_driver_deinit(i2s_lcd_handle_t handle);
 
 /**
  * @brief Write a data to LCD
- * 
+ *
  * @param handle i2s lcd driver handle
  * @param data Data to write
- * 
+ *
  * @return
  *      - ESP_OK on success
  *      - ESP_ERR_INVALID_ARG handle is invalid
@@ -76,10 +76,10 @@ esp_err_t i2s_lcd_write_data(i2s_lcd_handle_t handle, uint16_t data);
 
 /**
  * @brief Write a command to LCD
- * 
+ *
  * @param handle Handle of i2s lcd driver
  * @param cmd command to write
- * 
+ *
  * @return
  *      - ESP_OK on success
  *      - ESP_ERR_INVALID_ARG handle is invalid
@@ -88,11 +88,11 @@ esp_err_t i2s_lcd_write_cmd(i2s_lcd_handle_t handle, uint16_t cmd);
 
 /**
  * @brief Write a command to LCD
- * 
+ *
  * @param handle Handle of i2s lcd driver
  * @param cmd command to write
  * @param length length of command
- * 
+ *
  * @return
  *      - ESP_OK on success
  *      - ESP_ERR_INVALID_ARG handle is invalid
@@ -101,11 +101,11 @@ esp_err_t i2s_lcd_write_command(i2s_lcd_handle_t handle, const uint8_t *cmd, uin
 
 /**
  * @brief Write block data to LCD
- * 
- * @param handle  Handle of i2s lcd driver
+ *
+ * @param handle Handle of i2s lcd driver
  * @param data Pointer of data
  * @param length length of data
- * 
+ *
  * @return
  *      - ESP_OK on success
  *      - ESP_ERR_INVALID_ARG handle is invalid
@@ -114,22 +114,32 @@ esp_err_t i2s_lcd_write(i2s_lcd_handle_t handle, const uint8_t *data, uint32_t l
 
 /**
  * @brief acquire a lock
- * 
- * @param handle  Handle of i2s lcd driver
- * 
+ *
+ * @param handle Handle of i2s lcd driver
+ *
  * @return Always return ESP_OK
  */
 esp_err_t i2s_lcd_acquire(i2s_lcd_handle_t handle);
 
 /**
  * @brief release a lock
- * 
- * @param handle  Handle of i2s lcd driver
- * 
+ *
+ * @param handle Handle of i2s lcd driver
+ *
  * @return Always return ESP_OK
  */
 esp_err_t i2s_lcd_release(i2s_lcd_handle_t handle);
 
+/**
+ * @brief acquire a lock, but only wait a certain period of time
+ *
+ * @param handle Handle of i2s lcd driver
+ * @param ticks_to_wait waiting period
+ * @param lock_acquired true if the lock was acquired, false otherwise
+ *
+ * @return Always return ESP_OK
+ */
+esp_err_t i2s_lcd_acquire_nonblocking(i2s_lcd_handle_t handle, TickType_t ticks_to_wait, bool *lock_acquired);
 
 #ifdef __cplusplus
 }

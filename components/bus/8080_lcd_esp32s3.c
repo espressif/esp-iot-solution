@@ -298,7 +298,7 @@ static esp_err_t lcd_dma_config(lcd_cam_obj_t *lcd_cam_obj, const i2s_lcd_config
     lcd_cam_obj->dma_node_cnt = (lcd_cam_obj->dma_buffer_size) / lcd_cam_obj->dma_node_buffer_size; // Number of DMA nodes
     lcd_cam_obj->dma_half_node_cnt = lcd_cam_obj->dma_node_cnt / 2;
 
-    ESP_LOGI(TAG, "lcd_buffer_size: %d, lcd_dma_size: %d, lcd_dma_node_cnt: %d", lcd_cam_obj->dma_buffer_size, lcd_cam_obj->dma_node_buffer_size, lcd_cam_obj->dma_node_cnt);
+    ESP_LOGI(TAG, "lcd_buffer_size: %d, lcd_dma_size: %d, lcd_dma_node_cnt: %d", (int)lcd_cam_obj->dma_buffer_size, (int)lcd_cam_obj->dma_node_buffer_size, (int)lcd_cam_obj->dma_node_cnt);
 
     lcd_cam_obj->dma    = (lldesc_t *)heap_caps_malloc(lcd_cam_obj->dma_node_cnt * sizeof(lldesc_t), MALLOC_CAP_DMA);
     lcd_cam_obj->dma_buffer = (uint8_t *)heap_caps_malloc(lcd_cam_obj->dma_buffer_size * sizeof(uint8_t), MALLOC_CAP_DMA);
@@ -306,7 +306,7 @@ static esp_err_t lcd_dma_config(lcd_cam_obj_t *lcd_cam_obj, const i2s_lcd_config
 }
 
 
-esp_err_t lcd_cam_deinit(i2s_lcd_driver_t *drv)
+static esp_err_t lcd_cam_deinit(i2s_lcd_driver_t *drv)
 {
     if (!drv->i2s_lcd_obj) {
         return ESP_FAIL;
@@ -518,6 +518,16 @@ esp_err_t i2s_lcd_release(i2s_lcd_handle_t handle)
     LCD_CHECK(NULL != i2s_lcd_drv, "handle pointer invalid", ESP_ERR_INVALID_ARG);
     BaseType_t ret = xSemaphoreGive(i2s_lcd_drv->mutex);
     LCD_CHECK(pdTRUE == ret, "Give semaphore failed", ESP_FAIL);
+    return ESP_OK;
+}
+
+esp_err_t i2s_lcd_acquire_nonblocking(i2s_lcd_handle_t handle, TickType_t ticks_to_wait, bool *lock_acquired)
+{
+    i2s_lcd_driver_t *i2s_lcd_drv = (i2s_lcd_driver_t *)handle;
+    LCD_CHECK(NULL != i2s_lcd_drv, "handle pointer invalid", ESP_ERR_INVALID_ARG);
+    BaseType_t ret = xSemaphoreTake(i2s_lcd_drv->mutex, ticks_to_wait);
+    LCD_CHECK(pdTRUE == ret, "Take semaphore failed", ESP_FAIL);
+    *lock_acquired = (pdTRUE == ret);
     return ESP_OK;
 }
 
