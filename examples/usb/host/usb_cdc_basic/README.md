@@ -60,15 +60,23 @@ I (768) USB_HCDC: Creating bulk in pipe
 I (768) USB_HCDC: Creating bulk out pipe
 I (808) USB_HCDC: usb driver install succeed
 
-I (808) cdc_demo: Send len=4: AT
-I (828) cdc_demo: Receive len=6: 
+I (6059) cdc_basic_demo: Send itf0 len=4: AT
+
+I (6069) cdc_basic_demo: Send itf1 len=4: AT
+
+I (6079) cdc_basic_demo: Itf 0, Receive len=6: 
 OK
 
-I (1308) cdc_demo: Send len=4: AT
-I (1328) cdc_demo: Receive len=6: 
+I (6079) cdc_basic_demo: Itf 1, Receive len=6: 
 OK
 
-I (1808) cdc_demo: Send len=4: AT
-I (1828) cdc_demo: Receive len=6: 
+I (7089) cdc_basic_demo: Send itf0 len=4: AT
+
+I (7089) cdc_basic_demo: Send itf1 len=4: AT
+
+I (7109) cdc_basic_demo: Itf 0, Receive len=6: 
+OK
+
+I (7109) cdc_basic_demo: Itf 1, Receive len=6: 
 OK
 ```

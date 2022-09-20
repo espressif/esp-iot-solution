@@ -1,3 +1,3 @@
 idf_component_register(SRC_DIRS "."
-                       INCLUDE_DIRS "include" "${IDF_PATH}/components/usb/private_include"
-                       REQUIRES usb)
+                       INCLUDE_DIRS "include"
+                       REQUIRES esp_usbh)

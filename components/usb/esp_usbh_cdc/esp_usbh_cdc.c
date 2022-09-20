@@ -1,4 +1,4 @@
-// Copyright 2019-2021 Espressif Systems (Shanghai) PTE LTD
+// Copyright 2020-2022 Espressif Systems (Shanghai) PTE LTD
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "stdio.h"
-#include "string.h"
-
+#include <stdio.h>
+#include <string.h>
 #include "freertos/FreeRTOS.h"
+#include "freertos/portmacro.h"
 #include "freertos/queue.h"
 #include "freertos/semphr.h"
 #include "freertos/task.h"
@@ -24,102 +24,69 @@
 #include "esp_err.h"
 #include "esp_attr.h"
 #include "esp_intr_alloc.h"
+#include "esp_bit_defs.h"
 #include "esp_log.h"
-#include "hal/usb_hal.h"
-#include "hal/usbh_ll.h"
-#include "hcd.h"
 #include "usb/usb_types_stack.h"
-#include "usb_private.h"
 #include "usb/usb_helpers.h"
-#include "esp_private/usb_phy.h"
+#include "esp_usbh.h"
 #include "esp_usbh_cdc.h"
 
-#define CDC_CHECK(a, str, ret) if(!(a)) { \
+#define ERR_CHECK(a, str, ret) if(!(a)) { \
         ESP_LOGE(TAG,"%s:%d (%s):%s", __FILE__, __LINE__, __FUNCTION__, str); \
         return (ret); \
     }
 
-#define CDC_CHECK_GOTO(a, str, lable) if(!(a)) { \
+#define ERR_CHECK_GOTO(a, str, label) if(!(a)) { \
         ESP_LOGE(TAG,"%s:%d (%s):%s", __FILE__, __LINE__, __FUNCTION__, str); \
-        goto lable; \
+        goto label; \
     }
 
 static const char *TAG = "USB_HCDC";
 
-#define USB_PORT_NUM                         1        //Default port number
-#define USB_DEVICE_ADDR                      1        //Default CDC device address
-#define USB_ENUM_CONFIG_INDEX                0        //Index of the first configuration of the device
-#define USB_ENUM_SHORT_DESC_REQ_LEN          8        //Number of bytes to request when getting a short descriptor (just enough to get bMaxPacketSize0 or wTotalLength)
-#define USB_DEVICE_CONFIG                    1        //Default CDC device configuration
-#define USB_EP_CTRL_DEFAULT_MPS              64       //Default MPS(max payload size) of Endpoint 0
-#define CDC_EVENT_QUEUE_LEN                  16
-#define DATA_EVENT_QUEUE_LEN                 32
-#define CTRL_TRANSFER_DATA_MAX_BYTES         CONFIG_CTRL_TRANSFER_DATA_MAX_BYTES      //Just assume that will only IN/OUT 256 bytes in ctrl pipe
-#define TIMEOUT_USB_RINGBUF_MS               200       //Timeout for Ring Buffer push
-#define TIMEOUT_USB_CTRL_XFER_MS             5000      //Timeout for USB control transfer
-
-#define USB_TASK_BASE_PRIORITY CONFIG_USB_TASK_BASE_PRIORITY
-
-/**
- * @brief Task for USB I/O request and payload processing,
- * can not be blocked, higher task priority is suggested.
- *
- */
-#define USB_PROC_TASK_NAME "usb_proc"
-#define USB_PROC_TASK_PRIORITY (USB_TASK_BASE_PRIORITY+2)
-#define USB_PROC_TASK_STACK_SIZE 3072
-#define USB_PROC_TASK_CORE CONFIG_USB_TASK_CORE_ID
-
-#define CDC_DATA_TASK_NAME "cdc-data"
-#define CDC_DATA_TASK_PRIORITY (USB_TASK_BASE_PRIORITY+1)
-#define CDC_DATA_TASK_STACK_SIZE 3072
-#define CDC_DATA_TASK_CORE CONFIG_USB_TASK_CORE_ID
-
-#define BULK_OUT_URB_NUM CONFIG_CDC_BULK_OUT_URB_NUM
-#define BULK_IN_URB_NUM CONFIG_CDC_BULK_IN_URB_NUM
-#define BUFFER_SIZE_BULK_OUT CONFIG_CDC_BULK_OUT_URB_BUFFER_SIZE
-#define BUFFER_SIZE_BULK_IN CONFIG_CDC_BULK_IN_URB_BUFFER_SIZE
-#define USB_TASK_KILL_BIT             BIT1
-#define CDC_DATA_TASK_KILL_BIT        BIT4
-#define CDC_DEVICE_READY_BIT          BIT19
-
-#ifdef CONFIG_CDC_USE_TRACE_FACILITY
-volatile static int s_ringbuf_in_size = 0;
-volatile static int s_ringbuf_out_size = 0;
-volatile static int s_bulkbuf_out_max = 0;
-volatile static int s_bulkbuf_in_max = 0;
-volatile static int s_ringbuf_out_max = 0;
-volatile static int s_ringbuf_in_max = 0;
-#endif
-
-static EventGroupHandle_t s_usb_event_group = NULL;
-static RingbufHandle_t s_in_ringbuf_handle = NULL;
-static RingbufHandle_t s_out_ringbuf_handle = NULL;
-static SemaphoreHandle_t s_usb_read_mux = NULL;
-static SemaphoreHandle_t s_usb_write_mux = NULL;
-static TaskHandle_t s_usb_processing_task_hdl = NULL;
-
-static portMUX_TYPE s_in_ringbuf_mux = portMUX_INITIALIZER_UNLOCKED;
-static portMUX_TYPE s_out_ringbuf_mux = portMUX_INITIALIZER_UNLOCKED;
-volatile static int s_in_buffered_data_len = 0;
-volatile static int s_out_buffered_data_len = 0;
+#define DATA_EVENT_QUEUE_LEN           32                                   /*! queue length of cdc event */
+#define TIMEOUT_USB_RINGBUF_MS         200                                  /*! Timeout for ring buffer operate */
+#define TIMEOUT_USB_DRIVER_MS          6000                                 /*! Timeout for driver operate */
+#define TIMEOUT_USB_DRIVER_CHECK_MS    10                                   /*! Timeout check step */
+#define CDC_DATA_TASK_NAME             "cdc-data"                           /*! cdc task name */
+#define USBH_TASK_BASE_PRIORITY         CONFIG_USBH_TASK_BASE_PRIORITY      /*! usbh task priority */
+#define CDC_DATA_TASK_PRIORITY         (USBH_TASK_BASE_PRIORITY+1)          /*! cdc task priority, higher to handle event quick */
+#define CDC_DATA_TASK_STACK_SIZE       4096                                 /*! cdc task stack size */
+#define CDC_DATA_TASK_CORE             CONFIG_USBH_TASK_CORE_ID             /*! cdc task core id */
+#define BULK_OUT_URB_NUM               CONFIG_CDC_BULK_OUT_URB_NUM          /*! number of out urb enqueued simultaneously */
+#define BULK_IN_URB_NUM                CONFIG_CDC_BULK_IN_URB_NUM           /*! number of in urb enqueued simultaneously */
+#define BUFFER_SIZE_BULK_OUT           CONFIG_CDC_BULK_OUT_URB_BUFFER_SIZE  /*! out ringbuffer size */
+#define BUFFER_SIZE_BULK_IN            CONFIG_CDC_BULK_IN_URB_BUFFER_SIZE   /*! in ringbuffer size */
+#define CDC_DATA_TASK_KILL_BIT         BIT4                                 /*! event bit to kill cdc task */
+#define CDC_DATA_TASK_RESET_BIT        BIT5                                 /*! event bit to reset cdc task */
+#define CDC_DEVICE_READY_BIT           BIT6                                 /*! event bit to indicate if cdc device is ready */
 
 typedef enum {
-    PORT_EVENT,
-    PIPE_EVENT,
-} cdc_event_type_t;
+    CDC_STATE_NONE,
+    CDC_STATE_INSTALLED,
+    CDC_STATE_CONNECTED,
+    CDC_STATE_READY,
+} _cdc_state_t;
 
 typedef struct {
-    cdc_event_type_t _type;
-    union {
-        hcd_port_handle_t port_hdl;
-        hcd_pipe_handle_t pipe_handle;
-    } _handle;
-    union {
-        hcd_port_event_t port_event;
-        hcd_pipe_event_t pipe_event;
-    } _event;
-} cdc_event_msg_t;
+    int itf_num;                                                /*!< interface number enabled */
+    _cdc_state_t state;                                         /*!< the driver state */
+    usbh_port_handle_t port_hdl;                                /*!< usbh port handle */
+    EventGroupHandle_t event_group_hdl;                         /*!< event group to sync cdc event */
+    TaskHandle_t task_hdl;                                      /*!< cdc task handle */
+    bool itf_ready[CDC_INTERFACE_NUM_MAX];                      /*!< if interface is ready */
+    usb_ep_desc_t bulk_in_ep_desc[CDC_INTERFACE_NUM_MAX];       /*!< in endpoint descriptor of each interface */
+    usb_ep_desc_t bulk_out_ep_desc[CDC_INTERFACE_NUM_MAX];      /*!< out endpoint descriptor of each interface */
+    RingbufHandle_t in_ringbuf_handle[CDC_INTERFACE_NUM_MAX];   /*!< in ringbuffer handle of corresponding interface */
+    RingbufHandle_t out_ringbuf_handle[CDC_INTERFACE_NUM_MAX];  /*!< if interface is ready */
+    usbh_cdc_cb_t rx_callback[CDC_INTERFACE_NUM_MAX];           /*!< packet receive callback, should not block */
+    void *rx_callback_arg[CDC_INTERFACE_NUM_MAX];               /*!< packet receive callback args */
+    usbh_cdc_cb_t conn_callback;                                /*!< USB connect callback, set NULL if not use */
+    usbh_cdc_cb_t disconn_callback;                             /*!< USB disconnect callback, set NULL if not use */
+    void *conn_callback_arg;                                    /*!< USB connect callback arg, set NULL if not use  */
+    void *disconn_callback_arg;                                 /*!< USB disconnect callback arg, set NULL if not use */
+} _class_cdc_t;
+
+static _class_cdc_t s_cdc_instance = {};
 
 /**
  * @brief Set control line state bRequest=0x22
@@ -144,798 +111,161 @@ typedef struct {
     .bInterval = 0, \
     }
 
-/*------------------------------------------------ Task Code ----------------------------------------------------*/
+#define DEFAULT_USBH_CDC_CONFIGS() { \
+    0, \
 
-static bool _cdc_driver_is_init(void)
+
+/*--------------------------------- CDC Buffer Handle Code --------------------------------------*/
+static size_t _get_usb_out_ringbuf_len(int itf_num)
 {
-    if (s_usb_event_group == NULL) {
-        return false;
-    }
-
-    return true;
+    size_t uxItemsWaiting = 0;
+    vRingbufferGetInfo(s_cdc_instance.out_ringbuf_handle[itf_num], NULL, NULL, NULL, NULL, &uxItemsWaiting);
+    return uxItemsWaiting;
 }
 
-static size_t get_usb_out_ringbuf_len(void)
+static esp_err_t _usb_out_ringbuf_push(int itf_num, const uint8_t *buf, size_t write_bytes, TickType_t xTicksToWait)
 {
-    portENTER_CRITICAL(&s_out_ringbuf_mux);
-    size_t  len = s_out_buffered_data_len;
-    portEXIT_CRITICAL(&s_out_ringbuf_mux);
-    return len;
-}
-
-static esp_err_t usb_out_ringbuf_push(const uint8_t *buf, size_t write_bytes, TickType_t xTicksToWait)
-{
-    int res = xRingbufferSend(s_out_ringbuf_handle, buf, write_bytes, xTicksToWait);
+    int res = xRingbufferSend(s_cdc_instance.out_ringbuf_handle[itf_num], buf, write_bytes, xTicksToWait);
 
     if (res != pdTRUE) {
         ESP_LOGW(TAG, "The out buffer is too small, the data has been lost %u", write_bytes);
         return ESP_FAIL;
     }
-
-    portENTER_CRITICAL(&s_out_ringbuf_mux);
-    s_out_buffered_data_len += write_bytes;
-#ifdef CONFIG_CDC_USE_TRACE_FACILITY
-    s_ringbuf_out_max = s_out_buffered_data_len > s_ringbuf_out_max ? s_out_buffered_data_len : s_ringbuf_out_max;
-#endif
-    portEXIT_CRITICAL(&s_out_ringbuf_mux);
     return ESP_OK;
 }
 
-static esp_err_t usb_out_ringbuf_pop(uint8_t *buf, size_t req_bytes, size_t *read_bytes, TickType_t ticks_to_wait)
+static esp_err_t _usb_out_ringbuf_pop(int itf_num, uint8_t *buf, size_t req_bytes, size_t *read_bytes, TickType_t ticks_to_wait)
 {
-    uint8_t *buf_rcv = xRingbufferReceiveUpTo(s_out_ringbuf_handle, read_bytes, ticks_to_wait, req_bytes);
+    uint8_t *buf_rcv = xRingbufferReceiveUpTo(s_cdc_instance.out_ringbuf_handle[itf_num], read_bytes, ticks_to_wait, req_bytes);
 
     if (buf_rcv) {
         memcpy(buf, buf_rcv, *read_bytes);
-        vRingbufferReturnItem(s_out_ringbuf_handle, (void *)(buf_rcv));
-        portENTER_CRITICAL(&s_out_ringbuf_mux);
-        s_out_buffered_data_len -= *read_bytes;
-        portEXIT_CRITICAL(&s_out_ringbuf_mux);
+        vRingbufferReturnItem(s_cdc_instance.out_ringbuf_handle[itf_num], (void *)(buf_rcv));
         return ESP_OK;
     } else {
         return ESP_ERR_NO_MEM;
     }
 }
 
-static esp_err_t usb_in_ringbuf_push(const uint8_t *buf, size_t write_bytes, TickType_t xTicksToWait)
+static esp_err_t _usb_in_ringbuf_push(int itf_num, const uint8_t *buf, size_t write_bytes, TickType_t xTicksToWait)
 {
-    int res = xRingbufferSend(s_in_ringbuf_handle, buf, write_bytes, xTicksToWait);
+    int res = xRingbufferSend(s_cdc_instance.in_ringbuf_handle[itf_num], buf, write_bytes, xTicksToWait);
 
     if (res != pdTRUE) {
         ESP_LOGW(TAG, "The in buffer is too small, the data has been lost");
         return ESP_FAIL;
     }
-
-    portENTER_CRITICAL(&s_in_ringbuf_mux);
-    s_in_buffered_data_len += write_bytes;
-#ifdef CONFIG_CDC_USE_TRACE_FACILITY
-    s_ringbuf_in_max = s_in_buffered_data_len > s_ringbuf_in_max ? s_in_buffered_data_len : s_ringbuf_in_max;
-#endif
-    portEXIT_CRITICAL(&s_in_ringbuf_mux);
     return ESP_OK;
 }
 
-static esp_err_t usb_in_ringbuf_pop(uint8_t *buf, size_t req_bytes, size_t *read_bytes, TickType_t ticks_to_wait)
+static esp_err_t _usb_in_ringbuf_pop(int itf_num, uint8_t *buf, size_t req_bytes, size_t *read_bytes, TickType_t ticks_to_wait)
 {
-    uint8_t *buf_rcv = xRingbufferReceiveUpTo(s_in_ringbuf_handle, read_bytes, ticks_to_wait, req_bytes);
+    uint8_t *buf_rcv = xRingbufferReceiveUpTo(s_cdc_instance.in_ringbuf_handle[itf_num], read_bytes, ticks_to_wait, req_bytes);
 
     if (buf_rcv) {
         memcpy(buf, buf_rcv, *read_bytes);
-        vRingbufferReturnItem(s_in_ringbuf_handle, (void *)(buf_rcv));
-        portENTER_CRITICAL(&s_in_ringbuf_mux);
-        s_in_buffered_data_len -= *read_bytes;
-        portEXIT_CRITICAL(&s_in_ringbuf_mux);
+        vRingbufferReturnItem(s_cdc_instance.in_ringbuf_handle[itf_num], (void *)(buf_rcv));
         return ESP_OK;
     } else {
         return ESP_ERR_NO_MEM;
     }
 }
 
-typedef enum {
-    CDC_DEVICE_STATE_CHECK,
-    CDC_DEVICE_STATE_NOT_ATTACHED,
-    CDC_DEVICE_STATE_ATTACHED,
-    CDC_DEVICE_STATE_POWERED,
-    CDC_DEVICE_STATE_DEFAULT,
-    CDC_DEVICE_STATE_ADDRESS,
-    CDC_DEVICE_STATE_CONFIGURED,
-    CDC_DEVICE_STATE_SUSPENDED,
-} _device_state_t;
-
-static _device_state_t _update_device_state(_device_state_t state)
+static bool _cdc_driver_is_init(void)
 {
-    static _device_state_t device_state = CDC_DEVICE_STATE_NOT_ATTACHED;
-    if (state != CDC_DEVICE_STATE_CHECK) {
-        device_state = state;
-    }
-    return device_state;
+    return (s_cdc_instance.state == CDC_STATE_NONE) ? false : true;
 }
 
-static bool _if_device_ready()
+/* if cdc task and cdc pipe is ready to transmit data */
+static bool _cdc_driver_is_ready()
 {
-    if(!s_usb_event_group) return false;
-    return xEventGroupGetBits(s_usb_event_group) & CDC_DEVICE_READY_BIT;
-}
-
-static hcd_port_event_t _usb_port_event_dflt_process(hcd_port_handle_t port_hdl, hcd_port_event_t event)
-{
-    (void)event;
-    assert(port_hdl != NULL);
-    hcd_port_event_t actual_evt = hcd_port_handle_event(port_hdl);
-
-    switch (actual_evt) {
-        case HCD_PORT_EVENT_CONNECTION:
-            ESP_LOGI(TAG, "line %u HCD_PORT_EVENT_CONNECTION", __LINE__);
-            break;
-
-        case HCD_PORT_EVENT_DISCONNECTION:
-            ESP_LOGW(TAG, "line %u HCD_PORT_EVENT_DISCONNECTION", __LINE__);
-            break;
-
-        case HCD_PORT_EVENT_ERROR:
-            ESP_LOGW(TAG, "line %u HCD_PORT_EVENT_ERROR", __LINE__);
-            break;
-
-        case HCD_PORT_EVENT_OVERCURRENT:
-            ESP_LOGW(TAG, "line %u HCD_PORT_EVENT_OVERCURRENT", __LINE__);
-            break;
-
-        case HCD_PORT_EVENT_NONE:
-            ESP_LOGD(TAG, "line %u HCD_PORT_EVENT_NONE", __LINE__);
-            break;
-
-        default:
-            ESP_LOGE(TAG, "line %u invalid HCD_PORT_EVENT%d", __LINE__, actual_evt);
-            break;
-    }
-
-    return actual_evt;
-}
-
-
-static void _default_pipe_event_dflt_process(hcd_pipe_handle_t pipe_handle, hcd_pipe_event_t pipe_event);
-
-static esp_err_t _usb_port_event_wait(hcd_port_handle_t expected_port_hdl,
-                                      hcd_port_event_t expected_event, TickType_t xTicksToWait)
-{
-    //Wait for port callback to send an event message
-    QueueHandle_t queue_hdl = (QueueHandle_t)hcd_port_get_context(expected_port_hdl);
-    assert(queue_hdl != NULL);
-    esp_err_t ret = ESP_ERR_NOT_FOUND;
-    BaseType_t queue_ret = errQUEUE_EMPTY;
-    cdc_event_msg_t evt_msg;
-
-    do {
-        queue_ret = xQueueReceive(queue_hdl, &evt_msg, xTicksToWait);
-
-        if (queue_ret != pdPASS) {
-            break;
-        }
-
-        if (PIPE_EVENT == evt_msg._type) {
-            _default_pipe_event_dflt_process(evt_msg._handle.pipe_handle, evt_msg._event.pipe_event);
-            ret = ESP_ERR_NOT_FOUND;
-        } else {
-            if (expected_port_hdl == evt_msg._handle.port_hdl && expected_event == evt_msg._event.port_event) {
-                _usb_port_event_dflt_process(expected_port_hdl, expected_event);
-                ret = ESP_OK;
-            } else {
-                ESP_LOGD(TAG, "Got unexpected port_handle and event");
-                _usb_port_event_dflt_process(evt_msg._handle.port_hdl, evt_msg._event.port_event);
-                ret = ESP_ERR_INVALID_RESPONSE;
-            }
-        }
-    } while (ret == ESP_ERR_NOT_FOUND);
-
-    return ret;
-}
-
-static bool _usb_pipe_callback(hcd_pipe_handle_t pipe_handle, hcd_pipe_event_t pipe_event, void *user_arg, bool in_isr)
-{
-    QueueHandle_t usb_event_queue = (QueueHandle_t)user_arg;
-    cdc_event_msg_t event_msg = {
-        ._type = PIPE_EVENT,
-        ._handle.pipe_handle = pipe_handle,
-        ._event.pipe_event = pipe_event,
-    };
-
-    if (in_isr) {
-        BaseType_t xTaskWoken = pdFALSE;
-        xQueueSendFromISR(usb_event_queue, &event_msg, &xTaskWoken);
-        return (xTaskWoken == pdTRUE);
-    } else {
-        xQueueSend(usb_event_queue, &event_msg, portMAX_DELAY);
+    if (!s_cdc_instance.event_group_hdl) {
         return false;
     }
+    return xEventGroupGetBits(s_cdc_instance.event_group_hdl) & CDC_DEVICE_READY_BIT;
 }
 
-/************************************************************* USB Port API ***********************************************************/
-
-static usb_phy_handle_t s_phy_handle = NULL;
-
-/**
- * @brief Initialize USB controler and USB port
- * 
- * @param context context can be get from port handle
- * @param callback  usb port event callback
- * @param callback_arg callback args
- * @return hcd_port_handle_t port handle if initialize succeed, null if failed
- */
-static hcd_port_handle_t _usb_port_init(void *context, hcd_port_callback_t callback, void *callback_arg)
+static inline void _processing_out_pipe(int itf_num, usbh_pipe_handle_t pipe_hdl, bool if_dequeue, bool reset)
 {
-    CDC_CHECK(context != NULL && callback != NULL && callback_arg != NULL, "invalid args", NULL);
-    esp_err_t ret = ESP_OK;
-    hcd_port_handle_t port_hdl = NULL;
-
-    /* Router internal USB PHY to usb-otg instead of usb-serial-jtag (if it has) */
-    usb_phy_config_t phy_config = {
-        .controller = USB_PHY_CTRL_OTG,
-        .target = USB_PHY_TARGET_INT,
-        .otg_mode = USB_OTG_MODE_HOST,
-        .otg_speed = USB_PHY_SPEED_UNDEFINED,   //In Host mode, the speed is determined by the connected device
-        .gpio_conf = NULL,
-    };
-    ret = usb_new_phy(&phy_config, &s_phy_handle);
-    CDC_CHECK(ESP_OK == ret, "USB PHY init failed", NULL);
-    /* Initialize USB Peripheral */
-    hcd_config_t hcd_config = {
-        .intr_flags = ESP_INTR_FLAG_LEVEL2,
-    };
-    ret = hcd_install(&hcd_config);
-    CDC_CHECK_GOTO(ESP_OK == ret, "HCD Install failed", hcd_init_err);
-
-    //TODO: create a usb port task to handle event
-    /* Initialize USB Port */
-    hcd_port_config_t port_cfg = {
-        .fifo_bias = HCD_PORT_FIFO_BIAS_BALANCED,
-        .callback = callback,
-        .callback_arg = callback_arg,
-        .context = context,
-    };
-    ret = hcd_port_init(USB_PORT_NUM, &port_cfg, &port_hdl);
-    CDC_CHECK_GOTO(ESP_OK == ret, "HCD Port init failed", port_init_err);
-
-    ESP_LOGI(TAG, "USB Port=%d init succeed", USB_PORT_NUM);
-    return port_hdl;
-
-port_init_err:
-    hcd_uninstall();
-hcd_init_err:
-    usb_del_phy(s_phy_handle);
-    return NULL;
-}
-
-static esp_err_t _usb_port_reset(hcd_port_handle_t port_hdl)
-{
-    CDC_CHECK(port_hdl != NULL, "invalid port handle", ESP_ERR_INVALID_ARG);
-    esp_err_t ret = hcd_port_command(port_hdl, HCD_PORT_CMD_RESET);
-    CDC_CHECK(ESP_OK == ret, "Port reset failed", ESP_FAIL);
-    ESP_LOGI(TAG, "Port reset succeed");
-    return ret;
-}
-
-static esp_err_t _usb_port_disable(hcd_port_handle_t port_hdl)
-{
-    CDC_CHECK(port_hdl != NULL, "invalid port handle", ESP_ERR_INVALID_ARG);
-    esp_err_t ret = hcd_port_command(port_hdl, HCD_PORT_CMD_DISABLE);
-    CDC_CHECK(ESP_OK == ret, "Port disable failed", ESP_FAIL);
-    ESP_LOGI(TAG, "Port disable succeed");
-    return ret;
-}
-
-static esp_err_t _usb_port_power(hcd_port_handle_t port_hdl, bool on)
-{
-    CDC_CHECK(port_hdl != NULL, "invalid port handle", ESP_ERR_INVALID_ARG);
-    esp_err_t ret;
-    if(on) ret = hcd_port_command(port_hdl, HCD_PORT_CMD_POWER_ON);
-    else ret = hcd_port_command(port_hdl, HCD_PORT_CMD_POWER_OFF);
-    CDC_CHECK(ESP_OK == ret, "port speed get failed", ESP_FAIL);
-    ESP_LOGI(TAG, "Port power: %s", on?"ON":"OFF");
-    return ret;
-}
-
-static esp_err_t _usb_port_get_speed(hcd_port_handle_t port_hdl, usb_speed_t *port_speed)
-{
-    CDC_CHECK(port_hdl != NULL && port_speed != NULL, "invalid args", ESP_ERR_INVALID_ARG);
-    esp_err_t ret = hcd_port_get_speed(port_hdl, port_speed);
-    CDC_CHECK(ESP_OK == ret, "port get speed failed", ESP_FAIL);
-    ESP_LOGI(TAG, "Port speed = %d", *port_speed);
-    return ret;
-}
-
-
-/**
- * @brief Port deinit
- * 
- * @param port_hdl port handle to deinit
- * @return esp_err_t 
- */
-static esp_err_t _usb_port_deinit(hcd_port_handle_t port_hdl)
-{
-    esp_err_t ret;
-    ret = _usb_port_disable(port_hdl);
-
-    if (ESP_OK != ret) {
-        ESP_LOGW(TAG, "port disable failed");
-    }
-    //TODO: should be handle in usb port task
-    _usb_port_event_dflt_process(port_hdl, 0);
-    ret = _usb_port_power(port_hdl, false);
-    if (ESP_OK != ret) {
-        ESP_LOGW(TAG, "Port power off failed");
-    }
-    //TODO: should be handle in usb port task
-    _usb_port_event_wait(port_hdl, HCD_PORT_EVENT_DISCONNECTION, 200 / portTICK_PERIOD_MS);
-    ret = hcd_port_deinit(port_hdl);
-    if (ESP_OK != ret) {
-        ESP_LOGW(TAG, "port deinit failed");
-    }
-
-    ret = hcd_uninstall();
-    if (ESP_OK != ret) {
-        ESP_LOGW(TAG, "hcd uninstall failed");
-    }
-    ret = usb_del_phy(s_phy_handle);
-    if (ESP_OK != ret) {
-        ESP_LOGW(TAG, "phy delete failed");
-    }
-    ESP_LOGI(TAG, "USB Port=%d deinit succeed", USB_PORT_NUM);
-    return ret;
-}
-
-/************************************************** PIPE API **************************************************/
-
-static hcd_pipe_handle_t _usb_pipe_init(hcd_port_handle_t port_hdl, usb_ep_desc_t *ep_desc, uint8_t dev_addr,
-                                        usb_speed_t dev_speed, void *context, void *callback_arg)
-{
-    CDC_CHECK(port_hdl != NULL, "invalid args", NULL);
-    hcd_pipe_config_t pipe_cfg = {
-        .callback = _usb_pipe_callback,
-        .callback_arg = callback_arg,
-        .context = context,
-        .ep_desc = ep_desc,    //NULL EP descriptor to create a default pipe
-        .dev_addr = dev_addr,
-        .dev_speed = dev_speed,
-    };
-
-    esp_err_t ret = ESP_OK;
-    hcd_pipe_handle_t pipe_handle = NULL;
-    ret = hcd_pipe_alloc(port_hdl, &pipe_cfg, &pipe_handle);
-    CDC_CHECK(ESP_OK == ret, "pipe alloc failed", NULL);
-    return pipe_handle;
-}
-
-static esp_err_t _default_pipe_event_wait_until(hcd_pipe_handle_t expected_pipe_hdl,
-        hcd_pipe_event_t expected_event, TickType_t xTicksToWait);
-
-static esp_err_t _usb_pipe_deinit(hcd_pipe_handle_t pipe_hdl, size_t urb_num)
-{
-    CDC_CHECK(pipe_hdl != NULL, "invalid args", ESP_ERR_INVALID_ARG);
-    ESP_LOGI(TAG, "pipe state = %d", hcd_pipe_get_state(pipe_hdl));
-
-    esp_err_t ret = hcd_pipe_command(pipe_hdl, HCD_PIPE_CMD_HALT);
-    if (ESP_OK != ret) {
-        ESP_LOGW(TAG, "pipe=%p halt failed", pipe_hdl);
-    }
-
-    ret = hcd_pipe_command(pipe_hdl, HCD_PIPE_CMD_FLUSH);
-    if (ESP_OK != ret) {
-        ESP_LOGW(TAG, "pipe=%p flush failed", pipe_hdl);
-    }
-    _default_pipe_event_wait_until(pipe_hdl, HCD_PIPE_EVENT_URB_DONE, 200 / portTICK_PERIOD_MS);
-
-    for (size_t i = 0; i < urb_num; i++) {
-        urb_t *urb = hcd_urb_dequeue(pipe_hdl);
-        ESP_LOGD(TAG, "urb dequeue handle = %p", urb);
-    }
-
-    return hcd_pipe_free(pipe_hdl);
-}
-
-static esp_err_t _usb_pipe_flush(hcd_pipe_handle_t pipe_hdl, size_t urb_num)
-{
-    CDC_CHECK(pipe_hdl != NULL, "invalid args", ESP_ERR_INVALID_ARG);
-    ESP_LOGI(TAG, "pipe flushing: state = %d", hcd_pipe_get_state(pipe_hdl));
-
-    esp_err_t ret = hcd_pipe_command(pipe_hdl, HCD_PIPE_CMD_HALT);
-    if (ESP_OK != ret) {
-        ESP_LOGW(TAG, "pipe=%p halt failed", pipe_hdl);
-    }
-
-    ret = hcd_pipe_command(pipe_hdl, HCD_PIPE_CMD_FLUSH);
-    if (ESP_OK != ret) {
-        ESP_LOGW(TAG, "pipe=%p flush failed", pipe_hdl);
-    }
-    _default_pipe_event_wait_until(pipe_hdl, HCD_PIPE_EVENT_URB_DONE, 200 / portTICK_PERIOD_MS);
-
-    for (size_t i = 0; i < urb_num; i++) {
-        urb_t *urb = hcd_urb_dequeue(pipe_hdl);
-        ESP_LOGD(TAG, "urb dequeue handle = %p", urb);
-    }
-
-    ret = hcd_pipe_command(pipe_hdl, HCD_PIPE_CMD_CLEAR);
-    if (ESP_OK != ret) {
-        ESP_LOGW(TAG, "pipe=%p clear failed", pipe_hdl);
-    }
-
-    return ESP_OK;
-}
-
-/*------------------------------------------------ USB URB Code ----------------------------------------------------*/
-static urb_t *_usb_urb_alloc(int num_isoc_packets, size_t packet_data_buffer_size, void *context)
-{
-    //Allocate list of URBS
-    urb_t *urb = heap_caps_calloc(1, sizeof(urb_t) + (num_isoc_packets * sizeof(usb_isoc_packet_desc_t)), MALLOC_CAP_DEFAULT);
-
-    if (NULL == urb) {
-        ESP_LOGE(TAG, "urb alloc failed");
-        return NULL;
-    }
-
-    //Allocate data buffer for each URB and assign them
-    uint8_t *data_buffer = NULL;
-
-    if (num_isoc_packets) {
-        /* ISOC urb */
-        data_buffer = heap_caps_calloc(num_isoc_packets, packet_data_buffer_size, MALLOC_CAP_DMA);
-    } else {
-        /* no ISOC urb */
-        data_buffer = heap_caps_calloc(1, packet_data_buffer_size, MALLOC_CAP_DMA);
-    }
-
-    if (NULL == data_buffer) {
-        ESP_LOGE(TAG, "urb data_buffer alloc failed");
-        return NULL;
-    }
-
-    //Initialize URB and underlying transfer structure. Need to cast to dummy due to const fields
-    usb_transfer_dummy_t *transfer_dummy = (usb_transfer_dummy_t *)&urb->transfer;
-    transfer_dummy->data_buffer = data_buffer;
-    transfer_dummy->num_isoc_packets = num_isoc_packets;
-    transfer_dummy->context = context;
-
-    ESP_LOGD(TAG, "urb alloced");
-    return urb;
-}
-
-void _usb_urb_free(urb_t *urb)
-{
-    //Free data buffers of each URB
-    heap_caps_free(urb->transfer.data_buffer);
-    //Free the URB list
-    heap_caps_free(urb);
-    ESP_LOGD(TAG, "urb free");
-}
-
-static void _default_pipe_event_dflt_process(hcd_pipe_handle_t pipe_handle, hcd_pipe_event_t pipe_event)
-{
-    assert(pipe_handle != NULL);
-
-    switch (pipe_event) {
-        case HCD_PIPE_EVENT_URB_DONE:
-            ESP_LOGD(TAG, "line %u Pipe: default HCD_PIPE_EVENT_URB_DONE", __LINE__);
-            break;
-
-        case HCD_PIPE_EVENT_ERROR_XFER:
-            ESP_LOGW(TAG, "line %u Pipe: default HCD_PIPE_EVENT_ERROR_XFER", __LINE__);
-            break;
-
-        case HCD_PIPE_EVENT_ERROR_URB_NOT_AVAIL:
-            ESP_LOGW(TAG, "line %u Pipe: default HCD_PIPE_EVENT_ERROR_URB_NOT_AVAIL", __LINE__);
-            break;
-
-        case HCD_PIPE_EVENT_ERROR_OVERFLOW:
-            ESP_LOGW(TAG, "line %u Pipe: default HCD_PIPE_EVENT_ERROR_OVERFLOW", __LINE__);
-            break;
-
-        case HCD_PIPE_EVENT_ERROR_STALL:
-            ESP_LOGW(TAG, "line %u Pipe: default HCD_PIPE_EVENT_ERROR_STALL", __LINE__);
-            break;
-
-        case HCD_PIPE_EVENT_NONE:
-            ESP_LOGD(TAG, "line %u Pipe: default HCD_PIPE_EVENT_NONE", __LINE__);
-            break;
-
-        default:
-            ESP_LOGE(TAG, "line %u invalid HCD_PORT_EVENT%d", __LINE__, pipe_event);
-            break;
-    }
-}
-
-static esp_err_t _default_pipe_event_wait_until(hcd_pipe_handle_t expected_pipe_hdl,
-        hcd_pipe_event_t expected_event, TickType_t xTicksToWait)
-{
-    //Wait for pipe callback to send an event message
-    QueueHandle_t queue_hdl = (QueueHandle_t)hcd_pipe_get_context(expected_pipe_hdl);
-    cdc_event_msg_t evt_msg;
-    esp_err_t ret = ESP_ERR_NOT_FOUND;
-    BaseType_t queue_ret = errQUEUE_EMPTY;
-
-    do {
-        queue_ret = xQueueReceive(queue_hdl, &evt_msg, xTicksToWait);
-
-        if (queue_ret != pdPASS) {
-            break;
-        }
-
-        if (PORT_EVENT == evt_msg._type) {
-            _usb_port_event_dflt_process(evt_msg._handle.port_hdl, evt_msg._event.port_event);
-            ret = ESP_ERR_NOT_FOUND;
-        } else {
-            if (expected_event == evt_msg._event.pipe_event) {
-                _default_pipe_event_dflt_process(evt_msg._handle.pipe_handle, evt_msg._event.pipe_event);
-                ret = ESP_OK;
-            } else {
-                ESP_LOGD(TAG, "Got unexpected pipe_handle and event");
-                _default_pipe_event_dflt_process(evt_msg._handle.pipe_handle, evt_msg._event.pipe_event);
-                ret = ESP_ERR_INVALID_RESPONSE;
-            }
-        }
-    } while (ret == ESP_ERR_NOT_FOUND);
-
-    return ret;
-}
-
-/*------------------------------------------------ USB Control Process Code ----------------------------------------------------*/
-
-#ifdef CONFIG_CDC_GET_DEVICE_DESC
-static esp_err_t _usb_get_dev_desc(hcd_pipe_handle_t pipe_handle, usb_device_desc_t *device_desc)
-{
-    CDC_CHECK(pipe_handle != NULL, "pipe_handle can't be NULL", ESP_ERR_INVALID_ARG);
-    //malloc URB for default control
-    urb_t *urb_ctrl = _usb_urb_alloc(0, sizeof(usb_setup_packet_t) + CTRL_TRANSFER_DATA_MAX_BYTES, NULL);
-    CDC_CHECK(urb_ctrl != NULL, "alloc urb failed", ESP_ERR_NO_MEM);
-    urb_t *urb_done = NULL;
-    ESP_LOGI(TAG, "get device desc");
-    USB_SETUP_PACKET_INIT_GET_DEVICE_DESC((usb_setup_packet_t *)urb_ctrl->transfer.data_buffer);
-    urb_ctrl->transfer.num_bytes = sizeof(usb_setup_packet_t) + usb_round_up_to_mps(sizeof(usb_device_desc_t), USB_EP_CTRL_DEFAULT_MPS);
-    esp_err_t ret = hcd_urb_enqueue(pipe_handle, urb_ctrl);
-    CDC_CHECK_GOTO(ESP_OK == ret, "urb enqueue failed", free_urb_);
-    ret = _default_pipe_event_wait_until(pipe_handle, HCD_PIPE_EVENT_URB_DONE, pdMS_TO_TICKS(TIMEOUT_USB_CTRL_XFER_MS));
-    CDC_CHECK_GOTO(ESP_OK == ret, "urb event error", flush_urb_);
-    urb_done = hcd_urb_dequeue(pipe_handle);
-    CDC_CHECK_GOTO(urb_done == urb_ctrl, "urb status: not same", free_urb_);
-    CDC_CHECK_GOTO(USB_TRANSFER_STATUS_COMPLETED == urb_done->transfer.status, "urb status: not complete", free_urb_);
-    CDC_CHECK_GOTO((urb_done->transfer.actual_num_bytes <= sizeof(usb_setup_packet_t) + sizeof(usb_device_desc_t)), "urb status: data overflow", free_urb_);
-    ESP_LOGI(TAG, "get device desc, actual_num_bytes:%d", urb_done->transfer.actual_num_bytes);
-    usb_device_desc_t *dev_desc = (usb_device_desc_t *)(urb_done->transfer.data_buffer + sizeof(usb_setup_packet_t));
-    if (device_desc != NULL ) *device_desc = *dev_desc;
-    usb_print_device_descriptor(dev_desc);
-    goto free_urb_;
-
-flush_urb_:
-    _usb_pipe_flush(pipe_handle, 1);
-free_urb_:
-    _usb_urb_free(urb_ctrl);
-    return ret;
-}
-#endif
-
-#ifdef CONFIG_CDC_GET_CONFIG_DESC
-static esp_err_t _usb_get_config_desc(hcd_pipe_handle_t pipe_handle, usb_config_desc_t **config_desc)
-{
-    (void)config_desc;
-    CDC_CHECK(pipe_handle != NULL, "pipe_handle can't be NULL", ESP_ERR_INVALID_ARG);
-    //malloc URB for default control
-    urb_t *urb_ctrl = _usb_urb_alloc(0, sizeof(usb_setup_packet_t) + CTRL_TRANSFER_DATA_MAX_BYTES, NULL);
-    CDC_CHECK(urb_ctrl != NULL, "alloc urb failed", ESP_ERR_NO_MEM);
-    urb_t *urb_done = NULL;
-    ESP_LOGI(TAG, "get short config desc");
-    USB_SETUP_PACKET_INIT_GET_CONFIG_DESC((usb_setup_packet_t *)urb_ctrl->transfer.data_buffer, USB_ENUM_CONFIG_INDEX, USB_ENUM_SHORT_DESC_REQ_LEN);
-    urb_ctrl->transfer.num_bytes = sizeof(usb_setup_packet_t) + usb_round_up_to_mps(sizeof(usb_config_desc_t), USB_EP_CTRL_DEFAULT_MPS);
-    esp_err_t ret = hcd_urb_enqueue(pipe_handle, urb_ctrl);
-    CDC_CHECK_GOTO(ESP_OK == ret, "urb enqueue failed", free_urb_);
-    ret = _default_pipe_event_wait_until(pipe_handle, HCD_PIPE_EVENT_URB_DONE, pdMS_TO_TICKS(TIMEOUT_USB_CTRL_XFER_MS));
-    CDC_CHECK_GOTO(ESP_OK == ret, "urb event error", flush_urb_);
-    urb_done = hcd_urb_dequeue(pipe_handle);
-    CDC_CHECK_GOTO(urb_done == urb_ctrl, "urb status: not same", free_urb_);
-    CDC_CHECK_GOTO(USB_TRANSFER_STATUS_COMPLETED == urb_done->transfer.status, "urb status: not complete", free_urb_);
-    CDC_CHECK_GOTO((urb_done->transfer.actual_num_bytes <= sizeof(usb_setup_packet_t) + sizeof(usb_config_desc_t)), "urb status: data overflow", free_urb_);
-    ESP_LOGI(TAG, "get config desc, actual_num_bytes:%d", urb_done->transfer.actual_num_bytes);
-    usb_config_desc_t *cfg_desc = (usb_config_desc_t *)(urb_done->transfer.data_buffer + sizeof(usb_setup_packet_t));
-    uint16_t full_config_length = cfg_desc->wTotalLength;
-    if (cfg_desc->wTotalLength > CTRL_TRANSFER_DATA_MAX_BYTES) {
-        ESP_LOGE(TAG, "Configuration descriptor larger than control transfer max length");
-        goto free_urb_;
-    }
-    ESP_LOGI(TAG, "get full config desc");
-    USB_SETUP_PACKET_INIT_GET_CONFIG_DESC((usb_setup_packet_t *)urb_ctrl->transfer.data_buffer, USB_ENUM_CONFIG_INDEX, full_config_length);
-    urb_ctrl->transfer.num_bytes = sizeof(usb_setup_packet_t) + usb_round_up_to_mps(full_config_length, USB_EP_CTRL_DEFAULT_MPS);
-    ret = hcd_urb_enqueue(pipe_handle, urb_ctrl);
-    CDC_CHECK_GOTO(ESP_OK == ret, "urb enqueue failed", free_urb_);
-    ret = _default_pipe_event_wait_until(pipe_handle, HCD_PIPE_EVENT_URB_DONE, pdMS_TO_TICKS(TIMEOUT_USB_CTRL_XFER_MS));
-    CDC_CHECK_GOTO(ESP_OK == ret, "urb event error", flush_urb_);
-    urb_done = hcd_urb_dequeue(pipe_handle);
-    CDC_CHECK_GOTO(urb_done == urb_ctrl, "urb status: not same", free_urb_);
-    CDC_CHECK_GOTO(USB_TRANSFER_STATUS_COMPLETED == urb_done->transfer.status, "urb status: not complete", free_urb_);
-    CDC_CHECK_GOTO((urb_done->transfer.actual_num_bytes <= sizeof(usb_setup_packet_t) + full_config_length), "urb status: data overflow", free_urb_);
-    ESP_LOGI(TAG, "get full config desc, actual_num_bytes:%d", urb_done->transfer.actual_num_bytes);
-    cfg_desc = (usb_config_desc_t *)(urb_done->transfer.data_buffer + sizeof(usb_setup_packet_t));
-    usb_print_config_descriptor(cfg_desc, NULL);
-    goto free_urb_;
-
-flush_urb_:
-    _usb_pipe_flush(pipe_handle, 1);
-free_urb_:
-    _usb_urb_free(urb_ctrl);
-    return ret;
-}
-#endif
-
-static esp_err_t _usb_set_device_addr(hcd_pipe_handle_t pipe_handle, uint8_t dev_addr)
-{
-    CDC_CHECK(pipe_handle != NULL, "pipe_handle can't be NULL", ESP_ERR_INVALID_ARG);
-    //malloc URB for default control
-    urb_t *urb_ctrl = _usb_urb_alloc(0, sizeof(usb_setup_packet_t), NULL);
-    CDC_CHECK(urb_ctrl != NULL, "alloc urb failed", ESP_ERR_NO_MEM);
-
-    //STD: Set ADDR
-    USB_SETUP_PACKET_INIT_SET_ADDR((usb_setup_packet_t *)urb_ctrl->transfer.data_buffer, dev_addr);
-    urb_ctrl->transfer.num_bytes = sizeof(usb_setup_packet_t); //No data stage
-    //Enqueue it
-    ESP_LOGI(TAG, "Set Device Addr = %u", dev_addr);
-    esp_err_t ret = hcd_urb_enqueue(pipe_handle, urb_ctrl);
-    CDC_CHECK_GOTO(ESP_OK == ret, "urb enqueue failed", free_urb_);
-    ret = _default_pipe_event_wait_until(pipe_handle, HCD_PIPE_EVENT_URB_DONE, pdMS_TO_TICKS(TIMEOUT_USB_CTRL_XFER_MS));
-    CDC_CHECK_GOTO(ESP_OK == ret, "urb event error", flush_urb_);
-    urb_t *urb_done = hcd_urb_dequeue(pipe_handle);
-    CDC_CHECK_GOTO(urb_done == urb_ctrl, "urb status: not same", free_urb_);
-    CDC_CHECK_GOTO(USB_TRANSFER_STATUS_COMPLETED == urb_done->transfer.status, "urb status: not complete", free_urb_);
-    ret = hcd_pipe_update_dev_addr(pipe_handle, dev_addr);
-    CDC_CHECK_GOTO(ESP_OK == ret, "default pipe update address failed", free_urb_);
-    ret = hcd_pipe_update_mps(pipe_handle, USB_EP_CTRL_DEFAULT_MPS);
-    CDC_CHECK_GOTO(ESP_OK == ret, "default pipe update MPS failed", free_urb_);
-    ESP_LOGI(TAG, "Set Device Addr Done");
-    goto free_urb_;
-
-flush_urb_:
-    _usb_pipe_flush(pipe_handle, 1);
-free_urb_:
-    _usb_urb_free(urb_ctrl);
-    return ret;
-}
-
-static esp_err_t _usb_set_device_config(hcd_pipe_handle_t pipe_handle, uint16_t configuration)
-{
-    CDC_CHECK(pipe_handle != NULL, "pipe_handle can't be NULL", ESP_ERR_INVALID_ARG);
-    CDC_CHECK(configuration != 0, "configuration can't be 0", ESP_ERR_INVALID_ARG);
-    //malloc URB for default control
-    urb_t *urb_ctrl = _usb_urb_alloc(0, sizeof(usb_setup_packet_t), NULL);
-    CDC_CHECK(urb_ctrl != NULL, "alloc urb failed", ESP_ERR_NO_MEM);
-
-    USB_SETUP_PACKET_INIT_SET_CONFIG((usb_setup_packet_t *)urb_ctrl->transfer.data_buffer, configuration);
-    urb_ctrl->transfer.num_bytes = sizeof(usb_setup_packet_t); //No data stage
-    //Enqueue it
-    ESP_LOGI(TAG, "Set Device Configuration = %u", configuration);
-    esp_err_t ret = hcd_urb_enqueue(pipe_handle, urb_ctrl);
-    CDC_CHECK_GOTO(ESP_OK == ret, "urb enqueue failed", free_urb_);
-    ret = _default_pipe_event_wait_until(pipe_handle, HCD_PIPE_EVENT_URB_DONE, pdMS_TO_TICKS(TIMEOUT_USB_CTRL_XFER_MS));
-    CDC_CHECK_GOTO(ESP_OK == ret, "urb event error", flush_urb_);
-    urb_t *urb_done = hcd_urb_dequeue(pipe_handle);
-    CDC_CHECK_GOTO(urb_done == urb_ctrl, "urb status: not same", free_urb_);
-    CDC_CHECK_GOTO(USB_TRANSFER_STATUS_COMPLETED == urb_done->transfer.status, "urb status: not complete", free_urb_);
-    ESP_LOGI(TAG, "Set Device Configuration Done");
-    goto free_urb_;
-
-flush_urb_:
-    _usb_pipe_flush(pipe_handle, 1);
-free_urb_:
-    _usb_urb_free(urb_ctrl);
-    return ret;
-}
-
-#ifdef CONFIG_CDC_SEND_DTE_ACTIVE
-static esp_err_t _usb_set_device_line_state(hcd_pipe_handle_t pipe_handle, bool dtr, bool rts)
-{
-    CDC_CHECK(pipe_handle != NULL, "pipe_handle can't be NULL", ESP_ERR_INVALID_ARG);
-    //malloc URB for default control
-    urb_t *urb_ctrl = _usb_urb_alloc(0, sizeof(usb_setup_packet_t), NULL);
-    CDC_CHECK(urb_ctrl != NULL, "alloc urb failed", ESP_ERR_NO_MEM);
-
-    USB_CTRL_REQ_CDC_SET_LINE_STATE((usb_setup_packet_t *)urb_ctrl->transfer.data_buffer, 0, dtr, rts);
-    urb_ctrl->transfer.num_bytes = sizeof(usb_setup_packet_t); //No data stage
-    //Enqueue it
-    ESP_LOGI(TAG, "Set Device Line State: dtr %d, rts %d", dtr, rts);
-    esp_err_t ret = hcd_urb_enqueue(pipe_handle, urb_ctrl);
-    CDC_CHECK_GOTO(ESP_OK == ret, "urb enqueue failed", free_urb_);
-    ret = _default_pipe_event_wait_until(pipe_handle, HCD_PIPE_EVENT_URB_DONE, pdMS_TO_TICKS(TIMEOUT_USB_CTRL_XFER_MS));
-    CDC_CHECK_GOTO(ESP_OK == ret, "urb event error", flush_urb_);
-    urb_t *urb_done = hcd_urb_dequeue(pipe_handle);
-    CDC_CHECK_GOTO(urb_done == urb_ctrl, "urb status: not same", free_urb_);
-    CDC_CHECK_GOTO(USB_TRANSFER_STATUS_COMPLETED == urb_done->transfer.status, "urb status: not complete", free_urb_);
-    ESP_LOGI(TAG, "Set Device Line State Done");
-    goto free_urb_;
-
-flush_urb_:
-    _usb_pipe_flush(pipe_handle, 1);
-free_urb_:
-    _usb_urb_free(urb_ctrl);
-    return ret;
-}
-#endif
-
-typedef struct {
-    hcd_port_handle_t port_hdl;
-    usb_speed_t dev_speed;
-    uint8_t dev_addr;
-    usb_ep_desc_t bulk_in_ep_desc;
-    usb_ep_desc_t bulk_out_ep_desc;
-    EventGroupHandle_t event_group_hdl;
-    usbh_cdc_cb_t rx_callback;       /*!< packet receive callback, should not block */
-    void *rx_callback_arg;           /*!< packet receive callback args */
-} _cdc_data_task_args_t;
-
-static inline void _processing_out_pipe(hcd_pipe_handle_t pipe_hdl, bool if_dequeue)
-{
-    static size_t pendding_urb_num = 0;
-    static urb_t *pendding_urb[BULK_OUT_URB_NUM] = {NULL};
+    static size_t pending_urb_num[CDC_INTERFACE_NUM_MAX] = {0};
+    static esp_usbh_urb_handle_t pending_urb[CDC_INTERFACE_NUM_MAX][BULK_OUT_URB_NUM] = {NULL};
     esp_err_t ret = ESP_FAIL;
 
-    if (!pendding_urb_num && !if_dequeue) {
+    if (reset) {
+        for (size_t i = 0; i < CDC_INTERFACE_NUM_MAX; i++) {
+            pending_urb_num[i] = 0;
+            for (size_t j = 0; j < BULK_OUT_URB_NUM; j++) {
+                pending_urb[i][j] = NULL;
+            }
+        }
+        return;
+    }
+
+    if (!pending_urb_num[itf_num] && !if_dequeue) {
         return;
     }
 
     if (if_dequeue) {
-        urb_t *done_urb = hcd_urb_dequeue(pipe_hdl);
+        size_t num_bytes = 0;
+        usb_transfer_status_t status = USB_TRANSFER_STATUS_ERROR;
+        esp_usbh_urb_handle_t done_urb = esp_usbh_urb_dequeue(pipe_hdl, &num_bytes, &status);
 
-        if (done_urb->transfer.status != USB_TRANSFER_STATUS_COMPLETED) {
+        if (status != USB_TRANSFER_STATUS_COMPLETED) {
             /* retry if transfer not completed */
-            hcd_urb_enqueue(pipe_hdl, done_urb);
+            esp_usbh_urb_enqueue(pipe_hdl, done_urb, -1);
             return;
         }
 
-        ESP_LOGV(TAG, "ST actual len = %d", done_urb->transfer.actual_num_bytes);
-        /* add done urb to pendding urb list */
+        ESP_LOGV(TAG, "ST actual len = %u", num_bytes);
+        /* add done urb to pending urb list */
         for (size_t i = 0; i < BULK_OUT_URB_NUM; i++) {
-            if (pendding_urb[i] == NULL) {
-                pendding_urb[i] = done_urb;
-                ++pendding_urb_num;
-                assert(pendding_urb_num <= BULK_OUT_URB_NUM);
+            if (pending_urb[itf_num][i] == NULL) {
+                pending_urb[itf_num][i] = done_urb;
+                ++pending_urb_num[itf_num];
+                assert(pending_urb_num[itf_num] <= BULK_OUT_URB_NUM);
                 break;
             }
         }
     }
 
     /* check if we have buffered data need to send */
-    if (get_usb_out_ringbuf_len() == 0) return;
+    if (_get_usb_out_ringbuf_len(itf_num) == 0) {
+        return;
+    }
 
-    /* fetch a pendding urb from list */
-    urb_t *next_urb = NULL;
+    /* fetch a pending urb from list */
+    esp_usbh_urb_handle_t next_urb = NULL;
     size_t next_index = 0;
     for (; next_index < BULK_OUT_URB_NUM; next_index++) {
-        if (pendding_urb[next_index] != NULL) {
-            next_urb = pendding_urb[next_index];
+        if (pending_urb[itf_num][next_index] != NULL) {
+            next_urb = pending_urb[itf_num][next_index];
             break;
         }
     }
     assert(next_urb != NULL);
 
     size_t num_bytes_to_send = 0;
-    ret = usb_out_ringbuf_pop(next_urb->transfer.data_buffer, BUFFER_SIZE_BULK_OUT, &num_bytes_to_send, 0);
+    size_t buffer_size = 0;
+    uint8_t *buffer = esp_usbh_urb_buffer_claim(next_urb, &buffer_size, NULL);
+    ret = _usb_out_ringbuf_pop(itf_num, buffer, buffer_size, &num_bytes_to_send, 0);
     if (ret != ESP_OK || num_bytes_to_send == 0) {
         return;
     }
-    next_urb->transfer.num_bytes = num_bytes_to_send;
-#ifdef CONFIG_CDC_USE_TRACE_FACILITY
-    s_bulkbuf_out_max = num_bytes_to_send > s_bulkbuf_out_max ? num_bytes_to_send : s_bulkbuf_out_max;
-#endif
-    hcd_urb_enqueue(pipe_hdl, next_urb);
-    pendding_urb[next_index] = NULL;
-    --pendding_urb_num;
-    assert(pendding_urb_num <= BULK_OUT_URB_NUM);
-    ESP_LOGV(TAG, "ST %d: %.*s", next_urb->transfer.num_bytes, next_urb->transfer.num_bytes, next_urb->transfer.data_buffer);
+    esp_usbh_urb_enqueue(pipe_hdl, next_urb, num_bytes_to_send);
+    pending_urb[itf_num][next_index] = NULL;
+    --pending_urb_num[itf_num];
+    assert(pending_urb_num[itf_num] <= BULK_OUT_URB_NUM);
+    ESP_LOGV(TAG, "ITF%d ST %d: %.*s", itf_num, num_bytes_to_send, num_bytes_to_send, buffer);
 }
 
-static void inline _processing_in_pipe(hcd_pipe_handle_t pipe_hdl, EventGroupHandle_t event_group_hdl, usbh_cdc_cb_t rx_cb, void *rx_cb_arg)
+static void inline _processing_in_pipe(int itf_num, usbh_pipe_handle_t pipe_hdl, usbh_cdc_cb_t rx_cb, void *rx_cb_arg)
 {
-    urb_t *done_urb = hcd_urb_dequeue(pipe_hdl);
-    ESP_LOGV(TAG, "RCV actual %d: %.*s", done_urb->transfer.actual_num_bytes, done_urb->transfer.actual_num_bytes, done_urb->transfer.data_buffer);
-
-    if (done_urb->transfer.actual_num_bytes > 0) {
-        esp_err_t ret = usb_in_ringbuf_push(done_urb->transfer.data_buffer, done_urb->transfer.actual_num_bytes, pdMS_TO_TICKS(TIMEOUT_USB_RINGBUF_MS));
-#ifdef CONFIG_CDC_USE_TRACE_FACILITY
-        s_bulkbuf_in_max = done_urb->transfer.actual_num_bytes > s_bulkbuf_in_max ? done_urb->transfer.actual_num_bytes : s_bulkbuf_in_max;
-#endif
+    size_t num_bytes = 0;
+    esp_usbh_urb_handle_t done_urb = esp_usbh_urb_dequeue(pipe_hdl, &num_bytes, NULL);
+    if (num_bytes > 0) {
+        uint8_t *data_buffer = esp_usbh_urb_buffer_claim(done_urb, NULL, NULL);
+        ESP_LOGV(TAG, "ITF%d RCV actual %d: %.*s", itf_num, num_bytes, num_bytes, data_buffer);
+        esp_err_t ret = _usb_in_ringbuf_push(itf_num, data_buffer, num_bytes, pdMS_TO_TICKS(TIMEOUT_USB_RINGBUF_MS));
 
         if (ret != ESP_OK) {
             ESP_LOGW(TAG, "in ringbuf too small, skip a usb payload");
@@ -946,536 +276,501 @@ static void inline _processing_in_pipe(hcd_pipe_handle_t pipe_hdl, EventGroupHan
         }
     }
 
-    hcd_urb_enqueue(pipe_hdl, done_urb);
+    esp_usbh_urb_enqueue(pipe_hdl, done_urb, -1);
 }
+
+typedef struct {
+    uint8_t pipe_itf;
+    uint8_t pipe_addr;
+} _pipe_context;
 
 static void _cdc_data_task(void *arg)
 {
-    assert(arg != NULL);
-    _cdc_data_task_args_t *task_args = (_cdc_data_task_args_t *)(arg);
-    hcd_pipe_handle_t pipe_hdl_in = NULL;
-    hcd_pipe_handle_t pipe_hdl_out = NULL;
-    QueueHandle_t data_queue_hdl = NULL;
-    EventGroupHandle_t event_group_hdl = task_args->event_group_hdl;
-    usbh_cdc_cb_t rx_cb = task_args->rx_callback;
-    void *rx_cb_arg = task_args->rx_callback_arg;
-    size_t num_bytes_to_send = 0;
-    urb_t *urb_in[BULK_IN_URB_NUM] = {NULL};
-    urb_t *urb_out[BULK_OUT_URB_NUM] = {NULL};
+    ESP_LOGI(TAG, "CDC task start");
+    usbh_pipe_handle_t pipe_hdl_in[CDC_INTERFACE_NUM_MAX] = {NULL};
+    usbh_pipe_handle_t pipe_hdl_out[CDC_INTERFACE_NUM_MAX] = {NULL};
+    esp_usbh_urb_handle_t urb_in[CDC_INTERFACE_NUM_MAX][BULK_IN_URB_NUM] = {NULL};
+    esp_usbh_urb_handle_t urb_out[CDC_INTERFACE_NUM_MAX][BULK_OUT_URB_NUM] = {NULL};
+    _pipe_context pipe_ctx_in[CDC_INTERFACE_NUM_MAX] = {0};
+    _pipe_context pipe_ctx_out[CDC_INTERFACE_NUM_MAX] = {0};
+    _pipe_context *pipe_ctx = NULL;
+    usbh_cdc_cb_t rx_cb[CDC_INTERFACE_NUM_MAX] = {NULL};
+    void *rx_cb_arg[CDC_INTERFACE_NUM_MAX] = {NULL};
+    EventGroupHandle_t event_group_hdl = s_cdc_instance.event_group_hdl;
+    int itf_num = s_cdc_instance.itf_num;
 
-    cdc_event_msg_t evt_msg = {};
-    data_queue_hdl = xQueueCreate(DATA_EVENT_QUEUE_LEN, sizeof(cdc_event_msg_t));
-    assert(NULL != data_queue_hdl);
-
-    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-
-    ESP_LOGI(TAG, "Creating bulk in pipe");
-    pipe_hdl_in = _usb_pipe_init(task_args->port_hdl, &task_args->bulk_in_ep_desc, task_args->dev_addr,
-                                 task_args->dev_speed, (void *)data_queue_hdl, (void *)data_queue_hdl);
-    assert(pipe_hdl_in != NULL);
-
-    ESP_LOGI(TAG, "Creating bulk out pipe");
-    pipe_hdl_out = _usb_pipe_init(task_args->port_hdl, &task_args->bulk_out_ep_desc, task_args->dev_addr,
-                                  task_args->dev_speed, (void *)data_queue_hdl, (void *)data_queue_hdl);
-    assert(pipe_hdl_out != NULL);
-
-    for (size_t i = 0; i < BULK_IN_URB_NUM; i++) {
-        urb_t *urb = heap_caps_calloc(1, sizeof(urb_t), MALLOC_CAP_INTERNAL);
-        assert(NULL != urb);
-        urb_in[i] = urb;
-        uint8_t *data_buffer = heap_caps_malloc(BUFFER_SIZE_BULK_IN, MALLOC_CAP_DMA);
-        assert(NULL != data_buffer);
-        //Initialize URB and underlying transfer structure. Need to cast to dummy due to const fields
-        usb_transfer_dummy_t *transfer_dummy = (usb_transfer_dummy_t *)&urb->transfer;
-        transfer_dummy->data_buffer = data_buffer;
-        transfer_dummy->num_bytes = BUFFER_SIZE_BULK_IN;
-        hcd_urb_enqueue(pipe_hdl_in, urb);
+    for (size_t i = 0; i < itf_num; i++) {
+        rx_cb[i] = s_cdc_instance.rx_callback[i];
+        rx_cb_arg[i] = s_cdc_instance.rx_callback_arg[i];
+        pipe_ctx_in[i].pipe_itf = i;
+        pipe_ctx_out[i].pipe_itf = i;
+        pipe_ctx_in[i].pipe_addr = s_cdc_instance.bulk_in_ep_desc[i].bEndpointAddress;
+        pipe_ctx_out[i].pipe_addr = s_cdc_instance.bulk_out_ep_desc[i].bEndpointAddress;
+        for (size_t j = 0; j < BULK_IN_URB_NUM; j++) {
+            esp_usbh_urb_handle_t urb = esp_usbh_urb_alloc(0, BUFFER_SIZE_BULK_IN, NULL);
+            assert(NULL != urb);
+            urb_in[i][j] = urb;
+        }
+        for (size_t j = 0; j < BULK_OUT_URB_NUM; j++) {
+            esp_usbh_urb_handle_t urb = esp_usbh_urb_alloc(0, BUFFER_SIZE_BULK_OUT, NULL);
+            assert(NULL != urb);
+            urb_out[i][j] = urb;
+        }
     }
 
-    for (size_t i = 0; i < BULK_OUT_URB_NUM; i++) {
-        urb_t *urb = heap_caps_calloc(1, sizeof(urb_t), MALLOC_CAP_INTERNAL);
-        assert(NULL != urb);
-        urb_out[i] = urb;
-        uint8_t *data_buffer = heap_caps_malloc(BUFFER_SIZE_BULK_OUT, MALLOC_CAP_DMA);
-        assert(NULL != data_buffer);
-        //Initialize URB and underlying transfer structure. Need to cast to dummy due to const fields
-        usb_transfer_dummy_t *transfer_dummy = (usb_transfer_dummy_t *)&urb->transfer;
-        transfer_dummy->data_buffer = data_buffer;
-        urb->transfer.num_bytes = num_bytes_to_send;
-        hcd_urb_enqueue(pipe_hdl_out, urb);
-        ESP_LOGV(TAG, "ST %d: %.*s", urb->transfer.num_bytes, urb->transfer.num_bytes, urb->transfer.data_buffer);
-    }
-    xEventGroupSetBits(event_group_hdl, CDC_DEVICE_READY_BIT);
-
-    while (!(xEventGroupGetBits(event_group_hdl) & CDC_DATA_TASK_KILL_BIT)) {
-        if (xQueueReceive(data_queue_hdl, &evt_msg, 1) != pdTRUE) {
-            /* check if ringbuf has date to send */
-            _processing_out_pipe(pipe_hdl_out, false);
+    usbh_event_msg_t evt_msg = {};
+    QueueHandle_t evt_queue_hdl = xQueueCreate(DATA_EVENT_QUEUE_LEN, sizeof(usbh_event_msg_t));
+    assert(NULL != evt_queue_hdl);
+    // Waiting for usbh ready
+    while (!(xEventGroupGetBits(event_group_hdl) & (CDC_DATA_TASK_KILL_BIT | CDC_DATA_TASK_RESET_BIT))) {
+        if (ulTaskNotifyTake(pdTRUE, 1) == 0) {
             continue;
         }
-        switch (evt_msg._event.pipe_event) {
-            case HCD_PIPE_EVENT_URB_DONE:
-                if (evt_msg._handle.pipe_handle == pipe_hdl_out) {
-                    _processing_out_pipe(pipe_hdl_out, true);
-                } else if (evt_msg._handle.pipe_handle == pipe_hdl_in) {
-                    _processing_in_pipe(pipe_hdl_in, event_group_hdl, rx_cb, rx_cb_arg);
-                } else {
-                    ESP_LOGE(TAG, "invalid pipe handle");
-                    assert(0);
+
+        s_cdc_instance.state = CDC_STATE_CONNECTED;
+        // Create pipe when device connect
+        xQueueReset(evt_queue_hdl);
+        for (uint8_t i = 0; i < itf_num; i++) {
+            ESP_LOGD(TAG, "Creating bulk in pipe itf = %d, ep = 0x%02X, ", pipe_ctx_in[i].pipe_itf, pipe_ctx_in[i].pipe_addr);
+            pipe_hdl_in[i] = esp_usbh_pipe_init(s_cdc_instance.port_hdl, &s_cdc_instance.bulk_in_ep_desc[i], (void *)evt_queue_hdl, (void *)(&pipe_ctx_in[i]));
+            assert(pipe_hdl_in[i] != NULL);
+            ESP_LOGD(TAG, "Creating bulk out pipe itf = %d, ep = 0x%02X", pipe_ctx_out[i].pipe_itf, pipe_ctx_out[i].pipe_addr);
+            pipe_hdl_out[i] = esp_usbh_pipe_init(s_cdc_instance.port_hdl, &s_cdc_instance.bulk_out_ep_desc[i], (void *)evt_queue_hdl, (void *)(&pipe_ctx_out[i]));
+            assert(pipe_hdl_out[i] != NULL);
+            for (size_t j = 0; j < BULK_IN_URB_NUM; j++) {
+                esp_usbh_urb_enqueue(pipe_hdl_in[i], urb_in[i][j], BUFFER_SIZE_BULK_IN);
+            }
+            for (size_t j = 0; j < BULK_OUT_URB_NUM; j++) {
+                esp_usbh_urb_enqueue(pipe_hdl_out[i], urb_out[i][j], 0);
+            }
+            s_cdc_instance.itf_ready[i] = true;
+        }
+        //reset static members after usb reconnect
+        _processing_out_pipe(0, NULL, false, true);
+        xEventGroupSetBits(event_group_hdl, CDC_DEVICE_READY_BIT);
+        s_cdc_instance.state = CDC_STATE_READY;
+
+        while (!(xEventGroupGetBits(event_group_hdl) & (CDC_DATA_TASK_KILL_BIT | CDC_DATA_TASK_RESET_BIT))) {
+            if (xQueueReceive(evt_queue_hdl, &evt_msg, 1) != pdTRUE) {
+                /* check if ringbuf has data wait to send */
+                for (size_t i = 0; i < itf_num; i++) {
+                    _processing_out_pipe(i, pipe_hdl_out[i], false, false);
                 }
-
+                continue;
+            }
+            switch (evt_msg._type) {
+            case PORT_EVENT:
                 break;
+            case PIPE_EVENT:
+                pipe_ctx = (_pipe_context *)esp_usbh_pipe_get_context(evt_msg._handle.pipe_handle);
+                switch (evt_msg._event.pipe_event) {
+                case PIPE_EVENT_URB_DONE:
+                    if (pipe_ctx->pipe_addr & 0x80) {
+                        _processing_in_pipe(pipe_ctx->pipe_itf, evt_msg._handle.pipe_handle, rx_cb[pipe_ctx->pipe_itf], rx_cb_arg[pipe_ctx->pipe_itf]);
+                    } else {
+                        _processing_out_pipe(pipe_ctx->pipe_itf, evt_msg._handle.pipe_handle, true, false);
+                    }
+                    break;
 
-            case HCD_PIPE_EVENT_ERROR_XFER:
-                ESP_LOGW(TAG, "line %u Pipe: bulk_out HCD_PIPE_EVENT_ERROR_XFER", __LINE__);
-                break;
+                case PIPE_EVENT_ERROR_XFER:
+                    ESP_LOGW(TAG, "Itf:%u ep: 0x%02X PIPE_EVENT_ERROR_XFER", pipe_ctx->pipe_itf, pipe_ctx->pipe_addr);
+                    break;
 
-            case HCD_PIPE_EVENT_ERROR_URB_NOT_AVAIL:
-                ESP_LOGW(TAG, "line %u Pipe: bulk_out HCD_PIPE_EVENT_ERROR_URB_NOT_AVAIL", __LINE__);
-                break;
+                case PIPE_EVENT_ERROR_URB_NOT_AVAIL:
+                    ESP_LOGW(TAG, "Itf:%u ep: 0x%02X PIPE_EVENT_ERROR_URB_NOT_AVAIL", pipe_ctx->pipe_itf, pipe_ctx->pipe_addr);
+                    break;
 
-            case HCD_PIPE_EVENT_ERROR_OVERFLOW:
-                ESP_LOGW(TAG, "line %u Pipe: bulk_out HCD_PIPE_EVENT_ERROR_OVERFLOW", __LINE__);
-                break;
+                case PIPE_EVENT_ERROR_OVERFLOW:
+                    ESP_LOGW(TAG, "Itf:%u ep: 0x%02X PIPE_EVENT_ERROR_OVERFLOW", pipe_ctx->pipe_itf, pipe_ctx->pipe_addr);
+                    break;
 
-            case HCD_PIPE_EVENT_ERROR_STALL:
-                ESP_LOGW(TAG, "line %u Pipe: bulk_out HCD_PIPE_EVENT_ERROR_STALL", __LINE__);
-                break;
+                case PIPE_EVENT_ERROR_STALL:
+                    ESP_LOGW(TAG, "Itf:%u ep: 0x%02X PIPE_EVENT_ERROR_STALL", pipe_ctx->pipe_itf, pipe_ctx->pipe_addr);
+                    break;
 
-            case HCD_PIPE_EVENT_NONE:
-                break;
+                case PIPE_EVENT_NONE:
+                    break;
 
-            default:
-                ESP_LOGE(TAG, "line %u invalid HCD_PORT_EVENT%d", __LINE__, evt_msg._event.pipe_event);
-                break;
+                default:
+                    ESP_LOGE(TAG, "Itf:%u ep: 0x%02X invalid HCD_PORT_EVENT", pipe_ctx->pipe_itf, pipe_ctx->pipe_addr);
+                    break;
+                }
+            }
+        }
+        // reset state to installed
+        ESP_LOGI(TAG, "CDC task Reset");
+        xEventGroupClearBits(event_group_hdl, CDC_DEVICE_READY_BIT);
+        for (size_t i = 0; i < itf_num; i++) {
+            esp_err_t ret = esp_usbh_pipe_flush(pipe_hdl_in[i], BULK_IN_URB_NUM);
+            if (ESP_OK != ret) {
+                ESP_LOGW(TAG, "in pipe flush failed");
+            }
+            ret = esp_usbh_pipe_deinit(pipe_hdl_in[i]);
+            if (ESP_OK != ret) {
+                ESP_LOGE(TAG, "in pipe delete failed");
+            }
+            ret = esp_usbh_pipe_flush(pipe_hdl_out[i], BULK_OUT_URB_NUM);
+            if (ESP_OK != ret) {
+                ESP_LOGW(TAG, "out pipe flush failed");
+            }
+            ret = esp_usbh_pipe_deinit(pipe_hdl_out[i]);
+            if (ESP_OK != ret) {
+                ESP_LOGE(TAG, "out pipe delete failed");
+            }
+
+            s_cdc_instance.itf_ready[i] = false;
+            pipe_hdl_in[i] = NULL;
+            pipe_hdl_out[i] = NULL;
+            usbh_cdc_flush_rx_buffer(i);
+            usbh_cdc_flush_tx_buffer(i);
+        }
+        xEventGroupClearBits(event_group_hdl, CDC_DATA_TASK_RESET_BIT);
+        s_cdc_instance.state = CDC_STATE_INSTALLED;
+    } //handle hotplug
+
+    for (size_t i = 0; i < itf_num; i++) {
+        for (size_t j = 0; j < BULK_IN_URB_NUM; j++) {
+            esp_usbh_urb_free(urb_in[i][j]);
+            urb_in[i][j] = NULL;
+        }
+
+        for (size_t j = 0; j < BULK_OUT_URB_NUM; j++) {
+            esp_usbh_urb_free(urb_out[i][j]);
+            urb_out[i][j] = NULL;
         }
     }
-    xEventGroupClearBits(event_group_hdl, CDC_DEVICE_READY_BIT);
-    esp_err_t ret = _usb_pipe_deinit(pipe_hdl_in, BULK_IN_URB_NUM);
-    if (ESP_OK != ret) {
-        ESP_LOGE(TAG, "in pipe delete failed");
-    }
-
-    ret = _usb_pipe_deinit(pipe_hdl_out, BULK_OUT_URB_NUM);
-    if (ESP_OK != ret) {
-        ESP_LOGE(TAG, "out pipe delete failed");
-    }
-
-    for (size_t i = 0; i < BULK_IN_URB_NUM; i++) {
-        free(urb_in[i]->transfer.data_buffer);
-        free(urb_in[i]);
-    }
-
-    for (size_t i = 0; i < BULK_OUT_URB_NUM; i++) {
-        free(urb_out[i]->transfer.data_buffer);
-        free(urb_out[i]);
-    }
-
-    xEventGroupClearBits(event_group_hdl, CDC_DATA_TASK_KILL_BIT);
-    vQueueDelete(data_queue_hdl);
+    xEventGroupClearBits(event_group_hdl, CDC_DATA_TASK_KILL_BIT | CDC_DEVICE_READY_BIT);
+    s_cdc_instance.state = CDC_STATE_INSTALLED;
+    vQueueDelete(evt_queue_hdl);
     ESP_LOGI(TAG, "CDC task deleted");
     vTaskDelete(NULL);
 }
 
-static bool _usb_port_callback(hcd_port_handle_t port_hdl, hcd_port_event_t port_event, void *user_arg, bool in_isr)
+#ifdef CONFIG_CDC_SEND_DTE_ACTIVE
+static esp_err_t _usb_set_device_line_state(usbh_port_handle_t port_hdl, bool dtr, bool rts)
 {
-    QueueHandle_t usb_event_queue = (QueueHandle_t)user_arg;
-    assert(in_isr);    //Current HCD implementation should never call a port callback in a task context
-    cdc_event_msg_t event_msg = {
-        ._type = PORT_EVENT,
-        ._handle.port_hdl = port_hdl,
-        ._event.port_event = port_event,
-    };
-    BaseType_t xTaskWoken = pdFALSE;
-    xQueueSendFromISR(usb_event_queue, &event_msg, &xTaskWoken);
-    return (xTaskWoken == pdTRUE);
+    ESP_LOGI(TAG, "Set Device Line State: dtr %d, rts %d", dtr, rts);
+    esp_usbh_urb_handle_t urb_ctrl = esp_usbh_urb_alloc(0, sizeof(usb_setup_packet_t), NULL);
+    ERR_CHECK(urb_ctrl != NULL, "alloc urb failed", ESP_ERR_NO_MEM);
+    USB_CTRL_REQ_CDC_SET_LINE_STATE((usb_setup_packet_t *)esp_usbh_urb_buffer_claim(urb_ctrl, NULL, NULL), 0, dtr, rts);
+    size_t num_bytes = 0;
+    usb_transfer_status_t status = USB_TRANSFER_STATUS_ERROR;
+    esp_usbh_urb_handle_t urb_ctrl_done = esp_usbh_urb_ctrl_xfer(port_hdl, urb_ctrl, sizeof(usb_setup_packet_t), &num_bytes, &status);
+    ERR_CHECK_GOTO(urb_ctrl == urb_ctrl_done, "urb status: not same", free_urb_);
+    ERR_CHECK_GOTO(USB_TRANSFER_STATUS_COMPLETED == status, "urb status: not complete", free_urb_);
+    ESP_LOGI(TAG, "Set Device Line State Done");
+    esp_usbh_urb_free(urb_ctrl);
+    return ESP_OK;
+
+free_urb_:
+    ESP_LOGE(TAG, "Set Device Line State Failed");
+    esp_usbh_urb_free(urb_ctrl);
+    return ESP_FAIL;
+}
+#endif
+
+static esp_err_t _usbh_cdc_disconnect_handler(usbh_port_handle_t port_hdl, void *arg)
+{
+    if (xEventGroupGetBits(s_cdc_instance.event_group_hdl) & CDC_DEVICE_READY_BIT) {
+        xEventGroupSetBits(s_cdc_instance.event_group_hdl, CDC_DATA_TASK_RESET_BIT);
+        int counter = TIMEOUT_USB_DRIVER_MS;
+        while (xEventGroupGetBits(s_cdc_instance.event_group_hdl) & CDC_DATA_TASK_RESET_BIT) {
+            vTaskDelay(pdMS_TO_TICKS(TIMEOUT_USB_DRIVER_CHECK_MS));
+            counter -= TIMEOUT_USB_DRIVER_CHECK_MS;
+            if (counter <= 0) {
+                ESP_LOGE(TAG, "%s timeout", __func__);
+            }
+        }
+        xEventGroupClearBits(s_cdc_instance.event_group_hdl, CDC_DATA_TASK_RESET_BIT);
+    }
+
+    if (s_cdc_instance.disconn_callback) {
+        s_cdc_instance.disconn_callback(s_cdc_instance.disconn_callback_arg);
+    }
+    return ESP_OK;
 }
 
-static void _usb_processing_task(void *arg)
+static esp_err_t _usbh_cdc_connect_handler(usbh_port_handle_t port_hdl, void *arg)
 {
-    CDC_CHECK_GOTO(arg != NULL, "Task arg can't be NULL", delete_task_);
-    usbh_cdc_config_t *cdc_config = (usbh_cdc_config_t *)arg;
-
     esp_err_t ret = ESP_OK;
-    usb_speed_t port_speed = 0;
-    hcd_port_handle_t port_hdl = NULL;
-    hcd_port_event_t port_actual_evt;
-    hcd_pipe_handle_t pipe_hdl_dflt = NULL;
-    QueueHandle_t cdc_queue_hdl = NULL;
-    cdc_event_msg_t evt_msg = {};
-    TaskHandle_t cdc_data_task_hdl = NULL;
-    usbh_cdc_cb_t conn_callback = cdc_config->conn_callback;
-    void *conn_callback_arg = cdc_config->conn_callback_arg;
-    usbh_cdc_cb_t disconn_callback = cdc_config->disconn_callback;
-    void *disconn_callback_arg = cdc_config->disconn_callback_arg;
-    _cdc_data_task_args_t cdc_task_args = {
-        .dev_addr = USB_DEVICE_ADDR,
-        .bulk_in_ep_desc = *(cdc_config->bulk_in_ep),
-        .bulk_out_ep_desc = *(cdc_config->bulk_out_ep),
-        .event_group_hdl = s_usb_event_group,
-        .rx_callback = cdc_config->rx_callback,
-        .rx_callback_arg = cdc_config->rx_callback_arg,
-    };
-
-    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-    cdc_queue_hdl = xQueueCreate(CDC_EVENT_QUEUE_LEN, sizeof(cdc_event_msg_t));
-    assert(NULL != cdc_queue_hdl);
-    port_hdl = _usb_port_init((void *)cdc_queue_hdl, _usb_port_callback, (void *)cdc_queue_hdl);
-    CDC_CHECK_GOTO(port_hdl != NULL, "USB Port init failed", delete_cdc_queue_);
-    cdc_task_args.port_hdl = port_hdl;
-
-    while (1) {
-
-        ESP_LOGI(TAG, "Waitting USB Connection");
-        if (hcd_port_get_state(port_hdl) == HCD_PORT_STATE_NOT_POWERED) {
-            ret = _usb_port_power(port_hdl, true);
-            CDC_CHECK_GOTO(ESP_OK == ret, "Port Set POWER_ON failed", usb_driver_reset_);
-        }
-
-        while (!(xEventGroupGetBits(s_usb_event_group) & USB_TASK_KILL_BIT)) {
-
-            if (xQueueReceive(cdc_queue_hdl, &evt_msg, 10 / portTICK_PERIOD_MS) != pdTRUE) {
-                continue;
-            }
-
-            switch (evt_msg._type) {
-                case PORT_EVENT:
-                    port_actual_evt = _usb_port_event_dflt_process(port_hdl, evt_msg._event.port_event);
-                    switch (port_actual_evt) {
-                        case HCD_PORT_EVENT_CONNECTION:
-                            // Reset port and get speed
-                            ESP_LOGI(TAG, "Resetting Port");
-                            ret = _usb_port_reset(port_hdl);
-                            CDC_CHECK_GOTO(ESP_OK == ret, "Port Reset failed", usb_driver_reset_);
-                            _update_device_state(CDC_DEVICE_STATE_DEFAULT);
-                            ESP_LOGI(TAG, "Getting Port Speed");
-                            ret = _usb_port_get_speed(port_hdl, &port_speed);
-                            CDC_CHECK_GOTO(ESP_OK == ret, "USB Port get speed failed", usb_driver_reset_);
-                            ESP_LOGI(TAG, "USB Speed: %s-speed", port_speed?"full":"low");
-                            cdc_task_args.dev_speed = port_speed;
-
-                            if (!pipe_hdl_dflt) pipe_hdl_dflt = _usb_pipe_init(port_hdl, NULL, 0, port_speed,
-                                                                    (void *)cdc_queue_hdl, (void *)cdc_queue_hdl);
-
-                            CDC_CHECK_GOTO(pipe_hdl_dflt != NULL, "default pipe create failed", usb_driver_reset_);
-
-                            ret = _usb_set_device_addr(pipe_hdl_dflt, USB_DEVICE_ADDR);
-                            CDC_CHECK_GOTO(ESP_OK == ret, "Set device address failed", usb_driver_reset_);
-#ifdef CONFIG_CDC_GET_DEVICE_DESC
-                            ret = _usb_get_dev_desc(pipe_hdl_dflt, NULL);
-                            CDC_CHECK_GOTO(ESP_OK == ret, "Get device descriptor failed", usb_driver_reset_);
-#endif
-#ifdef CONFIG_CDC_GET_CONFIG_DESC
-                            ret = _usb_get_config_desc(pipe_hdl_dflt, NULL);
-                            CDC_CHECK_GOTO(ESP_OK == ret, "Get config descriptor failed", usb_driver_reset_);
-#endif
-                            _update_device_state(CDC_DEVICE_STATE_ADDRESS);
-                            ret = _usb_set_device_config(pipe_hdl_dflt, USB_DEVICE_CONFIG);
-                            CDC_CHECK_GOTO(ESP_OK == ret, "Set device configuration failed", usb_driver_reset_);
-                            _update_device_state(CDC_DEVICE_STATE_CONFIGURED);
 #ifdef CONFIG_CDC_SEND_DTE_ACTIVE
-                            ret = _usb_set_device_line_state(pipe_hdl_dflt, true, false);
-                            CDC_CHECK_GOTO(ESP_OK == ret, "Set device line state failed", usb_driver_reset_);
+    // will block to wait urb success
+    ret = _usb_set_device_line_state(port_hdl, true, false);
 #endif
-                            xTaskCreatePinnedToCore(_cdc_data_task, CDC_DATA_TASK_NAME, CDC_DATA_TASK_STACK_SIZE, (void *)(&cdc_task_args),
-                                                    CDC_DATA_TASK_PRIORITY, &cdc_data_task_hdl, CDC_DATA_TASK_CORE);
-                            CDC_CHECK_GOTO(cdc_data_task_hdl != NULL, "cdc task create failed", usb_driver_reset_);
-                            xTaskNotifyGive(cdc_data_task_hdl);
-                            if(conn_callback) conn_callback(conn_callback_arg);
-                            break;
-
-                        case HCD_PORT_EVENT_DISCONNECTION:
-                            _update_device_state(CDC_DEVICE_STATE_NOT_ATTACHED);
-                            ESP_LOGI(TAG, "hcd port state = %d", hcd_port_get_state(port_hdl));
-                            if(disconn_callback) disconn_callback(disconn_callback_arg);
-                            goto usb_driver_reset_;
-                            break;
-                        case HCD_PORT_EVENT_ERROR:
-                            _update_device_state(CDC_DEVICE_STATE_NOT_ATTACHED);
-                            ESP_LOGI(TAG, "hcd port state = %d", hcd_port_get_state(port_hdl));
-                            if(disconn_callback) disconn_callback(disconn_callback_arg);
-                            goto usb_driver_reset_;
-                            break;
-                        default:
-                            break;
-                    }
-
-                    break;
-
-                case PIPE_EVENT:
-                    _default_pipe_event_dflt_process(pipe_hdl_dflt, evt_msg._event.pipe_event);
-                    break;
-
-                default:
-                    break;
-            }
+    if (ret == ESP_OK) {
+        // only run callback after enum stage success
+        xTaskNotifyGive(s_cdc_instance.task_hdl);
+        if (s_cdc_instance.conn_callback) {
+            s_cdc_instance.conn_callback(s_cdc_instance.conn_callback_arg);
         }
-
-/* Reset USB to init state */
-usb_driver_reset_:
-        ESP_LOGW(TAG, "Resetting USB Driver");
-
-        if (cdc_data_task_hdl) {
-            xEventGroupSetBits(s_usb_event_group, CDC_DATA_TASK_KILL_BIT);
-            ESP_LOGW(TAG, "Waitting for CDC task delete");
-            while (xEventGroupGetBits(s_usb_event_group) & CDC_DATA_TASK_KILL_BIT) {
-                vTaskDelay(10 / portTICK_PERIOD_MS);
-            }
-            cdc_data_task_hdl = NULL;
-        }
-
-        if (pipe_hdl_dflt) {
-            ESP_LOGW(TAG, "Resetting default pipe");
-            _usb_pipe_deinit(pipe_hdl_dflt, 1);
-            pipe_hdl_dflt = NULL;
-        }
-
-        ESP_LOGI(TAG, "hcd recovering");
-        hcd_port_recover(port_hdl);
-        vTaskDelay(50 / portTICK_PERIOD_MS);
-
-        if (xEventGroupGetBits(s_usb_event_group) & USB_TASK_KILL_BIT) {
-            break;
-        }
-        
     }
-
-/* if set USB_TASK_KILL_BIT, all resource will be released */
-    ESP_LOGW(TAG, "Deleting USB Driver");
-    if (port_hdl) {
-        _usb_port_deinit(port_hdl);
-        port_hdl = NULL;
-    }
-delete_cdc_queue_:
-    if (cdc_queue_hdl) {
-        vQueueDelete(cdc_queue_hdl);
-    }
-delete_task_:
-    ESP_LOGW(TAG, "usb processing task deleted");
-    ESP_LOGW(TAG, "usb processing task watermark = %d B", uxTaskGetStackHighWaterMark(NULL));
-    xEventGroupClearBits(s_usb_event_group, USB_TASK_KILL_BIT);
-    vTaskDelete(NULL);
+    return ret;
 }
 
 
 esp_err_t usbh_cdc_driver_install(const usbh_cdc_config_t *config)
 {
-    CDC_CHECK(config != NULL, "config can't be NULL", ESP_ERR_INVALID_ARG);
-    CDC_CHECK(config->rx_buffer_size != 0 && config->rx_buffer_size != 0, "buffer size can't be 0", ESP_ERR_INVALID_ARG);
-    CDC_CHECK(config->bulk_in_ep != NULL || config->bulk_in_ep_addr & 0x80, "bulk_in_ep or bulk_in_ep_addr invalid", ESP_ERR_INVALID_ARG);
-    CDC_CHECK(config->bulk_out_ep != NULL || !(config->bulk_out_ep_addr & 0x80), "bulk_out_ep or bulk_out_ep_addr invalid", ESP_ERR_INVALID_ARG);
-
     if (_cdc_driver_is_init()) {
-        ESP_LOGW(TAG, "USB Driver has inited");
+        ESP_LOGW(TAG, "cdc driver has installed");
         return ESP_ERR_INVALID_STATE;
     }
+    ERR_CHECK(config != NULL, "config can't be NULL", ESP_ERR_INVALID_ARG);
+    int itf_num = (config->itf_num == 0) ? 1 : config->itf_num;
 
-    usb_ep_desc_t bulk_in_ep = DEFAULT_BULK_EP_DESC();
-    usb_ep_desc_t bulk_out_ep = DEFAULT_BULK_EP_DESC();
-    usbh_cdc_config_t config_dummy = *config;
-    if (config->bulk_in_ep == NULL) {
-        /* using default ep_desc with user's ep_addr */
-        bulk_in_ep.bEndpointAddress = config->bulk_in_ep_addr;
-    } else {
-        /* using user's ep_desc */
-        bulk_in_ep = *config->bulk_in_ep;
+    // check endpoint of each enabled interface
+    for (size_t i = 0; i < itf_num; i++) {
+        ERR_CHECK(config->rx_buffer_sizes[i] != 0 && config->tx_buffer_sizes[i] != 0, "buffer size can't be 0", ESP_ERR_INVALID_ARG);
+        ERR_CHECK(config->bulk_in_eps[i] != NULL || config->bulk_in_ep_addrs[i] & 0x80, "bulk_in_ep or bulk_in_ep_addr invalid", ESP_ERR_INVALID_ARG);
+        ERR_CHECK(config->bulk_out_eps[i] != NULL || !(config->bulk_out_ep_addrs[i] & 0x80), "bulk_out_ep or bulk_out_ep_addr invalid", ESP_ERR_INVALID_ARG);
     }
-    config_dummy.bulk_in_ep = &bulk_in_ep;
 
-    if (config->bulk_out_ep == NULL) {
-        /* using default ep_desc with user's ep_addr */
-        bulk_out_ep.bEndpointAddress = config->bulk_out_ep_addr;
-    } else {
-        /* using user's ep_desc */
-        bulk_out_ep = *config->bulk_out_ep;
+    for (size_t i = 0; i < itf_num; i++) {
+        if (config->bulk_in_eps[i] == NULL) {
+            /* using default ep_desc with user's ep_addr */
+            s_cdc_instance.bulk_in_ep_desc[i] = (usb_ep_desc_t)DEFAULT_BULK_EP_DESC();
+            s_cdc_instance.bulk_in_ep_desc[i].bEndpointAddress = config->bulk_in_ep_addrs[i];
+        } else {
+            /* using user's ep_desc */
+            s_cdc_instance.bulk_in_ep_desc[i] = *config->bulk_in_eps[i];
+        }
+
+        if (config->bulk_out_eps[i] == NULL) {
+            /* using default ep_desc with user's ep_addr */
+            s_cdc_instance.bulk_out_ep_desc[i] = (usb_ep_desc_t)DEFAULT_BULK_EP_DESC();
+            s_cdc_instance.bulk_out_ep_desc[i].bEndpointAddress = config->bulk_out_ep_addrs[i];
+        } else {
+            /* using user's ep_desc */
+            s_cdc_instance.bulk_out_ep_desc[i] = *config->bulk_out_eps[i];
+        }
     }
-    config_dummy.bulk_out_ep = &bulk_out_ep;
+    s_cdc_instance.itf_num = itf_num;
+    s_cdc_instance.event_group_hdl = xEventGroupCreate();
+    ERR_CHECK(s_cdc_instance.event_group_hdl != NULL, "Create event group failed", ESP_FAIL);
 
-#ifdef CONFIG_CDC_USE_TRACE_FACILITY
-    s_ringbuf_in_size = config_dummy.rx_buffer_size;
-    s_ringbuf_out_size = config_dummy.tx_buffer_size;
-#endif
+    for (size_t i = 0; i < itf_num; i++) {
+        s_cdc_instance.in_ringbuf_handle[i] = xRingbufferCreate(config->rx_buffer_sizes[i], RINGBUF_TYPE_BYTEBUF);
+        ERR_CHECK_GOTO(s_cdc_instance.in_ringbuf_handle[i] != NULL, "Create in ringbuffer failed", delete_resource_);
+        s_cdc_instance.out_ringbuf_handle[i] = xRingbufferCreate(config->tx_buffer_sizes[i], RINGBUF_TYPE_BYTEBUF);
+        ERR_CHECK_GOTO(s_cdc_instance.out_ringbuf_handle[i] != NULL, "Create out ringbuffer failed", delete_resource_);
+    }
+    usbh_port_config_t port_config = DEFAULT_USBH_PORT_CONFIG();
+    s_cdc_instance.conn_callback = config->conn_callback;
+    s_cdc_instance.conn_callback_arg = config->conn_callback_arg;
+    s_cdc_instance.disconn_callback = config->disconn_callback;
+    s_cdc_instance.disconn_callback_arg = config->disconn_callback_arg;
+    port_config.conn_callback = _usbh_cdc_connect_handler;
+    port_config.disconn_callback = _usbh_cdc_disconnect_handler;
+    s_cdc_instance.port_hdl = esp_usbh_port_init(&port_config);
+    ERR_CHECK_GOTO(s_cdc_instance.port_hdl != NULL, "usb port init failed", delete_resource_);
 
-    s_usb_event_group = xEventGroupCreate();
-    CDC_CHECK(s_usb_event_group != NULL, "Create event group failed", ESP_FAIL);
-    s_in_ringbuf_handle = xRingbufferCreate(config_dummy.rx_buffer_size, RINGBUF_TYPE_BYTEBUF);
-    CDC_CHECK_GOTO(s_in_ringbuf_handle != NULL, "Create in ringbuffer failed", delete_resource_);
-    s_out_ringbuf_handle = xRingbufferCreate(config_dummy.tx_buffer_size, RINGBUF_TYPE_BYTEBUF);
-    CDC_CHECK_GOTO(s_out_ringbuf_handle != NULL, "Create out ringbuffer failed", delete_resource_);
-    s_usb_read_mux = xSemaphoreCreateMutex();
-    CDC_CHECK_GOTO(s_usb_read_mux != NULL, "Create read mutex failed", delete_resource_);
-    s_usb_write_mux = xSemaphoreCreateMutex();
-    CDC_CHECK_GOTO(s_usb_write_mux != NULL, "Create write mutex failed", delete_resource_);
-
-    BaseType_t ret = xTaskCreatePinnedToCore(_usb_processing_task, USB_PROC_TASK_NAME, USB_PROC_TASK_STACK_SIZE, (void *)&config_dummy,
-                     USB_PROC_TASK_PRIORITY, &s_usb_processing_task_hdl, USB_PROC_TASK_CORE);
-    CDC_CHECK_GOTO(ret == pdPASS, "Create usb task failed", delete_resource_);
-
-    vTaskDelay(50 / portTICK_PERIOD_MS);
-    xTaskNotifyGive(s_usb_processing_task_hdl);
-
+    xTaskCreatePinnedToCore(_cdc_data_task, CDC_DATA_TASK_NAME, CDC_DATA_TASK_STACK_SIZE, NULL,
+                            CDC_DATA_TASK_PRIORITY, &s_cdc_instance.task_hdl, CDC_DATA_TASK_CORE);
+    ERR_CHECK_GOTO(s_cdc_instance.task_hdl != NULL, "Create usb task failed", delete_resource_);
+    s_cdc_instance.state = CDC_STATE_INSTALLED;
+    esp_usbh_port_start(s_cdc_instance.port_hdl);
     ESP_LOGI(TAG, "usb driver install succeed");
     return ESP_OK;
 
 delete_resource_:
-    if(s_usb_write_mux) vSemaphoreDelete(s_usb_write_mux);
-    if(s_usb_read_mux) vSemaphoreDelete(s_usb_read_mux);
-    if(s_out_ringbuf_handle) vRingbufferDelete(s_out_ringbuf_handle);
-    if(s_in_ringbuf_handle) vRingbufferDelete(s_in_ringbuf_handle);
-    if(s_usb_event_group) vEventGroupDelete(s_usb_event_group);
-    s_usb_event_group = NULL;
-    s_in_ringbuf_handle = NULL;
-    s_out_ringbuf_handle = NULL;
-    s_usb_read_mux = NULL;
-    s_usb_write_mux = NULL;
-    vTaskDelete(NULL);
+    if (s_cdc_instance.port_hdl) {
+        esp_usbh_port_deinit(s_cdc_instance.port_hdl);
+        s_cdc_instance.port_hdl = NULL;
+    }
+    for (size_t i = 0; i < itf_num; i++) {
+        if (s_cdc_instance.out_ringbuf_handle[i]) {
+            vRingbufferDelete(s_cdc_instance.out_ringbuf_handle[i]);
+        }
+        if (s_cdc_instance.in_ringbuf_handle[i]) {
+            vRingbufferDelete(s_cdc_instance.in_ringbuf_handle[i]);
+        }
+        s_cdc_instance.in_ringbuf_handle[i] = NULL;
+        s_cdc_instance.out_ringbuf_handle[i] = NULL;
+    }
+    if (s_cdc_instance.event_group_hdl) {
+        vEventGroupDelete(s_cdc_instance.event_group_hdl);
+        s_cdc_instance.event_group_hdl = NULL;
+    }
     return ESP_FAIL;
 }
 
 esp_err_t usbh_cdc_driver_delete(void)
 {
     if (!_cdc_driver_is_init()) {
+        ESP_LOGW(TAG, "cdc driver not installed");
         return ESP_ERR_INVALID_STATE;
     }
-
-    xEventGroupSetBits(s_usb_event_group, USB_TASK_KILL_BIT);
-
-    ESP_LOGW(TAG, "Waitting for USB Driver Delete");
-    while (xEventGroupGetBits(s_usb_event_group) & USB_TASK_KILL_BIT) {
-        vTaskDelay(10 / portTICK_PERIOD_MS);
+    xEventGroupSetBits(s_cdc_instance.event_group_hdl, CDC_DATA_TASK_KILL_BIT);
+    ESP_LOGI(TAG, "Waiting for CDC Driver Delete");
+    int counter = TIMEOUT_USB_DRIVER_MS;
+    while (xEventGroupGetBits(s_cdc_instance.event_group_hdl) & CDC_DATA_TASK_KILL_BIT) {
+        vTaskDelay(pdMS_TO_TICKS(TIMEOUT_USB_DRIVER_CHECK_MS));
+        counter -= TIMEOUT_USB_DRIVER_CHECK_MS;
+        if (counter <= 0) {
+            ESP_LOGW(TAG, "Waiting for CDC Driver Delete, timeout");
+            break;
+        }
     }
 
-    vRingbufferDelete(s_in_ringbuf_handle);
-    s_in_ringbuf_handle = NULL;
-    vRingbufferDelete(s_out_ringbuf_handle);
-    s_out_ringbuf_handle = NULL;
-    vSemaphoreDelete(s_usb_read_mux);
-    s_usb_read_mux = NULL;
-    vSemaphoreDelete(s_usb_write_mux);
-    s_usb_write_mux = NULL;
-    vEventGroupDelete(s_usb_event_group);
-    s_usb_event_group = NULL;
-    ESP_LOGW(TAG, "USB Driver Deleted!");
+    if (s_cdc_instance.port_hdl) {
+        esp_usbh_port_deinit(s_cdc_instance.port_hdl);
+        s_cdc_instance.port_hdl = NULL;
+    }
+
+    for (size_t i = 0; i < s_cdc_instance.itf_num; i++) {
+        if (s_cdc_instance.out_ringbuf_handle[i]) {
+            vRingbufferDelete(s_cdc_instance.out_ringbuf_handle[i]);
+        }
+        if (s_cdc_instance.in_ringbuf_handle[i]) {
+            vRingbufferDelete(s_cdc_instance.in_ringbuf_handle[i]);
+        }
+    }
+
+    vEventGroupDelete(s_cdc_instance.event_group_hdl);
+    s_cdc_instance.state = CDC_STATE_NONE;
+    memset(&s_cdc_instance, 0, sizeof(_class_cdc_t));;
+    ESP_LOGI(TAG, "CDC Driver Deleted!");
     return ESP_OK;
 }
 
 esp_err_t usbh_cdc_wait_connect(TickType_t ticks_to_wait)
 {
     if (!_cdc_driver_is_init()) {
+        ESP_LOGW(TAG, "cdc driver not installed");
         return ESP_ERR_INVALID_STATE;
     }
-    ESP_LOGI(TAG, "Waitting Device Connection");
-    TickType_t ticks_counter = 0;
-    const size_t ticks_step = 5;
-    while (!(xEventGroupGetBits(s_usb_event_group) & CDC_DEVICE_READY_BIT)) {
-        vTaskDelay(ticks_step);
-        ticks_counter += ticks_step;
-        if (ticks_counter >= ticks_to_wait) break;
-    }
-
-    if (!(xEventGroupGetBits(s_usb_event_group) & CDC_DEVICE_READY_BIT)) {
+    ESP_LOGI(TAG, "Waiting CDC Device Connection");
+    EventBits_t bits = xEventGroupWaitBits(s_cdc_instance.event_group_hdl, CDC_DEVICE_READY_BIT, false, false, ticks_to_wait);
+    if ((bits & CDC_DEVICE_READY_BIT) == 0) {
+        ESP_LOGW(TAG, "Waiting Device Connection, timeout");
         return ESP_ERR_TIMEOUT;
     }
-    ESP_LOGI(TAG, "Device Connected");
+    ESP_LOGI(TAG, "CDC Device Connected");
+    return ESP_OK;
+}
+
+esp_err_t usbh_cdc_itf_get_buffered_data_len(uint8_t itf, size_t *size)
+{
+    ERR_CHECK(size != NULL && itf < CDC_INTERFACE_NUM_MAX, "arg can't be NULL", ESP_ERR_INVALID_ARG);
+
+    if (_cdc_driver_is_init() == false) {
+        *size = 0;
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    if (usbh_cdc_get_itf_state(itf) == false) {
+        *size = 0;
+        return ESP_ERR_INVALID_STATE;
+    }
+    vRingbufferGetInfo(s_cdc_instance.in_ringbuf_handle[itf], NULL, NULL, NULL, NULL, size);
     return ESP_OK;
 }
 
 esp_err_t usbh_cdc_get_buffered_data_len(size_t *size)
 {
-    CDC_CHECK(size != NULL, "arg can't be NULL", ESP_ERR_INVALID_ARG);
-
-    if (_cdc_driver_is_init() == false) {
-        *size = 0;
-        ESP_LOGD(TAG, "CDC Driver not installed");
-        return ESP_ERR_INVALID_STATE;
-    }
-
-    if (_if_device_ready() == false) {
-        *size = 0;
-        ESP_LOGV(TAG, "Device not connected or not ready");
-        return ESP_ERR_INVALID_STATE;
-    }
-
-    portENTER_CRITICAL(&s_in_ringbuf_mux);
-    *size = s_in_buffered_data_len;
-    portEXIT_CRITICAL(&s_in_ringbuf_mux);
-    return ESP_OK;
+    return usbh_cdc_itf_get_buffered_data_len(0, size);
 }
 
-int usbh_cdc_read_bytes(uint8_t *buf, size_t length, TickType_t ticks_to_wait)
+int usbh_cdc_itf_read_bytes(uint8_t itf, uint8_t *buf, size_t length, TickType_t ticks_to_wait)
 {
-    CDC_CHECK(buf != NULL, "invalid args", -1);
+    ERR_CHECK(buf != NULL && itf < CDC_INTERFACE_NUM_MAX, "invalid args", -1);
     size_t read_sz = 0;
     int rx_data_size = 0;
 
-    if (_cdc_driver_is_init() == false) {
-        ESP_LOGD(TAG, "CDC Driver not installed");
-        return -1;
+    if (usbh_cdc_get_itf_state(itf) == false) {
+        ESP_LOGV(TAG, "%s: Device not connected or itf%u not ready", __func__, itf);
+        return 0;
     }
 
-    if (_if_device_ready() == false) {
-        ESP_LOGV(TAG, "Device not connected or not ready");
-        return -1;
-    }
-
-    xSemaphoreTake(s_usb_read_mux, portMAX_DELAY);
-    esp_err_t res = usb_in_ringbuf_pop(buf, length, &read_sz, ticks_to_wait);
+    esp_err_t res = _usb_in_ringbuf_pop(itf, buf, length, &read_sz, ticks_to_wait);
 
     if (res != ESP_OK) {
-        xSemaphoreGive(s_usb_read_mux);
         ESP_LOGD(TAG, "Read ringbuffer failed");
-        return -1;
+        return 0;
     }
 
     rx_data_size = read_sz;
 
-    /* Buffer's data can be wrapped, at that situations we should make another retrievement */
-    if (usb_in_ringbuf_pop(buf + read_sz, length - read_sz, &read_sz, 0) == ESP_OK) {
+    /* Buffer's data can be wrapped, at that situations we should make another retirement */
+    if (_usb_in_ringbuf_pop(itf, buf + read_sz, length - read_sz, &read_sz, 0) == ESP_OK) {
         rx_data_size += read_sz;
     }
 
-    xSemaphoreGive(s_usb_read_mux);
     return rx_data_size;
+}
+
+int usbh_cdc_read_bytes(uint8_t *buf, size_t length, TickType_t ticks_to_wait)
+{
+    return usbh_cdc_itf_read_bytes(0, buf, length, ticks_to_wait);
+}
+
+int usbh_cdc_itf_write_bytes(uint8_t itf, const uint8_t *buf, size_t length)
+{
+    ESP_LOGD(TAG, "cdc write itf: %u, p = %p, len=%u", itf, buf, length);
+    ERR_CHECK(buf != NULL && itf < CDC_INTERFACE_NUM_MAX, "invalid args", -1);
+    int tx_data_size = 0;
+
+    if (usbh_cdc_get_itf_state(itf) == false) {
+        ESP_LOGV(TAG, "%s: Device not connected or itf%u not ready", __func__, itf);
+        return 0;
+    }
+
+    esp_err_t ret = _usb_out_ringbuf_push(itf, buf, length, pdMS_TO_TICKS(TIMEOUT_USB_RINGBUF_MS));
+
+    if (ret != ESP_OK) {
+        ESP_LOGD(TAG, "Write ringbuffer failed");
+        return 0;
+    }
+
+    tx_data_size = length;
+    return tx_data_size;
 }
 
 int usbh_cdc_write_bytes(const uint8_t *buf, size_t length)
 {
-    CDC_CHECK(buf != NULL, "invalid args", -1);
-    int tx_data_size = 0;
-
-    if (_cdc_driver_is_init() == false) {
-        ESP_LOGD(TAG, "CDC Driver not installed");
-        return -1;
-    }
-
-    if (_if_device_ready() == false) {
-        ESP_LOGV(TAG, "Device not connected or not ready");
-        return -1;
-    }
-
-    xSemaphoreTake(s_usb_write_mux, portMAX_DELAY);
-    esp_err_t ret = usb_out_ringbuf_push(buf, length, pdMS_TO_TICKS(TIMEOUT_USB_RINGBUF_MS));
-
-    if (ret != ESP_OK) {
-        xSemaphoreGive(s_usb_write_mux);
-        ESP_LOGD(TAG, "Write ringbuffer failed");
-        return -1;
-    }
-
-    tx_data_size = length;
-    xSemaphoreGive(s_usb_write_mux);
-    return tx_data_size;
+    return usbh_cdc_itf_write_bytes(0, buf, length);
 }
 
-#ifdef CONFIG_CDC_USE_TRACE_FACILITY
-void usbh_cdc_print_buffer_msg(void)
+int usbh_cdc_get_itf_state(uint8_t itf)
 {
-    ESP_LOGI(TAG, "USBH CDC Transfer Buffer Dump:");
-    ESP_LOGI(TAG, "usb transfer Buffer size, out = %d, in = %d", BUFFER_SIZE_BULK_OUT, BUFFER_SIZE_BULK_IN);
-    ESP_LOGI(TAG, "usb transfer Max packet size, out = %d, in = %d\n", s_bulkbuf_out_max, s_bulkbuf_in_max);
-    ESP_LOGI(TAG, "USBH CDC Ringbuffer Dump:");
-    ESP_LOGI(TAG, "usb ringbuffer size, out = %d, in = %d", s_ringbuf_out_size, s_ringbuf_in_size);
-    ESP_LOGI(TAG, "usb ringbuffer load, out = %d, in = %d", s_out_buffered_data_len, s_in_buffered_data_len);
-    ESP_LOGI(TAG, "usb ringbuffer High water mark, out = %d, in = %d", s_ringbuf_out_max, s_ringbuf_in_max);
+    ERR_CHECK(itf < CDC_INTERFACE_NUM_MAX, "invalid args: itf", 0);
+    if (_cdc_driver_is_ready() && s_cdc_instance.itf_ready[itf]) {
+        return true;
+    }
+    return false;
 }
-#endif
+
+esp_err_t usbh_cdc_flush_rx_buffer(uint8_t itf)
+{
+    ERR_CHECK(itf < CDC_INTERFACE_NUM_MAX, "invalid args: itf", ESP_ERR_INVALID_ARG);
+    if (s_cdc_instance.in_ringbuf_handle[itf] == NULL) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    size_t read_bytes = 0;
+    size_t uxItemsWaiting = 0;
+    vRingbufferGetInfo(s_cdc_instance.in_ringbuf_handle[itf], NULL, NULL, NULL, NULL, &uxItemsWaiting);
+    uint8_t *buf_rcv = xRingbufferReceiveUpTo(s_cdc_instance.in_ringbuf_handle[itf], &read_bytes, 1, uxItemsWaiting);
+
+    if (buf_rcv) {
+        vRingbufferReturnItem(s_cdc_instance.in_ringbuf_handle[itf], (void *)(buf_rcv));
+    }
+    ESP_LOGI(TAG, "rx%u flush -%u = %u", itf, read_bytes, uxItemsWaiting);
+    return ESP_OK;
+}
+
+esp_err_t usbh_cdc_flush_tx_buffer(uint8_t itf)
+{
+    ERR_CHECK(itf < CDC_INTERFACE_NUM_MAX, "invalid args: itf", ESP_ERR_INVALID_ARG);
+    if (s_cdc_instance.out_ringbuf_handle[itf] == NULL) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    size_t read_bytes = 0;
+    size_t uxItemsWaiting = 0;
+    vRingbufferGetInfo(s_cdc_instance.out_ringbuf_handle[itf], NULL, NULL, NULL, NULL, &uxItemsWaiting);
+    uint8_t *buf_rcv = xRingbufferReceiveUpTo(s_cdc_instance.out_ringbuf_handle[itf], &read_bytes, 1, uxItemsWaiting);
+
+    if (buf_rcv) {
+        vRingbufferReturnItem(s_cdc_instance.out_ringbuf_handle[itf], (void *)(buf_rcv));
+    }
+    ESP_LOGI(TAG, "tx%u flush -%u = %u", itf, read_bytes, uxItemsWaiting);
+    return ESP_OK;
+}
