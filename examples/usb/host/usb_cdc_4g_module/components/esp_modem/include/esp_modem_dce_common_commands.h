@@ -36,10 +36,10 @@ extern "C" {
  * @brief Specific Timeout Constraint, Unit: millisecond
  *
  */
-#define MODEM_COMMAND_TIMEOUT_DEFAULT (500)      /*!< Default timeout value for most commands */
-#define MODEM_COMMAND_TIMEOUT_OPERATOR (75000)   /*!< Timeout value for getting operator status */
+#define MODEM_COMMAND_TIMEOUT_DEFAULT (2000)      /*!< Default timeout value for most commands */
+#define MODEM_COMMAND_TIMEOUT_OPERATOR (60000)   /*!< Timeout value for getting operator status */
 #define MODEM_COMMAND_TIMEOUT_RESET (60000)   /*!< Timeout value for reset command */
-#define MODEM_COMMAND_TIMEOUT_MODE_CHANGE (5000) /*!< Timeout value for changing working mode */
+#define MODEM_COMMAND_TIMEOUT_MODE_CHANGE (30000) /*!< Timeout value for changing working mode */
 #define MODEM_COMMAND_TIMEOUT_POWEROFF (1000)    /*!< Timeout value for power down */
 
 /**

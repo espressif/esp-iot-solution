@@ -20,7 +20,6 @@
 #include "sdkconfig.h"
 #include "esp_modem_internal.h"
 #include "esp_modem_dte_internal.h"
-#include "esp_modem_device_specific_dce.h"
 #include "esp_modem_netif.h"
 
 static const char *TAG = "esp-modem";
@@ -37,6 +36,12 @@ esp_err_t esp_modem_remove_event_handler(esp_modem_dte_t *dte, esp_event_handler
 {
     esp_modem_dte_internal_t *esp_dte = __containerof(dte, esp_modem_dte_internal_t, parent);
     return esp_event_handler_unregister_with(esp_dte->event_loop_hdl, ESP_MODEM_EVENT, ESP_EVENT_ANY_ID, handler);
+}
+
+esp_err_t esp_modem_post_event(esp_modem_dte_t *dte, int32_t event_id, void* event_data, size_t event_data_size, TickType_t ticks_to_wait)
+{
+    esp_modem_dte_internal_t *esp_dte = __containerof(dte, esp_modem_dte_internal_t, parent);
+    return esp_event_post_to(esp_dte->event_loop_hdl, ESP_MODEM_EVENT, event_id, event_data, event_data_size, ticks_to_wait);
 }
 
 esp_err_t esp_modem_start_ppp(esp_modem_dte_t *dte)
@@ -61,13 +66,20 @@ esp_err_t esp_modem_stop_ppp(esp_modem_dte_t *dte)
     ESP_MODEM_ERR_CHECK(dce, "DTE has not yet bind with DCE", err);
     esp_modem_dte_internal_t *esp_dte = __containerof(dte, esp_modem_dte_internal_t, parent);
 
-    /* Enter command mode */
-    ESP_MODEM_ERR_CHECK(dte->change_mode(dte, ESP_MODEM_COMMAND_MODE) == ESP_OK, "enter command mode failed", err);
+    /* Enter command mode, failed if 1.dte disconnect 2.already in command mode*/
+    esp_err_t ret = ESP_OK;
+    if (esp_dte->conn_state) {
+        ret = dte->change_mode(dte, ESP_MODEM_COMMAND_MODE);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "enter command mode failed");
+        }
+    }
 
     /* post PPP mode stopped event */
     esp_event_post_to(esp_dte->event_loop_hdl, ESP_MODEM_EVENT, ESP_MODEM_EVENT_PPP_STOP, NULL, 0, 0);
 
     /* wait for the PPP mode to exit gracefully */
+    ESP_LOGW(TAG, "Waiting exit the PPP mode gracefully");
     EventBits_t bits = xEventGroupWaitBits(esp_dte->process_group, ESP_MODEM_STOP_PPP_BIT, pdTRUE, pdTRUE, pdMS_TO_TICKS(20000));
     if (!(bits & ESP_MODEM_STOP_PPP_BIT)) {
         ESP_LOGW(TAG, "Failed to exit the PPP mode gracefully");
@@ -162,18 +174,17 @@ esp_err_t esp_modem_dce_init(esp_modem_dce_t *dce, esp_modem_dce_config_t *confi
     if (config->populate_command_list) {
         ESP_MODEM_ERR_CHECK(esp_modem_set_default_command_list(dce) == ESP_OK, "esp_modem_dce_set_default_commands failed", err);
     }
+    ESP_LOGI(TAG, "--------- Modem PreDefined Info ------------------");
+    ESP_LOGI(TAG, "Model: %s", CONFIG_MODEM_TARGET_NAME);
+    ESP_LOGI(TAG, "Modem itf: IN Addr:0x%02X, OUT Addr:0x%02X", CONFIG_MODEM_USB_IN_EP_ADDR, CONFIG_MODEM_USB_OUT_EP_ADDR);
+#ifdef CONFIG_MODEM_SUPPORT_SECONDARY_AT_PORT
+    ESP_LOGI(TAG, "Secondary AT itf: IN Addr:0x%02X, OUT Addr:0x%02X", CONFIG_MODEM_USB_IN2_EP_ADDR, CONFIG_MODEM_USB_OUT2_EP_ADDR);
+#endif
+    ESP_LOGI(TAG, "----------------------------------------------------");
     switch (config->device) {
-        case ESP_MODEM_DEVICE_SIM800:
-            err = esp_modem_sim800_specific_init(dce);
-            break;
-        case ESP_MODEM_DEVICE_SIM7600:
-            err = esp_modem_sim7600_specific_init(dce);
-            break;
-        case ESP_MODEM_DEVICE_BG96:
-            err = esp_modem_bg96_specific_init(dce);
-            break;
-        default:
+        //TODO: add modem specified command or workflow
         case ESP_MODEM_DEVICE_UNSPECIFIED:
+        default:
             break;
     }
     ESP_MODEM_ERR_CHECK(err == ESP_OK, "dce specific initialization has failed for %d type device", err, config->device);

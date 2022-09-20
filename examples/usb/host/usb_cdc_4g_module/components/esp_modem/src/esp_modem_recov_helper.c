@@ -54,6 +54,7 @@ static esp_err_t esp_modem_retry_run(esp_modem_recov_resend_t * retry, void *par
     esp_err_t err = ESP_FAIL;
     while (timeouts <= retry->retries_after_timeout &&
            errors <= retry->retries_after_error) {
+        esp_modem_wait_ms(10);
         if (timeouts || errors) {
             // provide recovery action based on the defined strategy
             if (retry->recover(retry, err, timeouts, errors) != ESP_OK) {

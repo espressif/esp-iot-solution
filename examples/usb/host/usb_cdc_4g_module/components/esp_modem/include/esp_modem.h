@@ -19,6 +19,7 @@ extern "C" {
 
 #include "esp_event.h"
 #include "driver/uart.h"
+#include "esp_usbh_cdc.h"
 
 /**
  * @brief Forward declare DTE and DCE objects
@@ -39,6 +40,7 @@ ESP_EVENT_DECLARE_BASE(ESP_MODEM_EVENT);
  */
 typedef enum {
     ESP_MODEM_EVENT_PPP_START = 0,       /*!< ESP Modem Start PPP Session */
+    ESP_MODEM_EVENT_PPP_RESTART = 1,     /*!< ESP Modem Restart PPP Session */
     ESP_MODEM_EVENT_PPP_STOP  = 3,       /*!< ESP Modem Stop PPP Session*/
     ESP_MODEM_EVENT_UNKNOWN   = 4        /*!< ESP Modem Unknown Response */
 } esp_modem_event_t;
@@ -84,6 +86,8 @@ typedef struct {
     uint32_t event_task_stack_size; /*!< UART Event Task Stack size */
     int event_task_priority;        /*!< UART Event Task Priority */
     int line_buffer_size;           /*!< Line buffer size for command mode */
+    usbh_cdc_cb_t conn_callback;
+    usbh_cdc_cb_t disconn_callback;
 } esp_modem_dte_config_t;
 
 /**
@@ -108,7 +112,9 @@ typedef struct {
         .event_queue_size = 30,                 \
         .event_task_stack_size = 2048,          \
         .event_task_priority = 5,               \
-        .line_buffer_size = 512                 \
+        .line_buffer_size = 512,                \
+        .conn_callback = NULL,                  \
+        .disconn_callback = NULL,               \
     }
 
 /**
@@ -141,9 +147,6 @@ typedef struct esp_modem_dce_pdp_ctx_s {
  */
 typedef enum esp_modem_dce_device_e {
     ESP_MODEM_DEVICE_UNSPECIFIED,
-    ESP_MODEM_DEVICE_SIM800,
-    ESP_MODEM_DEVICE_SIM7600,
-    ESP_MODEM_DEVICE_BG96,
 } esp_modem_dce_device_t;
 
 /**
@@ -167,7 +170,7 @@ typedef struct esp_modem_dce_config_s {
             .cid = 1,                  \
             .type = "IP",              \
             .apn = APN },              \
-        .populate_command_list = false,\
+        .populate_command_list = true,\
         .device = ESP_MODEM_DEVICE_UNSPECIFIED   \
     }
 
@@ -198,7 +201,7 @@ esp_modem_dte_t *esp_modem_dte_new(const esp_modem_dte_config_t *config);
  * @brief Create and initialize Modem DCE object
  *
  * @param config configuration of ESP Modem DTE object
- * @return modem_dce_t* Modem DCE object
+ * @return esp_modem_dce_t* Modem DCE object
  */
 esp_modem_dce_t *esp_modem_dce_new(esp_modem_dce_config_t *config);
 
@@ -253,6 +256,7 @@ esp_err_t esp_modem_set_event_handler(esp_modem_dte_t *dte, esp_event_handler_t 
  */
 esp_err_t esp_modem_remove_event_handler(esp_modem_dte_t *dte, esp_event_handler_t handler);
 
+esp_err_t esp_modem_post_event(esp_modem_dte_t *dte, int32_t event_id, void* event_data, size_t event_data_size, TickType_t ticks_to_wait);
 /**
  * @}
  */

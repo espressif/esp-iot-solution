@@ -17,6 +17,14 @@ menu "4G Modem Configuration"
         config MODEM_RESET_GPIO
             int "Modem reset control gpio, set 0 if not use"
             default 13
+        config MODEM_POWER_GPIO_INACTIVE_LEVEL
+            int "Power control gpio inactive level"
+            range 0 1
+            default 1
+        config MODEM_RESET_GPIO_INACTIVE_LEVEL
+            int "Reset control gpio inactive level"
+            range 0 1
+            default 1
     endmenu
 
     menu "WiFi soft AP"
@@ -56,10 +64,10 @@ menu "4G Modem Configuration"
             help
                 Max number of the STA connects to AP.
         config EXAMPLE_MANUAL_DNS
-            bool "config main dns address"
+            bool "manully config dns address"
             default n
             help
-                Config main dns address manully, using dns address from ppp by default
+                Config main dns address manully, if false using dns address got from ppp
         config EXAMPLE_MANUAL_DNS_ADDR
             string  "main dns address"
             default "114.114.114.114"
@@ -97,21 +105,26 @@ menu "4G Modem Configuration"
 
     endmenu
 
-    config MODEM_DIAL_RERTY_TIMES
+    config MODEM_DIAL_RETRY_TIMES
         int "Retry times during dial"
         default 5
         help 
             Set retry times waitting for modem link with carrier base station
+
+    config MODEM_PPP_APN
+        string "Set Modem APN"
+        default "internet"
+        help
+            Set APN (Access Point Name), a logical name to choose data network
+    config MODEM_SIM_PIN_PWD
+        string "Set SIM PIN"
+        default "1234"
+        help 
+            Set Pin of sim card if have
 
     config DUMP_SYSTEM_STATUS
         bool "Dump system task status"
         default n
         help
             Dump system task status, stack left, cpu load, etc.
-
-    config EXAMPLE_MODEM_PPP_APN
-        string "Set Modem APN"
-        default "internet"
-        help
-            Set APN (Access Point Name), a logical name to choose data network
 endmenu

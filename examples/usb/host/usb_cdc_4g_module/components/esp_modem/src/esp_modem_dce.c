@@ -46,6 +46,18 @@ esp_err_t esp_modem_dce_set_params(esp_modem_dce_t *dce, esp_modem_dce_config_t*
     return ESP_OK;
 }
 
+esp_err_t esp_modem_dce_set_apn(esp_modem_dce_t *dce, const char *new_apn)
+{
+    static char s_apn[64] = "";
+    if (strcmp(new_apn, dce->config.pdp_context.apn) == 0) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    strncpy(s_apn, new_apn, sizeof(s_apn)-1);
+    dce->config.pdp_context.apn = s_apn;
+    ESP_LOGI(TAG, "New APN = %s, require a restart to effect", dce->config.pdp_context.apn);
+    return ESP_OK;
+}
+
 esp_err_t esp_modem_dce_default_init(esp_modem_dce_t *dce, esp_modem_dce_config_t* config)
 {
     // Check parameters
@@ -132,7 +144,7 @@ static esp_err_t esp_modem_switch_to_data_mode(esp_modem_dce_t *dce)
         // Initiate PPP mode could fail, if we've already "dialed" the data call before.
         // in that case we retry to just resume the data mode
         ESP_LOGD(TAG, "set_data_mode, retry with resume_data_mode");
-        ESP_MODEM_ERR_CHECK(dce->resume_data_mode(dce, NULL, NULL) == ESP_OK, "setting data mode failed", err);
+        ESP_MODEM_ERR_CHECK(dce->resume_data_mode(dce, NULL, NULL) == ESP_OK, "Resume data mode failed", err);
     }
     dce->mode = ESP_MODEM_PPP_MODE;
     return ESP_OK;

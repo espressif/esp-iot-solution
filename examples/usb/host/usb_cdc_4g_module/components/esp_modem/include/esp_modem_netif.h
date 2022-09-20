@@ -95,6 +95,14 @@ void esp_modem_netif_teardown(esp_modem_netif_driver_t *h);
 esp_modem_netif_driver_t *esp_modem_netif_setup(esp_modem_dte_t *dte);
 
 /**
+ * @brief Transfer ppp event code to string
+ * 
+ * @param code 
+ * @return ** const char* 
+ */
+const char *esp_modem_netif_event_to_name(int code);
+
+/**
  * @}
  */
 

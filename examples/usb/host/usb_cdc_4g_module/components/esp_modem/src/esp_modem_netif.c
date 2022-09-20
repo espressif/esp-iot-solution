@@ -18,8 +18,43 @@
 #include "esp_log.h"
 #include "esp_netif_ppp.h"
 
-
 static const char *TAG = "esp-modem-netif";
+#define PPP_CODE2STR(code) {code, #code}
+
+typedef struct {
+    int code;
+    const char *msg;
+} _ppp_evt_msg_t;
+
+static const _ppp_evt_msg_t ppp_evt_msg_table[] = {
+    PPP_CODE2STR(NETIF_PPP_ERRORNONE),
+    PPP_CODE2STR(NETIF_PPP_ERRORPARAM),
+    PPP_CODE2STR(NETIF_PPP_ERROROPEN),
+    PPP_CODE2STR(NETIF_PPP_ERRORDEVICE),
+    PPP_CODE2STR(NETIF_PPP_ERRORALLOC),
+    PPP_CODE2STR(NETIF_PPP_ERRORUSER),
+    PPP_CODE2STR(NETIF_PPP_ERRORCONNECT),
+    PPP_CODE2STR(NETIF_PPP_ERRORAUTHFAIL),
+    PPP_CODE2STR(NETIF_PPP_ERRORPROTOCOL),
+    PPP_CODE2STR(NETIF_PPP_ERRORPEERDEAD),
+    PPP_CODE2STR(NETIF_PPP_ERRORIDLETIMEOUT),
+    PPP_CODE2STR(NETIF_PPP_ERRORCONNECTTIME),
+    PPP_CODE2STR(NETIF_PPP_ERRORLOOPBACK),
+    PPP_CODE2STR(NETIF_PPP_PHASE_DEAD),
+    PPP_CODE2STR(NETIF_PPP_PHASE_MASTER),
+    PPP_CODE2STR(NETIF_PPP_PHASE_HOLDOFF),
+    PPP_CODE2STR(NETIF_PPP_PHASE_INITIALIZE),
+    PPP_CODE2STR(NETIF_PPP_PHASE_SERIALCONN),
+    PPP_CODE2STR(NETIF_PPP_PHASE_DORMANT),
+    PPP_CODE2STR(NETIF_PPP_PHASE_ESTABLISH),
+    PPP_CODE2STR(NETIF_PPP_PHASE_AUTHENTICATE),
+    PPP_CODE2STR(NETIF_PPP_PHASE_CALLBACK),
+    PPP_CODE2STR(NETIF_PPP_PHASE_NETWORK),
+    PPP_CODE2STR(NETIF_PPP_PHASE_RUNNING),
+    PPP_CODE2STR(NETIF_PPP_PHASE_TERMINATE),
+    PPP_CODE2STR(NETIF_PPP_PHASE_DISCONNECT),
+    PPP_CODE2STR(NETIF_PPP_CONNECT_FAILED),
+};
 
 /**
  * @brief ESP32 Modem handle to be used as netif IO object
@@ -29,12 +64,23 @@ struct esp_modem_netif_driver_s {
     esp_modem_dte_t        *dte;            /*!< ptr to the esp_modem objects (DTE) */
 };
 
+const char *esp_modem_netif_event_to_name(int code)
+{
+    size_t i;
+    for (i = 0; i < sizeof(ppp_evt_msg_table)/sizeof(ppp_evt_msg_table[0]); ++i) {
+        if (ppp_evt_msg_table[i].code == code) {
+            return ppp_evt_msg_table[i].msg;
+        }
+    }
+    return "unknown ppp event";
+}
+
 static void on_ppp_changed(void *arg, esp_event_base_t event_base,
                            int32_t event_id, void *event_data)
 {
     esp_modem_dte_t *dte = arg;
     if (event_id < NETIF_PP_PHASE_OFFSET) {
-        ESP_LOGI(TAG, "PPP state changed event %d", event_id);
+        ESP_LOGI(TAG, "PPP state changed event %d (%s)", event_id, esp_modem_netif_event_to_name(event_id));
         // only notify the modem on state/error events, ignoring phase transitions
         esp_modem_notify_ppp_netif_closed(dte);
     }
@@ -94,17 +140,6 @@ static esp_err_t esp_modem_post_attach_init(esp_netif_t * esp_netif, void * args
 }
 
 /**
- * @brief Post attach adapter for esp-modem with autostart functionality
- *
- */
-static esp_err_t esp_modem_post_attach_start(esp_netif_t * esp_netif, void * args)
-{
-    esp_modem_netif_driver_t *driver = args;
-    ESP_ERROR_CHECK(esp_modem_post_attach_init(esp_netif, args));
-    return esp_modem_start_ppp(driver->dte);
-}
-
-/**
  * @brief Data path callback from esp-modem to pass data to esp-netif
  *
  * @param buffer data pointer
@@ -123,11 +158,7 @@ static esp_err_t modem_netif_receive_cb(void *buffer, size_t len, void *context)
 esp_modem_netif_driver_t *esp_modem_netif_new(esp_modem_dte_t *dte)
 {
     esp_modem_netif_driver_t *driver = esp_modem_netif_setup(dte);
-    if (driver) {
-        driver->base.post_attach = esp_modem_post_attach_init;
-        return driver;
-    }
-    return NULL;
+    return driver;
 }
 
 esp_modem_netif_driver_t *esp_modem_netif_setup(esp_modem_dte_t *dte)
@@ -143,7 +174,7 @@ esp_modem_netif_driver_t *esp_modem_netif_setup(esp_modem_dte_t *dte)
         goto drv_create_failed;
     }
 
-    driver->base.post_attach = esp_modem_post_attach_start;
+    driver->base.post_attach = esp_modem_post_attach_init;
     driver->dte = dte;
     return driver;
 
