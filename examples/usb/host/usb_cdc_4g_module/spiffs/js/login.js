@@ -1,4 +1,4 @@
-//const baseurl = 'http://192.168.4.1'
+const baseurl = 'http://192.168.4.1'
 const baseurl = window.location.origin
 const CONSTANT = {
     POST_LOGIN_URL: `${baseurl}/login`,

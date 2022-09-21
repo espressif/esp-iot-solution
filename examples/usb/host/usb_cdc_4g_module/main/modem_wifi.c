@@ -26,7 +26,6 @@
 #include "lwip/err.h"
 #include "lwip/sys.h"
 #include "lwip/lwip_napt.h"
-#include "modem_http_config.h"
 #include "modem_wifi.h"
 
 #ifdef CONFIG_EXAMPLE_ENABLE_WEB_ROUTER
