@@ -1,4 +1,4 @@
-// Copyright 2016-2021 Espressif Systems (Shanghai) PTE LTD
+// Copyright 2020-2022 Espressif Systems (Shanghai) PTE LTD
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,27 +25,39 @@
 extern "C" {
 #endif
 
+typedef enum {
+    UVC_XFER_ISOC = 0, /*!< Isochronous Transfer Mode */
+    UVC_XFER_BULK      /*!< Bulk Transfer Mode */
+} uvc_xfer_t;
+
 /**
  * @brief users need to get params from camera descriptors,
- * eg. run `lsusb -v` in linux 
+ * run the example first to printf the descriptor
  */
 typedef struct uvc_config{
-    usb_speed_t dev_speed; /*!< USB Device speed, Fix to USB_SPEED_FULL now */
-    uint16_t configuration; /*!< bConfigurationValue */
-    uint8_t format_index; /*!< bFormatIndex */
-    uint16_t frame_width;  /*!< wWidth */
-    uint16_t frame_height;  /*!< wHeight */
-    uint8_t frame_index;  /*!< bFrameIndex */
-    uint32_t frame_interval;  /*!< dwFrameInterval */
-    uint16_t interface;  /*!< bInterfaceNumber */
-    uint16_t interface_alt;  /*!< bAlternateSetting, ep MPS must =< 512 */
-    uint8_t isoc_ep_addr;  /*!< bEndpointAddress */
-    uint32_t isoc_ep_mps;  /*!< MPS size of bAlternateSetting */
-    uint32_t xfer_buffer_size;  /*!< transfer buffer size */
-    uint8_t *xfer_buffer_a;  /*!< buffer for usb payload */
-    uint8_t *xfer_buffer_b;  /*!< buffer for usb payload */
-    uint32_t frame_buffer_size;  /*!< frame buffer size */
-    uint8_t *frame_buffer;  /*!< buffer for one frame */
+    usb_speed_t dev_speed;      /*!< USB device speed, only support USB_SPEED_FULL now */
+    uvc_xfer_t xfer_type;       /*!< UVC stream transfer type, UVC_XFER_ISOC or UVC_XFER_BULK */
+    uint16_t configuration;     /*!< Configuration index value, 1 for most devices */
+    uint8_t format_index;       /*!< Format index of MJPEG */
+    uint8_t frame_index;        /*!< Frame index, to choose resolution */
+    uint16_t frame_width;       /*!< Picture width of selected frame_index */
+    uint16_t frame_height;      /*!< Picture height of selected frame_index */
+    uint32_t frame_interval;    /*!< Frame interval in 100-ns units, 666666 ~ 15 Fps*/
+    uint16_t interface;         /*!< UVC stream interface number */
+    uint16_t interface_alt;     /*!< UVC stream alternate interface, to choose MPS (Max Packet Size), bulk fix to 0*/
+    union {                     /*!< Using union for backward compatibility */
+        uint8_t isoc_ep_addr;   /*!< Isochronous endpoint address of selected alternate interface*/
+        uint8_t bulk_ep_addr;   /*!< Bulk endpoint address of UVC stream interface */
+    };
+    union {
+        uint32_t isoc_ep_mps;   /*!< Isochronous MPS of selected interface_alt */
+        uint32_t bulk_ep_mps;   /*!< Bulk MPS, fix to 64 for full speed */
+    };
+    uint32_t xfer_buffer_size;  /*!< Transfer buffer size, using double buffer here, must larger than one frame size */
+    uint8_t *xfer_buffer_a;     /*!< Buffer a for usb payload */
+    uint8_t *xfer_buffer_b;     /*!< Buffer b for usb payload */
+    uint32_t frame_buffer_size; /*!< Frame buffer size, must larger than one frame size */
+    uint8_t *frame_buffer;      /*!< Buffer for one frame */
 } uvc_config_t;
 
 /**
@@ -54,53 +66,53 @@ typedef struct uvc_config{
  * @param config config struct described in uvc_config_t
  * @return esp_err_t 
  *         ESP_ERR_INVALID_ARG Args not supported
- *         ESP_OK Config driver suceed
+ *         ESP_OK Config driver succeed
  */
 esp_err_t uvc_streaming_config(const uvc_config_t *config);
 
 /**
- * @brief Start camera IN streaming with pre-configs, uvc driver will create multi-tasks internal
- * to handle usb data from different pipes, and run user's callback after new frame ready.
+ * @brief Start camera IN streaming with pre-configs, uvc driver will create 2 internal task
+ * to handle usb data from stream pipe, and run user's callback after new frame ready.
  * only one streaming supported now.
  * 
- * @param cb callback function to handle incoming assembled UVC frame
- * @param user_ptr user pointer used in callback 
+ * @param cb callback function to handle incoming picture frame
+ * @param user_ptr user pointer used in callback
  * @return
  *         ESP_ERR_INVALID_STATE streaming not configured, or streaming running 
  *         ESP_ERR_INVALID_ARG args not supported
  *         ESP_FAIL start failed
- *         ESP_OK start suceed
+ *         ESP_OK start succeed
  */
 esp_err_t uvc_streaming_start(uvc_frame_callback_t *cb, void *user_ptr);
 
 /**
- * @brief Suspend current IN streaming
+ * @brief Suspend current IN streaming, only isochronous mode camera support
  * 
  * @return
  *         ESP_ERR_INVALID_STATE not inited
  *         ESP_FAIL suspend failed
- *         ESP_OK suspend suceed
+ *         ESP_OK suspend succeed
  *         ESP_ERR_TIMEOUT suspend wait timeout
  */
 esp_err_t uvc_streaming_suspend(void);
 
 /**
- * @brief Resume current IN streaming
+ * @brief Resume current IN streaming, only isochronous mode camera support
  * 
  * @return
  *         ESP_ERR_INVALID_STATE not inited
  *         ESP_FAIL resume failed
- *         ESP_OK resume suceed
+ *         ESP_OK resume succeed
  *         ESP_ERR_TIMEOUT resume wait timeout
  */
 esp_err_t uvc_streaming_resume(void);
 
 /**
- * @brief Stop current IN streaming, internal tasks will be delete, related resourses will be free
+ * @brief Stop current IN streaming, internal tasks will be delete, related resourse will be free
  * 
  * @return 
  *         ESP_ERR_INVALID_STATE not inited
- *         ESP_OK stop suceed
+ *         ESP_OK stop succeed
  *         ESP_ERR_TIMEOUT stop wait timeout
  */
 esp_err_t uvc_streaming_stop(void);
@@ -116,7 +128,7 @@ esp_err_t uvc_streaming_stop(void);
  *         ESP_ERR_NOT_SUPPORTED simulate not enable
  *         ESP_ERR_INVALID_ARG invalid input args
  *         ESP_ERR_NO_MEM no enough memory
- *         ESP_OK suceed
+ *         ESP_OK succeed
  */
 esp_err_t uvc_streaming_simulate_start(uvc_frame_callback_t *cb, void *user_ptr);
 

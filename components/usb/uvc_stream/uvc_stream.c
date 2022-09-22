@@ -16,35 +16,38 @@
 #include <string.h>
 #include <time.h>
 #include <sys/time.h>
+#include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "freertos/event_groups.h"
 #include "esp_intr_alloc.h"
 #include "esp_err.h"
 #include "esp_attr.h"
-#include "soc/gpio_pins.h"
-#include "soc/gpio_sig_map.h"
-#include "esp_rom_gpio.h"
+#include "esp_log.h"
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+    // enable functionality present in ESP-IDF v4.0
+#include "hal/usb_dwc_hal.h"
+#include "hal/usb_dwc_ll.h"
+#else
 #include "hal/usb_hal.h"
 #include "hal/usbh_ll.h"
+#endif
 #include "hcd.h"
 #include "usb/usb_types_stack.h"
 #include "usb/usb_helpers.h"
 #include "esp_private/usb_phy.h"
 #include "usb_private.h"
-#include "esp_log.h"
 #include "uvc_stream.h"
 #include "uvc_debug.h"
-#include "sdkconfig.h"
 
 #define UVC_CHECK(a, str, ret) if(!(a)) { \
         ESP_LOGE(TAG,"%s:%d (%s):%s", __FILE__, __LINE__, __FUNCTION__, str); \
         return (ret); \
     }
 
-#define UVC_CHECK_GOTO(a, str, lable) if(!(a)) { \
+#define UVC_CHECK_GOTO(a, str, label) if(!(a)) { \
         ESP_LOGE(TAG,"%s:%d (%s):%s", __FILE__, __LINE__, __FUNCTION__, str); \
-        goto lable; \
+        goto label; \
     }
 
 const char *TAG = "UVC_STREAM";
@@ -53,19 +56,21 @@ const char *TAG = "UVC_STREAM";
  * @brief General params for UVC device
  *
  */
-#define USB_PORT_NUM                         1        //Default port number
-#define USB_DEVICE_ADDR                      1        //Default UVC device address
-#define USB_ENUM_CONFIG_INDEX                0        //Index of the first configuration of the device
-#define USB_ENUM_SHORT_DESC_REQ_LEN          8        //Number of bytes to request when getting a short descriptor (just enough to get bMaxPacketSize0 or wTotalLength)
-#define USB_EP_CTRL_DEFAULT_MPS              64       //Default MPS(max payload size) of Endpoint 0
-#define USB_EP_ISOC_MAX_MPS                  512      //Max MPS ESP32-S2/S3 can handle
+#define USB_PORT_NUM                         1                                   //Default port number
+#define USB_DEVICE_ADDR                      1                                   //Default UVC device address
+#define USB_ENUM_SHORT_DESC_REQ_LEN          8                                   //Number of bytes to request when getting a short descriptor (just enough to get bMaxPacketSize0 or wTotalLength)
+#define USB_EP_CTRL_DEFAULT_MPS              64                                  //Default MPS(max payload size) of Endpoint 0
+#define USB_EP_ISOC_MAX_MPS                  512                                 //Max MPS ESP32-S2/S3 can handle
+#define USB_EP_BULK_FS_MPS                   64                                  //Default MPS of full speed bulk transfer
 #define CTRL_TRANSFER_DATA_MAX_BYTES         CONFIG_CTRL_TRANSFER_DATA_MAX_BYTES //Max data length assumed in control transfer
-#define NUM_ISOC_STREAM_URBS                 4        //Number of isochronous stream URBS created for continuous enqueue
-#define NUM_PACKETS_PER_URB_URB              5        //Number of packets in each isochronous stream URB
-#define UVC_EVENT_QUEUE_LEN                  30       //UVC event queue length 
-#define FRAME_MAX_INTERVAL                   2000000  //Specified in 100 ns units, General max frame interval (5 FPS)
-#define FRAME_MIN_INTERVAL                   333333   //General min frame interval (30 FPS)
-#define TIMEOUT_USB_CTRL_XFER_MS             5000      //Timeout for USB control transfer
+#define NUM_BULK_STREAM_URBS                 2                                   //Number of bulk stream URBS created for continuous enqueue
+#define NUM_BULK_BYTES_PER_URB               512                                 //Required transfer bytes of each URB, check
+#define NUM_ISOC_STREAM_URBS                 4                                   //Number of isochronous stream URBS created for continuous enqueue
+#define NUM_PACKETS_PER_URB_URB              5                                   //Number of packets in each isochronous stream URB
+#define UVC_EVENT_QUEUE_LEN                  30                                  //UVC event queue length 
+#define FRAME_MAX_INTERVAL                   2000000                             //Specified in 100 ns units, General max frame interval (5 FPS)
+#define FRAME_MIN_INTERVAL                   333333                              //General min frame interval (30 FPS)
+#define TIMEOUT_USB_CTRL_XFER_MS             5000                                //Timeout for USB control transfer
 
 /**
  * @brief Task for USB I/O request and payload processing,
@@ -90,15 +95,15 @@ const char *TAG = "UVC_STREAM";
  * @brief Events bit map
  *
  */
-#define USB_STREAM_INIT_DONE         BIT1       //set if uvc stream inited
-#define USB_STREAM_RUNNING           BIT2       //set if uvc streaming
-#define USB_STREAM_SUSPEND_DONE      BIT3       //set if uvc streaming successfully suspend
-#define USB_STREAM_SUSPEND_FAILED    BIT4       //set if uvc streaming failed suspend
-#define USB_STREAM_RESUME_DONE       BIT5       //set if uvc streaming successfully resume
-#define USB_STREAM_RESUME_FAILED     BIT6       //set if uvc streaming failed resume
-#define USB_STREAM_STOP_DONE         BIT7       //set if uvc streaming successfully stop
-#define USB_STREAM_STOP_FAILED       BIT8       //set if uvc streaming failed stop
-#define SAMPLE_PROC_RUNNING          BIT9       //set if sample processing
+#define USB_STREAM_INIT_DONE         BIT1        //set if uvc stream inited
+#define USB_STREAM_RUNNING           BIT2        //set if uvc streaming
+#define USB_STREAM_SUSPEND_DONE      BIT3        //set if uvc streaming successfully suspend
+#define USB_STREAM_SUSPEND_FAILED    BIT4        //set if uvc streaming failed suspend
+#define USB_STREAM_RESUME_DONE       BIT5        //set if uvc streaming successfully resume
+#define USB_STREAM_RESUME_FAILED     BIT6        //set if uvc streaming failed resume
+#define USB_STREAM_STOP_DONE         BIT7        //set if uvc streaming successfully stop
+#define USB_STREAM_STOP_FAILED       BIT8        //set if uvc streaming failed stop
+#define SAMPLE_PROC_RUNNING          BIT9        //set if sample processing
 #define SAMPLE_PROC_STOP_DONE        BIT10       //set if sample processing successfully stop
 #define USB_DEVICE_CONNECTED         BIT11       //set if uvc stream inited
 
@@ -229,19 +234,19 @@ void _uvc_stream_ctrl_printf(FILE *stream, uvc_stream_ctrl_t *ctrl)
 }
 
 //320*240@15 fps param for demo camera
-const static uvc_stream_ctrl_t s_uvc_stream_ctrl_default = {
-    .bmHint = 1,
-    .bFormatIndex = 2,
-    .bFrameIndex = 3,
-    .dwFrameInterval = 666666,
-    .wKeyFrameRate = 0,
-    .wPFrameRate = 0,
-    .wCompQuality = 0,
-    .wCompWindowSize = 0,
-    .wDelay = 0,
-    .dwMaxVideoFrameSize = 35000,
-    .dwMaxPayloadTransferSize = 512,
-};
+#define DEFAULT_UVC_STREAM_CTRL() {\
+    .bmHint = 1,\
+    .bFormatIndex = 2,\
+    .bFrameIndex = 3,\
+    .dwFrameInterval = 666666,\
+    .wKeyFrameRate = 0,\
+    .wPFrameRate = 0,\
+    .wCompQuality = 0,\
+    .wCompWindowSize = 0,\
+    .wDelay = 0,\
+    .dwMaxVideoFrameSize = 35000,\
+    .dwMaxPayloadTransferSize = 512,\
+}
 
 /*************************************** Internal Types ********************************************/
 /**
@@ -250,10 +255,14 @@ const static uvc_stream_ctrl_t s_uvc_stream_ctrl_default = {
  */
 typedef struct _uvc_device {
     usb_speed_t dev_speed;
+    uvc_xfer_t xfer_type;
     uint16_t configuration;
     uint8_t dev_addr;
-    uint8_t isoc_ep_addr;
-    uint32_t isoc_ep_mps;
+    uint8_t ep_addr;
+    uint32_t ep_mps;
+    uint32_t urb_num;
+    uint32_t packets_per_urb;
+    uint32_t bytes_per_packet;
     uvc_stream_ctrl_t ctrl_set;
     uvc_stream_ctrl_t ctrl_probed;
     uint32_t xfer_buffer_size;
@@ -638,17 +647,22 @@ static void _stream_pipe_event_process(hcd_pipe_handle_t pipe_handle, hcd_pipe_e
 
             TRIGGER_URB_DEQUEUE();
             _uvc_stream_handle_t *strmh = (_uvc_stream_handle_t *)(urb_done->transfer.context);
-            size_t index = 0;
-
-            for (size_t i = 0; i < urb_done->transfer.num_isoc_packets; i++) {
-                if (urb_done->transfer.isoc_packet_desc[i].status != USB_TRANSFER_STATUS_COMPLETED) {
-                    ESP_LOGV(TAG, "line:%u bad iso transct status %d", __LINE__, urb_done->transfer.isoc_packet_desc[i].status);
-                    continue;
+            if (urb_done->transfer.num_isoc_packets == 0) { // Bulk transfer
+                if (urb_done->transfer.actual_num_bytes > 0) {
+                    _uvc_process_payload(strmh, urb_done->transfer.data_buffer, urb_done->transfer.actual_num_bytes);
                 }
+            } else { // isoc transfer
+                size_t index = 0;
+                for (size_t i = 0; i < urb_done->transfer.num_isoc_packets; i++) {
+                    if (urb_done->transfer.isoc_packet_desc[i].status != USB_TRANSFER_STATUS_COMPLETED) {
+                        ESP_LOGV(TAG, "line:%u bad iso transct status %d", __LINE__, urb_done->transfer.isoc_packet_desc[i].status);
+                        continue;
+                    }
 
-                uint8_t *simplebuffer = urb_done->transfer.data_buffer + (index * s_uvc_dev.isoc_ep_mps);
-                ++index;
-                _uvc_process_payload(strmh, simplebuffer, (urb_done->transfer.isoc_packet_desc[i].actual_num_bytes));
+                    uint8_t *simplebuffer = urb_done->transfer.data_buffer + (index * s_uvc_dev.ep_mps);
+                    ++index;
+                    _uvc_process_payload(strmh, simplebuffer, (urb_done->transfer.isoc_packet_desc[i].actual_num_bytes));
+                }
             }
 
             if (enqueue_flag) {
@@ -843,7 +857,7 @@ free_urb_:
 
 #ifdef CONFIG_UVC_GET_CONFIG_DESC
 extern void _print_uvc_class_descriptors_cb(const usb_standard_desc_t *desc);
-static esp_err_t _usb_get_config_desc(hcd_pipe_handle_t pipe_handle, usb_config_desc_t **config_desc)
+static esp_err_t _usb_get_config_desc(hcd_pipe_handle_t pipe_handle, int index, usb_config_desc_t **config_desc)
 {
     (void)config_desc;
     UVC_CHECK(pipe_handle != NULL, "pipe_handle can't be NULL", ESP_ERR_INVALID_ARG);
@@ -852,7 +866,7 @@ static esp_err_t _usb_get_config_desc(hcd_pipe_handle_t pipe_handle, usb_config_
     UVC_CHECK(urb_ctrl != NULL, "alloc urb failed", ESP_ERR_NO_MEM);
     urb_t *urb_done = NULL;
     ESP_LOGI(TAG, "get short config desc");
-    USB_SETUP_PACKET_INIT_GET_CONFIG_DESC((usb_setup_packet_t *)urb_ctrl->transfer.data_buffer, USB_ENUM_CONFIG_INDEX, USB_ENUM_SHORT_DESC_REQ_LEN);
+    USB_SETUP_PACKET_INIT_GET_CONFIG_DESC((usb_setup_packet_t *)urb_ctrl->transfer.data_buffer, index-1, USB_ENUM_SHORT_DESC_REQ_LEN);
     urb_ctrl->transfer.num_bytes = sizeof(usb_setup_packet_t) + usb_round_up_to_mps(sizeof(usb_config_desc_t), USB_EP_CTRL_DEFAULT_MPS);
     esp_err_t ret = hcd_urb_enqueue(pipe_handle, urb_ctrl);
     UVC_CHECK_GOTO(ESP_OK == ret, "urb enqueue failed", free_urb_);
@@ -866,11 +880,11 @@ static esp_err_t _usb_get_config_desc(hcd_pipe_handle_t pipe_handle, usb_config_
     usb_config_desc_t *cfg_desc = (usb_config_desc_t *)(urb_done->transfer.data_buffer + sizeof(usb_setup_packet_t));
     uint16_t full_config_length = cfg_desc->wTotalLength;
     if (cfg_desc->wTotalLength > CTRL_TRANSFER_DATA_MAX_BYTES) {
-        ESP_LOGE(TAG, "Configuration descriptor larger than control transfer max length");
+        ESP_LOGW(TAG, "Configuration descriptor larger than control transfer max length");
         goto free_urb_;
     }
     ESP_LOGI(TAG, "get full config desc");
-    USB_SETUP_PACKET_INIT_GET_CONFIG_DESC((usb_setup_packet_t *)urb_ctrl->transfer.data_buffer, USB_ENUM_CONFIG_INDEX, full_config_length);
+    USB_SETUP_PACKET_INIT_GET_CONFIG_DESC((usb_setup_packet_t *)urb_ctrl->transfer.data_buffer, index-1, full_config_length);
     urb_ctrl->transfer.num_bytes = sizeof(usb_setup_packet_t) + usb_round_up_to_mps(full_config_length, USB_EP_CTRL_DEFAULT_MPS);
     ret = hcd_urb_enqueue(pipe_handle, urb_ctrl);
     UVC_CHECK_GOTO(ESP_OK == ret, "urb enqueue failed", free_urb_);
@@ -1052,7 +1066,13 @@ static inline void _uvc_swap_buffers(_uvc_stream_handle_t *strmh)
 {
     /* to prevent the latest data from being lost
     * if take mutex timeout, we should drop the last frame */
-    const size_t timeout_ms = (NUM_ISOC_STREAM_URBS-1) * NUM_PACKETS_PER_URB_URB;
+    size_t timeout_ms = 0;
+    if (s_uvc_dev.xfer_type == UVC_XFER_BULK) {
+        // for full speed bulk mode, max 19 packet can be transmit during each millisecond
+        timeout_ms = (NUM_BULK_STREAM_URBS-1) * (NUM_BULK_BYTES_PER_URB * 0.052 / USB_EP_BULK_FS_MPS);
+    } else {
+        timeout_ms = (NUM_ISOC_STREAM_URBS-1) * NUM_PACKETS_PER_URB_URB;
+    }
     if (xSemaphoreTake(strmh->cb_mutex, pdMS_TO_TICKS(timeout_ms) == pdTRUE)) {
         /* code */
         /* swap the buffers */
@@ -1149,9 +1169,14 @@ static inline void _uvc_process_payload(_uvc_stream_handle_t *strmh, uint8_t *pa
         /* The frame ID bit was flipped, but we have image data sitting
             around from prior transfers. This means the camera didn't send
             an EOF for the last transfer of the previous frame. */
-        ESP_LOGW(TAG, "SWAP NO EOF %d", strmh->got_bytes);
+        ESP_LOGD(TAG, "SWAP NO EOF %d", strmh->got_bytes);
         /* clean whole no-flipped buffer */
-        _uvc_drop_buffers(strmh);
+        if(s_uvc_dev.xfer_type == UVC_XFER_BULK) {
+            // compatible with no standard camera
+            _uvc_swap_buffers(strmh);
+        } else {
+            _uvc_drop_buffers(strmh);
+        }
     }
 
     strmh->fid = header_info & 1;
@@ -1344,11 +1369,7 @@ static esp_err_t _user_event_wait(hcd_port_handle_t port_hdl,
 
 static void _usb_processing_task(void *arg)
 {
-    UVC_CHECK_GOTO(arg != NULL, "Task arg can't be NULL", delete_task_);
-    _uvc_device_t *uvc_dev = calloc(1, sizeof(_uvc_device_t));
-    UVC_CHECK_GOTO(uvc_dev != NULL, "calloc device failed", delete_task_);
-    memcpy(uvc_dev, arg, sizeof(_uvc_device_t));
-
+    _uvc_device_t *uvc_dev = &s_uvc_dev;
     esp_err_t ret = ESP_OK;
     uvc_error_t uvc_ret = UVC_SUCCESS;
     usb_speed_t port_speed = 0;
@@ -1360,35 +1381,48 @@ static void _usb_processing_task(void *arg)
     _uvc_event_msg_t evt_msg = {};
     bool keep_running = true;
 
-    //prepare urb and data buffer for stream pipe
-    urb_t *stream_urbs[NUM_ISOC_STREAM_URBS] = {NULL};
-    for (int i = 0; i < NUM_ISOC_STREAM_URBS; i++) {
-        stream_urbs[i] = _usb_urb_alloc(NUM_PACKETS_PER_URB_URB, uvc_dev->isoc_ep_mps, NULL);
-        UVC_CHECK_GOTO(stream_urbs[i] != NULL, "stream urb alloc failed", free_urb_);
-        stream_urbs[i]->transfer.num_bytes = NUM_PACKETS_PER_URB_URB * uvc_dev->isoc_ep_mps; //No data stage
+    usb_ep_desc_t vs_ep_desc = {
+        .bLength = USB_EP_DESC_SIZE,
+        .bDescriptorType = USB_B_DESCRIPTOR_TYPE_ENDPOINT,
+        .bEndpointAddress = uvc_dev->ep_addr,
+        .bmAttributes = USB_BM_ATTRIBUTES_XFER_ISOC,
+        .wMaxPacketSize = uvc_dev->ep_mps,
+        .bInterval = 1,
+    };
 
-        for (size_t j = 0; j < NUM_PACKETS_PER_URB_URB; j++) {
-            //We need to initialize each individual isoc packet descriptor of the URB
-            stream_urbs[i]->transfer.isoc_packet_desc[j].num_bytes = uvc_dev->isoc_ep_mps;
+    //prepare urb and data buffer for stream pipe
+    urb_t **stream_urbs = heap_caps_calloc(uvc_dev->urb_num, sizeof(urb_t*), MALLOC_CAP_DMA);
+    UVC_CHECK_GOTO(stream_urbs != NULL, "p_urb alloc failed", free_p_urb_);
+
+    if (s_uvc_dev.xfer_type == UVC_XFER_BULK) {
+        vs_ep_desc.bmAttributes = USB_BM_ATTRIBUTES_XFER_BULK;
+        vs_ep_desc.bInterval = 0;
+        for (int i = 0; i < uvc_dev->urb_num; i++) {
+            stream_urbs[i] = _usb_urb_alloc(0, uvc_dev->bytes_per_packet, NULL);
+            UVC_CHECK_GOTO(stream_urbs[i] != NULL, "stream urb alloc failed", free_urb_);
+            stream_urbs[i]->transfer.num_bytes = uvc_dev->bytes_per_packet;
+        }
+    } else {
+        for (int i = 0; i < uvc_dev->urb_num; i++) {
+            stream_urbs[i] = _usb_urb_alloc(uvc_dev->packets_per_urb, uvc_dev->bytes_per_packet, NULL);
+            UVC_CHECK_GOTO(stream_urbs[i] != NULL, "stream urb alloc failed", free_urb_);
+            stream_urbs[i]->transfer.num_bytes = uvc_dev->packets_per_urb * uvc_dev->bytes_per_packet;
+
+            for (size_t j = 0; j < uvc_dev->packets_per_urb; j++) {
+                //We need to initialize each individual isoc packet descriptor of the URB
+                stream_urbs[i]->transfer.isoc_packet_desc[j].num_bytes = uvc_dev->bytes_per_packet;
+            }
         }
     }
 
     //Waitting for camera ready
     ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
-    usb_ep_desc_t isoc_ep_desc = {
-        .bLength = USB_EP_DESC_SIZE,
-        .bDescriptorType = USB_B_DESCRIPTOR_TYPE_ENDPOINT,
-        .bEndpointAddress = uvc_dev->isoc_ep_addr,
-        .bmAttributes = USB_BM_ATTRIBUTES_XFER_ISOC,
-        .wMaxPacketSize = uvc_dev->isoc_ep_mps,
-        .bInterval = 1,
-    };
     port_hdl = _usb_port_init((void *)uvc_dev->queue_hdl, (void *)uvc_dev->queue_hdl);
     UVC_CHECK_GOTO(port_hdl != NULL, "USB Port init failed", free_urb_);
     xEventGroupSetBits(uvc_dev->event_group, USB_STREAM_INIT_DONE);
     while (keep_running) {
-        ESP_LOGI(TAG, "Waitting USB Connection");
+        ESP_LOGI(TAG, "Waiting USB Connection");
 
         if (hcd_port_get_state(port_hdl) == HCD_PORT_STATE_NOT_POWERED) {
             ret = hcd_port_command(port_hdl, HCD_PORT_CMD_POWER_ON);
@@ -1396,7 +1430,7 @@ static void _usb_processing_task(void *arg)
         }
 
         while (1) {
-            if (xQueueReceive(uvc_dev->queue_hdl, &evt_msg, pdMS_TO_TICKS(10)) != pdTRUE) {
+            if (xQueueReceive(uvc_dev->queue_hdl, &evt_msg, portMAX_DELAY) != pdTRUE) {
                 continue;
             }
             switch (evt_msg._type) {
@@ -1404,6 +1438,8 @@ static void _usb_processing_task(void *arg)
                     port_actual_evt = _usb_port_event_dflt_process(port_hdl, evt_msg._event.port_event);
                     switch (port_actual_evt) {
                         case HCD_PORT_EVENT_CONNECTION:
+                                // wait for device ready
+                                vTaskDelay(pdMS_TO_TICKS(50));
                                 // Reset port and get speed
                                 ESP_LOGI(TAG, "Resetting Port");
                                 ret = hcd_port_command(port_hdl, HCD_PORT_CMD_RESET);
@@ -1421,7 +1457,7 @@ static void _usb_processing_task(void *arg)
 
                                 UVC_CHECK_GOTO(pipe_hdl_dflt != NULL, "default pipe create failed", usb_driver_reset_);
                                 // Initialize stream pipe
-                                if (!pipe_hdl_stream) pipe_hdl_stream = _usb_pipe_init(port_hdl, &isoc_ep_desc, uvc_dev->dev_addr,
+                                if (!pipe_hdl_stream) pipe_hdl_stream = _usb_pipe_init(port_hdl, &vs_ep_desc, uvc_dev->dev_addr,
                                             port_speed, (void *)uvc_dev->queue_hdl, (void *)uvc_dev->queue_hdl);
                                 UVC_CHECK_GOTO(pipe_hdl_stream != NULL, "stream pipe create failed", usb_driver_reset_);
                                 // UVC enum process
@@ -1432,7 +1468,7 @@ static void _usb_processing_task(void *arg)
                                 UVC_CHECK_GOTO(ESP_OK == ret, "Get device descriptor failed", usb_driver_reset_);
 #endif
 #ifdef CONFIG_UVC_GET_CONFIG_DESC
-                                ret = _usb_get_config_desc(pipe_hdl_dflt, NULL);
+                                ret = _usb_get_config_desc(pipe_hdl_dflt, uvc_dev->configuration, NULL);
                                 UVC_CHECK_GOTO(ESP_OK == ret, "Get config descriptor failed", usb_driver_reset_);
 #endif
                                 ret = _usb_set_device_config(pipe_hdl_dflt, uvc_dev->configuration);
@@ -1445,10 +1481,9 @@ static void _usb_processing_task(void *arg)
                                 UVC_CHECK_GOTO(uvc_ret == UVC_SUCCESS, "open stream failed", usb_driver_reset_);
                                 uvc_ret = uvc_stream_start(stream_hdl, uvc_dev->user_cb, uvc_dev->user_ptr, 0);
                                 UVC_CHECK_GOTO(uvc_ret == UVC_SUCCESS, "start stream failed", usb_driver_reset_);
-                                //TODO:wait for camera ready?
-                                vTaskDelay(pdMS_TO_TICKS(50));
+
                                 ESP_LOGI(TAG, "Camera Start Streaming");
-                                for (int i = 0; i < NUM_ISOC_STREAM_URBS; i++) {
+                                for (int i = 0; i < uvc_dev->urb_num; i++) {
                                     _usb_urb_context_update(stream_urbs[i], stream_hdl);
                                     ret = hcd_urb_enqueue(pipe_hdl_stream, stream_urbs[i]);
                                     UVC_CHECK_GOTO(ESP_OK == ret, "stream pipe enqueue failed", stop_stream_driver_reset_);
@@ -1483,6 +1518,10 @@ static void _usb_processing_task(void *arg)
 
                 case USER_EVENT:
                     if (evt_msg._event.user_cmd == STREAM_SUSPEND) {
+                        if (uvc_dev->xfer_type == UVC_XFER_BULK) {
+                            ESP_LOGW(TAG, "bulk transfer can't suspend, use stop instead");
+                            break;
+                        }
                         xEventGroupClearBits(uvc_dev->event_group, USB_STREAM_RUNNING);
                         if (pipe_hdl_stream) {
                             ret = _usb_pipe_deinit(pipe_hdl_stream, NUM_ISOC_STREAM_URBS);
@@ -1491,16 +1530,20 @@ static void _usb_processing_task(void *arg)
                         }
                         ret = _usb_set_device_interface(pipe_hdl_dflt, uvc_dev->interface, 0);
                         UVC_CHECK_GOTO(ESP_OK == ret, "suspend alt_interface failed", suspend_failed_driver_reset_);
-                        ESP_LOGD(TAG, "Stream suspended!");
+                        ESP_LOGI(TAG, "Stream suspended!");
                         xEventGroupSetBits(uvc_dev->event_group, USB_STREAM_SUSPEND_DONE);
                         break;
                     } else if (evt_msg._event.user_cmd == STREAM_RESUME) {
+                        if (uvc_dev->xfer_type == UVC_XFER_BULK) {
+                            ESP_LOGW(TAG, "bulk transfer can't resume, use start instead");
+                            break;
+                        }
                         ret = _uvc_vs_commit_control(pipe_hdl_dflt, &uvc_dev->ctrl_set, &uvc_dev->ctrl_probed);
                         UVC_CHECK_GOTO(ESP_OK == ret, "vs commit failed", resume_failed_driver_reset_);
                         ret = _usb_set_device_interface(pipe_hdl_dflt, uvc_dev->interface, uvc_dev->interface_alt);
                         UVC_CHECK_GOTO(ESP_OK == ret, "resume alt_interface failed", resume_failed_driver_reset_);
                         // Initialize stream pipe
-                        if (!pipe_hdl_stream) pipe_hdl_stream = _usb_pipe_init(port_hdl, &isoc_ep_desc, uvc_dev->dev_addr,
+                        if (!pipe_hdl_stream) pipe_hdl_stream = _usb_pipe_init(port_hdl, &vs_ep_desc, uvc_dev->dev_addr,
                                     port_speed, (void *)uvc_dev->queue_hdl, (void *)uvc_dev->queue_hdl);
                         UVC_CHECK_GOTO(pipe_hdl_stream != NULL, "stream pipe create failed", resume_failed_driver_reset_);
                         for (int i = 0; i < NUM_ISOC_STREAM_URBS; i++) {
@@ -1508,7 +1551,7 @@ static void _usb_processing_task(void *arg)
                             UVC_CHECK_GOTO(ESP_OK == ret, "stream pipe enqueue failed", resume_failed_driver_reset_);
                         }
                         xEventGroupSetBits(uvc_dev->event_group, USB_STREAM_RESUME_DONE | USB_STREAM_RUNNING);
-                        ESP_LOGD(TAG, "Streaming resumed");
+                        ESP_LOGI(TAG, "Streaming resumed");
                         break;
                     } else if (evt_msg._event.user_cmd == STREAM_STOP) {
                         keep_running = false;
@@ -1573,10 +1616,10 @@ free_urb_:
         _usb_urb_free(stream_urbs[i]);
     }
     xEventGroupSetBits(uvc_dev->event_group, USB_STREAM_STOP_DONE);
-    free(uvc_dev);
-delete_task_:
-    ESP_LOGW(TAG, "_usb_processing_task deleted");
-    ESP_LOGW(TAG, "_usb_processing_task watermark = %d B", uxTaskGetStackHighWaterMark(NULL));
+free_p_urb_:
+    free(stream_urbs);
+    ESP_LOGI(TAG, "_usb_processing_task deleted");
+    ESP_LOGD(TAG, "_usb_processing_task watermark = %d B", uxTaskGetStackHighWaterMark(NULL));
     vTaskDelete(NULL);
 }
 
@@ -1620,8 +1663,8 @@ static void _sample_processing_task(void *arg)
     xEventGroupClearBits(device_handle->event_group, SAMPLE_PROC_RUNNING);
     xEventGroupSetBits(device_handle->event_group, SAMPLE_PROC_STOP_DONE);
 
-    ESP_LOGW(TAG, "_sample_processing_task deleted");
-    ESP_LOGW(TAG, "_sample_processing_task watermark = %d B", uxTaskGetStackHighWaterMark(NULL));
+    ESP_LOGI(TAG, "_sample_processing_task deleted");
+    ESP_LOGD(TAG, "_sample_processing_task watermark = %d B", uxTaskGetStackHighWaterMark(NULL));
     vTaskDelete(NULL);
 }
 
@@ -1632,9 +1675,7 @@ esp_err_t uvc_streaming_config(const uvc_config_t *config)
     UVC_CHECK(config->dev_speed == USB_SPEED_FULL,
               "Only Support Full Speed, 12 Mbps", ESP_ERR_INVALID_ARG);
     UVC_CHECK((config->frame_interval >= FRAME_MIN_INTERVAL && config->frame_interval <= FRAME_MAX_INTERVAL),
-              "frame_interval Support 333333~2000000 ns", ESP_ERR_INVALID_ARG);
-    UVC_CHECK(config->isoc_ep_mps <= USB_EP_ISOC_MAX_MPS,
-              "MPS Must < USB_EP_ISOC_MAX_MPS", ESP_ERR_INVALID_ARG);
+              "frame_interval Support 333333~2000000", ESP_ERR_INVALID_ARG);
     UVC_CHECK(config->frame_buffer_size != 0, "frame_buffer_size can't 0", ESP_ERR_INVALID_ARG);
     UVC_CHECK(config->xfer_buffer_size != 0, "xfer_buffer_size can't 0", ESP_ERR_INVALID_ARG);
     UVC_CHECK(config->xfer_buffer_a != NULL, "xfer_buffer_a can't NULL", ESP_ERR_INVALID_ARG);
@@ -1642,16 +1683,24 @@ esp_err_t uvc_streaming_config(const uvc_config_t *config)
     UVC_CHECK(config->frame_buffer != NULL, "frame_buffer can't NULL", ESP_ERR_INVALID_ARG);
     UVC_CHECK(config->interface != 0, "Interface num must > 0", ESP_ERR_INVALID_ARG);
     UVC_CHECK(config->configuration != 0, "Configuration num must > 0", ESP_ERR_INVALID_ARG);
-    UVC_CHECK(config->interface_alt != 0, "Interface alt num must > 0", ESP_ERR_INVALID_ARG);
     UVC_CHECK(config->isoc_ep_addr & 0x80, "Endpoint direction must IN", ESP_ERR_INVALID_ARG);
 
+    if (config->xfer_type == UVC_XFER_ISOC) {
+        UVC_CHECK(config->isoc_ep_mps <= USB_EP_ISOC_MAX_MPS, "Isoc MPS must < USB_EP_ISOC_MAX_MPS", ESP_ERR_INVALID_ARG);
+        UVC_CHECK(config->interface_alt != 0, "Isoc interface alt num must > 0", ESP_ERR_INVALID_ARG);
+    } else {
+        UVC_CHECK(config->interface_alt == 0, "Bulk interface alt num must == 0", ESP_ERR_INVALID_ARG);
+        UVC_CHECK(config->bulk_ep_mps == USB_EP_BULK_FS_MPS, "Full speed bulk MPS must == USB_EP_BULK_FS_MPS", ESP_ERR_INVALID_ARG);
+    }
+
     s_uvc_dev.dev_speed = config->dev_speed;
+    s_uvc_dev.xfer_type = config->xfer_type;
     s_uvc_dev.dev_addr = USB_DEVICE_ADDR;
     s_uvc_dev.configuration = config->configuration;
     s_uvc_dev.interface = config->interface;
     s_uvc_dev.interface_alt = config->interface_alt;
-    s_uvc_dev.isoc_ep_addr = config->isoc_ep_addr;
-    s_uvc_dev.isoc_ep_mps = config->isoc_ep_mps;
+    s_uvc_dev.ep_addr = config->isoc_ep_addr;
+    s_uvc_dev.ep_mps = config->isoc_ep_mps;
     s_uvc_dev.xfer_buffer_size = config->xfer_buffer_size;
     s_uvc_dev.xfer_buffer_a = config->xfer_buffer_a;
     s_uvc_dev.xfer_buffer_b = config->xfer_buffer_b;
@@ -1661,12 +1710,29 @@ esp_err_t uvc_streaming_config(const uvc_config_t *config)
     s_uvc_dev.frame_width = config->frame_width;
     s_uvc_dev.frame_height = config->frame_height;
 
-    s_uvc_dev.ctrl_set = s_uvc_stream_ctrl_default;
+    s_uvc_dev.ctrl_set = (uvc_stream_ctrl_t)DEFAULT_UVC_STREAM_CTRL();
     s_uvc_dev.ctrl_set.bFormatIndex = config->format_index;
     s_uvc_dev.ctrl_set.bFrameIndex = config->frame_index;
     s_uvc_dev.ctrl_set.dwFrameInterval = config->frame_interval;
     s_uvc_dev.ctrl_set.dwMaxVideoFrameSize = config->frame_buffer_size;
     s_uvc_dev.ctrl_set.dwMaxPayloadTransferSize = config->isoc_ep_mps;
+
+    if (s_uvc_dev.xfer_type == UVC_XFER_BULK) {
+        // raw cost: NUM_BULK_STREAM_URBS * 1 * isoc_ep_mps
+        s_uvc_dev.urb_num = NUM_BULK_STREAM_URBS;
+        s_uvc_dev.packets_per_urb = 1;
+        // Note: According to UVC 1.5, each packet should have a header added, but most cameras don't.
+        // Therefore, a large buffer should be prepared to ensure that a frame can be received.
+        // s_uvc_dev.bytes_per_packet = NUM_BULK_BYTES_PER_URB;
+        s_uvc_dev.bytes_per_packet = config->frame_buffer_size;
+        ESP_LOGI(TAG, "Bulk transfer mode");
+    } else {
+        // raw cost: NUM_ISOC_STREAM_URBS * NUM_PACKETS_PER_URB_URB * isoc_ep_mps
+        s_uvc_dev.urb_num = NUM_ISOC_STREAM_URBS;
+        s_uvc_dev.packets_per_urb = NUM_PACKETS_PER_URB_URB;
+        s_uvc_dev.bytes_per_packet = config->isoc_ep_mps;
+        ESP_LOGI(TAG, "Isoc transfer mode");
+    }
 
     TRIGGER_INIT();
 
@@ -1690,7 +1756,7 @@ esp_err_t uvc_streaming_start(uvc_frame_callback_t *cb, void *user_ptr)
     s_uvc_dev.queue_hdl = xQueueCreate(UVC_EVENT_QUEUE_LEN, sizeof(_uvc_event_msg_t));
     UVC_CHECK_GOTO(s_uvc_dev.queue_hdl != NULL, "Create event queue failed", delete_event_group_);
     TaskHandle_t usb_taskh = NULL;
-    BaseType_t ret = xTaskCreatePinnedToCore(_usb_processing_task, USB_PROC_TASK_NAME, USB_PROC_TASK_STACK_SIZE, (void *)(&s_uvc_dev),
+    BaseType_t ret = xTaskCreatePinnedToCore(_usb_processing_task, USB_PROC_TASK_NAME, USB_PROC_TASK_STACK_SIZE, NULL,
                             USB_PROC_TASK_PRIORITY, &usb_taskh, USB_PROC_TASK_CORE);
     UVC_CHECK_GOTO(ret == pdPASS, "Create usb proc task failed", delete_queue_);
     vTaskDelay(50 / portTICK_PERIOD_MS); //wait for usb camera ready
