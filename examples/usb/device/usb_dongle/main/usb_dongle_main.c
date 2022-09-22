@@ -29,7 +29,7 @@
 #include "tusb_net.h"
 #include "tusb_bth.h"
 
-#if CFG_TUD_CDCACM
+#if CONFIG_TINYUSB_CDCACM_ENABLED
 #include "tusb_cdc_acm.h"
 static uint8_t buf[CONFIG_TINYUSB_CDC_RX_BUFSIZE + 1];
 void Command_Parse(char* Cmd);
@@ -51,7 +51,7 @@ static const char *TAG = "USB_Dongle";
  */
 void vRegisterCLICommands(void);
 
-#if CFG_TUD_CDCACM
+#if CONFIG_TINYUSB_CDCACM_ENABLED
 void tinyusb_cdc_rx_callback(int itf, cdcacm_event_t *event)
 {
     /* initialization */
@@ -73,7 +73,7 @@ void tinyusb_cdc_line_state_changed_callback(int itf, cdcacm_event_t *event)
     int rst = event->line_state_changed_data.rts;
     ESP_LOGI(TAG, "Line state changed! itf:%d dtr:%d, rst:%d", itf, dtr, rst);
 }
-#endif /* CFG_TUD_CDCACM */
+#endif /* CONFIG_TINYUSB_CDCACM_ENABLED */
 
 void app_main(void)
 {
@@ -85,15 +85,15 @@ void app_main(void)
     }
     ESP_ERROR_CHECK(ret);
 
-#if CFG_TUD_NET
+#if CONFIG_TINYUSB_NET_ENABLED
     tusb_net_init();
     initialise_wifi();
-#endif /* CFG_TUD_NET */
+#endif /* CONFIG_TINYUSB_NET_ENABLED */
 
-#if CFG_TUD_BTH
+#if CONFIG_TINYUSB_BTH_ENABLED
     // init ble controller
     tusb_bth_init();
-#endif /* CFG_TUD_BTH */
+#endif /* CONFIG_TINYUSB_BTH_ENABLED */
 
     ESP_LOGI(TAG, "USB initialization");
 
@@ -103,7 +103,7 @@ void app_main(void)
 
     ESP_ERROR_CHECK(tinyusb_driver_install(&tusb_cfg));
 
-#if CFG_TUD_CDCACM
+#if CONFIG_TINYUSB_CDCACM_ENABLED
     tinyusb_config_cdcacm_t amc_cfg = {
         .usb_dev = TINYUSB_USBDEV_0,
         .cdc_port = TINYUSB_CDC_ACM_0,
@@ -117,7 +117,7 @@ void app_main(void)
     ESP_ERROR_CHECK(tusb_cdc_acm_init(&amc_cfg));
 #elif CONFIG_UART_ENABLE
     initialise_uart();
-#endif /* CFG_TUD_CDCACM */
+#endif /* CONFIG_TINYUSB_CDCACM_ENABLED */
 
     ESP_LOGI(TAG, "USB initialization DONE");
 

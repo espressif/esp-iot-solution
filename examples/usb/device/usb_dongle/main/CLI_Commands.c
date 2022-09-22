@@ -60,7 +60,7 @@ char* null_password = "";
 static BaseType_t prvTaskStatusCommand( char *pcWriteBuffer, size_t xWriteBufferLen, const char *pcCommandString );
 #endif
 
-#if CFG_TUD_NET
+#if CONFIG_TINYUSB_NET_ENABLED
 static BaseType_t prvStationCommand( char *pcWriteBuffer, size_t xWriteBufferLen, const char *pcCommandString );
 
 static BaseType_t prvScanCommand( char *pcWriteBuffer, size_t xWriteBufferLen, const char *pcCommandString );
@@ -70,7 +70,7 @@ static BaseType_t prvAPCommand( char *pcWriteBuffer, size_t xWriteBufferLen, con
 static BaseType_t prvSetWiFiModeCommand( char *pcWriteBuffer, size_t xWriteBufferLen, const char *pcCommandString );
 
 static BaseType_t prvSmartConfigCommand( char *pcWriteBuffer, size_t xWriteBufferLen, const char *pcCommandString );
-#endif /* CFG_TUD_NET */
+#endif /* CONFIG_TINYUSB_NET_ENABLED */
 
 static BaseType_t prvRamCommand( char *pcWriteBuffer, size_t xWriteBufferLen, const char *pcCommandString );
 
@@ -89,7 +89,7 @@ static const CLI_Command_Definition_t xTaskStatus =
 };
 #endif
 
-#if CFG_TUD_NET
+#if CONFIG_TINYUSB_NET_ENABLED
 /* Structure that defines the "sta" command line command. */
 static const CLI_Command_Definition_t xStationCommand =
 {
@@ -134,7 +134,7 @@ static const CLI_Command_Definition_t xSmartConfigCommand =
 	prvSmartConfigCommand, /* The function to run. */
 	1 /* No parameters are expected. */
 };
-#endif /* CFG_TUD_NET */
+#endif /* CONFIG_TINYUSB_NET_ENABLED */
 
 /* Structure that defines the "ram" command line command. */
 static const CLI_Command_Definition_t xRamCommand =
@@ -173,13 +173,13 @@ void vRegisterCLICommands( void )
 #if CONFIG_FREERTOS_USE_STATS_FORMATTING_FUNCTIONS
 	FreeRTOS_CLIRegisterCommand( &xTaskStatus );
 #endif
-#if CFG_TUD_NET
+#if CONFIG_TINYUSB_NET_ENABLED
 	FreeRTOS_CLIRegisterCommand( &xAPCommand );
 	FreeRTOS_CLIRegisterCommand( &xStationCommand );
 	FreeRTOS_CLIRegisterCommand( &xSetWiFiModeCommand );
 	FreeRTOS_CLIRegisterCommand( &xSmartConfigCommand );
 	FreeRTOS_CLIRegisterCommand( &xScanCommand );
-#endif /* CFG_TUD_NET */
+#endif /* CONFIG_TINYUSB_NET_ENABLED */
 	FreeRTOS_CLIRegisterCommand( &xRamCommand );
 	FreeRTOS_CLIRegisterCommand( &xRestartCommand );
 	FreeRTOS_CLIRegisterCommand( &xGetVersionCommand );
@@ -212,7 +212,7 @@ static BaseType_t prvTaskStatusCommand( char *pcWriteBuffer, size_t xWriteBuffer
 #endif
 /*-----------------------------------------------------------*/
 
-#if CFG_TUD_NET
+#if CONFIG_TINYUSB_NET_ENABLED
 static BaseType_t prvStationCommand( char *pcWriteBuffer, size_t xWriteBufferLen, const char *pcCommandString )
 {
 	char *pc1, *pc2, *pc3, *pc4, *pc5, *pc6;
@@ -530,7 +530,7 @@ static BaseType_t prvSmartConfigCommand( char *pcWriteBuffer, size_t xWriteBuffe
 	return pdFALSE;
 }
 /*-----------------------------------------------------------*/
-#endif /* CFG_TUD_NET */
+#endif /* CONFIG_TINYUSB_NET_ENABLED */
 
 static BaseType_t prvRamCommand( char *pcWriteBuffer, size_t xWriteBufferLen, const char *pcCommandString )
 {

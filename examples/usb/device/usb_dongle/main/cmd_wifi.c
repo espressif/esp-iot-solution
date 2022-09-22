@@ -15,7 +15,7 @@
  */
 #include "tinyusb.h"
 
-#if CFG_TUD_NET
+#if CONFIG_TINYUSB_NET_ENABLED
 
 #include <stdio.h>
 #include <stdint.h>
@@ -462,4 +462,4 @@ void initialise_wifi(void)
     initialized = true;
 }
 
-#endif /* CFG_TUD_NET */
+#endif /* CONFIG_TINYUSB_NET_ENABLED */

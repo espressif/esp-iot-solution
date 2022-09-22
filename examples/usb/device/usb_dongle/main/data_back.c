@@ -25,7 +25,7 @@
 #if CONFIG_UART_ENABLE
 #include "driver/uart.h"
 #define UART_NUM    (CONFIG_UART_PORT_NUM)
-#elif CFG_TUD_CDCACM
+#elif CONFIG_TINYUSB_CDCACM_ENABLED
 #include "tusb_cdc_acm.h"
 #define ITF_NUM_CDC   0
 #endif
@@ -34,7 +34,7 @@ void esp_data_back(void* data_buf, size_t lenth, bool flush)
 {
 #if CONFIG_UART_ENABLE
     uart_write_bytes(UART_NUM, (char*)data_buf, lenth);
-#elif CFG_TUD_CDCACM
+#elif CONFIG_TINYUSB_CDCACM_ENABLED
     tinyusb_cdcacm_write_queue(ITF_NUM_CDC, (uint8_t*)data_buf, lenth);
     if (flush) {
         tinyusb_cdcacm_write_flush(ITF_NUM_CDC, 0);
