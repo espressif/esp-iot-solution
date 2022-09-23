@@ -33,6 +33,9 @@ static const char *TAG = "uvc_demo";
 /* using psram for _malloc */
 #define CONFIG_USE_PSRAM
 #ifdef CONFIG_USE_PSRAM
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+#include "esp_psram.h"
+#else
 #if CONFIG_IDF_TARGET_ESP32S2
 #include "esp32s2/spiram.h"
 #elif CONFIG_IDF_TARGET_ESP32S3
@@ -41,13 +44,14 @@ static const char *TAG = "uvc_demo";
 #error Target CONFIG_IDF_TARGET is not supported
 #endif
 #endif
+#endif
 
 /* USB PIN fixed in esp32-s2/s3, can not use io matrix */
 #define BOARD_USB_DP_PIN 20
 #define BOARD_USB_DN_PIN 19
 
 /* uncomment when using bulk mode camera */
-//#define EXAMPLE_BULK_TRANSFER_MODE
+#define EXAMPLE_BULK_TRANSFER_MODE
 
 /* USB Camera Descriptors Related MACROS,
 the quick demo skip the standard get descriptors process,

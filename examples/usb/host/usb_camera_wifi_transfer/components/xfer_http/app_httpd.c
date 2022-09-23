@@ -102,7 +102,7 @@ static esp_err_t capture_handler(httpd_req_t *req)
     httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
 
     char ts[32];
-    snprintf(ts, 32, "%ld.%06ld", fb->timestamp.tv_sec, fb->timestamp.tv_usec);
+    snprintf(ts, 32, "%lld.%06ld", fb->timestamp.tv_sec, fb->timestamp.tv_usec);
     httpd_resp_set_hdr(req, "X-Timestamp", (const char *)ts);
 
     size_t fb_len = 0;
@@ -110,7 +110,7 @@ static esp_err_t capture_handler(httpd_req_t *req)
     res = httpd_resp_send(req, (const char *)fb->buf, fb->len);
     esp_camera_fb_return(fb);
     int64_t fr_end = esp_timer_get_time();
-    ESP_LOGI(TAG, "JPG: %uB %ums", (uint32_t)(fb_len), (uint32_t)((fr_end - fr_start) / 1000));
+    ESP_LOGI(TAG, "JPG: %luB %lums", (uint32_t)(fb_len), (uint32_t)((fr_end - fr_start) / 1000));
     return res;
 }
 
@@ -181,7 +181,7 @@ static esp_err_t stream_handler(httpd_req_t *req)
         last_frame = fr_end;
         frame_time /= 1000;
         uint32_t avg_frame_time = ra_filter_run(&ra_filter, frame_time);
-        ESP_LOGI(TAG, "MJPG: %uB %ums (%.1ffps), AVG: %ums (%.1ffps)"
+        ESP_LOGI(TAG, "MJPG: %luB %lums (%.1ffps), AVG: %lums (%.1ffps)"
                  ,
                  (uint32_t)(_jpg_buf_len),
                  (uint32_t)frame_time, 1000.0 / (uint32_t)frame_time,

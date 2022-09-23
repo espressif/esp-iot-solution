@@ -23,15 +23,17 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
+#include "sdkconfig.h"
+#include "rom/ets_sys.h"
 #include "esp_system.h"
 #include "esp_wifi.h"
-#include "esp_event_loop.h"
+#include "esp_netif.h"
+#include "esp_event.h"
 #include "esp_log.h"
 #include "nvs_flash.h"
-#include "sdkconfig.h"
-
 #include "lwip/err.h"
 #include "lwip/sys.h"
+#include "lwip/ip_addr.h"
 
 /* The examples use WiFi configuration that you can set via 'make menuconfig'.
 
@@ -51,56 +53,45 @@ static const char *TAG = "camera wifi";
 
 static int s_retry_num = 0;
 
-static esp_err_t event_handler(void *ctx, system_event_t *event)
+static void event_handler(void* arg, esp_event_base_t event_base,
+                                int32_t event_id, void* event_data)
 {
-    switch(event->event_id) {
-    case SYSTEM_EVENT_AP_STACONNECTED:
-        ESP_LOGI(TAG, "station:" MACSTR " join, AID=%d",
-                 MAC2STR(event->event_info.sta_connected.mac),
-                 event->event_info.sta_connected.aid);
-        break;
-    case SYSTEM_EVENT_AP_STADISCONNECTED:
-        ESP_LOGI(TAG, "station:" MACSTR "leave, AID=%d",
-                 MAC2STR(event->event_info.sta_disconnected.mac),
-                 event->event_info.sta_disconnected.aid);
-        break;
-    case SYSTEM_EVENT_STA_START:
+    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
         esp_wifi_connect();
-        break;
-    case SYSTEM_EVENT_STA_GOT_IP:
-        ESP_LOGI(TAG, "got ip:%s",
-                 ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip));
-        s_retry_num = 0;
-        break;
-    case SYSTEM_EVENT_STA_DISCONNECTED:
-        {
-            if (s_retry_num < EXAMPLE_ESP_MAXIMUM_RETRY) {
-                esp_wifi_connect();
-                s_retry_num++;
-                ESP_LOGI(TAG,"retry to connect to the AP");
-            }
-            ESP_LOGI(TAG,"connect to the AP fail");
-            break;
+    } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
+        if (s_retry_num < EXAMPLE_ESP_MAXIMUM_RETRY) {
+            esp_wifi_connect();
+            s_retry_num++;
+            ESP_LOGI(TAG, "retry to connect to the AP");
         }
-    default:
-        break;
+        ESP_LOGI(TAG,"connect to the AP fail");
+    } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_AP_STACONNECTED) {
+        wifi_event_ap_staconnected_t* event = (wifi_event_ap_staconnected_t*) event_data;
+        ESP_LOGI(TAG, "station "MACSTR" join, AID=%d",
+                 MAC2STR(event->mac), event->aid);
+    } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_AP_STADISCONNECTED) {
+        wifi_event_ap_stadisconnected_t* event = (wifi_event_ap_stadisconnected_t*) event_data;
+        ESP_LOGI(TAG, "station "MACSTR" leave, AID=%d",
+                 MAC2STR(event->mac), event->aid);
+    } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
+        ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
+        ESP_LOGI(TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
+        s_retry_num = 0;
     }
-    return ESP_OK;
 }
 
-void wifi_init_softap()
+void wifi_init_softap(esp_netif_t *wifi_netif)
 {
     if (strcmp(EXAMPLE_IP_ADDR, "192.168.4.1"))
     {
-        int a, b, c, d;
-        sscanf(EXAMPLE_IP_ADDR, "%d.%d.%d.%d", &a, &b, &c, &d);
-        tcpip_adapter_ip_info_t ip_info;
-        IP4_ADDR(&ip_info.ip, a, b, c, d);
-        IP4_ADDR(&ip_info.gw, a, b, c, d);
-        IP4_ADDR(&ip_info.netmask, 255, 255, 255, 0);
-        ESP_ERROR_CHECK(tcpip_adapter_dhcps_stop(WIFI_IF_AP));
-        ESP_ERROR_CHECK(tcpip_adapter_set_ip_info(WIFI_IF_AP, &ip_info));
-        ESP_ERROR_CHECK(tcpip_adapter_dhcps_start(WIFI_IF_AP));
+        esp_netif_ip_info_t ip;
+        memset(&ip, 0 , sizeof(esp_netif_ip_info_t));
+        ip.ip.addr = ipaddr_addr(EXAMPLE_IP_ADDR);
+        ip.gw.addr = ipaddr_addr(EXAMPLE_IP_ADDR);
+        ip.netmask.addr = ipaddr_addr("255.255.255.0");
+        ESP_ERROR_CHECK(esp_netif_dhcps_stop(wifi_netif));
+        ESP_ERROR_CHECK(esp_netif_set_ip_info(wifi_netif, &ip));
+        ESP_ERROR_CHECK(esp_netif_dhcps_start(wifi_netif));
     }
     wifi_config_t wifi_config;
     memset(&wifi_config, 0, sizeof(wifi_config_t));
@@ -124,7 +115,7 @@ void wifi_init_softap()
              EXAMPLE_ESP_WIFI_AP_SSID, EXAMPLE_ESP_WIFI_AP_PASS);
 }
 
-void wifi_init_sta()
+void wifi_init_sta(esp_netif_t *wifi_netif)
 {
     wifi_config_t wifi_config;
     memset(&wifi_config, 0, sizeof(wifi_config_t));
@@ -140,41 +131,47 @@ void wifi_init_sta()
 
 void app_wifi_main()
 {
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    wifi_mode_t mode = WIFI_MODE_NULL;
-
-    if (strlen(EXAMPLE_ESP_WIFI_AP_SSID) && strlen(EXAMPLE_ESP_WIFI_SSID)) {
-        mode = WIFI_MODE_APSTA;
-    } else if (strlen(EXAMPLE_ESP_WIFI_AP_SSID)) {
-        mode = WIFI_MODE_AP;
-    } else if (strlen(EXAMPLE_ESP_WIFI_SSID)) {
-        mode = WIFI_MODE_STA;
-    }
-
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-      ESP_ERROR_CHECK(nvs_flash_erase());
-      ret = nvs_flash_init();
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK(ret);
+    // Initialize networking stack
+    ESP_ERROR_CHECK(esp_netif_init());
+    // Create default event loop needed by the  main app
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+
+    wifi_mode_t mode = WIFI_MODE_NULL;
+    esp_netif_t *wifi_netif = NULL;
+    if (strlen(EXAMPLE_ESP_WIFI_AP_SSID) && strlen(EXAMPLE_ESP_WIFI_SSID)) {
+        mode = WIFI_MODE_APSTA;
+        wifi_netif = esp_netif_create_default_wifi_ap();
+    } else if (strlen(EXAMPLE_ESP_WIFI_AP_SSID)) {
+        mode = WIFI_MODE_AP;
+        wifi_netif = esp_netif_create_default_wifi_ap();
+    } else if (strlen(EXAMPLE_ESP_WIFI_SSID)) {
+        mode = WIFI_MODE_STA;
+        wifi_netif = esp_netif_create_default_wifi_sta();
+    }
 
     if (mode == WIFI_MODE_NULL) {
         ESP_LOGW(TAG,"Neither AP or STA have been configured. WiFi will be off.");
         return;
     }
 
-    tcpip_adapter_init();
-    ESP_ERROR_CHECK(esp_event_loop_init(event_handler, NULL));
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
     ESP_ERROR_CHECK(esp_wifi_set_mode(mode));
-
+    ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_FLASH));
     if (mode & WIFI_MODE_AP) {
-        wifi_init_softap();
+        wifi_init_softap(wifi_netif);
     }
 
     if (mode & WIFI_MODE_STA) {
-        wifi_init_sta();
+        wifi_init_sta(wifi_netif);
     }
     ESP_ERROR_CHECK(esp_wifi_start());
-    ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE));
 }
