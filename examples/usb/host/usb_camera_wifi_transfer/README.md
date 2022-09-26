@@ -15,9 +15,9 @@ You can use any `ESP32-S2` or `ESP32-S3` development board integrated with PSRAM
 * Cameras that meet the following necessary parameters are supported:
   1. Camera compatible with USB1.1 full speed mode
   2. Camera comes with MJPEG compression
-  3. The camera supports setting the interface Max Packet Size to `512`
-  4. Image **transfer bandwidth should be less than 4 Mbps**, because we use 512 Bytes Packet size with isochronous transfer, only one packet can be transmitted per millisecond in this mode.
-  5. Due to the USB isochronous transfer bandwidth limitation, the image frame rate and single image size are mutually constrained. If the image size is 25 KB per frame, the frame rate can not above 20 FPS
+  3. For isochronous mode, the camera supports setting the interface Max Packet Size to `512`
+  4. For isochronous mode, Image **transfer bandwidth should be less than 4 Mbps**, because we use 512 Bytes Packet size, only one packet can be transmitted per millisecond. If the image size is 25 KB per frame, the frame rate can not above 20 FPS
+  5. For Bulk mode, Image **transfer bandwidth should be less than 8.8 Mbps**. If the image size is 50 KB per frame, the frame rate can not above 20 FPS
   6. This example supports **any resolution** that satisfies the above conditions, as no local decoding is required
 
 * USB camera hardware wiring.
@@ -63,7 +63,7 @@ The example code requires an additional `2 MB` PSRAM and can be used with develo
 4. Click `Get Still` to take a photo
 5. Click on the preview window `Save` to save the current image
 
-### Performance parameters
+### Performance parameters (isochronous mode)
 
 **Under the USB isochronous transfer bandwidth limitation**, different resolution images **compression rate** corresponds to **frame rate**:
 
@@ -74,3 +74,5 @@ The example code requires an additional `2 MB` PSRAM and can be used with develo
   **640*480** image throughput rates up to **15 frames** per second at a compression ratio of **25:1**, with an image size of approximately 36 KB per frame:
 
   ![](./_static/640_480_fps.jpg)
+
+* Since bulk transmission can double the bandwidth, the corresponding frame rate or resolution can also be doubled

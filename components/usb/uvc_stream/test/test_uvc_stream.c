@@ -42,7 +42,7 @@ then hardcode the related MACROS below
 #define DESCRIPTOR_STREAM_INTERFACE_INDEX   1
 #define DESCRIPTOR_STREAM_INTERFACE_ALT_MPS_512 3
 
-#define DESCRIPTOR_STREAM_ISOC_ENDPOINT_ADDR 0x81
+#define DESCRIPTOR_STREAM_ENDPOINT_ADDR 0x81
 
 #define DEMO_FRAME_WIDTH 320
 #define DEMO_FRAME_HEIGHT 240
@@ -52,6 +52,7 @@ then hardcode the related MACROS below
 
 /* max packet size of esp32-s2 is 1*512, bigger is not supported*/
 #define DEMO_ISOC_EP_MPS 512
+#define DEMO_BULK_EP_MPS 64
 #define DEMO_ISOC_INTERFACE_ALT DESCRIPTOR_STREAM_INTERFACE_ALT_MPS_512
 
 static void *_malloc(size_t size)
@@ -81,13 +82,8 @@ static void frame_cb(uvc_frame_t *frame, void *ptr)
     }
 }
 
-TEST_CASE("test uvc streaming", "[usb][uvc_stream]")
+TEST_CASE("test uvc isoc streaming", "[usb][uvc_stream]")
 {
-    /* using internal PHY */
-    usb_hal_context_t hal = {
-        .use_external_phy = false
-    };
-    usb_hal_init(&hal);
     /* malloc double buffer for usb payload, xfer_buffer_size >= frame_buffer_size*/
     uint8_t *xfer_buffer_a = (uint8_t *)_malloc(DEMO_XFER_BUFFER_SIZE);
     TEST_ASSERT(xfer_buffer_a != NULL);
@@ -99,6 +95,7 @@ TEST_CASE("test uvc streaming", "[usb][uvc_stream]")
     TEST_ASSERT(frame_buffer != NULL);
 
     uvc_config_t uvc_config = {
+        .xfer_type = UVC_XFER_ISOC,
         .dev_speed = USB_SPEED_FULL,
         .configuration = DESCRIPTOR_CONFIGURATION_INDEX,
         .format_index = DESCRIPTOR_FORMAT_MJPEG_INDEX,
@@ -108,8 +105,66 @@ TEST_CASE("test uvc streaming", "[usb][uvc_stream]")
         .frame_interval = DEMO_FRAME_INTERVAL,
         .interface = DESCRIPTOR_STREAM_INTERFACE_INDEX,
         .interface_alt = DEMO_ISOC_INTERFACE_ALT,
-        .isoc_ep_addr = DESCRIPTOR_STREAM_ISOC_ENDPOINT_ADDR,
+        .isoc_ep_addr = DESCRIPTOR_STREAM_ENDPOINT_ADDR,
         .isoc_ep_mps = DEMO_ISOC_EP_MPS,
+        .xfer_buffer_size = DEMO_XFER_BUFFER_SIZE,
+        .xfer_buffer_a = xfer_buffer_a,
+        .xfer_buffer_b = xfer_buffer_b,
+        .frame_buffer_size = DEMO_XFER_BUFFER_SIZE,
+        .frame_buffer = frame_buffer,
+    };
+    size_t test_count = 10;
+    for (size_t i = 0; i < test_count; i++) {
+        /* pre-config UVC driver with params from known USB Camera Descriptors*/
+        TEST_ASSERT_EQUAL(ESP_OK, uvc_streaming_config(&uvc_config));
+
+        /* Start camera IN stream with pre-configs, uvc driver will create multi-tasks internal
+        to handle usb data from different pipes, and user's callback will be called after new frame ready. */
+        TEST_ASSERT_EQUAL(ESP_OK, uvc_streaming_start(frame_cb, NULL));
+        vTaskDelay(2000 / portTICK_PERIOD_MS);
+
+        /* test streaming suspend */
+        TEST_ASSERT_EQUAL(ESP_OK, uvc_streaming_suspend());
+        vTaskDelay(2000 / portTICK_PERIOD_MS);
+
+        /* test streaming resume */
+        TEST_ASSERT_EQUAL(ESP_OK, uvc_streaming_resume());
+        vTaskDelay(2000 / portTICK_PERIOD_MS);
+
+        /* test streaming stop */
+        TEST_ASSERT_EQUAL(ESP_OK, uvc_streaming_stop());
+    }
+
+    _free(xfer_buffer_a);
+    _free(xfer_buffer_b);
+    _free(frame_buffer);
+}
+
+TEST_CASE("test uvc cdc streaming", "[usb][uvc_stream]")
+{
+    /* malloc double buffer for usb payload, xfer_buffer_size >= frame_buffer_size*/
+    uint8_t *xfer_buffer_a = (uint8_t *)_malloc(DEMO_XFER_BUFFER_SIZE);
+    TEST_ASSERT(xfer_buffer_a != NULL);
+    uint8_t *xfer_buffer_b = (uint8_t *)_malloc(DEMO_XFER_BUFFER_SIZE);
+    TEST_ASSERT(xfer_buffer_b != NULL);
+
+    /* malloc frame buffer for a jpeg frame*/
+    uint8_t *frame_buffer = (uint8_t *)_malloc(DEMO_XFER_BUFFER_SIZE);
+    TEST_ASSERT(frame_buffer != NULL);
+
+    uvc_config_t uvc_config = {
+        .xfer_type = UVC_XFER_BULK,
+        .dev_speed = USB_SPEED_FULL,
+        .configuration = DESCRIPTOR_CONFIGURATION_INDEX,
+        .format_index = DESCRIPTOR_FORMAT_MJPEG_INDEX,
+        .frame_width = 640,
+        .frame_height = 480,
+        .frame_index = 2,
+        .frame_interval = DEMO_FRAME_INTERVAL,
+        .interface = DESCRIPTOR_STREAM_INTERFACE_INDEX,
+        .interface_alt = 0,
+        .isoc_ep_addr = DESCRIPTOR_STREAM_ENDPOINT_ADDR,
+        .isoc_ep_mps = DEMO_BULK_EP_MPS,
         .xfer_buffer_size = DEMO_XFER_BUFFER_SIZE,
         .xfer_buffer_a = xfer_buffer_a,
         .xfer_buffer_b = xfer_buffer_b,
@@ -125,14 +180,6 @@ TEST_CASE("test uvc streaming", "[usb][uvc_stream]")
         to handle usb data from different pipes, and user's callback will be called after new frame ready. */
         TEST_ASSERT_EQUAL(ESP_OK, uvc_streaming_start(frame_cb, NULL));
         vTaskDelay(2000 / portTICK_PERIOD_MS);
-
-        /* test streaming suspend */
-        TEST_ASSERT_EQUAL(ESP_OK, uvc_streaming_suspend());
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-
-        /* test streaming resume */
-        TEST_ASSERT_EQUAL(ESP_OK, uvc_streaming_resume());
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
 
         /* test streaming stop */
         TEST_ASSERT_EQUAL(ESP_OK, uvc_streaming_stop());

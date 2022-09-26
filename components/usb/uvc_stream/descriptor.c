@@ -1,4 +1,4 @@
-// Copyright 2016-2022 Espressif Systems (Shanghai) PTE LTD
+// Copyright 2020-2022 Espressif Systems (Shanghai) PTE LTD
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -222,26 +222,26 @@ static void print_vs_frame_mjpeg_desc(const uint8_t *buff)
     printf("\twWidth %u\n", desc->wWidth);
     printf("\twHeigh %u\n", desc->wHeigh);
 #ifdef CONFIG_UVC_PRINT_DESC_VERBOSE
-    printf("\tdwMinBitRate %u\n", desc->dwMinBitRate);
-    printf("\tdwMaxBitRate %u\n", desc->dwMaxBitRate);
+    printf("\tdwMinBitRate %lu\n", desc->dwMinBitRate);
+    printf("\tdwMaxBitRate %lu\n", desc->dwMaxBitRate);
 #endif
-    printf("\tdwMaxVideoFrameBufSize %u\n", desc->dwMaxVideoFrameBufSize);
+    printf("\tdwMaxVideoFrameBufSize %lu\n", desc->dwMaxVideoFrameBufSize);
 #ifdef CONFIG_UVC_PRINT_DESC_VERBOSE
-    printf("\tdwDefaultFrameInterval %u\n", desc->dwDefaultFrameInterval);
-    printf("\tbFrameIntervalType %u\n", desc->bFrameIntervalType);
+    printf("\tdwDefaultFrameInterval %lu\n", desc->dwDefaultFrameInterval);
+    printf("\tbFrameIntervalType %lu\n", desc->bFrameIntervalType);
 #endif
 
     if (desc->bFrameIntervalType == 0) {
         // Continuous Frame Intervals
-        printf("\tdwMinFrameInterval %u\n",  desc->dwMinFrameInterval);
-        printf("\tdwMaxFrameInterval %u\n",  desc->dwMaxFrameInterval);
-        printf("\tdwFrameIntervalStep %u\n", desc->dwFrameIntervalStep);
+        printf("\tdwMinFrameInterval %lu\n",  desc->dwMinFrameInterval);
+        printf("\tdwMaxFrameInterval %lu\n",  desc->dwMaxFrameInterval);
+        printf("\tdwFrameIntervalStep %lu\n", desc->dwFrameIntervalStep);
     } else {
         // Discrete Frame Intervals
         size_t num_of_intervals = (desc->bLength - 26) / 4;
         uint32_t *interval = (uint32_t *)&desc->dwFrameInterval;
         for (int i = 0; i < num_of_intervals; ++i) {
-            printf("\tFrameInterval[%d] %u\n", i, interval[i]);
+            printf("\tFrameInterval[%d] %lu\n", i, interval[i]);
         }
     }
 }

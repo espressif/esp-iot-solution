@@ -4,6 +4,8 @@
 
 Users can control USB video stream to start, pause, restart, or stop via a simple API interface. By registering a frame callback, the user's method can be called when a new frame is received.
 
+The component support both isochronous and bulk mode camera
+
 ### Setup Environment
 
 1. Setup ESP-IDF `master` Environment, please refer [installation-step-by-step](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s2/get-started/index.html#installation-step-by-step)
@@ -20,17 +22,19 @@ Users can control USB video stream to start, pause, restart, or stop via a simpl
 
   1. Camera must be compatible with `USB1.1` full-speed mode
   2. Camera must support `MJPEG` compression
-  3. Camera interface `max packet size` be less than `512` bytes
-  4. Frame stream bandwidth should be less than `4 Mbps` (500 KB/s)
-  5. Please refer example readme for special camera requirements
+  3. For isochronous mode camera, interface `max packet size` should be less than `512` bytes
+  4. For isochronous mode camera, frame stream bandwidth should be less than `4 Mbps` (500 KB/s)
+  5. For bulk mode camera, frame stream bandwidth should be less than `8.8 Mbps` (1100 KB/s)
+  6. Please refer example readme for special camera requirements
 
 ### UVC Stream API Guide
 
-1. Users need to know USB camera detailed descriptors in advance, Linux can print the information using the `lsusb -v`, the` uvc_config_t` should be filled based on the information, the parameters correspondence is as follows:
+1. Users need to know USB camera detailed descriptors in advance, the` uvc_config_t` should be filled based on the information, the parameters correspondence is as follows:
 
 ```
 uvc_config_t uvc_config = {
-        .dev_speed = usb_speed_full, / / ​​usb speed mode, must fixed to usb_speed_full
+        .xfer_type = UVC_XFER_ISOC,  // camera transfer mode
+        .dev_speed = usb_speed_full, // ​​usb speed mode, must fixed to usb_speed_full
         .configuration = 1, // configure descriptor index, generally 1
         .format_index = 1, // mjpeg format index, for example 1
         .frame_width = 320, // mjpeg width pixel, for example 320

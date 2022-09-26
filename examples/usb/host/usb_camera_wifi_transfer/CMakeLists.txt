@@ -11,7 +11,7 @@ endif()
 
 # (Not part of the boilerplate)
 # This example uses an extra component for common functions such as Wi-Fi and Ethernet connection.
-set(EXTRA_COMPONENT_DIRS $ENV{IDF_PATH}/examples/common_components/protocol_examples_common $ENV{IOT_SOLUTION_PATH}/components/usb)
+set(EXTRA_COMPONENT_DIRS $ENV{IDF_PATH}/examples/common_components/protocol_examples_common $ENV{IOT_SOLUTION_PATH}/components/usb/uvc_stream)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(uvc_mjpeg_wifi)

@@ -24,15 +24,19 @@
 #include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "uvc_stream.h"
-
 #include "app_wifi.h"
 #include "app_httpd.h"
 #include "esp_camera.h"
 
+static const char *TAG = "uvc_demo";
+
+/* using psram for _malloc */
+#define CONFIG_USE_PSRAM
 #ifdef CONFIG_USE_PSRAM
-#if CONFIG_IDF_TARGET_ESP32 // ESP32/PICO-D4
-#include "esp32/spiram.h"
-#elif CONFIG_IDF_TARGET_ESP32S2
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+#include "esp_psram.h"
+#else
+#if CONFIG_IDF_TARGET_ESP32S2
 #include "esp32s2/spiram.h"
 #elif CONFIG_IDF_TARGET_ESP32S3
 #include "esp32s3/spiram.h"
@@ -40,58 +44,65 @@
 #error Target CONFIG_IDF_TARGET is not supported
 #endif
 #endif
+#endif
 
-/* USB PIN fixed in esp32-s2, can not use io matrix */
+/* USB PIN fixed in esp32-s2/s3, can not use io matrix */
 #define BOARD_USB_DP_PIN 20
 #define BOARD_USB_DN_PIN 19
 
+/* uncomment when using bulk mode camera */
+#define EXAMPLE_BULK_TRANSFER_MODE
+
 /* USB Camera Descriptors Related MACROS,
-the quick demo skip the standred get descriptors process,
-users need to get params from camera descriptors from PC side,
-eg. run `lsusb -v` in linux,
+the quick demo skip the standard get descriptors process,
+users need to get params from camera descriptors from log,
 then hardcode the related MACROS below
 */
 #define DESCRIPTOR_CONFIGURATION_INDEX 1
 #define DESCRIPTOR_FORMAT_MJPEG_INDEX  2
 
-#define DESCRIPTOR_FRAME_640_480_INDEX 1
-#define DESCRIPTOR_FRAME_352_288_INDEX 2
+#define DESCRIPTOR_FRAME_640_480_INDEX 2
 #define DESCRIPTOR_FRAME_320_240_INDEX 3
 
 #define DESCRIPTOR_FRAME_5FPS_INTERVAL  2000000
 #define DESCRIPTOR_FRAME_10FPS_INTERVAL 1000000
 #define DESCRIPTOR_FRAME_15FPS_INTERVAL 666666
+#define DESCRIPTOR_FRAME_25FPS_INTERVAL 400000
 #define DESCRIPTOR_FRAME_30FPS_INTERVAL 333333
 
-#define DESCRIPTOR_STREAM_INTERFACE_INDEX   1
+#define DESCRIPTOR_STREAM_INTERFACE_INDEX       1
 #define DESCRIPTOR_STREAM_INTERFACE_ALT_MPS_128 1
 #define DESCRIPTOR_STREAM_INTERFACE_ALT_MPS_256 2
 #define DESCRIPTOR_STREAM_INTERFACE_ALT_MPS_512 3
+#define DESCRIPTOR_STREAM_INTERFACE_BULK        0
 
-#define DESCRIPTOR_STREAM_ISOC_ENDPOINT_ADDR 0x81
+#define DESCRIPTOR_STREAM_ENDPOINT_ADDR 0x81
 
 /* Demo Related MACROS */
-#ifdef CONFIG_SIZE_320_240
-#define DEMO_FRAME_WIDTH 320
-#define DEMO_FRAME_HEIGHT 240
+#ifndef EXAMPLE_BULK_TRANSFER_MODE
+/* Isochronous transfer mode config */
+#define DEMO_XFER_MODE        UVC_XFER_ISOC
+#define DEMO_FRAME_WIDTH      320
+#define DEMO_FRAME_HEIGHT     240
 #define DEMO_XFER_BUFFER_SIZE (35 * 1024) //Double buffer
-#define DEMO_FRAME_INDEX DESCRIPTOR_FRAME_320_240_INDEX
-#define DEMO_FRAME_INTERVAL DESCRIPTOR_FRAME_15FPS_INTERVAL
-#elif CONFIG_SIZE_640_480
-#define DEMO_FRAME_WIDTH 640
-#define DEMO_FRAME_HEIGHT 480
-#define DEMO_XFER_BUFFER_SIZE (65 * 1024) //Double buffer
-#define DEMO_FRAME_INDEX DESCRIPTOR_FRAME_640_480_INDEX
-#define DEMO_FRAME_INTERVAL DESCRIPTOR_FRAME_5FPS_INTERVAL
+#define DEMO_FRAME_INDEX      DESCRIPTOR_FRAME_320_240_INDEX
+#define DEMO_FRAME_INTERVAL   DESCRIPTOR_FRAME_15FPS_INTERVAL
+#define DEMO_INTERFACE_ALT    DESCRIPTOR_STREAM_INTERFACE_ALT_MPS_512
+#define DEMO_EP_MPS           512         // max MPS of esp32-s2/s3 is 1*512
+#elif defined(EXAMPLE_BULK_TRANSFER_MODE)
+/* Bulk transfer mode config */
+#define DEMO_XFER_MODE        UVC_XFER_BULK
+#define DEMO_FRAME_WIDTH      640
+#define DEMO_FRAME_HEIGHT     480
+#define DEMO_XFER_BUFFER_SIZE (48 * 1024) //Double buffer
+#define DEMO_FRAME_INDEX      DESCRIPTOR_FRAME_640_480_INDEX
+#define DEMO_FRAME_INTERVAL   DESCRIPTOR_FRAME_15FPS_INTERVAL
+#define DEMO_INTERFACE_ALT    DESCRIPTOR_STREAM_INTERFACE_BULK
+#define DEMO_EP_MPS           64
 #endif
-
-/* max packet size of esp32-s2 is 1*512, bigger is not supported*/
-#define DEMO_ISOC_EP_MPS 512
-#define DEMO_ISOC_INTERFACE_ALT DESCRIPTOR_STREAM_INTERFACE_ALT_MPS_512
 
 #define BIT1_NEW_FRAME_START (0x01 << 1)
 #define BIT2_NEW_FRAME_END (0x01 << 2)
-static const char *TAG = "uvc_demo";
 static EventGroupHandle_t s_evt_handle;
 static camera_fb_t s_fb = {0};
 
@@ -128,7 +139,7 @@ void esp_camera_fb_return(camera_fb_t * fb)
  * input queue. If this function takes too long, you'll start losing frames. */
 static void frame_cb(uvc_frame_t *frame, void *ptr)
 {
-    ESP_LOGV(TAG, "callback! frame_format = %d, seq = %u, width = %d, height = %d, length = %u, ptr = %d",
+    ESP_LOGI(TAG, "callback! frame_format = %d, seq = %u, width = %d, height = %d, length = %u, ptr = %d",
             frame->frame_format, frame->sequence, frame->width, frame->height, frame->data_bytes, (int) ptr);
 
     switch (frame->frame_format) {
@@ -158,7 +169,7 @@ void app_main(void)
     /* create eventgroup for task sync */
     s_evt_handle = xEventGroupCreate();
     if (s_evt_handle == NULL) {
-        ESP_LOGE(TAG, "line-%u event group create faild", __LINE__);
+        ESP_LOGE(TAG, "line-%u event group create failed", __LINE__);
         assert(0);
     }
 
@@ -178,11 +189,12 @@ void app_main(void)
     uint8_t *frame_buffer = (uint8_t *)_malloc(DEMO_XFER_BUFFER_SIZE);
     assert(frame_buffer != NULL);
 
-    /* the quick demo skip the standred get descriptors process,
-    users need to get params from camera descriptors from PC side,
-    eg. run `lsusb -v` in linux, then modify related MACROS */
+    /* the quick demo skip the standard get descriptors process,
+    users need to get params from camera descriptors,
+    run the example first to printf the log with descriptors */
     uvc_config_t uvc_config = {
         .dev_speed = USB_SPEED_FULL,
+        .xfer_type = DEMO_XFER_MODE,
         .configuration = DESCRIPTOR_CONFIGURATION_INDEX,
         .format_index = DESCRIPTOR_FORMAT_MJPEG_INDEX,
         .frame_width = DEMO_FRAME_WIDTH,
@@ -190,9 +202,9 @@ void app_main(void)
         .frame_index = DEMO_FRAME_INDEX,
         .frame_interval = DEMO_FRAME_INTERVAL,
         .interface = DESCRIPTOR_STREAM_INTERFACE_INDEX,
-        .interface_alt = DEMO_ISOC_INTERFACE_ALT,
-        .isoc_ep_addr = DESCRIPTOR_STREAM_ISOC_ENDPOINT_ADDR,
-        .isoc_ep_mps = DEMO_ISOC_EP_MPS,
+        .interface_alt = DEMO_INTERFACE_ALT,
+        .isoc_ep_addr = DESCRIPTOR_STREAM_ENDPOINT_ADDR,
+        .isoc_ep_mps = DEMO_EP_MPS,
         .xfer_buffer_size = DEMO_XFER_BUFFER_SIZE,
         .xfer_buffer_a = xfer_buffer_a,
         .xfer_buffer_b = xfer_buffer_b,

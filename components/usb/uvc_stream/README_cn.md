@@ -4,6 +4,8 @@
 
 用户可通过简单的 API 接口控制视频流启动、暂停、重启、和停止操作。通过注册回调函数，可在得到完整图像帧时，对图像数据进行应用层处理。
 
+该组件可支持批量传输或同步传输两种模式的摄像头。
+
 ### 开发环境准备
 
 1. 搭建 ESP-IDF `master` 分支开发环境：[installation-step-by-step](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s2/get-started/index.html#installation-step-by-step)
@@ -20,16 +22,18 @@
 
   1. 摄像头必须兼容 `USB1.1` 全速模式
   2. 摄像头需要自带 `MJPEG` 压缩
-  3. 摄像头支持设置接口 `Max Packet Size` 为 `512`
-  4. 图像数据流 USB 传输总带宽应小于 `4 Mbps` （500 KB/s）
-  5. 分辨率等要求详见示例程序说明文件
+  3. 如使用同步传输摄像头，需要支持设置接口 `Max Packet Size` 为 `512`
+  4. 同步传输模式图像数据流 USB 传输总带宽应小于 `4 Mbps` （500 KB/s）
+  5. 批量传输模式图像数据流 USB 传输总带宽应小于 `8.8 Mbps` （1100 KB/s）
+  6. 分辨率等要求详见示例程序说明文件
 
 ### UVC Stream API 使用说明
 
-1. 用户需提前了解待适配摄像头`配置描述符`的详细参数，Linux 用户可使用 `lsusb -v` 查看， 据此填写 `uvc_config_t` 的配置项，参数对应关系如下：
+1. 用户需提前了解待适配摄像头`配置描述符`的详细参数，据此填写 `uvc_config_t` 的配置项，参数对应关系如下：
 
 ```
     uvc_config_t uvc_config = {
+        .xfer_type = UVC_XFER_ISOC,  //设置摄像头模式为同步传输
         .dev_speed = USB_SPEED_FULL, //固定为 USB_SPEED_FULL
         .configuration = 1, //配置描述符编号，一般为 1
         .format_index = 1, // MJPEG 对应的 bFormatIndex, 例如为 1
