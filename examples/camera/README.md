@@ -13,6 +13,7 @@ The camera sensor transmits data to ESP32 device through DVP(parallel digital vi
 * `pic_server` introduces how to control the action of taking pictures, and view the pictures immediately on the web page.
 * `test_framerate` introduces how to evaluate the speed of the camera sensor and how to improve the speed of the camera sensor.
 * `video_stream_server` demonstrates how to implement a video stream HTTP server on ESP32.
+* `video_recorder` demonstrates how to implement a video recorder on ESP32.
 
 ### More 
 * [ESP-WHO](https://github.com/espressif/esp-who) is an image processing development platform based on Espressif chips. It contains development examples that may be applied in practical applications.
