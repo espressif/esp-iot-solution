@@ -100,7 +100,7 @@ void app_main()
      * Similarly, when you need a smaller resolution image, please use a smaller xclk clock frequency, 
      * otherwise the warning `EV-EOF-OVF` may be triggered.
      */
-    TEST_ESP_OK(init_camera(10000000, PIXFORMAT_YUV422, FRAMESIZE_QVGA, 2));
+    TEST_ESP_OK(init_camera(10000000, PIXFORMAT_JPEG, FRAMESIZE_QVGA, 2));
 
     TEST_ESP_OK(start_pic_server());
 

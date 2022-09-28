@@ -26,7 +26,7 @@ idf.py menuconfig -> Camera Pin Configuration
 step2: Configure your wifi.
 
 ```
-idf.py menuconfig -> Example Connection Configuration
+idf.py menuconfig -> Example Configuration
 ```
 
 step3: Configure the camera.
