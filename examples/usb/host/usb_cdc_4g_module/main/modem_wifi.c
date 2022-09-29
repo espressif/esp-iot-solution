@@ -1,4 +1,4 @@
-// Copyright 2019-2021 Espressif Systems (Shanghai) PTE LTD
+// Copyright 2020-2022 Espressif Systems (Shanghai) PTE LTD
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@
 #include "esp_vfs_dev.h"
 #include "esp_vfs_fat.h"
 #include "esp_wifi.h"
+#include "esp_netif.h"
 #include "nvs.h"
 #include "nvs_flash.h"
 
@@ -26,12 +27,8 @@
 #include "lwip/err.h"
 #include "lwip/sys.h"
 #include "lwip/lwip_napt.h"
-#include "modem_http_config.h"
 #include "modem_wifi.h"
-
-#ifdef CONFIG_EXAMPLE_ENABLE_WEB_ROUTER
 #include "modem_http_config.h"
-#endif
 
 static const char *TAG = "modem_wifi";
 
@@ -43,17 +40,9 @@ static void event_handler(void *arg, esp_event_base_t event_base, int event_id, 
     }
 }
 
-esp_err_t modem_wifi_ap_init(void)
+esp_netif_t *modem_wifi_ap_init(void)
 {
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-
-    /* Register our event handler for Wi-Fi, IP and Provisioning related events */
-    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
-    ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_FLASH));
-
-    return esp_wifi_start();
+    return modem_wifi_init(WIFI_MODE_AP);
 }
 
 esp_netif_t *modem_wifi_init(wifi_mode_t mode)
@@ -73,10 +62,11 @@ esp_netif_t *modem_wifi_init(wifi_mode_t mode)
 
     /* Register our event handler for Wi-Fi, IP and Provisioning related events */
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
-
+    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
     ESP_ERROR_CHECK(esp_wifi_set_mode(mode));
     ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_FLASH));
     ESP_ERROR_CHECK(esp_wifi_start());
+    ESP_LOGI(TAG, "Wi-Fi %s started", mode == WIFI_MODE_STA ? "STA" : "AP");
 
     return wifi_netif;
 }
@@ -112,21 +102,22 @@ esp_err_t modem_wifi_set(modem_wifi_config_t *config)
     return ESP_OK;
 }
 
-esp_err_t modem_wifi_napt_enable()
+esp_err_t modem_wifi_napt_enable(bool enable)
 {
-    ip_napt_enable(_g_esp_netif_soft_ap_ip.ip.addr, 1);
-    ESP_LOGI(TAG, "NAT is enabled");
-
+    ip_napt_enable(_g_esp_netif_soft_ap_ip.ip.addr, enable);
+    ESP_LOGI(TAG, "NAT is %s", enable?"enabled":"disabled");
     return ESP_OK;
 }
 
-esp_err_t modem_wifi_set_dhcps(esp_netif_t *netif, uint32_t addr)
+esp_err_t modem_wifi_set_dns(esp_netif_t *netif, uint32_t addr)
 {
     esp_netif_dns_info_t dns;
     dns.ip.u_addr.ip4.addr = addr;
     dns.ip.type = IPADDR_TYPE_V4;
     dhcps_offer_t dhcps_dns_value = OFFER_DNS;
+    esp_netif_dhcps_stop(netif);
     ESP_ERROR_CHECK(esp_netif_dhcps_option(netif, ESP_NETIF_OP_SET, ESP_NETIF_DOMAIN_NAME_SERVER, &dhcps_dns_value, sizeof(dhcps_dns_value)));
     ESP_ERROR_CHECK(esp_netif_set_dns_info(netif, ESP_NETIF_DNS_MAIN, &dns));
+    esp_netif_dhcps_start(netif);
     return ESP_OK;
 }

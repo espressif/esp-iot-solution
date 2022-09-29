@@ -14,13 +14,37 @@ menu "ESP-MODEM"
             bool "EC600NCNLC-N06"
         config MODEM_TARGET_A7600C1
             bool "A7600C1"
+        config MODEM_TARGET_BG95_M3
+            bool "BG95M3"
+        config MODEM_TARGET_BG96_MA
+            bool "BG96MA"
+        config MODEM_TARGET_MC610_EU
+            bool "MC610_EU"
         config MODEM_TARGET_USER
             bool "User Defined"
     endchoice
 
+    config MODEM_TARGET_NAME
+        string
+        default "ML302-DNLM/CNLM" if MODEM_TARGET_ML302_DNLM
+        default "AIR724UG-NFM" if MODEM_TARGET_AIR724UG_NFM
+        default "EC600NCNLA-N05" if MODEM_TARGET_EC600N_CNLA_N05
+        default "EC600NCNLC-N06" if MODEM_TARGET_EC600N_CNLC_N06
+        default "A7600C1" if MODEM_TARGET_A7600C1
+        default "BG95M3" if MODEM_TARGET_BG95_M3
+        default "BG96MA" if MODEM_TARGET_BG96_MA
+        default "MC610_EU" if MODEM_TARGET_MC610_EU
+        default "User Defined" if MODEM_TARGET_USER
+
+    config MODEM_SUPPORT_SECONDARY_AT_PORT
+        bool "Enable Dual CDC Mode"
+        depends on (MODEM_TARGET_MC610_EU || MODEM_TARGET_USER)
+        default y if MODEM_TARGET_MC610_EU
+        default n if MODEM_TARGET_USER
+
     menu "USB CDC endpoint address config"
         visible if MODEM_TARGET_USER
-        
+
         config MODEM_USB_OUT_EP_ADDR
             hex "Modem USB CDC OUT endpoint address"
             default 0x01 if MODEM_TARGET_ML302_DNLM
@@ -28,11 +52,14 @@ menu "ESP-MODEM"
             default 0x0f if MODEM_TARGET_EC600N_CNLA_N05
             default 0x0a if MODEM_TARGET_EC600N_CNLC_N06
             default 0x0a if MODEM_TARGET_A7600C1
+            default 0x03 if MODEM_TARGET_BG95_M3
+            default 0x04 if MODEM_TARGET_BG96_MA
+            default 0x07 if MODEM_TARGET_MC610_EU
             default 0x01 if MODEM_TARGET_USER
             range 0x01 0x7f
             help
                 USB OUT endpoint address (eg.0x01) used for send AT/data to device
-    
+
         config MODEM_USB_IN_EP_ADDR
             hex "Modem USB CDC IN endpoint address"
             default 0x81 if MODEM_TARGET_ML302_DNLM
@@ -40,25 +67,27 @@ menu "ESP-MODEM"
             default 0x86 if  MODEM_TARGET_EC600N_CNLA_N05
             default 0x81 if  MODEM_TARGET_EC600N_CNLC_N06
             default 0x81 if MODEM_TARGET_A7600C1
+            default 0x84 if MODEM_TARGET_BG95_M3
+            default 0x86 if MODEM_TARGET_BG96_MA
+            default 0x87 if MODEM_TARGET_MC610_EU
             default 0x81 if MODEM_TARGET_USER
             range 0x81 0x8f
             help
                 USB IN endpoint address (eg.0x81) used for recive data from device
+        config MODEM_USB_OUT2_EP_ADDR
+            depends on MODEM_SUPPORT_SECONDARY_AT_PORT
+            hex "Modem USB CDC2 OUT endpoint address (AT Only)"
+            default 0x06 if MODEM_TARGET_MC610_EU
+            range 0x01 0x7f
+            help
+                USB OUT endpoint address (eg.0x01) used for send AT to device
+        config MODEM_USB_IN2_EP_ADDR
+            depends on MODEM_SUPPORT_SECONDARY_AT_PORT
+            hex "Modem USB CDC2 IN endpoint address (AT Only)"
+            default 0x86 if MODEM_TARGET_MC610_EU
+            range 0x81 0x8f
+            help
+                USB IN endpoint address (eg.0x81) used for recive AT from device
     endmenu
-
-    config MODEM_LEGACY_API
-        bool "Enable Legacy API"
-        default y
-        help
-            Set to true if the original pppos_client API from the example's internal
-            component should be used.....
-
-    config MODEM_PPP_APN
-        string "Local netif hostname"
-        default 'internet'
-        depends on MODEM_LEGACY_API
-        help
-            APN (Access Point Name), a logical name of a network
-            the modem connects to in the PPP mode
 
 endmenu

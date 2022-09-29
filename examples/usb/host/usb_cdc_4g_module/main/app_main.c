@@ -1,4 +1,4 @@
-// Copyright 2019-2021 Espressif Systems (Shanghai) PTE LTD
+// Copyright 2020-2022 Espressif Systems (Shanghai) PTE LTD
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -32,11 +32,11 @@
 #include "modem_http_config.h"
 #endif
 
-#ifdef CONFIG_CDC_USE_TRACE_FACILITY
-#include "esp_usbh_cdc.h"
-#endif
+static const char *TAG = "4g_main";
 
-static const char *TAG = "main";
+/* Uncomment to not enter network mode, just stay in command mode, where users can send AT command
+* user can call modem_board_ppp_start to enter network mode later */
+//#define EXAMPLE_NOT_ENTER_PPP_DURING_INIT
 
 static modem_wifi_config_t s_modem_wifi_config = MODEM_WIFI_DEFAULT_CONFIG();
 
@@ -99,25 +99,11 @@ static void _system_dump()
              heap_caps_get_free_size(MALLOC_CAP_8BIT | MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL),
              heap_caps_get_largest_free_block(MALLOC_CAP_8BIT | MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL));
     previousTotalRunTime = totalRunTime;
-#ifdef CONFIG_CDC_USE_TRACE_FACILITY
-    ESP_LOGI(TAG, "..............\n");
-    usbh_cdc_print_buffer_msg();
-#endif
 }
 #endif
 
 void app_main(void)
 {
-    ESP_LOGW(TAG, "Force reset 4g board");
-    gpio_config_t io_config = {
-        .pin_bit_mask = BIT64(MODEM_RESET_GPIO),
-        .mode = GPIO_MODE_OUTPUT
-    };
-    gpio_config(&io_config);
-    gpio_set_level(MODEM_RESET_GPIO, 0);
-    vTaskDelay(pdMS_TO_TICKS(500));
-    gpio_set_level(MODEM_RESET_GPIO, 1);
-
     /* Initialize NVS for Wi-Fi storage */
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -131,7 +117,7 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
-    /* Waitting for modem powerup */
+    /* Waiting for modem powerup */
     vTaskDelay(pdMS_TO_TICKS(3000));
     ESP_LOGI(TAG, "====================================");
     ESP_LOGI(TAG, "     ESP 4G Cat.1 Wi-Fi Router");
@@ -139,33 +125,55 @@ void app_main(void)
 
     /* Initialize modem board. Dial-up internet */
     modem_config_t modem_config = MODEM_DEFAULT_CONFIG();
-    esp_netif_t *ppp_netif = modem_board_init(&modem_config);
-    assert(ppp_netif != NULL);
+    /* Modem init flag, used to control init process */
+#ifdef EXAMPLE_NOT_ENTER_PPP_DURING_INIT
+    /* if Not enter ppp, modem will enter command mode after init */
+    modem_config.flags |= MODEM_FLAGS_INIT_NOT_ENTER_PPP;
+    /* if Not waiting for modem ready, just return after modem init */
+    modem_config.flags |= MODEM_FLAGS_INIT_NOT_BLOCK;
+#endif
+    modem_board_init(&modem_config);
 
 #ifdef CONFIG_EXAMPLE_ENABLE_WEB_ROUTER
     modem_http_get_nvs_wifi_config(&s_modem_wifi_config);
     modem_http_init(&s_modem_wifi_config);
 #endif
-    esp_netif_t *ap_netif = esp_netif_create_default_wifi_ap();
+    esp_netif_t *ap_netif = modem_wifi_ap_init();
     assert(ap_netif != NULL);
-#if CONFIG_EXAMPLE_MANUAL_DNS
-    ESP_ERROR_CHECK(modem_wifi_set_dhcps(ap_netif, inet_addr(CONFIG_EXAMPLE_MANUAL_DNS_ADDR)));
-    ESP_LOGI(TAG, "AP dns addr(manual): %s", CONFIG_EXAMPLE_MANUAL_DNS_ADDR);
-#else /* using dns from ppp */
-    esp_netif_dns_info_t dns;
-    ESP_ERROR_CHECK(esp_netif_get_dns_info(ppp_netif, ESP_NETIF_DNS_MAIN, &dns));
-    ESP_ERROR_CHECK(modem_wifi_set_dhcps(ap_netif, dns.ip.u_addr.ip4.addr));
-    ESP_LOGI(TAG, "AP dns addr(auto): " IPSTR, IP2STR(&dns.ip.u_addr.ip4));
-#endif
-    ESP_ERROR_CHECK(modem_wifi_ap_init());
     ESP_ERROR_CHECK(modem_wifi_set(&s_modem_wifi_config));
-    ESP_ERROR_CHECK(modem_wifi_napt_enable());
-
-    /* Dump system status */
-#ifdef CONFIG_DUMP_SYSTEM_STATUS
-    while (1) {
-        _system_dump();
-        vTaskDelay(pdMS_TO_TICKS(3000));
-    }
+    uint32_t ap_dns_addr = 0;
+#ifdef CONFIG_EXAMPLE_MANUAL_DNS
+    ap_dns_addr = inet_addr(CONFIG_EXAMPLE_MANUAL_DNS_ADDR);
+    ESP_ERROR_CHECK(modem_wifi_set_dns(ap_netif, ap_dns_addr));
+    ESP_LOGI(TAG, "ap dns addr(manual): %s", CONFIG_EXAMPLE_MANUAL_DNS_ADDR);
 #endif
+    ESP_ERROR_CHECK(modem_wifi_napt_enable(true));
+
+    while (1) {
+
+#if defined(EXAMPLE_NOT_ENTER_PPP_DURING_INIT) || defined(CONFIG_MODEM_SUPPORT_SECONDARY_AT_PORT)
+        // if you want to send AT command during ppp network working, make sure the modem support secondary AT port,
+        // otherwise, the modem interface must switch to command mode before send command
+        int rssi = 0, ber = 0;
+        modem_board_get_signal_quality(&rssi, &ber);
+        ESP_LOGI(TAG, "rssi=%d, ber=%d", rssi, ber);
+#endif
+
+        // If manual DNS not defined, set DNS when got address, user better to add a queue to handle this
+#ifndef CONFIG_EXAMPLE_MANUAL_DNS
+        esp_netif_dns_info_t dns;
+        modem_board_get_dns_info(ESP_NETIF_DNS_MAIN, &dns);
+        uint32_t _ap_dns_addr = dns.ip.u_addr.ip4.addr;
+        if (_ap_dns_addr != ap_dns_addr) {
+            modem_wifi_set_dns(ap_netif, _ap_dns_addr);
+            ap_dns_addr = _ap_dns_addr;
+            ESP_LOGW(TAG, "changed: ap dns addr (auto): %s", inet_ntoa(ap_dns_addr));
+        }
+#endif
+
+#ifdef CONFIG_DUMP_SYSTEM_STATUS
+        _system_dump();
+#endif
+        vTaskDelay(pdMS_TO_TICKS(5000));
+    }
 }

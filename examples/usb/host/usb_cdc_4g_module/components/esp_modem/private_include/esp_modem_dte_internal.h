@@ -41,6 +41,7 @@ extern "C" {
 typedef struct {
     uart_port_t uart_port;                  /*!< UART port */
     uint8_t *buffer;                        /*!< Internal buffer to store response lines/data from DCE */
+    uint8_t *data_buffer;                   /*!< Internal buffer to store response data from DCE */
     QueueHandle_t event_queue;              /*!< UART event queue handle */
     esp_event_loop_handle_t event_loop_hdl; /*!< Event loop handle */
     TaskHandle_t uart_event_task_hdl;       /*!< UART event task handle */
@@ -49,7 +50,11 @@ typedef struct {
     esp_modem_on_receive receive_cb;        /*!< ptr to data reception */
     void *receive_cb_ctx;                   /*!< ptr to rx fn context data */
     int line_buffer_size;                   /*!< line buffer size in command mode */
+    int data_buffer_size;                   /*!< data buffer size in data mode */
     int pattern_queue_size;                 /*!< UART pattern queue size */
+    int conn_state;                         /*!< DTE connection state, 0 if disconnect, 1 if connect */
+    usbh_cdc_cb_t conn_callback;            /*!< DTE connect callback */
+    usbh_cdc_cb_t disconn_callback;         /*!< DTE disconnect callback */
 } esp_modem_dte_internal_t;
 
 #ifdef __cplusplus

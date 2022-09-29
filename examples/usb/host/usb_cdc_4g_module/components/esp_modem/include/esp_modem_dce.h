@@ -22,8 +22,6 @@ extern "C" {
 #include "esp_modem.h"
 #include "esp_modem_dte.h"
 
-
-
 /**
  * @brief Forward declaration of the command list object, which (if enabled) is used
  * to populate a command palette and access commands by its symbolic name
@@ -49,8 +47,6 @@ typedef esp_err_t (*dce_command_t)(esp_modem_dce_t *dce, void *param, void *resu
  * @brief Type of line handlers called fro DTE upon line response reception
  */
 typedef esp_err_t (*esp_modem_dce_handle_line_t)(esp_modem_dce_t *dce, const char *line);
-
-
 
 /**
  * @brief DCE(Data Communication Equipment)
@@ -82,7 +78,6 @@ struct esp_modem_dce {
     dce_command_t set_flow_ctrl;                                                /*!< generic command for flow-ctrl */
     dce_command_t store_profile;                                                /*!< generic command for store-profile */
 };
-
 
 // DCE commands building blocks
 /**
@@ -184,6 +179,19 @@ esp_err_t esp_modem_dce_default_init(esp_modem_dce_t *dce, esp_modem_dce_config_
  *      - ESP_FAIL on error
  */
 esp_err_t esp_modem_dce_set_params(esp_modem_dce_t *dce, esp_modem_dce_config_t* config);
+
+
+/**
+ * @brief Change PDP context APN, will takes effect after redial-up, redial-up will execute if force_enable is true,  
+ *
+ * @param dce Modem DCE object
+ * @param new_apn Access point name
+ * @param force_enable if force enbale
+ * @return esp_err_t
+ *      - ESP_OK on success
+ *      - ESP_FAIL on error
+ */
+esp_err_t esp_modem_dce_set_apn(esp_modem_dce_t *dce, const char *new_apn);
 
 
 // list command operations

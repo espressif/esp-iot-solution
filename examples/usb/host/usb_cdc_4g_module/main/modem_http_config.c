@@ -1,11 +1,16 @@
-/* Simple HTTP Server Example
+// Copyright 2020-2022 Espressif Systems (Shanghai) PTE LTD
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 
-   This example code is in the Public Domain (or CC0 licensed, at your option.)
-
-   Unless required by applicable law or agreed to in writing, this
-   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-   CONDITIONS OF ANY KIND, either express or implied.
-*/
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -55,10 +60,10 @@ static const char *TAG = "4g_router_server";
         ESP_LOGE(TAG, "%s:%d (%s):%s", __FILE__, __LINE__, __FUNCTION__, str); \
         return (ret);                                                          \
     }
-#define STA_CHECK_GOTO(a, str, lable)                                          \
+#define STA_CHECK_GOTO(a, str, label)                                          \
     if (!(a)) {                                                                \
         ESP_LOGE(TAG, "%s:%d (%s):%s", __FILE__, __LINE__, __FUNCTION__, str); \
-        goto lable;                                                            \
+        goto label;                                                            \
     }
 
 #define STA_NODE_MUTEX_TICKS_TO_WAIT 200
@@ -1004,7 +1009,7 @@ static httpd_uri_t system_station_delete_device_post = {
     .user_ctx = NULL
 };
 
-static httpd_uri_t system_station_chanege_name_post = {
+static httpd_uri_t system_station_change_name_post = {
     .uri = "/system/station_state/change_name",
     .method = HTTP_POST,
     .handler = system_station_change_name_post_handler,
@@ -1049,8 +1054,8 @@ static httpd_handle_t start_webserver(const char *base_path)
         httpd_register_uri_handler(server, &system_station_get);
         system_station_delete_device_post.user_ctx = ctx_info;
         httpd_register_uri_handler(server, &system_station_delete_device_post);
-        system_station_chanege_name_post.user_ctx = ctx_info;
-        httpd_register_uri_handler(server, &system_station_chanege_name_post);
+        system_station_change_name_post.user_ctx = ctx_info;
+        httpd_register_uri_handler(server, &system_station_change_name_post);
         login_get.user_ctx = ctx_info;
         httpd_register_uri_handler(server, &login_get);
         login_post.user_ctx = ctx_info;
