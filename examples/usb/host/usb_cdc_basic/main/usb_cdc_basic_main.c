@@ -30,9 +30,13 @@ static const char *TAG = "cdc_basic_demo";
 #define IN_RINGBUF_SIZE (1024 * 1)
 #define OUT_RINGBUF_SIZE (1024 * 1)
 
+/* enable interface num */
+#define EXAMPLE_BULK_ITF_NUM 2
 /* bulk endpoint address */
-#define EXAMPLE_BULK_IN_EP_ADDR 0x81
-#define EXAMPLE_BULK_OUT_EP_ADDR 0x01
+#define EXAMPLE_BULK_IN0_EP_ADDR 0x81
+#define EXAMPLE_BULK_OUT0_EP_ADDR 0x01
+#define EXAMPLE_BULK_IN1_EP_ADDR 0x82
+#define EXAMPLE_BULK_OUT1_EP_ADDR 0x02
 /* bulk endpoint max package size */
 #define EXAMPLE_BULK_EP_MPS 64
 /* bulk endpoint transfer interval */
@@ -50,7 +54,7 @@ eg. run `lsusb -v` in linux, then hardcode the related params below
 static usb_ep_desc_t bulk_out_ep_desc = {
     .bLength = sizeof(usb_ep_desc_t),
     .bDescriptorType = USB_B_DESCRIPTOR_TYPE_ENDPOINT,
-    .bEndpointAddress = EXAMPLE_BULK_OUT_EP_ADDR,
+    .bEndpointAddress = EXAMPLE_BULK_OUT0_EP_ADDR,
     .bmAttributes = USB_BM_ATTRIBUTES_XFER_BULK,
     .wMaxPacketSize = EXAMPLE_BULK_EP_MPS,
     .bInterval = EXAMPLE_BULK_EP_INTERVAL,
@@ -59,7 +63,7 @@ static usb_ep_desc_t bulk_out_ep_desc = {
 static usb_ep_desc_t bulk_in_ep_desc = {
     .bLength = sizeof(usb_ep_desc_t),
     .bDescriptorType = USB_B_DESCRIPTOR_TYPE_ENDPOINT,
-    .bEndpointAddress = EXAMPLE_BULK_IN_EP_ADDR,
+    .bEndpointAddress = EXAMPLE_BULK_IN0_EP_ADDR,
     .bmAttributes = USB_BM_ATTRIBUTES_XFER_BULK,
     .wMaxPacketSize = EXAMPLE_BULK_EP_MPS,
     .bInterval = EXAMPLE_BULK_EP_INTERVAL,
@@ -73,15 +77,16 @@ static void usb_receive_task(void *param)
 
     while (1) {
         /* Polling USB receive buffer to get data */
-        usbh_cdc_get_buffered_data_len(&data_len);
-
-        if (data_len == 0) {
-            vTaskDelay(1);
-            continue;
+        for (size_t i = 0; i < EXAMPLE_BULK_ITF_NUM; i++) {
+            if(usbh_cdc_get_itf_state(i) == false) continue;
+            usbh_cdc_itf_get_buffered_data_len(i, &data_len);
+            if (data_len > 0) {
+                usbh_cdc_itf_read_bytes(i, buf, data_len, 10);
+                ESP_LOGI(TAG, "Itf %d, Receive len=%d: %.*s", i, data_len, data_len, buf);
+            } else {
+                vTaskDelay(1);
+            }
         }
-
-        usbh_cdc_read_bytes(buf, data_len, 10);
-        ESP_LOGI(TAG, "Receive len=%d: %.*s", data_len, data_len, buf);
     }
 }
 
@@ -109,14 +114,25 @@ void app_main(void)
     ESP_LOGI(TAG, "using default bulk endpoint descriptor");
     static usbh_cdc_config_t config = {
     /* use default endpoint descriptor with user address */
-        .bulk_in_ep_addr = EXAMPLE_BULK_IN_EP_ADDR,
-        .bulk_out_ep_addr = EXAMPLE_BULK_OUT_EP_ADDR,
+        .bulk_in_ep_addr = EXAMPLE_BULK_IN0_EP_ADDR,
+        .bulk_out_ep_addr = EXAMPLE_BULK_OUT0_EP_ADDR,
 #endif
         .rx_buffer_size = IN_RINGBUF_SIZE,
         .tx_buffer_size = OUT_RINGBUF_SIZE,
         .conn_callback = usb_connect_callback,
         .disconn_callback = usb_disconnect_callback,
     };
+
+#if (EXAMPLE_BULK_ITF_NUM > 1)
+    ESP_LOGI(TAG, "itf %d using default bulk endpoint descriptor", 1);
+    config.itf_num = 2;
+    /* test config with only ep addr */
+    config.bulk_in_ep_addrs[1] = EXAMPLE_BULK_IN1_EP_ADDR;
+    config.bulk_out_ep_addrs[1] = EXAMPLE_BULK_OUT1_EP_ADDR;
+    config.rx_buffer_sizes[1] = IN_RINGBUF_SIZE;
+    config.tx_buffer_sizes[1] = OUT_RINGBUF_SIZE;
+#endif
+
     /* install USB host CDC driver */
     esp_err_t ret = usbh_cdc_driver_install(&config);
     assert(ret == ESP_OK);
@@ -130,7 +146,11 @@ void app_main(void)
     char buff[32] = "AT\r\n";
     while (1) {
         int len = usbh_cdc_write_bytes((uint8_t *)buff, strlen(buff));
-        ESP_LOGI(TAG, "Send len=%d: %s", len, buff);
+        ESP_LOGI(TAG, "Send itf0 len=%d: %s", len, buff);
+#if (EXAMPLE_BULK_ITF_NUM > 1)
+        len = usbh_cdc_itf_write_bytes(1, (uint8_t *)buff, strlen(buff));
+        ESP_LOGI(TAG, "Send itf1 len=%d: %s", len, buff);
+#endif
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }

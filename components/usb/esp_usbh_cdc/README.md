@@ -2,13 +2,13 @@
 
 ## USB Host CDC
 
-This component implements a simple version of the USB CDC host function. It only retains the default control endpoint and two bulk transfer endpoints, which streamlines the enumeration logic of the USB host. Users only need to bind the USB CDC device endpoint address to achieve fast Initialization. The component is suitable for the CDC-like vendor classes that require high startup speed.
+This component implements a simple version of the USB CDC host function. It only retains the default control endpoint and bulk transfer endpoints, which streamlines the enumeration logic of the USB host. Users only need to bind the USB CDC device endpoint address to achieve fast Initialization. The component is suitable for the CDC-like vendor classes that require high startup speed.
 
 The design logic of the component API is similar to the [ESP-IDF UART driver](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s2/api-reference/peripherals/uart.html) interface, which can directly replace the UART interface to realize the update of the original code from UART to USB.
 
-## API Guide
+### API Guide
 
-1. Using `usbh_cdc_driver_install` to configure and start internal USB tasks, most importantly the CDC bulk endpoint addresses `bulk_in_ep_addr` and `bulk_out_ep_addr` is required to be specified for communication, and the tramsfer buffer memory size needs to be configured too. user is allowed to config descriptor detials too through `bulk_in_ep` and `bulk_out_ep`.
+1. Using `usbh_cdc_driver_install` to configure and start internal USB tasks, most importantly the CDC bulk endpoint addresses `bulk_in_ep_addr` and `bulk_out_ep_addr` is required to be specified for communication, and the transfer buffer memory size needs to be configured too. user is allowed to config descriptor details too through `bulk_in_ep` and `bulk_out_ep`.
 
     ```
     /* @brief install usbh cdc driver with bulk endpoint configs and size of internal ringbuffer*/
@@ -25,7 +25,7 @@ The design logic of the component API is similar to the [ESP-IDF UART driver](ht
     /* install USB host CDC driver */
     usbh_cdc_driver_install(&config);
 
-    /* Waitting for USB device connected */
+    /* Waiting for USB device connected */
     usbh_cdc_wait_connect(portMAX_DELAY);
     ```
 
@@ -35,7 +35,11 @@ The design logic of the component API is similar to the [ESP-IDF UART driver](ht
 5. `usbh_cdc_write_bytes` can be used to send data to USB Device. The data is first written to the internal transmit `ringbuffer`，then will be sent out during USB bus free.
 6. `usbh_cdc_driver_delete` can uninstall the USB driver completely to release all resources.
 
-## Examples
+### CDC Multiple Interface Support
+
+This component supports enable multiple CDC interfaces, each interface contains an IN and OUT endpoint. Users can communicate with the specified interfaces using `usbh_cdc_itf_read_bytes` and `usbh_cdc_itf_write_bytes`.
+
+### Examples
 
 * [usb host cdc basic example](../../../examples/usb/host/usb_cdc_basic)
 * [usb host cdc 4G modem](../../../examples/usb/host/usb_cdc_4g_module)

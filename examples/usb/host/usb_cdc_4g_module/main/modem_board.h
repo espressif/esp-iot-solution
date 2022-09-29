@@ -33,7 +33,7 @@ extern "C"
         .rx_buffer_size = 1024*15,   \
         .tx_buffer_size = 1024*15,   \
         .line_buffer_size = 1600,    \
-        .event_task_priority = CONFIG_USB_TASK_BASE_PRIORITY + 3,\
+        .event_task_priority = CONFIG_USBH_TASK_BASE_PRIORITY + 3,\
         .event_task_stack_size = 3072\
     }
 

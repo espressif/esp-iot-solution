@@ -2,13 +2,13 @@
 
 ## USB Host CDC
 
-该组件实现了简易版本的 USB CDC 主机功能，仅保留了默认控制传输端点和 2 个批量传输端点，精简了 USB 主机的枚举逻辑，用户只需绑定 USB CDC 设备端点地址即可实现快速的初始化，适用于对启动速度要求较高的自定义类设备。
+该组件实现了简易版本的 USB CDC 主机功能，仅保留了默认控制传输端点和批量传输端点，精简了 USB 主机的枚举逻辑，用户只需绑定 USB CDC 设备端点地址即可实现快速的初始化，适用于对启动速度要求较高的自定义类设备。
 
 该组件 API 的设计逻辑与 [ESP-IDF UART 驱动](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s2/api-reference/peripherals/uart.html)接口类似，可直接替换 UART 接口，实现原有代码 UART-> USB 的更新。
 
-## API 使用说明
+### API 使用说明
 
-1. 使用 `usbh_cdc_driver_install` 来配置和启动内部 USB 任务，最重要的是需要指定 CDC 批量端点地址 `bulk_in_ep_addr` 和 `bulk_out_ep_addr` 用于通信，并且还需要配置 tramsfer 缓冲区内存大小。 用户也可以通过 `bulk_in_ep` 和 `bulk_out_ep` 配置整个描述符详细信息。
+1. 使用 `usbh_cdc_driver_install` 来配置和启动内部 USB 任务，最重要的是需要指定 CDC 批量端点地址 `bulk_in_ep_addr` 和 `bulk_out_ep_addr` 用于通信，并且还需要配置 transfer 缓冲区内存大小。 用户也可以通过 `bulk_in_ep` 和 `bulk_out_ep` 配置整个描述符详细信息。
 
     ```
     /* @brief install usbh cdc driver with bulk endpoint configs and size of internal ringbuffer*/
@@ -25,7 +25,7 @@
     /* install USB host CDC driver */
     usbh_cdc_driver_install(&config);
 
-    /* Waitting for USB device connected */
+    /* Waiting for USB device connected */
     usbh_cdc_wait_connect(portMAX_DELAY);
     ```
 
@@ -35,7 +35,11 @@
 5. `usbh_cdc_write_bytes` 可用于向 USB 设备发送数据。 数据首先写入内部 `ringbuffer`，然后在 USB 总线空闲时发送出去。
 5、`usbh_cdc_driver_delete` 可以完全卸载 USB 驱动，释放所有资源。
 
-## Examples
+### CDC 多接口支持
+
+该组件支持配置多组 CDC 接口，每组接口均包含一个 IN 和 OUT 端点，用户使用 `usbh_cdc_itf_read_bytes` 和 `usbh_cdc_itf_write_bytes` 等 API 与指定接口通信。
+
+### Examples
 
 * [CDC 基础功能示例](../../../examples/usb/host/usb_cdc_basic)
-* [CDC 4G 上网](../../../examples/usb/host/usb_cdc_4g_module)
+* CDC 多接口示例 - [CDC 4G 上网](../../../examples/usb/host/usb_cdc_4g_module)
