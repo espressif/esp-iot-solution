@@ -14,7 +14,7 @@
 #include "pwm_audio.h"
 #include "file_manager.h"
 
-static const char *TAG = "wav palyer";
+static const char *TAG = "wav player";
 
 typedef struct {
     // The "RIFF" chunk descriptor
