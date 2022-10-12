@@ -167,6 +167,10 @@ a {
     height: auto;
 }
 
+.header-menu {
+    /*display: none;*/
+}
+
 .content-base {
     width: 100%;
     min-width: 300px;
@@ -284,6 +288,7 @@ a {
     background-color: #F0F0F2;
     line-height: 40px;
     padding-left: 10px;
+    box-sizing: border-box;
 }
 .header-title-one {
     color: black;
@@ -302,7 +307,7 @@ a {
     overflow: hidden;
     overflow-y: auto;
     box-sizing: border-box;
-    height: 100%;
+    /*height: 100%;*/
 }
 
 .page-title {
@@ -398,6 +403,7 @@ a {
 .device-detail {
     padding: 30px;
     width: 50%;
+    box-sizing: border-box;
 }
 
 .device-battery {
@@ -419,6 +425,7 @@ a {
 .tableStyle{
     background: #FFF;
     width: 100%;
+    min-width: 600px;
     border-collapse: collapse;
 }
 .tCenter{
@@ -1280,3 +1287,69 @@ th {
     }
 }
 
+
+@media (max-width: 768px) {
+    .left-base {
+        z-index: 1000;
+        position: fixed;
+        top: 80px;
+        bottom: 0;
+        display: none;
+        overflow: hidden;
+        background-color: white;
+    }
+    .header-menu {
+        position: absolute;
+        top: 50%;
+        right: 20px;
+        transform: translateY(-50%);
+        width: 40px;
+        height: 40px;
+        background-image: url("../img/menu.png");
+        background-position: center;
+        background-size: contain;
+        background-repeat: no-repeat;
+    }
+    .delMenu {
+        background-image: url("../img/deleteMenu.png");
+    }
+    .page-detail .content-thr {
+        width: 200px;
+        display: inline-block;
+        margin-left: 20px;
+        color: #CCCCCC;
+    }
+    .base-detail {
+        padding: 10px;
+    }
+
+    .base-detail img {
+        height: 30px;
+        width: 30px;
+    }
+
+    .base-detail span {
+        text-align: center;
+        padding-top: 10px;
+        font-size: 12px;
+    }
+
+    .base-two {
+        margin-left: 15px;
+        margin-right: 15px;
+    }
+
+    .base-line-text {
+        margin-bottom: 10px;
+        color: #1890FF;
+    }
+
+    .base-line {
+        height: 2px;
+        width: 110px;
+        background-color: #1890FF;
+    }
+    .device-detail {
+        width: 100%;
+    }
+}

@@ -167,8 +167,25 @@ function updateRouterList () {
     })
 }
 
+function menuClick (e) {
+    console.log('e: ', e.classList)
+    var menuView = document.getElementById('leftMenu')
+    if (e.classList.contains('delMenu')) {
+        menuView.style.display = 'none'
+        e.classList.remove('delMenu')
+    } else {
+        e.classList.add('delMenu')
+        menuView.style.display = 'block'
+    }
+
+}
+
 function initHash () {
     console.log('页面第一次加载')
+
+    var highShow = document.getElementById('customerShow')
+    highShow.style.display = 'none'
+
     updateRouterList()
     var dom = document.querySelector('table')
     dom.addEventListener('click', function(e) {
