@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <stdlib.h>
 #include <string.h>
 
 #include <esp_log.h>
+#include <driver/spi_master.h>
 
 #include "ws2812.h"
 

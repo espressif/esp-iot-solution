@@ -216,6 +216,22 @@ static hal_obj_t s_hal_obj_group[]           = {
         .set_sleep_status = (x_set_sleep_t)bp5758d_set_standby_mode,
     },
 #endif
+#ifdef CONFIG_ENABLE_KP18058_DRIVER
+    {
+        .type = DRIVER_KP18058,
+        .name = "KP18058",
+        .driver_color_bit_depth = 10,
+        .channel_num = 5,
+        .hardware_allow_max_input_value = (1 << 10) - 1,
+        .all_ch_allow_output = true,
+        .init = (x_init_t)kp18058_init,
+        .set_channel = (x_set_channel_t)kp18058_set_channel,
+        .regist_channel = (x_regist_channel_t)kp18058_regist_channel,
+        .set_shutdown = (x_set_shutdown_t)kp18058_set_shutdown,
+        .deinit = (x_deinit_t)kp18058_deinit,
+        .set_sleep_status = (x_set_sleep_t)kp18058_set_standby_mode,
+    },
+#endif
 #ifdef CONFIG_ENABLE_WS2812_DRIVER
     {
         .type = DRIVER_WS2812,
@@ -639,6 +655,32 @@ esp_err_t hal_set_channel(int channel, uint16_t value, uint32_t fade_ms)
 
     LIGHTBULB_CHECK(xSemaphoreTake(s_hal_obj->fade_mutex, FADE_CB_CHECK_MS) == pdTRUE, "Can't get mutex", return ESP_ERR_INVALID_STATE);
 
+#ifdef CONFIG_ENABLE_DITHERING_CHECK
+    // Allows to reduce fade time to increase resolution to avoid dithering
+    uint32_t min_delta = UINT32_MAX;
+    uint32_t max_valve = 0;
+
+    fade_data_t data = { 0 };
+    data = s_hal_obj->fade_data [channel];
+    data.final = final_processing(channel, value);
+    if (abs(data.final - data.cur) > 0) {
+        min_delta = MIN(min_delta, abs(data.final - data.cur));
+    }
+    if (data.cur > max_valve) {
+        max_valve = data.cur;
+    }
+    if (data.final > max_valve) {
+        max_valve = data.final;
+    }
+
+    if (fade_ms > CHANGE_RATE_MS * 2 * min_delta) {
+        fade_ms = min_delta * CHANGE_RATE_MS * 2;
+        if (max_valve < 12) {
+            fade_ms = fade_ms / 2;
+        }
+    }
+#endif
+
     // 2. Get the current value of fade_data
     fade_data_t fade_data = s_hal_obj->fade_data[channel];
 
@@ -657,14 +699,6 @@ esp_err_t hal_set_channel(int channel, uint16_t value, uint32_t fade_ms)
 
     // 5. Count the step value required on each call to fade_ms
     fade_data.step = abs(fade_data.cur - fade_data.final) / fade_data.num;
-#ifdef CONFIG_ENABLE_DITHERING_CHECK
-    // Allows to reduce fade time to increase resolution to avoid dithering
-    if (fade_data.step <= 0.5 && (fade_data.num != 1)) {
-        fade_data.num = fade_data.num * fade_data.step * 2;
-        fade_data.step = 0.5;
-    }
-#endif
-
     if (fade_data.cur > fade_data.final) {
         fade_data.step *= -1;
     }
@@ -703,6 +737,33 @@ esp_err_t hal_set_channel_group(uint16_t value[], uint8_t channel_mask, uint32_t
     LIGHTBULB_CHECK(xSemaphoreTake(s_hal_obj->fade_mutex, pdMS_TO_TICKS(FADE_CB_CHECK_MS)) == pdTRUE, "Can't get mutex", return ESP_ERR_INVALID_STATE);
     bool need_timer = false;
 
+#ifdef CONFIG_ENABLE_DITHERING_CHECK
+    // Allows to reduce fade time to increase resolution to avoid dithering
+    uint32_t min_delta = UINT32_MAX;
+    uint32_t max_valve = 0;
+    for (int channel = 0; channel < HAL_OUT_MAX_CHANNEL; channel++) {
+        fade_data_t fade_data [HAL_OUT_MAX_CHANNEL] = { 0 };
+        fade_data [channel] = s_hal_obj->fade_data [channel];
+        fade_data [channel].final = final_processing(channel, value [channel]);
+        if (abs(fade_data [channel].final - fade_data [channel].cur) > 0) {
+            min_delta = MIN(min_delta, abs(fade_data [channel].final - fade_data [channel].cur));
+        }
+        if (fade_data [channel].cur > max_valve) {
+            max_valve = fade_data [channel].cur;
+        }
+        if (fade_data [channel].final > max_valve) {
+            max_valve = fade_data [channel].final;
+        }
+    }
+
+    if (fade_ms > CHANGE_RATE_MS * 2 * min_delta) {
+        fade_ms = min_delta * CHANGE_RATE_MS * 2;
+        if (max_valve < 12) {
+            fade_ms = fade_ms / 2;
+        }
+    }
+#endif
+
     // 2. loop update channels through mask bits
     fade_data_t fade_data[HAL_OUT_MAX_CHANNEL] = { 0 };
     for (int channel = 0; channel < s_hal_obj->interface->channel_num; channel++) {
@@ -729,14 +790,6 @@ esp_err_t hal_set_channel_group(uint16_t value[], uint8_t channel_mask, uint32_t
 
         // 2.5 Count the step value required on each call to fade_ms
         fade_data[channel].step = abs(fade_data[channel].cur - fade_data[channel].final) / fade_data[channel].num;
-#ifdef CONFIG_ENABLE_DITHERING_CHECK
-        // Allows to reduce fade time to increase resolution to avoid dithering
-        if (fade_data[channel].step <= 0.5 && (fade_data[channel].num != 1)) {
-            fade_data[channel].num = fade_data[channel].num * fade_data[channel].step * 2;
-            fade_data[channel].step = 0.5;
-        }
-#endif
-
         if (fade_data[channel].cur > fade_data[channel].final) {
             fade_data[channel].step *= -1;
         }

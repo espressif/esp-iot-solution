@@ -70,7 +70,7 @@ typedef struct {
     lightbulb_status_t status;
     lightbulb_capability_t cap;
     lightbulb_power_limit_t power;
-    lightbulb_cct_limit_t cct;
+    lightbulb_cct_kelvin_range_t kelvin_range;
     TimerHandle_t power_timer;
     TimerHandle_t storage_timer;
     SemaphoreHandle_t mutex;
@@ -154,7 +154,7 @@ esp_err_t lightbulb_status_erase_nvs_storage(void)
 static uint16_t percentage_convert_to_kelvin(uint16_t percentage)
 {
     float _percentage = (float)percentage / 100;
-    uint16_t _kelvin = (_percentage * (s_lb_obj->cct.max_kelvin - s_lb_obj->cct.min_kelvin) + s_lb_obj->cct.max_kelvin);
+    uint16_t _kelvin = (_percentage * (s_lb_obj->kelvin_range.max - s_lb_obj->kelvin_range.min) + s_lb_obj->kelvin_range.max);
 
     /* Convert to the nearest integer */
     _kelvin = (_kelvin / 100) * 100;
@@ -176,14 +176,14 @@ static uint16_t percentage_convert_to_kelvin(uint16_t percentage)
  */
 static uint8_t kelvin_convert_to_percentage(uint16_t kelvin)
 {
-    if (kelvin > s_lb_obj->cct.max_kelvin) {
-        kelvin = s_lb_obj->cct.max_kelvin;
+    if (kelvin > s_lb_obj->kelvin_range.max) {
+        kelvin = s_lb_obj->kelvin_range.max;
     }
-    if (kelvin < s_lb_obj->cct.min_kelvin) {
-        kelvin = kelvin < s_lb_obj->cct.min_kelvin;
+    if (kelvin < s_lb_obj->kelvin_range.min) {
+        kelvin = kelvin < s_lb_obj->kelvin_range.min;
     }
 
-    return 100 * ((float)(kelvin - s_lb_obj->cct.min_kelvin) / (kelvin > s_lb_obj->cct.max_kelvin - s_lb_obj->cct.max_kelvin));
+    return 100 * ((float)(kelvin - s_lb_obj->kelvin_range.min) / (kelvin > s_lb_obj->kelvin_range.max - s_lb_obj->kelvin_range.max));
 }
 
 /**
@@ -424,12 +424,12 @@ static void print_func(void)
     ESP_LOGI(TAG, "     color min brightness: %d", s_lb_obj->power.color_min_value);
     ESP_LOGI(TAG, "     color max power: %d", s_lb_obj->power.color_max_power);
     if (CHECK_WHITE_CHANNEL_IS_SELECT()) {
-        ESP_LOGI(TAG, "cct limit param: ");
-        ESP_LOGI(TAG, "     max cct: %d", s_lb_obj->cct.max_kelvin);
-        ESP_LOGI(TAG, "     min cct: %d\r\n", s_lb_obj->cct.min_kelvin);
+        ESP_LOGI(TAG, "cct kelvin range param: ");
+        ESP_LOGI(TAG, "     max cct: %d", s_lb_obj->kelvin_range.max);
+        ESP_LOGI(TAG, "     min cct: %d", s_lb_obj->kelvin_range.min);
+        ESP_LOGI(TAG, "cct: %d%%, %dK, brightness: %d", s_lb_obj->status.cct_percentage, percentage_convert_to_kelvin(s_lb_obj->status.cct_percentage), s_lb_obj->status.brightness);
     }
     ESP_LOGI(TAG, "hue: %d, saturation: %d, value: %d", s_lb_obj->status.hue, s_lb_obj->status.saturation, s_lb_obj->status.value);
-    ESP_LOGI(TAG, "cct: %d, brightness: %d", s_lb_obj->status.cct, s_lb_obj->status.brightness);
     ESP_LOGI(TAG, "select works mode: %s, power status: %d", s_lb_obj->status.mode == WORK_COLOR ? "color" : "white", s_lb_obj->status.on);
     ESP_LOGI(TAG, "---------------------------------------------------------------------");
 }
@@ -469,6 +469,11 @@ esp_err_t lightbulb_init(lightbulb_config_t *config)
         driver_conf = (void *) & (config->driver_conf.bp5758d);
     }
 #endif
+#ifdef CONFIG_ENABLE_KP18058_DRIVER
+    if (config->type == DRIVER_KP18058) {
+        driver_conf = (void *) & (config->driver_conf.kp18058);
+    }
+#endif
 #ifdef CONFIG_ENABLE_SM2x35EGH_DRIVER
     if (config->type == DRIVER_SM2235EGH) {
         driver_conf = (void *) & (config->driver_conf.sm2235egh);
@@ -486,6 +491,12 @@ esp_err_t lightbulb_init(lightbulb_config_t *config)
         }
     }
 #endif
+    if (config->type != DRIVER_ESP_PWM && config->type != DRIVER_WS2812) {
+        if (config->capability.enable_mix_cct != true) {
+            config->capability.enable_mix_cct = true;
+            ESP_LOGW(TAG, "The IIC dimming chip must enable CCT mix, rewrite the enable_mix_cct variable to true.");
+        }
+    }
     hal_config_t hal_conf = {
         .type = config->type,
         .driver_data = driver_conf,
@@ -559,12 +570,12 @@ esp_err_t lightbulb_init(lightbulb_config_t *config)
 
     // cct Limit check
     if (CHECK_WHITE_CHANNEL_IS_SELECT()) {
-        if (config->cct_limit) {
-            memcpy(&s_lb_obj->cct, config->cct_limit, sizeof(lightbulb_cct_limit_t));
-            LIGHTBULB_CHECK(s_lb_obj->cct.max_kelvin > s_lb_obj->cct.min_kelvin, "CCT data error", goto EXIT)
+        if (config->kelvin_range) {
+            memcpy(&s_lb_obj->kelvin_range, config->kelvin_range, sizeof(lightbulb_cct_kelvin_range_t));
+            LIGHTBULB_CHECK(s_lb_obj->kelvin_range.max > s_lb_obj->kelvin_range.min, "CCT data error", goto EXIT)
         } else {
-            s_lb_obj->cct.max_kelvin = MAX_CCT_K;
-            s_lb_obj->cct.min_kelvin = MIN_CCT_K;
+            s_lb_obj->kelvin_range.max = MAX_CCT_K;
+            s_lb_obj->kelvin_range.min = MIN_CCT_K;
         }
     }
 
@@ -725,8 +736,8 @@ esp_err_t lightbulb_kelvin2percentage(uint16_t kelvin, uint8_t *percentage)
 {
     LIGHTBULB_CHECK(s_lb_obj, "not init", return ESP_ERR_INVALID_ARG);
     LIGHTBULB_CHECK(percentage, "percentage is null", return ESP_ERR_INVALID_ARG);
-    LIGHTBULB_CHECK(kelvin > s_lb_obj->cct.max_kelvin, "kelvin out of max range", return ESP_ERR_INVALID_ARG);
-    LIGHTBULB_CHECK(kelvin < s_lb_obj->cct.min_kelvin, "kelvin out of min range", return ESP_ERR_INVALID_ARG);
+    LIGHTBULB_CHECK(kelvin > s_lb_obj->kelvin_range.max, "kelvin out of max range", return ESP_ERR_INVALID_ARG);
+    LIGHTBULB_CHECK(kelvin < s_lb_obj->kelvin_range.min, "kelvin out of min range", return ESP_ERR_INVALID_ARG);
 
     *percentage = kelvin_convert_to_percentage(kelvin);
 
@@ -766,7 +777,7 @@ esp_err_t lightbulb_set_cct(uint16_t cct)
 
 esp_err_t lightbulb_set_brightness(uint8_t brightness)
 {
-    return lightbulb_set_cctb(s_lb_obj->status.cct, brightness);
+    return lightbulb_set_cctb(s_lb_obj->status.cct_percentage, brightness);
 }
 
 esp_err_t lightbulb_set_hsv(uint16_t hue, uint8_t saturation, uint8_t value)
@@ -822,12 +833,13 @@ EXIT:
     return err;
 }
 
-esp_err_t lightbulb_set_cctb(uint8_t cct, uint8_t brightness)
+esp_err_t lightbulb_set_cctb(uint16_t cct, uint8_t brightness)
 {
     LIGHTBULB_CHECK(s_lb_obj, "not init", return ESP_ERR_INVALID_ARG);
     LIGHTBULB_CHECK(brightness <= 100, "brightness out of range: %d", return ESP_ERR_INVALID_ARG, brightness);
     if (cct > 100) {
-        ESP_LOGW(TAG, "Current cct percentage value (%d) exceeds the max (100), convert to %d", cct, kelvin_convert_to_percentage(cct));
+        LIGHTBULB_CHECK(cct >= s_lb_obj->kelvin_range.min && cct <= s_lb_obj->kelvin_range.max, "cct out of range: %d", return ESP_ERR_INVALID_ARG, brightness);
+        ESP_LOGW(TAG, "will convert kelvin to percentage, %dK -> %d%%", cct, kelvin_convert_to_percentage(cct));
         cct = kelvin_convert_to_percentage(cct);
     }
     LIGHTBULB_CHECK(cct <= 100, "cct out of range: %d", return ESP_ERR_INVALID_ARG, cct);
@@ -871,7 +883,7 @@ esp_err_t lightbulb_set_cctb(uint8_t cct, uint8_t brightness)
 
     s_lb_obj->status.mode = WORK_WHITE;
     s_lb_obj->status.on = true;
-    s_lb_obj->status.cct = cct;
+    s_lb_obj->status.cct_percentage = cct;
     s_lb_obj->status.brightness = brightness;
 
     if (s_lb_obj->cap.sync_change_brightness_value && CHECK_COLOR_CHANNEL_IS_SELECT()) {
@@ -928,7 +940,7 @@ esp_err_t lightbulb_set_switch(bool status)
             LIGHTBULB_MUTEX_TAKE(portMAX_DELAY);
             s_lb_obj->status.brightness = (s_lb_obj->status.brightness) ? s_lb_obj->status.brightness : 100;
             LIGHTBULB_MUTEX_GIVE();
-            err = lightbulb_set_cctb(s_lb_obj->status.cct, s_lb_obj->status.brightness);
+            err = lightbulb_set_cctb(s_lb_obj->status.cct_percentage, s_lb_obj->status.brightness);
             break;
 
         default:
@@ -982,7 +994,19 @@ int8_t lightbulb_get_cct_percentage(void)
     LIGHTBULB_CHECK(CHECK_WHITE_CHANNEL_IS_SELECT(), "white channel output is disable", return -1);
 
     LIGHTBULB_MUTEX_TAKE(portMAX_DELAY);
-    int8_t result = s_lb_obj->status.cct;
+    int8_t result = s_lb_obj->status.cct_percentage;
+    LIGHTBULB_MUTEX_GIVE();
+
+    return result;
+}
+
+int16_t lightbulb_get_cct_kelvin(void)
+{
+    LIGHTBULB_CHECK(s_lb_obj, "not init", return -1);
+    LIGHTBULB_CHECK(CHECK_WHITE_CHANNEL_IS_SELECT(), "white channel output is disable", return -1);
+
+    LIGHTBULB_MUTEX_TAKE(portMAX_DELAY);
+    int16_t result = percentage_convert_to_kelvin(s_lb_obj->status.cct_percentage);
     LIGHTBULB_MUTEX_GIVE();
 
     return result;
@@ -998,38 +1022,6 @@ int8_t lightbulb_get_brightness(void)
     LIGHTBULB_MUTEX_GIVE();
 
     return result;
-}
-
-esp_err_t lightbulb_get_hsv(uint16_t *hue, uint8_t *saturation, uint8_t *value)
-{
-    LIGHTBULB_CHECK(s_lb_obj, "not init", return ESP_ERR_INVALID_ARG);
-    LIGHTBULB_CHECK(CHECK_COLOR_CHANNEL_IS_SELECT(), "color channel output is disable", return -1);
-    LIGHTBULB_CHECK(hue, "h is null", return ESP_ERR_INVALID_ARG);
-    LIGHTBULB_CHECK(saturation, "s is null", return ESP_ERR_INVALID_ARG);
-    LIGHTBULB_CHECK(value, "v is null", return ESP_ERR_INVALID_ARG);
-
-    LIGHTBULB_MUTEX_TAKE(portMAX_DELAY);
-    *hue = s_lb_obj->status.hue;
-    *saturation = s_lb_obj->status.saturation;
-    *value = s_lb_obj->status.value;
-    LIGHTBULB_MUTEX_GIVE();
-
-    return ESP_OK;
-}
-
-esp_err_t lightbulb_get_ctb(uint8_t *cct, uint8_t *brightness)
-{
-    LIGHTBULB_CHECK(s_lb_obj, "not init", return ESP_ERR_INVALID_ARG);
-    LIGHTBULB_CHECK(CHECK_WHITE_CHANNEL_IS_SELECT(), "white channel output is disable", return ESP_ERR_INVALID_ARG);
-    LIGHTBULB_CHECK(cct, "cct is null", return ESP_ERR_INVALID_ARG);
-    LIGHTBULB_CHECK(brightness, "brightness is null", return ESP_ERR_INVALID_ARG);
-
-    LIGHTBULB_MUTEX_TAKE(portMAX_DELAY);
-    *cct = s_lb_obj->status.cct;
-    *brightness = s_lb_obj->status.brightness;
-    LIGHTBULB_MUTEX_GIVE();
-
-    return ESP_OK;
 }
 
 esp_err_t lightbulb_get_all_detail(lightbulb_status_t *status)
@@ -1126,7 +1118,7 @@ lightbulb_works_mode_t lightbulb_get_mode(void)
 
 esp_err_t lightbulb_basic_effect_start(lightbulb_effect_config_t *config)
 {
-    esp_err_t err = ESP_OK;
+    esp_err_t err = ESP_ERR_INVALID_STATE;
     LIGHTBULB_CHECK(config, "config is null", return ESP_FAIL);
     LIGHTBULB_CHECK(s_lb_obj, "not init", return ESP_ERR_INVALID_ARG);
     LIGHTBULB_MUTEX_TAKE(portMAX_DELAY);
@@ -1138,11 +1130,12 @@ esp_err_t lightbulb_basic_effect_start(lightbulb_effect_config_t *config)
     }
 
     if (config->mode == WORK_COLOR) {
-        LIGHTBULB_CHECK(CHECK_COLOR_CHANNEL_IS_SELECT(), "color channel output is disable", return ESP_ERR_INVALID_STATE);
+        LIGHTBULB_CHECK(CHECK_COLOR_CHANNEL_IS_SELECT(), "color channel output is disable", goto EXIT);
         uint16_t color_value_max[5] = { 0 };
         uint16_t color_value_min[5] = { 0 };
         uint8_t channel_mask = get_channel_mask(WORK_COLOR);
-
+        err = ESP_OK;
+    
         color_value_max[0] = config->red * config->max_brightness / 100;
         color_value_max[1] = config->green * config->max_brightness / 100;
         color_value_max[2] = config->blue * config->max_brightness / 100;
@@ -1156,10 +1149,16 @@ esp_err_t lightbulb_basic_effect_start(lightbulb_effect_config_t *config)
         err |= hal_start_channel_group_action(color_value_min, color_value_max, channel_mask, config->effect_cycle_ms, flag);
 
     } else if (config->mode == WORK_WHITE) {
-        LIGHTBULB_CHECK(CHECK_WHITE_CHANNEL_IS_SELECT(), "white channel output is disable", return ESP_ERR_INVALID_ARG);
+        LIGHTBULB_CHECK(CHECK_WHITE_CHANNEL_IS_SELECT(), "white channel output is disable", goto EXIT);
+        if (config->cct > 100) {
+            LIGHTBULB_CHECK(config->cct >= s_lb_obj->kelvin_range.min && config->cct <= s_lb_obj->kelvin_range.max, "cct kelvin out of range: %d", goto EXIT, config->cct);
+            ESP_LOGW(TAG, "will convert kelvin to percentage, %dK -> %d%%", config->cct , kelvin_convert_to_percentage(config->cct));
+            config->cct = kelvin_convert_to_percentage(config->cct);
+        }
         uint16_t white_value_max[5] = { 0 };
         uint16_t white_value_min[5] = { 0 };
         uint8_t channel_mask = get_channel_mask(WORK_WHITE);
+        err = ESP_OK;
 
         if (CHECK_WHITE_OUTPUT_REQ_MIXED()) {
             cct_and_brightness_convert_to_cold_and_warm(config->cct, config->max_brightness, &white_value_max[3], &white_value_max[4]);
@@ -1168,14 +1167,15 @@ esp_err_t lightbulb_basic_effect_start(lightbulb_effect_config_t *config)
         } else {
             white_value_max[4] = config->max_brightness * 255 / 100;
             white_value_min[4] = config->min_brightness * 255 / 100;
-            err = hal_set_channel(CHANNEL_ID_COLD_CCT_WHITE, config->cct * 255 / 100, 0);
-            err = hal_start_channel_action(CHANNEL_ID_WARM_BRIGHTNESS_YELLOW, white_value_min[4], white_value_max[4], config->effect_cycle_ms, flag);
+            err |= hal_set_channel(CHANNEL_ID_COLD_CCT_WHITE, config->cct * 255 / 100, 0);
+            err |= hal_start_channel_action(CHANNEL_ID_WARM_BRIGHTNESS_YELLOW, white_value_min[4], white_value_max[4], config->effect_cycle_ms, flag);
         }
     } else {
         err = ESP_ERR_NOT_SUPPORTED;
     }
-    LIGHTBULB_MUTEX_GIVE();
 
+EXIT:
+    LIGHTBULB_MUTEX_GIVE();
     return err;
 }
 

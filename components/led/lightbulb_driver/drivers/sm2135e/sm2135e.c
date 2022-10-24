@@ -15,7 +15,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "esp_log.h"
+#include <esp_log.h>
 
 #include "iic.h"
 #include "sm2135e.h"

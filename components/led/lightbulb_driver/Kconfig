@@ -31,6 +31,12 @@ menu "LightBulb Driver Config"
             help
                 Enable BP5758d output.
 
+        config ENABLE_KP18058_DRIVER
+            bool "Enable kp18058 interface"
+            default "y"
+            help
+                Enable KP18058 output.
+
         config ENABLE_WS2812_DRIVER
             bool "Enable ws2812 interface"
             default "y"

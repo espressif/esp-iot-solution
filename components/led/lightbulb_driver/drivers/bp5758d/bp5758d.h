@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "driver/i2c.h"
+#include "driver/gpio.h"
 #pragma once
 
 /**

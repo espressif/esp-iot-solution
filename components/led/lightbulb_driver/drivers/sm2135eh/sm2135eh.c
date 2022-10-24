@@ -12,12 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "sm2135eh.h"
-#include "iic.h"
-
-#include "esp_log.h"
 #include <stdio.h>
 #include <string.h>
+
+#include <esp_log.h>
+
+#include "sm2135eh.h"
+#include "iic.h"
 
 static const char *TAG = "driver_sm2135eh";
 

@@ -25,7 +25,7 @@
 #define ACK_VAL                     (0x0)
 #define NACK_VAL                    (0x1)
 
-#define MAX_CMD_DATA_LEN            (11)
+#define MAX_CMD_DATA_LEN            (15)
 #define MAX_QUEUE_LEN               (20)
 
 static const char *TAG = "iic";
@@ -44,7 +44,7 @@ typedef struct {
 
 typedef struct {
     uint8_t addr;
-    uint8_t data[MAX_CMD_DATA_LEN + 1];
+    uint8_t data[MAX_CMD_DATA_LEN];
     size_t real_data_size;
 } i2c_send_data_t;
 

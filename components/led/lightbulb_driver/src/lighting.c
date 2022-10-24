@@ -289,8 +289,8 @@ void lightbulb_lighting_output_test(lightbulb_lighting_unit_t mask, uint16_t spe
     if (mask & BIT(9)) {
         ESP_LOGW(TAG, "white increment");
         lightbulb_set_switch(false);
-        for (int i = 0; i <= 100; i += 10) {
-            lightbulb_set_cctb(100, i);
+        for (int i = 0; i <= 100; i += 5) {
+            lightbulb_set_cctb(50, i);
             vTaskDelay(pdMS_TO_TICKS(speed_ms));
         }
 
