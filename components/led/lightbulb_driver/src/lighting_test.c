@@ -171,9 +171,9 @@ void lightbulb_lighting_output_test(lightbulb_lighting_unit_t mask, uint16_t spe
             .effect_type = EFFECT_BREATH,
             .mode = WORK_COLOR,
         };
-        lightbulb_basis_effect_start(&effect1);
+        lightbulb_basic_effect_start(&effect1);
         vTaskDelay(pdMS_TO_TICKS(speed_ms) * 5);
-        lightbulb_basis_effect_stop();
+        lightbulb_basic_effect_stop();
         vTaskDelay(pdMS_TO_TICKS(speed_ms) * 5);
         lightbulb_effect_config_t effect2 = {
             .red = 255,
@@ -185,9 +185,9 @@ void lightbulb_lighting_output_test(lightbulb_lighting_unit_t mask, uint16_t spe
             .effect_type = EFFECT_BLINK,
             .mode = WORK_COLOR,
         };
-        lightbulb_basis_effect_start(&effect2);
+        lightbulb_basic_effect_start(&effect2);
         vTaskDelay(pdMS_TO_TICKS(speed_ms) * 5);
-        lightbulb_basis_effect_stop_and_restore();
+        lightbulb_basic_effect_stop_and_restore();
     }
 
     // BIT6 action (only white)
@@ -202,9 +202,9 @@ void lightbulb_lighting_output_test(lightbulb_lighting_unit_t mask, uint16_t spe
             .effect_type = EFFECT_BREATH,
             .mode = WORK_WHITE,
         };
-        lightbulb_basis_effect_start(&effect1);
+        lightbulb_basic_effect_start(&effect1);
         vTaskDelay(pdMS_TO_TICKS(speed_ms) * 5);
-        lightbulb_basis_effect_stop();
+        lightbulb_basic_effect_stop();
         vTaskDelay(pdMS_TO_TICKS(speed_ms) * 5);
         lightbulb_effect_config_t effect2 = {
             .cct = 100,
@@ -214,9 +214,9 @@ void lightbulb_lighting_output_test(lightbulb_lighting_unit_t mask, uint16_t spe
             .effect_type = EFFECT_BLINK,
             .mode = WORK_WHITE,
         };
-        lightbulb_basis_effect_start(&effect2);
+        lightbulb_basic_effect_start(&effect2);
         vTaskDelay(pdMS_TO_TICKS(speed_ms) * 5);
-        lightbulb_basis_effect_stop_and_restore();
+        lightbulb_basic_effect_stop_and_restore();
     }
 
     // BIT7 Alexa

@@ -200,7 +200,7 @@ typedef struct {
     uint8_t white_max_brightness; //Limit the maximum brightness of white light output
     uint8_t white_min_brightness; //Limit the minimum brightness of white light output
     uint8_t color_max_value;
-    uint8_t color_mix_value;
+    uint8_t color_min_value;
 
     /* Dynamically adjust the final power
      * range: 100% <= value <= 300%
@@ -579,21 +579,21 @@ esp_err_t lightbulb_status_erase_nvs_storage(void);
  * @param config
  * @return esp_err_t
  */
-esp_err_t lightbulb_basis_effect_start(lightbulb_effect_config_t *config);
+esp_err_t lightbulb_basic_effect_start(lightbulb_effect_config_t *config);
 
 /**
  * @brief Stop the effect in progress and keep the current lighting output
  *
  * @return esp_err_t
  */
-esp_err_t lightbulb_basis_effect_stop(void);
+esp_err_t lightbulb_basic_effect_stop(void);
 
 /**
  * @brief Stop the effect in progress and restore the previous lighting output
  *
  * @return esp_err_t
  */
-esp_err_t lightbulb_basis_effect_stop_and_restore(void);
+esp_err_t lightbulb_basic_effect_stop_and_restore(void);
 
 /**
  * @brief Used to test lightbulb hardware functionality
