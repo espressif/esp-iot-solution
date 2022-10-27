@@ -163,7 +163,7 @@ lightbulb_power_limit_t limit = {
     .white_max_brightness = 100,
     .white_min_brightness = 10,
     .color_max_value = 100,
-    .color_mix_value = 10,
+    .color_min_value = 10,
     .white_max_power = 100,
     .color_max_power = 100
 }

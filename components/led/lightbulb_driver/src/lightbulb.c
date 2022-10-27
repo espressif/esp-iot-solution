@@ -264,7 +264,7 @@ static uint8_t process_color_value_limit(uint8_t value)
     }
     float percentage = value / 100.0;
 
-    uint8_t result = (s_lb_obj->power.color_max_value - s_lb_obj->power.color_mix_value) * percentage + s_lb_obj->power.color_mix_value;
+    uint8_t result = (s_lb_obj->power.color_max_value - s_lb_obj->power.color_min_value) * percentage + s_lb_obj->power.color_min_value;
     ESP_LOGD(TAG, "color_value convert input:%d output:%d", value, result);
     return result;
 }
@@ -421,7 +421,7 @@ static void print_func(void)
     ESP_LOGI(TAG, "     white min brightness: %d", s_lb_obj->power.white_min_brightness);
     ESP_LOGI(TAG, "     white max power: %d", s_lb_obj->power.white_max_power);
     ESP_LOGI(TAG, "     color max brightness: %d", s_lb_obj->power.color_max_value);
-    ESP_LOGI(TAG, "     color min brightness: %d", s_lb_obj->power.color_mix_value);
+    ESP_LOGI(TAG, "     color min brightness: %d", s_lb_obj->power.color_min_value);
     ESP_LOGI(TAG, "     color max power: %d", s_lb_obj->power.color_max_power);
     if (CHECK_WHITE_CHANNEL_IS_SELECT()) {
         ESP_LOGI(TAG, "cct limit param: ");
@@ -551,7 +551,7 @@ esp_err_t lightbulb_init(lightbulb_config_t *config)
     } else {
         s_lb_obj->power.color_max_value = 100;
         s_lb_obj->power.white_max_brightness = 100;
-        s_lb_obj->power.color_mix_value = 10;
+        s_lb_obj->power.color_min_value = 10;
         s_lb_obj->power.white_min_brightness = 10;
         s_lb_obj->power.color_max_power = 100;
         s_lb_obj->power.white_max_power = 100;
@@ -697,7 +697,7 @@ esp_err_t lightbulb_rgb2hsv(uint16_t red, uint16_t green, uint16_t blue, uint16_
         _hue = 0;
         _saturation = 0;
     } else {
-        _value = m_delta / m_max;
+        _saturation = m_delta / m_max;
 
         if (red == m_max) {
             _hue = (green - blue) / m_delta;
@@ -1124,7 +1124,7 @@ lightbulb_works_mode_t lightbulb_get_mode(void)
     return result;
 }
 
-esp_err_t lightbulb_basis_effect_start(lightbulb_effect_config_t *config)
+esp_err_t lightbulb_basic_effect_start(lightbulb_effect_config_t *config)
 {
     esp_err_t err = ESP_OK;
     LIGHTBULB_CHECK(config, "config is null", return ESP_FAIL);
@@ -1179,7 +1179,7 @@ esp_err_t lightbulb_basis_effect_start(lightbulb_effect_config_t *config)
     return err;
 }
 
-esp_err_t lightbulb_basis_effect_stop(void)
+esp_err_t lightbulb_basic_effect_stop(void)
 {
     LIGHTBULB_CHECK(s_lb_obj, "not init", return ESP_ERR_INVALID_ARG);
 
@@ -1199,7 +1199,7 @@ esp_err_t lightbulb_basis_effect_stop(void)
     return err;
 }
 
-esp_err_t lightbulb_basis_effect_stop_and_restore(void)
+esp_err_t lightbulb_basic_effect_stop_and_restore(void)
 {
     LIGHTBULB_CHECK(s_lb_obj, "not init", return ESP_ERR_INVALID_ARG);
 
