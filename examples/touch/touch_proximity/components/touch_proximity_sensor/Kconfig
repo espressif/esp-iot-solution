@@ -1,0 +1,9 @@
+menu "Touch Proximity Sensor"
+    
+    config ENABLE_TOUCH_PROX_DEBUG
+        bool "Enable touch proximity debug mode"
+        default n
+        help
+            "If enable values and events will be printf during runtime"
+
+endmenu
