@@ -107,7 +107,25 @@ LED 指示灯是最简单的输出外设之一，可以通过不同形式的闪�
 
     该组件支持线程安全操作，您可使用全局变量共享 LED 指示灯的操作句柄 ``led_indicator_handle_t``，也可以使用 :cpp:type:`led_indicator_get_handle` 在其它线程通过 LED 的 IO 号获取句柄以进行操作。
 
+自定义指示灯闪烁
++++++++++++++++++++
 
+.. code:: c
+    
+    static blink_step_t const *led_blink_lst[] = {
+        [BLINK_DOUBLE] = double_blink,
+        [BLINK_TRIPLE] = triple_blink,
+        [BLINK_NUM] = NULL,
+    };
+
+    led_indicator_config_t config = {
+        .off_level = 0,
+        .mode = LED_GPIO_MODE,
+        .blink_lists = led_blink_lst,
+        .blink_list_num = BLINK_MAX,
+    };
+
+通过定义 ``led_blink_lst[]`` 实现自定义指示灯。
 
 API 参考
 ^^^^^^^^^^^^^^^^

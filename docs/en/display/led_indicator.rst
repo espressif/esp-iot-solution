@@ -4,7 +4,6 @@ LED Indicator
 
 As one of the simplest output peripherals, LED indicators can indicate the current operating state of the system by blinking in different types. ESP-IoT-Solution provides an LED indicator component with the following features:
 
-
 - Can define multiple groups of different blink types
 - Can define the priority of blink types
 - Can set up multiple indicators
@@ -108,6 +107,25 @@ Delete an indicator: you can also delete an indicator to release resources if th
 
     This component supports thread-safe operations. You can share the LED indicator handle ``led_indicator_handle_t`` with global variables, or use :cpp:type:`led_indicator_get_handle` to get the handle in other threads via the LED's IO number for operation.
 
+Custom light blink
+++++++++++++++++++++++
+
+.. code:: c
+    
+    static blink_step_t const *led_blink_lst[] = {
+        [BLINK_DOUBLE] = double_blink,
+        [BLINK_TRIPLE] = triple_blink,
+        [BLINK_NUM] = NULL,
+    };
+
+    led_indicator_config_t config = {
+        .off_level = 0,
+        .mode = LED_GPIO_MODE,
+        .blink_lists = led_blink_lst,
+        .blink_list_num = BLINK_MAX,
+    };
+
+By defining ``led_blink_lst[]`` to achieve the custom indicator.
 
 API Reference
 ^^^^^^^^^^^^^^^^

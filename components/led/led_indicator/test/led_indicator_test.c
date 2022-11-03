@@ -1,4 +1,4 @@
-// Copyright 2020-2021 Espressif Systems (Shanghai) CO LTD
+// Copyright 2022-2024 Espressif Systems (Shanghai) CO LTD
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,10 +16,15 @@
 #include "esp_log.h"
 #include "led_indicator.h"
 #include "unity.h"
+#include "esp_idf_version.h"
 
-#define LED_IO_NUM_0    23
-#define LED_IO_NUM_1    18
-#define LED_IO_NUM_2    5
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+#define portTICK_RATE_MS 1
+#endif
+
+#define LED_IO_NUM_0    15
+#define LED_IO_NUM_1    16
+#define LED_IO_NUM_2    17
 
 #define TAG "led indicator"
 
@@ -32,6 +37,8 @@ void led_indicator_init()
     led_indicator_config_t config = {
         .off_level = 0,
         .mode = LED_GPIO_MODE,
+        .blink_lists = led_indicator_get_sample_lists(),
+        .blink_list_num = led_indicator_get_sample_lists_num(),
     };
 
     led_handle_0 = led_indicator_create(LED_IO_NUM_0, &config);
@@ -150,6 +157,8 @@ void led_indicator_all_init()
     led_indicator_config_t config = {
         .off_level = 0,
         .mode = LED_GPIO_MODE,
+        .blink_lists = led_indicator_get_sample_lists(),
+        .blink_list_num = led_indicator_get_sample_lists_num(),
     };
 
     led_handle_0 = led_indicator_create(LED_IO_NUM_0, &config);
@@ -244,4 +253,68 @@ TEST_CASE("blink three led", "[led][indicator]")
     led_indicator_all_init();
     led_indicator_gpio_mode_three_led();
     led_indicator_all_deinit();
+}
+
+typedef enum {
+    BLINK_DOUBLE,
+    BLINK_TRIPLE,
+    BLINK_NUM,
+} led_blink_type_t;
+
+static const blink_step_t double_blink[] = {
+    {LED_BLINK_HOLD, LED_STATE_ON, 300},
+    {LED_BLINK_HOLD, LED_STATE_OFF, 300},
+    {LED_BLINK_HOLD, LED_STATE_ON, 300},
+    {LED_BLINK_HOLD, LED_STATE_OFF, 300},
+    {LED_BLINK_STOP, 0, 0},
+};
+
+static const blink_step_t triple_blink[] = {
+    {LED_BLINK_HOLD, LED_STATE_ON, 300},
+    {LED_BLINK_HOLD, LED_STATE_OFF, 300},
+    {LED_BLINK_HOLD, LED_STATE_ON, 300},
+    {LED_BLINK_HOLD, LED_STATE_OFF, 300},
+    {LED_BLINK_HOLD, LED_STATE_ON, 300},
+    {LED_BLINK_HOLD, LED_STATE_OFF, 300},
+    {LED_BLINK_STOP, 0, 0},
+};
+
+static blink_step_t const *led_blink_lst[] = {
+    [BLINK_DOUBLE] = double_blink,
+    [BLINK_TRIPLE] = triple_blink,
+    [BLINK_NUM] = NULL,
+};
+
+
+TEST_CASE("User defined blink", "[led][indicator]")
+{
+    led_indicator_config_t config = {
+        .off_level = 0,
+        .mode = LED_GPIO_MODE,
+        .blink_lists = led_blink_lst,
+        .blink_list_num = BLINK_MAX,
+    };
+
+    led_handle_0 = led_indicator_create(LED_IO_NUM_0, &config);
+    TEST_ASSERT_NOT_NULL(led_handle_0);
+    TEST_ASSERT(led_handle_0 == led_indicator_get_handle(LED_IO_NUM_0)); //test get handle
+
+    ESP_LOGI(TAG, "double blink.....");
+    esp_err_t ret = led_indicator_start(led_handle_0, BLINK_DOUBLE);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(2000 / portTICK_RATE_MS);
+    ret = led_indicator_stop(led_handle_0, BLINK_DOUBLE);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(1000 / portTICK_RATE_MS);
+
+    ESP_LOGI(TAG, "triple blink.....");
+    ret = led_indicator_start(led_handle_0, BLINK_TRIPLE);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(2000 / portTICK_RATE_MS);
+    ret = led_indicator_stop(led_handle_0, BLINK_TRIPLE);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(1000 / portTICK_RATE_MS);
+
+
+    led_indicator_deinit();
 }
