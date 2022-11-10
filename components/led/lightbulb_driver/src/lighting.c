@@ -24,7 +24,7 @@ static const char *TAG = "output_test";
 void lightbulb_lighting_output_test(lightbulb_lighting_unit_t mask, uint16_t speed_ms)
 {
     // BIT0 rainbow (only color)
-    if (mask & BIT(0)) {
+    if (mask & LIGHTING_RAINBOW) {
         ESP_LOGW(TAG, "rainbow");
         lightbulb_set_switch(false);
         vTaskDelay(pdMS_TO_TICKS(speed_ms));
@@ -59,7 +59,7 @@ void lightbulb_lighting_output_test(lightbulb_lighting_unit_t mask, uint16_t spe
     }
 
     // BIT1 warm->cold
-    if (mask & BIT(1)) {
+    if (mask & LIGHTING_WARM_TO_COLD) {
         ESP_LOGW(TAG, "warm->cold");
         lightbulb_set_switch(false);
         vTaskDelay(pdMS_TO_TICKS(speed_ms));
@@ -77,7 +77,7 @@ void lightbulb_lighting_output_test(lightbulb_lighting_unit_t mask, uint16_t spe
     }
 
     // BIT2 cold->warm
-    if (mask & BIT(2)) {
+    if (mask & LIGHTING_COLD_TO_WARM) {
         ESP_LOGW(TAG, "cold->warm");
         lightbulb_set_switch(false);
         vTaskDelay(pdMS_TO_TICKS(speed_ms));
@@ -95,7 +95,7 @@ void lightbulb_lighting_output_test(lightbulb_lighting_unit_t mask, uint16_t spe
     }
 
     // BIT3 red green blue cct brightness 0->100
-    if (mask & BIT(3)) {
+    if (mask & LIGHTING_BASIC_FIVE) {
         ESP_LOGW(TAG, "basic five");
         lightbulb_set_switch(false);
         vTaskDelay(pdMS_TO_TICKS(speed_ms));
@@ -140,7 +140,7 @@ void lightbulb_lighting_output_test(lightbulb_lighting_unit_t mask, uint16_t spe
     }
 
     // BIT4 color<->white
-    if (mask & BIT(4)) {
+    if (mask & LIGHTING_COLOR_MUTUAL_WHITE) {
         ESP_LOGW(TAG, "color<->white");
         lightbulb_set_switch(false);
         vTaskDelay(pdMS_TO_TICKS(speed_ms));
@@ -157,8 +157,8 @@ void lightbulb_lighting_output_test(lightbulb_lighting_unit_t mask, uint16_t spe
         lightbulb_set_switch(false);
     }
 
-    // BIT5 action (only color)
-    if (mask & BIT(5)) {
+    // BIT5 effect (only color)
+    if (mask & LIGHTING_COLOR_EFFECT) {
         ESP_LOGW(TAG, "color effect");
         lightbulb_set_switch(false);
         lightbulb_effect_config_t effect1 = {
@@ -190,8 +190,8 @@ void lightbulb_lighting_output_test(lightbulb_lighting_unit_t mask, uint16_t spe
         lightbulb_basic_effect_stop_and_restore();
     }
 
-    // BIT6 action (only white)
-    if (mask & BIT(6)) {
+    // BIT6 effect (only white)
+    if (mask & LIGHTING_WHITE_EFFECT) {
         ESP_LOGW(TAG, "white effect");
         lightbulb_set_switch(false);
         lightbulb_effect_config_t effect1 = {
@@ -220,7 +220,7 @@ void lightbulb_lighting_output_test(lightbulb_lighting_unit_t mask, uint16_t spe
     }
 
     // BIT7 Alexa
-    if (mask & BIT(7)) {
+    if (mask & LIGHTING_ALEXA) {
         ESP_LOGW(TAG, "Alexa");
         lightbulb_set_switch(false);
         vTaskDelay(pdMS_TO_TICKS(speed_ms));
@@ -272,7 +272,7 @@ void lightbulb_lighting_output_test(lightbulb_lighting_unit_t mask, uint16_t spe
     }
 
     // BIT 8
-    if (mask & BIT(8)) {
+    if (mask & LIGHTING_COLOR_VALUE_INCREMENT) {
         ESP_LOGW(TAG, "color increment");
         lightbulb_set_switch(false);
         vTaskDelay(pdMS_TO_TICKS(speed_ms));
@@ -286,7 +286,7 @@ void lightbulb_lighting_output_test(lightbulb_lighting_unit_t mask, uint16_t spe
     }
 
     //BIT 9
-    if (mask & BIT(9)) {
+    if (mask & LIGHTING_WHITE_BRIGHTNESS_INCREMENT) {
         ESP_LOGW(TAG, "white increment");
         lightbulb_set_switch(false);
         for (int i = 0; i <= 100; i += 5) {
@@ -298,37 +298,4 @@ void lightbulb_lighting_output_test(lightbulb_lighting_unit_t mask, uint16_t spe
     }
 
     ESP_LOGW(TAG, "TEST DONE");
-}
-
-void alexa_light_query_hue_saturation_mapping(uint16_t hue, uint8_t saturation, uint16_t *out_hue, uint8_t *out_saturation)
-{
-    bool found_hue = false;
-    bool found_saturation = false;
-    int8_t index = -1;
-
-    uint16_t src_hue[10] = { 348, 17, 39, 50, 60, 174, 197, 277, 348, 255 };
-    uint16_t src_saturation[10] = { 90, 51, 100, 100, 100, 71, 42, 86, 25, 50 };
-    uint16_t target_hue[10] = { 357, 17, 24, 38, 47, 174, 197, 265, 348, 255 };
-    uint16_t target_saturation[10] = { 100, 90, 100, 100, 100, 100, 80, 100, 50, 70 };
-
-    for (int i = 0; i < 10; i++) {
-        if (hue == src_hue[i]) {
-            found_hue = true;
-            if (src_saturation[i] == saturation) {
-                found_saturation = true;
-                index = i;
-                break;
-            }
-        }
-    }
-
-    if (found_hue && found_saturation && index != -1) {
-        ESP_LOGW(TAG, "mapping success, index:%d", index);
-        *out_hue = target_hue[index];
-        *out_saturation = target_saturation[index];
-    } else {
-        *out_hue = hue;
-        *out_saturation = saturation;
-    }
-    ESP_LOGI(TAG, "input[%d %d] output[%d %d]", hue, saturation, *out_hue, *out_saturation);
 }

@@ -729,6 +729,131 @@ TEST_CASE("BP5758D", "[Application Layer]")
 }
 #endif
 
+#ifdef CONFIG_ENABLE_BP1658CJ_DRIVER
+TEST_CASE("BP1658CJ", "[Underlying Driver]")
+{
+{
+    //1.Status check
+    TEST_ESP_ERR(ESP_ERR_INVALID_STATE, bp1658cj_set_channel(BP1658CJ_CHANNEL_R, 1023));
+    TEST_ESP_ERR(ESP_ERR_INVALID_STATE, bp1658cj_set_rgb_channel(1023, 1023, 0));
+    TEST_ESP_ERR(ESP_ERR_INVALID_STATE, bp1658cj_set_cw_channel(1023, 1023));
+
+    //2. init check
+    driver_bp1658cj_t conf = {
+        .rgb_current = BP1658CJ_RGB_CURRENT_10MA,
+        .cw_current = BP1658CJ_CW_CURRENT_30MA,
+        .iic_clk = 4,
+        .iic_sda = 5,
+        .freq_khz = 300,
+        .enable_iic_queue = true
+    };
+    TEST_ESP_OK(bp1658cj_init(&conf));
+
+    //3. regist Check, step 1
+    TEST_ESP_OK(bp1658cj_regist_channel(BP1658CJ_CHANNEL_R, BP1658CJ_PIN_OUT1));
+    TEST_ESP_OK(bp1658cj_regist_channel(BP1658CJ_CHANNEL_G, BP1658CJ_PIN_OUT2));
+    TEST_ESP_OK(bp1658cj_regist_channel(BP1658CJ_CHANNEL_B, BP1658CJ_PIN_OUT3));
+    TEST_ESP_OK(bp1658cj_set_channel(BP1658CJ_CHANNEL_R, 1));
+    TEST_ESP_OK(bp1658cj_set_channel(BP1658CJ_CHANNEL_G, 1));
+    TEST_ESP_OK(bp1658cj_set_channel(BP1658CJ_CHANNEL_B, 1));
+    TEST_ESP_OK(bp1658cj_set_rgb_channel(1, 1, 1));
+    TEST_ESP_ERR(ESP_ERR_INVALID_STATE, bp1658cj_set_channel(BP1658CJ_CHANNEL_C, 1));
+    TEST_ESP_ERR(ESP_ERR_INVALID_STATE, bp1658cj_set_channel(BP1658CJ_CHANNEL_W, 1));
+
+    //3. regist Check, step 2
+    TEST_ESP_OK(bp1658cj_regist_channel(BP1658CJ_CHANNEL_C, BP1658CJ_PIN_OUT5));
+    TEST_ESP_OK(bp1658cj_regist_channel(BP1658CJ_CHANNEL_W, BP1658CJ_PIN_OUT4));
+    TEST_ESP_OK(bp1658cj_set_channel(BP1658CJ_CHANNEL_C, 1));
+    TEST_ESP_OK(bp1658cj_set_channel(BP1658CJ_CHANNEL_W, 1));
+    TEST_ESP_OK(bp1658cj_set_cw_channel(1, 1));
+
+    //4. Data range check
+    TEST_ESP_ERR(ESP_ERR_INVALID_ARG, bp1658cj_set_channel(BP1658CJ_CHANNEL_R, 1024));
+
+    //5. Color check
+    TEST_ESP_OK(bp1658cj_set_shutdown());
+    vTaskDelay(1000);
+    TEST_ESP_OK(bp1658cj_set_rgb_channel(255, 0, 0));
+    vTaskDelay(1000);
+    TEST_ESP_OK(bp1658cj_set_rgb_channel(0, 255, 0));
+    vTaskDelay(1000);
+    TEST_ESP_OK(bp1658cj_set_rgb_channel(0, 0, 255));
+    vTaskDelay(1000);
+    TEST_ESP_OK(bp1658cj_set_shutdown());
+    vTaskDelay(1000);
+    TEST_ESP_OK(bp1658cj_set_cw_channel(255, 0));
+    vTaskDelay(1000);
+    TEST_ESP_OK(bp1658cj_set_cw_channel(0, 255));
+    vTaskDelay(1000);
+    TEST_ESP_OK(bp1658cj_set_shutdown());
+    vTaskDelay(1000);
+    TEST_ESP_OK(bp1658cj_set_rgbcw_channel(255, 0, 0, 0, 0));
+    vTaskDelay(1000);
+    TEST_ESP_OK(bp1658cj_set_rgbcw_channel(0, 255, 0, 0, 0));
+    vTaskDelay(1000);
+    TEST_ESP_OK(bp1658cj_set_rgbcw_channel(0, 0, 255, 0, 0));
+    vTaskDelay(1000);
+    TEST_ESP_OK(bp1658cj_set_rgbcw_channel(0, 0, 0, 255, 0));
+    vTaskDelay(1000);
+    TEST_ESP_OK(bp1658cj_set_rgbcw_channel(0, 0, 0, 0, 255));
+    vTaskDelay(1000);
+    TEST_ESP_OK(bp1658cj_set_rgbcw_channel(255, 0, 0, 0, 0));
+    vTaskDelay(1000);
+    bp1658cj_set_sleep_mode(true);
+    vTaskDelay(1000);
+    TEST_ESP_OK(bp1658cj_set_rgbcw_channel(0, 255, 0, 0, 0));
+    vTaskDelay(1000);
+    bp1658cj_set_sleep_mode(true);
+    vTaskDelay(1000);
+    TEST_ESP_OK(bp1658cj_set_rgbcw_channel(0, 0, 255, 0, 0));
+    vTaskDelay(1000);
+
+    //6. deinit
+    TEST_ESP_OK(bp1658cj_set_shutdown());
+    // Wait for data transmission to complete
+    vTaskDelay(1000);
+    TEST_ESP_OK(bp1658cj_deinit());
+}
+}
+
+TEST_CASE("BP1658CJ", "[Application Layer]")
+{
+    lightbulb_config_t config = {
+        .type = DRIVER_BP1658CJ,
+        .driver_conf.bp1658cj.rgb_current = BP1658CJ_RGB_CURRENT_10MA,
+        .driver_conf.bp1658cj.cw_current = BP1658CJ_CW_CURRENT_30MA,
+        .driver_conf.bp1658cj.iic_clk = 4,
+        .driver_conf.bp1658cj.iic_sda = 5,
+        .driver_conf.bp1658cj.freq_khz = 300,
+        .driver_conf.bp1658cj.enable_iic_queue = true,
+        .capability.enable_fades = true,
+        .capability.fades_ms = 800,
+        .capability.enable_lowpower = false,
+        .capability.enable_mix_cct = true,
+        .capability.enable_status_storage = false,
+        .capability.mode_mask = COLOR_AND_WHITE_MODE,
+        .capability.storage_cb = NULL,
+        .capability.sync_change_brightness_value = true,
+        .io_conf.iic_io.red = OUT3,
+        .io_conf.iic_io.green = OUT4,
+        .io_conf.iic_io.blue = OUT5,
+        .io_conf.iic_io.cold_white = OUT1,
+        .io_conf.iic_io.warm_yellow = OUT2,
+        .external_limit = NULL,
+        .gamma_conf = NULL,
+        .init_status.mode = WORK_COLOR,
+        .init_status.on = true,
+        .init_status.hue = 0,
+        .init_status.saturation = 100,
+        .init_status.value = 100,
+    };
+    TEST_ESP_OK(lightbulb_init(&config));
+    vTaskDelay(1000);
+    lightbulb_lighting_output_test(LIGHTING_ALL_UNIT, 2000);
+    TEST_ESP_OK(lightbulb_deinit());
+}
+#endif
+
 #ifdef CONFIG_ENABLE_SM2x35EGH_DRIVER
 TEST_CASE("SM2235EGH", "[Underlying Driver]")
 {

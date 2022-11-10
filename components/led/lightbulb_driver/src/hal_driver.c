@@ -216,6 +216,22 @@ static hal_obj_t s_hal_obj_group[]           = {
         .set_sleep_status = (x_set_sleep_t)bp5758d_set_standby_mode,
     },
 #endif
+#ifdef CONFIG_ENABLE_BP1658CJ_DRIVER
+    {
+        .type = DRIVER_BP1658CJ,
+        .name = "BP1658CJ",
+        .driver_color_bit_depth = 10,
+        .channel_num = 5,
+        .hardware_allow_max_input_value = (1 << 10) - 1,
+        .all_ch_allow_output = true,
+        .init = (x_init_t)bp1658cj_init,
+        .set_channel = (x_set_channel_t)bp1658cj_set_channel,
+        .regist_channel = (x_regist_channel_t)bp1658cj_regist_channel,
+        .set_shutdown = (x_set_shutdown_t)bp1658cj_set_shutdown,
+        .deinit = (x_deinit_t)bp1658cj_deinit,
+        .set_sleep_status = (x_set_sleep_t)bp1658cj_set_sleep_mode,
+    },
+#endif
 #ifdef CONFIG_ENABLE_KP18058_DRIVER
     {
         .type = DRIVER_KP18058,

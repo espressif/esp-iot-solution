@@ -469,6 +469,11 @@ esp_err_t lightbulb_init(lightbulb_config_t *config)
         driver_conf = (void *) & (config->driver_conf.bp5758d);
     }
 #endif
+#ifdef CONFIG_ENABLE_BP5758D_DRIVER
+    if (config->type == DRIVER_BP1658CJ) {
+        driver_conf = (void *) & (config->driver_conf.bp1658cj);
+    }
+#endif
 #ifdef CONFIG_ENABLE_KP18058_DRIVER
     if (config->type == DRIVER_KP18058) {
         driver_conf = (void *) & (config->driver_conf.kp18058);

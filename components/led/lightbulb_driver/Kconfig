@@ -31,6 +31,12 @@ menu "LightBulb Driver Config"
             help
                 Enable BP5758d output.
 
+        config ENABLE_BP1658CJ_DRIVER
+            bool "Enable bp1658cj interface"
+            default "y"
+            help
+                Enable BP1658cj output.
+
         config ENABLE_KP18058_DRIVER
             bool "Enable kp18058 interface"
             default "y"
@@ -68,7 +74,7 @@ menu "LightBulb Driver Config"
             default LIGHTBULB_CHECK_DEFAULT_LEVEL_2
             help
                 The verbosity of the log output, if you need to save flash size please lower the output level.
-            
+
             config LIGHTBULB_CHECK_DEFAULT_LEVEL_1
                 bool "Level 1, Print very little log"
             config LIGHTBULB_CHECK_DEFAULT_LEVEL_2
