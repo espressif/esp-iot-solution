@@ -1,6 +1,6 @@
 set(srcs "src/hal_driver.c"
         "src/lightbulb.c"
-        "src/lighting_test.c"
+        "src/lighting.c"
         )
 
 set(priv_req nvs_flash)
@@ -36,6 +36,13 @@ endif()
 if(CONFIG_ENABLE_BP5758D_DRIVER)
     list(APPEND srcs "drivers/bp5758d/bp5758d.c")
     list(APPEND incs "drivers/bp5758d")
+    list(APPEND srcs "drivers/common/iic/iic.c")
+    list(APPEND incs "drivers/common/iic/")
+endif()
+
+if(CONFIG_ENABLE_KP18058_DRIVER)
+    list(APPEND srcs "drivers/kp18058/kp18058.c")
+    list(APPEND incs "drivers/kp18058")
     list(APPEND srcs "drivers/common/iic/iic.c")
     list(APPEND incs "drivers/common/iic/")
 endif()

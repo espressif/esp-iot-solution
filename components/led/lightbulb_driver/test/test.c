@@ -244,7 +244,7 @@ TEST_CASE("Storage interface", "[Application Layer]")
 
     //structure and set data
     lightbulb_status_t status = {
-        .cct = 100,
+        .cct_percentage = 100,
         .brightness = 100,
         .mode = WORK_WHITE,
     };
@@ -256,6 +256,41 @@ TEST_CASE("Storage interface", "[Application Layer]")
     TEST_ESP_OK(lightbulb_status_erase_nvs_storage());
 
     nvs_flash_deinit();
+}
+
+static IRAM_ATTR uint8_t parity_check(uint8_t input)
+{
+    static uint8_t count_table[256] = { 
+        0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4, 
+        1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 
+        1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 
+        2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 
+        1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 
+        2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 
+        2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 
+        3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, 
+        1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 
+        2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 
+        2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 
+        3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, 
+        2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 
+        3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, 
+        3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, 
+        4, 5, 5, 6, 5, 6, 6, 7, 5, 6, 6, 7, 6, 7, 7, 8, 
+    };
+
+    return (count_table[input] % 2 == 0) ? input:(input |= 0x01);
+}
+
+TEST_CASE("Parity Check", "[Application Layer]")
+{
+    for (int i = 0; i < 256; i++) {
+        if (i % 16 == 0) {
+            printf("\r\n");
+        }
+        uint8_t result = parity_check(i & 0xFE);
+        printf("%d,\t", result);
+    }
 }
 
 #ifdef CONFIG_ENABLE_PWM_DRIVER
@@ -568,7 +603,7 @@ TEST_CASE("SM2135EH", "[Application Layer]")
     };
     TEST_ESP_OK(lightbulb_init(&config));
     vTaskDelay(1000);
-    lightbulb_lighting_output_test(LIGHTING_ALL_UNIT, 2000);
+    lightbulb_lighting_output_test(LIGHTING_ALEXA, 2000);
     TEST_ESP_OK(lightbulb_deinit());
 }
 #endif
@@ -859,3 +894,123 @@ TEST_CASE("WS2812", "[Application Layer]")
     TEST_ESP_OK(lightbulb_deinit());
 }
 #endif
+
+#ifdef CONFIG_ENABLE_KP18058_DRIVER
+TEST_CASE("KP18058", "[Underlying Driver]")
+{
+    driver_kp18058_t kp18058 = {
+        .rgb_current_multiple = 10,
+        .cw_current_multiple = 10,
+        .iic_clk = 5,
+        .iic_sda = 4,
+        .iic_freq_khz = 300,
+        .enable_iic_queue = true,
+    };
+    TEST_ESP_OK(kp18058_init(&kp18058));
+
+    //3. regist Check, step 1
+    TEST_ESP_OK(kp18058_regist_channel(KP18058_CHANNEL_R, KP18058_PIN_OUT3));
+    TEST_ESP_OK(kp18058_regist_channel(KP18058_CHANNEL_G, KP18058_PIN_OUT2));
+    TEST_ESP_OK(kp18058_regist_channel(KP18058_CHANNEL_B, KP18058_PIN_OUT1));
+    TEST_ESP_OK(kp18058_set_channel(KP18058_CHANNEL_R, 1));
+    TEST_ESP_OK(kp18058_set_channel(KP18058_CHANNEL_G, 1));
+    TEST_ESP_OK(kp18058_set_channel(KP18058_CHANNEL_B, 1));
+    TEST_ESP_OK(kp18058_set_rgb_channel(1, 1, 1));
+    TEST_ESP_ERR(ESP_ERR_INVALID_STATE, kp18058_set_channel(KP18058_CHANNEL_C, 1));
+    TEST_ESP_ERR(ESP_ERR_INVALID_STATE, kp18058_set_channel(KP18058_CHANNEL_W, 1));
+
+    //3. regist Check, step 2
+    TEST_ESP_OK(kp18058_regist_channel(KP18058_CHANNEL_C, KP18058_PIN_OUT4));
+    TEST_ESP_OK(kp18058_regist_channel(KP18058_CHANNEL_W, KP18058_PIN_OUT5));
+    TEST_ESP_OK(kp18058_set_channel(KP18058_CHANNEL_C, 1));
+    TEST_ESP_OK(kp18058_set_channel(KP18058_CHANNEL_W, 1));
+    TEST_ESP_OK(kp18058_set_cw_channel(1, 1));
+
+    //4. Data range check
+    TEST_ESP_ERR(ESP_ERR_INVALID_ARG, kp18058_set_channel(KP18058_CHANNEL_R, 1024));
+
+    //5. Color check
+    TEST_ESP_OK(kp18058_set_shutdown());
+    vTaskDelay(1000);
+    TEST_ESP_OK(kp18058_set_rgb_channel(255, 0, 0));
+    vTaskDelay(1000);
+    TEST_ESP_OK(kp18058_set_rgb_channel(0, 255, 0));
+    vTaskDelay(1000);
+    TEST_ESP_OK(kp18058_set_rgb_channel(0, 0, 255));
+    vTaskDelay(1000);
+    TEST_ESP_OK(kp18058_set_shutdown());
+    vTaskDelay(1000);
+    TEST_ESP_OK(kp18058_set_cw_channel(255, 0));
+    vTaskDelay(1000);
+    TEST_ESP_OK(kp18058_set_cw_channel(0, 255));
+    vTaskDelay(1000);
+    TEST_ESP_OK(kp18058_set_shutdown());
+    vTaskDelay(1000);
+    TEST_ESP_OK(kp18058_set_rgbcw_channel(255, 0, 0, 0, 0));
+    vTaskDelay(1000);
+    TEST_ESP_OK(kp18058_set_rgbcw_channel(0, 255, 0, 0, 0));
+    vTaskDelay(1000);
+    TEST_ESP_OK(kp18058_set_rgbcw_channel(0, 0, 255, 0, 0));
+    vTaskDelay(1000);
+    TEST_ESP_OK(kp18058_set_rgbcw_channel(0, 0, 0, 255, 0));
+    vTaskDelay(1000);
+    TEST_ESP_OK(kp18058_set_rgbcw_channel(0, 0, 0, 0, 255));
+    vTaskDelay(1000);
+    TEST_ESP_OK(kp18058_set_rgbcw_channel(255, 0, 0, 0, 0));
+    vTaskDelay(1000);
+    kp18058_set_standby_mode(true);
+    vTaskDelay(1000);
+    TEST_ESP_OK(kp18058_set_rgbcw_channel(0, 255, 0, 0, 0));
+    vTaskDelay(1000);
+    kp18058_set_standby_mode(true);
+    vTaskDelay(1000);
+    TEST_ESP_OK(kp18058_set_rgbcw_channel(0, 0, 255, 0, 0));
+    vTaskDelay(1000);
+    TEST_ESP_OK(kp18058_set_rgbcw_channel(0, 0, 0, 0, 0));
+    vTaskDelay(1000);
+
+    //6. deinit
+    TEST_ESP_OK(kp18058_set_shutdown());
+    // Wait for data transmission to complete
+    vTaskDelay(1000);
+    TEST_ESP_OK(kp18058_deinit());
+}
+
+TEST_CASE("KP18058", "[Application Layer]")
+{
+    lightbulb_config_t config = {
+        .type = DRIVER_KP18058,
+        .driver_conf.kp18058.rgb_current_multiple = 15,
+        .driver_conf.kp18058.cw_current_multiple = 20,
+        .driver_conf.kp18058.iic_clk = 5,
+        .driver_conf.kp18058.iic_sda = 4,
+        .driver_conf.kp18058.iic_freq_khz = 300,
+        .driver_conf.kp18058.enable_iic_queue = true,
+        .capability.enable_fades = true,
+        .capability.fades_ms = 800,
+        .capability.enable_lowpower = false,
+        .capability.enable_mix_cct = true,
+        .capability.enable_status_storage = false,
+        .capability.mode_mask = COLOR_AND_WHITE_MODE,
+        .capability.storage_cb = NULL,
+        .capability.sync_change_brightness_value = true,
+        .io_conf.iic_io.red = OUT3,
+        .io_conf.iic_io.green = OUT2,
+        .io_conf.iic_io.blue = OUT1,
+        .io_conf.iic_io.cold_white = OUT5,
+        .io_conf.iic_io.warm_yellow = OUT4,
+        .external_limit = NULL,
+        .gamma_conf = NULL,
+        .init_status.mode = WORK_COLOR,
+        .init_status.on = true,
+        .init_status.hue = 0,
+        .init_status.saturation = 100,
+        .init_status.value = 100,
+    };
+    TEST_ESP_OK(lightbulb_init(&config));
+    vTaskDelay(1000);
+    lightbulb_lighting_output_test(LIGHTING_ALL_UNIT, 2000);
+    TEST_ESP_OK(lightbulb_deinit());
+}
+#endif
+

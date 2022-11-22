@@ -46,6 +46,10 @@
 #include "ws2812.h"
 #endif
 
+#ifdef CONFIG_ENABLE_KP18058_DRIVER
+#include "kp18058.h"
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -65,6 +69,7 @@ typedef enum {
     DRIVER_SM2235EGH,
     DRIVER_SM2335EGH,
     DRIVER_BP5758D, // Available for BP5758 BP5758D BP5768D
+    DRIVER_KP18058,
 
     /* Single Bus */
     DRIVER_WS2812,
@@ -182,8 +187,8 @@ typedef struct {
      * warm  ->  .. -> cold
      *
      */
-    uint16_t cct;       // range: 0-100
-    uint8_t brightness; // range: 0-100
+    uint8_t cct_percentage;     // range: 0-100 
+    uint8_t brightness;         // range: 0-100
 } lightbulb_status_t;
 
 /**
@@ -212,13 +217,13 @@ typedef struct {
 } lightbulb_power_limit_t;
 
 /**
- * @brief Used to map percentages to CCT
+ * @brief Used to map percentages to kelvin
  *
  */
 typedef struct {
-    uint16_t min_kelvin; // Minimum color temperature value, default is 2200 k
-    uint16_t max_kelvin; // Maximum color temperature value, default is 7000 k
-} lightbulb_cct_limit_t;
+    uint16_t min; // Minimum color temperature value, default is 2200 k
+    uint16_t max; // Maximum color temperature value, default is 7000 k
+} lightbulb_cct_kelvin_range_t;
 
 /**
  * @brief Function pointers to store lightbulb status
@@ -287,12 +292,15 @@ typedef struct {
         driver_sm2x35egh_t sm2235egh;
         driver_sm2x35egh_t sm2335egh;
 #endif
+#ifdef CONFIG_ENABLE_KP18058_DRIVER
+        driver_kp18058_t kp18058;
+#endif
 #ifdef CONFIG_ENABLE_WS2812_DRIVER
         driver_ws2812_t ws2812;
 #endif
     } driver_conf;
 
-    lightbulb_cct_limit_t *cct_limit;
+    lightbulb_cct_kelvin_range_t *kelvin_range;
     lightbulb_gamma_data_t *gamma_conf;
     lightbulb_power_limit_t *external_limit;
     union {
@@ -326,7 +334,7 @@ typedef struct {
     uint8_t red;
     uint8_t green;
     uint8_t blue;
-    uint8_t cct;
+    uint16_t cct;
     uint8_t min_brightness;
     uint8_t max_brightness;
     uint16_t effect_cycle_ms;
@@ -408,7 +416,7 @@ esp_err_t lightbulb_hsv2rgb(uint16_t hue, uint8_t saturation, uint8_t value, uin
 esp_err_t lightbulb_rgb2hsv(uint16_t red, uint16_t green, uint16_t blue, uint16_t *hue, uint8_t *saturation, uint8_t *value);
 
 /**
- * @brief Convert kelvin to percentage
+ * @brief Convert CCT kelvin to percentage
  *
  * @param kelvin default range: 2200k - 7000k
  * @param percentage range: 0 - 100
@@ -450,8 +458,8 @@ esp_err_t lightbulb_set_saturation(uint8_t saturation);
 esp_err_t lightbulb_set_value(uint8_t value);
 
 /**
- * @brief Set CCT
- *
+ * @brief Set color temperature (CCT)
+ * @note Supports use percentage or Kelvin values
  * @param cct range: 0-100 or 2200-7000
  * @return esp_err_t
  */
@@ -477,12 +485,12 @@ esp_err_t lightbulb_set_hsv(uint16_t hue, uint8_t saturation, uint8_t value);
 
 /**
  * @brief Set cct and brightness
- *
- * @param cct range: 0-100
+ * @note Supports use percentage or Kelvin
+ * @param cct range: 0-100 or 2200-7000k
  * @param brightness range: 0-100
  * @return esp_err_t
  */
-esp_err_t lightbulb_set_cctb(uint8_t cct, uint8_t brightness);
+esp_err_t lightbulb_set_cctb(uint16_t cct, uint8_t brightness);
 
 /**
  * @brief Set on/off
@@ -514,11 +522,18 @@ int8_t lightbulb_get_saturation(void);
 int8_t lightbulb_get_value(void);
 
 /**
- * @brief Get cct
+ * @brief Get CCT percentage
  *
  * @return int8_t
  */
 int8_t lightbulb_get_cct_percentage(void);
+
+/**
+ * @brief Get CCT kelvin
+ *
+ * @return int16_t
+ */
+int16_t lightbulb_get_cct_kelvin(void);
 
 /**
  * @brief Get brightness

@@ -15,8 +15,9 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "esp_log.h"
-#include "esp_compiler.h"
+#include <esp_log.h>
+#include <esp_compiler.h>
+#include <driver/ledc.h>
 
 #include "pwm.h"
 

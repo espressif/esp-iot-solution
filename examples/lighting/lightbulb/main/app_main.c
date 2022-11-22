@@ -97,6 +97,7 @@ void app_main(void)
      */
     lightbulb_lighting_output_test(LIGHTING_RAINBOW | LIGHTING_COLOR_EFFECT | LIGHTING_ALEXA, 2000);
     lightbulb_deinit();
+    vTaskDelay(pdMS_TO_TICKS(2000));
 
 #ifdef CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_WS2812
     /* Not a warning, just highlighted */
