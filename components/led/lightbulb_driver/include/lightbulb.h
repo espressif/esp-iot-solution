@@ -38,6 +38,10 @@
 #include "bp5758d.h"
 #endif
 
+#ifdef CONFIG_ENABLE_BP1658CJ_DRIVER
+#include "bp1658cj.h"
+#endif
+
 #ifdef CONFIG_ENABLE_SM2x35EGH_DRIVER
 #include "sm2x35egh.h"
 #endif
@@ -69,6 +73,7 @@ typedef enum {
     DRIVER_SM2235EGH,
     DRIVER_SM2335EGH,
     DRIVER_BP5758D, // Available for BP5758 BP5758D BP5768D
+    DRIVER_BP1658CJ,
     DRIVER_KP18058,
 
     /* Single Bus */
@@ -287,6 +292,9 @@ typedef struct {
 #endif
 #ifdef CONFIG_ENABLE_BP5758D_DRIVER
         driver_bp5758d_t bp5758d;
+#endif
+#ifdef CONFIG_ENABLE_BP1658CJ_DRIVER
+        driver_bp1658cj_t bp1658cj;
 #endif
 #ifdef CONFIG_ENABLE_SM2x35EGH_DRIVER
         driver_sm2x35egh_t sm2235egh;

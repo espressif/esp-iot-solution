@@ -40,6 +40,13 @@ if(CONFIG_ENABLE_BP5758D_DRIVER)
     list(APPEND incs "drivers/common/iic/")
 endif()
 
+if(CONFIG_ENABLE_BP1658CJ_DRIVER)
+    list(APPEND srcs "drivers/bp1658cj/bp1658cj.c")
+    list(APPEND incs "drivers/bp1658cj")
+    list(APPEND srcs "drivers/common/iic/iic.c")
+    list(APPEND incs "drivers/common/iic/")
+endif()
+
 if(CONFIG_ENABLE_KP18058_DRIVER)
     list(APPEND srcs "drivers/kp18058/kp18058.c")
     list(APPEND incs "drivers/kp18058")
