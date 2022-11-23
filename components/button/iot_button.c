@@ -41,7 +41,7 @@ typedef struct Button {
     uint8_t         button_level: 1;
     uint8_t         (*hal_button_Level)(void *hardware_data);
     void            *hardware_data;
-    void            *usr_data;
+    void            *usr_data[BUTTON_EVENT_MAX];
     button_type_t   type;
     button_cb_t     cb[BUTTON_EVENT_MAX];
     struct Button   *next;
@@ -56,8 +56,9 @@ static bool g_is_timer_running = false;
 #define DEBOUNCE_TICKS    CONFIG_BUTTON_DEBOUNCE_TICKS //MAX 8
 #define SHORT_TICKS       (CONFIG_BUTTON_SHORT_PRESS_TIME_MS /TICKS_INTERVAL)
 #define LONG_TICKS        (CONFIG_BUTTON_LONG_PRESS_TIME_MS /TICKS_INTERVAL)
+#define SERIAL_TICKS      (CONFIG_BUTTON_SERIAL_TIME_MS /TICKS_INTERVAL)
 
-#define CALL_EVENT_CB(ev)   if(btn->cb[ev])btn->cb[ev](btn, btn->usr_data)
+#define CALL_EVENT_CB(ev)   if(btn->cb[ev])btn->cb[ev](btn, btn->usr_data[ev])
 
 /**
   * @brief  Button driver core function, driver state machine.
@@ -145,8 +146,11 @@ static void button_handler(button_dev_t *btn)
     case 5:
         if (btn->button_level == btn->active_level) {
             //continue hold trigger
-            btn->event = (uint8_t)BUTTON_LONG_PRESS_HOLD;
-            CALL_EVENT_CB(BUTTON_LONG_PRESS_HOLD);
+            if (btn->ticks > SERIAL_TICKS) {
+                btn->event = (uint8_t)BUTTON_LONG_PRESS_HOLD;
+                CALL_EVENT_CB(BUTTON_LONG_PRESS_HOLD);
+                btn->ticks = 0;
+            }
         } else { //releasd
             btn->event = (uint8_t)BUTTON_PRESS_UP;
             CALL_EVENT_CB(BUTTON_PRESS_UP);
@@ -279,7 +283,7 @@ esp_err_t iot_button_register_cb(button_handle_t btn_handle, button_event_t even
     BTN_CHECK(event < BUTTON_EVENT_MAX, "event is invalid", ESP_ERR_INVALID_ARG);
     button_dev_t *btn = (button_dev_t *) btn_handle;
     btn->cb[event] = cb;
-    btn->usr_data = usr_data;
+    btn->usr_data[event] = usr_data;
     return ESP_OK;
 }
 
@@ -289,7 +293,19 @@ esp_err_t iot_button_unregister_cb(button_handle_t btn_handle, button_event_t ev
     BTN_CHECK(event < BUTTON_EVENT_MAX, "event is invalid", ESP_ERR_INVALID_ARG);
     button_dev_t *btn = (button_dev_t *) btn_handle;
     btn->cb[event] = NULL;
+    btn->usr_data[event] = NULL;
     return ESP_OK;
+}
+
+size_t iot_button_count_cb(button_handle_t btn_handle)
+{
+    BTN_CHECK(NULL != btn_handle, "Pointer of handle is invalid", ESP_ERR_INVALID_ARG);
+    button_dev_t *btn = (button_dev_t *) btn_handle;
+    size_t ret = 0;
+    for (size_t i = 0; i < BUTTON_EVENT_MAX; i++) {
+        if(btn->cb[i]) ret++;
+    }
+    return ret;
 }
 
 button_event_t iot_button_get_event(button_handle_t btn_handle)
