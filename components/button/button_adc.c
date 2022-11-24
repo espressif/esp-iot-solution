@@ -18,6 +18,7 @@
 #include "esp_adc_cal.h"
 #include "button_adc.h"
 #include "esp_timer.h"
+#include <inttypes.h>
 
 static const char *TAG = "adc button";
 
@@ -176,7 +177,7 @@ static uint32_t get_adc_volatge(adc1_channel_t channel)
     adc_reading /= NO_OF_SAMPLES;
     //Convert adc_reading to voltage in mV
     uint32_t voltage = esp_adc_cal_raw_to_voltage(adc_reading, &g_button.adc_chars);
-    ESP_LOGV(TAG, "Raw: %d\tVoltage: %dmV", adc_reading, voltage);
+    ESP_LOGV(TAG, "Raw: %"PRIu32"\tVoltage: %"PRIu32"mV", adc_reading, voltage);
     return voltage;
 }
 

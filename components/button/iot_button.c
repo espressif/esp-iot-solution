@@ -24,15 +24,21 @@
 
 static const char *TAG = "button";
 
-#define BTN_CHECK(a, str, ret_val)                          \
-    if (!(a))                                                     \
-    {                                                             \
+#define BTN_CHECK(a, str, ret_val)                                \
+    if (!(a)) {                                                   \
         ESP_LOGE(TAG, "%s(%d): %s", __FUNCTION__, __LINE__, str); \
         return (ret_val);                                         \
     }
 
+/**
+ * @brief Structs to record individual key parameters
+ *
+ */
 typedef struct Button {
     uint16_t        ticks;
+    uint16_t        long_press_ticks;     /*! Trigger ticks for long press*/
+    uint16_t        short_press_ticks;    /*! Trigger ticks for repeat press*/
+    uint16_t        long_press_hold_cnt;  /*! Record long press hold count*/
     uint8_t         repeat;
     button_event_t  event;
     uint8_t         state: 3;
@@ -59,6 +65,8 @@ static bool g_is_timer_running = false;
 #define SERIAL_TICKS      (CONFIG_BUTTON_SERIAL_TIME_MS /TICKS_INTERVAL)
 
 #define CALL_EVENT_CB(ev)   if(btn->cb[ev])btn->cb[ev](btn, btn->usr_data[ev])
+
+#define TIME_TO_TICKS(time, congfig_time)  (0 == (time))?congfig_time:(((time) / TICKS_INTERVAL))?((time) / TICKS_INTERVAL):1
 
 /**
   * @brief  Button driver core function, driver state machine.
@@ -103,7 +111,7 @@ static void button_handler(button_dev_t *btn)
             btn->ticks = 0;
             btn->state = 2;
 
-        } else if (btn->ticks > LONG_TICKS) {
+        } else if (btn->ticks > btn->long_press_ticks) {
             btn->event = (uint8_t)BUTTON_LONG_PRESS_START;
             CALL_EVENT_CB(BUTTON_LONG_PRESS_START);
             btn->state = 5;
@@ -118,7 +126,7 @@ static void button_handler(button_dev_t *btn)
             CALL_EVENT_CB(BUTTON_PRESS_REPEAT); // repeat hit
             btn->ticks = 0;
             btn->state = 3;
-        } else if (btn->ticks > SHORT_TICKS) {
+        } else if (btn->ticks > btn->short_press_ticks) {
             if (btn->repeat == 1) {
                 btn->event = (uint8_t)BUTTON_SINGLE_CLICK;
                 CALL_EVENT_CB(BUTTON_SINGLE_CLICK);
@@ -126,6 +134,8 @@ static void button_handler(button_dev_t *btn)
                 btn->event = (uint8_t)BUTTON_DOUBLE_CLICK;
                 CALL_EVENT_CB(BUTTON_DOUBLE_CLICK); // repeat hit
             }
+            btn->event = (uint8_t)BUTTON_PRESS_REPEAT_DONE;
+            CALL_EVENT_CB(BUTTON_PRESS_REPEAT_DONE); // repeat hit
             btn->state = 0;
         }
         break;
@@ -146,15 +156,16 @@ static void button_handler(button_dev_t *btn)
     case 5:
         if (btn->button_level == btn->active_level) {
             //continue hold trigger
-            if (btn->ticks > SERIAL_TICKS) {
+            if (btn->ticks >= (btn->long_press_hold_cnt + 1) * SERIAL_TICKS) {
                 btn->event = (uint8_t)BUTTON_LONG_PRESS_HOLD;
+                btn->long_press_hold_cnt++;
                 CALL_EVENT_CB(BUTTON_LONG_PRESS_HOLD);
-                btn->ticks = 0;
             }
         } else { //releasd
             btn->event = (uint8_t)BUTTON_PRESS_UP;
             CALL_EVENT_CB(BUTTON_PRESS_UP);
             btn->state = 0; //reset
+            btn->long_press_hold_cnt = 0;
         }
         break;
     }
@@ -168,7 +179,7 @@ static void button_cb(void *args)
     }
 }
 
-static button_dev_t *button_create_com(uint8_t active_level, uint8_t (*hal_get_key_state)(void *hardware_data), void *hardware_data)
+static button_dev_t *button_create_com(uint8_t active_level, uint8_t (*hal_get_key_state)(void *hardware_data), void *hardware_data, uint16_t long_press_ticks, uint16_t short_press_ticks)
 {
     BTN_CHECK(NULL != hal_get_key_state, "Function pointer is invalid", NULL);
 
@@ -179,6 +190,8 @@ static button_dev_t *button_create_com(uint8_t active_level, uint8_t (*hal_get_k
     btn->active_level = active_level;
     btn->hal_button_Level = hal_get_key_state;
     btn->button_level = !active_level;
+    btn->long_press_ticks = long_press_ticks;
+    btn->short_press_ticks = short_press_ticks;
 
     /** Add handle to list */
     btn->next = g_head_handle;
@@ -234,18 +247,22 @@ button_handle_t iot_button_create(const button_config_t *config)
 {
     esp_err_t ret = ESP_OK;
     button_dev_t *btn = NULL;
+    uint16_t long_press_time = 0;
+    uint16_t short_press_time = 0;
+    long_press_time = TIME_TO_TICKS(config->long_press_time, LONG_TICKS);
+    short_press_time = TIME_TO_TICKS(config->short_press_time, SHORT_TICKS);
     switch (config->type) {
     case BUTTON_TYPE_GPIO: {
         const button_gpio_config_t *cfg = &(config->gpio_button_config);
         ret = button_gpio_init(cfg);
         BTN_CHECK(ESP_OK == ret, "gpio button init failed", NULL);
-        btn = button_create_com(cfg->active_level, button_gpio_get_key_level, (void *)cfg->gpio_num);
+        btn = button_create_com(cfg->active_level, button_gpio_get_key_level, (void *)cfg->gpio_num, long_press_time, short_press_time);
     } break;
     case BUTTON_TYPE_ADC: {
         const button_adc_config_t *cfg = &(config->adc_button_config);
         ret = button_adc_init(cfg);
         BTN_CHECK(ESP_OK == ret, "adc button init failed", NULL);
-        btn = button_create_com(1, button_adc_get_key_level, (void *)ADC_BUTTON_COMBINE(cfg->adc_channel, cfg->button_index));
+        btn = button_create_com(1, button_adc_get_key_level, (void *)ADC_BUTTON_COMBINE(cfg->adc_channel, cfg->button_index), long_press_time, short_press_time);
     } break;
 
     default:
@@ -303,7 +320,9 @@ size_t iot_button_count_cb(button_handle_t btn_handle)
     button_dev_t *btn = (button_dev_t *) btn_handle;
     size_t ret = 0;
     for (size_t i = 0; i < BUTTON_EVENT_MAX; i++) {
-        if(btn->cb[i]) ret++;
+        if (btn->cb[i]) {
+            ret++;
+        }
     }
     return ret;
 }
@@ -320,4 +339,18 @@ uint8_t iot_button_get_repeat(button_handle_t btn_handle)
     BTN_CHECK(NULL != btn_handle, "Pointer of handle is invalid", 0);
     button_dev_t *btn = (button_dev_t *) btn_handle;
     return btn->repeat;
+}
+
+uint16_t iot_button_get_ticks_time(button_handle_t btn_handle)
+{
+    BTN_CHECK(NULL != btn_handle, "Pointer of handle is invalid", 0);
+    button_dev_t *btn = (button_dev_t *) btn_handle;
+    return (btn->ticks * TICKS_INTERVAL);
+}
+
+uint16_t iot_button_get_long_press_hold_cnt(button_handle_t btn_handle)
+{
+    BTN_CHECK(NULL != btn_handle, "Pointer of handle is invalid", 0);
+    button_dev_t *btn = (button_dev_t *) btn_handle;
+    return btn->long_press_hold_cnt;
 }

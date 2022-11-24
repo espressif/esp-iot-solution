@@ -21,7 +21,7 @@
 extern "C" {
 #endif
 
-typedef void (* button_cb_t)(void *, void *);
+typedef void (* button_cb_t)(void *button_handle, void *usr_data);
 typedef void *button_handle_t;
 
 /**
@@ -32,6 +32,7 @@ typedef enum {
     BUTTON_PRESS_DOWN = 0,
     BUTTON_PRESS_UP,
     BUTTON_PRESS_REPEAT,
+    BUTTON_PRESS_REPEAT_DONE,
     BUTTON_SINGLE_CLICK,
     BUTTON_DOUBLE_CLICK,
     BUTTON_LONG_PRESS_START,
@@ -55,9 +56,11 @@ typedef enum {
  */
 typedef struct {
     button_type_t type;                           /**< button type, The corresponding button configuration must be filled */
+    uint16_t long_press_time;                     /**< Trigger time(ms) for long press, if 0 default to BUTTON_LONG_PRESS_TIME_MS */
+    uint16_t short_press_time;                    /**< Trigger time(ms) for short press, if 0 default to BUTTON_SHORT_PRESS_TIME_MS */
     union {
-        button_gpio_config_t gpio_button_config; /**< gpio button configuration */
-        button_adc_config_t adc_button_config;   /**< adc button configuration */
+        button_gpio_config_t gpio_button_config;  /**< gpio button configuration */
+        button_adc_config_t adc_button_config;    /**< adc button configuration */
     }; /**< button configuration */
 } button_config_t;
 
@@ -133,6 +136,24 @@ button_event_t iot_button_get_event(button_handle_t btn_handle);
  * @return button pressed times. For example, double-click return 2, triple-click return 3, etc.
  */
 uint8_t iot_button_get_repeat(button_handle_t btn_handle);
+
+/**
+ * @brief Get button ticks time
+ *
+ * @param btn_handle Button handle
+ *
+ * @return Actual time from press down to up (ms).
+ */
+uint16_t iot_button_get_ticks_time(button_handle_t btn_handle);
+
+/**
+ * @brief Get button long press hold count
+ *
+ * @param btn_handle Button handle
+ *
+ * @return Count of trigger cb(BUTTON_LONG_PRESS_HOLD)
+ */
+uint16_t iot_button_get_long_press_hold_cnt(button_handle_t btn_handle);
 
 #ifdef __cplusplus
 }

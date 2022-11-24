@@ -11,6 +11,8 @@ menu "IoT Button"
         int "BUTTON DEBOUNCE TICKS"
         range 1 8
         default 2
+        help
+            "One CONFIG_BUTTON_DEBOUNCE_TICKS equal to CONFIG_BUTTON_PERIOD_TIME_MS"
 
     config BUTTON_SHORT_PRESS_TIME_MS
         int "BUTTON SHORT PRESS TIME (MS)"
