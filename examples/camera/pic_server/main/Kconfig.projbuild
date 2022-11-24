@@ -1,50 +1,69 @@
-menu "Example Connection Configuration"
+menu "Example Configuration"
+    menu "Example Connection Configuration"
 
-    config ESP_WIFI_SSID
-        string "WiFi STA SSID"
-        default ""
-        help
-        WiFi SSID (network name) to connect to or empty for Off.
+        config ESP_WIFI_SSID
+            string "WiFi STA SSID"
+            default ""
+            help
+            WiFi SSID (network name) to connect to or empty for Off.
 
-    config ESP_WIFI_PASSWORD
-        string "WiFi STA Password"
-        default ""
-        help
-        WiFi Password if WEP/WPA/WPA2 or empty if Open.
-        
-    config ESP_WIFI_AP_SSID
-        string "WiFi AP SSID"
-        default "ESP32-Camera"
-        help
-        AP SSID (network name) to create or empty for Off.
+        config ESP_WIFI_PASSWORD
+            string "WiFi STA Password"
+            default ""
+            help
+            WiFi Password if WEP/WPA/WPA2 or empty if Open.
+            
+        config ESP_WIFI_AP_SSID
+            string "WiFi AP SSID"
+            default "ESP32-Camera"
+            help
+            AP SSID (network name) to create or empty for Off.
 
-    config ESP_WIFI_AP_PASSWORD
-        string "WiFi AP Password"
-        default ""
-        help
-        AP password for WPA2 or empty for Open.
+        config ESP_WIFI_AP_PASSWORD
+            string "WiFi AP Password"
+            default ""
+            help
+            AP password for WPA2 or empty for Open.
 
-    config MAX_STA_CONN
-        int "Maximal STA connections"
-        default 1
-        help
-        Max number of the STA connects to AP.
+        config MAX_STA_CONN
+            int "Maximal STA connections"
+            default 1
+            help
+            Max number of the STA connects to AP.
 
-    config ESP_WIFI_AP_CHANNEL
-        string "WiFi AP Channel"
-        default ""
-        help
-        AP channel for better connection performance.
+        config ESP_WIFI_AP_CHANNEL
+            string "WiFi AP Channel"
+            default ""
+            help
+            AP channel for better connection performance.
 
-    config SERVER_IP
-        string "WiFi AP IP Address"
-        default "192.168.4.1"
-        help
-            IP address that the ESP will assign to it's AP interface. You can use this IP to connect to the camera after flashing.
+        config SERVER_IP
+            string "WiFi AP IP Address"
+            default "192.168.4.1"
+            help
+                IP address that the ESP will assign to it's AP interface. You can use this IP to connect to the camera after flashing.
 
-    config ESP_MAXIMUM_RETRY
-        int "Maximum retry"
-        default 5
-        help
-        Set the Maximum retry to avoid station reconnecting to the AP unlimited when the AP is really inexistent.
+        config ESP_MAXIMUM_RETRY
+            int "Maximum retry"
+            default 5
+            help
+            Set the Maximum retry to avoid station reconnecting to the AP unlimited when the AP is really inexistent.
+    endmenu
+
+    choice IMAGE_FORMAT
+            prompt "image format"
+            default IMAGE_JPEG_FORMAT
+            help
+                Different image formats mean different amounts of data and image quality.
+            config IMAGE_JPEG_FORMAT
+                bool "JPEG"
+                help
+                    The image data in JPEG format is compressed data, so it is more suitable for network transmission.
+                    In particular, use this format when a camera that can output jpeg format is used.
+            config IMAGE_BMP_FORMAT
+                bool "BMP"
+                help
+                    The image data in BMP format is uncompressed data.
+                    Data in this format will take up a lot of memory, but it can bring lossless image quality.
+    endchoice
 endmenu

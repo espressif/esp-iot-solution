@@ -25,8 +25,8 @@ extern "C" {
  * 
  */
 typedef struct {
-    int32_t gpio_num;
-    uint8_t active_level;
+    int32_t gpio_num;              /**< num of gpio */
+    uint8_t active_level;          /**< gpio level when press down */
 } button_gpio_config_t;
 
 /**

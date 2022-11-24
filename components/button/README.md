@@ -11,6 +11,7 @@ List of supported events:
  * Button double click
  * Button long press start
  * Button long press hold
+ * Button long press done
 
 There are two ways this driver can handle buttons:
 1. Buttons connected to standard digital GPIO

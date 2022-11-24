@@ -28,37 +28,52 @@ static esp_err_t pic_get_handler(httpd_req_t *req)
 {
     camera_fb_t *frame = NULL;
     esp_err_t res = ESP_OK;
-    size_t _jpg_buf_len = 0;
-    uint8_t *_jpg_buf = NULL;
+    size_t image_data_buf_len = 0;
+    uint8_t *image_data_buf = NULL;
 
+#if CONFIG_IMAGE_JPEG_FORMAT
     httpd_resp_set_type(req, "image/jpeg");
     httpd_resp_set_hdr(req, "Content-Disposition", "inline; filename=capture.jpg");
+#elif CONFIG_IMAGE_BMP_FORMAT
+    httpd_resp_set_type(req, "image/bmp");
+    httpd_resp_set_hdr(req, "Content-Disposition", "inline; filename=capture.bmp");
+#endif
     httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
 
     esp_camera_fb_return(esp_camera_fb_get());
     frame = esp_camera_fb_get();
 
     if (frame) {
+#if CONFIG_IMAGE_JPEG_FORMAT
         if (frame->format == PIXFORMAT_JPEG) {
-            _jpg_buf = frame->buf;
-            _jpg_buf_len = frame->len;
-        } else if (!frame2jpg(frame, 60, &_jpg_buf, &_jpg_buf_len)) {
+            image_data_buf = frame->buf;
+            image_data_buf_len = frame->len;
+        } else if (!frame2jpg(frame, 60, &image_data_buf, &image_data_buf_len)) {
             ESP_LOGE(TAG, "JPEG compression failed");
             res = ESP_FAIL;
         }
+#elif CONFIG_IMAGE_BMP_FORMAT
+        if (frame2bmp(frame, &image_data_buf, &image_data_buf_len) != true) {
+            res = ESP_FAIL;
+        }
+#endif
     } else {
         res = ESP_FAIL;
     }
 
     if (res == ESP_OK) {
-        res = httpd_resp_send_chunk(req, (const char *)_jpg_buf, _jpg_buf_len);
+        res = httpd_resp_send_chunk(req, (const char *)image_data_buf, image_data_buf_len);
+#if CONFIG_IMAGE_JPEG_FORMAT
         if (frame->format != PIXFORMAT_JPEG) {
-            free(_jpg_buf);
-            _jpg_buf = NULL;
+            free(image_data_buf);
+            image_data_buf = NULL;
         }
-
+#elif CONFIG_IMAGE_BMP_FORMAT
+        free(image_data_buf);
+        image_data_buf = NULL;
+#endif
         esp_camera_fb_return(frame);
-        ESP_LOGI(TAG, "pic len %d", _jpg_buf_len);
+        ESP_LOGI(TAG, "pic len %d", image_data_buf_len);
     } else {
         ESP_LOGW(TAG, "exit pic server");
         return ESP_FAIL;

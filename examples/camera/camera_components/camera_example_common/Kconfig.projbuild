@@ -14,6 +14,8 @@ menu "Camera Pin Configuration"
             bool "ESP32-S2-Kaluga-1 V1.3"
         config CAMERA_MODULE_ESP_S3_EYE
             bool "ESP-S3-EYE DevKit"
+        config CAMERA_MODULE_ESP_S3_KORVO2
+            bool "ESP-S3-Korvo-2"
         config CAMERA_MODEL_ESP32_CAM_BOARD
             bool "ESP32 Camera Development Board"
         config CAMERA_MODULE_M5STACK_PSRAM

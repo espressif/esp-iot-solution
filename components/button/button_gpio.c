@@ -28,6 +28,7 @@ static const char *TAG = "gpio button";
 esp_err_t button_gpio_init(const button_gpio_config_t *config)
 {
     GPIO_BTN_CHECK(NULL != config, "Pointer of config is invalid", ESP_ERR_INVALID_ARG);
+    GPIO_BTN_CHECK(GPIO_IS_VALID_GPIO(config->gpio_num), "GPIO number error", ESP_ERR_INVALID_ARG);
 
     gpio_config_t gpio_conf;
     gpio_conf.intr_type = GPIO_INTR_DISABLE;

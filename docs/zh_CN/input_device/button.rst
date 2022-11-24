@@ -20,23 +20,25 @@
 
 每个按键拥有下表的 7 个事件：
 
-+--------------------------+--------------------------+
-|        事件              |  触发条件                |
-+==========================+==========================+
-|  BUTTON_PRESS_DOWN       |   按下                   |
-+--------------------------+--------------------------+
-|  BUTTON_PRESS_UP         |   弹起                   |
-+--------------------------+--------------------------+
-|  BUTTON_PRESS_REPEAT     |   按下弹起次数 >= 2次    |
-+--------------------------+--------------------------+
-|  BUTTON_SINGLE_CLICK     |   按下弹起 1 次          |
-+--------------------------+--------------------------+
-|  BUTTON_DOUBLE_CLICK     |   按下弹起 2 次          |
-+--------------------------+--------------------------+
-|  BUTTON_LONG_PRESS_START |   按下时间达到阈值的瞬间 |
-+--------------------------+--------------------------+
-|  BUTTON_LONG_PRESS_HOLD  |   长按期间一直触发       |
-+--------------------------+--------------------------+
++--------------------------+------------------------+
+|           事件           |        触发条件        |
++==========================+========================+
+| BUTTON_PRESS_DOWN        | 按下                   |
++--------------------------+------------------------+
+| BUTTON_PRESS_UP          | 弹起                   |
++--------------------------+------------------------+
+| BUTTON_PRESS_REPEAT      | 按下弹起次数 >= 2次    |
++--------------------------+------------------------+
+| BUTTON_SINGLE_CLICK      | 按下弹起 1 次          |
++--------------------------+------------------------+
+| BUTTON_DOUBLE_CLICK      | 按下弹起 2 次          |
++--------------------------+------------------------+
+| BUTTON_LONG_PRESS_START  | 按下时间达到阈值的瞬间 |
++--------------------------+------------------------+
+| BUTTON_LONG_PRESS_HOLD   | 长按期间一直触发       |
++--------------------------+------------------------+
+| BUTTON_PRESS_REPEAT_DONE | 多次按下弹起结束       |
++--------------------------+------------------------+
 
 每个按键可以有 **回调** 和 **轮询** 两种使用方式：
 
@@ -48,6 +50,24 @@
 
 .. attention:: 回调函数中不能有 TaskDelay 等阻塞的操作
 
+配置项
+-----------
+- BUTTON_PERIOD_TIME_MS : 扫描周期
+
+- BUTTON_DEBOUNCE_TICKS : 消抖次数
+
+- BUTTON_SHORT_PRESS_TIME_MS : 连续短按有效时间
+
+- BUTTON_LONG_PRESS_TIME_MS : 长按有效时间
+
+- ADC_BUTTON_MAX_CHANNEL : ADC 按钮的最大通道数
+
+- ADC_BUTTON_MAX_BUTTON_PER_CHANNEL : ADC 一个通道最多的按钮数
+
+- ADC_BUTTON_SAMPLE_TIMES : 每次扫描的样本数
+
+- BUTTON_SERIAL_TIME_MS : 长按期间触发的 CALLBACK 间隔时间
+
 应用示例
 -----------
 
@@ -58,6 +78,8 @@
     // create gpio button
     button_config_t gpio_btn_cfg = {
         .type = BUTTON_TYPE_GPIO,
+        .long_press_ticks = CONFIG_BUTTON_LONG_PRESS_TIME_MS,
+        .short_press_ticks = CONFIG_BUTTON_SHORT_PRESS_TIME_MS,
         .gpio_button_config = {
             .gpio_num = 0,
             .active_level = 0,
@@ -71,6 +93,8 @@
     // create adc button
     button_config_t adc_btn_cfg = {
         .type = BUTTON_TYPE_ADC,
+        .long_press_ticks = CONFIG_BUTTON_LONG_PRESS_TIME_MS,
+        .short_press_ticks = CONFIG_BUTTON_SHORT_PRESS_TIME_MS,
         .adc_button_config = {
             .adc_channel = 0,
             .button_index = 0,
@@ -88,12 +112,12 @@
 
 .. code:: c
 
-    static void button_single_click_cb(void *arg)
+    static void button_single_click_cb(void *arg,void *usr_data)
     {
         ESP_LOGI(TAG, "BUTTON_SINGLE_CLICK");
     }
 
-    iot_button_register_cb(gpio_btn, BUTTON_SINGLE_CLICK, button_single_click_cb);
+    iot_button_register_cb(gpio_btn, BUTTON_SINGLE_CLICK, button_single_click_cb,NULL);
 
 查询按键事件
 ^^^^^^^^^^^^^^

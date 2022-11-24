@@ -1,0 +1,84 @@
+menu "Lightbulb Demo Configuration"
+
+    choice LIGHTBULB_DEMO_DRIVER_SELECT
+            bool "Demo select"
+            default LIGHTBULB_DEMO_DRIVER_SELECT_WS2812 if IDF_TARGET_ESP32C3 || IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
+            default LIGHTBULB_DEMO_DRIVER_SELECT_PWM
+            help
+                Select the driver type you want to demonstrate
+            
+            config LIGHTBULB_DEMO_DRIVER_SELECT_SM2135E
+                bool "Demo SM2135E"
+            config LIGHTBULB_DEMO_DRIVER_SELECT_WS2812
+                bool "Demo WS2812"
+            config LIGHTBULB_DEMO_DRIVER_SELECT_PWM
+                bool "Demo PWM"
+    endchoice
+
+    config WS2812_LED_GPIO
+        int "WS2812 LED GPIO"
+        default 8 if IDF_TARGET_ESP32C3
+        default 18 if IDF_TARGET_ESP32S2
+        default 48 if IDF_TARGET_ESP32S3
+        default 18
+        depends on LIGHTBULB_DEMO_DRIVER_SELECT_WS2812
+        help
+            Set the WS2812 RGB LED GPIO.
+    
+    config WS2812_LED_NUM
+        int "WS2812 LED NUM"
+        default 1
+        depends on LIGHTBULB_DEMO_DRIVER_SELECT_WS2812
+        help
+            Set the WS2812 LED NUM.
+
+    config PWM_FREQ_HZ
+        int "PWM Frequency (hz)"
+        default 4000
+        range 2000 5000
+        depends on LIGHTBULB_DEMO_DRIVER_SELECT_PWM
+        help
+            Set the PWM Frequency (hz).
+
+    config PWM_RED_GPIO
+        int "PWM Red GPIO"
+        default 10 if IDF_TARGET_ESP32C3 || IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32C2
+        default 15 if IDF_TARGET_ESP32S3
+        default 25
+        depends on LIGHTBULB_DEMO_DRIVER_SELECT_PWM
+        help
+            Set the PWM Red LED GPIO.
+    
+    config PWM_GREEN_GPIO
+        int "PWM Green GPIO"
+        default 6 if IDF_TARGET_ESP32C3 || IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32C2
+        default 16 if IDF_TARGET_ESP32S3
+        default 26
+        depends on LIGHTBULB_DEMO_DRIVER_SELECT_PWM
+        help
+            Set the PWM Green LED GPIO.
+
+    config PWM_BLUE_GPIO
+        int "PWM Blue GPIO"
+        default 7 if IDF_TARGET_ESP32C3 || IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32C2
+        default 17 if IDF_TARGET_ESP32S3
+        default 27
+        depends on LIGHTBULB_DEMO_DRIVER_SELECT_PWM
+        help
+            Set the PWM Blue LED GPIO.
+
+    config SM2135E_IIC_CLK_GPIO
+        int "SM2135E IIC CLK GPIO"
+        default 4
+        depends on LIGHTBULB_DEMO_DRIVER_SELECT_SM2135E
+        help
+            Set the SM2135E CLK GPIO.
+
+    config SM2135E_IIC_SDA_GPIO
+        int "SM2135E IIC SDA GPIO"
+        default 5
+        depends on LIGHTBULB_DEMO_DRIVER_SELECT_SM2135E
+        help
+            Set the SM2135E SDA GPIO.
+
+endmenu
