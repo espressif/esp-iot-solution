@@ -9,7 +9,7 @@ if(NOT DEFINED ENV{IOT_SOLUTION_PATH})
     message(WARNING "Can't detect IOT_SOLUTION_PATH in your environment, we infer it is $ENV{IOT_SOLUTION_PATH}")
 endif()
 
-include($ENV{IOT_SOLUTION_PATH}/component.cmake)
+set(EXTRA_COMPONENT_DIRS $ENV{IOT_SOLUTION_PATH}/components/led/lightbulb_driver)
 
 add_compile_options(-fdiagnostics-color=always)
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)

@@ -16,6 +16,7 @@
 
 #include <esp_log.h>
 #include <driver/spi_master.h>
+#include <hal/spi_hal.h>
 
 #include "ws2812.h"
 

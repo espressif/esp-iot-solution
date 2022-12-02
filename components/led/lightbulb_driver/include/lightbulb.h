@@ -247,7 +247,7 @@ typedef bool (*hardware_monitor_user_cb_t)(void);
  *
  */
 typedef struct {
-    uint32_t fades_ms;                        // Fade time, data range: 100ms - 3000ms, default is 800ms.
+    uint16_t fades_ms;                        // Fade time, data range: 100ms - 3000ms, default is 800ms.
     uint16_t storage_delay_ms;                // The storage delay time is used to solve the adverse effects of short-term repeated erasing and writing of nvs.
     lightbulb_mode_t mode_mask;               // Select the lightbulb light mode, the driver will initialize the corresponding port according to this option.
     lightbulb_status_storage_cb_t storage_cb; // This callback function will be called when the lightbulb status starts to be stored.
