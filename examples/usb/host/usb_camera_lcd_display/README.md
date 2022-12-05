@@ -2,6 +2,8 @@
 
 ## USB Camera + LCD Display Example
 
+Note: The `uvc_stream` driver has been migrated to [master/components/usb/usb_stream](https://github.com/espressif/esp-iot-solution/tree/master/components/usb/usb_stream), which support UVC + UAC function
+
 This example implements USB camera `MJPEG` stream reading, JPEG decoding, and screen refresh via the `ESP32-S2` or `ESP32-S3` series USB host function, and supports the following functions.
 
 * Support USB Camera data stream reading
