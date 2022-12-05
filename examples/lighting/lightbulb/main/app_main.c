@@ -32,6 +32,13 @@ void app_main(void)
 #ifdef CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_PWM
         .type = DRIVER_ESP_PWM,
         .driver_conf.pwm.freq_hz = CONFIG_PWM_FREQ_HZ,
+#ifdef CONFIG_IDF_TARGET_ESP32C2
+        /* Adapt to ESP8684-DevKitM-1 
+         * For details, please refer to: 
+         * https://docs.espressif.com/projects/espressif-esp-dev-kits/zh_CN/latest/esp8684/esp8684-devkitm-1/user_guide.html
+        */
+        .driver_conf.pwm.invert_level = true,
+#endif
 #endif
 #ifdef CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_SM2135E
         .type = DRIVER_SM2135E,

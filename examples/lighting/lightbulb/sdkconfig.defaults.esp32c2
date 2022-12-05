@@ -1,0 +1,4 @@
+#
+# ESP32-C2
+#
+CONFIG_XTAL_FREQ_26=y
