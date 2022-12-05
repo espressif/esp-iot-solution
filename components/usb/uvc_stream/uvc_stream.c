@@ -1512,17 +1512,17 @@ static void _usb_processing_task(void *arg)
 
             case PIPE_EVENT:
                 if (evt_msg._handle.pipe_handle == pipe_hdl_dflt) {
-                    hcd_pipe_event_t dflt_pipe_evt = _default_pipe_event_dflt_process(pipe_hdl_dflt, evt_msg._event.pipe_event);
-                    switch (dflt_pipe_evt) {
-                    case HCD_PIPE_EVENT_ERROR_STALL:
-                        xEventGroupClearBits(uvc_dev->event_group, USB_STREAM_RUNNING);
-                        goto stop_stream_driver_reset_;
-                        break;
-                    default:
-                        break;
-                    }
+                    _default_pipe_event_dflt_process(pipe_hdl_dflt, evt_msg._event.pipe_event);
                 } else if (evt_msg._handle.pipe_handle == pipe_hdl_stream) {
                     _stream_pipe_event_process(pipe_hdl_stream, evt_msg._event.pipe_event, true);
+                }
+                switch (evt_msg._event.pipe_event) {
+                    case HCD_PIPE_EVENT_ERROR_STALL:
+                    case HCD_PIPE_EVENT_ERROR_XFER:
+                        xEventGroupClearBits(uvc_dev->event_group, USB_STREAM_RUNNING);
+                        goto stop_stream_driver_reset_;
+                    default:
+                        break;
                 }
                 break;
 
