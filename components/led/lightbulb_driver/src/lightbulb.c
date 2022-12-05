@@ -804,7 +804,7 @@ esp_err_t lightbulb_set_hsv(uint16_t hue, uint8_t saturation, uint8_t value)
 
     esp_err_t err = ESP_OK;
     uint16_t color_value[5] = { 0 };
-    uint32_t fade_time = CALCULATE_FADE_TIME();
+    uint16_t fade_time = CALCULATE_FADE_TIME();
     uint8_t channel_mask = get_channel_mask(WORK_COLOR);
     uint8_t _value = value;
 
@@ -861,7 +861,7 @@ esp_err_t lightbulb_set_cctb(uint16_t cct, uint8_t brightness)
 
     esp_err_t err = ESP_OK;
     uint16_t white_value[5] = { 0 };
-    uint32_t fade_time = CALCULATE_FADE_TIME();
+    uint16_t fade_time = CALCULATE_FADE_TIME();
     uint8_t channel_mask = get_channel_mask(WORK_WHITE);
     uint8_t _brightness = brightness;
 

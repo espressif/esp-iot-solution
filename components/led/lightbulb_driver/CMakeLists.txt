@@ -3,7 +3,7 @@ set(srcs "src/hal_driver.c"
         "src/lighting.c"
         )
 
-set(priv_req nvs_flash)
+set(priv_req nvs_flash driver esp_timer)
 
 set(incs "include")
 

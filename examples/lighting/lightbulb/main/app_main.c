@@ -55,10 +55,12 @@ void app_main(void)
         .io_conf.pwm_io.green = CONFIG_PWM_GREEN_GPIO,
         .io_conf.pwm_io.blue = CONFIG_PWM_BLUE_GPIO,
 #endif
-#ifdef LIGHTBULB_DEMO_DRIVER_SELECT_SM2135E
+#ifdef CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_SM2135E
         .io_conf.iic_io.red = OUT3,
         .io_conf.iic_io.green = OUT2,
         .io_conf.iic_io.blue = OUT1,
+        .io_conf.iic_io.cold_white = OUT5,
+        .io_conf.iic_io.warm_yellow = OUT4,
 #endif
         //4. Limit param
         .external_limit = NULL,
