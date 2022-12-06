@@ -5,7 +5,7 @@ This example demonstrates how to use `usb_stream` component with an ESP device. 
 1. Config a UVC function with specified frame resolution and frame rate, register frame callback
 2. Config a UAC function with one microphone and one speaker stream, register mic frame callback
 3. Start the USB streaming
-4. In image frame callback, if `ENABLE_UVC_WIFI_XFER` is set to `1`, the real-time image can be fetched through ESP32Sx's Wi-Fi softAP (ssid: ESP32S2-UVC, http: 192.168.4.1), else will just print the image message
+4. In image frame callback, if `ENABLE_UVC_WIFI_XFER` is set to `1`, the real-time image can be fetched through ESP32Sx's Wi-Fi softAP (ssid: ESP32S3-UVC, http: 192.168.4.1), else will just print the image message
 5. In mic callback, if `ENABLE_UAC_MIC_SPK_LOOPBACK` is set to `1`, the mic data will be write back to usb speaker, else will just print mic data message
 6. For speaker, if `ENABLE_UAC_MIC_SPK_LOOPBACK` is set to `0`, the default sound will be played back
 
@@ -31,9 +31,10 @@ This example demonstrates how to use `usb_stream` component with an ESP device. 
 
 Build the project and flash it to the board, then run the monitor tool to view the serial output:
 
-Run `idf.py set-target esp32s3` to set target chip.
-
-Run `idf.py -p PORT flash monitor` to build, flash and monitor the project.
+* Run `. ./export.sh` to set IDF environment
+* Run `idf.py set-target esp32s3` to set target chip
+* Run `pip install "idf-component-manager~=1.1.4"` to upgrade your component manager if any error happends during last step
+* Run `idf.py -p PORT flash monitor` to build, flash and monitor the project
 
 (To exit the serial monitor, type `Ctrl-]`.)
 
@@ -51,7 +52,7 @@ I (305) wifi_init: tcp rx win: 5744
 I (305) wifi_init: tcp mss: 1440
 I (305) wifi_init: WiFi IRAM OP enabled
 I (305) wifi_init: WiFi RX IRAM OP enabled
-I (309) camera wifi: wifi_init_softap finished.SSID:ESP32S2-UVC password:
+I (309) camera wifi: wifi_init_softap finished.SSID:ESP32S3-UVC password:
 I (310) phy_init: phy_version 503,13653eb,Jun  1 2022,17:47:08
 I (350) wifi:mode : softAP (f4:12:fa:d8:db:91)
 I (355) wifi:Total power save buffer number: 16

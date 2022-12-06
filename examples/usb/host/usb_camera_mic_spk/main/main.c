@@ -24,10 +24,16 @@
 #include "usb_stream.h"
 
 static const char *TAG = "uvc_mic_spk_demo";
-#define ENABLE_UVC_CAMERA_FUNCTION 1
-#define ENABLE_UAC_MIC_SPK_FUNCTION 1
-#define ENABLE_UVC_WIFI_XFER 1
-#define ENABLE_UAC_MIC_SPK_LOOPBACK 0
+#define ENABLE_UVC_CAMERA_FUNCTION    1        /* enable uvc function */
+#define ENABLE_UAC_MIC_SPK_FUNCTION   1        /* enable uac mic+spk function */
+
+#if (ENABLE_UVC_CAMERA_FUNCTION)
+#define ENABLE_UVC_WIFI_XFER          0        /* transfer uvc frame to wifi http */
+#endif
+#if (ENABLE_UAC_MIC_SPK_FUNCTION)
+#define ENABLE_UAC_FEATURE_CONTROL    0        /* enable feature control(volume, mute) if the module support*/
+#define ENABLE_UAC_MIC_SPK_LOOPBACK   0        /* transfer mic data to speaker */
+#endif
 
 /* USB Camera Descriptors Related MACROS,
 the quick demo skip the standred get descriptors process,
@@ -75,13 +81,11 @@ static camera_fb_t s_fb = {0};
 camera_fb_t* esp_camera_fb_get()
 {
     xEventGroupWaitBits(s_evt_handle, BIT1_NEW_FRAME_START, true, true, portMAX_DELAY);
-    ESP_LOGV(TAG, "peek frame = %lld", s_fb.timestamp.tv_sec);
     return &s_fb;
 }
 
 void esp_camera_fb_return(camera_fb_t * fb)
 {
-    ESP_LOGV(TAG, "release frame = %lld", fb->timestamp.tv_sec);
     xEventGroupSetBits(s_evt_handle, BIT2_NEW_FRAME_END);
     return;
 }
@@ -138,6 +142,7 @@ void app_main(void)
     esp_log_level_set("*", ESP_LOG_INFO);
     esp_err_t ret = ESP_FAIL;
 
+#if (ENABLE_UVC_CAMERA_FUNCTION)
 #if (ENABLE_UVC_WIFI_XFER)
     s_evt_handle = xEventGroupCreate();
     if (s_evt_handle == NULL) {
@@ -147,8 +152,6 @@ void app_main(void)
     app_wifi_main();
     app_httpd_main();
 #endif //ENABLE_UVC_WIFI_XFER
-
-#if (ENABLE_UVC_CAMERA_FUNCTION)
     /* malloc double buffer for usb payload, xfer_buffer_size >= frame_buffer_size*/
     uint8_t *xfer_buffer_a = (uint8_t *)malloc(DEMO_UVC_XFER_BUFFER_SIZE);
     assert(xfer_buffer_a != NULL);
@@ -203,8 +206,10 @@ void app_main(void)
         .mic_min_bytes = 320,
         .mic_cb = &mic_frame_cb,
         .mic_cb_arg = NULL,
+#if (ENABLE_UAC_FEATURE_CONTROL)
         .ac_interface = 2,
         .spk_fu_id = 2,
+#endif
     };
     ret = uac_streaming_config(&uac_config);
     if (ret != ESP_OK) {
@@ -212,19 +217,20 @@ void app_main(void)
     }
 #endif
 
-    /* Start camera IN stream with pre-configs, uvc driver will create multi-tasks internal
+    /* Start stream with pre-configs, usb stream driver will create multi-tasks internal
     to handle usb data from different pipes, and user's callback will be called after new frame ready. */
     ret = usb_streaming_start();
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "uvc streaming start failed");
-    } else {
-        ESP_LOGI(TAG, "usb streaming start succeed");
+        ESP_LOGE(TAG, "usb streaming start failed");
     }
+    ESP_LOGI(TAG, "usb streaming start succeed");
 
 // IF not enable loopback, play default sound
 #if (ENABLE_UAC_MIC_SPK_FUNCTION && !ENABLE_UAC_MIC_SPK_LOOPBACK)
     // set the speaker volume to 10%
-    usb_streaming_control(STREAM_UAC_SPK, CTRL_UAC_VOLUME, (void *)10);
+#if (ENABLE_UAC_FEATURE_CONTROL)
+    usb_streaming_control(STREAM_UAC_SPK, CTRL_UAC_VOLUME, (void *)60);
+#endif
     extern const uint8_t wave_array_32000_16_1[];
     extern const uint32_t s_buffer_size;
     int freq_offsite_step = 32000 / uac_config.spk_samples_frequence;
@@ -245,10 +251,14 @@ void app_main(void)
         if ((uint32_t)(s_buffer + i) > (uint32_t)(wave_array_32000_16_1+s_buffer_size)) {
             s_buffer = (uint16_t *)wave_array_32000_16_1;
             // mute the speaker
+#if (ENABLE_UAC_FEATURE_CONTROL)
             usb_streaming_control(STREAM_UAC_SPK, CTRL_UAC_MUTE, (void *)1);
+#endif
             vTaskDelay(pdMS_TO_TICKS(1000));
             // un-mute the speaker
+#if (ENABLE_UAC_FEATURE_CONTROL)
             usb_streaming_control(STREAM_UAC_SPK, CTRL_UAC_MUTE, (void *)0);
+#endif
         } else {
             s_buffer += i*freq_offsite_step;
         }

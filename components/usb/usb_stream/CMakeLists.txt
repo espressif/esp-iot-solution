@@ -27,6 +27,7 @@ idf_component_register(SRCS usb_stream.c descriptor.c
                     PRIV_INCLUDE_DIRS "${IDF_PATH}/components/usb/private_include" "private_include"
                     EMBED_FILES ${embed_files}
                     REQUIRES usb esp_ringbuf)
+target_compile_options(${COMPONENT_LIB} PRIVATE "-Wno-address-of-packed-member")
 else()
 idf_component_register(SRCS usb_stream.c descriptor.c
                     INCLUDE_DIRS "include" "include/deprecated"

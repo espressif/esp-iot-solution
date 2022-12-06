@@ -175,9 +175,13 @@ TEST_CASE("test uac mic spk loop", "[usb][usb_stream][uvc][isoc]")
         TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_start());
         vTaskDelay(2000 / portTICK_PERIOD_MS);
         TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_SPK, CTRL_SUSPEND, NULL));
-        vTaskDelay(2000 / portTICK_PERIOD_MS);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
         TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_SPK, CTRL_RESUME, NULL));
-        vTaskDelay(2000 / portTICK_PERIOD_MS);
+        vTaskDelay(3000 / portTICK_PERIOD_MS);
+        TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_SPK, CTRL_SUSPEND, NULL));
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_SPK, CTRL_RESUME, NULL));
+        vTaskDelay(3000 / portTICK_PERIOD_MS);
         TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_stop());
         test_count--;
     }
@@ -238,37 +242,40 @@ TEST_CASE("test uac spk", "[usb][usb_stream][spk]")
     const int downsampling_bits = 16 - uac_config.spk_bit_resolution;
     const int buffer_ms = 400;
     const int buffer_size = buffer_ms * (uac_config.spk_bit_resolution / 8) * (uac_config.spk_samples_frequence / 1000);
-    size_t test_count = 5;
+    size_t test_count = 3;
     for (size_t i = 0; i < test_count; i++) {
         /* pre-config UAC driver with params from known USB Camera Descriptors*/
         TEST_ASSERT_EQUAL(ESP_OK, uac_streaming_config(&uac_config));
         /* Start camera IN stream with pre-configs, uvc driver will create multi-tasks internal
         to handle usb data from different pipes, and user's callback will be called after new frame ready. */
         TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_start());
-        vTaskDelay(2000 / portTICK_PERIOD_MS);
-        TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_SPK, CTRL_UAC_VOLUME, (void *)10));
         // if 8bit spk, declare uint8_t *d_buffer
         uint16_t *s_buffer = (uint16_t *)wave_array_32000_16_1;
         uint16_t *d_buffer = calloc(1, buffer_size);
         TEST_ASSERT_NOT_NULL(d_buffer);
-        size_t spk_count = 2;
+        size_t spk_count = 3;
         while(spk_count) {
-            size_t i = 0;
-            TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_SPK, CTRL_UAC_VOLUME, (void *)(80/spk_count)));
-            for (; i < buffer_size/(uac_config.spk_bit_resolution/8); i++) {
-                d_buffer[i] = *(s_buffer + i*freq_offsite_step) >> downsampling_bits;
+            TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_SPK, CTRL_UAC_VOLUME, (void *)(90/spk_count)));
+            TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_SPK, CTRL_UAC_MUTE, (void *)0));
+            while (1) {
+                /* code */
+                size_t i = 0;
+                for (; i < buffer_size/(uac_config.spk_bit_resolution/8); i++) {
+                    d_buffer[i] = *(s_buffer + i*freq_offsite_step) >> downsampling_bits;
+                }
+                TEST_ASSERT_EQUAL(ESP_OK, uac_spk_streaming_write(d_buffer, buffer_size, portMAX_DELAY));
+                if ((uint32_t)(s_buffer + i) > (uint32_t)(wave_array_32000_16_1+s_buffer_size)) {
+                    s_buffer = (uint16_t *)wave_array_32000_16_1;
+                    break;
+                } else {
+                    s_buffer += i*freq_offsite_step;
+                }
             }
-            TEST_ASSERT_EQUAL(ESP_OK, uac_spk_streaming_write(d_buffer, buffer_size, portMAX_DELAY));
-            if ((uint32_t)(s_buffer + i) > (uint32_t)(wave_array_32000_16_1+s_buffer_size)) {
-                s_buffer = (uint16_t *)wave_array_32000_16_1;
-                TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_SPK, CTRL_UAC_MUTE, (void *)1));
-                spk_count--;
-                vTaskDelay(pdMS_TO_TICKS(1000));
-                TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_SPK, CTRL_UAC_MUTE, (void *)0));
-                vTaskDelay(pdMS_TO_TICKS(1000));
-            } else {
-                s_buffer += i*freq_offsite_step;
-            }
+            spk_count--;
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
+            TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_SPK, CTRL_UAC_VOLUME, (void *)(0/spk_count)));
+            TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_SPK, CTRL_UAC_MUTE, (void *)1));
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
         }
         free(d_buffer);
         TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_stop());

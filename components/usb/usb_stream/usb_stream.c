@@ -105,7 +105,7 @@ const char *TAG = "UVC_STREAM";
  */
 #define UAC_TASK_NAME             "vs_ac_proc"                        /*! audio task name */
 #define UAC_TASK_PRIORITY         CONFIG_USB_PROC_TASK_PRIORITY       /*! audio task priority, higher to handle event quick */
-#define UAC_TASK_STACK_SIZE       4096                                /*! audio task stack size */
+#define UAC_TASK_STACK_SIZE       (1024 * 3)                          /*! audio task stack size */
 #define UAC_TASK_CORE             CONFIG_USB_PROC_TASK_CORE           /*! audio task core id */
 
 /**
@@ -1402,7 +1402,6 @@ static inline void _uvc_process_payload(_uvc_stream_handle_t *strmh, uint8_t *pa
     }
 
     if (header_info & (1 << 3)) {
-        /** @todo read the SOF token counter */
         strmh->last_scr = DW_TO_INT(payload + variable_offset);
         variable_offset += 6;
     }
@@ -1411,7 +1410,7 @@ static inline void _uvc_process_payload(_uvc_stream_handle_t *strmh, uint8_t *pa
     if (data_len >= 1) {
         if (strmh->got_bytes + data_len > s_uvc_dev.xfer_buffer_size) {
             /* This means transfer buffer Not enough for whole frame, just drop whole buffer here.
-               Please increase buffer size to handle big frame*/
+            Please increase buffer size to handle big frame*/
             ESP_LOGW(TAG, "Transfer buffer overflow, gotdata=%u B", strmh->got_bytes + data_len);
             _uvc_drop_buffers(strmh);
             return;
@@ -1438,7 +1437,6 @@ static inline void _uvc_process_payload(_uvc_stream_handle_t *strmh, uint8_t *pa
  */
 static uvc_error_t uvc_stream_open_ctrl(uvc_device_handle_t *devh, _uvc_stream_handle_t **strmhp, uvc_stream_ctrl_t *ctrl)
 {
-    /* TODO:Chosen frame and format descriptors, Hardcode here*/
     _uvc_stream_handle_t *strmh = NULL;
     uvc_error_t ret;
     strmh = calloc(1, sizeof(*strmh));
@@ -1452,7 +1450,6 @@ static uvc_error_t uvc_stream_open_ctrl(uvc_device_handle_t *devh, _uvc_stream_h
     strmh->frame.library_owns_data = 1;
     strmh->cur_ctrl = *ctrl;
     strmh->running = 0;
-    /** @todo take only what we need */
     strmh->outbuf = s_uvc_dev.xfer_buffer_a;
     strmh->holdbuf = s_uvc_dev.xfer_buffer_b;
     strmh->frame.data = s_uvc_dev.frame_buffer;
@@ -1505,7 +1502,7 @@ static uvc_error_t uvc_stream_start(_uvc_stream_handle_t *strmh, uvc_frame_callb
 
     if (cb) {
         BaseType_t ret = xTaskCreatePinnedToCore(_sample_processing_task, SAMPLE_PROC_TASK_NAME, SAMPLE_PROC_TASK_STACK_SIZE, (void *)strmh,
-                         SAMPLE_PROC_TASK_PRIORITY, &strmh->taskh, SAMPLE_PROC_TASK_CORE);
+                        SAMPLE_PROC_TASK_PRIORITY, &strmh->taskh, SAMPLE_PROC_TASK_CORE);
         if (ret != pdPASS) {
             ESP_LOGE(TAG, "sample task create failed");
             return UVC_ERROR_OTHER;
@@ -1554,7 +1551,7 @@ static void uvc_stream_close(_uvc_stream_handle_t *strmh)
 /****************************************************** Task Code ******************************************************/
 
 static esp_err_t _user_event_wait(hcd_port_handle_t port_hdl,
-                                  _uvc_user_cmd_t waiting_cmd, TickType_t xTicksToWait)
+                                _uvc_user_cmd_t waiting_cmd, TickType_t xTicksToWait)
 {
     //Wait for port callback to send an event message
     QueueHandle_t queue_hdl = (QueueHandle_t)hcd_port_get_context(port_hdl);
@@ -1618,7 +1615,7 @@ static esp_err_t _ring_buffer_push(RingbufHandle_t ringbuf_hdl, uint8_t *buf, si
     int res = xRingbufferSend(ringbuf_hdl, buf, write_bytes, xTicksToWait);
 
     if (res != pdTRUE) {
-        ESP_LOGW(TAG, "The spk buffer is too small, push failed");
+        ESP_LOGW(TAG, "buffer is too small, push failed");
         return ESP_FAIL;
     }
     return ESP_OK;
@@ -1674,7 +1671,6 @@ static void _processing_mic_pipe(hcd_pipe_handle_t pipe_hdl, mic_callback_t *use
     mic_frame.data_bytes = xfered_size;
     ESP_LOGV(TAG, "MIC RC %d", xfered_size);
     ESP_LOGV(TAG, "mic payload = %02x %02x...%02x %02x\n", urb_done->transfer.data_buffer[0], urb_done->transfer.data_buffer[1], urb_done->transfer.data_buffer[xfered_size-2], urb_done->transfer.data_buffer[xfered_size-1]);
-    //todo: assert(xfered_size == s_uac_dev.mic_min_bytes)
 
     if (s_uac_dev.mic_ringbuf_hdl) {
         esp_err_t ret = _ring_buffer_push(s_uac_dev.mic_ringbuf_hdl, mic_frame.data, mic_frame.data_bytes, 1);
@@ -1833,10 +1829,9 @@ static void _processing_spk_pipe(hcd_pipe_handle_t pipe_hdl, bool if_dequeue, bo
         //should never happened
         return;
     }
-    next_urb->transfer.num_bytes = num_bytes_to_send;
-
+    // may drop some data here?
+    next_urb->transfer.num_bytes = num_bytes_to_send - num_bytes_to_send % s_uac_dev.spk_as_ifc->bytes_per_packet;
     usb_transfer_dummy_t *transfer_dummy = (usb_transfer_dummy_t *)&next_urb->transfer;
-    //TODO check round to MPS
     transfer_dummy->num_isoc_packets = num_bytes_to_send / s_uac_dev.spk_as_ifc->bytes_per_packet;
     for (size_t j = 0; j < transfer_dummy->num_isoc_packets; j++) {
         //We need to initialize each individual isoc packet descriptor of the URB
@@ -1852,19 +1847,17 @@ static void _processing_spk_pipe(hcd_pipe_handle_t pipe_hdl, bool if_dequeue, bo
 
 static void _uac_deinit_cb(int time_out_ms)
 {
-    if (xEventGroupGetBits(s_usb_dev.event_group) & (USB_UVC_STREAM_RUNNING | UAC_MIC_STREAM_RUNNING | UAC_SPK_STREAM_RUNNING)) {
-        xEventGroupSetBits(s_usb_dev.event_group, USB_STREAM_TASK_KILL_BIT);
-        int counter = time_out_ms;
-        while (xEventGroupGetBits(s_usb_dev.event_group) & USB_STREAM_TASK_KILL_BIT) {
-            vTaskDelay(pdMS_TO_TICKS(10));
-            counter -= 10;
-            if (counter <= 0) {
-                ESP_LOGE(TAG, "%s uac deinit timeout", __func__);
-                break;
-            }
+    xEventGroupSetBits(s_usb_dev.event_group, USB_STREAM_TASK_KILL_BIT);
+    int counter = time_out_ms;
+    while (xEventGroupGetBits(s_usb_dev.event_group) & USB_STREAM_TASK_KILL_BIT) {
+        vTaskDelay(pdMS_TO_TICKS(10));
+        counter -= 10;
+        if (counter <= 0) {
+            ESP_LOGE(TAG, "%s uac deinit timeout", __func__);
+            break;
         }
-        xEventGroupClearBits(s_usb_dev.event_group, USB_STREAM_TASK_KILL_BIT);
     }
+    xEventGroupClearBits(s_usb_dev.event_group, USB_STREAM_TASK_KILL_BIT);
 }
 
 static void _uac_disconnect_cb(int time_out_ms)
@@ -1996,7 +1989,7 @@ static void _usb_stream_handle_task(void *arg)
 
         if (uac_dev->mic_active) {
             ESP_LOGI(TAG, "Creating mic in pipe itf = %d, ep = 0x%02X, ", uac_dev->mic_as_ifc->interface, uac_dev->mic_as_ifc->ep_addr);
-             uac_dev->mic_as_ifc->pipe_handle = _usb_pipe_init(port_hdl, &stream_ep_desc[STREAM_UAC_MIC], uvc_dev->parent->dev_addr, uvc_dev->parent->dev_speed,
+            uac_dev->mic_as_ifc->pipe_handle = _usb_pipe_init(port_hdl, &stream_ep_desc[STREAM_UAC_MIC], uvc_dev->parent->dev_addr, uvc_dev->parent->dev_speed,
                                           (void *)uvc_dev->parent->stream_queue_hdl, (void *)uvc_dev->parent->stream_queue_hdl);
             assert( uac_dev->mic_as_ifc->pipe_handle != NULL);
             for (size_t i = 0; i < uac_dev->mic_as_ifc->urb_num; i++) {
@@ -2145,13 +2138,11 @@ _usb_stream_reset:
         _ring_buffer_flush(uac_dev->spk_ringbuf_hdl);
         _ring_buffer_flush(uac_dev->mic_ringbuf_hdl);
         xEventGroupClearBits(uvc_dev->parent->event_group, USB_STREAM_TASK_RESET_BIT);
+        ESP_LOGI(TAG, "usb stream task reset done");
     } //handle hotplug
-
 free_stream_:
     if (uvc_stream_hdl) {
         uvc_stream_stop(uvc_stream_hdl);
-    }
-    if (uvc_stream_hdl) {
         uvc_stream_close(uvc_stream_hdl);
     }
     uvc_stream_hdl = NULL;
@@ -2180,9 +2171,9 @@ free_urb_:
         free(uac_dev->spk_as_ifc->urb_list);
         uac_dev->spk_as_ifc->urb_list = NULL;
     }
-
     xEventGroupClearBits(uvc_dev->parent->event_group, USB_STREAM_TASK_KILL_BIT | USB_UVC_STREAM_RUNNING | UAC_SPK_STREAM_RUNNING | UAC_MIC_STREAM_RUNNING);
     ESP_LOGI(TAG, "audio task deleted");
+    ESP_LOGD(TAG, "audio task watermark = %d B", uxTaskGetStackHighWaterMark(NULL));
     vTaskDelete(NULL);
 }
 
@@ -2296,12 +2287,11 @@ static void _usb_processing_task(void *arg)
                     xEventGroupSetBits(uvc_dev->parent->event_group, USB_DEVICE_CONNECTED);
                     break;
                 case HCD_PORT_EVENT_DISCONNECTION:
-                    ESP_LOGD(TAG, "hcd port state = %d", hcd_port_get_state(port_hdl));
+                    ESP_LOGD(TAG, "hcd port state after disconnect = %d", hcd_port_get_state(port_hdl));
                     xEventGroupClearBits(uvc_dev->parent->event_group, USB_DEVICE_CONNECTED);
                     if (uac_dev->parent->vs_as_taskh != NULL) {
-                        _uac_disconnect_cb(2000);
+                        _uac_disconnect_cb(3000);
                     }
-                    ESP_LOGD(TAG, "hcd port state = %d", hcd_port_get_state(port_hdl));
                     goto usb_driver_reset_;
                     break;
                 default:
@@ -2334,9 +2324,11 @@ static void _usb_processing_task(void *arg)
                     xEventGroupSetBits(uvc_dev->parent->event_group, USB_CTRL_PROC_SUCCEED);
                     ESP_LOGI(TAG, "%s interface(%u) suspended: alt set to 0!", p_itf->name, p_itf->interface);
                 } else if (evt_msg._event.user_cmd == STREAM_RESUME) {
-                    ret = _uvc_vs_commit_control(pipe_hdl_dflt, &uvc_dev->ctrl_set, &uvc_dev->ctrl_probed);
-                    UVC_CHECK_GOTO(ESP_OK == ret, "vs commit failed", resume_failed_driver_reset_);
                     _stream_ifc_t *p_itf = (_stream_ifc_t *)evt_msg._handle.user_hdl;
+                    if (p_itf->type == STREAM_UVC) {
+                        ret = _uvc_vs_commit_control(pipe_hdl_dflt, &uvc_dev->ctrl_set, &uvc_dev->ctrl_probed);
+                        UVC_CHECK_GOTO(ESP_OK == ret, "vs commit failed", resume_failed_driver_reset_);
+                    }
                     ret = _usb_set_device_interface(pipe_hdl_dflt, p_itf->interface, p_itf->interface_alt);
                     UVC_CHECK_GOTO(ESP_OK == ret, "resume alt_interface failed", resume_failed_driver_reset_);
                     xQueueSend(uvc_dev->parent->stream_queue_hdl, &evt_msg, portMAX_DELAY);
@@ -2395,7 +2387,7 @@ resume_failed_driver_reset_:
         xEventGroupSetBits(uvc_dev->parent->event_group, USB_CTRL_PROC_FAILED);
 usb_driver_reset_:
         if (uac_dev->parent->vs_as_taskh) {
-            _uac_deinit_cb(5000);
+            _uac_deinit_cb(2000);
             uac_dev->parent->vs_as_taskh = NULL;
         }
 
@@ -2410,7 +2402,7 @@ usb_driver_reset_:
         ESP_LOGI(TAG, "hcd recovering");
         hcd_port_recover(port_hdl);
         vTaskDelay(50 / portTICK_PERIOD_MS);
-        ESP_LOGI(TAG, "hcd port state = %d", hcd_port_get_state(port_hdl));
+        ESP_LOGI(TAG, "hcd port state after recovering = %d", hcd_port_get_state(port_hdl));
         if (_user_event_wait(port_hdl, STREAM_STOP, pdMS_TO_TICKS(200)) == ESP_OK) {
             ESP_LOGI(TAG, "handle user stop command");
             break;

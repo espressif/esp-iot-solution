@@ -1,10 +1,4 @@
 menu "HTTP Transfer Settings"
-    config ESP_HOST_NAME
-        string "Camera Host Name"
-        default ""
-        help
-        Hostname that the camera will advertise over mDNS.
-    
     config ESP_WIFI_SSID
         string "WiFi STA SSID"
         default ""
@@ -19,7 +13,7 @@ menu "HTTP Transfer Settings"
         
     config ESP_WIFI_AP_SSID
         string "WiFi AP SSID"
-        default "ESP32S2-UVC"
+        default "ESP32S3-UVC"
         help
         AP SSID (network name) to create or empty for Off.
     
