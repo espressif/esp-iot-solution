@@ -2,6 +2,8 @@
 
 ## USB Camera + Wi-Fi Transfer Example
 
+Note: The `uvc_stream` driver has been migrated to [master/components/usb/usb_stream](https://github.com/espressif/esp-iot-solution/tree/master/components/usb/usb_stream), which support UVC + UAC function
+
 This example implements USB camera `MJPEG` stream reading + Wi-Fi picture transfer via the `ESP32-S2` or `ESP32-S3` series Soc, and supports the following functions:
 
 * Support for reading and parsing USB Camera data streams

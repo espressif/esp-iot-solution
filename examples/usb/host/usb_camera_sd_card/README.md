@@ -2,6 +2,8 @@
 
 ## USB Camera + SD Card Example
 
+Note: The `uvc_stream` driver has been migrated to [master/components/usb/usb_stream](https://github.com/espressif/esp-iot-solution/tree/master/components/usb/usb_stream), which support UVC + UAC function
+
 This example demonstrates USB camera `MJPEG` stream reading + SD card storage via the `ESP32-S2` or `ESP32-S3` USB host function, which supports the following functions.
 
 * Support for reading and parsing USB Camera data streams

@@ -2,6 +2,8 @@
 
 ## USB Camera Wi-Fi Transfer Demo 说明
 
+Note: `uvc_stream` 驱动已经迁移到 [master/components/usb/usb_stream](https://github.com/espressif/esp-iot-solution/tree/master/components/usb/usb_stream), 新版本支持 UVC + UAC 功能
+
 该示例程序通过 `ESP32-S2` 或 `ESP32-S3` 系列 USB 主机功能，实现对 USB 摄像头 `MJPEG` 数据流读取、Wi-Fi 图传，支持以下功能：
 
 * 支持 USB Camera 数据流获取和解析

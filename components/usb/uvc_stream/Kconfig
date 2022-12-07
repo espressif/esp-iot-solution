@@ -28,7 +28,8 @@ menu "UVC Stream"
         default 5
     config USB_PROC_TASK_CORE
         int "usb handle task core id"
-        default 0
+        default 1 if IDF_TARGET_ESP32S3 && !FREERTOS_UNICORE
+        default 0 if IDF_TARGET_ESP32S2
     config SAMPLE_PROC_TASK_PRIORITY
         int "sample process task priority"
         default 2
