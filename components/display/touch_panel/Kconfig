@@ -9,6 +9,9 @@ menu "Touch Screen Driver"
         config TOUCH_DRIVER_NS2016
             bool "NS2016"
             default n
+        config TOUCH_DRIVER_RES4W
+            bool "RES4W"
+            default n
     endmenu
 
     config TOUCH_PANEL_MAX_CALIBRATE_ERROR
