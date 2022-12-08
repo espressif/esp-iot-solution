@@ -132,8 +132,10 @@ int ns2016_is_pressed(void)
      * @note There are two ways to determine weather the touch panel is pressed
      * 1. Read the IRQ line of touch controller
      * 2. Read value of z axis
-     * Only the second method is used here, so the IRQ line is not used.
      */
+    if (-1 != g_touch_dev.pin_num_int) {
+      return !gpio_get_level((gpio_num_t)g_touch_dev.pin_num_int);
+      }
     uint16_t z;
     esp_err_t ret = ns2016_get_sample(NS2016_TOUCH_CMD_Z1, &z);
     TOUCH_CHECK(ret == ESP_OK, "Z sample failed", 0);

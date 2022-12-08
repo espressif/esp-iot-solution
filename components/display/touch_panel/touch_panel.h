@@ -149,7 +149,7 @@ typedef struct {
     };
 
     touch_panel_interface_type_t interface_type;   /*!< Interface bus type, see touch_interface_type_t struct */
-    int8_t pin_num_int;                            /*!< Interrupt pin of touch panel. NOTE: Now this line is not used, you can set to -1 and no connection with hardware */
+    int8_t pin_num_int;                            /*!< Interrupt pin of touch panel. NOTE: You can set to -1 for no connection with hardware. If PENIRQ is connected set this to pin number. */
     touch_panel_dir_t direction;                   /*!< Rotate direction */
     uint16_t width;                                /*!< touch panel width */
     uint16_t height;                               /*!< touch panel height */
