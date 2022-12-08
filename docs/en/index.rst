@@ -8,17 +8,17 @@ This is the documentation for `ESP-IoT-Solution <https://github.com/espressif/es
 ESP-IoT-Solution contains device drivers and code frameworks for the development of IoT system, which works as extra components of `ESP-IDF <https://github.com/espressif/esp-idf>`_ and much easier to start.
 
 ===============================  ===============================  ===============================
- |Get Started|_                   |Display|_                       |Audio|_
+ |Get Started|_                   |Display|_                       |USB Host&Device|_
 -------------------------------  -------------------------------  -------------------------------
- `Get Started`_                   `Display`_                       `Audio`_
+ `Get Started`_                   `Display`_                       `USB Host&Device`_
 -------------------------------  -------------------------------  -------------------------------
  |GUI|_                           |Input|_                         |Sensors|_
 -------------------------------  -------------------------------  -------------------------------
  `GUI`_                           `Input`_                         `Sensors`_
 -------------------------------  -------------------------------  -------------------------------
- |Security&Encryption|_           |Contribute|_
+ |Audio|_                          |Security&Encryption|_           |Contribute|_
 -------------------------------  -------------------------------  -------------------------------
- `Security&Encryption`_           `Contribute`_
+ `Audio`_                          `Security&Encryption`_           `Contribute`_
 ===============================  ===============================  ===============================
 
 
@@ -36,6 +36,9 @@ ESP-IoT-Solution contains device drivers and code frameworks for the development
 
 .. |Display| image:: ../_static/display.png
 .. _Display: display/index.html
+
+.. |USB Host&Device| image:: ../_static/usb.png
+.. _USB Host&Device: usb/index.html
 
 .. |Input| image:: ../_static/input_device.png
 .. _Input: input_device/index.html
@@ -61,7 +64,8 @@ ESP-IoT-Solution contains device drivers and code frameworks for the development
 
    Get Started <gettingstarted>
    Basic Component <basic/index>
-   Display<display/index>
+   Display <display/index>
+   USB Host&Device <usb/index>
    Audio <audio/index>
    GUI <gui/index>
    Input Device <input_device/index>
