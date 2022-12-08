@@ -26,25 +26,37 @@
 extern "C" {
 #endif
 
+/**
+ * @brief UVC stream usb transfer type, most camera using isochronous mode,
+ * bulk mode can also be support for higher bandwidth
+ */
 typedef enum {
     UVC_XFER_ISOC = 0,  /*!< Isochronous Transfer Mode */
     UVC_XFER_BULK,      /*!< Bulk Transfer Mode */
 } uvc_xfer_t;
 
+/**
+ * @brief Stream id, used for control
+ * 
+ */
 typedef enum {
     STREAM_UVC = 0,     /*!< usb video stream */
     STREAM_UAC_SPK,     /*!< usb audio speaker stream */
     STREAM_UAC_MIC,     /*!< usb audio microphone stream */
-    STREAM_MAX,
+    STREAM_MAX,         /*!< max stream id */
 } usb_stream_t;
 
+/**
+ * @brief Stream control type, which also depends on if device support
+ * 
+ */
 typedef enum {
-    CTRL_NONE = 0,
+    CTRL_NONE = 0,     /*!< None */
     CTRL_SUSPEND,      /*!< streaming suspend control. ctrl_data NULL */
     CTRL_RESUME,       /*!< streaming resume control. ctrl_data NULL */
     CTRL_UAC_MUTE,     /*!< mute control. ctrl_data (false/true) */
     CTRL_UAC_VOLUME,   /*!< volume control. ctrl_data (0~100) */
-    CTRL_MAX,
+    CTRL_MAX,          /*!< max type value */
 } stream_ctrl_t;
 
 /**
@@ -71,7 +83,9 @@ typedef struct uvc_config {
     void *frame_cb_arg;             /*!< callback function arg */
 } uvc_config_t;
 
-/* mic callback type **/ 
+/**
+ * @brief mic frame type 
+ * */ 
 typedef struct {
     void *data;                 /*!< mic data */
     uint32_t data_bytes;        /*!< mic data size */
@@ -79,6 +93,10 @@ typedef struct {
     uint32_t samples_frequence; /*!< mic sample frequency */
 } mic_frame_t;
 
+/**
+ * @brief user callback function to handle incoming mic frames
+ * 
+ */
 typedef void(mic_callback_t)(mic_frame_t *frame, void *user_ptr);
 
 /**
@@ -149,8 +167,10 @@ esp_err_t usb_streaming_stop(void);
 
 /**
  * @brief Control specified streaming features
- * @Note suspend/resume only supported for isochronous mode stream
+ * @note suspend/resume only supported for isochronous mode stream
  * @param stream stream type defined in usb_stream_t
+ * @param ctrl_type stream control type defined in stream_ctrl_t
+ * @param ctrl_value stream control value
  * @return
  *         ESP_ERR_INVALID_STATE not inited
  *         ESP_FAIL resume failed
