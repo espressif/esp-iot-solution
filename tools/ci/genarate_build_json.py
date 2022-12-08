@@ -11,6 +11,16 @@ import sys
 # =============================================================================
 
 
+def get_idf_version():
+    args = [sys.executable, get_idf_path('tools/idf.py'), "--version"]
+    output = subprocess.check_output(args).decode('utf-8')
+    output = output.split('.')
+    m = int(output[0][-1:])
+    s = int(output[1][:1])
+    print('- IDF Version v%d.%d' % (m, s))
+    v = "{0}.{1}".format(m,s)
+    return v
+
 def get_idf_targets():
     args = [sys.executable, get_idf_path('tools/idf.py'), "--version"]
     output = subprocess.check_output(args).decode('utf-8')
@@ -19,7 +29,9 @@ def get_idf_targets():
     s = int(output[1][:1])
     print('- IDF Version v%d.%d' % (m, s))
     v = m * 10 + s
-    if v == 44:
+    if v == 50:
+        TARGETS = ['esp32', 'esp32s2', 'esp32s3', 'esp32c3', 'esp32c2', 'esp32c6']
+    elif v == 44:
         TARGETS = ['esp32', 'esp32s2', 'esp32s3', 'esp32c3']
     elif v == 43:
         TARGETS = ['esp32', 'esp32s2', 'esp32c3']
@@ -82,6 +94,22 @@ def write_json_list_to_file(json_list, file):
         f_json.write(json.dumps(a) + '\n')
     f_json.close()
 
+def apply_version(app_list, configs):
+    version = get_idf_version()
+    print('- Applying version %s' % (version))
+    app_list_res = list(app_list)
+    for p in app_list:
+        for app in configs['examples']:
+            if os.path.basename(p['app_dir']) == app['name']:
+                support = 0
+                for t in app['idfversion']:
+                    if t == version:
+                        support = 1
+
+                if support != 1:
+                    print('[%s] unsupport %s' % (app['name'], version))
+                    app_list_res.remove(p)
+    return app_list_res
 
 def apply_targets(app_list, configs, target):
     print('- Applying targets')
@@ -163,6 +191,9 @@ def diff(first, second):
 def generate_app_json(target, build_system, configs_json):
     json_file_path = get_apps(target, build_system)
     json_list = read_json_list_from_file(json_file_path)
+
+    # apply idf version
+    json_list = apply_version(json_list, configs_json)
 
     # apply target
     json_list = apply_targets(json_list, configs_json, target)

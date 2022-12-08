@@ -1,0 +1,60 @@
+menu "UVC Stream"
+
+    config CTRL_TRANSFER_DATA_MAX_BYTES
+        int "Max control transfer data size (Bytes)"
+        range 64 2048
+        default 1024
+    config UVC_GET_DEVICE_DESC
+        bool "Get camera device descriptor during emum"
+        default y
+    config UVC_GET_CONFIG_DESC
+        bool "Get camera config descriptor during emum"
+        default y
+    config UVC_PRINT_DESC_VERBOSE
+        bool "Print camera more descriptor info"
+        default n
+    config UVC_PRINT_PROBE_RESULT
+        bool "Print video cur probe result"
+        default y
+    config SOURCE_SIMULATE
+        bool "Enable Simulate Pictures From Flash"
+        default n
+
+    config TRIGGER_PIN
+        bool "Enable Trigger Pin For Debug"
+        default n
+    config USB_PROC_TASK_PRIORITY
+        int "usb handle task priority"
+        default 5
+    config USB_PROC_TASK_CORE
+        int "usb handle task core id"
+        default 1 if IDF_TARGET_ESP32S3 && !FREERTOS_UNICORE
+        default 0 if IDF_TARGET_ESP32S2
+    config SAMPLE_PROC_TASK_PRIORITY
+        int "sample process task priority"
+        default 2
+    config SAMPLE_PROC_TASK_CORE
+        int "sample process task core id"
+        default 0
+    config NUM_BULK_STREAM_URBS
+        int "bulk: urb number"
+        default 1
+    config BULK_BYTES_PER_URB_SAME_AS_FRAME
+        bool "bulk: transfer size in each urb same as frame buffer"
+        default y
+        help
+            According to UVC 1.5 2.4.3.2.1, each packet should have a header added, but most cameras don't.
+            Therefore, a large buffer should be prepared to ensure that a frame can be received.
+    config NUM_BULK_BYTES_PER_URB
+        int "bulk: transfer size in each urb"
+        depends on !BULK_BYTES_PER_URB_SAME_AS_FRAME
+        default 2048
+    config NUM_ISOC_STREAM_URBS
+        int "isoc: urb number"
+        default 3
+    config NUM_PACKETS_PER_URB_URB
+        int "isoc: packet number in each urb"
+        default 4
+
+
+endmenu

@@ -21,7 +21,7 @@ ESP-IoT-Solution contains following contents:
 
 | ESP-IoT-Solution | Dependent ESP-IDF |  Major Change                                          |    User Guide                                                             | Support State  |
 | :--------------: | :---------------: | :----------------------------------------------------: | :-----------------------------------------------------------------------: | -------------- |
-|      master      |   release/v4.3    |  code structure change, add support for ESP32-S2       | [Docs online](https://docs.espressif.com/projects/espressif-esp-iot-solution/zh_CN) | active, new feature develop |
+|      master      |   release/v4.4    |  code structure change, add support for new chips       | [Docs online](https://docs.espressif.com/projects/espressif-esp-iot-solution/zh_CN) | active, new feature develop |
 |   release/v1.1   |      v4.0.1       |  IDF version update, remove no longer supported code   | [v1.1 Overview](https://github.com/espressif/esp-iot-solution/tree/release/v1.1#esp32-iot-solution-overview) |limited support |
 |   release/v1.0   |      v3.2.2       |  legacy version                                        | [v1.0 Overview](https://github.com/espressif/esp-iot-solution/tree/release/v1.0#esp32-iot-solution-overview) | archived |
 

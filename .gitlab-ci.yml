@@ -18,7 +18,7 @@ before_script:
 
 .build_template: &build_template
   stage: build
-  image: espressif/idf:release-v4.3
+  image: espressif/idf:release-v4.4
   tags:
     - build
   variables:
@@ -51,17 +51,12 @@ before_script:
     - python ${IOT_SOLUTION_PATH}/tools/ci/genarate_build_json.py
     - ${IOT_SOLUTION_PATH}/tools/ci/build_examples.sh
 
-build_examples_00_with_idf_v4.2:
-  <<: *build_examples_template
-  image: espressif/idf:release-v4.2
-
-build_examples_00_with_idf_v4.3:
-  <<: *build_examples_template
-  image: espressif/idf:release-v4.3
-
 build_examples_00_with_idf_v4.4:
   <<: *build_examples_template
   image: espressif/idf:release-v4.4
+build_examples_00_with_idf_v5.0:
+  <<: *build_examples_template
+  image: espressif/idf:release-v5.0
 
 build_docs:
   stage: build

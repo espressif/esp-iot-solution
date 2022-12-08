@@ -21,7 +21,7 @@ ESP-IoT-Solution 包含的内容如下:
 
 | ESP-IoT-Solution | 依赖的 ESP-IDF |                  主要变更              |            文档              |        支持状态        |
 | :--------------: | :------------: | :----------------------------------: |:------------------------------: | ---------------------- |
-|      master      |   release/v4.3 |      代码结构变更，增加支持 ESP32-S2     | [Docs online](https://docs.espressif.com/projects/espressif-esp-iot-solution/zh_CN) | 新功能开发分支         |
+|      master      |   release/v4.4 |      代码结构变更，增加新的芯片支持     | [Docs online](https://docs.espressif.com/projects/espressif-esp-iot-solution/zh_CN) | 新功能开发分支         |
 |   release/v1.1   |     v4.0.1     | IDF 版本更新，删除已经移动到其它仓库的代码  | [v1.1 Overview](https://github.com/espressif/esp-iot-solution/tree/release/v1.1#esp32-iot-solution-overview) | 有限维护 |
 |   release/v1.0   |     v3.2.2     | 历史版本                               | [v1.0 Overview](https://github.com/espressif/esp-iot-solution/tree/release/v1.0#esp32-iot-solution-overview) | 备份，停止维护  |
 
