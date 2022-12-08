@@ -161,6 +161,7 @@ esp_err_t ns2016_get_rawdata(uint16_t *x, uint16_t *y)
     esp_err_t ret;
     uint32_t aveX = 0;
     uint32_t aveY = 0;
+    int valid_count = 0;
 
     for (int i = 0; i < NS2016_SMP_SIZE; i++) {
         ret = ns2016_get_sample(NS2016_TOUCH_CMD_X, &(samples[i].x));
@@ -168,12 +169,23 @@ esp_err_t ns2016_get_rawdata(uint16_t *x, uint16_t *y)
         ret = ns2016_get_sample(NS2016_TOUCH_CMD_Y, &(samples[i].y));
         TOUCH_CHECK(ret == ESP_OK, "Y sample failed", ESP_FAIL);
 
-        aveX += samples[i].x;
-        aveY += samples[i].y;
+        // Only add the samples to the average if they are valid
+        if ((samples[i].x >= TOUCH_SAMPLE_MIN) && (samples[i].x <= TOUCH_SAMPLE_MAX) &&
+            (samples[i].y >= TOUCH_SAMPLE_MIN) && (samples[i].y <= TOUCH_SAMPLE_MAX)) {
+            aveX += samples[i].x;
+            aveY += samples[i].y;
+            valid_count++;
+        }
     }
 
-    aveX /= NS2016_SMP_SIZE;
-    aveY /= NS2016_SMP_SIZE;
+    // If we don't have at least 50% valid samples, there was no valid touch.
+    if (valid_count >= (NS2016_SMP_SIZE / 2)) {
+        aveX /= valid_count;
+        aveY /= valid_count;
+    } else {
+        aveX = 1;
+        aveY = 1;
+    }
 
     *x = aveX;
     *y = aveY;
