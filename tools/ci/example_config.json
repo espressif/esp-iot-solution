@@ -261,6 +261,21 @@
             "idfversion": [
                 "4.4"
             ]
+        },
+        {
+            "name": "ble_ota",
+            "buildsystem": [
+                "cmake"
+            ],
+            "targets": [
+                "esp32",
+                "esp32c3",
+                "esp32s3"
+            ],
+            "idfversion": [
+                "4.4",
+                "5.0"
+            ]
         }
     ]
 }
