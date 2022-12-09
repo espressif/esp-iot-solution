@@ -1,5 +1,6 @@
 USB Stream Component
 =====================
+:link_to_translation:`zh_CN:[中文]`
 
 ``usb_stream`` is an USB ``UVC`` + ``UAC`` host driver for ESP32-S2/ESP32-S3, which supports read/write/control multimedia streaming from usb device. For example, at most one UVC + one Microphone + one Speaker streaming can be supported at the same time.
 
@@ -106,10 +107,10 @@ USB Stream Config Reference
 Bug report
 -----------
 
-ESP32S2 ECO0 Chip SPI screen jitter when work with usb camera
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ESP32-S2 ECO0 Chip SPI screen jitter when work with usb camera
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-1. In earlier versions of the ESP32S2 chip, USB transfers can cause SPI
+1. In earlier versions of the ESP32-S2 chip, USB transfers can cause SPI
    data contamination (esp32s2>=ECO1 and esp32s3 do not have this bug)
 2. Software workaround
 
