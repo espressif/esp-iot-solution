@@ -49,3 +49,4 @@ build
 # Local ENV
 .envrc
 dependencies.lock
+managed_components
