@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #pragma once
+#include "esp_idf_version.h"
 
 /**
  * @brief Output configuration
@@ -20,6 +21,10 @@
  */
 typedef struct {
     uint16_t freq_hz;
+#if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 4, 0))
+    /* The LEDC driver default active high, if you need active low, please set it to true. */
+    bool invert_level;
+#endif
 } driver_pwm_t;
 
 /**

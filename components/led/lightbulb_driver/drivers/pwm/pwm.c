@@ -36,6 +36,9 @@ static const char *TAG = "driver_pwm";
 typedef struct {
     ledc_timer_config_t ledc_config;
     uint8_t registered_channel_mask;
+#if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 4, 0))
+    bool invert_level;
+#endif
 } pwm_handle_t;
 
 static pwm_handle_t *s_pwm = NULL;
@@ -98,6 +101,9 @@ esp_err_t pwm_init(driver_pwm_t *config)
 
     s_pwm->ledc_config.timer_num = LEDC_TIMER_0;
     s_pwm->ledc_config.freq_hz = config->freq_hz;
+#if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 4, 0))
+    s_pwm->invert_level = config->invert_level;
+#endif
 
 #if CONFIG_IDF_TARGET_ESP32
     s_pwm->ledc_config.speed_mode = LEDC_HIGH_SPEED_MODE;
@@ -147,13 +153,19 @@ esp_err_t pwm_regist_channel(pwm_channel_t channel, gpio_num_t gpio_num)
     esp_err_t err = ESP_OK;
     PWM_CHECK(s_pwm, "pwm_init() must be called first", return ESP_ERR_INVALID_STATE);
 
+    // The LEDC will keep outputting during software reset, so we need to load the last value to make sure the lights don't flicker during the initial ledc channel.
+    uint32_t duty = ledc_get_duty(s_pwm->ledc_config.speed_mode, channel);
+
     const ledc_channel_config_t ledc_ch_config = {
         .gpio_num = gpio_num,
         .channel = channel,
         .intr_type = LEDC_INTR_DISABLE,
         .speed_mode = s_pwm->ledc_config.speed_mode,
         .timer_sel = s_pwm->ledc_config.timer_num,
-        .duty = 0,
+        .duty = duty,
+#if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 4, 0))
+        .flags.output_invert = s_pwm->invert_level,
+#endif
     };
     err = ledc_channel_config(&ledc_ch_config);
     PWM_CHECK(err == ESP_OK, "channel config fail", return ESP_ERR_INVALID_STATE);
@@ -213,7 +225,7 @@ esp_err_t pwm_set_cctb_or_cw_channel(uint16_t value_cct_c, uint16_t value_b_w)
     esp_err_t err = ESP_OK;
     PWM_CHECK(s_pwm, "pwm_init() must be called first", return ESP_ERR_INVALID_STATE);
     PWM_CHECK(s_pwm->registered_channel_mask & BIT(PWM_CHANNEL_CCT_COLD) &&
-              s_pwm->registered_channel_mask & BIT(PWM_CHANNEL_BRIGHTNESS_WARM), "CCT/Brightnss or cold/warm Channel not registered", return ESP_ERR_INVALID_STATE);
+              s_pwm->registered_channel_mask & BIT(PWM_CHANNEL_BRIGHTNESS_WARM), "CCT/Brightness or cold/warm Channel not registered", return ESP_ERR_INVALID_STATE);
     PWM_CHECK((value_cct_c <= (1 << s_pwm->ledc_config.duty_resolution)) &&
               (value_b_w <= (1 << s_pwm->ledc_config.duty_resolution)), "value out of range", return ESP_ERR_INVALID_ARG);
 
@@ -240,7 +252,7 @@ esp_err_t pwm_set_rgbcctb_or_rgbcw_channel(uint16_t value_r, uint16_t value_g, u
               s_pwm->registered_channel_mask & BIT(PWM_CHANNEL_G) &&
               s_pwm->registered_channel_mask & BIT(PWM_CHANNEL_B), "RGB Channel not registered", return ESP_ERR_INVALID_STATE);
     PWM_CHECK(s_pwm->registered_channel_mask & BIT(PWM_CHANNEL_CCT_COLD) &&
-              s_pwm->registered_channel_mask & BIT(PWM_CHANNEL_BRIGHTNESS_WARM), "CCT/Brightnss or cold/warm Channel not registered", return ESP_ERR_INVALID_STATE);
+              s_pwm->registered_channel_mask & BIT(PWM_CHANNEL_BRIGHTNESS_WARM), "CCT/Brightness or cold/warm Channel not registered", return ESP_ERR_INVALID_STATE);
     PWM_CHECK((value_r <= (1 << s_pwm->ledc_config.duty_resolution)) &&
               (value_g <= (1 << s_pwm->ledc_config.duty_resolution)) &&
               (value_b <= (1 << s_pwm->ledc_config.duty_resolution)), "value out of range", return ESP_ERR_INVALID_ARG);
