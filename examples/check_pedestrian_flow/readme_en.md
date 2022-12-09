@@ -2,12 +2,12 @@
 
 Pedestrian flow monitoring plays an important role in security, shopping malls, tourism and many other industries.
 
-[ESP32](http://espressif.com/zh-hans/products/hardware/esp32/overview), working in the Wi-Fi sniffer mode, can be used to calculate pedestrian flow. It can accept all packets over the air, and then parse the packets to capture the Probe Request frames sent by the surrounding wireless devices. Pedestrian flow can then be calculated based on analyzing the source and signal strength of the Probe Request frames. 
+[ESP32](https://www.espressif.com/zh-hans/products/socs/esp32), working in the Wi-Fi sniffer mode, can be used to calculate pedestrian flow. It can accept all packets over the air, and then parse the packets to capture the Probe Request frames sent by the surrounding wireless devices. Pedestrian flow can then be calculated based on analyzing the source and signal strength of the Probe Request frames. 
 
 After getting the basic pedestrian flow data, ESP32 sends the data to the OneNET IoT platform based on the MQTT protocol to generate a line chart of the pedestrian flow. Users can then access the data from the cloud.
 
 ## 1. Environment Setup
-**For details on compilation and programming of ESP32, please refer to Espressif's [official documents](http://espressif.com/zh-hans/support/download/overview) and [ESP-IDF Getting Started Guide](https://docs.espressif.com/projects/esp-idf/en/stable/get-started/index.html).**
+**For details on compilation and programming of ESP32, please refer to Espressif's [official documents](http://www.espressif.com/zh-hans/support/download/all) and [ESP-IDF Getting Started Guide](https://docs.espressif.com/projects/esp-idf/en/stable/get-started/index.html).**
 
 ### 1.1 Hardware Preparation
 

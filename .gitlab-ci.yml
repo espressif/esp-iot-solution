@@ -1,4 +1,5 @@
 stages:
+  - pre_check
   - build
   - deploy
 
@@ -15,6 +16,14 @@ before_script:
   - echo -e "Host gitlab.espressif.cn\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
   - git --version
   - git submodule update --init --recursive
+
+check_readme_links:
+  stage: pre_check
+  image: "$CI_DOCKER_REGISTRY/esp-env:v4.4-1"
+  tags: ["build", "amd64", "internet"]
+  allow_failure: true
+  script:
+    - python ${CI_PROJECT_DIR}/tools/ci/check_readme_links.py
 
 .build_template: &build_template
   stage: build
