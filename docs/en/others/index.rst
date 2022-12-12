@@ -8,3 +8,4 @@ Other Resources
     :maxdepth: 1
 
     GPIO Expander<io_expander>
+    ADC Range Extension<adc_range>
