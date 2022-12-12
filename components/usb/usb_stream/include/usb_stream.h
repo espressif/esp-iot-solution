@@ -26,6 +26,14 @@
 extern "C" {
 #endif
 
+#define FRAME_RESOLUTION_ANY  __UINT16_MAX__
+#define FPS2INTERVAL(fps)     (10000000ul / fps)
+#define FRAME_INTERVAL_FPS_5  FPS2INTERVAL(5)
+#define FRAME_INTERVAL_FPS_10 FPS2INTERVAL(10)
+#define FRAME_INTERVAL_FPS_15 FPS2INTERVAL(15)
+#define FRAME_INTERVAL_FPS_20 FPS2INTERVAL(20)
+#define FRAME_INTERVAL_FPS_30 FPS2INTERVAL(25)
+
 /**
  * @brief UVC stream usb transfer type, most camera using isochronous mode,
  * bulk mode can also be support for higher bandwidth
@@ -33,6 +41,7 @@ extern "C" {
 typedef enum {
     UVC_XFER_ISOC = 0,  /*!< Isochronous Transfer Mode */
     UVC_XFER_BULK,      /*!< Bulk Transfer Mode */
+    UVC_XFER_UNKNOWN,   /*!< Unknown Mode */
 } uvc_xfer_t;
 
 /**
@@ -60,20 +69,13 @@ typedef enum {
 } stream_ctrl_t;
 
 /**
- * @brief users need to get params from camera descriptors,
- * run the example first to printf the descriptor
+ * @brief UVC configurations, for params with (optional) label, users do not need to specify manually, 
+ * unless there is a problem with descriptor parse, or a problem with the device descriptor
  */
 typedef struct uvc_config {
-    uvc_xfer_t xfer_type;           /*!< UVC stream transfer type, UVC_XFER_ISOC or UVC_XFER_BULK */
-    uint8_t format_index;           /*!< Format index of MJPEG */
-    uint8_t frame_index;            /*!< Frame index, to choose resolution */
     uint16_t frame_width;           /*!< Picture width of selected frame_index */
     uint16_t frame_height;          /*!< Picture height of selected frame_index */
     uint32_t frame_interval;        /*!< Frame interval in 100-ns units, 666666 ~ 15 Fps*/
-    uint16_t interface;             /*!< UVC stream interface number */
-    uint16_t interface_alt;         /*!< UVC stream alternate interface, to choose MPS (Max Packet Size), bulk fix to 0*/
-    uint8_t ep_addr;                /*!< endpoint address of selected alternate interface*/
-    uint32_t ep_mps;                /*!< MPS of selected interface_alt */
     uint32_t xfer_buffer_size;      /*!< Transfer buffer size, using double buffer here, must larger than one frame size */
     uint8_t *xfer_buffer_a;         /*!< Buffer a for usb payload */
     uint8_t *xfer_buffer_b;         /*!< Buffer b for usb payload */
@@ -81,6 +83,13 @@ typedef struct uvc_config {
     uint8_t *frame_buffer;          /*!< Buffer for one frame */
     uvc_frame_callback_t *frame_cb; /*!< callback function to handle incoming frame */
     void *frame_cb_arg;             /*!< callback function arg */
+    uvc_xfer_t xfer_type;           /*!< (optional) UVC stream transfer type, UVC_XFER_ISOC or UVC_XFER_BULK */
+    uint8_t format_index;           /*!< (optional) Format index of MJPEG */
+    uint8_t frame_index;            /*!< (optional) Frame index, to choose resolution */
+    uint16_t interface;             /*!< (optional) UVC stream interface number */
+    uint16_t interface_alt;         /*!< (optional) UVC stream alternate interface, to choose MPS (Max Packet Size), bulk fix to 0*/
+    uint8_t ep_addr;                /*!< (optional) endpoint address of selected alternate interface*/
+    uint32_t ep_mps;                /*!< (optional) MPS of selected interface_alt */
 } uvc_config_t;
 
 /**
@@ -100,24 +109,25 @@ typedef struct {
 typedef void(mic_callback_t)(mic_frame_t *frame, void *user_ptr);
 
 /**
- * @brief uac interface params, config before usb_streaming_start
+ * @brief UAC configurations, for params with (optional) label, users do not need to specify manually, 
+ * unless there is a problem with descriptor parse, or a problem with the device descriptor
  */
 typedef struct {
-    uint16_t mic_interface;              /*!< microphone stream interface number, set 0 if not use */
     uint16_t mic_bit_resolution;         /*!< microphone resolution, bits */
     uint32_t mic_samples_frequence;      /*!< microphone frequence, Hz */
-    uint8_t  mic_ep_addr;                /*!< microphone interface endpoint address */
-    uint32_t mic_ep_mps;                 /*!< microphone interface endpoint mps */
-    uint16_t spk_interface;              /*!< speaker stream interface number, set 0 if not use */
     uint16_t spk_bit_resolution;         /*!< speaker resolution, bits */
     uint32_t spk_samples_frequence;      /*!< speaker frequence, Hz */
-    uint8_t  spk_ep_addr;                /*!< speaker interface endpoint address */
-    uint32_t spk_ep_mps;                 /*!< speaker interface endpoint mps */
     uint32_t spk_buf_size;               /*!< size of speaker send buffer, should be a multiple of spk_ep_mps */
     uint32_t mic_buf_size;               /*!< mic receive buffer size, 0 if not use, else should be a multiple of mic_min_bytes */
-    uint32_t mic_min_bytes;              /*!< min bytes to trigger mic callback, 0 if not using callback, else must be multiple (1~32) of mic_ep_mps */
+    uint32_t mic_min_bytes;              /*!< min bytes to trigger mic callback, 0 if not using callback, else must be 1~32 ms data, eg. for 16KHz 16bit, must less than 32*16*2 */
     mic_callback_t *mic_cb;              /*!< mic callback, can not block in here! */
     void *mic_cb_arg;                    /*!< mic callback args */
+    uint16_t mic_interface;              /*!< (optional) microphone stream interface number, set 0 if not use */
+    uint8_t  mic_ep_addr;                /*!< (optional) microphone interface endpoint address */
+    uint32_t mic_ep_mps;                 /*!< (optional) microphone interface endpoint mps */
+    uint16_t spk_interface;              /*!< (optional) speaker stream interface number, set 0 if not use */
+    uint8_t  spk_ep_addr;                /*!< (optional) speaker interface endpoint address */
+    uint32_t spk_ep_mps;                 /*!< (optional) speaker interface endpoint mps */
     uint16_t ac_interface;               /*!< (optional) audio control interface number, set 0 if not use */
     uint8_t  mic_fu_id;                  /*!< (optional) microphone feature unit id, set 0 if not use */
     uint8_t  spk_fu_id;                  /*!< (optional) speaker feature unit id, set 0 if not use */
@@ -189,6 +199,7 @@ esp_err_t usb_streaming_control(usb_stream_t stream, stream_ctrl_t ctrl_type, vo
  * 
  * @return
  *         ESP_ERR_INVALID_STATE not inited
+ *         ESP_ERR_NOT_FOUND speaker interface not found
  *         ESP_FAIL push data failed
  *         ESP_OK succeed
  */
@@ -204,6 +215,7 @@ esp_err_t uac_spk_streaming_write(void *data, size_t data_bytes, size_t timeout_
  * 
  * @return
  *         ESP_ERR_INVALID_STATE not inited
+ *         ESP_ERR_NOT_FOUND mic interface not found
  *         ESP_FAIL push data failed
  *         ESP_OK succeed
  */

@@ -34,25 +34,10 @@ the quick demo skip the standred get descriptors process,
 users need to get params from camera descriptors from log
 then hardcode the related MACROS below
 */
-#define DESCRIPTOR_FORMAT_MJPEG_INDEX  2
-#define DESCRIPTOR_FRAME_320_240_INDEX 3
-#define DESCRIPTOR_FRAME_15FPS_INTERVAL 666666
-
-#define DESCRIPTOR_STREAM_INTERFACE_INDEX   1
-#define DESCRIPTOR_STREAM_INTERFACE_ALT_MPS_512 3
-
-#define DESCRIPTOR_STREAM_ENDPOINT_ADDR 0x81
 
 #define DEMO_FRAME_WIDTH 320
 #define DEMO_FRAME_HEIGHT 240
 #define DEMO_XFER_BUFFER_SIZE (35 * 1024)
-#define DEMO_FRAME_INDEX DESCRIPTOR_FRAME_320_240_INDEX
-#define DEMO_FRAME_INTERVAL DESCRIPTOR_FRAME_15FPS_INTERVAL
-
-/* max packet size of esp32-s2 is 1*512, bigger is not supported*/
-#define DEMO_ISOC_EP_MPS 512
-#define DEMO_BULK_EP_MPS 64
-#define DEMO_ISOC_INTERFACE_ALT DESCRIPTOR_STREAM_INTERFACE_ALT_MPS_512
 
 static void *_malloc(size_t size)
 {
@@ -95,16 +80,9 @@ TEST_CASE("test uvc isoc streaming", "[usb][usb_stream][uvc][isoc]")
     TEST_ASSERT(frame_buffer != NULL);
 
     uvc_config_t uvc_config = {
-        .xfer_type = UVC_XFER_ISOC,
-        .format_index = DESCRIPTOR_FORMAT_MJPEG_INDEX,
         .frame_width = DEMO_FRAME_WIDTH,
         .frame_height = DEMO_FRAME_HEIGHT,
-        .frame_index = DEMO_FRAME_INDEX,
-        .frame_interval = DEMO_FRAME_INTERVAL,
-        .interface = DESCRIPTOR_STREAM_INTERFACE_INDEX,
-        .interface_alt = DEMO_ISOC_INTERFACE_ALT,
-        .ep_addr = DESCRIPTOR_STREAM_ENDPOINT_ADDR,
-        .ep_mps = DEMO_ISOC_EP_MPS,
+        .frame_interval = FPS2INTERVAL(15),
         .xfer_buffer_size = DEMO_XFER_BUFFER_SIZE,
         .xfer_buffer_a = xfer_buffer_a,
         .xfer_buffer_b = xfer_buffer_b,
@@ -149,22 +127,14 @@ TEST_CASE("test uac mic spk loop", "[usb][usb_stream][uvc][isoc]")
 {
     esp_log_level_set("*", ESP_LOG_DEBUG);
     uac_config_t uac_config = {
-        .mic_interface = 4,
         .mic_bit_resolution = 16,
         .mic_samples_frequence = 16000,
-        .mic_ep_addr = 0x82,
-        .mic_ep_mps = 32,
-        .spk_interface = 3,
         .spk_bit_resolution = 16,
         .spk_samples_frequence = 16000,
-        .spk_ep_addr = 0x02,
-        .spk_ep_mps = 32,
         .spk_buf_size = 16000,
         .mic_min_bytes = 320,
         .mic_cb = &mic_frame_cb,
         .mic_cb_arg = NULL,
-        .ac_interface = 2,
-        .spk_fu_id = 2,
     };
     size_t test_count = 5;
     for (size_t i = 0; i < test_count; i++) {
@@ -192,11 +162,8 @@ TEST_CASE("test uac mic", "[usb][usb_stream][mic]")
 {
     esp_log_level_set("*", ESP_LOG_VERBOSE);
     uac_config_t uac_config = {
-        .mic_interface = 4,
         .mic_bit_resolution = 16,
         .mic_samples_frequence = 16000,
-        .mic_ep_addr = 0x82,
-        .mic_ep_mps = 32,
         .mic_buf_size = 6400,
     };
     size_t loop_count = 5;
@@ -227,14 +194,9 @@ TEST_CASE("test uac spk", "[usb][usb_stream][spk]")
 {
     esp_log_level_set("*", ESP_LOG_DEBUG);
     uac_config_t uac_config = {
-        .spk_interface = 3,
         .spk_bit_resolution = 16,
         .spk_samples_frequence = 16000,
-        .spk_ep_addr = 0x02,
-        .spk_ep_mps = 32,
         .spk_buf_size = 16000,
-        .ac_interface = 2,
-        .spk_fu_id = 2,
     };
     extern const uint8_t wave_array_32000_16_1[];
     extern const uint32_t s_buffer_size;
@@ -287,22 +249,14 @@ TEST_CASE("test uvc+uac", "[usb][usb_stream][uvc][uac]")
 {
     esp_log_level_set("*", ESP_LOG_DEBUG);
     uac_config_t uac_config = {
-        .mic_interface = 4,
         .mic_bit_resolution = 16,
         .mic_samples_frequence = 16000,
-        .mic_ep_addr = 0x82,
-        .mic_ep_mps = 32,
-        .spk_interface = 3,
         .spk_bit_resolution = 16,
         .spk_samples_frequence = 16000,
-        .spk_ep_addr = 0x02,
-        .spk_ep_mps = 32,
         .spk_buf_size = 16000,
         .mic_min_bytes = 320,
         .mic_cb = &mic_frame_cb,
         .mic_cb_arg = NULL,
-        .ac_interface = 2,
-        .spk_fu_id = 2,
     };
     size_t test_count = 5;
     for (size_t i = 0; i < test_count; i++) {
@@ -334,16 +288,9 @@ TEST_CASE("test uvc bulk streaming", "[usb][usb_stream][uvc][bulk]")
     TEST_ASSERT(frame_buffer != NULL);
 
     uvc_config_t uvc_config = {
-        .xfer_type = UVC_XFER_BULK,
-        .format_index = DESCRIPTOR_FORMAT_MJPEG_INDEX,
         .frame_width = 640,
         .frame_height = 480,
-        .frame_index = 2,
-        .frame_interval = DEMO_FRAME_INTERVAL,
-        .interface = DESCRIPTOR_STREAM_INTERFACE_INDEX,
-        .interface_alt = 0,
-        .ep_addr = DESCRIPTOR_STREAM_ENDPOINT_ADDR,
-        .ep_mps = DEMO_BULK_EP_MPS,
+        .frame_interval = FPS2INTERVAL(15),
         .xfer_buffer_size = DEMO_XFER_BUFFER_SIZE,
         .xfer_buffer_a = xfer_buffer_a,
         .xfer_buffer_b = xfer_buffer_b,

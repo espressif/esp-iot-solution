@@ -43,122 +43,119 @@ See the Getting Started Guide for all the steps to configure and use the ESP-IDF
 ## Example Output
 
 ```
-I (304) wifi_init: rx ba win: 6
-I (304) wifi_init: tcpip mbox: 32
-I (304) wifi_init: udp mbox: 6
-I (304) wifi_init: tcp mbox: 6
-I (304) wifi_init: tcp tx win: 5744
-I (305) wifi_init: tcp rx win: 5744
-I (305) wifi_init: tcp mss: 1440
-I (305) wifi_init: WiFi IRAM OP enabled
-I (305) wifi_init: WiFi RX IRAM OP enabled
-I (309) camera wifi: wifi_init_softap finished.SSID:ESP32S3-UVC password:
-I (310) phy_init: phy_version 503,13653eb,Jun  1 2022,17:47:08
-I (350) wifi:mode : softAP (f4:12:fa:d8:db:91)
-I (355) wifi:Total power save buffer number: 16
-I (355) wifi:Init max length of beacon: 752/752
-I (355) wifi:Init max length of beacon: 752/752
-I (356) camera_httpd: Starting web server on port: '80'
-I (359) camera_httpd: Starting stream server on port: '81'
-I (362) UVC_STREAM: Isoc transfer mode
-I (362) UVC_STREAM: UVC Streaming Config Succeed
-I (362) UVC_STREAM: UAC Streaming Config Succeed
-I (393) UVC_STREAM: Port=1 init succeed
-I (393) UVC_STREAM: Waiting USB Connection
-I (413) UVC_STREAM: USB Streaming Starting
-I (413) uvc_mic_spk_demo: usb streaming start succeed
-W (413) UVC_STREAM: Device Not Connected
-I (413) UVC_STREAM: Will take effect after device connected
-I (4961) UVC_STREAM: line 477 HCD_PORT_EVENT_CONNECTION
-I (5011) UVC_STREAM: Resetting Port
-I (5071) UVC_STREAM: Setting Port FIFO
-I (5071) UVC_STREAM: Getting Port Speed
-I (5071) UVC_STREAM: Port speed = 1
-I (5071) UVC_STREAM: USB Speed: full-speed
-I (5072) UVC_STREAM: Set Device Addr = 1
-I (5072) UVC_STREAM: Set Device Addr Done
-I (5072) UVC_STREAM: get device desc
-I (5074) UVC_STREAM: get device desc, actual_num_bytes:26
+I (439) UVC_STREAM: line 486 HCD_PORT_EVENT_CONNECTION
+I (489) UVC_STREAM: Resetting Port
+I (549) UVC_STREAM: Setting Port FIFO
+I (549) UVC_STREAM: Getting Port Speed
+I (549) UVC_STREAM: Port speed = 1
+I (549) UVC_STREAM: USB Speed: full-speed
+I (550) UVC_STREAM: Set Device Addr = 1
+I (550) UVC_STREAM: Set Device Addr Done
+I (551) UVC_STREAM: get device desc
+I (551) UVC_STREAM: get device desc, actual_num_bytes:26
 *** Device descriptor ***
-bLength 18
-bDescriptorType 1
-bcdUSB 1.10
+bcdUSB 2.00
 bDeviceClass 0xef
 bDeviceSubClass 0x2
 bDeviceProtocol 0x1
 bMaxPacketSize0 64
-idVendor 0x4c4a
-idProduct 0x4c55
-bcdDevice 1.00
-iManufacturer 1
-iProduct 2
-iSerialNumber 0
+idVendor 0x1871
+idProduct 0xff50
 bNumConfigurations 1
-I (5075) UVC_STREAM: get short config desc
-I (5084) UVC_STREAM: get config desc, actual_num_bytes:16
-I (5084) UVC_STREAM: get full config desc
-I (5094) UVC_STREAM: get full config desc, actual_num_bytes:608
+I (552) UVC_STREAM: get short config desc
+I (553) UVC_STREAM: get config desc, actual_num_bytes:16
+I (553) UVC_STREAM: get full config desc
+I (561) UVC_STREAM: get full config desc, actual_num_bytes:397
 *** Configuration descriptor ***
-bLength 9
-bDescriptorType 2
-wTotalLength 600
-bNumInterfaces 5
+wTotalLength 389
+bNumInterfaces 2
 bConfigurationValue 1
-iConfiguration 0
-bmAttributes 0x80
-bMaxPower 400mA
-*** Interface Association Descriptor ***
-
-I (5113) UVC_STREAM: Set Device Configuration = 1
-I (5113) UVC_STREAM: Set Device Configuration Done
-I (5113) UVC_STREAM: SET_CUR Probe
-I (5114) UVC_STREAM: SET_CUR Probe Done
-I (5114) UVC_STREAM: GET_CUR Probe
-bmHint: 0001
-bFormatIndex: 1
-bFrameIndex: 2
-dwFrameInterval: 400000
-wKeyFrameRate: 0
-wPFrameRate: 0
-wCompQuality: 0
-wCompWindowSize: 0
-wDelay: 0
-dwMaxVideoFrameSize: 4177920
-dwMaxPayloadTransferSize: 512
-dwClockFrequency: 0
-bmFramingInfo: 0
-bPreferredVersion: 0
-bMinVersion: 0
-bMaxVersion: 0
-bInterfaceNumber: 0
-I (5116) UVC_STREAM: GET_CUR Probe Done, actual_num_bytes:34
-I (5116) UVC_STREAM: SET_CUR COMMIT
-I (5116) UVC_STREAM: SET_CUR COMMIT Done
-I (5117) UVC_STREAM: Set Device Interface = 1, Alt = 1
-I (5119) UVC_STREAM: Set Device Interface Done
-I (5119) UVC_STREAM: Set Device Interface = 4, Alt = 1
-I (5120) UVC_STREAM: Set Device Interface Done
-I (5121) UVC_STREAM: SET_CUR frequence 16000
-I (5124) UVC_STREAM: SET_CUR Done
-I (5124) UVC_STREAM: Set Device Interface = 3, Alt = 1
-I (5127) UVC_STREAM: Set Device Interface Done
-I (5127) UVC_STREAM: SET_CUR mute, 0
-I (5128) UVC_STREAM: SET_CUR mute Done
-I (5128) UVC_STREAM: SET_CUR volume e670 (10)
-I (5128) UVC_STREAM: SET_CUR volume Done
-I (5129) UVC_STREAM: SET_CUR frequence 16000
-I (5129) UVC_STREAM: SET_CUR Done
-I (5129) UVC_STREAM: usb stream task start
-I (5129) UVC_STREAM: mic stream urb ready
-I (5129) UVC_STREAM: spk stream urb ready
-I (5130) UVC_STREAM: uvc stream urb ready
-I (5130) UVC_STREAM: Sample processing task started
-I (5130) UVC_STREAM: Creating mic in pipe itf = 4, ep = 0x82, 
-I (5131) UVC_STREAM: mic streaming...
-I (5131) UVC_STREAM: Creating spk out pipe itf = 3, ep = 0x02
-I (5131) UVC_STREAM: spk streaming...
-I (5131) UVC_STREAM: Creating uvc in(isoc) pipe itf = 1-1, ep = 0x84
-I (5132) UVC_STREAM: uvc streaming...
-I (5541) uvc_mic_spk_demo: uvc callback! frame_format = 7, seq = 1, width = 640, height = 480, length = 8905, ptr = 0
+*** Interface Association Descriptor: Video ***
+        *** Interface descriptor ***
+        bInterfaceNumber 0
+        bAlternateSetting 0
+        bNumEndpoints 1
+        bInterfaceClass 0xe (Video)
+        bInterfaceSubClass 0x1
+                *** Endpoint descriptor ***
+                bEndpointAddress 0x83   EP 3 IN
+                bmAttributes 0x3        INT
+                wMaxPacketSize 16
+                bInterval 6
+        *** Interface descriptor ***
+        bInterfaceNumber 1
+        bAlternateSetting 0
+        bNumEndpoints 0
+        bInterfaceClass 0xe (Video)
+        bInterfaceSubClass 0x2
+        *** Class-specific VS Interface Descriptor ***
+        bNumFormats 2
+        *** VS Format MJPEG Descriptor ***
+        bFormatIndex 0x2
+        bNumFrameDescriptors 4
+        bDefaultFrameIndex 1
+        *** VS MJPEG Frame Descriptor ***
+        bFrameIndex 0x1
+        wWidth 640
+        wHeigh 480
+        FrameInterval[0] 666666
+        *** VS MJPEG Frame Descriptor ***
+        bFrameIndex 0x2
+        wWidth 480
+        wHeigh 320
+        FrameInterval[0] 666666
+        FrameInterval[1] 1000000
+        FrameInterval[2] 2000000
+        *** VS MJPEG Frame Descriptor ***
+        bFrameIndex 0x3
+        wWidth 352
+        wHeigh 288
+        FrameInterval[0] 666666
+        *** VS MJPEG Frame Descriptor ***
+        bFrameIndex 0x4
+        wWidth 320
+        wHeigh 240
+        FrameInterval[0] 666666
+        *** Interface descriptor ***
+        bInterfaceNumber 1
+        bAlternateSetting 1
+        bNumEndpoints 1
+        bInterfaceClass 0xe (Video)
+        bInterfaceSubClass 0x2
+                *** Endpoint descriptor ***
+                bEndpointAddress 0x81   EP 1 IN
+                bmAttributes 0x5        ISOC
+                wMaxPacketSize 956
+                bInterval 1
+W (568) UVC_STREAM: VS Interface(MPS < 600) NOT found
+W (569) UVC_STREAM: Try with first alt-interface config
+I (569) UVC_STREAM: Actual MJPEG format index = 2, contains 4 frames
+I (569) UVC_STREAM: Actual MJPEG width*heigh: 320*240, frame index = 4
+I (570) UVC_STREAM: UVC Streaming Config Succeed
+W (570) UVC_STREAM: UAC 1.0 TYPE1 NOT found
+I (570) UVC_STREAM: Set Device Configuration = 1
+I (571) UVC_STREAM: Set Device Configuration Done
+I (571) UVC_STREAM: SET_CUR Probe
+I (575) UVC_STREAM: SET_CUR Probe Done
+I (575) UVC_STREAM: GET_CUR Probe
+I (576) UVC_STREAM: GET_CUR Probe Done, actual_num_bytes:34
+I (576) UVC_STREAM: SET_CUR COMMIT
+I (580) UVC_STREAM: SET_CUR COMMIT Done
+I (580) UVC_STREAM: Set Device Interface = 1, Alt = 1
+I (930) UVC_STREAM: Set Device Interface Done
+I (930) UVC_STREAM: usb stream task start
+I (930) UVC_STREAM: uvc stream urb ready
+I (931) UVC_STREAM: Sample processing task started
+I (931) UVC_STREAM: Creating uvc in(isoc) pipe itf = 1-1, ep = 0x81
+I (931) UVC_STREAM: uvc streaming...
+I (1492) uvc_mic_spk_demo: uvc callback! frame_format = 7, seq = 1, width = 320, height = 240, length = 8752, ptr = 0
+I (1557) uvc_mic_spk_demo: uvc callback! frame_format = 7, seq = 2, width = 320, height = 240, length = 9496, ptr = 0
+I (1624) uvc_mic_spk_demo: uvc callback! frame_format = 7, seq = 3, width = 320, height = 240, length = 7920, ptr = 0
+I (1688) uvc_mic_spk_demo: uvc callback! frame_format = 7, seq = 4, width = 320, height = 240, length = 7880, ptr = 0
+I (1752) uvc_mic_spk_demo: uvc callback! frame_format = 7, seq = 5, width = 320, height = 240, length = 8616, ptr = 0
+I (1820) uvc_mic_spk_demo: uvc callback! frame_format = 7, seq = 6, width = 320, height = 240, length = 8808, ptr = 0
+I (1885) uvc_mic_spk_demo: uvc callback! frame_format = 7, seq = 7, width = 320, height = 240, length = 8912, ptr = 0
+I (1952) uvc_mic_spk_demo: uvc callback! frame_format = 7, seq = 8, width = 320, height = 240, length = 8832, ptr = 0
+I (2017) uvc_mic_spk_demo: uvc callback! frame_format = 7, seq = 9, width = 320, height = 240, length = 8816, ptr = 0
 
 ```

@@ -8,10 +8,16 @@ menu "UVC Stream"
         bool "Get camera device descriptor during emum"
         default y
     config UVC_GET_CONFIG_DESC
-        bool "Get camera config descriptor during emum"
+        bool "Get and parse camera config descriptor during emum"
+        default y
+        help
+            This option should be enable if need self-adaptation
+    config UVC_PRINT_DESC
+        bool "Print descriptor info"
         default y
     config UVC_PRINT_DESC_VERBOSE
-        bool "Print camera more descriptor info"
+        bool "Print descriptor info in verbose mode"
+        depends on UVC_PRINT_DESC
         default n
     config UVC_PRINT_PROBE_RESULT
         bool "Print video cur probe result"
