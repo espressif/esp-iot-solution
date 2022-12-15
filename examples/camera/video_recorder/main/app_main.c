@@ -7,6 +7,7 @@
    CONDITIONS OF ANY KIND, either express or implied.
 */
 
+#include <inttypes.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "string.h"
@@ -15,6 +16,7 @@
 
 #include "camera_pin.h"
 #include "esp_camera.h"
+#include "esp_timer.h"
 #include "file_manager.h"
 #include "avi_recorder.h"
 #include "app_wifi.h"
@@ -102,7 +104,7 @@ static uint32_t camera_test_fps(uint16_t times)
     total_time = esp_timer_get_time() - total_time;
     float fps = times / (total_time / 1000000.0f);
     ret = image_size / times;
-    ESP_LOGI(TAG, "fps=%f, image_average_size=%u", fps, ret);
+    ESP_LOGI(TAG, "fps=%f, image_average_size=%"PRIu32"", fps, ret);
     return ret;
 }
 

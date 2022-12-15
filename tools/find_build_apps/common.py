@@ -119,7 +119,7 @@ def redirect_overwrite_path(example_path):
                 if isinstance(pkg_list, dict):
                     for pkg_name, pkg_val in pkg_list.items():
                         if isinstance(pkg_val, dict):
-                            if pkg_val["override_path"]:
+                            if "override_path" in pkg_val:
                                 pkg_val["override_path"] = pkg_val["override_path"].lstrip("../")
                                 if pkg_val["override_path"].find("common_components") != -1:
                                     pkg_val["override_path"] = pkg_val["override_path"].replace("common_components", "../../../../../examples/common_components")
