@@ -2,7 +2,7 @@ menu "Lightbulb Demo Configuration"
 
     choice LIGHTBULB_DEMO_DRIVER_SELECT
             bool "Demo select"
-            default LIGHTBULB_DEMO_DRIVER_SELECT_WS2812 if IDF_TARGET_ESP32C3 || IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
+            default LIGHTBULB_DEMO_DRIVER_SELECT_WS2812 if IDF_TARGET_ESP32C3 || IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3 || IDF_TARGET_ESP32H2
             default LIGHTBULB_DEMO_DRIVER_SELECT_PWM
             help
                 Select the driver type you want to demonstrate
@@ -17,7 +17,7 @@ menu "Lightbulb Demo Configuration"
 
     config WS2812_LED_GPIO
         int "WS2812 LED GPIO"
-        default 8 if IDF_TARGET_ESP32C3
+        default 8 if IDF_TARGET_ESP32C3 || IDF_TARGET_ESP32H2
         default 18 if IDF_TARGET_ESP32S2
         default 48 if IDF_TARGET_ESP32S3
         default 4 if IDF_TARGET_ESP32C2
@@ -46,6 +46,7 @@ menu "Lightbulb Demo Configuration"
         default 10 if IDF_TARGET_ESP32C3 || IDF_TARGET_ESP32S2
         default 15 if IDF_TARGET_ESP32S3
         default 0 if IDF_TARGET_ESP32C2
+        default 23 if IDF_TARGET_ESP32H2
         default 25
         depends on LIGHTBULB_DEMO_DRIVER_SELECT_PWM
         help
@@ -56,6 +57,7 @@ menu "Lightbulb Demo Configuration"
         default 6 if IDF_TARGET_ESP32C3 || IDF_TARGET_ESP32S2
         default 16 if IDF_TARGET_ESP32S3
         default 1 if IDF_TARGET_ESP32C2
+        default 24 if IDF_TARGET_ESP32H2
         default 26
         depends on LIGHTBULB_DEMO_DRIVER_SELECT_PWM
         help
@@ -66,6 +68,7 @@ menu "Lightbulb Demo Configuration"
         default 7 if IDF_TARGET_ESP32C3 || IDF_TARGET_ESP32S2
         default 17 if IDF_TARGET_ESP32S3
         default 8 if IDF_TARGET_ESP32C2
+        default 25 if IDF_TARGET_ESP32H2
         default 27
         depends on LIGHTBULB_DEMO_DRIVER_SELECT_PWM
         help
