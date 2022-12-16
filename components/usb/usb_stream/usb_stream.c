@@ -80,6 +80,8 @@ const char *TAG = "UVC_STREAM";
 #define UAC_VOLUME_LEVEL_DEFAULT             50                                      //50%
 #define UAC_MIC_CB_MIN_MS_DEFAULT            20                                      //20MS
 #define UAC_SPK_ST_MAX_MS_DEFAULT            20                                      //20MS
+#define UAC_MIC_PACKET_COMPENSATION          1                                       //padding data if mic packet loss
+
 /**
  * @brief Task for USB I/O request and payload processing,
  * can not be blocked, higher task priority is suggested.
@@ -1665,7 +1667,25 @@ static void _processing_mic_pipe(hcd_pipe_handle_t pipe_hdl, mic_callback_t *use
             ESP_LOGW(TAG, "line:%u bad iso transit status %d", __LINE__, urb_done->transfer.isoc_packet_desc[i].status);
             break;
         } else {
-            xfered_size += urb_done->transfer.isoc_packet_desc[i].actual_num_bytes;
+            int actual_num_bytes = urb_done->transfer.isoc_packet_desc[i].actual_num_bytes;
+#if UAC_MIC_PACKET_COMPENSATION
+            if (actual_num_bytes == 0) {
+                int num_bytes = urb_done->transfer.isoc_packet_desc[i].num_bytes;
+                uint8_t *packet_buffer = urb_done->transfer.data_buffer + (i * num_bytes);
+                if (i == 0) {
+                    //if first packet loss (small probability), we just padding all 0
+                    memset(packet_buffer, 0, num_bytes);
+                    ESP_LOGV(TAG, "MIC: padding 0");
+                } else {
+                    //if other packets loss, we just padding the last packet
+                    uint8_t *packet_last_buffer = urb_done->transfer.data_buffer + (i * num_bytes - num_bytes);
+                    memcpy(packet_buffer, packet_last_buffer, num_bytes);
+                    ESP_LOGV(TAG, "MIC: padding data");
+                }
+                actual_num_bytes = num_bytes;
+            }
+#endif
+            xfered_size += actual_num_bytes;
         }
     }
     mic_frame.data_bytes = xfered_size;
