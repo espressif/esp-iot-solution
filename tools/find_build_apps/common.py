@@ -11,6 +11,7 @@ import typing
 from abc import abstractmethod
 from collections import namedtuple
 from io import open
+import yaml
 
 DEFAULT_TARGET = 'esp32'
 
@@ -83,6 +84,50 @@ def rmdir(path, exclude_file_pattern=None):
             except OSError:
                 pass
 
+def clear_overwrite_path(example_path):
+    config_path = example_path + '/main/idf_component.yml'
+    contents = ""
+    if not os.path.isfile(config_path):
+        print("{} not found".format(config_path))
+    else:
+        with open(config_path, mode='r', encoding='utf-8') as f:
+            contents = yaml.safe_load(f)
+            print(contents)
+            if (not contents):
+                return
+            for key, pkg_list in contents.items():
+                if isinstance(pkg_list, dict):
+                    for pkg_name, pkg_val in pkg_list.items():
+                        if isinstance(pkg_val, dict):
+                            pkg_val.pop("override_path", 'null')
+        with open(config_path, mode='w', encoding='utf-8') as f:
+            print(contents)
+            contents = yaml.dump(contents, f)
+
+def redirect_overwrite_path(example_path):
+    config_path = example_path + '/main/idf_component.yml'
+    contents = ""
+    if not os.path.isfile(config_path):
+        print("{} not found".format(config_path))
+    else:
+        with open(config_path, mode='r', encoding='utf-8') as f:
+            contents = yaml.safe_load(f)
+            print(contents)
+            if (not contents):
+                return
+            for key, pkg_list in contents.items():
+                if isinstance(pkg_list, dict):
+                    for pkg_name, pkg_val in pkg_list.items():
+                        if isinstance(pkg_val, dict):
+                            if pkg_val["override_path"]:
+                                pkg_val["override_path"].lstrip("../")
+                                if pkg_val["override_path"].find("common_components") != -1:
+                                    pkg_val["override_path"].replace("common_components", "../../../../../examples/common_components")
+                                elif pkg_val["override_path"].find("components") != -1:
+                                    pkg_val["override_path"].replace("components", "../../../../../components")
+        with open(config_path, mode='w', encoding='utf-8') as f:
+            print(contents)
+            contents = yaml.dump(contents, f)
 
 class BuildItem(object):
     """
@@ -315,6 +360,7 @@ class BuildSystem:
             logging.debug('Copying app from {} to {}'.format(app_path, work_path))
             if not build_item.dry_run:
                 shutil.copytree(app_path, work_path)
+                redirect_overwrite_path(work_path) #remove overwrite path before build
 
         if os.path.exists(build_path):
             logging.debug('Build directory {} exists, removing'.format(build_path))
