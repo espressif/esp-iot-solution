@@ -120,11 +120,11 @@ def redirect_overwrite_path(example_path):
                     for pkg_name, pkg_val in pkg_list.items():
                         if isinstance(pkg_val, dict):
                             if pkg_val["override_path"]:
-                                pkg_val["override_path"].lstrip("../")
+                                pkg_val["override_path"] = pkg_val["override_path"].lstrip("../")
                                 if pkg_val["override_path"].find("common_components") != -1:
-                                    pkg_val["override_path"].replace("common_components", "../../../../../examples/common_components")
+                                    pkg_val["override_path"] = pkg_val["override_path"].replace("common_components", "../../../../../examples/common_components")
                                 elif pkg_val["override_path"].find("components") != -1:
-                                    pkg_val["override_path"].replace("components", "../../../../../components")
+                                    pkg_val["override_path"] = pkg_val["override_path"].replace("components", "../../../../../components")
         with open(config_path, mode='w', encoding='utf-8') as f:
             print(contents)
             contents = yaml.dump(contents, f)
