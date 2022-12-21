@@ -12,13 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include <string.h>
+#include <inttypes.h>
 #include "esp_log.h"
+#include "esp_timer.h"
+#include "esp_idf_version.h"
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+#include "soc/soc_caps.h"
+#include "esp_adc/adc_oneshot.h"
+#include "esp_adc/adc_cali.h"
+#include "esp_adc/adc_cali_scheme.h"
+#else
 #include "driver/gpio.h"
 #include "driver/adc.h"
 #include "esp_adc_cal.h"
+#endif
 #include "button_adc.h"
-#include "esp_timer.h"
-#include <inttypes.h>
+
 
 static const char *TAG = "adc button";
 
@@ -32,11 +41,23 @@ static const char *TAG = "adc button";
 #define DEFAULT_VREF    1100
 #define NO_OF_SAMPLES   CONFIG_ADC_BUTTON_SAMPLE_TIMES     //Multisampling
 
-#define ADC_BUTTON_WIDTH       ADC_WIDTH_MAX-1
-#define ADC_BUTTON_ATTEN       ADC_ATTEN_DB_11
-#define ADC_BUTTON_ADC_UNIT    ADC_UNIT_1
-#define ADC_BUTTON_MAX_CHANNEL CONFIG_ADC_BUTTON_MAX_CHANNEL
-#define ADC_BUTTON_MAX_BUTTON  CONFIG_ADC_BUTTON_MAX_BUTTON_PER_CHANNEL
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+#define ADC_BUTTON_WIDTH        SOC_ADC_RTC_MAX_BITWIDTH
+#define ADC1_BUTTON_CHANNEL_MAX SOC_ADC_MAX_CHANNEL_NUM
+#define ADC_BUTTON_ATTEN        ADC_ATTEN_DB_11
+#else
+#define ADC_BUTTON_WIDTH        ADC_WIDTH_MAX-1
+#define ADC1_BUTTON_CHANNEL_MAX ADC1_CHANNEL_MAX
+#define ADC_BUTTON_ATTEN        ADC_ATTEN_DB_11
+#endif
+#define ADC_BUTTON_ADC_UNIT     ADC_UNIT_1
+#define ADC_BUTTON_MAX_CHANNEL  CONFIG_ADC_BUTTON_MAX_CHANNEL
+#define ADC_BUTTON_MAX_BUTTON   CONFIG_ADC_BUTTON_MAX_BUTTON_PER_CHANNEL
+
+
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+static adc_oneshot_unit_handle_t s_adc1_handle;
+#endif
 
 typedef struct {
     uint16_t min;
@@ -44,7 +65,7 @@ typedef struct {
 } button_data_t;
 
 typedef struct {
-    adc1_channel_t channel;
+    uint8_t channel;
     uint8_t is_init;
     button_data_t btns[ADC_BUTTON_MAX_BUTTON];  /* all button on the channel */
     uint64_t last_time;  /* the last time of adc sample */
@@ -52,7 +73,11 @@ typedef struct {
 
 typedef struct {
     bool is_configured;
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+    adc_cali_handle_t adc1_cali_handle;
+#else
     esp_adc_cal_characteristics_t adc_chars;
+#endif
     btn_adc_channel_t ch[ADC_BUTTON_MAX_CHANNEL];
     uint8_t ch_num;
 } adc_button_t;
@@ -69,7 +94,7 @@ static int find_unused_channel(void)
     return -1;
 }
 
-static int find_channel(adc1_channel_t channel)
+static int find_channel(uint8_t channel)
 {
     for (size_t i = 0; i < ADC_BUTTON_MAX_CHANNEL; i++) {
         if (channel == g_button.ch[i].channel) {
@@ -79,10 +104,60 @@ static int find_channel(adc1_channel_t channel)
     return -1;
 }
 
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+static bool adc_calibration_init(adc_unit_t unit, adc_atten_t atten, adc_cali_handle_t *out_handle)
+{
+    adc_cali_handle_t handle = NULL;
+    esp_err_t ret = ESP_FAIL;
+    bool calibrated = false;
+
+#if ADC_CALI_SCHEME_CURVE_FITTING_SUPPORTED
+    if (!calibrated) {
+        ESP_LOGI(TAG, "calibration scheme version is %s", "Curve Fitting");
+        adc_cali_curve_fitting_config_t cali_config = {
+            .unit_id = unit,
+            .atten = atten,
+            .bitwidth = ADC_BUTTON_WIDTH,
+        };
+        ret = adc_cali_create_scheme_curve_fitting(&cali_config, &handle);
+        if (ret == ESP_OK) {
+            calibrated = true;
+        }
+    }
+#endif
+
+#if ADC_CALI_SCHEME_LINE_FITTING_SUPPORTED
+    if (!calibrated) {
+        ESP_LOGI(TAG, "calibration scheme version is %s", "Line Fitting");
+        adc_cali_line_fitting_config_t cali_config = {
+            .unit_id = unit,
+            .atten = atten,
+            .bitwidth = ADC_BUTTON_WIDTH,
+        };
+        ret = adc_cali_create_scheme_line_fitting(&cali_config, &handle);
+        if (ret == ESP_OK) {
+            calibrated = true;
+        }
+    }
+#endif
+
+    *out_handle = handle;
+    if (ret == ESP_OK) {
+        ESP_LOGI(TAG, "Calibration Success");
+    } else if (ret == ESP_ERR_NOT_SUPPORTED || !calibrated) {
+        ESP_LOGW(TAG, "eFuse not burnt, skip software calibration");
+    } else {
+        ESP_LOGE(TAG, "Invalid arg or no memory");
+    }
+
+    return calibrated;
+}
+#endif
+
 esp_err_t button_adc_init(const button_adc_config_t *config)
 {
     ADC_BTN_CHECK(NULL != config, "Pointer of config is invalid", ESP_ERR_INVALID_ARG);
-    ADC_BTN_CHECK(config->adc_channel < ADC1_CHANNEL_MAX, "channel out of range", ESP_ERR_NOT_SUPPORTED);
+    ADC_BTN_CHECK(config->adc_channel < ADC1_BUTTON_CHANNEL_MAX, "channel out of range", ESP_ERR_NOT_SUPPORTED);
     ADC_BTN_CHECK(config->button_index < ADC_BUTTON_MAX_BUTTON, "button_index out of range", ESP_ERR_NOT_SUPPORTED);
     ADC_BTN_CHECK(config->max > 0, "key max voltage invalid", ESP_ERR_INVALID_ARG);
 
@@ -97,6 +172,20 @@ esp_err_t button_adc_init(const button_adc_config_t *config)
 
     /** initialize adc */
     if (0 == g_button.is_configured) {
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+        esp_err_t ret;
+        if (NULL == config->adc_handle) {
+            //ADC1 Init
+            adc_oneshot_unit_init_cfg_t init_config = {
+                .unit_id = ADC_UNIT_1,
+            };
+            ret = adc_oneshot_new_unit(&init_config, &s_adc1_handle);
+            ADC_BTN_CHECK(ret == ESP_OK, "adc oneshot new unit fail!", ESP_FAIL);
+        } else {
+            s_adc1_handle = &config->adc_handle ;
+            ESP_LOGI(TAG, "ADC1 has been initialized");
+        }
+#else
         //Configure ADC
         adc1_config_width(ADC_BUTTON_WIDTH);
         //Characterize ADC
@@ -108,12 +197,25 @@ esp_err_t button_adc_init(const button_adc_config_t *config)
         } else {
             ESP_LOGI(TAG, "Characterized using Default Vref");
         }
+#endif
         g_button.is_configured = 1;
     }
 
     /** initialize adc channel */
     if (0 == g_button.ch[ch_index].is_init) {
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+        //ADC1 Config
+        adc_oneshot_chan_cfg_t oneshot_config = {
+            .bitwidth = ADC_BUTTON_WIDTH,
+            .atten = ADC_BUTTON_ATTEN,
+        };
+        ret = adc_oneshot_config_channel(s_adc1_handle, config->adc_channel, &oneshot_config);
+        ADC_BTN_CHECK(ret == ESP_OK, "adc oneshot config channel fail!", ESP_FAIL);
+        //-------------ADC1 Calibration Init---------------//
+        ADC_BTN_CHECK(adc_calibration_init(ADC_BUTTON_ADC_UNIT, ADC_BUTTON_ATTEN, &g_button.adc1_cali_handle), "ADC1 Calibration Init False", 0);
+#else
         adc1_config_channel_atten(config->adc_channel, ADC_BUTTON_ATTEN);
+#endif
         g_button.ch[ch_index].channel = config->adc_channel;
         g_button.ch[ch_index].is_init = 1;
         g_button.ch[ch_index].last_time = 0;
@@ -125,9 +227,9 @@ esp_err_t button_adc_init(const button_adc_config_t *config)
     return ESP_OK;
 }
 
-esp_err_t button_adc_deinit(adc1_channel_t channel, int button_index)
+esp_err_t button_adc_deinit(uint8_t channel, int button_index)
 {
-    ADC_BTN_CHECK(channel < ADC1_CHANNEL_MAX, "channel out of range", ESP_ERR_INVALID_ARG);
+    ADC_BTN_CHECK(channel < ADC1_BUTTON_CHANNEL_MAX, "channel out of range", ESP_ERR_INVALID_ARG);
     ADC_BTN_CHECK(button_index < ADC_BUTTON_MAX_BUTTON, "button_index out of range", ESP_ERR_INVALID_ARG);
 
     int ch_index = find_channel(channel);
@@ -144,9 +246,8 @@ esp_err_t button_adc_deinit(adc1_channel_t channel, int button_index)
         }
     }
     if (unused_button == ADC_BUTTON_MAX_BUTTON && g_button.ch[ch_index].is_init) {  /**< if all button is unused, deinit the channel */
-        /* TODO: to deinit the channel  */
         g_button.ch[ch_index].is_init = 0;
-        g_button.ch[ch_index].channel = ADC1_CHANNEL_MAX;
+        g_button.ch[ch_index].channel = ADC1_BUTTON_CHANNEL_MAX;
         ESP_LOGD(TAG, "all button is unused on channel%d, deinit the channel", g_button.ch[ch_index].channel);
     }
 
@@ -158,19 +259,33 @@ esp_err_t button_adc_deinit(adc1_channel_t channel, int button_index)
         }
     }
     if (unused_ch == ADC_BUTTON_MAX_CHANNEL && g_button.is_configured) { /**< if all channel is unused, deinit the adc */
-        /* TODO: to deinit the peripheral adc  */
         g_button.is_configured = false;
         memset(&g_button, 0, sizeof(adc_button_t));
         ESP_LOGD(TAG, "all channel is unused, , deinit adc");
     }
-
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+    esp_err_t ret = adc_oneshot_del_unit(s_adc1_handle);
+    ADC_BTN_CHECK(ch_index >= 0, "adc oneshot deinit fail", ESP_FAIL);
+#endif
     return ESP_OK;
 }
 
-static uint32_t get_adc_volatge(adc1_channel_t channel)
+static uint32_t get_adc_volatge(uint8_t channel)
 {
     uint32_t adc_reading = 0;
     //Multisampling
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+    uint32_t adc_raw = 0;
+    for (int i = 0; i < NO_OF_SAMPLES; i++) {
+        adc_oneshot_read(s_adc1_handle, channel, &adc_raw);
+        adc_reading += adc_raw;
+    }
+    adc_reading /= NO_OF_SAMPLES;
+    //Convert adc_reading to voltage in mV
+    uint32_t voltage = 0;
+    adc_cali_raw_to_voltage(g_button.adc1_cali_handle, adc_reading, &voltage);
+    ESP_LOGV(TAG, "Raw: %"PRIu32"\tVoltage: %"PRIu32"mV", adc_reading, voltage);
+#else
     for (int i = 0; i < NO_OF_SAMPLES; i++) {
         adc_reading += adc1_get_raw(channel);
     }
@@ -178,6 +293,7 @@ static uint32_t get_adc_volatge(adc1_channel_t channel)
     //Convert adc_reading to voltage in mV
     uint32_t voltage = esp_adc_cal_raw_to_voltage(adc_reading, &g_button.adc_chars);
     ESP_LOGV(TAG, "Raw: %"PRIu32"\tVoltage: %"PRIu32"mV", adc_reading, voltage);
+#endif
     return voltage;
 }
 
@@ -186,7 +302,7 @@ uint8_t button_adc_get_key_level(void *button_index)
     static uint16_t vol = 0;
     uint32_t ch = ADC_BUTTON_SPLIT_CHANNEL(button_index);
     uint32_t index = ADC_BUTTON_SPLIT_INDEX(button_index);
-    ADC_BTN_CHECK(ch < ADC1_CHANNEL_MAX, "channel out of range", 0);
+    ADC_BTN_CHECK(ch < ADC1_BUTTON_CHANNEL_MAX, "channel out of range", 0);
     ADC_BTN_CHECK(index < ADC_BUTTON_MAX_BUTTON, "button_index out of range", 0);
     int ch_index = find_channel(ch);
     ADC_BTN_CHECK(ch_index >= 0, "The button_index is not init", 0);

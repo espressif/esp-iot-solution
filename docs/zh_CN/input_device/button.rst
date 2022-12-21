@@ -110,6 +110,29 @@
         ESP_LOGE(TAG, "Button create failed");
     }
 
+.. Note::
+    ADC 按钮使用的是 ADC1 ,当项目中还有其他地方使用到了 ADC1 时，请传入 adc_handle 和 adc_channel 来配置 ADC 按钮。
+
+    .. code::C
+        adc_oneshot_unit_handle_t adc1_handle;
+        adc_oneshot_unit_init_cfg_t init_config1 = {
+            .unit_id = ADC_UNIT_1,
+        };
+        //-------------ADC1 Init---------------//
+        adc_oneshot_new_unit(&init_config1, &adc1_handle);
+        // create adc button
+        button_config_t adc_btn_cfg = {
+            .type = BUTTON_TYPE_ADC,
+            .adc_button_config = {
+                .adc_handle = &adc1_handle,
+                .adc_channel = 1,
+            },
+        };
+        button_handle_t adc_btn = iot_button_create(&adc_btn_cfg);
+        if(NULL == adc_btn) {
+            ESP_LOGE(TAG, "Button create failed");
+        }
+
 注册回调函数
 ^^^^^^^^^^^^^^
 

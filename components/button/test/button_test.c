@@ -152,14 +152,14 @@ TEST_CASE("gpio button test", "[button][iot]")
 
 TEST_CASE("adc button test", "[button][iot]")
 {
-    /** ESP32-LyraT-Mini board */
+    /** ESP32-S3-Korvo board */
     const uint16_t vol[6] = {380, 820, 1180, 1570, 1980, 2410};
     button_config_t cfg = {0};
     cfg.type = BUTTON_TYPE_ADC;
     cfg.long_press_time = CONFIG_BUTTON_LONG_PRESS_TIME_MS;
     cfg.short_press_time = CONFIG_BUTTON_SHORT_PRESS_TIME_MS;
     for (size_t i = 0; i < 6; i++) {
-        cfg.adc_button_config.adc_channel = 3,
+        cfg.adc_button_config.adc_channel = 7,
         cfg.adc_button_config.button_index = i;
         if (i == 0) {
             cfg.adc_button_config.min = (0 + vol[i]) / 2;

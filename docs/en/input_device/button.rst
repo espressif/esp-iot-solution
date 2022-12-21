@@ -108,6 +108,29 @@ Create a button
         ESP_LOGE(TAG, "Button create failed");
     }
 
+.. Note::
+    please pass adc_handle and adc_channel , when there are other places in the project that use ADC1.
+
+    .. code::C
+        adc_oneshot_unit_handle_t adc1_handle;
+        adc_oneshot_unit_init_cfg_t init_config1 = {
+            .unit_id = ADC_UNIT_1,
+        };
+        //-------------ADC1 Init---------------//
+        adc_oneshot_new_unit(&init_config1, &adc1_handle);
+        // create adc button
+        button_config_t adc_btn_cfg = {
+            .type = BUTTON_TYPE_ADC,
+            .adc_button_config = {
+                .adc_handle = &adc1_handle,
+                .adc_channel = 1,
+            },
+        };
+        button_handle_t adc_btn = iot_button_create(&adc_btn_cfg);
+        if(NULL == adc_btn) {
+            ESP_LOGE(TAG, "Button create failed");
+        }
+
 Register call-back 
 ^^^^^^^^^^^^^^^^^^^
 
