@@ -258,6 +258,7 @@ typedef struct {
     bool enable_status_storage : 1;           // Store lightbulb state to nvs.
     bool enable_mix_cct : 1;                  // CCT output uses two-channel mixing instead of single-channel control.
     bool sync_change_brightness_value : 1;    // Enable this option if you need to use a parameter to mark the brightness of the white and color output
+    bool disable_auto_on : 1;                 // Enable this option if you don't need automatic on when color/white value is set
 } lightbulb_capability_t;
 
 /**
