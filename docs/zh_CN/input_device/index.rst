@@ -7,4 +7,5 @@
     :maxdepth: 1
 
     按键 <button>
+    旋钮 <knob>
     触摸屏 <touch_panel>

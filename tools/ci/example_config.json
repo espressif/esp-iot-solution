@@ -250,6 +250,20 @@
             ]
         },
         {
+            "name": "usb_surface_dial",
+            "buildsystem": [
+                "cmake"
+            ],
+            "targets": [
+                "esp32s2",
+                "esp32s3"
+            ],
+            "idfversion": [
+                "4.4",
+                "5.0"
+            ]
+        },
+        {
             "name": "examples",
             "buildsystem": [
                 "cmake",
