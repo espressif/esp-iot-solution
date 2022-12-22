@@ -42,6 +42,7 @@ static const char *TAG = "lightbulb";
 #define CHECK_LOW_POWER_FUNC_IS_ENABLE()                ((s_lb_obj->cap.enable_lowpower && s_lb_obj->power_timer) ? true : false)
 #define CHECK_AUTO_STATUS_STORAGE_FUNC_IS_ENABLE()      ((s_lb_obj->cap.enable_status_storage && s_lb_obj->storage_timer) ? true : false)
 #define CHECK_WHITE_OUTPUT_REQ_MIXED()                  (s_lb_obj->cap.enable_mix_cct)
+#define CHECK_AUTO_ON_FUNC_IS_ENABLE()                  ((!s_lb_obj->cap.disable_auto_on) ? true : false)
 
 /**
  * @brief Lightbulb fade time calculate
@@ -794,6 +795,8 @@ esp_err_t lightbulb_set_hsv(uint16_t hue, uint8_t saturation, uint8_t value)
     LIGHTBULB_CHECK(CHECK_COLOR_CHANNEL_IS_SELECT(), "color channel output is disable", return ESP_ERR_INVALID_STATE);
     LIGHTBULB_MUTEX_TAKE(portMAX_DELAY);
 
+    esp_err_t err = ESP_OK;
+
     if (CHECK_LOW_POWER_FUNC_IS_ENABLE()) {
         xTimerStop(s_lb_obj->power_timer, 0);
     }
@@ -802,29 +805,31 @@ esp_err_t lightbulb_set_hsv(uint16_t hue, uint8_t saturation, uint8_t value)
         xTimerReset(s_lb_obj->storage_timer, 0);
     }
 
-    esp_err_t err = ESP_OK;
-    uint16_t color_value[5] = { 0 };
-    uint16_t fade_time = CALCULATE_FADE_TIME();
-    uint8_t channel_mask = get_channel_mask(WORK_COLOR);
-    uint8_t _value = value;
+    if (s_lb_obj->status.on || CHECK_AUTO_ON_FUNC_IS_ENABLE()) {
+        uint16_t color_value[5] = { 0 };
+        uint16_t fade_time = CALCULATE_FADE_TIME();
+        uint8_t channel_mask = get_channel_mask(WORK_COLOR);
+        uint8_t _value = value;
 
-    // 1. calculate value
-    ESP_LOGI(TAG, "set [h:%d s:%d v:%d]", hue, saturation, value);
-    _value = process_color_value_limit(value);
+        // 1. calculate value
+        ESP_LOGI(TAG, "set [h:%d s:%d v:%d]", hue, saturation, value);
+        _value = process_color_value_limit(value);
 
-    // 2. convert to r g b
-    lightbulb_hsv2rgb(hue, saturation, _value, (uint8_t *)&color_value[0], (uint8_t *)&color_value[1], (uint8_t *)&color_value[2]);
-    ESP_LOGI(TAG, "8 bit color conversion value [r:%d g:%d b:%d]", color_value[0], color_value[1], color_value[2]);
+        // 2. convert to r g b
+        lightbulb_hsv2rgb(hue, saturation, _value, (uint8_t *)&color_value[0], (uint8_t *)&color_value[1], (uint8_t *)&color_value[2]);
+        ESP_LOGI(TAG, "8 bit color conversion value [r:%d g:%d b:%d]", color_value[0], color_value[1], color_value[2]);
 
-    // 3. according to power, re-calculate
-    process_color_power_limit(color_value[0], color_value[1], color_value[2], &color_value[0], &color_value[1], &color_value[2]);
-    ESP_LOGI(TAG, "hal write value [r:%d g:%d b:%d], channel_mask:%d fade_ms:%d", color_value[0], color_value[1], color_value[2], channel_mask, fade_time);
+        // 3. according to power, re-calculate
+        process_color_power_limit(color_value[0], color_value[1], color_value[2], &color_value[0], &color_value[1], &color_value[2]);
+        ESP_LOGI(TAG, "hal write value [r:%d g:%d b:%d], channel_mask:%d fade_ms:%d", color_value[0], color_value[1], color_value[2], channel_mask, fade_time);
 
-    err = hal_set_channel_group(color_value, channel_mask, fade_time);
-    LIGHTBULB_CHECK(err == ESP_OK, "set hal channel group fail", goto EXIT);
+        err = hal_set_channel_group(color_value, channel_mask, fade_time);
+        LIGHTBULB_CHECK(err == ESP_OK, "set hal channel group fail", goto EXIT);
+
+        s_lb_obj->status.on = true;
+    }
 
     s_lb_obj->status.mode = WORK_COLOR;
-    s_lb_obj->status.on = true;
     s_lb_obj->status.hue = hue;
     s_lb_obj->status.saturation = saturation;
     s_lb_obj->status.value = value;
@@ -851,6 +856,8 @@ esp_err_t lightbulb_set_cctb(uint16_t cct, uint8_t brightness)
     LIGHTBULB_CHECK(CHECK_WHITE_CHANNEL_IS_SELECT(), "white channel output is disable", return ESP_ERR_INVALID_STATE);
     LIGHTBULB_MUTEX_TAKE(portMAX_DELAY);
 
+    esp_err_t err = ESP_OK;
+
     if (CHECK_LOW_POWER_FUNC_IS_ENABLE()) {
         xTimerStop(s_lb_obj->power_timer, 0);
     }
@@ -859,35 +866,37 @@ esp_err_t lightbulb_set_cctb(uint16_t cct, uint8_t brightness)
         xTimerReset(s_lb_obj->storage_timer, 0);
     }
 
-    esp_err_t err = ESP_OK;
-    uint16_t white_value[5] = { 0 };
-    uint16_t fade_time = CALCULATE_FADE_TIME();
-    uint8_t channel_mask = get_channel_mask(WORK_WHITE);
-    uint8_t _brightness = brightness;
+    if (s_lb_obj->status.on || CHECK_AUTO_ON_FUNC_IS_ENABLE()) {
+        uint16_t white_value[5] = { 0 };
+        uint16_t fade_time = CALCULATE_FADE_TIME();
+        uint8_t channel_mask = get_channel_mask(WORK_WHITE);
+        uint8_t _brightness = brightness;
 
-    ESP_LOGI(TAG, "set cct:%d brightness:%d", cct, brightness);
-    // 1. calculate brightness
-    ESP_LOGD(TAG, "input cct:%d brightness:%d", cct, brightness);
-    _brightness = process_white_brightness_limit(_brightness);
-    ESP_LOGD(TAG, "setp_1 output cct:%d brightness:%d", cct, _brightness);
+        ESP_LOGI(TAG, "set cct:%d brightness:%d", cct, brightness);
+        // 1. calculate brightness
+        ESP_LOGD(TAG, "input cct:%d brightness:%d", cct, brightness);
+        _brightness = process_white_brightness_limit(_brightness);
+        ESP_LOGD(TAG, "setp_1 output cct:%d brightness:%d", cct, _brightness);
 
-    // 2. convert to cold warm
-    if (CHECK_WHITE_OUTPUT_REQ_MIXED()) {
-        cct_and_brightness_convert_to_cold_and_warm(cct, _brightness, &white_value[3], &white_value[4]);
-        ESP_LOGI(TAG, "convert cold:%d warm:%d", white_value[3], white_value[4]);
-        process_white_power_limit(white_value[3], white_value[4], (uint8_t *)&white_value[3], (uint8_t *)&white_value[4]);
-    } else {
-        white_value[3] = cct * 255 / 100;
-        white_value[4] = _brightness * 255 / 100;
-        ESP_LOGI(TAG, "convert cct:%d brightness:%d", white_value[3], white_value[4]);
+        // 2. convert to cold warm
+        if (CHECK_WHITE_OUTPUT_REQ_MIXED()) {
+            cct_and_brightness_convert_to_cold_and_warm(cct, _brightness, &white_value[3], &white_value[4]);
+            ESP_LOGI(TAG, "convert cold:%d warm:%d", white_value[3], white_value[4]);
+            process_white_power_limit(white_value[3], white_value[4], (uint8_t *)&white_value[3], (uint8_t *)&white_value[4]);
+        } else {
+            white_value[3] = cct * 255 / 100;
+            white_value[4] = _brightness * 255 / 100;
+            ESP_LOGI(TAG, "convert cct:%d brightness:%d", white_value[3], white_value[4]);
+        }
+        ESP_LOGI(TAG, "hal write value [white1:%d white2:%d], channel_mask:%d fade_ms:%d", white_value[3], white_value[4], channel_mask, fade_time);
+
+        err = hal_set_channel_group(white_value, channel_mask, fade_time);
+        LIGHTBULB_CHECK(err == ESP_OK, "set hal channel group fail", goto EXIT);
+
+        s_lb_obj->status.on = true;
     }
-    ESP_LOGI(TAG, "hal write value [white1:%d white2:%d], channel_mask:%d fade_ms:%d", white_value[3], white_value[4], channel_mask, fade_time);
-
-    err = hal_set_channel_group(white_value, channel_mask, fade_time);
-    LIGHTBULB_CHECK(err == ESP_OK, "set hal channel group fail", goto EXIT);
 
     s_lb_obj->status.mode = WORK_WHITE;
-    s_lb_obj->status.on = true;
     s_lb_obj->status.cct_percentage = cct;
     s_lb_obj->status.brightness = brightness;
 
