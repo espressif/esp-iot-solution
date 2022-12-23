@@ -1413,7 +1413,7 @@ static inline void _uvc_process_payload(_uvc_stream_handle_t *strmh, uint8_t *pa
         if (strmh->got_bytes + data_len > s_uvc_dev.xfer_buffer_size) {
             /* This means transfer buffer Not enough for whole frame, just drop whole buffer here.
             Please increase buffer size to handle big frame*/
-            ESP_LOGW(TAG, "Transfer buffer overflow, gotdata=%u B", strmh->got_bytes + data_len);
+            ESP_LOGW(TAG, "Transfer buffer overflow, got data=%u B", strmh->got_bytes + data_len);
             _uvc_drop_buffers(strmh);
             return;
         } else {
@@ -1421,11 +1421,11 @@ static inline void _uvc_process_payload(_uvc_stream_handle_t *strmh, uint8_t *pa
         }
 
         strmh->got_bytes += data_len;
+    }
 
-        if (header_info & (1 << 1)) {
-            /* The EOF bit is set, so publish the complete frame */
-            _uvc_swap_buffers(strmh);
-        }
+    if (header_info & (1 << 1)) {
+        /* The EOF bit is set, so publish the complete frame */
+        _uvc_swap_buffers(strmh);
     }
 }
 
@@ -2562,7 +2562,7 @@ esp_err_t uac_streaming_config(const uac_config_t *config)
     if (config->spk_interface) {
         s_uac_dev.spk_active = true;
     }
-    ESP_LOGI(TAG, "UAC Streaming Config Succeed");
+    ESP_LOGI(TAG, "UAC Streaming Config Succeed, Version: %d.%d.%d", USB_STREAM_VER_MAJOR, USB_STREAM_VER_MINOR, USB_STREAM_VER_PATCH);
     return ESP_OK;
 }
 
@@ -2641,7 +2641,7 @@ esp_err_t uvc_streaming_config(const uvc_config_t *config)
 
     TRIGGER_INIT();
     s_uvc_dev.active = true;
-    ESP_LOGI(TAG, "UVC Streaming Config Succeed");
+    ESP_LOGI(TAG, "UVC Streaming Config Succeed, Version: %d.%d.%d", USB_STREAM_VER_MAJOR, USB_STREAM_VER_MINOR, USB_STREAM_VER_PATCH);
     return ESP_OK;
 }
 
