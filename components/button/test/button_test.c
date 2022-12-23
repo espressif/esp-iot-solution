@@ -17,7 +17,11 @@
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include "freertos/timers.h"
+#include "esp_idf_version.h"
 #include "esp_log.h"
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+#include "esp_adc/adc_cali.h"
+#endif
 #include "unity.h"
 #include "iot_button.h"
 #include "sdkconfig.h"
@@ -215,12 +219,12 @@ TEST_CASE("adc gpio button test", "[button][iot]")
     iot_button_register_cb(g_btns[8], BUTTON_LONG_PRESS_HOLD, button_long_press_hold_cb, NULL);
     iot_button_register_cb(g_btns[8], BUTTON_PRESS_REPEAT_DONE, button_press_repeat_done_cb, NULL);
 
-    /** ESP32-LyraT-Mini board */
+    /** ESP32-S3-Korvo board */
     const uint16_t vol[6] = {380, 820, 1180, 1570, 1980, 2410};
     // button_config_t cfg = {0};
     cfg.type = BUTTON_TYPE_ADC;
     for (size_t i = 0; i < 6; i++) {
-        cfg.adc_button_config.adc_channel = 3,
+        cfg.adc_button_config.adc_channel = 7,
         cfg.adc_button_config.button_index = i;
         if (i == 0) {
             cfg.adc_button_config.min = (0 + vol[i]) / 2;
@@ -253,3 +257,106 @@ TEST_CASE("adc gpio button test", "[button][iot]")
         iot_button_delete(g_btns[i]);
     }
 }
+
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+static esp_err_t adc_calibration_init(adc_unit_t unit, adc_atten_t atten, adc_cali_handle_t *out_handle)
+{
+    adc_cali_handle_t handle = NULL;
+    esp_err_t ret = ESP_FAIL;
+    bool calibrated = false;
+
+#if ADC_CALI_SCHEME_CURVE_FITTING_SUPPORTED
+    if (!calibrated) {
+        ESP_LOGI(TAG, "calibration scheme version is %s", "Curve Fitting");
+        adc_cali_curve_fitting_config_t cali_config = {
+            .unit_id = unit,
+            .atten = atten,
+            .bitwidth = ADC_BUTTON_WIDTH,
+        };
+        ret = adc_cali_create_scheme_curve_fitting(&cali_config, &handle);
+        if (ret == ESP_OK) {
+            calibrated = true;
+        }
+    }
+#endif
+
+#if ADC_CALI_SCHEME_LINE_FITTING_SUPPORTED
+    if (!calibrated) {
+        ESP_LOGI(TAG, "calibration scheme version is %s", "Line Fitting");
+        adc_cali_line_fitting_config_t cali_config = {
+            .unit_id = unit,
+            .atten = atten,
+            .bitwidth = ADC_BUTTON_WIDTH,
+        };
+        ret = adc_cali_create_scheme_line_fitting(&cali_config, &handle);
+        if (ret == ESP_OK) {
+            calibrated = true;
+        }
+    }
+#endif
+
+    *out_handle = handle;
+    if (ret == ESP_OK) {
+        ESP_LOGI(TAG, "Calibration Success");
+    } else if (ret == ESP_ERR_NOT_SUPPORTED || !calibrated) {
+        ESP_LOGW(TAG, "eFuse not burnt, skip software calibration");
+    } else {
+        ESP_LOGE(TAG, "Invalid arg or no memory");
+    }
+
+    return calibrated ? ESP_OK : ESP_FAIL;
+}
+
+TEST_CASE("adc button idf5 drive test", "[button][iot]")
+{
+    adc_oneshot_unit_handle_t adc1_handle;
+    adc_cali_handle_t adc1_cali_handle;
+    adc_oneshot_unit_init_cfg_t init_config = {
+        .unit_id = ADC_UNIT_1,
+    };
+    esp_err_t ret = adc_oneshot_new_unit(&init_config, &adc1_handle);
+    TEST_ASSERT_TRUE(ret == ESP_OK);
+    adc_calibration_init(ADC_UNIT_1, ADC_ATTEN_DB_11, &adc1_cali_handle);
+
+    /** ESP32-S3-Korvo board */
+    const uint16_t vol[6] = {380, 820, 1180, 1570, 1980, 2410};
+    button_config_t cfg = {0};
+    cfg.type = BUTTON_TYPE_ADC;
+    cfg.long_press_time = CONFIG_BUTTON_LONG_PRESS_TIME_MS;
+    cfg.short_press_time = CONFIG_BUTTON_SHORT_PRESS_TIME_MS;
+    for (size_t i = 0; i < 6; i++) {
+        cfg.adc_button_config.adc_handle = &adc1_handle;
+        cfg.adc_button_config.adc_channel = 7,
+        cfg.adc_button_config.button_index = i;
+        if (i == 0) {
+            cfg.adc_button_config.min = (0 + vol[i]) / 2;
+        } else {
+            cfg.adc_button_config.min = (vol[i - 1] + vol[i]) / 2;
+        }
+
+        if (i == 5) {
+            cfg.adc_button_config.max = (vol[i] + 3000) / 2;
+        } else {
+            cfg.adc_button_config.max = (vol[i] + vol[i + 1]) / 2;
+        }
+
+        g_btns[i] = iot_button_create(&cfg);
+        TEST_ASSERT_NOT_NULL(g_btns[i]);
+        iot_button_register_cb(g_btns[i], BUTTON_PRESS_DOWN, button_press_down_cb, NULL);
+        iot_button_register_cb(g_btns[i], BUTTON_PRESS_UP, button_press_up_cb, NULL);
+        iot_button_register_cb(g_btns[i], BUTTON_PRESS_REPEAT, button_press_repeat_cb, NULL);
+        iot_button_register_cb(g_btns[i], BUTTON_SINGLE_CLICK, button_single_click_cb, NULL);
+        iot_button_register_cb(g_btns[i], BUTTON_DOUBLE_CLICK, button_double_click_cb, NULL);
+        iot_button_register_cb(g_btns[i], BUTTON_LONG_PRESS_START, button_long_press_start_cb, NULL);
+        iot_button_register_cb(g_btns[i], BUTTON_LONG_PRESS_HOLD, button_long_press_hold_cb, NULL);
+        iot_button_register_cb(g_btns[i], BUTTON_PRESS_REPEAT_DONE, button_press_repeat_done_cb, NULL);
+    }
+
+    while (1) {
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+    for (size_t i = 0; i < 6; i++) {
+        iot_button_delete(g_btns[i]);
+    }
+}
+#endif

@@ -54,11 +54,6 @@ static const char *TAG = "adc button";
 #define ADC_BUTTON_MAX_CHANNEL  CONFIG_ADC_BUTTON_MAX_CHANNEL
 #define ADC_BUTTON_MAX_BUTTON   CONFIG_ADC_BUTTON_MAX_BUTTON_PER_CHANNEL
 
-
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
-static adc_oneshot_unit_handle_t s_adc1_handle;
-#endif
-
 typedef struct {
     uint16_t min;
     uint16_t max;
@@ -75,6 +70,7 @@ typedef struct {
     bool is_configured;
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
     adc_cali_handle_t adc1_cali_handle;
+    adc_oneshot_unit_handle_t adc1_handle;
 #else
     esp_adc_cal_characteristics_t adc_chars;
 #endif
@@ -105,7 +101,7 @@ static int find_channel(uint8_t channel)
 }
 
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
-static bool adc_calibration_init(adc_unit_t unit, adc_atten_t atten, adc_cali_handle_t *out_handle)
+static esp_err_t adc_calibration_init(adc_unit_t unit, adc_atten_t atten, adc_cali_handle_t *out_handle)
 {
     adc_cali_handle_t handle = NULL;
     esp_err_t ret = ESP_FAIL;
@@ -150,7 +146,7 @@ static bool adc_calibration_init(adc_unit_t unit, adc_atten_t atten, adc_cali_ha
         ESP_LOGE(TAG, "Invalid arg or no memory");
     }
 
-    return calibrated;
+    return calibrated?ESP_OK:ESP_FAIL;
 }
 #endif
 
@@ -179,10 +175,10 @@ esp_err_t button_adc_init(const button_adc_config_t *config)
             adc_oneshot_unit_init_cfg_t init_config = {
                 .unit_id = ADC_UNIT_1,
             };
-            ret = adc_oneshot_new_unit(&init_config, &s_adc1_handle);
+            ret = adc_oneshot_new_unit(&init_config, &g_button.adc1_handle);
             ADC_BTN_CHECK(ret == ESP_OK, "adc oneshot new unit fail!", ESP_FAIL);
         } else {
-            s_adc1_handle = &config->adc_handle ;
+            g_button.adc1_handle = *config->adc_handle ;
             ESP_LOGI(TAG, "ADC1 has been initialized");
         }
 #else
@@ -209,10 +205,11 @@ esp_err_t button_adc_init(const button_adc_config_t *config)
             .bitwidth = ADC_BUTTON_WIDTH,
             .atten = ADC_BUTTON_ATTEN,
         };
-        ret = adc_oneshot_config_channel(s_adc1_handle, config->adc_channel, &oneshot_config);
+        esp_err_t ret = adc_oneshot_config_channel(g_button.adc1_handle, config->adc_channel, &oneshot_config);
         ADC_BTN_CHECK(ret == ESP_OK, "adc oneshot config channel fail!", ESP_FAIL);
         //-------------ADC1 Calibration Init---------------//
-        ADC_BTN_CHECK(adc_calibration_init(ADC_BUTTON_ADC_UNIT, ADC_BUTTON_ATTEN, &g_button.adc1_cali_handle), "ADC1 Calibration Init False", 0);
+        ret = adc_calibration_init(ADC_BUTTON_ADC_UNIT, ADC_BUTTON_ATTEN, &g_button.adc1_cali_handle);
+        ADC_BTN_CHECK(ret == ESP_OK, "ADC1 Calibration Init False", 0);
 #else
         adc1_config_channel_atten(config->adc_channel, ADC_BUTTON_ATTEN);
 #endif
@@ -264,8 +261,8 @@ esp_err_t button_adc_deinit(uint8_t channel, int button_index)
         ESP_LOGD(TAG, "all channel is unused, , deinit adc");
     }
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
-    esp_err_t ret = adc_oneshot_del_unit(s_adc1_handle);
-    ADC_BTN_CHECK(ch_index >= 0, "adc oneshot deinit fail", ESP_FAIL);
+    esp_err_t ret = adc_oneshot_del_unit(g_button.adc1_handle);
+    ADC_BTN_CHECK(ret == ESP_OK, "adc oneshot deinit fail", ESP_FAIL);
 #endif
     return ESP_OK;
 }
@@ -273,19 +270,19 @@ esp_err_t button_adc_deinit(uint8_t channel, int button_index)
 static uint32_t get_adc_volatge(uint8_t channel)
 {
     uint32_t adc_reading = 0;
-    //Multisampling
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
-    uint32_t adc_raw = 0;
+    int adc_raw = 0;
     for (int i = 0; i < NO_OF_SAMPLES; i++) {
-        adc_oneshot_read(s_adc1_handle, channel, &adc_raw);
+        adc_oneshot_read(g_button.adc1_handle, channel, &adc_raw);
         adc_reading += adc_raw;
     }
     adc_reading /= NO_OF_SAMPLES;
     //Convert adc_reading to voltage in mV
-    uint32_t voltage = 0;
+    int voltage = 0;
     adc_cali_raw_to_voltage(g_button.adc1_cali_handle, adc_reading, &voltage);
-    ESP_LOGV(TAG, "Raw: %"PRIu32"\tVoltage: %"PRIu32"mV", adc_reading, voltage);
+    ESP_LOGV(TAG, "Raw: %"PRIu32"\tVoltage: %dmV", adc_reading, voltage);
 #else
+    //Multisampling
     for (int i = 0; i < NO_OF_SAMPLES; i++) {
         adc_reading += adc1_get_raw(channel);
     }
