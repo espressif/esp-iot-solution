@@ -91,38 +91,62 @@ static void button_press_repeat_done_cb(void *arg, void *data)
     ESP_LOGI(TAG, "BTN%d: BUTTON_PRESS_REPEAT_DONE[%d]", get_btn_index((button_handle_t)arg), iot_button_get_repeat((button_handle_t)arg));
 }
 
-static void print_button_event(button_handle_t btn)
+static esp_err_t custom_button_gpio_init(void *param)
 {
-    button_event_t evt = iot_button_get_event(btn);
-    switch (evt) {
-    case BUTTON_PRESS_DOWN:
-        ESP_LOGI(TAG, "BUTTON_PRESS_DOWN");
-        break;
-    case BUTTON_PRESS_UP:
-        ESP_LOGI(TAG, "BUTTON_PRESS_UP");
-        break;
-    case BUTTON_PRESS_REPEAT:
-        ESP_LOGI(TAG, "BUTTON_PRESS_REPEAT");
-        break;
-    case BUTTON_SINGLE_CLICK:
-        ESP_LOGI(TAG, "BUTTON_SINGLE_CLICK");
-        break;
-    case BUTTON_DOUBLE_CLICK:
-        ESP_LOGI(TAG, "BUTTON_DOUBLE_CLICK");
-        break;
-    case BUTTON_LONG_PRESS_START:
-        ESP_LOGI(TAG, "BUTTON_LONG_PRESS_START");
-        break;
-    case BUTTON_LONG_PRESS_HOLD:
-        ESP_LOGI(TAG, "BUTTON_LONG_PRESS_HOLD");
-        break;
-    case BUTTON_PRESS_REPEAT_DONE:
-        ESP_LOGI(TAG, "BUTTON_PRESS_REPEAT_DONE");
-        break;
+    button_gpio_config_t *cfg = (button_gpio_config_t *)param;
 
-    default:
-        break;
+    return button_gpio_init(cfg);
+}
+
+static uint8_t custom_button_gpio_get_key_value(void *param)
+{
+    button_gpio_config_t *cfg = (button_gpio_config_t *)param;
+
+    return button_gpio_get_key_level((void *)cfg->gpio_num);
+}
+
+static esp_err_t custom_button_gpio_deinit(void *param)
+{
+    button_gpio_config_t *cfg = (button_gpio_config_t *)param;
+
+    return button_gpio_deinit(cfg->gpio_num);
+}
+
+TEST_CASE("custom button test", "[button][iot]")
+{
+    button_gpio_config_t *gpio_cfg = calloc(1, sizeof(button_gpio_config_t));
+    gpio_cfg->active_level = 0;
+    gpio_cfg->gpio_num = 0;
+
+    button_config_t cfg = {
+        .type = BUTTON_TYPE_CUSTOM,
+        .long_press_time = CONFIG_BUTTON_LONG_PRESS_TIME_MS,
+        .short_press_time = CONFIG_BUTTON_SHORT_PRESS_TIME_MS,
+        .custom_button_config = {
+            .button_custom_init = custom_button_gpio_init,
+            .button_custom_deinit = custom_button_gpio_deinit,
+            .button_custom_get_key_value = custom_button_gpio_get_key_value,
+            .active_level = 0,
+            .priv = gpio_cfg,
+        },
+    };
+
+    g_btns[0] = iot_button_create(&cfg);
+    TEST_ASSERT_NOT_NULL(g_btns[0]);
+    iot_button_register_cb(g_btns[0], BUTTON_PRESS_DOWN, button_press_down_cb, NULL);
+    iot_button_register_cb(g_btns[0], BUTTON_PRESS_UP, button_press_up_cb, NULL);
+    iot_button_register_cb(g_btns[0], BUTTON_PRESS_REPEAT, button_press_repeat_cb, NULL);
+    iot_button_register_cb(g_btns[0], BUTTON_SINGLE_CLICK, button_single_click_cb, NULL);
+    iot_button_register_cb(g_btns[0], BUTTON_DOUBLE_CLICK, button_double_click_cb, NULL);
+    iot_button_register_cb(g_btns[0], BUTTON_LONG_PRESS_START, button_long_press_start_cb, NULL);
+    iot_button_register_cb(g_btns[0], BUTTON_LONG_PRESS_HOLD, button_long_press_hold_cb, NULL);
+    iot_button_register_cb(g_btns[0], BUTTON_PRESS_REPEAT_DONE, button_press_repeat_done_cb, NULL);
+
+    while (1) {
+        vTaskDelay(pdMS_TO_TICKS(1000));
     }
+
+    iot_button_delete(g_btns[0]);
 }
 
 TEST_CASE("gpio button test", "[button][iot]")
