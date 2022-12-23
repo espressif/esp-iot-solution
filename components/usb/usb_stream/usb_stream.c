@@ -2562,7 +2562,7 @@ esp_err_t uac_streaming_config(const uac_config_t *config)
     if (config->spk_interface) {
         s_uac_dev.spk_active = true;
     }
-    ESP_LOGI(TAG, "UAC Streaming Config Succeed");
+    ESP_LOGI(TAG, "UAC Streaming Config Succeed, Version: %d.%d.%d", USB_STREAM_VER_MAJOR, USB_STREAM_VER_MINOR, USB_STREAM_VER_PATCH);
     return ESP_OK;
 }
 
@@ -2641,7 +2641,7 @@ esp_err_t uvc_streaming_config(const uvc_config_t *config)
 
     TRIGGER_INIT();
     s_uvc_dev.active = true;
-    ESP_LOGI(TAG, "UVC Streaming Config Succeed");
+    ESP_LOGI(TAG, "UVC Streaming Config Succeed, Version: %d.%d.%d", USB_STREAM_VER_MAJOR, USB_STREAM_VER_MINOR, USB_STREAM_VER_PATCH);
     return ESP_OK;
 }
 
