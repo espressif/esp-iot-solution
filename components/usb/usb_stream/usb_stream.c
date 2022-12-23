@@ -1413,7 +1413,7 @@ static inline void _uvc_process_payload(_uvc_stream_handle_t *strmh, uint8_t *pa
         if (strmh->got_bytes + data_len > s_uvc_dev.xfer_buffer_size) {
             /* This means transfer buffer Not enough for whole frame, just drop whole buffer here.
             Please increase buffer size to handle big frame*/
-            ESP_LOGW(TAG, "Transfer buffer overflow, gotdata=%u B", strmh->got_bytes + data_len);
+            ESP_LOGW(TAG, "Transfer buffer overflow, got data=%u B", strmh->got_bytes + data_len);
             _uvc_drop_buffers(strmh);
             return;
         } else {
@@ -1421,11 +1421,11 @@ static inline void _uvc_process_payload(_uvc_stream_handle_t *strmh, uint8_t *pa
         }
 
         strmh->got_bytes += data_len;
+    }
 
-        if (header_info & (1 << 1)) {
-            /* The EOF bit is set, so publish the complete frame */
-            _uvc_swap_buffers(strmh);
-        }
+    if (header_info & (1 << 1)) {
+        /* The EOF bit is set, so publish the complete frame */
+        _uvc_swap_buffers(strmh);
     }
 }
 
