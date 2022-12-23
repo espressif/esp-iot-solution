@@ -24,50 +24,27 @@
 #include "usb_stream.h"
 
 static const char *TAG = "uvc_mic_spk_demo";
-#define ENABLE_UVC_CAMERA_FUNCTION    1        /* enable uvc function */
-#define ENABLE_UAC_MIC_SPK_FUNCTION   1        /* enable uac mic+spk function */
-
+/****************** configure the example working mode *******************************/
+#define ENABLE_UVC_CAMERA_FUNCTION        1        /* enable uvc function */
+#define ENABLE_UAC_MIC_SPK_FUNCTION       1        /* enable uac mic+spk function */
 #if (ENABLE_UVC_CAMERA_FUNCTION)
-#define ENABLE_UVC_WIFI_XFER          0        /* transfer uvc frame to wifi http */
+#define ENABLE_UVC_FRAME_RESOLUTION_ANY   1        /* Using any resolution found from the camera */
+#define ENABLE_UVC_WIFI_XFER              0        /* transfer uvc frame to wifi http */
 #endif
 #if (ENABLE_UAC_MIC_SPK_FUNCTION)
-#define ENABLE_UAC_FEATURE_CONTROL    0        /* enable feature control(volume, mute) if the module support*/
-#define ENABLE_UAC_MIC_SPK_LOOPBACK   0        /* transfer mic data to speaker */
+#define ENABLE_UAC_FEATURE_CONTROL        0        /* enable feature control(volume, mute) if the module support*/
+#define ENABLE_UAC_MIC_SPK_LOOPBACK       0        /* transfer mic data to speaker */
 #endif
 
-/* USB Camera Descriptors Related MACROS,
-the quick demo skip the standred get descriptors process,
-users need to get params from camera descriptors from log
-then hardcode the related MACROS below
-*/
 #if (ENABLE_UVC_CAMERA_FUNCTION)
-/* UVC Class Related Descriptors */
-#define DESCRIPTOR_UVC_INTERFACE           1
-#define DESCRIPTOR_UVC_FORMAT_MJPEG_INDEX  1
-#define DESCRIPTOR_UVC_FRAME_640_480_INDEX 2
-#define DESCRIPTOR_UVC_FRAME_480_320_INDEX 3
-
-#define DESCRIPTOR_UVC_FRAME_10FPS_INTERVAL 1000000
-#define DESCRIPTOR_UVC_FRAME_15FPS_INTERVAL 666666
-#define DESCRIPTOR_UVC_FRAME_25FPS_INTERVAL 400000
-
-#define DESCRIPTOR_UVC_STREAM_INTERFACE_INDEX   1
-#define DESCRIPTOR_UVC_STREAM_INTERFACE_ALT_MPS_512 1
-#define DESCRIPTOR_UVC_STREAM_ISOC_ENDPOINT_ADDR 0x84
-
-/* Demo Related MACROS */
-#define DEMO_UVC_FORMAT_MJPEG       DESCRIPTOR_UVC_FORMAT_MJPEG_INDEX
-#define DEMO_UVC_FRAME_WIDTH        640
-#define DEMO_UVC_FRAME_HEIGHT       480
+#if (ENABLE_UVC_FRAME_RESOLUTION_ANY)
+#define DEMO_UVC_FRAME_WIDTH        FRAME_RESOLUTION_ANY
+#define DEMO_UVC_FRAME_HEIGHT       FRAME_RESOLUTION_ANY
+#else
+#define DEMO_UVC_FRAME_WIDTH        480
+#define DEMO_UVC_FRAME_HEIGHT       320
+#endif
 #define DEMO_UVC_XFER_BUFFER_SIZE   (35 * 1024) //Double buffer
-#define DEMO_UVC_FRAME_INDEX        DESCRIPTOR_UVC_FRAME_640_480_INDEX
-#define DEMO_UVC_FRAME_INTERVAL     DESCRIPTOR_UVC_FRAME_25FPS_INTERVAL
-/* max packet size of esp32-s2 is 1*512, bigger is not supported*/
-#define DEMO_UVC_ISOC_EP_MPS        512
-#define DEMO_UVC_ISOC_EP_ADDR       DESCRIPTOR_UVC_STREAM_ISOC_ENDPOINT_ADDR
-#define DEMO_UVC_ISOC_INTERFACE     DESCRIPTOR_UVC_INTERFACE
-#define DEMO_UVC_ISOC_INTERFACE_ALT DESCRIPTOR_UVC_STREAM_INTERFACE_ALT_MPS_512
-
 #if (ENABLE_UVC_WIFI_XFER)
 #include "app_wifi.h"
 #include "app_httpd.h"
@@ -162,18 +139,10 @@ void app_main(void)
     uint8_t *frame_buffer = (uint8_t *)malloc(DEMO_UVC_XFER_BUFFER_SIZE);
     assert(frame_buffer != NULL);
 
-    /* the quick demo skip the standred get descriptors process,
-    users need to get params from camera descriptors from demo print */
     uvc_config_t uvc_config = {
-        .format_index = DEMO_UVC_FORMAT_MJPEG,
         .frame_width = DEMO_UVC_FRAME_WIDTH,
         .frame_height = DEMO_UVC_FRAME_HEIGHT,
-        .frame_index = DEMO_UVC_FRAME_INDEX,
-        .frame_interval = DEMO_UVC_FRAME_INTERVAL,
-        .interface = DEMO_UVC_ISOC_INTERFACE,
-        .interface_alt = DEMO_UVC_ISOC_INTERFACE_ALT,
-        .ep_addr = DEMO_UVC_ISOC_EP_ADDR,
-        .ep_mps = DEMO_UVC_ISOC_EP_MPS,
+        .frame_interval = FPS2INTERVAL(15),
         .xfer_buffer_size = DEMO_UVC_XFER_BUFFER_SIZE,
         .xfer_buffer_a = xfer_buffer_a,
         .xfer_buffer_b = xfer_buffer_b,
@@ -183,7 +152,6 @@ void app_main(void)
         .frame_cb_arg = NULL,
     };
 
-    /* pre-config UVC driver with params from known USB Camera Descriptors*/
     ret = uvc_streaming_config(&uvc_config);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "uvc streaming config failed");
@@ -192,24 +160,14 @@ void app_main(void)
 
 #if (ENABLE_UAC_MIC_SPK_FUNCTION)
     uac_config_t uac_config = {
-        .mic_interface = 4,
         .mic_bit_resolution = 16,
         .mic_samples_frequence = 16000,
-        .mic_ep_addr = 0x82,
-        .mic_ep_mps = 32,
-        .spk_interface = 3,
         .spk_bit_resolution = 16,
         .spk_samples_frequence = 16000,
-        .spk_ep_addr = 0x02,
-        .spk_ep_mps = 32,
         .spk_buf_size = 16000,
         .mic_min_bytes = 320,
         .mic_cb = &mic_frame_cb,
         .mic_cb_arg = NULL,
-#if (ENABLE_UAC_FEATURE_CONTROL)
-        .ac_interface = 2,
-        .spk_fu_id = 2,
-#endif
     };
     ret = uac_streaming_config(&uac_config);
     if (ret != ESP_OK) {

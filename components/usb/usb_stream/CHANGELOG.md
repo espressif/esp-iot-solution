@@ -1,3 +1,24 @@
+# ChangeLog
+
+## v0.4.0 - 2022-12-22
+
+### Enhancements:
+
+* Support parsing descriptors to check the device functions and capabilities
+* Self-adaption appropriate interfaces based on descriptors and user's configurations
+* Camera:
+  * Support UVC config to any resolution, the first frame index will be used
+
+### API Changes:
+
+* add `optional` label to some members in `uvc_config_t` and `uac_config_t`, users can optionally set a value. The self-adaption process will first use actual configs from descriptors, if no appropriate interface found, will use the params from user's configuration
+
+### Bug Fixes:
+
+* USB:
+  * Fix STALL (appear on some devices) during get short configuration descriptor
+  * Resize endpoint 0 MPS based on device descriptor
+
 ## v0.3.3 - 2022-12-22
 
 ### Enhancements:
