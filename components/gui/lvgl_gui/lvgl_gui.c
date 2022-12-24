@@ -88,13 +88,15 @@ static esp_err_t lvgl_display_init(scr_driver_t *driver)
             remain_size = free_size / 2;
             ESP_LOGW(TAG, "Final remain size = %d Bytes", remain_size);
         }
+        size_t allow_size = (free_size - remain_size) & 0xfffffffc;
+        alloc_pixel = SIZE_TO_PIXEL(allow_size / BUFFER_NUMBER);
         if (alloc_pixel > DISP_BUF_SIZE) {
             // If half the remaining memory is more than we originally planned to allocate, just stick with the original plan.
             alloc_pixel = DISP_BUF_SIZE;
         }
-        size_t allow_size = (free_size - remain_size) & 0xfffffffc;
-        alloc_pixel = SIZE_TO_PIXEL(allow_size / BUFFER_NUMBER);
-        ESP_LOGW(TAG, "Exceeded max free size, force shrink to %u Byte", allow_size);
+        else {
+            ESP_LOGW(TAG, "Exceeded max free size, force shrink to %u Byte", allow_size);
+        }
     }
 
     lv_color_t *buf1 = heap_caps_malloc(PIXEL_TO_SIZE(alloc_pixel), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
