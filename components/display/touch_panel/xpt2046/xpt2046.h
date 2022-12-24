@@ -111,26 +111,26 @@ esp_err_t xpt2046_sample(touch_panel_points_t* info);
 esp_err_t xpt2046_get_temp_deg_c(float* temperature);
 
 /**
- * @brief Get the temperature from the touchscreen controller
+ * @brief Get the voltage on the battery pin from the touchscreen controller
  *
- * @param temperature a pointer to a float to store the temperature in degrees C
+ * @param voltage a pointer to a float to store the voltage in V
  *
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t xpt2046_get_batt_v(float* temperature);
+esp_err_t xpt2046_get_batt_v(float* voltage);
 
 /**
- * @brief Get the temperature from the touchscreen controller
+ * @brief Get the voltage on the aux pin from the touchscreen controller
  *
- * @param temperature a pointer to a float to store the temperature in degrees C
+ * @param voltage a pointer to a float to store the voltage in V
  *
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t xpt2046_get_aux_v(float* temperature);
+esp_err_t xpt2046_get_aux_v(float* voltage);
 
 
 #ifdef __cplusplus

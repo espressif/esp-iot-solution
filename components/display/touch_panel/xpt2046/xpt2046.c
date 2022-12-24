@@ -301,6 +301,7 @@ esp_err_t xpt2046_get_temp_deg_c(float* temperature)
 
     // First reading is to turn on the Vref
     ret = xpt2046_get_sample(XPT2046_TEMP0_CMD, &temp0);
+    TOUCH_CHECK(ESP_OK == ret, "Vref turn on failed", ESP_FAIL);
     // Second reading is to get the result
     ret = xpt2046_get_sample(XPT2046_TEMP0_CMD, &temp0);
     TOUCH_CHECK(ESP_OK == ret, "Temp0 read failed", ESP_FAIL);
@@ -311,6 +312,7 @@ esp_err_t xpt2046_get_temp_deg_c(float* temperature)
 
     // Last reading is to turn off the Vref
     ret = xpt2046_get_sample(XPT2046_TOUCH_CMD_Z1, &temp0);
+    TOUCH_CHECK(ESP_OK == ret, "Vref turn off failed", ESP_FAIL);
 
     return ESP_OK;
 }
@@ -322,6 +324,7 @@ esp_err_t xpt2046_get_batt_v(float* voltage)
 
     // First reading is to turn on the Vref
     ret = xpt2046_get_sample(XPT2046_VBAT_CMD, &vbat);
+    TOUCH_CHECK(ESP_OK == ret, "Vref turn on failed", ESP_FAIL);
     // Second reading is to get the result
     ret = xpt2046_get_sample(XPT2046_VBAT_CMD, &vbat);
     TOUCH_CHECK(ESP_OK == ret, "Vbat read failed", ESP_FAIL);
@@ -330,6 +333,7 @@ esp_err_t xpt2046_get_batt_v(float* voltage)
 
     // Last reading is to turn off the Vref
     ret = xpt2046_get_sample(XPT2046_TOUCH_CMD_Z1, &vbat);
+    TOUCH_CHECK(ESP_OK == ret, "Vref turn off failed", ESP_FAIL);
 
     return ESP_OK;
 }
@@ -341,6 +345,7 @@ esp_err_t xpt2046_get_aux_v(float* voltage)
 
     // First reading is to turn on the Vref
     ret = xpt2046_get_sample(XPT2046_AUXIN_CMD, &vin);
+    TOUCH_CHECK(ESP_OK == ret, "Vref turn on failed", ESP_FAIL);
     // Second reading is to get the result
     ret = xpt2046_get_sample(XPT2046_AUXIN_CMD, &vin);
     TOUCH_CHECK(ESP_OK == ret, "Aux read failed", ESP_FAIL);
@@ -349,6 +354,7 @@ esp_err_t xpt2046_get_aux_v(float* voltage)
 
     // Last reading is to turn off the Vref
     ret = xpt2046_get_sample(XPT2046_TOUCH_CMD_Z1, &vin);
+    TOUCH_CHECK(ESP_OK == ret, "Vref turn off failed", ESP_FAIL);
 
     return ESP_OK;
 }
