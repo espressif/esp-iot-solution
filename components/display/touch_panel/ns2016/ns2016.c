@@ -42,6 +42,7 @@ static const char *TAG = "NS2016";
 
 #define TOUCH_SAMPLE_MAX 4000
 #define TOUCH_SAMPLE_MIN 100
+#define TOUCH_SAMPLE_INVALID 0
 
 typedef struct {
     uint16_t x;
@@ -181,8 +182,8 @@ esp_err_t ns2016_get_rawdata(uint16_t *x, uint16_t *y)
         aveX /= valid_count;
         aveY /= valid_count;
     } else {
-        aveX = 1;
-        aveY = 1;
+        aveX = TOUCH_SAMPLE_INVALID;
+        aveY = TOUCH_SAMPLE_INVALID;
     }
 
     *x = aveX;

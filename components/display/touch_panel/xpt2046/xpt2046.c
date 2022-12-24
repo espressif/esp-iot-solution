@@ -32,6 +32,7 @@ static const char *TAG = "XPT2046";
 
 #define TOUCH_SAMPLE_MAX 4000
 #define TOUCH_SAMPLE_MIN 100
+#define TOUCH_SAMPLE_INVALID 0
 
 #define XPT2046_THRESHOLD_Z CONFIG_TOUCH_PANEL_THRESHOLD_PRESS
 
@@ -179,8 +180,8 @@ esp_err_t xpt2046_get_rawdata(uint16_t *x, uint16_t *y)
         aveX /= valid_count;
         aveY /= valid_count;
     } else {
-        aveX = 1;
-        aveY = 1;
+        aveX = TOUCH_SAMPLE_INVALID;
+        aveY = TOUCH_SAMPLE_INVALID;
     }
 
     *x = aveX;
