@@ -134,8 +134,8 @@ int ns2016_is_pressed(void)
      * 2. Read value of z axis
      */
     if (-1 != g_touch_dev.pin_num_int) {
-      return !gpio_get_level((gpio_num_t)g_touch_dev.pin_num_int);
-      }
+        return !gpio_get_level((gpio_num_t)g_touch_dev.pin_num_int);
+    }
     uint16_t z;
     esp_err_t ret = ns2016_get_sample(NS2016_TOUCH_CMD_Z1, &z);
     TOUCH_CHECK(ret == ESP_OK, "Z sample failed", 0);
