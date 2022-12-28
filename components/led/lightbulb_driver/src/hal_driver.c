@@ -990,10 +990,10 @@ esp_err_t hal_get_driver_feature(hal_feature_query_list_t type, void *out_data)
         *_out_data = (bool *)s_hal_obj->interface->all_ch_allow_output;
     } else if (QUERY_MAX_INPUT_VALUE == type) {
         uint8_t *_out_data = (uint8_t *)out_data;
-        *_out_data = s_hal_obj->interface->driver_color_bit_depth;
+        *_out_data = s_hal_obj->interface->hardware_allow_max_input_value;
     } else if (QUERY_COLOR_BIT_DEPTH == type) {
         uint16_t *_out_data = (uint16_t *)out_data;
-        *_out_data = s_hal_obj->interface->hardware_allow_max_input_value;
+        *_out_data = s_hal_obj->interface->driver_color_bit_depth;
     } else if (QUERY_DRIVER_NAME == type) {
         char **_out_data = (char **)out_data;
         *_out_data = (char *)s_hal_obj->interface->name;

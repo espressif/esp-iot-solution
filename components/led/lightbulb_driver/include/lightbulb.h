@@ -192,7 +192,7 @@ typedef struct {
      * warm  ->  .. -> cold
      *
      */
-    uint8_t cct_percentage;     // range: 0-100 
+    uint8_t cct_percentage;     // range: 0-100
     uint8_t brightness;         // range: 0-100
 } lightbulb_status_t;
 
@@ -347,6 +347,13 @@ typedef struct {
     uint8_t min_brightness;
     uint8_t max_brightness;
     uint16_t effect_cycle_ms;
+
+    /*
+     * If total_ms > 0 will enable auto-stop timer.
+     * When the timer triggers will automatically call the stop function and user callback function (if provided).
+     */
+    int total_ms;
+    void(*user_cb)(void);
 } lightbulb_effect_config_t;
 
 /**
