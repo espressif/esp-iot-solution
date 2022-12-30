@@ -2,6 +2,8 @@
 
 # ESP32 LittlevGL 咖啡机示例
 
+该示例不再维护，LCD 以及 LVGL 示例请参考： [i80_controller](https://github.com/espressif/esp-idf/tree/master/examples/peripherals/lcd/i80_controller)、[rgb_panel](https://github.com/espressif/esp-idf/tree/master/examples/peripherals/lcd/rgb_panel) 和 [spi_lcd_touch](https://github.com/espressif/esp-idf/tree/master/examples/peripherals/lcd/spi_lcd_touch)
+
 ## 示例环境
 
 - 硬件：
@@ -13,7 +15,7 @@
 
 连接示意图：
 
-<div align="center"><img src="../../../docs/_static/hmi_solution/lcd_connect.jpg" width = "700" alt="lcd_connect" align=center /></div>  
+<div align="center"><img src="../../../docs/_static/hmi_solution/lcd_connect.jpg" width = "700" alt="lcd_connect" align=center /></div>
 
 默认引脚连接：
 

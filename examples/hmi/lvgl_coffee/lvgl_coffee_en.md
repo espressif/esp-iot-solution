@@ -2,9 +2,11 @@
 
 # ESP32 LittlevGL Coffee Machine
 
+This example is no longer maintained. For LCD and LVGL examples, please refer to: [i80_controller](https://github.com/espressif/esp-idf/tree/master/examples/peripherals/lcd/i80_controller)、[rgb_panel](https://github.com/espressif/esp-idf/tree/master/examples/peripherals/lcd/rgb_panel) and [spi_lcd_touch](https://github.com/espressif/esp-idf/tree/master/examples/peripherals/lcd/spi_lcd_touch)
+
 ## What You Need
 
-- Hardware: 
+- Hardware:
 	* 1 x [ESP32\_LCD\_EB\_V1](https://docs.espressif.com/projects/espressif-esp-dev-kits/en/latest/esp32/esp32-lcdkit/index.html) HMI development board (for this example, it has to be used with the [ESP32_DevKitC](https://docs.espressif.com/projects/esp-idf/en/stable/hw-reference/modules-and-boards.html#esp32-devkitc-v4) development board)
 	* 1 x display (2.8 inches, 240x320 pixels, ILI9341 LCD + XPT2046 Touchscreen)
 - Software:
@@ -13,7 +15,7 @@
 
 See the connection image below:
 
-<div align="center"><img src="../../../docs/_static/hmi_solution/lcd_connect.jpg" width = "700" alt="lcd_connect" align=center /></div>  
+<div align="center"><img src="../../../docs/_static/hmi_solution/lcd_connect.jpg" width = "700" alt="lcd_connect" align=center /></div>
 
 The pins to be connected:
 
@@ -38,4 +40,4 @@ IRQ | 33
 
 ## Example Demonstration
 
-<div align="center"><img src="../../../docs/_static/hmi_solution/littlevgl/lvgl_coffee.jpg" width = "400" alt="lvgl_coffee" align=center /></div>  
+<div align="center"><img src="../../../docs/_static/hmi_solution/littlevgl/lvgl_coffee.jpg" width = "400" alt="lvgl_coffee" align=center /></div>

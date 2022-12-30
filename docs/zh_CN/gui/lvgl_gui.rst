@@ -41,6 +41,10 @@ LVGL 提供了在线的 `字模提取工具 <https://lvgl.io/tools/fontconverter
 示例方案
 ---------
 
+.. note::
+
+   以下示例不再维护，LCD 以及 LVGL 示例请参考： `i80_controller <https://github.com/espressif/esp-idf/tree/master/examples/peripherals/lcd/i80_controller>`_、 `rgb_panel <https://github.com/espressif/esp-idf/tree/master/examples/peripherals/lcd/rgb_panel>`_ 和 `spi_lcd_touch <https://github.com/espressif/esp-idf/tree/master/examples/peripherals/lcd/spi_lcd_touch>`_
+
 官方例程
 *********
 LVGL 官方提供了 ESP32 上使用 LVGL 的 `LVGL ESP32 示例程序 <https://github.com/lvgl/lv_port_esp32/>`_。
@@ -58,7 +62,7 @@ thermostat
 
 相应例程在 :example:`hmi/lvgl_thermostat`
 
-coffee 
+coffee
 ************
 
 使用 LVGL 绘制了一个咖啡机的交互界面：
