@@ -245,8 +245,8 @@ int ft5x06_is_press(void)
      * 1. Read the IRQ line of touch controller
      * 2. Read number of points touched in the register
      */
-    if (-1 != g_touch_dev.pin_num_int) {
-        return !gpio_get_level((gpio_num_t)g_touch_dev.pin_num_int);
+    if (-1 != g_dev.pin_num_int) {
+        return !gpio_get_level((gpio_num_t)g_dev.pin_num_int);
     }
     uint8_t points;
     ft5x06_read_reg(&g_dev, FT5x06_TOUCH_POINTS, &points);
