@@ -255,6 +255,10 @@ BPP < 8 时，一个字节映射到了多个像素，因此无法直接地控制
 应用示例
 ------------
 
+.. note::
+
+   以下示例不再维护，LCD 以及 LVGL 示例请参考： `i80_controller <https://github.com/espressif/esp-idf/tree/master/examples/peripherals/lcd/i80_controller>`_、 `rgb_panel <https://github.com/espressif/esp-idf/tree/master/examples/peripherals/lcd/rgb_panel>`_ 和 `spi_lcd_touch <https://github.com/espressif/esp-idf/tree/master/examples/peripherals/lcd/spi_lcd_touch>`_
+
 初始化屏幕
 ^^^^^^^^^^^
 

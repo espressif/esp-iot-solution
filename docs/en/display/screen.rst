@@ -107,20 +107,20 @@ The screen display direction set here is implemented entirely by the screen hard
 The total 8 combinations of display directions are listed in the following table. If the direction of your display is not correct, please check the configuration switches below to make it work properly.
 
 ==================  ======================  ====================  ===========================
-|original|           0                      |mirror_y|             SCR_MIRROR_Y             
+|original|           0                      |mirror_y|             SCR_MIRROR_Y
                      [SCR_DIR_LRTB]                                [SCR_DIR_LRBT]
 ------------------  ----------------------  --------------------  ---------------------------
-|mirror_x|           SCR_MIRROR_X           |mirror_xy|            SCR_MIRROR_X|             
-                     [SCR_DIR_RLTB]                                SCR_MIRROR_Y 
+|mirror_x|           SCR_MIRROR_X           |mirror_xy|            SCR_MIRROR_X|
+                     [SCR_DIR_RLTB]                                SCR_MIRROR_Y
                                                                    [SCR_DIR_RLBT]
 ------------------  ----------------------  --------------------  ---------------------------
 |swap_xy|            SCR_SWAP_XY            |swap_xy_mirror_y|     SCR_SWAP_XY|
-                     [SCR_DIR_TBLR]                                SCR_MIRROR_Y  
+                     [SCR_DIR_TBLR]                                SCR_MIRROR_Y
                                                                    [SCR_DIR_BTLR]
 ------------------  ----------------------  --------------------  ---------------------------
 |swap_xy_mirror_x|   SCR_SWAP_XY|           |swap_xy_mirror_xy|    SCR_SWAP_XY|
                      SCR_MIRROR_X                                  SCR_MIRROR_X|
-                     [SCR_DIR_TBRL]                                SCR_MIRROR_Y  
+                     [SCR_DIR_TBRL]                                SCR_MIRROR_Y
                                                                    [SCR_DIR_BTRL]
 ==================  ======================  ====================  ===========================
 
@@ -156,7 +156,7 @@ The implementations of display directions are not exactly the same for different
     - For color screens, 8 directions are supported.
     - For mono screens, e.g., SSD1306, only the first 4 directions defined in :cpp:type:`scr_dir_t` are supported, which means they do not support X/Y swapping.
 
-.. note:: 
+.. note::
     The display direction is also related to the screen panel you used, and you may encounter two types of abnormal cases：
 
     - The display direction is set to :cpp:enumerator:`SCR_DIR_LRTB`, but the screen does not show as what listed in the above table. This may be because the alignment on the screen panel is mirrored in the X/Y direction, in which case you need to adjust the rotation to get the desired direction.
@@ -181,7 +181,7 @@ When the screen is rotated 90° anticlockwise, the display area is shifted by 40
 
 The screen controller driver will help you to change the offset value automatically according to the rotation of the screen to maintain a proper display. All you need to do is to properly configure the screen offset and the screen panel size in :cpp:type:`scr_controller_config_t` when it is in ``SCR_DIR_LRTB`` direction.
 
-.. note:: 
+.. note::
 
     - This only supports screens with BPP >= 8.
     - When the resolution of your screen controller is configurable and you find something wrong with the offset, it may be because the selected resolution does not match the actual one, and you should make modifications accordingly, for example, set the ``ILI9806_RESOLUTION_VER`` in ``ili9806.c`` as the actual resolution for ILI9806.
@@ -189,6 +189,10 @@ The screen controller driver will help you to change the offset value automatica
 
 Application Example
 --------------------------
+
+.. note::
+
+   The following examples are no longer maintained. For LCD and LVGL examples, please refer to: `i80_controller <https://github.com/espressif/esp-idf/tree/master/examples/peripherals/lcd/i80_controller>`_、 `rgb_panel <https://github.com/espressif/esp-idf/tree/master/examples/peripherals/lcd/rgb_panel>`_  And `spi_lcd_touch <https://github.com/espressif/esp-idf/tree/master/examples/peripherals/lcd/spi_lcd_touch>`_
 
 Initialize the Screen
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -217,7 +221,7 @@ Initialize the Screen
 
     /** Find screen driver for ILI9806 */
     ret = scr_find_driver(SCREEN_CONTROLLER_ILI9806, &g_lcd);
-    if (ESP_OK != ret) {        
+    if (ESP_OK != ret) {
         ESP_LOGE(TAG, "screen find failed");
         return;
     }

@@ -41,6 +41,10 @@ LVGL provides online `Font Converter <https://lvgl.io/tools/fontconverter/>`_ an
 Demo Examples
 -----------------
 
+.. note::
+
+   The following examples are no longer maintained. For LCD and LVGL examples, please refer to: `i80_controller <https://github.com/espressif/esp-idf/tree/master/examples/peripherals/lcd/i80_controller>`_、 `rgb_panel <https://github.com/espressif/esp-idf/tree/master/examples/peripherals/lcd/rgb_panel>`_  And `spi_lcd_touch <https://github.com/espressif/esp-idf/tree/master/examples/peripherals/lcd/spi_lcd_touch>`_
+
 Official Demo
 *****************
 
@@ -59,7 +63,7 @@ A thermostat control interface designed using LVGL:
 
 Please find details of this example in :example:`hmi/lvgl_thermostat`.
 
-Coffee 
+Coffee
 ************
 
 An interactive interface of a coffee machine designed using LVGL:
