@@ -56,6 +56,7 @@ check_readme_links:
     # it's not possible to build 100% out-of-tree and have the "artifacts"
     # mechanism work, but this is the next best thing
     - rm -rf ${BUILD_PATH}
+    - python -m pip install --upgrade idf-component-manager
     # build some of examples
     - python ${IOT_SOLUTION_PATH}/tools/ci/genarate_build_json.py
     - ${IOT_SOLUTION_PATH}/tools/ci/build_examples.sh

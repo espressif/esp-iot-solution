@@ -16,6 +16,7 @@
 #if CONFIG_IDF_TARGET_ESP32S3
 
 #include <stdio.h>
+#include <inttypes.h>
 #include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -298,7 +299,7 @@ static esp_err_t lcd_dma_config(lcd_cam_obj_t *lcd_cam_obj, const i2s_lcd_config
     lcd_cam_obj->dma_node_cnt = (lcd_cam_obj->dma_buffer_size) / lcd_cam_obj->dma_node_buffer_size; // Number of DMA nodes
     lcd_cam_obj->dma_half_node_cnt = lcd_cam_obj->dma_node_cnt / 2;
 
-    ESP_LOGI(TAG, "lcd_buffer_size: %d, lcd_dma_size: %d, lcd_dma_node_cnt: %d", lcd_cam_obj->dma_buffer_size, lcd_cam_obj->dma_node_buffer_size, lcd_cam_obj->dma_node_cnt);
+    ESP_LOGI(TAG, "lcd_buffer_size: %"PRIu32", lcd_dma_size: %"PRIu32", lcd_dma_node_cnt: %"PRIu32"", lcd_cam_obj->dma_buffer_size, lcd_cam_obj->dma_node_buffer_size, lcd_cam_obj->dma_node_cnt);
 
     lcd_cam_obj->dma    = (lldesc_t *)heap_caps_malloc(lcd_cam_obj->dma_node_cnt * sizeof(lldesc_t), MALLOC_CAP_DMA);
     lcd_cam_obj->dma_buffer = (uint8_t *)heap_caps_malloc(lcd_cam_obj->dma_buffer_size * sizeof(uint8_t), MALLOC_CAP_DMA);

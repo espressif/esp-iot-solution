@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include <stdio.h>
+#include <inttypes.h>
 #include <string.h>
 
 #include "freertos/FreeRTOS.h"
@@ -61,12 +62,12 @@ static i2c_bus_t s_i2c_bus[I2C_NUM_MAX];
     }
 
 #define I2C_BUS_MUTEX_TAKE(mutex, ret) if (!xSemaphoreTake(mutex, I2C_BUS_MUTEX_TICKS_TO_WAIT)) { \
-        ESP_LOGE(TAG, "i2c_bus take mutex timeout, max wait = %d ms", I2C_BUS_MUTEX_TICKS_TO_WAIT); \
+        ESP_LOGE(TAG, "i2c_bus take mutex timeout, max wait = %"PRIu32"ms", I2C_BUS_MUTEX_TICKS_TO_WAIT); \
         return (ret); \
     }
 
 #define I2C_BUS_MUTEX_TAKE_MAX_DELAY(mutex, ret) if (!xSemaphoreTake(mutex, portMAX_DELAY)) { \
-        ESP_LOGE(TAG, "i2c_bus take mutex timeout, max wait = %d ms", portMAX_DELAY); \
+        ESP_LOGE(TAG, "i2c_bus take mutex timeout, max wait = %"PRIu32"ms", portMAX_DELAY); \
         return (ret); \
     }
 
@@ -91,7 +92,7 @@ i2c_bus_handle_t i2c_bus_create(i2c_port_t port, const i2c_config_t *conf)
     if (s_i2c_bus[port].is_init) {
         /**if i2c_bus has been inited and configs not changed, return the handle directly**/
         if (i2c_config_compare(port, conf)) {
-            ESP_LOGW(TAG, "i2c%d has been inited, return handle directly, ref_counter=%d", port, s_i2c_bus[port].ref_counter);
+            ESP_LOGW(TAG, "i2c%d has been inited, return handle directly, ref_counter=%"PRIu32"", port, s_i2c_bus[port].ref_counter);
             return (i2c_bus_handle_t)&s_i2c_bus[port];
         }
     } else {
@@ -116,7 +117,7 @@ esp_err_t i2c_bus_delete(i2c_bus_handle_t *p_bus)
 
     /** if ref_counter == 0, de-init the bus**/
     if ((i2c_bus->ref_counter) > 0) {
-        ESP_LOGW(TAG, "i2c%d is also handled by others ref_counter=%u, won't be de-inited", i2c_bus->i2c_port, i2c_bus->ref_counter);
+        ESP_LOGW(TAG, "i2c%d is also handled by others ref_counter=%"PRIu32", won't be de-inited", i2c_bus->i2c_port, i2c_bus->ref_counter);
         return ESP_OK;
     }
 

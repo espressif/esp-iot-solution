@@ -1,0 +1,16 @@
+if BOARD_ESP32S3_USB_OTG_EV
+
+    config BOARD_SPI3_INIT
+        bool "init spi3 during board init"
+        default n
+        help
+            if yes, spi3 will be initialized with default configuration during board initialize,
+            then, you can use iot_board_get_handle to get the bus handle.
+
+    config BOARD_ADC_INIT
+        bool "init adc during board init"
+        default n
+        help
+            if yes, adc for voltage monitoring will be configured.
+
+endif

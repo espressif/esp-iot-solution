@@ -1,24 +1,35 @@
-
-set(boards_dir "")
-
-if(CONFIG_BOARD_ESP32_DEVKITC_V4)
-    set(boards_dir "esp32-devkitc-v4")
-elseif(CONFIG_BOARD_ESP32_MESHKIT_SENSE)
-    set(boards_dir "esp32-meshkit-sense")
-elseif(CONFIG_BOARD_ESP32S2_SAOLA_1)
-    set(boards_dir "esp32s2-saola-1")
-elseif(CONFIG_BOARD_ESP32_LCDKIT)
-    set(boards_dir "esp32-lcdkit")
-elseif(CONFIG_BOARD_ESP32_M5STACK)
-    set(boards_dir "esp32-m5stack")
+if(CONFIG_BOARD_TARGET_PATH)
+    set(boards_dir ${CONFIG_BOARD_TARGET_PATH} )
+else()
+    message(FATAL_ERROR, "Board path not exists")
 endif()
 
+
+if("${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}" VERSION_GREATER_EQUAL "5.0")
+    list(APPEND PRIVREQ esp_adc)
+else() 
+    list(APPEND PRIVREQ esp_adc_cal)
+endif()
+
+set(user_src_dir "")
+if(DEFINED boards_dir)
 message(STATUS "-----------Board Info---------")
 message(STATUS "IDF_TARGET = ${IDF_TARGET}")
 message(STATUS "Board DIR = ${boards_dir}")
 message(STATUS "---------Board Info End---------")
+get_filename_component(abs_dir ${boards_dir} ABSOLUTE)
+if(IS_DIRECTORY ${abs_dir})
+file(GLOB dir_sources "${abs_dir}/*.c")
+if(dir_sources)
+    set(user_src_dir ${abs_dir})
+    message(STATUS "source files found for '${boards_dir}'.")
+else()
+    message(STATUS "No source files found for '${boards_dir}'.")
+endif()
+endif()
+endif()
 
-
-idf_component_register( SRC_DIRS "${boards_dir}"
-                        INCLUDE_DIRS "${boards_dir}"
-                        REQUIRES bus)
+#The SRC_DIRS order cannot be changed, otherwise weak functions may not be overridden
+idf_component_register( SRC_DIRS "${user_src_dir}" "."
+                        INCLUDE_DIRS "${boards_dir}" "."
+                        REQUIRES bus ${PRIVREQ} nvs_flash esp_wifi)

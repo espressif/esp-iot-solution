@@ -2,31 +2,144 @@ menu "Board Options"
     
     choice BOARD_TARGET
         prompt "Choose Target Board"
+        default BOARD_ESP32_DEVKITC_V4 if IDF_TARGET_ESP32
+        default BOARD_ESP32S2_SAOLA_1 if IDF_TARGET_ESP32S2
+        default BOARD_ESP32S3_USB_OTG_EV if IDF_TARGET_ESP32S3
 
         config BOARD_ESP32_DEVKITC_V4
-            bool "Devkitc-V4 With Esp32 Onboard From Espressif"
+            bool "esp32-devkitc-v4"
+            depends on IDF_TARGET_ESP32
         config BOARD_ESP32_MESHKIT_SENSE
-            bool "Meshkit Sense With Esp32 Onboard From Espressif"
+            bool "esp32-meshkit-sense"
+            depends on IDF_TARGET_ESP32
         config BOARD_ESP32S2_SAOLA_1
-            bool "Saola With Esp32S2 Onboard From Espressif"
+            bool "esp32s2-saola-1"
+            depends on IDF_TARGET_ESP32S2
         config BOARD_ESP32_LCDKIT
-            bool "Board ESP32-LCDKit_V1.1"
+            bool "esp32-lcdkit"
+            depends on IDF_TARGET_ESP32
+        config BOARD_ESP32S3_USB_OTG_EV
+            bool "esp32s3_usb_otg_ev"
+            depends on IDF_TARGET_ESP32S3
+        config BOARD_ESP32S3_DEVKITC_V1
+            bool "esp32s3_devkitc_v1"
+            depends on IDF_TARGET_ESP32S3
         config BOARD_ESP32_M5STACK
             bool "Board ESP32-M5Stack"
+            depends on IDF_TARGET_ESP32
     endchoice
 
-    menu "Devkitc-V4 Board Options"
-        visible if BOARD_ESP32_DEVKITC_V4
+    config BOARD_TARGET_PATH
+        string
+        default "esp32-devkitc-v4" if BOARD_ESP32_DEVKITC_V4
+        default "esp32-meshkit-sense" if BOARD_ESP32_MESHKIT_SENSE
+        default "esp32s2-saola-1" if BOARD_ESP32S2_SAOLA_1
+        default "esp32-lcdkit" if BOARD_ESP32_LCDKIT
+        default "esp32s3_usb_otg_ev" if BOARD_ESP32S3_USB_OTG_EV
+        default "esp32s3-devkitc-v1" if BOARD_ESP32S3_DEVKITC_V1
+        default "esp32-m5stack" if BOARD_ESP32_M5STACK
 
-        orsource "./esp32-devkitc-v4/Kconfig.in"
-        #source "{absolute path}/esp32-devkitc-v4/Kconfig.in" # v4.0 Backwards compatibility
-    endmenu
+    menu "Board Common Options"
+        menu "Initialize Options"
+            config BOARD_LED_INIT
+                bool "init led during board initialize"
+                default n
+                help
+                    if yes, led will be initialized during board initialize
 
-    menu "Saola Board Options"
-        visible if BOARD_ESP32S2_SAOLA_1
+            config BOARD_BUTTON_INIT
+                bool "init buttons during board initialize"
+                default n
+                help
+                    if yes, buttons will be initialized during board initialize
+                    then you can use iot_board_get_handle to get the button handle.
+            config BOARD_GPIO_INIT
+                bool "init gpio during board init"
+                default n
+                help
+                    if yes, gpio for power control will be initialized with default configuration during board initialize,
+            config BOARD_I2C0_INIT
+                bool "init i2c0 during board initialize"
+                default n
+                help
+                    if yes, i2c0 will be initialized with default configuration during board initialize,
+                    then you can use iot_board_get_handle to get the bus handle.
+            menu "i2c0 configurations"
+                visible if BOARD_I2C0_INIT
+                config BOARD_I2C0_SPEED
+                    int "i2c0 clock speed"
+                    default 100000
+                config BOARD_I2C0_SCL_PULLUP_EN
+                    bool "i2c0 scl pullup enable"
+                    default y
+                config BOARD_I2C0_SDA_PULLUP_EN
+                    bool "i2c0 sda pullup enable"
+                    default y
+            endmenu
+            config BOARD_SPI2_INIT
+                bool "init spi2 during board initialize"
+                default n
+                help
+                    if yes, spi2 will be initialized with default configuration during board initialize,
+                    then you can use iot_board_get_handle to get the bus handle.
+            menu "spi2 configuration"
+                visible if BOARD_SPI2_INIT
+                config BOARD_SPI2_MAX_TXF_SIZE
+                    int "sp2 max transfer size"
+                    default 4096
+            endmenu
+        endmenu
 
-        orsource "./esp32s2-saola-1/Kconfig.in"
-        #source "{absolute path}/esp32s2-saola-1/Kconfig.in" # v4.0 Backwards compatibility
+        menu "Wi-Fi Settings"
+
+            config BOARD_WIFI_SSID
+                string "WiFi STA SSID"
+                default ""
+                help
+                WiFi SSID (network name) to connect to or empty for Off.
+    
+            config BOARD_WIFI_PASSWORD
+                string "WiFi STA Password"
+                default ""
+                help
+                WiFi Password if WEP/WPA/WPA2 or empty if Open.
+    
+            config BOARD_WIFI_AP_SSID
+                string "WiFi AP SSID"
+                default "iot-default"
+                help
+                AP SSID (network name) to create or empty for Off.
+    
+            config BOARD_WIFI_AP_PASSWORD
+                string "WiFi AP Password"
+                default ""
+                help
+                AP password for WPA2 or empty for Open.
+    
+            config BOARD_MAX_STA_CONN
+                int "WiFi AP Maximal STA connections"
+                default 3
+                help
+                Max number of the STA connects to AP.
+    
+            config BOARD_WIFI_AP_CHANNEL
+                int "WiFi AP Channel"
+                default 6
+                help
+                AP channel for better connection performance.
+    
+            config BOARD_SERVER_IP
+                string "WiFi AP IP Address"
+                default "192.168.4.1"
+                help
+                    IP address that the ESP will assign to it's AP interface. You can use this IP to connect to the camera after flashing.
+    
+            config BOARD_MAXIMUM_RETRY
+                int "Maximum retry"
+                default 5
+                help
+                Set the Maximum retry to avoid station reconnecting to the AP unlimited when the AP is really inexistent.
+        endmenu
     endmenu
 
     menu "Meshkit Sense Board Options"
@@ -34,13 +147,6 @@ menu "Board Options"
 
         orsource "./esp32-meshkit-sense/Kconfig.in"
         #source "{absolute path}/esp32-meshkit-sense/Kconfig.in" # v4.0 Backwards compatibility
-    endmenu
-
-    menu "M5Stack Board Options"
-        visible if BOARD_ESP32_M5STACK
-
-        orsource "./esp32-m5stack/Kconfig.in"
-        #source "{absolute path}/esp32-m5stack/Kconfig.in" # v4.0 Backwards compatibility
     endmenu
 
 endmenu

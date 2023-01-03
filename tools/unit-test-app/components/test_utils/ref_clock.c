@@ -40,7 +40,13 @@
 #include "soc/dport_reg.h"
 #include "esp_intr_alloc.h"
 #include "freertos/FreeRTOS.h"
+
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+#include "esp_private/periph_ctrl.h"
+#else
 #include "driver/periph_ctrl.h"
+#endif
+
 #if CONFIG_IDF_TARGET_ESP32
 #include "esp32/rom/gpio.h"
 #elif CONFIG_IDF_TARGET_ESP32S2

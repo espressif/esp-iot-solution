@@ -52,7 +52,7 @@ menu "Sensor Hub Options"
             default 4 if !SENSOR_TASK_PRIORITY_INHERIT
         config SENSOR_TASK_STACK_SIZE
             int "sensor task stack size"
-            default 2048
+            default 4096
     endmenu
 
     menu "Sensor Event Loop Options"

@@ -2,8 +2,7 @@
     "examples": [{
             "name": "wav_player",
             "buildsystem": [
-                "cmake",
-                "make"
+                "cmake"
             ],
             "targets": [
                 "esp32",
@@ -17,8 +16,7 @@
         {
             "name": "check_pedestrian_flow",
             "buildsystem": [
-                "cmake",
-                "make"
+                "cmake"
             ],
             "targets": [
                 "esp32",
@@ -33,12 +31,10 @@
         {
             "name": "lvgl_coffee",
             "buildsystem": [
-                "cmake",
-                "make"
+                "cmake"
             ],
             "targets": [
-                "esp32",
-                "esp32s2"
+                "esp32"
             ],
             "idfversion": [
                 "4.4"
@@ -47,12 +43,10 @@
         {
             "name": "lvgl_example",
             "buildsystem": [
-                "cmake",
-                "make"
+                "cmake"
             ],
             "targets": [
-                "esp32",
-                "esp32s2"
+                "esp32"
             ],
             "idfversion": [
                 "4.4"
@@ -61,12 +55,10 @@
         {
             "name": "lvgl_thermostat",
             "buildsystem": [
-                "cmake",
-                "make"
+                "cmake"
             ],
             "targets": [
-                "esp32",
-                "esp32s2"
+                "esp32"
             ],
             "idfversion": [
                 "4.4"
@@ -75,12 +67,10 @@
         {
             "name": "lvgl_wificonfig",
             "buildsystem": [
-                "cmake",
-                "make"
+                "cmake"
             ],
             "targets": [
-                "esp32",
-                "esp32s2"
+                "esp32"
             ],
             "idfversion": [
                 "4.4"
@@ -89,12 +79,10 @@
         {
             "name": "screen",
             "buildsystem": [
-                "cmake",
-                "make"
+                "cmake"
             ],
             "targets": [
-                "esp32",
-                "esp32s2"
+                "esp32"
             ],
             "idfversion": [
                 "4.4"
@@ -252,10 +240,23 @@
         {
             "name": "examples",
             "buildsystem": [
-                "cmake",
-                "make"
+                "cmake"
             ],
             "targets": [
+            ],
+            "idfversion": [
+                "4.4"
+            ]
+        },
+        {
+            "name": "blink",
+            "buildsystem": [
+                "cmake"
+            ],
+            "targets": [
+                "esp32",
+                "esp32s2",
+                "esp32s3"
             ],
             "idfversion": [
                 "4.4"
