@@ -25,6 +25,10 @@
 #include "lwip/err.h"
 #include "lwip/sys.h"
 
+#if (ESP_IDF_VERSION_MAJOR >= 5)
+#include "esp_mac.h"
+#include "lwip/ip_addr.h"
+#endif
 
 /* The examples use WiFi configuration that you can set via 'make menuconfig'.
 

@@ -20,11 +20,12 @@
 
 #include "esp_camera.h"
 #include "camera_pin.h"
+#include "esp_timer.h"
 
 #define TEST_ESP_OK(ret) assert(ret == ESP_OK)
 #define TEST_ASSERT_NOT_NULL(ret) assert(ret != NULL)
 #define FB_COUNT_IN_RAM (2) // Frame buffer count used to storage frame passed by the sensor
-#define PIC_COUNT_TEST (36) // Total number of pictures to be acquired for testing
+#define PIC_COUNT_TEST (360) // Total number of pictures to be acquired for testing
 
 static const char *TAG = "test camera";
 
@@ -72,7 +73,7 @@ static esp_err_t init_camera(uint32_t xclk_freq_hz, pixformat_t pixel_format, fr
     return ret;
 }
 
-static bool camera_test_fps(uint16_t times, float *fps, uint32_t *size)
+static bool camera_test_fps(uint16_t times, float *fps, size_t *size)
 {
     *fps = 0.0f;
     *size = 0;
@@ -122,16 +123,16 @@ static void camera_performance_test_with_format(uint32_t xclk_freq, uint32_t pic
     TEST_ASSERT_NOT_NULL(info);
     // deinit sensor
     TEST_ESP_OK(esp_camera_deinit());
-    vTaskDelay(500 / portTICK_RATE_MS);
+    vTaskDelay(500);
 
     struct fps_result {
         float fps;
-        uint32_t size;
+        size_t size;
     };
     struct fps_result results = {0};
 
     ret = init_camera(xclk_freq, pixel_format, frame_size, FB_COUNT_IN_RAM);
-    vTaskDelay(100 / portTICK_RATE_MS);
+    vTaskDelay(100);
     if (ESP_OK != ret) {
         ESP_LOGW(TAG, "Testing init failed :-(, skip this item");
         task_fatal_error();
@@ -142,7 +143,7 @@ static void camera_performance_test_with_format(uint32_t xclk_freq, uint32_t pic
     printf("FPS Result\n");
     printf("fps, size \n");
 
-    printf("%5.2f,     %7d \n",
+    printf("%5.2f,     %7u \n",
         results.fps, results.size);
 
     printf("----------------------------------------------------------------------------------------\n");
@@ -150,5 +151,5 @@ static void camera_performance_test_with_format(uint32_t xclk_freq, uint32_t pic
 
 void app_main()
 {
-    camera_performance_test_with_format(20 * 1000000, PIC_COUNT_TEST, PIXFORMAT_RGB565, FRAMESIZE_QVGA);
+    camera_performance_test_with_format(10 * 1000000, PIC_COUNT_TEST, PIXFORMAT_RGB565, FRAMESIZE_QVGA);
 }
