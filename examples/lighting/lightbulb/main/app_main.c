@@ -32,6 +32,13 @@ void app_main(void)
 #ifdef CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_PWM
         .type = DRIVER_ESP_PWM,
         .driver_conf.pwm.freq_hz = CONFIG_PWM_FREQ_HZ,
+#ifdef CONFIG_IDF_TARGET_ESP32C2
+        /* Adapt to ESP8684-DevKitM-1 
+         * For details, please refer to: 
+         * https://docs.espressif.com/projects/espressif-esp-dev-kits/zh_CN/latest/esp8684/esp8684-devkitm-1/user_guide.html
+        */
+        .driver_conf.pwm.invert_level = true,
+#endif
 #endif
 #ifdef CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_SM2135E
         .type = DRIVER_SM2135E,
@@ -55,10 +62,12 @@ void app_main(void)
         .io_conf.pwm_io.green = CONFIG_PWM_GREEN_GPIO,
         .io_conf.pwm_io.blue = CONFIG_PWM_BLUE_GPIO,
 #endif
-#ifdef LIGHTBULB_DEMO_DRIVER_SELECT_SM2135E
+#ifdef CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_SM2135E
         .io_conf.iic_io.red = OUT3,
         .io_conf.iic_io.green = OUT2,
         .io_conf.iic_io.blue = OUT1,
+        .io_conf.iic_io.cold_white = OUT5,
+        .io_conf.iic_io.warm_yellow = OUT4,
 #endif
         //4. Limit param
         .external_limit = NULL,

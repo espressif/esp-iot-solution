@@ -22,7 +22,7 @@
 #include "esp_wifi.h"
 #include "esp_event.h"
 #include "nvs_flash.h"
-#include "board.h"
+#include "iot_board.h"
 #include "lvgl_gui.h"
 
 

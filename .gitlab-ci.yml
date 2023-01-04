@@ -1,4 +1,5 @@
 stages:
+  - pre_check
   - build
   - deploy
 
@@ -16,9 +17,17 @@ before_script:
   - git --version
   - git submodule update --init --recursive
 
+check_readme_links:
+  stage: pre_check
+  image: "$CI_DOCKER_REGISTRY/esp-env:v4.4-1"
+  tags: ["build", "amd64", "internet"]
+  allow_failure: true
+  script:
+    - python ${CI_PROJECT_DIR}/tools/ci/check_readme_links.py
+
 .build_template: &build_template
   stage: build
-  image: espressif/idf:release-v4.3
+  image: espressif/idf:release-v4.4
   tags:
     - build
   variables:
@@ -47,21 +56,17 @@ before_script:
     # it's not possible to build 100% out-of-tree and have the "artifacts"
     # mechanism work, but this is the next best thing
     - rm -rf ${BUILD_PATH}
+    - python -m pip install --upgrade idf-component-manager
     # build some of examples
     - python ${IOT_SOLUTION_PATH}/tools/ci/genarate_build_json.py
     - ${IOT_SOLUTION_PATH}/tools/ci/build_examples.sh
 
-build_examples_00_with_idf_v4.2:
-  <<: *build_examples_template
-  image: espressif/idf:release-v4.2
-
-build_examples_00_with_idf_v4.3:
-  <<: *build_examples_template
-  image: espressif/idf:release-v4.3
-
 build_examples_00_with_idf_v4.4:
   <<: *build_examples_template
   image: espressif/idf:release-v4.4
+build_examples_00_with_idf_v5.0:
+  <<: *build_examples_template
+  image: espressif/idf:release-v5.0
 
 build_docs:
   stage: build

@@ -8,3 +8,4 @@
     :maxdepth: 1
 
     GPIO 扩展<io_expander>
+    ADC 扩展量程方案<adc_range>

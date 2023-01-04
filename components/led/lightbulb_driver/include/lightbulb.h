@@ -192,7 +192,7 @@ typedef struct {
      * warm  ->  .. -> cold
      *
      */
-    uint8_t cct_percentage;     // range: 0-100 
+    uint8_t cct_percentage;     // range: 0-100
     uint8_t brightness;         // range: 0-100
 } lightbulb_status_t;
 
@@ -247,7 +247,7 @@ typedef bool (*hardware_monitor_user_cb_t)(void);
  *
  */
 typedef struct {
-    uint32_t fades_ms;                        // Fade time, data range: 100ms - 3000ms, default is 800ms.
+    uint16_t fades_ms;                        // Fade time, data range: 100ms - 3000ms, default is 800ms.
     uint16_t storage_delay_ms;                // The storage delay time is used to solve the adverse effects of short-term repeated erasing and writing of nvs.
     lightbulb_mode_t mode_mask;               // Select the lightbulb light mode, the driver will initialize the corresponding port according to this option.
     lightbulb_status_storage_cb_t storage_cb; // This callback function will be called when the lightbulb status starts to be stored.
@@ -258,6 +258,7 @@ typedef struct {
     bool enable_status_storage : 1;           // Store lightbulb state to nvs.
     bool enable_mix_cct : 1;                  // CCT output uses two-channel mixing instead of single-channel control.
     bool sync_change_brightness_value : 1;    // Enable this option if you need to use a parameter to mark the brightness of the white and color output
+    bool disable_auto_on : 1;                 // Enable this option if you don't need automatic on when color/white value is set
 } lightbulb_capability_t;
 
 /**
@@ -346,6 +347,13 @@ typedef struct {
     uint8_t min_brightness;
     uint8_t max_brightness;
     uint16_t effect_cycle_ms;
+
+    /*
+     * If total_ms > 0 will enable auto-stop timer.
+     * When the timer triggers will automatically call the stop function and user callback function (if provided).
+     */
+    int total_ms;
+    void(*user_cb)(void);
 } lightbulb_effect_config_t;
 
 /**

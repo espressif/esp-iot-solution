@@ -2,81 +2,90 @@
     "examples": [{
             "name": "wav_player",
             "buildsystem": [
-                "cmake",
-                "make"
+                "cmake"
             ],
             "targets": [
                 "esp32",
                 "esp32s2",
                 "esp32s3"
+            ],
+            "idfversion": [
+                "4.4"
             ]
         },
         {
             "name": "check_pedestrian_flow",
             "buildsystem": [
-                "cmake",
-                "make"
+                "cmake"
             ],
             "targets": [
                 "esp32",
                 "esp32s2",
                 "esp32s3",
                 "esp32c3"
+            ],
+            "idfversion": [
+                "4.4"
             ]
         },
         {
             "name": "lvgl_coffee",
             "buildsystem": [
-                "cmake",
-                "make"
+                "cmake"
             ],
             "targets": [
-                "esp32",
-                "esp32s2"
+                "esp32"
+            ],
+            "idfversion": [
+                "4.4"
             ]
         },
         {
             "name": "lvgl_example",
             "buildsystem": [
-                "cmake",
-                "make"
+                "cmake"
             ],
             "targets": [
-                "esp32",
-                "esp32s2"
+                "esp32"
+            ],
+            "idfversion": [
+                "4.4"
             ]
         },
         {
             "name": "lvgl_thermostat",
             "buildsystem": [
-                "cmake",
-                "make"
+                "cmake"
             ],
             "targets": [
-                "esp32",
-                "esp32s2"
+                "esp32"
+            ],
+            "idfversion": [
+                "4.4"
             ]
         },
         {
             "name": "lvgl_wificonfig",
             "buildsystem": [
-                "cmake",
-                "make"
+                "cmake"
             ],
             "targets": [
-                "esp32",
-                "esp32s2"
+                "esp32"
+            ],
+            "idfversion": [
+                "4.4"
             ]
         },
         {
             "name": "screen",
             "buildsystem": [
-                "cmake",
-                "make"
+                "cmake"
             ],
             "targets": [
-                "esp32",
-                "esp32s2"
+                "esp32"
+            ],
+            "idfversion": [
+                "4.4"
             ]
         },
         {
@@ -87,6 +96,9 @@
             "targets": [
                 "esp32",
                 "esp32s2"
+            ],
+            "idfversion": [
+                "4.4"
             ]
         },
         {
@@ -97,6 +109,9 @@
             "targets": [
                 "esp32",
                 "esp32s2"
+            ],
+            "idfversion": [
+                "4.4"
             ]
         },
         {
@@ -108,6 +123,10 @@
                 "esp32",
                 "esp32s2",
                 "esp32s3"
+            ],
+            "idfversion": [
+                "4.4",
+                "5.0"
             ]
         },
         {
@@ -119,6 +138,10 @@
                 "esp32",
                 "esp32s2",
                 "esp32s3"
+            ],
+            "idfversion": [
+                "4.4",
+                "5.0"
             ]
         },
         {
@@ -130,6 +153,10 @@
                 "esp32",
                 "esp32s2",
                 "esp32s3"
+            ],
+            "idfversion": [
+                "4.4",
+                "5.0"
             ]
         },
         {
@@ -141,6 +168,10 @@
                 "esp32",
                 "esp32s2",
                 "esp32s3"
+            ],
+            "idfversion": [
+                "4.4",
+                "5.0"
             ]
         },
         {
@@ -150,6 +181,10 @@
             ],
             "targets": [
                 "esp32s3"
+            ],
+            "idfversion": [
+                "4.4",
+                "5.0"
             ]
         },
         {
@@ -159,6 +194,9 @@
             ],
             "targets": [
                 "esp32c3"
+            ],
+            "idfversion": [
+                "4.4"
             ]
         },
         {
@@ -168,6 +206,9 @@
             ],
             "targets": [
                 "esp32c3"
+            ],
+            "idfversion": [
+                "4.4"
             ]
         },
         {
@@ -179,16 +220,51 @@
                 "esp32",
                 "esp32s2",
                 "esp32s3",
+                "esp32c2",
                 "esp32c3"
+            ],
+            "idfversion": [
+                "4.4",
+                "5.0"
+            ]
+        },
+        {
+            "name": "usb_camera_mic_spk",
+            "buildsystem": [
+                "cmake"
+            ],
+            "targets": [
+                "esp32s2",
+                "esp32s3"
+            ],
+            "idfversion": [
+                "4.4",
+                "5.0"
             ]
         },
         {
             "name": "examples",
             "buildsystem": [
-                "cmake",
-                "make"
+                "cmake"
             ],
             "targets": [
+            ],
+            "idfversion": [
+                "4.4"
+            ]
+        },
+        {
+            "name": "blink",
+            "buildsystem": [
+                "cmake"
+            ],
+            "targets": [
+                "esp32",
+                "esp32s2",
+                "esp32s3"
+            ],
+            "idfversion": [
+                "4.4"
             ]
         }
     ]

@@ -42,6 +42,7 @@ static const char *TAG = "NS2016";
 
 #define TOUCH_SAMPLE_MAX 4000
 #define TOUCH_SAMPLE_MIN 100
+#define TOUCH_SAMPLE_INVALID 0
 
 typedef struct {
     uint16_t x;
@@ -132,8 +133,10 @@ int ns2016_is_pressed(void)
      * @note There are two ways to determine weather the touch panel is pressed
      * 1. Read the IRQ line of touch controller
      * 2. Read value of z axis
-     * Only the second method is used here, so the IRQ line is not used.
      */
+    if (-1 != g_touch_dev.pin_num_int) {
+        return !gpio_get_level((gpio_num_t)g_touch_dev.pin_num_int);
+    }
     uint16_t z;
     esp_err_t ret = ns2016_get_sample(NS2016_TOUCH_CMD_Z1, &z);
     TOUCH_CHECK(ret == ESP_OK, "Z sample failed", 0);
@@ -159,6 +162,7 @@ esp_err_t ns2016_get_rawdata(uint16_t *x, uint16_t *y)
     esp_err_t ret;
     uint32_t aveX = 0;
     uint32_t aveY = 0;
+    int valid_count = 0;
 
     for (int i = 0; i < NS2016_SMP_SIZE; i++) {
         ret = ns2016_get_sample(NS2016_TOUCH_CMD_X, &(samples[i].x));
@@ -166,12 +170,23 @@ esp_err_t ns2016_get_rawdata(uint16_t *x, uint16_t *y)
         ret = ns2016_get_sample(NS2016_TOUCH_CMD_Y, &(samples[i].y));
         TOUCH_CHECK(ret == ESP_OK, "Y sample failed", ESP_FAIL);
 
-        aveX += samples[i].x;
-        aveY += samples[i].y;
+        // Only add the samples to the average if they are valid
+        if ((samples[i].x >= TOUCH_SAMPLE_MIN) && (samples[i].x <= TOUCH_SAMPLE_MAX) &&
+            (samples[i].y >= TOUCH_SAMPLE_MIN) && (samples[i].y <= TOUCH_SAMPLE_MAX)) {
+            aveX += samples[i].x;
+            aveY += samples[i].y;
+            valid_count++;
+        }
     }
 
-    aveX /= NS2016_SMP_SIZE;
-    aveY /= NS2016_SMP_SIZE;
+    // If we don't have at least 50% valid samples, there was no valid touch.
+    if (valid_count >= (NS2016_SMP_SIZE / 2)) {
+        aveX /= valid_count;
+        aveY /= valid_count;
+    } else {
+        aveX = TOUCH_SAMPLE_INVALID;
+        aveY = TOUCH_SAMPLE_INVALID;
+    }
 
     *x = aveX;
     *y = aveY;

@@ -17,7 +17,7 @@
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "esp_task_wdt.h"
-#include "board.h"
+#include "iot_board.h"
 #include "screen_driver.h"
 #include "img_array.h"
 

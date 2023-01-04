@@ -16,6 +16,7 @@
 
 #include <esp_log.h>
 #include <driver/spi_master.h>
+#include <hal/spi_hal.h>
 
 #include "ws2812.h"
 
@@ -140,7 +141,7 @@ esp_err_t ws2812_init(driver_ws2812_t *config)
 #endif
     WS2812_CHECK(err == ESP_OK, "spi_bus_initialize error", return err);
 
-#if CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32S3
+#if CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32H2
     spi_dev_t *hw = spi_periph_signal[SPI2_HOST].hw;
     hw->ctrl.d_pol = 0;
 #endif

@@ -2,10 +2,12 @@
 
 # ESP32 LittlevGL 恒温计面板示例
 
+该示例不再维护，LCD 以及 LVGL 示例请参考： [i80_controller](https://github.com/espressif/esp-idf/tree/master/examples/peripherals/lcd/i80_controller)、[rgb_panel](https://github.com/espressif/esp-idf/tree/master/examples/peripherals/lcd/rgb_panel) 和 [spi_lcd_touch](https://github.com/espressif/esp-idf/tree/master/examples/peripherals/lcd/spi_lcd_touch)
+
 ## 示例环境
 
 - 硬件：
-	* [ESP32\_LCD\_EB\_V1](https://github.com/espressif/esp-dev-kits/blob/master/esp32-lcdkit/docs/ESP32_LCDKit_guide_cn.md) 开发板（该示例需要搭配使用 [ESP32 DevKitC](https://docs.espressif.com/projects/esp-idf/en/stable/hw-reference/modules-and-boards.html#esp32-devkitc-v4) 开发板）
+	* [ESP32\_LCD\_EB\_V1](https://docs.espressif.com/projects/espressif-esp-dev-kits/en/latest/esp32/esp32-lcdkit/index.html) 开发板（该示例需要搭配使用 [ESP32 DevKitC](https://docs.espressif.com/projects/esp-idf/en/stable/hw-reference/modules-and-boards.html#esp32-devkitc-v4) 开发板）
 	* 屏幕（2.8 inch、240*320 pixel、ILI9341 LCD + XPT2046 Touch）
 - 软件：
 	* [esp-iot-solution](https://github.com/espressif/esp-iot-solution)
@@ -13,7 +15,7 @@
 
 连接示意图：
 
-<div align="center"><img src="../../../docs/_static/hmi_solution/lcd_connect.jpg" width = "700" alt="lcd_connect" align=center /></div>  
+<div align="center"><img src="../../../docs/_static/hmi_solution/lcd_connect.jpg" width = "700" alt="lcd_connect" align=center /></div>
 
 默认引脚连接：
 
@@ -38,4 +40,4 @@ IRQ | 33
 
 ## 示例结果
 
-<div align="center"><img src="../../../docs/_static/hmi_solution/littlevgl/thermostat.jpg" width = "400" alt="thermostat" align=center /></div>  
+<div align="center"><img src="../../../docs/_static/hmi_solution/littlevgl/thermostat.jpg" width = "400" alt="thermostat" align=center /></div>

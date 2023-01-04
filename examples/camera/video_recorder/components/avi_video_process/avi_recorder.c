@@ -11,12 +11,14 @@
 #include <dirent.h>
 #include <unistd.h>
 #include <errno.h>
+#include <inttypes.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
 #include "string.h"
 #include "esp_log.h"
 #include "esp_heap_caps.h"
+#include "esp_timer.h"
 #include "avi_def.h"
 
 static const char *TAG = "avi recorder";
@@ -298,7 +300,7 @@ static int jpeg2avi_write_index_chunk(jpeg2avi_data_t *j2a)
     AVI_IDX1 idx;
 
     lseek(j2a->idxfile, 0, SEEK_SET);
-    ESP_LOGI(TAG, "frame number=%d, size=%dKB", j2a->nframes, j2a->totalsize / 1024);
+    ESP_LOGI(TAG, "frame number=%"PRIu32", size=%"PRIu32"KB", j2a->nframes, j2a->totalsize / 1024);
     write(j2a->avifile, &index, 4);
     write(j2a->avifile, &index_chunk_size, 4);
 
@@ -324,7 +326,7 @@ static int jpeg2avi_write_index_chunk(jpeg2avi_data_t *j2a)
 
 static void jpeg2avi_end(jpeg2avi_data_t *j2a, int width, int height, uint32_t fps)
 {
-    ESP_LOGI(TAG, "video info: width=%d | height=%d | fps=%u", width, height, fps);
+    ESP_LOGI(TAG, "video info: width=%d | height=%d | fps=%"PRIu32"", width, height, fps);
     if (j2a->write_len) { // If there is still data in the current buffer, write all to the file
         write(j2a->avifile, j2a->buffer, j2a->write_len);
     }
@@ -395,7 +397,7 @@ static void recorder_task(void *args)
         uint64_t t = esp_timer_get_time() / 1000;
         if (t - printf_time > 1000) {
             printf_time = t;
-            ESP_LOGD(TAG, "recording %d/%d s", (uint32_t)((t - fr_start) / 1000), rec_arg->rec_time);
+            ESP_LOGD(TAG, "recording %"PRIu32"%"PRIu32" s", (uint32_t)((t - fr_start) / 1000), rec_arg->rec_time);
         }
         if (t > end_time || g_force_end) {
             break;

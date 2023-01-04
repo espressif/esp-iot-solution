@@ -1,0 +1,9 @@
+version: "0.0.1"
+description: board hal component
+url: https://github.com/espressif/esp-iot-solution
+dependencies:
+  idf: ">=4.2"
+  espressif/button:
+    version: "~2.5.0"
+  espressif/led_strip:
+    version: "~1.1.0-alpha" #please use version 2.0.0 if idf5.0

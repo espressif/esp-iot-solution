@@ -1,5 +1,7 @@
 # Screen Example
 
+This example is no longer maintained. For LCD and LVGL examples, please refer to: [i80_controller](https://github.com/espressif/esp-idf/tree/master/examples/peripherals/lcd/i80_controller)、[rgb_panel](https://github.com/espressif/esp-idf/tree/master/examples/peripherals/lcd/rgb_panel) and [spi_lcd_touch](https://github.com/espressif/esp-idf/tree/master/examples/peripherals/lcd/spi_lcd_touch)
+
 In this example, we configure a screen with spi or 8080 interface and then:
 * Set to landscape mode,
 * Draw a picture,

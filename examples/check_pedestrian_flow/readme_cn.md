@@ -1,12 +1,12 @@
 # ESP32 基于 Wi-Fi Sniffer 的人流量检测及 OneNET 数据云端统计
 
-[ESP32](http://espressif.com/zh-hans/products/hardware/esp32/overview) 是一颗低功耗、高集成度、性能稳定的 Wi-Fi/BLE 芯片，是物联网开发的首选设备。人流量监控在安保，商场，旅游等诸多行业具有重要作用。我们利用 ESP32 Wi-Fi 的混杂接收模式，接受全部可以获得的空中包，然后对其解析，筛选得到周围无线设备发送的 Probe Request 帧，通过对 Probe Request 帧的来源和强度进行分析和汇总，从而计算出周围一定区域内的设备设备使用量（人流量）。  
+[ESP32](https://www.espressif.com/zh-hans/products/socs/esp32) 是一颗低功耗、高集成度、性能稳定的 Wi-Fi/BLE 芯片，是物联网开发的首选设备。人流量监控在安保，商场，旅游等诸多行业具有重要作用。我们利用 ESP32 Wi-Fi 的混杂接收模式，接受全部可以获得的空中包，然后对其解析，筛选得到周围无线设备发送的 Probe Request 帧，通过对 Probe Request 帧的来源和强度进行分析和汇总，从而计算出周围一定区域内的设备设备使用量（人流量）。  
 
 在得到基本的人流量数据后，ESP32 设备通过 MQTT 将数据发送至 OneNET 物联网平台，得到最终的人流量变化曲线图，可以方便用户从云端进行数据处理和监控。
 
 ## 1. 开发环境搭建
 
-关于 ESP32 开发，比如编译，烧录等，请参考[乐鑫官方文档](http://espressif.com/zh-hans/support/download/overview)和 [ESP32 快速入门指南](https://docs.espressif.com/projects/esp-idf/en/stable/get-started/index.html)。
+关于 ESP32 开发，比如编译，烧录等，请参考[乐鑫官方文档](https://www.espressif.com/zh-hans/support/download/all)和 [ESP32 快速入门指南](https://docs.espressif.com/projects/esp-idf/en/stable/get-started/index.html)。
 
 ### 1.1 ESP32 硬件准备
 
@@ -27,25 +27,25 @@
 
 在登录后的页面，点击右上角的 `开发者中心` ，选择` 全部产品 -> 多协议接入` 。
 
-![protocol](../../documents/_static/check_pedestrian_flow/protocol.png)
+![protocol](../../docs/_static/examples/check_pedestrian_flow/protocol.png)
 
 然后选择 `添加产品` 后填入一些产品信息，如下示例：
 
-![add-product](../../documents/_static/check_pedestrian_flow/add-product.png)
+![add-product](../../docs/_static/examples/check_pedestrian_flow/add-product.png)
 
 设备接入协议应选择 “MQTT（旧版）”，完成后点击 `确定` 按钮，完成产品创建，同时将产生一个**产品 ID**, 在后面的程序中将用到。
 
-![product-id](../../documents/_static/check_pedestrian_flow/product-id.png)
+![product-id](../../docs/_static/examples/check_pedestrian_flow/product-id.png)
 
 #### 1.2.3 产品下面创建设备
 
 从左侧菜单进入 `设备列表` ，然后点击 `添加设备` ，填入设备信息。
 
-![add-device](../../documents/_static/check_pedestrian_flow/add-device.png)
+![add-device](../../docs/_static/examples/check_pedestrian_flow/add-device.png)
 
 创建完设备后，将生成设备 ID
 
-![device-id](../../documents/_static/check_pedestrian_flow/device-id.png)
+![device-id](../../docs/_static/examples/check_pedestrian_flow/device-id.png)
 
 这里的 **设备 ID** 和上面填入的 **鉴权信息** 一起会在后面的程序中用到。
 
@@ -53,7 +53,7 @@
 
 到这里就已经足够让设备连上 OneNET， 接下来是为了更好的数据展示效果，设备的应用可以对设备上传的数据进行统计和展示。同样从左侧菜单进入 `应用管理` 然后点击 ”添加应用“
 
-![add-application](../../documents/_static/check_pedestrian_flow/add-application.png)
+![add-application](../../docs/_static/examples/check_pedestrian_flow/add-application.png)
 
 添加完后，可以在 `应用管理` 页面看到已创建的应用。
 
@@ -61,7 +61,7 @@
 
 点击应用的图标，进入应用，然后点击 `编辑应用` 。
 
-![application-configure](../../documents/_static/check_pedestrian_flow/application-configure.png)
+![application-configure](../../docs/_static/examples/check_pedestrian_flow/application-configure.png)
 
 因为我们需要展示人流量的变化数据，因此在这里选择“折线图”，选择好数据流，然后在 `样式` 中对坐标轴进行设置，得到一个大体的应用框架。
 
@@ -191,7 +191,7 @@ MAC: 0x3E.0x97.0x88.0x49.0x37.0xD7, The time is: 36010, The rssi = -63
 
 **注意: 程序默认是 10 分钟上报一次数据，OneNet 平台要想看到曲线，需等待 10 分钟。**
 
-![show](../../documents/_static/check_pedestrian_flow/show.png)
+![show](../../docs/_static/examples/check_pedestrian_flow/show.png)
 
 ## 3. Demo 中一些分析和说明
 
@@ -199,11 +199,11 @@ MAC: 0x3E.0x97.0x88.0x49.0x37.0xD7, The time is: 36010, The rssi = -63
 
 Probe Request 包属于 802.11 标准，其基本帧结构如下：   
 
-<img src="../../documents/_static/check_pedestrian_flow/probo_request.jpg" width = "500" alt="esp32_station_current" align=center /> 
+<img src="../../docs/_static/examples/check_pedestrian_flow/probo_request.jpg" width = "500" alt="esp32_station_current" align=center /> 
 
 通过 wireshark 抓包获得 Probe Request 包如下：  
 
-<img src="../../documents/_static/check_pedestrian_flow/wireshark_packet.jpg" width = "800" alt="esp32_station_current" align=center />
+<img src="../../docs/_static/examples/check_pedestrian_flow/wireshark_packet.jpg" width = "800" alt="esp32_station_current" align=center />
 
 可以从包中看到该帧的类型 “Subtype : 4”, 信号强度和 MAC 地址等信息。
 
@@ -282,7 +282,7 @@ Probe Request 包属于 802.11 标准，其基本帧结构如下：
 人流量是指在一定区域内单位时间的人流总数，因此我们以 10 分钟为侦测区间，通过对在 10 分钟内的所有人数进行计算来获得人流量。
 在 10 分钟后将链表清空，开始下一阶段的监控。整个统计流程如下：  
 
-<img src="../../documents/_static/check_pedestrian_flow/diagram.jpg" width = "300" alt="esp32_station_current" align=center /> 
+<img src="../../docs/_static/examples/check_pedestrian_flow/diagram.jpg" width = "300" alt="esp32_station_current" align=center /> 
 
 ## 4. 总结
 

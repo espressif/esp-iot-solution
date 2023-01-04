@@ -21,7 +21,7 @@ ESP-IoT-Solution contains following contents:
 
 | ESP-IoT-Solution | Dependent ESP-IDF |  Major Change                                          |    User Guide                                                             | Support State  |
 | :--------------: | :---------------: | :----------------------------------------------------: | :-----------------------------------------------------------------------: | -------------- |
-|      master      |   release/v4.3    |  code structure change, add support for ESP32-S2       | [Docs online](https://docs.espressif.com/projects/espressif-esp-iot-solution/zh_CN) | active, new feature develop |
+|      master      |   release/v4.4    |  code structure change, add support for new chips       | [Docs online](https://docs.espressif.com/projects/espressif-esp-iot-solution/zh_CN) | active, new feature develop |
 |   release/v1.1   |      v4.0.1       |  IDF version update, remove no longer supported code   | [v1.1 Overview](https://github.com/espressif/esp-iot-solution/tree/release/v1.1#esp32-iot-solution-overview) |limited support |
 |   release/v1.0   |      v3.2.2       |  legacy version                                        | [v1.0 Overview](https://github.com/espressif/esp-iot-solution/tree/release/v1.0#esp32-iot-solution-overview) | archived |
 
@@ -80,7 +80,7 @@ project(empty-project)
 Add the following code directly to the project's CMakeLists.txt, please add the `REQUIRES` components also:
 
 ```
-set(EXTRA_COMPONENT_DIRS "${EXTRA_COMPONENT_DIRS} ${IOT_SOLUTION_PATH}/components/{component_you_choose}")
+set(EXTRA_COMPONENT_DIRS "${EXTRA_COMPONENT_DIRS} $ENV{IOT_SOLUTION_PATH}/components/{component_you_choose}")
 ```
 
 **Method 3**. Copy specified components of ESP-IoT-solution to the project's `components` directory

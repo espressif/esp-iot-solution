@@ -268,7 +268,7 @@ static hal_obj_t s_hal_obj_group[]           = {
 
 static float final_processing(uint8_t channel, uint16_t src_value)
 {
-    if (channel >= CHANNEL_ID_WARM_BRIGHTNESS_YELLOW) {
+    if (channel >= CHANNEL_ID_COLD_CCT_WHITE) {
         if (src_value >= MAX_TABLE_SIZE) {
             ESP_LOGE(TAG, "The data is not supported and will be truncated to 255");
             src_value = 255;
@@ -656,7 +656,7 @@ esp_err_t hal_regist_channel(int channel, gpio_num_t gpio_num)
     return err;
 }
 
-esp_err_t hal_set_channel(int channel, uint16_t value, uint32_t fade_ms)
+esp_err_t hal_set_channel(int channel, uint16_t value, uint16_t fade_ms)
 {
     LIGHTBULB_CHECK(s_hal_obj, "init() must be called first", return ESP_ERR_INVALID_STATE);
 
@@ -669,7 +669,7 @@ esp_err_t hal_set_channel(int channel, uint16_t value, uint32_t fade_ms)
     esp_timer_stop(s_hal_obj->fade_timer);
 #endif
 
-    LIGHTBULB_CHECK(xSemaphoreTake(s_hal_obj->fade_mutex, FADE_CB_CHECK_MS) == pdTRUE, "Can't get mutex", return ESP_ERR_INVALID_STATE);
+    LIGHTBULB_CHECK(xSemaphoreTake(s_hal_obj->fade_mutex, pdMS_TO_TICKS(FADE_CB_CHECK_MS)) == pdTRUE, "Can't get mutex", return ESP_ERR_INVALID_STATE);
 
 #ifdef CONFIG_ENABLE_DITHERING_CHECK
     // Allows to reduce fade time to increase resolution to avoid dithering
@@ -679,8 +679,8 @@ esp_err_t hal_set_channel(int channel, uint16_t value, uint32_t fade_ms)
     fade_data_t data = { 0 };
     data = s_hal_obj->fade_data [channel];
     data.final = final_processing(channel, value);
-    if (abs(data.final - data.cur) > 0) {
-        min_delta = MIN(min_delta, abs(data.final - data.cur));
+    if (fabsf(data.final - data.cur) > 0) {
+        min_delta = MIN(min_delta, fabsf(data.final - data.cur));
     }
     if (data.cur > max_valve) {
         max_valve = data.cur;
@@ -709,12 +709,12 @@ esp_err_t hal_set_channel(int channel, uint16_t value, uint32_t fade_ms)
     } else {
         fade_data.num = fade_ms / CHANGE_RATE_MS;
     }
-    if (abs(fade_data.cur - fade_data.final) == 0) {
+    if (fabsf(fade_data.cur - fade_data.final) == 0) {
         fade_data.num = 1;
     }
 
     // 5. Count the step value required on each call to fade_ms
-    fade_data.step = abs(fade_data.cur - fade_data.final) / fade_data.num;
+    fade_data.step = fabsf(fade_data.cur - fade_data.final) / fade_data.num;
     if (fade_data.cur > fade_data.final) {
         fade_data.step *= -1;
     }
@@ -737,7 +737,7 @@ esp_err_t hal_set_channel(int channel, uint16_t value, uint32_t fade_ms)
     return ESP_OK;
 }
 
-esp_err_t hal_set_channel_group(uint16_t value[], uint8_t channel_mask, uint32_t fade_ms)
+esp_err_t hal_set_channel_group(uint16_t value[], uint8_t channel_mask, uint16_t fade_ms)
 {
     LIGHTBULB_CHECK(s_hal_obj, "init() must be called first", return ESP_ERR_INVALID_STATE);
 
@@ -761,8 +761,8 @@ esp_err_t hal_set_channel_group(uint16_t value[], uint8_t channel_mask, uint32_t
         fade_data_t fade_data [HAL_OUT_MAX_CHANNEL] = { 0 };
         fade_data [channel] = s_hal_obj->fade_data [channel];
         fade_data [channel].final = final_processing(channel, value [channel]);
-        if (abs(fade_data [channel].final - fade_data [channel].cur) > 0) {
-            min_delta = MIN(min_delta, abs(fade_data [channel].final - fade_data [channel].cur));
+        if (fabsf(fade_data [channel].final - fade_data [channel].cur) > 0) {
+            min_delta = MIN(min_delta, fabsf(fade_data [channel].final - fade_data [channel].cur));
         }
         if (fade_data [channel].cur > max_valve) {
             max_valve = fade_data [channel].cur;
@@ -800,12 +800,12 @@ esp_err_t hal_set_channel_group(uint16_t value[], uint8_t channel_mask, uint32_t
         } else {
             fade_data[channel].num = fade_ms / CHANGE_RATE_MS;
         }
-        if (abs(fade_data[channel].cur - fade_data[channel].final) == 0) {
+        if (fabsf(fade_data[channel].cur - fade_data[channel].final) == 0) {
             fade_data[channel].num = 1;
         }
 
         // 2.5 Count the step value required on each call to fade_ms
-        fade_data[channel].step = abs(fade_data[channel].cur - fade_data[channel].final) / fade_data[channel].num;
+        fade_data[channel].step = fabsf(fade_data[channel].cur - fade_data[channel].final) / fade_data[channel].num;
         if (fade_data[channel].cur > fade_data[channel].final) {
             fade_data[channel].step *= -1;
         }
@@ -831,7 +831,7 @@ esp_err_t hal_set_channel_group(uint16_t value[], uint8_t channel_mask, uint32_t
     return ESP_OK;
 }
 
-esp_err_t hal_start_channel_action(int channel, uint16_t value_min, uint16_t value_max, uint32_t period_ms, bool fade_flag)
+esp_err_t hal_start_channel_action(int channel, uint16_t value_min, uint16_t value_max, uint16_t period_ms, bool fade_flag)
 {
     LIGHTBULB_CHECK(s_hal_obj, "init() must be called first", return ESP_ERR_INVALID_STATE);
     LIGHTBULB_CHECK((period_ms > CHANGE_RATE_MS * 2) || (period_ms == 0), "period_ms not allowed", return ESP_ERR_INVALID_ARG);
@@ -887,7 +887,7 @@ esp_err_t hal_start_channel_action(int channel, uint16_t value_min, uint16_t val
     return ESP_OK;
 }
 
-esp_err_t hal_start_channel_group_action(uint16_t value_min[], uint16_t value_max[], uint8_t channel_mask, uint32_t period_ms, bool fade_flag)
+esp_err_t hal_start_channel_group_action(uint16_t value_min[], uint16_t value_max[], uint8_t channel_mask, uint16_t period_ms, bool fade_flag)
 {
     LIGHTBULB_CHECK(s_hal_obj, "init() must be called first", return ESP_ERR_INVALID_STATE);
     LIGHTBULB_CHECK((period_ms > CHANGE_RATE_MS * 2) || (period_ms == 0), "period_ms not allowed", return ESP_ERR_INVALID_ARG);
@@ -990,10 +990,10 @@ esp_err_t hal_get_driver_feature(hal_feature_query_list_t type, void *out_data)
         *_out_data = (bool *)s_hal_obj->interface->all_ch_allow_output;
     } else if (QUERY_MAX_INPUT_VALUE == type) {
         uint8_t *_out_data = (uint8_t *)out_data;
-        *_out_data = s_hal_obj->interface->driver_color_bit_depth;
+        *_out_data = s_hal_obj->interface->hardware_allow_max_input_value;
     } else if (QUERY_COLOR_BIT_DEPTH == type) {
         uint16_t *_out_data = (uint16_t *)out_data;
-        *_out_data = s_hal_obj->interface->hardware_allow_max_input_value;
+        *_out_data = s_hal_obj->interface->driver_color_bit_depth;
     } else if (QUERY_DRIVER_NAME == type) {
         char **_out_data = (char **)out_data;
         *_out_data = (char *)s_hal_obj->interface->name;

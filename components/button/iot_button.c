@@ -40,12 +40,13 @@ typedef struct Button {
     uint16_t        short_press_ticks;    /*! Trigger ticks for repeat press*/
     uint16_t        long_press_hold_cnt;  /*! Record long press hold count*/
     uint8_t         repeat;
-    button_event_t  event;
     uint8_t         state: 3;
     uint8_t         debounce_cnt: 3;
     uint8_t         active_level: 1;
     uint8_t         button_level: 1;
+    button_event_t  event;
     uint8_t         (*hal_button_Level)(void *hardware_data);
+    esp_err_t       (*hal_button_deinit)(void *hardware_data);
     void            *hardware_data;
     void            *usr_data[BUTTON_EVENT_MAX];
     button_type_t   type;
@@ -250,6 +251,8 @@ static esp_err_t button_delete_com(button_dev_t *btn)
 
 button_handle_t iot_button_create(const button_config_t *config)
 {
+    BTN_CHECK(config, "Invalid button config", NULL);
+
     esp_err_t ret = ESP_OK;
     button_dev_t *btn = NULL;
     uint16_t long_press_time = 0;
@@ -268,6 +271,20 @@ button_handle_t iot_button_create(const button_config_t *config)
         ret = button_adc_init(cfg);
         BTN_CHECK(ESP_OK == ret, "adc button init failed", NULL);
         btn = button_create_com(1, button_adc_get_key_level, (void *)ADC_BUTTON_COMBINE(cfg->adc_channel, cfg->button_index), long_press_time, short_press_time);
+    } break;
+    case BUTTON_TYPE_CUSTOM: {
+        if (config->custom_button_config.button_custom_init) {
+            ret = config->custom_button_config.button_custom_init(config->custom_button_config.priv);
+            BTN_CHECK(ESP_OK == ret, "custom button init failed", NULL);
+        }
+
+        btn = button_create_com(config->custom_button_config.active_level,
+                                config->custom_button_config.button_custom_get_key_value,
+                                config->custom_button_config.priv,
+                                long_press_time, short_press_time);
+        if (btn) {
+            btn->hal_button_deinit = config->custom_button_config.button_custom_deinit;
+        }
     } break;
 
     default:
@@ -290,6 +307,16 @@ esp_err_t iot_button_delete(button_handle_t btn_handle)
         break;
     case BUTTON_TYPE_ADC:
         ret = button_adc_deinit(ADC_BUTTON_SPLIT_CHANNEL(btn->hardware_data), ADC_BUTTON_SPLIT_INDEX(btn->hardware_data));
+        break;
+    case BUTTON_TYPE_CUSTOM:
+        if (btn->hal_button_deinit) {
+            ret = btn->hal_button_deinit(btn->hardware_data);
+        }
+
+        if (btn->hardware_data) {
+            free(btn->hardware_data);
+            btn->hardware_data = NULL;
+        }
         break;
     default:
         break;

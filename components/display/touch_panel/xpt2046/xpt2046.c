@@ -24,6 +24,10 @@ static const char *TAG = "XPT2046";
         return (ret);                                                                   \
     }
 
+#define XPT2046_TEMP0_CMD     0b10000110
+#define XPT2046_TEMP1_CMD     0b11110110
+#define XPT2046_VBAT_CMD      0b10100110
+#define XPT2046_AUXIN_CMD     0b11100110
 #define XPT2046_TOUCH_CMD_X   0xD0
 #define XPT2046_TOUCH_CMD_Y   0x90
 #define XPT2046_TOUCH_CMD_Z1  0b10110000
@@ -32,8 +36,11 @@ static const char *TAG = "XPT2046";
 
 #define TOUCH_SAMPLE_MAX 4000
 #define TOUCH_SAMPLE_MIN 100
+#define TOUCH_SAMPLE_INVALID 0
 
 #define XPT2046_THRESHOLD_Z CONFIG_TOUCH_PANEL_THRESHOLD_PRESS
+
+#define XPT2046_TEMP0_COUNTS_AT_25C   (599.5 / 2507 * 4095)
 
 typedef struct {
     uint16_t x;
@@ -130,8 +137,10 @@ int xpt2046_is_pressed(void)
      * @note There are two ways to determine weather the touch panel is pressed
      * 1. Read the IRQ line of touch controller
      * 2. Read value of z axis
-     * Only the second method is used here, so the IRQ line is not used.
      */
+    if (-1 != g_dev.io_irq) {
+        return !gpio_get_level((gpio_num_t)g_dev.io_irq);
+    }
     uint16_t z;
     esp_err_t ret = xpt2046_get_sample(XPT2046_TOUCH_CMD_Z1, &z);
     TOUCH_CHECK(ret == ESP_OK, "Z sample failed", 0);
@@ -157,6 +166,7 @@ esp_err_t xpt2046_get_rawdata(uint16_t *x, uint16_t *y)
     esp_err_t ret;
     uint32_t aveX = 0;
     uint32_t aveY = 0;
+    int valid_count = 0;
 
     for (int i = 0; i < XPT2046_SMP_SIZE; i++) {
         ret = xpt2046_get_sample(XPT2046_TOUCH_CMD_X, &(samples[i].x));
@@ -164,12 +174,23 @@ esp_err_t xpt2046_get_rawdata(uint16_t *x, uint16_t *y)
         ret = xpt2046_get_sample(XPT2046_TOUCH_CMD_Y, &(samples[i].y));
         TOUCH_CHECK(ret == ESP_OK, "Y sample failed", ESP_FAIL);
 
-        aveX += samples[i].x;
-        aveY += samples[i].y;
+        // Only add the samples to the average if they are valid
+        if ((samples[i].x >= TOUCH_SAMPLE_MIN) && (samples[i].x <= TOUCH_SAMPLE_MAX) &&
+            (samples[i].y >= TOUCH_SAMPLE_MIN) && (samples[i].y <= TOUCH_SAMPLE_MAX)) {
+            aveX += samples[i].x;
+            aveY += samples[i].y;
+            valid_count++;
+        }
     }
 
-    aveX /= XPT2046_SMP_SIZE;
-    aveY /= XPT2046_SMP_SIZE;
+    // If we don't have at least 50% valid samples, there was no valid touch.
+    if (valid_count >= (XPT2046_SMP_SIZE / 2)) {
+        aveX /= valid_count;
+        aveY /= valid_count;
+    } else {
+        aveX = TOUCH_SAMPLE_INVALID;
+        aveY = TOUCH_SAMPLE_INVALID;
+    }
 
     *x = aveX;
     *y = aveY;
@@ -271,4 +292,69 @@ esp_err_t xpt2046_sample(touch_panel_points_t *info)
 esp_err_t xpt2046_calibration_run(const scr_driver_t *screen, bool recalibrate)
 {
     return touch_calibration_run(screen, xpt2046_is_pressed, xpt2046_get_rawdata, recalibrate);
+}
+
+esp_err_t xpt2046_get_temp_deg_c(float* temperature)
+{
+    esp_err_t ret;
+    uint16_t temp0;
+
+    // First reading is to turn on the Vref
+    ret = xpt2046_get_sample(XPT2046_TEMP0_CMD, &temp0);
+    TOUCH_CHECK(ESP_OK == ret, "Vref turn on failed", ESP_FAIL);
+    // Second reading is to get the result
+    ret = xpt2046_get_sample(XPT2046_TEMP0_CMD, &temp0);
+    TOUCH_CHECK(ESP_OK == ret, "Temp0 read failed", ESP_FAIL);
+
+    // 12 bit = 4095 counts. 2.507V full scale internal reference. 0.0021V/degC characteristic.
+    //  599.5mV @25degC nominal
+    *temperature = (float) (XPT2046_TEMP0_COUNTS_AT_25C - temp0) * (2.507 / 4095.0) / 0.0021 + 25.0;
+
+    // Last reading is to turn off the Vref
+    ret = xpt2046_get_sample(XPT2046_TOUCH_CMD_Z1, &temp0);
+    TOUCH_CHECK(ESP_OK == ret, "Vref turn off failed", ESP_FAIL);
+
+    return ESP_OK;
+}
+
+esp_err_t xpt2046_get_batt_v(float* voltage)
+{
+    esp_err_t ret;
+    uint16_t vbat;
+
+    // First reading is to turn on the Vref
+    ret = xpt2046_get_sample(XPT2046_VBAT_CMD, &vbat);
+    TOUCH_CHECK(ESP_OK == ret, "Vref turn on failed", ESP_FAIL);
+    // Second reading is to get the result
+    ret = xpt2046_get_sample(XPT2046_VBAT_CMD, &vbat);
+    TOUCH_CHECK(ESP_OK == ret, "Vbat read failed", ESP_FAIL);
+
+    *voltage = (float) vbat * (2.507 / 4095.0) * 4.0;
+
+    // Last reading is to turn off the Vref
+    ret = xpt2046_get_sample(XPT2046_TOUCH_CMD_Z1, &vbat);
+    TOUCH_CHECK(ESP_OK == ret, "Vref turn off failed", ESP_FAIL);
+
+    return ESP_OK;
+}
+
+esp_err_t xpt2046_get_aux_v(float* voltage)
+{
+    esp_err_t ret;
+    uint16_t vin;
+
+    // First reading is to turn on the Vref
+    ret = xpt2046_get_sample(XPT2046_AUXIN_CMD, &vin);
+    TOUCH_CHECK(ESP_OK == ret, "Vref turn on failed", ESP_FAIL);
+    // Second reading is to get the result
+    ret = xpt2046_get_sample(XPT2046_AUXIN_CMD, &vin);
+    TOUCH_CHECK(ESP_OK == ret, "Aux read failed", ESP_FAIL);
+
+    *voltage = (float) vin * (2.507 / 4095.0);
+
+    // Last reading is to turn off the Vref
+    ret = xpt2046_get_sample(XPT2046_TOUCH_CMD_Z1, &vin);
+    TOUCH_CHECK(ESP_OK == ret, "Vref turn off failed", ESP_FAIL);
+
+    return ESP_OK;
 }

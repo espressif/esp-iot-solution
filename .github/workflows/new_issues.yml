@@ -1,0 +1,24 @@
+name: Sync issues to Jira
+
+# This workflow will be triggered when a new issue is opened
+on: issues
+
+# Limit to single concurrent run for workflows which can create Jira issues.
+# Same concurrency group is used in issue_comment.yml
+concurrency: jira_issues
+
+jobs:
+  sync_issues_to_jira:
+    name: Sync issues to Jira
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Sync GitHub issues to Jira project
+        uses: espressif/github-actions/sync_issues_to_jira@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JIRA_PASS: ${{ secrets.JIRA_PASS }}
+          JIRA_PROJECT: ${{ secrets.JIRA_PROJECT }}
+          JIRA_COMPONENT: ${{ secrets.JIRA_COMPONENT }}
+          JIRA_URL: ${{ secrets.JIRA_URL }}
+          JIRA_USER: ${{ secrets.JIRA_USER }}

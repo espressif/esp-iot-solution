@@ -16,6 +16,7 @@
 
 #include "button_adc.h"
 #include "button_gpio.h"
+#include "esp_err.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -54,7 +55,20 @@ typedef enum button_event_e {  //C Definition
 typedef enum {
     BUTTON_TYPE_GPIO,
     BUTTON_TYPE_ADC,
+    BUTTON_TYPE_CUSTOM
 } button_type_t;
+
+/**
+ * @brief custom button configuration
+ * 
+ */
+typedef struct {
+    uint8_t active_level;                                   /**< active level when press down */
+    esp_err_t (*button_custom_init)(void *param);           /**< user defined button init */
+    uint8_t (*button_custom_get_key_value)(void *param);    /**< user defined button get key value */
+    esp_err_t (*button_custom_deinit)(void *param);         /**< user defined button deinit */
+    void *priv;                                             /**< private data used for custom button, MUST be allocated dynamically and will be auto freed in iot_button_delete*/
+} button_custom_config_t;
 
 /**
  * @brief Button configuration
@@ -67,6 +81,7 @@ typedef struct {
     union {
         button_gpio_config_t gpio_button_config;  /**< gpio button configuration */
         button_adc_config_t adc_button_config;    /**< adc button configuration */
+        button_custom_config_t custom_button_config;   /**< custom button configuration */
     }; /**< button configuration */
 } button_config_t;
 

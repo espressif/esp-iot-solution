@@ -21,7 +21,7 @@ ESP-IoT-Solution 包含的内容如下:
 
 | ESP-IoT-Solution | 依赖的 ESP-IDF |                  主要变更              |            文档              |        支持状态        |
 | :--------------: | :------------: | :----------------------------------: |:------------------------------: | ---------------------- |
-|      master      |   release/v4.3 |      代码结构变更，增加支持 ESP32-S2     | [Docs online](https://docs.espressif.com/projects/espressif-esp-iot-solution/zh_CN) | 新功能开发分支         |
+|      master      |   release/v4.4 |      代码结构变更，增加新的芯片支持     | [Docs online](https://docs.espressif.com/projects/espressif-esp-iot-solution/zh_CN) | 新功能开发分支         |
 |   release/v1.1   |     v4.0.1     | IDF 版本更新，删除已经移动到其它仓库的代码  | [v1.1 Overview](https://github.com/espressif/esp-iot-solution/tree/release/v1.1#esp32-iot-solution-overview) | 有限维护 |
 |   release/v1.0   |     v3.2.2     | 历史版本                               | [v1.0 Overview](https://github.com/espressif/esp-iot-solution/tree/release/v1.0#esp32-iot-solution-overview) | 备份，停止维护  |
 
@@ -77,7 +77,7 @@ project(empty-project)
 **方法 2**. 添加 ESP-IoT-Solution 指定组件到工程目录：可直接在工程的 CMakeLists.txt 中添加以下代码：
 
 ```
-set(EXTRA_COMPONENT_DIRS "${EXTRA_COMPONENT_DIRS} ${IOT_SOLUTION_PATH}/components/{component_you_choose}")
+set(EXTRA_COMPONENT_DIRS "${EXTRA_COMPONENT_DIRS} $ENV{IOT_SOLUTION_PATH}/components/{component_you_choose}")
 ```
 
 **方法 3**. 复制 ESP-IoT-Solution 指定组件到工程目录：直接将该组件和其依赖的组件，复制粘贴至工程的 components 文件夹。

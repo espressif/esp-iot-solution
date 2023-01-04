@@ -1,0 +1,4 @@
+dependencies:
+  idf: ">=4.3.2"
+  lightbulb_driver:
+    override_path: "../../../../components/led/lightbulb_driver"

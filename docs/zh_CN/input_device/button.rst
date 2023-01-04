@@ -1,6 +1,8 @@
 按键
 ========
 
+:link_to_translation:`en:[English]`
+
 按键组件实现了 GPIO 和 ADC 两种按键，并允许同时创建两种不同的按键。下图显示了两种按键的硬件设计：
 
 .. figure:: ../../_static/button_hardware.png
@@ -18,7 +20,7 @@
 按键事件
 ---------
 
-每个按键拥有下表的 7 个事件：
+每个按键拥有下表的 8 个事件：
 
 +--------------------------+------------------------+
 |           事件           |        触发条件        |
@@ -52,6 +54,7 @@
 
 配置项
 -----------
+
 - BUTTON_PERIOD_TIME_MS : 扫描周期
 
 - BUTTON_DEBOUNCE_TICKS : 消抖次数
@@ -106,6 +109,29 @@
     if(NULL == adc_btn) {
         ESP_LOGE(TAG, "Button create failed");
     }
+
+.. Note::
+    ADC 按钮使用的是 ADC1 ,当项目中还有其他地方使用到了 ADC1 时，请传入 adc_handle 和 adc_channel 来配置 ADC 按钮。
+
+    .. code::C
+        adc_oneshot_unit_handle_t adc1_handle;
+        adc_oneshot_unit_init_cfg_t init_config1 = {
+            .unit_id = ADC_UNIT_1,
+        };
+        //-------------ADC1 Init---------------//
+        adc_oneshot_new_unit(&init_config1, &adc1_handle);
+        // create adc button
+        button_config_t adc_btn_cfg = {
+            .type = BUTTON_TYPE_ADC,
+            .adc_button_config = {
+                .adc_handle = &adc1_handle,
+                .adc_channel = 1,
+            },
+        };
+        button_handle_t adc_btn = iot_button_create(&adc_btn_cfg);
+        if(NULL == adc_btn) {
+            ESP_LOGE(TAG, "Button create failed");
+        }
 
 注册回调函数
 ^^^^^^^^^^^^^^
