@@ -1,5 +1,14 @@
 # ChangeLog
 
+## v0.4.1 - 2023-01-05
+
+### Enhancements:
+
+* Add IRAM_ATTR to packet parsing functions
+* Speaker:
+  * padding zero packet if speaker buffer empty
+
+
 ## v0.4.0 - 2022-12-22
 
 ### Enhancements:

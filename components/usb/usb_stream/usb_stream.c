@@ -83,6 +83,8 @@ const char *TAG = "UVC_STREAM";
 #define UAC_MIC_CB_MIN_MS_DEFAULT            20                                      //20MS
 #define UAC_SPK_ST_MAX_MS_DEFAULT            20                                      //20MS
 #define UAC_MIC_PACKET_COMPENSATION          1                                       //padding data if mic packet loss
+#define UAC_SPK_PACKET_COMPENSATION          1                                       //padding zero if speaker buffer empty
+#define UAC_SPK_PACKET_COMPENSATION_SIZE_MS  1                                       //padding n MS zero if speaker buffer empty
 
 /**
  * @brief Task for USB I/O request and payload processing,
@@ -784,7 +786,7 @@ static hcd_pipe_event_t _pipe_event_dflt_process(hcd_pipe_handle_t pipe_handle, 
     return actual_evt;
 }
 
-static void _processing_uvc_pipe(hcd_pipe_handle_t pipe_handle, bool if_enqueue)
+IRAM_ATTR static void _processing_uvc_pipe(hcd_pipe_handle_t pipe_handle, bool if_enqueue)
 {
     assert(pipe_handle != NULL);
     bool enqueue_flag = if_enqueue;
@@ -2131,7 +2133,7 @@ static esp_err_t _user_event_wait(hcd_port_handle_t port_hdl,
     return ret;
 }
 
-static size_t _ring_buffer_get_len(RingbufHandle_t ringbuf_hdl)
+IRAM_ATTR static size_t _ring_buffer_get_len(RingbufHandle_t ringbuf_hdl)
 {
     if (ringbuf_hdl == NULL) {
         return 0;
@@ -2141,7 +2143,7 @@ static size_t _ring_buffer_get_len(RingbufHandle_t ringbuf_hdl)
     return size;
 }
 
-static void _ring_buffer_flush(RingbufHandle_t ringbuf_hdl)
+IRAM_ATTR static void _ring_buffer_flush(RingbufHandle_t ringbuf_hdl)
 {
     if (ringbuf_hdl == NULL) {
         return;
@@ -2157,7 +2159,7 @@ static void _ring_buffer_flush(RingbufHandle_t ringbuf_hdl)
     ESP_LOGD(TAG, "buffer flush -%u = %u", read_bytes, uxItemsWaiting);
 }
 
-static esp_err_t _ring_buffer_push(RingbufHandle_t ringbuf_hdl, uint8_t *buf, size_t write_bytes, TickType_t xTicksToWait)
+IRAM_ATTR static esp_err_t _ring_buffer_push(RingbufHandle_t ringbuf_hdl, uint8_t *buf, size_t write_bytes, TickType_t xTicksToWait)
 {
     if (ringbuf_hdl == NULL) {
         return ESP_ERR_INVALID_STATE;
@@ -2175,7 +2177,7 @@ static esp_err_t _ring_buffer_push(RingbufHandle_t ringbuf_hdl, uint8_t *buf, si
     return ESP_OK;
 }
 
-static esp_err_t _ring_buffer_pop(RingbufHandle_t ringbuf_hdl, uint8_t *buf, size_t req_bytes, size_t *read_bytes, TickType_t ticks_to_wait)
+IRAM_ATTR static esp_err_t _ring_buffer_pop(RingbufHandle_t ringbuf_hdl, uint8_t *buf, size_t req_bytes, size_t *read_bytes, TickType_t ticks_to_wait)
 {
     if (ringbuf_hdl == NULL) {
         return ESP_ERR_INVALID_STATE;
@@ -2194,7 +2196,7 @@ static esp_err_t _ring_buffer_pop(RingbufHandle_t ringbuf_hdl, uint8_t *buf, siz
     return ESP_FAIL;
 }
 
-static void _processing_mic_pipe(hcd_pipe_handle_t pipe_hdl, mic_callback_t *user_cb, void *user_ptr, bool if_enqueue)
+IRAM_ATTR static void _processing_mic_pipe(hcd_pipe_handle_t pipe_hdl, mic_callback_t *user_cb, void *user_ptr, bool if_enqueue)
 {
     if (pipe_hdl == NULL) {
         return;
@@ -2245,9 +2247,9 @@ static void _processing_mic_pipe(hcd_pipe_handle_t pipe_hdl, mic_callback_t *use
     ESP_LOGV(TAG, "mic payload = %02x %02x...%02x %02x\n", urb_done->transfer.data_buffer[0], urb_done->transfer.data_buffer[1], urb_done->transfer.data_buffer[xfered_size - 2], urb_done->transfer.data_buffer[xfered_size - 1]);
 
     if (s_uac_dev.mic_ringbuf_hdl) {
-        esp_err_t ret = _ring_buffer_push(s_uac_dev.mic_ringbuf_hdl, mic_frame.data, mic_frame.data_bytes, 1);
+        esp_err_t ret = _ring_buffer_push(s_uac_dev.mic_ringbuf_hdl, mic_frame.data, mic_frame.data_bytes, 0);
         if (ret != ESP_OK) {
-            ESP_LOGD(TAG, "mic ringbuf too small, please pop in time");
+            ESP_LOGV(TAG, "mic ringbuf too small, please pop in time");
         }
     }
 
@@ -2338,7 +2340,7 @@ esp_err_t uac_mic_streaming_read(void *buf, size_t buf_size, size_t *data_bytes,
     return _ring_buffer_pop(s_uac_dev.mic_ringbuf_hdl, buf, buf_size, data_bytes, remind_timeout);
 }
 
-static void _processing_spk_pipe(hcd_pipe_handle_t pipe_hdl, bool if_dequeue, bool reset)
+IRAM_ATTR static void _processing_spk_pipe(hcd_pipe_handle_t pipe_hdl, bool if_dequeue, bool reset)
 {
     if (pipe_hdl == NULL) {
         return;
@@ -2388,7 +2390,10 @@ static void _processing_spk_pipe(hcd_pipe_handle_t pipe_hdl, bool if_dequeue, bo
     }
     /* check if we have buffered data need to send */
     if (_ring_buffer_get_len(s_uac_dev.spk_ringbuf_hdl) < s_uac_dev.spk_as_ifc->bytes_per_packet) {
+#if (!UAC_SPK_PACKET_COMPENSATION)
+        /* if speaker packet compensation not enable, just return here */
         return;
+#endif
     }
 
     /* fetch a pending urb from list */
@@ -2408,8 +2413,13 @@ static void _processing_spk_pipe(hcd_pipe_handle_t pipe_hdl, bool if_dequeue, bo
     uint8_t *buffer = next_urb->transfer.data_buffer;
     ret = _ring_buffer_pop(s_uac_dev.spk_ringbuf_hdl, buffer, buffer_size, &num_bytes_to_send, 0);
     if (ret != ESP_OK || num_bytes_to_send == 0) {
+#if (!UAC_SPK_PACKET_COMPENSATION)
         //should never happened
         return;
+#else
+        num_bytes_to_send = s_uac_dev.spk_as_ifc->bytes_per_packet * UAC_SPK_PACKET_COMPENSATION_SIZE_MS;
+        memset(buffer, 0, num_bytes_to_send);
+#endif
     }
     // may drop some data here?
     num_bytes_send = num_bytes_to_send - num_bytes_to_send % s_uac_dev.spk_as_ifc->bytes_per_packet;
@@ -2516,10 +2526,12 @@ static void _usb_stream_handle_task(void *arg)
         for (int i = 0; i < uac_dev->spk_as_ifc->urb_num; i++) {
             uac_dev->spk_as_ifc->urb_list[i] = _usb_urb_alloc(uac_dev->spk_as_ifc->packets_per_urb, uac_dev->spk_as_ifc->bytes_per_packet, NULL);
             UVC_CHECK_GOTO(uac_dev->spk_as_ifc->urb_list[i] != NULL, "stream urb alloc failed", free_urb_);
-            uac_dev->spk_as_ifc->urb_list[i]->transfer.num_bytes = 0;
-            for (size_t j = 0; j < uac_dev->spk_as_ifc->packets_per_urb; j++) {
-                //We need to initialize each individual isoc packet descriptor of the URB
-                uac_dev->spk_as_ifc->urb_list[i]->transfer.isoc_packet_desc[j].num_bytes = 0;
+            usb_transfer_dummy_t *transfer_dummy = (usb_transfer_dummy_t *)(&(uac_dev->spk_as_ifc->urb_list[i]->transfer));
+            transfer_dummy->num_isoc_packets = 1;
+            uac_dev->spk_as_ifc->urb_list[i]->transfer.num_bytes = uac_dev->spk_as_ifc->bytes_per_packet * transfer_dummy->num_isoc_packets;
+            for (size_t j = 0; j < transfer_dummy->num_isoc_packets; j++) {
+                // Send all zero packets
+                uac_dev->spk_as_ifc->urb_list[i]->transfer.isoc_packet_desc[j].num_bytes = uac_dev->spk_as_ifc->bytes_per_packet;
             }
         }
         ESP_LOGI(TAG, "spk stream urb ready");
@@ -2616,7 +2628,10 @@ static void _usb_stream_handle_task(void *arg)
         while (!(xEventGroupGetBits(uvc_dev->parent->event_group) & (USB_STREAM_TASK_KILL_BIT | USB_STREAM_TASK_RESET_BIT))) {
             _uvc_event_msg_t evt_msg = {};
             if (xQueueReceive(uvc_dev->parent->stream_queue_hdl, &evt_msg, 1) != pdTRUE) {
+#if (!UAC_SPK_PACKET_COMPENSATION)
+                // if packet compensation not enable, there may no packet on flight 
                 _processing_spk_pipe(uac_dev->spk_as_ifc->pipe_handle, false, false);
+#endif
                 continue;
             }
             switch (evt_msg._type) {
@@ -3264,10 +3279,12 @@ esp_err_t usb_streaming_start()
     s_uvc_dev.parent = &s_usb_dev;
     if (s_uac_dev.spk_active && s_uac_dev.spk_buf_size) {
         s_uac_dev.spk_ringbuf_hdl = xRingbufferCreate(s_uac_dev.spk_buf_size, RINGBUF_TYPE_BYTEBUF);
+        ESP_LOGD(TAG, "Speaker ringbuf create succeed, size = %"PRIu32, s_uac_dev.spk_buf_size);
         UVC_CHECK_GOTO(s_uac_dev.spk_ringbuf_hdl != NULL, "Create speak buffer failed", free_resource_);
     }
     if (s_uac_dev.mic_active && s_uac_dev.mic_buf_size) {
         s_uac_dev.mic_ringbuf_hdl = xRingbufferCreate(s_uac_dev.mic_buf_size, RINGBUF_TYPE_BYTEBUF);
+        ESP_LOGD(TAG, "MIC ringbuf create succeed, size = %"PRIu32, s_uac_dev.mic_buf_size);
         UVC_CHECK_GOTO(s_uac_dev.mic_ringbuf_hdl != NULL, "Create speak buffer failed", free_resource_);
     }
 
