@@ -1222,7 +1222,7 @@ esp_err_t lightbulb_basic_effect_start(lightbulb_effect_config_t *config)
             s_lb_obj->effect_timer = xTimerCreate("effect_timer", pdMS_TO_TICKS(config->total_ms), false, NULL, timercb);
             LIGHTBULB_CHECK(s_lb_obj->effect_timer, "create timer fail", goto EXIT);
         } else {
-            xTimerChangePeriod(s_lb_obj->effect_timer, pdMS_TO_TICKS(config->total_ms * 1000), 0);
+            xTimerChangePeriod(s_lb_obj->effect_timer, pdMS_TO_TICKS(config->total_ms), 0);
         }
 
         if (config->user_cb) {
