@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+import "constants.proto";
+
+message CmdSendFile {
+    bytes data = 1;
+}
+
+message RespSendFile {
+
+}
+
+message CmdStartOTA {
+    bytes data = 1;
+}
+
+message RespStartOTA {
+
+}
+
+message CmdSubscribe {
+    string endpoint_name = 1;
+}
+
+message RespSubscribe {
+
+}
+
+enum SendFileMsgType {
+    TypeReserved = 0;
+    TypeCmdSendFile = 1;
+    TypeRespSendFile = 2;
+    TypeCmdStartOTA = 3;
+    TypeRespStartOTA = 4;
+    TypeCmdSubscribe = 5;
+    TypeRespSubscribe = 6;
+}
+
+message SendFilePayload {
+    SendFileMsgType msg = 1;
+    Status status = 2;
+    oneof payload {
+        CmdSendFile cmd_send_file = 10;
+        RespSendFile resp_send_file = 11;
+        CmdStartOTA cmd_start_ota = 12;
+        RespStartOTA resp_start_ota = 13;
+        CmdSubscribe cmd_subscribe = 14;
+        RespSubscribe resp_subscribe = 15;
+    }
+}

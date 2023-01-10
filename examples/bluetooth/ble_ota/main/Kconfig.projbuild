@@ -1,0 +1,39 @@
+menu "Example Configuration"
+
+    choice EXAMPLE_OTA_SECURITY_VERSION
+        bool "Protocomm security version"
+        default EXAMPLE_OTA_SECURITY_VERSION_2
+        help
+            BLE OTA component offers 3 security versions.
+            The example offers a choice between security version 1 and 2.
+
+        config EXAMPLE_OTA_SECURITY_VERSION_1
+            bool "Security version 1"
+            select ESP_PROTOCOMM_SUPPORT_SECURITY_VERSION_1
+
+        config EXAMPLE_OTA_SECURITY_VERSION_2
+            bool "Security version 2"
+            select ESP_PROTOCOMM_SUPPORT_SECURITY_VERSION_2
+    endchoice
+
+    choice EXAMPLE_OTA_MODE
+        bool "Security version 2 mode"
+        depends on EXAMPLE_OTA_SECURITY_VERSION_2
+        default EXAMPLE_OTA_SEC2_DEV_MODE
+
+        config EXAMPLE_OTA_SEC2_DEV_MODE
+            bool "Security version 2 development mode"
+            depends on EXAMPLE_OTA_SECURITY_VERSION_2
+            help
+                This enables the development mode for
+                security version 2.
+                Please note that this mode is NOT recommended for production purpose.
+
+        config EXAMPLE_OTA_SEC2_PROD_MODE
+            bool "Security version 2 production mode"
+            depends on EXAMPLE_OTA_SECURITY_VERSION_2
+            help
+                This enables the production mode for
+                security version 2.
+    endchoice
+endmenu

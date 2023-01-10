@@ -1,0 +1,8 @@
+menu "OTA Manager"
+    config OTA_WITH_PROTOCOMM
+        bool
+        prompt "Enable protocomm level security"
+        depends on BT_NIMBLE_ENABLED
+        help
+            Used to enable protocomm level security for file transfer using OTA
+endmenu
