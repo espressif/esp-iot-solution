@@ -1,0 +1,31 @@
+menu "IOT Knob"
+
+    config KNOB_PERIOD_TIME_MS
+        int "BUTTON PERIOD TIME (MS)"
+        range 2 10
+        default 3
+        help
+            "Knob scan interval"
+
+    config KNOB_DEBOUNCE_TICKS
+        int "KNOB DEBOUNCE TICKS"
+        range 1 8
+        default 2
+        help
+            "One CONFIG_KNOB_DEBOUNCE_TICKS equal to n CONFIG_KNOB_PERIOD_TIME_MS"
+
+    config KNOB_HIGH_LIMIT
+        int "KNOB HIGH LIMIT"
+        range 1 10000
+        default 1000
+        help
+            "The highest number that can be counted by the knob"
+
+    config KNOB_LOW_LIMIT
+        int "KNOB LOW LIMIT"
+        range -10000 -1
+        default -1000
+        help
+            "The lowest number that can be counted by the knob"
+
+endmenu
