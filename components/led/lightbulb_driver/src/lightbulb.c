@@ -183,10 +183,10 @@ static uint8_t kelvin_convert_to_percentage(uint16_t kelvin)
         kelvin = s_lb_obj->kelvin_range.max;
     }
     if (kelvin < s_lb_obj->kelvin_range.min) {
-        kelvin = kelvin < s_lb_obj->kelvin_range.min;
+        kelvin = s_lb_obj->kelvin_range.min;
     }
 
-    return 100 * ((float)(kelvin - s_lb_obj->kelvin_range.min) / (kelvin > s_lb_obj->kelvin_range.max - s_lb_obj->kelvin_range.max));
+    return 100 * ((float)(kelvin - s_lb_obj->kelvin_range.min) / (s_lb_obj->kelvin_range.max - s_lb_obj->kelvin_range.min));
 }
 
 /**
@@ -866,7 +866,7 @@ esp_err_t lightbulb_set_cctb(uint16_t cct, uint8_t brightness)
     LIGHTBULB_CHECK(s_lb_obj, "not init", return ESP_ERR_INVALID_ARG);
     LIGHTBULB_CHECK(brightness <= 100, "brightness out of range: %d", return ESP_ERR_INVALID_ARG, brightness);
     if (cct > 100) {
-        LIGHTBULB_CHECK(cct >= s_lb_obj->kelvin_range.min && cct <= s_lb_obj->kelvin_range.max, "cct out of range: %d", return ESP_ERR_INVALID_ARG, brightness);
+        LIGHTBULB_CHECK(cct >= s_lb_obj->kelvin_range.min && cct <= s_lb_obj->kelvin_range.max, "cct out of range: %d", NULL, cct);
         ESP_LOGW(TAG, "will convert kelvin to percentage, %dK -> %d%%", cct, kelvin_convert_to_percentage(cct));
         cct = kelvin_convert_to_percentage(cct);
     }
@@ -1222,7 +1222,7 @@ esp_err_t lightbulb_basic_effect_start(lightbulb_effect_config_t *config)
             s_lb_obj->effect_timer = xTimerCreate("effect_timer", pdMS_TO_TICKS(config->total_ms), false, NULL, timercb);
             LIGHTBULB_CHECK(s_lb_obj->effect_timer, "create timer fail", goto EXIT);
         } else {
-            xTimerChangePeriod(s_lb_obj->effect_timer, pdMS_TO_TICKS(config->total_ms * 1000), 0);
+            xTimerChangePeriod(s_lb_obj->effect_timer, pdMS_TO_TICKS(config->total_ms), 0);
         }
 
         if (config->user_cb) {
