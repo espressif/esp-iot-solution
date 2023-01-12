@@ -1,4 +1,3 @@
-
 function(pkg_check_version file_path ver_major ver_minor ver_patch)
 set(file_name "${file_path}/idf_component.yml")
 if(EXISTS ${file_name})
@@ -12,9 +11,32 @@ else()
 endif()
 endfunction()
 
-idf_component_register(SRCS "ble_ota.c"
-                        INCLUDE_DIRS include
-                        REQUIRES bt)
+set(srcs "")
+set(priv_include_dirs "")
+set(requires bt nvs_flash protocomm esp_netif protobuf-c)
+set(priv_requires json esp_timer)
+
+if(CONFIG_BT_NIMBLE_ENABLED)
+    list(APPEND srcs "src/nimble_ota.c")
+
+    if(CONFIG_OTA_WITH_PROTOCOMM)    
+        list(APPEND srcs
+            "src/scheme_ble.c"
+            "src/manager.c"
+            "src/handlers.c"
+            "src/decrypt_ota_file.c"
+            "proto-c/ota_send_file.pb-c.c")
+        list(APPEND priv_include_dirs proto-c "${IDF_PATH}/components/protocomm/proto-c")
+    endif()
+else()  
+    list(APPEND srcs "src/ble_ota.c")
+endif()
+
+idf_component_register(SRCS "${srcs}"
+                       INCLUDE_DIRS "include"
+                       PRIV_INCLUDE_DIRS "${priv_include_dirs}"
+                       REQUIRES "${requires}"
+                       PRIV_REQUIRES "${priv_requires}")
 
 pkg_check_version(${CMAKE_CURRENT_SOURCE_DIR} ver_major ver_minor ver_patch)
 message(STATUS "ble_ota: ${ver_major}.${ver_minor}.${ver_patch}")

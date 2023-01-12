@@ -1,18 +1,13 @@
-// Copyright 2022-2022 Espressif Systems (Shanghai) PTE LTD
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+ * SPDX-FileCopyrightText: 2019-2023 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #pragma once
+
+#ifndef _BLE_OTA_H_
+#define _BLE_OTA_H_
 
 #ifdef __cplusplus
 extern "C"
@@ -43,6 +38,7 @@ typedef struct esp_ble_ota_notification_check {
     bool customer_ntf_enable;       /*!< BLE OTA customer data characteristic */
 } esp_ble_ota_notification_check_t;
 
+#if CONFIG_BT_BLUEDROID_ENABLED
 /// BLE OTA characteristics
 typedef enum {
     RECV_FW_CHAR,
@@ -99,6 +95,48 @@ typedef enum {
     OTA_IDX_NB,
 } esp_ble_ota_service_index_t;
 
+#else
+
+typedef enum {
+    RECV_FW_CHAR,
+    OTA_STATUS_CHAR,
+    CMD_CHAR,
+    CUS_CHAR,
+    INVALID_CHAR,
+} esp_ble_ota_char_t;
+
+typedef enum {
+    RECV_FW_CHAR_VAL_IDX,
+    OTA_STATUS_CHAR_VAL_IDX,
+    CMD_CHAR_VAL_IDX,
+    CUS_CHAR_VAL_IDX,
+} esp_ble_ota_service_index_t;
+
+/**
+ * @brief           This function is called to process write event on characteristics
+ *
+ * @return          void
+ *
+ */
+void ble_ota_write_chr(struct os_mbuf *om);
+
+/**
+ * @brief           This function is called to start OTA
+ *
+ * @return          void
+ *
+ */
+void ble_ota_start_write_chr(struct os_mbuf *om);
+
+/**
+ * @brief           This function is called to subscribe characteristics
+ *
+ * @return          void
+ *
+ */
+void esp_ble_ota_subscribe(esp_ble_ota_char_t ota_char);
+
+#endif
 /**
  * @brief           This function is called to Initialization ble ota host
  *
@@ -132,4 +170,6 @@ unsigned int esp_ble_ota_get_fw_length(void);
 
 #ifdef __cplusplus
 }
+#endif
+
 #endif
