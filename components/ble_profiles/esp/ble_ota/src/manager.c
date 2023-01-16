@@ -147,7 +147,7 @@ esp_ble_ota_get_info_json(void)
 /* Declare the internal event handler */
 static void
 esp_ble_ota_event_handler_internal(void *arg, esp_event_base_t event_base,
-        int32_t event_id, void *event_data)
+                                   int32_t event_id, void *event_data)
 {
     ESP_LOGD(TAG, "%s invoked", __func__);
 }

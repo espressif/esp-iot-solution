@@ -28,8 +28,8 @@ static esp_err_t ota_send_file_handler(SendFilePayload *req,
 static esp_err_t ota_start_cmd_handler(SendFilePayload *req,
                                        SendFilePayload *resp, void *priv_data);
 
-static esp_err_t ota_subscribe_handler(SendFilePayload *req,
-                                       SendFilePayload *resp, void *priv_data);
+static esp_err_t ota_finish_cmd_handler(SendFilePayload *req,
+                                        SendFilePayload *resp, void *priv_data);
 
 static ota_cmd_t cmd_table[] = {
     {
@@ -41,8 +41,8 @@ static ota_cmd_t cmd_table[] = {
         .command_handler = ota_start_cmd_handler
     },
     {
-        .cmd_id = SEND_FILE_MSG_TYPE__TypeCmdSubscribe,
-        .command_handler = ota_subscribe_handler
+        .cmd_id = SEND_FILE_MSG_TYPE__TypeCmdFinishOTA,
+        .command_handler = ota_finish_cmd_handler
     }
 };
 
@@ -89,8 +89,9 @@ ota_start_cmd_handler(SendFilePayload *req,
     }
 
     resp_start_ota__init(resp_payload);
-    resp->status = (h->ota_start_cmd(req->cmd_start_ota->data.data,
-                                     req->cmd_start_ota->data.len) == ESP_OK ?
+    resp->status = (h->ota_start_cmd(req->cmd_start_ota->file_size,
+                                     req->cmd_start_ota->block_size,
+                                     req->cmd_start_ota->partition_name) == ESP_OK ?
                     STATUS__Success : STATUS__InternalError);
     resp->payload_case = SEND_FILE_PAYLOAD__PAYLOAD_CMD_START_OTA;
     resp->resp_start_ota = resp_payload;
@@ -98,8 +99,8 @@ ota_start_cmd_handler(SendFilePayload *req,
 }
 
 static esp_err_t
-ota_subscribe_handler(SendFilePayload *req,
-                      SendFilePayload *resp, void *priv_data)
+ota_finish_cmd_handler(SendFilePayload *req,
+                       SendFilePayload *resp, void *priv_data)
 {
     ESP_LOGI(TAG, "%s", __func__);
     ota_handlers_t *h = (ota_handlers_t *) priv_data;
@@ -108,17 +109,17 @@ ota_subscribe_handler(SendFilePayload *req,
         return ESP_ERR_INVALID_STATE;
     }
 
-    RespSubscribe *resp_payload = (RespSubscribe *) malloc(sizeof(RespSubscribe));
+    RespFinishOTA *resp_payload = (RespFinishOTA *) malloc(sizeof(RespFinishOTA));
     if (!resp_payload) {
         ESP_LOGE(TAG, "Error allocating memory");
         return ESP_ERR_NO_MEM;
     }
 
-    resp_subscribe__init(resp_payload);
-    resp->status = (h->ota_subscribe(req->cmd_subscribe->endpoint_name) == ESP_OK ?
+    resp_finish_ota__init(resp_payload);
+    resp->status = (h->ota_finish_cmd() == ESP_OK ?
                     STATUS__Success : STATUS__InternalError);
-    resp->payload_case = SEND_FILE_PAYLOAD__PAYLOAD_CMD_SUBSCRIBE;
-    resp->resp_subscribe = resp_payload;
+    resp->payload_case = SEND_FILE_PAYLOAD__PAYLOAD_CMD_FINISH_OTA;
+    resp->resp_finish_ota = resp_payload;
     return ESP_OK;
 }
 
@@ -142,8 +143,8 @@ ota_cmd_cleanup(SendFilePayload *resp, void *priv_data)
         free(resp->resp_send_file);
     }
     break;
-    case SEND_FILE_MSG_TYPE__TypeRespSubscribe: {
-        free(resp->resp_subscribe);
+    case SEND_FILE_MSG_TYPE__TypeRespFinishOTA: {
+        free(resp->resp_finish_ota);
     }
     break;
     case SEND_FILE_MSG_TYPE__TypeRespStartOTA: {

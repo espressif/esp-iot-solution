@@ -129,12 +129,12 @@ void ble_ota_write_chr(struct os_mbuf *om);
 void ble_ota_start_write_chr(struct os_mbuf *om);
 
 /**
- * @brief           This function is called to subscribe characteristics
+ * @brief           This function is used to set total file size and each block size
  *
  * @return          void
  *
  */
-void esp_ble_ota_subscribe(esp_ble_ota_char_t ota_char);
+void esp_ble_ota_set_sizes(size_t file_size, size_t block_size);
 
 #endif
 /**
@@ -168,6 +168,11 @@ esp_err_t esp_ble_ota_recv_fw_data_callback(esp_ble_ota_recv_fw_cb_t callback);
  */
 unsigned int esp_ble_ota_get_fw_length(void);
 
+/**
+ * @brief           This function is called to indicate OTA end
+ *
+ */
+void esp_ble_ota_finish(void);
 #ifdef __cplusplus
 }
 #endif
