@@ -118,15 +118,7 @@ typedef enum {
  * @return          void
  *
  */
-void ble_ota_write_chr(struct os_mbuf *om);
-
-/**
- * @brief           This function is called to start OTA
- *
- * @return          void
- *
- */
-void ble_ota_start_write_chr(struct os_mbuf *om);
+void esp_ble_ota_write(uint8_t *file, size_t length);
 
 /**
  * @brief           This function is used to set total file size and each block size
