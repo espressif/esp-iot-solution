@@ -21,26 +21,6 @@
 
 static const char *TAG = "ota_handlers";
 
-static esp_ble_ota_char_t
-find_ota_char_and_desr_by_handle(char *ep_name)
-{
-    for (int i = 0; i < ENDPOINTS; i++) {
-        if (strcmp(ep_name, "recv-fw")) {
-            return RECV_FW_CHAR;
-        }
-        if (strcmp(ep_name, "ota-bar")) {
-            return OTA_STATUS_CHAR;
-        }
-        if (strcmp(ep_name, "ota-command")) {
-            return CMD_CHAR;
-        }
-        if (strcmp(ep_name, "ota-customer")) {
-            return CUS_CHAR;
-        }
-    }
-    return INVALID_CHAR;
-}
-
 static esp_err_t
 ota_send_file(uint8_t *file, size_t length)
 {
@@ -51,24 +31,19 @@ ota_send_file(uint8_t *file, size_t length)
 }
 
 static esp_err_t
-ota_start_cmd(uint8_t *cmd, size_t length)
+ota_start_cmd(size_t file_size, size_t block_size, char *partition_name)
 {
-    ESP_LOGI(TAG, "%s len = %d data = ", __func__, length);
-    struct os_mbuf *om = ble_hs_mbuf_from_flat(cmd, length);
-    ble_ota_start_write_chr(om);
+    /* Currently by default partition is OTA, so not setting it */
+
+    ESP_LOGI(TAG, "%s file len = %d block size = %d", __func__, file_size, block_size);
+    esp_ble_ota_set_sizes(file_size, block_size);
     return ESP_OK;
 }
 
-static esp_err_t *
-ota_subscribe(char *ep_name)
+static esp_err_t
+ota_finish_cmd()
 {
-    ESP_LOGI(TAG, "%s %s", __func__, ep_name);
-
-    esp_ble_ota_char_t ota_char;
-    ota_char = find_ota_char_and_desr_by_handle(ep_name);
-
-    esp_ble_ota_subscribe(ota_char);
-
+    esp_ble_ota_finish(); 
     return ESP_OK;
 }
 
@@ -81,6 +56,6 @@ get_ota_handlers(ota_handlers_t *ptr)
     }
     ptr->ota_send_file = ota_send_file;
     ptr->ota_start_cmd = ota_start_cmd;
-    ptr->ota_subscribe = ota_subscribe;
+    ptr->ota_finish_cmd = ota_finish_cmd;
     return ESP_OK;
 }

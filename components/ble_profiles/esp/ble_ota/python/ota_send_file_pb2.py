@@ -21,7 +21,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto3',
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x13ota_send_file.proto\x1a\x0f\x63onstants.proto\"\x1b\n\x0b\x43mdSendFile\x12\x0c\n\x04\x64\x61ta\x18\x01 \x01(\x0c\"\x0e\n\x0cRespSendFile\"\x1b\n\x0b\x43mdStartOTA\x12\x0c\n\x04\x64\x61ta\x18\x01 \x01(\x0c\"\x0e\n\x0cRespStartOTA\"%\n\x0c\x43mdSubscribe\x12\x15\n\rendpoint_name\x18\x01 \x01(\t\"\x0f\n\rRespSubscribe\"\xc6\x02\n\x0fSendFilePayload\x12\x1d\n\x03msg\x18\x01 \x01(\x0e\x32\x10.SendFileMsgType\x12\x17\n\x06status\x18\x02 \x01(\x0e\x32\x07.Status\x12%\n\rcmd_send_file\x18\n \x01(\x0b\x32\x0c.CmdSendFileH\x00\x12\'\n\x0eresp_send_file\x18\x0b \x01(\x0b\x32\r.RespSendFileH\x00\x12%\n\rcmd_start_ota\x18\x0c \x01(\x0b\x32\x0c.CmdStartOTAH\x00\x12\'\n\x0eresp_start_ota\x18\r \x01(\x0b\x32\r.RespStartOTAH\x00\x12&\n\rcmd_subscribe\x18\x0e \x01(\x0b\x32\r.CmdSubscribeH\x00\x12(\n\x0eresp_subscribe\x18\x0f \x01(\x0b\x32\x0e.RespSubscribeH\x00\x42\t\n\x07payload*\xa6\x01\n\x0fSendFileMsgType\x12\x10\n\x0cTypeReserved\x10\x00\x12\x13\n\x0fTypeCmdSendFile\x10\x01\x12\x14\n\x10TypeRespSendFile\x10\x02\x12\x13\n\x0fTypeCmdStartOTA\x10\x03\x12\x14\n\x10TypeRespStartOTA\x10\x04\x12\x14\n\x10TypeCmdSubscribe\x10\x05\x12\x15\n\x11TypeRespSubscribe\x10\x06\x62\x06proto3'
+  serialized_pb=b'\n\x13ota_send_file.proto\x1a\x0f\x63onstants.proto\"\x1b\n\x0b\x43mdSendFile\x12\x0c\n\x04\x64\x61ta\x18\x01 \x01(\x0c\"\x0e\n\x0cRespSendFile\"L\n\x0b\x43mdStartOTA\x12\x11\n\tfile_size\x18\x01 \x01(\x04\x12\x12\n\nblock_size\x18\x02 \x01(\x04\x12\x16\n\x0epartition_name\x18\x03 \x01(\t\"\x0e\n\x0cRespStartOTA\"\x0e\n\x0c\x43mdFinishOTA\"\x0f\n\rRespFinishOTA\"\xc8\x02\n\x0fSendFilePayload\x12\x1d\n\x03msg\x18\x01 \x01(\x0e\x32\x10.SendFileMsgType\x12\x17\n\x06status\x18\x02 \x01(\x0e\x32\x07.Status\x12%\n\rcmd_send_file\x18\n \x01(\x0b\x32\x0c.CmdSendFileH\x00\x12\'\n\x0eresp_send_file\x18\x0b \x01(\x0b\x32\r.RespSendFileH\x00\x12%\n\rcmd_start_ota\x18\x0c \x01(\x0b\x32\x0c.CmdStartOTAH\x00\x12\'\n\x0eresp_start_ota\x18\r \x01(\x0b\x32\r.RespStartOTAH\x00\x12\'\n\x0e\x63md_finish_ota\x18\x0e \x01(\x0b\x32\r.CmdFinishOTAH\x00\x12)\n\x0fresp_finish_ota\x18\x0f \x01(\x0b\x32\x0e.RespFinishOTAH\x00\x42\t\n\x07payload*\xa6\x01\n\x0fSendFileMsgType\x12\x10\n\x0cTypeReserved\x10\x00\x12\x13\n\x0fTypeCmdSendFile\x10\x01\x12\x14\n\x10TypeRespSendFile\x10\x02\x12\x13\n\x0fTypeCmdStartOTA\x10\x03\x12\x14\n\x10TypeRespStartOTA\x10\x04\x12\x14\n\x10TypeCmdFinishOTA\x10\x05\x12\x15\n\x11TypeRespFinishOTA\x10\x06\x62\x06proto3'
   ,
   dependencies=[constants__pb2.DESCRIPTOR,])
 
@@ -58,20 +58,20 @@ _SENDFILEMSGTYPE = _descriptor.EnumDescriptor(
       type=None,
       create_key=_descriptor._internal_create_key),
     _descriptor.EnumValueDescriptor(
-      name='TypeCmdSubscribe', index=5, number=5,
+      name='TypeCmdFinishOTA', index=5, number=5,
       serialized_options=None,
       type=None,
       create_key=_descriptor._internal_create_key),
     _descriptor.EnumValueDescriptor(
-      name='TypeRespSubscribe', index=6, number=6,
+      name='TypeRespFinishOTA', index=6, number=6,
       serialized_options=None,
       type=None,
       create_key=_descriptor._internal_create_key),
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=516,
-  serialized_end=682,
+  serialized_start=544,
+  serialized_end=710,
 )
 _sym_db.RegisterEnumDescriptor(_SENDFILEMSGTYPE)
 
@@ -81,8 +81,8 @@ TypeCmdSendFile = 1
 TypeRespSendFile = 2
 TypeCmdStartOTA = 3
 TypeRespStartOTA = 4
-TypeCmdSubscribe = 5
-TypeRespSubscribe = 6
+TypeCmdFinishOTA = 5
+TypeRespFinishOTA = 6
 
 
 
@@ -152,9 +152,23 @@ _CMDSTARTOTA = _descriptor.Descriptor(
   create_key=_descriptor._internal_create_key,
   fields=[
     _descriptor.FieldDescriptor(
-      name='data', full_name='CmdStartOTA.data', index=0,
-      number=1, type=12, cpp_type=9, label=1,
-      has_default_value=False, default_value=b"",
+      name='file_size', full_name='CmdStartOTA.file_size', index=0,
+      number=1, type=4, cpp_type=4, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='block_size', full_name='CmdStartOTA.block_size', index=1,
+      number=2, type=4, cpp_type=4, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='partition_name', full_name='CmdStartOTA.partition_name', index=2,
+      number=3, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=b"".decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
@@ -171,7 +185,7 @@ _CMDSTARTOTA = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=85,
-  serialized_end=112,
+  serialized_end=161,
 )
 
 
@@ -195,46 +209,14 @@ _RESPSTARTOTA = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=114,
-  serialized_end=128,
+  serialized_start=163,
+  serialized_end=177,
 )
 
 
-_CMDSUBSCRIBE = _descriptor.Descriptor(
-  name='CmdSubscribe',
-  full_name='CmdSubscribe',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  create_key=_descriptor._internal_create_key,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='endpoint_name', full_name='CmdSubscribe.endpoint_name', index=0,
-      number=1, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=b"".decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=130,
-  serialized_end=167,
-)
-
-
-_RESPSUBSCRIBE = _descriptor.Descriptor(
-  name='RespSubscribe',
-  full_name='RespSubscribe',
+_CMDFINISHOTA = _descriptor.Descriptor(
+  name='CmdFinishOTA',
+  full_name='CmdFinishOTA',
   filename=None,
   file=DESCRIPTOR,
   containing_type=None,
@@ -252,8 +234,33 @@ _RESPSUBSCRIBE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=169,
-  serialized_end=184,
+  serialized_start=179,
+  serialized_end=193,
+)
+
+
+_RESPFINISHOTA = _descriptor.Descriptor(
+  name='RespFinishOTA',
+  full_name='RespFinishOTA',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  create_key=_descriptor._internal_create_key,
+  fields=[
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=195,
+  serialized_end=210,
 )
 
 
@@ -308,14 +315,14 @@ _SENDFILEPAYLOAD = _descriptor.Descriptor(
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
     _descriptor.FieldDescriptor(
-      name='cmd_subscribe', full_name='SendFilePayload.cmd_subscribe', index=6,
+      name='cmd_finish_ota', full_name='SendFilePayload.cmd_finish_ota', index=6,
       number=14, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
     _descriptor.FieldDescriptor(
-      name='resp_subscribe', full_name='SendFilePayload.resp_subscribe', index=7,
+      name='resp_finish_ota', full_name='SendFilePayload.resp_finish_ota', index=7,
       number=15, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
@@ -338,8 +345,8 @@ _SENDFILEPAYLOAD = _descriptor.Descriptor(
       create_key=_descriptor._internal_create_key,
     fields=[]),
   ],
-  serialized_start=187,
-  serialized_end=513,
+  serialized_start=213,
+  serialized_end=541,
 )
 
 _SENDFILEPAYLOAD.fields_by_name['msg'].enum_type = _SENDFILEMSGTYPE
@@ -348,8 +355,8 @@ _SENDFILEPAYLOAD.fields_by_name['cmd_send_file'].message_type = _CMDSENDFILE
 _SENDFILEPAYLOAD.fields_by_name['resp_send_file'].message_type = _RESPSENDFILE
 _SENDFILEPAYLOAD.fields_by_name['cmd_start_ota'].message_type = _CMDSTARTOTA
 _SENDFILEPAYLOAD.fields_by_name['resp_start_ota'].message_type = _RESPSTARTOTA
-_SENDFILEPAYLOAD.fields_by_name['cmd_subscribe'].message_type = _CMDSUBSCRIBE
-_SENDFILEPAYLOAD.fields_by_name['resp_subscribe'].message_type = _RESPSUBSCRIBE
+_SENDFILEPAYLOAD.fields_by_name['cmd_finish_ota'].message_type = _CMDFINISHOTA
+_SENDFILEPAYLOAD.fields_by_name['resp_finish_ota'].message_type = _RESPFINISHOTA
 _SENDFILEPAYLOAD.oneofs_by_name['payload'].fields.append(
   _SENDFILEPAYLOAD.fields_by_name['cmd_send_file'])
 _SENDFILEPAYLOAD.fields_by_name['cmd_send_file'].containing_oneof = _SENDFILEPAYLOAD.oneofs_by_name['payload']
@@ -363,17 +370,17 @@ _SENDFILEPAYLOAD.oneofs_by_name['payload'].fields.append(
   _SENDFILEPAYLOAD.fields_by_name['resp_start_ota'])
 _SENDFILEPAYLOAD.fields_by_name['resp_start_ota'].containing_oneof = _SENDFILEPAYLOAD.oneofs_by_name['payload']
 _SENDFILEPAYLOAD.oneofs_by_name['payload'].fields.append(
-  _SENDFILEPAYLOAD.fields_by_name['cmd_subscribe'])
-_SENDFILEPAYLOAD.fields_by_name['cmd_subscribe'].containing_oneof = _SENDFILEPAYLOAD.oneofs_by_name['payload']
+  _SENDFILEPAYLOAD.fields_by_name['cmd_finish_ota'])
+_SENDFILEPAYLOAD.fields_by_name['cmd_finish_ota'].containing_oneof = _SENDFILEPAYLOAD.oneofs_by_name['payload']
 _SENDFILEPAYLOAD.oneofs_by_name['payload'].fields.append(
-  _SENDFILEPAYLOAD.fields_by_name['resp_subscribe'])
-_SENDFILEPAYLOAD.fields_by_name['resp_subscribe'].containing_oneof = _SENDFILEPAYLOAD.oneofs_by_name['payload']
+  _SENDFILEPAYLOAD.fields_by_name['resp_finish_ota'])
+_SENDFILEPAYLOAD.fields_by_name['resp_finish_ota'].containing_oneof = _SENDFILEPAYLOAD.oneofs_by_name['payload']
 DESCRIPTOR.message_types_by_name['CmdSendFile'] = _CMDSENDFILE
 DESCRIPTOR.message_types_by_name['RespSendFile'] = _RESPSENDFILE
 DESCRIPTOR.message_types_by_name['CmdStartOTA'] = _CMDSTARTOTA
 DESCRIPTOR.message_types_by_name['RespStartOTA'] = _RESPSTARTOTA
-DESCRIPTOR.message_types_by_name['CmdSubscribe'] = _CMDSUBSCRIBE
-DESCRIPTOR.message_types_by_name['RespSubscribe'] = _RESPSUBSCRIBE
+DESCRIPTOR.message_types_by_name['CmdFinishOTA'] = _CMDFINISHOTA
+DESCRIPTOR.message_types_by_name['RespFinishOTA'] = _RESPFINISHOTA
 DESCRIPTOR.message_types_by_name['SendFilePayload'] = _SENDFILEPAYLOAD
 DESCRIPTOR.enum_types_by_name['SendFileMsgType'] = _SENDFILEMSGTYPE
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
@@ -406,19 +413,19 @@ RespStartOTA = _reflection.GeneratedProtocolMessageType('RespStartOTA', (_messag
   })
 _sym_db.RegisterMessage(RespStartOTA)
 
-CmdSubscribe = _reflection.GeneratedProtocolMessageType('CmdSubscribe', (_message.Message,), {
-  'DESCRIPTOR' : _CMDSUBSCRIBE,
+CmdFinishOTA = _reflection.GeneratedProtocolMessageType('CmdFinishOTA', (_message.Message,), {
+  'DESCRIPTOR' : _CMDFINISHOTA,
   '__module__' : 'ota_send_file_pb2'
-  # @@protoc_insertion_point(class_scope:CmdSubscribe)
+  # @@protoc_insertion_point(class_scope:CmdFinishOTA)
   })
-_sym_db.RegisterMessage(CmdSubscribe)
+_sym_db.RegisterMessage(CmdFinishOTA)
 
-RespSubscribe = _reflection.GeneratedProtocolMessageType('RespSubscribe', (_message.Message,), {
-  'DESCRIPTOR' : _RESPSUBSCRIBE,
+RespFinishOTA = _reflection.GeneratedProtocolMessageType('RespFinishOTA', (_message.Message,), {
+  'DESCRIPTOR' : _RESPFINISHOTA,
   '__module__' : 'ota_send_file_pb2'
-  # @@protoc_insertion_point(class_scope:RespSubscribe)
+  # @@protoc_insertion_point(class_scope:RespFinishOTA)
   })
-_sym_db.RegisterMessage(RespSubscribe)
+_sym_db.RegisterMessage(RespFinishOTA)
 
 SendFilePayload = _reflection.GeneratedProtocolMessageType('SendFilePayload', (_message.Message,), {
   'DESCRIPTOR' : _SENDFILEPAYLOAD,

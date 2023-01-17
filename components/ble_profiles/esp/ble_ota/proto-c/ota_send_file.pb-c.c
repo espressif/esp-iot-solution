@@ -191,96 +191,96 @@ void   resp_start_ota__free_unpacked
     assert(message->base.descriptor == &resp_start_ota__descriptor);
     protobuf_c_message_free_unpacked ((ProtobufCMessage *)message, allocator);
 }
-void   cmd_subscribe__init
-(CmdSubscribe         *message)
+void   cmd_finish_ota__init
+(CmdFinishOTA         *message)
 {
-    static const CmdSubscribe init_value = CMD_SUBSCRIBE__INIT;
+    static const CmdFinishOTA init_value = CMD_FINISH_OTA__INIT;
     *message = init_value;
 }
-size_t cmd_subscribe__get_packed_size
-(const CmdSubscribe *message)
+size_t cmd_finish_ota__get_packed_size
+(const CmdFinishOTA *message)
 {
-    assert(message->base.descriptor == &cmd_subscribe__descriptor);
+    assert(message->base.descriptor == &cmd_finish_ota__descriptor);
     return protobuf_c_message_get_packed_size ((const ProtobufCMessage *)(message));
 }
-size_t cmd_subscribe__pack
-(const CmdSubscribe *message,
+size_t cmd_finish_ota__pack
+(const CmdFinishOTA *message,
  uint8_t       *out)
 {
-    assert(message->base.descriptor == &cmd_subscribe__descriptor);
+    assert(message->base.descriptor == &cmd_finish_ota__descriptor);
     return protobuf_c_message_pack ((const ProtobufCMessage *)message, out);
 }
-size_t cmd_subscribe__pack_to_buffer
-(const CmdSubscribe *message,
+size_t cmd_finish_ota__pack_to_buffer
+(const CmdFinishOTA *message,
  ProtobufCBuffer *buffer)
 {
-    assert(message->base.descriptor == &cmd_subscribe__descriptor);
+    assert(message->base.descriptor == &cmd_finish_ota__descriptor);
     return protobuf_c_message_pack_to_buffer ((const ProtobufCMessage *)message, buffer);
 }
-CmdSubscribe *
-cmd_subscribe__unpack
+CmdFinishOTA *
+cmd_finish_ota__unpack
 (ProtobufCAllocator  *allocator,
  size_t               len,
  const uint8_t       *data)
 {
-    return (CmdSubscribe *)
-           protobuf_c_message_unpack (&cmd_subscribe__descriptor,
+    return (CmdFinishOTA *)
+           protobuf_c_message_unpack (&cmd_finish_ota__descriptor,
                                       allocator, len, data);
 }
-void   cmd_subscribe__free_unpacked
-(CmdSubscribe *message,
+void   cmd_finish_ota__free_unpacked
+(CmdFinishOTA *message,
  ProtobufCAllocator *allocator)
 {
     if (!message) {
         return;
     }
-    assert(message->base.descriptor == &cmd_subscribe__descriptor);
+    assert(message->base.descriptor == &cmd_finish_ota__descriptor);
     protobuf_c_message_free_unpacked ((ProtobufCMessage *)message, allocator);
 }
-void   resp_subscribe__init
-(RespSubscribe         *message)
+void   resp_finish_ota__init
+(RespFinishOTA         *message)
 {
-    static const RespSubscribe init_value = RESP_SUBSCRIBE__INIT;
+    static const RespFinishOTA init_value = RESP_FINISH_OTA__INIT;
     *message = init_value;
 }
-size_t resp_subscribe__get_packed_size
-(const RespSubscribe *message)
+size_t resp_finish_ota__get_packed_size
+(const RespFinishOTA *message)
 {
-    assert(message->base.descriptor == &resp_subscribe__descriptor);
+    assert(message->base.descriptor == &resp_finish_ota__descriptor);
     return protobuf_c_message_get_packed_size ((const ProtobufCMessage *)(message));
 }
-size_t resp_subscribe__pack
-(const RespSubscribe *message,
+size_t resp_finish_ota__pack
+(const RespFinishOTA *message,
  uint8_t       *out)
 {
-    assert(message->base.descriptor == &resp_subscribe__descriptor);
+    assert(message->base.descriptor == &resp_finish_ota__descriptor);
     return protobuf_c_message_pack ((const ProtobufCMessage *)message, out);
 }
-size_t resp_subscribe__pack_to_buffer
-(const RespSubscribe *message,
+size_t resp_finish_ota__pack_to_buffer
+(const RespFinishOTA *message,
  ProtobufCBuffer *buffer)
 {
-    assert(message->base.descriptor == &resp_subscribe__descriptor);
+    assert(message->base.descriptor == &resp_finish_ota__descriptor);
     return protobuf_c_message_pack_to_buffer ((const ProtobufCMessage *)message, buffer);
 }
-RespSubscribe *
-resp_subscribe__unpack
+RespFinishOTA *
+resp_finish_ota__unpack
 (ProtobufCAllocator  *allocator,
  size_t               len,
  const uint8_t       *data)
 {
-    return (RespSubscribe *)
-           protobuf_c_message_unpack (&resp_subscribe__descriptor,
+    return (RespFinishOTA *)
+           protobuf_c_message_unpack (&resp_finish_ota__descriptor,
                                       allocator, len, data);
 }
-void   resp_subscribe__free_unpacked
-(RespSubscribe *message,
+void   resp_finish_ota__free_unpacked
+(RespFinishOTA *message,
  ProtobufCAllocator *allocator)
 {
     if (!message) {
         return;
     }
-    assert(message->base.descriptor == &resp_subscribe__descriptor);
+    assert(message->base.descriptor == &resp_finish_ota__descriptor);
     protobuf_c_message_free_unpacked ((ProtobufCMessage *)message, allocator);
 }
 void   send_file_payload__init
@@ -381,26 +381,52 @@ const ProtobufCMessageDescriptor resp_send_file__descriptor = {
     (ProtobufCMessageInit) resp_send_file__init,
     NULL, NULL, NULL  /* reserved[123] */
 };
-static const ProtobufCFieldDescriptor cmd_start_ota__field_descriptors[1] = {
+static const ProtobufCFieldDescriptor cmd_start_ota__field_descriptors[3] = {
     {
-        "data",
+        "file_size",
         1,
         PROTOBUF_C_LABEL_NONE,
-        PROTOBUF_C_TYPE_BYTES,
+        PROTOBUF_C_TYPE_UINT64,
         0,   /* quantifier_offset */
-        offsetof(CmdStartOTA, data),
+        offsetof(CmdStartOTA, file_size),
         NULL,
         NULL,
         0,             /* flags */
         0, NULL, NULL  /* reserved1,reserved2, etc */
     },
+    {
+        "block_size",
+        2,
+        PROTOBUF_C_LABEL_NONE,
+        PROTOBUF_C_TYPE_UINT64,
+        0,   /* quantifier_offset */
+        offsetof(CmdStartOTA, block_size),
+        NULL,
+        NULL,
+        0,             /* flags */
+        0, NULL, NULL  /* reserved1,reserved2, etc */
+    },
+    {
+        "partition_name",
+        3,
+        PROTOBUF_C_LABEL_NONE,
+        PROTOBUF_C_TYPE_STRING,
+        0,   /* quantifier_offset */
+        offsetof(CmdStartOTA, partition_name),
+        NULL,
+        &protobuf_c_empty_string,
+        0,             /* flags */
+        0, NULL, NULL  /* reserved1,reserved2, etc */
+    },
 };
 static const unsigned cmd_start_ota__field_indices_by_name[] = {
-    0,   /* field[0] = data */
+    1,   /* field[1] = block_size */
+    0,   /* field[0] = file_size */
+    2,   /* field[2] = partition_name */
 };
 static const ProtobufCIntRange cmd_start_ota__number_ranges[1 + 1] = {
     { 1, 0 },
-    { 0, 1 }
+    { 0, 3 }
 };
 const ProtobufCMessageDescriptor cmd_start_ota__descriptor = {
     PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
@@ -409,7 +435,7 @@ const ProtobufCMessageDescriptor cmd_start_ota__descriptor = {
     "CmdStartOTA",
     "",
     sizeof(CmdStartOTA),
-    1,
+    3,
     cmd_start_ota__field_descriptors,
     cmd_start_ota__field_indices_by_name,
     1,  cmd_start_ota__number_ranges,
@@ -433,56 +459,38 @@ const ProtobufCMessageDescriptor resp_start_ota__descriptor = {
     (ProtobufCMessageInit) resp_start_ota__init,
     NULL, NULL, NULL  /* reserved[123] */
 };
-static const ProtobufCFieldDescriptor cmd_subscribe__field_descriptors[1] = {
-    {
-        "endpoint_name",
-        1,
-        PROTOBUF_C_LABEL_NONE,
-        PROTOBUF_C_TYPE_STRING,
-        0,   /* quantifier_offset */
-        offsetof(CmdSubscribe, endpoint_name),
-        NULL,
-        &protobuf_c_empty_string,
-        0,             /* flags */
-        0, NULL, NULL  /* reserved1,reserved2, etc */
-    },
-};
-static const unsigned cmd_subscribe__field_indices_by_name[] = {
-    0,   /* field[0] = endpoint_name */
-};
-static const ProtobufCIntRange cmd_subscribe__number_ranges[1 + 1] = {
-    { 1, 0 },
-    { 0, 1 }
-};
-const ProtobufCMessageDescriptor cmd_subscribe__descriptor = {
+#define cmd_finish_ota__field_descriptors NULL
+#define cmd_finish_ota__field_indices_by_name NULL
+#define cmd_finish_ota__number_ranges NULL
+const ProtobufCMessageDescriptor cmd_finish_ota__descriptor = {
     PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
-    "CmdSubscribe",
-    "CmdSubscribe",
-    "CmdSubscribe",
+    "CmdFinishOTA",
+    "CmdFinishOTA",
+    "CmdFinishOTA",
     "",
-    sizeof(CmdSubscribe),
-    1,
-    cmd_subscribe__field_descriptors,
-    cmd_subscribe__field_indices_by_name,
-    1,  cmd_subscribe__number_ranges,
-    (ProtobufCMessageInit) cmd_subscribe__init,
+    sizeof(CmdFinishOTA),
+    0,
+    cmd_finish_ota__field_descriptors,
+    cmd_finish_ota__field_indices_by_name,
+    0,  cmd_finish_ota__number_ranges,
+    (ProtobufCMessageInit) cmd_finish_ota__init,
     NULL, NULL, NULL  /* reserved[123] */
 };
-#define resp_subscribe__field_descriptors NULL
-#define resp_subscribe__field_indices_by_name NULL
-#define resp_subscribe__number_ranges NULL
-const ProtobufCMessageDescriptor resp_subscribe__descriptor = {
+#define resp_finish_ota__field_descriptors NULL
+#define resp_finish_ota__field_indices_by_name NULL
+#define resp_finish_ota__number_ranges NULL
+const ProtobufCMessageDescriptor resp_finish_ota__descriptor = {
     PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
-    "RespSubscribe",
-    "RespSubscribe",
-    "RespSubscribe",
+    "RespFinishOTA",
+    "RespFinishOTA",
+    "RespFinishOTA",
     "",
-    sizeof(RespSubscribe),
+    sizeof(RespFinishOTA),
     0,
-    resp_subscribe__field_descriptors,
-    resp_subscribe__field_indices_by_name,
-    0,  resp_subscribe__number_ranges,
-    (ProtobufCMessageInit) resp_subscribe__init,
+    resp_finish_ota__field_descriptors,
+    resp_finish_ota__field_indices_by_name,
+    0,  resp_finish_ota__number_ranges,
+    (ProtobufCMessageInit) resp_finish_ota__init,
     NULL, NULL, NULL  /* reserved[123] */
 };
 static const ProtobufCFieldDescriptor send_file_payload__field_descriptors[8] = {
@@ -559,38 +567,38 @@ static const ProtobufCFieldDescriptor send_file_payload__field_descriptors[8] = 
         0, NULL, NULL  /* reserved1,reserved2, etc */
     },
     {
-        "cmd_subscribe",
+        "cmd_finish_ota",
         14,
         PROTOBUF_C_LABEL_NONE,
         PROTOBUF_C_TYPE_MESSAGE,
         offsetof(SendFilePayload, payload_case),
-        offsetof(SendFilePayload, cmd_subscribe),
-        &cmd_subscribe__descriptor,
+        offsetof(SendFilePayload, cmd_finish_ota),
+        &cmd_finish_ota__descriptor,
         NULL,
         0 | PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
         0, NULL, NULL  /* reserved1,reserved2, etc */
     },
     {
-        "resp_subscribe",
+        "resp_finish_ota",
         15,
         PROTOBUF_C_LABEL_NONE,
         PROTOBUF_C_TYPE_MESSAGE,
         offsetof(SendFilePayload, payload_case),
-        offsetof(SendFilePayload, resp_subscribe),
-        &resp_subscribe__descriptor,
+        offsetof(SendFilePayload, resp_finish_ota),
+        &resp_finish_ota__descriptor,
         NULL,
         0 | PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
         0, NULL, NULL  /* reserved1,reserved2, etc */
     },
 };
 static const unsigned send_file_payload__field_indices_by_name[] = {
+    6,   /* field[6] = cmd_finish_ota */
     2,   /* field[2] = cmd_send_file */
     4,   /* field[4] = cmd_start_ota */
-    6,   /* field[6] = cmd_subscribe */
     0,   /* field[0] = msg */
+    7,   /* field[7] = resp_finish_ota */
     3,   /* field[3] = resp_send_file */
     5,   /* field[5] = resp_start_ota */
-    7,   /* field[7] = resp_subscribe */
     1,   /* field[1] = status */
 };
 static const ProtobufCIntRange send_file_payload__number_ranges[2 + 1] = {
@@ -618,20 +626,20 @@ static const ProtobufCEnumValue send_file_msg_type__enum_values_by_number[7] = {
     { "TypeRespSendFile", "SEND_FILE_MSG_TYPE__TypeRespSendFile", 2 },
     { "TypeCmdStartOTA", "SEND_FILE_MSG_TYPE__TypeCmdStartOTA", 3 },
     { "TypeRespStartOTA", "SEND_FILE_MSG_TYPE__TypeRespStartOTA", 4 },
-    { "TypeCmdSubscribe", "SEND_FILE_MSG_TYPE__TypeCmdSubscribe", 5 },
-    { "TypeRespSubscribe", "SEND_FILE_MSG_TYPE__TypeRespSubscribe", 6 },
+    { "TypeCmdFinishOTA", "SEND_FILE_MSG_TYPE__TypeCmdFinishOTA", 5 },
+    { "TypeRespFinishOTA", "SEND_FILE_MSG_TYPE__TypeRespFinishOTA", 6 },
 };
 static const ProtobufCIntRange send_file_msg_type__value_ranges[] = {
     {0, 0}, {0, 7}
 };
 static const ProtobufCEnumValueIndex send_file_msg_type__enum_values_by_name[7] = {
+    { "TypeCmdFinishOTA", 5 },
     { "TypeCmdSendFile", 1 },
     { "TypeCmdStartOTA", 3 },
-    { "TypeCmdSubscribe", 5 },
     { "TypeReserved", 0 },
+    { "TypeRespFinishOTA", 6 },
     { "TypeRespSendFile", 2 },
     { "TypeRespStartOTA", 4 },
-    { "TypeRespSubscribe", 6 },
 };
 const ProtobufCEnumDescriptor send_file_msg_type__descriptor = {
     PROTOBUF_C__ENUM_DESCRIPTOR_MAGIC,

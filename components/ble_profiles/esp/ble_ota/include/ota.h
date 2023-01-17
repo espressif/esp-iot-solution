@@ -26,19 +26,18 @@ typedef struct ota_ctrl_handlers {
      * Handler function called when ota start is requested. Status
      * is given the parameters :
      *
-     * cmd (input) - command to start OTA
+     * file_size (input) - total size of the file
      *
-     * length (input) - length of command
+     * block_size (input) - size of one block
+     *
+     * partition_name (input) - custom partition where data is to be written
      */
-    esp_err_t (*ota_start_cmd)(uint8_t *cmd, size_t length);
+    esp_err_t (*ota_start_cmd)(size_t file_size, size_t block_size, char *partition_name);
 
     /**
-     * Handler function called when ota subscribe is requested. Status
-     * is given the parameters :
-     *
-     * ep_name (input) - ep_name to be subscribed
+     * Handler function called when ota is completed.
      */
-    esp_err_t (*ota_subscribe)(char *ep_name);
+    esp_err_t (*ota_finish_cmd)();
 } ota_handlers_t;
 
 /**

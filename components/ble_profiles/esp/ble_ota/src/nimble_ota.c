@@ -17,7 +17,7 @@
 #include "host/ble_uuid.h"
 #include "ble_ota.h"
 
-#define BUF_LENGTH                          4098
+#define BUF_LENGTH                          4096
 #define OTA_IDX_NB                          4
 
 #define character_declaration_uuid          BLE_ATT_UUID_CHARACTERISTIC
@@ -41,11 +41,13 @@ static uint8_t *fw_buf = NULL;
 static uint32_t fw_buf_offset = 0;
 
 static uint32_t ota_total_len = 0;
+static uint32_t ota_block_size = BUF_LENGTH;
 
 esp_ble_ota_callback_funs_t ota_cb_fun_t = {
     .recv_fw_cb = NULL
 };
 
+#ifndef CONFIG_OTA_WITH_PROTOCOMM
 esp_ble_ota_notification_check_t ota_notification = {
     .recv_fw_ntf_enable = false,
     .process_bar_ntf_enable = false,
@@ -53,7 +55,6 @@ esp_ble_ota_notification_check_t ota_notification = {
     .customer_ntf_enable = false,
 };
 
-#ifndef CONFIG_OTA_WITH_PROTOCOMM
 static uint8_t own_addr_type;
 
 static uint16_t connection_handle;
@@ -68,40 +69,22 @@ static uint16_t custom_val;
 
 static int
 esp_ble_ota_gap_event(struct ble_gap_event *event, void *arg);
-#endif
-
-void ble_store_config_init(void);
-
-static uint16_t 
-crc16_ccitt(const unsigned char *buf, int len);
-static esp_err_t 
-esp_ble_ota_recv_fw_handler(uint8_t *buf, uint32_t length);
 static esp_ble_ota_char_t
 find_ota_char_and_desr_by_handle(uint16_t handle);
 static int
 esp_ble_ota_notification_data(uint16_t conn_handle, uint16_t attr_handle, uint8_t cmd_ack[],
                               esp_ble_ota_char_t ota_char);
+#endif
 
-void
-esp_ble_ota_subscribe(esp_ble_ota_char_t ota_char)
-{
-    switch (ota_char) {
-    case RECV_FW_CHAR:
-        ota_notification.recv_fw_ntf_enable = true;
-        break;
-    case OTA_STATUS_CHAR:
-        ota_notification.process_bar_ntf_enable = true;
-        break;
-    case CMD_CHAR:
-        ota_notification.command_ntf_enable = true;
-        break;
-    case CUS_CHAR:
-        ota_notification.customer_ntf_enable = true;
-        break;
-    case INVALID_CHAR:
-        break;
-    }
-}
+/*----------------------------------------------------
+ * Common api's 
+ *----------------------------------------------------*/
+
+void ble_store_config_init(void);
+static uint16_t
+crc16_ccitt(const unsigned char *buf, int len);
+static esp_err_t
+esp_ble_ota_recv_fw_handler(uint8_t *buf, uint32_t length);
 
 void
 ble_ota_write_chr(struct os_mbuf *om)
@@ -178,8 +161,8 @@ write_ota_data:
     return;
 
 sector_end:
-    esp_ble_ota_recv_fw_handler(fw_buf, 4096);
-    memset(fw_buf, 0x0, 4096);
+    esp_ble_ota_recv_fw_handler(fw_buf, ota_block_size);
+    memset(fw_buf, 0x0, ota_block_size);
     fw_buf_offset = 0;
     cmd_ack[0] = om->om_data[0];
     cmd_ack[1] = om->om_data[1];
@@ -192,60 +175,6 @@ sector_end:
 #ifndef CONFIG_OTA_WITH_PROTOCOMM
     esp_ble_ota_notification_data(connection_handle, attribute_handle, cmd_ack, ota_char);
 #endif
-}
-
-void
-ble_ota_start_write_chr(struct os_mbuf *om)
-{
-    uint8_t cmd_ack[20] = {0x03, 0x00, 0x00, 0x00, 0x00,
-                           0x00, 0x00, 0x00, 0x00, 0x00,
-                           0x00, 0x00, 0x00, 0x00, 0x00,
-                           0x00, 0x00, 0x00, 0x00, 0x00
-                          };
-    uint16_t crc16;
-
-#ifndef CONFIG_OTA_WITH_PROTOCOMM
-    esp_ble_ota_char_t ota_char = find_ota_char_and_desr_by_handle(attribute_handle);
-#endif
-    if ((om->om_data[0] == 0x01) && (om->om_data[1] == 0x00)) {
-        start_ota = true;
-
-        ota_total_len = (om->om_data[2]) + (om->om_data[3] * 256) +
-                        (om->om_data[4] * 256 * 256) + (om->om_data[5] * 256 * 256 * 256);
-
-        ESP_LOGI(TAG, "recv ota start cmd, fw_length = %ld", ota_total_len);
-
-        fw_buf = (uint8_t *)malloc(BUF_LENGTH * sizeof(uint8_t));
-        if (fw_buf == NULL) {
-            ESP_LOGE(TAG, "%s -  malloc fail", __func__);
-        } else {
-            memset(fw_buf, 0x0, BUF_LENGTH);
-        }
-        cmd_ack[2] = 0x01;
-        cmd_ack[3] = 0x00;
-        crc16 = crc16_ccitt(cmd_ack, 18);
-        cmd_ack[18] = crc16 & 0xff;
-        cmd_ack[19] = (crc16 & 0xff00) >> 8;
-#ifndef CONFIG_OTA_WITH_PROTOCOMM
-        esp_ble_ota_notification_data(connection_handle, attribute_handle, cmd_ack, ota_char);
-#endif
-    } else if ((om->om_data[0] == 0x02) && (om->om_data[1] == 0x00)) {
-        printf("\nCMD_CHAR -> 0 : %d, 1 : %d", om->om_data[0],
-               om->om_data[1]);
-        start_ota = false;
-        ota_total_len = 0;
-        ESP_LOGD(TAG, "recv ota stop cmd");
-        cmd_ack[2] = 0x02;
-        cmd_ack[3] = 0x00;
-        crc16 = crc16_ccitt(cmd_ack, 18);
-        cmd_ack[18] = crc16 & 0xff;
-        cmd_ack[19] = (crc16 & 0xff00) >> 8;
-#ifndef CONFIG_OTA_WITH_PROTOCOMM
-        esp_ble_ota_notification_data(connection_handle, attribute_handle, cmd_ack, ota_char);
-#endif
-        free(fw_buf);
-        fw_buf = NULL;
-    }
 }
 
 static uint16_t crc16_ccitt(const unsigned char *buf, int len)
@@ -294,7 +223,82 @@ esp_err_t esp_ble_ota_recv_fw_data_callback(esp_ble_ota_recv_fw_cb_t callback)
     return ESP_OK;
 }
 
-#ifndef CONFIG_OTA_WITH_PROTOCOMM
+/*----------------------------------------------------
+ * Protocomm specific api's
+ *----------------------------------------------------*/
+
+#ifdef CONFIG_OTA_WITH_PROTOCOMM
+void
+esp_ble_ota_set_sizes(size_t file_size, size_t block_size)
+{
+    ota_total_len = file_size;
+    ota_block_size = block_size;
+}
+
+void
+esp_ble_ota_finish(void)
+{
+    ESP_LOGI(TAG, "Received OTA end command");
+    start_ota = false;
+    ota_total_len = 0;
+    ota_block_size = 0;
+    free(fw_buf);
+    fw_buf = NULL;
+}
+
+#else
+
+/*----------------------------------------------------
+ * OTA without protocomm api's
+ *----------------------------------------------------*/
+
+void
+ble_ota_start_write_chr(struct os_mbuf *om)
+{
+    uint8_t cmd_ack[20] = {0x03, 0x00, 0x00, 0x00, 0x00,
+                           0x00, 0x00, 0x00, 0x00, 0x00,
+                           0x00, 0x00, 0x00, 0x00, 0x00,
+                           0x00, 0x00, 0x00, 0x00, 0x00
+                          };
+    uint16_t crc16;
+
+    esp_ble_ota_char_t ota_char = find_ota_char_and_desr_by_handle(attribute_handle);
+    if ((om->om_data[0] == 0x01) && (om->om_data[1] == 0x00)) {
+        start_ota = true;
+
+        ota_total_len = (om->om_data[2]) + (om->om_data[3] * 256) +
+                        (om->om_data[4] * 256 * 256) + (om->om_data[5] * 256 * 256 * 256);
+
+        ESP_LOGI(TAG, "recv ota start cmd, fw_length = %ld", ota_total_len);
+
+        fw_buf = (uint8_t *)malloc(ota_block_size * sizeof(uint8_t));
+        if (fw_buf == NULL) {
+            ESP_LOGE(TAG, "%s -  malloc fail", __func__);
+        } else {
+            memset(fw_buf, 0x0, ota_block_size);
+        }
+        cmd_ack[2] = 0x01;
+        cmd_ack[3] = 0x00;
+        crc16 = crc16_ccitt(cmd_ack, 18);
+        cmd_ack[18] = crc16 & 0xff;
+        cmd_ack[19] = (crc16 & 0xff00) >> 8;
+        esp_ble_ota_notification_data(connection_handle, attribute_handle, cmd_ack, ota_char);
+    } else if ((om->om_data[0] == 0x02) && (om->om_data[1] == 0x00)) {
+        printf("\nCMD_CHAR -> 0 : %d, 1 : %d", om->om_data[0],
+               om->om_data[1]);
+        start_ota = false;
+        ota_total_len = 0;
+        ESP_LOGD(TAG, "recv ota stop cmd");
+        cmd_ack[2] = 0x02;
+        cmd_ack[3] = 0x00;
+        crc16 = crc16_ccitt(cmd_ack, 18);
+        cmd_ack[18] = crc16 & 0xff;
+        cmd_ack[19] = (crc16 & 0xff00) >> 8;
+        esp_ble_ota_notification_data(connection_handle, attribute_handle, cmd_ack, ota_char);
+        free(fw_buf);
+        fw_buf = NULL;
+    }
+}
 
 static void
 gatt_svr_register_cb(struct ble_gatt_register_ctxt *ctxt, void *arg)
@@ -686,7 +690,22 @@ esp_ble_ota_gap_event(struct ble_gap_event *event, void *arg)
                  event->subscribe.prev_indicate,
                  event->subscribe.cur_indicate);
 
-        esp_ble_ota_subscribe(ota_char);
+        switch (ota_char) {
+        case RECV_FW_CHAR:
+            ota_notification.recv_fw_ntf_enable = true;
+            break;
+        case OTA_STATUS_CHAR:
+            ota_notification.process_bar_ntf_enable = true;
+            break;
+        case CMD_CHAR:
+            ota_notification.command_ntf_enable = true;
+            break;
+        case CUS_CHAR:
+            ota_notification.customer_ntf_enable = true;
+            break;
+        case INVALID_CHAR:
+            break;
+        }
         return 0;
 
     case BLE_GAP_EVENT_MTU:
@@ -816,5 +835,4 @@ esp_ble_ota_host_init(void)
 
     return 0;
 }
-
 #endif
