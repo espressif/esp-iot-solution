@@ -95,9 +95,9 @@ knob_event_t iot_knob_get_event(knob_handle_t knob_handle);
  *
  * @param knob_handle A knob handle to register
  *
- * @return int32_t count_value
+ * @return int count_value
  */
-int32_t iot_knob_get_count_value(knob_handle_t knob_handle);
+int iot_knob_get_count_value(knob_handle_t knob_handle);
 
 /**
  * @brief Clear knob cout value to zero

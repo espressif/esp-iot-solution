@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v0.1.1 - 2023-1-18
+
+### Bug Fixes:
+
+* Knob:
+  * Fix callback return usr_data root pointer, the usr_data of the relevant callback will now be returned.
+
 ## v0.1.0 - 2023-1-5
 
 ### Enhancements:

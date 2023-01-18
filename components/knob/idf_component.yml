@@ -1,4 +1,4 @@
-version: "0.1.0"
+version: "0.1.1"
 description: Knob driver implemented through software pcnt
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/knob
 dependencies:

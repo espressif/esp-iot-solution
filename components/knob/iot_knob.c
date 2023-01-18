@@ -24,7 +24,7 @@ static const char *TAG = "Knob";
         goto label; \
     }
 
-#define CALL_EVENT_CB(ev)   if(knob->cb[ev])knob->cb[ev](knob, knob->usr_data)
+#define CALL_EVENT_CB(ev)   if(knob->cb[ev])knob->cb[ev](knob, knob->usr_data[ev])
 
 typedef enum {
     KNOB_READY = 0,                     /*!< Knob state: ready*/
@@ -43,7 +43,7 @@ typedef struct Knob {
     uint8_t       encoder_b_level;                             /*!< Encoder B phase current Level */
     knob_event_t  event;                                       /*!< Current event */
     uint16_t      ticks;                                       /*!< Timer interrupt count */
-    int32_t       count_value;                                 /*!< Knob count */
+    int           count_value;                                 /*!< Knob count */
     uint8_t       (*hal_knob_level)(void *hardware_data);      /*!< Get current level */
     void          *encoder_a;                                  /*!< Encoder A phase gpio number */
     void          *encoder_b;                                  /*!< Encoder B phase gpio number */
@@ -314,6 +314,7 @@ esp_err_t iot_knob_unregister_cb(knob_handle_t knob_handle, knob_event_t event)
     KNOB_CHECK(event < KNOB_EVENT_MAX, "event is invalid", ESP_ERR_INVALID_ARG);
     knob_dev_t *knob = (knob_dev_t *) knob_handle;
     knob->cb[event] = NULL;
+    knob->usr_data[event] = NULL;
     return ESP_OK;
 }
 
@@ -324,7 +325,7 @@ knob_event_t iot_knob_get_event(knob_handle_t knob_handle)
     return knob->event;
 }
 
-int32_t iot_knob_get_count_value(knob_handle_t knob_handle)
+int iot_knob_get_count_value(knob_handle_t knob_handle)
 {
     KNOB_CHECK(NULL != knob_handle, "Pointer of handle is invalid", ESP_ERR_INVALID_ARG);
     knob_dev_t *knob = (knob_dev_t *) knob_handle;
