@@ -19,6 +19,7 @@
 
 #define BUF_LENGTH                          4096
 #define OTA_IDX_NB                          4
+#define CMD_ACK_LENGTH                      20
 
 #define character_declaration_uuid          BLE_ATT_UUID_CHARACTERISTIC
 #define character_client_config_uuid        BLE_ATT_UUID_CHARACTERISTIC
@@ -86,18 +87,18 @@ crc16_ccitt(const unsigned char *buf, int len);
 static esp_err_t
 esp_ble_ota_recv_fw_handler(uint8_t *buf, uint32_t length);
 
-void
-ble_ota_write_chr(struct os_mbuf *om)
+static void
+esp_ble_ota_write_chr(struct os_mbuf *om)
 {
 #ifndef CONFIG_OTA_WITH_PROTOCOMM
     esp_ble_ota_char_t ota_char = find_ota_char_and_desr_by_handle(attribute_handle);
 #endif
 
-    uint8_t cmd_ack[20] = {0x03, 0x00, 0x00, 0x00, 0x00,
-                           0x00, 0x00, 0x00, 0x00, 0x00,
-                           0x00, 0x00, 0x00, 0x00, 0x00,
-                           0x00, 0x00, 0x00, 0x00, 0x00
-                          };
+    uint8_t cmd_ack[CMD_ACK_LENGTH] = {0x03, 0x00, 0x00, 0x00, 0x00,
+                                       0x00, 0x00, 0x00, 0x00, 0x00,
+                                       0x00, 0x00, 0x00, 0x00, 0x00,
+                                       0x00, 0x00, 0x00, 0x00, 0x00
+                                      };
     uint16_t crc16;
 
     if ((om->om_data[0] + (om->om_data[1] * 256)) != cur_sector) {
@@ -246,20 +247,26 @@ esp_ble_ota_finish(void)
     fw_buf = NULL;
 }
 
+void
+esp_ble_ota_write(uint8_t *file, size_t length)
+{
+    struct os_mbuf *om = ble_hs_mbuf_from_flat(file, length);
+    esp_ble_ota_write_chr(om);
+}
 #else
 
 /*----------------------------------------------------
  * OTA without protocomm api's
  *----------------------------------------------------*/
 
-void
+static void
 ble_ota_start_write_chr(struct os_mbuf *om)
 {
-    uint8_t cmd_ack[20] = {0x03, 0x00, 0x00, 0x00, 0x00,
-                           0x00, 0x00, 0x00, 0x00, 0x00,
-                           0x00, 0x00, 0x00, 0x00, 0x00,
-                           0x00, 0x00, 0x00, 0x00, 0x00
-                          };
+    uint8_t cmd_ack[CMD_ACK_LENGTH] = {0x03, 0x00, 0x00, 0x00, 0x00,
+                                       0x00, 0x00, 0x00, 0x00, 0x00,
+                                       0x00, 0x00, 0x00, 0x00, 0x00,
+                                       0x00, 0x00, 0x00, 0x00, 0x00
+                                      };
     uint16_t crc16;
 
     esp_ble_ota_char_t ota_char = find_ota_char_and_desr_by_handle(attribute_handle);
@@ -354,7 +361,7 @@ ble_ota_gatt_handler(uint16_t conn_handle, uint16_t attr_handle,
 
         if (ota_char == RECV_FW_CHAR) {
             if (start_ota) {
-                ble_ota_write_chr(ctxt->om);
+                esp_ble_ota_write_chr(ctxt->om);
 
             } else {
                 ESP_LOGE(TAG, "%s -  don't receive the start cmd", __func__);
@@ -447,7 +454,7 @@ esp_ble_ota_notification_data(uint16_t conn_handle, uint16_t attr_handle, uint8_
     struct os_mbuf *txom;
     bool notify_enable = false;
     int rc;
-    txom = ble_hs_mbuf_from_flat(cmd_ack, sizeof(cmd_ack));
+    txom = ble_hs_mbuf_from_flat(cmd_ack, CMD_ACK_LENGTH);
 
     switch (ota_char) {
     case RECV_FW_CHAR:
