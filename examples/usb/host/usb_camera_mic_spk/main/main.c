@@ -198,15 +198,10 @@ void app_main(void)
     // if 8bit spk, declare uint8_t *d_buffer
     uint16_t *s_buffer = (uint16_t *)wave_array_32000_16_1;
     uint16_t *d_buffer = calloc(1, buffer_size);
+    size_t offset_size = buffer_size / (uac_config.spk_bit_resolution / 8);
 
-    while(1) {
-        size_t i = 0;
-        for (; i < buffer_size/(uac_config.spk_bit_resolution/8); i++) {
-            d_buffer[i] = *(s_buffer + i*freq_offsite_step) >> downsampling_bits;
-        }
-        // write to usb speaker
-        uac_spk_streaming_write(d_buffer, buffer_size, portMAX_DELAY);
-        if ((uint32_t)(s_buffer + i) > (uint32_t)(wave_array_32000_16_1+s_buffer_size)) {
+    while (1) {
+        if ((uint32_t)(s_buffer + offset_size) >= (uint32_t)(wave_array_32000_16_1 + s_buffer_size)) {
             s_buffer = (uint16_t *)wave_array_32000_16_1;
             // mute the speaker
 #if (ENABLE_UAC_FEATURE_CONTROL)
@@ -218,7 +213,13 @@ void app_main(void)
             usb_streaming_control(STREAM_UAC_SPK, CTRL_UAC_MUTE, (void *)0);
 #endif
         } else {
-            s_buffer += i*freq_offsite_step;
+            // fill to usb buffer
+            for (size_t i = 0; i < offset_size; i++) {
+                d_buffer[i] = *(s_buffer + i * freq_offsite_step) >> downsampling_bits;
+            }
+            // write to usb speaker
+            uac_spk_streaming_write(d_buffer, buffer_size, portMAX_DELAY);
+            s_buffer += offset_size * freq_offsite_step;
         }
     }
 #endif
