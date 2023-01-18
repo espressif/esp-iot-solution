@@ -410,6 +410,7 @@ static void print_func(void)
 
     hal_get_driver_feature(QUERY_DRIVER_NAME, &name);
     ESP_LOGI(TAG, "---------------------------------------------------------------------");
+    ESP_LOGI(TAG, "lightbulb driver component version: %d.%d.%d", LIGHTBULB_DRIVER_VER_MAJOR, LIGHTBULB_DRIVER_VER_MINOR, LIGHTBULB_DRIVER_VER_PATCH);
     ESP_LOGI(TAG, "driver name: %s", name);
     ESP_LOGI(TAG, "low power control: %s", s_lb_obj->cap.enable_lowpower ? "enable" : "disable");
     ESP_LOGI(TAG, "status storage: %s", s_lb_obj->cap.enable_status_storage ? "enable" : "disable");
