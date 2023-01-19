@@ -14,3 +14,7 @@
   * Deleted subscribe command support, no longer needed for protocomm.
 
   * Added finish command support to indicated end of OTA.
+
+## v0.1.2 - 2023-01-18
+
+* Fixed warnings
