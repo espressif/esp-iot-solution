@@ -15,14 +15,17 @@
 #include "esp_bt.h"
 #include "ble_ota.h"
 
-#define OTA_TAG                             "ESP_BLE_OTA"
 #define OTA_RINGBUF_SIZE                    8192
+#define OTA_TASK_SIZE                       8192
 
-#ifdef CONFIG_OTA_WITH_PROTOCOMM
+static const char *TAG = "ESP_BLE_OTA";
+
+#ifdef CONFIG_EXAMPLE_USE_PROTOCOMM
 #include "manager.h"
 #include "scheme_ble.h"
 #include "esp_netif.h"
 
+#if CONFIG_EXAMPLE_OTA_SEC2_DEV_MODE
 static const char sec2_salt[] = {
     0x03, 0x6e, 0xe0, 0xc7, 0xbc, 0xb9, 0xed, 0xa8, 0x4c, 0x9e, 0xac, 0x97, 0xd9, 0x3d, 0xec, 0xf4
 };
@@ -53,32 +56,34 @@ static const char sec2_verifier[] = {
     0xb3, 0xbe, 0x40, 0xc5, 0xc5, 0x32, 0x29, 0x3e, 0x71, 0x64, 0x9e, 0xde, 0x8c, 0xf6, 0x75, 0xa1,
     0xe6, 0xf6, 0x53, 0xc8, 0x31, 0xa8, 0x78, 0xde, 0x50, 0x40, 0xf7, 0x62, 0xde, 0x36, 0xb2, 0xba
 };
+#endif
 
 static esp_err_t
 example_get_sec2_salt(const char **salt, uint16_t *salt_len)
 {
 #if CONFIG_EXAMPLE_OTA_SEC2_DEV_MODE
-    ESP_LOGI(OTA_TAG, "Development mode: using hard coded salt");
+    ESP_LOGI(TAG, "Development mode: using hard coded salt");
     *salt = sec2_salt;
     *salt_len = sizeof(sec2_salt);
     return ESP_OK;
 #elif CONFIG_EXAMPLE_OTA_SEC2_PROD_MODE
-    ESP_LOGE(OTA_TAG, "Not implemented!");
+    ESP_LOGE(TAG, "Not implemented!");
     return ESP_FAIL;
 #endif
+    return ESP_FAIL;
 }
 
 static esp_err_t
 example_get_sec2_verifier(const char **verifier, uint16_t *verifier_len)
 {
 #if CONFIG_EXAMPLE_OTA_SEC2_DEV_MODE
-    ESP_LOGI(OTA_TAG, "Development mode: using hard coded verifier");
+    ESP_LOGI(TAG, "Development mode: using hard coded verifier");
     *verifier = sec2_verifier;
     *verifier_len = sizeof(sec2_verifier);
     return ESP_OK;
 #elif CONFIG_EXAMPLE_OTA_SEC2_PROD_MODE
     /* This code needs to be updated with appropriate implementation to provide verifier */
-    ESP_LOGE(OTA_TAG, "Not implemented!");
+    ESP_LOGE(TAG, "Not implemented!");
     return ESP_FAIL;
 #endif
     return ESP_FAIL;
@@ -92,7 +97,7 @@ event_handler(void *arg, esp_event_base_t event_base,
     if (event_base == ESP_BLE_OTA_EVENT) {
         switch (event_id) {
         case OTA_FILE_RCV:
-            printf("\nFile received in appln layer :");
+            ESP_LOGD(TAG, "File received in appln layer :");
             ota_recv_fw_cb(event_data, 4096);
             break;
         default:
@@ -101,10 +106,10 @@ event_handler(void *arg, esp_event_base_t event_base,
     } else if (event_base == PROTOCOMM_TRANSPORT_BLE_EVENT) {
         switch (event_id) {
         case PROTOCOMM_TRANSPORT_BLE_CONNECTED:
-            ESP_LOGI(OTA_TAG, "BLE transport: Connected!");
+            ESP_LOGI(TAG, "BLE transport: Connected!");
             break;
         case PROTOCOMM_TRANSPORT_BLE_DISCONNECTED:
-            ESP_LOGI(OTA_TAG, "BLE transport: Disconnected!");
+            ESP_LOGI(TAG, "BLE transport: Disconnected!");
             break;
         default:
             break;
@@ -113,17 +118,18 @@ event_handler(void *arg, esp_event_base_t event_base,
 }
 
 static void
-get_device_service_name(char *service_name, size_t max)
+get_device_service_name(char *service_name, size_t size)
 {
     char *svc_name = "OTA_123456";
-    strcpy(service_name, svc_name);
+    strlcpy(service_name, svc_name, size);
 }
 
-#endif /* CONFIG_OTA_WITH_PROTOCOMM */
+#endif /* CONFIG_EXAMPLE_USE_PROTOCOMM */
 
 static RingbufHandle_t s_ringbuf = NULL;
 
-bool ble_ota_ringbuf_init(uint32_t ringbuf_size)
+bool
+ble_ota_ringbuf_init(uint32_t ringbuf_size)
 {
     s_ringbuf = xRingbufferCreate(ringbuf_size, RINGBUF_TYPE_BYTEBUF);
     if (s_ringbuf == NULL) {
@@ -133,7 +139,8 @@ bool ble_ota_ringbuf_init(uint32_t ringbuf_size)
     return true;
 }
 
-size_t write_to_ringbuf(const uint8_t *data, size_t size)
+size_t
+write_to_ringbuf(const uint8_t *data, size_t size)
 {
     BaseType_t done = xRingbufferSend(s_ringbuf, (void *)data, size, (TickType_t)portMAX_DELAY);
     if (done) {
@@ -143,7 +150,8 @@ size_t write_to_ringbuf(const uint8_t *data, size_t size)
     }
 }
 
-void ota_task(void *arg)
+void
+ota_task(void *arg)
 {
     esp_partition_t *partition_ptr = NULL;
     esp_partition_t partition;
@@ -153,15 +161,15 @@ void ota_task(void *arg)
     uint32_t recv_len = 0;
     uint8_t *data = NULL;
     size_t item_size = 0;
-    ESP_LOGI(OTA_TAG, "ota_task start");
+    ESP_LOGI(TAG, "ota_task start");
     // search ota partition
     partition_ptr = (esp_partition_t *)esp_ota_get_boot_partition();
     if (partition_ptr == NULL) {
-        ESP_LOGE(OTA_TAG, "boot partition NULL!\r\n");
+        ESP_LOGE(TAG, "boot partition NULL!\r\n");
         goto OTA_ERROR;
     }
     if (partition_ptr->type != ESP_PARTITION_TYPE_APP) {
-        ESP_LOGE(OTA_TAG, "esp_current_partition->type != ESP_PARTITION_TYPE_APP\r\n");
+        ESP_LOGE(TAG, "esp_current_partition->type != ESP_PARTITION_TYPE_APP\r\n");
         goto OTA_ERROR;
     }
 
@@ -179,25 +187,25 @@ void ota_task(void *arg)
 
     partition_ptr = (esp_partition_t *)esp_partition_find_first(partition.type, partition.subtype, NULL);
     if (partition_ptr == NULL) {
-        ESP_LOGE(OTA_TAG, "partition NULL!\r\n");
+        ESP_LOGE(TAG, "partition NULL!\r\n");
         goto OTA_ERROR;
     }
 
     memcpy(&partition, partition_ptr, sizeof(esp_partition_t));
     if (esp_ota_begin(&partition, OTA_SIZE_UNKNOWN, &out_handle) != ESP_OK) {
-        ESP_LOGE(OTA_TAG, "esp_ota_begin failed!\r\n");
+        ESP_LOGE(TAG, "esp_ota_begin failed!\r\n");
         goto OTA_ERROR;
     }
 
-    ESP_LOGI(OTA_TAG, "wait data from ringbuf!\r\n");
+    ESP_LOGI(TAG, "wait for data from ringbuf! fw_len = %u", esp_ble_ota_get_fw_length());
     /*deal with all receive packet*/
     for (;;) {
         data = (uint8_t *)xRingbufferReceive(s_ringbuf, &item_size, (TickType_t)portMAX_DELAY);
 
-        // ESP_LOGI(OTA_TAG,"recv: %ld, recv_total:%d, fw_len:%d!\r\n", item_size, recv_len + item_size, esp_ble_ota_get_fw_length());
+        ESP_LOGI(TAG, "recv: %u, recv_total:%"PRIu32"\n", item_size, recv_len + item_size);
         if (item_size != 0) {
             if (esp_ota_write(out_handle, (const void *)data, item_size) != ESP_OK) {
-                ESP_LOGE(OTA_TAG, "esp_ota_write failed!\r\n");
+                ESP_LOGE(TAG, "esp_ota_write failed!\r\n");
                 goto OTA_ERROR;
             }
             recv_len += item_size;
@@ -210,35 +218,37 @@ void ota_task(void *arg)
     }
 
     if (esp_ota_end(out_handle) != ESP_OK) {
-        ESP_LOGE(OTA_TAG, "esp_ota_end failed!\r\n");
+        ESP_LOGE(TAG, "esp_ota_end failed!\r\n");
         goto OTA_ERROR;
     }
 
     if (esp_ota_set_boot_partition(&partition) != ESP_OK) {
-        ESP_LOGE(OTA_TAG, "esp_ota_set_boot_partition failed!\r\n");
+        ESP_LOGE(TAG, "esp_ota_set_boot_partition failed!\r\n");
         goto OTA_ERROR;
     }
 
     esp_restart();
 
 OTA_ERROR:
-
+    ESP_LOGE(TAG, "OTA failed");
     vTaskDelete(NULL);
 }
 
-void ota_recv_fw_cb(uint8_t *buf, uint32_t length)
+void
+ota_recv_fw_cb(uint8_t *buf, uint32_t length)
 {
     write_to_ringbuf(buf, length);
 }
 
-static void ota_task_init(void)
+static void
+ota_task_init(void)
 {
-    xTaskCreate(&ota_task, "ota_task", OTA_RINGBUF_SIZE, NULL, 1, NULL);
-
+    xTaskCreate(&ota_task, "ota_task", OTA_TASK_SIZE, NULL, 5, NULL);
     return;
 }
 
-void app_main()
+void
+app_main(void)
 {
     esp_err_t ret;
     esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
@@ -252,11 +262,11 @@ void app_main()
     ESP_ERROR_CHECK(ret);
 
     if (!ble_ota_ringbuf_init(OTA_RINGBUF_SIZE)) {
-        ESP_LOGE(OTA_TAG, "%s init ringbuf fail", __func__);
+        ESP_LOGE(TAG, "%s init ringbuf fail", __func__);
         return;
     }
 
-#ifdef CONFIG_OTA_WITH_PROTOCOMM
+#if CONFIG_EXAMPLE_USE_PROTOCOMM
     /* Initialize TCP/IP */
     ESP_ERROR_CHECK(esp_netif_init());
 
@@ -280,8 +290,10 @@ void app_main()
 
     char service_name[12];
     get_device_service_name(service_name, sizeof(service_name));
+    esp_ble_ota_security_t security = ESP_BLE_OTA_SECURITY_2;
+
 #ifdef CONFIG_EXAMPLE_OTA_SECURITY_VERSION_1
-    esp_ble_ota_security_t security = ESP_BLE_OTA_SECURITY_1;
+    security = ESP_BLE_OTA_SECURITY_1;
 
     /* Do we want a proof-of-possession (ignored if Security 0 is selected):
      *      - this should be a string with length > 0
@@ -295,8 +307,6 @@ void app_main()
     esp_ble_ota_security1_params_t *sec_params = pop;
 
 #elif CONFIG_EXAMPLE_OTA_SECURITY_VERSION_2
-    esp_ble_ota_security_t security = ESP_BLE_OTA_SECURITY_2;
-
     /* The username must be the same one, which has been used in the generation of salt and verifier */
 
     esp_ble_ota_security2_params_t sec2_params = {};
@@ -310,28 +320,27 @@ void app_main()
 
     ESP_ERROR_CHECK(esp_ble_ota_start(security, (const void *) sec_params, service_name, service_key));
 #else
-
     ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
 
     ret = esp_bt_controller_init(&bt_cfg);
     if (ret) {
-        ESP_LOGE(OTA_TAG, "%s enable controller failed: %s\n", __func__, esp_err_to_name(ret));
+        ESP_LOGE(TAG, "%s enable controller failed: %s\n", __func__, esp_err_to_name(ret));
         return;
     }
 
     ret = esp_bt_controller_enable(ESP_BT_MODE_BLE);
     if (ret) {
-        ESP_LOGE(OTA_TAG, "%s enable controller failed: %s\n", __func__, esp_err_to_name(ret));
+        ESP_LOGE(TAG, "%s enable controller failed: %s\n", __func__, esp_err_to_name(ret));
         return;
     }
 
     if (esp_ble_ota_host_init() != ESP_OK) {
-        ESP_LOGE(OTA_TAG, "%s initialoze ble host fail: %s\n", __func__, esp_err_to_name(ret));
+        ESP_LOGE(TAG, "%s initialoze ble host fail: %s\n", __func__, esp_err_to_name(ret));
         return;
     }
 
     esp_ble_ota_recv_fw_data_callback(ota_recv_fw_cb);
 
-#endif /* CONFIG_OTA_WITH_PROTOCOMM */
+#endif /* CONFIG_EXAMPLE_USE_PROTOCOMM */
     ota_task_init();
 }

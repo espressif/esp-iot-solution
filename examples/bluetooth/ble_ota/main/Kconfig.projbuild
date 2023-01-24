@@ -4,7 +4,7 @@ menu "Example Configuration"
         bool "Protocomm security version"
         default EXAMPLE_OTA_SECURITY_VERSION_2
         help
-            BLE OTA component offers 3 security versions.
+            OTA component offers 3 security versions.
             The example offers a choice between security version 1 and 2.
 
         config EXAMPLE_OTA_SECURITY_VERSION_1
@@ -36,4 +36,10 @@ menu "Example Configuration"
                 This enables the production mode for
                 security version 2.
     endchoice
+
+    config EXAMPLE_USE_PROTOCOMM
+        bool "Use protocomm layer for security"
+        select OTA_WITH_PROTOCOMM
+        help
+            This enables protocomm level security to transfer file via OTA
 endmenu
