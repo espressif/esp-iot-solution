@@ -1,3 +1,3 @@
-idf_component_get_property(CMAKE_UTILITIES_DIR espressif__cmake_utilities COMPONENT_DIR)
+# Include all cmake modules
 
-include(${CMAKE_UTILITIES_DIR}/package_manager.cmake)
+include(package_manager)

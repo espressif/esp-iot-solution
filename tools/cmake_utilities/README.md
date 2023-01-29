@@ -11,16 +11,16 @@ This component is aiming to provide some useful CMake utilities outside of ESP-I
       espressif/cmake_utilities: "0.*"
     ```
 
-2. Include the CMake file you needed in your component's CMakeLists.txt.
+2. Include the CMake file you needed in your component's CMakeLists.txt after idf_component_register.
 
     ```cmake
-    idf_component_get_property(CMAKE_UTILITIES_DIR espressif__cmake_utilities COMPONENT_DIR)
-
+    // Note: should remove .cmake postfix when using include(), otherwise the requested file will not found
+    // Note: should place this line after `idf_component_register` function
     // Include the top CMake file which will include other CMake files
-    include(${CMAKE_UTILITIES_DIR}/cmake_utilities.cmake)
+    include(cmake_utilities)
 
     // Or, only include the one you needed.
-    include(${CMAKE_UTILITIES_DIR}/package_manager.cmake)
+    include(package_manager)
     ```
 
 3. Then you can use the corresponding CMake function which is provided by the CMake file.
