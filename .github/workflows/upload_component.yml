@@ -13,7 +13,7 @@ jobs:
         with:
           submodules: 'recursive'
       - name: Upload components to component service
-        uses: espressif/github-actions/upload_components@master
+        uses: espressif/upload-components-ci-action@v1
         with:
           directories: >
             components/audio/pwm_audio;
