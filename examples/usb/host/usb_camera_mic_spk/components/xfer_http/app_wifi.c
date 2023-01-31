@@ -143,16 +143,18 @@ void app_wifi_main()
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
     wifi_mode_t mode = WIFI_MODE_NULL;
-    esp_netif_t *wifi_netif = NULL;
+    esp_netif_t *wifi_ap_netif = NULL;
+    esp_netif_t *wifi_sta_netif = NULL;
     if (strlen(EXAMPLE_ESP_WIFI_AP_SSID) && strlen(EXAMPLE_ESP_WIFI_SSID)) {
         mode = WIFI_MODE_APSTA;
-        wifi_netif = esp_netif_create_default_wifi_ap();
+        wifi_ap_netif = esp_netif_create_default_wifi_ap();
+        wifi_sta_netif = esp_netif_create_default_wifi_sta();
     } else if (strlen(EXAMPLE_ESP_WIFI_AP_SSID)) {
         mode = WIFI_MODE_AP;
-        wifi_netif = esp_netif_create_default_wifi_ap();
+        wifi_ap_netif = esp_netif_create_default_wifi_ap();
     } else if (strlen(EXAMPLE_ESP_WIFI_SSID)) {
         mode = WIFI_MODE_STA;
-        wifi_netif = esp_netif_create_default_wifi_sta();
+        wifi_sta_netif = esp_netif_create_default_wifi_sta();
     }
 
     if (mode == WIFI_MODE_NULL) {
@@ -167,11 +169,11 @@ void app_wifi_main()
     ESP_ERROR_CHECK(esp_wifi_set_mode(mode));
     ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_FLASH));
     if (mode & WIFI_MODE_AP) {
-        wifi_init_softap(wifi_netif);
+        wifi_init_softap(wifi_ap_netif);
     }
 
     if (mode & WIFI_MODE_STA) {
-        wifi_init_sta(wifi_netif);
+        wifi_init_sta(wifi_sta_netif);
     }
     ESP_ERROR_CHECK(esp_wifi_start());
 }
