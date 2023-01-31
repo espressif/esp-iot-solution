@@ -10,6 +10,7 @@
 
 * Fix kelvin 2 percentage
 * Fix effect timer time
+* Modify the logic of low power mode entry and exit
 
 ## v0.0.9 - 2022-12-28
 
