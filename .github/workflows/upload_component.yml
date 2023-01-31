@@ -20,6 +20,7 @@ jobs:
             components/ble_profiles/esp/ble_ota;
             components/button;
             components/knob;
+            components/led/led_indicator;
             components/led/lightbulb_driver;
             components/usb/usb_stream;
             tools/cmake_utilities;

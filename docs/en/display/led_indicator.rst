@@ -7,7 +7,7 @@ As one of the simplest output peripherals, LED indicators can indicate the curre
 - Can define multiple groups of different blink types
 - Can define the priority of blink types
 - Can set up multiple indicators
-
+- LEDC and other drivers support adjustable brightness, gradient
 
 Instructions
 ^^^^^^^^^^^^^^^^^
@@ -37,6 +37,17 @@ Example 2. define a blink loop: turn on 0.05 s, turn off 0.1 s, turn on 0.15 s, 
         {LED_BLINK_HOLD, LED_STATE_ON, 150},              // step3: turn on LED 150 ms
         {LED_BLINK_HOLD, LED_STATE_OFF, 100},             // step4: turn off LED 100 ms
         {LED_BLINK_STOP, 0, 0},                           // step5: stop blink (off)
+    };
+
+Example 3. Define a cyclic blink: 0.05s fade, 0.5s fade, and the light goes off at the end of execution. (GPIO mode is not supported)
+
+.. code:: c
+
+    const blink_step_t test_blink_breathe[] = {
+        {LED_BLINK_BREATHE, LED_STATE_ON, 500},              // step1: fade from off to on 500ms
+        {LED_BLINK_BREATHE, LED_STATE_OFF, 500},             // step2: fade from on to off 500ms
+        {LED_BLINK_BRIGHTNESS, 50, 500},                     // step3: set to half brightness 500 ms
+        {LED_BLINK_STOP, 0, 0},                              // step4: stop blink (50% brightness)
     };
 
 After defining a blink type, you need to add its corresponding enumeration member to ``led_indicator_blink_type_t`` and then add the type to the blink type list ``led_indicator_blink_lists``, as the following example:
@@ -78,8 +89,13 @@ Create an indicator by specifying an IO and a set of configuration information.
 .. code:: c
 
     led_indicator_config_t config = {
-        .off_level = 0,                              // attach led positive side to esp32 gpio pin
         .mode = LED_GPIO_MODE,
+        .led_gpio_config = {
+            .active_level = 1,
+            .gpio_num = 1,
+        },
+        .blink_lists = led_indicator_get_sample_lists(),
+        .blink_list_num = led_indicator_get_sample_lists_num(),
     };
     led_indicator_handle_t led_handle = led_indicator_create(8, &config); // attach to gpio 8
 
@@ -103,6 +119,18 @@ Delete an indicator: you can also delete an indicator to release resources if th
 
     led_indicator_delete(&led_handle);
 
+Preempt operation: You can flash the specified type directly at any time.
+
+.. code:: c
+
+    led_indicator_preempt_start(led_handle, BLINK_TEST_BLINK_LOOP);
+
+Stop preempt: You can use the stop queueing function to cancel the blinking mode that is being queued.
+
+.. code:: c
+
+    led_indicator_preempt_stop(led_handle, BLINK_TEST_BLINK_LOOP);
+
 .. Note::
 
     This component supports thread-safe operations. You can share the LED indicator handle ``led_indicator_handle_t`` with global variables, or use :cpp:type:`led_indicator_get_handle` to get the handle in other threads via the LED's IO number for operation.
@@ -119,8 +147,11 @@ Custom light blink
     };
 
     led_indicator_config_t config = {
-        .off_level = 0,
         .mode = LED_GPIO_MODE,
+        .led_gpio_config = {
+            .active_level = 1,
+            .gpio_num = 1,
+        },
         .blink_lists = led_blink_lst,
         .blink_list_num = BLINK_MAX,
     };
