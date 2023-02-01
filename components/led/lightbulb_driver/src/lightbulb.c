@@ -410,6 +410,7 @@ static void print_func(void)
 
     hal_get_driver_feature(QUERY_DRIVER_NAME, &name);
     ESP_LOGI(TAG, "---------------------------------------------------------------------");
+    ESP_LOGI(TAG, "lightbulb driver component version: %d.%d.%d", LIGHTBULB_DRIVER_VER_MAJOR, LIGHTBULB_DRIVER_VER_MINOR, LIGHTBULB_DRIVER_VER_PATCH);
     ESP_LOGI(TAG, "driver name: %s", name);
     ESP_LOGI(TAG, "low power control: %s", s_lb_obj->cap.enable_lowpower ? "enable" : "disable");
     ESP_LOGI(TAG, "status storage: %s", s_lb_obj->cap.enable_status_storage ? "enable" : "disable");
@@ -811,10 +812,6 @@ esp_err_t lightbulb_set_hsv(uint16_t hue, uint8_t saturation, uint8_t value)
 
     esp_err_t err = ESP_OK;
 
-    if (CHECK_LOW_POWER_FUNC_IS_ENABLE()) {
-        xTimerStop(s_lb_obj->power_timer, 0);
-    }
-
     if (CHECK_AUTO_STATUS_STORAGE_FUNC_IS_ENABLE()) {
         xTimerReset(s_lb_obj->storage_timer, 0);
     }
@@ -824,6 +821,10 @@ esp_err_t lightbulb_set_hsv(uint16_t hue, uint8_t saturation, uint8_t value)
     }
 
     if (s_lb_obj->status.on || CHECK_AUTO_ON_FUNC_IS_ENABLE()) {
+        if (CHECK_LOW_POWER_FUNC_IS_ENABLE()) {
+            xTimerStop(s_lb_obj->power_timer, 0);
+        }
+
         uint16_t color_value[5] = { 0 };
         uint16_t fade_time = CALCULATE_FADE_TIME();
         uint8_t channel_mask = get_channel_mask(WORK_COLOR);
@@ -876,10 +877,6 @@ esp_err_t lightbulb_set_cctb(uint16_t cct, uint8_t brightness)
 
     esp_err_t err = ESP_OK;
 
-    if (CHECK_LOW_POWER_FUNC_IS_ENABLE()) {
-        xTimerStop(s_lb_obj->power_timer, 0);
-    }
-
     if (CHECK_AUTO_STATUS_STORAGE_FUNC_IS_ENABLE()) {
         xTimerReset(s_lb_obj->storage_timer, 0);
     }
@@ -889,6 +886,10 @@ esp_err_t lightbulb_set_cctb(uint16_t cct, uint8_t brightness)
     }
 
     if (s_lb_obj->status.on || CHECK_AUTO_ON_FUNC_IS_ENABLE()) {
+        if (CHECK_LOW_POWER_FUNC_IS_ENABLE()) {
+            xTimerStop(s_lb_obj->power_timer, 0);
+        }
+
         uint16_t white_value[5] = { 0 };
         uint16_t fade_time = CALCULATE_FADE_TIME();
         uint8_t channel_mask = get_channel_mask(WORK_WHITE);

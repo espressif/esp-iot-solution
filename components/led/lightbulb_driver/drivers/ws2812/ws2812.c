@@ -22,9 +22,9 @@
 
 static const char *TAG = "ws2812";
 
-#define WS28128_SPI_SPEED_HZ    (2400 *1000)
-#define WS28128_LED_BUF         (9)
-#define WS28128_LED_BUF_BIT     (WS28128_LED_BUF * 8)
+#define WS2812_SPI_SPEED_HZ     (2400 * 1000)
+#define WS2812_LED_BUF          (9)
+#define WS2812_LED_BUF_BIT      (WS2812_LED_BUF * 8)
 
 typedef struct {
     spi_device_handle_t spi_handle;
@@ -71,10 +71,10 @@ static void set_data_bit(uint8_t data, uint8_t *buf)
 
 static void generate_data(uint32_t index, uint8_t red, uint8_t green, uint8_t blue, uint8_t *out_buf)
 {
-    memset(out_buf + (index) * WS28128_LED_BUF, 0, WS28128_LED_BUF);
-    set_data_bit(green, out_buf + (index) * WS28128_LED_BUF);
-    set_data_bit(red, out_buf + (index) * WS28128_LED_BUF + 3);
-    set_data_bit(blue, out_buf + (index) * WS28128_LED_BUF + 6);
+    memset(out_buf + (index) * WS2812_LED_BUF, 0, WS2812_LED_BUF);
+    set_data_bit(green, out_buf + (index) * WS2812_LED_BUF);
+    set_data_bit(red, out_buf + (index) * WS2812_LED_BUF + 3);
+    set_data_bit(blue, out_buf + (index) * WS2812_LED_BUF + 6);
 }
 
 static void cleanup(void)
@@ -105,7 +105,7 @@ esp_err_t ws2812_init(driver_ws2812_t *config)
     s_ws2812 = calloc(1, sizeof(ws2812_handle_t));
     WS2812_CHECK(err == ESP_OK, "alloc fail", return ESP_ERR_NO_MEM);
     s_ws2812->led_num = config->led_num;
-    s_ws2812->buf_size = s_ws2812->led_num * WS28128_LED_BUF;
+    s_ws2812->buf_size = s_ws2812->led_num * WS2812_LED_BUF;
 
     s_ws2812->buf = heap_caps_malloc(s_ws2812->buf_size, MALLOC_CAP_DMA);
     memset(s_ws2812->buf, 0, s_ws2812->buf_size);
@@ -119,14 +119,14 @@ esp_err_t ws2812_init(driver_ws2812_t *config)
         .sclk_io_num = -1,
         .quadwp_io_num = -1,
         .quadhd_io_num = -1,
-        .max_transfer_sz = config->led_num * WS28128_LED_BUF_BIT,
+        .max_transfer_sz = config->led_num * WS2812_LED_BUF_BIT,
     };
 
     spi_device_interface_config_t devcfg = {
         .command_bits = 0,
         .address_bits = 0,
         .dummy_bits = 0,
-        .clock_speed_hz = WS28128_SPI_SPEED_HZ,
+        .clock_speed_hz = WS2812_SPI_SPEED_HZ,
         .duty_cycle_pos = 128,
         .mode = 0,
         .spics_io_num = -1,
@@ -141,7 +141,7 @@ esp_err_t ws2812_init(driver_ws2812_t *config)
 #endif
     WS2812_CHECK(err == ESP_OK, "spi_bus_initialize error", return err);
 
-#if CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32H2
+#if !CONFIG_IDF_TARGET_ESP32
     spi_dev_t *hw = spi_periph_signal[SPI2_HOST].hw;
     hw->ctrl.d_pol = 0;
 #endif
@@ -175,5 +175,5 @@ esp_err_t ws2812_set_rgb_channel(uint8_t value_r, uint8_t value_g, uint8_t value
         generate_data(i, value_r, value_g, value_b, s_ws2812->buf);
     }
 
-    return _write(s_ws2812->buf, s_ws2812->led_num * WS28128_LED_BUF_BIT);
+    return _write(s_ws2812->buf, s_ws2812->led_num * WS2812_LED_BUF_BIT);
 }
