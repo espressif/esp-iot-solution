@@ -428,6 +428,7 @@ typedef struct _uvc_stream_handle {
     /** Current control block */
     struct uvc_stream_ctrl cur_ctrl;
     uint8_t fid;
+    uint8_t reassembling;
     uint32_t seq, hold_seq;
     uint32_t pts, hold_pts;
     uint32_t last_scr, hold_last_scr;
@@ -471,8 +472,7 @@ typedef struct {
     void *_event_data;
 } _uvc_event_msg_t;
 
-static inline void _uvc_process_payload(_uvc_stream_handle_t *strmh, uint8_t *payload, size_t payload_len);
-
+static inline void _uvc_process_payload(_uvc_stream_handle_t *strmh, size_t req_len, uint8_t *payload, size_t payload_len);
 /*------------------------------------------------ USB Port Code ----------------------------------------------------*/
 
 static bool _usb_port_callback(hcd_port_handle_t port_hdl, hcd_port_event_t port_event, void *user_arg, bool in_isr)
@@ -803,7 +803,7 @@ IRAM_ATTR static void _processing_uvc_pipe(hcd_pipe_handle_t pipe_handle, bool i
     _uvc_stream_handle_t *strmh = (_uvc_stream_handle_t *)(urb_done->transfer.context);
     if (urb_done->transfer.num_isoc_packets == 0) { // Bulk transfer
         if (urb_done->transfer.actual_num_bytes > 0) {
-            _uvc_process_payload(strmh, urb_done->transfer.data_buffer, urb_done->transfer.actual_num_bytes);
+            _uvc_process_payload(strmh, urb_done->transfer.num_bytes, urb_done->transfer.data_buffer, urb_done->transfer.actual_num_bytes);
         }
     } else { // isoc transfer
         size_t index = 0;
@@ -816,7 +816,7 @@ IRAM_ATTR static void _processing_uvc_pipe(hcd_pipe_handle_t pipe_handle, bool i
             uint8_t *simplebuffer = urb_done->transfer.data_buffer + (index * s_uvc_dev.vs_ifc->ep_mps);
             ++index;
             ESP_LOGV(TAG, "process payload=%u", index);
-            _uvc_process_payload(strmh, simplebuffer, (urb_done->transfer.isoc_packet_desc[i].actual_num_bytes));
+            _uvc_process_payload(strmh, (urb_done->transfer.isoc_packet_desc[i].num_bytes), simplebuffer, (urb_done->transfer.isoc_packet_desc[i].actual_num_bytes));
         }
     }
 
@@ -1693,7 +1693,7 @@ static esp_err_t _uvc_vs_commit_control(hcd_pipe_handle_t pipe_handle, uvc_strea
 
     ESP_LOGI(TAG, "GET_CUR Probe");
     USB_CTRL_UVC_PROBE_GET_REQ((usb_setup_packet_t *)urb_ctrl->transfer.data_buffer);
-    urb_ctrl->transfer.num_bytes = s_usb_dev.ep_mps; //IN should be integer multiple of MPS
+    urb_ctrl->transfer.num_bytes = sizeof(usb_setup_packet_t) + usb_round_up_to_mps(((usb_setup_packet_t *)urb_ctrl->transfer.data_buffer)->wLength, s_usb_dev.ep_mps); //IN should be integer multiple of MPS
     ret = hcd_urb_enqueue(pipe_handle, urb_ctrl);
     UVC_CHECK_GOTO(ESP_OK == ret, "urb enqueue failed", free_urb_);
     ret = _default_pipe_event_wait_until(pipe_handle, HCD_PIPE_EVENT_URB_DONE, pdMS_TO_TICKS(TIMEOUT_USB_CTRL_XFER_MS), false);
@@ -1897,69 +1897,93 @@ void _uvc_populate_frame(_uvc_stream_handle_t *strmh)
 }
 
 /**
- * @brief Process each payload of isoc transfer
+ * @brief Process each payload of uvc transfer
  *
  * @param strmh stream handle
  * @param payload payload buffer
  * @param payload_len payload buffer length
  */
-static inline void _uvc_process_payload(_uvc_stream_handle_t *strmh, uint8_t *payload, size_t payload_len)
+static inline void _uvc_process_payload(_uvc_stream_handle_t *strmh, size_t req_len, uint8_t *payload, size_t payload_len)
 {
-    size_t header_len;
-    uint8_t header_info;
-    size_t data_len;
+    size_t header_len = 0;
+    size_t variable_offset = 0;
+    uint8_t header_info = 0;
+    size_t data_len = 0;
+    uvc_xfer_t bulk_xfer = (s_uvc_dev.xfer_type==UVC_XFER_BULK)?1:0;
+    uint8_t flag_lstp = 0;
+    uint8_t flag_zlp = 0;
+    uint8_t flag_rsb = 0;
 
-    /* ignore empty payload transfers */
-    if (payload_len == 0) {
-        ESP_LOGV(TAG, "payload_len == 0");
+    if (bulk_xfer) {
+        if (payload_len == req_len) {
+            //transfer not complete
+            flag_rsb = 1;
+        } else if (payload_len == 0) {
+            flag_zlp = 1;
+            ESP_LOGV(TAG, "payload_len == 0");
+        } else {
+            flag_lstp = 1;
+        }
+    } else if (payload_len == 0){
+        // ignore empty payload transfers
         return;
     }
 
     /********************* processing header *******************/
-    header_len = payload[0];
+    if (!flag_zlp) {
+        ESP_LOGV(TAG, "zlp=%d, lstp=%d, req_len=%d, payload_len=%d, first=0x%02x, second=0x%02x", flag_zlp, flag_lstp, req_len, payload_len, payload[0], payload_len>1?payload[1]:0);
+        // make sure this is a header, judge from header length and bit field
+        if (payload[0] == 12 && payload_len >= 12 && (payload[1] & 0x80) && !(payload[1] & 0x30)) {
+            header_len = payload[0];
+            data_len = payload_len - header_len;
+            /* checking the end-of-header */
+            variable_offset = 2;
+            header_info = payload[1];
 
-    if (header_len != 12 || header_len > payload_len) {
-        ESP_LOGW(TAG, "bogus packet: actual_len=%zd, header_len=%zd\n", payload_len, header_len);
-        return;
-    }
-
-    data_len = payload_len - header_len;
-    /* checking the end-of-header */
-    size_t variable_offset = 2;
-    header_info = payload[1];
-
-    ESP_LOGV(TAG, "len=%u info=%02x, payload_len = %u, last_pts = %"PRIu32" , last_scr = %"PRIu32"", header_len, header_info, payload_len, strmh->pts, strmh->last_scr);
-    ESP_LOGV(TAG, "uvc payload = %02x %02x...%02x %02x\n", payload[header_len], payload[header_len + 1], payload[payload_len - 2], payload[payload_len - 1]);
-    /* ERR bit defined in Stream Header*/
-    if (header_info & 0x40) {
-        ESP_LOGW(TAG, "bad packet: error bit set");
-        return;
-    }
-
-    if (strmh->fid != (header_info & 1) && strmh->got_bytes != 0) {
-        /* The frame ID bit was flipped, but we have image data sitting
-            around from prior transfers. This means the camera didn't send
-            an EOF for the last transfer of the previous frame. */
-        ESP_LOGD(TAG, "SWAP NO EOF %d", strmh->got_bytes);
-        /* clean whole no-flipped buffer */
-        if (s_uvc_dev.xfer_type == UVC_XFER_BULK) {
-            // compatible with no standard camera
-            _uvc_swap_buffers(strmh);
+            ESP_LOGV(TAG, "header=%u info=0x%02x, payload_len = %u, last_pts = %"PRIu32" , last_scr = %"PRIu32"", header_len, header_info, payload_len, strmh->pts, strmh->last_scr);
+            if (flag_rsb) { 
+                ESP_LOGV(TAG, "reassembling start ...");
+                strmh->reassembling = 1;
+            }
+            /* ERR bit defined in Stream Header*/
+            if (header_info & 0x40) {
+                ESP_LOGW(TAG, "bad packet: error bit set");
+                strmh->reassembling = 0;
+                return;
+            }
+        } else if (strmh->reassembling) {
+            ESP_LOGV(TAG, "reassembling %u + %u", strmh->got_bytes, payload_len);
+            data_len = payload_len;
         } else {
-            _uvc_drop_buffers(strmh);
+            if (payload_len > 1) ESP_LOGD(TAG, "bogus packet: len = %u %02x %02x...%02x %02x\n", payload_len, payload[0], payload[1], payload[payload_len - 2], payload[payload_len - 1]);
+            return;
         }
     }
 
-    strmh->fid = header_info & 1;
+    if (header_info) {
+        if (strmh->fid != (header_info & 1) && strmh->got_bytes != 0) {
+            /* The frame ID bit was flipped, but we have image data sitting
+                around from prior transfers. This means the camera didn't send
+                an EOF for the last transfer of the previous frame. */
+#if CONFIG_UVC_DROP_NO_EOF_FRAME
+            ESP_LOGW(TAG, "DROP NO EOF, got data=%u B", strmh->got_bytes);
+            _uvc_drop_buffers(strmh);
+#else
+            ESP_LOGD(TAG, "SWAP NO EOF %d", strmh->got_bytes);
+            _uvc_swap_buffers(strmh);
+#endif
+        }
 
-    if (header_info & (1 << 2)) {
-        strmh->pts = DW_TO_INT(payload + variable_offset);
-        variable_offset += 4;
-    }
+        strmh->fid = header_info & 1;
+        if (header_info & (1 << 2)) {
+            strmh->pts = DW_TO_INT(payload + variable_offset);
+            variable_offset += 4;
+        }
 
-    if (header_info & (1 << 3)) {
-        strmh->last_scr = DW_TO_INT(payload + variable_offset);
-        variable_offset += 6;
+        if (header_info & (1 << 3)) {
+            strmh->last_scr = DW_TO_INT(payload + variable_offset);
+            variable_offset += 6;
+        }
     }
 
     /********************* processing data *****************/
@@ -1967,19 +1991,27 @@ static inline void _uvc_process_payload(_uvc_stream_handle_t *strmh, uint8_t *pa
         if (strmh->got_bytes + data_len > s_uvc_dev.xfer_buffer_size) {
             /* This means transfer buffer Not enough for whole frame, just drop whole buffer here.
             Please increase buffer size to handle big frame*/
-            ESP_LOGW(TAG, "Transfer buffer overflow, got data=%u B", strmh->got_bytes + data_len);
+#if CONFIG_UVC_DROP_OVERFLOW_FRAME
+            ESP_LOGW(TAG, "Transfer buffer overflow, got data=%u B, last=%u", strmh->got_bytes + data_len, data_len);
             _uvc_drop_buffers(strmh);
+#else
+            ESP_LOGD(TAG, "SWAP overflow %d", strmh->got_bytes);
+            _uvc_swap_buffers(strmh);
+#endif
+            strmh->reassembling = 0;
             return;
         } else {
+            if (payload_len > 1) ESP_LOGV(TAG, "uvc payload = %02x %02x...%02x %02x\n", payload[header_len], payload[header_len + 1], payload[payload_len - 2], payload[payload_len - 1]);
             memcpy(strmh->outbuf + strmh->got_bytes, payload + header_len, data_len);
         }
 
         strmh->got_bytes += data_len;
     }
 
-    if (header_info & (1 << 1)) {
+    if ((header_info & (1 << 1)) || flag_zlp || flag_lstp) {
         /* The EOF bit is set, so publish the complete frame */
-        _uvc_swap_buffers(strmh);
+        if (strmh->got_bytes != 0) _uvc_swap_buffers(strmh);
+        strmh->reassembling = 0;
     }
 }
 
@@ -3231,13 +3263,14 @@ esp_err_t uvc_streaming_config(const uvc_config_t *config)
     if (s_uvc_dev.xfer_type == UVC_XFER_BULK) {
         // raw cost: NUM_BULK_STREAM_URBS * 1 * ep_mps
         s_usb_itf[STREAM_UVC].xfer_type = UVC_XFER_BULK;
-        s_usb_itf[STREAM_UVC].urb_num = NUM_BULK_STREAM_URBS;
         s_usb_itf[STREAM_UVC].packets_per_urb = 1;
         // Note: According to UVC 1.5 2.4.3.2.1, each packet should have a header added, but most cameras don't.
         // Therefore, a large buffer should be prepared to ensure that a frame can be received.
 #ifdef CONFIG_BULK_BYTES_PER_URB_SAME_AS_FRAME
+        s_usb_itf[STREAM_UVC].urb_num = 1;
         s_usb_itf[STREAM_UVC].bytes_per_packet = config->frame_buffer_size;
 #else
+        s_usb_itf[STREAM_UVC].urb_num = NUM_BULK_STREAM_URBS;
         s_usb_itf[STREAM_UVC].bytes_per_packet = NUM_BULK_BYTES_PER_URB;
 #endif
     } else {

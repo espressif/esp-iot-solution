@@ -1,5 +1,20 @@
 # ChangeLog
 
+## v0.4.2 - 2023-01-30
+
+### Enhancements:
+
+* Camera:
+  * Disable BULK_BYTES_PER_URB_SAME_AS_FRAME by default, support reassemble bulk package segment (will save one image frame size RAM)
+  * Add config UVC_DROP_NO_EOF_FRAME, if disable(default) the frame with no EOF will be reserved (MJPEG may broken)
+  * Add config UVC_DROP_OVERFLOW_FRAME, if enable(default) the overflow frame will be dropped
+
+### Bug Fixes:
+
+* Camera
+  * fix transfer size in GET_CUR Probe stage
+
+
 ## v0.4.1 - 2023-01-05
 
 ### Enhancements:
