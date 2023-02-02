@@ -1,0 +1,26 @@
+menu "IoT USB Host CDC"
+
+    config CDC_SEND_DTE_ACTIVE
+        bool "Set control line state during init"
+        default n
+    config CDC_BULK_IN_URB_NUM
+        int "cdc bulk in urb number"
+        default 2
+        help
+            bulk in urb number, increase to handle heavy traffic
+    config CDC_BULK_OUT_URB_NUM
+        int "cdc bulk out urb number"
+        default 2
+        help
+            bulk out urb number, increase to handle heavy traffic
+    config CDC_BULK_IN_URB_BUFFER_SIZE
+        int "cdc bulk in urb buffer size"
+        default 512
+        help
+            buffer size of each bulk in urb, should be multiple of endpoint mps
+    config CDC_BULK_OUT_URB_BUFFER_SIZE
+        int "cdc bulk out urb buffer size"
+        default 512
+        help
+            buffer size of each bulk out urb
+endmenu

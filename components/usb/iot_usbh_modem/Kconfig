@@ -1,0 +1,171 @@
+menu "IoT USB Host Modem"
+
+    choice MODEM_TARGET
+        prompt "Choose Modem Board"
+        default MODEM_TARGET_ML302_DNLM
+
+        config MODEM_TARGET_ML302_DNLM
+            bool "ML302-DNLM/CNLM"
+        config MODEM_TARGET_AIR724UG_NFM
+            bool "AIR724UG-NFM"
+        config MODEM_TARGET_EC600N_CNLA_N05
+            bool "EC600NCNLA-N05"
+        config MODEM_TARGET_EC600N_CNLC_N06
+            bool "EC600NCNLC-N06"
+        config MODEM_TARGET_A7600C1
+            bool "A7600C1"
+        config MODEM_TARGET_BG95_M3
+            bool "BG95M3"
+        config MODEM_TARGET_BG96_MA
+            bool "BG96MA"
+        config MODEM_TARGET_MC610_EU
+            bool "MC610_EU"
+        config MODEM_TARGET_USER
+            bool "User Defined"
+    endchoice
+
+    config MODEM_TARGET_NAME
+        string
+        default "ML302-DNLM/CNLM" if MODEM_TARGET_ML302_DNLM
+        default "AIR724UG-NFM" if MODEM_TARGET_AIR724UG_NFM
+        default "EC600NCNLA-N05" if MODEM_TARGET_EC600N_CNLA_N05
+        default "EC600NCNLC-N06" if MODEM_TARGET_EC600N_CNLC_N06
+        default "A7600C1" if MODEM_TARGET_A7600C1
+        default "BG95M3" if MODEM_TARGET_BG95_M3
+        default "BG96MA" if MODEM_TARGET_BG96_MA
+        default "MC610_EU" if MODEM_TARGET_MC610_EU
+        default "User Defined" if MODEM_TARGET_USER
+
+    config MODEM_SUPPORT_SECONDARY_AT_PORT
+        bool "Enable Dual CDC Mode"
+        depends on (MODEM_TARGET_MC610_EU || MODEM_TARGET_USER)
+        default y if MODEM_TARGET_MC610_EU
+        default n if MODEM_TARGET_USER
+
+    menu "USB CDC endpoint address config"
+        visible if MODEM_TARGET_USER
+
+        config MODEM_USB_OUT_EP_ADDR
+            hex "Modem USB CDC OUT endpoint address"
+            default 0x01 if MODEM_TARGET_ML302_DNLM
+            default 0x03 if MODEM_TARGET_AIR724UG_NFM
+            default 0x0f if MODEM_TARGET_EC600N_CNLA_N05
+            default 0x0a if MODEM_TARGET_EC600N_CNLC_N06
+            default 0x0a if MODEM_TARGET_A7600C1
+            default 0x03 if MODEM_TARGET_BG95_M3
+            default 0x04 if MODEM_TARGET_BG96_MA
+            default 0x07 if MODEM_TARGET_MC610_EU
+            default 0x01 if MODEM_TARGET_USER
+            range 0x01 0x7f
+            help
+                USB OUT endpoint address (eg.0x01) used for send AT/data to device
+
+        config MODEM_USB_IN_EP_ADDR
+            hex "Modem USB CDC IN endpoint address"
+            default 0x81 if MODEM_TARGET_ML302_DNLM
+            default 0x84 if MODEM_TARGET_AIR724UG_NFM
+            default 0x86 if  MODEM_TARGET_EC600N_CNLA_N05
+            default 0x81 if  MODEM_TARGET_EC600N_CNLC_N06
+            default 0x81 if MODEM_TARGET_A7600C1
+            default 0x84 if MODEM_TARGET_BG95_M3
+            default 0x86 if MODEM_TARGET_BG96_MA
+            default 0x87 if MODEM_TARGET_MC610_EU
+            default 0x81 if MODEM_TARGET_USER
+            range 0x81 0x8f
+            help
+                USB IN endpoint address (eg.0x81) used for recive data from device
+        config MODEM_USB_OUT2_EP_ADDR
+            depends on MODEM_SUPPORT_SECONDARY_AT_PORT
+            hex "Modem USB CDC2 OUT endpoint address (AT Only)"
+            default 0x06 if MODEM_TARGET_MC610_EU
+            range 0x01 0x7f
+            help
+                USB OUT endpoint address (eg.0x01) used for send AT to device
+        config MODEM_USB_IN2_EP_ADDR
+            depends on MODEM_SUPPORT_SECONDARY_AT_PORT
+            hex "Modem USB CDC2 IN endpoint address (AT Only)"
+            default 0x86 if MODEM_TARGET_MC610_EU
+            range 0x81 0x8f
+            help
+                USB IN endpoint address (eg.0x81) used for recive AT from device
+    endmenu
+
+    config MODEM_DIAL_RETRY_TIMES
+        int "Retry Times During Dial-up"
+        default 5
+        help 
+            Set retry times waitting for modem link with carrier base station
+
+    config MODEM_PPP_APN
+        string "Set Modem APN"
+        default "internet"
+        help
+            Set APN (Access Point Name), a logical name to choose data network
+
+    config MODEM_SIM_PIN_PWD
+        string "Set SIM PIN"
+        default "1234"
+        help 
+            Set Pin of sim card if have
+
+    menu "GPIO Config"
+        config MODEM_POWER_GPIO
+            int "Modem power control gpio, set 0 if not use"
+            default 12
+        config MODEM_RESET_GPIO
+            int "Modem reset control gpio, set 0 if not use"
+            default 13
+        config MODEM_POWER_GPIO_INACTIVE_LEVEL
+            int "Power control gpio inactive level"
+            range 0 1
+            default 1
+        config MODEM_RESET_GPIO_INACTIVE_LEVEL
+            int "Reset control gpio inactive level"
+            range 0 1
+            default 1
+    endmenu
+
+    menu "Wi-Fi SoftAP"
+
+        config MODEM_WIFI_SSID
+            string "WiFi SSID"
+            default "esp_4g_router"
+            help
+                SSID (network name) for the example to connect to.
+        config MODEM_WIFI_PASSWORD
+            string "WiFi Password"
+            default "12345678"
+            help
+                WiFi password (WPA or WPA2) for the example to use.
+        config MODEM_WIFI_CHANNEL
+            int "WiFi Channel"
+            range 1 13
+            default 13
+            help
+                WiFi channel (network channel) for the example to use.
+        choice 
+            prompt "WiFi Bandwidth"
+            default WIFI_BANDWIFTH_40
+
+            config WIFI_BANDWIFTH_20
+                bool "20MHz"
+            config WIFI_BANDWIFTH_40
+                bool "40MHz"
+        endchoice
+        config MODEM_WIFI_MAX_STA
+            int "Maximal STA connections"
+            default 10
+            help
+                Max number of the STA connects to AP.
+        config EXAMPLE_MANUAL_DNS
+            bool "manully config dns address"
+            default n
+            help
+                Config main dns address manully, if false using dns address got from ppp
+        config EXAMPLE_MANUAL_DNS_ADDR
+            string  "main dns address"
+            default "114.114.114.114"
+            depends on EXAMPLE_MANUAL_DNS
+    endmenu
+
+endmenu

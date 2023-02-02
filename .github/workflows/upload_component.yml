@@ -23,6 +23,9 @@ jobs:
             components/led/led_indicator;
             components/led/lightbulb_driver;
             components/usb/usb_stream;
+            components/usb/iot_usbh;
+            components/usb/iot_usbh_cdc;
+            components/usb/iot_usbh_modem;
             tools/cmake_utilities;
           namespace: "espressif"
           api_token: ${{ secrets.IDF_COMPONENT_API_TOKEN }}
