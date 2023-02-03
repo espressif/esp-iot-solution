@@ -354,6 +354,12 @@ typedef struct {
      */
     int total_ms;
     void(*user_cb)(void);
+
+    /* 
+     * If set to true, the auto-stop timer can only be stopped by effect_stop/effect_start interfaces or triggered by FreeRTOS. 
+     * Any set APIs will only save the status, the status will not be written. 
+     */
+    bool interrupt_forbidden;
 } lightbulb_effect_config_t;
 
 /**
@@ -432,6 +438,34 @@ esp_err_t lightbulb_hsv2rgb(uint16_t hue, uint8_t saturation, uint8_t value, uin
 esp_err_t lightbulb_rgb2hsv(uint16_t red, uint16_t green, uint16_t blue, uint16_t *hue, uint8_t *saturation, uint8_t *value);
 
 /**
+ * @brief Convert xyY model to RGB model
+ * @note Refer: https://www.easyrgb.com/en/convert.php#inputFORM
+ *              https://www.easyrgb.com/en/math.php
+ * 
+ * @param x range: 0-1.0
+ * @param y range: 0-1.0
+ * @param Y range: 0-100.0
+ * @param red range: 0-255
+ * @param green range: 0-255
+ * @param blue range: 0-255
+ * @return esp_err_t 
+ */
+esp_err_t lightbulb_xyy2rgb(float x, float y, float Y, uint8_t *red, uint8_t *green, uint8_t *blue);
+
+/**
+ * @brief Convert RGB model to xyY model
+ * 
+ * @param red range: 0-255
+ * @param green range: 0-255
+ * @param blue range: 0-255
+ * @param x range: 0-1.0
+ * @param y range: 0-1.0
+ * @param Y range: 0-100.0
+ * @return esp_err_t 
+ */
+esp_err_t lightbulb_rgb2xyy(uint8_t red, uint8_t green, uint8_t blue, float *x, float *y, float *Y);
+
+/**
  * @brief Convert CCT kelvin to percentage
  *
  * @param kelvin default range: 2200k - 7000k
@@ -488,6 +522,18 @@ esp_err_t lightbulb_set_cct(uint16_t cct);
  * @return esp_err_t
  */
 esp_err_t lightbulb_set_brightness(uint8_t brightness);
+
+/**
+ * @brief Set xyY
+ * @attention The xyY color model cannot fully correspond to the HSV color model, so the color may be biased. 
+ *            The grayscale will be recalculated in lightbulb, so we cannot directly operate the underlying driver through the xyY interface.
+ * 
+ * @param x range: 0-1.0
+ * @param y range: 0-1.0
+ * @param Y range: 0-100.0
+ * @return esp_err_t 
+ */
+esp_err_t lightbulb_set_xyy(float x, float y, float Y);
 
 /**
  * @brief Set hsv

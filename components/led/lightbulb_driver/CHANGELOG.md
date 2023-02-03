@@ -1,5 +1,16 @@
 # ChangeLog
 
+## v0.2.0 - 2022-2-8
+
+### Enhancements:
+
+* Add interrupt_forbidden flag in effect
+* Provide Yxy color model conversion function
+
+### Bug Fixes:
+
+* Fix nvs structure naming error
+
 ## v0.1.0 - 2022-1-11
 
 ### Enhancements:
