@@ -22,35 +22,17 @@
 #include "tinyusb.h"
 #include "tusb_bth.h"
 
-#define BUFFER_SIZE_MAX  256
-#define LE_READ_BUFF_SIZE                  0x2002
-#define HCI_H4_CMD_PREAMBLE_SIZE           (4)
-#define UINT16_TO_STREAM(p, u16) {*(p)++ = (uint8_t)(u16); *(p)++ = (uint8_t)((u16) >> 8);}
-#define UINT8_TO_STREAM(p, u8)   {*(p)++ = (uint8_t)(u8);}
-
 static const char *TAG = "tusb_bth";
-static uint16_t acl_buf_size_max = 0;
-uint8_t * p_acl_buf = NULL;
 
-void ble_controller_init(void) {
-    esp_err_t ret;
-    esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
+static SemaphoreHandle_t evt_sem = NULL;
+static SemaphoreHandle_t acl_sem = NULL;
 
-    if ((ret = esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT)) != ESP_OK) {
-        ESP_LOGI(TAG, "Bluetooth controller release classic bt memory failed: %s", esp_err_to_name(ret));
-        return;
-    }
-
-    if ((ret = esp_bt_controller_init(&bt_cfg)) != ESP_OK) {
-        ESP_LOGI(TAG, "Bluetooth controller initialize failed: %s", esp_err_to_name(ret));
-        return;
-    }
-
-    if ((ret = esp_bt_controller_enable(ESP_BT_MODE_BLE)) != ESP_OK) {
-        ESP_LOGI(TAG, "Bluetooth controller enable failed: %s", esp_err_to_name(ret));
-        return;
-    }
-}
+static acl_data_t acl_tx_data = {
+    .is_new_pkt = true,
+    .pkt_total_len = 0,
+    .pkt_cur_offset = 0,
+    .pkt_val = NULL
+};
 
 /*
  * @brief: BT controller callback function, used to notify the upper layer that
@@ -58,7 +40,7 @@ void ble_controller_init(void) {
  */
 static void controller_rcv_pkt_ready(void)
 {
-    //TODO
+    // Do nothing, will check by esp_vhci_host_check_send_available().
 }
 
 /*
@@ -68,72 +50,43 @@ static void controller_rcv_pkt_ready(void)
 static int host_rcv_pkt(uint8_t *data, uint16_t len)
 {
     uint16_t act_len = len - 1;
+    uint8_t type = data[0];
+    uint8_t * acl_rx_buf = NULL;
+    uint8_t * evt_rx_buf = NULL;
 
-    if(data[0] == HCIT_TYPE_EVENT) { // event data from controller
-        uint8_t *hci_buf = (uint8_t *)malloc(len);
-        memcpy(hci_buf, data +1 , act_len);
-        ESP_LOGI(TAG, "evt_data from controller, evt_data_length: %d :", act_len);
-        tud_bt_event_send(hci_buf, act_len);
-        free(hci_buf);
-    } else if(data[0] == HCIT_TYPE_ACL_DATA) { // acl data from controller
-        uint8_t *hci_acl_buf_contr = (uint8_t *)malloc(len);
-        memcpy(hci_acl_buf_contr, data +1 , act_len);
-        ESP_LOGI(TAG, "acl_data from controller, acl_data_length: %d :", act_len);
-        tud_bt_acl_data_send(hci_acl_buf_contr, act_len);
-        free(hci_acl_buf_contr);
+    HCI_DUMP_BUFFER("Recv Pkt", data, len);
+
+    switch (type) {
+        case HCIT_TYPE_COMMAND:
+            break;
+        case HCIT_TYPE_ACL_DATA:
+            acl_rx_buf = (uint8_t *)malloc(act_len * sizeof(uint8_t));
+            assert(acl_rx_buf);
+
+            memcpy(acl_rx_buf, data +1 , act_len);
+            tud_bt_acl_data_send(acl_rx_buf, act_len);
+
+            xSemaphoreTake(acl_sem, portMAX_DELAY);
+            free(acl_rx_buf);
+            break;
+        case HCIT_TYPE_SCO_DATA:
+            break;
+        case HCIT_TYPE_EVENT:
+            evt_rx_buf = (uint8_t *)malloc(act_len * sizeof(uint8_t));
+            assert(evt_rx_buf);
+
+            memcpy(evt_rx_buf, data +1 , act_len);
+            tud_bt_event_send(evt_rx_buf, act_len);
+
+            xSemaphoreTake(evt_sem, portMAX_DELAY);
+            free(evt_rx_buf);
+            break;
+        default:
+            ESP_LOGE(TAG, "Unknow type [0x%02x]", type);
+            break;
     }
+
     return 0;
-}
-
-static esp_vhci_host_callback_t vhci_host_cb = {
-    controller_rcv_pkt_ready,
-    host_rcv_pkt
-};
-
-static int host_rcv_pkt_test (uint8_t *data, uint16_t len) {
-    
-    ESP_LOGI(TAG, "host_rcv_pkt_test evt_data_length: %d :", len);
-    if(data[1] == 0x0e && data[2] == 0x07 
-        && data[4] == 0x02 && data[5] == 0x20) {
-        // LE Read Buffer size command complete event
-        uint16_t* size_p = NULL;
-        uint16_t cmd_value;
-        size_p = (uint8_t*)(&cmd_value);
-        *size_p = data[7];
-        *(size_p+1) = data[8];
-        acl_buf_size_max = *size_p;
-        ESP_LOGI(TAG, "acl_buf_size_max: %d", acl_buf_size_max);
-    }
-    if (!acl_buf_size_max) {
-        acl_buf_size_max = BUFFER_SIZE_MAX;
-    }
-
-    p_acl_buf = (uint8_t *)malloc(acl_buf_size_max + 1);
-    esp_vhci_host_register_callback(&vhci_host_cb);
-    return 0;
-}
-
-uint16_t make_cmd_le_read_buff_size(uint8_t *buf)
-{
-    UINT8_TO_STREAM (buf, HCIT_TYPE_COMMAND);
-    UINT16_TO_STREAM (buf, LE_READ_BUFF_SIZE);
-    UINT8_TO_STREAM (buf, 0);
-    return HCI_H4_CMD_PREAMBLE_SIZE;
-}
-
-static esp_vhci_host_callback_t vhci_host_cb_test = {
-    controller_rcv_pkt_ready,
-    host_rcv_pkt_test
-};
-
-void tusb_bth_init(void)
-{
-    ble_controller_init();
-    // register vhci_host_cb_test, test le read buffer size
-    esp_vhci_host_register_callback(&vhci_host_cb_test);
-    uint8_t buf[6];
-    uint16_t sz = make_cmd_le_read_buff_size(buf);
-    esp_vhci_host_send_packet(buf, sz);
 }
 
 //--------------------------------------------------------------------+
@@ -145,15 +98,24 @@ void tusb_bth_init(void)
 // Part E, 5.4.1.
 // Length of the command is from 3 bytes (2 bytes for OpCode,
 // 1 byte for parameter total length) to 258.
-void tud_bt_hci_cmd_cb(void *hci_cmd, size_t cmd_len)
+void tud_bt_hci_cmd_cb(void * hci_cmd, size_t cmd_len)
 {
-    uint8_t *hci_cmd_buf = (uint8_t *)malloc(cmd_len + 1);
+    uint8_t * cmd_tx_buf = (uint8_t *)malloc((cmd_len + 1) * sizeof(uint8_t));
 
-    hci_cmd_buf[0] = HCIT_TYPE_COMMAND;
-    memcpy(hci_cmd_buf+1, hci_cmd, cmd_len);
-    esp_vhci_host_send_packet(hci_cmd_buf, cmd_len +1);
+    assert(cmd_tx_buf);
 
-    free(hci_cmd_buf);
+    cmd_tx_buf[0] = HCIT_TYPE_COMMAND;
+    memcpy(cmd_tx_buf + 1, hci_cmd, cmd_len);
+
+    HCI_DUMP_BUFFER("Transmit Pkt", cmd_tx_buf, cmd_len + 1);
+
+    while (!esp_vhci_host_check_send_available()) {
+        vTaskDelay(1);
+    }
+    esp_vhci_host_send_packet(cmd_tx_buf, cmd_len +1);
+
+    free(cmd_tx_buf);
+    cmd_tx_buf = NULL;
 }
 
 // Invoked when ACL data was received over USB from Bluetooth host.
@@ -161,46 +123,71 @@ void tud_bt_hci_cmd_cb(void *hci_cmd, size_t cmd_len)
 // Part E, 5.4.2.
 // Length is from 4 bytes, (12 bits for Handle, 4 bits for flags
 // and 16 bits for data total length) to endpoint size.
-static bool prepare_write = false;
-static uint16_t write_offset = 0;
-static uint16_t acl_data_length = 0;
 void tud_bt_acl_data_received_cb(void *acl_data, uint16_t data_len)
 {
+    if (acl_tx_data.is_new_pkt) {
+        acl_tx_data.pkt_total_len = *(((uint16_t * )acl_data) + 1) + 4;
+        acl_tx_data.pkt_cur_offset = 0;
 
-    // if acl_data is long data
-    if(!prepare_write) {
-        // first get acl_data_length
-        acl_data_length = *(((uint16_t * )acl_data) + 1);
-        if(acl_data_length > data_len) {
-            prepare_write = true;
-            p_acl_buf[0] = HCIT_TYPE_ACL_DATA;
-            memcpy(p_acl_buf + 1, acl_data, data_len);
-            write_offset = data_len + 1;
-        } else {
-            p_acl_buf[0] = HCIT_TYPE_ACL_DATA;
-            memcpy(p_acl_buf + 1, acl_data, data_len);
-            ESP_LOGI(TAG, "short acl_data from host, will send to controller, length: %d", (data_len + 1));
-            esp_vhci_host_send_packet(p_acl_buf, data_len + 1);
-        }
-    } else {
-        memcpy(p_acl_buf + write_offset, acl_data, data_len);
-        write_offset += data_len;
-        if(acl_data_length > write_offset) {
-            ESP_LOGI(TAG, "Remaining bytes: %d", (acl_data_length - write_offset));
+        acl_tx_data.pkt_val = (uint8_t *)malloc((acl_tx_data.pkt_total_len + 1) * sizeof(uint8_t));
+        assert(acl_tx_data.pkt_val);
+        memset(acl_tx_data.pkt_val, 0x0 , (acl_tx_data.pkt_total_len + 1));
+
+        acl_tx_data.pkt_val[0] = HCIT_TYPE_ACL_DATA;
+        acl_tx_data.pkt_cur_offset++;
+        memcpy(acl_tx_data.pkt_val + acl_tx_data.pkt_cur_offset, acl_data, data_len);
+        acl_tx_data.pkt_cur_offset += data_len;
+
+        if (data_len < acl_tx_data.pkt_total_len) {
+            acl_tx_data.is_new_pkt = false;
             return;
         }
-        ESP_LOGI(TAG, "long acl_data from host, will send to controller, length: %d", (data_len + 1));
-        prepare_write = false;
-        esp_vhci_host_send_packet(p_acl_buf, data_len + write_offset);
+
+        while (!esp_vhci_host_check_send_available()) {
+            vTaskDelay(1);
+        }
+
+        HCI_DUMP_BUFFER("Transmit Pkt", acl_tx_data.pkt_val, data_len + 1);
+        esp_vhci_host_send_packet(acl_tx_data.pkt_val, data_len + 1);
+        goto reset_params;
+    } else {
+        memcpy(acl_tx_data.pkt_val + acl_tx_data.pkt_cur_offset, acl_data, data_len);
+        acl_tx_data.pkt_cur_offset += data_len;
+
+        if ((acl_tx_data.pkt_cur_offset - 1) == acl_tx_data.pkt_total_len) {
+            while (!esp_vhci_host_check_send_available()) {
+                vTaskDelay(1);
+            }
+
+            HCI_DUMP_BUFFER("Transmit Pkt", acl_tx_data.pkt_val, acl_tx_data.pkt_total_len + 1);
+            esp_vhci_host_send_packet(acl_tx_data.pkt_val, acl_tx_data.pkt_total_len + 1);
+            goto reset_params;
+        }
     }
-    //free(hci_data_buf);
+
+    return;
+
+reset_params:
+
+    acl_tx_data.is_new_pkt = true;
+    acl_tx_data.pkt_total_len = 0;
+    acl_tx_data.pkt_cur_offset = 0;
+
+    if (acl_tx_data.pkt_val) {
+        free(acl_tx_data.pkt_val);
+        acl_tx_data.pkt_val = NULL;
+    }
+
+    return;
 }
 
 // Called when event sent with tud_bt_event_send() was delivered to BT stack.
 // Controller can release/reuse buffer with Event packet at this point.
 void tud_bt_event_sent_cb(uint16_t sent_bytes)
 {
-    //TODO
+    if (evt_sem) {
+        xSemaphoreGive(evt_sem);
+    }
 }
 
 // Called when ACL data that was sent with tud_bt_acl_data_send()
@@ -208,5 +195,82 @@ void tud_bt_event_sent_cb(uint16_t sent_bytes)
 // Controller can release/reuse buffer with ACL packet at this point.
 void tud_bt_acl_data_sent_cb(uint16_t sent_bytes)
 {
-    //TODO
+    if (acl_sem) {
+        xSemaphoreGive(acl_sem);
+    }
+}
+
+static esp_vhci_host_callback_t vhci_host_cb = {
+    controller_rcv_pkt_ready,
+    host_rcv_pkt
+};
+
+/**
+ * @brief Initialize BTH Device.
+ */
+void tusb_bth_init(void)
+{
+    esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
+
+    if (esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT) != ESP_OK) {
+        ESP_LOGE(TAG, "Bluetooth controller release classic bt memory failed.");
+        return;
+    }
+
+    if (esp_bt_controller_init(&bt_cfg) != ESP_OK) {
+        ESP_LOGE(TAG, "Bluetooth controller initialize failed.");
+        return;
+    }
+
+    if (esp_bt_controller_enable(ESP_BT_MODE_BLE) != ESP_OK) {
+        ESP_LOGE(TAG, "Bluetooth controller enable failed.");
+        return;
+    }
+
+    evt_sem = xSemaphoreCreateBinary();
+    assert(evt_sem);
+    acl_sem = xSemaphoreCreateBinary();
+    assert(acl_sem);
+
+    acl_tx_data.is_new_pkt = true;
+    acl_tx_data.pkt_total_len = 0;
+    acl_tx_data.pkt_cur_offset = 0;
+    acl_tx_data.pkt_val = NULL;
+
+    esp_vhci_host_register_callback(&vhci_host_cb);
+}
+
+/**
+ * @brief Deinitialization BTH Device.
+ */
+void tusb_bth_deinit(void)
+{
+    if (esp_bt_controller_disable() != ESP_OK) {
+        ESP_LOGE(TAG, "Bluetooth controller disable failed.");
+        return;
+    }
+
+    if (esp_bt_controller_deinit() != ESP_OK) {
+        ESP_LOGE(TAG, "Bluetooth controller deinit failed.");
+        return;
+    }
+
+    if (evt_sem) {
+        vSemaphoreDelete(evt_sem);
+        evt_sem = NULL;
+    }
+
+    if (acl_sem) {
+        vSemaphoreDelete(acl_sem);
+        acl_sem = NULL;
+    }
+
+    acl_tx_data.is_new_pkt = true;
+    acl_tx_data.pkt_total_len = 0;
+    acl_tx_data.pkt_cur_offset = 0;
+
+    if (acl_tx_data.pkt_val) {
+        free(acl_tx_data.pkt_val);
+        acl_tx_data.pkt_val = NULL;
+    }
 }
