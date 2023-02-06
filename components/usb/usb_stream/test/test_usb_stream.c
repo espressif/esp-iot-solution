@@ -28,15 +28,15 @@ static const char *TAG = "uvc_test";
 /* USB PIN fixed in esp32-s2, can not use io matrix */
 #define BOARD_USB_DP_PIN 20
 #define BOARD_USB_DN_PIN 19
+#define ENABLE_UVC_FRAME_RESOLUTION_ANY 1
 
-/* USB Camera Descriptors Related MACROS,
-the quick demo skip the standred get descriptors process,
-users need to get params from camera descriptors from log
-then hardcode the related MACROS below
-*/
-
-#define DEMO_FRAME_WIDTH 320
-#define DEMO_FRAME_HEIGHT 240
+#if (ENABLE_UVC_FRAME_RESOLUTION_ANY)
+#define DEMO_UVC_FRAME_WIDTH        FRAME_RESOLUTION_ANY
+#define DEMO_UVC_FRAME_HEIGHT       FRAME_RESOLUTION_ANY
+#else
+#define DEMO_UVC_FRAME_WIDTH        320
+#define DEMO_UVC_FRAME_HEIGHT       240
+#endif
 #define DEMO_XFER_BUFFER_SIZE (35 * 1024)
 
 static void *_malloc(size_t size)
@@ -66,7 +66,7 @@ static void frame_cb(uvc_frame_t *frame, void *ptr)
     }
 }
 
-TEST_CASE("test uvc isoc streaming", "[usb][usb_stream][uvc][isoc]")
+TEST_CASE("test uvc streaming", "[usb][usb_stream][uvc]")
 {
     esp_log_level_set("*", ESP_LOG_DEBUG);
     /* malloc double buffer for usb payload, xfer_buffer_size >= frame_buffer_size*/
@@ -80,8 +80,8 @@ TEST_CASE("test uvc isoc streaming", "[usb][usb_stream][uvc][isoc]")
     TEST_ASSERT(frame_buffer != NULL);
 
     uvc_config_t uvc_config = {
-        .frame_width = DEMO_FRAME_WIDTH,
-        .frame_height = DEMO_FRAME_HEIGHT,
+        .frame_width = DEMO_UVC_FRAME_WIDTH,
+        .frame_height = DEMO_UVC_FRAME_HEIGHT,
         .frame_interval = FPS2INTERVAL(15),
         .xfer_buffer_size = DEMO_XFER_BUFFER_SIZE,
         .xfer_buffer_a = xfer_buffer_a,
@@ -273,45 +273,4 @@ TEST_CASE("test uvc+uac", "[usb][usb_stream][uvc][uac]")
         TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_stop());
         test_count--;
     }
-}
-
-TEST_CASE("test uvc bulk streaming", "[usb][usb_stream][uvc][bulk]")
-{
-    /* malloc double buffer for usb payload, xfer_buffer_size >= frame_buffer_size*/
-    uint8_t *xfer_buffer_a = (uint8_t *)_malloc(DEMO_XFER_BUFFER_SIZE);
-    TEST_ASSERT(xfer_buffer_a != NULL);
-    uint8_t *xfer_buffer_b = (uint8_t *)_malloc(DEMO_XFER_BUFFER_SIZE);
-    TEST_ASSERT(xfer_buffer_b != NULL);
-
-    /* malloc frame buffer for a jpeg frame*/
-    uint8_t *frame_buffer = (uint8_t *)_malloc(DEMO_XFER_BUFFER_SIZE);
-    TEST_ASSERT(frame_buffer != NULL);
-
-    uvc_config_t uvc_config = {
-        .frame_width = 640,
-        .frame_height = 480,
-        .frame_interval = FPS2INTERVAL(15),
-        .xfer_buffer_size = DEMO_XFER_BUFFER_SIZE,
-        .xfer_buffer_a = xfer_buffer_a,
-        .xfer_buffer_b = xfer_buffer_b,
-        .frame_buffer_size = DEMO_XFER_BUFFER_SIZE,
-        .frame_buffer = frame_buffer,
-        .frame_cb = frame_cb,
-        .frame_cb_arg = NULL,
-    };
-    size_t test_count = 20;
-    for (size_t i = 0; i < test_count; i++) {
-        /* pre-config UVC driver with params from known USB Camera Descriptors*/
-        TEST_ASSERT_EQUAL(ESP_OK, uvc_streaming_config(&uvc_config));
-        /* Start camera IN stream with pre-configs, uvc driver will create multi-tasks internal
-        to handle usb data from different pipes, and user's callback will be called after new frame ready. */
-        TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_start());
-        vTaskDelay(2000 / portTICK_PERIOD_MS);
-        /* test streaming stop */
-        TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_stop());
-    }
-
-    _free(xfer_buffer_a);
-    _free(xfer_buffer_b);
-    _free(frame_buffer);
 }

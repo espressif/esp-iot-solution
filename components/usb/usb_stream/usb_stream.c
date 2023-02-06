@@ -67,6 +67,7 @@ const char *TAG = "UVC_STREAM";
 #define USB_SHORT_DESC_REQ_LEN               8                                       //Number of bytes to request when getting a short descriptor (just enough to get bMaxPacketSize0 or wTotalLength)
 #define USB_EP_ISOC_MAX_MPS                  600                                     //Max MPS ESP32-S2/S3 can handle
 #define USB_EP_BULK_FS_MPS                   64                                      //Default MPS of full speed bulk transfer
+#define USB_EP_BULK_HS_MPS                   512                                     //Default MPS of high speed bulk transfer
 #define CTRL_TRANSFER_DATA_MAX_BYTES         CONFIG_CTRL_TRANSFER_DATA_MAX_BYTES     //Max data length assumed in control transfer
 #define NUM_BULK_STREAM_URBS                 CONFIG_NUM_BULK_STREAM_URBS             //Number of bulk stream URBS created for continuous enqueue
 #define NUM_BULK_BYTES_PER_URB               CONFIG_NUM_BULK_BYTES_PER_URB           //Required transfer bytes of each URB, check
@@ -93,7 +94,7 @@ const char *TAG = "UVC_STREAM";
  */
 #define USB_PROC_TASK_NAME "usb_proc"
 #define USB_PROC_TASK_PRIORITY CONFIG_USB_PROC_TASK_PRIORITY
-#define USB_PROC_TASK_STACK_SIZE (1024 * 3)
+#define USB_PROC_TASK_STACK_SIZE CONFIG_USB_PROC_TASK_STACK_SIZE
 #define USB_PROC_TASK_CORE CONFIG_USB_PROC_TASK_CORE
 
 /**
@@ -102,17 +103,17 @@ const char *TAG = "UVC_STREAM";
  */
 #define SAMPLE_PROC_TASK_NAME "sample_proc"
 #define SAMPLE_PROC_TASK_PRIORITY CONFIG_SAMPLE_PROC_TASK_PRIORITY
-#define SAMPLE_PROC_TASK_STACK_SIZE (1024 * 3)
+#define SAMPLE_PROC_TASK_STACK_SIZE CONFIG_SAMPLE_PROC_TASK_STACK_SIZE
 #define SAMPLE_PROC_TASK_CORE CONFIG_SAMPLE_PROC_TASK_CORE
 
 /**
- * @brief Task for audio processing, polling and send data from ring buffer, run user callback when date received
+ * @brief Task for video/audio stream processing, polling and send data from ring buffer, run user callback when date received
  *
  */
-#define UAC_TASK_NAME             "vs_ac_proc"                        /*! audio task name */
-#define UAC_TASK_PRIORITY         CONFIG_USB_PROC_TASK_PRIORITY       /*! audio task priority, higher to handle event quick */
-#define UAC_TASK_STACK_SIZE       (1024 * 3)                          /*! audio task stack size */
-#define UAC_TASK_CORE             CONFIG_USB_PROC_TASK_CORE           /*! audio task core id */
+#define UAC_TASK_NAME             "usb_stream_proc"                   /*! usb stream task name */
+#define UAC_TASK_PRIORITY         CONFIG_USB_PROC_TASK_PRIORITY       /*! usb stream task priority, higher to handle event quick */
+#define UAC_TASK_STACK_SIZE       CONFIG_USB_PROC_TASK_STACK_SIZE     /*! usb stream task stack size */
+#define UAC_TASK_CORE             CONFIG_USB_PROC_TASK_CORE           /*! usb stream task core id */
 
 /**
  * @brief Events bit map
@@ -1992,7 +1993,8 @@ static inline void _uvc_process_payload(_uvc_stream_handle_t *strmh, size_t req_
             /* This means transfer buffer Not enough for whole frame, just drop whole buffer here.
             Please increase buffer size to handle big frame*/
 #if CONFIG_UVC_DROP_OVERFLOW_FRAME
-            ESP_LOGW(TAG, "Transfer buffer overflow, got data=%u B, last=%u", strmh->got_bytes + data_len, data_len);
+            ESP_LOGW(TAG, "Transfer buffer overflow, got data=%u B, last=%u (%02x %02x...%02x %02x)", strmh->got_bytes + data_len, data_len
+                    , payload[0], payload_len>1?payload[1]:0, payload_len>1?payload[payload_len - 2]:0, payload_len>1?payload[payload_len - 1]:0);
             _uvc_drop_buffers(strmh);
 #else
             ESP_LOGD(TAG, "SWAP overflow %d", strmh->got_bytes);
@@ -2027,7 +2029,7 @@ static uvc_error_t uvc_stream_open_ctrl(uvc_device_handle_t *devh, _uvc_stream_h
 {
     _uvc_stream_handle_t *strmh = NULL;
     uvc_error_t ret;
-    strmh = calloc(1, sizeof(*strmh));
+    strmh = heap_caps_calloc(1, sizeof(_uvc_stream_handle_t), MALLOC_CAP_INTERNAL);
 
     if (!strmh) {
         ret = UVC_ERROR_NO_MEM;
@@ -2801,8 +2803,8 @@ free_urb_:
         uac_dev->spk_as_ifc->urb_list = NULL;
     }
     xEventGroupClearBits(uvc_dev->parent->event_group, USB_STREAM_TASK_KILL_BIT | USB_UVC_STREAM_RUNNING | UAC_SPK_STREAM_RUNNING | UAC_MIC_STREAM_RUNNING);
-    ESP_LOGI(TAG, "audio task deleted");
-    ESP_LOGD(TAG, "audio task watermark = %d B", uxTaskGetStackHighWaterMark(NULL));
+    ESP_LOGI(TAG, "usb stream task deleted");
+    ESP_LOGD(TAG, "usb stream task watermark = %d B", uxTaskGetStackHighWaterMark(NULL));
     vTaskDelete(NULL);
 }
 
@@ -2889,8 +2891,10 @@ static void _usb_processing_task(void *arg)
                         ESP_LOGI(TAG, "Probe MJPEG payload size = %"PRIu32, uvc_dev->ctrl_set.dwMaxPayloadTransferSize);
                         ret = _uvc_vs_commit_control(pipe_hdl_dflt, &uvc_dev->ctrl_set, &uvc_dev->ctrl_probed);
                         UVC_CHECK_GOTO(ESP_OK == ret, "UVC negotiate failed", usb_driver_reset_);
-                        ret = _usb_set_device_interface(pipe_hdl_dflt, uvc_dev->vs_ifc->interface, uvc_dev->vs_ifc->interface_alt);
-                        UVC_CHECK_GOTO(ESP_OK == ret, "Set device interface failed", usb_driver_reset_);
+                        if (uvc_dev->xfer_type == UVC_XFER_ISOC) {
+                            ret = _usb_set_device_interface(pipe_hdl_dflt, uvc_dev->vs_ifc->interface, uvc_dev->vs_ifc->interface_alt);
+                            UVC_CHECK_GOTO(ESP_OK == ret, "Set device interface failed", usb_driver_reset_);
+                        }
                     }
                     if (uac_dev->mic_active && !uac_dev->mic_as_ifc->not_found) {
                         ret = _usb_set_device_interface(pipe_hdl_dflt, uac_dev->mic_as_ifc->interface, uac_dev->mic_as_ifc->interface_alt);
@@ -2927,7 +2931,7 @@ static void _usb_processing_task(void *arg)
                         if (uac_dev->parent->vs_as_taskh == NULL) {
                             xTaskCreatePinnedToCore(_usb_stream_handle_task, UAC_TASK_NAME, UAC_TASK_STACK_SIZE, (void *)port_hdl,
                                                     UAC_TASK_PRIORITY, &uac_dev->parent->vs_as_taskh, UAC_TASK_CORE);
-                            UVC_CHECK_GOTO(uac_dev->parent->vs_as_taskh != NULL, "Create usb task failed", usb_driver_reset_);
+                            UVC_CHECK_GOTO(uac_dev->parent->vs_as_taskh != NULL, "Create usb stream task failed", usb_driver_reset_);
                         }
                         xTaskNotifyGive(uac_dev->parent->vs_as_taskh);
                     }
@@ -2976,8 +2980,11 @@ static void _usb_processing_task(void *arg)
                         ret = _uvc_vs_commit_control(pipe_hdl_dflt, &uvc_dev->ctrl_set, &uvc_dev->ctrl_probed);
                         UVC_CHECK_GOTO(ESP_OK == ret, "vs commit failed", resume_failed_driver_reset_);
                     }
-                    ret = _usb_set_device_interface(pipe_hdl_dflt, p_itf->interface, p_itf->interface_alt);
-                    UVC_CHECK_GOTO(ESP_OK == ret, "resume alt_interface failed", resume_failed_driver_reset_);
+                    /* only set interface for isoc transfer */
+                    if (p_itf->xfer_type == UVC_XFER_ISOC) {
+                        ret = _usb_set_device_interface(pipe_hdl_dflt, p_itf->interface, p_itf->interface_alt);
+                        UVC_CHECK_GOTO(ESP_OK == ret, "resume alt_interface failed", resume_failed_driver_reset_);
+                    }
                     xQueueSend(uvc_dev->parent->stream_queue_hdl, &evt_msg, portMAX_DELAY);
                     EventBits_t uxBits = xEventGroupWaitBits(uvc_dev->parent->event_group, (USB_STREAM_TASK_PROC_SUCCEED), pdTRUE, pdFALSE, pdMS_TO_TICKS(TIMEOUT_USER_COMMAND));
                     UVC_CHECK_GOTO(uxBits & USB_STREAM_TASK_PROC_SUCCEED, "stream suspend failed", resume_failed_driver_reset_);
@@ -3228,7 +3235,7 @@ esp_err_t uvc_streaming_config(const uvc_config_t *config)
             UVC_CHECK(config->interface_alt != 0, "Isoc interface alt num must > 0", ESP_ERR_INVALID_ARG);
         } else {
             UVC_CHECK(config->interface_alt == 0, "Bulk interface alt num must == 0", ESP_ERR_INVALID_ARG);
-            UVC_CHECK(config->ep_mps == USB_EP_BULK_FS_MPS, "Full speed bulk MPS must == USB_EP_BULK_FS_MPS", ESP_ERR_INVALID_ARG);
+            UVC_CHECK(config->ep_mps == USB_EP_BULK_FS_MPS || config->ep_mps == USB_EP_BULK_HS_MPS, "Bulk MPS must == 64 or 512", ESP_ERR_INVALID_ARG);
         }
     }
 
@@ -3263,7 +3270,7 @@ esp_err_t uvc_streaming_config(const uvc_config_t *config)
     if (s_uvc_dev.xfer_type == UVC_XFER_BULK) {
         // raw cost: NUM_BULK_STREAM_URBS * 1 * ep_mps
         s_usb_itf[STREAM_UVC].xfer_type = UVC_XFER_BULK;
-        s_usb_itf[STREAM_UVC].packets_per_urb = 1;
+        s_usb_itf[STREAM_UVC].packets_per_urb = 0;
         // Note: According to UVC 1.5 2.4.3.2.1, each packet should have a header added, but most cameras don't.
         // Therefore, a large buffer should be prepared to ensure that a frame can be received.
 #ifdef CONFIG_BULK_BYTES_PER_URB_SAME_AS_FRAME
@@ -3407,9 +3414,6 @@ static esp_err_t _streaming_suspend(usb_stream_t stream)
 {
     UVC_CHECK(stream < STREAM_MAX, "invalid stream type", ESP_ERR_INVALID_ARG);
     UVC_CHECK(s_usb_itf[stream].interface, "interface not config", ESP_ERR_INVALID_STATE);
-    if (stream == STREAM_UVC) {
-        UVC_CHECK(s_uvc_dev.xfer_type != UVC_XFER_BULK, "bulk transfer can't suspend/resume, use start/stop instead", ESP_ERR_NOT_SUPPORTED);
-    }
     _stream_ifc_t *p_itf = &s_usb_itf[stream];
 
     if (!s_usb_dev.event_group || !(xEventGroupGetBits(s_usb_dev.event_group) & USB_HOST_INIT_DONE)) {
@@ -3449,9 +3453,6 @@ static esp_err_t _streaming_resume(usb_stream_t stream)
 {
     UVC_CHECK(stream < STREAM_MAX, "invalid stream type", ESP_ERR_INVALID_ARG);
     UVC_CHECK(s_usb_itf[stream].interface, "interface not config", ESP_ERR_INVALID_STATE);
-    if (stream == STREAM_UVC) {
-        UVC_CHECK(s_uvc_dev.xfer_type != UVC_XFER_BULK, "bulk transfer can't suspend/resume, use start/stop instead", ESP_ERR_INVALID_STATE);
-    }
     _stream_ifc_t *p_itf = &s_usb_itf[stream];
 
     if (!s_usb_dev.event_group || !(xEventGroupGetBits(s_usb_dev.event_group) & USB_HOST_INIT_DONE)) {

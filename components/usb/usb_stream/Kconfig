@@ -35,18 +35,24 @@ menu "UVC Stream"
         bool "Enable Trigger Pin For Debug"
         default n
     config USB_PROC_TASK_PRIORITY
-        int "usb handle task priority"
+        int "usb process task priority"
         default 5
     config USB_PROC_TASK_CORE
-        int "usb handle task core id"
+        int "usb process task core id"
         default 1 if IDF_TARGET_ESP32S3 && !FREERTOS_UNICORE
         default 0 if IDF_TARGET_ESP32S2
+    config USB_PROC_TASK_STACK_SIZE
+        int "usb process task stack size (Bytes)"
+        default 3072
     config SAMPLE_PROC_TASK_PRIORITY
         int "sample process task priority"
         default 2
     config SAMPLE_PROC_TASK_CORE
         int "sample process task core id"
         default 0
+    config SAMPLE_PROC_TASK_STACK_SIZE
+        int "sample process task stack size (Bytes)"
+        default 3072
     config BULK_BYTES_PER_URB_SAME_AS_FRAME
         bool "bulk: transfer size in each urb same as frame buffer"
         default n
