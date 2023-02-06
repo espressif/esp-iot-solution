@@ -9,6 +9,10 @@
 #ifndef _BLE_OTA_H_
 #define _BLE_OTA_H_
 
+#ifdef CONFIG_PRE_ENC_OTA
+#include "esp_encrypted_img.h"
+#endif
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -149,7 +153,12 @@ esp_err_t esp_ble_ota_host_init(void);
  *                  - other: failed
  *
  */
+#ifdef CONFIG_PRE_ENC_OTA
+esp_err_t esp_ble_ota_recv_fw_data_callback(esp_ble_ota_recv_fw_cb_t callback,
+                                            esp_decrypt_handle_t esp_decrypt_handle);
+#else
 esp_err_t esp_ble_ota_recv_fw_data_callback(esp_ble_ota_recv_fw_cb_t callback);
+#endif
 
 /**
  * @brief           This function is called to Initialization ble ota process

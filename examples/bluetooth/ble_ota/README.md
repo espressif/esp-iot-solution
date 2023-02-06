@@ -62,3 +62,35 @@ ACK_Status:
 ## 4. Sample code
 
 [ESP BLE OTA](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_ota)
+
+## 5. NimBLE OTA
+
+#### Configure the Project
+
+`idf.py menuconfig'
+- Component config → Bluetooth → Bluetooth → Host → NimBLE - BLE only
+
+Note: For maximum throughput, set maximum MTU using
+  - Component config → Bluetooth → NimBLE Options → Preferred MTU size in octets as 517
+
+### 5.1 OTA with Protocomm
+
+#### Configure the Project
+  `idf.py menuconfig`
+  - Example Configuration → Type of OTA → Use protocomm layer for security
+  - Component config → OTA Manager → Type of OTA → Enable protocomm level security
+
+### 5.2 Pre encrypted OTA
+  - For using pre encrypted OTA, the OTA file needs to be encrypted using [private key](../ble_ota/rsa_key/private.pem)
+  - To encrypt bin file follow the below steps:
+  ` git clone git@github.com:espressif/idf-extra-components.git
+    cd idf-extra-components/esp_encrypted_img/
+    python tools/esp_enc_img_gen.py encrypt /path/to/input.bin /path/to/RSA-public-key /path/to/enc.bin
+  `
+  - For more info regarding encrypting file refer : [esp_encrypted_img](https://github.com/espressif/idf-extra-components/tree/master/esp_encrypted_img)
+
+#### Configure the Project
+  `idf.py menuconfig`
+  - If using ESP32S3 set Component config → Bluetooth → Bluetooth → NimBLE Options → NimBLE Host task stack size as 8192 
+  - Example Configuration → Type of OTA → Use Pre-Encrypted OTA
+  - Component config → OTA Manager → Type of OTA → Enable pre encrypted OTA

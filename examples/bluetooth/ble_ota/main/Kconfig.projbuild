@@ -37,9 +37,25 @@ menu "Example Configuration"
                 security version 2.
     endchoice
 
-    config EXAMPLE_USE_PROTOCOMM
-        bool "Use protocomm layer for security"
-        select OTA_WITH_PROTOCOMM
-        help
-            This enables protocomm level security to transfer file via OTA
+    choice EXAMPLE_OTA_TYPE
+        prompt "Type of OTA"
+        default EXAMPLE_OTA_WITHOUT_SECURITY
+
+        config EXAMPLE_OTA_WITHOUT_SECURITY
+            bool "Use OTA without security"
+            help
+                This transfers file without any security using OTA
+
+        config EXAMPLE_USE_PROTOCOMM
+            bool "Use protocomm layer for security"
+            depends on BT_NIMBLE_ENABLED
+            help
+                This enables protocomm level security to transfer file via OTA
+
+        config EXAMPLE_USE_PRE_ENC_OTA
+            bool "Use Pre-Encrypted OTA"
+            depends on BT_NIMBLE_ENABLED
+            help
+                This enables transferring pre-encrypted file via OTA
+    endchoice
 endmenu
