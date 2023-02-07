@@ -86,7 +86,7 @@ esp_err_t lightbulb_status_set_to_nvs(const lightbulb_status_t *value)
     LIGHTBULB_CHECK(value, "value is null", return ESP_ERR_INVALID_ARG);
 
     esp_err_t err = ESP_OK;
-    nvs_handle handle = 0;
+    nvs_handle_t handle = 0;
 
     err = nvs_open(LIGHTBULB_NAMESPACE, NVS_READWRITE, &handle);
     LIGHTBULB_CHECK(err == ESP_OK, "nvs open fail, reason code: %d", return err, err);
@@ -107,7 +107,7 @@ esp_err_t lightbulb_status_get_from_nvs(lightbulb_status_t *value)
     LIGHTBULB_CHECK(value, "value is null", return ESP_ERR_INVALID_ARG);
 
     esp_err_t err = ESP_OK;
-    nvs_handle handle = 0;
+    nvs_handle_t handle = 0;
     size_t req_len = sizeof(lightbulb_status_t);
 
     err = nvs_open(LIGHTBULB_NAMESPACE, NVS_READWRITE, &handle);
@@ -124,7 +124,7 @@ esp_err_t lightbulb_status_get_from_nvs(lightbulb_status_t *value)
 esp_err_t lightbulb_status_erase_nvs_storage(void)
 {
     esp_err_t err = ESP_OK;
-    nvs_handle handle = 0;
+    nvs_handle_t handle = 0;
 
     err = nvs_open(LIGHTBULB_NAMESPACE, NVS_READWRITE, &handle);
     LIGHTBULB_CHECK(err == ESP_OK, "nvs open fail, reason code: %d", return err, err);
