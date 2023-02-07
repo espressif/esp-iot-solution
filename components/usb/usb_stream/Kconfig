@@ -44,6 +44,9 @@ menu "UVC Stream"
     config USB_PROC_TASK_STACK_SIZE
         int "usb process task stack size (Bytes)"
         default 3072
+    config USB_WAITING_AFTER_CONN_MS
+        int "usb enum delay time(ms) after device connection"
+        default 50
     config SAMPLE_PROC_TASK_PRIORITY
         int "sample process task priority"
         default 2

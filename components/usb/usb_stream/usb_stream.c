@@ -77,7 +77,11 @@ const char *TAG = "UVC_STREAM";
 #define FRAME_MAX_INTERVAL                   2000000                                 //Specified in 100 ns units, General max frame interval (5 FPS)
 #define FRAME_MIN_INTERVAL                   333333                                  //General min frame interval (30 FPS)
 #define TIMEOUT_USB_CTRL_XFER_MS             4000                                    //Timeout for USB control transfer
-#define TIMEOUT_USER_COMMAND                 5000                                    //Timeout for USER COMMAND control transfer
+#define WAITING_USB_AFTER_CONNECTION_MS      CONFIG_USB_WAITING_AFTER_CONN_MS       //Waiting n ms for usb device ready after connection
+#define TIMEOUT_USB_STREAM_START_MS          500                                     //Timeout for usb task start
+#define TIMEOUT_USB_STREAM_DEINIT_MS         5000                                    //Timeout for usb stream deinit
+#define TIMEOUT_USB_STREAM_DISCONNECT_MS     5000                                    //Timeout for usb stream disconnect
+#define TIMEOUT_USER_COMMAND_MS              5000                                    //Timeout for USER COMMAND control transfer
 #define NUM_ISOC_SPK_URBS                    3                                       //Number of isochronous stream URBS created for continuous enqueue
 #define NUM_ISOC_MIC_URBS                    3                                       //Number of isochronous stream URBS created for continuous enqueue
 #define UAC_VOLUME_LEVEL_DEFAULT             50                                      //50%
@@ -1404,6 +1408,10 @@ static esp_err_t usb_parse_config_descriptor(const usb_config_desc_t *cfg_desc, 
         if (mjpeg_format_found) {
             ESP_LOGI(TAG, "Actual MJPEG format index = %u, contains %u frames", mjpeg_format_idx, mjpeg_frame_num);
             actual_config.format_index = mjpeg_format_idx;
+        } else if (actual_config.format_index) {
+            ESP_LOGW(TAG, "MJPEG format NOT found");
+            ESP_LOGW(TAG, "Try with user's config");
+            vs_intf_found = true;
         } else {
             ESP_LOGW(TAG, "MJPEG format NOT found");
             vs_intf_found = false;
@@ -1413,6 +1421,10 @@ static esp_err_t usb_parse_config_descriptor(const usb_config_desc_t *cfg_desc, 
             actual_config.frame_height = vs_frame_height;
             actual_config.frame_width = vs_frame_width;
             ESP_LOGI(TAG, "Actual MJPEG width*heigh: %u*%u, frame index = %u", actual_config.frame_width, actual_config.frame_height, user_frame_idx);
+        } else if (actual_config.frame_index) {
+            ESP_LOGW(TAG, "MJPEG width*heigh: %u*%u, NOT found", actual_config.frame_width, actual_config.frame_height);
+            ESP_LOGW(TAG, "Try with user's config");
+            vs_intf_found = true;
         } else {
             ESP_LOGW(TAG, "MJPEG width*heigh: %u*%u, NOT found", actual_config.frame_width, actual_config.frame_height);
             vs_intf_found = false;
@@ -2472,7 +2484,7 @@ IRAM_ATTR static void _processing_spk_pipe(hcd_pipe_handle_t pipe_hdl, bool if_d
     ESP_LOGV(TAG, "spk payload = %02x %02x...%02x %02x\n", buffer[0], buffer[1], buffer[num_bytes_send - 2], buffer[num_bytes_send - 1]);
 }
 
-static void _uac_deinit_cb(int time_out_ms)
+static void _usb_stream_deinit_cb(int time_out_ms)
 {
     xEventGroupSetBits(s_usb_dev.event_group, USB_STREAM_TASK_KILL_BIT);
     int counter = time_out_ms;
@@ -2487,7 +2499,7 @@ static void _uac_deinit_cb(int time_out_ms)
     xEventGroupClearBits(s_usb_dev.event_group, USB_STREAM_TASK_KILL_BIT);
 }
 
-static void _uac_disconnect_cb(int time_out_ms)
+static void _usb_stream_disconnect_cb(int time_out_ms)
 {
     if (xEventGroupGetBits(s_usb_dev.event_group) & (USB_UVC_STREAM_RUNNING | UAC_MIC_STREAM_RUNNING | UAC_SPK_STREAM_RUNNING)) {
         xEventGroupSetBits(s_usb_dev.event_group, USB_STREAM_TASK_RESET_BIT);
@@ -2820,10 +2832,7 @@ static void _usb_processing_task(void *arg)
     _uvc_event_msg_t evt_msg = {};
     bool keep_running = true;
 
-
-    //Waitting for camera ready
     ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-
     port_hdl = _usb_port_init((void *)uvc_dev->parent->queue_hdl, (void *)uvc_dev->parent->queue_hdl);
     UVC_CHECK_GOTO(port_hdl != NULL, "USB Port init failed", free_task_);
     xEventGroupSetBits(uvc_dev->parent->event_group, USB_HOST_INIT_DONE);
@@ -2845,7 +2854,7 @@ static void _usb_processing_task(void *arg)
                 switch (port_actual_evt) {
                 case HCD_PORT_EVENT_CONNECTION:
                     // wait for device ready
-                    vTaskDelay(pdMS_TO_TICKS(50));
+                    vTaskDelay(pdMS_TO_TICKS(WAITING_USB_AFTER_CONNECTION_MS));
                     // Reset port and get speed
                     ESP_LOGI(TAG, "Resetting Port");
                     ret = hcd_port_command(port_hdl, HCD_PORT_CMD_RESET);
@@ -2941,7 +2950,7 @@ static void _usb_processing_task(void *arg)
                     ESP_LOGD(TAG, "hcd port state after disconnect = %d", hcd_port_get_state(port_hdl));
                     xEventGroupClearBits(uvc_dev->parent->event_group, USB_DEVICE_CONNECTED);
                     if (uac_dev->parent->vs_as_taskh != NULL) {
-                        _uac_disconnect_cb(3000);
+                        _usb_stream_disconnect_cb(TIMEOUT_USB_STREAM_DISCONNECT_MS);
                     }
                     goto usb_driver_reset_;
                     break;
@@ -2970,7 +2979,7 @@ static void _usb_processing_task(void *arg)
                     ret = _usb_set_device_interface(pipe_hdl_dflt, p_itf->interface, 0);
                     UVC_CHECK_GOTO(ESP_OK == ret, "suspend alt_interface failed", suspend_failed_driver_reset_);
                     xQueueSend(uvc_dev->parent->stream_queue_hdl, &evt_msg, portMAX_DELAY);
-                    EventBits_t uxBits = xEventGroupWaitBits(uvc_dev->parent->event_group, (USB_STREAM_TASK_PROC_SUCCEED), pdTRUE, pdFALSE, pdMS_TO_TICKS(TIMEOUT_USER_COMMAND));
+                    EventBits_t uxBits = xEventGroupWaitBits(uvc_dev->parent->event_group, (USB_STREAM_TASK_PROC_SUCCEED), pdTRUE, pdFALSE, pdMS_TO_TICKS(TIMEOUT_USER_COMMAND_MS));
                     UVC_CHECK_GOTO(uxBits & USB_STREAM_TASK_PROC_SUCCEED, "stream suspend failed", suspend_failed_driver_reset_);
                     xEventGroupSetBits(uvc_dev->parent->event_group, USB_CTRL_PROC_SUCCEED);
                     ESP_LOGI(TAG, "%s interface(%u) suspended: alt set to 0!", p_itf->name, p_itf->interface);
@@ -2979,6 +2988,14 @@ static void _usb_processing_task(void *arg)
                     if (p_itf->type == STREAM_UVC) {
                         ret = _uvc_vs_commit_control(pipe_hdl_dflt, &uvc_dev->ctrl_set, &uvc_dev->ctrl_probed);
                         UVC_CHECK_GOTO(ESP_OK == ret, "vs commit failed", resume_failed_driver_reset_);
+                    } else if (p_itf->type == STREAM_UAC_SPK && uac_dev->spk_freq_ctrl_support) {
+                        ret = _uac_as_control_set_freq(pipe_hdl_dflt, uac_dev->spk_as_ifc->ep_addr, uac_dev->spk_samples_frequence);
+                        UVC_CHECK_GOTO(ESP_OK == ret, "mic frequence set failed", resume_failed_driver_reset_);
+                        ESP_LOGI(TAG, "Set spk frequency = %"PRIu32" Hz", uac_dev->spk_samples_frequence);
+                    } else if (p_itf->type == STREAM_UAC_MIC && uac_dev->mic_freq_ctrl_support) {
+                        ret = _uac_as_control_set_freq(pipe_hdl_dflt, uac_dev->mic_as_ifc->ep_addr, uac_dev->mic_samples_frequence);
+                        UVC_CHECK_GOTO(ESP_OK == ret, "mic frequence set failed", resume_failed_driver_reset_);
+                        ESP_LOGI(TAG, "Set mic frequency = %"PRIu32" Hz", uac_dev->mic_samples_frequence);
                     }
                     /* only set interface for isoc transfer */
                     if (p_itf->xfer_type == UVC_XFER_ISOC) {
@@ -2986,7 +3003,7 @@ static void _usb_processing_task(void *arg)
                         UVC_CHECK_GOTO(ESP_OK == ret, "resume alt_interface failed", resume_failed_driver_reset_);
                     }
                     xQueueSend(uvc_dev->parent->stream_queue_hdl, &evt_msg, portMAX_DELAY);
-                    EventBits_t uxBits = xEventGroupWaitBits(uvc_dev->parent->event_group, (USB_STREAM_TASK_PROC_SUCCEED), pdTRUE, pdFALSE, pdMS_TO_TICKS(TIMEOUT_USER_COMMAND));
+                    EventBits_t uxBits = xEventGroupWaitBits(uvc_dev->parent->event_group, (USB_STREAM_TASK_PROC_SUCCEED), pdTRUE, pdFALSE, pdMS_TO_TICKS(TIMEOUT_USER_COMMAND_MS));
                     UVC_CHECK_GOTO(uxBits & USB_STREAM_TASK_PROC_SUCCEED, "stream suspend failed", resume_failed_driver_reset_);
                     xEventGroupSetBits(uvc_dev->parent->event_group, USB_CTRL_PROC_SUCCEED);
                     ESP_LOGI(TAG, "%s interface(%u) resumed: alt set to %u!", p_itf->name, p_itf->interface, p_itf->interface_alt);
@@ -3041,7 +3058,7 @@ resume_failed_driver_reset_:
         xEventGroupSetBits(uvc_dev->parent->event_group, USB_CTRL_PROC_FAILED);
 usb_driver_reset_:
         if (uac_dev->parent->vs_as_taskh) {
-            _uac_deinit_cb(2000);
+            _usb_stream_deinit_cb(TIMEOUT_USB_STREAM_DEINIT_MS);
             uac_dev->parent->vs_as_taskh = NULL;
         }
 
@@ -3055,9 +3072,9 @@ usb_driver_reset_:
         }
         ESP_LOGI(TAG, "hcd recovering");
         hcd_port_recover(port_hdl);
-        vTaskDelay(50 / portTICK_PERIOD_MS);
         ESP_LOGI(TAG, "hcd port state after recovering = %d", hcd_port_get_state(port_hdl));
-        if (_user_event_wait(port_hdl, STREAM_STOP, pdMS_TO_TICKS(200)) == ESP_OK) {
+        /* We have a chance here to check if users want to stop the driver */
+        if (_user_event_wait(port_hdl, STREAM_STOP, 1) == ESP_OK) {
             ESP_LOGI(TAG, "handle user stop command");
             break;
         }
@@ -3333,7 +3350,8 @@ esp_err_t usb_streaming_start()
                             USB_PROC_TASK_PRIORITY, &usbh_taskh, USB_PROC_TASK_CORE);
     UVC_CHECK_GOTO(usbh_taskh != NULL, "Create usb proc task failed", free_resource_);
     xTaskNotifyGive(usbh_taskh);
-    vTaskDelay(50 / portTICK_PERIOD_MS);
+    EventBits_t uxBits = xEventGroupWaitBits(s_usb_dev.event_group, USB_HOST_INIT_DONE, pdFALSE, pdFALSE, pdMS_TO_TICKS(TIMEOUT_USB_STREAM_START_MS));
+    UVC_CHECK_GOTO(uxBits & USB_HOST_INIT_DONE, "Start usb proc task failed", free_resource_);
     ESP_LOGI(TAG, "USB Streaming Starting");
     return ESP_OK;
 
@@ -3379,7 +3397,7 @@ esp_err_t usb_streaming_stop(void)
     };
 
     xQueueSend(s_usb_dev.queue_hdl, &event_msg, portMAX_DELAY);
-    EventBits_t uxBits = xEventGroupWaitBits(s_usb_dev.event_group, USB_HOST_STOP_DONE, pdTRUE, pdFALSE, pdMS_TO_TICKS(TIMEOUT_USER_COMMAND));
+    EventBits_t uxBits = xEventGroupWaitBits(s_usb_dev.event_group, USB_HOST_STOP_DONE, pdTRUE, pdFALSE, pdMS_TO_TICKS(TIMEOUT_USER_COMMAND_MS));
     if (!(uxBits & USB_HOST_STOP_DONE)) {
         ESP_LOGE(TAG, "UVC Streaming Stop Failed");
         return ESP_ERR_TIMEOUT;
@@ -3438,7 +3456,7 @@ static esp_err_t _streaming_suspend(usb_stream_t stream)
     };
 
     xQueueSend(s_usb_dev.queue_hdl, &event_msg, portMAX_DELAY);
-    EventBits_t uxBits = xEventGroupWaitBits(s_usb_dev.event_group, USB_CTRL_PROC_SUCCEED | USB_CTRL_PROC_FAILED, pdTRUE, pdFALSE, pdMS_TO_TICKS(TIMEOUT_USER_COMMAND));
+    EventBits_t uxBits = xEventGroupWaitBits(s_usb_dev.event_group, USB_CTRL_PROC_SUCCEED | USB_CTRL_PROC_FAILED, pdTRUE, pdFALSE, pdMS_TO_TICKS(TIMEOUT_USER_COMMAND_MS));
     if (uxBits & USB_CTRL_PROC_SUCCEED) {
         ESP_LOGI(TAG, "%s Streaming Suspend Done", p_itf->name);
         return ESP_OK;
@@ -3477,7 +3495,7 @@ static esp_err_t _streaming_resume(usb_stream_t stream)
     };
 
     xQueueSend(s_usb_dev.queue_hdl, &event_msg, portMAX_DELAY);
-    EventBits_t uxBits = xEventGroupWaitBits(s_usb_dev.event_group, USB_CTRL_PROC_SUCCEED | USB_CTRL_PROC_FAILED, pdTRUE, pdFALSE, pdMS_TO_TICKS(TIMEOUT_USER_COMMAND));
+    EventBits_t uxBits = xEventGroupWaitBits(s_usb_dev.event_group, USB_CTRL_PROC_SUCCEED | USB_CTRL_PROC_FAILED, pdTRUE, pdFALSE, pdMS_TO_TICKS(TIMEOUT_USER_COMMAND_MS));
     if (uxBits & USB_CTRL_PROC_SUCCEED) {
         ESP_LOGI(TAG, "%s Streaming Resume Done", p_itf->name);
         return ESP_OK;
@@ -3551,7 +3569,7 @@ static esp_err_t _uac_feature_control(usb_stream_t stream, stream_ctrl_t ctrl_ty
     }
 
     xQueueSend(s_usb_dev.queue_hdl, &event_msg, portMAX_DELAY);
-    EventBits_t uxBits = xEventGroupWaitBits(s_usb_dev.event_group, USB_CTRL_PROC_SUCCEED | USB_CTRL_PROC_FAILED, pdTRUE, pdFALSE, pdMS_TO_TICKS(TIMEOUT_USER_COMMAND));
+    EventBits_t uxBits = xEventGroupWaitBits(s_usb_dev.event_group, USB_CTRL_PROC_SUCCEED | USB_CTRL_PROC_FAILED, pdTRUE, pdFALSE, pdMS_TO_TICKS(TIMEOUT_USER_COMMAND_MS));
     if (uxBits & USB_CTRL_PROC_SUCCEED) {
         ESP_LOGI(TAG, "%s UAC Feature Control Done", p_itf->name);
         // update value

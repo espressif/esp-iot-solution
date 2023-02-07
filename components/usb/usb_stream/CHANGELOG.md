@@ -1,5 +1,20 @@
 # ChangeLog
 
+## v0.4.3 - 2023-02-07
+
+### Enhancements:
+
+* Remove some unnecessary vTaskDelay
+* Camera:
+  * Support for bulk camera with suspend/resume control
+  * Support force uvc format index if not found
+  * Add support for bulk camera with MPS(Max Packet Size) equal to 512 bytes
+
+### Bug Fixes:
+
+* Speaker: 
+  * fix some speaker resume control not work (should set freq after resume)
+
 ## v0.4.2 - 2023-01-30
 
 ### Enhancements:
