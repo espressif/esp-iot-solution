@@ -177,7 +177,6 @@ esp_err_t usb_streaming_stop(void);
 
 /**
  * @brief Control specified streaming features
- * @note suspend/resume only supported for isochronous mode stream
  * @param stream stream type defined in usb_stream_t
  * @param ctrl_type stream control type defined in stream_ctrl_t
  * @param ctrl_value stream control value
