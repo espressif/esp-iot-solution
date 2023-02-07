@@ -12,7 +12,6 @@ endif()
 list(APPEND EXTRA_COMPONENT_DIRS "$ENV{IOT_SOLUTION_PATH}/examples/decompress/xz_compressed_ota/bootloader_components/bootloader_custom_malloc")
 list(APPEND EXTRA_COMPONENT_DIRS "$ENV{IOT_SOLUTION_PATH}/examples/decompress/xz_compressed_ota/bootloader_components/esp-xz")
 
-include($ENV{IOT_SOLUTION_PATH}/component.cmake)
 # add_compile_options(-fdiagnostics-color=always)
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(xz_decompress_file_example)
