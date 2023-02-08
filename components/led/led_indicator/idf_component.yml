@@ -1,0 +1,7 @@
+version: "0.3.0"
+description: LED indicator driver
+url: https://github.com/espressif/esp-iot-solution/tree/master/components/led/led_indicator
+dependencies:
+  idf: ">=4.0"
+  cmake_utilities:
+    version: "~0.1.0"

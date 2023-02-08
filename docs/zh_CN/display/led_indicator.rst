@@ -7,7 +7,7 @@ LED 指示灯是最简单的输出外设之一，可以通过不同形式的闪�
 - 支持定义多组闪烁类型
 - 支持定义闪烁类型优先级
 - 支持创建多个指示灯
-
+- LEDC 等驱动支持调节亮度，渐变
 
 使用方法
 ^^^^^^^^^^^^^
@@ -37,6 +37,17 @@ LED 指示灯是最简单的输出外设之一，可以通过不同形式的闪�
         {LED_BLINK_HOLD, LED_STATE_ON, 150},              // step3: turn on LED 150 ms
         {LED_BLINK_HOLD, LED_STATE_OFF, 100},             // step4: turn off LED 100 ms
         {LED_BLINK_STOP, 0, 0},                           // step5: stop blink (off)
+    };
+
+例 3. 定义一个循环闪烁：渐亮 0.05s， 逐灭 0.5s， 执行完毕灯熄灭。（GPIO 模式不支持）
+
+.. code:: c
+
+    const blink_step_t test_blink_breathe[] = {
+        {LED_BLINK_BREATHE, LED_STATE_ON, 500},              // step1: fade from off to on 500ms
+        {LED_BLINK_BREATHE, LED_STATE_OFF, 500},             // step2: fade from on to off 500ms
+        {LED_BLINK_BRIGHTNESS, 50, 500},                     // step3: set to half brightness 500 ms
+        {LED_BLINK_STOP, 0, 0},                              // step4: stop blink (50% brightness)
     };
 
 定义闪烁类型之后，需要在 ``led_indicator_blink_type_t`` 添加该类型对应的枚举成员，然后将其添加到闪烁类型列表 ``led_indicator_blink_lists``，示例如下：
@@ -78,8 +89,13 @@ LED 指示灯是最简单的输出外设之一，可以通过不同形式的闪�
 .. code:: c
 
     led_indicator_config_t config = {
-        .off_level = 0,                              // attach led positive side to esp32 gpio pin
         .mode = LED_GPIO_MODE,
+        .led_gpio_config = {
+            .active_level = 1,
+            .gpio_num = 1,
+        },
+        .blink_lists = led_indicator_get_sample_lists(),
+        .blink_list_num = led_indicator_get_sample_lists_num(),
     };
     led_indicator_handle_t led_handle = led_indicator_create(8, &config); // attach to gpio 8
 
@@ -103,11 +119,45 @@ LED 指示灯是最简单的输出外设之一，可以通过不同形式的闪�
 
     led_indicator_delete(&led_handle);
 
+
+抢占操作： 您可以在任何时候直接闪烁指定的类型。
+
+.. code:: c
+
+    led_indicator_preempt_start(led_handle, BLINK_TEST_BLINK_LOOP);
+
+停止抢占：您可以使用停止抢占函数，来取消正在抢占的闪烁模式。
+
+.. code:: c
+
+    led_indicator_preempt_stop(led_handle, BLINK_TEST_BLINK_LOOP);
+
 .. Note::
 
     该组件支持线程安全操作，您可使用全局变量共享 LED 指示灯的操作句柄 ``led_indicator_handle_t``，也可以使用 :cpp:type:`led_indicator_get_handle` 在其它线程通过 LED 的 IO 号获取句柄以进行操作。
 
+自定义指示灯闪烁
++++++++++++++++++++
 
+.. code:: c
+    
+    static blink_step_t const *led_blink_lst[] = {
+        [BLINK_DOUBLE] = double_blink,
+        [BLINK_TRIPLE] = triple_blink,
+        [BLINK_NUM] = NULL,
+    };
+
+    led_indicator_config_t config = {
+        .mode = LED_GPIO_MODE,
+        .led_gpio_config = {
+            .active_level = 1,
+            .gpio_num = 1,
+        },
+        .blink_lists = led_blink_lst,
+        .blink_list_num = BLINK_MAX,
+    };
+
+通过定义 ``led_blink_lst[]`` 实现自定义指示灯。
 
 API 参考
 ^^^^^^^^^^^^^^^^

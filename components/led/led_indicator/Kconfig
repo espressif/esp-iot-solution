@@ -1,0 +1,8 @@
+menu "LED Indicator"
+
+    config BRIGHTNESS_TICKS
+        int "One brightness change for ticks"
+        range 1 50
+        default 10
+
+endmenu
