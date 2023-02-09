@@ -16,6 +16,7 @@
 #include "services/gatt/ble_svc_gatt.h"
 #include "host/ble_uuid.h"
 #include "ble_ota.h"
+#include "esp_nimble_hci.h"
 
 #define BUF_LENGTH                          4096
 #define OTA_IDX_NB                          4
@@ -812,10 +813,15 @@ esp_ble_ota_host_init(void)
 {
     int rc;
 
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
     if (esp_nimble_init() != 0) {
         ESP_LOGE(TAG, "nimble host init failed\n");
         return ESP_FAIL;
     }
+#else
+    ESP_ERROR_CHECK(esp_nimble_hci_and_controller_init());
+    nimble_port_init();
+#endif
 
     /* Initialize the NimBLE host configuration. */
     ble_hs_cfg.reset_cb = esp_ble_ota_on_reset;

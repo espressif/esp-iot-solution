@@ -18,3 +18,9 @@
 ## v0.1.2 - 2023-01-18
 
 * Fixed warnings
+
+## v0.1.3 - 2023-02-09
+
+* BLE-OTA:
+  * Added support for IDF release v4.4
+  * Fixed github ble_ota link in idf_component.yml
