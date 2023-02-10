@@ -9,7 +9,7 @@
 You can create a project from this example by the following command:
 
 ```
-idf.py create-project-from-example "espressif/esp-iot-solution^0.1.0:ble_ota"
+idf.py create-project-from-example "espressif/esp-iot-solution^0.1.3:ble_ota"
 ```
 
 > Note: For the examples downloaded by using this command, you need to comment out the override_path line in the main/idf_component.yml.
