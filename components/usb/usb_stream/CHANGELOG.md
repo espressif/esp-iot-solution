@@ -1,5 +1,15 @@
 # ChangeLog
 
+## v0.4.4 - 2023-02-09
+
+### Enhancements:
+
+* Remove all assert, replace with error handler
+
+### Bug Fixes:
+
+* Fix error message during disconnect
+
 ## v0.4.3 - 2023-02-07
 
 ### Enhancements:
