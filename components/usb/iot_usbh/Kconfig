@@ -1,0 +1,24 @@
+menu "IoT USB Host"
+    config USBH_GET_DEVICE_DESC
+        bool "Get device descriptor during emum"
+        default y
+    config USBH_GET_CONFIG_DESC
+        bool "Get config descriptor during emum"
+        default y
+    config USBH_TASK_CORE_ID
+        int "usbh task core_id"
+        default 0
+        range 0 0 if IDF_TARGET_ESP32S2
+        range 0 1 if IDF_TARGET_ESP32S3
+        help
+            pin usb task to specified core
+    config USBH_TASK_BASE_PRIORITY
+        int "usbh task base priority"
+        default 5
+        help
+            usb task base priority
+    config CTRL_TRANSFER_DATA_MAX_BYTES
+        int "Max control transfer data size (Bytes)"
+        range 64 2048
+        default 512
+endmenu
