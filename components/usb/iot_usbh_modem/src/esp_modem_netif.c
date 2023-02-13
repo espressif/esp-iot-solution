@@ -3,6 +3,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+#include <inttypes.h>
 #include "esp_netif.h"
 #include "esp_modem.h"
 #include "esp_modem_netif.h"
@@ -72,7 +73,7 @@ static void on_ppp_changed(void *arg, esp_event_base_t event_base,
 {
     esp_modem_dte_t *dte = arg;
     if (event_id < NETIF_PP_PHASE_OFFSET) {
-        ESP_LOGI(TAG, "PPP state changed event %d (%s)", event_id, esp_modem_netif_event_to_name(event_id));
+        ESP_LOGI(TAG, "PPP state changed event %"PRIi32": (%s)", event_id, esp_modem_netif_event_to_name(event_id));
         // only notify the modem on state/error events, ignoring phase transitions
         esp_modem_notify_ppp_netif_closed(dte);
     }

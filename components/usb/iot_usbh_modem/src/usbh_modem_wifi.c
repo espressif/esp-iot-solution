@@ -13,12 +13,13 @@
 #include "lwip/err.h"
 #include "lwip/sys.h"
 #include "lwip/lwip_napt.h"
+#include "dhcpserver/dhcpserver.h"
 #include "usbh_modem_wifi.h"
 
 static const char *TAG = "modem_wifi";
 
 /* Event handler for catching system events */
-static void event_handler(void *arg, esp_event_base_t event_base, int event_id, void *event_data)
+static void event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
     if (event_base == IP_EVENT && event_id == IP_EVENT_AP_STAIPASSIGNED) {
         ESP_LOGI(TAG, "Get IP addr");

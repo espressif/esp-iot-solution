@@ -9,10 +9,12 @@
 #include "freertos/event_groups.h"
 #include "freertos/task.h"
 #include "driver/gpio.h"
+#include "esp_wifi_types.h"
 #include "esp_err.h"
 #include "esp_system.h"
 #include "esp_event.h"
 #include "esp_log.h"
+#include "esp_netif.h"
 #include "esp_netif_ppp.h"
 #include "esp_modem.h"
 #include "esp_modem_recov_helper.h"
@@ -278,7 +280,7 @@ static void on_modem_event(void *arg, esp_event_base_t event_base,
                            int32_t event_id, void *event_data)
 {
     if (event_base == IP_EVENT) {
-        ESP_LOGI(TAG, "IP event! %d", event_id);
+        ESP_LOGI(TAG, "IP event! %"PRIi32"", event_id);
         if (event_id == IP_EVENT_PPP_GOT_IP) {
             esp_netif_dns_info_t dns_info;
             ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
@@ -311,7 +313,7 @@ static void on_modem_event(void *arg, esp_event_base_t event_base,
     } else if (event_base == ESP_MODEM_EVENT) {
         switch (event_id) {
         default:
-            ESP_LOGW(TAG, "Modem event! %d", event_id);
+            ESP_LOGW(TAG, "Modem event! %"PRIi32"", event_id);
             break;
         }
     } else if (event_base == WIFI_EVENT) {
@@ -460,7 +462,7 @@ static void _modem_daemon_task(void *param)
         /********************************** handle external event *********************************************************/
         EventBits_t bits = xEventGroupWaitBits(s_modem_evt_hdl, ( PPP_NET_MODE_ON_BIT | PPP_NET_MODE_OFF_BIT | DTE_USB_RECONNECT_BIT | DTE_USB_DISCONNECT_BIT | PPP_NET_RECONNECTING_BIT |
                                                PPP_NET_DISCONNECT_BIT | MODEM_DESTROY_BIT), pdFALSE, pdFALSE, portMAX_DELAY);
-        ESP_LOGD(TAG, "Handling bits = %04X, stage = %d, retry = %d ", bits, modem_stage, stage_retry_times);
+        ESP_LOGD(TAG, "Handling bits = %04X, stage = %d, retry = %d ", (unsigned int)bits, modem_stage, stage_retry_times);
         /* deamon task destroy */
         if (bits & MODEM_DESTROY_BIT) {
             break;

@@ -3,6 +3,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+#include <sys/queue.h>
 #include <string.h>
 #include "esp_log.h"
 #include "esp_modem_dce_command_lib.h"

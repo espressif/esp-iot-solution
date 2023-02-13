@@ -11,7 +11,8 @@ set(srcs "src/esp_modem.c"
 idf_component_register(SRCS "${srcs}"
                     INCLUDE_DIRS "include"
                     PRIV_INCLUDE_DIRS "private_include"
-                    REQUIRES driver)
+                    REQUIRES driver esp_netif esp_wifi
+                    PRIV_REQUIRES iot_usbh_cdc esp_event)
 
 include(cmake_utilities)
 cu_pkg_define_version(${CMAKE_CURRENT_LIST_DIR})
