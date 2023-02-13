@@ -14,8 +14,13 @@
 #include "esp_attr.h"
 #include "esp_intr_alloc.h"
 #include "esp_bit_defs.h"
+#if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 1, 0))
+#include "hal/usb_dwc_hal.h"
+#include "hal/usb_dwc_ll.h"
+#else
 #include "hal/usb_hal.h"
 #include "hal/usbh_ll.h"
+#endif
 #include "hcd.h"
 #include "usb/usb_types_stack.h"
 #include "usb_private.h"
@@ -338,7 +343,11 @@ usbh_port_handle_t iot_usbh_port_init(usbh_port_config_t *config)
         .target = USB_PHY_TARGET_INT,
         .otg_mode = USB_OTG_MODE_HOST,
         .otg_speed = USB_PHY_SPEED_UNDEFINED,   //In Host mode, the speed is determined by the connected device
+#if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0))
+        .otg_io_conf = NULL,
+#else
         .gpio_conf = NULL,
+#endif
     };
     ret = usb_new_phy(&phy_config, &port_instance->phy_handle);
     ERR_CHECK(ESP_OK == ret, "USB PHY init failed", NULL);

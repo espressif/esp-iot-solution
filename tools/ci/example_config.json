@@ -243,6 +243,20 @@
             ]
         },
         {
+            "name": "usb_cdc_4g_module",
+            "buildsystem": [
+                "cmake"
+            ],
+            "targets": [
+                "esp32s2",
+                "esp32s3"
+            ],
+            "idfversion": [
+                "4.4",
+                "5.0"
+            ]
+        },
+        {
             "name": "usb_surface_dial",
             "buildsystem": [
                 "cmake"

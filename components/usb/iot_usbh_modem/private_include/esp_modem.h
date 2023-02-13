@@ -10,6 +10,7 @@ extern "C" {
 #endif
 
 #include "esp_event.h"
+#include "esp_netif.h"
 #include "driver/uart.h"
 #include "iot_usbh_cdc.h"
 

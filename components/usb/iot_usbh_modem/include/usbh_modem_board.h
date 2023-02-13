@@ -7,7 +7,6 @@
 #include "esp_err.h"
 #include "esp_netif.h"
 #include "esp_event.h"
-#include "iot_usbh_cdc.h"
 
 #ifdef __cplusplus
 extern "C"
