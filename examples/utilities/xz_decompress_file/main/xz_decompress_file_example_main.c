@@ -1,18 +1,15 @@
-/* XZ decompress API been used to decompress the specified buffer.
-
-   This example code is in the Public Domain (or CC0 licensed, at your option.)
-
-   Unless required by applicable law or agreed to in writing, this
-   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-   CONDITIONS OF ANY KIND, either express or implied.
-*/
+/*
+ * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: CC0-1.0
+ */
 
 #include <string.h>
 
 #include "esp_err.h"
 #include "esp_log.h"
 
-#include "esp_xz_decompressor.h"
+#include "xz_decompress.h"
 
 #define IO_BUFFER_LEN (2048)
 
@@ -21,11 +18,11 @@ extern const uint8_t origin_file_end[] asm("_binary_hello_txt_end");
 extern const uint8_t xz_compressed_file_start[] asm("_binary_hello_txt_xz_start");
 extern const uint8_t xz_compressed_file_end[] asm("_binary_hello_txt_xz_end");
 
-static int decryped_count;
+static int decompressed_count;
 static size_t compressed_file_length;
 static size_t filled_length;
 
-static const char *TAG = "xz decry";
+static const char *TAG = "xz decompress";
 
 static void error(char *msg)
 {
@@ -56,10 +53,10 @@ static void test_buf_to_buf(void)
      * Read compressed data from in_buf, and write decompressed data to out_buf.
      * When you can estimate how much data will be extracted, you can use this API like this.
      */
-    int ret = esp_xz_decompress((unsigned char *)xz_compressed_file_start, compressed_file_length, NULL, NULL, (unsigned char *)out_buf, &decryped_count, error);
+    int ret = xz_decompress((unsigned char *)xz_compressed_file_start, compressed_file_length, NULL, NULL, (unsigned char *)out_buf, &decompressed_count, error);
     // Display the read contents from the decompressed buf
     ESP_LOGI(TAG, "decompress data:\n%s", out_buf);
-    ESP_LOGI(TAG, "ret = %d, decrypted count is %d", ret, decryped_count);
+    ESP_LOGI(TAG, "ret = %d, decompressed count is %d", ret, decompressed_count);
     free(out_buf);
 }
 
@@ -70,8 +67,8 @@ static void test_buf_to_cb(void)
      * to the specified partition/buffer chunk by chunk.
      * When you can not estimate how much data will be extracted, you can use this API like this.
      */
-    int ret = esp_xz_decompress((unsigned char *)xz_compressed_file_start, compressed_file_length, NULL, &flush, NULL, &decryped_count, &error);
-    ESP_LOGI(TAG, "ret = %d; decryped count = %d", ret, decryped_count);
+    int ret = xz_decompress((unsigned char *)xz_compressed_file_start, compressed_file_length, NULL, &flush, NULL, &decompressed_count, &error);
+    ESP_LOGI(TAG, "ret = %d; decompressed count = %d", ret, decompressed_count);
 }
 
 static void test_cb_to_cb(void)
@@ -82,8 +79,8 @@ static void test_cb_to_cb(void)
      * This is the memory friendly usage of the API, because it can read and write data in chunks instead of read
      * or write all data at once.
      */
-    int ret = esp_xz_decompress(NULL, 0, &fill, &flush, NULL, &decryped_count, &error);
-    ESP_LOGI(TAG, "ret = %d; decryped count = %d", ret, decryped_count);
+    int ret = xz_decompress(NULL, 0, &fill, &flush, NULL, &decompressed_count, &error);
+    ESP_LOGI(TAG, "ret = %d; decompressed count = %d", ret, decompressed_count);
 }
 
 static void test_cb_to_buf(void)
@@ -96,9 +93,9 @@ static void test_cb_to_buf(void)
      * Call fill() to read compressed data from partition/buffer chunk by chunk, and write decompressed data to out_buf.
      * The in_buf used to store the data tramsmited by fill().
      */
-    int ret = esp_xz_decompress(in_buf, 0, &fill, NULL, out_buf, &decryped_count, &error);
+    int ret = xz_decompress(in_buf, 0, &fill, NULL, out_buf, &decompressed_count, &error);
     ESP_LOGI(TAG, "decompress:\n%s", out_buf);
-    ESP_LOGI(TAG, "ret = %d; decryped count = %d", ret, decryped_count);
+    ESP_LOGI(TAG, "ret = %d; decompressed count = %d", ret, decompressed_count);
     free(out_buf);
     free(in_buf);
 }
@@ -130,5 +127,5 @@ void app_main(void)
     ESP_LOGI(TAG, "*****************test buf to callback end*************\n");
 
     // All done
-    ESP_LOGI(TAG, "TESK FINISH");
+    ESP_LOGI(TAG, "TASK FINISH");
 }

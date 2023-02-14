@@ -1,0 +1,5 @@
+dependencies:
+  xz:
+    version: "~1.0.0"
+    # Please comment the following line, if this example is installed by idf.py create-project-from-example.
+    override_path: "../../../../components/utilities/xz"

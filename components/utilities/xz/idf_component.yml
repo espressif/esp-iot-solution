@@ -1,0 +1,7 @@
+version: "1.0.0"
+description: xz decompression utility
+url: https://github.com/espressif/esp-iot-solution/tree/master/components/utilities/xz
+dependencies:
+  idf: ">=4.1"
+examples:
+  - path: ../../../examples/utilities/xz_decompress_file
