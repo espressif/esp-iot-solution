@@ -59,6 +59,38 @@ struct gatts_profile_inst {
     uint16_t mtu_size;
 };
 
+#ifdef CONFIG_BT_BLE_50_FEATURES_SUPPORTED
+#define EXT_ADV_HANDLE                            0
+#define NUM_EXT_ADV_SET                           1
+#define EXT_ADV_DURATION                          0
+#define EXT_ADV_MAX_EVENTS                        0
+
+static uint8_t ext_ota_adv_data[] = {
+    0x02, 0x01, 0x06,
+    0x03, 0x03, 0x18, 0x80, //UUID
+    0x09, 0x09, 0x45, 0x53, 0x50, 0x26, 0x43, 0x39, 0x31, 0x39, //ESP-C919
+    0x0d, 0xff, 0xe5, 0x02, 0x01, 0x01, 0x27, 0x95, 0x01, 0x00, 0x00, 0x00, 0xff, 0xff
+};
+
+static esp_ble_gap_ext_adv_t ext_adv[1] = {
+    [0] = {EXT_ADV_HANDLE, EXT_ADV_DURATION, EXT_ADV_MAX_EVENTS},
+};
+
+esp_ble_gap_ext_adv_params_t ext_ota_adv_params = {
+    .type = ESP_BLE_GAP_SET_EXT_ADV_PROP_CONNECTABLE,
+    .interval_min = 0x20,
+    .interval_max = 0x20,
+    .channel_map = ADV_CHNL_ALL,
+    .filter_policy = ADV_FILTER_ALLOW_SCAN_ANY_CON_ANY,
+    .primary_phy = ESP_BLE_GAP_PHY_1M,
+    .max_skip = 0,
+    .secondary_phy = ESP_BLE_GAP_PHY_2M,
+    .sid = 0,
+    .scan_req_notif = false,
+    .own_addr_type = BLE_ADDR_TYPE_PUBLIC,
+    .tx_power = EXT_ADV_TX_PWR_NO_PREFERENCE,
+};
+#else
 static esp_ble_adv_params_t ota_adv_params = {
     .adv_int_min        = 0x20,
     .adv_int_max        = 0x40,
@@ -81,6 +113,7 @@ static const uint8_t ota_scan_rsp_data[31] = {
     0x09, 0x09, 0x45, 0x53, 0x50, 0x26, 0x43, 0x39, 0x31, 0x39, //ESP-C919
     0x0d, 0xff, 0xe5, 0x02, 0x01, 0x01, 0x27, 0x95, 0x01, 0x00, 0x00, 0x00, 0xff, 0xff
 };
+#endif
 
 esp_ble_ota_callback_funs_t ota_cb_fun_t = {
     .recv_fw_cb = NULL
@@ -385,21 +418,32 @@ unsigned int esp_ble_ota_get_fw_length(void)
 
 static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param)
 {
-    esp_err_t err;
     esp_bd_addr_t bd_addr;
 
     ESP_LOGD(TAG, "GAP_EVT, event %d\n", event);
 
     switch (event) {
+#ifdef CONFIG_BT_BLE_50_FEATURES_SUPPORTED
+    case ESP_GAP_BLE_EXT_ADV_SET_PARAMS_COMPLETE_EVT:
+        esp_ble_gap_config_ext_adv_data_raw(EXT_ADV_HANDLE,  sizeof(ext_ota_adv_data), &ext_ota_adv_data[0]);
+        break;
+    case ESP_GAP_BLE_EXT_ADV_DATA_SET_COMPLETE_EVT:
+        esp_ble_gap_ext_adv_start(NUM_EXT_ADV_SET, &ext_adv[0]);
+        break;
+    case ESP_GAP_BLE_EXT_ADV_START_COMPLETE_EVT:
+         ESP_LOGI(TAG, "Ext adv start, status = %d", param->ext_adv_data_set.status);
+        break;
+#else
     case ESP_GAP_BLE_ADV_DATA_RAW_SET_COMPLETE_EVT:
         esp_ble_gap_start_advertising(&ota_adv_params);
         break;
     case ESP_GAP_BLE_ADV_START_COMPLETE_EVT:
         //advertising start complete event to indicate advertising start successfully or failed
-        if ((err = param->adv_start_cmpl.status) != ESP_BT_STATUS_SUCCESS) {
-            ESP_LOGE(TAG, "Advertising start failed: %s\n", esp_err_to_name(err));
+        if (param->adv_start_cmpl.status != ESP_BT_STATUS_SUCCESS) {
+            ESP_LOGE(TAG, "Advertising start failed\n");
         }
         break;
+#endif
     case ESP_GAP_BLE_SEC_REQ_EVT:
         for (int i = 0; i < ESP_BD_ADDR_LEN; i++) {
             ESP_LOGI(TAG, "%x:", param->ble_security.ble_req.bd_addr[i]);
@@ -740,7 +784,12 @@ static void gatts_ota_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt
         if (ret) {
             ESP_LOGE(TAG, "set device name failed, error code = %x", ret);
         }
-
+#ifdef CONFIG_BT_BLE_50_FEATURES_SUPPORTED
+        ret = esp_ble_gap_ext_adv_set_params(EXT_ADV_HANDLE, &ext_ota_adv_params);
+        if (ret) {
+            ESP_LOGE(TAG, "set ext adv params failed, error code = %x", ret);
+        }
+#else
         ret = esp_ble_gap_config_adv_data_raw((uint8_t *)ota_adv_data, sizeof(ota_adv_data));
         if (ret) {
             ESP_LOGE(TAG, "set adv data failed, error code = %x", ret);
@@ -750,6 +799,7 @@ static void gatts_ota_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt
         if (ret) {
             ESP_LOGE(TAG, "set scan rsp data failed, error code = %x", ret);
         }
+#endif
 
         ret = esp_ble_gatts_create_attr_tab(ota_gatt_db, gatts_if, OTA_IDX_NB, OTA_PROFILE_APP_IDX);
         if (ret) {
@@ -856,7 +906,11 @@ static void gatts_ota_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt
         esp_ble_gap_update_conn_params(&conn_params);
         break;
     case ESP_GATTS_DISCONNECT_EVT:
+#ifdef CONFIG_BT_BLE_50_FEATURES_SUPPORTED
+        esp_ble_gap_ext_adv_start(NUM_EXT_ADV_SET, &ext_adv[0]);
+#else
         esp_ble_gap_start_advertising(&ota_adv_params);
+#endif
         ota_profile_tab[OTA_PROFILE_APP_IDX].mtu_size = 23;
         break;
     case ESP_GATTS_CREAT_ATTR_TAB_EVT:

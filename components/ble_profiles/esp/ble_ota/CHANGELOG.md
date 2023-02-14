@@ -24,3 +24,8 @@
 * BLE-OTA:
   * Added support for IDF release v4.4
   * Fixed github ble_ota link in idf_component.yml
+
+## v0.1.4 - 2023-02-13
+
+* BLE-OTA:
+  * Added support for bluedroid BLE 5.0 features.
