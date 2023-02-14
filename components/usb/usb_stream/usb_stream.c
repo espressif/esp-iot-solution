@@ -19,13 +19,6 @@
 #include "esp_err.h"
 #include "esp_attr.h"
 #include "esp_log.h"
-#if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 1, 0))
-#include "hal/usb_dwc_hal.h"
-#include "hal/usb_dwc_ll.h"
-#else
-#include "hal/usb_hal.h"
-#include "hal/usbh_ll.h"
-#endif
 #include "hcd.h"
 #include "usb/usb_types_stack.h"
 #include "usb/usb_helpers.h"
@@ -1899,7 +1892,7 @@ static inline void _uvc_process_payload(_uvc_stream_handle_t *strmh, size_t req_
     size_t variable_offset = 0;
     uint8_t header_info = 0;
     size_t data_len = 0;
-    uvc_xfer_t bulk_xfer = (s_uvc_dev.xfer_type==UVC_XFER_BULK)?1:0;
+    bool bulk_xfer = (s_uvc_dev.xfer_type==UVC_XFER_BULK)?true:false;
     uint8_t flag_lstp = 0;
     uint8_t flag_zlp = 0;
     uint8_t flag_rsb = 0;
@@ -1923,7 +1916,7 @@ static inline void _uvc_process_payload(_uvc_stream_handle_t *strmh, size_t req_
     if (!flag_zlp) {
         ESP_LOGV(TAG, "zlp=%d, lstp=%d, req_len=%d, payload_len=%d, first=0x%02x, second=0x%02x", flag_zlp, flag_lstp, req_len, payload_len, payload[0], payload_len>1?payload[1]:0);
         // make sure this is a header, judge from header length and bit field
-        if (payload[0] == 12 && payload_len >= 12 && (payload[1] & 0x80) && !(payload[1] & 0x30)) {
+        if ((payload[0] == 12 || payload[0] == 6 || payload[0] == 2) && payload_len >= payload[0] && (payload[1] & 0x80) && !(payload[1] & 0x30)) {
             header_len = payload[0];
             data_len = payload_len - header_len;
             /* checking the end-of-header */
@@ -1998,8 +1991,8 @@ static inline void _uvc_process_payload(_uvc_stream_handle_t *strmh, size_t req_
 
         strmh->got_bytes += data_len;
     }
-
-    if ((header_info & (1 << 1)) || flag_zlp || flag_lstp) {
+    /* Just ignore the EOF bit if using bulk transfer */
+    if (((header_info & (1 << 1)) && !bulk_xfer) || flag_zlp || flag_lstp) {
         /* The EOF bit is set, so publish the complete frame */
         if (strmh->got_bytes != 0) _uvc_swap_buffers(strmh);
         strmh->reassembling = 0;

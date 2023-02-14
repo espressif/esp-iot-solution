@@ -1,5 +1,17 @@
 # ChangeLog
 
+## v0.4.5 - 2023-02-14
+
+### Bug Fixes:
+
+* Remove unnecessary header files "hal/usbh_ll.h" "hal/usb_hal.h"
+
+### Enhancements:
+
+* Camera:
+  * Support camera with length of 2, 6 bytes MJPEG UVC header
+  * Support bulk camera with EOF bit set in each payload
+
 ## v0.4.4 - 2023-02-09
 
 ### Enhancements:
