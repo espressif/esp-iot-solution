@@ -39,6 +39,15 @@ esp_decrypt_handle_t decrypt_handle_cmp;
 #define COMMAND_UUID                        0x8022
 #define CUSTOMER_UUID                       0x8023
 
+#if CONFIG_EXAMPLE_EXTENDED_ADV
+static uint8_t ext_adv_pattern[] = {
+    0x02, 0x01, 0x06,
+    0x03, 0x03, 0xab, 0xcd,
+    0x03, 0x03, 0x18, 0x11,
+    0x0f, 0X09, 'n', 'i', 'm', 'b', 'l', 'e', '-', 'o', 't', 'a', '-', 'e', 'x', 't',
+};
+#endif
+
 static bool counter = false;
 static const char *TAG = "NimBLE_BLE_OTA";
 
@@ -614,6 +623,58 @@ esp_ble_ota_print_conn_desc(struct ble_gap_conn_desc *desc)
  *     o General discoverable mode.
  *     o Undirected connectable mode.
  */
+#if CONFIG_EXAMPLE_EXTENDED_ADV
+static void
+esp_ble_ota_ext_advertise(void)
+{
+    struct ble_gap_ext_adv_params params;
+    struct os_mbuf *data;
+    uint8_t instance = 0;
+    int rc;
+
+    /* First check if any instance is already active */
+    if(ble_gap_adv_active())
+        return;
+
+    /* use defaults for non-set params */
+    memset (&params, 0, sizeof(params));
+
+    /* enable connectable advertising */
+    params.connectable = 1;
+
+    /* advertise using random addr */
+    params.own_addr_type = BLE_OWN_ADDR_PUBLIC;
+
+    params.primary_phy = BLE_HCI_LE_PHY_1M;
+    params.secondary_phy = BLE_HCI_LE_PHY_2M;
+    //params.tx_power = 127;
+    params.sid = 1;
+
+    params.itvl_min = BLE_GAP_ADV_FAST_INTERVAL1_MIN;
+    params.itvl_max = BLE_GAP_ADV_FAST_INTERVAL1_MIN;
+
+    /* configure instance 0 */
+    rc = ble_gap_ext_adv_configure(instance, &params, NULL,
+                                   esp_ble_ota_gap_event, NULL);
+    assert (rc == 0);
+    /* in this case only scan response is allowed */
+
+    /* get mbuf for scan rsp data */
+    data = os_msys_get_pkthdr(sizeof(ext_adv_pattern), 0);
+    assert(data);
+
+    /* fill mbuf with scan rsp data */
+    rc = os_mbuf_append(data, ext_adv_pattern, sizeof(ext_adv_pattern));
+    assert(rc == 0);
+
+    rc = ble_gap_ext_adv_set_data(instance, data);
+    assert (rc == 0);
+
+    /* start advertising */
+    rc = ble_gap_ext_adv_start(instance, 0, 0);
+    assert (rc == 0);
+}
+#else
 static void
 esp_ble_ota_advertise(void)
 {
@@ -674,6 +735,7 @@ esp_ble_ota_advertise(void)
         return;
     }
 }
+#endif
 
 /**
  * The nimble host executes this callback when a GAP event occurs.  The
@@ -704,16 +766,17 @@ esp_ble_ota_gap_event(struct ble_gap_event *event, void *arg)
                  event->connect.status == 0 ? "established" : "failed",
                  event->connect.status);
         if (event->connect.status == 0) {
-            //ota_transport_simple_ble_connect(event, arg);
             rc = ble_gap_conn_find(event->connect.conn_handle, &desc);
             assert(rc == 0);
             esp_ble_ota_print_conn_desc(&desc);
             connection_handle = event->connect.conn_handle;
-        }
-
-        if (event->connect.status != 0) {
+        } else {
             /* Connection failed; resume advertising. */
+#if CONFIG_EXAMPLE_EXTENDED_ADV
+            esp_ble_ota_ext_advertise();
+#else
             esp_ble_ota_advertise();
+#endif
         }
         esp_ble_ota_fill_handle_table();
         return 0;
@@ -723,7 +786,11 @@ esp_ble_ota_gap_event(struct ble_gap_event *event, void *arg)
         esp_ble_ota_print_conn_desc(&event->disconnect.conn);
 
         /* Connection terminated; resume advertising. */
+#if CONFIG_EXAMPLE_EXTENDED_ADV
+        esp_ble_ota_ext_advertise();
+#else       
         esp_ble_ota_advertise();
+#endif
         return 0;
 
     case BLE_GAP_EVENT_CONN_UPDATE:
@@ -738,7 +805,11 @@ esp_ble_ota_gap_event(struct ble_gap_event *event, void *arg)
     case BLE_GAP_EVENT_ADV_COMPLETE:
         ESP_LOGI(TAG, "advertise complete; reason=%d",
                  event->adv_complete.reason);
+#ifdef CONFIG_EXAMPLE_EXTENDED_ADV
+        esp_ble_ota_ext_advertise();
+#else
         esp_ble_ota_advertise();
+#endif
         return 0;
 
     case BLE_GAP_EVENT_ENC_CHANGE:
@@ -862,7 +933,12 @@ esp_ble_ota_on_sync(void)
     ESP_LOGI(TAG, "Device Address: ");
     print_addr(addr_val);
     /* Begin advertising. */
+#if CONFIG_EXAMPLE_EXTENDED_ADV
+    esp_ble_ota_ext_advertise();
+#else       
     esp_ble_ota_advertise();
+#endif
+
 }
 
 void esp_ble_ota_host_task(void *param)
