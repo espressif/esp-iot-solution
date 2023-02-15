@@ -11,7 +11,6 @@
 #include "unity.h"
 #include "esp_system.h"
 #include "esp_heap_caps.h"
-#include "hal/usb_hal.h"
 #include "usb_stream.h"
 #include "esp_log.h"
 
