@@ -18,6 +18,12 @@
 #include "ble_ota.h"
 #include "esp_nimble_hci.h"
 
+#ifdef CONFIG_PRE_ENC_OTA
+#define SECTOR_END_ID                       2
+#define ENC_HEADER                          512
+esp_decrypt_handle_t decrypt_handle_cmp;
+#endif
+
 #define BUF_LENGTH                          4096
 #define OTA_IDX_NB                          4
 #define CMD_ACK_LENGTH                      20
@@ -95,6 +101,30 @@ esp_ble_ota_write_chr(struct os_mbuf *om)
     esp_ble_ota_char_t ota_char = find_ota_char_and_desr_by_handle(attribute_handle);
 #endif
 
+#ifdef CONFIG_PRE_ENC_OTA
+    esp_err_t err;
+    pre_enc_decrypt_arg_t pargs = {};
+
+    pargs.data_in_len = om->om_len - 3;
+
+    if (SLIST_NEXT(om, om_next) != NULL) {
+        struct os_mbuf *temp2 = SLIST_NEXT(om, om_next);
+        pargs.data_in_len += temp2->om_len;
+    }
+
+    pargs.data_in = (const char *)malloc(pargs.data_in_len * sizeof(char *));
+    err = os_mbuf_copydata(om, 3, pargs.data_in_len, pargs.data_in);
+
+    if (om->om_data[2] == 0xff) {
+        pargs.data_in_len -= SECTOR_END_ID;
+    }
+
+    err = esp_encrypted_img_decrypt_data(decrypt_handle_cmp, &pargs);
+    if (err != ESP_OK && err != ESP_ERR_NOT_FINISHED) {
+        return;
+    }
+#endif
+
     uint8_t cmd_ack[CMD_ACK_LENGTH] = {0x03, 0x00, 0x00, 0x00, 0x00,
                                        0x00, 0x00, 0x00, 0x00, 0x00,
                                        0x00, 0x00, 0x00, 0x00, 0x00,
@@ -137,6 +167,18 @@ esp_ble_ota_write_chr(struct os_mbuf *om)
     }
 
 write_ota_data:
+#ifdef CONFIG_PRE_ENC_OTA
+    if(pargs.data_out_len > 0) {
+        memcpy(fw_buf + fw_buf_offset, pargs.data_out, pargs.data_out_len);
+
+        free(pargs.data_out);
+        free(pargs.data_in);
+
+        fw_buf_offset += pargs.data_out_len;
+    }
+    ESP_LOGD(TAG, "DEBUG: Sector:%ld, total length:%ld, length:%d", cur_sector,
+             fw_buf_offset, pargs.data_out_len);
+#else
     memcpy(fw_buf + fw_buf_offset, om->om_data + 3, om->om_len - 3);
     fw_buf_offset += om->om_len - 3;
 
@@ -151,6 +193,7 @@ write_ota_data:
 
     ESP_LOGD(TAG, "DEBUG: Sector:%ld, total length:%ld, length:%d", cur_sector,
              fw_buf_offset, om->om_len - 3);
+#endif
     if (om->om_data[2] == 0xff) {
         cur_packet = 0;
         cur_sector++;
@@ -163,9 +206,14 @@ write_ota_data:
     return;
 
 sector_end:
-    esp_ble_ota_recv_fw_handler(fw_buf, ota_block_size);
-    memset(fw_buf, 0x0, ota_block_size);
+    if (fw_buf_offset < ota_block_size) {
+        esp_ble_ota_recv_fw_handler(fw_buf, fw_buf_offset);
+    } else {
+        esp_ble_ota_recv_fw_handler(fw_buf, ota_block_size);
+    }
     fw_buf_offset = 0;
+    memset(fw_buf, 0x0, ota_block_size);
+
     cmd_ack[0] = om->om_data[0];
     cmd_ack[1] = om->om_data[1];
     cmd_ack[2] = 0x00; //success
@@ -219,11 +267,21 @@ esp_ble_ota_recv_fw_handler(uint8_t *buf, uint32_t length)
     return ESP_OK;
 }
 
+#ifndef CONFIG_PRE_ENC_OTA
 esp_err_t esp_ble_ota_recv_fw_data_callback(esp_ble_ota_recv_fw_cb_t callback)
 {
     ota_cb_fun_t.recv_fw_cb = callback;
     return ESP_OK;
 }
+#else
+esp_err_t esp_ble_ota_recv_fw_data_callback(esp_ble_ota_recv_fw_cb_t callback, 
+                                            esp_decrypt_handle_t esp_decrypt_handle)
+{
+    decrypt_handle_cmp = esp_decrypt_handle;
+    ota_cb_fun_t.recv_fw_cb = callback;
+    return ESP_OK;
+}
+#endif
 
 /*----------------------------------------------------
  * Protocomm specific api's
@@ -277,6 +335,9 @@ ble_ota_start_write_chr(struct os_mbuf *om)
         ota_total_len = (om->om_data[2]) + (om->om_data[3] * 256) +
                         (om->om_data[4] * 256 * 256) + (om->om_data[5] * 256 * 256 * 256);
 
+#ifdef CONFIG_PRE_ENC_OTA
+        ota_total_len -= ENC_HEADER;
+#endif
         ESP_LOGI(TAG, "recv ota start cmd, fw_length = %ld", ota_total_len);
 
         fw_buf = (uint8_t *)malloc(ota_block_size * sizeof(uint8_t));
@@ -294,6 +355,11 @@ ble_ota_start_write_chr(struct os_mbuf *om)
     } else if ((om->om_data[0] == 0x02) && (om->om_data[1] == 0x00)) {
         printf("\nCMD_CHAR -> 0 : %d, 1 : %d", om->om_data[0],
                om->om_data[1]);
+#ifdef CONFIG_PRE_ENC_OTA
+        if (esp_encrypted_img_decrypt_end(decrypt_handle_cmp) != ESP_OK) {
+            ESP_LOGI(TAG, "Decryption end failed");
+        }
+#endif
         start_ota = false;
         ota_total_len = 0;
         ESP_LOGD(TAG, "recv ota stop cmd");

@@ -1,8 +1,25 @@
 menu "OTA Manager"
-    config OTA_WITH_PROTOCOMM
-        bool
-        prompt "Enable protocomm level security"
-        depends on BT_NIMBLE_ENABLED
-        help
-            Used to enable protocomm level security for file transfer using OTA
+    choice OTA_TYPE
+        prompt "Type of OTA"
+        default OTA_WITHOUT_SECURITY
+
+        config OTA_WITHOUT_SECURITY
+            bool "Enable OTA without security"
+            help
+                This transfers file without any security using OTA
+
+        config OTA_WITH_PROTOCOMM
+            bool
+            prompt "Enable protocomm level security"
+            depends on BT_NIMBLE_ENABLED
+            help
+                Used to enable protocomm level security for file transfer using OTA
+
+        config PRE_ENC_OTA
+            bool
+            prompt "Enable pre encrypted OTA"
+            depends on BT_NIMBLE_ENABLED
+            help
+                Used to enable transferring pre encrypted file via OTA
+    endchoice
 endmenu

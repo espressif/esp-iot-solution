@@ -1,5 +1,6 @@
 dependencies:
+  espressif/esp_encrypted_img: "^2.0.1"
   idf: ">=4.4"
   ble_ota:
-    version: "~0.1.4"
+    version: "~0.1.5"
     override_path: "../../../../components/ble_profiles/esp/ble_ota"

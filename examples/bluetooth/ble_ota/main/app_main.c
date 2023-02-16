@@ -20,6 +20,12 @@
 
 static const char *TAG = "ESP_BLE_OTA";
 
+#if CONFIG_EXAMPLE_USE_PRE_ENC_OTA
+extern const char rsa_private_pem_start[] asm("_binary_private_pem_start");
+extern const char rsa_private_pem_end[]   asm("_binary_private_pem_end");
+esp_decrypt_handle_t decrypt_handle;
+#endif
+
 #ifdef CONFIG_EXAMPLE_USE_PROTOCOMM
 #include "manager.h"
 #include "scheme_ble.h"
@@ -339,7 +345,20 @@ app_main(void)
         return;
     }
 
+#if CONFIG_EXAMPLE_USE_PRE_ENC_OTA
+    esp_decrypt_cfg_t cfg = {};
+    cfg.rsa_pub_key = rsa_private_pem_start;
+    cfg.rsa_pub_key_len = rsa_private_pem_end - rsa_private_pem_start;
+    decrypt_handle = esp_encrypted_img_decrypt_start(&cfg);
+    if (!decrypt_handle) {
+        ESP_LOGE(TAG, "OTA upgrade failed");
+        vTaskDelete(NULL);
+    }
+
+    esp_ble_ota_recv_fw_data_callback(ota_recv_fw_cb, decrypt_handle);
+#else
     esp_ble_ota_recv_fw_data_callback(ota_recv_fw_cb);
+#endif /* CONFIG_EXAMPLE_USE_PRE_ENC_OTA */
 
 #endif /* CONFIG_EXAMPLE_USE_PROTOCOMM */
     ota_task_init();

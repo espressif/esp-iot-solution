@@ -1,4 +1,4 @@
-version: "0.1.4"
+version: "0.1.5"
 targets:
   - esp32
   - esp32c3
@@ -7,5 +7,6 @@ description: Espressif defined BLE OTA profile
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/ble_profiles/esp/ble_ota
 dependencies:
   idf: ">=4.4"
+  espressif/esp_encrypted_img: "^2.0.1"
 examples:
   - path: ../../../../examples/bluetooth/ble_ota

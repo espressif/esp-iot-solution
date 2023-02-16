@@ -29,3 +29,8 @@
 
 * BLE-OTA:
   * Added support for bluedroid BLE 5.0 features.
+
+## v0.1.5 - 2023-02-15
+
+* BLE-OTA:
+  * Added support for pre-encrypted OTA.
