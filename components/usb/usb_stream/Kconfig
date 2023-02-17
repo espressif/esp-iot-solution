@@ -22,6 +22,9 @@ menu "UVC Stream"
     config UVC_PRINT_PROBE_RESULT
         bool "Print video cur probe result"
         default y
+    config UVC_CHECK_BULK_JPEG_HEADER
+        bool "Check JPEG (ff d8) header in bulk payload"
+        default y
     config UVC_DROP_NO_EOF_FRAME
         bool "Drop no EOF image frames"
         default n

@@ -186,10 +186,10 @@ void print_ep_desc(const uint8_t *buff)
     if (buff == NULL) {
         return;
     }
+#ifdef CONFIG_UVC_PRINT_DESC
     const usb_ep_desc_t *ep_desc = (const usb_ep_desc_t *)buff;
     const char *ep_type_str;
     int type = ep_desc->bmAttributes & USB_BM_ATTRIBUTES_XFERTYPE_MASK;
-#ifdef CONFIG_UVC_PRINT_DESC
     switch (type) {
     case USB_BM_ATTRIBUTES_XFER_CONTROL:
         ep_type_str = "CTRL";
