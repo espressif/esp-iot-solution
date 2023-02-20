@@ -34,3 +34,8 @@
 
 * BLE-OTA:
   * Added support for pre-encrypted OTA.
+
+## v0.1.6 - 2023-02-17
+
+* BLE-OTA:
+  * Added support for nimble extended advertising.
