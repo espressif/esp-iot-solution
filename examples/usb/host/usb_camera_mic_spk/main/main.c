@@ -50,13 +50,15 @@ static const char *TAG = "uvc_mic_spk_demo";
 #include "app_httpd.h"
 #include "esp_camera.h"
 
+#define BIT0_FRAME_START     (0x01 << 0)
 #define BIT1_NEW_FRAME_START (0x01 << 1)
-#define BIT2_NEW_FRAME_END (0x01 << 2)
+#define BIT2_NEW_FRAME_END   (0x01 << 2)
 static EventGroupHandle_t s_evt_handle;
 static camera_fb_t s_fb = {0};
 
 camera_fb_t* esp_camera_fb_get()
 {
+    xEventGroupSetBits(s_evt_handle, BIT0_FRAME_START);
     xEventGroupWaitBits(s_evt_handle, BIT1_NEW_FRAME_START, true, true, portMAX_DELAY);
     return &s_fb;
 }
@@ -71,6 +73,9 @@ static void camera_frame_cb(uvc_frame_t *frame, void *ptr)
 {
     ESP_LOGI(TAG, "uvc callback! frame_format = %d, seq = %"PRIu32", width = %"PRIu32", height = %"PRIu32", length = %u, ptr = %d",
             frame->frame_format, frame->sequence, frame->width, frame->height, frame->data_bytes, (int) ptr);
+    if (!(xEventGroupGetBits(s_evt_handle) & BIT0_FRAME_START)) {
+        return;
+    }
 
     switch (frame->frame_format) {
         case UVC_FRAME_FORMAT_MJPEG:
@@ -83,7 +88,7 @@ static void camera_frame_cb(uvc_frame_t *frame, void *ptr)
             s_fb.timestamp.tv_sec = frame->sequence;
             xEventGroupSetBits(s_evt_handle, BIT1_NEW_FRAME_START);
             ESP_LOGV(TAG, "send frame = %"PRIu32"",frame->sequence);
-            xEventGroupWaitBits(s_evt_handle, BIT2_NEW_FRAME_END, true, true, pdTICKS_TO_MS(1000));
+            xEventGroupWaitBits(s_evt_handle, BIT2_NEW_FRAME_END, true, true, portMAX_DELAY);
             ESP_LOGV(TAG, "send frame done = %"PRIu32"",frame->sequence);
             break;
         default:
@@ -117,6 +122,7 @@ static void mic_frame_cb(mic_frame_t *frame, void *ptr)
 void app_main(void)
 {
     esp_log_level_set("*", ESP_LOG_INFO);
+    esp_log_level_set("httpd_txrx", ESP_LOG_INFO);
     esp_err_t ret = ESP_FAIL;
 
 #if (ENABLE_UVC_CAMERA_FUNCTION)
