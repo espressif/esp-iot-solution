@@ -1916,7 +1916,14 @@ static inline void _uvc_process_payload(_uvc_stream_handle_t *strmh, size_t req_
     if (!flag_zlp) {
         ESP_LOGV(TAG, "zlp=%d, lstp=%d, req_len=%d, payload_len=%d, first=0x%02x, second=0x%02x", flag_zlp, flag_lstp, req_len, payload_len, payload[0], payload_len>1?payload[1]:0);
         // make sure this is a header, judge from header length and bit field
-        if ((payload[0] == 12 || payload[0] == 6 || payload[0] == 2) && payload_len >= payload[0] && (payload[1] & 0x80) && !(payload[1] & 0x30)) {
+        // For SCR, PTS, some vendors not set bit, but also offer 12 Bytes header. so we just check SET condition
+        if ( payload_len >= payload[0] 
+            && (payload[0] == 12 || (payload[0] == 2 && !(payload[1] & 0x0C)) || (payload[0] == 6 && !(payload[1] & 0x08)))
+            && (payload[1] & 0x80) && !(payload[1] & 0x30)
+#ifdef CONFIG_UVC_CHECK_BULK_JPEG_HEADER
+            && (!bulk_xfer || ((payload[payload[0]] == 0xff) && (payload[payload[0]+1] == 0xd8)))
+#endif
+            ) {
             header_len = payload[0];
             data_len = payload_len - header_len;
             /* checking the end-of-header */

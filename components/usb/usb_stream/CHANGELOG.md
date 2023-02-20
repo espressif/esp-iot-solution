@@ -1,5 +1,14 @@
 # ChangeLog
 
+## v0.4.6 - 2023-02-17
+
+### Enhancements:
+
+* Camera:
+  * Add additional JPEG header check for bulk transfer
+
+# ChangeLog
+
 ## v0.4.5 - 2023-02-14
 
 ### Bug Fixes:

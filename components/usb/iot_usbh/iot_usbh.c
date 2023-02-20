@@ -14,13 +14,6 @@
 #include "esp_attr.h"
 #include "esp_intr_alloc.h"
 #include "esp_bit_defs.h"
-#if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 1, 0))
-#include "hal/usb_dwc_hal.h"
-#include "hal/usb_dwc_ll.h"
-#else
-#include "hal/usb_hal.h"
-#include "hal/usbh_ll.h"
-#endif
 #include "hcd.h"
 #include "usb/usb_types_stack.h"
 #include "usb_private.h"
