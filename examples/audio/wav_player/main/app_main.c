@@ -1,18 +1,16 @@
-/*
-   This example code is in the Public Domain (or CC0 licensed, at your option.)
-
-   Unless required by applicable law or agreed to in writing, this
-   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-   CONDITIONS OF ANY KIND, either express or implied.
-*/
+/* SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+#include <inttypes.h>
 #include <stdio.h>
 #include <sys/stat.h>
 #include <dirent.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
-#include "pwm_audio.h"
 #include "file_manager.h"
+#include "pwm_audio.h"
 
 static const char *TAG = "wav player";
 
@@ -50,10 +48,11 @@ static uint16_t g_file_num = 0;
 #define GPIO_AUDIO_OUTPUT_L 1
 #define GPIO_AUDIO_OUTPUT_R 2
 #elif defined CONFIG_IDF_TARGET_ESP32C3
-#define GPIO_AUDIO_OUTPUT_L 1
+#define GPIO_AUDIO_OUTPUT_L 3
 #define GPIO_AUDIO_OUTPUT_R 2
 #else
-
+#define GPIO_AUDIO_OUTPUT_L 1
+#define GPIO_AUDIO_OUTPUT_R 2
 #endif
 
 static esp_err_t play_wav(const char *filepath)
@@ -99,7 +98,7 @@ static esp_err_t play_wav(const char *filepath)
         return ESP_FAIL;
     }
 
-    ESP_LOGI(TAG, "frame_rate=%d, ch=%d, width=%d", wav_head.SampleRate, wav_head.NumChannels, wav_head.BitsPerSample);
+    ESP_LOGI(TAG, "frame_rate= %"PRIi32", ch=%d, width=%d", wav_head.SampleRate, wav_head.NumChannels, wav_head.BitsPerSample);
 
     pwm_audio_set_param(wav_head.SampleRate, wav_head.BitsPerSample, wav_head.NumChannels);
     pwm_audio_start();
@@ -132,19 +131,22 @@ void app_main()
     esp_err_t ret;
 
     ESP_LOGI(TAG, "[APP] Startup..");
-    ESP_LOGI(TAG, "[APP] Free memory: %d bytes", esp_get_free_heap_size());
+    ESP_LOGI(TAG, "[APP] Free memory: %"PRIu32" bytes", esp_get_free_heap_size());
     ESP_LOGI(TAG, "[APP] IDF version: %s", esp_get_idf_version());
 
-    pwm_audio_config_t pac;
-    pac.duty_resolution    = LEDC_TIMER_10_BIT;
-    pac.gpio_num_left      = GPIO_AUDIO_OUTPUT_L;
-    pac.ledc_channel_left  = LEDC_CHANNEL_0;
-    pac.gpio_num_right     = GPIO_AUDIO_OUTPUT_R;
-    pac.ledc_channel_right = LEDC_CHANNEL_1;
-    pac.ledc_timer_sel     = LEDC_TIMER_0;
-    pac.tg_num             = TIMER_GROUP_0;
-    pac.timer_num          = TIMER_0;
-    pac.ringbuf_len        = 1024 * 8;
+    pwm_audio_config_t pac = {
+        .duty_resolution    = LEDC_TIMER_10_BIT,
+        .gpio_num_left      = GPIO_AUDIO_OUTPUT_L,
+        .ledc_channel_left  = LEDC_CHANNEL_0,
+        .gpio_num_right     = GPIO_AUDIO_OUTPUT_R,
+        .ledc_channel_right = LEDC_CHANNEL_1,
+        .ledc_timer_sel     = LEDC_TIMER_0,
+        .ringbuf_len        = 1024 * 8,
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
+        .tg_num             = TIMER_GROUP_0,
+        .timer_num          = TIMER_0,   
+#endif
+    };
     pwm_audio_init(&pac);
 
 #ifdef CONFIG_STORAGE_SDCARD
@@ -163,15 +165,14 @@ void app_main()
         return;
     }
 
-    for (size_t i = 0; i < g_file_num; i++)
-    {
+    for (size_t i = 0; i < g_file_num; i++) {
         ESP_LOGI(TAG, "Start to play [%d:%s]", i, g_file_list[i]);
         char path_buf[256] = {0};
         sprintf(path_buf, "%s/%s", MOUNT_POINT, g_file_list[i]);
         play_wav(path_buf);
     }
     fm_file_table_free(&g_file_list, g_file_num);
-    
+
 #else
     ret = fm_spiffs_init();
     if (ESP_OK != ret) {
