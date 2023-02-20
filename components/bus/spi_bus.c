@@ -60,7 +60,11 @@ static _spi_bus_t s_spi_bus[2];
 
 spi_bus_handle_t spi_bus_create(spi_host_device_t host_id, const spi_config_t *bus_conf)
 {
+#if (SOC_SPI_PERIPH_NUM == 3)
     SPI_BUS_CHECK(SPI1_HOST < host_id && host_id <= SPI3_HOST, "Invalid spi host_id", NULL);
+#elif (SOC_SPI_PERIPH_NUM == 2)
+    SPI_BUS_CHECK(SPI1_HOST < host_id && host_id <= SPI2_HOST, "Invalid spi host_id", NULL);
+#endif
     uint8_t index = host_id - 1; //find related index
     spi_bus_config_t buscfg = {
         .miso_io_num = bus_conf->miso_io_num,
