@@ -1,0 +1,9 @@
+menu "CMake Utilities"
+    
+    config CU_RELINKER_ENABLE
+        bool "Enable relinker"
+        default n
+        help
+            "Enable relinker to linker some IRAM functions to Flash"
+
+endmenu
