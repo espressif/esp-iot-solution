@@ -27,7 +27,7 @@ This component using ESP32-S2, ESP32-S3 series SoC as a USB host to dial-up 4G C
 
 > There are different sub-models of the above modules. The communication stands may be different. For example, LTE-FDD 5(UL)/10(DL), LTE-TDD 1(UL)/8(DL). And endpoint address may different also, if you encounter problems, try modifying parameters using a custom device mode.
 
-## Other 4G Cat.1 module adaptation methods
+**Other 4G Cat.1 module adaptation methods**
 
 1. Confirm whether the 4G module **supports USB Fullspeed mode**;
 2. Confirm whether the 4G module **supports USB PPP dial-up interface**;
@@ -50,3 +50,8 @@ This component using ESP32-S2, ESP32-S3 series SoC as a USB host to dial-up 4G C
 6. Check outputs log to confirm that the `AT` command can be executed;
 
 > The basic AT commands supported by different Cat.1 chip platforms are roughly the same, but there may be some special commands that need to be supported by users.
+
+## Examples
+
+* [USB CDC 4G Module](https://github.com/espressif/esp-iot-solution/tree/master/examples/usb/host/usb_cdc_4g_module)
+
