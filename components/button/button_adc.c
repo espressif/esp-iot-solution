@@ -35,6 +35,8 @@ static const char *TAG = "adc button";
 #define ADC_BUTTON_WIDTH       ADC_WIDTH_BIT_12
 #elif CONFIG_IDF_TARGET_ESP32S2
 #define ADC_BUTTON_WIDTH       ADC_WIDTH_BIT_13
+#elif CONFIG_IDF_TARGET_ESP32S3
+#define ADC_BUTTON_WIDTH       ADC_WIDTH_BIT_12
 #endif
 #define ADC_BUTTON_ATTEN       ADC_ATTEN_DB_11
 #define ADC_BUTTON_ADC_UNIT    ADC_UNIT_1
