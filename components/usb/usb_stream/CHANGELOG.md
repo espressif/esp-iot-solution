@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v0.4.7 - 2023-02-20
+
+### Bug Fixes:
+
+* Camera:
+  * Fix incorrect isoc buffer offset when transfer error occurs
+
 ## v0.4.6 - 2023-02-17
 
 ### Enhancements:

@@ -783,16 +783,14 @@ IRAM_ATTR static void _processing_uvc_pipe(hcd_pipe_handle_t pipe_handle, bool i
             _uvc_process_payload(strmh, urb_done->transfer.num_bytes, urb_done->transfer.data_buffer, urb_done->transfer.actual_num_bytes);
         }
     } else { // isoc transfer
-        size_t index = 0;
         for (size_t i = 0; i < urb_done->transfer.num_isoc_packets; i++) {
             if (urb_done->transfer.isoc_packet_desc[i].status != USB_TRANSFER_STATUS_COMPLETED) {
                 ESP_LOGV(TAG, "line:%u bad iso transit status %d", __LINE__, urb_done->transfer.isoc_packet_desc[i].status);
                 continue;
             }
 
-            uint8_t *simplebuffer = urb_done->transfer.data_buffer + (index * s_uvc_dev.vs_ifc->ep_mps);
-            ++index;
-            ESP_LOGV(TAG, "process payload=%u", index);
+            uint8_t *simplebuffer = urb_done->transfer.data_buffer + (i * s_uvc_dev.vs_ifc->ep_mps);
+            ESP_LOGV(TAG, "process payload=%u, len = %d", i, urb_done->transfer.isoc_packet_desc[i].actual_num_bytes);
             _uvc_process_payload(strmh, (urb_done->transfer.isoc_packet_desc[i].num_bytes), simplebuffer, (urb_done->transfer.isoc_packet_desc[i].actual_num_bytes));
         }
     }
@@ -1834,6 +1832,7 @@ static inline void _uvc_swap_buffers(_uvc_stream_handle_t *strmh)
         strmh->hold_last_scr = strmh->last_scr;
         strmh->hold_pts = strmh->pts;
         strmh->hold_seq = strmh->seq;
+        ESP_LOGV(TAG, "SED LENGTH %d", strmh->hold_bytes);
         xTaskNotifyGive(strmh->taskh);
         xSemaphoreGive(strmh->cb_mutex);
     } else {
