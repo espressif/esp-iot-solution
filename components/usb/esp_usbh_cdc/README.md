@@ -2,6 +2,10 @@
 
 ## USB Host CDC
 
+```
+Note: This driver has been migrated to [master/components/usb/iot_usbh_cdc](https://github.com/espressif/esp-iot-solution/tree/master/components/usb/iot_usbh_cdc),
+```
+
 This component implements a simple version of the USB CDC host function. It only retains the default control endpoint and bulk transfer endpoints, which streamlines the enumeration logic of the USB host. Users only need to bind the USB CDC device endpoint address to achieve fast Initialization. The component is suitable for the CDC-like vendor classes that require high startup speed.
 
 The design logic of the component API is similar to the [ESP-IDF UART driver](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s2/api-reference/peripherals/uart.html) interface, which can directly replace the UART interface to realize the update of the original code from UART to USB.
