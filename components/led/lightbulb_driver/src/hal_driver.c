@@ -28,7 +28,7 @@ static const char *TAG = "hal_manage";
 #define PROBE_GPIO 4
 #define FADE_DEBUG_LOG_OUTPUT 0
 
-static void create_gpio_probe(int gpio_num)
+static void create_gpio_probe(int gpio_num, int level)
 {
     gpio_config_t io_conf;
     io_conf.intr_type = GPIO_INTR_DISABLE;
@@ -37,17 +37,13 @@ static void create_gpio_probe(int gpio_num)
     io_conf.pull_down_en = 0;
     io_conf.pull_up_en = 0;
     gpio_config(&io_conf);
-    gpio_set_level(PROBE_GPIO, 1);
+    gpio_set_level(gpio_num, level);
 }
 
-static void gpio_trigger(int gpio_num, bool need_reverse, int level)
+static void gpio_reverse(int gpio_num)
 {
-    if (need_reverse) {
-        int level = gpio_get_level(gpio_num);
-        gpio_set_level(gpio_num, !level);
-        return;
-    }
-    gpio_set_level(gpio_num, level);
+    static int level = 0;
+    gpio_set_level(gpio_num, (level++) % 2);
 }
 #endif
 
@@ -105,7 +101,7 @@ typedef struct {
     fade_data_t fade_data[HAL_OUT_MAX_CHANNEL];
     esp_timer_handle_t fade_timer;
     hal_obj_t *interface;
-    bool soft_start_and_stop;
+    bool use_hw_fade;
     bool use_balance;
     bool use_common_gamma_table;
     SemaphoreHandle_t fade_mutex;
@@ -418,7 +414,7 @@ static void fade_cb(void *priv)
 
                 // If this channel is not the last step of the fade
                 if (s_hal_obj->fade_data[channel].num != 0) {
-                    if (s_hal_obj->soft_start_and_stop && s_hal_obj->interface->type == DRIVER_ESP_PWM) {
+                    if (s_hal_obj->use_hw_fade && s_hal_obj->interface->type == DRIVER_ESP_PWM) {
                         err |= s_hal_obj->interface->set_hw_fade(channel, s_hal_obj->fade_data[channel].cur, HARDWARE_RETAIN_RATE_MS - 2);
                     } else if (s_hal_obj->interface->type != DRIVER_WS2812) {
                         err |= s_hal_obj->interface->set_channel(channel, s_hal_obj->fade_data[channel].cur);
@@ -426,13 +422,13 @@ static void fade_cb(void *priv)
                         //Nothing
                     }
 #if FADE_DEBUG_LOG_OUTPUT
-                    ESP_LOGD(TAG, "1.ch[%d]: cur:%f", channel, s_hal_obj->fade_data[channel].cur);
-                    gpio_trigger(PROBE_GPIO, false, true);
+                    ESP_LOGW(TAG, "1.ch[%d]: cur:%f", channel, s_hal_obj->fade_data[channel].cur);
+                    gpio_reverse(PROBE_GPIO);
 #endif
                     // Update the final value of this channel, which may be the maximum value or the minimum value, depending on whether it is currently increasing or decreasing.
                 } else {
                     s_hal_obj->fade_data[channel].cur = s_hal_obj->fade_data[channel].cycle && s_hal_obj->fade_data[channel].step < 0 ? s_hal_obj->fade_data[channel].min : s_hal_obj->fade_data[channel].final;
-                    if (s_hal_obj->soft_start_and_stop && s_hal_obj->interface->type == DRIVER_ESP_PWM) {
+                    if (s_hal_obj->use_hw_fade && s_hal_obj->interface->type == DRIVER_ESP_PWM) {
                         err |= s_hal_obj->interface->set_hw_fade(channel, s_hal_obj->fade_data[channel].cur, HARDWARE_RETAIN_RATE_MS - 2);
                     } else if (s_hal_obj->interface->type != DRIVER_WS2812) {
                         err |= s_hal_obj->interface->set_channel(channel, s_hal_obj->fade_data[channel].cur);
@@ -440,13 +436,13 @@ static void fade_cb(void *priv)
                         //Nothing
                     }
 #if FADE_DEBUG_LOG_OUTPUT
-                    ESP_LOGI(TAG, "2..ch[%d]: cur:%f", channel, s_hal_obj->fade_data[channel].cur);
-                    gpio_trigger(PROBE_GPIO, false, true);
+                    ESP_LOGW(TAG, "2..ch[%d]: cur:%f", channel, s_hal_obj->fade_data[channel].cur);
+                    gpio_reverse(PROBE_GPIO);
 #endif
                 }
                 // Because this channel does not need to perform fade, write the final value directly
             } else {
-                if (s_hal_obj->soft_start_and_stop && s_hal_obj->interface->type == DRIVER_ESP_PWM) {
+                if (s_hal_obj->use_hw_fade && s_hal_obj->interface->type == DRIVER_ESP_PWM) {
                     err |= s_hal_obj->interface->set_hw_fade(channel, s_hal_obj->fade_data[channel].cur, HARDWARE_RETAIN_RATE_MS - 2);
                 } else if (s_hal_obj->interface->type != DRIVER_WS2812) {
                     err |= s_hal_obj->interface->set_channel(channel, s_hal_obj->fade_data[channel].cur);
@@ -454,8 +450,8 @@ static void fade_cb(void *priv)
                     //Nothing
                 }
 #if FADE_DEBUG_LOG_OUTPUT
-                ESP_LOGD(TAG, "3...ch[%d]: cur:%f", channel, s_hal_obj->fade_data[channel].cur);
-                gpio_trigger(PROBE_GPIO, false, true);
+                ESP_LOGW(TAG, "3...ch[%d]: cur:%f", channel, s_hal_obj->fade_data[channel].cur);
+                gpio_reverse(PROBE_GPIO);
 #endif
             }
             // If this channel finishes updating, `fade_data[channel].num` will be less than 1, need to check if auto loop is needed again.
@@ -469,7 +465,7 @@ static void fade_cb(void *priv)
             } else {
                 s_hal_obj->fade_data[channel].cur = (s_hal_obj->fade_data[channel].cur == s_hal_obj->fade_data[channel].final) ? s_hal_obj->fade_data[channel].min : s_hal_obj->fade_data[channel].final;
             }
-            if (s_hal_obj->soft_start_and_stop && s_hal_obj->interface->type == DRIVER_ESP_PWM) {
+            if (s_hal_obj->use_hw_fade && s_hal_obj->interface->type == DRIVER_ESP_PWM) {
                 err |= s_hal_obj->interface->set_hw_fade(channel, s_hal_obj->fade_data[channel].cur, HARDWARE_RETAIN_RATE_MS - 2);
             } else if (s_hal_obj->interface->type != DRIVER_WS2812) {
                 err |= s_hal_obj->interface->set_channel(channel, s_hal_obj->fade_data[channel].cur);
@@ -478,7 +474,7 @@ static void fade_cb(void *priv)
             }
 #if FADE_DEBUG_LOG_OUTPUT
             ESP_LOGW(TAG, "4....ch[%d]: cur:%f setp:%f fin:%f", channel, s_hal_obj->fade_data[channel].cur, s_hal_obj->fade_data[channel].step, s_hal_obj->fade_data[channel].final);
-            gpio_trigger(PROBE_GPIO, false, true);
+            gpio_reverse(PROBE_GPIO);
 #endif
             // Here all channels complete the expected behavior.
         } else {
@@ -604,7 +600,9 @@ esp_err_t hal_output_init(hal_config_t *config, lightbulb_gamma_data_t *gamma, v
         err = s_hal_obj->interface->set_init_mode(wy_mode);
         LIGHTBULB_CHECK(err == ESP_OK, "init mode fail", goto EXIT);
     } else if (s_hal_obj->interface->type == DRIVER_ESP_PWM) {
-        s_hal_obj->soft_start_and_stop = true;
+#if CONFIG_PWM_ENABLE_HW_FADE
+        s_hal_obj->use_hw_fade = true;
+#endif
     }
 
     esp_timer_create_args_t timer_conf = {

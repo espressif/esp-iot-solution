@@ -41,7 +41,7 @@
 
 #define LIGHTBULB_CHECK(a, str, action, ...)                                \
     if (unlikely(!(a))) {                                                   \
-        ESP_LOGE(TAG, str, ##__VA_ARGS__);                                  \
+        ESP_LOGE(TAG, "Line %d returns an error.", __LINE__);               \
         action;                                                             \
     }
 

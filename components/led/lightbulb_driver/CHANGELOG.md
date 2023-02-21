@@ -1,5 +1,13 @@
 # ChangeLog
 
+## v0.2.1 - 2022-2-21
+
+### Bug Fixes:
+
+* Provide a workaround solution to temporarily solve the issue that LEDC hardware fade API calls are blocked
+  Please read some description of the macro PWM_ENABLE_HW_FADE in Kconfig
+* Effect interrupt_forbidden flag will allow to set when total_ms == 0
+
 ## v0.2.0 - 2022-2-8
 
 ### Enhancements:
