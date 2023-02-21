@@ -601,6 +601,7 @@ esp_err_t usbh_cdc_driver_delete(void)
         }
     }
 
+    s_cdc_instance.state = CDC_STATE_NONE;
     if (s_cdc_instance.port_hdl) {
         iot_usbh_port_deinit(s_cdc_instance.port_hdl);
         s_cdc_instance.port_hdl = NULL;
@@ -616,7 +617,6 @@ esp_err_t usbh_cdc_driver_delete(void)
     }
 
     vEventGroupDelete(s_cdc_instance.event_group_hdl);
-    s_cdc_instance.state = CDC_STATE_NONE;
     memset(&s_cdc_instance, 0, sizeof(_class_cdc_t));;
     ESP_LOGI(TAG, "CDC Driver Deleted!");
     return ESP_OK;
