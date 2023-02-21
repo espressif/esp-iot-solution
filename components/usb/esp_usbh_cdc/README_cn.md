@@ -2,6 +2,10 @@
 
 ## USB Host CDC
 
+```
+注意: 当前驱动已经迁移到 [master/components/usb/iot_usbh_cdc](https://github.com/espressif/esp-iot-solution/tree/master/components/usb/iot_usbh_cdc),
+```
+
 该组件实现了简易版本的 USB CDC 主机功能，仅保留了默认控制传输端点和批量传输端点，精简了 USB 主机的枚举逻辑，用户只需绑定 USB CDC 设备端点地址即可实现快速的初始化，适用于对启动速度要求较高的自定义类设备。
 
 该组件 API 的设计逻辑与 [ESP-IDF UART 驱动](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s2/api-reference/peripherals/uart.html)接口类似，可直接替换 UART 接口，实现原有代码 UART-> USB 的更新。
