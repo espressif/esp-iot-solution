@@ -1,0 +1,5 @@
+dependencies:
+  idf: ">=4.3"
+  pwm_audio:
+    version: "~1.1.0"
+    override_path: "../../../../components/audio/pwm_audio"

@@ -1,21 +1,9 @@
-// Copyright 2015-2020 Espressif Systems (Shanghai) PTE LTD
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+/* SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+#pragma once
 
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
-#ifndef _IOT_FILE_MANAGER_H_
-#define _IOT_FILE_MANAGER_H_
-
-#include "esp_err.h"
 #include "esp_spiffs.h"
 #include "esp_vfs.h"
 
@@ -25,18 +13,72 @@ extern "C" {
 
 #define MOUNT_POINT  "/audio"
 
+#ifdef CONFIG_STORAGE_SDCARD
+/**
+ * @brief Initialize the sdcard
+ *
+ * @return ESP_OK on success
+ */
 esp_err_t fm_sdcard_init(void);
+#endif
+
+/**
+ * @brief Initialize the spiffs
+ *
+ * @return ESP_OK on success
+ */
 esp_err_t fm_spiffs_init(void);
+
+/**
+ * @brief Traversing the file and printing
+ *
+ * @param direntName Root directory
+ * @param level Traversal depth
+ */
 void fm_print_dir(char *direntName, int level);
+
+/**
+ * @brief Get the root directory
+ *
+ * @return Root directory
+ */
 const char *fm_get_basepath(void);
+
+/**
+ * @brief Get the file name
+ *
+ * @param file file Pointer
+ * @return file name
+ */
 const char *fm_get_filename(const char *file);
+
+/**
+ * @brief Get the file size
+ *
+ * @param filepath File path
+ * @return File size
+ */
 size_t fm_get_file_size(const char *filepath);
+
+/**
+ * @brief Create a file table
+ *
+ * @param list_out file list
+ * @param files_number the number of files
+ * @param filter_suffix File Suffix Name
+ * @return ESP_OK on success
+ */
 esp_err_t fm_file_table_create(char ***list_out, uint16_t *files_number, const char *filter_suffix);
-esp_err_t fm_file_table_free(char ***list,uint16_t files_number);
+
+/**
+ * @brief Free file table
+ *
+ * @param list file list
+ * @param files_number the number of files
+ * @return ESP_OK on success
+ */
+esp_err_t fm_file_table_free(char ***list, uint16_t files_number);
 
 #ifdef __cplusplus
 }
 #endif
-
-#endif
-

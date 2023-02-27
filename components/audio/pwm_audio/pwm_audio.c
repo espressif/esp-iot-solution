@@ -1,45 +1,15 @@
-// Copyright 2020 Espressif Systems (Shanghai) PTE LTD
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
-#define _SOC_TIMG_STRUCT_H_ // to exclude `timer_group_struct.h` file
-
-#include <stdio.h>
+/* SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+#include <inttypes.h>
 #include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
-#include "freertos/task.h"
-#include "driver/ledc.h"
-#include "esp_err.h"
 #include "esp_log.h"
-#include "esp_heap_caps.h"
-#include "driver/timer.h"
 #include "soc/ledc_struct.h"
-#include "soc/ledc_reg.h"
 #include "pwm_audio.h"
-#include "sdkconfig.h"
 
-#if (CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32C3)
-
-#ifdef CONFIG_IDF_TARGET_ESP32
-#include "reg_struct/esp32_timer_group_struct.h"
-#elif defined CONFIG_IDF_TARGET_ESP32S2
-#include "reg_struct/esp32s2_timer_group_struct.h"
-#elif defined CONFIG_IDF_TARGET_ESP32S3
-#include "reg_struct/esp32s3_timer_group_struct.h"
-#elif defined CONFIG_IDF_TARGET_ESP32C3
-#include "reg_struct/esp32c3_timer_group_struct.h"
-#endif
 static const char *TAG = "pwm_audio";
 
 #define PWM_AUDIO_CHECK(a, str, ret_val)                          \
@@ -52,11 +22,13 @@ static const char *TAG = "pwm_audio";
 static const char *PWM_AUDIO_PARAM_ADDR_ERROR = "PWM AUDIO PARAM ADDR ERROR";
 static const char *PWM_AUDIO_FRAMERATE_ERROR  = "PWM AUDIO FRAMERATE ERROR";
 static const char *PWM_AUDIO_STATUS_ERROR     = "PWM AUDIO STATUS ERROR";
-static const char *PWM_AUDIO_TG_NUM_ERROR     = "PWM AUDIO TIMER GROUP NUMBER ERROR";
-static const char *PWM_AUDIO_TIMER_NUM_ERROR  = "PWM AUDIO TIMER NUMBER ERROR";
 static const char *PWM_AUDIO_ALLOC_ERROR      = "PWM AUDIO ALLOC ERROR";
 static const char *PWM_AUDIO_RESOLUTION_ERROR = "PWM AUDIO RESOLUTION ERROR";
 static const char *PWM_AUDIO_NOT_INITIALIZED  = "PWM AUDIO Uninitialized";
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
+static const char *PWM_AUDIO_TG_NUM_ERROR     = "PWM AUDIO TIMER GROUP NUMBER ERROR";
+static const char *PWM_AUDIO_TIMER_NUM_ERROR  = "PWM AUDIO TIMER NUMBER ERROR";
+#endif
 
 #define BUFFER_MIN_SIZE     (256UL)
 #define SAMPLE_RATE_MAX     (48000)
@@ -70,6 +42,7 @@ static const char *PWM_AUDIO_NOT_INITIALIZED  = "PWM AUDIO Uninitialized";
 #ifndef TIMER_BASE_CLK
 #define TIMER_BASE_CLK 80000000
 #endif
+#define TIMER_DIVIDER  16
 
 /**
  * Debug Configuration
@@ -90,7 +63,6 @@ typedef struct {
     pwm_audio_config_t    config;                          /**< pwm audio config struct */
     ledc_channel_config_t ledc_channel[PWM_AUDIO_CH_MAX];  /**< ledc channel config */
     ledc_timer_config_t   ledc_timer;                      /**< ledc timer config  */
-    _timg_dev_t            *timg_dev;                       /**< timer group register pointer */
     ringbuf_handle_t      *ringbuf;                        /**< audio ringbuffer pointer */
     uint32_t              channel_mask;                    /**< channel gpio mask */
     uint32_t              channel_set_num;                 /**< channel audio set number */
@@ -111,7 +83,9 @@ static volatile uint32_t *g_ledc_right_duty_val  = NULL;
 /**< pwm audio handle pointer */
 static pwm_audio_data_t *g_pwm_audio_handle = NULL;
 
-static portMUX_TYPE timer_spinlock = portMUX_INITIALIZER_UNLOCKED;
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+static gptimer_handle_t g_gptimer;
+#endif
 
 /**
  * Ringbuffer for pwm audio
@@ -134,10 +108,11 @@ static esp_err_t rb_destroy(ringbuf_handle_t *rb)
     rb = NULL;
     return ESP_OK;
 }
+
 static ringbuf_handle_t *rb_create(uint32_t size)
 {
     if (size < (BUFFER_MIN_SIZE << 2)) {
-        ESP_LOGE(TAG, "Invalid buffer size, Minimum = %d", (int32_t)(BUFFER_MIN_SIZE << 2));
+        ESP_LOGE(TAG, "Invalid buffer size, Minimum = %"PRIi32"", (int32_t)(BUFFER_MIN_SIZE << 2));
         return NULL;
     }
 
@@ -244,7 +219,6 @@ static esp_err_t rb_wait_semaphore(ringbuf_handle_t *rb, TickType_t ticks_to_wai
     return ESP_FAIL;
 }
 
-
 /*
  * Note:
  * In order to improve efficiency, register is operated directly
@@ -265,22 +239,26 @@ static inline void ledc_set_right_duty_fast(uint32_t duty_val)
 /*
  * Timer group ISR handler
  */
+
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+static bool IRAM_ATTR timer_group_isr(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_ctx)
+{
+    pwm_audio_data_t *handle = g_pwm_audio_handle;
+    if (handle == NULL) {
+        return false;
+    }
+#else
 static void IRAM_ATTR timer_group_isr(void *para)
 {
     pwm_audio_data_t *handle = g_pwm_audio_handle;
-
     if (handle == NULL) {
-        return;
+        return ;
     }
     /* Clear the interrupt */
-    // uint32_t st = timer_ll_get_intr_status(handle->timg_dev);
-    // if (st & (1UL << handle->config.timer_num)) {
-    timer_ll_clear_intr_status(handle->timg_dev, handle->config.timer_num);
-    // }
-    /* After the alarm has been triggered
-        we need enable it again, so it is triggered the next time */
-    timer_ll_enable_alarm(handle->timg_dev, handle->config.timer_num, 1);
-
+    timer_group_clr_intr_status_in_isr(handle->config.tg_num, handle->config.timer_num);
+    /* After the alarm has been triggered we need enable it again, so it is triggered the next time */
+    timer_group_enable_alarm_in_isr(handle->config.tg_num, handle->config.timer_num);
+#endif
     static uint8_t wave_h, wave_l;
     static uint16_t value;
     ringbuf_handle_t *rb = handle->ringbuf;
@@ -365,6 +343,11 @@ static void IRAM_ATTR timer_group_isr(void *para)
 #if (1==ISR_DEBUG)
     GPIO.out_w1tc = ISR_DEBUG_IO_MASK;
 #endif
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+    return true;
+#else
+    return;
+#endif
 }
 
 esp_err_t pwm_audio_get_status(pwm_audio_status_t *status)
@@ -397,15 +380,24 @@ esp_err_t pwm_audio_get_param(int *rate, int *bits, int *ch)
 
 esp_err_t pwm_audio_init(const pwm_audio_config_t *cfg)
 {
+    ESP_LOGI(TAG, "PWM Audio Version: %d.%d.%d",PWM_AUDIO_VER_MAJOR, PWM_AUDIO_VER_MINOR, PWM_AUDIO_VER_PATCH);
     esp_err_t res = ESP_OK;
-    PWM_AUDIO_CHECK(cfg != NULL, PWM_AUDIO_PARAM_ADDR_ERROR, ESP_ERR_INVALID_ARG);
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
     PWM_AUDIO_CHECK(cfg->tg_num < TIMER_GROUP_MAX, PWM_AUDIO_TG_NUM_ERROR, ESP_ERR_INVALID_ARG);
     PWM_AUDIO_CHECK(cfg->timer_num < TIMER_MAX, PWM_AUDIO_TIMER_NUM_ERROR, ESP_ERR_INVALID_ARG);
+#endif
+    PWM_AUDIO_CHECK(cfg != NULL, PWM_AUDIO_PARAM_ADDR_ERROR, ESP_ERR_INVALID_ARG);
     PWM_AUDIO_CHECK(cfg->duty_resolution <= 10 && cfg->duty_resolution >= 8, PWM_AUDIO_RESOLUTION_ERROR, ESP_ERR_INVALID_ARG);
     PWM_AUDIO_CHECK(NULL == g_pwm_audio_handle, "Already initiate", ESP_ERR_INVALID_STATE);
 
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+    ESP_LOGI(TAG, "left io: %d | right io: %d | resolution: %dBIT",
+             cfg->gpio_num_left, cfg->gpio_num_right, cfg->duty_resolution);
+#else
     ESP_LOGI(TAG, "timer: %d:%d | left io: %d | right io: %d | resolution: %dBIT",
              cfg->tg_num, cfg->timer_num, cfg->gpio_num_left, cfg->gpio_num_right, cfg->duty_resolution);
+#endif
+
 
     pwm_audio_data_t *handle = NULL;
 
@@ -433,13 +425,6 @@ esp_err_t pwm_audio_init(const pwm_audio_config_t *cfg)
     //configure GPIO with the given settings
     gpio_config(&io_conf);
 #endif
-
-    /**< Get timer group register pointer */
-    if (cfg->tg_num == TIMER_GROUP_0) {
-        handle->timg_dev = TIMERG0;
-    } else {
-        handle->timg_dev = TIMERG1;
-    }
 
     /**
      * config ledc to generate pwm
@@ -503,23 +488,37 @@ esp_err_t pwm_audio_init(const pwm_audio_config_t *cfg)
     g_ledc_right_conf1_val = &LEDC.channel_group[handle->ledc_timer.speed_mode].\
                              channel[handle->ledc_channel[CHANNEL_RIGHT_INDEX].channel].conf1.val;
 
-    /**
-     * Select and initialize basic parameters of the timer
-     */
-    timer_config_t config = {0};
-    config.divider = 16;
-    config.counter_dir = TIMER_COUNT_UP;
-    config.counter_en = TIMER_PAUSE;
-    config.alarm_en = TIMER_ALARM_EN;
-    config.intr_type = TIMER_INTR_LEVEL;
-    config.auto_reload = 1;
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+    gptimer_config_t timer_config = {
+        .clk_src = GPTIMER_CLK_SRC_DEFAULT,
+        .direction = GPTIMER_COUNT_UP,
+        .resolution_hz = TIMER_BASE_CLK / TIMER_DIVIDER,
+    };
+
+    gptimer_event_callbacks_t cbs = {
+        .on_alarm = timer_group_isr,
+    };
+
+    res = gptimer_new_timer(&timer_config, &g_gptimer);
+    PWM_AUDIO_CHECK(ESP_OK == res, "Timer group configuration failed", ESP_FAIL);
+    gptimer_register_event_callbacks(g_gptimer, &cbs, NULL);
+#else
+    /* Select and initialize basic parameters of the timer */
+    timer_config_t config = {
+        .divider = TIMER_DIVIDER,
+        .counter_dir = TIMER_COUNT_UP,
+        .counter_en = TIMER_PAUSE,
+        .alarm_en = TIMER_ALARM_EN,
+        .intr_type = TIMER_INTR_LEVEL,
+        .auto_reload = 1,
+    };
 #ifdef TIMER_GROUP_SUPPORTS_XTAL_CLOCK
     config.clk_src = TIMER_SRC_CLK_APB;  /* ESP32-S2 specific control bit !!!*/
 #endif
     res = timer_init(handle->config.tg_num, handle->config.timer_num, &config);
     PWM_AUDIO_CHECK(ESP_OK == res, "Timer group configuration failed", ESP_FAIL);
     timer_isr_register(handle->config.tg_num, handle->config.timer_num, timer_group_isr, NULL, ESP_INTR_FLAG_IRAM, NULL);
-
+#endif
     /**< set a initial parameter */
     res = pwm_audio_set_param(16000, 8, 2);
     PWM_AUDIO_CHECK(ESP_OK == res, "Set parameter failed", ESP_FAIL);
@@ -546,15 +545,22 @@ esp_err_t pwm_audio_set_param(int rate, ledc_timer_bit_t bits, int ch)
     handle->bits_per_sample = bits;
     handle->channel_set_num = ch;
 
-    // timer_disable_intr(handle->config.tg_num, handle->config.timer_num);
-    /* Timer's counter will initially start from value below.
-    Also, if auto_reload is set, this value will be automatically reload on alarm */
-    timer_set_counter_value(handle->config.tg_num, handle->config.timer_num, 0x00000000ULL);
-
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+    gptimer_set_raw_count(g_gptimer, 0x00000000ULL);
     /* Configure the alarm value and the interrupt on alarm. */
-    uint32_t divider = timer_ll_get_clock_prescale(handle->timg_dev, handle->config.timer_num);
-    timer_set_alarm_value(handle->config.tg_num, handle->config.timer_num, (TIMER_BASE_CLK / divider) / handle->framerate);
-    // timer_enable_intr(handle->config.tg_num, handle->config.timer_num);
+    gptimer_alarm_config_t alarm_config = {
+        .reload_count = 0,
+        .alarm_count = (TIMER_BASE_CLK / TIMER_DIVIDER) / handle->framerate,
+        .flags.auto_reload_on_alarm = true, // enable auto-reload
+    };
+
+    res = gptimer_set_alarm_action(g_gptimer, &alarm_config);
+#else
+    /* Timer's counter will initially start from value below. Also, if auto_reload is set, this value will be automatically reload on alarm */
+    timer_set_counter_value(handle->config.tg_num, handle->config.timer_num, 0x00000000ULL);
+    /* Configure the alarm value and the interrupt on alarm. */
+    res = timer_set_alarm_value(handle->config.tg_num, handle->config.timer_num, (TIMER_BASE_CLK / TIMER_DIVIDER) / handle->framerate);
+#endif
     return res;
 }
 
@@ -567,8 +573,16 @@ esp_err_t pwm_audio_set_sample_rate(int rate)
 
     pwm_audio_data_t *handle = g_pwm_audio_handle;
     handle->framerate = rate;
-    uint32_t divider = timer_ll_get_clock_prescale(handle->timg_dev, handle->config.timer_num);
-    res = timer_set_alarm_value(handle->config.tg_num, handle->config.timer_num, (TIMER_BASE_CLK / divider) / handle->framerate);
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+    gptimer_alarm_config_t alarm_config = {
+        .reload_count = 0,
+        .alarm_count = (TIMER_BASE_CLK / TIMER_DIVIDER) / handle->framerate,
+        .flags.auto_reload_on_alarm = true, // enable auto-reload
+    };
+    res = gptimer_set_alarm_action(g_gptimer, &alarm_config);
+#else
+    res = timer_set_alarm_value(handle->config.tg_num, handle->config.timer_num, (TIMER_BASE_CLK / TIMER_DIVIDER) / handle->framerate);
+#endif
     return res;
 }
 
@@ -724,7 +738,6 @@ esp_err_t IRAM_ATTR pwm_audio_write(uint8_t *inbuf, size_t inbuf_len, size_t *by
 
         } else {
             res = ESP_FAIL;
-            ESP_LOGD(TAG, "tg config=%x\n", handle->timg_dev->hw_timer[handle->config.timer_num].config.val);
         }
 
         if ((xTaskGetTickCount() - start_ticks) >= ticks_to_wait) {
@@ -741,17 +754,16 @@ esp_err_t pwm_audio_start(void)
     pwm_audio_data_t *handle = g_pwm_audio_handle;
     PWM_AUDIO_CHECK(NULL != handle, PWM_AUDIO_NOT_INITIALIZED, ESP_ERR_INVALID_STATE);
     PWM_AUDIO_CHECK(handle->status == PWM_AUDIO_STATUS_IDLE, PWM_AUDIO_STATUS_ERROR, ESP_ERR_INVALID_STATE);
-
     handle->status = PWM_AUDIO_STATUS_BUSY;
 
-    /**< timer enable interrupt */
-    portENTER_CRITICAL_SAFE(&timer_spinlock);
-    timer_ll_enable_intr(handle->timg_dev, handle->config.timer_num, 1);
-    timer_ll_enable_counter(handle->timg_dev, handle->config.timer_num, 1);
-    timer_ll_enable_alarm(handle->timg_dev, handle->config.timer_num, 1); /** Make sure the interrupt is enabled*/
-    portEXIT_CRITICAL_SAFE(&timer_spinlock);
-
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+    res = gptimer_enable(g_gptimer);
+    PWM_AUDIO_CHECK(res == ESP_OK, "gptimer enable fail", res);
+    res = gptimer_start(g_gptimer);
+#else
+    timer_enable_intr(handle->config.tg_num, handle->config.timer_num);
     res = timer_start(handle->config.tg_num, handle->config.timer_num);
+#endif
     return res;
 }
 
@@ -763,12 +775,11 @@ esp_err_t pwm_audio_stop(void)
 
     /**< just disable timer ,keep pwm output to reduce switching nosie */
     /**< timer disable interrupt */
-    portENTER_CRITICAL_SAFE(&timer_spinlock);
-    timer_ll_enable_intr(handle->timg_dev, handle->config.timer_num, 0);
-    timer_ll_enable_counter(handle->timg_dev, handle->config.timer_num, 0);
-    portEXIT_CRITICAL_SAFE(&timer_spinlock);
-
-    // timer_pause(handle->config.tg_num, handle->config.timer_num);
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+    gptimer_stop(g_gptimer);
+#else
+    timer_disable_intr(handle->config.tg_num, handle->config.timer_num);
+#endif
     rb_flush(handle->ringbuf);  /**< flush ringbuf, avoid play noise */
     handle->status = PWM_AUDIO_STATUS_IDLE;
     return ESP_OK;
@@ -778,10 +789,15 @@ esp_err_t pwm_audio_deinit(void)
 {
     pwm_audio_data_t *handle = g_pwm_audio_handle;
     PWM_AUDIO_CHECK(handle != NULL, PWM_AUDIO_PARAM_ADDR_ERROR, ESP_FAIL);
-
     handle->status = PWM_AUDIO_STATUS_UN_INIT;
+
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+    gptimer_stop(g_gptimer);
+    gptimer_del_timer(g_gptimer);
+#else
     timer_pause(handle->config.tg_num, handle->config.timer_num);
     timer_disable_intr(handle->config.tg_num, handle->config.timer_num);
+#endif
 
     for (size_t i = 0; i < PWM_AUDIO_CH_MAX; i++) {
         if (handle->ledc_channel[i].gpio_num >= 0) {
@@ -801,5 +817,3 @@ esp_err_t pwm_audio_deinit(void)
     g_pwm_audio_handle = NULL;
     return ESP_OK;
 }
-
-#endif
