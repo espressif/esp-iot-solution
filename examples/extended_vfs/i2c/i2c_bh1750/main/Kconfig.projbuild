@@ -1,0 +1,103 @@
+menu "Example Configuration"
+
+    config I2C_SDA_PIN_NUM
+        int "I2C SDA Pin Number"
+        default 25
+
+    config I2C_SCL_PIN_NUM
+        int "I2C SCL Pin Number"
+        default 26
+    
+    config I2C_TEST_COUNT
+        int "I2C Testing Count of Reading Sensor's Data"
+        default 10
+
+    choice I2C_READ_HB1750_METHOD
+        prompt "I2C Read BH1750 Method"
+        default I2C_READ_BH1750_BY_WRRD
+
+        config I2C_READ_BH1750_BY_WRRD
+            bool "Write then Read"
+            help
+                Select this option, application sends data frame to BH1750,
+                then waits for some time, at last reads data from BH1750, there
+                are totally 3 steps.
+
+        config I2C_READ_BH1750_BY_EXCHANGE
+            bool "Exchange"
+            help
+                Select this option, application just needs to configure a I2C
+                exchange message, pass this to I2C low-level driver by ioctl,
+                there is totally 1 step. 
+    endchoice
+
+    menu "BH1750 Sensor"
+        choice BH1750_ADDR
+            prompt "BH1750 I2C Address"
+            default BH1750_I2C_ADDRESS_LOW
+            help
+                Hardware address of BH1750, which is 2 types, and determined by ADDR terminal.
+
+            config BH1750_I2C_ADDRESS_LOW
+                bool "BH1750 I2C Address(ADDR=0)"
+                help
+                    I2C Address of BH1750 Sensor according to your schemetic configuration.
+
+            config BH1750_I2C_ADDRESS_High
+                bool "BH1750 I2C Address(ADDR=1)"
+                help
+                    I2C Address of BH1750 Sensor according to your schemetic configuration.
+        endchoice
+
+        config BH1750_ADDR
+            hex
+            default 0x5C if BH1750_I2C_ADDRESS_High
+            default 0x23 if BH1750_I2C_ADDRESS_LOW
+
+        choice BH1750_MODE
+            prompt "BH1750 Operation Mode"
+            default BH1750_ONETIME_L_RESOLUTION
+            help
+                Operation Mode of BH1750.
+                Different mode means different resolution and measurement time.
+            config BH1750_CONTINU_H_RESOLUTION
+                bool "Continuously H-Resolution Mode"
+                help
+                    Resolution is 1lx, measurement time is typically 120ms.
+            config BH1750_CONTINU_H_RESOLUTION2
+                bool "Continuously H-Resolution Mode2"
+                help
+                    Resolution is 0.5lx, measurement time is typically 120ms.
+            config BH1750_CONTINU_L_RESOLUTION
+                bool "Continuously L-Resolution Mode"
+                help
+                    Resolution is 4lx, measurement time is typically 16ms.
+            config BH1750_ONETIME_H_RESOLUTION
+                bool "One Time H-Resolution Mode"
+                help
+                    Resolution is 1lx, measurement time is typically 120ms.
+                    It is automatically set to Power Down mode after measurement.
+            config BH1750_ONETIME_H_RESOLUTION2
+                bool "One Time H-Resolution Mode2"
+                help
+                    Resolution is 0.5lx, measurement time is typically 120ms.
+                    It is automatically set to Power Down mode after measurement.
+            config BH1750_ONETIME_L_RESOLUTION
+                bool "One Time L-Resolution Mode"
+                help
+                    Resolution is 4lx, measurement time is typically 16ms.
+                    It is automatically set to Power Down mode after measurement.
+        endchoice
+
+        config BH1750_OPMODE
+            hex
+            default 0x10 if BH1750_CONTINU_H_RESOLUTION
+            default 0x11 if BH1750_CONTINU_H_RESOLUTION2
+            default 0x13 if BH1750_CONTINU_L_RESOLUTION
+            default 0x20 if BH1750_ONETIME_H_RESOLUTION
+            default 0x21 if BH1750_ONETIME_H_RESOLUTION2
+            default 0x23 if BH1750_ONETIME_L_RESOLUTION
+
+    endmenu
+
+endmenu

@@ -19,6 +19,7 @@ jobs:
             components/audio/pwm_audio;
             components/ble_profiles/esp/ble_ota;
             components/button;
+            components/extended_vfs;
             components/knob;
             components/led/led_indicator;
             components/led/lightbulb_driver;

@@ -1,0 +1,10 @@
+version: "0.1.0"
+description: Extended Virtual File-system
+url: https://github.com/espressif/esp-iot-solution/tree/master/components/extended_vfs
+dependencies:
+  idf: ">=4.4.3"
+  espressif/cmake_utilities: "0.*"
+examples:
+  - path:  ../../../examples/extended_vfs/gpio/gpio_simple
+  - path:  ../../../examples/extended_vfs/i2c/i2c_bh1750
+  - path:  ../../../examples/extended_vfs/i2c/i2c_tt21100
