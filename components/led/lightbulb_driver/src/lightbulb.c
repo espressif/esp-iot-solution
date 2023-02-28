@@ -44,7 +44,8 @@ static const char *TAG = "lightbulb";
 #define CHECK_WHITE_OUTPUT_REQ_MIXED()                  (s_lb_obj->cap.enable_mix_cct)
 #define CHECK_AUTO_ON_FUNC_IS_ENABLE()                  ((!s_lb_obj->cap.disable_auto_on) ? true : false)
 #define CHECK_EFFECT_TIMER_IS_ACTIVE()                  (s_lb_obj->effect_timer && (xTimerIsTimerActive(s_lb_obj->effect_timer) == pdTRUE))
-#define CHECK_EFFECT_ALLOW_TO_BE_INTERRUPTED()          (!s_lb_obj->effect_interrupt_forbidden_flag)           
+#define CHECK_EFFECT_ALLOW_TO_BE_INTERRUPTED()          (s_lb_obj->effect_running_flag && (!s_lb_obj->effect_interrupt_forbidden_flag))
+#define CHECK_EFFECT_IS_RUNNING()                       (s_lb_obj->effect_running_flag)
 
 /**
  * @brief Lightbulb fade time calculate
@@ -79,6 +80,7 @@ typedef struct {
     TimerHandle_t effect_timer;
     SemaphoreHandle_t mutex;
     bool effect_interrupt_forbidden_flag;
+    bool effect_running_flag;
 } lightbulb_obj_t;
 
 static lightbulb_obj_t *s_lb_obj = NULL;
@@ -654,10 +656,10 @@ esp_err_t lightbulb_set_xyy(float x, float y, float Y)
     uint8_t r, g, b;
     uint16_t h;
     uint8_t s, v;
-    
+
     lightbulb_xyy2rgb(x, y, Y, &r, &g, &b);
     lightbulb_rgb2hsv(r, g, b, &h, &s, &v);
-    
+
     return lightbulb_set_hsv(h, s, v);
 }
 
@@ -706,7 +708,7 @@ esp_err_t lightbulb_xyy2rgb(float x, float y, float Y, uint8_t *red, uint8_t *gr
 
     *red = (uint8_t)(_r * 255 + 0.5);
     *green = (uint8_t)(_g * 255 + 0.5);
-    *blue = (uint8_t)(_b * 255+ 0.5);
+    *blue = (uint8_t)(_b * 255 + 0.5);
 
     return ESP_OK;
 }
@@ -726,18 +728,18 @@ esp_err_t lightbulb_rgb2xyy(uint8_t red, uint8_t green, uint8_t blue, float *x, 
     } else {
         _red = _red / 12.92;
     }
-                        
+
     if ( _green > 0.04045 ) {
         _green = pow(( _green + 0.055 ) / 1.055, 2.4);
     } else {
         _green = _green / 12.92;
     }
-             
+
     if ( _blue > 0.04045 ) {
         _blue = pow(( _blue + 0.055 ) / 1.055, 2.4);
     } else {
         _blue = _blue / 12.92;
-    } 
+    }
 
     _red = _red * 100;
     _green = _green * 100;
@@ -750,7 +752,7 @@ esp_err_t lightbulb_rgb2xyy(uint8_t red, uint8_t green, uint8_t blue, float *x, 
     *Y = _Y;
     *x = _X / ( _X + _Y + _Z );
     *y = _Y / ( _X + _Y + _Z );
-    
+
     return ESP_OK;
 }
 
@@ -927,11 +929,12 @@ esp_err_t lightbulb_set_hsv(uint16_t hue, uint8_t saturation, uint8_t value)
         xTimerReset(s_lb_obj->storage_timer, 0);
     }
 
-    if (CHECK_EFFECT_TIMER_IS_ACTIVE() && CHECK_EFFECT_ALLOW_TO_BE_INTERRUPTED()) {
+    if (CHECK_EFFECT_IS_RUNNING() && CHECK_EFFECT_ALLOW_TO_BE_INTERRUPTED()) {
         ESP_LOGW(TAG, "The effect has stopped because the %s API is changing the lights.", __FUNCTION__);
         xTimerStop(s_lb_obj->effect_timer, 0);
         s_lb_obj->effect_interrupt_forbidden_flag = false;
-    } else if (CHECK_EFFECT_TIMER_IS_ACTIVE() && !CHECK_EFFECT_ALLOW_TO_BE_INTERRUPTED()) {
+        s_lb_obj->effect_running_flag = false;
+    } else if (CHECK_EFFECT_IS_RUNNING()) {
         ESP_LOGW(TAG, "The effect are not allowed to be interrupted, skip calling %s, just save this change.", __FUNCTION__);
         goto SAVE_ONLY;
     }
@@ -998,11 +1001,12 @@ esp_err_t lightbulb_set_cctb(uint16_t cct, uint8_t brightness)
         xTimerReset(s_lb_obj->storage_timer, 0);
     }
 
-    if (CHECK_EFFECT_TIMER_IS_ACTIVE() && CHECK_EFFECT_ALLOW_TO_BE_INTERRUPTED()) {
+    if (CHECK_EFFECT_IS_RUNNING() && CHECK_EFFECT_ALLOW_TO_BE_INTERRUPTED()) {
         ESP_LOGW(TAG, "The effect has stopped because the %s API is changing the lights.", __FUNCTION__);
         xTimerStop(s_lb_obj->effect_timer, 0);
         s_lb_obj->effect_interrupt_forbidden_flag = false;
-    } else if (CHECK_EFFECT_TIMER_IS_ACTIVE() && !CHECK_EFFECT_ALLOW_TO_BE_INTERRUPTED()) {
+        s_lb_obj->effect_running_flag = false;
+    } else if (CHECK_EFFECT_IS_RUNNING()) {
         ESP_LOGW(TAG, "The effect are not allowed to be interrupted, skip calling %s, just save this change.", __FUNCTION__);
         goto SAVE_ONLY;
     }
@@ -1038,6 +1042,7 @@ esp_err_t lightbulb_set_cctb(uint16_t cct, uint8_t brightness)
         err = hal_set_channel_group(white_value, channel_mask, fade_time);
         LIGHTBULB_CHECK(err == ESP_OK, "set hal channel group fail", goto EXIT);
 
+
         s_lb_obj->status.on = true;
     }
 
@@ -1061,6 +1066,7 @@ esp_err_t lightbulb_set_switch(bool status)
 
     esp_err_t err = ESP_OK;
     uint32_t fade_time = CALCULATE_FADE_TIME();
+    ESP_LOGI(TAG, "%s will update on/off status: %s -> %s", __FUNCTION__, s_lb_obj->status.on ? "on" : "off", status ? "on" : "off");
 
     if (!status) {
         LIGHTBULB_MUTEX_TAKE(portMAX_DELAY);
@@ -1070,12 +1076,14 @@ esp_err_t lightbulb_set_switch(bool status)
         if (CHECK_AUTO_STATUS_STORAGE_FUNC_IS_ENABLE()) {
             xTimerReset(s_lb_obj->storage_timer, 0);
         }
-        if (CHECK_EFFECT_TIMER_IS_ACTIVE() && CHECK_EFFECT_ALLOW_TO_BE_INTERRUPTED()) {
+        if (CHECK_EFFECT_IS_RUNNING() && CHECK_EFFECT_ALLOW_TO_BE_INTERRUPTED()) {
             ESP_LOGW(TAG, "The effect has stopped because the %s API is changing the lights.", __FUNCTION__);
             xTimerStop(s_lb_obj->effect_timer, 0);
             s_lb_obj->effect_interrupt_forbidden_flag = false;
-        } else if (CHECK_EFFECT_TIMER_IS_ACTIVE()) {
+            s_lb_obj->effect_running_flag = false;
+        } else if (CHECK_EFFECT_IS_RUNNING()) {
             ESP_LOGW(TAG, "The effect are not allowed to be interrupted, skip calling %s, just save this change.", __FUNCTION__);
+            s_lb_obj->status.on = false;
             LIGHTBULB_MUTEX_GIVE();
             return ESP_FAIL;
         }
@@ -1349,27 +1357,44 @@ esp_err_t lightbulb_basic_effect_start(lightbulb_effect_config_t *config)
         err = ESP_ERR_NOT_SUPPORTED;
     }
 
-    if (err == ESP_OK && config->total_ms > 0) {
-        if (!s_lb_obj->effect_timer) {
-            s_lb_obj->effect_timer = xTimerCreate("effect_timer", pdMS_TO_TICKS(config->total_ms), false, NULL, timercb);
-            LIGHTBULB_CHECK(s_lb_obj->effect_timer, "create timer fail", goto EXIT);
-        } else {
-            xTimerChangePeriod(s_lb_obj->effect_timer, pdMS_TO_TICKS(config->total_ms), 0);
-        }
-
-        if (config->user_cb) {
-            vTimerSetTimerID(s_lb_obj->effect_timer, config->user_cb);
-        } else {
-            vTimerSetTimerID(s_lb_obj->effect_timer, NULL);
-        }
+    if (err == ESP_OK) {
         s_lb_obj->effect_interrupt_forbidden_flag = config->interrupt_forbidden;
-        xTimerStart(s_lb_obj->effect_timer, 0);
-
-        /* Make sure the timer has started running */
-        while(!CHECK_EFFECT_TIMER_IS_ACTIVE()) {
-            vTaskDelay(1);
+        s_lb_obj->effect_running_flag = true;
+        if (config->total_ms > 0) {
+            if (!s_lb_obj->effect_timer) {
+                s_lb_obj->effect_timer = xTimerCreate("effect_timer", pdMS_TO_TICKS(config->total_ms), false, NULL, timercb);
+                LIGHTBULB_CHECK(s_lb_obj->effect_timer, "create timer fail", goto EXIT);
+            } else {
+                xTimerChangePeriod(s_lb_obj->effect_timer, pdMS_TO_TICKS(config->total_ms), 0);
+            }
+            if (config->user_cb) {
+                vTimerSetTimerID(s_lb_obj->effect_timer, config->user_cb);
+            } else {
+                vTimerSetTimerID(s_lb_obj->effect_timer, NULL);
+            }
+            xTimerStart(s_lb_obj->effect_timer, 0);
+            /* Make sure the timer has started running */
+            while (!CHECK_EFFECT_TIMER_IS_ACTIVE()) {
+                vTaskDelay(1);
+            }
+            ESP_LOGI(TAG, "The auto-stop timer will trigger after %d ms.", config->total_ms);
+        } else {
+            ESP_LOGI(TAG, "The auto-stop timer is not running, the effect will keep running.");
         }
-        ESP_LOGI(TAG, "The auto-stop timer will trigger after %d ms.", config->total_ms);
+        ESP_LOGI(TAG, "effect config: \r\n"
+                 "\teffect type: %d\r\n"
+                 "\tmode: %d\r\n"
+                 "\tred:%d\r\n"
+                 "\tgreen:%d\r\n"
+                 "\tblue:%d\r\n"
+                 "\tcct:%d\r\n"
+                 "\tmin_brightness:%d\r\n"
+                 "\tmax_brightness:%d\r\n"
+                 "\teffect_cycle_ms:%d\r\n"
+                 "\ttotal_ms:%d\r\n"
+                 "\tinterrupt_forbidden:%d", config->effect_type, config->mode, config->red, config->green, config->blue,
+                 config->cct, config->min_brightness, config->max_brightness, config->effect_cycle_ms, config->total_ms, config->interrupt_forbidden);
+        ESP_LOGI(TAG, "This effect will %s to be interrupted", s_lb_obj->effect_interrupt_forbidden_flag ? "not be allowed" : "allow");
     }
 
 EXIT:
@@ -1393,6 +1418,7 @@ esp_err_t lightbulb_basic_effect_stop(void)
     }
     err = hal_stop_channel_action(channel_mask);
     s_lb_obj->effect_interrupt_forbidden_flag = false;
+    s_lb_obj->effect_running_flag = false;
     LIGHTBULB_MUTEX_GIVE();
 
     return err;
@@ -1405,6 +1431,7 @@ esp_err_t lightbulb_basic_effect_stop_and_restore(void)
     LIGHTBULB_MUTEX_TAKE(portMAX_DELAY);
     bool is_on = s_lb_obj->status.on;
     s_lb_obj->effect_interrupt_forbidden_flag = false;
+    s_lb_obj->effect_running_flag = false;
     LIGHTBULB_MUTEX_GIVE();
 
     return lightbulb_set_switch(is_on);
