@@ -13,6 +13,33 @@ Features:
 
 Please refer: https://docs.espressif.com/projects/espressif-esp-iot-solution/en/latest/usb/usb_stream.html
 
+### Add component to your project
+
+Please use the component manager command `add-dependency` to add the `usb_stream` to your project's dependency, during the `CMake` step the component will be downloaded automatically
+
+```
+idf.py add-dependency "espressif/usb_stream=*"
+```
+
 ### Examples
 
-[USB Camera + Audio stream](https://github.com/espressif/esp-iot-solution/tree/master/examples/usb/host/usb_camera_mic_spk)
+Please use the component manager command `create-project-from-example` to create the project from example template
+
+```
+idf.py create-project-from-example "espressif/usb_stream=*:usb_camera_mic_spk"
+```
+
+Then the example will be downloaded in current folder, you can check into it for build and flash.
+
+> Or you can download examples from esp-iot-solution repository: [USB Camera + Audio stream](https://github.com/espressif/esp-iot-solution/tree/master/examples/usb/host/usb_camera_mic_spk)
+
+### Q&A
+
+Q1. I encountered the following problems when using the package manager
+
+```
+Executing action: create-project-from-example
+CMakeLists.txt not found in project directory /home/username
+```
+
+A1. This is because an older version packege manager was used, please run `pip install -U idf-component-manager` in ESP-IDF environment to update.

@@ -13,6 +13,34 @@
 
 请参考：https://docs.espressif.com/projects/espressif-esp-iot-solution/zh_CN/latest/usb/usb_stream.html
 
-### Examples
+### 添加组件到工程
 
-[USB Camera + Audio stream](https://github.com/espressif/esp-iot-solution/tree/master/examples/usb/host/usb_camera_mic_spk)
+请使用组件管理器指令 `add-dependency` 将 `usb_stream` 添加到项目的依赖项, 在 `CMake` 执行期间该组件将被自动下载到工程目录。
+
+```
+idf.py add-dependency "espressif/usb_stream=*"
+```
+
+### 示例程序
+
+请使用组件管理器指令 `create-project-from-example` 在当前文件夹下载该组件的默认示例程序。
+
+```
+idf.py create-project-from-example "espressif/usb_stream=*:usb_camera_mic_spk"
+```
+
+之后进入示例程序目录，可以进行下一步的编译和烧录。
+
+> 您也可以从 esp-iot-solution 仓库直接下载示例程序: [USB Camera + Audio stream](https://github.com/espressif/esp-iot-solution/tree/master/examples/usb/host/usb_camera_mic_spk)
+
+
+### 问答
+
+Q1. 我在使用包管理器添加组件时遇到以下问题
+
+```
+Executing action: create-project-from-example
+CMakeLists.txt not found in project directory /home/username
+```
+
+A1. 这是因为您使用了一个老的组件管理器版本, 请在 ESP-IDF 环境中运行 `pip install -U idf-component-manager` 更新组件。
