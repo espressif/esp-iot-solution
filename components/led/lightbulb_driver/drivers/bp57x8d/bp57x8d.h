@@ -17,33 +17,33 @@ typedef struct {
     gpio_num_t iic_sda;
     bool enable_iic_queue;
     uint16_t freq_khz;
-} driver_bp5758d_t;
+} driver_bp57x8d_t;
 
 /**
- * @brief BP5758D channel abstract definition
+ * @brief BP57x8D channel abstract definition
  *
  */
 typedef enum {
-    BP5758D_CHANNEL_R = 0,
-    BP5758D_CHANNEL_G,
-    BP5758D_CHANNEL_B,
-    BP5758D_CHANNEL_C,
-    BP5758D_CHANNEL_W,
-    BP5758D_CHANNEL_MAX,
-} bp5758d_channel_t;
+    BP57x8D_CHANNEL_R = 0,
+    BP57x8D_CHANNEL_G,
+    BP57x8D_CHANNEL_B,
+    BP57x8D_CHANNEL_C,
+    BP57x8D_CHANNEL_W,
+    BP57x8D_CHANNEL_MAX,
+} bp57x8d_channel_t;
 
 /**
- * @brief BP5758D output pin definition
+ * @brief BP57x8D output pin definition
  *
  */
 typedef enum {
-    BP5758D_PIN_OUT1 = 0,
-    BP5758D_PIN_OUT2,
-    BP5758D_PIN_OUT3,
-    BP5758D_PIN_OUT4,
-    BP5758D_PIN_OUT5,
-    BP5758D_PIN_OUT_MAX,
-} bp5758d_out_pin_t;
+    BP57x8D_PIN_OUT1 = 0,
+    BP57x8D_PIN_OUT2,
+    BP57x8D_PIN_OUT3,
+    BP57x8D_PIN_OUT4,
+    BP57x8D_PIN_OUT5,
+    BP57x8D_PIN_OUT_MAX,
+} bp57x8d_out_pin_t;
 
 /**
  * @brief Initialize sm2135e output
@@ -52,7 +52,7 @@ typedef enum {
  * @param hook_func Hook function, which will be called inside the driver. e.g. to notify that config have been changed internally
  * @return esp_err_t
  */
-esp_err_t bp5758d_init(driver_bp5758d_t *config, void(*hook_func)(void *));
+esp_err_t bp57x8d_init(driver_bp57x8d_t *config, void(*hook_func)(void *));
 
 /**
  * @brief Set any channel output
@@ -61,7 +61,7 @@ esp_err_t bp5758d_init(driver_bp5758d_t *config, void(*hook_func)(void *));
  * @param value Output value
  * @return esp_err_t
  */
-esp_err_t bp5758d_set_channel(bp5758d_channel_t channel, uint16_t value);
+esp_err_t bp57x8d_set_channel(bp57x8d_channel_t channel, uint16_t value);
 
 /**
  * @brief Register the bp5758d channel
@@ -71,7 +71,7 @@ esp_err_t bp5758d_set_channel(bp5758d_channel_t channel, uint16_t value);
  * @param pin Chip pin
  * @return esp_err_t
  */
-esp_err_t bp5758d_regist_channel(bp5758d_channel_t channel, bp5758d_out_pin_t pin);
+esp_err_t bp57x8d_regist_channel(bp57x8d_channel_t channel, bp57x8d_out_pin_t pin);
 
 /**
  * @brief Set only rgb channel output
@@ -81,7 +81,7 @@ esp_err_t bp5758d_regist_channel(bp5758d_channel_t channel, bp5758d_out_pin_t pi
  * @param value_b Output blue value
  * @return esp_err_t
  */
-esp_err_t bp5758d_set_rgb_channel(uint16_t value_r, uint16_t value_g, uint16_t value_b);
+esp_err_t bp57x8d_set_rgb_channel(uint16_t value_r, uint16_t value_g, uint16_t value_b);
 
 /**
  * @brief Set only cw channel output
@@ -90,7 +90,7 @@ esp_err_t bp5758d_set_rgb_channel(uint16_t value_r, uint16_t value_g, uint16_t v
  * @param value_w Output white value
  * @return esp_err_t
  */
-esp_err_t bp5758d_set_cw_channel(uint16_t value_c, uint16_t value_w);
+esp_err_t bp57x8d_set_cw_channel(uint16_t value_c, uint16_t value_w);
 
 /**
  * @brief Set all channel output
@@ -102,14 +102,14 @@ esp_err_t bp5758d_set_cw_channel(uint16_t value_c, uint16_t value_w);
  * @param value_y Output white value
  * @return esp_err_t
  */
-esp_err_t bp5758d_set_rgbcw_channel(uint16_t value_r, uint16_t value_g, uint16_t value_b, uint16_t value_c, uint16_t value_w);
+esp_err_t bp57x8d_set_rgbcw_channel(uint16_t value_r, uint16_t value_g, uint16_t value_b, uint16_t value_c, uint16_t value_w);
 
 /**
  * @brief Stop all channel output
  *
  * @return esp_err_t
  */
-esp_err_t bp5758d_set_shutdown(void);
+esp_err_t bp57x8d_set_shutdown(void);
 
 /**
  * @brief Set standby mode
@@ -117,11 +117,11 @@ esp_err_t bp5758d_set_shutdown(void);
  * @param enable_standby If set to true will enter standby mode
  * @return esp_err_t
  */
-esp_err_t bp5758d_set_standby_mode(bool enable_sleep);
+esp_err_t bp57x8d_set_standby_mode(bool enable_sleep);
 
 /**
  * @brief Deinitialize bp5758d and release resources
  *
  * @return esp_err_t
  */
-esp_err_t bp5758d_deinit(void);
+esp_err_t bp57x8d_deinit(void);

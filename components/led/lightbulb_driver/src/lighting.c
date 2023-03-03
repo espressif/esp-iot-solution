@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -88,7 +88,7 @@ void lightbulb_lighting_output_test(lightbulb_lighting_unit_t mask, uint16_t spe
 
     // BIT3 red green blue cct brightness 0->100
     if (mask & LIGHTING_BASIC_FIVE) {
-        ESP_LOGW(TAG, "basic five");
+        ESP_LOGW(TAG, "basic five lighting");
         lightbulb_set_switch(false);
         vTaskDelay(pdMS_TO_TICKS(speed_ms));
 
@@ -143,9 +143,9 @@ void lightbulb_lighting_output_test(lightbulb_lighting_unit_t mask, uint16_t spe
             .mode = WORK_COLOR,
         };
         lightbulb_basic_effect_start(&effect1);
-        vTaskDelay(pdMS_TO_TICKS(speed_ms) * 5);
+        vTaskDelay(pdMS_TO_TICKS(speed_ms) * 2);
         lightbulb_basic_effect_stop();
-        vTaskDelay(pdMS_TO_TICKS(speed_ms) * 5);
+        vTaskDelay(pdMS_TO_TICKS(speed_ms) * 2);
         lightbulb_effect_config_t effect2 = {
             .red = 255,
             .green = 0,
@@ -157,7 +157,7 @@ void lightbulb_lighting_output_test(lightbulb_lighting_unit_t mask, uint16_t spe
             .mode = WORK_COLOR,
         };
         lightbulb_basic_effect_start(&effect2);
-        vTaskDelay(pdMS_TO_TICKS(speed_ms) * 5);
+        vTaskDelay(pdMS_TO_TICKS(speed_ms) * 2);
         lightbulb_basic_effect_stop_and_restore();
     }
 
@@ -174,9 +174,9 @@ void lightbulb_lighting_output_test(lightbulb_lighting_unit_t mask, uint16_t spe
             .mode = WORK_WHITE,
         };
         lightbulb_basic_effect_start(&effect1);
-        vTaskDelay(pdMS_TO_TICKS(speed_ms) * 5);
+        vTaskDelay(pdMS_TO_TICKS(speed_ms) * 2);
         lightbulb_basic_effect_stop();
-        vTaskDelay(pdMS_TO_TICKS(speed_ms) * 5);
+        vTaskDelay(pdMS_TO_TICKS(speed_ms) * 2);
         lightbulb_effect_config_t effect2 = {
             .cct = 100,
             .max_brightness = 100,
@@ -186,7 +186,7 @@ void lightbulb_lighting_output_test(lightbulb_lighting_unit_t mask, uint16_t spe
             .mode = WORK_WHITE,
         };
         lightbulb_basic_effect_start(&effect2);
-        vTaskDelay(pdMS_TO_TICKS(speed_ms) * 5);
+        vTaskDelay(pdMS_TO_TICKS(speed_ms) * 2);
         lightbulb_basic_effect_stop_and_restore();
     }
 

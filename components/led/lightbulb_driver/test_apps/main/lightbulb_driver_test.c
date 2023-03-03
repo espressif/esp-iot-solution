@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -8,7 +8,7 @@
 #include "lightbulb.h"
 
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -143,12 +143,11 @@ TEST_CASE("PWM", "[Application Layer]")
     lightbulb_config_t config = {
         .type = DRIVER_ESP_PWM,
         .driver_conf.pwm.freq_hz = 4000,
-        .capability.enable_fades = true,
-        .capability.fades_ms = 800,
+        .capability.enable_fade = true,
+        .capability.fade_time_ms = 800,
         .capability.enable_lowpower = false,
-        .capability.enable_mix_cct = false,
         .capability.enable_status_storage = false,
-        .capability.mode_mask = COLOR_MODE,
+        .capability.led_beads = LED_BEADS_3CH_RGB,
         .capability.storage_cb = NULL,
         .capability.sync_change_brightness_value = true,
 
@@ -162,103 +161,6 @@ TEST_CASE("PWM", "[Application Layer]")
         .io_conf.pwm_io.blue = 7,
 #endif
 
-        .external_limit = NULL,
-        .gamma_conf = NULL,
-        .init_status.mode = WORK_COLOR,
-        .init_status.on = true,
-        .init_status.hue = 0,
-        .init_status.saturation = 100,
-        .init_status.value = 100,
-    };
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_init(&config));
-    vTaskDelay(pdMS_TO_TICKS(1000));
-    lightbulb_lighting_output_test(LIGHTING_BASIC_FIVE, 1000);
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit());
-}
-#endif
-
-#ifdef CONFIG_ENABLE_SM2135E_DRIVER
-TEST_CASE("SM2135E", "[Underlying Driver]")
-{
-    //1.Status check
-    TEST_ESP_ERR(ESP_ERR_INVALID_STATE, sm2135e_set_channel(SM2135E_CHANNEL_R, 255));
-    TEST_ESP_ERR(ESP_ERR_INVALID_STATE, sm2135e_set_rgb_channel(255, 255, 0));
-    TEST_ESP_ERR(ESP_ERR_INVALID_STATE, sm2135e_set_wy_channel(255, 255));
-
-    //2. init check
-    driver_sm2135e_t conf = {
-        .rgb_current = SM2135E_RGB_CURRENT_20MA,
-        .wy_current = SM2135E_WY_CURRENT_40MA,
-        .iic_clk = 4,
-        .iic_sda = 3,
-        .freq_khz = 400,
-        .enable_iic_queue = true
-    };
-    TEST_ASSERT_EQUAL(ESP_OK, sm2135e_init(&conf, NULL));
-
-    //3. regist Check, step 1
-    TEST_ASSERT_EQUAL(ESP_OK, sm2135e_regist_channel(SM2135E_CHANNEL_R, SM2135E_PIN_OUT3));
-    TEST_ASSERT_EQUAL(ESP_OK, sm2135e_regist_channel(SM2135E_CHANNEL_G, SM2135E_PIN_OUT2));
-    TEST_ASSERT_EQUAL(ESP_OK, sm2135e_regist_channel(SM2135E_CHANNEL_B, SM2135E_PIN_OUT1));
-    TEST_ASSERT_EQUAL(ESP_OK, sm2135e_set_channel(SM2135E_CHANNEL_R, 1));
-    TEST_ASSERT_EQUAL(ESP_OK, sm2135e_set_channel(SM2135E_CHANNEL_G, 1));
-    TEST_ASSERT_EQUAL(ESP_OK, sm2135e_set_channel(SM2135E_CHANNEL_B, 1));
-    TEST_ASSERT_EQUAL(ESP_OK, sm2135e_set_rgb_channel(1, 1, 1));
-    TEST_ESP_ERR(ESP_ERR_INVALID_STATE, sm2135e_set_channel(SM2135E_CHANNEL_W, 1));
-    TEST_ESP_ERR(ESP_ERR_INVALID_STATE, sm2135e_set_channel(SM2135E_CHANNEL_Y, 1));
-
-    //3. regist Check, step 2
-    TEST_ASSERT_EQUAL(ESP_OK, sm2135e_regist_channel(SM2135E_CHANNEL_W, SM2135E_PIN_OUT5));
-    TEST_ASSERT_EQUAL(ESP_OK, sm2135e_regist_channel(SM2135E_CHANNEL_Y, SM2135E_PIN_OUT4));
-    TEST_ASSERT_EQUAL(ESP_OK, sm2135e_set_channel(SM2135E_CHANNEL_W, 1));
-    TEST_ASSERT_EQUAL(ESP_OK, sm2135e_set_channel(SM2135E_CHANNEL_Y, 1));
-    TEST_ASSERT_EQUAL(ESP_OK, sm2135e_set_wy_channel(1, 1));
-
-    //4. Data range check
-    // Nothing
-
-    //5. Color check
-    TEST_ASSERT_EQUAL(ESP_OK, sm2135e_set_shutdown());
-    vTaskDelay(pdMS_TO_TICKS(100));
-    TEST_ASSERT_EQUAL(ESP_OK, sm2135e_set_rgb_channel(255, 0, 0));
-    vTaskDelay(pdMS_TO_TICKS(100));
-    TEST_ASSERT_EQUAL(ESP_OK, sm2135e_set_rgb_channel(0, 255, 0));
-    vTaskDelay(pdMS_TO_TICKS(100));
-    TEST_ASSERT_EQUAL(ESP_OK, sm2135e_set_rgb_channel(0, 0, 255));
-    vTaskDelay(pdMS_TO_TICKS(100));
-    TEST_ASSERT_EQUAL(ESP_OK, sm2135e_set_wy_channel(255, 0));
-    vTaskDelay(pdMS_TO_TICKS(100));
-    TEST_ASSERT_EQUAL(ESP_OK, sm2135e_set_wy_channel(0, 255));
-    vTaskDelay(pdMS_TO_TICKS(100));
-
-    //6. deinit
-    TEST_ASSERT_EQUAL(ESP_OK, sm2135e_set_shutdown());
-    TEST_ASSERT_EQUAL(ESP_OK, sm2135e_deinit());
-}
-
-TEST_CASE("SM2135E", "[Application Layer]")
-{
-    lightbulb_config_t config = {
-        .type = DRIVER_SM2135E,
-        .driver_conf.sm2135e.rgb_current = SM2135E_RGB_CURRENT_20MA,
-        .driver_conf.sm2135e.wy_current = SM2135E_WY_CURRENT_40MA,
-        .driver_conf.sm2135e.iic_clk = 4,
-        .driver_conf.sm2135e.iic_sda = 3,
-        .driver_conf.sm2135e.freq_khz = 400,
-        .driver_conf.sm2135e.enable_iic_queue = true,
-        .capability.enable_fades = true,
-        .capability.fades_ms = 800,
-        .capability.enable_lowpower = false,
-        .capability.enable_mix_cct = true,
-        .capability.enable_status_storage = false,
-        .capability.mode_mask = COLOR_AND_WHITE_MODE,
-        .capability.storage_cb = NULL,
-        .capability.sync_change_brightness_value = true,
-        .io_conf.iic_io.red = OUT3,
-        .io_conf.iic_io.green = OUT2,
-        .io_conf.iic_io.blue = OUT1,
-        .io_conf.iic_io.cold_white = OUT5,
-        .io_conf.iic_io.warm_yellow = OUT4,
         .external_limit = NULL,
         .gamma_conf = NULL,
         .init_status.mode = WORK_COLOR,
@@ -359,12 +261,11 @@ TEST_CASE("SM2135EH", "[Application Layer]")
         .driver_conf.sm2135eh.iic_sda = 3,
         .driver_conf.sm2135eh.freq_khz = 400,
         .driver_conf.sm2135eh.enable_iic_queue = true,
-        .capability.enable_fades = true,
-        .capability.fades_ms = 800,
+        .capability.enable_fade = true,
+        .capability.fade_time_ms = 800,
         .capability.enable_lowpower = false,
-        .capability.enable_mix_cct = true,
         .capability.enable_status_storage = false,
-        .capability.mode_mask = COLOR_AND_WHITE_MODE,
+        .capability.led_beads = LED_BEADS_5CH_RGBCW,
         .capability.storage_cb = NULL,
         .capability.sync_change_brightness_value = true,
         .io_conf.iic_io.red = OUT3,
@@ -387,105 +288,104 @@ TEST_CASE("SM2135EH", "[Application Layer]")
 }
 #endif
 
-#ifdef CONFIG_ENABLE_BP5758D_DRIVER
-TEST_CASE("BP5758D", "[Underlying Driver]")
+#ifdef CONFIG_ENABLE_BP57x8D_DRIVER
+TEST_CASE("BP57x8D", "[Underlying Driver]")
 {
     //1.Status check
-    TEST_ESP_ERR(ESP_ERR_INVALID_STATE, bp5758d_set_channel(BP5758D_CHANNEL_R, 1023));
-    TEST_ESP_ERR(ESP_ERR_INVALID_STATE, bp5758d_set_rgb_channel(1023, 1023, 0));
-    TEST_ESP_ERR(ESP_ERR_INVALID_STATE, bp5758d_set_cw_channel(1023, 1023));
+    TEST_ESP_ERR(ESP_ERR_INVALID_STATE, bp57x8d_set_channel(BP57x8D_CHANNEL_R, 1023));
+    TEST_ESP_ERR(ESP_ERR_INVALID_STATE, bp57x8d_set_rgb_channel(1023, 1023, 0));
+    TEST_ESP_ERR(ESP_ERR_INVALID_STATE, bp57x8d_set_cw_channel(1023, 1023));
 
     //2. init check
-    driver_bp5758d_t conf = {
+    driver_bp57x8d_t conf = {
         .current = {10, 10, 10, 20, 20},
         .iic_clk = 4,
         .iic_sda = 3,
         .freq_khz = 300,
         .enable_iic_queue = true
     };
-    TEST_ASSERT_EQUAL(ESP_OK, bp5758d_init(&conf, NULL));
+    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_init(&conf, NULL));
 
     //3. regist Check, step 1
-    TEST_ASSERT_EQUAL(ESP_OK, bp5758d_regist_channel(BP5758D_CHANNEL_R, BP5758D_PIN_OUT1));
-    TEST_ASSERT_EQUAL(ESP_OK, bp5758d_regist_channel(BP5758D_CHANNEL_G, BP5758D_PIN_OUT2));
-    TEST_ASSERT_EQUAL(ESP_OK, bp5758d_regist_channel(BP5758D_CHANNEL_B, BP5758D_PIN_OUT3));
-    TEST_ASSERT_EQUAL(ESP_OK, bp5758d_set_channel(BP5758D_CHANNEL_R, 1));
-    TEST_ASSERT_EQUAL(ESP_OK, bp5758d_set_channel(BP5758D_CHANNEL_G, 1));
-    TEST_ASSERT_EQUAL(ESP_OK, bp5758d_set_channel(BP5758D_CHANNEL_B, 1));
-    TEST_ASSERT_EQUAL(ESP_OK, bp5758d_set_rgb_channel(1, 1, 1));
-    TEST_ESP_ERR(ESP_ERR_INVALID_STATE, bp5758d_set_channel(BP5758D_CHANNEL_C, 1));
-    TEST_ESP_ERR(ESP_ERR_INVALID_STATE, bp5758d_set_channel(BP5758D_CHANNEL_W, 1));
+    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_regist_channel(BP57x8D_CHANNEL_R, BP57x8D_PIN_OUT1));
+    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_regist_channel(BP57x8D_CHANNEL_G, BP57x8D_PIN_OUT2));
+    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_regist_channel(BP57x8D_CHANNEL_B, BP57x8D_PIN_OUT3));
+    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_set_channel(BP57x8D_CHANNEL_R, 1));
+    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_set_channel(BP57x8D_CHANNEL_G, 1));
+    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_set_channel(BP57x8D_CHANNEL_B, 1));
+    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_set_rgb_channel(1, 1, 1));
+    TEST_ESP_ERR(ESP_ERR_INVALID_STATE, bp57x8d_set_channel(BP57x8D_CHANNEL_C, 1));
+    TEST_ESP_ERR(ESP_ERR_INVALID_STATE, bp57x8d_set_channel(BP57x8D_CHANNEL_W, 1));
 
     //3. regist Check, step 2
-    TEST_ASSERT_EQUAL(ESP_OK, bp5758d_regist_channel(BP5758D_CHANNEL_C, BP5758D_PIN_OUT5));
-    TEST_ASSERT_EQUAL(ESP_OK, bp5758d_regist_channel(BP5758D_CHANNEL_W, BP5758D_PIN_OUT4));
-    TEST_ASSERT_EQUAL(ESP_OK, bp5758d_set_channel(BP5758D_CHANNEL_C, 1));
-    TEST_ASSERT_EQUAL(ESP_OK, bp5758d_set_channel(BP5758D_CHANNEL_W, 1));
-    TEST_ASSERT_EQUAL(ESP_OK, bp5758d_set_cw_channel(1, 1));
+    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_regist_channel(BP57x8D_CHANNEL_C, BP57x8D_PIN_OUT5));
+    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_regist_channel(BP57x8D_CHANNEL_W, BP57x8D_PIN_OUT4));
+    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_set_channel(BP57x8D_CHANNEL_C, 1));
+    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_set_channel(BP57x8D_CHANNEL_W, 1));
+    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_set_cw_channel(1, 1));
 
     //4. Data range check
-    TEST_ESP_ERR(ESP_ERR_INVALID_ARG, bp5758d_set_channel(BP5758D_CHANNEL_R, 1024));
+    TEST_ESP_ERR(ESP_ERR_INVALID_ARG, bp57x8d_set_channel(BP57x8D_CHANNEL_R, 1024));
 
     //5. Color check
-    TEST_ASSERT_EQUAL(ESP_OK, bp5758d_set_shutdown());
+    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_set_shutdown());
     vTaskDelay(pdMS_TO_TICKS(100));
-    TEST_ASSERT_EQUAL(ESP_OK, bp5758d_set_rgb_channel(255, 0, 0));
+    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_set_rgb_channel(255, 0, 0));
     vTaskDelay(pdMS_TO_TICKS(100));
-    TEST_ASSERT_EQUAL(ESP_OK, bp5758d_set_rgb_channel(0, 255, 0));
+    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_set_rgb_channel(0, 255, 0));
     vTaskDelay(pdMS_TO_TICKS(100));
-    TEST_ASSERT_EQUAL(ESP_OK, bp5758d_set_rgb_channel(0, 0, 255));
+    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_set_rgb_channel(0, 0, 255));
     vTaskDelay(pdMS_TO_TICKS(100));
-    TEST_ASSERT_EQUAL(ESP_OK, bp5758d_set_shutdown());
+    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_set_shutdown());
     vTaskDelay(pdMS_TO_TICKS(100));
-    TEST_ASSERT_EQUAL(ESP_OK, bp5758d_set_cw_channel(255, 0));
+    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_set_cw_channel(255, 0));
     vTaskDelay(pdMS_TO_TICKS(100));
-    TEST_ASSERT_EQUAL(ESP_OK, bp5758d_set_cw_channel(0, 255));
+    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_set_cw_channel(0, 255));
     vTaskDelay(pdMS_TO_TICKS(100));
-    TEST_ASSERT_EQUAL(ESP_OK, bp5758d_set_shutdown());
+    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_set_shutdown());
     vTaskDelay(pdMS_TO_TICKS(100));
-    TEST_ASSERT_EQUAL(ESP_OK, bp5758d_set_rgbcw_channel(255, 0, 0, 0, 0));
+    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_set_rgbcw_channel(255, 0, 0, 0, 0));
     vTaskDelay(pdMS_TO_TICKS(100));
-    TEST_ASSERT_EQUAL(ESP_OK, bp5758d_set_rgbcw_channel(0, 255, 0, 0, 0));
+    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_set_rgbcw_channel(0, 255, 0, 0, 0));
     vTaskDelay(pdMS_TO_TICKS(100));
-    TEST_ASSERT_EQUAL(ESP_OK, bp5758d_set_rgbcw_channel(0, 0, 255, 0, 0));
+    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_set_rgbcw_channel(0, 0, 255, 0, 0));
     vTaskDelay(pdMS_TO_TICKS(100));
-    TEST_ASSERT_EQUAL(ESP_OK, bp5758d_set_rgbcw_channel(0, 0, 0, 255, 0));
+    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_set_rgbcw_channel(0, 0, 0, 255, 0));
     vTaskDelay(pdMS_TO_TICKS(100));
-    TEST_ASSERT_EQUAL(ESP_OK, bp5758d_set_rgbcw_channel(0, 0, 0, 0, 255));
+    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_set_rgbcw_channel(0, 0, 0, 0, 255));
     vTaskDelay(pdMS_TO_TICKS(100));
-    TEST_ASSERT_EQUAL(ESP_OK, bp5758d_set_rgbcw_channel(255, 0, 0, 0, 0));
+    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_set_rgbcw_channel(255, 0, 0, 0, 0));
     vTaskDelay(pdMS_TO_TICKS(100));
-    bp5758d_set_standby_mode(true);
+    bp57x8d_set_standby_mode(true);
     vTaskDelay(pdMS_TO_TICKS(100));
-    TEST_ASSERT_EQUAL(ESP_OK, bp5758d_set_rgbcw_channel(0, 255, 0, 0, 0));
+    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_set_rgbcw_channel(0, 255, 0, 0, 0));
     vTaskDelay(pdMS_TO_TICKS(100));
-    bp5758d_set_standby_mode(true);
+    bp57x8d_set_standby_mode(true);
     vTaskDelay(pdMS_TO_TICKS(100));
-    TEST_ASSERT_EQUAL(ESP_OK, bp5758d_set_rgbcw_channel(0, 0, 255, 0, 0));
+    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_set_rgbcw_channel(0, 0, 255, 0, 0));
     vTaskDelay(pdMS_TO_TICKS(100));
 
     //6. deinit
-    TEST_ASSERT_EQUAL(ESP_OK, bp5758d_set_shutdown());
+    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_set_shutdown());
     // Wait for data transmission to complete
     vTaskDelay(pdMS_TO_TICKS(1000));
-    TEST_ASSERT_EQUAL(ESP_OK, bp5758d_deinit());
+    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_deinit());
 }
 
-TEST_CASE("BP5758D", "[Application Layer]")
+TEST_CASE("BP57x8D", "[Application Layer]")
 {
     lightbulb_config_t config = {
-        .type = DRIVER_BP5758D,
-        .driver_conf.bp5758d.current = {10, 10, 10, 20, 20},
-        .driver_conf.bp5758d.iic_clk = 4,
-        .driver_conf.bp5758d.iic_sda = 3,
-        .driver_conf.bp5758d.freq_khz = 300,
-        .driver_conf.bp5758d.enable_iic_queue = true,
-        .capability.enable_fades = true,
-        .capability.fades_ms = 800,
+        .type = DRIVER_BP57x8D,
+        .driver_conf.bp57x8d.current = {10, 10, 10, 20, 20},
+        .driver_conf.bp57x8d.iic_clk = 4,
+        .driver_conf.bp57x8d.iic_sda = 3,
+        .driver_conf.bp57x8d.freq_khz = 300,
+        .driver_conf.bp57x8d.enable_iic_queue = true,
+        .capability.enable_fade = true,
+        .capability.fade_time_ms = 800,
         .capability.enable_lowpower = false,
-        .capability.enable_mix_cct = true,
         .capability.enable_status_storage = false,
-        .capability.mode_mask = COLOR_AND_WHITE_MODE,
+        .capability.led_beads = LED_BEADS_5CH_RGBCW,
         .capability.storage_cb = NULL,
         .capability.sync_change_brightness_value = true,
         .io_conf.iic_io.red = OUT1,
@@ -605,12 +505,11 @@ TEST_CASE("BP1658CJ", "[Application Layer]")
         .driver_conf.bp1658cj.iic_sda = 3,
         .driver_conf.bp1658cj.freq_khz = 300,
         .driver_conf.bp1658cj.enable_iic_queue = true,
-        .capability.enable_fades = true,
-        .capability.fades_ms = 800,
+        .capability.enable_fade = true,
+        .capability.fade_time_ms = 800,
         .capability.enable_lowpower = false,
-        .capability.enable_mix_cct = true,
         .capability.enable_status_storage = false,
-        .capability.mode_mask = COLOR_AND_WHITE_MODE,
+        .capability.led_beads = LED_BEADS_5CH_RGBCW,
         .capability.storage_cb = NULL,
         .capability.sync_change_brightness_value = true,
         .io_conf.iic_io.red = OUT3,
@@ -721,19 +620,18 @@ TEST_CASE("SM2235EGH", "[Underlying Driver]")
 TEST_CASE("SM2235EGH", "[Application Layer]")
 {
     lightbulb_config_t config = {
-        .type = DRIVER_SM2235EGH,
-        .driver_conf.sm2235egh.rgb_current = SM2235EGH_RGB_CURRENT_20MA,
-        .driver_conf.sm2235egh.cw_current = SM2235EGH_CW_CURRENT_40MA,
-        .driver_conf.sm2235egh.iic_clk = 5,
-        .driver_conf.sm2235egh.iic_sda = 4,
-        .driver_conf.sm2235egh.freq_khz = 400,
-        .driver_conf.sm2235egh.enable_iic_queue = true,
-        .capability.enable_fades = true,
-        .capability.fades_ms = 800,
+        .type = DRIVER_SM2x35EGH,
+        .driver_conf.sm2x35egh.rgb_current = SM2235EGH_RGB_CURRENT_20MA,
+        .driver_conf.sm2x35egh.cw_current = SM2235EGH_CW_CURRENT_40MA,
+        .driver_conf.sm2x35egh.iic_clk = 5,
+        .driver_conf.sm2x35egh.iic_sda = 4,
+        .driver_conf.sm2x35egh.freq_khz = 400,
+        .driver_conf.sm2x35egh.enable_iic_queue = true,
+        .capability.enable_fade = true,
+        .capability.fade_time_ms = 800,
         .capability.enable_lowpower = false,
-        .capability.enable_mix_cct = true,
         .capability.enable_status_storage = false,
-        .capability.mode_mask = COLOR_AND_WHITE_MODE,
+        .capability.led_beads = LED_BEADS_5CH_RGBCW,
         .capability.storage_cb = NULL,
         .capability.sync_change_brightness_value = true,
         .io_conf.iic_io.red = OUT3,
@@ -778,10 +676,10 @@ TEST_CASE("WS2812", "[Application Layer]")
         .type = DRIVER_WS2812,
         .driver_conf.ws2812.led_num = 22,
         .driver_conf.ws2812.ctrl_io = 2,
-        .capability.enable_fades = true,
-        .capability.fades_ms = 800,
+        .capability.enable_fade = true,
+        .capability.fade_time_ms = 800,
         .capability.enable_status_storage = false,
-        .capability.mode_mask = COLOR_MODE,
+        .capability.led_beads = LED_BEADS_3CH_RGB,
         .capability.storage_cb = NULL,
         .external_limit = NULL,
         .gamma_conf = NULL,
@@ -889,12 +787,11 @@ TEST_CASE("KP18058", "[Application Layer]")
         .driver_conf.kp18058.iic_sda = 4,
         .driver_conf.kp18058.iic_freq_khz = 300,
         .driver_conf.kp18058.enable_iic_queue = true,
-        .capability.enable_fades = true,
-        .capability.fades_ms = 800,
+        .capability.enable_fade = true,
+        .capability.fade_time_ms = 800,
         .capability.enable_lowpower = false,
-        .capability.enable_mix_cct = true,
         .capability.enable_status_storage = false,
-        .capability.mode_mask = COLOR_AND_WHITE_MODE,
+        .capability.led_beads = LED_BEADS_5CH_RGBCW,
         .capability.storage_cb = NULL,
         .capability.sync_change_brightness_value = true,
         .io_conf.iic_io.red = OUT3,
