@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.4.8 - 2023-03-02
+
+### Enhancements:
+
+* Add user guide for component manager
+
 ## v0.4.7 - 2023-02-20
 
 ### Bug Fixes:
