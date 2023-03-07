@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.4.10 - 2023-03-16
+
+### Enhancements:
+
+* Add example: usb_camera_lcd_display
+
 ## v0.4.9 - 2023-03-09
 
 ### Enhancements:

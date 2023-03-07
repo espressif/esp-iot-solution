@@ -1,4 +1,4 @@
-version: "0.4.9"
+version: "0.4.10"
 targets:
   - esp32s2
   - esp32s3
@@ -12,3 +12,4 @@ dependencies:
   cmake_utilities: "0.*"
 examples:
   - path: ../../../examples/usb/host/usb_camera_mic_spk
+  - path: ../../../examples/usb/host/usb_camera_lcd_display
