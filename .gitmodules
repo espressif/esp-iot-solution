@@ -4,6 +4,3 @@
 [submodule "examples/hmi/lvgl_example/components/lv_examples/lv_examples"]
 	path = examples/hmi/lvgl_example/components/lv_examples/lv_examples
 	url = https://github.com/lvgl/lv_examples.git
-[submodule "examples/decompress/xz_compressed_ota/bootloader_components"]
-	path = examples/decompress/xz_compressed_ota/bootloader_components
-	url = https://github.com/espressif/esp-bootloader-plus.git

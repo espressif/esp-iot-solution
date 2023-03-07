@@ -1,0 +1,6 @@
+dependencies:
+  bootloader_support_plus:
+    version: "0.*"
+    # Please comment the following line, if this example is installed by idf.py create-project-from-example.
+    override_path: "../../../../../components/bootloader_support_plus"
+  idf: ">=5.0"

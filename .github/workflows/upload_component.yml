@@ -18,6 +18,7 @@ jobs:
           directories: >
             components/audio/pwm_audio;
             components/ble_profiles/esp/ble_ota;
+            components/bootloader_support_plus;
             components/button;
             components/extended_vfs;
             components/knob;
