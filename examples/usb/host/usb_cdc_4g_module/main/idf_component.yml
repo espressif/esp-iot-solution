@@ -5,5 +5,5 @@ dependencies:
     version: "~0.3.0"
     override_path: "../../../../../components/led/led_indicator"
   iot_usbh_modem:
-    version: "~0.1.0"
+    version: "0.1.*"
     override_path: "../../../../../components/usb/iot_usbh_modem"

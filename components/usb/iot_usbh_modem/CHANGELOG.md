@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v0.1.3 - 2023-03-08
+
+* Fix NAPT enable issue 
+
 ## v0.1.2 - 2023-03-06
 
 * Modify the default channel 13 to 6

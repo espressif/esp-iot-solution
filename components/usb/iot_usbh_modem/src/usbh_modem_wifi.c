@@ -15,14 +15,35 @@
 #include "lwip/lwip_napt.h"
 #include "dhcpserver/dhcpserver.h"
 #include "usbh_modem_wifi.h"
+#include "usbh_modem_board.h"
 
 static const char *TAG = "modem_wifi";
+static int s_active_station_num = 0;
 
 /* Event handler for catching system events */
 static void event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
     if (event_base == IP_EVENT && event_id == IP_EVENT_AP_STAIPASSIGNED) {
         ESP_LOGI(TAG, "Get IP addr");
+    } else if (event_base == WIFI_EVENT) {
+        switch (event_id) {
+        case WIFI_EVENT_AP_STACONNECTED:
+            if (s_active_station_num == 0) {
+                modem_wifi_napt_enable(true);
+            }
+            if (++s_active_station_num > 0) {
+                esp_event_post(MODEM_BOARD_EVENT, MODEM_EVENT_WIFI_STA_CONN, (void *)s_active_station_num, 0, 0);
+            }
+            break;
+        case WIFI_EVENT_AP_STADISCONNECTED:
+            if (--s_active_station_num == 0) {
+                esp_event_post(MODEM_BOARD_EVENT, MODEM_EVENT_WIFI_STA_DISCONN, (void *)s_active_station_num, 0, 0);
+                modem_wifi_napt_enable(false);
+            }
+            break;
+        default:
+            break;
+        }
     }
 }
 

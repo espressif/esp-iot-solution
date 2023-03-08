@@ -217,7 +217,6 @@ void app_main(void)
     ESP_ERROR_CHECK(modem_wifi_set_dns(ap_netif, ap_dns_addr));
     ESP_LOGI(TAG, "ap dns addr(manual): %s", CONFIG_EXAMPLE_MANUAL_DNS_ADDR);
 #endif
-    ESP_ERROR_CHECK(modem_wifi_napt_enable(true));
 
     while (1) {
 
