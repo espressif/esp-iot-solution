@@ -140,7 +140,7 @@ menu "IoT USB Host Modem"
         config MODEM_WIFI_CHANNEL
             int "WiFi Channel"
             range 1 13
-            default 13
+            default 6
             help
                 WiFi channel (network channel) for the example to use.
         choice 
