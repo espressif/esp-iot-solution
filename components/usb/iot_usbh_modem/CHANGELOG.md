@@ -1,5 +1,10 @@
 # ChangeLog
 
+## v0.1.4 - 2023-03-09
+
+* Set default SoftAP DNS during Wi-Fi config
+* Add Ping process in example
+
 ## v0.1.3 - 2023-03-08
 
 * Fix NAPT enable issue 

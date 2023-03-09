@@ -16,6 +16,7 @@ typedef struct {
     wifi_mode_t mode;              /*!< Wi-Fi Work mode */
     char ssid[32];                 /*!< Wi-Fi SSID of the mode */
     char password[64];             /*!< Wi-Fi password of the mode */
+    char dns[16];                  /*!< Wi-Fi SoftAP DNS address */
     size_t channel;                /*!< Wi-Fi channel of the mode */
     size_t max_connection;         /*!< Wi-Fi max connections of the softap mode */
     size_t ssid_hidden;            /*!< If hide ssid in softap mode */

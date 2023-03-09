@@ -5,6 +5,7 @@
  */
 #include <stdio.h>
 #include <string.h>
+#include <arpa/inet.h>
 #include "esp_system.h"
 #include "esp_log.h"
 #include "esp_wifi.h"
@@ -19,6 +20,7 @@
 
 static const char *TAG = "modem_wifi";
 static int s_active_station_num = 0;
+static esp_netif_t *s_wifi_netif[WIFI_MODE_MAX] = {NULL};
 
 /* Event handler for catching system events */
 static void event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
@@ -69,7 +71,7 @@ esp_netif_t *modem_wifi_init(wifi_mode_t mode)
     ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_FLASH));
     ESP_ERROR_CHECK(esp_wifi_start());
     ESP_LOGI(TAG, "Wi-Fi %s started", mode == WIFI_MODE_STA ? "STA" : "AP");
-
+    s_wifi_netif[mode] = wifi_netif;
     return wifi_netif;
 }
 
@@ -80,7 +82,7 @@ esp_netif_t *modem_wifi_ap_init(void)
 
 esp_err_t modem_wifi_set(modem_wifi_config_t *config)
 {
-    if (config == NULL || config->ssid == NULL || config->password == NULL) {
+    if (config == NULL || config->ssid[0] == 0 || config->password[0] == 0) {
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -104,8 +106,16 @@ esp_err_t modem_wifi_set(modem_wifi_config_t *config)
         ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_cfg));
         ESP_ERROR_CHECK(esp_wifi_set_bandwidth(ESP_IF_WIFI_AP, config->bandwidth));
         ESP_LOGI(TAG, "softap ssid: %s password: %s", config->ssid, config->password);
+        if (config->dns[0]) {
+            uint32_t ap_dns_addr = inet_addr(config->dns);
+            ESP_ERROR_CHECK(modem_wifi_set_dns(s_wifi_netif[WIFI_MODE_AP], ap_dns_addr));
+            ESP_LOGI(TAG, "ap dns addr(manual): %s", config->dns);
+        } else {
+            uint32_t ap_dns_addr = inet_addr(CONFIG_MODEM_WIFI_DEFAULT_DNS);
+            ESP_ERROR_CHECK(modem_wifi_set_dns(s_wifi_netif[WIFI_MODE_AP], ap_dns_addr));
+            ESP_LOGI(TAG, "ap dns addr(default): %s", CONFIG_MODEM_WIFI_DEFAULT_DNS);
+        }
     }
-
     return ESP_OK;
 }
 

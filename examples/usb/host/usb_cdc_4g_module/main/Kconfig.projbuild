@@ -33,6 +33,30 @@ menu "4G Modem Example Config"
         help
             If not enable, just stay in command mode, user can call modem_board_ppp_start to enter network mode later
 
+    config EXAMPLE_AUTO_UPDATE_DNS
+        bool "Auto update Wi-Fi soft ap DNS address"
+        default y
+        help
+            If true using dns address got from ppp
+
+    config EXAMPLE_PING_NETWORK
+        bool "Ping network to check the state"
+        default y
+
+    config EXAMPLE_PING_MANUAL
+        bool "Ping manual address"
+        default y
+
+    config EXAMPLE_PING_MANUAL_ADDR
+        string "Manual address"
+        default "8.8.8.8"
+        depends on EXAMPLE_PING_MANUAL
+
+    config EXAMPLE_PING_TIMEOUT
+        int "ping timeout value (ms)"
+        default 2000
+        depends on EXAMPLE_PING_NETWORK
+
     config DUMP_SYSTEM_STATUS
         bool "Dump system task status"
         default n

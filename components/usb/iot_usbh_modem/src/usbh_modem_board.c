@@ -66,8 +66,8 @@ static const int PPP_NET_RECONNECTING_BIT         = BIT8;    /* ppp net reconnec
 
 static esp_modem_dce_t *s_dce = NULL;
 static EventGroupHandle_t s_modem_evt_hdl = NULL;
-static esp_ip_addr_t s_dns_ip_main = ESP_IP4ADDR_INIT(114, 114, 114, 114);
-static esp_ip_addr_t s_dns_ip_backup = ESP_IP4ADDR_INIT(8, 8, 8, 8);
+static esp_ip_addr_t s_dns_ip_main = ESP_IP4ADDR_INIT(8, 8, 8, 8);
+static esp_ip_addr_t s_dns_ip_backup = ESP_IP4ADDR_INIT(114, 114, 114, 114);
 
 typedef struct {
     esp_modem_dce_t parent;

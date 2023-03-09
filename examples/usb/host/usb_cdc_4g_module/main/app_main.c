@@ -5,13 +5,14 @@
  */
 
 #include <stdio.h>
+#include <inttypes.h>
 #include <string.h>
 #include <stdlib.h>
+
 #include <arpa/inet.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
-#include "driver/gpio.h"
 #include "esp_system.h"
 #include "esp_log.h"
 #include "nvs_flash.h"
@@ -23,6 +24,10 @@
 #include "usbh_modem_wifi.h"
 #ifdef CONFIG_EXAMPLE_ENABLE_WEB_ROUTER
 #include "modem_http_config.h"
+#endif
+
+#ifdef CONFIG_EXAMPLE_PING_NETWORK
+#include "ping/ping_sock.h"
 #endif
 
 static const char *TAG = "4g_main";
@@ -169,6 +174,33 @@ static void on_modem_event(void *arg, esp_event_base_t event_base,
     }
 }
 
+#ifdef CONFIG_EXAMPLE_PING_NETWORK
+static void on_ping_success(esp_ping_handle_t hdl, void *args)
+{
+    uint8_t ttl;
+    uint16_t seqno;
+    uint32_t elapsed_time, recv_len;
+    ip_addr_t target_addr;
+    esp_ping_get_profile(hdl, ESP_PING_PROF_SEQNO, &seqno, sizeof(seqno));
+    esp_ping_get_profile(hdl, ESP_PING_PROF_TTL, &ttl, sizeof(ttl));
+    esp_ping_get_profile(hdl, ESP_PING_PROF_IPADDR, &target_addr, sizeof(target_addr));
+    esp_ping_get_profile(hdl, ESP_PING_PROF_SIZE, &recv_len, sizeof(recv_len));
+    esp_ping_get_profile(hdl, ESP_PING_PROF_TIMEGAP, &elapsed_time, sizeof(elapsed_time));
+    ESP_LOGI(TAG, "%"PRIu32" bytes from %s icmp_seq=%u ttl=%u time=%"PRIu32" ms\n", recv_len, ipaddr_ntoa(&target_addr), seqno, ttl, elapsed_time);
+}
+
+static void on_ping_timeout(esp_ping_handle_t hdl, void *args)
+{
+    uint16_t seqno;
+    ip_addr_t target_addr;
+    esp_ping_get_profile(hdl, ESP_PING_PROF_SEQNO, &seqno, sizeof(seqno));
+    esp_ping_get_profile(hdl, ESP_PING_PROF_IPADDR, &target_addr, sizeof(target_addr));
+    ESP_LOGW(TAG, "From %s icmp_seq=%u timeout\n", ipaddr_ntoa(&target_addr), seqno);
+    // Users can add logic to handle ping timeout
+    // Add Wait or Reset logic
+}
+#endif
+
 void app_main(void)
 {
     /* Initialize led indicator */
@@ -211,13 +243,39 @@ void app_main(void)
     esp_netif_t *ap_netif = modem_wifi_ap_init();
     assert(ap_netif != NULL);
     ESP_ERROR_CHECK(modem_wifi_set(&s_modem_wifi_config));
-    uint32_t ap_dns_addr = 0;
-#ifdef CONFIG_EXAMPLE_MANUAL_DNS
-    ap_dns_addr = inet_addr(CONFIG_EXAMPLE_MANUAL_DNS_ADDR);
-    ESP_ERROR_CHECK(modem_wifi_set_dns(ap_netif, ap_dns_addr));
-    ESP_LOGI(TAG, "ap dns addr(manual): %s", CONFIG_EXAMPLE_MANUAL_DNS_ADDR);
+
+#ifdef CONFIG_EXAMPLE_PING_NETWORK
+    ip_addr_t target_addr;
+    memset(&target_addr, 0, sizeof(target_addr));
+    char *ping_addr_s = NULL;
+#ifdef CONFIG_EXAMPLE_PING_MANUAL_ADDR
+    // Ping users defined address
+    ping_addr_s = CONFIG_EXAMPLE_PING_MANUAL_ADDR;
+#else
+    // otherwise Ping DNS server
+    esp_netif_dns_info_t dns2;
+    modem_board_get_dns_info(ESP_NETIF_DNS_MAIN, &dns2);
+    ping_addr_s = ip4addr_ntoa((ip4_addr_t *)(&dns2.ip.u_addr.ip4));
+#endif
+    esp_ping_config_t ping_config = ESP_PING_DEFAULT_CONFIG();
+    ipaddr_aton(ping_addr_s, &target_addr);
+    ping_config.target_addr = target_addr;
+    ping_config.timeout_ms = CONFIG_EXAMPLE_PING_TIMEOUT;
+    ping_config.task_stack_size = 4096;
+    ping_config.count = 1;
+
+    /* set callback functions */
+    esp_ping_callbacks_t cbs = {
+        .on_ping_success = on_ping_success,
+        .on_ping_timeout = on_ping_timeout,
+        .on_ping_end = NULL,
+        .cb_args = NULL,
+    };
+    esp_ping_handle_t ping;
+    esp_ping_new_session(&ping_config, &cbs, &ping);
 #endif
 
+    uint32_t ap_dns_addr = 0;
     while (1) {
 
 #if !defined(CONFIG_EXAMPLE_ENTER_PPP_DURING_INIT) || defined(CONFIG_MODEM_SUPPORT_SECONDARY_AT_PORT)
@@ -229,7 +287,7 @@ void app_main(void)
 #endif
 
         // If manual DNS not defined, set DNS when got address, user better to add a queue to handle this
-#ifndef CONFIG_EXAMPLE_MANUAL_DNS
+#ifdef CONFIG_EXAMPLE_AUTO_UPDATE_DNS
         esp_netif_dns_info_t dns;
         modem_board_get_dns_info(ESP_NETIF_DNS_MAIN, &dns);
         uint32_t _ap_dns_addr = dns.ip.u_addr.ip4.addr;
@@ -240,9 +298,14 @@ void app_main(void)
         }
 #endif
 
+#ifdef CONFIG_EXAMPLE_PING_NETWORK
+        ESP_LOGI(TAG, "Ping addr %s Restart..", ping_addr_s);
+        esp_ping_start(ping);
+#endif
+
 #ifdef CONFIG_DUMP_SYSTEM_STATUS
         _system_dump();
 #endif
-        vTaskDelay(pdMS_TO_TICKS(5000));
+        vTaskDelay(pdMS_TO_TICKS(10000));
     }
 }
