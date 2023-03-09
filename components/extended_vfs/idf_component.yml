@@ -5,6 +5,6 @@ dependencies:
   idf: ">=4.4.3"
   espressif/cmake_utilities: "0.*"
 examples:
-  - path:  ../../../examples/extended_vfs/gpio/gpio_simple
-  - path:  ../../../examples/extended_vfs/i2c/i2c_bh1750
-  - path:  ../../../examples/extended_vfs/i2c/i2c_tt21100
+  - path:  ../../examples/extended_vfs/gpio/gpio_simple
+  - path:  ../../examples/extended_vfs/i2c/i2c_bh1750
+  - path:  ../../examples/extended_vfs/i2c/i2c_tt21100
