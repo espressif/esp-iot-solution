@@ -39,3 +39,8 @@
 
 * BLE-OTA:
   * Added support for nimble extended advertising.
+
+## v0.1.7 - 2023-03-09
+
+* BLE-OTA:
+  * Use cu_pkg_define_version to define the version of this component.

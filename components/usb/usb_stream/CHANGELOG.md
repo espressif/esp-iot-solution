@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.4.9 - 2023-03-09
+
+### Enhancements:
+
+* Use cu_pkg_define_version to define the version of this component.
+
 ## v0.4.8 - 2023-03-02
 
 ### Enhancements:
