@@ -64,7 +64,6 @@ static const int DTE_USB_RECONNECT_BIT            = BIT7;    /* dte usb reconnec
 /* daemon task internal event bit */
 static const int PPP_NET_RECONNECTING_BIT         = BIT8;    /* ppp net reconnecting, trigger by daemon task, clear by daemon task */
 
-static int s_active_station_num = 0;
 static esp_modem_dce_t *s_dce = NULL;
 static EventGroupHandle_t s_modem_evt_hdl = NULL;
 static esp_ip_addr_t s_dns_ip_main = ESP_IP4ADDR_INIT(114, 114, 114, 114);
@@ -316,21 +315,6 @@ static void on_modem_event(void *arg, esp_event_base_t event_base,
             ESP_LOGW(TAG, "Modem event! %"PRIi32"", event_id);
             break;
         }
-    } else if (event_base == WIFI_EVENT) {
-        switch (event_id) {
-        case WIFI_EVENT_AP_STACONNECTED:
-            if (++s_active_station_num > 0) {
-                esp_event_post(MODEM_BOARD_EVENT, MODEM_EVENT_WIFI_STA_CONN, (void *)s_active_station_num, 0, 0);
-            }
-            break;
-        case WIFI_EVENT_AP_STADISCONNECTED:
-            if (--s_active_station_num == 0) {
-                esp_event_post(MODEM_BOARD_EVENT, MODEM_EVENT_WIFI_STA_DISCONN, (void *)s_active_station_num, 0, 0);
-            }
-            break;
-        default:
-            break;
-        }
     }
 }
 
@@ -450,7 +434,6 @@ static void _modem_daemon_task(void *param)
     ESP_ERROR_CHECK(esp_modem_default_attach(dte, dce, ppp_netif));
     ESP_ERROR_CHECK(esp_modem_set_event_handler(dte, on_modem_event, ESP_EVENT_ANY_ID, NULL));
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, on_modem_event, NULL));
-    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, on_modem_event, NULL));
     if (config->handler) {
         ESP_ERROR_CHECK(esp_event_handler_register(MODEM_BOARD_EVENT, ESP_EVENT_ANY_ID, config->handler, config->handler_arg));
     }
