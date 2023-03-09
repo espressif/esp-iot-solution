@@ -1,0 +1,22 @@
+menu "Example Configuration"
+
+    config I2C_SDA_PIN_NUM
+        int "I2C SDA Pin Number"
+        default 8
+
+    config I2C_SCL_PIN_NUM
+        int "I2C SCL Pin Number"
+        default 18
+    
+    config TT21100_READY_PIN_NUM
+        int "TT21100 Ready Pin Number"
+        default 3        
+    
+    config I2C_TEST_COUNT
+        int "I2C Testing Count of Reading Sensor's Data"
+        default 100
+    
+    config I2C_SDA_SCL_PIN_PULLUP
+        bool "Set I2C SDA & SCL Pin Pull-Up"
+        default n
+endmenu

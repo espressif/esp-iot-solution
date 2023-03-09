@@ -317,6 +317,57 @@
                 "4.4",
                 "5.0"
             ]
+        },
+        {
+            "name": "gpio_simple",
+            "buildsystem": [
+                "cmake"
+            ],
+            "targets": [
+                "esp32",
+                "esp32c2",
+                "esp32c3",
+                "esp32s2",
+                "esp32s3"
+            ],
+            "idfversion": [
+                "4.4",
+                "5.0"
+            ]
+        },
+        {
+            "name": "i2c_bh1750",
+            "buildsystem": [
+                "cmake"
+            ],
+            "targets": [
+                "esp32",
+                "esp32c2",
+                "esp32c3",
+                "esp32s2",
+                "esp32s3"
+            ],
+            "idfversion": [
+                "4.4",
+                "5.0"
+            ]
+        },
+        {
+            "name": "i2c_tt21100",
+            "buildsystem": [
+                "cmake"
+            ],
+            "targets": [
+                "esp32",
+                "esp32c2",
+                "esp32c3",
+                "esp32s2",
+                "esp32s3"
+            ],
+            "idfversion": [
+                "4.4",
+                "5.0"
+            ]
         }
     ]
 }

@@ -1,0 +1,11 @@
+menu "Example Configuration"
+
+    config GPIO_SIMPLE_GPIO_PIN_NUM
+        int "GPIO Pin Number"
+        default 9
+
+    config GPIO_SIMPLE_TEST_COUNT
+        int "GPIO Pin Testing count"
+        default 10
+
+endmenu

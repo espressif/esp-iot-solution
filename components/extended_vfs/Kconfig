@@ -1,0 +1,23 @@
+menu "Extended VFS"
+    config EXTENDED_VFS
+        bool "Enable Extended VFS"
+        default y
+
+    if EXTENDED_VFS
+        menu "Peripherals"            
+            config EXTENDED_VFS_GPIO
+                bool "GPIO"
+                default y
+                help
+                    Select this option, then "/dev/gpio/x" (x=0, 1, ...) will be registered
+                    to VFS.
+
+            config EXTENDED_VFS_I2C
+                bool "I2C"
+                default y
+                help
+                    Select this option, then "/dev/i2c/x" (x=0, 1, ...) will be registered
+                    to VFS.
+        endmenu
+    endif
+endmenu
