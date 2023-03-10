@@ -24,9 +24,25 @@
 #define ACK_CHECK_DIS               (0x0)
 #define ACK_VAL                     (0x0)
 #define NACK_VAL                    (0x1)
-
 #define MAX_CMD_DATA_LEN            (15)
-#define MAX_QUEUE_LEN               (20)
+
+#ifdef CONFIG_LB_IIC_TASK_STACK
+#define IIC_TASK_STACK              CONFIG_LB_IIC_TASK_STACK
+#else
+#define IIC_TASK_STACK              2048
+#endif
+
+#ifdef CONFIG_LB_IIC_QUEUE_SIZE
+#define IIC_QUEUE_SIZE              CONFIG_LB_IIC_QUEUE_SIZE
+#else
+#define IIC_QUEUE_SIZE              20
+#endif
+
+#ifdef CONFIG_LB_IIC_TASK_PRIORITY
+#define IIC_TASK_PRIORITY           CONFIG_LB_IIC_TASK_PRIORITY
+#else
+#define IIC_TASK_PRIORITY           20
+#endif
 
 static const char *TAG = "iic";
 
@@ -147,10 +163,10 @@ esp_err_t iic_driver_send_task_create(void)
 {
     IIC_CHECK(!s_obj->cmd_queue_handle || !s_obj->send_task_handle, "already initialized", return ESP_ERR_INVALID_STATE);
 
-    s_obj->cmd_queue_handle = xQueueCreate(MAX_QUEUE_LEN, sizeof(i2c_send_data_t));
+    s_obj->cmd_queue_handle = xQueueCreate(IIC_QUEUE_SIZE, sizeof(i2c_send_data_t));
     IIC_CHECK(s_obj->cmd_queue_handle, "queue create fail", goto EXIT);
 
-    xTaskCreate(send_task, "send_task", 4096, NULL, 20, &s_obj->send_task_handle);
+    xTaskCreate(send_task, "send_task", IIC_TASK_STACK, NULL, IIC_TASK_PRIORITY, &s_obj->send_task_handle);
     IIC_CHECK(s_obj->send_task_handle, "task create fail", goto EXIT);
 
     return ESP_OK;

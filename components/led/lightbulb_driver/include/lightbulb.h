@@ -402,6 +402,15 @@ esp_err_t lightbulb_set_fades_function(bool is_enable);
 esp_err_t lightbulb_set_storage_function(bool is_enable);
 
 /**
+ * @brief Re-update the lightbulb status variable
+ * 
+ * @param new_status new status
+ * @param trigger If set to true, then it will be updated immediately
+ * @return esp_err_t 
+ */
+esp_err_t lightbulb_update_status_variable(lightbulb_status_t *new_status, bool trigger);
+
+/**
  * @brief Get lightbulb fade function enabled status
  *
  * @return true Enabled
