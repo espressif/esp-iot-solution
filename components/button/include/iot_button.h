@@ -110,6 +110,7 @@ esp_err_t iot_button_delete(button_handle_t btn_handle);
  * @return
  *      - ESP_OK on success
  *      - ESP_ERR_INVALID_ARG   Arguments is invalid.
+ *      - ESP_ERR_INVALID_STATE the Callback is already registered. No free Space for another Callback.
  */
 esp_err_t iot_button_register_cb(button_handle_t btn_handle, button_event_t event, button_cb_t cb, void *usr_data);
 
