@@ -326,6 +326,7 @@ esp_err_t iot_button_register_cb(button_handle_t btn_handle, button_event_t even
     BTN_CHECK(NULL != btn_handle, "Pointer of handle is invalid", ESP_ERR_INVALID_ARG);
     BTN_CHECK(event < BUTTON_EVENT_MAX, "event is invalid", ESP_ERR_INVALID_ARG);
     button_dev_t *btn = (button_dev_t *) btn_handle;
+    BTN_CHECK(NULL == btn->cb[event], "Callback is already registered", ESP_ERR_INVALID_STATE);
     btn->cb[event] = cb;
     btn->usr_data[event] = usr_data;
     return ESP_OK;
