@@ -37,6 +37,7 @@ macro(cu_pkg_define_version pkg_path)
         string(SUBSTRING ${pkg_name} ${pkg_name_pos} -1 pkg_name)
     endif()
     string(TOUPPER ${pkg_name} pkg_name)
+    string(REPLACE "-" "_" pkg_name ${pkg_name})
     message(STATUS "${pkg_name}: ${ver_major}.${ver_minor}.${ver_patch}")
     list(LENGTH pkg_name_list len)
     target_compile_options(${COMPONENT_LIB} PUBLIC
