@@ -157,15 +157,9 @@ menu "IoT USB Host Modem"
             default 10
             help
                 Max number of the STA connects to AP.
-        config EXAMPLE_MANUAL_DNS
-            bool "manully config dns address"
-            default n
-            help
-                Config main dns address manully, if false using dns address got from ppp
-        config EXAMPLE_MANUAL_DNS_ADDR
-            string  "main dns address"
-            default "114.114.114.114"
-            depends on EXAMPLE_MANUAL_DNS
+        config MODEM_WIFI_DEFAULT_DNS
+            string  "WiFi softap default DNS address"
+            default "8.8.8.8"
     endmenu
 
 endmenu
