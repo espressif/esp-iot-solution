@@ -1,5 +1,7 @@
 # Cmake utilities
 
+[![Component Registry](https://components.espressif.com/components/espressif/cmake_utilities/badge.svg)](https://components.espressif.com/components/espressif/cmake_utilities)
+
 This component is aiming to provide some useful CMake utilities outside of ESP-IDF.
 
 ## Use
@@ -11,7 +13,7 @@ This component is aiming to provide some useful CMake utilities outside of ESP-I
       espressif/cmake_utilities: "0.*"
     ```
 
-2. Include the CMake file you needed in your component's CMakeLists.txt after idf_component_register.
+2. Include the CMake file you needed in your component's CMakeLists.txt after idf_component_register, or your project's CMakeLists.txt
 
     ```cmake
     // Note: should remove .cmake postfix when using include(), otherwise the requested file will not found
@@ -24,3 +26,7 @@ This component is aiming to provide some useful CMake utilities outside of ESP-I
     ```
 
 3. Then you can use the corresponding CMake function which is provided by the CMake file.
+
+## Supported features
+
+1. [relinker](https://github.com/espressif/esp-iot-solution/blob/master/tools/cmake_utilities/docs/relinker.md)
