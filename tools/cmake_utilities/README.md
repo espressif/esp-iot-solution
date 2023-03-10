@@ -30,3 +30,4 @@ This component is aiming to provide some useful CMake utilities outside of ESP-I
 ## Supported features
 
 1. [relinker](https://github.com/espressif/esp-iot-solution/blob/master/tools/cmake_utilities/docs/relinker.md)
+2. [gen_compressed_ota](https://github.com/espressif/esp-iot-solution/blob/master/tools/cmake_utilities/docs/gen_compressed_ota.md)

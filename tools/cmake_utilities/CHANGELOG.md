@@ -1,3 +1,7 @@
+## v0.3.0 - 2023-03-10
+
+* Add gen_compressed_ota functionality, please refer to [gen_compressed_ota.md](https://github.com/espressif/esp-iot-solution/tree/master/tools/cmake_utilities/docs/gen_compressed_ota.md)
+
 ## v0.2.1 - 2023-03-09
 
 ### Bugfix:
