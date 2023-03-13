@@ -57,6 +57,30 @@ menu "LightBulb Driver Config"
             default "y"
             help
                 Enable ws2812 output.
+
+        menu "IIC Send Task Config"
+            depends on ENABLE_KP18058_DRIVER || ENABLE_BP1658CJ_DRIVER || ENABLE_BP5758D_DRIVER || ENABLE_SM2x35EGH_DRIVER || ENABLE_SM2135EH_DRIVER || ENABLE_SM2135E_DRIVER
+
+            config LB_IIC_TASK_STACK
+                int "IIC Send Task stack"
+                default 2048
+                help
+                    Stack size for the IIC Send Task.
+
+            config LB_IIC_QUEUE_SIZE
+                int "IIC QUEUE Size"
+                default 20
+                help
+                    Queue size for the IIC Send queue.
+
+            config LB_IIC_TASK_PRIORITY
+                int "IIC Send Task priority"
+                default 20
+                help
+                    Priority for the IIC Send Task. Not recommended to be changed
+                    unless you really need it.
+                endmenu
+
     endmenu
 
     config ENABLE_DITHERING_CHECK

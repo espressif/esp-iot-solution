@@ -1,5 +1,13 @@
 # ChangeLog
 
+## v0.2.2 - 2022-3-10
+
+### Bug Fixes:
+
+* Fixed some wrong data types
+* Provides configuration options for the iic task instead of hardcoding
+* Added null pointer judgment to effect timer
+
 ## v0.2.1 - 2022-2-21
 
 ### Bug Fixes:

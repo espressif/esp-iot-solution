@@ -931,7 +931,9 @@ esp_err_t lightbulb_set_hsv(uint16_t hue, uint8_t saturation, uint8_t value)
 
     if (CHECK_EFFECT_IS_RUNNING() && CHECK_EFFECT_ALLOW_TO_BE_INTERRUPTED()) {
         ESP_LOGW(TAG, "The effect has stopped because the %s API is changing the lights.", __FUNCTION__);
-        xTimerStop(s_lb_obj->effect_timer, 0);
+        if (CHECK_EFFECT_TIMER_IS_ACTIVE()) {
+            xTimerStop(s_lb_obj->effect_timer, 0);
+        }
         s_lb_obj->effect_interrupt_forbidden_flag = false;
         s_lb_obj->effect_running_flag = false;
     } else if (CHECK_EFFECT_IS_RUNNING()) {
@@ -965,6 +967,8 @@ esp_err_t lightbulb_set_hsv(uint16_t hue, uint8_t saturation, uint8_t value)
         LIGHTBULB_CHECK(err == ESP_OK, "set hal channel group fail", goto EXIT);
 
         s_lb_obj->status.on = true;
+    } else {
+        ESP_LOGW(TAG, "skip calling %s, just save this change.", __FUNCTION__);
     }
 
 SAVE_ONLY:
@@ -1003,7 +1007,9 @@ esp_err_t lightbulb_set_cctb(uint16_t cct, uint8_t brightness)
 
     if (CHECK_EFFECT_IS_RUNNING() && CHECK_EFFECT_ALLOW_TO_BE_INTERRUPTED()) {
         ESP_LOGW(TAG, "The effect has stopped because the %s API is changing the lights.", __FUNCTION__);
-        xTimerStop(s_lb_obj->effect_timer, 0);
+        if (CHECK_EFFECT_TIMER_IS_ACTIVE()) {
+            xTimerStop(s_lb_obj->effect_timer, 0);
+        }
         s_lb_obj->effect_interrupt_forbidden_flag = false;
         s_lb_obj->effect_running_flag = false;
     } else if (CHECK_EFFECT_IS_RUNNING()) {
@@ -1042,8 +1048,9 @@ esp_err_t lightbulb_set_cctb(uint16_t cct, uint8_t brightness)
         err = hal_set_channel_group(white_value, channel_mask, fade_time);
         LIGHTBULB_CHECK(err == ESP_OK, "set hal channel group fail", goto EXIT);
 
-
         s_lb_obj->status.on = true;
+    } else {
+        ESP_LOGW(TAG, "skip calling %s, just save this change.", __FUNCTION__);
     }
 
 SAVE_ONLY:
@@ -1078,7 +1085,9 @@ esp_err_t lightbulb_set_switch(bool status)
         }
         if (CHECK_EFFECT_IS_RUNNING() && CHECK_EFFECT_ALLOW_TO_BE_INTERRUPTED()) {
             ESP_LOGW(TAG, "The effect has stopped because the %s API is changing the lights.", __FUNCTION__);
-            xTimerStop(s_lb_obj->effect_timer, 0);
+            if (CHECK_EFFECT_TIMER_IS_ACTIVE()) {
+                xTimerStop(s_lb_obj->effect_timer, 0);
+            }
             s_lb_obj->effect_interrupt_forbidden_flag = false;
             s_lb_obj->effect_running_flag = false;
         } else if (CHECK_EFFECT_IS_RUNNING()) {
@@ -1293,6 +1302,22 @@ lightbulb_works_mode_t lightbulb_get_mode(void)
     LIGHTBULB_MUTEX_GIVE();
 
     return result;
+}
+
+esp_err_t  lightbulb_update_status_variable(lightbulb_status_t *new_status, bool trigger)
+{
+    LIGHTBULB_CHECK(new_status, "new_status is null", return ESP_FAIL);
+    LIGHTBULB_CHECK(s_lb_obj, "not init", return ESP_ERR_INVALID_ARG);
+    LIGHTBULB_MUTEX_TAKE(portMAX_DELAY);
+    esp_err_t err = ESP_OK;
+
+    memcpy(&s_lb_obj->status, new_status, sizeof(lightbulb_status_t));
+    LIGHTBULB_MUTEX_GIVE();
+
+    if (trigger) {
+        err = lightbulb_set_switch(s_lb_obj->status.on);
+    }
+    return err;
 }
 
 esp_err_t lightbulb_basic_effect_start(lightbulb_effect_config_t *config)
