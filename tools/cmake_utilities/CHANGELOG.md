@@ -1,3 +1,11 @@
+## v0.4.0 - 2023-03-13
+
+### Feature:
+
+* Add command `idf.py gen_single_bin` to generate merged bin file
+* Add command `idf.py flash_single_bin` to flash generated merged bin
+* Add config `Color in diagnostics` to control the GCC color output
+
 ## v0.3.0 - 2023-03-10
 
 * Add gen_compressed_ota functionality, please refer to [gen_compressed_ota.md](https://github.com/espressif/esp-iot-solution/tree/master/tools/cmake_utilities/docs/gen_compressed_ota.md)
