@@ -1,16 +1,8 @@
-// Copyright 2020 Espressif Systems (Shanghai) Co. Ltd.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/* SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include "freertos/FreeRTOS.h"
@@ -246,6 +238,7 @@ static esp_err_t button_delete_com(button_dev_t *btn)
 
 button_handle_t iot_button_create(const button_config_t *config)
 {
+    ESP_LOGI(TAG, "IoT Button Version: %d.%d.%d", BUTTON_VER_MAJOR, BUTTON_VER_MINOR, BUTTON_VER_PATCH);
     BTN_CHECK(config, "Invalid button config", NULL);
 
     esp_err_t ret = ESP_OK;
@@ -337,6 +330,7 @@ esp_err_t iot_button_unregister_cb(button_handle_t btn_handle, button_event_t ev
     BTN_CHECK(NULL != btn_handle, "Pointer of handle is invalid", ESP_ERR_INVALID_ARG);
     BTN_CHECK(event < BUTTON_EVENT_MAX, "event is invalid", ESP_ERR_INVALID_ARG);
     button_dev_t *btn = (button_dev_t *) btn_handle;
+    BTN_CHECK(NULL != btn->cb[event], "Callback is not registered yet", ESP_ERR_INVALID_STATE);
     btn->cb[event] = NULL;
     btn->usr_data[event] = NULL;
     return ESP_OK;
