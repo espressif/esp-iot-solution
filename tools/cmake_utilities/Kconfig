@@ -6,6 +6,31 @@ menu "CMake Utilities"
         help
             "Enable relinker to linker some IRAM functions to Flash"
 
+    if CU_RELINKER_ENABLE
+        config CU_RELINKER_ENABLE_PRINT_ERROR_INFO_WHEN_MISSING_FUNCTION
+            bool "Print error information when missing function"
+            default y
+            help
+                "Enable this option to print error information instead of
+                    throwing exception when missing function"
+
+        config CU_RELINKER_ENABLE_CUSTOMIZED_CONFIGURATION_FILES
+            bool "Enable customized relinker configuration files"
+            default n
+            help
+                "Enable this option to use customized relinker configuration
+                files instead of default ones"
+
+        if CU_RELINKER_ENABLE_CUSTOMIZED_CONFIGURATION_FILES
+            config CU_RELINKER_CUSTOMIZED_CONFIGURATION_FILES_PATH
+                string "Customized relinker configuration files path"
+                default ""
+                help
+                    "Customized relinker configuration files path. This path is
+                    evaluated relative to the project root directory."
+        endif
+    endif
+
     choice CU_DIAGNOSTICS_COLOR
         prompt "Color in diagnostics"
         default CU_DIAGNOSTICS_COLOR_ALWAYS
