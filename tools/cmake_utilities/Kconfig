@@ -6,4 +6,20 @@ menu "CMake Utilities"
         help
             "Enable relinker to linker some IRAM functions to Flash"
 
+    choice CU_DIAGNOSTICS_COLOR
+        prompt "Color in diagnostics"
+        default CU_DIAGNOSTICS_COLOR_ALWAYS
+        help
+            Use color in diagnostics. "never", "always", or "auto". If "always", GCC will output
+            with color defined in GCC_COLORS environment variable. If "never", only output plain
+            text. If "auto", only output with color when the standard error is a terminal and when
+            not executing in an emacs shell.
+
+        config CU_DIAGNOSTICS_COLOR_NEVER
+            bool "never"
+        config CU_DIAGNOSTICS_COLOR_ALWAYS
+            bool "always"
+        config CU_DIAGNOSTICS_COLOR_AUTO
+            bool "auto"
+    endchoice
 endmenu
