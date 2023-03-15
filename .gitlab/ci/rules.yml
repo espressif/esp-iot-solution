@@ -226,6 +226,9 @@
 .patterns-example_sensors_sensor_hub_monitor: &patterns-example_sensors_sensor_hub_monitor
   - "examples/sensors/sensor_hub_monitor/**/*"
 
+.patterns-example_usb_device_usb_msc_wireless_disk: &patterns-example_usb_device_usb_msc_wireless_disk
+  - "examples/usb/device/usb_msc_wireless_disk/**/*"
+
 .patterns-example_usb_device_usb_surface_dial: &patterns-example_usb_device_usb_surface_dial
   - "examples/usb/device/usb_surface_dial/**/*"
 
@@ -509,6 +512,13 @@
       changes: *patterns-components_sensors_sensor_hub
     - <<: *if-dev-push
       changes: *patterns-example_sensors_sensor_hub_monitor
+
+.rules:build:example_usb_device_usb_msc_wireless_disk:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-example_usb_device_usb_msc_wireless_disk
 
 .rules:build:example_usb_device_usb_surface_dial:
   rules:
