@@ -1,5 +1,17 @@
 # ChangeLog
 
+## v0.4.11 - 2023-03-22
+
+### Bug Fixes:
+
+* Mic:
+  * Fix adaptive endpoint occasional assert "rem_len<=transfer->num_bytes" to crash
+
+### Enhancements:
+
+* Mic:
+  * Padding last frame data if packet size not as expected
+
 ## v0.4.10 - 2023-03-16
 
 ### Enhancements:
