@@ -1,3 +1,5 @@
+[![Component Registry](https://components.espressif.com/components/espressif/usb_stream/badge.svg)](https://components.espressif.com/components/espressif/usb_stream)
+
 ## USB Stream Component
 
 `usb_stream` is an USB `UVC` + `UAC` host driver for ESP32-S2/ESP32-S3, which supports read/write/control multimedia streaming from usb device. For example, at most one UVC + one Microphone + one Speaker streaming can be supported at the same time.
@@ -25,13 +27,19 @@ idf.py add-dependency "espressif/usb_stream=*"
 
 Please use the component manager command `create-project-from-example` to create the project from example template
 
+* USB Camera WIFI picture transfer
 ```
 idf.py create-project-from-example "espressif/usb_stream=*:usb_camera_mic_spk"
 ```
 
+* USB Camera local display
+```
+idf.py create-project-from-example "espressif/usb_stream=*:usb_camera_lcd_display"
+```
+
 Then the example will be downloaded in current folder, you can check into it for build and flash.
 
-> Or you can download examples from esp-iot-solution repository: [USB Camera + Audio stream](https://github.com/espressif/esp-iot-solution/tree/master/examples/usb/host/usb_camera_mic_spk)
+> Or you can download examples from esp-iot-solution repository: [USB Camera + Audio stream](https://github.com/espressif/esp-iot-solution/tree/master/examples/usb/host/usb_camera_mic_spk), [USB Camera LCD Display](https://github.com/espressif/esp-iot-solution/tree/master/examples/usb/host/usb_camera_lcd_display).
 
 ### Q&A
 
@@ -42,4 +50,4 @@ Executing action: create-project-from-example
 CMakeLists.txt not found in project directory /home/username
 ```
 
-A1. This is because an older version packege manager was used, please run `pip install -U idf-component-manager` in ESP-IDF environment to update.
+A1. This is because an older version package manager was used, please run `pip install -U idf-component-manager` in ESP-IDF environment to update.

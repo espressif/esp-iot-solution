@@ -25,13 +25,19 @@ idf.py add-dependency "espressif/usb_stream=*"
 
 请使用组件管理器指令 `create-project-from-example` 在当前文件夹下载该组件的默认示例程序。
 
+* USB Camera WIFI 图传
 ```
 idf.py create-project-from-example "espressif/usb_stream=*:usb_camera_mic_spk"
 ```
 
+* USB Camera 本地刷屏
+```
+idf.py create-project-from-example "espressif/usb_stream=*:usb_camera_lcd_display"
+```
+
 之后进入示例程序目录，可以进行下一步的编译和烧录。
 
-> 您也可以从 esp-iot-solution 仓库直接下载示例程序: [USB Camera + Audio stream](https://github.com/espressif/esp-iot-solution/tree/master/examples/usb/host/usb_camera_mic_spk)
+> 您也可以从 esp-iot-solution 仓库直接下载示例程序: [USB Camera + Audio stream](https://github.com/espressif/esp-iot-solution/tree/master/examples/usb/host/usb_camera_mic_spk), [USB Camera LCD Display](https://github.com/espressif/esp-iot-solution/tree/master/examples/usb/host/usb_camera_lcd_display).
 
 
 ### 问答

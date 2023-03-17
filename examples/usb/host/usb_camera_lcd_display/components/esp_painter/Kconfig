@@ -1,0 +1,47 @@
+menu "ESP Painter"
+    config ESP_PAINTER_FORMAT_SIZE_MAX
+        int "Size of format string buffer"
+        default 128
+
+    menu "fonts"
+        config ESP_PAINTER_BASIC_FONT_12
+            bool "Enable basic_font_12"
+            default n
+
+        config ESP_PAINTER_BASIC_FONT_16
+            bool "Enable basic_font_16"
+            default n
+
+        config ESP_PAINTER_BASIC_FONT_20
+            bool "Enable basic_font_20"
+            default n
+
+        config ESP_PAINTER_BASIC_FONT_24
+            bool "Enable basic_font_24"
+            default y
+
+        config ESP_PAINTER_BASIC_FONT_28
+            bool "Enable basic_font_28"
+            default n
+
+        config ESP_PAINTER_BASIC_FONT_32
+            bool "Enable basic_font_32"
+            default n
+
+        config ESP_PAINTER_BASIC_FONT_36
+            bool "Enable basic_font_36"
+            default n
+
+        config ESP_PAINTER_BASIC_FONT_40
+            bool "Enable basic_font_40"
+            default n
+
+        config ESP_PAINTER_BASIC_FONT_44
+            bool "Enable basic_font_44"
+            default n
+
+        config ESP_PAINTER_BASIC_FONT_48
+            bool "Enable basic_font_48"
+            default n
+    endmenu
+endmenu

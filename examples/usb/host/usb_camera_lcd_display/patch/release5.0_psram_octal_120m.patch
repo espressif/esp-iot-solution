@@ -1,0 +1,487 @@
+From aa1f0ad0ab31c5de4924c8eea0c26cffaf1d0064 Mon Sep 17 00:00:00 2001
+From: Armando <douyiwen@espressif.com>
+Date: Mon, 1 Nov 2021 13:35:07 +0800
+Subject: [PATCH] mspi: support 120M DDR flash and psram
+
+---
+ .../esp_hw_support/port/esp32s3/rtc_clk.c     |  39 +++++-
+ components/esp_psram/esp32s3/Kconfig.spiram   |   1 -
+ .../hal/esp32s3/include/hal/spimem_flash_ll.h |   3 +
+ .../esp32s3/mspi_timing_tuning_configs.h      |  18 +++
+ .../spi_flash/esp32s3/spi_timing_config.c     |  24 ++--
+ .../spi_flash/esp32s3/spi_timing_config.h     |  25 ++--
+ .../spi_flash/spi_flash_timing_tuning.c       | 126 +++++++++++++++---
+ .../flash_psram/sdkconfig.ci.f8r8_120ddr      |   8 ++
+ .../sdkconfig.ci.f8r8_120ddr_120ddr           |  10 ++
+ 9 files changed, 212 insertions(+), 42 deletions(-)
+ create mode 100644 tools/test_apps/system/flash_psram/sdkconfig.ci.f8r8_120ddr
+ create mode 100644 tools/test_apps/system/flash_psram/sdkconfig.ci.f8r8_120ddr_120ddr
+
+diff --git a/components/esp_hw_support/port/esp32s3/rtc_clk.c b/components/esp_hw_support/port/esp32s3/rtc_clk.c
+index 39c33ec6ec..1eecce7ff2 100644
+--- a/components/esp_hw_support/port/esp32s3/rtc_clk.c
++++ b/components/esp_hw_support/port/esp32s3/rtc_clk.c
+@@ -159,7 +159,7 @@ static void rtc_clk_bbpll_enable(void)
+     clk_ll_bbpll_enable();
+ }
+ 
+-static void rtc_clk_bbpll_configure(rtc_xtal_freq_t xtal_freq, int pll_freq)
++void rtc_clk_bbpll_configure(rtc_xtal_freq_t xtal_freq, int pll_freq)
+ {
+     /* Digital part */
+     clk_ll_bbpll_set_freq_mhz(pll_freq);
+@@ -433,3 +433,40 @@ static bool rtc_clk_set_bbpll_always_on(void)
+  * TODO: update the library to use rtc_clk_xtal_freq_get
+  */
+ rtc_xtal_freq_t rtc_get_xtal(void) __attribute__((alias("rtc_clk_xtal_freq_get")));
++
++
++/*-------------------------------------------------------------------------------------------------
++ * This API is only used in MSPI timing tuning driver (spi_flash_timing_tuning.c)
++ * DO NOT USE this API elsewhere !!!!
++ *-------------------------------------------------------------------------------------------------*/
++void rtc_clk_configure_pll(rtc_xtal_freq_t xtal_freq, int pll_freq, uint8_t oc_div, uint8_t oc_ref_div)
++{
++    assert(xtal_freq == RTC_XTAL_FREQ_40M);
++    uint32_t pll_reg = GET_PERI_REG_MASK(RTC_CNTL_OPTIONS0_REG, RTC_CNTL_BB_I2C_FORCE_PD |
++                                         RTC_CNTL_BBPLL_FORCE_PD | RTC_CNTL_BBPLL_I2C_FORCE_PD);
++    assert(pll_reg == 0);
++
++    CLEAR_PERI_REG_MASK(I2C_MST_ANA_CONF0_REG, I2C_MST_BBPLL_STOP_FORCE_HIGH);
++    SET_PERI_REG_MASK(I2C_MST_ANA_CONF0_REG, I2C_MST_BBPLL_STOP_FORCE_LOW);
++
++    /* Set this register to let the digital part know 480M PLL is used */
++    SET_PERI_REG_MASK(SYSTEM_CPU_PER_CONF_REG, SYSTEM_PLL_FREQ_SEL);
++    uint8_t dr1 = 0;
++    uint8_t dr3 = 0;
++    uint8_t dchgp = 5;
++    uint8_t dcur = 3;
++    uint8_t dbias = 2;
++    uint8_t i2c_bbpll_lref  = (dchgp << I2C_BBPLL_OC_DCHGP_LSB) | (oc_ref_div);
++    uint8_t i2c_bbpll_div_7_0 = oc_div;
++    REGI2C_WRITE(I2C_BBPLL, I2C_BBPLL_MODE_HF, 0x6B);
++
++    uint8_t i2c_bbpll_dcur = (1 << I2C_BBPLL_OC_DLREF_SEL_LSB ) | (3 << I2C_BBPLL_OC_DHREF_SEL_LSB) | dcur;
++    REGI2C_WRITE(I2C_BBPLL, I2C_BBPLL_OC_REF_DIV, i2c_bbpll_lref);
++    REGI2C_WRITE(I2C_BBPLL, I2C_BBPLL_OC_DIV_7_0, i2c_bbpll_div_7_0);
++    REGI2C_WRITE_MASK(I2C_BBPLL, I2C_BBPLL_OC_DR1, dr1);
++    REGI2C_WRITE_MASK(I2C_BBPLL, I2C_BBPLL_OC_DR3, dr3);
++    REGI2C_WRITE(I2C_BBPLL, I2C_BBPLL_OC_DCUR, i2c_bbpll_dcur);
++    REGI2C_WRITE_MASK(I2C_BBPLL, I2C_BBPLL_OC_VCO_DBIAS, dbias);
++    REGI2C_WRITE_MASK(I2C_BBPLL, I2C_BBPLL_OC_DHREF_SEL, 3);
++    REGI2C_WRITE_MASK(I2C_BBPLL, I2C_BBPLL_OC_DLREF_SEL, 1);
++}
+diff --git a/components/esp_psram/esp32s3/Kconfig.spiram b/components/esp_psram/esp32s3/Kconfig.spiram
+index 48fe595370..fd9fdb3849 100644
+--- a/components/esp_psram/esp32s3/Kconfig.spiram
++++ b/components/esp_psram/esp32s3/Kconfig.spiram
+@@ -87,7 +87,6 @@ menu "SPI RAM config"
+             Select the speed for the SPI RAM chip.
+ 
+         config SPIRAM_SPEED_120M
+-            depends on SPIRAM_MODE_QUAD
+             bool "120MHz clock speed"
+         config SPIRAM_SPEED_80M
+             bool "80MHz clock speed"
+diff --git a/components/hal/esp32s3/include/hal/spimem_flash_ll.h b/components/hal/esp32s3/include/hal/spimem_flash_ll.h
+index 3c325bf839..4e8d5744f6 100644
+--- a/components/hal/esp32s3/include/hal/spimem_flash_ll.h
++++ b/components/hal/esp32s3/include/hal/spimem_flash_ll.h
+@@ -575,6 +575,9 @@ static inline uint8_t spimem_flash_ll_get_source_freq_mhz(void)
+         case 2:
+             clock_val = 160;
+             break;
++        case 3:
++            clock_val = 240;
++            break;
+         default:
+             abort();
+     }
+diff --git a/components/spi_flash/esp32s3/mspi_timing_tuning_configs.h b/components/spi_flash/esp32s3/mspi_timing_tuning_configs.h
+index 5e98c777c3..b042b83bcc 100644
+--- a/components/spi_flash/esp32s3/mspi_timing_tuning_configs.h
++++ b/components/spi_flash/esp32s3/mspi_timing_tuning_configs.h
+@@ -54,3 +54,21 @@
+ #define MSPI_TIMING_PSRAM_CONFIG_TABLE_CORE_CLK_120M_MODULE_CLK_120M_STR_MODE        {{2, 0, 1}, {0, 0, 0}, {2, 2, 2}, {1, 0, 1}, {2, 0, 2}, {0, 0, 1}, {2, 2, 3}, {1, 0, 2}, {2, 0, 3}, {0, 0, 2}, {2, 2, 4}, {1, 0, 3}}
+ #define MSPI_TIMING_PSRAM_CONFIG_NUM_CORE_CLK_120M_MODULE_CLK_120M_STR_MODE          12
+ #define MSPI_TIMING_PSRAM_DEFAULT_CONFIG_ID_CORE_CLK_120M_MODULE_CLK_120M_STR_MODE   2
++
++//PSRAM: core clock 240M, module clock 120M, DTR mode
++#define MSPI_TIMING_PSRAM_CONFIG_TABLE_CORE_CLK_240M_MODULE_CLK_120M_DTR_MODE        {{0, 0, 0}, {4, 1, 2}, {1, 0, 1}, {4, 0, 2}, {0, 0, 1}, {4, 1, 3}, {1, 0, 2}, {4, 0, 3}, {0, 0, 2}, {4, 1, 4}, {1, 0, 3}, {4, 0, 4}, {0, 0, 3}, {4, 1, 5}}
++#define MSPI_TIMING_PSRAM_CONFIG_NUM_CORE_CLK_240M_MODULE_CLK_120M_DTR_MODE          14
++#define MSPI_TIMING_PSRAM_DEFAULT_CONFIG_ID_CORE_CLK_240M_MODULE_CLK_120M_DTR_MODE   1
++
++
++//------------------------------------------Frequency Scanning Related-----------------------------------------------//
++/**
++ * On ESP32S3, only module clock 120M, DDR mode needs frequency scan. Frequency scanning is to get the max workable PLL
++ * frequency under each successfull timing tuning configuration. PLL frequency may fluctuate under high temperature,
++ * this method is to get the tuning configuration that can work under higher PLL frequency.
++ */
++#define MSPI_TIMING_PLL_FREQ_SCAN_RANGE_MHZ_MIN                                      440
++#define MSPI_TIMING_PLL_FREQ_SCAN_RANGE_MHZ_MAX                                      600
++#define MSPI_TIMING_PLL_FREQ_SCAN_THRESH_MHZ_LOW                                     448
++#define MSPI_TIMING_PLL_FREQ_SCAN_THRESH_MHZ_HIGH                                    520
++#define MSPI_TIMING_PLL_FREQ_SCAN_STEP_MHZ_MODULE_CLK_120M                           8
+diff --git a/components/spi_flash/esp32s3/spi_timing_config.c b/components/spi_flash/esp32s3/spi_timing_config.c
+index cd4ae3250c..7a42e5a6db 100644
+--- a/components/spi_flash/esp32s3/spi_timing_config.c
++++ b/components/spi_flash/esp32s3/spi_timing_config.c
+@@ -211,6 +211,7 @@ void spi_timing_config_flash_set_extra_dummy(uint8_t spi_num, uint8_t extra_dumm
+     g_rom_spiflash_dummy_len_plus[spi_num] = s_rom_flash_extra_dummy[spi_num] + extra_dummy;
+ 
+     // Only Quad Flash will run into this branch.
++    // So simply get the hpm dummy here by calling `spi_flash_hpm_get_dummy()`
+     uint32_t dummy = spi_timing_config_get_dummy();
+     SET_PERI_REG_BITS(SPI_MEM_USER1_REG(0), SPI_MEM_USR_DUMMY_CYCLELEN_V, dummy + g_rom_spiflash_dummy_len_plus[spi_num], SPI_MEM_USR_DUMMY_CYCLELEN_S);
+ #endif
+@@ -345,41 +346,36 @@ void spi_timing_config_psram_read_data(uint8_t spi_num, uint8_t *buf, uint32_t a
+  * These APIs are only used in `spi_flash_timing_tuning.c/sweep_for_success_sample_points()` for
+  * configuring SPI1 timing tuning related registers to find best tuning parameter
+  *-------------------------------------------------------------------------------------------------*/
+-void spi_timing_config_flash_tune_din_num_mode(uint8_t din_mode, uint8_t din_num)
++
++void spi_timing_config_flash_set_tuning_regs(const spi_timing_tuning_param_t *params)
+ {
+     /**
+      * 1. SPI_MEM_DINx_MODE(1), SPI_MEM_DINx_NUM(1) are meaningless
+      *    SPI0 and SPI1 share the SPI_MEM_DINx_MODE(0), SPI_MEM_DINx_NUM(0) for FLASH timing tuning
+      * 2. We use SPI1 to get the best Flash timing tuning (mode and num) config
+      */
+-    spi_timing_config_flash_set_din_mode_num(0, din_mode, din_num);
+-}
++    spi_timing_config_flash_set_din_mode_num(0, params->spi_din_mode, params->spi_din_num);
+ 
+-void spi_timing_config_flash_tune_dummy(uint8_t extra_dummy)
+-{
+-    spi_timing_config_flash_set_extra_dummy(1, extra_dummy);
++    spi_timing_config_flash_set_extra_dummy(1, params->extra_dummy_len);
+ }
+ 
+-void spi_timing_config_psram_tune_din_num_mode(uint8_t din_mode, uint8_t din_num)
++void spi_timing_config_psram_set_tuning_regs(const spi_timing_tuning_param_t *params)
+ {
+     /**
+      * 1. SPI_MEM_SPI_SMEM_DINx_MODE(1), SPI_MEM_SPI_SMEM_DINx_NUM(1) are meaningless
+      *    SPI0 and SPI1 share the SPI_MEM_SPI_SMEM_DINx_MODE(0), SPI_MEM_SPI_SMEM_DINx_NUM(0) for PSRAM timing tuning
+      * 2. We use SPI1 to get the best PSRAM timing tuning (mode and num) config
+      */
+-    spi_timing_config_psram_set_din_mode_num(0, din_mode, din_num);
+-}
++    spi_timing_config_psram_set_din_mode_num(0, params->spi_din_mode, params->spi_din_num);
+ 
+-void spi_timing_config_psram_tune_dummy(uint8_t extra_dummy)
+-{
+ #if CONFIG_SPIRAM_MODE_OCT
+     //On 728, for SPI1, flash and psram share the extra dummy register
+-    spi_timing_config_flash_set_extra_dummy(1, extra_dummy);
++    spi_timing_config_flash_set_extra_dummy(1, params->extra_dummy_len);
+ #elif CONFIG_SPIRAM_MODE_QUAD
+     //Update this `s_psram_extra_dummy`, the `s_psram_read_data` will set dummy according to this `s_psram_extra_dummy`
+-    s_psram_extra_dummy = extra_dummy;
++    s_psram_extra_dummy = params->extra_dummy_len;
+     SET_PERI_REG_MASK(SPI_MEM_USER_REG(1), SPI_MEM_USR_DUMMY); // dummy en
+-    SET_PERI_REG_BITS(SPI_MEM_USER1_REG(1), SPI_MEM_USR_DUMMY_CYCLELEN_V, extra_dummy - 1, SPI_MEM_USR_DUMMY_CYCLELEN_S);
++    SET_PERI_REG_BITS(SPI_MEM_USER1_REG(1), SPI_MEM_USR_DUMMY_CYCLELEN_V, s_psram_extra_dummy - 1, SPI_MEM_USR_DUMMY_CYCLELEN_S);
+ #endif
+ }
+ 
+diff --git a/components/spi_flash/esp32s3/spi_timing_config.h b/components/spi_flash/esp32s3/spi_timing_config.h
+index 57e9f3fb3d..1ecfde0ddd 100644
+--- a/components/spi_flash/esp32s3/spi_timing_config.h
++++ b/components/spi_flash/esp32s3/spi_timing_config.h
+@@ -126,6 +126,11 @@ extern "C" {
+ #define SPI_TIMING_PSRAM_EXPECTED_CORE_CLK_MHZ      160
+ #endif
+ 
++//PSRAM 120M DTR
++#if SPI_TIMING_PSRAM_DTR_MODE && CONFIG_SPIRAM_SPEED_120M
++#define SPI_TIMING_PSRAM_EXPECTED_CORE_CLK_MHZ      240
++#endif
++
+ //PSRAM 120M STR
+ #if SPI_TIMING_PSRAM_STR_MODE && CONFIG_SPIRAM_SPEED_120M
+ #if (SPI_TIMING_CORE_CLOCK_DIV == 2)
+@@ -235,18 +240,18 @@ void spi_timing_config_psram_read_data(uint8_t spi_num,uint8_t *buf, uint32_t ad
+ 
+ /*-------------------------------------------------------------------------------------------------
+  * SPI1 Timing Tuning APIs
+- * These APIs are only used in `spi_flash_timing_tuning.c/sweep_for_success_sample_points()` for
+- * configuring SPI1 timing tuning related registers to find best tuning parameter
++ *
++ * These APIs are only used in `spi_flash_timing_tuning.c` for configuring SPI1 timing
++ * tuning related registers to find best tuning parameter for Flash and PSRAM
+  *-------------------------------------------------------------------------------------------------*/
+-void spi_timing_config_flash_tune_din_num_mode(uint8_t din_mode, uint8_t din_num);
+-void spi_timing_config_flash_tune_dummy(uint8_t extra_dummy);
+-void spi_timing_config_psram_tune_din_num_mode(uint8_t din_mode, uint8_t din_num);
+-void spi_timing_config_psram_tune_dummy(uint8_t extra_dummy);
++void spi_timing_config_flash_set_tuning_regs(const spi_timing_tuning_param_t *params);
++void spi_timing_config_psram_set_tuning_regs(const spi_timing_tuning_param_t *params);
+ 
+-/**
+- * SPI1 register info get APIs. These APIs inform `spi_flash_timing_tuning.c` (driver layer) of the SPI1 flash settings.
+- * In this way, other components (e.g.: esp_flash driver) can get the info from it (`spi_flash_timing_tuning.c`).
+- */
++/*-------------------------------------------------------------------------------------------------
++ * SPI1 register info get APIs. These APIs inform `spi_flash_timing_tuning.c` (driver layer)
++ * of the SPI1 flash settings. In this way, other components (e.g.: esp_flash driver) can
++ * get the info from it (`spi_flash_timing_tuning.c`).
++ *-------------------------------------------------------------------------------------------------*/
+ void spi_timing_config_get_cs_timing(uint8_t *setup_time, uint32_t *hold_time);
+ uint32_t spi_timing_config_get_flash_clock_reg(void);
+ 
+diff --git a/components/spi_flash/spi_flash_timing_tuning.c b/components/spi_flash/spi_flash_timing_tuning.c
+index 277024c969..79711481a9 100644
+--- a/components/spi_flash/spi_flash_timing_tuning.c
++++ b/components/spi_flash/spi_flash_timing_tuning.c
+@@ -6,6 +6,7 @@
+ 
+ #include <stdlib.h>
+ #include <string.h>
++#include <sys/param.h>
+ #include "sdkconfig.h"
+ #include "esp_attr.h"
+ #include "esp_err.h"
+@@ -15,6 +16,7 @@
+ #include "soc/io_mux_reg.h"
+ #include "esp_private/spi_flash_os.h"
+ #include "soc/soc.h"
++#include "soc/rtc.h"
+ #if CONFIG_IDF_TARGET_ESP32S3
+ #include "esp32s3/spi_timing_config.h"
+ #include "esp32s3/rom/cache.h"
+@@ -86,10 +88,13 @@ static uint32_t get_psram_clock_divider(void)
+ #endif
+ }
+ 
++/**
++ * Timing Tuning Algorithms and Methods
++ *
++ * @note Consider putting these algorithms into another file, and use `V1`, `V2` ... `Vn` for chip-specific versions.
++ * Should be considered when doing other chip timing tuning
++ */
+ #if SPI_TIMING_FLASH_NEEDS_TUNING || SPI_TIMING_PSRAM_NEEDS_TUNING
+-/*------------------------------------------------------------------------------
+- * Static functions to do timing tuning
+- *----------------------------------------------------------------------------*/
+ /**
+  * Set timing tuning regs, in order to get successful sample points
+  */
+@@ -118,7 +123,7 @@ static void init_spi1_for_tuning(bool is_flash)
+  * We use different SPI1 timing tuning config to read data to see if current MSPI sampling is successful.
+  * The sampling result will be stored in an array. In this array, successful item will be 1, failed item will be 0.
+  */
+-static void sweep_for_success_sample_points(uint8_t *reference_data, const spi_timing_config_t *config, bool is_flash, uint8_t *out_array)
++static void sweep_for_success_sample_points(const uint8_t *reference_data, const spi_timing_config_t *config, bool is_flash, uint8_t *out_array)
+ {
+     uint32_t config_idx = 0;
+     uint8_t read_data[SPI_TIMING_TEST_DATA_LEN] = {0};
+@@ -127,15 +132,13 @@ static void sweep_for_success_sample_points(uint8_t *reference_data, const spi_t
+         memset(read_data, 0, SPI_TIMING_TEST_DATA_LEN);
+ #if SPI_TIMING_FLASH_NEEDS_TUNING
+         if (is_flash) {
+-            spi_timing_config_flash_tune_din_num_mode(config->tuning_config_table[config_idx].spi_din_mode, config->tuning_config_table[config_idx].spi_din_num);
+-            spi_timing_config_flash_tune_dummy(config->tuning_config_table[config_idx].extra_dummy_len);
++            spi_timing_config_flash_set_tuning_regs(&(config->tuning_config_table[config_idx]));
+             spi_timing_config_flash_read_data(1, read_data, SPI_TIMING_FLASH_TEST_DATA_ADDR, sizeof(read_data));
+         }
+ #endif
+ #if SPI_TIMING_PSRAM_NEEDS_TUNING
+         if (!is_flash) {
+-            spi_timing_config_psram_tune_din_num_mode(config->tuning_config_table[config_idx].spi_din_mode, config->tuning_config_table[config_idx].spi_din_num);
+-            spi_timing_config_psram_tune_dummy(config->tuning_config_table[config_idx].extra_dummy_len);
++            spi_timing_config_psram_set_tuning_regs(&(config->tuning_config_table[config_idx]));
+             spi_timing_config_psram_read_data(1, read_data, SPI_TIMING_PSRAM_TEST_DATA_ADDR, SPI_TIMING_TEST_DATA_LEN);
+         }
+ #endif
+@@ -175,14 +178,70 @@ static void find_max_consecutive_success_points(uint8_t *array, uint32_t size, u
+     *out_end_index = match_num == size ? size : end;
+ }
+ 
++#if (SPI_TIMING_FLASH_DTR_MODE || SPI_TIMING_PSRAM_DTR_MODE) && (SPI_TIMING_CORE_CLOCK_MHZ == 240)
++extern void rtc_clk_bbpll_configure(rtc_xtal_freq_t xtal_freq, int pll_freq);
++extern void rtc_clk_configure_pll(rtc_xtal_freq_t xtal_freq, int pll_freq, uint8_t oc_div, uint8_t oc_ref_div);
++
++static bool get_working_pll_freq(const uint8_t *reference_data, bool is_flash, uint32_t *out_max_freq, uint32_t *out_min_freq)
++{
++    uint8_t read_data[SPI_TIMING_TEST_DATA_LEN] = {0};
++    rtc_cpu_freq_config_t previous_config;
++    rtc_clk_cpu_freq_get_config(&previous_config);
++
++    uint32_t big_num = MSPI_TIMING_PLL_FREQ_SCAN_RANGE_MHZ_MAX * 2;  //This number should be larger than MSPI_TIMING_PLL_FREQ_SCAN_RANGE_MHZ_MAX, for error handling
++    uint32_t max_freq = 0;
++    uint32_t min_freq = big_num;
++    rtc_xtal_freq_t xtal_freq = rtc_clk_xtal_freq_get();
++
++    for (int pll_mhz_tuning = MSPI_TIMING_PLL_FREQ_SCAN_RANGE_MHZ_MIN; pll_mhz_tuning <= MSPI_TIMING_PLL_FREQ_SCAN_RANGE_MHZ_MAX; pll_mhz_tuning += 8) {
++        /**
++         * pll_mhz = xtal_mhz * (oc_div + 4) / (oc_ref_div + 1)
++         */
++        rtc_clk_configure_pll(xtal_freq, pll_mhz_tuning, ((pll_mhz_tuning / 4) - 4), 9);
++
++        memset(read_data, 0, SPI_TIMING_TEST_DATA_LEN);
++        if (is_flash) {
++            spi_timing_config_flash_read_data(1, read_data, SPI_TIMING_FLASH_TEST_DATA_ADDR, SPI_TIMING_TEST_DATA_LEN);
++        } else {
++            spi_timing_config_psram_read_data(1, read_data, SPI_TIMING_PSRAM_TEST_DATA_ADDR, SPI_TIMING_TEST_DATA_LEN);
++        }
++
++        if (memcmp(read_data, reference_data, SPI_TIMING_TEST_DATA_LEN) == 0) {
++            max_freq = MAX(pll_mhz_tuning, max_freq);
++            min_freq = MIN(pll_mhz_tuning, min_freq);
++
++            //Continue to find successful cases
++            continue;
++        }
++
++        if (max_freq != 0) {
++            //The first fail case after successful case(s) is the end
++            break;
++        }
++
++        //If no break, no successful case found, continue to find successful cases
++    }
++
++    //restore PLL config
++    rtc_clk_bbpll_configure(xtal_freq, previous_config.source_freq_mhz);
++
++    *out_max_freq = max_freq;
++    *out_min_freq = min_freq;
++
++    return (max_freq != 0);
++}
++#endif  //Frequency Scanning
++
+ #if SPI_TIMING_FLASH_DTR_MODE || SPI_TIMING_PSRAM_DTR_MODE
+-static uint32_t select_best_tuning_config_dtr(spi_timing_config_t *config, uint32_t consecutive_length, uint32_t end)
++static uint32_t select_best_tuning_config_dtr(spi_timing_config_t *config, uint32_t consecutive_length, uint32_t end, const uint8_t *reference_data, bool is_flash)
+ {
+ #if (SPI_TIMING_CORE_CLOCK_MHZ == 160)
+     //Core clock 160M DTR best point scheme
+-    uint32_t best_point;
++    (void) reference_data;
++    (void) is_flash;
++    uint32_t best_point = 0;
+ 
+-    //Define these magic number in macros in `spi_timing_config.h`. TODO: IDF-3663
++    //These numbers will probably be same on other chips, if this version of algorithm is utilised
+     if (consecutive_length <= 2 || consecutive_length >= 6) {
+         //tuning is FAIL, select default point, and generate a warning
+         best_point = config->default_config_id;
+@@ -198,6 +257,41 @@ static uint32_t select_best_tuning_config_dtr(spi_timing_config_t *config, uint3
+     }
+ 
+     return best_point;
++
++#elif (SPI_TIMING_CORE_CLOCK_MHZ == 240)
++
++    uint32_t best_point = 0;
++    uint32_t current_point = end + 1 - consecutive_length;
++    bool ret = false;
++
++    //This `max_freq` is the max pll frequency that per MSPI timing tuning config can work
++    uint32_t max_freq = 0;
++    uint32_t temp_max_freq = 0;
++    uint32_t temp_min_freq = 0;
++
++    for (; current_point <= end; current_point++) {
++        if (is_flash) {
++            spi_timing_config_flash_set_tuning_regs(&(config->tuning_config_table[current_point]));
++        } else {
++            spi_timing_config_psram_set_tuning_regs(&(config->tuning_config_table[current_point]));
++        }
++
++        ret = get_working_pll_freq(reference_data, is_flash, &temp_max_freq, &temp_min_freq);
++        if (ret && temp_min_freq <= MSPI_TIMING_PLL_FREQ_SCAN_THRESH_MHZ_LOW && temp_max_freq >= MSPI_TIMING_PLL_FREQ_SCAN_THRESH_MHZ_HIGH && temp_max_freq > max_freq) {
++            max_freq = temp_max_freq;
++            best_point = current_point;
++        }
++        ESP_EARLY_LOGD(TAG, "sample point %d, max pll is %d mhz, min pll is %d\n", current_point, temp_max_freq, temp_min_freq);
++    }
++    if (max_freq == 0) {
++        ESP_EARLY_LOGW(TAG, "freq scan tuning fail, best point is fallen back to index %d", end + 1 - consecutive_length);
++        best_point = end + 1 - consecutive_length;
++    } else {
++        ESP_EARLY_LOGD(TAG, "freq scan success, max pll is %dmhz, best point is index %d", max_freq, best_point);
++    }
++
++    return best_point;
++
+ #else
+     //won't reach here
+     abort();
+@@ -230,19 +324,19 @@ static uint32_t select_best_tuning_config_str(spi_timing_config_t *config, uint3
+ }
+ #endif
+ 
+-static void select_best_tuning_config(spi_timing_config_t *config, uint32_t consecutive_length, uint32_t end, bool is_flash)
++static void select_best_tuning_config(spi_timing_config_t *config, uint32_t consecutive_length, uint32_t end, const uint8_t *reference_data, bool is_flash)
+ {
+     uint32_t best_point = 0;
+     if (is_flash) {
+ #if SPI_TIMING_FLASH_DTR_MODE
+-        best_point = select_best_tuning_config_dtr(config, consecutive_length, end);
++        best_point = select_best_tuning_config_dtr(config, consecutive_length, end, reference_data, is_flash);
+ #elif SPI_TIMING_FLASH_STR_MODE
+         best_point = select_best_tuning_config_str(config, consecutive_length, end);
+ #endif
+         s_flash_best_timing_tuning_config = config->tuning_config_table[best_point];
+     } else {
+ #if SPI_TIMING_PSRAM_DTR_MODE
+-        best_point = select_best_tuning_config_dtr(config, consecutive_length, end);
++        best_point = select_best_tuning_config_dtr(config, consecutive_length, end, reference_data, is_flash);
+ #elif SPI_TIMING_PSRAM_STR_MODE
+         best_point = select_best_tuning_config_str(config, consecutive_length, end);
+ #endif
+@@ -250,7 +344,7 @@ static void select_best_tuning_config(spi_timing_config_t *config, uint32_t cons
+     }
+ }
+ 
+-static void do_tuning(uint8_t *reference_data, spi_timing_config_t *timing_config, bool is_flash)
++static void do_tuning(const uint8_t *reference_data, spi_timing_config_t *timing_config, bool is_flash)
+ {
+     /**
+      * We use SPI1 to tune the timing:
+@@ -265,7 +359,7 @@ static void do_tuning(uint8_t *reference_data, spi_timing_config_t *timing_confi
+     init_spi1_for_tuning(is_flash);
+     sweep_for_success_sample_points(reference_data, timing_config, is_flash, sample_result);
+     find_max_consecutive_success_points(sample_result, SPI_TIMING_CONFIG_NUM_DEFAULT, &consecutive_length, &last_success_point);
+-    select_best_tuning_config(timing_config, consecutive_length, last_success_point, is_flash);
++    select_best_tuning_config(timing_config, consecutive_length, last_success_point, reference_data, is_flash);
+ }
+ #endif  //#if SPI_TIMING_FLASH_NEEDS_TUNING || SPI_TIMING_PSRAM_NEEDS_TUNING
+ 
+diff --git a/tools/test_apps/system/flash_psram/sdkconfig.ci.f8r8_120ddr b/tools/test_apps/system/flash_psram/sdkconfig.ci.f8r8_120ddr
+new file mode 100644
+index 0000000000..9e719a121a
+--- /dev/null
++++ b/tools/test_apps/system/flash_psram/sdkconfig.ci.f8r8_120ddr
+@@ -0,0 +1,8 @@
++# Legacy, F8R8, Flash 120M DDR, PSRAM disable
++
++CONFIG_SPI_FLASH_USE_LEGACY_IMPL=y
++CONFIG_ESPTOOLPY_OCT_FLASH=y
++CONFIG_ESPTOOLPY_FLASH_SAMPLE_MODE_DTR=y
++CONFIG_ESPTOOLPY_FLASHFREQ_120M=y
++CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
++CONFIG_ESP32S3_SPIRAM_SUPPORT=n
+diff --git a/tools/test_apps/system/flash_psram/sdkconfig.ci.f8r8_120ddr_120ddr b/tools/test_apps/system/flash_psram/sdkconfig.ci.f8r8_120ddr_120ddr
+new file mode 100644
+index 0000000000..3cdb1bfa3d
+--- /dev/null
++++ b/tools/test_apps/system/flash_psram/sdkconfig.ci.f8r8_120ddr_120ddr
+@@ -0,0 +1,10 @@
++# Legacy, F8R8, Flash 120M DDR, PSRAM 120M DDR
++
++CONFIG_SPI_FLASH_USE_LEGACY_IMPL=y
++CONFIG_ESPTOOLPY_OCT_FLASH=y
++CONFIG_ESPTOOLPY_FLASH_SAMPLE_MODE_DTR=y
++CONFIG_ESPTOOLPY_FLASHFREQ_120M=y
++CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
++CONFIG_ESP32S3_SPIRAM_SUPPORT=y
++CONFIG_SPIRAM_MODE_OCT=y
++CONFIG_SPIRAM_SPEED_120M=y
+-- 
+2.37.1
+

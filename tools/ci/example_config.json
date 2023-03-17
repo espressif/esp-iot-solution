@@ -262,6 +262,18 @@
             ]
         },
         {
+            "name": "usb_camera_lcd_display",
+            "buildsystem": [
+                "cmake"
+            ],
+            "targets": [
+                "esp32s3"
+            ],
+            "idfversion": [
+                "5.0"
+            ]
+        },
+        {
             "name": "examples",
             "buildsystem": [
                 "cmake"
