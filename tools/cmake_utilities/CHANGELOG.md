@@ -1,3 +1,10 @@
+## v0.4.1 - 2023-03-15
+
+* relinker: add option to use customized configuration files
+* relinker: add option to print error information instead of throwing exception when missing function
+* relinker: move functions of SPI flash from IRAM to flash only when enable CONFIG_SPI_FLASH_ROM_IMPL
+* relinker: move some functions of esp_timer from IRAM to flash only when disable CONFIG_ESP_TIMER_SUPPORTS_ISR_DISPATCH_METHOD
+
 ## v0.4.0 - 2023-03-13
 
 ### Feature:

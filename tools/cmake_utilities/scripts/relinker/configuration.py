@@ -25,6 +25,7 @@ from io import StringIO
 OPT_MIN_LEN = 7
 
 espidf_objdump = None
+espidf_missing_function_info = True
 
 class sdkconfig_c:
     def __init__(self, path):
@@ -78,7 +79,11 @@ class object_c:
                 m = re.match(r'(\S*)\s*([glw])\s*([F|O])\s*(\S*)\s*(\S*)\s*(\S*)\s*', l, re.M|re.I)
                 if m and m[6] == func:
                     return m[4].replace('.text.', '')
-        raise RuntimeError('%s failed to find section'%(func))
+        if espidf_missing_function_info:
+            print('%s failed to find section'%(func))
+            return None
+        else:
+            raise RuntimeError('%s failed to find section'%(func))
 
     def __init__(self, name, path, libray):
         self.name = name
@@ -88,7 +93,9 @@ class object_c:
         self.funcs = dict()
     
     def append(self, func):
-        self.funcs[func] = self.get_func_section(self.dump, func)
+        section = self.get_func_section(self.dump, func)
+        if section != None:
+            self.funcs[func] = section
     
     def functions(self):
         nlist = list()
@@ -148,9 +155,10 @@ class paths_c:
             obj = '*'
         return self.paths[lib][obj]
 
-def generator(library_file, object_file, function_file, sdkconfig_file, objdump='riscv32-esp-elf-objdump'):
-    global espidf_objdump 
+def generator(library_file, object_file, function_file, sdkconfig_file, missing_function_info, objdump='riscv32-esp-elf-objdump'):
+    global espidf_objdump, espidf_missing_function_info
     espidf_objdump = objdump
+    espidf_missing_function_info = missing_function_info
 
     sdkconfig = sdkconfig_c(sdkconfig_file)
 

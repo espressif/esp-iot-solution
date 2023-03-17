@@ -16,7 +16,12 @@ include(relinker)
 
 The relinker feature is disabled by default, in order to use it, you need to enable the option `CU_RELINKER_ENABLE` in menuconfig.
 
-Here are the default configuration files in the folder `cmake_utilities/scripts/relinker/examples/esp32c2`, it's just used as a reference. If you would like to use your own configuration files, please put configuration files in the directory `relinker/esp32c2` under the project directory.
+Here are the default configuration files in the folder `cmake_utilities/scripts/relinker/examples/esp32c2`, it's just used as a reference. If you would like to use your own configuration files, please enable option `CU_RELINKER_ENABLE_CUSTOMIZED_CONFIGURATION_FILES` and set the path of your configuration files as following, this path is evaluated relative to the project root directory:
+
+```
+[*]     Enable customized relinker configuration files
+(path of your configuration files) Customized relinker configuration files path
+```
 
 > Note: Currently only esp32c2 is supported.
 

@@ -97,8 +97,8 @@ class target_c:
         return s
 
 class relink_c:
-    def __init__(self, library_file, object_file, function_file, sdkconfig_file):
-        libraries = configuration.generator(library_file, object_file, function_file, sdkconfig_file, espidf_objdump)
+    def __init__(self, library_file, object_file, function_file, sdkconfig_file, missing_function_info):
+        libraries = configuration.generator(library_file, object_file, function_file, sdkconfig_file, missing_function_info, espidf_objdump)
         self.targets = list()
         for i in libraries.libs:
             lib = libraries.libs[i]
@@ -253,6 +253,12 @@ def main():
         help='Debug level(option is \'debug\')',
         default='no',
         type=str)
+    
+    argparser.add_argument(
+        '--missing_function_info',
+        help='Print error information instead of throwing exception when missing function',
+        default=False,
+        type=bool)
 
     args = argparser.parse_args()
 
@@ -267,11 +273,12 @@ def main():
     logging.debug('sdkconfig:%s'%(args.sdkconfig))
     logging.debug('objdump:  %s'%(args.objdump))
     logging.debug('debug:    %s'%(args.debug))
+    logging.debug('missing_function_info: %s'%(args.missing_function_info))
 
     global espidf_objdump
     espidf_objdump = args.objdump
 
-    relink = relink_c(args.library, args.object, args.function, args.sdkconfig)
+    relink = relink_c(args.library, args.object, args.function, args.sdkconfig, args.missing_function_info)
     relink.save(args.input, args.output)
 
 if __name__ == '__main__':
