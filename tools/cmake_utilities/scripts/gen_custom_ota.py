@@ -178,13 +178,15 @@ def main():
             bin_data += struct.pack('32s', firmware_ver.encode())
         else:
             # Reserved
-            bin_data += struct.pack('<I', 0)
-            bin_data += struct.pack('<I', 0)
+            bin_data += struct.pack('10s', b'0')
         # The length of the compressed data
         bin_data += struct.pack('<I', f_len)
         print('compressed data len: {}'.format(f_len))
         # The MD5 for the compressed data
-        bin_data += struct.pack('16s', hashlib.md5(data).digest())
+        if (header_version[header_ver] < 3):
+            bin_data += struct.pack('32s', hashlib.md5(data).digest())
+        else:
+            bin_data += struct.pack('16s', hashlib.md5(data).digest())
         # The CRC32 for the header
         bin_data += struct.pack('<I', binascii.crc32(bin_data, 0x0))
         
