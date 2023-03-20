@@ -1,3 +1,10 @@
+## v0.4.2 - 2023-03-20
+
+### Bugfix:
+
+* gen_compressed_ota: Fix the number of bytes reserved in the v3 compressed image header
+* gen_compressed_ota: Fix definition of MD5 length in compressed image header for different versions.
+
 ## v0.4.1 - 2023-03-15
 
 * relinker: add option to use customized configuration files
