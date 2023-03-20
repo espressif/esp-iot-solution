@@ -1,0 +1,787 @@
+############
+# Patterns #
+############
+
+# components folder, in the alphabetic order
+.patterns-components_audio_dac_audio: &patterns-components_audio_dac_audio
+  - "components/audio/dac_audio/**/*"
+
+.patterns-components_audio_pwm_audio: &patterns-components_audio_pwm_audio
+  - "components/audio/pwm_audio/**/*"
+  - "components/tools/cmake_utilities/package_manager.cmake"
+
+.patterns-components_ble_profiles_esp_ble_ota: &patterns-components_ble_profiles_esp_ble_ota
+  - "components/ble_profiles/esp/ble_ota/**/*"
+  - "components/tools/cmake_utilities/package_manager.cmake"
+
+.patterns-components_bus: &patterns-components_bus
+  - "components/bus/**/*"
+
+.patterns-components_button: &patterns-components_button
+  - "components/button/**/*"
+  - "components/tools/cmake_utilities/package_manager.cmake"
+
+.patterns-components_display_digital_tube_ch450: &patterns-components_display_digital_tube_ch450
+  - "components/display/digital_tube/ch450/**/*"
+
+.patterns-components_display_digital_tube_ht16c21: &patterns-components_display_digital_tube_ht16c21
+  - "components/display/digital_tube/ht16c21/**/*"
+
+.patterns-components_display_digital_tube_is31fl3xxx: &patterns-components_display_digital_tube_is31fl3xxx
+  - "components/display/digital_tube/is31fl3xxx/**/*"
+
+.patterns-components_display_screen: &patterns-components_display_screen
+  - "components/display/screen/**/*"
+
+.patterns-components_display_touch_panel: &patterns-components_display_touch_panel
+  - "components/display/touch_panel/**/*"
+
+.patterns-components_expander_io_expander_mcp23017: &patterns-components_expander_io_expander_mcp23017
+  - "components/expander/io_expander/mcp23017/**/*"
+
+.patterns-components_extended_vfs: &patterns-components_extended_vfs
+  - "components/extended_vfs/**/*"
+  - "components/tools/cmake_utilities/package_manager.cmake"
+
+.patterns-components_gui_lvgl_gui: &patterns-components_gui_lvgl_gui
+  - "components/gui/lvgl_gui/**/*"
+
+.patterns-components_knob: &patterns-components_knob
+  - "components/knob/**/*"
+  - "components/tools/cmake_utilities/package_manager.cmake"
+
+.patterns-components_led_led_indicator: &patterns-components_led_led_indicator
+  - "components/led/led_indicator/**/*"
+  - "components/tools/cmake_utilities/package_manager.cmake"
+
+.patterns-components_led_light: &patterns-components_led_light
+  - "components/led/light/**/*"
+
+.patterns-components_led_lightbulb_driver: &patterns-components_led_lightbulb_driver
+  - "components/led/lightbulb_driver/**/*"
+  - "components/tools/cmake_utilities/package_manager.cmake"
+
+.patterns-components_motor_servo: &patterns-components_motor_servo
+  - "components/motor/servo/**/*"
+
+.patterns-components_sensors_gesture_apds9960: &patterns-components_sensors_gesture_apds9960
+  - "components/sensors/gesture/apds9960/**/*"
+
+.patterns-components_sensors_humiture_hdc2010: &patterns-components_sensors_humiture_hdc2010
+  - "components/sensors/humiture/hdc2010/**/*"
+
+.patterns-components_sensors_humiture_hts221: &patterns-components_sensors_humiture_hts221
+  - "components/sensors/gesture/hts221/**/*"
+
+.patterns-components_sensors_humiture_mvh3004d: &patterns-components_sensors_humiture_mvh3004d
+  - "components/sensors/gesture/mvh3004d/**/*"
+
+.patterns-components_sensors_humiture_sht3x: &patterns-components_sensors_humiture_sht3x
+  - "components/sensors/gesture/sht3x/**/*"
+
+.patterns-components_sensors_imu_lis2dh12: &patterns-components_sensors_imu_lis2dh12
+  - "components/sensors/imu/lis2dh12/**/*"
+
+.patterns-components_sensors_imu_mpu6050: &patterns-components_sensors_imu_mpu6050
+  - "components/sensors/imu/mpu6050/**/*"
+
+.patterns-components_sensors_light_sensor_bh1750: &patterns-components_sensors_light_sensor_bh1750
+  - "components/sensors/light_sensor/bh1750/**/*"
+
+.patterns-components_sensors_light_sensor_veml6040: &patterns-components_sensors_light_sensor_veml6040
+  - "components/sensors/light_sensor/veml6040/**/*"
+
+.patterns-components_sensors_light_sensor_veml6075: &patterns-components_sensors_light_sensor_veml6075
+  - "components/sensors/light_sensor/veml6075/**/*"
+
+.patterns-components_sensors_pressure_bme280: &patterns-components_sensors_pressure_bme280
+  - "components/sensors/pressure/bme280/**/*"
+
+.patterns-components_sensors_sensor_hub: &patterns-components_sensors_sensor_hub
+  - "components/sensors/sensor_hub/**/*"
+
+.patterns-components_storage_eeprom_at24c02: &patterns-components_storage_eeprom_at24c02
+  - "components/storage/eeprom/at24c02/**/*"
+
+.patterns-components_usb_iot_usbh: &patterns-components_usb_iot_usbh
+  - "components/usb/iot_usbh/**/*"
+  - "components/tools/cmake_utilities/package_manager.cmake"
+
+.patterns-components_usb_iot_usbh_cdc: &patterns-components_usb_iot_usbh_cdc
+  - "components/usb/iot_usbh/**/*"
+  - "components/usb/iot_usbh_cdc/**/*"
+  - "components/tools/cmake_utilities/package_manager.cmake"
+
+.patterns-components_usb_iot_usbh_modem: &patterns-components_usb_iot_usbh_modem
+  - "components/usb/iot_usbh/**/*"
+  - "components/usb/iot_usbh_cdc/**/*"
+  - "components/usb/iot_usbh_modem/**/*"
+  - "components/tools/cmake_utilities/package_manager.cmake"
+
+.patterns-components_usb_usb_stream: &patterns-components_usb_usb_stream
+  - "components/usb/usb_stream/**/*"
+  - "components/tools/cmake_utilities/package_manager.cmake"
+
+.patterns-components_utilities_xz: &patterns-components_utilities_xz
+  - "components/utilities/xz/**/*"
+
+# examples folder, in the alphabetic order
+.patterns-docs: &patterns-docs
+  - "docs/**/*"
+
+.patterns-docs_md: &patterns-docs_md
+  - "**/*.md"
+
+.patterns-docs_inc: &patterns-docs_inc
+  - "components/audio/dac_audio/include/dac_audio.h"
+  - "components/audio/pwm_audio/include/pwm_audio.h"
+  - "components/bus/include/i2c_bus.h"
+  - "components/bus/include/spi_bus.h"
+  - "components/led/led_indicator/include/led_indicator.h"
+  - "components/display/screen/screen_driver.h"
+  - "components/display/screen/interface_driver/scr_interface_driver.h"
+  - "components/button/include/iot_button.h"
+  - "components/knob/iot_knob.h"
+  - "components/display/touch_panel/touch_panel.h"
+  - "components/motor/servo/include/iot_servo.h"
+  - "components/sensors/sensor_hub/include/hal/humiture_hal.h"
+  - "components/sensors/sensor_hub/include/hal/imu_hal.h"
+  - "components/sensors/sensor_hub/include/hal/light_sensor_hal.h"
+  - "components/sensors/sensor_hub/include/sensor_type.h"
+  - "components/sensors/sensor_hub/include/iot_sensor_hub.h"
+  - "components/usb/usb_stream/include/usb_stream.h"
+
+# examples folder, in the alphabetic order
+.patterns-example_audio_wav_player: &patterns-example_audio_wav_player
+  - "examples/audio/**/*"
+
+.patterns-example_bluetooth_ble_ota: &patterns-example_bluetooth_ble_ota
+  - "examples/bluetooth/ble_ota/**/*"
+
+.patterns-example_camera_basic: &patterns-example_camera_basic
+  - "examples/camera/basic/**/*"
+
+.patterns-example_camera_pic_server: &patterns-example_camera_pic_server
+  - "examples/camera/pic_server/**/*"
+
+.patterns-example_camera_test_framerate: &patterns-example_camera_test_framerate
+  - "examples/camera/test_framerate/**/*"
+
+.patterns-example_camera_video_recorder: &patterns-example_camera_video_recorder
+  - "examples/camera/video_recorder/**/*"
+
+.patterns-example_camera_video_stream_server: &patterns-example_camera_video_stream_server
+  - "examples/camera/video_stream_server/**/*"
+
+.patterns-example_check_pedestrian_flow: &patterns-example_check_pedestrian_flow
+  - "examples/check_pedestrian_flow/**/*"
+
+.patterns-example_common_components_boards: &patterns-example_common_components_boards
+  - "examples/common_components/boards/**/*"
+
+.patterns-example_common_components_camera: &patterns-example_common_components_camera
+  - "examples/common_components/camera/**/*"
+
+.patterns-example_decompress_xz_compressed_ota: &patterns-example_decompress_xz_compressed_ota
+  - "examples/decompress/xz_compressed_ota/**/*"
+
+.patterns-example_extended_vfs_gpio_gpio_simple: &patterns-example_extended_vfs_gpio_gpio_simple
+  - "examples/extended_vfs/gpio/gpio_simple/**/*"
+
+.patterns-example_extended_vfs_i2c_i2c_bh1750: &patterns-example_extended_vfs_i2c_i2c_bh1750
+  - "examples/extended_vfs/i2c/i2c_hb1750/**/*"
+
+.patterns-example_extended_vfs_i2c_i2c_tt21100: &patterns-example_extended_vfs_i2c_i2c_tt21100
+  - "examples/extended_vfs/i2c/i2c_tt21100/**/*"
+
+.patterns-example_get_started_blink: &patterns-example_get_started_blink
+  - "examples/get-started/blink/**/*"
+
+.patterns-example_hmi_lvgl_coffee: &patterns-example_hmi_lvgl_coffee
+  - "examples/hmi/lvgl_coffee/**/*"
+
+.patterns-example_hmi_lvgl_example: &patterns-example_hmi_lvgl_example
+  - "examples/hmi/lvgl_coffee/**/*"
+
+.patterns-example_hmi_lvgl_thermostat: &patterns-example_hmi_lvgl_thermostat
+  - "examples/hmi/lvgl_thermostat/**/*"
+
+.patterns-example_hmi_lvgl_wificonfig: &patterns-example_hmi_lvgl_wificonfig
+  - "examples/hmi/lvgl_wificonfig/**/*"
+
+.patterns-example_lighting_lightbulb: &patterns-example_lighting_lightbulb
+  - "examples/lighting/lightbulb/**/*"
+
+.patterns-example_screen: &patterns-example_screen
+  - "examples/screen/**/*"
+
+.patterns-example_sensors_sensor_control_led: &patterns-example_sensors_sensor_control_led
+  - "examples/sensors/sensor_control_led/**/*"
+
+.patterns-example_sensors_sensor_hub_monitor: &patterns-example_sensors_sensor_hub_monitor
+  - "examples/sensors/sensor_hub_monitor/**/*"
+
+.patterns-example_usb_device_usb_surface_dial: &patterns-example_usb_device_usb_surface_dial
+  - "examples/usb/device/usb_surface_dial/**/*"
+
+.patterns-example_usb_host_usb_camera_lcd_display: &patterns-example_usb_host_usb_camera_lcd_display
+  - "examples/usb/host/usb_camera_lcd_display/**/*"
+
+.patterns-example_usb_host_usb_camera_mic_spk: &patterns-example_usb_host_usb_camera_mic_spk
+  - "examples/usb/host/usb_camera_mic_spk/**/*"
+
+.patterns-example_usb_host_usb_cdc_4g_module: &patterns-example_usb_host_usb_cdc_4g_module
+  - "examples/usb/host/usb_cdc_4g_module/**/*"
+
+.patterns-example_utilities_xz_decompress_file: &patterns-example_utilities_xz_decompress_file
+  - "examples/utilities/xz_decompress_file/**/*"
+
+# tools folder, in the alphabetic order
+.patterns-tools_cmake_utilities_gen_compressed_ota: &patterns-tools_cmake_utilities_gen_compressed_ota
+  - "components/tools/cmake_utilities/gen_compressed_ota.cmake"
+  - "components/tools/cmake_utilities/scripts/gen_custom_ota.py"
+
+.patterns-tools_cmake_utilities_package_manager: &patterns-tools_cmake_utilities_package_manager
+  - "components/tools/cmake_utilities/package_manager.cmake"
+
+.patterns-tools_cmake_utilities_relinker: &patterns-tools_cmake_utilities_relinker
+  - "components/tools/cmake_utilities/relinker.cmake"
+  - "components/tools/cmake_utilities/scripts/relinker/**/*"
+
+##############
+# if anchors #
+##############
+.if-protected: &if-protected
+  if: '($CI_COMMIT_REF_NAME == "master" || $CI_COMMIT_BRANCH =~ /^release\/v/ || $CI_COMMIT_TAG =~ /^v\d+\.\d+(\.\d+)?($|-)/)'
+
+.if-dev-push: &if-dev-push
+  if: '$CI_COMMIT_REF_NAME != "master" && $CI_COMMIT_BRANCH !~ /^release\/v/ && $CI_COMMIT_TAG !~ /^v\d+\.\d+(\.\d+)?($|-)/ && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "merge_request_event")'
+
+##################
+# Auto Generated #
+##################
+.if-label-build: &if-label-build
+  if: '$CI_MERGE_REQUEST_LABELS =~ /^(?:[^,\n\r]+,)*build(?:,[^,\n\r]+)*$/i'
+
+# rules for examples
+.rules:build:example_audio_wav_player:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_audio_pwm_audio
+    - <<: *if-dev-push
+      changes: *patterns-example_audio_wav_player
+
+.rules:build:example_bluetooth_ble_ota:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_ble_profiles_esp_ble_ota
+    - <<: *if-dev-push
+      changes: *patterns-example_bluetooth_ble_ota
+
+.rules:build:example_camera_basic:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-example_camera_basic
+    - <<: *if-dev-push
+      changes: *patterns-example_common_components_camera
+
+.rules:build:example_camera_pic_server:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-example_camera_pic_server
+    - <<: *if-dev-push
+      changes: *patterns-example_common_components_camera
+
+.rules:build:example_camera_test_framerate:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-example_camera_test_framerate
+    - <<: *if-dev-push
+      changes: *patterns-example_common_components_camera
+
+.rules:build:example_camera_video_recorder:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-example_camera_video_recorder
+    - <<: *if-dev-push
+      changes: *patterns-example_common_components_camera
+
+.rules:build:example_camera_video_stream_server:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-example_camera_video_stream_server
+    - <<: *if-dev-push
+      changes: *patterns-example_common_components_camera
+
+.rules:build:example_check_pedestrian_flow:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-example_check_pedestrian_flow
+
+.rules:build:example_decompress_xz_compressed_ota:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-example_decompress_xz_compressed_ota
+
+.rules:build:example_extended_vfs_gpio_gpio_simple:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_extended_vfs
+    - <<: *if-dev-push
+      changes: *patterns-example_extended_vfs_gpio_gpio_simple
+
+.rules:build:example_extended_vfs_i2c_i2c_bh1750:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_extended_vfs
+    - <<: *if-dev-push
+      changes: *patterns-example_extended_vfs_i2c_i2c_bh1750
+
+.rules:build:example_extended_vfs_i2c_i2c_tt21100:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_extended_vfs
+    - <<: *if-dev-push
+      changes: *patterns-example_extended_vfs_i2c_i2c_tt21100
+
+.rules:build:example_get_started_blink:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-example_get_started_blink
+
+.rules:build:example_hmi_lvgl_coffee:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_gui_lvgl_gui
+    - <<: *if-dev-push
+      changes: *patterns-example_common_components_boards
+    - <<: *if-dev-push
+      changes: *patterns-example_hmi_lvgl_coffee
+
+.rules:build:example_hmi_lvgl_example:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_gui_lvgl_gui
+    - <<: *if-dev-push
+      changes: *patterns-example_common_components_boards
+    - <<: *if-dev-push
+      changes: *patterns-example_hmi_lvgl_example
+
+.rules:build:example_hmi_lvgl_thermostat:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_gui_lvgl_gui
+    - <<: *if-dev-push
+      changes: *patterns-example_common_components_boards
+    - <<: *if-dev-push
+      changes: *patterns-example_hmi_lvgl_thermostat
+
+.rules:build:example_hmi_lvgl_wificonfig:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_gui_lvgl_gui
+    - <<: *if-dev-push
+      changes: *patterns-example_common_components_boards
+    - <<: *if-dev-push
+      changes: *patterns-example_hmi_lvgl_wificonfig
+
+.rules:build:example_lighting_lightbulb:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_led_lightbulb_driver
+    - <<: *if-dev-push
+      changes: *patterns-example_lighting_lightbulb
+
+.rules:build:example_screen:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_display_screen
+    - <<: *if-dev-push
+      changes: *patterns-example_screen
+
+.rules:build:example_sensors_sensor_control_led:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_bus
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_gesture_apds9960
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_humiture_hdc2010
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_humiture_hts221
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_humiture_mvh3004d
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_humiture_sht3x
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_imu_lis2dh12
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_imu_mpu6050
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_light_sensor_bh1750
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_light_sensor_veml6040
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_light_sensor_veml6075
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_pressure_bme280
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_sensor_hub
+    - <<: *if-dev-push
+      changes: *patterns-example_sensors_sensor_control_led
+
+.rules:build:example_sensors_sensor_hub_monitor:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_bus
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_gesture_apds9960
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_humiture_hdc2010
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_humiture_hts221
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_humiture_mvh3004d
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_humiture_sht3x
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_imu_lis2dh12
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_imu_mpu6050
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_light_sensor_bh1750
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_light_sensor_veml6040
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_light_sensor_veml6075
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_pressure_bme280
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_sensor_hub
+    - <<: *if-dev-push
+      changes: *patterns-example_sensors_sensor_hub_monitor
+
+.rules:build:example_usb_device_usb_surface_dial:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_button
+    - <<: *if-dev-push
+      changes: *patterns-components_knob
+    - <<: *if-dev-push
+      changes: *patterns-example_usb_device_usb_surface_dial
+
+.rules:build:example_usb_host_usb_camera_lcd_display:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_usb_usb_stream
+    - <<: *if-dev-push
+      changes: *patterns-example_usb_host_usb_camera_lcd_display
+
+.rules:build:example_usb_host_usb_camera_mic_spk:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_usb_usb_stream
+    - <<: *if-dev-push
+      changes: *patterns-example_usb_host_usb_camera_mic_spk
+
+.rules:build:example_usb_host_usb_cdc_4g_module:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_led_led_indicator
+    - <<: *if-dev-push
+      changes: *patterns-components_usb_iot_usbh_modem
+    - <<: *if-dev-push
+      changes: *patterns-example_usb_host_usb_cdc_4g_module
+
+.rules:build:example_utilities_xz_decompress_file:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_utilities_xz
+    - <<: *if-dev-push
+      changes: *patterns-example_utilities_xz_decompress_file
+
+# rules for ut
+.rules:build:component_audio_dac_audio_test:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_audio_dac_audio
+
+.rules:build:component_audio_pwm_audio_test:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_audio_pwm_audio
+
+.rules:build:component_bus_test:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_bus
+
+.rules:build:components_button_test:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_button
+
+.rules:build:components_display_digital_tube_ch450_test:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_display_digital_tube_ch450
+
+.rules:build:components_display_digital_tube_ht16c21_test:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_display_digital_tube_ht16c21
+
+.rules:build:components_display_digital_tube_is31fl3xxx_test:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_display_digital_tube_is31fl3xxx
+
+.rules:build:components_display_screen_test:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_display_screen
+
+.rules:build:components_display_touch_panel_test:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_display_touch_panel
+
+.rules:build:components_expander_io_expander_mcp23017_test:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_expander_io_expander_mcp23017
+
+.rules:build:components_knob_test:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_knob
+
+.rules:build:components_led_led_indicator_test:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_led_led_indicator
+
+.rules:build:components_led_light_test:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_led_light
+
+.rules:build:components_led_lightbulb_driver_test:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_led_lightbulb_driver
+
+.rules:build:components_motor_servo_test:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_motor_servo
+
+.rules:build:components_sensors_gesture_apds9960_test:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_gesture_apds9960
+
+.rules:build:components_sensors_humiture_hdc2010_test:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_humiture_hdc2010
+
+.rules:build:components_sensors_humiture_hts221_test:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_humiture_hts221
+
+.rules:build:components_sensors_humiture_mvh3004d_test:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_humiture_mvh3004d
+
+.rules:build:components_sensors_humiture_sht3x_test:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_humiture_sht3x
+
+.rules:build:components_sensors_imu_lis2dh12_test:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_imu_lis2dh12
+
+.rules:build:components_sensors_imu_mpu6050_test:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_imu_mpu6050
+
+.rules:build:components_sensors_light_sensor_bh1750_test:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_light_sensor_bh1750
+
+.rules:build:components_sensors_light_sensor_veml6040_test:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_light_sensor_veml6040
+
+.rules:build:components_sensors_light_sensor_veml6075_test:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_light_sensor_veml6075
+
+.rules:build:components_sensors_pressure_bme280_test:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_pressure_bme280
+
+.rules:build:components_sensors_sensor_hub_test:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_sensor_hub
+
+.rules:build:components_storage_eeprom_at24c02_test:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_storage_eeprom_at24c02
+
+.rules:build:components_usb_iot_usbh_test:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_usb_iot_usbh
+
+.rules:build:components_usb_iot_usbh_cdc_test:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_usb_iot_usbh_cdc
+
+.rules:build:components_usb_usb_stream_test:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_usb_usb_stream
+
+.rules:build:docs:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-docs
+    - <<: *if-dev-push
+      changes: *patterns-docs_inc
+
+.rules:pre_check:readme:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-docs_md

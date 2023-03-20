@@ -1,7 +1,23 @@
 stages:
   - pre_check
   - build
+  - build_doc
   - deploy
+
+workflow:
+  rules:
+    # Disable those non-protected push triggered pipelines
+    - if: '$CI_COMMIT_REF_NAME != "master" && $CI_COMMIT_BRANCH !~ /^release\/v/ && $CI_COMMIT_TAG !~ /^v\d+\.\d+(\.\d+)?($|-)/ && $CI_PIPELINE_SOURCE == "push"'
+      when: never
+    # when running merged result pipelines, it would create a temp commit id. use $CI_MERGE_REQUEST_SOURCE_BRANCH_SHA instead of $CI_COMMIT_SHA.
+    # Please use PIPELINE_COMMIT_SHA at all places that require a commit sha
+    - if: $CI_OPEN_MERGE_REQUESTS != null
+      variables:
+        PIPELINE_COMMIT_SHA: $CI_MERGE_REQUEST_SOURCE_BRANCH_SHA
+    - if: $CI_OPEN_MERGE_REQUESTS == null
+      variables:
+        PIPELINE_COMMIT_SHA: $CI_COMMIT_SHA
+    - when: always
 
 variables:
   IOT_SOLUTION_PATH: "$CI_PROJECT_DIR"
@@ -17,110 +33,9 @@ before_script:
   - git --version
   - git submodule update --init --recursive
 
-check_readme_links:
-  stage: pre_check
-  image: "$CI_DOCKER_REGISTRY/esp-env:v4.4-1"
-  tags: ["build", "amd64", "internet"]
-  allow_failure: true
-  script:
-    - python ${CI_PROJECT_DIR}/tools/ci/check_readme_links.py
-
-.build_template: &build_template
-  stage: build
-  image: espressif/idf:release-v4.4
-  tags:
-    - build
-  variables:
-    BATCH_BUILD: "1"
-    V: "0"
-
-.build_examples_template: &build_examples_template
-  <<: *build_template
-  artifacts:
-    when: always
-    paths:
-      - $BUILD_PATH/*/*/*/build/*.bin
-      - $BUILD_PATH/*/*/*/build/*/*.bin
-      - $BUILD_PATH/*/*/*/build/*.json
-      - $BUILD_PATH/*.json
-      - $LOG_PATH/*
-    expire_in: 1 week
-  variables:
-    IDF_CI_BUILD: "1"
-    LOG_PATH: "$CI_PROJECT_DIR/log_examples"
-    BUILD_PATH: "$CI_PROJECT_DIR/build_examples"
-    SIZE_INFO_LOCATION: "$CI_PROJECT_DIR/log_examples/size_info.txt"
-    PEDANTIC_CFLAGS: ""
-    PEDANTIC_CXXFLAGS: ""
-  script:
-    # it's not possible to build 100% out-of-tree and have the "artifacts"
-    # mechanism work, but this is the next best thing
-    - rm -rf ${BUILD_PATH}
-    - python -m pip install --upgrade idf-component-manager
-    # build some of examples
-    - python ${IOT_SOLUTION_PATH}/tools/ci/genarate_build_json.py
-    - ${IOT_SOLUTION_PATH}/tools/ci/build_examples.sh
-
-build_examples_00_with_idf_v4.4:
-  <<: *build_examples_template
-  image: espressif/idf:release-v4.4
-build_examples_00_with_idf_v5.0:
-  <<: *build_examples_template
-  image: espressif/idf:release-v5.0
-
-build_docs:
-  stage: build
-  image: $CI_DOCKER_REGISTRY/esp-idf-doc-env:v7
-  tags:
-    - build_docs
-  artifacts:
-    when: always
-    paths:
-      # English version of documentation
-      - docs/en/doxygen-warning-log.txt
-      - docs/en/sphinx-warning-log.txt
-      - docs/en/sphinx-warning-log-sanitized.txt
-      - docs/en/_build/html
-      # Chinese version of documentation
-      - docs/zh_CN/doxygen-warning-log.txt
-      - docs/zh_CN/sphinx-warning-log.txt
-      - docs/zh_CN/sphinx-warning-log-sanitized.txt
-      - docs/zh_CN/_build/html
-    expire_in: 1 mos
-  script:
-    - source /opt/pyenv/activate && pyenv global 3.6.10
-    - pip install "setuptools<57.5.0"
-    - pip install "funcparserlib==0.3.6"
-    - /opt/pyenv/pyenv-1.2.16/versions/3.6.10/bin/python -m pip install --user -r docs/requirements.txt
-    - cd docs
-    - ./check_lang_folder_sync.sh
-    - cd en
-    - make gh-linkcheck
-    - make html
-    - ../check_doc_warnings.sh
-    - cd ../zh_CN
-    - make gh-linkcheck
-    - make html
-    - ../check_doc_warnings.sh
-
-push_to_github:
-  stage: deploy
-  only:
-    - master
-    - /^release\/v/
-#  when: on_success
-  image: $CI_DOCKER_REGISTRY/esp32-ci-env
-  variables:
-    GIT_STRATEGY: clone
-  before_script:
-    - echo "skip default before_script"
-  script:
-    - mkdir -p ~/.ssh
-    - chmod 700 ~/.ssh
-    - echo -n $GH_PUSH_KEY > ~/.ssh/id_rsa_base64
-    - base64 --decode --ignore-garbage ~/.ssh/id_rsa_base64 > ~/.ssh/id_rsa
-    - chmod 600 ~/.ssh/id_rsa
-    - echo -e "Host github.com\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
-    - git remote remove github &>/dev/null || true
-    - git remote add github git@github.com:espressif/esp-iot-solution.git
-    - ${IOT_SOLUTION_PATH}/tools/ci/push_to_github.sh
+include:
+  - '.gitlab/ci/rules.yml'
+  - '.gitlab/ci/pre_check.yml'
+  - '.gitlab/ci/build.yml'
+  - '.gitlab/ci/docs.yml'
+  - '.gitlab/ci/deploy.yml'

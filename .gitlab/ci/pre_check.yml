@@ -1,0 +1,9 @@
+check_readme_links:
+  extends:
+    - .rules:pre_check:readme
+  stage: pre_check
+  image: "$CI_DOCKER_REGISTRY/esp-env:v4.4-1"
+  tags: ["build", "amd64", "internet"]
+  allow_failure: true
+  script:
+    - python ${CI_PROJECT_DIR}/tools/ci/check_readme_links.py
