@@ -1,3 +1,5 @@
+[![Component Registry](https://components.espressif.com/components/espressif/pwm_audio/badge.svg)](https://components.espressif.com/components/espressif/pwm_audio)
+
 # Component: pwm_audio
 
 [documentation](https://docs.espressif.com/projects/espressif-esp-iot-solution/en/latest/audio/pwm_audio.html)
@@ -7,7 +9,7 @@ The PWM audio function uses the internal LEDC peripheral in ESP32 to generate PW
 ## Features
 
 - Allows any GIPO with output capability as an audio output pin
-- Supports 8-bit ~ 10-bit PWM resolution
+- Supports 8-bit ~ 16-bit PWM resolution
 - Supports stereo
 - Supports 8 ～ 48 KHz sampling rate
 
