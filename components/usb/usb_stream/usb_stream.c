@@ -380,6 +380,7 @@ typedef struct _uac_device {
     uint32_t mic_samples_frequence;
     bool     mic_freq_ctrl_support;
     uint32_t mic_min_bytes;
+    uint32_t mic_ms_bytes;
     uint8_t  mic_fu_id;
     bool     mic_mute;
     uint8_t  mic_mute_ch;
@@ -2244,23 +2245,28 @@ IRAM_ATTR static void _processing_mic_pipe(hcd_pipe_handle_t pipe_hdl, mic_callb
             break;
         } else {
             int actual_num_bytes = urb_done->transfer.isoc_packet_desc[i].actual_num_bytes;
+            int num_bytes = urb_done->transfer.isoc_packet_desc[i].num_bytes;
+            uint8_t *packet_buffer = urb_done->transfer.data_buffer + (i * num_bytes);
 #if UAC_MIC_PACKET_COMPENSATION
-            if (actual_num_bytes == 0) {
-                int num_bytes = urb_done->transfer.isoc_packet_desc[i].num_bytes;
-                uint8_t *packet_buffer = urb_done->transfer.data_buffer + (i * num_bytes);
+            int num_bytes_ms = s_uac_dev.mic_ms_bytes;
+            if (actual_num_bytes != num_bytes_ms) {
+                ESP_LOGD(TAG, "Mic receive overflow %d, %d", actual_num_bytes, num_bytes_ms);
                 if (i == 0) {
                     //if first packet loss (small probability), we just padding all 0
-                    memset(packet_buffer, 0, num_bytes);
+                    memset(packet_buffer, 0, num_bytes_ms);
                     ESP_LOGV(TAG, "MIC: padding 0");
                 } else {
-                    //if other packets loss, we just padding the last packet
+                    //if other packets loss or overflow, we just padding the last packet
                     uint8_t *packet_last_buffer = urb_done->transfer.data_buffer + (i * num_bytes - num_bytes);
-                    memcpy(packet_buffer, packet_last_buffer, num_bytes);
+                    memcpy(packet_buffer, packet_last_buffer, num_bytes_ms);
                     ESP_LOGV(TAG, "MIC: padding data");
                 }
-                actual_num_bytes = num_bytes;
+                actual_num_bytes = num_bytes_ms;
             }
 #endif
+            if((uint32_t)packet_buffer > (uint32_t)(mic_frame.data + xfered_size)) {
+                memcpy(mic_frame.data + xfered_size, packet_buffer, actual_num_bytes);
+            }
             xfered_size += actual_num_bytes;
         }
     }
@@ -2541,7 +2547,7 @@ static void _usb_stream_handle_task(void *arg)
 
     if (uac_dev->spk_active && !uac_dev->spk_as_ifc->not_found) {
         stream_ep_desc[STREAM_UAC_SPK].bEndpointAddress = uac_dev->spk_as_ifc->ep_addr;
-        stream_ep_desc[STREAM_UAC_SPK].wMaxPacketSize = uac_dev->spk_as_ifc->ep_mps;
+        stream_ep_desc[STREAM_UAC_SPK].wMaxPacketSize = uac_dev->spk_as_ifc->bytes_per_packet;
         //prepare urb and data buffer for stream pipe
         uac_dev->spk_as_ifc->urb_list = heap_caps_calloc(uac_dev->spk_as_ifc->urb_num, sizeof(urb_t *), MALLOC_CAP_DMA);
         UVC_CHECK_GOTO(uac_dev->spk_as_ifc->urb_list != NULL, "p_urb alloc failed", free_urb_);
@@ -3174,7 +3180,7 @@ esp_err_t uac_streaming_config(const uac_config_t *config)
     s_usb_itf[STREAM_UAC_MIC].ep_mps = config->mic_ep_mps;
     s_usb_itf[STREAM_UAC_MIC].evt_bit = UAC_MIC_STREAM_RUNNING;
     s_usb_itf[STREAM_UAC_MIC].urb_num = NUM_ISOC_MIC_URBS;
-    s_usb_itf[STREAM_UAC_MIC].bytes_per_packet = config->mic_samples_frequence / 1000 * config->mic_bit_resolution / 8;
+    s_usb_itf[STREAM_UAC_MIC].bytes_per_packet = config->mic_ep_mps;
 
     s_usb_itf[STREAM_UAC_SPK].type = STREAM_UAC_SPK;
     s_usb_itf[STREAM_UAC_SPK].name = "SPK";
@@ -3200,7 +3206,8 @@ esp_err_t uac_streaming_config(const uac_config_t *config)
     }
     if (config->mic_samples_frequence) {
         //using samples_frequence as active flag
-        s_usb_itf[STREAM_UAC_MIC].packets_per_urb = s_uac_dev.mic_min_bytes / s_usb_itf[STREAM_UAC_MIC].bytes_per_packet;
+        s_uac_dev.mic_ms_bytes = config->mic_samples_frequence / 1000 * config->mic_bit_resolution / 8;
+        s_usb_itf[STREAM_UAC_MIC].packets_per_urb = s_uac_dev.mic_min_bytes / s_uac_dev.mic_ms_bytes;
         s_uac_dev.mic_active = true;
     }
     if (config->spk_samples_frequence) {
