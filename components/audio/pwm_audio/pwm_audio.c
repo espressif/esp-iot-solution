@@ -777,6 +777,7 @@ esp_err_t pwm_audio_stop(void)
     /**< timer disable interrupt */
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
     gptimer_stop(g_gptimer);
+    gptimer_disable(g_gptimer);
 #else
     timer_disable_intr(handle->config.tg_num, handle->config.timer_num);
 #endif
