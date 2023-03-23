@@ -8,6 +8,7 @@
     IDF_CCACHE_ENABLE: "1"
     BATCH_BUILD: "1"
     V: "0"
+    WARNING_STR: ""
 
 .build_examples_template: &build_examples_template
   <<: *build_template
@@ -40,6 +41,7 @@
       --build-log build_log.txt
       --size-file size.json
       --check-warnings
+      --ignore-warning-str "$WARNING_STR"
       --collect-size-info size_info.txt
       --default-build-targets $IDF_TARGET
 
@@ -178,15 +180,6 @@ build_example_check_pedestrian_flow_v4.4:
     IDF_TARGET: esp32,esp32s2,esp32s3,esp32c3
     EXAMPLE_DIR: examples/check_pedestrian_flow
 
-build_example_decompress_xz_compressed_ota_v4.4:
-  extends:
-    - .build_examples_template
-    - .rules:build:example_decompress_xz_compressed_ota
-  image: espressif/idf:release-v4.4
-  variables:
-    IDF_TARGET: esp32c3
-    EXAMPLE_DIR: examples/decompress/xz_compressed_ota
-
 build_example_extended_vfs_gpio_gpio_simple_v4.4:
   extends:
     - .build_examples_template
@@ -303,6 +296,16 @@ build_example_lighting_lightbulb_v5.0:
   variables:
     IDF_TARGET: esp32,esp32s2,esp32s3,esp32c2,esp32c3
     EXAMPLE_DIR: examples/lighting/lightbulb
+
+build_example_ota_simple_ota_example_v5.0:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_ota_simple_ota_example
+  image: espressif/idf:release-v5.0
+  variables:
+    IDF_TARGET: esp32c2,esp32c3
+    EXAMPLE_DIR: examples/ota/simple_ota_example
+    WARNING_STR: "1/2 app partitions are too small"
 
 build_example_screen_v4.4:
   extends:

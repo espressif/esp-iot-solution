@@ -14,6 +14,11 @@
   - "components/ble_profiles/esp/ble_ota/**/*"
   - "components/tools/cmake_utilities/package_manager.cmake"
 
+.patterns-components_bootloader_support_plus: &patterns-components_bootloader_support_plus
+  - "components/bootloader_support_plus/**/*"
+  - "components/utilities/xz/**/*"
+  - "components/tools/cmake_utilities/package_manager.cmake"
+
 .patterns-components_bus: &patterns-components_bus
   - "components/bus/**/*"
 
@@ -182,9 +187,6 @@
 .patterns-example_common_components_camera: &patterns-example_common_components_camera
   - "examples/common_components/camera/**/*"
 
-.patterns-example_decompress_xz_compressed_ota: &patterns-example_decompress_xz_compressed_ota
-  - "examples/decompress/xz_compressed_ota/**/*"
-
 .patterns-example_extended_vfs_gpio_gpio_simple: &patterns-example_extended_vfs_gpio_gpio_simple
   - "examples/extended_vfs/gpio/gpio_simple/**/*"
 
@@ -211,6 +213,9 @@
 
 .patterns-example_lighting_lightbulb: &patterns-example_lighting_lightbulb
   - "examples/lighting/lightbulb/**/*"
+
+.patterns-example_ota_simple_ota_example: &patterns-example_ota_simple_ota_example
+  - "examples/ota/simple_ota_example/**/*"
 
 .patterns-example_screen: &patterns-example_screen
   - "examples/screen/**/*"
@@ -334,13 +339,6 @@
     - <<: *if-dev-push
       changes: *patterns-example_check_pedestrian_flow
 
-.rules:build:example_decompress_xz_compressed_ota:
-  rules:
-    - <<: *if-protected
-    - <<: *if-label-build
-    - <<: *if-dev-push
-      changes: *patterns-example_decompress_xz_compressed_ota
-
 .rules:build:example_extended_vfs_gpio_gpio_simple:
   rules:
     - <<: *if-protected
@@ -427,6 +425,15 @@
       changes: *patterns-components_led_lightbulb_driver
     - <<: *if-dev-push
       changes: *patterns-example_lighting_lightbulb
+
+.rules:build:example_ota_simple_ota_example:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_bootloader_support_plus
+    - <<: *if-dev-push
+      changes: *patterns-example_ota_simple_ota_example
 
 .rules:build:example_screen:
   rules:
