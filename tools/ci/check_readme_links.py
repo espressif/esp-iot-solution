@@ -29,7 +29,6 @@ from collections import defaultdict, namedtuple
 from pathlib import Path
 
 EXCLUDE_DOCS_LIST = ["examples/hmi/lvgl_example/components/lv_examples/lv_examples/**.md",
-                     "examples/decompress/xz_compressed_ota/bootloader_components/tools/libdivsufsort/**.md",
                      "examples/hmi/lvgl_example/components/lv_examples/lv_examples/src/lv_demo_keypad_encoder/**.md",
                      "examples/hmi/lvgl_wificonfig/lvgl_wificonfig_cn.md",
                      "examples/get-started/blink/README.md"]

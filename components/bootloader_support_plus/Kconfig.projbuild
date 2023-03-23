@@ -1,0 +1,32 @@
+menu "Bootloader config (Custom)"
+    config BOOTLOADER_COMPRESSED_ENABLED
+        bool "Enable compressed OTA support"
+        default y
+
+    choice BOOTLOADER_CUSTOM_DECOMPRESSOR
+        prompt "Choose decompressor"
+        default BOOTLOADER_DECOMPRESSOR_XZ
+        depends on BOOTLOADER_COMPRESSED_ENABLED
+        help
+            Choose the corresponding decompression method to decompress the compressed OTA binary.
+
+        config BOOTLOADER_DECOMPRESSOR_XZ
+        bool "XZ"
+        help
+            Using XZ decompressor in custom bootloader.
+            
+    endchoice
+    
+    config BOOTLOADER_CUSTOM_DEBUG_ON
+        bool "Turn on debug log in custom bootloader"
+        default n
+
+    config SKIP_VALIDATE_CUSTOM_COMPRESSED_HEADER
+        bool "Skip compressed header validation after downloading compressed image"
+        default n
+
+    config SKIP_VALIDATE_CUSTOM_COMPRESSED_DATA
+        bool "Skip compressed data validation in custom bootloader"
+        default n
+
+endmenu
