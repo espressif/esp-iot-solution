@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.1.1 - 2023-03-20
+
+### Bug Fixes:
+
+* Disable gptimer in function pwm_audio_stop and pwm_audio_deinit.
+
 ## v1.1.0 - 2023-02-20
 
 ### Enhancements:

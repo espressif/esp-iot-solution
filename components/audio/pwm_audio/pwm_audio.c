@@ -2,6 +2,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+
 #include <inttypes.h>
 #include <string.h>
 #include "freertos/FreeRTOS.h"
@@ -500,8 +501,9 @@ esp_err_t pwm_audio_init(const pwm_audio_config_t *cfg)
     };
 
     res = gptimer_new_timer(&timer_config, &g_gptimer);
-    PWM_AUDIO_CHECK(ESP_OK == res, "Timer group configuration failed", ESP_FAIL);
-    gptimer_register_event_callbacks(g_gptimer, &cbs, NULL);
+    PWM_AUDIO_CHECK(ESP_OK == res, "gptimer configuration failed", res);
+    res = gptimer_register_event_callbacks(g_gptimer, &cbs, NULL);
+    PWM_AUDIO_CHECK(ESP_OK == res, "gptimer register event callback failed", res);
 #else
     /* Select and initialize basic parameters of the timer */
     timer_config_t config = {
@@ -516,8 +518,9 @@ esp_err_t pwm_audio_init(const pwm_audio_config_t *cfg)
     config.clk_src = TIMER_SRC_CLK_APB;  /* ESP32-S2 specific control bit !!!*/
 #endif
     res = timer_init(handle->config.tg_num, handle->config.timer_num, &config);
-    PWM_AUDIO_CHECK(ESP_OK == res, "Timer group configuration failed", ESP_FAIL);
-    timer_isr_register(handle->config.tg_num, handle->config.timer_num, timer_group_isr, NULL, ESP_INTR_FLAG_IRAM, NULL);
+    PWM_AUDIO_CHECK(ESP_OK == res, "Timer group configuration failed", res);
+    res = timer_isr_register(handle->config.tg_num, handle->config.timer_num, timer_group_isr, NULL, ESP_INTR_FLAG_IRAM, NULL);
+    PWM_AUDIO_CHECK(ESP_OK == res, "Timer register event callback failed", res);
 #endif
     /**< set a initial parameter */
     res = pwm_audio_set_param(16000, 8, 2);
@@ -527,7 +530,7 @@ esp_err_t pwm_audio_init(const pwm_audio_config_t *cfg)
 
     handle->status = PWM_AUDIO_STATUS_IDLE;
 
-    return res;
+    return ESP_OK;
 }
 
 esp_err_t pwm_audio_set_param(int rate, ledc_timer_bit_t bits, int ch)
@@ -561,7 +564,8 @@ esp_err_t pwm_audio_set_param(int rate, ledc_timer_bit_t bits, int ch)
     /* Configure the alarm value and the interrupt on alarm. */
     res = timer_set_alarm_value(handle->config.tg_num, handle->config.timer_num, (TIMER_BASE_CLK / TIMER_DIVIDER) / handle->framerate);
 #endif
-    return res;
+    PWM_AUDIO_CHECK(ESP_OK == res, "pwm_audio set param failed", res);
+    return ESP_OK;
 }
 
 esp_err_t pwm_audio_set_sample_rate(int rate)
@@ -583,7 +587,8 @@ esp_err_t pwm_audio_set_sample_rate(int rate)
 #else
     res = timer_set_alarm_value(handle->config.tg_num, handle->config.timer_num, (TIMER_BASE_CLK / TIMER_DIVIDER) / handle->framerate);
 #endif
-    return res;
+    PWM_AUDIO_CHECK(ESP_OK == res, "pwm_audio set sample rate failed", res);
+    return ESP_OK;
 }
 
 esp_err_t pwm_audio_set_volume(int8_t volume)
@@ -760,15 +765,19 @@ esp_err_t pwm_audio_start(void)
     res = gptimer_enable(g_gptimer);
     PWM_AUDIO_CHECK(res == ESP_OK, "gptimer enable fail", res);
     res = gptimer_start(g_gptimer);
+    PWM_AUDIO_CHECK(res == ESP_OK, "gptimer start fail", res);
 #else
-    timer_enable_intr(handle->config.tg_num, handle->config.timer_num);
+    res = timer_enable_intr(handle->config.tg_num, handle->config.timer_num);
+    PWM_AUDIO_CHECK(res == ESP_OK, "timer enable Interrupt fail", res);
     res = timer_start(handle->config.tg_num, handle->config.timer_num);
+    PWM_AUDIO_CHECK(res == ESP_OK, "timer start fail", res);
 #endif
-    return res;
+    return ESP_OK;
 }
 
 esp_err_t pwm_audio_stop(void)
 {
+    esp_err_t res;
     pwm_audio_data_t *handle = g_pwm_audio_handle;
     PWM_AUDIO_CHECK(NULL != handle, PWM_AUDIO_NOT_INITIALIZED, ESP_ERR_INVALID_STATE);
     PWM_AUDIO_CHECK(handle->status == PWM_AUDIO_STATUS_BUSY, PWM_AUDIO_STATUS_ERROR, ESP_ERR_INVALID_STATE);
@@ -776,9 +785,15 @@ esp_err_t pwm_audio_stop(void)
     /**< just disable timer ,keep pwm output to reduce switching nosie */
     /**< timer disable interrupt */
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
-    gptimer_stop(g_gptimer);
+    res = gptimer_stop(g_gptimer);
+    PWM_AUDIO_CHECK(res == ESP_OK, "gptimer stop failed", res);
+    res = gptimer_disable(g_gptimer);
+    PWM_AUDIO_CHECK(res == ESP_OK, "gptimer disable failed", res);
 #else
-    timer_disable_intr(handle->config.tg_num, handle->config.timer_num);
+    res = timer_pause(handle->config.tg_num, handle->config.timer_num);
+    PWM_AUDIO_CHECK(res == ESP_OK, "timer pause failed", res);
+    res = timer_disable_intr(handle->config.tg_num, handle->config.timer_num);
+    PWM_AUDIO_CHECK(res == ESP_OK, "timer disable failed", res);
 #endif
     rb_flush(handle->ringbuf);  /**< flush ringbuf, avoid play noise */
     handle->status = PWM_AUDIO_STATUS_IDLE;
@@ -787,16 +802,17 @@ esp_err_t pwm_audio_stop(void)
 
 esp_err_t pwm_audio_deinit(void)
 {
+    esp_err_t res;
     pwm_audio_data_t *handle = g_pwm_audio_handle;
     PWM_AUDIO_CHECK(handle != NULL, PWM_AUDIO_PARAM_ADDR_ERROR, ESP_FAIL);
     handle->status = PWM_AUDIO_STATUS_UN_INIT;
 
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
-    gptimer_stop(g_gptimer);
-    gptimer_del_timer(g_gptimer);
+    res = gptimer_del_timer(g_gptimer);
+    PWM_AUDIO_CHECK(res == ESP_OK, "gptimer del failed", res);
 #else
-    timer_pause(handle->config.tg_num, handle->config.timer_num);
-    timer_disable_intr(handle->config.tg_num, handle->config.timer_num);
+    res = timer_deinit(handle->config.tg_num, handle->config.timer_num);
+    PWM_AUDIO_CHECK(res == ESP_OK, "timer deinit failed", res);
 #endif
 
     for (size_t i = 0; i < PWM_AUDIO_CH_MAX; i++) {
