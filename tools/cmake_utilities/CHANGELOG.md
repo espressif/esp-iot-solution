@@ -1,3 +1,7 @@
+## v0.4.3 - 2023-03-24
+
+* relinker: support decoding to get IRAM excluded libraries
+
 ## v0.4.2 - 2023-03-20
 
 ### Bugfix:

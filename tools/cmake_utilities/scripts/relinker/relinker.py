@@ -20,6 +20,7 @@ import csv
 import os
 import subprocess
 import sys
+import re
 from io import StringIO
 import configuration
 
@@ -74,6 +75,27 @@ def func2sect(func):
             secs.append(l)
     return secs
 
+class filter_c:
+    def __init__(self, file):
+        lines = open(file).read().splitlines()
+        self.libs_desc = ''
+        self.libs = ''
+        for l in lines:
+            if ') .iram1 EXCLUDE_FILE(*' in l and ') .iram1.*)' in l:
+                desc = '\(EXCLUDE_FILE\((.*)\) .iram1 '
+                self.libs_desc = re.search(desc, l)[1]
+                self.libs = self.libs_desc.replace('*', '')
+                return
+    
+    def match(self, lib):
+        if lib in self.libs:
+            print('Remove lib %s'%(lib))
+            return True
+        return False
+    
+    def add(self):
+        return self.libs_desc
+
 class target_c:
     def __init__(self, lib, lib_path, file, fsecs):
         self.lib   = lib
@@ -97,11 +119,17 @@ class target_c:
         return s
 
 class relink_c:
-    def __init__(self, library_file, object_file, function_file, sdkconfig_file, missing_function_info):
+    def __init__(self, input, library_file, object_file, function_file, sdkconfig_file, missing_function_info):
+        self.filter = filter_c(input)
+        
         libraries = configuration.generator(library_file, object_file, function_file, sdkconfig_file, missing_function_info, espidf_objdump)
         self.targets = list()
         for i in libraries.libs:
             lib = libraries.libs[i]
+
+            if self.filter.match(lib.name):
+                continue
+
             for j in lib.objs:
                 obj = lib.objs[j]
                 self.targets.append(target_c(lib.name, lib.path, obj.name,
@@ -128,7 +156,9 @@ class relink_c:
             if len(secs) > 0:
                 flash_include.append('    %s(%s)'%(t.desc, ' '.join(secs)))
 
-        self.iram1_exclude = '    *(EXCLUDE_FILE(%s) .iram1.*) *(.iram1)' % (' '.join(iram1_exclude))
+        self.iram1_exclude = '    *(EXCLUDE_FILE(%s %s) .iram1.*) *(EXCLUDE_FILE(%s %s) .iram1)' % \
+                             (self.filter.add(), ' '.join(iram1_exclude), \
+                              self.filter.add(), ' '.join(iram1_exclude))
         self.iram1_include = '\n'.join(iram1_include)
         self.flash_include = '\n'.join(flash_include)
 
@@ -137,6 +167,11 @@ class relink_c:
         logging.debug('Flash Include: %s'%(self.flash_include))
 
     def __replace__(self, lines):
+        def is_iram_desc(l):
+            if '*(.iram1 .iram1.*)' in l or (') .iram1 EXCLUDE_FILE(*' in l and ') .iram1.*)' in l):
+                return True
+            return False
+
         iram_start = False
         flash_done = False
 
@@ -148,7 +183,7 @@ class relink_c:
             elif '.dram0.data :' in l:
                 logging.debug('end to process .iram0.text')
                 iram_start = False
-            elif '*(.iram1 .iram1.*)' in l:
+            elif is_iram_desc(l):
                 if iram_start:
                     lines[i] = '%s\n%s\n'%(self.iram1_exclude, self.iram1_include)
             elif '(.stub .gnu.warning' in l:
@@ -278,7 +313,7 @@ def main():
     global espidf_objdump
     espidf_objdump = args.objdump
 
-    relink = relink_c(args.library, args.object, args.function, args.sdkconfig, args.missing_function_info)
+    relink = relink_c(args.input, args.library, args.object, args.function, args.sdkconfig, args.missing_function_info)
     relink.save(args.input, args.output)
 
 if __name__ == '__main__':
