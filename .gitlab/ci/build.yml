@@ -334,6 +334,15 @@ build_example_sensors_sensor_hub_monitor_v4.4:
     IDF_TARGET: esp32,esp32s2
     EXAMPLE_DIR: examples/sensors/sensor_hub_monitor
 
+build_example_usb_device_usb_msc_wireless_disk_v5.0:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_usb_device_usb_msc_wireless_disk
+  image: espressif/idf:release-v5.0
+  variables:
+    IDF_TARGET: esp32s2,esp32s3
+    EXAMPLE_DIR: examples/usb/device/usb_msc_wireless_disk
+
 build_example_usb_device_usb_surface_dial_v4.4:
   extends:
     - .build_examples_template
