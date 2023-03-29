@@ -10,8 +10,8 @@
   - "components/audio/pwm_audio/**/*"
   - "components/tools/cmake_utilities/package_manager.cmake"
 
-.patterns-components_ble_profiles_esp_ble_ota: &patterns-components_ble_profiles_esp_ble_ota
-  - "components/ble_profiles/esp/ble_ota/**/*"
+.patterns-components_bluetooth_ble_profiles_esp_ble_ota: &patterns-components_bluetooth_ble_profiles_esp_ble_ota
+  - "components/bluetooth/ble_profiles/esp/ble_ota/**/*"
   - "components/tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_bootloader_support_plus: &patterns-components_bootloader_support_plus
@@ -286,7 +286,7 @@
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-dev-push
-      changes: *patterns-components_ble_profiles_esp_ble_ota
+      changes: *patterns-components_bluetooth_ble_profiles_esp_ble_ota
     - <<: *if-dev-push
       changes: *patterns-example_bluetooth_ble_ota
 
