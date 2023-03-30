@@ -37,7 +37,8 @@
     - python -m idf_build_apps build -vv
       -p $EXAMPLE_DIR 
       -t all
-      --build-dir build_@t/@w
+      --config "sdkconfig.ci.*="
+      --build-dir build_@t_@w
       --build-log build_log.txt
       --size-file size.json
       --check-warnings

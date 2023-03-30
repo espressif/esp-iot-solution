@@ -148,7 +148,7 @@ esp_ble_ota_write_chr(struct os_mbuf *om)
             ESP_LOGD(TAG, "Last sector");
         } else {
             // sector error
-            ESP_LOGE(TAG, "%s - sector index error, cur: %ld, recv: %d", __func__,
+            ESP_LOGE(TAG, "%s - sector index error, cur: %" PRIu32 ", recv: %d", __func__,
                      cur_sector, (om->om_data[0] + (om->om_data[1] * 256)));
             cmd_ack[0] = om->om_data[0];
             cmd_ack[1] = om->om_data[1];
@@ -170,7 +170,7 @@ esp_ble_ota_write_chr(struct os_mbuf *om)
             ESP_LOGD(TAG, "last packet");
             goto write_ota_data;
         } else { // packet seq error
-            ESP_LOGE(TAG, "%s - packet index error, cur: %ld, recv: %d", __func__,
+            ESP_LOGE(TAG, "%s - packet index error, cur: %" PRIu32 ", recv: %d", __func__,
                      cur_packet, om->om_data[2]);
         }
     }
@@ -185,7 +185,7 @@ write_ota_data:
 
         fw_buf_offset += pargs.data_out_len;
     }
-    ESP_LOGD(TAG, "DEBUG: Sector:%ld, total length:%ld, length:%d", cur_sector,
+    ESP_LOGD(TAG, "DEBUG: Sector:%" PRIu32 ", total length:%" PRIu32 ", length:%d", cur_sector,
              fw_buf_offset, pargs.data_out_len);
 #else
     memcpy(fw_buf + fw_buf_offset, om->om_data + 3, om->om_len - 3);
@@ -200,13 +200,13 @@ write_ota_data:
         temp = NULL;
     }
 
-    ESP_LOGD(TAG, "DEBUG: Sector:%ld, total length:%ld, length:%d", cur_sector,
+    ESP_LOGD(TAG, "DEBUG: Sector:%" PRIu32 ", total length:%" PRIu32 ", length:%d", cur_sector,
              fw_buf_offset, om->om_len - 3);
 #endif
     if (om->om_data[2] == 0xff) {
         cur_packet = 0;
         cur_sector++;
-        ESP_LOGD(TAG, "DEBUG: recv %ld sector", cur_sector);
+        ESP_LOGD(TAG, "DEBUG: recv %" PRIu32 " sector", cur_sector);
         goto sector_end;
     } else {
         ESP_LOGD(TAG, "DEBUG: wait next packet");
@@ -347,7 +347,7 @@ ble_ota_start_write_chr(struct os_mbuf *om)
 #ifdef CONFIG_PRE_ENC_OTA
         ota_total_len -= ENC_HEADER;
 #endif
-        ESP_LOGI(TAG, "recv ota start cmd, fw_length = %ld", ota_total_len);
+        ESP_LOGI(TAG, "recv ota start cmd, fw_length = %" PRIu32 "", ota_total_len);
 
         fw_buf = (uint8_t *)malloc(ota_block_size * sizeof(uint8_t));
         if (fw_buf == NULL) {
