@@ -120,8 +120,8 @@ static void camera_frame_cb(uvc_frame_t *frame, void *ptr)
     }
 
     static void *jpeg_buffer = NULL;
-    assert(jpeg_buffer != NULL);
     ppbuffer_get_write_buf(ppbuffer_handle, &jpeg_buffer);
+    assert(jpeg_buffer != NULL);
     esp_jpeg_decoder_one_picture((uint8_t *)frame->data, frame->data_bytes, jpeg_buffer);
     ppbuffer_set_write_done(ppbuffer_handle);
 }
