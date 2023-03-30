@@ -1,3 +1,7 @@
+## v0.4.4 - 2023-03-31
+
+* relinker: support same name objects in one library
+
 ## v0.4.3 - 2023-03-24
 
 * relinker: support decoding to get IRAM excluded libraries

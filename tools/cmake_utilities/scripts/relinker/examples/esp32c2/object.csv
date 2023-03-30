@@ -46,6 +46,8 @@ libfreertos.a,port_systick.c.obj,esp-idf/freertos/CMakeFiles/__idf_freertos.dir/
 libfreertos.a,queue.c.obj,esp-idf/freertos/CMakeFiles/__idf_freertos.dir/FreeRTOS-Kernel/queue.c.obj
 libfreertos.a,tasks.c.obj,esp-idf/freertos/CMakeFiles/__idf_freertos.dir/FreeRTOS-Kernel/tasks.c.obj
 libhal.a,brownout_hal.c.obj,esp-idf/hal/CMakeFiles/__idf_hal.dir/esp32c2/brownout_hal.c.obj
+libhal.a,efuse_hal.c.obj,esp-idf/hal/CMakeFiles/__idf_hal.dir/efuse_hal.c.obj
+libhal.a,efuse_hal.c.obj,esp-idf/hal/CMakeFiles/__idf_hal.dir/esp32c2/efuse_hal.c.obj
 libheap.a,heap_caps.c.obj,esp-idf/heap/CMakeFiles/__idf_heap.dir/heap_caps.c.obj
 libheap.a,multi_heap.c.obj,./esp-idf/heap/CMakeFiles/__idf_heap.dir/multi_heap.c.obj
 liblog.a,log_freertos.c.obj,esp-idf/log/CMakeFiles/__idf_log.dir/log_freertos.c.obj
