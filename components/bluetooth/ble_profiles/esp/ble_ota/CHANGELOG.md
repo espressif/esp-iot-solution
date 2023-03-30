@@ -44,3 +44,8 @@
 
 * BLE-OTA:
   * Use cu_pkg_define_version to define the version of this component.
+
+## v0.1.8 - 2023-03-31
+
+* BLE-OTA:
+  * Fixed errors for release v4.4
