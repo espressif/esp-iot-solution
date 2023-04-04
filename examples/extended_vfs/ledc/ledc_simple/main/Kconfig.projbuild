@@ -1,0 +1,26 @@
+menu "Example Configuration"
+
+    choice LEDC_DEVICE
+        prompt "Select LEDC Device"
+        default LEDC_DEVICE_LEDC0
+        help
+            Select LEDC Device for exmaple.
+            please note that not all developemnt boards support all following
+            devices.
+
+        config LEDC_DEVICE_LEDC0
+            bool "LEDC0"
+        config LEDC_DEVICE_LEDC1
+            bool "LEDC1"
+        config LEDC_DEVICE_LEDC2
+            bool "LEDC2"
+    endchoice
+
+    config LEDC_FREQUENCY
+        int "LEDC Frequency(Hz)"
+        default 1000  
+
+    config LEDC_CHANNEL_OUPUT_PIN
+        int "LEDC Output Pin"
+        default 4
+endmenu

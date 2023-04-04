@@ -196,6 +196,9 @@
 .patterns-example_extended_vfs_i2c_i2c_tt21100: &patterns-example_extended_vfs_i2c_i2c_tt21100
   - "examples/extended_vfs/i2c/i2c_tt21100/**/*"
 
+.patterns-example_extended_vfs_ledc_ledc_simple: &patterns-example_extended_vfs_ledc_ledc_simple
+  - "examples/extended_vfs/ledc/ledc_simple/**/*"
+
 .patterns-example_get_started_blink: &patterns-example_get_started_blink
   - "examples/get-started/blink/**/*"
 
@@ -368,6 +371,15 @@
       changes: *patterns-components_extended_vfs
     - <<: *if-dev-push
       changes: *patterns-example_extended_vfs_i2c_i2c_tt21100
+
+.rules:build:example_extended_vfs_ledc_ledc_simple:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_extended_vfs
+    - <<: *if-dev-push
+      changes: *patterns-example_extended_vfs_ledc_ledc_simple
 
 .rules:build:example_get_started_blink:
   rules:

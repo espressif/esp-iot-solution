@@ -6,6 +6,7 @@ Extended VFS is designed to make applications read/write/configure peripherals b
 
 * GPIO
 * I2C
+* LEDC
 
 You can refer to [examples](https://github.com/espressif/esp-iot-solution/tree/master/examples/extended_vfs) to learn usage and more details.
 
@@ -31,7 +32,7 @@ Then the example `gpio_simple` will be downloaded in current folder, you can che
 1. [gpio_simple](https://github.com/espressif/esp-iot-solution/tree/master/examples/extended_vfs/gpio/gpio_simple)
 2. [i2c_bh1750](https://github.com/espressif/esp-iot-solution/tree/master/examples/extended_vfs/i2c/i2c_bh1750)
 3. [i2c_tt21100](https://github.com/espressif/esp-iot-solution/tree/master/examples/extended_vfs/i2c/i2c_tt21100)
-
+4. [ledc_simple](https://github.com/espressif/esp-iot-solution/tree/master/examples/extended_vfs/ledc/ledc_simple)
 
 ### Q&A
 

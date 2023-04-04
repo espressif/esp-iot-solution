@@ -18,6 +18,13 @@ menu "Extended VFS"
                 help
                     Select this option, then "/dev/i2c/x" (x=0, 1, ...) will be registered
                     to VFS.
+
+            config EXTENDED_VFS_LEDC
+                bool "LEDC"
+                default y
+                help
+                    Select this option, then "/dev/ledc/x" (x=0, 1, ...) will be registered
+                    to VFS.
         endmenu
     endif
 endmenu
