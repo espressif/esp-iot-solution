@@ -9,17 +9,23 @@
 #include <soc/soc.h>
 
 #ifdef BOOTLOADER_BUILD
-#define XZ_BOOT_HEAP_ADDRESS				SOC_DRAM_LOW // (0x3FC7C000 + 0x4000) // for esp32c3 chip, you can use the free space form this address, pay attention your chip for this
-static uint8_t* heap_pool = (uint8_t*)XZ_BOOT_HEAP_ADDRESS; // now these memory is not been used, the address have to be 4-byte aligned.
-static uint32_t heap_used_offset = 0;
 
+#ifdef CONFIG_IDF_TARGET_ESP32
+#define XZ_BOOT_HEAP_START_ADDRESS  0x3FFB0000
+#define XZ_BOOT_HEAP_END_ADDRESS    0x3FFE0000
+#elif (CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3)
+#define XZ_BOOT_HEAP_START_ADDRESS  SOC_DRAM_LOW // (0x3FC7C000 + 0x4000) // for esp32c3 chip, you can use the free space form this address, pay attention your chip for this
 extern uint32_t* _dram_start;
+#define XZ_BOOT_HEAP_END_ADDRESS    (uint32_t)&_dram_start
+#endif
+static uint8_t* heap_pool = (uint8_t*)XZ_BOOT_HEAP_START_ADDRESS; // now these memory is not been used, the address have to be 4-byte aligned.
+static uint32_t heap_used_offset = 0;
 
 void* malloc(size_t size)
 {
 	void* p = NULL;
 
-	if (heap_used_offset + size < (uint32_t)&_dram_start) {
+	if (heap_used_offset + size < XZ_BOOT_HEAP_END_ADDRESS) {
 		p = &heap_pool[heap_used_offset];
 		heap_used_offset += size;
 	}
