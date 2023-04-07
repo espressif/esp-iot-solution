@@ -50,7 +50,7 @@ if(CONFIG_CU_RELINKER_ENABLE)
     idf_build_get_property(link_depends __LINK_DEPENDS)
 
     add_custom_command(OUTPUT ${link_dst_file}
-                        COMMAND ${python} ${relinker_script}
+                        COMMAND ${python} -B ${relinker_script}
                                 ${relinker_opts}
                         COMMAND ${CMAKE_COMMAND} -E copy
                                 ${link_dst_file}
