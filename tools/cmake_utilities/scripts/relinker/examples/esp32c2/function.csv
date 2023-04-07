@@ -280,6 +280,9 @@ libfreertos.a,tasks.c.obj,xTaskPriorityInherit,CONFIG_FREERTOS_PLACE_FUNCTIONS_I
 libfreertos.a,tasks.c.obj,prvGetExpectedIdleTime,FALSE
 libfreertos.a,tasks.c.obj,vTaskStepTick,FALSE
 libhal.a,brownout_hal.c.obj,brownout_hal_intr_clear,
+libhal.a,efuse_hal.c.obj,efuse_hal_chip_revision,
+libhal.a,efuse_hal.c.obj,efuse_hal_get_major_chip_version,
+libhal.a,efuse_hal.c.obj,efuse_hal_get_minor_chip_version,
 libheap.a,heap_caps.c.obj,dram_alloc_to_iram_addr,
 libheap.a,heap_caps.c.obj,heap_caps_free,
 libheap.a,heap_caps.c.obj,heap_caps_realloc_base,

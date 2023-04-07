@@ -64,36 +64,41 @@ class sdkconfig_c:
         return True
 
 class object_c:
-    def read_dump_info(self, path):
+    def read_dump_info(self, pathes):
         new_env = os.environ.copy()
         new_env['LC_ALL'] = 'C'
-        try:
-            dump = StringIO(subprocess.check_output([espidf_objdump, '-t', path], env=new_env).decode())
-            return dump.readlines()
-        except subprocess.CalledProcessError as e:
-            raise RuntimeError('cmd:%s result:%s'%(e.cmd, e.returncode))
+        dumps = list()
+        print('pathes:', pathes)
+        for path in pathes:
+            try:
+                dump = StringIO(subprocess.check_output([espidf_objdump, '-t', path], env=new_env).decode())
+                dumps.append(dump.readlines())
+            except subprocess.CalledProcessError as e:
+                raise RuntimeError('cmd:%s result:%s'%(e.cmd, e.returncode))
+        return dumps
 
-    def get_func_section(self, dump, func):
-        for l in dump:
-            if ' %s'%(func) in l and '*UND*' not in l:
-                m = re.match(r'(\S*)\s*([glw])\s*([F|O])\s*(\S*)\s*(\S*)\s*(\S*)\s*', l, re.M|re.I)
-                if m and m[6] == func:
-                    return m[4].replace('.text.', '')
+    def get_func_section(self, dumps, func):
+        for dump in dumps:
+            for l in dump:
+                if ' %s'%(func) in l and '*UND*' not in l:
+                    m = re.match(r'(\S*)\s*([glw])\s*([F|O])\s*(\S*)\s*(\S*)\s*(\S*)\s*', l, re.M|re.I)
+                    if m and m[6] == func:
+                        return m[4].replace('.text.', '')
         if espidf_missing_function_info:
             print('%s failed to find section'%(func))
             return None
         else:
             raise RuntimeError('%s failed to find section'%(func))
 
-    def __init__(self, name, path, libray):
+    def __init__(self, name, pathes, libray):
         self.name = name
-        self.path = path
         self.libray = libray
-        self.dump = self.read_dump_info(self.path)
         self.funcs = dict()
+        self.pathes = pathes
+        self.dumps = self.read_dump_info(pathes)
     
     def append(self, func):
-        section = self.get_func_section(self.dump, func)
+        section = self.get_func_section(self.dumps, func)
         if section != None:
             self.funcs[func] = section
     
@@ -146,7 +151,9 @@ class paths_c:
 
         if lib not in self.paths:
             self.paths[lib] = dict()
-        self.paths[lib][obj] = path
+        if obj not in self.paths[lib]:
+            self.paths[lib][obj] = list()
+        self.paths[lib][obj].append(path)
     
     def index(self, lib, obj):
         if lib not in self.paths:
@@ -179,7 +186,7 @@ def generator(library_file, object_file, function_file, sdkconfig_file, missing_
         obj_path = obj_paths.index(d['library'], d['object'])
         if not obj_path:
             obj_path = lib_path
-        libraries.append(d['library'], lib_path, d['object'], obj_path, d['function'])
+        libraries.append(d['library'], lib_path[0], d['object'], obj_path, d['function'])
     return libraries
 
 def main():
