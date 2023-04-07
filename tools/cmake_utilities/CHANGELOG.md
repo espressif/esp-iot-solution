@@ -1,5 +1,6 @@
-## v0.4.4 - 2023-03-31
+## v0.4.4 - 2023-04-07
 
+* relinker: suppressing the creation of `__pycache__`
 * relinker: support same name objects in one library
 
 ## v0.4.3 - 2023-03-24

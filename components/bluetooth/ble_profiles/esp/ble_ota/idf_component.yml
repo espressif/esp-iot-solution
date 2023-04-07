@@ -10,4 +10,4 @@ dependencies:
   espressif/esp_encrypted_img: "^2.0.1"
   cmake_utilities: "0.*"
 examples:
-  - path: ../../../../examples/bluetooth/ble_ota
+  - path: ../../../../../examples/bluetooth/ble_ota
