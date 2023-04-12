@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v0.4.12 - 2023-04-12
+
+### Bug Fixes:
+
+* Mic:
+  * Fix mic_min_bytes may exceed the limits
+
 ## v0.4.11 - 2023-03-22
 
 ### Bug Fixes:
