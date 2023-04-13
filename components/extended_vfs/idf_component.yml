@@ -1,4 +1,4 @@
-version: "0.2.0"
+version: "0.3.0"
 description: Extended Virtual File-system
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/extended_vfs
 dependencies:
@@ -9,3 +9,5 @@ examples:
   - path:  ../../examples/extended_vfs/i2c/i2c_bh1750
   - path:  ../../examples/extended_vfs/i2c/i2c_tt21100
   - path:  ../../examples/extended_vfs/ledc/ledc_simple
+  - path:  ../../examples/extended_vfs/spi/spi_master_simple
+  - path:  ../../examples/extended_vfs/spi/spi_slave_simple

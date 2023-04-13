@@ -14,6 +14,10 @@ if(CONFIG_EXTENDED_VFS)
     if(CONFIG_EXTENDED_VFS_LEDC)
         list(APPEND srcs "src/ext_vfs_ledc.c")
     endif()
+
+    if(CONFIG_EXTENDED_VFS_SPI)
+        list(APPEND srcs "src/ext_vfs_spi.c")
+    endif()
 endif()
 
 idf_component_register(SRCS ${srcs}

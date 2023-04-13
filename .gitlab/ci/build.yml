@@ -253,6 +253,42 @@ build_example_extended_vfs_ledc_ledc_simple_v5.0:
     IDF_TARGET: esp32,esp32s2,esp32s3,esp32c2,esp32c3
     EXAMPLE_DIR: examples/extended_vfs/ledc/ledc_simple
 
+build_example_extended_vfs_spi_spi_master_simple_v4.4:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_extended_vfs_spi_spi_master_simple
+  image: espressif/idf:release-v4.4
+  variables:
+    IDF_TARGET: esp32,esp32s2,esp32s3,esp32c3
+    EXAMPLE_DIR: examples/extended_vfs/spi/spi_master_simple
+
+build_example_extended_vfs_spi_spi_master_simple_v5.0:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_extended_vfs_spi_spi_master_simple
+  image: espressif/idf:release-v5.0
+  variables:
+    IDF_TARGET: esp32,esp32s2,esp32s3,esp32c3
+    EXAMPLE_DIR: examples/extended_vfs/spi/spi_master_simple
+
+build_example_extended_vfs_spi_spi_slave_simple_v4.4:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_extended_vfs_spi_spi_slave_simple
+  image: espressif/idf:release-v4.4
+  variables:
+    IDF_TARGET: esp32,esp32s2,esp32s3,esp32c3
+    EXAMPLE_DIR: examples/extended_vfs/spi/spi_slave_simple
+
+build_example_extended_vfs_spi_spi_slave_simple_v5.0:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_extended_vfs_spi_spi_slave_simple
+  image: espressif/idf:release-v5.0
+  variables:
+    IDF_TARGET: esp32,esp32s2,esp32s3,esp32c3
+    EXAMPLE_DIR: examples/extended_vfs/spi/spi_slave_simple
+
 build_example_get_started_blink_v4.4:
   extends:
     - .build_examples_template

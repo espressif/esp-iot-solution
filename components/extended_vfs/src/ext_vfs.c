@@ -28,4 +28,8 @@ void ext_vfs_init(void)
 #ifdef CONFIG_EXTENDED_VFS_LEDC
     ESP_ERROR_CHECK(ext_vfs_ledc_init());
 #endif
+
+#ifdef CONFIG_EXTENDED_VFS_SPI
+    ESP_ERROR_CHECK(ext_vfs_spi_init());
+#endif
 }

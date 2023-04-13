@@ -1,0 +1,33 @@
+menu "Example Configuration"
+
+    choice SPI_DEVICE
+        prompt "Select SPI Device"
+        default SPI_DEVICE_SPI2
+        help
+            Select SPI Device for exmaple.
+            please note that not all developemnt boards support all following
+            devices.
+
+        config SPI_DEVICE_SPI2
+            bool "SPI2"
+
+        config SPI_DEVICE_SPI3
+            bool "SPI3"
+    endchoice
+
+    config SPI_CS_PIN_NUM
+        int "SPI CS Pin Number"
+        default 10
+
+    config SPI_SCLK_PIN_NUM
+        int "SPI SCLK Pin Number"
+        default 12
+
+    config SPI_MOSI_PIN_NUM
+        int "SPI MOSI Pin Number"
+        default 11
+
+    config SPI_MISO_PIN_NUM
+        int "SPI MISO Pin Number"
+        default 13
+endmenu
