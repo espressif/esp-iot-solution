@@ -322,7 +322,17 @@ build_example_ota_simple_ota_example_v5.0:
     - .rules:build:example_ota_simple_ota_example
   image: espressif/idf:release-v5.0
   variables:
-    IDF_TARGET: esp32c2,esp32c3
+    IDF_TARGET: esp32c2,esp32c3,esp32
+    EXAMPLE_DIR: examples/ota/simple_ota_example
+    WARNING_STR: "1/2 app partitions are too small"
+
+build_example_ota_simple_ota_example_v5.1:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_ota_simple_ota_example
+  image: espressif/idf:release-v5.1
+  variables:
+    IDF_TARGET: esp32c2,esp32c3,esp32,esp32c6
     EXAMPLE_DIR: examples/ota/simple_ota_example
     WARNING_STR: "1/2 app partitions are too small"
 
