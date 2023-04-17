@@ -175,7 +175,6 @@ esp_err_t esp_modem_dce_default_start_up(esp_modem_dce_t *dce)
 {
     ESP_MODEM_ERR_CHECK(dce->sync(dce, NULL, NULL) == ESP_OK, "sending sync failed", err);
     ESP_MODEM_ERR_CHECK(dce->set_echo(dce, (void*)false, NULL) == ESP_OK, "set_echo failed", err);
-    ESP_MODEM_ERR_CHECK(dce->set_flow_ctrl(dce, (void*)ESP_MODEM_FLOW_CONTROL_NONE, NULL) == ESP_OK, "set_flow_ctrl failed", err);
     ESP_MODEM_ERR_CHECK(dce->store_profile(dce, NULL, NULL) == ESP_OK, "store_profile failed", err);
     return ESP_OK;
     err:

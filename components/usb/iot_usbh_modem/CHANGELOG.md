@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v0.1.5 - 2023-04-17
+
+* Fix compatibility issue, remove unnecessary command during startup
+
 ## v0.1.4 - 2023-03-09
 
 * Set default SoftAP DNS during Wi-Fi config
