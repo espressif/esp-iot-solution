@@ -14,6 +14,9 @@
 extern "C" {
 #endif
 
+#define ESP_ERR_CUSTOM_OTA_BASE        0x2100
+#define CUSTOM_OTA_IMAGE_TYPE_INVALID (ESP_ERR_CUSTOM_OTA_BASE + 1)
+
 typedef enum {
     DECOMPRESS_ENGINE,
     STORAGE_ENGINE,

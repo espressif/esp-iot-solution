@@ -29,4 +29,12 @@ menu "Bootloader config (Custom)"
         bool "Skip compressed data validation in custom bootloader"
         default n
 
+    config ENABLE_LEGACY_ESP_BOOTLOADER_PLUS_V2_SUPPORT
+        bool "Enable legacy esp bootloader plus v2 support"
+        help
+            This option is reserved to support devices already using esp-bootloader-plus scheme.
+            The triggering decompression mechanism in esp-bootloader-plus scheme and bootloader-support-plus scheme is different, 
+            so they are not compatible. Please make sure you only enable this option when you need the support of esp-bootloader-plus scheme.
+        default n
+
 endmenu

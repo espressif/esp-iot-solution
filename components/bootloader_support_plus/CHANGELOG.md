@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.2.0 - 2023-04-20
+
+### Feature:
+
+* Add support for compressed OTA v2 which is supported in the deprecated esp-bootloader-plus. However, it is recommended to use bootloader_support_plus as much as possible.
+
 ## v0.1.2 - 2023-04-17
 
 ### Feature:

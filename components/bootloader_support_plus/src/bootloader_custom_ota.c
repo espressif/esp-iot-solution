@@ -101,36 +101,103 @@ bootloader_custom_ota_header_t *bootloader_custom_ota_get_header_param(void)
     return &custom_ota_header;
 }
 
+#if CONFIG_ENABLE_LEGACY_ESP_BOOTLOADER_PLUS_V2_SUPPORT
+static esp_err_t bootloader_custom_ota_clear_storage_header()
+{
+#define SEC_SIZE    (1024 * 4)
+    return bootloader_flash_erase_range(custom_ota_config.src_addr, SEC_SIZE);
+}
+
+static bool bootloader_custom_search_partition_pos(uint8_t type, uint8_t subtype, esp_partition_pos_t *pos)
+{
+    const esp_partition_info_t *partitions;
+    esp_err_t err;
+    int num_partitions;
+    bool ret = false;
+
+    partitions = bootloader_mmap(ESP_PARTITION_TABLE_OFFSET, ESP_PARTITION_TABLE_MAX_LEN);
+    if (!partitions) {
+        ESP_LOGE(TAG, "bootloader_mmap(0x%x, 0x%x) failed", ESP_PARTITION_TABLE_OFFSET, ESP_PARTITION_TABLE_MAX_LEN);
+        return ret;
+    }
+    ESP_LOGD(TAG, "mapped partition table 0x%x at 0x%x", ESP_PARTITION_TABLE_OFFSET, (intptr_t)partitions);
+
+    err = esp_partition_table_verify(partitions, true, &num_partitions);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to verify partition table");
+        return ret;
+    }
+
+    for (int i = 0; i < num_partitions; i++) {
+        const esp_partition_info_t *partition = &partitions[i];
+
+        if (type == partition->type && subtype == partition->subtype) {
+            ESP_LOGD(TAG, "load partition table entry 0x%x", (intptr_t)partition);
+            ESP_LOGD(TAG, "find type=%x subtype=%x", partition->type, partition->subtype);
+            *pos = partition->pos;
+            ret = true;
+            break;
+        }
+    }
+
+    bootloader_munmap(partitions);
+
+    return ret;
+}
+#endif
+
 int bootloader_custom_ota_main(bootloader_state_t *bs, int boot_index)
 {
     int ota_index = 0; // By default, the extracted data is always placed in partition app_0
-    int last_run_index = 0; // Default app_0 partition index = 0
     esp_partition_pos_t pos;
-
+#ifndef CONFIG_ENABLE_LEGACY_ESP_BOOTLOADER_PLUS_V2_SUPPORT
+    const int last_run_index = 0; // Default app_0 partition index = 0
     // If not boot from the last partition, just do the quick boot from this boot index
     if ((boot_index + 1) != bs->app_count) {
         return boot_index;
     }
-    ESP_LOGI(TAG, "bootloader plus version: %d.%d.%d", BOOTLOADER_SUPPORT_PLUS_VER_MAJOR, BOOTLOADER_SUPPORT_PLUS_VER_MINOR, BOOTLOADER_SUPPORT_PLUS_VER_PATCH);
 
     // Get the partition pos of the downloaded compressed image
     pos = bs->ota[boot_index];
+#else
+    if (boot_index <= FACTORY_INDEX) {
+        ota_index = 0;
+    } else {
+        ota_index = (boot_index + 1) == bs->app_count ? 0 : (boot_index + 1);
+    }
+
+    if (!bootloader_custom_search_partition_pos(PART_TYPE_DATA, BOOTLOADER_CUSTOM_OTA_PARTITION_SUBTYPE, &pos)) {
+        ESP_LOGE(TAG, "no custom OTA storage partition!");
+        return boot_index;
+    }
+#endif // CONFIG_ENABLE_LEGACY_ESP_BOOTLOADER_PLUS_V2_SUPPORT
+
+    ESP_LOGI(TAG, "bootloader plus version: %d.%d.%d", BOOTLOADER_SUPPORT_PLUS_VER_MAJOR, BOOTLOADER_SUPPORT_PLUS_VER_MINOR, BOOTLOADER_SUPPORT_PLUS_VER_PATCH);
 
     custom_ota_config.src_addr = pos.offset;
     custom_ota_config.src_size = pos.size;
     custom_ota_config.src_offset = 0;
 
     esp_err_t err_ret = esp_image_verify(ESP_IMAGE_VERIFY_SILENT, &pos, NULL);
-    if (err_ret == ESP_FAIL) {
+#ifndef CONFIG_ENABLE_LEGACY_ESP_BOOTLOADER_PLUS_V2_SUPPORT
+    if (err_ret != ESP_OK) {
         ESP_LOGE(TAG, "image vefiry err!");
         goto exit;
     }
+#else
+    if(err_ret == CUSTOM_OTA_IMAGE_TYPE_INVALID) {
+        return boot_index;
+    } else if(err_ret == ESP_FAIL) {
+        ESP_LOGE(TAG, "image vefiry err!");
+        goto exit;
+    }
+#endif
 
     custom_ota_config.dst_addr = bs->ota[ota_index].offset;
     custom_ota_config.dst_size = bs->ota[ota_index].size;
     custom_ota_config.dst_offset = 0;
 
-    ESP_LOGD(TAG, "boot from slot %d, last run slot: %d, OTA to slot: %d", boot_index, last_run_index, ota_index);
+    ESP_LOGD(TAG, "boot from slot %d, OTA to slot: %d", boot_index, ota_index);
 
     custom_ota_params.config = &custom_ota_config;
     custom_ota_params.header = &custom_ota_header;
@@ -156,15 +223,26 @@ int bootloader_custom_ota_main(bootloader_state_t *bs, int boot_index)
         return boot_index;
     }
 
-    if (bootloader_custom_utility_updata_ota_data(bs, ota_index)) {
+    if (bootloader_custom_utility_updata_ota_data(bs, ota_index) == ESP_OK) {
+        ESP_LOGI(TAG, "OTA success, boot from slot %d", ota_index);
+    } else {
         ESP_LOGE(TAG, "update OTA data failed!");
-        return ota_index;
     }
-
-    ESP_LOGI(TAG, "OTA success, boot from slot %d", ota_index);
-
+    
+#ifndef CONFIG_ENABLE_LEGACY_ESP_BOOTLOADER_PLUS_V2_SUPPORT
     return ota_index;
+
 exit:
     bootloader_custom_utility_updata_ota_data(bs, last_run_index);
     return last_run_index;
+#else // NOT CONFIG_ENABLE_LEGACY_ESP_BOOTLOADER_PLUS_V2_SUPPORT
+    boot_index = ota_index;
+
+exit:
+    // Erase custom OTA binary header to avoid doing OTA again in the next reboot.
+    if(bootloader_custom_ota_clear_storage_header() != ESP_OK) {
+        ESP_LOGE(TAG,"erase compressed OTA header error!");
+    }
+    return boot_index;
+#endif // CONFIG_ENABLE_LEGACY_ESP_BOOTLOADER_PLUS_V2_SUPPORT
 }

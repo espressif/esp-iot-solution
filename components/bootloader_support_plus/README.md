@@ -136,6 +136,29 @@ CMakeLists.txt not found in project directory /home/username
 
 A1. This is because an older version packege manager was used, please run `pip install -U idf-component-manager` in ESP-IDF environment to update.
 
+Q2. Can a device that has used the esp-bootloader-plus solution use the bootloader-support-plus solution?
+
+A2. Yes. You can use script [gen_custom_ota.py](https://github.com/espressif/esp-iot-solution/blob/master/tools/cmake_utilities/scripts/gen_custom_ota.py) to execute the following commands to generate compressed firmware suitable for the esp bootloader plus solution:
+
+```
+python3 gen_compressed_ota.py -hv v2 -i simple_ota.bin
+```
+
+In addition, because the two solutions adopt different file formats and different mechanisms for triggering updates, please ensure that devices that have already used the esp bootloader plus solution continue to use the partition table that contains the storage partition with subtype 0x22:
+
+```
+# Name,   Type, SubType, Offset,   Size, Flags
+phy_init, data, phy, 0xf000,        4k
+nvs,      data, nvs,       ,        28k
+otadata,  data, ota,       ,        8k
+ota_0,    app,  ota_0,     ,        1216k,
+storage,  data, 0x22,      ,        640k,
+```
+
+Then enable the `CONDIF_ENABLE_LEGACY_ESP_BOOTLOADER_PLUS_V2_SUPPORT` option in menuconfig.
+
+In the end, you just need to download the compressed firmware to the storage partition and reboot the device to trigger the update.
+
 ## Contributing
 
 We welcome contributions to this project in the form of bug reports, feature requests and pull requests.
