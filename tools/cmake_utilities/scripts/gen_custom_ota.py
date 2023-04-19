@@ -43,7 +43,20 @@ OLD_APP_CHECK_DATA_SIZE = 4096
 # | Data | “ESP”   |    1    |   0/1    | 0/1        |	          |           |          |                |                |              |            |
 # |------|---------|---------|----------|------------|------------|-----------|----------|----------------|----------------|--------------|------------|
 
-# v2 compressed data header will be added in next version.
+# v2 compressed data header
+# Note: Encryption_type field is deprecated, the field is reserved for compatibility.
+# |------|---------|---------|----------|------------|------------|-----------|----------|----------------|----------------|---------------|---------------|--------------|------------|
+# |      | Magic   | header  | Compress | delta      | Encryption | Reserved  | Firmware | The length of  | The MD5 of     | base app check| The CRC32 for | The CRC32 for| compressed |
+# |      | number  | version | type     | type       | type       |           | version  | compressed data| compressed data| data len      | base app data | the header   | data       |
+# |------|---------|---------|----------|------------|------------|-----------|----------|----------------|----------------|---------------|---------------|--------------|------------|
+# | Size | 4 bytes | 1 byte  | 4 bits	| 4 bits     | 1 bytes	  | 1 bytes   | 32 bytes |  4 bytes	      | 32 bytes	   |  4 bytes      |  4 bytes      |  4 bytes     |            |
+# |------|---------|---------|----------|------------|------------|-----------|----------|----------------|----------------|---------------|---------------|--------------|------------|
+# | Data | String  |         |          |            |            |           | String   | little-endian  |   byte string  | little-endian | little-endian | little-endian|            |
+# | type | ended   |         |          |            |            |           | ended    |   integer      |                | integer       |    integer    |    integer   |            |
+# |      |with ‘\0’|         |          |            |            |           | with ‘\0’|                |                |               |               |              | Binary data|
+# |------|---------|---------|----------|------------|------------|-----------|----------|----------------|----------------|---------------|---------------|--------------|------------|
+# | Data | “ESP”   |    1    |   0/1    | 0/1        |	          |           |          |                |                |               |               |              |            |
+# |------|---------|---------|----------|------------|------------|-----------|----------|----------------|----------------|---------------|---------------|--------------|------------|
 
 # v3 compressed data header:
 # |------|---------|---------|----------|------------|-----------|----------------|----------------|--------------|------------|
@@ -186,6 +199,11 @@ def main():
         # The MD5 for the compressed data
         if (header_version[header_ver] < 3):
             bin_data += struct.pack('32s', hashlib.md5(data).digest())
+            if (header_version[header_ver] == 2):
+                # Todo, if it's diff OTA, write base app check data len
+                bin_data += struct.pack('<I', 0)
+                # Todo, if it's diff OTA, write base app crc32 checksum
+                bin_data += struct.pack('<I', 0)
         else:
             bin_data += struct.pack('16s', hashlib.md5(data).digest())
         # The CRC32 for the header
