@@ -1,3 +1,7 @@
+## v0.4.6 - 2023-04-20
+
+* relinker: add IDF v4.3.x support
+
 ## v0.4.5 - 2023-04-17
 
 * gen_compressed_ota: remove slash use in gen_custom_ota.py so that the script can be used in the Windows cmd terminal.

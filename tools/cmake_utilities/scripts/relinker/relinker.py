@@ -25,7 +25,8 @@ from io import StringIO
 import configuration
 
 sys.path.append(os.environ['IDF_PATH'] + '/tools/ldgen')
-from ldgen.entity import EntityDB
+sys.path.append(os.environ['IDF_PATH'] + '/tools/ldgen/ldgen')
+from entity import EntityDB
 
 espidf_objdump = None
 
