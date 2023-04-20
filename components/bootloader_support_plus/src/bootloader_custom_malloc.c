@@ -13,8 +13,8 @@
 #ifdef CONFIG_IDF_TARGET_ESP32
 #define XZ_BOOT_HEAP_START_ADDRESS  0x3FFB0000
 #define XZ_BOOT_HEAP_END_ADDRESS    0x3FFE0000
-#elif (CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3)
-#define XZ_BOOT_HEAP_START_ADDRESS  SOC_DRAM_LOW // (0x3FC7C000 + 0x4000) // for esp32c3 chip, you can use the free space form this address, pay attention your chip for this
+#elif (CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C6)
+#define XZ_BOOT_HEAP_START_ADDRESS  SOC_DRAM_LOW
 extern uint32_t* _dram_start;
 #define XZ_BOOT_HEAP_END_ADDRESS    (uint32_t)&_dram_start
 #endif
