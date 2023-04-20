@@ -52,8 +52,8 @@ In addition, if [secure boot](https://docs.espressif.com/projects/esp-idf/en/lat
 simple_ota.bin.xz.packed.signed
 ```
 
-you can also use the script [gen_compressed_ota.py](https://github.com/espressif/esp-iot-solution/blob/master/tools/cmake_utilities/scripts/relinker/gen_compressed_ota.py) to compress the specified app:
+you can also use the script [gen_custom_ota.py](https://github.com/espressif/esp-iot-solution/blob/master/tools/cmake_utilities/scripts/gen_custom_ota.py) to compress the specified app:
 
 ```plaintext
-python3 gen_compressed_ota.py -hv v3 -i simple_ota.bin --add_app_header
+python3 gen_custom_ota.py -hv v3 -i simple_ota.bin --add_app_header
 ```
