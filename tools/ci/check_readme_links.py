@@ -142,7 +142,8 @@ def check_readme_links(args):
             file_links.append(link)
 
     for url in EXCLUDE_URL_LIST:
-        del web_links[url]
+        if url in web_links:
+            del web_links[url]
 
     errors.extend(check_file_links(file_links))
 
