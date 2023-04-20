@@ -1,3 +1,7 @@
+## v0.4.5 - 2023-04-17
+
+* gen_compressed_ota: remove slash use in gen_custom_ota.py so that the script can be used in the Windows cmd terminal.
+
 ## v0.4.4 - 2023-04-07
 
 * relinker: suppressing the creation of `__pycache__`
