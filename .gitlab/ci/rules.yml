@@ -199,6 +199,12 @@
 .patterns-example_extended_vfs_ledc_ledc_simple: &patterns-example_extended_vfs_ledc_ledc_simple
   - "examples/extended_vfs/ledc/ledc_simple/**/*"
 
+.patterns-example_extended_vfs_spi_spi_master_simple: &patterns-example_extended_vfs_spi_spi_master_simple
+  - "examples/extended_vfs/spi/spi_master_simple/**/*"
+
+.patterns-example_extended_vfs_spi_spi_slave_simple: &patterns-example_extended_vfs_spi_spi_slave_simple
+  - "examples/extended_vfs/spi/spi_slave_simple/**/*"
+
 .patterns-example_get_started_blink: &patterns-example_get_started_blink
   - "examples/get-started/blink/**/*"
 
@@ -380,6 +386,24 @@
       changes: *patterns-components_extended_vfs
     - <<: *if-dev-push
       changes: *patterns-example_extended_vfs_ledc_ledc_simple
+
+.rules:build:example_extended_vfs_spi_spi_master_simple:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_extended_vfs
+    - <<: *if-dev-push
+      changes: *patterns-example_extended_vfs_spi_spi_master_simple
+
+.rules:build:example_extended_vfs_spi_spi_slave_simple:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_extended_vfs
+    - <<: *if-dev-push
+      changes: *patterns-example_extended_vfs_spi_spi_slave_simple
 
 .rules:build:example_get_started_blink:
   rules:
