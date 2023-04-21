@@ -27,7 +27,8 @@
 
 typedef struct spi_stat {
     uint32_t master :  1;       /*!< 1: SPI master mode, 0: slave mode */
-    spi_device_handle_t handle; /*!< SPI device handle */
+    uint32_t configured :  1;   /*!< 1: SPI device is configured, 0: SPI device is not configured */
+    spi_device_handle_t handle; /*!< SPI device handle, only SPI master use this */
 } spi_stat_t;
 
 static const char *TAG = "ext_vfs_spi";
@@ -73,7 +74,8 @@ static int config_spi(int port, const spi_cfg_t *cfg)
             return -1;
         }
 
-        spi_stat[port].master = true;
+        spi_stat[port].master = 1;
+        spi_stat[port].handle = handle;
     } else {
         spi_slave_interface_config_t slvcfg;
 
@@ -88,7 +90,7 @@ static int config_spi(int port, const spi_cfg_t *cfg)
             slvcfg.flags |= SPI_SLAVE_TXBIT_LSBFIRST;
         }
 
-        ret = spi_slave_initialize(port, &buscfg, &slvcfg, SPI_DMA_CH_AUTO);
+        ret = spi_slave_initialize(port, &buscfg, &slvcfg, SPI_DMA_DISABLED);
         if (ret != ESP_OK) {
             return -1;
         }
@@ -97,10 +99,8 @@ static int config_spi(int port, const spi_cfg_t *cfg)
         gpio_set_pull_mode(cfg->sclk_pin, GPIO_PULLUP_ONLY);
         gpio_set_pull_mode(cfg->cs_pin, GPIO_PULLUP_ONLY);
 
-        spi_stat[port].master = false;
+        spi_stat[port].master = 0;
     }
-
-    spi_stat[port].handle = handle;
 
     return 0;
 }
@@ -148,7 +148,7 @@ static int spi_transfer(int port, spi_ex_msg_t *msg)
         ret = spi_slave_transfer(port, msg);
     }
 
-    return ret;
+    return ret == ESP_OK ? 0 : -1;
 }
 
 static int spi_open(const char *path, int flags, int mode)
@@ -173,19 +173,29 @@ static int spi_close(int fd)
 
     ESP_LOGV(TAG, "close(%d)", fd);
 
-    err = spi_bus_remove_device(spi_stat[fd].handle);
-    if (err != ESP_OK) {
-        errno = EIO;
-        return -1;
+    if (spi_stat[fd].master) {
+        err = spi_bus_remove_device(spi_stat[fd].handle);
+        if (err != ESP_OK) {
+            errno = EIO;
+            return -1;
+        }
+
+        err = spi_bus_free(fd);
+        if (err != ESP_OK) {
+            errno = EIO;
+            return -1;
+        }
+
+        spi_stat[fd].handle = NULL;
+    } else {
+        err = spi_slave_free(fd);
+        if (err != ESP_OK) {
+            errno = EIO;
+            return -1;
+        }
     }
 
-    err = spi_bus_free(fd);
-    if (err != ESP_OK) {
-        errno = EIO;
-        return -1;
-    }
-
-    spi_stat[fd].handle = NULL;
+    spi_stat[fd].configured = 0;
 
     return 0;
 }
@@ -200,7 +210,7 @@ static int spi_ioctl(int fd, int cmd, va_list va_args)
         case SPIIOCSCFG: {
             spi_cfg_t *cfg = va_arg(va_args, spi_cfg_t *);
 
-            if (!cfg || spi_stat[fd].handle) {
+            if (!cfg || spi_stat[fd].configured) {
                 errno = EINVAL;
                 return -1;
             }
@@ -211,12 +221,14 @@ static int spi_ioctl(int fd, int cmd, va_list va_args)
                 return -1;
             }
 
+            spi_stat[fd].configured = 1;
+
             break;
         }
         case SPIIOCEXCHANGE: {
             spi_ex_msg_t *ex_msg = va_arg(va_args, spi_ex_msg_t *);
 
-            if (!ex_msg || !spi_stat[fd].handle) {
+            if (!ex_msg || !spi_stat[fd].configured) {
                 errno = EINVAL;
                 return -1;
             }
