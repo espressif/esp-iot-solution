@@ -100,6 +100,8 @@ In order to use compressed updates, you need to make the following changes:
 
 6. Create a partition table that supports compressed updates. By default, the last partition of type `app` in the partition table is used as the partition for storing compressed firmware. Because the size of the compressed firmware will be smaller than that of the original firmware, the partition for storing the compressed firmware can be set smaller.
 
+7. Enable compressed OTA support by running `idf.py menuconfig -> Bootloader config (Custom) -> Enable compressed OTA support` in the project directory.
+
 ## How to generate compressed firmware
 
 The [cmake_utilites](https://components.espressif.com/components/espressif/cmake_utilities) component is used to generate compressed firmware. After adding this component, you can generate a compressed firmware by running:
