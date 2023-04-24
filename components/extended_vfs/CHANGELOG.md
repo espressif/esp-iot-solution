@@ -1,5 +1,10 @@
 # ChangeLog
 
+## v0.3.1 - 2023-04-23
+
+* SPI: fix slave mode transmission error when TX/RX buffer in invalid
+* LED: fix open -> close -> open error
+
 ## v0.3.0 - 2023-04-12
 
 * Add SPI VFS driver

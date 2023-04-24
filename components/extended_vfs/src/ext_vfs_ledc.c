@@ -16,6 +16,7 @@
 #include "ioctl/esp_ledc_ioctl.h"
 
 #define LEDC_PORT_NUM       LEDC_TIMER_MAX  /*!< LEDC timer number */
+#define LEDC_CHANNEL_NUM    LEDC_TIMER_MAX  /*!< LEDC channel number */
 
 #define LEDC_MODE           LEDC_LOW_SPEED_MODE
 #define LEDC_DUTY_RES       LEDC_TIMER_13_BIT
@@ -23,8 +24,11 @@
 #define LEDC_DUTY_MAX       100
 #define LEDC_PHASE_MAX      360
 
+#define LEDC_GPIO_IDLE      0
+
 typedef struct ledc_stat {
     uint32_t configured :  1;   /*!< 1: LEDC device is configured, 0: LEDC device is not configured */
+    uint32_t channels : LEDC_CHANNEL_NUM; /*!< Channel mask */
 } ledc_stat_t;
 
 static const char *TAG = "ext_vfs_ledc";
@@ -84,6 +88,8 @@ static int config_ledc(int timer_port, const ledc_cfg_t *cfg)
             ledc_timer_rst(LEDC_MODE, timer_port);
             return -1;
         }
+
+        ledc_stat[timer_port].channels |= 1 << i;
     }
 
     return 0;
@@ -170,11 +176,26 @@ static int ledc_close(int fd)
 
     ESP_LOGV(TAG, "close(%d)", fd);
 
+    for (int i = 0; i < LEDC_CHANNEL_NUM; i++) {
+        int channel = 1 << i;
+
+        if (channel & ledc_stat[fd].channels) {
+            err = ledc_stop(LEDC_MODE, i, LEDC_GPIO_IDLE);
+            if (err != ESP_OK) {
+                errno = EIO;
+                return -1;
+            }
+        }
+    }
+
     err = ledc_timer_rst(LEDC_MODE, fd);
     if (err != ESP_OK) {
         errno = EIO;
         return -1;
     }
+
+    ledc_stat[fd].configured = 0;
+    ledc_stat[fd].channels = 0;
 
     return 0;
 }

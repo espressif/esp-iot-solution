@@ -17,17 +17,23 @@ menu "Example Configuration"
 
     config SPI_CS_PIN_NUM
         int "SPI CS Pin Number"
-        default 10
+        default 14 if IDF_TARGET_ESP32 || IDF_TARGET_ESP32S2
+        default 10 if IDF_TARGET_ESP32C3 || IDF_TARGET_ESP32S3
 
     config SPI_SCLK_PIN_NUM
         int "SPI SCLK Pin Number"
-        default 12
+        default 15 if IDF_TARGET_ESP32 || IDF_TARGET_ESP32S2
+        default 6 if IDF_TARGET_ESP32C3
+        default 12 if IDF_TARGET_ESP32S3
 
     config SPI_MOSI_PIN_NUM
         int "SPI MOSI Pin Number"
-        default 11
+        default 12 if IDF_TARGET_ESP32 || IDF_TARGET_ESP32S2
+        default 7 if IDF_TARGET_ESP32C3
+        default 11 if IDF_TARGET_ESP32S3
 
     config SPI_MISO_PIN_NUM
         int "SPI MISO Pin Number"
-        default 13
+        default 13 if IDF_TARGET_ESP32 || IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
+        default 2 if IDF_TARGET_ESP32C3
 endmenu
