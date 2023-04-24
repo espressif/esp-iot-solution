@@ -3160,16 +3160,6 @@ esp_err_t uac_streaming_config(const uac_config_t *config)
     s_uac_dev.spk_volume = UAC_VOLUME_LEVEL_DEFAULT;
     s_uac_dev.mic_volume = UAC_VOLUME_LEVEL_DEFAULT;
 
-    if (config->mic_interface && s_uac_dev.mic_min_bytes == 0) {
-        //IF mic_min_bytes not set, using config->mic_ep_mps * UAC_MIC_CB_MIN_MS_DEFAULT by default
-        s_uac_dev.mic_min_bytes = config->mic_ep_mps * UAC_MIC_CB_MIN_MS_DEFAULT;
-        ESP_LOGI(TAG, "mic_buf_size set to default %"PRIu32"*%d = %"PRIu32, config->mic_ep_mps, UAC_MIC_CB_MIN_MS_DEFAULT, config->mic_ep_mps * UAC_MIC_CB_MIN_MS_DEFAULT);
-        if (s_uac_dev.mic_buf_size < s_uac_dev.mic_min_bytes) {
-            s_uac_dev.mic_buf_size = s_uac_dev.mic_min_bytes;
-            ESP_LOGW(TAG, "mic_buf_size should bigger than mic_min_bytes");
-        }
-    }
-
     s_usb_itf[STREAM_UAC_MIC].type = STREAM_UAC_MIC;
     s_usb_itf[STREAM_UAC_MIC].name = "MIC";
     s_usb_itf[STREAM_UAC_MIC].xfer_type = UVC_XFER_ISOC;
@@ -3207,6 +3197,15 @@ esp_err_t uac_streaming_config(const uac_config_t *config)
     if (config->mic_samples_frequence) {
         //using samples_frequence as active flag
         s_uac_dev.mic_ms_bytes = config->mic_samples_frequence / 1000 * config->mic_bit_resolution / 8;
+        if (s_uac_dev.mic_min_bytes == 0) {
+            //IF mic_min_bytes not set, using s_uac_dev.mic_ms_bytes * UAC_MIC_CB_MIN_MS_DEFAULT by default
+            s_uac_dev.mic_min_bytes = s_uac_dev.mic_ms_bytes * UAC_MIC_CB_MIN_MS_DEFAULT;
+            ESP_LOGI(TAG, "mic_buf_size set to default %"PRIu32"*%d = %"PRIu32, config->mic_ep_mps, UAC_MIC_CB_MIN_MS_DEFAULT, s_uac_dev.mic_min_bytes);
+            if (s_uac_dev.mic_buf_size < s_uac_dev.mic_min_bytes) {
+                s_uac_dev.mic_buf_size = s_uac_dev.mic_min_bytes;
+                ESP_LOGW(TAG, "mic_buf_size should bigger than mic_min_bytes");
+            }
+        }
         s_usb_itf[STREAM_UAC_MIC].packets_per_urb = s_uac_dev.mic_min_bytes / s_uac_dev.mic_ms_bytes;
         s_uac_dev.mic_active = true;
     }

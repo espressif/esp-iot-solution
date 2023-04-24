@@ -1,4 +1,4 @@
-version: "0.4.11"
+version: "0.4.12"
 targets:
   - esp32s2
   - esp32s3
