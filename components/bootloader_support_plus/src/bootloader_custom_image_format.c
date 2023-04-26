@@ -189,7 +189,7 @@ esp_err_t __wrap_esp_image_verify(esp_image_load_mode_t mode, const esp_partitio
         }
 #endif
     } else {
-        return ESP_FAIL;
+        return CUSTOM_OTA_IMAGE_TYPE_INVALID;
     }
 
     return ESP_OK;

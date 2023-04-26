@@ -136,6 +136,29 @@ CMakeLists.txt not found in project directory /home/username
 
 A1. 这是旧版本的包管理器中存在的兼容性问题, 请在您的 ESP-IDF 开发环境中运行 `pip install -U idf-component-manager` 命令来更新包管理器组件。
 
+Q2. 已经使用 esp bootloader plus 方案的设备，是否可以使用 bootloader support plus 方案？
+
+A2. 可以。您可以使用脚本工具 [gen_custom_ota.py](https://github.com/espressif/esp-iot-solution/blob/master/tools/cmake_utilities/scripts/gen_custom_ota.py) 来执行下述命令生成适用于esp bootloader plus 方案的压缩固件：
+
+```
+python3 gen_compressed_ota.py -hv v2 -i simple_ota.bin
+```
+
+另外，因为这两个方案采取不同的文件格式以及不同的触发更新的机制，请确保已经使用 esp bootloader plus 方案的设备继续使用包含 SubType 为 0x22 的 storage 分区的分区表：
+
+```
+# Name,   Type, SubType, Offset,   Size, Flags
+phy_init, data, phy, 0xf000,        4k
+nvs,      data, nvs,       ,        28k
+otadata,  data, ota,       ,        8k
+ota_0,    app,  ota_0,     ,        1216k,
+storage,  data, 0x22,      ,        640k,
+```
+
+然后在 menuconfig 配置菜单中使能 `CONDIF_ENABLE_LEGACY_ESP_BOOTLOADER_PLUS_V2_SUPPORT` 选项。
+
+最后您只需要将压缩固件下载到 storage 分区，然后重启设备即可触发更新。
+
 ## 贡献
 我们欢迎以错误报告、功能请求和拉取请求的形式对此项目做出贡献。
 
