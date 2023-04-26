@@ -1,3 +1,7 @@
+## v0.4.7 - 2023-04-21
+
+* gen_compressed_ota: support the addition of a v2 compressed OTA header to compressed firmware.
+
 ## v0.4.6 - 2023-04-20
 
 * relinker: add IDF v4.3.x support
