@@ -1,7 +1,7 @@
 menu "Bootloader config (Custom)"
     config BOOTLOADER_COMPRESSED_ENABLED
         bool "Enable compressed OTA support"
-        default y
+        default n
 
     choice BOOTLOADER_CUSTOM_DECOMPRESSOR
         prompt "Choose decompressor"

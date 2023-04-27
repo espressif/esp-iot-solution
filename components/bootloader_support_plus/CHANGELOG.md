@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.2.1 - 2023-04-23
+
+### Fix:
+
+* Change CONFIG_BOOTLOADER_COMPRESSED_ENABLED to disable by default.
+
 ## v0.2.0 - 2023-04-20
 
 ### Feature:

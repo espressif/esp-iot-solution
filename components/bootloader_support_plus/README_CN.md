@@ -98,6 +98,8 @@ bootloader support plus 是乐鑫基于 [ESP-IDF](https://github.com/espressif/e
 
 6. 创建支持压缩更新的分区表。默认情况下，分区表中类型为 `app` 的最后一个分区用作存储压缩固件的分区。因为压缩固件的大小将小于原始固件的大小，所以可以将分区设置得更小。
 
+7. 在工程目录中通过  `idf.py menuconfig -> Bootloader config (Custom) -> Enable compressed OTA support` 使能压缩更新的支持。
+
 ## 如何生成压缩固件
 
 通过 [cmake_utilites](https://components.espressif.com/components/espressif/cmake_utilities) 组件可以制作压缩的固件。在添加该组件后，你可以通过运行下述命令来生成压缩的固件：
