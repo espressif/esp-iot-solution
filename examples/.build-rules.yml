@@ -120,6 +120,10 @@ examples/usb/host/usb_camera_mic_spk:
   enable:
     - if: IDF_TARGET in ["esp32s2","esp32s3"]
 
+examples/usb/host/usb_audio_player:
+  enable:
+    - if: IDF_TARGET in ["esp32s2","esp32s3"]
+
 examples/usb/host/usb_cdc_4g_module:
   enable:
     - if: IDF_TARGET in ["esp32s2","esp32s3"]

@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v1.0.2 - 2023-05-19
+
+### Enhancements:
+
+* UAC:
+  * Add UAC audio player example, play 48 KHz 16bit 2ch audio to USB headset
+
 ## v1.0.1 - 2023-05-18
 
 ### Enhancements:

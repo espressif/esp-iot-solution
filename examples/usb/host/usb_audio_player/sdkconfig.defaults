@@ -1,0 +1,12 @@
+# This file was generated using idf.py save-defconfig. It can be edited manually.
+# Espressif IoT Development Framework (ESP-IDF) Project Minimal Configuration
+#
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_ESPTOOLPY_FLASHMODE_QIO=y
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+
+# For IDF 5.0
+CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y
+CONFIG_ESP_CONSOLE_UART_CUSTOM=y
+CONFIG_FREERTOS_HZ=1000
+CONFIG_ESPTOOLPY_MONITOR_BAUD_CONSOLE=y

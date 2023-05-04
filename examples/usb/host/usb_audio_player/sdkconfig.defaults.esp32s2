@@ -1,0 +1,5 @@
+# This file was generated using idf.py save-defconfig. It can be edited manually.
+# Espressif IoT Development Framework (ESP-IDF) Project Minimal Configuration
+#
+CONFIG_NUM_ISOC_SPK_URBS=16
+CONFIG_UAC_SPK_ST_MAX_MS_DEFAULT=16
