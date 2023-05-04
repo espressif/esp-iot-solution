@@ -68,6 +68,7 @@ typedef enum {
     AUDIO_TERM_TYPE_OUT_ROOM_SPEAKER            = 0x0305,
     AUDIO_TERM_TYPE_OUT_COMMUNICATION_SPEAKER   = 0x0306,
     AUDIO_TERM_TYPE_OUT_LOW_FRQ_EFFECTS_SPEAKER = 0x0307,
+    AUDIO_TERM_TYPE_HEADSET                     = 0x0402,
 } audio_terminal_output_type_t;
 
 typedef enum {
@@ -376,7 +377,7 @@ typedef struct {
 void parse_ac_header_desc(const uint8_t *buff, uint16_t *bcdADC, uint8_t *intf_num);
 void parse_ac_input_desc(const uint8_t *buff, uint8_t *terminal_idx, uint16_t *terminal_type);
 void parse_ac_output_desc(const uint8_t *buff, uint8_t *terminal_idx, uint16_t *terminal_type);
-void parse_ac_feature_desc(const uint8_t *buff, uint8_t *source_idx, uint8_t *feature_unit_idx, uint8_t *control_type, uint8_t *control_type1);
+void parse_ac_feature_desc(const uint8_t *buff, uint8_t *source_idx, uint8_t *feature_unit_idx, uint8_t *volume_ch, uint8_t *mute_ch);
 void parse_as_general_desc(const uint8_t *buff, uint8_t *source_idx, uint16_t *format_tag);
 void parse_as_type_desc(const uint8_t *buff, uint8_t *channel_num, uint8_t *bit_resolution, uint8_t *freq_type, const uint8_t **pp_samfreq);
 

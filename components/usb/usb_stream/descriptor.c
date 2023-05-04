@@ -408,7 +408,7 @@ void parse_ac_output_desc(const uint8_t *buff, uint8_t *terminal_idx, uint16_t *
     }
 }
 
-void parse_ac_feature_desc(const uint8_t *buff, uint8_t *source_idx, uint8_t *feature_unit_idx, uint8_t *control_type, uint8_t *control_type1)
+void parse_ac_feature_desc(const uint8_t *buff, uint8_t *source_idx, uint8_t *feature_unit_idx, uint8_t *volume_ch, uint8_t *mute_ch)
 {
     if (buff == NULL) {
         return;
@@ -424,8 +424,7 @@ void parse_ac_feature_desc(const uint8_t *buff, uint8_t *source_idx, uint8_t *fe
     printf("\tbUnitID %d\n", desc->bUnitID);
     printf("\tbSourceID %d\n", desc->bSourceID);
     printf("\tbControlSize %d\n", desc->bControlSize);
-    /*we just print master and 1 channel */
-    for (size_t i = 0; i < 2; i += desc->bControlSize) {
+    for (size_t i = 0; i < (desc->bLength-7)/desc->bControlSize; i += desc->bControlSize) {
         printf("\tbmaControls[ch%d] 0x%x\n", i, desc->bmaControls[i]);
     }
 #ifdef CONFIG_UVC_PRINT_DESC_VERBOSE
@@ -438,11 +437,16 @@ void parse_ac_feature_desc(const uint8_t *buff, uint8_t *source_idx, uint8_t *fe
     if (source_idx) {
         *source_idx = desc->bSourceID;
     }
-    if (control_type) {
-        *control_type = desc->bmaControls[0];
-    }
-    if (control_type1) {
-        *control_type1 = desc->bmaControls[1];
+    uint8_t ch_num = 0;
+    for (size_t i = 0; i < (desc->bLength-7)/desc->bControlSize; i += desc->bControlSize) {
+        printf("\tbmaControls[ch%d] 0x%x\n", i, desc->bmaControls[i]);
+        if ((desc->bmaControls[i] & AUDIO_FEATURE_CONTROL_VOLUME) && volume_ch) {
+            *volume_ch = *volume_ch | (1 << ch_num);
+        }
+        if ((desc->bmaControls[i] & AUDIO_FEATURE_CONTROL_MUTE) && mute_ch) {
+            *mute_ch = *mute_ch | (1 << ch_num);
+        }
+        ch_num++;
     }
 }
 

@@ -25,5 +25,22 @@ from pytest_embedded import Dut
 )
 def test_usb_stream(dut: Dut)-> None:
     dut.expect_exact('Press ENTER to see the list of tests.')
-    dut.write('*')
+    dut.write('[devkit]')
     dut.expect_unity_test_output(timeout = 1000)
+
+@pytest.mark.target('esp32s2')
+@pytest.mark.target('esp32s3')
+@pytest.mark.env('usb-otg_camera')
+@pytest.mark.timeout(60 * 60)
+@pytest.mark.parametrize(
+    'config',
+    [
+        # Known to cause. assert failed: (rem_len == 0 || is_in)
+        # '160mhz',
+        '240mhz',
+    ],
+)
+def test_usb_stream_otg(dut: Dut)-> None:
+    dut.expect_exact('Press ENTER to see the list of tests.')
+    dut.write('[otg]')
+    dut.expect_unity_test_output(timeout = 3000)
