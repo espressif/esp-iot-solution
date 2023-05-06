@@ -79,7 +79,7 @@ menu "LightBulb Driver Config"
                 help
                     Priority for the IIC Send Task. Not recommended to be changed
                     unless you really need it.
-                endmenu
+        endmenu
 
     endmenu
 
@@ -88,6 +88,29 @@ menu "LightBulb Driver Config"
             default "y"
             help
                 Dithering check and fix.
+
+    config USE_GPTIMER_GENERATE_TICKS
+            bool "Use gptimer generate tick"
+            default "y"
+            help
+                fade tick uses gptimer instead of esp_timer.
+
+    menu "Gptimer Tick Notify Task Config"
+            depends on USE_GPTIMER_GENERATE_TICKS
+
+            config LB_NOTIFY_TASK_STACK
+                int "gptimer tick notify task stack"
+                default 1024
+                help
+                    Stack size for the gptimer tick notify task.
+
+            config LB_NOTIFY_TASK_PRIORITY
+                int "gptimer tick notify task priority"
+                default 20
+                help
+                    Priority for the gptimer tick notify task. Not recommended to be changed
+                    unless you really need it.
+    endmenu
 
     menu "Debug Log Config"
         config ENABLE_LIGHTBULB_DEBUG_LOG_OUTPUT

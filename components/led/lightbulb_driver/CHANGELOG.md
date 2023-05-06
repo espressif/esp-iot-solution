@@ -1,5 +1,15 @@
 # ChangeLog
 
+## v0.3.0 - 2022-5-8
+
+### Enhancements:
+
+* Provide an option to use gptimer instead of esptimer to generate ticks for the fade process
+
+### Bug Fixes:
+
+* Fixed a wrong conversion on `percentage_convert_to_kelvin`
+
 ## v0.2.2 - 2022-3-10
 
 ### Bug Fixes:

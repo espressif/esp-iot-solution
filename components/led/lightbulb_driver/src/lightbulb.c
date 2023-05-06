@@ -161,7 +161,7 @@ esp_err_t lightbulb_status_erase_nvs_storage(void)
 static uint16_t percentage_convert_to_kelvin(uint16_t percentage)
 {
     float _percentage = (float)percentage / 100;
-    uint16_t _kelvin = (_percentage * (s_lb_obj->kelvin_range.max - s_lb_obj->kelvin_range.min) + s_lb_obj->kelvin_range.max);
+    uint16_t _kelvin = (_percentage * (s_lb_obj->kelvin_range.max - s_lb_obj->kelvin_range.min) + s_lb_obj->kelvin_range.min);
 
     /* Convert to the nearest integer */
     _kelvin = (_kelvin / 100) * 100;
