@@ -2,7 +2,7 @@
 
 [![Component Registry](https://components.espressif.com/components/espressif/bootloader_support_plus/badge.svg)](https://components.espressif.com/components/espressif/bootloader_support_plus)
 
-* [中文版]((https://github.com/espressif/esp-iot-solution/blob/master/components/bootloader_support_plus/README_CN.md)
+* [中文版](https://github.com/espressif/esp-iot-solution/blob/master/components/bootloader_support_plus/README_CN.md)
 
 ## Overview
 The `bootloader support plus` is an enhanced bootloader based on [custom_bootloader](https://github.com/espressif/esp-idf/tree/master/examples/custom_bootloader) . The firmware update function is supported in the bootloader stage by decompressing the compressed firmware. In this solution, you can directly use the original OTA APIs (such as [esp_ota](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/ota.html#api-reference)、[esp_https_ota](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/esp_https_ota.html#api-reference)). The following table shows the Espressif SoCs that are compatible with `bootloader support plus` and their corresponding ESP-IDF versions.
