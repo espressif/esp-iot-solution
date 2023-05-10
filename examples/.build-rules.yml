@@ -1,0 +1,129 @@
+# Note: All operators are binary operators. For more than two operands, you may use the nested parentheses trick. 
+# For example:
+#    *  A == 1 or (B == 2 and C in [1,2,3])
+#    *  (A == 1 and B == 2) or (C not in ["3", "4", 5])
+
+examples/audio/wav_player:
+  enable:
+    - if: INCLUDE_DEFAULT == 1
+
+examples/bluetooth/ble_ota:
+  enable:
+    - if: IDF_TARGET in ["esp32","esp32s3","esp32c3"]
+
+examples/camera/basic:
+  enable:
+    - if: IDF_TARGET in ["esp32s2","esp32s3"]
+
+examples/camera/pic_server:
+  enable:
+    - if: IDF_TARGET in ["esp32s2","esp32s3"]
+
+examples/camera/pic_server:
+  enable:
+    - if: IDF_TARGET in ["esp32s2","esp32s3"]
+
+examples/camera/test_framerate:
+  enable:
+    - if: IDF_TARGET in ["esp32s2","esp32s3"]
+
+examples/camera/video_recorder:
+  enable:
+    - if: IDF_TARGET == "esp32s3"
+
+examples/camera/video_stream_server:
+  enable:
+    - if: IDF_TARGET in ["esp32s2","esp32s3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
+
+examples/check_pedestrian_flow:
+  enable:
+    - if: IDF_TARGET in ["esp32","esp32s2","esp32s3","esp32c3"]
+
+examples/extended_vfs/gpio/gpio_simple:
+  enable:
+    - if: IDF_TARGET in ["esp32","esp32s2","esp32s3","esp32c3"]
+
+examples/extended_vfs/i2c/i2c_bh1750:
+  enable:
+    - if: INCLUDE_DEFAULT == 1
+
+examples/extended_vfs/i2c/i2c_tt21100:
+  enable:
+    - if: INCLUDE_DEFAULT == 1
+
+examples/extended_vfs/ledc/ledc_simple:
+  enable:
+    - if: INCLUDE_DEFAULT == 1
+
+examples/extended_vfs/spi/spi_master_simple:
+  enable:
+    - if: IDF_TARGET in ["esp32","esp32s2","esp32s3","esp32c3"]
+
+examples/extended_vfs/spi/spi_slave_simple:
+  enable:
+    - if: IDF_TARGET in ["esp32","esp32s2","esp32s3","esp32c3"]
+
+examples/get-started/blink:
+  enable:
+    - if: (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4) and IDF_TARGET in ["esp32","esp32s2","esp32s3"]
+
+examples/hmi/lvgl_coffee:
+  enable:
+    - if: (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4) and IDF_TARGET == "esp32"
+
+examples/hmi/lvgl_example:
+  enable:
+    - if: (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4) and IDF_TARGET == "esp32"
+
+examples/hmi/lvgl_thermostat:
+  enable:
+    - if: (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4) and IDF_TARGET == "esp32"
+
+examples/hmi/lvgl_wificonfig:
+  enable:
+    - if: (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4) and IDF_TARGET == "esp32"
+
+examples/lighting/lightbulb:
+  enable:
+    - if: INCLUDE_DEFAULT == 1
+
+examples/ota/simple_ota_example:
+  enable:
+    - if: INCLUDE_DEFAULT in ["esp32c2","esp32c3","es32"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
+    - if: INCLUDE_DEFAULT in ["esp32c2","esp32c3","es32","esp32c6"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
+
+examples/screen:
+  enable:
+    - if: IDF_TARGET == "esp32" and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
+
+examples/sensors/sensor_control_led:
+  enable:
+    - if: IDF_TARGET in ["esp32","esp32s2"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
+
+examples/sensors/sensor_hub_monitor:
+  enable:
+    - if: IDF_TARGET in ["esp32","esp32s2"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
+
+examples/usb/device/usb_msc_wireless_disk:
+  enable:
+    - if: IDF_TARGET in ["esp32s2","esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
+
+examples/usb/device/usb_surface_dial:
+  enable:
+    - if: IDF_TARGET in ["esp32s2","esp32s3"]
+
+examples/usb/host/usb_camera_lcd_display:
+  enable:
+    - if: IDF_TARGET == "esp32s3" and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
+
+examples/usb/host/usb_camera_mic_spk:
+  enable:
+    - if: IDF_TARGET in ["esp32s2","esp32s3"]
+
+examples/usb/host/usb_cdc_4g_module:
+  enable:
+    - if: IDF_TARGET in ["esp32s2","esp32s3"]
+
+examples/utilities/xz_decompress_file:
+  enable:
+    - if: INCLUDE_DEFAULT == 1

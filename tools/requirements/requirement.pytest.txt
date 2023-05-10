@@ -1,0 +1,5 @@
+pytest
+pytest-embedded-idf
+pytest-embedded-serial-esp
+pytest-rerunfailures
+pytest-timeout
