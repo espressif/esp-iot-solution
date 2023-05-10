@@ -8,7 +8,7 @@ After creating a new button object by calling function `button_create()`, the bu
 List of supported events:
  * Button pressed
  * Button released
- * Button pressed - repeated
+ * Button pressed repeat
  * Button press repeat done
  * Button single click
  * Button double click

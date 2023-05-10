@@ -433,6 +433,17 @@ build_example_utilities_xz_decompress_file:
   variables:
     EXAMPLE_DIR: examples/utilities/xz_decompress_file
 
+build_components_button_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_button_test_apps
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
+  variables:
+    EXAMPLE_DIR: components/button/test_apps
+
 build_components_knob_test_apps:
   extends:
     - .build_examples_template

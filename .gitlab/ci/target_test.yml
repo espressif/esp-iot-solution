@@ -77,6 +77,31 @@ components_test_usb_camera:
     TEST_FOLDER: components/usb/usb_stream
     TEST_ENV: ${ENV_TAG}
 
+components_test_button:
+  extends:
+    - .pytest_template
+    - .rules:build:components_button_test_apps
+  needs:
+    - job: "build_components_button_test_apps"
+      artifacts: true
+      optional: false
+  parallel:
+    matrix:
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "4.4"
+        ENV_TAG: "button"
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "5.0"
+        ENV_TAG: "button"
+  tags:
+    - ${IDF_TARGET}
+    - ${ENV_TAG}
+  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
+  variables:
+    TEST_TARGET: ${IDF_TARGET}
+    TEST_FOLDER: components/button
+    TEST_ENV: ${ENV_TAG}
+
 components_test_led_indicator:
   extends:
     - .pytest_template
