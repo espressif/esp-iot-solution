@@ -1,8 +1,8 @@
 .build_template: &build_template
   stage: build
-  image: espressif/idf:release-v4.4
   tags:
     - build
+  image: ${IMAGE}
   variables:
     # Enable ccache for all build jobs. See configure_ci_environment.sh for more ccache related settings.
     IDF_CCACHE_ENABLE: "1"
@@ -34,457 +34,312 @@
   script:
     - pip install --upgrade idf-component-manager
     - pip install idf_build_apps
-    - python -m idf_build_apps build -vv
-      -p $EXAMPLE_DIR 
-      -t all
-      --config "sdkconfig.ci.*="
-      --build-dir build_@t_@w
-      --build-log build_log.txt
-      --size-file size.json
-      --check-warnings
-      --ignore-warning-str "$WARNING_STR"
-      --collect-size-info size_info.txt
-      --default-build-targets $IDF_TARGET
+    - python tools/build_apps.py ${EXAMPLE_DIR} -t all -vv
 
-build_example_audio_wav_player_v4.4:
+build_example_audio_wav_player:
   extends:
     - .build_examples_template
     - .rules:build:example_audio_wav_player
-  image: espressif/idf:release-v4.4
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
   variables:
-    IDF_TARGET: esp32,esp32s2,esp32s3,esp32c3
     EXAMPLE_DIR: examples/audio/wav_player
 
-build_example_audio_wav_player_v5.0:
-  extends:
-    - .build_examples_template
-    - .rules:build:example_audio_wav_player
-  image: espressif/idf:release-v5.0
-  variables:
-    IDF_TARGET: esp32,esp32s2,esp32s3,esp32c2,esp32c3
-    EXAMPLE_DIR: examples/audio/wav_player
-
-build_example_bluetooth_ble_ota_v4.4:
+build_example_bluetooth_ble_ota:
   extends:
     - .build_examples_template
     - .rules:build:example_bluetooth_ble_ota
-  image: espressif/idf:release-v4.4
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
   variables:
-    IDF_TARGET: esp32,esp32s3,esp32c3
     EXAMPLE_DIR: examples/bluetooth/ble_ota
 
-build_example_bluetooth_ble_ota_v5.0:
-  extends:
-    - .build_examples_template
-    - .rules:build:example_bluetooth_ble_ota
-  image: espressif/idf:release-v5.0
-  variables:
-    IDF_TARGET: esp32,esp32s3,esp32c3
-    EXAMPLE_DIR: examples/bluetooth/ble_ota
-
-build_example_camera_basic_v4.4:
+build_example_camera_basic:
   extends:
     - .build_examples_template
     - .rules:build:example_camera_basic
-  image: espressif/idf:release-v4.4
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
   variables:
-    IDF_TARGET: esp32s2,esp32s3
     EXAMPLE_DIR: examples/camera/basic
 
-build_example_camera_basic_v5.0:
-  extends:
-    - .build_examples_template
-    - .rules:build:example_camera_basic
-  image: espressif/idf:release-v5.0
-  variables:
-    IDF_TARGET: esp32s2,esp32s3
-    EXAMPLE_DIR: examples/camera/basic
-
-build_example_camera_pic_server_v4.4:
+build_example_camera_pic_server:
   extends:
     - .build_examples_template
     - .rules:build:example_camera_pic_server
-  image: espressif/idf:release-v4.4
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
   variables:
-    IDF_TARGET: esp32s2,esp32s3
     EXAMPLE_DIR: examples/camera/pic_server
 
-build_example_camera_pic_server_v5.0:
-  extends:
-    - .build_examples_template
-    - .rules:build:example_camera_pic_server
-  image: espressif/idf:release-v5.0
-  variables:
-    IDF_TARGET: esp32s2,esp32s3
-    EXAMPLE_DIR: examples/camera/pic_server
-
-build_example_camera_test_framerate_v4.4:
+build_example_camera_test_framerate:
   extends:
     - .build_examples_template
     - .rules:build:example_camera_test_framerate
-  image: espressif/idf:release-v4.4
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
   variables:
-    IDF_TARGET: esp32s2,esp32s3
     EXAMPLE_DIR: examples/camera/test_framerate
 
-build_example_camera_test_framerate_v5.0:
-  extends:
-    - .build_examples_template
-    - .rules:build:example_camera_test_framerate
-  image: espressif/idf:release-v5.0
-  variables:
-    IDF_TARGET: esp32s2,esp32s3
-    EXAMPLE_DIR: examples/camera/test_framerate
-
-build_example_camera_video_recorder_v4.4:
+build_example_camera_video_recorder:
   extends:
     - .build_examples_template
     - .rules:build:example_camera_video_recorder
-  image: espressif/idf:release-v4.4
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
   variables:
-    IDF_TARGET: esp32s3
     EXAMPLE_DIR: examples/camera/video_recorder
 
-build_example_camera_video_recorder_v5.0:
-  extends:
-    - .build_examples_template
-    - .rules:build:example_camera_video_recorder
-  image: espressif/idf:release-v5.0
-  variables:
-    IDF_TARGET: esp32s3
-    EXAMPLE_DIR: examples/camera/video_recorder
-
-build_example_camera_video_stream_server_v4.4:
+build_example_camera_video_stream_server:
   extends:
     - .build_examples_template
     - .rules:build:example_camera_video_stream_server
-  image: espressif/idf:release-v4.4
   variables:
-    IDF_TARGET: esp32s2,esp32s3
     EXAMPLE_DIR: examples/camera/video_stream_server
+    IMAGE: espressif/idf:release-v4.4
 
-build_example_camera_video_stream_server_v5.0:
-  extends:
-    - .build_examples_template
-    - .rules:build:example_camera_video_stream_server
-  image: espressif/idf:release-v5.0
-  variables:
-    IDF_TARGET: esp32s2,esp32s3
-    EXAMPLE_DIR: examples/camera/video_stream_server
-
-build_example_check_pedestrian_flow_v4.4:
+build_example_check_pedestrian_flow:
   extends:
     - .build_examples_template
     - .rules:build:example_check_pedestrian_flow
-  image: espressif/idf:release-v4.4
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
   variables:
-    IDF_TARGET: esp32,esp32s2,esp32s3,esp32c3
     EXAMPLE_DIR: examples/check_pedestrian_flow
 
-build_example_extended_vfs_gpio_gpio_simple_v4.4:
+build_example_extended_vfs_gpio_gpio_simple:
   extends:
     - .build_examples_template
     - .rules:build:example_extended_vfs_gpio_gpio_simple
-  image: espressif/idf:release-v4.4
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
   variables:
-    IDF_TARGET: esp32,esp32s2,esp32s3,esp32c3
     EXAMPLE_DIR: examples/extended_vfs/gpio/gpio_simple
 
-build_example_extended_vfs_gpio_gpio_simple_v5.0:
-  extends:
-    - .build_examples_template
-    - .rules:build:example_extended_vfs_gpio_gpio_simple
-  image: espressif/idf:release-v5.0
-  variables:
-    IDF_TARGET: esp32,esp32s2,esp32s3,esp32c2,esp32c3
-    EXAMPLE_DIR: examples/extended_vfs/gpio/gpio_simple
-
-build_example_extended_vfs_i2c_i2c_bh1750_v4.4:
+build_example_extended_vfs_i2c_i2c_bh1750:
   extends:
     - .build_examples_template
     - .rules:build:example_extended_vfs_i2c_i2c_bh1750
-  image: espressif/idf:release-v4.4
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
   variables:
-    IDF_TARGET: esp32,esp32s2,esp32s3,esp32c3
     EXAMPLE_DIR: examples/extended_vfs/i2c/i2c_bh1750
 
-build_example_extended_vfs_i2c_i2c_bh1750_v5.0:
-  extends:
-    - .build_examples_template
-    - .rules:build:example_extended_vfs_i2c_i2c_bh1750
-  image: espressif/idf:release-v5.0
-  variables:
-    IDF_TARGET: esp32,esp32s2,esp32s3,esp32c2,esp32c3
-    EXAMPLE_DIR: examples/extended_vfs/i2c/i2c_bh1750
-
-build_example_extended_vfs_i2c_i2c_tt21100_v4.4:
+build_example_extended_vfs_i2c_i2c_tt21100:
   extends:
     - .build_examples_template
     - .rules:build:example_extended_vfs_i2c_i2c_tt21100
-  image: espressif/idf:release-v4.4
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
   variables:
-    IDF_TARGET: esp32,esp32s2,esp32s3,esp32c3
     EXAMPLE_DIR: examples/extended_vfs/i2c/i2c_tt21100
 
-build_example_extended_vfs_i2c_i2c_tt21100_v5.0:
-  extends:
-    - .build_examples_template
-    - .rules:build:example_extended_vfs_i2c_i2c_tt21100
-  image: espressif/idf:release-v5.0
-  variables:
-    IDF_TARGET: esp32,esp32s2,esp32s3,esp32c2,esp32c3
-    EXAMPLE_DIR: examples/extended_vfs/i2c/i2c_tt21100
-
-build_example_extended_vfs_ledc_ledc_simple_v4.4:
+build_example_extended_vfs_ledc_ledc_simple:
   extends:
     - .build_examples_template
     - .rules:build:example_extended_vfs_ledc_ledc_simple
-  image: espressif/idf:release-v4.4
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
   variables:
-    IDF_TARGET: esp32,esp32s2,esp32s3,esp32c3
     EXAMPLE_DIR: examples/extended_vfs/ledc/ledc_simple
 
-build_example_extended_vfs_ledc_ledc_simple_v5.0:
-  extends:
-    - .build_examples_template
-    - .rules:build:example_extended_vfs_ledc_ledc_simple
-  image: espressif/idf:release-v5.0
-  variables:
-    IDF_TARGET: esp32,esp32s2,esp32s3,esp32c2,esp32c3
-    EXAMPLE_DIR: examples/extended_vfs/ledc/ledc_simple
-
-build_example_extended_vfs_spi_spi_master_simple_v4.4:
+build_example_extended_vfs_spi_spi_master_simple:
   extends:
     - .build_examples_template
     - .rules:build:example_extended_vfs_spi_spi_master_simple
-  image: espressif/idf:release-v4.4
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
   variables:
-    IDF_TARGET: esp32,esp32s2,esp32s3,esp32c3
     EXAMPLE_DIR: examples/extended_vfs/spi/spi_master_simple
 
-build_example_extended_vfs_spi_spi_master_simple_v5.0:
-  extends:
-    - .build_examples_template
-    - .rules:build:example_extended_vfs_spi_spi_master_simple
-  image: espressif/idf:release-v5.0
-  variables:
-    IDF_TARGET: esp32,esp32s2,esp32s3,esp32c3
-    EXAMPLE_DIR: examples/extended_vfs/spi/spi_master_simple
-
-build_example_extended_vfs_spi_spi_slave_simple_v4.4:
+build_example_extended_vfs_spi_spi_slave_simple:
   extends:
     - .build_examples_template
     - .rules:build:example_extended_vfs_spi_spi_slave_simple
-  image: espressif/idf:release-v4.4
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
   variables:
-    IDF_TARGET: esp32,esp32s2,esp32s3,esp32c3
     EXAMPLE_DIR: examples/extended_vfs/spi/spi_slave_simple
 
-build_example_extended_vfs_spi_spi_slave_simple_v5.0:
-  extends:
-    - .build_examples_template
-    - .rules:build:example_extended_vfs_spi_spi_slave_simple
-  image: espressif/idf:release-v5.0
-  variables:
-    IDF_TARGET: esp32,esp32s2,esp32s3,esp32c3
-    EXAMPLE_DIR: examples/extended_vfs/spi/spi_slave_simple
-
-build_example_get_started_blink_v4.4:
+build_example_get_started_blink:
   extends:
     - .build_examples_template
     - .rules:build:example_get_started_blink
-  image: espressif/idf:release-v4.4
   variables:
-    IDF_TARGET: esp32,esp32s2,esp32s3
     EXAMPLE_DIR: examples/get-started/blink
+    IMAGE: espressif/idf:release-v4.4
 
-build_example_hmi_lvgl_coffee_v4.4:
+build_example_hmi_lvgl_coffee:
   extends:
     - .build_examples_template
     - .rules:build:example_hmi_lvgl_coffee
-  image: espressif/idf:release-v4.4
   variables:
-    IDF_TARGET: esp32
     EXAMPLE_DIR: examples/hmi/lvgl_coffee
+    IMAGE: espressif/idf:release-v4.4
 
-build_example_hmi_lvgl_example_v4.4:
+build_example_hmi_lvgl_example:
   extends:
     - .build_examples_template
     - .rules:build:example_hmi_lvgl_example
-  image: espressif/idf:release-v4.4
   variables:
-    IDF_TARGET: esp32
     EXAMPLE_DIR: examples/hmi/lvgl_example
+    IMAGE: espressif/idf:release-v4.4
 
-build_example_hmi_lvgl_thermostat_v4.4:
+build_example_hmi_lvgl_thermostat:
   extends:
     - .build_examples_template
     - .rules:build:example_hmi_lvgl_thermostat
-  image: espressif/idf:release-v4.4
   variables:
-    IDF_TARGET: esp32
     EXAMPLE_DIR: examples/hmi/lvgl_thermostat
+    IMAGE: espressif/idf:release-v4.4
 
-build_example_hmi_lvgl_wificonfig_v4.4:
+build_example_hmi_lvgl_wificonfig:
   extends:
     - .build_examples_template
     - .rules:build:example_hmi_lvgl_wificonfig
-  image: espressif/idf:release-v4.4
   variables:
-    IDF_TARGET: esp32
     EXAMPLE_DIR: examples/hmi/lvgl_wificonfig
+    IMAGE: espressif/idf:release-v4.4
 
-build_example_lighting_lightbulb_v4.4:
+build_example_lighting_lightbulb:
   extends:
     - .build_examples_template
     - .rules:build:example_lighting_lightbulb
-  image: espressif/idf:release-v4.4
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
   variables:
-    IDF_TARGET: esp32,esp32s2,esp32s3,esp32c3
     EXAMPLE_DIR: examples/lighting/lightbulb
 
-build_example_lighting_lightbulb_v5.0:
-  extends:
-    - .build_examples_template
-    - .rules:build:example_lighting_lightbulb
-  image: espressif/idf:release-v5.0
-  variables:
-    IDF_TARGET: esp32,esp32s2,esp32s3,esp32c2,esp32c3
-    EXAMPLE_DIR: examples/lighting/lightbulb
-
-build_example_ota_simple_ota_example_v5.0:
+build_example_ota_simple_ota_example:
   extends:
     - .build_examples_template
     - .rules:build:example_ota_simple_ota_example
-  image: espressif/idf:release-v5.0
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.0
+      - IMAGE: espressif/idf:release-v5.1
   variables:
-    IDF_TARGET: esp32c2,esp32c3,esp32
     EXAMPLE_DIR: examples/ota/simple_ota_example
     WARNING_STR: "1/2 app partitions are too small"
 
-build_example_ota_simple_ota_example_v5.1:
-  extends:
-    - .build_examples_template
-    - .rules:build:example_ota_simple_ota_example
-  image: espressif/idf:release-v5.1
-  variables:
-    IDF_TARGET: esp32c2,esp32c3,esp32,esp32c6
-    EXAMPLE_DIR: examples/ota/simple_ota_example
-    WARNING_STR: "1/2 app partitions are too small"
-
-build_example_screen_v4.4:
+build_example_screen:
   extends:
     - .build_examples_template
     - .rules:build:example_screen
-  image: espressif/idf:release-v4.4
   variables:
-    IDF_TARGET: esp32
     EXAMPLE_DIR: examples/screen
+    IMAGE: espressif/idf:release-v4.4
 
-build_example_sensors_sensor_control_led_v4.4:
+build_example_sensors_sensor_control_led:
   extends:
     - .build_examples_template
     - .rules:build:example_sensors_sensor_control_led
-  image: espressif/idf:release-v4.4
   variables:
-    IDF_TARGET: esp32,esp32s2
     EXAMPLE_DIR: examples/sensors/sensor_control_led
+    IMAGE: espressif/idf:release-v4.4
 
-build_example_sensors_sensor_hub_monitor_v4.4:
+build_example_sensors_sensor_hub_monitor:
   extends:
     - .build_examples_template
     - .rules:build:example_sensors_sensor_hub_monitor
-  image: espressif/idf:release-v4.4
   variables:
-    IDF_TARGET: esp32,esp32s2
     EXAMPLE_DIR: examples/sensors/sensor_hub_monitor
+    IMAGE: espressif/idf:release-v4.4
 
-build_example_usb_device_usb_msc_wireless_disk_v5.0:
+build_example_usb_device_usb_msc_wireless_disk:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_device_usb_msc_wireless_disk
-  image: espressif/idf:release-v5.0
   variables:
-    IDF_TARGET: esp32s2,esp32s3
     EXAMPLE_DIR: examples/usb/device/usb_msc_wireless_disk
+    IMAGE: espressif/idf:release-v5.0
 
-build_example_usb_device_usb_surface_dial_v4.4:
+build_example_usb_device_usb_surface_dial:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_device_usb_surface_dial
-  image: espressif/idf:release-v4.4
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
   variables:
-    IDF_TARGET: esp32s2,esp32s3
     EXAMPLE_DIR: examples/usb/device/usb_surface_dial
 
-build_example_usb_device_usb_surface_dial_v5.0:
-  extends:
-    - .build_examples_template
-    - .rules:build:example_usb_device_usb_surface_dial
-  image: espressif/idf:release-v5.0
-  variables:
-    IDF_TARGET: esp32s2,esp32s3
-    EXAMPLE_DIR: examples/usb/device/usb_surface_dial
-
-build_example_usb_host_usb_camera_lcd_display_v5.0:
+build_example_usb_host_usb_camera_lcd_display:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_host_usb_camera_lcd_display
-  image: espressif/idf:release-v5.0
   variables:
-    IDF_TARGET: esp32s3
     EXAMPLE_DIR: examples/usb/host/usb_camera_lcd_display
+    IMAGE: espressif/idf:release-v5.0
 
-build_example_usb_host_usb_camera_mic_spk_v4.4:
+build_example_usb_host_usb_camera_mic_spk:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_host_usb_camera_mic_spk
-  image: espressif/idf:release-v4.4
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
   variables:
-    IDF_TARGET: esp32s2,esp32s3
     EXAMPLE_DIR: examples/usb/host/usb_camera_mic_spk
 
-build_example_usb_host_usb_camera_mic_spk_v5.0:
-  extends:
-    - .build_examples_template
-    - .rules:build:example_usb_host_usb_camera_mic_spk
-  image: espressif/idf:release-v5.0
-  variables:
-    IDF_TARGET: esp32s2,esp32s3
-    EXAMPLE_DIR: examples/usb/host/usb_camera_mic_spk
-
-build_example_usb_host_usb_cdc_4g_module_v4.4:
+build_example_usb_host_usb_cdc_4g_module:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_host_usb_cdc_4g_module
-  image: espressif/idf:release-v4.4
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
   variables:
-    IDF_TARGET: esp32s2,esp32s3
     EXAMPLE_DIR: examples/usb/host/usb_cdc_4g_module
 
-build_example_usb_host_usb_cdc_4g_module_v5.0:
-  extends:
-    - .build_examples_template
-    - .rules:build:example_usb_host_usb_cdc_4g_module
-  image: espressif/idf:release-v5.0
-  variables:
-    IDF_TARGET: esp32s2,esp32s3
-    EXAMPLE_DIR: examples/usb/host/usb_cdc_4g_module
-
-build_example_utilities_xz_decompress_file_v4.4:
+build_example_utilities_xz_decompress_file:
   extends:
     - .build_examples_template
     - .rules:build:example_utilities_xz_decompress_file
-  image: espressif/idf:release-v4.4
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
   variables:
-    IDF_TARGET: esp32,esp32s2,esp32s3,esp32c3
     EXAMPLE_DIR: examples/utilities/xz_decompress_file
 
-build_example_utilities_xz_decompress_file_v5.0:
+build_components_usb_usb_stream_test_apps:
   extends:
     - .build_examples_template
-    - .rules:build:example_utilities_xz_decompress_file
-  image: espressif/idf:release-v5.0
+    - .rules:build:components_usb_usb_stream_test
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
   variables:
-    IDF_TARGET: esp32,esp32s2,esp32s3,esp32c2,esp32c3
-    EXAMPLE_DIR: examples/utilities/xz_decompress_file
+    EXAMPLE_DIR: components/usb/usb_stream/test_apps

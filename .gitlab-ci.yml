@@ -1,6 +1,7 @@
 stages:
   - pre_check
   - build
+  - target_test
   - build_doc
   - deploy
 
@@ -39,3 +40,4 @@ include:
   - '.gitlab/ci/build.yml'
   - '.gitlab/ci/docs.yml'
   - '.gitlab/ci/deploy.yml'
+  - '.gitlab/ci/target_test.yml'

@@ -2,6 +2,12 @@
 # Patterns #
 ############
 
+# build system, if changed, build all apps
+.patterns-build_system: &patterns-build_system
+  - "tools/build_apps.py"
+  - "conftest.py"
+  - "pytest.ini"
+
 # components folder, in the alphabetic order
 .patterns-components_audio_dac_audio: &patterns-components_audio_dac_audio
   - "components/audio/dac_audio/**/*"
@@ -286,6 +292,8 @@
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
       changes: *patterns-components_audio_pwm_audio
     - <<: *if-dev-push
       changes: *patterns-example_audio_wav_player
@@ -294,6 +302,8 @@
   rules:
     - <<: *if-protected
     - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system    
     - <<: *if-dev-push
       changes: *patterns-components_bluetooth_ble_profiles_esp_ble_ota
     - <<: *if-dev-push
@@ -304,6 +314,8 @@
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
       changes: *patterns-example_camera_basic
     - <<: *if-dev-push
       changes: *patterns-example_common_components_camera
@@ -312,6 +324,8 @@
   rules:
     - <<: *if-protected
     - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-example_camera_pic_server
     - <<: *if-dev-push
@@ -322,6 +336,8 @@
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
       changes: *patterns-example_camera_test_framerate
     - <<: *if-dev-push
       changes: *patterns-example_common_components_camera
@@ -330,6 +346,8 @@
   rules:
     - <<: *if-protected
     - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-example_camera_video_recorder
     - <<: *if-dev-push
@@ -340,6 +358,8 @@
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
       changes: *patterns-example_camera_video_stream_server
     - <<: *if-dev-push
       changes: *patterns-example_common_components_camera
@@ -349,12 +369,16 @@
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
       changes: *patterns-example_check_pedestrian_flow
 
 .rules:build:example_extended_vfs_gpio_gpio_simple:
   rules:
     - <<: *if-protected
     - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_extended_vfs
     - <<: *if-dev-push
@@ -365,6 +389,8 @@
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
       changes: *patterns-components_extended_vfs
     - <<: *if-dev-push
       changes: *patterns-example_extended_vfs_i2c_i2c_bh1750
@@ -373,6 +399,8 @@
   rules:
     - <<: *if-protected
     - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_extended_vfs
     - <<: *if-dev-push
@@ -383,6 +411,8 @@
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
       changes: *patterns-components_extended_vfs
     - <<: *if-dev-push
       changes: *patterns-example_extended_vfs_ledc_ledc_simple
@@ -391,6 +421,8 @@
   rules:
     - <<: *if-protected
     - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_extended_vfs
     - <<: *if-dev-push
@@ -401,6 +433,8 @@
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
       changes: *patterns-components_extended_vfs
     - <<: *if-dev-push
       changes: *patterns-example_extended_vfs_spi_spi_slave_simple
@@ -410,12 +444,16 @@
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
       changes: *patterns-example_get_started_blink
 
 .rules:build:example_hmi_lvgl_coffee:
   rules:
     - <<: *if-protected
     - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_gui_lvgl_gui
     - <<: *if-dev-push
@@ -428,6 +466,8 @@
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
       changes: *patterns-components_gui_lvgl_gui
     - <<: *if-dev-push
       changes: *patterns-example_common_components_boards
@@ -438,6 +478,8 @@
   rules:
     - <<: *if-protected
     - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_gui_lvgl_gui
     - <<: *if-dev-push
@@ -450,6 +492,8 @@
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
       changes: *patterns-components_gui_lvgl_gui
     - <<: *if-dev-push
       changes: *patterns-example_common_components_boards
@@ -461,6 +505,8 @@
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
       changes: *patterns-components_led_lightbulb_driver
     - <<: *if-dev-push
       changes: *patterns-example_lighting_lightbulb
@@ -469,6 +515,8 @@
   rules:
     - <<: *if-protected
     - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_bootloader_support_plus
     - <<: *if-dev-push
@@ -479,6 +527,8 @@
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
       changes: *patterns-components_display_screen
     - <<: *if-dev-push
       changes: *patterns-example_screen
@@ -487,6 +537,8 @@
   rules:
     - <<: *if-protected
     - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_bus
     - <<: *if-dev-push
@@ -521,6 +573,8 @@
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
       changes: *patterns-components_bus
     - <<: *if-dev-push
       changes: *patterns-components_sensors_gesture_apds9960
@@ -554,12 +608,16 @@
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
       changes: *patterns-example_usb_device_usb_msc_wireless_disk
 
 .rules:build:example_usb_device_usb_surface_dial:
   rules:
     - <<: *if-protected
     - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_button
     - <<: *if-dev-push
@@ -572,6 +630,8 @@
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
       changes: *patterns-components_usb_usb_stream
     - <<: *if-dev-push
       changes: *patterns-example_usb_host_usb_camera_lcd_display
@@ -581,6 +641,8 @@
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
       changes: *patterns-components_usb_usb_stream
     - <<: *if-dev-push
       changes: *patterns-example_usb_host_usb_camera_mic_spk
@@ -589,6 +651,8 @@
   rules:
     - <<: *if-protected
     - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_led_led_indicator
     - <<: *if-dev-push
@@ -601,6 +665,8 @@
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
       changes: *patterns-components_utilities_xz
     - <<: *if-dev-push
       changes: *patterns-example_utilities_xz_decompress_file
@@ -611,12 +677,16 @@
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
       changes: *patterns-components_audio_dac_audio
 
 .rules:build:component_audio_pwm_audio_test:
   rules:
     - <<: *if-protected
     - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_audio_pwm_audio
 
@@ -625,12 +695,16 @@
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
       changes: *patterns-components_bus
 
 .rules:build:components_button_test:
   rules:
     - <<: *if-protected
     - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_button
 
@@ -639,12 +713,16 @@
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
       changes: *patterns-components_display_digital_tube_ch450
 
 .rules:build:components_display_digital_tube_ht16c21_test:
   rules:
     - <<: *if-protected
     - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_display_digital_tube_ht16c21
 
@@ -653,12 +731,16 @@
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
       changes: *patterns-components_display_digital_tube_is31fl3xxx
 
 .rules:build:components_display_screen_test:
   rules:
     - <<: *if-protected
     - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_display_screen
 
@@ -667,12 +749,16 @@
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
       changes: *patterns-components_display_touch_panel
 
 .rules:build:components_expander_io_expander_mcp23017_test:
   rules:
     - <<: *if-protected
     - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_expander_io_expander_mcp23017
 
@@ -681,12 +767,16 @@
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
       changes: *patterns-components_knob
 
 .rules:build:components_led_led_indicator_test:
   rules:
     - <<: *if-protected
     - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_led_led_indicator
 
@@ -695,12 +785,16 @@
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
       changes: *patterns-components_led_light
 
 .rules:build:components_led_lightbulb_driver_test:
   rules:
     - <<: *if-protected
     - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_led_lightbulb_driver
 
@@ -709,12 +803,16 @@
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
       changes: *patterns-components_motor_servo
 
 .rules:build:components_sensors_gesture_apds9960_test:
   rules:
     - <<: *if-protected
     - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_sensors_gesture_apds9960
 
@@ -723,12 +821,16 @@
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
       changes: *patterns-components_sensors_humiture_hdc2010
 
 .rules:build:components_sensors_humiture_hts221_test:
   rules:
     - <<: *if-protected
     - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_sensors_humiture_hts221
 
@@ -737,12 +839,16 @@
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
       changes: *patterns-components_sensors_humiture_mvh3004d
 
 .rules:build:components_sensors_humiture_sht3x_test:
   rules:
     - <<: *if-protected
     - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_sensors_humiture_sht3x
 
@@ -751,12 +857,16 @@
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
       changes: *patterns-components_sensors_imu_lis2dh12
 
 .rules:build:components_sensors_imu_mpu6050_test:
   rules:
     - <<: *if-protected
     - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_sensors_imu_mpu6050
 
@@ -765,12 +875,16 @@
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
       changes: *patterns-components_sensors_light_sensor_bh1750
 
 .rules:build:components_sensors_light_sensor_veml6040_test:
   rules:
     - <<: *if-protected
     - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_sensors_light_sensor_veml6040
 
@@ -779,12 +893,16 @@
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
       changes: *patterns-components_sensors_light_sensor_veml6075
 
 .rules:build:components_sensors_pressure_bme280_test:
   rules:
     - <<: *if-protected
     - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_sensors_pressure_bme280
 
@@ -793,12 +911,16 @@
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
       changes: *patterns-components_sensors_sensor_hub
 
 .rules:build:components_storage_eeprom_at24c02_test:
   rules:
     - <<: *if-protected
     - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_storage_eeprom_at24c02
 
@@ -807,12 +929,16 @@
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
       changes: *patterns-components_usb_iot_usbh
 
 .rules:build:components_usb_iot_usbh_cdc_test:
   rules:
     - <<: *if-protected
     - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_usb_iot_usbh_cdc
 
@@ -821,12 +947,16 @@
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
       changes: *patterns-components_usb_usb_stream
 
 .rules:build:docs:
   rules:
     - <<: *if-protected
     - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-docs
     - <<: *if-dev-push
@@ -836,5 +966,7 @@
   rules:
     - <<: *if-protected
     - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-docs_md

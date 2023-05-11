@@ -1,0 +1,36 @@
+variables:
+  # There is no target-test-env-v4.4 
+  DOCKER_TARGET_TEST_v5_0_ENV_IMAGE: "$CI_DOCKER_REGISTRY/target-test-env-v5.0:3"
+  DOCKER_TARGET_TEST_v5_1_ENV_IMAGE: "$CI_DOCKER_REGISTRY/target-test-env-v5.1:1"
+
+.test_template: &test_template
+  image: DOCKER_TARGET_TEST_v5_0_ENV_IMAGE
+  stage: target_test
+  timeout: 4 hour
+  variables:
+    GIT_DEPTH: 1
+    SUBMODULES_TO_FETCH: "none"
+  cache:
+    # Usually do not need submodule-cache in target_test
+    - key: pip-cache
+      paths:
+        - .cache/pip
+      policy: pull
+
+.pytest_template:
+  <<: *test_template
+  artifacts:
+    when: always
+    paths:
+      - XUNIT_RESULT.xml
+      - pytest_embedded_log/
+    reports:
+      junit: XUNIT_RESULT.xml
+    expire_in: 4 days
+  variables:
+    TEST_TARGET: 'esp32'
+    TEST_FOLDER: '.'
+    TEST_ENV: 'generic'
+  script:
+    - pip install -r tools/requirements/requirement.pytest.txt
+    - pytest ${TEST_FOLDER} --target ${IDF_TARGET} --env ${TEST_ENV} --junitxml=XUNIT_RESULT.xml
