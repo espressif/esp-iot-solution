@@ -66,7 +66,6 @@ USB Stream Config Reference
        .spk_samples_frequence = 16000, //speaker frequence, Hz
        .spk_buf_size = 16000, //size of speaker send buffer, should be a multiple of spk_ep_mps
        .mic_buf_size = 0, //mic receive buffer size, 0 if not use, else should be a multiple of mic_min_bytes
-       .mic_min_bytes = 320, //min bytes to trigger mic callback, 0 if not using callback, else must be multiple (1~32) of mic_ep_mps
        .mic_cb = &mic_frame_cb, //mic callback, can not block in here
        .mic_cb_arg = NULL, //mic callback args
    };

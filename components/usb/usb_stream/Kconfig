@@ -1,41 +1,28 @@
-menu "UVC Stream"
+menu "USB Stream"
 
     config CTRL_TRANSFER_DATA_MAX_BYTES
         int "Max control transfer data size (Bytes)"
         range 64 2048
         default 1024
+    config USB_STREAM_QUICK_START
+        bool "usb stream quick start"
+        default n
     config UVC_GET_DEVICE_DESC
-        bool "Get camera device descriptor during emum"
+        bool "Get device descriptor during emum"
+        depends on !USB_STREAM_QUICK_START
         default y
     config UVC_GET_CONFIG_DESC
-        bool "Get and parse camera config descriptor during emum"
+        bool "Get and parse config descriptor during emum"
+        depends on !USB_STREAM_QUICK_START
+        select UVC_GET_DEVICE_DESC
         default y
-        help
-            This option should be enable if need self-adaptation
     config UVC_PRINT_DESC
         bool "Print descriptor info"
+        depends on !USB_STREAM_QUICK_START
         default y
     config UVC_PRINT_DESC_VERBOSE
         bool "Print descriptor info in verbose mode"
         depends on UVC_PRINT_DESC
-        default n
-    config UVC_PRINT_PROBE_RESULT
-        bool "Print video cur probe result"
-        default y
-    config UVC_CHECK_BULK_JPEG_HEADER
-        bool "Check JPEG (ff d8) header in bulk payload"
-        default y
-    config UVC_DROP_NO_EOF_FRAME
-        bool "Drop no EOF image frames"
-        default n
-    config UVC_DROP_OVERFLOW_FRAME
-        bool "Drop overflow image frames"
-        default y
-    config SOURCE_SIMULATE
-        bool "Enable Simulate Pictures From Flash"
-        default n
-    config TRIGGER_PIN
-        bool "Enable Trigger Pin For Debug"
         default n
     config USB_PROC_TASK_PRIORITY
         int "usb process task priority"
@@ -52,37 +39,79 @@ menu "UVC Stream"
     config USB_WAITING_AFTER_CONN_MS
         int "usb enum delay time(ms) after device connection"
         default 50
-    config SAMPLE_PROC_TASK_PRIORITY
-        int "sample process task priority"
-        range 1 25
-        default 2
-    config SAMPLE_PROC_TASK_CORE
-        int "sample process task core id"
-        range 0 1
-        default 0
-    config SAMPLE_PROC_TASK_STACK_SIZE
-        int "sample process task stack size (Bytes)"
-        default 3072
-    config BULK_BYTES_PER_URB_SAME_AS_FRAME
-        bool "bulk: transfer size in each urb same as frame buffer"
-        default n
-        help
-            According to UVC 1.5 2.4.3.2.1, each packet should have a header added, but most cameras don't.
-            Therefore, a large buffer should be prepared to ensure that a frame can be received.
-    config NUM_BULK_STREAM_URBS
-        int "bulk: urb number"
-        depends on !BULK_BYTES_PER_URB_SAME_AS_FRAME
-        default 2
-    config NUM_BULK_BYTES_PER_URB
-        int "bulk: segment size in each urb transfer"
-        depends on !BULK_BYTES_PER_URB_SAME_AS_FRAME
-        default 2048
-    config NUM_ISOC_STREAM_URBS
-        int "isoc: urb number"
-        default 3
-    config NUM_PACKETS_PER_URB_URB
-        int "isoc: packet number in each urb"
-        default 4
 
+    menu "UVC Stream Config"
+        config SAMPLE_PROC_TASK_PRIORITY
+            int "uvc sample process task priority"
+            range 1 25
+            default 2
+        config SAMPLE_PROC_TASK_CORE
+            int "uvc sample process task core id"
+            range 0 1
+            default 0
+        config SAMPLE_PROC_TASK_STACK_SIZE
+            int "uvc sample process task stack size (Bytes)"
+            default 3072
+        config UVC_PRINT_PROBE_RESULT
+            bool "Print video cur probe result"
+            default y
+        config UVC_CHECK_BULK_JPEG_HEADER
+            bool "Check JPEG (ff d8) header in bulk payload"
+            default y
+        config UVC_DROP_NO_EOF_FRAME
+            bool "Drop no EOF image frames"
+            default n
+        config UVC_DROP_OVERFLOW_FRAME
+            bool "Drop overflow image frames"
+            default y
+        config NUM_BULK_STREAM_URBS
+            int "uvc bulk urb number"
+            default 2
+        config NUM_BULK_BYTES_PER_URB
+            int "uvc bulk segment size in each urb transfer"
+            default 2048
+        config NUM_ISOC_UVC_URBS
+            int "uvc isoc urb number"
+            default 3
+        config NUM_PACKETS_PER_URB
+            int "uvc isoc packet number in each urb"
+            default 4
+    endmenu
+
+    menu "UAC Stream Config"
+        config NUM_ISOC_SPK_URBS
+            int "uac speaker isoc urb number"
+            default 3
+        config NUM_ISOC_MIC_URBS
+            int "uac microphone isoc urb number"
+            default 3
+        config UAC_MIC_CB_MIN_MS_DEFAULT
+            int "uac microphone default cb interval (ms)"
+            default 20
+            range 1 32
+        config UAC_SPK_ST_MAX_MS_DEFAULT
+            int "uac speaker default max tx size (ms)"
+            default 32
+            range 1 32
+        config UAC_MIC_PACKET_COMPENSATION
+            bool "uac microphone packet compensation"
+            default y
+        config UAC_SPK_PACKET_COMPENSATION
+            bool "uac speaker packet compensation"
+            default y
+        config UAC_SPK_PACKET_COMPENSATION_SIZE_MS
+            int "uac speaker packet compensation size (ms)"
+            depends on UAC_SPK_PACKET_COMPENSATION
+            default 1
+        config USB_PRE_ALLOC_CTRL_TRANSFER_URB
+            bool "Pre-allocate control transfer urb, set to n if you want to use dynamic alloc"
+            default y
+        config UAC_SPK_VOLUME_LEVEL_DEFAULT
+            int "uac speaker default volume level"
+            default 80 
+        config UAC_MIC_VOLUME_LEVEL_DEFAULT 
+            int "uac microphone default volume level"
+            default 80
+    endmenu
 
 endmenu
