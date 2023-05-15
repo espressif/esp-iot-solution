@@ -1,0 +1,24 @@
+menu "Espressif GNU Profiler(GProf)"
+
+    config GPROF_ENABLE
+        bool "Enable Espressif GNU Profiler(GProf)"
+        default n
+        help
+            Enable Espressif GNU Profiler(GProf) to gather profiling 
+            information when program is running
+
+    if GPROF_ENABLE
+        config GPROF_COMPONENTS
+            string "Select components for GProf"
+            default ""
+            help
+                Select components that are to be gathered profiling
+                information when the program is running.
+
+                Components must be separated by ";", if users want to
+                profile component_A and component_B:
+
+                    (component_A;component_B) Select components for GProf
+    endif
+
+endmenu

@@ -127,3 +127,7 @@ examples/usb/host/usb_cdc_4g_module:
 examples/utilities/xz_decompress_file:
   enable:
     - if: INCLUDE_DEFAULT == 1
+
+examples/gprof/gprof_simple:
+  enable:
+    - if: IDF_TARGET in ["esp32","esp32s2","esp32s3","esp32c3"]

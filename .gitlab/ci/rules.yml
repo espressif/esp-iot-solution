@@ -259,6 +259,9 @@
 .patterns-example_utilities_xz_decompress_file: &patterns-example_utilities_xz_decompress_file
   - "examples/utilities/xz_decompress_file/**/*"
 
+.patterns-example_gprof_gprof_simple: &patterns-example_gprof_gprof_simple
+  - "examples/gprof/gprof_simple/**/*"
+
 # tools folder, in the alphabetic order
 .patterns-tools_cmake_utilities_gen_compressed_ota: &patterns-tools_cmake_utilities_gen_compressed_ota
   - "components/tools/cmake_utilities/gen_compressed_ota.cmake"
@@ -950,6 +953,15 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_usb_usb_stream
+
+.rules:build:example_gprof_gprof_simple:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_gprof_gprof_simple
 
 .rules:build:docs:
   rules:
