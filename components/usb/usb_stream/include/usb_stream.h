@@ -307,8 +307,8 @@ esp_err_t uac_mic_streaming_read(void *buf, size_t buf_size, size_t *data_bytes,
 esp_err_t uac_frame_size_list_get(usb_stream_t stream, uac_frame_size_t *frame_list, size_t *list_size, size_t *cur_index);
 
 /**
- * @brief Reset audio channel number, bit resolution and samples frequence, please suspend the stream 
- * using usb_streaming_control before reset. The new configs will be effective after streaming resume.
+ * @brief Reset audio channel number, bit resolution and samples frequence, please reset when the streaming
+ * in suspend state. The new configs will be effective after streaming resume.
  * 
  * @param stream stream type
  * @param ch_num audio channel numbers
@@ -337,9 +337,8 @@ esp_err_t uac_frame_size_reset(usb_stream_t stream, uint8_t ch_num, uint16_t bit
 esp_err_t uvc_frame_size_list_get(uvc_frame_size_t *frame_list, size_t *list_size, size_t *cur_index);
 
 /**
- * @brief Reset the expected frame size and frame interval, please suspend the UVC stream 
- * using usb_streaming_control before reset.The new configs will be effective after streaming resume.
- * 
+ * @brief Reset the expected frame size and frame interval, please reset when uvc streaming
+ * in suspend state.The new configs will be effective after streaming resume.
  * 
  * Note: frame_width and frame_height can be set to 0 at the same time, which means
  * no change on frame size.

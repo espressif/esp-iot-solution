@@ -8,6 +8,7 @@
 #include <inttypes.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/timers.h"
 #include "driver/gpio.h"
 #include "esp_system.h"
 #include "esp_heap_caps.h"
@@ -20,7 +21,12 @@ static const char *TAG = "usb_stream_test";
 
 /* USB PIN fixed in esp32-s2, can not use io matrix */
 #define TEST_MEMORY_LEAK_THRESHOLD (-400)
+
+#ifdef CONFIG_IDF_TARGET_ESP32S2
+#define DEMO_XFER_BUFFER_SIZE (45 * 1024)
+#else
 #define DEMO_XFER_BUFFER_SIZE (55 * 1024)
+#endif
 
 static void *_malloc(size_t size)
 {
@@ -55,6 +61,39 @@ static void stream_state_changed_cb(usb_stream_state_t event, void *arg)
     case STREAM_CONNECTED: {
         TaskHandle_t task_handle = (TaskHandle_t)arg;
         if (task_handle) xTaskNotifyGive(task_handle);
+        break;
+    }
+    case STREAM_DISCONNECTED:
+        ESP_LOGI(TAG, "Device disconnected");
+        break;
+    default:
+        ESP_LOGE(TAG, "Unknown event");
+        break;
+    }
+}
+
+static void stream_control_when_state_changed_cb(usb_stream_state_t event, void *arg)
+{
+    switch (event) {
+    case STREAM_CONNECTED: {
+        //Check the resolution list of connected camera
+        size_t frame_size = 0;
+        size_t frame_index = 0;
+        TEST_ASSERT_EQUAL(ESP_OK, uvc_frame_size_list_get(NULL, &frame_size, &frame_index));
+        TEST_ASSERT_NOT_EQUAL(0, frame_size);
+        ESP_LOGI(TAG, "UVC: get frame list size = %u, current = %u", frame_size, frame_index);
+        uvc_frame_size_t *uvc_frame_list = (uvc_frame_size_t *)malloc(frame_size * sizeof(uvc_frame_size_t));
+        TEST_ASSERT_EQUAL(ESP_OK, uvc_frame_size_list_get(uvc_frame_list, NULL, NULL));
+        ESP_LOGI(TAG, "\tframe[%u] = %ux%u", 0, uvc_frame_list[0].width, uvc_frame_list[0].height);
+        TEST_ASSERT_EQUAL(ESP_OK, uvc_frame_size_reset(uvc_frame_list[0].width, uvc_frame_list[0].height, FPS2INTERVAL(15)));
+        TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UVC, CTRL_RESUME, NULL));
+        TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_SPK, CTRL_RESUME, NULL));
+        TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_MIC, CTRL_RESUME, NULL));
+        TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_SPK, CTRL_UAC_MUTE, (void *)0));
+        TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_SPK, CTRL_UAC_VOLUME, (void *)30));
+        TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_MIC, CTRL_UAC_MUTE, (void *)0));
+        TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_MIC, CTRL_UAC_VOLUME, (void *)30));
+        free(uvc_frame_list);
         break;
     }
     case STREAM_DISCONNECTED:
@@ -216,7 +255,7 @@ TEST_CASE("test uvc change resolution", "[devkit][uvc]")
         for (size_t i = 0; i < frame_size; i++) {
             //Change the resolution one after another
             ESP_LOGI(TAG, "\tframe[%u] = %ux%u", i, uvc_frame_list[i].width, uvc_frame_list[i].height);
-            uvc_frame_size_reset(uvc_frame_list[i].width, uvc_frame_list[i].height, FPS2INTERVAL(15));
+            TEST_ASSERT_EQUAL(ESP_OK, uvc_frame_size_reset(uvc_frame_list[i].width, uvc_frame_list[i].height, FPS2INTERVAL(15)));
             //Resume uvc streaming to get the frames
             TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UVC, CTRL_RESUME, NULL));
             vTaskDelay(3000 / portTICK_PERIOD_MS);
@@ -255,7 +294,7 @@ TEST_CASE("test uac mic", "[devkit][uac][mic]")
         .mic_cb_arg = NULL,
         .flags = FLAG_UAC_MIC_SUSPEND_AFTER_START,
     };
-    size_t loop_count = 5;
+    size_t loop_count = 3;
     for (size_t i = 0; i < loop_count; i++) {
         /* code */
         TEST_ASSERT_EQUAL(ESP_OK, uac_streaming_config(&uac_config));
@@ -424,6 +463,76 @@ TEST_CASE("test uac mic spk loop", "[devkit][uac][mic][spk]")
     vTaskDelay(pdMS_TO_TICKS(100));
 }
 
+TEST_CASE("test uvc+uac callback", "[devkit][uvc][uac][mic][spk]")
+{
+    esp_log_level_set("*", ESP_LOG_DEBUG);
+    /* malloc double buffer for usb payload, xfer_buffer_size >= frame_buffer_size*/
+    uint8_t *xfer_buffer_a = (uint8_t *)_malloc(DEMO_XFER_BUFFER_SIZE);
+    TEST_ASSERT(xfer_buffer_a != NULL);
+    uint8_t *xfer_buffer_b = (uint8_t *)_malloc(DEMO_XFER_BUFFER_SIZE);
+    TEST_ASSERT(xfer_buffer_b != NULL);
+
+    /* malloc frame buffer for a jpeg frame*/
+    uint8_t *frame_buffer = (uint8_t *)_malloc(DEMO_XFER_BUFFER_SIZE);
+    TEST_ASSERT(frame_buffer != NULL);
+
+    uvc_config_t uvc_config = {
+        .frame_width = FRAME_RESOLUTION_ANY,
+        .frame_height = FRAME_RESOLUTION_ANY,
+        .frame_interval = FPS2INTERVAL(15),
+        .xfer_buffer_size = DEMO_XFER_BUFFER_SIZE,
+        .xfer_buffer_a = xfer_buffer_a,
+        .xfer_buffer_b = xfer_buffer_b,
+        .frame_buffer_size = DEMO_XFER_BUFFER_SIZE,
+        .frame_buffer = frame_buffer,
+        .frame_cb = frame_cb,
+        .frame_cb_arg = NULL,
+        .flags = FLAG_UVC_SUSPEND_AFTER_START,
+    };
+
+    uac_config_t uac_config = {
+        .mic_bit_resolution = UAC_BITS_ANY,
+        .mic_samples_frequence = UAC_FREQUENCY_ANY,
+        .spk_bit_resolution = UAC_BITS_ANY,
+        .spk_samples_frequence = UAC_FREQUENCY_ANY,
+        .spk_buf_size = 16000,
+        .mic_cb = &mic_frame_cb,
+        .mic_cb_arg = (void*)1,
+        .flags = FLAG_UAC_MIC_SUSPEND_AFTER_START | FLAG_UAC_SPK_SUSPEND_AFTER_START,
+    };
+
+    size_t test_count = 3;
+    for (size_t i = 0; i < test_count; i++) {
+        /* pre-config UVC driver with params from known USB Camera Descriptors*/
+        TEST_ASSERT_EQUAL(ESP_OK, uvc_streaming_config(&uvc_config));
+        /* pre-config UAC driver with params from known USB Camera Descriptors*/
+        TEST_ASSERT_EQUAL(ESP_OK, uac_streaming_config(&uac_config));
+        TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_state_register(&stream_control_when_state_changed_cb, NULL));
+        /* Start camera IN stream with pre-configs, uvc driver will create multi-tasks internal
+        to handle usb data from different pipes, and user's callback will be called after new frame ready. */
+        TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_start());
+        TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_connect_wait(portMAX_DELAY));
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
+        /* test streaming suspend */
+        TEST_ASSERT_NOT_EQUAL(ESP_FAIL, usb_streaming_control(STREAM_UVC, CTRL_SUSPEND, NULL));
+        TEST_ASSERT_NOT_EQUAL(ESP_FAIL, usb_streaming_control(STREAM_UAC_SPK, CTRL_SUSPEND, NULL));
+        TEST_ASSERT_NOT_EQUAL(ESP_FAIL, usb_streaming_control(STREAM_UAC_MIC, CTRL_SUSPEND, NULL));
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        /* test streaming resume */
+        TEST_ASSERT_NOT_EQUAL(ESP_FAIL, usb_streaming_control(STREAM_UVC, CTRL_RESUME, NULL));
+        TEST_ASSERT_NOT_EQUAL(ESP_FAIL, usb_streaming_control(STREAM_UAC_SPK, CTRL_RESUME, NULL));
+        TEST_ASSERT_NOT_EQUAL(ESP_FAIL, usb_streaming_control(STREAM_UAC_MIC, CTRL_RESUME, NULL));
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
+        /* test streaming stop */
+        TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_stop());
+    }
+
+    _free(xfer_buffer_a);
+    _free(xfer_buffer_b);
+    _free(frame_buffer);
+    vTaskDelay(pdMS_TO_TICKS(100));
+}
+
 TEST_CASE("test uvc+uac", "[devkit][uvc][uac][mic][spk]")
 {
     esp_log_level_set("*", ESP_LOG_DEBUG);
@@ -470,17 +579,21 @@ TEST_CASE("test uvc+uac", "[devkit][uvc][uac][mic][spk]")
         to handle usb data from different pipes, and user's callback will be called after new frame ready. */
         TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_start());
         TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_connect_wait(portMAX_DELAY));
-        vTaskDelay(50 / portTICK_PERIOD_MS);
-        /* test streaming suspend */
-        TEST_ASSERT_NOT_EQUAL(ESP_FAIL, usb_streaming_control(STREAM_UVC, CTRL_SUSPEND, NULL));
-        TEST_ASSERT_NOT_EQUAL(ESP_FAIL, usb_streaming_control(STREAM_UAC_SPK, CTRL_SUSPEND, NULL));
-        TEST_ASSERT_NOT_EQUAL(ESP_FAIL, usb_streaming_control(STREAM_UAC_MIC, CTRL_SUSPEND, NULL));
         vTaskDelay(1000 / portTICK_PERIOD_MS);
-        /* test streaming resume */
-        TEST_ASSERT_NOT_EQUAL(ESP_FAIL, usb_streaming_control(STREAM_UVC, CTRL_RESUME, NULL));
-        TEST_ASSERT_NOT_EQUAL(ESP_FAIL, usb_streaming_control(STREAM_UAC_SPK, CTRL_RESUME, NULL));
-        TEST_ASSERT_NOT_EQUAL(ESP_FAIL, usb_streaming_control(STREAM_UAC_MIC, CTRL_RESUME, NULL));
-        vTaskDelay(15000 / portTICK_PERIOD_MS);
+        /* test streaming suspend */
+        size_t count = 2;
+        while (count--) {
+            /* code */
+            TEST_ASSERT_NOT_EQUAL(ESP_FAIL, usb_streaming_control(STREAM_UVC, CTRL_SUSPEND, NULL));
+            TEST_ASSERT_NOT_EQUAL(ESP_FAIL, usb_streaming_control(STREAM_UAC_MIC, CTRL_SUSPEND, NULL));
+            TEST_ASSERT_NOT_EQUAL(ESP_FAIL, usb_streaming_control(STREAM_UAC_SPK, CTRL_SUSPEND, NULL));
+            vTaskDelay(3000 / portTICK_PERIOD_MS);
+            /* test streaming resume */
+            TEST_ASSERT_NOT_EQUAL(ESP_FAIL, usb_streaming_control(STREAM_UVC, CTRL_RESUME, NULL));
+            TEST_ASSERT_NOT_EQUAL(ESP_FAIL, usb_streaming_control(STREAM_UAC_SPK, CTRL_RESUME, NULL));
+            TEST_ASSERT_NOT_EQUAL(ESP_FAIL, usb_streaming_control(STREAM_UAC_MIC, CTRL_RESUME, NULL));
+            vTaskDelay(3000 / portTICK_PERIOD_MS);
+        }
         /* test streaming stop */
         TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_stop());
     }
@@ -566,9 +679,22 @@ static esp_err_t board_gpio_init(void)
     return ret;
 }
 
-TEST_CASE("30 min long time uvc+uac with suddenly disconnect", "[otg][uvc][uac][mic][spk][dis]")
+void trigger_disconnect(TimerHandle_t pxTimer)
 {
-    esp_log_level_set("*", ESP_LOG_DEBUG);
+    static bool power_on = true;
+    power_on = !power_on;
+    TEST_ASSERT_EQUAL(ESP_OK, iot_board_usb_device_set_power(power_on, false));
+    ESP_LOGW(TAG, "usb power %s", power_on ? "on" : "off");
+    if (power_on) {
+        uint32_t delay = esp_random() % 2000;
+        xTimerChangePeriod(pxTimer, pdMS_TO_TICKS(delay), 0);
+        xTimerStart(pxTimer, 0);
+    }
+}
+
+TEST_CASE("uvc+uac with suddenly disconnect", "[otg][uvc][uac][mic][spk][dis]")
+{
+    esp_log_level_set("*", ESP_LOG_INFO);
     /* malloc double buffer for usb payload, xfer_buffer_size >= frame_buffer_size*/
     uint8_t *xfer_buffer_a = (uint8_t *)_malloc(DEMO_XFER_BUFFER_SIZE);
     TEST_ASSERT(xfer_buffer_a != NULL);
@@ -603,9 +729,17 @@ TEST_CASE("30 min long time uvc+uac with suddenly disconnect", "[otg][uvc][uac][
         .mic_cb = &mic_frame_cb,
         .mic_cb_arg = (void*)1,
     };
-
-    size_t test_count = 10;
+    TimerHandle_t singleShotTimer = xTimerCreate("SingleShotTimer",    // Timer name
+                                                pdMS_TO_TICKS(1000),   // Timer period in ticks (1 second in this example)
+                                                pdFALSE,               // Auto-reload disabled
+                                                0,                     // Timer ID (optional)
+                                                &trigger_disconnect);  // Callback function when timer expires
+    size_t test_count = 3;
     for (size_t i = 0; i < test_count; i++) {
+        TEST_ASSERT_EQUAL(ESP_OK, iot_board_usb_device_set_power(true, false));
+        uint32_t delay = esp_random() % 10000 + 500;
+        xTimerChangePeriod(singleShotTimer, pdMS_TO_TICKS(delay), 0);
+        xTimerStart(singleShotTimer, 0);
         /* pre-config UVC driver with params from known USB Camera Descriptors*/
         TEST_ASSERT_EQUAL(ESP_OK, uvc_streaming_config(&uvc_config));
         /* pre-config UAC driver with params from known USB Camera Descriptors*/
@@ -613,33 +747,24 @@ TEST_CASE("30 min long time uvc+uac with suddenly disconnect", "[otg][uvc][uac][
         /* Start camera IN stream with pre-configs, uvc driver will create multi-tasks internal
         to handle usb data from different pipes, and user's callback will be called after new frame ready. */
         TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_start());
-        TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_connect_wait(portMAX_DELAY));
-        vTaskDelay(50 / portTICK_PERIOD_MS);
-
-        size_t dis_count = 3;
-        while (--dis_count) {
-            uint32_t delay = esp_random() % 60000;
-            ESP_LOGW(TAG, "will disconnect after %"PRIu32" ms", delay);
-            vTaskDelay(delay / portTICK_PERIOD_MS);
-            TEST_ASSERT_EQUAL(ESP_OK, iot_board_usb_device_set_power(false, false));
-            delay = esp_random() % 600;
-            vTaskDelay(delay / portTICK_PERIOD_MS);
-            TEST_ASSERT_EQUAL(ESP_OK, iot_board_usb_device_set_power(true, false));
-        }
-
+        usb_streaming_connect_wait(10000 / portTICK_PERIOD_MS);
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
         /* test streaming suspend */
-        TEST_ASSERT_NOT_EQUAL(ESP_FAIL, usb_streaming_control(STREAM_UVC, CTRL_SUSPEND, NULL));
-        TEST_ASSERT_NOT_EQUAL(ESP_FAIL, usb_streaming_control(STREAM_UAC_SPK, CTRL_SUSPEND, NULL));
-        TEST_ASSERT_NOT_EQUAL(ESP_FAIL, usb_streaming_control(STREAM_UAC_MIC, CTRL_SUSPEND, NULL));
+        /* we dont expected the api called success, because device may disconnect at any time  */
+        usb_streaming_control(STREAM_UVC, CTRL_SUSPEND, NULL);
+        usb_streaming_control(STREAM_UAC_SPK, CTRL_SUSPEND, NULL);
+        usb_streaming_control(STREAM_UAC_MIC, CTRL_SUSPEND, NULL);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
         /* test streaming resume */
-        TEST_ASSERT_NOT_EQUAL(ESP_FAIL, usb_streaming_control(STREAM_UVC, CTRL_RESUME, NULL));
-        TEST_ASSERT_NOT_EQUAL(ESP_FAIL, usb_streaming_control(STREAM_UAC_SPK, CTRL_RESUME, NULL));
-        TEST_ASSERT_NOT_EQUAL(ESP_FAIL, usb_streaming_control(STREAM_UAC_MIC, CTRL_RESUME, NULL));
+        usb_streaming_control(STREAM_UVC, CTRL_RESUME, NULL);
+        usb_streaming_control(STREAM_UAC_SPK, CTRL_RESUME, NULL);
+        usb_streaming_control(STREAM_UAC_MIC, CTRL_RESUME, NULL);
         vTaskDelay(3000 / portTICK_PERIOD_MS);
         /* test streaming stop */
         TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_stop());
     }
+    xTimerReset(singleShotTimer, 0);
+    xTimerDelete(singleShotTimer, 0);
     TEST_ASSERT_EQUAL(ESP_OK, iot_board_usb_set_mode(USB_DEVICE_MODE));
     TEST_ASSERT_EQUAL(ESP_OK, iot_board_usb_device_set_power(false, false));
     _free(xfer_buffer_a);

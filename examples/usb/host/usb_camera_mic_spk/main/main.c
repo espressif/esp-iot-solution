@@ -135,6 +135,7 @@ static void stream_state_changed_cb(usb_stream_state_t event, void *arg)
             for (size_t i = 0; i < frame_size; i++) {
                 ESP_LOGI(TAG, "\tframe[%u] = %ux%u", i, uvc_frame_list[i].width, uvc_frame_list[i].height);
             }
+            free(uvc_frame_list);
         } else {
             ESP_LOGW(TAG, "UVC: get frame list size = %u", frame_size);
         }
@@ -158,6 +159,7 @@ static void stream_state_changed_cb(usb_stream_state_t event, void *arg)
             }
             ESP_LOGI(TAG, "UAC MIC: use frame[%u] ch_num = %"PRIu32", bit_resolution = %"PRIu32", samples_frequence = %"PRIu32,
                     frame_index, s_mic_ch_num, s_mic_bit_resolution, s_mic_samples_frequence);
+            free(mic_frame_list);
         } else {
             ESP_LOGW(TAG, "UAC MIC: get frame list size = %u", frame_size);
         }
@@ -188,6 +190,7 @@ static void stream_state_changed_cb(usb_stream_state_t event, void *arg)
             }
             ESP_LOGI(TAG, "UAC SPK: use frame[%u] ch_num = %"PRIu32", bit_resolution = %"PRIu32", samples_frequence = %"PRIu32,
                         frame_index, s_spk_ch_num, s_spk_bit_resolution, s_spk_samples_frequence);
+            free(spk_frame_list);
         } else {
             ESP_LOGW(TAG, "UAC SPK: get frame list size = %u", frame_size);
         }
