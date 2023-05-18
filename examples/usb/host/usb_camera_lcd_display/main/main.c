@@ -2,7 +2,9 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+
 #include "freertos/FreeRTOS.h"
+#include "freertos/event_groups.h"
 #include "freertos/task.h"
 #include "bsp/esp-bsp.h"
 #include "esp_log.h"
@@ -12,41 +14,54 @@
 #include "esp_io_expander_tca9554.h"
 #include "esp_jpeg_dec.h"
 #include "esp_timer.h"
+#include "nvs.h"
+#include "nvs_flash.h"
 #include "ppbuffer.h"
 #include "usb_stream.h"
+#include "iot_button.h"
 
-static const char *TAG = "uvc_mic_spk_demo";
+static const char *TAG = "uvc_camera_lcd_demo";
 /****************** configure the example working mode *******************************/
 
-#define ENABLE_UVC_FRAME_RESOLUTION_ANY    1               /* Using any resolution found from the camera */
-#if (ENABLE_UVC_FRAME_RESOLUTION_ANY)
-#define DEMO_UVC_FRAME_WIDTH               FRAME_RESOLUTION_ANY
-#define DEMO_UVC_FRAME_HEIGHT              FRAME_RESOLUTION_ANY
-#define DISPLAY_BUFFER_SIZE                0
-#else
-#define DEMO_UVC_FRAME_WIDTH               480
-#define DEMO_UVC_FRAME_HEIGHT              320
-#define DISPLAY_BUFFER_SIZE                DEMO_UVC_FRAME_WIDTH * DEMO_UVC_FRAME_HEIGHT * 2
-#endif
-#define DEMO_UVC_XFER_BUFFER_SIZE          ( 45 * 1024) //Double buffer
+#define DEMO_UVC_XFER_BUFFER_SIZE            ( 60 * 1024) //Double buffer
+#define DEMO_KEY_RESOLUTION                  "resolution"
+#define DEMO_SWITCH_BUTTON_IO                0
 
-static esp_painter_handle_t painter        = NULL;
-static esp_lcd_panel_handle_t panel_handle = NULL;
-static uint8_t *rgb_frame_buf1             = NULL;
-static uint8_t *rgb_frame_buf2             = NULL;
-static uint8_t *cur_frame_buf              = NULL;
-static uint8_t *jpg_frame_buf1             = NULL;
-static uint8_t *jpg_frame_buf2             = NULL;
-static PingPongBuffer_t *ppbuffer_handle   = NULL;
-static jpeg_dec_io_t *jpeg_io              = NULL;
-static jpeg_dec_header_info_t *out_info    = NULL;
+#define BIT0_FRAME_START     (0x01 << 0)
+static EventGroupHandle_t s_evt_handle;
 
-static uint16_t current_width  = DEMO_UVC_FRAME_WIDTH;
-static uint16_t current_height = DEMO_UVC_FRAME_HEIGHT;
-static bool if_ppbuffer_init   = false;
+typedef struct {
+    uint16_t width;
+    uint16_t height;
+} camera_frame_size_t;
+
+typedef struct {
+    camera_frame_size_t camera_frame_size;
+    uvc_frame_size_t *camera_frame_list;
+    size_t camera_frame_list_num;
+    size_t camera_currect_frame_index;
+} camera_resolution_info_t;
+
+static camera_resolution_info_t camera_resolution_info = {0};
+static esp_painter_handle_t painter                    = NULL;
+static esp_lcd_panel_handle_t panel_handle             = NULL;
+static uint8_t *rgb_frame_buf1                         = NULL;
+static uint8_t *rgb_frame_buf2                         = NULL;
+static uint8_t *cur_frame_buf                          = NULL;
+static uint8_t *jpg_frame_buf1                         = NULL;
+static uint8_t *jpg_frame_buf2                         = NULL;
+static uint8_t *xfer_buffer_a                          = NULL;
+static uint8_t *xfer_buffer_b                          = NULL;
+static uint8_t *frame_buffer                           = NULL;
+static PingPongBuffer_t *ppbuffer_handle               = NULL;
+static jpeg_dec_io_t *jpeg_io                          = NULL;
+static jpeg_dec_header_info_t *out_info                = NULL;
+static uint16_t current_width                          = 0;
+static uint16_t current_height                         = 0;
+static bool if_ppbuffer_init                           = false;
 
 #if CONFIG_BSP_LCD_SUB_BOARD_480_480
-static esp_io_expander_handle_t io_expander = NULL; // IO expander tca9554 handle
+static esp_io_expander_handle_t io_expander  = NULL; // IO expander tca9554 handle
 #endif
 extern esp_lcd_panel_handle_t bsp_lcd_init(void *arg);
 
@@ -109,8 +124,6 @@ static void adaptive_jpg_frame_buffer(size_t length)
 
 static void camera_frame_cb(uvc_frame_t *frame, void *ptr)
 {
-    ESP_LOGI(TAG, "uvc callback! frame_format = %d, seq = %"PRIu32", width = %"PRIu32", height = %"PRIu32", length = %u, ptr = %d",
-             frame->frame_format, frame->sequence, frame->width, frame->height, frame->data_bytes, (int) ptr);
     if (current_width != frame->width || current_height != frame->height ) {
         current_width = frame->width;
         current_height = frame->height;
@@ -120,10 +133,18 @@ static void camera_frame_cb(uvc_frame_t *frame, void *ptr)
     }
 
     static void *jpeg_buffer = NULL;
-    ppbuffer_get_write_buf(ppbuffer_handle, &jpeg_buffer);
-    assert(jpeg_buffer != NULL);
-    esp_jpeg_decoder_one_picture((uint8_t *)frame->data, frame->data_bytes, jpeg_buffer);
+
+    /* A buffer equal to the screen size can be directly written into the LCD buffer to improve the frame rate */
+    if (current_width == BSP_LCD_H_RES && current_height <= BSP_LCD_V_RES) {
+        size_t length = (BSP_LCD_V_RES - current_height) * BSP_LCD_V_RES ;
+        esp_jpeg_decoder_one_picture((uint8_t *)frame->data, frame->data_bytes, cur_frame_buf + length);
+    } else {
+        ppbuffer_get_write_buf(ppbuffer_handle, &jpeg_buffer);
+        assert(jpeg_buffer != NULL);
+        esp_jpeg_decoder_one_picture((uint8_t *)frame->data, frame->data_bytes, jpeg_buffer);
+    }
     ppbuffer_set_write_done(ppbuffer_handle);
+    vTaskDelay(pdMS_TO_TICKS(1));
 }
 
 static void _display_task(void *arg)
@@ -145,22 +166,17 @@ static void _display_task(void *arg)
 
     while (1) {
         if ( ppbuffer_get_read_buf(ppbuffer_handle, (void *)&lcd_buffer) == ESP_OK) {
-            if (count_start_time == 0) {
-                count_start_time = esp_timer_get_time();
-            }
-            if (++frame_count == 20) {
-                frame_count = 0;
-                fps = 20 * 1000000 / (esp_timer_get_time() - count_start_time);
-                count_start_time = esp_timer_get_time();
-                ESP_LOGI(TAG, "camera fps: %d", fps);
-            }
-
-            if (current_width <= BSP_LCD_H_RES && current_height <= BSP_LCD_V_RES) {
+            if (current_width == BSP_LCD_H_RES && current_height <= BSP_LCD_V_RES) {
+                x_start = 0;
+                y_start = (BSP_LCD_V_RES - current_height) / 2;
+                esp_lcd_panel_draw_bitmap(panel_handle, 0, 0, 1, 1, cur_frame_buf);
+            } else if (current_width < BSP_LCD_H_RES && current_height < BSP_LCD_V_RES) {
                 x_start = (BSP_LCD_H_RES - current_width) / 2;
                 y_start = (BSP_LCD_V_RES - current_height) / 2;
                 esp_lcd_panel_draw_bitmap(panel_handle, 0, 0, 1, 1, cur_frame_buf);
                 esp_lcd_panel_draw_bitmap(panel_handle, x_start, y_start, x_start + current_width, y_start + current_height, lcd_buffer);
             } else {
+                /* This section is for refreshing images with a resolution larger than the screen, which is currently not enabled */
                 if (current_width < BSP_LCD_H_RES ) {
                     width = current_width;
                     x_start = (BSP_LCD_H_RES - current_width) / 2;
@@ -186,9 +202,21 @@ static void _display_task(void *arg)
                     esp_lcd_panel_draw_bitmap(panel_handle, x_start, i, x_start + width, i + 1, &lcd_buffer[(y_jump + i)*current_width + x_jump] );
                 }
             }
+
+            ppbuffer_set_read_done(ppbuffer_handle);
+            if (count_start_time == 0) {
+                count_start_time = esp_timer_get_time();
+            }
+
+            if (++frame_count == 20) {
+                frame_count = 0;
+                fps = 20 * 1000000 / (esp_timer_get_time() - count_start_time);
+                count_start_time = esp_timer_get_time();
+                ESP_LOGI(TAG, "camera fps: %d %d*%d", fps, current_width, current_height);
+            }
+
             esp_painter_draw_string_format(painter, x_start, y_start, NULL, COLOR_BRUSH_DEFAULT, "FPS: %d %d*%d", fps, current_width, current_height);
             cur_frame_buf = (cur_frame_buf == rgb_frame_buf1) ? rgb_frame_buf2 : rgb_frame_buf1;
-            ppbuffer_set_read_done(ppbuffer_handle);
         }
         vTaskDelay(1);
     }
@@ -225,43 +253,56 @@ static esp_err_t _display_init(void)
     return ESP_OK;
 }
 
-void app_main(void)
+static void _get_value_from_nvs(char *key, void *value, size_t *size)
 {
-    esp_log_level_set("*", ESP_LOG_INFO);
-    esp_err_t ret = ESP_FAIL;
+    nvs_handle_t my_handle;
+    esp_err_t err = nvs_open("memory", NVS_READWRITE, &my_handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Error (%s) opening NVS handle!\n", esp_err_to_name(err));
+    } else {
+        err = nvs_get_blob(my_handle, key, value, size);
+        switch (err) {
+        case ESP_OK:
+            break;
+        case ESP_ERR_NVS_NOT_FOUND:
+            ESP_LOGI(TAG, "%s is not initialized yet!", key);
+            break;
+        default :
+            ESP_LOGE(TAG, "Error (%s) reading!\n", esp_err_to_name(err));
+        }
 
-    /* malloc double buffer for usb payload, xfer_buffer_size >= frame_buffer_size*/
-    uint8_t *xfer_buffer_a = (uint8_t *)malloc(DEMO_UVC_XFER_BUFFER_SIZE);
-    assert(xfer_buffer_a != NULL);
-    uint8_t *xfer_buffer_b = (uint8_t *)malloc(DEMO_UVC_XFER_BUFFER_SIZE);
-    assert(xfer_buffer_b != NULL);
+        nvs_close(my_handle);
+    }
+}
 
-    /* malloc frame buffer for a jpeg frame*/
-    uint8_t *frame_buffer = (uint8_t *)malloc(DEMO_UVC_XFER_BUFFER_SIZE);
-    assert(frame_buffer != NULL);
+static esp_err_t _set_value_to_nvs(char *key, void *value, size_t size)
+{
+    nvs_handle_t my_handle;
+    esp_err_t err = nvs_open("memory", NVS_READWRITE, &my_handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Error (%s) opening NVS handle!\n", esp_err_to_name(err));
+        return ESP_FAIL;
+    } else {
+        err = nvs_set_blob(my_handle, key, value, size);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "NVS set failed %s", esp_err_to_name(err));
+        }
 
-    /* malloc frame buffer for ppbuffer_handle*/
-    ppbuffer_handle = (PingPongBuffer_t *)malloc(sizeof(PingPongBuffer_t));
+        err = nvs_commit(my_handle);
+        if ( err != ESP_OK) {
+            ESP_LOGE(TAG, "NVS commit failed");
+        }
 
-    // Create io_callback handle
-    jpeg_io = calloc(1, sizeof(jpeg_dec_io_t));
-    assert(jpeg_io != NULL);
-
-    // Create out_info handle
-    out_info = calloc(1, sizeof(jpeg_dec_header_info_t));
-    assert(out_info != NULL);
-
-    /* malloc double buffer for lcd frame, Must be 16-byte aligned */
-    if (DISPLAY_BUFFER_SIZE) {
-        adaptive_jpg_frame_buffer(DISPLAY_BUFFER_SIZE);
+        nvs_close(my_handle);
     }
 
-    ESP_ERROR_CHECK(_display_init());
+    return err;
+}
 
+static esp_err_t _usb_stream_init(void)
+{
     uvc_config_t uvc_config = {
-        .frame_width = DEMO_UVC_FRAME_WIDTH,
-        .frame_height = DEMO_UVC_FRAME_HEIGHT,
-        .frame_interval = FPS2INTERVAL(15),
+        .frame_interval = FPS2INTERVAL(30),
         .xfer_buffer_size = DEMO_UVC_XFER_BUFFER_SIZE,
         .xfer_buffer_a = xfer_buffer_a,
         .xfer_buffer_b = xfer_buffer_b,
@@ -269,23 +310,204 @@ void app_main(void)
         .frame_buffer = frame_buffer,
         .frame_cb = &camera_frame_cb,
         .frame_cb_arg = NULL,
+        .frame_width = FRAME_RESOLUTION_ANY,
+        .frame_height = FRAME_RESOLUTION_ANY,
+        .flags = FLAG_UVC_SUSPEND_AFTER_START,
     };
 
-    ret = uvc_streaming_config(&uvc_config);
+    esp_err_t ret = uvc_streaming_config(&uvc_config);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "uvc streaming config failed");
     }
+    return ret;
+}
+
+static size_t _find_current_resolution(camera_frame_size_t *camera_frame_size)
+{
+    if (camera_resolution_info.camera_frame_list == NULL) {
+        return -1;
+    }
+
+    size_t i = 0;
+    while (i < camera_resolution_info.camera_frame_list_num) {
+        if (camera_frame_size->width >= camera_resolution_info.camera_frame_list[i].width && camera_frame_size->height >= camera_resolution_info.camera_frame_list[i].height) {
+            /* Find next resolution
+               If current resolution is the min resolution, switch to the max resolution*/
+            camera_frame_size->width = camera_resolution_info.camera_frame_list[i].width;
+            camera_frame_size->height = camera_resolution_info.camera_frame_list[i].height;
+            break;
+        } else if (i == camera_resolution_info.camera_frame_list_num - 1) {
+            camera_frame_size->width = camera_resolution_info.camera_frame_list[i].width;
+            camera_frame_size->height = camera_resolution_info.camera_frame_list[i].height;
+            break;
+        }
+        i++;
+    }
+    ESP_LOGI(TAG, "Current resolution is %dx%d", camera_frame_size->width, camera_frame_size->height);
+    return i;
+}
+
+static void switch_button_press_down_cb(void *arg, void *data)
+{
+    if (camera_resolution_info.camera_frame_list == NULL || xEventGroupWaitBits(s_evt_handle, BIT0_FRAME_START, false, false, pdMS_TO_TICKS(10)) != pdTRUE) {
+        return;
+    }
+
+    ESP_LOGI(TAG, "old resolution is %d*%d", camera_resolution_info.camera_frame_size.width, camera_resolution_info.camera_frame_size.height);
+    if (++camera_resolution_info.camera_currect_frame_index >= camera_resolution_info.camera_frame_list_num) {
+        camera_resolution_info.camera_currect_frame_index = 0;
+    }
+    camera_resolution_info.camera_frame_size.width = camera_resolution_info.camera_frame_list[camera_resolution_info.camera_currect_frame_index].width;
+    camera_resolution_info.camera_frame_size.height = camera_resolution_info.camera_frame_list[camera_resolution_info.camera_currect_frame_index].height;
+    ESP_LOGI(TAG, "currect resolution is %d*%d", camera_resolution_info.camera_frame_size.width, camera_resolution_info.camera_frame_size.height);
+
+    /* Save the new camera resolution to nsv */
+    usb_streaming_control(STREAM_UVC, CTRL_SUSPEND, NULL);
+    ESP_ERROR_CHECK(uvc_frame_size_reset(camera_resolution_info.camera_frame_size.width,
+                                         camera_resolution_info.camera_frame_size.height,
+                                         FPS2INTERVAL(30)));
+    ESP_ERROR_CHECK(_set_value_to_nvs(DEMO_KEY_RESOLUTION, &camera_resolution_info.camera_frame_size, sizeof(camera_frame_size_t)));
+    esp_lcd_rgb_panel_restart(panel_handle);
+    usb_streaming_control(STREAM_UVC, CTRL_RESUME, NULL);
+}
+
+static esp_err_t _switch_button_init(void)
+{
+    button_config_t button_config = {
+        .type = BUTTON_TYPE_GPIO,
+        .gpio_button_config = {
+            .gpio_num = DEMO_SWITCH_BUTTON_IO,
+            .active_level = 0,
+        },
+    };
+
+    button_handle_t button_handle = iot_button_create(&button_config);
+    assert(button_handle != NULL);
+    esp_err_t ret = iot_button_register_cb(button_handle, BUTTON_PRESS_DOWN, switch_button_press_down_cb, NULL);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "button register callback fail");
+    }
+    return ret;
+}
+
+static void _stream_state_changed_cb(usb_stream_state_t event, void *arg)
+{
+    switch (event) {
+    case STREAM_CONNECTED: {
+        /* Get camera resolution in nvs*/
+        size_t size = sizeof(camera_frame_size_t);
+        _get_value_from_nvs(DEMO_KEY_RESOLUTION, &camera_resolution_info.camera_frame_size, &size);
+        size_t frame_index = 0;
+        uvc_frame_size_list_get(NULL, &camera_resolution_info.camera_frame_list_num, NULL);
+        if (camera_resolution_info.camera_frame_list_num) {
+            ESP_LOGI(TAG, "UVC: get frame list size = %u, current = %u", camera_resolution_info.camera_frame_list_num, frame_index);
+            uvc_frame_size_t *_frame_list = (uvc_frame_size_t *)malloc(camera_resolution_info.camera_frame_list_num * sizeof(uvc_frame_size_t));
+
+            camera_resolution_info.camera_frame_list = (uvc_frame_size_t *)realloc(camera_resolution_info.camera_frame_list, camera_resolution_info.camera_frame_list_num * sizeof(uvc_frame_size_t));
+            if (NULL == camera_resolution_info.camera_frame_list) {
+                ESP_LOGE(TAG, "camera_resolution_info.camera_frame_list");
+            }
+            uvc_frame_size_list_get(_frame_list, NULL, NULL);
+            for (size_t i = 0; i < camera_resolution_info.camera_frame_list_num; i++) {
+                if (_frame_list[i].width <= BSP_LCD_H_RES && _frame_list[i].height <= BSP_LCD_V_RES) {
+                    camera_resolution_info.camera_frame_list[frame_index++] = _frame_list[i];
+                    ESP_LOGI(TAG, "\tpick frame[%u] = %ux%u", i, _frame_list[i].width, _frame_list[i].height);
+                } else {
+                    ESP_LOGI(TAG, "\tdrop frame[%u] = %ux%u", i, _frame_list[i].width, _frame_list[i].height);
+                }
+            }
+            camera_resolution_info.camera_frame_list_num = frame_index;
+            if (camera_resolution_info.camera_frame_size.width != 0 && camera_resolution_info.camera_frame_size.height != 0) {
+                camera_resolution_info.camera_currect_frame_index = _find_current_resolution(&camera_resolution_info.camera_frame_size);
+            } else {
+                camera_resolution_info.camera_currect_frame_index = 0;
+            }
+
+            if (-1 == camera_resolution_info.camera_currect_frame_index ) {
+                ESP_LOGE(TAG, "fine current resolution fail");
+                break;
+            }
+            ESP_ERROR_CHECK(uvc_frame_size_reset(camera_resolution_info.camera_frame_list[camera_resolution_info.camera_currect_frame_index].width,
+                                                 camera_resolution_info.camera_frame_list[camera_resolution_info.camera_currect_frame_index].height, FPS2INTERVAL(30)));
+            _set_value_to_nvs(DEMO_KEY_RESOLUTION, &camera_resolution_info.camera_frame_list[camera_resolution_info.camera_currect_frame_index], sizeof(uvc_frame_size_t));
+
+            if (_frame_list != NULL) {
+                free(_frame_list);
+            }
+            /* Wait USB Camera connected */
+            usb_streaming_control(STREAM_UVC, CTRL_RESUME, NULL);
+            xEventGroupSetBits(s_evt_handle, BIT0_FRAME_START);
+        } else {
+            ESP_LOGW(TAG, "UVC: get frame list size = %u", camera_resolution_info.camera_frame_list_num);
+        }
+        ESP_LOGI(TAG, "Device connected");
+        break;
+    }
+    case STREAM_DISCONNECTED:
+        xEventGroupClearBits(s_evt_handle, BIT0_FRAME_START);
+        ESP_LOGI(TAG, "Device disconnected");
+        break;
+    default:
+        ESP_LOGE(TAG, "Unknown event");
+        break;
+    }
+}
+
+void app_main(void)
+{
+    esp_log_level_set("*", ESP_LOG_INFO);
+    /* Initialize NVS */
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        /* NVS partition was truncated and needs to be erased */
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        /* Retry nvs_flash_init */
+        ret = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(ret);
+
+    /* Create event group */
+    s_evt_handle = xEventGroupCreate();
+    if (s_evt_handle == NULL) {
+        ESP_LOGE(TAG, "line-%u event group create failed", __LINE__);
+        assert(0);
+    }
+
+    /* malloc double buffer for usb payload, xfer_buffer_size >= frame_buffer_size*/
+    xfer_buffer_a = (uint8_t *)malloc(DEMO_UVC_XFER_BUFFER_SIZE);
+    assert(xfer_buffer_a != NULL);
+    xfer_buffer_b = (uint8_t *)malloc(DEMO_UVC_XFER_BUFFER_SIZE);
+    assert(xfer_buffer_b != NULL);
+
+    /* malloc frame buffer for a jpeg frame*/
+    frame_buffer = (uint8_t *)malloc(DEMO_UVC_XFER_BUFFER_SIZE);
+    assert(frame_buffer != NULL);
+
+    /* malloc frame buffer for ppbuffer_handle*/
+    ppbuffer_handle = (PingPongBuffer_t *)malloc(sizeof(PingPongBuffer_t));
+
+    /* Create io_callback handle */
+    jpeg_io = calloc(1, sizeof(jpeg_dec_io_t));
+    assert(jpeg_io != NULL);
+
+    /* Create out_info handle */
+    out_info = calloc(1, sizeof(jpeg_dec_header_info_t));
+    assert(out_info != NULL);
+
+    /* Initialize the screen */
+    ESP_ERROR_CHECK(_display_init());
+
+    /* Initialize the button to switch resolution */
+    ESP_ERROR_CHECK(_switch_button_init());
+
+    /* Initialize the screen according to the resolution stored in nvs */
+    ESP_ERROR_CHECK(_usb_stream_init());
+
+    /* Register a callback to control uvc frame size */
+    ESP_ERROR_CHECK(usb_streaming_state_register(&_stream_state_changed_cb, NULL));
 
     /* Start stream with pre-configs, usb stream driver will create multi-tasks internal
     to handle usb data from different pipes, and user's callback will be called after new frame ready. */
-    ret = usb_streaming_start();
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "usb streaming start failed");
-    }
-
-    ESP_LOGI(TAG, "usb streaming start succeed");
-
-    while (1) {
-        vTaskDelay(100);
-    }
+    ESP_ERROR_CHECK(usb_streaming_start());
+    ESP_ERROR_CHECK(usb_streaming_connect_wait(portMAX_DELAY));
 }
