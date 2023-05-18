@@ -1,5 +1,15 @@
 # ChangeLog
 
+## v0.3.1 - 2022-5-15
+
+### Enhancements:
+
+* Add an active flag to gptimer to reduce invalid error print in the IDF gptimer driver
+
+### Bug Fixes:
+
+* Fixed a wrong error on kelvin range
+
 ## v0.3.0 - 2022-5-8
 
 ### Enhancements:

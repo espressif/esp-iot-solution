@@ -116,6 +116,7 @@ typedef struct {
 #if FADE_TICKS_FROM_GPTIMER
     gptimer_handle_t fade_timer;
     TaskHandle_t notify_task;
+    bool gptimer_is_active;
 #else
     esp_timer_handle_t fade_timer;
 #endif
@@ -434,7 +435,10 @@ static void fade_cb(void *priv)
             if (stop_flag == true) {
                 force_stop_all_ch();
 #ifdef FADE_TICKS_FROM_GPTIMER
-                gptimer_stop(s_hal_obj->fade_timer);
+                if (s_hal_obj->gptimer_is_active) {
+                    s_hal_obj->gptimer_is_active = false;
+                    gptimer_stop(s_hal_obj->fade_timer);
+                }
 #else
                 esp_timer_stop(s_hal_obj->fade_timer);
 #endif
@@ -536,7 +540,10 @@ static void fade_cb(void *priv)
     }
 #ifdef FADE_TICKS_FROM_GPTIMER
     if (idle_channel_num >= s_hal_obj->interface->channel_num) {
-        gptimer_stop(s_hal_obj->fade_timer);
+        if (s_hal_obj->gptimer_is_active) {
+            s_hal_obj->gptimer_is_active = false;
+            gptimer_stop(s_hal_obj->fade_timer);
+        }
     }
 #else
 #if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 3, 0))
@@ -713,7 +720,10 @@ esp_err_t hal_output_deinit()
     LIGHTBULB_CHECK(s_hal_obj, "init() must be called first", return ESP_ERR_INVALID_STATE);
 
 #ifdef FADE_TICKS_FROM_GPTIMER
-    gptimer_stop(s_hal_obj->fade_timer);
+    if (s_hal_obj->gptimer_is_active) {
+        s_hal_obj->gptimer_is_active = false;
+        gptimer_stop(s_hal_obj->fade_timer);
+    }
 #else
     esp_timer_stop(s_hal_obj->fade_timer);
 #endif
@@ -745,7 +755,10 @@ esp_err_t hal_set_channel(int channel, uint16_t value, uint16_t fade_ms)
     LIGHTBULB_CHECK(s_hal_obj, "init() must be called first", return ESP_ERR_INVALID_STATE);
 
 #ifdef FADE_TICKS_FROM_GPTIMER
-    gptimer_stop(s_hal_obj->fade_timer);
+    if (s_hal_obj->gptimer_is_active) {
+        s_hal_obj->gptimer_is_active = false;
+        gptimer_stop(s_hal_obj->fade_timer);
+    }
 #else
 #if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 3, 0))
     // 1. Stop all fade_cb operations
@@ -820,7 +833,9 @@ esp_err_t hal_set_channel(int channel, uint16_t value, uint16_t fade_ms)
     // 7. We need to execute a fade_cb immediately
     fade_cb(NULL);
 #ifdef FADE_TICKS_FROM_GPTIMER
-    gptimer_start(s_hal_obj->fade_timer);
+    if (gptimer_start(s_hal_obj->fade_timer) == ESP_OK) {
+        s_hal_obj->gptimer_is_active = true;
+    }
 #else
     esp_timer_start_periodic(s_hal_obj->fade_timer, 1000 * CHANGE_RATE_MS);
 #endif
@@ -834,7 +849,10 @@ esp_err_t hal_set_channel_group(uint16_t value[], uint8_t channel_mask, uint16_t
     LIGHTBULB_CHECK(s_hal_obj, "init() must be called first", return ESP_ERR_INVALID_STATE);
 
 #ifdef FADE_TICKS_FROM_GPTIMER
-    gptimer_stop(s_hal_obj->fade_timer);
+    if (s_hal_obj->gptimer_is_active) {
+        s_hal_obj->gptimer_is_active = false;
+        gptimer_stop(s_hal_obj->fade_timer);
+    }
 #else
 #if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 3, 0))
     // 1. Stop all fade_cb operations
@@ -923,7 +941,9 @@ esp_err_t hal_set_channel_group(uint16_t value[], uint8_t channel_mask, uint16_t
     fade_cb(NULL);
 #ifdef FADE_TICKS_FROM_GPTIMER
     if (need_timer) {
-        gptimer_start(s_hal_obj->fade_timer);
+        if (gptimer_start(s_hal_obj->fade_timer) == ESP_OK) {
+            s_hal_obj->gptimer_is_active = true;
+        }
     }
 #else
     if (need_timer) {
@@ -939,7 +959,10 @@ esp_err_t hal_start_channel_action(int channel, uint16_t value_min, uint16_t val
     LIGHTBULB_CHECK((period_ms > CHANGE_RATE_MS * 2) || (period_ms == 0), "period_ms not allowed", return ESP_ERR_INVALID_ARG);
 
 #ifdef FADE_TICKS_FROM_GPTIMER
-    gptimer_stop(s_hal_obj->fade_timer);
+    if (s_hal_obj->gptimer_is_active) {
+        s_hal_obj->gptimer_is_active = false;
+        gptimer_stop(s_hal_obj->fade_timer);
+    }
 #else
 #if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 3, 0))
     // 1. Stop all fade_cb operations
@@ -989,7 +1012,9 @@ esp_err_t hal_start_channel_action(int channel, uint16_t value_min, uint16_t val
     // 8. Actions need to be periodic, directly enabled
     fade_cb(NULL);
 #ifdef FADE_TICKS_FROM_GPTIMER
-    gptimer_start(s_hal_obj->fade_timer);
+    if (gptimer_start(s_hal_obj->fade_timer) == ESP_OK) {
+        s_hal_obj->gptimer_is_active = true;
+    }
 #else
     esp_timer_start_periodic(s_hal_obj->fade_timer, 1000 * CHANGE_RATE_MS);
 #endif
@@ -1004,7 +1029,10 @@ esp_err_t hal_start_channel_group_action(uint16_t value_min[], uint16_t value_ma
     LIGHTBULB_CHECK((period_ms > CHANGE_RATE_MS * 2) || (period_ms == 0), "period_ms not allowed", return ESP_ERR_INVALID_ARG);
 
 #ifdef FADE_TICKS_FROM_GPTIMER
-    gptimer_stop(s_hal_obj->fade_timer);
+    if (s_hal_obj->gptimer_is_active) {
+        s_hal_obj->gptimer_is_active = false;
+        gptimer_stop(s_hal_obj->fade_timer);
+    }
 #else
 #if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 3, 0))
     // 1. Stop all fade_cb operations
@@ -1057,7 +1085,9 @@ esp_err_t hal_start_channel_group_action(uint16_t value_min[], uint16_t value_ma
     // 8. Actions need to be periodic, directly enabled
     fade_cb(NULL);
 #ifdef FADE_TICKS_FROM_GPTIMER
-    gptimer_start(s_hal_obj->fade_timer);
+    if (gptimer_start(s_hal_obj->fade_timer) == ESP_OK) {
+        s_hal_obj->gptimer_is_active = true;
+    }
 #else
     esp_timer_start_periodic(s_hal_obj->fade_timer, 1000 * CHANGE_RATE_MS);
 #endif
@@ -1070,7 +1100,10 @@ esp_err_t hal_stop_channel_action(uint8_t channel_mask)
     LIGHTBULB_CHECK(s_hal_obj, "init() must be called first", return ESP_ERR_INVALID_STATE);
 
 #ifdef FADE_TICKS_FROM_GPTIMER
-    gptimer_stop(s_hal_obj->fade_timer);
+    if (s_hal_obj->gptimer_is_active) {
+        s_hal_obj->gptimer_is_active = false;
+        gptimer_stop(s_hal_obj->fade_timer);
+    }
 #else
 #if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 3, 0))
     // 1. Stop all fade_cb operations
@@ -1102,7 +1135,9 @@ esp_err_t hal_stop_channel_action(uint8_t channel_mask)
 
     fade_cb(NULL);
 #ifdef FADE_TICKS_FROM_GPTIMER
-    gptimer_start(s_hal_obj->fade_timer);
+    if (gptimer_start(s_hal_obj->fade_timer) == ESP_OK) {
+        s_hal_obj->gptimer_is_active = true;
+    }
 #else
     esp_timer_start_periodic(s_hal_obj->fade_timer, 1000 * CHANGE_RATE_MS);
 #endif

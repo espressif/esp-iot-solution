@@ -870,8 +870,7 @@ esp_err_t lightbulb_kelvin2percentage(uint16_t kelvin, uint8_t *percentage)
 {
     LIGHTBULB_CHECK(s_lb_obj, "not init", return ESP_ERR_INVALID_ARG);
     LIGHTBULB_CHECK(percentage, "percentage is null", return ESP_ERR_INVALID_ARG);
-    LIGHTBULB_CHECK(kelvin > s_lb_obj->kelvin_range.max, "kelvin out of max range", return ESP_ERR_INVALID_ARG);
-    LIGHTBULB_CHECK(kelvin < s_lb_obj->kelvin_range.min, "kelvin out of min range", return ESP_ERR_INVALID_ARG);
+    LIGHTBULB_CHECK(kelvin >= s_lb_obj->kelvin_range.min && kelvin <= s_lb_obj->kelvin_range.max, "kelvin out of range", return ESP_ERR_INVALID_ARG);
 
     *percentage = kelvin_convert_to_percentage(kelvin);
 
@@ -882,7 +881,7 @@ esp_err_t lightbulb_percentage2kelvin(uint8_t percentage, uint16_t *kelvin)
 {
     LIGHTBULB_CHECK(s_lb_obj, "not init", return ESP_ERR_INVALID_ARG);
     LIGHTBULB_CHECK(kelvin, "kelvin is null", return ESP_ERR_INVALID_ARG);
-    LIGHTBULB_CHECK(percentage > 100, "percentage out of range", return ESP_ERR_INVALID_ARG);
+    LIGHTBULB_CHECK(percentage <= 100, "percentage out of range", return ESP_ERR_INVALID_ARG);
 
     *kelvin = percentage_convert_to_kelvin(percentage);
 
