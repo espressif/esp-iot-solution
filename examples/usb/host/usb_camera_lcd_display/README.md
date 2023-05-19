@@ -1,12 +1,15 @@
 ## USB Stream Lcd Display Example
 
-This routine demonstrates how to use the [usb_stream](https://components.espressif.com/components/espressif/usb_stream) component to acquire a USB camera image and display it adaptively on the RGB screen.
+This routine demonstrates how to use the [usb_stream](https://components.espressif.com/components/espressif/usb_stream) component to get an image from a USB camera and display it dynamically on the RGB screen. 
 
+* Pressing the boot button can switch the display resolution. 
 * For better performance, please use ESP-IDF release/v5.0 or above versions.
+* Currently only images with a resolution smaller than the screen resolution are displayed
+* When the image width is equal to the screen width, the refresh rate is at its highest.
 
 ## Hardware
 
-* An [ESP32-S3-LCD-EV-Board](https://docs.espressif.com/projects/espressif-esp-dev-kits/en/latest/esp32s3/esp32-s3-lcd-ev-board/index.html) development board with 800x480/480*480 LCD.
+* An [ESP32-S3-LCD-EV-Board](https://docs.espressif.com/projects/espressif-esp-dev-kits/en/latest/esp32s3/esp32-s3-lcd-ev-board/index.html) development board with 800\*480/480\*480 LCD.
 * A USB camera (Can be connected to USB port or Expansion Connector)
 * An USB Type-C cable for Power supply and programming (Please connect to UART port instead of USB port)
 
@@ -17,6 +20,10 @@ Note:
   3. release "BOOT(SW2)".
   4. upload program and reset
 
+## Performance
+
+* Displaying 800*480 images on ESP32-S3-LCD-EV-Board and 800*480 screen can reach `16FPS`
+* Displaying 480*320 images on ESP32-S3-LCD-Ev-Board and 480*480 screen can reach `29FPS`
 
 ## IDF Patch
 
@@ -55,7 +62,7 @@ rm -rf build sdkconfig sdkconfig.old
 
 2. Use the command line to enable the relevant configuration
 ```
-idf.py -D SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.psram_octal_120m" set-target esp32s3
+idf.py -D SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.psram_octal_120m" reconfigure
 ```
 
 3. Compile and burn
