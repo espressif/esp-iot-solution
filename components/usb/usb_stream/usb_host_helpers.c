@@ -313,8 +313,9 @@ esp_err_t _usb_pipe_flush(hcd_pipe_handle_t pipe_hdl, size_t urb_num)
     }
     for (size_t i = 0; i < urb_num; i++) {
         urb_t *urb = hcd_urb_dequeue(pipe_hdl);
-        ESP_LOGD(TAG, "urb dequeue handle = %p", urb);
+        ESP_LOGV(TAG, "urb dequeue handle = %p", urb);
     }
+    ESP_LOGD(TAG, "urb dequeued num = %d", urb_num);
     ESP_LOGD(TAG, "pipe(%p) flush succeed", pipe_hdl);
     return ESP_OK;
 }
@@ -325,8 +326,9 @@ esp_err_t _usb_pipe_clear(hcd_pipe_handle_t pipe_hdl, size_t urb_num)
     ESP_LOGD(TAG, "pipe clearing: state = %d", hcd_pipe_get_state(pipe_hdl));
     for (size_t i = 0; i < urb_num; i++) {
         urb_t *urb = hcd_urb_dequeue(pipe_hdl);
-        ESP_LOGD(TAG, "urb dequeue handle = %p", urb);
+        ESP_LOGV(TAG, "urb dequeue handle = %p", urb);
     }
+    ESP_LOGD(TAG, "urb dequeued num = %d", urb_num);
     if (hcd_pipe_get_state(pipe_hdl) == HCD_PIPE_STATE_ACTIVE) {
         return ESP_OK;
     }

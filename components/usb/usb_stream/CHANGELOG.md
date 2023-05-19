@@ -1,5 +1,20 @@
 # ChangeLog
 
+## v1.0.1 - 2023-05-18
+
+### Enhancements:
+
+* USB:
+  * Support resume/suspend stream in `state_callback_t` callback function.
+
+* UAC:
+  * Optimize speaker zero compensation logic (When speaker stream running and buffer empty for a long time, the host will padding n(ms) zero packets to avoid device noise)
+  * If UAC has multiple alt interfaces, chose the first as default
+
+### Bug Fixes:
+
+Add additional delay to avoid malloc error if continuous suspend and resume
+
 ## v1.0.0 - 2023-05-10
 
 ### Release v1.0.0

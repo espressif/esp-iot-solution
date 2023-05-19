@@ -24,6 +24,9 @@ menu "USB Stream"
         bool "Print descriptor info in verbose mode"
         depends on UVC_PRINT_DESC
         default n
+    config USB_PRE_ALLOC_CTRL_TRANSFER_URB
+        bool "Pre-allocate control transfer urb, set to n if you want to use dynamic alloc"
+        default y
     config USB_PROC_TASK_PRIORITY
         int "usb process task priority"
         range 1 25
@@ -81,17 +84,17 @@ menu "USB Stream"
     menu "UAC Stream Config"
         config NUM_ISOC_SPK_URBS
             int "uac speaker isoc urb number"
-            default 3
+            default 6
         config NUM_ISOC_MIC_URBS
             int "uac microphone isoc urb number"
             default 3
         config UAC_MIC_CB_MIN_MS_DEFAULT
             int "uac microphone default cb interval (ms)"
-            default 20
+            default 16
             range 1 32
         config UAC_SPK_ST_MAX_MS_DEFAULT
             int "uac speaker default max tx size (ms)"
-            default 32
+            default 16
             range 1 32
         config UAC_MIC_PACKET_COMPENSATION
             bool "uac microphone packet compensation"
@@ -99,13 +102,16 @@ menu "USB Stream"
         config UAC_SPK_PACKET_COMPENSATION
             bool "uac speaker packet compensation"
             default y
-        config UAC_SPK_PACKET_COMPENSATION_SIZE_MS
-            int "uac speaker packet compensation size (ms)"
+        config UAC_SPK_PACKET_COMPENSATION_TIMEOUT_MS
+            int "speaker compensation after buffer empty timeout(ms)"
             depends on UAC_SPK_PACKET_COMPENSATION
-            default 1
-        config USB_PRE_ALLOC_CTRL_TRANSFER_URB
-            bool "Pre-allocate control transfer urb, set to n if you want to use dynamic alloc"
-            default y
+            default 1000
+            range 10 5000
+        config UAC_SPK_PACKET_COMPENSATION_SIZE_MS
+            int "speaker compensation size (ms)"
+            depends on UAC_SPK_PACKET_COMPENSATION
+            default 10
+            range 1 32
         config UAC_SPK_VOLUME_LEVEL_DEFAULT
             int "uac speaker default volume level"
             default 80 
