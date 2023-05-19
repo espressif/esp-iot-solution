@@ -253,6 +253,9 @@
 .patterns-example_usb_host_usb_camera_mic_spk: &patterns-example_usb_host_usb_camera_mic_spk
   - "examples/usb/host/usb_camera_mic_spk/**/*"
 
+.patterns-example_usb_host_usb_audio_player: &patterns-example_usb_host_usb_audio_player
+  - "examples/usb/host/usb_audio_player/**/*"
+
 .patterns-example_usb_host_usb_cdc_4g_module: &patterns-example_usb_host_usb_cdc_4g_module
   - "examples/usb/host/usb_cdc_4g_module/**/*"
 
@@ -649,6 +652,17 @@
       changes: *patterns-components_usb_usb_stream
     - <<: *if-dev-push
       changes: *patterns-example_usb_host_usb_camera_mic_spk
+
+.rules:build:example_usb_host_usb_audio_player:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_usb_usb_stream
+    - <<: *if-dev-push
+      changes: *patterns-example_usb_host_usb_audio_player
 
 .rules:build:example_usb_host_usb_cdc_4g_module:
   rules:

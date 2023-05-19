@@ -1,4 +1,4 @@
-version: "1.0.1"
+version: "1.0.2"
 targets:
   - esp32s2
   - esp32s3
@@ -13,3 +13,4 @@ dependencies:
 examples:
   - path: ../../../examples/usb/host/usb_camera_mic_spk
   - path: ../../../examples/usb/host/usb_camera_lcd_display
+  - path: ../../../examples/usb/host/usb_audio_player
