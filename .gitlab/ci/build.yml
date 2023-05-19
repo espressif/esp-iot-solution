@@ -343,3 +343,14 @@ build_components_usb_usb_stream_test_apps:
       - IMAGE: espressif/idf:release-v5.0
   variables:
     EXAMPLE_DIR: components/usb/usb_stream/test_apps
+
+build_example_gprof_gprof_simple:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_gprof_gprof_simple
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
+  variables:
+    EXAMPLE_DIR: examples/gprof/gprof_simple

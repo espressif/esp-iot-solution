@@ -1,0 +1,5 @@
+dependencies:
+  gprof:
+    version: "0.*"
+    override_path: "../../../../components/gprof"
+
