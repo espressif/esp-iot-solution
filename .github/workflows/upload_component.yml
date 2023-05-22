@@ -21,6 +21,7 @@ jobs:
             components/bootloader_support_plus;
             components/button;
             components/extended_vfs;
+            components/gprof;
             components/knob;
             components/led/led_indicator;
             components/led/lightbulb_driver;
