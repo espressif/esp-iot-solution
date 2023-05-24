@@ -47,24 +47,45 @@ components_test_usb_camera:
     matrix:
       - IDF_TARGET: esp32s2
         IDF_VERSION: "4.4"
-        TAGS: usb_camera
+        ENV_TAG: usb_camera
       - IDF_TARGET: esp32s2
         IDF_VERSION: "5.0"
-        TAGS: usb_camera
+        ENV_TAG: usb_camera
       - IDF_TARGET: esp32s3
         IDF_VERSION: "4.4"
-        TAGS: usb_camera
+        ENV_TAG: usb_camera
       - IDF_TARGET: esp32s3
         IDF_VERSION: "5.0"
-        TAGS: usb_camera
+        ENV_TAG: usb_camera
       - IDF_TARGET: esp32s3
         IDF_VERSION: "4.4"
-        TAGS: usb-otg_camera
+        ENV_TAG: usb-otg_camera
   tags: 
     - ${IDF_TARGET}
-    - ${TAGS}
+    - ${ENV_TAG}
   image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_TARGET: ${IDF_TARGET}
     TEST_FOLDER: components/usb/usb_stream
-    TEST_ENV: ${TAGS}
+    TEST_ENV: ${ENV_TAG}
+
+tools_test_cmake_utilities:
+  extends:
+    - .pytest_template
+    - .rules:build:tools_cmake_utilities_test_apps
+  needs:
+    - job: "build_tools_cmake_utilities_test_apps"
+      artifacts: true
+      optional: true
+  parallel:
+    matrix:
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "4.4"
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "5.0"
+  tags: 
+    - ${IDF_TARGET}
+  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
+  variables:
+    TEST_TARGET: ${IDF_TARGET}
+    TEST_FOLDER: tools/cmake_utilities

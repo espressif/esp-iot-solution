@@ -114,6 +114,12 @@
 .patterns-components_storage_eeprom_at24c02: &patterns-components_storage_eeprom_at24c02
   - "components/storage/eeprom/at24c02/**/*"
 
+.patterns-components_tools_cmake_utilities_test_component1: &patterns-components_tools_cmake_utilities_test_component1
+  - "tools/cmake_utilities/test_apps/components/test_component1/**/*"
+
+.patterns-components_tools_cmake_utilities_test_component2: &patterns-components_tools_cmake_utilities_test_component2
+  - "tools/cmake_utilities/test_apps/components/TEST-component2/**/*"
+
 .patterns-components_usb_iot_usbh: &patterns-components_usb_iot_usbh
   - "components/usb/iot_usbh/**/*"
   - "components/tools/cmake_utilities/package_manager.cmake"
@@ -266,16 +272,8 @@
   - "examples/gprof/gprof_simple/**/*"
 
 # tools folder, in the alphabetic order
-.patterns-tools_cmake_utilities_gen_compressed_ota: &patterns-tools_cmake_utilities_gen_compressed_ota
-  - "components/tools/cmake_utilities/gen_compressed_ota.cmake"
-  - "components/tools/cmake_utilities/scripts/gen_custom_ota.py"
-
-.patterns-tools_cmake_utilities_package_manager: &patterns-tools_cmake_utilities_package_manager
-  - "components/tools/cmake_utilities/package_manager.cmake"
-
-.patterns-tools_cmake_utilities_relinker: &patterns-tools_cmake_utilities_relinker
-  - "components/tools/cmake_utilities/relinker.cmake"
-  - "components/tools/cmake_utilities/scripts/relinker/**/*"
+.patterns-tools_cmake_utilities: &patterns-tools_cmake_utilities
+  - "tools/cmake_utilities/**/*"
 
 ##############
 # if anchors #
@@ -453,6 +451,15 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-example_get_started_blink
+
+.rules:build:example_gprof_gprof_simple:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_gprof_gprof_simple
 
 .rules:build:example_hmi_lvgl_coffee:
   rules:
@@ -968,15 +975,20 @@
     - <<: *if-dev-push
       changes: *patterns-components_usb_usb_stream
 
-.rules:build:example_gprof_gprof_simple:
+.rules:build:tools_cmake_utilities_test_apps:
   rules:
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-dev-push
       changes: *patterns-build_system
     - <<: *if-dev-push
-      changes: *patterns-example_gprof_gprof_simple
+      changes: *patterns-tools_cmake_utilities
+    - <<: *if-dev-push
+      changes: *patterns-components_tools_cmake_utilities_test_component1
+    - <<: *if-dev-push
+      changes: *patterns-components_tools_cmake_utilities_test_component2
 
+# For others
 .rules:build:docs:
   rules:
     - <<: *if-protected

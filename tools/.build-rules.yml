@@ -1,0 +1,3 @@
+tools/cmake_utilities/test_apps:
+  enable:
+    - if: IDF_TARGET in ["esp32s3"]
