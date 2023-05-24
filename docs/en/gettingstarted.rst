@@ -3,12 +3,12 @@ Get Started
 
 :link_to_translation:`zh_CN:[中文]`
 
-This document is intended to help you set up the development environment for ESP-IoT-Solution (Espressif IoT Solution). After that, a simple example will show you how to use ESP-IoT-Solution to set up environment, create a project, build and flash firmware onto an ESP32/ESP32-S series board, etc.
+This document is intended to help you set up the development environment for ESP-IoT-Solution (Espressif IoT Solution). After that, a simple example will show you how to use ESP-IoT-Solution to set up environment, create a project, build and flash firmware onto an ESP series board, etc.
 
 ESP-IoT-Solution Introduction
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-ESP-IoT-Solution contains peripheral drivers and code frameworks commonly used in IoT system development, which can be used as a complementary component to ESP-IDF to facilitate simpler development, mainly including the following contents:
+ESP-IoT-Solution contains peripheral drivers and code frameworks commonly used in IoT system development, which provide complementary components to ESP-IDF to facilitate simpler development, mainly including the following contents:
 
 - Device drivers such as sensors, screens, audio devices, input devices, actuators, and etc.
 - Code framework and related documents of low power management, security encryption, storage and etc.
@@ -19,23 +19,25 @@ ESP-IoT-Solution Versions
 
 Specifications of different ESP-IoT-Solution versions are listed in the following table:
 
-+--------------------------+-------------------------------+-----------------------------------------------------+---------------------------------+
-| ESP-IoT-Solution version | Corresponding ESP-IDF version |                    Main changes                     |             Status              |
-+==========================+===============================+=====================================================+=================================+
-| master                   | release/v4.4                  | Code structure changed, added support for new chips | New features development branch |
-+--------------------------+-------------------------------+-----------------------------------------------------+---------------------------------+
-| release/v1.1             | v4.0.1                        | IDF version updated, deleted codes that have been   | Limited maintenance             |
-|                          |                               | moved to other repos                                |                                 |
-+--------------------------+-------------------------------+-----------------------------------------------------+---------------------------------+
-| release/v1.0             | v3.2.2                        | Legacy version                                      | Stop maintenance                |
-+--------------------------+-------------------------------+-----------------------------------------------------+---------------------------------+
++--------------------------+-------------------------------+---------------------------------------------------+---------------------------------+
+| ESP-IoT-Solution version | Corresponding ESP-IDF version |                   Main changes                    |             Status              |
++==========================+===============================+===================================================+=================================+
+| master                   | >=v4.4                        | support component manager and new chips           | New features development branch |
++--------------------------+-------------------------------+---------------------------------------------------+---------------------------------+
+| release/v1.1             | v4.0.1                        | IDF version updated, deleted codes that have been | Stop maintenance                |
+|                          |                               | moved to other repos                              |                                 |
++--------------------------+-------------------------------+---------------------------------------------------+---------------------------------+
+| release/v1.0             | v3.2.2                        | Legacy version                                    | Stop maintenance                |
++--------------------------+-------------------------------+---------------------------------------------------+---------------------------------+
+
+Since the ``master`` branch uses the ``ESP Component Manager`` to manager components, each of them is a separate package, and each package may support a different version of the ESP-IDF, which will be declared in the component's ``idf_component.yml`` file.
 
 ESP-IDF Introduction
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-ESP-IDF is the IoT development framework for ESP32/ESP32-S2 series SoCs provided by Espressif, including:
+ESP-IDF is the IoT development framework for ESP series SoCs provided by Espressif, including:
 
-- A series of libraries and header files, providing core components required for building software projects based on ESP32/ESP32-S2;
+- A series of libraries and header files, providing core components required for building software projects based on ESP SoC;
 - Common tools and functions used during the development and manufacturing processes, e.g., build, flashing, debugging, measurement and etc.
 
 .. Note::
@@ -43,12 +45,12 @@ ESP-IDF is the IoT development framework for ESP32/ESP32-S2 series SoCs provided
     For detailed information, please go to `ESP-IDF Programming Guide <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/index.html>`_.
 
 
-ESP32/ESP32-S Introduction
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ESP Series SoC Introduction
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-You can select any development board from ESP32/ESP32-S series to get started with ESP-IoT-Solution, or select a supported board from the `Boards Component <./basic/boards.html>`_ directly for a quick start.
+You can select any development board from ESP series to get started with ESP-IoT-Solution, or select a supported board from the `Boards Component <./basic/boards.html>`_ directly for a quick start.
 
-ESP32/ESP32-S series SoCs support the following features:
+ESP series SoC support the following features:
 
 - 2.4 GHz Wi-Fi
 - Bluetooth
@@ -58,11 +60,11 @@ ESP32/ESP32-S series SoCs support the following features:
 - Rich memory resources, including up to 520 KB internal RAM and can support external PSRAM
 - Support security functions, e.g., hardware encryption
 
-ESP32/ESP32-S series of SoCs are designed with the 40 nm technology, showing the best power and RF performance, versatility and reliability in a wide variety of application and power scenarios.
+ESP series of SoC are designed with the 40nm technology, showing the best power and RF performance, versatility and reliability in a wide variety of application and power scenarios.
 
 .. Note::
 
-    The configuration varies by SOC series, please refer to `ESP Product Selector <http://products.espressif.com:8000/#/product-selector>`_ for details.
+    The configuration varies by SoC series, please refer to `ESP Product Selector <http://products.espressif.com:8000/#/product-selector>`_ for details.
 
 
 Setting up Development Environment
@@ -93,31 +95,11 @@ For other versions, please also use this command with ``release/v1.1`` replaced 
 Use ESP-IoT-Solution Components
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The following ways can be used to add ESP-IoT-Solution components:
+If you just want to use the components in ESP-IoT-Solution, we recommend you use it from the `ESP Component Registry <https://components.espressif.com/>`_. 
 
-1. Add all components from ESP-IoT-Solution to the project directory by inserting the following code to ``CMakeLists.txt`` under the project:
+The registered components in ESP-IoT-Solution are listed in :iot-solution_file:`README.md` , You can directly add the components from the Component Registry to your project by using the ``idf.py add-dependency`` command under your project's root directory. eg run ``idf.py add-dependency "espressif/usb_stream"`` to add the ``usb_stream``, the component will be downloaded automatically during the ``CMake`` step.
 
-    .. code:: 
-
-        cmake_minimum_required(VERSION 3.5)
-
-        include($ENV{IOT_SOLUTION_PATH}/component.cmake)
-        include($ENV{IDF_PATH}/tools/cmake/project.cmake)
-
-        project(empty-project)
-
-2. Add specific components from ESP-IoT-Solution to the project directory by inserting the following code to ``CMakeLists.txt`` under the project:
-
-    .. code:: 
-
-        set(EXTRA_COMPONENT_DIRS "${EXTRA_COMPONENT_DIRS} $ENV{IOT_SOLUTION_PATH}/components/{component_you_choose}")
-        #Please replace {component_you_choose} with the component name you choose. This command can be repeated if you need to add multiple components.
-
-3. Copy specific components from ESP-IoT-Solution to the project directory by directly copying and pasting the components and their dependencies into the ``components`` folder under the project.
-
-.. Note::
-
-    It is recommended to use the build system based on CMake (the default build system for ESP-IDF v4.0 and later versions) for ESP-IoT-Solution. If you need to use the GNU Make system, please refer to `Build System (Legacy GNU Make) <https://docs.espressif.com/projects/esp-idf/en/release-v4.2/esp32/api-guides/build-system-legacy.html>`_.
+Please refer to `IDF Component Manager <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/tools/idf-component-manager.html>`_ for details.
 
 Build and Download
 ~~~~~~~~~~~~~~~~~~~~~~
