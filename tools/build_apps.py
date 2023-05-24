@@ -57,6 +57,7 @@ def get_cmake_apps(
         manifest_files=[
             str(Path(PROJECT_ROOT) /'components'/'.build-rules.yml'),
             str(Path(PROJECT_ROOT) /'examples'/'.build-rules.yml'),
+            str(Path(PROJECT_ROOT) /'tools'/'.build-rules.yml'),
         ],
     )
     return apps

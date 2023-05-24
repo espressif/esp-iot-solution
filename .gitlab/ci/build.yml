@@ -194,6 +194,17 @@ build_example_get_started_blink:
     EXAMPLE_DIR: examples/get-started/blink
     IMAGE: espressif/idf:release-v4.4
 
+build_example_gprof_gprof_simple:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_gprof_gprof_simple
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
+  variables:
+    EXAMPLE_DIR: examples/gprof/gprof_simple
+
 build_example_hmi_lvgl_coffee:
   extends:
     - .build_examples_template
@@ -354,13 +365,13 @@ build_components_usb_usb_stream_test_apps:
   variables:
     EXAMPLE_DIR: components/usb/usb_stream/test_apps
 
-build_example_gprof_gprof_simple:
+build_tools_cmake_utilities_test_apps:
   extends:
     - .build_examples_template
-    - .rules:build:example_gprof_gprof_simple
+    - .rules:build:tools_cmake_utilities_test_apps
   parallel:
     matrix:
       - IMAGE: espressif/idf:release-v4.4
       - IMAGE: espressif/idf:release-v5.0
   variables:
-    EXAMPLE_DIR: examples/gprof/gprof_simple
+    EXAMPLE_DIR: tools/cmake_utilities/test_apps

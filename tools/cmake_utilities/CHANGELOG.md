@@ -1,3 +1,11 @@
+## v0.4.8 - 2023-05-24
+
+* Add unit test app
+
+### Bugfix:
+
+* fix customer target redefinition issue
+
 ## v0.4.7 - 2023-04-21
 
 * gen_compressed_ota: support the addition of a v2 compressed OTA header to compressed firmware.
