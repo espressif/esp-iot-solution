@@ -64,6 +64,7 @@ ESP-IoT-Solution contains device drivers and code frameworks for the development
 
    Get Started <gettingstarted>
    Basic Component <basic/index>
+   Bluetooth <bluetooth/index>
    Display <display/index>
    USB Host&Device <usb/index>
    Audio <audio/index>

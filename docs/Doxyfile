@@ -23,6 +23,16 @@ PROJECT_NAME = "ESP IoT Solution Guide"
 INPUT = \
     $(PROJECT_PATH)/components/audio/dac_audio/include/dac_audio.h \
     $(PROJECT_PATH)/components/audio/pwm_audio/include/pwm_audio.h \
+    $(PROJECT_PATH)/components/bluetooth/ble_conn_mgr/include/esp_ble_conn_mgr.h \
+    $(PROJECT_PATH)/components/bluetooth/ble_profiles/std/ble_anp/include/esp_anp.h \
+    $(PROJECT_PATH)/components/bluetooth/ble_profiles/std/ble_hrp/include/esp_hrp.h \
+    $(PROJECT_PATH)/components/bluetooth/ble_profiles/std/ble_htp/include/esp_htp.h \
+    $(PROJECT_PATH)/components/bluetooth/ble_services/ans/include/esp_ans.h \
+    $(PROJECT_PATH)/components/bluetooth/ble_services/bas/include/esp_bas.h \
+    $(PROJECT_PATH)/components/bluetooth/ble_services/dis/include/esp_dis.h \
+    $(PROJECT_PATH)/components/bluetooth/ble_services/hrs/include/esp_hrs.h \
+    $(PROJECT_PATH)/components/bluetooth/ble_services/hts/include/esp_hts.h \
+    $(PROJECT_PATH)/components/bluetooth/ble_services/tps/include/esp_tps.h \
     $(PROJECT_PATH)/components/bus/include/i2c_bus.h \
     $(PROJECT_PATH)/components/bus/include/i2s_lcd_driver.h \
     $(PROJECT_PATH)/components/bus/include/spi_bus.h \
