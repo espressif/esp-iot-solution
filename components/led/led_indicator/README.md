@@ -6,6 +6,7 @@ As one of the simplest output peripherals, LED indicators can indicate the curre
 * Can define the priority of blink types
 * Can set up multiple indicators
 * LEDC and other drivers support adjustable brightness, gradient
+* Support adjustment light with gamma
 
 ### LED Indicator User Guide
 

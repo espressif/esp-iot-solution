@@ -33,7 +33,7 @@ variables:
     TEST_ENV: 'generic'
   script:
     - pip install -r tools/requirements/requirement.pytest.txt
-    - pytest ${TEST_FOLDER} --target ${IDF_TARGET} --env ${TEST_ENV} --junitxml=XUNIT_RESULT.xml
+    - pytest ${TEST_FOLDER} --target ${TEST_TARGET} --env ${TEST_ENV} --junitxml=XUNIT_RESULT.xml
 
 components_test_usb_camera:
   extends:
@@ -71,6 +71,27 @@ components_test_usb_camera:
     TEST_TARGET: ${IDF_TARGET}
     TEST_FOLDER: components/usb/usb_stream
     TEST_ENV: ${ENV_TAG}
+
+components_test_led_indicator:
+  extends:
+    - .pytest_template
+    - .rules:build:components_led_led_indicator_test_apps
+  needs:
+    - job: "build_components_led_led_indicator_test_apps"
+      artifacts: true
+      optional: true
+  parallel:
+    matrix:
+        - IDF_VERSION: "4.4"
+        - IDF_VERSION: "5.0"
+  tags: 
+    - esp32s3
+    - led_indicator
+  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
+  variables:
+    TEST_TARGET: esp32s3
+    TEST_FOLDER: components/led/led_indicator
+    TEST_ENV: led_indicator
 
 tools_test_cmake_utilities:
   extends:

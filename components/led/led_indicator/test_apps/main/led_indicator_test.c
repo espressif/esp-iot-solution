@@ -13,11 +13,10 @@
 #include "led_indicator.h"
 #include "led_indicator_blink_default.h"
 #include "unity.h"
+#include "led_gamma.h"
 
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
-#define portTICK_RATE_MS 1
-#endif
-
+// Some resources are lazy allocated in pulse_cnt driver, the threshold is left for that case
+#define TEST_MEMORY_LEAK_THRESHOLD (-200)
 #define LED_IO_NUM_0    15
 #define LED_IO_NUM_1    16
 #define LED_IO_NUM_2    17
@@ -32,7 +31,7 @@ void led_indicator_init()
 {
     led_indicator_gpio_config_t led_indicator_gpio_config = {
         .gpio_num = LED_IO_NUM_0,              /**< num of GPIO */
-        .is_active_level_high = 0,
+        .is_active_level_high = 1,
     };
 
     led_indicator_config_t config = {
@@ -51,7 +50,7 @@ void led_indicator_deinit()
 {
     esp_err_t ret = led_indicator_delete(led_handle_0);
     TEST_ASSERT(ret == ESP_OK);
-    TEST_ASSERT_NULL(led_handle_0);
+    led_handle_0 = NULL;
 }
 
 void led_indicator_gpio_mode_test_all()
@@ -59,58 +58,58 @@ void led_indicator_gpio_mode_test_all()
     ESP_LOGI(TAG, "connecting.....");
     esp_err_t ret = led_indicator_start(led_handle_0, BLINK_CONNECTING);
     TEST_ASSERT(ret == ESP_OK);
-    vTaskDelay(4000 / portTICK_RATE_MS);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
     ret = led_indicator_stop(led_handle_0, BLINK_CONNECTING);
     TEST_ASSERT(ret == ESP_OK);
-    vTaskDelay(1000 / portTICK_RATE_MS);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
 
     ESP_LOGI(TAG, "connected.....");
     ret = led_indicator_start(led_handle_0, BLINK_CONNECTED);
     TEST_ASSERT(ret == ESP_OK);
-    vTaskDelay(4000 / portTICK_RATE_MS);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
     ret = led_indicator_stop(led_handle_0, BLINK_CONNECTED);
     TEST_ASSERT(ret == ESP_OK);
-    vTaskDelay(1000 / portTICK_RATE_MS);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
 
     ESP_LOGI(TAG, "reconnecting.....");
     ret = led_indicator_start(led_handle_0, BLINK_RECONNECTING);
     TEST_ASSERT(ret == ESP_OK);
-    vTaskDelay(4000 / portTICK_RATE_MS);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
     ret = led_indicator_stop(led_handle_0, BLINK_RECONNECTING);
     TEST_ASSERT(ret == ESP_OK);
-    vTaskDelay(1000 / portTICK_RATE_MS);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
 
     ESP_LOGI(TAG, "updating.....");
     ret = led_indicator_start(led_handle_0, BLINK_UPDATING);
     TEST_ASSERT(ret == ESP_OK);
-    vTaskDelay(4000 / portTICK_RATE_MS);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
     ret = led_indicator_stop(led_handle_0, BLINK_UPDATING);
     TEST_ASSERT(ret == ESP_OK);
-    vTaskDelay(1000 / portTICK_RATE_MS);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
 
     ESP_LOGI(TAG, "factory_reset.....");
     ret = led_indicator_start(led_handle_0, BLINK_FACTORY_RESET);
     TEST_ASSERT(ret == ESP_OK);
-    vTaskDelay(4000 / portTICK_RATE_MS);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
     ret = led_indicator_stop(led_handle_0, BLINK_FACTORY_RESET);
     TEST_ASSERT(ret == ESP_OK);
-    vTaskDelay(1000 / portTICK_RATE_MS);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
 
     ESP_LOGI(TAG, "provisioning.....");
     ret = led_indicator_start(led_handle_0, BLINK_PROVISIONING);
     TEST_ASSERT(ret == ESP_OK);
-    vTaskDelay(4000 / portTICK_RATE_MS);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
     ret = led_indicator_stop(led_handle_0, BLINK_PROVISIONING);
     TEST_ASSERT(ret == ESP_OK);
-    vTaskDelay(1000 / portTICK_RATE_MS);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
 
     ESP_LOGI(TAG, "provisioned.....");
     ret = led_indicator_start(led_handle_0, BLINK_PROVISIONED);
     TEST_ASSERT(ret == ESP_OK);
-    vTaskDelay(4000 / portTICK_RATE_MS);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
     ret = led_indicator_stop(led_handle_0, BLINK_PROVISIONED);
     TEST_ASSERT(ret == ESP_OK);
-    vTaskDelay(1000 / portTICK_RATE_MS);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
 
     ESP_LOGI(TAG, "test all condition done.....");
 }
@@ -127,19 +126,19 @@ void led_indicator_gpio_mode_preempt()
     ESP_LOGI(TAG, "connecting.....");
     esp_err_t ret = led_indicator_start(led_handle_0, BLINK_CONNECTING);
     TEST_ASSERT(ret == ESP_OK);
-    vTaskDelay(3000 / portTICK_RATE_MS);
+    vTaskDelay(3000 / portTICK_PERIOD_MS);
 
 
     ESP_LOGI(TAG, "factory_reset.....");
     ret = led_indicator_start(led_handle_0, BLINK_FACTORY_RESET); //higer priority than connecting
     TEST_ASSERT(ret == ESP_OK);
-    vTaskDelay(3000 / portTICK_RATE_MS);
+    vTaskDelay(3000 / portTICK_PERIOD_MS);
 
     ESP_LOGI(TAG, "factory_reset stop");
     ret = led_indicator_stop(led_handle_0, BLINK_FACTORY_RESET); //then switch to low priority
     TEST_ASSERT(ret == ESP_OK);
     ESP_LOGI(TAG, "connecting.....");
-    vTaskDelay(3000 / portTICK_RATE_MS);
+    vTaskDelay(3000 / portTICK_PERIOD_MS);
 
     ESP_LOGI(TAG, "connecting stop");
     ret = led_indicator_stop(led_handle_0, BLINK_CONNECTING);
@@ -157,7 +156,7 @@ void led_indicator_all_init()
 {
     led_indicator_gpio_config_t led_indicator_gpio_config = {
         .gpio_num = LED_IO_NUM_0,              /**< num of GPIO */
-        .is_active_level_high = 0,
+        .is_active_level_high = 1,
     };
 
     led_indicator_config_t config = {
@@ -168,7 +167,6 @@ void led_indicator_all_init()
     };
 
     led_handle_0 = led_indicator_create(&config);
-
     TEST_ASSERT_NOT_NULL(led_handle_0);
     led_indicator_gpio_config.gpio_num = LED_IO_NUM_1;
     led_handle_1 = led_indicator_create(&config);
@@ -185,13 +183,13 @@ void led_indicator_all_deinit()
 {
     esp_err_t ret = led_indicator_delete(led_handle_0);
     TEST_ASSERT(ret == ESP_OK);
-    TEST_ASSERT_NULL(led_handle_0);
+    led_handle_0 = NULL;
     ret = led_indicator_delete(led_handle_1);
     TEST_ASSERT(ret == ESP_OK);
-    TEST_ASSERT_NULL(led_handle_1);
+    led_handle_1 = NULL;
     ret = led_indicator_delete(led_handle_2);
     TEST_ASSERT(ret == ESP_OK);
-    TEST_ASSERT_NULL(led_handle_2);
+    led_handle_2 = NULL;
 }
 
 void led_indicator_gpio_mode_three_led()
@@ -203,53 +201,52 @@ void led_indicator_gpio_mode_three_led()
     ESP_LOGI(TAG, "provisioning.....");
     esp_err_t ret = led_indicator_start(provision, BLINK_PROVISIONING);
     TEST_ASSERT(ret == ESP_OK);
-    vTaskDelay(4000 / portTICK_RATE_MS);
-
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
     ESP_LOGI(TAG, "provisioned.....");
     ret = led_indicator_stop(provision, BLINK_PROVISIONING);
     TEST_ASSERT(ret == ESP_OK);
+
     ret = led_indicator_start(provision, BLINK_PROVISIONED);
     TEST_ASSERT(ret == ESP_OK);
 
     ESP_LOGI(TAG, "connecting.....");
     ret = led_indicator_start(led_connect, BLINK_CONNECTING);
     TEST_ASSERT(ret == ESP_OK);
-    vTaskDelay(4000 / portTICK_RATE_MS);
-
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
     ESP_LOGI(TAG, "connected.....");
     ret = led_indicator_stop(led_connect, BLINK_CONNECTING);
     TEST_ASSERT(ret == ESP_OK);
+
     ret = led_indicator_start(led_connect, BLINK_CONNECTED);
     TEST_ASSERT(ret == ESP_OK);
-    vTaskDelay(4000 / portTICK_RATE_MS);
-
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
     ESP_LOGI(TAG, "lost connection");
     ret = led_indicator_stop(led_connect, BLINK_CONNECTED);
     TEST_ASSERT(ret == ESP_OK);
-    vTaskDelay(1000 / portTICK_RATE_MS);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
 
     ESP_LOGI(TAG, "reconnecting.....");
     ret = led_indicator_start(led_connect, BLINK_RECONNECTING);
     TEST_ASSERT(ret == ESP_OK);
-    vTaskDelay(4000 / portTICK_RATE_MS);
-
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
     ESP_LOGI(TAG, "reconnected.....");
     ret = led_indicator_stop(led_connect, BLINK_RECONNECTING);
     TEST_ASSERT(ret == ESP_OK);
+
     ret = led_indicator_start(led_connect, BLINK_CONNECTED);
     TEST_ASSERT(ret == ESP_OK);
 
     ESP_LOGI(TAG, "updating.....");
     ret = led_indicator_start(led_system, BLINK_UPDATING);
     TEST_ASSERT(ret == ESP_OK);
-    vTaskDelay(4000 / portTICK_RATE_MS);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
     ret = led_indicator_stop(led_system, BLINK_UPDATING);
     TEST_ASSERT(ret == ESP_OK);
 
     ESP_LOGI(TAG, "factory_reset.....");
     ret = led_indicator_start(led_system, BLINK_FACTORY_RESET);
     TEST_ASSERT(ret == ESP_OK);
-    vTaskDelay(4000 / portTICK_RATE_MS);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
     ret = led_indicator_stop(led_system, BLINK_FACTORY_RESET);
     TEST_ASSERT(ret == ESP_OK);
 
@@ -264,6 +261,10 @@ TEST_CASE("blink three LED", "[LED][indicator]")
 }
 
 typedef enum {
+    BLINK_25_BRIGHTNESS,
+    BLINK_50_BRIGHTNESS,
+    BLINK_75_BRIGHTNESS,
+    BLINK_BREATHE,
     BLINK_DOUBLE,
     BLINK_TRIPLE,
     BLINK_FAST,
@@ -294,13 +295,39 @@ static const blink_step_t fast_blink[] = {
     {LED_BLINK_LOOP, 0, 0},
 };
 
-static blink_step_t const *led_blink_lst[] = {
-    [BLINK_DOUBLE] = double_blink,
-    [BLINK_TRIPLE] = triple_blink,
-    [BLINK_FAST] = fast_blink,
-    [BLINK_NUM] = NULL,
+static const blink_step_t breathe_blink[] = {
+    {LED_BLINK_BREATHE, LED_STATE_ON, 1000},
+    {LED_BLINK_BRIGHTNESS, LED_STATE_ON, 500},
+    {LED_BLINK_BREATHE, LED_STATE_OFF, 1000},
+    {LED_BLINK_BRIGHTNESS, LED_STATE_OFF, 500},
+    {LED_BLINK_LOOP, 0, 0},
 };
 
+static const blink_step_t brightness_25_blink[] = {
+    {LED_BLINK_BRIGHTNESS, LED_STATE_25_PERCENT, 1000},
+    {LED_BLINK_STOP, 0, 0},
+};
+
+static const blink_step_t brightness_50_blink[] = {
+    {LED_BLINK_BRIGHTNESS, LED_STATE_50_PERCENT, 1000},
+    {LED_BLINK_STOP, 0, 0},
+};
+
+static const blink_step_t brightness_75_blink[] = {
+    {LED_BLINK_BRIGHTNESS, LED_STATE_75_PERCENT, 1000},
+    {LED_BLINK_STOP, 0, 0},
+};
+
+static blink_step_t const *led_blink_lst[] = {
+    [BLINK_25_BRIGHTNESS] = brightness_25_blink,
+    [BLINK_50_BRIGHTNESS] = brightness_50_blink,
+    [BLINK_75_BRIGHTNESS] = brightness_75_blink,
+    [BLINK_BREATHE]       = breathe_blink,
+    [BLINK_DOUBLE]        = double_blink,
+    [BLINK_TRIPLE]        = triple_blink,
+    [BLINK_FAST]          = fast_blink,
+    [BLINK_NUM]           = NULL,
+};
 
 TEST_CASE("User defined blink", "[LED][indicator]")
 {
@@ -323,18 +350,18 @@ TEST_CASE("User defined blink", "[LED][indicator]")
     ESP_LOGI(TAG, "double blink.....");
     esp_err_t ret = led_indicator_start(led_handle_0, BLINK_DOUBLE);
     TEST_ASSERT(ret == ESP_OK);
-    vTaskDelay(2000 / portTICK_RATE_MS);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
     ret = led_indicator_stop(led_handle_0, BLINK_DOUBLE);
     TEST_ASSERT(ret == ESP_OK);
-    vTaskDelay(1000 / portTICK_RATE_MS);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
 
     ESP_LOGI(TAG, "triple blink.....");
     ret = led_indicator_start(led_handle_0, BLINK_TRIPLE);
     TEST_ASSERT(ret == ESP_OK);
-    vTaskDelay(2000 / portTICK_RATE_MS);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
     ret = led_indicator_stop(led_handle_0, BLINK_TRIPLE);
     TEST_ASSERT(ret == ESP_OK);
-    vTaskDelay(1000 / portTICK_RATE_MS);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
 
     led_indicator_deinit();
 }
@@ -359,77 +386,26 @@ TEST_CASE("Preempt blink lists test", "[LED][indicator]")
 
     ESP_LOGI(TAG, "double blink.....");
     esp_err_t ret = led_indicator_start(led_handle_0, BLINK_DOUBLE);
-    vTaskDelay(1000 / portTICK_RATE_MS);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
     TEST_ASSERT(ret == ESP_OK);
 
     ESP_LOGI(TAG, "fast blink preempt .....");
     ret = led_indicator_preempt_start(led_handle_0, BLINK_FAST);
     TEST_ASSERT(ret == ESP_OK);
-    vTaskDelay(2000 / portTICK_RATE_MS);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
 
     ESP_LOGI(TAG, "fast blink preempt stop.....");
     ret = led_indicator_preempt_stop(led_handle_0, BLINK_FAST);
-    vTaskDelay(1000 / portTICK_RATE_MS);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
 
     ESP_LOGI(TAG, "triple blink.....");
     ret = led_indicator_start(led_handle_0, BLINK_TRIPLE);
     TEST_ASSERT(ret == ESP_OK);
 
-    vTaskDelay(4000 / portTICK_RATE_MS);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
 
     led_indicator_deinit();
 }
-
-typedef enum {
-    BLINK_DOUBLE_BRIGHTNESS,
-    BLINK_25_BRIGHTNESS,
-    BLINK_50_BRIGHTNESS,
-    BLINK_75_BRIGHTNESS,
-    BLINK_BREATHE,
-    BLINK_BREATHE_NUM,
-} led_breathe_blink_type_t;
-
-static const blink_step_t breathe_blink[] = {
-    {LED_BLINK_BREATHE, LED_STATE_ON, 1000},
-    {LED_BLINK_BRIGHTNESS, LED_STATE_ON, 500},
-    {LED_BLINK_BREATHE, LED_STATE_OFF, 1000},
-    {LED_BLINK_BRIGHTNESS, LED_STATE_OFF, 500},
-    {LED_BLINK_BREATHE, LED_STATE_25_PERCENT, 1000},
-    {LED_BLINK_BRIGHTNESS, LED_STATE_25_PERCENT, 500},
-    {LED_BLINK_STOP, 0, 0},
-};
-
-static const blink_step_t brightness_25_blink[] = {
-    {LED_BLINK_BRIGHTNESS, LED_STATE_25_PERCENT, 1000},
-    {LED_BLINK_STOP, 0, 0},
-};
-
-static const blink_step_t brightness_50_blink[] = {
-    {LED_BLINK_BRIGHTNESS, LED_STATE_50_PERCENT, 1000},
-    {LED_BLINK_STOP, 0, 0},
-};
-
-static const blink_step_t brightness_75_blink[] = {
-    {LED_BLINK_BRIGHTNESS, LED_STATE_75_PERCENT, 1000},
-    {LED_BLINK_STOP, 0, 0},
-};
-
-static const blink_step_t brightness_double_blink[] = {
-    {LED_BLINK_HOLD, LED_STATE_ON ,500},
-    {LED_BLINK_HOLD, LED_STATE_OFF ,1000},
-    {LED_BLINK_HOLD, LED_STATE_ON ,500},
-    {LED_BLINK_HOLD, LED_STATE_OFF ,500},
-    {LED_BLINK_STOP, 0, 0},
-};
-
-static blink_step_t const *breathe_led_blink_lst[] = {
-    [BLINK_DOUBLE_BRIGHTNESS] = brightness_double_blink,
-    [BLINK_BREATHE] = breathe_blink,
-    [BLINK_25_BRIGHTNESS] = brightness_25_blink,
-    [BLINK_50_BRIGHTNESS] = brightness_50_blink,
-    [BLINK_75_BRIGHTNESS] = brightness_75_blink,
-    [BLINK_BREATHE_NUM] = NULL,
-};
 
 TEST_CASE("breathe test", "[LED][indicator]")
 {
@@ -460,38 +436,33 @@ TEST_CASE("breathe test", "[LED][indicator]")
     led_indicator_config_t config = {
         .led_indicator_ledc_config = &led_indicator_ledc_config,
         .mode = LED_LEDC_MODE,
-        .blink_lists = breathe_led_blink_lst,
-        .blink_list_num = BLINK_BREATHE_NUM,
+        .blink_lists = led_blink_lst,
+        .blink_list_num = BLINK_NUM,
     };
 
     led_handle_0 = led_indicator_create(&config);
     TEST_ASSERT_NOT_NULL(led_handle_0);
     TEST_ASSERT(led_handle_0 == led_indicator_get_handle((void *)LEDC_CHANNEL_0)); //test get handle
 
-    ESP_LOGI(TAG, "breathe blink .....");
-    esp_err_t ret = led_indicator_start(led_handle_0, BLINK_BREATHE);
-    TEST_ASSERT(ret == ESP_OK);
-    vTaskDelay(6000 / portTICK_RATE_MS);
-
     ESP_LOGI(TAG, "breathe 25/100 blink.....");
-    ret = led_indicator_start(led_handle_0, BLINK_25_BRIGHTNESS);
-    vTaskDelay(2000 / portTICK_RATE_MS);
+    esp_err_t ret = led_indicator_start(led_handle_0, BLINK_25_BRIGHTNESS);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
     TEST_ASSERT(ret == ESP_OK);
 
     ESP_LOGI(TAG, "breathe 50/100 blink.....");
     ret = led_indicator_start(led_handle_0, BLINK_50_BRIGHTNESS);
-    vTaskDelay(2000 / portTICK_RATE_MS);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
     TEST_ASSERT(ret == ESP_OK);
 
     ESP_LOGI(TAG, "breathe 75/100 blink.....");
     ret = led_indicator_start(led_handle_0, BLINK_75_BRIGHTNESS);
-    vTaskDelay(2000 / portTICK_RATE_MS);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
     TEST_ASSERT(ret == ESP_OK);
 
-    ESP_LOGI(TAG, "double breathe blink.....");
-    ret = led_indicator_start(led_handle_0, BLINK_DOUBLE_BRIGHTNESS);
+    ESP_LOGI(TAG, "breathe blink .....");
+    ret = led_indicator_start(led_handle_0, BLINK_BREATHE);
     TEST_ASSERT(ret == ESP_OK);
-    vTaskDelay(3000 / portTICK_RATE_MS);
+    vTaskDelay(8000 / portTICK_PERIOD_MS);
 
     led_indicator_deinit();
 }
@@ -541,38 +512,68 @@ TEST_CASE("custom mode test", "[LED][indicator]")
     led_indicator_config_t config = {
         .led_indicator_custom_config = &led_indicator_custom_config,
         .mode = LED_CUSTOM_MODE,
-        .blink_lists = breathe_led_blink_lst,
-        .blink_list_num = BLINK_BREATHE_NUM,
+        .blink_lists = led_blink_lst,
+        .blink_list_num = BLINK_NUM,
     };
 
     led_handle_0 = led_indicator_create(&config);
     TEST_ASSERT_NOT_NULL(led_handle_0);
     TEST_ASSERT(led_handle_0 == led_indicator_get_handle((void *)LEDC_CHANNEL_0)); //test get handle
 
-    ESP_LOGI(TAG, "breathe blink .....");
-    esp_err_t ret = led_indicator_start(led_handle_0, BLINK_BREATHE);
-    TEST_ASSERT(ret == ESP_OK);
-    vTaskDelay(6000 / portTICK_RATE_MS);
-
     ESP_LOGI(TAG, "breathe 25/100 blink.....");
-    ret = led_indicator_start(led_handle_0, BLINK_25_BRIGHTNESS);
-    vTaskDelay(2000 / portTICK_RATE_MS);
+    esp_err_t ret = led_indicator_start(led_handle_0, BLINK_25_BRIGHTNESS);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
     TEST_ASSERT(ret == ESP_OK);
 
     ESP_LOGI(TAG, "breathe 50/100 blink.....");
     ret = led_indicator_start(led_handle_0, BLINK_50_BRIGHTNESS);
-    vTaskDelay(2000 / portTICK_RATE_MS);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
     TEST_ASSERT(ret == ESP_OK);
 
     ESP_LOGI(TAG, "breathe 75/100 blink.....");
     ret = led_indicator_start(led_handle_0, BLINK_75_BRIGHTNESS);
-    vTaskDelay(2000 / portTICK_RATE_MS);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
     TEST_ASSERT(ret == ESP_OK);
 
-    ESP_LOGI(TAG, "double breathe blink.....");
-    ret = led_indicator_start(led_handle_0, BLINK_DOUBLE_BRIGHTNESS);
+    ESP_LOGI(TAG, "breathe blink .....");
+    ret = led_indicator_start(led_handle_0, BLINK_BREATHE);
     TEST_ASSERT(ret == ESP_OK);
-    vTaskDelay(3000 / portTICK_RATE_MS);
+    vTaskDelay(6000 / portTICK_PERIOD_MS);
 
     led_indicator_deinit();
+}
+
+TEST_CASE("test gamma table", "[LED][indicator]")
+{
+    led_indicator_new_gamma_table(2.3);
+}
+
+static size_t before_free_8bit;
+static size_t before_free_32bit;
+
+static void check_leak(size_t before_free, size_t after_free, const char *type)
+{
+    ssize_t delta = after_free - before_free;
+    printf("MALLOC_CAP_%s: Before %u bytes free, After %u bytes free (delta %d)\n", type, before_free, after_free, delta);
+    TEST_ASSERT_MESSAGE(delta >= TEST_MEMORY_LEAK_THRESHOLD, "memory leak");
+}
+
+void setUp(void)
+{
+    before_free_8bit = heap_caps_get_free_size(MALLOC_CAP_8BIT);
+    before_free_32bit = heap_caps_get_free_size(MALLOC_CAP_32BIT);
+}
+
+void tearDown(void)
+{
+    size_t after_free_8bit = heap_caps_get_free_size(MALLOC_CAP_8BIT);
+    size_t after_free_32bit = heap_caps_get_free_size(MALLOC_CAP_32BIT);
+    check_leak(before_free_8bit, after_free_8bit, "8BIT");
+    check_leak(before_free_32bit, after_free_32bit, "32BIT");
+}
+
+void app_main(void)
+{
+    printf("LED INDICATOR TEST \n");
+    unity_run_menu();
 }

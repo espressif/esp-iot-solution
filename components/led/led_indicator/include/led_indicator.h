@@ -154,6 +154,15 @@ esp_err_t led_indicator_preempt_start(led_indicator_handle_t handle, int blink_t
  */
 esp_err_t led_indicator_preempt_stop(led_indicator_handle_t handle, int blink_type);
 
+/**
+ * @brief Get the current fade value of the LED indicator.
+ *
+ * @param handle LED indicator handle
+ * @return uint8_t Current fade value: 0-255
+ *         if handle is null return 0
+ */
+uint8_t led_indicator_get_current_fade_value(led_indicator_handle_t handle);
+
 #ifdef __cplusplus
 }
 #endif

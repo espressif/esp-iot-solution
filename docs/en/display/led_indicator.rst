@@ -158,6 +158,24 @@ Custom light blink
 
 By defining ``led_blink_lst[]`` to achieve the custom indicator.
 
+Adjustment of Gamma
+++++++++++++++++++++++
+
+The way human eyes perceive brightness is not linear but has certain nonlinear characteristics. Under normal conditions, the human eye is more sensitive to darker areas and less sensitive to brighter areas. However, on digital display devices such as monitors, the brightness values of images are usually encoded in a linear manner. This leads to issues of brightness distortion or loss of details when converting the linearly encoded brightness values to the perceived brightness by the human eye. To address this problem, gamma correction is applied to the image. Gamma correction involves adjusting the brightness values nonlinearly to correct the image display. By applying a gamma value (typically ranging from 2.2 to 2.4), the linearly encoded brightness values are mapped to a nonlinear brightness curve that better matches the perception of the human eye. This improves the visibility of details in darker areas and enhances the overall visual accuracy and balance of the image.
+
+.. figure:: ../../_static/display/led_indicator_gamma_correction.png
+   :align: center
+   :width: 60%
+
+   Gamma Curve
+
+.. code:: c
+
+    float gamma = 2.3;
+    led_indicator_new_gamma_table(gamma);
+
+The default gamma table is 2.3, and a new gamma table can be generated using the `led_indicator_new_gamma_table()` function.
+
 API Reference
 ^^^^^^^^^^^^^^^^
 

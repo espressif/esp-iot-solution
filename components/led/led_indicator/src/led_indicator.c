@@ -18,6 +18,7 @@
 #include "led_indicator_blink_default.h"
 #include "led_gpio.h"
 #include "led_ledc.h"
+#include "led_gamma.h"
 
 static const char *TAG = "led_indicator";
 
@@ -37,7 +38,7 @@ static const char *TAG = "led_indicator";
 #define NULL_ACTIVE_BLINK  -1
 #define NULL_PREEMPT_BLINK -1
 
-static const char* led_indicator_mode_str[3] = {"GPIO mode", "LEDC mode", "custom mode"};
+static const char *led_indicator_mode_str[3] = {"GPIO mode", "LEDC mode", "custom mode"};
 
 /**
  * @brief LED indicator object
@@ -45,39 +46,39 @@ static const char* led_indicator_mode_str[3] = {"GPIO mode", "LEDC mode", "custo
  */
 typedef struct {
     bool is_active_level_high;                                                            /**< Set true if GPIO level is high when light is ON, otherwise false. */
-    esp_err_t (*hal_indicator_set_on_off)(void *hardware_data, bool on_off);              /*!< pointer functions for setting on or off */
-    esp_err_t (*hal_indicator_deinit)(void *hardware_data);                               /*!< pointer functions for Deinitialization */
-    esp_err_t (*hal_indicator_set_brightness)(void *hardware_data, uint32_t brightness);  /*!< pointer functions for setting brightness, must be supported by hardware */
-    void *hardware_data;             /*!< hardware data of the LED indicator */
-    led_indicator_mode_t mode;       /*!< LED work mode, eg. GPIO or pwm mode */
-    int active_blink;                /*!< active blink list*/
-    int preempt_blink;               /*!< highest priority blink list*/
-    int *p_blink_steps;              /*!< stage of each blink list */
-    float fade_value;                /*!< Count the number of fade */
-    uint32_t old_value;               /*!< Save the last brightness value */
-    uint32_t max_duty;               /*!< Max duty cycle from duty_resolution : 2^duty_resolution -1 */
-    SemaphoreHandle_t mutex;         /*!< mutex to achieve thread-safe */
-    TimerHandle_t h_timer;           /*!< LED timer handle, invalid if works in pwm mode */
-    blink_step_t const **blink_lists;/*!< user defined LED blink lists */
-    uint16_t blink_list_num;         /*!< number of blink lists */
+    esp_err_t (*hal_indicator_set_on_off)(void *hardware_data, bool on_off);              /*!< Pointer function for setting on or off */
+    esp_err_t (*hal_indicator_deinit)(void *hardware_data);                               /*!< Pointer function for Deinitialization */
+    esp_err_t (*hal_indicator_set_brightness)(void *hardware_data, uint32_t brightness);  /*!< Pointer function for setting brightness, must be supported by hardware */
+    void *hardware_data;               /*!< Hardware data of the LED indicator */
+    led_indicator_mode_t mode;         /*!< LED work mode, eg. GPIO or pwm mode */
+    int active_blink;                  /*!< Active blink list*/
+    int preempt_blink;                 /*!< Highest priority blink list*/
+    int *p_blink_steps;                /*!< Stage of each blink list */
+    uint8_t fade_value_count;          /*!< Count the number of fade */
+    uint8_t current_fade_value;        /*!< Current fade value */
+    uint8_t last_fade_value;           /*!< Save the last brightness value */
+    uint32_t max_duty;                 /*!< Max duty cycle from duty_resolution : 2^duty_resolution -1 */
+    SemaphoreHandle_t mutex;           /*!< Mutex to achieve thread-safe */
+    TimerHandle_t h_timer;             /*!< LED timer handle, invalid if works in pwm mode */
+    blink_step_t const **blink_lists;  /*!< User defined LED blink lists */
+    uint16_t blink_list_num;           /*!< Number of blink lists */
 } _led_indicator_t;
 
 typedef struct _led_indicator_slist_t {
-    SLIST_ENTRY(_led_indicator_slist_t) next;
-    _led_indicator_t *p_led_indicator;
+    SLIST_ENTRY(_led_indicator_slist_t) next;  /*!< Pointer to the next element in the singly linked list */
+    _led_indicator_t *p_led_indicator;         /*!< Pointer to the LED indicator structure */
 } _led_indicator_slist_t;
 
 typedef struct _led_indicator_com_config {
     bool is_active_level_high;                                                            /**< Set true if GPIO level is high when light is ON, otherwise false. */
-    esp_err_t (*hal_indicator_set_on_off)(void *hardware_data, bool on_off);               /*!< pointer functions for setting on or off */
-    esp_err_t (*hal_indicator_deinit)(void *hardware_data);                               /*!< pointer functions for Deinitialization */
-    esp_err_t (*hal_indicator_set_brightness)(void *hardware_data, uint32_t brightness);  /*!< pointer functions for setting brightness, must be supported by hardware */
+    esp_err_t (*hal_indicator_set_on_off)(void *hardware_data, bool on_off);              /*!< Pointer function for setting on or off */
+    esp_err_t (*hal_indicator_deinit)(void *hardware_data);                               /*!< Pointer function for Deinitialization */
+    esp_err_t (*hal_indicator_set_brightness)(void *hardware_data, uint32_t brightness);  /*!< Pointer function for setting brightness, must be supported by hardware */
     void *hardware_data;                  /*!< GPIO number of the LED indicator */
-    blink_step_t const **blink_lists;     /*!< user defined LED blink lists */
-    uint16_t blink_list_num;              /*!< number of blink lists */
+    blink_step_t const **blink_lists;     /*!< User defined LED blink lists */
+    uint16_t blink_list_num;              /*!< Number of blink lists */
     led_indicator_duty_t duty_resolution; /*!< Resolution of duty setting in number of bits. The range of duty values is [0, (2**duty_resolution) -1]. If the brightness cannot be set, set this as 1. */
 } _led_indicator_com_config_t;
-
 static SLIST_HEAD(_led_indicator_head_t, _led_indicator_slist_t) s_led_indicator_slist_head = SLIST_HEAD_INITIALIZER(s_led_indicator_slist_head);
 
 static esp_err_t _led_indicator_add_node(_led_indicator_t *p_led_indicator)
@@ -150,12 +151,14 @@ static void _blink_list_runner(TimerHandle_t xTimer)
             p_led_indicator->p_blink_steps[active_blink] += 1;
         }
 
-        if (pdFALSE == xSemaphoreTake(p_led_indicator->mutex, pdMS_TO_TICKS(100))) {
-            ESP_LOGW(TAG, "blinks runner blockTime expired, try repairing...");
-            xTimerChangePeriod(p_led_indicator->h_timer, pdMS_TO_TICKS(100), 0);
-            xTimerStart(p_led_indicator->h_timer, 0);
-            break;
-        }
+            if (pdFALSE == xSemaphoreTake(p_led_indicator->mutex, pdMS_TO_TICKS(100))) {
+                ESP_LOGW(TAG, "blinks runner blockTime expired, try repairing...");
+                if (p_led_indicator->h_timer != NULL) {
+                    xTimerChangePeriod(p_led_indicator->h_timer, pdMS_TO_TICKS(100), 0);
+                    xTimerStart(p_led_indicator->h_timer, 0);
+                }
+                break;
+            }
 
         switch (p_blink_step->type) {
         case LED_BLINK_LOOP:
@@ -173,14 +176,17 @@ static void _blink_list_runner(TimerHandle_t xTimer)
             }
             hardware_level = p_blink_step->value ? p_led_indicator->is_active_level_high : !p_led_indicator->is_active_level_high;
             p_led_indicator->hal_indicator_set_on_off(p_led_indicator->hardware_data, hardware_level);
-            p_led_indicator->old_value = p_blink_step->value ? LED_STATE_ON : LED_STATE_OFF;
+            p_led_indicator->current_fade_value = p_blink_step->value ? LED_STATE_ON : LED_STATE_OFF;
+            p_led_indicator->last_fade_value = p_blink_step->value ? LED_STATE_ON : LED_STATE_OFF;
             if (p_blink_step->hold_time_ms == 0) {
                 break;
             }
 
-            xTimerChangePeriod(p_led_indicator->h_timer, pdMS_TO_TICKS(p_blink_step->hold_time_ms), 0);
-            xTimerStart(p_led_indicator->h_timer, 0);
             leave = true;
+            if (p_led_indicator->h_timer != NULL) {
+                xTimerChangePeriod(p_led_indicator->h_timer, pdMS_TO_TICKS(p_blink_step->hold_time_ms), 0);
+                xTimerStart(p_led_indicator->h_timer, 0);
+            }
             break;
 
         case LED_BLINK_BRIGHTNESS: {
@@ -188,16 +194,19 @@ static void _blink_list_runner(TimerHandle_t xTimer)
                 break;
             }
 
-            uint32_t brightness_value = p_led_indicator->max_duty / BRIGHTNESS_MAX * p_blink_step->value;
+            uint32_t brightness_value = p_led_indicator->max_duty / BRIGHTNESS_MAX * led_indicator_get_gamma_value(p_blink_step->value);
             p_led_indicator->hal_indicator_set_brightness(p_led_indicator->hardware_data, brightness_value);
-            p_led_indicator->old_value = p_blink_step->value;
+            p_led_indicator->current_fade_value = p_blink_step->value;
+            p_led_indicator->last_fade_value = p_blink_step->value;
             if (p_blink_step->hold_time_ms == 0) {
                 break;
             }
 
-            xTimerChangePeriod(p_led_indicator->h_timer, pdMS_TO_TICKS(p_blink_step->hold_time_ms), 0);
-            xTimerStart(p_led_indicator->h_timer, 0);
             leave = true;
+            if (p_led_indicator->h_timer != NULL) {
+                xTimerChangePeriod(p_led_indicator->h_timer, pdMS_TO_TICKS(p_blink_step->hold_time_ms), 0);
+                xTimerStart(p_led_indicator->h_timer, 0);
+            }
             break;
         }
 
@@ -208,43 +217,48 @@ static void _blink_list_runner(TimerHandle_t xTimer)
 
             uint32_t brightness_value = 0;
             uint16_t ticks = BRIGHTNESS_TICKS;
-            int16_t diff_value = p_blink_step->value - p_led_indicator->old_value;
+            int16_t diff_value = p_blink_step->value - p_led_indicator->last_fade_value;
             // diff_brightness > 0: Fade increase
             // diff_brightness < 0: Fade decrease
             if (p_blink_step->hold_time_ms == 0) {
-                brightness_value = p_led_indicator->max_duty / BRIGHTNESS_MAX * (p_blink_step->value);
+                brightness_value = p_led_indicator->max_duty / BRIGHTNESS_MAX * led_indicator_get_gamma_value(p_blink_step->value);
                 p_led_indicator->hal_indicator_set_brightness(p_led_indicator->hardware_data, brightness_value);
                 goto next_blink;
             }
 
             if (diff_value >= 0) {
-                brightness_value = p_led_indicator->max_duty / BRIGHTNESS_MAX * (p_led_indicator->fade_value + p_led_indicator->old_value);
+                p_led_indicator->current_fade_value = p_led_indicator->fade_value_count + p_led_indicator->last_fade_value;
             } else {
-                brightness_value = p_led_indicator->max_duty / BRIGHTNESS_MAX * (p_led_indicator->old_value - p_led_indicator->fade_value);
+                p_led_indicator->current_fade_value = p_led_indicator->last_fade_value - p_led_indicator->fade_value_count;
             }
+            brightness_value = p_led_indicator->max_duty / BRIGHTNESS_MAX * led_indicator_get_gamma_value(p_led_indicator->current_fade_value);
             p_led_indicator->hal_indicator_set_brightness(p_led_indicator->hardware_data, brightness_value);
 
             if (diff_value == 0) {
                 ticks = p_blink_step->hold_time_ms;
-                p_led_indicator->fade_value += 1;
+                p_led_indicator->fade_value_count += 1;
             } else if (p_blink_step->hold_time_ms > BRIGHTNESS_TICKS * abs(diff_value)) {
                 ticks = p_blink_step->hold_time_ms /  abs(diff_value) ;
-                p_led_indicator->fade_value += 1;
+                p_led_indicator->fade_value_count += 1;
             } else {
-                p_led_indicator->fade_value += abs(diff_value) * ticks / p_blink_step->hold_time_ms;
+                p_led_indicator->fade_value_count += abs(diff_value) * ticks / p_blink_step->hold_time_ms;
             }
 
             ESP_LOGD(TAG, "breathe ticks value: %d", ticks);
-            xTimerChangePeriod(p_led_indicator->h_timer, pdMS_TO_TICKS(ticks), 0);
-            xTimerStart(p_led_indicator->h_timer, 0);
             leave = true;
-            if (p_led_indicator->fade_value > abs(diff_value)) {
+            if (p_led_indicator->h_timer != NULL) {
+                xTimerChangePeriod(p_led_indicator->h_timer, pdMS_TO_TICKS(ticks), 0);
+                xTimerStart(p_led_indicator->h_timer, 0);
+            }
+
+            if (p_led_indicator->fade_value_count > abs(diff_value)) {
                 goto next_blink;
             }
             break;
 next_blink:
-            p_led_indicator->fade_value = BRIGHTNESS_MIN;
-            p_led_indicator->old_value = p_blink_step->value;
+            p_led_indicator->fade_value_count = BRIGHTNESS_MIN;
+            p_led_indicator->current_fade_value = p_blink_step->value;
+            p_led_indicator->last_fade_value = p_blink_step->value;
             p_led_indicator->p_blink_steps[active_blink] += 1;
             break;
         }
@@ -404,15 +418,22 @@ static esp_err_t _led_indicator_delete_com(_led_indicator_t *p_led_indicator)
 {
     esp_err_t err;
     BaseType_t ret;
+    ret = xTimerStop(p_led_indicator->h_timer, portMAX_DELAY);
+    LED_INDICATOR_CHECK(ret == pdPASS, "LED timer stop failed", return ESP_FAIL);
+    ret = xTimerDelete(p_led_indicator->h_timer, portMAX_DELAY);
+    LED_INDICATOR_CHECK(ret == pdPASS, "LED timer delete failed", return ESP_FAIL);
     xSemaphoreTake(p_led_indicator->mutex, portMAX_DELAY);
+    for (int i = 0; i < p_led_indicator->blink_list_num; i++) {
+        p_led_indicator->p_blink_steps[i] = LED_BLINK_STOP;
+    }
+
     LED_INDICATOR_CHECK_WARNING(NULL != p_led_indicator->hal_indicator_deinit, "LED indicator not set deinit", goto not_deinit);
     err = p_led_indicator->hal_indicator_deinit(p_led_indicator->hardware_data);
     LED_INDICATOR_CHECK(err == ESP_OK, "LED indicator deinit failed", return ESP_FAIL);
 not_deinit:
-    ret = xTimerDelete(p_led_indicator->h_timer, portMAX_DELAY);
-    LED_INDICATOR_CHECK(ret == pdPASS, "LED timer delete failed", return ESP_FAIL);
     _led_indicator_remove_node(p_led_indicator);
     vSemaphoreDelete(p_led_indicator->mutex);
+    p_led_indicator->mutex = NULL;
     free(p_led_indicator->p_blink_steps);
     free(p_led_indicator);
     p_led_indicator = NULL;
@@ -502,4 +523,14 @@ esp_err_t led_indicator_preempt_stop(led_indicator_handle_t handle, int blink_ty
     xSemaphoreGive(p_led_indicator->mutex);
 
     return ESP_OK;
+}
+
+uint8_t led_indicator_get_current_fade_value(led_indicator_handle_t handle)
+{
+    LED_INDICATOR_CHECK(handle != NULL, "invalid p_handle", return 0);
+    _led_indicator_t *p_led_indicator = (_led_indicator_t *)handle;
+    xSemaphoreTake(p_led_indicator->mutex, portMAX_DELAY);
+    uint8_t fade_value = p_led_indicator->current_fade_value;
+    xSemaphoreGive(p_led_indicator->mutex);
+    return fade_value;
 }

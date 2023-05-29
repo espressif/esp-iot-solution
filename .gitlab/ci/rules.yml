@@ -817,7 +817,7 @@
     - <<: *if-dev-push
       changes: *patterns-components_knob
 
-.rules:build:components_led_led_indicator_test:
+.rules:build:components_led_led_indicator_test_apps:
   rules:
     - <<: *if-protected
     - <<: *if-label-build
