@@ -137,7 +137,8 @@ TEST_CASE("test uvc any resolution", "[devkit][uvc]")
         TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_start());
         TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_connect_wait(portMAX_DELAY));
         /* add delay for some camera will low response speed to pass */
-        vTaskDelay(1);
+        /* Some camera module can not suspend so quick when start up */
+        vTaskDelay(100 / portTICK_PERIOD_MS);
         /* test streaming suspend */
         TEST_ASSERT_NOT_EQUAL(ESP_FAIL, usb_streaming_control(STREAM_UVC, CTRL_SUSPEND, NULL));
         vTaskDelay(1000 / portTICK_PERIOD_MS);
