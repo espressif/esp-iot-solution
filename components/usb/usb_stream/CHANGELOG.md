@@ -1,5 +1,16 @@
 # ChangeLog
 
+## v1.0.3 - 2023-06-01
+
+### Bug Fixes:
+
+* Fix Quick Start Mode usb stream can not stop
+
+### Enhancements:
+
+* UAC:
+  * Support UAC work in Quick Start Mode (Device must support skip enum process)
+
 ## v1.0.2 - 2023-05-19
 
 ### Enhancements:

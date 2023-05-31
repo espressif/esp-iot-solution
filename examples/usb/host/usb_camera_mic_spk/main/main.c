@@ -286,13 +286,12 @@ void app_main(void)
     usb_streaming_control(STREAM_UAC_SPK, CTRL_UAC_MUTE, (void *)0);
     usb_streaming_control(STREAM_UAC_SPK, CTRL_UAC_VOLUME, (void *)80);
 
-// IF not enable loopback, play default sound
-#if (ENABLE_UAC_MIC_SPK_FUNCTION && !ENABLE_UAC_MIC_SPK_LOOPBACK)
-    // set the speaker volume to 10%
     while (1) {
         xEventGroupWaitBits(s_evt_handle, BIT3_SPK_START, true, false, portMAX_DELAY);
         /* Manually resume the speaker because SUSPEND_AFTER_START flags is set */
         ESP_ERROR_CHECK(usb_streaming_control(STREAM_UAC_SPK, CTRL_RESUME, NULL));
+        ESP_LOGI(TAG, "speaker resume");
+#if (ENABLE_UAC_MIC_SPK_FUNCTION && !ENABLE_UAC_MIC_SPK_LOOPBACK)
         ESP_LOGI(TAG, "start to play default sound");
         extern const uint8_t wave_array_32000_16_1[];
         extern const uint32_t s_buffer_size;
@@ -326,8 +325,8 @@ void app_main(void)
             }
         }
         free(d_buffer);
-    }
 #endif
+    }
 
     while (1) {
         vTaskDelay(100);
