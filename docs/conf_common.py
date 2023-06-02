@@ -88,6 +88,7 @@ extensions = ['breathe',
                    'sphinxcontrib.actdiag',
                    'sphinxcontrib.nwdiag',
                    'sphinxcontrib.rackdiag',
+                   'sphinxcontrib.cairosvgconverter',
                    'sphinxcontrib.packetdiag'
                   ]
 
