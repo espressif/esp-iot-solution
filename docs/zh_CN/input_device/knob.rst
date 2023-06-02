@@ -5,6 +5,14 @@
 
 **Knob** 是提供软件 PCNT 的组件，可以用在没有 PCNT 硬件功能的芯片（esp32c2, esp32c3）上。使用 Knob 可以快速适配物理编码器，如 EC11 编码器。
 
+适用的场景
+-----------
+
+适用于每秒脉冲数小于 30 个的低速旋钮计数场景。例如 EC11 编码器。
+适用于对脉冲数不要求 100% 准确的场景。
+
+.. Note:: 如需精确或快速的脉冲计数，请使用 `硬件 PCNT 功能 <https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32/api-reference/peripherals/pcnt.html?highlight=pcnt>`_ 。硬件 PCNT 支持的芯片 ESP32, ESP32-C6, ESP32-H2, ESP32-S2, ESP32-S3。
+
 旋钮事件
 ---------
 

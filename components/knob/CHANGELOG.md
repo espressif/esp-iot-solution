@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v0.1.3 - 2023-6-2
+
+###  Enhancements:
+
+* Add power on knob position detection to avoid logical inversion caused by knob position
+* Change test to test_apps project
+
 ## v0.1.2 - 2023-3-9
 
 ### Enhancements:
