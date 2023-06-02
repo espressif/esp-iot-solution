@@ -4,7 +4,7 @@
 setuptools<58
 sphinx==2.3.1
 breathe==4.14.1
-cairosvg==2.5.1
+cairosvg==2.7.0
 sphinxcontrib-svg2pdfconverter[CairoSVG]==1.2.0
 sphinx-rtd-theme==1.0.0
 sphinx-notfound-page==0.7.1 
