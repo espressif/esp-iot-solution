@@ -236,7 +236,7 @@ esp_err_t lcd_ssd1306_set_window(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t
     ret |= LCD_WRITE_CMD(0); /**< Set to Horizontal Addressing Mode */
     ret |= LCD_WRITE_CMD(SSD1306_CMD_SET_COLUMN_RANGE);
     ret |= LCD_WRITE_CMD(x0);
-    ret |= LCD_WRITE_CMD(x1 - 1);
+    ret |= LCD_WRITE_CMD(x1);
     ret |= LCD_WRITE_CMD(SSD1306_CMD_SET_PAGE_RANGE);
     ret |= LCD_WRITE_CMD(row1);
     ret |= LCD_WRITE_CMD(row2 - 1);
