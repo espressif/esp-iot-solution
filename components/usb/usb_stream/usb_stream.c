@@ -626,12 +626,13 @@ static esp_err_t _apply_pipe_config(usb_stream_t stream)
     if (stream == STREAM_UAC_MIC && usb_dev->enabled[STREAM_UAC_MIC] && !usb_dev->ifc[STREAM_UAC_MIC]->not_found) {
 #ifndef CONFIG_UVC_GET_CONFIG_DESC
         usb_dev->ifc[STREAM_UAC_MIC]->interface = usb_dev->uac_cfg.mic_interface;
+        usb_dev->ifc[STREAM_UAC_MIC]->interface_alt = 1;
         usb_dev->ifc[STREAM_UAC_MIC]->ep_addr = usb_dev->uac_cfg.mic_ep_addr;
         usb_dev->ifc[STREAM_UAC_MIC]->ep_mps = usb_dev->uac_cfg.mic_ep_mps;
         usb_dev->uac->ac_interface = usb_dev->uac_cfg.ac_interface;
         usb_dev->uac->fu_id[UAC_MIC] = usb_dev->uac_cfg.mic_fu_id;
-        usb_dev->uac->mute_ch[UAC_MIC] = 0;
-        usb_dev->uac->volume_ch[UAC_MIC] = 0;
+        usb_dev->uac->mute_ch[UAC_MIC] = 1 << 0;
+        usb_dev->uac->volume_ch[UAC_MIC] = 1 << 1;
 #endif
         usb_dev->ifc[STREAM_UAC_MIC]->xfer_type = UVC_XFER_ISOC;
         usb_dev->uac->volume[UAC_MIC] = UAC_MIC_VOLUME_LEVEL_DEFAULT;
@@ -643,12 +644,13 @@ static esp_err_t _apply_pipe_config(usb_stream_t stream)
     if (stream == STREAM_UAC_SPK && usb_dev->enabled[STREAM_UAC_SPK] && !usb_dev->ifc[STREAM_UAC_SPK]->not_found) {
 #ifndef CONFIG_UVC_GET_CONFIG_DESC
         usb_dev->ifc[STREAM_UAC_SPK]->interface = usb_dev->uac_cfg.spk_interface;
+        usb_dev->ifc[STREAM_UAC_SPK]->interface_alt = 1;
         usb_dev->ifc[STREAM_UAC_SPK]->ep_addr = usb_dev->uac_cfg.spk_ep_addr;
         usb_dev->ifc[STREAM_UAC_SPK]->ep_mps = usb_dev->uac_cfg.spk_ep_mps;
         usb_dev->uac->ac_interface = usb_dev->uac_cfg.ac_interface;
         usb_dev->uac->fu_id[UAC_SPK] = usb_dev->uac_cfg.spk_fu_id;
-        usb_dev->uac->mute_ch[UAC_SPK] = 0;
-        usb_dev->uac->volume_ch[UAC_SPK] = 0;
+        usb_dev->uac->mute_ch[UAC_SPK] = 1 << 0;
+        usb_dev->uac->volume_ch[UAC_SPK] = 1 << 1;
 #endif
         usb_dev->ifc[STREAM_UAC_SPK]->xfer_type = UVC_XFER_ISOC;
         usb_dev->uac->volume[UAC_SPK] = UAC_SPK_VOLUME_LEVEL_DEFAULT;
@@ -700,9 +702,17 @@ static esp_err_t _apply_stream_config(usb_stream_t stream)
     }
     if (stream == STREAM_UAC_MIC && usb_dev->enabled[STREAM_UAC_MIC] && !usb_dev->ifc[STREAM_UAC_MIC]->not_found) {
 #ifndef CONFIG_UVC_GET_CONFIG_DESC
+        static uac_frame_size_t frame_size = {0};
+        frame_size.ch_num = (usb_dev->uac_cfg.mic_ch_num == 0)?1: usb_dev->uac_cfg.mic_ch_num;
+        frame_size.bit_resolution = usb_dev->uac_cfg.mic_bit_resolution;
+        frame_size.samples_frequence = usb_dev->uac_cfg.mic_samples_frequence;
+        usb_dev->uac->frame_index[UAC_MIC] = 1;
+        usb_dev->uac->frame_num[UAC_MIC] = 1;
+        usb_dev->uac->frame_size[UAC_MIC] = &frame_size;
         usb_dev->uac->ch_num[UAC_MIC] = (usb_dev->uac_cfg.mic_ch_num == 0)?1: usb_dev->uac_cfg.mic_ch_num;
         usb_dev->uac->bit_resolution[UAC_MIC] = usb_dev->uac_cfg.mic_bit_resolution;
         usb_dev->uac->samples_frequence[UAC_MIC] = usb_dev->uac_cfg.mic_samples_frequence;
+        usb_dev->uac->freq_ctrl_support[UAC_MIC] = true;
 #else
         UVC_CHECK((usb_dev->uac->frame_index[UAC_MIC] <= usb_dev->uac->frame_num[UAC_MIC]), "invalid frame index", ESP_ERR_INVALID_STATE);
         if (usb_dev->uac->frame_index[UAC_MIC] == 0) {
@@ -728,9 +738,17 @@ static esp_err_t _apply_stream_config(usb_stream_t stream)
     }
     if (stream == STREAM_UAC_SPK && usb_dev->enabled[STREAM_UAC_SPK] && !usb_dev->ifc[STREAM_UAC_SPK]->not_found) {
 #ifndef CONFIG_UVC_GET_CONFIG_DESC
+        static uac_frame_size_t frame_size = {0};
+        frame_size.ch_num = (usb_dev->uac_cfg.spk_ch_num == 0)?1: usb_dev->uac_cfg.spk_ch_num;
+        frame_size.bit_resolution = usb_dev->uac_cfg.spk_bit_resolution;
+        frame_size.samples_frequence = usb_dev->uac_cfg.spk_samples_frequence;
+        usb_dev->uac->frame_index[UAC_SPK] = 1;
+        usb_dev->uac->frame_num[UAC_SPK] = 1;
+        usb_dev->uac->frame_size[UAC_SPK] = &frame_size;
         usb_dev->uac->ch_num[UAC_SPK] = (usb_dev->uac_cfg.spk_ch_num == 0)?1: usb_dev->uac_cfg.spk_ch_num;
         usb_dev->uac->bit_resolution[UAC_SPK] = usb_dev->uac_cfg.spk_bit_resolution;
         usb_dev->uac->samples_frequence[UAC_SPK] = usb_dev->uac_cfg.spk_samples_frequence;
+        usb_dev->uac->freq_ctrl_support[UAC_SPK] = true;
 #else
         UVC_CHECK((usb_dev->uac->frame_index[UAC_SPK] <= usb_dev->uac->frame_num[UAC_SPK]), "invalid frame index", ESP_ERR_INVALID_STATE);
         if (usb_dev->uac->frame_index[UAC_SPK] == 0) {
@@ -2430,6 +2448,16 @@ static void _usb_stream_handle_task(void *arg)
                 ESP_LOGD(TAG, "initial %s stream state %s", usb_dev->ifc[i]->name, usb_dev->ifc[i]->suspended ? "suspend" : "resume");
             }
         }
+
+        for (size_t i = 0; i < STREAM_MAX; i++) {
+            if (usb_dev->enabled[i] && !usb_dev->ifc[i]->not_found) {
+                _apply_pipe_config(i);
+                ret = _apply_stream_config(i);
+                /* the not found means, not found suitable configs from device descriptor */
+                UVC_CHECK_GOTO((ret == ESP_OK || ret == ESP_ERR_NOT_FOUND), "apply streaming config failed", _apply_config_failed);
+            }
+        }
+
         // We detach the user callback, users may reset the suspended flag in callback
         if (usb_dev->state_cb) {
             usb_dev->state_cb(STREAM_CONNECTED, usb_dev->state_cb_arg);
@@ -2437,7 +2465,6 @@ static void _usb_stream_handle_task(void *arg)
         //prepare urb and data buffer for stream pipe
         for (size_t i = 0; i < STREAM_MAX; i++) {
             if (usb_dev->enabled[i] && !usb_dev->ifc[i]->not_found) {
-                _apply_pipe_config(i);
                 usb_ep_desc_t stream_ep_desc = (usb_ep_desc_t) {
                     .bLength = USB_EP_DESC_SIZE,
                     .bDescriptorType = USB_B_DESCRIPTOR_TYPE_ENDPOINT,
@@ -2456,10 +2483,6 @@ static void _usb_stream_handle_task(void *arg)
                 usb_dev->ifc[i]->pipe_handle = _usb_pipe_init(usb_dev->port_hdl, &stream_ep_desc, usb_dev->dev_addr, usb_dev->dev_speed,
                                                (void *)usb_dev->ifc[i]->type, &_usb_pipe_callback, (void *)usb_dev->stream_queue_hdl);
                 UVC_CHECK_GOTO(usb_dev->ifc[i]->pipe_handle != NULL, "pipe init failed", _usb_stream_recover);
-                ret = _apply_stream_config(i);
-                /* the not found means, not found suitable configs from device descriptor */
-                UVC_CHECK_GOTO((ret == ESP_OK || ret == ESP_ERR_NOT_FOUND), "apply streaming config failed", _usb_stream_recover);
-
                 /* If resume the interface, depend on whether the user flags suspend the stream
                 * Please Note that, when disconnect and reconnect the device, the stream state will be reset
                 */
@@ -2637,6 +2660,8 @@ _usb_stream_recover:
             usb_dev->state_cb(STREAM_DISCONNECTED, usb_dev->state_cb_arg);
         }
         xEventGroupClearBits(usb_dev->event_group_hdl, USB_STREAM_TASK_RECOVER_BIT);
+_apply_config_failed:
+        continue;
     } //handle hotplug
     ESP_LOGI(TAG, "USB stream task deleted");
     ESP_LOGD(TAG, "USB stream task watermark = %d B", uxTaskGetStackHighWaterMark(NULL));
@@ -2764,6 +2789,7 @@ static esp_err_t _uvc_uac_device_enum(bool abort_process, bool *waiting_urb_done
 #ifndef CONFIG_UVC_GET_DEVICE_DESC
         usb_dev->enum_stage = ENUM_STAGE_CHECK_SHORT_DEV_DESC;
         ret = hcd_pipe_update_mps(usb_dev->dflt_pipe_hdl, usb_dev->ep_mps);
+        ESP_LOGI(TAG, "Default pipe endpoint MPS update to %d", usb_dev->ep_mps);
         UVC_CHECK_GOTO(ESP_OK == ret, "default pipe update MPS failed", stage_failed_);
 #endif
         break;
@@ -3240,7 +3266,9 @@ esp_err_t uac_streaming_config(const uac_config_t *config)
         "mic channel number must >= 1 and <=2", ESP_ERR_INVALID_ARG);
 #ifndef CONFIG_UVC_GET_CONFIG_DESC
         UVC_CHECK(config->mic_interface, "mic interface can not be 0", ESP_ERR_INVALID_ARG);
-        UVC_CHECK(config->mic_fu_id, "mic feature unit id can not be 0", ESP_ERR_INVALID_ARG);
+        if (config->ac_interface) {
+            UVC_CHECK(config->mic_fu_id, "mic feature unit id can not be 0", ESP_ERR_INVALID_ARG);
+        }
 #endif
         //below params act as backup configs, if suitable config not found from device descriptors 
         if (config->mic_interface) {
@@ -3260,7 +3288,9 @@ esp_err_t uac_streaming_config(const uac_config_t *config)
         UVC_CHECK(config->spk_buf_size, "spk buffer size can not be 0", ESP_ERR_INVALID_ARG);
 #ifndef CONFIG_UVC_GET_CONFIG_DESC
         UVC_CHECK(config->spk_interface, "spk interface can not be 0", ESP_ERR_INVALID_ARG);
-        UVC_CHECK(config->spk_fu_id, "spk feature unit id can not be 0", ESP_ERR_INVALID_ARG);
+        if (config->ac_interface) {
+            UVC_CHECK(config->spk_fu_id, "spk feature unit id can not be 0", ESP_ERR_INVALID_ARG);
+        }
 #endif
         if (config->spk_interface) {
             //if user set this interface manually, below param should also be set
@@ -3313,6 +3343,10 @@ esp_err_t uvc_streaming_config(const uvc_config_t *config)
     s_usb_dev.uvc_cfg = *config;
     s_usb_dev.flags |= config->flags;
     ESP_LOGI(TAG, "UVC Streaming Config Succeed, Version: %d.%d.%d", USB_STREAM_VER_MAJOR, USB_STREAM_VER_MINOR, USB_STREAM_VER_PATCH);
+#ifdef CONFIG_USB_STREAM_QUICK_START
+    // Please make sure your camera can skip the enumeration stage and start streaming directly
+    ESP_LOGI(TAG, "Quick Start Mode Enabled");
+#endif
     return ESP_OK;
 }
 
@@ -3511,7 +3545,9 @@ esp_err_t usb_streaming_stop(void)
     }
     if (s_usb_dev.uvc) {
         if (s_usb_dev.uvc->frame_size) {
+#ifdef CONFIG_UVC_GET_CONFIG_DESC
             free(s_usb_dev.uvc->frame_size);
+#endif
         }
         if (s_usb_dev.uvc->vs_ifc) {
             free(s_usb_dev.uvc->vs_ifc);
@@ -3527,7 +3563,9 @@ esp_err_t usb_streaming_stop(void)
                 free(s_usb_dev.uac->as_ifc[i]);
             }
             if (s_usb_dev.uac->frame_size[i]) {
+#ifdef CONFIG_UVC_GET_CONFIG_DESC
                 free(s_usb_dev.uac->frame_size[i]);
+#endif
             }
         }
         free(s_usb_dev.uac);
@@ -3767,7 +3805,7 @@ esp_err_t uvc_frame_size_list_get(uvc_frame_size_t *frame_list, size_t *list_siz
         memcpy(&frame_list[0], s_usb_dev.uvc->frame_size, sizeof(uvc_frame_size_t) * frame_num);
     }
     if (cur_index) {
-        *cur_index = s_usb_dev.uvc->frame_index - 1;
+        *cur_index = frame_num==1?0:(s_usb_dev.uvc->frame_index - 1);
     }
     UVC_EXIT_CRITICAL();
     return ESP_OK;

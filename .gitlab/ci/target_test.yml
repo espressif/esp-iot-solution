@@ -60,6 +60,9 @@ components_test_usb_camera:
       - IDF_TARGET: esp32s3
         IDF_VERSION: "4.4"
         ENV_TAG: usb-otg_camera
+      - IDF_TARGET: esp32s2
+        IDF_VERSION: "4.4"
+        ENV_TAG: usb_camera_isoc
   tags: 
     - ${IDF_TARGET}
     - ${ENV_TAG}

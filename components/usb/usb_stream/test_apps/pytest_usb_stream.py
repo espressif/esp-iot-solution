@@ -44,3 +44,20 @@ def test_usb_stream_otg(dut: Dut)-> None:
     dut.expect_exact('Press ENTER to see the list of tests.')
     dut.write('[otg]')
     dut.expect_unity_test_output(timeout = 3000)
+
+@pytest.mark.target('esp32s2')
+@pytest.mark.target('esp32s3')
+@pytest.mark.env('usb_camera_isoc')
+@pytest.mark.timeout(60 * 60)
+@pytest.mark.parametrize(
+    'config',
+    [
+        # Known to cause. assert failed: (rem_len == 0 || is_in)
+        # '160mhz',
+        'quick',
+    ],
+)
+def test_quick_start(dut: Dut)-> None:
+    dut.expect_exact('Press ENTER to see the list of tests.')
+    dut.write('[quick]')
+    dut.expect_unity_test_output(timeout = 3000)

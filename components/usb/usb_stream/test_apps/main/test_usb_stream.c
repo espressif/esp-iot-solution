@@ -137,7 +137,8 @@ TEST_CASE("test uvc any resolution", "[devkit][uvc]")
         TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_start());
         TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_connect_wait(portMAX_DELAY));
         /* add delay for some camera will low response speed to pass */
-        vTaskDelay(1);
+        /* Some camera module can not suspend so quick when start up */
+        vTaskDelay(100 / portTICK_PERIOD_MS);
         /* test streaming suspend */
         TEST_ASSERT_NOT_EQUAL(ESP_FAIL, usb_streaming_control(STREAM_UVC, CTRL_SUSPEND, NULL));
         vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -604,6 +605,83 @@ TEST_CASE("test uvc+uac", "[devkit][uvc][uac][mic][spk]")
     vTaskDelay(pdMS_TO_TICKS(100));
 }
 
+TEST_CASE("test uvc quick", "[uvc][quick]")
+{
+    // TODO: we currently only test UVC in quick mode,
+    // because we found some camera module with UVC+UAC will not work in quick mode
+    esp_log_level_set("*", ESP_LOG_VERBOSE);
+    /* malloc double buffer for usb payload, xfer_buffer_size >= frame_buffer_size*/
+    uint8_t *xfer_buffer_a = (uint8_t *)_malloc(DEMO_XFER_BUFFER_SIZE);
+    TEST_ASSERT(xfer_buffer_a != NULL);
+    uint8_t *xfer_buffer_b = (uint8_t *)_malloc(DEMO_XFER_BUFFER_SIZE);
+    TEST_ASSERT(xfer_buffer_b != NULL);
+
+    /* malloc frame buffer for a jpeg frame*/
+    uint8_t *frame_buffer = (uint8_t *)_malloc(DEMO_XFER_BUFFER_SIZE);
+    TEST_ASSERT(frame_buffer != NULL);
+
+    uvc_config_t uvc_config = {
+        /* match the any resolution of current camera (first frame size as default) */
+        .format_index = 1,
+        .frame_index = 3,
+        .frame_width = 480,
+        .frame_height = 320,
+        .frame_interval = FPS2INTERVAL(15),
+        .xfer_buffer_size = DEMO_XFER_BUFFER_SIZE,
+        .xfer_buffer_a = xfer_buffer_a,
+        .xfer_buffer_b = xfer_buffer_b,
+        .frame_buffer_size = DEMO_XFER_BUFFER_SIZE,
+        .frame_buffer = frame_buffer,
+        .frame_cb = &frame_cb,
+        .frame_cb_arg = NULL,
+        .ep_addr = 0x84,
+        .ep_mps = 512,
+        .interface = 1,
+        .interface_alt = 1,
+    };
+
+    size_t test_count = 3;
+    for (size_t i = 0; i < test_count; i++) {
+        /* pre-config UVC driver with params from known USB Camera Descriptors*/
+        TEST_ASSERT_EQUAL(ESP_OK, uvc_streaming_config(&uvc_config));
+        /* Start camera IN stream with pre-configs, uvc driver will create multi-tasks internal
+        to handle usb data from different pipes, and user's callback will be called after new frame ready. */
+        TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_start());
+        TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_connect_wait(portMAX_DELAY));
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
+        size_t frame_size = 0;
+        size_t frame_index = 0;
+        TEST_ASSERT_EQUAL(ESP_OK, uvc_frame_size_list_get(NULL, &frame_size, &frame_index));
+        ESP_LOGI(TAG, "UVC: get frame list size = %u, current = %u", frame_size, frame_index);
+        TEST_ASSERT_EQUAL(1, frame_size);
+        TEST_ASSERT_EQUAL(0, frame_index);
+        uvc_frame_size_t *uvc_frame_list = (uvc_frame_size_t *)malloc(frame_size * sizeof(uvc_frame_size_t));
+        TEST_ASSERT_EQUAL(ESP_OK, uvc_frame_size_list_get(uvc_frame_list, NULL, NULL));
+        ESP_LOGI(TAG, "\tframe[%u] = %ux%u", 0, uvc_frame_list[0].width, uvc_frame_list[0].height);
+        TEST_ASSERT_EQUAL(480, uvc_frame_list[0].width);
+        TEST_ASSERT_EQUAL(320, uvc_frame_list[0].height);
+        free(uvc_frame_list);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        /* test streaming suspend */
+        size_t count = 2;
+        while (count--) {
+            /* code */
+            TEST_ASSERT_NOT_EQUAL(ESP_FAIL, usb_streaming_control(STREAM_UVC, CTRL_SUSPEND, NULL));
+            vTaskDelay(3000 / portTICK_PERIOD_MS);
+            /* test streaming resume */
+            TEST_ASSERT_NOT_EQUAL(ESP_FAIL, usb_streaming_control(STREAM_UVC, CTRL_RESUME, NULL));
+            vTaskDelay(3000 / portTICK_PERIOD_MS);
+        }
+        /* test streaming stop */
+        TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_stop());
+    }
+
+    _free(xfer_buffer_a);
+    _free(xfer_buffer_b);
+    _free(frame_buffer);
+    vTaskDelay(pdMS_TO_TICKS(100));
+}
+
 /* Power Selector */
 #define BOARD_IO_HOST_BOOST_EN 13
 #define BOARD_IO_DEV_VBUS_EN 12
@@ -692,7 +770,7 @@ void trigger_disconnect(TimerHandle_t pxTimer)
     }
 }
 
-TEST_CASE("uvc+uac with suddenly disconnect", "[otg][uvc][uac][mic][spk][dis]")
+TEST_CASE("test uvc+uac with suddenly disconnect", "[otg][uvc][uac][mic][spk][dis]")
 {
     esp_log_level_set("*", ESP_LOG_INFO);
     /* malloc double buffer for usb payload, xfer_buffer_size >= frame_buffer_size*/
