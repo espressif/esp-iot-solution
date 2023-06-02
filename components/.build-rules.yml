@@ -1,3 +1,7 @@
 components/usb/usb_stream/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32s2","esp32s3"]
+
+components/knob/test_apps:
+  enable:
+    - if: INCLUDE_DEFAULT == 1

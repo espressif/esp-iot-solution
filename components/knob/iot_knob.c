@@ -27,6 +27,7 @@ static const char *TAG = "Knob";
 #define CALL_EVENT_CB(ev)   if(knob->cb[ev])knob->cb[ev](knob, knob->usr_data[ev])
 
 typedef enum {
+    KNOB_CHECK = -1,                    /*!< Knob state: check whether the knob is in the right position  */
     KNOB_READY = 0,                     /*!< Knob state: ready*/
     KNOB_PHASE_A,                       /*!< Knob state: phase A arrives first */
     KNOB_PHASE_B,                       /*!< Knob state: phase B arrives first */
@@ -176,6 +177,14 @@ static void knob_handler(knob_dev_t *knob)
             knob->state = KNOB_READY;
         }
         break;
+
+    case KNOB_CHECK:
+        if ( knob->encoder_a_level == knob->encoder_b_level) {
+            knob->state = KNOB_READY;
+            knob->encoder_a_change = false;
+            knob->encoder_b_change = false;
+        }
+        break;
     }
 }
 
@@ -238,6 +247,8 @@ knob_handle_t iot_knob_create(const knob_config_t *config)
 
     knob->encoder_a_level = knob->hal_knob_level(knob->encoder_a);
     knob->encoder_b_level = knob->hal_knob_level(knob->encoder_b);
+
+    knob->state = KNOB_CHECK;
 
     knob->next = s_head_handle;
     s_head_handle = knob;

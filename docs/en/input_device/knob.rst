@@ -5,6 +5,13 @@ Knob
 
 `Knob` is the component that provides the software PCNT, it can be used on chips(esp32c2, esp32c3) that do not have PCNT hardware capabilities. By using knob you can quickly use a physical encoder, such as the EC11 encoder.
 
+Applicable Scenarios
+---------------------
+
+This is suitable for low-speed rotary knob counting scenarios where the pulse rate is less than 30 pulses per second, such as the EC11 encoder. It is suitable for scenarios where 100% accuracy of pulse counting is not required.
+
+.. Note:: For precise or fast pulse counting, please use the `hardware PCNT function <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/pcnt.html?highlight=pcnt>`_. The hardware PCNT is supported by ESP32, ESP32-C6, ESP32-H2, ESP32-S2, ESP32-S3 chips.
+
 Knob Event
 -----------
 
