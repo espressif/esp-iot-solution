@@ -1,0 +1,20 @@
+menu "Example Configuration"
+    config EXAMPLE_BLE_ADV_NAME
+    string "Advertisement name"
+    default "ESP_PERIODIC_ADV"
+    help
+      The device name inside advertisement.
+
+    config EXAMPLE_BLE_SUB_ADV
+    string "Subsequent advertisement data"
+    default "SUB_ADV"
+    help
+      The data inside subsequent advertisements.
+
+    config EXAMPLE_EXTENDED_ADV
+        bool
+        default n
+        prompt "Enable Set Extended Adv Data"
+        help
+            Use this option to enable set extended advertising data in the example.
+endmenu

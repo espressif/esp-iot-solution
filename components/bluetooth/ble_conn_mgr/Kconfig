@@ -1,0 +1,150 @@
+menu "BLE Connection Management"
+
+    choice BLE_CONN_MGR_ROLE
+        bool "BLE Role"
+        default BLE_CONN_MGR_ROLE_PERIPHERAL
+        help
+            Select which role does the device work, support peripheral/central/both.
+
+        config BLE_CONN_MGR_ROLE_PERIPHERAL
+            bool "Peripheral"
+        config BLE_CONN_MGR_ROLE_CENTRAL
+            bool "Central"
+        config BLE_CONN_MGR_ROLE_BOTH
+            bool "Both Peripheral and Central"
+    endchoice
+
+    config BLE_CONN_MGR_ROLE
+        int
+        default 0 if BLE_CONN_MGR_ROLE_PERIPHERAL
+        default 1 if BLE_CONN_MGR_ROLE_CENTRAL
+        default 2 if BLE_CONN_MGR_ROLE_BOTH
+
+    config BLE_CONN_MGR_EXTENDED_ADV
+        bool
+        depends on BLE_CONN_MGR_ROLE_PERIPHERAL || BLE_CONN_MGR_ROLE_BOTH && SOC_BLE_50_SUPPORTED
+        default n
+        select BT_NIMBLE_EXT_ADV if BT_NIMBLE_ENABLED
+        prompt "Enable Extended Adv"
+        help
+            Use this option to enable extended advertising besides esp32.
+
+    config BLE_CONN_MGR_EXTENDED_ADV_CAP
+        int
+        range 0 15
+        depends on BLE_CONN_MGR_EXTENDED_ADV
+        default 0
+        prompt "Set Extended Advertising Capability"
+        help
+            Set extended advertising capability.
+
+            This is a bit map of bits that represents extended advertising capability of the device:
+
+            - BIT0: Connect flag, it performs connectable advertising if set.
+            - BIT1: Scan flag, it performs scannable advertising if set.
+            - BIT2: Directed flag, it performs directed advertising if set.
+            - BIT3: High-duty directed flag, it performs high-duty directed advertising if set.
+            - BIT4: Legacy PDUs flag, it uses legacy PDUs for advertising if set.
+            - BIT5: Anonymous flag, it performs anonymous advertising if set.
+            - BIT6: TX Power flag, it includes TX power in advertising PDU if set.
+            - BIT7: Scan request notification flag, it enable scan request notification if set.
+
+    config BLE_CONN_MGR_PERIODIC_ADV
+        bool
+        depends on BLE_CONN_MGR_EXTENDED_ADV
+        default n
+        prompt "Enable Periodic Adv"
+        help
+            Use this option to enable periodic advertising.
+
+    config BLE_CONN_MGR_PERIODIC_ADV_CAP
+        int
+        range 0 15
+        depends on BLE_CONN_MGR_PERIODIC_ADV
+        default 0
+        prompt "Set Periodic Advertising Capability"
+        help
+            Set periodic advertising capability.
+
+            This is a bitmap represents periodic advertising capability of the device, the bits are defined as follows:
+
+            - BIT0: TX Power flag, it includes TX power in advertising PDU if set.
+
+    config BLE_CONN_MGR_PERIODIC_SYNC
+        bool
+        depends on BLE_CONN_MGR_ROLE_CENTRAL || BLE_CONN_MGR_ROLE_BOTH && SOC_BLE_50_SUPPORTED
+        default n
+        select BT_NIMBLE_EXT_ADV if BT_NIMBLE_ENABLED
+        prompt "Enable Periodic Sync"
+        help
+            Use this option to enable periodic sync with the advertiser.
+
+    config BLE_CONN_MGR_PERIODIC_SYNC_CAP
+        int
+        range 0 15
+        depends on BLE_CONN_MGR_PERIODIC_SYNC
+        default 0
+        prompt "Set Periodic Sync Capability"
+        help
+            Set periodic sync capability.
+
+            This is a bitmap represents periodic sync capability of the device, the bits are defined as follows:
+
+            - BIT0: Reports flag, it is initially disabled when sync is created if set.
+
+    menuconfig BLE_CONN_MGR_SM
+        bool "Enable Security Manager"
+
+    if BLE_CONN_MGR_SM
+        choice BLE_CONN_MGR_SM_IO_TYPE
+            prompt "Local Input Output Capability"
+            default BLE_CONN_MGR_SM_IO_CAP_NO_IO
+            help
+                Select which capability does the device work, support display/keyboard/both.
+
+            config BLE_CONN_MGR_SM_IO_CAP_DISP_ONLY
+                bool "Display Only"
+            config BLE_CONN_MGR_SM_IO_CAP_DISP_YES_NO
+                bool "Display Yes/No"
+            config BLE_CONN_MGR_SM_IO_CAP_KEYBOARD_ONLY
+                bool "Keyboard Only"
+            config BLE_CONN_MGR_SM_IO_CAP_NO_IO
+                bool "Just works"
+            config BLE_CONN_MGR_SM_IO_CAP_KEYBOARD_DISP
+                bool "Both Keyboard & Display"
+        endchoice
+
+        config BLE_CONN_MGR_SM_IO_TYPE
+            int
+            default 0 if BLE_CONN_MGR_SM_IO_CAP_DISP_ONLY
+            default 1 if BLE_CONN_MGR_SM_IO_CAP_DISP_YES_NO
+            default 2 if BLE_CONN_MGR_SM_IO_CAP_KEYBOARD_ONLY
+            default 3 if BLE_CONN_MGR_SM_IO_CAP_NO_IO
+            default 4 if BLE_CONN_MGR_SM_IO_CAP_KEYBOARD_DISP
+
+        config BLE_CONN_MGR_SM_CAP
+            int
+            range 0 15
+            default 0
+            prompt "Set Security Manager Capability"
+            help
+                Set security manager capability.
+
+                This is a bitmap represents security manager capability of the device, the bits are defined as follows:
+
+                - BIT0: OOB flag, it requires Out-Of-Band information when pairing if set.
+                - BIT1: Bond flag, it stores keys distributed during bonding if set.
+                - BIT2: MITM flag, it requires Man-In-The-Middle protection when pairing if set.
+                - BIT3: Secure Connections flag, it requires secure connections for pairing if also supported by remote device if set.
+
+        config BLE_CONN_MGR_SM_KEY_DIST
+            int
+            range 0 15
+            default 0
+            prompt "Set Key Distribution"
+            help
+                Set key distribution to indicate which keys to distribute during pairing, it will be set if bond flag is set to 1.
+
+    endif # BLE_CONN_MGR_SM
+
+endmenu

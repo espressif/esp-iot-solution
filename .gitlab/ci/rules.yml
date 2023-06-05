@@ -16,6 +16,10 @@
   - "components/audio/pwm_audio/**/*"
   - "components/tools/cmake_utilities/package_manager.cmake"
 
+.patterns-components_bluetooth_ble_conn_mgr: &patterns-components_bluetooth_ble_conn_mgr
+  - "components/bluetooth/ble_conn_mgr/**/*"
+  - "components/tools/cmake_utilities/package_manager.cmake"
+
 .patterns-components_bluetooth_ble_profiles_esp_ble_ota: &patterns-components_bluetooth_ble_profiles_esp_ble_ota
   - "components/bluetooth/ble_profiles/esp/ble_ota/**/*"
   - "components/tools/cmake_utilities/package_manager.cmake"
@@ -167,10 +171,14 @@
   - "components/sensors/sensor_hub/include/sensor_type.h"
   - "components/sensors/sensor_hub/include/iot_sensor_hub.h"
   - "components/usb/usb_stream/include/usb_stream.h"
+  - "components/bluetooth/ble_conn_mgr/include/esp_ble_conn_mgr.h"
 
 # examples folder, in the alphabetic order
 .patterns-example_audio_wav_player: &patterns-example_audio_wav_player
   - "examples/audio/**/*"
+
+.patterns-example_bluetooth_ble_conn_mgr: &patterns-example_bluetooth_ble_conn_mgr
+  - "examples/bluetooth/ble_conn_mgr/**/*"
 
 .patterns-example_bluetooth_ble_ota: &patterns-example_bluetooth_ble_ota
   - "examples/bluetooth/ble_ota/**/*"
@@ -301,6 +309,17 @@
       changes: *patterns-components_audio_pwm_audio
     - <<: *if-dev-push
       changes: *patterns-example_audio_wav_player
+
+.rules:build:example_bluetooth_ble_conn_mgr:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_bluetooth_ble_conn_mgr
+    - <<: *if-dev-push
+      changes: *patterns-example_bluetooth_ble_conn_mgr
 
 .rules:build:example_bluetooth_ble_ota:
   rules:

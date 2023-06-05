@@ -1,0 +1,5 @@
+dependencies:
+  idf: ">=4.3"
+  ble_conn_mgr:
+    version: "~0.1.0"
+    override_path: "../../../../../components/bluetooth/ble_conn_mgr"
