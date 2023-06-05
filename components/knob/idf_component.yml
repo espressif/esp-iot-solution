@@ -8,4 +8,4 @@ dependencies:
   idf: ">=4.4.1"
   cmake_utilities: "0.*"
 examples:
-  - path: ../../../examples/usb/device/usb_surface_dial
+  - path: ../../examples/usb/device/usb_surface_dial
