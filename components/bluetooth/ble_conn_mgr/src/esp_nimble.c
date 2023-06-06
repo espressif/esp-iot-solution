@@ -1967,6 +1967,8 @@ esp_err_t esp_ble_conn_init(esp_ble_conn_config_t *config)
 
     s_conn_session = conn_session;
 
+    ESP_LOGI(TAG, "BLE Connection Management: v%d.%d.%d\n", BLE_CONN_MGR_VER_MAJOR, BLE_CONN_MGR_VER_MINOR, BLE_CONN_MGR_VER_PATCH);
+
     return ESP_OK;
 
 ble_init_error:
