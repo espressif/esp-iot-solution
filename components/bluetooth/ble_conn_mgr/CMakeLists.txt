@@ -20,3 +20,8 @@ idf_component_register(SRCS "${srcs}"
                        PRIV_INCLUDE_DIRS "${priv_includes}"
                        REQUIRES "${req}"
                        PRIV_REQUIRES "${priv_req}")
+
+if(CONFIG_BT_ENABLED)
+include(package_manager)
+cu_pkg_define_version(${CMAKE_CURRENT_LIST_DIR})
+endif()
