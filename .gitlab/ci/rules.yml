@@ -283,6 +283,9 @@
 .patterns-tools_cmake_utilities: &patterns-tools_cmake_utilities
   - "tools/cmake_utilities/**/*"
 
+.patterns-yml: &patterns-yml
+  - "**/*.yml"
+
 ##############
 # if anchors #
 ##############
@@ -1027,3 +1030,12 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-docs_md
+
+.rules:pre_check:components:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-yml
