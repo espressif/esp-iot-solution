@@ -7,3 +7,12 @@ check_readme_links:
   allow_failure: true
   script:
     - python ${CI_PROJECT_DIR}/tools/ci/check_readme_links.py
+
+check_example_paths:
+  extends:
+    - .rules:pre_check:components
+  stage: pre_check
+  image: python:3.9
+  script:
+    - pip install pyyaml
+    - python ${CI_PROJECT_DIR}/tools/ci/check_components.py
