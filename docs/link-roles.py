@@ -60,7 +60,7 @@ def crosslink(pattern):
     def role(name, rawtext, text, lineno, inliner, options={}, content=[]):
         (language, link_text) = text.split(':')
         docname = inliner.document.settings.env.docname
-        doc_path = inliner.document.settings.env.doc2path(docname, None, None)
+        doc_path = inliner.document.settings.env.doc2path(docname, False)
         return_path = '../' * doc_path.count('/') 
         url = pattern % (return_path, language, docname)
         node = nodes.reference(rawtext, link_text, refuri=url, **options)

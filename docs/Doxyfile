@@ -37,6 +37,7 @@ INPUT = \
     ../../components/display/touch_panel/touch_panel.h \
     ../../components/led/led_indicator/include/led_indicator.h \
     ../../components/button/include/iot_button.h \
+    ../../components/openai/include/OpenAI.h \
     ../../components/usb/usb_stream/include/usb_stream.h \
     ../../components/knob/iot_knob.h \
 

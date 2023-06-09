@@ -413,6 +413,17 @@ build_components_knob_test_apps:
   variables:
     EXAMPLE_DIR: components/knob/test_apps
 
+build_components_openai_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_openai_test_apps
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
+  variables:
+    EXAMPLE_DIR: components/openai/test_apps
+
 build_components_usb_usb_stream_test_apps:
   extends:
     - .build_examples_template

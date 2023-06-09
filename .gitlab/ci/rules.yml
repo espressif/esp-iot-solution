@@ -82,6 +82,10 @@
 .patterns-components_motor_servo: &patterns-components_motor_servo
   - "components/motor/servo/**/*"
 
+.patterns-components_openai: &patterns-components_openai
+  - "components/openai/**/*"
+  - "components/tools/cmake_utilities/package_manager.cmake"
+
 .patterns-components_sensors_gesture_apds9960: &patterns-components_sensors_gesture_apds9960
   - "components/sensors/gesture/apds9960/**/*"
 
@@ -864,6 +868,13 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_motor_servo
+
+# To avoid factors such as unstable wifi or expired openai-key, run ci-test only when the component itself changes.
+.rules:build:components_openai_test_apps:
+  rules:
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_openai
 
 .rules:build:components_sensors_gesture_apds9960_test:
   rules:
