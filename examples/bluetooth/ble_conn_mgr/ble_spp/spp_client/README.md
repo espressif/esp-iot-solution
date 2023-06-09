@@ -7,7 +7,7 @@
 
   This reference design consists of two Demos, the BLE SPP server and BLE SPP client that run on their respective endpoints. These devices connect and exchange data wirelessly with each other. This capability creates a virtual serial link over the air. Each byte input can be sent and received by both the server and client. The SPP server is implemented as the [spp_server](../spp_server) demo while the SPP client is implemented as the [spp_client](../spp_client) demo. Espressif designed the BLE SPP applications to use the UART transport layer but you could adapt this design to work with other serial protocols, such as SPI.
 
-  This vendor-specific custom profile is implemented in [main.c](../spp_client/main/app_main.c) and [main.c](../spp_server/main/app_main.c).
+  This vendor-specific custom profile is implemented in [app_main.c](../spp_client/main/app_main.c) and [app_main.c](../spp_server/main/app_main.c).
 
 ## Using Examples
 

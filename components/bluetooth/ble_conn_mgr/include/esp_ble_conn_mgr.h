@@ -29,6 +29,20 @@ extern "C"
 #define BLE_CONN_GATT_CHR_NOTIFY            0x0010  /*!< Characteristic notify properties */
 #define BLE_CONN_GATT_CHR_INDICATE          0x0020  /*!< Characteristic indicate properties */
 
+/**
+ * @brief This is type of function that will handle the registered characteristic
+ *
+ * @param[in] inbuf         The pointer to store data: read operation if NULL or write operation if not NULL
+ * @param[in] inlen         The store data length
+ * @param[out] outbuf       Variable to store data, it'll free by connection management component
+ * @param[out] outlen       Variable to store data length
+ * @param[in] priv_data     Private data context
+ *
+ * @return
+ *  - ESP_OK on successful
+ *  - ESP_ERR_INVALID_ARG on wrong parameter
+ *  - ESP_FAIL on error
+ */
 typedef esp_err_t (*esp_ble_conn_cb_t)(const uint8_t *inbuf,
                                        uint16_t inlen,
                                        uint8_t **outbuf,
