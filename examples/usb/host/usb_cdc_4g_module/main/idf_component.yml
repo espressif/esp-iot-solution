@@ -3,7 +3,6 @@ dependencies:
   cmake_utilities: "0.*"
   led_indicator:
     version: "~0.3.0"
-    override_path: "../../../../../components/led/led_indicator"
   iot_usbh_modem:
     version: "0.1.*"
     override_path: "../../../../../components/usb/iot_usbh_modem"

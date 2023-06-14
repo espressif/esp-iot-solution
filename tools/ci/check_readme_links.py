@@ -34,7 +34,7 @@ EXCLUDE_DOCS_LIST = ["examples/hmi/lvgl_example/components/lv_examples/lv_exampl
                      "examples/get-started/blink/README.md"]
 
 # The apple apps links are not accessible from the company network for some reason
-EXCLUDE_URL_LIST = ["https://www.xuetianli.com/azrj/28872.html","https://www.xuetianli.com/azrj/4559.html","https://lvgl.io/","https://www.espressif.com/zh-hans/products/socs/esp32","http://www.espressif.com/zh-hans/support/download/all","https://www.espressif.com/zh-hans/support/download/all","https://github.com/lvgl/lv_examples/blob/master/src/lv_demo_printer/screenshot1.gif?raw=true","https://lvgl.io"]
+EXCLUDE_URL_LIST = ["https://lvgl.io/","https://www.espressif.com/zh-hans/products/socs/esp32","http://www.espressif.com/zh-hans/support/download/all","https://www.espressif.com/zh-hans/support/download/all","https://github.com/lvgl/lv_examples/blob/master/src/lv_demo_printer/screenshot1.gif?raw=true"]
 
 Link = namedtuple('Link', ['file', 'url'])
 

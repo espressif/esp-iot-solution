@@ -1,5 +1,13 @@
 # ChangeLog
 
+## v0.4.0 - 2023-4-12
+
+### Enhancements:
+
+* LED INDICATOR:
+  * Add gamma adjustment 
+  * Update test_apps
+
 ## v0.3.0 - 2023-1-31
 
 ### Enhancements:

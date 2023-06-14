@@ -94,4 +94,4 @@ blink_step_t const *default_led_indicator_blink_lists[] = {
 };
 
 /* LED blink_steps handling machine implementation */
-const int DEFAULT_BLINK_LIST_NUM = (sizeof(default_led_indicator_blink_lists) / sizeof(default_led_indicator_blink_lists[0]));
+const int DEFAULT_BLINK_LIST_NUM = (sizeof(default_led_indicator_blink_lists) / sizeof(default_led_indicator_blink_lists[0]) - 1);
