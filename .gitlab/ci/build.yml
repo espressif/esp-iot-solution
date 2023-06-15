@@ -424,6 +424,17 @@ build_components_usb_usb_stream_test_apps:
   variables:
     EXAMPLE_DIR: components/usb/usb_stream/test_apps
 
+build_components_display_lcd_esp_lcd_panel_io_additions_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_display_lcd_esp_lcd_panel_io_additions_test_apps
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
+  variables:
+    EXAMPLE_DIR: components/display/lcd/esp_lcd_panel_io_additions/test_apps
+
 build_components_led_led_indicator_test_apps:
   extends:
     - .build_examples_template

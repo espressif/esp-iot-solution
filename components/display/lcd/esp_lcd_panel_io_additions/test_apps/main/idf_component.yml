@@ -1,0 +1,4 @@
+## IDF Component Manager Manifest File
+dependencies:
+  idf: ">=4.4.2"
+  espressif/esp_io_expander_tca9554: "^1.0.1"

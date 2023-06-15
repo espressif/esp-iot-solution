@@ -45,6 +45,9 @@
 .patterns-components_display_digital_tube_is31fl3xxx: &patterns-components_display_digital_tube_is31fl3xxx
   - "components/display/digital_tube/is31fl3xxx/**/*"
 
+.patterns-components_display_lcd_esp_lcd_panel_io_additions: &patterns-components_display_lcd_esp_lcd_panel_io_additions
+  - "components/display/lcd/esp_lcd_panel_io_additions/**/*"
+
 .patterns-components_display_screen: &patterns-components_display_screen
   - "components/display/screen/**/*"
 
@@ -329,7 +332,7 @@
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-dev-push
-      changes: *patterns-build_system    
+      changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_bluetooth_ble_profiles_esp_ble_ota
     - <<: *if-dev-push
@@ -780,6 +783,15 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_display_digital_tube_is31fl3xxx
+
+.rules:build:components_display_lcd_esp_lcd_panel_io_additions_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_display_lcd_esp_lcd_panel_io_additions
 
 .rules:build:components_display_screen_test:
   rules:

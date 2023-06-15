@@ -21,6 +21,7 @@ jobs:
             components/bluetooth/ble_profiles/esp/ble_ota;
             components/bootloader_support_plus;
             components/button;
+            components/display/lcd/esp_lcd_panel_io_additions;
             components/extended_vfs;
             components/gprof;
             components/knob;
