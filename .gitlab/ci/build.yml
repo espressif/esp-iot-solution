@@ -351,6 +351,17 @@ build_example_usb_device_usb_surface_dial:
   variables:
     EXAMPLE_DIR: examples/usb/device/usb_surface_dial
 
+build_example_usb_device_usb_uf2_ota:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_usb_device_usb_uf2_ota
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
+  variables:
+    EXAMPLE_DIR: examples/usb/device/usb_uf2_ota
+
 build_example_usb_host_usb_camera_lcd_display:
   extends:
     - .build_examples_template

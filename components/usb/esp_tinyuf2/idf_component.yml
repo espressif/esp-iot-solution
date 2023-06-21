@@ -1,0 +1,15 @@
+version: "0.0.1"
+targets:
+  - esp32s2
+  - esp32s3
+
+description: Support UF2 for ESP32Sx APP update (OTA)
+url: https://github.com/espressif/esp-iot-solution
+repository: https://github.com/espressif/esp-iot-solution.git
+issues: https://github.com/espressif/esp-iot-solution/issues
+
+dependencies:
+  idf: ">=4.4"
+  cmake_utilities: "0.*"
+  leeebo/tinyusb_src: 
+    version: "~0.0.3"
