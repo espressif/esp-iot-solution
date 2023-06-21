@@ -9,4 +9,4 @@ For more information, please refer to `OpenAI API <https://platform.openai.com/d
 API Reference
 -------------
 
-.. include:: /_build/inc/OpenAI.inc
+.. include-build-file:: inc/OpenAI.inc

@@ -106,4 +106,4 @@
 API 参考
 -----------------
 
-.. include:: /_build/inc/touch_panel.inc
+.. include-build-file:: inc/touch_panel.inc

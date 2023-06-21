@@ -179,4 +179,4 @@ The default gamma table is 2.3, and a new gamma table can be generated using the
 API Reference
 ^^^^^^^^^^^^^^^^
 
-.. include:: /_build/inc/led_indicator.inc
+.. include-build-file:: inc/led_indicator.inc

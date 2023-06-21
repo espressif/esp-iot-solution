@@ -144,4 +144,4 @@ Examples
 API Reference
 ---------------------
 
-.. include:: /_build/inc/usb_stream.inc
+.. include-build-file:: inc/usb_stream.inc

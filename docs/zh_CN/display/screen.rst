@@ -335,6 +335,6 @@ BPP < 8 时，一个字节映射到了多个像素，因此无法直接地控制
 API 参考
 -----------------
 
-.. include:: /_build/inc/screen_driver.inc
+.. include-build-file:: inc/screen_driver.inc
 
-.. include:: /_build/inc/scr_interface_driver.inc
+.. include-build-file:: inc/scr_interface_driver.inc

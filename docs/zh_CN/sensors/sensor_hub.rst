@@ -49,6 +49,6 @@ Sensor Hub 使用方法
 API 参考
 --------
 
-.. include:: /_build/inc/sensor_type.inc
+.. include-build-file:: inc/sensor_type.inc
 
-.. include:: /_build/inc/iot_sensor_hub.inc
+.. include-build-file:: inc/iot_sensor_hub.inc

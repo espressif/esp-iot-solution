@@ -20,4 +20,4 @@ API Reference
 
 The following APIs have implemented hardware abstraction on the IMU. Users can call the code from this layer directly to write a sensor application, or use the sensor interface in :doc:`sensor_hub <sensor_hub>` for easier development.
 
-.. include:: /_build/inc/imu_hal.inc
+.. include-build-file:: inc/imu_hal.inc

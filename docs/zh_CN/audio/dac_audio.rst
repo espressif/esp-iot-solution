@@ -7,4 +7,4 @@ ESP32 拥有两个独立的 DAC 通道，并可直接使用 I2S 通过 DMA 播�
 API 参考
 -------------
 
-.. include:: /_build/inc/dac_audio.inc
+.. include-build-file:: inc/dac_audio.inc

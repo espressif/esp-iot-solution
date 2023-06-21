@@ -7,4 +7,4 @@ ESP32 has two independent DAC channels and can play audio using I2S directly via
 API Reference
 -----------------
 
-.. include:: /_build/inc/dac_audio.inc
+.. include-build-file:: inc/dac_audio.inc

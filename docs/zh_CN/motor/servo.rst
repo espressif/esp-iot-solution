@@ -68,4 +68,4 @@
 API 参考
 -------------
 
-.. include:: /_build/inc/iot_servo.inc
+.. include-build-file:: inc/iot_servo.inc

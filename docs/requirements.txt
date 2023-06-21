@@ -1,18 +1,1 @@
-# This is a list of python packages used to generate documentation. This file is used with pip:
-# pip install --user -r requirements.txt
-#
-setuptools<58
-sphinx==2.3.1
-breathe==4.14.1
-cairosvg==2.5.1
-sphinxcontrib-svg2pdfconverter[CairoSVG]==1.2.0
-sphinx-rtd-theme==1.0.0
-sphinx-notfound-page==0.7.1 
-sphinxcontrib-blockdiag==2.0.0
-sphinxcontrib-seqdiag==2.0.0
-sphinxcontrib-actdiag==2.0.0
-sphinxcontrib-nwdiag==2.0.0
-sphinxcontrib-wavedrom==2.0.0
-nwdiag==2.0.0
-recommonmark==0.7.0
-future==0.16.0 # for ../tools/gen_esp_err_to_name.py
+esp-docs==1.*

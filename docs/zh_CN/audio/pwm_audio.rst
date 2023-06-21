@@ -74,4 +74,4 @@ PWM 频率
 API 参考
 -------------
 
-.. include:: /_build/inc/pwm_audio.inc
+.. include-build-file:: inc/pwm_audio.inc

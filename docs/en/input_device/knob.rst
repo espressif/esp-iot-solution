@@ -80,4 +80,4 @@ Register callback function
 API Reference
 -----------------
 
-.. include:: /_build/inc/iot_knob.inc
+.. include-build-file:: inc/iot_knob.inc

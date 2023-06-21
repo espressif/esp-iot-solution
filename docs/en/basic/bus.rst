@@ -137,9 +137,9 @@ API Reference
 i2c_bus API Reference
 ++++++++++++++++++++++++++++
 
-.. include:: /_build/inc/i2c_bus.inc
+.. include-build-file:: inc/i2c_bus.inc
 
 spi_bus API Reference
 +++++++++++++++++++++++++++++++
 
-.. include:: /_build/inc/spi_bus.inc
+.. include-build-file:: inc/spi_bus.inc

@@ -9,4 +9,4 @@ ChatGpt
 API 参考
 -------------
 
-.. include:: /_build/inc/OpenAI.inc
+.. include-build-file:: inc/OpenAI.inc

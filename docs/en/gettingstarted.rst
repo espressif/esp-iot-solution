@@ -97,7 +97,7 @@ Use ESP-IoT-Solution Components
 
 If you just want to use the components in ESP-IoT-Solution, we recommend you use it from the `ESP Component Registry <https://components.espressif.com/>`_. 
 
-The registered components in ESP-IoT-Solution are listed in :iot-solution_file:`README.md` , You can directly add the components from the Component Registry to your project by using the ``idf.py add-dependency`` command under your project's root directory. eg run ``idf.py add-dependency "espressif/usb_stream"`` to add the ``usb_stream``, the component will be downloaded automatically during the ``CMake`` step.
+The registered components in ESP-IoT-Solution are listed in :project_file:`README.md` , You can directly add the components from the Component Registry to your project by using the ``idf.py add-dependency`` command under your project's root directory. eg run ``idf.py add-dependency "espressif/usb_stream"`` to add the ``usb_stream``, the component will be downloaded automatically during the ``CMake`` step.
 
 Please refer to `IDF Component Manager <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/tools/idf-component-manager.html>`_ for details.
 

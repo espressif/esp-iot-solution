@@ -1,36 +1,33 @@
-build_docs:
-  extends:
-    - .rules:build:docs
+variables:
+  ESP_IDF_DOC_ENV_IMAGE: "$CI_DOCKER_REGISTRY/esp-idf-doc-env-v5.2:1-1"
+
+.build_docs_template:
+  image: $ESP_IDF_DOC_ENV_IMAGE
   stage: build_doc
-  image: $CI_DOCKER_REGISTRY/esp-idf-doc-env:v7
   tags:
     - build_docs
+  dependencies: []
+  script:
+    - cd docs
+    - python -m pip install -r requirements.txt 
+    - build-docs -t $DOCTGT -bs $DOC_BUILDERS -l $DOCLANG build
+    - ./check_lang_folder_sync.sh
+
+build_docs_html:
+  extends:
+    - .build_docs_template
+    - .rules:build:docs
   artifacts:
     when: always
     paths:
-      # English version of documentation
-      - docs/en/doxygen-warning-log.txt
-      - docs/en/sphinx-warning-log.txt
-      - docs/en/sphinx-warning-log-sanitized.txt
-      - docs/en/_build/html
-      # Chinese version of documentation
-      - docs/zh_CN/doxygen-warning-log.txt
-      - docs/zh_CN/sphinx-warning-log.txt
-      - docs/zh_CN/sphinx-warning-log-sanitized.txt
-      - docs/zh_CN/_build/html
-    expire_in: 1 mos
-  script:
-    - source /opt/pyenv/activate && pyenv global 3.6.10
-    - pip install "setuptools<57.5.0"
-    - pip install "funcparserlib==0.3.6"
-    - /opt/pyenv/pyenv-1.2.16/versions/3.6.10/bin/python -m pip install --user -r docs/requirements.txt
-    - cd docs
-    - ./check_lang_folder_sync.sh
-    - cd en
-    - make gh-linkcheck
-    - make html
-    - ../check_doc_warnings.sh
-    - cd ../zh_CN
-    - make gh-linkcheck
-    - make html
-    - ../check_doc_warnings.sh
+      - docs/_build/*/*/*.txt
+      - docs/_build/*/*/html/*
+    expire_in: 4 days
+  variables:
+    DOC_BUILDERS: "html"
+  parallel:
+    matrix:
+      - DOCLANG: "en"
+        DOCTGT: "esp32"
+      - DOCLANG: "zh_CN"
+        DOCTGT: "esp32"

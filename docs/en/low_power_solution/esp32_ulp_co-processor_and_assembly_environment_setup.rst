@@ -102,7 +102,7 @@ The ULP co-processor assembly enviroment is set up now.
 5. Save the file and restart MSYS2 console.
 
 Now you should be able to compile ULP programs, e.g.
-:example:`system/ulp_adc`
+`ulp_adc <https://github.com/espressif/esp-iot-solution/tree/release/v1.0/examples/ulp_examples/ulp_adc>`__
 
 3.3 MacOS
 ^^^^^^^^^
