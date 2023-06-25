@@ -13,6 +13,7 @@ check_example_paths:
     - .rules:pre_check:components
   stage: pre_check
   image: python:3.9
+  tags: ["build", "amd64", "internet"]
   script:
     - pip install pyyaml
     - python ${CI_PROJECT_DIR}/tools/ci/check_components.py
