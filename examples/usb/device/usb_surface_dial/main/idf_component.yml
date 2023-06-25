@@ -7,7 +7,7 @@ dependencies:
     version: ">=2.3.0"
     override_path: "../../../../../components/button"
   leeebo/tinyusb_src: 
-    version: "~0.0.2"
+    version: ">=0.0.4"
   espressif/knob: 
     version: ">=0.1.0"
     override_path: "../../../../../components/knob"
