@@ -43,7 +43,7 @@ Please note that different versions of ESP-IoT-Solution may depend on different 
 
 #### Get Components from ESP Component Registry
 
-If you just want to use the components in ESP-IoT-Solution, we recommend you use it from the [ESP Component Registry](https://components.espressif.com/). 
+If you just want to use the components in ESP-IoT-Solution, we recommend you use it from the [ESP Component Registry](https://components.espressif.com/).
 
 The registered components in ESP-IoT-Solution are listed below:
 
@@ -55,6 +55,7 @@ The registered components in ESP-IoT-Solution are listed below:
 | [bootloader_support_plus](https://components.espressif.com/components/espressif/bootloader_support_plus) | [![Component Registry](https://components.espressif.com/components/espressif/bootloader_support_plus/badge.svg)](https://components.espressif.com/components/espressif/bootloader_support_plus) |
 |                  [button](https://components.espressif.com/components/espressif/button)                  |                  [![Component Registry](https://components.espressif.com/components/espressif/button/badge.svg)](https://components.espressif.com/components/espressif/button)                  |
 |         [cmake_utilities](https://components.espressif.com/components/espressif/cmake_utilities)         |         [![Component Registry](https://components.espressif.com/components/espressif/cmake_utilities/badge.svg)](https://components.espressif.com/components/espressif/cmake_utilities)         |
+|            [esp_lcd_panel_io_additions](https://components.espressif.com/components/espressif/esp_lcd_panel_io_additions)            |            [![Component Registry](https://components.espressif.com/components/espressif/esp_lcd_panel_io_additions/badge.svg)](https://components.espressif.com/components/espressif/esp_lcd_panel_io_additions)            |
 |            [extended_vfs](https://components.espressif.com/components/espressif/extended_vfs)            |            [![Component Registry](https://components.espressif.com/components/espressif/extended_vfs/badge.svg)](https://components.espressif.com/components/espressif/extended_vfs)            |
 |                   [gprof](https://components.espressif.com/components/espressif/gprof)                   |                   [![Component Registry](https://components.espressif.com/components/espressif/gprof/badge.svg)](https://components.espressif.com/components/espressif/gprof)                   |
 |                [iot_usbh](https://components.espressif.com/components/espressif/iot_usbh)                |                [![Component Registry](https://components.espressif.com/components/espressif/iot_usbh/badge.svg)](https://components.espressif.com/components/espressif/iot_usbh)                |
