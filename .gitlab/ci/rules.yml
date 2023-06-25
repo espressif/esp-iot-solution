@@ -271,6 +271,9 @@
 .patterns-example_usb_device_usb_surface_dial: &patterns-example_usb_device_usb_surface_dial
   - "examples/usb/device/usb_surface_dial/**/*"
 
+.patterns-example_usb_device_usb_uf2_nvs: &patterns-example_usb_device_usb_uf2_nvs
+  - "examples/usb/device/usb_uf2_nvs/**/*"
+
 .patterns-example_usb_device_usb_uf2_ota: &patterns-example_usb_device_usb_uf2_ota
   - "examples/usb/device/usb_uf2_ota/**/*"
 
@@ -672,6 +675,17 @@
       changes: *patterns-components_knob
     - <<: *if-dev-push
       changes: *patterns-example_usb_device_usb_surface_dial
+
+.rules:build:example_usb_device_usb_uf2_nvs:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_usb_esp_tinyuf2
+    - <<: *if-dev-push
+      changes: *patterns-example_usb_device_usb_uf2_nvs
 
 .rules:build:example_usb_device_usb_uf2_ota:
   rules:

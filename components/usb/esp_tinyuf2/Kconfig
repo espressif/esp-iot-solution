@@ -1,19 +1,17 @@
-menu "UF2 Config"
-
+menu "TinyUF2 Config"
+    # We not support disable now
     config ENABLE_UF2_FLASHING
-        bool "Enable Uf2 Flashing API"
+        bool 
         default y if IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
-        select TINYUSB
-        select TINYUSB_MSC_ENABLED
         help
-            Enable, tinyusb msc will be enable by default
+            Enable UF2, only support ESP SoC with USB-OTG
     config UF2_DISK_SIZE_MB
         int "USB Virtual Disk size(MB)"
         depends on ENABLE_UF2_FLASHING
         default 8
         range 4 32 
     config UF2_FLASH_SIZE_MB
-        int "Flash size(MB)"
+        int "Max APP size(MB)"
         depends on ENABLE_UF2_FLASHING
         default 4
         range 2 8
@@ -29,7 +27,7 @@ menu "UF2 Config"
     config TUSB_PID
         hex "USB Device PID"
         depends on ENABLE_UF2_FLASHING
-        default 0x3000
+        default 0x8000
     config UF2_VOLUME_LABEL
         string "USB Disk Name"
         depends on ENABLE_UF2_FLASHING
@@ -42,7 +40,7 @@ menu "UF2 Config"
     config TUSB_PRODUCT
         string "Product Name"
         depends on ENABLE_UF2_FLASHING
-        default "UF2 Bootloader"
+        default "ESP TinyUF2"
     config UF2_SERIAL_NUM
         string "Product ID"
         depends on ENABLE_UF2_FLASHING
@@ -51,5 +49,9 @@ menu "UF2 Config"
         string "Product URL"
         depends on ENABLE_UF2_FLASHING
         default "https://products.espressif.com/"
-
+    config UF2_INI_FILE_SIZE
+        int "UF2 NVS ini file size"
+        depends on ENABLE_UF2_FLASHING
+        default 512
+        range 256 2048
 endmenu

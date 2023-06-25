@@ -2,6 +2,7 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2018 Ha Thach for Adafruit Industries
+ * Copyright (c) Espressif
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -68,6 +69,9 @@
 // Size of the flash cache in bytes, used for buffering flash writes
 #define FLASH_CACHE_SIZE             (CONFIG_FLASH_CACHE_SIZE * 1024)
 #define FLASH_CACHE_INVALID_ADDR     0xffffffff
+#define CFG_UF2_INI_FILE_SIZE        CONFIG_UF2_INI_FILE_SIZE
+extern char *_ini_file;
+extern char *_ini_file_dummy;
 
 //--------------------------------------------------------------------+
 // Basic API
@@ -85,6 +89,12 @@ uint8_t board_usb_get_serial(uint8_t serial_id[16]);
 
 // Initialize flash for DFU
 void board_flash_init(esp_partition_subtype_t subtype, const char *label, update_complete_cb_t complete_cb, bool if_restart);
+
+// Initialize flash for NVS
+void board_flash_nvs_init(const char *part_name, const char *namespace_name, nvs_modified_cb_t modified_cb);
+
+// Update DFU RAM to NVS
+void board_flash_nvs_update(const char *ini_str);
 
 // Get size of flash
 uint32_t board_flash_size(void);

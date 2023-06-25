@@ -3,16 +3,15 @@ idf_component_register(
                     "uf2/board_flash.c"
                     "uf2/ghostfat.c"
                     "msc/msc.c"
+                    "msc/usb_descriptors.c"
                     "esp_tinyuf2.c"
                     INCLUDE_DIRS "." "msc"
                     PRIV_INCLUDE_DIRS "private_include"
-                    REQUIRES app_update spi_flash usb)
+                    REQUIRES app_update
+                    PRIV_REQUIRES usb nvs_flash)
 
-cmake_policy(SET CMP0076 NEW)
-cmake_policy(SET CMP0079 NEW)
 idf_component_get_property(tusb_lib leeebo__tinyusb_src COMPONENT_LIB)
-idf_component_get_property(tusb_path leeebo__tinyusb_src COMPONENT_DIR)
-target_sources(${tusb_lib} PRIVATE "msc/usb_descriptors.c")
+cmake_policy(SET CMP0079 NEW)
 target_link_libraries(${tusb_lib} PRIVATE ${COMPONENT_LIB})
 
 execute_process(COMMAND git -C ${IDF_PATH} describe --dirty --always --tags
@@ -39,6 +38,17 @@ endif()
 
 get_filename_component(UF2_UTILS_PATH "./utils" ABSOLUTE)
 set(ENV{UF2_UTILS_PATH} ${UF2_UTILS_PATH})
+
+if (NOT TARGET uf2_ota)
+add_custom_target (
+    uf2-ota
+    COMMAND ${CMAKE_COMMAND} -E echo "transforming ${PROJECT_BIN} to ${project_name}.uf2"
+    COMMAND ${PYTHON} $ENV{UF2_UTILS_PATH}/uf2conv.py ${BUILD_DIR}/${PROJECT_BIN} -c -b 0x00 -f ${IDF_TARGET} -o ${PROJECT_DIR}/${project_name}.uf2
+    COMMAND ${CMAKE_COMMAND} -E echo "transforming done"
+    DEPENDS gen_project_binary
+    VERBATIM USES_TERMINAL
+)
+endif()
 
 include(package_manager)
 cu_pkg_define_version(${CMAKE_CURRENT_LIST_DIR})

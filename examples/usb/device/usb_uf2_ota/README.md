@@ -1,10 +1,9 @@
-## UF2 OTA Example
+## TinyUF2 OTA Example
 
 UF2 is a file format developed by Microsoft for [PXT](https://github.com/Microsoft/pxt), that is particularly suitable for flashing microcontrollers over MSC (Mass Storage Class). For a more friendly explanation, check out [this blog post](https://makecode.com/blog/one-chip-to-flash-them-all).
 
-Source project: https://github.com/adafruit/tinyuf2
 
-## How to use example
+## How to use the example
 
 ## Build and Flash
 
@@ -14,32 +13,14 @@ Run `idf.py -p PORT flash monitor` to build and flash the project.
 
 See the [Getting Started Guide](https://docs.espressif.com/projects/esp-idf/en/latest/get-started/index.html) for full steps to configure and use ESP-IDF to build projects.
 
-## Convert firmware to UF2 Format
-
-To create your own UF2 file, simply use the [Python conversion script](../../../../components/usb/esp_tinyuf2/utils/uf2conv.py) on a .bin file, specifying the family id as `ESP32S2`, `ESP32S3` or their magic number as follows. Note you must specify application address of 0x00 with the -b switch, the bootloader will use it as offset to write to ota partition.
-
-1. add convert script to path
-   ```
-   export PATH=$PATH:./utils
-   ```
-
-2. convert as follow
-
-    ```
-    uf2conv.py firmware.bin -c -b 0x00 -f ESP32S2
-    uf2conv.py firmware.bin -c -b 0x00 -f 0xbfdd4eee
-
-    uf2conv.py firmware.bin -c -b 0x00 -f ESP32S3
-    uf2conv.py firmware.bin -c -b 0x00 -f 0xc47e5767
-    ```
-
 ## Drag and drop to upgrade
 
-* Build and flash first UF2 supported firmware
-* Convert subsequent firmware upgrades to UF2 format
+* Build and flash the first TinyUF2 supported firmware
+* Insert `ESP32S3` to PC through USB, New disk name with `ESP32S2-UF2` will be found in File Manager
+* Run `idf.py uf2-ota` to generate or convert subsequent firmware upgrades to UF2 format, refer [esp_tinyuf2](../../../../components/usb/esp_tinyuf2/) for more details
 * Drag and drop UF2 format firmware to the disk to upgrade
 
-![UF2 Disk](./uf2_disk.png)
+![UF2 Disk](../../../../components/usb/esp_tinyuf2/uf2_disk.png)
 
 ## Example Output
 

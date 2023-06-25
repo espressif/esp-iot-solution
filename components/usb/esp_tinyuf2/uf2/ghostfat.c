@@ -4,6 +4,7 @@
  * Copyright (c) Microsoft Corporation
  * Copyright (c) Ha Thach for Adafruit Industries
  * Copyright (c) Henry Gabryjelski
+ * Copyright (c) Espressif
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,12 +29,9 @@
 #include <stdio.h>
 #include <assert.h>
 #include <inttypes.h>
-
 #include "compile_date.h"
 #include "board_flash.h"
 #include "uf2.h"
-
-
 
 //--------------------------------------------------------------------+
 //
@@ -163,6 +161,7 @@ const char autorunFile[] = "[Autorun]\r\nIcon=FAVICON.ICO\r\n";
 static FileContent_t info[] = {
     {.name = "INFO_UF2TXT", .content = infoUf2File , .size = sizeof(infoUf2File) - 1},
     {.name = "INDEX   HTM", .content = indexFile   , .size = sizeof(indexFile  ) - 1},
+    {.name = "CONFIG  INI", .content = NULL        , .size = 0  },
 #ifdef TINYUF2_FAVICON_HEADER
     {.name = "AUTORUN INF", .content = autorunFile , .size = sizeof(autorunFile) - 1},
     {.name = "FAVICON ICO", .content = favicon_data, .size = favicon_len            },
@@ -174,6 +173,7 @@ static FileContent_t info[] = {
 enum {
   NUM_FILES = sizeof(info) / sizeof(info[0]),
   FID_UF2 = NUM_FILES-1,
+  FID_INI = NUM_FILES-2,
   NUM_DIRENTRIES = NUM_FILES + 1 // including volume label as first root directory entry
 };
 
@@ -282,7 +282,10 @@ void uf2_init(void)
 
   // update CURRENT.UF2 file size
   info[FID_UF2].size = UF2_BYTE_COUNT;
-
+  if (_ini_file) {
+    info[FID_INI].content = _ini_file;
+    info[FID_INI].size = strlen(_ini_file);
+  }
   init_starting_clusters();
 }
 
@@ -420,7 +423,7 @@ void uf2_read_block (uint32_t block_no, uint8_t *data)
       d->updateTime       = COMPILE_DOS_TIME;
       d->updateDate       = COMPILE_DOS_DATE;
       d->startCluster     = startCluster & 0xFFFF;
-      d->size             = (inf->content ? inf->size : UF2_BYTE_COUNT);
+      d->size             = (inf->content ? inf->size : (fileIndex==FID_UF2?UF2_BYTE_COUNT:0));
     }
   }
   else if ( block_no < BPB_TOTAL_SECTORS )
@@ -492,13 +495,53 @@ int uf2_write_block (uint32_t block_no, uint8_t *data, WriteState *state)
   (void) block_no;
   UF2_Block *bl = (void*) data;
 
-  if ( !is_uf2_block(bl) ) return -1;
+  if ( !is_uf2_block(bl) )
+  {
+    if (block_no >= FS_START_CLUSTERS_SECTOR && block_no < BPB_TOTAL_SECTORS)
+    {
+      uint32_t sectionRelativeSector = block_no - FS_START_CLUSTERS_SECTOR;
+      // plus 2 for first data cluster offset
+      uint32_t fid = info_index_of(2 + sectionRelativeSector / BPB_SECTORS_PER_CLUSTER);
+
+      uint32_t fileRelativeSector = sectionRelativeSector - (info[fid].cluster_start-2) * BPB_SECTORS_PER_CLUSTER;
+
+      if ( fid == FID_INI )
+      {
+        // Handle all files other than CURRENT.UF2
+        size_t fileContentStartOffset = fileRelativeSector * BPB_SECTOR_SIZE;
+        size_t fileContentLength = CFG_UF2_INI_FILE_SIZE;
+
+        // nothing to copy if already past the end of the file (only when >1 sector per cluster)
+        if (fileContentLength > fileContentStartOffset) {
+          // obviously, 2nd and later sectors should not copy data from the start
+          void * dataStart = (char *)(_ini_file_dummy) + fileContentStartOffset;
+          // limit number of bytes of data to be copied to remaining valid bytes
+          size_t bytesToCopy = fileContentLength - fileContentStartOffset;
+          // and further limit that to a single sector at a time
+          if (bytesToCopy > BPB_SECTOR_SIZE) {
+            bytesToCopy = BPB_SECTOR_SIZE;
+          }
+          memcpy(dataStart, data, bytesToCopy);
+          if (strcmp(_ini_file_dummy, _ini_file + fileContentStartOffset)) {
+            // printf("Modify ini:\n%s\n", data);
+            strcpy(_ini_file + fileContentStartOffset, _ini_file_dummy);
+            //TODO: handle if file longer than one block
+            board_flash_nvs_update(_ini_file_dummy);
+          }
+        }
+      }
+    } else
+    {
+      return -1;
+    }
+  };
 
   if (bl->familyID == BOARD_UF2_FAMILY_ID)
   {
     // generic family ID
     board_flash_write(bl->targetAddr, bl->data, bl->payloadSize);
-  }else
+  }
+  else
   {
     // TODO family matches VID/PID
     return -1;
