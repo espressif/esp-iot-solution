@@ -106,7 +106,7 @@ esp_err_t spi_bus_delete(spi_bus_handle_t *p_bus_handle)
     return ESP_OK;
 }
 
-spi_bus_device_handle_t spi_bus_device_create(spi_bus_device_handle_t bus_handle, const spi_device_config_t *device_conf)
+spi_bus_device_handle_t spi_bus_device_create(spi_bus_handle_t bus_handle, const spi_device_config_t *device_conf)
 {
     SPI_BUS_CHECK(NULL != bus_handle, "Pointer error", NULL);
     _spi_bus_t *spi_bus = (_spi_bus_t *)bus_handle;
