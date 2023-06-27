@@ -2355,24 +2355,53 @@ OpenAI_t *OpenAICreate(const char *api_key)
     OPENAI_ERROR_CHECK(_oai != NULL, "Failed to allocate _OpenAI!", NULL);
     _oai->api_key = strdup(api_key);
 
+#if CONFIG_ENABLE_EMBEDDING
     _oai->parent.embeddingCreate = &OpenAI_EmbeddingCreate;
+#endif
+
+#if CONFIG_ENABLE_MODERATION
     _oai->parent.moderationCreate = &OpenAI_ModerationCreate;
+#endif
+
+#if CONFIG_ENABLE_COMPLETION
     _oai->parent.completionCreate = &OpenAI_CompletionCreate;
     _oai->parent.completionDelete = &OpenAI_CompletionDelete;
+#endif
+
+#if CONFIG_ENABLE_CHAT_COMPLETION
     _oai->parent.chatCreate = &OpenAI_ChatCompletionCreate;
     _oai->parent.chatDelete = &OpenAI_ChatCompletionDelete;
+#endif
+
+#if CONFIG_ENABLE_EDIT
     _oai->parent.editCreate = &OpenAI_EditCreate;
     _oai->parent.editDelete = &OpenAI_EditDelete;
+#endif
+
+#if CONFIG_ENABLE_IMAGE_GENERATION
     _oai->parent.imageGenerationCreate = &OpenAI_ImageGenerationCreate;
     _oai->parent.imageGenerationDelete = &OpenAI_ImageGenerationDelete;
+#endif
+
+#if CONFIG_ENABLE_IMAGE_VARIATION
     _oai->parent.imageVariationCreate = &OpenAI_ImageVariationCreate;
     _oai->parent.imageVariationDelete = &OpenAI_ImageVariationDelete;
+#endif
+
+#if CONFIG_ENABLE_IMAGE_EDIT
     _oai->parent.imageEditCreate = &OpenAI_ImageEditCreate;
     _oai->parent.imageEditDelete = &OpenAI_ImageEditDelete;
+#endif
+
+#if CONFIG_ENABLE_AUDIO_TRANSCRIPTION
     _oai->parent.audioTranscriptionCreate = &OpenAI_AudioTranscriptionCreate;
     _oai->parent.audioTranscriptionDelete = &OpenAI_AudioTranscriptionDelete;
+#endif
+
+#if CONFIG_ENABLE_AUDIO_TRANSLATION
     _oai->parent.audioTranslationCreate = &OpenAI_AudioTranslationCreate;
     _oai->parent.audioTranslationDelete = &OpenAI_AudioTranslationDelete;
+#endif
 
     _oai->get = &OpenAI_Get;
     _oai->del = &OpenAI_Del;

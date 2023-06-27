@@ -7,4 +7,4 @@ AI
 .. toctree::
     :maxdepth: 1
 
-    ChatGpt <chatgpt>
+    OpenAI <openai>

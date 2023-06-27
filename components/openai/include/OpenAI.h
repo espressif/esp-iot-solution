@@ -95,7 +95,7 @@ typedef struct OpenAI_EmbeddingResponse {
     char *(*getError)(struct OpenAI_EmbeddingResponse *embeddingData);
 
     /**
-     * @brief delete the embedding response
+     * @brief delete the embedding response, should free it after use.
      *
      * @param embeddingData[in] the point of OpenAI_EmbeddingResponse
      */
@@ -134,7 +134,7 @@ typedef struct OpenAI_ModerationResponse {
     char *(*getError)(struct OpenAI_ModerationResponse *moderationResponse);
 
     /**
-     * @brief delete the moderation response
+     * @brief delete the moderation response, should free it after use.
      *
      * @param moderationResponse[in] the point of } OpenAI_ModerationResponse_t
      */
@@ -716,7 +716,7 @@ typedef struct OpenAI_AudioTranslation {
  *
  */
 typedef struct OpenAI {
-
+#if CONFIG_ENABLE_EMBEDDING
     /**
      * @brief Create an embedding vector representing the input text.
      *
@@ -727,7 +727,9 @@ typedef struct OpenAI {
      * @return OpenAI_EmbeddingResponse_t* The embedding response object
      */
     OpenAI_EmbeddingResponse_t *(*embeddingCreate)(struct OpenAI *openai, char *input, const char *model, const char *user);
+#endif
 
+#if CONFIG_ENABLE_MODERATION
     /**
      * @brief Classify if text violates OpenAI's Content Policy.
      *
@@ -737,7 +739,9 @@ typedef struct OpenAI {
      * @return OpenAI_ModerationResponse_t* The moderation response object
      */
     OpenAI_ModerationResponse_t *(*moderationCreate)(struct OpenAI *openai, char *input, const char *model);
+#endif
 
+#if CONFIG_ENABLE_COMPLETION
     /**
      * @brief Generate text according to the prompt.
      *
@@ -752,7 +756,9 @@ typedef struct OpenAI {
      * @param completion[in] The completion object
      */
     void (*completionDelete)(OpenAI_Completion_t *completion);
+#endif
 
+#if CONFIG_ENABLE_CHAT_COMPLETION
     /**
      * @brief Create a chat completion object for chatting.
      *
@@ -767,7 +773,9 @@ typedef struct OpenAI {
      * @param chatCompletion[in] The chat completion object
      */
     void (*chatDelete)(OpenAI_ChatCompletion_t *chatCompletion);
+#endif
 
+#if CONFIG_ENABLE_EDIT
     /**
      * @brief Create an edit object for editing text.
      *
@@ -782,7 +790,9 @@ typedef struct OpenAI {
      * @param edit[in] The edit object
      */
     void (*editDelete)(OpenAI_Edit_t *edit);
+#endif
 
+#if CONFIG_ENABLE_IMAGE_GENERATION
     /**
      * @brief Create an image generation object.
      *
@@ -797,7 +807,9 @@ typedef struct OpenAI {
      * @param imageGeneration[in] The image generation object
      */
     void (*imageGenerationDelete)(OpenAI_ImageGeneration_t *imageGeneration);
+#endif
 
+#if CONFIG_ENABLE_IMAGE_VARIATION
     /**
      * @brief Create an image variation object.
      *
@@ -812,7 +824,9 @@ typedef struct OpenAI {
      * @param imageVariation[in] The image variation object
      */
     void (*imageVariationDelete)(OpenAI_ImageVariation_t *imageVariation);
+#endif
 
+#if CONFIG_ENABLE_IMAGE_EDIT
     /**
      * @brief Create an image editing object.
      *
@@ -827,7 +841,9 @@ typedef struct OpenAI {
      * @param imageEdit[in] The image editing object
      */
     void (*imageEditDelete)(OpenAI_ImageEdit_t *imageEdit);
+#endif
 
+#if CONFIG_ENABLE_AUDIO_TRANSCRIPTION
     /**
      * @brief Create an audio transcription object.
      *
@@ -842,7 +858,9 @@ typedef struct OpenAI {
      * @param audioTranscription[in] The audio transcription object
      */
     void (*audioTranscriptionDelete)(OpenAI_AudioTranscription_t *audioTranscription);
+#endif
 
+#if CONFIG_ENABLE_AUDIO_TRANSLATION
     /**
      * @brief Create an audio translation object.
      *
@@ -857,6 +875,7 @@ typedef struct OpenAI {
      * @param audioTranslation[in] The audio translation object
      */
     void (*audioTranslationDelete)(OpenAI_AudioTranslation_t *audioTranslation);
+#endif
 } OpenAI_t;
 
 /**

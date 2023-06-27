@@ -1,3 +1,11 @@
+# File contains known/allowed Sphinx warnings.
+#
+# Build will fail if sphinx-warning-log.txt contains any lines
+# which are not in this file. Lines are pre-sanitized by
+# `build_docs.py build` to remove formatting, paths and line numbers.
+#
+# Warnings in this file must be in the same overall order as the log file.
+#
 OpenAI.inc:line: WARNING: Error in declarator
 If declarator-id with parameters-and-qualifiers:
   Invalid C++ declaration: Expected identifier in nested name. [error at 4]

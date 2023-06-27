@@ -69,7 +69,7 @@ TEST_CASE("test ChatCompletion", "[ChatCompletion]")
     } else {
         ESP_LOGE(TAG, "Unknown error!");
     }
-    result->destroy(result);
+    result->delete(result);
     openai->chatDelete(chatCompletion);
     OpenAIDelete(openai);
     example_disconnect();
@@ -120,6 +120,18 @@ TEST_CASE("test AudioTranscription cn", "[AudioTranscription]")
     openai->audioTranscriptionDelete(audioTranscription);
     OpenAIDelete(openai);
     example_disconnect();
+}
+
+TEST_CASE("test memory leak", "[memory]")
+{
+    OpenAI_t *openai = OpenAICreate(openai_key);
+    TEST_ASSERT_NOT_NULL(openai);
+    OpenAI_Completion_t *completion = openai->completionCreate(openai);
+    TEST_ASSERT_NOT_NULL(completion);
+    completion->setModel(completion,"gpt-3.5-turbo");   //Model to use for completion. Default is gpt-3.5-turbo
+    completion->setUser(completion, "test");
+    openai->completionDelete(completion);
+    OpenAIDelete(openai);
 }
 
 static size_t before_free_8bit;
