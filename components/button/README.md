@@ -25,5 +25,5 @@ There are three ways this driver can handle buttons:
 Please use the component manager command `add-dependency` to add the `button` to your project's dependency, during the `CMake` step the component will be downloaded automatically
 
 ```
-idf.py add-dependency "espressif/buttom=*"
+idf.py add-dependency "espressif/button=*"
 ```
