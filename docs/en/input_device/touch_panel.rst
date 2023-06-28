@@ -105,4 +105,4 @@ To Know If a Touch Panel is Pressed and Its Corresponding Position
 API Reference
 -----------------
 
-.. include:: /_build/inc/touch_panel.inc
+.. include-build-file:: inc/touch_panel.inc

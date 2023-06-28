@@ -1,0 +1,7 @@
+menu "OpenAI"
+
+    config OPENAI_KEY
+        string "OpenAI Key"
+        default ""
+
+endmenu

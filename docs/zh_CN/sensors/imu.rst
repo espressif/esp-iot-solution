@@ -20,4 +20,4 @@ API 参考
 
 以下 API 实现了对惯性传感器的硬件抽象，用户可直接调用该层代码编写传感器应用程序，也可以使用 :doc:`sensor_hub <sensor_hub>` 中的传感器接口实现更简单的调用。
 
-.. include:: /_build/inc/imu_hal.inc
+.. include-build-file:: inc/imu_hal.inc

@@ -97,8 +97,7 @@ Linux(x64) <https://github.com/espressif/binutils-esp32ulp/wiki#downloads>`__
        export PATH="$PATH:/opt/xtensa-esp32-elf/bin:/opt/esp32ulp-elf-binutils/bin"
 
 3. 保存文件并重新打开 MSYS2 控制台。
-4. 设置到此完成，你可以编译 ULP 协处理器的例程了，可尝试编译 :example:`system/ulp_adc`
-   例子。
+4. 设置到此完成，你可以编译 ULP 协处理器的例程了，可尝试编译 `ulp_adc <https://github.com/espressif/esp-iot-solution/tree/release/v1.0/examples/ulp_examples/ulp_adc>`__ 例子。
 
 3.3 MacOS
 ^^^^^^^^^

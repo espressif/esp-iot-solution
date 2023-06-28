@@ -1,0 +1,63 @@
+menu "OpenAI"
+
+    config ENABLE_EMBEDDING
+        bool "Enable Embedding"
+        default y
+        help
+        Enable OpenAI Embedding
+        
+    config ENABLE_MODERATION
+        bool "Enable Moderation"
+        default y
+        help
+        Enable OpenAI Moderation
+
+    config ENABLE_COMPLETION
+        bool "Enable Completion"
+        default y
+        help
+        Enable OpenAI Completion
+    
+    config ENABLE_CHAT_COMPLETION
+        bool "Enable Chat Completion"
+        default y
+        help
+        Enable OpenAI Chat Completion
+    
+    config ENABLE_EDIT
+        bool "Enable Edit"
+        default y
+        help
+        Enable OpenAI Edit
+    
+    config ENABLE_IMAGE_GENERATION
+        bool "Enable ImageGeneration"
+        default y
+        help
+        Enable OpenAI ImageGeneration
+
+    config ENABLE_IMAGE_VARIATION
+        bool "Enable ImageVariation"
+        default y
+        help
+        Enable OpenAI ImageVariation
+
+    config ENABLE_IMAGE_EDIT
+        bool "Enable ImageEdit"
+        default y
+        help
+        Enable OpenAI ImageEdit
+
+    config ENABLE_AUDIO_TRANSCRIPTION
+        bool "Enable AudioTranscription"
+        default y
+        help
+        Enable OpenAI AudioTranscription
+
+    config ENABLE_AUDIO_TRANSLATION
+        bool "Enable AudioTranslation"
+        default y
+        help
+        Enable OpenAI AudioTranslation
+
+endmenu

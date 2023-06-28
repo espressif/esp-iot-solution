@@ -270,6 +270,6 @@ Obtain Screen Information
 API Reference
 -----------------
 
-.. include:: /_build/inc/screen_driver.inc
+.. include-build-file:: inc/screen_driver.inc
 
-.. include:: /_build/inc/scr_interface_driver.inc
+.. include-build-file:: inc/scr_interface_driver.inc

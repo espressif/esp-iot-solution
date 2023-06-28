@@ -93,6 +93,26 @@ components_test_led_indicator:
     TEST_FOLDER: components/led/led_indicator
     TEST_ENV: led_indicator
 
+components_test_openai:
+  extends:
+    - .pytest_template
+    - .rules:build:components_openai_test_apps
+  needs:
+    - job: "build_components_openai_test_apps"
+      artifacts: true
+      optional: true
+  parallel:
+    matrix:
+        - IDF_VERSION: "4.4"
+        - IDF_VERSION: "5.0"
+  tags: 
+    - esp32s3
+    - openai
+  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
+  variables:
+    TEST_TARGET: esp32s3
+    TEST_FOLDER: components/openai
+
 tools_test_cmake_utilities:
   extends:
     - .pytest_template

@@ -48,6 +48,6 @@ Examples
 API Reference
 ------------------------
 
-.. include:: /_build/inc/sensor_type.inc
+.. include-build-file:: inc/sensor_type.inc
 
-.. include:: /_build/inc/iot_sensor_hub.inc
+.. include-build-file:: inc/iot_sensor_hub.inc

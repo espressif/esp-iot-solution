@@ -180,5 +180,5 @@ gamma 曲线调光
 API 参考
 ^^^^^^^^^^^^^^^^
 
-.. include:: /_build/inc/led_indicator.inc
+.. include-build-file:: inc/led_indicator.inc
 

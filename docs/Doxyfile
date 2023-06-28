@@ -21,24 +21,25 @@ PROJECT_NAME = "ESP IoT Solution Guide"
 ## and used to include in API reference documentation
 
 INPUT = \
-    ../../components/bus/include/i2c_bus.h \
-    ../../components/bus/include/spi_bus.h \
-    ../../components/bus/include/i2s_lcd_driver.h \
-    ../../components/sensors/sensor_hub/include/sensor_type.h \
-    ../../components/sensors/sensor_hub/include/iot_sensor_hub.h \
-    ../../components/sensors/sensor_hub/include/hal/humiture_hal.h \
-    ../../components/sensors/sensor_hub/include/hal/imu_hal.h \
-    ../../components/sensors/sensor_hub/include/hal/light_sensor_hal.h \
-    ../../components/motor/servo/include/iot_servo.h \
-    ../../components/audio/pwm_audio/include/pwm_audio.h \
-    ../../components/audio/dac_audio/include/dac_audio.h \
-    ../../components/display/screen/screen_driver.h \
-    ../../components/display/screen/interface_driver/scr_interface_driver.h \
-    ../../components/display/touch_panel/touch_panel.h \
-    ../../components/led/led_indicator/include/led_indicator.h \
-    ../../components/button/include/iot_button.h \
-    ../../components/usb/usb_stream/include/usb_stream.h \
-    ../../components/knob/iot_knob.h \
+    $(PROJECT_PATH)/components/bus/include/i2c_bus.h \
+    $(PROJECT_PATH)/components/bus/include/spi_bus.h \
+    $(PROJECT_PATH)/components/bus/include/i2s_lcd_driver.h \
+    $(PROJECT_PATH)/components/sensors/sensor_hub/include/sensor_type.h \
+    $(PROJECT_PATH)/components/sensors/sensor_hub/include/iot_sensor_hub.h \
+    $(PROJECT_PATH)/components/sensors/sensor_hub/include/hal/humiture_hal.h \
+    $(PROJECT_PATH)/components/sensors/sensor_hub/include/hal/imu_hal.h \
+    $(PROJECT_PATH)/components/sensors/sensor_hub/include/hal/light_sensor_hal.h \
+    $(PROJECT_PATH)/components/motor/servo/include/iot_servo.h \
+    $(PROJECT_PATH)/components/audio/pwm_audio/include/pwm_audio.h \
+    $(PROJECT_PATH)/components/audio/dac_audio/include/dac_audio.h \
+    $(PROJECT_PATH)/components/display/screen/screen_driver.h \
+    $(PROJECT_PATH)/components/display/screen/interface_driver/scr_interface_driver.h \
+    $(PROJECT_PATH)/components/display/touch_panel/touch_panel.h \
+    $(PROJECT_PATH)/components/led/led_indicator/include/led_indicator.h \
+    $(PROJECT_PATH)/components/button/include/iot_button.h \
+    $(PROJECT_PATH)/components/openai/include/OpenAI.h \
+    $(PROJECT_PATH)/components/usb/usb_stream/include/usb_stream.h \
+    $(PROJECT_PATH)/components/knob/iot_knob.h \
 
 ## Get warnings for functions that have no documentation for their parameters or return value
 ##
@@ -83,3 +84,7 @@ QUIET = YES
 ##
 WARN_LOGFILE = "doxygen-warning-log.txt"
 
+## Enable Section Tags for conditional documentation
+##
+ENABLED_SECTIONS += DOC_EXCLUDE_HEADER_SECTION  ## To conditionally remove doc sections from IDF source files without affecting documentation in upstream files.
+ENABLED_SECTIONS += DOC_SINGLE_GROUP            ## To conditionally remove groups from the documentation and create a 'flat' document without affecting documentation in upstream files.

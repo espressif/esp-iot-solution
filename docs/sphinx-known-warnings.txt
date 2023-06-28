@@ -2,12 +2,129 @@
 #
 # Build will fail if sphinx-warning-log.txt contains any lines
 # which are not in this file. Lines are pre-sanitized by
-# check_doc_warnings.sh to remove formatting, paths, line numbers.
+# `build_docs.py build` to remove formatting, paths and line numbers.
 #
 # Warnings in this file must be in the same overall order as the log file.
 #
+OpenAI.inc:line: WARNING: Error in declarator
+If declarator-id with parameters-and-qualifiers:
+  Invalid C++ declaration: Expected identifier in nested name. [error at 4]
+    void(* delete )(struct OpenAI_EmbeddingResponse *embeddingData)
+    ----^
+If parenthesis in noptr-declarator:
+  Error in declarator or parameters-and-qualifiers
+  If pointer to member declarator:
+    Invalid C++ declaration: Expected identifier in nested name, got keyword: delete [error at 13]
+      void(* delete )(struct OpenAI_EmbeddingResponse *embeddingData)
+      -------------^
+  If declarator-id:
+    Invalid C++ declaration: Expected identifier in nested name, got keyword: delete [error at 13]
+      void(* delete )(struct OpenAI_EmbeddingResponse *embeddingData)
+      -------------^
 
-#
-# Breathe known issue: https://github.com/michaeljones/breathe/issues/405
-# Sphinx known issue: https://github.com/sphinx-doc/sphinx/pull/5901
-#
+OpenAI.inc:line: WARNING: Error in declarator
+If declarator-id with parameters-and-qualifiers:
+  Invalid C++ declaration: Expected identifier in nested name. [error at 4]
+    void(* delete )(struct OpenAI_ModerationResponse *moderationResponse)
+    ----^
+If parenthesis in noptr-declarator:
+  Error in declarator or parameters-and-qualifiers
+  If pointer to member declarator:
+    Invalid C++ declaration: Expected identifier in nested name, got keyword: delete [error at 13]
+      void(* delete )(struct OpenAI_ModerationResponse *moderationResponse)
+      -------------^
+  If declarator-id:
+    Invalid C++ declaration: Expected identifier in nested name, got keyword: delete [error at 13]
+      void(* delete )(struct OpenAI_ModerationResponse *moderationResponse)
+      -------------^
+
+OpenAI.inc:line: WARNING: Error in declarator
+If declarator-id with parameters-and-qualifiers:
+  Invalid C++ declaration: Expected identifier in nested name. [error at 4]
+    void(* delete )(struct OpenAI_ImageResponse *imageResponse)
+    ----^
+If parenthesis in noptr-declarator:
+  Error in declarator or parameters-and-qualifiers
+  If pointer to member declarator:
+    Invalid C++ declaration: Expected identifier in nested name, got keyword: delete [error at 13]
+      void(* delete )(struct OpenAI_ImageResponse *imageResponse)
+      -------------^
+  If declarator-id:
+    Invalid C++ declaration: Expected identifier in nested name, got keyword: delete [error at 13]
+      void(* delete )(struct OpenAI_ImageResponse *imageResponse)
+      -------------^
+
+OpenAI.inc:line: WARNING: Error in declarator
+If declarator-id with parameters-and-qualifiers:
+  Invalid C++ declaration: Expected identifier in nested name. [error at 4]
+    void(* delete )(struct OpenAI_StringResponse *stringResponse)
+    ----^
+If parenthesis in noptr-declarator:
+  Error in declarator or parameters-and-qualifiers
+  If pointer to member declarator:
+    Invalid C++ declaration: Expected identifier in nested name, got keyword: delete [error at 13]
+      void(* delete )(struct OpenAI_StringResponse *stringResponse)
+      -------------^
+  If declarator-id:
+    Invalid C++ declaration: Expected identifier in nested name, got keyword: delete [error at 13]
+      void(* delete )(struct OpenAI_StringResponse *stringResponse)
+      -------------^
+
+usb_stream.inc:line: WARNING: Error in type declaration.
+If typedef-like declaration:
+  Type must be either just a name or a typedef-like declaration.
+  If just a name:
+    Error in declarator or parameters-and-qualifiers
+    Invalid C++ declaration: Expected identifier in nested name, got keyword: void [error at 4]
+      void() mic_callback_t (mic_frame_t *frame, void *user_ptr)
+      ----^
+  If typedef-like declaration:
+    Error in declarator
+    If declarator-id with parameters-and-qualifiers:
+      Invalid C++ declaration: Expected identifier in nested name. [error at 4]
+        void() mic_callback_t (mic_frame_t *frame, void *user_ptr)
+        ----^
+    If parenthesis in noptr-declarator:
+      Error in declarator or parameters-and-qualifiers
+      If pointer to member declarator:
+        Invalid C++ declaration: Expected identifier in nested name. [error at 5]
+          void() mic_callback_t (mic_frame_t *frame, void *user_ptr)
+          -----^
+      If declarator-id:
+        Invalid C++ declaration: Expected identifier in nested name. [error at 5]
+          void() mic_callback_t (mic_frame_t *frame, void *user_ptr)
+          -----^
+If type alias or template alias:
+  Invalid C++ declaration: Expected identifier in nested name, got keyword: void [error at 4]
+    void() mic_callback_t (mic_frame_t *frame, void *user_ptr)
+    ----^
+
+usb_stream.inc:line: WARNING: Error in type declaration.
+If typedef-like declaration:
+  Type must be either just a name or a typedef-like declaration.
+  If just a name:
+    Error in declarator or parameters-and-qualifiers
+    Invalid C++ declaration: Expected identifier in nested name, got keyword: void [error at 4]
+      void() state_callback_t (usb_stream_state_t state, void *user_ptr)
+      ----^
+  If typedef-like declaration:
+    Error in declarator
+    If declarator-id with parameters-and-qualifiers:
+      Invalid C++ declaration: Expected identifier in nested name. [error at 4]
+        void() state_callback_t (usb_stream_state_t state, void *user_ptr)
+        ----^
+    If parenthesis in noptr-declarator:
+      Error in declarator or parameters-and-qualifiers
+      If pointer to member declarator:
+        Invalid C++ declaration: Expected identifier in nested name. [error at 5]
+          void() state_callback_t (usb_stream_state_t state, void *user_ptr)
+          -----^
+      If declarator-id:
+        Invalid C++ declaration: Expected identifier in nested name. [error at 5]
+          void() state_callback_t (usb_stream_state_t state, void *user_ptr)
+          -----^
+If type alias or template alias:
+  Invalid C++ declaration: Expected identifier in nested name, got keyword: void [error at 4]
+    void() state_callback_t (usb_stream_state_t state, void *user_ptr)
+    ----^
+

@@ -156,4 +156,4 @@
 API Reference
 -----------------
 
-.. include:: /_build/inc/iot_button.inc
+.. include-build-file:: inc/iot_button.inc
