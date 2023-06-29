@@ -1,0 +1,5 @@
+dependencies:
+  idf: ">=4.4"
+  esp_tinyuf2:
+    version: "0.*"
+    override_path: "../../../../../components/usb/esp_tinyuf2"

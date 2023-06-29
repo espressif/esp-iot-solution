@@ -136,6 +136,14 @@ examples/usb/device/usb_surface_dial:
   enable:
     - if: IDF_TARGET in ["esp32s2","esp32s3"]
 
+examples/usb/device/usb_uf2_nvs:
+  enable:
+    - if: IDF_TARGET in ["esp32s2","esp32s3"]
+
+examples/usb/device/usb_uf2_ota:
+  enable:
+    - if: IDF_TARGET in ["esp32s2","esp32s3"]
+
 examples/usb/host/usb_camera_lcd_display:
   enable:
     - if: IDF_TARGET == "esp32s3" and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
