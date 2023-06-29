@@ -1,3 +1,7 @@
+variables:
+  # Versioned esp-idf-doc env image to use for all document building jobs
+  ESP_DOCS_ENV_IMAGE: "$CI_DOCKER_REGISTRY/esp-idf-doc-env-v5.0"
+
 push_to_github:
   stage: deploy
   only:
@@ -19,3 +23,45 @@ push_to_github:
     - git remote remove github &>/dev/null || true
     - git remote add github git@github.com:espressif/esp-iot-solution.git
     - ${IOT_SOLUTION_PATH}/tools/ci/push_to_github.sh
+
+.deploy_docs_template:
+  stage: deploy
+  image: $ESP_DOCS_ENV_IMAGE
+  tags: 
+    - deploy_docs
+  needs:
+    - job: "build_docs_html"
+      artifacts: true
+      optional: true
+  script:
+    - source ${CI_PROJECT_DIR}/.gitlab/ci/utils.sh
+    - add_doc_server_ssh_keys $DOCS_DEPLOY_PRIVATEKEY $DOCS_DEPLOY_SERVER $DOCS_DEPLOY_SERVER_USER
+    - export GIT_VER=$(git describe --always)
+    - pip install -r ${CI_PROJECT_DIR}/docs/requirements.txt
+    - deploy-docs
+
+deploy_docs_preview:
+  extends:
+    - .deploy_docs_template
+    - .rules:deploy:docs_preview
+  variables:
+    TYPE: "preview"
+    DOCS_BUILD_DIR: "${CI_PROJECT_DIR}/docs/_build/"
+    DOCS_DEPLOY_PRIVATEKEY: "$DOCS_PREVIEW_DEPLOY_KEY"
+    DOCS_DEPLOY_SERVER: "$DOCS_PREVIEW_SERVER"
+    DOCS_DEPLOY_SERVER_USER: "$DOCS_PREVIEW_SERVER_USER"
+    DOCS_DEPLOY_PATH: "$DOCS_PREVIEW_PATH"
+    DOCS_DEPLOY_URL_BASE: "$DOCS_PREVIEW_URL_BASE"
+
+deploy_docs_production:
+  extends:
+    - .deploy_docs_template
+    - .rules:deploy:docs_production
+  variables:
+    TYPE: "production"
+    DOCS_BUILD_DIR: "${CI_PROJECT_DIR}/docs/_build/"
+    DOCS_DEPLOY_PRIVATEKEY: "$DOCS_PROD_DEPLOY_KEY"
+    DOCS_DEPLOY_SERVER: "$DOCS_PROD_SERVER"
+    DOCS_DEPLOY_SERVER_USER: "$DOCS_PROD_SERVER_USER"
+    DOCS_DEPLOY_PATH: "$DOCS_PROD_PATH"
+    DOCS_DEPLOY_URL_BASE: "$DOCS_PROD_URL_BASE"

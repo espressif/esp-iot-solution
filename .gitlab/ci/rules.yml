@@ -1076,6 +1076,20 @@
     - <<: *if-dev-push
       changes: *patterns-docs_inc
 
+.rules:deploy:docs_preview:
+  rules:
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-docs
+    - <<: *if-dev-push
+      changes: *patterns-docs_inc
+
+.rules:deploy:docs_production:
+  rules:
+    - <<: *if-protected
+
 .rules:pre_check:readme:
   rules:
     - <<: *if-protected
