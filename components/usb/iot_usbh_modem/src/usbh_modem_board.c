@@ -224,7 +224,6 @@ static esp_err_t modem_board_start_up(esp_modem_dce_t *dce)
 {
     MODEM_CHECK_GOTO(re_sync_fn(dce, NULL, NULL) == ESP_OK, "sending sync failed", err);
     MODEM_CHECK_GOTO(dce->set_echo(dce, (void *)false, NULL) == ESP_OK, "set_echo failed", err);
-    MODEM_CHECK_GOTO(dce->set_flow_ctrl(dce, (void *)ESP_MODEM_FLOW_CONTROL_NONE, NULL) == ESP_OK, "set_flow_ctrl failed", err);
     MODEM_CHECK_GOTO(dce->store_profile(dce, NULL, NULL) == ESP_OK, "store_profile failed", err);
     return ESP_OK;
 err:
@@ -396,7 +395,6 @@ static bool _ppp_network_start(esp_modem_dte_t *dte)
 
 static bool _ppp_network_stop(esp_modem_dte_t *dte)
 {
-    dte->dce->mode = ESP_MODEM_TRANSITION_MODE;
     if (esp_modem_stop_ppp(dte) == ESP_OK) {
         return true;
     }

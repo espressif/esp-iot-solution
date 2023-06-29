@@ -58,15 +58,6 @@ esp_err_t esp_modem_stop_ppp(esp_modem_dte_t *dte)
     ESP_MODEM_ERR_CHECK(dce, "DTE has not yet bind with DCE", err);
     esp_modem_dte_internal_t *esp_dte = __containerof(dte, esp_modem_dte_internal_t, parent);
 
-    /* Enter command mode, failed if 1.dte disconnect 2.already in command mode*/
-    esp_err_t ret = ESP_OK;
-    if (esp_dte->conn_state) {
-        ret = dte->change_mode(dte, ESP_MODEM_COMMAND_MODE);
-        if (ret != ESP_OK) {
-            ESP_LOGE(TAG, "enter command mode failed");
-        }
-    }
-
     /* post PPP mode stopped event */
     esp_event_post_to(esp_dte->event_loop_hdl, ESP_MODEM_EVENT, ESP_MODEM_EVENT_PPP_STOP, NULL, 0, 0);
 
@@ -75,6 +66,14 @@ esp_err_t esp_modem_stop_ppp(esp_modem_dte_t *dte)
     EventBits_t bits = xEventGroupWaitBits(esp_dte->process_group, ESP_MODEM_STOP_PPP_BIT, pdTRUE, pdTRUE, pdMS_TO_TICKS(20000));
     if (!(bits & ESP_MODEM_STOP_PPP_BIT)) {
         ESP_LOGW(TAG, "Failed to exit the PPP mode gracefully");
+    }
+    /* Enter command mode, failed if 1.dte disconnect 2.already in command mode*/
+    esp_err_t ret = ESP_OK;
+    if (esp_dte->conn_state) {
+        ret = dte->change_mode(dte, ESP_MODEM_COMMAND_MODE);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "enter command mode failed");
+        }
     }
     return ESP_OK;
 err:
