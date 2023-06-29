@@ -45,14 +45,15 @@ TEST_CASE("test ChatCompletion", "[ChatCompletion]")
     OpenAI_ChatCompletion_t *chatCompletion = openai->chatCreate(openai);
     TEST_ASSERT_NOT_NULL(chatCompletion);
     chatCompletion->setModel(chatCompletion,"gpt-3.5-turbo");   //Model to use for completion. Default is gpt-3.5-turbo
-    chatCompletion->setSystem(chatCompletion,"Code geek");      //Description of the required assistant
-    chatCompletion->setMaxTokens(chatCompletion,1000);          //The maximum number of tokens to generate in the completion.
+    chatCompletion->setSystem(chatCompletion,"You are a helpful assistant.");      //Description of the required assistant
+    chatCompletion->setMaxTokens(chatCompletion,1024);          //The maximum number of tokens to generate in the completion.
     chatCompletion->setTemperature(chatCompletion,0.2);         //float between 0 and 1. Higher value gives more random results.
     chatCompletion->setStop(chatCompletion,"\r");               //Up to 4 sequences where the API will stop generating further tokens.
     chatCompletion->setPresencePenalty(chatCompletion,0);       //float between -2.0 and 2.0. Positive values increase the model's likelihood to talk about new topics.
     chatCompletion->setFrequencyPenalty(chatCompletion,0);      //float between -2.0 and 2.0. Positive values decrease the model's likelihood to repeat the same line verbatim.
     chatCompletion->setUser(chatCompletion,"OpenAI-ESP32");     //A unique identifier representing your end-user, which can help OpenAI to monitor and detect abuse.
-    OpenAI_StringResponse_t *result = chatCompletion->message(chatCompletion, "Hello, how are you?", false);
+    // chinese
+    OpenAI_StringResponse_t *result = chatCompletion->message(chatCompletion, "给我讲一个笑话", false);
     TEST_ASSERT_NOT_NULL(result);
     if (result->getLen(result) == 1) {
         ESP_LOGI(TAG, "Received message. Tokens: %"PRIu32"", result->getUsage(result));
@@ -69,6 +70,26 @@ TEST_CASE("test ChatCompletion", "[ChatCompletion]")
     } else {
         ESP_LOGE(TAG, "Unknown error!");
     }
+    result->delete(result);
+    // english
+    result = chatCompletion->message(chatCompletion, "tell me a joke", false);
+    TEST_ASSERT_NOT_NULL(result);
+    if (result->getLen(result) == 1) {
+        ESP_LOGI(TAG, "Received message. Tokens: %"PRIu32"", result->getUsage(result));
+        char *response = result->getData(result, 0);
+        ESP_LOGI(TAG, "%s", response);
+    } else if (result->getLen(result) > 1) {
+        ESP_LOGI(TAG, "Received %"PRIu32" messages. Tokens: %"PRIu32"", result->getLen(result), result->getUsage(result));
+        for (int i = 0; i < result->getLen(result); ++i) {
+            char *response = result->getData(result, i);
+            ESP_LOGI(TAG, "Message[%d]: %s", i, response);
+        }
+    } else if (result->getError(result)) {
+        ESP_LOGE(TAG, "Error! %s", result->getError(result));
+    } else {
+        ESP_LOGE(TAG, "Unknown error!");
+    }
+
     result->delete(result);
     openai->chatDelete(chatCompletion);
     OpenAIDelete(openai);
@@ -113,7 +134,7 @@ TEST_CASE("test AudioTranscription cn", "[AudioTranscription]")
     audioTranscription->setResponseFormat(audioTranscription, OPENAI_AUDIO_RESPONSE_FORMAT_JSON);
     audioTranscription->setPrompt(audioTranscription, "请回复简体中文");                                                    //The default will return Traditional Chinese, here we add prompt to make GPT return Simplified Chinese
     audioTranscription->setTemperature(audioTranscription,0.2);                                                             //float between 0 and 1. Higher value gives more random results.
-    audioTranscription->setLanguage(audioTranscription,"en");                                                               //Set to Chinese to make GPT return faster and more accurate
+    audioTranscription->setLanguage(audioTranscription,"zh");                                                               //Set to Chinese to make GPT return faster and more accurate
     char *text = audioTranscription->file(audioTranscription, (uint8_t *)zhengzai_cn_wav_start, length, OPENAI_AUDIO_INPUT_FORMAT_WAV);
     ESP_LOGI(TAG, "Text: %s", text);
     free(text);
