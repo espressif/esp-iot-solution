@@ -40,7 +40,8 @@ static void event_handler(void *arg, esp_event_base_t event_base, int32_t event_
         case WIFI_EVENT_AP_STADISCONNECTED:
             if (--s_active_station_num == 0) {
                 esp_event_post(MODEM_BOARD_EVENT, MODEM_EVENT_WIFI_STA_DISCONN, (void *)s_active_station_num, 0, 0);
-                modem_wifi_napt_enable(false);
+                //TODO: esp-lwip NAPT now have a bug, disable then enable NAPT will cause random table index
+                //modem_wifi_napt_enable(false);
             }
             break;
         default:

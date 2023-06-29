@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.1.6 - 2023-04-17
+
+* Fix PPP mode can not exit gracefully
+* Fix compatibility issue, remove unnecessary command during startup
+* Fix NAPT disable issue (esp-lwip NAPT now have a bug, disable then enable NAPT will cause random table index)
+
 ## v0.1.5 - 2023-04-17
 
 * Fix compatibility issue, remove unnecessary command during startup
