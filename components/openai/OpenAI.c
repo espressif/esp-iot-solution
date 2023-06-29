@@ -2170,22 +2170,26 @@ void OpenAIDelete(OpenAI_t *oai)
     }
 }
 
-static char *OpenAI_Upload(const char *api_key, const char *endpoint, const char *boundary, uint8_t *data, size_t len)
+static char *OpenAI_Request(const char *api_key, const char *endpoint, const char *content_type, esp_http_client_method_t method, const char *boundary, uint8_t *data, size_t len)
 {
-    ESP_LOGD(TAG, "\"%s\": boundary=%s, len=%u", endpoint, boundary, len);
+    ESP_LOGD(TAG, "\"%s\", len=%u", endpoint, len);
     char *url = NULL;
     char *result = NULL;
     asprintf(&url, "https://api.openai.com/v1/%s", endpoint);
     OPENAI_ERROR_CHECK(url != NULL, "Failed to allocate url!", NULL);
     esp_http_client_config_t config = {
         .url = url,
-        .method = HTTP_METHOD_POST,
+        .method = method,
         .timeout_ms = 60000,
         .crt_bundle_attach = esp_crt_bundle_attach,
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
     char *headers = NULL;
-    asprintf(&headers, "multipart/form-data; boundary=%s", boundary);
+    if (boundary) {
+        asprintf(&headers, "%s; boundary=%s", content_type, boundary);
+    } else {
+        asprintf(&headers, "%s", content_type);
+    }
     OPENAI_ERROR_CHECK_GOTO(headers != NULL, "Failed to allocate headers!", end);
     esp_http_client_set_header(client, "Content-Type", headers);
     free(headers);
@@ -2197,9 +2201,15 @@ static char *OpenAI_Upload(const char *api_key, const char *endpoint, const char
 
     esp_err_t err = esp_http_client_open(client, len);
     OPENAI_ERROR_CHECK_GOTO(err == ESP_OK, "Failed to open client!", end);
-    int wlen = esp_http_client_write(client, (const char *)data, len);
-    OPENAI_ERROR_CHECK_GOTO(wlen >= 0, "Failed to write client!", end);
+    if (len > 0) {
+        int wlen = esp_http_client_write(client, (const char *)data, len);
+        OPENAI_ERROR_CHECK_GOTO(wlen >= 0, "Failed to write client!", end);
+    }
     int content_length = esp_http_client_fetch_headers(client);
+    if (esp_http_client_is_chunked_response(client)) {
+        esp_http_client_get_chunk_length(client, &content_length);
+    }
+    ESP_LOGD(TAG, "content_length=%d", content_length);
     OPENAI_ERROR_CHECK_GOTO(content_length >= 0, "HTTP client fetch headers failed!", end);
     result = (char *)malloc(content_length + 1);
     int read = esp_http_client_read_response(client, result, content_length);
@@ -2209,7 +2219,7 @@ static char *OpenAI_Upload(const char *api_key, const char *endpoint, const char
         result = NULL;
     } else {
         result[content_length] = 0;
-        ESP_LOGD(TAG, "%s", result);
+        ESP_LOGD(TAG, "result: %s, size: %d", result, strlen(result));
     }
 
 end:
@@ -2217,135 +2227,26 @@ end:
     esp_http_client_close(client);
     esp_http_client_cleanup(client);
     return result != NULL ? result : NULL;
+}
+
+static char *OpenAI_Upload(const char *api_key, const char *endpoint, const char *boundary, uint8_t *data, size_t len)
+{
+    return OpenAI_Request(api_key, endpoint, "multipart/form-data", HTTP_METHOD_POST, boundary, data, len);
 }
 
 static char *OpenAI_Post(const char *api_key, const char *endpoint, char *jsonBody)
 {
-    ESP_LOGD(TAG, "\"%s\": %s", endpoint, jsonBody);
-    char *url = NULL;
-    char *result = NULL;
-    asprintf(&url, "https://api.openai.com/v1/%s", endpoint);
-    OPENAI_ERROR_CHECK(url != NULL, "Failed to allocate url!", NULL);
-    esp_http_client_config_t config = {
-        .url = url,
-        .method = HTTP_METHOD_POST,
-        .timeout_ms = 60000,
-        .crt_bundle_attach = esp_crt_bundle_attach,
-    };
-    esp_http_client_handle_t client = esp_http_client_init(&config);
-    esp_http_client_set_header(client, "Content-Type", "application/json");
-    char *headers = NULL;
-    asprintf(&headers, "Bearer %s", api_key);
-    OPENAI_ERROR_CHECK_GOTO(headers != NULL, "Failed to allocate headers!", end);
-    esp_http_client_set_header(client, "Authorization", headers);
-    free(headers);
-
-    esp_err_t err = esp_http_client_open(client, strlen(jsonBody));
-    OPENAI_ERROR_CHECK_GOTO(err == ESP_OK, "Failed to open client!", end);
-    int wlen = esp_http_client_write(client, jsonBody, strlen(jsonBody));
-    OPENAI_ERROR_CHECK_GOTO(wlen >= 0, "Failed to write client!", end);
-    int content_length = esp_http_client_fetch_headers(client);
-    OPENAI_ERROR_CHECK_GOTO(content_length >= 0, "HTTP client fetch headers failed!", end);
-    result = (char *)malloc(content_length + 1);
-    int read = esp_http_client_read_response(client, result, content_length);
-    if (read != content_length) {
-        ESP_LOGE(TAG, "HTTP_ERROR: read=%d, length=%d", read, content_length);
-        free(result);
-        result = NULL;
-    } else {
-        result[content_length] = 0;
-        ESP_LOGD(TAG, "%s", result);
-    }
-
-end:
-    free(url);
-    esp_http_client_close(client);
-    esp_http_client_cleanup(client);
-    return result != NULL ? result : NULL;
+    return OpenAI_Request(api_key, endpoint, "application/json", HTTP_METHOD_POST, NULL, (uint8_t *)jsonBody, strlen(jsonBody));
 }
 
 static char *OpenAI_Get(const char *api_key, const char *endpoint)
 {
-    ESP_LOGD(TAG, "\"%s\"", endpoint);
-    char *url = NULL;
-    char *result = NULL;
-    asprintf(&url, "https://api.openai.com/v1/%s", endpoint);
-    OPENAI_ERROR_CHECK(url != NULL, "Failed to allocate url!", NULL);
-    esp_http_client_config_t config = {
-        .url = url,
-        .method = HTTP_METHOD_GET,
-        .timeout_ms = 60000,
-        .crt_bundle_attach = esp_crt_bundle_attach,
-    };
-    esp_http_client_handle_t client = esp_http_client_init(&config);
-    char *headers = NULL;
-    asprintf(&headers, "Bearer %s", api_key);
-    OPENAI_ERROR_CHECK_GOTO(headers != NULL, "Failed to allocate headers!", end);
-    esp_http_client_set_header(client, "Authorization", headers);
-    free(headers);
-
-    esp_err_t err = esp_http_client_open(client, 0);
-    OPENAI_ERROR_CHECK_GOTO(err == ESP_OK, "Failed to open client!", end);
-    int content_length = esp_http_client_fetch_headers(client);
-    OPENAI_ERROR_CHECK_GOTO(content_length >= 0, "HTTP client fetch headers failed!", end);
-    result = (char *)malloc(content_length + 1);
-    int read = esp_http_client_read_response(client, result, content_length);
-    if (read != content_length) {
-        ESP_LOGE(TAG, "HTTP_ERROR: read=%d, length=%d", read, content_length);
-        free(result);
-        result = NULL;
-    } else {
-        result[content_length] = 0;
-        ESP_LOGD(TAG, "%s", result);
-    }
-
-end:
-    free(url);
-    esp_http_client_close(client);
-    esp_http_client_cleanup(client);
-    return result != NULL ? result : NULL;
+    return OpenAI_Request(api_key, endpoint, "application/json", HTTP_METHOD_GET, NULL, NULL, 0);
 }
 
 static char *OpenAI_Del(const char *api_key, const char *endpoint)
 {
-    ESP_LOGD(TAG, "\"%s\"", endpoint);
-    char *url = NULL;
-    char *result = NULL;
-    asprintf(&url, "https://api.openai.com/v1/%s", endpoint);
-    OPENAI_ERROR_CHECK(url != NULL, "Failed to allocate url!", NULL);
-    esp_http_client_config_t config = {
-        .url = url,
-        .method = HTTP_METHOD_DELETE,
-        .timeout_ms = 60000,
-        .crt_bundle_attach = esp_crt_bundle_attach,
-    };
-    esp_http_client_handle_t client = esp_http_client_init(&config);
-    char *headers = NULL;
-    asprintf(&headers, "Bearer %s", api_key);
-    OPENAI_ERROR_CHECK_GOTO(headers != NULL, "Failed to allocate headers!", end);
-    esp_http_client_set_header(client, "Authorization", headers);
-    free(headers);
-
-    esp_err_t err = esp_http_client_open(client, 0);
-    OPENAI_ERROR_CHECK_GOTO(err == ESP_OK, "Failed to open client!", end);
-    int content_length = esp_http_client_fetch_headers(client);
-    OPENAI_ERROR_CHECK_GOTO(content_length >= 0, "HTTP client fetch headers failed!", end);
-    result = (char *)malloc(content_length + 1);
-    int read = esp_http_client_read_response(client, result, content_length);
-    if (read != content_length) {
-        ESP_LOGE(TAG, "HTTP_ERROR: read=%d, length=%d", read, content_length);
-        free(result);
-        result = NULL;
-    } else {
-        result[content_length] = 0;
-        ESP_LOGD(TAG, "%s", result);
-    }
-
-end:
-    free(url);
-    esp_http_client_close(client);
-    esp_http_client_cleanup(client);
-    return result != NULL ? result : NULL;
+    return OpenAI_Request(api_key, endpoint, "application/json", HTTP_METHOD_DELETE, NULL, NULL, 0);
 }
 
 OpenAI_t *OpenAICreate(const char *api_key)
