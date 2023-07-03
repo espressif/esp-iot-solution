@@ -502,7 +502,14 @@ int uf2_write_block (uint32_t block_no, uint8_t *data, WriteState *state)
       uint32_t sectionRelativeSector = block_no - FS_START_CLUSTERS_SECTOR;
       // plus 2 for first data cluster offset
       uint32_t fid = info_index_of(2 + sectionRelativeSector / BPB_SECTORS_PER_CLUSTER);
-
+#if 1
+      //Bug workaround: in linux, the OS request write to a different sector if enable wear leveling
+      // Here we need to workaround to make sure the data is written to the correct sector
+      if ( fid == FID_UF2 && data[0] == (uint8_t)'[') {
+        fid = FID_INI;
+        sectionRelativeSector = (info[FID_INI].cluster_start - 2) * BPB_SECTORS_PER_CLUSTER;
+      }
+#endif
       uint32_t fileRelativeSector = sectionRelativeSector - (info[fid].cluster_start-2) * BPB_SECTORS_PER_CLUSTER;
 
       if ( fid == FID_INI )
@@ -530,10 +537,8 @@ int uf2_write_block (uint32_t block_no, uint8_t *data, WriteState *state)
           }
         }
       }
-    } else
-    {
-      return -1;
     }
+    return -1;
   };
 
   if (bl->familyID == BOARD_UF2_FAMILY_ID)
