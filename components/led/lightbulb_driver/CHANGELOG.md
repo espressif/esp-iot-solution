@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.3.3 - 2023-7-04
+
+### Bug Fixes:
+
+* Fixed a compilation problem caused by a macro naming error.
+
 ## v0.3.2 - 2023-6-02
 
 ### Bug Fixes:

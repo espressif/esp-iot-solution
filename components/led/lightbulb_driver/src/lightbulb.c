@@ -483,7 +483,7 @@ esp_err_t lightbulb_init(lightbulb_config_t *config)
         driver_conf = (void *) & (config->driver_conf.bp5758d);
     }
 #endif
-#ifdef CONFIG_ENABLE_BP5758D_DRIVER
+#ifdef CONFIG_ENABLE_BP1658CJ_DRIVER
     if (config->type == DRIVER_BP1658CJ) {
         driver_conf = (void *) & (config->driver_conf.bp1658cj);
     }
@@ -870,7 +870,10 @@ esp_err_t lightbulb_kelvin2percentage(uint16_t kelvin, uint8_t *percentage)
 {
     LIGHTBULB_CHECK(s_lb_obj, "not init", return ESP_ERR_INVALID_ARG);
     LIGHTBULB_CHECK(percentage, "percentage is null", return ESP_ERR_INVALID_ARG);
-    LIGHTBULB_CHECK(kelvin >= s_lb_obj->kelvin_range.min && kelvin <= s_lb_obj->kelvin_range.max, "kelvin out of range", return ESP_ERR_INVALID_ARG);
+
+    if (kelvin >= s_lb_obj->kelvin_range.min && kelvin <= s_lb_obj->kelvin_range.max) {
+        ESP_LOGW(TAG, "kelvin out of range, will be forcibly converted");
+    }
 
     *percentage = kelvin_convert_to_percentage(kelvin);
 
