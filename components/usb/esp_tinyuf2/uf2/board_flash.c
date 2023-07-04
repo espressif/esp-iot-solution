@@ -116,7 +116,7 @@ static void ini_insert_section(const char *section)
   while (*p != '\0') {
     p++;
   }
-  sprintf(p, "[%s]\n", section);
+  sprintf(p, "[%s]\r\n", section);
 }
 
 static void ini_insert_pair(const char *key, const char *value)
@@ -128,7 +128,7 @@ static void ini_insert_pair(const char *key, const char *value)
   while (*p != '\0') {
     p++;
   }
-  sprintf(p, "%s = %s\n", key, value);
+  sprintf(p, "%s = %s\r\n", key, value);
 }
 
 static void ini_gen_from_nvs(const char *part, const char *name)
