@@ -42,6 +42,17 @@ menu "USB Stream"
     config USB_WAITING_AFTER_CONN_MS
         int "usb enum delay time(ms) after device connection"
         default 50
+    config USB_ENUM_FAILED_RETRY
+        bool "usb enum retry if device enum failed"
+        default y
+    config USB_ENUM_FAILED_RETRY_COUNT
+        int "usb enum retry max times, stop retry if times exceed"
+        depends on USB_ENUM_FAILED_RETRY
+        default 10
+    config USB_ENUM_FAILED_RETRY_DELAY_MS
+        int "usb enum retry delay time(ms)"
+        depends on USB_ENUM_FAILED_RETRY
+        default 200
 
     menu "UVC Stream Config"
         config SAMPLE_PROC_TASK_PRIORITY

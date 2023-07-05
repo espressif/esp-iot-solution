@@ -246,11 +246,20 @@ esp_err_t _usb_port_get_speed(hcd_port_handle_t port_hdl, usb_speed_t *port_spee
     return ret;
 }
 
+#ifdef RANDOM_ERROR_TEST
+#include "esp_random.h"
+#endif
 /*------------------------------------------------ USB Pipe Code ----------------------------------------------------*/
 IRAM_ATTR hcd_pipe_event_t _pipe_event_dflt_process(hcd_pipe_handle_t pipe_handle, const char *pipe_name, hcd_pipe_event_t pipe_event)
 {
     UVC_CHECK(pipe_handle != NULL, "pipe handle can not be NULL", pipe_event);
     hcd_pipe_event_t actual_evt = pipe_event;
+
+#ifdef RANDOM_ERROR_TEST
+    if (HCD_PIPE_EVENT_URB_DONE == pipe_event)
+    actual_evt = (esp_random() % 10 > 8) ? HCD_PIPE_EVENT_ERROR_XFER : HCD_PIPE_EVENT_URB_DONE;
+#endif
+
     switch (pipe_event) {
     case HCD_PIPE_EVENT_NONE:
         break;

@@ -126,11 +126,13 @@ static const char *TAG = "USB_STREAM";
 #define ACTION_PORT_DISABLE             BIT2          //disable port if user stop streaming 
 #define ACTION_DEVICE_CONNECT           BIT3          //find the connected device
 #define ACTION_DEVICE_DISCONNECT        BIT4          //lost the connected device
+#define ACTION_DEVICE_ENUM_RECOVER      BIT9          //recover enum the connected device
 #define ACTION_DEVICE_ENUM              BIT10         //enum the connected device
 #define ACTION_PIPE_DFLT_RECOVER        BIT11         //recover pipe from error state
 #define ACTION_PIPE_DFLT_CLEAR          BIT12         //Clear pipe from error state
 #define ACTION_PIPE_DFLT_DISABLE        BIT13         //disable pipe from error state
 #define ACTION_PIPE_XFER_DONE           BIT14         //handle pipe transfer event
+#define ACTION_PIPE_XFER_FAIL           BIT15         //handle pipe transfer event
 
 /********************************************** Helper Functions **********************************************/
 #define USB_CTRL_UVC_COMMIT_REQ(ctrl_req_ptr) ({  \
@@ -2704,9 +2706,11 @@ static uint32_t _usb_pipe_actions_update(hcd_pipe_event_t pipe_evt, uint32_t act
     case HCD_PIPE_EVENT_ERROR_OVERFLOW:
         action_bits |= ACTION_PIPE_DFLT_RECOVER;
         action_bits |= ACTION_PIPE_DFLT_CLEAR;
+        action_bits |= ACTION_PIPE_XFER_FAIL;
         break;
     case HCD_PIPE_EVENT_ERROR_STALL:
         action_bits |= ACTION_PIPE_DFLT_CLEAR;
+        action_bits |= ACTION_PIPE_XFER_FAIL;
         break;
     default:
         break;
@@ -2752,7 +2756,7 @@ static esp_err_t _uvc_uac_device_enum(bool abort_process, bool *waiting_urb_done
     } else if (usb_dev->enum_stage % 2) { // Check if we are in check stage, which is always odd number
         assert(usb_dev->dflt_pipe_hdl); //should not be NULL
         enum_done = hcd_urb_dequeue(usb_dev->dflt_pipe_hdl);
-        assert(enum_done == ctrl_urb); //should be the same urb
+        UVC_CHECK_GOTO(enum_done == ctrl_urb, "urb cleared: enum abort", stage_failed_);
 
         if (enum_transfer->status != USB_TRANSFER_STATUS_COMPLETED) {
             ESP_LOGE(TAG, "Bad transfer status %d", enum_transfer->status);
@@ -2906,6 +2910,10 @@ static void _usb_processing_task(void *arg)
     esp_err_t ret = ESP_OK;
     _event_msg_t evt_msg = {};
     uint32_t action_bits = 0;
+#ifdef CONFIG_USB_ENUM_FAILED_RETRY
+    int enum_retry_delay_ms = 0;
+    int enum_retry_count = 0;
+#endif
     ESP_LOGI(TAG, "USB task start");
     usb_dev->port_hdl = _usb_port_init(&_usb_port_callback, (void *)usb_dev->queue_hdl);
     UVC_CHECK_GOTO(usb_dev->port_hdl != NULL, "USB Port init failed", free_task_);
@@ -2921,6 +2929,12 @@ static void _usb_processing_task(void *arg)
             if (evt_msg._type == PORT_EVENT) {
                 hcd_port_event_t port_actual_evt = _usb_port_event_dflt_process(usb_dev->port_hdl, evt_msg._event.port_event);
                 action_bits = _usb_port_actions_update(port_actual_evt, action_bits);
+#ifdef CONFIG_USB_ENUM_FAILED_RETRY
+                //enum retry count reset to default if new device is connected
+                if (port_actual_evt == HCD_PORT_EVENT_CONNECTION) {
+                    enum_retry_count = CONFIG_USB_ENUM_FAILED_RETRY_COUNT;
+                }
+#endif
             } else if (evt_msg._type == PIPE_EVENT) {
                 hcd_pipe_event_t dflt_pipe_evt = _pipe_event_dflt_process(usb_dev->dflt_pipe_hdl, "default", evt_msg._event.pipe_event);
                 action_bits = _usb_pipe_actions_update(dflt_pipe_evt, action_bits);
@@ -2942,14 +2956,40 @@ static void _usb_processing_task(void *arg)
             vTaskDelay(pdMS_TO_TICKS(10));
             continue;
         }
-        if (usb_dev->state == STATE_DEVICE_ENUM && (action_bits & (ACTION_PORT_RECOVER
-                | ACTION_PORT_DISABLE | ACTION_PIPE_DFLT_CLEAR | ACTION_PIPE_DFLT_RECOVER))) {
-            _uvc_uac_device_enum(true, NULL);
+
+        if (usb_dev->state == STATE_DEVICE_ENUM && (action_bits & ACTION_PIPE_XFER_FAIL)) {
+            // transfer failed during enum process, back to enum action to judge if need retry
+            action_bits |= ACTION_DEVICE_ENUM;
         }
-        if (usb_dev->state == STATE_DEVICE_ACTIVE && (action_bits & (ACTION_PIPE_DFLT_CLEAR
-                | ACTION_PIPE_DFLT_RECOVER | ACTION_PIPE_DFLT_DISABLE))) {
+        if (usb_dev->state == STATE_DEVICE_ENUM && (action_bits & (ACTION_PORT_RECOVER
+            | ACTION_PORT_DISABLE | ACTION_PIPE_DFLT_DISABLE))) {
+            // If user disable, or port error, or disconnect happened, Force end the enum process without retry
+            _uvc_uac_device_enum(true, NULL);
+            action_bits &= ~ACTION_DEVICE_ENUM;
+            action_bits &= ~ACTION_DEVICE_ENUM_RECOVER;
+        }
+        if (usb_dev->state == STATE_DEVICE_ACTIVE && (action_bits & (ACTION_PIPE_XFER_FAIL
+            | ACTION_PIPE_DFLT_CLEAR | ACTION_PIPE_DFLT_RECOVER | ACTION_PIPE_DFLT_DISABLE))) {
+            // If transfer fail or pipe recovering, send a signal to transfer invoker
             xEventGroupSetBits(usb_dev->event_group_hdl, USB_CTRL_PROC_FAILED);
         }
+
+#ifdef CONFIG_USB_ENUM_FAILED_RETRY
+        if (action_bits & ACTION_DEVICE_ENUM_RECOVER) {
+            // we only retry if port not disabled or reconnect during the retry delay
+            if (enum_retry_delay_ms > 0) {
+                enum_retry_delay_ms -= 10;
+                ESP_LOGD(TAG, "USB enum failed, retrying in %d ms", enum_retry_delay_ms);
+                vTaskDelay(pdMS_TO_TICKS(10));
+            } else {
+                ESP_LOGW(TAG, "USB enum failed, retry now");
+                usb_dev->enum_stage = ENUM_STAGE_NONE;
+                action_bits |= ACTION_DEVICE_ENUM;
+                action_bits &= ~ACTION_DEVICE_ENUM_RECOVER;
+            }
+        }
+#endif
+
         if (action_bits & (ACTION_PORT_RECOVER | ACTION_PORT_DISABLE)) {
             ESP_LOGI(TAG, "Recover Stream Task");
             UVC_ENTER_CRITICAL();
@@ -2958,6 +2998,12 @@ static void _usb_processing_task(void *arg)
             if (usb_dev->stream_task_hdl != NULL) {
                 _usb_stream_recover_cb(TIMEOUT_USB_STREAM_DISCONNECT_MS);
             }
+        }
+        if (action_bits & ACTION_PIPE_XFER_FAIL) {
+            // we do nothing here, because all conditions has been handled
+            ESP_LOGD(TAG, "Action: ACTION_PIPE_XFER_FAIL");
+            action_bits &= ~ACTION_PIPE_XFER_FAIL;
+            ESP_LOGD(TAG, "Action: ACTION_PIPE_XFER_FAIL, Done!");
         }
         if (action_bits & ACTION_PIPE_DFLT_RECOVER) {
             ESP_LOGI(TAG, "Action: ACTION_PIPE_DFLT_RECOVER");
@@ -2970,6 +3016,17 @@ static void _usb_processing_task(void *arg)
             }
             action_bits &= ~ACTION_PIPE_DFLT_RECOVER;
             ESP_LOGD(TAG, "Action: ACTION_PIPE_DFLT_RECOVER, Done!");
+        }
+        if (action_bits & ACTION_PIPE_DFLT_CLEAR) {
+            ESP_LOGD(TAG, "Action: ACTION_PIPE_DFLT_CLEAR");
+            hcd_urb_dequeue(usb_dev->dflt_pipe_hdl);
+            ret = hcd_pipe_command(usb_dev->dflt_pipe_hdl, HCD_PIPE_CMD_CLEAR);
+            UVC_CHECK_CONTINUE(ESP_OK == ret, "Default pipe clear failed");
+            action_bits &= ~ACTION_PIPE_DFLT_CLEAR;
+            UVC_ENTER_CRITICAL();
+            usb_dev->state = STATE_DEVICE_ACTIVE;
+            UVC_EXIT_CRITICAL();
+            ESP_LOGD(TAG, "Action: ACTION_PIPE_DFLT_CLEAR, Done!");
         }
         if (action_bits & ACTION_PIPE_DFLT_DISABLE) {
             ESP_LOGI(TAG, "Action: ACTION_PIPE_DFLT_DISABLE");
@@ -3054,11 +3111,25 @@ static void _usb_processing_task(void *arg)
                 ESP_LOGD(TAG, "Action: ACTION_DEVICE_ENUM, Waiting URB Done");
             }
             if (ret != ESP_OK) {
+                action_bits &= ~ACTION_DEVICE_ENUM;
+#ifdef CONFIG_USB_ENUM_FAILED_RETRY
+                // if enum failed, we only retry if port not disabled or recovered
+                if (--enum_retry_count > 0) {
+                    enum_retry_delay_ms = CONFIG_USB_ENUM_FAILED_RETRY_DELAY_MS;
+                    action_bits |= ACTION_DEVICE_ENUM_RECOVER;
+                    ESP_LOGW(TAG, "USB enum failed, retrying in %d ms...", enum_retry_delay_ms);
+                } else {
+                    ESP_LOGE(TAG, "USB enum failed, no more retry");
+                }
+                UVC_ENTER_CRITICAL();
+                usb_dev->state = (action_bits & ACTION_DEVICE_ENUM_RECOVER)?STATE_DEVICE_RECOVER:STATE_DEVICE_ENUM_FAILED;
+                UVC_EXIT_CRITICAL();
+#else
                 // encounter failed, block in enum failed state
                 UVC_ENTER_CRITICAL();
                 usb_dev->state = STATE_DEVICE_ENUM_FAILED;
                 UVC_EXIT_CRITICAL();
-                action_bits &= ~ACTION_DEVICE_ENUM;
+#endif
             } else if (usb_dev->enum_stage == ENUM_STAGE_NONE) {
                 UVC_ENTER_CRITICAL();
                 usb_dev->state = STATE_DEVICE_ACTIVE;
@@ -3067,17 +3138,6 @@ static void _usb_processing_task(void *arg)
                 _usb_stream_connect_cb();
             }
             ESP_LOGD(TAG, "Action: ACTION_DEVICE_ENUM, Done (%d)", enum_stage);
-        }
-        if (action_bits & ACTION_PIPE_DFLT_CLEAR) {
-            ESP_LOGD(TAG, "Action: ACTION_PIPE_DFLT_CLEAR");
-            hcd_urb_dequeue(usb_dev->dflt_pipe_hdl);
-            ret = hcd_pipe_command(usb_dev->dflt_pipe_hdl, HCD_PIPE_CMD_CLEAR);
-            UVC_CHECK_CONTINUE(ESP_OK == ret, "Default pipe clear failed");
-            action_bits &= ~ACTION_PIPE_DFLT_CLEAR;
-            UVC_ENTER_CRITICAL();
-            usb_dev->state = STATE_DEVICE_ACTIVE;
-            UVC_EXIT_CRITICAL();
-            ESP_LOGD(TAG, "Action: ACTION_PIPE_DFLT_CLEAR, Done!");
         }
         if (action_bits & ACTION_PIPE_XFER_DONE) {
             ESP_LOGD(TAG, "Action: ACTION_PIPE_XFER_DONE");
@@ -3089,7 +3149,6 @@ static void _usb_processing_task(void *arg)
             action_bits &= ~ACTION_PIPE_XFER_DONE;
             ESP_LOGD(TAG, "Action: ACTION_PIPE_XFER_DONE, Done!");
         }
-
     }
     if (usb_dev->port_hdl) {
         _usb_port_deinit(usb_dev->port_hdl);
