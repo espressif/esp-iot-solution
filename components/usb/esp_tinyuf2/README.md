@@ -60,6 +60,11 @@ UF2 is a file format developed by Microsoft for [PXT](https://github.com/Microso
 
 ![UF2 Disk](./uf2_disk.png)
 
+## Enable UF2 USB Console
+
+If enable UF2 USB console `(Top) → Component config → TinyUF2 Config → Enable USB Console For log`, the log will be output to the USB Serial port (Output to UART by default).
+
+
 ## Build APP to UF2 format
 
 The new command `idf.py uf2-ota` is added by this component, which can be used to build the APP to UF2 format. After the build is complete, the UF2 file (`${PROJECT_NAME}.uf2`) will be generated in the current `project` directory.

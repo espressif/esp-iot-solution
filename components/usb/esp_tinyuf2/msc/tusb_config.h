@@ -30,6 +30,7 @@
  extern "C" {
 #endif
 
+#include "sdkconfig.h"
 //--------------------------------------------------------------------+
 // Board Specific Configuration
 //--------------------------------------------------------------------+
@@ -98,7 +99,11 @@
 #endif
 
 //------------- CLASS -------------//
+#ifdef CONFIG_ENABLE_UF2_USB_CONSOLE
+#define CFG_TUD_CDC              1
+#else
 #define CFG_TUD_CDC              0
+#endif
 #define CFG_TUD_MSC              1
 #define CFG_TUD_HID              0
 #define CFG_TUD_MIDI             0

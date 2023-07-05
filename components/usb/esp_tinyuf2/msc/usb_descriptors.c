@@ -65,22 +65,37 @@ uint8_t const * tud_descriptor_device_cb(void)
 
 enum
 {
+#ifdef CONFIG_ENABLE_UF2_USB_CONSOLE
+  ITF_NUM_CDC = 0,
+  ITF_NUM_CDC_DATA,
+#endif
   ITF_NUM_MSC,
   ITF_NUM_TOTAL
 };
 
+#define CONFIG_TOTAL_LEN    (TUD_CONFIG_DESC_LEN + TUD_MSC_DESC_LEN)
+
 #define EPNUM_MSC_OUT     0x01
 #define EPNUM_MSC_IN      0x81
+#ifdef CONFIG_ENABLE_UF2_USB_CONSOLE
+#define EPNUM_CDC_NOTIF   0x84
+#define EPNUM_CDC_OUT     0x02
+#define EPNUM_CDC_IN      0x83
+#undef CONFIG_TOTAL_LEN
+#define CONFIG_TOTAL_LEN  (TUD_CONFIG_DESC_LEN + TUD_MSC_DESC_LEN + TUD_CDC_DESC_LEN)
+#endif
 
-#define CONFIG_TOTAL_LEN    (TUD_CONFIG_DESC_LEN + TUD_MSC_DESC_LEN)
 
 uint8_t const desc_fs_configuration[] =
 {
   // Config number, interface count, string index, total length, attribute, power in mA
   TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, CONFIG_TOTAL_LEN, 0x00, 100),
-
+#ifdef CONFIG_ENABLE_UF2_USB_CONSOLE
+  // Interface number, string index, EP notification address and size, EP data address (out, in) and size.
+  TUD_CDC_DESCRIPTOR(ITF_NUM_CDC, 4, EPNUM_CDC_NOTIF, 8, EPNUM_CDC_OUT, EPNUM_CDC_IN, 64),
+#endif
   // Interface number, string index, EP Out & EP In address, EP size
-  TUD_MSC_DESCRIPTOR(ITF_NUM_MSC, 4, EPNUM_MSC_OUT, EPNUM_MSC_IN, 64),
+  TUD_MSC_DESCRIPTOR(ITF_NUM_MSC, 5, EPNUM_MSC_OUT, EPNUM_MSC_IN, 64),
 };
 
 // Invoked when received GET CONFIGURATION DESCRIPTOR
@@ -103,7 +118,8 @@ char const* string_desc_arr [] =
   CONFIG_TUSB_MANUFACTURER,                  // 1: Manufacturer
   CONFIG_TUSB_PRODUCT     ,                  // 2: Product
   CONFIG_UF2_SERIAL_NUM   ,                  // 3: Serials, should use chip ID
-  "UF2 MSC"               ,                  // 4: MSC Interface
+  "UF2 CDC"               ,                  // 4: CDC Interface
+  "UF2 MSC"               ,                  // 5: MSC Interface
 };
 
 static uint16_t _desc_str[32];

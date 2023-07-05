@@ -1,3 +1,10 @@
+set(src_cdc)
+set(inc_cdc)
+if(CONFIG_ENABLE_UF2_USB_CONSOLE)
+set(src_cdc "cdc/cdc.c" "cdc/tusb_cdc_acm.c" "cdc/tusb_console.c" "cdc/vfs_tinyusb.c")
+set(inc_cdc "cdc")
+endif()
+
 idf_component_register(
                     SRCS
                     "uf2/board_flash.c"
@@ -5,10 +12,11 @@ idf_component_register(
                     "msc/msc.c"
                     "msc/usb_descriptors.c"
                     "esp_tinyuf2.c"
-                    INCLUDE_DIRS "." "msc"
+                    ${src_cdc}
+                    INCLUDE_DIRS "." "msc" ${inc_cdc}
                     PRIV_INCLUDE_DIRS "private_include"
                     REQUIRES app_update
-                    PRIV_REQUIRES usb nvs_flash)
+                    PRIV_REQUIRES usb nvs_flash vfs esp_ringbuf)
 
 idf_component_get_property(tusb_lib leeebo__tinyusb_src COMPONENT_LIB)
 cmake_policy(SET CMP0079 NEW)

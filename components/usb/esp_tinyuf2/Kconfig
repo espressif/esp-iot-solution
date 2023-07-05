@@ -5,6 +5,9 @@ menu "TinyUF2 Config"
         default y if IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
         help
             Enable UF2, only support ESP SoC with USB-OTG
+    config ENABLE_UF2_USB_CONSOLE
+        bool "Enable USB Console For log"
+        default n
     config UF2_DISK_SIZE_MB
         int "USB Virtual Disk size(MB)"
         depends on ENABLE_UF2_FLASHING
