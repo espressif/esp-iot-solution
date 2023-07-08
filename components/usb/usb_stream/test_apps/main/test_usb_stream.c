@@ -202,6 +202,8 @@ TEST_CASE("test uvc specified resolution", "[devkit][uvc]")
         TEST_ASSERT_EQUAL(ESP_OK, uvc_frame_size_list_get(uvc_frame_list, NULL, NULL));
         TEST_ASSERT_EQUAL(FRAME_WIDTH, uvc_frame_list[frame_index].width);
         TEST_ASSERT_EQUAL(FRAME_HEIGHT, uvc_frame_list[frame_index].height);
+        // get some frames before stop
+        vTaskDelay(2000 / portTICK_PERIOD_MS);
         /* test streaming stop */
         TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_stop());
         free(uvc_frame_list);

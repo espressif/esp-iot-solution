@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v1.0.4 - 2023-07-05
+
+### Enhancements:
+
+* USB:
+  * Add retry mechanism if device enumeration failed
+
 ## v1.0.3 - 2023-06-01
 
 ### Bug Fixes:
