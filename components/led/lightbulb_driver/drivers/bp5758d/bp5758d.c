@@ -259,7 +259,7 @@ esp_err_t bp5758d_set_rgbcw_channel(uint16_t value_r, uint16_t value_g, uint16_t
     return iic_driver_write(addr, _value, sizeof(_value));
 }
 
-esp_err_t bp5758d_init(driver_bp5758d_t *config)
+esp_err_t bp5758d_init(driver_bp5758d_t *config, void(*hook_func)(void *))
 {
     esp_err_t err = ESP_OK;
     BP5758D_CHECK(config, "config is null", return ESP_ERR_INVALID_ARG);

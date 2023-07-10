@@ -300,7 +300,7 @@ esp_err_t kp18058_set_rgbcw_channel(uint16_t value_r, uint16_t value_g, uint16_t
     return _write(addr, _value, sizeof(_value));
 }
 
-esp_err_t kp18058_init(driver_kp18058_t *config)
+esp_err_t kp18058_init(driver_kp18058_t *config, void(*hook_func)(void *))
 {
     esp_err_t err = ESP_OK;
 

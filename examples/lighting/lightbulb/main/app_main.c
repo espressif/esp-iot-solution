@@ -115,7 +115,7 @@ void app_main(void)
         .led_num = CONFIG_WS2812_LED_NUM,
         .ctrl_io = CONFIG_WS2812_LED_GPIO,
     };
-    ws2812_init(&ws2812);
+    ws2812_init(&ws2812, NULL);
     /* Red */
     ws2812_set_rgb_channel(255, 0, 0);
     vTaskDelay(pdMS_TO_TICKS(2000) * 1);

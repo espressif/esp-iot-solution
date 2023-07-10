@@ -111,9 +111,10 @@ typedef enum {
  * @brief Initialize kp18058 output
  *
  * @param config Driver configuration
+ * @param hook_func Hook function, which will be called inside the driver. e.g. to notify that config have been changed internally
  * @return esp_err_t
  */
-esp_err_t kp18058_init(driver_kp18058_t *config);
+esp_err_t kp18058_init(driver_kp18058_t *config, void(*hook_func)(void *));
 
 /**
  * @brief Set any channel output

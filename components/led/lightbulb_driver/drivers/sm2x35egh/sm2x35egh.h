@@ -140,9 +140,10 @@ typedef enum {
  * @brief Initialize sm2235egh/sm2335egh output
  *
  * @param config Driver configuration
+ * @param hook_func Hook function, which will be called inside the driver. e.g. to notify that config have been changed internally
  * @return esp_err_t
  */
-esp_err_t sm2x35egh_init(driver_sm2x35egh_t *config);
+esp_err_t sm2x35egh_init(driver_sm2x35egh_t *config, void(*hook_func)(void *));
 
 /**
  * @brief Set any channel output

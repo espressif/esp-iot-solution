@@ -96,7 +96,7 @@ static void cleanup(void)
     }
 }
 
-esp_err_t ws2812_init(driver_ws2812_t *config)
+esp_err_t ws2812_init(driver_ws2812_t *config, void(*hook_func)(void *))
 {
     esp_err_t err = ESP_OK;
     WS2812_CHECK(config, "config is null", return ESP_ERR_INVALID_ARG);

@@ -1,4 +1,10 @@
 # ChangeLog
+## v0.4.0 - 2023-7-10
+
+### Enhancements:
+
+* The PWM driver will update the timer resolution based on the incoming PWM frequency to accommodate a wider range of frequencies.
+* Remove the blocking check of the timer status in `lightbulb_basic_effect_start` to allow for subsequent calls within the callback.
 
 ## v0.3.3 - 2023-7-04
 

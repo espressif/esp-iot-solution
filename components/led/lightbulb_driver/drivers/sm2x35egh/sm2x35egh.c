@@ -212,7 +212,7 @@ esp_err_t sm2x35egh_set_rgbcw_channel(uint16_t value_r, uint16_t value_g, uint16
     return iic_driver_write(addr, _value, sizeof(_value));
 }
 
-esp_err_t sm2x35egh_init(driver_sm2x35egh_t *config)
+esp_err_t sm2x35egh_init(driver_sm2x35egh_t *config, void(*hook_func)(void *))
 {
     esp_err_t err = ESP_OK;
 
