@@ -103,12 +103,37 @@ class target_c:
             self.secs = filter_secs(secs, ('.iram1.', '.text.', '.literal.'))
         self.isecs = strip_secs(self.secs, self.fsecs)
 
+        self.has_exclude_iram = True
+        self.has_exclude_dram = True
+
     def __str__(self):
         s = 'lib=%s\nfile=%s\lib_path=%s\ndesc=%s\nsecs=%s\nfsecs=%s\nisecs=%s\n'%(\
             self.lib, self.file, self.lib_path, self.desc, self.secs, self.fsecs,\
             self.isecs)
         return s
 
+class target2_c:
+    def __init__(self, lib, file, iram_secs):
+        self.lib   = lib
+        self.file  = file
+
+        self.fsecs = iram_secs
+        if file != '*':
+            self.desc  = '*%s:%s.*'%(lib, file.split('.')[0])
+        else:
+            self.desc  = '*%s:'%(lib)
+        self.isecs = iram_secs
+
+        self.has_exclude_iram = False
+        self.has_exclude_dram = False
+
+    def __str__(self):
+        s = 'lib=%s\nfile=%s\lib_path=%s\ndesc=%s\nsecs=%s\nfsecs=%s\nisecs=%s\n'%(\
+            self.lib, self.file, self.lib_path, self.desc, self.secs, self.fsecs,\
+            self.isecs)
+        return s
+
+# Remove specific functions from IRAM
 class relink_c:
     def __init__(self, input, library_file, object_file, function_file, sdkconfig_file, missing_function_info):
         self.filter = filter_c(input)
@@ -236,6 +261,102 @@ class relink_c:
         lines = self.__replace__(lines)
         open(output, 'w+').write('\n'.join(lines))
 
+# Link specific functions to IRAM
+class relink2_c:
+    def __init__(self, input, library_file, object_file, function_file, sdkconfig_file, missing_function_info):
+        self.filter = filter_c(input)
+
+        rodata_exclude = list()
+        iram_exclude   = list()
+        flash_exclude  = list()
+        rodata = str()
+        iram   = str()
+        flash  = str()
+
+        libraries = configuration.generator(library_file, object_file, function_file, sdkconfig_file, missing_function_info, espidf_objdump)
+        self.targets = list()
+        for i in libraries.libs:
+            lib = libraries.libs[i]
+
+            if self.filter.match(lib.name):
+                continue
+
+            for j in lib.objs:
+                obj = lib.objs[j]
+                if obj.section_all == False:
+                    self.targets.append(target_c(lib.name, lib.path, obj.name,
+                                                ' '.join(obj.sections())))
+                else:
+                    self.targets.append(target2_c(lib.name, obj.name, obj.sections()))
+
+        for t in self.targets:
+            # print(t.lib, t.file, t.lib_path, t.fsecs, t.desc, t.secs, t.isecs)
+            rodata += '    %s(.rodata .rodata.* .sdata2 .sdata2.* .srodata .srodata.*)\n'%(t.desc)
+            if t.has_exclude_dram:
+                rodata_exclude.append(t.desc)
+            iram   += '    %s(%s)\n'%(t.desc, ' '.join(t.fsecs))
+            if t.has_exclude_iram:
+                iram_exclude.append(t.desc)
+
+        self.rodata_ex  = '    *(EXCLUDE_FILE(%s) .rodata'%(' '.join(rodata_exclude))
+        self.rodata_ex += ' EXCLUDE_FILE(%s) .rodata.*'%(' '.join(rodata_exclude))
+        self.rodata_ex += ' EXCLUDE_FILE(%s) .sdata2'%(' '.join(rodata_exclude))
+        self.rodata_ex += ' EXCLUDE_FILE(%s) .sdata2.*'%(' '.join(rodata_exclude))
+        self.rodata_ex += ' EXCLUDE_FILE(%s) .srodata'%(' '.join(rodata_exclude))
+        self.rodata_ex += ' EXCLUDE_FILE(%s) .srodata.*)'%(' '.join(rodata_exclude))
+        self.rodata_in  = rodata
+
+        self.iram_ex  = '    *(EXCLUDE_FILE(%s) .iram1'%(' '.join(iram_exclude))
+        self.iram_ex += ' EXCLUDE_FILE(%s) .iram1.*)'%(' '.join(iram_exclude))
+        self.iram_in  = iram
+
+        # print(self.rodata_in)
+        # print(self.rodata_ex)
+        # print(self.iram_in)
+        # print(self.iram_ex)
+
+    def save(self, input, output):
+        lines = open(input).read().splitlines()
+        lines = self.__replace__(lines)
+        open(output, 'w+').write('\n'.join(lines))
+
+    def __replace__(self, lines):
+        iram_start = False
+
+        new_lines = list()
+        iram_cache = list()
+        for i in range(0, len(lines)):
+            l = lines[i]
+
+            if iram_start == False:
+                if '*(.iram1 .iram1.*)' in l:
+                    new_lines.append('%s\n'%(self.iram_in))
+                    iram_start = True
+                elif ' _text_start = ABSOLUTE(.);' in l:
+                    new_lines.append('%s\n\n%s'%(l, self.iram_ex))
+                    continue
+                elif '*(.stub .gnu.warning' in l:
+                    new_lines += iram_cache
+                    iram_cache = list()
+            else:
+                if '} > iram0_0_seg' in l:
+                    iram_start = False
+                
+            if iram_start == False:
+                new_lines.append(l)
+            else:
+                skip_str = [ 'libriscv.a:interrupt', 'libriscv.a:vectors' ]
+                need_skip = False
+                for s in skip_str:
+                    if s in l:
+                       need_skip = True
+                       break
+
+                if need_skip == False:
+                    iram_cache.append(l)
+        
+        return new_lines
+
 def main():
     argparser = argparse.ArgumentParser(description='Relinker script generator')
 
@@ -283,8 +404,12 @@ def main():
     argparser.add_argument(
         '--missing_function_info',
         help='Print error information instead of throwing exception when missing function',
-        default=False,
-        type=bool)
+        action='store_true')
+
+    argparser.add_argument(
+        '--link_to_iram',
+        help='True: Link specific functions to IRAM, False: Remove specific functions from IRAM',
+        action='store_true')
 
     args = argparser.parse_args()
 
@@ -304,7 +429,12 @@ def main():
     global espidf_objdump
     espidf_objdump = args.objdump
 
-    relink = relink_c(args.input, args.library, args.object, args.function, args.sdkconfig, args.missing_function_info)
+    if args.link_to_iram == False:
+        relink = relink_c(args.input, args.library, args.object, args.function, args.sdkconfig, args.missing_function_info)
+        
+    else:
+        relink = relink2_c(args.input, args.library, args.object, args.function, args.sdkconfig, args.missing_function_info)
+    
     relink.save(args.input, args.output)
 
 if __name__ == '__main__':

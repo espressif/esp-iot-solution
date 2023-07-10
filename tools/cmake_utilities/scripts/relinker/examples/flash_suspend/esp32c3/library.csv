@@ -1,0 +1,16 @@
+library,path
+libesp_hw_support.a,./esp-idf/esp_hw_support/libesp_hw_support.a
+libesp_system.a,./esp-idf/esp_system/libesp_system.a
+libesp_timer.a,./esp-idf/esp_timer/libesp_timer.a
+libfreertos.a,./esp-idf/freertos/libfreertos.a
+libhal.a,./esp-idf/hal/libhal.a
+libriscv.a,./esp-idf/riscv/libriscv.a
+libspi_flash.a,./esp-idf/spi_flash/libspi_flash.a
+libesp_pm.a,./esp-idf/esp_pm/libesp_pm.a
+libesp_phy.a,./esp-idf/esp_phy/libesp_phy.a
+libnewlib.a,./esp-idf/newlib/libnewlib.a
+libesp_wifi.a,./esp-idf/esp_wifi/libesp_wifi.a
+libesp_netif.a,./esp-idf/esp_netif/libesp_netif.a
+liblwip.a,./esp-idf/lwip/liblwip.a
+libpp.a,$IDF_PATH/components/esp_wifi/lib/esp32c3/libpp.a
+libnet80211.a,$IDF_PATH/components/esp_wifi/lib/esp32c3/libnet80211.a
