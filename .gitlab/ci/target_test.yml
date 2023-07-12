@@ -113,27 +113,6 @@ components_test_openai:
     TEST_TARGET: esp32s3
     TEST_FOLDER: components/openai
 
-tools_test_cmake_utilities:
-  extends:
-    - .pytest_template
-    - .rules:build:tools_cmake_utilities_test_apps
-  needs:
-    - job: "build_tools_cmake_utilities_test_apps"
-      artifacts: true
-      optional: true
-  parallel:
-    matrix:
-      - IDF_TARGET: esp32s3
-        IDF_VERSION: "4.4"
-      - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.0"
-  tags:
-    - ${IDF_TARGET}
-  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
-  variables:
-    TEST_TARGET: ${IDF_TARGET}
-    TEST_FOLDER: tools/cmake_utilities
-
 components_test_esp_lcd_panel_io_additions:
   extends:
     - .pytest_template
@@ -154,3 +133,74 @@ components_test_esp_lcd_panel_io_additions:
     TEST_TARGET: esp32s3
     TEST_FOLDER: components/display/lcd/esp_lcd_panel_io_additions
     TEST_ENV: esp32_s3_lcd_ev_board
+
+examples_test_usb_uf2_nvs:
+  extends:
+    - .pytest_template
+    - .rules:build:example_usb_device_usb_uf2_nvs
+  needs:
+    - job: "build_example_usb_device_usb_uf2_nvs"
+      artifacts: true
+      optional: true
+  parallel:
+    matrix:
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "5.0"
+        ENV_TAG: usb-otg_camera
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "4.4"
+        ENV_TAG: usb-otg_camera
+  tags:
+    - ${IDF_TARGET}
+    - ${ENV_TAG}
+  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
+  variables:
+    TEST_TARGET: ${IDF_TARGET}
+    TEST_FOLDER: examples/usb/device/usb_uf2_nvs
+    TEST_ENV: ${ENV_TAG}
+
+examples_test_usb_uf2_ota:
+  extends:
+    - .pytest_template
+    - .rules:build:example_usb_device_usb_uf2_ota
+  needs:
+    - job: "build_example_usb_device_usb_uf2_ota"
+      artifacts: true
+      optional: true
+  parallel:
+    matrix:
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "5.0"
+        ENV_TAG: usb-otg_camera
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "4.4"
+        ENV_TAG: usb-otg_camera
+  tags:
+    - ${IDF_TARGET}
+    - ${ENV_TAG}
+  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
+  variables:
+    TEST_TARGET: ${IDF_TARGET}
+    TEST_FOLDER: examples/usb/device/usb_uf2_ota
+    TEST_ENV: ${ENV_TAG}
+
+tools_test_cmake_utilities:
+  extends:
+    - .pytest_template
+    - .rules:build:tools_cmake_utilities_test_apps
+  needs:
+    - job: "build_tools_cmake_utilities_test_apps"
+      artifacts: true
+      optional: true
+  parallel:
+    matrix:
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "4.4"
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "5.0"
+  tags:
+    - ${IDF_TARGET}
+  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
+  variables:
+    TEST_TARGET: ${IDF_TARGET}
+    TEST_FOLDER: tools/cmake_utilities

@@ -29,9 +29,11 @@
 #include "esp_partition.h"
 #include "esp_ota_ops.h"
 #include "esp_mac.h"
+#include "esp_heap_caps.h"
 #include "board_flash.h"
 #include "nvs.h"
 #include "esp_inih.h"
+#include "esp_tinyuf2.h"
 
 #define PRINTF(...)           ESP_LOGI("uf2", __VA_ARGS__)
 #define PRINTFE(...)          ESP_LOGE("uf2", __VA_ARGS__)
@@ -51,7 +53,7 @@
   }while(0)
 
 static uint32_t _fl_addr = FLASH_CACHE_INVALID_ADDR;
-static uint8_t _fl_buf[FLASH_CACHE_SIZE] __attribute__((aligned(4)));
+static uint8_t *_fl_buf = NULL;
 static bool _if_restart = false;
 static update_complete_cb_t _complete_cb = NULL;
 static esp_partition_t const* _part_ota = NULL;
@@ -79,6 +81,7 @@ void board_dfu_complete(void)
 
   if (_if_restart) {
     /* code */
+    esp_tinyuf2_uninstall();
     PRINTF("UF2 Flashing complete, restart...");
     esp_restart();
   }
@@ -104,6 +107,19 @@ void board_flash_init(esp_partition_subtype_t subtype, const char *label, update
   if (runing_ota_ptt == _part_ota) {
     PRINTFE("Can not write to running partition");
     assert(0);
+  }
+  _fl_buf = heap_caps_malloc(FLASH_CACHE_SIZE, MALLOC_CAP_32BIT);
+  if (_fl_buf == NULL || (uint32_t)_fl_buf % 4 != 0) {
+    PRINTFE("Can not allocate memory for flash cache");
+    assert(0);
+  }
+}
+
+void board_flash_deinit(void)
+{
+  if (_fl_buf) {
+    free(_fl_buf);
+    _fl_buf = NULL;
   }
 }
 
@@ -227,6 +243,18 @@ void board_flash_nvs_init(const char *part_name, const char *namespace_name, nvs
     _ini_file_dummy = (char *)calloc(1, CFG_UF2_INI_FILE_SIZE);
   }
   ini_gen_from_nvs(part_name, namespace_name);
+}
+
+void board_flash_nvs_deinit(void)
+{
+  if (_ini_file) {
+    free(_ini_file);
+    _ini_file = NULL;
+  }
+  if (_ini_file_dummy) {
+    free(_ini_file_dummy);
+    _ini_file_dummy = NULL;
+  }
 }
 
 void board_flash_nvs_update(const char *ini_str)
