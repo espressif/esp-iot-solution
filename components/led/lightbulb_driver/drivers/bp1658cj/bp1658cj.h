@@ -106,9 +106,10 @@ typedef enum {
  * @brief Initialize bp1658cj output
  *
  * @param config Driver configuration
+ * @param hook_func Hook function, which will be called inside the driver. e.g. to notify that config have been changed internally
  * @return esp_err_t
  */
-esp_err_t bp1658cj_init(driver_bp1658cj_t *config);
+esp_err_t bp1658cj_init(driver_bp1658cj_t *config, void(*hook_func)(void *));
 
 /**
  * @brief Set any channel output

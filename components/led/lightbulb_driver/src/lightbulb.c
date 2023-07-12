@@ -1304,7 +1304,7 @@ lightbulb_works_mode_t lightbulb_get_mode(void)
     return result;
 }
 
-esp_err_t  lightbulb_update_status_variable(lightbulb_status_t *new_status, bool trigger)
+esp_err_t lightbulb_update_status_variable(lightbulb_status_t *new_status, bool trigger)
 {
     LIGHTBULB_CHECK(new_status, "new_status is null", return ESP_FAIL);
     LIGHTBULB_CHECK(s_lb_obj, "not init", return ESP_ERR_INVALID_ARG);
@@ -1398,10 +1398,6 @@ esp_err_t lightbulb_basic_effect_start(lightbulb_effect_config_t *config)
                 vTimerSetTimerID(s_lb_obj->effect_timer, NULL);
             }
             xTimerStart(s_lb_obj->effect_timer, 0);
-            /* Make sure the timer has started running */
-            while (!CHECK_EFFECT_TIMER_IS_ACTIVE()) {
-                vTaskDelay(1);
-            }
             ESP_LOGI(TAG, "The auto-stop timer will trigger after %d ms.", config->total_ms);
         } else {
             ESP_LOGI(TAG, "The auto-stop timer is not running, the effect will keep running.");

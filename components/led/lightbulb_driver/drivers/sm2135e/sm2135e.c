@@ -225,7 +225,7 @@ esp_err_t sm2135e_set_wy_channel(uint8_t value_w, uint8_t value_y)
     return iic_driver_write(addr, _value, sizeof(_value));
 }
 
-esp_err_t sm2135e_init(driver_sm2135e_t *config)
+esp_err_t sm2135e_init(driver_sm2135e_t *config, void(*hook_func)(void *))
 {
     esp_err_t err = ESP_OK;
 
