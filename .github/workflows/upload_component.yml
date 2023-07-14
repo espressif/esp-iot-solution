@@ -27,6 +27,7 @@ jobs:
             components/knob;
             components/led/led_indicator;
             components/led/lightbulb_driver;
+            components/motor/esp_simplefoc;
             components/openai;
             components/usb/esp_tinyuf2;
             components/usb/iot_usbh;

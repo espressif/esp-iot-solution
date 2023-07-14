@@ -79,6 +79,10 @@
   - "components/led/lightbulb_driver/**/*"
   - "components/tools/cmake_utilities/package_manager.cmake"
 
+.patterns-components_esp_simplefoc: &patterns-components_esp_simplefoc
+  - "components/motor/esp_simplefoc/**/*"
+  - "components/tools/cmake_utilities/package_manager.cmake"
+
 .patterns-components_motor_servo: &patterns-components_motor_servo
   - "components/motor/servo/**/*"
 
@@ -902,6 +906,15 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_led_lightbulb_driver
+
+.rules:build:components_motor_esp_simplefoc_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_esp_simplefoc
 
 .rules:build:components_motor_servo_test:
   rules:
