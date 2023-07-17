@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v2.5.2 - 2023-7-18
+
+### Enhancements:
+
+* Set "event" member to BUTTON_PRESS_REPEAT before calling the BUTTON_PRESS_REPEAT callback
+
 ## v2.5.1 - 2023-3-14
 
 ### Enhancements:
