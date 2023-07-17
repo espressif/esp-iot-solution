@@ -89,9 +89,11 @@ uint8_t board_usb_get_serial(uint8_t serial_id[16]);
 
 // Initialize flash for DFU
 void board_flash_init(esp_partition_subtype_t subtype, const char *label, update_complete_cb_t complete_cb, bool if_restart);
+void board_flash_deinit(void);
 
 // Initialize flash for NVS
 void board_flash_nvs_init(const char *part_name, const char *namespace_name, nvs_modified_cb_t modified_cb);
+void board_flash_nvs_deinit(void);
 
 // Update DFU RAM to NVS
 void board_flash_nvs_update(const char *ini_str);

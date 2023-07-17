@@ -37,7 +37,8 @@ void app_main(void)
         ESP_LOGI(TAG, "Restarting in %d seconds...", i);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
-
+    // uninstall UF2 OTA, restore to normal USB device
+    esp_tinyuf2_uninstall();
     ESP_LOGI(TAG, "Restarting now");
     /* restart to new app */
     esp_restart();

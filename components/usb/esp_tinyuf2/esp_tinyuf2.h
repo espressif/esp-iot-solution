@@ -70,6 +70,15 @@ typedef struct {
  */
 esp_err_t esp_tinyuf2_install(tinyuf2_ota_config_t *ota_config, tinyuf2_nvs_config_t *nvs_config);
 
+/**
+ * @brief Uninstall tinyuf2, only reset USB to default state
+ * @note not release memory due to tinyusb not support teardown
+ * 
+ * @return esp_err_t
+ *      - ESP_OK  Success
+ */
+esp_err_t esp_tinyuf2_uninstall(void);
+
 #ifdef __cplusplus
 }
 #endif

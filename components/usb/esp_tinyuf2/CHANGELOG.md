@@ -1,5 +1,10 @@
 # ChangeLog
 
+## v0.2.0 - 2023-07-17
+
+* Support `esp_tinyuf2_uninstall` API (Restore the USB hardware to default state, Not teardown TinyUSB stack, )
+* Support target test
+
 ## v0.1.0 - 2023-07-05
 
 * Support USB Console for log (disabled by default)
