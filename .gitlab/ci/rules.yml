@@ -266,6 +266,9 @@
 .patterns-example_usb_device_usb_webcam: &patterns-example_usb_device_usb_webcam
   - "examples/usb/device/usb_webcam/**/*"
 
+.patterns-example_usb_device_usb_hid_device: &patterns-example_usb_device_usb_hid_device
+  - "examples/usb/device/usb_hid_device/**/*"
+
 .patterns-example_usb_device_usb_msc_wireless_disk: &patterns-example_usb_device_usb_msc_wireless_disk
   - "examples/usb/device/usb_msc_wireless_disk/**/*"
 
@@ -624,6 +627,15 @@
       changes: *patterns-components_sensors_sensor_hub
     - <<: *if-dev-push
       changes: *patterns-example_sensors_sensor_hub_monitor
+
+.rules:build:example_usb_device_usb_hid_device:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_usb_device_usb_hid_device
 
 .rules:build:example_usb_device_usb_webcam:
   rules:

@@ -1,0 +1,26 @@
+menu "USB HID Device Example"
+
+    choice HID_SUBCLASS
+        prompt "HID Device"
+        default SUBCLASS_MOUSE
+
+        config SUBCLASS_MOUSE
+            bool "Mouse" 
+        config SUBCLASS_KEYBOARD
+            bool "Keyboard"
+    endchoice
+
+    config TUSB_VID
+        hex "USB Device VID"
+        default 0x303A
+    config TUSB_PID
+        hex "USB Device PID"
+        default 0x8000
+    config TUSB_MANUFACTURER
+        string "USB Device Manufacture"
+        default "Espressif"
+    config TUSB_PRODUCT
+        string "Product Name"
+        default "HID Demo"
+
+endmenu
