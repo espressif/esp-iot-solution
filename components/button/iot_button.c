@@ -115,6 +115,7 @@ static void button_handler(button_dev_t *btn)
         if (btn->button_level == btn->active_level) {
             btn->event = (uint8_t)BUTTON_PRESS_DOWN;
             CALL_EVENT_CB(BUTTON_PRESS_DOWN);
+            btn->event = (uint8_t)BUTTON_PRESS_REPEAT;
             btn->repeat++;
             CALL_EVENT_CB(BUTTON_PRESS_REPEAT); // repeat hit
             btn->ticks = 0;
