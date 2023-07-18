@@ -85,6 +85,28 @@ components_test_at581x:
     TEST_FOLDER: components/sensors/radar
     TEST_ENV: ${ENV_TAG}
 
+components_test_esp_msc_ota:
+  extends:
+    - .pytest_template
+    - .rules:build:components_usb_esp_msc_ota_test_apps
+  needs:
+    - job: "build_components_usb_esp_msc_ota_test_apps"
+      artifacts: true
+      optional: false
+  parallel:
+    matrix:
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "5.1"
+        ENV_TAG: "msc-ota"
+  tags:
+    - ${IDF_TARGET}
+    - ${ENV_TAG}
+  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
+  variables:
+    TEST_TARGET: ${IDF_TARGET}
+    TEST_FOLDER: components/usb/esp_msc_ota
+    TEST_ENV: ${ENV_TAG}
+
 components_test_usb_camera:
   extends:
     - .pytest_template

@@ -34,6 +34,10 @@ components/sensors/radar/at581x/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1
 
+components/usb/esp_msc_ota/test_apps:
+  enable:
+    - if: SOC_USB_OTG_SUPPORTED == 1
+
 components/display/lcd/esp_lcd_gc9b71/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1

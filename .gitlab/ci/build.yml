@@ -553,6 +553,14 @@ build_components_openai_test_apps:
   variables:
     EXAMPLE_DIR: components/openai/test_apps
 
+build_components_usb_esp_msc_ota_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_usb_esp_msc_ota_test_apps
+  variables:
+    IMAGE: espressif/idf:release-v5.1
+    EXAMPLE_DIR: components/usb/esp_msc_ota/test_apps
+
 build_components_usb_usb_stream_test_apps:
   extends:
     - .build_examples_template

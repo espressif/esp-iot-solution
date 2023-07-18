@@ -38,6 +38,7 @@ jobs:
             components/openai;
             components/sensors/humiture/aht20;
             components/sensors/radar/at581x;
+            components/usb/esp_msc_ota;
             components/usb/esp_tinyuf2;
             components/usb/iot_usbh;
             components/usb/iot_usbh_cdc;
