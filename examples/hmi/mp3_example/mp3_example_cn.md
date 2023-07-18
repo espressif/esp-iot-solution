@@ -64,6 +64,8 @@ IRQ | 33
 - 运行 `make menuconfig`(Make) 或者 `idf.py menuconfig`(CMake) 选择使用 ADF 播放音频文件，目录：`IoT Example - LittlevGL MP3 Example->Use esp-adf to play song`
 - 保存配置并运行 `make -j8 flash`(Make) 或者 `idf.py flash`(CMake) 编译、烧录程序到设备
 
+>注： 本示例工程使用 ESP-ADF Commit ID 为：08de80bb0f76539a8bfff8871925759ceca141df
+
 #### SD-Card、Audio 使用
 
 - 音频文件目前只支持 MP3 格式，MP3 文件可以放置在 SD-Card 的根目录下或者二级目录下，当前 Example 支持最多 20 个音频文件

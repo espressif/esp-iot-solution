@@ -64,6 +64,8 @@ IRQ | 33
 - Run `make menuconfig`(Make) or `idf.py menuconfig`(CMake) and select ADF for playing the audio files. To do this, please go to `IoT Example - LittlevGL MP3 Example->Use esp-adf to play song`.
 - Save the configuration and run `make -j8 flash`(Make) or `idf.py flash`(CMake) to build the example and flash it to the device.
 
+>Note: This example project uses the ESP-ADF Commit ID: 08de80bb0f76539a8bfff8871925759ceca141df
+
 #### SD-Card and audio related notes
 
 - Currently, only MP3 audio files are supported.
