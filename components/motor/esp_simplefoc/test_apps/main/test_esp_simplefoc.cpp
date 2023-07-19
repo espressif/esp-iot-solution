@@ -10,9 +10,6 @@
 #include <string>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "freertos/queue.h"
-#include "freertos/timers.h"
-#include "freertos/semphr.h"
 #include "esp_log.h"
 #include "esp_simplefoc.h"
 #include "unity.h"
@@ -49,13 +46,6 @@ float angle_sensor_scl_42_sda_41_get()
     return sensor_as5600_getAngle(1);
 }
 
-// LowsideCurrentSense cs = LowsideCurrentSense(0.005f, 10, 4, 5, 6);
-
-// float target_value = 0.0f;
-// Commander command = Commander(Serial);
-// void doTarget(char *cmd) { command.scalar(&target_value, cmd); }
-// void onMotor(char *cmd) { command.motor(&motor, cmd); }
-
 TEST_CASE("test esp_simplefoc openloop control", "[single motor][openloop][14pp][mcpwm]")
 {
 
@@ -75,8 +65,7 @@ TEST_CASE("test esp_simplefoc openloop control", "[single motor][openloop][14pp]
     motor.controller = MotionControlType::velocity_openloop;
 
     motor.init();
-    while (1)
-    {
+    while (1) {
         motor.move(1.2f);
         vTaskDelay(1 / portTICK_PERIOD_MS);
     }
@@ -101,8 +90,7 @@ TEST_CASE("test esp_simplefoc openloop control", "[single motor][openloop][14pp]
     motor.controller = MotionControlType::velocity_openloop;
 
     motor.init();
-    while (1)
-    {
+    while (1) {
         motor.move(1.2f);
         vTaskDelay(1 / portTICK_PERIOD_MS);
     }
@@ -127,8 +115,7 @@ TEST_CASE("test esp_simplefoc openloop control", "[single motor][openloop][14pp]
     motor.controller = MotionControlType::velocity_openloop;
 
     motor.init();
-    while (1)
-    {
+    while (1) {
         motor.move(1.2f);
         vTaskDelay(1 / portTICK_PERIOD_MS);
     }
@@ -169,8 +156,7 @@ TEST_CASE("test esp_simplefoc position control", "[single motor][position][14pp]
     motor.init();    // initialize motor
     motor.initFOC(); // align sensor and start FOC
 
-    while (1)
-    {
+    while (1) {
         motor.loopFOC();
         motor.move(2.5f);
         vTaskDelay(1 / portTICK_PERIOD_MS);
@@ -212,8 +198,7 @@ TEST_CASE("test esp_simplefoc position control", "[single motor][position][14pp]
     motor.init();    // initialize motor
     motor.initFOC(); // align sensor and start FOC
 
-    while (1)
-    {
+    while (1) {
         motor.loopFOC();
         motor.move(2.5f);
         vTaskDelay(1 / portTICK_PERIOD_MS);
@@ -255,12 +240,54 @@ TEST_CASE("test esp_simplefoc position control", "[single motor][position][14pp]
     motor.init();    // initialize motor
     motor.initFOC(); // align sensor and start FOC
 
-    while (1)
-    {
+    while (1) {
         motor.loopFOC();
         motor.move(2.5f);
         vTaskDelay(1 / portTICK_PERIOD_MS);
     }
+}
+
+TEST_CASE("test esp_simplefoc position control deinit", "[single motor][position][14pp][ledc][deinit]")
+{
+
+    BLDCMotor motor = BLDCMotor(14);
+    BLDCDriver3PWM driver = BLDCDriver3PWM(17, 16, 15);
+    GenericSensor sensor = GenericSensor(angle_sensor_scl_1_sda_2_get, angle_sensor_scl_1_sda_2_init);
+    SimpleFOCDebug::enable(); // enbale debug
+    Serial.begin(115200);
+
+    sensor.init(); // enable as5600 angle sensor
+    motor.linkSensor(&sensor);
+    driver.voltage_power_supply = 12;
+    driver.voltage_limit = 11;
+    driver.init({4, 5, 6}); // enable 3pwm driver, use ledc driver {4,5,6}
+    motor.linkDriver(&driver);
+    motor.controller = MotionControlType::angle; // set position control mode
+
+    // set velocity pid
+    motor.PID_velocity.P = 0.9f;
+    motor.PID_velocity.I = 2.2f;
+    motor.voltage_limit = 11;
+    motor.voltage_sensor_align = 2;
+
+    // set angle pid
+    motor.LPF_velocity.Tf = 0.05;
+    motor.P_angle.P = 15.5;
+    motor.P_angle.D = 0.05;
+    motor.velocity_limit = 200;
+
+    Serial.begin(115200);
+
+    motor.useMonitoring(Serial);
+    motor.init();    // initialize motor
+    motor.initFOC(); // align sensor and start FOC
+
+    for (int i = 0; i < 10000; i++) {
+        motor.loopFOC();
+        motor.move(2.5f);
+    }
+
+    driver.deinit(); // deinit driver
 }
 
 TEST_CASE("test esp_simplefoc velocity control", "[single motor][velocity][14pp][auto]")
@@ -298,8 +325,7 @@ TEST_CASE("test esp_simplefoc velocity control", "[single motor][velocity][14pp]
     motor.init();    // initialize motor
     motor.initFOC(); // align sensor and start FOC
 
-    while (1)
-    {
+    while (1) {
         motor.loopFOC();
         motor.move(2.5f);
         vTaskDelay(1 / portTICK_PERIOD_MS);
@@ -341,8 +367,7 @@ TEST_CASE("test esp_simplefoc openloop control", "[two motors][openloop][7pp][au
     motor2.controller = MotionControlType::velocity_openloop;
     motor2.init();
 
-    while (1)
-    {
+    while (1) {
         motor1.move(1.2f);
         motor2.move(1.2f);
         vTaskDelay(1 / portTICK_PERIOD_MS);
@@ -411,8 +436,7 @@ TEST_CASE("test esp_simplefoc position control", "[two motors][position][7pp][au
     motor2.init();    // initialize motor
     motor2.initFOC(); // align sensor and start FOC
 
-    while (1)
-    {
+    while (1) {
         motor1.move(1.2f);
         motor2.move(1.2f);
         motor1.loopFOC();

@@ -2,18 +2,14 @@ set(SRC_FILES
     "port/esp/esp_hal_misc.cpp"
     "port/esp/esp_hal_serial.cpp"
     "port/esp/esp_hal_gpio.cpp"
-    "port/esp/esp_hal_mcpwm.cpp"
-    "port/esp/esp_hal_adc.cpp"
-    "port/esp/esp_fast_math.cpp"
-    "port/esp/esp_bldc_3pwm.cpp"
-    "port/arduino/Print.cpp"
-    "port/arduino/Stream.cpp"
+    "port/esp/esp_hal_bldc_3pwm.cpp"
+    "port/esp/esp_app_fmath.cpp"
+    "port/esp/esp_app_print.cpp"
     "port/angle_sensor/sensor_as5600.c")
 
-set(INC_FILES "port/arduino/include/" "port/esp/include/" "port/angle_sensor")
-
+set(INC_FILES "port/esp/include/" "port/angle_sensor")
 set(IGNORE_FILES "port/esp/esp_hal_adc.cpp" "port/esp/esp_hal_mcpwm.cpp"
-                 "port/esp/esp_bldc_3pwm.cpp")
+                 "port/esp/esp_hal_bldc_3pwm.cpp")
 
 idf_component_register(
   SRCS

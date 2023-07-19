@@ -10,6 +10,9 @@ dependencies:
   idf:
     version: '>=5.0'
   espressif/arduino-foc:
-    version: "^2.3.0"
+    version: ">=2.3.0~1"
     public: true
   espressif/iqmath: "^1.11.0"
+examples:
+  - path: ../../../examples/motor/foc_openloop_control
+  - path: ../../../examples/motor/foc_velocity_control

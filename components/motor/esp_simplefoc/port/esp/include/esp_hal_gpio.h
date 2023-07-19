@@ -7,56 +7,63 @@
 #pragma once
 
 #include <stdint.h>
-#include "Arduino.h"
+#include "esp_platform.h"
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
 
-    typedef struct _IoRecord
-    {
-        gpio_config_t conf;
-        gpio_num_t number;
-    } IoRecord;
+typedef struct _IoRecord {
+    gpio_config_t conf; /*!< gpio pin configuration */
+    gpio_num_t number;  /*!< gpio pin number */
+} IoRecord;
 
-    /**
-     * @description: Set GPIO Mode. Arduino style function.
-     * @param {uint8_t} pin
-     * @param {uint8_t} mode
-     * @return {*}
-     */
-    void pinMode(uint8_t pin, uint8_t mode);
+/**
+ * @brief Set GPIO Mode. Arduino style function.
+ *
+ * @param pin gpio pin number
+ * @param mode gpio pin mode
+ */
+void pinMode(uint8_t pin, uint8_t mode);
 
-    /**
-     * @description: Write GPIO Value. Arduino style function.
-     * @param {uint8_t} pin
-     * @param {uint8_t} val
-     * @return {*}
-     */
-    void digitalWrite(uint8_t pin, uint8_t val);
+/**
+ * @brief Write GPIO Value. Arduino style function.
+ *
+ * @param pin gpio pin number
+ * @param val gpio pin level
+ */
+void digitalWrite(uint8_t pin, uint8_t val);
 
-    /**
-     * @description: Read GPIO Value. Arduino style function.
-     * @param {uint8_t} pin
-     * @return {*}
-     */
-    int digitalRead(uint8_t pin);
+/**
+ * @brief Read GPIO Value. Arduino style function.
+ *
+ * @param pin gpio pin number
+ * @return
+ *     - 0 Low level
+ *     - 1 High level
+ */
+int digitalRead(uint8_t pin);
 
-    /**
-     * @description: Set GPIO Interrupt. Arduino style function.
-     * @param {uint8_t} pin
-     * @return {*}
-     */
-    uint8_t digitalPinToInterrupt(uint8_t pin);
+/**
+ * @brief Set GPIO Interrupt. Arduino style function.
+ *
+ * @param pin gpio pin number
+ * @return uint8_t gpio pin number
+ * @note
+ *      This function only returns the pin number that needs to be interrupted by binding.
+ *
+ */
+uint8_t digitalPinToInterrupt(uint8_t pin);
 
-    /**
-     * @description: Bind funtion to GPIO Interrupt. Arduino style function.
-     * @param {uint8_t} pin
-     * @param {int} mode
-     * @return {*}
-     */
-    void attachInterrupt(uint8_t pin, void (*handler)(void), int mode);
+/**
+ * @brief Bind funtion to GPIO Interrupt. Arduino style function.
+ *
+ * @param pin gpio pin number
+ * @param handler interrupt function
+ * @param mode interrupt triggering mode
+ */
+void attachInterrupt(uint8_t pin, void (*handler)(void), int mode);
 
 #ifdef __cplusplus
 }

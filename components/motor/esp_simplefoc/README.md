@@ -1,6 +1,6 @@
 [![Component Registry](https://components.espressif.com/components/espressif/esp_simplefoc/badge.svg)](https://components.espressif.com/components/espressif/esp_simplefoc)
 
-## ESP32-IDF SimpleFOC Component
+## ESP-IDF SimpleFOC Component
  
 Features:
 

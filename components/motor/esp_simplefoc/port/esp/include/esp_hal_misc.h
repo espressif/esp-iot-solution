@@ -10,13 +10,44 @@ extern "C"
 {
 #endif
 
-    unsigned long micros();
-    unsigned long millis();
-    void delayMicroseconds(uint32_t us);
-    void delay(uint32_t ms);
-    float min(float a, float b);
+/**
+ * @brief Get time in ms since boot.
+ *
+ * @return number of microseconds since underlying timer has been started
+ */
+
+unsigned long micros();
+
+/**
+ * @brief Get time in us since boot.
+ *
+ * @return number of milliseconds since underlying timer has been started
+ */
+unsigned long millis();
+
+/**
+ * @brief Delay us.
+ *
+ * @param us microsecond
+ */
+void delayMicroseconds(uint32_t us);
+
+/**
+ * @brief Rtos ms delay function
+ *
+ * @param ms millisecond
+ */
+void delay(uint32_t ms);
+
+/**
+ * @brief Minimum function.
+ *
+ * @param a numbers that need to be compared
+ * @param b numbers that need to be compared
+ * @return minimum value
+ */
+float min(float a, float b);
 
 #ifdef __cplusplus
 }
 #endif
-

@@ -299,6 +299,26 @@ build_example_lighting_lightbulb:
   variables:
     EXAMPLE_DIR: examples/lighting/lightbulb
 
+build_example_motor_foc_openloop_control:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_motor_foc_openloop_control
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.0
+  variables:
+    EXAMPLE_DIR: examples/motor/foc_openloop_control
+
+build_example_motor_foc_velocity_control:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_motor_foc_velocity_control
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.0
+  variables:
+    EXAMPLE_DIR: examples/motor/foc_velocity_control
+
 build_example_ota_simple_ota_example:
   extends:
     - .build_examples_template

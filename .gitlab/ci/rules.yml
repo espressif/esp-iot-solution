@@ -257,6 +257,12 @@
 .patterns-example_lighting_lightbulb: &patterns-example_lighting_lightbulb
   - "examples/lighting/lightbulb/**/*"
 
+.patterns-example_motor_foc_openloop_control: &patterns-example_motor_foc_openloop_control
+  - "examples/motor/foc_openloop_control/**/*"
+
+.patterns-example_motor_foc_velocity_control: &patterns-example_motor_foc_velocity_control
+  - "examples/motor/foc_velocity_control/**/*"
+
 .patterns-example_ota_simple_ota_example: &patterns-example_ota_simple_ota_example
   - "examples/ota/simple_ota_example/**/*"
 
@@ -568,6 +574,28 @@
       changes: *patterns-components_led_lightbulb_driver
     - <<: *if-dev-push
       changes: *patterns-example_lighting_lightbulb
+
+.rules:build:example_motor_foc_openloop_control:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_esp_simplefoc
+    - <<: *if-dev-push
+      changes: *patterns-example_motor_foc_openloop_control
+
+.rules:build:example_motor_foc_velocity_control:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_esp_simplefoc
+    - <<: *if-dev-push
+      changes: *patterns-example_motor_foc_velocity_control
 
 .rules:build:example_ota_simple_ota_example:
   rules:
