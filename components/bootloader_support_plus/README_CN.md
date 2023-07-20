@@ -13,6 +13,7 @@ bootloader support plus 是乐鑫基于 [ESP-IDF](https://github.com/espressif/e
 | ESP32-C2 | [![alt text](https://camo.githubusercontent.com/bd5f5f82b920744ff961517942e99a46699fee58737cd9b31bf56e5ca41b781b/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f2d737570706f727465642d677265656e)](https://camo.githubusercontent.com/bd5f5f82b920744ff961517942e99a46699fee58737cd9b31bf56e5ca41b781b/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f2d737570706f727465642d677265656e) | [![alt text](https://camo.githubusercontent.com/bd5f5f82b920744ff961517942e99a46699fee58737cd9b31bf56e5ca41b781b/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f2d737570706f727465642d677265656e)](https://camo.githubusercontent.com/bd5f5f82b920744ff961517942e99a46699fee58737cd9b31bf56e5ca41b781b/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f2d737570706f727465642d677265656e) |
 | ESP32 | [![alt text](https://camo.githubusercontent.com/bd5f5f82b920744ff961517942e99a46699fee58737cd9b31bf56e5ca41b781b/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f2d737570706f727465642d677265656e)](https://camo.githubusercontent.com/bd5f5f82b920744ff961517942e99a46699fee58737cd9b31bf56e5ca41b781b/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f2d737570706f727465642d677265656e) |[![alt text](https://camo.githubusercontent.com/bd5f5f82b920744ff961517942e99a46699fee58737cd9b31bf56e5ca41b781b/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f2d737570706f727465642d677265656e)](https://camo.githubusercontent.com/bd5f5f82b920744ff961517942e99a46699fee58737cd9b31bf56e5ca41b781b/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f2d737570706f727465642d677265656e)|
 | ESP32C6 | N/A |[![alt text](https://camo.githubusercontent.com/bd5f5f82b920744ff961517942e99a46699fee58737cd9b31bf56e5ca41b781b/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f2d737570706f727465642d677265656e)](https://camo.githubusercontent.com/bd5f5f82b920744ff961517942e99a46699fee58737cd9b31bf56e5ca41b781b/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f2d737570706f727465642d677265656e)|
+| ESP32H2 | N/A |[![alt text](https://camo.githubusercontent.com/bd5f5f82b920744ff961517942e99a46699fee58737cd9b31bf56e5ca41b781b/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f2d737570706f727465642d677265656e)](https://camo.githubusercontent.com/bd5f5f82b920744ff961517942e99a46699fee58737cd9b31bf56e5ca41b781b/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f2d737570706f727465642d677265656e)|
 
 ## 压缩率
 
@@ -94,9 +95,18 @@ bootloader support plus 是乐鑫基于 [ESP-IDF](https://github.com/espressif/e
      espressif/bootloader_support_plus: ">=0.1.0"
    ```
 
-   关于组件管理器的更多说明请参考 [Espressif's documentation](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/tools/idf-component-manager.html)。
+   关于组件管理器的更多说明请参考 [Espressif's documentation](https://docs.espressif.com/projects/idf-component-manager/en/latest/index.html)。
 
-6. 创建支持压缩更新的分区表。默认情况下，分区表中类型为 `app` 的最后一个分区用作存储压缩固件的分区。因为压缩固件的大小将小于原始固件的大小，所以可以将分区设置得更小。
+6. 创建支持压缩更新的分区表。默认情况下，分区表中类型为 `app` 的最后一个分区用作存储压缩固件的分区。因为压缩固件的大小将小于原始固件的大小，所以可以将该分区设置得更小。下述为压缩更新中使用到的一个典型的分区表示例：
+
+      ```
+      # Name,   Type, SubType, Offset,   Size, Flags
+      phy_init, data, phy,       ,        4k
+      nvs,      data, nvs,       ,        28k
+      otadata,  data, ota,       ,        8k
+      ota_0,    app,  ota_0,     ,        1216k,
+      ota_1,    app,  ota_1,     ,        640k,
+      ```
 
 7. 在工程目录中通过  `idf.py menuconfig -> Bootloader config (Custom) -> Enable compressed OTA support` 使能压缩更新的支持。
 

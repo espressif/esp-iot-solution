@@ -1,4 +1,10 @@
-version: "0.2.0"
+version: "0.2.1"
+targets:
+  - esp32c2
+  - esp32c3
+  - esp32c6
+  - esp32
+  - esp32h2
 description: Provide extra bootloader support, now support upgrading the firmware by decompressing the OTA firmware in the bootloader stage.
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/bootloader_support_plus
 issues: https://github.com/espressif/esp-iot-solution/issues

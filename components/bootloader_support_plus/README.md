@@ -13,6 +13,7 @@ The `bootloader support plus` is an enhanced bootloader based on [custom_bootloa
 | ESP32-C2 | [![alt text](https://camo.githubusercontent.com/bd5f5f82b920744ff961517942e99a46699fee58737cd9b31bf56e5ca41b781b/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f2d737570706f727465642d677265656e)](https://camo.githubusercontent.com/bd5f5f82b920744ff961517942e99a46699fee58737cd9b31bf56e5ca41b781b/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f2d737570706f727465642d677265656e) | [![alt text](https://camo.githubusercontent.com/bd5f5f82b920744ff961517942e99a46699fee58737cd9b31bf56e5ca41b781b/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f2d737570706f727465642d677265656e)](https://camo.githubusercontent.com/bd5f5f82b920744ff961517942e99a46699fee58737cd9b31bf56e5ca41b781b/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f2d737570706f727465642d677265656e) |
 | ESP32 | [![alt text](https://camo.githubusercontent.com/bd5f5f82b920744ff961517942e99a46699fee58737cd9b31bf56e5ca41b781b/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f2d737570706f727465642d677265656e)](https://camo.githubusercontent.com/bd5f5f82b920744ff961517942e99a46699fee58737cd9b31bf56e5ca41b781b/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f2d737570706f727465642d677265656e) |[![alt text](https://camo.githubusercontent.com/bd5f5f82b920744ff961517942e99a46699fee58737cd9b31bf56e5ca41b781b/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f2d737570706f727465642d677265656e)](https://camo.githubusercontent.com/bd5f5f82b920744ff961517942e99a46699fee58737cd9b31bf56e5ca41b781b/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f2d737570706f727465642d677265656e)|
 | ESP32C6 | N/A |[![alt text](https://camo.githubusercontent.com/bd5f5f82b920744ff961517942e99a46699fee58737cd9b31bf56e5ca41b781b/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f2d737570706f727465642d677265656e)](https://camo.githubusercontent.com/bd5f5f82b920744ff961517942e99a46699fee58737cd9b31bf56e5ca41b781b/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f2d737570706f727465642d677265656e)|
+| ESP32H2 | N/A |[![alt text](https://camo.githubusercontent.com/bd5f5f82b920744ff961517942e99a46699fee58737cd9b31bf56e5ca41b781b/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f2d737570706f727465642d677265656e)](https://camo.githubusercontent.com/bd5f5f82b920744ff961517942e99a46699fee58737cd9b31bf56e5ca41b781b/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f2d737570706f727465642d677265656e)|
 
 ## Compression ratio
 
@@ -96,9 +97,18 @@ In order to use compressed updates, you need to make the following changes:
      espressif/bootloader_support_plus: ">=0.1.0"
    ```
 
-   More is in [Espressif's documentation](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/tools/idf-component-manager.html).
+   More is in [Espressif's documentation](https://docs.espressif.com/projects/idf-component-manager/en/latest/index.html).
 
-6. Create a partition table that supports compressed updates. By default, the last partition of type `app` in the partition table is used as the partition for storing compressed firmware. Because the size of the compressed firmware will be smaller than that of the original firmware, the partition for storing the compressed firmware can be set smaller.
+6. Create a partition table that supports compressed updates. By default, the last partition of type `app` in the partition table is used as the partition for storing compressed firmware. Because the size of the compressed firmware will be smaller than that of the original firmware, the partition for storing the compressed firmware can be set smaller. The following is a typical partition table used in compressed updates:
+
+   ```
+   # Name,   Type, SubType, Offset,   Size, Flags
+   phy_init, data, phy,       ,        4k
+   nvs,      data, nvs,       ,        28k
+   otadata,  data, ota,       ,        8k
+   ota_0,    app,  ota_0,     ,        1216k,
+   ota_1,    app,  ota_1,     ,        640k,
+   ```
 
 7. Enable compressed OTA support by running `idf.py menuconfig -> Bootloader config (Custom) -> Enable compressed OTA support` in the project directory.
 
