@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <string.h>
 #include "rom/ets_sys.h"
 #include "esp_wifi.h"
 #include "esp_log.h"

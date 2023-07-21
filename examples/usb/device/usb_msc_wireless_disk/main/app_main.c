@@ -3,11 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <inttypes.h>
+#include "ff.h"
 #include "diskio.h"
 #include "esp_vfs_fat.h"
 #include "driver/sdmmc_defs.h"
 #include "tinyusb.h"
 #include "sdmmc_cmd.h"
+#include "esp_idf_version.h"
 
 static const char *TAG = "usb_msc_wireless";
 
@@ -50,7 +53,11 @@ static esp_err_t init_fat(sdmmc_card_t **card_handle, const char *base_path)
         .max_files = 9,
         .allocation_unit_size = CONFIG_WL_SECTOR_SIZE
     };
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
     ret = esp_vfs_fat_spiflash_mount_rw_wl(base_path, "storage", &mount_config, &wl_handle_1);
+#else
+    ret = esp_vfs_fat_spiflash_mount(base_path, "storage", &mount_config, &wl_handle_1);
+#endif
 
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to mount FATFS (%s)", esp_err_to_name(ret));
@@ -154,13 +161,8 @@ void app_main(void)
 #endif
 
     ESP_LOGI(TAG, "USB MSC initialization");
-    const tinyusb_config_t tusb_cfg = {
-        .device_descriptor = NULL,
-        .string_descriptor = NULL,
-        .external_phy = false,
-        .configuration_descriptor = NULL,
-        .self_powered = false,
-    };
+
+    const tinyusb_config_t tusb_cfg = {0};
 
     ESP_ERROR_CHECK(tinyusb_driver_install(&tusb_cfg));
     ESP_LOGI(TAG, "USB MSC initialization DONE");

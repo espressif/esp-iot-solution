@@ -336,9 +336,12 @@ build_example_usb_device_usb_msc_wireless_disk:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_device_usb_msc_wireless_disk
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
   variables:
     EXAMPLE_DIR: examples/usb/device/usb_msc_wireless_disk
-    IMAGE: espressif/idf:release-v5.0
 
 build_example_usb_device_usb_surface_dial:
   extends:
