@@ -1,4 +1,4 @@
-[![Documentation Status](https://readthedocs.com/projects/espressif-esp-iot-solution/badge/?version=latest)](https://docs.espressif.com/projects/espressif-esp-iot-solution/en/latest/?badge=latest)
+[![Documentation Status](https://dl.espressif.com/AE/docs/docs_latest.svg)](https://docs.espressif.com/projects/espressif-esp-iot-solution/en/latest/esp32/index.html)
 
 ## Espressif IoT Solution Overview
 
