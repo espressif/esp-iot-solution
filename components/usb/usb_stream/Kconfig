@@ -69,6 +69,12 @@ menu "USB Stream"
         config UVC_PRINT_PROBE_RESULT
             bool "Print video cur probe result"
             default y
+        config UVC_PRINT_PAYLOAD_HEX
+            bool "Print video payload in hex format"
+            default n
+        config UVC_CHECK_HEADER_EOH
+            bool "Check EOH bit in payload header"
+            default n
         config UVC_CHECK_BULK_JPEG_HEADER
             bool "Check JPEG (ff d8) header in bulk payload"
             default y

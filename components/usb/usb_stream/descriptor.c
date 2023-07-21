@@ -439,7 +439,6 @@ void parse_ac_feature_desc(const uint8_t *buff, uint8_t *source_idx, uint8_t *fe
     }
     uint8_t ch_num = 0;
     for (size_t i = 0; i < (desc->bLength-7)/desc->bControlSize; i += desc->bControlSize) {
-        printf("\tbmaControls[ch%d] 0x%x\n", i, desc->bmaControls[i]);
         if ((desc->bmaControls[i] & AUDIO_FEATURE_CONTROL_VOLUME) && volume_ch) {
             *volume_ch = *volume_ch | (1 << ch_num);
         }

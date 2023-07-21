@@ -49,7 +49,13 @@ static EventGroupHandle_t s_evt_handle;
 #define DEMO_UVC_FRAME_WIDTH        480
 #define DEMO_UVC_FRAME_HEIGHT       320
 #endif
-#define DEMO_UVC_XFER_BUFFER_SIZE   (45 * 1024) //Double buffer
+
+#ifdef CONFIG_IDF_TARGET_ESP32S2
+#define DEMO_UVC_XFER_BUFFER_SIZE (45 * 1024)
+#else
+#define DEMO_UVC_XFER_BUFFER_SIZE (55 * 1024)
+#endif
+
 #if (ENABLE_UVC_WIFI_XFER)
 #include "app_wifi.h"
 #include "app_httpd.h"
