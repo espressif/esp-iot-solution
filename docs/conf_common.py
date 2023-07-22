@@ -23,7 +23,6 @@ github_repo = 'espressif/esp-iot-solution'
 html_context['github_user'] = 'espressif'
 html_context['github_repo'] = 'esp-iot-solution'
 
-idf_targets = ['esp32']
 languages = ['en', 'zh_CN']
 
 project_homepage = 'https://github.com/espressif/esp-iot-solution'

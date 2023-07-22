@@ -10,7 +10,7 @@ variables:
   script:
     - cd docs
     - python -m pip install -r requirements.txt 
-    - build-docs -t $DOCTGT -bs $DOC_BUILDERS -l $DOCLANG build
+    - build-docs -bs $DOC_BUILDERS -l $DOCLANG build
     - ./check_lang_folder_sync.sh
 
 build_docs_html:
@@ -28,6 +28,4 @@ build_docs_html:
   parallel:
     matrix:
       - DOCLANG: "en"
-        DOCTGT: "esp32"
       - DOCLANG: "zh_CN"
-        DOCTGT: "esp32"
