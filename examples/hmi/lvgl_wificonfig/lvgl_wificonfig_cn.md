@@ -7,7 +7,7 @@
 ## 示例环境
 
 - 硬件：
-	* [ESP32\_LCD\_EB\_V1](https://docs.espressif.com/projects/espressif-esp-dev-kits/en/latest/esp32/esp32-lcdkit/index.html) 开发板（该示例需要搭配使用 [ESP32 DevKitC](https://docs.espressif.com/projects/esp-idf/en/stable/hw-reference/modules-and-boards.html#esp32-devkitc-v4) 开发板）
+	* [ESP32\_LCD\_EB\_V1](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32/esp32-lcdkit/index.html) 开发板（该示例需要搭配使用 [ESP32 DevKitC](https://docs.espressif.com/projects/esp-idf/en/stable/hw-reference/modules-and-boards.html#esp32-devkitc-v4) 开发板）
 	* 屏幕（2.8 inch、240*320 pixel、ILI9341 LCD + XPT2046 Touch）
 - 软件：
 	* [esp-iot-solution](https://github.com/espressif/esp-iot-solution)

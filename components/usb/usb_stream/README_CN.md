@@ -13,7 +13,7 @@
 
 ### USB Stream 用户指南
 
-请参考：https://docs.espressif.com/projects/espressif-esp-iot-solution/zh_CN/latest/usb/usb_stream.html
+请参考：https://docs.espressif.com/projects/esp-iot-solution/zh_CN/latest/usb/usb_stream.html
 
 ### 添加组件到工程
 

@@ -127,7 +127,7 @@ Boards 组件的结构如下：
 .. _esp32s3-devkitc-v1: https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/hw-reference/esp32s3/user-guide-devkitc-1.html
 
 .. |esp32s3_usb_otg_ev| image:: ../../_static/pic_product_esp32_s3_otg.png
-.. _esp32s3_usb_otg_ev: https://docs.espressif.com/projects/espressif-esp-dev-kits/en/latest/esp32s3/esp32-s3-usb-otg/index.html
+.. _esp32s3_usb_otg_ev: https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-usb-otg/index.html
 
 添加新的开发板
 ----------------

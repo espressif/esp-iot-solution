@@ -13,7 +13,7 @@ Features:
 
 ### USB Stream User Guide
 
-Please refer: https://docs.espressif.com/projects/espressif-esp-iot-solution/en/latest/usb/usb_stream.html
+Please refer: https://docs.espressif.com/projects/esp-iot-solution/en/latest/usb/usb_stream.html
 
 ### Add component to your project
 

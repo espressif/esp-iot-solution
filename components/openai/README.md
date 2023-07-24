@@ -6,7 +6,7 @@ The `openai` component is a porting version of [OpenAI-ESP32](https://github.com
 
 ### Open AI User Guide
 
-Please refer: https://docs.espressif.com/projects/espressif-esp-iot-solution/en/latest/ai/openai.html
+Please refer: https://docs.espressif.com/projects/esp-iot-solution/en/latest/ai/openai.html
 
 ### Add component to your project
 

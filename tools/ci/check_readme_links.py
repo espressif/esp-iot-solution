@@ -31,7 +31,10 @@ from pathlib import Path
 EXCLUDE_DOCS_LIST = ["examples/hmi/lvgl_example/components/lv_examples/lv_examples/**.md",
                      "examples/hmi/lvgl_example/components/lv_examples/lv_examples/src/lv_demo_keypad_encoder/**.md",
                      "examples/hmi/lvgl_wificonfig/lvgl_wificonfig_cn.md",
-                     "examples/get-started/blink/README.md"]
+                     "examples/get-started/blink/README.md",
+                    "components/gui/lvgl_gui/lvgl/**/*.md",
+                     "components/gui/lvgl_gui/lvgl/*.md",
+                     "components/gui/lvgl_gui/lvgl/.github/**/*.md"]
 
 # The apple apps links are not accessible from the company network for some reason
 EXCLUDE_URL_LIST = ["https://lvgl.io/","https://www.espressif.com/zh-hans/products/socs/esp32","http://www.espressif.com/zh-hans/support/download/all","https://www.espressif.com/zh-hans/support/download/all","https://github.com/lvgl/lv_examples/blob/master/src/lv_demo_printer/screenshot1.gif?raw=true"]
@@ -126,7 +129,8 @@ def get_md_links(folder):
 
 def check_readme_links(args):
 
-    links = get_md_links('examples')
+    # Get all links from the readme files
+    links = get_md_links('')
     print('Found {} links'.format(len(links)))
 
     errors = []

@@ -1,4 +1,4 @@
-[![Documentation Status](https://dl.espressif.com/AE/docs/docs_latest.svg)](https://docs.espressif.com/projects/espressif-esp-iot-solution/zh_CN/latest/esp32/index.html)
+[![Documentation Status](https://dl.espressif.com/AE/docs/docs_latest.svg)](https://docs.espressif.com/projects/esp-iot-solution/zh_CN)
 
 ## Espressif IoT Solution 概述
 
@@ -14,8 +14,8 @@ ESP-IoT-Solution 包含的内容如下:
 
 ## 文档中心
 
-- 中文：https://docs.espressif.com/projects/espressif-esp-iot-solution/zh_CN
-- English: https://docs.espressif.com/projects/espressif-esp-iot-solution/en
+- 中文：https://docs.espressif.com/projects/esp-iot-solution/zh_CN
+- English: https://docs.espressif.com/projects/esp-iot-solution/en
 
 ## 快速参考
 
@@ -35,7 +35,7 @@ ESP 系列 SoC 采用 40nm 工艺制成，具有最佳的功耗性能、射频�
 
 | ESP-IoT-Solution | 依赖的 ESP-IDF |                  主要变更              |            文档              |        支持状态        |
 | :--------------: | :------------: | :----------------------------------: |:------------------------------: | ---------------------- |
-|      master      |   >= v4.4 |     支持组件管理器，增加新的芯片支持     | [Docs online](https://docs.espressif.com/projects/espressif-esp-iot-solution/zh_CN) | 新功能开发分支         |
+|      master      |   >= v4.4 |     支持组件管理器，增加新的芯片支持     | [Docs online](https://docs.espressif.com/projects/esp-iot-solution/zh_CN) | 新功能开发分支         |
 |   release/v1.1   |     v4.0.1     | IDF 版本更新，删除已经移动到其它仓库的代码  | [v1.1 Overview](https://github.com/espressif/esp-iot-solution/tree/release/v1.1#esp32-iot-solution-overview) | 备份，停止维护 |
 |   release/v1.0   |     v3.2.2     | 历史版本                               | [v1.0 Overview](https://github.com/espressif/esp-iot-solution/tree/release/v1.0#esp32-iot-solution-overview) | 备份，停止维护  |
 
@@ -77,7 +77,7 @@ ESP-IoT-Solution 中注册的组件如下:
 
 #### 从 ESP-IoT-Solution 仓库获取组件
 
-如果您想为 `ESP-IoT-Solution` 中的组件或示例[贡献代码](https://docs.espressif.com/projects/espressif-esp-iot-solution/zh_CN/latest/contribute/index.html)，或者想基于 `ESP-IoT-Solution` 中的示例开发项目，您可以通过以下步骤下载 ESP-IoT-Solution 代码仓库:
+如果您想为 `ESP-IoT-Solution` 中的组件或示例[贡献代码](https://docs.espressif.com/projects/esp-iot-solution/zh_CN/latest/contribute/index.html)，或者想基于 `ESP-IoT-Solution` 中的示例开发项目，您可以通过以下步骤下载 ESP-IoT-Solution 代码仓库:
 
 * 如果选择 `master` 版本，可使用以下指令获取代码：
 
@@ -106,9 +106,9 @@ ESP-IoT-Solution 中注册的组件如下:
 
 ### 其它参考资源
 
-- 最新版的文档：https://docs.espressif.com/projects/espressif-esp-iot-solution/zh_CN ，该文档是由本仓库 [docs](./docs) 目录 构建得到；
+- 最新版的文档：https://docs.espressif.com/projects/esp-iot-solution/zh_CN ，该文档是由本仓库 [docs](./docs) 目录 构建得到；
 - ESP-IDF 编程指南 https://docs.espressif.com/projects/esp-idf/zh_CN ，请参考 ESP-IoT-Solution 依赖的版本；
 - 可以在 [ESP Component Registry](https://components.espressif.com/)中找到 `ESP-IoT-Solution` 中的组件和其他已注册的组件;
-- 可以前往 [esp32.com](www.esp32.com) 论坛 提问，挖掘社区资源；
+- 可以前往 [esp32.com](https://www.esp32.com/) 论坛 提问，挖掘社区资源；
 - 如果你在使用中发现了错误或者需要新的功能，请先查看 [GitHub Issues](https://github.com/espressif/esp-iot-solution/issues)，确保该问题不会被重复提交；
 - 如果你有兴趣为 ESP-IoT-Solution 作贡献，请先阅读[贡献指南](./CONTRIBUTING.rst)。

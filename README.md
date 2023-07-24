@@ -1,4 +1,4 @@
-[![Documentation Status](https://dl.espressif.com/AE/docs/docs_latest.svg)](https://docs.espressif.com/projects/espressif-esp-iot-solution/en/latest/esp32/index.html)
+[![Documentation Status](https://dl.espressif.com/AE/docs/docs_latest.svg)](https://docs.espressif.com/projects/esp-iot-solution/en)
 
 ## Espressif IoT Solution Overview
 
@@ -14,8 +14,8 @@ ESP-IoT-Solution contains the following contents:
 
 ## Documentation Center
 
-- 中文：https://docs.espressif.com/projects/espressif-esp-iot-solution/zh_CN
-- English:https://docs.espressif.com/projects/espressif-esp-iot-solution/en
+- 中文：https://docs.espressif.com/projects/esp-iot-solution/zh_CN
+- English:https://docs.espressif.com/projects/esp-iot-solution/en
 
 ## Quick Reference
 
@@ -35,7 +35,7 @@ Please note that different versions of ESP-IoT-Solution may depend on different 
 
 | ESP-IoT-Solution | Dependent ESP-IDF |                    Major Change                     |                                                  User Guide                                                  |        Support State        |
 | :--------------: | :---------------: | :-------------------------------------------------: | :----------------------------------------------------------------------------------------------------------: | --------------------------- |
-|      master      |      >= v4.4      |       support component manager and new chips       |             [Docs online](https://docs.espressif.com/projects/espressif-esp-iot-solution/zh_CN)              | active, new feature develop |
+|      master      |      >= v4.4      |       support component manager and new chips       |             [Docs online](https://docs.espressif.com/projects/esp-iot-solution/zh_CN)              | active, new feature develop |
 |   release/v1.1   |      v4.0.1       | IDF version update, remove no longer supported code | [v1.1 Overview](https://github.com/espressif/esp-iot-solution/tree/release/v1.1#esp32-iot-solution-overview) | archived             |
 |   release/v1.0   |      v3.2.2       |                   legacy version                    | [v1.0 Overview](https://github.com/espressif/esp-iot-solution/tree/release/v1.0#esp32-iot-solution-overview) | archived                    |
 
@@ -78,7 +78,7 @@ You can directly add the components from the Component Registry to your project 
 
 #### Get ESP-IoT-Solution Repository
 
-If you want to [Contribute](https://docs.espressif.com/projects/espressif-esp-iot-solution/zh_CN/latest/contribute/index.html) to the components in ESP-IoT-Solution or want to start from the examples in ESP-IoT-Solution, you can get the ESP-IoT-Solution repository by following the steps:
+If you want to [Contribute](https://docs.espressif.com/projects/esp-iot-solution/zh_CN/latest/contribute/index.html) to the components in ESP-IoT-Solution or want to start from the examples in ESP-IoT-Solution, you can get the ESP-IoT-Solution repository by following the steps:
 
 * If select the `master` version, open the terminal, and run the following command:
 
@@ -107,9 +107,9 @@ There is no difference between building and flashing the examples in ESP-IoT-Sol
 
 ### Resources
 
-- Documentation for the latest version: https://docs.espressif.com/projects/espressif-esp-iot-solution/ . This documentation is built from the [docs directory](./docs) of this repository.
+- Documentation for the latest version: https://docs.espressif.com/projects/esp-iot-solution/ . This documentation is built from the [docs directory](./docs) of this repository.
 - ESP-IDF Programming Guide: https://docs.espressif.com/projects/esp-idf/zh_CN . Please refer to the version ESP-IoT-Solution depends on.
 - The [IDF Component Registry](https://components.espressif.com/) is where you can find the components in ESP-IoT-Solution and other registered components.
-- The [esp32.com forum](https://esp32.com/) is a place to ask questions and find community resources.
+- The [esp32.com forum](https://www.esp32.com/) is a place to ask questions and find community resources.
 - [Check the Issues section on GitHub]((https://github.com/espressif/esp-iot-solution/issues)) if you find a bug or have a feature request. Please check existing Issues before opening a new one.
 - If you're interested in contributing to ESP-IDF, please check the [Contributions Guide](./CONTRIBUTING.rst).
