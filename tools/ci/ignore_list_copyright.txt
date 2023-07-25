@@ -74,6 +74,9 @@
 ./examples/usb/device/usb_surface_dial/main/tusb_config.h
 ./examples/usb/device/usb_surface_dial/main/usb_descriptors.c
 ./examples/usb/device/usb_uf2_nvs/pytest_usb_uf2_nvs.py
+./examples/usb/device/usb_webcam/uvc_device/tusb_config.h
+./examples/usb/device/usb_webcam/uvc_device/usb_descriptors.c
+./examples/usb/device/usb_webcam/uvc_device/usb_descriptors.h
 ./examples/usb/host/usb_camera_lcd_display/components/esp_jpeg/include/esp_jpeg_common.h
 ./examples/usb/host/usb_camera_lcd_display/components/esp_jpeg/include/esp_jpeg_dec.h
 ./examples/usb/host/usb_camera_lcd_display/components/esp_jpeg/include/esp_jpeg_enc.h
