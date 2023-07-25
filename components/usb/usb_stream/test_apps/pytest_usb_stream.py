@@ -18,6 +18,7 @@ from pytest_embedded import Dut
 @pytest.mark.target('esp32s2')
 @pytest.mark.target('esp32s3')
 @pytest.mark.env('usb_camera')
+@pytest.mark.timeout(60 * 60)
 @pytest.mark.parametrize(
     'config',
     [
@@ -63,4 +64,20 @@ def test_usb_stream_otg(dut: Dut)-> None:
 def test_quick_start(dut: Dut)-> None:
     dut.expect_exact('Press ENTER to see the list of tests.')
     dut.write('[quick]')
+    dut.expect_unity_test_output(timeout = 3000)
+
+@pytest.mark.target('esp32s3')
+@pytest.mark.env('usb_camera_s3_eye')
+@pytest.mark.timeout(60 * 60)
+@pytest.mark.parametrize(
+    'config',
+    [
+        # Known to cause. assert failed: (rem_len == 0 || is_in)
+        # '160mhz',
+        '240mhz',
+    ],
+)
+def test_esp32s3_eye_camera_start(dut: Dut)-> None:
+    dut.expect_exact('Press ENTER to see the list of tests.')
+    dut.write('[uvc_only]')
     dut.expect_unity_test_output(timeout = 3000)

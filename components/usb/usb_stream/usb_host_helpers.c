@@ -36,7 +36,7 @@ void _usb_urb_clear(urb_t *urb)
 urb_t *_usb_urb_alloc(int num_isoc_packets, size_t packet_data_buffer_size, void *context)
 {
     uint8_t *data_buffer = NULL;
-    urb_t *urb = heap_caps_calloc(1, sizeof(urb_t) + (num_isoc_packets * sizeof(usb_isoc_packet_desc_t)), MALLOC_CAP_DEFAULT);
+    urb_t *urb = heap_caps_calloc(1, sizeof(urb_t) + (num_isoc_packets * sizeof(usb_isoc_packet_desc_t)), MALLOC_CAP_DMA);
     UVC_CHECK_GOTO(NULL != urb, "urb alloc failed", _alloc_failed);
     //Allocate data buffer for each URB and assign them
     if (num_isoc_packets) {

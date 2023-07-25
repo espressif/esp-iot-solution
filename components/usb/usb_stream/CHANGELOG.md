@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v1.0.6 - 2023-07-21
+
+### Bug Fixes:
+
+* USB:
+  * Fix transfer timeout cause USB refused to work (recover usb pipe in this case)
+
 ## v1.0.5 - 2023-07-21
 
 ### Enhancements:

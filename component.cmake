@@ -10,7 +10,7 @@ list(APPEND EXTRA_COMPONENT_DIRS
                                 "$ENV{IOT_SOLUTION_PATH}/components/expander/io_expander"
                                 "$ENV{IOT_SOLUTION_PATH}/components/gui"
                                 "$ENV{IOT_SOLUTION_PATH}/components/led"
-                                "$ENV{IOT_SOLUTION_PATH}/components/motor"
+                                "$ENV{IOT_SOLUTION_PATH}/components/motor/servo"
                                 "$ENV{IOT_SOLUTION_PATH}/components/sensors"
                                 "$ENV{IOT_SOLUTION_PATH}/components/sensors/gesture"
                                 "$ENV{IOT_SOLUTION_PATH}/components/sensors/humiture"
