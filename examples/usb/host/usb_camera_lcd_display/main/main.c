@@ -23,7 +23,7 @@
 static const char *TAG = "uvc_camera_lcd_demo";
 /****************** configure the example working mode *******************************/
 
-#define DEMO_UVC_XFER_BUFFER_SIZE            ( 60 * 1024) //Double buffer
+#define DEMO_UVC_XFER_BUFFER_SIZE            ( 88 * 1024) //Double buffer
 #define DEMO_KEY_RESOLUTION                  "resolution"
 #define DEMO_SWITCH_BUTTON_IO                0
 
@@ -54,8 +54,6 @@ static uint8_t *xfer_buffer_a                          = NULL;
 static uint8_t *xfer_buffer_b                          = NULL;
 static uint8_t *frame_buffer                           = NULL;
 static PingPongBuffer_t *ppbuffer_handle               = NULL;
-static jpeg_dec_io_t *jpeg_io                          = NULL;
-static jpeg_dec_header_info_t *out_info                = NULL;
 static uint16_t current_width                          = 0;
 static uint16_t current_height                         = 0;
 static bool if_ppbuffer_init                           = false;
@@ -77,6 +75,17 @@ static int esp_jpeg_decoder_one_picture(uint8_t *input_buf, int len, uint8_t *ou
     // Create jpeg_dec
     jpeg_dec = jpeg_dec_open(&config);
 
+    // Create io_callback handle
+    jpeg_dec_io_t *jpeg_io = calloc(1, sizeof(jpeg_dec_io_t));
+    if (jpeg_io == NULL) {
+        return ESP_FAIL;
+    }
+
+    // Create out_info handle
+    jpeg_dec_header_info_t *out_info = calloc(1, sizeof(jpeg_dec_header_info_t));
+    if (out_info == NULL) {
+        return ESP_FAIL;
+    }
     // Set input buffer and buffer len to io_callback
     jpeg_io->inbuf = input_buf;
     jpeg_io->inbuf_len = len;
@@ -101,6 +110,8 @@ static int esp_jpeg_decoder_one_picture(uint8_t *input_buf, int len, uint8_t *ou
 _exit:
     // Decoder deinitialize
     jpeg_dec_close(jpeg_dec);
+    free(out_info);
+    free(jpeg_io);
     return ret;
 }
 
@@ -169,7 +180,7 @@ static void _display_task(void *arg)
             if (current_width == BSP_LCD_H_RES && current_height <= BSP_LCD_V_RES) {
                 x_start = 0;
                 y_start = (BSP_LCD_V_RES - current_height) / 2;
-                esp_lcd_panel_draw_bitmap(panel_handle, 0, 0, 1, 1, cur_frame_buf);
+                esp_lcd_panel_draw_bitmap(panel_handle, 0, 0, current_width, current_height, cur_frame_buf);
             } else if (current_width < BSP_LCD_H_RES && current_height < BSP_LCD_V_RES) {
                 x_start = (BSP_LCD_H_RES - current_width) / 2;
                 y_start = (BSP_LCD_V_RES - current_height) / 2;
@@ -302,7 +313,7 @@ static esp_err_t _set_value_to_nvs(char *key, void *value, size_t size)
 static esp_err_t _usb_stream_init(void)
 {
     uvc_config_t uvc_config = {
-        .frame_interval = FPS2INTERVAL(30),
+        .frame_interval = FRAME_INTERVAL_FPS_30,
         .xfer_buffer_size = DEMO_UVC_XFER_BUFFER_SIZE,
         .xfer_buffer_a = xfer_buffer_a,
         .xfer_buffer_b = xfer_buffer_b,
@@ -485,14 +496,6 @@ void app_main(void)
 
     /* malloc frame buffer for ppbuffer_handle*/
     ppbuffer_handle = (PingPongBuffer_t *)malloc(sizeof(PingPongBuffer_t));
-
-    /* Create io_callback handle */
-    jpeg_io = calloc(1, sizeof(jpeg_dec_io_t));
-    assert(jpeg_io != NULL);
-
-    /* Create out_info handle */
-    out_info = calloc(1, sizeof(jpeg_dec_header_info_t));
-    assert(out_info != NULL);
 
     /* Initialize the screen */
     ESP_ERROR_CHECK(_display_init());
