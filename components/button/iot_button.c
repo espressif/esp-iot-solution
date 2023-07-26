@@ -107,7 +107,7 @@ static void button_handler(button_dev_t *btn)
         } else if (btn->ticks > btn->long_press_ticks) {
             btn->event = (uint8_t)BUTTON_LONG_PRESS_START;
             CALL_EVENT_CB(BUTTON_LONG_PRESS_START);
-            btn->state = 5;
+            btn->state = 4;
         }
         break;
 
@@ -130,6 +130,7 @@ static void button_handler(button_dev_t *btn)
             }
             btn->event = (uint8_t)BUTTON_PRESS_REPEAT_DONE;
             CALL_EVENT_CB(BUTTON_PRESS_REPEAT_DONE); // repeat hit
+            btn->repeat = 0;
             btn->state = 0;
         }
         break;
@@ -147,7 +148,7 @@ static void button_handler(button_dev_t *btn)
         }
         break;
 
-    case 5:
+    case 4:
         if (btn->button_level == btn->active_level) {
             //continue hold trigger
             if (btn->ticks >= (btn->long_press_hold_cnt + 1) * SERIAL_TICKS) {

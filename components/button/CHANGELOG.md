@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v2.5.3 - 2023-7-26
+
+### Enhancements:
+
+* `repeat` defined in struct button_dev_t is reset to 0 after event `BUTTON_PRESS_REPEAT_DONE`
+
 ## v2.5.2 - 2023-7-18
 
 ### Enhancements:
