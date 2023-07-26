@@ -15,6 +15,10 @@
 
 * Add GCC LTO support
 
+## v0.4.9 - 2023-7-26
+
+* gen_compressed_ota: Update the document to use the default V3 version compression format.
+
 ## v0.4.8 - 2023-05-24
 
 * Add unit test app

@@ -37,5 +37,15 @@ simple_ota.bin.xz.packed.signed
 you can also use the script [gen_custom_ota.py](https://github.com/espressif/esp-iot-solution/tree/master/tools/cmake_utilities/scripts/gen_custom_ota.py) to compress the specified app:
 
 ```plaintext
+python3 gen_custom_ota.py -hv v3 -i simple_ota.bin --add_app_header
+```
+
+## Notes
+
+1. Command tool [gen_custom_ota.py](https://github.com/espressif/esp-iot-solution/tree/master/tools/cmake_utilities/scripts/gen_custom_ota.py) can also be used to generate the compressed firmware required by  [esp bootloader plus](https://github.com/espressif/esp-bootloader-plus):
+
+```plaintext
 python3 gen_custom_ota.py -i simple_ota.bin
 ```
+
+Use `python3 gen_custom_ota.py -h` to see a summary of all available command line options.
