@@ -387,6 +387,7 @@ typedef struct {
     /** Current control block */
     struct uvc_stream_ctrl cur_ctrl;
     uint8_t fid;
+    uint8_t reassemble_flag;
     uint8_t reassembling;
     uint32_t seq, hold_seq;
     uint32_t pts, hold_pts;
@@ -1768,11 +1769,12 @@ IRAM_ATTR static void _uvc_process_payload(_uvc_stream_handle_t *strmh, size_t r
     uint8_t header_info = 0;
     size_t data_len = 0;
     bool bulk_xfer = (s_usb_dev.uvc->vs_ifc->xfer_type == UVC_XFER_BULK) ? true : false;
+    bool payload_reassembling = (strmh->reassemble_flag) ? true : false;
     uint8_t flag_lstp = 0;
     uint8_t flag_zlp = 0;
     uint8_t flag_rsb = 0;
 
-    if (bulk_xfer) {
+    if (bulk_xfer && payload_reassembling) {
         if (payload_len == req_len) {
             //transfer not complete
             flag_rsb = 1;
@@ -1782,11 +1784,16 @@ IRAM_ATTR static void _uvc_process_payload(_uvc_stream_handle_t *strmh, size_t r
         } else {
             flag_lstp = 1;
         }
+    } else if (bulk_xfer && payload_len < req_len) {
+        flag_lstp = 1;
     } else if (payload_len == 0) {
         // ignore empty payload transfers
         return;
     }
 
+#ifdef CONFIG_UVC_PRINT_PAYLOAD_HEX
+    ESP_LOG_BUFFER_HEXDUMP("UVC_HEX", payload, payload_len, ESP_LOG_VERBOSE);
+#endif
     /********************* processing header *******************/
     if (!flag_zlp) {
         ESP_LOGV(TAG, "zlp=%d, lstp=%d, req_len=%d, payload_len=%d, first=0x%02x, second=0x%02x", flag_zlp, flag_lstp, req_len, payload_len, payload[0], payload_len > 1 ? payload[1] : 0);
@@ -1794,11 +1801,17 @@ IRAM_ATTR static void _uvc_process_payload(_uvc_stream_handle_t *strmh, size_t r
         // For SCR, PTS, some vendors not set bit, but also offer 12 Bytes header. so we just check SET condition
         if ( payload_len >= payload[0]
                 && (payload[0] == 12 || (payload[0] == 2 && !(payload[1] & 0x0C)) || (payload[0] == 6 && !(payload[1] & 0x08)))
-                && (payload[1] & 0x80) && !(payload[1] & 0x30)
-#ifdef CONFIG_UVC_CHECK_BULK_JPEG_HEADER
-                && (!bulk_xfer || ((payload[payload[0]] == 0xff) && (payload[payload[0] + 1] == 0xd8)))
+                && !(payload[1] & 0x30)
+#ifdef CONFIG_UVC_CHECK_HEADER_EOH
+                /* EOH bit, when set, indicates the end of the BFH fields
+                 * Most camera set this bit to 1 in each header, but some vendors may not set it.
+                 */
+                && (payload[1] & 0x80)
 #endif
-           ) {
+#ifdef CONFIG_UVC_CHECK_BULK_JPEG_HEADER
+                && (!payload_reassembling || ((payload[payload[0]] == 0xff) && (payload[payload[0] + 1] == 0xd8)))
+#endif
+            ) {
             header_len = payload[0];
             data_len = payload_len - header_len;
             /* checking the end-of-header */
@@ -1821,13 +1834,19 @@ IRAM_ATTR static void _uvc_process_payload(_uvc_stream_handle_t *strmh, size_t r
             data_len = payload_len;
         } else {
             if (payload_len > 1) {
+#ifdef CONFIG_UVC_CHECK_HEADER_EOH
+                /* Give warning if EOH check enable, but camera not have*/
+                if (!(payload[1] & 0x80)) {
+                    ESP_LOGD(TAG, "bogus packet: EOH bit not set");
+                }
+#endif
                 ESP_LOGD(TAG, "bogus packet: len = %u %02x %02x...%02x %02x\n", payload_len, payload[0], payload[1], payload[payload_len - 2], payload[payload_len - 1]);
             }
             return;
         }
     }
 
-    if (header_info) {
+    if (header_len >= 2) {
         if (strmh->fid != (header_info & 1) && strmh->got_bytes != 0) {
             /* The frame ID bit was flipped, but we have image data sitting
                 around from prior transfers. This means the camera didn't send
@@ -1877,8 +1896,8 @@ IRAM_ATTR static void _uvc_process_payload(_uvc_stream_handle_t *strmh, size_t r
 
         strmh->got_bytes += data_len;
     }
-    /* Just ignore the EOF bit if using bulk transfer */
-    if (((header_info & (1 << 1)) && !bulk_xfer) || flag_zlp || flag_lstp) {
+    /* Just ignore the EOF bit if using payload reassembling in bulk transfer */
+    if (((header_info & (1 << 1)) && !payload_reassembling) || flag_zlp || flag_lstp) {
         /* The EOF bit is set, so publish the complete frame */
         if (strmh->got_bytes != 0) {
             _uvc_swap_buffers(strmh);
@@ -2331,22 +2350,26 @@ static esp_err_t _uvc_streaming_resume(void)
     uvc_stream_ctrl_t ctrl_set = (uvc_stream_ctrl_t)DEFAULT_UVC_STREAM_CTRL();
     uvc_stream_ctrl_t ctrl_probed = {0};
     uvc_frame_size_t frame_size = {0};
-    // UVC class specified enum process
+    /* UVC negotiation process */
     UVC_ENTER_CRITICAL();
     ctrl_set.bFormatIndex = uvc_dev->format_index;
     ctrl_set.bFrameIndex = uvc_dev->frame_index;
     ctrl_set.dwFrameInterval = uvc_dev->frame_interval;
     ctrl_set.dwMaxVideoFrameSize = s_usb_dev.uvc_cfg.frame_buffer_size;
-    ctrl_set.dwMaxPayloadTransferSize = uvc_dev->vs_ifc->ep_mps;
+    /* For bulk transfer, payload size config by NUM_BULK_BYTES_PER_URB for better performance */
+    ctrl_set.dwMaxPayloadTransferSize = (uvc_dev->vs_ifc->xfer_type == UVC_XFER_BULK)?NUM_BULK_BYTES_PER_URB:(uvc_dev->vs_ifc->ep_mps);
     frame_size.width = uvc_dev->frame_width;
     frame_size.height = uvc_dev->frame_height;
     UVC_EXIT_CRITICAL();
     ESP_LOGI(TAG, "Probe Format(%u) MJPEG, Frame(%u) %u*%u, interval(%"PRIu32")", ctrl_set.bFormatIndex,
-             ctrl_set.bFrameIndex, frame_size.width, frame_size.height, ctrl_set.dwFrameInterval);
+            ctrl_set.bFrameIndex, frame_size.width, frame_size.height, ctrl_set.dwFrameInterval);
     ESP_LOGI(TAG, "Probe payload size = %"PRIu32, ctrl_set.dwMaxPayloadTransferSize);
     esp_err_t ret = _uvc_vs_commit_control(&ctrl_set, &ctrl_probed);
     UVC_CHECK(ESP_OK == ret, "UVC negotiate failed", ESP_FAIL);
-    // start uvc streaming
+    if (ctrl_set.dwMaxPayloadTransferSize != ctrl_probed.dwMaxPayloadTransferSize) {
+        ESP_LOGW(TAG, "dwMaxPayloadTransferSize set = %" PRIu32 ", probed = %" PRIu32, ctrl_set.dwMaxPayloadTransferSize, ctrl_probed.dwMaxPayloadTransferSize);
+    }
+    /* start uvc streaming */
     uvc_error_t uvc_ret = UVC_SUCCESS;
     uvc_ret = uvc_stream_open_ctrl(NULL, &uvc_dev->uvc_stream_hdl, &ctrl_probed);
     UVC_CHECK(uvc_ret == UVC_SUCCESS, "open uvc stream failed", ESP_FAIL);
@@ -2481,7 +2504,7 @@ static void _usb_stream_handle_task(void *arg)
                     stream_ep_desc.bInterval = 0;
                 }
                 ESP_LOGI(TAG, "Creating %s pipe: ifc=%d-%d, ep=0x%02X, mps=%"PRIu32, usb_dev->ifc[i]->name, usb_dev->ifc[i]->interface, usb_dev->ifc[i]->interface_alt,
-                         usb_dev->ifc[i]->ep_addr, usb_dev->ifc[i]->ep_mps);
+                        usb_dev->ifc[i]->ep_addr, usb_dev->ifc[i]->ep_mps);
                 usb_dev->ifc[i]->pipe_handle = _usb_pipe_init(usb_dev->port_hdl, &stream_ep_desc, usb_dev->dev_addr, usb_dev->dev_speed,
                                                (void *)usb_dev->ifc[i]->type, &_usb_pipe_callback, (void *)usb_dev->stream_queue_hdl);
                 UVC_CHECK_GOTO(usb_dev->ifc[i]->pipe_handle != NULL, "pipe init failed", _usb_stream_recover);
@@ -2552,6 +2575,15 @@ static void _usb_stream_handle_task(void *arg)
                     if (evt_msg._handle.user_hdl != usb_dev->stream_task_hdl) {
                         ret = _apply_stream_config(stream);
                         UVC_CHECK_GOTO(ret == ESP_OK, "stream resume: apply config", _feedback_result);
+                    }
+                    if (p_itf->type == STREAM_UVC && p_itf->xfer_type == UVC_XFER_BULK) {
+                        uvc_dev->uvc_stream_hdl->reassemble_flag = 0;
+                        if (uvc_dev->uvc_stream_hdl->cur_ctrl.dwMaxPayloadTransferSize < p_itf->bytes_per_packet) {
+                            p_itf->bytes_per_packet = uvc_dev->uvc_stream_hdl->cur_ctrl.dwMaxPayloadTransferSize;
+                        } else if (uvc_dev->uvc_stream_hdl->cur_ctrl.dwMaxPayloadTransferSize > p_itf->bytes_per_packet) {
+                            uvc_dev->uvc_stream_hdl->reassemble_flag = 1;
+                            ESP_LOGD(TAG, "UVC Bulk Packet Reassemble Enable");
+                        }
                     }
                     if (p_itf->urb_list == NULL && p_itf->xfer_type == UVC_XFER_BULK) {
                         p_itf->urb_list = _usb_urb_list_alloc(p_itf->urb_num, 0, p_itf->bytes_per_packet);
@@ -2630,7 +2662,7 @@ _usb_stream_recover:
         /* check if reset trigger by disconnect */
         ESP_LOGI(TAG, "usb stream task wait reset");
         EventBits_t uxBits = xEventGroupWaitBits(usb_dev->event_group_hdl, USB_STREAM_TASK_KILL_BIT |
-                             USB_STREAM_TASK_RECOVER_BIT, pdFALSE, pdFALSE, pdMS_TO_TICKS(1000));
+                            USB_STREAM_TASK_RECOVER_BIT, pdFALSE, pdFALSE, pdMS_TO_TICKS(1000));
         if (uxBits & (USB_STREAM_TASK_KILL_BIT | USB_STREAM_TASK_RECOVER_BIT)) {
             // if reset trigger by disconnect, we just reset to default state
             ESP_LOGI(TAG, "usb stream task reset, reason: device %s", (uxBits & USB_STREAM_TASK_KILL_BIT) ? "disconnect" : "recover");

@@ -1,5 +1,13 @@
 # ChangeLog
 
+## v1.0.5 - 2023-07-21
+
+### Enhancements:
+
+* UVC:
+  * Enable bulk packets reassembling depends on the probe results
+  * Skip check EOH in payload header for compatibility (TinyUSB UVC device not set this bit)
+
 ## v1.0.4 - 2023-07-05
 
 ### Enhancements:
