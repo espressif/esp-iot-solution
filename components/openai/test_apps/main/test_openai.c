@@ -112,6 +112,7 @@ TEST_CASE("test AudioTranscription en", "[AudioTranscription]")
     audioTranscription->setTemperature(audioTranscription,0.2);                                                             //float between 0 and 1. Higher value gives more random results.
     audioTranscription->setLanguage(audioTranscription,"en");                                                               //Set to English to make GPT return faster and more accurate
     char *text = audioTranscription->file(audioTranscription, (uint8_t *)turn_on_tv_en_wav_start, length, OPENAI_AUDIO_INPUT_FORMAT_WAV);
+    TEST_ASSERT_NOT_NULL(text);
     ESP_LOGI(TAG, "Text: %s", text);
     free(text);
     openai->audioTranscriptionDelete(audioTranscription);
@@ -136,6 +137,7 @@ TEST_CASE("test AudioTranscription cn", "[AudioTranscription]")
     audioTranscription->setTemperature(audioTranscription,0.2);                                                             //float between 0 and 1. Higher value gives more random results.
     audioTranscription->setLanguage(audioTranscription,"zh");                                                               //Set to Chinese to make GPT return faster and more accurate
     char *text = audioTranscription->file(audioTranscription, (uint8_t *)zhengzai_cn_wav_start, length, OPENAI_AUDIO_INPUT_FORMAT_WAV);
+    TEST_ASSERT_NOT_NULL(text);
     ESP_LOGI(TAG, "Text: %s", text);
     free(text);
     openai->audioTranscriptionDelete(audioTranscription);

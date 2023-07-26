@@ -1,0 +1,46 @@
+DEFAULT:
+  perform_check: yes  # should the check be performed?
+  # Sections setting this to 'no' don't need to include any other options as they are ignored
+  # When a file is using a section with the option set to 'no', no checks are performed.
+
+  # what licenses (or license expressions) are allowed for files in this section
+  # when setting this option in a section, you need to list all the allowed licenses
+  allowed_licenses:
+    - Apache-2.0
+  license_for_new_files: Apache-2.0  # license to be used when inserting a new copyright notice
+  new_notice_c: |  # notice for new C, CPP, H, HPP and LD files
+    /*
+     * SPDX-FileCopyrightText: {years} Espressif Systems (Shanghai) CO LTD
+     *
+     * SPDX-License-Identifier: {license}
+     */
+  new_notice_python: |  # notice for new python files
+    # SPDX-FileCopyrightText: {years} Espressif Systems (Shanghai) CO LTD
+    # SPDX-License-Identifier: {license}
+
+  # comment lines matching:
+  # SPDX-FileCopyrightText: year[-year] Espressif Systems
+  # or
+  # SPDX-FileContributor: year[-year] Espressif Systems
+  # are replaced with this template prefixed with the correct comment notation (# or // or *) and SPDX- notation
+  espressif_copyright: '{years} Espressif Systems (Shanghai) CO LTD'
+
+# You can create your own rules for files or group of files
+examples_and_unit_tests:
+  include:
+   - 'examples/**/*'
+   - 'components/**/*'
+   - 'tools/**/*'
+  allowed_licenses:
+  - Apache-2.0
+  - MIT
+  - CC0-1.0
+  - Unlicense
+  license_for_new_files: Apache-2.0
+
+ignore:  # You can also select ignoring files here
+ perform_check: no  # Don't check files from that block
+ include:
+   - 'docs/**/*'
+   - 'components/gui/lvgl_gui/lvgl/**/*'
+   - 'examples/hmi/lvgl_example/components/lv_examples/lv_examples/**/*'
