@@ -34,7 +34,7 @@ typedef enum {
 /*Definitions of Board Information*/
 #define BOARD_NAME "ESP32_S3_USB_OTG_EV"
 #define BOARD_VENDOR "Espressif"
-#define BOARD_URL "https://docs.espressif.com/projects/espressif-esp-dev-kits/en/latest/esp32s3/esp32-s3-usb-otg/index.html"
+#define BOARD_URL "https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-usb-otg/index.html"
 
 /*Definitions of MCU Information*/
 #define BOARD_MCU_NAME "ESP32S3"

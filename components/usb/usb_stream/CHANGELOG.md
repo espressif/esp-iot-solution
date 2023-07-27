@@ -246,7 +246,7 @@ Add additional delay to avoid malloc error if continuous suspend and resume
 
 ### Enhancements:
 
-* add development documentation https://docs.espressif.com/projects/espressif-esp-iot-solution/zh_CN/latest/usb/usb_stream.html
+* add development documentation https://docs.espressif.com/projects/esp-iot-solution/zh_CN/latest/usb/usb_stream.html
 
 ## v0.3.0 - 2022-12-05
 

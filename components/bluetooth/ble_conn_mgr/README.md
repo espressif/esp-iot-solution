@@ -2,7 +2,7 @@
 
 [![Component Registry](https://components.espressif.com/components/espressif/ble_conn_mgr/badge.svg)](https://components.espressif.com/components/espressif/ble_conn_mgr)
 
-- [User Guide](https://docs.espressif.com/projects/espressif-esp-iot-solution/en/latest/bluetooth/ble_conn_mgr.html)
+- [User Guide](https://docs.espressif.com/projects/esp-iot-solution/en/latest/bluetooth/ble_conn_mgr.html)
 
 The ``ble_conn_mgr`` is a BLE connection management component that provides a simplified API interface for accessing commonly used BLE functionalities. It supports various scenarios such as peripheral and central.
 

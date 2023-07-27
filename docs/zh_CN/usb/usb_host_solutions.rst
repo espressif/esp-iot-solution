@@ -27,13 +27,13 @@ ESP USB Camera 视频方案
 
 * 芯片： ESP32-S2，ESP32-S3
 * 外设：USB-OTG
-* USB 摄像头：支持 MJPEG 格式，批量传输模式下 800*480@15fps，同步传输模式下 480*320@15fps，摄像头限制详见 `usb_stream API 说明 <https://docs.espressif.com/projects/espressif-esp-iot-solution/zh_CN/latest/usb/usb_stream.html>`_
+* USB 摄像头：支持 MJPEG 格式，批量传输模式下 800*480@15fps，同步传输模式下 480*320@15fps，摄像头限制详见 `usb_stream API 说明 <https://docs.espressif.com/projects/esp-iot-solution/zh_CN/latest/usb/usb_stream.html>`_
 
 链接:
 ~~~~~
 
 * `usb_stream 组件 <https://components.espressif.com/components/espressif/usb_stream>`_
-* `usb_stream API 说明 <https://docs.espressif.com/projects/espressif-esp-iot-solution/zh_CN/latest/usb/usb_stream.html>`_
+* `usb_stream API 说明 <https://docs.espressif.com/projects/esp-iot-solution/zh_CN/latest/usb/usb_stream.html>`_
 * `USB Camera Demo 视频 <https://www.bilibili.com/video/BV18841137qT>`_
 * 示例代码: USB 摄像头 + WiFi 图传 :example:`usb/host/usb_camera_mic_spk`
 * 示例代码: USB 摄像头 + LCD 本地刷屏 :example:`usb/host/usb_camera_lcd_display`
@@ -69,7 +69,7 @@ ESP USB Audio 音频方案
 ~~~~~
 
 * `usb_stream 组件 <https://components.espressif.com/components/espressif/usb_stream>`_
-* `usb_stream API 说明 <https://docs.espressif.com/projects/espressif-esp-iot-solution/zh_CN/latest/usb/usb_stream.html>`_
+* `usb_stream API 说明 <https://docs.espressif.com/projects/esp-iot-solution/zh_CN/latest/usb/usb_stream.html>`_
 * `USB Audio Demo 视频 <https://www.bilibili.com/video/BV1LP411975W>`_
 * 示例代码: MP3 音乐播放器 + USB 耳机 :example:`usb/host/usb_audio_player`
 

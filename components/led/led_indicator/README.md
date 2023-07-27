@@ -10,4 +10,4 @@ As one of the simplest output peripherals, LED indicators can indicate the curre
 
 ### LED Indicator User Guide
 
-Please refer: https://docs.espressif.com/projects/espressif-esp-iot-solution/en/latest/display/led_indicator.html
+Please refer: https://docs.espressif.com/projects/esp-iot-solution/en/latest/display/led_indicator.html

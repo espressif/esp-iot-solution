@@ -14,4 +14,4 @@ As a common component of examples, this component can provide unified pin macro 
     * ``board.c`` provides user implementation of common API (Covering default weak function), custom API function implementation
     * ``kconfig.in`` provides custom configuration items unique to the development board.
 
-For details about how to add a custom development board, please refer [Boards Component](https://docs.espressif.com/projects/espressif-esp-iot-solution/en/latest/basic/boards.html)
+For details about how to add a custom development board, please refer [Boards Component](https://docs.espressif.com/projects/esp-iot-solution/en/latest/basic/boards.html)

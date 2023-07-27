@@ -9,7 +9,7 @@ This routine demonstrates how to use the [usb_stream](https://components.espress
 
 ## Hardware
 
-* An [ESP32-S3-LCD-EV-Board](https://docs.espressif.com/projects/espressif-esp-dev-kits/en/latest/esp32s3/esp32-s3-lcd-ev-board/index.html) development board with 800\*480/480\*480 LCD.
+* An [ESP32-S3-LCD-EV-Board](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-lcd-ev-board/index.html) development board with 800\*480/480\*480 LCD.
 * A USB camera (Can be connected to USB port or Expansion Connector)
 * An USB Type-C cable for Power supply and programming (Please connect to UART port instead of USB port)
 

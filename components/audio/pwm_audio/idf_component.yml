@@ -2,7 +2,7 @@ version: "1.1.1"
 description: PWM audio output driver for ESP32 series Socs
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/audio/pwm_audio
 repository: https://github.com/espressif/esp-iot-solution.git
-documentation: https://docs.espressif.com/projects/espressif-esp-iot-solution/en/latest/audio/pwm_audio.html
+documentation: https://docs.espressif.com/projects/esp-iot-solution/en/latest/audio/pwm_audio.html
 issues: https://github.com/espressif/esp-iot-solution/issues
 dependencies:
   idf: ">=4.3"

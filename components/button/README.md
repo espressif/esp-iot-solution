@@ -1,7 +1,7 @@
 [![Component Registry](https://components.espressif.com/components/espressif/button/badge.svg)](https://components.espressif.com/components/espressif/button)
 
 # Component: Button
-[Online documentation](https://docs.espressif.com/projects/espressif-esp-iot-solution/en/latest/input_device/button.html)
+[Online documentation](https://docs.espressif.com/projects/esp-iot-solution/en/latest/input_device/button.html)
 
 After creating a new button object by calling function `button_create()`, the button object can create press events, every press event can have its own callback.
 

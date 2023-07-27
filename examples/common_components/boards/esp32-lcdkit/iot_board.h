@@ -21,7 +21,7 @@
 /*Definitions of Board Information*/
 #define BOARD_NAME "ESP32-LCDKit"
 #define BOARD_VENDOR "Espressif"
-#define BOARD_URL "https://docs.espressif.com/projects/espressif-esp-dev-kits/en/latest/esp32/esp32-lcdkit/user_guide.html"
+#define BOARD_URL "https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32/esp32-lcdkit/user_guide.html"
 
 /**
  * Resource ID on Board,
