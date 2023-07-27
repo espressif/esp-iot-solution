@@ -124,17 +124,12 @@ void parse_vs_format_mjpeg_desc(const uint8_t *buff, uint8_t *format_idx, uint8_
     }
 }
 
-void parse_vs_frame_mjpeg_desc(const uint8_t *buff, uint8_t *frame_idx, uint16_t *width, uint16_t *heigh)
+void parse_vs_frame_mjpeg_desc(const uint8_t *buff, uint8_t *frame_idx, uint16_t *width, uint16_t *heigh, uint8_t *interval_type, const uint32_t **pp_interval, uint32_t *dflt_interval)
 {
     if (buff == NULL) {
         return;
     }
-    // Copy to local buffer due to potential misalignment issues.
-    uint32_t raw_desc[25];
-    uint32_t desc_size = ((const vs_frame_desc_t *)buff)->bLength;
-    memcpy(raw_desc, buff, desc_size);
-
-    const vs_frame_desc_t *desc = (const vs_frame_desc_t *) raw_desc;
+    const vs_frame_desc_t *desc = (const vs_frame_desc_t *) buff;
 #ifdef CONFIG_UVC_PRINT_DESC
     printf("\t*** VS MJPEG Frame Descriptor ***\n");
 #ifdef CONFIG_UVC_PRINT_DESC_VERBOSE
@@ -178,6 +173,15 @@ void parse_vs_frame_mjpeg_desc(const uint8_t *buff, uint8_t *frame_idx, uint16_t
     }
     if (frame_idx) {
         *frame_idx = desc->bFrameIndex;
+    }
+    if (interval_type) {
+        *interval_type = desc->bFrameIntervalType;
+    }
+    if (pp_interval) {
+        *pp_interval = &(desc->dwFrameInterval);
+    }
+    if (dflt_interval) {
+        *dflt_interval = desc->dwDefaultFrameInterval;
     }
 }
 
