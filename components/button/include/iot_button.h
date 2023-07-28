@@ -27,11 +27,36 @@ typedef enum {
     BUTTON_PRESS_REPEAT_DONE,
     BUTTON_SINGLE_CLICK,
     BUTTON_DOUBLE_CLICK,
+    BUTTON_MULTIPLE_CLICK,
     BUTTON_LONG_PRESS_START,
     BUTTON_LONG_PRESS_HOLD,
+    BUTTON_LONG_PRESS_UP,
     BUTTON_EVENT_MAX,
     BUTTON_NONE_PRESS,
 } button_event_t;
+
+/**
+ * @brief Button events data
+ *
+ */
+typedef union {
+    struct long_press_t {
+        uint16_t press_time;
+    } long_press;
+
+    struct multiple_clicks_t {
+        uint16_t clicks;
+    } multiple_clicks;
+}button_event_data_t;
+
+/**
+ * @brief Button events configuration
+ *
+ */
+typedef struct {
+    button_event_t event;
+    button_event_data_t event_data;
+} button_event_config_t;
 
 /**
  * @brief Supported button type
@@ -112,11 +137,43 @@ esp_err_t iot_button_delete(button_handle_t btn_handle);
  *      - ESP_OK on success
  *      - ESP_ERR_INVALID_ARG   Arguments is invalid.
  *      - ESP_ERR_INVALID_STATE The Callback is already registered. No free Space for another Callback.
+ *      - ESP_ERR_NO_MEM        No more memory allocation for the event
  */
 esp_err_t iot_button_register_cb(button_handle_t btn_handle, button_event_t event, button_cb_t cb, void *usr_data);
 
 /**
+ * @brief Register the button event callback function.
+ *
+ * @param btn_handle A button handle to register
+ * @param event_cfg Button event configuration
+ * @param cb Callback function.
+ * @param usr_data user data
+ *
+ * @return
+ *      - ESP_OK on success
+ *      - ESP_ERR_INVALID_ARG   Arguments is invalid.
+ *      - ESP_ERR_INVALID_STATE The Callback is already registered. No free Space for another Callback.
+ *      - ESP_ERR_NO_MEM        No more memory allocation for the event
+ */
+esp_err_t iot_button_register_event_cb(button_handle_t btn_handle, button_event_config_t event_cfg, button_cb_t cb, void *usr_data);
+
+/**
  * @brief Unregister the button event callback function.
+ *        In case event_data is also passed it will unregister function for that particular event_data only.
+ *
+ * @param btn_handle A button handle to unregister
+ * @param event Button event
+ * @param cb callback to unregister
+ *
+ * @return
+ *      - ESP_OK on success
+ *      - ESP_ERR_INVALID_ARG   Arguments is invalid.
+ *      - ESP_ERR_INVALID_STATE The Callback was never registered with the event
+ */
+esp_err_t iot_button_unregister_event(button_handle_t btn_handle, button_event_config_t event_cfg, button_cb_t cb);
+
+/**
+ * @brief Unregister all the callbacks associated with the event.
  *
  * @param btn_handle A button handle to unregister
  * @param event Button event
@@ -124,18 +181,33 @@ esp_err_t iot_button_register_cb(button_handle_t btn_handle, button_event_t even
  * @return
  *      - ESP_OK on success
  *      - ESP_ERR_INVALID_ARG   Arguments is invalid.
- *      - ESP_ERR_INVALID_STATE The Callback is already registered. No free Space for another Callback.
+ *      - ESP_ERR_INVALID_STATE No callbacks registered for the event
  */
 esp_err_t iot_button_unregister_cb(button_handle_t btn_handle, button_event_t event);
 
 /**
- * @brief how many Callbacks are still registered.
+ * @brief counts total callbacks registered
  *
- * @param btn_handle A button handle to unregister
+ * @param btn_handle A button handle to the button
  *
- * @return 0 if no callbacks registered, or 1 .. (BUTTON_EVENT_MAX-1) for the number of Registered Buttons.
+ * @return
+ *      - 0 if no callbacks registered, or 1 .. (BUTTON_EVENT_MAX-1) for the number of Registered Buttons.
+ *      - ESP_ERR_INVALID_ARG if btn_handle is invalid
  */
 size_t iot_button_count_cb(button_handle_t btn_handle);
+
+/**
+ * @brief how many callbacks are registered for the event
+ *
+ * @param btn_handle A button handle to the button
+ *
+ * @param event Button event
+ *
+ * @return
+ *      - 0 if no callbacks registered, or 1 .. (BUTTON_EVENT_MAX-1) for the number of Registered Buttons.
+ *      - ESP_ERR_INVALID_ARG if btn_handle is invalid
+ */
+size_t iot_button_count_event(button_handle_t btn_handle, button_event_t event);
 
 /**
  * @brief Get button event

@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/timers.h"
@@ -19,6 +20,8 @@ static portMUX_TYPE s_button_lock = portMUX_INITIALIZER_UNLOCKED;
 #define BUTTON_ENTER_CRITICAL()           portENTER_CRITICAL(&s_button_lock)
 #define BUTTON_EXIT_CRITICAL()            portEXIT_CRITICAL(&s_button_lock)
 
+#define TOLERANCE CONFIG_BUTTON_LONG_PRESS_TOLERANCE_MS
+
 #define BTN_CHECK(a, str, ret_val)                                \
     if (!(a)) {                                                   \
         ESP_LOGE(TAG, "%s(%d): %s", __FUNCTION__, __LINE__, str); \
@@ -26,27 +29,39 @@ static portMUX_TYPE s_button_lock = portMUX_INITIALIZER_UNLOCKED;
     }
 
 /**
+ * @brief Structs to store callback info
+ *
+ */
+typedef struct {
+    button_cb_t cb;
+    void *usr_data;
+    button_event_data_t event_data;
+} button_cb_info_t;
+
+/**
  * @brief Structs to record individual key parameters
  *
  */
 typedef struct Button {
-    uint16_t        ticks;
-    uint16_t        long_press_ticks;     /*! Trigger ticks for long press*/
-    uint16_t        short_press_ticks;    /*! Trigger ticks for repeat press*/
-    uint16_t        long_press_hold_cnt;  /*! Record long press hold count*/
-    uint8_t         repeat;
-    uint8_t         state: 3;
-    uint8_t         debounce_cnt: 3;
-    uint8_t         active_level: 1;
-    uint8_t         button_level: 1;
-    button_event_t  event;
-    uint8_t         (*hal_button_Level)(void *hardware_data);
-    esp_err_t       (*hal_button_deinit)(void *hardware_data);
-    void            *hardware_data;
-    void            *usr_data[BUTTON_EVENT_MAX];
-    button_type_t   type;
-    button_cb_t     cb[BUTTON_EVENT_MAX];
-    struct Button   *next;
+    uint16_t            ticks;
+    uint16_t            long_press_ticks;     /*! Trigger ticks for long press*/
+    uint16_t            short_press_ticks;    /*! Trigger ticks for repeat press*/
+    uint16_t            long_press_hold_cnt;  /*! Record long press hold count*/
+    uint16_t            long_press_ticks_default;
+    uint8_t             repeat;
+    uint8_t             state: 3;
+    uint8_t             debounce_cnt: 3;
+    uint8_t             active_level: 1;
+    uint8_t             button_level: 1;
+    button_event_t      event;
+    uint8_t             (*hal_button_Level)(void *hardware_data);
+    esp_err_t           (*hal_button_deinit)(void *hardware_data);
+    void                *hardware_data;
+    button_type_t       type;
+    button_cb_info_t    *cb_info[BUTTON_EVENT_MAX];
+    size_t              size[BUTTON_EVENT_MAX];
+    int                 count[2];
+    struct Button       *next;
 } button_dev_t;
 
 //button handle list head.
@@ -60,7 +75,12 @@ static bool g_is_timer_running = false;
 #define LONG_TICKS        (CONFIG_BUTTON_LONG_PRESS_TIME_MS /TICKS_INTERVAL)
 #define SERIAL_TICKS      (CONFIG_BUTTON_SERIAL_TIME_MS /TICKS_INTERVAL)
 
-#define CALL_EVENT_CB(ev)   if(btn->cb[ev])btn->cb[ev](btn, btn->usr_data[ev])
+#define CALL_EVENT_CB(ev)                                                   \
+    if (btn->cb_info[ev]) {                                                 \
+        for (int i = 0; i < btn->size[ev]; i++) {                           \
+            btn->cb_info[ev][i].cb(btn, btn->cb_info[ev][i].usr_data);      \
+        }                                                                   \
+    }                                                                       \
 
 #define TIME_TO_TICKS(time, congfig_time)  (0 == (time))?congfig_time:(((time) / TICKS_INTERVAL))?((time) / TICKS_INTERVAL):1
 
@@ -109,8 +129,19 @@ static void button_handler(button_dev_t *btn)
 
         } else if (btn->ticks > btn->long_press_ticks) {
             btn->event = (uint8_t)BUTTON_LONG_PRESS_START;
-            CALL_EVENT_CB(BUTTON_LONG_PRESS_START);
             btn->state = 4;
+            /** Calling callbacks for BUTTON_LONG_PRESS_START */
+            uint16_t ticks_time = iot_button_get_ticks_time(btn);
+            if (btn->cb_info[btn->event] && btn->count[0] == 0) {
+                if (abs(ticks_time - (btn->long_press_ticks * TICKS_INTERVAL)) <= TOLERANCE && btn->cb_info[btn->event][btn->count[0]].event_data.long_press.press_time == (btn->long_press_ticks * TICKS_INTERVAL)) {
+                    do {
+                        btn->cb_info[btn->event][btn->count[0]].cb(btn, btn->cb_info[btn->event][btn->count[0]].usr_data);
+                        btn->count[0]++;
+                        if (btn->count[0] >= btn->size[btn->event])
+                            break;
+                    } while (btn->cb_info[btn->event][btn->count[0]].event_data.long_press.press_time == btn->long_press_ticks * TICKS_INTERVAL);
+                }
+            }
         }
         break;
 
@@ -131,6 +162,21 @@ static void button_handler(button_dev_t *btn)
                 btn->event = (uint8_t)BUTTON_DOUBLE_CLICK;
                 CALL_EVENT_CB(BUTTON_DOUBLE_CLICK); // repeat hit
             }
+
+            btn->event = (uint8_t)BUTTON_MULTIPLE_CLICK;
+
+            /** Calling the callbacks for MULTIPLE BUTTON CLICKS */
+            for (int i = 0; i < btn->size[btn->event]; i++) {
+                if (btn->repeat == btn->cb_info[btn->event][i].event_data.multiple_clicks.clicks) {
+                    do {
+                        btn->cb_info[btn->event][i].cb(btn, btn->cb_info[btn->event][i].usr_data);
+                        i++;
+                        if (i > btn->size[btn->event])
+                            break;
+                    } while (btn->cb_info[btn->event][i].event_data.multiple_clicks.clicks == btn->repeat);
+                }
+            }
+
             btn->event = (uint8_t)BUTTON_PRESS_REPEAT_DONE;
             CALL_EVENT_CB(BUTTON_PRESS_REPEAT_DONE); // repeat hit
             btn->repeat = 0;
@@ -158,8 +204,75 @@ static void button_handler(button_dev_t *btn)
                 btn->event = (uint8_t)BUTTON_LONG_PRESS_HOLD;
                 btn->long_press_hold_cnt++;
                 CALL_EVENT_CB(BUTTON_LONG_PRESS_HOLD);
+
+                /** Calling callbacks for BUTTON_LONG_PRESS_START based on press_time */
+                uint16_t ticks_time = iot_button_get_ticks_time(btn);
+                if (btn->cb_info[BUTTON_LONG_PRESS_START]) {
+                    button_cb_info_t *cb_info = btn->cb_info[BUTTON_LONG_PRESS_START];
+                    uint16_t time = cb_info[btn->count[0]].event_data.long_press.press_time;
+                    if (btn->long_press_ticks * TICKS_INTERVAL > time) {
+                        for (int i = btn->count[0] + 1; i < btn->size[BUTTON_LONG_PRESS_START]; i++) {
+                            time = cb_info[i].event_data.long_press.press_time;
+                            if (btn->long_press_ticks * TICKS_INTERVAL <= time) {
+                                btn->count[0] = i;
+                                break;
+                            }
+                        }
+                    }
+                    if (btn->count[0] < btn->size[BUTTON_LONG_PRESS_START] && abs(ticks_time - time) <= TOLERANCE) {
+                        do {
+                            cb_info[btn->count[0]].cb(btn, cb_info[btn->count[0]].usr_data);
+                            btn->count[0]++;
+                            if (btn->count[0] >= btn->size[BUTTON_LONG_PRESS_START])
+                                break;
+                        } while (time == cb_info[btn->count[0]].event_data.long_press.press_time);
+                    }
+                }
+
+                /** Updating counter for BUTTON_LONG_PRESS_UP press_time */
+                if (btn->cb_info[BUTTON_LONG_PRESS_UP]) {
+                    button_cb_info_t *cb_info = btn->cb_info[BUTTON_LONG_PRESS_UP];
+                    uint16_t time = cb_info[btn->count[1] + 1].event_data.long_press.press_time;
+                    if (btn->long_press_ticks * TICKS_INTERVAL > time) {
+                        for (int i = btn->count[1] + 1; i < btn->size[BUTTON_LONG_PRESS_UP]; i++) {
+                            time = cb_info[i].event_data.long_press.press_time;
+                            if (btn->long_press_ticks * TICKS_INTERVAL <= time) {
+                                btn->count[1] = i;
+                                break;
+                            }
+                        }
+                    }
+                    if(btn->count[1] + 1 < btn->size[BUTTON_LONG_PRESS_UP] && abs(ticks_time - time) <= TOLERANCE) {
+                        do {
+                            btn->count[1]++;
+                            if (btn->count[1] + 1 >= btn->size[BUTTON_LONG_PRESS_UP])
+                                break;
+                        } while (time == cb_info[btn->count[1] + 1].event_data.long_press.press_time);
+                    }
+                }
             }
         } else { //releasd
+
+            btn->event = BUTTON_LONG_PRESS_UP;
+
+            /** calling callbacks for BUTTON_LONG_PRESS_UP press_time */
+            if (btn->cb_info[btn->event] && btn->count[1] >= 0) {
+                button_cb_info_t *cb_info = btn->cb_info[btn->event];
+                do {
+                    cb_info[btn->count[1]].cb(btn, cb_info[btn->count[1]].usr_data);
+                    if (!btn->count[1])
+                        break;
+                    btn->count[1]--;
+                } while (cb_info[btn->count[1]].event_data.long_press.press_time == cb_info[btn->count[1] + 1].event_data.long_press.press_time);
+
+                /** Reset the counter */
+                btn->count[1] = -1;
+            }
+            /** Reset counter */
+            if (btn->cb_info[BUTTON_LONG_PRESS_START]) {
+                btn->count[0] = 0;
+            }
+
             btn->event = (uint8_t)BUTTON_PRESS_UP;
             CALL_EVENT_CB(BUTTON_PRESS_UP);
             btn->state = 0; //reset
@@ -189,6 +302,7 @@ static button_dev_t *button_create_com(uint8_t active_level, uint8_t (*hal_get_k
     btn->hal_button_Level = hal_get_key_state;
     btn->button_level = !active_level;
     btn->long_press_ticks = long_press_ticks;
+    btn->long_press_ticks_default = btn->long_press_ticks;
     btn->short_press_ticks = short_press_ticks;
 
     /** Add handle to list */
@@ -315,6 +429,11 @@ esp_err_t iot_button_delete(button_handle_t btn_handle)
         break;
     }
     BTN_CHECK(ESP_OK == ret, "button deinit failed", ESP_FAIL);
+    for (int i = 0; i < BUTTON_EVENT_MAX; i++) {
+        if (btn->cb_info[i]) {
+            free(btn->cb_info[i]);
+        }
+    }
     button_delete_com(btn);
     return ESP_OK;
 }
@@ -322,11 +441,97 @@ esp_err_t iot_button_delete(button_handle_t btn_handle)
 esp_err_t iot_button_register_cb(button_handle_t btn_handle, button_event_t event, button_cb_t cb, void *usr_data)
 {
     BTN_CHECK(NULL != btn_handle, "Pointer of handle is invalid", ESP_ERR_INVALID_ARG);
-    BTN_CHECK(event < BUTTON_EVENT_MAX, "event is invalid", ESP_ERR_INVALID_ARG);
     button_dev_t *btn = (button_dev_t *) btn_handle;
-    BTN_CHECK(NULL == btn->cb[event], "Callback is already registered", ESP_ERR_INVALID_STATE);
-    btn->cb[event] = cb;
-    btn->usr_data[event] = usr_data;
+    BTN_CHECK(event != BUTTON_MULTIPLE_CLICK, "event argument is invalid", ESP_ERR_INVALID_ARG);
+    button_event_config_t event_cfg = {
+        .event = event,
+    };
+
+    if ((event == BUTTON_LONG_PRESS_START || event == BUTTON_LONG_PRESS_UP) && !event_cfg.event_data.long_press.press_time) {
+        event_cfg.event_data.long_press.press_time = btn->long_press_ticks_default * TICKS_INTERVAL;
+    }
+
+    return iot_button_register_event_cb(btn_handle, event_cfg, cb, usr_data);
+}
+
+esp_err_t iot_button_register_event_cb(button_handle_t btn_handle, button_event_config_t event_cfg, button_cb_t cb, void *usr_data)
+{
+    BTN_CHECK(NULL != btn_handle, "Pointer of handle is invalid", ESP_ERR_INVALID_ARG);
+    button_dev_t *btn = (button_dev_t *) btn_handle;
+    button_event_t event = event_cfg.event;
+    BTN_CHECK(event < BUTTON_EVENT_MAX, "event is invalid", ESP_ERR_INVALID_ARG);
+    BTN_CHECK(!(event == BUTTON_LONG_PRESS_START || event == BUTTON_LONG_PRESS_UP) || event_cfg.event_data.long_press.press_time > btn->short_press_ticks * TICKS_INTERVAL, "event_data is invalid", ESP_ERR_INVALID_ARG);
+    BTN_CHECK(event != BUTTON_MULTIPLE_CLICK || event_cfg.event_data.multiple_clicks.clicks, "event_data is invalid", ESP_ERR_INVALID_ARG);
+
+    if (!btn->cb_info[event]) {
+        btn->cb_info[event] = calloc(1, sizeof(button_cb_info_t));
+        BTN_CHECK(NULL != btn->cb_info[event], "calloc cb_info failed", ESP_ERR_NO_MEM);
+        if (event == BUTTON_LONG_PRESS_START) {
+            btn->count[0] = 0;
+        } else if (event == BUTTON_LONG_PRESS_UP) {
+            btn->count[1] = -1;
+        }
+    }
+    else {
+        button_cb_info_t *p = realloc(btn->cb_info[event], sizeof(button_cb_info_t) * (btn->size[event] + 1));
+        BTN_CHECK(NULL != p, "realloc cb_info failed", ESP_ERR_NO_MEM);
+        btn->cb_info[event] = p;
+    }
+
+    btn->cb_info[event][btn->size[event]].cb = cb;
+    btn->cb_info[event][btn->size[event]].usr_data = usr_data;
+    btn->size[event]++;
+
+    /** Inserting the event_data in sorted manner */
+    if (event == BUTTON_LONG_PRESS_START || event == BUTTON_LONG_PRESS_UP) {
+        uint16_t press_time = event_cfg.event_data.long_press.press_time;
+        BTN_CHECK(press_time / TICKS_INTERVAL > btn->short_press_ticks, "press_time event_data is less than short_press_ticks", ESP_ERR_INVALID_ARG);
+        if (btn->size[event] >= 2) {
+            for (int i = btn->size[event] - 2; i >= 0; i--) {
+                if (btn->cb_info[event][i].event_data.long_press.press_time > press_time) {
+                    btn->cb_info[event][i + 1] = btn->cb_info[event][i];
+
+                    btn->cb_info[event][i].event_data.long_press.press_time = press_time;
+                    btn->cb_info[event][i].cb = cb;
+                    btn->cb_info[event][i].usr_data = usr_data;
+                } else {
+                    btn->cb_info[event][i + 1].event_data.long_press.press_time = press_time;
+                    btn->cb_info[event][i + 1].cb = cb;
+                    btn->cb_info[event][i + 1].usr_data = usr_data;
+                    break;
+                }
+            }
+        } else {
+            btn->cb_info[event][btn->size[event] - 1].event_data.long_press.press_time = press_time;
+        }
+
+        int32_t press_ticks = press_time / TICKS_INTERVAL;
+        if (btn->short_press_ticks < press_ticks && press_ticks < btn->long_press_ticks) {
+            iot_button_set_param(btn, BUTTON_LONG_PRESS_TIME_MS, (void*)press_time);
+        }
+    }
+
+    if (event == BUTTON_MULTIPLE_CLICK) {
+        if (btn->size[event] >= 2) {
+            for (int i = btn->size[event] - 2; i >= 0; i--) {
+                if (btn->cb_info[event][i].event_data.multiple_clicks.clicks > event_cfg.event_data.multiple_clicks.clicks) {
+                    btn->cb_info[event][i + 1] = btn->cb_info[event][i];
+
+                    btn->cb_info[event][i].event_data.multiple_clicks.clicks = event_cfg.event_data.multiple_clicks.clicks;
+                    btn->cb_info[event][i].cb = cb;
+                    btn->cb_info[event][i].usr_data = usr_data;
+                } else {
+                    btn->cb_info[event][i + 1].event_data.multiple_clicks.clicks = event_cfg.event_data.multiple_clicks.clicks;
+                    btn->cb_info[event][i + 1].cb = cb;
+                    btn->cb_info[event][i + 1].usr_data = usr_data;
+                    break;
+                }
+            }
+        } else {
+            btn->cb_info[event][btn->size[event] - 1].event_data.multiple_clicks.clicks = event_cfg.event_data.multiple_clicks.clicks;
+        }
+    }
+
     return ESP_OK;
 }
 
@@ -335,9 +540,63 @@ esp_err_t iot_button_unregister_cb(button_handle_t btn_handle, button_event_t ev
     BTN_CHECK(NULL != btn_handle, "Pointer of handle is invalid", ESP_ERR_INVALID_ARG);
     BTN_CHECK(event < BUTTON_EVENT_MAX, "event is invalid", ESP_ERR_INVALID_ARG);
     button_dev_t *btn = (button_dev_t *) btn_handle;
-    BTN_CHECK(NULL != btn->cb[event], "Callback is not registered yet", ESP_ERR_INVALID_STATE);
-    btn->cb[event] = NULL;
-    btn->usr_data[event] = NULL;
+    BTN_CHECK(NULL != btn->cb_info[event], "No callbacks registered for the event", ESP_ERR_INVALID_STATE);
+
+    if (btn->cb_info[event]) {
+        free(btn->cb_info[event]);
+
+        /** Reset the counter */
+        if (event == BUTTON_LONG_PRESS_START) {
+            btn->count[0] = 0;
+        } else if (event == BUTTON_LONG_PRESS_UP) {
+            btn->count[1] = -1;
+        }
+
+    }
+
+    btn->cb_info[event] = NULL;
+    btn->size[event] = 0;
+    return ESP_OK;
+}
+
+esp_err_t iot_button_unregister_event(button_handle_t btn_handle, button_event_config_t event_cfg, button_cb_t cb)
+{
+    BTN_CHECK(NULL != btn_handle, "Pointer of handle is invalid", ESP_ERR_INVALID_ARG);
+    button_event_t event = event_cfg.event;
+    BTN_CHECK(event < BUTTON_EVENT_MAX, "event is invalid", ESP_ERR_INVALID_ARG);
+    BTN_CHECK(NULL != cb, "Pointer to function callback is invalid", ESP_ERR_INVALID_ARG);
+    button_dev_t *btn = (button_dev_t *) btn_handle;
+
+    int check = -1;
+
+    for (int i = 0; i < btn->size[event]; i++) {
+        if (cb == btn->cb_info[event][i].cb) {
+            if ((event == BUTTON_LONG_PRESS_START || event == BUTTON_LONG_PRESS_UP) && event_cfg.event_data.long_press.press_time) {
+                if (event_cfg.event_data.long_press.press_time != btn->cb_info[event][i].event_data.long_press.press_time) {
+                    continue;
+                }
+            }
+
+            if (event == BUTTON_MULTIPLE_CLICK && event_cfg.event_data.multiple_clicks.clicks) {
+                if (event_cfg.event_data.multiple_clicks.clicks != btn->cb_info[event][i].event_data.multiple_clicks.clicks) {
+                    continue;
+                }
+            }
+            check = i;
+            for (int j = i; j <= btn->size[event]-1; j++) {
+                btn->cb_info[event][j] = btn->cb_info[event][j + 1];
+            }
+
+            button_cb_info_t *p = realloc(btn->cb_info[event], sizeof(button_cb_info_t) * (btn->size[event] - 1));
+            BTN_CHECK(NULL != p, "realloc cb_info failed", ESP_ERR_NO_MEM);
+            btn->cb_info[event] = p;
+            btn->size[event]--;
+            break;
+        }
+    }
+
+    BTN_CHECK(check != -1, "No such callback registered for the event", ESP_ERR_INVALID_STATE);
+
     return ESP_OK;
 }
 
@@ -347,11 +606,18 @@ size_t iot_button_count_cb(button_handle_t btn_handle)
     button_dev_t *btn = (button_dev_t *) btn_handle;
     size_t ret = 0;
     for (size_t i = 0; i < BUTTON_EVENT_MAX; i++) {
-        if (btn->cb[i]) {
-            ret++;
+        if (btn->cb_info[i]) {
+            ret+=btn->size[i];
         }
     }
     return ret;
+}
+
+size_t iot_button_count_event(button_handle_t btn_handle, button_event_t event)
+{
+    BTN_CHECK(NULL != btn_handle, "Pointer of handle is invalid", ESP_ERR_INVALID_ARG);
+    button_dev_t *btn = (button_dev_t *) btn_handle;
+    return btn->size[event];
 }
 
 button_event_t iot_button_get_event(button_handle_t btn_handle)
