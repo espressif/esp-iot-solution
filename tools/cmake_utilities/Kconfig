@@ -47,4 +47,11 @@ menu "CMake Utilities"
         config CU_DIAGNOSTICS_COLOR_AUTO
             bool "auto"
     endchoice
+
+    config CU_GCC_LTO_ENABLE
+        bool "Enable GCC link time optimization(LTO)"
+        default n
+        help
+            "Enable this option, users can enable GCC link time optimization(LTO)
+             feature for target components or dependencies.
 endmenu
