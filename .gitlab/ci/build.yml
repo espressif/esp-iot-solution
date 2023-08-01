@@ -335,6 +335,17 @@ build_example_sensors_sensor_hub_monitor:
     EXAMPLE_DIR: examples/sensors/sensor_hub_monitor
     IMAGE: espressif/idf:release-v4.4
 
+build_example_usb_device_usb_webcam:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_usb_device_usb_webcam
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
+  variables:
+    EXAMPLE_DIR: examples/usb/device/usb_webcam
+
 build_example_usb_device_usb_msc_wireless_disk:
   extends:
     - .build_examples_template

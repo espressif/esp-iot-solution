@@ -1,0 +1,14 @@
+targets:
+  - esp32s2
+  - esp32s3
+dependencies:
+  espressif/tinyusb:
+    version: ">=0.15.0~2"
+    rules:
+      - if: "idf_version >=5.0"
+  leeebo/tinyusb_src:
+    version: ">=0.15.0~6"
+    rules:
+      - if: "idf_version >=4.4,<5.0"
+  esp32-camera:
+    version: ">=2.0.5"
