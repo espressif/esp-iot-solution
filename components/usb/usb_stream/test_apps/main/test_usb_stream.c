@@ -106,7 +106,7 @@ static void stream_control_when_state_changed_cb(usb_stream_state_t event, void 
 }
 
 
-TEST_CASE("test uvc any resolution", "[devkit][uvc]")
+TEST_CASE("test uvc any resolution", "[devkit][uvc][uvc_only]")
 {
     esp_log_level_set("*", ESP_LOG_DEBUG);
     /* malloc double buffer for usb payload, xfer_buffer_size >= frame_buffer_size*/
@@ -152,10 +152,10 @@ TEST_CASE("test uvc any resolution", "[devkit][uvc]")
     _free(xfer_buffer_a);
     _free(xfer_buffer_b);
     _free(frame_buffer);
-    vTaskDelay(pdMS_TO_TICKS(100));
+    vTaskDelay(pdMS_TO_TICKS(500));
 }
 
-TEST_CASE("test uvc specified resolution", "[devkit][uvc]")
+TEST_CASE("test uvc specified resolution", "[devkit][uvc][uvc_only]")
 {
 #define FRAME_WIDTH 480
 #define FRAME_HEIGHT 320
@@ -212,10 +212,10 @@ TEST_CASE("test uvc specified resolution", "[devkit][uvc]")
     _free(xfer_buffer_a);
     _free(xfer_buffer_b);
     _free(frame_buffer);
-    vTaskDelay(pdMS_TO_TICKS(100));
+    vTaskDelay(pdMS_TO_TICKS(500));
 }
 
-TEST_CASE("test uvc change resolution", "[devkit][uvc]")
+TEST_CASE("test uvc change resolution", "[devkit][uvc][uvc_only]")
 {
     esp_log_level_set("*", ESP_LOG_DEBUG);
     /* malloc double buffer for usb payload, xfer_buffer_size >= frame_buffer_size*/
@@ -264,6 +264,7 @@ TEST_CASE("test uvc change resolution", "[devkit][uvc]")
             vTaskDelay(3000 / portTICK_PERIOD_MS);
             //Suspend uvc streaming to change the resolution
             TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UVC, CTRL_SUSPEND, NULL));
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
         }
         /* test streaming stop */
         TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_stop());
@@ -273,7 +274,7 @@ TEST_CASE("test uvc change resolution", "[devkit][uvc]")
     _free(xfer_buffer_a);
     _free(xfer_buffer_b);
     _free(frame_buffer);
-    vTaskDelay(pdMS_TO_TICKS(100));
+    vTaskDelay(pdMS_TO_TICKS(500));
 }
 
 static void mic_frame_cb(mic_frame_t *frame, void *ptr)
@@ -287,7 +288,7 @@ static void mic_frame_cb(mic_frame_t *frame, void *ptr)
 
 TEST_CASE("test uac mic", "[devkit][uac][mic]")
 {
-    esp_log_level_set("*", ESP_LOG_VERBOSE);
+    esp_log_level_set("*", ESP_LOG_DEBUG);
     uac_config_t uac_config = {
         .mic_ch_num = UAC_CH_ANY,
         .mic_bit_resolution = UAC_BITS_ANY,
@@ -333,7 +334,7 @@ TEST_CASE("test uac mic", "[devkit][uac][mic]")
             if (test_count % 20 == 0) {
                 TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_MIC, CTRL_UAC_MUTE, (void *)1));
                 TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_MIC, CTRL_SUSPEND, NULL));
-                vTaskDelay(20 / portTICK_PERIOD_MS);
+                vTaskDelay(100 / portTICK_PERIOD_MS);
                 TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_MIC, CTRL_RESUME, NULL));
                 TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_MIC, CTRL_UAC_MUTE, (void *)0));
                 TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_MIC, CTRL_UAC_VOLUME, (void *)test_count));
@@ -343,12 +344,12 @@ TEST_CASE("test uac mic", "[devkit][uac][mic]")
         TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_MIC, CTRL_SUSPEND, NULL));
         TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_stop());
     }
-    vTaskDelay(pdMS_TO_TICKS(100));
+    vTaskDelay(pdMS_TO_TICKS(500));
 }
 
 TEST_CASE("test uac spk", "[devkit][uac][spk]")
 {
-    esp_log_level_set("*", ESP_LOG_VERBOSE);
+    esp_log_level_set("*", ESP_LOG_DEBUG);
     uac_config_t uac_config = {
         .spk_ch_num = UAC_CH_ANY,
         .spk_bit_resolution = UAC_BITS_ANY,
@@ -420,7 +421,7 @@ TEST_CASE("test uac spk", "[devkit][uac][spk]")
         free(uac_frame_list);
         TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_stop());
     }
-    vTaskDelay(pdMS_TO_TICKS(100));
+    vTaskDelay(pdMS_TO_TICKS(500));
 }
 
 TEST_CASE("test uac mic spk loop", "[devkit][uac][mic][spk]")
@@ -463,7 +464,7 @@ TEST_CASE("test uac mic spk loop", "[devkit][uac][mic][spk]")
         TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_stop());
         test_count--;
     }
-    vTaskDelay(pdMS_TO_TICKS(100));
+    vTaskDelay(pdMS_TO_TICKS(500));
 }
 
 TEST_CASE("test uvc+uac callback", "[devkit][uvc][uac][mic][spk]")
@@ -533,7 +534,7 @@ TEST_CASE("test uvc+uac callback", "[devkit][uvc][uac][mic][spk]")
     _free(xfer_buffer_a);
     _free(xfer_buffer_b);
     _free(frame_buffer);
-    vTaskDelay(pdMS_TO_TICKS(100));
+    vTaskDelay(pdMS_TO_TICKS(500));
 }
 
 TEST_CASE("test uvc+uac", "[devkit][uvc][uac][mic][spk]")
@@ -604,14 +605,14 @@ TEST_CASE("test uvc+uac", "[devkit][uvc][uac][mic][spk]")
     _free(xfer_buffer_a);
     _free(xfer_buffer_b);
     _free(frame_buffer);
-    vTaskDelay(pdMS_TO_TICKS(100));
+    vTaskDelay(pdMS_TO_TICKS(500));
 }
 
 TEST_CASE("test uvc quick", "[uvc][quick]")
 {
     // TODO: we currently only test UVC in quick mode,
     // because we found some camera module with UVC+UAC will not work in quick mode
-    esp_log_level_set("*", ESP_LOG_VERBOSE);
+    esp_log_level_set("*", ESP_LOG_DEBUG);
     /* malloc double buffer for usb payload, xfer_buffer_size >= frame_buffer_size*/
     uint8_t *xfer_buffer_a = (uint8_t *)_malloc(DEMO_XFER_BUFFER_SIZE);
     TEST_ASSERT(xfer_buffer_a != NULL);
@@ -681,7 +682,7 @@ TEST_CASE("test uvc quick", "[uvc][quick]")
     _free(xfer_buffer_a);
     _free(xfer_buffer_b);
     _free(frame_buffer);
-    vTaskDelay(pdMS_TO_TICKS(100));
+    vTaskDelay(pdMS_TO_TICKS(500));
 }
 
 /* Power Selector */
@@ -850,7 +851,7 @@ TEST_CASE("test uvc+uac with suddenly disconnect", "[otg][uvc][uac][mic][spk][di
     _free(xfer_buffer_a);
     _free(xfer_buffer_b);
     _free(frame_buffer);
-    vTaskDelay(pdMS_TO_TICKS(100));
+    vTaskDelay(pdMS_TO_TICKS(500));
 }
 
 static size_t before_free_8bit;

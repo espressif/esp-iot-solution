@@ -43,6 +43,8 @@ components_test_usb_camera:
     - job: "build_components_usb_usb_stream_test_apps"
       artifacts: true
       optional: true
+  retry:
+    max: 2
   parallel:
     matrix:
       - IDF_TARGET: esp32s2
@@ -60,6 +62,9 @@ components_test_usb_camera:
       - IDF_TARGET: esp32s3
         IDF_VERSION: "4.4"
         ENV_TAG: usb-otg_camera
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "4.4"
+        ENV_TAG: usb_camera_s3_eye
       - IDF_TARGET: esp32s2
         IDF_VERSION: "4.4"
         ENV_TAG: usb_camera_isoc
