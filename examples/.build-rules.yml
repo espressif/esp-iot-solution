@@ -83,22 +83,6 @@ examples/get-started/blink:
   enable:
     - if: (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4) and IDF_TARGET in ["esp32","esp32s2","esp32s3"]
 
-examples/hmi/lvgl_coffee:
-  enable:
-    - if: (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4) and IDF_TARGET == "esp32"
-
-examples/hmi/lvgl_example:
-  enable:
-    - if: (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4) and IDF_TARGET == "esp32"
-
-examples/hmi/lvgl_thermostat:
-  enable:
-    - if: (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4) and IDF_TARGET == "esp32"
-
-examples/hmi/lvgl_wificonfig:
-  enable:
-    - if: (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4) and IDF_TARGET == "esp32"
-
 examples/lighting/lightbulb:
   enable:
     - if: INCLUDE_DEFAULT == 1

@@ -256,38 +256,6 @@ build_example_gprof_gprof_simple:
   variables:
     EXAMPLE_DIR: examples/gprof/gprof_simple
 
-build_example_hmi_lvgl_coffee:
-  extends:
-    - .build_examples_template
-    - .rules:build:example_hmi_lvgl_coffee
-  variables:
-    EXAMPLE_DIR: examples/hmi/lvgl_coffee
-    IMAGE: espressif/idf:release-v4.4
-
-build_example_hmi_lvgl_example:
-  extends:
-    - .build_examples_template
-    - .rules:build:example_hmi_lvgl_example
-  variables:
-    EXAMPLE_DIR: examples/hmi/lvgl_example
-    IMAGE: espressif/idf:release-v4.4
-
-build_example_hmi_lvgl_thermostat:
-  extends:
-    - .build_examples_template
-    - .rules:build:example_hmi_lvgl_thermostat
-  variables:
-    EXAMPLE_DIR: examples/hmi/lvgl_thermostat
-    IMAGE: espressif/idf:release-v4.4
-
-build_example_hmi_lvgl_wificonfig:
-  extends:
-    - .build_examples_template
-    - .rules:build:example_hmi_lvgl_wificonfig
-  variables:
-    EXAMPLE_DIR: examples/hmi/lvgl_wificonfig
-    IMAGE: espressif/idf:release-v4.4
-
 build_example_lighting_lightbulb:
   extends:
     - .build_examples_template

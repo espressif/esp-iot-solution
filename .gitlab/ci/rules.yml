@@ -242,18 +242,6 @@
 .patterns-example_get_started_blink: &patterns-example_get_started_blink
   - "examples/get-started/blink/**/*"
 
-.patterns-example_hmi_lvgl_coffee: &patterns-example_hmi_lvgl_coffee
-  - "examples/hmi/lvgl_coffee/**/*"
-
-.patterns-example_hmi_lvgl_example: &patterns-example_hmi_lvgl_example
-  - "examples/hmi/lvgl_coffee/**/*"
-
-.patterns-example_hmi_lvgl_thermostat: &patterns-example_hmi_lvgl_thermostat
-  - "examples/hmi/lvgl_thermostat/**/*"
-
-.patterns-example_hmi_lvgl_wificonfig: &patterns-example_hmi_lvgl_wificonfig
-  - "examples/hmi/lvgl_wificonfig/**/*"
-
 .patterns-example_lighting_lightbulb: &patterns-example_lighting_lightbulb
   - "examples/lighting/lightbulb/**/*"
 
@@ -511,58 +499,6 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-example_gprof_gprof_simple
-
-.rules:build:example_hmi_lvgl_coffee:
-  rules:
-    - <<: *if-protected
-    - <<: *if-label-build
-    - <<: *if-dev-push
-      changes: *patterns-build_system
-    - <<: *if-dev-push
-      changes: *patterns-components_gui_lvgl_gui
-    - <<: *if-dev-push
-      changes: *patterns-example_common_components_boards
-    - <<: *if-dev-push
-      changes: *patterns-example_hmi_lvgl_coffee
-
-.rules:build:example_hmi_lvgl_example:
-  rules:
-    - <<: *if-protected
-    - <<: *if-label-build
-    - <<: *if-dev-push
-      changes: *patterns-build_system
-    - <<: *if-dev-push
-      changes: *patterns-components_gui_lvgl_gui
-    - <<: *if-dev-push
-      changes: *patterns-example_common_components_boards
-    - <<: *if-dev-push
-      changes: *patterns-example_hmi_lvgl_example
-
-.rules:build:example_hmi_lvgl_thermostat:
-  rules:
-    - <<: *if-protected
-    - <<: *if-label-build
-    - <<: *if-dev-push
-      changes: *patterns-build_system
-    - <<: *if-dev-push
-      changes: *patterns-components_gui_lvgl_gui
-    - <<: *if-dev-push
-      changes: *patterns-example_common_components_boards
-    - <<: *if-dev-push
-      changes: *patterns-example_hmi_lvgl_thermostat
-
-.rules:build:example_hmi_lvgl_wificonfig:
-  rules:
-    - <<: *if-protected
-    - <<: *if-label-build
-    - <<: *if-dev-push
-      changes: *patterns-build_system
-    - <<: *if-dev-push
-      changes: *patterns-components_gui_lvgl_gui
-    - <<: *if-dev-push
-      changes: *patterns-example_common_components_boards
-    - <<: *if-dev-push
-      changes: *patterns-example_hmi_lvgl_wificonfig
 
 .rules:build:example_lighting_lightbulb:
   rules:
