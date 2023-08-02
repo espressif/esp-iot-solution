@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v1.1.0 - 2023-08-02
+
+### Bug Fixes:
+
+* UVC:
+  * Set UVC frame interval to default if user config not match
+
 ## v1.0.6 - 2023-07-21
 
 ### Bug Fixes:

@@ -32,4 +32,4 @@ endif()
 #The SRC_DIRS order cannot be changed, otherwise weak functions may not be overridden
 idf_component_register( SRC_DIRS "${user_src_dir}" "."
                         INCLUDE_DIRS "${boards_dir}" "."
-                        REQUIRES bus ${PRIVREQ} nvs_flash esp_wifi)
+                        REQUIRES ${PRIVREQ} nvs_flash esp_wifi)

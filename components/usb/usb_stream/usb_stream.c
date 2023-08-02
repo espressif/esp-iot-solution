@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 #include <inttypes.h>
+#include <stdint.h>
 #include <string.h>
 #include <time.h>
 #include <sys/time.h>
@@ -675,12 +676,16 @@ static esp_err_t _apply_stream_config(usb_stream_t stream)
         static uvc_frame_size_t frame_size = {0};
         frame_size.width = usb_dev->uvc_cfg.frame_width;
         frame_size.height = usb_dev->uvc_cfg.frame_height;
+        frame_size.interval_max = usb_dev->uvc_cfg.frame_interval;
+        frame_size.interval_min = usb_dev->uvc_cfg.frame_interval;
+        frame_size.interval = usb_dev->uvc_cfg.frame_interval;
         usb_dev->uvc->format_index = usb_dev->uvc_cfg.format_index;
         usb_dev->uvc->frame_index = usb_dev->uvc_cfg.frame_index;
         usb_dev->uvc->frame_height = usb_dev->uvc_cfg.frame_height;
         usb_dev->uvc->frame_width = usb_dev->uvc_cfg.frame_width;
         usb_dev->uvc->frame_num = 1;
         usb_dev->uvc->frame_size = &frame_size;
+        usb_dev->uvc->frame_interval = usb_dev->uvc_cfg.frame_interval;
 #else
         UVC_CHECK((usb_dev->uvc->frame_index <= usb_dev->uvc->frame_num), "invalid frame index", ESP_ERR_INVALID_STATE);
         if (usb_dev->uvc->frame_index == 0) {
@@ -690,8 +695,8 @@ static esp_err_t _apply_stream_config(usb_stream_t stream)
         UVC_CHECK(usb_dev->uvc->format_index != 0, "invalid format index", ESP_ERR_INVALID_STATE);
         usb_dev->uvc->frame_width = usb_dev->uvc->frame_size[usb_dev->uvc->frame_index - 1].width;
         usb_dev->uvc->frame_height = usb_dev->uvc->frame_size[usb_dev->uvc->frame_index - 1].height;
+        usb_dev->uvc->frame_interval = usb_dev->uvc->frame_size[usb_dev->uvc->frame_index - 1].interval;
 #endif
-        usb_dev->uvc->frame_interval = usb_dev->uvc_cfg.frame_interval;
         if (usb_dev->ifc[STREAM_UVC]->xfer_type == UVC_XFER_BULK) {
             usb_dev->ifc[STREAM_UVC]->urb_num = NUM_BULK_STREAM_URBS;
             usb_dev->ifc[STREAM_UVC]->packets_per_urb = 1;
@@ -965,13 +970,55 @@ static esp_err_t _update_config_from_descriptor(const usb_config_desc_t *cfg_des
                         }
                         mjpeg_format_found = true;
                         break;
-                    case VIDEO_CS_ITF_VS_FRAME_MJPEG:
-                        parse_vs_frame_mjpeg_desc((const uint8_t *)next_desc, &_frame_idx, &_frame_width, &_frame_heigh);
+                    case VIDEO_CS_ITF_VS_FRAME_MJPEG: {
+                        uint8_t interval_type = 0;
+                        const uint32_t *pp_interval = NULL;
+                        uint32_t dflt_interval = 0;
+                        uint32_t max_interval = 0;
+                        uint32_t min_interval = 0;
+                        uint32_t step_interval = 0;
+                        uint32_t final_interval = 0;
+                        parse_vs_frame_mjpeg_desc((const uint8_t *)next_desc, &_frame_idx, &_frame_width, &_frame_heigh, &interval_type, &pp_interval, &dflt_interval);
+                        if (interval_type) {
+                            min_interval = pp_interval[0];
+                            for (size_t i = 0; i <interval_type; i++) {
+                                if (usb_dev->uvc_cfg.frame_interval == pp_interval[i]) {
+                                    final_interval = pp_interval[i];
+                                }
+                                if (pp_interval[i] > max_interval) {
+                                    max_interval = pp_interval[i];
+                                }
+                                if (pp_interval[i] < min_interval) {
+                                    min_interval = pp_interval[i]; 
+                                }
+                            }
+                        } else {
+                            min_interval = pp_interval[0];
+                            max_interval = pp_interval[1];
+                            step_interval = pp_interval[2];
+                            if (usb_dev->uvc_cfg.frame_interval >= min_interval && usb_dev->uvc_cfg.frame_interval <= max_interval) {
+                                for (uint32_t i = min_interval; i < max_interval; i+=step_interval) {
+                                    if (usb_dev->uvc_cfg.frame_interval >= i && usb_dev->uvc_cfg.frame_interval < (i + step_interval)) {
+                                        final_interval = i;
+                                    }
+                                }
+                            }
+                        }
+                        if (final_interval == 0) {
+                            final_interval = dflt_interval;
+                            ESP_LOGD(TAG, "UVC frame interval %" PRIu32 " not found, using default = %" PRIu32, usb_dev->uvc_cfg.frame_interval, final_interval);
+                        } else {
+                            ESP_LOGD(TAG, "UVC frame interval %" PRIu32 " found = %" PRIu32, usb_dev->uvc_cfg.frame_interval, final_interval);
+                        }
                         if (uvc_dev) {
                             assert((_frame_idx - 1) < uvc_dev->frame_num); //should not happen
                             UVC_ENTER_CRITICAL();
                             uvc_dev->frame_size[_frame_idx - 1].width = _frame_width;
                             uvc_dev->frame_size[_frame_idx - 1].height = _frame_heigh;
+                            uvc_dev->frame_size[_frame_idx - 1].interval = final_interval;
+                            uvc_dev->frame_size[_frame_idx - 1].interval_min = min_interval;
+                            uvc_dev->frame_size[_frame_idx - 1].interval_max = max_interval;
+                            uvc_dev->frame_size[_frame_idx - 1].interval_step = step_interval;
                             UVC_EXIT_CRITICAL();
                         }
                         if (user_frame_found == true) {
@@ -985,6 +1032,7 @@ static esp_err_t _update_config_from_descriptor(const usb_config_desc_t *cfg_des
                             ESP_LOGW(TAG, "found width*heigh %u * %u , orientation swap?", _frame_heigh, _frame_width);
                         }
                         break;
+                    }
                     default:
                         break;
                     }
@@ -2382,7 +2430,7 @@ static esp_err_t _uvc_streaming_resume(void)
     esp_err_t ret = _uvc_vs_commit_control(&ctrl_set, &ctrl_probed);
     UVC_CHECK(ESP_OK == ret, "UVC negotiate failed", ESP_FAIL);
     if (ctrl_set.dwMaxPayloadTransferSize != ctrl_probed.dwMaxPayloadTransferSize) {
-        ESP_LOGW(TAG, "dwMaxPayloadTransferSize set = %" PRIu32 ", probed = %" PRIu32, ctrl_set.dwMaxPayloadTransferSize, ctrl_probed.dwMaxPayloadTransferSize);
+        ESP_LOGI(TAG, "dwMaxPayloadTransferSize set = %" PRIu32 ", probed = %" PRIu32, ctrl_set.dwMaxPayloadTransferSize, ctrl_probed.dwMaxPayloadTransferSize);
     }
     /* start uvc streaming */
     uvc_error_t uvc_ret = UVC_SUCCESS;
@@ -3934,13 +3982,13 @@ esp_err_t uvc_frame_size_reset(uint16_t frame_width, uint16_t frame_height, uint
         ESP_LOGE(TAG, "%s stream running, please suspend before frame_size_reset", s_usb_dev.ifc[STREAM_UVC]->name);
         return ESP_ERR_INVALID_STATE;
     }
+    int frame_found = -1;
     if (frame_width && frame_height) {
         bool frame_reset = false;
-        bool frame_found = false;
         UVC_ENTER_CRITICAL();
         size_t frame_num = s_usb_dev.uvc->frame_num;
         uvc_frame_size_t *frame_size = s_usb_dev.uvc->frame_size;
-        for (int i = 0; frame_num; i++) {
+        for (int i = 0; i < frame_num; i++) {
             if ((frame_width == FRAME_RESOLUTION_ANY || frame_width == frame_size[i].width)
                     && ( frame_height == FRAME_RESOLUTION_ANY || frame_height == frame_size[i].height)) {
                 if (i + 1 != s_usb_dev.uvc->frame_index) {
@@ -3953,12 +4001,12 @@ esp_err_t uvc_frame_size_reset(uint16_t frame_width, uint16_t frame_height, uint
                     s_usb_dev.uvc_cfg.frame_width = frame_size[i].width;
                     frame_reset = true;
                 }
-                frame_found = true;
+                frame_found = i;
                 break;
             }
         }
         UVC_EXIT_CRITICAL();
-        if (frame_found == false) {
+        if (frame_found == -1) {
             ESP_LOGE(TAG, "frame size not found, width = %d, height = %d", frame_width, frame_height);
             return ESP_ERR_NOT_FOUND;
         } else if (frame_reset == false) {
@@ -3966,13 +4014,48 @@ esp_err_t uvc_frame_size_reset(uint16_t frame_width, uint16_t frame_height, uint
             return ESP_OK;
         }
     }
+    uint32_t final_interval = frame_interval;
     if (frame_interval) {
+        if (frame_found != -1) {
+            final_interval = 0;
+            UVC_ENTER_CRITICAL();
+            uvc_frame_size_t *frame_size = s_usb_dev.uvc->frame_size;
+            if (frame_size[frame_found].interval_step) {
+                // continues interval
+                if (frame_interval >= frame_size[frame_found].interval_min && frame_interval <= frame_size[frame_found].interval_max) {
+                    for (uint32_t i = frame_size[frame_found].interval_min; i < frame_size[frame_found].interval_max; i+=frame_size[frame_found].interval_step) {
+                        if (frame_interval >= i && frame_interval < (i + frame_size[frame_found].interval_step)) {
+                            final_interval = i;
+                        }
+                    }
+                }
+            } else {
+                // fixed interval
+                if (frame_interval == frame_size[frame_found].interval_min) {
+                    final_interval = frame_size[frame_found].interval_min;
+                } else if (frame_interval == frame_size[frame_found].interval_max) {
+                    final_interval = frame_size[frame_found].interval_max;
+                } else if (frame_interval == frame_size[frame_found].interval) {
+                    final_interval = frame_size[frame_found].interval;
+                }
+            }
+            UVC_EXIT_CRITICAL();
+            if (final_interval == 0) {
+                UVC_ENTER_CRITICAL();
+                final_interval = frame_size[frame_found].interval;
+                UVC_EXIT_CRITICAL();
+                ESP_LOGW(TAG, "frame interval %" PRIu32 " not support, using = %" PRIu32, frame_interval, final_interval);
+            }
+        } else {
+            ESP_LOGW(TAG, "frame interval force to %" PRIu32, final_interval);
+        }
+        // else User should make sure the frame_interval is between frame_interval_min and frame_interval_max
         UVC_ENTER_CRITICAL();
-        s_usb_dev.uvc->frame_interval = frame_interval;
+        s_usb_dev.uvc->frame_interval = final_interval;
         UVC_EXIT_CRITICAL();
         //change user configuration
-        s_usb_dev.uvc_cfg.frame_interval = frame_interval;
+        s_usb_dev.uvc_cfg.frame_interval = final_interval;
     }
-    ESP_LOGI(TAG, "UVC frame size reset, width = %d, height = %d, interval = %"PRIu32, frame_width, frame_height, frame_interval);
+    ESP_LOGI(TAG, "UVC frame size reset, width = %d, height = %d, interval = %"PRIu32, frame_width, frame_height, final_interval);
     return ESP_OK;
 }

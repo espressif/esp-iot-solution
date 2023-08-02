@@ -2,3 +2,5 @@ dependencies:
   boards:
     version: "~0.0.1"
     override_path: "../../common_components/boards"
+  screen:
+    override_path: "../../../components/display/screen"

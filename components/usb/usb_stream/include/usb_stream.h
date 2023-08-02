@@ -116,8 +116,12 @@ typedef struct {
  * @brief uvc frame type 
  * */
 typedef struct {
-    uint16_t width;        /*!< frame width */
-    uint16_t height;       /*!< frame height */
+    uint16_t width;             /*!< frame width */
+    uint16_t height;            /*!< frame height */
+    uint32_t interval;          /*!< frame interval */
+    uint32_t interval_min;      /*!< frame min interval */
+    uint32_t interval_max;      /*!< frame max interval */
+    uint32_t interval_step;     /*!< frame interval step */
 } uvc_frame_size_t;
 
 /**
