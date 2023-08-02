@@ -79,6 +79,10 @@
   - "components/led/lightbulb_driver/**/*"
   - "components/tools/cmake_utilities/package_manager.cmake"
 
+.patterns-components_esp_simplefoc: &patterns-components_esp_simplefoc
+  - "components/motor/esp_simplefoc/**/*"
+  - "components/tools/cmake_utilities/package_manager.cmake"
+
 .patterns-components_motor_servo: &patterns-components_motor_servo
   - "components/motor/servo/**/*"
 
@@ -252,6 +256,12 @@
 
 .patterns-example_lighting_lightbulb: &patterns-example_lighting_lightbulb
   - "examples/lighting/lightbulb/**/*"
+
+.patterns-example_motor_foc_openloop_control: &patterns-example_motor_foc_openloop_control
+  - "examples/motor/foc_openloop_control/**/*"
+
+.patterns-example_motor_foc_velocity_control: &patterns-example_motor_foc_velocity_control
+  - "examples/motor/foc_velocity_control/**/*"
 
 .patterns-example_ota_simple_ota_example: &patterns-example_ota_simple_ota_example
   - "examples/ota/simple_ota_example/**/*"
@@ -564,6 +574,28 @@
       changes: *patterns-components_led_lightbulb_driver
     - <<: *if-dev-push
       changes: *patterns-example_lighting_lightbulb
+
+.rules:build:example_motor_foc_openloop_control:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_esp_simplefoc
+    - <<: *if-dev-push
+      changes: *patterns-example_motor_foc_openloop_control
+
+.rules:build:example_motor_foc_velocity_control:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_esp_simplefoc
+    - <<: *if-dev-push
+      changes: *patterns-example_motor_foc_velocity_control
 
 .rules:build:example_ota_simple_ota_example:
   rules:
@@ -902,6 +934,15 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_led_lightbulb_driver
+
+.rules:build:components_motor_esp_simplefoc_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_esp_simplefoc
 
 .rules:build:components_motor_servo_test:
   rules:

@@ -1,0 +1,4 @@
+dependencies:
+  idf: ">=4.4"
+  esp_simplefoc:
+    override_path: "../../../../components/motor/esp_simplefoc"
