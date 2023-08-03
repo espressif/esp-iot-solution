@@ -12,3 +12,4 @@ dependencies:
       - if: "idf_version >=4.4,<5.0"
   esp32-camera:
     version: ">=2.0.5"
+  cmake_utilities: "*"

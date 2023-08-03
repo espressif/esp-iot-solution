@@ -2,7 +2,17 @@
 
 This example demonstrates how to use ESP32-Sx USB function as the USB Web Camera (UVC device). 
 
-## How to use the example
+### Try the example through the esp-launchpad
+
+<a href="https://espressif.github.io/esp-launchpad/?flashConfigURL=https://raw.githubusercontent.com/espressif/esp-dev-kits/master/launch.toml">
+    <img alt="Try it with ESP Launchpad" src="https://espressif.github.io/esp-launchpad/assets/try_with_launchpad.png" width="200" height="56">
+</a>
+
+This example has been built for `ESP32-S3-EYE`, you can use `esp-launchpad` to flash the binary to your board directly.
+
+Please choose `ESP32-S3-EYE-USB_WebCam_v1_0`, then click flash to quickly start
+
+## How to build the example
 
 ### Hardware Required
 
