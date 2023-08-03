@@ -1,5 +1,8 @@
 # ChangeLog
 
+## v2.5.5 - 2023-8-3
+* Add modify api which can change long_press_time and short_press_time
+
 ## v2.5.4 - 2023-7-27
 
 ### Enhancements:

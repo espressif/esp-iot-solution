@@ -44,6 +44,16 @@ typedef enum {
 } button_type_t;
 
 /**
+ * @brief Button parameter
+ * 
+ */
+typedef enum {
+    BUTTON_LONG_PRESS_TIME_MS = 0,
+    BUTTON_SHORT_PRESS_TIME_MS,
+    BUTTON_PARAM_MAX,
+} button_param_t;
+
+/**
  * @brief custom button configuration
  * 
  */
@@ -162,6 +172,18 @@ uint16_t iot_button_get_ticks_time(button_handle_t btn_handle);
  * @return Count of trigger cb(BUTTON_LONG_PRESS_HOLD)
  */
 uint16_t iot_button_get_long_press_hold_cnt(button_handle_t btn_handle);
+
+/**
+ * @brief Dynamically change the parameters of the iot button
+ * 
+ * @param btn_handle Button handle
+ * @param param Button parameter
+ * @param value new value
+ * @return
+ *      - ESP_OK on success
+ *      - ESP_ERR_INVALID_ARG   Arguments is invalid.
+ */
+esp_err_t iot_button_set_param(button_handle_t btn_handle, button_param_t param, void *value);
 
 #ifdef __cplusplus
 }
