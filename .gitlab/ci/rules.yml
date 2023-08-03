@@ -763,7 +763,7 @@
     - <<: *if-dev-push
       changes: *patterns-components_bus
 
-.rules:build:components_button_test:
+.rules:build:components_button_test_apps:
   rules:
     - <<: *if-protected
     - <<: *if-label-build
@@ -773,7 +773,7 @@
       changes: *patterns-components_button
 
 .rules:build:components_display_digital_tube_ch450_test:
-  rules:
+  rules:    
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-dev-push
