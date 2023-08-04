@@ -9,3 +9,4 @@ endif()
 
 cmake_policy(SET CMP0079 NEW)
 target_link_libraries(${tusb_lib} PRIVATE ${COMPONENT_LIB})
+include(gen_single_bin)

@@ -7,6 +7,16 @@ This routine demonstrates how to use the [usb_stream](https://components.espress
 * Currently only images with a resolution smaller than the screen resolution are displayed
 * When the image width is equal to the screen width, the refresh rate is at its highest.
 
+## Try the example through the esp-launchpad
+
+<a href="https://espressif.github.io/esp-launchpad/?flashConfigURL=https://raw.githubusercontent.com/espressif/esp-dev-kits/master/launch.toml">
+    <img alt="Try it with ESP Launchpad" src="https://espressif.github.io/esp-launchpad/assets/try_with_launchpad.png" width="200" height="56">
+</a>
+
+This example has been built for `ESP32-S3-LCD-EV-Board`, you can use `esp-launchpad` to flash the binary to your board directly.
+
+Please choose `lcd_ev_subboard3_800_480_usb_camera` or `lcd_ev_subboard2_480_480_usb_camera`, then click flash to quickly start
+
 ## Hardware
 
 * An [ESP32-S3-LCD-EV-Board](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-lcd-ev-board/index.html) development board with 800\*480/480\*480 LCD.
