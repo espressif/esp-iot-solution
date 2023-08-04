@@ -3,7 +3,7 @@ variables:
 
 .build_docs_template:
   image: $ESP_IDF_DOC_ENV_IMAGE
-  stage: build_doc
+  stage: build_docs
   tags:
     - build_docs
   dependencies: []

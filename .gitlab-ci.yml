@@ -2,7 +2,7 @@ stages:
   - pre_check
   - build
   - target_test
-  - build_doc
+  - build_docs
   - deploy
 
 workflow:
