@@ -112,6 +112,10 @@ examples/sensors/sensor_hub_monitor:
   enable:
     - if: IDF_TARGET in ["esp32","esp32s2"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
 
+examples/usb/device/usb_uart_bridge:
+  enable:
+    - if: IDF_TARGET in ["esp32s3","esp32s2"]
+
 examples/usb/device/usb_webcam:
   enable:
     - if: IDF_TARGET in ["esp32s3","esp32s2"]
