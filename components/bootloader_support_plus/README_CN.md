@@ -153,7 +153,7 @@ Q2. 已经使用 esp bootloader plus 方案的设备，是否可以使用 bootlo
 A2. 可以。您可以使用脚本工具 [gen_custom_ota.py](https://github.com/espressif/esp-iot-solution/blob/master/tools/cmake_utilities/scripts/gen_custom_ota.py) 来执行下述命令生成适用于esp bootloader plus 方案的压缩固件：
 
 ```
-python3 gen_compressed_ota.py -hv v2 -i simple_ota.bin
+python3 gen_custom_ota.py -hv v2 -i simple_ota.bin
 ```
 
 另外，因为这两个方案采取不同的文件格式以及不同的触发更新的机制，请确保已经使用 esp bootloader plus 方案的设备继续使用包含 SubType 为 0x22 的 storage 分区的分区表：
