@@ -716,7 +716,7 @@ typedef struct OpenAI_AudioTranslation {
  *
  */
 typedef struct OpenAI {
-#if CONFIG_ENABLE_EMBEDDING
+#if CONFIG_ENABLE_EMBEDDING || defined __DOXYGEN__
     /**
      * @brief Create an embedding vector representing the input text.
      *
@@ -729,7 +729,7 @@ typedef struct OpenAI {
     OpenAI_EmbeddingResponse_t *(*embeddingCreate)(struct OpenAI *openai, char *input, const char *model, const char *user);
 #endif
 
-#if CONFIG_ENABLE_MODERATION
+#if CONFIG_ENABLE_MODERATION || defined __DOXYGEN__
     /**
      * @brief Classify if text violates OpenAI's Content Policy.
      *
@@ -741,7 +741,7 @@ typedef struct OpenAI {
     OpenAI_ModerationResponse_t *(*moderationCreate)(struct OpenAI *openai, char *input, const char *model);
 #endif
 
-#if CONFIG_ENABLE_COMPLETION
+#if CONFIG_ENABLE_COMPLETION || defined __DOXYGEN__
     /**
      * @brief Generate text according to the prompt.
      *
@@ -758,7 +758,7 @@ typedef struct OpenAI {
     void (*completionDelete)(OpenAI_Completion_t *completion);
 #endif
 
-#if CONFIG_ENABLE_CHAT_COMPLETION
+#if CONFIG_ENABLE_CHAT_COMPLETION || defined __DOXYGEN__
     /**
      * @brief Create a chat completion object for chatting.
      *
@@ -775,7 +775,7 @@ typedef struct OpenAI {
     void (*chatDelete)(OpenAI_ChatCompletion_t *chatCompletion);
 #endif
 
-#if CONFIG_ENABLE_EDIT
+#if CONFIG_ENABLE_EDIT || defined __DOXYGEN__
     /**
      * @brief Create an edit object for editing text.
      *
@@ -792,7 +792,7 @@ typedef struct OpenAI {
     void (*editDelete)(OpenAI_Edit_t *edit);
 #endif
 
-#if CONFIG_ENABLE_IMAGE_GENERATION
+#if CONFIG_ENABLE_IMAGE_GENERATION || defined __DOXYGEN__
     /**
      * @brief Create an image generation object.
      *
@@ -809,7 +809,7 @@ typedef struct OpenAI {
     void (*imageGenerationDelete)(OpenAI_ImageGeneration_t *imageGeneration);
 #endif
 
-#if CONFIG_ENABLE_IMAGE_VARIATION
+#if CONFIG_ENABLE_IMAGE_VARIATION || defined __DOXYGEN__
     /**
      * @brief Create an image variation object.
      *
@@ -826,7 +826,7 @@ typedef struct OpenAI {
     void (*imageVariationDelete)(OpenAI_ImageVariation_t *imageVariation);
 #endif
 
-#if CONFIG_ENABLE_IMAGE_EDIT
+#if CONFIG_ENABLE_IMAGE_EDIT || defined __DOXYGEN__
     /**
      * @brief Create an image editing object.
      *
@@ -843,7 +843,7 @@ typedef struct OpenAI {
     void (*imageEditDelete)(OpenAI_ImageEdit_t *imageEdit);
 #endif
 
-#if CONFIG_ENABLE_AUDIO_TRANSCRIPTION
+#if CONFIG_ENABLE_AUDIO_TRANSCRIPTION || defined __DOXYGEN__
     /**
      * @brief Create an audio transcription object.
      *
@@ -860,7 +860,7 @@ typedef struct OpenAI {
     void (*audioTranscriptionDelete)(OpenAI_AudioTranscription_t *audioTranscription);
 #endif
 
-#if CONFIG_ENABLE_AUDIO_TRANSLATION
+#if CONFIG_ENABLE_AUDIO_TRANSLATION || defined __DOXYGEN__
     /**
      * @brief Create an audio translation object.
      *
