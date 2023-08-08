@@ -94,6 +94,7 @@ TEST_CASE("test ChatCompletion", "[ChatCompletion]")
     openai->chatDelete(chatCompletion);
     OpenAIDelete(openai);
     example_disconnect();
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
 }
 
 TEST_CASE("test AudioTranscription en", "[AudioTranscription]")
@@ -118,6 +119,7 @@ TEST_CASE("test AudioTranscription en", "[AudioTranscription]")
     openai->audioTranscriptionDelete(audioTranscription);
     OpenAIDelete(openai);
     example_disconnect();
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
 }
 
 TEST_CASE("test AudioTranscription cn", "[AudioTranscription]")
@@ -143,6 +145,7 @@ TEST_CASE("test AudioTranscription cn", "[AudioTranscription]")
     openai->audioTranscriptionDelete(audioTranscription);
     OpenAIDelete(openai);
     example_disconnect();
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
 }
 
 TEST_CASE("test memory leak", "[memory]")
