@@ -49,7 +49,7 @@ void adc_calibration_deinit(adc_cali_handle_t handle);
 */
 static void IRAM_ATTR button_isr_handler(void* arg)
 {
-    uint8_t button_pin_num = (uint8_t) arg;
+    int button_pin_num = (int) arg;
     uint64_t current_time = esp_timer_get_time(); 
     
     // set bit whenever a button is pressed

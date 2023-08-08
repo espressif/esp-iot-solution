@@ -109,6 +109,16 @@ build_example_bluetooth_ble_ota:
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_ota
 
+build_example_bluetooth_ble_remote_control:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_bluetooth_ble_remote_control
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.0
+  variables:
+    EXAMPLE_DIR: examples/bluetooth/ble_remote_control
+
 build_example_camera_basic:
   extends:
     - .build_examples_template

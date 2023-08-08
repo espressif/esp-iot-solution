@@ -197,6 +197,9 @@
 .patterns-example_bluetooth_ble_ota: &patterns-example_bluetooth_ble_ota
   - "examples/bluetooth/ble_ota/**/*"
 
+.patterns-example_bluetooth_ble_remote_control: &patterns-example_bluetooth_ble_remote_control
+  - "examples/bluetooth/ble_remote_control/**/*"
+
 .patterns-example_camera_basic: &patterns-example_camera_basic
   - "examples/camera/basic/**/*"
 
@@ -351,6 +354,15 @@
       changes: *patterns-components_bluetooth_ble_profiles_esp_ble_ota
     - <<: *if-dev-push
       changes: *patterns-example_bluetooth_ble_ota
+
+.rules:build:example_bluetooth_ble_remote_control:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_bluetooth_ble_remote_control
 
 .rules:build:example_camera_basic:
   rules:

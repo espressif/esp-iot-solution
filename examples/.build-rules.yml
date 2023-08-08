@@ -27,6 +27,10 @@ examples/bluetooth/ble_ota:
   enable:
     - if: IDF_TARGET in ["esp32","esp32s3","esp32c3"]
 
+examples/bluetooth/ble_remote_control:
+  enable:
+    - if: IDF_TARGET in ["esp32","esp32s3","esp32c3"]
+
 examples/camera/basic:
   enable:
     - if: IDF_TARGET in ["esp32s2","esp32s3"]
