@@ -429,6 +429,7 @@ TEST_CASE("gpio button auto-test", "[button][iot][auto]")
     iot_button_register_cb(g_btns[0], BUTTON_LONG_PRESS_START, button_auto_check_cb, NULL);
     iot_button_register_cb(g_btns[0], BUTTON_LONG_PRESS_HOLD, button_auto_check_cb, NULL);
     iot_button_register_cb(g_btns[0], BUTTON_PRESS_REPEAT_DONE, button_auto_check_cb, NULL);
+    TEST_ASSERT_EQUAL(ESP_OK, iot_button_set_param(g_btns[0], BUTTON_LONG_PRESS_TIME_MS, (void *)2000));
 
     gpio_config_t io_conf = {
         .intr_type = GPIO_INTR_DISABLE,

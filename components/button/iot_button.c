@@ -15,6 +15,9 @@
 #include "sdkconfig.h"
 
 static const char *TAG = "button";
+static portMUX_TYPE s_button_lock = portMUX_INITIALIZER_UNLOCKED;
+#define BUTTON_ENTER_CRITICAL()           portENTER_CRITICAL(&s_button_lock)
+#define BUTTON_EXIT_CRITICAL()            portEXIT_CRITICAL(&s_button_lock)
 
 #define BTN_CHECK(a, str, ret_val)                                \
     if (!(a)) {                                                   \
@@ -377,4 +380,23 @@ uint16_t iot_button_get_long_press_hold_cnt(button_handle_t btn_handle)
     BTN_CHECK(NULL != btn_handle, "Pointer of handle is invalid", 0);
     button_dev_t *btn = (button_dev_t *) btn_handle;
     return btn->long_press_hold_cnt;
+}
+
+esp_err_t iot_button_set_param(button_handle_t btn_handle, button_param_t param, void *value)
+{
+    BTN_CHECK(NULL != btn_handle, "Pointer of handle is invalid", ESP_ERR_INVALID_ARG);
+    button_dev_t *btn = (button_dev_t *) btn_handle;
+    BUTTON_ENTER_CRITICAL();
+    switch (param) {
+    case BUTTON_LONG_PRESS_TIME_MS:
+        btn->long_press_ticks = (int32_t)value / TICKS_INTERVAL;
+        break;
+    case BUTTON_SHORT_PRESS_TIME_MS:
+        btn->short_press_ticks = (int32_t)value / TICKS_INTERVAL;
+        break;
+    default:
+        break;
+    }
+    BUTTON_EXIT_CRITICAL();
+    return ESP_OK;
 }
