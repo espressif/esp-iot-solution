@@ -153,7 +153,7 @@ Q2. Can a device that has used the esp-bootloader-plus solution use the bootload
 A2. Yes. You can use script [gen_custom_ota.py](https://github.com/espressif/esp-iot-solution/blob/master/tools/cmake_utilities/scripts/gen_custom_ota.py) to execute the following commands to generate compressed firmware suitable for the esp bootloader plus solution:
 
 ```
-python3 gen_compressed_ota.py -hv v2 -i simple_ota.bin
+python3 gen_custom_ota.py -hv v2 -i simple_ota.bin
 ```
 
 In addition, because the two solutions adopt different file formats and different mechanisms for triggering updates, please ensure that devices that have already used the esp bootloader plus solution continue to use the partition table that contains the storage partition with subtype 0x22:
