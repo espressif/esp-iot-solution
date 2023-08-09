@@ -1,0 +1,12 @@
+dependencies:
+  idf: ">=4.4"
+  espressif/button:
+    version: "~2.5.0"
+  espressif/tinyusb:
+    version: ">=0.15.0~2"
+    rules:
+      - if: "idf_version >=5.0"
+  leeebo/tinyusb_src:
+    version: ">=0.15.0~6"
+    rules:
+      - if: "idf_version >=4.4,<5.0"

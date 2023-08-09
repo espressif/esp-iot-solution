@@ -71,6 +71,9 @@
 ./examples/ota/simple_ota_example/main/simple_ota_example.c
 ./examples/screen/main/app_main.c
 ./examples/screen/main/img_array.h
+./examples/usb/device/usb_hid_device/hid_device/tusb_config.h
+./examples/usb/device/usb_hid_device/hid_device/usb_descriptors.c
+./examples/usb/device/usb_hid_device/hid_device/usb_descriptors.h
 ./examples/usb/device/usb_surface_dial/main/tusb_config.h
 ./examples/usb/device/usb_surface_dial/main/usb_descriptors.c
 ./examples/usb/device/usb_uf2_nvs/pytest_usb_uf2_nvs.py

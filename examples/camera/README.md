@@ -17,7 +17,7 @@ The camera sensor transmits data to ESP32 device through DVP(parallel digital vi
 
 ### More 
 * [ESP-WHO](https://github.com/espressif/esp-who) is an image processing development platform based on Espressif chips. It contains development examples that may be applied in practical applications.
-* [USB_camera_examples](https://github.com/espressif/esp-iot-solution/tree/usb/add_usb_solutions/examples/usb/host) Contains some examples of using USB cameras.
+* [USB_camera_examples](https://github.com/espressif/esp-iot-solution/tree/master/examples/usb/host) Contains some examples of using USB cameras.
 
 ## API Reference
 
