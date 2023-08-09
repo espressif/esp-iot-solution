@@ -1,6 +1,6 @@
 ## UVC Stream Component
 
-Note: This driver has been migrated to [master/components/usb/usb_stream](https://github.com/espressif/esp-iot-solution/tree/master/components/usb/usb_stream), which support UVC + UAC function
+> Note: This component is archived, we recommend using the new driver [master/components/usb/usb_stream](https://github.com/espressif/esp-iot-solution/tree/master/components/usb/usb_stream), which support both UVC and UAC function
 
 `UVC Stream` is a USB camera driver based on `UVC` Protocol. Developers can use ESP32-S2 / ESP32-S3 as a USB host send request then continuously receive USB camera `MJPEG` frames. With the help of `ESP-IOT-SOLUTION` decoding or network transmission components, real-time camera display or IPC can be implemented.
 

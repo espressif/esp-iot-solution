@@ -23,16 +23,16 @@
 
 static const char *TAG = "Board";
 
+#if CONFIG_IDF_TARGET_ESP32S2
 #define DEFAULT_VREF    1100        //Use adc2_vref_to_gpio() to obtain a better estimate
 #define NO_OF_SAMPLES   16          //Multisampling
 
 static esp_adc_cal_characteristics_t *adc1_chars = NULL;
 
-#if CONFIG_IDF_TARGET_ESP32S2
 static const adc_bits_width_t BOARD_ADC_WIDTH = ADC_WIDTH_BIT_13;
-#endif
 static const adc_atten_t BOARD_ADC_ATTEN = ADC_ATTEN_DB_11;
 static const adc_unit_t BOARD_ADC_UNIT = ADC_UNIT_1;
+#endif
 
 static bool s_board_is_init = false;
 static bool s_board_gpio_isinit = false;
@@ -51,17 +51,14 @@ static button_handle_t s_btn_up_hdl = NULL;
 static button_handle_t s_btn_dw_hdl = NULL;
 static button_handle_t s_btn_menu_hdl = NULL;
 
+#if CONFIG_IDF_TARGET_ESP32S2
 static void _check_efuse(void)
 {
-#if CONFIG_IDF_TARGET_ESP32S2
     if (esp_adc_cal_check_efuse(ESP_ADC_CAL_VAL_EFUSE_TP) == ESP_OK) {
         printf("eFuse Two Point: Supported\n");
     } else {
         printf("Cannot retrieve eFuse Two Point calibration values. Default calibration values will be used.\n");
     }
-#else
-#error "This example is configured for ESP32S2."
-#endif
 }
 
 static void _print_char_val_type(esp_adc_cal_value_t val_type)
@@ -74,6 +71,7 @@ static void _print_char_val_type(esp_adc_cal_value_t val_type)
         printf("Characterized using Default Vref\n");
     }
 }
+#endif
 
 static esp_err_t board_i2c_bus_init(void)
 {
@@ -189,6 +187,7 @@ static esp_err_t board_gpio_deinit(void)
 
 static esp_err_t board_adc_init(void)
 {
+#ifdef CONFIG_IDF_TARGET_ESP32S2
     //Check if Two Point or Vref are burned into eFuse
     _check_efuse();
 
@@ -201,7 +200,7 @@ static esp_err_t board_adc_init(void)
     adc1_chars = calloc(1, sizeof(esp_adc_cal_characteristics_t));
     esp_adc_cal_value_t val_type = esp_adc_cal_characterize(BOARD_ADC_UNIT, BOARD_ADC_ATTEN, BOARD_ADC_WIDTH, DEFAULT_VREF, adc1_chars);
     _print_char_val_type(val_type);
-
+#endif
     return ESP_OK;
 }
 
@@ -375,36 +374,42 @@ bool iot_board_usb_device_get_power(void)
 
 float iot_board_get_host_voltage(void)
 {
-    BOARD_CHECK(adc1_chars != NULL, "ADC not inited", 0.0);
+    uint32_t voltage = 0;
+#ifdef CONFIG_IDF_TARGET_ESP32S2
     uint32_t adc_reading = 0;
+    BOARD_CHECK(adc1_chars != NULL, "ADC not inited", 0.0);
     //Multisampling
     for (int i = 0; i < NO_OF_SAMPLES; i++) {
         adc_reading += adc1_get_raw((adc1_channel_t)BOARD_ADC_HOST_VOL_CHAN);
     }
     adc_reading /= NO_OF_SAMPLES;
     //Convert adc_reading to voltage in mV
-    uint32_t voltage = esp_adc_cal_raw_to_voltage(adc_reading, adc1_chars);
+    voltage = esp_adc_cal_raw_to_voltage(adc_reading, adc1_chars);
+#endif
     return voltage * 370.0 / 100.0 / 1000.0;
 }
 
 float iot_board_get_battery_voltage(void)
 {
-    BOARD_CHECK(adc1_chars != NULL, "ADC not inited", 0.0);
+    uint32_t voltage = 0;
+#ifdef CONFIG_IDF_TARGET_ESP32S2
     uint32_t adc_reading = 0;
+    BOARD_CHECK(adc1_chars != NULL, "ADC not inited", 0.0);
     //Multisampling
     for (int i = 0; i < NO_OF_SAMPLES; i++) {
         adc_reading += adc1_get_raw((adc1_channel_t)BOARD_ADC_HOST_VOL_CHAN);
     }
     adc_reading /= NO_OF_SAMPLES;
     //Convert adc_reading to voltage in mV
-    uint32_t voltage = esp_adc_cal_raw_to_voltage(adc_reading, adc1_chars);
+    voltage = esp_adc_cal_raw_to_voltage(adc_reading, adc1_chars);
+#endif
     return voltage * 200.0 / 100.0 / 1000.0;
 }
 
 esp_err_t iot_board_button_register_cb(board_res_handle_t btn_handle, button_event_t event, button_cb_t cb)
 {
     BOARD_CHECK(btn_handle != NULL, "invalid button handle", ESP_ERR_INVALID_ARG);
-    return iot_button_register_cb((board_res_handle_t)btn_handle, event, cb);
+    return iot_button_register_cb((board_res_handle_t)btn_handle, event, cb, NULL);
 }
 
 esp_err_t iot_board_button_unregister_cb(board_res_handle_t btn_handle, button_event_t event)

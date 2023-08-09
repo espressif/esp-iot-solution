@@ -1,6 +1,6 @@
 ## UVC Stream 组件说明
 
-Note: 该驱动已经迁移到 [master/components/usb/usb_stream](https://github.com/espressif/esp-iot-solution/tree/master/components/usb/usb_stream), 新版本支持 UVC + UAC 功能
+Note: 该驱动已过时，推荐使用新版本驱动 [master/components/usb/usb_stream](https://github.com/espressif/esp-iot-solution/tree/master/components/usb/usb_stream), 新版本支持 UVC + UAC 功能。
 
 `UVC Stream` 是基于 `UVC` 协议开发的 USB 摄像头驱动，用户可使用 ESP32-S2/ESP32-S3 作为 USB 主机，请求和并连续接收 USB 摄像头 `MJPEG` 图像帧。配合 `ESP-IOT-Solution` 图像解码或网络传输组件，可以实现屏幕显示或 IPC 等应用。
 
