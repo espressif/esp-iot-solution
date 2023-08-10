@@ -22,25 +22,31 @@
 
 每个按键拥有下表的 8 个事件：
 
-+--------------------------+------------------------+
-|           事件           |        触发条件        |
-+==========================+========================+
-| BUTTON_PRESS_DOWN        | 按下                   |
-+--------------------------+------------------------+
-| BUTTON_PRESS_UP          | 弹起                   |
-+--------------------------+------------------------+
-| BUTTON_PRESS_REPEAT      | 按下弹起次数 >= 2次    |
-+--------------------------+------------------------+
-| BUTTON_SINGLE_CLICK      | 按下弹起 1 次          |
-+--------------------------+------------------------+
-| BUTTON_DOUBLE_CLICK      | 按下弹起 2 次          |
-+--------------------------+------------------------+
-| BUTTON_LONG_PRESS_START  | 按下时间达到阈值的瞬间 |
-+--------------------------+------------------------+
-| BUTTON_LONG_PRESS_HOLD   | 长按期间一直触发       |
-+--------------------------+------------------------+
-| BUTTON_PRESS_REPEAT_DONE | 多次按下弹起结束       |
-+--------------------------+------------------------+
++--------------------------+-----------------------------------+
+|           事件           |             触发条件              |
++==========================+===================================+
+| BUTTON_PRESS_DOWN        | 按下                              |
++--------------------------+-----------------------------------+
+| BUTTON_PRESS_UP          | 弹起                              |
++--------------------------+-----------------------------------+
+| BUTTON_PRESS_REPEAT      | 按下弹起次数 >= 2次               |
++--------------------------+-----------------------------------+
+| BUTTON_PRESS_REPEAT_DONE | 重复按下结束                      |
++--------------------------+-----------------------------------+
+| BUTTON_SINGLE_CLICK      | 按下弹起 1 次                     |
++--------------------------+-----------------------------------+
+| BUTTON_DOUBLE_CLICK      | 按下弹起 2 次                     |
++--------------------------+-----------------------------------+
+| BUTTON_MULTIPLE_CLICK    | 指定重复按下次数 N 次，达成时触发 |
++--------------------------+-----------------------------------+
+| BUTTON_LONG_PRESS_START  | 按下时间达到阈值的瞬间            |
++--------------------------+-----------------------------------+
+| BUTTON_LONG_PRESS_HOLD   | 长按期间一直触发                  |
++--------------------------+-----------------------------------+
+| BUTTON_LONG_PRESS_UP     | 长按弹起                          |
++--------------------------+-----------------------------------+
+| BUTTON_PRESS_REPEAT_DONE | 多次按下弹起结束                  |
++--------------------------+-----------------------------------+
 
 每个按键可以有 **回调** 和 **轮询** 两种使用方式：
 
@@ -51,6 +57,9 @@
 当然你也可以将以上两种方式组合使用。
 
 .. attention:: 回调函数中不能有 TaskDelay 等阻塞的操作
+
+.. image:: https://dl.espressif.com/button_v2/button.svg
+   :alt: Button
 
 配置项
 -----------
@@ -70,6 +79,8 @@
 - ADC_BUTTON_SAMPLE_TIMES : 每次扫描的样本数
 
 - BUTTON_SERIAL_TIME_MS : 长按期间触发的 CALLBACK 间隔时间
+
+- BUTTON_LONG_PRESS_TOLERANCE_MS : 用于设置长按的容错时间。
 
 应用示例
 -----------
@@ -111,7 +122,7 @@
     }
 
 .. Note::
-    ADC 按钮使用的是 ADC1 ,当项目中还有其他地方使用到了 ADC1 时，请传入 adc_handle 和 adc_channel 来配置 ADC 按钮。
+    当 IDF 版本大于等于 release/5.0 时， ADC 按钮使用的是 ADC1 ,当项目中还有其他地方使用到了 ADC1 时，请传入 adc_handle 和 adc_channel 来配置 ADC 按钮。
 
     .. code::C
         adc_oneshot_unit_handle_t adc1_handle;
@@ -136,14 +147,47 @@
 注册回调函数
 ^^^^^^^^^^^^^^
 
-.. code:: c
+Button 组件支持为多个事件注册回调函数，每个事件都可以注册一个回调函数，当事件发生时，回调函数将会被调用。
 
-    static void button_single_click_cb(void *arg,void *usr_data)
-    {
-        ESP_LOGI(TAG, "BUTTON_SINGLE_CLICK");
-    }
+其中，
 
-    iot_button_register_cb(gpio_btn, BUTTON_SINGLE_CLICK, button_single_click_cb,NULL);
+- :cpp:enumerator:`BUTTON_LONG_PRESS_START` 和 :cpp:enumerator:`BUTTON_LONG_PRESS_UP` 支持设置特殊的长按时间。
+- :cpp:enumerator:`BUTTON_MULTIPLE_CLICK` 支持设置多次按下的次数。
+
+
+- 简单写法
+
+    .. code:: c
+
+        static void button_single_click_cb(void *arg,void *usr_data)
+        {
+            ESP_LOGI(TAG, "BUTTON_SINGLE_CLICK");
+        }
+
+        iot_button_register_cb(gpio_btn, BUTTON_SINGLE_CLICK, button_single_click_cb,NULL);
+
+- 多个回调函数写法
+
+    .. code:: C
+        
+        static void button_long_press_1_cb(void *arg,void *usr_data)
+        {
+            ESP_LOGI(TAG, "BUTTON_LONG_PRESS_START_1");
+        }
+
+        static void button_long_press_2_cb(void *arg,void *usr_data)
+        {
+            ESP_LOGI(TAG, "BUTTON_LONG_PRESS_START_2");
+        }
+        button_event_config_t cfg = {
+            .event = BUTTON_LONG_PRESS_START,
+            .event_data.long_press.press_time = 2000,
+        };
+
+        iot_button_register_event_cb(gpio_btn, cfg, BUTTON_LONG_PRESS_START, button_long_press_1_cb, NULL);
+
+        cfg.event_data.long_press.press_time = 5000;
+        iot_button_register_event_cb(gpio_btn, cfg, BUTTON_LONG_PRESS_START, button_long_press_2_cb, NULL);
 
 查询按键事件
 ^^^^^^^^^^^^^^
@@ -152,6 +196,13 @@
 
     button_event_t event;
     event = iot_button_get_event(button_handle);
+
+动态修改按键默认值 
+^^^^^^^^^^^^^^^^^^
+
+.. code:: c
+
+    iot_button_set_param(btn, BUTTON_LONG_PRESS_TIME_MS, 5000);
 
 API Reference
 -----------------

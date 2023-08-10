@@ -40,13 +40,21 @@ typedef enum {
  *
  */
 typedef union {
+    /**
+     * @brief Long press time event data
+     *
+     */
     struct long_press_t {
-        uint16_t press_time;
-    } long_press;
+        uint16_t press_time;    /**< press time(ms) for the corresponding callback to trigger */
+    } long_press;               /**< long press struct, for event BUTTON_LONG_PRESS_START and BUTTON_LONG_PRESS_UP */
 
+    /**
+     * @brief Multiple clicks event data
+     *
+     */
     struct multiple_clicks_t {
-        uint16_t clicks;
-    } multiple_clicks;
+        uint16_t clicks;        /**< number of clicks, to trigger the callback */
+    } multiple_clicks;          /**< multiple clicks struct, for event BUTTON_MULTIPLE_CLICK */
 }button_event_data_t;
 
 /**
@@ -54,8 +62,8 @@ typedef union {
  *
  */
 typedef struct {
-    button_event_t event;
-    button_event_data_t event_data;
+    button_event_t event;               /**< button event type */
+    button_event_data_t event_data;     /**< event data corresponding to the event */
 } button_event_config_t;
 
 /**
@@ -162,7 +170,7 @@ esp_err_t iot_button_register_event_cb(button_handle_t btn_handle, button_event_
  *        In case event_data is also passed it will unregister function for that particular event_data only.
  *
  * @param btn_handle A button handle to unregister
- * @param event Button event
+ * @param event_cfg Button event
  * @param cb callback to unregister
  *
  * @return

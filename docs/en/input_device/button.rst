@@ -21,25 +21,35 @@ Button event
 
 Triggering conditions for each button event are enlisted in the table below:
 
-+--------------------------+-----------------------------------------------+
-|          Event           |              Trigger Conditions               |
-+==========================+===============================================+
-| BUTTON_PRESS_DOWN        | Button press down                             |
-+--------------------------+-----------------------------------------------+
-| BUTTON_PRESS_UP          | Button release                                |
-+--------------------------+-----------------------------------------------+
-| BUTTON_PRESS_REPEAT      | Button press down and release (>= 2-times)    |
-+--------------------------+-----------------------------------------------+
-| BUTTON_SINGLE_CLICK      | Button press down and release (single time)   |
-+--------------------------+-----------------------------------------------+
-| BUTTON_DOUBLE_CLICK      | Button press down and release (double times)  |
-+--------------------------+-----------------------------------------------+
-| BUTTON_LONG_PRESS_START  | Button press reaches the long-press threshold |
-+--------------------------+-----------------------------------------------+
-| BUTTON_LONG_PRESS_HOLD   | Button press for long time                    |
-+--------------------------+-----------------------------------------------+
-| BUTTON_PRESS_REPEAT_DONE | Multiple press down and release               |
-+--------------------------+-----------------------------------------------+
+
++--------------------------+-----------------------------------+
+|          Event           |         Trigger Condition         |
++==========================+===================================+
+| BUTTON_PRESS_DOWN        | Pressed                           |
++--------------------------+-----------------------------------+
+| BUTTON_PRESS_UP          | Released                          |
++--------------------------+-----------------------------------+
+| BUTTON_PRESS_REPEAT      | Pressed and released >= 2 times   |
++--------------------------+-----------------------------------+
+| BUTTON_PRESS_REPEAT_DONE | Repeated press completed          |
++--------------------------+-----------------------------------+
+| BUTTON_SINGLE_CLICK      | Pressed and released once         |
++--------------------------+-----------------------------------+
+| BUTTON_DOUBLE_CLICK      | Pressed and released twice        |
++--------------------------+-----------------------------------+
+| BUTTON_MULTIPLE_CLICK    | Pressed and released N times      |
+|                          | specified, triggers when achieved |
++--------------------------+-----------------------------------+
+| BUTTON_LONG_PRESS_START  | Instant when held for a threshold |
+|                          | duration of time                  |
++--------------------------+-----------------------------------+
+| BUTTON_LONG_PRESS_HOLD   | Triggered continuously during     |
+|                          | long press                        |
++--------------------------+-----------------------------------+
+| BUTTON_LONG_PRESS_UP     | Released after a long press       |
++--------------------------+-----------------------------------+
+| BUTTON_PRESS_REPEAT_DONE | Repeated press and release ended  |
++--------------------------+-----------------------------------+
 
 Each button supports **call-back** and **pooling** mode.
 
@@ -49,6 +59,9 @@ Each button supports **call-back** and **pooling** mode.
 .. note:: you can also combine the above two methods.
 
 .. attention:: No blocking operations such as **TaskDelay** are allowed in the call-back function
+
+.. image:: https://dl.espressif.com/button_v2/button.svg
+   :alt: Button
 
 Configuration
 -------------
@@ -68,6 +81,8 @@ Configuration
 - ADC_BUTTON_SAMPLE_TIMES : ADC sample time
 
 - BUTTON_SERIAL_TIME_MS : call-back interval triggered by long press time
+
+- BUTTON_LONG_PRESS_TOLERANCE_MS: Used to set the tolerance time for long presses.
 
 Demonstration
 --------------
@@ -109,7 +124,7 @@ Create a button
     }
 
 .. Note::
-    please pass adc_handle and adc_channel , when there are other places in the project that use ADC1.
+    When the IDF version is greater than or equal to release/5.0, the ADC button uses ADC1. If ADC1 is used elsewhere in the project, please provide the `adc_handle` and `adc_channel` to configure the ADC button.
 
     .. code::C
         adc_oneshot_unit_handle_t adc1_handle;
@@ -134,14 +149,54 @@ Create a button
 Register call-back 
 ^^^^^^^^^^^^^^^^^^^
 
+The Button component supports registering callback functions for multiple events, with each event capable of having its own callback function. When an event occurs, the callback function will be invoked.
+
+In this context:
+
+- The :cpp:enumerator:`BUTTON_LONG_PRESS_START` and :cpp:enumerator:`BUTTON_LONG_PRESS_UP` enumerations support setting specific long press times.
+- The :cpp:enumerator:`BUTTON_MULTIPLE_CLICK` enumeration supports setting the number of consecutive button presses.
+
+- Here's a simple example:
+
+    .. code:: c
+
+        static void button_single_click_cb(void *arg,void *usr_data)
+        {
+            ESP_LOGI(TAG, "BUTTON_SINGLE_CLICK");
+        }
+
+        iot_button_register_cb(gpio_btn, BUTTON_SINGLE_CLICK, button_single_click_cb,NULL);
+
+
+- And here's an example involving multiple callback functions:
+
+    .. code:: C
+        
+        static void button_long_press_1_cb(void *arg,void *usr_data)
+        {
+            ESP_LOGI(TAG, "BUTTON_LONG_PRESS_START_1");
+        }
+
+        static void button_long_press_2_cb(void *arg,void *usr_data)
+        {
+            ESP_LOGI(TAG, "BUTTON_LONG_PRESS_START_2");
+        }
+        button_event_config_t cfg = {
+            .event = BUTTON_LONG_PRESS_START,
+            .event_data.long_press.press_time = 2000,
+        };
+
+        iot_button_register_event_cb(gpio_btn, cfg, BUTTON_LONG_PRESS_START, button_long_press_1_cb, NULL);
+
+        cfg.event_data.long_press.press_time = 5000;
+        iot_button_register_event_cb(gpio_btn, cfg, BUTTON_LONG_PRESS_START, button_long_press_2_cb, NULL);
+
+Dynamically Modifying Default Button Values
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 .. code:: c
 
-    static void button_single_click_cb(void *arg,void *usr_data)
-    {
-        ESP_LOGI(TAG, "BUTTON_SINGLE_CLICK");
-    }
-
-    iot_button_register_cb(gpio_btn, BUTTON_SINGLE_CLICK, button_single_click_cb,NULL);
+    iot_button_set_param(btn, BUTTON_LONG_PRESS_TIME_MS, 5000);
 
 Find an event
 ^^^^^^^^^^^^^^

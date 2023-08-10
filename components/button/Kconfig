@@ -26,7 +26,7 @@ menu "IoT Button"
 
     config BUTTON_LONG_PRESS_TOLERANCE_MS
         int "BUTTON LONG PRESS TOLERANCE TIME (MS)"
-        default 10
+        default 20
 
     config BUTTON_SERIAL_TIME_MS
         int "BUTTON SERIAL TIME (MS)"

@@ -12,8 +12,12 @@ List of supported events:
  * Button press repeat done
  * Button single click
  * Button double click
+ * Button multiple click
  * Button long press start
  * Button long press hold
+ * Button long press up
+
+![](https://dl.espressif.com/button_v2/button.svg)
 
 There are three ways this driver can handle buttons:
 1. Buttons connected to standard digital GPIO

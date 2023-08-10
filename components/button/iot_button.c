@@ -20,8 +20,6 @@ static portMUX_TYPE s_button_lock = portMUX_INITIALIZER_UNLOCKED;
 #define BUTTON_ENTER_CRITICAL()           portENTER_CRITICAL(&s_button_lock)
 #define BUTTON_EXIT_CRITICAL()            portEXIT_CRITICAL(&s_button_lock)
 
-#define TOLERANCE CONFIG_BUTTON_LONG_PRESS_TOLERANCE_MS
-
 #define BTN_CHECK(a, str, ret_val)                                \
     if (!(a)) {                                                   \
         ESP_LOGE(TAG, "%s(%d): %s", __FUNCTION__, __LINE__, str); \
@@ -74,6 +72,7 @@ static bool g_is_timer_running = false;
 #define SHORT_TICKS       (CONFIG_BUTTON_SHORT_PRESS_TIME_MS /TICKS_INTERVAL)
 #define LONG_TICKS        (CONFIG_BUTTON_LONG_PRESS_TIME_MS /TICKS_INTERVAL)
 #define SERIAL_TICKS      (CONFIG_BUTTON_SERIAL_TIME_MS /TICKS_INTERVAL)
+#define TOLERANCE         CONFIG_BUTTON_LONG_PRESS_TOLERANCE_MS
 
 #define CALL_EVENT_CB(ev)                                                   \
     if (btn->cb_info[ev]) {                                                 \
@@ -507,7 +506,7 @@ esp_err_t iot_button_register_event_cb(button_handle_t btn_handle, button_event_
 
         int32_t press_ticks = press_time / TICKS_INTERVAL;
         if (btn->short_press_ticks < press_ticks && press_ticks < btn->long_press_ticks) {
-            iot_button_set_param(btn, BUTTON_LONG_PRESS_TIME_MS, (void*)press_time);
+            iot_button_set_param(btn, BUTTON_LONG_PRESS_TIME_MS, (void*)(intptr_t)press_time);
         }
     }
 
