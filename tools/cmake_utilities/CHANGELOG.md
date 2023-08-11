@@ -1,3 +1,7 @@
+## v0.5.0 - 2023-08-02
+
+* Add GCC LTO support
+
 ## v0.4.8 - 2023-05-24
 
 * Add unit test app
