@@ -1,0 +1,48 @@
+menu "Espressif ELF Loader Configuration"
+    visible if (IDF_TARGET_ESP32 || IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3)
+
+    config ELF_LOADER
+        bool "Enable Espressif ELF Loader"
+        default y
+        depends on (IDF_TARGET_ESP32 || IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3)
+        help
+            Select this option to enable ELF Loader and show the submenu with ELF Loader configuration choices.
+
+    if ELF_LOADER
+        config ELF_LOADER_CACHE_OFFSET
+            bool
+            default n
+            help
+                Select this option if D-cache and I-cache has different offset to access the same physical address.
+        
+        config ELF_LOADER_SET_MMU
+            bool
+            default n
+            help
+                Select this option if D-cache and I-cache is not symmetry。
+
+        config ELF_LOADER_LOAD_PSRAM
+            bool "Load ELF to PSRAM"
+            default y
+            depends on (IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3) && SPIRAM
+            select ELF_LOADER_CACHE_OFFSET if (IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3)
+            select ELF_LOADER_SET_MMU if IDF_TARGET_ESP32S2
+            help
+                Load ELF file into PSRAM instead of internal SRAM.
+
+        menu "ELF Symbols Table"
+
+            config ELF_LOADER_LIBC_SYMBOLS
+                bool "Libc Symbols Table"
+                default y
+
+            config ELF_LOADER_ESPIDF_SYMBOLS
+                bool "ESP-IDF Symbols Table"
+                default y
+
+            config ELF_LOADER_CUSTOMER_SYMBOLS
+                bool "Customer Symbols Table"
+                default n
+        endmenu
+    endif
+endmenu
