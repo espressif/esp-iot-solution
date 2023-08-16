@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "esp_timer.h"
 #include "esp_log.h"
 #include "hal/usb_hal.h"
@@ -17,6 +19,18 @@
 #include "camera_config.h"
 #include "camera_pin.h"
 #include "esp_camera.h"
+#if CONFIG_CAMERA_MODULE_ESP_S3_EYE
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+#include "freertos/event_groups.h"
+#include "bsp/esp-bsp.h"
+#include "show_eyes.h"
+static EventGroupHandle_t s_event_group = NULL;
+#define EYES_CLOSE_BIT BIT0
+#define EYES_OPEN_BIT  BIT1
+#else
+#pragma message("ESP-S3-EYE lcd animation not supported in ESP-IDF < v5.0")
+#endif
+#endif
 
 static const char *TAG = "usb_webcam";
 static usb_phy_handle_t phy_hdl;
@@ -163,6 +177,11 @@ void tud_suspend_cb(bool remote_wakeup_en)
 {
     (void) remote_wakeup_en;
     ESP_LOGI(TAG, "Suspend");
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+#if CONFIG_CAMERA_MODULE_ESP_S3_EYE
+    xEventGroupSetBits(s_event_group, EYES_CLOSE_BIT);
+#endif
+#endif
 }
 
 // Invoked when usb bus is resumed
@@ -267,12 +286,28 @@ int tud_video_commit_cb(uint_fast8_t ctl_idx, uint_fast8_t stm_idx,
         ESP_LOGE(TAG, "camera init failed");
         return VIDEO_ERROR_OUT_OF_RANGE;
     }
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+#if CONFIG_CAMERA_MODULE_ESP_S3_EYE
+    xEventGroupSetBits(s_event_group, EYES_OPEN_BIT);
+#endif
+#endif
     return VIDEO_ERROR_NONE;
 }
 #endif
 
 void app_main(void)
 {
+#if CONFIG_CAMERA_MODULE_ESP_S3_EYE
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+    bsp_display_start();
+    bsp_display_backlight_on();
+    lv_obj_t* img = eyes_init();
+    s_event_group = xEventGroupCreate();
+    xEventGroupSetBits(s_event_group, EYES_CLOSE_BIT);
+#else
+    ESP_LOGW(TAG, "ESP-S3-EYE lcd animation not supported in ESP-IDF < v5.0");
+#endif
+#endif
     ESP_LOGI(TAG, "Selected Camera Board %s", CAMERA_MODULE_NAME);
     frame_buffer = (uint8_t *)malloc(UVC_FRAME_BUF_SIZE);
     if (frame_buffer == NULL) {
@@ -298,4 +333,42 @@ void app_main(void)
 
     xTaskCreatePinnedToCore(tusb_device_task, "TinyUSB", 4096, NULL, 5, NULL, 0);
     xTaskCreatePinnedToCore(video_task, "uvc", 4096, NULL, 4, &uvc_task_hdl, 0);
+    while (1) {
+#if CONFIG_CAMERA_MODULE_ESP_S3_EYE
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+        static uint32_t close_time_ms = 0;
+        static uint32_t open_time_ms = 0;
+        EventBits_t bits = xEventGroupWaitBits(s_event_group, EYES_CLOSE_BIT | EYES_OPEN_BIT, pdTRUE, pdFALSE, pdMS_TO_TICKS(10));
+        if (bits & EYES_CLOSE_BIT) {
+            eyes_close(img);
+            close_time_ms = 10;
+            open_time_ms = 0;
+            ESP_LOGI(TAG, "EYES CLOSE");
+        } else if (bits & EYES_OPEN_BIT) {
+            eyes_open(img);
+            close_time_ms = 0;
+            open_time_ms = 10;
+            ESP_LOGI(TAG, "EYES OPEN");
+        } else if (open_time_ms) {
+            open_time_ms += 10;
+            if (open_time_ms > 1000) {
+                open_time_ms = 0;
+                eyes_blink(img);
+                ESP_LOGI(TAG, "EYES BLINK");
+            }
+        } else if (close_time_ms) {
+            close_time_ms += 10;
+            if (close_time_ms > 1000) {
+                close_time_ms = 0;
+                eyes_static(img);
+                ESP_LOGI(TAG, "EYES STATIC");
+            }
+        }
+#else
+        vTaskDelay(pdMS_TO_TICKS(100));
+#endif
+#else
+        vTaskDelay(pdMS_TO_TICKS(100));
+#endif
+    }
 }

@@ -1,6 +1,12 @@
-## USB WebCam example
+## USB WebCam Example
 
 This example demonstrates how to use ESP32-Sx USB function as the USB Web Camera (UVC device). 
+
+* Support both UVC Isochronous and Bulk transfer mode
+* Support MJPEG format only
+* Support LCD animation in `esp32-s3-eye` board (**IDF v5.0 or later**)
+
+![esp32_s3_eye_webcam](https://dl.espressif.com/AE/esp-dev-kits/webcam.gif)
 
 ### Try the example through the esp-launchpad
 

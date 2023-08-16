@@ -12,4 +12,14 @@ dependencies:
       - if: "idf_version >=4.4,<5.0"
   esp32-camera:
     version: ">=2.0.5"
+  esp32_s3_eye:
+    version: ^2.0.2
+    rules:
+      - if: "target == $EYES_SHOW_TARGET"
+      - if: "idf_version >=5.0"
+  eyes_show:
+    rules:
+      - if: "target == $EYES_SHOW_TARGET"
+      - if: "idf_version >=5.0"
+    override_path: "../eyes_show"
   cmake_utilities: "*"
