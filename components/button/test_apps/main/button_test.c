@@ -380,12 +380,13 @@ static void button_auto_press_test_task(void *arg)
     // test BUTTON_LONG_PRESS_START
     xSemaphoreTake(g_check, portMAX_DELAY);
     gpio_set_level(GPIO_OUTPUT_IO_45, 0);
-    vTaskDelay(pdMS_TO_TICKS(1500));
+    vTaskDelay(pdMS_TO_TICKS(2000));
 
     // test BUTTON_LONG_PRESS_HOLD
     xSemaphoreTake(g_check, portMAX_DELAY);
-    gpio_set_level(GPIO_OUTPUT_IO_45, 1);
+    gpio_set_level(GPIO_OUTPUT_IO_45, 0);
 
+    xSemaphoreTake(g_check, portMAX_DELAY);
     ESP_LOGI(TAG, "Auto Press Success!");
     vTaskDelete(NULL);
 }
@@ -397,6 +398,7 @@ static void button_auto_check_cb(void *arg, void *data)
     if (iot_button_get_event(g_btns[0]) == state) {
         ESP_LOGI(TAG, "Auto check: button event %s pass", button_event_str[state]);
         if (++state >= BUTTON_EVENT_MAX) {
+            xSemaphoreGive(g_check);
             xSemaphoreGive(g_auto_check_pass);
             return;
         }

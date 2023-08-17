@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v2.5.6 - 2023-8-22
+
+### bugfix
+
+* Fixed a bug where the Serial trigger interval in button_long_press_hold event fires at an incorrect time
+
 ## v2.5.5 - 2023-8-3
 * Add modify api which can change long_press_time and short_press_time
 
