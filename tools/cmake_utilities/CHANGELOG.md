@@ -1,3 +1,7 @@
+## v0.5.1 - 2023-08-22
+
+* Add string 1-byte align support
+
 ## v0.5.0 - 2023-08-02
 
 * Add GCC LTO support

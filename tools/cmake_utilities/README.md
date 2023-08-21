@@ -31,4 +31,4 @@ This component is aiming to provide some useful CMake utilities outside of ESP-I
 
 1. [relinker](https://github.com/espressif/esp-iot-solution/blob/master/tools/cmake_utilities/docs/relinker.md)
 2. [gen_compressed_ota](https://github.com/espressif/esp-iot-solution/blob/master/tools/cmake_utilities/docs/gen_compressed_ota.md)
-3. [Link Time Optimization](https://github.com/espressif/esp-iot-solution/blob/master/tools/cmake_utilities/docs/gcc_lto.md)
+3. [GCC Optimization](https://github.com/espressif/esp-iot-solution/blob/master/tools/cmake_utilities/docs/gcc.md)
