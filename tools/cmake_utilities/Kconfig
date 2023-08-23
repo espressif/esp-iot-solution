@@ -54,4 +54,12 @@ menu "CMake Utilities"
         help
             "Enable this option, users can enable GCC link time optimization(LTO)
              feature for target components or dependencies.
+    
+    config CU_GCC_STRING_1BYTE_ALIGN
+        bool "GCC string 1-byte align"
+        default n
+        help
+            "Enable this option, user can make string in designated components align
+             by 1-byte instead 1-word(4-byte), this can reduce unnecessary filled data
+             so that to reduce firmware size."
 endmenu
