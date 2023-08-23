@@ -49,7 +49,7 @@ public:
      * @param parity uart parity constants
      * @param stopBits uart stop bits number
      */
-    void begin(unsigned long baud, uart_port_t uart_num = CONFIG_ESP_CONSOLE_UART_NUM, int tx_io = TX0, int rx_io = RX0, uart_word_length_t wordLength = UART_DATA_8_BITS, uart_parity_t parity = UART_PARITY_DISABLE, uart_stop_bits_t stopBits = UART_STOP_BITS_1);
+    void begin(unsigned long baud, uart_port_t uart_num = static_cast<uart_port_t>(CONFIG_ESP_CONSOLE_UART_NUM), int tx_io = TX0, int rx_io = RX0, uart_word_length_t wordLength = UART_DATA_8_BITS, uart_parity_t parity = UART_PARITY_DISABLE, uart_stop_bits_t stopBits = UART_STOP_BITS_1);
 
     /**
      * @brief Delete hardwareSerial.
