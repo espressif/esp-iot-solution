@@ -154,7 +154,7 @@ static void button_handler(button_dev_t *btn)
     case 4:
         if (btn->button_level == btn->active_level) {
             //continue hold trigger
-            if (btn->ticks >= (btn->long_press_hold_cnt + 1) * SERIAL_TICKS) {
+            if (btn->ticks >= (btn->long_press_hold_cnt + 1) * SERIAL_TICKS + btn->long_press_ticks) {
                 btn->event = (uint8_t)BUTTON_LONG_PRESS_HOLD;
                 btn->long_press_hold_cnt++;
                 CALL_EVENT_CB(BUTTON_LONG_PRESS_HOLD);
