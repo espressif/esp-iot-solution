@@ -1,8 +1,7 @@
 dependencies:
   idf: ">=5.0"
-  espressif/esp32_s3_lcd_ev_board: "^1.0.3"
+  espressif/esp32_s3_lcd_ev_board: "^2.0.0"
   espressif/button: "~2.5.0"
   usb_stream:
-    version: ">=1.0.5"
+    version: "~1.1.0"
     override_path: "../../../../../components/usb/usb_stream"
-  
