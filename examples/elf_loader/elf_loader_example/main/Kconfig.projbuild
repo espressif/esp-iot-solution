@@ -1,0 +1,12 @@
+menu "ELF Loader Example Configuration"
+
+    config ELF_LOADER_MAIN_ARGS
+        bool "Support arguments for ELF main"
+        default n
+    
+    config ELF_LOADER_MAIN_ARGS_STRING
+        string "Arguments of ELF main"
+        default "main"
+        depends on ELF_LOADER_MAIN_ARGS
+
+endmenu

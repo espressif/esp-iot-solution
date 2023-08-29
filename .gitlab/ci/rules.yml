@@ -305,6 +305,12 @@
 .patterns-example_gprof_gprof_simple: &patterns-example_gprof_gprof_simple
   - "examples/gprof/gprof_simple/**/*"
 
+.patterns-example_elf_loader_elf_loader_example: &patterns-example_elf_loader_elf_loader_example
+  - "examples/elf_loader/elf_loader_example/**/*"
+
+.patterns-example_elf_loader_build_elf_file_example: &patterns-example_elf_loader_build_elf_file_example
+  - "examples/elf_loader/build_elf_file_example/**/*"
+
 # tools folder, in the alphabetic order
 .patterns-tools_cmake_utilities: &patterns-tools_cmake_utilities
   - "tools/cmake_utilities/**/*"
@@ -819,6 +825,26 @@
       changes: *patterns-components_utilities_xz
     - <<: *if-dev-push
       changes: *patterns-example_utilities_xz_decompress_file
+
+.rules:build:example_elf_loader_elf_loader_example:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_elf_loader_elf_loader_example
+
+.rules:build:example_elf_loader_build_elf_file_example:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_elf_loader_build_elf_file_example
 
 # rules for ut
 .rules:build:component_audio_dac_audio_test:

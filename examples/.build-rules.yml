@@ -171,3 +171,11 @@ examples/utilities/xz_decompress_file:
 examples/gprof/gprof_simple:
   enable:
     - if: IDF_TARGET in ["esp32","esp32s2","esp32s3","esp32c3"]
+
+examples/elf_loader/elf_loader_example:
+  enable:
+    - if: IDF_TARGET in ["esp32","esp32s2","esp32s3"]
+
+examples/elf_loader/build_elf_file_example:
+  enable:
+    - if: IDF_TARGET in ["esp32","esp32s2","esp32s3"]
