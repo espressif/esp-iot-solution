@@ -1301,15 +1301,15 @@ esp_err_t lightbulb_update_status_variable(lightbulb_status_t *new_status, bool 
 {
     LIGHTBULB_CHECK(new_status, "new_status is null", return ESP_FAIL);
     LIGHTBULB_CHECK(s_lb_obj, "not init", return ESP_ERR_INVALID_ARG);
-    LIGHTBULB_MUTEX_TAKE(portMAX_DELAY);
     esp_err_t err = ESP_OK;
 
+    LIGHTBULB_MUTEX_TAKE(portMAX_DELAY);
     memcpy(&s_lb_obj->status, new_status, sizeof(lightbulb_status_t));
-    LIGHTBULB_MUTEX_GIVE();
-
     if (trigger) {
         err = lightbulb_set_switch(s_lb_obj->status.on);
     }
+    LIGHTBULB_MUTEX_GIVE();
+
     return err;
 }
 

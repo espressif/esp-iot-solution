@@ -1,4 +1,12 @@
 # ChangeLog
+
+## v0.4.1 - 2023-8-30
+
+### Bug Fixes:
+
+* Fixed a thread safety issue.
+* Fixed fade direction being reversed.
+
 ## v0.4.0 - 2023-7-10
 
 ### Enhancements:
