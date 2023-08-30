@@ -158,6 +158,12 @@ enum {
 #define TUD_VIDEO_DESC_CS_VS_FMT_I420(_fmtidx, _numfmtdesc, _frmidx, _asrx, _asry, _interlace, _cp) \
   TUD_VIDEO_DESC_CS_VS_FMT_UNCOMPR(_fmtidx, _numfmtdesc, TUD_VIDEO_GUID_I420, 12, _frmidx, _asrx, _asry, _interlace, _cp)
 
+#define TUD_VIDEO_DESC_CS_VS_FRM_MJPEG_CONT_TEMPLATE(bFrameIndex) \
+        TUD_VIDEO_DESC_CS_VS_FRM_MJPEG_CONT(bFrameIndex, 0, UVC_FRAMES_INFO[bFrameIndex-1].width, UVC_FRAMES_INFO[bFrameIndex-1].height, \
+            UVC_FRAMES_INFO[bFrameIndex-1].width * UVC_FRAMES_INFO[bFrameIndex-1].height * 16, UVC_FRAMES_INFO[bFrameIndex-1].width * UVC_FRAMES_INFO[bFrameIndex-1].height * 16 * UVC_FRAMES_INFO[bFrameIndex-1].rate, \
+            UVC_FRAMES_INFO[bFrameIndex-1].width * UVC_FRAMES_INFO[bFrameIndex-1].height * 16 / 8, \
+            (10000000/UVC_FRAMES_INFO[bFrameIndex-1].rate), (10000000/UVC_FRAMES_INFO[bFrameIndex-1].rate), (10000000/UVC_FRAMES_INFO[bFrameIndex-1].rate), (10000000/UVC_FRAMES_INFO[bFrameIndex-1].rate))
+
 #define TUD_VIDEO_CAPTURE_DESCRIPTOR_UNCOMPR(_stridx, _epin, _width, _height, _fps, _epsize) \
   TUD_VIDEO_DESC_IAD(ITF_NUM_VIDEO_CONTROL, /* 2 Interfaces */ 0x02, _stridx), \
   /* Video control 0 */ \
@@ -259,18 +265,10 @@ enum {
       TUD_VIDEO_DESC_CS_VS_FMT_MJPEG(/*bFormatIndex*/1, /*bNumFrameDescriptors*/UVC_FRAME_NUM, \
         /*bmFlags*/0, /*bDefaultFrameIndex*/1, 0, 0, 0, /*bCopyProtect*/0), \
         /* Video stream frame format */ \
-        TUD_VIDEO_DESC_CS_VS_FRM_MJPEG_CONT(/*bFrameIndex */1, 0, UVC_FRAMES_INFO[0].width, UVC_FRAMES_INFO[0].height, \
-            UVC_FRAMES_INFO[0].width * UVC_FRAMES_INFO[0].height * 16, UVC_FRAMES_INFO[0].width * UVC_FRAMES_INFO[0].height * 16 * UVC_FRAMES_INFO[0].rate, \
-            UVC_FRAMES_INFO[0].width * UVC_FRAMES_INFO[0].height * 16 / 8, \
-            (10000000/UVC_FRAMES_INFO[0].rate), (10000000/UVC_FRAMES_INFO[0].rate), (10000000/UVC_FRAMES_INFO[0].rate), (10000000/UVC_FRAMES_INFO[0].rate)), \
-        TUD_VIDEO_DESC_CS_VS_FRM_MJPEG_CONT(/*bFrameIndex */2, 0, UVC_FRAMES_INFO[1].width, UVC_FRAMES_INFO[1].height, \
-            UVC_FRAMES_INFO[1].width * UVC_FRAMES_INFO[1].height * 16, UVC_FRAMES_INFO[1].width * UVC_FRAMES_INFO[1].height * 16 * UVC_FRAMES_INFO[1].rate, \
-            UVC_FRAMES_INFO[1].width * UVC_FRAMES_INFO[1].height * 16 / 8, \
-            (10000000/UVC_FRAMES_INFO[1].rate), (10000000/UVC_FRAMES_INFO[1].rate), (10000000/UVC_FRAMES_INFO[1].rate), (10000000/UVC_FRAMES_INFO[1].rate)), \
-        TUD_VIDEO_DESC_CS_VS_FRM_MJPEG_CONT(/*bFrameIndex */3, 0, UVC_FRAMES_INFO[2].width, UVC_FRAMES_INFO[2].height, \
-            UVC_FRAMES_INFO[2].width * UVC_FRAMES_INFO[2].height * 16, UVC_FRAMES_INFO[2].width * UVC_FRAMES_INFO[2].height * 16 * UVC_FRAMES_INFO[2].rate, \
-            UVC_FRAMES_INFO[2].width * UVC_FRAMES_INFO[2].height * 16 / 8, \
-            (10000000/UVC_FRAMES_INFO[2].rate), (10000000/UVC_FRAMES_INFO[2].rate), (10000000/UVC_FRAMES_INFO[2].rate), (10000000/UVC_FRAMES_INFO[2].rate)), \
+        TUD_VIDEO_DESC_CS_VS_FRM_MJPEG_CONT_TEMPLATE(1), \
+        TUD_VIDEO_DESC_CS_VS_FRM_MJPEG_CONT_TEMPLATE(2), \
+        TUD_VIDEO_DESC_CS_VS_FRM_MJPEG_CONT_TEMPLATE(3), \
+        TUD_VIDEO_DESC_CS_VS_FRM_MJPEG_CONT_TEMPLATE(4), \
         TUD_VIDEO_DESC_CS_VS_COLOR_MATCHING(VIDEO_COLOR_PRIMARIES_BT709, VIDEO_COLOR_XFER_CH_BT709, VIDEO_COLOR_COEF_SMPTE170M), \
   /* VS alt 1 */\
   TUD_VIDEO_DESC_STD_VS(ITF_NUM_VIDEO_STREAMING, 1, 1, _stridx), \
@@ -373,18 +371,10 @@ enum {
       TUD_VIDEO_DESC_CS_VS_FMT_MJPEG(/*bFormatIndex*/1, /*bNumFrameDescriptors*/UVC_FRAME_NUM, \
         /*bmFlags*/0, /*bDefaultFrameIndex*/1, 0, 0, 0, /*bCopyProtect*/0), \
         /* Video stream frame format */ \
-        TUD_VIDEO_DESC_CS_VS_FRM_MJPEG_CONT(/*bFrameIndex */1, 0, UVC_FRAMES_INFO[0].width, UVC_FRAMES_INFO[0].height, \
-            UVC_FRAMES_INFO[0].width * UVC_FRAMES_INFO[0].height * 16, UVC_FRAMES_INFO[0].width * UVC_FRAMES_INFO[0].height * 16 * UVC_FRAMES_INFO[0].rate, \
-            UVC_FRAMES_INFO[0].width * UVC_FRAMES_INFO[0].height * 16 / 8, \
-            (10000000/UVC_FRAMES_INFO[0].rate), (10000000/UVC_FRAMES_INFO[0].rate), (10000000/UVC_FRAMES_INFO[0].rate), (10000000/UVC_FRAMES_INFO[0].rate)), \
-        TUD_VIDEO_DESC_CS_VS_FRM_MJPEG_CONT(/*bFrameIndex */2, 0, UVC_FRAMES_INFO[1].width, UVC_FRAMES_INFO[1].height, \
-            UVC_FRAMES_INFO[1].width * UVC_FRAMES_INFO[1].height * 16, UVC_FRAMES_INFO[1].width * UVC_FRAMES_INFO[1].height * 16 * UVC_FRAMES_INFO[1].rate, \
-            UVC_FRAMES_INFO[1].width * UVC_FRAMES_INFO[1].height * 16 / 8, \
-            (10000000/UVC_FRAMES_INFO[1].rate), (10000000/UVC_FRAMES_INFO[1].rate), (10000000/UVC_FRAMES_INFO[1].rate), (10000000/UVC_FRAMES_INFO[1].rate)), \
-        TUD_VIDEO_DESC_CS_VS_FRM_MJPEG_CONT(/*bFrameIndex */3, 0, UVC_FRAMES_INFO[2].width, UVC_FRAMES_INFO[2].height, \
-            UVC_FRAMES_INFO[2].width * UVC_FRAMES_INFO[2].height * 16, UVC_FRAMES_INFO[2].width * UVC_FRAMES_INFO[2].height * 16 * UVC_FRAMES_INFO[2].rate, \
-            UVC_FRAMES_INFO[2].width * UVC_FRAMES_INFO[2].height * 16 / 8, \
-            (10000000/UVC_FRAMES_INFO[2].rate), (10000000/UVC_FRAMES_INFO[2].rate), (10000000/UVC_FRAMES_INFO[2].rate), (10000000/UVC_FRAMES_INFO[2].rate)), \
+        TUD_VIDEO_DESC_CS_VS_FRM_MJPEG_CONT_TEMPLATE(1), \
+        TUD_VIDEO_DESC_CS_VS_FRM_MJPEG_CONT_TEMPLATE(2), \
+        TUD_VIDEO_DESC_CS_VS_FRM_MJPEG_CONT_TEMPLATE(3), \
+        TUD_VIDEO_DESC_CS_VS_FRM_MJPEG_CONT_TEMPLATE(4), \
         TUD_VIDEO_DESC_CS_VS_COLOR_MATCHING(VIDEO_COLOR_PRIMARIES_BT709, VIDEO_COLOR_XFER_CH_BT709, VIDEO_COLOR_COEF_SMPTE170M), \
         /* EP */ \
         TUD_VIDEO_DESC_EP_BULK(_epin, _epsize, 1)

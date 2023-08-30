@@ -55,8 +55,9 @@ static const struct {
 } UVC_FRAMES_INFO[] = {
     {UVC_FRAME_SIZE, UVC_FRAME_WIDTH, UVC_FRAME_HEIGHT, UVC_FRAME_RATE, UVC_JPEG_QUALITY},
     {FRAMESIZE_VGA, 640, 480, 15, 14},
-    {FRAMESIZE_HVGA, 480, 320, 30, 10}
+    {FRAMESIZE_HVGA, 480, 320, 30, 10},
+    {FRAMESIZE_QVGA, 320, 240, 30, 10},
 };
 
 #define UVC_FRAME_NUM (sizeof(UVC_FRAMES_INFO) / sizeof(UVC_FRAMES_INFO[0]))
-_Static_assert(UVC_FRAME_NUM == 3, "UVC_FRAME_NUM must be 3");
+_Static_assert(UVC_FRAME_NUM == 4, "UVC_FRAME_NUM must be 4");
