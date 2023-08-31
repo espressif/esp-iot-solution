@@ -289,12 +289,12 @@ void app_main(void)
     ESP_ERROR_CHECK(usb_streaming_connect_wait(portMAX_DELAY));
     // wait for speaker device ready
     xEventGroupWaitBits(s_evt_handle, BIT3_SPK_START, false, false, portMAX_DELAY);
-    usb_streaming_control(STREAM_UAC_SPK, CTRL_UAC_MUTE, (void *)0);
-    usb_streaming_control(STREAM_UAC_SPK, CTRL_UAC_VOLUME, (void *)80);
 
     while (1) {
         xEventGroupWaitBits(s_evt_handle, BIT3_SPK_START, true, false, portMAX_DELAY);
         /* Manually resume the speaker because SUSPEND_AFTER_START flags is set */
+        usb_streaming_control(STREAM_UAC_SPK, CTRL_UAC_MUTE, (void *)0);
+        usb_streaming_control(STREAM_UAC_SPK, CTRL_UAC_VOLUME, (void *)80);
         ESP_ERROR_CHECK(usb_streaming_control(STREAM_UAC_SPK, CTRL_RESUME, NULL));
         ESP_LOGI(TAG, "speaker resume");
 #if (ENABLE_UAC_MIC_SPK_FUNCTION && !ENABLE_UAC_MIC_SPK_LOOPBACK)
