@@ -445,35 +445,21 @@ TEST_CASE("gpio button auto-test", "[button][iot][auto]")
     };
     g_btns[0] = iot_button_create(&cfg);
     TEST_ASSERT_NOT_NULL(g_btns[0]);
-    iot_button_register_cb(g_btns[0], BUTTON_PRESS_DOWN, button_auto_check_cb_1, NULL);
-    iot_button_register_cb(g_btns[0], BUTTON_PRESS_DOWN, button_auto_check_cb, NULL);
-    iot_button_register_cb(g_btns[0], BUTTON_PRESS_UP, button_auto_check_cb_1, NULL);
-    iot_button_register_cb(g_btns[0], BUTTON_PRESS_UP, button_auto_check_cb, NULL);
-    iot_button_register_cb(g_btns[0], BUTTON_PRESS_REPEAT, button_auto_check_cb_1, NULL);
-    iot_button_register_cb(g_btns[0], BUTTON_PRESS_REPEAT, button_auto_check_cb, NULL);
-    iot_button_register_cb(g_btns[0], BUTTON_SINGLE_CLICK, button_auto_check_cb_1, NULL);
-    iot_button_register_cb(g_btns[0], BUTTON_SINGLE_CLICK, button_auto_check_cb, NULL);
-    iot_button_register_cb(g_btns[0], BUTTON_DOUBLE_CLICK, button_auto_check_cb_1, NULL);
-    iot_button_register_cb(g_btns[0], BUTTON_DOUBLE_CLICK, button_auto_check_cb, NULL);
 
-    button_event_config_t btn_cfg = {
-        .event = BUTTON_MULTIPLE_CLICK,
-        .event_data =
-            {
-                .multiple_clicks.clicks = 4,
-            },
-    };
-    iot_button_register_event_cb(g_btns[0], btn_cfg, button_auto_check_cb_1, NULL);
-    iot_button_register_event_cb(g_btns[0], btn_cfg, button_auto_check_cb, NULL);
+    /* register iot_button callback for all the button_event */
+    for (uint8_t i = 0; i < BUTTON_EVENT_MAX; i++) {
+        if (i == BUTTON_MULTIPLE_CLICK) {
+            button_event_config_t btn_cfg;
+            btn_cfg.event = i;
+            btn_cfg.event_data.multiple_clicks.clicks = 4;
+            iot_button_register_event_cb(g_btns[0], btn_cfg, button_auto_check_cb_1, NULL);
+            iot_button_register_event_cb(g_btns[0], btn_cfg, button_auto_check_cb, NULL);
+        } else {
+            iot_button_register_cb(g_btns[0], i, button_auto_check_cb_1, NULL);
+            iot_button_register_cb(g_btns[0], i, button_auto_check_cb, NULL);
+        }
+    }
 
-    iot_button_register_cb(g_btns[0], BUTTON_LONG_PRESS_START, button_auto_check_cb_1, NULL);
-    iot_button_register_cb(g_btns[0], BUTTON_LONG_PRESS_START, button_auto_check_cb, NULL);
-    iot_button_register_cb(g_btns[0], BUTTON_LONG_PRESS_HOLD, button_auto_check_cb_1, NULL);
-    iot_button_register_cb(g_btns[0], BUTTON_LONG_PRESS_HOLD, button_auto_check_cb, NULL);
-    iot_button_register_cb(g_btns[0], BUTTON_LONG_PRESS_UP, button_auto_check_cb_1, NULL);
-    iot_button_register_cb(g_btns[0], BUTTON_LONG_PRESS_UP, button_auto_check_cb, NULL);
-    iot_button_register_cb(g_btns[0], BUTTON_PRESS_REPEAT_DONE, button_auto_check_cb_1, NULL);
-    iot_button_register_cb(g_btns[0], BUTTON_PRESS_REPEAT_DONE, button_auto_check_cb, NULL);
     TEST_ASSERT_EQUAL(ESP_OK, iot_button_set_param(g_btns[0], BUTTON_LONG_PRESS_TIME_MS, (void *)1500));
 
     gpio_config_t io_conf = {
@@ -489,6 +475,19 @@ TEST_CASE("gpio button auto-test", "[button][iot][auto]")
     xTaskCreate(button_auto_press_test_task, "button_auto_press_test_task", 1024 * 4, NULL, 10, NULL);
 
     TEST_ASSERT_EQUAL(pdTRUE, xSemaphoreTake(g_auto_check_pass, pdMS_TO_TICKS(6000)));
+
+    for (uint8_t i = 0; i < BUTTON_EVENT_MAX; i++) {
+        button_event_config_t btn_cfg;
+        btn_cfg.event = i;
+        if (i == BUTTON_MULTIPLE_CLICK) {
+            btn_cfg.event_data.multiple_clicks.clicks = 4;
+        } else if ( i == BUTTON_LONG_PRESS_UP || i == BUTTON_LONG_PRESS_START) {
+            btn_cfg.event_data.long_press.press_time = 1500;
+        }
+        iot_button_unregister_event(g_btns[0], btn_cfg, button_auto_check_cb);
+        iot_button_unregister_event(g_btns[0], btn_cfg, button_auto_check_cb_1);
+    }
+
     TEST_ASSERT_EQUAL(ESP_OK,iot_button_delete(g_btns[0]));
     vEventGroupDelete(g_check);
     vSemaphoreDelete(g_auto_check_pass);
