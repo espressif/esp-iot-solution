@@ -586,10 +586,16 @@ esp_err_t iot_button_unregister_event(button_handle_t btn_handle, button_event_c
                 btn->cb_info[event][j] = btn->cb_info[event][j + 1];
             }
 
-            button_cb_info_t *p = realloc(btn->cb_info[event], sizeof(button_cb_info_t) * (btn->size[event] - 1));
-            BTN_CHECK(NULL != p, "realloc cb_info failed", ESP_ERR_NO_MEM);
-            btn->cb_info[event] = p;
-            btn->size[event]--;
+            if (btn->size[event] != 1) {
+                button_cb_info_t *p = realloc(btn->cb_info[event], sizeof(button_cb_info_t) * (btn->size[event] - 1));
+                BTN_CHECK(NULL != p, "realloc cb_info failed", ESP_ERR_NO_MEM);
+                btn->cb_info[event] = p;
+                btn->size[event]--;
+            } else {
+                free(btn->cb_info[event]);
+                btn->cb_info[event] = NULL;
+                btn->size[event] = 0;
+            }
             break;
         }
     }
