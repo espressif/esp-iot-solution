@@ -986,7 +986,15 @@ esp_err_t hal_start_channel_action(int channel, uint16_t value_min, uint16_t val
     fade_data.final = final_processing(channel, value_max);
     // start actions from current value
     float cur = s_hal_obj->fade_data[channel].cur;
-    cur = MIN(fade_data.final, cur);
+
+    /**
+     * -0.1 is used to handle a specific scenario. When multiple channels are involved in the action, and the flag is set to 0,
+     * if the current value (cur) of any channel is equal to the final value (fin), then the direction of change for that channel will be forcibly set to decreasing.
+     * This may result in asynchronous changes across the channels, where some channels will increase while others will decrease.
+     * To avoid this situation, we can simply use "final - 1" instead.
+     *
+     */
+    cur = MIN(fade_data.final - 0.1, cur);
     cur = MAX(fade_data.min, cur);
     fade_data.cur = cur;
 
@@ -1063,7 +1071,15 @@ esp_err_t hal_start_channel_group_action(uint16_t value_min[], uint16_t value_ma
         fade_data[channel].min = final_processing(channel, value_min[channel]);
         fade_data[channel].final = final_processing(channel, value_max[channel]);
         float cur = s_hal_obj->fade_data[channel].cur;
-        cur = MIN(fade_data[channel].final, cur);
+
+        /**
+         * -0.1 is used to handle a specific scenario. When multiple channels are involved in the action, and the flag is set to 0,
+         * if the current value (cur) of any channel is equal to the final value (fin), then the direction of change for that channel will be forcibly set to decreasing.
+         * This may result in asynchronous changes across the channels, where some channels will increase while others will decrease.
+         * To avoid this situation, we can simply use "final - 1" instead.
+         *
+         */
+        cur = MIN(fade_data[channel].final - 0.1, cur);
         cur = MAX(fade_data[channel].min, cur);
         fade_data[channel].cur = cur;
 
