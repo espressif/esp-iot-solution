@@ -1,5 +1,13 @@
 # ChangeLog
 
+## v1.1.1 - 2023-08-31
+
+### Bug Fixes:
+
+* UAC:
+  * Fix padding 0 length
+  * Continuous padding 0 with buffer empty timeout (default 80ms) to avoid speaker noise
+
 ## v1.1.0 - 2023-08-02
 
 ### Bug Fixes:
