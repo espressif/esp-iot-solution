@@ -119,11 +119,15 @@ menu "USB Stream"
         config UAC_SPK_PACKET_COMPENSATION
             bool "uac speaker packet compensation"
             default y
+        config UAC_SPK_PACKET_COMPENSATION_CONTINUOUS
+            bool "speaker continuous compensation"
+            depends on UAC_SPK_PACKET_COMPENSATION
+            default y
         config UAC_SPK_PACKET_COMPENSATION_TIMEOUT_MS
             int "speaker compensation after buffer empty timeout(ms)"
             depends on UAC_SPK_PACKET_COMPENSATION
-            default 1000
-            range 10 5000
+            default 80
+            range 10 1000
         config UAC_SPK_PACKET_COMPENSATION_SIZE_MS
             int "speaker compensation size (ms)"
             depends on UAC_SPK_PACKET_COMPENSATION

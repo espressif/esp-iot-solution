@@ -69,8 +69,9 @@ static const char *TAG = "USB_STREAM";
 #define UAC_MIC_VOLUME_LEVEL_DEFAULT         CONFIG_UAC_MIC_VOLUME_LEVEL_DEFAULT         //Default volume level for mic
 #define UAC_MIC_PACKET_COMPENSATION          CONFIG_UAC_MIC_PACKET_COMPENSATION          //padding data if mic packet loss
 #define UAC_SPK_PACKET_COMPENSATION          CONFIG_UAC_SPK_PACKET_COMPENSATION          //padding zero if speaker buffer empty
-#define UAC_SPK_PACKET_COMPENSATION_SIZE_MS  CONFIG_UAC_SPK_PACKET_COMPENSATION_SIZE_MS  //padding n MS zero if speaker buffer empty
-#define UAC_SPK_PACKET_COMPENSATION_TIMEOUT_MS CONFIG_UAC_SPK_PACKET_COMPENSATION_TIMEOUT_MS //padding n MS zero if speaker buffer empty
+#define UAC_SPK_PACKET_COMPENSATION_SIZE_MS    CONFIG_UAC_SPK_PACKET_COMPENSATION_SIZE_MS    //padding n MS zero if speaker buffer empty
+#define UAC_SPK_PACKET_COMPENSATION_TIMEOUT_MS CONFIG_UAC_SPK_PACKET_COMPENSATION_TIMEOUT_MS //padding n MS after wait timeout
+#define UAC_SPK_PACKET_COMPENSATION_CONTINUOUS CONFIG_UAC_SPK_PACKET_COMPENSATION_CONTINUOUS //continuous padding zero at timeout interval
 #define USB_PRE_ALLOC_CTRL_TRANSFER_URB        CONFIG_USB_PRE_ALLOC_CTRL_TRANSFER_URB        //Pre-allocate URB for control transfer
 
 /**
@@ -2303,8 +2304,11 @@ IRAM_ATTR static void _processing_spk_pipe(hcd_pipe_handle_t pipe_hdl, bool if_d
         if (pending_urb_num == NUM_ISOC_SPK_URBS) {
             if (++zero_counter == (UAC_SPK_PACKET_COMPENSATION_TIMEOUT_MS / portTICK_PERIOD_MS)) {
                 /* if speaker packets compensation enable, we padding 0 to speaker */
-                num_bytes_to_send = s_usb_dev.uac->as_ifc[UAC_SPK]->bytes_per_packet * UAC_SPK_PACKET_COMPENSATION_SIZE_MS>UAC_SPK_ST_MAX_MS_DEFAULT?UAC_SPK_ST_MAX_MS_DEFAULT:UAC_SPK_PACKET_COMPENSATION_SIZE_MS;
+                num_bytes_to_send = s_usb_dev.uac->as_ifc[UAC_SPK]->bytes_per_packet * (UAC_SPK_PACKET_COMPENSATION_SIZE_MS>UAC_SPK_ST_MAX_MS_DEFAULT?UAC_SPK_ST_MAX_MS_DEFAULT:UAC_SPK_PACKET_COMPENSATION_SIZE_MS);
                 memset(buffer, 0, num_bytes_to_send);
+#if UAC_SPK_PACKET_COMPENSATION_CONTINUOUS
+                zero_counter = 0;
+#endif
                 ESP_LOGD(TAG, "SPK: padding 0 length = %d", num_bytes_to_send);
             }
         }
