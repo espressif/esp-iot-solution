@@ -180,6 +180,40 @@ TEST_CASE("gpio button test", "[button][iot]")
     iot_button_delete(g_btns[0]);
 }
 
+TEST_CASE("gpio button test power save", "[button][iot][power save]")
+{
+    button_config_t cfg = {
+        .type = BUTTON_TYPE_GPIO,
+        .long_press_time = CONFIG_BUTTON_LONG_PRESS_TIME_MS,
+        .short_press_time = CONFIG_BUTTON_SHORT_PRESS_TIME_MS,
+        .gpio_button_config = {
+            .gpio_num = 0,
+            .active_level = 0,
+        },
+    };
+    g_btns[0] = iot_button_create(&cfg);
+    TEST_ASSERT_NOT_NULL(g_btns[0]);
+    iot_button_register_cb(g_btns[0], BUTTON_PRESS_DOWN, button_press_down_cb, NULL);
+    iot_button_register_cb(g_btns[0], BUTTON_PRESS_UP, button_press_up_cb, NULL);
+    iot_button_register_cb(g_btns[0], BUTTON_PRESS_REPEAT, button_press_repeat_cb, NULL);
+    iot_button_register_cb(g_btns[0], BUTTON_SINGLE_CLICK, button_single_click_cb, NULL);
+    iot_button_register_cb(g_btns[0], BUTTON_DOUBLE_CLICK, button_double_click_cb, NULL);
+    iot_button_register_cb(g_btns[0], BUTTON_LONG_PRESS_START, button_long_press_start_cb, NULL);
+    iot_button_register_cb(g_btns[0], BUTTON_LONG_PRESS_HOLD, button_long_press_hold_cb, NULL);
+    iot_button_register_cb(g_btns[0], BUTTON_PRESS_REPEAT_DONE, button_press_repeat_done_cb, NULL);
+
+    TEST_ASSERT_EQUAL(ESP_OK, iot_button_stop());
+    vTaskDelay(pdMS_TO_TICKS(1000));
+    TEST_ASSERT_EQUAL(ESP_OK, iot_button_resume());
+
+    while (1)
+    {
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+
+    iot_button_delete(g_btns[0]);
+}
+
 #if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
 TEST_CASE("adc button test", "[button][iot]")
 {

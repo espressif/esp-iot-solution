@@ -265,6 +265,24 @@ uint16_t iot_button_get_long_press_hold_cnt(button_handle_t btn_handle);
  */
 esp_err_t iot_button_set_param(button_handle_t btn_handle, button_param_t param, void *value);
 
+/**
+ * @brief resume button timer, if button timer is stopped. Make sure iot_button_create() is called before calling this API.
+ *
+ * @return
+ *     - ESP_OK on success
+ *     - ESP_ERR_INVALID_STATE   timer state is invalid.
+ */
+esp_err_t iot_button_resume(void);
+
+/**
+ * @brief stop button timer, if button timer is running. Make sure iot_button_create() is called before calling this API.
+ *
+ * @return
+ *     - ESP_OK on success
+ *     - ESP_ERR_INVALID_STATE   timer state is invalid
+ */
+esp_err_t iot_button_stop(void);
+
 #ifdef __cplusplus
 }
 #endif

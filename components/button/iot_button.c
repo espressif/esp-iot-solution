@@ -64,7 +64,7 @@ typedef struct Button {
 
 //button handle list head.
 static button_dev_t *g_head_handle = NULL;
-static esp_timer_handle_t g_button_timer_handle;
+static esp_timer_handle_t g_button_timer_handle = NULL;
 static bool g_is_timer_running = false;
 
 #define TICKS_INTERVAL    CONFIG_BUTTON_PERIOD_TIME_MS
@@ -669,5 +669,27 @@ esp_err_t iot_button_set_param(button_handle_t btn_handle, button_param_t param,
         break;
     }
     BUTTON_EXIT_CRITICAL();
+    return ESP_OK;
+}
+
+esp_err_t iot_button_resume(void)
+{
+    BTN_CHECK(g_button_timer_handle, "Button timer handle is invalid", ESP_ERR_INVALID_STATE);
+    BTN_CHECK(!g_is_timer_running, "Button timer is already running", ESP_ERR_INVALID_STATE);
+
+    esp_err_t err = esp_timer_start_periodic(g_button_timer_handle, TICKS_INTERVAL * 1000U);
+    BTN_CHECK(ESP_OK == err, "Button timer start failed", ESP_FAIL);
+    g_is_timer_running = true;
+    return ESP_OK;
+}
+
+esp_err_t iot_button_stop(void)
+{
+    BTN_CHECK(g_button_timer_handle, "Button timer handle is invalid", ESP_ERR_INVALID_STATE);
+    BTN_CHECK(g_is_timer_running, "Button timer is not running", ESP_ERR_INVALID_STATE);
+
+    esp_err_t err = esp_timer_stop(g_button_timer_handle);
+    BTN_CHECK(ESP_OK == err, "Button timer stop failed", ESP_FAIL);
+    g_is_timer_running = false;
     return ESP_OK;
 }
