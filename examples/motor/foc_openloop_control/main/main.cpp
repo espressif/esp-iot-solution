@@ -13,7 +13,9 @@
 #include "esp_log.h"
 #include "esp_simplefoc.h"
 
+#if CONFIG_SOC_MCPWM_SUPPORTED
 #define USING_MCPWM
+#endif
 
 BLDCMotor motor = BLDCMotor(14);
 BLDCDriver3PWM driver = BLDCDriver3PWM(17, 16, 15);

@@ -13,7 +13,9 @@
 #include "esp_log.h"
 #include "esp_simplefoc.h"
 
+#if CONFIG_SOC_MCPWM_SUPPORTED
 #define USING_MCPWM
+#endif
 
 void angle_sensor_init()
 {
@@ -26,7 +28,7 @@ float angle_sensor_get()
 }
 
 BLDCMotor motor = BLDCMotor(14);
-BLDCDriver3PWM driver = BLDCDriver3PWM(17, 16, 15);
+BLDCDriver3PWM driver = BLDCDriver3PWM(4, 5, 6);
 GenericSensor sensor = GenericSensor(angle_sensor_get, angle_sensor_init);
 
 float target_value = 0.0f;

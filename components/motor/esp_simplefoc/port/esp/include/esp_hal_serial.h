@@ -10,19 +10,15 @@
 #include "driver/gpio.h"
 #include "driver/uart.h"
 #include "soc/soc_caps.h"
+#include "soc/uart_channel.h"
 
 /**
  * ESP32-S-Devkitc default serial port: tx:1 rx:3
  * ESP32-S3-Devkitc default serial port: tx:43 rx:44
  */
 
-#if CONFIG_IDF_TARGET_ESP32
-#define TX0 1
-#define RX0 3
-#elif CONFIG_IDF_TARGET_ESP32S3
-#define TX0 43
-#define RX0 44
-#endif
+#define TX0 UART_NUM_0_TXD_DIRECT_GPIO_NUM
+#define RX0 UART_NUM_0_RXD_DIRECT_GPIO_NUM
 
 class HardwareSerial : public Stream {
 public:
