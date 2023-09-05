@@ -1,5 +1,13 @@
 # ChangeLog
 
+## v3.0.1 - 2023-9-1
+
+### Enhancements:
+
+* Resolves bug for iot_button_unregister_event function returned error when reallocating with 0 byte.
+* Update Test cases to test iot_button_unregister_event_cb
+* Add api iot_button_stop & iot_button_resume for power save.
+
 ## v3.0.0 - 2023-8-15
 
 ### Enhancements:
