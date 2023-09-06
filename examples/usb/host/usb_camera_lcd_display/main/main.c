@@ -7,6 +7,7 @@
 #include "freertos/event_groups.h"
 #include "freertos/task.h"
 #include "bsp/esp-bsp.h"
+#include "bsp/display.h"
 #include "esp_log.h"
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_panel_rgb.h"
@@ -57,11 +58,6 @@ static PingPongBuffer_t *ppbuffer_handle               = NULL;
 static uint16_t current_width                          = 0;
 static uint16_t current_height                         = 0;
 static bool if_ppbuffer_init                           = false;
-
-#if CONFIG_BSP_LCD_SUB_BOARD_480_480
-static esp_io_expander_handle_t io_expander  = NULL; // IO expander tca9554 handle
-#endif
-extern esp_lcd_panel_handle_t bsp_lcd_init(void *arg);
 
 static int esp_jpeg_decoder_one_picture(uint8_t *input_buf, int len, uint8_t *output_buf)
 {
@@ -236,13 +232,8 @@ static void _display_task(void *arg)
 static esp_err_t _display_init(void)
 {
     bsp_i2c_init();
-    void *lcd_usr_data = NULL;
-#if CONFIG_BSP_LCD_SUB_BOARD_480_480
-    /* Sub board 2 with 480x480 uses io expander to configure LCD */
-    io_expander = bsp_io_expander_init();
-    lcd_usr_data = io_expander;
-#endif
-    panel_handle = bsp_lcd_init(lcd_usr_data);
+    bsp_display_config_t disp_config = {0};
+    bsp_display_new(&disp_config, &panel_handle, NULL);
     assert(panel_handle);
     esp_lcd_rgb_panel_get_frame_buffer(panel_handle, 2, (void **)&rgb_frame_buf1, (void **)&rgb_frame_buf2);
     cur_frame_buf = rgb_frame_buf2;
@@ -372,7 +363,7 @@ static void switch_button_press_down_cb(void *arg, void *data)
     camera_resolution_info.camera_frame_size.height = camera_resolution_info.camera_frame_list[camera_resolution_info.camera_currect_frame_index].height;
     ESP_LOGI(TAG, "currect resolution is %d*%d", camera_resolution_info.camera_frame_size.width, camera_resolution_info.camera_frame_size.height);
 
-    /* Save the new camera resolution to nsv */
+    /* Save the new camera resolution to nvs */
     usb_streaming_control(STREAM_UVC, CTRL_SUSPEND, NULL);
     ESP_ERROR_CHECK(uvc_frame_size_reset(camera_resolution_info.camera_frame_size.width,
                                          camera_resolution_info.camera_frame_size.height,
@@ -440,7 +431,11 @@ static void _stream_state_changed_cb(usb_stream_state_t event, void *arg)
             }
             ESP_ERROR_CHECK(uvc_frame_size_reset(camera_resolution_info.camera_frame_list[camera_resolution_info.camera_currect_frame_index].width,
                                                  camera_resolution_info.camera_frame_list[camera_resolution_info.camera_currect_frame_index].height, FPS2INTERVAL(30)));
-            _set_value_to_nvs(DEMO_KEY_RESOLUTION, &camera_resolution_info.camera_frame_list[camera_resolution_info.camera_currect_frame_index], sizeof(uvc_frame_size_t));
+            camera_frame_size_t camera_frame_size = {
+                .width = camera_resolution_info.camera_frame_list[camera_resolution_info.camera_currect_frame_index].width,
+                .height = camera_resolution_info.camera_frame_list[camera_resolution_info.camera_currect_frame_index].height,
+            };
+            ESP_ERROR_CHECK(_set_value_to_nvs(DEMO_KEY_RESOLUTION, &camera_frame_size, sizeof(camera_frame_size_t)));
 
             if (_frame_list != NULL) {
                 free(_frame_list);
