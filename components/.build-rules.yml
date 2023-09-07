@@ -14,10 +14,14 @@ components/motor/esp_simplefoc/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32s3"]
 
-components/openai:
+components/openai/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1
 
 components/display/lcd/esp_lcd_panel_io_additions/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32s3"]
+
+components/display/lcd_touch/esp_lcd_touch_spd2010:
+  enable:
+    - if: INCLUDE_DEFAULT == 1

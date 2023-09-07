@@ -1,0 +1,6 @@
+## IDF Component Manager Manifest File
+dependencies:
+  idf: ">=4.4.2"
+  esp_lcd_touch_spd2010:
+    version: "*"
+    override_path: "../../"
