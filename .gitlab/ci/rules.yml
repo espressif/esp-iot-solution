@@ -48,6 +48,9 @@
 .patterns-components_display_lcd_esp_lcd_panel_io_additions: &patterns-components_display_lcd_esp_lcd_panel_io_additions
   - "components/display/lcd/esp_lcd_panel_io_additions/**/*"
 
+.patterns-components_display_lcd_touch_esp_lcd_touch_spd2010: &patterns-components_display_lcd_touch_esp_lcd_touch_spd2010
+  - "components/display/lcd_touch/esp_lcd_touch_spd2010/**/*"
+
 .patterns-components_display_screen: &patterns-components_display_screen
   - "components/display/screen/**/*"
 
@@ -892,7 +895,7 @@
       changes: *patterns-components_button
 
 .rules:build:components_display_digital_tube_ch450_test:
-  rules:    
+  rules:
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-label-target_test
@@ -934,6 +937,17 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_display_lcd_esp_lcd_panel_io_additions
+
+.rules:build:components_display_lcd_touch_esp_lcd_touch_spd2010_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_display_lcd_touch_esp_lcd_touch_spd2010
 
 .rules:build:components_display_screen_test:
   rules:

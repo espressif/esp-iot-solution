@@ -22,6 +22,7 @@ jobs:
             components/bootloader_support_plus;
             components/button;
             components/display/lcd/esp_lcd_panel_io_additions;
+            components/display/lcd_touch/esp_lcd_touch_spd2010;
             components/elf_loader;
             components/extended_vfs;
             components/gprof;

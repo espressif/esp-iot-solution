@@ -31,7 +31,7 @@
     expire_in: 1 week
   variables:
     IDF_CI_BUILD: "1"
-    # By configuring this macro, you can append the compiled configuration file. 
+    # By configuring this macro, you can append the compiled configuration file.
     # For example, using "sdkconf.etc=default" specifies the default sdkconfig file.
     EXAMPLE_CONFIG: "="
   script:
@@ -529,6 +529,17 @@ build_components_display_lcd_esp_lcd_panel_io_additions_test_apps:
       - IMAGE: espressif/idf:release-v5.0
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_panel_io_additions/test_apps
+
+build_components_display_lcd_touch_esp_lcd_touch_spd2010_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_display_lcd_touch_esp_lcd_touch_spd2010_test_apps
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
+  variables:
+    EXAMPLE_DIR: components/display/lcd_touch/esp_lcd_touch_spd2010/test_apps
 
 build_components_led_led_indicator_test_apps:
   extends:
