@@ -297,6 +297,7 @@ int tud_video_commit_cb(uint_fast8_t ctl_idx, uint_fast8_t stm_idx,
 
 void app_main(void)
 {
+    // if using esp-s3-eye board, show the GUI
 #if CONFIG_CAMERA_MODULE_ESP_S3_EYE
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
     bsp_display_start();
@@ -315,13 +316,17 @@ void app_main(void)
         return;
     }
 
-    usb_phy_init();
     // init device stack on configured roothub port
+    usb_phy_init();
     bool usb_init = tud_init(BOARD_TUD_RHPORT);
     if (!usb_init) {
         ESP_LOGE(TAG, "tud_init fail");
         return;
     }
+
+    xTaskCreatePinnedToCore(tusb_device_task, "TinyUSB", 4096, NULL, 5, NULL, 0);
+    xTaskCreatePinnedToCore(video_task, "uvc", 4096, NULL, 4, &uvc_task_hdl, 0);
+
     ESP_LOGI(TAG, "Format List");
     ESP_LOGI(TAG, "\tFormat(1) = %s", "MJPEG");
     ESP_LOGI(TAG, "Frame List");
@@ -331,8 +336,6 @@ void app_main(void)
     ESP_LOGI(TAG, "\tFrame(3) = %d * %d @%dfps, Quality = %d", UVC_FRAMES_INFO[2].width, UVC_FRAMES_INFO[2].height, UVC_FRAMES_INFO[2].rate, UVC_FRAMES_INFO[2].jpeg_quality);
 #endif
 
-    xTaskCreatePinnedToCore(tusb_device_task, "TinyUSB", 4096, NULL, 5, NULL, 0);
-    xTaskCreatePinnedToCore(video_task, "uvc", 4096, NULL, 4, &uvc_task_hdl, 0);
     while (1) {
 #if CONFIG_CAMERA_MODULE_ESP_S3_EYE
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
