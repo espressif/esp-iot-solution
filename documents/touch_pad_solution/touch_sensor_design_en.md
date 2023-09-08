@@ -601,7 +601,7 @@ Common sliders are V-shaped, double-V-shaped or zigzag-shaped.
 
 #### 3.3.13. Matrix Button Design
 
-If the application requires a high number of buttons and there are no enough IO pins, matrix button design can be used to allow more buttons than there are IO pins.
+If the application requires a high number of buttons and there are not enough IO pins, matrix button design can be used to allow more buttons than there are IO pins.
   
 An m×n matrix requires m+n touch sensors. A matrix button design consists of two groups of capacitive sensors: Row sensors and Column sensors, as shown below:
 
