@@ -412,6 +412,56 @@ components_test_esp_lcd_st77903:
     TEST_FOLDER: components/display/lcd/esp_lcd_st77903
     TEST_ENV: esp32_s3_lcd_ev_board
 
+components_led_lightbulb_driver_test:
+  extends:
+    - .pytest_template
+    - .rules:build:components_led_lightbulb_driver_test_apps
+  needs:
+    - job: "build_components_led_lightbulb_driver_test_apps"
+      artifacts: true
+      optional: true
+  parallel:
+    matrix:
+      - IDF_TARGET: esp32s2
+        IDF_VERSION: "4.4"
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "4.4"
+      - IDF_TARGET: esp32s2
+        IDF_VERSION: "5.0"
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "5.0"
+      - IDF_TARGET: esp32s2
+        IDF_VERSION: "5.1"
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "5.1"
+  tags:
+    - ${IDF_TARGET}
+  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
+  variables:
+    TEST_TARGET: ${IDF_TARGET}
+    TEST_FOLDER: components/led/lightbulb_driver
+
+example_lighting_lightbulb:
+  extends:
+    - .pytest_template
+    - .rules:build:example_lighting_lightbulb
+  needs:
+    - job: "build_example_lighting_lightbulb"
+      artifacts: true
+      optional: true
+  parallel:
+    matrix:
+      - IDF_TARGET: esp32s2
+        IDF_VERSION: "5.1"
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "5.1"
+  tags:
+    - ${IDF_TARGET}
+  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
+  variables:
+    TEST_TARGET: ${IDF_TARGET}
+    TEST_FOLDER: examples/lighting/lightbulb
+
 examples_test_usb_uf2_nvs:
   extends:
     - .pytest_template

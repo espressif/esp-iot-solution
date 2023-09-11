@@ -303,8 +303,7 @@ build_example_lighting_lightbulb:
     - .rules:build:example_lighting_lightbulb
   parallel:
     matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
+      - IMAGE: espressif/idf:release-v5.1
   variables:
     EXAMPLE_DIR: examples/lighting/lightbulb
 
@@ -751,6 +750,18 @@ build_components_usb_iot_usbh_cdc_test_apps:
 #
 # tools build jobs
 #
+
+build_components_led_lightbulb_driver_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_led_lightbulb_driver_test_apps
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
+      - IMAGE: espressif/idf:release-v5.1
+  variables:
+    EXAMPLE_DIR: components/led/lightbulb_driver/test_apps
 
 build_tools_cmake_utilities_test_apps:
   extends:

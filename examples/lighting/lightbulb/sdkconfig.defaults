@@ -1,7 +1,7 @@
 #
 # LightBulb Driver Config
 #
-
+CONFIG_LB_NOTIFY_TASK_STACK=1536
 #
 # Drivers
 #

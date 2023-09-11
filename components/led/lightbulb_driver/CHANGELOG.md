@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v0.5.2 - 2023-10-28
+
+### Enhancements:
+
+* Update LEDC low power code logic.
+* Modify the test cases and use the pytest tool for real hardware testing.
+
 ## v0.5.1 - 2023-10-26
 
 ### Bug Fixes:
