@@ -135,13 +135,33 @@ components_test_openai:
     matrix:
         - IDF_VERSION: "4.4"
         - IDF_VERSION: "5.0"
-  tags: 
+  tags:
     - esp32s3
     - openai
   image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_TARGET: esp32s3
     TEST_FOLDER: components/openai
+
+components_test_esp_lcd_gc9b71:
+  extends:
+    - .pytest_template
+    - .rules:build:components_display_lcd_esp_lcd_gc9b71_test_apps
+  needs:
+    - job: "build_components_display_lcd_esp_lcd_gc9b71_test_apps"
+      artifacts: true
+      optional: true
+  parallel:
+    matrix:
+        - IDF_VERSION: "5.1"
+  tags:
+    - esp32s3
+    - esp32s3_lcd_ev
+  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
+  variables:
+    TEST_TARGET: esp32s3
+    TEST_FOLDER: components/display/lcd/esp_lcd_gc9b71
+    TEST_ENV: esp32_s3_lcd_ev_board
 
 components_test_esp_lcd_panel_io_additions:
   extends:
@@ -162,6 +182,46 @@ components_test_esp_lcd_panel_io_additions:
   variables:
     TEST_TARGET: esp32s3
     TEST_FOLDER: components/display/lcd/esp_lcd_panel_io_additions
+    TEST_ENV: esp32_s3_lcd_ev_board
+
+components_test_esp_lcd_sh8601:
+  extends:
+    - .pytest_template
+    - .rules:build:components_display_lcd_esp_lcd_sh8601_test_apps
+  needs:
+    - job: "build_components_display_lcd_esp_lcd_sh8601_test_apps"
+      artifacts: true
+      optional: true
+  parallel:
+    matrix:
+        - IDF_VERSION: "5.1"
+  tags:
+    - esp32s3
+    - esp32s3_lcd_ev
+  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
+  variables:
+    TEST_TARGET: esp32s3
+    TEST_FOLDER: components/display/lcd/esp_lcd_sh8601
+    TEST_ENV: esp32_s3_lcd_ev_board
+
+components_test_esp_lcd_spd2010:
+  extends:
+    - .pytest_template
+    - .rules:build:components_display_lcd_esp_lcd_spd2010_test_apps
+  needs:
+    - job: "build_components_display_lcd_esp_lcd_spd2010_test_apps"
+      artifacts: true
+      optional: true
+  parallel:
+    matrix:
+        - IDF_VERSION: "5.1"
+  tags:
+    - esp32s3
+    - esp32s3_lcd_ev
+  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
+  variables:
+    TEST_TARGET: esp32s3
+    TEST_FOLDER: components/display/lcd/esp_lcd_spd2010
     TEST_ENV: esp32_s3_lcd_ev_board
 
 examples_test_usb_uf2_nvs:
