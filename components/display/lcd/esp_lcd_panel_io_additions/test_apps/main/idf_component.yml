@@ -2,3 +2,6 @@
 dependencies:
   idf: ">=4.4.2"
   espressif/esp_io_expander_tca9554: "^1.0.1"
+  esp_lcd_panel_io_additions:
+    version: "*"
+    override_path: "../../"
