@@ -45,8 +45,17 @@
 .patterns-components_display_digital_tube_is31fl3xxx: &patterns-components_display_digital_tube_is31fl3xxx
   - "components/display/digital_tube/is31fl3xxx/**/*"
 
+.patterns-components_display_lcd_esp_lcd_gc9b71: &patterns-components_display_lcd_esp_lcd_gc9b71
+  - "components/display/lcd/esp_lcd_gc9b71/**/*"
+
 .patterns-components_display_lcd_esp_lcd_panel_io_additions: &patterns-components_display_lcd_esp_lcd_panel_io_additions
   - "components/display/lcd/esp_lcd_panel_io_additions/**/*"
+
+.patterns-components_display_lcd_esp_lcd_sh8601: &patterns-components_display_lcd_esp_lcd_sh8601
+  - "components/display/lcd/esp_lcd_sh8601/**/*"
+
+.patterns-components_display_lcd_esp_lcd_spd2010: &patterns-components_display_lcd_esp_lcd_spd2010
+  - "components/display/lcd/esp_lcd_spd2010/**/*"
 
 .patterns-components_display_lcd_touch_esp_lcd_touch_spd2010: &patterns-components_display_lcd_touch_esp_lcd_touch_spd2010
   - "components/display/lcd_touch/esp_lcd_touch_spd2010/**/*"
@@ -226,6 +235,9 @@
 
 .patterns-example_common_components_camera: &patterns-example_common_components_camera
   - "examples/common_components/camera/**/*"
+
+.patterns-example_display_lcd_qspi_with_ram: &patterns-example_display_lcd_qspi_with_ram
+  - "examples/display/lcd/qspi_with_ram/**/*"
 
 .patterns-example_extended_vfs_gpio_gpio_simple: &patterns-example_extended_vfs_gpio_gpio_simple
   - "examples/extended_vfs/gpio/gpio_simple/**/*"
@@ -466,6 +478,16 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-example_check_pedestrian_flow
+
+.rules:build:example_display_lcd_qspi_with_ram:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_display_lcd_qspi_with_ram
 
 .rules:build:example_extended_vfs_gpio_gpio_simple:
   rules:
@@ -927,6 +949,17 @@
     - <<: *if-dev-push
       changes: *patterns-components_display_digital_tube_is31fl3xxx
 
+.rules:build:components_display_lcd_esp_lcd_gc9b71_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_display_lcd_esp_lcd_gc9b71
+
 .rules:build:components_display_lcd_esp_lcd_panel_io_additions_test_apps:
   rules:
     - <<: *if-protected
@@ -937,6 +970,28 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_display_lcd_esp_lcd_panel_io_additions
+
+.rules:build:components_display_lcd_esp_lcd_sh8601_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_display_lcd_esp_lcd_sh8601
+
+.rules:build:components_display_lcd_esp_lcd_spd2010_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_display_lcd_esp_lcd_spd2010
 
 .rules:build:components_display_lcd_touch_esp_lcd_touch_spd2010_test_apps:
   rules:

@@ -1,0 +1,31 @@
+version: "1.0.0"
+
+dependencies:
+  idf: ">=5.1"
+
+  esp_lcd_touch_cst816s:
+    version: "^1"
+    public: true
+
+  esp_lcd_touch_spd2010:
+    version: "^0.0.1"
+    public: true
+
+  esp_lcd_gc9b71:
+    version: "*"
+    override_path: "../../../../../components/display/lcd/esp_lcd_gc9b71"
+    public: true
+
+  esp_lcd_sh8601:
+    version: "*"
+    override_path: "../../../../../components/display/lcd/esp_lcd_sh8601"
+    public: true
+
+  esp_lcd_spd2010:
+    version: "*"
+    override_path: "../../../../../components/display/lcd/esp_lcd_spd2010"
+    public: true
+
+  lvgl/lvgl:
+    version: "^8"
+    public: true
