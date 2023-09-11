@@ -18,7 +18,7 @@ components/openai/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1
 
-components/display/lcd/esp_lcd_gc9b71:
+components/display/lcd/esp_lcd_gc9b71/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1
 
@@ -26,18 +26,22 @@ components/display/lcd/esp_lcd_panel_io_additions/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32s3"]
 
-components/display/lcd/esp_lcd_sh8601:
+components/display/lcd/esp_lcd_sh8601/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1
 
-components/display/lcd/esp_lcd_spd2010:
+components/display/lcd/esp_lcd_spd2010/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1
 
-components/display/lcd/esp_lcd_st77903:
+components/display/lcd/esp_lcd_st7701/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32s3"]
 
-components/display/lcd_touch/esp_lcd_touch_spd2010:
+components/display/lcd/esp_lcd_st77903/test_apps:
+  enable:
+    - if: IDF_TARGET in ["esp32s3"]
+
+components/display/lcd_touch/esp_lcd_touch_spd2010/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1

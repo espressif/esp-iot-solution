@@ -18,6 +18,7 @@
 #include "esp_lcd_panel_ops.h"
 #include "unity.h"
 #include "unity_test_runner.h"
+#include "unity_test_utils_memory.h"
 
 #include "esp_lcd_st77903.h"
 
@@ -114,7 +115,7 @@ TEST_CASE("test st77903 to draw color bar with QSPI interface", "[st77903][qspi]
     };
     const esp_lcd_panel_dev_config_t panel_config = {
         .reset_gpio_num = TEST_PIN_NUM_LCD_RST,
-        .rgb_endian = LCD_RGB_ENDIAN_BGR,
+        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_BGR,
         .bits_per_pixel = TEST_LCD_QSPI_BIT_PER_PIXEL,
         .vendor_config = &vendor_config,
     };
@@ -187,7 +188,7 @@ TEST_CASE("test st77903 to draw color bar with RGB interface", "[st77903][rgb]")
     };
     const esp_lcd_panel_dev_config_t panel_config = {
         .reset_gpio_num = TEST_PIN_NUM_LCD_RST,
-        .rgb_endian = LCD_RGB_ENDIAN_RGB,
+        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,
         .bits_per_pixel = TEST_LCD_BIT_PER_PIXEL,
         .vendor_config = &vendor_config,
     };
@@ -202,17 +203,10 @@ TEST_CASE("test st77903 to draw color bar with RGB interface", "[st77903][rgb]")
 #endif
 
 // Some resources are lazy allocated in the LCD driver, the threadhold is left for that case
-#define TEST_MEMORY_LEAK_THRESHOLD (-300)
+#define TEST_MEMORY_LEAK_THRESHOLD  (300)
 
 static size_t before_free_8bit;
 static size_t before_free_32bit;
-
-static void check_leak(size_t before_free, size_t after_free, const char *type)
-{
-    ssize_t delta = after_free - before_free;
-    printf("MALLOC_CAP_%s: Before %u bytes free, After %u bytes free (delta %d)\n", type, before_free, after_free, delta);
-    TEST_ASSERT_MESSAGE(delta >= TEST_MEMORY_LEAK_THRESHOLD, "memory leak");
-}
 
 void setUp(void)
 {
@@ -224,8 +218,8 @@ void tearDown(void)
 {
     size_t after_free_8bit = heap_caps_get_free_size(MALLOC_CAP_8BIT);
     size_t after_free_32bit = heap_caps_get_free_size(MALLOC_CAP_32BIT);
-    check_leak(before_free_8bit, after_free_8bit, "8BIT");
-    check_leak(before_free_32bit, after_free_32bit, "32BIT");
+    unity_utils_check_leak(before_free_8bit, after_free_8bit, "8BIT", TEST_MEMORY_LEAK_THRESHOLD);
+    unity_utils_check_leak(before_free_32bit, after_free_32bit, "32BIT", TEST_MEMORY_LEAK_THRESHOLD);
 }
 
 void app_main(void)

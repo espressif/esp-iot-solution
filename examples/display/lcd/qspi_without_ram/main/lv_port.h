@@ -55,7 +55,7 @@ extern "C" {
 
 void lv_port_init(void);
 
-bool lv_port_lock(uint32_t timeout_ms);
+bool lv_port_lock(int timeout_ms);
 
 void lv_port_unlock(void);
 

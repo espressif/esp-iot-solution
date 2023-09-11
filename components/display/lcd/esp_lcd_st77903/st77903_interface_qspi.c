@@ -351,15 +351,15 @@ esp_err_t lcd_new_panel_st77903_qspi(const esp_lcd_panel_dev_config_t *panel_dev
     panel = (st77903_qspi_panel_t *)heap_caps_calloc(1, sizeof(st77903_qspi_panel_t), MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
     ESP_GOTO_ON_FALSE(panel, ESP_ERR_NO_MEM, err, TAG, "Malloc failed");
 
-    switch (panel_dev_config->rgb_endian) {
-    case LCD_RGB_ENDIAN_RGB:
+    switch (panel_dev_config->rgb_ele_order) {
+    case LCD_RGB_ELEMENT_ORDER_RGB:
         panel->madctl_val = 0;
         break;
-    case LCD_RGB_ENDIAN_BGR:
+    case LCD_RGB_ELEMENT_ORDER_BGR:
         panel->madctl_val |= LCD_CMD_BGR_BIT;
         break;
     default:
-        ESP_GOTO_ON_FALSE(false, ESP_ERR_NOT_SUPPORTED, err, TAG, "Unsupported color endian");
+        ESP_GOTO_ON_FALSE(false, ESP_ERR_NOT_SUPPORTED, err, TAG, "unsupported color element order");
         break;
     }
 
@@ -1177,7 +1177,7 @@ end:
 }
 
 static const st77903_lcd_init_cmd_t vendor_specific_init_default[] = {
-//   cmd   data        data_size  delay_ms
+//  {cmd, { data }, data_size, delay_ms}
     {0xf0, (uint8_t []){0xc3}, 1, 0},
     {0xf0, (uint8_t []){0x96}, 1, 0},
     {0xf0, (uint8_t []){0xa5}, 1, 0},

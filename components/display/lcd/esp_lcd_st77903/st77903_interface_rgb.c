@@ -75,15 +75,15 @@ esp_err_t lcd_new_panel_st77903_rgb(const esp_lcd_panel_io_handle_t io, const es
         ESP_GOTO_ON_ERROR(gpio_config(&io_conf), err, TAG, "configure GPIO for RST line failed");
     }
 
-    switch (panel_dev_config->rgb_endian) {
-    case LCD_RGB_ENDIAN_RGB:
+    switch (panel_dev_config->rgb_ele_order) {
+    case LCD_RGB_ELEMENT_ORDER_RGB:
         st77903->madctl_val = 0;
         break;
-    case LCD_RGB_ENDIAN_BGR:
+    case LCD_RGB_ELEMENT_ORDER_BGR:
         st77903->madctl_val |= LCD_CMD_BGR_BIT;
         break;
     default:
-        ESP_GOTO_ON_FALSE(false, ESP_ERR_NOT_SUPPORTED, err, TAG, "unsupported color endian");
+        ESP_GOTO_ON_FALSE(false, ESP_ERR_NOT_SUPPORTED, err, TAG, "unsupported color element order");
         break;
     }
 
@@ -175,9 +175,8 @@ err:
     return ret;
 }
 
-// *INDENT-OFF*
 const static st77903_lcd_init_cmd_t vendor_specific_init_default[] = {
-//   cmd   data        data_size  delay_ms
+//  {cmd, { data }, data_size, delay_ms}
     {0xF0, (uint8_t []){0xC3}, 1, 0},
     {0xF0, (uint8_t []){0x96}, 1, 0},
     {0xF0, (uint8_t []){0xA5}, 1, 0},
@@ -211,7 +210,6 @@ const static st77903_lcd_init_cmd_t vendor_specific_init_default[] = {
     {0x11, (uint8_t []){0x00}, 0, 120},
     {0x29, (uint8_t []){0x00}, 0, 120},
 };
-// *INDENT-OFF*
 
 static esp_err_t panel_st77903_rgb_send_init_cmds(st77903_panel_t *st77903)
 {

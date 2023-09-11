@@ -70,15 +70,15 @@ esp_err_t esp_lcd_new_panel_sh8601(const esp_lcd_panel_io_handle_t io, const esp
         ESP_GOTO_ON_ERROR(gpio_config(&io_conf), err, TAG, "configure GPIO for RST line failed");
     }
 
-    switch (panel_dev_config->color_space) {
-    case ESP_LCD_COLOR_SPACE_RGB:
+    switch (panel_dev_config->rgb_ele_order) {
+    case LCD_RGB_ELEMENT_ORDER_RGB:
         sh8601->madctl_val = 0;
         break;
-    case ESP_LCD_COLOR_SPACE_BGR:
+    case LCD_RGB_ELEMENT_ORDER_BGR:
         sh8601->madctl_val |= LCD_CMD_BGR_BIT;
         break;
     default:
-        ESP_GOTO_ON_FALSE(false, ESP_ERR_NOT_SUPPORTED, err, TAG, "unsupported color space");
+        ESP_GOTO_ON_FALSE(false, ESP_ERR_NOT_SUPPORTED, err, TAG, "unsupported color element order");
         break;
     }
 
@@ -191,7 +191,7 @@ static esp_err_t panel_sh8601_reset(esp_lcd_panel_t *panel)
 }
 
 static const sh8601_lcd_init_cmd_t vendor_specific_init_default[] = {
-//   cmd   data        data_size  delay_ms
+//  {cmd, { data }, data_size, delay_ms}
     {0x44, (uint8_t []){0x00, 0xc8}, 2, 0},
     {0x35, (uint8_t []){0x00}, 0, 0},
     {0x53, (uint8_t []){0x20}, 1, 25},

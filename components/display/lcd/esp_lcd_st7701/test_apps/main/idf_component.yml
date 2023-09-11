@@ -1,0 +1,12 @@
+## IDF Component Manager Manifest File
+dependencies:
+  idf: ">=5.0.4"
+  esp_lcd_panel_io_additions:
+    version: "^1"
+    public: true
+  esp_io_expander_tca9554:
+    version: "^1"
+    public: true
+  esp_lcd_st7701:
+    version: "*"
+    override_path: "../../../esp_lcd_st7701"

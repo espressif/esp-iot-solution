@@ -38,11 +38,11 @@ void lv_port_init(void)
     xTaskCreate(lv_task, "lvgl", EXAMPLE_LVGL_TASK_STACK_SIZE, NULL, EXAMPLE_LVGL_TASK_PRIORITY, &lvgl_task_handle);
 }
 
-bool lv_port_lock(uint32_t timeout_ms)
+bool lv_port_lock(int timeout_ms)
 {
     assert(lvgl_mux && "lv_port_start must be called first");
 
-    const TickType_t timeout_ticks = (timeout_ms == 0) ? portMAX_DELAY : pdMS_TO_TICKS(timeout_ms);
+    const TickType_t timeout_ticks = (timeout_ms == -1) ? portMAX_DELAY : pdMS_TO_TICKS(timeout_ms);
     return xSemaphoreTake(lvgl_mux, timeout_ticks) == pdTRUE;
 }
 
@@ -566,7 +566,7 @@ static void disp_init(void)
     };
     const esp_lcd_panel_dev_config_t panel_config = {
         .reset_gpio_num = EXAMPLE_PIN_NUM_LCD_RST,
-        .rgb_endian = LCD_RGB_ENDIAN_BGR,
+        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,
         .bits_per_pixel = EXAMPLE_LCD_BIT_PER_PIXEL,
         .vendor_config = &vendor_config,
     };
@@ -655,7 +655,7 @@ static void lv_task(void *arg)
     uint32_t task_delay_ms = EXAMPLE_LVGL_TASK_MAX_DELAY_MS;
     while (1) {
         // Lock the mutex due to the LVGL APIs are not thread-safe
-        if (lv_port_lock(0)) {
+        if (lv_port_lock(-1)) {
             task_delay_ms = lv_timer_handler();
             // Release the mutex
             lv_port_unlock();

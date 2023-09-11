@@ -1,6 +1,6 @@
 ## IDF Component Manager Manifest File
 dependencies:
-  idf: ">=5.1.0"
+  idf: ">=5.0.4"
   esp_lcd_gc9b71:
     version: "*"
     override_path: "../../../esp_lcd_gc9b71"
