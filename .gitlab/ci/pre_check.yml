@@ -14,7 +14,7 @@ check_copyright:
   tags: ["build", "amd64", "internet"]
   allow_failure: true
   before_script:
-    - pip install git+https://github.com/espressif/check-copyright.git@master
+    - pip install git+https://github.com/espressif/check-copyright.git@v1.0.3
   script:
     - python -m check_copyright --verbose --dry-run --ignore tools/ci/ignore_list_copyright.txt --config tools/ci/check_copyright_config.yaml .
 
