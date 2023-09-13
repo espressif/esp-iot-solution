@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 #include "esp_log.h"
 #include "soc/rtc_cntl_struct.h"
 #include "soc/usb_serial_jtag_reg.h"
