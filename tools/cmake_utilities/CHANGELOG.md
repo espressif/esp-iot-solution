@@ -1,3 +1,7 @@
+## v0.5.2 - 2023-09-15
+
+* Support work on older ESP-IDF, eg: 4.3.x
+
 ## v0.5.1 - 2023-08-22
 
 * Add string 1-byte align support
