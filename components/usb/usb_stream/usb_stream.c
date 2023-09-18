@@ -431,6 +431,8 @@ typedef struct {
     // dynamic values should be protect
     // index 0: speaker, index 1: mic
     uint16_t ac_interface;
+    uint8_t *mic_frame_buf;
+    uint32_t mic_frame_buf_size;
     uint32_t mic_ms_bytes;
     uint32_t spk_ms_bytes;
     uint32_t spk_max_xfer_size;
@@ -741,8 +743,11 @@ static esp_err_t _apply_stream_config(usb_stream_t stream)
         ESP_LOGD(TAG, "min_bytes in mic callback = %"PRIu32, mic_min_bytes);
         if (usb_dev->uac_cfg.mic_buf_size && (usb_dev->uac_cfg.mic_buf_size < mic_min_bytes)) {
             ESP_LOGE(TAG, "mic_buf_size=%"PRIu32" must >= mic_min_bytes %"PRIu32, usb_dev->uac_cfg.mic_buf_size, mic_min_bytes);
-            abort();
+            assert(0);
         }
+        usb_dev->uac->mic_frame_buf = heap_caps_realloc(usb_dev->uac->mic_frame_buf, mic_min_bytes, MALLOC_CAP_INTERNAL);
+        UVC_CHECK(usb_dev->uac->mic_frame_buf, "alloc mic frame buf failed", ESP_ERR_NO_MEM);
+        usb_dev->uac->mic_frame_buf_size = mic_min_bytes;
         ESP_LOGD(TAG, "MIC ch_num=%"PRIu8", bit_resolution=%"PRIu16", samples_frequence=%"PRIu32", bytes_per_packet=%"PRIu32,
             usb_dev->uac->ch_num[UAC_MIC], usb_dev->uac->bit_resolution[UAC_MIC], usb_dev->uac->samples_frequence[UAC_MIC], usb_dev->ifc[STREAM_UAC_MIC]->bytes_per_packet);
     }
@@ -963,7 +968,8 @@ static esp_err_t _update_config_from_descriptor(const usb_config_desc_t *cfg_des
                         parse_vs_format_mjpeg_desc((const uint8_t *)next_desc, &mjpeg_format_idx, &mjpeg_frame_num);
                         if (uvc_dev) {
                             uvc_frame_size_t *frame_size = uvc_dev->frame_size;
-                            frame_size = (uvc_frame_size_t *)heap_caps_realloc(frame_size, mjpeg_frame_num * sizeof(uvc_frame_size_t), MALLOC_CAP_INTERNAL);
+                            frame_size = (uvc_frame_size_t *)heap_caps_realloc(frame_size, mjpeg_frame_num * sizeof(uvc_frame_size_t), MALLOC_CAP_DEFAULT);
+                            UVC_CHECK(frame_size, "alloc uvc frame size failed", ESP_ERR_NO_MEM);
                             UVC_ENTER_CRITICAL();
                             uvc_dev->frame_num = mjpeg_frame_num;
                             uvc_dev->frame_size = frame_size;
@@ -1131,7 +1137,8 @@ static esp_err_t _update_config_from_descriptor(const usb_config_desc_t *cfg_des
                         if (usb_dev->enabled[STREAM_UAC_MIC]) {
                             uint8_t frame_num = freq_type == 0 ? 1 : freq_type;
                             uac_frame_size_t *frame_size = uac_dev->frame_size[UAC_MIC];
-                            frame_size = (uac_frame_size_t *)heap_caps_realloc(frame_size, frame_num * sizeof(uac_frame_size_t), MALLOC_CAP_INTERNAL);
+                            frame_size = (uac_frame_size_t *)heap_caps_realloc(frame_size, frame_num * sizeof(uac_frame_size_t), MALLOC_CAP_DEFAULT);
+                            UVC_CHECK(frame_size, "alloc mic frame size failed", ESP_ERR_NO_MEM);
                             UVC_ENTER_CRITICAL();
                             uac_dev->frame_num[UAC_MIC] = frame_num;
                             uac_dev->frame_size[UAC_MIC] = frame_size;
@@ -1195,7 +1202,8 @@ static esp_err_t _update_config_from_descriptor(const usb_config_desc_t *cfg_des
                         if (usb_dev->enabled[STREAM_UAC_SPK]) {
                             uint8_t frame_num = freq_type == 0 ? 1 : freq_type;
                             uac_frame_size_t *frame_size = uac_dev->frame_size[UAC_SPK];
-                            frame_size = (uac_frame_size_t *)heap_caps_realloc(frame_size, frame_num * sizeof(uac_frame_size_t), MALLOC_CAP_INTERNAL);
+                            frame_size = (uac_frame_size_t *)heap_caps_realloc(frame_size, frame_num * sizeof(uac_frame_size_t), MALLOC_CAP_DEFAULT);
+                            UVC_CHECK(frame_size, "alloc spk frame size failed", ESP_ERR_NO_MEM);
                             UVC_ENTER_CRITICAL();
                             uac_dev->frame_num[UAC_SPK] = frame_num;
                             uac_dev->frame_size[UAC_SPK] = frame_size;
@@ -2163,7 +2171,7 @@ IRAM_ATTR static void _processing_mic_pipe(hcd_pipe_handle_t pipe_hdl, mic_callb
     mic_frame_t mic_frame = {
         .bit_resolution = s_usb_dev.uac->bit_resolution[UAC_MIC],
         .samples_frequence = s_usb_dev.uac->samples_frequence[UAC_MIC],
-        .data = urb_done->transfer.data_buffer,
+        .data = s_usb_dev.uac->mic_frame_buf,
     };
 
     for (size_t i = 0; i < urb_done->transfer.num_isoc_packets; i++) {
@@ -2191,10 +2199,10 @@ IRAM_ATTR static void _processing_mic_pipe(hcd_pipe_handle_t pipe_hdl, mic_callb
                 actual_num_bytes = num_bytes_ms;
             }
 #endif
-            if ((uint32_t)packet_buffer > (uint32_t)(mic_frame.data + xfered_size)) {
+            if (xfered_size + actual_num_bytes <= s_usb_dev.uac->mic_frame_buf_size) {
                 memcpy(mic_frame.data + xfered_size, packet_buffer, actual_num_bytes);
+                xfered_size += actual_num_bytes;
             }
-            xfered_size += actual_num_bytes;
         }
     }
     mic_frame.data_bytes = xfered_size;
@@ -3729,6 +3737,9 @@ esp_err_t usb_streaming_stop(void)
                 free(s_usb_dev.uac->frame_size[i]);
 #endif
             }
+        }
+        if (s_usb_dev.uac->mic_frame_buf) {
+            free(s_usb_dev.uac->mic_frame_buf);
         }
         free(s_usb_dev.uac);
     }

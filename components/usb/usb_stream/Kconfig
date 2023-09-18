@@ -101,7 +101,7 @@ menu "USB Stream"
     menu "UAC Stream Config"
         config NUM_ISOC_SPK_URBS
             int "uac speaker isoc urb number"
-            default 6
+            default 3
         config NUM_ISOC_MIC_URBS
             int "uac microphone isoc urb number"
             default 3
@@ -115,7 +115,7 @@ menu "USB Stream"
             range 1 32
         config UAC_MIC_PACKET_COMPENSATION
             bool "uac microphone packet compensation"
-            default y
+            default n
         config UAC_SPK_PACKET_COMPENSATION
             bool "uac speaker packet compensation"
             default y

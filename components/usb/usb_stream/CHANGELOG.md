@@ -1,5 +1,13 @@
 # ChangeLog
 
+## v1.1.2 - 2023-09-18
+
+### Bug Fixes:
+
+* UAC:
+  * Mic：disable compensation by default, the frame data_bytes in `mic_cb` varies with host.
+  * Mic：add separate `mic_frame_buf` to restore the frame data, fix the frame data may be overwritten in special case (MPS > sizeof(frame_ms)).
+
 ## v1.1.1 - 2023-08-31
 
 ### Bug Fixes:
