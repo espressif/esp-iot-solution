@@ -30,6 +30,9 @@
 ./components/usb/esp_tinyuf2/uf2/board_flash.c
 ./components/usb/esp_tinyuf2/uf2/ghostfat.c
 ./components/usb/esp_tinyuf2/utils/uf2conv.py
+./components/usb/usb_device_uvc/include/tusb_config.h
+./components/usb/usb_device_uvc/private_include/usb_descriptors.h
+./components/usb/usb_device_uvc/usb_descriptors.c
 ./components/usb/usb_stream/include/libuvc_def.h
 ./components/usb/usb_stream/test_apps/main/wave_1ch_16bits.c
 ./components/utilities/xz/port/include/xz_config.h
@@ -77,9 +80,6 @@
 ./examples/usb/device/usb_surface_dial/main/tusb_config.h
 ./examples/usb/device/usb_surface_dial/main/usb_descriptors.c
 ./examples/usb/device/usb_uf2_nvs/pytest_usb_uf2_nvs.py
-./examples/usb/device/usb_webcam/uvc_device/tusb_config.h
-./examples/usb/device/usb_webcam/uvc_device/usb_descriptors.c
-./examples/usb/device/usb_webcam/uvc_device/usb_descriptors.h
 ./examples/usb/host/usb_camera_lcd_display/components/esp_jpeg/include/esp_jpeg_common.h
 ./examples/usb/host/usb_camera_lcd_display/components/esp_jpeg/include/esp_jpeg_dec.h
 ./examples/usb/host/usb_camera_lcd_display/components/esp_jpeg/include/esp_jpeg_enc.h

@@ -26,7 +26,7 @@
 #ifndef _TUSB_CONFIG_H_
 #define _TUSB_CONFIG_H_
 
-#include "camera_config.h"
+#include "uvc_frame_config.h"
 #ifdef __cplusplus
  extern "C" {
 #endif
@@ -112,7 +112,7 @@
 #define CFG_TUD_VIDEO_STREAMING_EP_BUFSIZE  512
 #endif
 
-#define CFG_EXAMPLE_VIDEO_DISABLE_MJPEG (!UVC_FORMAT_JPEG)
+#define CFG_EXAMPLE_VIDEO_DISABLE_MJPEG (!FORMAT_MJPEG)
 
 #ifdef __cplusplus
  }

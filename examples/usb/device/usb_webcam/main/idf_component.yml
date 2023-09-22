@@ -2,14 +2,6 @@ targets:
   - esp32s2
   - esp32s3
 dependencies:
-  espressif/tinyusb:
-    version: ">=0.15.0~2"
-    rules:
-      - if: "idf_version >=5.0"
-  leeebo/tinyusb_src:
-    version: ">=0.15.0~6"
-    rules:
-      - if: "idf_version >=4.4,<5.0"
   esp32-camera:
     version: ">=2.0.5"
   esp32_s3_eye:
@@ -23,3 +15,6 @@ dependencies:
       - if: "idf_version >=5.0"
     override_path: "../eyes_show"
   cmake_utilities: "*"
+  usb_device_uvc:
+    version: "0.*"
+    override_path: "../../../../../components/usb/usb_device_uvc"

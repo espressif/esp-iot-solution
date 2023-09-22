@@ -27,16 +27,6 @@
 #include "tusb.h"
 #include "usb_descriptors.h"
 
-/* A combination of interfaces must have a unique product id, since PC will save device driver after the first plug.
- * Same VID/PID with different interface e.g MSC (first), then CDC (later) will possibly cause system error on PC.
- *
- * Auto ProductID layout's Bitmap:
- *   [MSB]  VIDEO | AUDIO | MIDI | HID | MSC | CDC          [LSB]
- */
-#define _PID_MAP(itf, n)  ( (CFG_TUD_##itf) << (n) )
-#define USB_PID           (0x4000 | _PID_MAP(CDC, 0) | _PID_MAP(MSC, 1) | _PID_MAP(HID, 2) | \
-    _PID_MAP(MIDI, 3) | _PID_MAP(AUDIO, 4) | _PID_MAP(VIDEO, 5) | _PID_MAP(VENDOR, 6) )
-
 //--------------------------------------------------------------------+
 // Device Descriptors
 //--------------------------------------------------------------------+
@@ -53,8 +43,8 @@ tusb_desc_device_t const desc_device = {
 
     .bMaxPacketSize0    = CFG_TUD_ENDPOINT0_SIZE,
 
-    .idVendor           = 0x303A,
-    .idProduct          = USB_PID,
+    .idVendor           = CONFIG_TUSB_VID,
+    .idProduct          = CONFIG_TUSB_PID,
     .bcdDevice          = 0x0100,
 
     .iManufacturer      = 0x01,
@@ -156,10 +146,10 @@ uint8_t const *tud_descriptor_configuration_cb(uint8_t index)
 // array of pointer to string descriptors
 char const *string_desc_arr [] = {
     (const char[]) { 0x09, 0x04 }, // 0: is supported language is English (0x0409)
-    "ESPRESSIF",                   // 1: Manufacturer
-    "WebCam",                      // 2: Product
-    "123456",                      // 3: Serials, should use chip ID
-    "ESP UVC Camera",              // 4: UVC Interface
+    CONFIG_TUSB_MANUFACTURER,      // 1: Manufacturer
+    CONFIG_TUSB_PRODUCT,           // 2: Product
+    CONFIG_TUSB_SERIAL_NUM         // 3: Serials, should use chip ID
+    "UVC Interface",               // 4: UVC Interface
 };
 
 static uint16_t _desc_str[32];
