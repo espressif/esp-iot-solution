@@ -1,4 +1,4 @@
-# Note: All operators are binary operators. For more than two operands, you may use the nested parentheses trick. 
+# Note: All operators are binary operators. For more than two operands, you may use the nested parentheses trick.
 # For example:
 #    *  A == 1 or (B == 2 and C in [1,2,3])
 #    *  (A == 1 and B == 2) or (C not in ["3", "4", 5])
@@ -58,6 +58,10 @@ examples/camera/video_stream_server:
 examples/check_pedestrian_flow:
   enable:
     - if: IDF_TARGET in ["esp32","esp32s2","esp32s3","esp32c3"]
+
+examples/display/lcd/qspi_without_ram:
+  enable:
+    - if: IDF_TARGET in ["esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 2)
 
 examples/extended_vfs/gpio/gpio_simple:
   enable:

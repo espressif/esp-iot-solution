@@ -1,0 +1,71 @@
+menu "Example Configuration"
+    menu "LCD"
+        config EXAMPLE_LCD_BUFFER_NUMS
+            int "Set number of frame buffers"
+            default 1
+            range 1 3
+            help
+                Let LCD driver create a specified number of frame-size buffers. Only when it is set to multiple can the avoiding tearing be turned on.
+    endmenu
+
+    menu "Display"
+        config EXAMPLE_DISPLAY_LVGL_AVOID_TEAR
+            bool "Avoid tearing effect"
+            depends on EXAMPLE_LCD_BUFFER_NUMS > 1
+            default "n"
+            help
+                Avoid tearing effect through LVGL buffer mode and double frame buffers of RGB LCD. This feature is only available for RGB LCD.
+
+        choice EXAMPLE_DISPLAY_LVGL_MODE
+            depends on EXAMPLE_DISPLAY_LVGL_AVOID_TEAR
+            prompt "Select LVGL buffer mode"
+            default EXAMPLE_DISPLAY_LVGL_FULL_REFRESH
+            config EXAMPLE_DISPLAY_LVGL_FULL_REFRESH
+                bool "Full refresh"
+            config EXAMPLE_DISPLAY_LVGL_DIRECT_MODE
+                bool "Direct mode"
+        endchoice
+
+        choice EXAMPLE_DISPLAY_LVGL_ROTATION
+            depends on EXAMPLE_DISPLAY_LVGL_AVOID_TEAR
+            depends on EXAMPLE_LCD_BUFFER_NUMS = 3
+            prompt "Select rotation"
+            default EXAMPLE_DISPLAY_LVGL_ROTATION_NONE
+            config EXAMPLE_DISPLAY_LVGL_ROTATION_NONE
+                bool "Rotation 0"
+            config EXAMPLE_DISPLAY_LVGL_ROTATION_90
+                bool "Rotation 90"
+            config EXAMPLE_DISPLAY_LVGL_ROTATION_180
+                bool "Rotation 180"
+            config EXAMPLE_DISPLAY_LVGL_ROTATION_270
+                bool "Rotation 270"
+            help
+                Rotate screen when avoid tearing effect is enabled. Need to set EXAMPLE_LCD_BUFFER_NUMS to 3.
+                The rotation is software-based and will substantially reduce FPS if enabled.
+        endchoice
+
+        config EXAMPLE_DISPLAY_LVGL_ROTATION_DEGREE
+            int
+            default 0 if EXAMPLE_DISPLAY_LVGL_ROTATION_NONE
+            default 1 if EXAMPLE_DISPLAY_LVGL_ROTATION_90
+            default 2 if EXAMPLE_DISPLAY_LVGL_ROTATION_180
+            default 3 if EXAMPLE_DISPLAY_LVGL_ROTATION_270
+
+        choice EXAMPLE_DISPLAY_LVGL_BUF_CAPS
+            depends on !EXAMPLE_DISPLAY_LVGL_AVOID_TEAR
+            prompt "Select LVGL buffer memory capability"
+            default EXAMPLE_DISPLAY_LVGL_INTERNAL
+            config EXAMPLE_DISPLAY_LVGL_PSRAM
+                bool "PSRAM memory"
+            config EXAMPLE_DISPLAY_LVGL_INTERNAL
+                bool "Internal memory"
+        endchoice
+
+        config EXAMPLE_DISPLAY_LVGL_BUF_HEIGHT
+            depends on !EXAMPLE_DISPLAY_LVGL_AVOID_TEAR
+            int "LVGL buffer height"
+            default 100
+            help
+                Height of LVGL buffer. The width of the buffer is the same as that of the LCD.
+    endmenu
+endmenu

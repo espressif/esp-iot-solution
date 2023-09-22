@@ -34,6 +34,10 @@ components/display/lcd/esp_lcd_spd2010:
   enable:
     - if: INCLUDE_DEFAULT == 1
 
+components/display/lcd/esp_lcd_st77903:
+  enable:
+    - if: IDF_TARGET in ["esp32s3"]
+
 components/display/lcd_touch/esp_lcd_touch_spd2010:
   enable:
     - if: INCLUDE_DEFAULT == 1

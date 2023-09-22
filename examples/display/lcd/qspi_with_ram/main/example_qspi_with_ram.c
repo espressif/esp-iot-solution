@@ -85,7 +85,7 @@ esp_lcd_touch_handle_t tp = NULL;
 #define EXAMPLE_LVGL_TICK_PERIOD_MS    2
 #define EXAMPLE_LVGL_TASK_MAX_DELAY_MS 500
 #define EXAMPLE_LVGL_TASK_MIN_DELAY_MS 1
-#define EXAMPLE_LVGL_TASK_STACK_SIZE   4 * 1024
+#define EXAMPLE_LVGL_TASK_STACK_SIZE   (4 * 1024)
 #define EXAMPLE_LVGL_TASK_PRIORITY     2
 
 static bool example_notify_lvgl_flush_ready(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_io_event_data_t *edata, void *user_ctx)
@@ -256,13 +256,17 @@ static void example_lvgl_unlock(void)
     xSemaphoreGive(lvgl_mux);
 }
 
-static void example_lvgl_task(void *arg)
+static void example_lvgl_port_task(void *arg)
 {
     ESP_LOGI(TAG, "Starting LVGL task");
+    uint32_t task_delay_ms = EXAMPLE_LVGL_TASK_MAX_DELAY_MS;
     while (1) {
-        example_lvgl_lock(0);
-        uint32_t task_delay_ms = lv_timer_handler();
-        example_lvgl_unlock();
+        // Lock the mutex due to the LVGL APIs are not thread-safe
+        if (example_lvgl_lock(0)) {
+            task_delay_ms = lv_timer_handler();
+            // Release the mutex
+            example_lvgl_unlock();
+        }
         if (task_delay_ms > EXAMPLE_LVGL_TASK_MAX_DELAY_MS) {
             task_delay_ms = EXAMPLE_LVGL_TASK_MAX_DELAY_MS;
         } else if (task_delay_ms < EXAMPLE_LVGL_TASK_MIN_DELAY_MS) {
@@ -457,17 +461,17 @@ void app_main(void)
 
     lvgl_mux = xSemaphoreCreateMutex();
     assert(lvgl_mux);
-    xTaskCreate(example_lvgl_task, "LVGL", EXAMPLE_LVGL_TASK_STACK_SIZE, NULL, EXAMPLE_LVGL_TASK_PRIORITY, NULL);
+    xTaskCreate(example_lvgl_port_task, "LVGL", EXAMPLE_LVGL_TASK_STACK_SIZE, NULL, EXAMPLE_LVGL_TASK_PRIORITY, NULL);
 
     ESP_LOGI(TAG, "Display LVGL demos");
-    // Lock the mutex due to LVGL is not thread-safe
-    example_lvgl_lock(0);
+    // Lock the mutex due to the LVGL APIs are not thread-safe
+    if (example_lvgl_lock(0)) {
+        // lv_demo_widgets();      /* A widgets example */
+        lv_demo_music();        /* A modern, smartphone-like music player demo. */
+        // lv_demo_stress();       /* A stress test for LVGL. */
+        // lv_demo_benchmark();    /* A demo to measure the performance of LVGL or to compare different settings. */
 
-    // lv_demo_widgets();      /* A widgets example */
-    lv_demo_music();        /* A modern, smartphone-like music player demo. */
-    // lv_demo_stress();       /* A stress test for LVGL. */
-    // lv_demo_benchmark();    /* A demo to measure the performance of LVGL or to compare different settings. */
-
-    // Release the mutex
-    example_lvgl_unlock();
+        // Release the mutex
+        example_lvgl_unlock();
+    }
 }

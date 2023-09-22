@@ -191,6 +191,23 @@ build_example_display_lcd_qspi_with_ram:
   variables:
     EXAMPLE_DIR: examples/display/lcd/qspi_with_ram
 
+build_example_display_lcd_qspi_without_ram:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_display_lcd_qspi_without_ram
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:latest
+  before_script:
+    - export PATCH_PATH=${IOT_SOLUTION_PATH}/examples/display/lcd/qspi_without_ram/patch/support_qspi_without_ram_a9349f4ad4.patch
+    - cd "$(dirname $(whereis idf.py | awk -F ' ' '{print $2}'))/.."
+    - git checkout a9349f4ad4
+    - git submodule update --init --recursive
+    - git apply ${PATCH_PATH}
+    - cd ${IOT_SOLUTION_PATH}
+  variables:
+    EXAMPLE_DIR: examples/display/lcd/qspi_without_ram
+
 build_example_extended_vfs_gpio_gpio_simple:
   extends:
     - .build_examples_template
@@ -569,6 +586,23 @@ build_components_display_lcd_esp_lcd_spd2010_test_apps:
       - IMAGE: espressif/idf:release-v5.1
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_spd2010/test_apps
+
+build_components_display_lcd_esp_lcd_st77903_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_display_lcd_esp_lcd_st77903_test_apps
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:latest
+  before_script:
+    - export PATCH_PATH=${IOT_SOLUTION_PATH}/examples/display/lcd/qspi_without_ram/patch/support_qspi_without_ram_a9349f4ad4.patch
+    - cd "$(dirname $(whereis idf.py | awk -F ' ' '{print $2}'))/.."
+    - git checkout a9349f4ad4
+    - git submodule update --init --recursive
+    - git apply ${PATCH_PATH}
+    - cd ${IOT_SOLUTION_PATH}
+  variables:
+    EXAMPLE_DIR: components/display/lcd/esp_lcd_st77903/test_apps
 
 build_components_display_lcd_touch_esp_lcd_touch_spd2010_test_apps:
   extends:
