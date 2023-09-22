@@ -57,6 +57,9 @@
 .patterns-components_display_lcd_esp_lcd_spd2010: &patterns-components_display_lcd_esp_lcd_spd2010
   - "components/display/lcd/esp_lcd_spd2010/**/*"
 
+.patterns-components_display_lcd_esp_lcd_st77903: &patterns-components_display_lcd_esp_lcd_st77903
+  - "components/display/lcd/esp_lcd_st77903/**/*"
+
 .patterns-components_display_lcd_touch_esp_lcd_touch_spd2010: &patterns-components_display_lcd_touch_esp_lcd_touch_spd2010
   - "components/display/lcd_touch/esp_lcd_touch_spd2010/**/*"
 
@@ -238,6 +241,9 @@
 
 .patterns-example_display_lcd_qspi_with_ram: &patterns-example_display_lcd_qspi_with_ram
   - "examples/display/lcd/qspi_with_ram/**/*"
+
+.patterns-example_display_lcd_qspi_without_ram: &patterns-example_display_lcd_qspi_without_ram
+  - "examples/display/lcd/qspi_without_ram/**"
 
 .patterns-example_extended_vfs_gpio_gpio_simple: &patterns-example_extended_vfs_gpio_gpio_simple
   - "examples/extended_vfs/gpio/gpio_simple/**/*"
@@ -488,6 +494,16 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-example_display_lcd_qspi_with_ram
+
+.rules:build:example_display_lcd_qspi_without_ram:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_display_lcd_qspi_without_ram
 
 .rules:build:example_extended_vfs_gpio_gpio_simple:
   rules:
@@ -992,6 +1008,17 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_display_lcd_esp_lcd_spd2010
+
+.rules:build:components_display_lcd_esp_lcd_st77903_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_display_lcd_esp_lcd_st77903
 
 .rules:build:components_display_lcd_touch_esp_lcd_touch_spd2010_test_apps:
   rules:
