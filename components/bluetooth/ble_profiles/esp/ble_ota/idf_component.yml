@@ -2,6 +2,7 @@ version: "0.1.8"
 targets:
   - esp32
   - esp32c3
+  - esp32h2
   - esp32s3
 description: Espressif defined BLE OTA profile
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/bluetooth/ble_profiles/esp/ble_ota
