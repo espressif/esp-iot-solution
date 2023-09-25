@@ -36,12 +36,16 @@ menu "USB Stream"
         range 0 1
         default 1 if IDF_TARGET_ESP32S3 && !FREERTOS_UNICORE
         default 0 if IDF_TARGET_ESP32S2
+        default 0
     config USB_PROC_TASK_STACK_SIZE
         int "usb process task stack size (Bytes)"
         default 3072
     config USB_WAITING_AFTER_CONN_MS
         int "usb enum delay time(ms) after device connection"
         default 50
+    config USB_CTRL_XFER_TIMEOUT_MS
+        int "usb control transfer timeout(ms)"
+        default 1000
     config USB_ENUM_FAILED_RETRY
         bool "usb enum retry if device enum failed"
         default y
@@ -61,8 +65,10 @@ menu "USB Stream"
             default 2
         config SAMPLE_PROC_TASK_CORE
             int "uvc sample process task core id"
-            range 0 1
+            range -1 1
             default 0
+                help
+                    -1: not affinity, 0: APP_CPU, 1: PRO_CPU
         config SAMPLE_PROC_TASK_STACK_SIZE
             int "uvc sample process task stack size (Bytes)"
             default 3072
@@ -133,12 +139,6 @@ menu "USB Stream"
             depends on UAC_SPK_PACKET_COMPENSATION
             default 10
             range 1 32
-        config UAC_SPK_VOLUME_LEVEL_DEFAULT
-            int "uac speaker default volume level"
-            default 80 
-        config UAC_MIC_VOLUME_LEVEL_DEFAULT 
-            int "uac microphone default volume level"
-            default 80
     endmenu
 
 endmenu
