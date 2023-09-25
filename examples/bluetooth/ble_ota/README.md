@@ -63,6 +63,13 @@ ACK_Status:
 
 [ESP BLE OTA](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_ota)
 
+### 4.1 OTA update ESP32-H2
+
+To construct the BLE OTA demo for the ESP32-H2 device, ensure you're using ESP-IDF version 5.0 or later. Currently, the ESP32-H2 doesn't support NimBLE OTA updates, so omit the instructions in section 5. Maintain the default configuration for the Bluetooth framework, where `Bluedroid - Dual-mode` is selected. To ensure compatibility with the sample app mentioned in section 3, deactivate BLE 5.0 features by navigating to:
+
+1. `Component config` > `Bluetooth` > `Bluedroid Options` and deselect `Enable BLE 5.0 features`.
+2. `Component config` > `Bluetooth` > `Controller Options` and deselect `Enable BLE 5 feature`.
+
 ## 5. NimBLE OTA
 
 #### Configure the Project
