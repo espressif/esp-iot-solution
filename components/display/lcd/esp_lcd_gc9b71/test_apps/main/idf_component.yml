@@ -3,4 +3,4 @@ dependencies:
   idf: ">=5.1.0"
   esp_lcd_gc9b71:
     version: "*"
-    override_path: "../../"
+    override_path: "../../../esp_lcd_gc9b71"
