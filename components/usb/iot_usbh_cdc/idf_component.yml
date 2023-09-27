@@ -10,3 +10,4 @@ dependencies:
   iot_usbh:
     version: ">=0.1.2"
     public: true
+    override_path: "../iot_usbh"

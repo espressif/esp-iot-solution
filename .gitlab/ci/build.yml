@@ -477,7 +477,7 @@ build_example_usb_host_usb_cdc_4g_module:
   parallel:
     matrix:
       - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
+      - IMAGE: espressif/idf:release-v5.1
   variables:
     EXAMPLE_DIR: examples/usb/host/usb_cdc_4g_module
 
