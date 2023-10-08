@@ -1,2 +1,2 @@
-idf_component_register(SRCS "led_indicator_test.c"
-                        REQUIRES led_indicator unity)
+idf_component_register(SRC_DIRS "." 
+                       INCLUDE_DIRS ".")

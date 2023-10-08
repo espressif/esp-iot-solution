@@ -12,10 +12,16 @@
 extern "C" {
 #endif
 
+#define LEDC_MODE       CONFIG_LEDC_SPEED_MODE_VALUE
+#define LEDC_DUTY_RES   CONFIG_LEDC_TIMER_BIT_NUM
+#define LEDC_FREQ_HZ    CONFIG_LEDC_TIMER_FREQ_HZ
+
 typedef struct {
-    bool is_active_level_high;                     /**< Set true if GPIO level is high when light is ON, otherwise false. */
-    ledc_timer_config_t *ledc_timer_config;        /*!< Configuration parameters of LEDC timer for ledc_timer_config function*/
-    ledc_channel_config_t *ledc_channel_config;    /*!< Configuration parameters of LEDC channel for ledc_channel_config function*/
+    bool is_active_level_high;              /*!< Set true if GPIO level is high when light is ON, otherwise false. */
+    bool timer_inited;                      /*!< Set true if LEDC timer is inited, otherwise false. */
+    ledc_timer_t timer_num;                 /*!< The timer source of channel */
+    int32_t gpio_num;                       /*!< num of gpio */
+    ledc_channel_t channel;                 /*!< LEDC channel */
 } led_indicator_ledc_config_t;
 
 /**

@@ -14,6 +14,7 @@
 #include "led_indicator_blink_default.h"
 #include "unity.h"
 #include "led_gamma.h"
+#include "iot_button.h"
 
 // Some resources are lazy allocated in pulse_cnt driver, the threshold is left for that case
 #define TEST_MEMORY_LEAK_THRESHOLD (-200)
@@ -358,7 +359,7 @@ TEST_CASE("User defined blink", "[LED][indicator]")
     ESP_LOGI(TAG, "triple blink.....");
     ret = led_indicator_start(led_handle_0, BLINK_TRIPLE);
     TEST_ASSERT(ret == ESP_OK);
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
+    vTaskDelay(3000 / portTICK_PERIOD_MS);
     ret = led_indicator_stop(led_handle_0, BLINK_TRIPLE);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -409,33 +410,17 @@ TEST_CASE("Preempt blink lists test", "[LED][indicator]")
 
 TEST_CASE("breathe test", "[LED][indicator]")
 {
-    ledc_timer_config_t timer_config = {
-        .duty_resolution = LEDC_TIMER_13_BIT,        // resolution of PWM duty
-        .freq_hz = 5000,                             // frequency of PWM signal
-        .speed_mode = LEDC_LOW_SPEED_MODE,           // timer mode
-        .timer_num = LEDC_TIMER_1,                   // timer index
-        .clk_cfg = LEDC_AUTO_CLK,                    // Auto select the source clock
-    };
-
-    ledc_channel_config_t ledc_channel = {
-        .channel    = LEDC_CHANNEL_0,
-        .duty       = 0,
-        .gpio_num   = LED_IO_NUM_0,
-        .speed_mode = LEDC_LOW_SPEED_MODE,
-        .hpoint     = 0,
-        .timer_sel  = LEDC_TIMER_1,
-        .flags.output_invert = 0
-    };
-
     led_indicator_ledc_config_t led_indicator_ledc_config = {
         .is_active_level_high = 1,
-        .ledc_timer_config = &timer_config,
-        .ledc_channel_config = &ledc_channel,
+        .timer_inited = false,
+        .timer_num = LEDC_TIMER_0,
+        .gpio_num = LED_IO_NUM_0,
+        .channel = LEDC_CHANNEL_0,
     };
 
     led_indicator_config_t config = {
-        .led_indicator_ledc_config = &led_indicator_ledc_config,
         .mode = LED_LEDC_MODE,
+        .led_indicator_ledc_config = &led_indicator_ledc_config,
         .blink_lists = led_blink_lst,
         .blink_list_num = BLINK_NUM,
     };
@@ -469,31 +454,15 @@ TEST_CASE("breathe test", "[LED][indicator]")
 
 static esp_err_t custom_ledc_init(void *param)
 {
-    ledc_timer_config_t timer_config = {
-        .duty_resolution = LEDC_TIMER_13_BIT,        // resolution of PWM duty
-        .freq_hz = 5000,                             // frequency of PWM signal
-        .speed_mode = LEDC_LOW_SPEED_MODE,           // timer mode
-        .timer_num = LEDC_TIMER_1,                   // timer index
-        .clk_cfg = LEDC_AUTO_CLK,                    // Auto select the source clock
-    };
-
-    ledc_channel_config_t ledc_channel = {
-        .channel    = LEDC_CHANNEL_0,
-        .duty       = 0,
-        .gpio_num   = LED_IO_NUM_0,
-        .speed_mode = LEDC_LOW_SPEED_MODE,
-        .hpoint     = 0,
-        .timer_sel  = LEDC_TIMER_1,
-        .flags.output_invert = 0
-    };
-
-    led_indicator_ledc_config_t custom_led_indicator_ledc_config = {
+    led_indicator_ledc_config_t led_indicator_ledc_config = {
         .is_active_level_high = 1,
-        .ledc_timer_config = &timer_config,
-        .ledc_channel_config = &ledc_channel,
+        .timer_inited = false,
+        .timer_num = LEDC_TIMER_0,
+        .gpio_num = LED_IO_NUM_0,
+        .channel = LEDC_CHANNEL_0,
     };
 
-    esp_err_t ret = led_indicator_ledc_init(&custom_led_indicator_ledc_config);
+    esp_err_t ret = led_indicator_ledc_init(&led_indicator_ledc_config);
     return ret;
 }
 
@@ -548,6 +517,61 @@ TEST_CASE("test gamma table", "[LED][indicator]")
     led_indicator_new_gamma_table(2.3);
 }
 
+static void button_press_down_cb(void *arg, void *data)
+{
+    static bool preempted = false;
+    if (preempted == false) {
+        ESP_LOGI(TAG, "preempt blink.....");
+        esp_err_t ret = led_indicator_preempt_start(led_handle_0, BLINK_50_BRIGHTNESS);
+        TEST_ASSERT(ret == ESP_OK);
+        preempted = true;
+    } else {
+        ESP_LOGI(TAG, "preempt blink stop.....");
+        esp_err_t ret = led_indicator_preempt_stop(led_handle_0, BLINK_50_BRIGHTNESS);
+        TEST_ASSERT(ret == ESP_OK);
+        preempted = false;
+    }
+}
+
+TEST_CASE("test led preempt func with breath", "[LED][preempt][breath]")
+{
+    button_config_t cfg = {
+        .type = BUTTON_TYPE_GPIO,
+        .gpio_button_config = {
+            .gpio_num = 0,
+            .active_level = 0,
+        },
+    };
+    button_handle_t btn = iot_button_create(&cfg);
+    iot_button_register_cb(btn, BUTTON_PRESS_DOWN, button_press_down_cb, NULL);
+
+    led_indicator_ledc_config_t led_indicator_ledc_config = {
+        .is_active_level_high = 1,
+        .timer_inited = false,
+        .timer_num = LEDC_TIMER_0,
+        .gpio_num = LED_IO_NUM_0,
+        .channel = LEDC_CHANNEL_0,
+    };
+
+    led_indicator_config_t config = {
+        .mode = LED_LEDC_MODE,
+        .led_indicator_ledc_config = &led_indicator_ledc_config,
+        .blink_lists = led_blink_lst,
+        .blink_list_num = BLINK_NUM,
+    };
+
+    led_handle_0 = led_indicator_create(&config);
+    TEST_ASSERT_NOT_NULL(led_handle_0);
+    TEST_ASSERT(led_handle_0 == led_indicator_get_handle((void *)LEDC_CHANNEL_0)); //test get handle
+
+    ESP_LOGI(TAG, "breathe blink .....");
+    esp_err_t ret = led_indicator_start(led_handle_0, BLINK_BREATHE);
+    TEST_ASSERT(ret == ESP_OK);
+    while (1) {
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
+}
+
 static size_t before_free_8bit;
 static size_t before_free_32bit;
 
@@ -574,6 +598,13 @@ void tearDown(void)
 
 void app_main(void)
 {
-    printf("LED INDICATOR TEST \n");
+    //   _    ___ ___    ___ _  _ ___ ___ ___   _ _____ ___  ___   _____ ___ ___ _____ 
+    //  | |  | __|   \  |_ _| \| |   \_ _/ __| /_\_   _/ _ \| _ \ |_   _| __/ __|_   _|
+    //  | |__| _|| |) |  | || .` | |) | | (__ / _ \| || (_) |   /   | | | _|\__ \ | |  
+    //  |____|___|___/  |___|_|\_|___/___\___/_/ \_\_| \___/|_|_\   |_| |___|___/ |_|  
+    printf("  _    ___ ___    ___ _  _ ___ ___ ___   _ _____ ___  ___   _____ ___ ___ _____\n");
+    printf(" | |  | __|   \\  |_ _| \\| |   \\_ _/ __| /_\\_   _/ _ \\| _ \\ |_   _| __/ __|_   _|\n");
+    printf(" | |__| _|| |) |  | || .` | |) | | (__ / _ \\| || (_) |   /   | | | _|\\__ \\ | |\n");
+    printf(" |____|___|___/  |___|_|\\_|___/___\\___/_/ \\_\\_| \\___/|_|_\\   |_| |___|___/ |_|\n");
     unity_run_menu();
 }

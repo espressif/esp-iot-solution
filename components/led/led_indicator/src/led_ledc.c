@@ -20,14 +20,32 @@
 
 #define LEDC_MAX_CHANNEL 8
 
+#define LEDC_TIMER_CONFIG(ledc_timer)   \
+{                                     \
+    .speed_mode = LEDC_MODE,          \
+    .duty_resolution = LEDC_DUTY_RES, \
+    .timer_num = ledc_timer,          \
+    .freq_hz = LEDC_FREQ_HZ,          \
+    .clk_cfg = LEDC_AUTO_CLK,         \
+}
+
+#define LEDC_CHANNEL_CONFIG(ledc_timer, ledc_channel, gpio) \
+{                                                       \
+    .speed_mode = LEDC_MODE,                            \
+    .timer_sel = ledc_timer,                            \
+    .hpoint = 0,                                        \
+    .duty = 0,                                          \
+    .intr_type = LEDC_INTR_DISABLE,                     \
+    .channel = ledc_channel,                            \
+    .gpio_num = gpio,                                   \
+}
+
 typedef struct {
     bool is_init;                   /*!< Is the channel being used */
-    ledc_mode_t speed_mode;         /*!< LEDC speed speed_mode, high-speed mode or low-speed mode */
     ledc_channel_t channel;         /*!< LEDC channel (0 - 7) */
 } led_indicator_ledc_channel_t;
 
 typedef struct {
-    bool ledc_timer_is_init;                                      /*!< Avoid repeated init ledc_timer */
     uint8_t channel_num;                                          /*!< Number of LEDC channels already in use */
     uint32_t max_duty;                                            /*!< Max duty cycle from duty_resolution : 2^duty_resolution -1 */
     led_indicator_ledc_channel_t ledc_channel[LEDC_MAX_CHANNEL];  /*!< LEDC channel state */
@@ -38,26 +56,25 @@ static led_indicator_ledc_t *s_ledc = NULL;
 esp_err_t led_indicator_ledc_init(void *param)
 {
     esp_err_t ret = ESP_OK;
-    uint32_t ch;
     const led_indicator_ledc_config_t *cfg = (led_indicator_ledc_config_t *)param;
     if (!s_ledc) {
         s_ledc = calloc(1, sizeof(led_indicator_ledc_t));
     }
     LED_LEDC_CHECK(NULL != s_ledc, "alloc fail", return ESP_ERR_NO_MEM);
 
-    if ( !s_ledc->ledc_timer_is_init ) {
-        ret = ledc_timer_config(cfg->ledc_timer_config);
+    if (!cfg->timer_inited) {
+        ledc_timer_config_t ledc_timer_cfg = LEDC_TIMER_CONFIG(cfg->timer_num); 
+        ret = ledc_timer_config(&ledc_timer_cfg);
         LED_LEDC_CHECK(ESP_OK == ret, "LEDC timer config fail!", goto EXIT);
-        s_ledc->ledc_timer_is_init = true;
-        s_ledc->max_duty = pow(2, cfg->ledc_timer_config->duty_resolution) - 1;
+        s_ledc->max_duty = pow(2, ledc_timer_cfg.duty_resolution) - 1;
     }
 
-    ch = cfg->ledc_channel_config->channel;
+    ledc_channel_t ch = cfg->channel;
     LED_LEDC_CHECK(!s_ledc->ledc_channel[ch].is_init, "LEDC channel is already initialized!", goto EXIT);
-    ret = ledc_channel_config(cfg->ledc_channel_config);
+    ledc_channel_config_t ledc_ch_cfg = LEDC_CHANNEL_CONFIG(cfg->timer_num, cfg->channel, cfg->gpio_num);
+    ret = ledc_channel_config(&ledc_ch_cfg);
     LED_LEDC_CHECK(ESP_OK == ret, "ledc_channel_config fail!", goto EXIT);
-    s_ledc->ledc_channel[ch].speed_mode = cfg->ledc_channel_config->speed_mode;
-    s_ledc->ledc_channel[ch].channel = cfg->ledc_channel_config->channel;
+    s_ledc->ledc_channel[ch].channel = ch;
     s_ledc->ledc_channel[ch].is_init = true;
     s_ledc->channel_num += 1;
     return ESP_OK;
@@ -73,6 +90,7 @@ EXIT:
 esp_err_t led_indicator_ledc_deinit(void *channel)
 {
     uint32_t ch = (uint32_t)channel;
+    LED_LEDC_CHECK(NULL != s_ledc, "LEDC is not initialized", return ESP_FAIL);
     LED_LEDC_CHECK(s_ledc->ledc_channel[ch].is_init, "LEDC channel does't init", return ESP_FAIL);
     s_ledc->ledc_channel[ch].is_init = false;
     s_ledc->channel_num -= 1;
@@ -90,14 +108,14 @@ esp_err_t led_indicator_ledc_set_on_off(void *channel, bool on_off)
     uint32_t ch = (uint32_t)channel;
     LED_LEDC_CHECK(s_ledc->ledc_channel[ch].is_init, "LEDC channel does't init", return ESP_FAIL);
     if (on_off) {
-        ret = ledc_set_duty(s_ledc->ledc_channel[ch].speed_mode, s_ledc->ledc_channel[ch].channel, s_ledc->max_duty);
+        ret = ledc_set_duty(LEDC_MODE, s_ledc->ledc_channel[ch].channel, s_ledc->max_duty);
         LED_LEDC_CHECK(ESP_OK == ret, "LEDC set duty error", return ret);
     } else {
-        ret = ledc_set_duty(s_ledc->ledc_channel[ch].speed_mode, s_ledc->ledc_channel[ch].channel, on_off);
+        ret = ledc_set_duty(LEDC_MODE, s_ledc->ledc_channel[ch].channel, on_off);
         LED_LEDC_CHECK(ESP_OK == ret, "LEDC set duty error", return ret);
     }
 
-    ret = ledc_update_duty(s_ledc->ledc_channel[ch].speed_mode, s_ledc->ledc_channel[ch].channel);
+    ret = ledc_update_duty(LEDC_MODE, s_ledc->ledc_channel[ch].channel);
     LED_LEDC_CHECK(ESP_OK == ret, "LEDC update duty error", return ret);
     return ESP_OK;
 }
@@ -108,9 +126,9 @@ esp_err_t led_indicator_ledc_set_brightness(void *channel, uint32_t brightness)
     uint32_t ch = (uint32_t)channel;
     LED_LEDC_CHECK(s_ledc->ledc_channel[ch].is_init, "LEDC channel does't init", return ESP_FAIL);
     LED_LEDC_CHECK(s_ledc->max_duty > brightness, "brightness can't be larger than (2^max_duty - 1)", return ESP_FAIL);
-    ret = ledc_set_duty(s_ledc->ledc_channel[ch].speed_mode, s_ledc->ledc_channel[ch].channel, brightness);
+    ret = ledc_set_duty(LEDC_MODE, s_ledc->ledc_channel[ch].channel, brightness);
     LED_LEDC_CHECK(ESP_OK == ret, "LEDC set duty error", return ret);
-    ret = ledc_update_duty(s_ledc->ledc_channel[ch].speed_mode, s_ledc->ledc_channel[ch].channel);
+    ret = ledc_update_duty(LEDC_MODE, s_ledc->ledc_channel[ch].channel);
     LED_LEDC_CHECK(ESP_OK == ret, "LEDC update duty error", return ret);
     return ESP_OK;
 }

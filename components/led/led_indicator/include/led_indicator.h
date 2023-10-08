@@ -22,11 +22,11 @@ extern "C" {
  *
  */
 enum {
-    LED_STATE_OFF = 0,          /*!< turn off the LED */
-    LED_STATE_25_PERCENT = 64,  /*!< 25% brightness, must support to set brightness */
+    LED_STATE_OFF = 0,           /*!< turn off the LED */
+    LED_STATE_25_PERCENT = 64,   /*!< 25% brightness, must support to set brightness */
     LED_STATE_50_PERCENT = 128,  /*!< 50% brightness, must support to set brightness */
     LED_STATE_75_PERCENT = 191,  /*!< 75% brightness, must support to set brightness */
-    LED_STATE_ON = UINT8_MAX,   /*!< turn on the LED */
+    LED_STATE_ON = UINT8_MAX,    /*!< turn on the LED */
 };
 
 /**

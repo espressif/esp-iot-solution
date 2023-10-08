@@ -17,8 +17,8 @@ extern "C" {
  *
  */
 typedef struct {
-    bool is_active_level_high;     /**< Set true if GPIO level is high when light is ON, otherwise false. */
-    int32_t gpio_num;              /**< num of GPIO */
+    bool is_active_level_high;     /*!< Set true if GPIO level is high when light is ON, otherwise false. */
+    int32_t gpio_num;              /*!< num of GPIO */
 } led_indicator_gpio_config_t;
 
 /**
