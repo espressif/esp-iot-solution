@@ -214,6 +214,49 @@ TEST_CASE("gpio button test power save", "[button][iot][power save]")
     iot_button_delete(g_btns[0]);
 }
 
+TEST_CASE("matrix keyboard button test","[button][matrix key]")
+{
+    int32_t row_gpio[4] = {4,5,6,7};
+    int32_t col_gpio[4] = {3,8,16,15};
+    button_config_t cfg = {
+        .type = BUTTON_TYPE_MATRIX,
+        .long_press_time = CONFIG_BUTTON_LONG_PRESS_TIME_MS,
+        .short_press_time = CONFIG_BUTTON_SHORT_PRESS_TIME_MS,
+        .matrix_button_config = {
+            .row_gpio_num = 0,
+            .col_gpio_num = 0,
+        }
+    };
+
+    for (int i=0;i<4;i++){
+        cfg.matrix_button_config.row_gpio_num = row_gpio[i];
+        for (int j=0;j<4;j++) {
+            cfg.matrix_button_config.col_gpio_num = col_gpio[j];
+            g_btns[i*4+j] = iot_button_create(&cfg);
+            TEST_ASSERT_NOT_NULL(g_btns[i*4+j]);
+            iot_button_register_cb(g_btns[i*4+j], BUTTON_PRESS_DOWN, button_press_down_cb, NULL);
+            iot_button_register_cb(g_btns[i*4+j], BUTTON_PRESS_UP, button_press_up_cb, NULL);
+            iot_button_register_cb(g_btns[i*4+j], BUTTON_PRESS_REPEAT, button_press_repeat_cb, NULL);
+            iot_button_register_cb(g_btns[i*4+j], BUTTON_SINGLE_CLICK, button_single_click_cb, NULL);
+            iot_button_register_cb(g_btns[i*4+j], BUTTON_DOUBLE_CLICK, button_double_click_cb, NULL);
+            iot_button_register_cb(g_btns[i*4+j], BUTTON_LONG_PRESS_START, button_long_press_start_cb, NULL);
+            iot_button_register_cb(g_btns[i*4+j], BUTTON_LONG_PRESS_HOLD, button_long_press_hold_cb, NULL);
+            iot_button_register_cb(g_btns[i*4+j], BUTTON_PRESS_REPEAT_DONE, button_press_repeat_done_cb, NULL);
+        }
+    }
+
+    while (1)
+    {
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+
+    for (int i=0;i<4;i++){
+        for (int j=0;j<4;j++) {
+            iot_button_delete(g_btns[i*4+j]);
+        }
+    }
+}
+
 #if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
 TEST_CASE("adc button test", "[button][iot]")
 {
@@ -632,7 +675,6 @@ TEST_CASE("gpio button long_press auto-test", "[button][long_press][auto]")
     vSemaphoreDelete(long_press_auto_check_pass);
     vTaskDelay(pdMS_TO_TICKS(100));
 }
-
 
 static void check_leak(size_t before_free, size_t after_free, const char *type)
 {

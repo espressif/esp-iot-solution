@@ -7,6 +7,7 @@
 
 #include "button_adc.h"
 #include "button_gpio.h"
+#include "button_matrix.h"
 #include "esp_err.h"
 
 #ifdef __cplusplus
@@ -73,6 +74,7 @@ typedef struct {
 typedef enum {
     BUTTON_TYPE_GPIO,
     BUTTON_TYPE_ADC,
+    BUTTON_TYPE_MATRIX,
     BUTTON_TYPE_CUSTOM
 } button_type_t;
 
@@ -103,13 +105,14 @@ typedef struct {
  *
  */
 typedef struct {
-    button_type_t type;                           /**< button type, The corresponding button configuration must be filled */
-    uint16_t long_press_time;                     /**< Trigger time(ms) for long press, if 0 default to BUTTON_LONG_PRESS_TIME_MS */
-    uint16_t short_press_time;                    /**< Trigger time(ms) for short press, if 0 default to BUTTON_SHORT_PRESS_TIME_MS */
+    button_type_t type;                               /**< button type, The corresponding button configuration must be filled */
+    uint16_t long_press_time;                         /**< Trigger time(ms) for long press, if 0 default to BUTTON_LONG_PRESS_TIME_MS */
+    uint16_t short_press_time;                        /**< Trigger time(ms) for short press, if 0 default to BUTTON_SHORT_PRESS_TIME_MS */
     union {
-        button_gpio_config_t gpio_button_config;  /**< gpio button configuration */
-        button_adc_config_t adc_button_config;    /**< adc button configuration */
-        button_custom_config_t custom_button_config;   /**< custom button configuration */
+        button_gpio_config_t gpio_button_config;      /**< gpio button configuration */
+        button_adc_config_t adc_button_config;        /**< adc button configuration */
+        button_matrix_config_t matrix_button_config; /**< matrix key button configuration */
+        button_custom_config_t custom_button_config;  /**< custom button configuration */
     }; /**< button configuration */
 } button_config_t;
 

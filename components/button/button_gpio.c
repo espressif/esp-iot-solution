@@ -39,16 +39,7 @@ esp_err_t button_gpio_init(const button_gpio_config_t *config)
 
 esp_err_t button_gpio_deinit(int gpio_num)
 {
-    /** both disable pullup and pulldown */
-    gpio_config_t gpio_conf = {
-        .intr_type = GPIO_INTR_DISABLE,
-        .mode = GPIO_MODE_INPUT,
-        .pin_bit_mask = (1ULL << gpio_num),
-        .pull_down_en = GPIO_PULLDOWN_DISABLE,
-        .pull_up_en = GPIO_PULLUP_DISABLE,
-    };
-    gpio_config(&gpio_conf);
-    return ESP_OK;
+    return gpio_reset_pin(gpio_num);;
 }
 
 uint8_t button_gpio_get_key_level(void *gpio_num)

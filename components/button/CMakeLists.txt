@@ -6,7 +6,7 @@ else()
     list(APPEND REQ esp_adc_cal)
 endif()
 
-idf_component_register(SRCS "button_adc.c" "button_gpio.c" "iot_button.c"
+idf_component_register(SRCS "button_adc.c" "button_gpio.c" "iot_button.c" "button_matrix.c"
                         INCLUDE_DIRS include
                         REQUIRES driver ${REQ}
                         PRIV_REQUIRES ${PRIVREQ})
