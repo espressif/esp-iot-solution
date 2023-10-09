@@ -1,5 +1,10 @@
 # ChangeLog
 
+## v0.2.0 - 2023-10-09
+
+* add hardware test
+* decrease the stack priority to `usb base` level
+
 ## v0.1.3 - 2023-04-17
 
 ### Bug Fixes:

@@ -4,11 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/param.h>
 #include "esp_eth.h"
+#include "esp_mac.h"
 #include "esp_netif.h"
 #include "esp_spiffs.h"
 #include "esp_system.h"
@@ -244,7 +246,14 @@ static esp_err_t stalist_update()
         struct modem_netif_sta_info *node;
         SLIST_FOREACH(node, &s_sta_list_head, field) {
             if (node->ip.addr == 0) {
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+                esp_netif_pair_mac_ip_t pair_mac_ip = { 0 };
+                memcpy(pair_mac_ip.mac, node->mac, 6);
+                esp_netif_dhcps_get_clients_by_mac(esp_netif_get_handle_from_ifkey("WIFI_AP_DEF"), 1, &pair_mac_ip);
+                node->ip = pair_mac_ip.ip;
+#else
                 dhcp_search_ip_on_mac(node->mac, (ip4_addr_t *)&node->ip);
+#endif
             }
             char mac_addr[18] = "";
             size_t name_size = sizeof(node->name);
@@ -278,7 +287,14 @@ static esp_err_t stalist_add_node(uint8_t mac[6])
     if (err == ESP_ERR_NVS_NOT_FOUND ) {
         memcpy(node->name, mac_addr, 12);
     }
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+    esp_netif_pair_mac_ip_t pair_mac_ip = { 0 };
+    memcpy(pair_mac_ip.mac, node->mac, 6);
+    esp_netif_dhcps_get_clients_by_mac(esp_netif_get_handle_from_ifkey("WIFI_AP_DEF"), 1, &pair_mac_ip);
+    node->ip = pair_mac_ip.ip;
+#else
     dhcp_search_ip_on_mac(node->mac, (ip4_addr_t *)&node->ip);
+#endif
     SLIST_INSERT_HEAD(&s_sta_list_head, node, field);
     STA_CHECK_GOTO(pdTRUE == xSemaphoreGive(s_sta_node_mutex), "give semaphore failed", cleanupnode);
     return ESP_OK;
@@ -1174,7 +1190,7 @@ static esp_err_t init_fs(void)
 }
 
 static void event_handler(void *arg, esp_event_base_t event_base,
-                          int event_id, void *event_data)
+                          int32_t event_id, void *event_data)
 {
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_AP_STADISCONNECTED) {
         wifi_event_ap_stadisconnected_t *event = (wifi_event_ap_stadisconnected_t *)event_data;

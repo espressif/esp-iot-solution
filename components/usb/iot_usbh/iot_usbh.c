@@ -52,7 +52,7 @@ static const char *TAG = "IOT_USBH";
  */
 #define USBH_TASK_BASE_PRIORITY       CONFIG_USBH_TASK_BASE_PRIORITY        /*! USB Task base priority */
 #define USBH_PROC_TASK_NAME           "usbh_proc"                           /*! USB processing task name, task to handle hot-plug */
-#define USBH_PROC_TASK_PRIORITY       (USBH_TASK_BASE_PRIORITY)             /*! USB processing task priority */
+#define USBH_PROC_TASK_PRIORITY       (USBH_TASK_BASE_PRIORITY + 3)         /*! USB processing task priority */
 #define USBH_PROC_TASK_STACK_SIZE     3072                                  /*! USB processing task stack size */
 #define USBH_PROC_TASK_CORE           CONFIG_USBH_TASK_CORE_ID              /*! USB processing task pin to core id */
 #define USBH_TASK_KILL_BIT            BIT1                                  /*! Event bit to kill USB processing task */

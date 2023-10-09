@@ -38,8 +38,8 @@ static const char *TAG = "USB_HCDC";
 #define TIMEOUT_USB_DRIVER_MS          6000                                 /*! Timeout for driver operate */
 #define TIMEOUT_USB_DRIVER_CHECK_MS    10                                   /*! Timeout check step */
 #define CDC_DATA_TASK_NAME             "cdc-data"                           /*! cdc task name */
-#define USBH_TASK_BASE_PRIORITY         CONFIG_USBH_TASK_BASE_PRIORITY      /*! usbh task priority */
-#define CDC_DATA_TASK_PRIORITY         (USBH_TASK_BASE_PRIORITY+1)          /*! cdc task priority, higher to handle event quick */
+#define USBH_TASK_BASE_PRIORITY        CONFIG_USBH_TASK_BASE_PRIORITY       /*! usbh task priority */
+#define CDC_DATA_TASK_PRIORITY         USBH_TASK_BASE_PRIORITY              /*! cdc task priority, higher to handle event quick */
 #define CDC_DATA_TASK_STACK_SIZE       4096                                 /*! cdc task stack size */
 #define CDC_DATA_TASK_CORE             CONFIG_USBH_TASK_CORE_ID             /*! cdc task core id */
 #define BULK_OUT_URB_NUM               CONFIG_CDC_BULK_OUT_URB_NUM          /*! number of out urb enqueued simultaneously */
@@ -684,7 +684,7 @@ int usbh_cdc_itf_read_bytes(uint8_t itf, uint8_t *buf, size_t length, TickType_t
     if (_usb_in_ringbuf_pop(itf, buf + read_sz, length - read_sz, &read_sz, 0) == ESP_OK) {
         rx_data_size += read_sz;
     }
-
+    ESP_LOGD(TAG, "cdc read itf: %u, buf = %p, len = %u, read = %d", itf, buf, length, rx_data_size);
     return rx_data_size;
 }
 
@@ -695,7 +695,7 @@ int usbh_cdc_read_bytes(uint8_t *buf, size_t length, TickType_t ticks_to_wait)
 
 int usbh_cdc_itf_write_bytes(uint8_t itf, const uint8_t *buf, size_t length)
 {
-    ESP_LOGD(TAG, "cdc write itf: %u, p = %p, len=%u", itf, buf, length);
+    ESP_LOGD(TAG, "cdc write itf: %u, buf = %p, len = %u", itf, buf, length);
     ERR_CHECK(buf != NULL && itf < CDC_INTERFACE_NUM_MAX, "invalid args", -1);
     int tx_data_size = 0;
 
