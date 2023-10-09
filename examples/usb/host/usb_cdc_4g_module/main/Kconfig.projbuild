@@ -2,7 +2,7 @@ menu "4G Modem Example Config"
 
     config EXAMPLE_ENABLE_WEB_ROUTER
         bool "Open web configuration"
-        default n
+        default y
         help
             Open the web router, you can configure the system parameters
 
