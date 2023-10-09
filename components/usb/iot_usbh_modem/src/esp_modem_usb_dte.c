@@ -96,7 +96,6 @@ static void esp_handle_usb_data(esp_modem_dte_internal_t *esp_dte)
 
         // Read the data and process it using `handle_line` logic
         // to avoid reading two line at the same time
-        //length = MIN(2, length);
         length = MIN(esp_dte->line_buffer_size-1, length);
         length = usbh_cdc_read_bytes(esp_dte->buffer, length, pdMS_TO_TICKS(10));
         esp_dte->buffer[length] = '\0';
@@ -139,7 +138,6 @@ static void esp_handle_usb2_data(esp_modem_dte_internal_t *esp_dte)
 
         // Read the data and process it using `handle_line` logic
         // to avoid reading two line at the same time
-        //length = MIN(2, length);
         length = MIN(esp_dte->line_buffer_size-1, length);
         length = usbh_cdc_itf_read_bytes(1, esp_dte->buffer, length, pdMS_TO_TICKS(10));
         esp_dte->buffer[length] = '\0';
@@ -257,10 +255,14 @@ static esp_err_t esp_modem_dte_send_cmd(esp_modem_dte_t *dte, const char *comman
         /* if interface 0 in ppp mode while interface 1 exist, and command not ppp exist "+++"
          * using interface 1 for command send*/
         usbh_cdc_itf_write_bytes(1, (const uint8_t*)command, strlen(command));
-    } else {
+    } else if (dce->mode != ESP_MODEM_PPP_MODE || strcmp(command, "+++") == 0) {
+        /* send command in no PPP mode, or send +++ in PPP mode */
         usbh_cdc_itf_write_bytes(0, (const uint8_t*)command, strlen(command));
+    } else {
+        ESP_LOGW(TAG, "Not support sending command in ppp mode, please exit ppp mode first");
+        return ESP_FAIL;
     }
-    
+
     /* Check timeout */
     EventBits_t bits = xEventGroupWaitBits(esp_dte->process_group, (ESP_MODEM_COMMAND_BIT|ESP_MODEM_STOP_BIT), pdTRUE, pdFALSE, pdMS_TO_TICKS(timeout));
     ESP_MODEM_ERR_CHECK(bits&ESP_MODEM_COMMAND_BIT, "process command timeout", err);
@@ -386,6 +388,8 @@ static esp_err_t esp_modem_dte_deinit(esp_modem_dte_t *dte)
     vEventGroupDelete(esp_dte->process_group);
     /* Delete event loop */
     esp_event_loop_delete(esp_dte->event_loop_hdl);
+    /* Delete send cmd lock */
+    vSemaphoreDelete(esp_dte->parent.send_cmd_lock);
     /* Uninstall UART Driver */
     usbh_cdc_driver_delete();
     /* Free memory */
@@ -411,9 +415,12 @@ esp_modem_dte_t *esp_modem_dte_new(const esp_modem_dte_config_t *config)
     /* malloc memory to storing lines from modem dce */
     esp_dte->line_buffer_size = config->line_buffer_size;
     esp_dte->buffer = calloc(1, config->line_buffer_size);
+    ESP_MODEM_ERR_CHECK(esp_dte->buffer, "calloc line memory failed", err_buf_mem);
     esp_dte->data_buffer_size = config->line_buffer_size;
     esp_dte->data_buffer = calloc(1, esp_dte->data_buffer_size);
-    ESP_MODEM_ERR_CHECK(esp_dte->buffer, "calloc line memory failed", err_line_mem);
+    ESP_MODEM_ERR_CHECK(esp_dte->data_buffer, "calloc data memory failed", err_buf_mem);
+    esp_dte->parent.send_cmd_lock = xSemaphoreCreateMutex();
+    ESP_MODEM_ERR_CHECK(esp_dte->parent.send_cmd_lock, "create send cmd lock failed", err_buf_mem);
     /* Bind methods */
     esp_dte->parent.send_cmd = esp_modem_dte_send_cmd;
     esp_dte->parent.send_data = esp_modem_dte_send_data;
@@ -478,8 +485,10 @@ err_usb_config:
 err_sem:
     esp_event_loop_delete(esp_dte->event_loop_hdl);
 err_eloop:
+    vSemaphoreDelete(esp_dte->parent.send_cmd_lock);
+err_buf_mem:
+    free(esp_dte->data_buffer);
     free(esp_dte->buffer);
-err_line_mem:
     free(esp_dte);
 err_dte_mem:
     return NULL;

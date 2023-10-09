@@ -180,13 +180,6 @@ typedef struct esp_modem_dce_config_s {
  */
 esp_modem_dte_t *esp_modem_dte_new(const esp_modem_dte_config_t *config);
 
-/**
- * @brief Create and initialize Modem DCE object
- *
- * @param config configuration of ESP Modem DTE object
- * @return esp_modem_dce_t* Modem DCE object
- */
-esp_modem_dce_t *esp_modem_dce_new(esp_modem_dce_config_t *config);
 
 /**
  * @brief Initialize the DCE object that has already been created
@@ -240,9 +233,6 @@ esp_err_t esp_modem_set_event_handler(esp_modem_dte_t *dte, esp_event_handler_t 
 esp_err_t esp_modem_remove_event_handler(esp_modem_dte_t *dte, esp_event_handler_t handler);
 
 esp_err_t esp_modem_post_event(esp_modem_dte_t *dte, int32_t event_id, void* event_data, size_t event_data_size, TickType_t ticks_to_wait);
-/**
- * @}
- */
 
 
 /**

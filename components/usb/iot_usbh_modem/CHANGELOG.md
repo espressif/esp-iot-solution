@@ -1,5 +1,13 @@
 # ChangeLog
 
+## v0.2.0 - 2023-10-9
+
+* Improve recovery mechanism
+* Add new model AIR780E
+* Fix concurrency issue in AT command mode
+* Fix memory stamp issue in `common_get_operator_after_mode_format`
+
+
 ## v0.1.6 - 2023-04-17
 
 * Fix PPP mode can not exit gracefully

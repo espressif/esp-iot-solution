@@ -12,6 +12,8 @@ extern "C" {
 #include "esp_types.h"
 #include "esp_err.h"
 #include "esp_event.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 
 /**
  * @brief Working mode of Modem
@@ -31,7 +33,8 @@ typedef enum {
 struct esp_modem_dte {
     esp_modem_flow_ctrl_t flow_ctrl;                                                    /*!< Flow control of DTE */
     esp_modem_dce_t *dce;                                                               /*!< DCE which connected to the DTE */
-    struct esp_modem_netif_driver_s *netif_adapter;
+    struct esp_modem_netif_driver_s *netif_adapter;                                     /*!< Netif adapter */
+    SemaphoreHandle_t send_cmd_lock;                                                    /*!< Mutex for send command */
     esp_err_t (*send_cmd)(esp_modem_dte_t *dte, const char *command, uint32_t timeout); /*!< Send command to DCE */
     int (*send_data)(esp_modem_dte_t *dte, const char *data, uint32_t length);          /*!< Send data to DCE */
     esp_err_t (*send_wait)(esp_modem_dte_t *dte, const char *data, uint32_t length,

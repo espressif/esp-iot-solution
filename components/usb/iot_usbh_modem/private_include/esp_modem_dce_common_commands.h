@@ -10,6 +10,7 @@ extern "C" {
 #endif
 
 #include "esp_modem_dce.h"
+#include "sdkconfig.h"
 
 /**
 * @brief Result Code from DCE
@@ -28,11 +29,11 @@ extern "C" {
  * @brief Specific Timeout Constraint, Unit: millisecond
  *
  */
-#define MODEM_COMMAND_TIMEOUT_DEFAULT (2000)      /*!< Default timeout value for most commands */
-#define MODEM_COMMAND_TIMEOUT_OPERATOR (60000)   /*!< Timeout value for getting operator status */
-#define MODEM_COMMAND_TIMEOUT_RESET (60000)   /*!< Timeout value for reset command */
-#define MODEM_COMMAND_TIMEOUT_MODE_CHANGE (30000) /*!< Timeout value for changing working mode */
-#define MODEM_COMMAND_TIMEOUT_POWEROFF (1000)    /*!< Timeout value for power down */
+#define MODEM_COMMAND_TIMEOUT_DEFAULT     CONFIG_MODEM_COMMAND_TIMEOUT_DEFAULT
+#define MODEM_COMMAND_TIMEOUT_OPERATOR    CONFIG_MODEM_COMMAND_TIMEOUT_OPERATOR
+#define MODEM_COMMAND_TIMEOUT_RESET       CONFIG_MODEM_COMMAND_TIMEOUT_RESET
+#define MODEM_COMMAND_TIMEOUT_MODE_CHANGE CONFIG_MODEM_COMMAND_TIMEOUT_MODE_CHANGE
+#define MODEM_COMMAND_TIMEOUT_POWEROFF    CONFIG_MODEM_COMMAND_TIMEOUT_POWEROFF
 
 /**
 * @brief Strip the tailed "\r\n"
