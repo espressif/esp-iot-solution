@@ -155,13 +155,10 @@
   - "components/tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_usb_iot_usbh_cdc: &patterns-components_usb_iot_usbh_cdc
-  - "components/usb/iot_usbh/**/*"
   - "components/usb/iot_usbh_cdc/**/*"
   - "components/tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_usb_iot_usbh_modem: &patterns-components_usb_iot_usbh_modem
-  - "components/usb/iot_usbh/**/*"
-  - "components/usb/iot_usbh_cdc/**/*"
   - "components/usb/iot_usbh_modem/**/*"
   - "components/tools/cmake_utilities/package_manager.cmake"
 
@@ -851,6 +848,10 @@
     - <<: *if-dev-push
       changes: *patterns-components_led_led_indicator
     - <<: *if-dev-push
+      changes: *patterns-components_usb_iot_usbh
+    - <<: *if-dev-push
+      changes: *patterns-components_usb_iot_usbh_cdc
+    - <<: *if-dev-push
       changes: *patterns-components_usb_iot_usbh_modem
     - <<: *if-dev-push
       changes: *patterns-example_usb_host_usb_cdc_4g_module
@@ -1301,6 +1302,8 @@
     - <<: *if-trigger-job
     - <<: *if-dev-push
       changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_usb_iot_usbh
     - <<: *if-dev-push
       changes: *patterns-components_usb_iot_usbh_cdc
 

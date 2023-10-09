@@ -10,7 +10,7 @@ dependencies:
   idf: ">=4.4.1"
   cmake_utilities: "0.*"
   iot_usbh_cdc:
-    version: "0.1.*"
+    version: "0.*"
     override_path: "../iot_usbh_cdc"
 examples:
   - path: ../../../examples/usb/host/usb_cdc_4g_module

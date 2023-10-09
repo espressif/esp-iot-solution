@@ -546,6 +546,28 @@ build_components_usb_usb_stream_test_apps:
   variables:
     EXAMPLE_DIR: components/usb/usb_stream/test_apps
 
+build_components_usb_iot_usbh_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_usb_iot_usbh_test
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
+  variables:
+    EXAMPLE_DIR: components/usb/iot_usbh/test_apps
+
+build_components_usb_iot_usbh_cdc_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_usb_iot_usbh_cdc_test
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
+  variables:
+    EXAMPLE_DIR: components/usb/iot_usbh_cdc/test_apps
+
 build_components_display_lcd_esp_lcd_gc9b71_test_apps:
   extends:
     - .build_examples_template

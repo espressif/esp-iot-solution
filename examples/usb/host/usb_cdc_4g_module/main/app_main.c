@@ -90,7 +90,7 @@ static void _system_dump()
 
         uint32_t taskRunTime = stats->ulRunTimeCounter;
         float load = f * (taskRunTime - previousTaskData->ulRunTimeCounter);
-        ESP_LOGI(TAG, "%.2f \t%u \t%s \t%u\n", load, stats->usStackHighWaterMark, stats->pcTaskName, stats->uxBasePriority);
+        ESP_LOGI(TAG, "%.2f \t%" PRIu32 "\t%s %" PRIu32 "\t\n", load, stats->usStackHighWaterMark, stats->pcTaskName, (uint32_t)stats->uxBasePriority);
 
         previousTaskData->ulRunTimeCounter = taskRunTime;
     }
@@ -219,7 +219,6 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
     /* Waiting for modem powerup */
-    vTaskDelay(pdMS_TO_TICKS(3000));
     ESP_LOGI(TAG, "====================================");
     ESP_LOGI(TAG, "     ESP 4G Cat.1 Wi-Fi Router");
     ESP_LOGI(TAG, "====================================");
