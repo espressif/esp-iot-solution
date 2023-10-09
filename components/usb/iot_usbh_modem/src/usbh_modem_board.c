@@ -195,11 +195,10 @@ static esp_err_t my_recov(esp_modem_recov_resend_t *retry_cmd, esp_err_t err, in
     ESP_LOGI(TAG, "Current timeouts: %d and errors: %d", timeouts, errors);
     if (err != ESP_OK) {
         if (timeouts + errors < 2) {
-            // first timeout, try to exit data mode and sync again
+            ESP_LOGW(TAG, "Try to exit ppp mode........");
             dce->mode = ESP_MODEM_TRANSITION_MODE;
             dce->set_command_mode(dce, NULL, NULL);
-            esp_modem_dce_sync(dce, NULL, NULL);
-        } else if (timeouts + errors < 3) {
+        } else if (timeouts + errors <= 3) {
             // try to reset with GPIO if resend didn't help
             ESP_LOGW(TAG, "Reset modem through reset pin........");
             esp_event_post(MODEM_BOARD_EVENT, MODEM_EVENT_DTE_RESTART, NULL, 0, 0);
@@ -208,9 +207,12 @@ static esp_err_t my_recov(esp_modem_recov_resend_t *retry_cmd, esp_err_t err, in
             esp_event_post(MODEM_BOARD_EVENT, MODEM_EVENT_DTE_RESTART_DONE, NULL, 0, 0);
         } else {
             // otherwise power-cycle the board
+            ESP_LOGW(TAG, "Reset modem through power pin........");
+            esp_event_post(MODEM_BOARD_EVENT, MODEM_EVENT_DTE_RESTART, NULL, 0, 0);
             modem_board_t *board = __containerof(dce, modem_board_t, parent);
             board->power_down(dce);
-            esp_modem_dce_sync(dce, NULL, NULL);
+            board->power_up(dce);
+            esp_event_post(MODEM_BOARD_EVENT, MODEM_EVENT_DTE_RESTART_DONE, NULL, 0, 0);
         }
     }
     return ESP_OK;
@@ -218,13 +220,10 @@ static esp_err_t my_recov(esp_modem_recov_resend_t *retry_cmd, esp_err_t err, in
 
 static DEFINE_RETRY_CMD(re_sync_fn, re_sync, modem_board_t)
 
-static DEFINE_RETRY_CMD(re_store_profile_fn, re_store_profile, modem_board_t)
-
 static esp_err_t modem_board_start_up(esp_modem_dce_t *dce)
 {
     MODEM_CHECK_GOTO(re_sync_fn(dce, NULL, NULL) == ESP_OK, "sending sync failed", err);
     MODEM_CHECK_GOTO(dce->set_echo(dce, (void *)false, NULL) == ESP_OK, "set_echo failed", err);
-    MODEM_CHECK_GOTO(dce->store_profile(dce, NULL, NULL) == ESP_OK, "store_profile failed", err);
     return ESP_OK;
 err:
     return ESP_FAIL;
@@ -259,18 +258,17 @@ static esp_modem_dce_t *modem_board_create(esp_modem_dce_config_t *config)
     // /* reset sequence (typical values for modem reser, Treset=200ms, wait 5s after reset */
     if (MODEM_RESET_GPIO) board->reset_pin = esp_modem_recov_gpio_new(MODEM_RESET_GPIO, MODEM_RESET_GPIO_INACTIVE_LEVEL,
                 MODEM_RESET_GPIO_ACTIVE_MS, MODEM_RESET_GPIO_INACTIVE_MS);
-    board->parent.deinit = modem_board_deinit;
     board->reset = modem_board_reset;
     board->power_up = modem_board_power_up;
     board->power_down = modem_board_power_down;
     board->re_sync = esp_modem_recov_resend_new(&board->parent, board->parent.sync, my_recov, 5, 5);
-    board->re_store_profile = esp_modem_recov_resend_new(&board->parent, board->parent.store_profile, my_recov, 2, 3);
     //overwrite default function
+    board->parent.deinit = modem_board_deinit;
     board->parent.start_up = modem_board_start_up;
-    board->parent.store_profile = re_store_profile_fn;
 
     return &board->parent;
 err:
+    free(board);
     return NULL;
 }
 
@@ -655,7 +653,8 @@ esp_err_t modem_board_init(modem_config_t *config)
     MODEM_CHECK(s_modem_evt_hdl == NULL, "Modem already initialized", ESP_ERR_INVALID_STATE);
     ESP_LOGI(TAG, "iot_usbh_modem, version: %d.%d.%d", IOT_USBH_MODEM_VER_MAJOR, IOT_USBH_MODEM_VER_MINOR, IOT_USBH_MODEM_VER_PATCH);
     MODEM_CHECK(config != NULL && config->line_buffer_size && config->rx_buffer_size && config->tx_buffer_size, "Buffer size can not be 0", ESP_ERR_INVALID_ARG);
-    MODEM_CHECK(config != NULL && config->event_task_priority && config->event_task_stack_size, "Task stack size can not be 0", ESP_ERR_INVALID_ARG);
+    MODEM_CHECK(config != NULL && config->event_task_stack_size, "Task stack size can not be 0", ESP_ERR_INVALID_ARG);
+    MODEM_CHECK(config != NULL && config->event_task_priority > CONFIG_USBH_TASK_BASE_PRIORITY, "Task priority must > USB", ESP_ERR_INVALID_ARG);
     s_modem_evt_hdl = xEventGroupCreate();
     assert(s_modem_evt_hdl != NULL);
     // if set not enter ppp mode, daemon task will suspend
@@ -722,7 +721,7 @@ esp_err_t modem_board_get_operator_state(char *buf, size_t buf_size)
 {
     MODEM_CHECK(buf != NULL && buf_size != 0, "arg can not be NULL", ESP_ERR_INVALID_ARG);
     MODEM_CHECK(s_dce != NULL, "modem not ready", ESP_ERR_INVALID_STATE);
-    return esp_modem_command_list_run(s_dce, "get_operator_name", (void *)buf_size, (void *)buf);
+    return esp_modem_dce_get_operator_name(s_dce, (void *)buf_size, (void *)buf);
 }
 
 esp_err_t modem_board_set_apn(const char *new_apn, bool force_enable)

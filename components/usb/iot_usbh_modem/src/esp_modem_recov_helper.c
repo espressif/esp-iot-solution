@@ -54,7 +54,7 @@ static esp_err_t esp_modem_retry_run(esp_modem_recov_resend_t * retry, void *par
             }
         }
         if (retry->command) {
-            ESP_LOGD(TAG, "%s(%d): executing:%s...", __func__, __LINE__, retry->command );
+            ESP_LOGI(TAG, "%s(%d): executing:%s...", __func__, __LINE__, retry->command );
         }
 
         // Execute the command
@@ -78,12 +78,11 @@ static esp_err_t esp_modem_retry_run(esp_modem_recov_resend_t * retry, void *par
 
         // Success
         if (retry->command) {
-            ESP_LOGD(TAG, "%s(%d): Command:%s succeeded", __func__, __LINE__, retry->command);
+            ESP_LOGI(TAG, "%s(%d): Command:%s succeeded", __func__, __LINE__, retry->command);
         }
         return ESP_OK;
     }
-    return err;
-
+    return ESP_FAIL;
 }
 
 esp_modem_recov_resend_t *esp_modem_recov_resend_new(esp_modem_dce_t *dce, dce_command_t orig_cmd, esp_modem_retry_fn_t recover, int max_timeouts, int max_errors)

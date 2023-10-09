@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 #include <string.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 #include "esp_modem_dce.h"
 #include "esp_modem_dce_command_lib.h"
 #include "esp_modem_dce_common_commands.h"
@@ -15,17 +17,21 @@ static const char *TAG = "esp_modem_dce";
 esp_err_t esp_modem_dce_generic_command(esp_modem_dce_t *dce, const char * command, uint32_t timeout, esp_modem_dce_handle_line_t handle_line, void *ctx)
 {
     esp_modem_dte_t *dte = dce->dte;
-    ESP_LOGD(TAG, "%s(%d): Sending command:%s\n", __func__, __LINE__, command );
+    ESP_LOGD(TAG, "%s(%d): Sending command:%s\n", __func__, __LINE__, command);
+    xSemaphoreTake(dte->send_cmd_lock, portMAX_DELAY);
     dce->handle_line = handle_line;
     dce->handle_line_ctx = ctx;
     if (dte->send_cmd(dte, command, timeout) != ESP_OK) {
+        xSemaphoreGive(dte->send_cmd_lock);
         ESP_LOGW(TAG, "%s(%d): Command:%s response timeout", __func__, __LINE__, command );
         return ESP_ERR_TIMEOUT;
     }
     if (dce->state == ESP_MODEM_STATE_FAIL) {
+        xSemaphoreGive(dte->send_cmd_lock);
         ESP_LOGW(TAG, "%s(%d): Command:%s\n...failed", __func__, __LINE__, command );
         return ESP_FAIL;
     }
+    xSemaphoreGive(dte->send_cmd_lock);
     ESP_LOGD(TAG, "%s(%d): Command:%s\n succeeded", __func__, __LINE__, command );
     return ESP_OK;
 }
@@ -175,7 +181,6 @@ esp_err_t esp_modem_dce_default_start_up(esp_modem_dce_t *dce)
 {
     ESP_MODEM_ERR_CHECK(dce->sync(dce, NULL, NULL) == ESP_OK, "sending sync failed", err);
     ESP_MODEM_ERR_CHECK(dce->set_echo(dce, (void*)false, NULL) == ESP_OK, "set_echo failed", err);
-    ESP_MODEM_ERR_CHECK(dce->store_profile(dce, NULL, NULL) == ESP_OK, "store_profile failed", err);
     return ESP_OK;
     err:
     return ESP_FAIL;

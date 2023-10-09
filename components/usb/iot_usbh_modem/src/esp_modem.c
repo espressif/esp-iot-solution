@@ -145,16 +145,6 @@ err:
     return ESP_FAIL;
 }
 
-esp_modem_dce_t *esp_modem_dce_new(esp_modem_dce_config_t *config)
-{
-    ESP_MODEM_ERR_CHECK(config, "failed to init with zero configuration", err);
-    esp_modem_dce_t *dce = calloc(1, sizeof(esp_modem_dce_t));
-    ESP_MODEM_ERR_CHECK(dce, "calloc of esp_modem_dce_t failed", err);
-    ESP_MODEM_ERR_CHECK(esp_modem_dce_init(dce, config) == ESP_OK, "esp_modem_dce_init has failed", err);
-    return dce;
-err:
-    return NULL;
-}
 
 esp_err_t esp_modem_dce_init(esp_modem_dce_t *dce, esp_modem_dce_config_t *config)
 {

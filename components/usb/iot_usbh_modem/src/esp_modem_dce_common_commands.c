@@ -23,21 +23,27 @@ static inline esp_err_t generic_command_default_handle(esp_modem_dce_t *dce, con
 static esp_err_t common_handle_string(esp_modem_dce_t *dce, const char *line)
 {
     esp_err_t err = ESP_FAIL;
+    if (strstr(line, MODEM_RESULT_CODE_ERROR)) {
+        err = esp_modem_process_command_done(dce, ESP_MODEM_STATE_FAIL);
+        return err;
+    }
+
+    if (strstr(line, "+")) {
+        common_string_t *result_str = dce->handle_line_ctx;
+        assert(result_str->command != NULL && result_str->string != NULL && result_str->len != 0);
+        char *result = strstr(line, "+");
+        if (result) {
+            int len = snprintf(result_str->string, result_str->len, "%s", result);
+            if (len > 2) {
+                /* Strip "\r\n" */
+                strip_cr_lf_tail(result_str->string, len);
+            }
+        }
+        err = ESP_OK;
+    }
+
     if (strstr(line, MODEM_RESULT_CODE_SUCCESS)) {
         err = esp_modem_process_command_done(dce, ESP_MODEM_STATE_SUCCESS);
-    } else if (strstr(line, MODEM_RESULT_CODE_ERROR)) {
-        err = esp_modem_process_command_done(dce, ESP_MODEM_STATE_FAIL);
-    }
-    common_string_t *result_str = dce->handle_line_ctx;
-    assert(result_str->command != NULL && result_str->string != NULL && result_str->len != 0);
-    char *result = strstr(line, "+");
-    if (result) {
-        int len = snprintf(result_str->string, result_str->len, "%s", result);
-        if (len > 2) {
-            /* Strip "\r\n" */
-            strip_cr_lf_tail(result_str->string, len);
-            err = ESP_OK;
-        }
     }
     return err;
 }
@@ -48,16 +54,20 @@ static esp_err_t common_handle_string(esp_modem_dce_t *dce, const char *line)
 static esp_err_t esp_modem_dce_common_handle_cbc(esp_modem_dce_t *dce, const char *line)
 {
     esp_err_t err = ESP_FAIL;
-    if (strstr(line, MODEM_RESULT_CODE_SUCCESS)) {
-        err = esp_modem_process_command_done(dce, ESP_MODEM_STATE_SUCCESS);
-    } else if (strstr(line, MODEM_RESULT_CODE_ERROR)) {
+    if (strstr(line, MODEM_RESULT_CODE_ERROR)) {
         err = esp_modem_process_command_done(dce, ESP_MODEM_STATE_FAIL);
+        return err;
     }
+
     if (strstr(line, "+CBC")) {
         esp_modem_dce_cbc_ctx_t *cbc = dce->handle_line_ctx;
         /* +CBC: <bcs>,<bcl>,<voltage> */
         sscanf(strstr(line, "+CBC"), "%*s%d,%d,%d", &cbc->bcs, &cbc->bcl, &cbc->battery_status);
         err = ESP_OK;
+    }
+
+    if (strstr(line, MODEM_RESULT_CODE_SUCCESS)) {
+        err = esp_modem_process_command_done(dce, ESP_MODEM_STATE_SUCCESS);
     }
     return err;
 }
@@ -67,17 +77,21 @@ static esp_err_t esp_modem_dce_common_handle_cbc(esp_modem_dce_t *dce, const cha
 static esp_err_t esp_modem_dce_common_handle_csq(esp_modem_dce_t *dce, const char *line)
 {
     esp_err_t err = ESP_FAIL;
-    if (strstr(line, MODEM_RESULT_CODE_SUCCESS)) {
-        err = esp_modem_process_command_done(dce, ESP_MODEM_STATE_SUCCESS);
-    } else if (strstr(line, MODEM_RESULT_CODE_ERROR)) {
+    if (strstr(line, MODEM_RESULT_CODE_ERROR)) {
         err = esp_modem_process_command_done(dce, ESP_MODEM_STATE_FAIL);
+        return err;
     }
+
     if (strstr(line, "+CSQ")) {
         /* store value of rssi and ber */
         esp_modem_dce_csq_ctx_t *csq = dce->handle_line_ctx;
         /* +CSQ: <rssi>,<ber> */
         sscanf(strstr(line, "+CSQ"), "%*s%d,%d", &csq->rssi, &csq->ber);
         err = ESP_OK;
+    }
+
+    if (strstr(line, MODEM_RESULT_CODE_SUCCESS)) {
+        err = esp_modem_process_command_done(dce, ESP_MODEM_STATE_SUCCESS);
     }
     return err;
 }
@@ -90,7 +104,9 @@ static esp_err_t esp_modem_dce_handle_power_down(esp_modem_dce_t *dce, const cha
     esp_err_t err = ESP_FAIL;
     if (strstr(line, MODEM_RESULT_CODE_SUCCESS)) {
         err = ESP_OK;
-    } else if (strstr(line, "POWERED DOWN")) {
+    }
+
+    if (strstr(line, "POWERED DOWN")) {
         err = esp_modem_process_command_done(dce, ESP_MODEM_STATE_SUCCESS);
     }
     return err;
@@ -129,11 +145,11 @@ static esp_err_t esp_modem_dce_handle_atd_ppp(esp_modem_dce_t *dce, const char *
 static esp_err_t esp_modem_dce_handle_read_pin(esp_modem_dce_t *dce, const char *line)
 {
     esp_err_t err = ESP_FAIL;
-    if (strstr(line, MODEM_RESULT_CODE_SUCCESS)) {
-        err = esp_modem_process_command_done(dce, ESP_MODEM_STATE_SUCCESS);
-    } else if (strstr(line, MODEM_RESULT_CODE_ERROR)) {
+    if (strstr(line, MODEM_RESULT_CODE_ERROR)) {
         err = esp_modem_process_command_done(dce, ESP_MODEM_STATE_FAIL);
+        return err;
     }
+
     if (strstr(line, "READY")) {
         int *ready = (int*)dce->handle_line_ctx;
         *ready = true;
@@ -143,6 +159,10 @@ static esp_err_t esp_modem_dce_handle_read_pin(esp_modem_dce_t *dce, const char 
         *ready = false;
         err = ESP_OK;
     }
+
+    if (strstr(line, MODEM_RESULT_CODE_SUCCESS)) {
+        err = esp_modem_process_command_done(dce, ESP_MODEM_STATE_SUCCESS);
+    } 
     return err;
 }
 
@@ -151,8 +171,7 @@ static esp_err_t esp_modem_dce_handle_reset(esp_modem_dce_t *dce, const char *li
     esp_err_t err = ESP_OK;
     if (strstr(line, MODEM_RESULT_CODE_SUCCESS)) {
         err = ESP_OK;
-    } else
-    if (strstr(line, "PB DONE")) {
+    } else if (strstr(line, "PB DONE")) {
         err = esp_modem_process_command_done(dce, ESP_MODEM_STATE_SUCCESS);
     } else if (strstr(line, MODEM_RESULT_CODE_ERROR)) {
         err = esp_modem_process_command_done(dce, ESP_MODEM_STATE_FAIL);
@@ -179,11 +198,11 @@ esp_err_t esp_modem_dce_set_echo(esp_modem_dce_t *dce, void *param, void *result
 static esp_err_t common_get_operator_after_mode_format(esp_modem_dce_t *dce, const char *line)
 {
     esp_err_t err = ESP_FAIL;
-    if (strstr(line, MODEM_RESULT_CODE_SUCCESS)) {
-        err = esp_modem_process_command_done(dce, ESP_MODEM_STATE_SUCCESS);
-    } else if (strstr(line, MODEM_RESULT_CODE_ERROR)) {
+    if (strstr(line, MODEM_RESULT_CODE_ERROR)) {
         err = esp_modem_process_command_done(dce, ESP_MODEM_STATE_FAIL);
+        return err;
     }
+
     if (strstr(line, "+COPS")) {
         common_string_t *result_str = dce->handle_line_ctx;
         assert(result_str->string != NULL && result_str->len != 0);
@@ -192,11 +211,11 @@ static esp_err_t common_get_operator_after_mode_format(esp_modem_dce_t *dce, con
         char *line_copy = strdup(strstr(line, "+COPS"));
         /* +COPS: <mode>[, <format>[, <oper>]] */
         char *str_ptr = NULL;
-        char *p[3];
+        char *p[6] = {0};
         uint8_t i = 0;
         /* strtok will broke string by replacing delimiter with '\0' */
         p[i] = strtok_r(line_copy, ",", &str_ptr);
-        while (p[i]) {
+        while (p[i] && i < 5) {
             p[++i] = strtok_r(NULL, ",", &str_ptr);
         }
         if (i >= 3) {
@@ -208,6 +227,11 @@ static esp_err_t common_get_operator_after_mode_format(esp_modem_dce_t *dce, con
             }
         }
         free(line_copy);
+        err = ESP_OK;
+    }
+
+    if (strstr(line, MODEM_RESULT_CODE_SUCCESS)) {
+        err = esp_modem_process_command_done(dce, ESP_MODEM_STATE_SUCCESS);
     }
     return err;
 }

@@ -8,6 +8,8 @@ menu "IoT USB Host Modem"
             bool "ML302-DNLM/CNLM"
         config MODEM_TARGET_AIR724UG_NFM
             bool "AIR724UG-NFM"
+        config MODEM_TARGET_AIR780_E
+            bool "AIR780E"
         config MODEM_TARGET_EC600N_CNLA_N05
             bool "EC600NCNLA-N05"
         config MODEM_TARGET_EC600N_CNLC_N06
@@ -31,6 +33,7 @@ menu "IoT USB Host Modem"
         default "EC600NCNLA-N05" if MODEM_TARGET_EC600N_CNLA_N05
         default "EC600NCNLC-N06" if MODEM_TARGET_EC600N_CNLC_N06
         default "A7600C1" if MODEM_TARGET_A7600C1
+        default "AIR780E" if MODEM_TARGET_AIR780_E
         default "BG95M3" if MODEM_TARGET_BG95_M3
         default "BG96MA" if MODEM_TARGET_BG96_MA
         default "MC610_EU" if MODEM_TARGET_MC610_EU
@@ -52,6 +55,7 @@ menu "IoT USB Host Modem"
             default 0x0f if MODEM_TARGET_EC600N_CNLA_N05
             default 0x0a if MODEM_TARGET_EC600N_CNLC_N06
             default 0x0a if MODEM_TARGET_A7600C1
+            default 0X02 if MODEM_TARGET_AIR780_E
             default 0x03 if MODEM_TARGET_BG95_M3
             default 0x04 if MODEM_TARGET_BG96_MA
             default 0x07 if MODEM_TARGET_MC610_EU
@@ -67,6 +71,7 @@ menu "IoT USB Host Modem"
             default 0x86 if  MODEM_TARGET_EC600N_CNLA_N05
             default 0x81 if  MODEM_TARGET_EC600N_CNLC_N06
             default 0x81 if MODEM_TARGET_A7600C1
+            default 0X84 if MODEM_TARGET_AIR780_E
             default 0x84 if MODEM_TARGET_BG95_M3
             default 0x86 if MODEM_TARGET_BG96_MA
             default 0x87 if MODEM_TARGET_MC610_EU
@@ -123,6 +128,24 @@ menu "IoT USB Host Modem"
             int "Reset control gpio inactive level"
             range 0 1
             default 1
+    endmenu
+
+    menu "Timeout Config"
+        config MODEM_COMMAND_TIMEOUT_DEFAULT
+            int "Timeout (ms) for common AT command"
+            default 2000
+        config MODEM_COMMAND_TIMEOUT_OPERATOR
+            int "Timeout (ms) for getting operator status"
+            default 6000
+        config MODEM_COMMAND_TIMEOUT_RESET
+            int "Timeout (ms) for reset command"
+            default 6000
+        config MODEM_COMMAND_TIMEOUT_MODE_CHANGE
+            int "Timeout (ms) for changing working mode"
+            default 10000
+        config MODEM_COMMAND_TIMEOUT_POWEROFF
+            int "Timeout (ms) for power down"
+            default 1000
     endmenu
 
     menu "Wi-Fi SoftAP"

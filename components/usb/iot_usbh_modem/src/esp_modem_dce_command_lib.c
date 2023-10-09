@@ -90,8 +90,6 @@ static esp_err_t esp_modem_dce_init_command_list(esp_modem_dce_t *dce, size_t co
     return ESP_OK;
 }
 
-
-
 esp_err_t esp_modem_set_default_command_list(esp_modem_dce_t *dce)
 {
     esp_err_t err = esp_modem_dce_init_command_list(dce, sizeof(s_command_list) / sizeof(cmd_item_t), s_command_list);
