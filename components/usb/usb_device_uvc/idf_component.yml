@@ -1,0 +1,23 @@
+version: "0.0.1"
+targets:
+  - esp32s2
+  - esp32s3
+
+description: USB Device UVC, Streaming Video to Host
+url: https://github.com/espressif/esp-iot-solution/tree/master/components/usb/usb_device_uvc
+repository: https://github.com/espressif/esp-iot-solution.git
+issues: https://github.com/espressif/esp-iot-solution/issues
+
+dependencies:
+  espressif/tinyusb:
+    version: ">=0.15.0~2"
+    rules:
+      - if: "idf_version >=5.0"
+  leeebo/tinyusb_src:
+    version: ">=0.15.0~6"
+    rules:
+      - if: "idf_version >=4.4,<5.0"
+  cmake_utilities: "*"
+
+examples:
+  - path: ../../../examples/usb/device/usb_webcam

@@ -1,83 +1,11 @@
 menu "USB WebCam config"
 
-    choice CAMERA_DEFAULT_FORMAT
-        bool "Camera Default Format"
-        default FORMAT_MJPEG
-        config FORMAT_MJPEG
-            bool "MJPEG"
-    endchoice
-
-    choice CAMERA_UVC_MODE
-        bool "UVC transfer mode"
-        default UVC_MODE_ISOC
-        config UVC_MODE_ISOC
-            bool "Isochronous"
-        config UVC_MODE_BULK
-            bool "Bulk"
-    endchoice
-
-    config CAMERA_QUALITY_JPEG
-        int "JPEG Quality"
-        depends on FORMAT_MJPEG
-        default 14
-        range 0 63
-
-    choice CAMERA_DEFAULT_FRAMESIZE
-        bool "Camera Default Resolution"
-        default FRAMESIZE_HD
-        config FRAMESIZE_QVGA
-            bool "QVGA 320x240"
-        config FRAMESIZE_HVGA
-            bool "HVGA 480x320"
-        config FRAMESIZE_VGA
-            bool "VGA 640x480"
-        config FRAMESIZE_SVGA
-            bool "SVGA 800x600"
-        config FRAMESIZE_HD
-            bool "HD 1280x720"
-        config FRAMESIZE_FHD
-            bool "FHD 1920x1080"
-    endchoice
-
-    config CAMERA_DEFAULT_FRAMERATE
-        int "Camera Frame Rate (FPS)"
-        default 30 if FRAMESIZE_QVGA
-        default 30 if FRAMESIZE_HVGA
-        default 15 if FRAMESIZE_VGA
-        default 15 if FRAMESIZE_SVGA
-        default 15 if FRAMESIZE_HD
-        default 15 if FRAMESIZE_FHD
-
-    config CAMERA_DEFAULT_FRAMESIZE_WIDTH
-        int
-        default 320 if FRAMESIZE_QVGA
-        default 480 if FRAMESIZE_HVGA
-        default 640 if FRAMESIZE_VGA
-        default 800 if FRAMESIZE_SVGA
-        default 1280 if FRAMESIZE_HD
-        default 1920 if FRAMESIZE_FHD
-
-    config CAMERA_DEFAULT_FRAMESIZE_HEIGT
-        int
-        default 240 if FRAMESIZE_QVGA
-        default 320 if FRAMESIZE_HVGA
-        default 480 if FRAMESIZE_VGA
-        default 600 if FRAMESIZE_SVGA
-        default 720 if FRAMESIZE_HD
-        default 1080 if FRAMESIZE_FHD
-
-    config CAMERA_DEFAULT_FRAMESIZE_SIZE
-        int "Frame Buffer Size (KB)"
-        default 70 if FRAMESIZE_HD
-        default 80 if FRAMESIZE_FHD
-        default 60 if IDF_TARGET_ESP32S3
-        default 45 if IDF_TARGET_ESP32S2
-
-    config CAMERA_MULTI_FRAMESIZE
-        bool "Enable multiple frames sizes"
-        default y
+    config CAMERA_XCLK_FREQ
+        int "XCLK frequency"
+        range 1000000 40000000
+        default 20000000
         help
-            If enable, add VGA and HVGA to list
+            Select XCLK frequency.
 
     menu "Camera Pin Configuration"
 

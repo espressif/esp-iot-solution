@@ -5,20 +5,16 @@
  */
 
 #include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_timer.h"
 #include "esp_log.h"
-#include "hal/usb_hal.h"
-#include "esp_private/usb_phy.h"
-#include "tusb.h"
-#include "usb_descriptors.h"
-#include "camera_config.h"
 #include "camera_pin.h"
 #include "esp_camera.h"
+#include "usb_device_uvc.h"
+#include "uvc_frame_config.h"
 #if CONFIG_CAMERA_MODULE_ESP_S3_EYE
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
 #include "freertos/event_groups.h"
@@ -33,7 +29,22 @@ static EventGroupHandle_t s_event_group = NULL;
 #endif
 
 static const char *TAG = "usb_webcam";
-static usb_phy_handle_t phy_hdl;
+
+#define CAMERA_XCLK_FREQ           CONFIG_CAMERA_XCLK_FREQ
+#define CAMERA_FB_COUNT            2
+
+#if CONFIG_IDF_TARGET_ESP32S3
+#define UVC_MAX_FRAMESIZE_SIZE     (75*1024)
+#else
+#define UVC_MAX_FRAMESIZE_SIZE     (60*1024)
+#endif
+
+typedef struct {
+    camera_fb_t *cam_fb_p;
+    uvc_fb_t uvc_fb;
+} fb_t;
+
+static fb_t s_fb;
 
 static esp_err_t camera_init(uint32_t xclk_freq_hz, pixformat_t pixel_format, framesize_t frame_size, int jpeg_quality, uint8_t fb_count)
 {
@@ -123,177 +134,102 @@ static esp_err_t camera_init(uint32_t xclk_freq_hz, pixformat_t pixel_format, fr
         cur_fb_count = fb_count;
         inited = true;
     } else {
-#if UVC_FORMAT_JPEG
         ESP_LOGE(TAG, "JPEG format is not supported");
         return ESP_ERR_NOT_SUPPORTED;
-#endif
     }
 
     return ret;
 }
 
-static void usb_phy_init(void)
+static void camera_stop_cb(void *cb_ctx)
 {
-    // Configure USB PHY
-    usb_phy_config_t phy_conf = {
-        .controller = USB_PHY_CTRL_OTG,
-        .otg_mode = USB_OTG_MODE_DEVICE,
-    };
-    phy_conf.target = USB_PHY_TARGET_INT;
-    usb_new_phy(&phy_conf, &phy_hdl);
-}
-
-static inline uint32_t get_time_millis(void)
-{
-    return (uint32_t)(esp_timer_get_time() / 1000);
-}
-
-static void tusb_device_task(void *arg)
-{
-    while (1) {
-        tud_task();
-    }
-}
-
-//--------------------------------------------------------------------+
-// Device callbacks
-//--------------------------------------------------------------------+
-// Invoked when device is mounted
-void tud_mount_cb(void)
-{
-    ESP_LOGI(TAG, "Mount");
-}
-
-// Invoked when device is unmounted
-void tud_umount_cb(void)
-{
-    ESP_LOGI(TAG, "UN-Mount");
-}
-
-// Invoked when usb bus is suspended
-// remote_wakeup_en : if host allow us  to perform remote wakeup
-// Within 7ms, device must draw an average of current less than 2.5 mA from bus
-void tud_suspend_cb(bool remote_wakeup_en)
-{
-    (void) remote_wakeup_en;
-    ESP_LOGI(TAG, "Suspend");
+    (void)cb_ctx;
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
 #if CONFIG_CAMERA_MODULE_ESP_S3_EYE
     xEventGroupSetBits(s_event_group, EYES_CLOSE_BIT);
 #endif
 #endif
+    ESP_LOGI(TAG, "Camera Stop");
 }
 
-// Invoked when usb bus is resumed
-void tud_resume_cb(void)
+static esp_err_t camera_start_cb(uvc_format_t format, int width, int height, int rate, void *cb_ctx)
 {
-    ESP_LOGI(TAG, "Resume");
-}
+    (void)cb_ctx;
+    ESP_LOGI(TAG, "Camera Start");
+    ESP_LOGI(TAG, "Format: %d, width: %d, height: %d, rate: %d", format, width, height, rate);
+    framesize_t frame_size = FRAMESIZE_QVGA;
+    int jpeg_quality = 14;
 
-#if (CFG_TUD_VIDEO)
-//--------------------------------------------------------------------+
-// USB Video
-//--------------------------------------------------------------------+
-static uint8_t *frame_buffer = NULL;
-static uint32_t interval_ms = 1000 / UVC_FRAME_RATE;
-static TaskHandle_t uvc_task_hdl = NULL;
-
-void video_task(void *arg)
-{
-    uint32_t start_ms = 0;
-    uint32_t frame_num = 0;
-    uint32_t frame_len = 0;
-    uint32_t already_start = 0;
-    uint32_t tx_busy = 0;
-    camera_fb_t *pic = NULL;
-
-    while (1) {
-        if (!tud_video_n_streaming(0, 0)) {
-            already_start  = 0;
-            frame_num     = 0;
-            tx_busy = 0;
-            vTaskDelay(1);
-            continue;
-        }
-
-        if (!already_start) {
-            already_start = 1;
-            start_ms = get_time_millis();
-        }
-
-        uint32_t cur = get_time_millis();
-        if (cur - start_ms < interval_ms) {
-            vTaskDelay(1);
-            continue;
-        }
-
-        if (tx_busy) {
-            uint32_t xfer_done = ulTaskNotifyTake(pdTRUE, 1);
-            if (xfer_done == 0) {
-                continue;
-            }
-            ++frame_num;
-            tx_busy = 0;
-        }
-
-        start_ms += interval_ms;
-        ESP_LOGD(TAG, "frame %" PRIu32 " taking picture...", frame_num);
-        pic = esp_camera_fb_get();
-        if(pic){
-            ESP_LOGD(TAG, "Picture taken! Its size was: %zu bytes", pic->len);
-        } else {
-            ESP_LOGE(TAG, "Failed to capture picture");
-            continue;
-        }
-
-        if (pic->len > UVC_FRAME_BUF_SIZE) {
-            ESP_LOGW(TAG, "frame size is too big, dropping frame");
-            esp_camera_fb_return(pic);
-            continue;
-        }
-        frame_len = pic->len;
-        memcpy(frame_buffer, pic->buf, frame_len);
-        esp_camera_fb_return(pic);
-        tx_busy = 1;
-        tud_video_n_frame_xfer(0, 0, (void *)frame_buffer, frame_len);
-        ESP_LOGD(TAG, "frame %" PRIu32 " transfer start, size %" PRIu32, frame_num, frame_len);
+    if (format != UVC_FORMAT_JPEG) {
+        ESP_LOGE(TAG, "Only support MJPEG format");
+        return ESP_ERR_NOT_SUPPORTED;
     }
-}
 
-void tud_video_frame_xfer_complete_cb(uint_fast8_t ctl_idx, uint_fast8_t stm_idx)
-{
-    (void)ctl_idx;
-    (void)stm_idx;
-    /* flip buffer */
-    xTaskNotifyGive(uvc_task_hdl);
-}
-
-int tud_video_commit_cb(uint_fast8_t ctl_idx, uint_fast8_t stm_idx,
-                        video_probe_and_commit_control_t const *parameters)
-{
-    (void)ctl_idx;
-    (void)stm_idx;
-    /* convert unit to ms from 100 ns */
-    ESP_LOGI(TAG, "bFrameIndex: %u", parameters->bFrameIndex);
-    ESP_LOGI(TAG, "dwFrameInterval: %" PRIu32 "", parameters->dwFrameInterval);
-    interval_ms = parameters->dwFrameInterval / 10000;
-    if (parameters->bFrameIndex > UVC_FRAME_NUM) {
-        return VIDEO_ERROR_OUT_OF_RANGE;
+    if (width == 320 && height == 240) {
+        frame_size = FRAMESIZE_QVGA;
+        jpeg_quality = 10;
+    } else if (width == 480 && height == 320) {
+        frame_size = FRAMESIZE_HVGA;
+        jpeg_quality = 10;
+    } else if (width == 640 && height == 480) {
+        frame_size = FRAMESIZE_VGA;
+        jpeg_quality = 12;
+    } else if (width == 800 && height == 600) {
+        frame_size = FRAMESIZE_SVGA;
+        jpeg_quality = 14;
+    } else if (width == 1280 && height == 720) {
+        frame_size = FRAMESIZE_HD;
+        jpeg_quality = 16;
+    } else if (width == 1920 && height == 1080) {
+        frame_size = FRAMESIZE_FHD;
+        jpeg_quality = 16;
+    } else {
+        ESP_LOGE(TAG, "Unsupported frame size %dx%d", width, height);
+        return ESP_ERR_NOT_SUPPORTED;
     }
-    int frame_index = parameters->bFrameIndex - 1;
-    esp_err_t ret = camera_init(20000000, PIXFORMAT_JPEG, UVC_FRAMES_INFO[frame_index].frame_size, UVC_FRAMES_INFO[frame_index].jpeg_quality, 2);
+
+    esp_err_t ret = camera_init(CAMERA_XCLK_FREQ, PIXFORMAT_JPEG, frame_size, jpeg_quality, CAMERA_FB_COUNT);
     if (ret!= ESP_OK) {
         ESP_LOGE(TAG, "camera init failed");
-        return VIDEO_ERROR_OUT_OF_RANGE;
+        return ret;
     }
+
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
 #if CONFIG_CAMERA_MODULE_ESP_S3_EYE
     xEventGroupSetBits(s_event_group, EYES_OPEN_BIT);
 #endif
 #endif
-    return VIDEO_ERROR_NONE;
+    return ESP_OK;
 }
-#endif
+
+static uvc_fb_t* camera_fb_get_cb(void *cb_ctx)
+{
+    (void)cb_ctx;
+    s_fb.cam_fb_p = esp_camera_fb_get();
+    if (!s_fb.cam_fb_p) {
+        return NULL;
+    }
+    s_fb.uvc_fb.buf = s_fb.cam_fb_p->buf;
+    s_fb.uvc_fb.len = s_fb.cam_fb_p->len;
+    s_fb.uvc_fb.width = s_fb.cam_fb_p->width;
+    s_fb.uvc_fb.height = s_fb.cam_fb_p->height;
+    s_fb.uvc_fb.format = s_fb.cam_fb_p->format;
+    s_fb.uvc_fb.timestamp = s_fb.cam_fb_p->timestamp;
+
+    if (s_fb.uvc_fb.len > UVC_MAX_FRAMESIZE_SIZE) {
+        ESP_LOGE(TAG, "Frame size %d is larger than max frame size %d", s_fb.uvc_fb.len, UVC_MAX_FRAMESIZE_SIZE);
+        esp_camera_fb_return(s_fb.cam_fb_p);
+        return NULL;
+    }
+    return &s_fb.uvc_fb;
+}
+
+static void camera_fb_return_cb(uvc_fb_t *fb, void *cb_ctx)
+{
+    (void)cb_ctx;
+    assert(fb == &s_fb.uvc_fb);
+    esp_camera_fb_return(s_fb.cam_fb_p);
+}
 
 void app_main(void)
 {
@@ -310,31 +246,31 @@ void app_main(void)
 #endif
 #endif
     ESP_LOGI(TAG, "Selected Camera Board %s", CAMERA_MODULE_NAME);
-    frame_buffer = (uint8_t *)malloc(UVC_FRAME_BUF_SIZE);
-    if (frame_buffer == NULL) {
+    uint8_t *uvc_buffer = (uint8_t *)malloc(UVC_MAX_FRAMESIZE_SIZE);
+    if (uvc_buffer == NULL) {
         ESP_LOGE(TAG, "malloc frame buffer fail");
         return;
     }
 
-    // init device stack on configured roothub port
-    usb_phy_init();
-    bool usb_init = tud_init(BOARD_TUD_RHPORT);
-    if (!usb_init) {
-        ESP_LOGE(TAG, "tud_init fail");
-        return;
-    }
-
-    xTaskCreatePinnedToCore(tusb_device_task, "TinyUSB", 4096, NULL, 5, NULL, 0);
-    xTaskCreatePinnedToCore(video_task, "uvc", 4096, NULL, 4, &uvc_task_hdl, 0);
+    uvc_device_config_t config = {
+        .uvc_buffer = uvc_buffer,
+        .uvc_buffer_size = UVC_MAX_FRAMESIZE_SIZE,
+        .start_cb = camera_start_cb,
+        .fb_get_cb = camera_fb_get_cb,
+        .fb_return_cb = camera_fb_return_cb,
+        .stop_cb = camera_stop_cb,
+    };
 
     ESP_LOGI(TAG, "Format List");
     ESP_LOGI(TAG, "\tFormat(1) = %s", "MJPEG");
     ESP_LOGI(TAG, "Frame List");
-    ESP_LOGI(TAG, "\tFrame(1) = %d * %d @%dfps, Quality = %d", UVC_FRAMES_INFO[0].width, UVC_FRAMES_INFO[0].height, UVC_FRAMES_INFO[0].rate, UVC_FRAMES_INFO[0].jpeg_quality);
+    ESP_LOGI(TAG, "\tFrame(1) = %d * %d @%dfps", UVC_FRAMES_INFO[0].width, UVC_FRAMES_INFO[0].height, UVC_FRAMES_INFO[0].rate);
 #if CONFIG_CAMERA_MULTI_FRAMESIZE
-    ESP_LOGI(TAG, "\tFrame(2) = %d * %d @%dfps, Quality = %d", UVC_FRAMES_INFO[1].width, UVC_FRAMES_INFO[1].height, UVC_FRAMES_INFO[1].rate, UVC_FRAMES_INFO[1].jpeg_quality);
-    ESP_LOGI(TAG, "\tFrame(3) = %d * %d @%dfps, Quality = %d", UVC_FRAMES_INFO[2].width, UVC_FRAMES_INFO[2].height, UVC_FRAMES_INFO[2].rate, UVC_FRAMES_INFO[2].jpeg_quality);
+    ESP_LOGI(TAG, "\tFrame(2) = %d * %d @%dfps", UVC_FRAMES_INFO[1].width, UVC_FRAMES_INFO[1].height, UVC_FRAMES_INFO[1].rate);
+    ESP_LOGI(TAG, "\tFrame(3) = %d * %d @%dfps", UVC_FRAMES_INFO[2].width, UVC_FRAMES_INFO[2].height, UVC_FRAMES_INFO[2].rate);
 #endif
+
+    ESP_ERROR_CHECK(uvc_device_init(&config));
 
     while (1) {
 #if CONFIG_CAMERA_MODULE_ESP_S3_EYE

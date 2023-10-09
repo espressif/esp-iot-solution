@@ -38,6 +38,7 @@ jobs:
             components/usb/iot_usbh;
             components/usb/iot_usbh_cdc;
             components/usb/iot_usbh_modem;
+            components/usb/usb_device_uvc;
             components/usb/usb_stream;
             components/utilities/xz;
             tools/cmake_utilities;
