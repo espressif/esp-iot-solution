@@ -83,7 +83,7 @@ typedef struct {
     x_set_hw_fade_t set_hw_fade;
     x_set_init_mode_t set_init_mode;
     x_set_sleep_t set_sleep_status;
-    uint8_t driver_color_bit_depth;
+    uint32_t driver_grayscale_level;
     uint16_t hardware_allow_max_input_value;
     /* Supports all channels output at the same time */
     bool all_ch_allow_output;
@@ -127,7 +127,7 @@ static hal_obj_t s_hal_obj_group[]           = {
     {
         .type = DRIVER_ESP_PWM,
         .name = "PWM",
-        .driver_color_bit_depth = 12,
+        .driver_grayscale_level = 1 << 12,
         .channel_num = 5,
         .hardware_allow_max_input_value = (1 << 12),
         .all_ch_allow_output = true,
@@ -144,7 +144,7 @@ static hal_obj_t s_hal_obj_group[]           = {
     {
         .type = DRIVER_SM2135E,
         .name = "SM2135E",
-        .driver_color_bit_depth = 8,
+        .driver_grayscale_level = 1 << 8,
         .channel_num = 5,
         .hardware_allow_max_input_value = (1 << 8) - 1,
         .all_ch_allow_output = false,
@@ -160,7 +160,7 @@ static hal_obj_t s_hal_obj_group[]           = {
     {
         .type = DRIVER_SM2135EH,
         .name = "SM2135EH",
-        .driver_color_bit_depth = 8,
+        .driver_grayscale_level = 1 << 8,
         .channel_num = 5,
         .hardware_allow_max_input_value = (1 << 8) - 1,
         .all_ch_allow_output = true,
@@ -176,7 +176,7 @@ static hal_obj_t s_hal_obj_group[]           = {
     {
         .type = DRIVER_SM2235EGH,
         .name = "SM2235EGH",
-        .driver_color_bit_depth = 10,
+        .driver_grayscale_level = 1 << 10,
         .channel_num = 5,
         .hardware_allow_max_input_value = (1 << 10) - 1,
         .all_ch_allow_output = true,
@@ -192,7 +192,7 @@ static hal_obj_t s_hal_obj_group[]           = {
     {
         .type = DRIVER_SM2335EGH,
         .name = "SM2335EGH",
-        .driver_color_bit_depth = 10,
+        .driver_grayscale_level = 1 << 10,
         .channel_num = 5,
         .hardware_allow_max_input_value = (1 << 10) - 1,
         .all_ch_allow_output = true,
@@ -208,7 +208,7 @@ static hal_obj_t s_hal_obj_group[]           = {
     {
         .type = DRIVER_BP5758D,
         .name = "BP5758D",
-        .driver_color_bit_depth = 10,
+        .driver_grayscale_level = 1 << 10,
         .channel_num = 5,
         .hardware_allow_max_input_value = (1 << 10) - 1,
         .all_ch_allow_output = true,
@@ -224,7 +224,7 @@ static hal_obj_t s_hal_obj_group[]           = {
     {
         .type = DRIVER_BP1658CJ,
         .name = "BP1658CJ",
-        .driver_color_bit_depth = 10,
+        .driver_grayscale_level = 1 << 10,
         .channel_num = 5,
         .hardware_allow_max_input_value = (1 << 10) - 1,
         .all_ch_allow_output = true,
@@ -240,7 +240,7 @@ static hal_obj_t s_hal_obj_group[]           = {
     {
         .type = DRIVER_KP18058,
         .name = "KP18058",
-        .driver_color_bit_depth = 10,
+        .driver_grayscale_level = 1 << 10,
         .channel_num = 5,
         .hardware_allow_max_input_value = (1 << 10) - 1,
         .all_ch_allow_output = true,
@@ -256,7 +256,7 @@ static hal_obj_t s_hal_obj_group[]           = {
     {
         .type = DRIVER_WS2812,
         .name = "WS2812",
-        .driver_color_bit_depth = 8,
+        .driver_grayscale_level = 1 << 8,
         .channel_num = 3,
         .hardware_allow_max_input_value = (1 << 8) - 1,
         .all_ch_allow_output = false,
@@ -309,7 +309,7 @@ static float final_processing(uint8_t channel, uint16_t src_value)
     return target_value;
 }
 
-static esp_err_t gamma_table_create(uint16_t *output_gamma_table, uint16_t table_size, float gamma_curve_coefficient, int8_t target_bit_depth)
+static esp_err_t gamma_table_create(uint16_t *output_gamma_table, uint16_t table_size, float gamma_curve_coefficient, int32_t grayscale_level)
 {
     float value_tmp = 0;
 
@@ -322,7 +322,7 @@ static esp_err_t gamma_table_create(uint16_t *output_gamma_table, uint16_t table
     for (int i = 0; i < table_size; i++) {
         value_tmp = (float)(i) / (table_size - 1);
         value_tmp = powf(value_tmp, 1.0f / gamma_curve_coefficient);
-        value_tmp *= ((1 << target_bit_depth));
+        value_tmp *= grayscale_level;
         output_gamma_table[i] = (uint16_t)value_tmp;
         ESP_LOGD(TAG, "index:%4d %4f  %4d", i, value_tmp, output_gamma_table[i]);
     };
@@ -555,9 +555,9 @@ static void fade_cb(void *priv)
 static void driver_default_hook_func(void *ctx)
 {
     if (s_hal_obj->interface->type == DRIVER_ESP_PWM) {
-        uint32_t bit = (uint32_t) ctx;
-        s_hal_obj->interface->driver_color_bit_depth = (uint8_t)bit;
-        s_hal_obj->interface->hardware_allow_max_input_value = (1 << (uint8_t)bit);
+        uint32_t grayscale_level = (uint32_t) ctx;
+        s_hal_obj->interface->driver_grayscale_level = grayscale_level;
+        s_hal_obj->interface->hardware_allow_max_input_value = grayscale_level;
     }
 }
 
@@ -610,27 +610,27 @@ esp_err_t hal_output_init(hal_config_t *config, lightbulb_gamma_data_t *gamma, v
         if ((gamma->r_curve_coe == gamma->g_curve_coe) && (gamma->g_curve_coe == gamma->b_curve_coe)) {
             s_rgb_gamma_table_group[3] = calloc(MAX_TABLE_SIZE, sizeof(uint16_t));
             LIGHTBULB_CHECK(s_rgb_gamma_table_group[3], "common gamma table buffer alloc fail", goto EXIT);
-            gamma_table_create(s_rgb_gamma_table_group[3], MAX_TABLE_SIZE, gamma->r_curve_coe, s_hal_obj->interface->driver_color_bit_depth);
+            gamma_table_create(s_rgb_gamma_table_group[3], MAX_TABLE_SIZE, gamma->r_curve_coe, s_hal_obj->interface->driver_grayscale_level);
             s_hal_obj->use_common_gamma_table = true;
         } else {
             // R
             s_rgb_gamma_table_group[0] = calloc(MAX_TABLE_SIZE, sizeof(uint16_t));
             LIGHTBULB_CHECK(s_rgb_gamma_table_group[0], "red channel gamma table buffer alloc fail", goto EXIT);
-            gamma_table_create(s_rgb_gamma_table_group[0], MAX_TABLE_SIZE, gamma->r_curve_coe, s_hal_obj->interface->driver_color_bit_depth);
+            gamma_table_create(s_rgb_gamma_table_group[0], MAX_TABLE_SIZE, gamma->r_curve_coe, s_hal_obj->interface->driver_grayscale_level);
             // G
             s_rgb_gamma_table_group[1] = calloc(MAX_TABLE_SIZE, sizeof(uint16_t));
             LIGHTBULB_CHECK(s_rgb_gamma_table_group[1], "green channel gamma table buffer alloc fail", goto EXIT);
-            gamma_table_create(s_rgb_gamma_table_group[1], MAX_TABLE_SIZE, gamma->g_curve_coe, s_hal_obj->interface->driver_color_bit_depth);
+            gamma_table_create(s_rgb_gamma_table_group[1], MAX_TABLE_SIZE, gamma->g_curve_coe, s_hal_obj->interface->driver_grayscale_level);
             // B
             s_rgb_gamma_table_group[2] = calloc(MAX_TABLE_SIZE, sizeof(uint16_t));
             LIGHTBULB_CHECK(s_rgb_gamma_table_group[2], "blue channel gamma table buffer alloc fail", goto EXIT);
-            gamma_table_create(s_rgb_gamma_table_group[2], MAX_TABLE_SIZE, gamma->b_curve_coe, s_hal_obj->interface->driver_color_bit_depth);
+            gamma_table_create(s_rgb_gamma_table_group[2], MAX_TABLE_SIZE, gamma->b_curve_coe, s_hal_obj->interface->driver_grayscale_level);
         }
     } else {
         ESP_LOGW(TAG, "Generate table with default parameters");
         s_rgb_gamma_table_group[3] = calloc(MAX_TABLE_SIZE, sizeof(uint16_t));
         LIGHTBULB_CHECK(s_rgb_gamma_table_group[3], "common gamma table buffer alloc fail", goto EXIT);
-        gamma_table_create(s_rgb_gamma_table_group[3], MAX_TABLE_SIZE, DEFAULT_GAMMA_CURVE, s_hal_obj->interface->driver_color_bit_depth);
+        gamma_table_create(s_rgb_gamma_table_group[3], MAX_TABLE_SIZE, DEFAULT_GAMMA_CURVE, s_hal_obj->interface->driver_grayscale_level);
         s_hal_obj->use_common_gamma_table = true;
     }
 
@@ -641,7 +641,7 @@ esp_err_t hal_output_init(hal_config_t *config, lightbulb_gamma_data_t *gamma, v
         s_rgb_white_balance_coefficient[2] = gamma->balance->b_balance_coe;
     }
 
-    gamma_table_create(s_default_linear_table, MAX_TABLE_SIZE, 1.0, s_hal_obj->interface->driver_color_bit_depth);
+    gamma_table_create(s_default_linear_table, MAX_TABLE_SIZE, 1.0, s_hal_obj->interface->driver_grayscale_level);
     s_default_linear_table[255] = s_hal_obj->interface->hardware_allow_max_input_value;
 
     if (s_hal_obj->use_common_gamma_table) {
@@ -1173,9 +1173,9 @@ esp_err_t hal_get_driver_feature(hal_feature_query_list_t type, void *out_data)
     } else if (QUERY_MAX_INPUT_VALUE == type) {
         uint16_t *_out_data = (uint16_t *)out_data;
         *_out_data = s_hal_obj->interface->hardware_allow_max_input_value;
-    } else if (QUERY_COLOR_BIT_DEPTH == type) {
-        uint8_t *_out_data = (uint8_t *)out_data;
-        *_out_data = s_hal_obj->interface->driver_color_bit_depth;
+    } else if (QUERY_GRAYSCALE_LEVEL == type) {
+        uint32_t *_out_data = (uint32_t *)out_data;
+        *_out_data = s_hal_obj->interface->driver_grayscale_level;
     } else if (QUERY_DRIVER_NAME == type) {
         char **_out_data = (char **)out_data;
         *_out_data = (char *)s_hal_obj->interface->name;

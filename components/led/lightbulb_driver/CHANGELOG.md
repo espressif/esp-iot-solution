@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.5.0 - 2023-10-09
+
+### Enhancements:
+
+* Add a phase delay function to the PWM drive, and after enabling this function, all channel outputs will be in a complementary state.
+
 ## v0.4.1 - 2023-8-30
 
 ### Bug Fixes:

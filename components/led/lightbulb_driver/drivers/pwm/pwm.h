@@ -8,6 +8,10 @@
 #pragma once
 #include "esp_idf_version.h"
 
+#define PWM_RGB_CHANNEL_PHASE_DELAY_FLAG        0X01
+#define PWM_CW_CHANNEL_PHASE_DELAY_FLAG         0X02
+#define PWM_RGBCW_CHANNEL_PHASE_DELAY_FLAG      0X04
+
 /**
  * @brief Output configuration
  *
@@ -18,6 +22,10 @@ typedef struct {
     /* The LEDC driver default active high, if you need active low, please set it to true. */
     bool invert_level;
 #endif
+    /* This option is used to configure the channels of complementary output. If the flag is not set, all channels (if needed) will be output at the same time. */
+    struct {
+        uint8_t flag;
+    } phase_delay;
 } driver_pwm_t;
 
 /**

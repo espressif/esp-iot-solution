@@ -32,6 +32,7 @@ typedef struct {
 #if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 4, 0))
     bool invert_level;
 #endif
+    uint32_t hponit[5];
 } pwm_handle_t;
 
 static pwm_handle_t *s_pwm = NULL;
@@ -116,8 +117,27 @@ esp_err_t pwm_init(driver_pwm_t *config, void(*hook_func)(void *))
         }
     }
     PWM_CHECK(err == ESP_OK, "LEDC timer config fail, please reduce the frequency", goto EXIT);
-    preset_bit = s_pwm->ledc_config.duty_resolution;
-    hook_func((void*)preset_bit);
+
+    uint32_t grayscale_level = 1 << s_pwm->ledc_config.duty_resolution;
+    if (config->phase_delay.flag & PWM_RGB_CHANNEL_PHASE_DELAY_FLAG) {
+        grayscale_level /= 3;
+        for (int i = 0; i < 3; i++) {
+            s_pwm->hponit[i] = grayscale_level * i;
+        }
+    } else if (config->phase_delay.flag & PWM_CW_CHANNEL_PHASE_DELAY_FLAG) {
+        grayscale_level /= 2;
+        for (int i = 3; i < 5; i++) {
+            s_pwm->hponit[i] = grayscale_level * i;
+        }
+    } else if (config->phase_delay.flag & PWM_RGBCW_CHANNEL_PHASE_DELAY_FLAG) {
+        grayscale_level /= 5;
+        for (int i = 0; i < 5; i++) {
+            s_pwm->hponit[i] = grayscale_level * i;
+        }
+    } else {
+        /* Nothing */
+    }
+    hook_func((void*)grayscale_level);
 
     err = ledc_fade_func_install(ESP_INTR_FLAG_IRAM);
     PWM_CHECK(err == ESP_OK, "ledc_fade_func_install fail", goto EXIT);
@@ -188,7 +208,7 @@ esp_err_t pwm_set_channel(pwm_channel_t channel, uint16_t value)
     power_control_disable_sleep();
 #endif
 
-    err |= ledc_set_duty(s_pwm->ledc_config.speed_mode, channel, value);
+    err |= ledc_set_duty_with_hpoint(s_pwm->ledc_config.speed_mode, channel, value, s_pwm->hponit[channel]);
     err |= ledc_update_duty(s_pwm->ledc_config.speed_mode, channel);
 
     return err;
@@ -210,9 +230,9 @@ esp_err_t pwm_set_rgb_channel(uint16_t value_r, uint16_t value_g, uint16_t value
 #endif
 
     //Must be set first
-    err |= ledc_set_duty(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_R, value_r);
-    err |= ledc_set_duty(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_G, value_g);
-    err |= ledc_set_duty(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_B, value_b);
+    err |= ledc_set_duty_with_hpoint(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_R, value_r, s_pwm->hponit[PWM_CHANNEL_R]);
+    err |= ledc_set_duty_with_hpoint(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_G, value_g, s_pwm->hponit[PWM_CHANNEL_G]);
+    err |= ledc_set_duty_with_hpoint(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_B, value_b, s_pwm->hponit[PWM_CHANNEL_B]);
 
     //Update later
     err |= ledc_update_duty(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_R);
@@ -236,8 +256,8 @@ esp_err_t pwm_set_cctb_or_cw_channel(uint16_t value_cct_c, uint16_t value_b_w)
 #endif
 
     //Must be set first
-    err |= ledc_set_duty(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_CCT_COLD, value_cct_c);
-    err |= ledc_set_duty(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_BRIGHTNESS_WARM, value_b_w);
+    err |= ledc_set_duty_with_hpoint(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_CCT_COLD, value_cct_c, s_pwm->hponit[PWM_CHANNEL_CCT_COLD]);
+    err |= ledc_set_duty_with_hpoint(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_BRIGHTNESS_WARM, value_b_w, s_pwm->hponit[PWM_CHANNEL_BRIGHTNESS_WARM]);
 
     //Update later
     err |= ledc_update_duty(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_CCT_COLD);
@@ -266,11 +286,11 @@ esp_err_t pwm_set_rgbcctb_or_rgbcw_channel(uint16_t value_r, uint16_t value_g, u
 #endif
 
     //Must be set first
-    err |= ledc_set_duty(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_R, value_r);
-    err |= ledc_set_duty(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_G, value_g);
-    err |= ledc_set_duty(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_B, value_b);
-    err |= ledc_set_duty(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_CCT_COLD, value_cct_c);
-    err |= ledc_set_duty(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_BRIGHTNESS_WARM, value_b_w);
+    err |= ledc_set_duty_with_hpoint(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_R, value_r, s_pwm->hponit[PWM_CHANNEL_R]);
+    err |= ledc_set_duty_with_hpoint(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_G, value_g, s_pwm->hponit[PWM_CHANNEL_G]);
+    err |= ledc_set_duty_with_hpoint(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_B, value_b, s_pwm->hponit[PWM_CHANNEL_B]);
+    err |= ledc_set_duty_with_hpoint(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_CCT_COLD, value_cct_c, s_pwm->hponit[PWM_CHANNEL_CCT_COLD]);
+    err |= ledc_set_duty_with_hpoint(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_BRIGHTNESS_WARM, value_b_w, s_pwm->hponit[PWM_CHANNEL_BRIGHTNESS_WARM]);
 
     //Update later
     err |= ledc_update_duty(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_R);
@@ -293,7 +313,7 @@ esp_err_t pwm_set_shutdown(void)
 
     for (int i = 0; i < PWM_CHANNEL_MAX; i++) {
         if (s_pwm->registered_channel_mask & BIT(i)) {
-            err |= ledc_set_duty(s_pwm->ledc_config.speed_mode, i, 0);
+            err |= ledc_set_duty_with_hpoint(s_pwm->ledc_config.speed_mode, i, 0, s_pwm->hponit[i]);
             err |= ledc_update_duty(s_pwm->ledc_config.speed_mode, i);
         }
     }
@@ -309,7 +329,10 @@ esp_err_t pwm_set_hw_fade(pwm_channel_t channel, uint16_t value, int fade_ms)
 #if CONFIG_PM_ENABLE
     power_control_disable_sleep();
 #endif
-
+    if(0 != s_pwm->hponit[1]) {
+        ESP_LOGE(TAG, "Unable to set hpoint during hardware fade, disable CONFIG_PWM_ENABLE_HW_FADE feature or call other set API");
+        abort();
+    }
     return ledc_set_fade_time_and_start(s_pwm->ledc_config.speed_mode, channel, value, fade_ms, LEDC_FADE_NO_WAIT);
 }
 
