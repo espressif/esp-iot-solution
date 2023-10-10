@@ -18,6 +18,3 @@ dependencies:
     rules:
       - if: "idf_version >=4.4,<5.0"
   cmake_utilities: "*"
-
-examples:
-  - path: ../../../examples/usb/device/usb_webcam
