@@ -20,14 +20,4 @@ idf.py add-dependency "espressif/usb_device_uvc=*"
 
 ### Examples
 
-Please use the component manager command `create-project-from-example` to create the project from the example template
-
-* USB WecCamera
-
-```
-idf.py create-project-from-example "espressif/usb_device_uvc=*:usb_webcam"
-```
-
-Then the example will be downloaded in the current folder, you can check into it for build and flash.
-
-> Or you can download examples from esp-iot-solution repository: [USB WebCamera](https://github.com/espressif/esp-iot-solution/tree/master/examples/usb/device/usb_webcam)
+* [USB WebCamera: Make ESP32-S3-EYE as a USB Camera Device](https://github.com/espressif/esp-iot-solution/tree/master/examples/usb/device/usb_webcam)
