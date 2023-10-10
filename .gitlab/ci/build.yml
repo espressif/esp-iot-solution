@@ -574,6 +574,7 @@ build_components_display_lcd_esp_lcd_gc9b71_test_apps:
     - .rules:build:components_display_lcd_esp_lcd_gc9b71_test_apps
   parallel:
     matrix:
+      - IMAGE: espressif/idf:release-v5.0
       - IMAGE: espressif/idf:release-v5.1
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_gc9b71/test_apps
@@ -595,6 +596,7 @@ build_components_display_lcd_esp_lcd_sh8601_test_apps:
     - .rules:build:components_display_lcd_esp_lcd_sh8601_test_apps
   parallel:
     matrix:
+      - IMAGE: espressif/idf:release-v5.0
       - IMAGE: espressif/idf:release-v5.1
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_sh8601/test_apps
@@ -605,9 +607,21 @@ build_components_display_lcd_esp_lcd_spd2010_test_apps:
     - .rules:build:components_display_lcd_esp_lcd_spd2010_test_apps
   parallel:
     matrix:
+      - IMAGE: espressif/idf:release-v5.0
       - IMAGE: espressif/idf:release-v5.1
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_spd2010/test_apps
+
+build_components_display_lcd_esp_lcd_st7701_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_display_lcd_esp_lcd_st7701_test_apps
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.0
+      - IMAGE: espressif/idf:release-v5.1
+  variables:
+    EXAMPLE_DIR: components/display/lcd/esp_lcd_st7701/test_apps
 
 build_components_display_lcd_esp_lcd_st77903_test_apps:
   extends:

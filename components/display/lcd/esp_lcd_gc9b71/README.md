@@ -13,7 +13,7 @@ Implementation of the GC9B71 LCD controller with [esp_lcd](https://docs.espressi
 Packages from this repository are uploaded to [Espressif's component service](https://components.espressif.com/).
 You can add them to your project via `idf.py add-dependancy`, e.g.
 ```
-    idf.py add-dependency esp_lcd_gc9b71==1.0.0
+    idf.py add-dependency "espressif/esp_lcd_gc9b71"
 ```
 
 Alternatively, you can create `idf_component.yml`. More is in [Espressif's documentation](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/tools/idf-component-manager.html).
@@ -38,7 +38,7 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
  * The array should be declared as static const and positioned outside the function.
  */
 // static const gc9b71_lcd_init_cmd_t lcd_init_cmds[] = {
-// //   cmd   data        data_size  delay_ms
+// //  {cmd, { data }, data_size, delay_ms}
 //    {0xfe, (uint8_t []){0x00}, 0, 0},
 //    {0xef, (uint8_t []){0x00}, 0, 0},
 //    {0x80, (uint8_t []){0x11}, 1, 0},
@@ -57,8 +57,8 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
     };
     const esp_lcd_panel_dev_config_t panel_config = {
         .reset_gpio_num = EXAMPLE_PIN_NUM_LCD_RST,
-        .rgb_endian = LCD_RGB_ENDIAN_RGB,               // Implemented by LCD command `36h`
-        .bits_per_pixel = EXAMPLE_LCD_BIT_PER_PIXEL,    // Implemented by LCD command `3Ah`
+        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,     // Implemented by LCD command `36h`
+        .bits_per_pixel = EXAMPLE_LCD_BIT_PER_PIXEL,    // Implemented by LCD command `3Ah` (16/18/24)
         .vendor_config = (void *)&vendor_config,
     };
     ESP_ERROR_CHECK(esp_lcd_new_panel_gc9b71(io_handle, &panel_config, &panel_handle));
@@ -88,7 +88,7 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
  * The array should be declared as static const and positioned outside the function.
  */
 // static const gc9b71_lcd_init_cmd_t lcd_init_cmds[] = {
-// //   cmd   data        data_size  delay_ms
+// //  {cmd, { data }, data_size, delay_ms}
 //    {0xfe, (uint8_t []){0x00}, 0, 0},
 //    {0xef, (uint8_t []){0x00}, 0, 0},
 //    {0x80, (uint8_t []){0x11}, 1, 0},
@@ -107,8 +107,8 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
     };
     const esp_lcd_panel_dev_config_t panel_config = {
         .reset_gpio_num = EXAMPLE_PIN_NUM_LCD_RST,
-        .rgb_endian = LCD_RGB_ENDIAN_RGB,               // Implemented by LCD command `36h`
-        .bits_per_pixel = EXAMPLE_LCD_BIT_PER_PIXEL,    // Implemented by LCD command `3Ah`
+        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,     // Implemented by LCD command `36h`
+        .bits_per_pixel = EXAMPLE_LCD_BIT_PER_PIXEL,    // Implemented by LCD command `3Ah` (16/18/24)
         .vendor_config = (void *)&vendor_config,
     };
     ESP_ERROR_CHECK(esp_lcd_new_panel_gc9b71(io_handle, &panel_config, &panel_handle));

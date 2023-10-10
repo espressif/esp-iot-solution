@@ -7,7 +7,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/gpio.h"
-#include "driver/gpio.h"
+#include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "lv_demos.h"
 
@@ -38,7 +38,7 @@ void app_main()
 
     ESP_LOGI(TAG, "Display LVGL demos");
     // Lock the mutex due to the LVGL APIs are not thread-safe
-    if (lv_port_lock(0)) {
+    if (lv_port_lock(-1)) {
         lv_demo_stress();
         // lv_demo_benchmark();
         // lv_demo_music();

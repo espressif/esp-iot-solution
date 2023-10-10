@@ -242,11 +242,11 @@ static void example_increase_lvgl_tick(void *arg)
     lv_tick_inc(EXAMPLE_LVGL_TICK_PERIOD_MS);
 }
 
-static bool example_lvgl_lock(uint32_t timeout_ms)
+static bool example_lvgl_lock(int timeout_ms)
 {
     assert(lvgl_mux && "bsp_display_start must be called first");
 
-    const TickType_t timeout_ticks = (timeout_ms == 0) ? portMAX_DELAY : pdMS_TO_TICKS(timeout_ms);
+    const TickType_t timeout_ticks = (timeout_ms == -1) ? portMAX_DELAY : pdMS_TO_TICKS(timeout_ms);
     return xSemaphoreTake(lvgl_mux, timeout_ticks) == pdTRUE;
 }
 
@@ -262,7 +262,7 @@ static void example_lvgl_port_task(void *arg)
     uint32_t task_delay_ms = EXAMPLE_LVGL_TASK_MAX_DELAY_MS;
     while (1) {
         // Lock the mutex due to the LVGL APIs are not thread-safe
-        if (example_lvgl_lock(0)) {
+        if (example_lvgl_lock(-1)) {
             task_delay_ms = lv_timer_handler();
             // Release the mutex
             example_lvgl_unlock();
@@ -340,7 +340,7 @@ void app_main(void)
     esp_lcd_panel_handle_t panel_handle = NULL;
     const esp_lcd_panel_dev_config_t panel_config = {
         .reset_gpio_num = EXAMPLE_PIN_NUM_LCD_RST,
-        .rgb_endian = LCD_RGB_ENDIAN_RGB,
+        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,
         .bits_per_pixel = LCD_BIT_PER_PIXEL,
         .vendor_config = &vendor_config,
     };
@@ -465,7 +465,7 @@ void app_main(void)
 
     ESP_LOGI(TAG, "Display LVGL demos");
     // Lock the mutex due to the LVGL APIs are not thread-safe
-    if (example_lvgl_lock(0)) {
+    if (example_lvgl_lock(-1)) {
         // lv_demo_widgets();      /* A widgets example */
         lv_demo_music();        /* A modern, smartphone-like music player demo. */
         // lv_demo_stress();       /* A stress test for LVGL. */

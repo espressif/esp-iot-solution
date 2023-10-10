@@ -16,7 +16,7 @@ Implementation of the ST77903 LCD controller with [esp_lcd](https://docs.espress
  * The array should be declared as static const and positioned outside the function.
  */
 // static const st77903_lcd_init_cmd_t lcd_init_cmds[] = {
-// //   cmd   data        data_size  delay_ms
+// //  {cmd, { data }, data_size, delay_ms}
 //    {0xf0, (uint8_t []){0xc3}, 1, 0},
 //    {0xf0, (uint8_t []){0x96}, 1, 0},
 //    {0xf0, (uint8_t []){0xa5}, 1, 0},
@@ -46,8 +46,8 @@ Implementation of the ST77903 LCD controller with [esp_lcd](https://docs.espress
     };
     const esp_lcd_panel_dev_config_t panel_config = {
         .reset_gpio_num = EXAMPLE_PIN_NUM_LCD_RST,
-        .rgb_endian = LCD_RGB_ENDIAN_BGR,
-        .bits_per_pixel = EXAMPLE_LCD_QSPI_BIT_PER_PIXEL,
+        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_BGR,     // Implemented by LCD command `36h`
+        .bits_per_pixel = EXAMPLE_LCD_BIT_PER_PIXEL,    // Implemented by LCD command `3Ah` (16/18/24)
         .vendor_config = &vendor_config,
     };
     ESP_ERROR_CHECK(esp_lcd_new_panel_st77903(NULL, &panel_config, &panel_handle));
@@ -83,7 +83,7 @@ It's recommended to use the [esp_lcd_panel_io_additions](https://components.espr
  * The array should be declared as static const and positioned outside the function.
  */
 // static const st77903_lcd_init_cmd_t lcd_init_cmds[] = {
-// //   cmd   data        data_size  delay_ms
+// //  {cmd, { data }, data_size, delay_ms}
 //    {0xf0, (uint8_t []){0xc3}, 1, 0},
 //    {0xf0, (uint8_t []){0x96}, 1, 0},
 //    {0xf0, (uint8_t []){0xa5}, 1, 0},
@@ -132,8 +132,8 @@ It's recommended to use the [esp_lcd_panel_io_additions](https://components.espr
     };
     const esp_lcd_panel_dev_config_t panel_config = {
         .reset_gpio_num = EXAMPLE_PIN_NUM_LCD_RST,
-        .rgb_endian = LCD_RGB_ENDIAN_RGB,
-        .bits_per_pixel = EXAMPLE_LCD_BIT_PER_PIXEL,
+        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,     // Implemented by LCD command `36h`
+        .bits_per_pixel = EXAMPLE_LCD_BIT_PER_PIXEL,    // Implemented by LCD command `3Ah` (16/18/24)
         .vendor_config = &vendor_config,
     };
     ESP_ERROR_CHECK(esp_lcd_new_panel_st77903(io_handle, &panel_config, &panel_handle));    /**

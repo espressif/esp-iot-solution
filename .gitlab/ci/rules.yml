@@ -57,6 +57,9 @@
 .patterns-components_display_lcd_esp_lcd_spd2010: &patterns-components_display_lcd_esp_lcd_spd2010
   - "components/display/lcd/esp_lcd_spd2010/**/*"
 
+.patterns-components_display_lcd_esp_lcd_st7701: &patterns-components_display_lcd_esp_lcd_st7701
+  - "components/display/lcd/esp_lcd_st7701/**/*"
+
 .patterns-components_display_lcd_esp_lcd_st77903: &patterns-components_display_lcd_esp_lcd_st77903
   - "components/display/lcd/esp_lcd_st77903/**/*"
 
@@ -1009,6 +1012,17 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_display_lcd_esp_lcd_spd2010
+
+.rules:build:components_display_lcd_esp_lcd_st7701_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_display_lcd_esp_lcd_st7701
 
 .rules:build:components_display_lcd_esp_lcd_st77903_test_apps:
   rules:
