@@ -378,6 +378,12 @@ button_handle_t iot_button_create(const button_config_t *config)
         BTN_CHECK(ESP_OK == ret, "adc button init failed", NULL);
         btn = button_create_com(1, button_adc_get_key_level, (void *)ADC_BUTTON_COMBINE(cfg->adc_channel, cfg->button_index), long_press_time, short_press_time);
     } break;
+    case BUTTON_TYPE_MATRIX: {
+        const button_matrix_config_t *cfg = &(config->matrix_button_config);
+        ret = button_matrix_init(cfg);
+        BTN_CHECK(ESP_OK == ret, "matrix button init failed", NULL);
+        btn = button_create_com(1, button_matrix_get_key_level, (void *)MATRIX_BUTTON_COMBINE(cfg->row_gpio_num, cfg->col_gpio_num), long_press_time, short_press_time);
+    } break;
     case BUTTON_TYPE_CUSTOM: {
         if (config->custom_button_config.button_custom_init) {
             ret = config->custom_button_config.button_custom_init(config->custom_button_config.priv);
@@ -413,6 +419,9 @@ esp_err_t iot_button_delete(button_handle_t btn_handle)
         break;
     case BUTTON_TYPE_ADC:
         ret = button_adc_deinit(ADC_BUTTON_SPLIT_CHANNEL(btn->hardware_data), ADC_BUTTON_SPLIT_INDEX(btn->hardware_data));
+        break;
+    case BUTTON_TYPE_MATRIX:
+        ret = button_matrix_deinit(MATRIX_BUTTON_SPLIT_ROW(btn->hardware_data), MATRIX_BUTTON_SPLIT_COL(btn->hardware_data));
         break;
     case BUTTON_TYPE_CUSTOM:
         if (btn->hal_button_deinit) {

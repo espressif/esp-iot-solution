@@ -121,6 +121,21 @@
         ESP_LOGE(TAG, "Button create failed");
     }
 
+    // create matrix keypad button
+    button_config_t matrix_button_cfg = {
+        .type = BUTTON_TYPE_MATRIX,
+        .long_press_time = CONFIG_BUTTON_LONG_PRESS_TIME_MS,
+        .short_press_time = CONFIG_BUTTON_SHORT_PRESS_TIME_MS,
+        .matrix_button_config = {
+            .row_gpio_num = 0,
+            .col_gpio_num = 1,
+        }
+    };
+    button_handle_t matrix_button = iot_button_create(&matrix_button_cfg);
+    if(NULL == matrix_button) {
+        ESP_LOGE(TAG, "Button create failed");
+    }
+
 .. Note::
     当 IDF 版本大于等于 release/5.0 时， ADC 按钮使用的是 ADC1 ,当项目中还有其他地方使用到了 ADC1 时，请传入 adc_handle 和 adc_channel 来配置 ADC 按钮。
 
@@ -203,6 +218,16 @@ Button 组件支持为多个事件注册回调函数，每个事件都可以注�
 .. code:: c
 
     iot_button_set_param(btn, BUTTON_LONG_PRESS_TIME_MS, 5000);
+
+低功耗支持
+^^^^^^^^^^^
+
+.. code:: c
+
+    // stop button
+    iot_button_stop();
+    // resume button
+    iot_button_resume();
 
 API Reference
 -----------------

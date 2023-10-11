@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v3.1.0 - 2023-10-9
+
+### Enhancements:
+
+* Support matrix keypad
+
 ## v3.0.1 - 2023-9-1
 
 ### Enhancements:
