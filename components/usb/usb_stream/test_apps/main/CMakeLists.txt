@@ -1,3 +1,3 @@
 idf_component_register(SRC_DIRS "."
                        INCLUDE_DIRS "."
-                       REQUIRES unity test_utils usb_stream driver)
+                       REQUIRES unity test_utils usb_stream driver sdmmc fatfs vfs)

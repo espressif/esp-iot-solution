@@ -16,6 +16,11 @@
 #include "usb_stream.h"
 #include "unity.h"
 #include "esp_random.h"
+#ifdef CONFIG_IDF_TARGET_ESP32S3
+#include "driver/sdmmc_host.h"
+#include "esp_vfs_fat.h"
+#include "sdmmc_cmd.h"
+#endif
 
 static const char *TAG = "usb_stream_test";
 
@@ -322,7 +327,7 @@ TEST_CASE("test uac mic", "[devkit][uac][mic]")
         uint8_t *buffer = malloc(buffer_size);
         TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_MIC, CTRL_RESUME, NULL));
         TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_MIC, CTRL_UAC_MUTE, (void *)0));
-        TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_MIC, CTRL_UAC_VOLUME, (void *)90));
+        TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_MIC, CTRL_UAC_VOLUME, (void *)30));
         vTaskDelay(20 / portTICK_PERIOD_MS);
         for (size_t i = 0; i < test_count; i++) {
             /* pre-config UAC driver with params from known USB Camera Descriptors*/
@@ -346,6 +351,105 @@ TEST_CASE("test uac mic", "[devkit][uac][mic]")
     }
     vTaskDelay(pdMS_TO_TICKS(500));
 }
+
+#ifdef CONFIG_IDF_TARGET_ESP32S3
+static void mic_frame_to_sdcard_cb(mic_frame_t *frame, void *ptr)
+{
+    // We should using higher baudrate here, to reduce the blocking time here
+    ESP_LOGV(TAG, "mic callback! bit_resolution = %u, samples_frequence = %"PRIu32", data_bytes = %"PRIu32,
+            frame->bit_resolution, frame->samples_frequence, frame->data_bytes);
+    // We should never block in mic callback!
+    FILE *fp = (FILE *)ptr;
+    if (fp) fwrite(frame->data, 1, frame->data_bytes, fp);
+}
+
+TEST_CASE("test uac mic save to sdcard", "[s3_korvo_2l][uac][mic][sdcard]")
+{
+#define IO_VBUS_POWER_CTRL      48
+#define IO_LED_CTRL             17
+#define IO_SD_CARD_CMD          7
+#define IO_SD_CARD_CLK          6
+#define IO_SD_CARD_DATA0        4
+#define SD_CARD_BASE_PATH       "/sdcard"
+
+    esp_log_level_set("*", ESP_LOG_DEBUG);
+    // init sdcard and fatfs
+    sdmmc_card_t *card;
+    esp_vfs_fat_sdmmc_mount_config_t mount_config = {
+        .format_if_mount_failed = true,
+        .max_files = 2,
+        .allocation_unit_size = 16 * 1024
+    };
+    sdmmc_host_t host = SDMMC_HOST_DEFAULT();
+    // This initializes the slot without card detect (CD) and write protect (WP) signals.
+    // Modify slot_config.gpio_cd and slot_config.gpio_wp if your board has these signals.
+    sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
+    slot_config.clk = IO_SD_CARD_CLK;
+    slot_config.cmd = IO_SD_CARD_CMD;
+    slot_config.d0 = IO_SD_CARD_DATA0;
+    // To use 1-line SD mode, change this to 1:
+    slot_config.width = 1;
+    TEST_ASSERT_EQUAL(ESP_OK, esp_vfs_fat_sdmmc_mount(SD_CARD_BASE_PATH, &host, &slot_config, &mount_config, &card));
+    sdmmc_card_print_info(stdout, card);
+
+    /* Power on VBUS */
+    gpio_config_t io_conf = {0};
+    //disable interrupt
+    io_conf.intr_type = GPIO_INTR_DISABLE;
+    io_conf.mode = GPIO_MODE_OUTPUT;
+    io_conf.pin_bit_mask = (1ULL << IO_VBUS_POWER_CTRL | 1ULL << IO_LED_CTRL);
+    io_conf.pull_down_en = 1;
+    TEST_ASSERT_EQUAL(ESP_OK, gpio_config(&io_conf));
+    TEST_ASSERT_EQUAL(ESP_OK, gpio_set_level(IO_VBUS_POWER_CTRL, 0));
+    TEST_ASSERT_EQUAL(ESP_OK, gpio_set_level(IO_LED_CTRL, 0));
+
+    uac_config_t uac_config = {
+        .mic_ch_num = UAC_CH_ANY,
+        .mic_bit_resolution = UAC_BITS_ANY,
+        .mic_samples_frequence = UAC_FREQUENCY_ANY,
+        .mic_cb = mic_frame_to_sdcard_cb,
+        .mic_cb_arg = NULL,
+    };
+
+    /* Start camera IN stream with pre-configs, uvc driver will create multi-tasks internal
+    to handle usb data from different pipes, and user's callback will be called after new frame ready. */
+    size_t test_count = 10;
+    size_t recorder_time_ms = 10000;
+    vTaskDelay(20 / portTICK_PERIOD_MS);
+    for (size_t i = 0; i < test_count; i++) {
+        char file_name[32] = {0};
+        sprintf(file_name, "%s/recorder_%u.wav", SD_CARD_BASE_PATH, i);
+        ESP_LOGI(TAG, "open file %s", file_name);
+        FILE *fp = fopen(file_name, "wb");
+        TEST_ASSERT_NOT_NULL(fp);
+        TEST_ASSERT_EQUAL(ESP_OK, gpio_set_level(IO_LED_CTRL, 1));
+        uac_config.mic_cb_arg = fp;
+
+        TEST_ASSERT_EQUAL(ESP_OK, uac_streaming_config(&uac_config));
+        TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_start());
+        TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_connect_wait(portMAX_DELAY));
+        //Check the resolution list of connected camera
+        size_t frame_size = 0;
+        size_t frame_index = 0;
+        TEST_ASSERT_EQUAL(ESP_OK, uac_frame_size_list_get(STREAM_UAC_MIC, NULL, &frame_size, &frame_index));
+        TEST_ASSERT_NOT_EQUAL(0, frame_size);
+        ESP_LOGI(TAG, "uac: get frame list size = %u, current = %u", frame_size, frame_index);
+        uac_frame_size_t *uac_frame_list = (uac_frame_size_t *)malloc(frame_size * sizeof(uac_frame_size_t));
+        TEST_ASSERT_EQUAL(ESP_OK, uac_frame_size_list_get(STREAM_UAC_MIC, uac_frame_list, NULL, NULL));
+        ESP_LOGI(TAG, "current frame: ch_num %u, bit %u, frequency %"PRIu32, uac_frame_list[frame_index].ch_num, uac_frame_list[frame_index].bit_resolution, uac_frame_list[frame_index].samples_frequence);
+        free(uac_frame_list);
+
+        vTaskDelay(recorder_time_ms / portTICK_PERIOD_MS);
+        TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_stop());
+        fclose(fp);
+        ESP_LOGI(TAG, "close file %s", file_name);
+        TEST_ASSERT_EQUAL(ESP_OK, gpio_set_level(IO_LED_CTRL, 0));
+        vTaskDelay(pdMS_TO_TICKS(3000));
+    }
+    esp_vfs_fat_sdcard_unmount(SD_CARD_BASE_PATH, card);
+    vTaskDelay(pdMS_TO_TICKS(500));
+}
+#endif
 
 TEST_CASE("test uac spk", "[devkit][uac][spk]")
 {
@@ -392,7 +496,7 @@ TEST_CASE("test uac spk", "[devkit][uac][spk]")
             size_t spk_count = 3;
             while(spk_count) {
                 TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_SPK, CTRL_RESUME, NULL));
-                TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_SPK, CTRL_UAC_VOLUME, (void *)(90/spk_count)));
+                TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_SPK, CTRL_UAC_VOLUME, (void *)(60/spk_count)));
                 TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_SPK, CTRL_UAC_MUTE, (void *)0));
                 while (1) {
                     if ((uint32_t)(s_buffer + offset_size) >= (uint32_t)(wave_array_32000_16_1 + s_buffer_size)) {
@@ -444,7 +548,7 @@ TEST_CASE("test uac mic spk loop", "[devkit][uac][mic][spk]")
         to handle usb data from different pipes, and user's callback will be called after new frame ready. */
         TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_start());
         TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_connect_wait(portMAX_DELAY));
-        TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_SPK, CTRL_UAC_VOLUME, (void *)(90/(i+1))));
+        TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_SPK, CTRL_UAC_VOLUME, (void *)(60/(i+1))));
         size_t test_count2 = 3;
         vTaskDelay(3000 / portTICK_PERIOD_MS);
         while (--test_count2) {

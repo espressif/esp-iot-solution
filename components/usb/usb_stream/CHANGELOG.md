@@ -1,5 +1,32 @@
 # ChangeLog
 
+## v1.2.0 - 2023-10-11
+
+### Enhancements:
+
+* USB:
+  * Improve control transfer timeout handling
+  * Add sysviwer debug support
+* UVC:
+  * Change sample process task core affinity option, support config -1 to not pin to core
+* UAC:
+  * Add Mic data save to SDCard test case
+
+### Bug Fixes:
+
+* UAC:
+  * Volume/Mute: remove set volume/mute default value (to walk around some camera issue), user need to set after stream start
+* UVC:
+  * Fix bug when specified resolution not found.
+
+## v1.1.2 - 2023-09-18
+
+### Bug Fixes:
+
+* UAC:
+  * Mic：disable compensation by default, the frame data_bytes in `mic_cb` varies depending on host.
+  * Mic：add separate `mic_frame_buf` to restore the frame data, fix the frame data may be overwritten in special case (MPS > sizeof(frame_ms)).
+
 ## v1.1.1 - 2023-08-31
 
 ### Bug Fixes:

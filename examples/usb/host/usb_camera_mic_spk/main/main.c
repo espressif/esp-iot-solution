@@ -293,9 +293,9 @@ void app_main(void)
     while (1) {
         xEventGroupWaitBits(s_evt_handle, BIT3_SPK_START, true, false, portMAX_DELAY);
         /* Manually resume the speaker because SUSPEND_AFTER_START flags is set */
-        usb_streaming_control(STREAM_UAC_SPK, CTRL_UAC_MUTE, (void *)0);
-        usb_streaming_control(STREAM_UAC_SPK, CTRL_UAC_VOLUME, (void *)80);
         ESP_ERROR_CHECK(usb_streaming_control(STREAM_UAC_SPK, CTRL_RESUME, NULL));
+        usb_streaming_control(STREAM_UAC_SPK, CTRL_UAC_VOLUME, (void *)80);
+        usb_streaming_control(STREAM_UAC_MIC, CTRL_UAC_VOLUME, (void *)80);
         ESP_LOGI(TAG, "speaker resume");
 #if (ENABLE_UAC_MIC_SPK_FUNCTION && !ENABLE_UAC_MIC_SPK_LOOPBACK)
         ESP_LOGI(TAG, "start to play default sound");

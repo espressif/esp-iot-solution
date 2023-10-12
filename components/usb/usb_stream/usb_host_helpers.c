@@ -209,7 +209,7 @@ hcd_port_handle_t _usb_port_init(hcd_port_callback_t callback, void *callback_ar
     UVC_CHECK_GOTO(ESP_OK == ret, "HCD Port init failed", port_init_err);
     ret = hcd_port_command(port_hdl, HCD_PORT_CMD_POWER_ON);
     UVC_CHECK_GOTO(ESP_OK == ret, "HCD Port Power on failed", port_power_err);
-    ESP_LOGI(TAG, "Port=%d init succeed, context = %p", USB_PORT_NUM, phy_handle);
+    ESP_LOGD(TAG, "Port=%d init succeed, context = %p", USB_PORT_NUM, phy_handle);
     return port_hdl;
 port_power_err:
     hcd_port_deinit(port_hdl);
@@ -234,7 +234,7 @@ esp_err_t _usb_port_deinit(hcd_port_handle_t port_hdl)
     UVC_CHECK_CONTINUE(ESP_OK == ret, "port deinit failed");
     ret = hcd_uninstall();
     UVC_CHECK_CONTINUE(ESP_OK == ret, "hcd uninstall failed");
-    ESP_LOGI(TAG, "Port=%d deinit succeed, context = %p", USB_PORT_NUM, phy_handle);
+    ESP_LOGD(TAG, "Port=%d deinit succeed, context = %p", USB_PORT_NUM, phy_handle);
     return ret;
 }
 
