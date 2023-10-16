@@ -1,4 +1,4 @@
-version: "0.1.8"
+version: "0.1.9"
 targets:
   - esp32
   - esp32c3

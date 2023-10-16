@@ -49,3 +49,8 @@
 
 * BLE-OTA:
   * Fixed errors for release v4.4
+
+## v0.1.9 - 2023-10-16
+
+* BLE-OTA:
+  * Add support for ESP32H2
