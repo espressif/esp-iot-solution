@@ -43,7 +43,7 @@ typedef struct {
 typedef enum {
     QUERY_IS_ALLOW_ALL_OUTPUT,
     QUERY_MAX_INPUT_VALUE,
-    QUERY_COLOR_BIT_DEPTH,
+    QUERY_GRAYSCALE_LEVEL,
     QUERY_DRIVER_NAME,
 } hal_feature_query_list_t;
 
