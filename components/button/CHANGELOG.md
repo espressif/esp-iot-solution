@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v3.1.1 - 2023-10-18
+
+### bugfix
+
+* Fixed a bug where multiple callbacks feature crashes for BUTTON_MULTIPLE_CLICK
+
 ## v3.1.0 - 2023-10-9
 
 ### Enhancements:
