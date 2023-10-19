@@ -517,34 +517,9 @@ TEST_CASE("test gamma table", "[LED][indicator]")
     led_indicator_new_gamma_table(2.3);
 }
 
-static void button_press_down_cb(void *arg, void *data)
-{
-    static bool preempted = false;
-    if (preempted == false) {
-        ESP_LOGI(TAG, "preempt blink.....");
-        esp_err_t ret = led_indicator_preempt_start(led_handle_0, BLINK_50_BRIGHTNESS);
-        TEST_ASSERT(ret == ESP_OK);
-        preempted = true;
-    } else {
-        ESP_LOGI(TAG, "preempt blink stop.....");
-        esp_err_t ret = led_indicator_preempt_stop(led_handle_0, BLINK_50_BRIGHTNESS);
-        TEST_ASSERT(ret == ESP_OK);
-        preempted = false;
-    }
-}
 
 TEST_CASE("test led preempt func with breath", "[LED][preempt][breath]")
 {
-    button_config_t cfg = {
-        .type = BUTTON_TYPE_GPIO,
-        .gpio_button_config = {
-            .gpio_num = 0,
-            .active_level = 0,
-        },
-    };
-    button_handle_t btn = iot_button_create(&cfg);
-    iot_button_register_cb(btn, BUTTON_PRESS_DOWN, button_press_down_cb, NULL);
-
     led_indicator_ledc_config_t led_indicator_ledc_config = {
         .is_active_level_high = 1,
         .timer_inited = false,
@@ -559,16 +534,32 @@ TEST_CASE("test led preempt func with breath", "[LED][preempt][breath]")
         .blink_lists = led_blink_lst,
         .blink_list_num = BLINK_NUM,
     };
+    int cnt0 = 3;
+    while (cnt0--) {
+        led_handle_0 = led_indicator_create(&config);
+        TEST_ASSERT_NOT_NULL(led_handle_0);
+        TEST_ASSERT(led_handle_0 == led_indicator_get_handle((void *)LEDC_CHANNEL_0)); //test get handle
 
-    led_handle_0 = led_indicator_create(&config);
-    TEST_ASSERT_NOT_NULL(led_handle_0);
-    TEST_ASSERT(led_handle_0 == led_indicator_get_handle((void *)LEDC_CHANNEL_0)); //test get handle
-
-    ESP_LOGI(TAG, "breathe blink .....");
-    esp_err_t ret = led_indicator_start(led_handle_0, BLINK_BREATHE);
-    TEST_ASSERT(ret == ESP_OK);
-    while (1) {
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        ESP_LOGI(TAG, "breathe blink .....");
+        esp_err_t ret = led_indicator_start(led_handle_0, BLINK_BREATHE);
+        TEST_ASSERT(ret == ESP_OK);
+        static bool preempted = false;
+        int cnt = 3;
+        while (cnt--) {
+            if (preempted == false) {
+                ESP_LOGI(TAG, "preempt blink.....");
+                esp_err_t ret = led_indicator_preempt_start(led_handle_0, BLINK_50_BRIGHTNESS);
+                TEST_ASSERT(ret == ESP_OK);
+                preempted = true;
+            } else {
+                ESP_LOGI(TAG, "preempt blink stop.....");
+                esp_err_t ret = led_indicator_preempt_stop(led_handle_0, BLINK_50_BRIGHTNESS);
+                TEST_ASSERT(ret == ESP_OK);
+                preempted = false;
+            }
+            vTaskDelay(3000 / portTICK_PERIOD_MS);
+        }
+        led_indicator_delete(led_handle_0);
     }
 }
 

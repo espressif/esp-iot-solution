@@ -132,14 +132,29 @@ static void _blink_list_switch(_led_indicator_t *p_led_indicator)
  */
 static void _blink_list_runner(TimerHandle_t xTimer)
 {
-    _led_indicator_t *p_led_indicator = (_led_indicator_t *)pvTimerGetTimerID(xTimer);
     bool leave = false;
     bool hardware_level;
 
     while (!leave) {
+        _led_indicator_t *p_led_indicator = (_led_indicator_t *)pvTimerGetTimerID(xTimer);
+
+        if (p_led_indicator == NULL) {
+            break;
+        }
+
+        if (pdFALSE == xSemaphoreTake(p_led_indicator->mutex, 0)) {
+            // In most cases, the semaphore should be taken successfully.
+            // If not, it means that the blinks is changing, or user prepares to delete the indicator.
+            if (p_led_indicator->h_timer != NULL) {
+                xTimerChangePeriod(p_led_indicator->h_timer, pdMS_TO_TICKS(50), 0);
+                xTimerStart(p_led_indicator->h_timer, 0);
+            }
+            break;
+        }
 
         if (p_led_indicator->active_blink == NULL_ACTIVE_BLINK) {
-            return;
+            xSemaphoreGive(p_led_indicator->mutex);
+            break;
         }
 
         int active_blink = p_led_indicator->active_blink;
@@ -151,15 +166,6 @@ static void _blink_list_runner(TimerHandle_t xTimer)
             p_led_indicator->p_blink_steps[active_blink] += 1;
         }
 
-            if (pdFALSE == xSemaphoreTake(p_led_indicator->mutex, pdMS_TO_TICKS(100))) {
-                ESP_LOGW(TAG, "blinks runner blockTime expired, try repairing...");
-                if (p_led_indicator->h_timer != NULL) {
-                    xTimerChangePeriod(p_led_indicator->h_timer, pdMS_TO_TICKS(100), 0);
-                    xTimerStart(p_led_indicator->h_timer, 0);
-                }
-                break;
-            }
-
         switch (p_blink_step->type) {
         case LED_BLINK_LOOP:
             p_led_indicator->p_blink_steps[active_blink] = 0;
@@ -170,8 +176,9 @@ static void _blink_list_runner(TimerHandle_t xTimer)
             _blink_list_switch(p_led_indicator);
             break;
 
-        case LED_BLINK_HOLD:
+        case LED_BLINK_HOLD: {
             if (!p_led_indicator->hal_indicator_set_on_off) {
+                ESP_LOGW(TAG, "LED_BLINK_HOLD Skip: no hal_indicator_set_on_off function");
                 break;
             }
             hardware_level = p_blink_step->value ? p_led_indicator->is_active_level_high : !p_led_indicator->is_active_level_high;
@@ -188,10 +195,11 @@ static void _blink_list_runner(TimerHandle_t xTimer)
                 xTimerStart(p_led_indicator->h_timer, 0);
             }
             break;
+        }
 
         case LED_BLINK_BRIGHTNESS: {
             if (!p_led_indicator->hal_indicator_set_brightness) {
-                ESP_LOGW(TAG, "LED indicator does not have the hal_indicator_set_brightness function");
+                ESP_LOGW(TAG, "LED_BLINK_BRIGHTNESS Skip: no hal_indicator_set_brightness function");
                 break;
             }
 
@@ -213,7 +221,7 @@ static void _blink_list_runner(TimerHandle_t xTimer)
 
         case LED_BLINK_BREATHE: {
             if (!p_led_indicator->hal_indicator_set_brightness) {
-                ESP_LOGW(TAG, "LED indicator does not have the hal_indicator_set_brightness function");
+                ESP_LOGW(TAG, "LED_BLINK_BREATHE Skip: no hal_indicator_set_brightness function");
                 break;
             }
 
@@ -419,12 +427,12 @@ without_init:
 static esp_err_t _led_indicator_delete_com(_led_indicator_t *p_led_indicator)
 {
     esp_err_t err;
-    BaseType_t ret;
-    ret = xTimerStop(p_led_indicator->h_timer, portMAX_DELAY);
-    LED_INDICATOR_CHECK(ret == pdPASS, "LED timer stop failed", return ESP_FAIL);
-    ret = xTimerDelete(p_led_indicator->h_timer, portMAX_DELAY);
-    LED_INDICATOR_CHECK(ret == pdPASS, "LED timer delete failed", return ESP_FAIL);
+    vTimerSetTimerID(p_led_indicator->h_timer, NULL);
     xSemaphoreTake(p_led_indicator->mutex, portMAX_DELAY);
+    xTimerStop(p_led_indicator->h_timer, portMAX_DELAY);
+    xTimerDelete(p_led_indicator->h_timer, portMAX_DELAY);
+    p_led_indicator->h_timer = NULL;
+
     for (int i = 0; i < p_led_indicator->blink_list_num; i++) {
         p_led_indicator->p_blink_steps[i] = LED_BLINK_STOP;
     }
@@ -434,6 +442,7 @@ static esp_err_t _led_indicator_delete_com(_led_indicator_t *p_led_indicator)
     LED_INDICATOR_CHECK(err == ESP_OK, "LED indicator deinit failed", return ESP_FAIL);
 not_deinit:
     _led_indicator_remove_node(p_led_indicator);
+    xSemaphoreGive(p_led_indicator->mutex);
     vSemaphoreDelete(p_led_indicator->mutex);
     p_led_indicator->mutex = NULL;
     free(p_led_indicator->p_blink_steps);
