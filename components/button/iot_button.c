@@ -170,7 +170,7 @@ static void button_handler(button_dev_t *btn)
                     do {
                         btn->cb_info[btn->event][i].cb(btn, btn->cb_info[btn->event][i].usr_data);
                         i++;
-                        if (i > btn->size[btn->event])
+                        if (i >= btn->size[btn->event])
                             break;
                     } while (btn->cb_info[btn->event][i].event_data.multiple_clicks.clicks == btn->repeat);
                 }
