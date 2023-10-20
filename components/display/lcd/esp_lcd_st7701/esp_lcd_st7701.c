@@ -17,6 +17,9 @@
 
 #include "esp_lcd_st7701.h"
 
+#define ST7701_CMD_SDIR     (0xC7)
+#define ST7701_CMD_SS_BIT   (1 << 2)
+
 typedef struct {
     esp_lcd_panel_io_handle_t io;
     int reset_gpio_num;
@@ -25,6 +28,7 @@ typedef struct {
     const st7701_lcd_init_cmd_t *init_cmds;
     uint16_t init_cmds_size;
     struct {
+        unsigned int mirror_by_cmd: 1;
         unsigned int auto_del_panel_io: 1;
         unsigned int display_on_off_use_cmd: 1;
         unsigned int reset_level: 1;
@@ -33,6 +37,7 @@ typedef struct {
     esp_err_t (*init)(esp_lcd_panel_t *panel);
     esp_err_t (*del)(esp_lcd_panel_t *panel);
     esp_err_t (*reset)(esp_lcd_panel_t *panel);
+    esp_err_t (*mirror)(esp_lcd_panel_t *panel, bool x_axis, bool y_axis);
     esp_err_t (*disp_on_off)(esp_lcd_panel_t *panel, bool on_off);
 } st7701_panel_t;
 
@@ -43,6 +48,7 @@ static esp_err_t panel_st7701_send_init_cmds(st7701_panel_t *st7701);
 static esp_err_t panel_st7701_init(esp_lcd_panel_t *panel);
 static esp_err_t panel_st7701_del(esp_lcd_panel_t *panel);
 static esp_err_t panel_st7701_reset(esp_lcd_panel_t *panel);
+static esp_err_t panel_st7701_mirror(esp_lcd_panel_t *panel, bool mirror_x, bool mirror_y);
 static esp_err_t panel_st7701_disp_on_off(esp_lcd_panel_t *panel, bool off);
 
 esp_err_t esp_lcd_new_panel_st7701(const esp_lcd_panel_io_handle_t io, const esp_lcd_panel_dev_config_t *panel_dev_config,
@@ -51,6 +57,9 @@ esp_err_t esp_lcd_new_panel_st7701(const esp_lcd_panel_io_handle_t io, const esp
     ESP_RETURN_ON_FALSE(io && panel_dev_config && ret_panel, ESP_ERR_INVALID_ARG, TAG, "invalid arguments");
     st7701_vendor_config_t *vendor_config = (st7701_vendor_config_t *)panel_dev_config->vendor_config;
     ESP_RETURN_ON_FALSE(vendor_config && vendor_config->rgb_config, ESP_ERR_INVALID_ARG, TAG, "`verndor_config` and `rgb_config` are necessary");
+    ESP_RETURN_ON_FALSE(!vendor_config->flags.auto_del_panel_io || !vendor_config->flags.mirror_by_cmd,
+                        ESP_ERR_INVALID_ARG, TAG, "`mirror_by_cmd` and `auto_del_panel_io` cannot work together");
+
 
     esp_err_t ret = ESP_OK;
     st7701_panel_t *st7701 = (st7701_panel_t *)calloc(1, sizeof(st7701_panel_t));
@@ -96,6 +105,7 @@ esp_err_t esp_lcd_new_panel_st7701(const esp_lcd_panel_io_handle_t io, const esp
     st7701->init_cmds = vendor_config->init_cmds;
     st7701->init_cmds_size = vendor_config->init_cmds_size;
     st7701->reset_gpio_num = panel_dev_config->reset_gpio_num;
+    st7701->flags.mirror_by_cmd = vendor_config->flags.mirror_by_cmd;
     st7701->flags.display_on_off_use_cmd = (vendor_config->rgb_config->disp_gpio_num >= 0) ? 0 : 1;
     st7701->flags.auto_del_panel_io = vendor_config->flags.auto_del_panel_io;
     st7701->flags.reset_level = panel_dev_config->flags.reset_active_high;
@@ -130,11 +140,13 @@ esp_err_t esp_lcd_new_panel_st7701(const esp_lcd_panel_io_handle_t io, const esp
     st7701->init = (*ret_panel)->init;
     st7701->del = (*ret_panel)->del;
     st7701->reset = (*ret_panel)->reset;
+    st7701->mirror = (*ret_panel)->mirror;
     st7701->disp_on_off = (*ret_panel)->disp_on_off;
     // Overwrite the functions of RGB panel
     (*ret_panel)->init = panel_st7701_init;
     (*ret_panel)->del = panel_st7701_del;
     (*ret_panel)->reset = panel_st7701_reset;
+    (*ret_panel)->mirror = panel_st7701_mirror;
     (*ret_panel)->disp_on_off = panel_st7701_disp_on_off;
     (*ret_panel)->user_data = st7701;
     ESP_LOGD(TAG, "new st7701 panel @%p", st7701);
@@ -295,6 +307,38 @@ static esp_err_t panel_st7701_reset(esp_lcd_panel_t *panel)
     // Reset RGB panel
     ESP_RETURN_ON_ERROR(st7701->reset(panel), TAG, "reset RGB panel failed");
 
+    return ESP_OK;
+}
+
+static esp_err_t panel_st7701_mirror(esp_lcd_panel_t *panel, bool mirror_x, bool mirror_y)
+{
+    st7701_panel_t *st7701 = (st7701_panel_t *)panel->user_data;
+    esp_lcd_panel_io_handle_t io = st7701->io;
+    uint8_t sdir_val = 0;
+
+    if (st7701->flags.mirror_by_cmd) {
+        ESP_RETURN_ON_FALSE(io, ESP_FAIL, TAG, "Panel IO is deleted, cannot send command");
+        // Control mirror through LCD command
+        if (mirror_x) {
+            sdir_val = ST7701_CMD_SS_BIT;
+        } else {
+            sdir_val = 0;
+        }
+        if (mirror_y) {
+            st7701->madctl_val |= LCD_CMD_ML_BIT;
+        } else {
+            st7701->madctl_val &= ~LCD_CMD_ML_BIT;
+        }
+        ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, ST7701_CMD_SDIR, (uint8_t[]) {
+            sdir_val,
+        }, 1), TAG, "send command failed");;
+        ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, LCD_CMD_MADCTL, (uint8_t[]) {
+            st7701->madctl_val,
+        }, 1), TAG, "send command failed");;
+    } else {
+        // Control mirror through RGB panel
+        ESP_RETURN_ON_ERROR(st7701->mirror(panel, mirror_x, mirror_y), TAG, "RGB panel mirror failed");
+    }
     return ESP_OK;
 }
 

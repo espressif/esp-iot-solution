@@ -28,13 +28,13 @@ It's recommended to use the [esp_lcd_panel_io_additions](https://components.espr
 ```c
     ESP_LOGI(TAG, "Install 3-wire SPI panel IO");
     spi_line_config_t line_config = {
-        .cs_io_type = IO_TYPE_EXPANDER,     // Set to `IO_TYPE_GPIO` if using GPIO, same to below
-        .cs_expander_pin = EXAMPLE_LCD_IO_SPI_CS,
+        .cs_io_type = IO_TYPE_EXPANDER,             // Set to `IO_TYPE_EXPANDER` if using IO expander
+        .cs_gpio_num = EXAMPLE_LCD_IO_SPI_CS,
         .scl_io_type = IO_TYPE_GPIO,
-        .scl_expander_pin = EXAMPLE_LCD_IO_SPI_SCK,
+        .scl_gpio_num = EXAMPLE_LCD_IO_SPI_SCK,
         .sda_io_type = IO_TYPE_GPIO,
-        .sda_expander_pin = EXAMPLE_LCD_IO_SPI_SDO,
-        .io_expander = expander_handle,     // Set to NULL if not using IO expander
+        .sda_gpio_num = EXAMPLE_LCD_IO_SPI_SDO,
+        .io_expander = NULL,                        // Set to device handle if using IO expander
     };
     esp_lcd_panel_io_3wire_spi_config_t io_config = ST7701_PANEL_IO_3WIRE_SPI_CONFIG(line_config, 0);
     esp_lcd_panel_io_handle_t io_handle = NULL;
