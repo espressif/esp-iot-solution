@@ -42,10 +42,10 @@ typedef enum {
  *
  */
 typedef struct {
-    bool is_active_level_high;                                                             /**< Set true if GPIO level is high when light is ON, otherwise false. */
+    bool is_active_level_high;                                                             /*!< Set true if GPIO level is high when light is ON, otherwise false. */
     led_indicator_duty_t duty_resolution;                                                  /*!< Resolution of duty setting in number of bits. The range of duty values is [0, (2**duty_resolution) -1]. If the brightness cannot be set, set this as 1. */
     esp_err_t (*hal_indicator_init)(void *hardware_data );                                 /*!< pointer functions for initialization*/
-    esp_err_t (*hal_indicator_set_on_off)(void *hardware_data, bool on_off);                /*!< pointer functions for setting on or off */
+    esp_err_t (*hal_indicator_set_on_off)(void *hardware_data, bool on_off);               /*!< pointer functions for setting on or off */
     esp_err_t (*hal_indicator_deinit)(void *hardware_data );                               /*!< pointer functions for deinitialization */
     esp_err_t (*hal_indicator_set_brightness)(void *hardware_data, uint32_t brightness);   /*!< pointer functions for setting brightness, must be supported by hardware */
     void *hardware_data;                                                                   /*!< user hardware data*/

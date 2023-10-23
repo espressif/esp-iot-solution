@@ -1,5 +1,21 @@
 # ChangeLog
 
+## v0.5.1 - 2023-10-23
+
+### BUG FIX
+
+* Fix the issue that led_indicator is destroyed but timer is still running.
+
+## v0.5.0 - 2023-10-7
+
+### Enhancements:
+
+* Simplified the initialization process for LEDC.
+
+### BUG FIX
+
+* Resolved the blink issue in the breathing mode.
+
 ## v0.4.0 - 2023-4-12
 
 ### Enhancements:

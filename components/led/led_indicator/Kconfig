@@ -9,4 +9,38 @@ menu "LED Indicator"
         bool "Enable gamma correction"
         default "y"
 
+    menu "LEDC Config"
+
+        choice LEDC_SPEED_MODE
+            prompt "LEDC Speed Mode"
+            default LEDC_LOW_SPEED_MODE
+
+        config LEDC_HIGH_SPEED_MODE
+            bool "LEDC high speed mode"
+            depends on SOC_LEDC_SUPPORT_HS_MODE
+        config LEDC_LOW_SPEED_MODE
+            bool "LEDC low speed mode"
+        endchoice
+
+        config LEDC_SPEED_MODE_VALUE
+            int
+            default 1 if LEDC_LOW_SPEED_MODE && SOC_LEDC_SUPPORT_HS_MODE
+            default 0 if LEDC_HIGH_SPEED_MODE && SOC_LEDC_SUPPORT_HS_MODE
+            default 0 if LEDC_LOW_SPEED_MODE && !SOC_LEDC_SUPPORT_HS_MODE
+
+        config LEDC_TIMER_BIT_NUM
+            int "LEDC Timer Bit Num"
+            default 13
+            range 1 20 if SOC_LEDC_TIMER_BIT_WIDE_NUM > 14
+            range 1 14 if SOC_LEDC_TIMER_BIT_WIDE_NUM <= 14
+            help
+                The bit number of LEDC timer (1 - SOC_LEDC_TIMER_BIT_WIDE_NUM)
+
+        config LEDC_TIMER_FREQ_HZ
+            int "LEDC Timer Frequency"
+            default 5000
+            help
+                The frequency of LEDC timer (1 - 40000000)
+    endmenu
+
 endmenu
