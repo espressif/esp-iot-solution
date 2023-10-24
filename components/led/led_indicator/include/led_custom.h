@@ -48,6 +48,8 @@ typedef struct {
     esp_err_t (*hal_indicator_set_on_off)(void *hardware_data, bool on_off);               /*!< pointer functions for setting on or off */
     esp_err_t (*hal_indicator_deinit)(void *hardware_data );                               /*!< pointer functions for deinitialization */
     esp_err_t (*hal_indicator_set_brightness)(void *hardware_data, uint32_t brightness);   /*!< pointer functions for setting brightness, must be supported by hardware */
+    esp_err_t (*hal_indicator_set_rgb)(void *hardware, uint32_t rgb_value);                /*!< Pointer function for setting rgb, must be supported by hardware */
+    esp_err_t (*hal_indicator_set_hsv)(void *hardware, uint32_t hsv_value);                /*!< Pointer function for setting rgb, must be supported by hardware */
     void *hardware_data;                                                                   /*!< user hardware data*/
 } led_indicator_custom_config_t;
 

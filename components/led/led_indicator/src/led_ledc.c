@@ -63,7 +63,7 @@ esp_err_t led_indicator_ledc_init(void *param)
     LED_LEDC_CHECK(NULL != s_ledc, "alloc fail", return ESP_ERR_NO_MEM);
 
     if (!cfg->timer_inited) {
-        ledc_timer_config_t ledc_timer_cfg = LEDC_TIMER_CONFIG(cfg->timer_num); 
+        ledc_timer_config_t ledc_timer_cfg = LEDC_TIMER_CONFIG(cfg->timer_num);
         ret = ledc_timer_config(&ledc_timer_cfg);
         LED_LEDC_CHECK(ESP_OK == ret, "LEDC timer config fail!", goto EXIT);
         s_ledc->max_duty = pow(2, ledc_timer_cfg.duty_resolution) - 1;
@@ -125,8 +125,8 @@ esp_err_t led_indicator_ledc_set_brightness(void *channel, uint32_t brightness)
     esp_err_t ret;
     uint32_t ch = (uint32_t)channel;
     LED_LEDC_CHECK(s_ledc->ledc_channel[ch].is_init, "LEDC channel does't init", return ESP_FAIL);
-    LED_LEDC_CHECK(s_ledc->max_duty > brightness, "brightness can't be larger than (2^max_duty - 1)", return ESP_FAIL);
-    ret = ledc_set_duty(LEDC_MODE, s_ledc->ledc_channel[ch].channel, brightness);
+    LED_LEDC_CHECK(brightness <= UINT8_MAX , "brightness can't be larger than UINT8_MAX", return ESP_FAIL);
+    ret = ledc_set_duty(LEDC_MODE, s_ledc->ledc_channel[ch].channel, brightness * s_ledc->max_duty / UINT8_MAX);
     LED_LEDC_CHECK(ESP_OK == ret, "LEDC set duty error", return ret);
     ret = ledc_update_duty(LEDC_MODE, s_ledc->ledc_channel[ch].channel);
     LED_LEDC_CHECK(ESP_OK == ret, "LEDC update duty error", return ret);
