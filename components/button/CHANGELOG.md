@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v3.1.2 - 2023-10-24
+
+### bugfix
+
+* Fixed a bug where iot_button_delete feature crashes for custom button
+
 ## v3.1.1 - 2023-10-18
 
 ### bugfix
