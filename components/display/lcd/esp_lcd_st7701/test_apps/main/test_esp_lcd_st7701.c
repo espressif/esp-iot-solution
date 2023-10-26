@@ -88,11 +88,11 @@ TEST_CASE("test st7701 to draw color bar with RGB interface", "[st7701][rgb]")
     ESP_LOGI(TAG, "Install 3-wire SPI panel IO");
     spi_line_config_t line_config = {
         .cs_io_type = IO_TYPE_GPIO,
-        .cs_expander_pin = TEST_LCD_IO_SPI_CS_1,
+        .cs_gpio_num = TEST_LCD_IO_SPI_CS_1,
         .scl_io_type = IO_TYPE_GPIO,
-        .scl_expander_pin = TEST_LCD_IO_SPI_SCL,
+        .scl_gpio_num = TEST_LCD_IO_SPI_SCL,
         .sda_io_type = IO_TYPE_GPIO,
-        .sda_expander_pin = TEST_LCD_IO_SPI_SDA,
+        .sda_gpio_num = TEST_LCD_IO_SPI_SDA,
         .io_expander = NULL,
     };
     esp_lcd_panel_io_3wire_spi_config_t io_config = ST7701_PANEL_IO_3WIRE_SPI_CONFIG(line_config, 0);
@@ -139,7 +139,7 @@ TEST_CASE("test st7701 to draw color bar with RGB interface", "[st7701][rgb]")
     };
     const esp_lcd_panel_dev_config_t panel_config = {
         .reset_gpio_num = TEST_LCD_IO_RST,
-        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_BGR,
+        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,
         .bits_per_pixel = TEST_LCD_BIT_PER_PIXEL,
         .vendor_config = &vendor_config,
     };
@@ -178,9 +178,9 @@ TEST_CASE("test st7701 to draw color bar with RGB interface, using IO expander",
         .cs_io_type = IO_TYPE_EXPANDER,
         .cs_expander_pin = TEST_LCD_IO_SPI_CS_2,
         .scl_io_type = IO_TYPE_GPIO,
-        .scl_expander_pin = TEST_LCD_IO_SPI_SCL,
+        .scl_gpio_num = TEST_LCD_IO_SPI_SCL,
         .sda_io_type = IO_TYPE_GPIO,
-        .sda_expander_pin = TEST_LCD_IO_SPI_SDA,
+        .sda_gpio_num = TEST_LCD_IO_SPI_SDA,
         .io_expander = expander_handle,
     };
     esp_lcd_panel_io_3wire_spi_config_t io_config = ST7701_PANEL_IO_3WIRE_SPI_CONFIG(line_config, 0);
@@ -227,7 +227,7 @@ TEST_CASE("test st7701 to draw color bar with RGB interface, using IO expander",
     };
     const esp_lcd_panel_dev_config_t panel_config = {
         .reset_gpio_num = TEST_LCD_IO_RST,
-        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_BGR,
+        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,
         .bits_per_pixel = TEST_LCD_BIT_PER_PIXEL,
         .vendor_config = &vendor_config,
     };

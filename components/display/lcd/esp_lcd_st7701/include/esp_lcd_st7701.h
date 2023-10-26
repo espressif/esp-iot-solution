@@ -41,7 +41,10 @@ typedef struct {
                                                      */
     uint16_t init_cmds_size;                        /*<! Number of commands in above array */
     struct {
-        unsigned int auto_del_panel_io: 1;          /*<! Delete the panel IO instance automatically if set to 1.
+        unsigned int mirror_by_cmd: 1;              /*<! The `mirror()` function will be implemented by LCD command if set to 1.
+                                                     *   Otherwise, the function will be implemented by software.
+                                                     */
+        unsigned int auto_del_panel_io: 1;          /*<! Delete the panel IO instance automatically if set to 1. All `*_by_cmd` flags will be invalid.
                                                      *   If the panel IO pins are sharing other pins of the RGB interface to save GPIOs,
                                                      *   Please set it to 1 to release the panel IO and its pins (except CS signal).
                                                      */
