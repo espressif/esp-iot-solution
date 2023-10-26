@@ -126,8 +126,9 @@ esp_err_t pwm_init(driver_pwm_t *config, void(*hook_func)(void *))
         }
     } else if (config->phase_delay.flag & PWM_CW_CHANNEL_PHASE_DELAY_FLAG) {
         grayscale_level /= 2;
-        for (int i = 3; i < 5; i++) {
-            s_pwm->hponit[i] = grayscale_level * i;
+        uint8_t cw_start_ch = 3;
+        for (int i = 0; i < 2; i++) {
+            s_pwm->hponit[cw_start_ch + i] = grayscale_level * i;
         }
     } else if (config->phase_delay.flag & PWM_RGBCW_CHANNEL_PHASE_DELAY_FLAG) {
         grayscale_level /= 5;
@@ -137,7 +138,9 @@ esp_err_t pwm_init(driver_pwm_t *config, void(*hook_func)(void *))
     } else {
         /* Nothing */
     }
-    hook_func((void*)grayscale_level);
+    if (hook_func) {
+        hook_func((void*)grayscale_level);
+    }
 
     err = ledc_fade_func_install(ESP_INTR_FLAG_IRAM);
     PWM_CHECK(err == ESP_OK, "ledc_fade_func_install fail", goto EXIT);

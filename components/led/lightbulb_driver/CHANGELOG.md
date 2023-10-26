@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.5.1 - 2023-10-26
+
+### Bug Fixes:
+
+* Fix phase delay for pwm cw channel.
+
 ## v0.5.0 - 2023-10-09
 
 ### Enhancements:
