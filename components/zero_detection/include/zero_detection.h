@@ -6,11 +6,6 @@
 #ifndef _ZERO_DETECTION_H_
 #define _ZERO_DETECTION_H_
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <inttypes.h>
-
 #include "driver/gpio.h"
 #include "driver/mcpwm_cap.h"
 #include "hal/gpio_ll.h"
@@ -22,7 +17,6 @@
 #include "soc/gpio_struct.h"
 #include "esp_log.h"
 #include "esp_check.h"
-#include "esp_private/esp_clk.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -83,44 +77,44 @@ typedef union {
      * @brief Signal exceeds frequency range data return type
      */
     struct {
-        mcpwm_capture_edge_t cap_edge;
-        uint32_t full_cycle_us;
+        mcpwm_capture_edge_t cap_edge; /*!< Trigger edge of zero cross signal */
+        uint32_t full_cycle_us;        /*!< Current signal cycle */
     } signal_freq_event_data_t;
 
     /**
      * @brief Signal valid data return type
      */
     struct {
-        mcpwm_capture_edge_t cap_edge;
-        uint32_t full_cycle_us;
-        uint16_t valid_count;
+        mcpwm_capture_edge_t cap_edge; /*!< Trigger edge of zero cross signal */
+        uint32_t full_cycle_us;        /*!< Current signal cycle */
+        uint16_t valid_count;          /*!< Counting when the signal is valid */
     } signal_valid_event_data_t;
 
     /**
      * @brief Signal invalid data return type
      */
     struct {
-        mcpwm_capture_edge_t cap_edge;
-        uint32_t full_cycle_us;
-        uint16_t invalid_count;
+        mcpwm_capture_edge_t cap_edge; /*!< Trigger edge of zero cross signal */
+        uint32_t full_cycle_us;        /*!< Current signal cycle */
+        uint16_t invalid_count;        /*!< Counting when the signal is invalid */
     } signal_invalid_event_data_t;
 
     /**
      * @brief Signal rising edge data return type
      */
     struct {
-        uint16_t valid_count;
-        uint16_t invalid_count;
-        uint32_t full_cycle_us;
+        uint16_t valid_count;          /*!< Counting when the signal is valid */
+        uint16_t invalid_count;        /*!< Counting when the signal is invalid */
+        uint32_t full_cycle_us;        /*!< Current signal cycle */
     } signal_rising_edge_event_data_t;
 
     /**
      * @brief Signal falling edge data return type
      */
     struct {
-        uint16_t valid_count;
-        uint16_t invalid_count;
-        uint32_t full_cycle_us;
+        uint16_t valid_count;          /*!< Counting when the signal is valid */
+        uint16_t invalid_count;        /*!< Counting when the signal is invalid */
+        uint32_t full_cycle_us;        /*!< Current signal cycle */
     } signal_falling_edge_event_data_t;
 } zero_detect_cb_param_t;
 
@@ -133,14 +127,14 @@ typedef int (*esp_zero_detect_cb_t)(zero_detect_event_t zero_detect_event, zero_
  * @brief User config data type
  */
 typedef struct {
-    uint32_t capture_pin;
-    uint16_t valid_time;            //Count value when the signal is valid
-    uint16_t invalid_time;          //Count value when thea signl exceeds the frequency range
-    zero_signal_type_t zero_signal_type;          //Zero Crossing Signal Type
-    zero_driver_type_t zero_driver_type;          //Zero crossing driver type
-    double freq_range_max_hz;       //Maximum value of the frequency range when determining a valid signal
-    double freq_range_min_hz;       //Minimum value of the frequency range when determining a valid signal
-    esp_zero_detect_cb_t event_callback;
+    int32_t capture_pin;           /*!< GPIO number for zero cross detect capture */
+    uint16_t valid_time;            /*!< Comparison value for determining signal validity */
+    uint16_t invalid_time;          /*!< Comparison value for determining signal invalidity */
+    zero_signal_type_t zero_signal_type;          /*!< Zero Crossing Signal type */
+    zero_driver_type_t zero_driver_type;          /*!< Zero crossing driver type */
+    double freq_range_max_hz;       /*!< Maximum value of the frequency range when determining a valid signal */
+    double freq_range_min_hz;       /*!< Minimum value of the frequency range when determining a valid signal */
+    esp_zero_detect_cb_t event_callback; /*!< Various event returns in zero cross detection */
 } zero_detect_config_t;
 
 typedef void *zero_detect_handle_t;

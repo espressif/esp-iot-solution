@@ -1,8 +1,8 @@
-/*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+/* SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+
 #include "zero_detection.h"
 
 #define ZERO_DETECTION_RELAY_CONFIG_DEFAULT() { \
@@ -10,8 +10,8 @@
     .relay_on_off = 0, \
     .relay_active_level = 1,\
     .relay_status_after_power_loss = 1,\
-    .control_pin = CONFIG_ZERO_DETECT_OUTPUT_GPIO,\
     .relay_out_of_range = RELAY_DEFAULT_LOW,\
+    .control_pin = CONFIG_ZERO_DETECT_OUTPUT_GPIO,\
 }
 
 static const char *TAG = "example";
@@ -27,7 +27,7 @@ typedef struct {
     bool relay_on_off;         //Current user switch command
     bool relay_active_level;   //Active level for controlling the relay
     bool relay_status_after_power_loss;  //Status After power loss
-    uint32_t control_pin;
+    int32_t control_pin;
     zero_out_range_default_t relay_out_of_range; //Actions taken when the signal is out of the frequency range
 } zero_cross_relay_t;
 
@@ -139,8 +139,11 @@ void app_main(void)
     config.valid_time = 6;
     config.event_callback = zero_detection_event_cb;     //Create callback
     config.zero_signal_type = CONFIG_ZERO_DETECT_SIGNAL_TYPE;
+#if defined(SOC_MCPWM_SUPPORTED)
     config.zero_driver_type = MCPWM_TYPE;
-
+#else
+    config.zero_driver_type = GPIO_TYPE;
+#endif
     g_zcds = zero_detect_create(&config);
     relay_on_off(true);  //User API to contorl the relay
 

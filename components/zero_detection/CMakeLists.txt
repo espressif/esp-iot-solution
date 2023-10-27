@@ -5,3 +5,6 @@ if("${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}" VERSION_GREATER_EQUAL "5.0")
 else()
     message(FATAL_ERROR "Not supported in the current version")
 endif()
+
+include(package_manager)
+cu_pkg_define_version(${CMAKE_CURRENT_LIST_DIR})

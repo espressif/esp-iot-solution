@@ -1,4 +1,5 @@
-/* SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+/*
+ * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -7,16 +8,20 @@
 
 static const char *TAG = "zero_detect";
 
+/**
+ * @brief Structs to store device info
+ *
+ */
 typedef struct zero_cross {
 
     uint32_t cap_val_begin_of_sample;     //Tick record value captured by the timer
     uint32_t cap_val_end_of_sample;
     uint32_t full_cycle_us;            //Tick value after half a cycle, becomes the entire cycle after multiplying by two
 
-    uint16_t valid_count;            //Count value of valid signals,Switching during half a cycle
+    uint16_t valid_count;            //Count value of valid signals,switching during half a cycle
     uint16_t valid_time;             //Number of valid signal verifications
 
-    uint16_t invalid_count;          //Count value of invalid signals,Switching during half a cycle
+    uint16_t invalid_count;          //Count value of invalid signals,switching during half a cycle
     uint16_t invalid_time;           //Number of invalid signal verifications
 
     bool zero_source_power_invalid;  //Power loss flag when signal source is lost
@@ -25,7 +30,7 @@ typedef struct zero_cross {
     zero_signal_type_t zero_signal_type;  //Zero crossing signal type
     zero_driver_type_t zero_driver_type;  //Zero crossing driver type
 
-    uint32_t capture_pin;
+    int32_t capture_pin;
 
     double freq_range_max_us;      //Tick value calculated after the user inputs the frequency
     double freq_range_min_us;
@@ -42,6 +47,9 @@ typedef struct zero_cross {
 
 } zero_cross_dev_t;
 
+/**
+  * @brief  Zero cross detecion driver core function
+  */
 void zero_cross_handle_interrupt(void *user_data, const mcpwm_capture_event_data_t *edata)
 {
     zero_cross_dev_t *zero_cross_dev = user_data;
@@ -337,7 +345,25 @@ err:
 
 zero_detect_handle_t zero_detect_create(zero_detect_config_t *config)
 {
+    ESP_LOGI(TAG, "IoT Zero Detecion Version: %d.%d.%d", ZERO_DETECTION_VER_MAJOR, ZERO_DETECTION_VER_MINOR, ZERO_DETECTION_VER_PATCH);
     zero_cross_dev_t *zcd = (zero_cross_dev_t *) calloc(1, sizeof(zero_cross_dev_t));
+    if (NULL == zcd) {
+        ESP_LOGI(TAG, "Calloc device failed");
+        return NULL;
+    }
+
+    if (config->freq_range_max_hz < 0) {
+        ESP_LOGW(TAG, "The entered freq_range_max_hz should not be negative, setting to the default value of 65 as the current value");
+        config->freq_range_max_hz = 65;
+    }
+    if (config->freq_range_min_hz < 0) {
+        ESP_LOGW(TAG, "The entered freq_range_min_hz should not be negative, setting to the default value of 45 as the current value");
+        config->freq_range_min_hz = 45;
+    }
+    if (!GPIO_IS_VALID_GPIO(config->capture_pin)) {
+        ESP_LOGW(TAG, "The current GPIO pin is invalid; set to the default GPIO2");
+        config->capture_pin = 2;
+    }
 
     zcd->valid_time = config->valid_time;
     zcd->invalid_time = config->invalid_time;

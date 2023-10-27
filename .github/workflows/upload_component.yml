@@ -45,6 +45,7 @@ jobs:
             components/usb/usb_device_uvc;
             components/usb/usb_stream;
             components/utilities/xz;
+            components/zero_detection;
             tools/cmake_utilities;
           namespace: "espressif"
           api_token: ${{ secrets.IDF_COMPONENT_API_TOKEN }}

@@ -440,6 +440,37 @@ examples_test_usb_uf2_ota:
     TEST_FOLDER: examples/usb/device/usb_uf2_ota
     TEST_ENV: ${ENV_TAG}
 
+components_test_zero_detection:
+  extends:
+    - .pytest_template
+    - .rules:build:components_zero_detection_test_apps
+  needs:
+    - job: "build_components_zero_detection_test_apps"
+      artifacts: true
+      optional: true
+  parallel:
+    matrix:
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "5.0"
+        ENV_TAG: zero_detection
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "5.1"
+        ENV_TAG: zero_detection
+      - IDF_TARGET: esp32c3
+        IDF_VERSION: "5.0"
+        ENV_TAG: zero_detection
+      - IDF_TARGET: esp32c3
+        IDF_VERSION: "5.1"
+        ENV_TAG: zero_detection
+  tags:
+    - ${IDF_TARGET}
+    - ${ENV_TAG}
+  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
+  variables:
+    TEST_TARGET: ${IDF_TARGET}
+    TEST_FOLDER: components/zero_detection
+    TEST_ENV: ${ENV_TAG}
+
 tools_test_cmake_utilities:
   extends:
     - .pytest_template
