@@ -1,0 +1,37 @@
+menu "Example Configuration"
+
+    orsource "$IDF_PATH/examples/common_components/env_caps/$IDF_TARGET/Kconfig.env_caps"
+
+    config ZERO_DETECT_INPUT_GPIO
+        int "ZERO CROSS DETCETION INPUT GPIO"
+        range 0 48
+        default 2
+        help
+            "ZERO CROSS DETCETION INPUT GPIO"
+    
+    config ZERO_DETECT_OUTPUT_GPIO
+        int "ZERO CROSS DETCETION OUTPUT GPIO"
+        range 0 48
+        default 5
+        help
+            "ZERO CROSS DETCETION INPUT GPIO"
+
+    choice ZERO_DETECT_SIGNAL_TYPE
+        prompt "SIGNAL TYPE"
+        default SQUARE_WAVE
+        help
+            ZERO DETECT SIGNAL TYPE
+
+        config SQUARE_WAVE
+            bool "SQUARE WAVE"
+        config PULSE_WAVE
+            bool "PULSE WAVE"
+    endchoice
+
+    config ZERO_DETECT_SIGNAL_TYPE
+        int
+        default 0 if SQUARE_WAVE
+        default 1 if PULSE_WAVE
+        default 0
+
+endmenu
