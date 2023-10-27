@@ -428,10 +428,6 @@ esp_err_t iot_button_delete(button_handle_t btn_handle)
             ret = btn->hal_button_deinit(btn->hardware_data);
         }
 
-        if (btn->hardware_data) {
-            free(btn->hardware_data);
-            btn->hardware_data = NULL;
-        }
         break;
     default:
         break;
