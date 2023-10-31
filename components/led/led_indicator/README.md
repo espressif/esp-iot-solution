@@ -7,6 +7,7 @@ As one of the simplest output peripherals, LED indicators can indicate the curre
 * Can set up multiple indicators
 * LEDC and other drivers support adjustable brightness, gradient
 * Support adjustment light with gamma
+* Supports LED strips types like WS2812 and SK6812, and offers gradual color transitions based on the color wheel, brightness transitions, and the ability to specify LED index.
 
 ### LED Indicator User Guide
 

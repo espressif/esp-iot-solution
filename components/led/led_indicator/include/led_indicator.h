@@ -15,6 +15,7 @@ extern "C" {
 #include "esp_err.h"
 #include "led_gpio.h"
 #include "led_ledc.h"
+#include "led_strips.h"
 #include "led_custom.h"
 
 /**
@@ -37,7 +38,11 @@ typedef enum {
     LED_BLINK_STOP = -1,   /*!< stop the blink */
     LED_BLINK_HOLD,        /*!< hold the on-off state */
     LED_BLINK_BREATHE,     /*!< breathe state */
-    LED_BLINK_BRIGHTNESS,  /*!< set the brightness */
+    LED_BLINK_BRIGHTNESS,  /*!< set the brightness, it will transition from the old brightness to the new brightness */
+    LED_BLINK_RGB,         /*!< color change with R(0-255) G(0-255) B(0-255) */
+    LED_BLINK_RGB_RING,    /*!< Gradual color transition from old color to new color in a color ring */
+    LED_BLINK_HSV,         /*!< color change with H(0-360) S(0-255) V(0-255) */
+    LED_BLINK_HSV_RING,    /*!< Gradual color transition from old color to new color in a color ring */
     LED_BLINK_LOOP,        /*!< loop from first step */
 } blink_step_type_t;
 
@@ -47,8 +52,8 @@ typedef enum {
  */
 typedef struct {
     blink_step_type_t type;          /*!< action type in this step */
-    uint8_t value;                   /*!< hold on or off, set NULL if LED_BLINK_STOP or LED_BLINK_LOOP */
-    uint32_t hold_time_ms;           /*!< hold time(ms), set NULL if not LED_BLINK_HOLD,*/
+    uint32_t value;                  /*!< hold on or off, set 0 if LED_BLINK_STOP() or LED_BLINK_LOOP */
+    uint32_t hold_time_ms;           /*!< hold time(ms), set 0 if not LED_BLINK_HOLD */
 } blink_step_t;
 
 /**
@@ -56,9 +61,10 @@ typedef struct {
  *
  */
 typedef enum {
-    LED_GPIO_MODE,         /*!< blink with max brightness*/
-    LED_LEDC_MODE,         /*!< blink with LEDC driver*/
-    LED_CUSTOM_MODE,       /*!< blink with custom driver*/
+    LED_GPIO_MODE,         /*!< blink with max brightness */
+    LED_LEDC_MODE,         /*!< blink with LEDC driver */
+    LED_STRIPS_MODE,       /*!< blink with LEDC strips driver */
+    LED_CUSTOM_MODE,       /*!< blink with custom driver */
 } led_indicator_mode_t;
 
 /**
@@ -68,9 +74,10 @@ typedef enum {
 typedef struct {
     led_indicator_mode_t mode;                  /*!< LED work mode, eg. GPIO or pwm mode */
     union {
-        led_indicator_gpio_config_t *led_indicator_gpio_config;     /*!< LED GPIO configuration */
-        led_indicator_ledc_config_t *led_indicator_ledc_config;     /*!< LED LEDC configuration */
-        led_indicator_custom_config_t *led_indicator_custom_config; /*!< LED custom configuration */
+        led_indicator_gpio_config_t *led_indicator_gpio_config;       /*!< LED GPIO configuration */
+        led_indicator_ledc_config_t *led_indicator_ledc_config;       /*!< LED LEDC configuration */
+        led_indicator_strips_config_t *led_indicator_strips_config;   /*!< LED LEDC rgb configuration */
+        led_indicator_custom_config_t *led_indicator_custom_config;   /*!< LED custom configuration */
     }; /**< LED configuration */
     blink_step_t const **blink_lists;           /*!< user defined LED blink lists */
     uint16_t blink_list_num;                    /*!< number of blink lists */
@@ -162,6 +169,64 @@ esp_err_t led_indicator_preempt_stop(led_indicator_handle_t handle, int blink_ty
  *         if handle is null return 0
  */
 uint8_t led_indicator_get_current_fade_value(led_indicator_handle_t handle);
+
+/**
+ * @brief Set the LED indicator on or off.
+ *
+ * @param handle LED indicator handle.
+ * @param on_off true: on, false: off
+ * @note If you have an RGB/Strips type of light, this API will control the last LED
+ *       index you set, and the color will be displayed based on the last color you set.
+ * @return esp_err_t
+ *     - ESP_OK: Success
+ *     - ESP_FAIL: Failure
+ *     - ESP_ERR_INVALID_ARG: Invalid parameter
+ */
+esp_err_t led_indicator_set_on_off(led_indicator_handle_t handle, bool on_off);
+
+/**
+ * @brief Set the brightness for the LED indicator.
+ *
+ * @param handle LED indicator handle.
+ * @param brightness Brightness value to set (0 to 255).
+ *        You can control a specific LED by specifying the index using `SET_IB`,
+ *        and set it to MAX_INDEX 127 to control all LEDs. This feature is only
+ *        supported for LEDs of type LED_RGB_MODE.
+ *        Index: (0-126), set (127) to control all.
+ * @return esp_err_t
+ *     - ESP_OK: Success
+ *     - ESP_FAIL: Failure
+ *     - ESP_ERR_INVALID_ARG: Invalid parameter
+ */
+esp_err_t led_indicator_set_brightness(led_indicator_handle_t handle, uint32_t brightness);
+
+/**
+ * @brief Set the HSV color for the LED indicator.
+ *
+ * @param handle LED indicator handle.
+ * @param ihsv_value HSV color value to set.
+ *       I: 0-126, set 127 to control all H: 0-360, S: 0-255, V: 0-255
+ * @note Index settings are only supported for LED_RGB_MODE.
+ * @return esp_err_t
+ *     - ESP_OK: Success
+ *     - ESP_FAIL: Failure
+ *     - ESP_ERR_INVALID_ARG: Invalid parameter
+ */
+esp_err_t led_indicator_set_hsv(led_indicator_handle_t handle, uint32_t ihsv_value);
+
+/**
+ * @brief Set the RGB color for the LED indicator.
+ *
+ * @param handle LED indicator handle.
+ * @param irgb_value RGB color value to set (0xRRGGBB).
+ *        I: 0-126, set 127 to control all R: 0-255, G: 0-255, B: 0-255
+ * @note Index settings are only supported for LED_RGB_MODE.
+ * @return esp_err_t
+ *     - ESP_OK: Success
+ *     - ESP_FAIL: Failure
+ *     - ESP_ERR_INVALID_ARG: Invalid parameter
+ */
+esp_err_t led_indicator_set_rgb(led_indicator_handle_t handle, uint32_t irgb_value);
 
 #ifdef __cplusplus
 }

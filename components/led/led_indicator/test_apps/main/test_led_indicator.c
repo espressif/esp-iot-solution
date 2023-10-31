@@ -21,8 +21,11 @@
 #define LED_IO_NUM_0    15
 #define LED_IO_NUM_1    16
 #define LED_IO_NUM_2    17
+#define LED_STRIP_BLINK_GPIO 48
+#define LED_STRIP_RMT_RES_HZ  (10 * 1000 * 1000)
+#define MAX_LED_NUM 16
 
-#define TAG "LED indicator"
+#define TAG "LED indicator Test"
 
 static led_indicator_handle_t led_handle_0 = NULL;
 static led_indicator_handle_t led_handle_1 = NULL;
@@ -49,6 +52,7 @@ void led_indicator_init()
 
 void led_indicator_deinit()
 {
+    ESP_LOGI(TAG, "deinit.....");
     esp_err_t ret = led_indicator_delete(led_handle_0);
     TEST_ASSERT(ret == ESP_OK);
     led_handle_0 = NULL;
@@ -475,6 +479,8 @@ TEST_CASE("custom mode test", "[LED][indicator]")
         .hal_indicator_deinit = led_indicator_ledc_deinit,
         .hal_indicator_set_on_off = led_indicator_ledc_set_on_off,
         .hal_indicator_set_brightness = led_indicator_ledc_set_brightness,
+        .hal_indicator_set_rgb = NULL,
+        .hal_indicator_set_hsv = NULL,
         .hardware_data = (void *)LEDC_CHANNEL_0,
     };
 
@@ -517,7 +523,6 @@ TEST_CASE("test gamma table", "[LED][indicator]")
     led_indicator_new_gamma_table(2.3);
 }
 
-
 TEST_CASE("test led preempt func with breath", "[LED][preempt][breath]")
 {
     led_indicator_ledc_config_t led_indicator_ledc_config = {
@@ -543,7 +548,7 @@ TEST_CASE("test led preempt func with breath", "[LED][preempt][breath]")
         ESP_LOGI(TAG, "breathe blink .....");
         esp_err_t ret = led_indicator_start(led_handle_0, BLINK_BREATHE);
         TEST_ASSERT(ret == ESP_OK);
-        static bool preempted = false;
+        bool preempted = false;
         int cnt = 3;
         while (cnt--) {
             if (preempted == false) {
@@ -560,8 +565,329 @@ TEST_CASE("test led preempt func with breath", "[LED][preempt][breath]")
             vTaskDelay(3000 / portTICK_PERIOD_MS);
         }
         led_indicator_delete(led_handle_0);
+
     }
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
 }
+
+/*********************************************** LED STRIPS *******************************************************/
+
+/* esp32c2 not support rmt */
+#if !CONFIG_IDF_TARGET_ESP32C2
+
+typedef enum {
+    BLINK_RGB_25_BRIGHTNESS,
+    BLINK_RGB_50_BRIGHTNESS,
+    BLINK_RGB_75_BRIGHTNESS,
+    BLINK_RGB_BREATHE,
+    BLINK_RGB_RED,
+    BLINK_RGB_GREEN,
+    BLINK_RGB_BLUE,
+    BLINK_RGB_RING_RED_TO_BLUE,
+    BLINK_HSV_RED,
+    BLINK_HSV_GREEN,
+    BLINK_HSV_BLUE,
+    BLINK_HSV_RING_RED_TO_BLUE,
+    BLINK_RGB_FLASH,
+    BLINK_RGB_DOUBLE,
+    BLINK_RGB_TRIPLE,
+    BLINK_RGB_NUM,
+} led_blink_rgb_type_t;
+
+static const blink_step_t rgb_double_blink[] = {
+    {LED_BLINK_HOLD,  LED_STATE_ON, 500},
+    {LED_BLINK_HOLD, LED_STATE_OFF, 500},
+    {LED_BLINK_HOLD, LED_STATE_ON, 500},
+    {LED_BLINK_HOLD, LED_STATE_OFF, 500},
+    {LED_BLINK_STOP, 0, 0},
+};
+
+static const blink_step_t rgb_triple_blink[] = {
+    {LED_BLINK_HOLD, LED_STATE_ON, 500},
+    {LED_BLINK_HOLD, LED_STATE_OFF, 500},
+    {LED_BLINK_HOLD, LED_STATE_ON, 500},
+    {LED_BLINK_HOLD, LED_STATE_OFF, 500},
+    {LED_BLINK_HOLD, LED_STATE_ON, 500},
+    {LED_BLINK_HOLD, LED_STATE_OFF, 500},
+    {LED_BLINK_STOP, 0, 0},
+};
+
+static const blink_step_t rgb_breathe_blink[] = {
+    {LED_BLINK_BREATHE, INSERT_INDEX(MAX_INDEX,LED_STATE_OFF), 1000},
+    {LED_BLINK_BRIGHTNESS, INSERT_INDEX(MAX_INDEX,LED_STATE_OFF), 500},
+    {LED_BLINK_BREATHE, INSERT_INDEX(MAX_INDEX,LED_STATE_ON), 1000},
+    {LED_BLINK_BRIGHTNESS, INSERT_INDEX(MAX_INDEX,LED_STATE_ON), 500},
+    {LED_BLINK_LOOP, 0, 0},
+};
+
+static const blink_step_t rgb_brightness_25_blink[] = {
+    {LED_BLINK_BRIGHTNESS, LED_STATE_25_PERCENT, 1000},
+    {LED_BLINK_STOP, 0, 0},
+};
+
+static const blink_step_t rgb_brightness_50_blink[] = {
+    {LED_BLINK_BRIGHTNESS, LED_STATE_50_PERCENT, 1000},
+    {LED_BLINK_STOP, 0, 0},
+};
+
+static const blink_step_t rgb_brightness_75_blink[] = {
+    {LED_BLINK_BRIGHTNESS, LED_STATE_75_PERCENT, 1000},
+    {LED_BLINK_STOP, 0, 0},
+};
+
+static const blink_step_t rgb_red_blink[] = {
+    {LED_BLINK_RGB, SET_IRGB(MAX_INDEX,0xFF,0,0), 2000},
+    {LED_BLINK_STOP, 0, 0},
+};
+
+static const blink_step_t rgb_green_blink[] = {
+    {LED_BLINK_RGB, SET_IRGB(MAX_INDEX,0,0xFF,0), 2000},
+    {LED_BLINK_STOP, 0, 0},
+};
+
+static const blink_step_t rgb_blue_blink[] = {
+    {LED_BLINK_RGB, SET_IRGB(MAX_INDEX,0,0,0xFF), 2000},
+    {LED_BLINK_STOP, 0, 0},
+};
+
+static const blink_step_t rgb_ring_red_to_blue_blink[] = {
+    {LED_BLINK_RGB, SET_IRGB(MAX_INDEX,0xFF,0,0), 0},
+    {LED_BLINK_RGB_RING, SET_IRGB(MAX_INDEX,0,0,0xFF), 4000},
+    {LED_BLINK_RGB_RING, SET_IRGB(MAX_INDEX,0xFF,0,0), 4000},
+    {LED_BLINK_LOOP, 0, 0},
+};
+
+static const blink_step_t rgb_flash_blink[] = {
+    {LED_BLINK_RGB, SET_IRGB(MAX_INDEX,0xFF,0,0), 200},
+    {LED_BLINK_RGB, SET_IRGB(MAX_INDEX,0xFF,0xFF,0), 200},
+    {LED_BLINK_RGB, SET_IRGB(MAX_INDEX,0,0xFF,0), 200},
+    {LED_BLINK_RGB, SET_IRGB(MAX_INDEX,0,0xFF,0xFF), 200},
+    {LED_BLINK_RGB, SET_IRGB(MAX_INDEX,0,0,0xFF), 200},
+    {LED_BLINK_RGB, SET_IRGB(MAX_INDEX,0xFF,0,0xFF), 200},
+    {LED_BLINK_LOOP, 0, 0},
+};
+
+static const blink_step_t hsv_red_blink[] = {
+    {LED_BLINK_HSV, SET_IHSV(MAX_INDEX,0,255,255), 0},
+    {LED_BLINK_STOP, 0, 0},
+};
+
+static const blink_step_t hsv_green_blink[] = {
+    {LED_BLINK_HSV, SET_IHSV(MAX_INDEX,120,255,255), 0},
+    {LED_BLINK_STOP, 0, 0},
+};
+
+static const blink_step_t hsv_blue_blink[] = {
+    {LED_BLINK_HSV, SET_IHSV(MAX_INDEX,240,255,255), 0},
+    {LED_BLINK_STOP, 0, 0},
+};
+
+static blink_step_t const *led_rgb_blink_lst[] = {
+    [BLINK_RGB_25_BRIGHTNESS] = rgb_brightness_25_blink,
+    [BLINK_RGB_50_BRIGHTNESS] = rgb_brightness_50_blink,
+    [BLINK_RGB_75_BRIGHTNESS] = rgb_brightness_75_blink,
+    [BLINK_RGB_BREATHE] = rgb_breathe_blink,
+    [BLINK_RGB_RED] = rgb_red_blink,
+    [BLINK_RGB_GREEN] = rgb_green_blink,
+    [BLINK_RGB_BLUE] = rgb_blue_blink,
+    [BLINK_RGB_RING_RED_TO_BLUE] = rgb_ring_red_to_blue_blink,
+    [BLINK_HSV_RED] = hsv_red_blink,
+    [BLINK_HSV_GREEN] = hsv_green_blink,
+    [BLINK_HSV_BLUE] = hsv_blue_blink,
+    [BLINK_HSV_RING_RED_TO_BLUE] = rgb_ring_red_to_blue_blink,
+    [BLINK_RGB_FLASH] = rgb_flash_blink,
+    [BLINK_RGB_DOUBLE] = rgb_double_blink,
+    [BLINK_RGB_TRIPLE] = rgb_triple_blink,
+    [BLINK_RGB_NUM] = NULL,
+};
+
+TEST_CASE("TEST LED RGB by RGB","[LED RGB][RGB]")
+{
+    led_strip_config_t strip_config = {
+        .strip_gpio_num = LED_STRIP_BLINK_GPIO,   // The GPIO that connected to the LED strip's data line
+        .max_leds = MAX_LED_NUM,                  // The number of LEDs in the strip,
+        .led_pixel_format = LED_PIXEL_FORMAT_GRB, // Pixel format of your LED strip
+        .led_model = LED_MODEL_WS2812,            // LED strip model
+        .flags.invert_out = false,                // whether to invert the output signal
+    };
+
+    // LED strip backend configuration: RMT
+    led_strip_rmt_config_t rmt_config = {
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
+        .rmt_channel = 0,
+#else
+        .clk_src = RMT_CLK_SRC_DEFAULT,        // different clock source can lead to different power consumption
+        .resolution_hz = LED_STRIP_RMT_RES_HZ, // RMT counter clock frequency
+        .flags.with_dma = false,               // DMA feature is available on ESP target like ESP32-S3
+#endif
+    };
+
+    led_indicator_strips_config_t led_indicator_strips_config = {
+        .is_active_level_high = 1,
+        .led_strip_cfg = strip_config,
+        .led_strip_driver = LED_STRIP_RMT,
+        .led_strip_rmt_cfg = rmt_config,
+    };
+
+    led_indicator_config_t config = {
+        .mode = LED_STRIPS_MODE,
+        .led_indicator_strips_config = &led_indicator_strips_config,
+        .blink_lists = led_rgb_blink_lst,
+        .blink_list_num = BLINK_RGB_NUM,
+    };
+
+    led_handle_0 = led_indicator_create(&config);
+    TEST_ASSERT_NOT_NULL(led_handle_0);
+    esp_err_t ret = ESP_OK;
+
+    ESP_LOGI(TAG, "breathe 25/100 blink.....");
+    ret = led_indicator_start(led_handle_0, BLINK_RGB_25_BRIGHTNESS);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+    TEST_ASSERT(ret == ESP_OK);
+
+    ESP_LOGI(TAG, "breathe 50/100 blink.....");
+    ret = led_indicator_start(led_handle_0, BLINK_RGB_50_BRIGHTNESS);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+    TEST_ASSERT(ret == ESP_OK);
+
+    ESP_LOGI(TAG, "breathe 75/100 blink.....");
+    ret = led_indicator_start(led_handle_0, BLINK_RGB_75_BRIGHTNESS);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+    TEST_ASSERT(ret == ESP_OK);
+
+    ESP_LOGI(TAG, "breathe blink .....");
+    ret = led_indicator_start(led_handle_0, BLINK_RGB_BREATHE);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(8000 / portTICK_PERIOD_MS);
+    led_indicator_stop(led_handle_0, BLINK_RGB_BREATHE);
+
+    ESP_LOGI(TAG, "red blink .....");
+    ret = led_indicator_start(led_handle_0, BLINK_RGB_RED);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+
+    ESP_LOGI(TAG, "green blink .....");
+    ret = led_indicator_start(led_handle_0, BLINK_RGB_GREEN);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+
+    ESP_LOGI(TAG, "blue blink .....");
+    ret = led_indicator_start(led_handle_0, BLINK_RGB_BLUE);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+
+    ESP_LOGI(TAG, "ring red to blue blink .....");
+    ret = led_indicator_start(led_handle_0, BLINK_RGB_RING_RED_TO_BLUE);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(12000 / portTICK_PERIOD_MS);
+    led_indicator_stop(led_handle_0, BLINK_RGB_RING_RED_TO_BLUE);
+
+    ESP_LOGI(TAG, "hsv red blink .....");
+    ret = led_indicator_start(led_handle_0, BLINK_HSV_RED);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+
+    ESP_LOGI(TAG, "hsv green blink .....");
+    ret = led_indicator_start(led_handle_0, BLINK_HSV_GREEN);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+
+    ESP_LOGI(TAG, "hsv blue blink .....");
+    ret = led_indicator_start(led_handle_0, BLINK_HSV_BLUE);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+
+    ESP_LOGI(TAG, "hsv ring red to blue blink .....");
+    ret = led_indicator_start(led_handle_0, BLINK_HSV_RING_RED_TO_BLUE);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(12000 / portTICK_PERIOD_MS);
+    led_indicator_stop(led_handle_0, BLINK_HSV_RING_RED_TO_BLUE);
+
+    ESP_LOGI(TAG, "flash blink .....");
+    ret = led_indicator_start(led_handle_0, BLINK_RGB_FLASH);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(8000 / portTICK_PERIOD_MS);
+    led_indicator_stop(led_handle_0, BLINK_RGB_FLASH);
+
+    ESP_LOGI(TAG, "double blink .....");
+    ret = led_indicator_start(led_handle_0, BLINK_RGB_DOUBLE);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
+
+    ESP_LOGI(TAG, "triple blink .....");
+    ret = led_indicator_start(led_handle_0, BLINK_RGB_TRIPLE);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(6000 / portTICK_PERIOD_MS);
+
+    led_indicator_deinit();
+}
+
+TEST_CASE("TEST LED RGB control Real time ","[LED RGB][Real time]")
+{
+    led_strip_config_t strip_config = {
+        .strip_gpio_num = LED_STRIP_BLINK_GPIO,   // The GPIO that connected to the LED strip's data line
+        .max_leds = MAX_LED_NUM,        // The number of LEDs in the strip,
+        .led_pixel_format = LED_PIXEL_FORMAT_GRB, // Pixel format of your LED strip
+        .led_model = LED_MODEL_WS2812,            // LED strip model
+        .flags.invert_out = false,                // whether to invert the output signal
+    };
+
+    // LED strip backend configuration: RMT
+    led_strip_rmt_config_t rmt_config = {
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
+        .rmt_channel = 0,
+#else
+        .clk_src = RMT_CLK_SRC_DEFAULT,        // different clock source can lead to different power consumption
+        .resolution_hz = LED_STRIP_RMT_RES_HZ, // RMT counter clock frequency
+        .flags.with_dma = false,               // DMA feature is available on ESP target like ESP32-S3
+#endif
+    };
+
+    led_indicator_strips_config_t led_indicator_strips_config = {
+        .is_active_level_high = 1,
+        .led_strip_cfg = strip_config,
+        .led_strip_driver = LED_STRIP_RMT,
+        .led_strip_rmt_cfg = rmt_config,
+    };
+
+    led_indicator_config_t config = {
+        .mode = LED_STRIPS_MODE,
+        .led_indicator_strips_config = &led_indicator_strips_config,
+        .blink_lists = led_rgb_blink_lst,
+        .blink_list_num = BLINK_RGB_NUM,
+    };
+
+    led_handle_0 = led_indicator_create(&config);
+
+    esp_err_t ret = ESP_OK;
+
+    ESP_LOGI(TAG, "set red by rgb_value one by one .....");
+
+    for(int i = 0; i < MAX_LED_NUM; i++) {
+        ret = led_indicator_set_rgb(led_handle_0, SET_IRGB(i,0xFF,0,0));
+        TEST_ASSERT(ret == ESP_OK);
+        vTaskDelay(500 / portTICK_PERIOD_MS);
+    }
+
+    ESP_LOGI(TAG, "set red by rgb_value .....");
+    ret = led_indicator_set_rgb(led_handle_0, SET_IRGB(MAX_INDEX,0xFF,0,0));
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+    ESP_LOGI(TAG, "set green by hsv_value .....");
+    ret = led_indicator_set_hsv(led_handle_0, SET_IHSV(MAX_INDEX ,240, 255, 255));
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+    ESP_LOGI(TAG, "set brightness by hsv_value .....");
+    ret = led_indicator_set_brightness(led_handle_0, INSERT_INDEX(MAX_INDEX, LED_STATE_50_PERCENT));
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+    led_indicator_deinit();
+}
+
+#endif
 
 static size_t before_free_8bit;
 static size_t before_free_32bit;
@@ -589,10 +915,10 @@ void tearDown(void)
 
 void app_main(void)
 {
-    //   _    ___ ___    ___ _  _ ___ ___ ___   _ _____ ___  ___   _____ ___ ___ _____ 
+    //   _    ___ ___    ___ _  _ ___ ___ ___   _ _____ ___  ___   _____ ___ ___ _____
     //  | |  | __|   \  |_ _| \| |   \_ _/ __| /_\_   _/ _ \| _ \ |_   _| __/ __|_   _|
-    //  | |__| _|| |) |  | || .` | |) | | (__ / _ \| || (_) |   /   | | | _|\__ \ | |  
-    //  |____|___|___/  |___|_|\_|___/___\___/_/ \_\_| \___/|_|_\   |_| |___|___/ |_|  
+    //  | |__| _|| |) |  | || .` | |) | | (__ / _ \| || (_) |   /   | | | _|\__ \ | |
+    //  |____|___|___/  |___|_|\_|___/___\___/_/ \_\_| \___/|_|_\   |_| |___|___/ |_|
     printf("  _    ___ ___    ___ _  _ ___ ___ ___   _ _____ ___  ___   _____ ___ ___ _____\n");
     printf(" | |  | __|   \\  |_ _| \\| |   \\_ _/ __| /_\\_   _/ _ \\| _ \\ |_   _| __/ __|_   _|\n");
     printf(" | |__| _|| |) |  | || .` | |) | | (__ / _ \\| || (_) |   /   | | | _|\\__ \\ | |\n");

@@ -1,5 +1,21 @@
 # ChangeLog
 
+## v0.6.1 - 2023-10-31
+
+### BUG FIX
+
+* Fix preempt blink not stop as expected.
+
+### Enhancements:
+
+* Support LED RGB type by driver [led_strip](https://components.espressif.com/components/espressif/led_strip)
+
+* Add api to control led indicator's brightness, HSV color, RGB color in real time
+
+* Support change led indicator's color by type HSV and RGB.
+
+* Support color gradient modification based on the color ring.
+
 ## v0.5.1 - 2023-10-23
 
 ### BUG FIX

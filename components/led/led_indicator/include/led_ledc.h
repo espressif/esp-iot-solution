@@ -49,7 +49,7 @@ esp_err_t led_indicator_ledc_deinit(void *ledc_handle);
  * @brief Set the specific LEDC's level to make the LED indicator ON or OFF
  *
  * @param ledc_handle LED indicator LEDC operation handle
- * @param on_off Set 0 or 1 to control the LEDC's output level.
+ * @param on_off Set 0 to control the LEDC's output level low, while values greater than 0 set the LEDC's output level high..
  * @return esp_err_t
  *     - ESP_OK Success
  *     - ESP_ERR_INVALID_ARG Parameter error
@@ -61,7 +61,7 @@ esp_err_t led_indicator_ledc_set_on_off(void *ledc_handle, bool on_off);
  * @brief Set LEDC duty cycle
  *
  * @param ledc_handle LED indicator LEDC operation handle
- * @param brightness duty cycle, depending on duty cycle accuracy
+ * @param brightness duty cycle of LEDC [0-255]
  * @return esp_err_t
  *     - ESP_OK Success
  *     - ESP_ERR_INVALID_ARG Parameter error
