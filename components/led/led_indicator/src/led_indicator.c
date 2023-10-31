@@ -139,26 +139,26 @@ static void _blink_list_runner(TimerHandle_t xTimer)
 {
     bool leave = false;
     uint32_t hardware_level;
+    bool timer_restart = false;
+    TickType_t timer_period_ms = 0;
+    _led_indicator_t *p_led_indicator = (_led_indicator_t *)pvTimerGetTimerID(xTimer);
+
+    if (p_led_indicator == NULL) {
+        return;
+    }
+
+    if (pdTRUE != xSemaphoreTake(p_led_indicator->mutex, 0)) {
+        // In most cases, the semaphore should be taken successfully.
+        // If not, it means that the blinks is changing, or user prepares to delete the indicator.
+        xTimerChangePeriod(p_led_indicator->h_timer, pdMS_TO_TICKS(50), 0);
+        xTimerStart(p_led_indicator->h_timer, 0);
+        ESP_LOGV(TAG, "timeout restart, period: %d ms", 50);
+        return;
+    }
 
     while (!leave) {
-        _led_indicator_t *p_led_indicator = (_led_indicator_t *)pvTimerGetTimerID(xTimer);
-
-        if (p_led_indicator == NULL) {
-            break;
-        }
-
-        if (pdFALSE == xSemaphoreTake(p_led_indicator->mutex, 0)) {
-            // In most cases, the semaphore should be taken successfully.
-            // If not, it means that the blinks is changing, or user prepares to delete the indicator.
-            if (p_led_indicator->h_timer != NULL) {
-                xTimerChangePeriod(p_led_indicator->h_timer, pdMS_TO_TICKS(50), 0);
-                xTimerStart(p_led_indicator->h_timer, 0);
-            }
-            break;
-        }
 
         if (p_led_indicator->active_blink == NULL_ACTIVE_BLINK) {
-            xSemaphoreGive(p_led_indicator->mutex);
             break;
         }
 
@@ -178,6 +178,9 @@ static void _blink_list_runner(TimerHandle_t xTimer)
 
         case LED_BLINK_STOP:
             p_led_indicator->p_blink_steps[active_blink] = LED_BLINK_STOP;
+            if (p_led_indicator->preempt_blink != NULL_PREEMPT_BLINK) {
+                p_led_indicator->preempt_blink = NULL_PREEMPT_BLINK;
+            }
             _blink_list_switch(p_led_indicator);
             break;
 
@@ -195,10 +198,8 @@ static void _blink_list_runner(TimerHandle_t xTimer)
             }
 
             leave = true;
-            if (p_led_indicator->h_timer != NULL) {
-                xTimerChangePeriod(p_led_indicator->h_timer, pdMS_TO_TICKS(p_blink_step->hold_time_ms), 0);
-                xTimerStart(p_led_indicator->h_timer, 0);
-            }
+            timer_restart = true;
+            timer_period_ms = p_blink_step->hold_time_ms;
             break;
         }
 
@@ -216,10 +217,8 @@ static void _blink_list_runner(TimerHandle_t xTimer)
             }
 
             leave = true;
-            if (p_led_indicator->h_timer != NULL) {
-                xTimerChangePeriod(p_led_indicator->h_timer, pdMS_TO_TICKS(p_blink_step->hold_time_ms), 0);
-                xTimerStart(p_led_indicator->h_timer, 0);
-            }
+            timer_restart = true;
+            timer_period_ms = p_blink_step->hold_time_ms;
             break;
         }
 
@@ -267,10 +266,8 @@ static void _blink_list_runner(TimerHandle_t xTimer)
 
             ESP_LOGD(TAG, "breathe ticks value: %d", ticks);
             leave = true;
-            if (p_led_indicator->h_timer != NULL) {
-                xTimerChangePeriod(p_led_indicator->h_timer, pdMS_TO_TICKS(ticks), 0);
-                xTimerStart(p_led_indicator->h_timer, 0);
-            }
+            timer_restart = true;
+            timer_period_ms = ticks;
 
             if (p_led_indicator->fade_value_count > abs(diff_value)) {
                 p_led_indicator->fade_value_count = BRIGHTNESS_MIN;
@@ -295,10 +292,8 @@ static void _blink_list_runner(TimerHandle_t xTimer)
             }
 
             leave = true;
-            if (p_led_indicator->h_timer != NULL) {
-                xTimerChangePeriod(p_led_indicator->h_timer, pdMS_TO_TICKS(p_blink_step->hold_time_ms), 0);
-                xTimerStart(p_led_indicator->h_timer, 0);
-            }
+            timer_restart = true;
+            timer_period_ms = p_blink_step->hold_time_ms;
             break;
         }
 
@@ -340,10 +335,8 @@ static void _blink_list_runner(TimerHandle_t xTimer)
 
             ESP_LOGD(TAG, "hsv ring ticks value: %d", ticks);
             leave = true;
-            if (p_led_indicator->h_timer != NULL) {
-                xTimerChangePeriod(p_led_indicator->h_timer, pdMS_TO_TICKS(ticks), 0);
-                xTimerStart(p_led_indicator->h_timer, 0);
-            }
+            timer_restart = true;
+            timer_period_ms = ticks;
 
             if (p_led_indicator->fade_value_count > abs(diff_value)) {
                 p_led_indicator->fade_value_count = BRIGHTNESS_MIN;
@@ -372,10 +365,8 @@ static void _blink_list_runner(TimerHandle_t xTimer)
             }
 
             leave = true;
-            if (p_led_indicator->h_timer != NULL) {
-                xTimerChangePeriod(p_led_indicator->h_timer, pdMS_TO_TICKS(p_blink_step->hold_time_ms), 0);
-                xTimerStart(p_led_indicator->h_timer, 0);
-            }
+            timer_restart = true;
+            timer_period_ms = p_blink_step->hold_time_ms;
             break;
         }
 
@@ -421,10 +412,8 @@ static void _blink_list_runner(TimerHandle_t xTimer)
 
             ESP_LOGD(TAG, "breathe ticks value: %d", ticks);
             leave = true;
-            if (p_led_indicator->h_timer != NULL) {
-                xTimerChangePeriod(p_led_indicator->h_timer, pdMS_TO_TICKS(ticks), 0);
-                xTimerStart(p_led_indicator->h_timer, 0);
-            }
+            timer_restart = true;
+            timer_period_ms = ticks;
 
             if (p_led_indicator->fade_value_count > abs(diff_value)) {
                 p_led_indicator->fade_value_count = BRIGHTNESS_MIN;
@@ -440,8 +429,15 @@ static void _blink_list_runner(TimerHandle_t xTimer)
             assert(false && "invalid state");
             break;
         }
-        xSemaphoreGive(p_led_indicator->mutex);
     }
+    // check if the indicator is deleted
+    p_led_indicator = (_led_indicator_t *)pvTimerGetTimerID(xTimer);
+    if (p_led_indicator && timer_restart && timer_period_ms) {
+        xTimerChangePeriod(p_led_indicator->h_timer, pdMS_TO_TICKS(timer_period_ms), 0);
+        xTimerStart(p_led_indicator->h_timer, 0);
+        ESP_LOGV(TAG, "timer restart, period: %" PRIu32 " ms", timer_period_ms);
+    }
+    xSemaphoreGive(p_led_indicator->mutex);
 }
 
 static _led_indicator_t *_led_indicator_create_com(_led_indicator_com_config_t *cfg)
@@ -621,8 +617,15 @@ static esp_err_t _led_indicator_delete_com(_led_indicator_t *p_led_indicator)
 {
     esp_err_t err;
     vTimerSetTimerID(p_led_indicator->h_timer, NULL);
+    // wait until the timmer is stopped before release resources
+    int timeout_ms = 200;
+    do {
+        xTimerStop(p_led_indicator->h_timer, portMAX_DELAY);
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+        timeout_ms -= 10;
+    } while (xTimerIsTimerActive(p_led_indicator->h_timer) == pdTRUE && timeout_ms > 0);
+
     xSemaphoreTake(p_led_indicator->mutex, portMAX_DELAY);
-    xTimerStop(p_led_indicator->h_timer, portMAX_DELAY);
     xTimerDelete(p_led_indicator->h_timer, portMAX_DELAY);
     p_led_indicator->h_timer = NULL;
 
@@ -675,7 +678,8 @@ esp_err_t led_indicator_start(led_indicator_handle_t handle, int blink_type)
     _blink_list_switch(p_led_indicator);
     xSemaphoreGive(p_led_indicator->mutex);
     if (p_led_indicator->active_blink == blink_type) { //re-run from first step
-        _blink_list_runner(p_led_indicator->h_timer);
+        xTimerChangePeriod(p_led_indicator->h_timer, 1, 0);
+        xTimerStart(p_led_indicator->h_timer, 0);
     }
 
     return ESP_OK;
@@ -709,7 +713,8 @@ esp_err_t led_indicator_preempt_start(led_indicator_handle_t handle, int blink_t
     xSemaphoreGive(p_led_indicator->mutex);
 
     if (p_led_indicator->active_blink == blink_type) { //re-run from first step
-        _blink_list_runner(p_led_indicator->h_timer);
+        xTimerChangePeriod(p_led_indicator->h_timer, 1, 0);
+        xTimerStart(p_led_indicator->h_timer, 0);
     }
     return ESP_OK;
 }

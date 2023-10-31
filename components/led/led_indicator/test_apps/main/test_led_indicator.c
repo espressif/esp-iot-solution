@@ -21,8 +21,11 @@
 #define LED_IO_NUM_0    15
 #define LED_IO_NUM_1    16
 #define LED_IO_NUM_2    17
+#define LED_STRIP_BLINK_GPIO 48
+#define LED_STRIP_RMT_RES_HZ  (10 * 1000 * 1000)
+#define MAX_LED_NUM 16
 
-#define TAG "LED indicator"
+#define TAG "LED indicator Test"
 
 static led_indicator_handle_t led_handle_0 = NULL;
 static led_indicator_handle_t led_handle_1 = NULL;
@@ -49,6 +52,7 @@ void led_indicator_init()
 
 void led_indicator_deinit()
 {
+    ESP_LOGI(TAG, "deinit.....");
     esp_err_t ret = led_indicator_delete(led_handle_0);
     TEST_ASSERT(ret == ESP_OK);
     led_handle_0 = NULL;
@@ -696,10 +700,6 @@ static blink_step_t const *led_rgb_blink_lst[] = {
     [BLINK_RGB_TRIPLE] = rgb_triple_blink,
     [BLINK_RGB_NUM] = NULL,
 };
-
-#define LED_STRIP_BLINK_GPIO 14
-#define LED_STRIP_RMT_RES_HZ  (10 * 1000 * 1000)
-#define MAX_LED_NUM 16
 
 TEST_CASE("TEST LED RGB by RGB","[LED RGB][RGB]")
 {

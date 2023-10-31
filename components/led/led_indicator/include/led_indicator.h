@@ -37,7 +37,7 @@ enum {
 typedef enum {
     LED_BLINK_STOP = -1,   /*!< stop the blink */
     LED_BLINK_HOLD,        /*!< hold the on-off state */
-    LED_BLINK_BREATHE,     /*!< breathe state,  */
+    LED_BLINK_BREATHE,     /*!< breathe state */
     LED_BLINK_BRIGHTNESS,  /*!< set the brightness, it will transition from the old brightness to the new brightness */
     LED_BLINK_RGB,         /*!< color change with R(0-255) G(0-255) B(0-255) */
     LED_BLINK_RGB_RING,    /*!< Gradual color transition from old color to new color in a color ring */
@@ -52,8 +52,8 @@ typedef enum {
  */
 typedef struct {
     blink_step_type_t type;          /*!< action type in this step */
-    uint32_t value;                  /*!< hold on or off, set NULL if LED_BLINK_STOP() or LED_BLINK_LOOP */
-    uint32_t hold_time_ms;           /*!< hold time(ms), set NULL if not LED_BLINK_HOLD,*/
+    uint32_t value;                  /*!< hold on or off, set 0 if LED_BLINK_STOP() or LED_BLINK_LOOP */
+    uint32_t hold_time_ms;           /*!< hold time(ms), set 0 if not LED_BLINK_HOLD */
 } blink_step_t;
 
 /**
@@ -61,10 +61,10 @@ typedef struct {
  *
  */
 typedef enum {
-    LED_GPIO_MODE,         /*!< blink with max brightness*/
-    LED_LEDC_MODE,         /*!< blink with LEDC driver*/
-    LED_STRIPS_MODE,       /*!< blink with LEDC strips driver*/
-    LED_CUSTOM_MODE,       /*!< blink with custom driver*/
+    LED_GPIO_MODE,         /*!< blink with max brightness */
+    LED_LEDC_MODE,         /*!< blink with LEDC driver */
+    LED_STRIPS_MODE,       /*!< blink with LEDC strips driver */
+    LED_CUSTOM_MODE,       /*!< blink with custom driver */
 } led_indicator_mode_t;
 
 /**
@@ -204,7 +204,7 @@ esp_err_t led_indicator_set_brightness(led_indicator_handle_t handle, uint32_t b
  * @brief Set the HSV color for the LED indicator.
  *
  * @param handle LED indicator handle.
- * @param hsv_value HSV color value to set.
+ * @param ihsv_value HSV color value to set.
  *       I: 0-126, set 127 to control all H: 0-360, S: 0-255, V: 0-255
  * @note Index settings are only supported for LED_RGB_MODE.
  * @return esp_err_t
@@ -218,7 +218,7 @@ esp_err_t led_indicator_set_hsv(led_indicator_handle_t handle, uint32_t ihsv_val
  * @brief Set the RGB color for the LED indicator.
  *
  * @param handle LED indicator handle.
- * @param rgb_value RGB color value to set (0xRRGGBB).
+ * @param irgb_value RGB color value to set (0xRRGGBB).
  *        I: 0-126, set 127 to control all R: 0-255, G: 0-255, B: 0-255
  * @note Index settings are only supported for LED_RGB_MODE.
  * @return esp_err_t

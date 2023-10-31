@@ -1,6 +1,10 @@
 # ChangeLog
 
-## v0.6.0 - 2023-10-24
+## v0.6.1 - 2023-10-31
+
+### BUG FIX
+
+* Fix preempt blink not stop as expected.
 
 ### Enhancements:
 
