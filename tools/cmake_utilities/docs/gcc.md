@@ -110,6 +110,6 @@ cu_gcc_string_1byte_align(COMPONENTS ${app_lto_components} ${idf_lto_components}
 Build the project and the firmware size is:
 
 Option | Firmware size |
-|:-:|:-:|:-:|
+|:-:|:-:|
  -Os + LTO | 1,020,640 |
  -Os + LTO + string 1-byte align | 1,018,340 |
