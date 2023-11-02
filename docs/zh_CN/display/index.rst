@@ -1,12 +1,11 @@
-
 显示
 *************************
 
 :link_to_translation:`en:[English]`
 
 .. toctree::
-    :maxdepth: 1
+   :maxdepth: 1
 
-    显示屏 <screen>
+    LCD 显示屏 <lcd/index>
     数码管 <digit_tube>
     LED 指示灯<led_indicator>
