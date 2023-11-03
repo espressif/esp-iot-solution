@@ -12,3 +12,11 @@
 ### Enhancements:
 
 * Support to mirror by command
+
+## v1.0.0 - 2023-11-03
+
+### bugfix
+
+* Fix the incompatible dependent version of ESP-IDF
+* Fix missing dependency of `cmake_utilities` component
+* Check conflicting commands between initialization sequence and driver

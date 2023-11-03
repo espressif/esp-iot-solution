@@ -12,3 +12,12 @@
 ### Enhancements:
 
 * Support to use ESP-IDF release/v5.0
+
+## v1.0.0 - 2023-11-03
+
+### bugfix
+
+* Fix the incompatible dependent version of ESP-IDF
+* Remove LCD command `29h` from the initialization sequence
+* Add parameter `max_trans_sz` in default bus configuration macro
+* Check conflicting commands between initialization sequence and driver

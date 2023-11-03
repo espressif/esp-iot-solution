@@ -60,23 +60,23 @@ esp_err_t esp_lcd_new_panel_gc9b71(const esp_lcd_panel_io_handle_t io, const esp
  * @brief LCD panel bus configuration structure
  *
  */
-#define GC9B71_PANEL_BUS_SPI_CONFIG(sclk, mosi)             \
-    {                                                       \
-        .sclk_io_num = sclk,                                \
-        .mosi_io_num = mosi,                                \
-        .miso_io_num = -1,                                  \
-        .quadhd_io_num = -1,                                \
-        .quadwp_io_num = -1,                                \
-        .max_transfer_sz = SPI_LL_DMA_MAX_BIT_LEN >> 3,     \
+#define GC9B71_PANEL_BUS_SPI_CONFIG(sclk, mosi, max_trans_sz)   \
+    {                                                           \
+        .sclk_io_num = sclk,                                    \
+        .mosi_io_num = mosi,                                    \
+        .miso_io_num = -1,                                      \
+        .quadhd_io_num = -1,                                    \
+        .quadwp_io_num = -1,                                    \
+        .max_transfer_sz = max_trans_sz,                        \
     }
-#define GC9B71_PANEL_BUS_QSPI_CONFIG(sclk, d0, d1, d2, d3)      \
+#define GC9B71_PANEL_BUS_QSPI_CONFIG(sclk, d0, d1, d2, d3, max_trans_sz) \
     {                                                           \
         .sclk_io_num = sclk,                                    \
         .data0_io_num = d0,                                     \
         .data1_io_num = d1,                                     \
         .data2_io_num = d2,                                     \
         .data3_io_num = d3,                                     \
-        .max_transfer_sz = SPI_LL_DMA_MAX_BIT_LEN >> 3,         \
+        .max_transfer_sz = max_trans_sz,                        \
     }
 
 /**

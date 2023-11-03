@@ -21,20 +21,20 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
 
 ## Example use
 
-For most RGB LCDs, they typically use a "[3-Wire SPI + Parallel RGB](https://focuslcds.com/3-wire-spi-parallel-rgb-interface-fan4213/)" interface. The "3-Wire SPI" interface is used for transmitting command data and the "Parallel RGB" interface is used for sending pixel data.
+For most RGB LCDs, they typically use a "3-Wire SPI + Parallel RGB" interface. The "3-Wire SPI" interface is used for transmitting command data and the "Parallel RGB" interface is used for sending pixel data.
 
 It's recommended to use the [esp_lcd_panel_io_additions](https://components.espressif.com/components/espressif/esp_lcd_panel_io_additions) component to bit-bang the "3-Wire SPI" interface through **GPIO** or an **IO expander** (like [TCA9554](https://components.espressif.com/components/espressif/esp_io_expander_tca9554)). To do this, please first add this component to your project manually. Then, refer to the following code to initialize the GC9503 controller.
 
 ```c
     ESP_LOGI(TAG, "Install 3-wire SPI panel IO");
     spi_line_config_t line_config = {
-        .cs_io_type = IO_TYPE_EXPANDER,             // Set to `IO_TYPE_EXPANDER` if using IO expander
+        .cs_io_type = IO_TYPE_EXPANDER,             // Set to `IO_TYPE_GPIO` if using GPIO, same to below
         .cs_gpio_num = EXAMPLE_LCD_IO_SPI_CS,
         .scl_io_type = IO_TYPE_GPIO,
         .scl_gpio_num = EXAMPLE_LCD_IO_SPI_SCK,
         .sda_io_type = IO_TYPE_GPIO,
         .sda_gpio_num = EXAMPLE_LCD_IO_SPI_SDO,
-        .io_expander = NULL,                        // Set to device handle if using IO expander
+        .io_expander = NULL,                        // Set to NULL if not using IO expander
     };
     esp_lcd_panel_io_3wire_spi_config_t io_config = ST7701_PANEL_IO_3WIRE_SPI_CONFIG(line_config, 0);
     esp_lcd_panel_io_handle_t io_handle = NULL;

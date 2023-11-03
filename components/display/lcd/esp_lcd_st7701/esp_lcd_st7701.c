@@ -20,6 +20,13 @@
 #define ST7701_CMD_SDIR     (0xC7)
 #define ST7701_CMD_SS_BIT   (1 << 2)
 
+#define ST7701_CMD_CND2BKxSEL       (0xFF)
+#define ST7701_CMD_BKxSEL_BYTE0     (0x77)
+#define ST7701_CMD_BKxSEL_BYTE1     (0x01)
+#define ST7701_CMD_BKxSEL_BYTE2     (0x00)
+#define ST7701_CMD_BKxSEL_BYTE3     (0x00)
+#define ST7701_CMD_CN2_BIT          (1 << 4)
+
 typedef struct {
     esp_lcd_panel_io_handle_t io;
     int reset_gpio_num;
@@ -208,9 +215,14 @@ static const st7701_lcd_init_cmd_t vendor_specific_init_default[] = {
 static esp_err_t panel_st7701_send_init_cmds(st7701_panel_t *st7701)
 {
     esp_lcd_panel_io_handle_t io = st7701->io;
+    const st7701_lcd_init_cmd_t *init_cmds = NULL;
+    uint16_t init_cmds_size = 0;
+    bool is_command2_disable = true;
+    bool is_cmd_overwritten = false;
 
-    ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, 0xf0, (uint8_t []){0x77, 0x01, 0x00, 0x00, 0x00}, 1), TAG,
-                        "Write cmd failed");
+    ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, ST7701_CMD_CND2BKxSEL, (uint8_t []){
+        ST7701_CMD_BKxSEL_BYTE0, ST7701_CMD_BKxSEL_BYTE1, ST7701_CMD_BKxSEL_BYTE2, ST7701_CMD_BKxSEL_BYTE3, 0x00
+    }, 5), TAG, "Write cmd failed");
     // Set color format
     ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, LCD_CMD_MADCTL, (uint8_t []){
         st7701->madctl_val
@@ -221,8 +233,6 @@ static esp_err_t panel_st7701_send_init_cmds(st7701_panel_t *st7701)
 
     // vendor specific initialization, it can be different between manufacturers
     // should consult the LCD supplier for initialization sequence code
-    const st7701_lcd_init_cmd_t *init_cmds = NULL;
-    uint16_t init_cmds_size = 0;
     if (st7701->init_cmds) {
         init_cmds = st7701->init_cmds;
         init_cmds_size = st7701->init_cmds_size;
@@ -231,31 +241,39 @@ static esp_err_t panel_st7701_send_init_cmds(st7701_panel_t *st7701)
         init_cmds_size = sizeof(vendor_specific_init_default) / sizeof(st7701_lcd_init_cmd_t);
     }
 
-    bool is_cmd_overwritten = false;
     for (int i = 0; i < init_cmds_size; i++) {
-        // Check if the command has been used or conflicts with the internal
-        switch (init_cmds[i].cmd) {
-        case LCD_CMD_MADCTL:
-            is_cmd_overwritten = true;
-            st7701->madctl_val = ((uint8_t *)init_cmds[i].data)[0];
-            break;
-        case LCD_CMD_COLMOD:
-            is_cmd_overwritten = true;
-            st7701->colmod_val = ((uint8_t *)init_cmds[i].data)[0];
-            break;
-        default:
-            is_cmd_overwritten = false;
-            break;
+        // Check if the command has been used or conflicts with the internal only when command2 is disable
+        if (is_command2_disable && (init_cmds[i].data_bytes > 0)) {
+            switch (init_cmds[i].cmd) {
+            case LCD_CMD_MADCTL:
+                is_cmd_overwritten = true;
+                st7701->madctl_val = ((uint8_t *)init_cmds[i].data)[0];
+                break;
+            case LCD_CMD_COLMOD:
+                is_cmd_overwritten = true;
+                st7701->colmod_val = ((uint8_t *)init_cmds[i].data)[0];
+                break;
+            default:
+                is_cmd_overwritten = false;
+                break;
+            }
+
+            if (is_cmd_overwritten) {
+                is_cmd_overwritten = false;
+                ESP_LOGW(TAG, "The %02Xh command has been used and will be overwritten by external initialization sequence",
+                        init_cmds[i].cmd);
+            }
         }
 
-        if (is_cmd_overwritten) {
-            ESP_LOGW(TAG, "The %02Xh command has been used and will be overwritten by external initialization sequence",
-                     init_cmds[i].cmd);
-        }
-
+        // Send command
         ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, init_cmds[i].cmd, init_cmds[i].data, init_cmds[i].data_bytes),
                             TAG, "send command failed");
         vTaskDelay(pdMS_TO_TICKS(init_cmds[i].delay_ms));
+
+        // Check if the current cmd is the command2 disable cmd
+        if ((init_cmds[i].cmd == ST7701_CMD_CND2BKxSEL) && (init_cmds[i].data_bytes > 4)) {
+            is_command2_disable = !(((uint8_t *)init_cmds[i].data)[4] & ST7701_CMD_CN2_BIT);
+        }
     }
     ESP_LOGD(TAG, "send init commands success");
 

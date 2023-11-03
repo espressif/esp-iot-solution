@@ -24,6 +24,11 @@
 #define LCD_OPCODE_READ_CMD         (0x0BULL)
 #define LCD_OPCODE_WRITE_COLOR      (0x32ULL)
 
+#define SPD2010_CMD_SET             (0xFF)
+#define SPD2010_CMD_SET_BYTE0       (0x20)
+#define SPD2010_CMD_SET_BYTE1       (0x10)
+#define SPD2010_CMD_SET_USER        (0x00)
+
 static const char *TAG = "spd2010";
 
 static esp_err_t panel_spd2010_del(esp_lcd_panel_t *panel);
@@ -44,7 +49,7 @@ typedef struct {
     int y_gap;
     uint8_t fb_bits_per_pixel;
     uint8_t madctl_val; // save current value of LCD_CMD_MADCTL register
-    uint8_t colmod_cal; // save surrent value of LCD_CMD_COLMOD register
+    uint8_t colmod_val; // save current value of LCD_CMD_COLMOD register
     const spd2010_lcd_init_cmd_t *init_cmds;
     uint16_t init_cmds_size;
     struct {
@@ -85,16 +90,16 @@ esp_err_t esp_lcd_new_panel_spd2010(const esp_lcd_panel_io_handle_t io, const es
     uint8_t fb_bits_per_pixel = 0;
     switch (panel_dev_config->bits_per_pixel) {
     case 16: // RGB565
-        spd2010->colmod_cal = 0x55;
+        spd2010->colmod_val = 0x55;
         fb_bits_per_pixel = 16;
         break;
     case 18: // RGB666
-        spd2010->colmod_cal = 0x66;
+        spd2010->colmod_val = 0x66;
         // each color component (R/G/B) should occupy the 6 high bits of a byte, which means 3 full bytes are required for a pixel
         fb_bits_per_pixel = 24;
         break;
     case 24: // RGB888
-        spd2010->colmod_cal = 0x77;
+        spd2010->colmod_val = 0x77;
         fb_bits_per_pixel = 24;
         break;
     default:
@@ -594,26 +599,29 @@ static const spd2010_lcd_init_cmd_t vendor_specific_init_default[] = {
     {0x02, (uint8_t []){0x00}, 1, 0},
     {0xFF, (uint8_t []){0x20, 0x10, 0x00}, 3, 0},
     {0x11, (uint8_t []){0x00}, 0, 120},
-    {0x29, (uint8_t []){0x00}, 0, 20},
 };
 
 static esp_err_t panel_spd2010_init(esp_lcd_panel_t *panel)
 {
     spd2010_panel_t *spd2010 = __containerof(panel, spd2010_panel_t, base);
     esp_lcd_panel_io_handle_t io = spd2010->io;
+    const spd2010_lcd_init_cmd_t *init_cmds = NULL;
+    uint16_t init_cmds_size = 0;
+    bool is_user_set = true;
+    bool is_cmd_overwritten = false;
 
-    ESP_RETURN_ON_ERROR(tx_param(spd2010, io, 0xFF, (uint8_t[]) {0x20, 0x10, 0x00}, 3), TAG, "send command failed");
+    ESP_RETURN_ON_ERROR(tx_param(spd2010, io, SPD2010_CMD_SET, (uint8_t[]) {
+        SPD2010_CMD_SET_BYTE0, SPD2010_CMD_SET_BYTE1, SPD2010_CMD_SET_USER
+    }, 3), TAG, "send command failed");
     ESP_RETURN_ON_ERROR(tx_param(spd2010, io, LCD_CMD_MADCTL, (uint8_t[]) {
         spd2010->madctl_val,
     }, 1), TAG, "send command failed");
     ESP_RETURN_ON_ERROR(tx_param(spd2010, io, LCD_CMD_COLMOD, (uint8_t[]) {
-        spd2010->colmod_cal,
+        spd2010->colmod_val,
     }, 1), TAG, "send command failed");
 
     // vendor specific initialization, it can be different between manufacturers
     // should consult the LCD supplier for initialization sequence code
-    const spd2010_lcd_init_cmd_t *init_cmds = NULL;
-    uint16_t init_cmds_size = 0;
     if (spd2010->init_cmds) {
         init_cmds = spd2010->init_cmds;
         init_cmds_size = spd2010->init_cmds_size;
@@ -621,11 +629,42 @@ static esp_err_t panel_spd2010_init(esp_lcd_panel_t *panel)
         init_cmds = vendor_specific_init_default;
         init_cmds_size = sizeof(vendor_specific_init_default) / sizeof(spd2010_lcd_init_cmd_t);
     }
+
     for (int i = 0; i < init_cmds_size; i++) {
+        // Check if the command has been used or conflicts with the internal only when command2 is disable
+        if (is_user_set && (init_cmds[i].data_bytes > 0)) {
+            switch (init_cmds[i].cmd) {
+            case LCD_CMD_MADCTL:
+                is_cmd_overwritten = true;
+                spd2010->madctl_val = ((uint8_t *)init_cmds[i].data)[0];
+                break;
+            case LCD_CMD_COLMOD:
+                is_cmd_overwritten = true;
+                spd2010->colmod_val = ((uint8_t *)init_cmds[i].data)[0];
+                break;
+            default:
+                is_cmd_overwritten = false;
+                break;
+            }
+
+            if (is_cmd_overwritten) {
+                is_cmd_overwritten = false;
+                ESP_LOGW(TAG, "The %02Xh command has been used and will be overwritten by external initialization sequence",
+                        init_cmds[i].cmd);
+            }
+        }
+
+        // Send command
         ESP_RETURN_ON_ERROR(tx_param(spd2010, io, init_cmds[i].cmd, init_cmds[i].data, init_cmds[i].data_bytes), TAG,
                             "send command failed");
         vTaskDelay(pdMS_TO_TICKS(init_cmds[i].delay_ms));
+
+        // Check if the current cmd is the "command set" cmd
+        if ((init_cmds[i].cmd == SPD2010_CMD_SET) && (init_cmds[i].data_bytes > 2)) {
+            is_user_set = (((uint8_t *)init_cmds[i].data)[2] == SPD2010_CMD_SET_USER);
+        }
     }
+    ESP_LOGD(TAG, "send init commands success");
 
     return ESP_OK;
 }

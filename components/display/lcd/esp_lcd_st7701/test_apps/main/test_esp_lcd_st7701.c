@@ -27,7 +27,7 @@
 #define TEST_LCD_V_RES              (480)
 #define TEST_LCD_BIT_PER_PIXEL      (18)
 #define TEST_RGB_BIT_PER_PIXEL      (16)
-#define TEST_LCD_DATA_WIDTH         (16)
+#define TEST_RGB_DATA_WIDTH         (16)
 
 #define TEST_LCD_IO_RGB_DISP        (GPIO_NUM_NC)
 #define TEST_LCD_IO_RGB_VSYNC       (GPIO_NUM_3)
@@ -103,7 +103,7 @@ TEST_CASE("test st7701 to draw color bar with RGB interface", "[st7701][rgb]")
     esp_lcd_rgb_panel_config_t rgb_config = {
         .clk_src = LCD_CLK_SRC_DEFAULT,
         .psram_trans_align = 64,
-        .data_width = TEST_LCD_DATA_WIDTH,
+        .data_width = TEST_RGB_DATA_WIDTH,
         .bits_per_pixel = TEST_RGB_BIT_PER_PIXEL,
         .de_gpio_num = TEST_LCD_IO_RGB_DE,
         .pclk_gpio_num = TEST_LCD_IO_RGB_PCLK,
@@ -191,7 +191,7 @@ TEST_CASE("test st7701 to draw color bar with RGB interface, using IO expander",
     esp_lcd_rgb_panel_config_t rgb_config = {
         .clk_src = LCD_CLK_SRC_DEFAULT,
         .psram_trans_align = 64,
-        .data_width = TEST_LCD_DATA_WIDTH,
+        .data_width = TEST_RGB_DATA_WIDTH,
         .bits_per_pixel = TEST_RGB_BIT_PER_PIXEL,
         .de_gpio_num = TEST_LCD_IO_RGB_DE,
         .pclk_gpio_num = TEST_LCD_IO_RGB_PCLK,

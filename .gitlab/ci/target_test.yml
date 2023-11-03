@@ -207,8 +207,7 @@ components_test_esp_lcd_gc9b71:
       optional: true
   parallel:
     matrix:
-        - IDF_VERSION: "5.0"
-        - IDF_VERSION: "5.1"
+        - IDF_VERSION: "5.2"
   tags:
     - esp32s3
     - esp32s3_lcd_ev
@@ -249,8 +248,7 @@ components_test_esp_lcd_sh8601:
       optional: true
   parallel:
     matrix:
-        - IDF_VERSION: "5.0"
-        - IDF_VERSION: "5.1"
+        - IDF_VERSION: "5.2"
   tags:
     - esp32s3
     - esp32s3_lcd_ev
@@ -270,8 +268,7 @@ components_test_esp_lcd_spd2010:
       optional: true
   parallel:
     matrix:
-        - IDF_VERSION: "5.0"
-        - IDF_VERSION: "5.1"
+        - IDF_VERSION: "5.2"
   tags:
     - esp32s3
     - esp32s3_lcd_ev
@@ -291,8 +288,7 @@ components_test_esp_lcd_st7701:
       optional: true
   parallel:
     matrix:
-        - IDF_VERSION: "5.0"
-        - IDF_VERSION: "5.1"
+        - IDF_VERSION: "5.2"
   tags:
     - esp32s3
     - esp32s3_lcd_ev

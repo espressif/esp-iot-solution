@@ -1,4 +1,4 @@
-version: "0.0.2"
+version: "1.0.0"
 targets:
   - esp32s3
 description: ESP LCD ST7701
@@ -6,4 +6,5 @@ url: https://github.com/espressif/esp-iot-solution/tree/master/components/displa
 repository: https://github.com/espressif/esp-iot-solution.git
 issues: https://github.com/espressif/esp-iot-solution/issues
 dependencies:
-  idf: ">=5.0.4"
+  idf: ">5.0.4,!=5.1.1"
+  cmake_utilities: "0.*"

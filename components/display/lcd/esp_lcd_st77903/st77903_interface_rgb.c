@@ -62,6 +62,8 @@ esp_err_t lcd_new_panel_st77903_rgb(const esp_lcd_panel_io_handle_t io, const es
 {
     ESP_RETURN_ON_FALSE(io, ESP_ERR_INVALID_ARG, TAG, "invalid arguments");
     st77903_vendor_config_t *vendor_config = (st77903_vendor_config_t *)panel_dev_config->vendor_config;
+    ESP_RETURN_ON_FALSE(!vendor_config->flags.auto_del_panel_io || !vendor_config->flags.mirror_by_cmd,
+                        ESP_ERR_INVALID_ARG, TAG, "`mirror_by_cmd` and `auto_del_panel_io` cannot work together");
 
     esp_err_t ret = ESP_OK;
     st77903_panel_t *st77903 = (st77903_panel_t *)calloc(1, sizeof(st77903_panel_t));

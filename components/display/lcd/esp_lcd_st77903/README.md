@@ -59,7 +59,7 @@ Implementation of the ST77903 LCD controller with [esp_lcd](https://docs.espress
 
 ### RGB Interface
 
-For most RGB LCDs, they typically use a "[3-Wire SPI + Parallel RGB](https://focuslcds.com/3-wire-spi-parallel-rgb-interface-fan4213/)" interface. The "3-Wire SPI" interface is used for transmitting command data and the "Parallel RGB" interface is used for sending pixel data.
+For most RGB LCDs, they typically use a "3-Wire SPI + Parallel RGB" interface. The "3-Wire SPI" interface is used for transmitting command data and the "Parallel RGB" interface is used for sending pixel data.
 
 It's recommended to use the [esp_lcd_panel_io_additions](https://components.espressif.com/components/espressif/esp_lcd_panel_io_additions) component to bit-bang the "3-Wire SPI" interface through **GPIO** or an **IO expander** (like [TCA9554](https://components.espressif.com/components/espressif/esp_io_expander_tca9554)). To do this, please first add this component to your project manually. Then, refer to the following code to initialize the ST77903 controller.
 
@@ -69,9 +69,9 @@ It's recommended to use the [esp_lcd_panel_io_additions](https://components.espr
         .cs_io_type = IO_TYPE_EXPANDER,     // Set to `IO_TYPE_GPIO` if using GPIO, same to below
         .cs_expander_pin = EXAMPLE_LCD_IO_SPI_CS,
         .scl_io_type = IO_TYPE_GPIO,
-        .scl_expander_pin = EXAMPLE_LCD_IO_SPI_SCK,
+        .scl_gpio_num = EXAMPLE_LCD_IO_SPI_SCK,
         .sda_io_type = IO_TYPE_GPIO,
-        .sda_expander_pin = EXAMPLE_LCD_IO_SPI_SDO,
+        .sda_gpio_num = EXAMPLE_LCD_IO_SPI_SDO,
         .io_expander = expander_handle,     // Set to NULL if not using IO expander
     };
     esp_lcd_panel_io_3wire_spi_config_t io_config = ST77903_RGB_PANEL_IO_3WIRE_SPI_CONFIG(line_config, 0);

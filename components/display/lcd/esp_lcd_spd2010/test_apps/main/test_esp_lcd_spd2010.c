@@ -75,7 +75,9 @@ static void test_draw_bitmap(esp_lcd_panel_handle_t panel_handle)
 TEST_CASE("test spd2010 to draw color bar with SPI interface", "[spd2010][spi]")
 {
     ESP_LOGI(TAG, "Initialize SPI bus");
-    const spi_bus_config_t buscfg = SPD2010_PANEL_BUS_SPI_CONFIG(TEST_PIN_NUM_LCD_PCLK, TEST_PIN_NUM_LCD_DATA0);
+    const spi_bus_config_t buscfg = SPD2010_PANEL_BUS_SPI_CONFIG(TEST_PIN_NUM_LCD_PCLK,
+                                                                TEST_PIN_NUM_LCD_DATA0,
+                                                                TEST_LCD_H_RES * TEST_LCD_V_RES * TEST_LCD_BIT_PER_PIXEL / 8);
     TEST_ESP_OK(spi_bus_initialize(TEST_LCD_HOST, &buscfg, SPI_DMA_CH_AUTO));
 
     ESP_LOGI(TAG, "Install panel IO");
@@ -107,9 +109,12 @@ TEST_CASE("test spd2010 to draw color bar with SPI interface", "[spd2010][spi]")
 TEST_CASE("test spd2010 to draw color bar with QSPI interface", "[spd2010][qspi]")
 {
     ESP_LOGI(TAG, "Initialize SPI bus");
-    const spi_bus_config_t buscfg = SPD2010_PANEL_BUS_QSPI_CONFIG(TEST_PIN_NUM_LCD_PCLK, TEST_PIN_NUM_LCD_DATA0,
-                                                                  TEST_PIN_NUM_LCD_DATA1, TEST_PIN_NUM_LCD_DATA2,
-                                                                  TEST_PIN_NUM_LCD_DATA3);
+    const spi_bus_config_t buscfg = SPD2010_PANEL_BUS_QSPI_CONFIG(TEST_PIN_NUM_LCD_PCLK,
+                                                                TEST_PIN_NUM_LCD_DATA0,
+                                                                TEST_PIN_NUM_LCD_DATA1,
+                                                                TEST_PIN_NUM_LCD_DATA2,
+                                                                TEST_PIN_NUM_LCD_DATA3,
+                                                                TEST_LCD_H_RES * TEST_LCD_V_RES * TEST_LCD_BIT_PER_PIXEL / 8);
     TEST_ESP_OK(spi_bus_initialize(TEST_LCD_HOST, &buscfg, SPI_DMA_CH_AUTO));
 
     ESP_LOGI(TAG, "Install panel IO");

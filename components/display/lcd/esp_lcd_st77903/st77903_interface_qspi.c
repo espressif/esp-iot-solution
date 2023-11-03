@@ -1205,7 +1205,6 @@ static const st77903_lcd_init_cmd_t vendor_specific_init_default[] = {
     {0x35, (uint8_t []){0x00}, 1, 0},
     {0x21, (uint8_t []){0x00}, 0, 0},
     {0x11, (uint8_t []){0x00}, 0, 120},
-    {0x29, (uint8_t []){0x00}, 0, 120},
 };
 
 static esp_err_t lcd_cmd_config(st77903_qspi_panel_t *panel)

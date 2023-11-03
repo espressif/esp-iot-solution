@@ -24,7 +24,9 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
 
 ```c
     ESP_LOGI(TAG, "Initialize SPI bus");
-    const spi_bus_config_t bus_config = SPD2010_PANEL_BUS_SPI_CONFIG(EXAMPLE_PIN_NUM_LCD_PCLK, EXAMPLE_PIN_NUM_LCD_DATA0);
+    const spi_bus_config_t bus_config = SPD2010_PANEL_BUS_SPI_CONFIG(EXAMPLE_PIN_NUM_LCD_PCLK,
+                                                                    EXAMPLE_PIN_NUM_LCD_DATA0,
+                                                                    EXAMPLE_LCD_H_RES * 80 * sizeof(uint16_t));
     ESP_ERROR_CHECK(spi_bus_initialize(EXAMPLE_LCD_HOST, &bus_config, SPI_DMA_CH_AUTO));
 
     ESP_LOGI(TAG, "Install panel IO");
@@ -58,7 +60,7 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
     const esp_lcd_panel_dev_config_t panel_config = {
         .reset_gpio_num = EXAMPLE_PIN_NUM_LCD_RST,
         .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,     // Implemented by LCD command `36h`
-        .bits_per_pixel = EXAMPLE_LCD_BIT_PER_PIXEL,    // Implemented by LCD command `3Ah` (16/18/24)
+        .bits_per_pixel = 16,                           // Implemented by LCD command `3Ah` (16/18/24)
         .vendor_config = &vendor_config,
     };
     ESP_ERROR_CHECK(esp_lcd_new_panel_spd2010(io_handle, &panel_config, &panel_handle));
@@ -71,10 +73,11 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
 ```c
     ESP_LOGI(TAG, "Initialize QSPI bus");
     const esp_lcd_panel_io_spi_config_t io_config = SPD2010_PANEL_BUS_QSPI_CONFIG(EXAMPLE_PIN_NUM_LCD_PCLK,
-                                                                                  EXAMPLE_PIN_NUM_LCD_DATA0,
-                                                                                  EXAMPLE_PIN_NUM_LCD_DATA1,
-                                                                                  EXAMPLE_PIN_NUM_LCD_DATA2,
-                                                                                  EXAMPLE_PIN_NUM_LCD_DATA3);
+                                                                                 EXAMPLE_PIN_NUM_LCD_DATA0,
+                                                                                 EXAMPLE_PIN_NUM_LCD_DATA1,
+                                                                                 EXAMPLE_PIN_NUM_LCD_DATA2,
+                                                                                 EXAMPLE_PIN_NUM_LCD_DATA3,
+                                                                                 EXAMPLE_LCD_H_RES * 80 * sizeof(uint16_t));
     ESP_ERROR_CHECK(spi_bus_initialize(EXAMPLE_LCD_HOST, &buscfg, SPI_DMA_CH_AUTO));
 
     ESP_LOGI(TAG, "Install panel IO");
@@ -107,7 +110,7 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
     const esp_lcd_panel_dev_config_t panel_config = {
         .reset_gpio_num = EXAMPLE_PIN_NUM_LCD_RST,
         .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,     // Implemented by LCD command `36h`
-        .bits_per_pixel = EXAMPLE_LCD_BIT_PER_PIXEL,    // Implemented by LCD command `3Ah` (16/18/24)
+        .bits_per_pixel = 16,                           // Implemented by LCD command `3Ah` (16/18/24)
         .vendor_config = &vendor_config,
     };
     ESP_ERROR_CHECK(esp_lcd_new_panel_spd2010(io_handle, &panel_config, &panel_handle));

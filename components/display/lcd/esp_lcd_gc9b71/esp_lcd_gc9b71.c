@@ -44,7 +44,7 @@ typedef struct {
     int y_gap;
     uint8_t fb_bits_per_pixel;
     uint8_t madctl_val; // save current value of LCD_CMD_MADCTL register
-    uint8_t colmod_cal; // save surrent value of LCD_CMD_COLMOD register
+    uint8_t colmod_val; // save current value of LCD_CMD_COLMOD register
     const gc9b71_lcd_init_cmd_t *init_cmds;
     uint16_t init_cmds_size;
     struct {
@@ -85,16 +85,16 @@ esp_err_t esp_lcd_new_panel_gc9b71(const esp_lcd_panel_io_handle_t io, const esp
     uint8_t fb_bits_per_pixel = 0;
     switch (panel_dev_config->bits_per_pixel) {
     case 16: // RGB565
-        gc9b71->colmod_cal = 0x55;
+        gc9b71->colmod_val = 0x55;
         fb_bits_per_pixel = 16;
         break;
     case 18: // RGB666
-        gc9b71->colmod_cal = 0x66;
+        gc9b71->colmod_val = 0x66;
         // each color component (R/G/B) should occupy the 6 high bits of a byte, which means 3 full bytes are required for a pixel
         fb_bits_per_pixel = 24;
         break;
     case 24: // RGB888
-        gc9b71->colmod_cal = 0x77;
+        gc9b71->colmod_val = 0x77;
         fb_bits_per_pixel = 24;
         break;
     default:
@@ -246,25 +246,25 @@ static const gc9b71_lcd_init_cmd_t vendor_specific_init_default[] = {
     {0xBE, (uint8_t []){0x11}, 1, 0},
     {0xFB, (uint8_t []){0x00, 0x00}, 2, 0},
     {0x11, (uint8_t []){0x00}, 0, 1000},
-    {0x29, (uint8_t []){0x00}, 0, 0},
 };
 
 static esp_err_t panel_gc9b71_init(esp_lcd_panel_t *panel)
 {
     gc9b71_panel_t *gc9b71 = __containerof(panel, gc9b71_panel_t, base);
     esp_lcd_panel_io_handle_t io = gc9b71->io;
+    const gc9b71_lcd_init_cmd_t *init_cmds = NULL;
+    uint16_t init_cmds_size = 0;
+    bool is_cmd_overwritten = false;
 
     ESP_RETURN_ON_ERROR(tx_param(gc9b71, io, LCD_CMD_MADCTL, (uint8_t[]) {
         gc9b71->madctl_val,
     }, 1), TAG, "send command failed");
     ESP_RETURN_ON_ERROR(tx_param(gc9b71, io, LCD_CMD_COLMOD, (uint8_t[]) {
-        gc9b71->colmod_cal,
+        gc9b71->colmod_val,
     }, 1), TAG, "send command failed");
 
     // vendor specific initialization, it can be different between manufacturers
     // should consult the LCD supplier for initialization sequence code
-    const gc9b71_lcd_init_cmd_t *init_cmds = NULL;
-    uint16_t init_cmds_size = 0;
     if (gc9b71->init_cmds) {
         init_cmds = gc9b71->init_cmds;
         init_cmds_size = gc9b71->init_cmds_size;
@@ -272,11 +272,32 @@ static esp_err_t panel_gc9b71_init(esp_lcd_panel_t *panel)
         init_cmds = vendor_specific_init_default;
         init_cmds_size = sizeof(vendor_specific_init_default) / sizeof(gc9b71_lcd_init_cmd_t);
     }
+
     for (int i = 0; i < init_cmds_size; i++) {
+        // Check if the command has been used or conflicts with the internal
+        switch (init_cmds[i].cmd) {
+        case LCD_CMD_MADCTL:
+            is_cmd_overwritten = true;
+            gc9b71->madctl_val = ((uint8_t *)init_cmds[i].data)[0];
+            break;
+        case LCD_CMD_COLMOD:
+            is_cmd_overwritten = true;
+            gc9b71->colmod_val = ((uint8_t *)init_cmds[i].data)[0];
+            break;
+        default:
+            is_cmd_overwritten = false;
+            break;
+        }
+
+        if (is_cmd_overwritten) {
+            ESP_LOGW(TAG, "The %02Xh command has been used and will be overwritten by external initialization sequence", init_cmds[i].cmd);
+        }
+
         ESP_RETURN_ON_ERROR(tx_param(gc9b71, io, init_cmds[i].cmd, init_cmds[i].data, init_cmds[i].data_bytes), TAG,
                             "send command failed");
         vTaskDelay(pdMS_TO_TICKS(init_cmds[i].delay_ms));
     }
+    ESP_LOGD(TAG, "send init commands success");
 
     return ESP_OK;
 }
