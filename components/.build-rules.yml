@@ -54,6 +54,10 @@ components/display/lcd/esp_lcd_panel_io_additions/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32s3"]
 
+components/display/lcd/esp_lcd_nv3022b/test_apps:
+  enable:
+    - if: INCLUDE_DEFAULT == 1
+
 components/display/lcd/esp_lcd_sh8601/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1
@@ -69,6 +73,10 @@ components/display/lcd/esp_lcd_st7701/test_apps:
 components/display/lcd/esp_lcd_st77903/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32s3"]
+
+components/display/lcd/esp_lcd_st77916/test_apps:
+  enable:
+    - if: INCLUDE_DEFAULT == 1
 
 components/display/lcd_touch/esp_lcd_touch_spd2010/test_apps:
   enable:

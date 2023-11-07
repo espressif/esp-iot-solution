@@ -543,6 +543,17 @@ build_components_display_lcd_esp_lcd_panel_io_additions_test_apps:
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_panel_io_additions/test_apps
 
+build_components_display_lcd_esp_lcd_nv3022b_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_display_lcd_esp_lcd_nv3022b_test_apps
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.1
+  variables:
+    EXAMPLE_DIR: components/display/lcd/esp_lcd_nv3022b/test_apps
+
 build_components_display_lcd_esp_lcd_sh8601_test_apps:
   extends:
     - .build_examples_template
@@ -589,6 +600,16 @@ build_components_display_lcd_esp_lcd_st77903_test_apps:
     - cd ${IOT_SOLUTION_PATH}
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_st77903/test_apps
+
+build_components_display_lcd_esp_lcd_st77916_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_display_lcd_esp_lcd_st77916_test_apps
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.1
+  variables:
+    EXAMPLE_DIR: components/display/lcd/esp_lcd_st77916/test_apps
 
 build_components_display_lcd_touch_esp_lcd_touch_spd2010_test_apps:
   extends:
