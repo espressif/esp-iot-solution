@@ -734,12 +734,12 @@ esp_err_t led_indicator_preempt_stop(led_indicator_handle_t handle, int blink_ty
     return ESP_OK;
 }
 
-uint8_t led_indicator_get_current_fade_value(led_indicator_handle_t handle)
+uint8_t led_indicator_get_brightness(led_indicator_handle_t handle)
 {
     LED_INDICATOR_CHECK(handle != NULL, "invalid p_handle", return 0);
     _led_indicator_t *p_led_indicator = (_led_indicator_t *)handle;
     xSemaphoreTake(p_led_indicator->mutex, portMAX_DELAY);
-    uint8_t fade_value = p_led_indicator->current_fade_value;
+    uint8_t fade_value = p_led_indicator->current_fade_value & 0xFF;
     xSemaphoreGive(p_led_indicator->mutex);
     return fade_value;
 }
@@ -778,6 +778,16 @@ esp_err_t led_indicator_set_brightness(led_indicator_handle_t handle, uint32_t b
     return ESP_OK;
 }
 
+uint32_t led_indicator_get_hsv(led_indicator_handle_t handle)
+{
+    LED_INDICATOR_CHECK(handle != NULL, "invalid p_handle", return 0);
+    _led_indicator_t *p_led_indicator = (_led_indicator_t *)handle;
+    xSemaphoreTake(p_led_indicator->mutex, portMAX_DELAY);
+    uint32_t hsv_value = p_led_indicator->current_fade_value & 0x1FFFFFFF;
+    xSemaphoreGive(p_led_indicator->mutex);
+    return hsv_value;
+}
+
 esp_err_t led_indicator_set_hsv(led_indicator_handle_t handle, uint32_t ihsv_value)
 {
     LED_INDICATOR_CHECK(handle != NULL, "invalid p_handle", return ESP_ERR_INVALID_ARG);
@@ -792,6 +802,21 @@ esp_err_t led_indicator_set_hsv(led_indicator_handle_t handle, uint32_t ihsv_val
     p_led_indicator->last_fade_value = ihsv_value;
     xSemaphoreGive(p_led_indicator->mutex);
     return ESP_OK;
+}
+
+uint32_t led_indicator_get_rgb(led_indicator_handle_t handle)
+{
+    LED_INDICATOR_CHECK(handle != NULL, "invalid p_handle", return 0);
+    _led_indicator_t *p_led_indicator = (_led_indicator_t *)handle;
+    xSemaphoreTake(p_led_indicator->mutex, portMAX_DELAY);
+    uint32_t ihsv_value = p_led_indicator->current_fade_value;
+    xSemaphoreGive(p_led_indicator->mutex);
+    
+    uint32_t r,g,b,rgb_value;
+    led_indicator_strips_hsv2rgb(ihsv_value, &r, &g, &b);
+    rgb_value = (r << 16) | (g << 8) | b;
+    
+    return rgb_value;
 }
 
 esp_err_t led_indicator_set_rgb(led_indicator_handle_t handle, uint32_t irgb_value)
