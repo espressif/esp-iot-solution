@@ -290,17 +290,26 @@ void app_main(void)
 
     ESP_LOGI(TAG, "Initialize SPI bus");
 #if CONFIG_EXAMPLE_LCD_CONTROLLER_GC9B71
-    const spi_bus_config_t buscfg = GC9B71_PANEL_BUS_QSPI_CONFIG(EXAMPLE_PIN_NUM_LCD_PCLK, EXAMPLE_PIN_NUM_LCD_DATA0,
-                                                                 EXAMPLE_PIN_NUM_LCD_DATA1, EXAMPLE_PIN_NUM_LCD_DATA2,
-                                                                 EXAMPLE_PIN_NUM_LCD_DATA3);
+    const spi_bus_config_t buscfg = GC9B71_PANEL_BUS_QSPI_CONFIG(EXAMPLE_PIN_NUM_LCD_PCLK,
+                                                                EXAMPLE_PIN_NUM_LCD_DATA0,
+                                                                EXAMPLE_PIN_NUM_LCD_DATA1,
+                                                                EXAMPLE_PIN_NUM_LCD_DATA2,
+                                                                EXAMPLE_PIN_NUM_LCD_DATA3,
+                                                                EXAMPLE_LCD_H_RES * EXAMPLE_LCD_V_RES * LCD_BIT_PER_PIXEL / 8);
 #elif CONFIG_EXAMPLE_LCD_CONTROLLER_SPD2010
-    const spi_bus_config_t buscfg = SPD2010_PANEL_BUS_QSPI_CONFIG(EXAMPLE_PIN_NUM_LCD_PCLK, EXAMPLE_PIN_NUM_LCD_DATA0,
-                                                                  EXAMPLE_PIN_NUM_LCD_DATA1, EXAMPLE_PIN_NUM_LCD_DATA2,
-                                                                  EXAMPLE_PIN_NUM_LCD_DATA3);
+    const spi_bus_config_t buscfg = SPD2010_PANEL_BUS_QSPI_CONFIG(EXAMPLE_PIN_NUM_LCD_PCLK,
+                                                                EXAMPLE_PIN_NUM_LCD_DATA0,
+                                                                EXAMPLE_PIN_NUM_LCD_DATA1,
+                                                                EXAMPLE_PIN_NUM_LCD_DATA2,
+                                                                EXAMPLE_PIN_NUM_LCD_DATA3,
+                                                                EXAMPLE_LCD_H_RES * EXAMPLE_LCD_V_RES * LCD_BIT_PER_PIXEL / 8);
 #elif CONFIG_EXAMPLE_LCD_CONTROLLER_SH8601
-    const spi_bus_config_t buscfg = SH8601_PANEL_BUS_QSPI_CONFIG(EXAMPLE_PIN_NUM_LCD_PCLK, EXAMPLE_PIN_NUM_LCD_DATA0,
-                                                                 EXAMPLE_PIN_NUM_LCD_DATA1, EXAMPLE_PIN_NUM_LCD_DATA2,
-                                                                 EXAMPLE_PIN_NUM_LCD_DATA3);
+    const spi_bus_config_t buscfg = SH8601_PANEL_BUS_QSPI_CONFIG(EXAMPLE_PIN_NUM_LCD_PCLK,
+                                                                EXAMPLE_PIN_NUM_LCD_DATA0,
+                                                                EXAMPLE_PIN_NUM_LCD_DATA1,
+                                                                EXAMPLE_PIN_NUM_LCD_DATA2,
+                                                                EXAMPLE_PIN_NUM_LCD_DATA3,
+                                                                EXAMPLE_LCD_H_RES * EXAMPLE_LCD_V_RES * LCD_BIT_PER_PIXEL / 8);
 #endif
     ESP_ERROR_CHECK(spi_bus_initialize(LCD_HOST, &buscfg, SPI_DMA_CH_AUTO));
 

@@ -317,7 +317,7 @@ SYNC 模式
     // ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(panel_handle, true));    // 通过 `disp_gpio_num` 引脚控制 LCD 显示的开关，
                                                                           // 仅当该引脚设置且不为 `-1` 时可用，否则会报错
 
-关于 ``RGB`` 接口参数配置的说明和一些特殊功能函数的使用，请参考 :ref:`说明 <rgb_参数配置及特殊功能函数>`
+关于 ``RGB`` 接口的参数配置和一些功能函数的说明，请参考 :ref:`RGB 参数配置及功能函数 <rgb_参数配置及功能函数>`
 
 **对于采用 3-wire SPI 和 RGB 接口的 LCD** ，首先通过移植好的驱动组件创建 LCD 设备并获取数据类型为 ``esp_lcd_panel_handle_t`` 的句柄，然后使用 `LCD 通用 APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ 来初始化 LCD 设备，下面是以 `ST7701S <https://components.espressif.com/components/espressif/esp_lcd_st7701>`_ 为例的代码说明：
 
@@ -426,16 +426,19 @@ SYNC 模式
     // ESP_ERROR_CHECK(esp_lcd_panel_set_gap(panel_handle, 0, 0));
     // ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(panel_handle, true));
 
-.. _rgb_参数配置及特殊功能函数:
+.. _rgb_参数配置及功能函数:
 
-关于 ``RGB`` 接口配置参数更加详细的说明，请参考 `ESP-IDF 编程指南 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/peripherals/lcd.html#rgb-interfaced-lcd>`_。
+关于 ``RGB`` 接口配置参数更加详细的说明，请参考 `ESP-IDF 编程指南 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/peripherals/lcd.html#rgb-interfaced-lcd>`_。下面是一些关于使用函数 ``esp_lcd_panel_draw_bitmap()`` 刷新 RGB LCD 图像的说明：
+
+  - 该函数是通过内存拷贝的方式刷新帧缓存里的图像数据，也就是说该函数调用完成后帧缓存内的图像数据也已经更新完成，而 ``RGB`` 接口本身是通过 DMA 从帧缓存中获取图像数据来刷新 LCD，这两个过程是异步进行的。
+  - 该函数会判断传入参数 ``color_data`` 的值是否为 ``RGB`` 接口内部的帧缓存地址，若是，则不会进行上述的内存拷贝操作，而是直接将 ``RGB`` 接口的 DMA 传输地址设置为该缓存地址，从而在具有多个帧缓存的情况下实现切换的功能。
 
 除了 `LCD 通用 APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ 之外， `RGB 接口驱动 <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/src/esp_lcd_panel_rgb.c>`_ 中还提供了一些特殊功能的函数，下面是一些常用函数的使用说明：
 
-  #. ``esp_lcd_rgb_panel_set_pclk()``：动态修改时钟频率，可以在 LCD 初始化后使用。
-  #. ``esp_lcd_rgb_panel_restart()``：复位数据传输，用于在屏幕发生偏移时调用可以使其恢复正常。
-  #. ``esp_lcd_rgb_panel_get_frame_buffer()``：用于获取帧缓存的地址，可用数量由配置参数 ``num_fbs`` 决定，用于多缓冲防撕裂。
-  #. ``esp_lcd_rgb_panel_register_event_callbacks()``：注册多种事件的回调函数，示例代码及说明如下：
+  - ``esp_lcd_rgb_panel_set_pclk()``：动态修改时钟频率，可以在 LCD 初始化后使用。
+  - ``esp_lcd_rgb_panel_restart()``：复位数据传输，用于在屏幕发生偏移时调用可以使其恢复正常。
+  - ``esp_lcd_rgb_panel_get_frame_buffer()``：获取帧缓存的地址，可用数量由配置参数 ``num_fbs`` 决定，用于多缓冲防撕裂。
+  - ``esp_lcd_rgb_panel_register_event_callbacks()``：注册多种事件的回调函数，示例代码及说明如下：
 
     .. code-block:: c
 
@@ -455,7 +458,8 @@ SYNC 模式
 
         esp_lcd_rgb_panel_event_callbacks_t cbs = {
             .on_vsync = example_on_vsync_event,                 // 刷新完一帧图像时的回调函数
-            .on_bounce_frame_finish = example_on_bounce_event,  // 通过 Bounce Buffer 机制传输完一帧图像时的回调函数
+            .on_bounce_frame_finish = example_on_bounce_event,  // 通过 Bounce Buffer 机制搬运完一帧图像时的回调函数
+                                                                // 需注意，此时 RGB 接口还未传输完该帧图像
         };
         ESP_ERROR_CHECK(esp_lcd_rgb_panel_register_event_callbacks(panel_handle, &cbs, &example_user_ctx));
 
@@ -465,5 +469,3 @@ SYNC 模式
 - `ST7701S 数据手册 <https://dl.espressif.com/AE/esp-iot-solution/ST7701S_SPEC_%20V1.4.pdf>`_
 - `ST77903 数据手册 <https://dl.espressif.com/AE/esp-iot-solution/ST77903_SPEC_P0.5.pdf>`_
 - `GC9503 数据手册 <https://github.com/espressif/esp-dev-kits/blob/master/docs/_static/esp32-s3-lcd-ev-board/datasheets/3.95_480x480_SmartDisplay/GC9503NP_DataSheet_V1.7.pdf>`_
-- `色彩格式 <https://focuslcds.com/color-depth-65k-262k-16-7m-colors/>`_
-- `3-wire SPI + RGB 接口 <https://focuslcds.com/3-wire-spi-parallel-rgb-interface-fan4213/>`_

@@ -9,8 +9,10 @@ LCD 开发指南
 
   - `支持的接口类型`_：乐鑫各系列芯片对不同 LCD 接口的支持情况。
   - `驱动及示例`_：乐鑫提供的 LCD 驱动及示例。
-  - `开发框架`_：使用乐鑫芯片开发 LCD 的软硬件框架。
-  - `开发步骤`_：使用乐鑫芯片开发 LCD 应用的详细步骤。
+  - `开发框架`_：开发 LCD 的软硬件框架。
+  - `开发步骤`_：开发 LCD 应用的详细步骤。
+  - `常见问题`_：列出了开发 LCD 应用过程中常见的问题。
+  - `相关文档`_：列出了相关文档的链接。
 
 支持的接口类型
 ----------------------------
@@ -75,9 +77,9 @@ LCD 开发指南
 
 .. note::
 
-    #. 推荐基于 ESP-IDF `release/v5.1 <https://github.com/espressif/esp-idf/tree/release/v5.1>`_ 及以上版本分支进行开发，因为低版本不支持部分重要的新特性，尤其是对于 ``RGB`` 接口。
-    #. 对于使用 ``3-wire SPI + RGB`` 接口的 LCD，请参考示例 `esp_lcd_st7701 - Example use <https://components.espressif.com/components/espressif/esp_lcd_st7701>`_。
-    #. 即使 LCD 驱动 IC 的型号相同，不同的屏幕往往需要使用各自厂商提供的初始化命令配置，大部分驱动组件支持在初始化 LCD 设备时传入自定义的初始化命令，若不支持，请参考 `方法 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/lcd.html#steps-to-add-manufacture-specific-initialization>`_ 。
+    - 推荐基于 ESP-IDF `release/v5.1 <https://github.com/espressif/esp-idf/tree/release/v5.1>`_ 及以上版本分支进行开发，因为低版本不支持部分重要的新特性，尤其是对于 ``RGB`` 接口。
+    - 对于使用 ``3-wire SPI + RGB`` 接口的 LCD，请参考示例 `esp_lcd_st7701 - Example use <https://components.espressif.com/components/espressif/esp_lcd_st7701>`_。
+    - 即使 LCD 驱动 IC 的型号相同，不同的屏幕往往需要使用各自厂商提供的初始化命令配置，大部分驱动组件支持在初始化 LCD 设备时传入自定义的初始化命令，若不支持，请参考 `方法 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/lcd.html#steps-to-add-manufacture-specific-initialization>`_ 。
 
 开发框架
 -------------------------
@@ -85,7 +87,7 @@ LCD 开发指南
 硬件框架
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-对于 SPI/I80 LCD，ESP 可以通过单一的外设接口发送 **命令** 来配置 LCD 以及传输 **局部的色彩数据** 来刷新屏幕。LCD 的驱动 IC 会将接收到的色彩数据存储在 **全屏大小的 GRAM** 内，并按照固定的刷新速率把 **全屏的色彩数据** 显示到面板上，这两个过程是异步进行的。
+对于 SPI/I80 LCD，ESP 可以通过单一的外设接口发送 **命令** 来配置 LCD 以及传输 **局部的色彩数据** 来刷新屏幕。LCD 的驱动 IC 会将接收到的色彩数据存储在 **全屏大小的 GRAM** 内，并按照固定的刷新速率把 **全屏的色彩数据** 显示到面板上，这两个过程是异步进行的。下面是 SPI/I80 LCD 的硬件驱动框架示意图：
 
 .. figure:: ../../../_static/display/screen/lcd_hw_framework_spi_i80.png
     :align: center
@@ -94,7 +96,7 @@ LCD 开发指南
 
     硬件驱动框架示意图 - SPI/I80 LCD
 
-对于大多数 RGB LCD，ESP 需要使用两种不同的接口，一方面通过 ``3-wire SPI`` 接口发送 **命令** 来配置 LCD ，另一方面通过 ``RGB`` 接口传输 **全屏的色彩数据** 来刷新屏幕。由于 LCD 的驱动 IC 没有内置的 GRAM，它会将接收到的色彩数据直接显示到面板上，因此这两个过程是同步进行的。
+对于大多数 RGB LCD，ESP 需要使用两种不同的接口，一方面通过 ``3-wire SPI`` 接口发送 **命令** 来配置 LCD ，另一方面通过 ``RGB`` 接口传输 **全屏的色彩数据** 来刷新屏幕。由于 LCD 的驱动 IC 没有内置的 GRAM，它会将接收到的色彩数据直接显示到面板上，因此这两个过程是同步进行的。下面是 RGB LCD 的硬件驱动框架示意图：
 
 .. figure:: ../../../_static/display/screen/lcd_hw_framework_rgb.png
     :align: center
@@ -105,7 +107,7 @@ LCD 开发指南
 
 通过对比这两种框架可以看出，RGB LCD 相较于 SPI/I80 LCD，不仅需要 ESP 使用两种接口来分别实现传输命令和色彩数据，还要求 ESP 提供全屏大小的 GRAM 来实现屏幕刷新（由于芯片内的 SRAM 的空间比较有限，通常将 GRAM 放在 PSRAM 上）。
 
-对于 QSPI LCD，不同型号的驱动 IC 可能需要不同的驱动方式，比如 SPD2010 这款 IC 内置 GRAM，其驱动方式与 SPI/I80 类似，而 ST77903 这款 IC 内部没有 GRAM，其驱动方式与 RGB LCD 类似，但是它们都是通过用单一的外设接口传输命令和色彩数据。
+对于 QSPI LCD，不同型号的驱动 IC 可能需要不同的驱动方式，比如 *SPD2010* 这款 IC 内置 GRAM，其驱动方式与 SPI/I80 LCD 类似，而 *ST77903* 这款 IC 内部没有 GRAM，其驱动方式与 RGB LCD 类似，但是它们都是通过用单一的外设接口传输命令和色彩数据，下面是这两种 QSPI LCD 的硬件驱动框架示意图：
 
 .. figure:: ../../../_static/display/screen/lcd_hw_framework_qspi_with_gram.png
     :align: center
@@ -151,10 +153,10 @@ LCD 开发指南
 
 不同类型的 LCD 接口需要使用不同的外设，下面对几种常用接口的设备初始化过程进行说明：
 
-  #. :ref:`SPI LCD 详解 - 初始化接口设备 <spi_初始化接口设备>`
-  #. :ref:`RGB LCD 详解 - 初始化接口设备 <rgb_初始化接口设备>`
-  #. I80 LCD 详解 - 初始化接口设备（待更新）
-  #. QSPI LCD 详解 - 初始化接口设备（待更新）
+  - :ref:`SPI LCD 详解 - 初始化接口设备 <spi_初始化接口设备>`
+  - :ref:`RGB LCD 详解 - 初始化接口设备 <rgb_初始化接口设备>`
+  - I80 LCD 详解 - 初始化接口设备（待更新）
+  - QSPI LCD 详解 - 初始化接口设备（待更新）
 
 关于这部分更加详细的说明，请参考 `ESP-IDF 编程指南 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/peripherals/lcd.html>`_。
 
@@ -169,24 +171,47 @@ LCD 开发指南
 
 在移植驱动组件前，请先尝试直接从 :ref:`LCD 驱动组件 <lcd_驱动组件>` 中获取目标 LCD 驱动 IC 的组件。若该组件不存在，那么也可以基于已有的并且接口类型相同的组件进行移植。不同接口类型的 LCD 驱动可能具有不同的移植原理，下面对几种常用接口的 LCD 驱动组件的移植方法进行说明：
 
-  #. :ref:`SPI LCD 详解 - 移植驱动组件 <spi_移植驱动组件>`
-  #. :ref:`RGB LCD 详解 - 移植驱动组件 <rgb_移植驱动组件>`
-  #. I80 LCD 详解 - 移植驱动组件（待更新）
-  #. QSPI LCD 详解 - 移植驱动组件（待更新）
+  - :ref:`SPI LCD 详解 - 移植驱动组件 <spi_移植驱动组件>`
+  - :ref:`RGB LCD 详解 - 移植驱动组件 <rgb_移植驱动组件>`
+  - I80 LCD 详解 - 移植驱动组件（待更新）
+  - QSPI LCD 详解 - 移植驱动组件（待更新）
 
 .. _lcd_初始化:
 
 然后，利用驱动组件就可以实现 LCD 的初始化，下面对几种常用接口的 LCD 初始化进行说明：
 
-  #. :ref:`SPI LCD 详解 - 初始化 LCD 设备  <spi_初始化_lcd>`
-  #. :ref:`RGB LCD 详解 - 初始化 LCD 设备  <rgb_初始化_lcd>`
-  #. I80 LCD 详解 - 初始化 LCD 设备 （待更新）
-  #. QSPI LCD 详解 - 初始化 LCD 设备 （待更新）
+  - :ref:`SPI LCD 详解 - 初始化 LCD 设备  <spi_初始化_lcd>`
+  - :ref:`RGB LCD 详解 - 初始化 LCD 设备  <rgb_初始化_lcd>`
+  - I80 LCD 详解 - 初始化 LCD 设备 （待更新）
+  - QSPI LCD 详解 - 初始化 LCD 设备 （待更新）
 
 关于这部分更加详细的说明，请参考 `ESP-IDF 编程指南 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/peripherals/lcd.html>`_。
 
 移植 LVGL
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
+（待更新）
+
 设计 GUI
 ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+（待更新）
+
+常见问题
+-------------------------
+
+下面列举了一些开发 LCD 应用过程中常见的问题，请点击问题跳转查看解决方法。
+
+* `ESP 系列芯片如何使用 Arduino IDE 开发 GUI <https://docs.espressif.com/projects/esp-faq/zh_CN/latest/software-framework/peripherals/lcd.html#esp-arduino-ide-gui>`_
+* `ESP 系列芯片支持 LCD 的最大分辨率及帧率 <https://docs.espressif.com/projects/esp-faq/zh_CN/latest/software-framework/peripherals/lcd.html#id3>`_
+* `ESP 系列芯片如何提高 LCD 的渲染帧率 <https://docs.espressif.com/projects/esp-faq/zh_CN/latest/software-framework/peripherals/lcd.html#id2>`_
+* `ESP32-S3 如何提高 RGB LCD 的 PCLK（刷新帧率） <https://docs.espressif.com/projects/esp-faq/zh_CN/latest/software-framework/peripherals/lcd.html#esp32-s3-rgb-pclk>`_
+* `ESP32-S3 如何解决驱动 RGB LCD 出现屏幕偏移或闪烁的问题 <https://docs.espressif.com/projects/esp-faq/zh_CN/latest/software-framework/peripherals/lcd.html#esp32-s3-rgb-lcd>`_
+* `ESP32-S3R8 如何配置 PSRAM 120M Octal(DDR) <https://docs.espressif.com/projects/esp-faq/zh_CN/latest/software-framework/peripherals/lcd.html>`_
+
+相关文档
+-------------------------
+
+* `ESP-IDF 编程指南 - LCD <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/peripherals/lcd.html>`_
+* `ESP-FAQ - LCD <https://docs.espressif.com/projects/esp-faq/zh_CN/latest/software-framework/peripherals/lcd.html>`_
+* `LVGL 文档 <https://docs.lvgl.io/8.3/>`_

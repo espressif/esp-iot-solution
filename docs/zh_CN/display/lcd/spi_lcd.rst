@@ -86,8 +86,8 @@ Interface I/II 模式
 
 .. note::
 
-  #. ``3-line`` 模式有时也称为 ``3-wire`` 或 ``9-bit`` 模式。
-  #. 虽然 ESP 的 SPI 外设不支持 LCD 的 ``3-line`` 模式，但是可以通过软件模拟实现，具体请参考组件 `esp_lcd_panel_io_additions <https://components.espressif.com/components/espressif/esp_lcd_panel_io_additions>`_，它通常用于实现 RGB LCD 的初始化。
+  - ``3-line`` 模式有时也称为 ``3-wire`` 或 ``9-bit`` 模式。
+  - 虽然 ESP 的 SPI 外设不支持 LCD 的 ``3-line`` 模式，但是可以通过软件模拟实现，具体请参考组件 `esp_lcd_panel_io_additions <https://components.espressif.com/components/espressif/esp_lcd_panel_io_additions>`_，它通常用于实现 RGB LCD 的初始化。
 
 .. _spi_初始化接口设备:
 
@@ -120,8 +120,8 @@ Interface I/II 模式
 
 下面是部分配置参数的说明：
 
-#. 若 LCD 驱动 IC 配置为 :ref:`Interface-I 接口模式 <spi_interface_I/II_模式>`，软件仅需设置 ``mosi_io_num`` 为其数据线 IO，而设置 ``miso_io_num`` 为 -1。
-#. `SPI 驱动 <https://github.com/espressif/esp-idf/blob/cbce221e88d52665523093b2b6dd0ebe3f1243f1/components/driver/spi/gpspi/spi_master.c#L775>`_ 在传输数据前会对输入数据量的大小进行判断，若单次传输的字节数超过 ``max_transfer_sz`` 则会报错。但是， **SPI 单次 DMA 传输允许的最大字节数** 不仅取决于 ``max_transfer_sz``，而且受限于 ESP-IDF 中的 `SPI_LL_DATA_MAX_BIT_LEN <https://github.com/espressif/esp-idf/blob/cbce221e88d52665523093b2b6dd0ebe3f1243f1/components/hal/esp32s3/include/hal/spi_ll.h#L43>`_ （不同系列 ESP 的值不同），即满足 ``最大字节数 <= MIN(max_transfer_sz, (SPI_LL_DATA_MAX_BIT_LEN / 8))`` 。由于 `esp_lcd 驱动 <https://github.com/espressif/esp-idf/blob/cbce221e88d52665523093b2b6dd0ebe3f1243f1/components/esp_lcd/src/esp_lcd_panel_io_spi.c#L358>`_ 会提前判断输入的数据量是否超过限制，如果超过则进行 **分包处理** 后才控制 SPI 进行多次传输， **因此 max_transfer_sz 通常设为全屏大小即可** 。
+  - 若 LCD 驱动 IC 配置为 :ref:`Interface-I 接口模式 <spi_interface_I/II_模式>`，软件仅需设置 ``mosi_io_num`` 为其数据线 IO，而设置 ``miso_io_num`` 为 -1。
+  - `SPI 驱动 <https://github.com/espressif/esp-idf/blob/cbce221e88d52665523093b2b6dd0ebe3f1243f1/components/driver/spi/gpspi/spi_master.c#L775>`_ 在传输数据前会对输入数据量的大小进行判断，若单次传输的字节数超过 ``max_transfer_sz`` 则会报错。但是， **SPI 单次 DMA 传输允许的最大字节数** 不仅取决于 ``max_transfer_sz``，而且受限于 ESP-IDF 中的 `SPI_LL_DATA_MAX_BIT_LEN <https://github.com/espressif/esp-idf/blob/cbce221e88d52665523093b2b6dd0ebe3f1243f1/components/hal/esp32s3/include/hal/spi_ll.h#L43>`_ （不同系列 ESP 的值不同），即满足 ``最大字节数 <= MIN(max_transfer_sz, (SPI_LL_DATA_MAX_BIT_LEN / 8))`` 。由于 `esp_lcd 驱动 <https://github.com/espressif/esp-idf/blob/cbce221e88d52665523093b2b6dd0ebe3f1243f1/components/esp_lcd/src/esp_lcd_panel_io_spi.c#L358>`_ 会提前判断输入的数据量是否超过限制，如果超过则进行 **分包处理** 后才控制 SPI 进行多次传输， **因此 max_transfer_sz 通常设为全屏大小即可** 。
 
 创建接口设备
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -276,9 +276,9 @@ Interface I/II 模式
 
 下面是一些关于使用函数 ``esp_lcd_panel_draw_bitmap()`` 刷新 SPI LCD 图像的说明：
 
-  #. 传入该函数的图像缓存的字节数可以大于 ``max_transfer_sz``，此时 ``esp_lcd`` 驱动内部会根据 SPI 单次 DMA 传输允许的最大字节数进行分包处理。
-  #. 由于该函数是采用 DMA 的方式来传输图像数据，也就是说该函数调用完成后数据仍在通过 DMA 进行传输，此时不能修改正在使用的缓存区域（如进行 LVGL 的渲染）。因此，需要通过总线初始化或者调用 ``esp_lcd_panel_io_register_event_callbacks()`` 注册的回调函数来判断上一次传输是否完成。
-  #. 由于 SPI 驱动目前不支持直接通过 DMA 传输 PSRAM 上的数据，其内部会判断数据是否存放在 PSRAM 上，若是则会将其拷贝到 SRAM 中再进行传输。因此，推荐使用 SRAM 作为图像的缓存进行传输（如用于 LVGL 渲染的缓存），否则直接传输 PSRAM 上较大的图像数据，很可能会出现 SRAM 不足的情况。
+  - 传入该函数的图像缓存的字节数可以大于 ``max_transfer_sz``，此时 ``esp_lcd`` 驱动内部会根据 SPI 单次 DMA 传输允许的最大字节数进行分包处理。
+  - 由于该函数是采用 DMA 的方式来传输图像数据，也就是说该函数调用完成后数据仍在通过 DMA 进行传输，此时不能修改正在使用的缓存区域（如进行 LVGL 的渲染）。因此，需要通过总线初始化或者调用 ``esp_lcd_panel_io_register_event_callbacks()`` 注册的回调函数来判断上一次传输是否完成。
+  - 由于 SPI 驱动目前不支持直接通过 DMA 传输 PSRAM 上的数据，其内部会判断数据是否存放在 PSRAM 上，若是则会将其拷贝到 SRAM 中再进行传输。因此，推荐使用 SRAM 作为图像的缓存进行传输（如用于 LVGL 渲染的缓存），否则直接传输 PSRAM 上较大的图像数据，很可能会出现 SRAM 不足的情况。
 
 相关文档
 ---------------------
