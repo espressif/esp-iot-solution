@@ -115,6 +115,10 @@
 .patterns-components_sensors_gesture_apds9960: &patterns-components_sensors_gesture_apds9960
   - "components/sensors/gesture/apds9960/**/*"
 
+.patterns-components_sensors_humiture_aht20: &patterns-components_sensors_humiture_aht20
+  - "components/sensors/humiture/aht20/**/*"
+  - "components/tools/cmake_utilities/package_manager.cmake"
+
 .patterns-components_sensors_humiture_hdc2010: &patterns-components_sensors_humiture_hdc2010
   - "components/sensors/humiture/hdc2010/**/*"
 
@@ -144,6 +148,10 @@
 
 .patterns-components_sensors_pressure_bme280: &patterns-components_sensors_pressure_bme280
   - "components/sensors/pressure/bme280/**/*"
+
+.patterns-components_sensors_radar_at581x: &patterns-components_sensors_radar_at581x
+  - "components/sensors/radar/at581x/**/*"
+  - "components/tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_sensors_sensor_hub: &patterns-components_sensors_sensor_hub
   - "components/sensors/sensor_hub/**/*"
@@ -335,10 +343,6 @@
 
 .patterns-example_elf_loader_build_elf_file_example: &patterns-example_elf_loader_build_elf_file_example
   - "examples/elf_loader/build_elf_file_example/**/*"
-
-.patterns-components_sensors_radar_at581x: &patterns-components_sensors_radar_at581x
-  - "components/sensors/radar/at581x/**/*"
-  - "components/tools/cmake_utilities/package_manager.cmake"
 
 # tools folder, in the alphabetic order
 .patterns-tools_cmake_utilities: &patterns-tools_cmake_utilities
@@ -1350,6 +1354,17 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_usb_usb_stream
+
+.rules:build:components_sensors_humiture_aht20_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_humiture_aht20
 
 .rules:build:components_sensors_radar_at581x_test_apps:
   rules:

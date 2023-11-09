@@ -415,6 +415,31 @@ examples_test_usb_uf2_ota:
     TEST_FOLDER: examples/usb/device/usb_uf2_ota
     TEST_ENV: ${ENV_TAG}
 
+components_test_aht20:
+  extends:
+    - .pytest_template
+    - .rules:build:components_sensors_humiture_aht20_test_apps
+  needs:
+    - job: "build_components_sensors_humiture_aht20_test_apps"
+      artifacts: true
+      optional: false
+  parallel:
+    matrix:
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "4.4"
+        ENV_TAG: "esp-box-3"
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "5.0"
+        ENV_TAG: "esp-box-3"
+  tags:
+    - ${IDF_TARGET}
+    - ${ENV_TAG}
+  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
+  variables:
+    TEST_TARGET: ${IDF_TARGET}
+    TEST_FOLDER: components/sensors/humiture/aht20
+    TEST_ENV: ${ENV_TAG}
+
 tools_test_cmake_utilities:
   extends:
     - .pytest_template

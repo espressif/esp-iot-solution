@@ -676,6 +676,17 @@ build_components_led_led_indicator_test_apps:
   variables:
     EXAMPLE_DIR: components/led/led_indicator/test_apps
 
+build_components_sensors_humiture_aht20_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_sensors_humiture_aht20_test_apps
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
+  variables:
+    EXAMPLE_DIR: components/sensors/humiture/aht20/test_apps
+
 build_components_sensors_radar_at581x_test_apps:
   extends:
     - .build_examples_template
@@ -700,3 +711,27 @@ build_tools_cmake_utilities_test_apps:
       - IMAGE: espressif/idf:release-v5.0
   variables:
     EXAMPLE_DIR: tools/cmake_utilities/test_apps
+
+build_example_elf_loader_elf_loader_example:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_elf_loader_elf_loader_example
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
+        EXAMPLE_CONFIG: "sdkconfig.ci=default"
+  variables:
+    EXAMPLE_DIR: examples/elf_loader/elf_loader_example
+
+build_example_elf_loader_build_elf_file_example:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_elf_loader_build_elf_file_example
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
+  variables:
+    EXAMPLE_DIR: examples/elf_loader/build_elf_file_example
+
