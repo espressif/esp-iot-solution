@@ -43,5 +43,6 @@ jobs:
             components/usb/usb_stream;
             components/utilities/xz;
             tools/cmake_utilities;
+            components/ir/ir_learn;
           namespace: "espressif"
           api_token: ${{ secrets.IDF_COMPONENT_API_TOKEN }}

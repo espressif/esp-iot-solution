@@ -1,0 +1,18 @@
+menu "IR Learn"
+    
+    config RMT_MEM_BLOCK_SYMBOLS
+        int "RMT MEM BLOCK SYMBOLS (DMA)"
+        range 64 1024
+        default 512
+        help
+            "Size of memory block, in number of `rmt_symbol_word_t`, must be an even."
+            "In the DMA mode, this field controls the DMA buffer size, it can be set to a large value (e.g. 1024)"
+
+    config RMT_DECODE_MARGIN_US
+        int "DECODE MARGIN TIME (US)"
+        range 10 300
+        default 200
+        help
+            "Allowable error margin for each symbol level"
+
+endmenu
