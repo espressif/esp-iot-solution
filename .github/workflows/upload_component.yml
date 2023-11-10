@@ -36,6 +36,7 @@ jobs:
             components/led/lightbulb_driver;
             components/motor/esp_simplefoc;
             components/openai;
+            components/sensors/humiture/aht20;
             components/sensors/radar/at581x;
             components/usb/esp_tinyuf2;
             components/usb/iot_usbh;
@@ -45,6 +46,5 @@ jobs:
             components/usb/usb_stream;
             components/utilities/xz;
             tools/cmake_utilities;
-            components/sensors/humiture/aht20;
           namespace: "espressif"
           api_token: ${{ secrets.IDF_COMPONENT_API_TOKEN }}
