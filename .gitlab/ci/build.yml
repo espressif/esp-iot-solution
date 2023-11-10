@@ -676,6 +676,16 @@ build_components_led_led_indicator_test_apps:
   variables:
     EXAMPLE_DIR: components/led/led_indicator/test_apps
 
+build_components_sensors_radar_at581x_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_sensors_radar_at581x_test_apps
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
+  variables:
+    EXAMPLE_DIR: components/sensors/radar/at581x/test_apps
 #
 # tools build jobs
 #

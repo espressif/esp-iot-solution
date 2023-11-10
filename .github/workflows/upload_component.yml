@@ -30,11 +30,13 @@ jobs:
             components/elf_loader;
             components/extended_vfs;
             components/gprof;
+            components/ir/ir_learn;
             components/knob;
             components/led/led_indicator;
             components/led/lightbulb_driver;
             components/motor/esp_simplefoc;
             components/openai;
+            components/sensors/radar/at581x;
             components/usb/esp_tinyuf2;
             components/usb/iot_usbh;
             components/usb/iot_usbh_cdc;
@@ -43,6 +45,5 @@ jobs:
             components/usb/usb_stream;
             components/utilities/xz;
             tools/cmake_utilities;
-            components/ir/ir_learn;
           namespace: "espressif"
           api_token: ${{ secrets.IDF_COMPONENT_API_TOKEN }}
