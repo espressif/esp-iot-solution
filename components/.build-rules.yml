@@ -10,6 +10,10 @@ components/usb/iot_usbh_cdc/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32s2","esp32s3"]
 
+components/ir/ir_learn/test_apps:
+  enable:
+    - if: INCLUDE_DEFAULT == 1
+
 components/knob/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1
@@ -23,6 +27,10 @@ components/motor/esp_simplefoc/test_apps:
     - if: IDF_TARGET in ["esp32s3"]
 
 components/openai/test_apps:
+  enable:
+    - if: INCLUDE_DEFAULT == 1
+
+components/sensors/radar/at581x/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1
 
@@ -51,9 +59,5 @@ components/display/lcd/esp_lcd_st77903/test_apps:
     - if: IDF_TARGET in ["esp32s3"]
 
 components/display/lcd_touch/esp_lcd_touch_spd2010/test_apps:
-  enable:
-    - if: INCLUDE_DEFAULT == 1
-
-components/ir/ir_learn/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1
