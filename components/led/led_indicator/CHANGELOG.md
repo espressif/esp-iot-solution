@@ -1,5 +1,13 @@
 # ChangeLog
 
+## v0.7.0 - 2023-11-09
+
+### Enhancements:
+
+* Renamed function `get_current_fade_value` to `get_brightness`.
+
+* Added get functions for color (in RGB and HSV color format).
+
 ## v0.6.1 - 2023-10-31
 
 ### BUG FIX

@@ -162,13 +162,13 @@ esp_err_t led_indicator_preempt_start(led_indicator_handle_t handle, int blink_t
 esp_err_t led_indicator_preempt_stop(led_indicator_handle_t handle, int blink_type);
 
 /**
- * @brief Get the current fade value of the LED indicator.
+ * @brief Get the current brightness value of the LED indicator.
  *
  * @param handle LED indicator handle
- * @return uint8_t Current fade value: 0-255
+ * @return uint8_t Current brightness value: 0-255
  *         if handle is null return 0
  */
-uint8_t led_indicator_get_current_fade_value(led_indicator_handle_t handle);
+uint8_t led_indicator_get_brightness(led_indicator_handle_t handle);
 
 /**
  * @brief Set the LED indicator on or off.
@@ -201,6 +201,16 @@ esp_err_t led_indicator_set_on_off(led_indicator_handle_t handle, bool on_off);
 esp_err_t led_indicator_set_brightness(led_indicator_handle_t handle, uint32_t brightness);
 
 /**
+ * @brief Get the HSV color of the LED indicator.
+ *
+ * @param handle LED indicator handle.
+ * @return HSV color value
+ *         H: 0-360, S: 0-255, V: 0-255
+ * @note Index settings are only supported for LED_RGB_MODE.
+ */
+uint32_t led_indicator_get_hsv(led_indicator_handle_t handle);
+
+/**
  * @brief Set the HSV color for the LED indicator.
  *
  * @param handle LED indicator handle.
@@ -213,6 +223,16 @@ esp_err_t led_indicator_set_brightness(led_indicator_handle_t handle, uint32_t b
  *     - ESP_ERR_INVALID_ARG: Invalid parameter
  */
 esp_err_t led_indicator_set_hsv(led_indicator_handle_t handle, uint32_t ihsv_value);
+
+/**
+ * @brief Get the RGB color of the LED indicator.
+ *
+ * @param handle LED indicator handle.
+ * @return RGB color value (0xRRGGBB)
+ *         R: 0-255, G: 0-255, B: 0-255
+ * @note Index settings are only supported for LED_RGB_MODE.
+ */
+uint32_t led_indicator_get_rgb(led_indicator_handle_t handle);
 
 /**
  * @brief Set the RGB color for the LED indicator.
