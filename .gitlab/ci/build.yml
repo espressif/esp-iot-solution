@@ -39,6 +39,10 @@
     - pip install idf_build_apps
     - python tools/build_apps.py ${EXAMPLE_DIR} --config ${EXAMPLE_CONFIG} -t all -vv
 
+#
+# example build jobs
+#
+
 build_example_audio_wav_player:
   extends:
     - .build_examples_template
@@ -492,6 +496,10 @@ build_example_utilities_xz_decompress_file:
   variables:
     EXAMPLE_DIR: examples/utilities/xz_decompress_file
 
+#
+# components build jobs
+#
+
 build_components_button_test_apps:
   extends:
     - .build_examples_template
@@ -502,6 +510,16 @@ build_components_button_test_apps:
       - IMAGE: espressif/idf:release-v5.0
   variables:
     EXAMPLE_DIR: components/button/test_apps
+
+build_components_ir_ir_learn_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_ir_ir_learn_test_apps
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.0
+  variables:
+    EXAMPLE_DIR: components/ir/ir_learn/test_apps
 
 build_components_knob_test_apps:
   extends:
@@ -658,6 +676,10 @@ build_components_led_led_indicator_test_apps:
   variables:
     EXAMPLE_DIR: components/led/led_indicator/test_apps
 
+#
+# tools build jobs
+#
+
 build_tools_cmake_utilities_test_apps:
   extends:
     - .build_examples_template
@@ -668,26 +690,3 @@ build_tools_cmake_utilities_test_apps:
       - IMAGE: espressif/idf:release-v5.0
   variables:
     EXAMPLE_DIR: tools/cmake_utilities/test_apps
-
-build_example_elf_loader_elf_loader_example:
-  extends:
-    - .build_examples_template
-    - .rules:build:example_elf_loader_elf_loader_example
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
-        EXAMPLE_CONFIG: "sdkconfig.ci=default"
-  variables:
-    EXAMPLE_DIR: examples/elf_loader/elf_loader_example
-
-build_example_elf_loader_build_elf_file_example:
-  extends:
-    - .build_examples_template
-    - .rules:build:example_elf_loader_build_elf_file_example
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
-  variables:
-    EXAMPLE_DIR: examples/elf_loader/build_elf_file_example

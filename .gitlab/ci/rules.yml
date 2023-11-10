@@ -82,6 +82,10 @@
 .patterns-components_gui_lvgl_gui: &patterns-components_gui_lvgl_gui
   - "components/gui/lvgl_gui/**/*"
 
+.patterns-components_ir_ir_learn: &patterns-components_ir_ir_learn
+  - "components/ir/ir_learn/**/*"
+  - "components/tools/cmake_utilities/package_manager.cmake"
+
 .patterns-components_knob: &patterns-components_knob
   - "components/knob/**/*"
   - "components/tools/cmake_utilities/package_manager.cmake"
@@ -1078,6 +1082,17 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_expander_io_expander_mcp23017
+
+.rules:build:components_ir_ir_learn_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_ir_ir_learn
 
 .rules:build:components_knob_test:
   rules:
