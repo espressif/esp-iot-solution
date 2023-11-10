@@ -16,6 +16,8 @@
 
 static const char *TAG = "OpenAI";
 
+#define OPENAI_DEFAULT_BASE_URL "https://api.openai.com/v1/"
+
 #define OPENAI_ERROR_CHECK(a, str, ret) if(!(a)) { \
         ESP_LOGE(TAG,"%s:%d (%s):%s", __FILE__, __LINE__, __FUNCTION__, str); \
         return (ret); \
@@ -2170,12 +2172,13 @@ void OpenAIDelete(OpenAI_t *oai)
     }
 }
 
-static char *OpenAI_Request(const char *api_key, const char *endpoint, const char *content_type, esp_http_client_method_t method, const char *boundary, uint8_t *data, size_t len)
+static char *OpenAI_Request(const char *base_url, const char *api_key, const char *endpoint, const char *content_type, esp_http_client_method_t method, const char *boundary, uint8_t *data, size_t len)
 {
     ESP_LOGD(TAG, "\"%s\", len=%u", endpoint, len);
     char *url = NULL;
     char *result = NULL;
-    asprintf(&url, "https://api.openai.com/v1/%s", endpoint);
+
+    asprintf(&url, "%s%s", base_url ? base_url : OPENAI_DEFAULT_BASE_URL, endpoint);
     OPENAI_ERROR_CHECK(url != NULL, "Failed to allocate url!", NULL);
     esp_http_client_config_t config = {
         .url = url,
@@ -2229,23 +2232,29 @@ end:
     return result != NULL ? result : NULL;
 }
 
-static char *OpenAI_Upload(const char *api_key, const char *endpoint, const char *boundary, uint8_t *data, size_t len)
+static char *OpenAI_Upload(const char *base_url, const char *api_key, const char *endpoint, const char *boundary, uint8_t *data, size_t len)
 {
-    return OpenAI_Request(api_key, endpoint, "multipart/form-data", HTTP_METHOD_POST, boundary, data, len);
+    return OpenAI_Request(base_url, api_key, endpoint, "multipart/form-data", HTTP_METHOD_POST, boundary, data, len);
 }
 
-static char *OpenAI_Post(const char *api_key, const char *endpoint, char *jsonBody)
+static char *OpenAI_Post(const char *base_url, const char *api_key, const char *endpoint, char *jsonBody)
 {
-    return OpenAI_Request(api_key, endpoint, "application/json", HTTP_METHOD_POST, NULL, (uint8_t *)jsonBody, strlen(jsonBody));
+    return OpenAI_Request(base_url, api_key, endpoint, "application/json", HTTP_METHOD_POST, NULL, (uint8_t *)jsonBody, strlen(jsonBody));
 }
 
-static char *OpenAI_Get(const char *api_key, const char *endpoint)
+static char *OpenAI_get(const char *base_url, const char *api_key, const char *endpoint)
 {
+    char *url = malloc(strlen(base_url ? base_url : OPENAI_DEFAULT_BASE_URL) + strlen(endpoint) + 1);
+    sprintf(url, "%s%s", base_url ? base_url : OPENAI_DEFAULT_BASE_URL, endpoint);
+
     return OpenAI_Request(api_key, endpoint, "application/json", HTTP_METHOD_GET, NULL, NULL, 0);
 }
 
-static char *OpenAI_Del(const char *api_key, const char *endpoint)
+static char *OpenAI_del(const char *base_url, const char *api_key, const char *endpoint)
 {
+    char *url = malloc(strlen(base_url ? base_url : OPENAI_DEFAULT_BASE_URL) + strlen(endpoint) + 1);
+    sprintf(url, "%s%s", base_url ? base_url : OPENAI_DEFAULT_BASE_URL, endpoint);
+
     return OpenAI_Request(api_key, endpoint, "application/json", HTTP_METHOD_DELETE, NULL, NULL, 0);
 }
 
