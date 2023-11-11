@@ -2242,7 +2242,7 @@ static char *OpenAI_Post(const char *base_url, const char *api_key, const char *
     return OpenAI_Request(base_url, api_key, endpoint, "application/json", HTTP_METHOD_POST, NULL, (uint8_t *)jsonBody, strlen(jsonBody));
 }
 
-static char *OpenAI_get(const char *base_url, const char *api_key, const char *endpoint)
+static char *OpenAI_Get(const char *base_url, const char *api_key, const char *endpoint)
 {
     char *url = malloc(strlen(base_url ? base_url : OPENAI_DEFAULT_BASE_URL) + strlen(endpoint) + 1);
     sprintf(url, "%s%s", base_url ? base_url : OPENAI_DEFAULT_BASE_URL, endpoint);
@@ -2250,7 +2250,7 @@ static char *OpenAI_get(const char *base_url, const char *api_key, const char *e
     return OpenAI_Request(api_key, endpoint, "application/json", HTTP_METHOD_GET, NULL, NULL, 0);
 }
 
-static char *OpenAI_del(const char *base_url, const char *api_key, const char *endpoint)
+static char *OpenAI_Del(const char *base_url, const char *api_key, const char *endpoint)
 {
     char *url = malloc(strlen(base_url ? base_url : OPENAI_DEFAULT_BASE_URL) + strlen(endpoint) + 1);
     sprintf(url, "%s%s", base_url ? base_url : OPENAI_DEFAULT_BASE_URL, endpoint);
