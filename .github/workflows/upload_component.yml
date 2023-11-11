@@ -36,6 +36,7 @@ jobs:
             components/led/lightbulb_driver;
             components/motor/esp_simplefoc;
             components/openai;
+            components/sensors/humiture/aht20;
             components/sensors/radar/at581x;
             components/usb/esp_tinyuf2;
             components/usb/iot_usbh;
