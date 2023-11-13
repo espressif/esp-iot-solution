@@ -358,7 +358,8 @@ TEST_CASE("adc button idf5 drive test", "[button][iot]")
     };
     esp_err_t ret = adc_oneshot_new_unit(&init_config, &adc1_handle);
     TEST_ASSERT_TRUE(ret == ESP_OK);
-    adc_calibration_init(ADC_UNIT_1, ADC_ATTEN_DB_11, &adc1_cali_handle);
+    /*!< use atten 11db or 12db */
+    adc_calibration_init(ADC_UNIT_1, 3, &adc1_cali_handle);
 
     /** ESP32-S3-Korvo board */
     const uint16_t vol[6] = {380, 820, 1180, 1570, 1980, 2410};

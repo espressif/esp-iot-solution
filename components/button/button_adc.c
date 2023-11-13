@@ -33,14 +33,17 @@ static const char *TAG = "adc button";
 #define DEFAULT_VREF    1100
 #define NO_OF_SAMPLES   CONFIG_ADC_BUTTON_SAMPLE_TIMES     //Multisampling
 
+/*!< Using atten bigger than 6db by default, it will be 11db or 12db in different target */
+#define DEFAULT_ADC_ATTEN (ADC_ATTEN_DB_6 + 1)
+
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
 #define ADC_BUTTON_WIDTH        SOC_ADC_RTC_MAX_BITWIDTH
 #define ADC1_BUTTON_CHANNEL_MAX SOC_ADC_MAX_CHANNEL_NUM
-#define ADC_BUTTON_ATTEN        ADC_ATTEN_DB_11
+#define ADC_BUTTON_ATTEN        DEFAULT_ADC_ATTEN
 #else
 #define ADC_BUTTON_WIDTH        ADC_WIDTH_MAX-1
 #define ADC1_BUTTON_CHANNEL_MAX ADC1_CHANNEL_MAX
-#define ADC_BUTTON_ATTEN        ADC_ATTEN_DB_11
+#define ADC_BUTTON_ATTEN        DEFAULT_ADC_ATTEN
 #endif
 #define ADC_BUTTON_ADC_UNIT     ADC_UNIT_1
 #define ADC_BUTTON_MAX_CHANNEL  CONFIG_ADC_BUTTON_MAX_CHANNEL

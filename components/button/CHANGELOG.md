@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v3.1.3 - 2023-11-13
+
+* Resolved issue 'ADC_ATTEN_DB_11 is deprecated'.
+
 ## v3.1.2 - 2023-10-24
 
 ### bugfix
@@ -84,5 +88,5 @@
 
 ### Enhancements:
 
-* Support custom button 
+* Support custom button
 * Add BUTTON_PRESS_REPEAT_DONE event
