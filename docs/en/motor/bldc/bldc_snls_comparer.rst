@@ -1,0 +1,1 @@
+.. include:: ../../../zh_CN/motor/bldc/bldc_snls_comparer.rst

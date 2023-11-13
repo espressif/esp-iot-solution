@@ -101,8 +101,12 @@
   - "components/led/lightbulb_driver/**/*"
   - "components/tools/cmake_utilities/package_manager.cmake"
 
-.patterns-components_esp_simplefoc: &patterns-components_esp_simplefoc
+.patterns-components_motor_esp_simplefoc: &patterns-components_motor_esp_simplefoc
   - "components/motor/esp_simplefoc/**/*"
+  - "components/tools/cmake_utilities/package_manager.cmake"
+
+.patterns-components_motor_esp_sensorless_bldc_control: &patterns-components_motor_esp_sensorless_bldc_control
+  - "components/motor/esp_sensorless_bldc_control/**/*"
   - "components/tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_motor_servo: &patterns-components_motor_servo
@@ -205,20 +209,25 @@
 .patterns-docs_inc: &patterns-docs_inc
   - "components/audio/dac_audio/include/dac_audio.h"
   - "components/audio/pwm_audio/include/pwm_audio.h"
+  - "components/bluetooth/ble_conn_mgr/include/esp_ble_conn_mgr.h"
   - "components/bus/include/i2c_bus.h"
   - "components/bus/include/spi_bus.h"
-  - "components/led/led_indicator/include/led_indicator.h"
-  - "components/display/screen/screen_driver.h"
-  - "components/display/screen/interface_driver/scr_interface_driver.h"
   - "components/button/include/iot_button.h"
-  - "components/knob/iot_knob.h"
+  - "components/display/screen/interface_driver/scr_interface_driver.h"
+  - "components/display/screen/screen_driver.h"
   - "components/display/touch_panel/touch_panel.h"
+  - "components/knob/iot_knob.h"
+  - "components/led/led_indicator/include/led_indicator.h"
+  - "components/motor/esp_sensorless_bldc_control/control/include/bldc_control_param.h"
+  - "components/motor/esp_sensorless_bldc_control/control/include/bldc_control.h"
+  - "components/motor/esp_sensorless_bldc_control/user_cfg/bldc_user_cfg.h"
   - "components/motor/servo/include/iot_servo.h"
+  - "components/openai/include/OpenAI.h"
   - "components/sensors/sensor_hub/include/hal/humiture_hal.h"
   - "components/sensors/sensor_hub/include/hal/imu_hal.h"
   - "components/sensors/sensor_hub/include/hal/light_sensor_hal.h"
-  - "components/sensors/sensor_hub/include/sensor_type.h"
   - "components/sensors/sensor_hub/include/iot_sensor_hub.h"
+  - "components/sensors/sensor_hub/include/sensor_type.h"
   - "components/usb/usb_stream/include/usb_stream.h"
   - "components/bluetooth/ble_conn_mgr/include/esp_ble_conn_mgr.h"
   - "components/zero_detection/include/zero_detection.h"
@@ -641,7 +650,7 @@
     - <<: *if-dev-push
       changes: *patterns-build_system
     - <<: *if-dev-push
-      changes: *patterns-components_esp_simplefoc
+      changes: *patterns-components_motor_esp_simplefoc
     - <<: *if-dev-push
       changes: *patterns-example_motor_foc_openloop_control
 
@@ -653,7 +662,7 @@
     - <<: *if-dev-push
       changes: *patterns-build_system
     - <<: *if-dev-push
-      changes: *patterns-components_esp_simplefoc
+      changes: *patterns-components_motor_esp_simplefoc
     - <<: *if-dev-push
       changes: *patterns-example_motor_foc_velocity_control
 
@@ -1167,7 +1176,18 @@
     - <<: *if-dev-push
       changes: *patterns-build_system
     - <<: *if-dev-push
-      changes: *patterns-components_esp_simplefoc
+      changes: *patterns-components_motor_esp_simplefoc
+
+.rules:build:components_motor_esp_sensorless_bldc_control_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_motor_esp_sensorless_bldc_control
 
 .rules:build:components_motor_servo_test:
   rules:

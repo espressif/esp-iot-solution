@@ -34,6 +34,7 @@ jobs:
             components/knob;
             components/led/led_indicator;
             components/led/lightbulb_driver;
+            components/motor/esp_sensorless_bldc_control;
             components/motor/esp_simplefoc;
             components/openai;
             components/sensors/humiture/aht20;

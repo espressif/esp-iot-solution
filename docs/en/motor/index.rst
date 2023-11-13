@@ -5,4 +5,5 @@ Motor
 .. toctree::
     :maxdepth: 1
 
+    BLDC <bldc/index>
     Servo <servo>
