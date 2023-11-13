@@ -22,6 +22,7 @@ IGNORE_WARNINGS = [
     r'This clock source will be affected by the DFS of the power management',
     r'The current IDF version does not support using the gptimer API',
     r'DeprecationWarning: pkg_resources is deprecated as an API',
+    r'\'ADC_ATTEN_DB_11\' is deprecated',
 ]
 
 def _get_idf_version():
