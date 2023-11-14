@@ -12,7 +12,9 @@
 #include "esp_log.h"
 #include "esp_rom_md5.h"
 #include "esp_rom_crc.h"
-
+#ifdef CONFIG_BOOTLOADER_WDT_ENABLE
+#include "hal/wdt_hal.h"
+#endif
 #include "bootloader_flash_priv.h"
 
 #include "bootloader_custom_ota.h"
@@ -39,7 +41,7 @@ static const bootloader_custom_ota_engine_t storage_engines[] = {
 
 static bootloader_custom_ota_config_t custom_ota_config;
 static bootloader_custom_ota_header_t custom_ota_header;
-static const bootloader_custom_ota_engine_t * custom_ota_engines[MAX_ENGINE];
+static const bootloader_custom_ota_engine_t *custom_ota_engines[MAX_ENGINE];
 
 static bootloader_custom_ota_params_t custom_ota_params;
 
@@ -214,7 +216,33 @@ int bootloader_custom_ota_main(bootloader_state_t *bs, int boot_index)
     However, the size of the partition to be erased each time is fixed,
     so we can know whether the watchdog reset will be triggered here at the test stage.
     */
+#ifdef CONFIG_BOOTLOADER_WDT_ENABLE
+#ifndef CONFIG_IDF_TARGET_ESP32C6
+    wdt_hal_context_t rtc_wdt_ctx = {.inst = WDT_RWDT, .rwdt_dev = &RTCCNTL};
+#else
+    wdt_hal_context_t rtc_wdt_ctx = RWDT_HAL_CONTEXT_DEFAULT();
+#endif
+    if ((custom_ota_config.dst_addr % FLASH_SECTOR_SIZE) != 0 || (custom_ota_config.dst_size % FLASH_SECTOR_SIZE != 0)) {
+        return ESP_ERR_INVALID_SIZE;
+    }
+    uint32_t end = custom_ota_config.dst_addr + custom_ota_config.dst_size;
+    for (uint32_t start = custom_ota_config.dst_addr; start < end;) {
+        wdt_hal_write_protect_disable(&rtc_wdt_ctx);
+        wdt_hal_feed(&rtc_wdt_ctx);
+        wdt_hal_write_protect_enable(&rtc_wdt_ctx);
+        uint32_t erase_len = FLASH_SECTOR_SIZE;
+        if (start % FLASH_BLOCK_SIZE == 0 && end - start >= FLASH_BLOCK_SIZE) {
+            erase_len = FLASH_BLOCK_SIZE;
+        }
+        if (bootloader_flash_erase_range(start, erase_len) != ESP_OK) {
+            ESP_LOGE(TAG, "erase OTA slot error");
+            return boot_index;
+        }
+        start += erase_len;
+    }
+#else
     bootloader_flash_erase_range(custom_ota_config.dst_addr, custom_ota_config.dst_size);
+#endif
 
     int ret = bootloader_custom_ota_engines_start();
 
