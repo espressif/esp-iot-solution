@@ -168,7 +168,8 @@ esp_err_t led_indicator_strips_deinit(void *strips)
 esp_err_t led_indicator_strips_set_on_off(void *strips, bool on_off)
 {
     led_strips_t *p_strip = (led_strips_t *)strips;
-    uint8_t i,h,s,v;
+    uint8_t i,s,v;
+    uint16_t h;
     uint32_t iihsv_value = p_strip->ihsv;
     SET_BRIGHTNESS(iihsv_value, on_off ? MAX_BRIGHTNESS : 0);
     i = GET_INDEX(iihsv_value);
@@ -230,7 +231,8 @@ esp_err_t led_indicator_strips_set_rgb(void *strips, uint32_t irgb_value)
 esp_err_t led_indicator_strips_set_hsv(void *strips, uint32_t iihsv_value)
 {
     led_strips_t *p_strip = (led_strips_t *)strips;
-    uint8_t i,h,s,v;
+    uint8_t i,s,v;
+    uint16_t h;
     i = GET_INDEX(iihsv_value);
     h = GET_HUE(iihsv_value);
     s = GET_SATURATION(iihsv_value);
@@ -260,7 +262,8 @@ esp_err_t led_indicator_strips_set_hsv(void *strips, uint32_t iihsv_value)
 esp_err_t led_indicator_strips_set_brightness(void *strips, uint32_t ihsv)
 {
     led_strips_t *p_strip = (led_strips_t *)strips;
-    uint8_t i,h,s,v;
+    uint8_t i,s,v;
+    uint16_t h;
     uint32_t ihsv_value;
     ihsv_value = p_strip->ihsv;
     SET_BRIGHTNESS(ihsv_value, GET_BRIGHTNESS(ihsv));
