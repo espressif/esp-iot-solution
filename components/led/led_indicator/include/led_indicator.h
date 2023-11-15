@@ -248,6 +248,21 @@ uint32_t led_indicator_get_rgb(led_indicator_handle_t handle);
  */
 esp_err_t led_indicator_set_rgb(led_indicator_handle_t handle, uint32_t irgb_value);
 
+/**
+ * @brief Set the color temperature for the LED indicator.
+ *
+ * @param handle LED indicator handle.
+ * @param temperature Color temperature of LED (0xIITTTTTT)
+ *        I: 0-126, set 127 to control all, TTTTTT: 0-1000000
+
+ * @note Index settings are only supported for LED_RGB_MODE.
+ * @return esp_err_t
+ *     - ESP_OK: Success
+ *     - ESP_FAIL: Failure
+ *     - ESP_ERR_INVALID_ARG: Invalid parameter
+ */
+esp_err_t led_indicator_set_color_temperature(led_indicator_handle_t handle, const uint32_t temperature);
+
 #ifdef __cplusplus
 }
 #endif

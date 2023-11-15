@@ -1,3 +1,13 @@
+## v0.7.1 - 2023-10-15
+
+### BUG FIX
+
+* Fix set HSV hue color.
+
+### Enhancements:
+
+* Added API for set color by temperature.
+
 # ChangeLog
 
 ## v0.7.0 - 2023-11-09
