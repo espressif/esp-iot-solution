@@ -26,10 +26,10 @@ static const char *TAG = "openai_test";
 #define TEST_MEMORY_LEAK_THRESHOLD (-3000)
 
 static char *openai_key = CI_OPENAI_KEY;
-extern const uint8_t turn_on_tv_en_wav_start[] asm("_binary_turn_on_tv_en_wav_start");
-extern const uint8_t turn_on_tv_en_wav_end[]   asm("_binary_turn_on_tv_en_wav_end");
-extern const uint8_t zhengzai_cn_wav_start[] asm("_binary_zhengzai_cn_wav_start");
-extern const uint8_t zhengzai_cn_wav_end[]   asm("_binary_zhengzai_cn_wav_end");  
+extern const uint8_t turn_on_tv_en_mp3_start[] asm("_binary_turn_on_tv_en_mp3_start");
+extern const uint8_t turn_on_tv_en_mp3_end[]   asm("_binary_turn_on_tv_en_mp3_end");
+extern const uint8_t introduce_espressif_mp3_start[] asm("_binary_introduce_espressif_mp3_start");
+extern const uint8_t introduce_espressif_mp3_end[]   asm("_binary_introduce_espressif_mp3_end");  
 
 TEST_CASE("test ChatCompletion", "[ChatCompletion]")
 {
@@ -108,11 +108,11 @@ TEST_CASE("test AudioTranscription en", "[AudioTranscription]")
     OpenAI_t *openai = OpenAICreate(openai_key);
     OpenAI_AudioTranscription_t *audioTranscription = openai->audioTranscriptionCreate(openai);
     TEST_ASSERT_NOT_NULL(audioTranscription);
-    size_t length = turn_on_tv_en_wav_end - turn_on_tv_en_wav_start;
+    size_t length = turn_on_tv_en_mp3_end - turn_on_tv_en_mp3_start;
     audioTranscription->setResponseFormat(audioTranscription, OPENAI_AUDIO_RESPONSE_FORMAT_JSON);
     audioTranscription->setTemperature(audioTranscription,0.2);                                                             //float between 0 and 1. Higher value gives more random results.
     audioTranscription->setLanguage(audioTranscription,"en");                                                               //Set to English to make GPT return faster and more accurate
-    char *text = audioTranscription->file(audioTranscription, (uint8_t *)turn_on_tv_en_wav_start, length, OPENAI_AUDIO_INPUT_FORMAT_WAV);
+    char *text = audioTranscription->file(audioTranscription, (uint8_t *)turn_on_tv_en_mp3_start, length, OPENAI_AUDIO_INPUT_FORMAT_MP3);
     TEST_ASSERT_NOT_NULL(text);
     ESP_LOGI(TAG, "Text: %s", text);
     free(text);
@@ -133,12 +133,12 @@ TEST_CASE("test AudioTranscription cn", "[AudioTranscription]")
     OpenAI_t *openai = OpenAICreate(openai_key);
     OpenAI_AudioTranscription_t *audioTranscription = openai->audioTranscriptionCreate(openai);
     TEST_ASSERT_NOT_NULL(audioTranscription);
-    size_t length = zhengzai_cn_wav_end - zhengzai_cn_wav_start;
+    size_t length = introduce_espressif_mp3_end - introduce_espressif_mp3_start;
     audioTranscription->setResponseFormat(audioTranscription, OPENAI_AUDIO_RESPONSE_FORMAT_JSON);
     audioTranscription->setPrompt(audioTranscription, "请回复简体中文");                                                    //The default will return Traditional Chinese, here we add prompt to make GPT return Simplified Chinese
     audioTranscription->setTemperature(audioTranscription,0.2);                                                             //float between 0 and 1. Higher value gives more random results.
     audioTranscription->setLanguage(audioTranscription,"zh");                                                               //Set to Chinese to make GPT return faster and more accurate
-    char *text = audioTranscription->file(audioTranscription, (uint8_t *)zhengzai_cn_wav_start, length, OPENAI_AUDIO_INPUT_FORMAT_WAV);
+    char *text = audioTranscription->file(audioTranscription, (uint8_t *)introduce_espressif_mp3_start, length, OPENAI_AUDIO_INPUT_FORMAT_MP3);
     TEST_ASSERT_NOT_NULL(text);
     ESP_LOGI(TAG, "Text: %s", text);
     free(text);

@@ -1,11 +1,17 @@
 menu "OpenAI"
 
+    config DEFAULT_OPENAI_BASE_URL
+        string "Default Base URL"
+        default "https://api.openai.com/v1/"
+        help
+        Default Base URL for OpenAI API
+
     config ENABLE_EMBEDDING
         bool "Enable Embedding"
         default y
         help
         Enable OpenAI Embedding
-        
+
     config ENABLE_MODERATION
         bool "Enable Moderation"
         default y
