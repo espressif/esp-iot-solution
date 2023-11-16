@@ -5,5 +5,4 @@ menu "Zero Cross Detection"
         default "n"
         help
             Use GPTimer instead of ESPTimer.
-
 endmenu

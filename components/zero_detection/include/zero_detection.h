@@ -1,8 +1,8 @@
-/*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+/* SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+
 #ifndef _ZERO_DETECTION_H_
 #define _ZERO_DETECTION_H_
 
@@ -16,9 +16,8 @@
 #include "hal/gpio_ll.h"
 #if defined(CONFIG_USE_GPTIMER)
 #include "driver/gptimer.h"
-#else
-#include "esp_timer.h"
 #endif
+#include "esp_timer.h"
 
 #include "soc/gpio_struct.h"
 #include "esp_log.h"
@@ -43,6 +42,7 @@ extern "C" {
     .capture_pin = 2,\
     .event_callback = NULL,\
     .zero_signal_type = SQUARE_WAVE,\
+    .zero_driver_type = GPIO_TYPE,\
 }
 
 /**
@@ -66,6 +66,16 @@ typedef enum {
 } zero_signal_type_t;
 
 /**
+ * @brief Zero detection driver type
+ */
+typedef enum {
+#if defined(SOC_MCPWM_SUPPORTED)
+    MCPWM_TYPE = 0,
+#endif
+    GPIO_TYPE,
+} zero_driver_type_t;
+
+/** 
  * @brief Event callback parameters union
  */
 typedef union {
@@ -74,7 +84,7 @@ typedef union {
      */
     struct {
         mcpwm_capture_edge_t cap_edge;
-        uint32_t full_cycle_ticks; 
+        uint32_t full_cycle_us;
     } signal_freq_event_data_t;
 
     /**
@@ -82,7 +92,7 @@ typedef union {
      */
     struct {
         mcpwm_capture_edge_t cap_edge;
-        uint32_t full_cycle_ticks; 
+        uint32_t full_cycle_us;
         uint16_t valid_count;
     } signal_valid_event_data_t;
 
@@ -91,7 +101,7 @@ typedef union {
      */
     struct {
         mcpwm_capture_edge_t cap_edge;
-        uint32_t full_cycle_ticks; 
+        uint32_t full_cycle_us;
         uint16_t invalid_count;
     } signal_invalid_event_data_t;
 
@@ -101,7 +111,7 @@ typedef union {
     struct {
         uint16_t valid_count;
         uint16_t invalid_count;
-        uint32_t full_cycle_ticks; 
+        uint32_t full_cycle_us;
     } signal_rising_edge_event_data_t;
 
     /**
@@ -110,7 +120,7 @@ typedef union {
     struct {
         uint16_t valid_count;
         uint16_t invalid_count;
-        uint32_t full_cycle_ticks; 
+        uint32_t full_cycle_us;
     } signal_falling_edge_event_data_t;
 } zero_detect_cb_param_t;
 
@@ -127,6 +137,7 @@ typedef struct {
     uint16_t valid_time;            //Count value when the signal is valid
     uint16_t invalid_time;          //Count value when thea signl exceeds the frequency range
     zero_signal_type_t zero_signal_type;          //Zero Crossing Signal Type
+    zero_driver_type_t zero_driver_type;          //Zero crossing driver type
     double freq_range_max_hz;       //Maximum value of the frequency range when determining a valid signal
     double freq_range_min_hz;       //Minimum value of the frequency range when determining a valid signal
     esp_zero_detect_cb_t event_callback;
@@ -178,7 +189,7 @@ bool zero_detect_get_power_status(zero_detect_handle_t zcd_handle);
  * @brief Get singal invaild status
  *
  * @param zcd_handle A zero detect handle
- * 
+ *
  * @return
  *      - true  Signal is invaild
  *      - false Signal is vaild
