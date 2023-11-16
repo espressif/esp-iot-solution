@@ -39,6 +39,23 @@ static const char *TAG = "led_indicator";
 #define NULL_ACTIVE_BLINK  -1
 #define NULL_PREEMPT_BLINK -1
 
+typedef struct {
+    uint16_t hue;
+    uint8_t saturation;
+} HS_color_t;
+static const HS_color_t temp_table[] = {
+    {4, 100},  {8, 100},  {11, 100}, {14, 100}, {16, 100}, {18, 100}, {20, 100}, {22, 100}, {24, 100}, {25, 100},
+    {27, 100}, {28, 100}, {30, 100}, {31, 100}, {31, 95},  {30, 89},  {30, 85},  {29, 80},  {29, 76},  {29, 73},
+    {29, 69},  {28, 66},  {28, 63},  {28, 60},  {28, 57},  {28, 54},  {28, 52},  {27, 49},  {27, 47},  {27, 45},
+    {27, 43},  {27, 41},  {27, 39},  {27, 37},  {27, 35},  {27, 33},  {27, 31},  {27, 30},  {27, 28},  {27, 26},
+    {27, 25},  {27, 23},  {27, 22},  {27, 21},  {27, 19},  {27, 18},  {27, 17},  {27, 15},  {28, 14},  {28, 13},
+    {28, 12},  {29, 10},  {29, 9},   {30, 8},   {31, 7},   {32, 6},   {34, 5},   {36, 4},   {41, 3},   {49, 2},
+    {0, 0},    {294, 2},  {265, 3},  {251, 4},  {242, 5},  {237, 6},  {233, 7},  {231, 8},  {229, 9},  {228, 10},
+    {227, 11}, {226, 11}, {226, 12}, {225, 13}, {225, 13}, {224, 14}, {224, 14}, {224, 15}, {224, 15}, {223, 16},
+    {223, 16}, {223, 17}, {223, 17}, {223, 17}, {222, 18}, {222, 18}, {222, 19}, {222, 19}, {222, 19}, {222, 19},
+    {222, 20}, {222, 20}, {222, 20}, {222, 21}, {222, 21}
+};
+
 static const char *led_indicator_mode_str[4] = {"GPIO mode", "LEDC mode", "LED Strips mode","custom mode"};
 
 /**
@@ -835,4 +852,41 @@ esp_err_t led_indicator_set_rgb(led_indicator_handle_t handle, uint32_t irgb_val
     p_led_indicator->last_fade_value = p_led_indicator->current_fade_value;
     xSemaphoreGive(p_led_indicator->mutex);
     return ESP_OK;
+}
+
+esp_err_t led_indicator_set_color_temperature(led_indicator_handle_t handle, const uint32_t temperature)
+{
+    LED_INDICATOR_CHECK(handle != NULL, "invalid p_handle", return ESP_ERR_INVALID_ARG);
+    _led_indicator_t *p_led_indicator = (_led_indicator_t *)handle;
+    if (!p_led_indicator->hal_indicator_set_hsv) {
+        ESP_LOGW(TAG, "LED indicator does not have the hal_indicator_set_hsv function");
+        return ESP_FAIL;
+    }
+    uint16_t hue;
+    uint8_t saturation;
+    
+    xSemaphoreTake(p_led_indicator->mutex, portMAX_DELAY);
+    uint32_t ihsv_value = p_led_indicator->current_fade_value & 0x1FFFFFFF;
+    
+    if ((temperature & 0xFFFFFF) < 600) {
+        hue = 0;
+        saturation = 100;
+    } else if ((temperature & 0xFFFFFF) > 10000) {
+        hue = 222;
+        saturation = 21 + ((temperature & 0xFFFFFF) - 10000) * 41 / 990000;
+    } else {
+        hue = temp_table[((temperature & 0xFFFFFF) - 600) / 100].hue;
+        saturation = temp_table[((temperature & 0xFFFFFF) - 600) / 100].saturation;
+    }
+    saturation = (saturation * 255) / 100;
+
+    SET_SATURATION(ihsv_value, saturation);
+    SET_HUE(ihsv_value, hue);
+    ihsv_value = (ihsv_value & 0x1FFFFFF) | (temperature & 0x7F000000);
+    
+    p_led_indicator->hal_indicator_set_hsv(p_led_indicator->hardware_data, ihsv_value);
+    p_led_indicator->current_fade_value = ihsv_value;
+    p_led_indicator->last_fade_value = ihsv_value;
+    xSemaphoreGive(p_led_indicator->mutex);
+    return ESP_OK; 
 }
