@@ -7,6 +7,10 @@
 #include <map>
 #include "esp_hal_bldc_3pwm.h"
 
+#ifdef CONFIG_SOC_MCPWM_SUPPORTED
+#define MCPWM_TIMER_CLK_SRC MCPWM_TIMER_CLK_SRC_DEFAULT
+#endif
+
 std::vector<std::pair<DriverMode, std::tuple<int, int>>> HardwareResource = {
     {DriverMode::mcpwm, {0, 0}},
     {DriverMode::mcpwm, {1, 0}},
@@ -275,7 +279,7 @@ int BLDCDriver3PWM::init()
         printf("No available Driver.\n");
         return 0;
     }
-
+#ifdef CONFIG_SOC_MCPWM_SUPPORTED
     if (ret == 1) {
         // mcpwm
         driverMode = DriverMode::mcpwm;
@@ -285,7 +289,7 @@ int BLDCDriver3PWM::init()
         // Init mcpwm driver.
         mcpwm_timer_config_t timer_config = {
             .group_id = auto_mcpwm_group,
-            .clk_src = MCPWM_TIMER_CLK_SRC_DEFAULT,
+            .clk_src = MCPWM_TIMER_CLK_SRC,
             .resolution_hz = _PWM_TIMEBASE_RESOLUTION_HZ,
             .count_mode = MCPWM_TIMER_COUNT_MODE_UP,                                      // centeral mode
             .period_ticks = (uint32_t)(1 * _PWM_TIMEBASE_RESOLUTION_HZ / _PWM_FREQUENCY), // real frequency is pwm_frequency/2
@@ -336,7 +340,9 @@ int BLDCDriver3PWM::init()
 
         mcpwm_period = timer_config.period_ticks;
         initialized = 1;
-    } else if (ret == 2) {
+    } else 
+#endif
+    if (ret == 2) {
         // ledc
         driverMode = DriverMode::ledc;
         printf("Current Driver uses LEDC Channel:%d %d %d\n", auto_ledc_channels[0], auto_ledc_channels[1], auto_ledc_channels[2]);
@@ -373,6 +379,7 @@ int BLDCDriver3PWM::init()
     return 1;
 }
 
+#ifdef CONFIG_SOC_MCPWM_SUPPORTED
 int BLDCDriver3PWM::init(int _mcpwm_group)
 {
     // PWM pins
@@ -407,7 +414,7 @@ int BLDCDriver3PWM::init(int _mcpwm_group)
     // Init mcpwm driver.
     mcpwm_timer_config_t timer_config = {
         .group_id = _mcpwm_group,
-        .clk_src = MCPWM_TIMER_CLK_SRC_DEFAULT,
+        .clk_src = MCPWM_TIMER_CLK_SRC,
         .resolution_hz = _PWM_TIMEBASE_RESOLUTION_HZ,
         .count_mode = MCPWM_TIMER_COUNT_MODE_UP,                                      // centeral mode
         .period_ticks = (uint32_t)(1 * _PWM_TIMEBASE_RESOLUTION_HZ / _PWM_FREQUENCY), // real frequency is pwm_frequency/2
@@ -461,6 +468,7 @@ int BLDCDriver3PWM::init(int _mcpwm_group)
 
     return 1;
 }
+#endif
 
 int BLDCDriver3PWM::init(std::vector<int> _ledc_channels)
 {
@@ -535,6 +543,7 @@ int BLDCDriver3PWM::deinit()
         }
         setLedcChannelUnUsed(ledc_channels);
         break;
+#ifdef CONFIG_SOC_MCPWM_SUPPORTED
     case DriverMode::mcpwm:
         for (int i = 0; i < 3; i++) {
             if (mcpwm_del_generator(generator[i]) != ESP_OK) {
@@ -559,6 +568,7 @@ int BLDCDriver3PWM::deinit()
 
         setMcpwmGroupUnUsed(mcpwm_group);
         break;
+#endif
     default:
         break;
     }
@@ -582,11 +592,13 @@ void BLDCDriver3PWM::halPwmWrite()
         ESP_ERROR_CHECK(ledc_set_duty(_LEDC_MODE, static_cast<ledc_channel_t>(ledc_channels[2]), (uint32_t)((mcpwm_period * dc_c))));
         ESP_ERROR_CHECK(ledc_update_duty(_LEDC_MODE, static_cast<ledc_channel_t>(ledc_channels[2])));
         break;
+#ifdef CONFIG_SOC_MCPWM_SUPPORTED
     case DriverMode::mcpwm:
         ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(comparator[0], (uint32_t)((mcpwm_period * dc_a))));
         ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(comparator[1], (uint32_t)((mcpwm_period * dc_b))));
         ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(comparator[2], (uint32_t)((mcpwm_period * dc_c))));
         break;
+#endif
     default:
         break;
     }

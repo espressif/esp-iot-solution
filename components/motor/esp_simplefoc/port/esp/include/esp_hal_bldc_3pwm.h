@@ -12,8 +12,10 @@
 #include "time_utils.h"
 #include "defaults.h"
 #include "drivers/hardware_api.h"
-#include "driver/mcpwm_prelude.h"
 #include "driver/ledc.h"
+#ifdef CONFIG_SOC_MCPWM_SUPPORTED
+#include "driver/mcpwm_prelude.h"
+#endif
 
 #define _PWM_FREQUENCY 20000                           /*!< default frequency of MCPWM */
 #define _PWM_FREQUENCY_MAX 50000                       /*!< Max frequency of MCPWM */
@@ -52,6 +54,7 @@ public:
      */
     int init() override;
 
+#ifdef CONFIG_SOC_MCPWM_SUPPORTED
     /**
      * @brief Motor hardware init function, using MCPWM.
      *
@@ -61,6 +64,7 @@ public:
      *     - 1 Success
      */
     int init(int _mcpwm_group);
+#endif
 
     /**
      * @brief Motor hardware init function, using LEDC.
@@ -128,11 +132,13 @@ public:
 
 private:
     DriverMode driverMode;
-    int mcpwm_group;
     std::vector<int> ledc_channels;
+    uint32_t mcpwm_period;
+#ifdef CONFIG_SOC_MCPWM_SUPPORTED
+    int mcpwm_group;
     mcpwm_gen_handle_t generator[3] = {};
     mcpwm_cmpr_handle_t comparator[3];
     mcpwm_oper_handle_t oper[3];
     mcpwm_timer_handle_t timer = NULL;
-    uint32_t mcpwm_period;
+#endif
 };

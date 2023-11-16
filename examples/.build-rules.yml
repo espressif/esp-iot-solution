@@ -96,12 +96,12 @@ examples/lighting/lightbulb:
     - if: INCLUDE_DEFAULT == 1
 
 examples/motor/foc_openloop_control:
-  enable:
-    - if: IDF_TARGET in ["esp32","esp32s3"]
+  disable:
+    - if: IDF_TARGET == "esp32c2"
 
 examples/motor/foc_velocity_control:
-  enable:
-    - if: IDF_TARGET in ["esp32","esp32s3"]
+  disable:
+    - if: IDF_TARGET == "esp32c2"
 
 examples/ota/simple_ota_example:
   enable:
