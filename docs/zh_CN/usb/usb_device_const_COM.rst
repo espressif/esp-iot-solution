@@ -9,7 +9,7 @@ ESP ROM Code 中对 USB 描述符配置如下：
 .. list-table::
    :header-rows: 1
 
-   * - 
+   * -
      - ESP32S2
      - ESP32S3
      - ESP32C3
@@ -32,7 +32,7 @@ ESP ROM Code 中对 USB 描述符配置如下：
 递增 COM 编号，为量产烧录带来额外工作。对于需要使用 USB 进行固件下载的客户，建议修改 Windows 的递增 COM 编号的规则，阻止依据 Serial 号递增编号。
 
 解决方案
---------
+^^^^^^^^^
 
 **管理员方式打开** ``Windows CMD`` , 执行以下指令。该指令将添加注册表项，阻止依据 Serial 号递增编号，\ **设置完成后请重启电脑使能修改**\ ：
 

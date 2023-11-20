@@ -5,7 +5,7 @@ USB-Serial-JTAG 外设介绍
 ESP32-S3/C3 等芯片内置 USB-Serial-JTAG 外设，它包含了 USB-to-serial 转换器和 USB-to-JTAG 转换器，支持通过 USB 线连接到 PC，实现固件下载、调试和打印系统 LOG 等功能。USB-Serial-JTAG 外设的内部结构可参考 `ESP32-C3 技术参考手册-USB Serial/JTAG Controller <https://www.espressif.com/sites/default/files/documentation/esp32-c3_technical_reference_manual_en.pdf>`_\ 。
 
 USB-Serial-JTAG 外设驱动
-------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 
 * Linux 和 MacOS 系统下，无需手动安装驱动
@@ -13,7 +13,7 @@ USB-Serial-JTAG 外设驱动
 * Windows 7/8 系统，需要手动安装驱动，驱动下载地址：\ `esp32-usb-jtag-2021-07-15 <https://dl.espressif.com/dl/idf-driver/idf-driver-esp32-usb-jtag-2021-07-15.zip>`_\ 。用户也可以使用 `ESP-IDF Windows Installer <https://dl.espressif.com/dl/esp-idf/>`_\ ，勾选 USB-Serial-JTAG 驱动进行安装，
 
 USB-Serial-JTAG 外设内置功能
-----------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 USB-Serial-JTAG 外设接入 PC 后，设备管理器将新增两个设备：
 
@@ -40,7 +40,7 @@ Linux 如下图所示：
 * 默认情况下，USB-Serial-JTAG 下载功能处于使能状态，可以直接使用 USB 线连接到 PC，然后使用 esptool 工具（或直接使用 idf.py flash）配置 USB-Serial-JTAG 设备对应的串口号（Windows 为 ``COM*``\ ，Linux 为 ``/dev/ttyACM*``\ , MacOS 为 ``/dev/cu*``\ ）下载固件。下载期间，esptool 通过 USB 控制协议自动将设备 Reset 并切换到下载模式。
 * 如果在应用程序中将 USB-Serial-JTAG 对应的 USB 引脚用作了其它功能，例如用作普通 GPIO 或其它外设 IO，USB-Serial-JTAG 将无法与 USB 主机建立连接，因此无法通过 USB 将设备切换到下载模式，用户必须通过 Boot 控制引脚，将设备手动切换到下载模式，然后再使用 esptool 下载固件。
 * 为了避免在应用程序中将 USB-Serial-JTAG 对应的 USB 引脚用作其它功能，导致无法通过 USB 自动进入下载模式，用户需要在硬件设计时，引出 Boot 控制引脚。
-* 默认情况下，通过 USB 接口下载不同的芯片，COM 号将递增，可能对量产造成不便，用户可参考 `阻止 Windows 依据 USB 设备序列号递增 COM 编号 <./usb_device_const_COM.md>`_\ 。
+* 默认情况下，通过 USB 接口下载不同的芯片，COM 号将递增，可能对量产造成不便，用户可参考 :doc:`阻止 Windows 依据 USB 设备序列号递增 COM 编号 <./usb_device_const_COM>` 。
 
 使用 USB-Serial-JTAG 调试代码
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -1,18 +1,18 @@
 
-自供电 USB 设备解决方案
------------------------
+Self-Powered USB Device Solutions
+----------------------------------
 
-按照 USB 协议要求，USB 自供电设备必须通过检测 5V VBUS 电压来判断设备是否拔出，进而实现热插拔。对于主机供电设备，由于主机 VBUS 断电之后，设备直接掉电关机，无需实现该逻辑。
+According to the USB protocol requirements, self-powered USB devices must detect the 5V VBUS voltage to determine if the device is unplugged, thereby enabling hot-plugging. For host-powered devices, since the device shuts down immediately when the host VBUS is disconnected, there is no need to implement this logic.
 
-USB 设备 VBUS 检测方法一般有两种方法：由 USB PHY 硬件检测，或\ **借助 ADC/GPIO 由软件检测**\ 。
+There are generally two methods for USB device VBUS detection: detection by USB PHY hardware, or \ **detection by software with the help of ADC/GPIO**\.
 
-由于 ESP32S2/S3 内部 USB PHY 不支持硬件检测逻辑，该功能需要借助 ADC/GPIO 由软件实现，其中使用 GPIO 检测方法最为简便，实现方法如下：
+The internal USB PHY of ESP32S2/S3 does not support hardware detection logic, this function needs to be implemented by software with the help of ADC/GPIO. Among them, using the GPIO detection method is the simplest. The implementation is as follows:
 
-**对于 ESP-IDF 4.4 及更早版本:**
+**For ESP-IDF 4.4 and earlier versions:**
 
 
-#. 硬件上，需要额外占用一个 IO（任意指定，特殊引脚除外），通过两个电阻分压（例如两个 100KΩ ）与 ESP32S2/S3 相连 (ESP32S2/S3 IO 最大可输入电压为 3.3v)；
-#. 在 ``tinyusb_driver_install`` 之后，需要调用 ``usbd_vbus_detect_gpio_enable`` 函数使能 VBUS 检测，该函数实现代码如下，请直接复制到需要调用的位置：
+#. On the hardware side, you need to allocate an additional I/O (except for special pins) connected to ESP32S2/S3 through a voltage divider with two resistors (e.g., two 100KΩ). (Note: ESP32S2/S3 I/O maximum input voltage is 3.3v.)
+#. After the ``tinyusb_driver_install``, it is necessary to call the ``usbd_vbus_detect_gpio_enable`` function to enable VBUS detection. The implementation code for this function is as follows. Please copy it to the required location for invocation:
 
 .. code-block:: C
 
@@ -29,7 +29,7 @@ USB 设备 VBUS 检测方法一般有两种方法：由 USB PHY 硬件检测，�
     *                    └───────────────
     *        The API Must be Called after tinyusb_driver_install to overwrite the default config.
     * @param gpio_num, The gpio number used for vbus detect
-    * 
+    *
     */
    static void usbd_vbus_detect_gpio_enable(int gpio_num)
    {
@@ -42,17 +42,17 @@ USB 设备 VBUS 检测方法一般有两种方法：由 USB PHY 硬件检测，�
            .pull_down_en = 0,
        };
        gpio_config(&io_conf);
-       esp_rom_gpio_connect_in_signal(gpio_num, USB_OTG_VBUSVALID_IN_IDX, 0); 
-       esp_rom_gpio_connect_in_signal(gpio_num, USB_SRP_BVALID_IN_IDX, 0); 
-       esp_rom_gpio_connect_in_signal(gpio_num, USB_SRP_SESSEND_IN_IDX, 1); 
+       esp_rom_gpio_connect_in_signal(gpio_num, USB_OTG_VBUSVALID_IN_IDX, 0);
+       esp_rom_gpio_connect_in_signal(gpio_num, USB_SRP_BVALID_IN_IDX, 0);
+       esp_rom_gpio_connect_in_signal(gpio_num, USB_SRP_SESSEND_IN_IDX, 1);
        return;
    }
 
-**对于 ESP-IDF 5.0 及以上版本:**
+**For ESP-IDF 5.0 and later versions:**
 
-#. 同上，硬件上需要额外占用一个 IO（任意指定，特殊引脚除外），通过两个电阻分压（例如两个 100KΩ ）与 ESP32S2/S3 相连；
-#. 将用于检测 VBUS 的 IO 初始化为 GPIO 输入模式;
-#. 直接将 IO 配置到 ``tinyusb_config_t`` 中（\ `详情可参考 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/peripherals/usb_device.html#self-powered-device>`_\ ）：
+#. Same as above, the hardware needs to occupy an additional IO (arbitrarily specified, except for special pins), which is connected to ESP32S2/S3 through two resistor voltage dividers (for example, two 100KΩ);
+#. Initialize the IO used to detect VBUS to GPIO input mode;
+#. Configure IO directly into ``tinyusb_config_t`` (\ `For details, please refer to <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/peripherals/usb_device. html#self-powered-device>`_\ ):
 
 .. code-block:: C
 

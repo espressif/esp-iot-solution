@@ -17,7 +17,7 @@ USB IF（USB Implementers Forum）是 USB 标准的制定者，它制定了 USB 
    :alt: USB Solution
 
 USB 电气属性
-------------
+^^^^^^^^^^^^^^^^^^^^
 
 Type-A 接口的 USB 电气属性如下：
 
@@ -47,39 +47,39 @@ Type-A 接口的 USB 电气属性如下：
 
 
 
-* 对于\ `自供电设备，需要使用 1 个额外 IO 检测 VBUS 电压 <./usb_device_self_power.md>`_\ ，用于检测设备是否拔出
+* 对于\ :doc:`自供电设备，需要使用 1 个额外 IO 检测 VBUS 电压 <./usb_device_self_power>` ，用于检测设备是否拔出
 * D- D+ 接反不会损坏硬件，但是主机将无法识别
 
 USB-OTG Full-speed 控制器简介
------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 **USB OTG Full-speed 控制器**\ 是指同时具有 USB-OTG，USB Host 和 USB Device 模式的控制器，支持模式的协商和切换。支持 Full-speed (12Mbps) 和 Low-speed (1.5Mbps) 两种速率，支持 USB 1.1 和 USB 2.0 协议。
 
 ESP-IDF 从 v4.4 开始已经包含 USB Host 和 USB Device 协议栈和各种设备类驱动，支持用户二次开发。
 
-更多介绍，请参考\ `USB-OTG 控制器介绍 <./usb_otg_overview.md>`_\ 。
+更多介绍，请参考\ :doc:`USB-OTG 控制器介绍 <./usb_otg>` 。
 
 USB-Serial-JTAG 控制器简介
---------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 **USB-Serial-JTAG Controller**\ ：同时具有 USB Serial 和 USB JTAG 功能的专用 USB 控制器，支持通过 USB 接口下载固件、打印 log、CDC 传输和 JTAG 调试，不支持修改 USB 功能、修改描述符等二次开发。
 
-更多介绍，请参考\ `USB-Serial-JTAG 控制器介绍 <./usb_otg_overview.md>`_\ 。
+更多介绍，请参考\ :doc:`USB-Serial-JTAG 控制器介绍 <./usb_otg>` 。
 
 USB Full-speed PHY 简介
------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 **USB Full-speed PHY**\ ：也称 USB Full-speed Transceiver，用于 USB Controller 数字信号到 USB 总线信号电平转换，提供总线驱动能力等。内部 USB Full-speed PHY 连接到外部固定 IO 引脚。
 
-更多介绍，请参考\ `USB-PHY 介绍 <./usb_phy.md>`_\ 。
+更多介绍，请参考\ :doc:`USB-PHY 介绍 <./usb_phy>` 。
 
 ESP32-S/C 系列 USB 外设支持情况
--------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. list-table::
    :header-rows: 1
 
-   * - 
+   * -
      - USB OTG High-speed
      - USB OTG Full-speed
      - USB-Serial-JTAG
@@ -139,7 +139,7 @@ ESP32-S/C 系列 USB 外设支持情况
 * X : Not Supported
 
 ESP32-S2 USB 功能简介
----------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ESP32-S2 内置 **USB OTG Full-speed Controller** 和 **USB Full-speed PHY**\ ，内部结构如下：
 
@@ -150,7 +150,7 @@ ESP32-S2 内置 **USB OTG Full-speed Controller** 和 **USB Full-speed PHY**\ �
 
 
 ESP32-C3 USB 功能简介
----------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ESP32-C3 内置 **USB-Serial-JTAG Controller** 和 **USB Full-speed PHY**\ ，内部结构如下:
 
@@ -161,9 +161,9 @@ ESP32-C3 内置 **USB-Serial-JTAG Controller** 和 **USB Full-speed PHY**\ ，�
 
 
 ESP32-S3 USB 功能简介
----------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-ESP32-S3 内置两个 USB 控制器，分别是  **USB OTG Full-speed Controller** 和 **USB-Serial-JTAG Controller**\ ，内置一个 **USB Full-speed PHY**\ 。内部 USB PHY 默认连接到 **USB-Serial-JTAG** 控制器，可通过烧写 eFuse 修改默认，或配置寄存器动态切换，也可通过增加外部 PHY，同时启用两个控制器。内部 USB PHY 的切换详情，参考 `USB PHY 切换 <./usb_phy.md>`_\ 。
+ESP32-S3 内置两个 USB 控制器，分别是  **USB OTG Full-speed Controller** 和 **USB-Serial-JTAG Controller**\ ，内置一个 **USB Full-speed PHY**\ 。内部 USB PHY 默认连接到 **USB-Serial-JTAG** 控制器，可通过烧写 eFuse 修改默认，或配置寄存器动态切换，也可通过增加外部 PHY，同时启用两个控制器。内部 USB PHY 的切换详情，参考 :doc:`USB PHY 切换 <./usb_phy>`\ 。
 
 
 .. image:: ../../_static/usb/esp32s3_usb.png
