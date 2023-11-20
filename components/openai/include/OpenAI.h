@@ -893,6 +893,12 @@ OpenAI_t *OpenAICreate(const char *api_key);
  */
 void OpenAIDelete(OpenAI_t *oai);
 
+/**
+ * @brief Modify the Base URL of the OpenAI object
+ *
+ */
+void OpenAIChangeBaseURL(OpenAI_t *oai, const char *baseURL);
+
 #ifdef __cplusplus
 }
 #endif

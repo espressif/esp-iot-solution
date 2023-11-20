@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v0.2.0 - 2023-11-15
+
+### Enhancements
+
+* Support config the OpenAI Base URL through API `OpenAIChangeBaseURL` or `menuconfig`. Thanks [@Sam McLeod](https://github.com/sammcj)
+* Using MP3 format audio file in unit test
+
 ## v0.1.2 - 2023-8-4
 
 ### Docs

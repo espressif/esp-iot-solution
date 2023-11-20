@@ -16,6 +16,8 @@
 
 static const char *TAG = "OpenAI";
 
+#define OPENAI_DEFAULT_BASE_URL CONFIG_DEFAULT_OPENAI_BASE_URL
+
 #define OPENAI_ERROR_CHECK(a, str, ret) if(!(a)) { \
         ESP_LOGE(TAG,"%s:%d (%s):%s", __FILE__, __LINE__, __FUNCTION__, str); \
         return (ret); \
@@ -121,11 +123,12 @@ char *getJsonError(cJSON *json)
 typedef struct {
     OpenAI_t parent;                                                                                             /*!<  Parent object */
     char *api_key;                                                                                               /*!<  API key for OpenAI */
+    char *base_url;                                                                                              /*!<  Base URL for OpenAI or Other compatible API */
 
-    char *(*get)(const char *api_key, const char *endpoint);                                                     /*!<  Perform an HTTP GET request. */
-    char *(*del)(const char *api_key, const char *endpoint);                                                     /*!<  Perform an HTTP DELETE request. */
-    char *(*post)(const char *api_key, const char *endpoint, char *jsonBody);                                    /*!<  Perform an HTTP POST request. */
-    char *(*upload)(const char *api_key, const char *endpoint, const char *boundary, uint8_t *data, size_t len); /*!<  Upload data using an HTTP request. */
+    char *(*get)(const char *base_url, const char *api_key, const char *endpoint);                                                     /*!<  Perform an HTTP GET request. */
+    char *(*del)(const char *base_url, const char *api_key, const char *endpoint);                                                     /*!<  Perform an HTTP DELETE request. */
+    char *(*post)(const char *base_url, const char *api_key, const char *endpoint, char *jsonBody);                                    /*!<  Perform an HTTP POST request. */
+    char *(*upload)(const char *base_url, const char *api_key, const char *endpoint, const char *boundary, uint8_t *data, size_t len); /*!<  Upload data using an HTTP request. */
 } _OpenAI_t;
 
 //
@@ -867,7 +870,7 @@ static OpenAI_StringResponse_t *OpenAI_CompletionPrompt(OpenAI_Completion_t *com
     }
     char *jsonBody = cJSON_Print(req);
     cJSON_Delete(req);
-    char *res = _completion->oai->post(_completion->oai->api_key, endpoint, jsonBody);
+    char *res = _completion->oai->post(_completion->oai->base_url, _completion->oai->api_key, endpoint, jsonBody);
     free(jsonBody);
     OPENAI_ERROR_CHECK(res != NULL, "OpenAI API call failed", NULL);
 
@@ -1143,7 +1146,7 @@ OpenAI_StringResponse_t *OpenAI_ChatCompletionMessage(OpenAI_ChatCompletion_t *c
     }
     char *jsonBody = cJSON_Print(req);
     cJSON_Delete(req);
-    char *res = _chatCompletion->oai->post(_chatCompletion->oai->api_key, endpoint, jsonBody);
+    char *res = _chatCompletion->oai->post(_chatCompletion->oai->base_url, _chatCompletion->oai->api_key, endpoint, jsonBody);
     free(jsonBody);
     OPENAI_ERROR_CHECK(res != NULL, "Empty result!", result);
     if (save) {
@@ -1281,7 +1284,7 @@ OpenAI_StringResponse_t *OpenAI_EditProcess(OpenAI_Edit_t *edit, char *instructi
     }
     char *jsonBody = cJSON_Print(req);
     cJSON_Delete(req);
-    char *res = _edit->oai->post(_edit->oai->api_key, endpoint, jsonBody);
+    char *res = _edit->oai->post(_edit->oai->base_url, _edit->oai->api_key, endpoint, jsonBody);
     free(jsonBody);
     OPENAI_ERROR_CHECK(res != NULL, "Empty result!", result);
     return OpenAI_StringResponseCreate(res);
@@ -1403,7 +1406,7 @@ OpenAI_ImageResponse_t *OpenAI_ImageGenerationPrompt(OpenAI_ImageGeneration_t *i
     }
     char *jsonBody = cJSON_Print(req);
     cJSON_Delete(req);
-    char *res = _imageGeneration->oai->post(_imageGeneration->oai->api_key, endpoint, jsonBody);
+    char *res = _imageGeneration->oai->post(_imageGeneration->oai->base_url, _imageGeneration->oai->api_key, endpoint, jsonBody);
     free(jsonBody);
     OPENAI_ERROR_CHECK(res != NULL, "Empty result!", result);
     return OpenAI_ImageResponseCreate(res);
@@ -1544,7 +1547,7 @@ static OpenAI_ImageResponse_t *OpenAI_ImageVariationImage(OpenAI_ImageVariation_
     free(reqBody);
     free(reqEndBody);
     free(itemPrefix);
-    char *res = _imageVariation->oai->upload(_imageVariation->oai->api_key, endpoint, boundary, data, len);
+    char *res = _imageVariation->oai->upload(_imageVariation->oai->base_url, _imageVariation->oai->api_key, endpoint, boundary, data, len);
     free(data);
     OPENAI_ERROR_CHECK(res != NULL, "Empty result!", NULL);
     return OpenAI_ImageResponseCreate(res);
@@ -1722,7 +1725,7 @@ static OpenAI_ImageResponse_t *OpenAI_ImageEditImage(OpenAI_ImageEdit_t *imageEd
     if (maskBody != NULL) {
         free(maskBody);
     }
-    char *res = _imageEdit->oai->upload(_imageEdit->oai->api_key, endpoint, boundary, data, len);
+    char *res = _imageEdit->oai->upload(_imageEdit->oai->base_url, _imageEdit->oai->api_key, endpoint, boundary, data, len);
     free(data);
     OPENAI_ERROR_CHECK(res != NULL, "Empty result!", NULL);
     return OpenAI_ImageResponseCreate(res);
@@ -1898,7 +1901,7 @@ static char *OpenAI_AudioTranscriptionFile(OpenAI_AudioTranscription_t *audioTra
     free(reqEndBody);
     free(itemPrefix);
 
-    char *result = _audioTranscription->oai->upload(_audioTranscription->oai->api_key, endpoint, boundary, data, len);
+    char *result = _audioTranscription->oai->upload(_audioTranscription->oai->base_url, _audioTranscription->oai->api_key, endpoint, boundary, data, len);
     free(data);
     OPENAI_ERROR_CHECK(result != NULL, "Empty result!", NULL);
     cJSON *json = cJSON_Parse(result);
@@ -2039,7 +2042,7 @@ static char *OpenAI_AudioTranslationFile(OpenAI_AudioTranslation_t *audioTransla
     free(itemPrefix);
     free(reqBody);
     free(reqEndBody);
-    char *result = _audioTranslation->oai->upload(_audioTranslation->oai->api_key, endpoint, boundary, data, len);
+    char *result = _audioTranslation->oai->upload(_audioTranslation->oai->base_url, _audioTranslation->oai->api_key, endpoint, boundary, data, len);
     free(data);
     OPENAI_ERROR_CHECK(result != NULL, "Empty result!", NULL);
     cJSON *json = cJSON_Parse(result);
@@ -2108,7 +2111,7 @@ OpenAI_EmbeddingResponse_t *OpenAI_EmbeddingCreate(OpenAI_t *openai, char *input
     char *jsonBody = cJSON_Print(req);
     cJSON_Delete(req);
     _OpenAI_t *_openai = __containerof(openai, _OpenAI_t, parent);
-    char *response = _openai->post(_openai->api_key, endpoint, jsonBody);
+    char *response = _openai->post(_openai->base_url, _openai->api_key, endpoint, jsonBody);
     free(jsonBody);
     OPENAI_ERROR_CHECK(response != NULL, "Empty response!", NULL);
     return OpenAI_EmbeddingResponseCreate(response);
@@ -2147,15 +2150,11 @@ OpenAI_ModerationResponse_t *OpenAI_ModerationCreate(OpenAI_t *openai, char *inp
     char *jsonBody = cJSON_Print(req);
     cJSON_Delete(req);
     _OpenAI_t *_openai = __containerof(openai, _OpenAI_t, parent);
-    res = _openai->post(_openai->api_key, endpoint, jsonBody);
+    res = _openai->post(_openai->base_url, _openai->api_key, endpoint, jsonBody);
     free(jsonBody);
     OPENAI_ERROR_CHECK(res != NULL, "Empty result!", NULL);
     return OpenAI_ModerationResponseCreate(res);
 }
-
-//
-// Open AI
-//
 
 void OpenAIDelete(OpenAI_t *oai)
 {
@@ -2163,6 +2162,7 @@ void OpenAIDelete(OpenAI_t *oai)
     if (_oai != NULL) {
         if (_oai->api_key != NULL) {
             free(_oai->api_key);
+            free(_oai->base_url);
             _oai->api_key = NULL;
         }
         free(_oai);
@@ -2170,12 +2170,21 @@ void OpenAIDelete(OpenAI_t *oai)
     }
 }
 
-static char *OpenAI_Request(const char *api_key, const char *endpoint, const char *content_type, esp_http_client_method_t method, const char *boundary, uint8_t *data, size_t len)
+void OpenAIChangeBaseURL(OpenAI_t *oai, const char *baseURL)
+{
+    _OpenAI_t *_oai = __containerof(oai, _OpenAI_t, parent);
+    if (_oai->base_url != NULL) {
+        free(_oai->base_url);
+    }
+    _oai->base_url = strdup(baseURL);
+}
+
+static char *OpenAI_Request(const char *base_url, const char *api_key, const char *endpoint, const char *content_type, esp_http_client_method_t method, const char *boundary, uint8_t *data, size_t len)
 {
     ESP_LOGD(TAG, "\"%s\", len=%u", endpoint, len);
     char *url = NULL;
     char *result = NULL;
-    asprintf(&url, "https://api.openai.com/v1/%s", endpoint);
+    asprintf(&url, "%s%s", base_url, endpoint);
     OPENAI_ERROR_CHECK(url != NULL, "Failed to allocate url!", NULL);
     esp_http_client_config_t config = {
         .url = url,
@@ -2229,24 +2238,24 @@ end:
     return result != NULL ? result : NULL;
 }
 
-static char *OpenAI_Upload(const char *api_key, const char *endpoint, const char *boundary, uint8_t *data, size_t len)
+static char *OpenAI_Upload(const char *base_url, const char *api_key, const char *endpoint, const char *boundary, uint8_t *data, size_t len)
 {
-    return OpenAI_Request(api_key, endpoint, "multipart/form-data", HTTP_METHOD_POST, boundary, data, len);
+    return OpenAI_Request(base_url, api_key, endpoint, "multipart/form-data", HTTP_METHOD_POST, boundary, data, len);
 }
 
-static char *OpenAI_Post(const char *api_key, const char *endpoint, char *jsonBody)
+static char *OpenAI_Post(const char *base_url, const char *api_key, const char *endpoint, char *jsonBody)
 {
-    return OpenAI_Request(api_key, endpoint, "application/json", HTTP_METHOD_POST, NULL, (uint8_t *)jsonBody, strlen(jsonBody));
+    return OpenAI_Request(base_url, api_key, endpoint, "application/json", HTTP_METHOD_POST, NULL, (uint8_t *)jsonBody, strlen(jsonBody));
 }
 
-static char *OpenAI_Get(const char *api_key, const char *endpoint)
+static char *OpenAI_Get(const char *base_url, const char *api_key, const char *endpoint)
 {
-    return OpenAI_Request(api_key, endpoint, "application/json", HTTP_METHOD_GET, NULL, NULL, 0);
+    return OpenAI_Request(base_url, api_key, endpoint, "application/json", HTTP_METHOD_GET, NULL, NULL, 0);
 }
 
-static char *OpenAI_Del(const char *api_key, const char *endpoint)
+static char *OpenAI_Del(const char *base_url, const char *api_key, const char *endpoint)
 {
-    return OpenAI_Request(api_key, endpoint, "application/json", HTTP_METHOD_DELETE, NULL, NULL, 0);
+    return OpenAI_Request(base_url, api_key, endpoint, "application/json", HTTP_METHOD_DELETE, NULL, NULL, 0);
 }
 
 OpenAI_t *OpenAICreate(const char *api_key)
@@ -2255,6 +2264,7 @@ OpenAI_t *OpenAICreate(const char *api_key)
     _OpenAI_t *_oai = (_OpenAI_t *)calloc(1, sizeof(_OpenAI_t));
     OPENAI_ERROR_CHECK(_oai != NULL, "Failed to allocate _OpenAI!", NULL);
     _oai->api_key = strdup(api_key);
+    _oai->base_url = strdup(OPENAI_DEFAULT_BASE_URL);
 
 #if CONFIG_ENABLE_EMBEDDING
     _oai->parent.embeddingCreate = &OpenAI_EmbeddingCreate;
