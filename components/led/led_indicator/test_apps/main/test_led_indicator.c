@@ -15,6 +15,7 @@
 #include "unity.h"
 #include "led_gamma.h"
 #include "iot_button.h"
+#include "led_convert.h"
 
 // Some resources are lazy allocated in pulse_cnt driver, the threshold is left for that case
 #define TEST_MEMORY_LEAK_THRESHOLD (-200)
@@ -701,7 +702,118 @@ static blink_step_t const *led_rgb_blink_lst[] = {
     [BLINK_RGB_NUM] = NULL,
 };
 
-TEST_CASE("TEST LED RGB by RGB","[LED RGB][RGB]")
+#define LED_RGB_RED_GPIO 11
+#define LED_RGB_GREEN_GPIO 12
+#define LED_RGB_BLUE_GPIO 13
+
+TEST_CASE("TEST LED RGB","[LED RGB][RGB]")
+{
+    led_indicator_rgb_config_t led_grb_cfg = {
+        .is_active_level_high = 1,
+        .timer_inited = false,
+        .timer_num = LEDC_TIMER_0,
+        .red_gpio_num = LED_RGB_RED_GPIO,
+        .green_gpio_num = LED_RGB_GREEN_GPIO,
+        .blue_gpio_num = LED_RGB_BLUE_GPIO,
+        .red_channel = LEDC_CHANNEL_0,
+        .green_channel = LEDC_CHANNEL_1,
+        .blue_channel = LEDC_CHANNEL_2,
+    };
+
+    led_indicator_config_t config = {
+        .mode = LED_RGB_MODE,
+        .led_indicator_rgb_config = &led_grb_cfg,
+        .blink_lists = led_rgb_blink_lst,
+        .blink_list_num = BLINK_RGB_NUM,
+    };
+
+    led_handle_0 = led_indicator_create(&config);
+    TEST_ASSERT_NOT_NULL(led_handle_0);
+    esp_err_t ret = ESP_OK;
+
+    ESP_LOGI(TAG, "breathe 25/100 blink.....");
+    ret = led_indicator_start(led_handle_0, BLINK_RGB_25_BRIGHTNESS);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+    TEST_ASSERT(ret == ESP_OK);
+
+    ESP_LOGI(TAG, "breathe 50/100 blink.....");
+    ret = led_indicator_start(led_handle_0, BLINK_RGB_50_BRIGHTNESS);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+    TEST_ASSERT(ret == ESP_OK);
+
+    ESP_LOGI(TAG, "breathe 75/100 blink.....");
+    ret = led_indicator_start(led_handle_0, BLINK_RGB_75_BRIGHTNESS);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+    TEST_ASSERT(ret == ESP_OK);
+
+    ESP_LOGI(TAG, "breathe blink .....");
+    ret = led_indicator_start(led_handle_0, BLINK_RGB_BREATHE);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(8000 / portTICK_PERIOD_MS);
+    led_indicator_stop(led_handle_0, BLINK_RGB_BREATHE);
+
+    ESP_LOGI(TAG, "red blink .....");
+    ret = led_indicator_start(led_handle_0, BLINK_RGB_RED);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+
+    ESP_LOGI(TAG, "green blink .....");
+    ret = led_indicator_start(led_handle_0, BLINK_RGB_GREEN);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+
+    ESP_LOGI(TAG, "blue blink .....");
+    ret = led_indicator_start(led_handle_0, BLINK_RGB_BLUE);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+
+    ESP_LOGI(TAG, "ring red to blue blink .....");
+    ret = led_indicator_start(led_handle_0, BLINK_RGB_RING_RED_TO_BLUE);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(12000 / portTICK_PERIOD_MS);
+    led_indicator_stop(led_handle_0, BLINK_RGB_RING_RED_TO_BLUE);
+
+    ESP_LOGI(TAG, "hsv red blink .....");
+    ret = led_indicator_start(led_handle_0, BLINK_HSV_RED);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+
+    ESP_LOGI(TAG, "hsv green blink .....");
+    ret = led_indicator_start(led_handle_0, BLINK_HSV_GREEN);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+
+    ESP_LOGI(TAG, "hsv blue blink .....");
+    ret = led_indicator_start(led_handle_0, BLINK_HSV_BLUE);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+
+    ESP_LOGI(TAG, "hsv ring red to blue blink .....");
+    ret = led_indicator_start(led_handle_0, BLINK_HSV_RING_RED_TO_BLUE);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(12000 / portTICK_PERIOD_MS);
+    led_indicator_stop(led_handle_0, BLINK_HSV_RING_RED_TO_BLUE);
+
+    ESP_LOGI(TAG, "flash blink .....");
+    ret = led_indicator_start(led_handle_0, BLINK_RGB_FLASH);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(8000 / portTICK_PERIOD_MS);
+    led_indicator_stop(led_handle_0, BLINK_RGB_FLASH);
+
+    ESP_LOGI(TAG, "double blink .....");
+    ret = led_indicator_start(led_handle_0, BLINK_RGB_DOUBLE);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
+
+    ESP_LOGI(TAG, "triple blink .....");
+    ret = led_indicator_start(led_handle_0, BLINK_RGB_TRIPLE);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(6000 / portTICK_PERIOD_MS);
+
+    led_indicator_deinit();
+}
+
+TEST_CASE("TEST LED Strips by RGB","[LED Strips][RGB]")
 {
     led_strip_config_t strip_config = {
         .strip_gpio_num = LED_STRIP_BLINK_GPIO,   // The GPIO that connected to the LED strip's data line

@@ -15,7 +15,9 @@ extern "C" {
 #include "esp_err.h"
 #include "led_gpio.h"
 #include "led_ledc.h"
+#include "led_rgb.h"
 #include "led_strips.h"
+#include "led_convert.h"
 #include "led_custom.h"
 
 /**
@@ -63,6 +65,7 @@ typedef struct {
 typedef enum {
     LED_GPIO_MODE,         /*!< blink with max brightness */
     LED_LEDC_MODE,         /*!< blink with LEDC driver */
+    LED_RGB_MODE,          /*!< blink with RGB driver */
     LED_STRIPS_MODE,       /*!< blink with LEDC strips driver */
     LED_CUSTOM_MODE,       /*!< blink with custom driver */
 } led_indicator_mode_t;
@@ -76,6 +79,7 @@ typedef struct {
     union {
         led_indicator_gpio_config_t *led_indicator_gpio_config;       /*!< LED GPIO configuration */
         led_indicator_ledc_config_t *led_indicator_ledc_config;       /*!< LED LEDC configuration */
+        led_indicator_rgb_config_t *led_indicator_rgb_config;         /*!< LED RGB configuration */
         led_indicator_strips_config_t *led_indicator_strips_config;   /*!< LED LEDC rgb configuration */
         led_indicator_custom_config_t *led_indicator_custom_config;   /*!< LED custom configuration */
     }; /**< LED configuration */
