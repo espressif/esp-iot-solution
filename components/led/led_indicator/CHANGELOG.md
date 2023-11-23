@@ -1,3 +1,7 @@
+## v0.7.2 - 2023-11-23
+
+* Fix possible cmake_utilities dependency issue
+
 ## v0.7.1 - 2023-10-15
 
 ### BUG FIX

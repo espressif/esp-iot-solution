@@ -1,6 +1,7 @@
 # @brief Link designated functions from SRAM to Flash to save SRAM
 if(CONFIG_CU_RELINKER_ENABLE)
-    if(NOT TARGET customer_sections)
+    # project_elf variable is only in project.cmake
+    if(NOT TARGET customer_sections AND DEFINED project_elf)
         message(STATUS "Relinker is enabled.")
         if(CONFIG_IDF_TARGET_ESP32C2)
             set(target "esp32c2")
