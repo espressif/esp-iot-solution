@@ -5,7 +5,7 @@ USB Host & Device
 :link_to_translation:`zh_CN:[中文]`
 
 .. toctree::
-    :maxdepth: 1
+    :maxdepth: 2
 
     USB Overview <usb_overview>
     USB OTG <usb_otg>
@@ -16,4 +16,4 @@ USB Host & Device
     USB Device Solution <usb_device_solutions>
     USB Self Power Device <usb_device_self_power>
     USB Device Set Const COM <usb_device_const_COM>
-    USB Stream <usb_stream>
+    usb_driver_index

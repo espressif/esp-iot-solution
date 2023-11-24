@@ -1,15 +1,15 @@
 
-阻止 Windows 依据 USB 设备序列号递增 COM 编号
----------------------------------------------
+Prevent Windows from incrementing COM numbers based on USB device serial number
+--------------------------------------------------------------------------------
 
-由于任何连接到 Windows PC 的设备都通过其 VID、PID 和 Serial 号进行识别。如果这 3 个参数中的任何一个发生了变化，那么 PC 将检测到新的硬件，并与该设备关联一个不同的 COM 端口，详情请参考 `Windows USB device registry entries <https://learn.microsoft.com/en-us/windows-hardware/drivers/usbcon/usb-device-specific-registry-settings>`_\ 。
+Due to the fact that any device connected to a Windows PC is identified by its VID (Vendor ID), PID (Product ID), and Serial number. If any of these three parameters undergo a change, the PC will detect new hardware and assigns it to a different COM port. For more details, please refer to the `Windows USB device registry entries <https://learn.microsoft.com/en-us/windows-hardware/drivers/usbcon/usb-device-specific-registry-settings>`_.
 
-ESP ROM Code 中对 USB 描述符配置如下：
+In the ESP ROM Code, the configuration of USB descriptors is as follows:
 
 .. list-table::
    :header-rows: 1
 
-   * - 
+   * -
      - ESP32S2
      - ESP32S3
      - ESP32C3
@@ -23,21 +23,21 @@ ESP ROM Code 中对 USB 描述符配置如下：
      - 0x1001
    * - **Serial**
      - 0
-     - MAC 地址字符串
-     - MAC 地址字符串
+     - MAC address
+     - MAC address
 
-* ESP32S2（usb-otg）Serial 为常量 0，每个设备相同，COM 号一致
-* ESP32S3（usb-serial-jtag）、ESP32C3（usb-serial-jtag）Serial 为设备 MAC 地址，每个设备均不同，COM 号默认递增
+* For ESP32S2 with USB On-The-Go (usb-otg), the Serial is a constant 0, and it remains the same for every device, resulting in consistent COM port numbers.
+* For ESP32S3 (usb-serial-jtag) and ESP32C3 (usb-serial-jtag), the Serial is set to the device MAC address. Each device has a unique MAC address, leading to different COM port numbers by default with incremental assignment.
 
-递增 COM 编号，为量产烧录带来额外工作。对于需要使用 USB 进行固件下载的客户，建议修改 Windows 的递增 COM 编号的规则，阻止依据 Serial 号递增编号。
+Incrementing COM numbers pose additional challenges for mass production programming. For customers requiring firmware downloads via USB, it is recommended to modify the Windows rules for incrementing the COM number to prevent incrementing the number based on the Serial number.
 
-解决方案
---------
+Solution
+^^^^^^^^^^^^^
 
-**管理员方式打开** ``Windows CMD`` , 执行以下指令。该指令将添加注册表项，阻止依据 Serial 号递增编号，\ **设置完成后请重启电脑使能修改**\ ：
+**Open Command Prompt in Administrator Mode** ``on Windows``, and execute the following command. This will add a registry entry to prevent incremental numbering based on the Serial number. **After completing the setup, please restart your computer to apply the changes**.
 
 .. code-block:: shell
 
    REG ADD HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\usbflags\303A10010101 /V IgnoreHWSerNum /t REG_BINARY /d 01
 
-用户也可下载 :download:`ignore_hwserial_esp32s3c3.bat <../../_static/ignore_hwserial_esp32s3c3.bat>` 脚本，右键选择管理员方式运行。
+Users have the option to download the script :download:`ignore_hwserial_esp32s3c3.bat <../../_static/ignore_hwserial_esp32s3c3.bat>` , then run it with administrative privileges by right-clicking and selecting **Run as Administrator**.

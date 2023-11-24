@@ -1,11 +1,11 @@
 
 USB-OTG 外设介绍
-----------------
+------------------
 
 ESP32-S2/S3 等芯片内置 USB-OTG 外设，它包含了 USB 控制器和 USB PHY，支持通过 USB 线连接到 PC，实现 USB Host 和 USB Device 功能。
 
 USB-OTG 传输速率
-----------------
+^^^^^^^^^^^^^^^^^^^
 
 ESP32-S2/S3 USB-OTG Full Speed 总线传输速率为 12 Mbps，但由于 USB 传输存在一些校验和同步机制，实际的有效传输速率将低于 12 Mbps。具体数值和传输类型相关，如下表所示：
 
@@ -71,10 +71,10 @@ ESP32-S2/S3 USB-OTG Full Speed 总线传输速率为 12 Mbps，但由于 USB 传
 
 
 USB-OTG 外设内置功能
---------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
 使用 USB OTG Console 下载固件和打印 LOG
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ESP32-S2/S3 等内置 USB-OTG 外设的芯片，ROM Code 中内置了 USB 通信设备类 (CDC) 的功能，该功能可用于替代 UART 接口，实现 Log、Console 和固件下载功能。
 
@@ -98,7 +98,7 @@ ESP32-S2/S3 等内置 USB-OTG 外设的芯片，ROM Code 中内置了 USB 通信
 
 
 使用 USB OTG DFU 下载固件
-^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ESP32-S2/S3 等内置 USB-OTG 外设的芯片，ROM Code 中内置了 USB DFU（Device Firmware Upgrade）功能，可用于实现标准的 DFU 下载模式。
 
@@ -113,17 +113,17 @@ ESP32-S2/S3 等内置 USB-OTG 外设的芯片，ROM Code 中内置了 USB DFU（
 
 
 使用 USB-OTG 外设进行 USB Host 开发
------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 USB-OTG 外设支持 USB Host 功能，用户可以通过 USB 接口直接连接到外部 USB 设备。ESP-IDF 从 v4.4 版本开始，已经支持 USB Host Driver，用户可以参考 `ESP-IDF USB Host <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/peripherals/usb_host.html>`_\ ，开发 USB Class Driver。
 
 此外乐鑫也已经官方支持 USB Host HID，USB Host MSC，USB Host CDC，USB Host UVC 等设备类驱动，用户可以直接使用这些驱动进行应用开发。
 
-USB Host 方案详情，请参考 `USB Host Solution <./usb_host_solutions.md>`_\ 。
+USB Host 方案详情，请参考 :doc:`USB Host Solution <./usb_host_solutions>` 。
 
 使用 USB-OTG 外设进行 USB Device 开发
--------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 USB-OTG 外设支持 USB Device 功能，乐鑫已经官方适配了 TinyUSB 协议栈，用户可以直接使用基于 TinyUSB 开源协议栈开发的 USB 标准设备或自定义设备，例如 HID，MSC，CDC，ECM, UAC 等。
 
-USB Device 方案详情，请参考 `USB Device Solution <./usb_device_solutions.md>`_\ 。
+USB Device 方案详情，请参考 :doc:`USB Device Solution <./usb_device_solutions>` 。

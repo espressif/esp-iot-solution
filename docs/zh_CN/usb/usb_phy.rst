@@ -5,7 +5,7 @@ USB PHY/Transceiver 介绍
 USB Full-speed PHY/Transceiver 的功能是将 USB 控制器的数字信号转换为 USB 总线信号电平，提供总线驱动能力，检测接收错误等。ESP32-S2/S3 等芯片已内置一个 USB Full-speed PHY，用户可直接使用芯片指定的 USB D+ D- 与外部 USB 系统通信。此外，ESP32-S2/S3 还保留了外部 PHY 的扩展接口，用户可在需要时连接外部 PHY。
 
 使用内部 PHY
-------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ESP32-S2/S3/C3 内部集成了 USB PHY，因此无需外接 PHY 芯片，可以直接与外部 USB 主机或设备通过 USB D+/D- 连接。但对于集成两个 USB 控制器的芯片，例如 ESP32-S3 内置 USB-OTG 和 USB-Serial-JTAG，两者共用一个内部 PHY，同一时间只能有一个工作。
 
@@ -38,7 +38,7 @@ ESP32-S2/S3/C3 内部集成了 USB PHY，因此无需外接 PHY 芯片，可以�
 
 
 使用外部 PHY
-------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 通过增加一个外部 PHY，可以实现 USB-OTG 和 USB-Serial-JTAG 两个外设同时工作。
 
@@ -56,14 +56,14 @@ ESP32S2/S3 支持 SP5301 或同等功能的 USB PHY。外部 PHY 的典型电路
 
 
 USB PHY 默认配置
-----------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 
 #. 对于同时具有 USB-OTG 和 USB-Serial-JTAG 两个外设的芯片，默认情况下 USB-Serial-JTAG 与内部 USB-PHY 连接。用户可以直接通过 USB 接口进行下载或调试，无需额外配置。
 #. 如需使用 USB Host Driver 或 TinyUSB 协议栈开发 USB-OTG 应用，在协议栈初始化时，USB-PHY 连接会自动切换为 USB-OTG，用户不必再进行配置。在 USB-OTG 模式下，如果用户需要使用 USB-Serial-JTAG 的下载功能，需要手动 Boot 到下载模式。
 
 修改 USB PHY 默认配置
----------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 方法 1： 通过配置寄存器，将 USB-PHY 连接切换为 USB-OTG。
 

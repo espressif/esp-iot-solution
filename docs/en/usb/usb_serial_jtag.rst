@@ -1,23 +1,23 @@
 
-USB-Serial-JTAG 外设介绍
-------------------------
+USB-Serial-JTAG Peripheral Introduction
+-----------------------------------------
 
-ESP32-S3/C3 等芯片内置 USB-Serial-JTAG 外设，它包含了 USB-to-serial 转换器和 USB-to-JTAG 转换器，支持通过 USB 线连接到 PC，实现固件下载、调试和打印系统 LOG 等功能。USB-Serial-JTAG 外设的内部结构可参考 `ESP32-C3 技术参考手册-USB Serial/JTAG Controller <https://www.espressif.com/sites/default/files/documentation/esp32-c3_technical_reference_manual_en.pdf>`_\ 。
+The ESP32-S3/C3 chips come with a built-in USB-Serial-JTAG peripheral, which includes a USB-to-serial converter and a USB-to-JTAG converter. It supports connection to a PC via a USB cable, enabling functions such as firmware downloading, debugging, and printing system logs. The internal structure of the USB-Serial-JTAG peripheral can be referred to in the `ESP32-C3 Technical Reference Manual - USB Serial/JTAG Controller <https://www.espressif.com/sites/default/files/documentation/esp32-c3_technical_reference_manual_en.pdf>`_\ .
 
-USB-Serial-JTAG 外设驱动
-------------------------
+USB-Serial-JTAG  peripheral driver
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 
-* Linux 和 MacOS 系统下，无需手动安装驱动
-* Windows 10 及以上系统，联网将自动安装驱动
-* Windows 7/8 系统，需要手动安装驱动，驱动下载地址：\ `esp32-usb-jtag-2021-07-15 <https://dl.espressif.com/dl/idf-driver/idf-driver-esp32-usb-jtag-2021-07-15.zip>`_\ 。用户也可以使用 `ESP-IDF Windows Installer <https://dl.espressif.com/dl/esp-idf/>`_\ ，勾选 USB-Serial-JTAG 驱动进行安装，
+* For Linux and MacOS systems, No need to manually install drivers.
+* For Windows 10 and above, drivers will be automatically installed when connected to the internet.
+* For Windows 7/8 systems, manual driver installation is necessary. The driver can be downloaded from: \ `esp32-usb-jtag-2021-07-15 <https://dl.espressif.com/dl/idf-driver/idf-driver-esp32-usb-jtag-2021-07-15.zip>`_\ . Alternatively, users can use the `ESP-IDF Windows Installer <https://dl.espressif.com/dl/esp-idf/>`_\ , selecting the USB-Serial-JTAG driver during installation.
 
-USB-Serial-JTAG 外设内置功能
-----------------------------
+USB-Serial-JTAG peripheral built-in functionality
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-USB-Serial-JTAG 外设接入 PC 后，设备管理器将新增两个设备：
+Upon connecting the USB-Serial-JTAG peripheral to a PC, the Device Manager will show the addition of two devices:
 
-Windows 如下图所示：
+For Windows as shown in the following figure:
 
 
 .. image:: ../../_static/usb/device_manager_usb_serial_jtag_cn.png
@@ -25,7 +25,7 @@ Windows 如下图所示：
    :alt: device_manager_usb_serial_jtag_cn
 
 
-Linux 如下图所示：
+For Linux as shown in the following figure:
 
 
 .. image:: ../../_static/usb/usb_serial_jtag_linux.png
@@ -33,36 +33,36 @@ Linux 如下图所示：
    :alt: device_manager_usb_serial_jtag_cn
 
 
-使用 USB-Serial-JTAG 下载固件
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Use USB-Serial-JTAG to download firmware
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 
-* 默认情况下，USB-Serial-JTAG 下载功能处于使能状态，可以直接使用 USB 线连接到 PC，然后使用 esptool 工具（或直接使用 idf.py flash）配置 USB-Serial-JTAG 设备对应的串口号（Windows 为 ``COM*``\ ，Linux 为 ``/dev/ttyACM*``\ , MacOS 为 ``/dev/cu*``\ ）下载固件。下载期间，esptool 通过 USB 控制协议自动将设备 Reset 并切换到下载模式。
-* 如果在应用程序中将 USB-Serial-JTAG 对应的 USB 引脚用作了其它功能，例如用作普通 GPIO 或其它外设 IO，USB-Serial-JTAG 将无法与 USB 主机建立连接，因此无法通过 USB 将设备切换到下载模式，用户必须通过 Boot 控制引脚，将设备手动切换到下载模式，然后再使用 esptool 下载固件。
-* 为了避免在应用程序中将 USB-Serial-JTAG 对应的 USB 引脚用作其它功能，导致无法通过 USB 自动进入下载模式，用户需要在硬件设计时，引出 Boot 控制引脚。
-* 默认情况下，通过 USB 接口下载不同的芯片，COM 号将递增，可能对量产造成不便，用户可参考 `阻止 Windows 依据 USB 设备序列号递增 COM 编号 <./usb_device_const_COM.md>`_\ 。
-
-使用 USB-Serial-JTAG 调试代码
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-``USB-Serial-JTAG`` 支持通过 ``JTAG`` 接口调试代码，用户仅需使用 USB 线连接到 PC，然后使用 ``OpenOCD`` 工具即可调试代码。配置方法请参考 `配置 ESP32-C3 内置 JTAG 接口 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32c3/api-guides/jtag-debugging/configure-builtin-jtag.html>`_\ 。
-
-使用 USB-Serial-JTAG 打印系统 LOG
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* By default, the USB-Serial-JTAG download function is enabled. You can directly connect it to the PC using a USB cable and then use the esptool tool (or directly use idf.py flash) to configure the serial port corresponding to the USB-Serial-JTAG device (COM* for Windows, /dev/ttyACM* for Linux, /dev/cu* for MacOS) for firmware download. During the download process, esptool automatically resets the device and switches it to download mode through the USB control protocol.
+* If the USB pins corresponding to USB-Serial-JTAG are used for other functions in the application, such as being used as a regular GPIO or other peripheral IO, USB-Serial-JTAG will be unable to establish a connection with the USB host. Therefore, it cannot switch the device to download mode via USB. In such cases, users must manually switch the device to download mode using the Boot control pin and then use esptool for firmware download.
+* To avoid using the USB pins corresponding to USB-Serial-JTAG for other functions in the application, which would prevent automatic entry into download mode via USB, users need to expose the Boot control pin in hardware design.
+* By default, when downloading different chips through the USB interface, the COM number will increment, which may cause inconvenience for mass production. Users can refer to :doc:`Prevent Windows from incrementing COM numbers based on USB device serial number <./usb_device_const_COM>` for a solution.
 
 
-* 用户可通过 ``menuconfig-> Component config → ESP System Settings → Channel for console secondary output`` 配置 USB-Serial-JTAG LOG 功能的使能状态。
-* LOG 功能使能以后，可以直接使用 USB 线连接到 PC，然后使用 ``idf.py monitor`` 或其它串口工具打开 USB-Serial-JTAG 设备对应的串口号（Windows 为 ``COM*``\ ，Linux 为 ``/dev/ttyACM*``\ , MacOS 为 ``/dev/cu*``\ ），即可打印系统 LOG。
-* ``USB-Serial-JTAG`` 仅在主机接入后才会打印 LOG，如果主机未接入，\ ``USB-Serial-JTAG`` 不会被初始化，也不会打印 LOG。
-* ``USB-Serial-JTAG`` LOG 功能无法在睡眠模式下使用（包括 deep sleep 和 light sleep 模式），如果需要在睡眠模式下打印 LOG，可以使用 ``UART`` 接口。
+Debugging code using USB-Serial-JTAG
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-使用 USB-Serial-JTAG 引脚作为普通 GPIO
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The ``USB-Serial-JTAG`` supports debugging code through the ``JTAG`` interface. Users only need to connect it to the PC using a USB cable and then use the ``OpenOCD`` tool for code debugging. Please refer to the configuration guide for setting up the built-in JTAG interface on ESP32-C3 at: `Configure Built-in JTAG Interface on ESP32-C3 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32c3/api-guides/jtag-debugging/configure-builtin-jtag.html>`_\.
 
-如果用户需要在应用程序中将 USB-Serial-JTAG 对应的 USB 引脚用作其它功能，例如用作普通 GPIO。需要注意 USB D+ 接口默认上拉 USB 电阻，该电阻会导致 USB D+ 引脚常为高电平，因此需要在用作 GPIO 时将其禁用。
+Print system LOG using USB-Serial-JTAG
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* Users can enable the USB-Serial-JTAG LOG feature by configuring the state in ``menuconfig-> Component config → ESP System Settings → Channel for console secondary output``.
+* Once the LOG feature is enabled, you can connect the device directly to the PC using a USB cable and then use ``idf.py monitor`` or other serial port tools to open the serial port corresponding to the USB-Serial-JTAG device (``COM*`` for Windows, ``/dev/ttyACM*`` for Linux, ``/dev/cu*`` for MacOS) to print system logs.
+* The ``USB-Serial-JTAG`` will only print logs after the host is connected. If the host is not connected, ``USB-Serial-JTAG`` will not be initialized, and logs will not be printed.
+* The LOG feature of ``USB-Serial-JTAG`` cannot be used in sleep modes (including deep sleep and light sleep modes). If it is necessary to print logs in sleep mode, the ``UART`` interface can be used.
+
+Using USB-Serial-JTAG pins as normal GPIO
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If users need to use the USB pins corresponding to USB-Serial-JTAG for other functions in the application, such as using them as regular GPIO, it is important to note that the USB D+ interface has a default pull-up resistor, which keeps the USB D+ pin at a high level. Therefore, it is necessary to disable this pull-up resistor when using it as a GPIO.
 
 
-* ESP-IDF v4.4 及以后版本 GPIO 驱动默认会禁用 USB D+ 上拉电阻，用户使用 GPIO 驱动时无需额外配置。
-* 用户也可以修改寄存器值 ``USB_SERIAL_JTAG.conf0.dp_pullup = 0;`` 将 USB D+ 上拉电阻禁用。
+* Starting from ESP-IDF v4.4, the GPIO driver defaults to disabling the USB D+ pull-up resistor. Users do not need additional configuration when using the GPIO driver.
+* Users can also modify the register value ``USB_SERIAL_JTAG.conf0.dp_pullup = 0;`` to disable the USB D+ pull-up resistor.
 
-需要特别注意的是 USB D+ 引脚的上拉电阻在上电时刻即存在，用户在调用软件禁用上拉电阻之前，USB D+ 引脚已经被拉高，导致 D+ 引脚做为 GPIO 时，初始阶段为高电平，如果用户需要在上电后 USB D+ 引脚立即为低电平，需要在硬件设计时，将 USB D+ 引脚通过外部电路拉低。
+It is important to note that the pull-up resistor on the USB D+ pin is present at power-up. Before software disables the pull-up resistor, the USB D+ pin has already been pulled high, causing it to be in a high-level state during the initial phase when used as a GPIO. If users need the USB D+ pin to be immediately low after power-up, it is necessary to design the hardware to pull down the USB D+ pin through an external circuit.
