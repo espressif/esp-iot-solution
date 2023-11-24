@@ -54,3 +54,7 @@
 
 * BLE-OTA:
   * Add support for ESP32H2
+
+## v0.1.10 - 2023-11-23
+
+* Fix possible cmake_utilities dependency issue

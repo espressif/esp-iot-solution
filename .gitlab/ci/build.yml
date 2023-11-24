@@ -559,7 +559,7 @@ build_components_usb_usb_stream_test_apps:
     - .rules:build:components_usb_usb_stream_test
   parallel:
     matrix:
-      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:v4.4.6 #temporary specify v4.4.6 for usb_stream, the latest version has some USB issues
       - IMAGE: espressif/idf:release-v5.0
   variables:
     EXAMPLE_DIR: components/usb/usb_stream/test_apps

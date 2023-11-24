@@ -25,5 +25,5 @@ idf_component_register(SRCS "${srcs}"
                        REQUIRES "${requires}"
                        PRIV_REQUIRES "${priv_requires}")
 
-include(cmake_utilities)
+include(package_manager)
 cu_pkg_define_version(${CMAKE_CURRENT_LIST_DIR})

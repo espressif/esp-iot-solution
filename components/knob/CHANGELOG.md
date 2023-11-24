@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v0.1.4 - 2023-11-23
+
+* Fix possible cmake_utilities dependency issue
+
 ## v0.1.3 - 2023-6-2
 
 ###  Enhancements:

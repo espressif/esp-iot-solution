@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v0.3.2 - 2023-11-23
+
+* Fix possible cmake_utilities dependency issue
+
 ## v0.3.1 - 2023-04-23
 
 * SPI: fix slave mode transmission error when TX/RX buffer in invalid

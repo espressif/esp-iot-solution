@@ -10,8 +10,6 @@ In order to use this feature, you need to include the needed CMake file in your 
 ```cmake
 project(XXXX)
 
-include(cmake_utilities)
-#or
 include(gen_compressed_ota)
 ```
 
