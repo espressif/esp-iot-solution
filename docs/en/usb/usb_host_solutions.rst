@@ -2,7 +2,7 @@
 USB Host Solution
 ------------------
 
-ESP32-S2/S3 and similar chips come with built-in USB-OTG peripherals, supporting the connection of various USB devices through the USB interface. The following provides an overview of the USB Host solutions supported by the ESP32-S2/S3 chips.
+ESP32-S2/S3 and similar chips come with built-in USB-OTG peripherals, supporting the connection of various type of USB devices through the USB interface. The following provides an overview of the USB Host solutions supported by the ESP32-S2/S3 chips.
 
 ESP USB Camera Video Solution
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -19,7 +19,7 @@ Features:
 * Automatic Descriptor Parsing
 * Dynamic Resolution Configuration
 * MJPEG Video Stream Transmission
-* Batch and Synchronous Transfer Modes
+* Bulk or Isochronous Transfer Modes
 
 Hardware:
 ~~~~~~~~~~
@@ -27,7 +27,7 @@ Hardware:
 
 * Chips: ESP32-S2, ESP32-S3
 * Peripherals: USB-OTG
-* USB Camera: Supports MJPEG format, with a bulk transfer mode of 800*480@15fps, and an isochronous transfer mode of 480*320@15fps. For camera limitations, refer to the `usb_stream API documentation <https://docs.espressif.com/projects/esp-iot-solution/en/latest/usb/usb_stream.html>`_.
+* USB Camera: Supports MJPEG format, with a bulk transfer mode of 800*480@15fps, or an isochronous transfer mode of 480*320@15fps. For camera limitations, refer to the `usb_stream API documentation <https://docs.espressif.com/projects/esp-iot-solution/en/latest/usb/usb_stream.html>`_.
 
 links:
 ~~~~~~~
@@ -51,12 +51,12 @@ Features:
 * Quick Start
 * Hot Swap
 * Automatic Parsing Descriptors
-* PCM Audio Streaming
+* PCM Audio Format
 * Dynamic Modification of Sampling Rate
 * Multi-Channel Speakers
 * Multi-Channel Microphone
 * Support Volume and Mute Control
-* Synchronous Support with USB Camera
+* Support Simultaneous Work with USB Camera
 
 Hardware:
 ~~~~~~~~~~
@@ -76,15 +76,15 @@ Links:
 ESP USB 4G Networking Solutions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Supports connecting 4G Cat.1 and Cat.4 modules via the USB interface, enabling PPP dial-up for internet access. It also supports sharing the internet via Wi-Fi SoftAP hotspot for other devices. Suitable for IoT gateways, MiFi mobile hotspots, smart energy storage, advertising lightboxes, and other scenarios.
+Supports connecting 4G Cat.1 or Cat.4 modules via the USB interface, enabling PPP dial-up for internet access. It also supports sharing the internet via Wi-Fi SoftAP hotspot for other devices. Suitable for IoT gateways, MiFi mobile hotspots, smart energy storage, advertising lightboxes, and other scenarios.
 
 Features:
 ~~~~~~~~~~
 
 * Quick Start
 * Hot Plug
-* Modem+AT Dual Interface (Module Support Required)
-* PPP Standard Protocol (Supported by Most 4G Modules)
+* Modem+AT Dual Interface
+* PPP Standard Protocol
 * 4G to Wi-Fi Hotspot Support
 * NAPT (Network Address and Port Translation) Support
 * Power Management Support

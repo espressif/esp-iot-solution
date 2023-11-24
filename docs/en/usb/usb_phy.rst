@@ -4,7 +4,7 @@ USB PHY/Transceiver Introduction
 
 The function of the USB Full-speed PHY/Transceiver is to convert the digital signals from the USB controller into USB bus signal levels, providing bus driving capability, and detecting receive errors, among other functions. Chips like ESP32-S2/S3 have a built-in USB Full-speed PHY, allowing users to directly use the USB D+ D- pins specified by the chip for communication with an external USB system. Additionally, ESP32-S2/S3 retains an external PHY extension interface, allowing users to connect an external PHY when needed.
 
-To use the internal PHY
+Use the internal PHY
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The ESP32-S2/S3/C3 internally integrates a USB PHY, eliminating the need for an external PHY chip. It can directly connect to external USB hosts or devices through the USB D+/D- pins. However, for chips with two integrated USB controllers, such as the ESP32-S3 with built-in USB-OTG and USB-Serial-JTAG, both controllers share a single internal PHY, allowing only one to operate at a time.
@@ -37,7 +37,7 @@ The internal USB-PHY corresponds to fixed GPIO pins, as shown in the table below
      - 12
 
 
-To use an external PHY
+Use an external PHY
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 By adding an external PHY, it is possible to enable the simultaneous operation of both USB-OTG and USB-Serial-JTAG.
@@ -68,9 +68,9 @@ Modify the default configuration of the USB PHY
 Method 1: Switch the USB-PHY connection to USB-OTG by configuring the registers.
 
 
-* The USB Host Driver or TinyUSB protocol stack internally switches the connection of the internal USB-PHY to USB-OTG by configuring USB PHY registers. For more information, please refer to the `USB PHY Configuration API <https://github.com/espressif/esp-idf/blob/master/components/usb/include/esp_private/usb_phy.h>`_.
+* The USB Host Driver or TinyUSB stack internally switches the connection of the internal USB-PHY to USB-OTG by configuring USB PHY registers. For more information, please refer to the `USB PHY Configuration API <https://github.com/espressif/esp-idf/blob/master/components/usb/include/esp_private/usb_phy.h>`_.
 
-Method 2: Switch the default connection of USB-PHY to USB-OTG by burning the efuse usb_phy_sel bit to 1.
+Method 2: Switch the default connection of USB-PHY to USB-OTG by burning the efuse ``usb_phy_sel`` bit to 1.
 
 
 * This efuse bit should only be burned if the user needs to use USB-OTG functionality in Boot mode. Once burned, when the chip enters Boot mode, it will utilize the download functionality provided by USB-OTG, such as USB DFU.

@@ -66,7 +66,7 @@ For the ESP32-S2/S3, the USB On-The-Go (USB-OTG) Full Speed bus transfer rate is
 
 ..
 
-   * Calculation Formula for Transfer Rate: Transfer Rate (Bytes/s) = Maximum Transfer Size * Number of Packets Transferred Per Millisecond * 1000
+   * Calculation Formula for Transfer Rate: Transfer Rate (Bytes/s) = Maximum Packet Size * Number of Packets Transferred Per Millisecond * 1000
    * Control transfers are used for transmitting device control information and involve multiple stages. The effective transfer rate needs to be calculated based on the implementation of the protocol stack.
 
 
@@ -80,15 +80,13 @@ Using USB OTG Console for Firmware Download and Logging
 For chips like ESP32-S2/S3 with built-in USB On-The-Go (USB-OTG) peripherals, the ROM Code contains the functionality of USB Communication Device Class (CDC). This feature can be utilized as an alternative to UART interfaces, enabling functions such as logging, console access, and firmware downloads.
 
 
-#.
-   Since the USB OTG Console is initially disabled, follow these steps to perform the first firmware download:
+#. Since the USB OTG Console is initially disabled, follow these steps to perform the first firmware download:
 
    #. Enable the USB OTG Console feature in ``menuconfig`` and then compile the firmware.
-   #. Manually pull down the Boot control pin of the chip and connect the chip to the PC via USB to enter download mode. The PC will detect a new serial port device, listed as ``COM*`` on Windows, ``/dev/ttyACM*`` on Linux, and ``/dev/cu*`` on MacOS.
-   #. Use the esptool utility (or directly use idf.py flash) to configure the corresponding serial port and download the firmware.
+   #. Manually pull down the ``Boot`` pin of the chip and connect the chip to the PC via USB to enter download mode. The PC will detect a new serial port device, listed as ``COM*`` on Windows, ``/dev/ttyACM*`` on Linux, and ``/dev/cu*`` on MacOS.
+   #. Use the ``esptool`` utility (or directly use ``idf.py flash``) to configure the corresponding serial port and download the firmware.
 
-#.
-   After the initial download, the USB OTG Console functionality will be automatically enabled. You can then connect to the PC via USB, and the PC will detect a new serial port device, listed as ``COM*`` on Windows, ``/dev/ttyACM*`` on Linux, and ``/dev/cu*`` on MacOS. Log data will be printed from this virtual serial port.
+#. After the initial download, the USB OTG Console functionality will be automatically enabled. You can then connect to the PC via USB, and the PC will detect a new serial port device, listed as ``COM*`` on Windows, ``/dev/ttyACM*`` on Linux, and ``/dev/cu*`` on MacOS. Log data will be printed from this virtual serial port.
 
 #. Users no longer need to manually pull down the Boot control pin. To download firmware, use the esptool utility (or directly use idf.py flash) to configure the corresponding serial port. During the download, esptool will automatically reset the device and switch it to download mode using the USB control protocol.
 
@@ -124,6 +122,6 @@ For more details on the USB Host solution, please refer to :doc:`USB Host Soluti
 USB Device development using USB-OTG peripherals
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-USB-OTG peripherals support USB Device functionality, and Espressif has officially adapted the TinyUSB protocol stack. Users can directly use USB standard devices or custom devices developed based on the open-source TinyUSB protocol stack, such as HID, MSC, CDC, ECM, UAC, and more.
+USB-OTG peripherals support USB Device functionality, and Espressif has officially adapted the ``TinyUSB`` stack. Users can develop USB standard devices or custom devices based on the open-source ``TinyUSB``, such as HID, MSC, CDC, ECM, UAC, and more.
 
 For more details on the USB Device solution, please refer to :doc:`USB Device Solution <./usb_device_solutions>`.

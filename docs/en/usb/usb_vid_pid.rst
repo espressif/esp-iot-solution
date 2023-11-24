@@ -1,11 +1,10 @@
 USB VID and PID
 -----------------
 
-VID and PID are unique identifiers for USB devices, used to distinguish between different USB devices. Generally, VID and PID are assigned by USB-IF, which is the standard-setting body for USB devices.
+VID and PID are unique identifiers for USB devices, used to distinguish between different USB devices. Generally, VID and PID are assigned by USB-IF, which is the USB Implementers Forum. 
 
 In the following scenarios, you can exempt from applying for VID and PID
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
 
 * If your product operates in USB Host mode, you do not need to apply for VID and PID.
 * If your product operates in USB Device mode, and you plan to use Espressif's VID (0x303A) and develop a USB standard device based on the TinyUSB protocol stack, you do not need to apply for a PID. You can use the default PID provided by TinyUSB.

@@ -27,7 +27,7 @@ In the ESP ROM Code, the configuration of USB descriptors is as follows:
      - MAC address
 
 * For ESP32S2 with USB On-The-Go (usb-otg), the Serial is a constant 0, and it remains the same for every device, resulting in consistent COM port numbers.
-* For ESP32S3 (usb-serial-jtag) and ESP32C3 (usb-serial-jtag), the Serial is set to the device MAC address. Each device has a unique MAC address,  leading to different COM port numbers by default with incremental assignment.
+* For ESP32S3 (usb-serial-jtag) and ESP32C3 (usb-serial-jtag), the Serial is set to the device MAC address. Each device has a unique MAC address, leading to different COM port numbers by default with incremental assignment.
 
 Incrementing COM numbers pose additional challenges for mass production programming. For customers requiring firmware downloads via USB, it is recommended to modify the Windows rules for incrementing the COM number to prevent incrementing the number based on the Serial number.
 
