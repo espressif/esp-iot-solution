@@ -52,3 +52,6 @@ pdf_file_prefix = u'esp-iot-solution'
 # The name of an image file (relative to this directory) to place at the top of
 # the title page.
 latex_logo = "../_static/espressif2.pdf"
+
+# add Tracking ID for Google Analytics
+google_analytics_id = 'G-YK0H573CWX'
