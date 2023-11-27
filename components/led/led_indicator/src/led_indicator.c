@@ -18,8 +18,10 @@
 #include "led_indicator_blink_default.h"
 #include "led_gpio.h"
 #include "led_ledc.h"
+#include "led_rgb.h"
 #include "led_strips.h"
 #include "led_gamma.h"
+#include "led_convert.h"
 
 static const char *TAG = "led_indicator";
 
@@ -56,7 +58,7 @@ static const HS_color_t temp_table[] = {
     {222, 20}, {222, 20}, {222, 20}, {222, 21}, {222, 21}
 };
 
-static const char *led_indicator_mode_str[4] = {"GPIO mode", "LEDC mode", "LED Strips mode","custom mode"};
+static const char *led_indicator_mode_str[5] = {"GPIO mode", "LEDC mode", "LED RGB mode", "LED Strips mode","custom mode"};
 
 /**
  * @brief LED indicator object
@@ -226,7 +228,7 @@ static void _blink_list_runner(TimerHandle_t xTimer)
                 break;
             }
             p_led_indicator->hal_indicator_set_rgb(p_led_indicator->hardware_data, p_blink_step->value);
-            p_led_indicator->current_fade_value = led_indicator_strips_rgb2hsv(p_blink_step->value);
+            p_led_indicator->current_fade_value = led_indicator_rgb2hsv(p_blink_step->value);
             SET_INDEX(p_led_indicator->current_fade_value, GET_INDEX(p_blink_step->value));
             p_led_indicator->last_fade_value = p_led_indicator->current_fade_value;
             if (p_blink_step->hold_time_ms == 0) {
@@ -245,7 +247,7 @@ static void _blink_list_runner(TimerHandle_t xTimer)
                 break;
             }
 
-            uint32_t hsv_value = led_indicator_strips_rgb2hsv(p_blink_step->value);
+            uint32_t hsv_value = led_indicator_rgb2hsv(p_blink_step->value);
             uint16_t ticks = BRIGHTNESS_TICKS;
             int16_t diff_value = GET_HUE(hsv_value) - GET_HUE(p_led_indicator->last_fade_value);
 
@@ -266,7 +268,7 @@ static void _blink_list_runner(TimerHandle_t xTimer)
             SET_INDEX(p_led_indicator->current_fade_value, GET_INDEX(p_blink_step->value));
 
             uint32_t r,g,b,irgb_value;
-            led_indicator_strips_hsv2rgb(p_led_indicator->current_fade_value, &r, &g, &b);
+            led_indicator_hsv2rgb(p_led_indicator->current_fade_value, &r, &g, &b);
             irgb_value = (r << 16) | (g << 8) | b;
             SET_INDEX(irgb_value, GET_INDEX(p_blink_step->value));
             p_led_indicator->hal_indicator_set_rgb(p_led_indicator->hardware_data, irgb_value);
@@ -512,7 +514,6 @@ led_indicator_handle_t led_indicator_create(const led_indicator_config_t *config
     bool if_blink_default_list = false;
     ESP_LOGI(TAG, "LED Indicator Version: %d.%d.%d", LED_INDICATOR_VER_MAJOR, LED_INDICATOR_VER_MINOR, LED_INDICATOR_VER_PATCH);
     LED_INDICATOR_CHECK(config != NULL, "invalid config pointer", return NULL);
-    // LED_INDICATOR_CHECK(config->blink_lists != NULL, "LED indicator blink lists can't be NULL", return NULL);
     _led_indicator_com_config_t com_cfg = {0};
     _led_indicator_t *p_led_indicator = NULL;
     switch (config->mode) {
@@ -527,17 +528,6 @@ led_indicator_handle_t led_indicator_create(const led_indicator_config_t *config
         com_cfg.hal_indicator_deinit = led_indicator_gpio_deinit;
         com_cfg.hal_indicator_set_brightness =  NULL;
         com_cfg.duty_resolution = LED_DUTY_1_BIT;
-        if (config->blink_lists == NULL) {
-            ESP_LOGI(TAG, "blink_lists is null, use default blink list");
-            com_cfg.blink_lists = default_led_indicator_blink_lists;
-            com_cfg.blink_list_num = DEFAULT_BLINK_LIST_NUM;
-            if_blink_default_list = true;
-        } else {
-            com_cfg.blink_lists = config->blink_lists;
-            com_cfg.blink_list_num = config->blink_list_num;
-        }
-
-        p_led_indicator = _led_indicator_create_com(&com_cfg);
         break;
     }
     case LED_LEDC_MODE: {
@@ -550,17 +540,21 @@ led_indicator_handle_t led_indicator_create(const led_indicator_config_t *config
         com_cfg.hal_indicator_deinit = led_indicator_ledc_deinit;
         com_cfg.hal_indicator_set_brightness = led_indicator_ledc_set_brightness;
         com_cfg.duty_resolution = LED_DUTY_8_BIT;
-        if (config->blink_lists == NULL) {
-            ESP_LOGI(TAG, "blink_lists is null, use default blink list");
-            com_cfg.blink_lists = default_led_indicator_blink_lists;
-            com_cfg.blink_list_num = DEFAULT_BLINK_LIST_NUM;
-            if_blink_default_list = true;
-        } else {
-            com_cfg.blink_lists = config->blink_lists;
-            com_cfg.blink_list_num = config->blink_list_num;
-        }
-
-        p_led_indicator = _led_indicator_create_com(&com_cfg);
+        break;
+    }
+    case LED_RGB_MODE: {
+        void *hardware_data = NULL;
+        const led_indicator_rgb_config_t *cfg = config->led_indicator_rgb_config;
+        ret = led_indicator_rgb_init((void *)cfg, &hardware_data);
+        LED_INDICATOR_CHECK(ESP_OK == ret, "LEDC mode init failed", return NULL);
+        com_cfg.is_active_level_high = cfg->is_active_level_high;
+        com_cfg.hardware_data = hardware_data;
+        com_cfg.hal_indicator_set_on_off = led_indicator_rgb_set_on_off;
+        com_cfg.hal_indicator_deinit = led_indicator_rgb_deinit;
+        com_cfg.hal_indicator_set_brightness = led_indicator_rgb_set_brightness;
+        com_cfg.hal_indicator_set_rgb = led_indicator_rgb_set_rgb;
+        com_cfg.hal_indicator_set_hsv = led_indicator_rgb_set_hsv;
+        com_cfg.duty_resolution = LED_DUTY_8_BIT;
         break;
     }
     case LED_STRIPS_MODE: {
@@ -576,17 +570,6 @@ led_indicator_handle_t led_indicator_create(const led_indicator_config_t *config
         com_cfg.hal_indicator_set_rgb = led_indicator_strips_set_rgb;
         com_cfg.hal_indicator_set_hsv = led_indicator_strips_set_hsv;
         com_cfg.duty_resolution = LED_DUTY_8_BIT;
-        if (config->blink_lists == NULL) {
-            ESP_LOGI(TAG, "blink_lists is null, use default blink list");
-            com_cfg.blink_lists = default_led_indicator_blink_lists;
-            com_cfg.blink_list_num = DEFAULT_BLINK_LIST_NUM;
-            if_blink_default_list = true;
-        } else {
-            com_cfg.blink_lists = config->blink_lists;
-            com_cfg.blink_list_num = config->blink_list_num;
-        }
-
-        p_led_indicator = _led_indicator_create_com(&com_cfg);
         break;
     }
     case LED_CUSTOM_MODE: {
@@ -603,26 +586,27 @@ without_init:
         com_cfg.hal_indicator_set_rgb = cfg->hal_indicator_set_rgb;
         com_cfg.hal_indicator_set_hsv = cfg->hal_indicator_set_hsv;
         com_cfg.duty_resolution = cfg->duty_resolution;
-        com_cfg.blink_lists = config->blink_lists;
-        com_cfg.blink_list_num = config->blink_list_num;
-        if (config->blink_lists == NULL) {
-            ESP_LOGI(TAG, "blink_lists is null, use default blink list");
-            com_cfg.blink_lists = default_led_indicator_blink_lists;
-            com_cfg.blink_list_num = DEFAULT_BLINK_LIST_NUM;
-            if_blink_default_list = true;
-        } else {
-            com_cfg.blink_lists = config->blink_lists;
-            com_cfg.blink_list_num = config->blink_list_num;
-        }
-
-        p_led_indicator = _led_indicator_create_com(&com_cfg);
         break;
     }
     default:
         ESP_LOGE(TAG, "Unsupported indicator mode");
+        goto unsupported_mode;
         break;
     }
 
+    if (config->blink_lists == NULL) {
+        ESP_LOGI(TAG, "blink_lists is null, use default blink list");
+        com_cfg.blink_lists = default_led_indicator_blink_lists;
+        com_cfg.blink_list_num = DEFAULT_BLINK_LIST_NUM;
+        if_blink_default_list = true;
+    } else {
+        com_cfg.blink_lists = config->blink_lists;
+        com_cfg.blink_list_num = config->blink_list_num;
+    }
+
+    p_led_indicator = _led_indicator_create_com(&com_cfg);
+
+unsupported_mode:
     LED_INDICATOR_CHECK(NULL != p_led_indicator, "LED indicator create failed", return NULL);
     p_led_indicator->mode = config->mode;
     _led_indicator_add_node(p_led_indicator);
@@ -828,11 +812,11 @@ uint32_t led_indicator_get_rgb(led_indicator_handle_t handle)
     xSemaphoreTake(p_led_indicator->mutex, portMAX_DELAY);
     uint32_t ihsv_value = p_led_indicator->current_fade_value;
     xSemaphoreGive(p_led_indicator->mutex);
-    
+
     uint32_t r,g,b,rgb_value;
-    led_indicator_strips_hsv2rgb(ihsv_value, &r, &g, &b);
+    led_indicator_hsv2rgb(ihsv_value, &r, &g, &b);
     rgb_value = (r << 16) | (g << 8) | b;
-    
+
     return rgb_value;
 }
 
@@ -844,7 +828,7 @@ esp_err_t led_indicator_set_rgb(led_indicator_handle_t handle, uint32_t irgb_val
         ESP_LOGW(TAG, "LED indicator does not have the hal_indicator_set_rgb function");
         return ESP_FAIL;
     }
-    uint32_t hsv = led_indicator_strips_rgb2hsv(irgb_value);
+    uint32_t hsv = led_indicator_rgb2hsv(irgb_value);
     xSemaphoreTake(p_led_indicator->mutex, portMAX_DELAY);
     p_led_indicator->hal_indicator_set_rgb(p_led_indicator->hardware_data, irgb_value);
     p_led_indicator->current_fade_value = hsv;
@@ -864,10 +848,10 @@ esp_err_t led_indicator_set_color_temperature(led_indicator_handle_t handle, con
     }
     uint16_t hue;
     uint8_t saturation;
-    
+
     xSemaphoreTake(p_led_indicator->mutex, portMAX_DELAY);
     uint32_t ihsv_value = p_led_indicator->current_fade_value & 0x1FFFFFFF;
-    
+
     if ((temperature & 0xFFFFFF) < 600) {
         hue = 0;
         saturation = 100;
@@ -883,10 +867,10 @@ esp_err_t led_indicator_set_color_temperature(led_indicator_handle_t handle, con
     SET_SATURATION(ihsv_value, saturation);
     SET_HUE(ihsv_value, hue);
     ihsv_value = (ihsv_value & 0x1FFFFFF) | (temperature & 0x7F000000);
-    
+
     p_led_indicator->hal_indicator_set_hsv(p_led_indicator->hardware_data, ihsv_value);
     p_led_indicator->current_fade_value = ihsv_value;
     p_led_indicator->last_fade_value = ihsv_value;
     xSemaphoreGive(p_led_indicator->mutex);
-    return ESP_OK; 
+    return ESP_OK;
 }

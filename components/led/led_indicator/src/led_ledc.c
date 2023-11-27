@@ -8,6 +8,7 @@
 #include "driver/ledc.h"
 #include "esp_log.h"
 #include "led_ledc.h"
+#include "led_common.h"
 
 #define TAG "led_ledc"
 
@@ -19,26 +20,6 @@
     }
 
 #define LEDC_MAX_CHANNEL 8
-
-#define LEDC_TIMER_CONFIG(ledc_timer)   \
-{                                     \
-    .speed_mode = LEDC_MODE,          \
-    .duty_resolution = LEDC_DUTY_RES, \
-    .timer_num = ledc_timer,          \
-    .freq_hz = LEDC_FREQ_HZ,          \
-    .clk_cfg = LEDC_AUTO_CLK,         \
-}
-
-#define LEDC_CHANNEL_CONFIG(ledc_timer, ledc_channel, gpio) \
-{                                                       \
-    .speed_mode = LEDC_MODE,                            \
-    .timer_sel = ledc_timer,                            \
-    .hpoint = 0,                                        \
-    .duty = 0,                                          \
-    .intr_type = LEDC_INTR_DISABLE,                     \
-    .channel = ledc_channel,                            \
-    .gpio_num = gpio,                                   \
-}
 
 typedef struct {
     bool is_init;                   /*!< Is the channel being used */

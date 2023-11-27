@@ -7,14 +7,11 @@
 #pragma once
 
 #include "driver/ledc.h"
+// #include "led_common.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#define LEDC_MODE       CONFIG_LEDC_SPEED_MODE_VALUE
-#define LEDC_DUTY_RES   CONFIG_LEDC_TIMER_BIT_NUM
-#define LEDC_FREQ_HZ    CONFIG_LEDC_TIMER_FREQ_HZ
 
 typedef struct {
     bool is_active_level_high;              /*!< Set true if GPIO level is high when light is ON, otherwise false. */

@@ -1,3 +1,12 @@
+
+# ChangeLog
+
+## v0.8.0 -2023-11-21
+
+### Enhancements:
+
+* Supports RGB lights with three beads
+
 ## v0.7.2 - 2023-11-23
 
 * Fix possible cmake_utilities dependency issue
@@ -11,8 +20,6 @@
 ### Enhancements:
 
 * Added API for set color by temperature.
-
-# ChangeLog
 
 ## v0.7.0 - 2023-11-09
 
@@ -59,7 +66,7 @@
 ### Enhancements:
 
 * LED INDICATOR:
-  * Add gamma adjustment 
+  * Add gamma adjustment
   * Update test_apps
 
 ## v0.3.0 - 2023-1-31
