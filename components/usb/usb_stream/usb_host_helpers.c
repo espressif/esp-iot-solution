@@ -228,12 +228,12 @@ esp_err_t _usb_port_deinit(hcd_port_handle_t port_hdl)
     ret = hcd_port_command(port_hdl, HCD_PORT_CMD_POWER_OFF);
     UVC_CHECK_CONTINUE(ESP_OK == ret, "Port power off failed");
     usb_phy_handle_t phy_handle = hcd_port_get_context(port_hdl);
-    ret = usb_del_phy(phy_handle);
-    UVC_CHECK_CONTINUE(ESP_OK == ret, "phy delete failed");
     ret = hcd_port_deinit(port_hdl);
     UVC_CHECK_CONTINUE(ESP_OK == ret, "port deinit failed");
     ret = hcd_uninstall();
     UVC_CHECK_CONTINUE(ESP_OK == ret, "hcd uninstall failed");
+    ret = usb_del_phy(phy_handle);
+    UVC_CHECK_CONTINUE(ESP_OK == ret, "phy delete failed");
     ESP_LOGD(TAG, "Port=%d deinit succeed, context = %p", USB_PORT_NUM, phy_handle);
     return ret;
 }
