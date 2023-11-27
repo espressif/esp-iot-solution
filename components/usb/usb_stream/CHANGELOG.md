@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.2.1 - 2023-11-27
+
+### Bug Fixes:
+
+* Fix `W (44) boot.esp32s3: PRO CPU has been reset by WDT.` after apply the IDF commit [2368837](https://github.com/espressif/esp-idf/commit/236883728d1d9ed835da15cfec4d37220ecec017)
+
 ## v1.2.0 - 2023-10-11
 
 ### Enhancements:
