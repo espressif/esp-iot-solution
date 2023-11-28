@@ -31,18 +31,6 @@ extern "C" {
 #define INSERT_INDEX(index, brightness) \
         ((((index) & 0x7F) << 25) | ((brightness) & 0xFF))
 
-#define SET_INDEX(variable, value) \
-        variable = (variable & 0x1FFFFFF) | (((value) & 0x7F) << 25)
-
-#define SET_HUE(variable, value) \
-        variable = (variable & 0xFE00FFFF) | (((value) & 0x1FF) << 16)
-
-#define SET_SATURATION(variable, value) \
-        variable = (variable & 0xFFFF00FF) | (((value) & 0xFF) << 8)
-
-#define SET_BRIGHTNESS(variable, value) \
-        variable = (variable & 0xFFFFFF00) | ((value) & 0xFF)
-
 #define GET_INDEX(variable) \
         ((variable >> 25) & 0x7F)
 
@@ -63,6 +51,18 @@ extern "C" {
 
 #define GET_BLUE(variable) \
         (variable & 0xFF)
+
+typedef struct {
+    union {
+        struct {
+            uint32_t v:8;       /*!< Brightness/Value of the LED. 0-255 */
+            uint32_t s:8;       /*!< Saturation of the LED. 0-255 */
+            uint32_t h:9;       /*!< Hue of the LED. 0-360 */
+            uint32_t i:7;       /*!< Index of the LED. 0-126, set 127 to control all  */
+        };
+        uint32_t value;         /*!< IHSV value of the LED. */
+    };
+} led_indicator_ihsv_t;
 
 /**
  * @brief Convert an RGB color value to an HSV color value.

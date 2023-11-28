@@ -29,7 +29,7 @@
 typedef struct {
     led_strip_handle_t led_strip;
     uint32_t max_index;             /*!< Maximum LEDs in a single strip */
-    uint32_t ihsv;                  /*!< IHSV: I [0-127] 7 bits -  H [0-360] - 9 bits, S [0-255] - 8 bits, V [0-255] - 8 bits*/
+    led_indicator_ihsv_t ihsv;      /*!< IHSV: I [0-127] 7 bits -  H [0-360] - 9 bits, S [0-255] - 8 bits, V [0-255] - 8 bits*/
 } led_strips_t;
 
 esp_err_t led_indicator_strips_init(void *param, void **ret_strips)
@@ -86,24 +86,17 @@ esp_err_t led_indicator_strips_deinit(void *strips)
 esp_err_t led_indicator_strips_set_on_off(void *strips, bool on_off)
 {
     led_strips_t *p_strip = (led_strips_t *)strips;
-    uint8_t i,s,v;
-    uint16_t h;
-    uint32_t iihsv_value = p_strip->ihsv;
-    SET_BRIGHTNESS(iihsv_value, on_off ? MAX_BRIGHTNESS : 0);
-    i = GET_INDEX(iihsv_value);
-    h = GET_HUE(iihsv_value);
-    s = GET_SATURATION(iihsv_value);
-    v = GET_BRIGHTNESS(iihsv_value);
+    p_strip->ihsv.v = on_off ? MAX_BRIGHTNESS : 0;
     esp_err_t err = ESP_OK;
-    if (i == MAX_INDEX) {
+    if (p_strip->ihsv.i == MAX_INDEX) {
         for (int j = 0; j < p_strip->max_index; j++) {
-            err |= led_strip_set_pixel_hsv(p_strip->led_strip, j, h, s, v);
+            err |= led_strip_set_pixel_hsv(p_strip->led_strip, j, p_strip->ihsv.h, p_strip->ihsv.s, p_strip->ihsv.v);
             if (err != ESP_OK) {
                 return err;
             }
         }
     } else {
-        err |= led_strip_set_pixel_hsv(p_strip->led_strip, i, h, s, v);
+        err |= led_strip_set_pixel_hsv(p_strip->led_strip, p_strip->ihsv.i, p_strip->ihsv.h, p_strip->ihsv.s, p_strip->ihsv.v);
     }
 
     err |= led_strip_refresh(p_strip->led_strip);
@@ -111,7 +104,6 @@ esp_err_t led_indicator_strips_set_on_off(void *strips, bool on_off)
     if (err != ESP_OK) {
         return err;
     }
-    p_strip->ihsv = iihsv_value;
     return ESP_OK;
 }
 
@@ -141,31 +133,26 @@ esp_err_t led_indicator_strips_set_rgb(void *strips, uint32_t irgb_value)
     if (err != ESP_OK) {
         return err;
     }
-    p_strip->ihsv = led_indicator_rgb2hsv(irgb_value);
-    SET_INDEX(p_strip->ihsv, i);
+    p_strip->ihsv.value = led_indicator_rgb2hsv(irgb_value);
+    p_strip->ihsv.i = i;
     return ESP_OK;
 }
 
-esp_err_t led_indicator_strips_set_hsv(void *strips, uint32_t iihsv_value)
+esp_err_t led_indicator_strips_set_hsv(void *strips, uint32_t ihsv_value)
 {
     led_strips_t *p_strip = (led_strips_t *)strips;
-    uint8_t i,s,v;
-    uint16_t h;
-    i = GET_INDEX(iihsv_value);
-    h = GET_HUE(iihsv_value);
-    s = GET_SATURATION(iihsv_value);
-    v = GET_BRIGHTNESS(iihsv_value);
+    p_strip->ihsv.value = ihsv_value;
 
     esp_err_t err = ESP_OK;
-    if (i == MAX_INDEX) {
+    if (p_strip->ihsv.i == MAX_INDEX) {
         for (int j = 0; j < p_strip->max_index; j++) {
-            err |= led_strip_set_pixel_hsv(p_strip->led_strip, j, h, s, v);
+            err |= led_strip_set_pixel_hsv(p_strip->led_strip, j, p_strip->ihsv.h, p_strip->ihsv.s, p_strip->ihsv.v);
             if (err != ESP_OK) {
                 return err;
             }
         }
     } else {
-        err |= led_strip_set_pixel_hsv(p_strip->led_strip, i, h, s, v);
+        err |= led_strip_set_pixel_hsv(p_strip->led_strip, p_strip->ihsv.i, p_strip->ihsv.h, p_strip->ihsv.s, p_strip->ihsv.v);
     }
 
     err |= led_strip_refresh(p_strip->led_strip);
@@ -173,34 +160,25 @@ esp_err_t led_indicator_strips_set_hsv(void *strips, uint32_t iihsv_value)
         return err;
     }
 
-    p_strip->ihsv = iihsv_value;
     return ESP_OK;
 }
 
 esp_err_t led_indicator_strips_set_brightness(void *strips, uint32_t ihsv)
 {
     led_strips_t *p_strip = (led_strips_t *)strips;
-    uint8_t i,s,v;
-    uint16_t h;
-    uint32_t ihsv_value;
-    ihsv_value = p_strip->ihsv;
-    SET_BRIGHTNESS(ihsv_value, GET_BRIGHTNESS(ihsv));
-    SET_INDEX(ihsv_value, GET_INDEX(ihsv));
-    i = GET_INDEX(ihsv_value);
-    h = GET_HUE(ihsv_value);
-    s = GET_SATURATION(ihsv_value);
-    v = GET_BRIGHTNESS(ihsv_value);
+    p_strip->ihsv.i = GET_INDEX(ihsv);
+    p_strip->ihsv.v = GET_BRIGHTNESS(ihsv);
 
     esp_err_t err = ESP_OK;
-    if (i == MAX_INDEX) {
+    if (p_strip->ihsv.i == MAX_INDEX) {
         for (int j = 0; j < p_strip->max_index; j++) {
-            err |= led_strip_set_pixel_hsv(p_strip->led_strip, j, h, s, v);
+            err |= led_strip_set_pixel_hsv(p_strip->led_strip, j, p_strip->ihsv.h, p_strip->ihsv.s, p_strip->ihsv.v);
             if (err != ESP_OK) {
                 return err;
             }
         }
     } else {
-        err |= led_strip_set_pixel_hsv(p_strip->led_strip, i, h, s, v);
+        err |= led_strip_set_pixel_hsv(p_strip->led_strip, p_strip->ihsv.i, p_strip->ihsv.h, p_strip->ihsv.s, p_strip->ihsv.v);
     }
 
     err |= led_strip_refresh(p_strip->led_strip);
@@ -208,6 +186,5 @@ esp_err_t led_indicator_strips_set_brightness(void *strips, uint32_t ihsv)
         return err;
     }
 
-    p_strip->ihsv = ihsv_value;
     return ESP_OK;
 }

@@ -43,9 +43,9 @@ uint32_t led_indicator_rgb2hsv(uint32_t rgb_value)
 
 void led_indicator_hsv2rgb(uint32_t hsv, uint32_t *r, uint32_t *g, uint32_t *b)
 {
-    uint8_t h = (hsv >> 16) & 0x1FF;
+    uint16_t h = (hsv >> 16) & 0x1FF;
     uint8_t s = (hsv >> 8) & 0xFF;
-    uint16_t v = hsv & 0xFF;
+    uint8_t v = hsv & 0xFF;
 
     uint8_t rgb_max = v;
     uint8_t rgb_min = rgb_max * (255 - s) / 255.0f;

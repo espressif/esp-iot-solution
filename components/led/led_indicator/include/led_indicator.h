@@ -98,14 +98,6 @@ typedef void *led_indicator_handle_t; /*!< LED indicator operation handle */
 led_indicator_handle_t led_indicator_create(const led_indicator_config_t *config);
 
 /**
- * @brief get the handle of created led_indicator with hardware data
- *
- * @param hardware_data user hardware data for LED
- * @return led_indicator_handle_t handle of the created LED indicator, NULL if not created.
- */
-led_indicator_handle_t led_indicator_get_handle(void *hardware_data);
-
-/**
  * @brief delete the LED indicator and release resource
  *
  * @param handle pointer to LED indicator handle

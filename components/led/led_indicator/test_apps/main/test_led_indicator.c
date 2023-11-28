@@ -19,9 +19,9 @@
 
 // Some resources are lazy allocated in pulse_cnt driver, the threshold is left for that case
 #define TEST_MEMORY_LEAK_THRESHOLD (-200)
-#define LED_IO_NUM_0    15
-#define LED_IO_NUM_1    16
-#define LED_IO_NUM_2    17
+#define LED_IO_NUM_0    11
+#define LED_IO_NUM_1    12
+#define LED_IO_NUM_2    13
 #define LED_STRIP_BLINK_GPIO 48
 #define LED_STRIP_RMT_RES_HZ  (10 * 1000 * 1000)
 #define MAX_LED_NUM 16
@@ -48,7 +48,6 @@ void led_indicator_init()
 
     led_handle_0 = led_indicator_create(&config);
     TEST_ASSERT_NOT_NULL(led_handle_0);
-    TEST_ASSERT(led_handle_0 == led_indicator_get_handle((void *)LED_IO_NUM_0)); //test get handle
 }
 
 void led_indicator_deinit()
@@ -180,9 +179,6 @@ void led_indicator_all_init()
     led_indicator_gpio_config.gpio_num = LED_IO_NUM_2;
     led_handle_2 = led_indicator_create(&config);
     TEST_ASSERT_NOT_NULL(led_handle_2);
-    TEST_ASSERT(led_handle_0 == led_indicator_get_handle((void *)LED_IO_NUM_0)); //test get handle
-    TEST_ASSERT(led_handle_1 == led_indicator_get_handle((void *)LED_IO_NUM_1)); //test get handle
-    TEST_ASSERT(led_handle_2 == led_indicator_get_handle((void *)LED_IO_NUM_2)); //test get handle
 }
 
 void led_indicator_all_deinit()
@@ -351,7 +347,6 @@ TEST_CASE("User defined blink", "[LED][indicator]")
 
     led_handle_0 = led_indicator_create(&config);
     TEST_ASSERT_NOT_NULL(led_handle_0);
-    TEST_ASSERT(led_handle_0 == led_indicator_get_handle((void *)LED_IO_NUM_0)); //test get handle
 
     ESP_LOGI(TAG, "double blink.....");
     esp_err_t ret = led_indicator_start(led_handle_0, BLINK_DOUBLE);
@@ -388,7 +383,6 @@ TEST_CASE("Preempt blink lists test", "[LED][indicator]")
 
     led_handle_0 = led_indicator_create(&config);
     TEST_ASSERT_NOT_NULL(led_handle_0);
-    TEST_ASSERT(led_handle_0 == led_indicator_get_handle((void *)LED_IO_NUM_0)); //test get handle
 
     ESP_LOGI(TAG, "double blink.....");
     esp_err_t ret = led_indicator_start(led_handle_0, BLINK_DOUBLE);
@@ -432,7 +426,6 @@ TEST_CASE("breathe test", "[LED][indicator]")
 
     led_handle_0 = led_indicator_create(&config);
     TEST_ASSERT_NOT_NULL(led_handle_0);
-    TEST_ASSERT(led_handle_0 == led_indicator_get_handle((void *)LEDC_CHANNEL_0)); //test get handle
 
     ESP_LOGI(TAG, "breathe 25/100 blink.....");
     esp_err_t ret = led_indicator_start(led_handle_0, BLINK_25_BRIGHTNESS);
@@ -494,7 +487,6 @@ TEST_CASE("custom mode test", "[LED][indicator]")
 
     led_handle_0 = led_indicator_create(&config);
     TEST_ASSERT_NOT_NULL(led_handle_0);
-    TEST_ASSERT(led_handle_0 == led_indicator_get_handle((void *)LEDC_CHANNEL_0)); //test get handle
 
     ESP_LOGI(TAG, "breathe 25/100 blink.....");
     esp_err_t ret = led_indicator_start(led_handle_0, BLINK_25_BRIGHTNESS);
@@ -544,7 +536,6 @@ TEST_CASE("test led preempt func with breath", "[LED][preempt][breath]")
     while (cnt0--) {
         led_handle_0 = led_indicator_create(&config);
         TEST_ASSERT_NOT_NULL(led_handle_0);
-        TEST_ASSERT(led_handle_0 == led_indicator_get_handle((void *)LEDC_CHANNEL_0)); //test get handle
 
         ESP_LOGI(TAG, "breathe blink .....");
         esp_err_t ret = led_indicator_start(led_handle_0, BLINK_BREATHE);
@@ -573,8 +564,7 @@ TEST_CASE("test led preempt func with breath", "[LED][preempt][breath]")
 
 /*********************************************** LED STRIPS *******************************************************/
 
-/* esp32c2 not support rmt */
-#if !CONFIG_IDF_TARGET_ESP32C2
+
 
 typedef enum {
     BLINK_RGB_25_BRIGHTNESS,
@@ -746,16 +736,16 @@ TEST_CASE("TEST LED RGB","[LED RGB][RGB]")
     vTaskDelay(2000 / portTICK_PERIOD_MS);
     TEST_ASSERT(ret == ESP_OK);
 
+    ESP_LOGI(TAG, "red blink .....");
+    ret = led_indicator_start(led_handle_0, BLINK_RGB_RED);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+
     ESP_LOGI(TAG, "breathe blink .....");
     ret = led_indicator_start(led_handle_0, BLINK_RGB_BREATHE);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(8000 / portTICK_PERIOD_MS);
     led_indicator_stop(led_handle_0, BLINK_RGB_BREATHE);
-
-    ESP_LOGI(TAG, "red blink .....");
-    ret = led_indicator_start(led_handle_0, BLINK_RGB_RED);
-    TEST_ASSERT(ret == ESP_OK);
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
 
     ESP_LOGI(TAG, "green blink .....");
     ret = led_indicator_start(led_handle_0, BLINK_RGB_GREEN);
@@ -813,6 +803,9 @@ TEST_CASE("TEST LED RGB","[LED RGB][RGB]")
     led_indicator_deinit();
 }
 
+/* esp32c2 not support rmt */
+#if !CONFIG_IDF_TARGET_ESP32C2
+
 TEST_CASE("TEST LED Strips by RGB","[LED Strips][RGB]")
 {
     led_strip_config_t strip_config = {
@@ -835,7 +828,6 @@ TEST_CASE("TEST LED Strips by RGB","[LED Strips][RGB]")
     };
 
     led_indicator_strips_config_t led_indicator_strips_config = {
-        .is_active_level_high = 1,
         .led_strip_cfg = strip_config,
         .led_strip_driver = LED_STRIP_RMT,
         .led_strip_rmt_cfg = rmt_config,
@@ -956,7 +948,6 @@ TEST_CASE("TEST LED RGB control Real time ","[LED RGB][Real time]")
     };
 
     led_indicator_strips_config_t led_indicator_strips_config = {
-        .is_active_level_high = 1,
         .led_strip_cfg = strip_config,
         .led_strip_driver = LED_STRIP_RMT,
         .led_strip_rmt_cfg = rmt_config,
