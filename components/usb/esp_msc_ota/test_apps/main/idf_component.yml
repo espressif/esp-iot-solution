@@ -1,0 +1,3 @@
+dependencies:
+  idf: ">=5.0"
+  button: "~2.5.5"

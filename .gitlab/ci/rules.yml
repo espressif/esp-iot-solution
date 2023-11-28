@@ -165,6 +165,10 @@
 .patterns-components_tools_cmake_utilities_test_component2: &patterns-components_tools_cmake_utilities_test_component2
   - "tools/cmake_utilities/test_apps/components/TEST-component2/**/*"
 
+.patterns-components_usb_esp_msc_ota: &patterns-components_usb_esp_msc_ota
+  - "components/usb/esp_msc_ota/**/*"
+  - "components/tools/cmake_utilities/package_manager.cmake"
+
 .patterns-components_usb_iot_usbh: &patterns-components_usb_iot_usbh
   - "components/usb/iot_usbh/**/*"
   - "components/tools/cmake_utilities/package_manager.cmake"
@@ -1319,6 +1323,17 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_storage_eeprom_at24c02
+
+.rules:build:components_usb_esp_msc_ota_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_usb_esp_msc_ota
 
 .rules:build:components_usb_iot_usbh_test:
   rules:
