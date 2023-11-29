@@ -87,18 +87,18 @@ void zero_cross_handle_interrupt(void *user_data, const mcpwm_capture_event_data
                 //Enter the user callback function and return detection data and avoid judging upon receiving the first triggering edge
                 if (zero_cross_dev->event_callback && (zero_cross_dev->cap_val_end_of_sample != 0) && (zero_cross_dev->cap_val_begin_of_sample != 0)) {
                     zero_detect_cb_param_t param = {0};
-                    param.signal_valid_event_data_t.valid_count = zero_cross_dev->valid_count;
-                    param.signal_valid_event_data_t.full_cycle_us = zero_cross_dev->full_cycle_us;
-                    param.signal_valid_event_data_t.cap_edge = MCPWM_CAP_EDGE_POS;
+                    param.signal_valid_event_data.valid_count = zero_cross_dev->valid_count;
+                    param.signal_valid_event_data.full_cycle_us = zero_cross_dev->full_cycle_us;
+                    param.signal_valid_event_data.cap_edge = MCPWM_CAP_EDGE_POS;
                     zero_cross_dev->event_callback(SIGNAL_VALID, &param);
                 }
             }
         }
         if (zero_cross_dev->event_callback) {
             zero_detect_cb_param_t param = {0};
-            param.signal_rising_edge_event_data_t.valid_count = zero_cross_dev->valid_count;
-            param.signal_rising_edge_event_data_t.invalid_count = zero_cross_dev->invalid_count;
-            param.signal_rising_edge_event_data_t.full_cycle_us = zero_cross_dev->full_cycle_us;
+            param.signal_rising_edge_event_data.valid_count = zero_cross_dev->valid_count;
+            param.signal_rising_edge_event_data.invalid_count = zero_cross_dev->invalid_count;
+            param.signal_rising_edge_event_data.full_cycle_us = zero_cross_dev->full_cycle_us;
             zero_cross_dev->event_callback(SIGNAL_RISING_EDGE, &param);
         }
     } else if (!edge_status) {
@@ -115,9 +115,9 @@ void zero_cross_handle_interrupt(void *user_data, const mcpwm_capture_event_data
                     //Enter the user callback function and return detection data and avoid judging upon receiving the first triggering edge
                     if (zero_cross_dev->event_callback && (zero_cross_dev->cap_val_end_of_sample != 0) && (zero_cross_dev->cap_val_begin_of_sample != 0)) {
                         zero_detect_cb_param_t param = {0};
-                        param.signal_valid_event_data_t.valid_count = zero_cross_dev->valid_count;
-                        param.signal_valid_event_data_t.full_cycle_us = zero_cross_dev->full_cycle_us;
-                        param.signal_valid_event_data_t.cap_edge = MCPWM_CAP_EDGE_NEG;
+                        param.signal_valid_event_data.valid_count = zero_cross_dev->valid_count;
+                        param.signal_valid_event_data.full_cycle_us = zero_cross_dev->full_cycle_us;
+                        param.signal_valid_event_data.cap_edge = MCPWM_CAP_EDGE_NEG;
                         zero_cross_dev->event_callback(SIGNAL_VALID, &param);
                     }
                 }
@@ -125,9 +125,9 @@ void zero_cross_handle_interrupt(void *user_data, const mcpwm_capture_event_data
         }
         if (zero_cross_dev->event_callback) {
             zero_detect_cb_param_t param = {0};
-            param.signal_falling_edge_event_data_t.valid_count = zero_cross_dev->valid_count;
-            param.signal_falling_edge_event_data_t.invalid_count = zero_cross_dev->invalid_count;
-            param.signal_falling_edge_event_data_t.full_cycle_us = zero_cross_dev->full_cycle_us;
+            param.signal_falling_edge_event_data.valid_count = zero_cross_dev->valid_count;
+            param.signal_falling_edge_event_data.invalid_count = zero_cross_dev->invalid_count;
+            param.signal_falling_edge_event_data.full_cycle_us = zero_cross_dev->full_cycle_us;
             zero_cross_dev->event_callback(SIGNAL_FALLING_EDGE, &param);
         }
     }
@@ -140,12 +140,12 @@ void zero_cross_handle_interrupt(void *user_data, const mcpwm_capture_event_data
             if (zero_cross_dev->invalid_count >= zero_cross_dev->invalid_time) {
                 if (zero_cross_dev->event_callback && (zero_cross_dev->cap_val_end_of_sample != 0) && (zero_cross_dev->cap_val_begin_of_sample != 0)) {
                     zero_detect_cb_param_t param = {0};
-                    param.signal_invalid_event_data_t.invalid_count = zero_cross_dev->invalid_count;
-                    param.signal_invalid_event_data_t.full_cycle_us = zero_cross_dev->full_cycle_us;
+                    param.signal_invalid_event_data.invalid_count = zero_cross_dev->invalid_count;
+                    param.signal_invalid_event_data.full_cycle_us = zero_cross_dev->full_cycle_us;
                     if (edge_status) {
-                        param.signal_invalid_event_data_t.cap_edge = MCPWM_CAP_EDGE_POS;
+                        param.signal_invalid_event_data.cap_edge = MCPWM_CAP_EDGE_POS;
                     } else {
-                        param.signal_invalid_event_data_t.cap_edge = MCPWM_CAP_EDGE_NEG;
+                        param.signal_invalid_event_data.cap_edge = MCPWM_CAP_EDGE_NEG;
                     }
                     zero_cross_dev->event_callback(SIGNAL_INVALID, &param);
                 }
@@ -153,11 +153,11 @@ void zero_cross_handle_interrupt(void *user_data, const mcpwm_capture_event_data
             if (zero_cross_dev->event_callback && (zero_cross_dev->cap_val_end_of_sample != 0) && (zero_cross_dev->cap_val_begin_of_sample != 0)) {
                 zero_detect_cb_param_t param = {0};
                 if (edge_status) {
-                    param.signal_freq_event_data_t.cap_edge = MCPWM_CAP_EDGE_POS;
+                    param.signal_freq_event_data.cap_edge = MCPWM_CAP_EDGE_POS;
                 } else {
-                    param.signal_freq_event_data_t.cap_edge = MCPWM_CAP_EDGE_NEG;
+                    param.signal_freq_event_data.cap_edge = MCPWM_CAP_EDGE_NEG;
                 }
-                param.signal_freq_event_data_t.full_cycle_us = zero_cross_dev->full_cycle_us;
+                param.signal_freq_event_data.full_cycle_us = zero_cross_dev->full_cycle_us;
                 zero_cross_dev->event_callback(SIGNAL_FREQ_OUT_OF_RANGE, &param);
             }
         }

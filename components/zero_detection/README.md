@@ -1,6 +1,7 @@
 [![Component Registry](https://components.espressif.com/components/espressif/zero_detection/badge.svg)](https://components.espressif.com/components/espressif/zero_detection)
 
 # Component: Zero_Detection
+[Online documentation](https://docs.espressif.com/projects/esp-iot-solution/en/latest/others/zero_detection.html)
 
 The zero cross detection driver is a component designed to analyze zero cross signals. By examining the period and triggering edges of zero cross signals, it can determine the signal's validity, invalidity, whether it exceeds the expected frequency range, and if there are signal losses.
 

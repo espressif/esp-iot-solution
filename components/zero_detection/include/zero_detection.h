@@ -63,10 +63,10 @@ typedef enum {
  * @brief Zero detection driver type
  */
 typedef enum {
-#if defined(SOC_MCPWM_SUPPORTED)
-    MCPWM_TYPE = 0,
+#if SOC_MCPWM_SUPPORTED
+    MCPWM_TYPE = 0,  /*!< Use MCPWM as driver */
 #endif
-    GPIO_TYPE,
+    GPIO_TYPE,       /*!< Use GPIO as driver */
 } zero_driver_type_t;
 
 /**
@@ -76,46 +76,46 @@ typedef union {
     /**
      * @brief Signal exceeds frequency range data return type
      */
-    struct {
+    struct signal_freq_event_data_t {
         mcpwm_capture_edge_t cap_edge; /*!< Trigger edge of zero cross signal */
         uint32_t full_cycle_us;        /*!< Current signal cycle */
-    } signal_freq_event_data_t;
+    } signal_freq_event_data;          /*!< Signal freq event data struct */
 
     /**
      * @brief Signal valid data return type
      */
-    struct {
+    struct signal_valid_event_data_t {
         mcpwm_capture_edge_t cap_edge; /*!< Trigger edge of zero cross signal */
         uint32_t full_cycle_us;        /*!< Current signal cycle */
         uint16_t valid_count;          /*!< Counting when the signal is valid */
-    } signal_valid_event_data_t;
+    } signal_valid_event_data;         /*!< Signal valid event data struct */
 
     /**
      * @brief Signal invalid data return type
      */
-    struct {
+    struct signal_invalid_event_data_t {
         mcpwm_capture_edge_t cap_edge; /*!< Trigger edge of zero cross signal */
         uint32_t full_cycle_us;        /*!< Current signal cycle */
         uint16_t invalid_count;        /*!< Counting when the signal is invalid */
-    } signal_invalid_event_data_t;
+    } signal_invalid_event_data;       /*!< Signal invalid event data struct */
 
     /**
      * @brief Signal rising edge data return type
      */
-    struct {
+    struct signal_rising_edge_event_data_t {
         uint16_t valid_count;          /*!< Counting when the signal is valid */
         uint16_t invalid_count;        /*!< Counting when the signal is invalid */
         uint32_t full_cycle_us;        /*!< Current signal cycle */
-    } signal_rising_edge_event_data_t;
+    } signal_rising_edge_event_data;   /*!< Signal rising edge event data struct */
 
     /**
      * @brief Signal falling edge data return type
      */
-    struct {
+    struct signal_falling_edge_event_data_t {
         uint16_t valid_count;          /*!< Counting when the signal is valid */
         uint16_t invalid_count;        /*!< Counting when the signal is invalid */
         uint32_t full_cycle_us;        /*!< Current signal cycle */
-    } signal_falling_edge_event_data_t;
+    } signal_falling_edge_event_data;  /*!< Signal falling edge event_data */
 } zero_detect_cb_param_t;
 
 /**

@@ -43,6 +43,7 @@ INPUT = \
     $(PROJECT_PATH)/components/sensors/sensor_hub/include/iot_sensor_hub.h \
     $(PROJECT_PATH)/components/sensors/sensor_hub/include/sensor_type.h \
     $(PROJECT_PATH)/components/usb/usb_stream/include/usb_stream.h \
+    $(PROJECT_PATH)/components/zero_detection/include/zero_detection.h \
 
 ## Get warnings for functions that have no documentation for their parameters or return value
 ##
