@@ -1,28 +1,26 @@
-[![Component Registry](https://components.espressif.com/components/espressif/button/badge.svg)](https://components.espressif.com/components/espressif/button)
+[![Component Registry](https://components.espressif.com/components/espressif/zero_detection/badge.svg)](https://components.espressif.com/components/espressif/zero_detection)
 
 # Component: Zero_Detection
-[Online documentation](https://docs.espressif.com/projects/esp-iot-solution/en/latest/input_device/button.html)
+
+The zero cross detection driver is a component designed to analyze zero cross signals. By examining the period and triggering edges of zero cross signals, it can determine the signal's validity, invalidity, whether it exceeds the expected frequency range, and if there are signal losses.
+
+The program returns results in the form of events, meeting the user's need for timely signal processing. Additionally, it supports the analysis of two types of zero cross signals, including square waveforms and pulse types.
 
 After creating a new zero detection object by calling function `zero_detect_create()`, the zero detection object can create many events.
 
 List of supported events:
- * Button pressed
- * Button released
- * Button pressed repeat
- * Button press repeat done
- * Button single click
- * Button double click
- * Button multiple click
- * Button long press start
- * Button long press hold
- * Button long press up
+ * SIGNAL_FREQ_OUT_OF_RANGE
+ * SIGNAL_VALID
+ * SIGNAL_INVALID
+ * SIGNAL_LOST
+ * SIGNAL_RISING_EDGE
+ * SIGNAL_FALLING_EDGE
 
-![](https://dl.espressif.com/button_v2/button.svg)
+Users have the flexibility to configure the program's drive modes, including MCPWM capture and GPIO interrupt. Furthermore, users can adjust parameters such as the effective frequency range and the number of valid signal judgments, providing a high level of flexibility.
 
-There are three ways this driver can handle buttons:
-1. Buttons connected to standard digital GPIO
-2. Multiple buttons connected to single ADC channel
-3. Custom button connect to any driver
+There are two ways this driver can handle signal:
+1. Analyzing and collecting signals using GPIO interrupts
+2. Using GPIO for signal collection and analysis
 
 ## Add component to your project
 

@@ -191,6 +191,10 @@
 .patterns-components_utilities_xz: &patterns-components_utilities_xz
   - "components/utilities/xz/**/*"
 
+.patterns-components_zero_detection: &patterns-components_zero_detection
+  - "components/zero_detection/**/*"
+  - "components/tools/cmake_utilities/package_manager.cmake"
+
 # examples folder, in the alphabetic order
 .patterns-docs: &patterns-docs
   - "docs/**/*"
@@ -217,6 +221,7 @@
   - "components/sensors/sensor_hub/include/iot_sensor_hub.h"
   - "components/usb/usb_stream/include/usb_stream.h"
   - "components/bluetooth/ble_conn_mgr/include/esp_ble_conn_mgr.h"
+  - "components/zero_detection/include/zero_detection.h"
 
 # examples folder, in the alphabetic order
 .patterns-example_audio_wav_player: &patterns-example_audio_wav_player
@@ -347,6 +352,9 @@
 
 .patterns-example_elf_loader_build_elf_file_example: &patterns-example_elf_loader_build_elf_file_example
   - "examples/elf_loader/build_elf_file_example/**/*"
+
+.patterns-example_zero_cross_detection_example: &patterns-example_zero_cross_detection_example
+  - "examples/zero_cross_detecion/**/*"
 
 # tools folder, in the alphabetic order
 .patterns-tools_cmake_utilities: &patterns-tools_cmake_utilities
@@ -1391,6 +1399,17 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_sensors_radar_at581x
+
+.rules:build:components_zero_detection_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_zero_detection
 
 .rules:build:tools_cmake_utilities_test_apps:
   rules:

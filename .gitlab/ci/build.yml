@@ -742,3 +742,14 @@ build_example_elf_loader_build_elf_file_example:
       - IMAGE: espressif/idf:release-v5.0
   variables:
     EXAMPLE_DIR: examples/elf_loader/build_elf_file_example
+
+build_components_zero_detection_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_zero_detection_test_apps
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.0
+      - IMAGE: espressif/idf:release-v5.1
+  variables:
+    EXAMPLE_DIR: components/zero_detection/test_apps
