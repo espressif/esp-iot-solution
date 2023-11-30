@@ -1,3 +1,7 @@
+components/usb/esp_msc_ota/test_apps:
+  enable:
+    - if: SOC_USB_OTG_SUPPORTED == 1
+
 components/usb/usb_stream/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32s2","esp32s3"]
@@ -57,8 +61,6 @@ components/display/lcd/esp_lcd_sh8601/test_apps:
 components/display/lcd/esp_lcd_spd2010/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1
-  disable:
-    - if: IDF_TARGET in ["esp32c2"]
 
 components/display/lcd/esp_lcd_st7701/test_apps:
   enable:
