@@ -27,7 +27,6 @@ typedef enum {
 } led_strip_driver_t;
 
 typedef struct {
-    bool is_active_level_high;                          /*!< Set true if GPIO level is high when light is ON, otherwise false. */
     led_strip_config_t led_strip_cfg;                   /*!< LED Strip Configuration. */
     led_strip_driver_t led_strip_driver;                /*!< led strip control type */
     union {

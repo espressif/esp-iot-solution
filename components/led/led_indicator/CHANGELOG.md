@@ -1,6 +1,18 @@
 
 # ChangeLog
 
+## v0.9.0 - 2023-11-28
+
+### BUG FIX
+
+* Resolve the error with 'is_active_level_high' in LEDC RGB type.
+
+### Break Change
+
+* Remove `led_indicator_strips_config_t:is_active_level_high`
+
+* Remove `led_indicator_get_handle`, the query of 'led_indicator handle' through GPIO number and LEDC channel is no longer supported.
+
 ## v0.8.0 -2023-11-21
 
 ### Enhancements:
