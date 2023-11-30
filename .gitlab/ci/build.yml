@@ -308,6 +308,17 @@ build_example_lighting_lightbulb:
   variables:
     EXAMPLE_DIR: examples/lighting/lightbulb
 
+build_example_lvgl_freetype:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_lvgl_freetype
+  parallel:
+    matrix:
+        - IMAGE: espressif/idf:release-v5.1
+  variables:
+    EXAMPLE_TARGET: esp32s3
+    EXAMPLE_DIR: examples/hmi/lvgl_freetype
+
 build_example_motor_foc_openloop_control:
   extends:
     - .build_examples_template
