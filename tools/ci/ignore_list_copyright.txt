@@ -68,6 +68,7 @@
 ./examples/hmi/lvgl_coffee/main/coffee_cup.c
 ./examples/hmi/lvgl_coffee/main/coffee_flower.c
 ./examples/hmi/lvgl_example/components/lv_examples/lv_ex_conf.h
+./examples/hmi/lvgl_freetype/main/assets/font_Kaiti30.c
 ./examples/hmi/lvgl_thermostat/main/img_day.c
 ./examples/hmi/lvgl_thermostat/main/img_night.c
 ./examples/hmi/lvgl_thermostat/main/img_snow.c

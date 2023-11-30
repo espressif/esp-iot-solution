@@ -281,6 +281,9 @@
 .patterns-example_lighting_lightbulb: &patterns-example_lighting_lightbulb
   - "examples/lighting/lightbulb/**/*"
 
+.patterns-example_lvgl_freetype: &patterns-example_lvgl_freetype
+  - "examples/hmi/lvgl_freetype/**/*"
+
 .patterns-example_motor_foc_openloop_control: &patterns-example_motor_foc_openloop_control
   - "examples/motor/foc_openloop_control/**/*"
 
@@ -620,6 +623,16 @@
       changes: *patterns-components_led_lightbulb_driver
     - <<: *if-dev-push
       changes: *patterns-example_lighting_lightbulb
+
+.rules:build:example_lvgl_freetype:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_lvgl_freetype
 
 .rules:build:example_motor_foc_openloop_control:
   rules:
