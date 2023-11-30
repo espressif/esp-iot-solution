@@ -5,7 +5,7 @@
 
 This example shows how to create a BLE Joystick with an ESP32 series SoC implemented in BLUEDROID. 
 
-Please, check this [tutorial](tutorial/joystick_walkthrough.md) for more information about this example.
+Please, check this [tutorial](tutorial/controller_walkthrough.md) for more information about this example.
 
 ## How to Use Example
 

@@ -1,6 +1,6 @@
 # Blink Example
 
-This example demonstrates how to blink development board LED using GPIO or RMT for the addressable LED, i.e. [WS2812](http://www.world-semi.com/Certifications/WS2812B.html).
+This example demonstrates how to blink development board LED using GPIO or RMT for the addressable LED, i.e. [WS2812](https://www.mouser.com/pdfDocs/WS2812B-2020_V10_EN_181106150240761.pdf).
 
 ## Compatibility
 
@@ -8,10 +8,10 @@ This example is will run on boards marked with green checkbox. Please remember t
 
 | Board Name | Getting Started | Chip | Compatible |
 |-------------------|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|:--------------------------------------------------------------------:|:-----------------------------------------------------------------:|
-| esp32-meshkit-sense | [![alt text](../../../docs/_static/esp32-meshkit-sense.png "esp32-meshkit-sense")](../../../docs/en/hw-reference/ESP32-MeshKit-Sense_guide.html) | <img src="../../../docs/_static/ESP32.svg" height="85" alt="ESP32"> | ![alt text](../../../docs/_static/yes-button.png "Compatible") |
-| esp32s2-saola | [![alt text](../../../docs/_static/esp32s2-saola.png "esp32-devkitc-v4")](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s2/hw-reference/esp32s2/user-guide-saola-1-v1.2.html) | <img src="../../../docs/_static/ESP32-S2.svg" height="85" alt="ESP32"> | ![alt text](../../../docs/_static/yes-button.png "Compatible") |
-| esp32-s3-devkitc-1-v1 | [![alt text](../../../docs/_static/esp32-s3-devkitc-1-v1-isometric.png "esp32-s3-devkitc-1-v1-isometric")](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/hw-reference/esp32s3/user-guide-devkitc-1.html) | <img src="../../../docs/_static/ESP32-S3.svg" height="85" alt="ESP32-S3"> | ![alt text](../../../docs/_static/yes-button.png "Compatible") |
-| esp32s3_usb_otg_ev | [![alt text](../../../docs/_static/pic_product_esp32_s3_otg.png "esp32s3_usb_otg_ev")](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-usb-otg/index.html) | <img src="../../../docs/_static/ESP32-S3.svg" height="85" alt="ESP32-S3"> | ![alt text](../../../docs/_static/yes-button.png "Compatible") |
+| esp32-meshkit-sense | [![alt text](../../../docs/_static/esp32-meshkit-sense.png)](../../../docs/en/hw-reference/ESP32-MeshKit-Sense_guide.html) | <img src="../../../docs/_static/ESP32.svg" height="85" alt="ESP32"> | ![alt text](../../../docs/_static/yes-button.png) |
+| esp32s2-saola | [![alt text](../../../docs/_static/esp32s2-saola.png)](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s2/hw-reference/esp32s2/user-guide-saola-1-v1.2.html) | <img src="../../../docs/_static/ESP32-S2.svg" height="85" alt="ESP32"> | ![alt text](../../../docs/_static/yes-button.png) |
+| esp32-s3-devkitc-1-v1 | [![alt text](../../../docs/_static/esp32-s3-devkitc-1-v1-isometric.png)](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/hw-reference/esp32s3/user-guide-devkitc-1.html) | <img src="../../../docs/_static/ESP32-S3.svg" height="85" alt="ESP32-S3"> | ![alt text](../../../docs/_static/yes-button.png) |
+| esp32s3_usb_otg_ev | [![alt text](../../../docs/_static/pic_product_esp32_s3_otg.png)](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-usb-otg/index.html) | <img src="../../../docs/_static/ESP32-S3.svg" height="85" alt="ESP32-S3"> | ![alt text](../../../docs/_static/yes-button.png) |
 
 
 ## How to Use Example

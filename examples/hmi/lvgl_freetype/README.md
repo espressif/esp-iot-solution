@@ -15,7 +15,7 @@ Please first read the [User Guide](https://docs.espressif.com/projects/espressif
 
 Run `idf.py menuconfig` and go to `Board Support Package`:
 * `BSP_LCD_SUB_BOARD`: Choose a LCD subboard according to hardware. Default use subboard3 (800x480).
-* More configurations see BSP's [README](https://github.com/espressif/esp-bsp/tree/master/esp32_s3_lcd_ev_board#bsp-esp32-s3-lcd-ev-board).
+* More configurations see BSP's [README](https://github.com/espressif/esp-bsp/tree/master/bsp/esp32_s3_lcd_ev_board#bsp-esp32-s3-lcd-ev-board).
 
 ### Build and Flash
 

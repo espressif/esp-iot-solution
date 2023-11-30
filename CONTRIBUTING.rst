@@ -17,6 +17,8 @@ Before sending us a Pull Request, please consider this list of points:
 
 * Does any new code conform to the esp-idf : :doc:`Style Guide <style-guide>` ?
 
+* Have you installed the `pre-commit hook <https://docs.espressif.com/projects/esp-idf/en/stable/esp32/contribute/install-pre-commit-hook.html>`_ for the esp-iot-solution project?
+
 * Does the code documentation follow requirements in `Documenting-code <http://docs.espressif.com/projects/esp-idf/en/stable/contribute/documenting-code.html>`_ ?
 
 * Is the code adequately commented for people to understand how it is structured?

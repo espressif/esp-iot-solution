@@ -95,13 +95,3 @@
 ./tools/cmake_utilities/test_apps/components/TEST-component2/test_component2.c
 ./tools/cmake_utilities/test_apps/components/TEST-component2/test_component2.h
 ./tools/cmake_utilities/test_apps/pytest_cmake_utilities.py
-./tools/unit-test-app/components/deep_sleep/test/deep_sleep.c
-./tools/unit-test-app/components/light_sleep/test/light_sleep.c
-./tools/unit-test-app/components/modem_sleep/test/modem_sleep.c
-./tools/unit-test-app/components/test_utils/test/ccomp_timer_test_api.c
-./tools/unit-test-app/components/test_utils/test/ccomp_timer_test_data.c
-./tools/unit-test-app/components/test_utils/test/ccomp_timer_test_inst.c
-./tools/unit-test-app/idf_ext.py
-./tools/unit-test-app/main/app_main.c
-./tools/unit-test-app/tools/CreateSectionTable.py
-./tools/unit-test-app/tools/UnitTestParser.py
