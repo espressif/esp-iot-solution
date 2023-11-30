@@ -14,4 +14,4 @@ New data from AHT20 can be obtained in Polling modes.
 > Note: The user is responsible for initialization and configuration of I2C bus.
 
 ### Polling mode
-After calling `aht20_new_sensor()` and `aht20_init_sensor()` the user is responsible for reading out new samples from AHT20.
+After calling `aht20_new_sensor()` the user is responsible for reading out new samples from AHT20.

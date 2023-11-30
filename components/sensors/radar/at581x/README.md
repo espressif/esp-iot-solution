@@ -9,6 +9,6 @@ I2C driver and definition of AT581X radar sensor.
 See [AT581X datasheet](https://dl.espressif.com/AE/esp_iot_solution/MS58-3909S68U4-3V3-G-NLS-IIC%20Data%20Sheet%20V1.0.pdf).
 
 ## Operation modes
-After calling `at581x_new_sensor()` and `at581x_init_sensor()` the user is responsible for reading detecting status from IO.
+After calling `at581x_new_sensor()` the user is responsible for reading detecting status from IO.
 
 > Note: The user is responsible for initialization and configuration of I2C bus.
