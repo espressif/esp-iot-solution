@@ -6,7 +6,7 @@ Implementation of the SPD2010 touch controller with [esp_lcd_touch](https://gith
 
 | Touch controller | Communication interface |    Component name     |                                Link to datasheet                                |
 | :--------------: | :---------------------: | :-------------------: | :-----------------------------------------------------------------------------: |
-|     SPD2010      |           I2C           | esp_lcd_touch_spd2010 | [PDF](https://dl.espressif.com/AE/esp-iot-solution/SPD2010(L-WEA2010)_0.50.pdf) |
+|     SPD2010      |           I2C           | esp_lcd_touch_spd2010 | [PDF](https://dl.espressif.com/AE/esp-iot-solution/SPD2010_L-WEA2010_0.50.pdf) |
 
 ## Add to project
 

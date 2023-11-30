@@ -23,7 +23,7 @@
 
 |Name|Function| Bus |Vendor|Datasheet|
 |--|--|--|--|--|
-|BME280| Pressure |I2C/SPI | BOSCH|[datesheet](https://ae-bst.resource.bosch.com/media/_tech/media/datasheets/BST-BME280-DS002.pdf) |
+|BME280| Pressure |I2C/SPI | BOSCH|[datesheet](https://www.bosch-sensortec.com/media/boschsensortec/downloads/product_flyer/bst-bme280-fl000.pdf) |
 
 ### 4. IMU (Inertial Measurement Unit)
 
