@@ -51,6 +51,7 @@ static void IRAM_ATTR button_isr_handler(void* arg)
 {
     int button_pin_num = (int) arg;
     uint64_t current_time = esp_timer_get_time();
+    BaseType_t task_woken = pdFALSE;
 
     // set bit whenever a button is pressed
     // do not send to queue yet in case of other button presses or multiple presses
@@ -66,8 +67,12 @@ static void IRAM_ATTR button_isr_handler(void* arg)
         };
 
         prev_trigger_time = current_time;
-        xQueueSendFromISR(input_queue, &button_event, 0);
+        xQueueSendFromISR(input_queue, &button_event, &task_woken);
         button_input = 0;
+    }
+
+    if (task_woken == pdTRUE) {
+        portYIELD_FROM_ISR();
     }
 }
 

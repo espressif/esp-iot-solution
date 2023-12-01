@@ -334,10 +334,10 @@ static void IRAM_ATTR timer_group_isr(void *para)
     if (0 == rb->is_give && free_size > BUFFER_MIN_SIZE) {
         /**< The execution time of the following code is 2.71 microsecond */
         rb->is_give = 1; /**< To prevent multiple give semaphores */
-        BaseType_t xHigherPriorityTaskWoken;
+        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
         xSemaphoreGiveFromISR(rb->semaphore_rb, &xHigherPriorityTaskWoken);
 
-        if (pdFALSE != xHigherPriorityTaskWoken) {
+        if (xHigherPriorityTaskWoken == pdTRUE) {
             portYIELD_FROM_ISR();
         }
     }

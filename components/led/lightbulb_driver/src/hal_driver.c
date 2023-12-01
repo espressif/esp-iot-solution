@@ -274,7 +274,7 @@ static hal_obj_t s_hal_obj_group[]           = {
 static void fade_cb(void *priv);
 static IRAM_ATTR bool on_timer_alarm_cb(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_ctx)
 {
-    portBASE_TYPE task_woken = pdFALSE;
+    BaseType_t task_woken = pdFALSE;
     vTaskNotifyGiveFromISR (s_hal_obj->notify_task, &task_woken);
 
     return task_woken == pdTRUE;

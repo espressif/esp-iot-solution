@@ -74,7 +74,7 @@ static bool ir_learn_rx_done_callback(rmt_channel_handle_t channel, const rmt_rx
     ir_learn_t *ir_learn = (ir_learn_t *)user_data;
 
     xQueueSendFromISR(ir_learn->receive_queue, edata, &task_woken);
-    return task_woken;
+    return (task_woken == pdTRUE);
 }
 
 esp_err_t ir_learn_print_raw(struct ir_learn_sub_list_head *cmd_list)

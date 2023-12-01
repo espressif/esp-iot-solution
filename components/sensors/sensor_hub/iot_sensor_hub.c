@@ -330,7 +330,7 @@ static void sensors_timer_cb(TimerHandle_t xTimer)
 
 static void IRAM_ATTR sensors_intr_isr_handler(void *arg)
 {
-    portBASE_TYPE task_woken = pdFALSE;
+    BaseType_t task_woken = pdFALSE;
     uint32_t event_bit = (uint32_t )(arg);
     xEventGroupSetBitsFromISR(s_event_group, (0x01 << event_bit), &task_woken);
 

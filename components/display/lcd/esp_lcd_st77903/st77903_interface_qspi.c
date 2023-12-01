@@ -933,8 +933,7 @@ IRAM_ATTR static bool load_trans_pool(st77903_qspi_panel_t *panel, spi_multi_tra
     uint16_t next_trans_num;
     void **fbs = panel->fbs;
     void **bbs = panel->bbs;
-    BaseType_t need_yield_1 = pdFALSE;
-    BaseType_t need_yield_2 = pdFALSE;
+    BaseType_t need_yield = pdFALSE;
 
     panel->load_line_cnt += trans_num;
     //  We should switch to next frame buffer after the last line of the frame is loaded
@@ -946,7 +945,7 @@ IRAM_ATTR static bool load_trans_pool(st77903_qspi_panel_t *panel, spi_multi_tra
         panel->cur_fb_index = panel->next_fb_index;
         if (panel->on_bounce_frame_finish) {
             if (panel->on_bounce_frame_finish(&panel->base, NULL, panel->user_ctx)) {
-                need_yield_1 = pdTRUE;
+                need_yield = pdTRUE;
             }
         }
     }
@@ -965,7 +964,7 @@ IRAM_ATTR static bool load_trans_pool(st77903_qspi_panel_t *panel, spi_multi_tra
             .next_buf_bytes = next_trans_num * panel->bytes_per_line,
         };
         if (in_isr) {
-            xQueueSendFromISR(panel->queue_load_mem_info, &load_info, &need_yield_2);
+            xQueueSendFromISR(panel->queue_load_mem_info, &load_info, &need_yield);
         } else {
             xQueueSend(panel->queue_load_mem_info, &load_info, portMAX_DELAY);
         }
@@ -979,7 +978,7 @@ IRAM_ATTR static bool load_trans_pool(st77903_qspi_panel_t *panel, spi_multi_tra
         // So, we should release semaphore to allow refresh task continue
         load_buf = (uint8_t *)fbs[cur_fb_index] + load_line_cnt * panel->bytes_per_line;
         if (in_isr) {
-            xSemaphoreGiveFromISR(panel->sem_count_free_trans, &need_yield_2);
+            xSemaphoreGiveFromISR(panel->sem_count_free_trans, &need_yield);
         } else {
             xSemaphoreGive(panel->sem_count_free_trans);
         }
@@ -990,34 +989,33 @@ IRAM_ATTR static bool load_trans_pool(st77903_qspi_panel_t *panel, spi_multi_tra
         load_buf += panel->bytes_per_line;
     }
 
-    return (need_yield_1 == pdTRUE) || (need_yield_2 == pdTRUE);
+    return (need_yield == pdTRUE);
 }
 
 IRAM_ATTR static void post_trans_color_cb(spi_transaction_t *trans)
 {
-    BaseType_t need_yield_1 = pdFALSE;
-    BaseType_t need_yield_2 = pdFALSE;
+    BaseType_t need_yield = pdFALSE;
     custom_user_data_t *user = (custom_user_data_t *)trans->user;
 
     if (user != NULL) {
         st77903_qspi_panel_t *panel = user->panel;
         if (user->is_color) {  // Trans color end
             if(load_trans_pool(panel, (spi_multi_transaction_t *)trans, true)) {
-                need_yield_1 = pdTRUE;
+                need_yield = pdTRUE;
             }
         } else if (panel->flags.enable_read_reg && user->is_vfp && panel->flags.wait_frame_end) { // Trans VFP end
-            xSemaphoreGiveFromISR(panel->sem_read_ready, &need_yield_2);
+            xSemaphoreGiveFromISR(panel->sem_read_ready, &need_yield);
         } else if (!user->is_vfp) { // Trans VBP end
             esp_rom_delay_us(LCD_LINE_INTERVAL_MIN_US);
             if (panel->on_vsync) {
                 if (panel->on_vsync(&panel->base, NULL, panel->user_ctx)) {
-                    need_yield_2 = pdTRUE;
+                    need_yield = pdTRUE;
                 }
             }
         }
     }
 
-    if ((need_yield_1 == pdTRUE) || (need_yield_2 == pdTRUE)) {
+    if (need_yield == pdTRUE) {
         portYIELD_FROM_ISR();
     }
 }

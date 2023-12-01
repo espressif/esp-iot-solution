@@ -75,7 +75,7 @@ static void touch_callback(esp_lcd_touch_handle_t tp)
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     xSemaphoreGiveFromISR(touch_mux, &xHigherPriorityTaskWoken);
 
-    if (xHigherPriorityTaskWoken) {
+    if (xHigherPriorityTaskWoken == pdTRUE) {
         portYIELD_FROM_ISR();
     }
 }
