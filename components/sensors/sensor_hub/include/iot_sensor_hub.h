@@ -43,7 +43,7 @@ extern const char *SENSOR_MODE_STRING[];
 
 /**
  * @brief sensor id, used for iot_sensor_create
- * 
+ *
  */
 typedef enum {
 #ifdef CONFIG_SENSOR_INCLUDED_HUMITURE
@@ -63,7 +63,7 @@ typedef enum {
 
 /**
  * @brief sensor information type
- * 
+ *
  */
 typedef struct {
     const char* name;  /*!< sensor name*/
@@ -74,7 +74,7 @@ typedef struct {
 
 /**
  * @brief sensor initialization parameter
- * 
+ *
  */
 typedef struct {
     bus_handle_t bus;                           /*!< i2c/spi bus handle*/
@@ -92,7 +92,7 @@ extern "C"
 
 /**
  * @brief Create a sensor instance with specified sensor_id and desired configurations.
- * 
+ *
  * @param sensor_id sensor's id detailed in sensor_id_t.
  * @param config sensor's configurations detailed in sensor_config_t
  * @param p_sensor_handle return sensor handle if succeed, NULL if failed.
@@ -137,12 +137,12 @@ esp_err_t iot_sensor_delete(sensor_handle_t *p_sensor_handle);
 
 /**
  * @brief Scan for valid sensors attached on bus
- * 
+ *
  * @param bus bus handle
  * @param buf Pointer to a buffer to save sensors' information, if NULL no information will be saved.
- * @param num Maximum number of sensor information to save, invalid if buf set to NULL, 
+ * @param num Maximum number of sensor information to save, invalid if buf set to NULL,
  * latter sensors will be discarded if num less-than the total number found on the bus.
- * @return uint8_t total number of valid sensors found on the bus 
+ * @return uint8_t total number of valid sensors found on the bus
  */
 uint8_t iot_sensor_scan(bus_handle_t bus, sensor_info_t* buf[], uint8_t num);
 

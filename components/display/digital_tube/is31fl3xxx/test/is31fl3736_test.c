@@ -171,4 +171,3 @@ TEST_CASE("I2C led is31f13736 test", "[is31f13736][iot][fxled]")
 {
     is31f13736_test();
 }
-

@@ -40,4 +40,3 @@ TEST_CASE("I2C CH450 test", "[ch450][iot][led]")
     ch450_delete(seg);
     i2c_bus_delete(&i2c_bus);
 }
-

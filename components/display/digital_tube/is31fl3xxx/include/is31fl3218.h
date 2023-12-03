@@ -28,7 +28,7 @@ extern "C" {
 
 /**
  * @brief IS31FL3218 mode
- * 
+ *
  */
 typedef enum {
     IS31FL3218_MODE_SHUTDOWN = 0, /**< Software shutdown mode */
@@ -38,7 +38,7 @@ typedef enum {
 
 /**
  * @brief Register of IS31FL3218
- * 
+ *
  */
 typedef enum {
     IS31FL3218_REG_SHUTDOWN = 0x00,                         /*0 First state or BR/EDR scan 1*/
@@ -140,4 +140,3 @@ esp_err_t is31fl3218_write_pwm_regs(is31fl3218_handle_t fxled, uint8_t* duty, in
 #endif
 
 #endif
-

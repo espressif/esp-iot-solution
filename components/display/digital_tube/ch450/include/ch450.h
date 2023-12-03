@@ -17,7 +17,7 @@ extern "C" {
 
 /**
  * @brief Commands
- * 
+ *
  */
 typedef enum {
     CH450_SEG_2 = 0x64,

@@ -365,4 +365,3 @@ esp_err_t is31fl3736_delete(is31fl3736_handle_t fxled)
     free(led);
     return ESP_OK;
 }
-

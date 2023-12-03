@@ -182,4 +182,3 @@ esp_err_t ht16c21_ram_read_byte(ht16c21_handle_t dev, uint8_t address, uint8_t *
 esp_err_t ht16c21_ram_read(ht16c21_handle_t dev, uint8_t address, uint8_t *buf, uint8_t len);
 
 #endif
-

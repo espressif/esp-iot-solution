@@ -183,7 +183,7 @@ esp_err_t is31fl3736_set_led_matrix(is31fl3736_handle_t fxled, uint16_t cs_x_bit
  * @param fxled object handle of is31fl3736
  * @param cs_x_bit  BIT0 ~ BIT8 represent current source channel 0 ~ channel 8
  * @param sw_y_bit  BIT0 ~ BIT12 represent switch channel 0 ~ channel 12
- * @param duty  the PWM duty for this LED 
+ * @param duty  the PWM duty for this LED
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL error

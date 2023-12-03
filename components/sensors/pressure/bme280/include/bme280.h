@@ -325,7 +325,7 @@ esp_err_t bme280_take_forced_measurement(bme280_handle_t sensor);
  *
  * @param sensor object handle of bme280
  * @param temperature pointer to temperature
- * @return esp_err_t 
+ * @return esp_err_t
  */
 esp_err_t bme280_read_temperature(bme280_handle_t sensor, float *temperature);
 
@@ -334,7 +334,7 @@ esp_err_t bme280_read_temperature(bme280_handle_t sensor, float *temperature);
  *
  * @param sensor object handle of bme280
  * @param pressure pointer to pressure value
- * @return esp_err_t 
+ * @return esp_err_t
  */
 esp_err_t bme280_read_pressure(bme280_handle_t sensor, float *pressure);
 
@@ -343,7 +343,7 @@ esp_err_t bme280_read_pressure(bme280_handle_t sensor, float *pressure);
  *
  * @param sensor object handle of bme280
  * @param humidity pointer to humidity value
- * @return esp_err_t 
+ * @return esp_err_t
  */
 esp_err_t bme280_read_humidity(bme280_handle_t sensor, float *humidity);
 
@@ -354,7 +354,7 @@ esp_err_t bme280_read_humidity(bme280_handle_t sensor, float *humidity);
  * @param sensor object handle of bme280
  * @param seaLevel: Sea-level pressure in hPa
  * @param altitude pointer to altitude value
- * @return esp_err_t 
+ * @return esp_err_t
  */
 esp_err_t bme280_read_altitude(bme280_handle_t sensor, float seaLevel, float *altitude);
 
@@ -366,7 +366,7 @@ esp_err_t bme280_read_altitude(bme280_handle_t sensor, float seaLevel, float *al
  * @param altitude      Altitude in meters
  * @param atmospheric   Atmospheric pressure in hPa
  * @param pressure pointer to pressure value
- * @return esp_err_t 
+ * @return esp_err_t
  */
 esp_err_t bme280_calculates_pressure(bme280_handle_t sensor, float altitude,
                                      float atmospheric, float *pressure);

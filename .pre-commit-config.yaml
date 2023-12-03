@@ -6,7 +6,7 @@ repos:
     rev: v1.0.3
     hooks:
       - id: check-copyright
-        args: ['--config', 'tools/ci/check_copyright_config.yaml', '--ignore', 'tools/ci/ignore_list_copyright.txt']
+        args: ['--config', 'tools/ci/check_copyright_config.yaml', '--ignore', 'tools/ci/ignore_list_copyright']
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.0.1
     hooks:
