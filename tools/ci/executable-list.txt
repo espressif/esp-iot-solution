@@ -1,0 +1,13 @@
+components/usb/esp_tinyuf2/utils/uf2conv.py
+components/utilities/xz/xz-embedded/linux/scripts/xz_wrap.sh
+docs/check_lang_folder_sync.sh
+docs/convert_to_rst.sh
+docs/en/conf.py
+docs/zh_CN/conf.py
+examples/usb/host/usb_camera_mic_spk/components/xfer_http/www/compress_pages.sh
+tools/ci/check_components.py
+tools/ci/check_executables.py
+tools/ci/check_readme_links.py
+tools/ci/push_to_github.sh
+tools/cmake_utilities/scripts/gen_custom_ota.py
+tools/cmake_utilities/scripts/relinker/relinker.py

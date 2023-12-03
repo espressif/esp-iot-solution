@@ -35,6 +35,7 @@ repos:
       - id: end-of-file-fixer
         exclude: *whitespace_excludes
       - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
       - id: mixed-line-ending
         args: ['-f=lf']
       - id: double-quote-string-fixer
@@ -44,3 +45,17 @@ repos:
       - id: no-commit-to-branch
         name: Do not use uppercase letters in the branch name
         args: ['--pattern', '^[^A-Z]*[A-Z]']
+  - repo: local
+    hooks:
+      - id: check-executables
+        name: Check File Permissions
+        entry: tools/ci/check_executables.py --action executables
+        language: python
+        types: [executable]
+        exclude: '\.pre-commit/.+'
+      - id: check-executable-list
+        name: Validate executable-list.txt
+        entry: tools/ci/check_executables.py --action list
+        language: python
+        pass_filenames: false
+        always_run: true
