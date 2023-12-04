@@ -11,7 +11,7 @@ repos:
     rev: v4.0.1
     hooks:
       - id: file-contents-sorter
-        files: 'tools\/ci\/(executable-list\.txt|mypy_ignore_list\.txt|check_copyright_ignore\.txt)'
+        files: 'tools\/ci\/(executable-list\.txt|ignore_list_copyright)'
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.0.1
     hooks:
@@ -45,6 +45,12 @@ repos:
       - id: no-commit-to-branch
         name: Do not use uppercase letters in the branch name
         args: ['--pattern', '^[^A-Z]*[A-Z]']
+  - repo: https://github.com/espressif/astyle_py.git
+    rev: v1.0.2
+    hooks:
+      - id: astyle_py
+        # If you are modifying astyle version, update tools/format.sh as well
+        args: ['--astyle-version=3.4.7', '--rules=tools/ci/astyle-rules.yml']
   - repo: local
     hooks:
       - id: check-executables

@@ -1,0 +1,32 @@
+DEFAULT:
+  # These formatting options will be used by default.
+  # If you are modifying this, update tools/format.sh as well!
+  options: "--style=otbs --attach-namespaces --attach-classes --indent=spaces=4 --convert-tabs --align-reference=name --keep-one-line-statements --pad-header --pad-oper --unpad-paren --max-continuation-indent=120"
+
+# not_formatted_temporary:
+#   # Formatting in these folder or files aren't checked yet.
+#   # For each of these, decide whether it should be formatted or not.
+#   # 1. If yes, format the code and remove the component from the exclude list.
+#   #    Add special rules for upstream source files, if necessary.
+#   #    To reformat the files:
+#   #    - Remove the directory from this exclude list
+#   #    - Run 'git add .astyle-rules.yml'
+#   #    - Run 'pre-commit run --all-files'
+#   # 2. If no, move it to 'not_formatted_permanent' section below.
+#   check: false
+#   include:
+
+# not_formatted_permanent:
+#   # Files which are not supposed to be formatted.
+#   # Typically, these are:
+#   # - Upstream source code we don't want to modify
+#   # - Generated files
+#   check: false
+#   include:
+
+docs:
+  # Docs directory contains some .inc files, which are not C include files
+  # and should not be formatted
+  check: false
+  include:
+    - "/docs/**/*.inc"
