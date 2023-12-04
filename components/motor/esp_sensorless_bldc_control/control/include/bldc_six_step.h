@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -12,8 +12,7 @@ extern "C" {
 #include "bldc_control_param.h"
 #include "bldc_driver.h"
 
-typedef enum
-{
+typedef enum {
     CONTROL_TYPE_LEDC = 0,   /*!< LEDC control */
 #if CONFIG_SOC_MCPWM_SUPPORTED
     CONTROL_TYPE_MCPWM,      /*!< MCPWM control */
@@ -21,11 +20,9 @@ typedef enum
     CONTROL_TYPE_GPIO,       /*!< GPIO control */
 } control_type_t;
 
-typedef struct
-{
+typedef struct {
     control_type_t control_type;                 /*!< Control type */
-    union
-    {
+    union {
         bldc_ledc_config_t bldc_ledc;            /*!< LEDC control config */
 #if CONFIG_SOC_MCPWM_SUPPORTED
         bldc_mcpwm_config_t bldc_mcpwm;          /*!< MCPWM control config */

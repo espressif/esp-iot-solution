@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -164,7 +163,7 @@ esp_err_t imu_test(sensor_imu_handle_t sensor)
 esp_err_t imu_acquire_acce(sensor_imu_handle_t sensor, axis3_t* acce)
 {
     SENSOR_CHECK(sensor != NULL, "sensor handle can't be NULL ", ESP_ERR_INVALID_ARG);
-    sensor_imu_t *p_sensor = (sensor_imu_t* )(sensor);
+    sensor_imu_t *p_sensor = (sensor_imu_t*)(sensor);
     esp_err_t ret = p_sensor->impl->acquire_acce(&acce->x, &acce->y, &acce->z);
     return ret;
 }
@@ -172,7 +171,7 @@ esp_err_t imu_acquire_acce(sensor_imu_handle_t sensor, axis3_t* acce)
 esp_err_t imu_acquire_gyro(sensor_imu_handle_t sensor, axis3_t* gyro)
 {
     SENSOR_CHECK(sensor != NULL, "sensor handle can't be NULL ", ESP_ERR_INVALID_ARG);
-    sensor_imu_t *p_sensor = (sensor_imu_t* )(sensor);
+    sensor_imu_t *p_sensor = (sensor_imu_t*)(sensor);
     esp_err_t ret = p_sensor->impl->acquire_gyro(&gyro->x, &gyro->y, &gyro->z);
     return ret;
 }
@@ -198,8 +197,7 @@ static esp_err_t imu_set_power(sensor_imu_handle_t sensor, sensor_power_mode_t p
     SENSOR_CHECK(sensor != NULL, "pointer can't be NULL ", ESP_ERR_INVALID_ARG);
     sensor_imu_t *p_sensor = (sensor_imu_t *)(sensor);
     esp_err_t ret;
-    switch (power_mode)
-    {
+    switch (power_mode) {
     case POWER_MODE_WAKEUP:
         ret = p_sensor->impl->wakeup();
         break;
@@ -237,8 +235,7 @@ esp_err_t imu_control(sensor_imu_handle_t sensor, sensor_command_t cmd, void *ar
 {
     SENSOR_CHECK(sensor != NULL, "sensor handle can't be NULL ", ESP_ERR_INVALID_ARG);
     esp_err_t ret;
-    switch (cmd)
-    {
+    switch (cmd) {
     case COMMAND_SET_MODE:
         ret = ESP_ERR_NOT_SUPPORTED;
         break;

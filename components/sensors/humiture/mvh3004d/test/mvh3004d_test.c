@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #include <stdio.h>
 #include "unity.h"
 #include "driver/i2c.h"
@@ -45,7 +44,7 @@ void mvh3004d_get_data_test()
 {
     int cnt = 10;
     float tp = 0.0, rh = 0.0;
-    while(cnt--){
+    while (cnt--) {
         mvh3004d_get_data(mvh3004d, &tp, &rh);
         printf("mvh3004d[%d]: tp: %.02f; rh: %.02f %%\n", cnt, tp, rh);
         vTaskDelay(1000 / portTICK_RATE_MS);
@@ -58,5 +57,3 @@ TEST_CASE("Sensor MVH3004D test", "[mvh3004d][iot][sensor]")
     mvh3004d_get_data_test();
     mvh3004d_deinit_test();
 }
-
-

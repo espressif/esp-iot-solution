@@ -22,4 +22,3 @@
 #define AT581X_STATUS_CRC_FLAG              (4)             /* 1 --CRC ok; 0 --CRC failed */
 #define AT581X_STATUS_MODE_STATUS           (5)             /* 00 -NOR mode; 01 -CYC mode; 1x --CMD mode */
 #define AT581X_STATUS_BUSY_INDICATION       (7)             /* 1 --Equipment is busy; 0 --Equipment is idle */
-

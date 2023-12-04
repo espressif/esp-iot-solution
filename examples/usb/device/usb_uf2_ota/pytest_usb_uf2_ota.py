@@ -32,7 +32,7 @@ def check_usb_device(product_name):
             # Install usbutils package
             subprocess.run(['sudo', 'apt-get', 'update'])
             subprocess.run(['sudo', 'apt-get', 'install', '-y', 'usbutils'])
-            
+
             # Retry running the lsusb command
             output = subprocess.check_output(['lsusb']).decode('utf-8')
             print(output)
@@ -42,7 +42,7 @@ def check_usb_device(product_name):
                     return True
             return False
         except subprocess.CalledProcessError as e:
-            print("Error executing lsusb:", e)
+            print('Error executing lsusb:', e)
             return False
 
 @pytest.mark.target('esp32s2')

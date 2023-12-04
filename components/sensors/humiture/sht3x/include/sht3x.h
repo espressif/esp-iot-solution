@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #ifndef _SHT3x_H_
 #define _SHT3x_H_
 

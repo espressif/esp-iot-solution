@@ -65,7 +65,7 @@ index 46f2d0b979..2bfec01106 100644
 @@ -122,6 +122,25 @@ menu "Driver Configurations"
                  Also you can forbid the ISR being disabled during flash writing
                  access, by add ESP_INTR_FLAG_IRAM when initializing the driver.
- 
+
 +        config SPI_MASTER_DYNAMIC_TRANS
 +            bool "Dynamic paste transactions for HW"
 +            default n
@@ -86,7 +86,7 @@ index 46f2d0b979..2bfec01106 100644
 +                cpu resource.
 +
      endmenu # SPI Configuration
- 
+
      menu "TWAI Configuration"
 diff --git a/components/driver/include/esp_private/spi_master_internal.h b/components/driver/include/esp_private/spi_master_internal.h
 new file mode 100644
@@ -221,7 +221,7 @@ index a3178346f7..4b85dd8fd2 100644
      uint32_t *buffer_to_rcv;    // similar to buffer_to_send
 +    uint32_t dummy;             //As we create the queue when in init, to use sct mode private descriptor as a queue item (when in sct mode), we need to add a dummy member here to keep the same size with `spi_sct_desc_priv_t`.
  } spi_trans_priv_t;
- 
+
 +#if SOC_SPI_SCT_SUPPORTED
 +//Type of dma descriptors that used under SPI SCT mode
 +typedef struct {
@@ -259,20 +259,20 @@ index a3178346f7..4b85dd8fd2 100644
      int cur_cs;     //current device doing transaction
      const spi_bus_attr_t* bus_attr;
 +    bool static_sct_mode;
- 
+
      /**
       * the bus is permanently controlled by a device until `spi_bus_release_bus`` is called. Otherwise
       * the acquiring of SPI bus will be freed when `spi_device_polling_end` is called.
       */
      spi_device_t* device_acquiring_lock;
 +    portMUX_TYPE spinlock;
- 
+
  //debug information
      bool polling;   //in process of a polling, avoid of queue new transactions into ISR
 @@ -172,6 +203,13 @@ static spi_host_t* bus_driver_ctx[SOC_SPI_PERIPH_NUM] = {};
  static const char *SPI_TAG = "spi_master";
  #define SPI_CHECK(a, str, ret_val)  ESP_RETURN_ON_FALSE_ISR(a, ret_val, SPI_TAG, str)
- 
+
 +#if SOC_SPI_SCT_SUPPORTED && CONFIG_SPI_MASTER_PRE_PASTE_TRANS
 +#if SOC_GDMA_SUPPORTED
 +static bool on_gdma_tx_cb(gdma_channel_handle_t dma_chan, gdma_event_data_t *event_data, void *user_data);
@@ -280,7 +280,7 @@ index a3178346f7..4b85dd8fd2 100644
 +static void spi_dma_tx_intr_handle(void *arg);
 +#endif
 +#endif //SOC_SPI_SCT_SUPPORTED && CONFIG_SPI_MASTER_PRE_PASTE_TRANS
- 
+
  static void spi_intr(void *arg);
  static void spi_bus_intr_enable(void *host);
 @@ -226,6 +264,7 @@ static esp_err_t spi_master_init_driver(spi_host_device_t host_id)
@@ -290,7 +290,7 @@ index a3178346f7..4b85dd8fd2 100644
 +        .spinlock = (portMUX_TYPE)portMUX_INITIALIZER_UNLOCKED,
          .bus_attr = bus_attr,
      };
- 
+
 @@ -268,6 +307,27 @@ static esp_err_t spi_master_init_driver(spi_host_device_t host_id)
          spi_bus_lock_handle_t lock = spi_bus_lock_get_by_id(host_id);
          spi_bus_lock_set_bg_control(lock, spi_bus_intr_enable, spi_bus_intr_disable, host);
@@ -317,7 +317,7 @@ index a3178346f7..4b85dd8fd2 100644
 +        }
 +#endif //SOC_SPI_SCT_SUPPORTED && CONFIG_SPI_MASTER_PRE_PASTE_TRANS
      }
- 
+
      bus_driver_ctx[host_id] = host;
 @@ -279,6 +339,9 @@ cleanup:
          if (host->intr) {
@@ -332,7 +332,7 @@ index a3178346f7..4b85dd8fd2 100644
 @@ -582,57 +645,64 @@ static void SPI_MASTER_ISR_ATTR spi_bus_intr_disable(void *host)
      esp_intr_disable(((spi_host_t*)host)->intr);
  }
- 
+
 -// The function is called to send a new transaction, in ISR or in the task.
 -// Setup the transaction-specified registers and linked-list used by the DMA (or FIFO if DMA is not used)
 -static void SPI_MASTER_ISR_ATTR spi_new_trans(spi_device_t *dev, spi_trans_priv_t *trans_buf)
@@ -375,7 +375,7 @@ index a3178346f7..4b85dd8fd2 100644
 +    hal_trans->send_buffer = (uint8_t*)host->cur_trans_buf.buffer_to_send;
 +    hal_trans->cmd = trans->cmd;
 +    hal_trans->addr = trans->addr;
- 
+
      if (trans->flags & SPI_TRANS_VARIABLE_CMD) {
 -        hal_trans.cmd_bits = ((spi_transaction_ext_t *)trans)->command_bits;
 +        hal_trans->cmd_bits = ((spi_transaction_ext_t *)trans)->command_bits;
@@ -420,7 +420,7 @@ index a3178346f7..4b85dd8fd2 100644
 +    spi_transaction_t *trans = trans_buf->trans;
 +    spi_hal_context_t *hal = &(dev->host->hal);
 +    spi_hal_dev_config_t *hal_dev = &(dev->hal_dev);
- 
+
 +    dev->host->cur_cs = dev->id;
 +
 +    //Reconfigure according to device settings, the function only has effect when the dev_id is changed.
@@ -431,11 +431,11 @@ index a3178346f7..4b85dd8fd2 100644
 +    spi_format_hal_trans_struct(dev, trans_buf, &hal_trans);
      spi_hal_setup_trans(hal, hal_dev, &hal_trans);
      spi_hal_prepare_data(hal, hal_dev, &hal_trans);
- 
+
 @@ -656,14 +726,298 @@ static void SPI_MASTER_ISR_ATTR spi_post_trans(spi_host_t *host)
      host->cur_cs = DEV_NUM_MAX;
  }
- 
+
 +#if SOC_SPI_SCT_SUPPORTED
 +static void SPI_MASTER_ISR_ATTR spi_sct_set_hal_trans_config(spi_transaction_t *trans, spi_hal_trans_config_t *hal_trans)
 +{
@@ -730,7 +730,7 @@ index a3178346f7..4b85dd8fd2 100644
 +        return;
 +    }
 +#endif
- 
+
      /*
       * Help to skip the handling of in-flight transaction, and disable of the interrupt.
 @@ -673,7 +1027,7 @@ static void SPI_MASTER_ISR_ATTR spi_intr(void *arg)
@@ -745,7 +745,7 @@ index a3178346f7..4b85dd8fd2 100644
 @@ -687,15 +1041,38 @@ static void SPI_MASTER_ISR_ATTR spi_intr(void *arg)
          }
  #endif  //#if CONFIG_IDF_TARGET_ESP32
- 
+
 -        //cur_cs is changed to DEV_NUM_MAX here
 -        spi_post_trans(host);
 -
@@ -792,7 +792,7 @@ index a3178346f7..4b85dd8fd2 100644
 @@ -705,10 +1082,9 @@ static void SPI_MASTER_ISR_ATTR spi_intr(void *arg)
      /*------------ new transaction starts here ------------------*/
      assert(host->cur_cs == DEV_NUM_MAX);
- 
+
 -    spi_bus_lock_handle_t lock = host->bus_attr->lock;
 -    BaseType_t trans_found = pdFALSE;
 -
@@ -802,7 +802,7 @@ index a3178346f7..4b85dd8fd2 100644
 +#endif
      // There should be remaining requests
      BUS_LOCK_DEBUG_EXECUTE_CHECK(spi_bus_lock_bg_req_exist(lock));
- 
+
 @@ -733,7 +1109,18 @@ static void SPI_MASTER_ISR_ATTR spi_intr(void *arg)
              bool dev_has_req = spi_bus_lock_bg_check_dev_req(desired_dev);
              if (dev_has_req) {
@@ -824,7 +824,7 @@ index a3178346f7..4b85dd8fd2 100644
                  }
 @@ -741,16 +1128,38 @@ static void SPI_MASTER_ISR_ATTR spi_intr(void *arg)
          }
- 
+
          if (trans_found) {
 -            spi_trans_priv_t *const cur_trans_buf = &host->cur_trans_buf;
 +#if SOC_SPI_SCT_SUPPORTED
@@ -869,7 +869,7 @@ index a3178346f7..4b85dd8fd2 100644
          // or resume acquiring device task (if quit due to bus acquiring).
      } while (!spi_bus_lock_bg_exit(lock, trans_found, &do_yield));
 @@ -1135,3 +1544,249 @@ esp_err_t spi_bus_get_max_transaction_len(spi_host_device_t host_id, size_t *max
- 
+
      return ESP_OK;
  }
 +
@@ -1127,13 +1127,13 @@ index d5c6bcbc59..f634389b1d 100644
  //for spi_bus_initialization functions. to be back-compatible
  #include "driver/spi_common.h"
 +#include "soc/soc_caps.h"
- 
+
  /**
   * @brief SPI common used frequency (in Hz)
 @@ -54,6 +55,8 @@ typedef struct spi_transaction_t spi_transaction_t;
  /** @endcond */
  typedef void(*transaction_cb_t)(spi_transaction_t *trans);
- 
+
 +typedef struct spi_device_t *spi_device_handle_t;  ///< Handle for a device on a SPI bus
 +
  /**
@@ -1150,7 +1150,7 @@ index d5c6bcbc59..f634389b1d 100644
 @@ -157,8 +161,6 @@ typedef struct {
      uint8_t dummy_bits;             ///< The dummy length in this transaction, in bits.
  } spi_transaction_ext_t ;
- 
+
 -
 -typedef struct spi_device_t *spi_device_handle_t;  ///< Handle for a device on a SPI bus
  /**
@@ -1163,12 +1163,12 @@ index 3d7c23c1ae..295a0bf142 100644
 @@ -6,6 +6,10 @@ set(srcs
      "test_spi_bus_lock.c"
  )
- 
+
 +# temparay close iram check for sct function
 +if(CONFIG_SOC_SPI_SUPPORT_SLAVE_HD_VER2 AND NOT CONFIG_SPI_MASTER_ISR_IN_IRAM)
 +    list(APPEND srcs "test_spi_master_sct.c")
 +endif()
- 
+
  # In order for the cases defined by `TEST_CASE` to be linked into the final elf,
  # the component can be registered as WHOLE_ARCHIVE
 diff --git a/components/driver/test_apps/spi/master/main/test_spi_master_sct.c b/components/driver/test_apps/spi/master/main/test_spi_master_sct.c
@@ -1610,7 +1610,7 @@ index e16c8c7055..5121a61976 100644
 -    return hw->cmd.val;
 +    return hw->cmd.usr;
  }
- 
+
  /**
 @@ -590,8 +591,8 @@ static inline void spi_ll_master_set_line_mode(spi_dev_t *hw, spi_line_mode_t li
      hw->ctrl.faddr_dual = (line_mode.addr_lines == 2);
@@ -1621,11 +1621,11 @@ index e16c8c7055..5121a61976 100644
 +    hw->user.fwrite_dual = (line_mode.data_lines == 2);
      hw->user.fwrite_quad = (line_mode.data_lines == 4);
  }
- 
+
 @@ -1072,6 +1073,17 @@ static inline void spi_ll_clear_int_stat(spi_dev_t *hw)
      hw->dma_int_clr.trans_done = 1;
  }
- 
+
 +/**
 + * Clear the sct_trans_done interrupt.
 + *
@@ -1643,7 +1643,7 @@ index e16c8c7055..5121a61976 100644
 @@ -1200,6 +1212,335 @@ static inline int spi_ll_get_slave_hd_dummy_bits(spi_line_mode_t line_mode)
      return 8;
  }
- 
+
 +
 +
 +/*------------------------------------------------------------------------------
@@ -1975,7 +1975,7 @@ index e16c8c7055..5121a61976 100644
 +
  #undef SPI_LL_RST_MASK
  #undef SPI_LL_UNUSED_INT_MASK
- 
+
 diff --git a/components/hal/esp32c3/include/hal/spi_ll.h b/components/hal/esp32c3/include/hal/spi_ll.h
 index 0cd6d8fc3c..2756b32e41 100644
 --- a/components/hal/esp32c3/include/hal/spi_ll.h
@@ -1990,7 +1990,7 @@ index 0cd6d8fc3c..2756b32e41 100644
 -    return hw->cmd.val;
 +    return hw->cmd.usr;
  }
- 
+
  /**
 @@ -592,8 +593,8 @@ static inline void spi_ll_master_set_line_mode(spi_dev_t *hw, spi_line_mode_t li
      hw->ctrl.faddr_dual = (line_mode.addr_lines == 2);
@@ -2001,11 +2001,11 @@ index 0cd6d8fc3c..2756b32e41 100644
 +    hw->user.fwrite_dual = (line_mode.data_lines == 2);
      hw->user.fwrite_quad = (line_mode.data_lines == 4);
  }
- 
+
 @@ -1074,6 +1075,17 @@ static inline void spi_ll_clear_int_stat(spi_dev_t *hw)
      hw->dma_int_raw.trans_done = 0;
  }
- 
+
 +/**
 + * Clear the sct_trans_done interrupt.
 + *
@@ -2023,7 +2023,7 @@ index 0cd6d8fc3c..2756b32e41 100644
 @@ -1115,6 +1127,332 @@ static inline uint32_t spi_ll_slave_hd_get_last_addr(spi_dev_t *hw)
      return hw->slave1.last_addr;
  }
- 
+
 +/*------------------------------------------------------------------------------
 + * Segmented-Configure-Transfer
 + *----------------------------------------------------------------------------*/
@@ -2352,7 +2352,7 @@ index 0cd6d8fc3c..2756b32e41 100644
 +
  #undef SPI_LL_RST_MASK
  #undef SPI_LL_UNUSED_INT_MASK
- 
+
 diff --git a/components/hal/esp32c6/include/hal/spi_ll.h b/components/hal/esp32c6/include/hal/spi_ll.h
 index 6599f0e1bf..9277ad38e4 100644
 --- a/components/hal/esp32c6/include/hal/spi_ll.h
@@ -2367,7 +2367,7 @@ index 6599f0e1bf..9277ad38e4 100644
 -    return hw->cmd.val;
 +    return hw->cmd.usr;
  }
- 
+
  /**
 @@ -594,8 +595,8 @@ static inline void spi_ll_master_set_line_mode(spi_dev_t *hw, spi_line_mode_t li
      hw->ctrl.faddr_dual = (line_mode.addr_lines == 2);
@@ -2378,11 +2378,11 @@ index 6599f0e1bf..9277ad38e4 100644
 +    hw->user.fwrite_dual = (line_mode.data_lines == 2);
      hw->user.fwrite_quad = (line_mode.data_lines == 4);
  }
- 
+
 @@ -1076,6 +1077,17 @@ static inline void spi_ll_clear_int_stat(spi_dev_t *hw)
      hw->dma_int_clr.trans_done = 1;
  }
- 
+
 +/**
 + * Clear the sct_trans_done interrupt.
 + *
@@ -2400,7 +2400,7 @@ index 6599f0e1bf..9277ad38e4 100644
 @@ -1117,6 +1129,333 @@ static inline uint32_t spi_ll_slave_hd_get_last_addr(spi_dev_t *hw)
      return hw->slave1.slv_last_addr;
  }
- 
+
 +
 +/*------------------------------------------------------------------------------
 + * Segmented-Configure-Transfer
@@ -2730,7 +2730,7 @@ index 6599f0e1bf..9277ad38e4 100644
 +
  #undef SPI_LL_RST_MASK
  #undef SPI_LL_UNUSED_INT_MASK
- 
+
 diff --git a/components/hal/esp32h2/include/hal/spi_ll.h b/components/hal/esp32h2/include/hal/spi_ll.h
 index 1bdf297ab3..25248d8140 100644
 --- a/components/hal/esp32h2/include/hal/spi_ll.h
@@ -2745,7 +2745,7 @@ index 1bdf297ab3..25248d8140 100644
 -    return hw->cmd.val;
 +    return hw->cmd.usr;
  }
- 
+
  /**
 @@ -596,8 +597,8 @@ static inline void spi_ll_master_set_line_mode(spi_dev_t *hw, spi_line_mode_t li
      hw->ctrl.faddr_dual = (line_mode.addr_lines == 2);
@@ -2756,11 +2756,11 @@ index 1bdf297ab3..25248d8140 100644
 +    hw->user.fwrite_dual = (line_mode.data_lines == 2);
      hw->user.fwrite_quad = (line_mode.data_lines == 4);
  }
- 
+
 @@ -1078,6 +1079,17 @@ static inline void spi_ll_clear_int_stat(spi_dev_t *hw)
      hw->dma_int_clr.trans_done_int_clr = 1;
  }
- 
+
 +/**
 + * Clear the sct_trans_done interrupt.
 + *
@@ -2778,7 +2778,7 @@ index 1bdf297ab3..25248d8140 100644
 @@ -1119,6 +1131,339 @@ static inline uint32_t spi_ll_slave_hd_get_last_addr(spi_dev_t *hw)
      return hw->slave1.slv_last_addr;
  }
- 
+
 +
 +/*------------------------------------------------------------------------------
 + * Segmented-Configure-Transfer
@@ -3114,7 +3114,7 @@ index 1bdf297ab3..25248d8140 100644
 +
  #undef SPI_LL_RST_MASK
  #undef SPI_LL_UNUSED_INT_MASK
- 
+
 diff --git a/components/hal/esp32s2/include/hal/spi_ll.h b/components/hal/esp32s2/include/hal/spi_ll.h
 index ab78bf421b..a5770cb936 100644
 --- a/components/hal/esp32s2/include/hal/spi_ll.h
@@ -3142,7 +3142,7 @@ index ab78bf421b..a5770cb936 100644
 -    return hw->cmd.val;
 +    return hw->cmd.usr;
  }
- 
+
  /**
 @@ -556,10 +560,10 @@ static inline void spi_ll_master_set_line_mode(spi_dev_t *hw, spi_line_mode_t li
      hw->ctrl.faddr_quad = (line_mode.addr_lines == 4);
@@ -3156,7 +3156,7 @@ index ab78bf421b..a5770cb936 100644
 +    hw->user.fwrite_quad = (line_mode.data_lines == 4);
      hw->user.fwrite_oct = (line_mode.data_lines == 8);
  }
- 
+
 @@ -932,7 +936,6 @@ static inline void spi_ll_set_command(spi_dev_t *hw, uint16_t cmd, int cmdlen, b
           * more straightly.
           */
@@ -3164,11 +3164,11 @@ index ab78bf421b..a5770cb936 100644
 -
      }
  }
- 
+
 @@ -1067,6 +1070,17 @@ static inline void spi_ll_clear_int_stat(spi_dev_t *hw)
      hw->slave.trans_done = 0;
  }
- 
+
 +/**
 + * Clear the sct_trans_done interrupt.
 + *
@@ -3186,7 +3186,7 @@ index ab78bf421b..a5770cb936 100644
 @@ -1311,6 +1325,370 @@ static inline bool spi_ll_tx_get_empty_err(spi_dev_t *hw)
      return hw->dma_int_raw.outfifo_empty_err;
  }
- 
+
 +/*------------------------------------------------------------------------------
 + * Segmented-Configure-Transfer
 + *----------------------------------------------------------------------------*/
@@ -3553,7 +3553,7 @@ index ab78bf421b..a5770cb936 100644
 +
  #undef SPI_LL_RST_MASK
  #undef SPI_LL_UNUSED_INT_MASK
- 
+
 diff --git a/components/hal/esp32s3/include/hal/spi_ll.h b/components/hal/esp32s3/include/hal/spi_ll.h
 index 5d3e3ed17d..8fa5c68130 100644
 --- a/components/hal/esp32s3/include/hal/spi_ll.h
@@ -3568,7 +3568,7 @@ index 5d3e3ed17d..8fa5c68130 100644
 -    return hw->cmd.val;
 +    return hw->cmd.usr;
  }
- 
+
  /**
 @@ -594,10 +595,10 @@ static inline void spi_ll_master_set_line_mode(spi_dev_t *hw, spi_line_mode_t li
      hw->ctrl.faddr_quad = (line_mode.addr_lines == 4);
@@ -3582,11 +3582,11 @@ index 5d3e3ed17d..8fa5c68130 100644
 +    hw->user.fwrite_quad = (line_mode.data_lines == 4);
      hw->user.fwrite_oct = (line_mode.data_lines == 8);
  }
- 
+
 @@ -1087,6 +1088,17 @@ static inline void spi_ll_clear_int_stat(spi_dev_t *hw)
      hw->dma_int_clr.trans_done = 1;
  }
- 
+
 +/**
 + * Clear the sct_trans_done interrupt.
 + *
@@ -3604,7 +3604,7 @@ index 5d3e3ed17d..8fa5c68130 100644
 @@ -1128,6 +1140,339 @@ static inline uint32_t spi_ll_slave_hd_get_last_addr(spi_dev_t *hw)
      return hw->slave1.last_addr;
  }
- 
+
 +
 +/*------------------------------------------------------------------------------
 + * Segmented-Configure-Transfer
@@ -3940,15 +3940,15 @@ index 5d3e3ed17d..8fa5c68130 100644
 +
  #undef SPI_LL_RST_MASK
  #undef SPI_LL_UNUSED_INT_MASK
- 
+
 diff --git a/components/hal/include/hal/spi_hal.h b/components/hal/include/hal/spi_hal.h
 index ad4ad8a319..338b4a6624 100644
 --- a/components/hal/include/hal/spi_hal.h
 +++ b/components/hal/include/hal/spi_hal.h
 @@ -40,6 +40,15 @@ extern "C" {
- 
+
  #if SOC_GPSPI_SUPPORTED
- 
+
 +/**
 + * @brief Enum for DMA descriptor status
 + */
@@ -3964,7 +3964,7 @@ index ad4ad8a319..338b4a6624 100644
 @@ -130,6 +139,16 @@ typedef struct {
      uint32_t rx_dma_chan;               ///< RX DMA channel
      int dmadesc_n;                      ///< The amount of descriptors of both ``dmadesc_tx`` and ``dmadesc_rx`` that the HAL can use.
- 
+
 +#if SOC_SPI_SCT_SUPPORTED
 +    /* Segmented-Configure-Transfer required, configured by driver, don't touch */
 +    uint32_t tx_free_desc_num;
@@ -3981,7 +3981,7 @@ index ad4ad8a319..338b4a6624 100644
 @@ -160,6 +179,33 @@ typedef struct {
      };//boolean configurations
  } spi_hal_dev_config_t;
- 
+
 +#if SOC_SPI_SCT_SUPPORTED
 +/**
 + * SCT mode required configurations, per segment
@@ -4015,7 +4015,7 @@ index ad4ad8a319..338b4a6624 100644
 @@ -273,6 +319,136 @@ void spi_hal_cal_timing(int source_freq_hz, int eff_clk, bool gpio_is_used, int
   */
  int spi_hal_get_freq_limit(bool gpio_is_used, int input_delay_ns);
- 
+
 +#if SOC_SPI_SCT_SUPPORTED
 +/*----------------------------------------------------------
 + * Segmented-Configure-Transfer (SCT) Mode
@@ -4147,7 +4147,7 @@ index ad4ad8a319..338b4a6624 100644
 +
 +#endif  //#if SOC_SPI_SCT_SUPPORTED
  #endif  //#if SOC_GPSPI_SUPPORTED
- 
+
  #ifdef __cplusplus
 diff --git a/components/hal/spi_hal_iram.c b/components/hal/spi_hal_iram.c
 index b005f7943d..a228dc78e0 100644
@@ -4377,7 +4377,7 @@ index 7e543e407a..e1b2182096 100644
 @@ -439,6 +439,22 @@ config SOC_SPI_PERIPH_SUPPORT_CONTROL_DUMMY_OUT
      bool
      default y
- 
+
 +config SOC_SPI_SCT_SUPPORTED
 +    bool
 +    default y
@@ -4404,7 +4404,7 @@ index f4134e46a8..173809ae43 100644
 @@ -223,6 +223,12 @@
  // Peripheral supports output given level during its "dummy phase"
  #define SOC_SPI_PERIPH_SUPPORT_CONTROL_DUMMY_OUT 1
- 
+
 +#define SOC_SPI_SCT_SUPPORTED                     1
 +#define SOC_SPI_SCT_SUPPORTED_PERIPH(PERIPH_NUM)  ((PERIPH_NUM==1) ? 1 : 0)    //Support Segmented-Configure-Transfer
 +#define SOC_SPI_SCT_REG_NUM                       14
@@ -4413,7 +4413,7 @@ index f4134e46a8..173809ae43 100644
 +
  #define SOC_MEMSPI_IS_INDEPENDENT 1
  #define SOC_SPI_MAX_PRE_DIVIDER 16
- 
+
 diff --git a/components/soc/esp32c3/include/soc/Kconfig.soc_caps.in b/components/soc/esp32c3/include/soc/Kconfig.soc_caps.in
 index 1752b39011..05542fca7f 100644
 --- a/components/soc/esp32c3/include/soc/Kconfig.soc_caps.in
@@ -4421,7 +4421,7 @@ index 1752b39011..05542fca7f 100644
 @@ -655,6 +655,22 @@ config SOC_SPI_PERIPH_SUPPORT_CONTROL_DUMMY_OUT
      bool
      default y
- 
+
 +config SOC_SPI_SCT_SUPPORTED
 +    bool
 +    default y
@@ -4448,7 +4448,7 @@ index cc8d06657c..7a91e00d3a 100644
 @@ -304,6 +304,12 @@
  // Peripheral supports output given level during its "dummy phase"
  #define SOC_SPI_PERIPH_SUPPORT_CONTROL_DUMMY_OUT 1
- 
+
 +#define SOC_SPI_SCT_SUPPORTED                     1
 +#define SOC_SPI_SCT_SUPPORTED_PERIPH(PERIPH_NUM)  ((PERIPH_NUM==1) ? 1 : 0)    //Support Segmented-Configure-Transfer
 +#define SOC_SPI_SCT_REG_NUM                       14
@@ -4457,7 +4457,7 @@ index cc8d06657c..7a91e00d3a 100644
 +
  #define SOC_MEMSPI_IS_INDEPENDENT 1
  #define SOC_SPI_MAX_PRE_DIVIDER 16
- 
+
 diff --git a/components/soc/esp32c6/include/soc/Kconfig.soc_caps.in b/components/soc/esp32c6/include/soc/Kconfig.soc_caps.in
 index 3a0650ca9f..99366b1f6c 100644
 --- a/components/soc/esp32c6/include/soc/Kconfig.soc_caps.in
@@ -4465,7 +4465,7 @@ index 3a0650ca9f..99366b1f6c 100644
 @@ -887,6 +887,22 @@ config SOC_SPI_SUPPORT_CLK_RC_FAST
      bool
      default y
- 
+
 +config SOC_SPI_SCT_SUPPORTED
 +    bool
 +    default y
@@ -4492,7 +4492,7 @@ index 60ee051c52..a6da002f04 100644
 @@ -378,6 +378,12 @@
  // host_id = 0 -> SPI0/SPI1, host_id = 1 -> SPI2,
  #define SOC_SPI_PERIPH_SUPPORT_MULTILINE_MODE(host_id)  ({(void)host_id; 1;})
- 
+
 +#define SOC_SPI_SCT_SUPPORTED                     1
 +#define SOC_SPI_SCT_SUPPORTED_PERIPH(PERIPH_NUM)  ((PERIPH_NUM==1) ? 1 : 0)    //Support Segmented-Configure-Transfer
 +#define SOC_SPI_SCT_REG_NUM                       14
@@ -4501,7 +4501,7 @@ index 60ee051c52..a6da002f04 100644
 +
  #define SOC_MEMSPI_IS_INDEPENDENT 1
  #define SOC_SPI_MAX_PRE_DIVIDER 16
- 
+
 diff --git a/components/soc/esp32h2/include/soc/Kconfig.soc_caps.in b/components/soc/esp32h2/include/soc/Kconfig.soc_caps.in
 index 11b7544a2c..22d5ab8a9d 100644
 --- a/components/soc/esp32h2/include/soc/Kconfig.soc_caps.in
@@ -4509,7 +4509,7 @@ index 11b7544a2c..22d5ab8a9d 100644
 @@ -867,6 +867,22 @@ config SOC_SPI_SUPPORT_CLK_RC_FAST
      bool
      default y
- 
+
 +config SOC_SPI_SCT_SUPPORTED
 +    bool
 +    default y
@@ -4536,7 +4536,7 @@ index 4467ab10bf..623ddaefab 100644
 @@ -371,6 +371,12 @@
  // host_id = 0 -> SPI0/SPI1, host_id = 1 -> SPI2,
  #define SOC_SPI_PERIPH_SUPPORT_MULTILINE_MODE(host_id)  ({(void)host_id; 1;})
- 
+
 +#define SOC_SPI_SCT_SUPPORTED                     1
 +#define SOC_SPI_SCT_SUPPORTED_PERIPH(PERIPH_NUM)  ((PERIPH_NUM==1) ? 1 : 0)    //Support Segmented-Configure-Transfer
 +#define SOC_SPI_SCT_REG_NUM                       14
@@ -4545,7 +4545,7 @@ index 4467ab10bf..623ddaefab 100644
 +
  #define SOC_MEMSPI_IS_INDEPENDENT 1
  #define SOC_SPI_MAX_PRE_DIVIDER 16
- 
+
 diff --git a/components/soc/esp32s2/include/soc/Kconfig.soc_caps.in b/components/soc/esp32s2/include/soc/Kconfig.soc_caps.in
 index a5a1f00895..a5b29fd798 100644
 --- a/components/soc/esp32s2/include/soc/Kconfig.soc_caps.in
@@ -4553,12 +4553,12 @@ index a5a1f00895..a5b29fd798 100644
 @@ -659,11 +659,27 @@ config SOC_SPI_PERIPH_SUPPORT_CONTROL_DUMMY_OUT
      bool
      default y
- 
+
 -config SOC_MEMSPI_IS_INDEPENDENT
 +config SOC_SPI_SUPPORT_OCT
      bool
      default y
- 
+
 -config SOC_SPI_SUPPORT_OCT
 +config SOC_SPI_SCT_SUPPORTED
 +    bool
@@ -4579,7 +4579,7 @@ index a5a1f00895..a5b29fd798 100644
 +config SOC_MEMSPI_IS_INDEPENDENT
      bool
      default y
- 
+
 diff --git a/components/soc/esp32s2/include/soc/soc_caps.h b/components/soc/esp32s2/include/soc/soc_caps.h
 index 5944211d30..9c23c0fc48 100644
 --- a/components/soc/esp32s2/include/soc/soc_caps.h
@@ -4587,11 +4587,11 @@ index 5944211d30..9c23c0fc48 100644
 @@ -291,9 +291,15 @@
  // Only SPI1 supports this feature
  #define SOC_SPI_PERIPH_SUPPORT_CONTROL_DUMMY_OUT             1
- 
+
 -#define SOC_MEMSPI_IS_INDEPENDENT 1
 -#define SOC_SPI_SUPPORT_OCT 1
 +#define SOC_SPI_SUPPORT_OCT                       1
- 
+
 +#define SOC_SPI_SCT_SUPPORTED                     1
 +#define SOC_SPI_SCT_SUPPORTED_PERIPH(PERIPH_NUM)  (((PERIPH_NUM==1) || (PERIPH_NUM==2)) ? 1 : 0)    //Support Segmented-Configure-Transfer
 +#define SOC_SPI_SCT_REG_NUM                       27
@@ -4609,7 +4609,7 @@ index f22258f020..11bb860f08 100644
 @@ -787,6 +787,22 @@ config SOC_SPI_SUPPORT_OCT
      bool
      default y
- 
+
 +config SOC_SPI_SCT_SUPPORTED
 +    bool
 +    default y
@@ -4636,7 +4636,7 @@ index 7cd6c6c44b..86dbfde4e9 100644
 @@ -318,6 +318,12 @@
  #define SOC_SPI_MAX_PRE_DIVIDER                     16
  #define SOC_SPI_SUPPORT_OCT                         1
- 
+
 +#define SOC_SPI_SCT_SUPPORTED                     1
 +#define SOC_SPI_SCT_SUPPORTED_PERIPH(PERIPH_NUM)  ((PERIPH_NUM==1) ? 1 : 0)    //Support Segmented-Configure-Transfer
 +#define SOC_SPI_SCT_REG_NUM                       14
@@ -4675,11 +4675,10 @@ index 899a604ce0..f674f3e58b 100644
   */
 @@ -23,3 +23,6 @@
  */
- 
+
  #pragma once
 +
 +#define SOC_SPI_SCT_SUPPORTED       1
 +#define SOC_SPI_SCT_BUFFER_NUM_MAX  24
--- 
+--
 2.34.1
-

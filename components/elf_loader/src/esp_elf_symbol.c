@@ -21,12 +21,11 @@
 
 #include "private/elf_symbol.h"
 
-
-extern int __ltdf2 (double a, double b);
-extern unsigned int __fixunsdfsi (double a);
-extern int __gtdf2 (double a, double b);
-extern double __floatunsidf (unsigned int i);
-extern double __divdf3 (double a, double b);
+extern int __ltdf2(double a, double b);
+extern unsigned int __fixunsdfsi(double a);
+extern int __gtdf2(double a, double b);
+extern double __floatunsidf(unsigned int i);
+extern double __divdf3(double a, double b);
 
 /** @brief Libc public functions symbols look-up table */
 
@@ -154,7 +153,7 @@ static const struct esp_elfsym g_esp_espidf_elfsyms[] = {
  * @brief Find symbol address by name.
  *
  * @param sym_name - Symbol name
- * 
+ *
  * @return Symbol address if success or 0 if failed.
  */
 uintptr_t elf_find_sym(const char *sym_name)

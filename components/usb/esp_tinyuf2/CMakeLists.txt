@@ -33,7 +33,7 @@ idf_build_get_property(project_version PROJECT_VER)
 message("Project name: ${project_name}")
 message("Project version: ${project_version}")
 
-if(${CMAKE_VERSION} VERSION_LESS "3.12") 
+if(${CMAKE_VERSION} VERSION_LESS "3.12")
     message("Please consider to switch to CMake above 3.12")
     add_definitions(-DUF2_APP_NAME="${project_name}")
     add_definitions(-DUF2_APP_VERSION="${project_version}")

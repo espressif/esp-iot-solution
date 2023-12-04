@@ -117,7 +117,7 @@ static int i2c_master_transfer(int port, const i2c_msg_t *msg)
         err = i2c_master_write(cmd, msg->buffer, msg->size, check_en);
         if (err != ESP_OK) {
             goto errout_start_cmd;
-        }    
+        }
     } else {
         err = i2c_master_read(cmd, msg->buffer, msg->size, I2C_MASTER_LAST_NACK);
         if (err != ESP_OK) {
@@ -163,7 +163,7 @@ static int i2c_slave_transfer(int port, const i2c_msg_t *msg)
         errno = EIO;
         return -1;
     }
-    
+
     return 0;
 }
 #endif
@@ -272,7 +272,7 @@ static int i2c_exchange(int port, const i2c_ex_msg_t *ex_msg)
         ret = -1;
     }
 
-    return ret;  
+    return ret;
 }
 
 static int i2c_open(const char *path, int flags, int mode)
@@ -322,55 +322,55 @@ static int i2c_ioctl(int fd, int cmd, va_list va_args)
     ESP_LOGV(TAG, "cmd=%x", cmd);
 
     switch (cmd) {
-        case I2CIOCSCFG: {
-            i2c_cfg_t *cfg = va_arg(va_args, i2c_cfg_t *);
+    case I2CIOCSCFG: {
+        i2c_cfg_t *cfg = va_arg(va_args, i2c_cfg_t *);
 
-            if (!cfg) {
-                errno = EINVAL;
-                return -1;
-            }
-
-            ret = config_i2c(fd, cfg);
-            if (ret < 0) {
-                return -1;
-            }
-
-            break;
-        }
-        case I2CIOCRDWR: {
-            i2c_msg_t *msg = va_arg(va_args, i2c_msg_t *);
-
-            if (!msg) {
-                errno = EINVAL;
-                return -1;
-            }
-
-            ret = i2c_transfer(fd, msg);
-            if (ret < 0) {
-                return -1;
-            }
-
-            break;
-        }
-        case I2CIOCEXCHANGE: {
-            i2c_ex_msg_t *ex_msg = va_arg(va_args, i2c_ex_msg_t *);
-
-            if (!ex_msg) {
-                errno = EINVAL;
-                return -1;
-            }
-
-            ret = i2c_exchange(fd, ex_msg);
-            if (ret < 0) {
-                return -1;
-            }
-
-            break;
-        }
-        default: {
+        if (!cfg) {
             errno = EINVAL;
             return -1;
         }
+
+        ret = config_i2c(fd, cfg);
+        if (ret < 0) {
+            return -1;
+        }
+
+        break;
+    }
+    case I2CIOCRDWR: {
+        i2c_msg_t *msg = va_arg(va_args, i2c_msg_t *);
+
+        if (!msg) {
+            errno = EINVAL;
+            return -1;
+        }
+
+        ret = i2c_transfer(fd, msg);
+        if (ret < 0) {
+            return -1;
+        }
+
+        break;
+    }
+    case I2CIOCEXCHANGE: {
+        i2c_ex_msg_t *ex_msg = va_arg(va_args, i2c_ex_msg_t *);
+
+        if (!ex_msg) {
+            errno = EINVAL;
+            return -1;
+        }
+
+        ret = i2c_exchange(fd, ex_msg);
+        if (ret < 0) {
+            return -1;
+        }
+
+        break;
+    }
+    default: {
+        errno = EINVAL;
+        return -1;
+    }
     }
 
     return 0;

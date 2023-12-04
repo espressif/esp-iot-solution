@@ -29,7 +29,7 @@
 
 #define GPIO_PIN_NUM            CONFIG_TT21100_READY_PIN_NUM
 #define GPIO_DEVICE_BASE        "/dev/gpio/"
-#define GPIO_DEVICE             COMBINE(GPIO_DEVICE_BASE, GPIO_PIN_NUM) 
+#define GPIO_DEVICE             COMBINE(GPIO_DEVICE_BASE, GPIO_PIN_NUM)
 
 #define I2C_TEST_COUNT          CONFIG_I2C_TEST_COUNT
 
@@ -240,42 +240,42 @@ static int tt21100_read(tt21100_device_t *dev, int *msg_id, tt21100_input_data_t
 
         hdr = (report_hdr_t *)buffer;
         switch (hdr->id) {
-            case TT21100_PACK_ID_TOUCH: {
-                    touch_report_t *report = (touch_report_t *)buffer;
+        case TT21100_PACK_ID_TOUCH: {
+            touch_report_t *report = (touch_report_t *)buffer;
 
-                    if (report->data_num) {
-                        int num = MIN(report->data_num, TT21100_TOUCH_POINT_NUM);
-                        touch_record_t *record = report->record;
+            if (report->data_num) {
+                int num = MIN(report->data_num, TT21100_TOUCH_POINT_NUM);
+                touch_record_t *record = report->record;
 
-                        for (int i = 0; i < num; i++) {
-                            input_data->touch[i].valid = true;
-                            input_data->touch[i].x = record[i].x;
-                            input_data->touch[i].y = record[i].y;
-                        }
-
-                        *msg_id = TT21100_PACK_ID_TOUCH;
-
-                        return 1;
-                    }
+                for (int i = 0; i < num; i++) {
+                    input_data->touch[i].valid = true;
+                    input_data->touch[i].x = record[i].x;
+                    input_data->touch[i].y = record[i].y;
                 }
-                break;
-            case TT21100_PACK_ID_BUTTON: {
-                    button_report_t *report = (button_report_t *)buffer;
 
-                    for (int i = 0; i < 4; i++) {
-                        if (report->button & (1 << i)) {
-                            input_data->button[i].valid  = true;
-                            input_data->button[i].signal = report->button_signal[i];
-                        }
-                    }
+                *msg_id = TT21100_PACK_ID_TOUCH;
 
-                    *msg_id = TT21100_PACK_ID_BUTTON;
+                return 1;
+            }
+        }
+        break;
+        case TT21100_PACK_ID_BUTTON: {
+            button_report_t *report = (button_report_t *)buffer;
 
-                    return 1;
+            for (int i = 0; i < 4; i++) {
+                if (report->button & (1 << i)) {
+                    input_data->button[i].valid  = true;
+                    input_data->button[i].signal = report->button_signal[i];
                 }
-                break;
-            default:
-                break;
+            }
+
+            *msg_id = TT21100_PACK_ID_BUTTON;
+
+            return 1;
+        }
+        break;
+        default:
+            break;
         }
 
     }
@@ -286,7 +286,7 @@ static int tt21100_read(tt21100_device_t *dev, int *msg_id, tt21100_input_data_t
 static void tt21100_deinit(tt21100_device_t *dev)
 {
     close(dev->gpio_fd);
-    close(dev->i2c_fd);    
+    close(dev->i2c_fd);
 }
 
 void app_main(void)
@@ -310,28 +310,28 @@ void app_main(void)
         ret = tt21100_read(&device, &msg_id, &input_data);
         if (ret == 1) {
             switch (msg_id) {
-                case TT21100_PACK_ID_TOUCH:
-                    printf("  X0=%d Y0=%d", input_data.touch[0].x,
-                                            input_data.touch[0].y);
-                    for (int i = 1; i < TT21100_TOUCH_POINT_NUM; i++) {
-                        if (input_data.touch[i].valid) {
-                            printf(" X%d=%d Y%d=%d", i, input_data.touch[i].x,
-                                                     i, input_data.touch[i].y);
-                        }
+            case TT21100_PACK_ID_TOUCH:
+                printf("  X0=%d Y0=%d", input_data.touch[0].x,
+                       input_data.touch[0].y);
+                for (int i = 1; i < TT21100_TOUCH_POINT_NUM; i++) {
+                    if (input_data.touch[i].valid) {
+                        printf(" X%d=%d Y%d=%d", i, input_data.touch[i].x,
+                               i, input_data.touch[i].y);
                     }
-                    printf("\n");
-                    break;
-                case TT21100_PACK_ID_BUTTON:
-                    printf(" ");
-                    for (int i = 0; i < TT21100_TOUCH_POINT_NUM; i++) {
-                        if (input_data.button[i].valid) {
-                            printf(" Button%d=%d", i, input_data.button[i].signal);
-                        }
+                }
+                printf("\n");
+                break;
+            case TT21100_PACK_ID_BUTTON:
+                printf(" ");
+                for (int i = 0; i < TT21100_TOUCH_POINT_NUM; i++) {
+                    if (input_data.button[i].valid) {
+                        printf(" Button%d=%d", i, input_data.button[i].signal);
                     }
-                    printf("\n");
-                    test_count++;
-                default:
-                    break;
+                }
+                printf("\n");
+                test_count++;
+            default:
+                break;
             }
 
             test_count++;

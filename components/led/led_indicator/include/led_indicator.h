@@ -262,4 +262,3 @@ esp_err_t led_indicator_set_color_temperature(led_indicator_handle_t handle, con
 #ifdef __cplusplus
 }
 #endif
-

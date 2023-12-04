@@ -64,7 +64,7 @@ if(CONFIG_CU_RELINKER_ENABLE)
                                     "${object_file}"
                                     "${function_file}"
                             VERBATIM)
-        
+
         add_custom_target(customer_sections DEPENDS ${link_dst_file})
         add_dependencies(${project_elf} customer_sections)
     endif()

@@ -99,30 +99,30 @@ uint8_t const desc_fs_configuration[] = {
 #if !CFG_EXAMPLE_VIDEO_DISABLE_MJPEG
 # if CFG_TUD_VIDEO_STREAMING_BULK
 # if UVC_FRAME_MULTI
-  TUD_VIDEO_CAPTURE_DESCRIPTOR_MULTI_MJPEG_BULK(4, EPNUM_VIDEO_IN, CFG_TUD_VIDEO_STREAMING_EP_BUFSIZE)
+    TUD_VIDEO_CAPTURE_DESCRIPTOR_MULTI_MJPEG_BULK(4, EPNUM_VIDEO_IN, CFG_TUD_VIDEO_STREAMING_EP_BUFSIZE)
 # else
-  TUD_VIDEO_CAPTURE_DESCRIPTOR_MJPEG_BULK(4, EPNUM_VIDEO_IN,
-                                          UVC_FRAME_WIDTH, UVC_FRAME_HEIGHT, UVC_FRAME_RATE,
-                                          CFG_TUD_VIDEO_STREAMING_EP_BUFSIZE)
+    TUD_VIDEO_CAPTURE_DESCRIPTOR_MJPEG_BULK(4, EPNUM_VIDEO_IN,
+                                            UVC_FRAME_WIDTH, UVC_FRAME_HEIGHT, UVC_FRAME_RATE,
+                                            CFG_TUD_VIDEO_STREAMING_EP_BUFSIZE)
 # endif
 # else
 # if UVC_FRAME_MULTI
-  TUD_VIDEO_CAPTURE_DESCRIPTOR_MULTI_MJPEG(4, EPNUM_VIDEO_IN, CFG_TUD_VIDEO_STREAMING_EP_BUFSIZE)
+    TUD_VIDEO_CAPTURE_DESCRIPTOR_MULTI_MJPEG(4, EPNUM_VIDEO_IN, CFG_TUD_VIDEO_STREAMING_EP_BUFSIZE)
 #else
-  TUD_VIDEO_CAPTURE_DESCRIPTOR_MJPEG(4, EPNUM_VIDEO_IN,
-                                     UVC_FRAME_WIDTH, UVC_FRAME_HEIGHT, UVC_FRAME_RATE,
-                                     CFG_TUD_VIDEO_STREAMING_EP_BUFSIZE)
+    TUD_VIDEO_CAPTURE_DESCRIPTOR_MJPEG(4, EPNUM_VIDEO_IN,
+                                       UVC_FRAME_WIDTH, UVC_FRAME_HEIGHT, UVC_FRAME_RATE,
+                                       CFG_TUD_VIDEO_STREAMING_EP_BUFSIZE)
 #endif
 # endif
 #else
 # if CFG_TUD_VIDEO_STREAMING_BULK
-  TUD_VIDEO_CAPTURE_DESCRIPTOR_UNCOMPR_BULK(4, EPNUM_VIDEO_IN,
-                                            UVC_FRAME_WIDTH, UVC_FRAME_HEIGHT, UVC_FRAME_RATE,
-                                            CFG_TUD_VIDEO_STREAMING_EP_BUFSIZE)
+    TUD_VIDEO_CAPTURE_DESCRIPTOR_UNCOMPR_BULK(4, EPNUM_VIDEO_IN,
+                                              UVC_FRAME_WIDTH, UVC_FRAME_HEIGHT, UVC_FRAME_RATE,
+                                              CFG_TUD_VIDEO_STREAMING_EP_BUFSIZE)
 # else
-  TUD_VIDEO_CAPTURE_DESCRIPTOR_UNCOMPR(4, EPNUM_VIDEO_IN,
-                                       UVC_FRAME_WIDTH, UVC_FRAME_HEIGHT, UVC_FRAME_RATE,
-                                       CFG_TUD_VIDEO_STREAMING_EP_BUFSIZE)
+    TUD_VIDEO_CAPTURE_DESCRIPTOR_UNCOMPR(4, EPNUM_VIDEO_IN,
+                                         UVC_FRAME_WIDTH, UVC_FRAME_HEIGHT, UVC_FRAME_RATE,
+                                         CFG_TUD_VIDEO_STREAMING_EP_BUFSIZE)
 # endif
 #endif
 #endif
@@ -162,14 +162,14 @@ uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid)
 
     uint8_t chr_count;
 
-    if ( index == 0) {
+    if (index == 0) {
         memcpy(&_desc_str[1], string_desc_arr[0], 2);
         chr_count = 1;
     } else {
         // Note: the 0xEE index string is a Microsoft OS 1.0 Descriptors.
         // https://docs.microsoft.com/en-us/windows-hardware/drivers/usbcon/microsoft-defined-usb-descriptors
 
-        if ( !(index < sizeof(string_desc_arr) / sizeof(string_desc_arr[0])) ) {
+        if (!(index < sizeof(string_desc_arr) / sizeof(string_desc_arr[0]))) {
             return NULL;
         }
 
@@ -177,7 +177,7 @@ uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid)
 
         // Cap at max char
         chr_count = (uint8_t) strlen(str);
-        if ( chr_count > 31 ) {
+        if (chr_count > 31) {
             chr_count = 31;
         }
 
@@ -188,7 +188,7 @@ uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid)
     }
 
     // first byte is length (including header), second byte is string type
-    _desc_str[0] = (uint16_t) ((TUSB_DESC_STRING << 8 ) | (2 * chr_count + 2));
+    _desc_str[0] = (uint16_t)((TUSB_DESC_STRING << 8) | (2 * chr_count + 2));
 
     return _desc_str;
 }

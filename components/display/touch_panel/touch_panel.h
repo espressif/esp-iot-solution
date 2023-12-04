@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #ifndef _IOT_TOUCH_PANEL_H
 #define _IOT_TOUCH_PANEL_H
 
@@ -22,7 +21,7 @@ extern "C" {
 
 /**
  * @brief Touch events
- * 
+ *
  */
 typedef enum {
     TOUCH_EVT_RELEASE = 0x0,  /*!< Release event */
@@ -31,7 +30,7 @@ typedef enum {
 
 /**
  * @brief Information of touch panel
- * 
+ *
  */
 typedef struct {
     touch_panel_event_t event;   /*!< Event of touch */
@@ -121,7 +120,7 @@ typedef enum {
 
 /**
  * @brief Configuration of touch panel
- * 
+ *
  */
 typedef struct {
     /** Interface configuration */
@@ -150,7 +149,7 @@ typedef struct {
 
 /**
  * @brief Define screen common function
- * 
+ *
  */
 typedef struct {
     /**
@@ -211,10 +210,10 @@ typedef struct {
 
 /**
  * @brief Find a touch panel controller driver
- * 
+ *
  * @param controller Touch panel controller to initialize
  * @param out_driver Pointer to a touch driver
- * 
+ *
  * @return
  *      - ESP_OK on success
  *      - ESP_ERR_INVALID_ARG   Arguments is NULL.

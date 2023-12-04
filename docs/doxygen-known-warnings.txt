@@ -1,0 +1,3 @@
+bldc_control.h:line: warning: parameters of member bldc_control_config_t::@10 are not (all) documented
+bldc_control.h:line: warning: parameters of member bldc_control_config_t::@12 are not (all) documented
+sensor_type.h:line: warning: parameters of member sensor_data_t::@14 are not (all) documented

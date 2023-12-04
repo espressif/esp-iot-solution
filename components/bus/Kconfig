@@ -11,7 +11,7 @@ menu "Bus Options"
         config I2C_MS_TO_WAIT
             int "mutex block time"
             default 200
-            range 50 5000 
+            range 50 5000
             help
                 task block time when try to take the bus, unit:milliseconds
     endmenu

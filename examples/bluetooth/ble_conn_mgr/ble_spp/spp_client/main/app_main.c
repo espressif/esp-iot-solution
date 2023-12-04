@@ -41,101 +41,101 @@ static void app_ble_conn_event_handler(void *handler_args, esp_event_base_t base
     }
 
     switch (id) {
-        case ESP_BLE_CONN_EVENT_CONNECTED:
-            ESP_LOGI(TAG,"ESP_BLE_CONN_EVENT_CONNECTED\n");
-            attribute_handle[0] = 1;
+    case ESP_BLE_CONN_EVENT_CONNECTED:
+        ESP_LOGI(TAG, "ESP_BLE_CONN_EVENT_CONNECTED\n");
+        attribute_handle[0] = 1;
+        break;
+    case ESP_BLE_CONN_EVENT_DISCONNECTED:
+        ESP_LOGI(TAG, "ESP_BLE_CONN_EVENT_DISCONNECTED\n");
+        break;
+    case ESP_BLE_CONN_EVENT_DATA_RECEIVE:
+        ESP_LOGI(TAG, "ESP_BLE_CONN_EVENT_DATA_RECEIVE\n");
+        esp_ble_conn_data_t *conn_data = (esp_ble_conn_data_t *)event_data;
+        switch (conn_data->type) {
+        case BLE_CONN_UUID_TYPE_16:
+            ESP_LOGI(TAG, "%u", conn_data->uuid.uuid16);
             break;
-        case ESP_BLE_CONN_EVENT_DISCONNECTED:
-            ESP_LOGI(TAG,"ESP_BLE_CONN_EVENT_DISCONNECTED\n");
+        case BLE_CONN_UUID_TYPE_32:
+            ESP_LOG_BUFFER_HEX(TAG, &conn_data->uuid, sizeof(conn_data->uuid.uuid32));
             break;
-        case ESP_BLE_CONN_EVENT_DATA_RECEIVE:
-            ESP_LOGI(TAG,"ESP_BLE_CONN_EVENT_DATA_RECEIVE\n");
-            esp_ble_conn_data_t *conn_data = (esp_ble_conn_data_t *)event_data;
-            switch (conn_data->type) {
-                case BLE_CONN_UUID_TYPE_16:
-                    ESP_LOGI(TAG, "%u", conn_data->uuid.uuid16);
-                    break;
-                case BLE_CONN_UUID_TYPE_32:
-                    ESP_LOG_BUFFER_HEX(TAG, &conn_data->uuid, sizeof(conn_data->uuid.uuid32));
-                    break;
-                case BLE_CONN_UUID_TYPE_128:
-                    ESP_LOG_BUFFER_HEX(TAG, &conn_data->uuid, BLE_UUID128_VAL_LEN);
-                    break;
-                default:
-                    break;
-            }
-
-            ESP_LOG_BUFFER_CHAR(TAG, conn_data->data, conn_data->data_len);
-
-            esp_ble_conn_data_t inbuff = {
-                .type = BLE_CONN_UUID_TYPE_16,
-                .uuid = {
-                    .uuid16 = GATT_SPP_CHR_UUID,
-                },
-                .data = NULL,
-                .data_len = 0,
-            };
-            esp_err_t rc = esp_ble_conn_read(&inbuff);
-            if (rc == 0) {
-                ESP_LOGI(TAG,"Read data success!");
-                ESP_LOG_BUFFER_CHAR(TAG, inbuff.data, inbuff.data_len);
-            } else {
-                ESP_LOGE(TAG,"Error in reading characteristic rc=%d",rc);
-            }
+        case BLE_CONN_UUID_TYPE_128:
+            ESP_LOG_BUFFER_HEX(TAG, &conn_data->uuid, BLE_UUID128_VAL_LEN);
             break;
         default:
             break;
+        }
+
+        ESP_LOG_BUFFER_CHAR(TAG, conn_data->data, conn_data->data_len);
+
+        esp_ble_conn_data_t inbuff = {
+            .type = BLE_CONN_UUID_TYPE_16,
+            .uuid = {
+                .uuid16 = GATT_SPP_CHR_UUID,
+            },
+            .data = NULL,
+            .data_len = 0,
+        };
+        esp_err_t rc = esp_ble_conn_read(&inbuff);
+        if (rc == 0) {
+            ESP_LOGI(TAG, "Read data success!");
+            ESP_LOG_BUFFER_CHAR(TAG, inbuff.data, inbuff.data_len);
+        } else {
+            ESP_LOGE(TAG, "Error in reading characteristic rc=%d", rc);
+        }
+        break;
+    default:
+        break;
     }
 }
 
 static void ble_client_uart_task(void *pvParameters)
 {
-	ESP_LOGI(TAG,"BLE client UART task started\n");
-	int rc;
-	int i;
-	uart_event_t event;
+    ESP_LOGI(TAG, "BLE client UART task started\n");
+    int rc;
+    int i;
+    uart_event_t event;
     for (;;) {
-            //Waiting for UART event.
-            if (xQueueReceive(spp_common_uart_queue, (void * )&event, (TickType_t)portMAX_DELAY)) {
-                switch (event.type) {
-                    //Event of UART receving data
-                    case UART_DATA:
-                        if (event.size) {
-                            /* Writing characteristics */
-                            uint8_t *temp = NULL;
-                            temp = (uint8_t *)malloc(sizeof(uint8_t)*event.size);
-                            if (temp == NULL){
-                                ESP_LOGE(TAG, "malloc failed,%s L#%d\n", __func__, __LINE__);
-                                break;
+        //Waiting for UART event.
+        if (xQueueReceive(spp_common_uart_queue, (void *)&event, (TickType_t)portMAX_DELAY)) {
+            switch (event.type) {
+            //Event of UART receving data
+            case UART_DATA:
+                if (event.size) {
+                    /* Writing characteristics */
+                    uint8_t *temp = NULL;
+                    temp = (uint8_t *)malloc(sizeof(uint8_t) * event.size);
+                    if (temp == NULL) {
+                        ESP_LOGE(TAG, "malloc failed,%s L#%d\n", __func__, __LINE__);
+                        break;
+                    }
+                    memset(temp, 0x0, event.size);
+                    uart_read_bytes(UART_NUM_0, temp, event.size, portMAX_DELAY);
+                    for (i = 0; i < ATTRIBUTE_MAX_CONNECTIONS; i++) {
+                        if (attribute_handle[i] != 0) {
+                            esp_ble_conn_data_t inbuff = {
+                                .type = BLE_CONN_UUID_TYPE_16,
+                                .uuid = {
+                                    .uuid16 = GATT_SPP_CHR_UUID,
+                                },
+                                .data = temp,
+                                .data_len = 1,
+                            };
+                            rc = esp_ble_conn_write(&inbuff);
+                            if (rc == 0) {
+                                ESP_LOGI(TAG, "Write in uart task success!");
+                            } else {
+                                ESP_LOGI(TAG, "Error in writing characteristic rc=%d", rc);
                             }
-                            memset(temp, 0x0, event.size);
-                            uart_read_bytes(UART_NUM_0, temp, event.size, portMAX_DELAY);
-                            for ( i = 0; i < ATTRIBUTE_MAX_CONNECTIONS; i++) {
-                                if (attribute_handle[i] != 0) {
-                                    esp_ble_conn_data_t inbuff = {
-                                        .type = BLE_CONN_UUID_TYPE_16,
-                                        .uuid = {
-                                            .uuid16 = GATT_SPP_CHR_UUID,
-                                        },
-                                        .data = temp,
-                                        .data_len = 1,
-                                    };
-                                    rc = esp_ble_conn_write(&inbuff);
-                                    if (rc == 0) {
-                                        ESP_LOGI(TAG,"Write in uart task success!");
-                                    } else {
-                                        ESP_LOGI(TAG,"Error in writing characteristic rc=%d",rc);
-                                    }
-                                    vTaskDelay(10);
-                                }
-                            }
-                            free(temp);
+                            vTaskDelay(10);
                         }
-                    break;
-                default:
-                    break;
+                    }
+                    free(temp);
                 }
+                break;
+            default:
+                break;
             }
+        }
     }
     vTaskDelete(NULL);
 }

@@ -60,9 +60,7 @@ scr_driver_t lcd_ili9806_default_driver = {
     .get_info = lcd_ili9806_get_info,
 };
 
-
 static void lcd_ili9806_init_reg(void);
-
 
 esp_err_t lcd_ili9806_init(const scr_controller_config_t *lcd_conf)
 {
@@ -208,7 +206,6 @@ esp_err_t lcd_ili9806_set_window(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t
     LCD_CHECK(ESP_OK == ret, "Set window failed", ESP_FAIL);
     return ESP_OK;
 }
-
 
 esp_err_t lcd_ili9806_write_ram_data(uint16_t color)
 {

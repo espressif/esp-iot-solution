@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -24,7 +24,7 @@ bool read_adc_on_full(mcpwm_timer_handle_t timer, const mcpwm_timer_event_data_t
     if (zero_cross->control_param->status == INJECT) {
         /*!< Read the injected ADC value */
         if (zero_cross->control_param->inject_adc_read) {
-            zero_cross->control_param->inject_adc_value[zero_cross->control_param->inject_count -1] = bldc_adc_read_isr(zero_cross->adc_handle, zero_cross->adc_channel[BUS_CHANNEL]);
+            zero_cross->control_param->inject_adc_value[zero_cross->control_param->inject_count - 1] = bldc_adc_read_isr(zero_cross->adc_handle, zero_cross->adc_channel[BUS_CHANNEL]);
             /*!< ADC read complete. */
         }
     } else {
@@ -65,8 +65,7 @@ esp_err_t bldc_zero_cross_adc_init(bldc_zero_cross_adc_handle_t *handle, bldc_ze
     return ESP_OK;
 
 deinit:
-    if (zero_cross != NULL)
-    {
+    if (zero_cross != NULL) {
         free(zero_cross);
     }
     return ESP_FAIL;
@@ -107,8 +106,8 @@ uint8_t bldc_zero_cross_adc_operation(void *handle)
                 zero_cross->control_param->filter_delay = zero_cross->control_param->speed_count * 3.0 / ZERO_CROSS_ADVANCE; /*!< Thirty-degree time delay. At some point compensation is required */
                 zero_cross->control_param->phase_change_done = false;
                 zero_cross->control_param->speed_count = 0;
-                zero_cross->control_param->filter_failed_count=0;
-                zero_cross->avoid_continue_current=0;
+                zero_cross->control_param->filter_failed_count = 0;
+                zero_cross->avoid_continue_current = 0;
             }
 
             static bool speed_clac_flag = false;
@@ -127,7 +126,7 @@ uint8_t bldc_zero_cross_adc_operation(void *handle)
                     BLDC_LPF(zero_cross->control_param->speed_rpm, speed_rpm, 0.2);
                 }
                 zero_cross->speed_cnt = 0;
-            } else if (zero_cross->control_param->phase_cnt != 1){
+            } else if (zero_cross->control_param->phase_cnt != 1) {
                 speed_clac_flag = false;
             }
         }

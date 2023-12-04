@@ -259,8 +259,8 @@ void print_intf_desc(const uint8_t *buff)
     printf("\tbAlternateSetting %d\n", intf_desc->bAlternateSetting);
     printf("\tbNumEndpoints %d\n", intf_desc->bNumEndpoints);
     printf("\tbInterfaceClass 0x%x (%s)\n", intf_desc->bInterfaceClass,
-    intf_desc->bInterfaceClass==USB_CLASS_VIDEO?"Video":
-    (intf_desc->bInterfaceClass==USB_CLASS_AUDIO?"Audio":"Unknown"));
+           intf_desc->bInterfaceClass == USB_CLASS_VIDEO ? "Video" :
+           (intf_desc->bInterfaceClass == USB_CLASS_AUDIO ? "Audio" : "Unknown"));
     printf("\tbInterfaceSubClass 0x%x\n", intf_desc->bInterfaceSubClass);
 #ifdef CONFIG_UVC_PRINT_DESC_VERBOSE
     printf("\tbInterfaceProtocol 0x%x\n", intf_desc->bInterfaceProtocol);
@@ -428,7 +428,7 @@ void parse_ac_feature_desc(const uint8_t *buff, uint8_t *source_idx, uint8_t *fe
     printf("\tbUnitID %d\n", desc->bUnitID);
     printf("\tbSourceID %d\n", desc->bSourceID);
     printf("\tbControlSize %d\n", desc->bControlSize);
-    for (size_t i = 0; i < (desc->bLength-7)/desc->bControlSize; i += desc->bControlSize) {
+    for (size_t i = 0; i < (desc->bLength - 7) / desc->bControlSize; i += desc->bControlSize) {
         printf("\tbmaControls[ch%d] 0x%x\n", i, desc->bmaControls[i]);
     }
 #ifdef CONFIG_UVC_PRINT_DESC_VERBOSE
@@ -442,7 +442,7 @@ void parse_ac_feature_desc(const uint8_t *buff, uint8_t *source_idx, uint8_t *fe
         *source_idx = desc->bSourceID;
     }
     uint8_t ch_num = 0;
-    for (size_t i = 0; i < (desc->bLength-7)/desc->bControlSize; i += desc->bControlSize) {
+    for (size_t i = 0; i < (desc->bLength - 7) / desc->bControlSize; i += desc->bControlSize) {
         if ((desc->bmaControls[i] & AUDIO_FEATURE_CONTROL_VOLUME) && volume_ch) {
             *volume_ch = *volume_ch | (1 << ch_num);
         }

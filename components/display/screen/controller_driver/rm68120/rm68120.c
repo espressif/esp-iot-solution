@@ -24,7 +24,7 @@ static const char *TAG = "lcd rm68120";
 #define LCD_NAME "RM68120"
 #define LCD_BPP  16
 
-/** 
+/**
  * RM68120 can select different resolution, but I can't find the way
  */
 #define RM68120_RESOLUTION_HOR 480
@@ -61,7 +61,6 @@ scr_driver_t lcd_rm68120_default_driver = {
     .draw_bitmap = lcd_rm68120_draw_bitmap,
     .get_info = lcd_rm68120_get_info,
 };
-
 
 static void lcd_rm68120_init_reg(void);
 
@@ -418,7 +417,6 @@ static void lcd_rm68120_init_reg(void)
     LCD_WRITE_REG_16B(0xD333, 0x8e);
     LCD_WRITE_REG_16B(0xD334, 0xff);
 
-
     //GAMMA SETING  RED
     LCD_WRITE_REG_16B(0xD400, 0x00);
     LCD_WRITE_REG_16B(0xD401, 0x00);
@@ -667,7 +665,7 @@ static void lcd_rm68120_init_reg(void)
     LCD_WRITE_REG_16B(0xf600, 0x60);
     //TE ON
     LCD_WRITE_REG_16B(0x3500, 0x00);
-    //SLEEP OUT 
+    //SLEEP OUT
     LCD_WRITE_CMD_16B(0x1100);
     vTaskDelay(100 / portTICK_RATE_MS);
     //DISPLY ON

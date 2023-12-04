@@ -27,10 +27,10 @@ class sdkconfig_c:
                 if mo:
                     config[mo.group(1)]=mo.group(2).replace('"', '')
         self.config = config
-    
+
     def index(self, i):
         return self.config[i]
-    
+
     def check(self, options):
         options = options.replace(' ', '')
         if '&&' in options:
@@ -86,18 +86,18 @@ class object_c:
         self.funcs = dict()
         self.pathes = pathes
         self.dumps = self.read_dump_info(pathes)
-    
+
     def append(self, func):
         section = self.get_func_section(self.dumps, func)
         if section != None:
             self.funcs[func] = section
-    
+
     def functions(self):
         nlist = list()
         for i in self.funcs:
             nlist.append(i)
         return nlist
-    
+
     def sections(self):
         nlist = list()
         for i in self.funcs:
@@ -123,7 +123,7 @@ class libraries_c:
         if lib not in self.libs:
             self.libs[lib] = library_c(lib, lib_path)
         self.libs[lib].append(obj, obj_path, func)
-    
+
     def dump(self):
         for libname in self.libs:
             lib = self.libs[libname]
@@ -134,7 +134,7 @@ class libraries_c:
 class paths_c:
     def __init__(self):
         self.paths = dict()
-    
+
     def append(self, lib, obj, path):
         if '$IDF_PATH' in path:
             path = path.replace('$IDF_PATH', os.environ['IDF_PATH'])
@@ -144,7 +144,7 @@ class paths_c:
         if obj not in self.paths[lib]:
             self.paths[lib][obj] = list()
         self.paths[lib][obj].append(path)
-    
+
     def index(self, lib, obj):
         if lib not in self.paths:
             return None

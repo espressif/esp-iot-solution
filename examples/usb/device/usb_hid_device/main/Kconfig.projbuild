@@ -5,7 +5,7 @@ menu "USB HID Device Example"
         default SUBCLASS_MOUSE
 
         config SUBCLASS_MOUSE
-            bool "Mouse" 
+            bool "Mouse"
         config SUBCLASS_KEYBOARD
             bool "Keyboard"
     endchoice

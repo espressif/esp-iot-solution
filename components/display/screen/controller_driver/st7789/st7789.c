@@ -83,7 +83,7 @@ static void lcd_st7789_init_reg(void)
     LCD_WRITE_CMD(0xBB);  //VCOM Setting
     LCD_WRITE_DATA(0x19);
 
-    LCD_WRITE_CMD(0xC0); //LCM Control     
+    LCD_WRITE_CMD(0xC0); //LCM Control
     LCD_WRITE_DATA(0x2C);
 
     LCD_WRITE_CMD(0xC2);  //VDV and VRH Command Enable
@@ -95,7 +95,7 @@ static void lcd_st7789_init_reg(void)
 
     LCD_WRITE_CMD(0xC6);  //Frame Rate Control in Normal Mode
     LCD_WRITE_DATA(0x0F);
-    
+
     LCD_WRITE_CMD(0xD0);  // Power Control 1
     LCD_WRITE_DATA(0xA4);
     LCD_WRITE_DATA(0xA1);

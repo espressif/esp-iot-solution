@@ -12,10 +12,10 @@
 #define VEML6075_I2C_MASTER_SCL_IO               (gpio_num_t)22  /*!< gpio number for I2C master clock */
 #define VEML6075_I2C_MASTER_SDA_IO               (gpio_num_t)21  /*!< gpio number for I2C master data  */
 
-#define VEML6075_I2C_MASTER_NUM              	 I2C_NUM_1   /*!< I2C port number for master dev */
+#define VEML6075_I2C_MASTER_NUM                  I2C_NUM_1   /*!< I2C port number for master dev */
 #define VEML6075_I2C_MASTER_TX_BUF_DISABLE       0           /*!< I2C master do not need buffer */
-#define VEML6075_I2C_MASTER_RX_BUF_DISABLE   	 0           /*!< I2C master do not need buffer */
-#define VEML6075_I2C_MASTER_FREQ_HZ         	 100000      /*!< I2C master clock frequency */
+#define VEML6075_I2C_MASTER_RX_BUF_DISABLE       0           /*!< I2C master do not need buffer */
+#define VEML6075_I2C_MASTER_FREQ_HZ              100000      /*!< I2C master clock frequency */
 
 static i2c_bus_handle_t i2c_bus = NULL;
 static veml6075_handle_t veml6075 = NULL;
@@ -71,7 +71,7 @@ static void veml6075_test_get_date()
         printf("UVB:%f ", veml6075_get_uvb(veml6075));
         printf("UV Index:%f \n", veml6075_get_uv_index(veml6075));
         vTaskDelay(1000  / portTICK_RATE_MS);
-     }
+    }
 }
 
 TEST_CASE("Sensor veml6075 test", "[veml6075][iot][sensor]")

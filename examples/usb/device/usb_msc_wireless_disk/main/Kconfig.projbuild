@@ -8,18 +8,18 @@ menu "USB MSC Device Demo"
             bool "Use Internal Flash"
 
         config USE_EXTERNAL_SDCARD
-            bool "Use External SDCard" 
+            bool "Use External SDCard"
 
         choice SDCARD_INTERFACE
             prompt "SD Card Interface"
             depends on USE_EXTERNAL_SDCARD
             default SDCARD_INTFC_SPI
-    
+
             config SDCARD_INTFC_SPI
                 bool "Use SPI interface"
-    
+
             config SDCARD_INTFC_SDIO
-                bool "Use SDIO interface" 
+                bool "Use SDIO interface"
         endchoice
 
         config DISK_BLOCK_SIZE
@@ -28,17 +28,17 @@ menu "USB MSC Device Demo"
             default 512
 
         menu "SD Card PIN CONFIG"
-        
+
         config SDCARD_SPI_CS_PIN
             int "SD Card SPI CS pin"
             depends on SDCARD_INTFC_SPI
             default 34
-        
+
         config SDCARD_SPI_CLK_PIN
             int "SD Card SPI CLK pin"
             depends on SDCARD_INTFC_SPI
             default 36
-        
+
         config SDCARD_SPI_DI_PIN
             int "SD Card SPI DI pin"
             depends on SDCARD_INTFC_SPI
@@ -48,12 +48,12 @@ menu "USB MSC Device Demo"
             int "SD Card SPI DO pin"
             depends on SDCARD_INTFC_SPI
             default 37
-        
+
         config SDCARD_SDIO_DO_PIN
             int "SD Card SDIO DO pin"
             depends on SDCARD_INTFC_SDIO
             default 37
-        
+
         config SDCARD_SDIO_CMD_PIN
             int "SD Card SDIO CMD pin"
             depends on SDCARD_INTFC_SDIO
@@ -71,53 +71,53 @@ menu "USB MSC Device Demo"
         default y
 
     menu "WiFi Settings"
-        config ESP_WIFI_ROUTE_SSID 
+        config ESP_WIFI_ROUTE_SSID
             string "WiFi Route SSID"
             default ""
             help
             WiFi SSID (network name) to connect to or empty for Off.
-        
+
         config ESP_WIFI_ROUTE_PASSWORD
             string "WiFi Route Password"
             default ""
             help
             WiFi Password if WEP/WPA/WPA2 or empty if Open.
-            
+
         config ESP_WIFI_SOFTAP_SSID
             string "WiFi softAP  SSID"
             default "ESP-Wireless-Disk"
             help
             softAP SSID (network name) to create or empty for Off.
-        
+
         config ESP_WIFI_SOFTAP_PASSWORD
             string "WiFi softAP Password"
             default ""
             help
             softAP password for WPA2 or empty for Open.
-        
+
         config ESP_WIFI_SOFTAP_MAX_STA
             int "Maximal STA connections"
             default 5
             help
             Max number of the STA connects to softAP.
-        
+
         config ESP_WIFI_AP_CHANNEL
             int "WiFi softAP Channel"
             default 1
             help
             softAP channel for better connection performance.
-        
+
         config SERVER_IP
             string "WiFi softAP IP Address"
             default "192.168.4.1"
             help
                 IP address that the ESP will assign to it's softAP interface. You can use this IP to connect to the camera after flashing.
-        
+
         config ESP_MAXIMUM_RETRY
             int "Maximum retry"
             default 5
             help
             Set the Maximum retry to avoid station reconnecting to the softAP unlimited when the softAP is really inexistent.
     endmenu
-        
+
 endmenu

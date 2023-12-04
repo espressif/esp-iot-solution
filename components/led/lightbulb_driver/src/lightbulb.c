@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #include <math.h>
 #include <string.h>
 
@@ -45,7 +44,6 @@ static const char *TAG = "lightbulb";
  *
  */
 #define CALCULATE_FADE_TIME()                           (s_lb_obj->cap.enable_fades ? s_lb_obj->cap.fades_ms : 0)
-
 
 /**
  * @brief Key-value pair for nvs
@@ -717,19 +715,19 @@ esp_err_t lightbulb_rgb2xyy(uint8_t red, uint8_t green, uint8_t blue, float *x, 
     float _blue = blue / 255.0;
 
     if (_red > 0.04045) {
-        _red = pow(( _red + 0.055 ) / 1.055, 2.4);
+        _red = pow((_red + 0.055) / 1.055, 2.4);
     } else {
         _red = _red / 12.92;
     }
 
-    if ( _green > 0.04045 ) {
-        _green = pow(( _green + 0.055 ) / 1.055, 2.4);
+    if (_green > 0.04045) {
+        _green = pow((_green + 0.055) / 1.055, 2.4);
     } else {
         _green = _green / 12.92;
     }
 
-    if ( _blue > 0.04045 ) {
-        _blue = pow(( _blue + 0.055 ) / 1.055, 2.4);
+    if (_blue > 0.04045) {
+        _blue = pow((_blue + 0.055) / 1.055, 2.4);
     } else {
         _blue = _blue / 12.92;
     }
@@ -743,8 +741,8 @@ esp_err_t lightbulb_rgb2xyy(uint8_t red, uint8_t green, uint8_t blue, float *x, 
     float _Z = _red * 0.0193 + _green * 0.1192 + _blue * 0.9505;
 
     *Y = _Y;
-    *x = _X / ( _X + _Y + _Z );
-    *y = _Y / ( _X + _Y + _Z );
+    *x = _X / (_X + _Y + _Z);
+    *y = _Y / (_X + _Y + _Z);
 
     return ESP_OK;
 }

@@ -44,11 +44,11 @@
 
 // Family ID for updating Application
 #if CONFIG_IDF_TARGET_ESP32S2
-  #define BOARD_UF2_FAMILY_ID     0xbfdd4eee
+#define BOARD_UF2_FAMILY_ID     0xbfdd4eee
 #elif CONFIG_IDF_TARGET_ESP32S3
-  #define BOARD_UF2_FAMILY_ID     0xc47e5767
+#define BOARD_UF2_FAMILY_ID     0xc47e5767
 #else
-  #error unsupported MCUs
+#error unsupported MCUs
 #endif
 
 #define USB_VID           CONFIG_TUSB_VID

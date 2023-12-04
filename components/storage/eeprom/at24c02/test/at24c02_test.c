@@ -51,11 +51,11 @@ void at24c02_test_byte_write_read()
         /****One Byte Test****/
         uint8_t data0 = cnt;
         TEST_ASSERT(ESP_OK == at24c02_write_byte(at24c02, cnt, data0));
-        ESP_LOGI(TAG, "write data of address %u :%u",cnt, data0);
+        ESP_LOGI(TAG, "write data of address %u :%u", cnt, data0);
         vTaskDelay(50 / portTICK_RATE_MS);
         uint8_t data0_read = 0;
         TEST_ASSERT(ESP_OK == at24c02_read_byte(at24c02, cnt, &data0_read));
-        ESP_LOGI(TAG, "read data of address %u :%u",cnt, data0_read);
+        ESP_LOGI(TAG, "read data of address %u :%u", cnt, data0_read);
         TEST_ASSERT_EQUAL_UINT8(data0, data0_read);
     }
 }
@@ -70,13 +70,13 @@ void at24c02_test_bytes_write_read()
             data[i] = cnt + i;
         }
         TEST_ASSERT(ESP_OK == at24c02_write(at24c02, cnt, sizeof(data), data));
-        ESP_LOGI(TAG, "write data start from address %u: %u,%u,%u,%u,%u",cnt, data[0],
-                data[1], data[2], data[3], data[4]);
+        ESP_LOGI(TAG, "write data start from address %u: %u,%u,%u,%u,%u", cnt, data[0],
+                 data[1], data[2], data[3], data[4]);
         vTaskDelay(50 / portTICK_RATE_MS);
         uint8_t data_read[5] = {0x00};
         TEST_ASSERT(ESP_OK == at24c02_read(at24c02, cnt, sizeof(data_read), data_read));
-        ESP_LOGI(TAG, "read data start from address %u: %u,%u,%u,%u,%u",cnt, data_read[0],
-                data_read[1], data_read[2], data_read[3], data_read[4]);
+        ESP_LOGI(TAG, "read data start from address %u: %u,%u,%u,%u,%u", cnt, data_read[0],
+                 data_read[1], data_read[2], data_read[3], data_read[4]);
         TEST_ASSERT_EQUAL_UINT8_ARRAY(data, data_read, 5);
     }
 }
@@ -90,17 +90,17 @@ void at24c02_test_bit_write_read()
         uint8_t data2_read = 0;
         TEST_ASSERT(ESP_OK == at24c02_write_byte(at24c02, cnt, 0x00));
         vTaskDelay(50 / portTICK_RATE_MS);
-        ESP_LOGI(TAG, "write byte of address %u %x",cnt, 0x00);
+        ESP_LOGI(TAG, "write byte of address %u %x", cnt, 0x00);
         for (size_t i = 0; i < 8; i++) {
-            TEST_ASSERT(ESP_OK == at24c02_write_bit(at24c02, cnt, i, (data2 >> i)&0x01));
-            ESP_LOGI(TAG, "write bit of address %u:bit%u = %u",cnt, i, (data2 >> i)&0x01);
+            TEST_ASSERT(ESP_OK == at24c02_write_bit(at24c02, cnt, i, (data2 >> i) & 0x01));
+            ESP_LOGI(TAG, "write bit of address %u:bit%u = %u", cnt, i, (data2 >> i) & 0x01);
             data2_read = 0;
             vTaskDelay(50 / portTICK_RATE_MS);
             TEST_ASSERT(ESP_OK == at24c02_read_bit(at24c02, cnt, i, &data2_read));
-            ESP_LOGI(TAG, "read bit of address %u:bit%u = %u",cnt, i, data2_read);
+            ESP_LOGI(TAG, "read bit of address %u:bit%u = %u", cnt, i, data2_read);
             data2_read = 0;
             TEST_ASSERT(ESP_OK == at24c02_read_byte(at24c02, cnt, &data2_read));
-            ESP_LOGI(TAG, "read byte of address %u :%u",cnt, data2_read);
+            ESP_LOGI(TAG, "read byte of address %u :%u", cnt, data2_read);
         }
         TEST_ASSERT_EQUAL_UINT8(data2, data2_read);
     }
@@ -115,17 +115,17 @@ void at24c02_test_bits_write_read()
         uint8_t data2_read = 0;
         TEST_ASSERT(ESP_OK == at24c02_write_byte(at24c02, cnt, 0x00));
         vTaskDelay(50 / portTICK_RATE_MS);
-        ESP_LOGI(TAG, "write byte of address %u %x",cnt, 0x00);
+        ESP_LOGI(TAG, "write byte of address %u %x", cnt, 0x00);
         for (size_t i = 0; i < 2; i++) {
-            TEST_ASSERT(ESP_OK == at24c02_write_bits(at24c02, cnt, i*4+3, 4, ((data2>>(i*4))&0x0f)));
-            ESP_LOGI(TAG, "write bits from address %u:bit%u = %u",cnt, i*4, ((data2>>(i*4))&0x0f));
+            TEST_ASSERT(ESP_OK == at24c02_write_bits(at24c02, cnt, i * 4 + 3, 4, ((data2 >> (i * 4)) & 0x0f)));
+            ESP_LOGI(TAG, "write bits from address %u:bit%u = %u", cnt, i * 4, ((data2 >> (i * 4)) & 0x0f));
             data2_read = 0;
             vTaskDelay(50 / portTICK_RATE_MS);
-            TEST_ASSERT(ESP_OK == at24c02_read_bits(at24c02, cnt, i*4+3, 4, &data2_read));
-            ESP_LOGI(TAG, "read bits of address %u:bit%u = %u",cnt, i*4, data2_read);
+            TEST_ASSERT(ESP_OK == at24c02_read_bits(at24c02, cnt, i * 4 + 3, 4, &data2_read));
+            ESP_LOGI(TAG, "read bits of address %u:bit%u = %u", cnt, i * 4, data2_read);
             data2_read = 0;
             TEST_ASSERT(ESP_OK == at24c02_read_byte(at24c02, cnt, &data2_read));
-            ESP_LOGI(TAG, "read byte of address %u :%u",cnt, data2_read);
+            ESP_LOGI(TAG, "read byte of address %u :%u", cnt, data2_read);
         }
         TEST_ASSERT_EQUAL_UINT8(data2, data2_read);
     }

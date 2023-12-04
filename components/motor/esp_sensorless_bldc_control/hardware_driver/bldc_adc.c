@@ -30,7 +30,7 @@ esp_err_t bldc_adc_init(const bldc_adc_config_t *config, adc_oneshot_unit_handle
         if_init_adc_unit = true;
     }
 
-    for (int i=0; i<config->adc_channel_num; i++) {
+    for (int i = 0; i < config->adc_channel_num; i++) {
         err = adc_oneshot_config_channel(*adc_handle, config->adc_channel[i], &config->chan_cfg);
         BLDC_CHECK(err == ESP_OK, "ADC channel configuration failed", ESP_ERR_INVALID_STATE);
     }

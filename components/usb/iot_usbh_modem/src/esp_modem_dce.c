@@ -23,16 +23,16 @@ esp_err_t esp_modem_dce_generic_command(esp_modem_dce_t *dce, const char * comma
     dce->handle_line_ctx = ctx;
     if (dte->send_cmd(dte, command, timeout) != ESP_OK) {
         xSemaphoreGive(dte->send_cmd_lock);
-        ESP_LOGW(TAG, "%s(%d): Command:%s response timeout", __func__, __LINE__, command );
+        ESP_LOGW(TAG, "%s(%d): Command:%s response timeout", __func__, __LINE__, command);
         return ESP_ERR_TIMEOUT;
     }
     if (dce->state == ESP_MODEM_STATE_FAIL) {
         xSemaphoreGive(dte->send_cmd_lock);
-        ESP_LOGW(TAG, "%s(%d): Command:%s\n...failed", __func__, __LINE__, command );
+        ESP_LOGW(TAG, "%s(%d): Command:%s\n...failed", __func__, __LINE__, command);
         return ESP_FAIL;
     }
     xSemaphoreGive(dte->send_cmd_lock);
-    ESP_LOGD(TAG, "%s(%d): Command:%s\n succeeded", __func__, __LINE__, command );
+    ESP_LOGD(TAG, "%s(%d): Command:%s\n succeeded", __func__, __LINE__, command);
     return ESP_OK;
 }
 
@@ -49,7 +49,7 @@ esp_err_t esp_modem_dce_set_apn(esp_modem_dce_t *dce, const char *new_apn)
     if (strcmp(new_apn, dce->config.pdp_context.apn) == 0) {
         return ESP_ERR_INVALID_STATE;
     }
-    strncpy(s_apn, new_apn, sizeof(s_apn)-1);
+    strncpy(s_apn, new_apn, sizeof(s_apn) - 1);
     dce->config.pdp_context.apn = s_apn;
     ESP_LOGI(TAG, "New APN = %s, require a restart to effect", dce->config.pdp_context.apn);
     return ESP_OK;
@@ -128,7 +128,7 @@ static esp_err_t esp_modem_switch_to_command_mode(esp_modem_dce_t *dce)
     }
     dce->mode = ESP_MODEM_COMMAND_MODE;
     return ESP_OK;
-    err:
+err:
     return ESP_FAIL;
 }
 
@@ -145,10 +145,9 @@ static esp_err_t esp_modem_switch_to_data_mode(esp_modem_dce_t *dce)
     }
     dce->mode = ESP_MODEM_PPP_MODE;
     return ESP_OK;
-    err:
+err:
     return ESP_FAIL;
 }
-
 
 /**
  * @brief Set Working Mode
@@ -162,18 +161,18 @@ static esp_err_t esp_modem_switch_to_data_mode(esp_modem_dce_t *dce)
 esp_err_t esp_modem_dce_set_working_mode(esp_modem_dce_t *dce, esp_modem_mode_t mode)
 {
     switch (mode) {
-        case ESP_MODEM_COMMAND_MODE:
-            ESP_MODEM_ERR_CHECK(esp_modem_switch_to_command_mode(dce) == ESP_OK, "Setting command mode failed", err);
-            break;
-        case ESP_MODEM_PPP_MODE:
-            ESP_MODEM_ERR_CHECK(esp_modem_switch_to_data_mode(dce) == ESP_OK, "Setting data mode failed", err);
-            break;
-        default:
-            ESP_LOGW(TAG, "unsupported working mode: %d", mode);
-            goto err;
+    case ESP_MODEM_COMMAND_MODE:
+        ESP_MODEM_ERR_CHECK(esp_modem_switch_to_command_mode(dce) == ESP_OK, "Setting command mode failed", err);
+        break;
+    case ESP_MODEM_PPP_MODE:
+        ESP_MODEM_ERR_CHECK(esp_modem_switch_to_data_mode(dce) == ESP_OK, "Setting data mode failed", err);
+        break;
+    default:
+        ESP_LOGW(TAG, "unsupported working mode: %d", mode);
+        goto err;
     }
     return ESP_OK;
-    err:
+err:
     return ESP_FAIL;
 }
 
@@ -182,6 +181,6 @@ esp_err_t esp_modem_dce_default_start_up(esp_modem_dce_t *dce)
     ESP_MODEM_ERR_CHECK(dce->sync(dce, NULL, NULL) == ESP_OK, "sending sync failed", err);
     ESP_MODEM_ERR_CHECK(dce->set_echo(dce, (void*)false, NULL) == ESP_OK, "set_echo failed", err);
     return ESP_OK;
-    err:
+err:
     return ESP_FAIL;
 }

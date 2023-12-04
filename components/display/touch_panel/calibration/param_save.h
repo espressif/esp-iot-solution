@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #ifndef _PARAMETER_SAVE_H_
 #define _PARAMETER_SAVE_H_
 

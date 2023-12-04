@@ -27,7 +27,7 @@ push_to_github:
 .deploy_docs_template:
   stage: deploy
   image: $ESP_DOCS_ENV_IMAGE
-  tags: 
+  tags:
     - deploy_docs
   needs:
     - job: "build_docs_html"

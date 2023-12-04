@@ -46,24 +46,24 @@ static void button_keyboard_cb(void *arg, void *arg2)
     int button_gpio = get_button_gpio(button_hdl);
     uint8_t _keycode[6] = { 0 };
     switch (button_gpio) {
-        case EXAMPLE_BUTTON_UP:
-            _keycode[0] = HID_KEY_U;
-            break;
+    case EXAMPLE_BUTTON_UP:
+        _keycode[0] = HID_KEY_U;
+        break;
 
-        case EXAMPLE_BUTTON_DOWN:
-            _keycode[0] = HID_KEY_D;
-            break;
+    case EXAMPLE_BUTTON_DOWN:
+        _keycode[0] = HID_KEY_D;
+        break;
 
-        case EXAMPLE_BUTTON_LEFT:
-            _keycode[0] = HID_KEY_L;
-            break;
+    case EXAMPLE_BUTTON_LEFT:
+        _keycode[0] = HID_KEY_L;
+        break;
 
-        case EXAMPLE_BUTTON_RIGHT:
-            _keycode[0] = HID_KEY_R;
-            break;
+    case EXAMPLE_BUTTON_RIGHT:
+        _keycode[0] = HID_KEY_R;
+        break;
 
-        default:
-            break;
+    default:
+        break;
     }
     tinyusb_hid_keyboard_report(_keycode);
     ESP_LOGI(TAG, "Keyboard %c", _keycode[0] - HID_KEY_A + 'a');
@@ -75,24 +75,24 @@ static void button_mouse_cb(void *arg, void *arg2)
     int button_gpio = get_button_gpio(button_hdl);
     int mouse_offset_x = 0, mouse_offset_y = 0;
     switch (button_gpio) {
-        case EXAMPLE_BUTTON_UP:
-            mouse_offset_y = -EXAMPLE_MOUSE_OFFSET_Y;
-            break;
+    case EXAMPLE_BUTTON_UP:
+        mouse_offset_y = -EXAMPLE_MOUSE_OFFSET_Y;
+        break;
 
-        case EXAMPLE_BUTTON_DOWN:
-            mouse_offset_y = EXAMPLE_MOUSE_OFFSET_Y;
-            break;
+    case EXAMPLE_BUTTON_DOWN:
+        mouse_offset_y = EXAMPLE_MOUSE_OFFSET_Y;
+        break;
 
-        case EXAMPLE_BUTTON_LEFT:
-            mouse_offset_x = -EXAMPLE_MOUSE_OFFSET_X;
-            break;
+    case EXAMPLE_BUTTON_LEFT:
+        mouse_offset_x = -EXAMPLE_MOUSE_OFFSET_X;
+        break;
 
-        case EXAMPLE_BUTTON_RIGHT:
-            mouse_offset_x = EXAMPLE_MOUSE_OFFSET_X;
-            break;
+    case EXAMPLE_BUTTON_RIGHT:
+        mouse_offset_x = EXAMPLE_MOUSE_OFFSET_X;
+        break;
 
-        default:
-            break;
+    default:
+        break;
     }
     tinyusb_hid_mouse_move_report(mouse_offset_x, mouse_offset_y, 0, 0);
     ESP_LOGI(TAG, "Mouse x=%d y=%d", mouse_offset_x, mouse_offset_y);
@@ -170,7 +170,7 @@ void app_main(void)
     for (size_t i = 0; i < EXAMPLE_BUTTON_NUM; i++) {
         cfg.gpio_button_config.gpio_num = s_button_gpio[i];
         s_button_handles[i] = iot_button_create(&cfg);
-        if(s_button_handles[i] == NULL) {
+        if (s_button_handles[i] == NULL) {
             ESP_LOGE(TAG, "Button io = %d created failed", s_button_gpio[i]);
             assert(0);
         } else {

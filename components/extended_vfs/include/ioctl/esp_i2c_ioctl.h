@@ -41,9 +41,9 @@ extern "C" {
 /**
  * @brief I2C exchange message flag
  */
-#define I2C_EX_MSG_READ_FIRST   (1 << 0)  /*!< Read and then write */ 
+#define I2C_EX_MSG_READ_FIRST   (1 << 0)  /*!< Read and then write */
 #define I2C_EX_MSG_CHECK_ACK    (1 << 1)  /*!< Check ack after writing data */
-#define I2C_EX_MSG_DELAY_EN     (1 << 2)  /*!< Delay between write and read */ 
+#define I2C_EX_MSG_DELAY_EN     (1 << 2)  /*!< Delay between write and read */
 
 /**
  * @brief I2C configuration.

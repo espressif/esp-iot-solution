@@ -24,7 +24,7 @@ static const char *TAG = "lcd nt35510";
 #define LCD_NAME "NT35510"
 #define LCD_BPP  16
 
-/** 
+/**
  * NT35510 can select different resolution, but I can't find the way
  */
 #define NT35510_RESOLUTION_HOR 480
@@ -61,7 +61,6 @@ scr_driver_t lcd_nt35510_default_driver = {
     .draw_bitmap = lcd_nt35510_draw_bitmap,
     .get_info = lcd_nt35510_get_info,
 };
-
 
 static void lcd_nt35510_init_reg(void);
 
@@ -250,7 +249,7 @@ static void lcd_nt35510_init_reg(void)
     LCD_WRITE_CMD_16B(0x0100);
     vTaskDelay(10 / portTICK_RATE_MS);
 
-     // Partial mode on
+    // Partial mode on
     LCD_WRITE_CMD_16B(0x1200);
 
     // Enable manufacturer command set, select page 1
@@ -433,7 +432,7 @@ static void lcd_nt35510_init_reg(void)
     LCD_WRITE_REG_16B(0xd332, 0x0003);
     LCD_WRITE_REG_16B(0xd333, 0x00cc);
 
-    // Gamma 2.2 Correction for Red (Negative)    
+    // Gamma 2.2 Correction for Red (Negative)
     LCD_WRITE_REG_16B(0xd400, 0x0000);
     LCD_WRITE_REG_16B(0xd401, 0x005d);
     LCD_WRITE_REG_16B(0xd402, 0x0000);
@@ -629,7 +628,7 @@ static void lcd_nt35510_init_reg(void)
     LCD_WRITE_REG_16B(0xbc01, 0x0005); // Idle mode
     LCD_WRITE_REG_16B(0xbc02, 0x0005); // Partial mode
 
-    // EQ Control Function for Source Driver 
+    // EQ Control Function for Source Driver
     LCD_WRITE_REG_16B(0xb800, 0x0001); // EQ mode 1
     LCD_WRITE_REG_16B(0xb801, 0x0003); // Normal mode, 0.5us per step = 1.5 us
     LCD_WRITE_REG_16B(0xb802, 0x0003); // Idle mode, 0.5us per step = 1.5 us

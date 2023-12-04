@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -33,19 +33,17 @@ typedef enum {
     BLDC_CONTROL_BLOCKED,        /*!< BLDC control blocked event */
 } bldc_control_event_t;
 
-typedef enum{
+typedef enum {
     SPEED_OPEN_LOOP = 0,  /*!< Open-loop speed control, speed control by setting pwm duty, poor load carrying capacity */
     SPEED_CLOSED_LOOP,    /*!< Closed-loop speed control, rotational speed control via PID, high load carrying capacity */
 } speed_mode_t;
 
-typedef enum
-{
+typedef enum {
     BLDC_SIX_STEP = 0,   /*!< six-step phase change */
     BLDC_FOC,            /*!< foc phase change, not supported yet */
 } control_mode_t;
 
-typedef enum
-{
+typedef enum {
     ALIGNMENT_COMPARER,  /*!< Comparator detects zero crossing */
 #if CONFIG_SOC_MCPWM_SUPPORTED
     ALIGNMENT_ADC,       /*!< ADC detects zero crossing */
@@ -69,12 +67,10 @@ typedef struct {
     speed_mode_t speed_mode;          /*!< Speed Mode */
     control_mode_t control_mode;      /*!< Control Mode */
     alignment_mode_t alignment_mode;  /*!< Alignment Mode */
-    union
-    {
+    union {
         bldc_six_step_config_t six_step_config; /*!< six-step phase change config */
     };
-    union
-    {
+    union {
         bldc_zero_cross_comparer_config_t zero_cross_comparer_config; /*!< Comparator detects zero crossing config */
 #if CONFIG_SOC_MCPWM_SUPPORTED
         bldc_zero_cross_adc_config_t zero_cross_adc_config;           /*!< ADC detects zero crossing config */

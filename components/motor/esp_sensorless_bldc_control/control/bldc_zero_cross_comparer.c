@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -21,8 +21,7 @@ typedef struct {
 
 static void alignment_comparer_get_value(bldc_zero_cross_comparer_t *zero_cross)
 {
-    for (int i = 0; i < PHASE_MAX; i++)
-    {
+    for (int i = 0; i < PHASE_MAX; i++) {
         zero_cross->alignment_queue_value[i] = zero_cross->alignment_queue_value[i] << 1;
         zero_cross->alignment_queue_value[i] |= gpio_get_level(zero_cross->alignment_pin[i]);
     }
@@ -36,16 +35,12 @@ static void alignment_comparer_get_value(bldc_zero_cross_comparer_t *zero_cross)
 static uint8_t bldc_umef_edge(uint8_t val)
 {
     static uint8_t oldval = 0;
-    if (oldval != val)
-    {
+    if (oldval != val) {
         oldval = val;
 
-        if (val == 0)
-        {
+        if (val == 0) {
             return 0;
-        }
-        else
-        {
+        } else {
             return 1;
         }
     }
@@ -62,8 +57,7 @@ esp_err_t bldc_zero_cross_comparer_init(bldc_zero_cross_comparer_handle_t *handl
     zero_cross->control_param = control_param;
     esp_err_t err = ESP_OK;
 
-    for (int i = 0; i < PHASE_MAX; i++)
-    {
+    for (int i = 0; i < PHASE_MAX; i++) {
         err = bldc_gpio_init(&config->comparer_gpio[i]);
         BLDC_CHECK_GOTO(err == ESP_OK, "gpio init error", deinit);
         zero_cross->alignment_pin[i] = config->comparer_gpio[i].gpio_num;
@@ -73,8 +67,7 @@ esp_err_t bldc_zero_cross_comparer_init(bldc_zero_cross_comparer_handle_t *handl
     return ESP_OK;
 
 deinit:
-    if (zero_cross != NULL)
-    {
+    if (zero_cross != NULL) {
         free(zero_cross);
     }
     return ESP_FAIL;
@@ -85,8 +78,7 @@ esp_err_t bldc_zero_cross_comparer_deinit(bldc_zero_cross_comparer_handle_t hand
     bldc_zero_cross_comparer_t *zero_cross = (bldc_zero_cross_comparer_t *)handle;
     BLDC_CHECK(zero_cross != NULL, "bldc zero cross handle is NULL", ESP_ERR_INVALID_ARG);
 
-    for (int i = 0; i < PHASE_MAX; i++)
-    {
+    for (int i = 0; i < PHASE_MAX; i++) {
         gpio_reset_pin(zero_cross->alignment_pin[i]);
     }
 
@@ -103,18 +95,12 @@ uint8_t bldc_zero_cross_comparer_operation(void *handle)
     alignment_comparer_get_value(zero_cross);
     zero_cross->control_param->speed_count++;
 
-    for (int i = 0; i < PHASE_MAX; i++)
-    {
-        if ((zero_cross->alignment_queue_value[i] & ZERO_CROSS_DETECTION_ACCURACY) == ZERO_CROSS_DETECTION_ACCURACY)
-        {
+    for (int i = 0; i < PHASE_MAX; i++) {
+        if ((zero_cross->alignment_queue_value[i] & ZERO_CROSS_DETECTION_ACCURACY) == ZERO_CROSS_DETECTION_ACCURACY) {
             zero_cross->queue_filter_state[i] = 1;
-        }
-        else if ((zero_cross->alignment_queue_value[i] & ZERO_CROSS_DETECTION_ACCURACY) == 0)
-        {
+        } else if ((zero_cross->alignment_queue_value[i] & ZERO_CROSS_DETECTION_ACCURACY) == 0) {
             zero_cross->queue_filter_state[i] = 0;
-        }
-        else
-        {
+        } else {
             zero_cross->control_param->filter_failed_count++;
             /*!< Direct return */
             return 0;
@@ -161,8 +147,7 @@ uint8_t bldc_zero_cross_comparer_operation(void *handle)
     if (zero_cross->zero_stable_flag >= ZERO_STABLE_FLAG_CNT + 2) {
         zero_cross->zero_stable_flag = ZERO_STABLE_FLAG_CNT + 2;
         uint8_t phase = zero_cross_comparer_get_phase(zero_cross->queue_filter_state, zero_cross->control_param->dir);
-        if (phase <= 0 || phase > 6)
-        {
+        if (phase <= 0 || phase > 6) {
             zero_cross->control_param->error_hall_count++;
             return 0;
         } else {

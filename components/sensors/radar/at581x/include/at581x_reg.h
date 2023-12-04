@@ -183,4 +183,3 @@ typedef enum {
 #define AT581X_LIGHT_REF_LOW_BIT    (0)     /*!< AT581X_LIGHT_REF, high 2bit of Light_ref_low. */
 #define AT581X_LIGHT_REF_HIGH_BIT   (2)     /*!< AT581X_LIGHT_REF, high 2bit of Light_ref_high. */
 #define AT581X_LIGHT_INV_BIT        (4)     /*!< AT581X_LIGHT_REF, 0: Default. 1: reverse. */
-

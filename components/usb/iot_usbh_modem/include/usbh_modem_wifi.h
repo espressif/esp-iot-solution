@@ -31,8 +31,8 @@ typedef struct {
 #endif
 
 /**
- * @brief  Broadcast SSID or not, default 0, broadcast the SSID 
- * 
+ * @brief  Broadcast SSID or not, default 0, broadcast the SSID
+ *
  */
 #define MODEM_WIFI_DEFAULT_CONFIG()               \
 {                                                 \
@@ -48,7 +48,7 @@ typedef struct {
 
 /**
  * @brief Initializes the ESP32's Wi-Fi
- * 
+ *
  * @param mode Wi-Fi work mode
  * @return pointer to an esp_netif_t object.
  */

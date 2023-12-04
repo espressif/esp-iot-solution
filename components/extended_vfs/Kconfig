@@ -4,7 +4,7 @@ menu "Extended VFS"
         default y
 
     if EXTENDED_VFS
-        menu "Peripherals"            
+        menu "Peripherals"
             config EXTENDED_VFS_GPIO
                 bool "GPIO"
                 default y

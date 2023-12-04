@@ -11,7 +11,7 @@ menu "Example Configuration"
             default ""
             help
             WiFi Password if WEP/WPA/WPA2 or empty if Open.
-            
+
         config ESP_WIFI_AP_SSID
             string "WiFi AP SSID"
             default "ESP32-Camera"
@@ -47,7 +47,7 @@ menu "Example Configuration"
             default 5
             help
             Set the Maximum retry to avoid station reconnecting to the AP unlimited when the AP is really inexistent.
-            
+
         config EXAMPLE_HTTPD_CONN_CLOSE_HEADER
             bool "Send connection close header from request handlers"
             default y
@@ -76,6 +76,6 @@ menu "Example Configuration"
         bool "Enable file server to download video recorder."
             default n
             help
-                If this config item is set, After the video capture is over, a file server is automatically started. 
+                If this config item is set, After the video capture is over, a file server is automatically started.
                 Video files can be downloaded through this file server.
 endmenu

@@ -12,8 +12,7 @@ extern "C" {
 #include "bldc_driver.h"
 #include "bldc_control_param.h"
 
-typedef struct
-{
+typedef struct {
     bldc_gpio_config_t comparer_gpio[PHASE_MAX]; /*!< Read IO for hardware comparators */
 } bldc_zero_cross_comparer_config_t;
 

@@ -98,7 +98,7 @@ menu "IoT USB Host Modem"
     config MODEM_DIAL_RETRY_TIMES
         int "Retry Times During Dial-up"
         default 5
-        help 
+        help
             Set retry times waitting for modem link with carrier base station
 
     config MODEM_PPP_APN
@@ -110,7 +110,7 @@ menu "IoT USB Host Modem"
     config MODEM_SIM_PIN_PWD
         string "Set SIM PIN"
         default "1234"
-        help 
+        help
             Set Pin of sim card if have
 
     menu "GPIO Config"
@@ -166,7 +166,7 @@ menu "IoT USB Host Modem"
             default 6
             help
                 WiFi channel (network channel) for the example to use.
-        choice 
+        choice
             prompt "WiFi Bandwidth"
             default WIFI_BANDWIFTH_40
 

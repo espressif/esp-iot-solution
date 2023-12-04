@@ -34,7 +34,7 @@ def lib_secs(lib, file, lib_path):
         secs = sections_infos.get_sections(lib, file.split('.')[0])
         if len(secs) == 0:
             raise ValueError('Failed to get sections from lib %s'%(lib_path))
-    
+
     return secs
 
 def filter_secs(secs_a, secs_b):
@@ -56,7 +56,7 @@ def func2sect(func):
     else:
         func_l = list()
         func_l.append(func)
-    
+
     secs = list()
     for l in func_l:
         if '.iram1.' not in l:
@@ -77,13 +77,13 @@ class filter_c:
                 self.libs_desc = re.search(desc, l)[1]
                 self.libs = self.libs_desc.replace('*', '')
                 return
-    
+
     def match(self, lib):
         if lib in self.libs:
             print('Remove lib %s'%(lib))
             return True
         return False
-    
+
     def add(self):
         return self.libs_desc
 
@@ -112,7 +112,7 @@ class target_c:
 class relink_c:
     def __init__(self, input, library_file, object_file, function_file, sdkconfig_file, missing_function_info):
         self.filter = filter_c(input)
-        
+
         libraries = configuration.generator(library_file, object_file, function_file, sdkconfig_file, missing_function_info, espidf_objdump)
         self.targets = list()
         for i in libraries.libs:
@@ -199,7 +199,7 @@ class relink_c:
                         return l.replace(S, ' '.join(t.isecs))
                     else:
                         return ' '
-                
+
                 S = '%s(%s)'%(t.desc, ' '.join(t.fsecs))
                 if S in l:
                     return ' '
@@ -215,7 +215,7 @@ class relink_c:
                         l = l.replace(s2, ')')
                         replaced = True
                 if '( )' in l or '()' in l:
-                    return ' ' 
+                    return ' '
                 if replaced:
                     return l
             else:
@@ -273,13 +273,13 @@ def main():
         '--objdump', '-g',
         help='GCC objdump command',
         type=str)
-    
+
     argparser.add_argument(
         '--debug', '-d',
         help='Debug level(option is \'debug\')',
         default='no',
         type=str)
-    
+
     argparser.add_argument(
         '--missing_function_info',
         help='Print error information instead of throwing exception when missing function',

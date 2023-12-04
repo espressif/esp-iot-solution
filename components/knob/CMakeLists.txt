@@ -1,4 +1,4 @@
-idf_component_register(SRCS "iot_knob.c" 
+idf_component_register(SRCS "iot_knob.c"
                        INCLUDE_DIRS "."
                        REQUIRES driver
                        PRIV_REQUIRES esp_timer)

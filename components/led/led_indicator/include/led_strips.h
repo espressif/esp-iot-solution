@@ -34,7 +34,7 @@ typedef struct {
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 1, 0)
         led_strip_spi_config_t led_strip_spi_cfg;       /*!< SPI Configuration for the LED strip. */
 #endif
-        };
+    };
 } led_indicator_strips_config_t;
 
 /**

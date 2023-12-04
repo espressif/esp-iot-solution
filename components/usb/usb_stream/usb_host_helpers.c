@@ -74,7 +74,6 @@ void _usb_urb_free(urb_t *urb)
     ESP_LOGD(TAG, "urb free(%p)", urb);
 }
 
-
 urb_t **_usb_urb_list_alloc(uint32_t urb_num, uint32_t num_isoc_packets, uint32_t bytes_per_packet)
 {
     ESP_LOGD(TAG, "urb list alloc urb_num = %"PRId32", isoc packets = %"PRId32 ", bytes_per_packet = %"PRId32, urb_num, num_isoc_packets, bytes_per_packet);
@@ -177,7 +176,7 @@ hcd_port_event_t _usb_port_event_dflt_process(hcd_port_handle_t port_hdl, hcd_po
 
 hcd_port_handle_t _usb_port_init(hcd_port_callback_t callback, void *callback_arg)
 {
-    UVC_CHECK( callback != NULL && callback_arg != NULL, "invalid args", NULL);
+    UVC_CHECK(callback != NULL && callback_arg != NULL, "invalid args", NULL);
     esp_err_t ret = ESP_OK;
     hcd_port_handle_t port_hdl = NULL;
     usb_phy_config_t phy_config = {
@@ -256,8 +255,9 @@ IRAM_ATTR hcd_pipe_event_t _pipe_event_dflt_process(hcd_pipe_handle_t pipe_handl
     hcd_pipe_event_t actual_evt = pipe_event;
 
 #ifdef RANDOM_ERROR_TEST
-    if (HCD_PIPE_EVENT_URB_DONE == pipe_event)
-    actual_evt = (esp_random() % 10 > 8) ? HCD_PIPE_EVENT_ERROR_XFER : HCD_PIPE_EVENT_URB_DONE;
+    if (HCD_PIPE_EVENT_URB_DONE == pipe_event) {
+        actual_evt = (esp_random() % 10 > 8) ? HCD_PIPE_EVENT_ERROR_XFER : HCD_PIPE_EVENT_URB_DONE;
+    }
 #endif
 
     switch (pipe_event) {

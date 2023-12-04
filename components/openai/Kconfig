@@ -23,19 +23,19 @@ menu "OpenAI"
         default y
         help
         Enable OpenAI Completion
-    
+
     config ENABLE_CHAT_COMPLETION
         bool "Enable Chat Completion"
         default y
         help
         Enable OpenAI Chat Completion
-    
+
     config ENABLE_EDIT
         bool "Enable Edit"
         default y
         help
         Enable OpenAI Edit
-    
+
     config ENABLE_IMAGE_GENERATION
         bool "Enable ImageGeneration"
         default y

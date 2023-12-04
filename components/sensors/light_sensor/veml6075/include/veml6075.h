@@ -49,7 +49,7 @@ typedef enum {
 } veml6075_integration_time_t;
 
 typedef enum {
-    VEML6075_TRIGGER_DIS = 0, /*!< set not trigger 				*/
+    VEML6075_TRIGGER_DIS = 0, /*!< set not trigger              */
     VEML6075_TRIGGER_ONCE = 1, /*!< set trigger one time detect cycle*/
     VEML6075_TRIGGER_MAX,
 } veml6075_trigger_t;
@@ -145,27 +145,27 @@ esp_err_t veml6075_get_mode(veml6075_handle_t sensor, veml6075_config_t * device
 /**
  * @brief The UVA band intensity is returned as a float (0.0 means "no light", higher
  * numbers mean more light was measured
- * 
+ *
  * @param sensor veml6075 operate handle
- * @return uint16_t 
+ * @return uint16_t
  */
 esp_err_t veml6075_get_raw_data(veml6075_handle_t sensor);
 
 /**
  * @brief The UVA band intensity is returned as a float (0.0 means "no light", higher
  * numbers mean more light was measured
- * 
+ *
  * @param sensor veml6075 operate handle
- * @return uint16_t 
+ * @return uint16_t
  */
 float veml6075_get_uva(veml6075_handle_t sensor);
 
 /**
  * @brief The UVB band intensity is returned as a float (0.0 means "no light", higher
  * numbers mean more light was measured
- * 
+ *
  * @param sensor veml6075 operate handle
- * @return uint16_t 
+ * @return uint16_t
  */
 float veml6075_get_uvb(veml6075_handle_t sensor);
 
@@ -180,47 +180,47 @@ float veml6075_get_uvb(veml6075_handle_t sensor);
  * *   >10.5 - Extreme UVIndex intensity
  *
  * @param sensor veml6075 operate handle
- * @return uint16_t 
+ * @return uint16_t
  */
 float veml6075_get_uv_index(veml6075_handle_t sensor);
 
 /**
  * @brief Return raw counters for light measured in the UVA register.
- * 
+ *
  * @param sensor veml6075 operate handle
- * @return uint16_t 
+ * @return uint16_t
  */
 uint16_t veml6075_get_raw_uva(veml6075_handle_t sensor);
 
 /**
  * @brief Return raw counters for light measured in the UVB register.
- * 
+ *
  * @param sensor veml6075 operate handle
- * @return uint16_t 
+ * @return uint16_t
  */
 uint16_t veml6075_get_raw_uvb(veml6075_handle_t sensor);
 
 /**
  * @brief Return raw counters for light measured in the RawDark register.
- * 
+ *
  * @param sensor veml6075 operate handle
- * @return uint16_t 
+ * @return uint16_t
  */
 uint16_t veml6075_get_raw_dark(veml6075_handle_t sensor);
 
 /**
  * @brief Return raw counters for light measured in the Visual register.
- * 
+ *
  * @param sensor veml6075 operate handle
- * @return uint16_t 
+ * @return uint16_t
  */
 uint16_t veml6075_get_raw_vis(veml6075_handle_t sensor);
 
 /**
  * @brief Return raw counters for light measured in the Infra Red register.
- * 
+ *
  * @param sensor veml6075 operate handle
- * @return uint16_t 
+ * @return uint16_t
  */
 uint16_t veml6075_get_raw_ir(veml6075_handle_t sensor);
 
@@ -228,7 +228,7 @@ uint16_t veml6075_get_raw_ir(veml6075_handle_t sensor);
 #ifdef CONFIG_SENSOR_LIGHT_INCLUDED_VEML6075
 /**
  * @brief initialize veml6040 with default configurations
- * 
+ *
  * @param i2c_bus i2c bus handle the sensor will attached to
  * @return
  *     - ESP_OK Success
@@ -238,7 +238,7 @@ esp_err_t light_sensor_veml6075_init(i2c_bus_handle_t handle);
 
 /**
  * @brief de-initialize veml6040
- * 
+ *
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
@@ -247,7 +247,7 @@ esp_err_t light_sensor_veml6075_deinit(void);
 
 /**
  * @brief test if veml6040 is active
- * 
+ *
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
@@ -257,7 +257,7 @@ esp_err_t light_sensor_veml6075_test(void);
 /**
  * @brief Acquire light sensor ultra violet result one time.
  * light Ultraviolet includes UVA UVB and UV
- * 
+ *
  * @param uv Ultraviolet result (unit:lux)
  * @param uva Ultraviolet A data (unit:lux)
  * @param uvb  Ultraviolet B data (unit:lux)

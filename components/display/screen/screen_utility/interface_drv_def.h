@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #ifndef _INTERFACE_DRV_DEF_H_
 #define _INTERFACE_DRV_DEF_H_
 
@@ -23,7 +22,6 @@ extern "C" {
 #define LCD_READ(data, length)  g_lcd_handle.interface_drv->read(g_lcd_handle.interface_drv, (data), (length))
 #define LCD_IFACE_ACQUIRE()     g_lcd_handle.interface_drv->bus_acquire(g_lcd_handle.interface_drv)
 #define LCD_IFACE_RELEASE()     g_lcd_handle.interface_drv->bus_release(g_lcd_handle.interface_drv)
-
 
 static inline esp_err_t LCD_WRITE_CMD(uint8_t cmd)
 {

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -69,7 +69,7 @@ esp_err_t led_indicator_rgb_deinit(void *rgb_handle)
     return ESP_OK;
 }
 
-static esp_err_t led_indicator_rgb_set_duty(led_rgb_t *p_rgb ,uint32_t rgb[])
+static esp_err_t led_indicator_rgb_set_duty(led_rgb_t *p_rgb, uint32_t rgb[])
 {
     esp_err_t ret;
     if (!p_rgb->is_active_level_high) {
@@ -128,7 +128,7 @@ esp_err_t led_indicator_rgb_set_hsv(void *rgb_handle, uint32_t hsv_value)
     uint32_t rgb[3];
     led_indicator_hsv2rgb(hsv_value, &rgb[0], &rgb[1], &rgb[2]);
     for (int i = 0; i < 3; i++) {
-       rgb[i] = rgb[i] * p_rgb->max_duty / UINT8_MAX;
+        rgb[i] = rgb[i] * p_rgb->max_duty / UINT8_MAX;
     }
 
     ret = led_indicator_rgb_set_duty(p_rgb, rgb);
@@ -145,7 +145,7 @@ esp_err_t led_indicator_rgb_set_brightness(void *rgb_handle, uint32_t brightness
     p_rgb->hsv.v = brightness;
     led_indicator_hsv2rgb(p_rgb->hsv.value, &rgb[0], &rgb[1], &rgb[2]);
     for (int i = 0; i < 3; i++) {
-       rgb[i] = rgb[i] * p_rgb->max_duty / UINT8_MAX;
+        rgb[i] = rgb[i] * p_rgb->max_duty / UINT8_MAX;
     }
 
     ret = led_indicator_rgb_set_duty(p_rgb, rgb);

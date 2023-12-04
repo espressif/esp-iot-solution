@@ -137,7 +137,7 @@ static void camera_performance_test_with_format(uint32_t xclk_freq, uint32_t pic
     printf("fps, size \n");
 
     printf("%5.2f,     %7u \n",
-        results.fps, results.size);
+           results.fps, results.size);
 
     printf("----------------------------------------------------------------------------------------\n");
 }

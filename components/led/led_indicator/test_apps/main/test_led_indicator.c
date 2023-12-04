@@ -133,7 +133,6 @@ void led_indicator_gpio_mode_preempt()
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(3000 / portTICK_PERIOD_MS);
 
-
     ESP_LOGI(TAG, "factory_reset.....");
     ret = led_indicator_start(led_handle_0, BLINK_FACTORY_RESET); //higer priority than connecting
     TEST_ASSERT(ret == ESP_OK);
@@ -564,8 +563,6 @@ TEST_CASE("test led preempt func with breath", "[LED][preempt][breath]")
 
 /*********************************************** LED STRIPS *******************************************************/
 
-
-
 typedef enum {
     BLINK_RGB_25_BRIGHTNESS,
     BLINK_RGB_50_BRIGHTNESS,
@@ -604,10 +601,10 @@ static const blink_step_t rgb_triple_blink[] = {
 };
 
 static const blink_step_t rgb_breathe_blink[] = {
-    {LED_BLINK_BREATHE, INSERT_INDEX(MAX_INDEX,LED_STATE_OFF), 1000},
-    {LED_BLINK_BRIGHTNESS, INSERT_INDEX(MAX_INDEX,LED_STATE_OFF), 500},
-    {LED_BLINK_BREATHE, INSERT_INDEX(MAX_INDEX,LED_STATE_ON), 1000},
-    {LED_BLINK_BRIGHTNESS, INSERT_INDEX(MAX_INDEX,LED_STATE_ON), 500},
+    {LED_BLINK_BREATHE, INSERT_INDEX(MAX_INDEX, LED_STATE_OFF), 1000},
+    {LED_BLINK_BRIGHTNESS, INSERT_INDEX(MAX_INDEX, LED_STATE_OFF), 500},
+    {LED_BLINK_BREATHE, INSERT_INDEX(MAX_INDEX, LED_STATE_ON), 1000},
+    {LED_BLINK_BRIGHTNESS, INSERT_INDEX(MAX_INDEX, LED_STATE_ON), 500},
     {LED_BLINK_LOOP, 0, 0},
 };
 
@@ -627,49 +624,49 @@ static const blink_step_t rgb_brightness_75_blink[] = {
 };
 
 static const blink_step_t rgb_red_blink[] = {
-    {LED_BLINK_RGB, SET_IRGB(MAX_INDEX,0xFF,0,0), 2000},
+    {LED_BLINK_RGB, SET_IRGB(MAX_INDEX, 0xFF, 0, 0), 2000},
     {LED_BLINK_STOP, 0, 0},
 };
 
 static const blink_step_t rgb_green_blink[] = {
-    {LED_BLINK_RGB, SET_IRGB(MAX_INDEX,0,0xFF,0), 2000},
+    {LED_BLINK_RGB, SET_IRGB(MAX_INDEX, 0, 0xFF, 0), 2000},
     {LED_BLINK_STOP, 0, 0},
 };
 
 static const blink_step_t rgb_blue_blink[] = {
-    {LED_BLINK_RGB, SET_IRGB(MAX_INDEX,0,0,0xFF), 2000},
+    {LED_BLINK_RGB, SET_IRGB(MAX_INDEX, 0, 0, 0xFF), 2000},
     {LED_BLINK_STOP, 0, 0},
 };
 
 static const blink_step_t rgb_ring_red_to_blue_blink[] = {
-    {LED_BLINK_RGB, SET_IRGB(MAX_INDEX,0xFF,0,0), 0},
-    {LED_BLINK_RGB_RING, SET_IRGB(MAX_INDEX,0,0,0xFF), 4000},
-    {LED_BLINK_RGB_RING, SET_IRGB(MAX_INDEX,0xFF,0,0), 4000},
+    {LED_BLINK_RGB, SET_IRGB(MAX_INDEX, 0xFF, 0, 0), 0},
+    {LED_BLINK_RGB_RING, SET_IRGB(MAX_INDEX, 0, 0, 0xFF), 4000},
+    {LED_BLINK_RGB_RING, SET_IRGB(MAX_INDEX, 0xFF, 0, 0), 4000},
     {LED_BLINK_LOOP, 0, 0},
 };
 
 static const blink_step_t rgb_flash_blink[] = {
-    {LED_BLINK_RGB, SET_IRGB(MAX_INDEX,0xFF,0,0), 200},
-    {LED_BLINK_RGB, SET_IRGB(MAX_INDEX,0xFF,0xFF,0), 200},
-    {LED_BLINK_RGB, SET_IRGB(MAX_INDEX,0,0xFF,0), 200},
-    {LED_BLINK_RGB, SET_IRGB(MAX_INDEX,0,0xFF,0xFF), 200},
-    {LED_BLINK_RGB, SET_IRGB(MAX_INDEX,0,0,0xFF), 200},
-    {LED_BLINK_RGB, SET_IRGB(MAX_INDEX,0xFF,0,0xFF), 200},
+    {LED_BLINK_RGB, SET_IRGB(MAX_INDEX, 0xFF, 0, 0), 200},
+    {LED_BLINK_RGB, SET_IRGB(MAX_INDEX, 0xFF, 0xFF, 0), 200},
+    {LED_BLINK_RGB, SET_IRGB(MAX_INDEX, 0, 0xFF, 0), 200},
+    {LED_BLINK_RGB, SET_IRGB(MAX_INDEX, 0, 0xFF, 0xFF), 200},
+    {LED_BLINK_RGB, SET_IRGB(MAX_INDEX, 0, 0, 0xFF), 200},
+    {LED_BLINK_RGB, SET_IRGB(MAX_INDEX, 0xFF, 0, 0xFF), 200},
     {LED_BLINK_LOOP, 0, 0},
 };
 
 static const blink_step_t hsv_red_blink[] = {
-    {LED_BLINK_HSV, SET_IHSV(MAX_INDEX,0,255,255), 0},
+    {LED_BLINK_HSV, SET_IHSV(MAX_INDEX, 0, 255, 255), 0},
     {LED_BLINK_STOP, 0, 0},
 };
 
 static const blink_step_t hsv_green_blink[] = {
-    {LED_BLINK_HSV, SET_IHSV(MAX_INDEX,120,255,255), 0},
+    {LED_BLINK_HSV, SET_IHSV(MAX_INDEX, 120, 255, 255), 0},
     {LED_BLINK_STOP, 0, 0},
 };
 
 static const blink_step_t hsv_blue_blink[] = {
-    {LED_BLINK_HSV, SET_IHSV(MAX_INDEX,240,255,255), 0},
+    {LED_BLINK_HSV, SET_IHSV(MAX_INDEX, 240, 255, 255), 0},
     {LED_BLINK_STOP, 0, 0},
 };
 
@@ -696,7 +693,7 @@ static blink_step_t const *led_rgb_blink_lst[] = {
 #define LED_RGB_GREEN_GPIO 12
 #define LED_RGB_BLUE_GPIO 13
 
-TEST_CASE("TEST LED RGB","[LED RGB][RGB]")
+TEST_CASE("TEST LED RGB", "[LED RGB][RGB]")
 {
     led_indicator_rgb_config_t led_grb_cfg = {
         .is_active_level_high = 1,
@@ -806,7 +803,7 @@ TEST_CASE("TEST LED RGB","[LED RGB][RGB]")
 /* esp32c2 not support rmt */
 #if !CONFIG_IDF_TARGET_ESP32C2
 
-TEST_CASE("TEST LED Strips by RGB","[LED Strips][RGB]")
+TEST_CASE("TEST LED Strips by RGB", "[LED Strips][RGB]")
 {
     led_strip_config_t strip_config = {
         .strip_gpio_num = LED_STRIP_BLINK_GPIO,   // The GPIO that connected to the LED strip's data line
@@ -926,7 +923,7 @@ TEST_CASE("TEST LED Strips by RGB","[LED Strips][RGB]")
     led_indicator_deinit();
 }
 
-TEST_CASE("TEST LED RGB control Real time ","[LED RGB][Real time]")
+TEST_CASE("TEST LED RGB control Real time ", "[LED RGB][Real time]")
 {
     led_strip_config_t strip_config = {
         .strip_gpio_num = LED_STRIP_BLINK_GPIO,   // The GPIO that connected to the LED strip's data line
@@ -966,19 +963,19 @@ TEST_CASE("TEST LED RGB control Real time ","[LED RGB][Real time]")
 
     ESP_LOGI(TAG, "set red by rgb_value one by one .....");
 
-    for(int i = 0; i < MAX_LED_NUM; i++) {
-        ret = led_indicator_set_rgb(led_handle_0, SET_IRGB(i,0xFF,0,0));
+    for (int i = 0; i < MAX_LED_NUM; i++) {
+        ret = led_indicator_set_rgb(led_handle_0, SET_IRGB(i, 0xFF, 0, 0));
         TEST_ASSERT(ret == ESP_OK);
         vTaskDelay(500 / portTICK_PERIOD_MS);
     }
 
     ESP_LOGI(TAG, "set red by rgb_value .....");
-    ret = led_indicator_set_rgb(led_handle_0, SET_IRGB(MAX_INDEX,0xFF,0,0));
+    ret = led_indicator_set_rgb(led_handle_0, SET_IRGB(MAX_INDEX, 0xFF, 0, 0));
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(1000 / portTICK_PERIOD_MS);
 
     ESP_LOGI(TAG, "set green by hsv_value .....");
-    ret = led_indicator_set_hsv(led_handle_0, SET_IHSV(MAX_INDEX ,240, 255, 255));
+    ret = led_indicator_set_hsv(led_handle_0, SET_IHSV(MAX_INDEX, 240, 255, 255));
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(1000 / portTICK_PERIOD_MS);
 

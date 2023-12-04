@@ -135,27 +135,27 @@ float veml6040_get_lux(veml6040_handle_t sensor)
     veml6040_dev_t *dev = (veml6040_dev_t *) sensor;
     sensorValue = veml6040_get_green(sensor);
     switch (dev->config.integration_time) {
-        case VEML6040_INTEGRATION_TIME_40MS:
-            ambientLightInLux = sensorValue * VEML6040_GSENS_40MS;
-            break;
-        case VEML6040_INTEGRATION_TIME_80MS:
-            ambientLightInLux = sensorValue * VEML6040_GSENS_80MS;
-            break;
-        case VEML6040_INTEGRATION_TIME_160MS:
-            ambientLightInLux = sensorValue * VEML6040_GSENS_160MS;
-            break;
-        case VEML6040_INTEGRATION_TIME_320MS:
-            ambientLightInLux = sensorValue * VEML6040_GSENS_320MS;
-            break;
-        case VEML6040_INTEGRATION_TIME_640MS:
-            ambientLightInLux = sensorValue * VEML6040_GSENS_640MS;
-            break;
-        case VEML6040_INTEGRATION_TIME_1280MS:
-            ambientLightInLux = sensorValue * VEML6040_GSENS_1280MS;
-            break;
-        default:
-            ambientLightInLux = VEML6040_I2C_ERR_RES;
-            break;
+    case VEML6040_INTEGRATION_TIME_40MS:
+        ambientLightInLux = sensorValue * VEML6040_GSENS_40MS;
+        break;
+    case VEML6040_INTEGRATION_TIME_80MS:
+        ambientLightInLux = sensorValue * VEML6040_GSENS_80MS;
+        break;
+    case VEML6040_INTEGRATION_TIME_160MS:
+        ambientLightInLux = sensorValue * VEML6040_GSENS_160MS;
+        break;
+    case VEML6040_INTEGRATION_TIME_320MS:
+        ambientLightInLux = sensorValue * VEML6040_GSENS_320MS;
+        break;
+    case VEML6040_INTEGRATION_TIME_640MS:
+        ambientLightInLux = sensorValue * VEML6040_GSENS_640MS;
+        break;
+    case VEML6040_INTEGRATION_TIME_1280MS:
+        ambientLightInLux = sensorValue * VEML6040_GSENS_1280MS;
+        break;
+    default:
+        ambientLightInLux = VEML6040_I2C_ERR_RES;
+        break;
     }
     return ambientLightInLux;
 }

@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #include "esp_log.h"
 #include "iot_board.h"
 #include "iot_sensor_hub.h"
@@ -23,61 +22,61 @@ static void sensor_event_handler(void *handler_args, esp_event_base_t base, int3
         return;
     }
     switch (id) {
-        case SENSOR_STARTED:
-            ESP_LOGI(TAG, "Timestamp = %llu - %s SENSOR_STARTED",
-                     sensor_data->timestamp,
-                     SENSOR_TYPE_STRING[sensor_type]);
-            break;
-        case SENSOR_STOPED:
-            ESP_LOGI(TAG, "Timestamp = %llu - %s SENSOR_STOPED",
-                     sensor_data->timestamp,
-                     SENSOR_TYPE_STRING[sensor_type]);
-            break;
-        case SENSOR_HUMI_DATA_READY:
-            ESP_LOGI(TAG, "Timestamp = %llu - SENSOR_HUMI_DATA_READY - "
-                     "humiture=%.2f",
-                     sensor_data->timestamp,
-                     sensor_data->humidity);
-            break;
-        case SENSOR_TEMP_DATA_READY:
-            ESP_LOGI(TAG, "Timestamp = %llu - SENSOR_TEMP_DATA_READY - "
-                     "temperature=%.2f\n",
-                     sensor_data->timestamp,
-                     sensor_data->temperature);
-            break;
-        case SENSOR_ACCE_DATA_READY:
-            ESP_LOGI(TAG, "Timestamp = %llu - SENSOR_ACCE_DATA_READY - "
-                     "acce_x=%.2f, acce_y=%.2f, acce_z=%.2f\n",
-                     sensor_data->timestamp,
-                     sensor_data->acce.x, sensor_data->acce.y, sensor_data->acce.z);
-            break;
-        case SENSOR_GYRO_DATA_READY:
-            ESP_LOGI(TAG, "Timestamp = %llu - SENSOR_GYRO_DATA_READY - "
-                     "gyro_x=%.2f, gyro_y=%.2f, gyro_z=%.2f\n",
-                     sensor_data->timestamp,
-                     sensor_data->gyro.x, sensor_data->gyro.y, sensor_data->gyro.z);
-            break;
-        case SENSOR_LIGHT_DATA_READY:
-            ESP_LOGI(TAG, "Timestamp = %llu - SENSOR_LIGHT_DATA_READY - "
-                     "light=%.2f",
-                     sensor_data->timestamp,
-                     sensor_data->light);
-            break;
-        case SENSOR_RGBW_DATA_READY:
-            ESP_LOGI(TAG, "Timestamp = %llu - SENSOR_RGBW_DATA_READY - "
-                     "r=%.2f, g=%.2f, b=%.2f, w=%.2f\n",
-                     sensor_data->timestamp,
-                     sensor_data->rgbw.r, sensor_data->rgbw.r, sensor_data->rgbw.b, sensor_data->rgbw.w);
-            break;
-        case SENSOR_UV_DATA_READY:
-            ESP_LOGI(TAG, "Timestamp = %llu - SENSOR_UV_DATA_READY - "
-                     "uv=%.2f, uva=%.2f, uvb=%.2f\n",
-                     sensor_data->timestamp,
-                     sensor_data->uv.uv, sensor_data->uv.uva, sensor_data->uv.uvb);
-            break;
-        default:
-            ESP_LOGI(TAG, "Timestamp = %llu - event id = %d", sensor_data->timestamp, id);
-            break;
+    case SENSOR_STARTED:
+        ESP_LOGI(TAG, "Timestamp = %llu - %s SENSOR_STARTED",
+                 sensor_data->timestamp,
+                 SENSOR_TYPE_STRING[sensor_type]);
+        break;
+    case SENSOR_STOPED:
+        ESP_LOGI(TAG, "Timestamp = %llu - %s SENSOR_STOPED",
+                 sensor_data->timestamp,
+                 SENSOR_TYPE_STRING[sensor_type]);
+        break;
+    case SENSOR_HUMI_DATA_READY:
+        ESP_LOGI(TAG, "Timestamp = %llu - SENSOR_HUMI_DATA_READY - "
+                 "humiture=%.2f",
+                 sensor_data->timestamp,
+                 sensor_data->humidity);
+        break;
+    case SENSOR_TEMP_DATA_READY:
+        ESP_LOGI(TAG, "Timestamp = %llu - SENSOR_TEMP_DATA_READY - "
+                 "temperature=%.2f\n",
+                 sensor_data->timestamp,
+                 sensor_data->temperature);
+        break;
+    case SENSOR_ACCE_DATA_READY:
+        ESP_LOGI(TAG, "Timestamp = %llu - SENSOR_ACCE_DATA_READY - "
+                 "acce_x=%.2f, acce_y=%.2f, acce_z=%.2f\n",
+                 sensor_data->timestamp,
+                 sensor_data->acce.x, sensor_data->acce.y, sensor_data->acce.z);
+        break;
+    case SENSOR_GYRO_DATA_READY:
+        ESP_LOGI(TAG, "Timestamp = %llu - SENSOR_GYRO_DATA_READY - "
+                 "gyro_x=%.2f, gyro_y=%.2f, gyro_z=%.2f\n",
+                 sensor_data->timestamp,
+                 sensor_data->gyro.x, sensor_data->gyro.y, sensor_data->gyro.z);
+        break;
+    case SENSOR_LIGHT_DATA_READY:
+        ESP_LOGI(TAG, "Timestamp = %llu - SENSOR_LIGHT_DATA_READY - "
+                 "light=%.2f",
+                 sensor_data->timestamp,
+                 sensor_data->light);
+        break;
+    case SENSOR_RGBW_DATA_READY:
+        ESP_LOGI(TAG, "Timestamp = %llu - SENSOR_RGBW_DATA_READY - "
+                 "r=%.2f, g=%.2f, b=%.2f, w=%.2f\n",
+                 sensor_data->timestamp,
+                 sensor_data->rgbw.r, sensor_data->rgbw.r, sensor_data->rgbw.b, sensor_data->rgbw.w);
+        break;
+    case SENSOR_UV_DATA_READY:
+        ESP_LOGI(TAG, "Timestamp = %llu - SENSOR_UV_DATA_READY - "
+                 "uv=%.2f, uva=%.2f, uvb=%.2f\n",
+                 sensor_data->timestamp,
+                 sensor_data->uv.uv, sensor_data->uv.uva, sensor_data->uv.uvb);
+        break;
+    default:
+        ESP_LOGI(TAG, "Timestamp = %llu - event id = %d", sensor_data->timestamp, id);
+        break;
     }
 }
 
@@ -108,14 +107,14 @@ void app_main(void)
         .min_delay = SENSOR_PERIOD /*data acquire period*/
     };
     int num = iot_sensor_scan(i2c0_bus_handle, sensor_infos, 10); /*scan for valid sensors based on active i2c address*/
-    for (size_t i = 0; i < num && i<10; i++) {
+    for (size_t i = 0; i < num && i < 10; i++) {
 
         if (ESP_OK != iot_sensor_create(sensor_infos[i]->sensor_id, &sensor_config, &sensor_handle[i])) { /*create a sensor with specific sensor_id and configurations*/
             goto error_loop;
         }
 
         iot_sensor_start(sensor_handle[i]); /*start a sensor, data ready events will be posted once data acquired successfully*/
-        ESP_LOGI(TAG,"%s (%s) created",sensor_infos[i]->name, sensor_infos[i]->desc);
+        ESP_LOGI(TAG, "%s (%s) created", sensor_infos[i]->name, sensor_infos[i]->desc);
     }
 
     while (1) {

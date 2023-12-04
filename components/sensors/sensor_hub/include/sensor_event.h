@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #ifndef _SENSORS_EVENT_H_
 #define _SENSORS_EVENT_H_
 
@@ -64,10 +63,10 @@ esp_err_t sensors_event_loop_delete(void);
  *  - Others: Fail
  */
 esp_err_t sensors_event_handler_instance_register(esp_event_base_t event_base,
-        int32_t event_id,
-        esp_event_handler_t event_handler,
-        void *event_handler_arg,
-        esp_event_handler_instance_t *context);
+                                                  int32_t event_id,
+                                                  esp_event_handler_t event_handler,
+                                                  void *event_handler_arg,
+                                                  esp_event_handler_instance_t *context);
 
 /**
  * @brief Unregister a handler from the sensors event loop.
@@ -82,8 +81,8 @@ esp_err_t sensors_event_handler_instance_register(esp_event_base_t event_base,
  *  - Others: Fail
  */
 esp_err_t sensors_event_handler_instance_unregister(esp_event_base_t event_base,
-        int32_t event_id,
-        esp_event_handler_instance_t context);
+                                                    int32_t event_id,
+                                                    esp_event_handler_instance_t context);
 
 /**
  * @brief Posts an event to the sensors event loop. The event loop library keeps a copy of event_data and manages

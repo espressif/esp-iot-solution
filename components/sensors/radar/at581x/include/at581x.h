@@ -17,7 +17,6 @@ extern "C" {
 #include "at581x_reg.h"
 #include "at581x_reg.h"
 
-
 /* AT581X address */
 #define AT581X_ADDRRES_0 (0x28<<1)
 
@@ -32,7 +31,6 @@ typedef void *at581x_dev_handle_t;
  *
  */
 typedef void (*at581x_interrupt_callback_t)(void *arg);
-
 
 typedef struct {
     uint16_t self_check_tm_cfg;     /*!< Power-on self-test time, range: 0 ~ 65536 ms */
@@ -189,10 +187,10 @@ esp_err_t at581x_set_trig_keep_time(at581x_dev_handle_t handle, uint64_t keep_ti
  *          - ESP_ERR_INVALID_ARG     Invalid device handle or argument.
  */
 esp_err_t at581x_set_light_sensor_threshold(at581x_dev_handle_t handle,
-        bool onoff,
-        uint32_t light_sensor_value_high,
-        uint32_t light_sensor_value_low,
-        uint32_t light_sensor_iniverse);
+                                            bool onoff,
+                                            uint32_t light_sensor_value_high,
+                                            uint32_t light_sensor_value_low,
+                                            uint32_t light_sensor_iniverse);
 /**
  * @brief Control the RF module.
  *
@@ -236,4 +234,3 @@ esp_err_t at581x_set_detect_window(at581x_dev_handle_t handle, uint8_t window_le
 #ifdef __cplusplus
 }
 #endif
-

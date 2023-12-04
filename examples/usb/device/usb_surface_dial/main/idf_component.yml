@@ -3,12 +3,11 @@ dependencies:
   ## Required IDF version
   idf:
     version: ">=4.4.0"
-  espressif/button: 
+  espressif/button:
     version: ">=2.3.0"
     override_path: "../../../../../components/button"
-  leeebo/tinyusb_src: 
+  leeebo/tinyusb_src:
     version: ">=0.0.4"
-  espressif/knob: 
+  espressif/knob:
     version: ">=0.1.0"
     override_path: "../../../../../components/knob"
-

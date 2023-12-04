@@ -1,11 +1,8 @@
-/* Camera pic server example
-
-   This example code is in the Public Domain (or CC0 licensed, at your option.)
-
-   Unless required by applicable law or agreed to in writing, this
-   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-   CONDITIONS OF ANY KIND, either express or implied.
-*/
+/*
+ * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #include <stdio.h>
 #include <string.h>
@@ -59,7 +56,7 @@ static esp_err_t init_camera(uint32_t xclk_freq_hz, pixformat_t pixel_format, fr
         .pixel_format = pixel_format, //YUV422,GRAYSCALE,RGB565,JPEG
         .frame_size = frame_size,    //QQVGA-UXGA, sizes above QVGA are not been recommended when not JPEG format.
 
-        .jpeg_quality = 10, //0-63 
+        .jpeg_quality = 10, //0-63
         .fb_count = fb_count,       // For ESP32/ESP32-S2, if more than one, i2s runs in continuous mode. Use only with JPEG.
         .grab_mode = CAMERA_GRAB_LATEST,
         .fb_location = CAMERA_FB_IN_PSRAM
@@ -76,7 +73,7 @@ static esp_err_t init_camera(uint32_t xclk_freq_hz, pixformat_t pixel_format, fr
     }
 
     if (s->id.PID == OV3660_PID || s->id.PID == OV2640_PID) {
-        s->set_vflip(s, 1); //flip it back    
+        s->set_vflip(s, 1); //flip it back
     } else if (s->id.PID == GC0308_PID) {
         s->set_hmirror(s, 0);
     } else if (s->id.PID == GC032A_PID) {
@@ -97,7 +94,7 @@ void app_main()
     app_wifi_main();
     /* Check the image format supported by your camera sensor.
      * Typically, when you need to obtain a larger resolution image, increase the xclk clock frequency.
-     * Similarly, when you need a smaller resolution image, please use a smaller xclk clock frequency, 
+     * Similarly, when you need a smaller resolution image, please use a smaller xclk clock frequency,
      * otherwise the warning `EV-EOF-OVF` may be triggered.
      */
     TEST_ESP_OK(init_camera(10000000, PIXFORMAT_YUV422, FRAMESIZE_QVGA, 2));

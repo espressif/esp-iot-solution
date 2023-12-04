@@ -60,7 +60,6 @@ esp_err_t esp_modem_netif_set_default_handlers(esp_modem_netif_driver_t *h, esp_
  * @}
  */
 
-
 /**
  * @defgroup ESP_MODEM_NETIF_LEGACY Modem netif adapter legacy API
  * @brief  Legacy API for modem netif
@@ -88,9 +87,9 @@ esp_modem_netif_driver_t *esp_modem_netif_setup(esp_modem_dte_t *dte);
 
 /**
  * @brief Transfer ppp event code to string
- * 
- * @param code 
- * @return ** const char* 
+ *
+ * @param code
+ * @return ** const char*
  */
 const char *esp_modem_netif_event_to_name(int code);
 

@@ -327,4 +327,3 @@ void painter_draw_filled_circle(int x, int y, int radius, uint16_t color)
         }
     } while (x_pos <= 0);
 }
-

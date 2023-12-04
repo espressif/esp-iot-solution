@@ -94,7 +94,7 @@ esp_ble_ota_notification_data(uint16_t conn_handle, uint16_t attr_handle, uint8_
 #endif
 
 /*----------------------------------------------------
- * Common api's 
+ * Common api's
  *----------------------------------------------------*/
 
 void ble_store_config_init(void);
@@ -177,7 +177,7 @@ esp_ble_ota_write_chr(struct os_mbuf *om)
 
 write_ota_data:
 #ifdef CONFIG_PRE_ENC_OTA
-    if(pargs.data_out_len > 0) {
+    if (pargs.data_out_len > 0) {
         memcpy(fw_buf + fw_buf_offset, pargs.data_out, pargs.data_out_len);
 
         free(pargs.data_out);
@@ -283,7 +283,7 @@ esp_err_t esp_ble_ota_recv_fw_data_callback(esp_ble_ota_recv_fw_cb_t callback)
     return ESP_OK;
 }
 #else
-esp_err_t esp_ble_ota_recv_fw_data_callback(esp_ble_ota_recv_fw_cb_t callback, 
+esp_err_t esp_ble_ota_recv_fw_data_callback(esp_ble_ota_recv_fw_cb_t callback,
                                             esp_decrypt_handle_t esp_decrypt_handle)
 {
     decrypt_handle_cmp = esp_decrypt_handle;
@@ -633,11 +633,12 @@ esp_ble_ota_ext_advertise(void)
     int rc;
 
     /* First check if any instance is already active */
-    if(ble_gap_adv_active())
+    if (ble_gap_adv_active()) {
         return;
+    }
 
     /* use defaults for non-set params */
-    memset (&params, 0, sizeof(params));
+    memset(&params, 0, sizeof(params));
 
     /* enable connectable advertising */
     params.connectable = 1;
@@ -656,7 +657,7 @@ esp_ble_ota_ext_advertise(void)
     /* configure instance 0 */
     rc = ble_gap_ext_adv_configure(instance, &params, NULL,
                                    esp_ble_ota_gap_event, NULL);
-    assert (rc == 0);
+    assert(rc == 0);
     /* in this case only scan response is allowed */
 
     /* get mbuf for scan rsp data */
@@ -668,11 +669,11 @@ esp_ble_ota_ext_advertise(void)
     assert(rc == 0);
 
     rc = ble_gap_ext_adv_set_data(instance, data);
-    assert (rc == 0);
+    assert(rc == 0);
 
     /* start advertising */
     rc = ble_gap_ext_adv_start(instance, 0, 0);
-    assert (rc == 0);
+    assert(rc == 0);
 }
 #else
 static void
@@ -788,7 +789,7 @@ esp_ble_ota_gap_event(struct ble_gap_event *event, void *arg)
         /* Connection terminated; resume advertising. */
 #if CONFIG_EXAMPLE_EXTENDED_ADV
         esp_ble_ota_ext_advertise();
-#else       
+#else
         esp_ble_ota_advertise();
 #endif
         return 0;
@@ -935,7 +936,7 @@ esp_ble_ota_on_sync(void)
     /* Begin advertising. */
 #if CONFIG_EXAMPLE_EXTENDED_ADV
     esp_ble_ota_ext_advertise();
-#else       
+#else
     esp_ble_ota_advertise();
 #endif
 

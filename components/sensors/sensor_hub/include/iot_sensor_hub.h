@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #ifndef _IOT_SENSOR_HUB_H_
 #define _IOT_SENSOR_HUB_H_
 

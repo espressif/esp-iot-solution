@@ -1,5 +1,5 @@
 menu "CMake Utilities"
-    
+
     config CU_RELINKER_ENABLE
         bool "Enable relinker"
         default n
@@ -54,7 +54,7 @@ menu "CMake Utilities"
         help
             "Enable this option, users can enable GCC link time optimization(LTO)
              feature for target components or dependencies.
-    
+
     config CU_GCC_STRING_1BYTE_ALIGN
         bool "GCC string 1-byte align"
         default n

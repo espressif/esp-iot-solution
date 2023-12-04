@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #include <stdio.h>
 
 #include <freertos/FreeRTOS.h>
@@ -28,7 +27,6 @@ static const char *TAG = "test case";
 #ifndef MIN
 #define MIN(a, b)                                   (((a) < (b)) ? (a) : (b))
 #endif
-
 
 static void cct_and_brightness_convert_to_cold_and_warm(float white_max_power, uint8_t cct, uint8_t brightness, uint16_t *out_cold, uint16_t *out_warm)
 {
@@ -253,26 +251,26 @@ TEST_CASE("Storage interface", "[Application Layer]")
 
 static IRAM_ATTR uint8_t parity_check(uint8_t input)
 {
-    static uint8_t count_table[256] = { 
-        0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4, 
-        1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 
-        1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 
-        2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 
-        1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 
-        2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 
-        2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 
-        3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, 
-        1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 
-        2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 
-        2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 
-        3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, 
-        2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 
-        3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, 
-        3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, 
-        4, 5, 5, 6, 5, 6, 6, 7, 5, 6, 6, 7, 6, 7, 7, 8, 
+    static uint8_t count_table[256] = {
+        0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
+        1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
+        1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
+        2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+        1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
+        2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+        2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+        3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
+        1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
+        2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+        2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+        3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
+        2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+        3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
+        3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
+        4, 5, 5, 6, 5, 6, 6, 7, 5, 6, 6, 7, 6, 7, 7, 8,
     };
 
-    return (count_table[input] % 2 == 0) ? input:(input |= 0x01);
+    return (count_table[input] % 2 == 0) ? input : (input |= 0x01);
 }
 
 TEST_CASE("Parity Check", "[Application Layer]")
@@ -725,88 +723,88 @@ TEST_CASE("BP5758D", "[Application Layer]")
 #ifdef CONFIG_ENABLE_BP1658CJ_DRIVER
 TEST_CASE("BP1658CJ", "[Underlying Driver]")
 {
-{
-    //1.Status check
-    TEST_ESP_ERR(ESP_ERR_INVALID_STATE, bp1658cj_set_channel(BP1658CJ_CHANNEL_R, 1023));
-    TEST_ESP_ERR(ESP_ERR_INVALID_STATE, bp1658cj_set_rgb_channel(1023, 1023, 0));
-    TEST_ESP_ERR(ESP_ERR_INVALID_STATE, bp1658cj_set_cw_channel(1023, 1023));
+    {
+        //1.Status check
+        TEST_ESP_ERR(ESP_ERR_INVALID_STATE, bp1658cj_set_channel(BP1658CJ_CHANNEL_R, 1023));
+        TEST_ESP_ERR(ESP_ERR_INVALID_STATE, bp1658cj_set_rgb_channel(1023, 1023, 0));
+        TEST_ESP_ERR(ESP_ERR_INVALID_STATE, bp1658cj_set_cw_channel(1023, 1023));
 
-    //2. init check
-    driver_bp1658cj_t conf = {
-        .rgb_current = BP1658CJ_RGB_CURRENT_10MA,
-        .cw_current = BP1658CJ_CW_CURRENT_30MA,
-        .iic_clk = 4,
-        .iic_sda = 5,
-        .freq_khz = 300,
-        .enable_iic_queue = true
-    };
-    TEST_ESP_OK(bp1658cj_init(&conf));
+        //2. init check
+        driver_bp1658cj_t conf = {
+            .rgb_current = BP1658CJ_RGB_CURRENT_10MA,
+            .cw_current = BP1658CJ_CW_CURRENT_30MA,
+            .iic_clk = 4,
+            .iic_sda = 5,
+            .freq_khz = 300,
+            .enable_iic_queue = true
+        };
+        TEST_ESP_OK(bp1658cj_init(&conf));
 
-    //3. regist Check, step 1
-    TEST_ESP_OK(bp1658cj_regist_channel(BP1658CJ_CHANNEL_R, BP1658CJ_PIN_OUT1));
-    TEST_ESP_OK(bp1658cj_regist_channel(BP1658CJ_CHANNEL_G, BP1658CJ_PIN_OUT2));
-    TEST_ESP_OK(bp1658cj_regist_channel(BP1658CJ_CHANNEL_B, BP1658CJ_PIN_OUT3));
-    TEST_ESP_OK(bp1658cj_set_channel(BP1658CJ_CHANNEL_R, 1));
-    TEST_ESP_OK(bp1658cj_set_channel(BP1658CJ_CHANNEL_G, 1));
-    TEST_ESP_OK(bp1658cj_set_channel(BP1658CJ_CHANNEL_B, 1));
-    TEST_ESP_OK(bp1658cj_set_rgb_channel(1, 1, 1));
-    TEST_ESP_ERR(ESP_ERR_INVALID_STATE, bp1658cj_set_channel(BP1658CJ_CHANNEL_C, 1));
-    TEST_ESP_ERR(ESP_ERR_INVALID_STATE, bp1658cj_set_channel(BP1658CJ_CHANNEL_W, 1));
+        //3. regist Check, step 1
+        TEST_ESP_OK(bp1658cj_regist_channel(BP1658CJ_CHANNEL_R, BP1658CJ_PIN_OUT1));
+        TEST_ESP_OK(bp1658cj_regist_channel(BP1658CJ_CHANNEL_G, BP1658CJ_PIN_OUT2));
+        TEST_ESP_OK(bp1658cj_regist_channel(BP1658CJ_CHANNEL_B, BP1658CJ_PIN_OUT3));
+        TEST_ESP_OK(bp1658cj_set_channel(BP1658CJ_CHANNEL_R, 1));
+        TEST_ESP_OK(bp1658cj_set_channel(BP1658CJ_CHANNEL_G, 1));
+        TEST_ESP_OK(bp1658cj_set_channel(BP1658CJ_CHANNEL_B, 1));
+        TEST_ESP_OK(bp1658cj_set_rgb_channel(1, 1, 1));
+        TEST_ESP_ERR(ESP_ERR_INVALID_STATE, bp1658cj_set_channel(BP1658CJ_CHANNEL_C, 1));
+        TEST_ESP_ERR(ESP_ERR_INVALID_STATE, bp1658cj_set_channel(BP1658CJ_CHANNEL_W, 1));
 
-    //3. regist Check, step 2
-    TEST_ESP_OK(bp1658cj_regist_channel(BP1658CJ_CHANNEL_C, BP1658CJ_PIN_OUT5));
-    TEST_ESP_OK(bp1658cj_regist_channel(BP1658CJ_CHANNEL_W, BP1658CJ_PIN_OUT4));
-    TEST_ESP_OK(bp1658cj_set_channel(BP1658CJ_CHANNEL_C, 1));
-    TEST_ESP_OK(bp1658cj_set_channel(BP1658CJ_CHANNEL_W, 1));
-    TEST_ESP_OK(bp1658cj_set_cw_channel(1, 1));
+        //3. regist Check, step 2
+        TEST_ESP_OK(bp1658cj_regist_channel(BP1658CJ_CHANNEL_C, BP1658CJ_PIN_OUT5));
+        TEST_ESP_OK(bp1658cj_regist_channel(BP1658CJ_CHANNEL_W, BP1658CJ_PIN_OUT4));
+        TEST_ESP_OK(bp1658cj_set_channel(BP1658CJ_CHANNEL_C, 1));
+        TEST_ESP_OK(bp1658cj_set_channel(BP1658CJ_CHANNEL_W, 1));
+        TEST_ESP_OK(bp1658cj_set_cw_channel(1, 1));
 
-    //4. Data range check
-    TEST_ESP_ERR(ESP_ERR_INVALID_ARG, bp1658cj_set_channel(BP1658CJ_CHANNEL_R, 1024));
+        //4. Data range check
+        TEST_ESP_ERR(ESP_ERR_INVALID_ARG, bp1658cj_set_channel(BP1658CJ_CHANNEL_R, 1024));
 
-    //5. Color check
-    TEST_ESP_OK(bp1658cj_set_shutdown());
-    vTaskDelay(1000);
-    TEST_ESP_OK(bp1658cj_set_rgb_channel(255, 0, 0));
-    vTaskDelay(1000);
-    TEST_ESP_OK(bp1658cj_set_rgb_channel(0, 255, 0));
-    vTaskDelay(1000);
-    TEST_ESP_OK(bp1658cj_set_rgb_channel(0, 0, 255));
-    vTaskDelay(1000);
-    TEST_ESP_OK(bp1658cj_set_shutdown());
-    vTaskDelay(1000);
-    TEST_ESP_OK(bp1658cj_set_cw_channel(255, 0));
-    vTaskDelay(1000);
-    TEST_ESP_OK(bp1658cj_set_cw_channel(0, 255));
-    vTaskDelay(1000);
-    TEST_ESP_OK(bp1658cj_set_shutdown());
-    vTaskDelay(1000);
-    TEST_ESP_OK(bp1658cj_set_rgbcw_channel(255, 0, 0, 0, 0));
-    vTaskDelay(1000);
-    TEST_ESP_OK(bp1658cj_set_rgbcw_channel(0, 255, 0, 0, 0));
-    vTaskDelay(1000);
-    TEST_ESP_OK(bp1658cj_set_rgbcw_channel(0, 0, 255, 0, 0));
-    vTaskDelay(1000);
-    TEST_ESP_OK(bp1658cj_set_rgbcw_channel(0, 0, 0, 255, 0));
-    vTaskDelay(1000);
-    TEST_ESP_OK(bp1658cj_set_rgbcw_channel(0, 0, 0, 0, 255));
-    vTaskDelay(1000);
-    TEST_ESP_OK(bp1658cj_set_rgbcw_channel(255, 0, 0, 0, 0));
-    vTaskDelay(1000);
-    bp1658cj_set_sleep_mode(true);
-    vTaskDelay(1000);
-    TEST_ESP_OK(bp1658cj_set_rgbcw_channel(0, 255, 0, 0, 0));
-    vTaskDelay(1000);
-    bp1658cj_set_sleep_mode(true);
-    vTaskDelay(1000);
-    TEST_ESP_OK(bp1658cj_set_rgbcw_channel(0, 0, 255, 0, 0));
-    vTaskDelay(1000);
+        //5. Color check
+        TEST_ESP_OK(bp1658cj_set_shutdown());
+        vTaskDelay(1000);
+        TEST_ESP_OK(bp1658cj_set_rgb_channel(255, 0, 0));
+        vTaskDelay(1000);
+        TEST_ESP_OK(bp1658cj_set_rgb_channel(0, 255, 0));
+        vTaskDelay(1000);
+        TEST_ESP_OK(bp1658cj_set_rgb_channel(0, 0, 255));
+        vTaskDelay(1000);
+        TEST_ESP_OK(bp1658cj_set_shutdown());
+        vTaskDelay(1000);
+        TEST_ESP_OK(bp1658cj_set_cw_channel(255, 0));
+        vTaskDelay(1000);
+        TEST_ESP_OK(bp1658cj_set_cw_channel(0, 255));
+        vTaskDelay(1000);
+        TEST_ESP_OK(bp1658cj_set_shutdown());
+        vTaskDelay(1000);
+        TEST_ESP_OK(bp1658cj_set_rgbcw_channel(255, 0, 0, 0, 0));
+        vTaskDelay(1000);
+        TEST_ESP_OK(bp1658cj_set_rgbcw_channel(0, 255, 0, 0, 0));
+        vTaskDelay(1000);
+        TEST_ESP_OK(bp1658cj_set_rgbcw_channel(0, 0, 255, 0, 0));
+        vTaskDelay(1000);
+        TEST_ESP_OK(bp1658cj_set_rgbcw_channel(0, 0, 0, 255, 0));
+        vTaskDelay(1000);
+        TEST_ESP_OK(bp1658cj_set_rgbcw_channel(0, 0, 0, 0, 255));
+        vTaskDelay(1000);
+        TEST_ESP_OK(bp1658cj_set_rgbcw_channel(255, 0, 0, 0, 0));
+        vTaskDelay(1000);
+        bp1658cj_set_sleep_mode(true);
+        vTaskDelay(1000);
+        TEST_ESP_OK(bp1658cj_set_rgbcw_channel(0, 255, 0, 0, 0));
+        vTaskDelay(1000);
+        bp1658cj_set_sleep_mode(true);
+        vTaskDelay(1000);
+        TEST_ESP_OK(bp1658cj_set_rgbcw_channel(0, 0, 255, 0, 0));
+        vTaskDelay(1000);
 
-    //6. deinit
-    TEST_ESP_OK(bp1658cj_set_shutdown());
-    // Wait for data transmission to complete
-    vTaskDelay(1000);
-    TEST_ESP_OK(bp1658cj_deinit());
-}
+        //6. deinit
+        TEST_ESP_OK(bp1658cj_set_shutdown());
+        // Wait for data transmission to complete
+        vTaskDelay(1000);
+        TEST_ESP_OK(bp1658cj_deinit());
+    }
 }
 
 TEST_CASE("BP1658CJ", "[Application Layer]")
@@ -1131,4 +1129,3 @@ TEST_CASE("KP18058", "[Application Layer]")
     TEST_ESP_OK(lightbulb_deinit());
 }
 #endif
-

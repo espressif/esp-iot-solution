@@ -24,7 +24,7 @@ static bool s_no_ssid_pwd = false;
 static EventGroupHandle_t s_event_group;
 
 static void event_handler(void* arg, esp_event_base_t event_base,
-                                int32_t event_id, void* event_data)
+                          int32_t event_id, void* event_data)
 {
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
         esp_wifi_connect();
@@ -34,9 +34,9 @@ static void event_handler(void* arg, esp_event_base_t event_base,
             s_retry_num++;
             ESP_LOGI(TAG, "retry to connect to the AP");
         } else {
-            ESP_LOGE(TAG,"connect to the AP fail, retry times exceed");
+            ESP_LOGE(TAG, "connect to the AP fail, retry times exceed");
         }
-        ESP_LOGI(TAG,"connect to the AP fail");
+        ESP_LOGI(TAG, "connect to the AP fail");
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
         ESP_LOGI(TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
@@ -76,9 +76,9 @@ static void wifi_sta_start(const char *ssid, const char *password)
     if (ssid && password) {
         esp_wifi_stop();
         wifi_config_t wifi_config = {0};
-        strlcpy((char *)wifi_config.sta.ssid, ssid, strlen(ssid)+1);
-        strlcpy((char *)wifi_config.sta.password, password, strlen(password)+1);
-        ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config) );
+        strlcpy((char *)wifi_config.sta.ssid, ssid, strlen(ssid) + 1);
+        strlcpy((char *)wifi_config.sta.password, password, strlen(password) + 1);
+        ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
         ESP_ERROR_CHECK(esp_wifi_start());
         ESP_LOGI(TAG, "wifi start ssid:%s password:%s", ssid, password);
     } else {
@@ -117,7 +117,7 @@ void app_main(void)
     } else {
         size_t buf_len_long = sizeof(ssid);
         err = nvs_get_str(my_handle, "ssid", ssid, &buf_len_long);
-        if (err != ESP_OK ||buf_len_long == 0) {
+        if (err != ESP_OK || buf_len_long == 0) {
             /* give a init value */
             s_no_ssid_pwd = true;
             ESP_ERROR_CHECK(nvs_set_str(my_handle, "ssid", "myssid"));
@@ -154,7 +154,7 @@ void app_main(void)
 
     while (1) {
         EventBits_t bits = xEventGroupWaitBits(s_event_group, NVS_MODIFIED_BIT,
-                            pdTRUE, pdFALSE, portMAX_DELAY);
+                                               pdTRUE, pdFALSE, portMAX_DELAY);
         if (bits & NVS_MODIFIED_BIT) {
             nvs_open_from_partition(uf2_nvs_partition, uf2_nvs_namespace, NVS_READONLY, &my_handle);
             size_t buf_len_long = sizeof(ssid);

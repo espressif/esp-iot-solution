@@ -40,30 +40,30 @@ typedef enum {
 
 typedef union {
     struct {
-        uint8_t normal_en:1; /**< Software shutdown contorl. 0:shutdown; 1:normal */
-        uint8_t breath_en:1; /**< auto breath enable. 0:PWM mode; 1:auto breath mode */
-        uint8_t detect_en:1; /**< Open/Short Detection. 0:disable; 1:enable */
-        uint8_t :3;          /**< reserve */
-        uint8_t sync_mode:2; /**< Synchronize Configuration. 0:high impedance; 1:master; 2:slave */
+        uint8_t normal_en: 1; /**< Software shutdown contorl. 0:shutdown; 1:normal */
+        uint8_t breath_en: 1; /**< auto breath enable. 0:PWM mode; 1:auto breath mode */
+        uint8_t detect_en: 1; /**< Open/Short Detection. 0:disable; 1:enable */
+        uint8_t : 3;         /**< reserve */
+        uint8_t sync_mode: 2; /**< Synchronize Configuration. 0:high impedance; 1:master; 2:slave */
     };
     uint8_t val;
 } is31fl3736_mode_t;
 
 typedef struct {
-    uint8_t open_en:1;  /**< Dot Open Interrupt. 0:Disable dot open interrupt; 1:enable */
-    uint8_t short_en:1; /**< Dot Short Interrupt. 0:Disable dot short interrupt; 1:enable */
-    uint8_t auto_breath:1; /**< Auto Breath Interrupt. 0:Disable auto breath loop finish interrupt; 1:enable */
-    uint8_t auto_clr:1; /**< Auto Clear Interrupt. 0:Intr not auto clear; 1:Intr clear when INTB stay low */
-    uint8_t :4;         /**< reserve */
+    uint8_t open_en: 1; /**< Dot Open Interrupt. 0:Disable dot open interrupt; 1:enable */
+    uint8_t short_en: 1; /**< Dot Short Interrupt. 0:Disable dot short interrupt; 1:enable */
+    uint8_t auto_breath: 1; /**< Auto Breath Interrupt. 0:Disable auto breath loop finish interrupt; 1:enable */
+    uint8_t auto_clr: 1; /**< Auto Clear Interrupt. 0:Intr not auto clear; 1:Intr clear when INTB stay low */
+    uint8_t : 4;        /**< reserve */
 } is31fl3736_intr_t;
 
 typedef struct {
-    uint8_t open_s:1; /**< Open Bit. 0:No open; 1:Open happens */
-    uint8_t short_s:1;/**< Short Bit. 0:No short; 1:short happens */
-    uint8_t abm1:1;   /**< Dot Short Interrupt. 0:ABM1 not finish; 1:ABM1 finish */
-    uint8_t abm2:1;   /**< Auto Breath Interrupt. 0:ABM2 not finish; 1:ABM2 finish */
-    uint8_t abm3:1;   /**< Auto Breath Mode 3 Finish. 0:ABM3 not finish; 1:ABM3 finish */
-    uint8_t :3;       /**< reserve */
+    uint8_t open_s: 1; /**< Open Bit. 0:No open; 1:Open happens */
+    uint8_t short_s: 1; /**< Short Bit. 0:No short; 1:short happens */
+    uint8_t abm1: 1;  /**< Dot Short Interrupt. 0:ABM1 not finish; 1:ABM1 finish */
+    uint8_t abm2: 1;  /**< Auto Breath Interrupt. 0:ABM2 not finish; 1:ABM2 finish */
+    uint8_t abm3: 1;  /**< Auto Breath Mode 3 Finish. 0:ABM3 not finish; 1:ABM3 finish */
+    uint8_t : 3;      /**< reserve */
 } is31fl3736_intr_status_t;
 
 typedef enum {

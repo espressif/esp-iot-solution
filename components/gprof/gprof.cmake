@@ -31,7 +31,7 @@ if(CONFIG_GPROF_ENABLE)
                                 ${link_dst_file}
                        DEPENDS "${link_depends}"
                        VERBATIM)
-    
+
     add_custom_target(customer_sections DEPENDS ${link_dst_file})
     add_dependencies(${project_elf} customer_sections)
 
@@ -43,7 +43,7 @@ if(CONFIG_GPROF_ENABLE)
                         --elf           ${project_elf}
                         --output        ${gprof_file}
                         --gcc           ${CMAKE_C_COMPILER})
-    
+
     add_custom_target(gprof
         DEPENDS ${project_elf}
         COMMAND ${python} -B ${gprof_script} ${gprof_opts})

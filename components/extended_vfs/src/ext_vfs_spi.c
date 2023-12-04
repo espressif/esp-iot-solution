@@ -114,7 +114,7 @@ static int spi_master_transfer(int port, spi_ex_msg_t *msg)
     t.length = msg->size * 8;
     t.tx_buffer = msg->tx_buffer;
     t.rx_buffer = msg->rx_buffer;
-    
+
     ret = spi_device_transmit(spi_stat[port].handle, &t);
 
     return ret;
@@ -207,44 +207,44 @@ static int spi_ioctl(int fd, int cmd, va_list va_args)
     ESP_LOGV(TAG, "cmd=%x", cmd);
 
     switch (cmd) {
-        case SPIIOCSCFG: {
-            spi_cfg_t *cfg = va_arg(va_args, spi_cfg_t *);
+    case SPIIOCSCFG: {
+        spi_cfg_t *cfg = va_arg(va_args, spi_cfg_t *);
 
-            if (!cfg || spi_stat[fd].configured) {
-                errno = EINVAL;
-                return -1;
-            }
-
-            ret = config_spi(fd, cfg);
-            if (ret < 0) {
-                errno = EIO;
-                return -1;
-            }
-
-            spi_stat[fd].configured = 1;
-
-            break;
-        }
-        case SPIIOCEXCHANGE: {
-            spi_ex_msg_t *ex_msg = va_arg(va_args, spi_ex_msg_t *);
-
-            if (!ex_msg || !spi_stat[fd].configured) {
-                errno = EINVAL;
-                return -1;
-            }
-
-            ret = spi_transfer(fd, ex_msg);
-            if (ret < 0) {
-                errno = EIO;
-                return -1;
-            }
-
-            break;
-        }
-        default: {
+        if (!cfg || spi_stat[fd].configured) {
             errno = EINVAL;
             return -1;
         }
+
+        ret = config_spi(fd, cfg);
+        if (ret < 0) {
+            errno = EIO;
+            return -1;
+        }
+
+        spi_stat[fd].configured = 1;
+
+        break;
+    }
+    case SPIIOCEXCHANGE: {
+        spi_ex_msg_t *ex_msg = va_arg(va_args, spi_ex_msg_t *);
+
+        if (!ex_msg || !spi_stat[fd].configured) {
+            errno = EINVAL;
+            return -1;
+        }
+
+        ret = spi_transfer(fd, ex_msg);
+        if (ret < 0) {
+            errno = EIO;
+            return -1;
+        }
+
+        break;
+    }
+    default: {
+        errno = EINVAL;
+        return -1;
+    }
     }
 
     return 0;

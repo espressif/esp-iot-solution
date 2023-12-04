@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #include <stdio.h>
 #include "driver/gpio.h"
 #include "driver/adc.h"
@@ -135,8 +134,7 @@ esp_err_t iot_board_specific_deinit(void)
 board_res_handle_t iot_board_specific_get_handle(int id)
 {
     board_res_handle_t handle;
-    switch (id)
-    {
+    switch (id) {
     case BOARD_SPI3_ID:
         handle = (board_res_handle_t)s_spi3_bus_handle;
         break;
@@ -213,19 +211,18 @@ float iot_board_battery_voltage(void)
 esp_err_t iot_board_usb_set_mode(usb_mode_t mode)
 {
     BOARD_CHECK(s_board_gpio_is_init, "mode control gpio not inited", ESP_FAIL);
-    switch (mode)
-    {
-        case USB_DEVICE_MODE:
-            gpio_set_level(BOARD_IO_USB_SEL, false);
-            break;
-        case USB_HOST_MODE:
-            gpio_set_level(BOARD_IO_USB_SEL, true);
-            break;
-        default:
-            gpio_set_level(BOARD_IO_USB_SEL, false); //default to device mode
-            break;
+    switch (mode) {
+    case USB_DEVICE_MODE:
+        gpio_set_level(BOARD_IO_USB_SEL, false);
+        break;
+    case USB_HOST_MODE:
+        gpio_set_level(BOARD_IO_USB_SEL, true);
+        break;
+    default:
+        gpio_set_level(BOARD_IO_USB_SEL, false); //default to device mode
+        break;
     }
-    ESP_LOGI(TAG, "switch to usb %s port", mode==USB_HOST_MODE?"host":"device");
+    ESP_LOGI(TAG, "switch to usb %s port", mode == USB_HOST_MODE ? "host" : "device");
     return ESP_OK;
 }
 

@@ -30,10 +30,10 @@ extern "C"
 #define BLE_CONN_GATT_CHR_INDICATE          0x0020  /*!< Characteristic indicate properties */
 
 typedef esp_err_t (*esp_ble_conn_cb_t)(const uint8_t *inbuf,
-                                    uint16_t inlen,
-                                    uint8_t **outbuf,
-                                    uint16_t *outlen,
-                                    void *priv_data);
+                                       uint16_t inlen,
+                                       uint8_t **outbuf,
+                                       uint16_t *outlen,
+                                       void *priv_data);
 
 /** @cond **/
 /* BLE CONN_MGR EVENTS BASE */
@@ -138,7 +138,7 @@ typedef struct {
     const char *periodic_adv_data;                  /*!< Periodic advertising data */
     const char *extended_adv_rsp_data;              /*!< Extended advertising responses data */
 
-    uint16_t    include_service_uuid:1;             /*!< If include service UUID in advertising */
+    uint16_t    include_service_uuid: 1;            /*!< If include service UUID in advertising */
 } esp_ble_conn_config_t;
 
 /**
@@ -247,7 +247,7 @@ esp_err_t esp_ble_conn_stop(void);
  * @brief   This api is typically used to update maximum transmission unit value
  *
  * @param[in]  mtu The maximum transmission unit value to update
- * 
+ *
  * @return
  *  - ESP_OK on successful
  *  - ESP_ERR_INVALID_ARG on wrong update
@@ -258,7 +258,7 @@ esp_err_t esp_ble_conn_set_mtu(uint16_t mtu);
 /**
  * @brief This api is typically used to connect actively
  *
- * @return 
+ * @return
  *  - ESP_OK on success
  *  - ESP_ERR_INVALID_ARG on wrong connect
  *  - ESP_FAIL on other error
@@ -268,7 +268,7 @@ esp_err_t esp_ble_conn_connect(void);
 /**
  * @brief This api is typically used to disconnect actively
  *
- * @return 
+ * @return
  *  - ESP_OK on success
  *  - ESP_ERR_INVALID_ARG on wrong disconnect
  *  - ESP_FAIL on other error
@@ -277,10 +277,10 @@ esp_err_t esp_ble_conn_disconnect(void);
 
 /**
  * @brief This api is typically used to notify actively
- * 
+ *
  * @param[in]  inbuff The pointer to store notify data.
  *
- * @return 
+ * @return
  *  - ESP_OK on success
  *  - ESP_ERR_INVALID_ARG on wrong notify
  *  - ESP_FAIL on other error
@@ -289,10 +289,10 @@ esp_err_t esp_ble_conn_notify(const esp_ble_conn_data_t *inbuff);
 
 /**
  * @brief This api is typically used to read actively
- * 
+ *
  * @param[in]  outbuf The pointer to store read data.
  *
- * @return 
+ * @return
  *  - ESP_OK on success
  *  - ESP_ERR_INVALID_ARG on wrong read
  *  - ESP_FAIL on other error
@@ -301,10 +301,10 @@ esp_err_t esp_ble_conn_read(esp_ble_conn_data_t *outbuf);
 
 /**
  * @brief This api is typically used to write actively
- * 
+ *
  * @param[in]  inbuff The pointer to store write data.
  *
- * @return 
+ * @return
  *  - ESP_OK on success
  *  - ESP_ERR_INVALID_ARG on wrong write
  *  - ESP_FAIL on other error
@@ -313,11 +313,11 @@ esp_err_t esp_ble_conn_write(const esp_ble_conn_data_t *inbuff);
 
 /**
  * @brief This api is typically used to subscribe actively
- * 
+ *
  * @param[in]  desc   The declarations of descriptors
  * @param[in]  inbuff The pointer to store subscribe data.
  *
- * @return 
+ * @return
  *  - ESP_OK on success
  *  - ESP_ERR_INVALID_ARG on wrong subscribe
  *  - ESP_FAIL on other error
@@ -326,10 +326,10 @@ esp_err_t esp_ble_conn_subscribe(esp_ble_conn_desc_t desc, const esp_ble_conn_da
 
 /**
  * @brief This api is typically used to add service actively
- * 
+ *
  * @param[in]  svc The pointer to store service.
  *
- * @return 
+ * @return
  *  - ESP_OK on success
  *  - ESP_ERR_INVALID_ARG on wrong add service
  *  - ESP_FAIL on other error
@@ -338,10 +338,10 @@ esp_err_t esp_ble_conn_add_svc(const esp_ble_conn_svc_t *svc);
 
 /**
  * @brief This api is typically used to remove service actively
- * 
+ *
  * @param[in]  svc The pointer to store service.
  *
- * @return 
+ * @return
  *  - ESP_OK on success
  *  - ESP_ERR_INVALID_ARG on wrong remove service
  *  - ESP_FAIL on other error

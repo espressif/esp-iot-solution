@@ -23,16 +23,16 @@ static uint32_t heap_used_offset = 0;
 
 void* malloc(size_t size)
 {
-	void* p = NULL;
+    void* p = NULL;
 
-	if (heap_used_offset + size < XZ_BOOT_HEAP_END_ADDRESS) {
-		p = &heap_pool[heap_used_offset];
-		heap_used_offset += size;
-	}
-#ifdef	CONFIG_BOOTLOADER_CUSTOM_DEBUG_ON
-	ESP_LOGI("c_malloc", "heap_used_offset=%d", heap_used_offset);
+    if (heap_used_offset + size < XZ_BOOT_HEAP_END_ADDRESS) {
+        p = &heap_pool[heap_used_offset];
+        heap_used_offset += size;
+    }
+#ifdef  CONFIG_BOOTLOADER_CUSTOM_DEBUG_ON
+    ESP_LOGI("c_malloc", "heap_used_offset=%d", heap_used_offset);
 #endif
-	return p;
+    return p;
 }
 
 // If use the xz decompress in bootloader, we don't support free now!

@@ -79,7 +79,7 @@ esp_err_t is31fl3218_channel_enable(is31fl3218_handle_t fxled, uint32_t ch_bit)
     for (int i = 0; i < 3; i++) {
         conl[i] = (ch_bit >> (i * 6)) & 0x3f;
     }
-    return is31fl3218_write(fxled, IS31FL3218_REG_CONL_1, (uint8_t *) (conl), 3);
+    return is31fl3218_write(fxled, IS31FL3218_REG_CONL_1, (uint8_t *)(conl), 3);
 }
 
 /**

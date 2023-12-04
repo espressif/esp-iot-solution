@@ -144,7 +144,7 @@ void app_main()
         .ringbuf_len        = 1024 * 8,
 #if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
         .tg_num             = TIMER_GROUP_0,
-        .timer_num          = TIMER_0,   
+        .timer_num          = TIMER_0,
 #endif
     };
     pwm_audio_init(&pac);

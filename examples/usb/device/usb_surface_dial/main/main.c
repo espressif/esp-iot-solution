@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2016-2021 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2016-2023 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -31,7 +31,7 @@
 #define DIAL_L_F     0xEC
 
 static button_handle_t s_btn = 0;
-static knob_handle_t s_knob = 0; 
+static knob_handle_t s_knob = 0;
 static usb_phy_handle_t s_phy_hdl;
 
 static void usb_phy_init(void)
@@ -70,13 +70,13 @@ static void _button_press_up_cb(void *arg, void *data)
 
 static void _knob_right_cb(void *arg, void *data)
 {
-    ESP_LOGI(TAG, "KONB: KONB_RIGHT,count_value:%"PRId32"",iot_knob_get_count_value((button_handle_t)arg));
+    ESP_LOGI(TAG, "KONB: KONB_RIGHT,count_value:%"PRId32"", iot_knob_get_count_value((button_handle_t)arg));
     surface_dial_report(DIAL_L);
 }
 
 static void _knob_left_cb(void *arg, void *data)
 {
-    ESP_LOGI(TAG, "KONB: KONB_LEFT,count_value:%"PRId32"",iot_knob_get_count_value((button_handle_t)arg));
+    ESP_LOGI(TAG, "KONB: KONB_LEFT,count_value:%"PRId32"", iot_knob_get_count_value((button_handle_t)arg));
     surface_dial_report(DIAL_R);
 }
 
@@ -99,12 +99,12 @@ static void _button_init(void)
 static void _knob_init(void)
 {
     knob_config_t cfg = {
-        .default_direction =0,
+        .default_direction = 0,
         .gpio_encoder_a = GPIO_KNOB_A,
         .gpio_encoder_b = GPIO_KNOB_B,
     };
     s_knob = iot_knob_create(&cfg);
-    if(NULL == s_knob) {
+    if (NULL == s_knob) {
         ESP_LOGE(TAG, "knob create failed");
     }
 

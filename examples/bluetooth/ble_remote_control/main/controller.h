@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -41,7 +41,6 @@
 #define PIN_BUTTON_C CONFIG_BUTTON_PIN_C
 #define PIN_BUTTON_D CONFIG_BUTTON_PIN_D
 #endif
-
 
 #ifdef CONFIG_BUTTON_INPUT_MODE_BOOT
 #define BUTTON_PIN_BIT_MASK (1ULL<<PIN_BUTTON_BOOT)
@@ -90,7 +89,7 @@ esp_err_t button_init(void);
 
 /**
  * @brief   Read button input values
- * 
+ *
  * @details     This function returns a 8 bit value to represent button input
  *              The least significant 4 bits represent button A (LSB), B, C, D
  * @details     Implementation depends on the HID report descriptor (see hidd.c)
@@ -144,6 +143,3 @@ void joystick_adc_read(uint8_t *x_axis, uint8_t *y_axis);
  * @brief   Deinitialize resources for joystick input
 */
 esp_err_t joystick_deinit(void);
-
-
-

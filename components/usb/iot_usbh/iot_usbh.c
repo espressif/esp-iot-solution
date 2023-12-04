@@ -189,7 +189,7 @@ static void _pipe_event_dflt_process(usbh_pipe_handle_t pipe_handle, usbh_pipe_e
 }
 
 static esp_err_t iot_usbh_port_event_wait(usbh_port_handle_t port_hdl,
-        usbh_port_event_t expected_event, TickType_t xTicksToWait)
+                                          usbh_port_event_t expected_event, TickType_t xTicksToWait)
 {
     ERR_CHECK(port_hdl != NULL, "invalid args", ESP_ERR_INVALID_ARG);
     //Wait for port callback to send an event message
@@ -240,7 +240,7 @@ static bool IRAM_ATTR _usbh_port_callback(hcd_port_handle_t port_hdl, hcd_port_e
     usbh_event_msg_t event_msg = {
         ._type = PORT_EVENT,
         ._handle.port_hdl = (usbh_port_handle_t)port_instance,
-        ._event.port_event = (usbh_port_event_t)port_event,
+                ._event.port_event = (usbh_port_event_t)port_event,
     };
     if (in_isr) {
         BaseType_t xTaskWoken = pdFALSE;
@@ -471,7 +471,7 @@ static bool IRAM_ATTR _usbh_pipe_callback(hcd_pipe_handle_t pipe_handle, hcd_pip
     usbh_event_msg_t event_msg = {
         ._type = PIPE_EVENT,
         ._handle.pipe_handle = (usbh_pipe_handle_t)pipe_instance,
-        ._event.pipe_event = (usbh_pipe_event_t)pipe_event,
+                ._event.pipe_event = (usbh_pipe_event_t)pipe_event,
     };
 
     if (in_isr) {
@@ -485,7 +485,7 @@ static bool IRAM_ATTR _usbh_pipe_callback(hcd_pipe_handle_t pipe_handle, hcd_pip
 }
 
 static esp_err_t iot_usbh_pipe_event_wait(usbh_pipe_handle_t pipe_hdl,
-        usbh_pipe_event_t expected_event, TickType_t xTicksToWait)
+                                          usbh_pipe_event_t expected_event, TickType_t xTicksToWait)
 {
     //Wait for pipe callback to send an event message
     ERR_CHECK(pipe_hdl != NULL, "invalid args", ESP_ERR_INVALID_ARG);
@@ -783,7 +783,7 @@ static esp_err_t _usbh_get_dev_desc(usbh_pipe_handle_t pipe_handle, usb_device_d
     // store device descriptor from transfer buffer
     ESP_LOGI(TAG, "get device desc, actual_num_bytes:%d", num_bytes);
     usb_device_desc_t *dev_desc = (usb_device_desc_t *)(urb_done->transfer.data_buffer + sizeof(usb_setup_packet_t));
-    if (device_desc != NULL ) {
+    if (device_desc != NULL) {
         *device_desc = *dev_desc;
     }
     usb_print_device_descriptor(dev_desc);

@@ -165,7 +165,7 @@ esp_err_t ns2016_get_rawdata(uint16_t *x, uint16_t *y)
 
         // Only add the samples to the average if they are valid
         if ((samples[i].x >= TOUCH_SAMPLE_MIN) && (samples[i].x <= TOUCH_SAMPLE_MAX) &&
-            (samples[i].y >= TOUCH_SAMPLE_MIN) && (samples[i].y <= TOUCH_SAMPLE_MAX)) {
+                (samples[i].y >= TOUCH_SAMPLE_MIN) && (samples[i].y <= TOUCH_SAMPLE_MAX)) {
             aveX += samples[i].x;
             aveY += samples[i].y;
             valid_count++;

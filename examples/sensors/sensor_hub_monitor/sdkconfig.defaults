@@ -80,4 +80,3 @@ CONFIG_BOARD_I2C0_INIT=y
 #
 CONFIG_SENSOR_EXAMPLE_PERIOD=200
 # end of Sensor Monitor Example
-

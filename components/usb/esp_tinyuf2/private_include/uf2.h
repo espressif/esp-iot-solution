@@ -46,18 +46,18 @@ SOFTWARE.
 // Flash size is constrained by RAM, a 4MB size requires 2kB RAM, see MAX_BLOCKS
 // Largest tested is 256MB, with 0x300000 blocks (1.5GB), 64 sectors per cluster
 #ifndef CFG_UF2_FLASH_SIZE
-    #define CFG_UF2_FLASH_SIZE          (4*1024*1024)
+#define CFG_UF2_FLASH_SIZE          (4*1024*1024)
 #endif
 
 // Number of 512-byte blocks in the exposed filesystem, default is just under 32MB
 // The filesystem needs space for the current file, text files, uploaded file, and FAT
 #ifndef CFG_UF2_NUM_BLOCKS
-    #define CFG_UF2_NUM_BLOCKS          (0x10109)
+#define CFG_UF2_NUM_BLOCKS          (0x10109)
 #endif
 
 // Sectors per FAT cluster, must be increased proportionally for larger filesystems
 #ifndef CFG_UF2_SECTORS_PER_CLUSTER
-    #define CFG_UF2_SECTORS_PER_CLUSTER (1)
+#define CFG_UF2_SECTORS_PER_CLUSTER (1)
 #endif
 
 //--------------------------------------------------------------------+
@@ -100,7 +100,6 @@ typedef struct {
     // store magic also at the end to limit damage from partial block reads
     uint32_t magicEnd;
 } UF2_Block;
-
 
 void uf2_init(void);
 void uf2_read_block(uint32_t block_no, uint8_t *data);

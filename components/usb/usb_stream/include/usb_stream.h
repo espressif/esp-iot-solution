@@ -44,7 +44,7 @@ typedef enum {
 
 /**
  * @brief Stream id, used for control
- * 
+ *
  */
 typedef enum {
     STREAM_UVC = 0,     /*!< usb video stream */
@@ -55,7 +55,7 @@ typedef enum {
 
 /**
  * @brief USB device connection status
- * 
+ *
  */
 typedef enum {
     STREAM_CONNECTED = 0,
@@ -64,7 +64,7 @@ typedef enum {
 
 /**
  * @brief Stream control type, which also depends on if device support
- * 
+ *
  */
 typedef enum {
     CTRL_NONE = 0,     /*!< None */
@@ -76,7 +76,7 @@ typedef enum {
 } stream_ctrl_t;
 
 /**
- * @brief UVC configurations, for params with (optional) label, users do not need to specify manually, 
+ * @brief UVC configurations, for params with (optional) label, users do not need to specify manually,
  * unless there is a problem with descriptors, or users want to skip the get and process descriptors steps
  */
 typedef struct uvc_config {
@@ -103,8 +103,8 @@ typedef struct uvc_config {
 } uvc_config_t;
 
 /**
- * @brief mic frame type 
- * */ 
+ * @brief mic frame type
+ * */
 typedef struct {
     void *data;                 /*!< mic data */
     uint32_t data_bytes;        /*!< mic data size */
@@ -113,7 +113,7 @@ typedef struct {
 } mic_frame_t;
 
 /**
- * @brief uvc frame type 
+ * @brief uvc frame type
  * */
 typedef struct {
     uint16_t width;             /*!< frame width */
@@ -125,7 +125,7 @@ typedef struct {
 } uvc_frame_size_t;
 
 /**
- * @brief uac frame type 
+ * @brief uac frame type
  * */
 typedef struct {
     uint8_t ch_num;                 /*!< channel numbers */
@@ -137,18 +137,18 @@ typedef struct {
 
 /**
  * @brief user callback function to handle incoming mic frames
- * 
+ *
  */
 typedef void(mic_callback_t)(mic_frame_t *frame, void *user_ptr);
 
 /**
  * @brief user callback function to handle usb device connection status
- * 
+ *
  */
 typedef void(state_callback_t)(usb_stream_state_t state, void *user_ptr);
 
 /**
- * @brief UAC configurations, for params with (optional) label, users do not need to specify manually, 
+ * @brief UAC configurations, for params with (optional) label, users do not need to specify manually,
  * unless there is a problem with descriptor parse, or a problem with the device descriptor
  */
 typedef struct {
@@ -177,12 +177,12 @@ typedef struct {
 } uac_config_t;
 
 /**
- * @brief Config UVC streaming with user defined parameters.For normal use, user only need to specify 
+ * @brief Config UVC streaming with user defined parameters.For normal use, user only need to specify
  * no-optional parameters, and set optional parameters to 0 (the driver will find the correct value from the device descriptors).
  * For quick start mode, user should specify all parameters manually to skip get and process descriptors steps.
- * 
+ *
  * @param config parameters defined in uvc_config_t
- * @return esp_err_t 
+ * @return esp_err_t
  *      ESP_ERR_INVALID_STATE USB streaming is running, user need to stop streaming first
  *      ESP_ERR_INVALID_ARG Invalid argument
  *      ESP_OK Success
@@ -190,12 +190,12 @@ typedef struct {
 esp_err_t uvc_streaming_config(const uvc_config_t *config);
 
 /**
- * @brief Config UAC streaming with user defined parameters.For normal use, user only need to specify 
+ * @brief Config UAC streaming with user defined parameters.For normal use, user only need to specify
  * no-optional parameters, and set optional parameters to 0 (the driver will find the correct value from the device descriptors).
  * For quick start mode, user should specify all parameters manually to skip get and process descriptors steps.
- * 
+ *
  * @param config parameters defined in uvc_config_t
- * @return esp_err_t 
+ * @return esp_err_t
  *      ESP_ERR_INVALID_STATE USB streaming is running, user need to stop streaming first
  *      ESP_ERR_INVALID_ARG Invalid argument
  *      ESP_OK Success
@@ -205,7 +205,7 @@ esp_err_t uac_streaming_config(const uac_config_t *config);
 /**
  * @brief Start usb streaming with pre-configs, usb driver will create internal tasks
  * to handle usb data from stream pipe, and run user's callback after new frame ready.
- * 
+ *
  * @return
  *         ESP_ERR_INVALID_STATE streaming not configured, or streaming running already
  *         ESP_FAIL start failed
@@ -215,8 +215,8 @@ esp_err_t usb_streaming_start(void);
 
 /**
  * @brief Stop current usb streaming, internal tasks will be delete, related resourse will be free
- * 
- * @return 
+ *
+ * @return
  *         ESP_ERR_INVALID_STATE streaming not started
  *         ESP_ERR_TIMEOUT stop wait timeout
  *         ESP_OK stop succeed
@@ -225,9 +225,9 @@ esp_err_t usb_streaming_stop(void);
 
 /**
  * @brief Wait for USB device connection
- * 
+ *
  * @param timeout_ms timeout in ms
- * @return esp_err_t 
+ * @return esp_err_t
  *      ESP_ERR_INVALID_STATE: usb streaming not started
  *      ESP_ERR_TIMEOUT: timeout
  *      ESP_OK: device connected
@@ -237,10 +237,10 @@ esp_err_t usb_streaming_connect_wait(size_t timeout_ms);
 /**
  * @brief This function registers a callback for USB streaming, please note that only one callback
  *  can be registered, the later registered callback will overwrite the previous one.
- * 
+ *
  * @param cb A pointer to a function that will be called when the USB streaming state changes.
  * @param user_ptr user_ptr is a void pointer.
- * 
+ *
  * @return esp_err_t
  *    - ESP_OK Success
  *    - ESP_ERR_INVALID_STATE USB streaming is running, callback need register before start
@@ -263,11 +263,11 @@ esp_err_t usb_streaming_control(usb_stream_t stream, stream_ctrl_t ctrl_type, vo
 
 /**
  * @brief Write data to the speaker buffer, will be send out when USB device is ready
- * 
+ *
  * @param data The data to be written.
  * @param data_bytes The size of the data to be written.
  * @param timeout_ms The timeout value for writing data to the buffer.
- * 
+ *
  * @return
  *         ESP_ERR_INVALID_STATE spk stream not config
  *         ESP_ERR_NOT_FOUND spk interface not found
@@ -278,12 +278,12 @@ esp_err_t uac_spk_streaming_write(void *data, size_t data_bytes, size_t timeout_
 
 /**
  * @brief Read data from internal mic buffer, the actual size will be returned
- * 
+ *
  * @param buf pointer to the buffer to store the received data
  * @param buf_size The size of the data buffer.
  * @param data_bytes The actual size read from buffer
  * @param timeout_ms The timeout value for the read operation.
- * 
+ *
  * @return
  *         ESP_ERR_INVALID_ARG parameter error
  *         ESP_ERR_INVALID_STATE mic stream not config
@@ -297,8 +297,8 @@ esp_err_t uac_mic_streaming_read(void *buf, size_t buf_size, size_t *data_bytes,
  * @brief Get the audio frame size list of current stream, the list contains audio channel number, bit resolution and samples frequence.
  * IF list_size equals 1 and the samples_frequence equals 0, which means the frequency can be set to any value between samples_frequence_min
  * and samples_frequence_max.
- * 
- * 
+ *
+ *
  * @param stream the stream type
  * @param frame_list the output frame list, NULL to only get the list size
  * @param list_size frame list size
@@ -313,7 +313,7 @@ esp_err_t uac_frame_size_list_get(usb_stream_t stream, uac_frame_size_t *frame_l
 /**
  * @brief Reset audio channel number, bit resolution and samples frequence, please reset when the streaming
  * in suspend state. The new configs will be effective after streaming resume.
- * 
+ *
  * @param stream stream type
  * @param ch_num audio channel numbers
  * @param bit_resolution audio bit resolution
@@ -329,11 +329,11 @@ esp_err_t uac_frame_size_reset(usb_stream_t stream, uint8_t ch_num, uint16_t bit
 
 /**
  * @brief Get the frame size list of current connected camera
- * 
+ *
  * @param frame_list the frame size list, can be NULL if only want to get list size
  * @param list_size the list size
  * @param cur_index current frame index
- * @return esp_err_t 
+ * @return esp_err_t
  *       ESP_ERR_INVALID_ARG parameter error
  *       ESP_ERR_INVALID_STATE uvc stream not config or not active
  *       ESP_OK succeed
@@ -343,14 +343,14 @@ esp_err_t uvc_frame_size_list_get(uvc_frame_size_t *frame_list, size_t *list_siz
 /**
  * @brief Reset the expected frame size and frame interval, please reset when uvc streaming
  * in suspend state.The new configs will be effective after streaming resume.
- * 
+ *
  * Note: frame_width and frame_height can be set to 0 at the same time, which means
  * no change on frame size.
- * 
+ *
  * @param frame_width frame width, FRAME_RESOLUTION_ANY means any width
  * @param frame_height frame height, FRAME_RESOLUTION_ANY means any height
  * @param frame_interval frame interval, 0 means no change
- * @return esp_err_t 
+ * @return esp_err_t
  */
 esp_err_t uvc_frame_size_reset(uint16_t frame_width, uint16_t frame_height, uint32_t frame_interval);
 

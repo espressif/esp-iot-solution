@@ -39,7 +39,7 @@ esp_err_t esp_painter_new(esp_painter_config_t *config, esp_painter_handle_t *ha
     ESP_RETURN_ON_FALSE(config && handle, ESP_ERR_INVALID_ARG, TAG, "Invalid arguments");
     ESP_RETURN_ON_FALSE(config->piexl_color_byte > 0 && config->piexl_color_byte < 4, ESP_ERR_INVALID_ARG, TAG, "Byte of piexl color must be in [1, 3]");
     ESP_RETURN_ON_FALSE(config->brush.color < BIT(config->piexl_color_byte * 8), ESP_ERR_INVALID_ARG, TAG, "Brush color out of range");
-    ESP_RETURN_ON_FALSE(config->canvas.width > 0 && config->canvas.height> 0, ESP_ERR_INVALID_ARG, TAG, "Canvas shape must > 0");
+    ESP_RETURN_ON_FALSE(config->canvas.width > 0 && config->canvas.height > 0, ESP_ERR_INVALID_ARG, TAG, "Canvas shape must > 0");
     ESP_RETURN_ON_FALSE(
         config->canvas.color == COLOR_CANVAS_TRANS_BG || config->canvas.color < BIT(config->piexl_color_byte * 8),
         ESP_ERR_INVALID_ARG, TAG, "Canvas color out of range"

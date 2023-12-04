@@ -14,7 +14,6 @@ typedef struct common_string_s {
     size_t len;
 } common_string_t;
 
-
 static inline esp_err_t generic_command_default_handle(esp_modem_dce_t *dce, const char * command)
 {
     return esp_modem_dce_generic_command(dce, command, MODEM_COMMAND_TIMEOUT_DEFAULT, esp_modem_dce_handle_response_default, NULL);
@@ -162,7 +161,7 @@ static esp_err_t esp_modem_dce_handle_read_pin(esp_modem_dce_t *dce, const char 
 
     if (strstr(line, MODEM_RESULT_CODE_SUCCESS)) {
         err = esp_modem_process_command_done(dce, ESP_MODEM_STATE_SUCCESS);
-    } 
+    }
     return err;
 }
 
@@ -178,7 +177,6 @@ static esp_err_t esp_modem_dce_handle_reset(esp_modem_dce_t *dce, const char *li
     }
     return err;
 }
-
 
 esp_err_t esp_modem_dce_sync(esp_modem_dce_t *dce, void *param, void *result)
 {
@@ -267,7 +265,6 @@ esp_err_t esp_modem_dce_get_operator_name(esp_modem_dce_t *dce, void *param, voi
                                          common_get_operator_after_mode_format, &common_str);
 }
 
-
 esp_err_t esp_modem_dce_reset(esp_modem_dce_t *dce, void *param, void *result)
 {
     return esp_modem_dce_generic_command(dce,  "AT+CRESET\r", MODEM_COMMAND_TIMEOUT_RESET, esp_modem_dce_handle_reset, NULL);
@@ -285,7 +282,6 @@ esp_err_t esp_modem_dce_read_pin(esp_modem_dce_t *dce, void *param, void *result
 {
     return esp_modem_dce_generic_command(dce,  "AT+CPIN?\r", MODEM_COMMAND_TIMEOUT_DEFAULT, esp_modem_dce_handle_read_pin, result);
 }
-
 
 esp_err_t esp_modem_dce_store_profile(esp_modem_dce_t *dce, void *param, void *result)
 {
@@ -367,13 +363,13 @@ esp_err_t esp_modem_dce_set_baud_temp(esp_modem_dce_t *dce, void *param, void *r
 {
     char command[] = "AT+IPR=3686400\r"; // reserve space with max baud placeholder
     size_t cmd_placeholder_len = strlen(command);
-    strncpy(command + 7, param, cmd_placeholder_len-7); // copy param string to the param
+    strncpy(command + 7, param, cmd_placeholder_len - 7); // copy param string to the param
     size_t cmd_len = strlen(command);
-    if (cmd_len+1 >= cmd_placeholder_len) {
+    if (cmd_len + 1 >= cmd_placeholder_len) {
         return ESP_FAIL;
     }
     command[cmd_len] = '\r';
-    command[cmd_len+1] = '\0';
+    command[cmd_len + 1] = '\0';
     return esp_modem_dce_generic_command(dce, command, MODEM_COMMAND_TIMEOUT_DEFAULT,
                                          esp_modem_dce_handle_response_default, NULL);
 }

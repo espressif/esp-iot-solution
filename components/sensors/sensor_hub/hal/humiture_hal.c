@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -22,9 +21,18 @@
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
-static esp_err_t null_function(void){return ESP_ERR_NOT_SUPPORTED;}
-static esp_err_t null_acquire_humidity_function(float *h){return ESP_ERR_NOT_SUPPORTED;}
-static esp_err_t null_acquire_temperature_function(float *t){return ESP_ERR_NOT_SUPPORTED;}
+static esp_err_t null_function(void)
+{
+    return ESP_ERR_NOT_SUPPORTED;
+}
+static esp_err_t null_acquire_humidity_function(float *h)
+{
+    return ESP_ERR_NOT_SUPPORTED;
+}
+static esp_err_t null_acquire_temperature_function(float *t)
+{
+    return ESP_ERR_NOT_SUPPORTED;
+}
 #pragma GCC diagnostic pop
 
 static const char *TAG = "HUMITURE|TEMPERATURE";
@@ -193,8 +201,7 @@ static esp_err_t humiture_set_power(sensor_humiture_handle_t sensor, sensor_powe
     SENSOR_CHECK(sensor != NULL, "pointer can't be NULL ", ESP_ERR_INVALID_ARG);
     sensor_humiture_t *p_sensor = (sensor_humiture_t *)(sensor);
     esp_err_t ret;
-    switch (power_mode)
-    {
+    switch (power_mode) {
     case POWER_MODE_WAKEUP:
         ret = p_sensor->impl->wakeup();
         break;
@@ -232,8 +239,7 @@ esp_err_t humiture_control(sensor_humiture_handle_t sensor, sensor_command_t cmd
 {
     SENSOR_CHECK(sensor != NULL, "sensor handle can't be NULL ", ESP_ERR_INVALID_ARG);
     esp_err_t ret;
-    switch (cmd)
-    {
+    switch (cmd) {
     case COMMAND_SET_MODE:
         ret = ESP_ERR_NOT_SUPPORTED;
         break;

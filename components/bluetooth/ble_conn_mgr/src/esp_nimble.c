@@ -230,7 +230,7 @@ static svc_uuid_t *esp_ble_conn_svc_find_range(esp_ble_conn_session_t *conn_sess
 
     SLIST_FOREACH(svc, &conn_session->uuid_list, next) {
         if (svc->gatt_svc.start_handle <= attr_handle &&
-            svc->gatt_svc.end_handle >= attr_handle) {
+                svc->gatt_svc.end_handle >= attr_handle) {
             return svc;
         }
     }
@@ -284,20 +284,20 @@ static esp_err_t esp_ble_conn_svc_disced(uint16_t conn_handle, const struct ble_
     assert(conn_session->conn_handle == conn_handle);
 
     switch (error->status) {
-        case 0:
-            rc = esp_ble_conn_svc_add(conn_session, service);
-            break;
+    case 0:
+        rc = esp_ble_conn_svc_add(conn_session, service);
+        break;
 
-        case BLE_HS_EDONE:
-            /* All services discovered; start discovering characteristics */
-            if (conn_session->chrs_handle) {
-                esp_ble_conn_disc_chrs(conn_session);
-            }
-            break;
+    case BLE_HS_EDONE:
+        /* All services discovered; start discovering characteristics */
+        if (conn_session->chrs_handle) {
+            esp_ble_conn_disc_chrs(conn_session);
+        }
+        break;
 
-        default:
-            rc = error->status;
-            break;
+    default:
+        rc = error->status;
+        break;
     }
 
     if (rc != ESP_OK) {
@@ -602,22 +602,22 @@ static esp_err_t esp_ble_conn_dsc_disced(uint16_t conn_handle, const struct ble_
     assert(conn_session->conn_handle == conn_handle);
 
     switch (error->status) {
-        case 0:
-            rc = esp_ble_conn_dsc_uuid_add(conn_session, chr_val_handle, dsc);
-            break;
+    case 0:
+        rc = esp_ble_conn_dsc_uuid_add(conn_session, chr_val_handle, dsc);
+        break;
 
-        case BLE_HS_EDONE:
-            /* All descriptors in this characteristic discovered; start discovering
-            * descriptors in the next characteristic.
-            */
-            if (conn_session->chrs_handle > 0) {
-                esp_ble_conn_disc_dscs(conn_session);
-            }
-            break;
+    case BLE_HS_EDONE:
+        /* All descriptors in this characteristic discovered; start discovering
+        * descriptors in the next characteristic.
+        */
+        if (conn_session->chrs_handle > 0) {
+            esp_ble_conn_disc_dscs(conn_session);
+        }
+        break;
 
-        default:
-            rc = error->status;
-            break;
+    default:
+        rc = error->status;
+        break;
     }
 
     if (rc != ESP_OK) {
@@ -637,8 +637,8 @@ static void esp_ble_conn_disc_dscs(esp_ble_conn_session_t *conn_session)
     SLIST_FOREACH(svc, &conn_session->uuid_list, next) {
         SLIST_FOREACH(chr, &svc->chrs, next) {
             if (!esp_ble_conn_chr_is_empty(svc, chr) &&
-                SLIST_EMPTY(&chr->dscs) &&
-                conn_session->chrs_handle <= chr->chr.def_handle) {
+                    SLIST_EMPTY(&chr->dscs) &&
+                    conn_session->chrs_handle <= chr->chr.def_handle) {
 
                 rc = ble_gattc_disc_all_dscs(conn_session->conn_handle, chr->chr.val_handle, esp_ble_conn_chr_end_handle(svc, chr), esp_ble_conn_dsc_disced, conn_session);
                 if (rc != ESP_OK) {
@@ -701,7 +701,7 @@ static void esp_ble_conn_should_connect(struct ble_gap_disc_desc *disc)
     };
 
     if (disc->event_type != BLE_HCI_ADV_RPT_EVTYPE_ADV_IND &&
-        disc->event_type != BLE_HCI_ADV_RPT_EVTYPE_DIR_IND) {
+            disc->event_type != BLE_HCI_ADV_RPT_EVTYPE_DIR_IND) {
         ESP_LOGE(TAG, "The device has to be advertising connectability");
         return;
     }
@@ -1553,7 +1553,7 @@ static esp_err_t esp_ble_conn_gatts_init(esp_ble_conn_session_t *conn_session)
 #if defined(CONFIG_BLE_CONN_MGR_ROLE_PERIPHERAL) || defined(CONFIG_BLE_CONN_MGR_ROLE_BOTH)
     ble_svc_gap_init();
     ble_svc_gatt_init();
-    
+
     rc = ble_gatts_count_cfg(conn_session->gatt_db);
     if (rc != ESP_OK) {
         return rc;
@@ -1985,7 +1985,7 @@ esp_err_t esp_ble_conn_deinit(void)
     if (!conn_session) {
         return ESP_ERR_INVALID_ARG;
     }
-    
+
     if (conn_session->device_name) {
         free(conn_session->device_name);
         conn_session->device_name = NULL;
@@ -2054,7 +2054,7 @@ esp_err_t esp_ble_conn_deinit(void)
         free(svc_uuid);
         svc_uuid = NULL;
     }
-    
+
     while (!SLIST_EMPTY(&conn_session->mbuf_list)) {
         attr_mbuf = SLIST_FIRST(&conn_session->mbuf_list);
         SLIST_REMOVE_HEAD(&conn_session->mbuf_list, next);
@@ -2488,7 +2488,7 @@ esp_err_t esp_ble_conn_add_svc(const esp_ble_conn_svc_t *svc)
 {
     svc_uuid_t *svc_uuid = NULL;
     esp_ble_conn_session_t *conn_session = s_conn_session;
-    
+
     if (!conn_session || !svc || BLE_UUID_TYPE(svc->type)) {
         return ESP_ERR_INVALID_ARG;
     }
@@ -2531,7 +2531,7 @@ esp_err_t esp_ble_conn_remove_svc(const esp_ble_conn_svc_t *svc)
 {
     svc_uuid_t *svc_uuid = NULL;
     esp_ble_conn_session_t *conn_session = s_conn_session;
-    
+
     if (!conn_session || !svc || BLE_UUID_TYPE(svc->type)) {
         return ESP_ERR_INVALID_ARG;
     }

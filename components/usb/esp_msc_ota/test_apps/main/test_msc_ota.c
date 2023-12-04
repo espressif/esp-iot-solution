@@ -129,17 +129,16 @@ esp_err_t iot_board_usb_device_set_power(bool on_off, bool from_battery)
 
 esp_err_t iot_board_usb_set_mode(usb_mode_t mode)
 {
-    switch (mode)
-    {
-        case USB_DEVICE_MODE:
-            gpio_set_level(BOARD_IO_USB_SEL, false); //USB_SEL
-            break;
-        case USB_HOST_MODE:
-            gpio_set_level(BOARD_IO_USB_SEL, true); //USB_SEL
-            break;
-        default:
-            assert(0);
-            break;
+    switch (mode) {
+    case USB_DEVICE_MODE:
+        gpio_set_level(BOARD_IO_USB_SEL, false); //USB_SEL
+        break;
+    case USB_HOST_MODE:
+        gpio_set_level(BOARD_IO_USB_SEL, true); //USB_SEL
+        break;
+    default:
+        assert(0);
+        break;
     }
     return ESP_OK;
 }
@@ -200,7 +199,6 @@ TEST_CASE("Auto MSC OTA", "[MSC OTA][Auto]")
 
     TEST_ASSERT_EQUAL(ESP_OK, iot_board_usb_set_mode(USB_DEVICE_MODE));
     TEST_ASSERT_EQUAL(ESP_OK, iot_board_usb_device_set_power(false, false));
-
 
     esp_msc_host_uninstall(host_handle);
     vTaskDelay(1000 / portTICK_PERIOD_MS);

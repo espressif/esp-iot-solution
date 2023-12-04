@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #ifndef _SCREEN_UTILITY_H_
 #define _SCREEN_UTILITY_H_
 
@@ -16,7 +15,7 @@ extern "C" {
 
 /**
  * @brief Declare screen parameters
- * 
+ *
  */
 typedef struct {
     scr_interface_driver_t *interface_drv;

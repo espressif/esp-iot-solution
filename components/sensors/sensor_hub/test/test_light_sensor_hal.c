@@ -45,12 +45,15 @@ static void light_sensor_test_get_data()
         uv_t uv = {0};
         rgbw_t rgbw = {0};
         printf("\n************* light sensor ************\n");
-        if ( ESP_OK == light_sensor_acquire_light(light_sensor_handle, &light))
-        printf("light illuminance:%.2f\n", light);
-        if ( ESP_OK == light_sensor_acquire_rgbw(light_sensor_handle, &rgbw))
-        printf("red:%.2f green:%.2f blue:%.2f white:%.2f\n", rgbw.r, rgbw.g, rgbw.b, rgbw.w);
-        if ( ESP_OK == light_sensor_acquire_uv(light_sensor_handle, &uv))
-        printf("UV:%.2f UVA:%.2f UVB:%.2f\n", uv.uv, uv.uva, uv.uvb);
+        if (ESP_OK == light_sensor_acquire_light(light_sensor_handle, &light)) {
+            printf("light illuminance:%.2f\n", light);
+        }
+        if (ESP_OK == light_sensor_acquire_rgbw(light_sensor_handle, &rgbw)) {
+            printf("red:%.2f green:%.2f blue:%.2f white:%.2f\n", rgbw.r, rgbw.g, rgbw.b, rgbw.w);
+        }
+        if (ESP_OK == light_sensor_acquire_uv(light_sensor_handle, &uv)) {
+            printf("UV:%.2f UVA:%.2f UVB:%.2f\n", uv.uv, uv.uva, uv.uvb);
+        }
         printf("**************************************************\n");
         vTaskDelay(1000 / portTICK_RATE_MS);
     }

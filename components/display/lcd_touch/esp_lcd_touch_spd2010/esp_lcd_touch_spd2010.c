@@ -314,7 +314,7 @@ static esp_err_t read_tp_status_length(esp_lcd_touch_handle_t tp, tp_status_t *t
 
 static esp_err_t read_tp_hdp(esp_lcd_touch_handle_t tp, tp_status_t *tp_status, tp_touch_t *touch)
 {
-    uint8_t sample_data[4+(10*6)]; // 4 Bytes Header + 10 Finger * 6 Bytes
+    uint8_t sample_data[4 + (10 * 6)]; // 4 Bytes Header + 10 Finger * 6 Bytes
     uint8_t i, offset;
     uint8_t check_id;
 
@@ -329,14 +329,14 @@ static esp_err_t read_tp_hdp(esp_lcd_touch_handle_t tp, tp_status_t *tp_status, 
     check_id = sample_data[4];
 
     if ((check_id <= 0x0A) && tp_status->status_low.pt_exist) {
-        touch->touch_num = ((tp_status->read_len - 4)/6);
+        touch->touch_num = ((tp_status->read_len - 4) / 6);
         touch->gesture = 0x00;
 
         for (i = 0; i < touch->touch_num; i++) {
-            offset = i*6;
+            offset = i * 6;
             touch->rpt[i].id = sample_data[4 + offset];
-            touch->rpt[i].x = (((sample_data[7 + offset] & 0xF0) << 4)| sample_data[5 + offset]);
-            touch->rpt[i].y = (((sample_data[7 + offset] & 0x0F) << 8)| sample_data[6 + offset]);
+            touch->rpt[i].x = (((sample_data[7 + offset] & 0xF0) << 4) | sample_data[5 + offset]);
+            touch->rpt[i].y = (((sample_data[7 + offset] & 0x0F) << 8) | sample_data[6 + offset]);
             touch->rpt[i].weight = sample_data[8 + offset];
         }
 
@@ -356,10 +356,10 @@ static esp_err_t read_tp_hdp(esp_lcd_touch_handle_t tp, tp_status_t *tp_status, 
         /* Dump Log */
         for (uint8_t finger_num = 0; finger_num < touch->touch_num; finger_num++) {
             ESP_LOGD(TAG, "ID[%d], X[%d], Y[%d], Weight[%d]\n",
-                         touch->rpt[finger_num].id,
-                         touch->rpt[finger_num].x,
-                         touch->rpt[finger_num].y,
-                         touch->rpt[finger_num].weight);
+                     touch->rpt[finger_num].id,
+                     touch->rpt[finger_num].x,
+                     touch->rpt[finger_num].y,
+                     touch->rpt[finger_num].weight);
         }
     } else if ((check_id == 0xF6) && tp_status->status_low.gesture) {
         touch->touch_num = 0x00;
@@ -408,8 +408,8 @@ static esp_err_t Read_HDP_REMAIN_DATA(esp_lcd_touch_handle_t tp, tp_hdp_status_t
 static esp_err_t read_fw_version(esp_lcd_touch_handle_t tp)
 {
     uint8_t sample_data[18];
-	uint16_t DVer;
-	uint32_t Dummy, PID, ICName_H, ICName_L;
+    uint16_t DVer;
+    uint32_t Dummy, PID, ICName_H, ICName_L;
 
     sample_data[0] = 0x26;
     sample_data[1] = 0x00;
@@ -419,11 +419,11 @@ static esp_err_t read_fw_version(esp_lcd_touch_handle_t tp)
     i2c_read(&sample_data[0], 18);
     esp_rom_delay_us(200);
 
-	Dummy = ((sample_data[0] << 24) | (sample_data[1] << 16) | (sample_data[3] << 8) | (sample_data[0]));
-	DVer = ((sample_data[5] << 8) | (sample_data[4]));
-	PID = ((sample_data[9] << 24) | (sample_data[8] << 16) | (sample_data[7] << 8) | (sample_data[6]));
-	ICName_L = ((sample_data[13] << 24) | (sample_data[12] << 16) | (sample_data[11] << 8) | (sample_data[10]));    // "2010"
-	ICName_H = ((sample_data[17] << 24) | (sample_data[16] << 16) | (sample_data[15] << 8) | (sample_data[14]));    // "SPD"
+    Dummy = ((sample_data[0] << 24) | (sample_data[1] << 16) | (sample_data[3] << 8) | (sample_data[0]));
+    DVer = ((sample_data[5] << 8) | (sample_data[4]));
+    PID = ((sample_data[9] << 24) | (sample_data[8] << 16) | (sample_data[7] << 8) | (sample_data[6]));
+    ICName_L = ((sample_data[13] << 24) | (sample_data[12] << 16) | (sample_data[11] << 8) | (sample_data[10]));    // "2010"
+    ICName_H = ((sample_data[17] << 24) | (sample_data[16] << 16) | (sample_data[15] << 8) | (sample_data[14]));    // "SPD"
 
     ESP_LOGD(TAG, "Dummy[%"PRIu32"], DVer[%"PRIu16"], PID[%"PRIu32"], Name[%"PRIu32"-%"PRIu32"]", Dummy, DVer, PID, ICName_H, ICName_L);
 
@@ -467,8 +467,7 @@ hdp_done_check:
         if (tp_hdp_status.status == 0x82) {
             /* Clear INT */
             ESP_RETURN_ON_ERROR(write_tp_clear_int_cmd(tp), TAG, "Write clear int cmd failed");
-        }
-        else if (tp_hdp_status.status == 0x00) {
+        } else if (tp_hdp_status.status == 0x00) {
             /* Read HDP Remain Data */
             ESP_RETURN_ON_ERROR(Read_HDP_REMAIN_DATA(tp, &tp_hdp_status), TAG, "Read hdp remain data failed");
             goto hdp_done_check;
@@ -479,4 +478,3 @@ hdp_done_check:
 
     return ESP_OK;
 }
-

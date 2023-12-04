@@ -26,8 +26,7 @@ typedef enum {
     BLDC_ADC_CHANNEL_MAX,
 } bldc_adc_channel_enum_t;
 
-typedef struct
-{
+typedef struct {
     adc_oneshot_unit_handle_t *adc_handle;            /*!< ADC handle */
     adc_unit_t adc_unit;                              /*!< ADC unit */
     adc_oneshot_chan_cfg_t chan_cfg;                  /*!< ADC channel configuration */

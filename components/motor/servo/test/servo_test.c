@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #include <stdio.h>
 #include <string.h>
 #include "freertos/FreeRTOS.h"
@@ -83,9 +82,9 @@ TEST_CASE("Servo_motor test", "[servo][iot]")
     } ;
     TEST_ASSERT(ESP_OK == iot_servo_init(LEDC_LOW_SPEED_MODE, &servo_cfg_ls));
 
-/**
- * Only ESP32 has the high speed mode
- */
+    /**
+     * Only ESP32 has the high speed mode
+     */
 #ifdef CONFIG_IDF_TARGET_ESP32
     servo_config_t servo_cfg_hs = {
         .max_angle = 180,

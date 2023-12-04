@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2021-2022 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2021-2023 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -415,12 +415,12 @@ err:
 }
 
 esp_err_t avi_recorder_start(const char *fname,
-    int (*get_frame)(void **buf, size_t *len),
-    int (*return_frame)(void *buf),
-    uint16_t image_width,
-    uint16_t image_high,
-    uint32_t rec_time,
-    bool block)
+                             int (*get_frame)(void **buf, size_t *len),
+                             int (*return_frame)(void *buf),
+                             uint16_t image_width,
+                             uint16_t image_high,
+                             uint32_t rec_time,
+                             bool block)
 {
     if (REC_STATE_IDLE != g_state) {
         ESP_LOGE(TAG, "recorder already running");
@@ -439,8 +439,8 @@ esp_err_t avi_recorder_start(const char *fname,
     rec_arg.fname = fname;
     rec_arg.rec_time = rec_time;
     rec_arg.event_hdl = xEventGroupCreate();
-    
-    if(pdPASS != xTaskCreatePinnedToCore(recorder_task, "recorder", 1024 * 4, &rec_arg, configMAX_PRIORITIES - 2, NULL, 1)) {
+
+    if (pdPASS != xTaskCreatePinnedToCore(recorder_task, "recorder", 1024 * 4, &rec_arg, configMAX_PRIORITIES - 2, NULL, 1)) {
         vEventGroupDelete(rec_arg.event_hdl);
         return ESP_FAIL;
     }

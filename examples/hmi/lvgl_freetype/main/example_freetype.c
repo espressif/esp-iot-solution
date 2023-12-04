@@ -60,7 +60,7 @@ esp_err_t freetype_ttf_preload(lv_ft_info_t *info)
     do {
         uint32_t len = 0;
         do {
-            len += fread( font_stream_mem + total_read + len, 1, (FREAM_SIZE - len), file);
+            len += fread(font_stream_mem + total_read + len, 1, (FREAM_SIZE - len), file);
             if (1 == feof(file)) {
                 break;
             }

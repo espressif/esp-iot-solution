@@ -254,7 +254,6 @@ TEST_CASE_MULTIPLE_DEVICES("I2C master read slave test", "[i2c_bus]", master_rea
 
 #endif  //DISABLED_FOR_TARGET(ESP32S2)
 
-
 TEST_CASE("i2c bus init-deinit test", "[bus][i2c_bus]")
 {
     i2c_bus_init_deinit_test();

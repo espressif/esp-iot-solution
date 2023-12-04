@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #include <stdio.h>
 #include "esp_log.h"
 #include "board_common.h"
@@ -136,7 +135,7 @@ typedef struct {
     uint8_t io_num;
     uint8_t type;
     uint8_t state;
-    union{
+    union {
         uint8_t polarity;
         led_strip_t *p_strip;
     };
@@ -149,7 +148,7 @@ typedef struct {
 } board_button_t;
 
 #if defined(CONFIG_BOARD_LED_INIT) && (BOARD_LED_NUM > 0)
-static board_led_t s_led[]={
+static board_led_t s_led[] = {
     BOARD_LED_CONFIG(1),
 #if BOARD_LED_NUM > 1
     BOARD_LED_CONFIG(2),
@@ -173,7 +172,7 @@ static board_led_t s_led[]={
 #endif
 
 #if defined(CONFIG_BOARD_BUTTON_INIT) && (BOARD_BUTTON_NUM > 0)
-const static int s_button[]={
+const static int s_button[] = {
     BOARD_BUTTON_CONFIG(1),
 #if BOARD_BUTTON_NUM > 1
     BOARD_BUTTON_CONFIG(2),
@@ -329,7 +328,7 @@ static esp_err_t board_spi_bus_deinit(void)
 static esp_err_t board_led_init(void)
 {
 #if defined(CONFIG_BOARD_LED_INIT) && (BOARD_LED_NUM > 0)
-    ESP_LOGI(TAG, "BOARD_LED_NUM = %d", BOARD_LED_NUM );
+    ESP_LOGI(TAG, "BOARD_LED_NUM = %d", BOARD_LED_NUM);
     gpio_config_t io_conf = {
         //disable interrupt
         .intr_type = GPIO_INTR_DISABLE,
@@ -340,7 +339,7 @@ static esp_err_t board_led_init(void)
         .mode = GPIO_MODE_OUTPUT,
     };
 
-    for(size_t i = 0; i < BOARD_LED_NUM; i++){
+    for (size_t i = 0; i < BOARD_LED_NUM; i++) {
         if (s_led[i].type == LED_TYPE_GPIO) {
             io_conf.pin_bit_mask = 1ULL << s_led[i].io_num;
             esp_err_t ret = gpio_config(&io_conf);
@@ -370,7 +369,7 @@ static esp_err_t board_led_deinit(void)
 {
 #if defined(CONFIG_BOARD_LED_INIT) && (BOARD_LED_NUM > 0)
     BOARD_CHECK(s_board_led_is_init, "led not inited", ESP_ERR_INVALID_STATE);
-    for(size_t i = 0; i < BOARD_LED_NUM; i++){
+    for (size_t i = 0; i < BOARD_LED_NUM; i++) {
         if (s_led[i].type == LED_TYPE_RGB) {
             esp_err_t ret = led_strip_denit(s_led[i].p_strip);
             BOARD_CHECK(ret == ESP_OK, "led(RGB) deinit failed", ret);
@@ -387,7 +386,7 @@ static button_handle_t board_button_io_to_handle(int gpio_num)
 #if defined(CONFIG_BOARD_BUTTON_INIT) && (BOARD_BUTTON_NUM > 0)
     size_t i = 0;
     bool if_find = false;
-    for (i = 0; i< BOARD_BUTTON_NUM; i++) {
+    for (i = 0; i < BOARD_BUTTON_NUM; i++) {
         if (gpio_num == s_button[i].io_num) {
             if_find = true;
             break;
@@ -414,7 +413,7 @@ static esp_err_t board_button_init()
             .active_level = 0,
         },
     };
-    for (size_t i = 0; i< BOARD_BUTTON_NUM; i++) {
+    for (size_t i = 0; i < BOARD_BUTTON_NUM; i++) {
         cfg.gpio_button_config.gpio_num = s_button[i].io_num;
         cfg.gpio_button_config.active_level = s_button[i].polarity;
         s_button[i].handle = iot_button_create(&cfg);
@@ -442,13 +441,13 @@ ATTR_WEAK esp_err_t iot_board_init(void)
 {
     ESP_LOGD(TAG, "%s", __func__);
     BOARD_CHECK(!s_board_is_init, "board has inited", ESP_ERR_INVALID_STATE);
-    ESP_LOGI(TAG,"Board Init ...");
+    ESP_LOGI(TAG, "Board Init ...");
 #ifdef BOARD_CALLBACKS
-    s_board_callbacks.pre_init_cb =BOARD_CALLBACKS.pre_init_cb;
-    s_board_callbacks.pre_deinit_cb =BOARD_CALLBACKS.pre_deinit_cb;
-    s_board_callbacks.post_init_cb =BOARD_CALLBACKS.post_init_cb;
-    s_board_callbacks.post_deinit_cb =BOARD_CALLBACKS.post_deinit_cb;
-    s_board_callbacks.get_handle_cb =BOARD_CALLBACKS.get_handle_cb;
+    s_board_callbacks.pre_init_cb = BOARD_CALLBACKS.pre_init_cb;
+    s_board_callbacks.pre_deinit_cb = BOARD_CALLBACKS.pre_deinit_cb;
+    s_board_callbacks.post_init_cb = BOARD_CALLBACKS.post_init_cb;
+    s_board_callbacks.post_deinit_cb = BOARD_CALLBACKS.post_deinit_cb;
+    s_board_callbacks.get_handle_cb = BOARD_CALLBACKS.get_handle_cb;
     ESP_LOGI(TAG, "register board specified callbacks");
 #endif
     esp_err_t ret = ESP_OK;
@@ -478,8 +477,8 @@ ATTR_WEAK esp_err_t iot_board_init(void)
     }
 
     s_board_is_init = true;
-    ESP_LOGI(TAG,"Board Info: \n\n%s", iot_board_get_info());
-    ESP_LOGI(TAG,"Board Init Done !");
+    ESP_LOGI(TAG, "Board Info: \n\n%s", iot_board_get_info());
+    ESP_LOGI(TAG, "Board Init Done !");
     return ESP_OK;
 }
 
@@ -515,7 +514,7 @@ ATTR_WEAK esp_err_t iot_board_deinit(void)
     }
 
     s_board_is_init = false;
-    ESP_LOGI(TAG,"Board Deinit Done ...");
+    ESP_LOGI(TAG, "Board Deinit Done ...");
     return ESP_OK;
 }
 
@@ -529,8 +528,7 @@ ATTR_WEAK board_res_handle_t iot_board_get_handle(int id)
 {
     ESP_LOGD(TAG, "%s", __func__);
     board_res_handle_t handle = NULL;
-    switch (id)
-    {
+    switch (id) {
     case BOARD_I2C0_ID:
         handle = (board_res_handle_t)s_i2c0_bus_handle;
         break;
@@ -558,8 +556,8 @@ ATTR_WEAK esp_err_t iot_board_led_set_state(int gpio_num, bool if_on)
     BOARD_CHECK(s_board_led_is_init, "led control gpio not inited", ESP_FAIL);
 #if defined(CONFIG_BOARD_LED_INIT) && (BOARD_LED_NUM > 0)
     int i = 0;
-    for (i = 0; i < BOARD_LED_NUM; i++){
-        if (s_led[i].io_num==gpio_num) {
+    for (i = 0; i < BOARD_LED_NUM; i++) {
+        if (s_led[i].io_num == gpio_num) {
             break;
         }
     }
@@ -568,7 +566,7 @@ ATTR_WEAK esp_err_t iot_board_led_set_state(int gpio_num, bool if_on)
         ESP_LOGE(TAG, "GPIO %d is not a valid LED", gpio_num);
         return ESP_FAIL;
     }
-        
+
     if (s_led[i].type == LED_TYPE_GPIO) {
         if (!s_led[i].polarity) { /*check led polarity*/
             if_on = !if_on;
@@ -585,7 +583,7 @@ ATTR_WEAK esp_err_t iot_board_led_set_state(int gpio_num, bool if_on)
             s_led[i].p_strip->clear(s_led[i].p_strip, 50);
         }
     }
-    s_led[i].state=if_on;
+    s_led[i].state = if_on;
 #endif
     return ESP_OK;
 }
@@ -595,7 +593,7 @@ ATTR_WEAK esp_err_t iot_board_led_all_set_state(bool if_on)
     ESP_LOGD(TAG, "%s %d", __func__, if_on);
     BOARD_CHECK(s_board_led_is_init, "led control gpio not inited", ESP_FAIL);
 #if defined(CONFIG_BOARD_LED_INIT) && (BOARD_LED_NUM > 0)
-    for (size_t i = 0; i < BOARD_LED_NUM; i++){
+    for (size_t i = 0; i < BOARD_LED_NUM; i++) {
         iot_board_led_set_state(s_led[i].io_num, if_on);
     }
 #endif
@@ -609,7 +607,7 @@ ATTR_WEAK esp_err_t iot_board_led_toggle_state(int gpio_num)
 #if defined(CONFIG_BOARD_LED_INIT) && (BOARD_LED_NUM > 0)
     size_t i = 0;
     for (; i < BOARD_LED_NUM; i++) {
-        if (s_led[i].io_num==gpio_num) {
+        if (s_led[i].io_num == gpio_num) {
             break;
         }
     }

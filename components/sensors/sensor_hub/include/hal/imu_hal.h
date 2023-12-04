@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #ifndef _IMU_HAL_H_
 #define _IMU_HAL_H_
 
@@ -16,7 +15,7 @@ typedef void *sensor_imu_handle_t; /*!< imu sensor handle*/
 
 /**
  * @brief imu sensor id, used for imu_create
- * 
+ *
  */
 typedef enum {
     MPU6050_ID = 0x01, /*!< MPU6050 imu sensor id*/
@@ -59,25 +58,25 @@ esp_err_t imu_delete(sensor_imu_handle_t *sensor);
 esp_err_t imu_test(sensor_imu_handle_t sensor);
 
 /**
- * @brief Acquire imu sensor accelerometer result one time. 
- * 
- * @param sensor imu sensor handle to operate 
+ * @brief Acquire imu sensor accelerometer result one time.
+ *
+ * @param sensor imu sensor handle to operate
  * @param acce result data (unit:g)
- * @return esp_err_t 
+ * @return esp_err_t
  *     - ESP_OK Success
- *     - ESP_FAIL Fail 
+ *     - ESP_FAIL Fail
  *     - ESP_ERR_NOT_SUPPORTED Function not supported on this sensor
 */
 esp_err_t imu_acquire_acce(sensor_imu_handle_t sensor, axis3_t* acce);
 
 /**
  * @brief Acquire imu sensor gyroscope result one time.
- * 
- * @param sensor imu sensor handle to operate 
+ *
+ * @param sensor imu sensor handle to operate
  * @param gyro result data (unit:dps)
- * @return esp_err_t 
+ * @return esp_err_t
  *     - ESP_OK Success
- *     - ESP_FAIL Fail 
+ *     - ESP_FAIL Fail
  *     - ESP_ERR_NOT_SUPPORTED Function not supported on this sensor
 */
 esp_err_t imu_acquire_gyro(sensor_imu_handle_t sensor, axis3_t* gyro);
@@ -106,7 +105,7 @@ esp_err_t imu_wakeup(sensor_imu_handle_t sensor);
 
 /**
  * @brief acquire a group of sensor data
- * 
+ *
  * @param sensor imu sensor handle to operate
  * @param data_group acquired data
  * @return esp_err_t
@@ -117,7 +116,7 @@ esp_err_t imu_acquire(sensor_imu_handle_t sensor, sensor_data_group_t *data_grou
 
 /**
  * @brief control sensor mode with control commands and args
- * 
+ *
  * @param sensor imu sensor handle to operate
  * @param cmd control commands detailed in sensor_command_t
  * @param args control commands args
@@ -131,6 +130,5 @@ esp_err_t imu_control(sensor_imu_handle_t sensor, sensor_command_t cmd, void *ar
 extern "C"
 }
 #endif
-
 
 #endif

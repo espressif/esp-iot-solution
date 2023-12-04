@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #include "sdkconfig.h"
 #ifdef CONFIG_IDF_TARGET_ESP32
 

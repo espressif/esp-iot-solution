@@ -35,7 +35,7 @@ uint32_t led_indicator_rgb2hsv(uint32_t rgb_value)
         } else if (g == maxRGB) {
             h = (60 * (b - r) / delta + 120);
         } else {
-            h = (60 * (r-g) / delta + 240);
+            h = (60 * (r - g) / delta + 240);
         }
     }
     return (h << 16) | (s << 8) | v;

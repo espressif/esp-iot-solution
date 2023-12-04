@@ -4,8 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
-
 #ifndef _DAC_AUDIO_H_
 #define _DAC_AUDIO_H_
 #include "esp_err.h"
@@ -17,8 +15,7 @@ extern "C" {
 /**
  * @brief Configuration parameters for dac_audio_init function
  */
-typedef struct
-{
+typedef struct {
     i2s_port_t              i2s_num;                /*!< I2S_NUM_0, I2S_NUM_1*/
     int                     sample_rate;            /*!< I2S sample rate*/
     i2s_bits_per_sample_t   bits_per_sample;        /*!< I2S bits per sample*/

@@ -123,7 +123,7 @@ esp_err_t modem_wifi_set(modem_wifi_config_t *config)
 esp_err_t modem_wifi_napt_enable(bool enable)
 {
     ip_napt_enable(_g_esp_netif_soft_ap_ip.ip.addr, enable);
-    ESP_LOGI(TAG, "NAT is %s", enable?"enabled":"disabled");
+    ESP_LOGI(TAG, "NAT is %s", enable ? "enabled" : "disabled");
     return ESP_OK;
 }
 

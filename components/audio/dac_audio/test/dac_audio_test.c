@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #include <stdio.h>
 #include "unity.h"
 #include "test_utils.h"
@@ -20,15 +19,15 @@ TEST_CASE("dac audio sine wave test", "[audio][iot]")
     int8_t *data_buffer;
     const uint32_t size = 240;  /*< f = 48000 / 240 = 200Hz*/
 
-    data_buffer = malloc(size*2);
+    data_buffer = malloc(size * 2);
     TEST_ASSERT_NOT_NULL(data_buffer);
 
     /**
      * Generating two channel waveforms with phase difference
      */
     for (size_t i = 0; i < size; i++) {
-        data_buffer[i*2] = 127.8f * sinf(PI_2 * (float)i / (float)size);
-        data_buffer[i*2+1] = 127.8f * cosf(PI_2 * (float)i / (float)size);
+        data_buffer[i * 2] = 127.8f * sinf(PI_2 * (float)i / (float)size);
+        data_buffer[i * 2 + 1] = 127.8f * cosf(PI_2 * (float)i / (float)size);
     }
 
     dac_audio_config_t dac_cfg;
@@ -126,6 +125,4 @@ TEST_CASE("dac audio play music test", "[audio][iot]")
 {
     play_with_param(0, 1);
 
-
 }
-

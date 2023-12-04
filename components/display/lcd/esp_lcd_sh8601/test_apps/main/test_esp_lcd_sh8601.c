@@ -110,11 +110,11 @@ TEST_CASE("test sh8601 to draw color bar with QSPI interface", "[sh8601][qspi]")
 {
     ESP_LOGI(TAG, "Initialize SPI bus");
     const spi_bus_config_t buscfg = SH8601_PANEL_BUS_QSPI_CONFIG(TEST_PIN_NUM_LCD_PCLK,
-                                                                TEST_PIN_NUM_LCD_DATA0,
-                                                                TEST_PIN_NUM_LCD_DATA1,
-                                                                TEST_PIN_NUM_LCD_DATA2,
-                                                                TEST_PIN_NUM_LCD_DATA3,
-                                                                TEST_LCD_H_RES * TEST_LCD_V_RES * TEST_LCD_BIT_PER_PIXEL / 8);
+                                                                 TEST_PIN_NUM_LCD_DATA0,
+                                                                 TEST_PIN_NUM_LCD_DATA1,
+                                                                 TEST_PIN_NUM_LCD_DATA2,
+                                                                 TEST_PIN_NUM_LCD_DATA3,
+                                                                 TEST_LCD_H_RES * TEST_LCD_V_RES * TEST_LCD_BIT_PER_PIXEL / 8);
     TEST_ESP_OK(spi_bus_initialize(TEST_LCD_HOST, &buscfg, SPI_DMA_CH_AUTO));
 
     ESP_LOGI(TAG, "Install panel IO");
@@ -134,7 +134,7 @@ TEST_CASE("test sh8601 to draw color bar with QSPI interface", "[sh8601][qspi]")
         .reset_gpio_num = TEST_PIN_NUM_LCD_RST,
         .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,
         .bits_per_pixel = TEST_LCD_BIT_PER_PIXEL,
-        .vendor_config = (void *)&vendor_config,
+        .vendor_config = (void *) &vendor_config,
     };
     TEST_ESP_OK(esp_lcd_new_panel_sh8601(io_handle, &panel_config, &panel_handle));
     esp_lcd_panel_reset(panel_handle);

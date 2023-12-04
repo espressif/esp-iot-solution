@@ -44,7 +44,7 @@ static esp_err_t esp_modem_retry_run(esp_modem_recov_resend_t * retry, void *par
     int timeouts = 0;
     esp_err_t err = ESP_FAIL;
     while (timeouts <= retry->retries_after_timeout &&
-           errors <= retry->retries_after_error) {
+            errors <= retry->retries_after_error) {
         esp_modem_wait_ms(10);
         if (timeouts || errors) {
             // provide recovery action based on the defined strategy
@@ -54,7 +54,7 @@ static esp_err_t esp_modem_retry_run(esp_modem_recov_resend_t * retry, void *par
             }
         }
         if (retry->command) {
-            ESP_LOGI(TAG, "%s(%d): executing:%s...", __func__, __LINE__, retry->command );
+            ESP_LOGI(TAG, "%s(%d): executing:%s...", __func__, __LINE__, retry->command);
         }
 
         // Execute the command
@@ -67,7 +67,7 @@ static esp_err_t esp_modem_retry_run(esp_modem_recov_resend_t * retry, void *par
             }
             timeouts++;
             continue;
-        // Check for errors
+            // Check for errors
         } else if (err != ESP_OK) {
             if (retry->command) {
                 ESP_LOGW(TAG, "%s(%d): Command:%s failed", __func__, __LINE__, retry->command);
@@ -104,8 +104,8 @@ err:
 esp_modem_recov_gpio_t *esp_modem_recov_gpio_new(int gpio_num, int inactive_level, int active_width_ms, int inactive_width_ms)
 {
     gpio_config_t io_config = {
-            .pin_bit_mask = BIT64(gpio_num),
-            .mode = GPIO_MODE_OUTPUT
+        .pin_bit_mask = BIT64(gpio_num),
+        .mode = GPIO_MODE_OUTPUT
     };
     gpio_config(&io_config);
     gpio_set_level(gpio_num, inactive_level);

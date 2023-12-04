@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #ifndef _IOT_SENSOR_TYPE_H_
 #define _IOT_SENSOR_TYPE_H_
 
@@ -14,7 +20,7 @@ typedef void *bus_handle_t; /*!< i2c/spi bus handle */
 
 /**
  * @brief imu sensor type
- * 
+ *
  */
 #ifndef AXIS3_T
 typedef union {
@@ -30,7 +36,7 @@ typedef union {
 
 /**
  * @brief color sensor type
- * 
+ *
  */
 #ifndef RGBW_T
 typedef struct {
@@ -44,7 +50,7 @@ typedef struct {
 
 /**
  * @brief uv sensor data type
- * 
+ *
  */
 #ifndef UV_T
 typedef struct {
@@ -58,7 +64,7 @@ typedef struct {
 
 /**
  * @brief sensor type
- * 
+ *
  */
 typedef enum {
     NULL_ID, /*!< NULL */
@@ -70,7 +76,7 @@ typedef enum {
 
 /**
  * @brief sensor operate command
- * 
+ *
  */
 typedef enum {
     COMMAND_SET_MODE, /*!< set measure mdoe */
@@ -83,7 +89,7 @@ typedef enum {
 
 /**
  * @brief sensor power mode
- * 
+ *
  */
 typedef enum {
     POWER_MODE_WAKEUP, /*!< wakeup from sleep */
@@ -93,7 +99,7 @@ typedef enum {
 
 /**
  * @brief sensor acquire mode
- * 
+ *
  */
 typedef enum {
     MODE_DEFAULT, /*!< default work mode */
@@ -104,7 +110,7 @@ typedef enum {
 
 /**
  * @brief sensor acquire range
- * 
+ *
  */
 typedef enum {
     RANGE_DEFAULT, /*!< default range */
@@ -115,7 +121,7 @@ typedef enum {
 
 /**
  * @brief sensor general events
- * 
+ *
  */
 typedef enum {
     SENSOR_STARTED,                 /*!< sensor started, data acquire will be started */
@@ -125,7 +131,7 @@ typedef enum {
 
 /**
  * @brief sensor data ready events
- * 
+ *
  */
 typedef enum {
     SENSOR_ACCE_DATA_READY = 10,    /*!< Accelerometer data ready */
@@ -150,7 +156,7 @@ typedef enum {
 
 /**
  * @brief sensor data type
- * 
+ *
  */
 typedef struct {
     int64_t                  timestamp;     /*!< timestamp  */
@@ -181,7 +187,7 @@ typedef struct {
 
 /**
  * @brief sensor data group type
- * 
+ *
  */
 typedef struct {
     uint8_t number; /*!< effective data number */
@@ -191,7 +197,7 @@ typedef struct {
 /** @cond **/
 /**
  * @brief sensor hal level interface
- * 
+ *
  */
 typedef struct {
     sensor_type_t type; /*!< sensor type  */

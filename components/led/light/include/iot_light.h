@@ -17,7 +17,7 @@ extern "C" {
 typedef struct {
     gpio_num_t io_num;
     ledc_mode_t mode;
-    ledc_channel_t channel; 
+    ledc_channel_t channel;
     TimerHandle_t timer;
     int breath_period;
     uint32_t next_duty;
@@ -45,11 +45,11 @@ typedef enum {
 /**
   * @brief  light initialize
   *
-  * @param  timer the ledc timer used by light 
+  * @param  timer the ledc timer used by light
   * @param  speed_mode
   * @param  freq_hz frequency of timer
   * @param  channel_num decide how many channels the light contains
-  * @param  timer_bit 
+  * @param  timer_bit
   *
   * @return  the handle of light
   */
@@ -58,7 +58,7 @@ light_handle_t iot_light_create(ledc_timer_t timer, ledc_mode_t speed_mode, uint
 /**
   * @brief  add an output channel to light
   *
-  * @param  light_handle 
+  * @param  light_handle
   * @param  channel_idx the id of channel (0 ~ channel_num-1)
   * @param  io_num
   * @param  channel the ledc channel you want to use

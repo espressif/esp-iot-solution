@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #ifndef _IOT_BOARD_H_
 #define _IOT_BOARD_H_
 
@@ -19,7 +18,7 @@ typedef enum {
     NULL_RESOURCE,
     BOARD_I2C0_ID,
     BOARD_SPI2_ID,
-}board_res_id_t;
+} board_res_id_t;
 
 /*Definitions of Board Information*/
 #define BOARD_NAME "ESP32-Devkitc"

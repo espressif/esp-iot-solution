@@ -6,7 +6,7 @@ set(priv_req "")
 
 if(CONFIG_BT_NIMBLE_ENABLED)
     list(APPEND srcs     "src/esp_nimble.c")
-elseif(CONFIG_BT_BLUEDROID_ENABLED)  
+elseif(CONFIG_BT_BLUEDROID_ENABLED)
     list(APPEND srcs     "src/esp_bluedroid.c")
     message(FATAL_ERROR "Bluedroid support is not implemented yet for BLE connect management")
 endif()

@@ -59,7 +59,7 @@ static const HS_color_t temp_table[] = {
     {222, 20}, {222, 20}, {222, 20}, {222, 21}, {222, 21}
 };
 
-static const char *led_indicator_mode_str[5] = {"GPIO mode", "LEDC mode", "LED RGB mode", "LED Strips mode","custom mode"};
+static const char *led_indicator_mode_str[5] = {"GPIO mode", "LEDC mode", "LED RGB mode", "LED Strips mode", "custom mode"};
 
 /**
  * @brief LED indicator object
@@ -208,7 +208,7 @@ static void _blink_list_runner(TimerHandle_t xTimer)
                 ESP_LOGW(TAG, "LED_BLINK_HOLD Skip: no hal_indicator_set_on_off function");
                 break;
             }
-            hardware_level = p_blink_step_value.v ? 1:0;
+            hardware_level = p_blink_step_value.v ? 1 : 0;
             p_led_indicator->hal_indicator_set_on_off(p_led_indicator->hardware_data, hardware_level);
 
             p_led_indicator->current_fade_value.v = hardware_level ? LED_STATE_ON : LED_STATE_OFF;
@@ -272,7 +272,7 @@ static void _blink_list_runner(TimerHandle_t xTimer)
             }
             p_led_indicator->current_fade_value.i = p_blink_step_value.i;
 
-            uint32_t r,g,b;
+            uint32_t r, g, b;
 
             led_indicator_hsv2rgb(p_led_indicator->current_fade_value.value, &r, &g, &b);
             led_indicator_ihsv_t irgb_value = {
@@ -809,7 +809,7 @@ uint32_t led_indicator_get_rgb(led_indicator_handle_t handle)
     uint32_t ihsv_value = p_led_indicator->current_fade_value.value;
     xSemaphoreGive(p_led_indicator->mutex);
 
-    uint32_t r,g,b,rgb_value;
+    uint32_t r, g, b, rgb_value;
     led_indicator_hsv2rgb(ihsv_value, &r, &g, &b);
     rgb_value = (r << 16) | (g << 8) | b;
 

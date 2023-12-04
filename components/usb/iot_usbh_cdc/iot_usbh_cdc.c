@@ -104,7 +104,6 @@ static _class_cdc_t s_cdc_instance = {};
 #define DEFAULT_USBH_CDC_CONFIGS() { \
     0, \
 
-
 /*--------------------------------- CDC Buffer Handle Code --------------------------------------*/
 static size_t _get_usb_out_ringbuf_len(int itf_num)
 {
@@ -496,7 +495,6 @@ static esp_err_t _usbh_cdc_connect_handler(usbh_port_handle_t port_hdl, void *ar
     }
     return ret;
 }
-
 
 esp_err_t usbh_cdc_driver_install(const usbh_cdc_config_t *config)
 {

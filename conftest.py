@@ -79,9 +79,9 @@ def test_case_name(request: FixtureRequest, target: str, config: str) -> str:
 @pytest.fixture
 @multi_dut_fixture
 def build_dir(
-    app_path: str, 
-    target: Optional[str], 
-    config: Optional[str], 
+    app_path: str,
+    target: Optional[str],
+    config: Optional[str],
     idf_version: str
 ) -> Optional[str]:
     """

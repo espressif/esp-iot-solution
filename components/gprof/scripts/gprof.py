@@ -43,7 +43,7 @@ def relink(args):
     if found == False:
         raise Exception('text start index is not found')
 
-    open(args.output, 'w+').write('\n'.join(lines))   
+    open(args.output, 'w+').write('\n'.join(lines))
 
 def dump(args):
     logging.debug('partition_csv:   %s'%(args.partition_csv))
@@ -65,7 +65,7 @@ def dump(args):
                 offset = parse_int(p['Offset']) + parse_int(p['Size'])
             else:
                 offset = offset + parse_int(p['Size'])
-    
+
     if found == False:
         raise Exception('gprof partition is not found')
 
@@ -181,7 +181,7 @@ def main():
         action='store_true',
         default=False
     )
-    
+
     parser_dump.add_argument(
         '--esptool',
         help='GCC toolchain',

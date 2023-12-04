@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #include <stdio.h>
 #include <string.h>
 #include "freertos/FreeRTOS.h"
@@ -58,7 +57,7 @@ static esp_err_t init_camera(uint32_t xclk_freq_hz, pixformat_t pixel_format, fr
         .pixel_format = pixel_format, //YUV422,GRAYSCALE,RGB565,JPEG
         .frame_size = frame_size,    //QQVGA-UXGA, sizes above QVGA are not been recommended when not JPEG format.
 
-        .jpeg_quality = 10, //0-63 
+        .jpeg_quality = 10, //0-63
         .fb_count = fb_count,       // For ESP32/ESP32-S2, if more than one, i2s runs in continuous mode. Use only with JPEG.
         .grab_mode = CAMERA_GRAB_LATEST,
         .fb_location = CAMERA_FB_IN_PSRAM
@@ -75,7 +74,7 @@ static esp_err_t init_camera(uint32_t xclk_freq_hz, pixformat_t pixel_format, fr
     }
 
     if (s->id.PID == OV3660_PID || s->id.PID == OV2640_PID) {
-        s->set_vflip(s, 1); //flip it back    
+        s->set_vflip(s, 1); //flip it back
     } else if (s->id.PID == GC0308_PID) {
         s->set_hmirror(s, 0);
     } else if (s->id.PID == GC032A_PID) {
@@ -94,9 +93,9 @@ static esp_err_t init_camera(uint32_t xclk_freq_hz, pixformat_t pixel_format, fr
 void app_main()
 {
     app_wifi_main();
-    
+
     camera_fb_t *frame;
-    
+
     xQueueIFrame = xQueueCreate(2, sizeof(camera_fb_t *));
 
     /* It is recommended to use a camera sensor with JPEG compression to maximize the speed */
@@ -105,11 +104,11 @@ void app_main()
     TEST_ESP_OK(start_stream_server(xQueueIFrame, true));
 
     ESP_LOGI(TAG, "Begin capture frame");
-    
+
     while (true) {
         frame = esp_camera_fb_get();
         if (frame) {
             xQueueSend(xQueueIFrame, &frame, portMAX_DELAY);
-        } 
+        }
     }
 }

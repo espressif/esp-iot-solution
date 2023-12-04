@@ -106,7 +106,6 @@ typedef struct {
  */
 esp_err_t tusb_cdc_acm_init(const tinyusb_config_cdcacm_t *cfg);
 
-
 /**
  * @brief Register a callback invoking on CDC event. If the callback had been
  *        already registered, it will be overwritten
@@ -117,9 +116,8 @@ esp_err_t tusb_cdc_acm_init(const tinyusb_config_cdcacm_t *cfg);
  * @return esp_err_t - ESP_OK or ESP_ERR_INVALID_ARG
  */
 esp_err_t tinyusb_cdcacm_register_callback(tinyusb_cdcacm_itf_t itf,
-        cdcacm_event_type_t event_type,
-        tusb_cdcacm_callback_t callback);
-
+                                           cdcacm_event_type_t event_type,
+                                           tusb_cdcacm_callback_t callback);
 
 /**
  * @brief Unregister a callback invoking on CDC event.
@@ -130,7 +128,6 @@ esp_err_t tinyusb_cdcacm_register_callback(tinyusb_cdcacm_itf_t itf,
  */
 esp_err_t tinyusb_cdcacm_unregister_callback(tinyusb_cdcacm_itf_t itf, cdcacm_event_type_t event_type);
 
-
 /**
  * @brief Sent one character to a write buffer
  *
@@ -139,7 +136,6 @@ esp_err_t tinyusb_cdcacm_unregister_callback(tinyusb_cdcacm_itf_t itf, cdcacm_ev
  * @return size_t - amount of queued bytes
  */
 size_t tinyusb_cdcacm_write_queue_char(tinyusb_cdcacm_itf_t itf, char ch);
-
 
 /**
  * @brief Write data to write buffer from a byte array
@@ -177,7 +173,6 @@ esp_err_t tinyusb_cdcacm_write_flush(tinyusb_cdcacm_itf_t itf, uint32_t timeout_
  * @return esp_err_t ESP_OK, ESP_FAIL or ESP_ERR_INVALID_STATE
  */
 esp_err_t tinyusb_cdcacm_read(tinyusb_cdcacm_itf_t itf, uint8_t *out_buf, size_t out_buf_sz, size_t *rx_data_size);
-
 
 /**
  * @brief Check if the ACM initialized

@@ -268,7 +268,8 @@ static esp_err_t stalist_update()
     return ESP_OK;
 }
 
-modem_http_list_head_t *modem_http_get_stalist(){
+modem_http_list_head_t *modem_http_get_stalist()
+{
     return &s_sta_list_head;
 }
 
@@ -284,7 +285,7 @@ static esp_err_t stalist_add_node(uint8_t mac[6])
     size_t name_size = sizeof(node->name);
     sprintf(mac_addr, "%02x%02x%02x%02x%02x%02x", node->mac[0], node->mac[1], node->mac[2], node->mac[3], node->mac[4], node->mac[5]);
     esp_err_t err = from_nvs_get_value(mac_addr, node->name, &name_size); // name
-    if (err == ESP_ERR_NVS_NOT_FOUND ) {
+    if (err == ESP_ERR_NVS_NOT_FOUND) {
         memcpy(node->name, mac_addr, 12);
     }
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
@@ -1097,26 +1098,26 @@ esp_err_t modem_http_get_nvs_wifi_config(modem_wifi_config_t *wifi_config)
     size_t str_size = sizeof(str);
 
     esp_err_t err = from_nvs_get_value("ssid", str, &str_size);
-    if ( err == ESP_OK ) {
+    if (err == ESP_OK) {
         strncpy(wifi_config->ssid, str, str_size);
     }
     str_size = sizeof(str);
 
     err = from_nvs_get_value("password", str, &str_size);
-    if ( err == ESP_OK ) {
+    if (err == ESP_OK) {
         strncpy(wifi_config->password, str, sizeof(wifi_config->password));
     }
     str_size = sizeof(str);
 
     err = from_nvs_get_value("auth_mode", str, &str_size);
-    if ( err == ESP_OK ) {
-         if ( !strcmp(str, "OPEN") ) {
+    if (err == ESP_OK) {
+        if (!strcmp(str, "OPEN")) {
             wifi_config->authmode = WIFI_AUTH_OPEN;
-        } else if ( !strcmp(str, "WEP") ) {
+        } else if (!strcmp(str, "WEP")) {
             wifi_config->authmode = WIFI_AUTH_WEP;
-        } else if ( !strcmp(str, "WPA2_PSK") ) {
+        } else if (!strcmp(str, "WPA2_PSK")) {
             wifi_config->authmode = WIFI_AUTH_WPA2_PSK;
-        } else if ( !strcmp(str, "WPA_WPA2_PSK") ) {
+        } else if (!strcmp(str, "WPA_WPA2_PSK")) {
             wifi_config->authmode = WIFI_AUTH_WPA_WPA2_PSK;
         } else {
             ESP_LOGE(TAG, "auth_mode %s is not define", str);
@@ -1125,14 +1126,14 @@ esp_err_t modem_http_get_nvs_wifi_config(modem_wifi_config_t *wifi_config)
     str_size = sizeof(str);
 
     err = from_nvs_get_value("channel", str, &str_size);
-    if ( err == ESP_OK ) {
+    if (err == ESP_OK) {
         wifi_config->channel = atoi(str);
     }
     str_size = sizeof(str);
 
     from_nvs_get_value("hide_ssid", str, &str_size);
-    if ( err == ESP_OK ) {
-        if ( !strcmp(str, "true") ) {
+    if (err == ESP_OK) {
+        if (!strcmp(str, "true")) {
             wifi_config->ssid_hidden = 1;
         } else {
             wifi_config->ssid_hidden = 0;
@@ -1141,7 +1142,7 @@ esp_err_t modem_http_get_nvs_wifi_config(modem_wifi_config_t *wifi_config)
     str_size = sizeof(str);
 
     err = from_nvs_get_value("bandwidth", str, &str_size);
-    if ( err == ESP_OK ) {
+    if (err == ESP_OK) {
         if (!strcmp(str, "40")) {
             wifi_config->bandwidth = WIFI_BW_HT40;
         } else {
@@ -1150,7 +1151,7 @@ esp_err_t modem_http_get_nvs_wifi_config(modem_wifi_config_t *wifi_config)
     }
 
     err = from_nvs_get_value("max_connection", str, &str_size);
-    if ( err == ESP_OK ) {
+    if (err == ESP_OK) {
         wifi_config->max_connection = atoi(str);
     }
 
@@ -1211,7 +1212,7 @@ static httpd_handle_t s_server = NULL;
 
 esp_err_t modem_http_deinit(httpd_handle_t server)
 {
-    if(s_if_init == true){
+    if (s_if_init == true) {
         s_modem_wifi_config = NULL;
         stop_webserver(server);
         s_if_init = false;
@@ -1222,7 +1223,7 @@ esp_err_t modem_http_deinit(httpd_handle_t server)
 
 esp_err_t modem_http_init(modem_wifi_config_t *wifi_config)
 {
-    if(s_if_init == false){
+    if (s_if_init == false) {
         s_modem_wifi_config = wifi_config;
         SLIST_INIT(&s_sta_list_head);
         /* Start the server for the first time */

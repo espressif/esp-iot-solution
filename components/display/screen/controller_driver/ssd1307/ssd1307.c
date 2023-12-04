@@ -103,7 +103,6 @@ scr_driver_t lcd_ssd1307_default_driver = {
     .get_info = lcd_ssd1307_get_info,
 };
 
-
 esp_err_t lcd_ssd1307_init(const scr_controller_config_t *lcd_conf)
 {
     LCD_CHECK(lcd_conf->width <= SSD1307_COLUMNS, "Width greater than maximum", ESP_ERR_INVALID_ARG);

@@ -169,7 +169,7 @@ esp_err_t xpt2046_get_rawdata(uint16_t *x, uint16_t *y)
 
         // Only add the samples to the average if they are valid
         if ((samples[i].x >= TOUCH_SAMPLE_MIN) && (samples[i].x <= TOUCH_SAMPLE_MAX) &&
-            (samples[i].y >= TOUCH_SAMPLE_MIN) && (samples[i].y <= TOUCH_SAMPLE_MAX)) {
+                (samples[i].y >= TOUCH_SAMPLE_MIN) && (samples[i].y <= TOUCH_SAMPLE_MAX)) {
             aveX += samples[i].x;
             aveY += samples[i].y;
             valid_count++;
@@ -301,7 +301,7 @@ esp_err_t xpt2046_get_temp_deg_c(float* temperature)
 
     // 12 bit = 4095 counts. 2.507V full scale internal reference. 0.0021V/degC characteristic.
     //  599.5mV @25degC nominal
-    *temperature = (float) (XPT2046_TEMP0_COUNTS_AT_25C - temp0) * (2.507 / 4095.0) / 0.0021 + 25.0;
+    *temperature = (float)(XPT2046_TEMP0_COUNTS_AT_25C - temp0) * (2.507 / 4095.0) / 0.0021 + 25.0;
 
     // Last reading is to turn off the Vref
     ret = xpt2046_get_sample(XPT2046_TOUCH_CMD_Z1, &temp0);

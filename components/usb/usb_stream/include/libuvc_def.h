@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 #pragma once
 
 #include <stdio.h>
@@ -54,36 +59,36 @@ typedef enum uvc_error {
  * @ingroup streaming
  */
 enum uvc_frame_format {
-  UVC_FRAME_FORMAT_UNKNOWN = 0,
-  /** Any supported format */
-  UVC_FRAME_FORMAT_ANY = 0,
-  UVC_FRAME_FORMAT_UNCOMPRESSED,
-  UVC_FRAME_FORMAT_COMPRESSED,
-  /** YUYV/YUV2/YUV422: YUV encoding with one luminance value per pixel and
-   * one UV (chrominance) pair for every two pixels.
-   */
-  UVC_FRAME_FORMAT_YUYV,
-  UVC_FRAME_FORMAT_UYVY,
-  /** 24-bit RGB */
-  UVC_FRAME_FORMAT_RGB,
-  UVC_FRAME_FORMAT_BGR,
-  /** Motion-JPEG (or JPEG) encoded images */
-  UVC_FRAME_FORMAT_MJPEG,
-  UVC_FRAME_FORMAT_H264,
-  /** Greyscale images */
-  UVC_FRAME_FORMAT_GRAY8,
-  UVC_FRAME_FORMAT_GRAY16,
-  /* Raw colour mosaic images */
-  UVC_FRAME_FORMAT_BY8,
-  UVC_FRAME_FORMAT_BA81,
-  UVC_FRAME_FORMAT_SGRBG8,
-  UVC_FRAME_FORMAT_SGBRG8,
-  UVC_FRAME_FORMAT_SRGGB8,
-  UVC_FRAME_FORMAT_SBGGR8,
-  /** YUV420: NV12 */
-  UVC_FRAME_FORMAT_NV12,
-  /** Number of formats understood */
-  UVC_FRAME_FORMAT_COUNT,
+    UVC_FRAME_FORMAT_UNKNOWN = 0,
+    /** Any supported format */
+    UVC_FRAME_FORMAT_ANY = 0,
+    UVC_FRAME_FORMAT_UNCOMPRESSED,
+    UVC_FRAME_FORMAT_COMPRESSED,
+    /** YUYV/YUV2/YUV422: YUV encoding with one luminance value per pixel and
+     * one UV (chrominance) pair for every two pixels.
+     */
+    UVC_FRAME_FORMAT_YUYV,
+    UVC_FRAME_FORMAT_UYVY,
+    /** 24-bit RGB */
+    UVC_FRAME_FORMAT_RGB,
+    UVC_FRAME_FORMAT_BGR,
+    /** Motion-JPEG (or JPEG) encoded images */
+    UVC_FRAME_FORMAT_MJPEG,
+    UVC_FRAME_FORMAT_H264,
+    /** Greyscale images */
+    UVC_FRAME_FORMAT_GRAY8,
+    UVC_FRAME_FORMAT_GRAY16,
+    /* Raw colour mosaic images */
+    UVC_FRAME_FORMAT_BY8,
+    UVC_FRAME_FORMAT_BA81,
+    UVC_FRAME_FORMAT_SGRBG8,
+    UVC_FRAME_FORMAT_SGBRG8,
+    UVC_FRAME_FORMAT_SRGGB8,
+    UVC_FRAME_FORMAT_SBGGR8,
+    /** YUV420: NV12 */
+    UVC_FRAME_FORMAT_NV12,
+    /** Number of formats understood */
+    UVC_FRAME_FORMAT_COUNT,
 };
 
 /** Converts an unaligned four-byte little-endian integer into an int32 */
@@ -155,38 +160,38 @@ enum uvc_vs_ctrl_selector {
  * @ingroup streaming
  */
 typedef struct uvc_frame {
-  /** Image data for this frame */
-  void *data;
-  /** Size of image data buffer */
-  size_t data_bytes;
-  /** Width of image in pixels */
-  uint32_t width;
-  /** Height of image in pixels */
-  uint32_t height;
-  /** Pixel data format */
-  enum uvc_frame_format frame_format;
-  /** Number of bytes per horizontal line (undefined for compressed format) */
-  size_t step;
-  /** Frame number (may skip, but is strictly monotonically increasing) */
-  uint32_t sequence;
-  /** Estimate of system time when the device started capturing the image */
-  struct timeval capture_time;
-  /** Estimate of system time when the device finished receiving the image */
-  struct timespec capture_time_finished;
-  /** Handle on the device that produced the image.
-   * @warning You must not call any uvc_* functions during a callback. */
-  uvc_device_handle_t *source;
-  /** Is the data buffer owned by the library?
-   * If 1, the data buffer can be arbitrarily reallocated by frame conversion
-   * functions.
-   * If 0, the data buffer will not be reallocated or freed by the library.
-   * Set this field to zero if you are supplying the buffer.
-   */
-  uint8_t library_owns_data;
-  /** Metadata for this frame if available */
-  void *metadata;
-  /** Size of metadata buffer */
-  size_t metadata_bytes;
+    /** Image data for this frame */
+    void *data;
+    /** Size of image data buffer */
+    size_t data_bytes;
+    /** Width of image in pixels */
+    uint32_t width;
+    /** Height of image in pixels */
+    uint32_t height;
+    /** Pixel data format */
+    enum uvc_frame_format frame_format;
+    /** Number of bytes per horizontal line (undefined for compressed format) */
+    size_t step;
+    /** Frame number (may skip, but is strictly monotonically increasing) */
+    uint32_t sequence;
+    /** Estimate of system time when the device started capturing the image */
+    struct timeval capture_time;
+    /** Estimate of system time when the device finished receiving the image */
+    struct timespec capture_time_finished;
+    /** Handle on the device that produced the image.
+     * @warning You must not call any uvc_* functions during a callback. */
+    uvc_device_handle_t *source;
+    /** Is the data buffer owned by the library?
+     * If 1, the data buffer can be arbitrarily reallocated by frame conversion
+     * functions.
+     * If 0, the data buffer will not be reallocated or freed by the library.
+     * Set this field to zero if you are supplying the buffer.
+     */
+    uint8_t library_owns_data;
+    /** Metadata for this frame if available */
+    void *metadata;
+    /** Size of metadata buffer */
+    size_t metadata_bytes;
 } uvc_frame_t;
 
 /** A callback function to handle incoming assembled UVC frames

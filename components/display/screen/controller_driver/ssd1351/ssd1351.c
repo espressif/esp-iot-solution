@@ -89,11 +89,11 @@ esp_err_t lcd_ssd1351_init(const scr_controller_config_t *lcd_conf)
     LCD_CHECK(lcd_conf->height <= SSD1351_RESOLUTION_VER, "Height greater than maximum", ESP_ERR_INVALID_ARG);
     LCD_CHECK(NULL != lcd_conf, "config pointer invalid", ESP_ERR_INVALID_ARG);
     LCD_CHECK((NULL != lcd_conf->interface_drv->write_command && \
-              NULL != lcd_conf->interface_drv->write_data && \
-              NULL != lcd_conf->interface_drv->write && \
-              NULL != lcd_conf->interface_drv->read && \
-              NULL != lcd_conf->interface_drv->bus_acquire && \
-              NULL != lcd_conf->interface_drv->bus_release),
+               NULL != lcd_conf->interface_drv->write_data && \
+               NULL != lcd_conf->interface_drv->write && \
+               NULL != lcd_conf->interface_drv->read && \
+               NULL != lcd_conf->interface_drv->bus_acquire && \
+               NULL != lcd_conf->interface_drv->bus_release),
               "Interface driver invalid", ESP_ERR_INVALID_ARG);
 
     // Reset the display
@@ -270,7 +270,6 @@ esp_err_t lcd_ssd1351_set_invert(bool is_invert)
 {
     return LCD_WRITE_CMD(is_invert ? SSD1351_CMD_INVERTDISPLAY  : SSD1351_CMD_NORMALDISPLAY);
 }
-
 
 esp_err_t lcd_ssd1351_write_ram_data(uint16_t color)
 {

@@ -56,7 +56,6 @@ const static rmt_receive_config_t ir_learn_rmt_rx_cfg = {
 static ir_learn_t *ir_learn_ctx = NULL;
 static EventGroupHandle_t ir_learn_event_group;
 
-
 bool ir_learn_list_lock(uint32_t timeout_ms)
 {
     const TickType_t timeout_ticks = (timeout_ms == 0) ? portMAX_DELAY : pdMS_TO_TICKS(timeout_ms);
@@ -519,8 +518,8 @@ esp_err_t ir_learn_new(const ir_learn_cfg_t *cfg, ir_learn_handle_t *handle_out)
     ir_learn_ctx->learn_count = cfg->learn_count;
     ir_learn_ctx->rmt_rx.num_symbols = RMT_RX_MEM_BLOCK_SIZE * 4;
     ir_learn_ctx->rmt_rx.received_symbols = (rmt_symbol_word_t *)heap_caps_malloc(\
-                                            ir_learn_ctx->rmt_rx.num_symbols * sizeof(rmt_symbol_word_t), \
-                                            MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+                                                                                  ir_learn_ctx->rmt_rx.num_symbols * sizeof(rmt_symbol_word_t), \
+                                                                                  MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
     IR_LEARN_CHECK_GOTO(ir_learn_ctx->rmt_rx.received_symbols, "no mem to store received RMT symbols", ESP_ERR_NO_MEM, err);
 
     ir_learn_ctx->receive_queue = xQueueCreate(1, sizeof(rmt_rx_done_event_data_t));

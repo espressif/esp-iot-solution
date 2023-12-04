@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #include <string.h>
 #include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
@@ -44,45 +43,45 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
     }
 
     switch (event_id) {
-        case WIFI_EVENT_AP_STACONNECTED: {
-            wifi_event_ap_staconnected_t *event = (wifi_event_ap_staconnected_t *) event_data;
-            ESP_LOGI(TAG, "station "MACSTR" join, AID=%d",
-                     MAC2STR(event->mac), event->aid);
-            break;
-        }
+    case WIFI_EVENT_AP_STACONNECTED: {
+        wifi_event_ap_staconnected_t *event = (wifi_event_ap_staconnected_t *) event_data;
+        ESP_LOGI(TAG, "station "MACSTR" join, AID=%d",
+                 MAC2STR(event->mac), event->aid);
+        break;
+    }
 
-        case WIFI_EVENT_AP_STADISCONNECTED: {
-            wifi_event_ap_stadisconnected_t *event = (wifi_event_ap_stadisconnected_t *) event_data;
-            ESP_LOGI(TAG, "station "MACSTR" leave, AID=%d",
-                     MAC2STR(event->mac), event->aid);
-            break;
-        }
+    case WIFI_EVENT_AP_STADISCONNECTED: {
+        wifi_event_ap_stadisconnected_t *event = (wifi_event_ap_stadisconnected_t *) event_data;
+        ESP_LOGI(TAG, "station "MACSTR" leave, AID=%d",
+                 MAC2STR(event->mac), event->aid);
+        break;
+    }
 
-        case WIFI_EVENT_STA_START:
-            esp_wifi_connect();
-            break;
-
-        case WIFI_EVENT_STA_DISCONNECTED:
-            if (s_retry_num < BOARD_MAXIMUM_RETRY) {
-                esp_wifi_connect();
-                s_retry_num++;
-                ESP_LOGI(TAG, "retry to connect to the AP");
-            } else {
-                ESP_LOGI(TAG, "giveup retry");
-            }
-
-            ESP_LOGI(TAG, "connect to the AP fail");
-            break;
-
-        case IP_EVENT_STA_GOT_IP: {
-            ip_event_got_ip_t *event = (ip_event_got_ip_t *) event_data;
-            ESP_LOGI(TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
-            s_retry_num = 0;
-        }
+    case WIFI_EVENT_STA_START:
+        esp_wifi_connect();
         break;
 
-        default:
-            break;
+    case WIFI_EVENT_STA_DISCONNECTED:
+        if (s_retry_num < BOARD_MAXIMUM_RETRY) {
+            esp_wifi_connect();
+            s_retry_num++;
+            ESP_LOGI(TAG, "retry to connect to the AP");
+        } else {
+            ESP_LOGI(TAG, "giveup retry");
+        }
+
+        ESP_LOGI(TAG, "connect to the AP fail");
+        break;
+
+    case IP_EVENT_STA_GOT_IP: {
+        ip_event_got_ip_t *event = (ip_event_got_ip_t *) event_data;
+        ESP_LOGI(TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
+        s_retry_num = 0;
+    }
+    break;
+
+    default:
+        break;
     }
 }
 
@@ -166,10 +165,10 @@ ATTR_WEAK esp_err_t iot_board_wifi_init()
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
     ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
-                    ESP_EVENT_ANY_ID,
-                    &wifi_event_handler,
-                    NULL,
-                    NULL));
+                                                        ESP_EVENT_ANY_ID,
+                                                        &wifi_event_handler,
+                                                        NULL,
+                                                        NULL));
 
     ESP_ERROR_CHECK(esp_wifi_set_mode(mode));
 

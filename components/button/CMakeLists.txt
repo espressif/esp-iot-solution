@@ -2,7 +2,7 @@ set(PRIVREQ esp_timer)
 
 if("${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}" VERSION_GREATER_EQUAL "5.0")
     list(APPEND REQ esp_adc)
-else() 
+else()
     list(APPEND REQ esp_adc_cal)
 endif()
 

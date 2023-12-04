@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -58,9 +58,9 @@ esp_err_t bldc_mcpwm_init(bldc_mcpwm_config_t *mcpwm_config, void **cmprs)
 
     for (int i = 0; i < 3; i++) {
         err = mcpwm_generator_set_actions_on_compare_event(bldc_mcpwm_ctx->generators[i],
-                MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, bldc_mcpwm_ctx->comparators[i], MCPWM_GEN_ACTION_LOW),
-                MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN, bldc_mcpwm_ctx->comparators[i], MCPWM_GEN_ACTION_HIGH),
-                MCPWM_GEN_COMPARE_EVENT_ACTION_END());
+                                                           MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, bldc_mcpwm_ctx->comparators[i], MCPWM_GEN_ACTION_LOW),
+                                                           MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN, bldc_mcpwm_ctx->comparators[i], MCPWM_GEN_ACTION_HIGH),
+                                                           MCPWM_GEN_COMPARE_EVENT_ACTION_END());
         BLDC_CHECK(err == ESP_OK, "mcpwm_generator_set_action_on_compare_event failed: %s", err, esp_err_to_name(err));
     }
 

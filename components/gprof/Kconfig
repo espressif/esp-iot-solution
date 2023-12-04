@@ -4,7 +4,7 @@ menu "Espressif GNU Profiler(GProf)"
         bool "Enable Espressif GNU Profiler(GProf)"
         default n
         help
-            Enable Espressif GNU Profiler(GProf) to gather profiling 
+            Enable Espressif GNU Profiler(GProf) to gather profiling
             information when program is running
 
     if GPROF_ENABLE

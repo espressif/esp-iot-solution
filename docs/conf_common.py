@@ -29,7 +29,7 @@ project_homepage = 'https://github.com/espressif/esp-iot-solution'
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-html_logo = "../_static/espressif-logo.svg"
+html_logo = '../_static/espressif-logo.svg'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -51,7 +51,7 @@ pdf_file_prefix = u'esp-iot-solution'
 
 # The name of an image file (relative to this directory) to place at the top of
 # the title page.
-latex_logo = "../_static/espressif2.pdf"
+latex_logo = '../_static/espressif2.pdf'
 
 # add Tracking ID for Google Analytics
 google_analytics_id = 'G-YK0H573CWX'

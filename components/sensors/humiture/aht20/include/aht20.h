@@ -15,7 +15,6 @@ extern "C" {
 
 #include "driver/i2c.h"
 
-
 /* AHT20 address: CE pin low - 0x38, CE pin high - 0x39 */
 #define AHT20_ADDRRES_0 (0x38<<1)
 #define AHT20_ADDRESS_1 (0x39<<1)
@@ -73,9 +72,8 @@ esp_err_t aht20_del_sensor(aht20_dev_handle_t handle);
  *     - ESP_FAIL Fail
  */
 esp_err_t aht20_read_temperature_humidity(aht20_dev_handle_t handle,
-        uint32_t *temperature_raw, float *temperature,
-        uint32_t *humidity_raw, float *humidity);
+                                          uint32_t *temperature_raw, float *temperature,
+                                          uint32_t *humidity_raw, float *humidity);
 #ifdef __cplusplus
 }
 #endif
-

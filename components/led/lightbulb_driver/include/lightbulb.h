@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #pragma once
 
 #include <freertos/FreeRTOS.h>
@@ -245,7 +244,7 @@ typedef struct {
     lightbulb_mode_t mode_mask;               // Select the lightbulb light mode, the driver will initialize the corresponding port according to this option.
     lightbulb_status_storage_cb_t storage_cb; // This callback function will be called when the lightbulb status starts to be stored.
     hardware_monitor_user_cb_t monitor_cb;    // This callback function will be called when there is a problem with the underlying hardware,
-                                              // and if it returns true then subsequent communication will be aborted.
+    // and if it returns true then subsequent communication will be aborted.
     bool enable_fades : 1;                    // Color switching uses fade effects instead of direct rapid changes.
     bool enable_lowpower : 1;                 // Low-power regulation with lights off.
     bool enable_status_storage : 1;           // Store lightbulb state to nvs.
@@ -348,9 +347,9 @@ typedef struct {
     int total_ms;
     void(*user_cb)(void);
 
-    /* 
-     * If set to true, the auto-stop timer can only be stopped by effect_stop/effect_start interfaces or triggered by FreeRTOS. 
-     * Any set APIs will only save the status, the status will not be written. 
+    /*
+     * If set to true, the auto-stop timer can only be stopped by effect_stop/effect_start interfaces or triggered by FreeRTOS.
+     * Any set APIs will only save the status, the status will not be written.
      */
     bool interrupt_forbidden;
 } lightbulb_effect_config_t;
@@ -396,10 +395,10 @@ esp_err_t lightbulb_set_storage_function(bool is_enable);
 
 /**
  * @brief Re-update the lightbulb status variable
- * 
+ *
  * @param new_status new status
  * @param trigger If set to true, then it will be updated immediately
- * @return esp_err_t 
+ * @return esp_err_t
  */
 esp_err_t lightbulb_update_status_variable(lightbulb_status_t *new_status, bool trigger);
 
@@ -443,27 +442,27 @@ esp_err_t lightbulb_rgb2hsv(uint16_t red, uint16_t green, uint16_t blue, uint16_
  * @brief Convert xyY model to RGB model
  * @note Refer: https://www.easyrgb.com/en/convert.php#inputFORM
  *              https://www.easyrgb.com/en/math.php
- * 
+ *
  * @param x range: 0-1.0
  * @param y range: 0-1.0
  * @param Y range: 0-100.0
  * @param red range: 0-255
  * @param green range: 0-255
  * @param blue range: 0-255
- * @return esp_err_t 
+ * @return esp_err_t
  */
 esp_err_t lightbulb_xyy2rgb(float x, float y, float Y, uint8_t *red, uint8_t *green, uint8_t *blue);
 
 /**
  * @brief Convert RGB model to xyY model
- * 
+ *
  * @param red range: 0-255
  * @param green range: 0-255
  * @param blue range: 0-255
  * @param x range: 0-1.0
  * @param y range: 0-1.0
  * @param Y range: 0-100.0
- * @return esp_err_t 
+ * @return esp_err_t
  */
 esp_err_t lightbulb_rgb2xyy(uint8_t red, uint8_t green, uint8_t blue, float *x, float *y, float *Y);
 
@@ -527,13 +526,13 @@ esp_err_t lightbulb_set_brightness(uint8_t brightness);
 
 /**
  * @brief Set xyY
- * @attention The xyY color model cannot fully correspond to the HSV color model, so the color may be biased. 
+ * @attention The xyY color model cannot fully correspond to the HSV color model, so the color may be biased.
  *            The grayscale will be recalculated in lightbulb, so we cannot directly operate the underlying driver through the xyY interface.
- * 
+ *
  * @param x range: 0-1.0
  * @param y range: 0-1.0
  * @param Y range: 0-100.0
- * @return esp_err_t 
+ * @return esp_err_t
  */
 esp_err_t lightbulb_set_xyy(float x, float y, float Y);
 

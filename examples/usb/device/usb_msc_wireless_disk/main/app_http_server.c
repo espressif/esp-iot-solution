@@ -199,7 +199,7 @@ static esp_err_t download_get_handler(httpd_req_t *req)
     struct stat file_stat;
 
     const char *filename = get_path_from_uri(filepath, ((struct file_server_data *)req->user_ctx)->base_path,
-                           req->uri, sizeof(filepath));
+                                             req->uri, sizeof(filepath));
     if (!filename) {
         ESP_LOGE(TAG, "Filename is too long");
         /* Respond with 500 Internal Server Error */
@@ -279,7 +279,7 @@ static esp_err_t upload_post_handler(httpd_req_t *req)
     /* Skip leading "/upload" from URI to get filename */
     /* Note sizeof() counts NULL termination hence the -1 */
     const char *filename = get_path_from_uri(filepath, ((struct file_server_data *)req->user_ctx)->base_path,
-                           req->uri + sizeof("/upload") - 1, sizeof(filepath));
+                                             req->uri + sizeof("/upload") - 1, sizeof(filepath));
     if (!filename) {
         /* Respond with 500 Internal Server Error */
         httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Filename too long");
@@ -389,7 +389,7 @@ static esp_err_t delete_post_handler(httpd_req_t *req)
     /* Skip leading "/delete" from URI to get filename */
     /* Note sizeof() counts NULL termination hence the -1 */
     const char *filename = get_path_from_uri(filepath, ((struct file_server_data *)req->user_ctx)->base_path,
-                           req->uri  + sizeof("/delete") - 1, sizeof(filepath));
+                                             req->uri  + sizeof("/delete") - 1, sizeof(filepath));
     if (!filename) {
         /* Respond with 500 Internal Server Error */
         httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Filename too long");

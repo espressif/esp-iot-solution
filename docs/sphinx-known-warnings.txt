@@ -1,11 +1,3 @@
-# File contains known/allowed Sphinx warnings.
-#
-# Build will fail if sphinx-warning-log.txt contains any lines
-# which are not in this file. Lines are pre-sanitized by
-# `build_docs.py build` to remove formatting, paths and line numbers.
-#
-# Warnings in this file must be in the same overall order as the log file.
-#
 OpenAI.inc:line: WARNING: Error in declarator
 If declarator-id with parameters-and-qualifiers:
   Invalid C++ declaration: Expected identifier in nested name. [error at 4]
@@ -127,4 +119,3 @@ If type alias or template alias:
   Invalid C++ declaration: Expected identifier in nested name, got keyword: void [error at 4]
     void() state_callback_t (usb_stream_state_t state, void *user_ptr)
     ----^
-

@@ -12,10 +12,10 @@
 #define VEML6040_I2C_MASTER_SCL_IO               (gpio_num_t)22  /*!< gpio number for I2C master clock */
 #define VEML6040_I2C_MASTER_SDA_IO               (gpio_num_t)21  /*!< gpio number for I2C master data  */
 
-#define VEML6040_I2C_MASTER_NUM              	 I2C_NUM_1   /*!< I2C port number for master dev */
+#define VEML6040_I2C_MASTER_NUM                  I2C_NUM_1   /*!< I2C port number for master dev */
 #define VEML6040_I2C_MASTER_TX_BUF_DISABLE       0           /*!< I2C master do not need buffer */
-#define VEML6040_I2C_MASTER_RX_BUF_DISABLE   	 0           /*!< I2C master do not need buffer */
-#define VEML6040_I2C_MASTER_FREQ_HZ         	 100000      /*!< I2C master clock frequency */
+#define VEML6040_I2C_MASTER_RX_BUF_DISABLE       0           /*!< I2C master do not need buffer */
+#define VEML6040_I2C_MASTER_FREQ_HZ              100000      /*!< I2C master clock frequency */
 
 static i2c_bus_handle_t i2c_bus = NULL;
 static veml6040_handle_t veml6040 = NULL;
@@ -72,7 +72,7 @@ static void veml6040_test_get_date()
         printf("blue:%d ", veml6040_get_blue(veml6040));
         printf("lux:%f\n", veml6040_get_lux(veml6040));
         vTaskDelay(1000  / portTICK_RATE_MS);
-     }
+    }
 }
 
 TEST_CASE("Sensor veml6040 test", "[veml6040][iot][sensor]")
@@ -82,4 +82,3 @@ TEST_CASE("Sensor veml6040 test", "[veml6040][iot][sensor]")
     veml6040_test_get_date();
     veml6040_test_deinit();
 }
-

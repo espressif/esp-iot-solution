@@ -22,7 +22,7 @@ typedef struct {
     gpio_num_t mosi_io_num; /*!< GPIO pin for Master Out Slave In (=spi_d) signal, or -1 if not used.*/
     gpio_num_t sclk_io_num; /*!< GPIO pin for Spi CLocK signal, or -1 if not used*/
     int max_transfer_sz; /*!< <Maximum length of bytes available to send, if < 4096, 4096 will be set*/
-}spi_config_t;
+} spi_config_t;
 
 /**
  * spi device initialization parameters.
@@ -31,7 +31,7 @@ typedef struct {
     gpio_num_t cs_io_num; /*!< GPIO pin to select this device (CS), or -1 if not used*/
     uint8_t mode; /*!< modes (0,1,2,3) that correspond to the four possible clocking configurations*/
     int clock_speed_hz; /*!< spi clock speed, divisors of 80MHz, in Hz. See ``SPI_MASTER_FREQ_*`*/
-}spi_device_config_t;
+} spi_device_config_t;
 
 #ifdef __cplusplus
 extern "C"
@@ -40,7 +40,7 @@ extern "C"
 
 /**
  * @brief Create and initialize a spi bus and return the spi bus handle
- * 
+ *
  * @param host_id SPI peripheral that controls this bus, SPI2_HOST or SPI3_HOST
  * @param bus_conf spi bus configurations details in spi_config_t
  * @return spi_bus_handle_t handle for spi bus operation, NULL if failed.
@@ -111,10 +111,10 @@ esp_err_t spi_bus_transfer_bytes(spi_bus_device_handle_t dev_handle, const uint8
  * @brief Send a polling transaction, wait for it to complete, and return the result
  *        @note
  *        Only call this function when ``spi_bus_transfer_xx`` do not meet the requirements
- * 
+ *
  * @param dev_handle handle for device operation.
  * @param p_trans Description of transaction to execute
- * @return esp_err_t 
+ * @return esp_err_t
  *     - ESP_ERR_INVALID_ARG   if parameter is invalid
  *     - ESP_ERR_TIMEOUT       if bus is busy
  *     - ESP_OK                on success
@@ -154,4 +154,3 @@ esp_err_t spi_bus_transfer_reg32(spi_bus_device_handle_t dev_handle, uint32_t da
 #endif
 
 #endif
-

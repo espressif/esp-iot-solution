@@ -410,7 +410,7 @@ esp_err_t esp_msc_ota_set_msc_connect_state(esp_msc_ota_handle_t handle, bool if
 {
     esp_msc_ota_t *msc_ota = (esp_msc_ota_t *)handle;
     MSC_OTA_CHECK(msc_ota != NULL, "Invalid handle", ESP_ERR_INVALID_ARG);
-    if(if_connect) {
+    if (if_connect) {
         xEventGroupSetBits(msc_ota->mscEventGroup, MSC_CONNECT);
     } else {
         xEventGroupClearBits(msc_ota->mscEventGroup, MSC_CONNECT);

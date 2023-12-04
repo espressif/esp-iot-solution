@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #ifndef _IOT_SERVO_H_
 #define _IOT_SERVO_H_
 
@@ -14,7 +13,7 @@
 
 /**
  * @brief Configuration of servo motor channel
- * 
+ *
  */
 typedef struct {
     gpio_num_t servo_pin[LEDC_CHANNEL_MAX];     /**< Pin number of pwm output */
@@ -23,7 +22,7 @@ typedef struct {
 
 /**
  * @brief Configuration of servo motor
- * 
+ *
  */
 typedef struct {
     uint16_t max_angle;        /**< Servo max angle */
@@ -41,7 +40,7 @@ extern "C" {
 
 /**
  * @brief Initialize ledc to control the servo
- * 
+ *
  * @param speed_mode Select the LEDC channel group with specified speed mode. Note that not all targets support high speed mode.
  * @param config Pointer of servo configure struct
  *
@@ -54,9 +53,9 @@ esp_err_t iot_servo_init(ledc_mode_t speed_mode, const servo_config_t *config);
 
 /**
  * @brief Deinitialize ledc for servo
- * 
+ *
  * @param speed_mode Select the LEDC channel group with specified speed mode.
- * 
+ *
  * @return
  *     - ESP_OK Success
  */
@@ -64,13 +63,13 @@ esp_err_t iot_servo_deinit(ledc_mode_t speed_mode);
 
 /**
  * @brief Set the servo motor to a certain angle
- * 
+ *
  * @note This API is not thread-safe
- * 
+ *
  * @param speed_mode Select the LEDC channel group with specified speed mode.
  * @param channel LEDC channel, select from ledc_channel_t
  * @param angle The angle to go
- * 
+ *
  * @return
  *     - ESP_OK Success
  *     - ESP_ERR_INVALID_ARG Parameter error
@@ -78,12 +77,12 @@ esp_err_t iot_servo_deinit(ledc_mode_t speed_mode);
 esp_err_t iot_servo_write_angle(ledc_mode_t speed_mode, uint8_t channel, float angle);
 
 /**
- * @brief Read current angle of one channel 
- * 
+ * @brief Read current angle of one channel
+ *
  * @param speed_mode Select the LEDC channel group with specified speed mode.
  * @param channel LEDC channel, select from ledc_channel_t
  * @param angle Current angle of the channel
- * 
+ *
  * @return
  *     - ESP_OK Success
  *     - ESP_ERR_INVALID_ARG Parameter error

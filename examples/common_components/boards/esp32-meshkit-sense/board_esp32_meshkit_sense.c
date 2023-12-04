@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #include <stdio.h>
 #include "iot_board.h"
 #include "esp_log.h"
@@ -28,7 +27,7 @@ const board_specific_callbacks_t board_esp32_meshkit_callbacks = {
 /****General board level API ****/
 esp_err_t iot_board_specific_init(void)
 {
-    if(s_board_is_init) {
+    if (s_board_is_init) {
         return ESP_OK;
     }
 #ifdef CONFIG_BOARD_POWER_SENSOR
@@ -48,7 +47,7 @@ esp_err_t iot_board_specific_init(void)
 
 esp_err_t iot_board_specific_deinit(void)
 {
-    if(!s_board_is_init) {
+    if (!s_board_is_init) {
         return ESP_OK;
     }
 #ifdef CONFIG_BOARD_POWER_SENSOR
@@ -61,7 +60,6 @@ esp_err_t iot_board_specific_deinit(void)
     s_board_is_init = false;
     return ESP_OK;
 }
-
 
 /****Extended board level API ****/
 esp_err_t iot_board_sensor_set_power(bool on_off)

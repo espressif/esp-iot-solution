@@ -23,10 +23,10 @@ def check_example_paths(component_path):
         absolute_path = os.path.normpath(os.path.join(component_path, path))
         # Check if the path is valid
         if not os.path.exists(absolute_path):
-            print(f"Invalid example path: {absolute_path}")
+            print(f'Invalid example path: {absolute_path}')
             return False
         else:
-            print(f"Found example path: {absolute_path}")
+            print(f'Found example path: {absolute_path}')
     return True
 
 def check_component_paths(file_path):
@@ -37,10 +37,10 @@ def check_component_paths(file_path):
         for directory in directories:
             if directory.strip():
                 if not os.path.isdir(directory.strip()):
-                    print(f"Invalid component path: {directory.strip()}")
+                    print(f'Invalid component path: {directory.strip()}')
                     return False
                 else:
-                    print(f"Found component path: {directory.strip()}")
+                    print(f'Found component path: {directory.strip()}')
                     valid = check_example_paths(directory.strip())
                     if not valid:
                         return False
@@ -52,7 +52,7 @@ if __name__ == '__main__':
     valid = check_component_paths(file_path)
 
     if valid:
-        print("All example paths are valid.")
+        print('All example paths are valid.')
     else:
-        print("Invalid example paths found.")
+        print('Invalid example paths found.')
         sys.exit(1)

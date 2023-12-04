@@ -16,12 +16,12 @@ extern "C"
 
 /**
  * @brief Start run touch panel calibration
- * 
+ *
  * @param screen LCD driver for display prompts
  * @param func_is_pressed pointer of function
  * @param func_read_rawdata pointer of function
  * @param recalibrate Is calibration mandatory
- * @return esp_err_t 
+ * @return esp_err_t
  */
 esp_err_t touch_calibration_run(const scr_driver_t *screen,
                                 int (*func_is_pressed)(void),
@@ -30,13 +30,12 @@ esp_err_t touch_calibration_run(const scr_driver_t *screen,
 
 /**
  * @brief transform raw data of touch panel to pixel coordinate value of screen
- * 
+ *
  * @param x Value of X axis direction
  * @param y Value of Y axis direction
- * @return esp_err_t 
+ * @return esp_err_t
  */
 esp_err_t touch_calibration_transform(int32_t *x, int32_t *y);
-
 
 #ifdef __cplusplus
 }

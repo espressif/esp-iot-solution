@@ -28,8 +28,8 @@ void app_main(void)
         .driver_conf.pwm.freq_hz = CONFIG_PWM_FREQ_HZ,
         .driver_conf.pwm.phase_delay.flag = PWM_RGBCW_CHANNEL_PHASE_DELAY_FLAG,
 #ifdef CONFIG_IDF_TARGET_ESP32C2
-        /* Adapt to ESP8684-DevKitM-1 
-         * For details, please refer to: 
+        /* Adapt to ESP8684-DevKitM-1
+         * For details, please refer to:
          * https://docs.espressif.com/projects/esp-dev-kits/zh_CN/latest/esp8684/esp8684-devkitm-1/user_guide.html
         */
         .driver_conf.pwm.invert_level = true,

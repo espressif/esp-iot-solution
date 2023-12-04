@@ -6,7 +6,7 @@ menu "4G Modem Example Config"
         help
             Open the web router, you can configure the system parameters
 
-    config EXAMPLE_WEB_MOUNT_POINT  
+    config EXAMPLE_WEB_MOUNT_POINT
         string "Website mount point in VFS"
         default "/spiffs"
         depends on EXAMPLE_ENABLE_WEB_ROUTER

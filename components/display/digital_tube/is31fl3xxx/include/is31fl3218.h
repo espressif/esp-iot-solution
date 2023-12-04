@@ -9,7 +9,6 @@
 
 #include "i2c_bus.h"
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -67,7 +66,6 @@ typedef enum {
     IS31FL3218_REG_RESET,
     IS31FL3218_REG_MAX,
 } is31fl3218_reg_t;
-
 
 typedef void* is31fl3218_handle_t;
 

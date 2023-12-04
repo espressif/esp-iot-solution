@@ -41,7 +41,7 @@ ota_start_cmd(size_t file_size, size_t block_size, char *partition_name)
 static esp_err_t
 ota_finish_cmd()
 {
-    esp_ble_ota_finish(); 
+    esp_ble_ota_finish();
     return ESP_OK;
 }
 

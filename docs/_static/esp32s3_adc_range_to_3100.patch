@@ -31,7 +31,7 @@ index b28b9d919a..b9faac93d5 100644
 +#endif
      // check if we can fetch the values from eFuse.
      int version = esp_efuse_rtc_calib_get_ver();
- 
+
 @@ -866,7 +871,9 @@ uint32_t adc_get_calibration_offset(adc_ll_num_t adc_n, adc_channel_t channel, a
          ADC_EXIT_CRITICAL();
          adc_power_release();
@@ -42,7 +42,7 @@ index b28b9d919a..b9faac93d5 100644
 +#endif
      s_adc_cali_param[adc_n][atten] = init_code;
      ESP_LOGV(ADC_TAG, "Calib(V%d) ADC%d atten=%d: %04X", version, adc_n, atten, init_code);
- 
+
 diff --git a/components/efuse/esp32s3/esp_efuse_rtc_calib.c b/components/efuse/esp32s3/esp_efuse_rtc_calib.c
 index ec5f76814c..99c9aff483 100644
 --- a/components/efuse/esp32s3/esp_efuse_rtc_calib.c
@@ -52,13 +52,13 @@ index ec5f76814c..99c9aff483 100644
  #include "esp_efuse.h"
  #include "esp_efuse_table.h"
 +#include "esp_efuse_rtc_calib.h"
- 
+
  //Don't introduce new dependency of ADC, keep these macro same as ADC related definations
  #define ADC_ATTEN_MAX    4
 @@ -30,6 +31,44 @@ int esp_efuse_rtc_calib_get_ver(void)
      return cali_version_v1;
  }
- 
+
 +#ifdef CONFIG_ENABLE_ADC_USER_CODE_OFFSET
 +static uint32_t adc_icode_offset[ADC_NUM_MAX][4] = {0};
 +static bool adc_icode_offset_flag[ADC_NUM_MAX][4] = {0};
@@ -111,7 +111,7 @@ index ec5f76814c..99c9aff483 100644
      return adc_icode[atten];
 +#endif
  }
- 
+
  esp_err_t esp_efuse_rtc_calib_get_cal_voltage(int version, uint32_t adc_unit, int atten, uint32_t *out_digi, uint32_t *out_vol_mv)
 diff --git a/components/efuse/esp32s3/include/esp_efuse_rtc_calib.h b/components/efuse/esp32s3/include/esp_efuse_rtc_calib.h
 index e2f5b54329..9d215ac057 100644
@@ -120,7 +120,7 @@ index e2f5b54329..9d215ac057 100644
 @@ -54,6 +54,15 @@ esp_err_t esp_efuse_rtc_calib_get_cal_voltage(int version, uint32_t adc_unit, in
   */
  float esp_efuse_rtc_calib_get_cal_temp(int version);
- 
+
 +#define CONFIG_ENABLE_ADC_USER_CODE_OFFSET 1
 +
 +#ifdef CONFIG_ENABLE_ADC_USER_CODE_OFFSET
@@ -144,7 +144,7 @@ index 09878cc015..9a5af2432e 100644
 +#include "esp_efuse_rtc_calib.h"
  #include "esp_adc_cal.h"
  #include "esp_adc_cal_internal.h"
- 
+
 @@ -33,11 +34,54 @@ esp_err_t esp_adc_cal_get_voltage(adc_channel_t channel,
      } else {
          ESP_RETURN_ON_FALSE(channel < SOC_ADC_CHANNEL_NUM(1), ESP_ERR_INVALID_ARG, TAG, "Invalid channel");
@@ -154,7 +154,7 @@ index 09878cc015..9a5af2432e 100644
 +            return ret;
 +        }
      }
- 
+
      if (ret == ESP_OK) {
          *voltage = esp_adc_cal_raw_to_voltage((uint32_t)adc_reading, chars);
      }
@@ -194,12 +194,11 @@ index 09878cc015..9a5af2432e 100644
 +            }
 +            *voltage = voltage_b;
 +        }
-+    } 
++    }
 +#endif
 +
      return ret;
  }
- 
--- 
-2.34.1
 
+--
+2.34.1

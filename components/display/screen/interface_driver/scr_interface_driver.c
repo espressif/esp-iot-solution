@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #include "sdkconfig.h"
 #include <string.h>
 #include "freertos/FreeRTOS.h"
@@ -376,4 +375,3 @@ esp_err_t scr_interface_delete(const scr_interface_driver_t *driver)
     }
     return ESP_OK;
 }
-

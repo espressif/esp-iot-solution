@@ -110,4 +110,3 @@ void app_main(void)
     printf("AT581X TEST \n");
     unity_run_menu();
 }
-

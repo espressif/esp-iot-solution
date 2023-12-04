@@ -295,7 +295,7 @@ esp_err_t i2c_bus_write_bits(i2c_bus_device_handle_t dev_handle, uint8_t mem_add
  * @param cmd_handle I2C command handler
  * @param ticks_to_wait maximum wait ticks.
  * @param conf pointer to I2C parameter settings
- * @return esp_err_t 
+ * @return esp_err_t
  */
 inline static esp_err_t i2c_master_cmd_begin_with_conf(i2c_port_t i2c_num, i2c_cmd_handle_t cmd_handle, TickType_t ticks_to_wait, const i2c_config_t *conf)
 {
@@ -455,7 +455,7 @@ static esp_err_t i2c_driver_deinit(i2c_port_t port)
     I2C_BUS_CHECK(s_i2c_bus[port].is_init == true, "i2c not inited", ESP_ERR_INVALID_STATE);
     i2c_driver_delete(port); //always return ESP_OK
     s_i2c_bus[port].is_init = false;
-    ESP_LOGI(TAG,"i2c%d bus deinited",port);
+    ESP_LOGI(TAG, "i2c%d bus deinited", port);
     return ESP_OK;
 }
 

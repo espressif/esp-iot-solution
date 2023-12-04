@@ -22,10 +22,10 @@ static const char* TAG = "Touch calibration";
 #define TOUCH_CAL_VAL_NAMESPACE "DefLvglParam"
 #define TOUCH_CAL_VAL_KEY "DefTouchCalVal"
 
-typedef struct{
+typedef struct {
     int32_t x;
     int32_t y;
-}point_t;
+} point_t;
 
 typedef struct {
     float ax;
@@ -34,7 +34,7 @@ typedef struct {
     float ay;
     float by;
     float cy;
-}Calibration_t;
+} Calibration_t;
 
 static Calibration_t g_caldata;
 static bool g_calibrated = false;
@@ -72,7 +72,7 @@ static void _get_point(int8_t index, point_t *cross, point_t *point)
     uint32_t time_out = 10000; // ms
 
     if (0 != index) {
-        _draw_touch_Point(cross[index-1].x, cross[index-1].y, COLOR_WHITE);
+        _draw_touch_Point(cross[index - 1].x, cross[index - 1].y, COLOR_WHITE);
     }
     _draw_touch_Point(cross[index].x, cross[index].y, COLOR_RED);
 
@@ -80,14 +80,13 @@ static void _get_point(int8_t index, point_t *cross, point_t *point)
     while (!g_touch_is_pressed()) {
         vTaskDelay(50 / portTICK_RATE_MS);
         time_out -= 50;
-        if (0 == time_out)
-        {
+        if (0 == time_out) {
             point->x = point->y = 0;
             /** TODO: How to deal with it when the user does not touch the screen for a long time
              */
             // break;
         }
-        
+
     };
     uint16_t tx, ty;
     g_touch_read_rawdata(&tx, &ty);
@@ -98,10 +97,10 @@ static void _get_point(int8_t index, point_t *cross, point_t *point)
 
 /**
  * @brief transform raw data of touch panel to pixel coordinate value of screen
- * 
+ *
  * @param x Value of X axis direction
  * @param y Value of Y axis direction
- * @return esp_err_t 
+ * @return esp_err_t
  */
 esp_err_t touch_calibration_transform(int32_t *x, int32_t *y)
 {
@@ -129,35 +128,32 @@ static void calibration_calculate(const point_t *cross, const point_t *points)
     c1 = cross[1].x;
     c2 = cross[2].x;
 
-
     /* Compute all the required determinants */
     float dx;
-    
-    dx = (float)(points[0].x - points[2].x) * (float)(points[1].y - points[2].y) 
-        - (float)(points[1].x - points[2].x) * (float)(points[0].y - points[2].y);
 
-    g_caldata.ax = ((float)(c0 - c2) * (float)(points[1].y - points[2].y) 
-                - (float)(c1 - c2) * (float)(points[0].y - points[2].y)) / dx;
-    g_caldata.bx = ((float)(c1 - c2) * (float)(points[0].x - points[2].x) 
-                - (float)(c0 - c2) * (float)(points[1].x - points[2].x)) / dx;
-    g_caldata.cx = (c0 * ((float)points[1].x * (float)points[2].y - (float)points[2].x * (float)points[1].y) 
-                - c1 * ((float)points[0].x * (float)points[2].y - (float)points[2].x * (float)points[0].y) 
-                + c2 * ((float)points[0].x * (float)points[1].y - (float)points[1].x * (float)points[0].y)) / dx;
+    dx = (float)(points[0].x - points[2].x) * (float)(points[1].y - points[2].y)
+         - (float)(points[1].x - points[2].x) * (float)(points[0].y - points[2].y);
 
-  
+    g_caldata.ax = ((float)(c0 - c2) * (float)(points[1].y - points[2].y)
+                    - (float)(c1 - c2) * (float)(points[0].y - points[2].y)) / dx;
+    g_caldata.bx = ((float)(c1 - c2) * (float)(points[0].x - points[2].x)
+                    - (float)(c0 - c2) * (float)(points[1].x - points[2].x)) / dx;
+    g_caldata.cx = (c0 * ((float)points[1].x * (float)points[2].y - (float)points[2].x * (float)points[1].y)
+                    - c1 * ((float)points[0].x * (float)points[2].y - (float)points[2].x * (float)points[0].y)
+                    + c2 * ((float)points[0].x * (float)points[1].y - (float)points[1].x * (float)points[0].y)) / dx;
+
     // Work on y values
     c0 = cross[0].y;
     c1 = cross[1].y;
     c2 = cross[2].y;
- 
 
-    g_caldata.ay = ((float)(c0 - c2) * (float)(points[1].y - points[2].y) 
-                - (float)(c1 - c2) * (float)(points[0].y - points[2].y)) / dx;
-    g_caldata.by = ((float)(c1 - c2) * (float)(points[0].x - points[2].x) 
-                - (float)(c0 - c2) * (float)(points[1].x - points[2].x)) / dx;
-    g_caldata.cy = (c0 * ((float)points[1].x * (float)points[2].y - (float)points[2].x * (float)points[1].y) 
-                - c1 * ((float)points[0].x * (float)points[2].y - (float)points[2].x * (float)points[0].y) 
-                + c2 * ((float)points[0].x * (float)points[1].y - (float)points[1].x * (float)points[0].y)) / dx;
+    g_caldata.ay = ((float)(c0 - c2) * (float)(points[1].y - points[2].y)
+                    - (float)(c1 - c2) * (float)(points[0].y - points[2].y)) / dx;
+    g_caldata.by = ((float)(c1 - c2) * (float)(points[0].x - points[2].x)
+                    - (float)(c0 - c2) * (float)(points[1].x - points[2].x)) / dx;
+    g_caldata.cy = (c0 * ((float)points[1].x * (float)points[2].y - (float)points[2].x * (float)points[1].y)
+                    - c1 * ((float)points[0].x * (float)points[2].y - (float)points[2].x * (float)points[0].y)
+                    + c2 * ((float)points[0].x * (float)points[1].y - (float)points[1].x * (float)points[0].y)) / dx;
 }
 
 static void show_prompt_with_dir(uint16_t x, uint16_t y, const char *str, const font_t *font, uint16_t color, scr_dir_t dir)
@@ -173,12 +169,12 @@ static void show_prompt_with_dir(uint16_t x, uint16_t y, const char *str, const 
 
 /**
  * @brief Start run touch panel calibration
- * 
+ *
  * @param screen LCD driver for display prompts
  * @param func_is_pressed pointer of function
  * @param func_read_rawdata pointer of function
  * @param recalibrate Is calibration mandatory
- * @return esp_err_t 
+ * @return esp_err_t
  */
 esp_err_t touch_calibration_run(const scr_driver_t *screen,
                                 int (*func_is_pressed)(void),
@@ -188,7 +184,7 @@ esp_err_t touch_calibration_run(const scr_driver_t *screen,
     CALIBRATION_CHECK(NULL != screen, "Screen driver invalid", ESP_ERR_INVALID_ARG);
     CALIBRATION_CHECK(NULL != func_is_pressed, "Func pointer func_is_pressed invalid", ESP_ERR_INVALID_ARG);
     CALIBRATION_CHECK(NULL != func_read_rawdata, "Func pointer func_read_rawdata invalid", ESP_ERR_INVALID_ARG);
-    
+
     esp_err_t ret = ESP_OK;
 
     g_touch_is_pressed = func_is_pressed;
@@ -204,7 +200,7 @@ esp_err_t touch_calibration_run(const scr_driver_t *screen,
         ESP_ERROR_CHECK(nvs_flash_erase());
         ret = nvs_flash_init();
     }
-    ESP_ERROR_CHECK( ret );
+    ESP_ERROR_CHECK(ret);
     vTaskDelay(100 / portTICK_PERIOD_MS);   //Wait until nvs is stable， otherwise will cause exception
 
     if ((false == recalibrate) && (ESP_OK == touch_load_calibration(&g_caldata))) {
@@ -213,7 +209,7 @@ esp_err_t touch_calibration_run(const scr_driver_t *screen,
     }
 
     /**
-     * Restore screen display rotate to original for corresponding raw data of touch panel. 
+     * Restore screen display rotate to original for corresponding raw data of touch panel.
      * So read current direction of screen and backup it.
      */
     scr_info_t lcd_info;
@@ -245,8 +241,7 @@ esp_err_t touch_calibration_run(const scr_driver_t *screen,
     cross[3].x = w / 2;
     cross[3].y = h / 2;
 
-    while (calibrate_error)
-    {
+    while (calibrate_error) {
         painter_clear(COLOR_WHITE);
         show_prompt_with_dir(0, 0, "Please press the center of the circle in turn", &Font12, COLOR_BLUE, old_dir);
 
@@ -266,10 +261,10 @@ esp_err_t touch_calibration_run(const scr_driver_t *screen,
         // Converted to screen pixel coordinates to test for correct calibration
         touch_calibration_transform(&points[3].x, &points[3].y);
         // Is this accurate enough?
-        calibrate_error = (points[3].x - cross[3].x) * (points[3].x - cross[3].x) 
-            + (points[3].y - cross[3].y) * (points[3].y - cross[3].y);
+        calibrate_error = (points[3].x - cross[3].x) * (points[3].x - cross[3].x)
+                          + (points[3].y - cross[3].y) * (points[3].y - cross[3].y);
         if (calibrate_error > (uint32_t)GMOUSE_FINGER_CALIBRATE_ERROR * (uint32_t)GMOUSE_FINGER_CALIBRATE_ERROR) {
-            show_prompt_with_dir(10, h/2, "Calibration Failed!", &Font16, COLOR_RED, old_dir);
+            show_prompt_with_dir(10, h / 2, "Calibration Failed!", &Font16, COLOR_RED, old_dir);
             ESP_LOGW(TAG, "Touch Calibration failed! Error=%d", calibrate_error);
             g_calibrated = false;
             index = 0;
@@ -279,7 +274,7 @@ esp_err_t touch_calibration_run(const scr_driver_t *screen,
             calibrate_error = 0;
             ESP_LOGI(TAG, "/ XL = (%f)X + (%f)Y + (%f)", g_caldata.ax, g_caldata.bx, g_caldata.cx);
             ESP_LOGI(TAG, "\\ YL = (%f)X + (%f)Y + (%f)", g_caldata.ay, g_caldata.by, g_caldata.cy);
-            show_prompt_with_dir((w/2)-(Font16.Width*5), (h/2)+Font16.Height, "Successful", &Font16, COLOR_BLUE, old_dir);
+            show_prompt_with_dir((w / 2) - (Font16.Width * 5), (h / 2) + Font16.Height, "Successful", &Font16, COLOR_BLUE, old_dir);
             touch_save_calibration(&g_caldata, sizeof(Calibration_t));
             vTaskDelay(2000 / portTICK_PERIOD_MS);
         }

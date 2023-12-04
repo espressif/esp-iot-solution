@@ -29,7 +29,7 @@ static char *openai_key = CI_OPENAI_KEY;
 extern const uint8_t turn_on_tv_en_mp3_start[] asm("_binary_turn_on_tv_en_mp3_start");
 extern const uint8_t turn_on_tv_en_mp3_end[]   asm("_binary_turn_on_tv_en_mp3_end");
 extern const uint8_t introduce_espressif_mp3_start[] asm("_binary_introduce_espressif_mp3_start");
-extern const uint8_t introduce_espressif_mp3_end[]   asm("_binary_introduce_espressif_mp3_end");  
+extern const uint8_t introduce_espressif_mp3_end[]   asm("_binary_introduce_espressif_mp3_end");
 
 TEST_CASE("test ChatCompletion", "[ChatCompletion]")
 {
@@ -44,14 +44,14 @@ TEST_CASE("test ChatCompletion", "[ChatCompletion]")
     TEST_ASSERT_NOT_NULL(openai);
     OpenAI_ChatCompletion_t *chatCompletion = openai->chatCreate(openai);
     TEST_ASSERT_NOT_NULL(chatCompletion);
-    chatCompletion->setModel(chatCompletion,"gpt-3.5-turbo");   //Model to use for completion. Default is gpt-3.5-turbo
-    chatCompletion->setSystem(chatCompletion,"You are a helpful assistant.");      //Description of the required assistant
-    chatCompletion->setMaxTokens(chatCompletion,1024);          //The maximum number of tokens to generate in the completion.
-    chatCompletion->setTemperature(chatCompletion,0.2);         //float between 0 and 1. Higher value gives more random results.
-    chatCompletion->setStop(chatCompletion,"\r");               //Up to 4 sequences where the API will stop generating further tokens.
-    chatCompletion->setPresencePenalty(chatCompletion,0);       //float between -2.0 and 2.0. Positive values increase the model's likelihood to talk about new topics.
-    chatCompletion->setFrequencyPenalty(chatCompletion,0);      //float between -2.0 and 2.0. Positive values decrease the model's likelihood to repeat the same line verbatim.
-    chatCompletion->setUser(chatCompletion,"OpenAI-ESP32");     //A unique identifier representing your end-user, which can help OpenAI to monitor and detect abuse.
+    chatCompletion->setModel(chatCompletion, "gpt-3.5-turbo");  //Model to use for completion. Default is gpt-3.5-turbo
+    chatCompletion->setSystem(chatCompletion, "You are a helpful assistant.");     //Description of the required assistant
+    chatCompletion->setMaxTokens(chatCompletion, 1024);         //The maximum number of tokens to generate in the completion.
+    chatCompletion->setTemperature(chatCompletion, 0.2);        //float between 0 and 1. Higher value gives more random results.
+    chatCompletion->setStop(chatCompletion, "\r");              //Up to 4 sequences where the API will stop generating further tokens.
+    chatCompletion->setPresencePenalty(chatCompletion, 0);      //float between -2.0 and 2.0. Positive values increase the model's likelihood to talk about new topics.
+    chatCompletion->setFrequencyPenalty(chatCompletion, 0);     //float between -2.0 and 2.0. Positive values decrease the model's likelihood to repeat the same line verbatim.
+    chatCompletion->setUser(chatCompletion, "OpenAI-ESP32");    //A unique identifier representing your end-user, which can help OpenAI to monitor and detect abuse.
     // chinese
     OpenAI_StringResponse_t *result = chatCompletion->message(chatCompletion, "给我讲一个笑话", false);
     TEST_ASSERT_NOT_NULL(result);
@@ -70,7 +70,7 @@ TEST_CASE("test ChatCompletion", "[ChatCompletion]")
     } else {
         ESP_LOGE(TAG, "Unknown error!");
     }
-    result->delete(result);
+    result->delete (result);
     // english
     result = chatCompletion->message(chatCompletion, "tell me a joke", false);
     TEST_ASSERT_NOT_NULL(result);
@@ -90,7 +90,7 @@ TEST_CASE("test ChatCompletion", "[ChatCompletion]")
         ESP_LOGE(TAG, "Unknown error!");
     }
 
-    result->delete(result);
+    result->delete (result);
     openai->chatDelete(chatCompletion);
     OpenAIDelete(openai);
     example_disconnect();
@@ -110,8 +110,8 @@ TEST_CASE("test AudioTranscription en", "[AudioTranscription]")
     TEST_ASSERT_NOT_NULL(audioTranscription);
     size_t length = turn_on_tv_en_mp3_end - turn_on_tv_en_mp3_start;
     audioTranscription->setResponseFormat(audioTranscription, OPENAI_AUDIO_RESPONSE_FORMAT_JSON);
-    audioTranscription->setTemperature(audioTranscription,0.2);                                                             //float between 0 and 1. Higher value gives more random results.
-    audioTranscription->setLanguage(audioTranscription,"en");                                                               //Set to English to make GPT return faster and more accurate
+    audioTranscription->setTemperature(audioTranscription, 0.2);                                                            //float between 0 and 1. Higher value gives more random results.
+    audioTranscription->setLanguage(audioTranscription, "en");                                                              //Set to English to make GPT return faster and more accurate
     char *text = audioTranscription->file(audioTranscription, (uint8_t *)turn_on_tv_en_mp3_start, length, OPENAI_AUDIO_INPUT_FORMAT_MP3);
     TEST_ASSERT_NOT_NULL(text);
     ESP_LOGI(TAG, "Text: %s", text);
@@ -136,8 +136,8 @@ TEST_CASE("test AudioTranscription cn", "[AudioTranscription]")
     size_t length = introduce_espressif_mp3_end - introduce_espressif_mp3_start;
     audioTranscription->setResponseFormat(audioTranscription, OPENAI_AUDIO_RESPONSE_FORMAT_JSON);
     audioTranscription->setPrompt(audioTranscription, "请回复简体中文");                                                    //The default will return Traditional Chinese, here we add prompt to make GPT return Simplified Chinese
-    audioTranscription->setTemperature(audioTranscription,0.2);                                                             //float between 0 and 1. Higher value gives more random results.
-    audioTranscription->setLanguage(audioTranscription,"zh");                                                               //Set to Chinese to make GPT return faster and more accurate
+    audioTranscription->setTemperature(audioTranscription, 0.2);                                                            //float between 0 and 1. Higher value gives more random results.
+    audioTranscription->setLanguage(audioTranscription, "zh");                                                              //Set to Chinese to make GPT return faster and more accurate
     char *text = audioTranscription->file(audioTranscription, (uint8_t *)introduce_espressif_mp3_start, length, OPENAI_AUDIO_INPUT_FORMAT_MP3);
     TEST_ASSERT_NOT_NULL(text);
     ESP_LOGI(TAG, "Text: %s", text);
@@ -154,7 +154,7 @@ TEST_CASE("test memory leak", "[memory]")
     TEST_ASSERT_NOT_NULL(openai);
     OpenAI_Completion_t *completion = openai->completionCreate(openai);
     TEST_ASSERT_NOT_NULL(completion);
-    completion->setModel(completion,"gpt-3.5-turbo");   //Model to use for completion. Default is gpt-3.5-turbo
+    completion->setModel(completion, "gpt-3.5-turbo");  //Model to use for completion. Default is gpt-3.5-turbo
     completion->setUser(completion, "test");
     openai->completionDelete(completion);
     OpenAIDelete(openai);

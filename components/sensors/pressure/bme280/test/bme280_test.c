@@ -47,14 +47,17 @@ void bme280_test_getdata()
     int cnt = 10;
     while (cnt--) {
         float temperature = 0.0, humidity = 0.0, pressure = 0.0;
-        if (ESP_OK == bme280_read_temperature(bme280, &temperature))
-        ESP_LOGI("BME280", "temperature:%f ", temperature);
+        if (ESP_OK == bme280_read_temperature(bme280, &temperature)) {
+            ESP_LOGI("BME280", "temperature:%f ", temperature);
+        }
         vTaskDelay(300 / portTICK_RATE_MS);
-        if (ESP_OK == bme280_read_humidity(bme280, &humidity))
-        ESP_LOGI("BME280", "humidity:%f ", humidity);
+        if (ESP_OK == bme280_read_humidity(bme280, &humidity)) {
+            ESP_LOGI("BME280", "humidity:%f ", humidity);
+        }
         vTaskDelay(300 / portTICK_RATE_MS);
-        if (ESP_OK == bme280_read_pressure(bme280, &pressure))
-        ESP_LOGI("BME280", "pressure:%f\n", pressure);
+        if (ESP_OK == bme280_read_pressure(bme280, &pressure)) {
+            ESP_LOGI("BME280", "pressure:%f\n", pressure);
+        }
         vTaskDelay(300 / portTICK_RATE_MS);
     }
 }

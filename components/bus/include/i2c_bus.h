@@ -59,7 +59,7 @@ uint8_t i2c_bus_scan(i2c_bus_handle_t bus_handle, uint8_t *buf, uint8_t num);
 
 /**
  * @brief Get current active clock speed.
- * 
+ *
  * @param bus_handle I2C bus handle
  * @return uint32_t current clock speed
  */
@@ -67,7 +67,7 @@ uint32_t i2c_bus_get_current_clk_speed(i2c_bus_handle_t bus_handle);
 
 /**
  * @brief Get created device number of the bus.
- * 
+ *
  * @param bus_handle I2C bus handle
  * @return uint8_t created device number of the bus
  */
@@ -77,7 +77,7 @@ uint8_t i2c_bus_get_created_device_num(i2c_bus_handle_t bus_handle);
  * @brief Create an I2C device on specific bus.
  *        Dynamic configuration must be enable to achieve multiple devices with different configs on a single bus.
  *        menuconfig:Bus Options->I2C Bus Options->enable dynamic configuration
- * 
+ *
  * @param bus_handle Point to the I2C bus handle
  * @param dev_addr i2c device address
  * @param clk_speed device specified clock frequency the i2c_bus will switch to during each transfer. 0 if use current bus speed.
@@ -97,7 +97,7 @@ esp_err_t i2c_bus_device_delete(i2c_bus_device_handle_t *p_dev_handle);
 
 /**
  * @brief Get device's I2C address
- * 
+ *
  * @param dev_handle I2C device handle
  * @return uint8_t I2C address, return NULL_I2C_DEV_ADDR if dev_handle is invalid.
  */
@@ -109,7 +109,7 @@ uint8_t i2c_bus_device_get_address(i2c_bus_device_handle_t dev_handle);
  * @param dev_handle I2C device handle
  * @param mem_address The internal reg/mem address to read from, set to NULL_I2C_MEM_ADDR if no internal address.
  * @param data Pointer to a buffer to save the data that was read
- * @return esp_err_t 
+ * @return esp_err_t
  *     - ESP_OK Success
  *     - ESP_ERR_INVALID_ARG Parameter error
  *     - ESP_FAIL Sending command error, slave doesn't ACK the transfer.
@@ -126,7 +126,7 @@ esp_err_t i2c_bus_read_byte(i2c_bus_device_handle_t dev_handle, uint8_t mem_addr
  * @param mem_address The internal reg/mem address to read from, set to NULL_I2C_MEM_ADDR if no internal address.
  * @param data_len Number of bytes to read
  * @param data Pointer to a buffer to save the data that was read
- * @return esp_err_t 
+ * @return esp_err_t
  *     - ESP_OK Success
  *     - ESP_ERR_INVALID_ARG Parameter error
  *     - ESP_FAIL Sending command error, slave doesn't ACK the transfer.
@@ -142,7 +142,7 @@ esp_err_t i2c_bus_read_bytes(i2c_bus_device_handle_t dev_handle, uint8_t mem_add
  * @param mem_address The internal reg/mem address to read from, set to NULL_I2C_MEM_ADDR if no internal address.
  * @param bit_num The bit number 0 - 7 to read
  * @param data Pointer to a buffer to save the data that was read. *data == 0 -> bit = 0, *data !=0 -> bit = 1.
- * @return esp_err_t 
+ * @return esp_err_t
  *     - ESP_OK Success
  *     - ESP_ERR_INVALID_ARG Parameter error
  *     - ESP_FAIL Sending command error, slave doesn't ACK the transfer.
@@ -159,7 +159,7 @@ esp_err_t i2c_bus_read_bit(i2c_bus_device_handle_t dev_handle, uint8_t mem_addre
  * @param bit_start The bit to start from, 0 - 7, MSB at 0
  * @param length The number of bits to read, 1 - 8
  * @param data Pointer to a buffer to save the data that was read
- * @return esp_err_t 
+ * @return esp_err_t
  *     - ESP_OK Success
  *     - ESP_ERR_INVALID_ARG Parameter error
  *     - ESP_FAIL Sending command error, slave doesn't ACK the transfer.
@@ -174,7 +174,7 @@ esp_err_t i2c_bus_read_bits(i2c_bus_device_handle_t dev_handle, uint8_t mem_addr
  * @param dev_handle I2C device handle
  * @param mem_address The internal reg/mem address to write to, set to NULL_I2C_MEM_ADDR if no internal address.
  * @param data The byte to write.
- * @return esp_err_t 
+ * @return esp_err_t
  *     - ESP_OK Success
  *     - ESP_ERR_INVALID_ARG Parameter error
  *     - ESP_FAIL Sending command error, slave doesn't ACK the transfer.
@@ -191,7 +191,7 @@ esp_err_t i2c_bus_write_byte(i2c_bus_device_handle_t dev_handle, uint8_t mem_add
  * @param mem_address The internal reg/mem address to write to, set to NULL_I2C_MEM_ADDR if no internal address.
  * @param data_len Number of bytes to write
  * @param data Pointer to the bytes to write.
- * @return esp_err_t 
+ * @return esp_err_t
  *     - ESP_OK Success
  *     - ESP_ERR_INVALID_ARG Parameter error
  *     - ESP_FAIL Sending command error, slave doesn't ACK the transfer.
@@ -207,7 +207,7 @@ esp_err_t i2c_bus_write_bytes(i2c_bus_device_handle_t dev_handle, uint8_t mem_ad
  * @param mem_address The internal reg/mem address to write to, set to NULL_I2C_MEM_ADDR if no internal address.
  * @param bit_num The bit number 0 - 7 to write
  * @param data The bit to write, data == 0 means set bit = 0, data !=0 means set bit = 1.
- * @return esp_err_t 
+ * @return esp_err_t
  *     - ESP_OK Success
  *     - ESP_ERR_INVALID_ARG Parameter error
  *     - ESP_FAIL Sending command error, slave doesn't ACK the transfer.
@@ -224,7 +224,7 @@ esp_err_t i2c_bus_write_bit(i2c_bus_device_handle_t dev_handle, uint8_t mem_addr
  * @param bit_start The bit to start from, 0 - 7, MSB at 0
  * @param length The number of bits to write, 1 - 8
  * @param data The bits to write.
- * @return esp_err_t 
+ * @return esp_err_t
  *     - ESP_OK Success
  *     - ESP_ERR_INVALID_ARG Parameter error
  *     - ESP_FAIL Sending command error, slave doesn't ACK the transfer.
@@ -243,10 +243,10 @@ esp_err_t i2c_bus_write_bits(i2c_bus_device_handle_t dev_handle, uint8_t mem_add
  *        hence multiple devices with different configs on a single bus can be supported.
  *        @note
  *        Only call this function when ``i2c_bus_read/write_xx`` do not meet the requirements
- * 
+ *
  * @param dev_handle I2C device handle
  * @param cmd I2C command handler
- * @return esp_err_t 
+ * @return esp_err_t
  *     - ESP_OK Success
  *     - ESP_ERR_INVALID_ARG Parameter error
  *     - ESP_FAIL Sending command error, slave doesn't ACK the transfer.
@@ -262,7 +262,7 @@ esp_err_t i2c_bus_cmd_begin(i2c_bus_device_handle_t dev_handle, i2c_cmd_handle_t
  * @param mem_address The internal 16-bit reg/mem address to write to, set to NULL_I2C_MEM_ADDR if no internal address.
  * @param data_len Number of bytes to write
  * @param data Pointer to the bytes to write.
- * @return esp_err_t 
+ * @return esp_err_t
  *     - ESP_OK Success
  *     - ESP_ERR_INVALID_ARG Parameter error
  *     - ESP_FAIL Sending command error, slave doesn't ACK the transfer.
@@ -278,7 +278,7 @@ esp_err_t i2c_bus_write_reg16(i2c_bus_device_handle_t dev_handle, uint16_t mem_a
  * @param mem_address The internal 16-bit reg/mem address to read from, set to NULL_I2C_MEM_ADDR if no internal address.
  * @param data_len Number of bytes to read
  * @param data Pointer to a buffer to save the data that was read
- * @return esp_err_t 
+ * @return esp_err_t
  *     - ESP_OK Success
  *     - ESP_ERR_INVALID_ARG Parameter error
  *     - ESP_FAIL Sending command error, slave doesn't ACK the transfer.

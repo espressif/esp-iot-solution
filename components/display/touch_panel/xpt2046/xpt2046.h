@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #ifndef _XPT2046_H
 #define _XPT2046_H
 
@@ -28,9 +27,9 @@ esp_err_t xpt2046_init(const touch_panel_config_t *xpt_conf);
 
 /**
  * @brief Deinitial touch panel
- * 
+ *
  * @param free_bus Is free bus
- * 
+ *
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
@@ -39,8 +38,8 @@ esp_err_t xpt2046_deinit(void);
 
 /**
  * @brief Check if there is a press
- * 
- * @return 
+ *
+ * @return
  *      - 0 Not press
  *      - 1 pressed
  */
@@ -48,36 +47,36 @@ int xpt2046_is_pressed(void);
 
 /**
  * @brief Set touch rotate direction
- * 
+ *
  * @param dir rotate direction
- * 
+ *
  * @return
  *     - ESP_OK Success
- *     - ESP_FAIL Fail 
+ *     - ESP_FAIL Fail
  */
 esp_err_t xpt2046_set_direction(touch_panel_dir_t dir);
 
 /**
  * @brief Get raw data
- * 
+ *
  * @param x Value of X axis direction
  * @param y Value of Y axis direction
- * 
+ *
  * @return
  *     - ESP_OK Success
- *     - ESP_FAIL Fail 
+ *     - ESP_FAIL Fail
  */
 esp_err_t xpt2046_get_rawdata(uint16_t *x, uint16_t *y);
 
 /**
  * @brief Start run touch panel calibration
- * 
+ *
  * @param screen LCD driver for display prompts
  * @param recalibrate Is calibration mandatory
- * 
+ *
  * @return
  *     - ESP_OK Success
- *     - ESP_FAIL Fail 
+ *     - ESP_FAIL Fail
  */
 esp_err_t xpt2046_calibration_run(const scr_driver_t *screen, bool recalibrate);
 
@@ -124,7 +123,6 @@ esp_err_t xpt2046_get_batt_v(float* voltage);
  *     - ESP_FAIL Fail
  */
 esp_err_t xpt2046_get_aux_v(float* voltage);
-
 
 #ifdef __cplusplus
 }

@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #include <stdio.h>
 #include "unity.h"
 #include "esp_log.h"
@@ -87,4 +86,3 @@ TEST_CASE("Sensor apds9960 test", "[apds9960][iot][sensor]")
     apds9960_test_func();
     apds9960_test_deinit();
 }
-

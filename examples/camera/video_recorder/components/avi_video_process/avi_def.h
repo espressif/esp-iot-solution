@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2021-2022 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2021-2023 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -8,24 +8,24 @@
 
 #include "stdint.h"
 
- /**
-  * reference links: https://www.cnblogs.com/songhe364826110/p/7619949.html
-  * AVIFileFormat: https://web.archive.org/web/20170411001412/http://www.alexander-noe.com/video/documentation/avi.pdf
-  * OpenDML AVI File Format Extensions: https://web.archive.org/web/20070112225112/http://www.the-labs.com/Video/odmlff2-avidef.pdf
-  */
+/**
+ * reference links: https://www.cnblogs.com/songhe364826110/p/7619949.html
+ * AVIFileFormat: https://web.archive.org/web/20170411001412/http://www.alexander-noe.com/video/documentation/avi.pdf
+ * OpenDML AVI File Format Extensions: https://web.archive.org/web/20070112225112/http://www.the-labs.com/Video/odmlff2-avidef.pdf
+ */
 
 typedef struct {
     uint32_t FourCC;
     uint32_t size;   // Block size, equal to the size of subsequent data
     /* data uint8_t _data[size]; */
-}AVI_CHUNK_HEAD;
+} AVI_CHUNK_HEAD;
 
 typedef struct {
     uint32_t List;   // Fixed to "list" and "riff" if it is riff list
     uint32_t size;   // Block size, equal to the size of subsequent data
     uint32_t FourCC;
     /* data uint8_t _data[size-4]; */
-}AVI_LIST_HEAD;
+} AVI_LIST_HEAD;
 
 typedef struct {
     uint32_t FourCC;            // Block ID, fixed to 'avih'
@@ -41,14 +41,14 @@ typedef struct {
     uint32_t width;             // Width of video main window (unit: pixel)
     uint32_t height;            // Height of video main window (unit: pixel)
     uint32_t reserved[4];       // reserved space for dwScale,dwRate,dwStart,dwLength.
-}AVI_AVIH_CHUNK;
+} AVI_AVIH_CHUNK;
 
 typedef struct {
     int16_t left;
     int16_t top;
     int16_t right;
     int16_t bottom;
-}AVI_RECT_FRAME;
+} AVI_RECT_FRAME;
 
 typedef struct {
     uint32_t FourCC;            // Block ID, set to Strh
@@ -67,7 +67,7 @@ typedef struct {
     uint32_t quality;           // Quality index of stream data
     uint32_t sample_size;       // Audio sampling size, video stream can be set to 0
     AVI_RECT_FRAME rcFrame;     // The display position of this stream in the main video window can be set to {0,0, width, height}
-}AVI_STRH_CHUNK;
+} AVI_STRH_CHUNK;
 
 /*For video streams, the STRF block structure is as follows*/
 typedef struct {
@@ -84,7 +84,7 @@ typedef struct {
     uint32_t y_pixels_per_meter; // The vertical resolution of the display device can be set to 0
     uint32_t num_colors;         // Set to 0
     uint32_t imp_colors;         // Set to 0
-}AVI_VIDS_STRF_CHUNK;
+} AVI_VIDS_STRF_CHUNK;
 
 /*For audio streams, the strf block structure is as follows*/
 typedef struct __attribute__((packed))
@@ -97,26 +97,26 @@ typedef struct __attribute__((packed))
     uint32_t avg_bytes_per_sec;
     uint16_t block_align;
     uint32_t bits_per_sample;
-}AVI_AUDS_STRF_CHUNK;
+} AVI_AUDS_STRF_CHUNK;
 
 typedef struct {
     AVI_LIST_HEAD strl;
     AVI_STRH_CHUNK strh;
     AVI_VIDS_STRF_CHUNK strf;
-}AVI_STRL_LIST;
+} AVI_STRL_LIST;
 
 typedef struct {
     AVI_LIST_HEAD hdrl;
     AVI_AVIH_CHUNK avih;
     AVI_STRL_LIST  strl;
-}AVI_HDRL_LIST;
+} AVI_HDRL_LIST;
 
 typedef struct {
     uint32_t FourCC; // Block ID，can be set to "idx1"
     uint32_t flags;
     uint32_t chunkoffset;
     uint32_t chunklength;
-}AVI_IDX1;
+} AVI_IDX1;
 
 /**
 "db"：Uncompressed video frame (RGB data stream)；

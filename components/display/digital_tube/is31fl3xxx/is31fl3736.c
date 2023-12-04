@@ -164,7 +164,7 @@ esp_err_t is31fl3736_reset_reg(is31fl3736_handle_t fxled)
  * switch scan (SW-Y) 1 ~ 12; all == 8 * 12 == 96
  */
 esp_err_t is31fl3736_set_led_matrix(is31fl3736_handle_t fxled, uint16_t cs_x_bit, uint16_t sw_y_bit,
-                                        is31fl3736_led_stau_t status)
+                                    is31fl3736_led_stau_t status)
 {
     int i, j, k;
     uint8_t reg, reg_mask, reg_val, temp;
@@ -323,7 +323,7 @@ static esp_err_t is31fl3736_init(is31fl3736_handle_t fxled)
 uint8_t is31fl3736_get_i2c_addr(is31fl3736_addr_pin_t addr1_pin, is31fl3736_addr_pin_t addr2_pin)
 {
     uint8_t addr = IS31FL3736_I2C_ID | ((uint8_t) addr1_pin << 1) | ((uint8_t) addr2_pin << 3);
-    ESP_LOGI(TAG, "slave ADDR : %02x", (uint8_t )addr);
+    ESP_LOGI(TAG, "slave ADDR : %02x", (uint8_t)addr);
     return addr;
 }
 

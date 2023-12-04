@@ -289,10 +289,10 @@ esp_err_t bme280_read_coefficients(bme280_handle_t sensor);
  *    - ESP_FAIL Fail
  */
 esp_err_t bme280_set_sampling(bme280_handle_t sensor, bme280_sensor_mode mode,
-                                  bme280_sensor_sampling tempsampling,
-                                  bme280_sensor_sampling presssampling,
-                                  bme280_sensor_sampling humsampling, bme280_sensor_filter filter,
-                                  bme280_standby_duration duration);
+                              bme280_sensor_sampling tempsampling,
+                              bme280_sensor_sampling presssampling,
+                              bme280_sensor_sampling humsampling, bme280_sensor_filter filter,
+                              bme280_standby_duration duration);
 
 /**
  * @brief init bme280 device

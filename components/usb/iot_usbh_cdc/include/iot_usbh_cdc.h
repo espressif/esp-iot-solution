@@ -12,7 +12,7 @@
 #if (CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3)
 #define CDC_INTERFACE_NUM_MAX                3                /*!< Support 3 cdc interface at most (each only contains two bulk channel) */
 #else
-#define CDC_INTERFACE_NUM_MAX                0         
+#define CDC_INTERFACE_NUM_MAX                0
 #error "USB Host CDC not supported"
 #endif
 

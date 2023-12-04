@@ -105,9 +105,9 @@ esp_err_t iot_usbh_port_deinit(usbh_port_handle_t port_hdl);
 
 /**
  * It returns the context pointer that was passed to the port when it was created
- * 
+ *
  * @param port_hdl port handle return by iot_usbh_port_init
- * 
+ *
  * @return The context of the port.
  */
 void* iot_usbh_port_get_context(usbh_port_handle_t port_hdl);
@@ -153,9 +153,9 @@ esp_err_t iot_usbh_pipe_deinit(usbh_pipe_handle_t pipe_hdl);
 
 /**
  * It returns the context pointer that was passed to the pipe when it was created
- * 
+ *
  * @param pipe_hdl the pipe handle returned by iot_usbh_pipe_init()
- * 
+ *
  * @return The context of the pipe.
  */
 void* iot_usbh_pipe_get_context(usbh_pipe_handle_t pipe_hdl);
@@ -193,11 +193,11 @@ esp_err_t iot_usbh_urb_free(iot_usbh_urb_handle_t urb_hdl);
 
 /**
  * It returns a pointer to the buffer that was allocated for the URB
- * 
+ *
  * @param urb_hdl the handle of the URB
  * @param buf_size the size of the buffer that the URB has allocated for the transfer.
  * @param num_isoc number of isochronous packets in the URB.
- * 
+ *
  * @return The buffer pointer is being returned.
  */
 void* iot_usbh_urb_buffer_claim(iot_usbh_urb_handle_t urb_hdl, size_t *buf_size, size_t *num_isoc);
@@ -214,24 +214,24 @@ esp_err_t iot_usbh_urb_enqueue(usbh_pipe_handle_t pipe_hdl, iot_usbh_urb_handle_
 
 /**
  * It takes a pipe handle, and returns the transferred URB in the queue of the pipe
- * 
+ *
  * @param pipe_hdl the pipe handle to dequeue
  * @param xfered_size the number of bytes transferred
  * @param status The status of the transfer.
- * 
+ *
  * @return A pointer to the URB that was dequeued.
  */
 iot_usbh_urb_handle_t iot_usbh_urb_dequeue(usbh_pipe_handle_t pipe_hdl, size_t *xfered_size, usb_transfer_status_t *status);
 
 /**
  * It waits for the URB to be done, then returns the URB
- * 
+ *
  * @param port_hdl the port to handle the urb
  * @param urb_hdl the URB handle to be used for the transfer.
  * @param xfer_size the size of the data to be transferred.
  * @param xfered_size the number of bytes transferred
  * @param status The status of the transfer.
- * 
+ *
  * @return A pointer to the URB that was just completed.
  */
 

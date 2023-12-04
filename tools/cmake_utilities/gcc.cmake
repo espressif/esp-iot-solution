@@ -1,4 +1,4 @@
-if(CONFIG_CU_GCC_LTO_ENABLE) 
+if(CONFIG_CU_GCC_LTO_ENABLE)
     # Enable cmake interprocedural optimization(IPO) support to check if GCC supports link time optimization(LTO)
     cmake_policy(SET CMP0069 NEW)
     include(CheckIPOSupported)
@@ -19,7 +19,7 @@ if(CONFIG_CU_GCC_LTO_ENABLE)
             set(GCC_LTO_OBJECT_TYPE         "-ffat-lto-objects")
             # Set compression level 9(min:0, max:9)
             set(GCC_LTO_COMPRESSION_LEVEL   "-flto-compression-level=9")
-            # Set partition level max to removed used symbol 
+            # Set partition level max to removed used symbol
             set(GCC_LTO_PARTITION_LEVEL     "-flto-partition=max")
 
             # Set mode "auto" to increase compiling speed

@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #include <string.h>
 
 #include <esp_log.h>
@@ -164,7 +163,7 @@ esp_err_t ws2812_set_rgb_channel(uint8_t value_r, uint8_t value_g, uint8_t value
 {
     WS2812_CHECK(s_ws2812, "ws2812b_init() must be called first", return ESP_ERR_INVALID_STATE);
 
-    for (int i = 0; i < s_ws2812->led_num; i++ ) {
+    for (int i = 0; i < s_ws2812->led_num; i++) {
         generate_data(i, value_r, value_g, value_b, s_ws2812->buf);
     }
 

@@ -1,7 +1,7 @@
 menu "TinyUF2 Config"
     # We not support disable now
     config ENABLE_UF2_FLASHING
-        bool 
+        bool
         default y if IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
         help
             Enable UF2, only support ESP SoC with USB-OTG
@@ -12,7 +12,7 @@ menu "TinyUF2 Config"
         int "USB Virtual Disk size(MB)"
         depends on ENABLE_UF2_FLASHING
         default 8
-        range 4 32 
+        range 4 32
     config UF2_FLASH_SIZE_MB
         int "Max APP size(MB)"
         depends on ENABLE_UF2_FLASHING
