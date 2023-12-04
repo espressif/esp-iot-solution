@@ -1,13 +1,13 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
 /**
  * @file controller.c
- * @brief Reading analog value from the controller, map to button direction 
- * 
+ * @brief Reading analog value from the controller, map to button direction
+ *
  * @details User and modify the components in this file for custom commands
 */
 
@@ -34,24 +34,25 @@ extern QueueHandle_t input_queue;
 void set_button_bit(int pin_num, int pin_level);
 uint8_t get_button_value(void);
 void clear_button_value(void);
-esp_err_t adc_calibration_init(adc_channel_t channel, adc_cali_handle_t*  cali_handle); 
+esp_err_t adc_calibration_init(adc_channel_t channel, adc_cali_handle_t*  cali_handle);
 void adc_calibration_deinit(adc_cali_handle_t handle);
 
 /**
  * @brief   Interrupt handler for button input
  * @details This function will send button input event to RTOS queue
- * 
+ *
  * @details The function also implements simple button debouncing
  * @ref     Alternatively, refer to ESP-Component Registry for button debouncing component
  * @link    https://components.espressif.com/components/espressif/button
- * 
+ *
  * @param[in]   arg     Pointer to button pin number
 */
 static void IRAM_ATTR button_isr_handler(void* arg)
 {
     int button_pin_num = (int) arg;
-    uint64_t current_time = esp_timer_get_time(); 
-    
+    uint64_t current_time = esp_timer_get_time();
+    BaseType_t task_woken = pdFALSE;
+
     // set bit whenever a button is pressed
     // do not send to queue yet in case of other button presses or multiple presses
     set_button_bit(button_pin_num, 1);
@@ -59,21 +60,25 @@ static void IRAM_ATTR button_isr_handler(void* arg)
     // Simple button debouncing
     if (current_time - prev_trigger_time > DEBOUNCE_TIME_US) {
         uint8_t button_value = get_button_value();
-        
+
         input_event_t button_event = {
             .input_source = INPUT_SOURCE_BUTTON,
             .data_button = button_value,
         };
 
         prev_trigger_time = current_time;
-        xQueueSendFromISR(input_queue, &button_event, 0);
-        button_input = 0; 
+        xQueueSendFromISR(input_queue, &button_event, &task_woken);
+        button_input = 0;
+    }
+
+    if (task_woken == pdTRUE) {
+        portYIELD_FROM_ISR();
     }
 }
 
 /**
  * @brief   Set the bit of the button that is pressed
- * 
+ *
  * @param[in]   pin_num     Button pin number
  * @param[in]   pin_level   Button pin level (0 or 1)
 */
@@ -94,10 +99,10 @@ void set_button_bit(int pin_num, int pin_level)
     case PIN_BUTTON_C:
         button_input |= (pin_level << 2);
         break;
-    case PIN_BUTTON_D:  
+    case PIN_BUTTON_D:
         button_input |= (pin_level << 3);
         break;
-    default:    
+    default:
         break;
     }
 #endif
@@ -194,7 +199,7 @@ void joystick_adc_read(uint8_t *x_axis, uint8_t *y_axis)
     // Map ADC to 8-bit range
     mapped_x = map_range(raw_x, 0, ADC_RAW_MAX, 0, UINT8_MAX);
     mapped_y = map_range(raw_y, 0, ADC_RAW_MAX, 0, UINT8_MAX);
-#else 
+#else
     // Return default value if not using ADC
     mapped_x = UINT8_MAX / 2;
     mapped_y = UINT8_MAX / 2;
@@ -204,7 +209,7 @@ void joystick_adc_read(uint8_t *x_axis, uint8_t *y_axis)
     *y_axis = mapped_y;
 }
 
-esp_err_t joystick_init(void) 
+esp_err_t joystick_init(void)
 {
     // ADC Init
     adc_oneshot_unit_init_cfg_t init_config = {
@@ -237,7 +242,7 @@ esp_err_t joystick_init(void)
 }
 
 esp_err_t button_init(void)
-{   
+{
     const gpio_config_t pin_config = {
         .pin_bit_mask = BUTTON_PIN_BIT_MASK,
         .mode = GPIO_MODE_INPUT,
@@ -260,7 +265,7 @@ esp_err_t button_init(void)
     return ESP_OK;
 }
 
-uint8_t button_read(void) 
+uint8_t button_read(void)
 {
 #ifdef CONFIG_BUTTON_INPUT_MODE_BOOT
     // Boot button is active low (high when released, low when pressed)
@@ -278,7 +283,7 @@ uint8_t button_read(void)
 }
 
 esp_err_t button_deinit(void)
-{   
+{
     gpio_uninstall_isr_service();
 #ifdef CONFIG_BUTTON_INPUT_MODE_BOOT
     ESP_ERROR_CHECK(gpio_reset_pin(PIN_BUTTON_BOOT));
@@ -300,7 +305,7 @@ void print_console_read_help(void)
     ESP_LOGI(TAG, "Press Enter to send input, make sure caps lock is off\n");
 }
 
-void char_to_joystick_input(uint8_t user_input, uint8_t *x_axis, uint8_t *y_axis) 
+void char_to_joystick_input(uint8_t user_input, uint8_t *x_axis, uint8_t *y_axis)
 {
     switch (user_input) {
     case 'q':
@@ -322,8 +327,8 @@ void char_to_joystick_input(uint8_t user_input, uint8_t *x_axis, uint8_t *y_axis
     case 's':
         *x_axis = UINT8_MAX / 2;
         *y_axis = UINT8_MAX / 2;
-        break;  
-    case 'd':   
+        break;
+    case 'd':
         *x_axis = UINT8_MAX;
         *y_axis = UINT8_MAX / 2;
         break;
@@ -370,13 +375,13 @@ void joystick_console_read(void *args)
 }
 
 void joystick_ext_read(void *args)
-{   
+{
     uint8_t curr_x = 0, curr_y = 0, prev_x = 0, prev_y = 0;
 
     while (true) {
         DELAY(HID_LATENCY);
         joystick_adc_read(&curr_x, &curr_y);
-        
+
         // Skip if value is within threshold
         if (abs(curr_x - prev_x) < JOYSTICK_THRESHOLD && abs(curr_y - prev_y) < JOYSTICK_THRESHOLD) {
             DELAY(100);
@@ -397,7 +402,7 @@ void joystick_ext_read(void *args)
     }
 }
 
-esp_err_t joystick_deinit(void) 
+esp_err_t joystick_deinit(void)
 {
     ESP_ERROR_CHECK(adc_oneshot_del_unit(adc_handle));
     adc_calibration_deinit(calibrate_handle_x);

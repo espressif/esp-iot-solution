@@ -63,7 +63,7 @@ static bool IRAM_ATTR bldc_control_gptimer_cb(gptimer_handle_t timer, const gpti
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     /*!< Floating-point numbers cannot be computed in an interrupt, informing the task to start an arithmetic control */
     xSemaphoreGiveFromISR(control->xSemaphore, &xHigherPriorityTaskWoken);
-    return xHigherPriorityTaskWoken == pdTRUE ? true : false;
+    return (xHigherPriorityTaskWoken == pdTRUE);
 }
 
 static void bldc_control_task(void *args)

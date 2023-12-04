@@ -84,17 +84,22 @@ const uint16_t ir_learn_tx_map[] = {
     550, 1660, 550, 550, 550, 0,
 };
 
-void detect_to_handler(void *arg)
+static void detect_to_handler(void *arg)
 {
     QueueHandle_t queue = (QueueHandle_t)(arg);
+    BaseType_t task_woken = pdFALSE;
 
     if (gpio_get_level(IR_TX_DETECT_IO)) {
         if (!SLIST_EMPTY(&ir_test_result)) {
             esp_rom_printf(DRAM_STR("send rmt out\r\n"));
-            xQueueSendFromISR(queue, &ir_test_result, 0);
+            xQueueSendFromISR(queue, &ir_test_result, &task_woken);
         } else {
             esp_rom_printf(DRAM_STR("ir learn cmd empty\r\n"));
         }
+    }
+
+    if (task_woken == pdTRUE) {
+        portYIELD_FROM_ISR();
     }
 }
 
