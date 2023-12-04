@@ -1,4 +1,3 @@
-
 Display
 *************************
 
@@ -8,6 +7,5 @@ Display
     :maxdepth: 1
 
     LCD Screen <lcd/index>
-    Digit Tube <digit_tube>
+    Digital Tube <digital_tube>
     LED lndicator <led_indicator>
-
