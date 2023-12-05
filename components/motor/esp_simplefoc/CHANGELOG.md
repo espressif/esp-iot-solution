@@ -1,8 +1,15 @@
 # ChangeLog
 
-## v0.1.0 - 2023-11-14
+## v0.1.1 - 2023-12-4
+### Enhancements:
+* FOC:
+    * Change angle sensor driver with c++.
 
-* Support chip whitch without mcpwm driver
+## v0.1.0 - 2023-11-4
+### Enhancements:
+* FOC:
+    * Support chip whitch without mcpwm driver.
+
 ## V0.0.3 - 2023-8-16
 ### Enhancements:
 * FOC:

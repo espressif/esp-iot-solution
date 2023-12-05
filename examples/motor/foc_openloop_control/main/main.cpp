@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -22,7 +22,7 @@ BLDCDriver3PWM driver = BLDCDriver3PWM(17, 16, 15);
 
 extern "C" void app_main(void)
 {
-    SimpleFOCDebug::enable(); // enbale debug
+    SimpleFOCDebug::enable();                               /*!< Enable Debug */
     Serial.begin(115200);
 
     driver.voltage_power_supply = 12;
@@ -35,9 +35,9 @@ extern "C" void app_main(void)
 #endif
     motor.linkDriver(&driver);
 
-    motor.velocity_limit = 200.0; // 200 rad/s velocity limit
-    motor.voltage_limit = 12.0;   // 12 Volt
-    motor.controller = MotionControlType::velocity_openloop;
+    motor.velocity_limit = 200.0;
+    motor.voltage_limit = 12.0;
+    motor.controller = MotionControlType::velocity_openloop;/*!< Set openloop control mode */
 
     motor.init();
     while (1) {

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -17,19 +17,9 @@
 #define USING_MCPWM
 #endif
 
-void angle_sensor_init()
-{
-    sensor_as5600_init(0, GPIO_NUM_1, GPIO_NUM_2);
-}
-
-float angle_sensor_get()
-{
-    return sensor_as5600_getAngle(0);
-}
-
 BLDCMotor motor = BLDCMotor(14);
 BLDCDriver3PWM driver = BLDCDriver3PWM(4, 5, 6);
-GenericSensor sensor = GenericSensor(angle_sensor_get, angle_sensor_init);
+AS5600 as5600 = AS5600(I2C_NUM_0, GPIO_NUM_1, GPIO_NUM_2);
 
 float target_value = 0.0f;
 Commander command = Commander(Serial);
@@ -40,11 +30,11 @@ void doTarget(char *cmd)
 
 extern "C" void app_main(void)
 {
-    SimpleFOCDebug::enable(); // enable debug
+    SimpleFOCDebug::enable();                                        /*!< Enable debug */
     Serial.begin(115200);
 
-    sensor.init(); // enable as5600 angle sensor
-    motor.linkSensor(&sensor);
+    as5600.init();                                                   /*!< Enable as5600 */
+    motor.linkSensor(&as5600);
     driver.voltage_power_supply = 12;
     driver.voltage_limit = 11;
 #ifdef USING_MCPWM
@@ -54,9 +44,8 @@ extern "C" void app_main(void)
 #endif
 
     motor.linkDriver(&driver);
-    motor.controller = MotionControlType::velocity; // set position control mode
-
-    // set velocity pid
+    motor.controller = MotionControlType::velocity;                  /*!< Set position control mode */
+    /*!< Set velocity pid */
     motor.PID_velocity.P = 0.9f;
     motor.PID_velocity.I = 2.2f;
     motor.voltage_limit = 11;
@@ -65,9 +54,9 @@ extern "C" void app_main(void)
     motor.velocity_limit = 200;
 
     motor.useMonitoring(Serial);
-    motor.init();                                                   // initialize motor
-    motor.initFOC();                                                // align sensor and start FOC
-    command.add('T', doTarget, const_cast<char *>("target angle")); // add serial command
+    motor.init();                                                    /*!< Initialize motor */
+    motor.initFOC();                                                 /*!<  Align sensor and start FOC */
+    command.add('T', doTarget, const_cast<char *>("target angle"));  /*!< Add serial command */
 
     while (1) {
         motor.loopFOC();

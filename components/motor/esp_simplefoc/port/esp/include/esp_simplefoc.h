@@ -13,4 +13,5 @@
 #include "sensors/GenericSensor.h"
 #include "current_sense/GenericCurrentSense.h"
 #include "current_sense/LowsideCurrentSense.h"
-#include "../../angle_sensor/sensor_as5600.h"
+#include "../../angle_sensor/as5600.h"
+#include "../../angle_sensor/mt6701.h"
