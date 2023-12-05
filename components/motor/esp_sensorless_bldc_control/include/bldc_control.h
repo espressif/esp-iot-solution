@@ -43,13 +43,6 @@ typedef enum {
     BLDC_FOC,            /*!< foc phase change, not supported yet */
 } control_mode_t;
 
-typedef enum {
-    ALIGNMENT_COMPARER,  /*!< Comparator detects zero crossing */
-#if CONFIG_SOC_MCPWM_SUPPORTED
-    ALIGNMENT_ADC,       /*!< ADC detects zero crossing */
-#endif
-} alignment_mode_t;
-
 /**
  * @brief Debug configuration, when activated, will periodically invoke the debug_operation.
  *

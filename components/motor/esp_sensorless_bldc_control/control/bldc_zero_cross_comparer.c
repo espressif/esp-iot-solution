@@ -120,7 +120,7 @@ uint8_t bldc_zero_cross_comparer_operation(void *handle)
                     /*!< ft/(2*n*c) * 60; where ft is the counting frequency, that is, the frequency of the cycle interrupt, n is the polar logarithm, and c is the number of times it is memorized. */
                     speed_rpm = (uint32_t)(COMPARER_RPM_CALCULATION_COEFFICIENT / zero_cross->control_param->speed_count);
                 } else {
-                    speed_rpm = -(uint32_t)(COMPARER_RPM_CALCULATION_COEFFICIENT / zero_cross->control_param->speed_count);
+                    speed_rpm = (uint32_t)(COMPARER_RPM_CALCULATION_COEFFICIENT / zero_cross->control_param->speed_count);
                 }
                 ESP_LOGD(TAG, "speed_rpm: %"PRIu32", speed_count: %"PRIu32"\n", speed_rpm, zero_cross->control_param->speed_count);
 
@@ -152,8 +152,11 @@ uint8_t bldc_zero_cross_comparer_operation(void *handle)
             return 0;
         } else {
             zero_cross->control_param->phase_cnt = phase;
+            if (zero_cross->control_param->phase_cnt != zero_cross->control_param->phase_cnt_prev && zero_cross->control_param->phase_change_done == true) {
+                zero_cross->control_param->phase_change_done = false;
+                return 1;
+            }
         }
-        return 1;
     }
 
     return 0;

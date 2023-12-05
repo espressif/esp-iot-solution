@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -22,7 +22,7 @@ extern "C" {
  * @brief MCPWM Settings
  *
  */
-#define MCPWM_CLK_SRC (20 * 1000 * 1000) /*!< Number of count ticks within a period time_us = 1,000,000 / MCPWM_CLK_SRC */
+#define MCPWM_CLK_SRC (40 * 1000 * 1000) /*!< Number of count ticks within a period time_us = 1,000,000 / MCPWM_CLK_SRC */
 #define MCPWM_PERIOD (2000) /*!< pwm_cycle_us = 1,000,000 / MCPWM_CLK_SRC * MCPWM_PERIOD */
 
 /**
@@ -121,14 +121,14 @@ extern "C" {
  * @brief Closed-loop PID parameters for speed.
  *
  */
-#define SPEED_KP (0.003)                         /*!< P */
-#define SPEED_KI (0.0001)                       /*!< I */
-#define SPEED_KD (0)                             /*!< D */
-#define SPEED_MIN_INTEGRAL (- DUTY_MAX/SPEED_KI) /*!< Minimum integral saturation limit. */
-#define SPEED_MAX_INTEGRAL (DUTY_MAX/SPEED_KI)   /*!< Maximum integral saturation limit. */
-#define SPEED_MIN_OUTPUT (0)                     /*!< Minimum PWM duty cycle output. */
-#define SPEED_MAX_OUTPUT (DUTY_MAX)              /*!< Maximum PWM duty cycle output. */
-#define SPEED_CAL_TYPE (0)                       /*!< 0 Incremental 1 Positional */
+#define SPEED_KP (0.003)                                        /*!< P */
+#define SPEED_KI (0.0001)                                       /*!< I */
+#define SPEED_KD (0)                                            /*!< D */
+#define SPEED_MIN_INTEGRAL (- DUTY_MAX/SPEED_KI)                /*!< Minimum integral saturation limit. */
+#define SPEED_MAX_INTEGRAL (DUTY_MAX/SPEED_KI)                  /*!< Maximum integral saturation limit. */
+#define SPEED_MIN_OUTPUT (PWM_DUTYCYCLE_20)                     /*!< Minimum PWM duty cycle output. */
+#define SPEED_MAX_OUTPUT (DUTY_MAX)                             /*!< Maximum PWM duty cycle output. */
+#define SPEED_CAL_TYPE (0)                                      /*!< 0 Incremental 1 Positional */
 
 /**
  * @brief Speed parameter settings.

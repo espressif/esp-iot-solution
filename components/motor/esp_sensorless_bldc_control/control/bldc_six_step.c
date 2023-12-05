@@ -28,6 +28,8 @@ typedef struct bldc_six_step {
     esp_err_t (*set_gpio)(void *phase, uint32_t duty);
     void (*set_phase_duty)(struct bldc_six_step *six_step, phase_enum_t phase, uint32_t H_duty, uint32_t L_duty);
     uint8_t pos_check_stage;
+    void (**six_step_cw_array)(struct bldc_six_step *six_step, uint32_t Hduty, uint32_t Lduty);
+    void (**six_step_ccw_array)(struct bldc_six_step *six_step, uint32_t Hduty, uint32_t Lduty);
 } bldc_six_step_t;
 
 static void bldc_six_step_set_Hpwm_Lgpio(bldc_six_step_t *six_step, phase_enum_t phase, uint32_t H_duty, uint32_t L_duty)
@@ -54,6 +56,7 @@ static void bldc_six_step_UphaseH_VphaseL(bldc_six_step_t *six_step, uint32_t Hd
     six_step->set_phase_duty(six_step, PHASE_U, Hduty, !Lduty);
     six_step->set_phase_duty(six_step, PHASE_V, 0, Lduty);
     six_step->set_phase_duty(six_step, PHASE_W, 0, !Lduty);
+    six_step->control_param->adc_bemf_phase = PHASE_W;
 }
 
 static void bldc_six_step_VphaseH_UphaseL(bldc_six_step_t *six_step, uint32_t Hduty, uint32_t Lduty)
@@ -61,6 +64,7 @@ static void bldc_six_step_VphaseH_UphaseL(bldc_six_step_t *six_step, uint32_t Hd
     six_step->set_phase_duty(six_step, PHASE_U, 0, Lduty);
     six_step->set_phase_duty(six_step, PHASE_V, Hduty, !Lduty);
     six_step->set_phase_duty(six_step, PHASE_W, 0, !Lduty);
+    six_step->control_param->adc_bemf_phase = PHASE_W;
 }
 
 static void bldc_six_step_WphaseH_UphaseL(bldc_six_step_t *six_step, uint32_t Hduty, uint32_t Lduty)
@@ -68,6 +72,7 @@ static void bldc_six_step_WphaseH_UphaseL(bldc_six_step_t *six_step, uint32_t Hd
     six_step->set_phase_duty(six_step, PHASE_U, 0, Lduty);
     six_step->set_phase_duty(six_step, PHASE_V, 0, !Lduty);
     six_step->set_phase_duty(six_step, PHASE_W, Hduty, !Lduty);
+    six_step->control_param->adc_bemf_phase = PHASE_V;
 }
 
 static void bldc_six_step_WphaseH_VphaseL(bldc_six_step_t *six_step, uint32_t Hduty, uint32_t Lduty)
@@ -75,6 +80,7 @@ static void bldc_six_step_WphaseH_VphaseL(bldc_six_step_t *six_step, uint32_t Hd
     six_step->set_phase_duty(six_step, PHASE_U, 0, !Lduty);
     six_step->set_phase_duty(six_step, PHASE_V, 0, Lduty);
     six_step->set_phase_duty(six_step, PHASE_W, Hduty, !Lduty);
+    six_step->control_param->adc_bemf_phase = PHASE_U;
 }
 
 static void bldc_six_step_UphaseH_WphaseL(bldc_six_step_t *six_step, uint32_t Hduty, uint32_t Lduty)
@@ -82,6 +88,7 @@ static void bldc_six_step_UphaseH_WphaseL(bldc_six_step_t *six_step, uint32_t Hd
     six_step->set_phase_duty(six_step, PHASE_U, Hduty, !Lduty);
     six_step->set_phase_duty(six_step, PHASE_V, 0, !Lduty);
     six_step->set_phase_duty(six_step, PHASE_W, 0, Lduty);
+    six_step->control_param->adc_bemf_phase = PHASE_V;
 }
 
 static void bldc_six_step_VphaseH_WphaseL(bldc_six_step_t *six_step, uint32_t Hduty, uint32_t Lduty)
@@ -89,6 +96,7 @@ static void bldc_six_step_VphaseH_WphaseL(bldc_six_step_t *six_step, uint32_t Hd
     six_step->set_phase_duty(six_step, PHASE_U, 0, !Lduty);
     six_step->set_phase_duty(six_step, PHASE_V, Hduty, !Lduty);
     six_step->set_phase_duty(six_step, PHASE_W, 0, Lduty);
+    six_step->control_param->adc_bemf_phase = PHASE_U;
 }
 
 static void bldc_six_step_UVphaseH_WphaseL(bldc_six_step_t *six_step, uint32_t Hduty, uint32_t Lduty)
@@ -218,6 +226,8 @@ uint8_t bldc_six_step_inject(bldc_six_step_handle_t *handle)
             //TODO: error handle make again
             six_step->control_param->phase_cnt = 1;
         }
+        six_step->pos_check_stage = 0;
+        six_step->control_param->inject_count = 0;
         return 1;
         break;
     }
@@ -235,6 +245,58 @@ inject:
     return 0;
 }
 
+/**
+ * @brief six step comparer cw sequence
+ *
+ */
+static void (*six_step_comparer_cw_array[6])(bldc_six_step_t *six_step, uint32_t Hduty, uint32_t Lduty) = {
+    &bldc_six_step_UphaseH_VphaseL,
+    &bldc_six_step_WphaseH_VphaseL,
+    &bldc_six_step_WphaseH_UphaseL,
+    &bldc_six_step_VphaseH_UphaseL,
+    &bldc_six_step_VphaseH_WphaseL,
+    &bldc_six_step_UphaseH_WphaseL,
+};
+
+/**
+ * @brief six step comparer ccw sequence
+ *
+ */
+static void (*six_step_comparer_ccw_array[6])(bldc_six_step_t *six_step, uint32_t Hduty, uint32_t Lduty) = {
+    &bldc_six_step_UphaseH_VphaseL,
+    &bldc_six_step_UphaseH_WphaseL,
+    &bldc_six_step_VphaseH_WphaseL,
+    &bldc_six_step_VphaseH_UphaseL,
+    &bldc_six_step_WphaseH_UphaseL,
+    &bldc_six_step_WphaseH_VphaseL,
+};
+
+/**
+ * @brief six step cw sequence
+ *
+ */
+static void (*six_step_adc_cw_array[6])(bldc_six_step_t *six_step, uint32_t Hduty, uint32_t Lduty) = {
+    &bldc_six_step_WphaseH_VphaseL,
+    &bldc_six_step_WphaseH_UphaseL,
+    &bldc_six_step_VphaseH_UphaseL,
+    &bldc_six_step_VphaseH_WphaseL,
+    &bldc_six_step_UphaseH_WphaseL,
+    &bldc_six_step_UphaseH_VphaseL,
+};
+
+/**
+ * @brief six step ccw sequence
+ *
+ */
+static void (*six_step_adc_ccw_array[6])(bldc_six_step_t *six_step, uint32_t Hduty, uint32_t Lduty) = {
+    &bldc_six_step_UphaseH_VphaseL,
+    &bldc_six_step_UphaseH_WphaseL,
+    &bldc_six_step_VphaseH_WphaseL,
+    &bldc_six_step_VphaseH_UphaseL,
+    &bldc_six_step_WphaseH_UphaseL,
+    &bldc_six_step_WphaseH_VphaseL,
+};
+
 void bldc_six_step_turn(bldc_six_step_handle_t *handle)
 {
     bldc_six_step_t *six_step = (bldc_six_step_t *)handle;
@@ -244,64 +306,10 @@ void bldc_six_step_turn(bldc_six_step_handle_t *handle)
         six_step->control_param->phase_cnt = 6;
     }
 
-    if (six_step->control_param->dir == CCW) {
-        switch (six_step->control_param->phase_cnt) {
-        case 1:
-            bldc_six_step_UphaseH_VphaseL(six_step, six_step->control_param->duty, six_step->lower_active_level);
-            six_step->control_param->adc_bemf_phase = PHASE_W;
-            break;
-        case 2:
-            bldc_six_step_UphaseH_WphaseL(six_step, six_step->control_param->duty, six_step->lower_active_level);
-            six_step->control_param->adc_bemf_phase = PHASE_V;
-            break;
-        case 3:
-            bldc_six_step_VphaseH_WphaseL(six_step, six_step->control_param->duty, six_step->lower_active_level);
-            six_step->control_param->adc_bemf_phase = PHASE_U;
-            break;
-        case 4:
-            bldc_six_step_VphaseH_UphaseL(six_step, six_step->control_param->duty, six_step->lower_active_level);
-            six_step->control_param->adc_bemf_phase = PHASE_W;
-            break;
-        case 5:
-            bldc_six_step_WphaseH_UphaseL(six_step, six_step->control_param->duty, six_step->lower_active_level);
-            six_step->control_param->adc_bemf_phase = PHASE_V;
-            break;
-        case 6:
-            bldc_six_step_WphaseH_VphaseL(six_step, six_step->control_param->duty, six_step->lower_active_level);
-            six_step->control_param->adc_bemf_phase = PHASE_U;
-            break;
-        default:
-            break;
-        }
-    } else if (six_step->control_param->dir == CW) {
-        switch (six_step->control_param->phase_cnt) {
-        case 1:
-            bldc_six_step_UphaseH_VphaseL(six_step, six_step->control_param->duty, six_step->lower_active_level);
-            six_step->control_param->adc_bemf_phase = PHASE_W;
-            break;
-        case 2:
-            bldc_six_step_WphaseH_VphaseL(six_step, six_step->control_param->duty, six_step->lower_active_level);
-            six_step->control_param->adc_bemf_phase = PHASE_U;
-            break;
-        case 3:
-            bldc_six_step_WphaseH_UphaseL(six_step, six_step->control_param->duty, six_step->lower_active_level);
-            six_step->control_param->adc_bemf_phase = PHASE_V;
-            break;
-        case 4:
-            bldc_six_step_VphaseH_UphaseL(six_step, six_step->control_param->duty, six_step->lower_active_level);
-            six_step->control_param->adc_bemf_phase = PHASE_W;
-            break;
-        case 5:
-            bldc_six_step_VphaseH_WphaseL(six_step, six_step->control_param->duty, six_step->lower_active_level);
-            six_step->control_param->adc_bemf_phase = PHASE_U;
-            break;
-        case 6:
-            bldc_six_step_UphaseH_WphaseL(six_step, six_step->control_param->duty, six_step->lower_active_level);
-            six_step->control_param->adc_bemf_phase = PHASE_V;
-            break;
-        default:
-            break;
-        }
+    if (six_step->control_param->dir == CW) {
+        six_step->six_step_cw_array[six_step->control_param->phase_cnt - 1](six_step, six_step->control_param->duty, six_step->lower_active_level);
+    } else if (six_step->control_param->dir == CCW) {
+        six_step->six_step_ccw_array[six_step->control_param->phase_cnt - 1](six_step, six_step->control_param->duty, six_step->lower_active_level);
     }
     six_step->control_param->phase_cnt_prev = six_step->control_param->phase_cnt;
     six_step->control_param->phase_change_done = true;
@@ -389,6 +397,14 @@ esp_err_t bldc_six_step_init(bldc_six_step_handle_t *handle, bldc_six_step_confi
         six_step->_can_be_enable = true;
     } else {
         six_step->_can_be_enable = false;
+    }
+
+    if (six_step->control_param->alignment_mode == ALIGNMENT_COMPARER) {
+        six_step->six_step_cw_array = six_step_comparer_cw_array;
+        six_step->six_step_ccw_array = six_step_comparer_ccw_array;
+    } else {
+        six_step->six_step_cw_array = six_step_adc_cw_array;
+        six_step->six_step_ccw_array = six_step_adc_ccw_array;
     }
 
     *handle = (bldc_six_step_handle_t)six_step;
@@ -516,18 +532,14 @@ uint8_t bldc_six_step_operation(void *handle)
         }
 
         /*!< Starting strong drag phase change */
-        bldc_six_step_turn(handle);
         if (++six_step->control_param->phase_cnt >= 7) {
             six_step->control_param->phase_cnt = 1;
         }
-
+        bldc_six_step_turn(handle);
     } else if (six_step->control_param->status == ALIGNMENT) {
         six_step->control_param->duty = ALIGNMENTDUTY;
         /*!< Aligning the initial phase */
         bldc_six_step_turn(handle);
-        if (++six_step->control_param->phase_cnt >= 7) {
-            six_step->control_param->phase_cnt = 1;
-        }
         six_step->control_param->duty = RAMP_DUTY_STA;
         six_step->control_param->drag_time = RAMP_TIM_STA;
     } else if (six_step->control_param->status == INJECT) {

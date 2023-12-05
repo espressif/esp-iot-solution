@@ -87,48 +87,54 @@ uint8_t bldc_zero_cross_adc_operation(void *handle)
     bldc_zero_cross_adc_t *zero_cross = (bldc_zero_cross_adc_t *)handle;
     /*!< ADC injection phase */
     zero_cross->control_param->speed_count++;
+    zero_cross->speed_cnt++;
+    static bool speed_clac_flag = false;
+    /*!< Motor changed six phases */
+    if (zero_cross->control_param->phase_cnt == 1 && !speed_clac_flag) {
+        speed_clac_flag = true;
+        if (zero_cross->speed_cnt < SKIP_INVALID_SPEED_CALCULATION) {
+        } else {
+            uint32_t speed_rpm = 0;
+            if (zero_cross->control_param->dir == CCW) {
+                /*!< ft/(n*c) * 60; where ft is the counting frequency, that is, the frequency of the cycle interrupt, n is the polar logarithm, c is the number of times to remember */
+                speed_rpm = (uint32_t)(ADC_RPM_CALCULATION_COEFFICIENT / zero_cross->speed_cnt);
+            } else {
+                speed_rpm = (uint32_t)(ADC_RPM_CALCULATION_COEFFICIENT / zero_cross->speed_cnt);
+            }
+            BLDC_LPF(zero_cross->control_param->speed_rpm, speed_rpm, 0.2);
+            ESP_LOGD(TAG, "speed_rpm: %"PRIu32", speed_count: %"PRIu32"\n", zero_cross->control_param->speed_rpm, zero_cross->speed_cnt);
+        }
+        zero_cross->speed_cnt = 0;
+    } else if (zero_cross->control_param->phase_cnt != 1) {
+        speed_clac_flag = false;
+    }
+
     if (zero_cross->control_param->status == DRAG) {
-        if (zero_cross->control_param->speed_count >= ENTER_CLOSE_TIME) {
+        if (zero_cross->control_param->speed_count >= 10000) {
             zero_cross->control_param->speed_count = 0;
             return 1;
         }
     } else {
-        zero_cross->speed_cnt++;
+        ESP_LOGD(TAG, "%"PRIu32",%"PRIu32",%d\n", zero_cross->control_param->adc_value[0], zero_cross->control_param->adc_value[1] >> 1, zero_cross->control_param->phase_cnt);
+        uint8_t ret = 0;
         if (zero_cross->control_param->phase_change_done == true) {
 
-            if (++zero_cross->avoid_continue_current >= 4) {
+            if (++zero_cross->avoid_continue_current >= AVOID_CONTINUE_CURRENT_TIME) {
                 zero_cross->control_param->phase_cnt = zero_cross_adc_get_phase(zero_cross->control_param->phase_cnt, ZERO_REPEAT_TIME, zero_cross->control_param->adc_value);
-            }
 
-            if (zero_cross->control_param->phase_cnt == zero_cross->control_param->phase_cnt_prev) {
-                zero_cross->control_param->filter_failed_count++;
-            } else {
-                zero_cross->control_param->filter_delay = zero_cross->control_param->speed_count * 3.0 / ZERO_CROSS_ADVANCE; /*!< Thirty-degree time delay. At some point compensation is required */
-                zero_cross->control_param->phase_change_done = false;
-                zero_cross->control_param->speed_count = 0;
-                zero_cross->control_param->filter_failed_count = 0;
-                zero_cross->avoid_continue_current = 0;
-            }
-
-            static bool speed_clac_flag = false;
-            /*!< Motor changed six phases */
-            if (zero_cross->control_param->phase_cnt == 1 && !speed_clac_flag) {
-                speed_clac_flag = true;
-                if (zero_cross->speed_cnt < SKIP_INVALID_SPEED_CALCULATION) {
+                if (zero_cross->control_param->phase_cnt == zero_cross->control_param->phase_cnt_prev) {
+                    zero_cross->control_param->filter_failed_count++;
                 } else {
-                    uint32_t speed_rpm = 0;
-                    if (zero_cross->control_param->dir == CCW) {
-                        /*!< ft/(n*c) * 60; where ft is the counting frequency, that is, the frequency of the cycle interrupt, n is the polar logarithm, c is the number of times to remember */
-                        speed_rpm = (uint32_t)(ADC_RPM_CALCULATION_COEFFICIENT / zero_cross->speed_cnt);
-                    } else {
-                        speed_rpm = -(uint32_t)(ADC_RPM_CALCULATION_COEFFICIENT / zero_cross->speed_cnt);
-                    }
-                    BLDC_LPF(zero_cross->control_param->speed_rpm, speed_rpm, 0.2);
+                    zero_cross->control_param->filter_delay = zero_cross->control_param->speed_count * 3.0 / ZERO_CROSS_ADVANCE; /*!< Thirty-degree time delay. At some point compensation is required */
+                    zero_cross->control_param->phase_change_done = false;
+                    zero_cross->control_param->speed_count = 0;
+                    zero_cross->control_param->filter_failed_count = 0;
+                    zero_cross->avoid_continue_current = 0;
+                    ret = 1;
                 }
-                zero_cross->speed_cnt = 0;
-            } else if (zero_cross->control_param->phase_cnt != 1) {
-                speed_clac_flag = false;
             }
+
+            return  ret;
         }
     }
     return 0;
