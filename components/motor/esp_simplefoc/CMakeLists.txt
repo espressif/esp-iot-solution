@@ -5,11 +5,12 @@ set(SRC_FILES
     "port/esp/esp_hal_bldc_3pwm.cpp"
     "port/esp/esp_app_fmath.cpp"
     "port/esp/esp_app_print.cpp"
-    "port/angle_sensor/sensor_as5600.c")
+    "port/angle_sensor/as5600.cpp"
+    "port/angle_sensor/mt6701.cpp")
 
 set(INC_FILES "port/esp/include/" "port/angle_sensor")
 set(IGNORE_FILES "port/esp/esp_hal_adc.cpp" "port/esp/esp_hal_mcpwm.cpp"
-                 "port/esp/esp_hal_bldc_3pwm.cpp")
+                 "port/esp/esp_hal_bldc_3pwm.cpp" "port/angle_sensor/mt6701.cpp")
 
 idf_component_register(
   SRCS

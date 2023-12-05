@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -340,41 +340,41 @@ int BLDCDriver3PWM::init()
 
         mcpwm_period = timer_config.period_ticks;
         initialized = 1;
-    } else 
+    } else
 #endif
-    if (ret == 2) {
-        // ledc
-        driverMode = DriverMode::ledc;
-        printf("Current Driver uses LEDC Channel:%d %d %d\n", auto_ledc_channels[0], auto_ledc_channels[1], auto_ledc_channels[2]);
-        ledc_channels = auto_ledc_channels;
-        setLedcChannelUsed(ledc_channels); //  mark this ledc channel is used.
+        if (ret == 2) {
+            // ledc
+            driverMode = DriverMode::ledc;
+            printf("Current Driver uses LEDC Channel:%d %d %d\n", auto_ledc_channels[0], auto_ledc_channels[1], auto_ledc_channels[2]);
+            ledc_channels = auto_ledc_channels;
+            setLedcChannelUsed(ledc_channels); //  mark this ledc channel is used.
 
-        ledc_timer_config_t ledc_timer = {
-            .speed_mode = _LEDC_MODE,
-            .duty_resolution = _LEDC_DUTY_RES,
-            .timer_num = LEDC_TIMER_0,
-            .freq_hz = _LEDC_FREQUENCY, // Set output frequency at 20 kHz
-            .clk_cfg = LEDC_USE_APB_CLK
-        };
-        ESP_ERROR_CHECK(ledc_timer_config(&ledc_timer));
+            ledc_timer_config_t ledc_timer = {
+                .speed_mode = _LEDC_MODE,
+                .duty_resolution = _LEDC_DUTY_RES,
+                .timer_num = LEDC_TIMER_0,
+                .freq_hz = _LEDC_FREQUENCY, // Set output frequency at 20 kHz
+                .clk_cfg = LEDC_USE_APB_CLK
+            };
+            ESP_ERROR_CHECK(ledc_timer_config(&ledc_timer));
 
-        int pins[3] = {pwmA, pwmB, pwmC}; // save pins
+            int pins[3] = {pwmA, pwmB, pwmC}; // save pins
 
-        ledc_channel_config_t ledc_channel;
-        for (int i = 0; i < 3; i++) {
-            ledc_channel.speed_mode = _LEDC_MODE;
-            ledc_channel.timer_sel = LEDC_TIMER_0;
-            ledc_channel.duty = 0;
-            ledc_channel.hpoint = 0;
-            ledc_channel.intr_type = LEDC_INTR_DISABLE;
-            ledc_channel.channel = static_cast<ledc_channel_t>(ledc_channels[i]);
-            ledc_channel.gpio_num = pins[i];
-            ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel));
+            ledc_channel_config_t ledc_channel;
+            for (int i = 0; i < 3; i++) {
+                ledc_channel.speed_mode = _LEDC_MODE;
+                ledc_channel.timer_sel = LEDC_TIMER_0;
+                ledc_channel.duty = 0;
+                ledc_channel.hpoint = 0;
+                ledc_channel.intr_type = LEDC_INTR_DISABLE;
+                ledc_channel.channel = static_cast<ledc_channel_t>(ledc_channels[i]);
+                ledc_channel.gpio_num = pins[i];
+                ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel));
+            }
+
+            initialized = 1;
+            mcpwm_period = _LEDC_DUTY;
         }
-
-        initialized = 1;
-        mcpwm_period = _LEDC_DUTY;
-    }
 
     return 1;
 }
