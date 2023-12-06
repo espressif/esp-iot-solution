@@ -37,6 +37,8 @@ not_formatted_permanent:
     - "components/gui/lvgl_gui/"
     - "components/usb/usb_stream/test_apps/main/wave_1ch_16bits.c"
     - "components/utilities/xz/"
+    - "docs/doxygen-known-warnings.txt"
+    - "docs/sphinx-known-warnings.txt"
     - "examples/hmi/lvgl_coffee/"
     - "examples/hmi/lvgl_example/"
     - "examples/hmi/lvgl_thermostat/"

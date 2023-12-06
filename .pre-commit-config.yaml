@@ -20,12 +20,14 @@ repos:
         # items are:
         # 1 - some file extensions
         # 2 - any file matching *test*/*expected* (for host tests, if possible use this naming pattern always)
-        # 3 - any directory named 'testdata'
-        # 4 - protobuf auto-generated files
+        # 3 - any file with known-warnings in the name
+        # 4 - any directory named 'testdata'
+        # 5 - protobuf auto-generated files
         exclude: &whitespace_excludes |
           (?x)^(
             .+\.(md|rst|map|bin)|
             .+test.*\/.*expected.*|
+            .+known-warnings.*|
             .+\/testdata\/.+|
             .*_pb2.py|
             .*.pb-c.h|

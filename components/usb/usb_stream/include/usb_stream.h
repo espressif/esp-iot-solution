@@ -88,7 +88,7 @@ typedef struct uvc_config {
     uint8_t *xfer_buffer_b;         /*!< Buffer b for usb payload */
     uint32_t frame_buffer_size;     /*!< Frame buffer size, must larger than one frame size */
     uint8_t *frame_buffer;          /*!< Buffer for one frame */
-    uvc_frame_callback_t *frame_cb; /*!< callback function to handle incoming frame */
+    uvc_frame_callback_t frame_cb;  /*!< callback function to handle incoming frame */
     void *frame_cb_arg;             /*!< callback function arg */
     /*!< Optional configs, Users need to specify parameters manually when they want to
     skip the get and process descriptors steps (used to speed up startup)*/
@@ -139,13 +139,13 @@ typedef struct {
  * @brief user callback function to handle incoming mic frames
  *
  */
-typedef void(mic_callback_t)(mic_frame_t *frame, void *user_ptr);
+typedef void(*mic_callback_t)(mic_frame_t *frame, void *user_ptr);
 
 /**
  * @brief user callback function to handle usb device connection status
  *
  */
-typedef void(state_callback_t)(usb_stream_state_t state, void *user_ptr);
+typedef void(*state_callback_t)(usb_stream_state_t state, void *user_ptr);
 
 /**
  * @brief UAC configurations, for params with (optional) label, users do not need to specify manually,
@@ -160,7 +160,7 @@ typedef struct {
     uint32_t spk_samples_frequence;      /*!< speaker frequence(Hz), UAC_FREQUENCY_ANY for any frequency */
     uint32_t spk_buf_size;               /*!< size of speaker send buffer, should be a multiple of spk_ep_mps */
     uint32_t mic_buf_size;               /*!< mic receive buffer size, 0 if not use */
-    mic_callback_t *mic_cb;              /*!< mic callback, can not block in here!, NULL if not use */
+    mic_callback_t mic_cb;               /*!< mic callback, can not block in here!, NULL if not use */
     void *mic_cb_arg;                    /*!< mic callback args, NULL if not use */
     /*!< Optional configs, Users need to specify parameters manually when they want to
     skip the get and process descriptors steps (used to speed up startup)*/
@@ -245,7 +245,7 @@ esp_err_t usb_streaming_connect_wait(size_t timeout_ms);
  *    - ESP_OK Success
  *    - ESP_ERR_INVALID_STATE USB streaming is running, callback need register before start
  */
-esp_err_t usb_streaming_state_register(state_callback_t *cb, void *user_ptr);
+esp_err_t usb_streaming_state_register(state_callback_t cb, void *user_ptr);
 
 /**
  * @brief Control USB streaming with specific stream and control type

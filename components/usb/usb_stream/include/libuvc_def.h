@@ -197,4 +197,4 @@ typedef struct uvc_frame {
 /** A callback function to handle incoming assembled UVC frames
  * @ingroup streaming
  */
-typedef void(uvc_frame_callback_t)(struct uvc_frame *frame, void *user_ptr);
+typedef void(*uvc_frame_callback_t)(struct uvc_frame *frame, void *user_ptr);

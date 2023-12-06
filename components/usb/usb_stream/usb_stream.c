@@ -399,7 +399,7 @@ typedef struct {
     uint32_t last_scr, hold_last_scr;
     size_t got_bytes, hold_bytes;
     uint8_t *outbuf, *holdbuf;
-    uvc_frame_callback_t *user_cb;
+    uvc_frame_callback_t user_cb;
     void *user_ptr;
     SemaphoreHandle_t cb_mutex;
     TaskHandle_t taskh;
@@ -491,7 +491,7 @@ typedef struct {
     _enum_stage_t enum_stage;
     // dynamic values should be protect
     _device_state_t state;
-    state_callback_t *state_cb;
+    state_callback_t state_cb;
     void *state_cb_arg;
     uint32_t flags;
 } _usb_device_t;
@@ -2037,7 +2037,7 @@ static void _sample_processing_task(void *arg);
  * @param flags Stream setup flags, currently undefined. Set this to zero. The lower bit
  * is reserved for backward compatibility.
  */
-static uvc_error_t uvc_stream_start(_uvc_stream_handle_t *strmh, uvc_frame_callback_t *cb, void *user_ptr, uint8_t flags)
+static uvc_error_t uvc_stream_start(_uvc_stream_handle_t *strmh, uvc_frame_callback_t cb, void *user_ptr, uint8_t flags)
 {
     if (strmh->running) {
         ESP_LOGW(TAG, "line:%u UVC_ERROR_BUSY", __LINE__);
@@ -2162,7 +2162,7 @@ IRAM_ATTR static esp_err_t _ring_buffer_pop(RingbufHandle_t ringbuf_hdl, uint8_t
     return ESP_FAIL;
 }
 
-IRAM_ATTR static void _processing_mic_pipe(hcd_pipe_handle_t pipe_hdl, mic_callback_t *user_cb, void *user_ptr, bool if_enqueue)
+IRAM_ATTR static void _processing_mic_pipe(hcd_pipe_handle_t pipe_hdl, mic_callback_t user_cb, void *user_ptr, bool if_enqueue)
 {
     if (pipe_hdl == NULL) {
         return;
@@ -3698,7 +3698,7 @@ esp_err_t usb_streaming_connect_wait(size_t timeout_ms)
     return ESP_OK;
 }
 
-esp_err_t usb_streaming_state_register(state_callback_t *cb, void *user_ptr)
+esp_err_t usb_streaming_state_register(state_callback_t cb, void *user_ptr)
 {
     if (s_usb_dev.event_group_hdl) {
         ESP_LOGW(TAG, "USB streaming is running, callback need register before start");
