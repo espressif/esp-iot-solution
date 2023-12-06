@@ -102,6 +102,19 @@ build_example_bluetooth_ble_conn_mgr_ble_spp_server:
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_conn_mgr/ble_spp/spp_server
 
+build_example_bluetooth_ble_hrp:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_bluetooth_ble_hrp
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.3
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
+      - IMAGE: espressif/idf:release-v5.1
+  variables:
+    EXAMPLE_DIR: examples/bluetooth/ble_profiles/ble_hrp
+
 build_example_bluetooth_ble_ota:
   extends:
     - .build_examples_template
