@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+/* SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -128,6 +128,7 @@ typedef struct {
     char *(*get)(const char *base_url, const char *api_key, const char *endpoint);                                                     /*!<  Perform an HTTP GET request. */
     char *(*del)(const char *base_url, const char *api_key, const char *endpoint);                                                     /*!<  Perform an HTTP DELETE request. */
     char *(*post)(const char *base_url, const char *api_key, const char *endpoint, char *jsonBody);                                    /*!<  Perform an HTTP POST request. */
+    char *(*speechpost)(const char *base_url, const char *api_key, const char *endpoint, char *jsonBody, size_t *output_len);          /*!<  Perform an HTTP POST request for speech. */
     char *(*upload)(const char *base_url, const char *api_key, const char *endpoint, const char *boundary, uint8_t *data, size_t len); /*!<  Upload data using an HTTP request. */
 } _OpenAI_t;
 
@@ -1779,6 +1780,178 @@ static const char *audio_input_mime[] = {
     "audio/webm"
 };
 
+static const char *audio_speech_formats[] = {"mp3", "opus", "aac", "flac"};
+
+/**
+ * @brief Gives audio from the input text.
+ *
+ */
+typedef struct {
+    OpenAI_AudioSpeech_t parent;              /*!< Base object */
+    _OpenAI_t *oai;                                  /*!< Pointer to the OpenAI object */
+    char *model;                                     /*!< ID of the model to use. */
+    char *voice;
+    float speed;
+    OpenAI_Audio_Output_Format response_format;    /*!< The format of the output, in one of these options: "mp3", "opus", "aac", or "flac"*/
+} _OpenAI_AudioSpeech_t;
+
+static void OpenAI_AudioSpeechDelete(OpenAI_AudioSpeech_t *audioSpeech)
+{
+    _OpenAI_AudioSpeech_t *_audioSpeech = __containerof(audioSpeech, _OpenAI_AudioSpeech_t, parent);
+    if (_audioSpeech != NULL) {
+        if (_audioSpeech->model != NULL) {
+            free(_audioSpeech->model);
+            _audioSpeech->model = NULL;
+        }
+        if (_audioSpeech->voice != NULL) {
+            free(_audioSpeech->voice);
+            _audioSpeech->voice = NULL;
+        }
+        free(_audioSpeech);
+        _audioSpeech = NULL;
+    }
+}
+
+static void OpenAI_AudioSpeechSetModel(OpenAI_AudioSpeech_t *speech, const char *m)
+{
+    _OpenAI_AudioSpeech_t *_speech = __containerof(speech, _OpenAI_AudioSpeech_t, parent);
+    if (_speech->model != NULL) {
+        free(_speech->model);
+        _speech->model = NULL;
+    }
+    _speech->model = strdup(m);
+}
+
+static void OpenAI_AudioSpeechSetVoice(OpenAI_AudioSpeech_t *speech, const char *m)
+{
+    _OpenAI_AudioSpeech_t *_speech = __containerof(speech, _OpenAI_AudioSpeech_t, parent);
+    if (_speech->voice != NULL) {
+        free(_speech->voice);
+        _speech->voice = NULL;
+    }
+    _speech->voice = strdup(m);
+}
+
+static void OpenAI_AudioSpeechSetSpeed(OpenAI_AudioSpeech_t *speech, float t)
+{
+    _OpenAI_AudioSpeech_t *_speech = __containerof(speech, _OpenAI_AudioSpeech_t, parent);
+    if (t >= 0.25 && t <= 4.0) {
+        _speech->speed = t;
+    }
+}
+
+static void OpenAI_AudioSpeechSetResponseFormat(OpenAI_AudioSpeech_t *audioCreateSpeech, OpenAI_Audio_Output_Format rf)
+{
+    _OpenAI_AudioSpeech_t *_audioCreateSpeech = __containerof(audioCreateSpeech, _OpenAI_AudioSpeech_t, parent);
+    if (rf >= OPENAI_AUDIO_OUTPUT_FORMAT_MP3 && rf <= OPENAI_AUDIO_OUTPUT_FORMAT_FLAC) {
+        _audioCreateSpeech->response_format = rf;
+    }
+}
+
+/**
+ * @brief Gives an audio from the input text.
+ *
+ */
+typedef struct {
+    OpenAI_SpeechResponse_t parent;
+    uint32_t len;
+    char *data;
+} _OpenAI_SpeechResponse_t;
+
+static void OpenAI_SpeechResponseDelete(OpenAI_SpeechResponse_t *audioSpeech)
+{
+    _OpenAI_SpeechResponse_t *_audioSpeech = __containerof(audioSpeech, _OpenAI_SpeechResponse_t, parent);
+
+    if (_audioSpeech != NULL) {
+        if (_audioSpeech->data) {
+            free(_audioSpeech->data);
+            _audioSpeech->data = NULL;
+        }
+
+        free(_audioSpeech);
+        _audioSpeech = NULL;
+    }
+}
+
+static uint32_t OpenAI_SpeechBufferGetLen(OpenAI_SpeechResponse_t *audioSpeech)
+{
+    _OpenAI_SpeechResponse_t *_audioSpeech = __containerof(audioSpeech, _OpenAI_SpeechResponse_t, parent);
+    return _audioSpeech->len;
+}
+
+static char *OpenAI_SpeechGetDate(OpenAI_SpeechResponse_t *audioSpeech)
+{
+    _OpenAI_SpeechResponse_t *_audioSpeech = __containerof(audioSpeech, _OpenAI_SpeechResponse_t, parent);
+    return (_audioSpeech->data);
+}
+
+static OpenAI_SpeechResponse_t *OpenAI_SpeechResponseCreate(char *payload, size_t dataLength)
+{
+    _OpenAI_SpeechResponse_t  *_audioSpeech = (_OpenAI_SpeechResponse_t *)calloc(1, sizeof(_OpenAI_SpeechResponse_t));
+    OPENAI_ERROR_CHECK(NULL != _audioSpeech, "calloc failed!", NULL);
+    if (payload == NULL) {
+        return &_audioSpeech->parent;
+    }
+
+    _audioSpeech->len = dataLength;
+    _audioSpeech->data = (char *)malloc(dataLength * sizeof(char));
+    OPENAI_ERROR_CHECK_GOTO(_audioSpeech->data != NULL, "malloc failed!", end);
+    memcpy(_audioSpeech->data, payload, dataLength);
+
+    free(payload);
+
+    _audioSpeech->parent.getLen = &OpenAI_SpeechBufferGetLen;
+    _audioSpeech->parent.getData = &OpenAI_SpeechGetDate;
+    _audioSpeech->parent.delete = &OpenAI_SpeechResponseDelete;
+    return &_audioSpeech->parent;
+end:
+    free(payload);
+    OpenAI_SpeechResponseDelete(&_audioSpeech->parent);
+    return NULL;
+}
+
+OpenAI_SpeechResponse_t *OpenAI_AudioSpeechMessage(OpenAI_AudioSpeech_t *audioSpeech, char *p)
+{
+    size_t dataLength = 0;
+    const char *endpoint = "audio/speech";
+    OpenAI_SpeechResponse_t *result = NULL;
+    cJSON *req = cJSON_CreateObject();
+    OPENAI_ERROR_CHECK(req != NULL, "cJSON_CreateObject failed!", NULL);
+    _OpenAI_AudioSpeech_t *_audioSpeech = __containerof(audioSpeech, _OpenAI_AudioSpeech_t, parent);
+    reqAddString("model", (_audioSpeech->model == NULL) ? "tts-1" : _audioSpeech->model);
+    reqAddString("input", p);
+    reqAddString("voice", (_audioSpeech->voice == NULL) ? "alloy" : _audioSpeech->voice);
+    if (_audioSpeech->response_format != OPENAI_AUDIO_OUTPUT_FORMAT_MP3) {
+        reqAddString("response_format", audio_speech_formats[_audioSpeech->response_format]);
+    }
+    if (_audioSpeech->speed != 1.0) {
+        reqAddNumber("speed", _audioSpeech->speed);
+    }
+    char *jsonBody = cJSON_Print(req);
+    ESP_LOGD(TAG, "json body for Speech Message %s", jsonBody);
+    cJSON_Delete(req);
+    char *res = _audioSpeech->oai->speechpost(_audioSpeech->oai->base_url, _audioSpeech->oai->api_key, endpoint, jsonBody, &dataLength);
+    free(jsonBody);
+    OPENAI_ERROR_CHECK(res != NULL, "Empty result!", result);
+    return OpenAI_SpeechResponseCreate(res, dataLength);
+}
+
+static OpenAI_AudioSpeech_t *OpenAI_AudioSpeechCreate(OpenAI_t *openai)
+{
+    _OpenAI_AudioSpeech_t *_audioCreateSpeech = (_OpenAI_AudioSpeech_t *)calloc(1, sizeof(_OpenAI_AudioSpeech_t));
+    OPENAI_ERROR_CHECK(_audioCreateSpeech != NULL, "Failed to allocate _audioCreateSpeech!", NULL);
+
+    _audioCreateSpeech->oai = __containerof(openai, _OpenAI_t, parent);
+    _audioCreateSpeech->response_format = OPENAI_AUDIO_OUTPUT_FORMAT_MP3;
+    _audioCreateSpeech->parent.setModel = &OpenAI_AudioSpeechSetModel;
+    _audioCreateSpeech->parent.setVoice = &OpenAI_AudioSpeechSetVoice;
+    _audioCreateSpeech->parent.setSpeed = &OpenAI_AudioSpeechSetSpeed;
+    _audioCreateSpeech->parent.setResponseFormat = &OpenAI_AudioSpeechSetResponseFormat;
+    _audioCreateSpeech->parent.speech = &OpenAI_AudioSpeechMessage;
+
+    return &_audioCreateSpeech->parent;
+}
+
 /**
  * @brief Transcribes audio into the input language.
  *
@@ -2238,6 +2411,75 @@ end:
     return result != NULL ? result : NULL;
 }
 
+static char *OpenAI_Speech_Request(const char *base_url, const char *api_key, const char *endpoint, const char *content_type, esp_http_client_method_t method, const char *boundary, uint8_t *data, size_t len, size_t *output_len)
+{
+    ESP_LOGD(TAG, "\"%s\", len=%u", endpoint, len);
+    char *url = NULL;
+    char *result = NULL;
+    asprintf(&url, "%s%s", base_url, endpoint);
+    OPENAI_ERROR_CHECK(url != NULL, "Failed to allocate url!", NULL);
+    esp_http_client_config_t config = {
+        .url = url,
+        .method = method,
+        .timeout_ms = 60000,
+        .crt_bundle_attach = esp_crt_bundle_attach,
+    };
+    esp_http_client_handle_t client = esp_http_client_init(&config);
+    char *headers = NULL;
+    if (boundary) {
+        asprintf(&headers, "%s; boundary=%s", content_type, boundary);
+    } else {
+        asprintf(&headers, "%s", content_type);
+    }
+    OPENAI_ERROR_CHECK_GOTO(headers != NULL, "Failed to allocate headers!", end);
+    esp_http_client_set_header(client, "Content-Type", headers);
+    ESP_LOGD(TAG, "headers:\r\n%s", headers);
+    free(headers);
+
+    asprintf(&headers, "Bearer %s", api_key);
+    OPENAI_ERROR_CHECK_GOTO(headers != NULL, "Failed to allocate headers!", end);
+    esp_http_client_set_header(client, "Authorization", headers);
+    free(headers);
+
+    esp_err_t err = esp_http_client_open(client, len);
+    ESP_LOGD(TAG, "data:\r\n%s", data);
+
+    OPENAI_ERROR_CHECK_GOTO(err == ESP_OK, "Failed to open client!", end);
+    if (len > 0) {
+        int wlen = esp_http_client_write(client, (const char *)data, len);
+        OPENAI_ERROR_CHECK_GOTO(wlen >= 0, "Failed to write client!", end);
+    }
+    int content_length = esp_http_client_fetch_headers(client);
+    if (esp_http_client_is_chunked_response(client)) {
+        esp_http_client_get_chunk_length(client, &content_length);
+    }
+    ESP_LOGD(TAG, "chunk_length=%d", content_length); //4096
+    OPENAI_ERROR_CHECK_GOTO(content_length >= 0, "HTTP client fetch headers failed!", end);
+
+    *output_len = 0;
+    int i = 0;
+    while (false == esp_http_client_is_complete_data_received(client)) {
+        result = (char *)realloc(result, *output_len + content_length + 1);
+        OPENAI_ERROR_CHECK_GOTO(result != NULL, "Chunk Data reallocated Failed", end);
+        int read = esp_http_client_read_response(client, result + (int) * output_len, content_length);
+        *output_len += read;
+        ESP_LOGD(TAG, "HTTP_READ:=%d", read);
+        i++;
+    }
+    ESP_LOGD(TAG, "output_len: %d\n", (int)*output_len);
+
+end:
+    free(url);
+    esp_http_client_close(client);
+    esp_http_client_cleanup(client);
+    return result != NULL ? result : NULL;
+}
+
+static char *OpenAI_Speech_Post(const char *base_url, const char *api_key, const char *endpoint, char *jsonBody, size_t *output_len)
+{
+    return OpenAI_Speech_Request(base_url, api_key, endpoint, "application/json", HTTP_METHOD_POST, NULL, (uint8_t *)jsonBody, strlen(jsonBody), output_len);
+}
+
 static char *OpenAI_Upload(const char *base_url, const char *api_key, const char *endpoint, const char *boundary, uint8_t *data, size_t len)
 {
     return OpenAI_Request(base_url, api_key, endpoint, "multipart/form-data", HTTP_METHOD_POST, boundary, data, len);
@@ -2314,9 +2556,15 @@ OpenAI_t *OpenAICreate(const char *api_key)
     _oai->parent.audioTranslationDelete = &OpenAI_AudioTranslationDelete;
 #endif
 
+#if CONFIG_ENABLE_AUDIO_SPEECH
+    _oai->parent.audioSpeechCreate = &OpenAI_AudioSpeechCreate;
+    _oai->parent.audioSpeechDelete = &OpenAI_AudioSpeechDelete;
+#endif
+
     _oai->get = &OpenAI_Get;
     _oai->del = &OpenAI_Del;
     _oai->post = &OpenAI_Post;
+    _oai->speechpost = &OpenAI_Speech_Post;
     _oai->upload = &OpenAI_Upload;
     return &_oai->parent;
 }
