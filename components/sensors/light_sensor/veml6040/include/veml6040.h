@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #ifndef _VEML6040_H_
 #define _VEML6040_H_
 #include "i2c_bus.h"
@@ -29,7 +28,7 @@ typedef enum {
 } veml6040_integration_time_t;
 
 typedef enum {
-    VEML6040_TRIGGER_DIS = 0, /*!< set not trigger 				*/
+    VEML6040_TRIGGER_DIS = 0, /*!< set not trigger              */
     VEML6040_TRIGGER_ONCE = 1, /*!< set trigger one time detect cycle*/
     VEML6040_TRIGGER_MAX,
 } veml6040_trigger_t;
@@ -84,7 +83,7 @@ esp_err_t veml6040_delete(veml6040_handle_t *sensor);
 
 /**
  * @brief  set veml6040 mode
- * @param  sensor device object	handle of veml6040
+ * @param  sensor device object handle of veml6040
  * @param  device_info device config info
  * @return
  *     - ESP_OK Success
@@ -94,7 +93,7 @@ esp_err_t veml6040_set_mode(veml6040_handle_t sensor, veml6040_config_t *device_
 
 /**
  * @brief  set veml6040 mode
- * @param  sensor device object	handle of veml6040
+ * @param  sensor device object handle of veml6040
  * @param  device_info device config info
  * @return
  *     - ESP_OK Success
@@ -113,7 +112,7 @@ int veml6040_get_red(veml6040_handle_t sensor);
 
 /**
  * Get the current green light brightness value
- * @param  sensor device object	handle of veml6040
+ * @param  sensor device object handle of veml6040
  * @return
  *    - green valueveml6040_info
  *    - -1 if fail to read sensor
@@ -122,7 +121,7 @@ int veml6040_get_green(veml6040_handle_t sensor);
 
 /**
  * Get the current blue light brightness value
- * @param  sensor device object	handle of veml6040
+ * @param  sensor device object handle of veml6040
  * @return
  *    - blue value
  *    - -1 if fail to read sensor
@@ -131,7 +130,7 @@ int veml6040_get_blue(veml6040_handle_t sensor);
 
 /**
  * Get the current white light brightness value
- * @param  sensor device object	handle of veml6040
+ * @param  sensor device object handle of veml6040
  * @return
  *    - white value
  *    - -1 if fail to read sensor
@@ -140,7 +139,7 @@ int veml6040_get_white(veml6040_handle_t sensor);
 
 /*
  * Get LUX value
- * @param  sensor device object	handle of veml6040
+ * @param  sensor device object handle of veml6040
  * @return
  *    - LUX value
  *    - -1 if fail to read sensor
@@ -149,7 +148,7 @@ float veml6040_get_lux(veml6040_handle_t sensor);
 
 /*
  * Get color temperature
- * @param  sensor device object	handle of veml6040
+ * @param  sensor device object handle of veml6040
  * @param  offset set offset
  * @note
  *     In open-air conditions the offset = 0.5. Depending on the optical
@@ -164,7 +163,7 @@ float veml6040_get_cct(veml6040_handle_t sensor, float offset);
 #ifdef CONFIG_SENSOR_LIGHT_INCLUDED_VEML6040
 /**
  * @brief initialize veml6040 with default configurations
- * 
+ *
  * @param i2c_bus i2c bus handle the sensor will attached to
  * @return
  *     - ESP_OK Success
@@ -174,7 +173,7 @@ esp_err_t light_sensor_veml6040_init(i2c_bus_handle_t handle);
 
 /**
  * @brief de-initialize veml6040
- * 
+ *
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
@@ -183,7 +182,7 @@ esp_err_t light_sensor_veml6040_deinit(void);
 
 /**
  * @brief test if veml6040 is active
- * 
+ *
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
@@ -193,7 +192,7 @@ esp_err_t light_sensor_veml6040_test(void);
 /**
  * @brief Acquire light sensor color result result one time.
  * light color includes red green blue and white.
- * 
+ *
  * @param r red result (unit:lux)
  * @param g green result (unit:lux)
  * @param b blue result (unit:lux)

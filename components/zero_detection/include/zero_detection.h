@@ -69,7 +69,7 @@ typedef enum {
     GPIO_TYPE,
 } zero_driver_type_t;
 
-/** 
+/**
  * @brief Event callback parameters union
  */
 typedef union {

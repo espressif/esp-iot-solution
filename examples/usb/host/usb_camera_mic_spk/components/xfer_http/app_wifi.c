@@ -39,7 +39,7 @@ static const char *TAG = "camera wifi";
 static int s_retry_num = 0;
 
 static void event_handler(void* arg, esp_event_base_t event_base,
-                                int32_t event_id, void* event_data)
+                          int32_t event_id, void* event_data)
 {
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
         esp_wifi_connect();
@@ -49,7 +49,7 @@ static void event_handler(void* arg, esp_event_base_t event_base,
             s_retry_num++;
             ESP_LOGI(TAG, "retry to connect to the AP");
         }
-        ESP_LOGI(TAG,"connect to the AP fail");
+        ESP_LOGI(TAG, "connect to the AP fail");
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_AP_STACONNECTED) {
         wifi_event_ap_staconnected_t* event = (wifi_event_ap_staconnected_t*) event_data;
         ESP_LOGI(TAG, "station "MACSTR" join, AID=%d",
@@ -67,10 +67,9 @@ static void event_handler(void* arg, esp_event_base_t event_base,
 
 void wifi_init_softap(esp_netif_t *wifi_netif)
 {
-    if (strcmp(EXAMPLE_IP_ADDR, "192.168.4.1"))
-    {
+    if (strcmp(EXAMPLE_IP_ADDR, "192.168.4.1")) {
         esp_netif_ip_info_t ip;
-        memset(&ip, 0 , sizeof(esp_netif_ip_info_t));
+        memset(&ip, 0, sizeof(esp_netif_ip_info_t));
         ip.ip.addr = ipaddr_addr(EXAMPLE_IP_ADDR);
         ip.gw.addr = ipaddr_addr(EXAMPLE_IP_ADDR);
         ip.netmask.addr = ipaddr_addr("255.255.255.0");
@@ -107,7 +106,7 @@ void wifi_init_sta(esp_netif_t *wifi_netif)
     snprintf((char*)wifi_config.sta.ssid, 32, "%s", EXAMPLE_ESP_WIFI_SSID);
     snprintf((char*)wifi_config.sta.password, 64, "%s", EXAMPLE_ESP_WIFI_PASS);
 
-    ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config) );
+    ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
 
     ESP_LOGI(TAG, "wifi_init_sta finished.");
     ESP_LOGI(TAG, "connect to ap SSID:%s password:%s",
@@ -143,7 +142,7 @@ void app_wifi_main()
     }
 
     if (mode == WIFI_MODE_NULL) {
-        ESP_LOGW(TAG,"Neither AP or STA have been configured. WiFi will be off.");
+        ESP_LOGW(TAG, "Neither AP or STA have been configured. WiFi will be off.");
         return;
     }
 

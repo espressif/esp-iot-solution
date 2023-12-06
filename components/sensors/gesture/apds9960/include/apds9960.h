@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #ifndef _APDS9960_H_
 #define _APDS9960_H_
 
@@ -195,7 +194,7 @@ typedef enum {
 #define DEFAULT_PROX_PPULSE     0x87    // 16us, 8 pulses
 #define DEFAULT_GESTURE_PPULSE  0x89    // 16us, 10 pulses
 #define DEFAULT_POFFSET_UR      0       // 0 offset
-#define DEFAULT_POFFSET_DL      0       // 0 offset      
+#define DEFAULT_POFFSET_DL      0       // 0 offset
 #define DEFAULT_CONFIG1         0x60    // No 12x wait (WTIME) factor
 #define DEFAULT_LDRIVE          LED_DRIVE_100MA
 #define DEFAULT_PGAIN           PGAIN_4X
@@ -205,10 +204,10 @@ typedef enum {
 #define DEFAULT_AILT            0xFFFF  // Force interrupt for calibration
 #define DEFAULT_AIHT            0
 #define DEFAULT_PERS            0x11    // 2 consecutive prox or ALS for int.
-#define DEFAULT_CONFIG2         0x01    // No saturation interrupts or LED boost  
+#define DEFAULT_CONFIG2         0x01    // No saturation interrupts or LED boost
 #define DEFAULT_CONFIG3         0       // Enable all photodiodes, no SAI
 #define DEFAULT_GPENTH          40      // Threshold for entering gesture mode
-#define DEFAULT_GEXTH           30      // Threshold for exiting gesture mode    
+#define DEFAULT_GEXTH           30      // Threshold for exiting gesture mode
 #define DEFAULT_GCONF1          0x40    // 4 gesture events for int., 1 for exit
 #define DEFAULT_GGAIN           GGAIN_4X
 #define DEFAULT_GLDRIVE         LED_DRIVE_100MA
@@ -382,7 +381,7 @@ extern "C"
  *     - Others Success
  */
 apds9960_handle_t apds9960_create(i2c_bus_handle_t bus,
-                                      uint8_t dev_addr);
+                                  uint8_t dev_addr);
 
 /**
  * @brief Delete and release a sensor object
@@ -475,7 +474,7 @@ esp_err_t apds9960_set_wait_time(apds9960_handle_t sensor, uint8_t time);
  *     - ESP_FAIL Fail
  */
 esp_err_t apds9960_set_adc_integration_time(apds9960_handle_t sensor,
-        uint16_t iTimeMS);
+                                            uint16_t iTimeMS);
 
 /**
  * @brief Get the integration time for the ADC of the APDS9960, in millis
@@ -498,7 +497,7 @@ float apds9960_get_adc_integration_time(apds9960_handle_t sensor);
  *     - ESP_FAIL Fail
  */
 esp_err_t apds9960_set_ambient_light_gain(apds9960_handle_t sensor,
-        apds9960_again_t aGain);
+                                          apds9960_again_t aGain);
 
 /**
  * @brief Get the color/ALS gain on the APDS9960 (adjusts the sensitivity to light)
@@ -523,7 +522,7 @@ apds9960_again_t apds9960_get_ambient_light_gain(apds9960_handle_t sensor);
  *     - ESP_FAIL Fail
  */
 esp_err_t apds9960_set_led_drive_boost(apds9960_handle_t sensor,
-        apds9960_leddrive_t drive, apds9960_ledboost_t boost);
+                                       apds9960_leddrive_t drive, apds9960_ledboost_t boost);
 
 /**
  * @brief  Enable proximity engine on APDS9960
@@ -548,7 +547,7 @@ esp_err_t apds9960_enable_proximity_engine(apds9960_handle_t sensor, bool en);
  *     - ESP_FAIL Fail
  */
 esp_err_t apds9960_set_proximity_gain(apds9960_handle_t sensor,
-        apds9960_pgain_t pGain);
+                                      apds9960_pgain_t pGain);
 
 /**
  * @brief  Gets the receiver gain for proximity detection
@@ -572,7 +571,7 @@ apds9960_pgain_t apds9960_get_proximity_gain(apds9960_handle_t sensor);
  *     - ESP_FAIL Fail
  */
 esp_err_t apds9960_set_proximity_pulse(apds9960_handle_t sensor,
-        apds9960_ppulse_len_t pLen, uint8_t pulses);
+                                       apds9960_ppulse_len_t pLen, uint8_t pulses);
 
 /**
  * @brief Turns proximity interrupts on or off
@@ -620,7 +619,7 @@ uint8_t apds9960_read_proximity(apds9960_handle_t sensor);
  *     - ESP_FAIL Fail
  */
 esp_err_t apds9960_set_proximity_interrupt_threshold(apds9960_handle_t sensor,
-        uint8_t low, uint8_t high, uint8_t persistance);
+                                                     uint8_t low, uint8_t high, uint8_t persistance);
 
 /**
  * @brief Enable gesture engine on APDS9960
@@ -656,7 +655,7 @@ bool apds9960_gesture_valid(apds9960_handle_t sensor);
  *     - ESP_FAIL Fail
  */
 esp_err_t apds9960_set_gesture_dimensions(apds9960_handle_t sensor,
-        uint8_t dims);
+                                          uint8_t dims);
 
 /**
  * @brief Sets the FIFO threshold for gesture
@@ -669,7 +668,7 @@ esp_err_t apds9960_set_gesture_dimensions(apds9960_handle_t sensor,
  *     - ESP_FAIL Fail
  */
 esp_err_t apds9960_set_gesture_fifo_threshold(apds9960_handle_t sensor,
-        uint8_t thresh);
+                                              uint8_t thresh);
 
 /**
  * @brief  Set the gesture gain for gesture detection
@@ -695,7 +694,7 @@ esp_err_t apds9960_set_gesture_gain(apds9960_handle_t sensor, apds9960_ggain_t g
  *     - ESP_FAIL Fail
  */
 esp_err_t apds9960_set_gesture_proximity_threshold(apds9960_handle_t sensor,
-        uint8_t entthresh, uint8_t exitthresh);
+                                                   uint8_t entthresh, uint8_t exitthresh);
 
 /**
  * @brief Sets the offset for gesture
@@ -711,8 +710,8 @@ esp_err_t apds9960_set_gesture_proximity_threshold(apds9960_handle_t sensor,
  *     - ESP_FAIL Fail
  */
 esp_err_t apds9960_set_gesture_offset(apds9960_handle_t sensor,
-        uint8_t offset_up, uint8_t offset_down, uint8_t offset_left,
-        uint8_t offset_right);
+                                      uint8_t offset_up, uint8_t offset_down, uint8_t offset_left,
+                                      uint8_t offset_right);
 
 /**
  * @brief Processes a gesture event and returns best guessed gesture
@@ -756,7 +755,7 @@ void apds9960_reset_counts(apds9960_handle_t sensor);
  *     - ESP_FAIL Fail
  */
 esp_err_t apds9960_set_gesture_pulse(apds9960_handle_t sensor,
-        apds9960_gpulselen_t gpulseLen, uint8_t pulses);
+                                     apds9960_gpulselen_t gpulseLen, uint8_t pulses);
 
 /**
  * @brief Turns gesture-related interrupts on or off
@@ -828,7 +827,7 @@ bool apds9960_color_data_ready(apds9960_handle_t sensor);
  *     - ESP_FAIL Fail
  */
 esp_err_t apds9960_get_color_data(apds9960_handle_t sensor, uint16_t *r,
-                                      uint16_t *g, uint16_t *b, uint16_t *c);
+                                  uint16_t *g, uint16_t *b, uint16_t *c);
 
 /**
  * @brief  Converts the raw R/G/B values to color temperature in degrees Kelvin
@@ -842,7 +841,7 @@ esp_err_t apds9960_get_color_data(apds9960_handle_t sensor, uint16_t *r,
  *     - Return the results in degrees Kelvin
  */
 uint16_t apds9960_calculate_color_temperature(apds9960_handle_t sensor,
-        uint16_t r, uint16_t g, uint16_t b);
+                                              uint16_t r, uint16_t g, uint16_t b);
 
 /**
  * @brief  Calculate ambient light values
@@ -856,7 +855,7 @@ uint16_t apds9960_calculate_color_temperature(apds9960_handle_t sensor,
  *     - Return the results of ambient light values
  */
 uint16_t apds9960_calculate_lux(apds9960_handle_t sensor, uint16_t r,
-                                    uint16_t g, uint16_t b);
+                                uint16_t g, uint16_t b);
 
 /**
  * @brief Turns color interrupts on or off
@@ -870,7 +869,6 @@ uint16_t apds9960_calculate_lux(apds9960_handle_t sensor, uint16_t r,
  */
 esp_err_t apds9960_enable_color_interrupt(apds9960_handle_t sensor, bool en);
 
-
 /**
  * @brief Set ALS interrupt low/high threshold
  *
@@ -883,7 +881,7 @@ esp_err_t apds9960_enable_color_interrupt(apds9960_handle_t sensor, bool en);
  *     - ESP_FAIL Fail
  */
 esp_err_t apds9960_set_int_limits(apds9960_handle_t sensor, uint16_t l,
-                                      uint16_t h);
+                                  uint16_t h);
 
 /**
  * @brief clear interrupt
@@ -919,7 +917,7 @@ esp_err_t apds9960_enable(apds9960_handle_t sensor, bool en);
  *     - ESP_FAIL Fail
  */
 esp_err_t apds9960_set_light_intlow_threshold(apds9960_handle_t sensor,
-        uint16_t threshold);
+                                              uint16_t threshold);
 
 /**
  * @brief Sets the high threshold for ambient light interrupts
@@ -932,7 +930,7 @@ esp_err_t apds9960_set_light_intlow_threshold(apds9960_handle_t sensor,
  *     - ESP_FAIL Fail
  */
 esp_err_t apds9960_set_light_inthigh_threshold(apds9960_handle_t sensor,
-        uint16_t threshold);
+                                               uint16_t threshold);
 
 #ifdef __cplusplus
 }

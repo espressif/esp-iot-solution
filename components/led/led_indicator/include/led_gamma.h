@@ -24,8 +24,8 @@ uint8_t led_indicator_get_gamma_value(uint8_t input);
  * @brief Create a new gamma table for the LED indicator
  *
  * @param gamma The gamma value to use for the new table, should be larger than 0
- *              Gamma values less than 1 (0-1) create steeper adjustment curves, enhancing details in 
- *              darker areas while compressing brighter areas. On the other hand, gamma values greater 
+ *              Gamma values less than 1 (0-1) create steeper adjustment curves, enhancing details in
+ *              darker areas while compressing brighter areas. On the other hand, gamma values greater
  *              than 1 create gentler adjustment curves, enhancing details in brighter areas but potentially
  *              losing details in darker areas. However, a gamma value greater than 1 is generally considered
  *              more visually pleasing as it better mimics the non-linear perception of brightness by the human eye.
@@ -38,4 +38,3 @@ esp_err_t led_indicator_new_gamma_table(float gamma);
 #ifdef __cplusplus
 }
 #endif
-

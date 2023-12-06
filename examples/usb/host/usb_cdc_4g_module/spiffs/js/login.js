@@ -41,4 +41,3 @@ function login() {
         console.log('基本信息保存：', res)
     })
 }
-

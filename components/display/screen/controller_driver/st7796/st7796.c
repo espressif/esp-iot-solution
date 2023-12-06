@@ -21,7 +21,6 @@ static const char *TAG = "lcd st7796";
         return (ret);                                                           \
     }
 
-
 #define LCD_NAME "ST7796"
 #define LCD_BPP  16
 
@@ -65,7 +64,6 @@ scr_driver_t lcd_st7796_default_driver = {
     .draw_bitmap = lcd_st7796_draw_bitmap,
     .get_info = lcd_st7796_get_info,
 };
-
 
 static esp_err_t lcd_st7796_reg_config(void);
 
@@ -214,7 +212,6 @@ esp_err_t lcd_st7796_set_window(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t 
     LCD_CHECK(ESP_OK == ret, "Set window failed", ESP_FAIL);
     return ESP_OK;
 }
-
 
 esp_err_t lcd_st7796_write_ram_data(uint16_t color)
 {

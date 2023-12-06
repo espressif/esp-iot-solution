@@ -7,18 +7,18 @@ menu "Example Configuration"
         help
             GPIO number on which the "Boot" button is connected. This is generally used
             by the application for custom operations like toggling states, resetting to defaults, etc.
-    
+
     choice JOYSTICK_INPUT_MODE
         prompt "Joystick Input Mode"
         default JOYSTICK_INPUT_MODE_ADC
         help
             Select the mode of joystick input.
-        
+
         config JOYSTICK_INPUT_MODE_ADC
             bool "ADC"
             help
                 Use ADC to read joystick input, using external hardware
-        
+
         config JOYSTICK_INPUT_MODE_CONSOLE
             bool "Console"
             help
@@ -35,7 +35,7 @@ menu "Example Configuration"
             bool "GPIO"
             help
                 Use GPIO to read button input, using external hardware
-        
+
         config BUTTON_INPUT_MODE_BOOT
             bool "Boot"
             help
@@ -50,28 +50,28 @@ menu "Example Configuration"
         help
             Enable this option to demonstrate tear down when the tear down button bitmask combination is pressed.
             Need external buttons with pull-up resistors connected to GPIOs.
-    
+
     config BUTTON_PIN_A
         int "Button A GPIO"
         depends on BUTTON_INPUT_MODE_GPIO
         default 4
         help
-            GPIO pin number on which the "Button A" is connected. 
-    
+            GPIO pin number on which the "Button A" is connected.
+
     config BUTTON_PIN_B
         int "Button B GPIO"
         depends on BUTTON_INPUT_MODE_GPIO
         default 5
         help
-            GPIO pin number on which the "Button B" is connected. 
-    
+            GPIO pin number on which the "Button B" is connected.
+
     config BUTTON_PIN_C
         int "Button C GPIO"
         depends on BUTTON_INPUT_MODE_GPIO
         default 6
         help
             GPIO pin number on which the "Button C" is connected.
-    
+
     config BUTTON_PIN_D
         int "Button D GPIO"
         depends on BUTTON_INPUT_MODE_GPIO

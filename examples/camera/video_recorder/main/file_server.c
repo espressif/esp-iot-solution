@@ -1,11 +1,8 @@
-/* HTTP File Server Example
-
-   This example code is in the Public Domain (or CC0 licensed, at your option.)
-
-   Unless required by applicable law or agreed to in writing, this
-   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-   CONDITIONS OF ANY KIND, either express or implied.
-*/
+/*
+ * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #include <stdio.h>
 #include <string.h>
@@ -104,10 +101,10 @@ static esp_err_t http_resp_dir_html(httpd_req_t *req, const char *dirpath)
 
     /* Send file-list table definition and column labels */
     httpd_resp_sendstr_chunk(req,
-        "<table class=\"fixed\" border=\"1\">"
-        "<col width=\"800px\" /><col width=\"300px\" /><col width=\"300px\" /><col width=\"100px\" />"
-        "<thead><tr><th>Name</th><th>Type</th><th>Size (Bytes)</th><th>Delete</th></tr></thead>"
-        "<tbody>");
+                             "<table class=\"fixed\" border=\"1\">"
+                             "<col width=\"800px\" /><col width=\"300px\" /><col width=\"300px\" /><col width=\"100px\" />"
+                             "<thead><tr><th>Name</th><th>Type</th><th>Size (Bytes)</th><th>Delete</th></tr></thead>"
+                             "<tbody>");
 
     /* Iterate over all files / folders and fetch their names and sizes */
     while ((entry = readdir(dir)) != NULL) {
@@ -265,8 +262,8 @@ static esp_err_t download_get_handler(httpd_req_t *req)
                 httpd_resp_sendstr_chunk(req, NULL);
                 /* Respond with 500 Internal Server Error */
                 httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to send file");
-               return ESP_FAIL;
-           }
+                return ESP_FAIL;
+            }
         }
 
         /* Keep looping till the whole file is sent */

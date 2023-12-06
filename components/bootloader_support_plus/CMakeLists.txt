@@ -6,8 +6,8 @@ set(srcs "src/bootloader_custom_image_format.c"
 set(requires "bootloader" "bootloader_support" "spi_flash")
 
 if(BOOTLOADER_BUILD)
-    list(APPEND srcs "src/bootloader_custom_malloc.c" 
-                     "src/bootloader_decompressor_common.c" 
+    list(APPEND srcs "src/bootloader_custom_malloc.c"
+                     "src/bootloader_decompressor_common.c"
                      "src/bootloader_storage_flash.c")
 else()
     list(APPEND requires "app_update" "esp_partition")

@@ -65,38 +65,38 @@ typedef struct esp_ble_ota_scheme {
      * start the ota service associated with a protocomm instance
      * and a scheme specific configuration
      */
-    esp_err_t (*ota_start) (protocomm_t *pc, void *config);
+    esp_err_t (*ota_start)(protocomm_t *pc, void *config);
 
     /**
      * Function which is to be called by the manager to stop the
      * ota service previously associated with a protocomm instance
      */
-    esp_err_t (*ota_stop) (protocomm_t *pc);
+    esp_err_t (*ota_stop)(protocomm_t *pc);
 
     /**
      * Function which is to be called by the manager to generate
      * a new configuration for the ota service, that is
      * to be passed to ota_start()
      */
-    void *(*new_config) (void);
+    void *(*new_config)(void);
 
     /**
      * Function which is to be called by the manager to delete a
      * configuration generated using new_config()
      */
-    void (*delete_config) (void *config);
+    void (*delete_config)(void *config);
 
     /**
      * Function which is to be called by the manager to set the
      * service name and key values in the configuration structure
      */
-    esp_err_t (*set_config_service) (void *config, const char *service_name, const char *service_key);
+    esp_err_t (*set_config_service)(void *config, const char *service_name, const char *service_key);
 
     /**
      * Function which is to be called by the manager to set a protocomm endpoint
      * with an identifying name and UUID in the configuration structure
      */
-    esp_err_t (*set_config_endpoint) (void *config, const char *endpoint_name, uint16_t uuid);
+    esp_err_t (*set_config_endpoint)(void *config, const char *endpoint_name, uint16_t uuid);
 
 } esp_ble_ota_scheme_t;
 

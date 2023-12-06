@@ -38,7 +38,7 @@ static int elf_args_decode(const char *str, int *argc, char ***argv)
 
     pbuf = malloc(n * sizeof(char *) + len);
     if (!pbuf) {
-        return -ENOMEM;    
+        return -ENOMEM;
     }
 
     argv_buf = (char **)pbuf;
@@ -74,15 +74,15 @@ int app_main(void)
 #ifdef CONFIG_ELF_LOADER_MAIN_ARGS
     if (strlen(CONFIG_ELF_LOADER_MAIN_ARGS_STRING) <= 0) {
         ESP_LOGE(TAG, "Failed to check arguments %s",
-                 CONFIG_ELF_LOADER_MAIN_ARGS_STRING);   
-        return -1;     
+                 CONFIG_ELF_LOADER_MAIN_ARGS_STRING);
+        return -1;
     }
 
     ret = elf_args_decode(CONFIG_ELF_LOADER_MAIN_ARGS_STRING, &argc, &argv);
     if (ret < 0) {
         ESP_LOGE(TAG, "Failed to decode arguments %s errno=%d",
                  CONFIG_ELF_LOADER_MAIN_ARGS_STRING, ret);
-        return ret; 
+        return ret;
     }
 #else
     argc = 0;

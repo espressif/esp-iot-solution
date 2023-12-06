@@ -1,11 +1,8 @@
-/* Camera basic example
-
-   This example code is in the Public Domain (or CC0 licensed, at your option.)
-
-   Unless required by applicable law or agreed to in writing, this
-   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-   CONDITIONS OF ANY KIND, either express or implied.
-*/
+/*
+ * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #include <esp_log.h>
 #include <esp_system.h>
@@ -52,7 +49,7 @@ static esp_err_t init_camera(uint32_t xclk_freq_hz, pixformat_t pixel_format, fr
         .frame_size = frame_size,    // QQVGA-UXGA, sizes above QVGA are not been recommended when not JPEG format.
 
         .jpeg_quality = 30, // 0-63, used only with JPEG format.
-        .fb_count = fb_count,       // For ESP32/ESP32-S2, if more than one, i2s runs in continuous mode. 
+        .fb_count = fb_count,       // For ESP32/ESP32-S2, if more than one, i2s runs in continuous mode.
         .grab_mode = CAMERA_GRAB_WHEN_EMPTY,
         .fb_location = CAMERA_FB_IN_PSRAM
     };
@@ -75,7 +72,7 @@ static esp_err_t init_camera(uint32_t xclk_freq_hz, pixformat_t pixel_format, fr
     }
 
     if (s->id.PID == OV3660_PID || s->id.PID == OV2640_PID) {
-        s->set_vflip(s, 1); // flip it back    
+        s->set_vflip(s, 1); // flip it back
     } else if (s->id.PID == GC0308_PID) {
         s->set_hmirror(s, 0);
     } else if (s->id.PID == GC032A_PID) {
@@ -104,11 +101,11 @@ void app_main()
         ESP_LOGI(TAG, "Taking picture...");
         camera_fb_t *pic = esp_camera_fb_get();
 
-        if(pic){
+        if (pic) {
             // use pic->buf to access the image
             ESP_LOGI(TAG, "Picture taken! Its size was: %zu bytes", pic->len);
             // To enable the frame buffer can be reused again.
-            // Note: If you don't call fb_return(), the next time you call fb_get() you may get 
+            // Note: If you don't call fb_return(), the next time you call fb_get() you may get
             // an error "Failed to get the frame on time!"because there is no frame buffer space available.
             esp_camera_fb_return(pic);
         }

@@ -50,13 +50,13 @@ static void _free(void *ptr)
 static void frame_cb(uvc_frame_t *frame, void *ptr)
 {
     ESP_LOGI(TAG, "uvc callback! frame_format = %d, seq = %"PRIu32", width = %"PRIu32", height = %"PRIu32", length = %u, ptr = %d",
-            frame->frame_format, frame->sequence, frame->width, frame->height, frame->data_bytes, (int) ptr);
+             frame->frame_format, frame->sequence, frame->width, frame->height, frame->data_bytes, (int) ptr);
 
     switch (frame->frame_format) {
-        case UVC_FRAME_FORMAT_MJPEG:
-            break;
-        default:
-            break;
+    case UVC_FRAME_FORMAT_MJPEG:
+        break;
+    default:
+        break;
     }
 }
 
@@ -65,7 +65,9 @@ static void stream_state_changed_cb(usb_stream_state_t event, void *arg)
     switch (event) {
     case STREAM_CONNECTED: {
         TaskHandle_t task_handle = (TaskHandle_t)arg;
-        if (task_handle) xTaskNotifyGive(task_handle);
+        if (task_handle) {
+            xTaskNotifyGive(task_handle);
+        }
         break;
     }
     case STREAM_DISCONNECTED:
@@ -109,7 +111,6 @@ static void stream_control_when_state_changed_cb(usb_stream_state_t event, void 
         break;
     }
 }
-
 
 TEST_CASE("test uvc any resolution", "[devkit][uvc][uvc_only]")
 {
@@ -286,9 +287,11 @@ static void mic_frame_cb(mic_frame_t *frame, void *ptr)
 {
     // We should using higher baudrate here, to reduce the blocking time here
     ESP_LOGV(TAG, "mic callback! bit_resolution = %u, samples_frequence = %"PRIu32", data_bytes = %"PRIu32,
-            frame->bit_resolution, frame->samples_frequence, frame->data_bytes);
+             frame->bit_resolution, frame->samples_frequence, frame->data_bytes);
     // We should never block in mic callback!
-    if (ptr) uac_spk_streaming_write(frame->data, frame->data_bytes, 0);
+    if (ptr) {
+        uac_spk_streaming_write(frame->data, frame->data_bytes, 0);
+    }
 }
 
 TEST_CASE("test uac mic", "[devkit][uac][mic]")
@@ -357,10 +360,12 @@ static void mic_frame_to_sdcard_cb(mic_frame_t *frame, void *ptr)
 {
     // We should using higher baudrate here, to reduce the blocking time here
     ESP_LOGV(TAG, "mic callback! bit_resolution = %u, samples_frequence = %"PRIu32", data_bytes = %"PRIu32,
-            frame->bit_resolution, frame->samples_frequence, frame->data_bytes);
+             frame->bit_resolution, frame->samples_frequence, frame->data_bytes);
     // We should never block in mic callback!
     FILE *fp = (FILE *)ptr;
-    if (fp) fwrite(frame->data, 1, frame->data_bytes, fp);
+    if (fp) {
+        fwrite(frame->data, 1, frame->data_bytes, fp);
+    }
 }
 
 TEST_CASE("test uac mic save to sdcard", "[s3_korvo_2l][uac][mic][sdcard]")
@@ -494,9 +499,9 @@ TEST_CASE("test uac spk", "[devkit][uac][spk]")
             uint16_t *d_buffer = calloc(1, buffer_size);
             TEST_ASSERT_NOT_NULL(d_buffer);
             size_t spk_count = 3;
-            while(spk_count) {
+            while (spk_count) {
                 TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_SPK, CTRL_RESUME, NULL));
-                TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_SPK, CTRL_UAC_VOLUME, (void *)(60/spk_count)));
+                TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_SPK, CTRL_UAC_VOLUME, (void *)(60 / spk_count)));
                 TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_SPK, CTRL_UAC_MUTE, (void *)0));
                 while (1) {
                     if ((uint32_t)(s_buffer + offset_size) >= (uint32_t)(wave_array_32000_16_1 + s_buffer_size)) {
@@ -514,7 +519,7 @@ TEST_CASE("test uac spk", "[devkit][uac][spk]")
                 }
                 spk_count--;
                 vTaskDelay(1000 / portTICK_PERIOD_MS);
-                TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_SPK, CTRL_UAC_VOLUME, (void *)(0/spk_count)));
+                TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_SPK, CTRL_UAC_VOLUME, (void *)(0 / spk_count)));
                 TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_SPK, CTRL_UAC_MUTE, (void *)1));
                 TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_SPK, CTRL_SUSPEND, NULL));
                 vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -548,7 +553,7 @@ TEST_CASE("test uac mic spk loop", "[devkit][uac][mic][spk]")
         to handle usb data from different pipes, and user's callback will be called after new frame ready. */
         TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_start());
         TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_connect_wait(portMAX_DELAY));
-        TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_SPK, CTRL_UAC_VOLUME, (void *)(60/(i+1))));
+        TEST_ASSERT_EQUAL(ESP_OK, usb_streaming_control(STREAM_UAC_SPK, CTRL_UAC_VOLUME, (void *)(60 / (i + 1))));
         size_t test_count2 = 3;
         vTaskDelay(3000 / portTICK_PERIOD_MS);
         while (--test_count2) {
@@ -821,17 +826,16 @@ esp_err_t iot_board_usb_device_set_power(bool on_off, bool from_battery)
 
 esp_err_t iot_board_usb_set_mode(usb_mode_t mode)
 {
-    switch (mode)
-    {
-        case USB_DEVICE_MODE:
-            gpio_set_level(BOARD_IO_USB_SEL, false); //USB_SEL
-            break;
-        case USB_HOST_MODE:
-            gpio_set_level(BOARD_IO_USB_SEL, true); //USB_SEL
-            break;
-        default:
-            assert(0);
-            break;
+    switch (mode) {
+    case USB_DEVICE_MODE:
+        gpio_set_level(BOARD_IO_USB_SEL, false); //USB_SEL
+        break;
+    case USB_HOST_MODE:
+        gpio_set_level(BOARD_IO_USB_SEL, true); //USB_SEL
+        break;
+    default:
+        assert(0);
+        break;
     }
     return ESP_OK;
 }
@@ -915,10 +919,10 @@ TEST_CASE("test uvc+uac with suddenly disconnect", "[otg][uvc][uac][mic][spk][di
         .mic_cb_arg = (void*)1,
     };
     TimerHandle_t singleShotTimer = xTimerCreate("SingleShotTimer",    // Timer name
-                                                pdMS_TO_TICKS(1000),   // Timer period in ticks (1 second in this example)
-                                                pdFALSE,               // Auto-reload disabled
-                                                0,                     // Timer ID (optional)
-                                                &trigger_disconnect);  // Callback function when timer expires
+                                                 pdMS_TO_TICKS(1000),   // Timer period in ticks (1 second in this example)
+                                                 pdFALSE,               // Auto-reload disabled
+                                                 0,                     // Timer ID (optional)
+                                                 &trigger_disconnect);  // Callback function when timer expires
     size_t test_count = 3;
     for (size_t i = 0; i < test_count; i++) {
         TEST_ASSERT_EQUAL(ESP_OK, iot_board_usb_device_set_power(true, false));

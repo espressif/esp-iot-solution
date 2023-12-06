@@ -190,10 +190,10 @@ typedef struct esp_elf {
 
     esp_elf_sec_t   sec[ELF_SECS];      /*!< ".bss", "data", "rodata", ".text" */
 
-    int             (*entry)(int argc, char *argv[]);   /*!< Entry pointer of ELF */
+    int (*entry)(int argc, char *argv[]);               /*!< Entry pointer of ELF */
 
 #ifdef CONFIG_ELF_LOADER_SET_MMU
-    uint32_t        text_off;           /* .text symbol offset */  
+    uint32_t        text_off;           /* .text symbol offset */
 
     uint32_t        mmu_off;            /* MMU unit offset */
     uint32_t        mmu_num;            /* MMU unit total number */

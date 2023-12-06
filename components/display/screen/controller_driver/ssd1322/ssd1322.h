@@ -14,7 +14,6 @@ extern "C"
 
 #include "screen_driver.h"
 
-
 /**
  * @brief device initialization
  *
@@ -37,9 +36,9 @@ esp_err_t lcd_ssd1322_deinit(void);
 
 /**
  * @brief Get screen information
- * 
+ *
  * @param info Pointer to a scr_info_t structure.
- * 
+ *
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
@@ -48,11 +47,11 @@ esp_err_t lcd_ssd1322_get_info(scr_info_t *info);
 
 /**
  * @brief Set screen direction of rotation
- * 
+ *
  * @note  Only the first four directions defined by scr_dir_t are supported
  *
  * @param dir Pointer to a scr_dir_t structure.
- * 
+ *
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
@@ -66,7 +65,7 @@ esp_err_t lcd_ssd1322_set_rotate(scr_dir_t dir);
  * @param y0 Starting point in Y direction
  * @param x1 End point in X direction
  * @param y1 End point in Y direction
- * 
+ *
  * @return
  *      - ESP_OK on success
  *      - ESP_FAIL Failed
@@ -75,11 +74,11 @@ esp_err_t lcd_ssd1322_set_window(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t
 
 /**
  * @brief Draw one pixel in screen with color
- * 
+ *
  * @param x X co-ordinate of set orientation
  * @param y Y co-ordinate of set orientation
  * @param color New color of the pixel
- * 
+ *
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
@@ -88,13 +87,13 @@ esp_err_t lcd_ssd1322_draw_pixel(uint16_t x, uint16_t y, uint16_t color);
 
 /**
  * @brief Fill the pixels on LCD screen with bitmap
- * 
+ *
  * @param x Starting point in X direction
  * @param y Starting point in Y direction
  * @param w width of image in bitmap array
  * @param h height of image in bitmap array
  * @param bitmap pointer to bitmap array
- * 
+ *
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
@@ -103,9 +102,9 @@ esp_err_t lcd_ssd1322_draw_bitmap(uint16_t x, uint16_t y, uint16_t w, uint16_t h
 
 /**
  * @brief Set the contrast of screen
- * 
+ *
  * @param contrast Contrast to set
- * 
+ *
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
@@ -114,10 +113,10 @@ esp_err_t lcd_ssd1322_set_contrast(uint8_t contrast);
 
 /**
  * @brief Set screen color invert
- * 
+ *
  * @param is_invert true: color invert on, false: color invert off
- * 
- * @return 
+ *
+ * @return
  *      - ESP_OK on success
  *      - ESP_FAIL Failed
  */

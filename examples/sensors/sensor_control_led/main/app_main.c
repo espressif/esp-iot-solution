@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #include "esp_log.h"
 #include "iot_board.h"
 #include "iot_sensor_hub.h"
@@ -33,29 +32,31 @@ static void sensor_event_handler(void *handler_args, esp_event_base_t base, int3
 {
     sensor_data_t *sensor_data = (sensor_data_t *)event_data;
     sensor_type_t sensor_type = (sensor_type_t)((sensor_data->sensor_id) >> 4 & SENSOR_ID_MASK);
-    if (sensor_data->sensor_id != LIGHT_SENSOR_ID) return;
+    if (sensor_data->sensor_id != LIGHT_SENSOR_ID) {
+        return;
+    }
 
     switch (id) {
-        case SENSOR_STARTED:
-            ESP_LOGI(TAG, "Timestamp = %llu - %s SENSOR_STARTED",
-                     sensor_data->timestamp,
-                     SENSOR_TYPE_STRING[sensor_type]);
-            break;
-        case SENSOR_STOPED:
-            ESP_LOGI(TAG, "Timestamp = %llu - %s SENSOR_STOPED",
-                     sensor_data->timestamp,
-                     SENSOR_TYPE_STRING[sensor_type]);
-            break;
-        case SENSOR_LIGHT_DATA_READY:
-            ESP_LOGI(TAG, "Timestamp = %llu - SENSOR_LIGHT_DATA_READY - "
-                     "light=%.2f",
-                     sensor_data->timestamp,
-                     sensor_data->light);
-            led_control(sensor_data->light);
-            break;
-        default:
-            ESP_LOGI(TAG, "Timestamp = %llu - event id = %d", sensor_data->timestamp, id);
-            break;
+    case SENSOR_STARTED:
+        ESP_LOGI(TAG, "Timestamp = %llu - %s SENSOR_STARTED",
+                 sensor_data->timestamp,
+                 SENSOR_TYPE_STRING[sensor_type]);
+        break;
+    case SENSOR_STOPED:
+        ESP_LOGI(TAG, "Timestamp = %llu - %s SENSOR_STOPED",
+                 sensor_data->timestamp,
+                 SENSOR_TYPE_STRING[sensor_type]);
+        break;
+    case SENSOR_LIGHT_DATA_READY:
+        ESP_LOGI(TAG, "Timestamp = %llu - SENSOR_LIGHT_DATA_READY - "
+                 "light=%.2f",
+                 sensor_data->timestamp,
+                 sensor_data->light);
+        led_control(sensor_data->light);
+        break;
+    default:
+        ESP_LOGI(TAG, "Timestamp = %llu - event id = %d", sensor_data->timestamp, id);
+        break;
     }
 }
 

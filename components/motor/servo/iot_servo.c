@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #include "esp_log.h"
 #include "esp_err.h"
 #include "driver/ledc.h"

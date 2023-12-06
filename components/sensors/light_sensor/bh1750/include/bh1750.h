@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #ifndef _BH1750_H_
 #define _BH1750_H_
 #include "esp_err.h"
@@ -141,7 +140,7 @@ esp_err_t bh1750_change_measure_time(bh1750_handle_t sensor, uint8_t measure_tim
 #ifdef CONFIG_SENSOR_LIGHT_INCLUDED_BH1750
 /**
  * @brief initialize bh1750 with default configurations
- * 
+ *
  * @param i2c_bus i2c bus handle the sensor will attached to
  * @return
  *     - ESP_OK Success
@@ -151,7 +150,7 @@ esp_err_t light_sensor_bh1750_init(i2c_bus_handle_t handle);
 
 /**
  * @brief de-initialize bh1750
- * 
+ *
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
@@ -160,7 +159,7 @@ esp_err_t light_sensor_bh1750_deinit(void);
 
 /**
  * @brief test if bh1750 is active
- * 
+ *
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
@@ -169,7 +168,7 @@ esp_err_t light_sensor_bh1750_test(void);
 
 /**
  * @brief acquire bh1750 light illuminance result one time.
- * 
+ *
  * @param l result data (unit:lux)
  * @return
  *     - ESP_OK Success

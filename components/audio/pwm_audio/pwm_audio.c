@@ -381,7 +381,7 @@ esp_err_t pwm_audio_get_param(int *rate, int *bits, int *ch)
 
 esp_err_t pwm_audio_init(const pwm_audio_config_t *cfg)
 {
-    ESP_LOGI(TAG, "PWM Audio Version: %d.%d.%d",PWM_AUDIO_VER_MAJOR, PWM_AUDIO_VER_MINOR, PWM_AUDIO_VER_PATCH);
+    ESP_LOGI(TAG, "PWM Audio Version: %d.%d.%d", PWM_AUDIO_VER_MAJOR, PWM_AUDIO_VER_MINOR, PWM_AUDIO_VER_PATCH);
     esp_err_t res = ESP_OK;
 #if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
     PWM_AUDIO_CHECK(cfg->tg_num < TIMER_GROUP_MAX, PWM_AUDIO_TG_NUM_ERROR, ESP_ERR_INVALID_ARG);
@@ -398,7 +398,6 @@ esp_err_t pwm_audio_init(const pwm_audio_config_t *cfg)
     ESP_LOGI(TAG, "timer: %d:%d | left io: %d | right io: %d | resolution: %dBIT",
              cfg->tg_num, cfg->timer_num, cfg->gpio_num_left, cfg->gpio_num_right, cfg->duty_resolution);
 #endif
-
 
     pwm_audio_data_t *handle = NULL;
 

@@ -59,7 +59,7 @@ void app_main(void)
         goto exit;
     }
 
-    while(1) {
+    while (1) {
         spi_ex_msg_t msg;
 
         snprintf(text, text_size, "SPI Tx %d", count++);

@@ -20,8 +20,7 @@ TEST_CASE("test as5600", "[sensor][as5600]")
 {
     AS5600 as5600 = AS5600(I2C_NUM_0, GPIO_NUM_8, GPIO_NUM_2);
     as5600.init();
-    for (int i = 0; i < 10; ++i)
-    {
+    for (int i = 0; i < 10; ++i) {
         ESP_LOGI(TAG, "angle:%.2f", as5600.getSensorAngle());
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
@@ -31,13 +30,12 @@ TEST_CASE("test as5600", "[sensor][as5600]")
 TEST_CASE("test mt6701", "[sensor][mt6701]")
 {
 #if CONFIG_IDF_TARGET_ESP32C3
-    MT6701 mt6701 = MT6701(SPI2_HOST, GPIO_NUM_2, GPIO_NUM_1, (gpio_num_t)-1, GPIO_NUM_3);
+    MT6701 mt6701 = MT6701(SPI2_HOST, GPIO_NUM_2, GPIO_NUM_1, (gpio_num_t) -1, GPIO_NUM_3);
 #else
-    MT6701 mt6701 = MT6701(SPI2_HOST, GPIO_NUM_2, GPIO_NUM_1, (gpio_num_t)-1, GPIO_NUM_42);
+    MT6701 mt6701 = MT6701(SPI2_HOST, GPIO_NUM_2, GPIO_NUM_1, (gpio_num_t) -1, GPIO_NUM_42);
 #endif
     mt6701.init();
-    for (int i = 0; i < 10; ++i)
-    {
+    for (int i = 0; i < 10; ++i) {
         ESP_LOGI(TAG, "angle:%.2f", mt6701.getSensorAngle());
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
@@ -63,8 +61,7 @@ TEST_CASE("test esp_simplefoc openloop control", "[single motor][openloop][14pp]
 
     motor.init();
 
-    for (int i = 0; i < 5000; ++i)
-    {
+    for (int i = 0; i < 5000; ++i) {
         motor.move(1.2f);
         vTaskDelay(1 / portTICK_PERIOD_MS);
     }
@@ -100,8 +97,7 @@ TEST_CASE("test esp_simplefoc velocity control", "[single motor][velocity][14pp]
     motor.init();                                              /*!< Initialize motor */
     motor.initFOC();                                           /*!< Align sensor and start fog */
 
-    for (int i = 0; i < 3000; ++i)
-    {
+    for (int i = 0; i < 3000; ++i) {
         motor.loopFOC();
         motor.move(1.2f);
         vTaskDelay(1 / portTICK_PERIOD_MS);
@@ -144,8 +140,7 @@ TEST_CASE("test esp_simplefoc position control", "[single motor][position][14pp]
     motor.init();                                               /*!< Initialize motor */
     motor.initFOC();                                            /*!< Align sensor and start fog */
 
-    for (int i = 0; i < 3000; ++i)
-    {
+    for (int i = 0; i < 3000; ++i) {
         motor.loopFOC();
         motor.move(1.2f);
         vTaskDelay(1 / portTICK_PERIOD_MS);

@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #include "esp_log.h"
 #include "xpt2046.h"
 #include "ft5x06.h"

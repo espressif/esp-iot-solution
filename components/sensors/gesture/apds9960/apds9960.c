@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #include <stdio.h>
 #include "driver/i2c.h"
 #include "apds9960.h"
@@ -216,7 +215,7 @@ esp_err_t apds9960_enable_gesture_engine(apds9960_handle_t sensor, bool en)
 }
 
 esp_err_t apds9960_set_led_drive_boost(apds9960_handle_t sensor, apds9960_leddrive_t drive,
-        apds9960_ledboost_t boost)
+                                       apds9960_ledboost_t boost)
 {
     // set BOOST
     apds9960_dev_t *sens = (apds9960_dev_t *) sensor;
@@ -477,7 +476,7 @@ uint8_t apds9960_read_proximity(apds9960_handle_t sensor)
 }
 
 esp_err_t apds9960_set_proximity_interrupt_threshold(apds9960_handle_t sensor, uint8_t low, uint8_t high,
-        uint8_t persistance)
+                                                     uint8_t persistance)
 {
     apds9960_dev_t *sens = (apds9960_dev_t *) sensor;
     i2c_bus_write_byte(sens->i2c_dev, APDS9960_PILT, low);
@@ -608,7 +607,7 @@ esp_err_t apds9960_set_gesture_proximity_threshold(apds9960_handle_t sensor, uin
 }
 
 esp_err_t apds9960_set_gesture_offset(apds9960_handle_t sensor, uint8_t offset_up, uint8_t offset_down,
-        uint8_t offset_left, uint8_t offset_right)
+                                      uint8_t offset_left, uint8_t offset_right)
 {
     apds9960_dev_t *sens = (apds9960_dev_t *) sensor;
     i2c_bus_write_byte(sens->i2c_dev, APDS9960_GOFFSET_U, offset_up);

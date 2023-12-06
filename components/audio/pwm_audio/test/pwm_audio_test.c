@@ -12,10 +12,8 @@
 
 static const char *TAG = "pwm_audio test";
 
-
 #define LEFT_CHANNEL_GPIO  26
 #define RIGHT_CHANNEL_GPIO 25
-
 
 TEST_CASE("pwm audio sine wave test", "[audio][iot]")
 {
@@ -23,15 +21,15 @@ TEST_CASE("pwm audio sine wave test", "[audio][iot]")
     int8_t *data_buffer;
     const uint32_t size = 240;  /*< f = 48000 / 240 = 200Hz*/
 
-    data_buffer = malloc(size*2);
+    data_buffer = malloc(size * 2);
     TEST_ASSERT_NOT_NULL(data_buffer);
 
     /**
      * Generating two channel waveforms with phase difference
      */
     for (size_t i = 0; i < size; i++) {
-        data_buffer[i*2] = 127.8f * sinf(PI_2 * (float)i / (float)size);
-        data_buffer[i*2+1] = 127.8f * cosf(PI_2 * (float)i / (float)size);
+        data_buffer[i * 2] = 127.8f * sinf(PI_2 * (float)i / (float)size);
+        data_buffer[i * 2 + 1] = 127.8f * cosf(PI_2 * (float)i / (float)size);
     }
 
     pwm_audio_config_t pac;
@@ -143,4 +141,3 @@ TEST_CASE("pwm audio play music test", "[audio][iot]")
     play_with_param(LEDC_TIMER_9_BIT, 2);
     play_with_param(LEDC_TIMER_10_BIT, 2);
 }
-

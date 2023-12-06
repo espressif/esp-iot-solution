@@ -20,7 +20,7 @@
 static const char *TAG = "app_main";
 
 /* 16 Bit SPP Service UUID */
-#define BLE_SVC_SPP_UUID16				                    0xABF0
+#define BLE_SVC_SPP_UUID16                                  0xABF0
 
 /* 16 Bit SPP Service Characteristic UUID */
 #define BLE_SVC_SPP_CHR_UUID16                              0xABF1
@@ -35,7 +35,7 @@ QueueHandle_t spp_common_uart_queue = NULL;
 uint16_t connection_handle[ATTRIBUTE_MAX_CONNECTIONS];
 
 static esp_err_t esp_spp_chr_cb(const uint8_t *inbuf, uint16_t inlen,
-                                      uint8_t **outbuf, uint16_t *outlen, void *priv_data)
+                                uint8_t **outbuf, uint16_t *outlen, void *priv_data)
 {
     if (!outbuf || !outlen) {
         return ESP_ERR_INVALID_ARG;
@@ -56,9 +56,11 @@ static esp_err_t esp_spp_chr_cb(const uint8_t *inbuf, uint16_t inlen,
 }
 
 static const esp_ble_conn_character_t spp_nu_lookup_table[] = {
-    {"spp_chr",           BLE_CONN_UUID_TYPE_16,  BLE_CONN_GATT_CHR_READ | BLE_CONN_GATT_CHR_WRITE | \
-                                                  BLE_CONN_GATT_CHR_NOTIFY | BLE_CONN_GATT_CHR_INDICATE, \
-                                                  { BLE_SVC_SPP_CHR_UUID16 }, esp_spp_chr_cb},
+    {
+        "spp_chr",           BLE_CONN_UUID_TYPE_16,  BLE_CONN_GATT_CHR_READ | BLE_CONN_GATT_CHR_WRITE | \
+        BLE_CONN_GATT_CHR_NOTIFY | BLE_CONN_GATT_CHR_INDICATE, \
+        { BLE_SVC_SPP_CHR_UUID16 }, esp_spp_chr_cb
+    },
 };
 
 static const esp_ble_conn_svc_t spp_svc = {
@@ -66,7 +68,7 @@ static const esp_ble_conn_svc_t spp_svc = {
     .uuid = {
         .uuid16 = BLE_SVC_SPP_UUID16,
     },
-    .nu_lookup_count = sizeof(spp_nu_lookup_table)/sizeof(spp_nu_lookup_table[0]),
+    .nu_lookup_count = sizeof(spp_nu_lookup_table) / sizeof(spp_nu_lookup_table[0]),
     .nu_lookup = (esp_ble_conn_character_t *)spp_nu_lookup_table
 };
 
@@ -82,59 +84,59 @@ static void app_ble_conn_event_handler(void *handler_args, esp_event_base_t base
     }
 
     switch (id) {
-        case ESP_BLE_CONN_EVENT_CONNECTED:
-            ESP_LOGI(TAG,"ESP_BLE_CONN_EVENT_CONNECTED\n");
-            connection_handle[0] = 1;
-            break;
-        case ESP_BLE_CONN_EVENT_DISCONNECTED:
-            ESP_LOGI(TAG,"ESP_BLE_CONN_EVENT_DISCONNECTED\n");
-            break;
-        default:
-            break;
+    case ESP_BLE_CONN_EVENT_CONNECTED:
+        ESP_LOGI(TAG, "ESP_BLE_CONN_EVENT_CONNECTED\n");
+        connection_handle[0] = 1;
+        break;
+    case ESP_BLE_CONN_EVENT_DISCONNECTED:
+        ESP_LOGI(TAG, "ESP_BLE_CONN_EVENT_DISCONNECTED\n");
+        break;
+    default:
+        break;
     }
 }
 
 void ble_server_uart_task(void *pvParameters)
 {
-    ESP_LOGI(TAG,"BLE server UART_task started\n");
+    ESP_LOGI(TAG, "BLE server UART_task started\n");
     uart_event_t event;
-    int rc=0;
+    int rc = 0;
     for (;;) {
-         //Waiting for UART event.
-         if (xQueueReceive(spp_common_uart_queue, (void * )&event, (TickType_t)portMAX_DELAY)) {
+        //Waiting for UART event.
+        if (xQueueReceive(spp_common_uart_queue, (void *)&event, (TickType_t)portMAX_DELAY)) {
             switch (event.type) {
-                //Event of UART receving data
-                case UART_DATA:
-                    if (event.size) {
-                        static uint8_t ntf[1];
-                        ntf[0] = 90;
-                        for ( int i = 0; i < ATTRIBUTE_MAX_CONNECTIONS; i++) {
-                            if (connection_handle[i] != 0) {
-                                esp_ble_conn_data_t inbuff = {
-                                    .type = BLE_CONN_UUID_TYPE_16,
-                                    .uuid = {
-                                        .uuid16 = BLE_SVC_SPP_CHR_UUID16,
-                                    },
-                                    .data = ntf,
-                                    .data_len = 1,
-                                };
-                                rc = esp_ble_conn_notify(&inbuff);
-                                if ( rc == 0 ) {
-                                    ESP_LOGI(TAG,"Notification sent successfully");
-                                } else {
-                                    ESP_LOGI(TAG,"Error in sending notification rc = %d", rc);
-                                }
+            //Event of UART receving data
+            case UART_DATA:
+                if (event.size) {
+                    static uint8_t ntf[1];
+                    ntf[0] = 90;
+                    for (int i = 0; i < ATTRIBUTE_MAX_CONNECTIONS; i++) {
+                        if (connection_handle[i] != 0) {
+                            esp_ble_conn_data_t inbuff = {
+                                .type = BLE_CONN_UUID_TYPE_16,
+                                .uuid = {
+                                    .uuid16 = BLE_SVC_SPP_CHR_UUID16,
+                                },
+                                .data = ntf,
+                                .data_len = 1,
+                            };
+                            rc = esp_ble_conn_notify(&inbuff);
+                            if (rc == 0) {
+                                ESP_LOGI(TAG, "Notification sent successfully");
+                            } else {
+                                ESP_LOGI(TAG, "Error in sending notification rc = %d", rc);
                             }
                         }
                     }
-                    break;
-                default:
-                    break;
+                }
+                break;
+            default:
+                break;
             }
-	    }
-	}
+        }
+    }
 
-	vTaskDelete(NULL);
+    vTaskDelete(NULL);
 }
 
 static void ble_spp_uart_init(void)
@@ -153,7 +155,7 @@ static void ble_spp_uart_init(void)
 #endif
     };
     //Install UART driver, and get the queue.
-    uart_driver_install(UART_NUM_0, 4096, 8192, 10,&spp_common_uart_queue,0);
+    uart_driver_install(UART_NUM_0, 4096, 8192, 10, &spp_common_uart_queue, 0);
     //Set UART parameters
     uart_param_config(UART_NUM_0, &uart_config);
     //Set UART pins

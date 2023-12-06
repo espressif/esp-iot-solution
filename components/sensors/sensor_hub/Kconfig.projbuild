@@ -68,7 +68,7 @@ menu "Sensor Hub Options"
             default y
         config SENSORS_EVENT_QUEUE_SIZE
             int "sensor event loop queue size"
-            default 32 
+            default 32
         config SENSORS_EVENT_STACK_SIZE
             int "sensor event loop task stack size"
             default 4096

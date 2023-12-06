@@ -168,43 +168,43 @@ static int gpio_ioctl(int fd, int cmd, va_list va_args)
 
     ESP_LOGV(TAG, "cmd=%x", cmd);
 
-    switch(cmd) {
-        case GPIOCSCFG: {
-            gpioc_cfg_t *cfg = va_arg(va_args, gpioc_cfg_t *);
+    switch (cmd) {
+    case GPIOCSCFG: {
+        gpioc_cfg_t *cfg = va_arg(va_args, gpioc_cfg_t *);
 
-            if (!cfg) {
-                errno = EINVAL;
-                return -1;
-            }
-
-            ESP_LOGV(TAG, "cfg->flags=%x", (int)cfg->flags);
-
-            if (cfg->flags & GPIOC_PULLDOWN_EN) {
-                gpio_pullup_en(fd);
-            } else {
-                gpio_pullup_dis(fd);
-            }
-
-            if (cfg->flags & GPIOC_PULLUP_EN) {
-                gpio_pulldown_en(fd);
-            } else {
-                gpio_pulldown_dis(fd);
-            }
-
-            if (cfg->flags & GPIOC_OPENDRAIN_EN) {
-                set_opendrain(fd, true);
-            } else {
-                set_opendrain(fd, false);
-            }
-
-            ret = 0;
-            break;
-        }
-        default: {
+        if (!cfg) {
             errno = EINVAL;
-            ret = -1;
-            break;
+            return -1;
         }
+
+        ESP_LOGV(TAG, "cfg->flags=%x", (int)cfg->flags);
+
+        if (cfg->flags & GPIOC_PULLDOWN_EN) {
+            gpio_pullup_en(fd);
+        } else {
+            gpio_pullup_dis(fd);
+        }
+
+        if (cfg->flags & GPIOC_PULLUP_EN) {
+            gpio_pulldown_en(fd);
+        } else {
+            gpio_pulldown_dis(fd);
+        }
+
+        if (cfg->flags & GPIOC_OPENDRAIN_EN) {
+            set_opendrain(fd, true);
+        } else {
+            set_opendrain(fd, false);
+        }
+
+        ret = 0;
+        break;
+    }
+    default: {
+        errno = EINVAL;
+        ret = -1;
+        break;
+    }
     }
 
     return ret;

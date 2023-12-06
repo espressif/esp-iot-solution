@@ -1,4 +1,4 @@
-# This file is for debug purposes only. 
+# This file is for debug purposes only.
 # idf.py -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.debug.sysview" set-target esp32s3 build
 # Sysview through UART0, only supported in IDF v5.0 and above
 

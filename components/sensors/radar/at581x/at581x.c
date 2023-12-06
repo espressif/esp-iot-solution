@@ -120,10 +120,10 @@ esp_err_t at581x_set_trig_keep_time(at581x_dev_handle_t handle, uint64_t keep_ti
 }
 
 esp_err_t at581x_set_light_sensor_threshold(at581x_dev_handle_t handle,
-        bool onoff,
-        uint32_t light_sensor_value_high,
-        uint32_t light_sensor_value_low,
-        uint32_t light_sensor_iniverse)
+                                            bool onoff,
+                                            uint32_t light_sensor_value_high,
+                                            uint32_t light_sensor_value_low,
+                                            uint32_t light_sensor_iniverse)
 {
     if (onoff) {
         ESP_RETURN_ON_ERROR(at581x_write_reg(handle, AT581X_CNF_LIGHT_DR, AT581X_CNF_LIGHT_ON), TAG, "I2C read/write error");
@@ -245,7 +245,7 @@ esp_err_t at581x_new_sensor(const at581x_i2c_config_t *i2c_conf, at581x_dev_hand
         }
     }
 
-    if(handle) {
+    if (handle) {
         ESP_RETURN_ON_ERROR(at581x_set_distance((at581x_dev_handle_t)handle, p_def_cfg->power_cfg, p_def_cfg->delta_cfg, p_def_cfg->gain_cfg), TAG, "set_distance error");
         ESP_RETURN_ON_ERROR(at581x_set_trig_base_time((at581x_dev_handle_t)handle, p_def_cfg->trig_base_tm_cfg), TAG, "set_trig_base_time error");
         ESP_RETURN_ON_ERROR(at581x_set_trig_keep_time((at581x_dev_handle_t)handle, p_def_cfg->trig_keep_tm_cfg), TAG, "set_trig_keep_time error");
@@ -277,4 +277,3 @@ esp_err_t at581x_del_sensor(at581x_dev_handle_t handle)
 
     return ESP_OK;
 }
-

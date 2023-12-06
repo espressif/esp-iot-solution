@@ -28,8 +28,7 @@ extern "C" {
     .alarm_count = count,               \
 }
 
-typedef struct
-{
+typedef struct {
     gptimer_handle_t *gptimer;      /*!< Pointer to gptimer handle */
     gptimer_event_callbacks_t cbs;  /*!< gptimer event callbacks */
     void *user_data;                /*!< User data */

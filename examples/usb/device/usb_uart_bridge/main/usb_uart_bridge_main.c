@@ -297,7 +297,7 @@ static void usb_tx_task(void *arg)
 
 static void uart_read_task(void *arg)
 {
-    TaskHandle_t usb_tx_handle = (TaskHandle_t )arg;
+    TaskHandle_t usb_tx_handle = (TaskHandle_t)arg;
     uint8_t data[UART_RX_BUF_SIZE] = {0};
 
     while (1) {

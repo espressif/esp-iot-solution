@@ -139,35 +139,35 @@ static void on_modem_event(void *arg, esp_event_base_t event_base,
                            int32_t event_id, void *event_data)
 {
     if (event_base == MODEM_BOARD_EVENT) {
-        if ( event_id == MODEM_EVENT_SIMCARD_DISCONN) {
+        if (event_id == MODEM_EVENT_SIMCARD_DISCONN) {
             ESP_LOGW(TAG, "Modem Board Event: SIM Card disconnected");
             led_indicator_start(s_led_system_handle, BLINK_CONNECTED);
-        } else if ( event_id == MODEM_EVENT_SIMCARD_CONN) {
+        } else if (event_id == MODEM_EVENT_SIMCARD_CONN) {
             ESP_LOGI(TAG, "Modem Board Event: SIM Card Connected");
             led_indicator_stop(s_led_system_handle, BLINK_CONNECTED);
-        } else if ( event_id == MODEM_EVENT_DTE_DISCONN) {
+        } else if (event_id == MODEM_EVENT_DTE_DISCONN) {
             ESP_LOGW(TAG, "Modem Board Event: USB disconnected");
             led_indicator_start(s_led_system_handle, BLINK_CONNECTING);
-        } else if ( event_id == MODEM_EVENT_DTE_CONN) {
+        } else if (event_id == MODEM_EVENT_DTE_CONN) {
             ESP_LOGI(TAG, "Modem Board Event: USB connected");
             led_indicator_stop(s_led_system_handle, BLINK_CONNECTED);
             led_indicator_stop(s_led_system_handle, BLINK_CONNECTING);
-        } else if ( event_id == MODEM_EVENT_DTE_RESTART) {
+        } else if (event_id == MODEM_EVENT_DTE_RESTART) {
             ESP_LOGW(TAG, "Modem Board Event: Hardware restart");
             led_indicator_start(s_led_system_handle, BLINK_CONNECTED);
-        } else if ( event_id == MODEM_EVENT_DTE_RESTART_DONE) {
+        } else if (event_id == MODEM_EVENT_DTE_RESTART_DONE) {
             ESP_LOGI(TAG, "Modem Board Event: Hardware restart done");
             led_indicator_stop(s_led_system_handle, BLINK_CONNECTED);
-        } else if ( event_id == MODEM_EVENT_NET_CONN) {
+        } else if (event_id == MODEM_EVENT_NET_CONN) {
             ESP_LOGI(TAG, "Modem Board Event: Network connected");
             led_indicator_start(s_led_4g_handle, BLINK_CONNECTED);
-        } else if ( event_id == MODEM_EVENT_NET_DISCONN) {
+        } else if (event_id == MODEM_EVENT_NET_DISCONN) {
             ESP_LOGW(TAG, "Modem Board Event: Network disconnected");
             led_indicator_stop(s_led_4g_handle, BLINK_CONNECTED);
-        } else if ( event_id == MODEM_EVENT_WIFI_STA_CONN) {
+        } else if (event_id == MODEM_EVENT_WIFI_STA_CONN) {
             ESP_LOGI(TAG, "Modem Board Event: Station connected");
             led_indicator_start(s_led_wifi_handle, BLINK_CONNECTED);
-        } else if ( event_id == MODEM_EVENT_WIFI_STA_DISCONN) {
+        } else if (event_id == MODEM_EVENT_WIFI_STA_DISCONN) {
             ESP_LOGW(TAG, "Modem Board Event: All stations disconnected");
             led_indicator_stop(s_led_wifi_handle, BLINK_CONNECTED);
         }

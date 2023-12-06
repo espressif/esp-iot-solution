@@ -72,7 +72,7 @@ static void lis2dh12_test_get_data(void)
     lis2dh12_config.bdu_status = LIS2DH12_DISABLE;
     lis2dh12_config.fs = LIS2DH12_FS_16G;
     lis2dh12_set_config(lis2dh12, &lis2dh12_config);
-    lis2dh12_acce_value_t lis2dh12_acce_value ={0};
+    lis2dh12_acce_value_t lis2dh12_acce_value = {0};
 
     lis2dh12_get_config(lis2dh12, &lis2dh12_config);
     printf("temp_enable is: %02x\n", lis2dh12_config.temp_enable);
@@ -84,7 +84,7 @@ static void lis2dh12_test_get_data(void)
     printf("bdu_status status is: %02x\n", lis2dh12_config.bdu_status);
     printf("full scale is: %02x\n", lis2dh12_config.fs);
 
-    while(cnt--){
+    while (cnt--) {
         printf("\n******************************************\n");
         lis2dh12_get_x_acc(lis2dh12, &x_acc);
         printf("X-axis acceleration is: %08x\n", x_acc);
@@ -92,8 +92,8 @@ static void lis2dh12_test_get_data(void)
         printf("Y-axis acceleration is: %08x\n", y_acc);
         lis2dh12_get_z_acc(lis2dh12, &z_acc);
         printf("Z-axis acceleration is: %08x\n", z_acc);
-        lis2dh12_get_acce(lis2dh12,&lis2dh12_acce_value);
-        printf("x = %f y= %f z = %f\n", lis2dh12_acce_value.acce_x,lis2dh12_acce_value.acce_y,lis2dh12_acce_value.acce_z);
+        lis2dh12_get_acce(lis2dh12, &lis2dh12_acce_value);
+        printf("x = %f y= %f z = %f\n", lis2dh12_acce_value.acce_x, lis2dh12_acce_value.acce_y, lis2dh12_acce_value.acce_z);
         printf("******************************************\n");
         vTaskDelay(1000 / portTICK_RATE_MS);
     }

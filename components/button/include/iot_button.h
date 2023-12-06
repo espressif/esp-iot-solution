@@ -56,7 +56,7 @@ typedef union {
     struct multiple_clicks_t {
         uint16_t clicks;        /**< number of clicks, to trigger the callback */
     } multiple_clicks;          /**< multiple clicks struct, for event BUTTON_MULTIPLE_CLICK */
-}button_event_data_t;
+} button_event_data_t;
 
 /**
  * @brief Button events configuration
@@ -80,7 +80,7 @@ typedef enum {
 
 /**
  * @brief Button parameter
- * 
+ *
  */
 typedef enum {
     BUTTON_LONG_PRESS_TIME_MS = 0,
@@ -90,7 +90,7 @@ typedef enum {
 
 /**
  * @brief custom button configuration
- * 
+ *
  */
 typedef struct {
     uint8_t active_level;                                   /**< active level when press down */
@@ -258,7 +258,7 @@ uint16_t iot_button_get_long_press_hold_cnt(button_handle_t btn_handle);
 
 /**
  * @brief Dynamically change the parameters of the iot button
- * 
+ *
  * @param btn_handle Button handle
  * @param param Button parameter
  * @param value new value

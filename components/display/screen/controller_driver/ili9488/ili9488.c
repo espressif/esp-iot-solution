@@ -21,7 +21,6 @@ static const char *TAG = "ILI9488";
         return (ret);                                                           \
     }
 
-
 #define ILI9488_NOP           0x00
 #define ILI9488_SWRESET       0x01
 #define ILI9488_RDDID         0x04
@@ -92,7 +91,6 @@ static const char *TAG = "ILI9488";
 #define ILI9488_MAD_Y_UP      0x80
 #define ILI9488_MAD_Y_DOWN    0x00
 
-
 /* MADCTL Defines */
 #define MADCTL_MY  0x80
 #define MADCTL_MX  0x40
@@ -125,7 +123,6 @@ scr_driver_t lcd_ili9488_default_driver = {
     .draw_bitmap = lcd_ili9488_draw_bitmap,
     .get_info = lcd_ili9488_get_info,
 };
-
 
 static void lcd_ili9488_init_reg(void);
 

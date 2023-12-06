@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #ifndef _IOT_SCREEN_INTERFACE_DRIVER_H_
 #define _IOT_SCREEN_INTERFACE_DRIVER_H_
 
@@ -19,7 +18,7 @@ extern "C" {
 
 /**
  * @brief SPI interface configuration
- * 
+ *
  */
 typedef struct {
     spi_bus_handle_t spi_bus;    /*!< Handle of spi bus */
@@ -31,7 +30,7 @@ typedef struct {
 
 /**
  * @brief I2C interface configuration
- * 
+ *
  */
 typedef struct {
     i2c_bus_handle_t i2c_bus;    /*!< Handle of i2c bus */
@@ -41,7 +40,7 @@ typedef struct {
 
 /**
  * @brief Type of screen interface
- * 
+ *
  */
 typedef enum {
     SCREEN_IFACE_I2C,            /*!< I2C interface */
@@ -51,7 +50,7 @@ typedef enum {
 
 /**
  * @brief Define common function for screen interface driver
- * 
+ *
  */
 typedef struct {
     scr_interface_type_t type;                                                  /*!< Interface bus type, see scr_interface_type_t struct */
@@ -65,11 +64,11 @@ typedef struct {
 
 /**
  * @brief Create screen interface driver
- * 
+ *
  * @param type Type of screen interface
  * @param config configuration of interface driver
  * @param out_driver Pointer to a screen interface driver
- * 
+ *
  * @return
  *      - ESP_OK on success
  *      - ESP_ERR_INVALID_ARG   Arguments is NULL.
@@ -80,9 +79,9 @@ esp_err_t scr_interface_create(scr_interface_type_t type, void *config, scr_inte
 
 /**
  * @brief Delete screen interface driver
- * 
+ *
  * @param driver screen interface driver to delete
- * 
+ *
  * @return
  *      - ESP_OK on success
  *      - ESP_ERR_INVALID_ARG   Arguments is NULL.

@@ -18,7 +18,7 @@ menu "Example Configuration"
 
     config LEDC_FREQUENCY
         int "LEDC Frequency(Hz)"
-        default 1000  
+        default 1000
 
     config LEDC_CHANNEL_OUPUT_PIN
         int "LEDC Output Pin"

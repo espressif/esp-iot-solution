@@ -67,7 +67,6 @@ esp_err_t esp_lcd_new_panel_st7701(const esp_lcd_panel_io_handle_t io, const esp
     ESP_RETURN_ON_FALSE(!vendor_config->flags.auto_del_panel_io || !vendor_config->flags.mirror_by_cmd,
                         ESP_ERR_INVALID_ARG, TAG, "`mirror_by_cmd` and `auto_del_panel_io` cannot work together");
 
-
     esp_err_t ret = ESP_OK;
     st7701_panel_t *st7701 = (st7701_panel_t *)calloc(1, sizeof(st7701_panel_t));
     ESP_RETURN_ON_FALSE(st7701, ESP_ERR_NO_MEM, TAG, "no mem for st7701 panel");
@@ -220,14 +219,14 @@ static esp_err_t panel_st7701_send_init_cmds(st7701_panel_t *st7701)
     bool is_command2_disable = true;
     bool is_cmd_overwritten = false;
 
-    ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, ST7701_CMD_CND2BKxSEL, (uint8_t []){
+    ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, ST7701_CMD_CND2BKxSEL, (uint8_t []) {
         ST7701_CMD_BKxSEL_BYTE0, ST7701_CMD_BKxSEL_BYTE1, ST7701_CMD_BKxSEL_BYTE2, ST7701_CMD_BKxSEL_BYTE3, 0x00
     }, 5), TAG, "Write cmd failed");
     // Set color format
-    ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, LCD_CMD_MADCTL, (uint8_t []){
+    ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, LCD_CMD_MADCTL, (uint8_t []) {
         st7701->madctl_val
     }, 1), TAG, "Write cmd failed");
-    ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, LCD_CMD_COLMOD, (uint8_t []){
+    ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, LCD_CMD_COLMOD, (uint8_t []) {
         st7701->colmod_val
     }, 1), TAG, "Write cmd failed");
 
@@ -261,7 +260,7 @@ static esp_err_t panel_st7701_send_init_cmds(st7701_panel_t *st7701)
             if (is_cmd_overwritten) {
                 is_cmd_overwritten = false;
                 ESP_LOGW(TAG, "The %02Xh command has been used and will be overwritten by external initialization sequence",
-                        init_cmds[i].cmd);
+                         init_cmds[i].cmd);
             }
         }
 

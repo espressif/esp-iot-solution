@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 
@@ -77,7 +76,7 @@ static esp_err_t stream_handler(httpd_req_t *req)
         } else {
             free(frame->buf);
         }
-        
+
         if (res != ESP_OK) {
             ESP_LOGE(TAG, "Break stream handler");
             break;
@@ -100,7 +99,7 @@ esp_err_t start_stream_server(const QueueHandle_t frame_i, const bool return_fb)
         .handler = stream_handler,
         .user_ctx = NULL
     };
-    
+
     esp_err_t err = httpd_start(&stream_httpd, &config);
     if (err == ESP_OK) {
         err = httpd_register_uri_handler(stream_httpd, &stream_uri);

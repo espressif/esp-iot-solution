@@ -44,7 +44,7 @@ static const bootloader_custom_ota_engine_t * custom_ota_engines[MAX_ENGINE];
 static bootloader_custom_ota_params_t custom_ota_params;
 
 static const bootloader_custom_ota_engine_t *bootloader_custom_ota_engine_get(bootloader_custom_ota_engine_type_t engine_type,
-    const bootloader_custom_ota_engine_t *engines, uint8_t engines_num)
+                                                                              const bootloader_custom_ota_engine_t *engines, uint8_t engines_num)
 {
     const bootloader_custom_ota_engine_t *engine = NULL;
 
@@ -62,13 +62,13 @@ static bool bootloader_custom_ota_engines_init(bootloader_custom_ota_params_t *p
 {
     // Prepare engines
     custom_ota_engines[DECOMPRESS_ENGINE] = bootloader_custom_ota_engine_get(custom_ota_header.compress_type,
-        decompressor_engines, sizeof(decompressor_engines) / sizeof(decompressor_engines[0]));
+                                                                             decompressor_engines, sizeof(decompressor_engines) / sizeof(decompressor_engines[0]));
 
     if (!custom_ota_engines[DECOMPRESS_ENGINE]) {
         ESP_LOGE(TAG, "No supported decompressor %d type!", custom_ota_header.compress_type);
         return false;
     }
- 
+
     custom_ota_engines[STORAGE_ENGINE] = &storage_engines[STORAGE_FLASH];
 
     for (uint32_t loop = 0; loop < MAX_ENGINE; loop++) {
@@ -185,9 +185,9 @@ int bootloader_custom_ota_main(bootloader_state_t *bs, int boot_index)
         goto exit;
     }
 #else
-    if(err_ret == CUSTOM_OTA_IMAGE_TYPE_INVALID) {
+    if (err_ret == CUSTOM_OTA_IMAGE_TYPE_INVALID) {
         return boot_index;
-    } else if(err_ret == ESP_FAIL) {
+    } else if (err_ret == ESP_FAIL) {
         ESP_LOGE(TAG, "image vefiry err!");
         goto exit;
     }
@@ -210,8 +210,8 @@ int bootloader_custom_ota_main(bootloader_state_t *bs, int boot_index)
 
     ESP_LOGI(TAG, "start OTA to slot %d", ota_index);
     /*
-    If the partition to be erased is too large, the watchdog reset may be triggered here. 
-    However, the size of the partition to be erased each time is fixed, 
+    If the partition to be erased is too large, the watchdog reset may be triggered here.
+    However, the size of the partition to be erased each time is fixed,
     so we can know whether the watchdog reset will be triggered here at the test stage.
     */
     bootloader_flash_erase_range(custom_ota_config.dst_addr, custom_ota_config.dst_size);
@@ -228,7 +228,7 @@ int bootloader_custom_ota_main(bootloader_state_t *bs, int boot_index)
     } else {
         ESP_LOGE(TAG, "update OTA data failed!");
     }
-    
+
 #ifndef CONFIG_ENABLE_LEGACY_ESP_BOOTLOADER_PLUS_V2_SUPPORT
     return ota_index;
 
@@ -240,8 +240,8 @@ exit:
 
 exit:
     // Erase custom OTA binary header to avoid doing OTA again in the next reboot.
-    if(bootloader_custom_ota_clear_storage_header() != ESP_OK) {
-        ESP_LOGE(TAG,"erase compressed OTA header error!");
+    if (bootloader_custom_ota_clear_storage_header() != ESP_OK) {
+        ESP_LOGE(TAG, "erase compressed OTA header error!");
     }
     return boot_index;
 #endif // CONFIG_ENABLE_LEGACY_ESP_BOOTLOADER_PLUS_V2_SUPPORT

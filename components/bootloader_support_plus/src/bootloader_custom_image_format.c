@@ -40,7 +40,7 @@ static bootloader_custom_ota_image_type_t bootloader_custom_ota_get_header_type(
      *  custom image with esp original image headers: 0xE9 0x00
      *  custom image with header: "ESP"
      */
-    if(bootloader_flash_read(part->offset, buf, 4, true) != ESP_OK) {
+    if (bootloader_flash_read(part->offset, buf, 4, true) != ESP_OK) {
         ESP_LOGE(TAG, "get img type failed");
         return OTA_IMAGE_TYPE_MAX;
     }
@@ -70,14 +70,14 @@ static bool bootloader_custom_ota_header_check(uint32_t src_addr)
         ESP_LOGW(TAG, "custom OTA version check error!");
         return false;
     }
-    
+
     header_crc = custom_ota_header->crc32;
     // check CRC32
     if (esp_rom_crc32_le(0, (const uint8_t *)custom_ota_header, bootloader_custom_ota_header_length - sizeof(custom_ota_header->crc32)) != header_crc) {
         ESP_LOGW(TAG, "custom OTA CRC32 check error!");
         return false;
     }
-    
+
     return true;
 }
 
@@ -87,7 +87,7 @@ static bool bootloader_custom_ota_verify_signature(uint32_t src_addr)
     uint32_t bootloader_custom_ota_header_length = sizeof(bootloader_custom_ota_header_t);
     uint32_t packed_image_len = ALIGN_UP((custom_ota_header->length + bootloader_custom_ota_header_length), FLASH_SECTOR_SIZE);
 
-#ifdef	CONFIG_BOOTLOADER_CUSTOM_DEBUG_ON
+#ifdef  CONFIG_BOOTLOADER_CUSTOM_DEBUG_ON
     ESP_LOGI(TAG, "sign_length is %0xu, src_addr is %0xu, packed_image_len is %0xu", custom_ota_header->length, src_addr, packed_image_len);
 #endif
 
@@ -149,48 +149,48 @@ esp_err_t __wrap_esp_image_verify(esp_image_load_mode_t mode, const esp_partitio
     if (image_type == OTA_IMAGE_TYPE_1) {
         ESP_LOGE(TAG, "Not allow to OTA a standard image when customer bootloader enabled");
         return ESP_ERR_IMAGE_INVALID;
-    } else 
+    } else
 #endif
-    if (image_type == OTA_IMAGE_TYPE_2 || image_type == OTA_IMAGE_TYPE_3) {
-        bootloader_custom_ota_config_t *custom_ota_config = bootloader_custom_ota_get_config_param();
+        if (image_type == OTA_IMAGE_TYPE_2 || image_type == OTA_IMAGE_TYPE_3) {
+            bootloader_custom_ota_config_t *custom_ota_config = bootloader_custom_ota_get_config_param();
 
 #ifndef BOOTLOADER_BUILD
-        custom_ota_config->src_addr = part->offset;
+            custom_ota_config->src_addr = part->offset;
 #endif
 
 #if defined(BOOTLOADER_BUILD)
 
-        if (image_type == OTA_IMAGE_TYPE_2) {
-            custom_ota_config->src_addr += APP_IMAGE_HEADER_LEN_DEFAULT;   // hard code here, the length of esp original image headers is 0x120
-        }
+            if (image_type == OTA_IMAGE_TYPE_2) {
+                custom_ota_config->src_addr += APP_IMAGE_HEADER_LEN_DEFAULT;   // hard code here, the length of esp original image headers is 0x120
+            }
 
-        if (!bootloader_custom_ota_header_check(custom_ota_config->src_addr)) {
-            return ESP_FAIL;
-        }
+            if (!bootloader_custom_ota_header_check(custom_ota_config->src_addr)) {
+                return ESP_FAIL;
+            }
 
 #ifndef CONFIG_SKIP_VALIDATE_CUSTOM_COMPRESSED_DATA
-        if (!bootloader_custom_ota_md5_check(custom_ota_config->src_addr)) {
-            return ESP_FAIL;
-        }
+            if (!bootloader_custom_ota_md5_check(custom_ota_config->src_addr)) {
+                return ESP_FAIL;
+            }
 
-    #if defined(CONFIG_SECURE_SIGNED_APPS_RSA_SCHEME) && defined(CONFIG_SECURE_BOOT_V2_ENABLED)
-        if (!bootloader_custom_ota_verify_signature(custom_ota_config->src_addr)) {
-            return ESP_FAIL;
-        }
-    #endif // END CONFIG_SECURE_SIGNED_APPS_RSA_SCHEME && CONFIG_SECURE_BOOT_V2_ENABLED
+#if defined(CONFIG_SECURE_SIGNED_APPS_RSA_SCHEME) && defined(CONFIG_SECURE_BOOT_V2_ENABLED)
+            if (!bootloader_custom_ota_verify_signature(custom_ota_config->src_addr)) {
+                return ESP_FAIL;
+            }
+#endif // END CONFIG_SECURE_SIGNED_APPS_RSA_SCHEME && CONFIG_SECURE_BOOT_V2_ENABLED
 #endif // END CONFIG_SKIP_VALIDATE_CUSTOM_COMPRESSED_DATA
 #elif !defined(CONFIG_SKIP_VALIDATE_CUSTOM_COMPRESSED_HEADER) // NOT BOOTLOADER_BUILD
-        if (image_type == OTA_IMAGE_TYPE_2) {
-            custom_ota_config->src_addr += APP_IMAGE_HEADER_LEN_DEFAULT;   // hard code here, the length of esp original image headers is 0x120
-        }
+            if (image_type == OTA_IMAGE_TYPE_2) {
+                custom_ota_config->src_addr += APP_IMAGE_HEADER_LEN_DEFAULT;   // hard code here, the length of esp original image headers is 0x120
+            }
 
-        if (!bootloader_custom_ota_header_check(custom_ota_config->src_addr)) {
-            return ESP_FAIL;
-        }
+            if (!bootloader_custom_ota_header_check(custom_ota_config->src_addr)) {
+                return ESP_FAIL;
+            }
 #endif
-    } else {
-        return CUSTOM_OTA_IMAGE_TYPE_INVALID;
-    }
+        } else {
+            return CUSTOM_OTA_IMAGE_TYPE_INVALID;
+        }
 
     return ESP_OK;
 }
@@ -213,8 +213,8 @@ const esp_partition_t* __wrap_esp_ota_get_next_update_partition(const esp_partit
     */
 
     for (esp_partition_subtype_t t = ESP_PARTITION_SUBTYPE_APP_OTA_0;
-         t != ESP_PARTITION_SUBTYPE_APP_OTA_MAX;
-         t++) {
+            t != ESP_PARTITION_SUBTYPE_APP_OTA_MAX;
+            t++) {
         const esp_partition_t *p = esp_partition_find_first(ESP_PARTITION_TYPE_APP, t, NULL);
         if (p == NULL) {
             continue;

@@ -79,7 +79,6 @@ TEST_CASE("Screen SSD1306 I2C test", "[screen][iot]")
     TEST_ASSERT(ESP_OK == scr_find_driver(SCREEN_CONTROLLER_SSD1306, &lcd));
     TEST_ASSERT(ESP_OK == lcd.init(&lcd_cfg));
 
-
     TEST_ASSERT(ESP_OK == lcd.get_info(&lcd_info));
     ESP_LOGI(TAG, "Screen name:%s | width:%d | height:%d", lcd_info.name, lcd_info.width, lcd_info.height);
     TEST_ASSERT(ESP_OK == lcd.draw_bitmap(0, 0, 128, 64, (uint16_t *)bmp_image_128_64));
@@ -285,7 +284,6 @@ static const unsigned char bmp_image_128_64[1024] = {
     0XF1, 0XF1, 0XF1, 0XE0, 0XEC, 0XFE, 0XFE, 0XFF, 0XFF, 0XFF, 0XFF, 0XFF, 0XF3, 0XF2, 0XE3, 0XE3,
     0XE3, 0XE1, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00,
 };
-
 
 static const unsigned char bmp_image_52_24[156] = { /* 0X02,0X01,0X34,0X00,0X18,0X00, */
     0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X1E, 0X82, 0X86, 0X02, 0X1E, 0X06, 0X38, 0X1E, 0X80, 0X06,
@@ -814,4 +812,3 @@ static const unsigned char bmp_image_256_64_4bit[8192] = { /* 0X00,0X04,0X00,0X0
     0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00,
     0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00,
 };
-

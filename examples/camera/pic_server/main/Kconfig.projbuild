@@ -12,7 +12,7 @@ menu "Example Configuration"
             default ""
             help
             WiFi Password if WEP/WPA/WPA2 or empty if Open.
-            
+
         config ESP_WIFI_AP_SSID
             string "WiFi AP SSID"
             default "ESP32-Camera"

@@ -9,7 +9,7 @@ variables:
   dependencies: []
   script:
     - cd docs
-    - python -m pip install -r requirements.txt 
+    - python -m pip install -r requirements.txt
     - build-docs -bs $DOC_BUILDERS -l $DOCLANG build
     - ./check_lang_folder_sync.sh
 

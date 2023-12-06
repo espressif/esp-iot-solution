@@ -23,6 +23,6 @@ language = 'zh_CN'
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  ('index', 'ReadtheDocsTemplate.tex', u'ESP-IoT-Solution', 
+  ('index', 'ReadtheDocsTemplate.tex', u'ESP-IoT-Solution',
    u'2016 - 2023 乐鑫信息科技（上海）股份有限公司', 'manual'),
 ]

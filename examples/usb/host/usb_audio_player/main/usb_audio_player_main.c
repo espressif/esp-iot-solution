@@ -48,7 +48,7 @@ static void _audio_player_callback(audio_player_cb_ctx_t *ctx)
 {
     ESP_LOGI(TAG, "ctx->audio_event = %d", ctx->audio_event);
     switch (ctx->audio_event) {
-    case AUDIO_PLAYER_CALLBACK_EVENT_IDLE:{
+    case AUDIO_PLAYER_CALLBACK_EVENT_IDLE: {
         ESP_LOGI(TAG, "AUDIO_PLAYER_REQUEST_IDLE");
         usb_streaming_control(STREAM_UAC_SPK, CTRL_SUSPEND, NULL);
         FILE *fp = fopen(SPIFFS_BASE MP3_FILE_NAME, "rb");
@@ -58,7 +58,8 @@ static void _audio_player_callback(audio_player_cb_ctx_t *ctx)
         } else {
             ESP_LOGE(TAG, "unable to open filename '%s'", MP3_FILE_NAME);
         }
-        break;}
+        break;
+    }
     case AUDIO_PLAYER_CALLBACK_EVENT_PLAYING:
         usb_streaming_control(STREAM_UAC_SPK, CTRL_RESUME, NULL);
         ESP_LOGI(TAG, "AUDIO_PLAYER_REQUEST_PLAY");
@@ -90,7 +91,7 @@ static void stream_state_changed_cb(usb_stream_state_t event, void *arg)
             ESP_LOGI(TAG, "UAC SPK: use frame[%u] ch_num = %u, bit_resolution = %u, samples_frequence = %"PRIu32,
                      frame_index, spk_frame_list[frame_index].ch_num, spk_frame_list[frame_index].bit_resolution, spk_frame_list[frame_index].samples_frequence);
             usb_streaming_control(STREAM_UAC_SPK, CTRL_UAC_VOLUME, (void *)45);
-            if (xEventGroupGetBits(s_evt_handle) & BIT1_SPK_START){
+            if (xEventGroupGetBits(s_evt_handle) & BIT1_SPK_START) {
                 audio_player_resume();
             } else {
                 xEventGroupSetBits(s_evt_handle, BIT1_SPK_START);

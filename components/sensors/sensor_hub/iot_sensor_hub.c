@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #include <string.h>
 #include <sys/queue.h>
 #include "esp_log.h"
@@ -180,20 +179,20 @@ static const char *sensor_find_event_base(int sensor_type)
     const char *event_base = NULL;
 
     switch (sensor_type) {
-        case IMU_ID:
-            event_base = SENSOR_IMU_EVENTS;
-            break;
+    case IMU_ID:
+        event_base = SENSOR_IMU_EVENTS;
+        break;
 
-        case HUMITURE_ID:
-            event_base = SENSOR_HUMITURE_EVENTS;
-            break;
+    case HUMITURE_ID:
+        event_base = SENSOR_HUMITURE_EVENTS;
+        break;
 
-        case LIGHT_SENSOR_ID:
-            event_base = SENSOR_LIGHTSENSOR_EVENTS;
-            break;
+    case LIGHT_SENSOR_ID:
+        event_base = SENSOR_LIGHTSENSOR_EVENTS;
+        break;
 
-        default :
-            break;
+    default :
+        break;
     }
 
     return event_base;
@@ -331,7 +330,7 @@ static void sensors_timer_cb(TimerHandle_t xTimer)
 static void IRAM_ATTR sensors_intr_isr_handler(void *arg)
 {
     BaseType_t task_woken = pdFALSE;
-    uint32_t event_bit = (uint32_t )(arg);
+    uint32_t event_bit = (uint32_t)(arg);
     xEventGroupSetBitsFromISR(s_event_group, (0x01 << event_bit), &task_woken);
 
     //Switch context if necessary
@@ -439,25 +438,25 @@ esp_err_t iot_sensor_create(sensor_id_t sensor_id, const sensor_config_t *config
     snprintf(sensor_timmer_name, sizeof(sensor_timmer_name) - 1, "%s%02x", SENSOR_TYPE_STRING[sensor->type], sensor->sensor_id);
 
     switch (sensor->mode) {
-        case MODE_POLLING:
-            sensor->timer_handle = sensor_polling_mode_init(sensor_timmer_name, sensor->min_delay, (void *)(sensor->event_bit));
-            SENSOR_CHECK_GOTO(sensor->timer_handle != NULL, "sensor timer create failed", cleanup_sensor_node);
-            break;
+    case MODE_POLLING:
+        sensor->timer_handle = sensor_polling_mode_init(sensor_timmer_name, sensor->min_delay, (void *)(sensor->event_bit));
+        SENSOR_CHECK_GOTO(sensor->timer_handle != NULL, "sensor timer create failed", cleanup_sensor_node);
+        break;
 
-        case MODE_INTERRUPT:
-            ret = sensor_intr_mode_init(config_copy.intr_pin, config_copy.intr_type);
-            SENSOR_CHECK_GOTO(ret == ESP_OK, "sensor intr init failed", cleanup_sensor_node);
-            sensor->isr_state = ISR_STATE_INITIALIZED;
-            break;
+    case MODE_INTERRUPT:
+        ret = sensor_intr_mode_init(config_copy.intr_pin, config_copy.intr_type);
+        SENSOR_CHECK_GOTO(ret == ESP_OK, "sensor intr init failed", cleanup_sensor_node);
+        sensor->isr_state = ISR_STATE_INITIALIZED;
+        break;
 
-        default:
-            break;
+    default:
+        break;
     }
 
     /*create a default sensor task if not created*/
     if (s_sensor_task_handle == NULL) {
         BaseType_t task_created = xTaskCreatePinnedToCore(sensor_default_task, SENSOR_DEFAULT_TASK_NAME, SENSOR_DEFAULT_TASK_STACK_SIZE,
-                                    ((void *)(&s_sensor_slist_head)), SENSOR_DEFAULT_TASK_PRIORITY, &s_sensor_task_handle, SENSOR_DEFAULT_TASK_CORE_ID);
+                                                          ((void *)(&s_sensor_slist_head)), SENSOR_DEFAULT_TASK_PRIORITY, &s_sensor_task_handle, SENSOR_DEFAULT_TASK_CORE_ID);
         SENSOR_CHECK_GOTO(task_created == pdPASS, "create default sensor task failed", cleanup_sensor_node);
     }
     sensor->task_handle = s_sensor_task_handle;
@@ -476,11 +475,11 @@ esp_err_t iot_sensor_create(sensor_id_t sensor_id, const sensor_config_t *config
 #endif
 
     ESP_LOGI(TAG, "Sensor created, Task name = %s, Type = %s, Sensor ID = %d, Mode = %s, Min Delay = %d ms",
-                SENSOR_DEFAULT_TASK_NAME,
-                SENSOR_TYPE_STRING[sensor->type],
-                sensor->sensor_id,
-                SENSOR_MODE_STRING[sensor->mode],
-                sensor->min_delay);
+             SENSOR_DEFAULT_TASK_NAME,
+             SENSOR_TYPE_STRING[sensor->type],
+             sensor->sensor_id,
+             SENSOR_MODE_STRING[sensor->mode],
+             sensor->min_delay);
 
     *p_sensor_handle = (sensor_handle_t)sensor;
     return ESP_OK;
@@ -503,19 +502,19 @@ esp_err_t iot_sensor_stop(sensor_handle_t sensor_handle)
     SENSOR_CHECK(sensor->timer_handle != NULL, "sensor timmer handle can not be NULL", ESP_ERR_INVALID_ARG);
 
     switch (sensor->mode) {
-        case MODE_POLLING:
-            SENSOR_CHECK(pdTRUE == xTimerStop(sensor->timer_handle, portMAX_DELAY), "sensor stop failed", ESP_FAIL);
-            break;
+    case MODE_POLLING:
+        SENSOR_CHECK(pdTRUE == xTimerStop(sensor->timer_handle, portMAX_DELAY), "sensor stop failed", ESP_FAIL);
+        break;
 
-        case MODE_INTERRUPT:
-            if (sensor->isr_state == ISR_STATE_ACTIVE){
-                SENSOR_CHECK(ESP_OK == sensor_intr_isr_remove(sensor->intr_pin), "sensor stop failed", ESP_FAIL);
-                sensor->isr_state = ISR_STATE_INACTIVE;
-            }
-            break;
-        default:
-            SENSOR_CHECK( false, "sensor stop failed", ESP_ERR_NOT_SUPPORTED);
-            break;
+    case MODE_INTERRUPT:
+        if (sensor->isr_state == ISR_STATE_ACTIVE) {
+            SENSOR_CHECK(ESP_OK == sensor_intr_isr_remove(sensor->intr_pin), "sensor stop failed", ESP_FAIL);
+            sensor->isr_state = ISR_STATE_INACTIVE;
+        }
+        break;
+    default:
+        SENSOR_CHECK(false, "sensor stop failed", ESP_ERR_NOT_SUPPORTED);
+        break;
     }
 
     sensor_data_t sensor_data;
@@ -545,19 +544,19 @@ esp_err_t iot_sensor_start(sensor_handle_t sensor_handle)
     SENSOR_CHECK(sensor->timer_handle != NULL, "sensor timmer_handle/isr_state can not be NULL", ESP_ERR_INVALID_ARG);
 
     switch (sensor->mode) {
-        case MODE_POLLING:
-            SENSOR_CHECK(pdTRUE == xTimerStart(sensor->timer_handle, portMAX_DELAY), "sensor start failed", ESP_FAIL);
-            break;
+    case MODE_POLLING:
+        SENSOR_CHECK(pdTRUE == xTimerStart(sensor->timer_handle, portMAX_DELAY), "sensor start failed", ESP_FAIL);
+        break;
 
-        case MODE_INTERRUPT:
-            if (sensor->isr_state == ISR_STATE_INITIALIZED){
-                SENSOR_CHECK(ESP_OK == sensor_intr_isr_add(sensor->intr_pin, ((void *)sensor->event_bit)), "sensor start failed", ESP_FAIL);
-                sensor->isr_state = ISR_STATE_ACTIVE;
-            }
-            break;
-        default:
-            SENSOR_CHECK( false, "sensor start failed", ESP_ERR_NOT_SUPPORTED);
-            break;
+    case MODE_INTERRUPT:
+        if (sensor->isr_state == ISR_STATE_INITIALIZED) {
+            SENSOR_CHECK(ESP_OK == sensor_intr_isr_add(sensor->intr_pin, ((void *)sensor->event_bit)), "sensor start failed", ESP_FAIL);
+            sensor->isr_state = ISR_STATE_ACTIVE;
+        }
+        break;
+    default:
+        SENSOR_CHECK(false, "sensor start failed", ESP_ERR_NOT_SUPPORTED);
+        break;
     }
 
     sensor_data_t sensor_data;
@@ -571,7 +570,7 @@ esp_err_t iot_sensor_start(sensor_handle_t sensor_handle)
         ESP_LOGW(TAG, "sensor event post failed = %s, or eventloop not initialized", esp_err_to_name(ret));
     }
 
-    ret = sensor->impl->control(sensor->driver_handle, COMMAND_SET_POWER,  (void *)POWER_MODE_WAKEUP);
+    ret = sensor->impl->control(sensor->driver_handle, COMMAND_SET_POWER, (void *)POWER_MODE_WAKEUP);
 
     if (ESP_OK != ret && ESP_ERR_NOT_SUPPORTED != ret) { /*not supported case will be skip*/
         ESP_LOGW(TAG, "sensor set power failed ret = %s", esp_err_to_name(ret));
@@ -587,21 +586,21 @@ esp_err_t iot_sensor_delete(sensor_handle_t *p_sensor_handle)
     SENSOR_CHECK(sensor->timer_handle != NULL, "sensor timmer handle can not be NULL", ESP_ERR_INVALID_ARG);
 
     switch (sensor->mode) {
-        case MODE_POLLING:
-            SENSOR_CHECK(pdTRUE == xTimerDelete(sensor->timer_handle, portMAX_DELAY), "sensor delete failed", ESP_FAIL);
-            sensor->timer_handle = NULL;
-            break;
+    case MODE_POLLING:
+        SENSOR_CHECK(pdTRUE == xTimerDelete(sensor->timer_handle, portMAX_DELAY), "sensor delete failed", ESP_FAIL);
+        sensor->timer_handle = NULL;
+        break;
 
-        case MODE_INTERRUPT:
-            if (sensor->isr_state == ISR_STATE_ACTIVE){
-                SENSOR_CHECK(ESP_OK == sensor_intr_isr_remove(sensor->intr_pin), "sensor delete failed", ESP_FAIL);
-                sensor->isr_state = ISR_STATE_INACTIVE;
-            }
-            break;
+    case MODE_INTERRUPT:
+        if (sensor->isr_state == ISR_STATE_ACTIVE) {
+            SENSOR_CHECK(ESP_OK == sensor_intr_isr_remove(sensor->intr_pin), "sensor delete failed", ESP_FAIL);
+            sensor->isr_state = ISR_STATE_INACTIVE;
+        }
+        break;
 
-        default:
-            SENSOR_CHECK( false, "sensor delete failed", ESP_ERR_NOT_SUPPORTED);
-            break;
+    default:
+        SENSOR_CHECK(false, "sensor delete failed", ESP_ERR_NOT_SUPPORTED);
+        break;
     }
 
     /*remove from sensor list*/
@@ -609,7 +608,7 @@ esp_err_t iot_sensor_delete(sensor_handle_t *p_sensor_handle)
     SENSOR_CHECK(ret == ESP_OK, "sensor node remove failed", ret);
 
     /*set sensor to sleep mode then delete the driver*/
-    ret = sensor->impl->control(sensor->driver_handle, COMMAND_SET_POWER,  (void *)POWER_MODE_SLEEP);
+    ret = sensor->impl->control(sensor->driver_handle, COMMAND_SET_POWER, (void *)POWER_MODE_SLEEP);
 
     if (ESP_OK != ret && ESP_ERR_NOT_SUPPORTED != ret) { /*not supported case will be skip*/
         ESP_LOGW(TAG, "sensor set power failed ret = %s", esp_err_to_name(ret));
@@ -631,13 +630,19 @@ esp_err_t iot_sensor_delete(sensor_handle_t *p_sensor_handle)
             ESP_LOGW(TAG, "......waitting for sensor default task deleted.....");
             vTaskDelay(timerout_counter_step / portTICK_RATE_MS);
             timerout_counter += timerout_counter_step;
-            if (timerout_counter >= SENSOR_DEFAULT_TASK_DELETE_TIMEOUT_MS) return ESP_ERR_TIMEOUT;
+            if (timerout_counter >= SENSOR_DEFAULT_TASK_DELETE_TIMEOUT_MS) {
+                return ESP_ERR_TIMEOUT;
+            }
         }
         /*delete default event group*/
-        if (s_event_group != NULL) vEventGroupDelete(s_event_group);
+        if (s_event_group != NULL) {
+            vEventGroupDelete(s_event_group);
+        }
         s_event_group = NULL;
         /*delete default mutex group*/
-        if (s_sensor_node_mutex != NULL) vSemaphoreDelete(s_sensor_node_mutex);
+        if (s_sensor_node_mutex != NULL) {
+            vSemaphoreDelete(s_sensor_node_mutex);
+        }
         s_sensor_node_mutex = NULL;
 
 #ifdef CONFIG_SENSOR_DEFAULT_HANDLER
@@ -701,26 +706,26 @@ esp_err_t iot_sensor_handler_register_with_type(sensor_type_t sensor_type, int32
     SENSOR_CHECK(handler != NULL, "handler can not be NULL", ESP_ERR_INVALID_ARG);
 
     switch (sensor_type) {
-        case NULL_ID:
-            ESP_ERROR_CHECK(sensors_event_handler_instance_register(ESP_EVENT_ANY_BASE, ESP_EVENT_ANY_ID, handler, NULL, context));
-            break;
+    case NULL_ID:
+        ESP_ERROR_CHECK(sensors_event_handler_instance_register(ESP_EVENT_ANY_BASE, ESP_EVENT_ANY_ID, handler, NULL, context));
+        break;
 
-        case HUMITURE_ID:
-            ESP_ERROR_CHECK(sensors_event_handler_instance_register(SENSOR_HUMITURE_EVENTS, event_id, handler, NULL, context));
-            break;
+    case HUMITURE_ID:
+        ESP_ERROR_CHECK(sensors_event_handler_instance_register(SENSOR_HUMITURE_EVENTS, event_id, handler, NULL, context));
+        break;
 
-        case IMU_ID:
-            ESP_ERROR_CHECK(sensors_event_handler_instance_register(SENSOR_IMU_EVENTS, event_id, handler, NULL, context));
-            break;
+    case IMU_ID:
+        ESP_ERROR_CHECK(sensors_event_handler_instance_register(SENSOR_IMU_EVENTS, event_id, handler, NULL, context));
+        break;
 
-        case LIGHT_SENSOR_ID:
-            ESP_ERROR_CHECK(sensors_event_handler_instance_register(SENSOR_LIGHTSENSOR_EVENTS, event_id, handler, NULL, context));
-            break;
+    case LIGHT_SENSOR_ID:
+        ESP_ERROR_CHECK(sensors_event_handler_instance_register(SENSOR_LIGHTSENSOR_EVENTS, event_id, handler, NULL, context));
+        break;
 
-        default :
-            ESP_LOGE(TAG, "no driver founded, sensor base = %d", sensor_type);
-            return ESP_FAIL;
-            break;
+    default :
+        ESP_LOGE(TAG, "no driver founded, sensor base = %d", sensor_type);
+        return ESP_FAIL;
+        break;
     }
 
     return ESP_OK;
@@ -731,25 +736,25 @@ esp_err_t iot_sensor_handler_unregister_with_type(sensor_type_t sensor_type, int
     SENSOR_CHECK(context != NULL, "context can not be NULL", ESP_ERR_INVALID_ARG);
 
     switch (sensor_type) {
-        case NULL_ID:
-            ESP_ERROR_CHECK(sensors_event_handler_instance_unregister(SENSOR_HUMITURE_EVENTS, ESP_EVENT_ANY_ID, context));
-            break;
+    case NULL_ID:
+        ESP_ERROR_CHECK(sensors_event_handler_instance_unregister(SENSOR_HUMITURE_EVENTS, ESP_EVENT_ANY_ID, context));
+        break;
 
-        case HUMITURE_ID:
-            ESP_ERROR_CHECK(sensors_event_handler_instance_unregister(SENSOR_HUMITURE_EVENTS, event_id, context));
-            break;
+    case HUMITURE_ID:
+        ESP_ERROR_CHECK(sensors_event_handler_instance_unregister(SENSOR_HUMITURE_EVENTS, event_id, context));
+        break;
 
-        case IMU_ID:
-            ESP_ERROR_CHECK(sensors_event_handler_instance_unregister(SENSOR_IMU_EVENTS, event_id, context));
-            break;
+    case IMU_ID:
+        ESP_ERROR_CHECK(sensors_event_handler_instance_unregister(SENSOR_IMU_EVENTS, event_id, context));
+        break;
 
-        case LIGHT_SENSOR_ID:
-            ESP_ERROR_CHECK(sensors_event_handler_instance_unregister(SENSOR_LIGHTSENSOR_EVENTS, event_id, context));
-            break;
+    case LIGHT_SENSOR_ID:
+        ESP_ERROR_CHECK(sensors_event_handler_instance_unregister(SENSOR_LIGHTSENSOR_EVENTS, event_id, context));
+        break;
 
-        default :
-            ESP_LOGE(TAG, "no driver founded, sensor base = %d", sensor_type);
-            break;
+    default :
+        ESP_LOGE(TAG, "no driver founded, sensor base = %d", sensor_type);
+        break;
     }
 
     return ESP_OK;
@@ -771,70 +776,70 @@ static void sensor_default_event_handler(void *handler_args, esp_event_base_t ba
     }
 
     switch (id) {
-        case SENSOR_STARTED:
-            ESP_LOGI(TAG, "Timestamp = %llu - %s SENSOR_STARTED",
-                     sensor_data->timestamp,
-                     SENSOR_TYPE_STRING[sensor_type]);
-            break;
+    case SENSOR_STARTED:
+        ESP_LOGI(TAG, "Timestamp = %llu - %s SENSOR_STARTED",
+                 sensor_data->timestamp,
+                 SENSOR_TYPE_STRING[sensor_type]);
+        break;
 
-        case SENSOR_STOPED:
-            ESP_LOGI(TAG, "Timestamp = %llu - %s SENSOR_STOPED",
-                     sensor_data->timestamp,
-                     SENSOR_TYPE_STRING[sensor_type]);
-            break;
+    case SENSOR_STOPED:
+        ESP_LOGI(TAG, "Timestamp = %llu - %s SENSOR_STOPED",
+                 sensor_data->timestamp,
+                 SENSOR_TYPE_STRING[sensor_type]);
+        break;
 
-        case SENSOR_HUMI_DATA_READY:
-            ESP_LOGI(TAG, "Timestamp = %llu - SENSOR_HUMI_DATA_READY - "
-                     "humiture=%.2f",
-                     sensor_data->timestamp,
-                     sensor_data->humidity);
-            break;
+    case SENSOR_HUMI_DATA_READY:
+        ESP_LOGI(TAG, "Timestamp = %llu - SENSOR_HUMI_DATA_READY - "
+                 "humiture=%.2f",
+                 sensor_data->timestamp,
+                 sensor_data->humidity);
+        break;
 
-        case SENSOR_TEMP_DATA_READY:
-            ESP_LOGI(TAG, "Timestamp = %llu - SENSOR_TEMP_DATA_READY - "
-                     "temperature=%.2f\n",
-                     sensor_data->timestamp,
-                     sensor_data->temperature);
-            break;
+    case SENSOR_TEMP_DATA_READY:
+        ESP_LOGI(TAG, "Timestamp = %llu - SENSOR_TEMP_DATA_READY - "
+                 "temperature=%.2f\n",
+                 sensor_data->timestamp,
+                 sensor_data->temperature);
+        break;
 
-        case SENSOR_ACCE_DATA_READY:
-            ESP_LOGI(TAG, "Timestamp = %llu - SENSOR_ACCE_DATA_READY - "
-                     "acce_x=%.2f, acce_y=%.2f, acce_z=%.2f\n",
-                     sensor_data->timestamp,
-                     sensor_data->acce.x, sensor_data->acce.y, sensor_data->acce.z);
-            break;
+    case SENSOR_ACCE_DATA_READY:
+        ESP_LOGI(TAG, "Timestamp = %llu - SENSOR_ACCE_DATA_READY - "
+                 "acce_x=%.2f, acce_y=%.2f, acce_z=%.2f\n",
+                 sensor_data->timestamp,
+                 sensor_data->acce.x, sensor_data->acce.y, sensor_data->acce.z);
+        break;
 
-        case SENSOR_GYRO_DATA_READY:
-            ESP_LOGI(TAG, "Timestamp = %llu - SENSOR_GYRO_DATA_READY - "
-                     "gyro_x=%.2f, gyro_y=%.2f, gyro_z=%.2f\n",
-                     sensor_data->timestamp,
-                     sensor_data->gyro.x, sensor_data->gyro.y, sensor_data->gyro.z);
-            break;
+    case SENSOR_GYRO_DATA_READY:
+        ESP_LOGI(TAG, "Timestamp = %llu - SENSOR_GYRO_DATA_READY - "
+                 "gyro_x=%.2f, gyro_y=%.2f, gyro_z=%.2f\n",
+                 sensor_data->timestamp,
+                 sensor_data->gyro.x, sensor_data->gyro.y, sensor_data->gyro.z);
+        break;
 
-        case SENSOR_LIGHT_DATA_READY:
-            ESP_LOGI(TAG, "Timestamp = %llu - SENSOR_LIGHT_DATA_READY - "
-                     "light=%.2f",
-                     sensor_data->timestamp,
-                     sensor_data->light);
-            break;
+    case SENSOR_LIGHT_DATA_READY:
+        ESP_LOGI(TAG, "Timestamp = %llu - SENSOR_LIGHT_DATA_READY - "
+                 "light=%.2f",
+                 sensor_data->timestamp,
+                 sensor_data->light);
+        break;
 
-        case SENSOR_RGBW_DATA_READY:
-            ESP_LOGI(TAG, "Timestamp = %llu - SENSOR_RGBW_DATA_READY - "
-                     "r=%.2f, g=%.2f, b=%.2f, w=%.2f\n",
-                     sensor_data->timestamp,
-                     sensor_data->rgbw.r, sensor_data->rgbw.r, sensor_data->rgbw.b, sensor_data->rgbw.w);
-            break;
+    case SENSOR_RGBW_DATA_READY:
+        ESP_LOGI(TAG, "Timestamp = %llu - SENSOR_RGBW_DATA_READY - "
+                 "r=%.2f, g=%.2f, b=%.2f, w=%.2f\n",
+                 sensor_data->timestamp,
+                 sensor_data->rgbw.r, sensor_data->rgbw.r, sensor_data->rgbw.b, sensor_data->rgbw.w);
+        break;
 
-        case SENSOR_UV_DATA_READY:
-            ESP_LOGI(TAG, "Timestamp = %llu - SENSOR_UV_DATA_READY - "
-                     "uv=%.2f, uva=%.2f, uvb=%.2f\n",
-                     sensor_data->timestamp,
-                     sensor_data->uv.uv, sensor_data->uv.uva, sensor_data->uv.uvb);
-            break;
+    case SENSOR_UV_DATA_READY:
+        ESP_LOGI(TAG, "Timestamp = %llu - SENSOR_UV_DATA_READY - "
+                 "uv=%.2f, uva=%.2f, uvb=%.2f\n",
+                 sensor_data->timestamp,
+                 sensor_data->uv.uv, sensor_data->uv.uva, sensor_data->uv.uvb);
+        break;
 
-        default:
-            ESP_LOGI(TAG, "Timestamp = %llu - event id = %d", sensor_data->timestamp, id);
-            break;
+    default:
+        ESP_LOGI(TAG, "Timestamp = %llu - event id = %d", sensor_data->timestamp, id);
+        break;
     }
 }
 #endif

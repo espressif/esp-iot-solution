@@ -28,7 +28,7 @@ typedef enum {
 
 /**
  * @brief Knob config
- * 
+ *
  */
 typedef struct {
     uint8_t default_direction;          /*!< 0:positive increase   1:negative increase */
@@ -84,7 +84,7 @@ esp_err_t iot_knob_unregister_cb(knob_handle_t knob_handle, knob_event_t event);
 
 /**
  * @brief Get knob event
- * 
+ *
  * @param knob_handle A knob handle to register
  * @return knob_event_t Knob event
  */

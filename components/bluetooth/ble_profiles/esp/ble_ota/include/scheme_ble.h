@@ -47,8 +47,8 @@ extern const esp_ble_ota_scheme_t esp_ble_ota_scheme_ble;
 }
 
 void esp_ble_ota_scheme_ble_event_cb_free_btdm(void *user_data, esp_ble_ota_cb_event_t event, void *event_data);
-void esp_ble_ota_scheme_ble_event_cb_free_ble (void *user_data, esp_ble_ota_cb_event_t event, void *event_data);
-void esp_ble_ota_scheme_ble_event_cb_free_bt  (void *user_data, esp_ble_ota_cb_event_t event, void *event_data);
+void esp_ble_ota_scheme_ble_event_cb_free_ble(void *user_data, esp_ble_ota_cb_event_t event, void *event_data);
+void esp_ble_ota_scheme_ble_event_cb_free_bt(void *user_data, esp_ble_ota_cb_event_t event, void *event_data);
 
 /**
  * @brief   Set the 128 bit GATT service UUID used for ota

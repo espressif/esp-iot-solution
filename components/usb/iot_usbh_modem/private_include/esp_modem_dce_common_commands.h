@@ -179,8 +179,6 @@ typedef struct esp_modem_dce_cbc_ctx_s {
  */
 esp_err_t esp_modem_dce_get_battery_status(esp_modem_dce_t *dce, void *param, void *result);
 
-
-
 /**
  * @brief Get DCE module IMEI number
  *

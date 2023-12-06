@@ -24,7 +24,7 @@ esp_err_t ppbuffer_create(PingPongBuffer_t *ppbuf, void *buf0, void *buf1)
 
     memset(ppbuf, 0, sizeof(PingPongBuffer_t));
     ppbuf->buffer[0] = buf0;
-    ppbuf->buffer[1] = buf1; 
+    ppbuf->buffer[1] = buf1;
     return ESP_OK;
 }
 

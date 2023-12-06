@@ -13,7 +13,6 @@
 #include "esp_log.h"
 #include "mpu6050.h"
 
-
 #define WRITE_BIT  I2C_MASTER_WRITE /*!< I2C master write */
 #define READ_BIT   I2C_MASTER_READ  /*!< I2C master read */
 #define ACK_CHECK_EN   0x1     /*!< I2C master will check ack from slave*/
@@ -173,20 +172,20 @@ esp_err_t mpu6050_get_acce_sensitivity(mpu6050_handle_t sensor, float *acce_sens
     ret = i2c_bus_read_byte(sens->i2c_dev, MPU6050_ACCEL_CONFIG, &acce_fs);
     acce_fs = (acce_fs >> 3) & 0x03;
     switch (acce_fs) {
-        case ACCE_FS_2G:
-            *acce_sensitivity = 16384;
-            break;
-        case ACCE_FS_4G:
-            *acce_sensitivity = 8192;
-            break;
-        case ACCE_FS_8G:
-            *acce_sensitivity = 4096;
-            break;
-        case ACCE_FS_16G:
-            *acce_sensitivity = 2048;
-            break;
-        default:
-            break;
+    case ACCE_FS_2G:
+        *acce_sensitivity = 16384;
+        break;
+    case ACCE_FS_4G:
+        *acce_sensitivity = 8192;
+        break;
+    case ACCE_FS_8G:
+        *acce_sensitivity = 4096;
+        break;
+    case ACCE_FS_16G:
+        *acce_sensitivity = 2048;
+        break;
+    default:
+        break;
     }
     return ret;
 }
@@ -199,20 +198,20 @@ esp_err_t mpu6050_get_gyro_sensitivity(mpu6050_handle_t sensor, float *gyro_sens
     ret = i2c_bus_read_byte(sens->i2c_dev, MPU6050_ACCEL_CONFIG, &gyro_fs);
     gyro_fs = (gyro_fs >> 3) & 0x03;
     switch (gyro_fs) {
-        case GYRO_FS_250DPS:
-            *gyro_sensitivity = 131;
-            break;
-        case GYRO_FS_500DPS:
-            *gyro_sensitivity = 65.5;
-            break;
-        case GYRO_FS_1000DPS:
-            *gyro_sensitivity = 32.8;
-            break;
-        case GYRO_FS_2000DPS:
-            *gyro_sensitivity = 16.4;
-            break;
-        default:
-            break;
+    case GYRO_FS_250DPS:
+        *gyro_sensitivity = 131;
+        break;
+    case GYRO_FS_500DPS:
+        *gyro_sensitivity = 65.5;
+        break;
+    case GYRO_FS_1000DPS:
+        *gyro_sensitivity = 32.8;
+        break;
+    case GYRO_FS_2000DPS:
+        *gyro_sensitivity = 16.4;
+        break;
+    default:
+        break;
     }
     return ret;
 }
@@ -286,7 +285,7 @@ esp_err_t mpu6050_get_gyro(mpu6050_handle_t sensor, mpu6050_gyro_value_t *gyro_v
 }
 
 esp_err_t mpu6050_complimentory_filter(mpu6050_handle_t sensor, mpu6050_acce_value_t *acce_value,
-        mpu6050_gyro_value_t *gyro_value, complimentary_angle_t *complimentary_angle)
+                                       mpu6050_gyro_value_t *gyro_value, complimentary_angle_t *complimentary_angle)
 {
     float acce_angle[2];
     float gyro_angle[2];

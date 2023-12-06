@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #include "sdkconfig.h"
 #if CONFIG_IDF_TARGET_ESP32S3
 
@@ -63,7 +62,6 @@ typedef struct {
     lcd_cam_obj_t *i2s_lcd_obj;
     SemaphoreHandle_t mutex;
 } i2s_lcd_driver_t;
-
 
 static void IRAM_ATTR dma_isr(void *arg)
 {
@@ -298,7 +296,6 @@ static esp_err_t lcd_dma_config(lcd_cam_obj_t *lcd_cam_obj, const i2s_lcd_config
     lcd_cam_obj->dma_buffer = (uint8_t *)heap_caps_malloc(lcd_cam_obj->dma_buffer_size * sizeof(uint8_t), MALLOC_CAP_DMA);
     return ESP_OK;
 }
-
 
 esp_err_t lcd_cam_deinit(i2s_lcd_driver_t *drv)
 {

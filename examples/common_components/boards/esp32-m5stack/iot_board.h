@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #ifndef _IOT_BOARD_H_
 #define _IOT_BOARD_H_
 
@@ -33,7 +32,7 @@ typedef enum {
     NULL_RESOURCE,
     BOARD_I2C0_ID,
     BOARD_SPI3_ID,
-}board_res_id_t;
+} board_res_id_t;
 
 #define BOARD_IO_I2C0_SCL 3
 #define BOARD_IO_I2C0_SDA 1
@@ -94,7 +93,7 @@ typedef enum {
 
 /**< Touch panel interface pins */
 /**
- * When both the screen and the touch panel are SPI interfaces, 
+ * When both the screen and the touch panel are SPI interfaces,
  * they can choose to share a SPI host. The board ESP32-LCDKit is this.
  */
 #define BOARD_TOUCH_SPI_CS_PIN 32

@@ -8,4 +8,3 @@ dependencies:
   cmake_utilities: "0.*"
 examples:
   - path: ../../../../examples/display/lcd/qspi_with_ram
-

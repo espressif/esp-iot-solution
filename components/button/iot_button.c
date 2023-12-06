@@ -52,8 +52,8 @@ typedef struct Button {
     uint8_t             active_level: 1;
     uint8_t             button_level: 1;
     button_event_t      event;
-    uint8_t             (*hal_button_Level)(void *hardware_data);
-    esp_err_t           (*hal_button_deinit)(void *hardware_data);
+    uint8_t (*hal_button_Level)(void *hardware_data);
+    esp_err_t (*hal_button_deinit)(void *hardware_data);
     void                *hardware_data;
     button_type_t       type;
     button_cb_info_t    *cb_info[BUTTON_EVENT_MAX];
@@ -136,8 +136,9 @@ static void button_handler(button_dev_t *btn)
                     do {
                         btn->cb_info[btn->event][btn->count[0]].cb(btn, btn->cb_info[btn->event][btn->count[0]].usr_data);
                         btn->count[0]++;
-                        if (btn->count[0] >= btn->size[btn->event])
+                        if (btn->count[0] >= btn->size[btn->event]) {
                             break;
+                        }
                     } while (btn->cb_info[btn->event][btn->count[0]].event_data.long_press.press_time == btn->long_press_ticks * TICKS_INTERVAL);
                 }
             }
@@ -170,8 +171,9 @@ static void button_handler(button_dev_t *btn)
                     do {
                         btn->cb_info[btn->event][i].cb(btn, btn->cb_info[btn->event][i].usr_data);
                         i++;
-                        if (i >= btn->size[btn->event])
+                        if (i >= btn->size[btn->event]) {
                             break;
+                        }
                     } while (btn->cb_info[btn->event][i].event_data.multiple_clicks.clicks == btn->repeat);
                 }
             }
@@ -222,8 +224,9 @@ static void button_handler(button_dev_t *btn)
                         do {
                             cb_info[btn->count[0]].cb(btn, cb_info[btn->count[0]].usr_data);
                             btn->count[0]++;
-                            if (btn->count[0] >= btn->size[BUTTON_LONG_PRESS_START])
+                            if (btn->count[0] >= btn->size[BUTTON_LONG_PRESS_START]) {
                                 break;
+                            }
                         } while (time == cb_info[btn->count[0]].event_data.long_press.press_time);
                     }
                 }
@@ -241,11 +244,12 @@ static void button_handler(button_dev_t *btn)
                             }
                         }
                     }
-                    if(btn->count[1] + 1 < btn->size[BUTTON_LONG_PRESS_UP] && abs(ticks_time - time) <= TOLERANCE) {
+                    if (btn->count[1] + 1 < btn->size[BUTTON_LONG_PRESS_UP] && abs(ticks_time - time) <= TOLERANCE) {
                         do {
                             btn->count[1]++;
-                            if (btn->count[1] + 1 >= btn->size[BUTTON_LONG_PRESS_UP])
+                            if (btn->count[1] + 1 >= btn->size[BUTTON_LONG_PRESS_UP]) {
                                 break;
+                            }
                         } while (time == cb_info[btn->count[1] + 1].event_data.long_press.press_time);
                     }
                 }
@@ -259,8 +263,9 @@ static void button_handler(button_dev_t *btn)
                 button_cb_info_t *cb_info = btn->cb_info[btn->event];
                 do {
                     cb_info[btn->count[1]].cb(btn, cb_info[btn->count[1]].usr_data);
-                    if (!btn->count[1])
+                    if (!btn->count[1]) {
                         break;
+                    }
                     btn->count[1]--;
                 } while (cb_info[btn->count[1]].event_data.long_press.press_time == cb_info[btn->count[1] + 1].event_data.long_press.press_time);
 
@@ -327,7 +332,7 @@ static esp_err_t button_delete_com(button_dev_t *btn)
     BTN_CHECK(NULL != btn, "Pointer of handle is invalid", ESP_ERR_INVALID_ARG);
 
     button_dev_t **curr;
-    for (curr = &g_head_handle; *curr; ) {
+    for (curr = &g_head_handle; *curr;) {
         button_dev_t *entry = *curr;
         if (entry == btn) {
             *curr = entry->next;
@@ -475,8 +480,7 @@ esp_err_t iot_button_register_event_cb(button_handle_t btn_handle, button_event_
         } else if (event == BUTTON_LONG_PRESS_UP) {
             btn->count[1] = -1;
         }
-    }
-    else {
+    } else {
         button_cb_info_t *p = realloc(btn->cb_info[event], sizeof(button_cb_info_t) * (btn->size[event] + 1));
         BTN_CHECK(NULL != p, "realloc cb_info failed", ESP_ERR_NO_MEM);
         btn->cb_info[event] = p;
@@ -587,7 +591,7 @@ esp_err_t iot_button_unregister_event(button_handle_t btn_handle, button_event_c
                 }
             }
             check = i;
-            for (int j = i; j <= btn->size[event]-1; j++) {
+            for (int j = i; j <= btn->size[event] - 1; j++) {
                 btn->cb_info[event][j] = btn->cb_info[event][j + 1];
             }
 
@@ -617,7 +621,7 @@ size_t iot_button_count_cb(button_handle_t btn_handle)
     size_t ret = 0;
     for (size_t i = 0; i < BUTTON_EVENT_MAX; i++) {
         if (btn->cb_info[i]) {
-            ret+=btn->size[i];
+            ret += btn->size[i];
         }
     }
     return ret;

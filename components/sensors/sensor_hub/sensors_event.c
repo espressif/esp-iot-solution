@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
@@ -60,12 +59,11 @@ esp_err_t sensors_event_loop_delete(void)
     return ESP_OK;
 }
 
-
 esp_err_t sensors_event_handler_instance_register(esp_event_base_t event_base,
-        int32_t event_id,
-        esp_event_handler_t event_handler,
-        void *event_handler_arg,
-        esp_event_handler_instance_t *context)
+                                                  int32_t event_id,
+                                                  esp_event_handler_t event_handler,
+                                                  void *event_handler_arg,
+                                                  esp_event_handler_instance_t *context)
 {
 #ifdef CONFIG_SENSOR_EVENT_LOOP_AUTO
     if (h_sensors_loop == NULL) {
@@ -97,8 +95,8 @@ esp_err_t sensors_event_handler_instance_register(esp_event_base_t event_base,
 }
 
 esp_err_t sensors_event_handler_instance_unregister(esp_event_base_t event_base,
-        int32_t event_id,
-        esp_event_handler_instance_t context)
+                                                    int32_t event_id,
+                                                    esp_event_handler_instance_t context)
 {
     if (h_sensors_loop == NULL) {
         return ESP_ERR_INVALID_STATE;
@@ -129,7 +127,6 @@ esp_err_t sensors_event_post(esp_event_base_t event_base, int32_t event_id,
     return esp_event_post_to(h_sensors_loop, event_base, event_id,
                              event_data, event_data_size, ticks_to_wait);
 }
-
 
 #if CONFIG_ESP_EVENT_POST_FROM_ISR
 esp_err_t sensors_event_isr_post(esp_event_base_t event_base, int32_t event_id,

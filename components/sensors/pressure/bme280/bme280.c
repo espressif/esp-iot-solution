@@ -370,4 +370,3 @@ esp_err_t bme280_calculates_pressure(bme280_handle_t sensor, float altitude,
     *pressure = atmospheric / pow(1.0 - (altitude / 44330.0), 5.255);
     return ESP_OK;
 }
-

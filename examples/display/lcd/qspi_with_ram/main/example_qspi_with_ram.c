@@ -291,25 +291,25 @@ void app_main(void)
     ESP_LOGI(TAG, "Initialize SPI bus");
 #if CONFIG_EXAMPLE_LCD_CONTROLLER_GC9B71
     const spi_bus_config_t buscfg = GC9B71_PANEL_BUS_QSPI_CONFIG(EXAMPLE_PIN_NUM_LCD_PCLK,
-                                                                EXAMPLE_PIN_NUM_LCD_DATA0,
-                                                                EXAMPLE_PIN_NUM_LCD_DATA1,
-                                                                EXAMPLE_PIN_NUM_LCD_DATA2,
-                                                                EXAMPLE_PIN_NUM_LCD_DATA3,
-                                                                EXAMPLE_LCD_H_RES * EXAMPLE_LCD_V_RES * LCD_BIT_PER_PIXEL / 8);
+                                                                 EXAMPLE_PIN_NUM_LCD_DATA0,
+                                                                 EXAMPLE_PIN_NUM_LCD_DATA1,
+                                                                 EXAMPLE_PIN_NUM_LCD_DATA2,
+                                                                 EXAMPLE_PIN_NUM_LCD_DATA3,
+                                                                 EXAMPLE_LCD_H_RES * EXAMPLE_LCD_V_RES * LCD_BIT_PER_PIXEL / 8);
 #elif CONFIG_EXAMPLE_LCD_CONTROLLER_SPD2010
     const spi_bus_config_t buscfg = SPD2010_PANEL_BUS_QSPI_CONFIG(EXAMPLE_PIN_NUM_LCD_PCLK,
-                                                                EXAMPLE_PIN_NUM_LCD_DATA0,
-                                                                EXAMPLE_PIN_NUM_LCD_DATA1,
-                                                                EXAMPLE_PIN_NUM_LCD_DATA2,
-                                                                EXAMPLE_PIN_NUM_LCD_DATA3,
-                                                                EXAMPLE_LCD_H_RES * EXAMPLE_LCD_V_RES * LCD_BIT_PER_PIXEL / 8);
+                                                                  EXAMPLE_PIN_NUM_LCD_DATA0,
+                                                                  EXAMPLE_PIN_NUM_LCD_DATA1,
+                                                                  EXAMPLE_PIN_NUM_LCD_DATA2,
+                                                                  EXAMPLE_PIN_NUM_LCD_DATA3,
+                                                                  EXAMPLE_LCD_H_RES * EXAMPLE_LCD_V_RES * LCD_BIT_PER_PIXEL / 8);
 #elif CONFIG_EXAMPLE_LCD_CONTROLLER_SH8601
     const spi_bus_config_t buscfg = SH8601_PANEL_BUS_QSPI_CONFIG(EXAMPLE_PIN_NUM_LCD_PCLK,
-                                                                EXAMPLE_PIN_NUM_LCD_DATA0,
-                                                                EXAMPLE_PIN_NUM_LCD_DATA1,
-                                                                EXAMPLE_PIN_NUM_LCD_DATA2,
-                                                                EXAMPLE_PIN_NUM_LCD_DATA3,
-                                                                EXAMPLE_LCD_H_RES * EXAMPLE_LCD_V_RES * LCD_BIT_PER_PIXEL / 8);
+                                                                 EXAMPLE_PIN_NUM_LCD_DATA0,
+                                                                 EXAMPLE_PIN_NUM_LCD_DATA1,
+                                                                 EXAMPLE_PIN_NUM_LCD_DATA2,
+                                                                 EXAMPLE_PIN_NUM_LCD_DATA3,
+                                                                 EXAMPLE_LCD_H_RES * EXAMPLE_LCD_V_RES * LCD_BIT_PER_PIXEL / 8);
 #endif
     ESP_ERROR_CHECK(spi_bus_initialize(LCD_HOST, &buscfg, SPI_DMA_CH_AUTO));
 
@@ -326,8 +326,8 @@ void app_main(void)
     };
 #elif CONFIG_EXAMPLE_LCD_CONTROLLER_SPD2010
     const esp_lcd_panel_io_spi_config_t io_config = SPD2010_PANEL_IO_QSPI_CONFIG(EXAMPLE_PIN_NUM_LCD_CS,
-                                                                                example_notify_lvgl_flush_ready,
-                                                                                &disp_drv);
+                                                                                 example_notify_lvgl_flush_ready,
+                                                                                 &disp_drv);
     spd2010_vendor_config_t vendor_config = {
         .flags = {
             .use_qspi_interface = 1,

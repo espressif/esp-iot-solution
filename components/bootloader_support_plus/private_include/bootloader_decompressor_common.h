@@ -39,7 +39,7 @@ int bootloader_decompressor_write(void *buf, unsigned int size);
  *
  * @param params Pointer to the ota params
  *
- * @return 0 
+ * @return 0
  */
 int bootloader_decompressor_init(bootloader_custom_ota_params_t *params);
 

@@ -50,17 +50,17 @@ static EventGroupHandle_t s_wifi_event_group = NULL;
 #define WIFI_FAIL_BIT      BIT1
 
 static void wifi_event_handler(void *arg, esp_event_base_t event_base,
-    int32_t event_id, void *event_data)
+                               int32_t event_id, void *event_data)
 {
     /* AP mode */
     if (event_id == WIFI_EVENT_AP_STACONNECTED) {
         wifi_event_ap_staconnected_t *event = (wifi_event_ap_staconnected_t *)event_data;
         ESP_LOGI(TAG, "station "MACSTR" join, AID=%d",
-            MAC2STR(event->mac), event->aid);
+                 MAC2STR(event->mac), event->aid);
     } else if (event_id == WIFI_EVENT_AP_STADISCONNECTED) {
         wifi_event_ap_stadisconnected_t *event = (wifi_event_ap_stadisconnected_t *)event_data;
         ESP_LOGI(TAG, "station "MACSTR" leave, AID=%d",
-            MAC2STR(event->mac), event->aid);
+                 MAC2STR(event->mac), event->aid);
     }
     /* Sta mode */
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
@@ -116,7 +116,7 @@ static void wifi_init_softap(esp_netif_t *netif)
     ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_config));
 
     ESP_LOGI(TAG, "wifi_init_softap finished.SSID:%s password:%s",
-        EXAMPLE_ESP_WIFI_AP_SSID, EXAMPLE_ESP_WIFI_AP_PASS);
+             EXAMPLE_ESP_WIFI_AP_SSID, EXAMPLE_ESP_WIFI_AP_PASS);
 }
 
 static void wifi_init_sta()
@@ -130,7 +130,7 @@ static void wifi_init_sta()
 
     ESP_LOGI(TAG, "wifi_init_sta finished.");
     ESP_LOGI(TAG, "connect to ap SSID:%s password:%s",
-        EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS);
+             EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS);
 }
 
 void app_wifi_main()
@@ -164,15 +164,15 @@ void app_wifi_main()
 
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
     ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
-        ESP_EVENT_ANY_ID,
-        &wifi_event_handler,
-        NULL,
-        NULL));
+                                                        ESP_EVENT_ANY_ID,
+                                                        &wifi_event_handler,
+                                                        NULL,
+                                                        NULL));
     ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT,
-        IP_EVENT_STA_GOT_IP,
-        &wifi_event_handler,
-        NULL,
-        NULL));
+                                                        IP_EVENT_STA_GOT_IP,
+                                                        &wifi_event_handler,
+                                                        NULL,
+                                                        NULL));
 
     ESP_ERROR_CHECK(esp_wifi_set_mode(mode));
 
@@ -191,10 +191,10 @@ void app_wifi_main()
 
     if (mode & WIFI_MODE_STA) {
         xEventGroupWaitBits(s_wifi_event_group,
-            WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
-            pdFALSE,
-            pdFALSE,
-            portMAX_DELAY);
+                            WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
+                            pdFALSE,
+                            pdFALSE,
+                            portMAX_DELAY);
     }
     vEventGroupDelete(s_wifi_event_group);
     s_wifi_event_group = NULL;

@@ -2,7 +2,7 @@ version: "0.2.1"
 targets:
   - esp32s2
   - esp32s3
-description: Simple USB Host driver maintained in esp-iot-solution 
+description: Simple USB Host driver maintained in esp-iot-solution
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/usb/iot_usbh
 repository: https://github.com/espressif/esp-iot-solution/tree/master/components/usb/iot_usbh
 issues: https://github.com/espressif/esp-iot-solution/issues

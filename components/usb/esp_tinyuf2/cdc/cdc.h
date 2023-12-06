@@ -58,7 +58,6 @@ typedef struct {
  */
 esp_err_t tinyusb_cdc_init(int itf, const tinyusb_config_cdc_t *cfg);
 
-
 /**
  * @brief De-initializing CDC. Clean its objects
  * @param itf - number of a CDC object
@@ -66,7 +65,6 @@ esp_err_t tinyusb_cdc_init(int itf, const tinyusb_config_cdc_t *cfg);
  *
  */
 esp_err_t tinyusb_cdc_deinit(int itf);
-
 
 /**
  * @brief Return interface of a CDC device

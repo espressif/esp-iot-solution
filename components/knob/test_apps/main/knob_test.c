@@ -103,7 +103,6 @@ TEST_CASE("one knob test", "[knob][iot]")
     cfg->gpio_encoder_a = GPIO_KNOB_A;
     cfg->gpio_encoder_b = GPIO_KNOB_B;
 
-    
     s_knob[0] = iot_knob_create(cfg);
     TEST_ASSERT_NOT_NULL(s_knob[0]);
     iot_knob_register_cb(s_knob[0], KNOB_LEFT, knob_left_cb, (void *)knob_name[0]);
@@ -118,7 +117,6 @@ TEST_CASE("one knob test", "[knob][iot]")
 
     iot_knob_delete(s_knob[0]);
 }
-
 
 static size_t before_free_8bit;
 static size_t before_free_32bit;

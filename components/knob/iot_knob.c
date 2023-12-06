@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2016-2021 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2016-2023 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -45,7 +45,7 @@ typedef struct Knob {
     knob_event_t  event;                                       /*!< Current event */
     uint16_t      ticks;                                       /*!< Timer interrupt count */
     int           count_value;                                 /*!< Knob count */
-    uint8_t       (*hal_knob_level)(void *hardware_data);      /*!< Get current level */
+    uint8_t (*hal_knob_level)(void *hardware_data);            /*!< Get current level */
     void          *encoder_a;                                  /*!< Encoder A phase gpio number */
     void          *encoder_b;                                  /*!< Encoder B phase gpio number */
     void          *usr_data[KNOB_EVENT_MAX];                   /*!< User data for event */
@@ -97,7 +97,7 @@ static void knob_handler(knob_dev_t *knob)
             knob->encoder_a_change = false;
             knob->ticks = 0;
             knob->state = KNOB_PHASE_A;
-        } else if ( knob->encoder_b_change) {
+        } else if (knob->encoder_b_change) {
             knob->encoder_b_change = false;
             knob->ticks = 0;
             knob->state = KNOB_PHASE_B;
@@ -179,7 +179,7 @@ static void knob_handler(knob_dev_t *knob)
         break;
 
     case KNOB_CHECK:
-        if ( knob->encoder_a_level == knob->encoder_b_level) {
+        if (knob->encoder_a_level == knob->encoder_b_level) {
             knob->state = KNOB_READY;
             knob->encoder_a_change = false;
             knob->encoder_b_change = false;
@@ -264,7 +264,7 @@ knob_handle_t iot_knob_create(const knob_config_t *config)
         s_is_timer_running = true;
     }
 
-    ESP_LOGI(TAG, "Iot Knob Config Succeed, encoder A:%d, encoder B:%d, direction:%d, Version: %d.%d.%d",config->gpio_encoder_a, config->gpio_encoder_b, config->default_direction, KNOB_VER_MAJOR, KNOB_VER_MINOR, KNOB_VER_PATCH);
+    ESP_LOGI(TAG, "Iot Knob Config Succeed, encoder A:%d, encoder B:%d, direction:%d, Version: %d.%d.%d", config->gpio_encoder_a, config->gpio_encoder_b, config->default_direction, KNOB_VER_MAJOR, KNOB_VER_MINOR, KNOB_VER_PATCH);
     return (knob_handle_t)knob;
 
 _encoder_b_deinit:
@@ -282,7 +282,7 @@ esp_err_t iot_knob_delete(knob_handle_t knob_handle)
     ret = _knob_gpio_deinit((int)(knob->usr_data));
     KNOB_CHECK(ESP_OK == ret, "knob deinit failed", ESP_FAIL);
     knob_dev_t **curr;
-    for (curr = &s_head_handle; *curr; ) {
+    for (curr = &s_head_handle; *curr;) {
         knob_dev_t *entry = *curr;
         if (entry == knob) {
             *curr = entry->next;

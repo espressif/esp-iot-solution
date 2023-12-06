@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #ifndef _IOT_FILE_MANAGER_H_
 #define _IOT_FILE_MANAGER_H_
 
@@ -26,7 +25,7 @@ const char *fm_get_basepath(void);
 const char *fm_get_filename(const char *file);
 size_t fm_get_file_size(const char *filepath);
 esp_err_t fm_file_table_create(char ***list_out, uint16_t *files_number, const char *filter_suffix);
-esp_err_t fm_file_table_free(char ***list,uint16_t files_number);
+esp_err_t fm_file_table_free(char ***list, uint16_t files_number);
 esp_err_t fm_unmount_sdcard(void);
 
 #ifdef __cplusplus
@@ -34,4 +33,3 @@ esp_err_t fm_unmount_sdcard(void);
 #endif
 
 #endif
-

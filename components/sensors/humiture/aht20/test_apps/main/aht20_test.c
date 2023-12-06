@@ -102,4 +102,3 @@ void app_main(void)
     printf("AHT20 TEST \n");
     unity_run_menu();
 }
-

@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #include "stdlib.h"
 #include "time.h"
 #include "stdio.h"
@@ -29,13 +28,11 @@ typedef void (*fill_pixel_func_t)(int x, int y, uint8_t duty);
 
 fill_pixel_func_t fill_pixel_func = NULL;
 
-typedef struct
-{
+typedef struct {
     int x, y;
 } curPoint;
 
-typedef struct
-{
+typedef struct {
     curPoint body[200];
     int len, arrowHead, score, dead;
 } MainSnack;
@@ -87,7 +84,7 @@ void create_food(curPoint* food)
     srand(system_get_rtc_time());
     while (1) {
         found = 0;
-        int loop_num = (rand()+system_get_rtc_time()) % 10;
+        int loop_num = (rand() + system_get_rtc_time()) % 10;
         while (loop_num--) {
             rand();
         }
@@ -104,22 +101,21 @@ void create_food(curPoint* food)
     }
 }
 
-
 void snake_auto_run()
 {
-    if(Ms.body[1].x == 4 && Ms.body[1].y == 0) {
+    if (Ms.body[1].x == 4 && Ms.body[1].y == 0) {
         Ms.arrowHead = HEAD_LEFT;
-    } else if(Ms.body[1].x == 0 && Ms.body[1].y % 2 == 0) {
+    } else if (Ms.body[1].x == 0 && Ms.body[1].y % 2 == 0) {
         Ms.arrowHead = HEAD_DOWN;
-    } else if(Ms.body[1].x == 0 && Ms.body[1].y % 2 == 1) {
+    } else if (Ms.body[1].x == 0 && Ms.body[1].y % 2 == 1) {
         Ms.arrowHead = HEAD_RIGHT;
-    } else if(Ms.body[1].x == 6 && Ms.body[1].y % 2 == 1 && Ms.body[1].y < 11) {
+    } else if (Ms.body[1].x == 6 && Ms.body[1].y % 2 == 1 && Ms.body[1].y < 11) {
         Ms.arrowHead = HEAD_DOWN;
-    } else if(Ms.body[1].x == 6 && Ms.body[1].y % 2 == 0) {
+    } else if (Ms.body[1].x == 6 && Ms.body[1].y % 2 == 0) {
         Ms.arrowHead = HEAD_LEFT;
-    } else if(Ms.body[1].x == 7 && Ms.body[1].y == 11) {
+    } else if (Ms.body[1].x == 7 && Ms.body[1].y == 11) {
         Ms.arrowHead = HEAD_UP;
-    } else if(Ms.body[1].x == 7 && Ms.body[1].y == 0) {
+    } else if (Ms.body[1].x == 7 && Ms.body[1].y == 0) {
         Ms.arrowHead = HEAD_LEFT;
     }
 }
@@ -132,7 +128,7 @@ void GameProcess(void *arg)
     food.y = -1;
     food.x = -1;
 
-    while(gpio_get_level(0) == 1) {
+    while (gpio_get_level(0) == 1) {
         if (food.y == -1) {
             ets_printf("find\n");
             create_food(&food);
@@ -146,20 +142,20 @@ void GameProcess(void *arg)
             Ms.body[i + 1] = Ms.body[i];
         }
         switch (Ms.arrowHead) {
-            case HEAD_RIGHT:
-                Ms.body[1].x++;
-                break;
-            case HEAD_LEFT:
-                Ms.body[1].x--;
-                break;
-            case HEAD_UP:
-                Ms.body[1].y--;
-                break;
-            case HEAD_DOWN:
-                Ms.body[1].y++;
-                break;
+        case HEAD_RIGHT:
+            Ms.body[1].x++;
+            break;
+        case HEAD_LEFT:
+            Ms.body[1].x--;
+            break;
+        case HEAD_UP:
+            Ms.body[1].y--;
+            break;
+        case HEAD_DOWN:
+            Ms.body[1].y++;
+            break;
         }
-        if(mode == MODE_AUTO) {
+        if (mode == MODE_AUTO) {
             snake_auto_run();
         }
         //check food
@@ -168,9 +164,9 @@ void GameProcess(void *arg)
             Ms.len++;
             Ms.body[Ms.len].x = -1;
             Ms.body[Ms.len].y = -1;
-            if(Ms.len == MAX_COLS * MAX_LINES) {
+            if (Ms.len == MAX_COLS * MAX_LINES) {
                 printf("DONE!!!\n");
-                vTaskDelay(1000/portTICK_PERIOD_MS);
+                vTaskDelay(1000 / portTICK_PERIOD_MS);
                 return;
             }
         }

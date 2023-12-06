@@ -13,8 +13,7 @@ esp_err_t bldc_gpio_init(const bldc_gpio_config_t *config)
     BLDC_CHECK(NULL != config, "Pointer of config is invalid", ESP_ERR_INVALID_ARG);
     BLDC_CHECK(GPIO_IS_VALID_GPIO(config->gpio_num), "GPIO number error", ESP_ERR_INVALID_ARG);
     gpio_config_t gpio_conf = GPIO_CONFIG_DEFAULT(config->gpio_mode, config->gpio_num);
-    if (config->gpio_mode == GPIO_MODE_INPUT)
-    {
+    if (config->gpio_mode == GPIO_MODE_INPUT) {
         if (config->active_level) {
             gpio_conf.pull_down_en = GPIO_PULLDOWN_ENABLE;
         } else {

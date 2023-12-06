@@ -21,7 +21,6 @@
 static i2c_bus_handle_t i2c_bus = NULL;
 static is31fl3218_handle_t fxled = NULL;
 
-
 /**
  * @brief i2c master initialization
  */
@@ -36,7 +35,7 @@ void fxled_is31fl3218_init()
         .master.clk_speed = I2C_MASTER_FREQ_HZ,
     };
     i2c_bus = i2c_bus_create(I2C_MASTER_NUM, &conf);
-    if(fxled ==NULL) {
+    if (fxled == NULL) {
         fxled = is31fl3218_create(i2c_bus);
     }
     TEST_ASSERT_NOT_NULL(fxled);
@@ -46,12 +45,12 @@ void is31f13218_test()
 {
     fxled_is31fl3218_init();
 
-    uint8_t i=0,j=255/10;
-    ESP_ERROR_CHECK( is31fl3218_channel_set(fxled, IS31FL3218_CH_NUM_MAX_MASK, 0) );
+    uint8_t i = 0, j = 255 / 10;
+    ESP_ERROR_CHECK(is31fl3218_channel_set(fxled, IS31FL3218_CH_NUM_MAX_MASK, 0));
     int cnt = 0;
     printf("enter loop\n");
     uint8_t duty_data[18] = {0};
-    while(1){
+    while (1) {
         is31fl3218_write_pwm_regs(fxled, duty_data, sizeof(duty_data));
         vTaskDelay(20 / portTICK_RATE_MS);
         if (++i > IS31FL3218_CH_NUM_MAX - 1) {
@@ -111,4 +110,3 @@ TEST_CASE("I2C led is31f13218 test", "[is31f13218][iot][fxled]")
 {
     is31f13218_test();
 }
-

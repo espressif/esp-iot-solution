@@ -1,5 +1,5 @@
 menu "Board Options"
-    
+
     choice BOARD_TARGET
         prompt "Choose Target Board"
         default BOARD_ESP32_DEVKITC_V4 if IDF_TARGET_ESP32
@@ -97,43 +97,43 @@ menu "Board Options"
                 default ""
                 help
                 WiFi SSID (network name) to connect to or empty for Off.
-    
+
             config BOARD_WIFI_PASSWORD
                 string "WiFi STA Password"
                 default ""
                 help
                 WiFi Password if WEP/WPA/WPA2 or empty if Open.
-    
+
             config BOARD_WIFI_AP_SSID
                 string "WiFi AP SSID"
                 default "iot-default"
                 help
                 AP SSID (network name) to create or empty for Off.
-    
+
             config BOARD_WIFI_AP_PASSWORD
                 string "WiFi AP Password"
                 default ""
                 help
                 AP password for WPA2 or empty for Open.
-    
+
             config BOARD_MAX_STA_CONN
                 int "WiFi AP Maximal STA connections"
                 default 3
                 help
                 Max number of the STA connects to AP.
-    
+
             config BOARD_WIFI_AP_CHANNEL
                 int "WiFi AP Channel"
                 default 6
                 help
                 AP channel for better connection performance.
-    
+
             config BOARD_SERVER_IP
                 string "WiFi AP IP Address"
                 default "192.168.4.1"
                 help
                     IP address that the ESP will assign to it's AP interface. You can use this IP to connect to the camera after flashing.
-    
+
             config BOARD_MAXIMUM_RETRY
                 int "Maximum retry"
                 default 5

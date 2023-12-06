@@ -23,7 +23,6 @@ extern "C" {
             return super->retry->run(super->retry, param, result);      \
         }
 
-
 /**
  * @brief GPIO helper object used to pull modem IOs
  *
@@ -70,7 +69,6 @@ struct esp_modem_retry_s {
  *
  */
 esp_modem_recov_resend_t *esp_modem_recov_resend_new(esp_modem_dce_t *dce, dce_command_t orig_cmd, esp_modem_retry_fn_t recover, int max_timeouts, int max_errors);
-
 
 /**
  * @brief Create new gpio object

@@ -231,9 +231,9 @@ static esp_err_t st77903_qspi_alloc_buffers(st77903_qspi_panel_t *panel)
         .base = {
             .cmd = ST77903_INS_DATA,
             .length = panel->bytes_per_line * 8,
-            .addr = ((uint32_t)ST77903_CMD_HSYNC) << 8,
+            .addr = (((uint32_t)ST77903_CMD_HSYNC) << 8),
             .flags = SPI_TRANS_MODE_QIO,
-            .user = (void *)&panel->trans_user,
+            .user = (void *) &panel->trans_user,
             .sct_gap_len = SPI_SEG_GAP_GET_CLK_LEN(SPI_SEG_GAP_GET_US(panel->hor_res, panel->bytes_per_line)),
         },
     };
@@ -253,8 +253,8 @@ static esp_err_t st77903_qspi_alloc_buffers(st77903_qspi_panel_t *panel)
             .cmd = ST77903_INS_CMD,
             .length = 0,
             .addr = ((uint32_t)ST77903_CMD_HSYNC) << 8,
-            .user = (void *)&panel->vbp_user,
-            .sct_gap_len = SPI_SEG_GAP_GET_CLK_LEN(LCD_LINE_INTERVAL_MIN_US),
+                                                  .user = (void *) &panel->vbp_user,
+                                                  .sct_gap_len = SPI_SEG_GAP_GET_CLK_LEN(LCD_LINE_INTERVAL_MIN_US),
         },
     };
     for (int i = 0; i < LCD_VSYNC_BACK_NUM + 1; i++) {
@@ -300,7 +300,7 @@ esp_err_t lcd_new_panel_st77903_qspi(const esp_lcd_panel_dev_config_t *panel_dev
             .data3_io_num = config->qspi.data3_io_num,
             .flags = SPICOMMON_BUSFLAG_QUAD,
             .max_transfer_sz = config->trans_pool_size * config->trans_pool_num * dma_nodes_per_spi_trans *
-                               DMA_DESCRIPTOR_BUFFER_MAX_SIZE * 2,
+            DMA_DESCRIPTOR_BUFFER_MAX_SIZE * 2,
         };
         ESP_RETURN_ON_ERROR(spi_bus_initialize(config->qspi.host_id, &spi_config, SPI_DMA_CH_AUTO), TAG, "SPI bus init failed");
         ESP_LOGD(TAG, "SPI max transfer size: %dKB", spi_config.max_transfer_sz / 1024);
@@ -1000,7 +1000,7 @@ IRAM_ATTR static void post_trans_color_cb(spi_transaction_t *trans)
     if (user != NULL) {
         st77903_qspi_panel_t *panel = user->panel;
         if (user->is_color) {  // Trans color end
-            if(load_trans_pool(panel, (spi_multi_transaction_t *)trans, true)) {
+            if (load_trans_pool(panel, (spi_multi_transaction_t *)trans, true)) {
                 need_yield = pdTRUE;
             }
         } else if (panel->flags.enable_read_reg && user->is_vfp && panel->flags.wait_frame_end) { // Trans VFP end
@@ -1057,7 +1057,7 @@ static esp_err_t lcd_write_color(st77903_qspi_panel_t *panel)
             panel->write_pool_index = 0;
         }
         row_count -= pool_size;
-    } while(row_count > 0);
+    } while (row_count > 0);
 
     return ESP_OK;
 }
@@ -1072,9 +1072,9 @@ static esp_err_t lcd_read_reg(st77903_qspi_panel_t *panel)
     spi_transaction_t send_seg = {
         .cmd = ST77903_INS_READ,
         .addr = ((uint32_t)panel->read_reg) << 8,
-        .rxlength = 8 * panel->read_data_size,
-        .tx_buffer = NULL,
-        .rx_buffer = panel->read_data,
+                                            .rxlength = 8 * panel->read_data_size,
+                                            .tx_buffer = NULL,
+                                            .rx_buffer = panel->read_data,
     };
     ESP_RETURN_ON_ERROR(spi_device_polling_transmit(panel->spi_read_dev, &send_seg), TAG, "SPI polling trans failed");
     ESP_RETURN_ON_ERROR(spi_bus_multi_trans_mode_enable(panel->spi_write_dev, true), TAG, "Segment mode enable failed");
@@ -1190,7 +1190,7 @@ static const st77903_lcd_init_cmd_t vendor_specific_init_default[] = {
     {0xe1, (uint8_t []){0x87, 0x09, 0x0c, 0x06, 0x05, 0x03, 0x29, 0x32, 0x49, 0x0f, 0x1b, 0x17, 0x2a, 0x2f}, 14, 0},
     {0xe5, (uint8_t []){0xbe, 0xf5, 0xb1, 0x22, 0x22, 0x25, 0x10, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22}, 14, 0},
     {0xe6, (uint8_t []){0xbe, 0xf5, 0xb1, 0x22, 0x22, 0x25, 0x10, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22}, 14, 0},
-    {0xec, (uint8_t []){0x40, 0x03},2, 0},
+    {0xec, (uint8_t []){0x40, 0x03}, 2, 0},
     {0xb2, (uint8_t []){0x00}, 1, 0},
     {0xb3, (uint8_t []){0x01}, 1, 0},
     {0xb4, (uint8_t []){0x00}, 1, 0},
@@ -1207,24 +1207,30 @@ static const st77903_lcd_init_cmd_t vendor_specific_init_default[] = {
 
 static esp_err_t lcd_cmd_config(st77903_qspi_panel_t *panel)
 {
-    ESP_RETURN_ON_ERROR(lcd_write_cmd(panel, 0xf0, (uint8_t []){0xc3}, 1), TAG, "Write cmd failed");
-    ESP_RETURN_ON_ERROR(lcd_write_cmd(panel, 0xf0, (uint8_t []){0x96}, 1), TAG, "Write cmd failed");
-    ESP_RETURN_ON_ERROR(lcd_write_cmd(panel, 0xf0, (uint8_t []){0xa5}, 1), TAG, "Write cmd failed");
+    ESP_RETURN_ON_ERROR(lcd_write_cmd(panel, 0xf0, (uint8_t []) {
+        0xc3
+    }, 1), TAG, "Write cmd failed");
+    ESP_RETURN_ON_ERROR(lcd_write_cmd(panel, 0xf0, (uint8_t []) {
+        0x96
+    }, 1), TAG, "Write cmd failed");
+    ESP_RETURN_ON_ERROR(lcd_write_cmd(panel, 0xf0, (uint8_t []) {
+        0xa5
+    }, 1), TAG, "Write cmd failed");
     uint8_t NL = (panel->ver_res >> 1) - 1;
     uint8_t NC = (panel->hor_res >> 3) - 1;
     // Set Resolution
-    ESP_RETURN_ON_ERROR(lcd_write_cmd(panel, ST77903_CMD_DISCN, (uint8_t []){
+    ESP_RETURN_ON_ERROR(lcd_write_cmd(panel, ST77903_CMD_DISCN, (uint8_t []) {
         NL, NC
     }, 2), TAG, "Write cmd failed");
     // Set VFP & VBP
-    ESP_RETURN_ON_ERROR(lcd_write_cmd(panel, ST77903_CMD_BPC, (uint8_t []){
+    ESP_RETURN_ON_ERROR(lcd_write_cmd(panel, ST77903_CMD_BPC, (uint8_t []) {
         0x00, LCD_VSYNC_FRONT_NUM, 0x00, LCD_VSYNC_BACK_NUM
     }, 4), TAG, "Write cmd failed");
     // Set color format
-    ESP_RETURN_ON_ERROR(lcd_write_cmd(panel, LCD_CMD_MADCTL, (uint8_t []){
+    ESP_RETURN_ON_ERROR(lcd_write_cmd(panel, LCD_CMD_MADCTL, (uint8_t []) {
         panel->madctl_val
     }, 1), TAG, "Write cmd failed");
-    ESP_RETURN_ON_ERROR(lcd_write_cmd(panel, LCD_CMD_COLMOD, (uint8_t []){
+    ESP_RETURN_ON_ERROR(lcd_write_cmd(panel, LCD_CMD_COLMOD, (uint8_t []) {
         panel->colmod_val
     }, 1), TAG, "Write cmd failed");
 

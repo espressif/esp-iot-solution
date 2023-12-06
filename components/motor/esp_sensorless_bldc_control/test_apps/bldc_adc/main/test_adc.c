@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -19,27 +19,27 @@ static const char *TAG = "test_adc";
 bldc_control_handle_t bldc_control_handle = NULL;
 
 static void bldc_control_event_handler(void *arg, esp_event_base_t event_base,
-                                  int32_t event_id, void *event_data)
+                                       int32_t event_id, void *event_data)
 {
     switch (event_id) {
-        case BLDC_CONTROL_START:
-            ESP_LOGI(TAG, "BLDC_CONTROL_START");
-            break;
-        case BLDC_CONTROL_STOP:
-            ESP_LOGI(TAG, "BLDC_CONTROL_STOP");
-            break;
-        case BLDC_CONTROL_ALIGNMENT:
-            ESP_LOGI(TAG, "BLDC_CONTROL_ALIGNMENT");
-            break;
-        case BLDC_CONTROL_CLOSED_LOOP:
-            ESP_LOGI(TAG, "BLDC_CONTROL_CLOSED_LOOP");
-            break;
-        case BLDC_CONTROL_DRAG:
-            ESP_LOGI(TAG, "BLDC_CONTROL_DRAG");
-            break;
-        case BLDC_CONTROL_BLOCKED:
-            ESP_LOGI(TAG, "BLDC_CONTROL_BLOCKED");
-            break;
+    case BLDC_CONTROL_START:
+        ESP_LOGI(TAG, "BLDC_CONTROL_START");
+        break;
+    case BLDC_CONTROL_STOP:
+        ESP_LOGI(TAG, "BLDC_CONTROL_STOP");
+        break;
+    case BLDC_CONTROL_ALIGNMENT:
+        ESP_LOGI(TAG, "BLDC_CONTROL_ALIGNMENT");
+        break;
+    case BLDC_CONTROL_CLOSED_LOOP:
+        ESP_LOGI(TAG, "BLDC_CONTROL_CLOSED_LOOP");
+        break;
+    case BLDC_CONTROL_DRAG:
+        ESP_LOGI(TAG, "BLDC_CONTROL_DRAG");
+        break;
+    case BLDC_CONTROL_BLOCKED:
+        ESP_LOGI(TAG, "BLDC_CONTROL_BLOCKED");
+        break;
     }
 }
 
@@ -48,7 +48,7 @@ static void button_press_down_cb(void *arg, void *data)
     bldc_control_handle_t bldc_control_handle = (bldc_control_handle_t) data;
 #if CLOSED_LOOP == 1
     static int speed_rpm = 200;
-    bldc_control_set_speed_rpm(bldc_control_handle,speed_rpm);
+    bldc_control_set_speed_rpm(bldc_control_handle, speed_rpm);
     speed_rpm += 50;
     if (speed_rpm > 1000) {
         speed_rpm = 200;
@@ -77,7 +77,7 @@ void button_init(void *user_data)
     iot_button_register_cb(btn, BUTTON_PRESS_DOWN, button_press_down_cb, user_data);
 }
 
-TEST_CASE("bldc adc test mcpwm","[bldc comparer][mcpwm]")
+TEST_CASE("bldc adc test mcpwm", "[bldc comparer][mcpwm]")
 {
     esp_event_loop_create_default();
     ESP_ERROR_CHECK(esp_event_handler_register(BLDC_CONTROL_EVENT, ESP_EVENT_ANY_ID, &bldc_control_event_handler, NULL));
@@ -85,7 +85,7 @@ TEST_CASE("bldc adc test mcpwm","[bldc comparer][mcpwm]")
         .control_type = CONTROL_TYPE_MCPWM,
         .bldc_mcpwm = {
             .group_id = 0,
-            .gpio_num = {17,16,15},
+            .gpio_num = {17, 16, 15},
         },
     };
 

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -25,11 +25,11 @@
 
 #define HID_DEMO_TAG "HID_REMOTE_CONTROL"
 
-#define TEAR_DOWN_BIT_MASK 0b0011 
+#define TEAR_DOWN_BIT_MASK 0b0011
 // Refer to HID report reference defined in hidd.c
-    // bit 0 - Button A, bit 1 - Button B, bit 2 - Button C, bit 3 - Button D
-    // 0b0011 represent pressing Button A and Button B simultaneously
-    // Pressing the button combination will trigger tear down
+// bit 0 - Button A, bit 1 - Button B, bit 2 - Button C, bit 3 - Button D
+// 0b0011 represent pressing Button A and Button B simultaneously
+// Pressing the button combination will trigger tear down
 
 bool is_connected = false;
 QueueHandle_t input_queue = NULL;
@@ -39,22 +39,22 @@ const char *DEVICE_NAME = "ESP32 Remote";
 /**
  * @brief   Print the user input report sent through BLE HID
 */
-void print_user_input_report(uint8_t joystick_x, uint8_t joystick_y, 
-    uint8_t hat_switch, uint8_t buttons, uint8_t throttle) 
+void print_user_input_report(uint8_t joystick_x, uint8_t joystick_y,
+                             uint8_t hat_switch, uint8_t buttons, uint8_t throttle)
 {
     ESP_LOGI(HID_DEMO_TAG, " ");
     ESP_LOGI(HID_DEMO_TAG, "----- Sending user input -----");
 
-    ESP_LOGI(HID_DEMO_TAG, "X: 0x%x (%d), Y: 0x%x (%d), SW: %d, B: %d, Thr: %d", 
-                joystick_x, joystick_x, joystick_y, joystick_y, 
-                hat_switch, buttons, throttle);
+    ESP_LOGI(HID_DEMO_TAG, "X: 0x%x (%d), Y: 0x%x (%d), SW: %d, B: %d, Thr: %d",
+             joystick_x, joystick_x, joystick_y, joystick_y,
+             hat_switch, buttons, throttle);
 
     if (buttons) {
-        ESP_LOGI(HID_DEMO_TAG, "Button pressed: %s %s %s %s", 
-            (buttons & 0x01) ? "A" : "-",
-            (buttons & 0x02) ? "B" : "-",
-            (buttons & 0x04) ? "C" : "-",
-            (buttons & 0x08) ? "D" : "-");
+        ESP_LOGI(HID_DEMO_TAG, "Button pressed: %s %s %s %s",
+                 (buttons & 0x01) ? "A" : "-",
+                 (buttons & 0x02) ? "B" : "-",
+                 (buttons & 0x04) ? "C" : "-",
+                 (buttons & 0x08) ? "D" : "-");
     }
 
     ESP_LOGI(HID_DEMO_TAG, " ----- End of user input ----- \n");
@@ -62,11 +62,11 @@ void print_user_input_report(uint8_t joystick_x, uint8_t joystick_y,
 
 /**
  * @brief   Main task to send user input to the ESP to the central device
- *          
+ *
  * @details This task will wait for user input from the console, joystick, or button (using RTOS queue)
  *          The function does not return unless Tear Down button sequence is pressed (and tear down config enabled in menuconfig)
 */
-void joystick_task() 
+void joystick_task()
 {
     esp_err_t ret = ESP_OK;
     input_event_t input_event = {0};
@@ -76,7 +76,7 @@ void joystick_task()
     uint8_t button_in = 0;
     uint8_t throttle = 0;   // unused in this example
 
-    while(true){
+    while (true) {
         DELAY(HID_LATENCY);
 
         if (!is_connected) {
@@ -87,18 +87,18 @@ void joystick_task()
 
         // HID report values to set is dependent on the HID report map (refer to hidd.c)
         // For this examples, the values in the HID report to send are
-            // x_axis : 8 bit, 0 - 255
-            // y_axis : 8 bit, 0 - 255
-            // hat switches : 4 bit
-            // buttons 1 to 4: 1 bit each, 0 - 1
-            // throttle: 8 bit
+        // x_axis : 8 bit, 0 - 255
+        // y_axis : 8 bit, 0 - 255
+        // hat switches : 4 bit
+        // buttons 1 to 4: 1 bit each, 0 - 1
+        // throttle: 8 bit
 
         // Send report if there are any inputs (refer to controller.c)
         if (xQueueReceive(input_queue, &input_event, 100) == pdTRUE) {
             switch (input_event.input_source) {
             case (INPUT_SOURCE_BUTTON):
                 button_in = input_event.data_button;
-                joystick_adc_read(&x_axis, &y_axis);  
+                joystick_adc_read(&x_axis, &y_axis);
                 ESP_LOGI(HID_DEMO_TAG, "Button input received");
                 break;
             case (INPUT_SOURCE_CONSOLE):
@@ -120,12 +120,12 @@ void joystick_task()
             set_hid_report_values(x_axis, y_axis, button_in, hat_switch, throttle);
             print_user_input_report(x_axis, y_axis, hat_switch, button_in, throttle);
             ret = send_user_input();
-        } 
+        }
 
         // Alternatively, to simply poll user input can do:
         // joystick_adc_read(&x_axis, &y_axis);
         // button_read(&button_in);
-      
+
         if (ret != ESP_OK) {
             ESP_LOGE(HID_DEMO_TAG, "Error sending user input, code = %d", ret);
         }
@@ -231,7 +231,7 @@ void app_main(void)
     ESP_LOGI(HID_DEMO_TAG, "Security set");
     esp_ble_gatts_app_register(ESP_GATT_UUID_HID_SVC); // Trigger ESP_GATTS_REG_EVT (see gap_gatts.c and hidd.c)
     ret = esp_ble_gatt_set_local_mtu(500);
-    if (ret){
+    if (ret) {
         ESP_LOGE(HID_DEMO_TAG, "set local  MTU failed, error code = %x", ret);
     }
 
@@ -246,7 +246,7 @@ void app_main(void)
 #endif
 
     // Main joystick task
-    joystick_task(); 
+    joystick_task();
 
 #ifdef CONFIG_EXAMPLE_ENABLE_TEAR_DOWN_DEMO
     // Tear down, after returning from joystick_task()

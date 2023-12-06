@@ -25,7 +25,6 @@ static const char *TAG = "FT5x06";
 #define ACK_VAL            0x0                      /*!< I2C ack value */
 #define NACK_VAL           0x1                      /*!< I2C nack value */
 
-
 #define FT5x06_DEVICE_MODE                0x00
 #define FT5x06_GESTURE_ID                 0x01
 #define FT5x06_TOUCH_POINTS               0x02

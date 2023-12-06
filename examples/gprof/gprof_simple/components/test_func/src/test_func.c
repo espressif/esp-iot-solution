@@ -13,14 +13,14 @@ static void test_func_real_0(void)
 {
     for (int i = 0; i < 10; i++) {
         cJSON_Compare(a_json, b_json, 0);
-    }  
+    }
 }
 
 static void test_func_real_1(void)
 {
     for (int i = 0; i < 10; i++) {
         cJSON_Compare(a_json, b_json, 1);
-    }    
+    }
 }
 
 static void test_func_level_4(void)

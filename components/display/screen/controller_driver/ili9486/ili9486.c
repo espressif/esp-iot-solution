@@ -59,7 +59,6 @@ scr_driver_t lcd_ili9486_default_driver = {
     .get_info = lcd_ili9486_get_info,
 };
 
-
 static void lcd_ili9486_init_reg(void);
 
 esp_err_t lcd_ili9486_init(const scr_controller_config_t *lcd_conf)
@@ -242,7 +241,6 @@ esp_err_t lcd_ili9486_draw_bitmap(uint16_t x, uint16_t y, uint16_t w, uint16_t h
     LCD_CHECK(ESP_OK == ret, "lcd write ram data failed", ESP_FAIL);
     return ESP_OK;
 }
-
 
 static void lcd_ili9486_init_reg(void)
 {

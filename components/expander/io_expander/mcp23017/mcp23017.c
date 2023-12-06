@@ -27,7 +27,7 @@ static const char *TAG = "mcp23017";
 
 /**
  * @brief register address when iocon.bank == 0 (default)
- * 
+ *
  */
 typedef enum {
     MCP23017_REG_IODIRA = 0, /*!< DIRECTION REGISTER A */
@@ -52,7 +52,7 @@ typedef enum {
     MCP23017_REG_GPIOB,  /*!<  GENERAL PURPOSE I/O PORT REGISTER B */
     MCP23017_REG_OLATA,  /*!< OUTPUT LATCH REGISTER 0 A */
     MCP23017_REG_OLATB,  /*!< OUTPUT LATCH REGISTER 0 B */
-} mcp23017_reg_t; 
+} mcp23017_reg_t;
 
 typedef enum {
     MCP23017_IOCON_UNIMPLEMENTED = 0x01,
@@ -202,7 +202,7 @@ esp_err_t mcp23017_interrupt_disable(mcp23017_handle_t dev, uint16_t pins)
 }
 
 esp_err_t mcp23017_set_interrupt_polarity(mcp23017_handle_t dev,
-        mcp23017_gpio_port_t gpio, uint8_t chLevel)
+                                          mcp23017_gpio_port_t gpio, uint8_t chLevel)
 {
     MCP23017_CHECK(dev != NULL, "invalid arg", ESP_ERR_INVALID_ARG)
     mcp23017_dev_t *p_device = (mcp23017_dev_t *) dev;
@@ -295,8 +295,8 @@ esp_err_t mcp23017_set_io_dir(mcp23017_handle_t dev, uint8_t value,
     mcp23017_dev_t *p_device = (mcp23017_dev_t *) dev;
 
     return i2c_bus_write_byte(p_device->i2c_dev,
-                               (gpio == MCP23017_GPIOA) ?
-                               MCP23017_REG_IODIRA : MCP23017_REG_IODIRB, value);
+                              (gpio == MCP23017_GPIOA) ?
+                              MCP23017_REG_IODIRA : MCP23017_REG_IODIRB, value);
 }
 
 esp_err_t mcp23017_write_io(mcp23017_handle_t dev, uint8_t value,
@@ -306,8 +306,8 @@ esp_err_t mcp23017_write_io(mcp23017_handle_t dev, uint8_t value,
     mcp23017_dev_t *p_device = (mcp23017_dev_t *) dev;
 
     return i2c_bus_write_byte(p_device->i2c_dev,
-                               (gpio == MCP23017_GPIOA) ? MCP23017_REG_GPIOA : MCP23017_REG_GPIOB,
-                               value);
+                              (gpio == MCP23017_GPIOA) ? MCP23017_REG_GPIOA : MCP23017_REG_GPIOB,
+                              value);
 }
 
 uint8_t mcp23017_read_io(mcp23017_handle_t dev, mcp23017_gpio_port_t gpio)

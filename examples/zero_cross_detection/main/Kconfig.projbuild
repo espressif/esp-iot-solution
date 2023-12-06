@@ -8,7 +8,7 @@ menu "Example Configuration"
         default 2
         help
             "ZERO CROSS DETCETION INPUT GPIO"
-    
+
     config ZERO_DETECT_OUTPUT_GPIO
         int "ZERO CROSS DETCETION OUTPUT GPIO"
         range 0 48

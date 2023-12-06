@@ -101,7 +101,7 @@ uint8_t const *tud_descriptor_device_cb(void)
     HID_COLLECTION_END \
 
 uint8_t const desc_hid_report[] = {
-    TUD_HID_REPORT_DESC_DIAL( HID_REPORT_ID(1) )
+    TUD_HID_REPORT_DESC_DIAL(HID_REPORT_ID(1))
 };
 
 // Invoked when received GET HID REPORT DESCRIPTOR
@@ -168,14 +168,14 @@ uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid)
 
     uint8_t chr_count;
 
-    if ( index == 0) {
+    if (index == 0) {
         memcpy(&_desc_str[1], string_desc_arr[0], 2);
         chr_count = 1;
     } else {
         // Note: the 0xEE index string is a Microsoft OS 1.0 Descriptors.
         // https://docs.microsoft.com/en-us/windows-hardware/drivers/usbcon/microsoft-defined-usb-descriptors
 
-        if ( !(index < sizeof(string_desc_arr) / sizeof(string_desc_arr[0])) ) {
+        if (!(index < sizeof(string_desc_arr) / sizeof(string_desc_arr[0]))) {
             return NULL;
         }
 
@@ -183,7 +183,7 @@ uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid)
 
         // Cap at max char
         chr_count = (uint8_t) strlen(str);
-        if ( chr_count > 31 ) {
+        if (chr_count > 31) {
             chr_count = 31;
         }
 
@@ -194,7 +194,7 @@ uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid)
     }
 
     // first byte is length (including header), second byte is string type
-    _desc_str[0] = (uint16_t) ((TUSB_DESC_STRING << 8 ) | (2 * chr_count + 2));
+    _desc_str[0] = (uint16_t)((TUSB_DESC_STRING << 8) | (2 * chr_count + 2));
 
     return _desc_str;
 }

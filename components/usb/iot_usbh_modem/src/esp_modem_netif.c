@@ -60,7 +60,7 @@ struct esp_modem_netif_driver_s {
 const char *esp_modem_netif_event_to_name(int code)
 {
     size_t i;
-    for (i = 0; i < sizeof(ppp_evt_msg_table)/sizeof(ppp_evt_msg_table[0]); ++i) {
+    for (i = 0; i < sizeof(ppp_evt_msg_table) / sizeof(ppp_evt_msg_table[0]); ++i) {
         if (ppp_evt_msg_table[i].code == code) {
             return ppp_evt_msg_table[i].msg;
         }
@@ -114,17 +114,17 @@ static esp_err_t esp_modem_post_attach_init(esp_netif_t * esp_netif, void * args
     esp_modem_netif_driver_t *driver = args;
     esp_modem_dte_t *dte = driver->dte;
     const esp_netif_driver_ifconfig_t driver_ifconfig = {
-            .driver_free_rx_buffer = NULL,
-            .transmit = esp_modem_dte_transmit,
-            .handle = dte
+        .driver_free_rx_buffer = NULL,
+        .transmit = esp_modem_dte_transmit,
+        .handle = dte
     };
     driver->base.netif = esp_netif;
     ESP_ERROR_CHECK(esp_netif_set_driver_config(esp_netif, &driver_ifconfig));
     // // check if PPP error events are enabled, if not, do enable the error occurred/state changed
     // // to notify the modem layer when switching modes
     esp_netif_ppp_config_t ppp_config = {
-            .ppp_error_event_enabled = true,
-            .ppp_phase_event_enabled = true,
+        .ppp_error_event_enabled = true,
+        .ppp_phase_event_enabled = true,
     };
     esp_netif_ppp_set_params(esp_netif, &ppp_config);
 

@@ -18,7 +18,7 @@ extern "C"
 
 /**
  * @brief Structure for recording the connected sta
- * 
+ *
  */
 struct modem_netif_sta_info {
     SLIST_ENTRY(modem_netif_sta_info) field;
@@ -32,39 +32,39 @@ typedef SLIST_HEAD(modem_http_list_head, modem_netif_sta_info) modem_http_list_h
 
 /**
  * @brief Deinit http server
- * 
- * @return esp_err_t 
+ *
+ * @return esp_err_t
  */
 esp_err_t modem_http_deinit(httpd_handle_t server);
 
 /**
  * @brief Initialize http server
- * 
+ *
  * @param wifi_config wifi Configure Information
- * @return esp_err_t 
+ * @return esp_err_t
  */
 esp_err_t modem_http_init(modem_wifi_config_t *wifi_config);
 
 /**
  * @brief Read the stored wifi configuration information from nsv and loaded into the structure wifi_config
- * 
+ *
  * @param wifi_config wifi Configure Information
- * @return esp_err_t 
+ * @return esp_err_t
  */
 esp_err_t modem_http_get_nvs_wifi_config(modem_wifi_config_t *wifi_config);
 
 /**
  * @brief Print information about the nodes in the chain table
- * 
+ *
  * @param head Link table header
- * @return esp_err_t 
+ * @return esp_err_t
  */
 esp_err_t modem_http_print_nodes(modem_http_list_head_t *head);
 
 /**
  * @brief Get managed list information
- * 
- * @return struct modem_http_list_head_t 
+ *
+ * @return struct modem_http_list_head_t
  */
 modem_http_list_head_t *modem_http_get_stalist();
 

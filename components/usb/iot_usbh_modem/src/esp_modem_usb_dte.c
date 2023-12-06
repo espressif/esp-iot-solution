@@ -37,7 +37,7 @@ static const char *TAG = "esp-modem-dte";
  */
 static inline bool is_only_cr_lf(const char *str, uint32_t len)
 {
-    for (int i=0; i<len; ++i) {
+    for (int i = 0; i < len; ++i) {
         if (str[i] != '\r' && str[i] != '\n') {
             return false;
         }
@@ -96,19 +96,19 @@ static void esp_handle_usb_data(esp_modem_dte_internal_t *esp_dte)
 
         // Read the data and process it using `handle_line` logic
         // to avoid reading two line at the same time
-        length = MIN(esp_dte->line_buffer_size-1, length);
+        length = MIN(esp_dte->line_buffer_size - 1, length);
         length = usbh_cdc_read_bytes(esp_dte->buffer, length, pdMS_TO_TICKS(10));
         esp_dte->buffer[length] = '\0';
-        if (strchr((char*)esp_dte->buffer, '\n') == NULL) {
-            size_t max = esp_dte->line_buffer_size-1;
+        if (strchr((char *)esp_dte->buffer, '\n') == NULL) {
+            size_t max = esp_dte->line_buffer_size - 1;
             size_t bytes;
             // if pattern not found in the data,
             // continue reading as long as the modem is in MODEM_STATE_PROCESSING, checking for the pattern
-            while (length < max && esp_dte->buffer[length-1] != '\n' &&
-                   esp_dte->parent.dce->state == ESP_MODEM_STATE_PROCESSING) {
+            while (length < max && esp_dte->buffer[length - 1] != '\n' &&
+                    esp_dte->parent.dce->state == ESP_MODEM_STATE_PROCESSING) {
                 bytes = usbh_cdc_read_bytes(esp_dte->buffer + length, 1, pdMS_TO_TICKS(10));
                 length += bytes;
-                ESP_LOGV("esp-modem: debug_data", "Continuous read in non-data mode: length: %d char: %x", length, esp_dte->buffer[length-1]);
+                ESP_LOGV("esp-modem: debug_data", "Continuous read in non-data mode: length: %d char: %x", length, esp_dte->buffer[length - 1]);
             }
             esp_dte->buffer[length] = '\0';
         }
@@ -132,25 +132,25 @@ static void esp_handle_usb2_data(esp_modem_dte_internal_t *esp_dte)
 {
     size_t length = 0;
     usbh_cdc_itf_get_buffered_data_len(1, &length);
-    
+
     // Only handle interface1 data during interface0 in ppp mode
     if (esp_dte->parent.dce->mode == ESP_MODEM_PPP_MODE && length) {
 
         // Read the data and process it using `handle_line` logic
         // to avoid reading two line at the same time
-        length = MIN(esp_dte->line_buffer_size-1, length);
+        length = MIN(esp_dte->line_buffer_size - 1, length);
         length = usbh_cdc_itf_read_bytes(1, esp_dte->buffer, length, pdMS_TO_TICKS(10));
         esp_dte->buffer[length] = '\0';
-        if (strchr((char*)esp_dte->buffer, '\n') == NULL) {
-            size_t max = esp_dte->line_buffer_size-1;
+        if (strchr((char *)esp_dte->buffer, '\n') == NULL) {
+            size_t max = esp_dte->line_buffer_size - 1;
             size_t bytes;
             // if pattern not found in the data,
             // continue reading as long as the modem is in MODEM_STATE_PROCESSING, checking for the pattern
-            while (length < max && esp_dte->buffer[length-1] != '\n' &&
-                   esp_dte->parent.dce->state == ESP_MODEM_STATE_PROCESSING) {
+            while (length < max && esp_dte->buffer[length - 1] != '\n' &&
+                    esp_dte->parent.dce->state == ESP_MODEM_STATE_PROCESSING) {
                 bytes = usbh_cdc_itf_read_bytes(1, esp_dte->buffer + length, 1, pdMS_TO_TICKS(10));
                 length += bytes;
-                ESP_LOGV("esp-modem: debug_data2", "Continuous read in non-data mode: length: %d char: %x", length, esp_dte->buffer[length-1]);
+                ESP_LOGV("esp-modem: debug_data2", "Continuous read in non-data mode: length: %d char: %x", length, esp_dte->buffer[length - 1]);
             }
             esp_dte->buffer[length] = '\0';
         }
@@ -166,7 +166,7 @@ static void esp_handle_usb2_data(esp_modem_dte_internal_t *esp_dte)
     length = usbh_cdc_itf_read_bytes(1, temp_buffer, length, pdMS_TO_TICKS(10));
     /* pass the input data to configured callback */
     if (length) {
-        ESP_LOGI(TAG,"Intf2 not handle date, just dump:");
+        ESP_LOGI(TAG, "Intf2 not handle date, just dump:");
         ESP_LOG_BUFFER_HEXDUMP("esp-modem-dte: inf2", temp_buffer, length, ESP_LOG_INFO);
     }
     free(temp_buffer);
@@ -175,7 +175,9 @@ static void esp_handle_usb2_data(esp_modem_dte_internal_t *esp_dte)
 static void _usb_recv_date_cb(void *arg)
 {
     TaskHandle_t *p_usb_event_hdl = (TaskHandle_t *)arg;
-    if (*p_usb_event_hdl == NULL) return;
+    if (*p_usb_event_hdl == NULL) {
+        return;
+    }
     xTaskNotifyGive(*p_usb_event_hdl);
 }
 
@@ -205,7 +207,7 @@ static void _usb_disconn_callback(void *arg)
 static void _usb_data_recv_task(void *param)
 {
     esp_modem_dte_internal_t *esp_dte = (esp_modem_dte_internal_t *)param;
-    EventBits_t bits = xEventGroupWaitBits(esp_dte->process_group, (ESP_MODEM_START_BIT|ESP_MODEM_STOP_BIT), pdFALSE, pdFALSE, portMAX_DELAY);
+    EventBits_t bits = xEventGroupWaitBits(esp_dte->process_group, (ESP_MODEM_START_BIT | ESP_MODEM_STOP_BIT), pdFALSE, pdFALSE, portMAX_DELAY);
     if (bits & ESP_MODEM_STOP_BIT) {
         vTaskDelete(NULL);
     }
@@ -221,7 +223,9 @@ static void _usb_data_recv_task(void *param)
         }
         if (usbh_cdc_get_itf_state(1)) {
             usbh_cdc_itf_get_buffered_data_len(1, &length2);
-            if(length2 > 0) esp_handle_usb2_data(esp_dte);
+            if (length2 > 0) {
+                esp_handle_usb2_data(esp_dte);
+            }
         }
         if (!(length || length2)) {
             ulTaskNotifyTake(true, 1);//yield to other task, but unblock as soon as possiable
@@ -264,8 +268,8 @@ static esp_err_t esp_modem_dte_send_cmd(esp_modem_dte_t *dte, const char *comman
     }
 
     /* Check timeout */
-    EventBits_t bits = xEventGroupWaitBits(esp_dte->process_group, (ESP_MODEM_COMMAND_BIT|ESP_MODEM_STOP_BIT), pdTRUE, pdFALSE, pdMS_TO_TICKS(timeout));
-    ESP_MODEM_ERR_CHECK(bits&ESP_MODEM_COMMAND_BIT, "process command timeout", err);
+    EventBits_t bits = xEventGroupWaitBits(esp_dte->process_group, (ESP_MODEM_COMMAND_BIT | ESP_MODEM_STOP_BIT), pdTRUE, pdFALSE, pdMS_TO_TICKS(timeout));
+    ESP_MODEM_ERR_CHECK(bits & ESP_MODEM_COMMAND_BIT, "process command timeout", err);
     ret = ESP_OK;
 err:
     dce->handle_line = NULL;
@@ -344,7 +348,7 @@ static esp_err_t esp_modem_dte_change_mode(esp_modem_dte_t *dte, esp_modem_mode_
     esp_modem_mode_t current_mode = dce->mode;
     ESP_MODEM_ERR_CHECK(current_mode != new_mode, "already in mode: %d", err, new_mode);
     dce->mode = ESP_MODEM_TRANSITION_MODE;  // mode switching will be finished in set_working_mode() on success
-                                            // (or restored on failure)
+    // (or restored on failure)
     switch (new_mode) {
     case ESP_MODEM_PPP_MODE:
         ESP_MODEM_ERR_CHECK(dce->set_working_mode(dce, new_mode) == ESP_OK, "set new working mode:%d failed", err_restore_mode, new_mode);
@@ -468,12 +472,12 @@ esp_modem_dte_t *esp_modem_dte_new(const esp_modem_dte_config_t *config)
     ESP_MODEM_ERR_CHECK(ret == ESP_OK, "usb connect timeout", err_usb_config);
     /* Create USB Event task */
     BaseType_t base_ret = xTaskCreate(_usb_data_recv_task,             //Task Entry
-                                 "usb_data_recv",              //Task Name
-                                 config->event_task_stack_size,           //Task Stack Size(Bytes)
-                                 esp_dte,                           //Task Parameter
-                                 config->event_task_priority,             //Task Priority, must higher than USB Task
-                                 &(esp_dte->uart_event_task_hdl)   //Task Handler
-                                );
+                                      "usb_data_recv",              //Task Name
+                                      config->event_task_stack_size,           //Task Stack Size(Bytes)
+                                      esp_dte,                           //Task Parameter
+                                      config->event_task_priority,             //Task Priority, must higher than USB Task
+                                      & (esp_dte->uart_event_task_hdl)  //Task Handler
+                                     );
     ESP_MODEM_ERR_CHECK(base_ret == pdTRUE, "create uart event task failed", err_tsk_create);
 
     return &(esp_dte->parent);

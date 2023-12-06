@@ -6,14 +6,14 @@ menu "LightBulb Driver Config"
             default "y"
             help
                 Enable PWM output.
-        
+
         config PWM_ENABLE_HW_FADE
             depends on ENABLE_PWM_DRIVER
             bool "Use hardware fade API"
             default "n" if IDF_TARGET_ESP32C6
             default "y"
             help
-                Use the hardware fade API to implement the fade function, and the change of the duty cycle will be smoother. 
+                Use the hardware fade API to implement the fade function, and the change of the duty cycle will be smoother.
                 Please note: the lightbulb component still uses esp_timer to trigger the fade API, and the fade API is only used for small-scale changes.
 
         config ENABLE_SM2135E_DRIVER
@@ -139,5 +139,5 @@ menu "LightBulb Driver Config"
                 bool "Level 3, Print detail log"
         endchoice
     endmenu
-    
+
 endmenu

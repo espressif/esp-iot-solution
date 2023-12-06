@@ -18,7 +18,7 @@
 
 /**
  * @brief   GAP GATT Server Profile
- * @details Store information about the server profile for easier access (such as for tear down) 
+ * @details Store information about the server profile for easier access (such as for tear down)
  * @details Allows for multiple profiles to be registered
 */
 typedef struct {
@@ -61,4 +61,4 @@ void gap_event_callback(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *pa
  * @param[in] param         GATTS event parameters (differ based on event type)
 */
 void gatts_event_callback(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if,
-                                esp_ble_gatts_cb_param_t *param);
+                          esp_ble_gatts_cb_param_t *param);

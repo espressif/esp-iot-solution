@@ -118,7 +118,7 @@ static void mic_frame_cb(mic_frame_t *frame, void *ptr)
 {
     // We should using higher baudrate here, to reduce the blocking time here
     ESP_LOGD(TAG, "mic callback! bit_resolution = %u, samples_frequence = %"PRIu32", data_bytes = %"PRIu32,
-                frame->bit_resolution, frame->samples_frequence, frame->data_bytes);
+             frame->bit_resolution, frame->samples_frequence, frame->data_bytes);
     // We should never block in mic callback!
 #if (ENABLE_UAC_MIC_SPK_LOOPBACK)
     uac_spk_streaming_write(frame->data, frame->data_bytes, 0);
@@ -154,8 +154,8 @@ static void stream_state_changed_cb(usb_stream_state_t event, void *arg)
             uac_frame_size_list_get(STREAM_UAC_MIC, mic_frame_list, NULL, NULL);
             for (size_t i = 0; i < frame_size; i++) {
                 ESP_LOGI(TAG, "\t [%u] ch_num = %u, bit_resolution = %u, samples_frequence = %"PRIu32 ", samples_frequence_min = %"PRIu32 ", samples_frequence_max = %"PRIu32,
-                        i, mic_frame_list[i].ch_num, mic_frame_list[i].bit_resolution, mic_frame_list[i].samples_frequence,
-                        mic_frame_list[i].samples_frequence_min, mic_frame_list[i].samples_frequence_max);
+                         i, mic_frame_list[i].ch_num, mic_frame_list[i].bit_resolution, mic_frame_list[i].samples_frequence,
+                         mic_frame_list[i].samples_frequence_min, mic_frame_list[i].samples_frequence_max);
             }
             s_mic_samples_frequence = mic_frame_list[frame_index].samples_frequence;
             s_mic_ch_num = mic_frame_list[frame_index].ch_num;
@@ -164,7 +164,7 @@ static void stream_state_changed_cb(usb_stream_state_t event, void *arg)
                 ESP_LOGW(TAG, "UAC MIC: only support 1 channel in this example");
             }
             ESP_LOGI(TAG, "UAC MIC: use frame[%u] ch_num = %"PRIu32", bit_resolution = %"PRIu32", samples_frequence = %"PRIu32,
-                    frame_index, s_mic_ch_num, s_mic_bit_resolution, s_mic_samples_frequence);
+                     frame_index, s_mic_ch_num, s_mic_bit_resolution, s_mic_samples_frequence);
             free(mic_frame_list);
         } else {
             ESP_LOGW(TAG, "UAC MIC: get frame list size = %u", frame_size);
@@ -177,12 +177,12 @@ static void stream_state_changed_cb(usb_stream_state_t event, void *arg)
             uac_frame_size_list_get(STREAM_UAC_SPK, spk_frame_list, NULL, NULL);
             for (size_t i = 0; i < frame_size; i++) {
                 ESP_LOGI(TAG, "\t [%u] ch_num = %u, bit_resolution = %u, samples_frequence = %"PRIu32 ", samples_frequence_min = %"PRIu32 ", samples_frequence_max = %"PRIu32,
-                        i, spk_frame_list[i].ch_num, spk_frame_list[i].bit_resolution, spk_frame_list[i].samples_frequence,
-                        spk_frame_list[i].samples_frequence_min, spk_frame_list[i].samples_frequence_max);
+                         i, spk_frame_list[i].ch_num, spk_frame_list[i].bit_resolution, spk_frame_list[i].samples_frequence,
+                         spk_frame_list[i].samples_frequence_min, spk_frame_list[i].samples_frequence_max);
             }
             if (s_spk_samples_frequence != spk_frame_list[frame_index].samples_frequence
-                || s_spk_ch_num != spk_frame_list[frame_index].ch_num
-                || s_spk_bit_resolution != spk_frame_list[frame_index].bit_resolution) {
+                    || s_spk_ch_num != spk_frame_list[frame_index].ch_num
+                    || s_spk_bit_resolution != spk_frame_list[frame_index].bit_resolution) {
                 if (s_spk_samples_frequence) {
                     xEventGroupSetBits(s_evt_handle, BIT4_SPK_RESET);
                 }
@@ -195,7 +195,7 @@ static void stream_state_changed_cb(usb_stream_state_t event, void *arg)
                 ESP_LOGW(TAG, "UAC SPK: only support 1 channel in this example");
             }
             ESP_LOGI(TAG, "UAC SPK: use frame[%u] ch_num = %"PRIu32", bit_resolution = %"PRIu32", samples_frequence = %"PRIu32,
-                        frame_index, s_spk_ch_num, s_spk_bit_resolution, s_spk_samples_frequence);
+                     frame_index, s_spk_ch_num, s_spk_bit_resolution, s_spk_samples_frequence);
             free(spk_frame_list);
         } else {
             ESP_LOGW(TAG, "UAC SPK: get frame list size = %u", frame_size);
@@ -280,7 +280,7 @@ void app_main(void)
         ESP_LOGE(TAG, "uac streaming config failed");
     }
 #endif
-    /* register the state callback to get connect/disconnect event 
+    /* register the state callback to get connect/disconnect event
     * in the callback, we can get the frame list of current device
     */
     ESP_ERROR_CHECK(usb_streaming_state_register(&stream_state_changed_cb, NULL));

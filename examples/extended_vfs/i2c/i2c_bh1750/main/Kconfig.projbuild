@@ -7,7 +7,7 @@ menu "Example Configuration"
     config I2C_SCL_PIN_NUM
         int "I2C SCL Pin Number"
         default 26
-    
+
     config I2C_TEST_COUNT
         int "I2C Testing Count of Reading Sensor's Data"
         default 10
@@ -28,7 +28,7 @@ menu "Example Configuration"
             help
                 Select this option, application just needs to configure a I2C
                 exchange message, pass this to I2C low-level driver by ioctl,
-                there is totally 1 step. 
+                there is totally 1 step.
     endchoice
 
     menu "BH1750 Sensor"

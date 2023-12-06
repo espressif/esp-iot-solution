@@ -47,7 +47,7 @@ typedef enum {
 
 /**
  * @brief Struct for Embedding data
- * 
+ *
  */
 typedef struct {
     uint32_t len;  /*!< Length of the data */

@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #ifndef _LIGHT_SENSOR_HAL_H_
 #define _LIGHT_SENSOR_HAL_H_
 
@@ -16,7 +15,7 @@ typedef void *sensor_light_handle_t; /*!< light sensor handle*/
 
 /**
  * @brief light sensor id, used for light_sensor_create
- * 
+ *
  */
 typedef enum {
     BH1750_ID = 0x01, /*!< BH1750 light sensor id*/
@@ -122,7 +121,7 @@ esp_err_t light_sensor_wakeup(sensor_light_handle_t sensor);
 
 /**
  * @brief acquire a group of sensor data
- * 
+ *
  * @param sensor light sensor handle to operate
  * @param data_group acquired data
  * @return esp_err_t
@@ -133,7 +132,7 @@ esp_err_t light_sensor_acquire(sensor_light_handle_t sensor, sensor_data_group_t
 
 /**
  * @brief control sensor mode with control commands and args
- * 
+ *
  * @param sensor light sensor handle to operate
  * @param cmd control commands detailed in sensor_command_t
  * @param args control commands args
@@ -147,6 +146,5 @@ esp_err_t light_sensor_control(sensor_light_handle_t sensor, sensor_command_t cm
 extern "C"
 }
 #endif
-
 
 #endif

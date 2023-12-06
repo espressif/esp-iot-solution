@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #include <stdio.h>
 #include "driver/i2c.h"
 #include "i2c_bus.h"
@@ -93,24 +92,24 @@ esp_err_t sht3x_measure_period(bool set, uint16_t *min_delay)
     //set value
     uint8_t delay_mode = *min_delay >> 8;
     switch (delay_mode) {
-        case 0x20:
-            s_min_delay = 2000;
-            break;
-        case 0x21:
-            s_min_delay = 1000;
-            break;
-        case 0x22:
-            s_min_delay = 500;
-            break;
-        case 0x24:
-            s_min_delay = 250;
-            break;
-        case 0x27:
-            s_min_delay = 100;
-            break;
-        default:
-            s_min_delay = 250;
-            break;
+    case 0x20:
+        s_min_delay = 2000;
+        break;
+    case 0x21:
+        s_min_delay = 1000;
+        break;
+    case 0x22:
+        s_min_delay = 500;
+        break;
+    case 0x24:
+        s_min_delay = 250;
+        break;
+    case 0x27:
+        s_min_delay = 100;
+        break;
+    default:
+        s_min_delay = 250;
+        break;
     }
     return ESP_OK;
 }

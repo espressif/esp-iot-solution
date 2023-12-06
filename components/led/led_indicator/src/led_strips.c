@@ -110,7 +110,7 @@ esp_err_t led_indicator_strips_set_on_off(void *strips, bool on_off)
 esp_err_t led_indicator_strips_set_rgb(void *strips, uint32_t irgb_value)
 {
     led_strips_t *p_strip = (led_strips_t *)strips;
-    uint8_t i,r,g,b;
+    uint8_t i, r, g, b;
     i = GET_INDEX(irgb_value);
     r = GET_RED(irgb_value);
     g = GET_GREEN(irgb_value);

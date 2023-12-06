@@ -166,7 +166,6 @@ ota_cmd_dispatcher(SendFilePayload *req,
 
     ESP_LOGD(TAG, "In ota_cmd_dispatcher Cmd=%d", req->msg);
 
-
     int cmd_index = lookup_cmd_handler(req->msg);
     if (cmd_index < 0) {
         ESP_LOGE(TAG, "Failed to find cmd with ID = %d in the command table", req->msg);

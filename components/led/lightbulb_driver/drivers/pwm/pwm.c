@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #include <string.h>
 #include <stdio.h>
 
@@ -332,7 +331,7 @@ esp_err_t pwm_set_hw_fade(pwm_channel_t channel, uint16_t value, int fade_ms)
 #if CONFIG_PM_ENABLE
     power_control_disable_sleep();
 #endif
-    if(0 != s_pwm->hponit[1]) {
+    if (0 != s_pwm->hponit[1]) {
         ESP_LOGE(TAG, "Unable to set hpoint during hardware fade, disable CONFIG_PWM_ENABLE_HW_FADE feature or call other set API");
         abort();
     }

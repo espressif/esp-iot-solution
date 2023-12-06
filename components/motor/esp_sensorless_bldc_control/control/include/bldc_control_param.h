@@ -12,8 +12,7 @@ extern "C" {
 
 #include <stdint.h>
 
-typedef enum
-{
+typedef enum {
     CW = 0, /*!< Clockwise */
     CCW,    /*!< counterclockwise */
 } dir_enum_t;

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2021-2022 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2021-2023 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: CC0-1.0
  */
@@ -13,9 +13,9 @@ extern "C" {
 #endif
 
 typedef struct {
-  const uint8_t *bitmap;
-  uint16_t width;
-  uint16_t height;
+    const uint8_t *bitmap;
+    uint16_t width;
+    uint16_t height;
 } esp_painter_basic_font_t;
 
 #define esp_painter_FONT_DECLARE(font_name) extern const esp_painter_basic_font_t font_name;

@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #ifndef _IOT_BOARD_H_
 #define _IOT_BOARD_H_
 
@@ -19,7 +18,7 @@ typedef enum {
     NULL_RESOURCE,
     BOARD_I2C0_ID,
     BOARD_SPI2_ID,
-}board_res_id_t;
+} board_res_id_t;
 
 /*Definitions of Board Information*/
 #define BOARD_NAME "ESP32-MESHKIT-SENSE_V1_1"
@@ -87,33 +86,33 @@ extern "C"
 /*********************************** Extended board level API ***********************/
 /**
  * @brief set board sensor power
- * 
+ *
  * @param on_off set true if power on the sensors onboard, set false if power off them.
- * @return esp_err_t 
+ * @return esp_err_t
  */
 esp_err_t iot_board_sensor_set_power(bool on_off);
 
 /**
  * @brief get board sensor power
- * 
+ *
  * @return true sensor is power on
  * @return false sensor is not power on
  */
 bool iot_board_sensor_get_power(void);
 
 /**
- * @brief set board screen power 
- * 
+ * @brief set board screen power
+ *
  * @param on_off set true if power on the screen onboard, set false if power off it.
- * @return esp_err_t 
+ * @return esp_err_t
  */
 esp_err_t iot_board_screen_set_power(bool on_off);
 
 /**
- * @brief get board screen power 
- * 
- * @return true screen is power on 
- * @return false screen is not power on 
+ * @brief get board screen power
+ *
+ * @return true screen is power on
+ * @return false screen is not power on
  */
 bool iot_board_screen_get_power(void);
 

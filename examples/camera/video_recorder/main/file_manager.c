@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #include <stdio.h>
 #include <string.h>
 #include <sys/unistd.h>
@@ -101,7 +100,7 @@ esp_err_t fm_sdcard_init(void)
       CLK   SCK   14
       D0    MISO  2
       D1          4
-  */
+    */
 #ifdef SOC_SDMMC_USE_GPIO_MATRIX
     slot_config.clk = GPIO_NUM_14;
     slot_config.cmd = GPIO_NUM_15;
@@ -156,10 +155,10 @@ esp_err_t fm_sdcard_init(void)
     if (ret != ESP_OK) {
         if (ret == ESP_FAIL) {
             ESP_LOGE(TAG, "Failed to mount filesystem. "
-                "If you want the card to be formatted, set format_if_mount_failed = true.");
+                     "If you want the card to be formatted, set format_if_mount_failed = true.");
         } else {
             ESP_LOGE(TAG, "Failed to initialize the card (%s). "
-                "Make sure SD card lines have pull-up resistors in place.", esp_err_to_name(ret));
+                     "Make sure SD card lines have pull-up resistors in place.", esp_err_to_name(ret));
         }
         return ESP_FAIL;
     }

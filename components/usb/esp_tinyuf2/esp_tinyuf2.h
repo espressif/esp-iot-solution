@@ -26,19 +26,19 @@ extern "C" {
 
 /**
  * @brief user callback called after uf2 update complete
- * 
+ *
  */
 typedef void (*update_complete_cb_t)(void);
 
 /**
  * @brief user callback called after nvs modified
- * 
+ *
  */
 typedef void (*nvs_modified_cb_t)(void);
 
 /**
  * @brief tinyuf2 configurations
- * 
+ *
  */
 typedef struct {
     esp_partition_subtype_t subtype;  /*! Partition subtype. if ESP_PARTITION_SUBTYPE_ANY will use the next_update_partition by default. */
@@ -49,7 +49,7 @@ typedef struct {
 
 /**
  * @brief tinyuf2 nvs configurations
- * 
+ *
  */
 typedef struct {
     const char *part_name;            /*! Partition name. */
@@ -60,7 +60,7 @@ typedef struct {
 /**
  * @brief Flashing app to specified partition through USB UF2 (Virtual USB Disk)，
  * and support operate NVS partition through USB UF2 CONFIG.ini file.
- * 
+ *
  * @param ota_config tinyuf2 configs described in tinyuf2_ota_config_t
  * @param nvs_config tinyuf2 nvs configs described in tinyuf2_nvs_config_t
  * @return
@@ -73,7 +73,7 @@ esp_err_t esp_tinyuf2_install(tinyuf2_ota_config_t *ota_config, tinyuf2_nvs_conf
 /**
  * @brief Uninstall tinyuf2, only reset USB to default state
  * @note not release memory due to tinyusb not support teardown
- * 
+ *
  * @return esp_err_t
  *      - ESP_OK  Success
  */

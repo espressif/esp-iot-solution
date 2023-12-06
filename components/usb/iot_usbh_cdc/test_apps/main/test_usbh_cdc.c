@@ -50,7 +50,9 @@ static void usb_read_task(void *param)
     uint8_t buf[IN_RINGBUF_SIZE];
     while (!(xEventGroupGetBits(s_event_group_hdl) & READ_TASK_KILL_BIT)) {
         for (size_t i = 0; i < TEST_ITF_NUM; i++) {
-            if(usbh_cdc_get_itf_state(i) == false) continue;
+            if (usbh_cdc_get_itf_state(i) == false) {
+                continue;
+            }
             usbh_cdc_itf_get_buffered_data_len(i, &data_len);
             if (data_len > 0) {
                 usbh_cdc_itf_read_bytes(i, buf, data_len, 10);

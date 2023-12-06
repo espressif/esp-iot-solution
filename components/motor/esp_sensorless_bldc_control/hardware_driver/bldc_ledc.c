@@ -34,7 +34,7 @@ esp_err_t bldc_ledc_deinit()
 }
 
 esp_err_t bldc_ledc_set_duty(void *channel, uint32_t duty)
-{    
+{
     uint32_t channel_num = (uint32_t)channel;
     ledc_set_duty(BLDC_LEDC_MODE, channel_num, duty);
     ledc_update_duty(BLDC_LEDC_MODE, channel_num);

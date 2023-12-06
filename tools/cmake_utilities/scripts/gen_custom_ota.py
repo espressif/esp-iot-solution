@@ -25,8 +25,8 @@ header_version = {'v1': 1, 'v2': 2, 'v3': 3}
 
 SCRIPT_VERSION = '1.0.0'
 ORIGIN_APP_IMAGE_HEADER_LEN = 288   # sizeof(esp_image_header_t) + sizeof(esp_image_segment_header_t) + sizeof(esp_app_desc_t). See esp_app_format.h
-# At present, we calculate the checksum of the first 4KB data of the old app.                
-OLD_APP_CHECK_DATA_SIZE = 4096      
+# At present, we calculate the checksum of the first 4KB data of the old app.
+OLD_APP_CHECK_DATA_SIZE = 4096
 
 # v1 compressed data header:
 # Note: Encryption_type field is deprecated, the field is reserved for compatibility.
@@ -78,14 +78,14 @@ def xz_compress(store_directory, in_file):
         os.remove(compressed_file)
 
     xz_compressor_filter = [
-        {"id": lzma.FILTER_LZMA2, "preset": 6, "dict_size": 64*1024},
+        {'id': lzma.FILTER_LZMA2, 'preset': 6, 'dict_size': 64*1024},
     ]
     with open(in_file, 'rb') as src_f:
         data = src_f.read()
-        with lzma.open(compressed_file, "wb", format=lzma.FORMAT_XZ, check=lzma.CHECK_CRC32, filters=xz_compressor_filter) as f:
+        with lzma.open(compressed_file, 'wb', format=lzma.FORMAT_XZ, check=lzma.CHECK_CRC32, filters=xz_compressor_filter) as f:
             f.write(data)
             f.close()
-    
+
     if not os.path.exists(os.path.join(store_directory, os.path.split(compressed_file)[1])):
         shutil.copy(compressed_file, store_directory)
         print('copy xz file done')
@@ -110,19 +110,19 @@ def get_script_version():
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-hv', '--header_ver', nargs='?', choices = ['v1', 'v2', 'v3'], 
+    parser.add_argument('-hv', '--header_ver', nargs='?', choices = ['v1', 'v2', 'v3'],
             default='v3', help='the version of the packed file header [default:v3]')
-    parser.add_argument('-c', '--compress_type', nargs= '?', choices = ['none', 'xz'], 
+    parser.add_argument('-c', '--compress_type', nargs= '?', choices = ['none', 'xz'],
             default='xz', help='compressed type [default:xz]')
-    parser.add_argument('-i', '--in_file', nargs = '?', 
+    parser.add_argument('-i', '--in_file', nargs = '?',
             default='', help='the new app firmware')
-    parser.add_argument('--sign_key', nargs = '?', 
+    parser.add_argument('--sign_key', nargs = '?',
             default='', help='the sign key used for secure boot')
-    parser.add_argument('-fv', '--fw_ver', nargs='?', 
+    parser.add_argument('-fv', '--fw_ver', nargs='?',
             default='', help='the version of the compressed data(this field is deprecated in v3)')
-    parser.add_argument('--add_app_header', action="store_true", help='add app header to use native esp_ota_* & esp_https_ota_* APIs')
+    parser.add_argument('--add_app_header', action='store_true', help='add app header to use native esp_ota_* & esp_https_ota_* APIs')
     parser.add_argument('-v', '--version', action='version', version=get_script_version(), help='the version of the script')
-    
+
     args = parser.parse_args()
 
     compress_type = args.compress_type
@@ -137,20 +137,20 @@ def main():
         if(origin_app_name == ''):
             print('get origin app name fail')
             return
-        
+
         if os.path.exists(origin_app_name):
             src_file = origin_app_name
         else:
             print('origin app.bin not found')
             return
-    
+
     print('src file is: {}'.format(src_file))
 
     # rebuild the cpmpressed_app directroy
     cpmoressed_app_directory = 'custom_ota_binaries'
     if os.path.exists(cpmoressed_app_directory):
         shutil.rmtree(cpmoressed_app_directory)
-    
+
     os.mkdir(cpmoressed_app_directory)
     print('The compressed file will store in {}'.format(cpmoressed_app_directory))
 
@@ -164,7 +164,7 @@ def main():
         compressed_file = os.path.join(cpmoressed_app_directory, compressed_file_name)
     else:
         compressed_file = ''.join(src_file)
-    
+
     print('compressed file is: {}'.format(compressed_file))
 
     #step2: packet the compressed image header
@@ -208,13 +208,13 @@ def main():
             bin_data += struct.pack('16s', hashlib.md5(data).digest())
         # The CRC32 for the header
         bin_data += struct.pack('<I', binascii.crc32(bin_data, 0x0))
-        
+
         # write compressed data
         bin_data += data
         with open(packed_file, 'wb') as dst_f:
             # write compressed image header and compressed dada
             dst_f.write(bin_data)
-    
+
     print('packed file is: {}'.format(packed_file))
 
     #step3: if need sign, then sign the packed image
@@ -224,7 +224,7 @@ def main():
         print('signed_file is: {}'.format(signed_file))
     else:
         signed_file = ''.join(packed_file)
-        
+
     if (header_version[header_ver] == 3) and add_app_header:
         with open(signed_file, 'rb+') as src_f:
             packed_data = src_f.read()

@@ -6,7 +6,7 @@ menu "Lightbulb Demo Configuration"
             default LIGHTBULB_DEMO_DRIVER_SELECT_PWM
             help
                 Select the driver type you want to demonstrate
-            
+
             config LIGHTBULB_DEMO_DRIVER_SELECT_SM2135E
                 bool "Demo SM2135E"
             config LIGHTBULB_DEMO_DRIVER_SELECT_WS2812
@@ -25,7 +25,7 @@ menu "Lightbulb Demo Configuration"
         depends on LIGHTBULB_DEMO_DRIVER_SELECT_WS2812
         help
             Set the WS2812 RGB LED GPIO.
-    
+
     config WS2812_LED_NUM
         int "WS2812 LED NUM"
         default 1
@@ -51,7 +51,7 @@ menu "Lightbulb Demo Configuration"
         depends on LIGHTBULB_DEMO_DRIVER_SELECT_PWM
         help
             Set the PWM Red LED GPIO.
-    
+
     config PWM_GREEN_GPIO
         int "PWM Green GPIO"
         default 6 if IDF_TARGET_ESP32C3 || IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32C6

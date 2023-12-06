@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -49,8 +49,7 @@ static esp_err_t bldc_control_operation(void *handle);
 
 static void bldc_control_dispatch_event(int32_t event_id, const void *event_data, size_t event_data_size)
 {
-    if (esp_event_post(BLDC_CONTROL_EVENT, event_id, event_data, event_data_size, portMAX_DELAY) != ESP_OK)
-    {
+    if (esp_event_post(BLDC_CONTROL_EVENT, event_id, event_data, event_data_size, portMAX_DELAY) != ESP_OK) {
         // please call esp_event_loop_create_default() to create event loop to receive event if this happens
         ESP_LOGE(TAG, "Failed to post bldc_control event: %s", bldc_control_event_name_table[event_id]);
     }
@@ -70,8 +69,7 @@ static void bldc_control_task(void *args)
 {
     bldc_control_t *control = (bldc_control_t *)args;
     while (1) {
-        if (xSemaphoreTake(control->xSemaphore, portMAX_DELAY) == pdTRUE)
-        {
+        if (xSemaphoreTake(control->xSemaphore, portMAX_DELAY) == pdTRUE) {
             control->control_operation(args);
         }
     }
@@ -105,8 +103,7 @@ esp_err_t bldc_control_init(bldc_control_handle_t *handle, bldc_control_config_t
 
     xTaskCreate(bldc_control_task, "bldc_control_task", 1024 * 4, control, 10, NULL);
 
-    switch (config->alignment_mode)
-    {
+    switch (config->alignment_mode) {
     case ALIGNMENT_COMPARER:
         ret = bldc_zero_cross_comparer_init(&control->zero_cross_handle, &config->zero_cross_comparer_config, &control->control_param);
         BLDC_CHECK_GOTO(ret == ESP_OK, "bldc_zero_cross_comparer_init failed", deinit);
@@ -161,21 +158,17 @@ esp_err_t bldc_control_init(bldc_control_handle_t *handle, bldc_control_config_t
 
     return ESP_OK;
 deinit:
-    if (control->change_phase_handle)
-    {
+    if (control->change_phase_handle) {
         // todo change_phase_deinit
         free(control->change_phase_handle);
     }
-    if (control->xSemaphore)
-    {
+    if (control->xSemaphore) {
         vSemaphoreDelete(control->xSemaphore);
     }
-    if (control->gptimer)
-    {
+    if (control->gptimer) {
         bldc_gptimer_deinit(control->gptimer);
     }
-    if (control)
-    {
+    if (control) {
         free(control);
     }
     return ret;
@@ -205,12 +198,10 @@ esp_err_t bldc_control_deinit(bldc_control_handle_t *handle)
         break;
     }
 
-    if (control->xSemaphore)
-    {
+    if (control->xSemaphore) {
         vSemaphoreDelete(control->xSemaphore);
     }
-    if (control->gptimer)
-    {
+    if (control->gptimer) {
         bldc_gptimer_deinit(control->gptimer);
     }
 
@@ -365,11 +356,9 @@ static esp_err_t bldc_control_operation(void *handle)
 {
     bldc_control_t *control = (bldc_control_t *)handle;
 
-    switch (control->control_param.status)
-    {
+    switch (control->control_param.status) {
     case INJECT:
-        if (--control->delayCnt <= 0)
-        {
+        if (--control->delayCnt <= 0) {
             if (control->change_phase(control->change_phase_handle) == 1) {
                 control->control_param.status = ALIGNMENT;
                 ESP_LOGI(TAG, "INJECT OK\n");
@@ -386,8 +375,7 @@ static esp_err_t bldc_control_operation(void *handle)
         control->delayCnt = ALIGNMENTNMS;
         break;
     case DRAG:
-        if (--control->delayCnt <= 0)
-        {
+        if (--control->delayCnt <= 0) {
             control->change_phase(control->change_phase_handle);
             control->delayCnt = control->control_param.drag_time;
         }
@@ -400,8 +388,7 @@ static esp_err_t bldc_control_operation(void *handle)
             control->delayCnt = control->control_param.filter_delay;
         }
 
-        if (control->control_param.filter_failed_count > 15000)
-        {
+        if (control->control_param.filter_failed_count > 15000) {
             control->control_param.filter_failed_count = 0;
             control->control_param.speed_rpm = 0;
             control->control_param.duty = 0;

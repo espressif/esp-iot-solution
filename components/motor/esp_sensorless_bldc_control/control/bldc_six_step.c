@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -157,71 +157,69 @@ uint8_t bldc_six_step_inject(bldc_six_step_handle_t *handle)
         return 0;
     }
 
-    switch (six_step->pos_check_stage)
-    {
-        case 0:
-            six_step->pos_check_stage = 10;
-            goto charge;
-            break;
-        case 10:
-            six_step->pos_check_stage = 1;
-            goto inject;
-            break;
-        case 1:
-            six_step->pos_check_stage = 20;
-            goto charge;
-            break;
-        case 20:
-            six_step->pos_check_stage = 2;
-            goto inject;
-            break;
-        case 2:
-            six_step->pos_check_stage = 30;
-            goto charge;
-            break;
-        case 30:
-            six_step->pos_check_stage = 3;
-            goto inject;
-            break;
-        case 3:
-            six_step->pos_check_stage = 40;
-            goto charge;
-            break;
-        case 40:
-            six_step->pos_check_stage = 4;
-            goto inject;
-            break;
-        case 4:
-            six_step->pos_check_stage = 50;
-            goto charge;
-            break;
-        case 50:
-            six_step->pos_check_stage = 5;
-            goto inject;
-            break;
-        case 5:
-            six_step->pos_check_stage = 60;
-            goto charge;
-            break;
-        case 60:
-            six_step->pos_check_stage = 6;
-            goto inject;
-            break;
-        case 6:
-            bldc_six_step_UVW_stop(six_step, !six_step->lower_active_level);
-            six_step->control_param->phase_cnt = inject_get_phase(six_step->control_param->inject_adc_value);
-            ESP_LOGD(TAG, "inject detect phase: %d", six_step->control_param->phase_cnt);
-            ESP_LOGD(TAG, "inject_adc_value: %"PRId32" %"PRId32" %"PRId32" %"PRId32" %"PRId32" %"PRId32"",
-                           six_step->control_param->inject_adc_value[0], six_step->control_param->inject_adc_value[1],
-                           six_step->control_param->inject_adc_value[2], six_step->control_param->inject_adc_value[3],
-                           six_step->control_param->inject_adc_value[4], six_step->control_param->inject_adc_value[5]);
-            if (six_step->control_param->phase_cnt < 1 || six_step->control_param->phase_cnt > 6)
-            {
-                //TODO: error handle make again
-                six_step->control_param->phase_cnt = 1;
-            }
-            return 1;
-            break;
+    switch (six_step->pos_check_stage) {
+    case 0:
+        six_step->pos_check_stage = 10;
+        goto charge;
+        break;
+    case 10:
+        six_step->pos_check_stage = 1;
+        goto inject;
+        break;
+    case 1:
+        six_step->pos_check_stage = 20;
+        goto charge;
+        break;
+    case 20:
+        six_step->pos_check_stage = 2;
+        goto inject;
+        break;
+    case 2:
+        six_step->pos_check_stage = 30;
+        goto charge;
+        break;
+    case 30:
+        six_step->pos_check_stage = 3;
+        goto inject;
+        break;
+    case 3:
+        six_step->pos_check_stage = 40;
+        goto charge;
+        break;
+    case 40:
+        six_step->pos_check_stage = 4;
+        goto inject;
+        break;
+    case 4:
+        six_step->pos_check_stage = 50;
+        goto charge;
+        break;
+    case 50:
+        six_step->pos_check_stage = 5;
+        goto inject;
+        break;
+    case 5:
+        six_step->pos_check_stage = 60;
+        goto charge;
+        break;
+    case 60:
+        six_step->pos_check_stage = 6;
+        goto inject;
+        break;
+    case 6:
+        bldc_six_step_UVW_stop(six_step, !six_step->lower_active_level);
+        six_step->control_param->phase_cnt = inject_get_phase(six_step->control_param->inject_adc_value);
+        ESP_LOGD(TAG, "inject detect phase: %d", six_step->control_param->phase_cnt);
+        ESP_LOGD(TAG, "inject_adc_value: %"PRId32" %"PRId32" %"PRId32" %"PRId32" %"PRId32" %"PRId32"",
+                 six_step->control_param->inject_adc_value[0], six_step->control_param->inject_adc_value[1],
+                 six_step->control_param->inject_adc_value[2], six_step->control_param->inject_adc_value[3],
+                 six_step->control_param->inject_adc_value[4], six_step->control_param->inject_adc_value[5]);
+        if (six_step->control_param->phase_cnt < 1 || six_step->control_param->phase_cnt > 6) {
+            //TODO: error handle make again
+            six_step->control_param->phase_cnt = 1;
+        }
+        return 1;
+        break;
     }
     return 0;
 
@@ -231,7 +229,7 @@ charge:
     return 0;
 inject:
     six_step->control_param->inject_count++;
-    injectArray[six_step->control_param->inject_count -1](six_step, DUTY_MAX * 0.95, six_step->lower_active_level);
+    injectArray[six_step->control_param->inject_count - 1](six_step, DUTY_MAX * 0.95, six_step->lower_active_level);
     six_step->control_param->inject_adc_read = true;
     six_step->control_param->charge_time = CHARGE_TIME;
     return 0;
@@ -246,10 +244,8 @@ void bldc_six_step_turn(bldc_six_step_handle_t *handle)
         six_step->control_param->phase_cnt = 6;
     }
 
-    if (six_step->control_param->dir == CCW)
-    {
-        switch (six_step->control_param->phase_cnt)
-        {
+    if (six_step->control_param->dir == CCW) {
+        switch (six_step->control_param->phase_cnt) {
         case 1:
             bldc_six_step_UphaseH_VphaseL(six_step, six_step->control_param->duty, six_step->lower_active_level);
             six_step->control_param->adc_bemf_phase = PHASE_W;
@@ -277,11 +273,8 @@ void bldc_six_step_turn(bldc_six_step_handle_t *handle)
         default:
             break;
         }
-    }
-    else if (six_step->control_param->dir == CW)
-    {
-        switch (six_step->control_param->phase_cnt)
-        {
+    } else if (six_step->control_param->dir == CW) {
+        switch (six_step->control_param->phase_cnt) {
         case 1:
             bldc_six_step_UphaseH_VphaseL(six_step, six_step->control_param->duty, six_step->lower_active_level);
             six_step->control_param->adc_bemf_phase = PHASE_W;
@@ -325,14 +318,11 @@ esp_err_t bldc_six_step_init(bldc_six_step_handle_t *handle, bldc_six_step_confi
     esp_err_t err = ESP_OK;
     six_step->control_param = control_param;
     /*<! init upper switch */
-    switch (config->upper_switch_config.control_type)
-    {
-    case CONTROL_TYPE_LEDC:
-    {
+    switch (config->upper_switch_config.control_type) {
+    case CONTROL_TYPE_LEDC: {
         err = bldc_ledc_init(&config->upper_switch_config.bldc_ledc);
         BLDC_CHECK_GOTO(err == ESP_OK, "ledc init error", deinit);
-        for (int i = 0; i < PHASE_MAX; i++)
-        {
+        for (int i = 0; i < PHASE_MAX; i++) {
             six_step->phase_upper_pin[i] = (void *)config->upper_switch_config.bldc_ledc.ledc_channel[i];
         }
         six_step->set_upper_pwm = &bldc_ledc_set_duty;
@@ -353,14 +343,11 @@ esp_err_t bldc_six_step_init(bldc_six_step_handle_t *handle, bldc_six_step_confi
     six_step->upper_switch_type = config->upper_switch_config.control_type;
 
     /*<! init lower switch */
-    switch (config->lower_switch_config.control_type)
-    {
-    case CONTROL_TYPE_LEDC:
-    {
+    switch (config->lower_switch_config.control_type) {
+    case CONTROL_TYPE_LEDC: {
         err = bldc_ledc_init(&config->lower_switch_config.bldc_ledc);
         BLDC_CHECK_GOTO(err == ESP_OK, "gpio init error", deinit);
-        for (int i = 0; i < PHASE_MAX; i++)
-        {
+        for (int i = 0; i < PHASE_MAX; i++) {
             six_step->phase_lower_pin[i] = (void *)config->lower_switch_config.bldc_ledc.ledc_channel[i];
         }
         six_step->set_lower_pwm = &bldc_ledc_set_duty;
@@ -373,12 +360,10 @@ esp_err_t bldc_six_step_init(bldc_six_step_handle_t *handle, bldc_six_step_confi
         BLDC_CHECK_GOTO(err == ESP_OK, "mcpwm init error", deinit);
         six_step->set_lower_pwm = &bldc_mcpwm_set_duty;
         six_step->set_phase_duty = &bldc_six_step_set_Hpwm_Lpwm;
-    break;
+        break;
 #endif
-    case CONTROL_TYPE_GPIO:
-    {
-        for (int i = 0; i < PHASE_MAX; i++)
-        {
+    case CONTROL_TYPE_GPIO: {
+        for (int i = 0; i < PHASE_MAX; i++) {
             err = bldc_gpio_init(&config->lower_switch_config.bldc_gpio[i]);
             BLDC_CHECK_GOTO(err == ESP_OK, "gpio init error", deinit);
             six_step->phase_lower_pin[i] = (void *)config->lower_switch_config.bldc_gpio[i].gpio_num;
@@ -394,10 +379,8 @@ esp_err_t bldc_six_step_init(bldc_six_step_handle_t *handle, bldc_six_step_confi
     six_step->lower_switch_type = config->lower_switch_config.control_type;
     six_step->lower_active_level = config->lower_switch_active_level;
 
-    if (config->mos_en_config.has_enable)
-    {
-        for (int i = 0; i < PHASE_MAX; i++)
-        {
+    if (config->mos_en_config.has_enable) {
+        for (int i = 0; i < PHASE_MAX; i++) {
             err = bldc_gpio_init(&config->mos_en_config.en_gpio[i]);
             BLDC_CHECK_GOTO(err == ESP_OK, "gpio init error", deinit);
             six_step->phase_enable_pin[i] = (void *)config->mos_en_config.en_gpio[i].gpio_num;
@@ -412,8 +395,7 @@ esp_err_t bldc_six_step_init(bldc_six_step_handle_t *handle, bldc_six_step_confi
 
     return ESP_OK;
 deinit:
-    if (six_step)
-    {
+    if (six_step) {
         free(six_step);
     }
     return ESP_FAIL;
@@ -426,33 +408,31 @@ esp_err_t bldc_six_step_deinit(bldc_six_step_handle_t handle)
     esp_err_t err = ESP_OK;
     switch (six_step->upper_switch_type) {
 #if CONFIG_SOC_MCPWM_SUPPORTED
-        case CONTROL_TYPE_MCPWM:
-            err = bldc_mcpwm_deinit(six_step->phase_upper_pin);
-            BLDC_CHECK(err == ESP_OK, "mcpwm deinit error", ESP_FAIL);
-            break;
+    case CONTROL_TYPE_MCPWM:
+        err = bldc_mcpwm_deinit(six_step->phase_upper_pin);
+        BLDC_CHECK(err == ESP_OK, "mcpwm deinit error", ESP_FAIL);
+        break;
 #endif
-        default:
-            break;
+    default:
+        break;
     }
 
     switch (six_step->lower_switch_type) {
 #if CONFIG_SOC_MCPWM_SUPPORTED
-        case CONTROL_TYPE_MCPWM:
-            err = bldc_mcpwm_deinit(six_step->phase_lower_pin);
-            BLDC_CHECK(err == ESP_OK, "mcpwm deinit error", ESP_FAIL);
-            break;
+    case CONTROL_TYPE_MCPWM:
+        err = bldc_mcpwm_deinit(six_step->phase_lower_pin);
+        BLDC_CHECK(err == ESP_OK, "mcpwm deinit error", ESP_FAIL);
+        break;
 #endif
-        case CONTROL_TYPE_GPIO:
-            if (six_step->_can_be_enable)
-            {
-                for (int i = 0; i < PHASE_MAX; i++)
-                {
-                    err = bldc_gpio_deinit((uint32_t)six_step->phase_enable_pin[i]);
-                    BLDC_CHECK(err == ESP_OK, "gpio deinit error", ESP_FAIL);
-                }
+    case CONTROL_TYPE_GPIO:
+        if (six_step->_can_be_enable) {
+            for (int i = 0; i < PHASE_MAX; i++) {
+                err = bldc_gpio_deinit((uint32_t)six_step->phase_enable_pin[i]);
+                BLDC_CHECK(err == ESP_OK, "gpio deinit error", ESP_FAIL);
             }
-        default:
-            break;
+        }
+    default:
+        break;
     }
 
     free(six_step);
@@ -463,8 +443,7 @@ static esp_err_t bldc_six_step_enable(bldc_six_step_handle_t handle)
 {
     bldc_six_step_t *six_step = (bldc_six_step_t *)handle;
     BLDC_CHECK(six_step != NULL, "six_step has not been init", ESP_ERR_INVALID_STATE);
-    if (six_step->_can_be_enable)
-    {
+    if (six_step->_can_be_enable) {
         six_step->set_gpio(six_step->phase_enable_pin[PHASE_U], six_step->enable_level);
         six_step->set_gpio(six_step->phase_enable_pin[PHASE_V], six_step->enable_level);
         six_step->set_gpio(six_step->phase_enable_pin[PHASE_W], six_step->enable_level);
@@ -477,8 +456,7 @@ static esp_err_t bldc_six_step_disable(bldc_six_step_handle_t handle)
 {
     bldc_six_step_t *six_step = (bldc_six_step_t *)handle;
     BLDC_CHECK(six_step != NULL, "six_step has not been init", ESP_ERR_INVALID_STATE);
-    if (six_step->_can_be_enable)
-    {
+    if (six_step->_can_be_enable) {
         six_step->set_gpio(six_step->phase_enable_pin[PHASE_U], six_step->enable_level);
         six_step->set_gpio(six_step->phase_enable_pin[PHASE_V], six_step->enable_level);
         six_step->set_gpio(six_step->phase_enable_pin[PHASE_W], six_step->enable_level);
@@ -517,8 +495,7 @@ uint8_t bldc_six_step_operation(void *handle)
 {
     bldc_six_step_t *six_step = (bldc_six_step_t *)handle;
     if (six_step->control_param->status == CLOSED_LOOP) {
-        if (six_step->control_param->phase_cnt <= 0 || six_step->control_param->phase_cnt > 6)
-        {
+        if (six_step->control_param->phase_cnt <= 0 || six_step->control_param->phase_cnt > 6) {
             return 0;
         }
 
@@ -528,17 +505,13 @@ uint8_t bldc_six_step_operation(void *handle)
     } else if (six_step->control_param->status == DRAG) {
         six_step->control_param->duty += RAMP_DUTY_INC;
         six_step->control_param->drag_time -= (six_step->control_param->drag_time / RAMP_TIM_STEP) + 1;
-        if (six_step->control_param->drag_time < RAMP_TIM_END)
-        {
+        if (six_step->control_param->drag_time < RAMP_TIM_END) {
             /*!< Zero crossing time interval */
             six_step->control_param->drag_time = RAMP_TIM_END;
         }
-        if (six_step->control_param->duty < RAMP_DUTY_STA)
-        {
+        if (six_step->control_param->duty < RAMP_DUTY_STA) {
             six_step->control_param->duty = RAMP_DUTY_STA;
-        }
-        else if (six_step->control_param->duty > RAMP_DUTY_END)
-        {
+        } else if (six_step->control_param->duty > RAMP_DUTY_END) {
             six_step->control_param->duty = RAMP_DUTY_END;
         }
 
@@ -557,7 +530,7 @@ uint8_t bldc_six_step_operation(void *handle)
         }
         six_step->control_param->duty = RAMP_DUTY_STA;
         six_step->control_param->drag_time = RAMP_TIM_STA;
-    }else if (six_step->control_param->status == INJECT) {
+    } else if (six_step->control_param->status == INJECT) {
         /*!< Returns 1 if the initial phase is obtained after six injections, 0 otherwise. */
         return bldc_six_step_inject(handle);
     } else if (six_step->control_param->status == BLOCKED || six_step->control_param->status == STOP) {

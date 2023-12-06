@@ -131,7 +131,7 @@ static void adaptive_jpg_frame_buffer(size_t length)
 
 static void camera_frame_cb(uvc_frame_t *frame, void *ptr)
 {
-    if (current_width != frame->width || current_height != frame->height ) {
+    if (current_width != frame->width || current_height != frame->height) {
         current_width = frame->width;
         current_height = frame->height;
         adaptive_jpg_frame_buffer(current_width * current_height * 2);
@@ -167,12 +167,12 @@ static void _display_task(void *arg)
     int x_jump = 0;
     int y_jump = 0;
 
-    while ( !if_ppbuffer_init ) {
+    while (!if_ppbuffer_init) {
         vTaskDelay(1);
     }
 
     while (1) {
-        if ( ppbuffer_get_read_buf(ppbuffer_handle, (void *)&lcd_buffer) == ESP_OK) {
+        if (ppbuffer_get_read_buf(ppbuffer_handle, (void *)&lcd_buffer) == ESP_OK) {
             if (current_width == BSP_LCD_H_RES && current_height <= BSP_LCD_V_RES) {
                 x_start = 0;
                 y_start = (BSP_LCD_V_RES - current_height) / 2;
@@ -184,7 +184,7 @@ static void _display_task(void *arg)
                 esp_lcd_panel_draw_bitmap(panel_handle, x_start, y_start, x_start + current_width, y_start + current_height, lcd_buffer);
             } else {
                 /* This section is for refreshing images with a resolution larger than the screen, which is currently not enabled */
-                if (current_width < BSP_LCD_H_RES ) {
+                if (current_width < BSP_LCD_H_RES) {
                     width = current_width;
                     x_start = (BSP_LCD_H_RES - current_width) / 2;
                     x_jump = 0;
@@ -194,7 +194,7 @@ static void _display_task(void *arg)
                     x_jump = (current_width - BSP_LCD_H_RES) / 2;
                 }
 
-                if (current_height < BSP_LCD_V_RES ) {
+                if (current_height < BSP_LCD_V_RES) {
                     height = current_height;
                     y_start = (BSP_LCD_V_RES - current_height) / 2;
                     y_jump = 0;
@@ -206,7 +206,7 @@ static void _display_task(void *arg)
 
                 esp_lcd_panel_draw_bitmap(panel_handle, 0, 0, 1, 1, cur_frame_buf);
                 for (int i = y_start; i < height; i++) {
-                    esp_lcd_panel_draw_bitmap(panel_handle, x_start, i, x_start + width, i + 1, &lcd_buffer[(y_jump + i)*current_width + x_jump] );
+                    esp_lcd_panel_draw_bitmap(panel_handle, x_start, i, x_start + width, i + 1, &lcd_buffer[(y_jump + i)*current_width + x_jump]);
                 }
             }
 
@@ -291,7 +291,7 @@ static esp_err_t _set_value_to_nvs(char *key, void *value, size_t size)
         }
 
         err = nvs_commit(my_handle);
-        if ( err != ESP_OK) {
+        if (err != ESP_OK) {
             ESP_LOGE(TAG, "NVS commit failed");
         }
 
@@ -425,7 +425,7 @@ static void _stream_state_changed_cb(usb_stream_state_t event, void *arg)
                 camera_resolution_info.camera_currect_frame_index = 0;
             }
 
-            if (-1 == camera_resolution_info.camera_currect_frame_index ) {
+            if (-1 == camera_resolution_info.camera_currect_frame_index) {
                 ESP_LOGE(TAG, "fine current resolution fail");
                 break;
             }

@@ -48,7 +48,6 @@ static const char *partition_label = "audio";
 #define PIN_NUM_CS   13
 #endif //USE_SPI_MODE
 
-
 esp_err_t fm_sdcard_init(void)
 {
     esp_err_t ret;

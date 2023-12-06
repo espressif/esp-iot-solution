@@ -31,7 +31,7 @@ void app_main(void)
     gpioc_cfg_t cfg;
     uint8_t state = 0;
     const char device[] = GPIO_DEVICE;
-    
+
     ext_vfs_init();
 
     fd = open(device, O_WRONLY);

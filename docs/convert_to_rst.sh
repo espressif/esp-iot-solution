@@ -5,7 +5,7 @@ do
     if [ $i != "main.tex" ] && [ $i != "structure.tex" ]
     then
 	echo $i;
-        target=`basename $i`	
+        target=`basename $i`
 	pandoc $i --verbose --number-sections --section-divs --reference-links -t rst -o en/rst/${target/tex/rst};
 	# Change \label to and anchor before the section/chapter names
 	perl -0777 -i -pe 's/\n\n([^\n]*\n[-~]*\n\n)\[sec:([^\]]*)\][ ]*/\n\n.. _sec_$2:\n\n$1/igs' en/rst/${target/tex/rst};

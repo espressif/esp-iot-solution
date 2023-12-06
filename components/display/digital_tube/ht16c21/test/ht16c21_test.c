@@ -14,7 +14,6 @@
 #define I2C_MASTER_SCL_IO  19
 #define I2C_MASTER_FREQ_HZ 100000
 
-
 TEST_CASE("I2C HT16C21 test", "[ht16c21][iot][led]")
 {
     i2c_bus_handle_t i2c_bus = NULL;
@@ -32,7 +31,7 @@ TEST_CASE("I2C HT16C21 test", "[ht16c21][iot][led]")
     TEST_ASSERT_NOT_NULL(i2c_bus);
     seg = ht16c21_create(i2c_bus, HT16C21_I2C_ADDRESS_DEFAULT);
     TEST_ASSERT_NOT_NULL(seg);
-    
+
     ht16c21_config_t ht16c21_conf = {
         .duty_bias = HT16C21_4DUTY_3BIAS,
         .oscillator_display = HT16C21_OSCILLATOR_ON_DISPLAY_ON,
@@ -47,4 +46,3 @@ TEST_CASE("I2C HT16C21 test", "[ht16c21][iot][led]")
     ht16c21_delete(seg);
     i2c_bus_delete(&i2c_bus);
 }
-

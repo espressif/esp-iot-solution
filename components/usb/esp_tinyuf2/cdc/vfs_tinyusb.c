@@ -33,8 +33,6 @@ const static char *TAG = "tusb_vfs";
                                     }                   \
                                 } while (0)
 
-
-
 #if CONFIG_NEWLIB_STDOUT_LINE_ENDING_CRLF
 #   define DEFAULT_TX_MODE ESP_LINE_ENDINGS_CRLF
 #elif CONFIG_NEWLIB_STDOUT_LINE_ENDING_CR
@@ -62,7 +60,6 @@ typedef struct {
 } vfs_tinyusb_t;
 
 static vfs_tinyusb_t s_vfstusb;
-
 
 static esp_err_t apply_path(char const *path)
 {
@@ -105,7 +102,6 @@ static void vfstusb_deinit(void)
 {
     memset(&s_vfstusb, 0, sizeof(s_vfstusb));
 }
-
 
 static int tusb_open(const char *path, int flags, int mode)
 {
@@ -175,7 +171,7 @@ static ssize_t tusb_read(int fd, void *data, size_t size)
                 c = '\n';
             }
         }
-        if ( c == NONE) { // if data ends
+        if (c == NONE) {  // if data ends
             break;
         }
         data_c[received] = (char) c;
@@ -191,7 +187,6 @@ static ssize_t tusb_read(int fd, void *data, size_t size)
     errno = EWOULDBLOCK;
     return -1;
 }
-
 
 static int tusb_fstat(int fd, struct stat *st)
 {
@@ -237,8 +232,6 @@ esp_err_t esp_vfs_tusb_cdc_unregister(char const *path)
         return res;
     }
 
-
-
     res = esp_vfs_unregister(s_vfstusb.vfs_path);
     if (res != ESP_OK) {
         ESP_LOGE(TAG, "Can't unregister TinyUSB driver from '%s' (err: 0x%x)", s_vfstusb.vfs_path, res);
@@ -248,9 +241,6 @@ esp_err_t esp_vfs_tusb_cdc_unregister(char const *path)
     }
     return res;
 }
-
-
-
 
 esp_err_t esp_vfs_tusb_cdc_register(int cdc_intf, char const *path)
 {

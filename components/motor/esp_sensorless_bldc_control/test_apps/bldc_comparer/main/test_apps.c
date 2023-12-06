@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -32,10 +32,10 @@ void tearDown(void)
 void app_main(void)
 {
 
-    //   ___ _    ___   ___   _____ ___ ___ _____ 
+    //   ___ _    ___   ___   _____ ___ ___ _____
     //  | _ ) |  |   \ / __| |_   _| __/ __|_   _|
-    //  | _ \ |__| |) | (__    | | | _|\__ \ | |  
-    //  |___/____|___/ \___|   |_| |___|___/ |_|  
+    //  | _ \ |__| |) | (__    | | | _|\__ \ | |
+    //  |___/____|___/ \___|   |_| |___|___/ |_|
     //
     printf("  ___ _    ___   ___   _____ ___ ___ _____ \n");
     printf(" | _ ) |  |   \\ / __| |_   _| __/ __|_   _|\n");

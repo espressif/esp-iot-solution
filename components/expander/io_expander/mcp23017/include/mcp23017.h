@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #ifndef _MCP23017_H_
 #define _MCP23017_H_
 
@@ -91,7 +90,7 @@ esp_err_t mcp23017_delete(mcp23017_handle_t *p_dev);
  *     - ESP_ERR_INVALID_ARG Parameter error
  */
 esp_err_t mcp23017_interrupt_en(mcp23017_handle_t dev, uint16_t pins,
-        bool intr_mode, uint16_t defaultValue);
+                                bool intr_mode, uint16_t defaultValue);
 
 /**
  * @brief delete MCP23017 interrupt pin,
@@ -119,7 +118,7 @@ esp_err_t mcp23017_interrupt_disable(mcp23017_handle_t dev, uint16_t pins);
  *     - ESP_ERR_INVALID_ARG Parameter error
  */
 esp_err_t mcp23017_set_interrupt_polarity(mcp23017_handle_t dev,
-        mcp23017_gpio_port_t gpio, uint8_t chLevel);
+                                          mcp23017_gpio_port_t gpio, uint8_t chLevel);
 
 /**
  * @brief Sequential operation mode set
@@ -155,7 +154,7 @@ esp_err_t mcp23017_set_pullup(mcp23017_handle_t dev, uint16_t pins);
  *
  * @param dev device handle of MCP23017
  *
- * @return 
+ * @return
  *     - uint16_t value of interrupt pin
  */
 uint16_t mcp23017_get_int_pin(mcp23017_handle_t dev);
@@ -195,7 +194,7 @@ esp_err_t mcp23017_check_present(mcp23017_handle_t dev);
  *     - ESP_ERR_INVALID_ARG Parameter error
  */
 esp_err_t mcp23017_mirror_interrupt(mcp23017_handle_t dev, uint8_t mirror,
-        mcp23017_gpio_port_t gpio);
+                                    mcp23017_gpio_port_t gpio);
 
 /**
  * @brief write output value of GPIOA,(work in output)
@@ -210,7 +209,7 @@ esp_err_t mcp23017_mirror_interrupt(mcp23017_handle_t dev, uint8_t mirror,
  *     - ESP_ERR_INVALID_ARG Parameter error
  */
 esp_err_t mcp23017_write_io(mcp23017_handle_t dev, uint8_t value,
-        mcp23017_gpio_port_t gpio);
+                            mcp23017_gpio_port_t gpio);
 
 /**
  * @brief read value of REG_GPIOA/REG_GPIOB;Reflects the logic level on pin <7: 0>
@@ -236,11 +235,10 @@ uint8_t mcp23017_read_io(mcp23017_handle_t dev, mcp23017_gpio_port_t gpio);
  *     - ESP_ERR_INVALID_ARG Parameter error
  */
 esp_err_t mcp23017_set_io_dir(mcp23017_handle_t dev, uint8_t value,
-        mcp23017_gpio_port_t gpio);
+                              mcp23017_gpio_port_t gpio);
 
 #ifdef __cplusplus
 }
 #endif
-
 
 #endif

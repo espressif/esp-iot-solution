@@ -37,7 +37,7 @@ void light_test()
     vTaskDelay(5000 / portTICK_PERIOD_MS);
 
     ESP_LOGI(TAG, "stage2");
-    iot_light_blink_starte(light, (1<<CHANNEL_ID_R)|(1<<CHANNEL_ID_G)|(1<<CHANNEL_ID_B), 100);
+    iot_light_blink_starte(light, (1 << CHANNEL_ID_R) | (1 << CHANNEL_ID_G) | (1 << CHANNEL_ID_B), 100);
     vTaskDelay(5000 / portTICK_PERIOD_MS);
     iot_light_blink_stop(light);
 

@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #ifndef _IOT_BOARD_H_
 #define _IOT_BOARD_H_
 
@@ -22,7 +21,7 @@ typedef enum {
     BOARD_I2C0_ID,
     BOARD_SPI2_ID,
     BOARD_SPI3_ID,
-}board_res_id_t;
+} board_res_id_t;
 
 /*Definitions of Board Information*/
 #define BOARD_NAME "ESP32_S3_USB_OTG_EV"
@@ -176,7 +175,7 @@ extern "C"
 /*********************************** ESP32-S3-USB-OTG board specified API ***********************/
 /**
  * @brief Set usb host port power
- * 
+ *
  * @param on_off true if power on, false if power off.
  * @param from_battery true if power from battery, flase if power from usb device port
  * @return esp_err_t
@@ -187,7 +186,7 @@ esp_err_t iot_board_usb_host_set_power(bool on_off, bool from_battery);
 
 /**
  * @brief Check if usb host port is powered
- * 
+ *
  * @return bool
  *         true if usb is power on
  *         false if usb is power off
@@ -196,7 +195,7 @@ bool iot_board_usb_host_get_power(void);
 
 /**
  * @brief Check usb device interface voltage
- * 
+ *
  * @return float
  *         device interface voltage from other host (Unit: V)
  */
@@ -204,7 +203,7 @@ float iot_board_usb_device_voltage(void);
 
 /**
  * @brief Check battery voltage
- * 
+ *
  * @return float
  *         battery voltage (Unit: V)
  */
@@ -212,7 +211,7 @@ float iot_board_battery_voltage(void);
 
 /**
  * @brief Set board USB mode
- * 
+ *
  * @param mode modes defined in usb_mode_t, if USB_DEVICE_MODE connect usb to device port, if USB_HOST_MODE connect usb to host port.
  * @return esp_err_t
  *         ESP_FAIL set mode failed, mode control gpio not ininted
@@ -222,7 +221,7 @@ esp_err_t iot_board_usb_set_mode(usb_mode_t mode);
 
 /**
  * @brief Get board current USB mode
- * 
+ *
  * @return usb_mode_t
  *         USB_DEVICE_MODE if connecting to usb device port
  *         USB_HOST_MODE if connecting to usb host port.

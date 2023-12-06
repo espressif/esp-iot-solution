@@ -13,7 +13,6 @@
 #define I2C_MASTER_SCL_IO 23
 #define I2C_MASTER_FREQ_HZ 100000
 
-
 TEST_CASE("I2C CH450 test", "[ch450][iot][led]")
 {
     i2c_bus_handle_t i2c_bus = NULL;
@@ -40,4 +39,3 @@ TEST_CASE("I2C CH450 test", "[ch450][iot][led]")
     ch450_delete(seg);
     i2c_bus_delete(&i2c_bus);
 }
-

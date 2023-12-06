@@ -17,7 +17,7 @@ extern "C" {
  *
  * @param elf - ELF object pointer
  * @param sym - ELF symbol address
- * 
+ *
  * @return Mapped physic address.
  */
 uintptr_t esp_elf_map_sym(esp_elf_t *elf, uintptr_t sym);
@@ -26,7 +26,7 @@ uintptr_t esp_elf_map_sym(esp_elf_t *elf, uintptr_t sym);
  * @brief Initialize ELF object.
  *
  * @param elf - ELF object pointer
- * 
+ *
  * @return ESP_OK if sucess or other if failed.
  */
 int esp_elf_init(esp_elf_t *elf);
@@ -36,7 +36,7 @@ int esp_elf_init(esp_elf_t *elf);
  *
  * @param elf - ELF object pointer
  * @param pbuf - ELF data buffer
- * 
+ *
  * @return ESP_OK if sucess or other if failed.
  */
 int esp_elf_relocate(esp_elf_t *elf, const uint8_t *pbuf);
@@ -48,7 +48,7 @@ int esp_elf_relocate(esp_elf_t *elf, const uint8_t *pbuf);
  * @param opt  - Request options
  * @param argc - Arguments number
  * @param argv - Arguments value array
- * 
+ *
  * @return ESP_OK if sucess or other if failed.
  */
 int esp_elf_request(esp_elf_t *elf, int opt, int argc, char *argv[]);
@@ -57,7 +57,7 @@ int esp_elf_request(esp_elf_t *elf, int opt, int argc, char *argv[]);
  * @brief Deinitialize ELF object.
  *
  * @param elf - ELF object pointer
- * 
+ *
  * @return None
  */
 void esp_elf_deinit(esp_elf_t *elf);
@@ -66,7 +66,7 @@ void esp_elf_deinit(esp_elf_t *elf);
  * @brief Print header description information of ELF.
  *
  * @param pbuf - ELF data buffer
- * 
+ *
  * @return None
  */
 void esp_elf_print_hdr(const uint8_t *pbuf);
@@ -75,7 +75,7 @@ void esp_elf_print_hdr(const uint8_t *pbuf);
  * @brief Print section header description information of ELF.
  *
  * @param pbuf - ELF data buffer
- * 
+ *
  * @return None
  */
 void esp_elf_print_shdr(const uint8_t *pbuf);
@@ -84,7 +84,7 @@ void esp_elf_print_shdr(const uint8_t *pbuf);
  * @brief Print section information of ELF.
  *
  * @param pbuf - ELF data buffer
- * 
+ *
  * @return None
  */
 void esp_elf_print_sec(esp_elf_t *elf);

@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #include <stdio.h>
 #include <string.h>
 
@@ -52,7 +51,6 @@ static const char *TAG = "driver_bp1658cj";
  * BP1658CJ register current address - Byte1
  */
 // Nothing
-
 
 /**
  * BP1658CJ register grayscale address - Byte 2-11
@@ -127,7 +125,6 @@ esp_err_t bp1658cj_set_shutdown(void)
 
     uint8_t _value[10] = { 0 };
     uint8_t addr = BASE_ADDR | BIT_R_OUT1 | BIT_ALL_OUT_ENABLE;
-    
 
     return iic_driver_write(addr, _value, sizeof(_value));
 }
@@ -231,7 +228,6 @@ esp_err_t bp1658cj_set_rgbcw_channel(uint16_t value_r, uint16_t value_g, uint16_
 
     _value[s_bp1658cj->mapping_addr[4] * 2 + 0] = (value_w & 0x1F);
     _value[s_bp1658cj->mapping_addr[4] * 2 + 1] = (value_w >> 5);
-
 
     return iic_driver_write(addr, _value, sizeof(_value));
 }

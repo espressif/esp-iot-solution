@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #ifndef _IOT_SCREEN_DRIVER_H_
 #define _IOT_SCREEN_DRIVER_H_
 
@@ -104,7 +103,7 @@ typedef enum {
 
 /**
  * @brief The types of colors that can be displayed on the screen
- * 
+ *
  */
 typedef enum {
     SCR_COLOR_TYPE_MONO,     /**< The screen is monochrome */
@@ -139,7 +138,7 @@ typedef enum {
 
 /**
  * @brief configuration of screen controller
- * 
+ *
  */
 typedef struct {
     scr_interface_driver_t *interface_drv;   /*!< Interface driver for screen */
@@ -156,7 +155,7 @@ typedef struct {
 
 /**
  * @brief Information of screen
- * 
+ *
  */
 typedef struct {
     uint16_t width;                      /*!< Current screen width, it may change when apply to rotate */
@@ -196,11 +195,11 @@ typedef struct {
     /**
     * @brief Set screen direction of rotation
     *
-    * @param dir Pointer to a scr_dir_t structure. 
+    * @param dir Pointer to a scr_dir_t structure.
     * You can set the direction in two ways, for example, set it to "SCR_DIR_LRBT" or "SCR_MIRROR_Y", They are the same, depending on which expression you want to use
-    * 
+    *
     * @note Not all screens support eight directions, it depends on the screen controller.
-    * 
+    *
     * @return
     *      - ESP_OK on success
     *      - ESP_FAIL Failed
@@ -214,7 +213,7 @@ typedef struct {
     * @param y0 Starting point in Y direction
     * @param x1 End point in X direction
     * @param y1 End point in Y direction
-    * 
+    *
     * @note When the BPP of the screen controller is less than 8, the coordinate value is limited to a multiple of some number
     *
     * @return

@@ -91,7 +91,7 @@ esp_err_t led_indicator_ledc_set_on_off(void *channel, bool on_off)
     esp_err_t ret;
     uint32_t ch = (uint32_t)channel;
     LED_LEDC_CHECK(s_ledc->ledc_channel[ch].is_init, "LEDC channel does't init", return ESP_FAIL);
-    uint32_t duty = on_off?s_ledc->max_duty:0;
+    uint32_t duty = on_off ? s_ledc->max_duty : 0;
     if (!s_ledc->ledc_channel[ch].is_active_level_high) {
         duty = s_ledc->max_duty - duty;
     }
@@ -108,8 +108,8 @@ esp_err_t led_indicator_ledc_set_brightness(void *channel, uint32_t brightness)
     esp_err_t ret;
     uint32_t ch = (uint32_t)channel;
     LED_LEDC_CHECK(s_ledc->ledc_channel[ch].is_init, "LEDC channel does't init", return ESP_FAIL);
-    LED_LEDC_CHECK(brightness <= UINT8_MAX , "brightness can't be larger than UINT8_MAX", return ESP_FAIL);
-    brightness = s_ledc->ledc_channel[ch].is_active_level_high?brightness:(UINT8_MAX - brightness);
+    LED_LEDC_CHECK(brightness <= UINT8_MAX, "brightness can't be larger than UINT8_MAX", return ESP_FAIL);
+    brightness = s_ledc->ledc_channel[ch].is_active_level_high ? brightness : (UINT8_MAX - brightness);
     ret = ledc_set_duty(LEDC_MODE, s_ledc->ledc_channel[ch].channel, brightness * s_ledc->max_duty / UINT8_MAX);
     LED_LEDC_CHECK(ESP_OK == ret, "LEDC set duty error", return ret);
     ret = ledc_update_duty(LEDC_MODE, s_ledc->ledc_channel[ch].channel);

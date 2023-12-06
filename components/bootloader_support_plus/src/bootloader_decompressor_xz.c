@@ -33,7 +33,7 @@ int bootloader_decompressor_xz_input(void *addr, int size)
 
     ret = xz_decompress(NULL, 0, &bootloader_decompressor_read, &bootloader_decompressor_write, NULL, &in_used, &bootloader_decompressor_xz_error);
 
-    if((ret != 0) && (in_used != 0)) {
+    if ((ret != 0) && (in_used != 0)) {
         return -2;
     }
 

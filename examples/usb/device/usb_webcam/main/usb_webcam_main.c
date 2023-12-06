@@ -56,7 +56,7 @@ static esp_err_t camera_init(uint32_t xclk_freq_hz, pixformat_t pixel_format, fr
     static uint8_t cur_fb_count = 0;
 
     if ((inited && cur_xclk_freq_hz == xclk_freq_hz && cur_pixel_format == pixel_format
-        && cur_frame_size== frame_size && cur_fb_count == fb_count && cur_jpeg_quality == jpeg_quality)) {
+            && cur_frame_size == frame_size && cur_fb_count == fb_count && cur_jpeg_quality == jpeg_quality)) {
         ESP_LOGD(TAG, "camera already inited");
         return ESP_OK;
     } else if (inited) {
@@ -93,7 +93,7 @@ static esp_err_t camera_init(uint32_t xclk_freq_hz, pixformat_t pixel_format, fr
         .frame_size = frame_size,
 
         .jpeg_quality = jpeg_quality,
-        .fb_count = fb_count, 
+        .fb_count = fb_count,
         .grab_mode = CAMERA_GRAB_WHEN_EMPTY,
         .fb_location = CAMERA_FB_IN_PSRAM
     };
@@ -116,7 +116,7 @@ static esp_err_t camera_init(uint32_t xclk_freq_hz, pixformat_t pixel_format, fr
     }
 
     if (s->id.PID == OV3660_PID || s->id.PID == OV2640_PID) {
-        s->set_vflip(s, 1); // flip it back    
+        s->set_vflip(s, 1); // flip it back
     } else if (s->id.PID == GC0308_PID) {
         s->set_hmirror(s, 0);
     } else if (s->id.PID == GC032A_PID) {
@@ -189,7 +189,7 @@ static esp_err_t camera_start_cb(uvc_format_t format, int width, int height, int
     }
 
     esp_err_t ret = camera_init(CAMERA_XCLK_FREQ, PIXFORMAT_JPEG, frame_size, jpeg_quality, CAMERA_FB_COUNT);
-    if (ret!= ESP_OK) {
+    if (ret != ESP_OK) {
         ESP_LOGE(TAG, "camera init failed");
         return ret;
     }

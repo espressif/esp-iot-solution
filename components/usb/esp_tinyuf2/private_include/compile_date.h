@@ -31,10 +31,10 @@
 // Reproducible builds are also important for other reasons.
 // See generally, https://reproducible-builds.org/
 #ifndef COMPILE_DATE
-  #define COMPILE_DATE __DATE__
+#define COMPILE_DATE __DATE__
 #endif
 #ifndef COMPILE_TIME
-  #define COMPILE_TIME __TIME__
+#define COMPILE_TIME __TIME__
 #endif
 
 #define COMPILE_YEAR_INT ((( \
@@ -63,7 +63,7 @@
    )
 
 // __TIME__ expands to an eight-character string constant
-// "23:59:01", or (if cannot determine time) "??:??:??" 
+// "23:59:01", or (if cannot determine time) "??:??:??"
 #define COMPILE_HOUR_INT ( \
    (COMPILE_TIME [0u] == '?' ? 0 : COMPILE_TIME [0u] - '0') * 10u \
  + (COMPILE_TIME [1u] == '?' ? 0 : COMPILE_TIME [1u] - '0')       )
@@ -76,16 +76,14 @@
    (COMPILE_TIME [6u] == '?' ? 0 : COMPILE_TIME [6u] - '0') * 10u \
  + (COMPILE_TIME [7u] == '?' ? 0 : COMPILE_TIME [7u] - '0')       )
 
-
 #define COMPILE_DOS_DATE ( \
-	((COMPILE_YEAR_INT  - 1980u) << 9u) | \
-	( COMPILE_MONTH_INT          << 5u) | \
-	( COMPILE_DAY_INT            << 0u) )
+    ((COMPILE_YEAR_INT  - 1980u) << 9u) | \
+    ( COMPILE_MONTH_INT          << 5u) | \
+    ( COMPILE_DAY_INT            << 0u) )
 
 #define COMPILE_DOS_TIME ( \
-	( COMPILE_HOUR_INT    << 11u) | \
-	( COMPILE_MINUTE_INT  <<  5u) | \
-	( COMPILE_SECONDS_INT <<  0u) )
+    ( COMPILE_HOUR_INT    << 11u) | \
+    ( COMPILE_MINUTE_INT  <<  5u) | \
+    ( COMPILE_SECONDS_INT <<  0u) )
 
 #endif // COMPILE_DATE_H
-

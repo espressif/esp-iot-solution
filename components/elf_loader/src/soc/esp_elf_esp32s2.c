@@ -16,7 +16,7 @@
 #include "soc/mmu.h"
 #include "private/elf_platform.h"
 
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0) 
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
 #define PSRAM_VADDR_START   0x3f800000
 #else
 #define PSRAM_VADDR_START   (DRAM0_CACHE_ADDRESS_HIGH - esp_spiram_get_size())

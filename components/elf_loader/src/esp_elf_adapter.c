@@ -23,7 +23,7 @@
  *
  * @param n - Memory size in byte
  * @param exec - True: memory can run executable code; False: memory can R/W data
- * 
+ *
  * @return Memory pointer if success or NULL if failed.
  */
 void *esp_elf_malloc(uint32_t n, bool exec)
@@ -41,7 +41,7 @@ void *esp_elf_malloc(uint32_t n, bool exec)
  * @brief Free block of memory.
  *
  * @param ptr - memory block pointer allocated by "esp_elf_malloc"
- * 
+ *
  * @return None
  */
 void esp_elf_free(void *ptr)
@@ -50,11 +50,11 @@ void esp_elf_free(void *ptr)
 }
 
 /**
- * @brief Remap symbol from ".data" to ".text" section. 
+ * @brief Remap symbol from ".data" to ".text" section.
  *
  * @param elf  - ELF object pointer
  * @param sym  - ELF symbol table
- * 
+ *
  * @return Remapped symbol value
  */
 #ifdef CONFIG_ELF_LOADER_CACHE_OFFSET
@@ -64,7 +64,7 @@ uintptr_t elf_remap_text(esp_elf_t *elf, uintptr_t sym)
     esp_elf_sec_t *sec = &elf->sec[ELF_SEC_TEXT];
 
     if ((sym >= sec->addr) &&
-        (sym < (sec->addr + sec->size))) {
+            (sym < (sec->addr + sec->size))) {
 #ifdef CONFIG_ELF_LOADER_SET_MMU
         mapped_sym = sym + elf->text_off;
 #else
@@ -82,7 +82,7 @@ uintptr_t elf_remap_text(esp_elf_t *elf, uintptr_t sym)
  * @brief Flush data from cache to external RAM.
  *
  * @param None
- * 
+ *
  * @return None
  */
 #ifdef CONFIG_ELF_LOADER_LOAD_PSRAM

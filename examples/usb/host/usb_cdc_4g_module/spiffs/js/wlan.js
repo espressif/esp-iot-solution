@@ -171,4 +171,3 @@ function initHash () {
     }
   })
 }
-

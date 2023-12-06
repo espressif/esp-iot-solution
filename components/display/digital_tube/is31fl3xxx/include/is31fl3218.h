@@ -9,7 +9,6 @@
 
 #include "i2c_bus.h"
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -28,7 +27,7 @@ extern "C" {
 
 /**
  * @brief IS31FL3218 mode
- * 
+ *
  */
 typedef enum {
     IS31FL3218_MODE_SHUTDOWN = 0, /**< Software shutdown mode */
@@ -38,7 +37,7 @@ typedef enum {
 
 /**
  * @brief Register of IS31FL3218
- * 
+ *
  */
 typedef enum {
     IS31FL3218_REG_SHUTDOWN = 0x00,                         /*0 First state or BR/EDR scan 1*/
@@ -67,7 +66,6 @@ typedef enum {
     IS31FL3218_REG_RESET,
     IS31FL3218_REG_MAX,
 } is31fl3218_reg_t;
-
 
 typedef void* is31fl3218_handle_t;
 
@@ -140,4 +138,3 @@ esp_err_t is31fl3218_write_pwm_regs(is31fl3218_handle_t fxled, uint8_t* duty, in
 #endif
 
 #endif
-

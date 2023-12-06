@@ -83,7 +83,7 @@ esp_err_t esp_lcd_new_panel_io_3wire_spi(const esp_lcd_panel_io_3wire_spi_config
 
     const spi_line_config_t *line_config = &io_config->line_config;
     ESP_RETURN_ON_FALSE(line_config->io_expander || (line_config->cs_io_type == IO_TYPE_GPIO &&
-                        line_config->scl_io_type == IO_TYPE_GPIO && line_config->sda_io_type == IO_TYPE_GPIO),
+                                                     line_config->scl_io_type == IO_TYPE_GPIO && line_config->sda_io_type == IO_TYPE_GPIO),
                         ESP_ERR_INVALID_ARG, TAG, "IO Expander handle is required if any IO is not gpio");
 
     esp_lcd_panel_io_3wire_spi_t *panel_io = calloc(1, sizeof(esp_lcd_panel_io_3wire_spi_t));

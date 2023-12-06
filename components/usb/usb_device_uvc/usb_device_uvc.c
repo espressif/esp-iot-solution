@@ -162,7 +162,7 @@ int tud_video_commit_cb(uint_fast8_t ctl_idx, uint_fast8_t stm_idx,
     }
     int frame_index = parameters->bFrameIndex - 1;
     esp_err_t ret = s_uvc_device.user_config.start_cb(s_uvc_device.format, UVC_FRAMES_INFO[frame_index].width,
-                UVC_FRAMES_INFO[frame_index].height, UVC_FRAMES_INFO[frame_index].rate, s_uvc_device.user_config.cb_ctx);
+                                                      UVC_FRAMES_INFO[frame_index].height, UVC_FRAMES_INFO[frame_index].rate, s_uvc_device.user_config.cb_ctx);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "camera init failed");
         return VIDEO_ERROR_OUT_OF_RANGE;

@@ -19,7 +19,7 @@
 #include "esp_log.h"
 #include "esp_heap_caps.h"
 #include "esp_partition.h"
-#if __has_include("spi_flash_mmap.h") 
+#if __has_include("spi_flash_mmap.h")
 #include "spi_flash_mmap.h"
 #endif
 
@@ -70,7 +70,6 @@ static inline uintptr_t hist_bt_pc(esp_gprof_t *gp)
     uintptr_t sp;
     uintptr_t pc = RA2PC(RA_PTR());
 
-
     if (GMON_IN_TEXT(gp, pc)) {
         return pc;
     }
@@ -102,7 +101,7 @@ static esp_err_t save_buf_data(esp_gprof_t *gp, void *buf, int n)
 {
     esp_err_t err;
     size_t off = gp->saved_size + sizeof(esp_gprof_hdr_t);
-    
+
     err = esp_partition_write(gp->part, off, buf, n);
     if (err != ESP_OK) {
         return err;
@@ -154,7 +153,7 @@ static esp_err_t save_ghdr(esp_gprof_t *gp)
     ghdr.version = GPROF_VERSION;
     memset(ghdr.spare, '\0', sizeof(ghdr.spare));
 
-    return save_buf_data(gp, &ghdr, sizeof (ghdr_t));
+    return save_buf_data(gp, &ghdr, sizeof(ghdr_t));
 }
 
 /**
@@ -166,8 +165,8 @@ static esp_err_t save_hist(esp_gprof_t *gp)
     hist_hdr_t hdr;
 
     struct iovec iov[3] = {
-        { &tag, sizeof (tag) },
-        { &hdr, sizeof (hist_hdr_t) },
+        { &tag, sizeof(tag) },
+        { &hdr, sizeof(hist_hdr_t) },
         { gp->histcnt, gp->histcnt_bs }
     };
 
@@ -215,7 +214,7 @@ static esp_err_t save_callgraph(esp_gprof_t *gp)
             arc.from_pc = from_pc;
             arc.self_pc = gp->to[index].self_pc;
             arc.count   = gp->to[index].count;
-            memcpy (hdr_buf + nfilled, &arc, sizeof(cg_hdr_t));
+            memcpy(hdr_buf + nfilled, &arc, sizeof(cg_hdr_t));
 
             if (++nfilled == NARCS_PER_WRITEV) {
                 err = save_iov_data(gp, iov, 2 * nfilled);
@@ -358,7 +357,7 @@ static int gprof_data_init(esp_gprof_t *gp, void *low_pc, void *high_pc)
     /* Initialie caller information */
 
     gp->from_bs  = ROUND_UP(gp->text_size / HASHFRACTION, sizeof(void *));
-    gp->from_num = gp->from_bs / sizeof (from_t);
+    gp->from_num = gp->from_bs / sizeof(from_t);
 
     /* Initialie callee information */
 
@@ -524,7 +523,7 @@ esp_err_t esp_gprof_save(void)
         return err;
     }
 
-    ESP_LOGD(TAG, "Save %" PRIu32 " bytes to %" PRIu32 , gp->saved_size, gp->part->address + sizeof(esp_gprof_hdr_t));
+    ESP_LOGD(TAG, "Save %" PRIu32 " bytes to %" PRIu32, gp->saved_size, gp->part->address + sizeof(esp_gprof_hdr_t));
     ESP_LOGI(TAG, "GProf data is saved successfully");
 
     /* Set state to be saved */

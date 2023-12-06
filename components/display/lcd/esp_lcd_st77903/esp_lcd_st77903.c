@@ -36,7 +36,7 @@ esp_err_t esp_lcd_new_panel_st77903(const esp_lcd_panel_io_handle_t io, const es
 
     if (ret == ESP_OK) {
         ESP_LOGI(TAG, "LCD panel create success, version: %d.%d.%d", ESP_LCD_ST77903_VER_MAJOR, ESP_LCD_ST77903_VER_MINOR,
-                ESP_LCD_ST77903_VER_PATCH);
+                 ESP_LCD_ST77903_VER_PATCH);
     }
 
     return ret;

@@ -97,7 +97,7 @@ esp_err_t bootloader_storage_flash_write(size_t dest_addr, void *src, size_t siz
     if (!src) {
         return ESP_ERR_INVALID_ARG;
     }
-    
+
     actual_read_size = bootloader_storage_flash_stream_read(dest_addr, size, allow_decrypt);
     if (actual_read_size == ESP_OK) {
         ESP_LOGE(TAG, "read to stream buf err");
@@ -149,7 +149,7 @@ int bootloader_storage_flash_input(void *buf, int size)
         }
     }
     write_count++;
-    
+
 #endif
 
     return size;

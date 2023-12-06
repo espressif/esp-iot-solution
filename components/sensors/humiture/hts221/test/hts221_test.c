@@ -34,7 +34,7 @@ void hts221_init_test()
     hts221 = hts221_create(i2c_bus, HTS221_I2C_ADDRESS);
     hts221_get_deviceid(hts221, &hts221_deviceid);
     printf("hts221 device ID is: %02x\n", hts221_deviceid);
-    hts221_config_t hts221_config;    
+    hts221_config_t hts221_config;
     hts221_get_config(hts221, &hts221_config);
     printf("avg_h is: %02x\n", hts221_config.avg_h);
     printf("avg_t is: %02x\n", hts221_config.avg_t);
@@ -65,7 +65,7 @@ void hts221_get_data_test()
     int16_t temperature;
     int16_t humidity;
     int cnt = 10;
-    while(cnt--){
+    while (cnt--) {
         printf("\n********HTS221 HUMIDITY&TEMPERATURE SENSOR********\n");
         hts221_get_humidity(hts221, &humidity);
         printf("humidity value is: %2.2f\n", (float)humidity / 10);

@@ -334,14 +334,14 @@ esp_err_t mpu6050_get_gyro(mpu6050_handle_t sensor, mpu6050_gyro_value_t *gyro_v
  *     - ESP_FAIL Fail
  */
 esp_err_t mpu6050_complimentory_filter(mpu6050_handle_t sensor, mpu6050_acce_value_t *acce_value,
-        mpu6050_gyro_value_t *gyro_value, complimentary_angle_t *complimentary_angle);
+                                       mpu6050_gyro_value_t *gyro_value, complimentary_angle_t *complimentary_angle);
 
 /***implements of imu hal interface****/
 #ifdef CONFIG_SENSOR_IMU_INCLUDED_MPU6050
 
 /**
  * @brief initialize mpu6050 with default configurations
- * 
+ *
  * @param i2c_bus i2c bus handle the sensor will attached to
  * @return
  *     - ESP_OK Success
@@ -351,7 +351,7 @@ esp_err_t imu_mpu6050_init(i2c_bus_handle_t i2c_bus);
 
 /**
  * @brief de-initialize mpu6050
- * 
+ *
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
@@ -360,7 +360,7 @@ esp_err_t imu_mpu6050_deinit(void);
 
 /**
  * @brief test if mpu6050 is active
- * 
+ *
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
@@ -369,7 +369,7 @@ esp_err_t imu_mpu6050_test(void);
 
 /**
  * @brief acquire mpu6050 accelerometer result one time.
- * 
+ *
  * @param acce_x result data (unit:g)
  * @param acce_y result data (unit:g)
  * @param acce_z result data (unit:g)
@@ -381,7 +381,7 @@ esp_err_t imu_mpu6050_acquire_acce(float *acce_x, float *acce_y, float *acce_z);
 
 /**
  * @brief acquire mpu6050 gyroscope result one time.
- * 
+ *
  * @param gyro_x result data (unit:dps)
  * @param gyro_y result data (unit:dps)
  * @param gyro_z result data (unit:dps)
@@ -393,7 +393,7 @@ esp_err_t imu_mpu6050_acquire_gyro(float *gyro_x, float *gyro_y, float *gyro_z);
 
 /**
  * @brief set mpu6050 to sleep mode.
- * 
+ *
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
@@ -402,7 +402,7 @@ esp_err_t imu_mpu6050_sleep(void);
 
 /**
  * @brief wakeup mpu6050 from sleep mode.
- * 
+ *
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
@@ -416,4 +416,3 @@ esp_err_t imu_mpu6050_wakeup(void);
 #endif
 
 #endif
-

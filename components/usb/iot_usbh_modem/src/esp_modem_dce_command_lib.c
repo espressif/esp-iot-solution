@@ -35,26 +35,26 @@ struct esp_modem_dce_cmd_list {
  *
  */
 static const cmd_item_t s_command_list[] = {
-        { .command = "sync", .function = esp_modem_dce_sync },
-        { .command = "get_imei_number", .function = esp_modem_dce_get_imei_number },
-        { .command = "get_imsi_number", .function = esp_modem_dce_get_imsi_number },
-        { .command = "get_module_name", .function = esp_modem_dce_get_module_name },
-        { .command = "get_operator_name", .function = esp_modem_dce_get_operator_name },
-        { .command = "set_echo", .function = esp_modem_dce_set_echo },
-        { .command = "store_profile", .function = esp_modem_dce_store_profile },
-        { .command = "set_flow_ctrl", .function = esp_modem_dce_set_flow_ctrl },
-        { .command = "set_pdp_context", .function = esp_modem_dce_set_pdp_context },
-        { .command = "hang_up", .function = esp_modem_dce_hang_up },
-        { .command = "get_signal_quality", .function = esp_modem_dce_get_signal_quality },
-        { .command = "set_data_mode", .function = esp_modem_dce_set_data_mode },
-        { .command = "resume_data_mode", .function = esp_modem_dce_resume_data_mode },
-        { .command = "set_command_mode", .function = esp_modem_dce_set_command_mode },
-        { .command = "get_battery_status", .function = esp_modem_dce_get_battery_status },
-        { .command = "power_down", .function = esp_modem_dce_power_down },
-        { .command = "reset", .function = esp_modem_dce_reset },
-        { .command = "set_pin", .function = esp_modem_dce_set_pin },
-        { .command = "read_pin", .function = esp_modem_dce_read_pin },
-        { .command = "set_baud", .function = esp_modem_dce_set_baud_temp },
+    { .command = "sync", .function = esp_modem_dce_sync },
+    { .command = "get_imei_number", .function = esp_modem_dce_get_imei_number },
+    { .command = "get_imsi_number", .function = esp_modem_dce_get_imsi_number },
+    { .command = "get_module_name", .function = esp_modem_dce_get_module_name },
+    { .command = "get_operator_name", .function = esp_modem_dce_get_operator_name },
+    { .command = "set_echo", .function = esp_modem_dce_set_echo },
+    { .command = "store_profile", .function = esp_modem_dce_store_profile },
+    { .command = "set_flow_ctrl", .function = esp_modem_dce_set_flow_ctrl },
+    { .command = "set_pdp_context", .function = esp_modem_dce_set_pdp_context },
+    { .command = "hang_up", .function = esp_modem_dce_hang_up },
+    { .command = "get_signal_quality", .function = esp_modem_dce_get_signal_quality },
+    { .command = "set_data_mode", .function = esp_modem_dce_set_data_mode },
+    { .command = "resume_data_mode", .function = esp_modem_dce_resume_data_mode },
+    { .command = "set_command_mode", .function = esp_modem_dce_set_command_mode },
+    { .command = "get_battery_status", .function = esp_modem_dce_get_battery_status },
+    { .command = "power_down", .function = esp_modem_dce_power_down },
+    { .command = "reset", .function = esp_modem_dce_reset },
+    { .command = "set_pin", .function = esp_modem_dce_set_pin },
+    { .command = "read_pin", .function = esp_modem_dce_read_pin },
+    { .command = "set_baud", .function = esp_modem_dce_set_baud_temp },
 };
 
 static esp_err_t update_internal_command_refs(esp_modem_dce_t *dce)
@@ -81,7 +81,7 @@ static esp_err_t esp_modem_dce_init_command_list(esp_modem_dce_t *dce, size_t co
     }
     SLIST_INIT(&dce->dce_cmd_list->command_list);
 
-    for (int i=0; i < commands; ++i) {
+    for (int i = 0; i < commands; ++i) {
         cmd_item_t *new_item = calloc(1, sizeof(struct cmd_item_s));
         new_item->command = command_list[i].command;
         new_item->function = command_list[i].function;
@@ -114,7 +114,6 @@ esp_err_t esp_modem_command_list_run(esp_modem_dce_t *dce, const char * command,
     }
     return ESP_ERR_NOT_FOUND;
 }
-
 
 dce_command_t esp_modem_dce_find_command(esp_modem_dce_t *dce, const char * command)
 {

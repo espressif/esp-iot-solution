@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #include "sdkconfig.h"
 #if CONFIG_IDF_TARGET_ESP32S2
 
@@ -27,7 +26,6 @@
 #include "esp32s2/rom/lldesc.h"
 #include "soc/system_reg.h"
 #include "i2s_lcd_driver.h"
-
 
 static const char *TAG = "ESP32S2_I2S_LCD";
 
@@ -97,7 +95,7 @@ static void lcd_dma_set_int(i2s_lcd_obj_t *i2s_lcd_obj)
         i2s_lcd_obj->dma[x].empty = (uint32_t)&i2s_lcd_obj->dma[(x + 1) % i2s_lcd_obj->dma_node_cnt];
     }
     i2s_lcd_obj->dma[i2s_lcd_obj->dma_half_node_cnt - 1].empty = (uint32_t)NULL;
-    i2s_lcd_obj->dma[i2s_lcd_obj->dma_node_cnt - 1].empty = (uint32_t)NULL; 
+    i2s_lcd_obj->dma[i2s_lcd_obj->dma_node_cnt - 1].empty = (uint32_t)NULL;
 }
 
 static void lcd_dma_set_left(i2s_lcd_obj_t *i2s_lcd_obj, int pos, size_t len)
@@ -175,9 +173,9 @@ static void i2s_write_data(i2s_lcd_obj_t *i2s_lcd_obj, uint8_t *data, size_t len
         cnt = left - left % 2;
         if (cnt) {
             if (i2s_lcd_obj->swap_data) {
-                for (y = 0; y < cnt; y+=2) {
-                    out[y+1] = in[y+0];
-                    out[y+0] = in[y+1];
+                for (y = 0; y < cnt; y += 2) {
+                    out[y + 1] = in[y + 0];
+                    out[y + 0] = in[y + 1];
                 }
             } else {
                 memcpy(out, in, cnt);
@@ -390,8 +388,8 @@ i2s_lcd_handle_t i2s_lcd_driver_init(const i2s_lcd_config_t *config)
     I2S_CHECK(NULL != i2s_lcd_drv, "Error malloc handle of i2s lcd driver", NULL);
 
     esp_err_t ret = lcd_cam_init(i2s_lcd_drv, config);
-    if(ESP_OK != ret) {
-        ESP_LOGE(TAG,"%s:%d (%s):%s", __FILE__, __LINE__, __FUNCTION__, "i2s lcd driver initialize failed");
+    if (ESP_OK != ret) {
+        ESP_LOGE(TAG, "%s:%d (%s):%s", __FILE__, __LINE__, __FUNCTION__, "i2s lcd driver initialize failed");
         heap_caps_free(i2s_lcd_drv);
         return NULL;
     }

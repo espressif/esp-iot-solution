@@ -98,4 +98,3 @@ esp_err_t ch450_write_num(ch450_handle_t dev, uint8_t seg_idx, uint8_t val)
     CH450_CHECK(val < 10, "Value should be less than 10", ESP_ERR_INVALID_ARG);
     return ch450_write(dev, seg_cmd, ch450_digit[val]);
 }
-

@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #include <stdio.h>
 #include <stdio_ext.h>
 #include "esp_log.h"
@@ -25,7 +24,6 @@ typedef struct {
 } console_handle_t;
 
 static console_handle_t con;
-
 
 /**
  * @brief Reopen standard streams using a new path

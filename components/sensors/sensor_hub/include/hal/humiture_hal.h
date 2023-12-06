@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #ifndef _HUMITURE_HAL_H_
 #define _HUMITURE_HAL_H_
 
@@ -15,7 +14,7 @@ typedef void *sensor_humiture_handle_t; /*!< humiture sensor handle*/
 
 /**
  * @brief humiture sensor id, used for humiture_create
- * 
+ *
  */
 typedef enum {
     SHT3X_ID = 0x01, /*!< sht3x humiture sensor id*/
@@ -106,7 +105,7 @@ esp_err_t humiture_wakeup(sensor_humiture_handle_t sensor);
 
 /**
  * @brief acquire a group of sensor data
- * 
+ *
  * @param sensor humiture sensor handle to operate
  * @param data_group acquired data
  * @return esp_err_t
@@ -117,7 +116,7 @@ esp_err_t humiture_acquire(sensor_humiture_handle_t sensor, sensor_data_group_t 
 
 /**
  * @brief control sensor mode with control commands and args
- * 
+ *
  * @param sensor humiture sensor handle to operate
  * @param cmd control commands detailed in sensor_command_t
  * @param args control commands args
@@ -131,6 +130,5 @@ esp_err_t humiture_control(sensor_humiture_handle_t sensor, sensor_command_t cmd
 extern "C"
 }
 #endif
-
 
 #endif

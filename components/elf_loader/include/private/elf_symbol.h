@@ -26,7 +26,7 @@ struct esp_elfsym {
  * @brief Find symbol address by name.
  *
  * @param sym_name - Symbol name
- * 
+ *
  * @return Symbol address if success or 0 if failed.
  */
 uintptr_t elf_find_sym(const char *sym_name);

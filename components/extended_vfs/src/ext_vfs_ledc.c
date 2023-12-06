@@ -55,13 +55,13 @@ static int config_ledc(int timer_port, const ledc_cfg_t *cfg)
         channel_cfg = &cfg->channel_cfg[i];
 
         if (channel_cfg->phase >= LEDC_PHASE_MAX ||
-            channel_cfg->duty > LEDC_DUTY_MAX) {
+                channel_cfg->duty > LEDC_DUTY_MAX) {
             errno = EINVAL;
             return -1;
         }
     }
 
-    memset(&ledc_timer, 0 , sizeof(ledc_timer));
+    memset(&ledc_timer, 0, sizeof(ledc_timer));
     ledc_timer.timer_num = timer_port;
     ledc_timer.freq_hz = cfg->frequency;
     ledc_timer.speed_mode = LEDC_MODE;
@@ -116,7 +116,7 @@ static int set_phase(int timer_port, const ledc_phase_cfg_t *duty_cfg)
 {
     esp_err_t ret;
     uint32_t duty = ledc_get_duty(LEDC_MODE, duty_cfg->channel);
-    
+
     ret = ledc_set_duty_with_hpoint(LEDC_MODE, duty_cfg->channel, duty, duty_cfg->phase);
     if (ret != ESP_OK) {
         return -1;
@@ -207,105 +207,105 @@ static int ledc_ioctl(int fd, int cmd, va_list va_args)
     ESP_LOGV(TAG, "cmd=%x", cmd);
 
     switch (cmd) {
-        case LEDCIOCSCFG: {
-            ledc_cfg_t *cfg = va_arg(va_args, ledc_cfg_t *);
+    case LEDCIOCSCFG: {
+        ledc_cfg_t *cfg = va_arg(va_args, ledc_cfg_t *);
 
-            if (!cfg || ledc_stat[fd].configured) {
-                errno = EINVAL;
-                return -1;
-            }
-
-            ret = config_ledc(fd, cfg);
-            if (ret < 0) {
-                errno = EIO;
-                return -1;
-            }
-
-            ledc_stat[fd].configured = 1;
-
-            break;
-        }
-        case LEDCIOCSSETFREQ: {
-            uint32_t freq = va_arg(va_args, uint32_t);
-
-            if (!freq || !ledc_stat[fd].configured) {
-                errno = EINVAL;
-                return -1;
-            }
-
-            ret = set_freq(fd, freq);
-            if (ret < 0) {
-                errno = EIO;
-                return -1;
-            }
-
-            break;
-        }
-        case LEDCIOCSSETDUTY: {
-            ledc_duty_cfg_t *cfg = va_arg(va_args, ledc_duty_cfg_t *);
-
-            if (!cfg || !ledc_stat[fd].configured) {
-                errno = EINVAL;
-                return -1;
-            }
-
-            ret = set_duty(fd, cfg);
-            if (ret < 0) {
-                errno = EIO;
-                return -1;
-            }
-
-            break;
-        }
-        case LEDCIOCSSETPHASE: {
-            ledc_phase_cfg_t *cfg = va_arg(va_args, ledc_phase_cfg_t *);
-
-            if (!cfg || !ledc_stat[fd].configured) {
-                errno = EINVAL;
-                return -1;
-            }
-
-            ret = set_phase(fd, cfg);
-            if (ret < 0) {
-                errno = EIO;
-                return -1;
-            }
-
-            break;
-        }
-        case LEDCIOCSPAUSE:
-            if (!ledc_stat[fd].configured) {
-                errno = EINVAL;
-                return -1;
-            }
-
-            ret = pause_timer(fd);
-            if (ret < 0) {
-                errno = EIO;
-                return -1;
-            }
-
-            break;
-        case LEDCIOCSRESUME:
-            if (!ledc_stat[fd].configured) {
-                errno = EINVAL;
-                return -1;
-            }
-
-            ret = resume_timer(fd);
-            if (ret < 0) {
-                errno = EIO;
-                return -1;
-            }
-
-            break;
-        default: {
+        if (!cfg || ledc_stat[fd].configured) {
             errno = EINVAL;
             return -1;
         }
+
+        ret = config_ledc(fd, cfg);
+        if (ret < 0) {
+            errno = EIO;
+            return -1;
+        }
+
+        ledc_stat[fd].configured = 1;
+
+        break;
+    }
+    case LEDCIOCSSETFREQ: {
+        uint32_t freq = va_arg(va_args, uint32_t);
+
+        if (!freq || !ledc_stat[fd].configured) {
+            errno = EINVAL;
+            return -1;
+        }
+
+        ret = set_freq(fd, freq);
+        if (ret < 0) {
+            errno = EIO;
+            return -1;
+        }
+
+        break;
+    }
+    case LEDCIOCSSETDUTY: {
+        ledc_duty_cfg_t *cfg = va_arg(va_args, ledc_duty_cfg_t *);
+
+        if (!cfg || !ledc_stat[fd].configured) {
+            errno = EINVAL;
+            return -1;
+        }
+
+        ret = set_duty(fd, cfg);
+        if (ret < 0) {
+            errno = EIO;
+            return -1;
+        }
+
+        break;
+    }
+    case LEDCIOCSSETPHASE: {
+        ledc_phase_cfg_t *cfg = va_arg(va_args, ledc_phase_cfg_t *);
+
+        if (!cfg || !ledc_stat[fd].configured) {
+            errno = EINVAL;
+            return -1;
+        }
+
+        ret = set_phase(fd, cfg);
+        if (ret < 0) {
+            errno = EIO;
+            return -1;
+        }
+
+        break;
+    }
+    case LEDCIOCSPAUSE:
+        if (!ledc_stat[fd].configured) {
+            errno = EINVAL;
+            return -1;
+        }
+
+        ret = pause_timer(fd);
+        if (ret < 0) {
+            errno = EIO;
+            return -1;
+        }
+
+        break;
+    case LEDCIOCSRESUME:
+        if (!ledc_stat[fd].configured) {
+            errno = EINVAL;
+            return -1;
+        }
+
+        ret = resume_timer(fd);
+        if (ret < 0) {
+            errno = EIO;
+            return -1;
+        }
+
+        break;
+    default: {
+        errno = EINVAL;
+        return -1;
+    }
     }
 
-    return 0; 
+    return 0;
 }
 
 int ext_vfs_ledc_init(void)

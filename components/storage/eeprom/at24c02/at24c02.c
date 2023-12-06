@@ -32,7 +32,7 @@ at24c02_handle_t at24c02_create(i2c_bus_handle_t bus, uint8_t dev_addr)
 
 esp_err_t at24c02_delete(at24c02_handle_t *device)
 {
-    if ( device == NULL || *device == NULL) {
+    if (device == NULL || *device == NULL) {
         return ESP_FAIL;
     }
     at24c02_dev_t *dev = (at24c02_dev_t *)(*device);

@@ -92,7 +92,7 @@ esp_err_t esp_modem_notify_initialized(esp_modem_dte_t *dte)
     esp_modem_dte_internal_t *esp_dte = __containerof(dte, esp_modem_dte_internal_t, parent);
     EventBits_t bits = xEventGroupSetBits(esp_dte->process_group, ESP_MODEM_START_BIT);
     return bits & ESP_MODEM_START_BIT ? ESP_OK : ESP_FAIL;  // START bit should be set (since it's not auto-cleared)
-                                                            // report error otherwise
+    // report error otherwise
 }
 
 esp_err_t esp_modem_default_destroy(esp_modem_dte_t *dte)
@@ -145,7 +145,6 @@ err:
     return ESP_FAIL;
 }
 
-
 esp_err_t esp_modem_dce_init(esp_modem_dce_t *dce, esp_modem_dce_config_t *config)
 {
     esp_err_t err = ESP_OK;
@@ -163,10 +162,10 @@ esp_err_t esp_modem_dce_init(esp_modem_dce_t *dce, esp_modem_dce_config_t *confi
 #endif
     ESP_LOGI(TAG, "----------------------------------------------------");
     switch (config->device) {
-        //TODO: add modem specified command or workflow
-        case ESP_MODEM_DEVICE_UNSPECIFIED:
-        default:
-            break;
+    //TODO: add modem specified command or workflow
+    case ESP_MODEM_DEVICE_UNSPECIFIED:
+    default:
+        break;
     }
     ESP_MODEM_ERR_CHECK(err == ESP_OK, "dce specific initialization has failed for %d type device", err, config->device);
     return ESP_OK;

@@ -29,7 +29,7 @@ esp_err_t ft5x06_init(const touch_panel_config_t * config);
 
 /**
  * @brief Deinitial touch panel
- * 
+ *
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
@@ -38,8 +38,8 @@ esp_err_t ft5x06_deinit(void);
 
 /**
  * @brief Check if there is a press
- * 
- * @return 
+ *
+ * @return
  *      - 0 Not press
  *      - 1 pressed
  */
@@ -47,12 +47,12 @@ int ft5x06_is_press(void);
 
 /**
  * @brief Set touch rotate rotation
- * 
+ *
  * @param dir rotate direction
- * 
+ *
  * @return
  *     - ESP_OK Success
- *     - ESP_FAIL Fail 
+ *     - ESP_FAIL Fail
  */
 esp_err_t ft5x06_set_direction(touch_panel_dir_t dir);
 

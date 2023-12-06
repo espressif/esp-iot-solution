@@ -46,11 +46,11 @@ static void _usb_otg_phy_init(bool enable)
         phy_conf.otg_speed = USB_PHY_SPEED_FULL;
         usb_new_phy(&phy_conf, &phy_hdl);
     } else {
-        // Restore the USB PHY to default state 
+        // Restore the USB PHY to default state
         // Configure USB JTAG PHY
 #if SOC_USB_SERIAL_JTAG_SUPPORTED
         //TODO: here if we create a new phy with jtag, usb not appear
-        usb_phy_ll_int_jtag_enable(&USB_SERIAL_JTAG); 
+        usb_phy_ll_int_jtag_enable(&USB_SERIAL_JTAG);
 #endif
     }
 }
@@ -77,9 +77,9 @@ static void usb_device_task(void* param)
 // To generate a disconnect event
 static void usbd_vbus_enable(bool enable)
 {
-    esp_rom_gpio_connect_in_signal(enable?GPIO_MATRIX_CONST_ONE_INPUT:GPIO_MATRIX_CONST_ZERO_INPUT, USB_OTG_VBUSVALID_IN_IDX, 0);
-    esp_rom_gpio_connect_in_signal(enable?GPIO_MATRIX_CONST_ONE_INPUT:GPIO_MATRIX_CONST_ZERO_INPUT, USB_SRP_BVALID_IN_IDX, 0);
-    esp_rom_gpio_connect_in_signal(enable?GPIO_MATRIX_CONST_ONE_INPUT:GPIO_MATRIX_CONST_ZERO_INPUT, USB_SRP_SESSEND_IN_IDX, 1);
+    esp_rom_gpio_connect_in_signal(enable ? GPIO_MATRIX_CONST_ONE_INPUT : GPIO_MATRIX_CONST_ZERO_INPUT, USB_OTG_VBUSVALID_IN_IDX, 0);
+    esp_rom_gpio_connect_in_signal(enable ? GPIO_MATRIX_CONST_ONE_INPUT : GPIO_MATRIX_CONST_ZERO_INPUT, USB_SRP_BVALID_IN_IDX, 0);
+    esp_rom_gpio_connect_in_signal(enable ? GPIO_MATRIX_CONST_ONE_INPUT : GPIO_MATRIX_CONST_ZERO_INPUT, USB_SRP_SESSEND_IN_IDX, 1);
     return;
 }
 
@@ -94,9 +94,10 @@ static esp_err_t tinyusb_init()
     return ESP_OK;
 }
 
-// bool tusb_teardown(void); function is not implemented in tinyusb, 
+// bool tusb_teardown(void); function is not implemented in tinyusb,
 // here we just deinit hardware, the memory not released
-__attribute__((weak)) bool tusb_teardown(void) {
+__attribute__((weak)) bool tusb_teardown(void)
+{
     ESP_LOGW(TAG, "tusb_teardown not implemented in tinyusb, memory not released");
     return true;
 }

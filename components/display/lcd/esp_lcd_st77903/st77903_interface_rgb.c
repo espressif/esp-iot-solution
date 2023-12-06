@@ -217,20 +217,26 @@ static esp_err_t panel_st77903_rgb_send_init_cmds(st77903_panel_t *st77903)
 {
     esp_lcd_panel_io_handle_t io = st77903->io;
 
-    ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, 0xf0, (uint8_t []){0xc3}, 1), TAG, "Write cmd failed");
-    ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, 0xf0, (uint8_t []){0x96}, 1), TAG, "Write cmd failed");
-    ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, 0xf0, (uint8_t []){0xa5}, 1), TAG, "Write cmd failed");
+    ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, 0xf0, (uint8_t []) {
+        0xc3
+    }, 1), TAG, "Write cmd failed");
+    ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, 0xf0, (uint8_t []) {
+        0x96
+    }, 1), TAG, "Write cmd failed");
+    ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, 0xf0, (uint8_t []) {
+        0xa5
+    }, 1), TAG, "Write cmd failed");
     uint8_t NL = (st77903->ver_res >> 1) - 1;
     uint8_t NC = (st77903->hor_res >> 3) - 1;
     // Set Resolution
-    ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, ST77903_CMD_DISCN, (uint8_t []){
+    ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, ST77903_CMD_DISCN, (uint8_t []) {
         NL, NC
     }, 2), TAG, "Write cmd failed");
     // Set color format
-    ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, LCD_CMD_MADCTL, (uint8_t []){
+    ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, LCD_CMD_MADCTL, (uint8_t []) {
         st77903->madctl_val
     }, 1), TAG, "Write cmd failed");
-    ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, LCD_CMD_COLMOD, (uint8_t []){
+    ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, LCD_CMD_COLMOD, (uint8_t []) {
         st77903->colmod_val
     }, 1), TAG, "Write cmd failed");
 

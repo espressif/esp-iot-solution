@@ -650,7 +650,7 @@ static esp_err_t panel_spd2010_init(esp_lcd_panel_t *panel)
             if (is_cmd_overwritten) {
                 is_cmd_overwritten = false;
                 ESP_LOGW(TAG, "The %02Xh command has been used and will be overwritten by external initialization sequence",
-                        init_cmds[i].cmd);
+                         init_cmds[i].cmd);
             }
         }
 
