@@ -1,0 +1,66 @@
+menu "ESP RainMaker App Wi-Fi Provisioning"
+
+    config APP_WIFI_PROV_SHOW_QR
+        bool "Show provisioning QR code"
+        default y
+        help
+            Show the QR code for provisioning.
+
+    choice APP_WIFI_PROV_TRANSPORT
+        bool "Provisioning Transport method"
+        default APP_WIFI_PROV_TRANSPORT_BLE
+        help
+            Wi-Fi provisioning component offers both, SoftAP and BLE transports. Choose any one.
+
+        config APP_WIFI_PROV_TRANSPORT_SOFTAP
+            bool "Soft AP"
+        config APP_WIFI_PROV_TRANSPORT_BLE
+            bool "BLE"
+            select BT_ENABLED
+            depends on !IDF_TARGET_ESP32S2
+    endchoice
+
+    config APP_WIFI_PROV_TRANSPORT
+        int
+        default 1 if APP_WIFI_PROV_TRANSPORT_SOFTAP
+        default 2 if APP_WIFI_PROV_TRANSPORT_BLE
+
+    config APP_WIFI_RESET_PROV_ON_FAILURE
+        bool
+        default y
+        prompt "Reset provisioned credentials and state machine after session failure"
+        help
+            Enable reseting provisioned credentials and state machine after session failure.
+            This will restart the provisioning service after retries are exhausted.
+
+    config APP_WIFI_PROV_MAX_RETRY_CNT
+        int
+        default 5
+        prompt "Max retries before reseting provisioning state machine"
+        depends on APP_WIFI_RESET_PROV_ON_FAILURE
+        help
+            Set the Maximum retry to avoid reconnecting to an inexistent AP or if credentials
+            are misconfigured. Provisioned credentials are erased and internal state machine
+            is reset after this threshold is reached.
+
+    config APP_WIFI_SHOW_DEMO_INTRO_TEXT
+        bool "Show intro text for demos"
+        default n
+        help
+            Show some intro text for demos in order to help users understand more about ESP RainMaker.
+
+    config APP_WIFI_PROV_TIMEOUT_PERIOD
+        int "Provisioning Timeout"
+        default 30
+        help
+            Timeout (in minutes) after which the provisioning will auto stop. A reboot will be required
+            to restart provisioning. It is always recommended to set this to some non zero value, especially
+            if you are not using PoP. Set to 0 if you do not want provisioning to auto stop.
+
+    config APP_WIFI_PROV_NAME_PREFIX
+        string "Provisioning Name Prefix"
+        default "PROV"
+        help
+            Provisioning Name Prefix.
+
+endmenu
