@@ -316,6 +316,9 @@
 .patterns-example_motor_foc_velocity_control: &patterns-example_motor_foc_velocity_control
   - "examples/motor/foc_velocity_control/**/*"
 
+.patterns-example_motor_foc_knob: &patterns-example_motor_foc_knob
+  - "examples/motor/foc_knob_example/**/*"
+
 .patterns-example_ota_simple_ota_example: &patterns-example_ota_simple_ota_example
   - "examples/ota/simple_ota_example/**/*"
 
@@ -689,6 +692,18 @@
       changes: *patterns-components_motor_esp_simplefoc
     - <<: *if-dev-push
       changes: *patterns-example_motor_foc_velocity_control
+
+.rules:build:example_motor_foc_knob:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_motor_esp_simplefoc
+    - <<: *if-dev-push
+      changes: *patterns-example_motor_foc_knob
 
 .rules:build:example_ota_simple_ota_example:
   rules:
