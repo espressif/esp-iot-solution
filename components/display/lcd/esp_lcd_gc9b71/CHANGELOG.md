@@ -21,3 +21,9 @@
 * Remove LCD command `29h` from the initialization sequence
 * Add parameter `max_trans_sz` in default bus configuration macro
 * Add check for conflicting commands between initialization sequence and driver
+
+## v1.0.1 - 2023-12-04
+
+### bugfix
+
+* Remove unused header `hal/spi_ll.h`

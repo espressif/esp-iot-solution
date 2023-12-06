@@ -53,7 +53,7 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
 
     ESP_LOGI(TAG, "Install SH8601 panel driver");
     esp_lcd_panel_handle_t panel_handle = NULL;
-    const sh8601_vendor_config_t vendor_config = {
+    sh8601_vendor_config_t vendor_config = {
         // .init_cmds = lcd_init_cmds,         // Uncomment these line if use custom initialization commands
         // .init_cmds_size = sizeof(lcd_init_cmds) / sizeof(sh8601_lcd_init_cmd_t),
         .flags = {
@@ -104,7 +104,7 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
 
     ESP_LOGI(TAG, "Install SH8601 panel driver");
     esp_lcd_panel_handle_t panel_handle = NULL;
-    const sh8601_vendor_config_t vendor_config = {
+    sh8601_vendor_config_t vendor_config = {
         // .init_cmds = lcd_init_cmds,         // Uncomment these line if use custom initialization commands
         // .init_cmds_size = sizeof(lcd_init_cmds) / sizeof(sh8601_lcd_init_cmd_t),
         .flags = {

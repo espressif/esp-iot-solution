@@ -23,9 +23,11 @@ jobs:
             components/button;
             components/display/lcd/esp_lcd_gc9b71;
             components/display/lcd/esp_lcd_panel_io_additions;
+            components/display/lcd/esp_lcd_nv3022b;
             components/display/lcd/esp_lcd_sh8601;
             components/display/lcd/esp_lcd_spd2010;
             components/display/lcd/esp_lcd_st7701;
+            components/display/lcd/esp_lcd_st77916;
             components/display/lcd_touch/esp_lcd_touch_spd2010;
             components/elf_loader;
             components/extended_vfs;
