@@ -2,6 +2,8 @@
 USB PHY/Transceiver 介绍
 ------------------------
 
+:link_to_translation:`en:[English]`
+
 USB Full-speed PHY/Transceiver 的功能是将 USB 控制器的数字信号转换为 USB 总线信号电平，提供总线驱动能力，检测接收错误等。ESP32-S2/S3 等芯片已内置一个 USB Full-speed PHY，用户可直接使用芯片指定的 USB D+ D- 与外部 USB 系统通信。此外，ESP32-S2/S3 还保留了外部 PHY 的扩展接口，用户可在需要时连接外部 PHY。
 
 使用内部 PHY

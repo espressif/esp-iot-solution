@@ -2,6 +2,8 @@
 Prevent Windows from incrementing COM numbers based on USB device serial number
 --------------------------------------------------------------------------------
 
+:link_to_translation:`zh_CN:[中文]`
+
 Due to the fact that any device connected to a Windows PC is identified by its VID (Vendor ID), PID (Product ID), and Serial number. If any of these three parameters undergo a change, the PC will detect new hardware and assigns it to a different COM port. For more details, please refer to the `Windows USB device registry entries <https://learn.microsoft.com/en-us/windows-hardware/drivers/usbcon/usb-device-specific-registry-settings>`_.
 
 In the ESP ROM Code, the configuration of USB descriptors is as follows:

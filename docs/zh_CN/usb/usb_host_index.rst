@@ -1,4 +1,4 @@
-USB 设备驱动
+USB 主机驱动
 *********************
 
 :link_to_translation:`en:[English]`
@@ -6,4 +6,4 @@ USB 设备驱动
 .. toctree::
     :maxdepth: 1
 
-    USB UVC 设备 <usb_device_uvc>
+    USB UVC/UAC 主机 <usb_stream>

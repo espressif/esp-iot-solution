@@ -2,6 +2,8 @@
 **ESP USB Peripheral Introduction**
 ====================================
 
+:link_to_translation:`zh_CN:[中文]`
+
 USB Introduction
 -----------------
 

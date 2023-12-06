@@ -2,6 +2,8 @@
 USB Host 方案
 -------------
 
+:link_to_translation:`en:[English]`
+
 ESP32-S2/S3 等芯片内置 USB-OTG 外设，支持通过 USB 接口连接多种多样的 USB 设备。以下介绍了 ESP32-S2/S3 芯片支持的 USB Host 解决方案。
 
 ESP USB Camera 视频方案

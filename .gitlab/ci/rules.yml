@@ -224,8 +224,8 @@
   - "components/display/touch_panel/touch_panel.h"
   - "components/knob/iot_knob.h"
   - "components/led/led_indicator/include/led_indicator.h"
-  - "components/motor/esp_sensorless_bldc_control/control/include/bldc_control_param.h"
   - "components/motor/esp_sensorless_bldc_control/control/include/bldc_control.h"
+  - "components/motor/esp_sensorless_bldc_control/control/include/bldc_control_param.h"
   - "components/motor/esp_sensorless_bldc_control/user_cfg/bldc_user_cfg.h"
   - "components/motor/servo/include/iot_servo.h"
   - "components/openai/include/OpenAI.h"
@@ -234,8 +234,8 @@
   - "components/sensors/sensor_hub/include/hal/light_sensor_hal.h"
   - "components/sensors/sensor_hub/include/iot_sensor_hub.h"
   - "components/sensors/sensor_hub/include/sensor_type.h"
+  - "components/usb/usb_device_uvc/include/usb_device_uvc.h"
   - "components/usb/usb_stream/include/usb_stream.h"
-  - "components/bluetooth/ble_conn_mgr/include/esp_ble_conn_mgr.h"
   - "components/zero_detection/include/zero_detection.h"
 
 # examples folder, in the alphabetic order

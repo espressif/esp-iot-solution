@@ -2,6 +2,8 @@
 USB PHY/Transceiver Introduction
 ---------------------------------
 
+:link_to_translation:`zh_CN:[中文]`
+
 The function of the USB Full-speed PHY/Transceiver is to convert the digital signals from the USB controller into USB bus signal levels, providing bus driving capability, and detecting receive errors, among other functions. Chips like ESP32-S2/S3 have a built-in USB Full-speed PHY, allowing users to directly use the USB D+ D- pins specified by the chip for communication with an external USB system. Additionally, ESP32-S2/S3 retains an external PHY extension interface, allowing users to connect an external PHY when needed.
 
 Use the internal PHY

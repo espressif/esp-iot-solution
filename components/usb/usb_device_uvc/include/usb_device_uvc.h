@@ -14,36 +14,61 @@
 extern "C" {
 #endif
 
+/**
+ * @brief UVC format
+ */
 typedef enum {
-    UVC_FORMAT_JPEG,
+    UVC_FORMAT_JPEG,            /*!< JPEG format */
 } uvc_format_t;
 
+/**
+ * @brief Frame buffer structure
+ */
 typedef struct {
-    uint8_t * buf;              /*!< Pointer to the pixel data */
+    uint8_t *buf;               /*!< Pointer to the frame data */
     size_t len;                 /*!< Length of the buffer in bytes */
-    size_t width;               /*!< Width of the buffer in pixels */
-    size_t height;              /*!< Height of the buffer in pixels */
-    uvc_format_t format;        /*!< Format of the pixel data */
-    struct timeval timestamp;   /*!< Timestamp since boot of the first DMA buffer of the frame */
+    size_t width;               /*!< Width of the image frame in pixels */
+    size_t height;              /*!< Height of the image frame in pixels */
+    uvc_format_t format;        /*!< Format of the frame data */
+    struct timeval timestamp;   /*!< Timestamp since boot of the frame */
 } uvc_fb_t;
 
+/**
+ * @brief type of callback function when host open the UVC device
+ */
 typedef esp_err_t (*uvc_input_start_cb_t)(uvc_format_t format, int width, int height, int rate, void *cb_ctx);
+
+/**
+ * @brief type of callback function when host request a new frame buffer
+ */
 typedef uvc_fb_t* (*uvc_input_fb_get_cb_t)(void *cb_ctx);
+
+/**
+ * @brief type of callback function when the frame buffer is no longer used
+ */
 typedef void (*uvc_input_fb_return_cb_t)(uvc_fb_t *fb, void *cb_ctx);
+
+/**
+ * @brief type of callback function when host close the UVC device
+ */
 typedef void (*uvc_input_stop_cb_t)(void *cb_ctx);
 
+/**
+ * @brief Configuration for the UVC device
+ */
 typedef struct {
     uint8_t *uvc_buffer;                   /*!< UVC transfer buffer */
     uint32_t uvc_buffer_size;              /*!< UVC transfer buffer size, should bigger than one frame size */
-    uvc_input_start_cb_t start_cb;         /*!< callback function for UVC start */
-    uvc_input_fb_get_cb_t fb_get_cb;       /*!< callback function for UVC get frame buffer */
-    uvc_input_fb_return_cb_t fb_return_cb; /*!< callback function for UVC return frame buffer */
-    uvc_input_stop_cb_t stop_cb;           /*!< callback function for UVC stop */
-    void *cb_ctx;                          /*!< callback context */
+    uvc_input_start_cb_t start_cb;         /*!< callback function of host open the UVC device with the specific format and resolution */
+    uvc_input_fb_get_cb_t fb_get_cb;       /*!< callback function of host request a new frame buffer */
+    uvc_input_fb_return_cb_t fb_return_cb; /*!< callback function of the frame buffer is no longer used */
+    uvc_input_stop_cb_t stop_cb;           /*!< callback function of host close the UVC device */
+    void *cb_ctx;                          /*!< callback context, for user specific usage */
 } uvc_device_config_t;
 
 /**
- * @brief Initialize the UVC device
+ * @brief Initialize the UVC device, after this function is called, the UVC device will be visible to the host
+ *       and the host can open the UVC device with the specific format and resolution.
  *
  * @param config Configuration for the UVC device
  *
@@ -55,7 +80,7 @@ esp_err_t uvc_device_init(uvc_device_config_t *config);
 
 /**
  * @brief Deinitialize the UVC device
- * TODO: This function is not implemented yet because tinyusb does not support deinitialization
+ * @note  This function is not implemented yet because tinyusb does not support deinitialization
  * @return ESP_OK on success
  *         ESP_FAIL if the UVC device could not be deinitialized
  */

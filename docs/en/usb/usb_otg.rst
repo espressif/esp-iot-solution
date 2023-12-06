@@ -2,6 +2,8 @@
 USB-OTG Peripheral Introduction
 --------------------------------
 
+:link_to_translation:`zh_CN:[中文]`
+
 The ESP32-S2/S3 and other chips come with built-in USB On-The-Go (USB-OTG) peripherals. They include a USB controller and USB PHY, supporting connection to a PC via a USB cable, enabling USB Host and USB Device functionalities.
 
 USB-OTG Transfer Rate

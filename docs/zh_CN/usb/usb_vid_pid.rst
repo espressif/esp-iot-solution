@@ -1,6 +1,8 @@
 USB VID 和 PID
 --------------
 
+:link_to_translation:`en:[English]`
+
 VID 和 PID 是 USB 设备的唯一标识符，用于区分不同的 USB 设备。一般 VID 和 PID 由 USB-IF 分配，USB-IF 是 USB 设备的标准制定者。
 
 以下情况您可以免申请 VID 和 PID

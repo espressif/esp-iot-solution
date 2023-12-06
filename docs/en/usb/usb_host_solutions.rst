@@ -2,6 +2,8 @@
 USB Host Solution
 ------------------
 
+:link_to_translation:`zh_CN:[中文]`
+
 ESP32-S2/S3 and similar chips come with built-in USB-OTG peripherals, supporting the connection of various type of USB devices through the USB interface. The following provides an overview of the USB Host solutions supported by the ESP32-S2/S3 chips.
 
 ESP USB Camera Video Solution

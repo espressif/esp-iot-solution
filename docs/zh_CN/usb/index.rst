@@ -16,4 +16,5 @@ USB 主机 & 设备
     USB Device 方案 <usb_device_solutions>
     USB 自供电设备解决方案 <usb_device_self_power>
     USB 设备序列号递增 COM 编号 <usb_device_const_COM>
-    usb_driver_index 
+    usb_host_index
+    usb_driver_index
