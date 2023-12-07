@@ -62,3 +62,19 @@ If parenthesis in noptr-declarator:
       void(* delete )(struct OpenAI_StringResponse *stringResponse)
       -------------^
 
+OpenAI.inc:line: WARNING: Error in declarator
+If declarator-id with parameters-and-qualifiers:
+  Invalid C++ declaration: Expected identifier in nested name. [error at 4]
+    void(* delete )(struct OpenAI_SpeechResponse *SpeechResponse)
+    ----^
+If parenthesis in noptr-declarator:
+  Error in declarator or parameters-and-qualifiers
+  If pointer to member declarator:
+    Invalid C++ declaration: Expected identifier in nested name, got keyword: delete [error at 13]
+      void(* delete )(struct OpenAI_SpeechResponse *SpeechResponse)
+      -------------^
+  If declarator-id:
+    Invalid C++ declaration: Expected identifier in nested name, got keyword: delete [error at 13]
+      void(* delete )(struct OpenAI_SpeechResponse *SpeechResponse)
+      -------------^
+

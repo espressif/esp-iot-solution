@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+/* SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -44,6 +44,14 @@ typedef enum {
     OPENAI_AUDIO_INPUT_FORMAT_WAV,
     OPENAI_AUDIO_INPUT_FORMAT_WEBM
 } OpenAI_Audio_Input_Format;
+
+/*<! Enum for audio output formats */
+typedef enum {
+    OPENAI_AUDIO_OUTPUT_FORMAT_MP3,
+    OPENAI_AUDIO_OUTPUT_FORMAT_OPUS,
+    OPENAI_AUDIO_OUTPUT_FORMAT_AAC,
+    OPENAI_AUDIO_OUTPUT_FORMAT_FLAC
+} OpenAI_Audio_Output_Format;
 
 /**
  * @brief Struct for Embedding data
@@ -224,6 +232,36 @@ typedef struct OpenAI_StringResponse {
      */
     void (*delete)(struct OpenAI_StringResponse *stringResponse);
 } OpenAI_StringResponse_t;
+
+/**
+ * @brief Store the returned data into a OpenAI_SpeechResponse_t structure
+ */
+typedef struct OpenAI_SpeechResponse {
+
+    /**
+     * @brief get the len of openai speech response
+     *
+     * @param speechResponse[in] the point of OpenAI_SpeechResponse_t
+     * @return uint32_t
+     */
+    uint32_t (*getLen)(struct OpenAI_SpeechResponse *SpeechResponse);
+
+    /**
+    * @brief get the data of openai response
+    *
+    * @param SpeechResponse[in] the point of OpenAI_SpeechResponse_t
+    * @return char*
+    */
+    char *(*getData)(struct OpenAI_SpeechResponse *SpeechResponse);
+
+    /**
+     * @brief delete the openai response
+     *
+     * @param SpeechResponse[in] the point of OpenAI_SpeechResponse_t
+     */
+    void (*delete)(struct OpenAI_SpeechResponse *SpeechResponse);
+
+} OpenAI_SpeechResponse_t;
 
 /**
  * @brief Given a prompt, the model will return one or more predicted completions,
@@ -670,6 +708,54 @@ typedef struct OpenAI_AudioTranscription {
 } OpenAI_AudioTranscription_t;
 
 /**
+ * @brief Given a list of messages comprising a conversation, the model will return a response.
+ *
+ */
+typedef struct OpenAI_AudioSpeech {
+    /**
+     * @brief Set the model to use for completion
+     *
+     * @param createSpeech[in] the point of OpenAI_SpeechResponse_t
+     * @param m[in] the name of the model to use for audio response
+     */
+    void (*setModel)(struct OpenAI_AudioSpeech *createSpeech, const char *m);
+
+    /**
+     * @brief Set the voice to use for completion
+     *
+     * @param createSpeech[in] the point of OpenAI_SpeechResponse_t
+     * @param m[in] the name of the model to use for audio response
+     */
+    void (*setVoice)(struct OpenAI_AudioSpeech *createSpeech, const char *m);
+
+    /**
+     * @brief Set the speed of the output audio.
+     *
+     * @param createSpeech[in] the point of OpenAI_SpeechResponse_t
+     * @param t[in] float between 0.25 to 4.0
+     */
+    void (*setSpeed)(struct OpenAI_AudioSpeech *createSpeech, float t);
+
+    /**
+     * @brief Set the format of the output.
+     *
+     * @param createSpeech[in] the point of OpenAI_SpeechResponse_t
+     * @param rf[in] the format of the output audio
+     */
+    void (*setResponseFormat)(struct OpenAI_AudioSpeech *createSpeech, OpenAI_Audio_Output_Format rf);
+
+    /**
+     * @brief Send the message for completion. Save it with the first response if selected.
+     *
+     * @param createSpeech[in] the point of OpenAI_SpeechResponse_t
+     * @param p[in] the message for audio generation
+     * @return *
+     */
+    OpenAI_SpeechResponse_t *(*speech)(struct OpenAI_AudioSpeech *createSpeech, char *p);
+
+} OpenAI_AudioSpeech_t;
+
+/**
  * @brief Translates audio into English.
  *
  */
@@ -875,6 +961,24 @@ typedef struct OpenAI {
      * @param audioTranslation[in] The audio translation object
      */
     void (*audioTranslationDelete)(OpenAI_AudioTranslation_t *audioTranslation);
+#endif
+
+#if CONFIG_ENABLE_AUDIO_SPEECH || defined __DOXYGEN__
+    /**
+     * @brief Create an audio speech object.
+     *
+     * @param openai[in] The OpenAI object
+     * @return OpenAI_AudioSpeech_t* The audio speech object
+     */
+    OpenAI_AudioSpeech_t *(*audioSpeechCreate)(struct OpenAI *openai);
+
+    /**
+     * @brief Delete an audio speech object.
+     *
+     * @param openai[in] The OpenAI object
+     * @return OpenAI_AudioSpeech_t* The audio speech object
+     */
+    void (*audioSpeechDelete)(OpenAI_AudioSpeech_t *audioSpeech);
 #endif
 } OpenAI_t;
 

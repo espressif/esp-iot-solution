@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.3.0 - 2023-12-4
+
+### Enhancements
+
+* Support OpenAI text to speech api
+
 ## v0.2.0 - 2023-11-15
 
 ### Enhancements

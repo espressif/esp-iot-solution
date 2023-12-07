@@ -148,6 +148,52 @@ TEST_CASE("test AudioTranscription cn", "[AudioTranscription]")
     vTaskDelay(1000 / portTICK_PERIOD_MS);
 }
 
+TEST_CASE("test AudioSpeech", "[AudioSpeech]")
+{
+    /* This helper function configures Wi-Fi or Ethernet, as selected in menuconfig.
+     * Read "Establishing Wi-Fi or Ethernet Connection" section in
+     * examples/protocols/README.md for more information about this function.
+     */
+    ESP_ERROR_CHECK(example_connect());
+    ESP_LOGI(TAG, "Connected to AP, begin http example");
+    OpenAI_t *openai = OpenAICreate(openai_key);
+    OpenAI_AudioTranscription_t *audioTranscription = openai->audioTranscriptionCreate(openai);
+    OpenAI_AudioSpeech_t *audioSpeech = openai->audioSpeechCreate(openai);
+    /*preparing a transcription*/
+    TEST_ASSERT_NOT_NULL(audioTranscription);
+    size_t length = turn_on_tv_en_mp3_end - turn_on_tv_en_mp3_start;
+    audioTranscription->setResponseFormat(audioTranscription, OPENAI_AUDIO_RESPONSE_FORMAT_JSON);
+    audioTranscription->setTemperature(audioTranscription, 0.2);                                                            //float between 0 and 1. Higher value gives more random results.
+    audioTranscription->setLanguage(audioTranscription, "en");                                                              //Set to English to make GPT return faster and more accurate
+    /*preparing a audio speech*/
+    TEST_ASSERT_NOT_NULL(audioSpeech);
+    audioSpeech->setModel(audioSpeech, "tts-1-hd");
+    audioSpeech->setVoice(audioSpeech, "nova");
+    audioSpeech->setResponseFormat(audioSpeech, OPENAI_AUDIO_OUTPUT_FORMAT_MP3);
+    audioSpeech->setSpeed(audioSpeech, 0.8);
+    /*sending to transcription api to get transcriptions of save audio file*/
+    char *giventext = audioTranscription->file(audioTranscription, (uint8_t *)turn_on_tv_en_mp3_start, length, OPENAI_AUDIO_INPUT_FORMAT_MP3);
+    TEST_ASSERT_NOT_NULL(giventext);
+    ESP_LOGI(TAG, "Given Text: %s", giventext);
+    /*sending to speech api to get mp3 of transcriptions*/
+    OpenAI_SpeechResponse_t *speechresult = audioSpeech->speech(audioSpeech, giventext);
+    TEST_ASSERT_NOT_NULL(speechresult);
+    char *response = speechresult->getData(speechresult);
+    /*sending to transcriptions api to get transcriptions of mp3 coming from speech api*/
+    char *finaltext = audioTranscription->file(audioTranscription, (uint8_t *)response, speechresult->getLen(speechresult), OPENAI_AUDIO_INPUT_FORMAT_MP3);
+    TEST_ASSERT_NOT_NULL(finaltext);
+    ESP_LOGI(TAG, "Final Text: %s", finaltext);
+    TEST_ASSERT_TRUE(strcmp(giventext, finaltext) == 0);
+    free(giventext);
+    free(finaltext);
+    openai->audioTranscriptionDelete(audioTranscription);
+    speechresult->delete (speechresult);
+    openai->audioSpeechDelete(audioSpeech);
+    OpenAIDelete(openai);
+    example_disconnect();
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+}
+
 TEST_CASE("test memory leak", "[memory]")
 {
     OpenAI_t *openai = OpenAICreate(openai_key);
