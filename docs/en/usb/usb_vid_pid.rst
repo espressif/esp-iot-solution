@@ -1,6 +1,8 @@
 USB VID and PID
 -----------------
 
+:link_to_translation:`zh_CN:[中文]`
+
 VID and PID are unique identifiers for USB devices, used to distinguish between different USB devices. Generally, VID and PID are assigned by USB-IF, which is the USB Implementers Forum. 
 
 In the following scenarios, you can exempt from applying for VID and PID

@@ -1,4 +1,4 @@
-USB Device Drivers
+USB Host Drivers
 *********************
 
 :link_to_translation:`zh_CN:[中文]`
@@ -6,4 +6,4 @@ USB Device Drivers
 .. toctree::
     :maxdepth: 1
 
-    USB UVC Device <usb_device_uvc>
+    USB UVC/UAC Host <usb_stream>

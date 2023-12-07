@@ -2,6 +2,8 @@
 USB-Serial-JTAG Peripheral Introduction
 -----------------------------------------
 
+:link_to_translation:`zh_CN:[中文]`
+
 The ESP32-S3/C3 chips come with a built-in USB-Serial-JTAG peripheral, which includes a USB-to-serial converter and a USB-to-JTAG converter. It supports connection to a PC via a USB cable, enabling functions such as firmware downloading, debugging, and printing system logs. The internal structure of the USB-Serial-JTAG peripheral can be referred to in the `ESP32-C3 Technical Reference Manual - USB Serial/JTAG Controller <https://www.espressif.com/sites/default/files/documentation/esp32-c3_technical_reference_manual_en.pdf>`_\ .
 
 USB-Serial-JTAG  peripheral driver

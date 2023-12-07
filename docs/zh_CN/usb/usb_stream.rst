@@ -1,5 +1,6 @@
 USB Stream 组件说明
 ======================
+
 :link_to_translation:`en:[English]`
 
 ``usb_stream`` 是基于 ESP32-S2/ESP32-S3 的 USB UVC + UAC 主机驱动程序，支持从 USB 设备读取/写入/控制多媒体流。例如最多同时支持 1 路摄像头 + 1 路麦克风 + 1 路播放器数据流。
@@ -131,7 +132,9 @@ ESP32-S2 ECO0 芯片 SPI 屏幕和 USB 同时启用，可能导致屏幕抖动
 Examples
 ----------
 
-:example:`usb/host/usb_camera_mic_spk`
+1. :example:`usb/host/usb_camera_mic_spk`
+2. :example:`usb/host/usb_camera_lcd_display`
+3. :example:`usb/host/usb_audio_player`
 
 API Reference
 --------------

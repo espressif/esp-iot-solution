@@ -2,6 +2,8 @@
 **ESP USB 外设介绍**
 ========================
 
+:link_to_translation:`en:[English]`
+
 USB 简介
 --------
 

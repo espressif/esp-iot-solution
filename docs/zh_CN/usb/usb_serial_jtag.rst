@@ -2,6 +2,8 @@
 USB-Serial-JTAG 外设介绍
 ------------------------
 
+:link_to_translation:`en:[English]`
+
 ESP32-S3/C3 等芯片内置 USB-Serial-JTAG 外设，它包含了 USB-to-serial 转换器和 USB-to-JTAG 转换器，支持通过 USB 线连接到 PC，实现固件下载、调试和打印系统 LOG 等功能。USB-Serial-JTAG 外设的内部结构可参考 `ESP32-C3 技术参考手册-USB Serial/JTAG Controller <https://www.espressif.com/sites/default/files/documentation/esp32-c3_technical_reference_manual_en.pdf>`_\ 。
 
 USB-Serial-JTAG 外设驱动

@@ -1,0 +1,1 @@
+.. include:: ../../en/usb/usb_device_uvc.rst

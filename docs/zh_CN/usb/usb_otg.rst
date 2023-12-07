@@ -2,6 +2,8 @@
 USB-OTG 外设介绍
 ------------------
 
+:link_to_translation:`en:[English]`
+
 ESP32-S2/S3 等芯片内置 USB-OTG 外设，它包含了 USB 控制器和 USB PHY，支持通过 USB 线连接到 PC，实现 USB Host 和 USB Device 功能。
 
 USB-OTG 传输速率

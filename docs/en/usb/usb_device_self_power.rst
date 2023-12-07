@@ -2,6 +2,8 @@
 Self-Powered USB Device Solutions
 ----------------------------------
 
+:link_to_translation:`zh_CN:[中文]`
+
 According to the USB protocol requirements, self-powered USB devices must detect the 5V VBUS voltage to determine if the device is unplugged, thereby enabling hot-plugging. For host-powered devices, since the device shuts down immediately when the host VBUS is disconnected, there is no need to implement this logic.
 
 There are generally two methods for USB device VBUS detection: detection by USB PHY hardware, or \ **detection by software with the help of ADC/GPIO**\.

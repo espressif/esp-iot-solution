@@ -2,6 +2,8 @@
 阻止 Windows 依据 USB 设备序列号递增 COM 编号
 ---------------------------------------------
 
+:link_to_translation:`en:[English]`
+
 由于任何连接到 Windows PC 的设备都通过其 VID、PID 和 Serial 号进行识别。如果这 3 个参数中的任何一个发生了变化，那么 PC 将检测到新的硬件，并与该设备关联一个不同的 COM 端口，详情请参考 `Windows USB device registry entries <https://learn.microsoft.com/en-us/windows-hardware/drivers/usbcon/usb-device-specific-registry-settings>`_\ 。
 
 ESP ROM Code 中对 USB 描述符配置如下：
