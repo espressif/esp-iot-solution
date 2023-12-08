@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v0.2.2 - 2023-12-08
+
+* Add doc and example
+
 ## v0.2.1 - 2023-11-23
 
 * Fix possible cmake_utilities dependency issue
