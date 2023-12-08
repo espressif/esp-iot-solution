@@ -13,3 +13,5 @@ dependencies:
     version: "0.*"
     public: true
     override_path: "../iot_usbh"
+examples:
+  - path: ../../../examples/usb/host/usb_cdc_basic
