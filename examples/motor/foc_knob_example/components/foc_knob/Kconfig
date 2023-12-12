@@ -1,0 +1,10 @@
+menu "FOC Knob"
+
+    config FOC_KNOB_MAX_VELOCITY
+        int "FOC Knob Max Velocity"
+        range 1 100
+        default 23
+        help
+            When the maximum velocity is smaller, the rebound velocity will also be smaller.
+
+endmenu

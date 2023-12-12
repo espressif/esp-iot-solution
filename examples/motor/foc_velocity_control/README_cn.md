@@ -67,7 +67,7 @@ I (214) cpu_start: Compile time:     Jul 19 2023 10:20:23
 I (221) cpu_start: ELF file SHA256:  686b47738...
 I (226) cpu_start: ESP-IDF:          v5.2-dev-1113-g28c643a56d
 I (232) cpu_start: Min chip rev:     v0.0
-I (237) cpu_start: Max chip rev:     v0.99 
+I (237) cpu_start: Max chip rev:     v0.99
 I (242) cpu_start: Chip rev:         v0.1
 I (247) heap_init: Initializing. RAM available for dynamic allocation:
 I (254) heap_init: At 3FC96AF8 len 00052C18 (331 KiB): DRAM
@@ -80,14 +80,14 @@ W (287) spi_flash: Detected size(16384k) larger than the size in the binary imag
 I (301) sleep: Configure to isolate all GPIO pins in sleep state
 I (307) sleep: Enable automatic switching of GPIO sleep configuration
 I (315) app_start: Starting scheduler on CPU0
-I (319) app_start: StartY�I (345) gpio: GPIO[17]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 
-I (345) gpio: GPIO[16]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 
-I (352) gpio: GPIO[15]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 
+I (319) app_start: StartY�I (345) gpio: GPIO[17]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0
+I (345) gpio: GPIO[16]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0
+I (352) gpio: GPIO[15]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0
 MCPWM Group: 0 is idle
 Auto. Current Driver uses Mcpwm GroupId:0
-I (368) gpio: GPIO[17]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
-I (377) gpio: GPIO[16]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
-I (386) gpio: GPIO[15]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (368) gpio: GPIO[17]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0
+I (377) gpio: GPIO[16]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0
+I (386) gpio: GPIO[15]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0
 MOT: Monitor enabled!
 MOT: Init
 MOT: Enable driver.
@@ -101,3 +101,5 @@ MOT: Ready.
 T2.0
 2.000
 ```
+
+![FOC exmaple](https://dl.espressif.com/ae/esp-iot-solution/foc_close_loop.gif)

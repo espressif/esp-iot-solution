@@ -13,42 +13,59 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 #include "esp_err.h"
+#include "pid_ctrl.h"
 
 #ifndef PI
 #define PI 3.14159265358979f
 #endif
 
-#define IDLE_VELOCITY_EWMA_ALPHA  0.001
-#define IDLE_VELOCITY_RAD_PER_SEC  0.05
-#define IDLE_CORRECTION_DELAY_MILLIS  500
-#define IDLE_CORRECTION_MAX_ANGLE_RAD  (5 * PI / 180)
-#define IDLE_CORRECTION_RATE_ALPHA  0.0005
-#define DEAD_ZONE_DETENT_PERCENT  0.2
-#define DEAD_ZONE_RAD  (1 * PI / 180)
+typedef void (* foc_knob_cb_t)(void *foc_knob_handle, void *user_data);
+typedef void *foc_knob_handle_t; /*!< Knob operation handle */
 
-typedef void *knob_handle_t; /*!< Knob operation handle */
+typedef struct {
+    float angle_to_detent_center;          /*!< The angle from the current position. */
+    float position_width_radians;          /*!< Width of each position in radians */
+    int32_t num_positions;                 /*!< Number of positions */
+    int32_t position;                      /*!< Current position */
+    const char *descriptor;                /*!< Description */
+} foc_knob_state_t;
 
 /**
  * @brief Knob parameters
  *
  */
 typedef struct {
-    int32_t num_positions;        // Number of positions
-    int32_t position;             // Current position
-    float position_width_radians; // Width of each position in radians
-    float detent_strength_unit;   // Strength of detent during normal rotation
-    float endstop_strength_unit;  // Strength of detent when reaching the end
-    float snap_point;             // Snap point for each position
-    const char *descriptor;       // Description
-} knob_param_t;
+    int32_t    num_positions;               /*!< Number of positions */
+    int32_t    position;                    /*!< Current position */
+    float      position_width_radians;      /*!< Width of each position in radians */
+    float      detent_strength_unit;        /*!< Strength of detent during normal rotation */
+    float      endstop_strength_unit;       /*!< Strength of detent when reaching the end */
+    float      snap_point;                  /*!< Snap point for each position */
+    const char *descriptor;                 /*!< Description */
+} foc_knob_param_t;
+
+/**
+ * @brief Knob events
+ *
+ */
+typedef enum {
+    FOC_KNOB_INC = 0,                      /*!< EVENT: Position increase */
+    FOC_KNOB_DEC,                          /*!< EVENT: Position decrease */
+    FOC_KNOB_H_LIM,                        /*!< EVENT: Count reaches maximum limit */
+    FOC_KNOB_L_LIM,                        /*!< EVENT: Count reaches the minimum limit */
+    FOC_KNOB_ANGLE_CHANGE,                 /*!< EVENT: Angle change */
+    FOC_KNOB_EVENT_MAX,                    /*!< EVENT: Number of events */
+} foc_knob_event_t;
 
 /**
  * @brief Knob specified configurations, used when creating a Knob
  */
 typedef struct {
-    knob_param_t const **param_lists;
-    uint16_t param_list_num;
-} knob_config_t;
+    foc_knob_param_t const **param_lists;   /*!< foc mode lists, if not set use default_foc_knob_param_lst */
+    uint16_t param_list_num;                /*!< foc mode number */
+    float max_torque_out_limit;             /*!< max torque out limit */
+    float max_torque;                       /*!< max torque in limit */
+} foc_knob_config_t;
 
 /**
  * @brief Create a knob
@@ -57,21 +74,18 @@ typedef struct {
  *
  * @return A handle to the created knob
  */
-knob_handle_t knob_create(const knob_config_t *config);
+foc_knob_handle_t foc_knob_create(const foc_knob_config_t *config);
 
 /**
- * @brief Get knob parameters for a specific mode.
- *
- * This function retrieves the knob parameters for a specific mode and returns a pointer
- * to a 'knob_param_t' structure.
+ * @brief Change the mode of the knob.
  *
  * @param handle A handle to the knob.
- * @param mode The mode for which parameters are requested.
- *
- * @return A pointer to the 'knob_param_t' structure if successful, or NULL if the mode
- * is out of range or the handle is invalid.
+ * @param mode The mode to be set for the knob.
+ * @return
+ *     - ESP_OK if the successful.
+ *     - ESP_ERR_INVALID_ARG if the provided arguments are invalid.
  */
-knob_param_t *knob_get_param(knob_handle_t handle, int mode);
+esp_err_t foc_knob_change_mode(foc_knob_handle_t handle, uint16_t mode);
 
 /**
  * @brief Start knob operation.
@@ -80,13 +94,12 @@ knob_param_t *knob_get_param(knob_handle_t handle, int mode);
  * and shaft angle.
  *
  * @param handle A handle to the knob.
- * @param mode The mode of the knob operation.
  * @param shaft_velocity The velocity of the knob's shaft.
  * @param shaft_angle The angle of the knob's shaft.
  *
  * @return The torque applied during the knob operation.
  */
-float knob_start(knob_handle_t handle, int mode, float shaft_velocity, float shaft_angle);
+float foc_knob_run(foc_knob_handle_t handle, float shaft_velocity, float shaft_angle);
 
 /**
  * @brief Delete a knob and free associated memory.
@@ -97,7 +110,101 @@ float knob_start(knob_handle_t handle, int mode, float shaft_velocity, float sha
  * @param handle A handle to the knob to be deleted.
 * @return ESP_OK on success
 */
-esp_err_t knob_delete(knob_handle_t handle);
+esp_err_t foc_knob_delete(foc_knob_handle_t handle);
+
+/**
+ * @brief Registers a callback function for a Field-Oriented Control (FOC) knob event.
+ *
+ * @param handle The handle to the FOC knob.
+ * @param event The event type to register the callback for.
+ * @param cb The callback function to be invoked when the specified event occurs.
+ * @param usr_data User-defined data that will be passed to the callback function when invoked.
+ *
+ * @return
+ *     - ESP_OK if the callback is successfully registered.
+ *     - ESP_ERR_INVALID_ARG if the provided arguments are invalid.
+ */
+esp_err_t foc_knob_register_cb(foc_knob_handle_t handle, foc_knob_event_t event, foc_knob_cb_t cb, void *usr_data);
+
+/**
+ * @brief Unregisters a callback function for a Field-Oriented Control (FOC) knob event.
+ *
+ * @param handle The handle to the FOC knob.
+ * @param event The event type for which the callback needs to be unregistered.
+ *
+ * @return
+ *     - ESP_OK if the callback is successfully unregistered.
+ *     - ESP_ERR_INVALID_ARG if the provided arguments are invalid.
+ */
+esp_err_t foc_knob_unregister_cb(foc_knob_handle_t handle, foc_knob_event_t event);
+
+/**
+ * @brief Get the current state of the knob.
+ *
+ * @param handle The handle to the FOC knob.
+ * @param state The pointer to the state structure to be filled.
+ * @return
+ *     - ESP_OK if the successful.
+ *     - ESP_ERR_INVALID_ARG if the provided arguments are invalid.
+ */
+esp_err_t foc_knob_get_state(foc_knob_handle_t handle, foc_knob_state_t *state);
+
+/**
+ * @brief Get the current event of the knob.
+ *
+ * @param handle The handle to the FOC knob.
+ * @param event The pointer to the event structure to be filled.
+ * @return
+ *     - ESP_OK if the successful.
+ *     - ESP_ERR_INVALID_ARG if the provided arguments are invalid.
+ */
+esp_err_t foc_knob_get_event(foc_knob_handle_t handle, foc_knob_event_t *event);
+
+/**
+ * @brief Get the current mode of the knob.
+ *
+ * @param handle The handle to the FOC knob.
+ * @param position The pointer to the position structure to be filled.
+ * @return
+ *     - ESP_OK if the successful.
+ *     - ESP_ERR_INVALID_ARG if the provided arguments are invalid.
+ */
+esp_err_t foc_knob_set_currect_mode_position(foc_knob_handle_t handle, int32_t position);
+
+/**
+ * @brief Get the current mode's position of the knob.
+ *
+ * @param handle The handle to the FOC knob.
+ * @param position The pointer to the position structure to be filled.
+ * @return
+ *     - ESP_OK if the successful.
+ *     - ESP_ERR_INVALID_ARG if the provided arguments are invalid.
+ */
+esp_err_t foc_knob_get_current_mode_position(foc_knob_handle_t handle, int32_t *position);
+
+/**
+ * @brief Set the position of the knob.
+ *
+ * @param handle The handle to the FOC knob.
+ * @param mode The mode of setting the position
+ * @param position The desired position value to be set for the FOC knob.
+ * @return
+ *     - ESP_OK if the successful.
+ *     - ESP_ERR_INVALID_ARG if the provided arguments are invalid.
+ */
+esp_err_t foc_knob_set_position(foc_knob_handle_t handle, uint16_t mode, int32_t position);
+
+/**
+ * @brief Get the position of the knob.
+ *
+ * @param handle The handle to the FOC knob.
+ * @param mode The mode of getting the position
+ * @param position The pointer to the position structure to be filled.
+ * @return
+ *     - ESP_OK if the successful.
+ *     - ESP_ERR_INVALID_ARG if the provided arguments are invalid.
+ */
+esp_err_t foc_knob_get_position(foc_knob_handle_t handle, uint16_t mode, int32_t *position);
 
 #ifdef __cplusplus
 }
