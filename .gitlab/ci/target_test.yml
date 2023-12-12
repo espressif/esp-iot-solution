@@ -298,10 +298,10 @@ components_test_esp_lcd_gc9b71:
   needs:
     - job: "build_components_display_lcd_esp_lcd_gc9b71_test_apps"
       artifacts: true
-      optional: true
+      optional: false
   parallel:
     matrix:
-        - IDF_VERSION: "5.2"
+        - IDF_VERSION: "5.1"
   tags:
     - esp32s3
     - esp32s3_lcd_ev
@@ -318,7 +318,7 @@ components_test_esp_lcd_panel_io_additions:
   needs:
     - job: "build_components_display_lcd_esp_lcd_panel_io_additions_test_apps"
       artifacts: true
-      optional: true
+      optional: false
   parallel:
     matrix:
         - IDF_VERSION: "4.4"
@@ -339,10 +339,10 @@ components_test_esp_lcd_sh8601:
   needs:
     - job: "build_components_display_lcd_esp_lcd_sh8601_test_apps"
       artifacts: true
-      optional: true
+      optional: false
   parallel:
     matrix:
-        - IDF_VERSION: "5.2"
+        - IDF_VERSION: "5.1"
   tags:
     - esp32s3
     - esp32s3_lcd_ev
@@ -359,10 +359,10 @@ components_test_esp_lcd_spd2010:
   needs:
     - job: "build_components_display_lcd_esp_lcd_spd2010_test_apps"
       artifacts: true
-      optional: true
+      optional: false
   parallel:
     matrix:
-        - IDF_VERSION: "5.2"
+        - IDF_VERSION: "5.1"
   tags:
     - esp32s3
     - esp32s3_lcd_ev
@@ -379,10 +379,10 @@ components_test_esp_lcd_st7701:
   needs:
     - job: "build_components_display_lcd_esp_lcd_st7701_test_apps"
       artifacts: true
-      optional: true
+      optional: false
   parallel:
     matrix:
-        - IDF_VERSION: "5.2"
+        - IDF_VERSION: "5.1"
   tags:
     - esp32s3
     - esp32s3_lcd_ev
@@ -392,25 +392,26 @@ components_test_esp_lcd_st7701:
     TEST_FOLDER: components/display/lcd/esp_lcd_st7701
     TEST_ENV: esp32_s3_lcd_ev_board
 
-components_test_esp_lcd_st77903:
-  extends:
-    - .pytest_template
-    - .rules:build:components_display_lcd_esp_lcd_st77903_test_apps
-  needs:
-    - job: "build_components_display_lcd_esp_lcd_st77903_test_apps"
-      artifacts: true
-      optional: true
-  parallel:
-    matrix:
-        - IDF_VERSION: "5.2"
-  tags:
-    - esp32s3
-    - esp32s3_lcd_ev
-  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
-  variables:
-    TEST_TARGET: esp32s3
-    TEST_FOLDER: components/display/lcd/esp_lcd_st77903
-    TEST_ENV: esp32_s3_lcd_ev_board
+# Diable due to lack IDF release-v5.2 docker
+# components_test_esp_lcd_st77903:
+#   extends:
+#     - .pytest_template
+#     - .rules:build:components_display_lcd_esp_lcd_st77903_test_apps
+#   needs:
+#     - job: "build_components_display_lcd_esp_lcd_st77903_test_apps"
+#       artifacts: true
+#       optional: false
+#   parallel:
+#     matrix:
+#         - IDF_VERSION: "5.2"
+#   tags:
+#     - esp32s3
+#     - esp32s3_lcd_ev
+#   image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
+#   variables:
+#     TEST_TARGET: esp32s3
+#     TEST_FOLDER: components/display/lcd/esp_lcd_st77903
+#     TEST_ENV: esp32_s3_lcd_ev_board
 
 components_led_lightbulb_driver_test:
   extends:
@@ -436,10 +437,12 @@ components_led_lightbulb_driver_test:
         IDF_VERSION: "5.1"
   tags:
     - ${IDF_TARGET}
+    - generic
   image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_TARGET: ${IDF_TARGET}
     TEST_FOLDER: components/led/lightbulb_driver
+    TEST_ENV: generic
 
 example_lighting_lightbulb:
   extends:

@@ -191,7 +191,7 @@ build_example_display_lcd_qspi_with_ram:
     - .rules:build:example_display_lcd_qspi_with_ram
   parallel:
     matrix:
-      - IMAGE: espressif/idf:latest
+      - IMAGE: espressif/idf:release-v5.1
   variables:
     EXAMPLE_DIR: examples/display/lcd/qspi_with_ram
 
@@ -201,7 +201,7 @@ build_example_display_lcd_qspi_without_ram:
     - .rules:build:example_display_lcd_qspi_without_ram
   parallel:
     matrix:
-      - IMAGE: espressif/idf:latest
+      - IMAGE: espressif/idf:v5.1.2
   before_script:
     - export PATCH_PATH=${IOT_SOLUTION_PATH}/examples/display/lcd/qspi_without_ram/patch/support_qspi_without_ram_a9349f4ad4.patch
     - cd "$(dirname $(whereis idf.py | awk -F ' ' '{print $2}'))/.."
@@ -457,7 +457,6 @@ build_example_usb_host_usb_camera_lcd_display:
     - .rules:build:example_usb_host_usb_camera_lcd_display
   parallel:
     matrix:
-      - IMAGE: espressif/idf:release-v5.0
       - IMAGE: espressif/idf:release-v5.1
         EXAMPLE_CONFIG: "sdkconfig.psram_octal_120m=default"
   variables:
@@ -527,7 +526,7 @@ build_components_display_lcd_esp_lcd_gc9b71_test_apps:
     - .rules:build:components_display_lcd_esp_lcd_gc9b71_test_apps
   parallel:
     matrix:
-      - IMAGE: espressif/idf:latest
+      - IMAGE: espressif/idf:release-v5.1
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_gc9b71/test_apps
 
@@ -559,7 +558,7 @@ build_components_display_lcd_esp_lcd_sh8601_test_apps:
     - .rules:build:components_display_lcd_esp_lcd_sh8601_test_apps
   parallel:
     matrix:
-      - IMAGE: espressif/idf:latest
+      - IMAGE: espressif/idf:release-v5.1
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_sh8601/test_apps
 
@@ -569,7 +568,7 @@ build_components_display_lcd_esp_lcd_spd2010_test_apps:
     - .rules:build:components_display_lcd_esp_lcd_spd2010_test_apps
   parallel:
     matrix:
-      - IMAGE: espressif/idf:latest
+      - IMAGE: espressif/idf:release-v5.1
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_spd2010/test_apps
 
@@ -579,7 +578,7 @@ build_components_display_lcd_esp_lcd_st7701_test_apps:
     - .rules:build:components_display_lcd_esp_lcd_st7701_test_apps
   parallel:
     matrix:
-      - IMAGE: espressif/idf:latest
+      - IMAGE: espressif/idf:release-v5.1
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_st7701/test_apps
 
@@ -679,7 +678,9 @@ build_components_openai_test_apps:
     - .rules:build:components_openai_test_apps
   parallel:
     matrix:
-      - IMAGE: espressif/idf:release-v4.4
+      # TODO: Replace v4.4.6 with release/v4.4 when the bug is fixed.
+      - IMAGE: espressif/idf:v4.4.6   # Due to a bug in the ESP32-S3 not being able to scan for AP in release/v4.4,
+                                      # temporarily using version v4.4.6 and awaiting the next update in release/v4.4.
       - IMAGE: espressif/idf:release-v5.0
   variables:
     EXAMPLE_DIR: components/openai/test_apps

@@ -20,14 +20,16 @@ This example uses the [esp_timer](https://docs.espressif.com/projects/esp-idf/en
 
 The ST77903 driver relies on some new features that have not yet been merged into `ESP-IDF`. To successfully compile the example, please follow the steps to apply the patch:
 
-1. Go to the root folder of ESP-IDF, run the following commands and swtich to the commit **a9349f4ad4**. If the commit can't be switched, please update the `master` branch.
+1. Get the `release/v5.2` or `master` branch of ESP-IDF.
+
+2. Go to the root folder of ESP-IDF, run the following commands and swtich to the commit **a9349f4ad4**. If the commit can't be switched, please update the branch.
 
 ```bash
 git checkout --recurse-submodules a9349f4ad4
 git submodule update --init --recursive
 ```
 
-2. Run the command `git apply <path_of_patch>/support_qspi_without_ram_a9349f4ad4.patch` to apply the [patch](patch/support_qspi_without_ram_a9349f4ad4.patch).
+3. Run the command `git apply <path_of_patch>/support_qspi_without_ram_a9349f4ad4.patch` to apply the [patch](patch/support_qspi_without_ram_a9349f4ad4.patch).
 
 ### Hardware Required
 
