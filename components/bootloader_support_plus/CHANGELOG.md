@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.2.2 - 2023-12-12
+
+### Fix:
+
+* Change wrap to be triggered only when the CONFIG_BOOTLOADER_COMPRESSED_ENABLED is enabled.
+
 ## v0.2.1 - 2023-04-23
 
 ### Fix:
