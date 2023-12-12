@@ -1,0 +1,10 @@
+# Extenal DangerJS
+include:
+  - project: espressif/shared-ci-dangerjs
+    ref: master
+    file: danger.yaml
+
+run-danger-mr-linter:
+  stage: pre_check
+  tags:
+    - dangerjs

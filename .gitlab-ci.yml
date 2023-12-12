@@ -23,18 +23,8 @@ workflow:
 variables:
   IOT_SOLUTION_PATH: "$CI_PROJECT_DIR"
 
-before_script:
-  # add gitlab ssh key
-  - mkdir -p ~/.ssh
-  - chmod 700 ~/.ssh
-  - echo -n $GITLAB_KEY > ~/.ssh/id_rsa_base64
-  - base64 --decode --ignore-garbage ~/.ssh/id_rsa_base64 > ~/.ssh/id_rsa
-  - chmod 600 ~/.ssh/id_rsa
-  - echo -e "Host gitlab.espressif.cn\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
-  - git --version
-  - git submodule update --init --recursive
-
 include:
+  - '.gitlab/ci/danger.yml'
   - '.gitlab/ci/rules.yml'
   - '.gitlab/ci/pre_check.yml'
   - '.gitlab/ci/build.yml'
