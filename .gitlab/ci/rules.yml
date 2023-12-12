@@ -310,6 +310,9 @@
 .patterns-example_lvgl_freetype: &patterns-example_lvgl_freetype
   - "examples/hmi/lvgl_freetype/**/*"
 
+.patterns-example_motor_bldc_fan_rainmaker: &patterns-example_motor_bldc_fan_rainmaker
+  - "examples/motor/bldc_fan_rainmaker/**/*"
+
 .patterns-example_motor_foc_openloop_control: &patterns-example_motor_foc_openloop_control
   - "examples/motor/foc_openloop_control/**/*"
 
@@ -668,6 +671,18 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-example_lvgl_freetype
+
+.rules:build:example_motor_bldc_fan_rainmaker:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_motor_esp_sensorless_bldc_control
+    - <<: *if-dev-push
+      changes: *patterns-example_motor_bldc_fan_rainmaker
 
 .rules:build:example_motor_foc_openloop_control:
   rules:

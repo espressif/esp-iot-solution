@@ -8,3 +8,5 @@ dependencies:
   esp_sensorless_bldc_control_lib: "^0.1.0~2"
   idf:
     version: '>=5.0'
+examples:
+  - path: ../../../examples/motor/bldc_fan_rainmaker

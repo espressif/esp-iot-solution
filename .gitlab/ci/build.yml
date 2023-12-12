@@ -314,6 +314,14 @@ build_example_lvgl_freetype:
     EXAMPLE_TARGET: esp32s3
     EXAMPLE_DIR: examples/hmi/lvgl_freetype
 
+build_example_motor_bldc_fan_rainmaker:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_motor_bldc_fan_rainmaker
+  variables:
+    EXAMPLE_DIR: examples/motor/bldc_fan/rainmaker
+    IMAGE: espressif/idf:release-v5.0
+
 build_example_motor_foc_openloop_control:
   extends:
     - .build_examples_template

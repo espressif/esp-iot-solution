@@ -1,15 +1,9 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-/*
-   This example code is in the Public Domain (or CC0 licensed, at your option.)
 
-   Unless required by applicable law or agreed to in writing, this
-   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-   CONDITIONS OF ANY KIND, either express or implied.
-*/
 #include <string.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -123,7 +117,8 @@ static void app_wifi_print_qr(const char *name, const char *pop, const char *tra
     }
 #ifdef CONFIG_APP_WIFI_PROV_SHOW_QR
     ESP_LOGI(TAG, "Scan this QR code from the ESP RainMaker phone app for Provisioning.");
-    qrcode_display(payload);
+    esp_qrcode_config_t qrcode_cfg = ESP_QRCODE_CONFIG_DEFAULT();
+    esp_qrcode_generate(&qrcode_cfg, payload);
 #endif /* CONFIG_APP_WIFI_PROV_SHOW_QR */
     ESP_LOGI(TAG, "If QR code is not visible, copy paste the below URL in a browser.\n%s?data=%s", QRCODE_BASE_URL, payload);
     esp_event_post(APP_WIFI_EVENT, APP_WIFI_EVENT_QR_DISPLAY, payload, strlen(payload) + 1, portMAX_DELAY);
@@ -254,7 +249,6 @@ static esp_err_t get_device_service_name(char *service_name, size_t max)
     }
     return ESP_OK;
 }
-
 
 static char *get_device_pop(app_wifi_pop_type_t pop_type)
 {

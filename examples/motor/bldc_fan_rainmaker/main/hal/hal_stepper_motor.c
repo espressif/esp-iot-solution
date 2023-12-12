@@ -14,7 +14,7 @@ static void hal_stepper_motor_timer_cb(void *args)
 {
     static uint16_t step_count = 0;
     if (stepper_motor.is_start) {
-        if (step_count++ == 10 * 100) {
+        if (step_count++ == 30 * 100) {
             stepper_motor.dir = !stepper_motor.dir;
             step_count = 0;
         }

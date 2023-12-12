@@ -17,6 +17,7 @@ extern "C" {
 
 typedef struct {
     uint8_t is_start;      /*!< motor status 0:off 1:start */
+    uint8_t is_natural;    /*!< motor natural wind 0: off 1: start */
     uint16_t min_speed;    /*!< motor min speed */
     uint16_t max_speed;    /*!< motor max speed */
     uint16_t target_speed; /*!< motor target speed */

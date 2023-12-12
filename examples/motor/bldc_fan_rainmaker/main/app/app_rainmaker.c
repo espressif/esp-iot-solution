@@ -31,7 +31,6 @@ esp_rmaker_param_t *speed_param;
 esp_rmaker_param_t *power_param;
 esp_rmaker_param_t *shake_param;
 
-
 static esp_err_t app_rainmaker_write_cb(const esp_rmaker_device_t *device, const esp_rmaker_param_t *param, esp_rmaker_param_val_t val, void *priv_data, esp_rmaker_write_ctx_t *ctx)
 {
     if (ctx) {
@@ -56,12 +55,17 @@ static esp_err_t app_rainmaker_write_cb(const esp_rmaker_device_t *device, const
                  val.val.b ? "true" : "false", esp_rmaker_device_get_name(device),
                  esp_rmaker_param_get_name(param));
         stepper_motor.is_start = val.val.b ? 1 : 0;
+    } else if (strcmp(esp_rmaker_param_get_name(param), "Natural") == 0) {
+        //*!< get shake status */
+        ESP_LOGI(TAG, "Natural received value = %s for %s - %s",
+                 val.val.b ? "true" : "false", esp_rmaker_device_get_name(device),
+                 esp_rmaker_param_get_name(param));
+        motor_parameter.is_natural = val.val.b ? 1 : 0;
     }
 
     esp_rmaker_param_update_and_report(param, val);
     return ESP_OK;
 }
-
 
 static void app_rainmaker_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
@@ -152,7 +156,6 @@ static void app_rainmaker_event_handler(void *arg, esp_event_base_t event_base, 
     }
 }
 
-
 esp_err_t app_rainmaker_init()
 {
     esp_err_t err = nvs_flash_init();                                                                                            //*!< init nvs */
@@ -202,8 +205,18 @@ esp_err_t app_rainmaker_init()
     shake_param = esp_rmaker_power_param_create("Shake", false);                                                                 //*!< create shake param */
     esp_rmaker_device_add_param(fan_device, shake_param);
 
+    esp_rmaker_ota_enable_default();                                                                                             //*!< enable ota */
+
+    esp_rmaker_system_serv_config_t system_serv_config = {
+        .flags = SYSTEM_SERV_FLAGS_ALL,
+        .reboot_seconds = 2,
+        .reset_seconds = 2,
+        .reset_reboot_seconds = 2,
+    };
+    esp_rmaker_system_service_enable(&system_serv_config);                                                                       //*!< enable system service */
+
     esp_rmaker_start();                                                                                                          //*!< start rainmaker */
-    err = app_wifi_start(POP_TYPE_RANDOM);
+    err = app_wifi_start(POP_TYPE_NONE);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Could not start Wifi. Aborting!!!");
         vTaskDelay(5000 / portTICK_PERIOD_MS);

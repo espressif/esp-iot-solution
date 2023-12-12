@@ -1,15 +1,8 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-/*
-   This example code is in the Public Domain (or CC0 licensed, at your option.)
-
-   Unless required by applicable law or agreed to in writing, this
-   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-   CONDITIONS OF ANY KIND, either express or implied.
-*/
 
 #pragma once
 #include <esp_err.h>
@@ -22,7 +15,7 @@ extern "C" {
 /** ESP RainMaker Event Base */
 ESP_EVENT_DECLARE_BASE(APP_WIFI_EVENT);
 
-/** App Wi-Fir Events */
+/** App Wi-Fi Events */
 typedef enum {
     /** QR code available for display. Associated data is the NULL terminated QR payload. */
     APP_WIFI_EVENT_QR_DISPLAY = 1,
@@ -36,9 +29,9 @@ typedef enum {
 typedef enum {
     /** Use MAC address to generate PoP */
     POP_TYPE_MAC,
-    /** Use random stream generated and stored in fctry partition during claiming process as PoP */
+    /** Use random stream generated and stored in factory partition during claiming process as PoP */
     POP_TYPE_RANDOM,
-    /** Do not use any PoP.
+    /* Do not use any PoP.
      * Use this option with caution. Consider using `CONFIG_APP_WIFI_PROV_TIMEOUT_PERIOD` with this.
      */
     POP_TYPE_NONE

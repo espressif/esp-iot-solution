@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -9,14 +9,12 @@
 #include "driver/gpio.h"
 #include "esp_timer.h"
 
-typedef enum
-{
+typedef enum {
     STEP_CW = 0,
     STEP_CCW,
 } stepper_dir_t;
 
-typedef struct
-{
+typedef struct {
     uint8_t is_start;
     gpio_num_t pin[4];
     stepper_dir_t dir;
