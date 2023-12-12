@@ -1197,7 +1197,7 @@
     - <<: *if-dev-push
       changes: *patterns-components_led_light
 
-.rules:build:components_led_lightbulb_driver_test:
+.rules:build:components_led_lightbulb_driver_test_apps:
   rules:
     - <<: *if-protected
     - <<: *if-label-build

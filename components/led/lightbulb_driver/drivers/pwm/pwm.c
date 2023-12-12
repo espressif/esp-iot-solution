@@ -36,7 +36,7 @@ typedef struct {
 
 static pwm_handle_t *s_pwm = NULL;
 
-#if CONFIG_PM_ENABLE
+#if CONFIG_PM_ENABLE && CONFIG_IDF_TARGET_ESP32
 #include "esp_pm.h"
 
 static esp_pm_lock_handle_t s_sleep_lock = NULL;
@@ -138,13 +138,18 @@ esp_err_t pwm_init(driver_pwm_t *config, void(*hook_func)(void *))
         /* Nothing */
     }
     if (hook_func) {
-        hook_func((void*)grayscale_level);
+        hook_func((void *)grayscale_level);
     }
 
     err = ledc_fade_func_install(ESP_INTR_FLAG_IRAM);
     PWM_CHECK(err == ESP_OK, "ledc_fade_func_install fail", goto EXIT);
 
-#if CONFIG_PM_ENABLE
+    /**
+     * Since LEDC uses the XTAL clock source for configuration, there is no need to create a power lock to keep PWM output during in sleep mode.
+     * Additionally, this update does not apply to the ESP32.
+     *
+     */
+#if CONFIG_PM_ENABLE && CONFIG_IDF_TARGET_ESP32
     err = power_control_lock_create();
     PWM_CHECK(err == ESP_OK, "power_control_lock_create fail", goto EXIT);
     power_control_disable_sleep();
@@ -206,7 +211,7 @@ esp_err_t pwm_set_channel(pwm_channel_t channel, uint16_t value)
     PWM_CHECK(s_pwm->registered_channel_mask & BIT(channel), "Channel not registered", return ESP_ERR_INVALID_STATE);
     PWM_CHECK((value <= (1 << s_pwm->ledc_config.duty_resolution)), "value out of range", return ESP_ERR_INVALID_ARG);
 
-#if CONFIG_PM_ENABLE
+#if CONFIG_PM_ENABLE && CONFIG_IDF_TARGET_ESP32
     power_control_disable_sleep();
 #endif
 
@@ -227,7 +232,7 @@ esp_err_t pwm_set_rgb_channel(uint16_t value_r, uint16_t value_g, uint16_t value
               (value_g <= (1 << s_pwm->ledc_config.duty_resolution)) &&
               (value_b <= (1 << s_pwm->ledc_config.duty_resolution)), "value out of range", return ESP_ERR_INVALID_ARG);
 
-#if CONFIG_PM_ENABLE
+#if CONFIG_PM_ENABLE && CONFIG_IDF_TARGET_ESP32
     power_control_disable_sleep();
 #endif
 
@@ -253,7 +258,7 @@ esp_err_t pwm_set_cctb_or_cw_channel(uint16_t value_cct_c, uint16_t value_b_w)
     PWM_CHECK((value_cct_c <= (1 << s_pwm->ledc_config.duty_resolution)) &&
               (value_b_w <= (1 << s_pwm->ledc_config.duty_resolution)), "value out of range", return ESP_ERR_INVALID_ARG);
 
-#if CONFIG_PM_ENABLE
+#if CONFIG_PM_ENABLE && CONFIG_IDF_TARGET_ESP32
     power_control_disable_sleep();
 #endif
 
@@ -283,7 +288,7 @@ esp_err_t pwm_set_rgbcctb_or_rgbcw_channel(uint16_t value_r, uint16_t value_g, u
     PWM_CHECK((value_cct_c <= (1 << s_pwm->ledc_config.duty_resolution)) &&
               (value_b_w <= (1 << s_pwm->ledc_config.duty_resolution)), "value out of range", return ESP_ERR_INVALID_ARG);
 
-#if CONFIG_PM_ENABLE
+#if CONFIG_PM_ENABLE && CONFIG_IDF_TARGET_ESP32
     power_control_disable_sleep();
 #endif
 
@@ -309,7 +314,7 @@ esp_err_t pwm_set_shutdown(void)
     esp_err_t err = ESP_OK;
     PWM_CHECK(s_pwm, "pwm_init() must be called first", return ESP_ERR_INVALID_STATE);
 
-#if CONFIG_PM_ENABLE
+#if CONFIG_PM_ENABLE && CONFIG_IDF_TARGET_ESP32
     power_control_disable_sleep();
 #endif
 
@@ -328,7 +333,7 @@ esp_err_t pwm_set_hw_fade(pwm_channel_t channel, uint16_t value, int fade_ms)
     PWM_CHECK(s_pwm->registered_channel_mask & BIT(channel), "Channel not registered", return ESP_ERR_INVALID_STATE);
     PWM_CHECK(value <= ((1 << s_pwm->ledc_config.duty_resolution)), "value out of range", return ESP_ERR_INVALID_ARG);
 
-#if CONFIG_PM_ENABLE
+#if CONFIG_PM_ENABLE && CONFIG_IDF_TARGET_ESP32
     power_control_disable_sleep();
 #endif
     if (0 != s_pwm->hponit[1]) {
@@ -341,11 +346,13 @@ esp_err_t pwm_set_hw_fade(pwm_channel_t channel, uint16_t value, int fade_ms)
 esp_err_t pwm_set_sleep(bool is_enable)
 {
 #if CONFIG_PM_ENABLE
+#if CONFIG_IDF_TARGET_ESP32
     if (is_enable) {
         power_control_enable_sleep();
     } else {
         power_control_disable_sleep();
     }
+#endif
     return ESP_OK;
 #else
     ESP_LOGE(TAG, "You need to enable power management via menuconfig");

@@ -33,6 +33,9 @@ components/motor/esp_sensorless_bldc_control/test_apps/bldc_adc:
 components/motor/esp_sensorless_bldc_control/test_apps/bldc_comparer:
   disable:
     - if: IDF_TARGET in ["esp32c2"]
+components/led/lightbulb_driver/test_apps:
+  enable:
+    - if: INCLUDE_DEFAULT == 1
 
 components/motor/esp_simplefoc/test_apps:
   enable:

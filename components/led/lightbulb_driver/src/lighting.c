@@ -91,43 +91,22 @@ void lightbulb_lighting_output_test(lightbulb_lighting_unit_t mask, uint16_t spe
         ESP_LOGW(TAG, "basic five");
         lightbulb_set_switch(false);
         vTaskDelay(pdMS_TO_TICKS(speed_ms));
-        int i = 0;
-        for (i = 0; i <= 100; i += 10) {
-            lightbulb_set_hsv(0, 100, i);
-            vTaskDelay(pdMS_TO_TICKS(speed_ms));
-        }
-        for (i = 0; i <= 100; i += 10) {
-            lightbulb_set_hsv(120, 100, i);
-            vTaskDelay(pdMS_TO_TICKS(speed_ms));
-        }
-        for (i = 0; i <= 100; i += 10) {
-            lightbulb_set_hsv(240, 100, i);
-            vTaskDelay(pdMS_TO_TICKS(speed_ms));
-        }
-        for (i = 0; i <= 100; i += 10) {
-            lightbulb_set_hsv(30, 100, i);
-            vTaskDelay(pdMS_TO_TICKS(speed_ms));
-        }
-        for (i = 0; i <= 100; i += 10) {
-            lightbulb_set_hsv(160, 100, i);
-            vTaskDelay(pdMS_TO_TICKS(speed_ms));
-        }
-        for (i = 0; i <= 100; i += 10) {
-            lightbulb_set_hsv(270, 100, i);
-            vTaskDelay(pdMS_TO_TICKS(speed_ms));
-        }
-        for (i = 0; i <= 100; i += 10) {
-            lightbulb_set_cctb(0, i);
-            vTaskDelay(pdMS_TO_TICKS(speed_ms));
-        }
-        for (i = 0; i <= 100; i += 10) {
-            lightbulb_set_cctb(50, i);
-            vTaskDelay(pdMS_TO_TICKS(speed_ms));
-        }
-        for (i = 0; i <= 100; i += 10) {
-            lightbulb_set_cctb(100, i);
-            vTaskDelay(pdMS_TO_TICKS(speed_ms));
-        }
+
+        lightbulb_set_hsv(0, 100, 100);
+        vTaskDelay(pdMS_TO_TICKS(speed_ms));
+
+        lightbulb_set_hsv(120, 100, 100);
+        vTaskDelay(pdMS_TO_TICKS(speed_ms));
+
+        lightbulb_set_hsv(240, 100, 100);
+        vTaskDelay(pdMS_TO_TICKS(speed_ms));
+
+        lightbulb_set_cctb(0, 100);
+        vTaskDelay(pdMS_TO_TICKS(speed_ms));
+
+        lightbulb_set_cctb(100, 100);
+        vTaskDelay(pdMS_TO_TICKS(speed_ms));
+
         lightbulb_set_switch(false);
     }
 
