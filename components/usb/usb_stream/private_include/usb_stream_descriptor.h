@@ -8,6 +8,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include "libuvc_def.h"
 #include "usb/usb_types_ch9.h"
 #include "usb/usb_types_stack.h"
 
@@ -213,7 +214,7 @@ typedef struct {
     uint8_t  bAspectRatioY;
     uint8_t  bmInterlaceFlags;
     uint8_t  bCopyProtect;
-} USB_DESC_ATTR vs_format_desc_t;
+} USB_DESC_ATTR vs_format_mjpeg_desc_t;
 
 typedef struct {
     uint8_t  bLength;
@@ -236,7 +237,46 @@ typedef struct {
             uint32_t dwFrameIntervalStep;
         };
     };
-} USB_DESC_ATTR vs_frame_desc_t;
+} USB_DESC_ATTR vs_frame_mjpeg_desc_t;
+
+typedef struct {
+    uint8_t  bLength;
+    uint8_t  bDescriptorType;
+    uint8_t  bDescriptorSubType;
+    uint8_t  bFormatIndex;
+    uint8_t  bNumFrameDescriptors;
+    uint8_t  guidFormat[16];
+    uint8_t  bBitsPerPixel;
+    uint8_t  bDefaultFrameIndex;
+    uint8_t  bAspectRatioX;
+    uint8_t  bAspectRatioY;
+    uint8_t  bmInterlaceFlags;
+    uint8_t  bCopyProtect;
+    uint8_t  bVariableSize;
+} USB_DESC_ATTR vs_format_frame_based_desc_t;
+
+typedef struct {
+    uint8_t  bLength;
+    uint8_t  bDescriptorType;
+    uint8_t  bDescriptorSubType;
+    uint8_t  bFrameIndex;
+    uint8_t  bmCapabilities;
+    uint16_t wWidth;
+    uint16_t wHeigh;
+    uint32_t dwMinBitRate;
+    uint32_t dwMaxBitRate;
+    uint32_t dwDefaultFrameInterval;
+    uint8_t  bFrameIntervalType;
+    uint32_t dwBytesPerLine;
+    union {
+        uint32_t dwFrameInterval;
+        struct {
+            uint32_t dwMinFrameInterval;
+            uint32_t dwMaxFrameInterval;
+            uint32_t dwFrameIntervalStep;
+        };
+    };
+} USB_DESC_ATTR vs_frame_frame_based_desc_t;
 
 typedef struct {
     uint8_t bLength;
@@ -385,8 +425,10 @@ void print_cfg_desc(const uint8_t *buff);
 void print_assoc_desc(const uint8_t *buff);
 void print_intf_desc(const uint8_t *buff);
 void parse_ep_desc(const uint8_t *buff, uint16_t *ep_mps, uint8_t *ep_addr, uint8_t *ep_attr);
-void parse_vs_format_mjpeg_desc(const uint8_t *buff, uint8_t *format_idx, uint8_t *frame_num);
+void parse_vs_format_mjpeg_desc(const uint8_t *buff, uint8_t *format_idx, uint8_t *frame_num, enum uvc_frame_format *fmt);
 void parse_vs_frame_mjpeg_desc(const uint8_t *buff, uint8_t *frame_idx, uint16_t *width, uint16_t *heigh, uint8_t *interval_type, const uint32_t **pp_interval, uint32_t *dflt_interval);
+void parse_vs_format_frame_based_desc(const uint8_t *buff, uint8_t *format_idx, uint8_t *frame_num, enum uvc_frame_format *fmt);
+void parse_vs_frame_frame_based_desc(const uint8_t *buff, uint8_t *frame_idx, uint16_t *width, uint16_t *heigh, uint8_t *interval_type, const uint32_t **pp_interval, uint32_t *dflt_interval);
 void print_uvc_header_desc(const uint8_t *buff, uint8_t sub_class);
 void print_device_descriptor(const uint8_t *buff);
 void print_ep_desc(const uint8_t *buff);

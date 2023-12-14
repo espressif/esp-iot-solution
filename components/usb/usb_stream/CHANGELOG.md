@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v1.3.0 - 2023-12-14
+
+* Support UVC frame type: frame based, which can be used to transmit H264 streams.
+
 ## v1.2.1 - 2023-11-27
 
 ### Bug Fixes:

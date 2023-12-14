@@ -458,6 +458,7 @@ build_example_usb_host_usb_camera_lcd_display:
   parallel:
     matrix:
       - IMAGE: espressif/idf:release-v5.1
+      - IMAGE: espressif/idf:release-v5.1
         EXAMPLE_CONFIG: "sdkconfig.psram_octal_120m=default"
   variables:
     EXAMPLE_DIR: examples/usb/host/usb_camera_lcd_display

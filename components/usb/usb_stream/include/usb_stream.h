@@ -43,6 +43,17 @@ typedef enum {
 } uvc_xfer_t;
 
 /**
+ * @brief UVC stream format type, default using MJPEG format,
+ */
+/** @cond **/
+typedef enum {
+    UVC_FORMAT_MJPEG = 0,    /*!< Default MJPEG format */
+    UVC_FORMAT_FRAME_BASED,  /*!< Frame-based format */
+    UVC_FORMAT_MAX,         /*!< Unknown format */
+} uvc_format_t;
+/** @endcond **/
+
+/**
  * @brief Stream id, used for control
  *
  */
@@ -90,10 +101,11 @@ typedef struct uvc_config {
     uint8_t *frame_buffer;          /*!< Buffer for one frame */
     uvc_frame_callback_t frame_cb;  /*!< callback function to handle incoming frame */
     void *frame_cb_arg;             /*!< callback function arg */
+    uvc_format_t format;            /*!< (optional) UVC stream format, default using MJPEG */
     /*!< Optional configs, Users need to specify parameters manually when they want to
     skip the get and process descriptors steps (used to speed up startup)*/
     uvc_xfer_t xfer_type;           /*!< (optional) UVC stream transfer type, UVC_XFER_ISOC or UVC_XFER_BULK */
-    uint8_t format_index;           /*!< (optional) Format index of MJPEG */
+    uint8_t format_index;           /*!< (optional) Format index */
     uint8_t frame_index;            /*!< (optional) Frame index, to choose resolution */
     uint16_t interface;             /*!< (optional) UVC stream interface number */
     uint16_t interface_alt;         /*!< (optional) UVC stream alternate interface, to choose MPS (Max Packet Size), bulk fix to 0*/
