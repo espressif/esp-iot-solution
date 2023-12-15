@@ -18,6 +18,10 @@ extern "C" {
 #include "msc_host.h"
 #include "usb/usb_host.h"
 
+/**
+ * @brief Declare Event Base for ESP MSC HOST
+ *
+ */
 ESP_EVENT_DECLARE_BASE(ESP_MSC_HOST_EVENT);
 
 typedef enum {

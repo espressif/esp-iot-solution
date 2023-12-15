@@ -12,8 +12,8 @@ Use the internal PHY
 The ESP32-S2/S3/C3 internally integrates a USB PHY, eliminating the need for an external PHY chip. It can directly connect to external USB hosts or devices through the USB D+/D- pins. However, for chips with two integrated USB controllers, such as the ESP32-S3 with built-in USB-OTG and USB-Serial-JTAG, both controllers share a single internal PHY, allowing only one to operate at a time.
 
 
-.. image:: ../../_static/usb/esp32s3_usb.png
-   :target: ../../_static/usb/esp32s3_usb.png
+.. image:: ../../../_static/usb/esp32s3_usb.png
+   :target: ../../../_static/usb/esp32s3_usb.png
    :alt: esp32s3_usb
 
 
@@ -47,8 +47,8 @@ By adding an external PHY, it is possible to enable the simultaneous operation o
 ESP32S2/S3 supports SP5301 or equivalent USB PHY. A typical circuit diagram for an external PHY is as follows:
 
 
-.. image:: ../../_static/usb/usb_fs_phy_sp5301.png
-   :target: ../../_static/usb/usb_fs_phy_sp5301.png
+.. image:: ../../../_static/usb/usb_fs_phy_sp5301.png
+   :target: ../../../_static/usb/usb_fs_phy_sp5301.png
    :alt: usb_fs_phy_sp5301
 
 

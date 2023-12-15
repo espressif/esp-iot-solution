@@ -29,13 +29,13 @@ Hardware:
 
 * Chips: ESP32-S2, ESP32-S3
 * Peripherals: USB-OTG
-* USB Camera: Supports MJPEG format, with a bulk transfer mode of 800*480@15fps, or an isochronous transfer mode of 480*320@15fps. For camera limitations, refer to the `usb_stream API documentation <https://docs.espressif.com/projects/esp-iot-solution/en/latest/usb/usb_stream.html>`_.
+* USB Camera: Supports MJPEG format, with a bulk transfer mode of 800*480@15fps, or an isochronous transfer mode of 480*320@15fps. For camera limitations, refer to the `usb_stream API documentation <https://docs.espressif.com/projects/esp-iot-solution/en/latest/usb/usb_host/usb_stream.html>`_.
 
 links:
 ~~~~~~~
 
 * `usb_stream component <https://components.espressif.com/components/espressif/usb_stream>`_
-* `usb_stream API reference <https://docs.espressif.com/projects/esp-iot-solution/en/latest/usb/usb_stream.html>`_
+* `usb_stream API reference <https://docs.espressif.com/projects/esp-iot-solution/en/latest/usb/usb_host/usb_stream.html>`_
 * `USB Camera Demo video <https://www.bilibili.com/video/BV18841137qT>`_
 * Example Code: USB Camera + WiFi Image Transmission: :example:`usb/host/usb_camera_mic_spk`
 * Example Code: USB Camera + Local Screen Display with LCD: :example:`usb/host/usb_camera_lcd_display`
@@ -71,7 +71,7 @@ Links:
 ~~~~~~~~
 
 * `usb_stream components <https://components.espressif.com/components/espressif/usb_stream>`_
-* `usb_stream API reference <https://docs.espressif.com/projects/esp-iot-solution/en/latest/usb/usb_stream.html>`_
+* `usb_stream API reference <https://docs.espressif.com/projects/esp-iot-solution/en/latest/usb/usb_host/usb_stream.html>`_
 * `USB Audio Demo video <https://www.bilibili.com/video/BV1LP411975W>`_
 * Example Code: MP3 Music Player + USB Headphones: :example:`usb/host/usb_audio_player`
 

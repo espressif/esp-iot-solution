@@ -22,16 +22,16 @@ Upon connecting the USB-Serial-JTAG peripheral to a PC, the Device Manager will 
 For Windows as shown in the following figure:
 
 
-.. image:: ../../_static/usb/device_manager_usb_serial_jtag_cn.png
-   :target: ../../_static/usb/device_manager_usb_serial_jtag_cn.png
+.. image:: ../../../_static/usb/device_manager_usb_serial_jtag_cn.png
+   :target: ../../../_static/usb/device_manager_usb_serial_jtag_cn.png
    :alt: device_manager_usb_serial_jtag_cn
 
 
 For Linux as shown in the following figure:
 
 
-.. image:: ../../_static/usb/usb_serial_jtag_linux.png
-   :target: ../../_static/usb/usb_serial_jtag_linux.png
+.. image:: ../../../_static/usb/usb_serial_jtag_linux.png
+   :target: ../../../_static/usb/usb_serial_jtag_linux.png
    :alt: device_manager_usb_serial_jtag_cn
 
 
