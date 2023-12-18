@@ -38,7 +38,9 @@ if(BOOTLOADER_BUILD)
         target_linker_script(${COMPONENT_LIB} INTERFACE "ld/${CONFIG_IDF_TARGET}/linker.lf")
     endif()
 else()
-    target_link_libraries(${COMPONENT_LIB} INTERFACE "-Wl,--wrap=esp_ota_get_next_update_partition")
+    if(CONFIG_BOOTLOADER_COMPRESSED_ENABLED)
+        target_link_libraries(${COMPONENT_LIB} INTERFACE "-Wl,--wrap=esp_ota_get_next_update_partition")
+    endif()
 
     # Force app_update to also appear later than bootloader_support_plus in link line
     idf_component_get_property(app_update app_update COMPONENT_LIB)
@@ -52,7 +54,9 @@ else()
 
 endif()
 
-target_link_libraries(${COMPONENT_LIB} INTERFACE "-Wl,--wrap=esp_image_verify")
+if(CONFIG_BOOTLOADER_COMPRESSED_ENABLED)
+    target_link_libraries(${COMPONENT_LIB} INTERFACE "-Wl,--wrap=esp_image_verify")
+endif()
 
 include(package_manager)
 cu_pkg_define_version(${CMAKE_CURRENT_LIST_DIR})
