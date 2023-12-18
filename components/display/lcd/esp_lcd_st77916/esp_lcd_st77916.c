@@ -24,10 +24,8 @@
 #define LCD_OPCODE_READ_CMD         (0x0BULL)
 #define LCD_OPCODE_WRITE_COLOR      (0x32ULL)
 
-#define ST77916_CMD_SET             (0xFF)
-#define ST77916_CMD_SET_BYTE0       (0x20)
-#define ST77916_CMD_SET_BYTE1       (0x10)
-#define ST77916_CMD_SET_USER        (0x00)
+#define ST77916_CMD_SET             (0xF0)
+#define ST77916_PARAM_SET           (0x00)
 
 static const char *TAG = "st77916";
 
@@ -225,7 +223,7 @@ static const st77916_lcd_init_cmd_t vendor_specific_init_default[] = {
     {0xD0, (uint8_t []){0x91}, 1, 0},
     {0xD1, (uint8_t []){0x68}, 1, 0},
     {0xD2, (uint8_t []){0x69}, 1, 0},
-    {0xF5, (uint8_t []){0x00, 0xA5}, 1, 0},
+    {0xF5, (uint8_t []){0x00, 0xA5}, 2, 0},
     {0xDD, (uint8_t []){0x35}, 1, 0},
     {0xDE, (uint8_t []){0x35}, 1, 0},
     {0xF1, (uint8_t []){0x10}, 1, 0},
@@ -417,9 +415,6 @@ static esp_err_t panel_st77916_init(esp_lcd_panel_t *panel)
     bool is_user_set = true;
     bool is_cmd_overwritten = false;
 
-    ESP_RETURN_ON_ERROR(tx_param(st77916, io, ST77916_CMD_SET, (uint8_t[]) {
-        ST77916_CMD_SET_BYTE0, ST77916_CMD_SET_BYTE1, ST77916_CMD_SET_USER
-    }, 3), TAG, "send command failed");
     ESP_RETURN_ON_ERROR(tx_param(st77916, io, LCD_CMD_MADCTL, (uint8_t[]) {
         st77916->madctl_val,
     }, 1), TAG, "send command failed");
@@ -461,12 +456,12 @@ static esp_err_t panel_st77916_init(esp_lcd_panel_t *panel)
         }
 
         // Send command
-        ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, init_cmds[i].cmd, init_cmds[i].data, init_cmds[i].data_bytes), TAG, "send command failed");
+        ESP_RETURN_ON_ERROR(tx_param(st77916, io, init_cmds[i].cmd, init_cmds[i].data, init_cmds[i].data_bytes), TAG, "send command failed");
         vTaskDelay(pdMS_TO_TICKS(init_cmds[i].delay_ms));
 
         // Check if the current cmd is the "command set" cmd
-        if ((init_cmds[i].cmd == ST77916_CMD_SET) && (init_cmds[i].data_bytes > 2)) {
-            is_user_set = (((uint8_t *)init_cmds[i].data)[2] == ST77916_CMD_SET_USER);
+        if ((init_cmds[i].cmd == ST77916_CMD_SET)) {
+            is_user_set = ((uint8_t *)init_cmds[i].data)[0] == ST77916_PARAM_SET ? true : false;
         }
     }
     ESP_LOGD(TAG, "send init commands success");

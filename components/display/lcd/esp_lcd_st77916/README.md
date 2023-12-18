@@ -1,6 +1,6 @@
 # ESP LCD ST77916
 
-[![Component Registry](https://components.espressif.com/components/espressif/esp_lcd_ST77916/badge.svg)](https://components.espressif.com/components/espressif/esp_lcd_st77916)
+[![Component Registry](https://components.espressif.com/components/espressif/esp_lcd_st77916/badge.svg)](https://components.espressif.com/components/espressif/esp_lcd_st77916)
 
 Implementation of the ST77916 LCD controller with [esp_lcd](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/peripherals/lcd.html) component.
 
@@ -39,10 +39,10 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
  */
 // static const ST77916_lcd_init_cmd_t lcd_init_cmds[] = {
 // //  {cmd, { data }, data_size, delay_ms}
-//    {0x44, (uint8_t []){0x00, 0xc8}, 2, 0},
-//    {0x35, (uint8_t []){0x00}, 0, 0},
-//    {0x53, (uint8_t []){0x20}, 1, 25},
-//    {0x29, (uint8_t []){0x00}, 0, 120},
+//  {0xF0, (uint8_t []){0x08}, 1, 0},
+//  {0xF2, (uint8_t []){0x08}, 1, 0},
+//  {0x9B, (uint8_t []){0x51}, 1, 0},
+//  {0x86, (uint8_t []){0x53}, 1, 0},
 //     ...
 // };
 
@@ -107,13 +107,13 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
     };
     const esp_lcd_panel_dev_config_t panel_config = {
         .reset_gpio_num = EXAMPLE_PIN_NUM_LCD_RST,
-        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,               // Implemented by LCD command `36h`
+        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,     // Implemented by LCD command `36h`
         .bits_per_pixel = EXAMPLE_LCD_BIT_PER_PIXEL,    // Implemented by LCD command `3Ah` (16/18)
         .vendor_config = &vendor_config,
     };
     ESP_ERROR_CHECK(esp_lcd_new_panel_st77916(io_handle, &panel_config, &panel_handle));
 
-    esp_lcd_panel_reset(panel_handle);s
+    esp_lcd_panel_reset(panel_handle);
     esp_lcd_panel_init(panel_handle);
     esp_lcd_panel_disp_on_off(panel_handle, true);
 ```

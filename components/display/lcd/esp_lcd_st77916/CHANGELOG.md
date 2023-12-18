@@ -6,3 +6,9 @@
 
 * Implement the driver for the ST77916 LCD controller
 * Support SPI and QSPI interface
+
+## v0.0.2 - 2023-12-15
+
+### Enhancements:
+
+* Fix issues of QSPI interface
