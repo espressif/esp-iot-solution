@@ -1,0 +1,8 @@
+targets:
+  - esp32s2
+  - esp32s3
+dependencies:
+  idf: ">=4.4.1"
+  iot_usbh_cdc:
+    version: "0.2.*"
+    override_path: "../../../../../components/usb/iot_usbh_cdc"

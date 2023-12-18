@@ -7,3 +7,4 @@ USB Host Drivers
     :maxdepth: 1
 
     USB UVC/UAC Host <usb_stream>
+    USB CDC Host <usb_host_iot_usbh_cdc>

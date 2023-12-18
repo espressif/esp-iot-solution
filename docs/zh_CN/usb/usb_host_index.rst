@@ -7,3 +7,4 @@ USB 主机驱动
     :maxdepth: 1
 
     USB UVC/UAC 主机 <usb_stream>
+    USB CDC 主机 <usb_host_iot_usbh_cdc>
