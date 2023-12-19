@@ -233,7 +233,7 @@ Add additional delay to avoid malloc error if continuous suspend and resume
 
 ### Bug Fixes:
 
-* Speaker: 
+* Speaker:
   * fix some speaker resume control not work (should set freq after resume)
 
 ## v0.4.2 - 2023-01-30
@@ -301,7 +301,7 @@ Add additional delay to avoid malloc error if continuous suspend and resume
 
 ### Enhancements:
 
-* add development documentation https://docs.espressif.com/projects/esp-iot-solution/zh_CN/latest/usb/usb_stream.html
+* add development documentation https://docs.espressif.com/projects/esp-iot-solution/zh_CN/latest/usb/usb_host/usb_stream.html
 
 ## v0.3.0 - 2022-12-05
 

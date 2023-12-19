@@ -14,8 +14,8 @@ USB-IF (USB Implementers Forum) is the organization responsible for establishing
 Espressif's ESP32-S2/S3/C3 chips come with built-in USB-OTG or USB-Serial-JTAG peripherals, supporting a variety of USB applications. These include USB multimedia applications, USB communication applications, USB storage applications, USB human interface applications, and more.
 
 
-.. image:: ../../_static/usb_solutions.png
-   :target: ../../_static/usb_solutions.png
+.. image:: ../../../_static/usb_solutions.png
+   :target: ../../../_static/usb_solutions.png
    :alt: USB Solution
 
 USB Electrical Properties
@@ -146,8 +146,8 @@ ESP32-S2 USB Function Overview
 The ESP32-S2 features an integrated **USB OTG Full-Speed Controller** and **USB Full-Speed PHY**\ . The internal architecture is as follows:
 
 
-.. image:: ../../_static/usb/esp32s2_usb.png
-   :target: ../../_static/usb/esp32s2_usb.png
+.. image:: ../../../_static/usb/esp32s2_usb.png
+   :target: ../../../_static/usb/esp32s2_usb.png
    :alt: esp32s2_usb
 
 
@@ -157,8 +157,8 @@ ESP32-C3 USB Function Overview
 The ESP32-C3 comes equipped with a built-in **USB-Serial-JTAG Controller** and **USB Full-Speed PHY**\ . The internal architecture is outlined below:
 
 
-.. image:: ../../_static/usb/esp32c3_usb.png
-   :target: ../../_static/usb/esp32c3_usb.png
+.. image:: ../../../_static/usb/esp32c3_usb.png
+   :target: ../../../_static/usb/esp32c3_usb.png
    :alt: esp32c3_usb
 
 
@@ -168,7 +168,7 @@ ESP32-S3 USB Function Overview
 The ESP32-S3 is equipped with two built-in USB controllers. **USB OTG Full-Speed Controller** and **USB-Serial-JTAG Controller**\ , Additionally, there is an integrated USB Full-speed PHY. The internal USB PHY is initially connected to the **USB-Serial-JTAG** controller by default. It can be modified through eFuse burning to change the default configuration or dynamically switched through register configuration. It is also possible to enable both controllers simultaneously by adding an external PHY. For detailed information on switching the internal USB PHY, refer to :doc:`USB PHY Switching <./usb_phy>`.
 
 
-.. image:: ../../_static/usb/esp32s3_usb.png
-   :target: ../../_static/usb/esp32s3_usb.png
+.. image:: ../../../_static/usb/esp32s3_usb.png
+   :target: ../../../_static/usb/esp32s3_usb.png
    :alt: esp32s3_usb
 

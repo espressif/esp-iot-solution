@@ -12,8 +12,8 @@ USB Full-speed PHY/Transceiver 的功能是将 USB 控制器的数字信号转�
 ESP32-S2/S3/C3 内部集成了 USB PHY，因此无需外接 PHY 芯片，可以直接与外部 USB 主机或设备通过 USB D+/D- 连接。但对于集成两个 USB 控制器的芯片，例如 ESP32-S3 内置 USB-OTG 和 USB-Serial-JTAG，两者共用一个内部 PHY，同一时间只能有一个工作。
 
 
-.. image:: ../../_static/usb/esp32s3_usb.png
-   :target: ../../_static/usb/esp32s3_usb.png
+.. image:: ../../../_static/usb/esp32s3_usb.png
+   :target: ../../../_static/usb/esp32s3_usb.png
    :alt: esp32s3_usb
 
 
@@ -22,7 +22,7 @@ ESP32-S2/S3/C3 内部集成了 USB PHY，因此无需外接 PHY 芯片，可以�
 .. list-table::
    :header-rows: 1
 
-   * - 
+   * -
      - D+
      - D-
    * - ESP32-S2
@@ -47,8 +47,8 @@ ESP32-S2/S3/C3 内部集成了 USB PHY，因此无需外接 PHY 芯片，可以�
 ESP32S2/S3 支持 SP5301 或同等功能的 USB PHY。外部 PHY 的典型电路图如下：
 
 
-.. image:: ../../_static/usb/usb_fs_phy_sp5301.png
-   :target: ../../_static/usb/usb_fs_phy_sp5301.png
+.. image:: ../../../_static/usb/usb_fs_phy_sp5301.png
+   :target: ../../../_static/usb/usb_fs_phy_sp5301.png
    :alt: usb_fs_phy_sp5301
 
 

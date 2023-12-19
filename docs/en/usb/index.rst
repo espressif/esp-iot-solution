@@ -7,14 +7,6 @@ USB Host & Device
 .. toctree::
     :maxdepth: 2
 
-    USB Overview <usb_overview>
-    USB OTG <usb_otg>
-    USB Serial JTAG <usb_serial_jtag>
-    USB PHY <usb_phy>
-    USB VID PID <usb_vid_pid>
-    USB Host Solution <usb_host_solutions>
-    USB Device Solution <usb_device_solutions>
-    USB Self Power Device <usb_device_self_power>
-    USB Device Set Const COM <usb_device_const_COM>
-    usb_host_index
-    usb_driver_index
+    USB Overview <usb_overview/index>
+    USB HOST Driver <usb_host/usb_host_index>
+    USB Device Driver <usb_device/usb_driver_index>

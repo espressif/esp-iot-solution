@@ -7,6 +7,10 @@
 * 支持 U 盘热插拔
 * 支持 U 盘 OTA 功能。
 
+### 用户指南
+
+请查看: https://docs.espressif.com/projects/esp-iot-solution/zh_CN/latest/usb/usb_host/esp_msc_ota.html
+
 ### 添加组件到工程
 
 请使用组件管理器指令 `add-dependency` 将 `esp_msc_ota` 添加到项目的依赖项, 在 `CMake` 执行期间该组件将被自动下载到工程目录。

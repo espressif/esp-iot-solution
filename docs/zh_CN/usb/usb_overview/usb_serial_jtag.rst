@@ -1,4 +1,3 @@
-
 USB-Serial-JTAG 外设介绍
 ------------------------
 
@@ -22,16 +21,16 @@ USB-Serial-JTAG 外设接入 PC 后，设备管理器将新增两个设备：
 Windows 如下图所示：
 
 
-.. image:: ../../_static/usb/device_manager_usb_serial_jtag_cn.png
-   :target: ../../_static/usb/device_manager_usb_serial_jtag_cn.png
+.. image:: ../../../_static/usb/device_manager_usb_serial_jtag_cn.png
+   :target: ../../../_static/usb/device_manager_usb_serial_jtag_cn.png
    :alt: device_manager_usb_serial_jtag_cn
 
 
 Linux 如下图所示：
 
 
-.. image:: ../../_static/usb/usb_serial_jtag_linux.png
-   :target: ../../_static/usb/usb_serial_jtag_linux.png
+.. image:: ../../../_static/usb/usb_serial_jtag_linux.png
+   :target: ../../../_static/usb/usb_serial_jtag_linux.png
    :alt: device_manager_usb_serial_jtag_cn
 
 

@@ -14,8 +14,8 @@ USB IF（USB Implementers Forum）是 USB 标准的制定者，它制定了 USB 
 乐鑫 ESP32-S2/S3/C3 等芯片均已内置 USB-OTG 或 USB-Serial-JTAG 外设，支持各种各样的 USB 应用，包括 USB 多媒体类应用，USB 通信类应用，USB 存储类应用，USB 人机交互类应用等。
 
 
-.. image:: ../../_static/usb_solutions.png
-   :target: ../../_static/usb_solutions.png
+.. image:: ../../../_static/usb_solutions.png
+   :target: ../../../_static/usb_solutions.png
    :alt: USB Solution
 
 USB 电气属性
@@ -146,8 +146,8 @@ ESP32-S2 USB 功能简介
 ESP32-S2 内置 **USB OTG Full-speed Controller** 和 **USB Full-speed PHY**\ ，内部结构如下：
 
 
-.. image:: ../../_static/usb/esp32s2_usb.png
-   :target: ../../_static/usb/esp32s2_usb.png
+.. image:: ../../../_static/usb/esp32s2_usb.png
+   :target: ../../../_static/usb/esp32s2_usb.png
    :alt: esp32s2_usb
 
 
@@ -157,8 +157,8 @@ ESP32-C3 USB 功能简介
 ESP32-C3 内置 **USB-Serial-JTAG Controller** 和 **USB Full-speed PHY**\ ，内部结构如下:
 
 
-.. image:: ../../_static/usb/esp32c3_usb.png
-   :target: ../../_static/usb/esp32c3_usb.png
+.. image:: ../../../_static/usb/esp32c3_usb.png
+   :target: ../../../_static/usb/esp32c3_usb.png
    :alt: esp32c3_usb
 
 
@@ -168,7 +168,7 @@ ESP32-S3 USB 功能简介
 ESP32-S3 内置两个 USB 控制器，分别是  **USB OTG Full-speed Controller** 和 **USB-Serial-JTAG Controller**\ ，内置一个 **USB Full-speed PHY**\ 。内部 USB PHY 默认连接到 **USB-Serial-JTAG** 控制器，可通过烧写 eFuse 修改默认，或配置寄存器动态切换，也可通过增加外部 PHY，同时启用两个控制器。内部 USB PHY 的切换详情，参考 :doc:`USB PHY 切换 <./usb_phy>`\ 。
 
 
-.. image:: ../../_static/usb/esp32s3_usb.png
-   :target: ../../_static/usb/esp32s3_usb.png
+.. image:: ../../../_static/usb/esp32s3_usb.png
+   :target: ../../../_static/usb/esp32s3_usb.png
    :alt: esp32s3_usb
 

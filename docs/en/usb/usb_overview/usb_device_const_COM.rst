@@ -42,4 +42,4 @@ Solution
 
    REG ADD HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\usbflags\303A10010101 /V IgnoreHWSerNum /t REG_BINARY /d 01
 
-Users have the option to download the script :download:`ignore_hwserial_esp32s3c3.bat <../../_static/ignore_hwserial_esp32s3c3.bat>` , then run it with administrative privileges by right-clicking and selecting **Run as Administrator**.
+Users have the option to download the script :download:`ignore_hwserial_esp32s3c3.bat <../../../_static/ignore_hwserial_esp32s3c3.bat>` , then run it with administrative privileges by right-clicking and selecting **Run as Administrator**.

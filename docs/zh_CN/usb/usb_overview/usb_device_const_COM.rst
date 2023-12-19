@@ -42,4 +42,4 @@ ESP ROM Code 中对 USB 描述符配置如下：
 
    REG ADD HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\usbflags\303A10010101 /V IgnoreHWSerNum /t REG_BINARY /d 01
 
-用户也可下载 :download:`ignore_hwserial_esp32s3c3.bat <../../_static/ignore_hwserial_esp32s3c3.bat>` 脚本，右键选择管理员方式运行。
+用户也可下载 :download:`ignore_hwserial_esp32s3c3.bat <../../../_static/ignore_hwserial_esp32s3c3.bat>` 脚本，右键选择管理员方式运行。

@@ -7,6 +7,10 @@
 * Supports hot-plugging of USB disk.
 * Supports USB disk OTA functionality.
 
+### User Guide
+
+Please refer: https://docs.espressif.com/projects/esp-iot-solution/en/latest/usb/usb_host/esp_msc_ota.html
+
 ### Adding the Component to the Project
 
 Please use the component manager command `add-dependency` to add `esp_msc_ota` as a dependency to your project. During the `CMake` execution, this component will be automatically downloaded to the project directory.

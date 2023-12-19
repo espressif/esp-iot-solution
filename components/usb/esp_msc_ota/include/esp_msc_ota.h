@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -18,7 +18,13 @@ extern "C"
 #include "esp_app_format.h"
 #include "esp_ota_ops.h"
 
+/**
+ * @brief Declare Event Base for ESP MSC OTA
+ *
+ */
+/** @cond **/
 ESP_EVENT_DECLARE_BASE(ESP_MSC_OTA_EVENT);
+/** @endcond **/
 
 typedef enum {
     ESP_MSC_OTA_START,                 /*!< Start update */
@@ -39,6 +45,10 @@ typedef enum {
     ESP_MSC_OTA_SUCCESS,
 } esp_msc_ota_status_t;
 
+/**
+ * @brief esp msc ota config
+ *
+ */
 typedef struct {
     const char *ota_bin_path;    /*!< OTA binary name, must be an exact match. Note: By default file names cannot exceed 11 bytes e.g. "/usb/ota.bin" */
     bool bulk_flash_erase;       /*!< Erase entire flash partition during initialization. By default flash partition is erased during write operation and in chunk of 4K sector size */
