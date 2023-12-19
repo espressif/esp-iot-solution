@@ -10,6 +10,7 @@
 #include <inttypes.h>
 
 #include "esp_log.h"
+#include "libuvc_def.h"
 #include "usb/usb_host.h"
 #include "usb/usb_types_ch9.h"
 #include "usb_stream_descriptor.h"
@@ -90,12 +91,106 @@ void print_uvc_header_desc(const uint8_t *buff, uint8_t sub_class)
 #endif
 }
 
-void parse_vs_format_mjpeg_desc(const uint8_t *buff, uint8_t *format_idx, uint8_t *frame_num)
+struct format_table_entry {
+    enum uvc_frame_format format;
+    uint8_t abstract_fmt;
+    uint8_t guid[16];
+    int children_count;
+    enum uvc_frame_format *children;
+};
+
+struct format_table_entry *_get_format_entry(enum uvc_frame_format format)
+{
+#define ABS_FMT(_fmt, _num, ...) \
+        case _fmt: { \
+        static enum uvc_frame_format _fmt##_children[] = __VA_ARGS__; \
+        static struct format_table_entry _fmt##_entry = { \
+            _fmt, 0, {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, _num, _fmt##_children }; \
+        return &_fmt##_entry; }
+
+#define FMT(_fmt, ...) \
+        case _fmt: { \
+        static struct format_table_entry _fmt##_entry = { \
+            _fmt, 0, __VA_ARGS__, 0, NULL }; \
+        return &_fmt##_entry; }
+
+    switch (format) {
+        /* Define new formats here */
+        ABS_FMT(UVC_FRAME_FORMAT_ANY, 2,
+        {UVC_FRAME_FORMAT_UNCOMPRESSED, UVC_FRAME_FORMAT_COMPRESSED})
+
+        ABS_FMT(UVC_FRAME_FORMAT_UNCOMPRESSED, 8, {
+            UVC_FRAME_FORMAT_YUYV, UVC_FRAME_FORMAT_UYVY, UVC_FRAME_FORMAT_GRAY8,
+            UVC_FRAME_FORMAT_GRAY16, UVC_FRAME_FORMAT_NV12, UVC_FRAME_FORMAT_P010,
+            UVC_FRAME_FORMAT_BGR, UVC_FRAME_FORMAT_RGB
+        })
+        FMT(UVC_FRAME_FORMAT_YUYV,
+        {'Y',  'U',  'Y',  '2', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
+        FMT(UVC_FRAME_FORMAT_UYVY,
+        {'U',  'Y',  'V',  'Y', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
+        FMT(UVC_FRAME_FORMAT_GRAY8,
+        {'Y',  '8',  '0',  '0', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
+        FMT(UVC_FRAME_FORMAT_GRAY16,
+        {'Y',  '1',  '6',  ' ', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
+        FMT(UVC_FRAME_FORMAT_NV12,
+        {'N',  'V',  '1',  '2', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
+        FMT(UVC_FRAME_FORMAT_P010,
+        {'P',  '0',  '1',  '0', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
+        FMT(UVC_FRAME_FORMAT_BGR,
+        {0x7d, 0xeb, 0x36, 0xe4, 0x4f, 0x52, 0xce, 0x11, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70})
+        FMT(UVC_FRAME_FORMAT_RGB,
+        {0x7e, 0xeb, 0x36, 0xe4, 0x4f, 0x52, 0xce, 0x11, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70})
+        FMT(UVC_FRAME_FORMAT_BY8,
+        {'B',  'Y',  '8',  ' ', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
+        FMT(UVC_FRAME_FORMAT_BA81,
+        {'B',  'A',  '8',  '1', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
+        FMT(UVC_FRAME_FORMAT_SGRBG8,
+        {'G',  'R',  'B',  'G', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
+        FMT(UVC_FRAME_FORMAT_SGBRG8,
+        {'G',  'B',  'R',  'G', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
+        FMT(UVC_FRAME_FORMAT_SRGGB8,
+        {'R',  'G',  'G',  'B', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
+        FMT(UVC_FRAME_FORMAT_SBGGR8,
+        {'B',  'G',  'G',  'R', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
+        ABS_FMT(UVC_FRAME_FORMAT_COMPRESSED, 2,
+        {UVC_FRAME_FORMAT_MJPEG, UVC_FRAME_FORMAT_H264})
+        FMT(UVC_FRAME_FORMAT_MJPEG,
+        {'M',  'J',  'P',  'G'})
+        FMT(UVC_FRAME_FORMAT_H264,
+        {'H',  '2',  '6',  '4', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
+
+    default:
+        return NULL;
+    }
+
+#undef ABS_FMT
+#undef FMT
+}
+
+static enum uvc_frame_format uvc_frame_format_for_guid(const uint8_t guid[16])
+{
+    struct format_table_entry *format;
+    enum uvc_frame_format fmt;
+
+    for (fmt = 0; fmt < UVC_FRAME_FORMAT_COUNT; ++fmt) {
+        format = _get_format_entry(fmt);
+        if (!format || format->abstract_fmt) {
+            continue;
+        }
+        if (!memcmp(format->guid, guid, 16)) {
+            return format->format;
+        }
+    }
+
+    return UVC_FRAME_FORMAT_UNKNOWN;
+}
+
+void parse_vs_format_mjpeg_desc(const uint8_t *buff, uint8_t *format_idx, uint8_t *frame_num, enum uvc_frame_format *fmt)
 {
     if (buff == NULL) {
         return;
     }
-    const vs_format_desc_t *desc = (const vs_format_desc_t *) buff;
+    const vs_format_mjpeg_desc_t *desc = (const vs_format_mjpeg_desc_t *) buff;
 #ifdef CONFIG_UVC_PRINT_DESC
     printf("\t*** VS Format MJPEG Descriptor ***\n");
 #ifdef CONFIG_UVC_PRINT_DESC_VERBOSE
@@ -122,6 +217,9 @@ void parse_vs_format_mjpeg_desc(const uint8_t *buff, uint8_t *format_idx, uint8_
     if (frame_num) {
         *frame_num = desc->bNumFrameDescriptors;
     }
+    if (fmt) {
+        *fmt = UVC_FRAME_FORMAT_MJPEG;
+    }
 }
 
 void parse_vs_frame_mjpeg_desc(const uint8_t *buff, uint8_t *frame_idx, uint16_t *width, uint16_t *heigh, uint8_t *interval_type, const uint32_t **pp_interval, uint32_t *dflt_interval)
@@ -129,7 +227,7 @@ void parse_vs_frame_mjpeg_desc(const uint8_t *buff, uint8_t *frame_idx, uint16_t
     if (buff == NULL) {
         return;
     }
-    const vs_frame_desc_t *desc = (const vs_frame_desc_t *) buff;
+    const vs_frame_mjpeg_desc_t *desc = (const vs_frame_mjpeg_desc_t *) buff;
 #ifdef CONFIG_UVC_PRINT_DESC
     printf("\t*** VS MJPEG Frame Descriptor ***\n");
 #ifdef CONFIG_UVC_PRINT_DESC_VERBOSE
@@ -159,6 +257,104 @@ void parse_vs_frame_mjpeg_desc(const uint8_t *buff, uint8_t *frame_idx, uint16_t
     } else {
         // Discrete Frame Intervals
         size_t num_of_intervals = (desc->bLength - 26) / 4;
+        assert(num_of_intervals == desc->bFrameIntervalType);  // num_of_intervals should same as bFrameIntervalType
+        uint32_t *interval = (uint32_t *)&desc->dwFrameInterval;
+        for (int i = 0; i < num_of_intervals; ++i) {
+            printf("\tFrameInterval[%d] %"PRIu32"\n", i, interval[i]);
+        }
+    }
+#endif
+    if (width) {
+        *width = desc->wWidth;
+    }
+    if (heigh) {
+        *heigh = desc->wHeigh;
+    }
+    if (frame_idx) {
+        *frame_idx = desc->bFrameIndex;
+    }
+    if (interval_type) {
+        *interval_type = desc->bFrameIntervalType;
+    }
+    if (pp_interval) {
+        *pp_interval = &(desc->dwFrameInterval);
+    }
+    if (dflt_interval) {
+        *dflt_interval = desc->dwDefaultFrameInterval;
+    }
+}
+
+void parse_vs_format_frame_based_desc(const uint8_t *buff, uint8_t *format_idx, uint8_t *frame_num, enum uvc_frame_format *fmt)
+{
+    if (buff == NULL) {
+        return;
+    }
+    const vs_format_frame_based_desc_t *desc = (const vs_format_frame_based_desc_t *) buff;
+#ifdef CONFIG_UVC_PRINT_DESC
+    printf("\t*** VS Format Frame-Based Descriptor ***\n");
+#ifdef CONFIG_UVC_PRINT_DESC_VERBOSE
+    printf("\tbLength 0x%x\n", desc->bLength);
+    printf("\tbDescriptorType 0x%x\n", desc->bDescriptorType);
+    printf("\tbDescriptorSubType 0x%x\n", desc->bDescriptorSubType);
+#endif
+    printf("\tbFormatIndex 0x%x\n", desc->bFormatIndex);
+    printf("\tbNumFrameDescriptors %u\n", desc->bNumFrameDescriptors);
+    printf("\tguidFormat %.*s\n", 16, desc->guidFormat);
+    printf("\tbDefaultFrameIndex %u\n", desc->bDefaultFrameIndex);
+#ifdef CONFIG_UVC_PRINT_DESC_VERBOSE
+    printf("\tbAspectRatioX %u\n", desc->bAspectRatioX);
+    printf("\tbAspectRatioY %u\n", desc->bAspectRatioY);
+    printf("\tbmInterlaceFlags 0x%x\n", desc->bmInterlaceFlags);
+    printf("\tbCopyProtect %u\n", desc->bCopyProtect);
+#endif
+#endif
+    if (format_idx) {
+        *format_idx = desc->bFormatIndex;
+    }
+    if (frame_num) {
+        *frame_num = desc->bNumFrameDescriptors;
+    }
+    if (fmt) {
+        *fmt = uvc_frame_format_for_guid(desc->guidFormat);
+    }
+}
+
+void parse_vs_frame_frame_based_desc(const uint8_t *buff, uint8_t *frame_idx, uint16_t *width, uint16_t *heigh, uint8_t *interval_type, const uint32_t **pp_interval, uint32_t *dflt_interval)
+{
+    if (buff == NULL) {
+        return;
+    }
+    const vs_frame_frame_based_desc_t *desc = (const vs_frame_frame_based_desc_t *) buff;
+#ifdef CONFIG_UVC_PRINT_DESC
+    printf("\t*** VS Frame-Based Frame Descriptor ***\n");
+#ifdef CONFIG_UVC_PRINT_DESC_VERBOSE
+    printf("\tbLength 0x%x\n", desc->bLength);
+    printf("\tbDescriptorType 0x%x\n", desc->bDescriptorType);
+    printf("\tbDescriptorSubType 0x%x\n", desc->bDescriptorSubType);
+#endif
+    printf("\tbFrameIndex 0x%x\n", desc->bFrameIndex);
+#ifdef CONFIG_UVC_PRINT_DESC_VERBOSE
+    printf("\tbmCapabilities 0x%x\n", desc->bmCapabilities);
+#endif
+    printf("\twWidth %u\n", desc->wWidth);
+    printf("\twHeigh %u\n", desc->wHeigh);
+#ifdef CONFIG_UVC_PRINT_DESC_VERBOSE
+    printf("\tdwMinBitRate %"PRIu32"\n", desc->dwMinBitRate);
+    printf("\tdwMaxBitRate %"PRIu32"\n", desc->dwMaxBitRate);
+    printf("\tdwDefaultFrameInterval %"PRIu32"\n", desc->dwDefaultFrameInterval);
+    printf("\tbFrameIntervalType %u\n", desc->bFrameIntervalType);
+    printf("\tdwBytesPerLine %"PRIu32"\n", desc->dwBytesPerLine);
+#endif
+
+    if (desc->bFrameIntervalType == 0) {
+        // Continuous Frame Intervals
+        printf("\tdwMinFrameInterval %"PRIu32"\n",  desc->dwMinFrameInterval);
+        printf("\tdwMaxFrameInterval %"PRIu32"\n",  desc->dwMaxFrameInterval);
+        printf("\tdwFrameIntervalStep %"PRIu32"\n", desc->dwFrameIntervalStep);
+    } else {
+        // Discrete Frame Intervals
+        size_t num_of_intervals = (desc->bLength - 26) / 4;
+        assert(num_of_intervals == desc->bFrameIntervalType);  // num_of_intervals should same as bFrameIntervalType
         uint32_t *interval = (uint32_t *)&desc->dwFrameInterval;
         for (int i = 0; i < num_of_intervals; ++i) {
             printf("\tFrameInterval[%d] %"PRIu32"\n", i, interval[i]);

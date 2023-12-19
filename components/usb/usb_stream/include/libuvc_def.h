@@ -87,6 +87,8 @@ enum uvc_frame_format {
     UVC_FRAME_FORMAT_SBGGR8,
     /** YUV420: NV12 */
     UVC_FRAME_FORMAT_NV12,
+    /** YUV: P010 */
+    UVC_FRAME_FORMAT_P010,
     /** Number of formats understood */
     UVC_FRAME_FORMAT_COUNT,
 };

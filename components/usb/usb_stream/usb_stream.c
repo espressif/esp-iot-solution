@@ -411,6 +411,7 @@ typedef struct {
 typedef struct {
     _stream_ifc_t *vs_ifc;
     _uvc_stream_handle_t *uvc_stream_hdl;
+    enum uvc_frame_format frame_format;
     uint8_t format_index;
     // dynamic values should be protect
     uvc_frame_size_t *frame_size;
@@ -800,10 +801,12 @@ static esp_err_t _update_config_from_descriptor(const usb_config_desc_t *cfg_des
     int offset = 0;
     bool already_next = false;
     uint16_t wTotalLength = cfg_desc->wTotalLength;
-    /* flags indicate if required format and frame found */
-    bool mjpeg_format_found = false;
-    uint8_t mjpeg_format_idx = 0;
-    uint8_t mjpeg_frame_num = 0;
+    /* flags indicate if required setting format and frame found */
+    bool format_set_found = false;
+    uint8_t format_idx = 0;
+    uint8_t frame_num = 0;
+    enum uvc_frame_format format = UVC_FRAME_FORMAT_UNKNOWN;
+    /* flags user definded frame found */
     bool user_frame_found = false;
     uint8_t user_frame_idx = 0;
     /* flags indicate if suitable audio stream interface found */
@@ -968,19 +971,26 @@ static esp_err_t _update_config_from_descriptor(const usb_config_desc_t *cfg_des
                         print_uvc_header_desc((const uint8_t *)next_desc, VIDEO_SUBCLASS_STREAMING);
                         break;
                     case VIDEO_CS_ITF_VS_FORMAT_MJPEG:
-                        parse_vs_format_mjpeg_desc((const uint8_t *)next_desc, &mjpeg_format_idx, &mjpeg_frame_num);
+                        if (usb_dev->uvc_cfg.format != UVC_FORMAT_MJPEG) {
+                            break;
+                        }
+                        parse_vs_format_mjpeg_desc((const uint8_t *)next_desc, &format_idx, &frame_num, &format);
                         if (uvc_dev) {
                             uvc_frame_size_t *frame_size = uvc_dev->frame_size;
-                            frame_size = (uvc_frame_size_t *)heap_caps_realloc(frame_size, mjpeg_frame_num * sizeof(uvc_frame_size_t), MALLOC_CAP_DEFAULT);
+                            frame_size = (uvc_frame_size_t *)heap_caps_realloc(frame_size, frame_num * sizeof(uvc_frame_size_t), MALLOC_CAP_DEFAULT);
                             UVC_CHECK(frame_size, "alloc uvc frame size failed", ESP_ERR_NO_MEM);
                             UVC_ENTER_CRITICAL();
-                            uvc_dev->frame_num = mjpeg_frame_num;
+                            uvc_dev->frame_num = frame_num;
                             uvc_dev->frame_size = frame_size;
+                            uvc_dev->frame_format = format;
                             UVC_EXIT_CRITICAL();
                         }
-                        mjpeg_format_found = true;
+                        format_set_found = true;
                         break;
                     case VIDEO_CS_ITF_VS_FRAME_MJPEG: {
+                        if (usb_dev->uvc_cfg.format != UVC_FORMAT_MJPEG) {
+                            break;
+                        }
                         uint8_t interval_type = 0;
                         const uint32_t *pp_interval = NULL;
                         uint32_t dflt_interval = 0;
@@ -989,6 +999,89 @@ static esp_err_t _update_config_from_descriptor(const usb_config_desc_t *cfg_des
                         uint32_t step_interval = 0;
                         uint32_t final_interval = 0;
                         parse_vs_frame_mjpeg_desc((const uint8_t *)next_desc, &_frame_idx, &_frame_width, &_frame_heigh, &interval_type, &pp_interval, &dflt_interval);
+                        if (interval_type) {
+                            min_interval = pp_interval[0];
+                            for (size_t i = 0; i < interval_type; i++) {
+                                if (usb_dev->uvc_cfg.frame_interval == pp_interval[i]) {
+                                    final_interval = pp_interval[i];
+                                }
+                                if (pp_interval[i] > max_interval) {
+                                    max_interval = pp_interval[i];
+                                }
+                                if (pp_interval[i] < min_interval) {
+                                    min_interval = pp_interval[i];
+                                }
+                            }
+                        } else {
+                            min_interval = pp_interval[0];
+                            max_interval = pp_interval[1];
+                            step_interval = pp_interval[2];
+                            if (usb_dev->uvc_cfg.frame_interval >= min_interval && usb_dev->uvc_cfg.frame_interval <= max_interval) {
+                                for (uint32_t i = min_interval; i < max_interval; i += step_interval) {
+                                    if (usb_dev->uvc_cfg.frame_interval >= i && usb_dev->uvc_cfg.frame_interval < (i + step_interval)) {
+                                        final_interval = i;
+                                    }
+                                }
+                            }
+                        }
+                        if (final_interval == 0) {
+                            final_interval = dflt_interval;
+                            ESP_LOGD(TAG, "UVC frame interval %" PRIu32 " not found, using default = %" PRIu32, usb_dev->uvc_cfg.frame_interval, final_interval);
+                        } else {
+                            ESP_LOGD(TAG, "UVC frame interval %" PRIu32 " found = %" PRIu32, usb_dev->uvc_cfg.frame_interval, final_interval);
+                        }
+                        if (uvc_dev) {
+                            assert((_frame_idx - 1) < uvc_dev->frame_num); //should not happen
+                            UVC_ENTER_CRITICAL();
+                            uvc_dev->frame_size[_frame_idx - 1].width = _frame_width;
+                            uvc_dev->frame_size[_frame_idx - 1].height = _frame_heigh;
+                            uvc_dev->frame_size[_frame_idx - 1].interval = final_interval;
+                            uvc_dev->frame_size[_frame_idx - 1].interval_min = min_interval;
+                            uvc_dev->frame_size[_frame_idx - 1].interval_max = max_interval;
+                            uvc_dev->frame_size[_frame_idx - 1].interval_step = step_interval;
+                            UVC_EXIT_CRITICAL();
+                        }
+                        if (user_frame_found == true) {
+                            break;
+                        }
+                        if (((_frame_width == usb_dev->uvc_cfg.frame_width) || (FRAME_RESOLUTION_ANY == usb_dev->uvc_cfg.frame_width))
+                                && ((_frame_heigh == usb_dev->uvc_cfg.frame_height) || (FRAME_RESOLUTION_ANY == usb_dev->uvc_cfg.frame_height))) {
+                            user_frame_found = true;
+                            user_frame_idx = _frame_idx;
+                        } else if ((_frame_width == usb_dev->uvc_cfg.frame_height) && (_frame_heigh == usb_dev->uvc_cfg.frame_width)) {
+                            ESP_LOGW(TAG, "found width*heigh %u * %u , orientation swap?", _frame_heigh, _frame_width);
+                        }
+                        break;
+                    }
+                    case VIDEO_CS_ITF_VS_FORMAT_FRAME_BASED:
+                        if (usb_dev->uvc_cfg.format != UVC_FORMAT_FRAME_BASED) {
+                            break;
+                        }
+                        parse_vs_format_frame_based_desc((const uint8_t *)next_desc, &format_idx, &frame_num, &format);
+                        if (uvc_dev) {
+                            uvc_frame_size_t *frame_size = uvc_dev->frame_size;
+                            frame_size = (uvc_frame_size_t *)heap_caps_realloc(frame_size, frame_num * sizeof(uvc_frame_size_t), MALLOC_CAP_DEFAULT);
+                            UVC_CHECK(frame_size, "alloc uvc frame size failed", ESP_ERR_NO_MEM);
+                            UVC_ENTER_CRITICAL();
+                            uvc_dev->frame_num = frame_num;
+                            uvc_dev->frame_size = frame_size;
+                            uvc_dev->frame_format = format;
+                            UVC_EXIT_CRITICAL();
+                        }
+                        format_set_found = true;
+                        break;
+                    case VIDEO_CS_ITF_VS_FRAME_FRAME_BASED: {
+                        if (usb_dev->uvc_cfg.format != UVC_FORMAT_FRAME_BASED) {
+                            break;
+                        }
+                        uint8_t interval_type = 0;
+                        const uint32_t *pp_interval = NULL;
+                        uint32_t dflt_interval = 0;
+                        uint32_t max_interval = 0;
+                        uint32_t min_interval = 0;
+                        uint32_t step_interval = 0;
+                        uint32_t final_interval = 0;
+                        parse_vs_frame_frame_based_desc((const uint8_t *)next_desc, &_frame_idx, &_frame_width, &_frame_heigh, &interval_type, &pp_interval, &dflt_interval);
                         if (interval_type) {
                             min_interval = pp_interval[0];
                             for (size_t i = 0; i < interval_type; i++) {
@@ -1337,15 +1430,15 @@ static esp_err_t _update_config_from_descriptor(const usb_config_desc_t *cfg_des
             ESP_LOGW(TAG, "VS Interface(MPS <= %d) NOT found", USB_EP_ISOC_IN_MAX_MPS);
             ESP_LOGW(TAG, "Try with first alt-interface config");
         }
-        if (mjpeg_format_found) {
-            ESP_LOGI(TAG, "Actual MJPEG format index = %u, contains %u frames", mjpeg_format_idx, mjpeg_frame_num);
-            uvc_dev->format_index = mjpeg_format_idx;
+        if (format_set_found) {
+            ESP_LOGI(TAG, "Actual %s format index, format index = %u, contains %u frames", usb_dev->uvc_cfg.format == UVC_FORMAT_FRAME_BASED ? "Frame Based" : "MJPEG", format_idx, frame_num);
+            uvc_dev->format_index = format_idx;
         } else if (usb_dev->uvc_cfg.format_index) {
-            ESP_LOGW(TAG, "MJPEG format NOT found");
+            ESP_LOGW(TAG, "Setting format: %d NOT found", usb_dev->uvc_cfg.format);
             ESP_LOGW(TAG, "Try with user's config");
             uvc_dev->format_index = usb_dev->uvc_cfg.format_index;
         } else {
-            ESP_LOGE(TAG, "MJPEG format NOT found");
+            ESP_LOGE(TAG, "Setting format: %d NOT found", usb_dev->uvc_cfg.format);
             // We treat MJPEG format as mandatory
             vs_intf_found = false;
         }
@@ -1353,9 +1446,9 @@ static esp_err_t _update_config_from_descriptor(const usb_config_desc_t *cfg_des
             UVC_ENTER_CRITICAL();
             uvc_dev->frame_index = user_frame_idx;
             UVC_EXIT_CRITICAL();
-            ESP_LOGI(TAG, "Actual MJPEG width*heigh: %u*%u, frame index = %u", usb_dev->uvc_cfg.frame_width, usb_dev->uvc_cfg.frame_height, user_frame_idx);
+            ESP_LOGI(TAG, "Actual Frame: %d, width*heigh: %u*%u, frame index = %u", uvc_dev->frame_format, usb_dev->uvc_cfg.frame_width, usb_dev->uvc_cfg.frame_height, user_frame_idx);
         } else if (usb_dev->uvc_cfg.frame_index) {
-            ESP_LOGW(TAG, "MJPEG width*heigh: %u*%u, NOT found", usb_dev->uvc_cfg.frame_width, usb_dev->uvc_cfg.frame_height);
+            ESP_LOGW(TAG, "Frame: %d, width*heigh: %u*%u, NOT found", uvc_dev->frame_format, usb_dev->uvc_cfg.frame_width, usb_dev->uvc_cfg.frame_height);
             ESP_LOGW(TAG, "Try with user's config");
             UVC_ENTER_CRITICAL();
             uvc_dev->frame_index = usb_dev->uvc_cfg.frame_index;
@@ -1364,7 +1457,7 @@ static esp_err_t _update_config_from_descriptor(const usb_config_desc_t *cfg_des
             UVC_EXIT_CRITICAL();
         } else {
             // No suitable frame found, we need suspend UVC interface during start
-            ESP_LOGW(TAG, "MJPEG width*heigh: %u*%u, NOT found", usb_dev->uvc_cfg.frame_width, usb_dev->uvc_cfg.frame_height);
+            ESP_LOGW(TAG, "Frame: %d, width*heigh: %u*%u, NOT found", uvc_dev->frame_format, usb_dev->uvc_cfg.frame_width, usb_dev->uvc_cfg.frame_height);
             vs_intf_found = false;
         }
     }
@@ -2006,6 +2099,7 @@ static uvc_error_t uvc_stream_open_ctrl(uvc_device_handle_t *devh, _uvc_stream_h
     strmh->outbuf = s_usb_dev.uvc_cfg.xfer_buffer_a;
     strmh->holdbuf = s_usb_dev.uvc_cfg.xfer_buffer_b;
     strmh->frame.data = s_usb_dev.uvc_cfg.frame_buffer;
+    strmh->frame_format = s_usb_dev.uvc->frame_format;
 
     strmh->cb_mutex = xSemaphoreCreateMutex();
 
@@ -2049,7 +2143,6 @@ static uvc_error_t uvc_stream_start(_uvc_stream_handle_t *strmh, uvc_frame_callb
     strmh->fid = 0;
     strmh->pts = 0;
     strmh->last_scr = 0;
-    strmh->frame_format = UVC_FRAME_FORMAT_MJPEG;
     strmh->user_cb = cb;
     strmh->user_ptr = user_ptr;
 
@@ -2444,7 +2537,7 @@ static esp_err_t _uvc_streaming_resume(void)
     frame_size.width = uvc_dev->frame_width;
     frame_size.height = uvc_dev->frame_height;
     UVC_EXIT_CRITICAL();
-    ESP_LOGI(TAG, "Probe Format(%u) MJPEG, Frame(%u) %u*%u, interval(%"PRIu32")", ctrl_set.bFormatIndex,
+    ESP_LOGI(TAG, "Probe Format(%u), Frame(%u) %u*%u, interval(%"PRIu32")", ctrl_set.bFormatIndex,
              ctrl_set.bFrameIndex, frame_size.width, frame_size.height, ctrl_set.dwFrameInterval);
     ESP_LOGI(TAG, "Probe payload size = %"PRIu32, ctrl_set.dwMaxPayloadTransferSize);
     esp_err_t ret = _uvc_vs_commit_control(&ctrl_set, &ctrl_probed);
@@ -2456,6 +2549,7 @@ static esp_err_t _uvc_streaming_resume(void)
     uvc_error_t uvc_ret = UVC_SUCCESS;
     uvc_ret = uvc_stream_open_ctrl(NULL, &uvc_dev->uvc_stream_hdl, &ctrl_probed);
     UVC_CHECK(uvc_ret == UVC_SUCCESS, "open uvc stream failed", ESP_FAIL);
+
     uvc_ret = uvc_stream_start(uvc_dev->uvc_stream_hdl, s_usb_dev.uvc_cfg.frame_cb, s_usb_dev.uvc_cfg.frame_cb_arg, 0);
     UVC_CHECK_GOTO(uvc_ret == UVC_SUCCESS, "start uvc stream failed", free_stream_);
     if (uvc_dev->vs_ifc->xfer_type == UVC_XFER_ISOC) {
@@ -3495,6 +3589,7 @@ esp_err_t uvc_streaming_config(const uvc_config_t *config)
     UVC_CHECK(config != NULL, "config can't NULL", ESP_ERR_INVALID_ARG);
     UVC_CHECK((config->frame_interval >= FRAME_MIN_INTERVAL && config->frame_interval <= FRAME_MAX_INTERVAL),
               "frame_interval Support 333333~2000000", ESP_ERR_INVALID_ARG);
+    UVC_CHECK(config->format < UVC_FORMAT_MAX, "format can't larger than UVC_FORMAT_MAX", ESP_ERR_INVALID_ARG);
     UVC_CHECK(config->frame_height != 0, "frame_height can't 0", ESP_ERR_INVALID_ARG);
     UVC_CHECK(config->frame_width != 0, "frame_width can't 0", ESP_ERR_INVALID_ARG);
     UVC_CHECK(config->frame_buffer_size != 0, "frame_buffer_size can't 0", ESP_ERR_INVALID_ARG);
