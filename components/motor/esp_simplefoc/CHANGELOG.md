@@ -1,5 +1,10 @@
 # ChangeLog
 
+## v0.1.2 - 2023-12-11
+### Bug Fix:
+* FOC:
+    * Fix mcpwm's comparator configuration not initializing interrupt priority.
+
 ## v0.1.1 - 2023-12-4
 ### Enhancements:
 * FOC:

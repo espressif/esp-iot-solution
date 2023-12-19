@@ -308,7 +308,8 @@ int BLDCDriver3PWM::init()
             ESP_ERROR_CHECK(mcpwm_operator_connect_timer(oper[i], timer));
         }
 
-        mcpwm_comparator_config_t comparator_config;
+        mcpwm_comparator_config_t comparator_config = {0};
+        comparator_config.intr_priority = 0;
         comparator_config.flags.update_cmp_on_tez = true;
         comparator_config.flags.update_cmp_on_tep = false;
         comparator_config.flags.update_cmp_on_sync = false;
@@ -433,7 +434,8 @@ int BLDCDriver3PWM::init(int _mcpwm_group)
         ESP_ERROR_CHECK(mcpwm_operator_connect_timer(oper[i], timer));
     }
 
-    mcpwm_comparator_config_t comparator_config;
+    mcpwm_comparator_config_t comparator_config = {0};
+    comparator_config.intr_priority = 0;
     comparator_config.flags.update_cmp_on_tez = true;
     comparator_config.flags.update_cmp_on_tep = false;
     comparator_config.flags.update_cmp_on_sync = false;
