@@ -33,7 +33,7 @@ static size_t before_free_32bit;
 uint32_t delay_gap_begin = 0;
 uint32_t delay_gap_end = 0;
 
-static IRAM_ATTR int square_event_cb(zero_detect_event_t zero_detect_event, zero_detect_cb_param_t *param)  //User's callback API
+static IRAM_ATTR void square_event_cb(zero_detect_event_t zero_detect_event, zero_detect_cb_param_t *param, void *usr_data)  //User's callback API
 {
     switch (zero_detect_event) {
     case SIGNAL_FREQ_OUT_OF_RANGE:
@@ -60,10 +60,9 @@ static IRAM_ATTR int square_event_cb(zero_detect_event_t zero_detect_event, zero
     default:
         break;
     }
-    return zero_detect_event;
 }
 
-static IRAM_ATTR int pulse_event_cb(zero_detect_event_t zero_detect_event, zero_detect_cb_param_t *param)  //User's callback API
+static IRAM_ATTR void pulse_event_cb(zero_detect_event_t zero_detect_event, zero_detect_cb_param_t *param, void *usr_data)  //User's callback API
 {
     switch (zero_detect_event) {
     case SIGNAL_FREQ_OUT_OF_RANGE:
@@ -84,7 +83,6 @@ static IRAM_ATTR int pulse_event_cb(zero_detect_event_t zero_detect_event, zero_
     default:
         break;
     }
-    return zero_detect_event;
 }
 
 TEST_CASE("custom_zero_cross_detection_test", "[zero_cross_detecion][iot][pulse]")
@@ -99,13 +97,12 @@ TEST_CASE("custom_zero_cross_detection_test", "[zero_cross_detecion][iot][pulse]
     gpio_ll_set_level(&GPIO, 5, 1);
     gpio_config(&io_conf);
 
-    static zero_detect_handle_t *g_zcds;
+    static zero_detect_handle_t g_zcds = NULL;
     zero_detect_config_t config = ZERO_DETECTION_INIT_CONFIG_DEFAULT(); //Default parameter
     config.capture_pin = 2;
     config.freq_range_max_hz = 65;  //Hz
     config.freq_range_min_hz = 45;  //Hz
     config.valid_time = 6;
-    config.event_callback = pulse_event_cb;     //Create callback
     config.zero_signal_type = PULSE_WAVE;
 #if defined(SOC_MCPWM_SUPPORTED)
     config.zero_driver_type = MCPWM_TYPE;
@@ -115,6 +112,8 @@ TEST_CASE("custom_zero_cross_detection_test", "[zero_cross_detecion][iot][pulse]
 
     g_zcds = zero_detect_create(&config);
     TEST_ASSERT_NOT_EQUAL(NULL, g_zcds);
+
+    zero_detect_register_cb(g_zcds, pulse_event_cb, NULL);
 
     for (int i = 0; i < 100; i++) {
         delay_gap_begin = esp_timer_get_time();
@@ -143,18 +142,19 @@ TEST_CASE("custom_zero_cross_detection_test", "[zero_cross_detecion][iot][square
     gpio_ll_set_level(&GPIO, 5, 1);
     gpio_config(&io_conf);
 
-    static zero_detect_handle_t *g_zcds;
+    static zero_detect_handle_t g_zcds = NULL;
     zero_detect_config_t config = ZERO_DETECTION_INIT_CONFIG_DEFAULT(); //Default parameter
     config.capture_pin = 2;
     config.freq_range_max_hz = 65;  //Hz
     config.freq_range_min_hz = 45;  //Hz
     config.valid_time = 6;
-    config.event_callback = square_event_cb;     //Create callback
     config.zero_signal_type = SQUARE_WAVE;
     config.zero_driver_type = GPIO_TYPE;
 
     g_zcds = zero_detect_create(&config);
     TEST_ASSERT_NOT_EQUAL(NULL, g_zcds);
+
+    zero_detect_register_cb(g_zcds, square_event_cb, NULL);
 
     for (int i = 0; i < 100; i++) {
         delay_gap_begin = esp_timer_get_time();

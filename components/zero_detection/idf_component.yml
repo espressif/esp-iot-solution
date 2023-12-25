@@ -1,6 +1,9 @@
-version: "0.0.1"
+version: "0.0.2"
 description: Zero Cross Detection Driver
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/zero_detection
+repository: https://github.com/espressif/esp-iot-solution.git
+documentation: https://docs.espressif.com/projects/esp-iot-solution/en/latest/others/zero_detection.html
+issues: https://github.com/espressif/esp-iot-solution/issues
 dependencies:
   idf: ">=5.0"
   espressif/cmake_utilities: "0.*"
