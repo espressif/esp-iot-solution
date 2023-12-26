@@ -35,7 +35,8 @@ typedef struct zero_cross {
     double freq_range_max_us;      //Tick value calculated after the user inputs the frequency
     double freq_range_min_us;
 
-    esp_zero_detect_cb_t event_callback;
+    zero_cross_cb_t event_callback; //Zero cross event callback
+    void *user_data;                //User's data when regsister for callback
 
     mcpwm_cap_timer_handle_t cap_timer;
     mcpwm_cap_channel_handle_t cap_chan;
@@ -90,7 +91,7 @@ void zero_cross_handle_interrupt(void *user_data, const mcpwm_capture_event_data
                     param.signal_valid_event_data.valid_count = zero_cross_dev->valid_count;
                     param.signal_valid_event_data.full_cycle_us = zero_cross_dev->full_cycle_us;
                     param.signal_valid_event_data.cap_edge = MCPWM_CAP_EDGE_POS;
-                    zero_cross_dev->event_callback(SIGNAL_VALID, &param);
+                    zero_cross_dev->event_callback(SIGNAL_VALID, &param, zero_cross_dev->user_data);
                 }
             }
         }
@@ -99,7 +100,7 @@ void zero_cross_handle_interrupt(void *user_data, const mcpwm_capture_event_data
             param.signal_rising_edge_event_data.valid_count = zero_cross_dev->valid_count;
             param.signal_rising_edge_event_data.invalid_count = zero_cross_dev->invalid_count;
             param.signal_rising_edge_event_data.full_cycle_us = zero_cross_dev->full_cycle_us;
-            zero_cross_dev->event_callback(SIGNAL_RISING_EDGE, &param);
+            zero_cross_dev->event_callback(SIGNAL_RISING_EDGE, &param, zero_cross_dev->user_data);
         }
     } else if (!edge_status) {
         if (zero_cross_dev->zero_signal_type == SQUARE_WAVE) {  //The falling edge is only used with square wave signals
@@ -118,7 +119,7 @@ void zero_cross_handle_interrupt(void *user_data, const mcpwm_capture_event_data
                         param.signal_valid_event_data.valid_count = zero_cross_dev->valid_count;
                         param.signal_valid_event_data.full_cycle_us = zero_cross_dev->full_cycle_us;
                         param.signal_valid_event_data.cap_edge = MCPWM_CAP_EDGE_NEG;
-                        zero_cross_dev->event_callback(SIGNAL_VALID, &param);
+                        zero_cross_dev->event_callback(SIGNAL_VALID, &param, zero_cross_dev->user_data);
                     }
                 }
             }
@@ -128,7 +129,7 @@ void zero_cross_handle_interrupt(void *user_data, const mcpwm_capture_event_data
             param.signal_falling_edge_event_data.valid_count = zero_cross_dev->valid_count;
             param.signal_falling_edge_event_data.invalid_count = zero_cross_dev->invalid_count;
             param.signal_falling_edge_event_data.full_cycle_us = zero_cross_dev->full_cycle_us;
-            zero_cross_dev->event_callback(SIGNAL_FALLING_EDGE, &param);
+            zero_cross_dev->event_callback(SIGNAL_FALLING_EDGE, &param, zero_cross_dev->user_data);
         }
     }
 
@@ -147,7 +148,7 @@ void zero_cross_handle_interrupt(void *user_data, const mcpwm_capture_event_data
                     } else {
                         param.signal_invalid_event_data.cap_edge = MCPWM_CAP_EDGE_NEG;
                     }
-                    zero_cross_dev->event_callback(SIGNAL_INVALID, &param);
+                    zero_cross_dev->event_callback(SIGNAL_INVALID, &param, zero_cross_dev->user_data);
                 }
             }
             if (zero_cross_dev->event_callback && (zero_cross_dev->cap_val_end_of_sample != 0) && (zero_cross_dev->cap_val_begin_of_sample != 0)) {
@@ -158,7 +159,7 @@ void zero_cross_handle_interrupt(void *user_data, const mcpwm_capture_event_data
                     param.signal_freq_event_data.cap_edge = MCPWM_CAP_EDGE_NEG;
                 }
                 param.signal_freq_event_data.full_cycle_us = zero_cross_dev->full_cycle_us;
-                zero_cross_dev->event_callback(SIGNAL_FREQ_OUT_OF_RANGE, &param);
+                zero_cross_dev->event_callback(SIGNAL_FREQ_OUT_OF_RANGE, &param, zero_cross_dev->user_data);
             }
         }
     }
@@ -188,8 +189,9 @@ static IRAM_ATTR bool zero_source_power_invalid_cb(gptimer_handle_t timer, const
     zero_cross_dev->cap_val_end_of_sample = 0;
     zero_cross_dev->valid_count = 0;
     zero_cross_dev->zero_singal_invaild = 0;
-    zero_cross_dev->event_callback(SIGNAL_LOST, NULL);
-
+    if (zero_cross_dev->event_callback) {
+        zero_cross_dev->event_callback(SIGNAL_LOST, NULL, zero_cross_dev->user_data);
+    }
     return false;
 }
 #else
@@ -202,7 +204,9 @@ void IRAM_ATTR zero_source_power_invalid_cb(void *arg)
     zero_cross_dev->cap_val_end_of_sample = 0;
     zero_cross_dev->valid_count = 0;
     zero_cross_dev->zero_singal_invaild = 0;
-    zero_cross_dev->event_callback(SIGNAL_LOST, NULL);
+    if (zero_cross_dev->event_callback) {
+        zero_cross_dev->event_callback(SIGNAL_LOST, NULL, zero_cross_dev->user_data);
+    }
 }
 #endif
 
@@ -370,7 +374,6 @@ zero_detect_handle_t zero_detect_create(zero_detect_config_t *config)
     zcd->freq_range_max_us = 1000000 / config->freq_range_min_hz;
     zcd->freq_range_min_us = 1000000 / config->freq_range_max_hz;
     zcd->capture_pin = config->capture_pin;
-    zcd->event_callback = config->event_callback;
     zcd->zero_signal_type = config->zero_signal_type;
 #if defined(SOC_MCPWM_SUPPORTED)
     zcd->zero_driver_type = config->zero_driver_type;
@@ -460,6 +463,21 @@ err:
     return ret;
 }
 
+esp_err_t zero_detect_register_cb(zero_detect_handle_t zcd_handle, zero_cross_cb_t cb, void *usr_data)
+{
+    esp_err_t ret = ESP_OK;
+    if (zcd_handle == NULL || cb == NULL) {
+        ESP_LOGW(TAG, "arg is invalid");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    zero_cross_dev_t *zcd = (zero_cross_dev_t *)zcd_handle;
+    zcd->user_data = usr_data;
+    zcd->event_callback = cb;
+
+    return ret;
+}
+
 void zero_show_data(zero_detect_handle_t zcd_handle)
 {
     zero_cross_dev_t *zcd = (zero_cross_dev_t *)zcd_handle;
@@ -480,6 +498,12 @@ bool zero_detect_get_power_status(zero_detect_handle_t zcd_handle)
 {
     zero_cross_dev_t *zcd = (zero_cross_dev_t *)zcd_handle;
     return zcd->zero_source_power_invalid;
+}
+
+zero_signal_type_t zero_detect_get_signal_type(zero_detect_handle_t zcd_handle)
+{
+    zero_cross_dev_t *zcd = (zero_cross_dev_t *)zcd_handle;
+    return zcd->zero_signal_type;
 }
 
 bool zero_detect_signal_invaild_status(zero_detect_handle_t zcd_handle)

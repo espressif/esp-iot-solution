@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.0.2 - 2023-12-26
+
+### Enhancements:
+
+- add register callback function and get signal type function
+
 ## v0.0.1 - 2023-11-28
 
 First release version.

@@ -34,7 +34,6 @@ extern "C" {
     .freq_range_min_hz = 45,\
     .freq_range_max_hz = 65,\
     .capture_pin = 2,\
-    .event_callback = NULL,\
     .zero_signal_type = SQUARE_WAVE,\
     .zero_driver_type = GPIO_TYPE,\
 }
@@ -121,7 +120,7 @@ typedef union {
 /**
  * @brief Callback format
  */
-typedef int (*esp_zero_detect_cb_t)(zero_detect_event_t zero_detect_event, zero_detect_cb_param_t *param);
+typedef void (*zero_cross_cb_t)(zero_detect_event_t zero_detect_event, zero_detect_cb_param_t *param, void *usr_data);
 
 /**
  * @brief User config data type
@@ -134,7 +133,6 @@ typedef struct {
     zero_driver_type_t zero_driver_type;          /*!< Zero crossing driver type */
     double freq_range_max_hz;       /*!< Maximum value of the frequency range when determining a valid signal */
     double freq_range_min_hz;       /*!< Minimum value of the frequency range when determining a valid signal */
-    esp_zero_detect_cb_t event_callback; /*!< Various event returns in zero cross detection */
 } zero_detect_config_t;
 
 typedef void *zero_detect_handle_t;
@@ -189,6 +187,30 @@ bool zero_detect_get_power_status(zero_detect_handle_t zcd_handle);
  *      - false Signal is vaild
  */
 bool zero_detect_singal_invaild_status(zero_detect_handle_t zcd_handle);
+
+/**
+ * @brief Get singal type
+ *
+ * @param zcd_handle A zero detect handle
+ *
+ * @return
+ *      - SQUARE_WAVE Signal type is square
+ *      - PULSE_WAVE  Signal type is pulse
+ */
+zero_signal_type_t zero_detect_get_signal_type(zero_detect_handle_t zcd_handle);
+
+/**
+ * @brief Register zero cross detection callback
+ *
+ * @param zcd_handle A zero detect handle
+ * @param cb A callback function
+ * @param usr_data User data
+ *
+ * @return
+ *      - ESP_OK  Success
+ *      - ESP_FAIL Failure
+ */
+esp_err_t zero_detect_register_cb(zero_detect_handle_t zcd_handle, zero_cross_cb_t cb, void *usr_data);
 
 #endif
 

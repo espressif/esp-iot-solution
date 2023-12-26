@@ -39,7 +39,7 @@ static zero_cross_relay_t zcd = ZERO_DETECTION_RELAY_CONFIG_DEFAULT(); //Default
 static zero_detect_handle_t *g_zcds;
 zero_detect_config_t config = ZERO_DETECTION_INIT_CONFIG_DEFAULT(); //Default parameter
 
-int zero_detection_event_cb(zero_detect_event_t zero_detect_event, zero_detect_cb_param_t *param)  //User's callback API
+void zero_detection_event_cb(zero_detect_event_t zero_detect_event, zero_detect_cb_param_t *param, void *usr_data)  //User's callback API
 {
     switch (zero_detect_event) {
     case SIGNAL_FREQ_OUT_OF_RANGE:
@@ -121,7 +121,6 @@ int zero_detection_event_cb(zero_detect_event_t zero_detect_event, zero_detect_c
     default:
         break;
     }
-    return zero_detect_event;
 }
 
 esp_err_t relay_on_off(bool on_off)
@@ -137,7 +136,6 @@ void app_main(void)
     config.freq_range_max_hz = 65;  //Hz
     config.freq_range_min_hz = 45;  //Hz
     config.valid_time = 6;
-    config.event_callback = zero_detection_event_cb;     //Create callback
     config.zero_signal_type = CONFIG_ZERO_DETECT_SIGNAL_TYPE;
 #if defined(SOC_MCPWM_SUPPORTED)
     config.zero_driver_type = MCPWM_TYPE;
@@ -156,6 +154,7 @@ void app_main(void)
     io_conf.pull_up_en = 0;
     gpio_ll_set_level(&GPIO, zcd.control_pin, !zcd.relay_active_level);
     gpio_config(&io_conf);
+    zero_detect_register_cb(g_zcds, zero_detection_event_cb, NULL);
 
     while (1) {
         vTaskDelay(500 / portTICK_PERIOD_MS);
