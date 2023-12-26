@@ -9,7 +9,7 @@
 	* 1 x display (2.8 inches, 240x320 pixels, ILI9341 LCD + XPT2046 Touchscreen)
 - Software: 
 	* [esp-iot-solution](https://github.com/espressif/esp-iot-solution)
-	* [LittlevGL GUI](https://littlevgl.com/)
+	* [LittlevGL GUI](https://lvgl.io/)
 
 - Setup: see [README.md](../../../README.md#preparation)
 
