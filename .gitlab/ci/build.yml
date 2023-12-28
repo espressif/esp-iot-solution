@@ -338,6 +338,16 @@ build_example_motor_foc_velocity_control:
   variables:
     EXAMPLE_DIR: examples/motor/foc_velocity_control
 
+build_example_motor_foc_knob:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_motor_foc_knob
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.0
+  variables:
+    EXAMPLE_DIR: examples/motor/foc_knob_example
+
 build_example_ota_simple_ota_example:
   extends:
     - .build_examples_template
