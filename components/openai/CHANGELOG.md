@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v0.3.1 - 2023-12-29
+
+### Enhancements
+
+* Fix infinite loop of TTS read
+* Update Error message
+
 ## v0.3.0 - 2023-12-4
 
 ### Enhancements

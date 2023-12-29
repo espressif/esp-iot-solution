@@ -86,7 +86,7 @@ char *getJsonError(cJSON *json)
     if (!cJSON_IsObject(json)) {
         char *jsonStr = cJSON_Print(json);
         char *errorMsg = NULL;
-        asprintf(&errorMsg, "Response is not an object! %s", jsonStr);
+        asprintf(&errorMsg, "\"code\": Response is not an object! %s", jsonStr);
         OPENAI_ERROR_CHECK(errorMsg != NULL, "asprintf failed!", NULL);
         free(jsonStr);
         return errorMsg;
@@ -96,21 +96,22 @@ char *getJsonError(cJSON *json)
         if (!cJSON_IsObject(error)) {
             char *jsonStr = cJSON_Print(error);
             char *errorMsg = NULL;
-            asprintf(&errorMsg, "Error is not an object! %s", jsonStr);
+            asprintf(&errorMsg, "\"code\": Error is not an object! %s", jsonStr);
             OPENAI_ERROR_CHECK(errorMsg != NULL, "asprintf failed!", NULL);
             free(jsonStr);
             return errorMsg;
         }
-        if (!cJSON_HasObjectItem(error, "message")) {
+        if (!cJSON_HasObjectItem(error, "code")) {
             char *jsonStr = cJSON_Print(error);
             char *errorMsg = NULL;
-            asprintf(&errorMsg, "Error does not contain message! %s", jsonStr);
+            asprintf(&errorMsg, "\"code\": Error does not contain code! %s", jsonStr);
             OPENAI_ERROR_CHECK(errorMsg != NULL, "asprintf failed!", NULL);
             free(jsonStr);
             return errorMsg;
         }
-        cJSON *error_message = cJSON_GetObjectItem(error, "message");
-        char *errorMsg = strdup(cJSON_GetStringValue(error_message));
+        cJSON *error_code = cJSON_GetObjectItem(error, "code");
+        char *errorMsg = NULL;
+        asprintf(&errorMsg, "\"code\": %s!", cJSON_GetStringValue(error_code));
         return errorMsg;
     }
     return NULL;
@@ -1889,7 +1890,7 @@ static OpenAI_SpeechResponse_t *OpenAI_SpeechResponseCreate(char *payload, size_
 {
     _OpenAI_SpeechResponse_t  *_audioSpeech = (_OpenAI_SpeechResponse_t *)calloc(1, sizeof(_OpenAI_SpeechResponse_t));
     OPENAI_ERROR_CHECK(NULL != _audioSpeech, "calloc failed!", NULL);
-    if (payload == NULL) {
+    if (payload == NULL || 0 == dataLength) {
         return &_audioSpeech->parent;
     }
 
@@ -2082,7 +2083,11 @@ static char *OpenAI_AudioTranscriptionFile(OpenAI_AudioTranscription_t *audioTra
     result = NULL;
     char *error = getJsonError(json);
     if (error != NULL) {
-        ESP_LOGE(TAG, "%s", error);
+        if (strcmp(error, "cJSON_Parse failed!") == 0) {
+            free(error);
+            error = NULL;
+        }
+        result = error;
     } else {
         if (cJSON_HasObjectItem(json, "text")) {
             cJSON *text = cJSON_GetObjectItem(json, "text");
@@ -2454,18 +2459,17 @@ static char *OpenAI_Speech_Request(const char *base_url, const char *api_key, co
         esp_http_client_get_chunk_length(client, &content_length);
     }
     ESP_LOGD(TAG, "chunk_length=%d", content_length); //4096
-    OPENAI_ERROR_CHECK_GOTO(content_length >= 0, "HTTP client fetch headers failed!", end);
+    OPENAI_ERROR_CHECK_GOTO(content_length > 0, "HTTP client fetch headers failed!", end);
 
+    int read_len = 0;
     *output_len = 0;
-    int i = 0;
-    while (false == esp_http_client_is_complete_data_received(client)) {
+    do {
         result = (char *)realloc(result, *output_len + content_length + 1);
         OPENAI_ERROR_CHECK_GOTO(result != NULL, "Chunk Data reallocated Failed", end);
-        int read = esp_http_client_read_response(client, result + (int) * output_len, content_length);
-        *output_len += read;
-        ESP_LOGD(TAG, "HTTP_READ:=%d", read);
-        i++;
-    }
+        read_len = esp_http_client_read_response(client, result + (int) * output_len, content_length);
+        *output_len += read_len;
+        ESP_LOGD(TAG, "HTTP_READ:=%d", read_len);
+    } while (read_len > 0);
     ESP_LOGD(TAG, "output_len: %d\n", (int)*output_len);
 
 end:
