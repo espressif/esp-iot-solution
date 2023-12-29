@@ -39,10 +39,6 @@
     - pip install idf_build_apps
     - python tools/build_apps.py ${EXAMPLE_DIR} --config ${EXAMPLE_CONFIG} -t all -vv
 
-#
-# example build jobs
-#
-
 build_example_audio_wav_player:
   extends:
     - .build_examples_template
@@ -527,10 +523,6 @@ build_example_utilities_xz_decompress_file:
   variables:
     EXAMPLE_DIR: examples/utilities/xz_decompress_file
 
-#
-# components build jobs
-#
-
 build_components_button_test_apps:
   extends:
     - .build_examples_template
@@ -745,6 +737,7 @@ build_components_usb_usb_stream_test_apps:
     matrix:
       - IMAGE: espressif/idf:release-v4.4
       - IMAGE: espressif/idf:release-v5.0
+      - IMAGE: espressif/idf:latest
   variables:
     EXAMPLE_DIR: components/usb/usb_stream/test_apps
 
@@ -769,10 +762,6 @@ build_components_usb_iot_usbh_cdc_test_apps:
       - IMAGE: espressif/idf:release-v5.0
   variables:
     EXAMPLE_DIR: components/usb/iot_usbh_cdc/test_apps
-
-#
-# tools build jobs
-#
 
 build_components_led_lightbulb_driver_test_apps:
   extends:

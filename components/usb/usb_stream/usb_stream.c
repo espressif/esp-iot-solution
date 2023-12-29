@@ -22,6 +22,9 @@
 #include "esp_attr.h"
 #include "esp_log.h"
 #include "hcd.h"
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
+#include "hal/usb_dwc_ll.h"
+#endif
 #include "usb/usb_types_stack.h"
 #include "usb/usb_types_ch9.h"
 #include "usb/usb_helpers.h"
@@ -460,8 +463,21 @@ typedef struct {
     int periodic_out_mps;
 } fifo_mps_limits_t;
 
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
+const fifo_mps_limits_t mps_limits_default = {
+    .in_mps = (USB_DWC_FIFO_RX_LINES_DEFAULT - 2) * 4,
+    .non_periodic_out_mps = USB_DWC_FIFO_NPTX_LINES_DEFAULT * 4,
+    .periodic_out_mps = USB_DWC_FIFO_PTX_LINES_DEFAULT * 4,
+};
+const fifo_mps_limits_t mps_limits_bias_rx = {
+    .in_mps = (USB_DWC_FIFO_RX_LINES_BIASRX - 2) * 4,
+    .non_periodic_out_mps = USB_DWC_FIFO_NPTX_LINES_BIASRX * 4,
+    .periodic_out_mps = USB_DWC_FIFO_PTX_LINES_BIASRX * 4,
+};
+#else
 extern const fifo_mps_limits_t mps_limits_default;
 extern const fifo_mps_limits_t mps_limits_bias_rx;
+#endif
 
 typedef struct {
     // const user config values

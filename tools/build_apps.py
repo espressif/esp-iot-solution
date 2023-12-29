@@ -23,6 +23,11 @@ IGNORE_WARNINGS = [
     r'The current IDF version does not support using the gptimer API',
     r'DeprecationWarning: pkg_resources is deprecated as an API',
     r'\'ADC_ATTEN_DB_11\' is deprecated',
+    r'warning: unknown kconfig symbol \'ESP32S2_DEFAULT_CPU_FREQ_160\' assigned to*',
+    r'warning: unknown kconfig symbol \'ESP32S2_DEFAULT_CPU_FREQ_240\' assigned to*',
+    r'warning: unknown kconfig symbol \'ESP32S3_DEFAULT_CPU_FREQ_160\' assigned to*',
+    r'warning: unknown kconfig symbol \'ESP32S3_DEFAULT_CPU_FREQ_240\' assigned to*',
+    r'warning: unknown kconfig symbol \'FATFS_LONG_FILENAMES\' assigned to \'y\' in /builds/ae_group/esp-iot-solution/components/usb/usb_stream/test_apps/*',
 ]
 
 def _get_idf_version():
