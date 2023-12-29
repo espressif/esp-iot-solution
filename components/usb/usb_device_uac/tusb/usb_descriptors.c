@@ -27,16 +27,6 @@
 #include "tusb.h"
 #include "usb_descriptors.h"
 
-/* A combination of interfaces must have a unique product id, since PC will save device driver after the first plug.
- * Same VID/PID with different interface e.g MSC (first), then CDC (later) will possibly cause system error on PC.
- *
- * Auto ProductID layout's Bitmap:
- *   [MSB]     AUDIO | MIDI | HID | MSC | CDC          [LSB]
- */
-#define _PID_MAP(itf, n)  ( (CFG_TUD_##itf) << (n) )
-#define USB_PID           (0x4000 | _PID_MAP(CDC, 0) | _PID_MAP(MSC, 1) | _PID_MAP(HID, 2) | \
-    _PID_MAP(MIDI, 3) | _PID_MAP(AUDIO, 4) | _PID_MAP(VENDOR, 5) )
-
 //--------------------------------------------------------------------+
 // Device Descriptors
 //--------------------------------------------------------------------+
@@ -52,8 +42,8 @@ tusb_desc_device_t const desc_device = {
     .bDeviceProtocol    = MISC_PROTOCOL_IAD,
     .bMaxPacketSize0    = CFG_TUD_ENDPOINT0_SIZE,
 
-    .idVendor           = 0x303A,
-    .idProduct          = USB_PID,
+    .idVendor           = CONFIG_TUSB_VID,
+    .idProduct          = CONFIG_TUSB_PID,
     .bcdDevice          = 0x0100,
 
     .iManufacturer      = 0x01,
@@ -80,9 +70,14 @@ uint8_t const *tud_descriptor_device_cb(void)
 uint8_t const desc_configuration[] = {
     // Config number, interface count, string index, total length, attribute, power in mA
     TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, CONFIG_TOTAL_LEN, 0x00, 100),
-
     // Interface number, string index, EP Out & EP In address, EP size
-    TUD_AUDIO_HEADSET_STEREO_DESCRIPTOR(2, EPNUM_AUDIO_OUT, EPNUM_AUDIO_IN)
+#if CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX && CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX
+    TUD_AUDIO_MIC_SPEAK_DESCRIPTOR(2, EPNUM_AUDIO_OUT, EPNUM_AUDIO_IN)
+#elif CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX
+    TUD_AUDIO_MIC_DESCRIPTOR(1, EPNUM_AUDIO_IN)
+#elif CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX
+    TUD_AUDIO_SPEAK_DESCRIPTOR(1, EPNUM_AUDIO_OUT)
+#endif
 };
 
 // Invoked when received GET CONFIGURATION DESCRIPTOR
@@ -101,9 +96,9 @@ uint8_t const *tud_descriptor_configuration_cb(uint8_t index)
 // array of pointer to string descriptors
 char const *string_desc_arr [] = {
     (const char[]) { 0x09, 0x04 },  // 0: is supported language is English (0x0409)
-    "Espressif",                    // 1: Manufacturer
-    "headset",                      // 2: Product
-    "000001",                       // 3: Serials, should use chip ID
+    CONFIG_TUSB_MANUFACTURER,                    // 1: Manufacturer
+    CONFIG_TUSB_PRODUCT,                      // 2: Product
+    CONFIG_TUSB_SERIAL_NUM,                       // 3: Serials, should use chip ID
     "speakers",                     // 4: Audio Interface
     "microphone",                   // 5: Audio Interface
 };
@@ -122,7 +117,6 @@ uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid)
         memcpy(&_desc_str[1], string_desc_arr[0], 2);
         chr_count = 1;
     } else {
-        // Convert ASCII string into UTF-16
 
         if (!(index < sizeof(string_desc_arr) / sizeof(string_desc_arr[0]))) {
             return NULL;

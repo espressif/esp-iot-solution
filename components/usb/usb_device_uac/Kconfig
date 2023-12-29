@@ -1,0 +1,49 @@
+menu "USB Device UAC"
+
+    config TUSB_VID
+        hex "USB Device VID"
+        default 0x303A
+
+    config TUSB_PID
+        hex "USB Device PID"
+        default 0x8000
+
+    config TUSB_MANUFACTURER
+        string "USB Device Manufacture"
+        default "Espressif"
+
+    config TUSB_PRODUCT
+        string "Product Name"
+        default "ESP UAC Device"
+
+    config TUSB_SERIAL_NUM
+        string "Product ID"
+        default "12345678"
+
+    config UAC_SPEAKER_CHANNEL_NUM
+        int "UAC Speaker channel number"
+        range 0 8
+        default 1
+
+    config UAC_MIC_CHANNEL_NUM
+        int "UAC mic channel number"
+        range 0 4
+        default 2
+
+    config UAC_SAMPLE_RATE
+        int "UAC sample rate"
+        default 48000
+
+    config UAC_SPK_INTERVAL
+        int "UAC SPK interval"
+        default 10
+        help
+            SPK: The interval of reading data from UAC device, in ms. Batch fetching data helps reduce latency at the slave end.
+
+    config UAC_MIC_INTERVAL
+        int "UAC MIC interval"
+        default 10
+        help
+            MIC: The interval of writing data to UAC device, in ms. Batch fetching data helps reduce latency at the slave end.
+
+endmenu
