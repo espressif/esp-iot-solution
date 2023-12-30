@@ -115,7 +115,7 @@ esp_err_t aht20_read_temperature_humidity(aht20_dev_handle_t handle,
         raw_data += buf[3];
         raw_data = raw_data >> 4;
         *humidity_raw = raw_data;
-        *humidity = (float)raw_data * 100 / 1048576;
+        *humidity = (float)raw_data * 100 / 1048575;
 
         raw_data = buf[3] & 0x0F;
         raw_data = raw_data << 8;
@@ -123,7 +123,7 @@ esp_err_t aht20_read_temperature_humidity(aht20_dev_handle_t handle,
         raw_data = raw_data << 8;
         raw_data += buf[5];
         *temperature_raw = raw_data;
-        *temperature = (float)raw_data * 200 / 1048576 - 50;
+        *temperature = (float)raw_data * 200 / 1048575 - 50;
         return ESP_OK;
     } else {
         ESP_LOGI(TAG, "data is not ready");
