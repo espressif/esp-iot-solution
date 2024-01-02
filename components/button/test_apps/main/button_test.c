@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+/* SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -172,6 +172,10 @@ TEST_CASE("gpio button test", "[button][iot]")
     iot_button_register_cb(g_btns[0], BUTTON_LONG_PRESS_START, button_long_press_start_cb, NULL);
     iot_button_register_cb(g_btns[0], BUTTON_LONG_PRESS_HOLD, button_long_press_hold_cb, NULL);
     iot_button_register_cb(g_btns[0], BUTTON_PRESS_REPEAT_DONE, button_press_repeat_done_cb, NULL);
+
+    uint8_t level = 0;
+    level = iot_button_get_key_level(g_btns[0]);
+    ESP_LOGI(TAG, "button level is %d", level);
 
     while (1) {
         vTaskDelay(pdMS_TO_TICKS(1000));
@@ -699,6 +703,19 @@ void tearDown(void)
 
 void app_main(void)
 {
-    printf("USB STREAM TEST \n");
+    /*
+    * ____          _    _                  _______          _
+    *|  _ \        | |  | |                |__   __|        | |
+    *| |_) | _   _ | |_ | |_  ___   _ __      | |  ___  ___ | |_
+    *|  _ < | | | || __|| __|/ _ \ | '_ \     | | / _ \/ __|| __|
+    *| |_) || |_| || |_ | |_| (_) || | | |    | ||  __/\__ \| |_
+    *|____/  \__,_| \__| \__|\___/ |_| |_|    |_| \___||___/ \__|
+    */
+    printf("  ____          _    _                  _______          _   \n");
+    printf(" |  _ \\        | |  | |                |__   __|        | |  \n");
+    printf(" | |_) | _   _ | |_ | |_  ___   _ __      | |  ___  ___ | |_ \n");
+    printf(" |  _ < | | | || __|| __|/ _ \\ | '_ \\     | | / _ \\/ __|| __|\n");
+    printf(" | |_) || |_| || |_ | |_| (_) || | | |    | ||  __/\\__ \\| |_ \n");
+    printf(" |____/  \\__,_| \\__| \\__|\\___/ |_| |_|    |_| \\___||___/ \\__|\n");
     unity_run_menu();
 }

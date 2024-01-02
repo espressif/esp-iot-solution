@@ -5,14 +5,14 @@
 
 按键组件实现了 GPIO 和 ADC 两种按键，并允许同时创建两种不同的按键。下图显示了两种按键的硬件设计：
 
-.. figure:: ../../_static/button_hardware.png
+.. figure:: ../../_static/input_device/button/button_hardware.png
     :width: 650
 
 - GPIO 按键优点有：每一个按键占用独立的 IO，之间互不影响，稳定性高；缺点有：按键数量多时占用太多 IO 资源。
 
 - ADC 按键优点有：可多个按键共用一个 ADC 通道，占用 IO 资源少；缺点有：不能同时按下多按键，当按键因氧化等因素导致闭合电阻增大时，容易误触，稳定性不高。
 
-.. note:: 
+.. note::
 
     - GPIO 按键需注意上下拉问题，组件内部会启用芯片内部的上下拉电阻，但是在仅支持输入的 IO 内部没有电阻， **需要外部连接**。
     - ADC 按键需注意电压不能超过 ADC 量程。
@@ -184,7 +184,7 @@ Button 组件支持为多个事件注册回调函数，每个事件都可以注�
 - 多个回调函数写法
 
     .. code:: C
-        
+
         static void button_long_press_1_cb(void *arg,void *usr_data)
         {
             ESP_LOGI(TAG, "BUTTON_LONG_PRESS_START_1");
@@ -212,7 +212,7 @@ Button 组件支持为多个事件注册回调函数，每个事件都可以注�
     button_event_t event;
     event = iot_button_get_event(button_handle);
 
-动态修改按键默认值 
+动态修改按键默认值
 ^^^^^^^^^^^^^^^^^^
 
 .. code:: c
@@ -221,6 +221,66 @@ Button 组件支持为多个事件注册回调函数，每个事件都可以注�
 
 低功耗支持
 ^^^^^^^^^^^
+
+在 light_sleep 模式下，esp_timer 定时器会定时触发，导致 cpu 整体功耗居高不下。为了解决这个问题，button 组件提供了低功耗模式。
+
+所需配置：
+
+- 打开 `CONFIG_GPIO_BUTTON_SUPPORT_POWER_SAVE` 选项， 会在组件中增加低功耗相关代码
+- 确保创建的所有按键类型为 GPIO 按键， 并且都开启了 `enable_power_save`，如存在其他按键，会导致低功耗模式失效
+
+.. Note:: 该功能只保证 Button 组件只在使用中才唤醒 CPU, 不保证 CPU 一定会进入低功耗模式
+
+功耗对比：
+
+- 未开启低功耗模式，按下一次按键
+
+    .. figure:: ../../_static/input_device/button/button_one_press.png
+        :align: center
+        :width: 70%
+        :alt: 未开启低功耗模式，一次按下
+
+- 开启低功耗模式，按下一次按键
+
+    .. figure:: ../../_static/input_device/button/button_power_save_one_press.png
+        :align: center
+        :width: 70%
+        :alt: 开启低功耗模式，一次按下
+
+因为 GPIO 唤醒 CPU, 仅支持电平触发，所以当按键为工作电平时，CPU 会支持的被唤醒，取决于按下去的时长，因此在低功耗模式下，单次按下的平均电流高于未开启低功耗模式。但是在大的工作周期中，会比未开启低功耗模式更加省电。
+
+- 未开启低功耗模式下，在 4s 内按下三次按键
+
+    .. figure:: ../../_static/input_device/button/button_three_press_4s.png
+        :align: center
+        :width: 70%
+        :alt: 非低功耗模式下，在 4s 内按下三次按键
+
+- 低功耗模式下，在 4s 内按下三次按键
+
+    .. figure:: ../../_static/input_device/button/button_power_save_three_press_4s.png
+        :align: center
+        :width: 70%
+        :alt: 低功耗模式下，在 4s 内按下三次按键
+
+如图，低功耗模式下更加的省电。
+
+.. code:: c
+
+    button_config_t btn_cfg = {
+        .type = BUTTON_TYPE_GPIO,
+        .gpio_button_config = {
+            .gpio_num = button_num,
+            .active_level = BUTTON_ACTIVE_LEVEL,
+            .enable_power_save = true,
+        },
+    };
+    button_handle_t btn = iot_button_create(&btn_cfg);
+
+开启和关闭
+^^^^^^^^^^^^^
+
+组件支持在任意时刻开启和关闭。
 
 .. code:: c
 

@@ -9,7 +9,7 @@ menu "IoT Button"
 
     config BUTTON_DEBOUNCE_TICKS
         int "BUTTON DEBOUNCE TICKS"
-        range 1 8
+        range 1 7
         default 2
         help
             "One CONFIG_BUTTON_DEBOUNCE_TICKS equal to CONFIG_BUTTON_PERIOD_TIME_MS"
@@ -34,6 +34,16 @@ menu "IoT Button"
         default 20
         help
             "Serial trigger interval"
+
+    config GPIO_BUTTON_SUPPORT_POWER_SAVE
+        bool "GPIO BUTTON SUPPORT POWER SAVE"
+        default n
+        help
+            Enable GPIO button power save
+
+            The function enables the use of GPIO buttons during light sleep,
+            but enabling this function prevents the simultaneous use of other
+            types of buttons.
 
     config ADC_BUTTON_MAX_CHANNEL
         int "ADC BUTTON MAX CHANNEL"

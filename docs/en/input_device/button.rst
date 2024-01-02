@@ -5,16 +5,16 @@
 
 The button component supports GPIO and ADC mode, and it allows the creation of two different kinds of the button at the same time. The following figure shows the hardware design of the button:
 
-.. figure:: ../../_static/button_hardware.png
+.. figure:: ../../_static/input_device/button/button_hardware.png
     :width: 650
 
 - GPIO button: The advantage of the GPIO button is that each button occupies an independent IO and therefore does not affect each other, and has high stability however when the number of buttons increases, it may take too many IO resources.
-- ADC button: The advantage of using the ADC button is that one ADC channel can share multiple buttons and occupy fewer IO resources. The disadvantages include that you cannot press multiple buttons at the same time, and instability increases due to increase in the closing resistance of the button due to oxidation and other factors. 
+- ADC button: The advantage of using the ADC button is that one ADC channel can share multiple buttons and occupy fewer IO resources. The disadvantages include that you cannot press multiple buttons at the same time, and instability increases due to increase in the closing resistance of the button due to oxidation and other factors.
 
-.. note:: 
+.. note::
 
     - The GPIO button needs to pay attention to the problem of pull-up and pull-down resistor inside the chip, which will be enabled by default. But there is no such resistor inside the IO that only supports input, **external connection requires**.
-    - The voltage of the ADC button should not exceed the ADC range. 
+    - The voltage of the ADC button should not exceed the ADC range.
 
 Button event
 ------------
@@ -53,7 +53,7 @@ Triggering conditions for each button event are enlisted in the table below:
 
 Each button supports **call-back** and **pooling** mode.
 
-- Call-back: Each event of a button can register a call-back function for it, and the call-back function will be called when an event is generated. This method has high efficiency and real-time performance, and no events will be lost. 
+- Call-back: Each event of a button can register a call-back function for it, and the call-back function will be called when an event is generated. This method has high efficiency and real-time performance, and no events will be lost.
 - Polling: Periodically call :c:func:`iot_button_get_event` in the program to query the current event of the button. This method is easy to use and is suitable for occasions with simple tasks
 
 .. note:: you can also combine the above two methods.
@@ -70,9 +70,9 @@ Configuration
 
 - BUTTON_DEBOUNCE_TICKS : debounce time
 
-- BUTTON_SHORT_PRESS_TIME_MS : short press down effective time 
+- BUTTON_SHORT_PRESS_TIME_MS : short press down effective time
 
-- BUTTON_LONG_PRESS_TIME_MS : long press down effective time 
+- BUTTON_LONG_PRESS_TIME_MS : long press down effective time
 
 - ADC_BUTTON_MAX_CHANNEL : maximum number of channel for ADC
 
@@ -161,8 +161,8 @@ Create a button
             ESP_LOGE(TAG, "Button create failed");
         }
 
-Register call-back 
-^^^^^^^^^^^^^^^^^^^
+Register callback function
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The Button component supports registering callback functions for multiple events, with each event capable of having its own callback function. When an event occurs, the callback function will be invoked.
 
@@ -186,7 +186,7 @@ In this context:
 - And here's an example involving multiple callback functions:
 
     .. code:: C
-        
+
         static void button_long_press_1_cb(void *arg,void *usr_data)
         {
             ESP_LOGI(TAG, "BUTTON_LONG_PRESS_START_1");
@@ -223,6 +223,64 @@ Find an event
 
 Low power
 ^^^^^^^^^^^
+
+In light_sleep mode, the `esp_timer` triggers periodically, resulting in sustained high overall CPU power consumption. To address this issue, the button component offers a low-power mode.
+
+Configuration Required:
+
+- Enable the `CONFIG_GPIO_BUTTON_SUPPORT_POWER_SAVE` option to include low-power-related code in the component.
+- Ensure all created buttons type are GPIO type and have `enable_power_save` activated. The presence of other buttons may render the low-power mode ineffective.
+
+.. Note:: This feature ensures that the Button component only wakes up the CPU when in use, but does not guarantee the CPU will always enter low-power mode.
+
+Power Consumption Comparison:
+
+- Without enabling low-power mode, pressing the button once:
+
+    .. figure:: ../../_static/input_device/button/button_one_press.png
+        :align: center
+        :width: 70%
+        :alt: Without enabling low-power mode, a single press
+
+- With low-power mode enabled, pressing the button once:
+
+    .. figure:: ../../_static/input_device/button/button_power_save_one_press.png
+        :align: center
+        :width: 70%
+        :alt: With low-power mode enabled, a single press
+
+Because GPIO wakes up the CPU, supporting only level triggering, the CPU is awakened only when the button is at its operating level. Therefore, in low-power mode, the average current during a single press is higher than when low-power mode is not enabled, depending on the duration of the button press. However, over larger operational periods, it saves more power than when low-power mode is not enabled.
+
+- Without enabling low-power mode, pressing the button three times within 4 seconds:
+
+    .. figure:: ../../_static/input_device/button/button_three_press_4s.png
+        :align: center
+        :width: 70%
+
+- With low-power mode enabled, pressing the button three times within 4 seconds:
+
+    .. figure:: ../../_static/input_device/button/button_power_save_three_press_4s.png
+        :align: center
+        :width: 70%
+
+As shown, low-power mode results in more power savings.
+
+.. code:: c
+
+    button_config_t btn_cfg = {
+        .type = BUTTON_TYPE_GPIO,
+        .gpio_button_config = {
+            .gpio_num = button_num,
+            .active_level = BUTTON_ACTIVE_LEVEL,
+            .enable_power_save = true,
+        },
+    };
+    button_handle_t btn = iot_button_create(&btn_cfg);
+
+Stop and resume
+^^^^^^^^^^^^^^^^^
+
+The component supports being turned on and off at any given moment.
 
 .. code:: c
 

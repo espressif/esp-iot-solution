@@ -1,0 +1,11 @@
+# Enable support for power management
+CONFIG_PM_ENABLE=y
+# Enable tickless idle mode
+CONFIG_FREERTOS_USE_TICKLESS_IDLE=y
+# Put related source code in IRAM
+CONFIG_PM_SLP_IRAM_OPT=y
+CONFIG_PM_RTOS_IDLE_OPT=y
+# Use 1000Hz freertos tick to lower sleep time threshold
+CONFIG_FREERTOS_HZ=1000
+# For button power save
+CONFIG_GPIO_BUTTON_SUPPORT_POWER_SAVE=y

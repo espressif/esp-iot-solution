@@ -1,5 +1,12 @@
 # ChangeLog
 
+
+## v3.2.0 - 2023-11-13
+
+### Enhancements:
+
+* The power consumption of GPIO buttons is lower during light sleep mode.
+
 ## v3.1.3 - 2023-11-13
 
 * Resolved issue 'ADC_ATTEN_DB_11 is deprecated'.
