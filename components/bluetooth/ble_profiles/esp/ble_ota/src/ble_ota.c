@@ -630,7 +630,7 @@ void esp_ble_ota_send_ack_data(ble_ota_ack_type_t ack_type, uint16_t ack_status,
     switch (ack_type) {
     case BLE_OTA_CMD_ACK:
         cmd_ack[0] = (BLE_OTA_ACK_CMD & 0xff);
-        cmd_ack[1] = (BLE_OTA_ACK_CMD & 0xff) >> 8;
+        cmd_ack[1] = (BLE_OTA_ACK_CMD & 0xff00) >> 8;
 
         cmd_ack[2] = (ack_param & 0xff);
         cmd_ack[3] = (ack_param & 0xff00) >> 8;
@@ -646,13 +646,13 @@ void esp_ble_ota_send_ack_data(ble_ota_ack_type_t ack_type, uint16_t ack_status,
         break;
     case BLE_OTA_FW_ACK:
         cmd_ack[0] = (ack_param & 0xff);
-        cmd_ack[1] = (ack_param & 0xff) >> 8;
+        cmd_ack[1] = (ack_param & 0xff00) >> 8;
 
         cmd_ack[2] = (ack_status & 0xff);
         cmd_ack[3] = (ack_status & 0xff00) >> 8;
 
         cmd_ack[4] = (cur_sector & 0xff);
-        cmd_ack[5] = (cur_sector & 0xff) >> 8;
+        cmd_ack[5] = (cur_sector & 0xff00) >> 8;
 
         crc16 = crc16_ccitt(cmd_ack, 18);
         cmd_ack[18] = crc16 & 0xff;

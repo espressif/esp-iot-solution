@@ -58,3 +58,8 @@
 ## v0.1.10 - 2023-11-23
 
 * Fix possible cmake_utilities dependency issue
+
+## v0.1.11 - 2024-01-02
+
+* BLE-OTA:
+  * Fixed ble ota packet index issue.
