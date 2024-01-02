@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.3.1 - 2023-12-29
+
+### Bug Fixes:
+
+1. Fix link error under ESP-IDF 5.3
+
 ## v1.3.0 - 2023-12-14
 
 * Support UVC frame type: frame based, which can be used to transmit H264 streams.
