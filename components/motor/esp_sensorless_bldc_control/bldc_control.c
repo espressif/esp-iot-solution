@@ -24,7 +24,6 @@ typedef struct {
     SemaphoreHandle_t xSemaphore;     /*!< semaphore handle */
     control_param_t control_param;
     control_mode_t control_mode;      /*!< control mode */
-    alignment_mode_t alignment_mode;  /*!< alignment mode */
     speed_mode_t speed_mode;          /*!< speed mode */
     pid_ctrl_block_handle_t pid;
     uint8_t (*change_phase)(void *handle);
@@ -130,7 +129,7 @@ esp_err_t bldc_control_init(bldc_control_handle_t *handle, bldc_control_config_t
         goto deinit;
         break;
     }
-    control->alignment_mode = config->alignment_mode;
+    control->control_param.alignment_mode = config->alignment_mode;
 
     switch (config->control_mode) {
     case BLDC_SIX_STEP:
@@ -180,7 +179,7 @@ esp_err_t bldc_control_deinit(bldc_control_handle_t *handle)
     BLDC_CHECK(control != NULL, "control is NULL", ESP_ERR_INVALID_ARG);
     esp_err_t err = ESP_OK;
 
-    switch (control->alignment_mode) {
+    switch (control->control_param.alignment_mode) {
     case ALIGNMENT_COMPARER:
         err = bldc_zero_cross_comparer_deinit(control->zero_cross_handle);
         BLDC_CHECK(err == ESP_OK, "bldc_zero_cross_comparer_deinit failed", ESP_FAIL);
@@ -220,7 +219,7 @@ esp_err_t bldc_control_start(bldc_control_handle_t *handle, uint32_t expect_Spee
         break;
     }
 
-    switch (control->alignment_mode) {
+    switch (control->control_param.alignment_mode) {
     case ALIGNMENT_COMPARER:
         bldc_zero_cross_comparer_start(control->zero_cross_handle);
         break;
@@ -267,7 +266,7 @@ esp_err_t bldc_control_stop(bldc_control_handle_t *handle)
         break;
     }
 
-    switch (control->alignment_mode) {
+    switch (control->control_param.alignment_mode) {
     case ALIGNMENT_COMPARER:
         break;
 #if CONFIG_SOC_MCPWM_SUPPORTED
@@ -361,7 +360,6 @@ static esp_err_t bldc_control_operation(void *handle)
         if (--control->delayCnt <= 0) {
             if (control->change_phase(control->change_phase_handle) == 1) {
                 control->control_param.status = ALIGNMENT;
-                ESP_LOGI(TAG, "INJECT OK\n");
             }
             control->delayCnt = control->control_param.charge_time;
         }
@@ -400,7 +398,10 @@ static esp_err_t bldc_control_operation(void *handle)
         if (control->control_param.phase_cnt != control->control_param.phase_cnt_prev) {
             control->delayCnt--;
         }
-        control->zero_cross(control->zero_cross_handle);
+
+        if (control->zero_cross(control->zero_cross_handle) == 1) {
+            control->delayCnt = control->control_param.filter_delay;
+        }
 
         if (control->control_param.filter_failed_count > 15000) {
             control->control_param.filter_failed_count = 0;
@@ -411,18 +412,12 @@ static esp_err_t bldc_control_operation(void *handle)
             bldc_control_dispatch_event(BLDC_CONTROL_BLOCKED, NULL, 0);
         } else if (control->delayCnt <= 0) {
             control->change_phase(control->change_phase_handle);
-            control->delayCnt = control->control_param.filter_delay;
         }
 
         if (control->speed_mode == SPEED_CLOSED_LOOP) {
             float duty = 0;
             int32_t a = control->control_param.expect_speed_rpm - control->control_param.speed_rpm;
             pid_compute(control->pid, (float)(a), &duty);
-            if (duty < PWM_DUTYCYCLE_20 && duty >= 0) {
-                duty = PWM_DUTYCYCLE_20;
-            } else if (duty > -PWM_DUTYCYCLE_20 && duty < 0) {
-                duty = -PWM_DUTYCYCLE_20;
-            }
             control->control_param.duty = abs((int)duty);
         }
 

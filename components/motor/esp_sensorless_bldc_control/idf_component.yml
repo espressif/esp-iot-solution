@@ -1,4 +1,4 @@
-version: 0.1.0
+version: 0.2.0
 description: ESP32 Sensorless BLDC Control Component
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/motor/esp_sensorless_bldc_control
 repository: https://github.com/espressif/esp-iot-solution.git

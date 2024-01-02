@@ -126,7 +126,7 @@ extern "C" {
 #define SPEED_KD (0)                             /*!< D */
 #define SPEED_MIN_INTEGRAL (- DUTY_MAX/SPEED_KI) /*!< Minimum integral saturation limit. */
 #define SPEED_MAX_INTEGRAL (DUTY_MAX/SPEED_KI)   /*!< Maximum integral saturation limit. */
-#define SPEED_MIN_OUTPUT (0)                     /*!< Minimum PWM duty cycle output. */
+#define SPEED_MIN_OUTPUT (PWM_DUTYCYCLE_20)                     /*!< Minimum PWM duty cycle output. */
 #define SPEED_MAX_OUTPUT (DUTY_MAX)              /*!< Maximum PWM duty cycle output. */
 #define SPEED_CAL_TYPE (0)                       /*!< 0 Incremental 1 Positional */
 
