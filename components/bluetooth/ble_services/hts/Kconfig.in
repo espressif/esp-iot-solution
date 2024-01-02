@@ -1,0 +1,56 @@
+# GATT Health Thermometer Service
+
+menuconfig BLE_HTS
+    bool "GATT Health Thermometer Service"
+
+if BLE_HTS
+
+choice BLE_HTS_DEFAULT_PERM
+    prompt "Default permissions used for HTS characteristics"
+    default BLE_HTS_DEFAULT_PERM_RW
+    help
+      Default permissions for HTS characteristic attributes
+      used when no permission is set for the report.
+      Used also for boot reports.
+
+config BLE_HTS_DEFAULT_PERM_RW
+    bool "Read and write allowed"
+
+config BLE_HTS_DEFAULT_PERM_RW_ENCRYPT
+    bool "Require encryption for access"
+
+config BLE_HTS_DEFAULT_PERM_RW_AUTHEN
+    bool "Require encryption and authentication for access"
+
+endchoice
+
+config BLE_HTS_TEMPERATURE_TYPE
+    bool "Temperature Type characteristic"
+    help
+      Enable Temperature Type characteristic in Health Thermometer Service.
+
+config BLE_HTS_INTERMEDIATE_TEMPERATURE
+    bool "Intermediate Temperature characteristic"
+    help
+      Enable Intermediate Temperature characteristic in Health Thermometer Service.
+
+config BLE_HTS_MEASUREMENT_INTERVAL
+    bool "Measurement Interval characteristic"
+    help
+      Enable Measurement Interval characteristic in Health Thermometer Service.
+
+config BLE_HTS_MEASUREMENT_INTERVAL_INDICATE_ENABLE
+    bool "Measurement Interval Indicate"
+    default y
+    depends on BLE_HTS_MEASUREMENT_INTERVAL
+    help
+      Set y to support indicate n to disable it.
+
+config BLE_HTS_MEASUREMENT_INTERVAL_WRITE_ENABLE
+    bool "Measurement Interval Write"
+    default y
+    depends on BLE_HTS_MEASUREMENT_INTERVAL
+    help
+      Set y to support indicate n to disable it.
+
+endif # BLE_HTS

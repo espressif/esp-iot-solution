@@ -44,6 +44,48 @@ examples/bluetooth/ble_profiles/ble_htp:
     - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3","esp32h2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
     - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3","esp32c6","esp32h2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
 
+examples/bluetooth/ble_services/ble_ans:
+  enable:
+    - if: IDF_TARGET in ["esp32","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 3)
+    - if: IDF_TARGET in ["esp32","esp32s3","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
+    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3","esp32h2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
+    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3","esp32c6","esp32h2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
+
+examples/bluetooth/ble_services/ble_bas:
+  enable:
+    - if: IDF_TARGET in ["esp32","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 3)
+    - if: IDF_TARGET in ["esp32","esp32s3","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
+    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3","esp32h2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
+    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3","esp32c6","esp32h2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
+
+examples/bluetooth/ble_services/ble_dis:
+  enable:
+    - if: IDF_TARGET in ["esp32","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 3)
+    - if: IDF_TARGET in ["esp32","esp32s3","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
+    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3","esp32h2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
+    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3","esp32c6","esp32h2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
+
+examples/bluetooth/ble_services/ble_hrs:
+  enable:
+    - if: IDF_TARGET in ["esp32","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 3)
+    - if: IDF_TARGET in ["esp32","esp32s3","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
+    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3","esp32h2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
+    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3","esp32c6","esp32h2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
+
+examples/bluetooth/ble_services/ble_hts:
+  enable:
+    - if: IDF_TARGET in ["esp32","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 3)
+    - if: IDF_TARGET in ["esp32","esp32s3","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
+    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3","esp32h2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
+    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3","esp32c6","esp32h2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
+
+examples/bluetooth/ble_services/ble_tps:
+  enable:
+    - if: IDF_TARGET in ["esp32","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 3)
+    - if: IDF_TARGET in ["esp32","esp32s3","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
+    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3","esp32h2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
+    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3","esp32c6","esp32h2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
+
 examples/bluetooth/ble_ota:
   enable:
     - if: IDF_TARGET in ["esp32","esp32s3","esp32c3"]

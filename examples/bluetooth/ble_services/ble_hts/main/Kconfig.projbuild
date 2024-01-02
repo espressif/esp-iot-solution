@@ -1,0 +1,19 @@
+menu "Example Configuration"
+    config EXAMPLE_BLE_ADV_NAME
+    string "Advertisement name"
+    default "BLE_HTS"
+    help
+      The device name inside advertisement.
+
+    config EXAMPLE_BLE_SUB_ADV
+    string "Subsequent advertisement data"
+    default "SUB_ADV"
+    help
+      The data inside subsequent advertisements.
+
+    config EXAMPLE_BLE_THERMOMETER_ROLE
+    bool "Thermometer Role"
+    depends on BLE_DIS
+    help
+      Enable Thermometer Role which instantiate one and only one Health Thermometer Service and instantiate one Device Information Service.
+endmenu

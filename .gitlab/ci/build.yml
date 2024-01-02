@@ -137,6 +137,84 @@ build_example_bluetooth_ble_htp:
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_profiles/ble_htp
 
+build_example_bluetooth_ble_services_ble_ans:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_bluetooth_ble_services
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.3
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
+      - IMAGE: espressif/idf:release-v5.1
+  variables:
+    EXAMPLE_DIR: examples/bluetooth/ble_services/ble_ans
+
+build_example_bluetooth_ble_services_ble_bas:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_bluetooth_ble_services
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.3
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
+      - IMAGE: espressif/idf:release-v5.1
+  variables:
+    EXAMPLE_DIR: examples/bluetooth/ble_services/ble_bas
+
+build_example_bluetooth_ble_services_ble_dis:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_bluetooth_ble_services
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.3
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
+      - IMAGE: espressif/idf:release-v5.1
+  variables:
+    EXAMPLE_DIR: examples/bluetooth/ble_services/ble_dis
+
+build_example_bluetooth_ble_services_ble_hrs:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_bluetooth_ble_services
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.3
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
+      - IMAGE: espressif/idf:release-v5.1
+  variables:
+    EXAMPLE_DIR: examples/bluetooth/ble_services/ble_hrs
+
+build_example_bluetooth_ble_services_ble_hts:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_bluetooth_ble_services
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.3
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
+      - IMAGE: espressif/idf:release-v5.1
+  variables:
+    EXAMPLE_DIR: examples/bluetooth/ble_services/ble_hts
+
+build_example_bluetooth_ble_services_ble_tps:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_bluetooth_ble_services
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.3
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
+      - IMAGE: espressif/idf:release-v5.1
+  variables:
+    EXAMPLE_DIR: examples/bluetooth/ble_services/ble_tps
+
 build_example_bluetooth_ble_ota:
   extends:
     - .build_examples_template
