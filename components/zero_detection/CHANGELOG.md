@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.0.3 - 2023-01-03
+
+### Bug Fix:
+
+- compile error with c++
+
 ## v0.0.2 - 2023-12-26
 
 ### Enhancements:
