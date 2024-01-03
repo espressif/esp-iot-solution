@@ -212,8 +212,8 @@ zero_signal_type_t zero_detect_get_signal_type(zero_detect_handle_t zcd_handle);
  */
 esp_err_t zero_detect_register_cb(zero_detect_handle_t zcd_handle, zero_cross_cb_t cb, void *usr_data);
 
-#endif
-
 #ifdef __cplusplus
 }
+#endif
+
 #endif
