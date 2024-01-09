@@ -214,7 +214,7 @@ Typical Connection Methods
 For the common LCD pins, the typical connection method is as follows:
 
 - **RST (RESET)**: It is recommended to connect to a GPIO pin and according to the LCD driver IC's datasheet, generate a reset timing sequence during power-on. In general, pull-up/pull-down resistors can also be used connected to the system power.
-- **Backlight (LEDA、LEDK)**: It is recommended to connect LEDA to the system power supply, and LEDK should be connected to the system power supply using switching devices. Control the on/off state through GPIO or use the LEDC peripheral to output PWM to adjust the backlight brightness.
+- **Backlight (LEDA、LEDK)**: It is recommended to connect LEDA(Anode) to the system power supply, and LEDK(Cathode) should be connected to the system power supply using switching devices. Control the on/off state through GPIO or use the LEDC peripheral to output PWM to adjust the backlight brightness.
 - **TE (Tear Effect)**: Recommend connecting to GPIO and using GPIO interrupts to obtain the TE signal for achieving frame synchronization.
 - **Power(VCC、GND)**: It is recommended to connect all to the corresponding system power sources and avoid leaving any pins floating.
 

@@ -28,6 +28,8 @@ From the above figure, it can be seen that *ST7789* uses the ``IM[3:0]`` pins to
 
     Pin Description for SPI Interface
 
+Note: SPI pin names: CS, SCK (SCL), SDA (MOSI), SDO (MISO), DC (RS).
+
 .. _spi_interface_I/II_mode:
 
 Interface I/II Mode
@@ -89,17 +91,22 @@ From the diagram, it can be seen that the main difference between "3-line" and "
   - ``3-line`` mode is sometimes referred to as ``3-wire`` or ``9-bit`` mode.
   - While ESP's SPI peripheral does not support the LCD's ``3-line`` mode, it can be implemented through software emulation. For details, please refer to the `esp_lcd_panel_io_additions <https://components.espressif.com/components/espressif/esp_lcd_panel_io_additions>`_ component. This is typically used for initializing RGB LCDs.
 
+SPI LCD Driving Process:
+------------------------------
+
+The SPI LCD driver process can be roughly divided into three parts: initializing the interface device, porting driver components, and initializing the LCD device.
+
 .. _spi_initialization_interface_device:
 
 Initialization Interface Device
 ----------------------------------
 
-The following is based on the `spi_lcd_touch <https://github.com/espressif/esp-idf/tree/v5.1/examples/peripherals/lcd/spi_lcd_touch>`_ example from ESP-IDF release/v5.1, demonstrating how to initialize an SPI interface device.
+Initializing the interface device involves first initializing the bus and then creating the interface device. The following is based on the `spi_lcd_touch <https://github.com/espressif/esp-idf/tree/v5.1/examples/peripherals/lcd/spi_lcd_touch>`_ example from ESP-IDF release/v5.1, demonstrating how to initialize an SPI interface device.
 
 Initializing the Bus
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-If multiple devices are using the same SPI bus simultaneously, the bus only needs to be initialized once. The following is an explanation of the example code:
+Example Code:
 
 .. code-block:: c
 
@@ -118,6 +125,8 @@ If multiple devices are using the same SPI bus simultaneously, the bus only need
                                               // The 1st parameter represents the SPI host ID used, consistent with subsequent interface device creation
                                               // The 3rd parameter represents the DMA channel number used, set to `SPI_DMA_CH_AUTO` by default
 
+If multiple devices are using the same SPI bus simultaneously, the bus only needs to be initialized once.
+
 The following are explanations for some configuration parameters:
 
   - If the LCD driver IC is configured in :ref:`Interface-I mode <spi_interface_I/II_mode>`, only set ``mosi_io_num`` as the data line IO, and set ``miso_io_num`` to -1.
@@ -126,7 +135,7 @@ The following are explanations for some configuration parameters:
 Creating the Interface Device
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Once the SPI bus is initialized, you can create the corresponding interface device. Each interface device corresponds to an SPI master device. The following is an explanation of the example code:
+Example Code:
 
 .. code-block:: c
 
@@ -163,7 +172,9 @@ Once the SPI bus is initialized, you can create the corresponding interface devi
     // };
     // esp_lcd_panel_io_register_event_callbacks(io_handle, &cbs, &example_user_ctx);
 
-For a more detailed explanation of the ``SPI`` interface configuration parameters, please refer to the `ESP-IDF Programming Guide <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/peripherals/lcd.html#spi-interfaced-lcd>`_.
+Once the SPI bus is initialized, you can create the corresponding interface device. Each interface device corresponds to an SPI master device.
+
+**Note:: For a more detailed explanation of the ``SPI`` interface configuration parameters**, please refer to the `ESP-IDF Programming Guide <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/peripherals/lcd.html#spi-interfaced-lcd>`_.
 
 By creating the interface device, you can obtain a handle of data type ``esp_lcd_panel_io_handle_t``, which allows you to use the following `General Interface APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_io.h>`_ to send **commands** and **image data** to the LCD driver IC:
 
@@ -220,17 +231,17 @@ The following is an explanation of the implementation of various functions in ``
 
 For most SPI LCDs, their driver IC commands and parameters are compatible with the explanations provided above. Therefore, porting can be completed through the following steps:
 
-  #. Choose an SPI LCD driver component in :ref:`LCD Driver Components <LCD_Driver_Component>` that is similar to the model you are targeting.
-  #. Consult the data sheet of the target LCD driver IC to confirm whether the commands and parameters used in each function in the selected component are consistent. If they are not consistent, you need to modify the relevant code.
-  #. Even if the model of the LCD driver IC is the same, screens from different manufacturers often require configuration with their respective initialization commands. Therefore, you need to modify the commands and parameters sent in the ``init()`` function. These initialization commands are usually stored in a static array in a specific format. Additionally, be careful not to include some special commands in the initialization commands, such as ``LCD_CMD_COLMOD (3Ah)`` and ``LCD_CMD_MADCTL (36h)``, as these commands are managed and used by the driver component.
-  #. Use the character search and replace feature in your editor to replace the LCD driver IC name in the component with the target name. For example, replace ``gc9a01`` with ``st77916``.
+#. Choose an SPI LCD driver component in :ref:`LCD Driver Components <LCD_Driver_Component>` that is similar to the model you are targeting.
+#. Consult the data sheet of the target LCD driver IC to verify the consistency of commands and parameters within each function of the selected component. If inconsistencies are identified, make appropriate modifications to the relevant code.
+#. Although the models of the LCD driver IC might be identical, different screens require specific configurations through initialization commands provided by their respective manufacturers. Therefore, you need to modify the commands and parameters sent in the ``init()`` function. These initialization commands are usually stored in a static array in a specific format. Additionally, be careful not to include some special commands in the initialization commands, such as ``LCD_CMD_COLMOD (3Ah)`` and ``LCD_CMD_MADCTL (36h)``, as these commands are managed and used by the driver component.
+#. Use the character search and replace feature in your editor to replace the LCD driver IC name in the component with the target name. For example, replace ``gc9a01`` with ``st77916``.
 
 .. _spi_init_lcd:
 
 Initializing the LCD Device
 ------------------------------
 
-First, create an LCD device and obtain a handle of data type ``esp_lcd_panel_handle_t`` using the ported driver component. Then, use the `LCD General APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ to initialize the LCD device. The following is an example code explanation using `GC9A01 <https://components.espressif.com/components/espressif/esp_lcd_gc9a01>`_:
+The following is an example code explanation using `GC9A01 <https://components.espressif.com/components/espressif/esp_lcd_gc9a01>`_:
 
 .. code-block:: c
 
@@ -273,6 +284,8 @@ First, create an LCD device and obtain a handle of data type ``esp_lcd_panel_han
     // ESP_ERROR_CHECK(esp_lcd_panel_swap_xy(panel_handle, true));
     // ESP_ERROR_CHECK(esp_lcd_panel_set_gap(panel_handle, 0, 0));
     ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(panel_handle, true));
+
+First, create an LCD device and obtain a handle of data type ``esp_lcd_panel_handle_t`` using the ported driver component. Then, use the `LCD General APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ to initialize the LCD device.
 
 Here are some explanations regarding the use of the ``esp_lcd_panel_draw_bitmap()`` function to refresh images on an SPI LCD:
 
