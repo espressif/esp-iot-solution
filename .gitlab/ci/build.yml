@@ -282,6 +282,18 @@ build_example_get_started_blink:
     EXAMPLE_DIR: examples/get-started/blink
     IMAGE: espressif/idf:release-v4.4
 
+build_example_get_started_button_power_save:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_get_started_button_power_save
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
+      - IMAGE: espressif/idf:latest
+  variables:
+    EXAMPLE_DIR: examples/get-started/button_power_save
+
 build_example_gprof_gprof_simple:
   extends:
     - .build_examples_template

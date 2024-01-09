@@ -91,6 +91,10 @@ examples/get-started/blink:
   enable:
     - if: (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4) and IDF_TARGET in ["esp32","esp32s2","esp32s3"]
 
+examples/get-started/button_power_save:
+  enable:
+    - if: INCLUDE_DEFAULT == 1
+
 examples/lighting/lightbulb:
   enable:
     - if: INCLUDE_DEFAULT == 1

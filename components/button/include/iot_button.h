@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+/* SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -267,6 +267,16 @@ uint16_t iot_button_get_long_press_hold_cnt(button_handle_t btn_handle);
  *      - ESP_ERR_INVALID_ARG   Arguments is invalid.
  */
 esp_err_t iot_button_set_param(button_handle_t btn_handle, button_param_t param, void *value);
+
+/**
+ * @brief Get button key level
+ *
+ * @param btn_handle Button handle
+ * @return
+ *      - 1 if key is pressed
+ *      - 0 if key is released or invalid button handle
+ */
+uint8_t iot_button_get_key_level(button_handle_t btn_handle);
 
 /**
  * @brief resume button timer, if button timer is stopped. Make sure iot_button_create() is called before calling this API.

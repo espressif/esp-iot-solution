@@ -304,6 +304,9 @@
 .patterns-example_get_started_blink: &patterns-example_get_started_blink
   - "examples/get-started/blink/**/*"
 
+.patterns-example_get_started_button_power_save: &patterns-example_get_started_button_power_save
+  - "examples/get-started/button_power_save/**/*"
+
 .patterns-example_lighting_lightbulb: &patterns-example_lighting_lightbulb
   - "examples/lighting/lightbulb/**/*"
 
@@ -636,6 +639,18 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-example_get_started_blink
+
+.rules:build:example_get_started_button_power_save:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_button
+    - <<: *if-dev-push
+      changes: *patterns-example_get_started_button_power_save
 
 .rules:build:example_gprof_gprof_simple:
   rules:

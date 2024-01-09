@@ -22,7 +22,15 @@ List of supported events:
 There are three ways this driver can handle buttons:
 1. Buttons connected to standard digital GPIO
 2. Multiple buttons connected to single ADC channel
-3. Custom button connect to any driver
+3. Matrix keyboard employs multiple GPIOs for operation.
+4. Custom button connect to any driver
+
+The component supports the following functionalities:
+1. Creation of an unlimited number of buttons, accommodating various types simultaneously.
+2. Multiple callback functions for a single event.
+3. Allowing customization of the consecutive key press count to any desired number.
+4. Facilitating the setup of callbacks for any specified long-press duration.
+5. Support power save mode (Only for gpio button)
 
 ## Add component to your project
 

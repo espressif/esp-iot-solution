@@ -1,0 +1,6 @@
+version: "0.0.1"
+dependencies:
+    idf: ">=4.4"
+    button:
+      version: "*"
+      override_path: "../../../../components/button"
