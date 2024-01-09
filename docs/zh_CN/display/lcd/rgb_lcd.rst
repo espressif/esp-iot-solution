@@ -19,7 +19,7 @@ RGB LCD 详解
 
     ST7701S 的接口类型选择
 
-从上图中可以看出， *ST7701S* 是通过 ``IM[3:0]`` 引脚来选择 ``SPI + RGB`` 接口的配置。通常来说，这类 LCD 会选择 ``3-wire SPI + RGB`` 的接口类型，对应于上图中的 ``RGB+9b_SPI(rise/fall)``，其中， ``9b_SPI`` 表示 ``SPI`` 接口的 :ref:`3-line 模式 <spi_3/4-line_模式>` （一般称为 ``3-wire``）， ``rise/fall`` 表示 ``SCL`` 信号的有效边沿， ``rise`` 表示上升沿有效（SPI 模式 0/3）， ``fall`` 表示下降沿（SPI 模式 1/2）。
+从上图中可以看出， *ST7701S* 是通过 ``IM[3:0]`` 引脚来选择 ``SPI + RGB`` 接口的配置。通常来说，这类 LCD 会选择 ``3-wire SPI + RGB`` 的接口类型，对应于上图中的 ``RGB+9b_SPI(rise/fall)``，其中， ``9b_SPI`` 表示 ``SPI`` 接口的 :ref:`3-line 模式 <spi_3/4-line_模式>` (一般称为 ``3-wire``)， ``rise/fall`` 表示 ``SCL`` 信号的有效边沿， ``rise`` 表示上升沿有效 (SPI 模式 0/3)， ``fall`` 表示下降沿 (SPI 模式 1/2)。
 
 下图为 *ST7701S* 的 ``SPI`` 和 ``RGB`` 接口的引脚描述：
 
@@ -36,6 +36,8 @@ RGB LCD 详解
     :alt: ST7701S RGB 接口的引脚描述
 
     ST7701S RGB 接口的引脚描述
+
+注：RGB 引脚名称：CS、SCK(SCL)、SDA(MOSI)、HSYNC、VSYNC、PCLK、DE、D[23:0](D[17:0]/D[7:0])
 
 对于采用 ``SPI + RGB`` 接口的 LCD，一般可以通过命令配置 ``RGB`` 接口为 ``DE 模式`` 或者 ``SYNC 模式``，下面以 *ST7701S* 为例介绍这两种模式。
 
@@ -96,7 +98,7 @@ SYNC 模式
 色彩格式
 ---------------------
 
-大多数 RGB LCD 支持多种色彩（输入数据）格式，包括 ``RGB565`` 、 ``RGB666`` 、 ``RGB888`` 等，通常可以使用 ``COLMOD（3Ah）`` 命令来配置。下图为 *ST7701S* 的色彩格式配置：
+大多数 RGB LCD 支持多种色彩（输入数据）格式，包括 ``RGB565`` 、 ``RGB666`` 、 ``RGB888`` 等，通常可以使用 ``COLMOD(3Ah)`` 命令来配置。下图为 *ST7701S* 的色彩格式配置：
 
 .. figure:: ../../../_static/display/screen/lcd_st7701_color_format.png
     :align: center
@@ -105,7 +107,7 @@ SYNC 模式
 
     ST7701S 的色彩格式配置
 
-从上图可以看出， *ST7701S* 支持 ``16-bit RGB565`` 、 ``18-bit RGB666`` 、 ``24-bit RGB888`` 三种色彩格式，其中 ``N-bit`` 表示接口的数据线位数，并且是通过 ``COLMOD（3Ah）：VIPF[2:0]`` 和 ``COLCTRL（CDh）：MDT`` 命令来进行选择。 **需注意，命令配置需要与硬件接口保持一致** ，例如 LCD 模块仅提供了 18-bit 的数据线，那么软件一定不能配置色彩格式为 ``24-bit RGB888`` ，并且在此情况下只有在数据线为 ``D[21:16]，D[13:8]，D[5:0]`` 时才能配置为 ``16-bit RGB565``。
+从上图可以看出， *ST7701S* 支持 ``16-bit RGB565`` 、 ``18-bit RGB666`` 、 ``24-bit RGB888`` 三种色彩格式，其中 ``N-bit`` 表示接口的数据线位数，并且是通过 ``COLMOD(3Ah)：VIPF[2:0]`` 和 ``COLCTRL(CDh)：MDT`` 命令来进行选择。 **需注意，命令配置需要与硬件接口保持一致** ，例如 LCD 模块仅提供了 18-bit 的数据线，那么软件一定不能配置色彩格式为 ``24-bit RGB888`` ，并且在此情况下只有在数据线为 ``D[21:16]，D[13:8]，D[5:0]`` 时才能配置为 ``16-bit RGB565``。
 
 **除此之外，色彩格式的位数并不等于接口的有效数据线位数** ，下图为 *ST77903* 的接口类型选择和色彩格式配置：
 
@@ -123,20 +125,23 @@ SYNC 模式
 
     ST77903 的色彩格式配置
 
-从上图可以看出， *ST77903* 支持 ``6-bit RGB565`` 、 ``6-bit RGB666`` 和 ``8-bit RGB888`` 三种色彩格式，而它们的位数分别为 ``16-bit`` 、 ``18-bit`` 和 ``24-bit`` 。多数 LCD 的 ``RGB`` 接口仅需一个时钟周期即可并行传输单个像素的色彩数据，而像 ST77903 这类 LCD 接口则需要多个时钟周期传输单个像素的色彩数据，所以这类接口也被称为 **串行 RGB 接口** （SRGB）。
+从上图可以看出， *ST77903* 支持 ``6-bit RGB565`` 、 ``6-bit RGB666`` 和 ``8-bit RGB888`` 三种色彩格式，而它们的位数分别为 ``16-bit`` 、 ``18-bit`` 和 ``24-bit`` 。多数 LCD 的 ``RGB`` 接口仅需一个时钟周期即可并行传输单个像素的色彩数据，而像 ST77903 这类 LCD 接口则需要多个时钟周期传输单个像素的色彩数据，所以这类接口也被称为 **串行 RGB 接口** (SRGB)。
 
 .. note::
 
-    虽然 ESP32-S3 仅支持 ``16-bit RGB565`` 和 ``8-bit RGB888`` 两种色彩格式，但是通过特殊的硬件连接方式可以使其驱动支持 ``18-bit RGB666`` 或 ``24-bit RGB888`` 色彩格式的 LCD ，连接方式请参考开发板 `ESP32-S3-LCD-EV-Board <https://docs.espressif.com/projects/espressif-esp-dev-kits/zh_CN/latest/esp32s3/esp32-s3-lcd-ev-board/index.html>`_ 的 `LCD 子板 2 <https://docs.espressif.com/projects/esp-dev-kits/zh_CN/latest/_static/esp32-s3-lcd-ev-board/schematics/SCH_ESP32-S3-LCD-EV-Board-SUB2_V1.2_20230509.pdf>`_ （3.95' LCD_QMZX） 和 `LCD 子板 3 <https://docs.espressif.com/projects/esp-dev-kits/zh_CN/latest/_static/esp32-s3-lcd-ev-board/schematics/SCH_ESP32-S3-LCD-EV-Board-SUB3_V1.1_20230315.pdf>`_ 原理图。
+    虽然 ESP32-S3 仅支持 ``16-bit RGB565`` 和 ``8-bit RGB888`` 两种色彩格式，但是通过特殊的硬件连接方式可以使其驱动支持 ``18-bit RGB666`` 或 ``24-bit RGB888`` 色彩格式的 LCD ，连接方式请参考开发板 `ESP32-S3-LCD-EV-Board <https://docs.espressif.com/projects/espressif-esp-dev-kits/zh_CN/latest/esp32s3/esp32-s3-lcd-ev-board/index.html>`_ 的 `LCD 子板 2 <https://docs.espressif.com/projects/esp-dev-kits/zh_CN/latest/_static/esp32-s3-lcd-ev-board/schematics/SCH_ESP32-S3-LCD-EV-Board-SUB2_V1.2_20230509.pdf>`_ (3.95' LCD_QMZX) 和 `LCD 子板 3 <https://docs.espressif.com/projects/esp-dev-kits/zh_CN/latest/_static/esp32-s3-lcd-ev-board/schematics/SCH_ESP32-S3-LCD-EV-Board-SUB3_V1.1_20230315.pdf>`_ 原理图。
+
+RGB LCD 驱动流程
+------------------------------
+
+RGB LCD 驱动流程可大致分为三个部分：初始化接口设备、移植驱动组件和初始化 LCD 设备。
 
 .. _rgb_初始化接口设备:
 
 初始化接口设备
 ---------------------------
 
-**对于仅采用 RGB 接口的 LCD** ，因为它们不支持传输命令及参数，所以这里不需要初始化接口设备，请直接参考 :ref:`初始化 LCD 设备  <rgb_初始化_lcd>`。
-
-**对于采用 3-wire SPI 和 RGB 接口的 LCD** ，这里仅需创建 ``3-wire SPI`` 接口设备。由于 ESP 的 SPI 外设不支持直接传输 9-bit 数据，并且该接口仅用于传输数据量较小的命令及参数，而且对于数据传输的带宽以及时序要求不高，因此可以使用 GPIO 或者 IO 扩展芯片引脚 （如 `TCA9554 <https://components.espressif.com/components/espressif/esp_io_expander_tca9554>`_ ） 通过软件模拟 SPI 协议的方式来实现。下面是使用 `esp_lcd_panel_io_additions <https://components.espressif.com/components/espressif/esp_lcd_panel_io_additions>`_ 组件来创建 ``3-wire SPI`` 接口设备的代码说明：
+下面是使用 `esp_lcd_panel_io_additions <https://components.espressif.com/components/espressif/esp_lcd_panel_io_additions>`_ 组件来创建 ``3-wire SPI`` 接口设备的代码说明：
 
 .. code-block:: c
 
@@ -170,6 +175,10 @@ SYNC 模式
     esp_lcd_panel_io_handle_t io_handle = NULL;
     ESP_ERROR_CHECK(esp_lcd_new_panel_io_3wire_spi(&io_config, &io_handle));
 
+**对于仅采用 RGB 接口的 LCD** ，因为它们不支持传输命令及参数，所以这里不需要初始化接口设备，请直接参考 :ref:`初始化 LCD 设备  <rgb_初始化_lcd>`。
+
+**对于采用 3-wire SPI 和 RGB 接口的 LCD** ，这里仅需创建 ``3-wire SPI`` 接口设备。由于 ESP 的 SPI 外设不支持直接传输 9-bit 数据，并且该接口仅用于传输数据量较小的命令及参数，而且对于数据传输的带宽以及时序要求不高，因此可以使用 GPIO 或者 IO 扩展芯片引脚 （如 `TCA9554 <https://components.espressif.com/components/espressif/esp_io_expander_tca9554>`_ ） 通过软件模拟 SPI 协议的方式来实现。
+
 通过创建接口设备可以获取数据类型为 ``esp_lcd_panel_io_handle_t`` 的句柄，然后能够使用 ``esp_lcd_panel_io_tx_param()`` 给 LCD 的驱动 IC 发送 **命令** 。
 
 .. _rgb_移植驱动组件:
@@ -198,7 +207,7 @@ SYNC 模式
     * - reset()
       - rgb_panel_reset()
       - esp_lcd_panel_reset()
-      - 若设备连接了复位引脚，则通过该引脚进行硬件复位，否则通过命令 ``LCD_CMD_SWRESET（01h）`` 进行软件复位，最后使用 ``rgb_panel_reset()`` 复位 ``RGB`` 接口。
+      - 若设备连接了复位引脚，则通过该引脚进行硬件复位，否则通过命令 ``LCD_CMD_SWRESET (01h)`` 进行软件复位，最后使用 ``rgb_panel_reset()`` 复位 ``RGB`` 接口。
     * - init()
       - rgb_panel_init()
       - esp_lcd_panel_init()
@@ -230,21 +239,21 @@ SYNC 模式
     * - disp_on_off()
       - rgb_panel_disp_on_off()
       - esp_lcd_panel_mirror()
-      - 根据用户配置来实现 LCD 显示的开关。如果没有配置 ``disp_gpio_num``，则可以通过 LCD 命令 ``LCD_CMD_DISON（29h）`` 和 ``LCD_CMD_DISOFF（28h）`` 来进行控制。另外，如果配置了 ``disp_gpio_num``，则可以通过调用函数 ``rgb_panel_disp_on_off()`` 来实现控制。
+      - 根据用户配置来实现 LCD 显示的开关。如果没有配置 ``disp_gpio_num``，则可以通过 LCD 命令 ``LCD_CMD_DISON(29h)`` 和 ``LCD_CMD_DISOFF(28h)`` 来进行控制。另外，如果配置了 ``disp_gpio_num``，则可以通过调用函数 ``rgb_panel_disp_on_off()`` 来实现控制。
 
 对于大多数 RGB LCD，其驱动 IC 的命令及参数与上述实现说明中的兼容，因此可以通过以下步骤完成移植：
 
-  #. 在 :ref:`LCD 驱动组件 <lcd_驱动组件>`  中选择一个型号相似的 RGB LCD 驱动组件。
-  #. 通过查阅目标 LCD 驱动 IC 的数据手册，确认其与所选组件中各功能使用到的命令及参数是否一致，若不一致则需要修改相关代码。
-  #. 即使 LCD 驱动 IC 的型号相同，不同制造商的屏幕也通常需要使用各自提供的初始化命令配置。因此，需要修改初始化函数 ``init()`` 中发送的命令和参数。这些初始化命令通常以特定的格式存储在一个静态数组中。此外，需要注意不要在初始化命令中包含由驱动 IC 控制的命令，例如 ``LCD_CMD_COLMOD（3Ah）``，以确保成功初始化 LCD 设备。
-  #. 可使用编辑器的字符搜索和替换功能，将组件中的 LCD 驱动 IC 名称替换为目标名称，如将 ``gc9503`` 替换为 ``st7701``。
+#. 在 :ref:`LCD 驱动组件 <lcd_驱动组件>`  中选择一个型号相似的 RGB LCD 驱动组件。
+#. 通过查阅目标 LCD 驱动 IC 的数据手册，确认其与所选组件中各功能使用到的命令及参数是否一致，若不一致则需要修改相关代码。
+#. 即使 LCD 驱动 IC 的型号相同，不同制造商的屏幕也通常需要使用各自提供的初始化命令配置。因此，需要修改初始化函数 ``init()`` 中发送的命令和参数。这些初始化命令通常以特定的格式存储在一个静态数组中。此外，需要注意不要在初始化命令中包含由驱动 IC 控制的命令，例如 ``LCD_CMD_COLMOD(3Ah)``，以确保成功初始化 LCD 设备。
+#. 可使用编辑器的字符搜索和替换功能，将组件中的 LCD 驱动 IC 名称替换为目标名称，如将 ``gc9503`` 替换为 ``st7701``。
 
 .. _rgb_初始化_lcd:
 
 初始化 LCD 设备
 ---------------------------
 
-**对于采用 3-wire SPI 和 RGB 接口的 LCD** ，首先通过 `RGB 接口驱动 <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/src/esp_lcd_panel_rgb.c>`_ 中的 ``esp_lcd_new_rgb_panel()`` 函数创建 LCD 设备并获取数据类型为 ``esp_lcd_panel_handle_t`` 的句柄，然后使用 `LCD 通用 APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ 来初始化 LCD 设备，下面是以 ESP-IDF release/v5.1 中 `rgb_panel <https://github.com/espressif/esp-idf/tree/release/v5.1/examples/peripherals/lcd/rgb_panel>`_ 为例的代码说明：
+下面是以 ESP-IDF release/v5.1 中 `rgb_panel <https://github.com/espressif/esp-idf/tree/release/v5.1/examples/peripherals/lcd/rgb_panel>`_ 为例的代码说明：
 
 .. code-block:: c
 
@@ -317,9 +326,11 @@ SYNC 模式
     // ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(panel_handle, true));    // 通过 `disp_gpio_num` 引脚控制 LCD 显示的开关，
                                                                           // 仅当该引脚设置且不为 `-1` 时可用，否则会报错
 
+**对于采用 3-wire SPI 和 RGB 接口的 LCD** ，首先通过 `RGB 接口驱动 <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/src/esp_lcd_panel_rgb.c>`_ 中的 ``esp_lcd_new_rgb_panel()`` 函数创建 LCD 设备并获取数据类型为 ``esp_lcd_panel_handle_t`` 的句柄，然后使用 `LCD 通用 APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ 来初始化 LCD 设备.
+
 关于 ``RGB`` 接口的参数配置和一些功能函数的说明，请参考 :ref:`RGB 参数配置及功能函数 <rgb_参数配置及功能函数>`
 
-**对于采用 3-wire SPI 和 RGB 接口的 LCD** ，首先通过移植好的驱动组件创建 LCD 设备并获取数据类型为 ``esp_lcd_panel_handle_t`` 的句柄，然后使用 `LCD 通用 APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ 来初始化 LCD 设备，下面是以 `ST7701S <https://components.espressif.com/components/espressif/esp_lcd_st7701>`_ 为例的代码说明：
+下面是以 `ST7701S <https://components.espressif.com/components/espressif/esp_lcd_st7701>`_ 为例的代码说明：
 
 .. code-block:: c
 
@@ -425,6 +436,8 @@ SYNC 模式
     // ESP_ERROR_CHECK(esp_lcd_panel_swap_xy(panel_handle, true));
     // ESP_ERROR_CHECK(esp_lcd_panel_set_gap(panel_handle, 0, 0));
     // ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(panel_handle, true));
+
+**对于采用 3-wire SPI 和 RGB 接口的 LCD** ，首先通过移植好的驱动组件创建 LCD 设备并获取数据类型为 ``esp_lcd_panel_handle_t`` 的句柄，然后使用 `LCD 通用 APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ 来初始化 LCD 设备。
 
 .. _rgb_参数配置及功能函数:
 

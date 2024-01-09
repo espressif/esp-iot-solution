@@ -66,20 +66,60 @@ Espressif Systems provides comprehensive support for all interface types introdu
 Driver and Examples
 ---------------------
 
-**LCD Peripheral Driver** is located in `components/esp_lcd <https://github.com/espressif/esp-idf/tree/master/components/esp_lcd>`_ directory under **ESP-IDF**. Currently, it supports the following interfaces ``I2C``, ``SPI(QSPI)``, ``I80`` as well as ``RGB``. For detailed information, please refer to the `documentation <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/peripherals/lcd.html>`_. The following is the official Espressif system **LCD Driver component** based on ``esp_lcd``.
+**LCD Peripheral** Driver is located in the `components/esp_lcd <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/peripherals/lcd.html>_` directory under **ESP-IDF**. Currently, it supports the ``I2C``, ``SPI (QSPI)``, ``I80``, and ``RGB`` interfaces. The following table lists the LCD driver components officially ported by Espressif based on esp_lcd, and these components will continue to be updated:
+
+.. list-table::
+    :widths: 10 15
+    :header-rows: 1
+
+    * - LCD Controller
+      - Interface
+    * - `st7789 <https://github.com/espressif/esp-idf/blob/master/components/esp_lcd/src/esp_lcd_panel_st7789.c>`_
+      - SPI/I80
+    * - `nt35510 <https://github.com/espressif/esp-idf/blob/master/components/esp_lcd/src/esp_lcd_panel_nt35510.c>`_
+      - SPI/I80
+    * - `ssd1306 <https://github.com/espressif/esp-idf/blob/master/components/esp_lcd/src/esp_lcd_panel_ssd1306.c>`_
+      - I2C
+    * - `gc9b71 <https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_gc9b71>`_
+      - SPI/QSPI
+    * - `nv3022b <https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_nv3022b>`_
+      - SPI
+    * - `sh8601 <https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_sh8601>`_
+      - SPI/QSPI
+    * - `spd2010 <https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_spd2010>`_
+      - SPI/QSPI
+    * - `st7701 <https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_st7701>`_
+      - 3-wire SPI + RGB
+    * - `st77916 <https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_st77916>`_
+      - SPI/QSPI
+    * - `gc9503 <https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_gc9503>`_
+      - 3-wire SPI + RGB
+    * - `gc9a01 <https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_gc9a01>`_
+      - SPI
+    * - `ili9341 <https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_ili9341>`_
+      - SPI
+    * - `ra8875 <https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_ra8875>`_
+      - Parallel Intel 8080
+    * - `sh1107 <https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_sh1107>`_
+      - I2C
+    * - `ssd1681 <https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_ssd1681>`_
+      - SPI
+    * - `st7796 <https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_st7796>`_
+      - SPI/I80
+
+**Please note:**
 
 .. _LCD_Driver_Component:
 
-  - `ESP-IDF <https://github.com/espressif/esp-idf/tree/master/components/esp_lcd/src>`_ : st7789、nt35510、ssd1306。
-  - `ESP component manager <https://components.espressif.com/components?q=espressif%2Fesp_lcd>`_ : gc9a01、ili9341、ra8875、sh1107、st7796、st7701、gc9503、gc9b71、spd2010、...(continuously updated)
+  - The **st7789**, **nt35510**, and **ssd1306** components are maintained in the `ESP-IDF <https://github.com/espressif/esp-idf/tree/master/components/esp_lcd/src>`_. Other components can be found in the `Espressif IDF Component Registry <https://components.espressif.com/components?q=espressif%2Fesp_lcd>`_.
+  - Although the models of the **LCD driver IC** might be identical, **different screens** require specific configurations through initialization commands provided by their respective manufacturers. Most driver components support the customization of initialization commands during the initialization of the LCD device. If it is not supported, please refer to the `method <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/lcd.html#steps-to-add-manufacture-specific-initialization>`_.
 
-**LCD Example** is located in the `examples/peripherals/lcd <https://github.com/espressif/esp-idf/tree/master/examples/peripherals/lcd>`_ directory under **ESP-IDF** and the :project:`examples/display/lcd <examples/display/lcd>` directory under **esp-iot-solution**.
+**LCD Example** is located in the `examples/peripherals/lcd <https://github.com/espressif/esp-idf/tree/master/examples/peripherals/lcd>`_ directory under **ESP-IDF** and the :project:`examples/display/lcd <examples/display/lcd>` directory under **esp-iot-solution**. These serve as a reference for the usage of the LCD driver component.
 
 .. note::
 
     - It is recommended to develop based on ESP-IDF `release/v5.1 <https://github.com/espressif/esp-idf/tree/release/v5.1>`_ and above version branches, because lower versions may lack to support some parts of the important new features, especially for the ``RGB`` interface.
     - For LCDs using the ``3-wire SPI + RGB`` interface, please refer to the example `esp_lcd_st7701 - Example use <https://components.espressif.com/components/espressif/esp_lcd_st7701>`_.
-    - Even if the LCD driver IC is of the same model, different screens often need to be configured using the initialization commands provided by their respective manufacturers. Most driver components support after giving custom initialization commands when initializing the LCD device. if not, please refer to `method <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/lcd.html#steps-to-add-manufacture-specific-initialization>`_.
 
 Development Framework
 -------------------------

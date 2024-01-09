@@ -24,7 +24,7 @@ LCD 开发指南
     :header-rows: 1
 
     * - Soc
-      - SPI（QSPI）
+      - SPI (QSPI)
       - I80
       - RGB
       - MIPI-DSI
@@ -66,20 +66,60 @@ LCD 开发指南
 驱动及示例
 ---------------------
 
-**LCD 外设驱动** 位于 **ESP-IDF** 下的 `components/esp_lcd <https://github.com/espressif/esp-idf/tree/master/components/esp_lcd>`_ 目录，目前支持 ``I2C``、 ``SPI（QSPI）``、 ``I80`` 以及 ``RGB`` 接口，详细介绍请参考 `文档 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/peripherals/lcd.html>`_。下面是乐鑫官方基于 ``esp_lcd`` 移植的 **LCD 驱动组件** ：
+**LCD 外设驱动** 位于 **ESP-IDF** 下的 `components/esp_lcd <https://github.com/espressif/esp-idf/tree/master/components/esp_lcd>`_ 目录，目前支持 ``I2C``、 ``SPI (QSPI)``、 ``I80`` 以及 ``RGB`` 接口，详细介绍请参考 `文档 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/peripherals/lcd.html>`_。下表是目前乐鑫官方基于 ``esp_lcd`` 移植的 **LCD 驱动组件** , 并且 **LCD 驱动组件** 会持续更新：
+
+.. list-table::
+    :widths: 10 15
+    :header-rows: 1
+
+    * - LCD 控制器
+      - 接口
+    * - `st7789 <https://github.com/espressif/esp-idf/blob/master/components/esp_lcd/src/esp_lcd_panel_st7789.c>`_
+      - SPI/I80
+    * - `nt35510 <https://github.com/espressif/esp-idf/blob/master/components/esp_lcd/src/esp_lcd_panel_nt35510.c>`_
+      - SPI/I80
+    * - `ssd1306 <https://github.com/espressif/esp-idf/blob/master/components/esp_lcd/src/esp_lcd_panel_ssd1306.c>`_
+      - I2C
+    * - `gc9b71 <https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_gc9b71>`_
+      - SPI/QSPI
+    * - `nv3022b <https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_nv3022b>`_
+      - SPI
+    * - `sh8601 <https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_sh8601>`_
+      - SPI/QSPI
+    * - `spd2010 <https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_spd2010>`_
+      - SPI/QSPI
+    * - `st7701 <https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_st7701>`_
+      - 3-wire SPI + RGB
+    * - `st77916 <https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_st77916>`_
+      - SPI/QSPI
+    * - `gc9503 <https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_gc9503>`_
+      - 3-wire SPI + RGB
+    * - `gc9a01 <https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_gc9a01>`_
+      - SPI
+    * - `ili9341 <https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_ili9341>`_
+      - SPI  
+    * - `ra8875 <https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_ra8875>`_
+      - Parallel Intel 8080  
+    * - `sh1107 <https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_sh1107>`_
+      - I2C  
+    * - `ssd1681 <https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_ssd1681>`_
+      - SPI  
+    * - `st7796 <https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_st7796>`_
+      - SPI/I80   
+
+**请注意：**
 
 .. _lcd_驱动组件:
 
-  - `ESP-IDF <https://github.com/espressif/esp-idf/tree/master/components/esp_lcd/src>`_ 中：st7789、nt35510、ssd1306。
-  - `ESP 组件管理器 <https://components.espressif.com/components?q=espressif%2Fesp_lcd>`_ 中：gc9a01、ili9341、ra8875、sh1107、st7796、st7701、gc9503、gc9b71、spd2010、...（持续更新中）
+  - **st7789**、**nt35510**、**ssd1306** 组件保存在 `ESP-IDF <https://github.com/espressif/esp-idf/tree/master/components/esp_lcd/src>`_ 中。其余组件可以在 `ESP 组件管理器 <https://components.espressif.com/components?q=espressif%2Fesp_lcd>`_ 中搜索使用。
+  - 即使 **LCD 驱动 IC** 的型号相同，不同的屏幕往往需要使用各自厂商提供的初始化命令配置，大部分驱动组件支持在初始化 LCD 设备时传入自定义的初始化命令，若不支持，请参考 `方法 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/lcd.html#steps-to-add-manufacture-specific-initialization>`_ 。
 
-**LCD 示例** 位于 **ESP-IDF** 下的 `examples/peripherals/lcd <https://github.com/espressif/esp-idf/tree/master/examples/peripherals/lcd>`_ 目录和 **esp-iot-solution** 下的 :project:`examples/display/lcd <examples/display/lcd>` 目录。
+**LCD 示例** 位于 **ESP-IDF** 下的 `examples/peripherals/lcd <https://github.com/espressif/esp-idf/tree/master/examples/peripherals/lcd>`_ 目录和 **esp-iot-solution** 下的 :project:`examples/display/lcd <examples/display/lcd>` 目录，可参考 LCD 驱动组件使用。
 
 .. note::
 
     - 推荐基于 ESP-IDF `release/v5.1 <https://github.com/espressif/esp-idf/tree/release/v5.1>`_ 及以上版本分支进行开发，因为低版本不支持部分重要的新特性，尤其是对于 ``RGB`` 接口。
     - 对于使用 ``3-wire SPI + RGB`` 接口的 LCD，请参考示例 `esp_lcd_st7701 - Example use <https://components.espressif.com/components/espressif/esp_lcd_st7701>`_。
-    - 即使 LCD 驱动 IC 的型号相同，不同的屏幕往往需要使用各自厂商提供的初始化命令配置，大部分驱动组件支持在初始化 LCD 设备时传入自定义的初始化命令，若不支持，请参考 `方法 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/lcd.html#steps-to-add-manufacture-specific-initialization>`_ 。
 
 开发框架
 -------------------------
@@ -112,24 +152,24 @@ LCD 开发指南
 .. figure:: ../../../_static/display/screen/lcd_hw_framework_qspi_with_gram.png
     :align: center
     :scale: 50%
-    :alt: 硬件驱动框架示意图 - QSPI LCD（有 GRAM）
+    :alt: 硬件驱动框架示意图 - QSPI LCD (有 GRAM)
 
-    硬件驱动框架示意图 - QSPI LCD（有 GRAM）
+    硬件驱动框架示意图 - QSPI LCD (有 GRAM)
 
 .. figure:: ../../../_static/display/screen/lcd_hw_framework_qspi_without_gram.png
     :align: center
     :scale: 50%
-    :alt: 硬件驱动框架示意图 - QSPI LCD（无 GRAM）
+    :alt: 硬件驱动框架示意图 - QSPI LCD (无 GRAM)
 
-    硬件驱动框架示意图 - QSPI LCD（无 GRAM）
+    硬件驱动框架示意图 - QSPI LCD (无 GRAM)
 
 软件框架
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 软件开发框架主要由 SDK、Driver 和 APP 三个层次组成:
 
-  #. **SDK 层**：ESP-IDF 作为框架的基础部分，不仅包含了驱动 LCD 所需的 ``I2C``、 ``SPI（QSPI）``、 ``I80`` 和 ``RGB`` 等多种外设，还通过 ``esp_lcd`` 组件提供了统一的 APIs 来操作接口和 LCD，如命令及参数的传输，LCD 的图像刷新、反转、镜像等功能。
-  #. **Driver 层**：基于 SDK 提供的 APIs 可以实现各种设备驱动，并通过初始化接口设备和 LCD 设备实现 LVGL（GUI 框架）的移植。
+  #. **SDK 层**：ESP-IDF 作为框架的基础部分，不仅包含了驱动 LCD 所需的 ``I2C``、 ``SPI(QSPI)``、 ``I80`` 和 ``RGB`` 等多种外设，还通过 ``esp_lcd`` 组件提供了统一的 APIs 来操作接口和 LCD，如命令及参数的传输，LCD 的图像刷新、反转、镜像等功能。
+  #. **Driver 层**：基于 SDK 提供的 APIs 可以实现各种设备驱动，并通过初始化接口设备和 LCD 设备实现 LVGL (GUI 框架)的移植。
   #. **APP 层**：使用 LVGL 提供的 APIs 实现各种 GUI 功能，如显示图片、动画、文字等。
 
 .. figure:: ../../../_static/display/screen/lcd_sw_framework.png

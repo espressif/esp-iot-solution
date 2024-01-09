@@ -3,7 +3,7 @@ LCD 概述
 
 :link_to_translation:`en:[English]`
 
-通常所说的 LCD 是 TFT-LCD （薄膜晶体管液晶显示器）的统称。它是⼀种常⻅的数字显示技术，常⽤于显示图像和⽂字。LCD 使⽤液晶材料和偏振光技术，当液晶分⼦受电场影响时，会改变光的偏振⽅向，从⽽控制光线强度，使图像或⽂字显示在屏幕上。
+通常所说的 LCD 是 TFT-LCD (薄膜晶体管液晶显示器)的统称。它是⼀种常⻅的数字显示技术，常⽤于显示图像和⽂字。LCD 使⽤液晶材料和偏振光技术，当液晶分⼦受电场影响时，会改变光的偏振⽅向，从⽽控制光线强度，使图像或⽂字显示在屏幕上。
 
 .. figure:: ../../../_static/display/screen/lcd_hardware.png
     :align: center
@@ -122,19 +122,19 @@ LCD 具有很多优点，例如：能耗低、寿命⻓、可靠性⾼、清晰�
       - 1
       - 最小
       - LCD
-    * - QSPI（Quad-SPI）
+    * - QSPI (Quad-SPI)
       - SPI 接口的一种扩展，可以使用 4 根数据线并行传输
       - 较少
       - 4
       - 较小
       - LCD 或主控
-    * - I80（MCU、DBI）
+    * - I80 (MCU、DBI)
       - 并行接口，以 I80 总线协议为基础
       - 较多
       - 8/16
       - 较大
       - LCD
-    * - RGB（DPI）
+    * - RGB (DPI)
       - 并行接口，一般需搭配 3-wire SPI 接口
       - 最多
       - 8/16/18/24
@@ -189,15 +189,15 @@ LCD 具有很多优点，例如：能耗低、寿命⻓、可靠性⾼、清晰�
     * - 类型
       - 引脚
     * - LCD 通用
-      - RST（RESET）、Backlight（LEDA、LEDK）、TE（tear effect）、Power（VCC、GND）
+      - RST (RESET)、Backlight (LEDA、LEDK)、TE (tear effect)、Power (VCC、GND)
     * - SPI
-      - CS、SCK（SCL）、SDA（MOSI）、SDO（MISO）、DC（RS）
+      - CS、SCK(SCL)、SDA (MOSI)、SDO (MISO)、DC (RS)
     * - QSPI
-      - CS、SCK（SCL）、SDA（DATA0）、DATA1、DATA2、DATA3
+      - CS、SCK (SCL)、SDA (DATA0)、DATA1、DATA2、DATA3
     * - I80
-      - CS（CSX）、RD（RDX）、WR（WRX）、DC（D/CX）、D[15:0]（D[7:0]）
+      - CS (CSX)、RD (RDX)、WR (WRX)、DC (D/CX)、D[15:0] (D[7:0])
     * - RGB
-      - CS、SCK（SCL）、SDA（MOSI）、HSYNC、VSYNC、PCLK、DE、D[23:0]（D[17:0]/D[7:0]）
+      - CS、SCK(SCL)、SDA(MOSI)、HSYNC、VSYNC、PCLK、DE、D[23:0] (D[17:0]/D[7:0])
 
 常用接口 LCD 的详细介绍如下：
 
@@ -213,10 +213,10 @@ LCD 具有很多优点，例如：能耗低、寿命⻓、可靠性⾼、清晰�
 
 对于通用的 LCD 引脚，通常采用如下的连接方式：
 
-  - **RST（RESET）**：推荐连接至 GPIO，并根据 LCD 驱动 IC 的数据手册，在上电时输出复位时序。一般情况下也可以使用上拉/下拉电阻连接系统电源。
-  - **Backlight（LEDA、LEDK）**：推荐 LEDA 连接至系统电源，LEDK 使用开关元器件连接至系统电源，并通过 GPIO 控制亮灭，或者通过 LEDC 外设输出 PWM 以调节背光亮度。
-  - **TE（tear effect）**：推荐连接至 GPIO，通过 GPIO 中断来获取 TE 信号，以实现帧同步。
-  - **Power（VCC、GND）**：推荐全部连接至对应的系统电源，而不要让一部分引脚浮空。
+  - **RST (RESET)**：推荐连接至 GPIO，并根据 LCD 驱动 IC 的数据手册，在上电时输出复位时序。一般情况下也可以使用上拉/下拉电阻连接系统电源。
+  - **Backlight (LEDA、LEDK)**：推荐 LEDA 连接至系统电源（阳极），LEDK 使用开关元器件连接至系统电源（阴极），并通过 GPIO 控制亮灭，或者通过 LEDC 外设输出 PWM 以调节背光亮度。
+  - **TE (tear effect)**：推荐连接至 GPIO，通过 GPIO 中断来获取 TE 信号，以实现帧同步。
+  - **Power (VCC、GND)**：推荐全部连接至对应的系统电源，而不要让一部分引脚浮空。
 
 对于不同接口类型的引脚，主控 MCU 需要采用不同的连接方式，下面将分别介绍 ``SPI`` ``QSPI`` ``I80`` 和 ``RGB`` 四种接口的典型连接方式。
 
@@ -258,7 +258,7 @@ QSPI 接口
 I80 接口
 ^^^^^^^^^^^^^^^
 
-``I80`` 接口的 LCD 硬件设计请参考开发板 `ESP32-S3-LCD-EV-Board <https://docs.espressif.com/projects/espressif-esp-dev-kits/zh_CN/latest/esp32s3/esp32-s3-lcd-ev-board/index.html>`_ 及其 `LCD 子板 <https://docs.espressif.com/projects/esp-dev-kits/zh_CN/latest/_static/esp32-s3-lcd-ev-board/schematics/SCH_ESP32-S3-LCD-EV-Board-SUB2_V1.2_20230509.pdf>`__ （3.5' LCD_ZJY），其典型连接示意图如下：
+``I80`` 接口的 LCD 硬件设计请参考开发板 `ESP32-S3-LCD-EV-Board <https://docs.espressif.com/projects/espressif-esp-dev-kits/zh_CN/latest/esp32s3/esp32-s3-lcd-ev-board/index.html>`_ 及其 `LCD 子板 <https://docs.espressif.com/projects/esp-dev-kits/zh_CN/latest/_static/esp32-s3-lcd-ev-board/schematics/SCH_ESP32-S3-LCD-EV-Board-SUB2_V1.2_20230509.pdf>`__ (3.5' LCD_ZJY)，其典型连接示意图如下：
 
 .. figure:: ../../../_static/display/screen/lcd_connection_i80.png
     :align: center
@@ -275,7 +275,7 @@ I80 接口
 RGB 接口
 ^^^^^^^^^^^^^^^
 
-``RGB`` 接口的 LCD 硬件设计请参考开发板 `ESP32-S3-LCD-EV-Board <https://docs.espressif.com/projects/espressif-esp-dev-kits/zh_CN/latest/esp32s3/esp32-s3-lcd-ev-board/index.html>`_ 及其 `LCD 子板 <https://docs.espressif.com/projects/esp-dev-kits/zh_CN/latest/_static/esp32-s3-lcd-ev-board/schematics/SCH_ESP32-S3-LCD-EV-Board-SUB2_V1.2_20230509.pdf>`__ （3.95' LCD_QMZX），其典型连接示意图如下：
+``RGB`` 接口的 LCD 硬件设计请参考开发板 `ESP32-S3-LCD-EV-Board <https://docs.espressif.com/projects/espressif-esp-dev-kits/zh_CN/latest/esp32s3/esp32-s3-lcd-ev-board/index.html>`_ 及其 `LCD 子板 <https://docs.espressif.com/projects/esp-dev-kits/zh_CN/latest/_static/esp32-s3-lcd-ev-board/schematics/SCH_ESP32-S3-LCD-EV-Board-SUB2_V1.2_20230509.pdf>`__ (3.95' LCD_QMZX)，其典型连接示意图如下：
 
 .. figure:: ../../../_static/display/screen/lcd_connection_rgb.png
     :align: center
@@ -288,7 +288,7 @@ RGB 接口
 
   - 图中虚线表示可选引脚。
   - ``DE`` 用于 DE 模式下。
-  - ``CS``、 ``SCK`` 和 ``SDA`` 为 3-wire（3-line） SPI 接口引脚，用于发送命令及参数对 LCD 进行配置，一些屏幕可能没有这些引脚，因此也不需要进行初始化配置。由于 ``3-wire SPI`` 接口可以仅用于进行 LCD 的初始化，而无需用于后续的屏幕刷新，因此，为了节省 IO 数量，可以将 ``SCK`` 和 ``SDA`` 与任意 ``RGB`` 接口引脚进行复用。
+  - ``CS``、 ``SCK`` 和 ``SDA`` 为 3-wire (3-line) SPI 接口引脚，用于发送命令及参数对 LCD 进行配置，一些屏幕可能没有这些引脚，因此也不需要进行初始化配置。由于 ``3-wire SPI`` 接口可以仅用于进行 LCD 的初始化，而无需用于后续的屏幕刷新，因此，为了节省 IO 数量，可以将 ``SCK`` 和 ``SDA`` 与任意 ``RGB`` 接口引脚进行复用。
 
 帧率
 ---------------
@@ -344,4 +344,4 @@ RGB 接口
 
 显示是指 LCD 的驱动 IC 将接收到的图像数据显示到屏幕上的过程，其快慢可以用 **屏幕刷新率** 来衡量。
 
-对于 SPI/I80 接口的 LCD，屏幕刷新率是由 LCD 驱动 IC 决定的，一般可以通过发送特定的命令来设置，如 *ST7789* 的 ``FRCTRL2（C6h）`` 命令；对于 RGB 接口的 LCD，屏幕刷新率是由主控决定的，其等价于接口帧率。
+对于 SPI/I80 接口的 LCD，屏幕刷新率是由 LCD 驱动 IC 决定的，一般可以通过发送特定的命令来设置，如 *ST7789* 的 ``FRCTRL2(C6h)`` 命令；对于 RGB 接口的 LCD，屏幕刷新率是由主控决定的，其等价于接口帧率。

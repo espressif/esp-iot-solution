@@ -27,6 +27,8 @@ SPI LCD 详解
     :alt: SPI 接口的引脚描述
 
     SPI 接口的引脚描述
+    
+注：SPI 引脚名称：CS、SCK(SCL)、SDA (MOSI)、SDO (MISO)、DC (RS)
 
 .. _spi_interface_I/II_模式:
 
@@ -89,17 +91,22 @@ Interface I/II 模式
   - ``3-line`` 模式有时也称为 ``3-wire`` 或 ``9-bit`` 模式。
   - 虽然 ESP 的 SPI 外设不支持 LCD 的 ``3-line`` 模式，但是可以通过软件模拟实现，具体请参考组件 `esp_lcd_panel_io_additions <https://components.espressif.com/components/espressif/esp_lcd_panel_io_additions>`_，它通常用于实现 RGB LCD 的初始化。
 
+SPI LCD 驱动流程
+------------------------------
+
+SPI LCD 驱动流程可大致分为三个部分：初始化接口设备、移植驱动组件和初始化 LCD 设备。
+
 .. _spi_初始化接口设备:
 
 初始化接口设备
 ------------------------------
 
-下面基于 ESP-IDF release/v5.1 中的 `spi_lcd_touch <https://github.com/espressif/esp-idf/tree/v5.1/examples/peripherals/lcd/spi_lcd_touch>`_ 示例，介绍如何初始化 SPI 接口设备。
+初始化接口设备需要先初始化总线，再创建接口设备。下面基于 ESP-IDF release/v5.1 中的 `spi_lcd_touch <https://github.com/espressif/esp-idf/tree/v5.1/examples/peripherals/lcd/spi_lcd_touch>`_ 示例，具体介绍如何初始化 SPI 接口设备。
 
 初始化总线
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-如果有多个设备同时使用同一 SPI 总线，那么只需要对总线初始化一次，下面是示例代码的说明：
+示例代码:
 
 .. code-block:: c
 
@@ -118,6 +125,8 @@ Interface I/II 模式
                                               // 第 1 个参数表示使用的 SPI 主机 ID，和后续创建接口设备时保持一致
                                               // 第 3 个参数表示使用的 DMA 通道号，默认设置为 `SPI_DMA_CH_AUTO` 即可
 
+如果有多个设备同时使用同一 SPI 总线，那么只需要对总线初始化一次。
+
 下面是部分配置参数的说明：
 
   - 若 LCD 驱动 IC 配置为 :ref:`Interface-I 接口模式 <spi_interface_I/II_模式>`，软件仅需设置 ``mosi_io_num`` 为其数据线 IO，而设置 ``miso_io_num`` 为 -1。
@@ -126,7 +135,7 @@ Interface I/II 模式
 创建接口设备
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-基于初始化好的 SPI 总线可以创建相应的接口设备，每个接口设备对应一个 SPI master 设备，下面是示例代码的说明：
+示例代码:
 
 .. code-block:: c
 
@@ -163,7 +172,9 @@ Interface I/II 模式
     // };
     // esp_lcd_panel_io_register_event_callbacks(io_handle, &cbs, &example_user_ctx);
 
-关于 ``SPI`` 接口配置参数更加详细的说明，请参考 `ESP-IDF 编程指南 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/peripherals/lcd.html#spi-interfaced-lcd>`_。
+基于初始化好的 SPI 总线可以创建相应的接口设备，每个接口设备对应一个 SPI master 设备。
+
+**注意：关于 SPI 接口配置参数更加详细的说明**，请参考 `ESP-IDF 编程指南 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/peripherals/lcd.html#spi-interfaced-lcd>`_。
 
 通过创建接口设备可以获取数据类型为 ``esp_lcd_panel_io_handle_t`` 的句柄，然后能够使用以下 `接口通用 APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_io.h>`_ 给 LCD 的驱动 IC 发送 **命令** 和 **图像数据**：
 
@@ -192,7 +203,7 @@ Interface I/II 模式
       - 实现说明
     * - reset()
       - esp_lcd_panel_reset()
-      - 若设备连接了复位引脚，则通过该引脚进行硬件复位，否则通过命令 ``LCD_CMD_SWRESET（01h）`` 进行软件复位。
+      - 若设备连接了复位引脚，则通过该引脚进行硬件复位，否则通过命令 ``LCD_CMD_SWRESET(01h)`` 进行软件复位。
     * - init()
       - esp_lcd_panel_init()
       - 通过发送一系列的命令及参数来初始化 LCD 设备。
@@ -201,36 +212,36 @@ Interface I/II 模式
       - 释放驱动占用的资源，包括申请的存储空间和使用的 IO。
     * - draw_bitmap()
       - esp_lcd_panel_draw_bitmap()
-      - 首先通过命令 ``LCD_CMD_CASET（2Ah）`` 和 ``LCD_CMD_RASET（2Bh）`` 发送图像的起始和终止坐标，然后通过命令 ``LCD_CMD_RAMWR（2Ch）`` 发送图像数据。
+      - 首先通过命令 ``LCD_CMD_CASET(2Ah)`` 和 ``LCD_CMD_RASET(2Bh)`` 发送图像的起始和终止坐标，然后通过命令 ``LCD_CMD_RAMWR(2Ch)`` 发送图像数据。
     * - mirror()
       - esp_lcd_panel_mirror()
-      - 通过命令 ``LCD_CMD_MADCTL（36h）`` 设置是否镜像屏幕的 X 轴和 Y 轴。
+      - 通过命令 ``LCD_CMD_MADCTL(36h)`` 设置是否镜像屏幕的 X 轴和 Y 轴。
     * - swap_xy()
       - esp_lcd_panel_swap_xy()
-      - 通过命令 ``LCD_CMD_MADCTL（36h）`` 设置是否交换屏幕的 X 轴和 Y 轴。
+      - 通过命令 ``LCD_CMD_MADCTL(36h)`` 设置是否交换屏幕的 X 轴和 Y 轴。
     * - set_gap()
       - esp_lcd_panel_set_gap()
       - 通过软件修改画图时的起始和终止坐标，从而实现画图的偏移。
     * - invert_color()
       - esp_lcd_panel_invert_color()
-      - 通过命令 ``LCD_CMD_INVON（21h）`` 和 ``LCD_CMD_INVOFF（20h）`` 实现像素的颜色数据按位取反（0xF0F0 -> 0x0F0F）。
+      - 通过命令 ``LCD_CMD_INVON(21h)`` 和 ``LCD_CMD_INVOFF(20h)`` 实现像素的颜色数据按位取反（0xF0F0 -> 0x0F0F）。
     * - disp_on_off()
       - esp_lcd_panel_disp_on_off()
-      - 通过命令 ``LCD_CMD_DISON（29h）`` 和 ``LCD_CMD_DISOFF（28h）`` 实现屏幕显示的开关。
+      - 通过命令 ``LCD_CMD_DISON(29h)`` 和 ``LCD_CMD_DISOFF(28h)`` 实现屏幕显示的开关。
 
 对于大多数 SPI LCD，其驱动 IC 的命令及参数与上述实现说明中的兼容，因此可以通过以下步骤完成移植：
 
-  #. 在 :ref:`LCD 驱动组件 <lcd_驱动组件>`  中选择一个型号相似的 SPI LCD 驱动组件。
-  #. 通过查阅目标 LCD 驱动 IC 的数据手册，确认其与所选组件中各功能使用到的命令及参数是否一致，若不一致则需要修改相关代码。
-  #. 即使 LCD 驱动 IC 的型号相同，不同制造商的屏幕也通常需要使用各自提供的初始化命令配置。因此，需要修改初始化函数 ``init()`` 中发送的命令和参数。这些初始化命令通常以特定的格式存储在一个静态数组中。此外，需要注意不要在初始化命令中包含一些特殊的命令，例如 ``LCD_CMD_COLMOD（3Ah）`` 和 ``LCD_CMD_MADCTL（36h）``，这些命令是由驱动组件进行管理和使用的。
-  #. 可使用编辑器的字符搜索和替换功能，将组件中的 LCD 驱动 IC 名称替换为目标名称，如将 ``gc9a01`` 替换为 ``st77916``。
+#. 在 :ref:`LCD 驱动组件 <lcd_驱动组件>`  中选择一个型号相似的 SPI LCD 驱动组件。
+#. 通过查阅目标 LCD 驱动 IC 的数据手册，确认其与所选组件中各功能使用到的命令及参数是否一致，若不一致则需要修改相关代码。
+#. 即使 LCD 驱动 IC 的型号相同，不同制造商的屏幕也通常需要使用各自提供的初始化命令配置。因此，需要修改初始化函数 ``init()`` 中发送的命令和参数。这些初始化命令通常以特定的格式存储在一个静态数组中。此外，需要注意不要在初始化命令中包含一些特殊的命令，例如 ``LCD_CMD_COLMOD(3Ah)`` 和 ``LCD_CMD_MADCTL(36h)``，这些命令是由驱动组件进行管理和使用的。
+#. 可使用编辑器的字符搜索和替换功能，将组件中的 LCD 驱动 IC 名称替换为目标名称，如将 ``gc9a01`` 替换为 ``st77916``。
 
 .. _spi_初始化_lcd:
 
 初始化 LCD 设备
 ------------------------------
 
-首先通过移植好的驱动组件创建 LCD 设备并获取数据类型为 ``esp_lcd_panel_handle_t`` 的句柄，然后使用 `LCD 通用 APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ 来初始化 LCD 设备，下面是以 `GC9A01 <https://components.espressif.com/components/espressif/esp_lcd_gc9a01>`_ 为例的代码说明：
+下面以 `GC9A01 <https://components.espressif.com/components/espressif/esp_lcd_gc9a01>`_ 为例的代码说明：
 
 .. code-block:: c
 
@@ -273,6 +284,8 @@ Interface I/II 模式
     // ESP_ERROR_CHECK(esp_lcd_panel_swap_xy(panel_handle, true));
     // ESP_ERROR_CHECK(esp_lcd_panel_set_gap(panel_handle, 0, 0));
     ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(panel_handle, true));
+
+首先通过移植好的驱动组件创建 LCD 设备并获取数据类型为 ``esp_lcd_panel_handle_t`` 的句柄，然后使用 `LCD 通用 APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ 来初始化 LCD 设备。
 
 下面是一些关于使用函数 ``esp_lcd_panel_draw_bitmap()`` 刷新 SPI LCD 图像的说明：
 
