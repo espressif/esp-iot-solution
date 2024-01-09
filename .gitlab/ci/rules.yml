@@ -20,6 +20,10 @@
   - "components/bluetooth/ble_conn_mgr/**/*"
   - "components/tools/cmake_utilities/package_manager.cmake"
 
+.patterns-components_bluetooth_ble_profiles_std_ble_anp: &patterns-components_bluetooth_ble_profiles_std_ble_anp
+  - "components/bluetooth/ble_profiles/std/ble_anp/**/*"
+  - "components/tools/cmake_utilities/package_manager.cmake"
+
 .patterns-components_bluetooth_ble_profiles_std_ble_hrp: &patterns-components_bluetooth_ble_profiles_std_ble_hrp
   - "components/bluetooth/ble_profiles/std/ble_hrp/**/*"
   - "components/tools/cmake_utilities/package_manager.cmake"
@@ -251,6 +255,9 @@
 .patterns-example_bluetooth_ble_conn_mgr: &patterns-example_bluetooth_ble_conn_mgr
   - "examples/bluetooth/ble_conn_mgr/**/*"
 
+.patterns-example_bluetooth_ble_anp: &patterns-example_bluetooth_ble_anp
+  - "examples/bluetooth/ble_anp/**/*"
+
 .patterns-example_bluetooth_ble_hrp: &patterns-example_bluetooth_ble_hrp
   - "examples/bluetooth/ble_hrp/**/*"
 
@@ -456,6 +463,17 @@
       changes: *patterns-components_bluetooth_ble_conn_mgr
     - <<: *if-dev-push
       changes: *patterns-example_bluetooth_ble_conn_mgr
+
+.rules:build:example_bluetooth_ble_anp:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_bluetooth_ble_profiles_std_ble_anp
+    - <<: *if-dev-push
+      changes: *patterns-example_bluetooth_ble_anp
 
 .rules:build:example_bluetooth_ble_hrp:
   rules:

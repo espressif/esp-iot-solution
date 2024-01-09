@@ -1,0 +1,19 @@
+menu "Example Configuration"
+    config EXAMPLE_BLE_ADV_NAME
+	string "Advertisement name"
+	default "BLE_ANS"
+	help
+	  The device name inside advertisement.
+
+    config EXAMPLE_BLE_SUB_ADV
+	string "Subsequent advertisement data"
+	default "SUB_ADV"
+	help
+	  The data inside subsequent advertisements.
+
+    config EXAMPLE_BLE_SUB_SCAN
+	string "Subsequent scan responses data"
+	default "SUB_SCAN"
+	help
+	  The data inside subsequent scan responses.
+endmenu

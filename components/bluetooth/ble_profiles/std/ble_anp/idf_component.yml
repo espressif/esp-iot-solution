@@ -1,0 +1,6 @@
+version: "0.1.0"
+description: BLE standard profile support Alert Notification
+url: https://github.com/espressif/esp-iot-solution/tree/master/components/bluetooth/ble_profiles/std/ble_anp
+issues: https://github.com/espressif/esp-iot-solution/issues
+examples:
+  - path: ../../../../../examples/bluetooth/ble_profiles

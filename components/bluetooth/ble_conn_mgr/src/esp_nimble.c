@@ -1217,7 +1217,6 @@ static int esp_ble_conn_gap_event(struct ble_gap_event *event, void *arg)
             struct ble_hs_adv_fields fields;
             rc = ble_hs_adv_parse_fields(&fields, event->disc.data, event->disc.length_data);
             if (rc != ESP_OK) {
-                ESP_LOGE(TAG, "");
                 return 0;
             } else {
                 /* Try to connect to the advertiser if it looks interesting. */
