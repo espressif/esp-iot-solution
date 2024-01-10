@@ -603,7 +603,7 @@ int16_t lightbulb_get_cct_kelvin(void);
  *
  * @return int8_t
  */
-int8_t lightbulb_get_brightness();
+int8_t lightbulb_get_brightness(void);
 
 /**
  * @brief Get on/off status
