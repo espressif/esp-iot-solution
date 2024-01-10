@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.5.3 - 2024-01-10
+
+### Bug Fixes:
+
+* fix: function declaration isn't a prototype [-Werror=strict-prototypes]
+
 ## v0.5.2 - 2023-10-28
 
 ### Enhancements:
