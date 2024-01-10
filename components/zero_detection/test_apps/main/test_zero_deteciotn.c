@@ -1,4 +1,5 @@
-/* SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+/*
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -102,7 +103,7 @@ TEST_CASE("custom_zero_cross_detection_test", "[zero_cross_detecion][iot][pulse]
     config.capture_pin = 2;
     config.freq_range_max_hz = 65;  //Hz
     config.freq_range_min_hz = 45;  //Hz
-    config.valid_time = 6;
+    config.valid_times = 6;
     config.zero_signal_type = PULSE_WAVE;
 #if defined(SOC_MCPWM_SUPPORTED)
     config.zero_driver_type = MCPWM_TYPE;
@@ -147,7 +148,7 @@ TEST_CASE("custom_zero_cross_detection_test", "[zero_cross_detecion][iot][square
     config.capture_pin = 2;
     config.freq_range_max_hz = 65;  //Hz
     config.freq_range_min_hz = 45;  //Hz
-    config.valid_time = 6;
+    config.valid_times = 6;
     config.zero_signal_type = SQUARE_WAVE;
     config.zero_driver_type = GPIO_TYPE;
 

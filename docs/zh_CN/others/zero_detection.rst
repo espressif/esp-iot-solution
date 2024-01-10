@@ -52,7 +52,8 @@
 ^^^^^^^^^^^^
 .. code:: c
 
-    int zero_detection_event_cb(zero_detect_event_t zero_detect_event, zero_detect_cb_param_t *param) {//User's callback API 
+    void IRAM_ATTR zero_detection_event_cb(zero_detect_event_t zero_detect_event, zero_detect_cb_param_t *param, void *usr_data)  //User's callback API
+    {
         switch (zero_detect_event) {
         case SIGNAL_FREQ_OUT_OF_RANGE:
             ESP_LOGE(TAG, "SIGNAL_FREQ_OUT_OF_RANGE");
@@ -66,7 +67,6 @@
         default:
             break;
         }
-        return zero_detect_event;
     }
 
     // Create a zero detection and register call-back
@@ -74,9 +74,8 @@
         .capture_pin = 2,
         .freq_range_max_hz = 65,
         .freq_range_min_hz = 45,  //Hz
-        .valid_time = 6,
-        .invalid_time = 5,
-        .event_callback = zero_detection_event_cb,     //Create callback
+        .valid_times = 6,
+        .invalid_times = 5,
         .zero_signal_type = SQUARE_WAVE,
         .zero_driver_type = MCPWM_TYPE,
     };
@@ -84,6 +83,7 @@
     if(NULL == g_zcds) {
         ESP_LOGE(TAG, "Zero Detection create failed");
     }
+    zero_detect_register_cb(g_zcds, zero_detection_event_cb, NULL);
 
 API Reference
 -------------

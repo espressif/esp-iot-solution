@@ -9,6 +9,10 @@ The program returns results in the form of events, meeting the user's need for t
 
 After creating a new zero detection object by calling function `zero_detect_create()`, the zero detection object can create many events.
 
+Afterward, users can register the interrupt by calling function `zero_detect_register_cb()`, 
+
+Note: The prefix `IRAM_ATTR` should be added before registering the user-written interrupt function.
+
 List of supported events:
  * SIGNAL_FREQ_OUT_OF_RANGE
  * SIGNAL_VALID
