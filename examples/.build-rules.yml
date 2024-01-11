@@ -100,6 +100,10 @@ examples/lighting/lightbulb:
     - if: INCLUDE_DEFAULT == 1
 
 examples/motor/foc_openloop_control:
+  enable:
+    - if: IDF_TARGET == "esp32s3"
+
+examples/motor/foc_openloop_control:
   disable:
     - if: IDF_TARGET == "esp32c2"
 
