@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.5.4 - 2024-01-12
+
+### Bug Fixes:
+
+* fix: stack overflow in task fade_tick_task on xtensa architecture
+
 ## v0.5.3 - 2024-01-10
 
 ### Bug Fixes:

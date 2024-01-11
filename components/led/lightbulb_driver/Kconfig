@@ -100,7 +100,9 @@ menu "LightBulb Driver Config"
 
             config LB_NOTIFY_TASK_STACK
                 int "gptimer tick notify task stack"
-                default 1024
+                # for xtensa, the minimum stack size is 1280
+                default 1024 if IDF_TARGET_ARCH_XTENSA
+                default 1280
                 help
                     Stack size for the gptimer tick notify task.
 
