@@ -36,7 +36,7 @@
     EXAMPLE_CONFIG: "="
   script:
     - pip install --upgrade idf-component-manager
-    - pip install idf_build_apps
+    - pip install "idf_build_apps<2.0"
     - python tools/build_apps.py ${EXAMPLE_DIR} --config ${EXAMPLE_CONFIG} -t all -vv
 
 build_example_audio_wav_player:
