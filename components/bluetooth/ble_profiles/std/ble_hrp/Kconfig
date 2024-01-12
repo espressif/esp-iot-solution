@@ -1,0 +1,8 @@
+menu "BLE Profile: Heart Rate"
+    config BLE_HEART_RATE_PROFILES
+    bool "Enable Heart Rate Profile"
+    default n
+    help
+        Enable support for Heart Rate Profile.
+
+endmenu
