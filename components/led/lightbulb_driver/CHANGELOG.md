@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.5.5 - 2024-01-15
+
+### Bug Fixes:
+
+* Update conditions for CI tests
+
 ## v0.5.4 - 2024-01-12
 
 ### Bug Fixes:
