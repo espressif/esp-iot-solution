@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -670,13 +670,17 @@ esp_err_t hal_output_init(hal_config_t *config, lightbulb_gamma_data_t *gamma, v
     xTaskCreate(fade_tick_task, "fade_tick_task", CONFIG_LB_NOTIFY_TASK_STACK, NULL, CONFIG_LB_NOTIFY_TASK_PRIORITY, &s_hal_obj->notify_task);
     LIGHTBULB_CHECK(s_hal_obj->notify_task, "notify task create fail", goto EXIT);
 
-    gptimer_config_t timer_config = {
+    gptimer_clock_source_t clk;
 #if CONFIG_IDF_TARGET_ESP32
-#warning This clock source will be affected by the DFS of the power management
-        .clk_src = GPTIMER_CLK_SRC_APB,
-#else
-        .clk_src = GPTIMER_CLK_SRC_XTAL,
+    clk = GPTIMER_CLK_SRC_APB;
+#if CONFIG_PM_ENABLE
+    ESP_LOGW(TAG, "This clock source will be affected by the DFS of the power management");
 #endif
+#else
+    clk = GPTIMER_CLK_SRC_XTAL;
+#endif
+    gptimer_config_t timer_config = {
+        .clk_src = clk,
         .direction = GPTIMER_COUNT_UP,
         .resolution_hz = 1000000, // 1MHz, 1 tick = 1us
     };
