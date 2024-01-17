@@ -1,0 +1,19 @@
+menu "Example Configuration"
+
+    config EXAMPLE_GPIO_NUM
+        int "GPIO number"
+        default 1
+        help
+          GPIO number to use for example.
+
+    config EXAMPLE_GPIO_ACTIVE_LEVEL
+        bool "GPIO active level"
+        default y
+        help
+          GPIO active level.
+
+    config EXAMPLE_ENABLE_CONSOLE_CONTROL
+        bool "Enable console control"
+        default n
+
+endmenu

@@ -1,0 +1,49 @@
+menu "Example Configuration"
+
+    config EXAMPLE_GPIO_RED_NUM
+        int "GPIO red number"
+        default 1
+        help
+          GPIO red number to use for example.
+
+    config EXAMPLE_GPIO_GREEN_NUM
+        int "GPIO green number"
+        default 2
+        help
+          GPIO green number to use for example.
+
+    config EXAMPLE_GPIO_BLUE_NUM
+        int "GPIO blue number"
+        default 3
+        help
+          GPIO blue number to use for example.
+
+    config EXAMPLE_LEDC_RED_CHANNEL
+        int "LED RED channel"
+        default 0
+        help
+          LED RGD channel to use for example.
+
+    config EXAMPLE_LEDC_GREEN_CHANNEL
+        int "LED GREEN channel"
+        default 1
+        help
+          LED GREEN channel to use for example.
+
+    config EXAMPLE_LEDC_BLUE_CHANNEL
+        int "LED BLUE channel"
+        default 2
+        help
+          LED BLUE channel to use for example.
+
+    config EXAMPLE_GPIO_ACTIVE_LEVEL
+        bool "GPIO active level"
+        default y
+        help
+          GPIO active level.
+
+    config EXAMPLE_ENABLE_CONSOLE_CONTROL
+      bool "Enable console control"
+      default n
+
+endmenu

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -276,8 +276,7 @@ static void _blink_list_runner(TimerHandle_t xTimer)
 
             led_indicator_hsv2rgb(p_led_indicator->current_fade_value.value, &r, &g, &b);
             led_indicator_ihsv_t irgb_value = {
-                .value = (r << 16) | (g << 8) | b,
-                .i = p_blink_step_value.i,
+                .value = SET_IRGB(p_blink_step_value.i, r, g, b),
             };
             p_led_indicator->hal_indicator_set_rgb(p_led_indicator->hardware_data, irgb_value.value);
 
@@ -701,6 +700,9 @@ esp_err_t led_indicator_preempt_start(led_indicator_handle_t handle, int blink_t
     LED_INDICATOR_CHECK(p_led_indicator->blink_lists[blink_type] != NULL, "undefined blink_type", return ESP_ERR_INVALID_ARG);
 
     xSemaphoreTake(p_led_indicator->mutex, portMAX_DELAY);
+    if (p_led_indicator->preempt_blink != NULL_PREEMPT_BLINK) {
+        p_led_indicator->p_blink_steps[p_led_indicator->preempt_blink] = LED_BLINK_STOP; // Maker sure the last preempt blink is stopped
+    }
     p_led_indicator->p_blink_steps[blink_type] = 0;
     p_led_indicator->preempt_blink = blink_type;
     _blink_list_switch(p_led_indicator); //stop and switch to next blink steps
@@ -720,8 +722,10 @@ esp_err_t led_indicator_preempt_stop(led_indicator_handle_t handle, int blink_ty
     LED_INDICATOR_CHECK(blink_type >= 0 && blink_type < p_led_indicator->blink_list_num, "blink_type out of range", return ESP_FAIL);
     LED_INDICATOR_CHECK(p_led_indicator->blink_lists[blink_type] != NULL, "undefined blink_type", return ESP_ERR_INVALID_ARG);
     xSemaphoreTake(p_led_indicator->mutex, portMAX_DELAY);
-    p_led_indicator->p_blink_steps[blink_type] = LED_BLINK_STOP;
-    p_led_indicator->preempt_blink = NULL_PREEMPT_BLINK;
+    if (p_led_indicator->preempt_blink == blink_type) {
+        p_led_indicator->p_blink_steps[blink_type] = LED_BLINK_STOP;
+        p_led_indicator->preempt_blink = NULL_PREEMPT_BLINK;
+    }
     _blink_list_switch(p_led_indicator); //stop and switch to next blink steps
     xSemaphoreGive(p_led_indicator->mutex);
 

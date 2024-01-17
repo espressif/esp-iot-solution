@@ -927,7 +927,7 @@ TEST_CASE("TEST LED RGB control Real time ", "[LED RGB][Real time]")
 {
     led_strip_config_t strip_config = {
         .strip_gpio_num = LED_STRIP_BLINK_GPIO,   // The GPIO that connected to the LED strip's data line
-        .max_leds = MAX_LED_NUM,        // The number of LEDs in the strip,
+        .max_leds = MAX_LED_NUM,                  // The number of LEDs in the strip,
         .led_pixel_format = LED_PIXEL_FORMAT_GRB, // Pixel format of your LED strip
         .led_model = LED_MODEL_WS2812,            // LED strip model
         .flags.invert_out = false,                // whether to invert the output signal

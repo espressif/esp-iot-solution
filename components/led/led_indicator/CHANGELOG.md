@@ -1,6 +1,12 @@
 
 # ChangeLog
 
+## v0.9.1 - 2024-1-17
+
+* Resolve the issue of calling preempt_stop with a specified blink_type that is not running, causing the current preemptive blink to stop.
+* Resolve the issue of the RGB ring not functioning.
+* Ensure that preempt_start stops the previous preemptive blink.
+
 ## v0.9.0 - 2023-11-28
 
 ### BUG FIX
