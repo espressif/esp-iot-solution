@@ -22,7 +22,8 @@ typedef void *button_handle_t;
  *
  */
 typedef enum {
-    BUTTON_PRESS_DOWN = 0,
+    BUTTON_PRESS_NORMAL = 0,
+    BUTTON_PRESS_DOWN,
     BUTTON_PRESS_UP,
     BUTTON_PRESS_REPEAT,
     BUTTON_PRESS_REPEAT_DONE,

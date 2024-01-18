@@ -115,6 +115,7 @@ static void button_handler(button_dev_t *btn)
         if (btn->button_level == btn->active_level) {
             btn->event = (uint8_t)BUTTON_PRESS_DOWN;
             CALL_EVENT_CB(BUTTON_PRESS_DOWN);
+            CALL_EVENT_CB(BUTTON_PRESS_NORMAL);
             btn->ticks = 0;
             btn->repeat = 1;
             btn->state = 1;
@@ -127,6 +128,7 @@ static void button_handler(button_dev_t *btn)
         if (btn->button_level != btn->active_level) {
             btn->event = (uint8_t)BUTTON_PRESS_UP;
             CALL_EVENT_CB(BUTTON_PRESS_UP);
+            CALL_EVENT_CB(BUTTON_PRESS_NORMAL);
             btn->ticks = 0;
             btn->state = 2;
 
@@ -153,6 +155,7 @@ static void button_handler(button_dev_t *btn)
         if (btn->button_level == btn->active_level) {
             btn->event = (uint8_t)BUTTON_PRESS_DOWN;
             CALL_EVENT_CB(BUTTON_PRESS_DOWN);
+            CALL_EVENT_CB(BUTTON_PRESS_NORMAL);
             btn->event = (uint8_t)BUTTON_PRESS_REPEAT;
             btn->repeat++;
             CALL_EVENT_CB(BUTTON_PRESS_REPEAT); // repeat hit
@@ -193,6 +196,7 @@ static void button_handler(button_dev_t *btn)
         if (btn->button_level != btn->active_level) {
             btn->event = (uint8_t)BUTTON_PRESS_UP;
             CALL_EVENT_CB(BUTTON_PRESS_UP);
+            CALL_EVENT_CB(BUTTON_PRESS_NORMAL);
             if (btn->ticks < SHORT_TICKS) {
                 btn->ticks = 0;
                 btn->state = 2; //repeat press
@@ -283,6 +287,7 @@ static void button_handler(button_dev_t *btn)
 
             btn->event = (uint8_t)BUTTON_PRESS_UP;
             CALL_EVENT_CB(BUTTON_PRESS_UP);
+            CALL_EVENT_CB(BUTTON_PRESS_NORMAL);
             btn->state = 0; //reset
             btn->long_press_hold_cnt = 0;
         }
