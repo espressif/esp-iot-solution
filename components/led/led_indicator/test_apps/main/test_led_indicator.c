@@ -14,7 +14,6 @@
 #include "led_indicator_blink_default.h"
 #include "unity.h"
 #include "led_gamma.h"
-#include "iot_button.h"
 #include "led_convert.h"
 
 // Some resources are lazy allocated in pulse_cnt driver, the threshold is left for that case
