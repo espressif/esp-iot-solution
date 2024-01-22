@@ -1336,8 +1336,14 @@ static int esp_ble_conn_gap_event(struct ble_gap_event *event, void *arg)
 #endif
 #endif
         case BLE_GAP_EVENT_NOTIFY_TX:
-            if ((event->notify_tx.status == BLE_HS_EDONE) || (event->notify_tx.status == BLE_HS_ETIMEOUT)) {
-                xSemaphoreGive(conn_session->semaphore);
+            if (event->notify_tx.indication) {
+                if ((event->notify_tx.status == BLE_HS_EDONE) || (event->notify_tx.status == BLE_HS_ETIMEOUT)) {
+                    xSemaphoreGive(conn_session->semaphore);
+                }
+            } else {
+                if (event->notify_tx.status == 0) {
+                    xSemaphoreGive(conn_session->semaphore);
+                }
             }
             break;
         case BLE_GAP_EVENT_CONNECT:
@@ -2258,6 +2264,7 @@ esp_err_t esp_ble_conn_notify(const esp_ble_conn_data_t *inbuff)
     rc = ble_gattc_notify_custom(conn_session->conn_handle, attr_mbuf->attr_handle, om);
     if (!rc) {
         ESP_LOGD(TAG, "Notify sent, attr_handle = %d", attr_mbuf->attr_handle);
+        return (xSemaphoreTake(conn_session->semaphore, pdMS_TO_TICKS(CONFIG_BLE_CONN_MGR_WAIT_DURATION * 1000)) != pdPASS) ? ESP_ERR_TIMEOUT : ESP_OK;
     } else {
         ESP_LOGE(TAG, "Error in sending notify, rc = %d", rc);
     }
@@ -2319,7 +2326,7 @@ esp_err_t esp_ble_conn_read(esp_ble_conn_data_t *inbuff)
         return rc;
     }
 
-    if (xSemaphoreTake(conn_session->semaphore, pdMS_TO_TICKS(31 * 1000)) != pdPASS) {
+    if (xSemaphoreTake(conn_session->semaphore, pdMS_TO_TICKS(CONFIG_BLE_CONN_MGR_WAIT_DURATION * 1000)) != pdPASS) {
         return ESP_ERR_TIMEOUT;
     }
 #endif
@@ -2403,7 +2410,7 @@ esp_err_t esp_ble_conn_write(const esp_ble_conn_data_t *inbuff)
 
     if (!rc) {
         ESP_LOGD(TAG, "Sent data, attr_handle = %d", chr_val_handle);
-        return (xSemaphoreTake(conn_session->semaphore, pdMS_TO_TICKS(31 * 1000)) != pdPASS) ? ESP_ERR_TIMEOUT : ESP_OK;
+        return (xSemaphoreTake(conn_session->semaphore, pdMS_TO_TICKS(CONFIG_BLE_CONN_MGR_WAIT_DURATION * 1000)) != pdPASS) ? ESP_ERR_TIMEOUT : ESP_OK;
     } else {
         ESP_LOGE(TAG, "Error in sending data, rc = %d", rc);
     }
@@ -2475,7 +2482,7 @@ esp_err_t esp_ble_conn_subscribe(esp_ble_conn_desc_t desc, const esp_ble_conn_da
 
     if (!rc) {
         ESP_LOGD(TAG, "Descriptors data, attr_handle = %d", handle);
-        return (xSemaphoreTake(conn_session->semaphore, pdMS_TO_TICKS(31 * 1000)) != pdPASS) ? ESP_ERR_TIMEOUT : ESP_OK;
+        return (xSemaphoreTake(conn_session->semaphore, pdMS_TO_TICKS(CONFIG_BLE_CONN_MGR_WAIT_DURATION * 1000)) != pdPASS) ? ESP_ERR_TIMEOUT : ESP_OK;
     } else {
         ESP_LOGE(TAG, "Error in descriptors data, rc = %d", rc);
     }

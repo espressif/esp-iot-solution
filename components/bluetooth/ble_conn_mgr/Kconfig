@@ -20,6 +20,13 @@ menu "BLE Connection Management"
         default 1 if BLE_CONN_MGR_ROLE_CENTRAL
         default 2 if BLE_CONN_MGR_ROLE_BOTH
 
+    config BLE_CONN_MGR_WAIT_DURATION
+        int "Duration to wait for completed"
+        range 10 31
+        default 31
+        help
+            Set the duration to wait for completed. Use a value big enough to avoid retransmissions.
+
     config BLE_CONN_MGR_EXTENDED_ADV
         bool
         depends on BLE_CONN_MGR_ROLE_PERIPHERAL || BLE_CONN_MGR_ROLE_BOTH && SOC_BLE_50_SUPPORTED

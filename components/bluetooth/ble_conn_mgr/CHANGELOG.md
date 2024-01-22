@@ -1,3 +1,9 @@
+## v0.1.1 - 2023-6-12
+
+### Bug Fixes:
+
+- Add duration to wait for write data completed
+
 ## v0.1.0
 
 This is the first release version for BLE connection management component in Espressif Component Registry, more detailed descriptions about the project, please refer to [User_Guide](https://docs.espressif.com/projects/esp-iot-solution/en/latest/bluetooth/ble_conn_mgr.html).
