@@ -1,0 +1,7 @@
+menu "BLE Profile: Alert Notification"
+    config BLE_ALERT_NOTIFICATION_PROFILES
+    bool "Enable Alert Notification Profile"
+    default n
+    help
+        Enable support for Alert Notification Profile.
+endmenu
