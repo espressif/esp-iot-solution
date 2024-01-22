@@ -1,0 +1,7 @@
+menu "BLE Profile: Health Thermometer"
+    config BLE_HEALTH_THERMOMETER_PROFILES
+        bool "Enable Health Thermometer Profile"
+        default n
+        help
+            Enable support for Health Thermometer Profile.
+endmenu
