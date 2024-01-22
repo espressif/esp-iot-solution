@@ -1,0 +1,8 @@
+# GATT TX Power Service
+
+menuconfig BLE_TPS
+    bool "GATT TX Power Service"
+
+if BLE_TPS
+
+endif # BLE_TPS

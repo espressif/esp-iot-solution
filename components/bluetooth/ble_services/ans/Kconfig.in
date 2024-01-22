@@ -1,0 +1,8 @@
+# GATT Alert Notification Service
+
+menuconfig BLE_ANS
+    bool "GATT Alert Notification Service"
+
+if BLE_ANS
+
+endif # BLE_ANS

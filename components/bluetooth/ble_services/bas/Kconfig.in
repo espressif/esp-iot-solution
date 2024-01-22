@@ -1,0 +1,89 @@
+# GATT Battery Service
+
+menuconfig BLE_BAS
+    bool "GATT Battery Service"
+
+if BLE_BAS
+
+config BLE_BAS_BATTERY_LEVEL_NOTIFY_ENABLE
+    bool "Battery Level Notification"
+    default y
+    help
+      Set y to support notification or n to disable it.
+
+config BLE_BAS_BATTERY_LEVEL_STATUS
+    bool "Battery Level Status characteristic"
+    help
+      Enable Battery Level Status characteristic in Battery Service.
+
+config BLE_BAS_BATTERY_LEVEL_STATUS_INDICATE_ENABLE
+    bool "Battery Level Status Indicate"
+    default y
+    depends on BLE_BAS_BATTERY_LEVEL_STATUS
+    help
+      Set y to support indicate or n to disable it.
+
+config BLE_BAS_ESTIMATED_SERVICE_DATE
+    bool "Estimated Service Date characteristic"
+    help
+      Enable Estimated Service Date characteristic in Battery Service.
+
+config BLE_BAS_ESTIMATED_SERVICE_DATE_INDICATE_ENABLE
+    bool "Estimated Service Date Indicate"
+    default y
+    depends on BLE_BAS_ESTIMATED_SERVICE_DATE
+    help
+      Set y to support indicate or n to disable it.
+
+config BLE_BAS_BATTERY_CRITICAL_STATUS
+    bool "Battery Critical Status characteristic"
+    help
+      Enable Battery Critical Status characteristic in Battery Service.
+
+config BLE_BAS_BATTERY_ENERGY_STATUS
+    bool "Battery Energy Status characteristic"
+    help
+      Enable Battery Energy Status characteristic in Battery Service.
+
+config BLE_BAS_BATTERY_ENERGY_STATUS_INDICATE_ENABLE
+    bool "Battery Energy Status Indicate"
+    default y
+    depends on BLE_BAS_BATTERY_ENERGY_STATUS
+    help
+      Set y to support indicate or n to disable it.
+
+config BLE_BAS_BATTERY_TIME_STATUS
+    bool "Battery Time Status characteristic"
+    help
+      Enable Battery Time Status characteristic in Battery Service.
+
+config BLE_BAS_BATTERY_TIME_STATUS_INDICATE_ENABLE
+    bool "Battery Energy Status Indicate"
+    default y
+    depends on BLE_BAS_BATTERY_TIME_STATUS
+    help
+      Set y to support indicate or n to disable it.
+
+config BLE_BAS_BATTERY_HEALTH_STATUS
+    bool "Battery Health Status characteristic"
+    help
+      Enable Battery Health Status characteristic in Battery Service.
+
+config BLE_BAS_BATTERY_HEALTH_STATUS_INDICATE_ENABLE
+    bool "Battery Health Status Indicate"
+    default y
+    depends on BLE_BAS_BATTERY_HEALTH_STATUS
+    help
+      Set y to support indicate or n to disable it.
+
+config BLE_BAS_BATTERY_HEALTH_INFORMATION
+    bool "Battery Health Information characteristic"
+    help
+      Enable Battery Health Information characteristic in Battery Service.
+
+config BLE_BAS_BATTERY_INFORMATION
+    bool "Battery Information characteristic"
+    help
+      Enable Battery Information characteristic in Battery Service.
+
+endif # BLE_BAS

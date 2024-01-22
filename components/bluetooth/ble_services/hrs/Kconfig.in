@@ -1,0 +1,37 @@
+# GATT Heart Rate Service
+
+menuconfig BLE_HRS
+    bool "GATT Heart Rate Service"
+
+if BLE_HRS
+
+choice BLE_HRS_DEFAULT_PERM
+    prompt "Default permissions used for HRS characteristics"
+    default BLE_HRS_DEFAULT_PERM_RW
+    help
+      Default permissions for HRS characteristic attributes
+      used when no permission is set for the report.
+      Used also for boot reports.
+
+config BLE_HRS_DEFAULT_PERM_RW
+    bool "Read and write allowed"
+
+config BLE_HRS_DEFAULT_PERM_RW_ENCRYPT
+    bool "Require encryption for access"
+
+config BLE_HRS_DEFAULT_PERM_RW_AUTHEN
+    bool "Require encryption and authentication for access"
+
+endchoice
+
+config BLE_HRS_BODY_SENSOR_LOCATION
+    bool "Body Sensor Location characteristic"
+    help
+      Enable Body Sensor Location characteristic in Heart Rate Service.
+
+config BLE_HRS_CONTROL_POINT
+    bool "Heart Rate Control Point characteristic"
+    help
+      Enable Heart Rate Control Point characteristic in Heart Rate Service.
+
+endif # BLE_HRS
