@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.2.3 - 2023-12-14
+
+### Fix:
+
+* Feed watchdog when erase OTA slot.
+
 ## v0.2.2 - 2023-12-12
 
 ### Fix:
@@ -42,4 +48,3 @@
 
 * Initial version
   * Support to update the firmware in the bootloader stage by decompressing the compressed OTA firmware
-
