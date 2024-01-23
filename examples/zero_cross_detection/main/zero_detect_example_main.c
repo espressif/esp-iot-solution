@@ -1,4 +1,5 @@
-/* SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+/*
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -39,7 +40,7 @@ static zero_cross_relay_t zcd = ZERO_DETECTION_RELAY_CONFIG_DEFAULT(); //Default
 static zero_detect_handle_t *g_zcds;
 zero_detect_config_t config = ZERO_DETECTION_INIT_CONFIG_DEFAULT(); //Default parameter
 
-void zero_detection_event_cb(zero_detect_event_t zero_detect_event, zero_detect_cb_param_t *param, void *usr_data)  //User's callback API
+void IRAM_ATTR zero_detection_event_cb(zero_detect_event_t zero_detect_event, zero_detect_cb_param_t *param, void *usr_data)  //User's callback API
 {
     switch (zero_detect_event) {
     case SIGNAL_FREQ_OUT_OF_RANGE:
@@ -135,7 +136,8 @@ void app_main(void)
     config.capture_pin = CONFIG_ZERO_DETECT_INPUT_GPIO;
     config.freq_range_max_hz = 65;  //Hz
     config.freq_range_min_hz = 45;  //Hz
-    config.valid_time = 6;
+    config.signal_lost_time_us = 100000; //Us
+    config.valid_times = 6;
     config.zero_signal_type = CONFIG_ZERO_DETECT_SIGNAL_TYPE;
 #if defined(SOC_MCPWM_SUPPORTED)
     config.zero_driver_type = MCPWM_TYPE;

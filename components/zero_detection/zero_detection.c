@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -19,10 +19,12 @@ typedef struct zero_cross {
     uint32_t full_cycle_us;            //Tick value after half a cycle, becomes the entire cycle after multiplying by two
 
     uint16_t valid_count;            //Count value of valid signals,switching during half a cycle
-    uint16_t valid_time;             //Number of valid signal verifications
+    uint16_t valid_times;             //Minimum required number of times for detecting signal validity
 
     uint16_t invalid_count;          //Count value of invalid signals,switching during half a cycle
-    uint16_t invalid_time;           //Number of invalid signal verifications
+    uint16_t invalid_times;           //Minimum required number of times for detecting signal invalidity
+
+    int64_t signal_lost_time_us;        //Minimum required duration for detecting signal loss
 
     bool zero_source_power_invalid;  //Power loss flag when signal source is lost
     bool zero_singal_invaild;        //Signal is in an invalid range
@@ -51,7 +53,7 @@ typedef struct zero_cross {
 /**
   * @brief  Zero cross detecion driver core function
   */
-void zero_cross_handle_interrupt(void *user_data, const mcpwm_capture_event_data_t *edata)
+void IRAM_ATTR zero_cross_handle_interrupt(void *user_data, const mcpwm_capture_event_data_t *edata)
 {
     zero_cross_dev_t *zero_cross_dev = user_data;
     int gpio_status = 0;
@@ -68,7 +70,7 @@ void zero_cross_handle_interrupt(void *user_data, const mcpwm_capture_event_data
 #if defined(CONFIG_USE_GPTIMER)
     gptimer_set_raw_count(zero_cross_dev->gptimer, 0);
 #else
-    esp_timer_restart(zero_cross_dev->esp_timer, 100000);
+    esp_timer_restart(zero_cross_dev->esp_timer, zero_cross_dev->signal_lost_time_us);
 #endif
     if (edge_status) {
         if (zero_cross_dev->zero_signal_type == PULSE_WAVE) { //The methods for calculating the periods of pulse signals and square wave signals are different
@@ -82,7 +84,7 @@ void zero_cross_handle_interrupt(void *user_data, const mcpwm_capture_event_data
         if (zero_cross_dev->full_cycle_us >= zero_cross_dev->freq_range_min_us && zero_cross_dev->full_cycle_us <= zero_cross_dev->freq_range_max_us) {
             zero_cross_dev->valid_count++; //Reset to zero, increment and evaluate the counting value
             zero_cross_dev->invalid_count = 0;
-            if (zero_cross_dev->valid_count >= zero_cross_dev->valid_time) {
+            if (zero_cross_dev->valid_count >= zero_cross_dev->valid_times) {
                 zero_cross_dev->zero_singal_invaild = false;
                 zero_cross_dev->zero_source_power_invalid = false;
                 //Enter the user callback function and return detection data and avoid judging upon receiving the first triggering edge
@@ -110,7 +112,7 @@ void zero_cross_handle_interrupt(void *user_data, const mcpwm_capture_event_data
             if (zero_cross_dev->full_cycle_us >= zero_cross_dev->freq_range_min_us && zero_cross_dev->full_cycle_us <= zero_cross_dev->freq_range_max_us) {   //Determine whether it is within the frequency range
                 zero_cross_dev->valid_count++;
                 zero_cross_dev->invalid_count = 0;
-                if (zero_cross_dev->valid_count >= zero_cross_dev->valid_time) {
+                if (zero_cross_dev->valid_count >= zero_cross_dev->valid_times) {
                     zero_cross_dev->zero_singal_invaild = false;
                     zero_cross_dev->zero_source_power_invalid = false;
                     //Enter the user callback function and return detection data and avoid judging upon receiving the first triggering edge
@@ -138,7 +140,7 @@ void zero_cross_handle_interrupt(void *user_data, const mcpwm_capture_event_data
             zero_cross_dev->zero_singal_invaild = true;
             zero_cross_dev->valid_count = 0;
             zero_cross_dev->invalid_count++;
-            if (zero_cross_dev->invalid_count >= zero_cross_dev->invalid_time) {
+            if (zero_cross_dev->invalid_count >= zero_cross_dev->invalid_times) {
                 if (zero_cross_dev->event_callback && (zero_cross_dev->cap_val_end_of_sample != 0) && (zero_cross_dev->cap_val_begin_of_sample != 0)) {
                     zero_detect_cb_param_t param = {0};
                     param.signal_invalid_event_data.invalid_count = zero_cross_dev->invalid_count;
@@ -275,7 +277,7 @@ esp_err_t zero_detect_gpio_init(zero_detect_handle_t zcd_handle)
     io_conf.pull_up_en = 1;
     ESP_GOTO_ON_ERROR(gpio_config(&io_conf), err, TAG, "GPIO config failed");
     //Change gpio interrupt type for one pin
-    ESP_GOTO_ON_ERROR(gpio_install_isr_service(0), err, TAG, "GPIO install isr failed");
+    ESP_GOTO_ON_ERROR(gpio_install_isr_service(ESP_INTR_FLAG_IRAM), err, TAG, "GPIO install isr failed");
 
     return ESP_OK;
 
@@ -302,7 +304,7 @@ esp_err_t zero_detect_gptime_init(zero_detect_handle_t zcd_handle)
 
     ESP_LOGI(TAG, "Install gptimer alarm");
     gptimer_alarm_config_t gptimer_alarm = {
-        .alarm_count = 100000,            //100ms
+        .alarm_count = zcd->signal_lost_time_us,
         .reload_count = 0,
         .flags.auto_reload_on_alarm = true,
     };
@@ -369,8 +371,9 @@ zero_detect_handle_t zero_detect_create(zero_detect_config_t *config)
         config->capture_pin = 2;
     }
 
-    zcd->valid_time = config->valid_time;
-    zcd->invalid_time = config->invalid_time;
+    zcd->valid_times = config->valid_times;
+    zcd->invalid_times = config->invalid_times;
+    zcd->signal_lost_time_us = config->signal_lost_time_us;
     zcd->freq_range_max_us = 1000000 / config->freq_range_min_hz;
     zcd->freq_range_min_us = 1000000 / config->freq_range_max_hz;
     zcd->capture_pin = config->capture_pin;
@@ -412,7 +415,7 @@ zero_detect_handle_t zero_detect_create(zero_detect_config_t *config)
         ESP_LOGE(TAG, "Gptimer start failed");
     }
 #else
-    if (esp_timer_start_periodic(zcd->esp_timer, 100000) != ESP_OK) {
+    if (esp_timer_start_periodic(zcd->esp_timer, zcd->signal_lost_time_us) != ESP_OK) {
         ESP_LOGE(TAG, "Esptimer start failed");
     }
 #endif

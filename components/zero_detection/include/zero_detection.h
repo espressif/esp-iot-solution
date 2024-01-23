@@ -1,4 +1,5 @@
-/* SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+/*
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -29,8 +30,9 @@ extern "C" {
 #endif
 
 #define ZERO_DETECTION_INIT_CONFIG_DEFAULT() { \
-    .valid_time = 6, \
-    .invalid_time = 5, \
+    .valid_times = 6, \
+    .invalid_times = 5, \
+    .signal_lost_time_us = 100000, \
     .freq_range_min_hz = 45,\
     .freq_range_max_hz = 65,\
     .capture_pin = 2,\
@@ -126,9 +128,10 @@ typedef void (*zero_cross_cb_t)(zero_detect_event_t zero_detect_event, zero_dete
  * @brief User config data type
  */
 typedef struct {
-    int32_t capture_pin;           /*!< GPIO number for zero cross detect capture */
-    uint16_t valid_time;            /*!< Comparison value for determining signal validity */
-    uint16_t invalid_time;          /*!< Comparison value for determining signal invalidity */
+    int32_t capture_pin;            /*!< GPIO number for zero cross detect capture */
+    uint16_t valid_times;            /*!< Minimum required number of times for detecting signal validity */
+    uint16_t invalid_times;          /*!< Minimum required number of times for detecting signal invalidity */
+    uint64_t signal_lost_time_us;      /*!< Minimum required duration for detecting signal loss */
     zero_signal_type_t zero_signal_type;          /*!< Zero Crossing Signal type */
     zero_driver_type_t zero_driver_type;          /*!< Zero crossing driver type */
     double freq_range_max_hz;       /*!< Maximum value of the frequency range when determining a valid signal */
