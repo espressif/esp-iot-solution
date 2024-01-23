@@ -64,6 +64,7 @@ ESP-IoT-Solution 包含物联网系统开发中常用的外设驱动和代码框
 
    快速入门 <gettingstarted>
    基础组件 <basic/index>
+   蓝牙 <bluetooth/index>
    显示设备 <display/index>
    USB主机&设备 <usb/index>
    音频设备 <audio/index>
