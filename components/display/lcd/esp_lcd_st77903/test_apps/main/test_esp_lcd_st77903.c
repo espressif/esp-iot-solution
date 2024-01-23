@@ -27,12 +27,16 @@
 #define TEST_LCD_QSPI_V_RES             (400)
 #define TEST_LCD_QSPI_BIT_PER_PIXEL     (16)
 
-#define TEST_PIN_NUM_LCD_QSPI_CS        (GPIO_NUM_9)
-#define TEST_PIN_NUM_LCD_QSPI_PCLK      (GPIO_NUM_10)
-#define TEST_PIN_NUM_LCD_QSPI_DATA0     (GPIO_NUM_11)
-#define TEST_PIN_NUM_LCD_QSPI_DATA1     (GPIO_NUM_12)
-#define TEST_PIN_NUM_LCD_QSPI_DATA2     (GPIO_NUM_13)
-#define TEST_PIN_NUM_LCD_QSPI_DATA3     (GPIO_NUM_14)
+#define TEST_PIN_NUM_LCD_QSPI_CS        (GPIO_NUM_14)
+#define TEST_PIN_NUM_LCD_QSPI_PCLK      (GPIO_NUM_9)
+#define TEST_PIN_NUM_LCD_QSPI_DATA0     (GPIO_NUM_10)
+#define TEST_PIN_NUM_LCD_QSPI_DATA1     (GPIO_NUM_11)
+#define TEST_PIN_NUM_LCD_QSPI_DATA2     (GPIO_NUM_12)
+#define TEST_PIN_NUM_LCD_QSPI_DATA3     (GPIO_NUM_13)
+
+#define TEST_ENABLE_LCD_READ            (0)
+#define TEST_LCD_REG_RDDST              (0x09)
+#define TEST_LCD_REG_VALUE              (0x00265284ULL)
 
 #if SOC_LCD_RGB_SUPPORTED
 #define TEST_LCD_RGB_H_RES              (320)
@@ -72,6 +76,7 @@ static void test_draw_bitmap(esp_lcd_panel_handle_t panel_handle, uint16_t h_res
     uint16_t row_line = v_res / bits_per_pixel;
     uint8_t byte_per_pixel = bits_per_pixel / 8;
     uint8_t *color = (uint8_t *)heap_caps_calloc(1, row_line * h_res * byte_per_pixel, MALLOC_CAP_DMA);
+    TEST_ASSERT_NOT_NULL(color);
     for (int j = 0; j < bits_per_pixel; j++) {
         for (int i = 0; i < row_line * h_res; i++) {
             for (int k = 0; k < byte_per_pixel; k++) {
@@ -88,7 +93,7 @@ static void test_draw_bitmap(esp_lcd_panel_handle_t panel_handle, uint16_t h_res
     vTaskDelay(pdMS_TO_TICKS(TEST_DELAY_TIME_MS));
 }
 
-TEST_CASE("test st77903 to draw color bar with QSPI interface", "[st77903][qspi]")
+TEST_CASE("test st77903 to draw color bar with QSPI interface", "[st77903][qspi][write]")
 {
     ESP_LOGI(TAG, "Install st77903 panel driver");
     esp_lcd_panel_handle_t panel_handle = NULL;
@@ -121,7 +126,6 @@ TEST_CASE("test st77903 to draw color bar with QSPI interface", "[st77903][qspi]
     };
     TEST_ESP_OK(esp_lcd_new_panel_st77903(NULL, &panel_config, &panel_handle));
     TEST_ESP_OK(esp_lcd_panel_reset(panel_handle));
-    TEST_ESP_OK(esp_lcd_panel_mirror(panel_handle, true, false));
     TEST_ESP_OK(esp_lcd_panel_disp_on_off(panel_handle, true));
     TEST_ESP_OK(esp_lcd_panel_init(panel_handle));
 
@@ -136,6 +140,56 @@ TEST_CASE("test st77903 to draw color bar with QSPI interface", "[st77903][qspi]
 
     TEST_ESP_OK(esp_lcd_panel_del(panel_handle));
 }
+
+#if TEST_ENABLE_LCD_READ
+TEST_CASE("test st77903 to read register with QSPI interface", "[st77903][qspi][read]")
+{
+    ESP_LOGI(TAG, "Install st77903 panel driver");
+    esp_lcd_panel_handle_t panel_handle = NULL;
+    st77903_qspi_config_t qspi_config = ST77903_QSPI_CONFIG_DEFAULT(TEST_LCD_HOST,
+                                                                    TEST_PIN_NUM_LCD_QSPI_CS,
+                                                                    TEST_PIN_NUM_LCD_QSPI_PCLK,
+                                                                    TEST_PIN_NUM_LCD_QSPI_DATA0,
+                                                                    TEST_PIN_NUM_LCD_QSPI_DATA1,
+                                                                    TEST_PIN_NUM_LCD_QSPI_DATA2,
+                                                                    TEST_PIN_NUM_LCD_QSPI_DATA3,
+                                                                    1,
+                                                                    TEST_LCD_QSPI_H_RES,
+                                                                    TEST_LCD_QSPI_V_RES);
+    qspi_config.flags.enable_read_reg = 1;
+#if CONFIG_IDF_TARGET_ESP32C6
+    qspi_config.flags.fb_in_psram = 0;
+    qspi_config.trans_pool_num = 2;
+#endif
+    st77903_vendor_config_t vendor_config = {
+        .qspi_config = &qspi_config,
+        .flags = {
+            .use_qspi_interface = 1,
+            .mirror_by_cmd = 1,
+        },
+    };
+    const esp_lcd_panel_dev_config_t panel_config = {
+        .reset_gpio_num = TEST_PIN_NUM_LCD_RST,
+        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_BGR,
+        .bits_per_pixel = TEST_LCD_QSPI_BIT_PER_PIXEL,
+        .vendor_config = &vendor_config,
+    };
+    TEST_ESP_OK(esp_lcd_new_panel_st77903(NULL, &panel_config, &panel_handle));
+    TEST_ESP_OK(esp_lcd_panel_reset(panel_handle));
+    TEST_ESP_OK(esp_lcd_panel_disp_on_off(panel_handle, true));
+    TEST_ESP_OK(esp_lcd_panel_init(panel_handle));
+
+    test_draw_bitmap(panel_handle, TEST_LCD_QSPI_H_RES, TEST_LCD_QSPI_V_RES, TEST_LCD_QSPI_BIT_PER_PIXEL, true);
+    vTaskDelay(pdMS_TO_TICKS(TEST_DELAY_TIME_MS));
+
+    int reg_value = 0;
+    TEST_ESP_OK(esp_lcd_st77903_qspi_read_reg(panel_handle, TEST_LCD_REG_RDDST, (uint8_t *)&reg_value, sizeof(reg_value), portMAX_DELAY));
+    ESP_LOGI(TAG, "Read register 0x%02x value: 0x%08x", TEST_LCD_REG_RDDST, reg_value);
+    TEST_ASSERT_TRUE(reg_value == TEST_LCD_REG_VALUE);
+
+    TEST_ESP_OK(esp_lcd_panel_del(panel_handle));
+}
+#endif
 
 #if SOC_LCD_RGB_SUPPORTED
 TEST_CASE("test st77903 to draw color bar with RGB interface", "[st77903][rgb]")

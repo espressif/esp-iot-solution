@@ -315,11 +315,21 @@ build_example_display_lcd_qspi_without_ram:
   parallel:
     matrix:
       - IMAGE: espressif/idf:v5.1.2
+      - IMAGE: espressif/idf:release-v5.2
   before_script:
-    - export PATCH_PATH=${IOT_SOLUTION_PATH}/examples/display/lcd/qspi_without_ram/patch/support_qspi_without_ram_a9349f4ad4.patch
-    - cd "$(dirname $(whereis idf.py | awk -F ' ' '{print $2}'))/.."
-    - git checkout a9349f4ad4
-    - git submodule update --init --recursive
+    - |
+      if [[ "$IMAGE" == "espressif/idf:release-v5.2" ]]; then
+        export PATCH_PATH="${IOT_SOLUTION_PATH}/examples/display/lcd/qspi_without_ram/patch/support_qspi_without_ram_a9349f4ad4.patch"
+        cd "$(dirname "$(whereis idf.py | awk -F ' ' '{print $2}')")/.."
+        git checkout a9349f4ad4
+        git submodule update --init --recursive
+        ./install.sh
+        . ./export.sh
+      else
+        export PATCH_PATH="${IOT_SOLUTION_PATH}/examples/display/lcd/qspi_without_ram/patch/support_qspi_without_ram_v5.1.2.patch"
+        cd "$(dirname "$(whereis idf.py | awk -F ' ' '{print $2}')")/.."
+        git submodule update --init --recursive
+      fi
     - git apply ${PATCH_PATH}
     - cd ${IOT_SOLUTION_PATH}
   variables:
@@ -739,12 +749,22 @@ build_components_display_lcd_esp_lcd_st77903_test_apps:
     - .rules:build:components_display_lcd_esp_lcd_st77903_test_apps
   parallel:
     matrix:
-      - IMAGE: espressif/idf:latest
+      - IMAGE: espressif/idf:v5.1.2
+      - IMAGE: espressif/idf:release-v5.2
   before_script:
-    - export PATCH_PATH=${IOT_SOLUTION_PATH}/examples/display/lcd/qspi_without_ram/patch/support_qspi_without_ram_a9349f4ad4.patch
-    - cd "$(dirname $(whereis idf.py | awk -F ' ' '{print $2}'))/.."
-    - git checkout a9349f4ad4
-    - git submodule update --init --recursive
+    - |
+      if [[ "$IMAGE" == "espressif/idf:release-v5.2" ]]; then
+        export PATCH_PATH="${IOT_SOLUTION_PATH}/examples/display/lcd/qspi_without_ram/patch/support_qspi_without_ram_a9349f4ad4.patch"
+        cd "$(dirname "$(whereis idf.py | awk -F ' ' '{print $2}')")/.."
+        git checkout a9349f4ad4
+        git submodule update --init --recursive
+        ./install.sh
+        . ./export.sh
+      else
+        export PATCH_PATH="${IOT_SOLUTION_PATH}/examples/display/lcd/qspi_without_ram/patch/support_qspi_without_ram_v5.1.2.patch"
+        cd "$(dirname "$(whereis idf.py | awk -F ' ' '{print $2}')")/.."
+        git submodule update --init --recursive
+      fi
     - git apply ${PATCH_PATH}
     - cd ${IOT_SOLUTION_PATH}
   variables:
