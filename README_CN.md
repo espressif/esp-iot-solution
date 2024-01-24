@@ -88,7 +88,7 @@ ESP-IoT-Solution 中注册的组件如下:
 
 </center>
 
-可以在项目根目录下使用 `idf.py add-dependency` 命令直接将组件从 Component Registry 添加到项目中。例如，执行 `idf.py add-dependency "expressif/usb_stream"` 命令添加 `usb_stream`，该组件将在 `CMake` 步骤中自动下载。
+可以在项目根目录下使用 `idf.py add-dependency` 命令直接将组件从 Component Registry 添加到项目中。例如，执行 `idf.py add-dependency "espressif/usb_stream"` 命令添加 `usb_stream`，该组件将在 `CMake` 步骤中自动下载。
 
 > 请参考 [IDF Component Manager](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/tools/idf-component-manager.html) 查看更多关于组件管理器的细节.
 
