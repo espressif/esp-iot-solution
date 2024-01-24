@@ -95,7 +95,7 @@ ESP 系列 SoC 采用 40nm 工艺制成，具有最佳的功耗性能、射频�
 
 如果您只想使用 ESP-IoT-Solution 中的组件，我们建议您从 ESP 组件注册表 `ESP Component Registry <https://components.espressif.com/>`_ 中使用它。
 
-ESP-IoT-Solution 中注册的组件可在 :project_file:`README_CN.md` 中查阅，您可以在项目根目录下使用 ``idf.py add-dependency`` 命令直接将组件从 Component Registry 添加到项目中。例如，执行 ``idf.py add-dependency "expressif/usb_stream"`` 命令添加 ``usb_stream``，该组件将在 ``CMake`` 步骤中自动下载。
+ESP-IoT-Solution 中注册的组件可在 :project_file:`README_CN.md` 中查阅，您可以在项目根目录下使用 ``idf.py add-dependency`` 命令直接将组件从 Component Registry 添加到项目中。例如，执行 ``idf.py add-dependency "espressif/usb_stream"`` 命令添加 ``usb_stream``，该组件将在 ``CMake`` 步骤中自动下载。
 
 请参考 `IDF Component Manager <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/tools/idf-component-manager.html>`_ 查看更多关于组件管理器的细节.
 
@@ -120,7 +120,7 @@ ESP-IoT-Solution 中注册的组件可在 :project_file:`README_CN.md` 中查阅
     .. code:: shell
 
         . $HOME/esp/esp-idf/export.sh
-    
+
     请将以上指令中的路径，替换成实际安装路径。
 
 * 添加 IOT_SOLUTION_PATH 环境变量：
