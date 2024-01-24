@@ -21,10 +21,6 @@ static const char *TAG = "sm2x35egh";
         action;                                                             \
     }
 
-#if CONFIG_ENABLE_DRIVER_DEBUG_LOG_OUTPUT
-#define LOG_LOCAL_LEVEL ESP_LOG_DEBUG
-#endif
-
 #define INVALID_ADDR        0xFF
 #define IIC_BASE_UNIT_HZ    1000
 #define SM2x35EGH_MAX_PIN   5

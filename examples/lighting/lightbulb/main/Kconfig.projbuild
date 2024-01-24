@@ -7,8 +7,8 @@ menu "Lightbulb Demo Configuration"
             help
                 Select the driver type you want to demonstrate
 
-            config LIGHTBULB_DEMO_DRIVER_SELECT_SM2135E
-                bool "Demo SM2135E"
+            config LIGHTBULB_DEMO_DRIVER_SELECT_BP5758D
+                bool "Demo BP5758D"
             config LIGHTBULB_DEMO_DRIVER_SELECT_WS2812
                 bool "Demo WS2812"
             config LIGHTBULB_DEMO_DRIVER_SELECT_PWM
@@ -74,18 +74,18 @@ menu "Lightbulb Demo Configuration"
         help
             Set the PWM Blue LED GPIO.
 
-    config SM2135E_IIC_CLK_GPIO
-        int "SM2135E IIC CLK GPIO"
+    config BP5758D_IIC_CLK_GPIO
+        int "BP5758D IIC CLK GPIO"
         default 4
-        depends on LIGHTBULB_DEMO_DRIVER_SELECT_SM2135E
+        depends on LIGHTBULB_DEMO_DRIVER_SELECT_BP5758D
         help
-            Set the SM2135E CLK GPIO.
+            Set the BP5758D CLK GPIO.
 
-    config SM2135E_IIC_SDA_GPIO
-        int "SM2135E IIC SDA GPIO"
+    config BP5758D_IIC_SDA_GPIO
+        int "BP5758D IIC SDA GPIO"
         default 5
-        depends on LIGHTBULB_DEMO_DRIVER_SELECT_SM2135E
+        depends on LIGHTBULB_DEMO_DRIVER_SELECT_BP5758D
         help
-            Set the SM2135E SDA GPIO.
+            Set the BP5758D SDA GPIO.
 
 endmenu

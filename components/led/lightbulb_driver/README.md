@@ -1,62 +1,76 @@
-# 球泡灯组件
+# Lightbulb Component
 
-该组件将球泡灯中常用的多款调光方案做了封装，使用一个抽象层管理这些方案，便于开发者集成，提供功率限制、颜色校准、呼吸/渐变等多种常用功能，已支持的调光方案如下：
+👉 [中文版](./README_CN.md)
 
-- PWM 直驱方案
+The lightbulb component encapsulates several commonly used dimming schemes for lightbulbs, managing these schemes through an abstract layer for easy integration into developers' applications. Currently, support has been extended to all ESP32 series chips.
 
-  - RGB 三路 + C/W 两路：RGB 彩光与 C/W 白光通道混光输出
-  - RGB 三路 + CCT/Brightness 两路：RGB 彩光通道混光输出，白光使用单独一路控制色温，另一路控制亮度
+- PWM Scheme:
+
+  - RGB + C/W
+  - RGB + CCT/Brightness
 
 - IIC 调光芯片方案
 
-  - SM2135E
+  - ~~SM2135E~~
   - SM2135EH
-  - SM2235EGH
-  - SM2335EGH
-  - BP5758/BP5758D/BP5768D
+  - SM2X35EGH (SM2235EGH/SM2335EGH)
+  - BP57x8D (BP5758/BP5758D/BP5768)
   - BP1658CJ
   - KP18058
 
-- 单总线方案
+- Single Bus Scheme:
 
   - WS2812
 
-## PWM 直驱方案使用示例
+## Supported common functionalities
 
-PWM 直驱方案对于 5 路球泡灯有 2 种控制方式，`RGB 三路 + C/W 两路` 与 `RGB 三路 + CCT/Brightness 两路`，最主要的区别在于后者使用单独的硬件通道控制色温与亮度，不需要程序计算混色比例，所以该方式下色温的准确度是最高的，前者则需要根据所需色温时刻计算冷色与暖色灯珠输出的占比。
+- Dynamic Effects: Supports various color transitions using fades, and allows configuring periodic breathing and blinking effects.
+- Calibration: Enables fine-tuning of output data using coefficients to achieve white balance functionality, and supports gamma calibration curves.
+- Status Storage: Utilizes the `NVS` component to store the current state of the lightbulb, facilitating features like power loss memory.
+- LED Configuration: Supports up to 5 types of LED configurations, with the following combinations:
+  - Single-channel, cold or warm temperature LED, capable of brightness control under a single color temperature.
+  - Dual-channel, cold and warm LEDs, enabling control of both color temperature and brightness.
+  - Tri-channel, red, green, and blue LEDs, allowing for arbitrary color control.
+  - Four-channel, red, green, blue, and cold or warm temperature LEDs, enabling color control and brightness control under a single color temperature. If a mixing table is configured, different color temperatures can be achieved by mixing these LEDs, enabling color temperature control.
+  - Five-channel, red, green, blue, cold, and warm temperature LEDs, enabling color and color temperature-controlled brightness.
+- Power Limitation: Balances the output power under different color temperatures and colors.
+- Low Power: Reduces overall power consumption without compromising dynamic effects.
+- Software Color Temperature: Applicable for PWM-driven scenarios where hardware color temperature adjustment is not performed.
 
-使用实例如下：
+## Example of PWM Scheme
+
+The PWM scheme is implemented using the LEDC driver, supporting both software and hardware fade functionalities. It also automatically configures resolution based on frequency. An example of usage is provided below:
 
 ```c
 lightbulb_config_t config = {
-    //1. 选择 PWM 输出并进行参数配置
+    // 1. Select PWM output and configure parameters
     .type = DRIVER_ESP_PWM,
     .driver_conf.pwm.freq_hz = 4000,
 
-    //2. 功能选择，根据你的需要启用/禁用
-    .capability.enable_fades = true,
-    .capability.fades_ms = 800,
+    // 2. Capability Selection: Enable/Disable Based on Your Needs
+    .capability.enable_fade = true,
+    .capability.fade_time_ms = 800,
     .capability.enable_lowpower = false,
-    /* 如果你的驱动白光输出为软件混色而不是硬件单独控制，需要启用此功能 */
-    .capability.enable_mix_cct = false,
+    /* If your driver controls white light output separately through hardware instead of software mixing, enable this feature. */
+    .capability.enable_hardware_cct = true,
     .capability.enable_status_storage = true,
-    /* 用于配置是 3 路或 2 路或 5 路输出模式 */
-    .capability.mode_mask = COLOR_MODE,
+    /* Used to configure the combination of LED beads */
+    .capability.led_beads = LED_BEADS_3CH_RGB,
     .capability.storage_cb = NULL,
     .capability.sync_change_brightness_value = true,
 
-    //3. 配置 PWM 输出的硬件管脚
+    // 3. Configure hardware pins for PWM output
     .io_conf.pwm_io.red = 25,
     .io_conf.pwm_io.green = 26,
     .io_conf.pwm_io.blue = 27,
 
-    //4. 限制参数，使用细则请参考后面小节
+    // 4. Limit parameters, defaults are usually sufficient
     .external_limit = NULL,
 
-    //5. 颜色校准参数
+    // 5. Calibration parameters, defaults are usually sufficient
     .gamma_conf = NULL,
 
-    //6. 初始化照明参数，如果 on 置位将在初始化驱动时点亮球泡灯
+    // 6. Initialize status parameters; if "on" is set, the light will turn on during driver initialization.
     .init_status.mode = WORK_COLOR,
     .init_status.on = true,
     .init_status.hue = 0,
@@ -66,49 +80,44 @@ lightbulb_config_t config = {
 lightbulb_init(&config);
 ```
 
-## IIC 调光芯片方案使用示例
+## Example of IIC Scheme
 
-该组件已支持多款 IIC 调光芯片，调光芯片的具体功能及参数请参阅芯片手册。
-
-使用实例如下：
+The IIC dimming chip solution now supports configuring all parameters of the IIC dimming chip. Please refer to the manual for the specific functions and parameters of the dimming chip and fill in accordingly. An example of usage is provided below:
 
 ```c
 lightbulb_config_t config = {
-    //1. 选择需要的芯片并进行参数配置，每款芯片配置的参数存在不同，请仔细参阅芯片手册
-    .type = DRIVER_SM2135E,
-    .driver_conf.sm2135e.rgb_current = SM2135E_RGB_CURRENT_20MA,
-    .driver_conf.sm2135e.wy_current = SM2135E_WY_CURRENT_40MA,
-    .driver_conf.sm2135e.iic_clk = 4,
-    .driver_conf.sm2135e.iic_sda = 5,
-    .driver_conf.sm2135e.freq_khz = 400,
-    .driver_conf.sm2135e.enable_iic_queue = true,
+    // 1. Select the desired chip and configure parameters. Each chip has different configuration parameters. Please carefully refer to the chip manual.
+    .type = DRIVER_BP57x8D,
+    .driver_conf.bp57x8d.freq_khz = 300,
+    .driver_conf.bp57x8d.enable_iic_queue = true,
+    .driver_conf.bp57x8d.iic_clk = 4,
+    .driver_conf.bp57x8d.iic_sda = 5,
+    .driver_conf.bp57x8d.current = {50, 50, 60, 30, 50},
 
-    //2. 驱动功能选择，根据你的需要启用/禁用
-    .capability.enable_fades = true,
-    .capability.fades_ms = 800,
+    // 2. Capability Selection: Enable/Disable Based on Your Needs
+    .capability.enable_fade = true,
+    .capability.fade_time_ms = 800,
     .capability.enable_lowpower = false,
 
-    /* 对于 IIC 方案，该选项必须配置为启用 */
-    .capability.enable_mix_cct = true,
     .capability.enable_status_storage = true,
-    .capability.mode_mask = COLOR_AND_WHITE_MODE,
+    .capability.led_beads = LED_BEADS_5CH_RGBCW,
     .capability.storage_cb = NULL,
     .capability.sync_change_brightness_value = true,
 
-    //3. 配置 IIC 芯片的硬件管脚
+    // 3. Configure hardware pins for the IIC chip.
     .io_conf.iic_io.red = OUT3,
     .io_conf.iic_io.green = OUT2,
     .io_conf.iic_io.blue = OUT1,
     .io_conf.iic_io.cold_white = OUT5,
     .io_conf.iic_io.warm_yellow = OUT4,
 
-    //4. 限制参数，使用细则请参考后面小节
+    // 4. Limit parameters, defaults are usually sufficient
     .external_limit = NULL,
 
-    //5. 颜色校准参数
+    // 5. Calibration parameters, defaults are usually sufficient
     .gamma_conf = NULL,
 
-    //6. 初始化照明参数，如果 on 置位将在初始化驱动时点亮球泡灯
+    // 6. Initialize status parameters; if "on" is set, the light will turn on during driver initialization.
     .init_status.mode = WORK_COLOR,
     .init_status.on = true,
     .init_status.hue = 0,
@@ -118,33 +127,33 @@ lightbulb_config_t config = {
 lightbulb_init(&config);
 ```
 
-## 单总线方案使用示例
+## Example of Single-bus Scheme
 
-该组件使用 SPI 驱动输出 WS2812 所需要的数据，数据封装顺序为 GRB。
+Single-bus scheme utilizes the SPI driver to output data for WS2812 LEDs, with data packaging sequence set as GRB.
 
 ```c
 lightbulb_config_t config = {
-    //1. 选择 WS2812 输出并进行参数配置
+    // 1. Select WS2812 output and configure parameters
     .type = DRIVER_WS2812,
     .driver_conf.ws2812.led_num = 22,
     .driver_conf.ws2812.ctrl_io = 4,
 
-    //2. 驱动功能选择，根据你的需要启用/禁用
-    .capability.enable_fades = true,
-    .capability.fades_ms = 800,
+    // 2. Capability Selection: Enable/Disable Based on Your Needs
+    .capability.enable_fade = true,
+    .capability.fade_time_ms = 800,
     .capability.enable_status_storage = true,
 
-    /* 对于 WS2812 只能选择 COLOR_MODE */
-    .capability.mode_mask = COLOR_MODE,
+    /* For WS2812, you can only choose LED_BEADS_3CH_RGB */
+    .capability.led_beads = LED_BEADS_3CH_RGB,
     .capability.storage_cb = NULL,
 
-    //3. 限制参数，使用细则请参考后面小节
+    // 3. Limit parameters, defaults are usually sufficient
     .external_limit = NULL,
 
-    //4. 颜色校准参数
+    // 4. Calibration parameters, defaults are usually sufficient
     .gamma_conf = NULL,
 
-    //5. 初始化照明参数，如果 on 置位将在初始化驱动时点亮球泡灯
+    // 5. Initialize status parameters; if "on" is set, the light will turn on during driver initialization.
     .init_status.mode = WORK_COLOR,
     .init_status.on = true,
     .init_status.hue = 0,
@@ -154,11 +163,11 @@ lightbulb_config_t config = {
 lightbulb_init(&config);
 ```
 
-## 限制参数使用说明
+## Example of Limit Parameters
 
-限制参数主要用途为限制输出的最大功率，以及将亮度参数限制在一个区间。该组件彩光与白光可独立控制，所以存在 2 组最大/最小亮度参数及功率参数。彩光使用 `HSV` 模型，`value` 代表彩光亮度，白光使用 `brightness` 参数。`value` 与 `brightness` 数据输入范围为 0 <= x <= 100。
+The primary purpose of limit parameters is to restrict the maximum output power and constrain the brightness parameters within a specific range. This component allows independent control of colored light and white light, which results in two sets of maximum/minimum brightness parameters and power parameters. Colored light uses the HSV model, with the value representing colored light brightness, while white light uses the brightness parameter. The input range for both value and brightness is 0 <= x <= 100.
 
-如果设置了亮度限制参数，那么将对输入值进行等比例缩放，例如，我们设置了下面这些参数
+If brightness limitation parameters are set, the input values will be proportionally scaled. For instance, consider the following parameters:
 
 ```c
 lightbulb_power_limit_t limit = {
@@ -171,7 +180,7 @@ lightbulb_power_limit_t limit = {
 }
 ```
 
-`value` 与 `brightness` 输入与输出的关系如下：
+The relationship between value and brightness inputs and outputs is as follows:
 
 ```c
 input   output
@@ -183,7 +192,7 @@ input   output
 0        0
 ```
 
-功率限制在亮度参数限制后进一步进行，对于 RGB 通道调整区间为 100 <= x <= 300，输入与输出的关系如下：
+Power limit is applied after the brightness parameter limitations, and for the RGB channel adjustment, the range is 100 <= x <= 300. The relationship between input and output is as follows:
 
 ```c
 input           output(color_max_power = 100)       output(color_max_power = 200)       output(color_max_power = 300)
@@ -196,11 +205,11 @@ input           output(color_max_power = 100)       output(color_max_power = 200
 
 ```
 
-## 颜色校准参数
+## Example of Calibration Parameters
 
-颜色校准参数由 2 个部分组成，用于生成 gamma 灰度表的曲线系数 `x_curve_coe` 及用于做最终调整的白平衡系数 `r_balance_coe`。
+Color calibration parameters consist of two components: curve coefficients `curve_coefficient` used to generate the gamma grayscale table, and white balance coefficients `balance_coefficient` used for the final adjustments.
 
-- 曲线系数的取值在 0.8 <= x <= 2.2，各参数输出如下
+- Curve coefficients have values within the range of 0.8 <= x <= 2.2. The output for each parameter is as follows:
 
 ```c
 
@@ -221,10 +230,10 @@ max|                                    |                                  |
   0               ...                255 
 ```
 
-组件将根据各驱动所支持的最大输入值生成 gamma 校准表格，所有 8bit RGB 都将转为校准后的值，建议为 RGB 通道设置同一系数。
+The component will generate a gamma calibration table based on the maximum input values supported by each driver. All 8-bit RGB values will be converted to their calibrated counterparts. It is recommended to set the same coefficient for the RGB channels.
 
-- 白平衡系数的取值在 0.5-1.0，对数据进行最后微调，计算规则为 `输出值 = 输入值 * 系数`，可以为每个通道设置不同的系数。
+- White balance coefficients have values within the range of 0.5 to 1.0. They are used for final fine-tuning of the data, and the calculation rule is: output value = input value * coefficient. Different coefficients can be set for each channel.
 
-## 示例代码
+## Example Code
 
-[点击此处](https://github.com/espressif/esp-iot-solution/tree/master/examples/lighting/lightbulb) 获取示例代码及使用说明。
+Click [here](https://github.com/espressif/esp-iot-solution/tree/master/examples/lighting/lightbulb) to access the example code and usage instructions.

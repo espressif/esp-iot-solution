@@ -20,10 +20,6 @@ static const char *TAG = "kp18058";
         action;                                                             \
     }
 
-#if CONFIG_ENABLE_DRIVER_DEBUG_LOG_OUTPUT
-#define LOG_LOCAL_LEVEL ESP_LOG_DEBUG
-#endif
-
 #define INVALID_ADDR            0xFF
 #define IIC_BASE_UNIT_HZ        1000
 #define KP18058_MAX_PIN         5

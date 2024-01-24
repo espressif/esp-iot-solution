@@ -10,17 +10,10 @@ menu "LightBulb Driver Config"
         config PWM_ENABLE_HW_FADE
             depends on ENABLE_PWM_DRIVER
             bool "Use hardware fade API"
-            default "n" if IDF_TARGET_ESP32C6
-            default "y"
+            default "n"
             help
                 Use the hardware fade API to implement the fade function, and the change of the duty cycle will be smoother.
                 Please note: the lightbulb component still uses esp_timer to trigger the fade API, and the fade API is only used for small-scale changes.
-
-        config ENABLE_SM2135E_DRIVER
-            bool "Enable sm2135e interface"
-            default "y"
-            help
-                Enable SM2135E output.
 
         config ENABLE_SM2135EH_DRIVER
             bool "Enable sm2135eh interface"
@@ -34,8 +27,8 @@ menu "LightBulb Driver Config"
             help
                 Enable SM2x35egh output.
 
-        config ENABLE_BP5758D_DRIVER
-            bool "Enable bp5758d interface"
+        config ENABLE_BP57x8D_DRIVER
+            bool "Enable bp57x8d(bp5758d bp5768d) interface"
             default "y"
             help
                 Enable BP5758d output.
@@ -59,7 +52,7 @@ menu "LightBulb Driver Config"
                 Enable ws2812 output.
 
         menu "IIC Send Task Config"
-            depends on ENABLE_KP18058_DRIVER || ENABLE_BP1658CJ_DRIVER || ENABLE_BP5758D_DRIVER || ENABLE_SM2x35EGH_DRIVER || ENABLE_SM2135EH_DRIVER || ENABLE_SM2135E_DRIVER
+            depends on ENABLE_KP18058_DRIVER || ENABLE_BP1658CJ_DRIVER || ENABLE_BP57x8D_DRIVER || ENABLE_SM2x35EGH_DRIVER || ENABLE_SM2135EH_DRIVER || ENABLE_SM2135E_DRIVER
 
             config LB_IIC_TASK_STACK
                 int "IIC Send Task stack"
@@ -120,12 +113,6 @@ menu "LightBulb Driver Config"
             default "n"
             help
                 Enable Lightbulb debug log.
-
-        config ENABLE_DRIVER_DEBUG_LOG_OUTPUT
-            bool "Enable driver debug log output"
-            default "n"
-            help
-                Enable driver debug log.
 
         choice LIGHTBULB_CHECK_LOG_DEFAULT_LEVEL
             bool "Default LIGHTBULB_CHECK func print log level"

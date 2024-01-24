@@ -21,10 +21,6 @@ static const char *TAG = "driver_pwm";
         action;                                                             \
     }
 
-#if CONFIG_ENABLE_DRIVER_DEBUG_LOG_OUTPUT
-#define LOG_LOCAL_LEVEL ESP_LOG_DEBUG
-#endif
-
 typedef struct {
     ledc_timer_config_t ledc_config;
     uint8_t registered_channel_mask;
@@ -198,7 +194,7 @@ esp_err_t pwm_regist_channel(pwm_channel_t channel, gpio_num_t gpio_num)
     };
     err = ledc_channel_config(&ledc_ch_config);
     PWM_CHECK(err == ESP_OK, "channel config fail", return ESP_ERR_INVALID_STATE);
-    ESP_LOGI(TAG, "channel:%d -> gpio_num:%d", channel, gpio_num);
+    ESP_LOGD(TAG, "channel:%d -> gpio_num:%d", channel, gpio_num);
     s_pwm->registered_channel_mask |= (1 << channel);
 
     return err;
@@ -208,7 +204,7 @@ esp_err_t pwm_set_channel(pwm_channel_t channel, uint16_t value)
 {
     esp_err_t err = ESP_OK;
     PWM_CHECK(s_pwm, "pwm_init() must be called first", return ESP_ERR_INVALID_STATE);
-    PWM_CHECK(s_pwm->registered_channel_mask & BIT(channel), "Channel not registered", return ESP_ERR_INVALID_STATE);
+    PWM_CHECK(s_pwm->registered_channel_mask & BIT(channel), "Channel %d not registered", return ESP_ERR_INVALID_STATE, channel);
     PWM_CHECK((value <= (1 << s_pwm->ledc_config.duty_resolution)), "value out of range", return ESP_ERR_INVALID_ARG);
 
 #if CONFIG_PM_ENABLE && CONFIG_IDF_TARGET_ESP32
@@ -330,7 +326,7 @@ esp_err_t pwm_set_shutdown(void)
 esp_err_t pwm_set_hw_fade(pwm_channel_t channel, uint16_t value, int fade_ms)
 {
     PWM_CHECK(s_pwm, "pwm_init() must be called first", return ESP_ERR_INVALID_STATE);
-    PWM_CHECK(s_pwm->registered_channel_mask & BIT(channel), "Channel not registered", return ESP_ERR_INVALID_STATE);
+    PWM_CHECK(s_pwm->registered_channel_mask & BIT(channel), "Channel %d not registered", return ESP_ERR_INVALID_STATE, channel);
     PWM_CHECK(value <= ((1 << s_pwm->ledc_config.duty_resolution)), "value out of range", return ESP_ERR_INVALID_ARG);
 
 #if CONFIG_PM_ENABLE && CONFIG_IDF_TARGET_ESP32

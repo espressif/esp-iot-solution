@@ -1,4 +1,19 @@
 # ChangeLog
+## v1.0.0 - 2024-01-16
+
+### Enhancements:
+
+* The driver provides LED bead combination options and supports different types of lightbulbs.
+* Added feature to count IIC driver transmission failures, aiding in hardware health monitoring.
+* Discontinued support for SM2135E driver, removing related files and code.
+* Updated BP5758D driver files to BP57X8D for consistency with SM2X35EGH.
+* The driver now supports setting white balance parameters for all channels. This means that you can adjust the white balance individually for each channel, allowing for precise control and customization of the lighting output.
+* Increased the power limit range from 100-300 to 100-500, facilitating power setting for RGBWW beads.
+* Introduced CCT output modes: standard mode (consistent with original scheme, mapping percentage to Kelvin values proportionally) and precise mode (setting individual percentages for each Kelvin value and predetermining current coefficients for each channel, scaling these coefficients proportionally during writing).
+* Some configuration changes: 
+  * Removed mode_mask from capability, now using led_beads to set the LED panel bead combination
+  * Renamed enable_mix_cct to enable_hardware_cct, fades_ms to fade_time_ms, and enable_fades to enable_fade
+  * Removed hardware_monitor_cb
 
 ## v0.5.5 - 2024-01-15
 
@@ -38,7 +53,6 @@
 * Add a phase delay function to the PWM drive, and after enabling this function, all channel outputs will be in a complementary state.
 
 ## v0.4.1 - 2023-8-30
-
 ### Bug Fixes:
 
 * Fixed a thread safety issue.

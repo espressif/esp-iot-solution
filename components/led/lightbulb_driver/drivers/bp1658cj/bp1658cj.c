@@ -20,10 +20,6 @@ static const char *TAG = "driver_bp1658cj";
         action;                                                             \
     }
 
-#if CONFIG_ENABLE_DRIVER_DEBUG_LOG_OUTPUT
-#define LOG_LOCAL_LEVEL ESP_LOG_DEBUG
-#endif
-
 #define INVALID_ADDR        0xFF
 #define IIC_BASE_UNIT_HZ    1000
 #define BP1658CJ_MAX_PIN    5

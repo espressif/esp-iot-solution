@@ -33,10 +33,6 @@ static ws2812_handle_t *s_ws2812 = NULL;
         action;                                                             \
     }
 
-#if CONFIG_ENABLE_DRIVER_DEBUG_LOG_OUTPUT
-#define LOG_LOCAL_LEVEL ESP_LOG_DEBUG
-#endif
-
 static esp_err_t _write(uint8_t *buf, size_t size)
 {
     spi_transaction_t t = { 0 };

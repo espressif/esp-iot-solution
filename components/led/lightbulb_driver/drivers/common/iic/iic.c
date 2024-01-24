@@ -48,6 +48,7 @@ typedef struct {
     QueueHandle_t cmd_queue_handle;
     TaskHandle_t send_task_handle;
     i2c_port_t i2c_master_num;
+    esp_err_t last_err;
 } iic_config_t;
 
 typedef struct {
@@ -70,10 +71,10 @@ static esp_err_t _write(uint8_t addr, uint8_t *data_wr, size_t size)
     i2c_master_write_byte(cmd, addr, ACK_CHECK_DIS);
     i2c_master_write(cmd, data_wr, size, ACK_CHECK_DIS);
     i2c_master_stop(cmd);
-    esp_err_t err = i2c_master_cmd_begin(s_obj->i2c_master_num, cmd, pdMS_TO_TICKS(10));
+    s_obj->last_err = i2c_master_cmd_begin(s_obj->i2c_master_num, cmd, pdMS_TO_TICKS(10));
     i2c_cmd_link_delete(cmd);
 
-    return err;
+    return s_obj->last_err;
 }
 
 static void send_task(void *arg)
@@ -128,7 +129,7 @@ esp_err_t iic_driver_init(i2c_port_t i2c_master_num, gpio_num_t sda_io_num, gpio
 
 esp_err_t iic_driver_write(uint8_t addr, uint8_t *data_wr, size_t size)
 {
-    esp_err_t err = ESP_OK;
+    esp_err_t err = s_obj->last_err;
     if (s_obj->cmd_queue_handle && s_obj->send_task_handle) {
         if (uxQueueSpacesAvailable(s_obj->cmd_queue_handle) == 0) {
             // ESP_LOGE(TAG, "queue full, reset");
