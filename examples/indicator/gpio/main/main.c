@@ -5,14 +5,13 @@
  */
 
 #include <stdio.h>
+#include <inttypes.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "cmd_led_indicator.h"
-#include "esp_log.h"
 #include "esp_idf_version.h"
 #include "esp_log.h"
 #include "led_indicator.h"
-#include "inttypes.h"
 
 #define GPIO_LED_PIN       CONFIG_EXAMPLE_GPIO_NUM
 #define GPIO_ACTIVE_LEVEL  CONFIG_EXAMPLE_GPIO_ACTIVE_LEVEL

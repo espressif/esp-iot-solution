@@ -5,14 +5,13 @@
  */
 
 #include <stdio.h>
+#include <inttypes.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "cmd_led_indicator.h"
-#include "esp_log.h"
 #include "esp_idf_version.h"
 #include "esp_log.h"
 #include "led_indicator.h"
-#include "inttypes.h"
 
 #define WS2812_GPIO_NUM       CONFIG_EXAMPLE_WS2812_GPIO_NUM
 #define WS2812_STRIPS_NUM     CONFIG_EXAMPLE_WS2812_STRIPS_NUM

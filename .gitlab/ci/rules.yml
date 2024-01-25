@@ -314,8 +314,8 @@
 .patterns-example_get_started_button_power_save: &patterns-example_get_started_button_power_save
   - "examples/get-started/button_power_save/**/*"
 
-.patterns-example_lighting_indicator: &patterns-example_lighting_indicator
-  - "examples/lighting/indicator/**/*"
+.patterns-example_indicator: &patterns-example_indicator
+  - "examples/indicator/**/*"
 
 .patterns-example_lighting_lightbulb: &patterns-example_lighting_lightbulb
   - "examples/lighting/lightbulb/**/*"
@@ -686,7 +686,7 @@
     - <<: *if-dev-push
       changes: *patterns-example_gprof_gprof_simple
 
-.rules:build:example_lighting_indicator:
+.rules:build:example_indicator:
   rules:
     - <<: *if-protected
     - <<: *if-label-build
@@ -696,7 +696,7 @@
     - <<: *if-dev-push
       changes: *patterns-components_led_led_indicator
     - <<: *if-dev-push
-      changes: *patterns-example_lighting_indicator
+      changes: *patterns-example_indicator
 
 .rules:build:example_lighting_lightbulb:
   rules:

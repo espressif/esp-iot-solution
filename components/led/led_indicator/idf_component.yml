@@ -8,4 +8,4 @@ dependencies:
     public: true
   cmake_utilities: "0.*"
 examples:
-  - path: ../../../examples/lighting/indicator
+  - path: ../../../examples/indicator
