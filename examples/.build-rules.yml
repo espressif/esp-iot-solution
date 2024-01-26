@@ -158,6 +158,14 @@ examples/get-started/button_power_save:
   enable:
     - if: INCLUDE_DEFAULT == 1
 
+examples/indicator:
+  enable:
+    - if: INCLUDE_DEFAULT == 1
+
+examples/indicator/ws2812_strips:
+  enable:
+    - if: SOC_RMT_SUPPORTED == 1
+
 examples/lighting/lightbulb:
   enable:
     - if: INCLUDE_DEFAULT == 1

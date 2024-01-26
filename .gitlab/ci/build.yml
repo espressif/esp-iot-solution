@@ -432,6 +432,17 @@ build_example_gprof_gprof_simple:
   variables:
     EXAMPLE_DIR: examples/gprof/gprof_simple
 
+build_example_indicator:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_indicator
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.1
+      - IMAGE: espressif/idf:release-v4.4
+  variables:
+    EXAMPLE_DIR: examples/indicator
+
 build_example_lighting_lightbulb:
   extends:
     - .build_examples_template

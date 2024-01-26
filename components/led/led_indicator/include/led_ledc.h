@@ -7,7 +7,6 @@
 #pragma once
 
 #include "driver/ledc.h"
-// #include "led_common.h"
 
 #ifdef __cplusplus
 extern "C" {

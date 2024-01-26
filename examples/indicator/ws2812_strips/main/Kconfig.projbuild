@@ -1,0 +1,24 @@
+menu "Example Configuration"
+
+    config EXAMPLE_WS2812_GPIO_NUM
+        int "WS2812 GPIO number"
+        default 8 if IDF_TARGET_ESP32C3 || IDF_TARGET_ESP32H2
+        default 18 if IDF_TARGET_ESP32S2
+        default 48 if IDF_TARGET_ESP32S3
+        default 8 if IDF_TARGET_ESP32C6
+        default 1
+        help
+          GPIO number (IOxx) to blink on and off or the RMT signal for the addressable LED.
+          Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
+
+    config EXAMPLE_WS2812_STRIPS_NUM
+        int "Number of strips"
+        default 1
+        help
+          Number of strips to control.
+
+    config EXAMPLE_ENABLE_CONSOLE_CONTROL
+      bool "Enable console control"
+      default n
+
+endmenu

@@ -1,0 +1,9 @@
+version: "0.0.1"
+dependencies:
+    idf: ">=4.4"
+    cmd_led_indicator:
+      version: "*"
+      override_path: "../../components/cmd_led_indicator"
+    led_indicator:
+      version: "*"
+      override_path: "../../../../components/led/led_indicator"
