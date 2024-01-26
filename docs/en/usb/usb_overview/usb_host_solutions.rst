@@ -4,7 +4,7 @@ USB Host Solution
 
 :link_to_translation:`zh_CN:[中文]`
 
-ESP32-S2/S3 and similar chips come with built-in USB-OTG peripherals, supporting the connection of various type of USB devices through the USB interface. The following provides an overview of the USB Host solutions supported by the ESP32-S2/S3 chips.
+ESP32-S2/S3 chips have built-in USB-OTG peripherals, which support USB host mode. Based on the USB host stack and various USB host class drivers provided by ESP-IDF, they can connect to a variety of USB devices through the USB interface. The following describes the USB Host solutions supported by ESP32-S2/S3 chips.
 
 ESP USB Camera Video Solution
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -133,5 +133,5 @@ Hardware:
 Links:
 ~~~~~~~
 
-* `usb_host_msc component <https://components.espressif.com/components/espressif/usb_host_msc>`_
-* Example Code: Mounting USB Flash Drive + File System Access `here <https://github.com/espressif/esp-idf/tree/master/examples/peripherals/usb/host/msc>`_
+* `USB Flash Drive OTA component <https://github.com/espressif/esp-iot-solution/tree/master/components/usb/esp_msc_ota>`_
+* `Mount USB Flash Drive + File System Access Example <https://github.com/espressif/esp-idf/tree/master/examples/peripherals/usb/host/msc>`_
