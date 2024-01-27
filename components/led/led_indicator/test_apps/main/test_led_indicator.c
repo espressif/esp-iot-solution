@@ -34,13 +34,13 @@ static led_indicator_handle_t led_handle_2 = NULL;
 void led_indicator_init()
 {
     led_indicator_gpio_config_t led_indicator_gpio_config = {
-        .gpio_num = LED_IO_NUM_0,              /**< num of GPIO */
         .is_active_level_high = 1,
+        .gpio_num = LED_IO_NUM_0,              /**< num of GPIO */
     };
 
     led_indicator_config_t config = {
-        .led_indicator_gpio_config = &led_indicator_gpio_config,
         .mode = LED_GPIO_MODE,
+        .led_indicator_gpio_config = &led_indicator_gpio_config,
         .blink_lists = (void *)NULL,
         .blink_list_num = 0,
     };
