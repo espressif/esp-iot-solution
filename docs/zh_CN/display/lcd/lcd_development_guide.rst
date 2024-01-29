@@ -90,22 +90,28 @@ LCD 开发指南
       - SPI/QSPI
     * - `st7701 <https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_st7701>`_
       - 3-wire SPI + RGB
+    * - `st77903_rgb <https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_st77903_rgb>`_
+      - 3-wire SPI + RGB
+    * - `st77903 <https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_st77903>`_
+      - QSPI
     * - `st77916 <https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_st77916>`_
+      - SPI/QSPI
+    * - `st77922 <https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_st77922>`_
       - SPI/QSPI
     * - `gc9503 <https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_gc9503>`_
       - 3-wire SPI + RGB
     * - `gc9a01 <https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_gc9a01>`_
       - SPI
     * - `ili9341 <https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_ili9341>`_
-      - SPI  
+      - SPI
     * - `ra8875 <https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_ra8875>`_
-      - Parallel Intel 8080  
+      - Parallel Intel 8080
     * - `sh1107 <https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_sh1107>`_
-      - I2C  
+      - I2C
     * - `ssd1681 <https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_ssd1681>`_
-      - SPI  
+      - SPI
     * - `st7796 <https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_st7796>`_
-      - SPI/I80   
+      - SPI/I80
 
 **请注意：**
 

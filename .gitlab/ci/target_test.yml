@@ -392,12 +392,12 @@ components_test_esp_lcd_st7701:
     TEST_FOLDER: components/display/lcd/esp_lcd_st7701
     TEST_ENV: esp32_s3_lcd_ev_board
 
-components_test_esp_lcd_st77903:
+components_test_esp_lcd_st77903_rgb:
   extends:
     - .pytest_template
-    - .rules:build:components_display_lcd_esp_lcd_st77903_test_apps
+    - .rules:build:components_display_lcd_esp_lcd_st77903_rgb_test_apps
   needs:
-    - job: "build_components_display_lcd_esp_lcd_st77903_test_apps"
+    - job: "build_components_display_lcd_esp_lcd_st77903_rgb_test_apps"
       artifacts: true
       optional: false
   parallel:
@@ -409,7 +409,67 @@ components_test_esp_lcd_st77903:
   image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_TARGET: esp32s3
-    TEST_FOLDER: components/display/lcd/esp_lcd_st77903
+    TEST_FOLDER: components/display/lcd/esp_lcd_st77903_rgb
+    TEST_ENV: esp32_s3_lcd_ev_board
+
+components_test_esp_lcd_nv3022b:
+  extends:
+    - .pytest_template
+    - .rules:build:components_display_lcd_esp_lcd_nv3022b_test_apps
+  needs:
+    - job: "build_components_display_lcd_esp_lcd_nv3022b_test_apps"
+      artifacts: true
+      optional: false
+  parallel:
+    matrix:
+        - IDF_VERSION: "5.1"
+  tags:
+    - esp32s3
+    - esp32s3_lcd_ev
+  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
+  variables:
+    TEST_TARGET: esp32s3
+    TEST_FOLDER: components/display/lcd/esp_lcd_nv3022b
+    TEST_ENV: esp32_s3_lcd_ev_board
+
+components_test_esp_lcd_st77916:
+  extends:
+    - .pytest_template
+    - .rules:build:components_display_lcd_esp_lcd_st77916_test_apps
+  needs:
+    - job: "build_components_display_lcd_esp_lcd_st77916_test_apps"
+      artifacts: true
+      optional: false
+  parallel:
+    matrix:
+        - IDF_VERSION: "5.1"
+  tags:
+    - esp32s3
+    - esp32s3_lcd_ev
+  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
+  variables:
+    TEST_TARGET: esp32s3
+    TEST_FOLDER: components/display/lcd/esp_lcd_st77916
+    TEST_ENV: esp32_s3_lcd_ev_board
+
+components_test_esp_lcd_st77922:
+  extends:
+    - .pytest_template
+    - .rules:build:components_display_lcd_esp_lcd_st77922_test_apps
+  needs:
+    - job: "build_components_display_lcd_esp_lcd_st77922_test_apps"
+      artifacts: true
+      optional: false
+  parallel:
+    matrix:
+        - IDF_VERSION: "5.1"
+  tags:
+    - esp32s3
+    - esp32s3_lcd_ev
+  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
+  variables:
+    TEST_TARGET: esp32s3
+    TEST_FOLDER: components/display/lcd/esp_lcd_st77922
     TEST_ENV: esp32_s3_lcd_ev_board
 
 components_led_lightbulb_driver_test:

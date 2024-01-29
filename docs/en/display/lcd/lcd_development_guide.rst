@@ -90,7 +90,13 @@ Driver and Examples
       - SPI/QSPI
     * - `st7701 <https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_st7701>`_
       - 3-wire SPI + RGB
+    * - `st77903_rgb <https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_st77903_rgb>`_
+      - 3-wire SPI + RGB
+    * - `st77903 <https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_st77903>`_
+      - QSPI
     * - `st77916 <https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_st77916>`_
+      - SPI/QSPI
+    * - `st77922 <https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_st77922>`_
       - SPI/QSPI
     * - `gc9503 <https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_gc9503>`_
       - 3-wire SPI + RGB
