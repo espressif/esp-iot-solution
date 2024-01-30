@@ -1,9 +1,10 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -14,16 +15,12 @@
 
 static const char *TAG = "kp18058";
 
-#define KP18058_CHECK(a, str, action, ...)                                  \
-    if (unlikely(!(a))) {                                                   \
-        ESP_LOGE(TAG, str, ##__VA_ARGS__);                                  \
-        action;                                                             \
-    }
-
 #define INVALID_ADDR            0xFF
 #define IIC_BASE_UNIT_HZ        1000
 #define KP18058_MAX_PIN         5
 #define KP18058_MAX_CMD_LEN     13
+#define IS_INT_DIV_BY_1_5(x)    (fabsf((x) / 1.5f - (int)((x) / 1.5f)) < 1e-6 || fabsf((x) / 1.5f - (int)((x) / 1.5f)) > 0.999999)
+#define IS_INT_DIV_BY_2_5(x)    (fabsf((x) / 2.5f - (int)((x) / 2.5f)) < 1e-6 || fabsf((x) / 2.5f - (int)((x) / 2.5f)) > 0.999999)
 
 /**
  * KP18058 register start address - Byte0
@@ -162,7 +159,7 @@ static esp_err_t set_init_data(void)
 
 esp_err_t kp18058_set_standby_mode(bool enable_standby)
 {
-    KP18058_CHECK(s_kp18058, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_kp18058, "not init", return ESP_ERR_INVALID_STATE);
 
     uint8_t addr = BASE_ADDR | BIT_STANDBY | BIT_NEXT_BYTE4;
     uint8_t value[13] = { 0 };
@@ -182,9 +179,9 @@ esp_err_t kp18058_set_shutdown(void)
 
 esp_err_t kp18058_regist_channel(kp18058_channel_t channel, kp18058_out_pin_t pin)
 {
-    KP18058_CHECK(s_kp18058, "not init", return ESP_ERR_INVALID_STATE);
-    KP18058_CHECK(channel < KP18058_CHANNEL_MAX, "check channel fail", return ESP_ERR_INVALID_ARG);
-    KP18058_CHECK(pin < KP18058_PIN_OUT_MAX, "check out pin fail", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(s_kp18058, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(channel < KP18058_CHANNEL_MAX, "check channel fail", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(pin < KP18058_PIN_OUT_MAX, "check out pin fail", return ESP_ERR_INVALID_ARG);
 
     s_kp18058->mapping_addr[channel] = pin;
     return ESP_OK;
@@ -192,9 +189,9 @@ esp_err_t kp18058_regist_channel(kp18058_channel_t channel, kp18058_out_pin_t pi
 
 esp_err_t kp18058_set_channel(kp18058_channel_t channel, uint16_t value)
 {
-    KP18058_CHECK(s_kp18058, "not init", return ESP_ERR_INVALID_STATE);
-    KP18058_CHECK(s_kp18058->mapping_addr[channel] != INVALID_ADDR, "channel:%d not regist", return ESP_ERR_INVALID_STATE, channel);
-    KP18058_CHECK(value <= 1023, "value out of range", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(s_kp18058, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_kp18058->mapping_addr[channel] != INVALID_ADDR, "channel:%d not regist", return ESP_ERR_INVALID_STATE, channel);
+    DRIVER_CHECK(value <= 1023, "value out of range", return ESP_ERR_INVALID_ARG);
 
     uint8_t addr = BASE_ADDR | BIT_ALL_CHANNEL | get_mapping_addr(channel);
     uint8_t _value[2] = { 0 };
@@ -212,8 +209,8 @@ esp_err_t kp18058_set_channel(kp18058_channel_t channel, uint16_t value)
 
 esp_err_t kp18058_set_rgb_channel(uint16_t value_r, uint16_t value_g, uint16_t value_b)
 {
-    KP18058_CHECK(s_kp18058, "not init", return ESP_ERR_INVALID_STATE);
-    KP18058_CHECK(s_kp18058->mapping_addr[0] != INVALID_ADDR || s_kp18058->mapping_addr[1] != INVALID_ADDR || s_kp18058->mapping_addr[2] != INVALID_ADDR, "color channel not regist", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_kp18058, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_kp18058->mapping_addr[0] != INVALID_ADDR || s_kp18058->mapping_addr[1] != INVALID_ADDR || s_kp18058->mapping_addr[2] != INVALID_ADDR, "color channel not regist", return ESP_ERR_INVALID_STATE);
 
     uint8_t addr = BASE_ADDR | BIT_ALL_CHANNEL | BIT_NEXT_BYTE4;
     uint8_t _value[6] = { 0 };
@@ -237,8 +234,8 @@ esp_err_t kp18058_set_rgb_channel(uint16_t value_r, uint16_t value_g, uint16_t v
 
 esp_err_t kp18058_set_cw_channel(uint16_t value_c, uint16_t value_w)
 {
-    KP18058_CHECK(s_kp18058, "not init", return ESP_ERR_INVALID_STATE);
-    KP18058_CHECK(s_kp18058->mapping_addr[3] != INVALID_ADDR || s_kp18058->mapping_addr[4] != INVALID_ADDR, "white channel not regist", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_kp18058, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_kp18058->mapping_addr[3] != INVALID_ADDR || s_kp18058->mapping_addr[4] != INVALID_ADDR, "white channel not regist", return ESP_ERR_INVALID_STATE);
 
     uint8_t addr = BASE_ADDR | BIT_ALL_CHANNEL | BIT_NEXT_BYTE10;
     uint8_t _value[4] = { 0 };
@@ -259,8 +256,8 @@ esp_err_t kp18058_set_cw_channel(uint16_t value_c, uint16_t value_w)
 
 esp_err_t kp18058_set_rgbcw_channel(uint16_t value_r, uint16_t value_g, uint16_t value_b, uint16_t value_c, uint16_t value_w)
 {
-    KP18058_CHECK(s_kp18058, "not init", return ESP_ERR_INVALID_STATE);
-    KP18058_CHECK(s_kp18058->mapping_addr[3] != INVALID_ADDR || s_kp18058->mapping_addr[4] != INVALID_ADDR, "white channel not regist", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_kp18058, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_kp18058->mapping_addr[3] != INVALID_ADDR || s_kp18058->mapping_addr[4] != INVALID_ADDR, "white channel not regist", return ESP_ERR_INVALID_STATE);
 
     uint8_t addr = BASE_ADDR | BIT_ALL_CHANNEL | BIT_NEXT_BYTE4;
     uint8_t _value[10] = { 0 };
@@ -288,17 +285,31 @@ esp_err_t kp18058_set_rgbcw_channel(uint16_t value_r, uint16_t value_g, uint16_t
     return _write(addr, _value, sizeof(_value));
 }
 
+int kp18058_rgb_current_mapping(float current_mA)
+{
+    DRIVER_CHECK((current_mA >= 1.5) && (current_mA <= 48) && (IS_INT_DIV_BY_1_5(current_mA)), "The current value is incorrect and cannot be mapped.", return -1);
+
+    return (current_mA * 1.0 / 1.5) - 1;
+}
+
+int kp18058_cw_current_mapping(float current_mA)
+{
+    DRIVER_CHECK((current_mA >= 0.0) && (current_mA <= 77.5) && (IS_INT_DIV_BY_2_5(current_mA)), "The current value is incorrect and cannot be mapped.", return -1);
+
+    return (current_mA * 1.0 / 2.5);
+}
+
 esp_err_t kp18058_init(driver_kp18058_t *config, void(*hook_func)(void *))
 {
     esp_err_t err = ESP_OK;
 
-    KP18058_CHECK(config, "config is null", return ESP_ERR_INVALID_ARG);
-    KP18058_CHECK(!s_kp18058, "already init done", return ESP_ERR_INVALID_ARG);
-    KP18058_CHECK(config->cw_current_multiple < 31 && config->cw_current_multiple >= 1, "cw channel current data check failed", return ESP_ERR_INVALID_ARG);
-    KP18058_CHECK(config->rgb_current_multiple < 31 && config->rgb_current_multiple >= 1, "rgb channel current data check failed", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(config, "config is null", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(!s_kp18058, "already init done", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(config->cw_current_multiple < 31 && config->cw_current_multiple >= 1, "cw channel current data check failed", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(config->rgb_current_multiple < 31 && config->rgb_current_multiple >= 1, "rgb channel current data check failed", return ESP_ERR_INVALID_ARG);
 
     s_kp18058 = calloc(1, sizeof(kp18058_handle_t));
-    KP18058_CHECK(s_kp18058, "alloc fail", return ESP_ERR_NO_MEM);
+    DRIVER_CHECK(s_kp18058, "alloc fail", return ESP_ERR_NO_MEM);
     memset(s_kp18058->mapping_addr, INVALID_ADDR, KP18058_MAX_PIN);
 
     // The following configuration defaults value are from the KP18058 data sheet
@@ -338,11 +349,11 @@ esp_err_t kp18058_init(driver_kp18058_t *config, void(*hook_func)(void *))
     }
 
     err |= iic_driver_init(I2C_NUM_0, config->iic_sda, config->iic_clk, config->iic_freq_khz * IIC_BASE_UNIT_HZ);
-    KP18058_CHECK(err == ESP_OK, "i2c master init fail", goto EXIT);
+    DRIVER_CHECK(err == ESP_OK, "i2c master init fail", goto EXIT);
 
     if (config->enable_iic_queue) {
         err |= iic_driver_send_task_create();
-        KP18058_CHECK(err == ESP_OK, "task create fail", goto EXIT);
+        DRIVER_CHECK(err == ESP_OK, "task create fail", goto EXIT);
     }
 
     return err;
@@ -357,7 +368,7 @@ EXIT:
 
 esp_err_t kp18058_deinit(void)
 {
-    KP18058_CHECK(s_kp18058, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_kp18058, "not init", return ESP_ERR_INVALID_STATE);
 
     kp18058_set_shutdown();
     iic_driver_deinit();

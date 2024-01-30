@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -13,12 +13,6 @@
 #include "iic.h"
 
 static const char *TAG = "driver_sm2135eh";
-
-#define SM2135EH_CHECK(a, str, action, ...)                                 \
-    if (unlikely(!(a))) {                                                   \
-        ESP_LOGE(TAG, str, ##__VA_ARGS__);                                  \
-        action;                                                             \
-    }
 
 #define INVALID_ADDR        0xFF
 #define IIC_BASE_UNIT_HZ    1000
@@ -93,7 +87,7 @@ static esp_err_t set_mode_and_current(bool enable_standby_mode, sm2135eh_rgb_cur
 
 esp_err_t sm2135eh_set_max_current(sm2135eh_rgb_current_t rgb, sm2135eh_wy_current_t wy)
 {
-    SM2135EH_CHECK(s_sm2135eh, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_sm2135eh, "not init", return ESP_ERR_INVALID_STATE);
 
     uint8_t value = 0;
     uint8_t addr = BASE_ADDR | BIT_MAX_CURRENT;
@@ -104,7 +98,7 @@ esp_err_t sm2135eh_set_max_current(sm2135eh_rgb_current_t rgb, sm2135eh_wy_curre
 
 esp_err_t sm2135eh_set_standby_mode(bool enable_standby)
 {
-    SM2135EH_CHECK(s_sm2135eh, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_sm2135eh, "not init", return ESP_ERR_INVALID_STATE);
 
     uint8_t addr = BASE_ADDR | BIT_STANDBY_MODE_SELECT;
     uint8_t value = BIT_DISABLE_STANDBY;
@@ -121,7 +115,7 @@ esp_err_t sm2135eh_set_standby_mode(bool enable_standby)
 
 esp_err_t sm2135eh_set_shutdown(void)
 {
-    SM2135EH_CHECK(s_sm2135eh, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_sm2135eh, "not init", return ESP_ERR_INVALID_STATE);
 
     uint8_t _value[5] = { 0 };
     uint8_t addr = BASE_ADDR | BIT_R_OUT1;
@@ -132,9 +126,9 @@ esp_err_t sm2135eh_set_shutdown(void)
 
 esp_err_t sm2135eh_regist_channel(sm2135eh_channel_t channel, sm2135eh_out_pin_t pin)
 {
-    SM2135EH_CHECK(s_sm2135eh, "not init", return ESP_ERR_INVALID_STATE);
-    SM2135EH_CHECK(channel < SM2135EH_CHANNEL_MAX, "check channel fail", return ESP_ERR_INVALID_ARG);
-    SM2135EH_CHECK(pin < SM2135EH_PIN_OUT_MAX, "check out pin fail", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(s_sm2135eh, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(channel < SM2135EH_CHANNEL_MAX, "check channel fail", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(pin < SM2135EH_PIN_OUT_MAX, "check out pin fail", return ESP_ERR_INVALID_ARG);
 
     s_sm2135eh->mapping_addr[channel] = pin;
     return ESP_OK;
@@ -142,8 +136,8 @@ esp_err_t sm2135eh_regist_channel(sm2135eh_channel_t channel, sm2135eh_out_pin_t
 
 esp_err_t sm2135eh_set_channel(sm2135eh_channel_t channel, uint8_t value)
 {
-    SM2135EH_CHECK(s_sm2135eh, "not init", return ESP_ERR_INVALID_STATE);
-    SM2135EH_CHECK(s_sm2135eh->mapping_addr[channel] != INVALID_ADDR, "channel:%d not regist", return ESP_ERR_INVALID_STATE, channel);
+    DRIVER_CHECK(s_sm2135eh, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_sm2135eh->mapping_addr[channel] != INVALID_ADDR, "channel:%d not regist", return ESP_ERR_INVALID_STATE, channel);
 
     if (!s_sm2135eh->init_done) {
         set_mode_and_current(false, s_sm2135eh->rgb_current, s_sm2135eh->wy_current);
@@ -156,8 +150,8 @@ esp_err_t sm2135eh_set_channel(sm2135eh_channel_t channel, uint8_t value)
 
 esp_err_t sm2135eh_set_rgb_channel(uint8_t value_r, uint8_t value_g, uint8_t value_b)
 {
-    SM2135EH_CHECK(s_sm2135eh, "not init", return ESP_ERR_INVALID_STATE);
-    SM2135EH_CHECK(s_sm2135eh->mapping_addr[SM2135EH_CHANNEL_R] != INVALID_ADDR || s_sm2135eh->mapping_addr[SM2135EH_CHANNEL_G] != INVALID_ADDR || s_sm2135eh->mapping_addr[SM2135EH_CHANNEL_B] != INVALID_ADDR, "color channel not regist", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_sm2135eh, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_sm2135eh->mapping_addr[SM2135EH_CHANNEL_R] != INVALID_ADDR || s_sm2135eh->mapping_addr[SM2135EH_CHANNEL_G] != INVALID_ADDR || s_sm2135eh->mapping_addr[SM2135EH_CHANNEL_B] != INVALID_ADDR, "color channel not regist", return ESP_ERR_INVALID_STATE);
 
     if (!s_sm2135eh->init_done) {
         set_mode_and_current(false, s_sm2135eh->rgb_current, s_sm2135eh->wy_current);
@@ -175,8 +169,8 @@ esp_err_t sm2135eh_set_rgb_channel(uint8_t value_r, uint8_t value_g, uint8_t val
 
 esp_err_t sm2135eh_set_wy_channel(uint8_t value_w, uint8_t value_y)
 {
-    SM2135EH_CHECK(s_sm2135eh, "not init", return ESP_ERR_INVALID_STATE);
-    SM2135EH_CHECK(s_sm2135eh->mapping_addr[SM2135EH_CHANNEL_W] != INVALID_ADDR || s_sm2135eh->mapping_addr[SM2135EH_CHANNEL_Y] != INVALID_ADDR, "white channel not regist", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_sm2135eh, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_sm2135eh->mapping_addr[SM2135EH_CHANNEL_W] != INVALID_ADDR || s_sm2135eh->mapping_addr[SM2135EH_CHANNEL_Y] != INVALID_ADDR, "white channel not regist", return ESP_ERR_INVALID_STATE);
 
     if (!s_sm2135eh->init_done) {
         set_mode_and_current(false, s_sm2135eh->rgb_current, s_sm2135eh->wy_current);
@@ -193,9 +187,9 @@ esp_err_t sm2135eh_set_wy_channel(uint8_t value_w, uint8_t value_y)
 
 esp_err_t sm2135eh_set_rgbwy_channel(uint8_t value_r, uint8_t value_g, uint8_t value_b, uint8_t value_w, uint8_t value_y)
 {
-    SM2135EH_CHECK(s_sm2135eh, "not init", return ESP_ERR_INVALID_STATE);
-    SM2135EH_CHECK(s_sm2135eh->mapping_addr[SM2135EH_CHANNEL_R] != INVALID_ADDR || s_sm2135eh->mapping_addr[SM2135EH_CHANNEL_G] != INVALID_ADDR || s_sm2135eh->mapping_addr[SM2135EH_CHANNEL_B] != INVALID_ADDR, "color channel not regist", return ESP_ERR_INVALID_STATE);
-    SM2135EH_CHECK(s_sm2135eh->mapping_addr[SM2135EH_CHANNEL_W] != INVALID_ADDR || s_sm2135eh->mapping_addr[SM2135EH_CHANNEL_Y] != INVALID_ADDR, "white channel not regist", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_sm2135eh, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_sm2135eh->mapping_addr[SM2135EH_CHANNEL_R] != INVALID_ADDR || s_sm2135eh->mapping_addr[SM2135EH_CHANNEL_G] != INVALID_ADDR || s_sm2135eh->mapping_addr[SM2135EH_CHANNEL_B] != INVALID_ADDR, "color channel not regist", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_sm2135eh->mapping_addr[SM2135EH_CHANNEL_W] != INVALID_ADDR || s_sm2135eh->mapping_addr[SM2135EH_CHANNEL_Y] != INVALID_ADDR, "white channel not regist", return ESP_ERR_INVALID_STATE);
 
     if (!s_sm2135eh->init_done) {
         sm2135eh_set_max_current(s_sm2135eh->rgb_current, s_sm2135eh->wy_current);
@@ -215,15 +209,38 @@ esp_err_t sm2135eh_set_rgbwy_channel(uint8_t value_r, uint8_t value_g, uint8_t v
     return iic_driver_write(addr, _value, sizeof(_value));
 }
 
+sm2135eh_rgb_current_t sm2135eh_rgb_current_mapping(int current_mA)
+{
+    DRIVER_CHECK((current_mA >= 9) && (current_mA <= 44) && (!((current_mA - 9) % 5)), "The current value is incorrect and cannot be mapped.", return SM2135EH_RGB_CURRENT_MAX);
+
+    return (sm2135eh_rgb_current_t)((current_mA - 9) / 5);
+}
+
+sm2135eh_wy_current_t sm2135eh_wy_current_mapping(int current_mA)
+{
+    DRIVER_CHECK((current_mA >= 0) && (current_mA <= 72), "The current value is incorrect and cannot be mapped.", return SM2135EH_WY_CURRENT_MAX);
+
+    const uint8_t limits[] = { 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 59, 63, 67, 72};
+    for (int i = 0; i < sizeof(limits); i++) {
+        if (current_mA == limits[i]) {
+            return (sm2135eh_wy_current_t)i;
+        }
+    }
+
+    return SM2135EH_WY_CURRENT_MAX;
+}
+
 esp_err_t sm2135eh_init(driver_sm2135eh_t *config, void(*hook_func)(void *))
 {
     esp_err_t err = ESP_OK;
 
-    SM2135EH_CHECK(config, "config is null", return ESP_ERR_INVALID_ARG);
-    SM2135EH_CHECK(!s_sm2135eh, "already init done", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(config, "config is null", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(!s_sm2135eh, "already init done", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(config->rgb_current >= SM2135EH_RGB_CURRENT_9MA && config->rgb_current < SM2135EH_RGB_CURRENT_MAX, "rgb channel current param error", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(config->wy_current >= SM2135EH_WY_CURRENT_0MA && config->wy_current < SM2135EH_WY_CURRENT_MAX, "cw channel current param error", return ESP_ERR_INVALID_ARG);
 
     s_sm2135eh = calloc(1, sizeof(sm2135eh_handle_t));
-    SM2135EH_CHECK(s_sm2135eh, "alloc fail", return ESP_ERR_NO_MEM);
+    DRIVER_CHECK(s_sm2135eh, "alloc fail", return ESP_ERR_NO_MEM);
     memset(s_sm2135eh->mapping_addr, INVALID_ADDR, SM2135EH_MAX_PIN);
 
     s_sm2135eh->rgb_current = config->rgb_current;
@@ -235,11 +252,11 @@ esp_err_t sm2135eh_init(driver_sm2135eh_t *config, void(*hook_func)(void *))
     }
 
     err |= iic_driver_init(I2C_NUM_0, config->iic_sda, config->iic_clk, config->freq_khz * IIC_BASE_UNIT_HZ);
-    SM2135EH_CHECK(err == ESP_OK, "i2c master init fail", goto EXIT);
+    DRIVER_CHECK(err == ESP_OK, "i2c master init fail", goto EXIT);
 
     if (config->enable_iic_queue) {
         err |= iic_driver_send_task_create();
-        SM2135EH_CHECK(err == ESP_OK, "task create fail", goto EXIT);
+        DRIVER_CHECK(err == ESP_OK, "task create fail", goto EXIT);
     }
 
     return err;
@@ -254,7 +271,7 @@ EXIT:
 
 esp_err_t sm2135eh_deinit(void)
 {
-    SM2135EH_CHECK(s_sm2135eh, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_sm2135eh, "not init", return ESP_ERR_INVALID_STATE);
 
     sm2135eh_set_shutdown();
     iic_driver_deinit();

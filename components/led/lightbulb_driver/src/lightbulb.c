@@ -318,21 +318,17 @@ static void cct_and_brightness_convert_and_power_limit(lightbulb_led_beads_comb_
         uint16_t max_value;
         float max_power;
         lightbulb_cct_mapping_data_t data = search_mapping_cct_data(cct);
+        ESP_LOGD(TAG, "%f, %f, %f, %f, %f", data.rgbcw[0], data.rgbcw[1], data.rgbcw[2], data.rgbcw[3], data.rgbcw[4]);
 
-        float mix_param[5] = {0.0};
-        for (int i = 0; i < 5; i++) {
-            mix_param[i] = data.rgbcw[i];
-        }
-        ESP_LOGD(TAG, "%f, %f, %f, %f, %f", mix_param[0], mix_param[1], mix_param[2], mix_param[3], mix_param[4]);
         hal_get_driver_feature(QUERY_MAX_INPUT_VALUE, &max_value);
-        float baseline = MAX(mix_param[0], mix_param[1]);
-        baseline = MAX(baseline, mix_param[2]);
-        baseline = MAX(baseline, mix_param[3]);
-        baseline = MAX(baseline, mix_param[4]);
+        float baseline = MAX(data.rgbcw[0], data.rgbcw[1]);
+        baseline = MAX(baseline, data.rgbcw[2]);
+        baseline = MAX(baseline, data.rgbcw[3]);
+        baseline = MAX(baseline, data.rgbcw[4]);
         max_power = MIN(max_value * multiple, max_value / baseline);
         ESP_LOGD(TAG, "%f, %d, %f", max_power, max_value, baseline);
         for (int i = 0; i < 5; i++) {
-            white_value[i] = round(max_power * mix_param[i] * (brightness / 100.0));
+            white_value[i] = round(max_power * data.rgbcw[i] * (brightness / 100.0));
         }
     }
 }
@@ -1131,6 +1127,7 @@ esp_err_t lightbulb_rgb2hsv(uint16_t red, uint16_t green, uint16_t blue, uint16_
 esp_err_t lightbulb_kelvin2percentage(uint16_t kelvin, uint8_t *percentage)
 {
     LIGHTBULB_CHECK(s_lb_obj, "not init", return ESP_ERR_INVALID_ARG);
+    LIGHTBULB_CHECK(s_lb_obj->cct_manager.kelvin_to_percentage, "No conversion function was registered because the this led combination does not support CCT.", return ESP_ERR_INVALID_ARG);
     LIGHTBULB_CHECK(percentage, "percentage is null", return ESP_ERR_INVALID_ARG);
 
     if (kelvin >= s_lb_obj->cct_manager.kelvin_range.min && kelvin <= s_lb_obj->cct_manager.kelvin_range.max) {
@@ -1145,6 +1142,7 @@ esp_err_t lightbulb_kelvin2percentage(uint16_t kelvin, uint8_t *percentage)
 esp_err_t lightbulb_percentage2kelvin(uint8_t percentage, uint16_t *kelvin)
 {
     LIGHTBULB_CHECK(s_lb_obj, "not init", return ESP_ERR_INVALID_ARG);
+    LIGHTBULB_CHECK(s_lb_obj->cct_manager.percentage_to_kelvin, "No conversion function was registered because the this led combination does not support CCT.", return ESP_ERR_INVALID_ARG);
     LIGHTBULB_CHECK(kelvin, "kelvin is null", return ESP_ERR_INVALID_ARG);
     LIGHTBULB_CHECK(percentage <= 100, "percentage out of range", return ESP_ERR_INVALID_ARG);
 
@@ -1251,6 +1249,7 @@ EXIT:
 esp_err_t lightbulb_set_cctb(uint16_t cct, uint8_t brightness)
 {
     LIGHTBULB_CHECK(s_lb_obj, "not init", return ESP_ERR_INVALID_ARG);
+    LIGHTBULB_CHECK(IS_WHITE_CHANNEL_SELECTED(), "white channel output is disable", return ESP_ERR_INVALID_STATE);
     LIGHTBULB_CHECK(brightness <= 100, "brightness out of range: %d", return ESP_ERR_INVALID_ARG, brightness);
     if (cct > 100) {
         LIGHTBULB_CHECK(cct >= s_lb_obj->cct_manager.kelvin_range.min && cct <= s_lb_obj->cct_manager.kelvin_range.max, "cct out of range: %d", NULL, cct);
@@ -1269,7 +1268,6 @@ esp_err_t lightbulb_set_cctb(uint16_t cct, uint8_t brightness)
         }
     }
     LIGHTBULB_CHECK(cct <= 100, "cct out of range: %d", return ESP_ERR_INVALID_ARG, cct);
-    LIGHTBULB_CHECK(IS_WHITE_CHANNEL_SELECTED(), "white channel output is disable", return ESP_ERR_INVALID_STATE);
     LB_MUTEX_TAKE(portMAX_DELAY);
 
     esp_err_t err = ESP_OK;

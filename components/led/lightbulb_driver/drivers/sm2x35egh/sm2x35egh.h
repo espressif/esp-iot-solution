@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -208,3 +208,35 @@ esp_err_t sm2x35egh_deinit(void);
  * @return esp_err_t
  */
 esp_err_t sm2x35egh_set_standby_mode(bool enable_sleep);
+
+/**
+ * @brief Convert the rgb channel current value into the enumeration value required by the driver
+ *
+ * @param current_mA Drive current value, in milliamps, ranges from 4~64mA, and can be evenly divided by 4
+ * @return sm2x35egh_rgb_current_t
+ */
+sm2x35egh_rgb_current_t sm2235egh_rgb_current_mapping(int current_mA);
+
+/**
+ * @brief Convert the cw channel current value into the enumeration value required by the driver
+ *
+ * @param current_mA Drive current value, in milliamps, ranges from 5~80mA, and can be evenly divided by 5
+ * @return sm2x35egh_rgb_current_t
+ */
+sm2x35egh_rgb_current_t sm2235egh_cw_current_mapping(int current_mA);
+
+/**
+ * @brief Convert the rgb channel current value into the enumeration value required by the driver
+ *
+ * @param current_mA Drive current value, in milliamps, ranges from 10~160mA, and can be evenly divided by 5
+ * @return sm2x35egh_rgb_current_t
+ */
+sm2x35egh_rgb_current_t sm2335egh_rgb_current_mapping(int current_mA);
+
+/**
+ * @brief Convert the cw channel current value into the enumeration value required by the driver
+ *
+ * @param current_mA Drive current value, in milliamps, ranges from 5~80mA, and can be evenly divided by 5
+ * @return sm2x35egh_rgb_current_t
+ */
+sm2x35egh_rgb_current_t sm2335egh_cw_current_mapping(int current_mA);

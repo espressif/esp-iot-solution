@@ -1,4 +1,12 @@
 # ChangeLog
+
+## v1.1.0 - 2024-01-30
+
+### Enhancements:
+
+* Added the conversion function of IIC current values to the enumeration values required by the driver.
+* Added driver layer parameter checking macro and allowed to configure the detail level of the output log through menuconfig.
+
 ## v1.0.0 - 2024-01-16
 
 ### Enhancements:

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -56,8 +56,8 @@ typedef enum {
  *
  */
 typedef struct {
-    uint8_t rgb_current_multiple;   // Range 1-31, the base value is 1.5mA. If the multiple is 10, will output 15mA current.
-    uint8_t cw_current_multiple;    // Range 1-31, the base value is 2.5mA. If the multiple is 10, will output 25mA current.
+    uint8_t rgb_current_multiple;   // Range 0-31, 1.5~48mA, the base value is 1.5mA. If the multiple is 0, will output 1.5mA current. If the multiple is 10, will output 16.5mA current.
+    uint8_t cw_current_multiple;    // Range 0-31, 0~77.5mA, the base value is 2.5mA. If the multiple is 10, will output 25mA current.
     gpio_num_t iic_clk;
     gpio_num_t iic_sda;
     uint16_t iic_freq_khz;
@@ -157,6 +157,22 @@ esp_err_t kp18058_set_cw_channel(uint16_t value_w, uint16_t value_y);
  * @return esp_err_t
  */
 esp_err_t kp18058_set_rgbcw_channel(uint16_t value_r, uint16_t value_g, uint16_t value_b, uint16_t value_c, uint16_t value_w);
+
+/**
+ * @brief Convert the rgb channel current value into the multiple value required by the driver
+ *
+ * @param current_mA Drive current multiple value, ranges from 1.5~48mA, and can be evenly divided by 1.5
+ * @return int
+ */
+int kp18058_rgb_current_mapping(float current_mA);
+
+/**
+ * @brief Convert the cw channel current value into the multiple value required by the driver
+ *
+ * @param current_mA Drive current multiple value, ranges from 0~77.5mA, and can be evenly divided by 2.5
+ * @return int
+ */
+int kp18058_cw_current_mapping(float current_mA);
 
 /**
  * @brief Stop all channel output

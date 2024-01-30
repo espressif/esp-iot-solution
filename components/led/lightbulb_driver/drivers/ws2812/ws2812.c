@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -10,6 +10,7 @@
 #include <driver/spi_master.h>
 #include <hal/spi_hal.h>
 
+#include "driver_utils.h"
 #include "ws2812.h"
 
 static const char *TAG = "ws2812";
@@ -26,12 +27,6 @@ typedef struct {
 } ws2812_handle_t;
 
 static ws2812_handle_t *s_ws2812 = NULL;
-
-#define WS2812_CHECK(a, str, action, ...)                                   \
-    if (unlikely(!(a))) {                                                   \
-        ESP_LOGE(TAG, str, ##__VA_ARGS__);                                  \
-        action;                                                             \
-    }
 
 static esp_err_t _write(uint8_t *buf, size_t size)
 {
@@ -87,11 +82,11 @@ static void cleanup(void)
 esp_err_t ws2812_init(driver_ws2812_t *config, void(*hook_func)(void *))
 {
     esp_err_t err = ESP_OK;
-    WS2812_CHECK(config, "config is null", return ESP_ERR_INVALID_ARG);
-    WS2812_CHECK(!s_ws2812, "already init done", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(config, "config is null", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(!s_ws2812, "already init done", return ESP_ERR_INVALID_ARG);
 
     s_ws2812 = calloc(1, sizeof(ws2812_handle_t));
-    WS2812_CHECK(err == ESP_OK, "alloc fail", return ESP_ERR_NO_MEM);
+    DRIVER_CHECK(err == ESP_OK, "alloc fail", return ESP_ERR_NO_MEM);
     s_ws2812->led_num = config->led_num;
     s_ws2812->buf_size = s_ws2812->led_num * WS2812_LED_BUF;
 
@@ -99,7 +94,7 @@ esp_err_t ws2812_init(driver_ws2812_t *config, void(*hook_func)(void *))
     memset(s_ws2812->buf, 0, s_ws2812->buf_size);
 
     err = gpio_set_drive_capability(config->ctrl_io, GPIO_DRIVE_CAP_3);
-    WS2812_CHECK(err == ESP_OK, "set drive capability fail", return err);
+    DRIVER_CHECK(err == ESP_OK, "set drive capability fail", return err);
 
     spi_bus_config_t buscfg = {
         .mosi_io_num = config->ctrl_io,
@@ -127,17 +122,17 @@ esp_err_t ws2812_init(driver_ws2812_t *config, void(*hook_func)(void *))
     int dma_chan = SPI2_HOST;
     err = spi_bus_initialize(SPI2_HOST, &buscfg, dma_chan);
 #endif
-    WS2812_CHECK(err == ESP_OK, "spi_bus_initialize error", return err);
+    DRIVER_CHECK(err == ESP_OK, "spi_bus_initialize error", return err);
 
 #if !CONFIG_IDF_TARGET_ESP32
     spi_dev_t *hw = spi_periph_signal[SPI2_HOST].hw;
     hw->ctrl.d_pol = 0;
 #endif
     err = spi_bus_add_device(SPI2_HOST, &devcfg, &s_ws2812->spi_handle);
-    WS2812_CHECK(err == ESP_OK, "spi_bus_add_device error", goto EXIT);
+    DRIVER_CHECK(err == ESP_OK, "spi_bus_add_device error", goto EXIT);
 
     err = _write(s_ws2812->buf, s_ws2812->buf_size);
-    WS2812_CHECK(err == ESP_OK, "set init data fail", return err);
+    DRIVER_CHECK(err == ESP_OK, "set init data fail", return err);
 
     return ESP_OK;
 
@@ -149,7 +144,7 @@ EXIT:
 
 esp_err_t ws2812_deinit(void)
 {
-    WS2812_CHECK(s_ws2812, "not init", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(s_ws2812, "not init", return ESP_ERR_INVALID_ARG);
 
     cleanup();
     return ESP_OK;
@@ -157,7 +152,7 @@ esp_err_t ws2812_deinit(void)
 
 esp_err_t ws2812_set_rgb_channel(uint8_t value_r, uint8_t value_g, uint8_t value_b)
 {
-    WS2812_CHECK(s_ws2812, "ws2812b_init() must be called first", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_ws2812, "ws2812b_init() must be called first", return ESP_ERR_INVALID_STATE);
 
     for (int i = 0; i < s_ws2812->led_num; i++) {
         generate_data(i, value_r, value_g, value_b, s_ws2812->buf);
