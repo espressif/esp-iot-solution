@@ -659,6 +659,17 @@ build_example_usb_host_usb_cdc_basic:
   variables:
     EXAMPLE_DIR: examples/usb/host/usb_cdc_basic
 
+build_example_usb_host_usb_msc_ota:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_usb_host_usb_msc_ota
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.0
+      - IMAGE: espressif/idf:release-v5.1
+  variables:
+    EXAMPLE_DIR: examples/usb/host/usb_msc_ota
+
 build_example_utilities_xz_decompress_file:
   extends:
     - .build_examples_template

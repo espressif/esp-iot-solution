@@ -1,10 +1,10 @@
-version: "0.1.0"
+version: "0.1.1"
 targets:
   - esp32s2
   - esp32s3
 
 description: Support OTA update through USB host MSC
-url: https://github.com/espressif/esp-iot-solution
+url: https://github.com/espressif/esp-iot-solution/tree/master/components/usb/esp_msc_ota
 repository: https://github.com/espressif/esp-iot-solution.git
 issues: https://github.com/espressif/esp-iot-solution/issues
 
@@ -12,3 +12,5 @@ dependencies:
   idf: ">=5.0"
   cmake_utilities: "0.*"
   espressif/usb_host_msc: "1.1.1"
+examples:
+  - path: ../../../examples/usb/host/usb_msc_ota

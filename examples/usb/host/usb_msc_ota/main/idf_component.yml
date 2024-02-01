@@ -1,0 +1,8 @@
+version: 0.0.1
+targets:
+  - esp32s2
+  - esp32s3
+dependencies:
+  esp_msc_ota:
+    version: "*"
+    override_path: "../../../../../components/usb/esp_msc_ota"
