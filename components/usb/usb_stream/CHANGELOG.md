@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v1.3.2 - 2024-02-04
+
+* Fix build error under latest ESP-IDF master (5.3), due to the changes in ``usb_dwc_ll.h``
+
 ## v1.3.1 - 2023-12-29
 
 ### Bug Fixes:
