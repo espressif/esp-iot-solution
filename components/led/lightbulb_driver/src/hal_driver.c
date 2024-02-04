@@ -24,7 +24,7 @@
 
 static const char *TAG = "hal_manage";
 
-#if CONFIG_ENABLE_LIGHTBULB_DEBUG_LOG_OUTPUT
+#if CONFIG_ENABLE_LIGHTBULB_DEBUG
 #define PROBE_GPIO 4
 #define FADE_DEBUG_LOG_OUTPUT 0
 

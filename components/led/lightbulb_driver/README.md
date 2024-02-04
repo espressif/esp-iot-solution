@@ -9,7 +9,7 @@ The lightbulb component encapsulates several commonly used dimming schemes for l
   - RGB + C/W
   - RGB + CCT/Brightness
 
-- IIC 调光芯片方案
+- IIC Dimming Scheme
 
   - ~~SM2135E~~
   - SM2135EH

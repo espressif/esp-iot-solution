@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -11,15 +11,10 @@
 #include <esp_compiler.h>
 #include <driver/ledc.h>
 
+#include "driver_utils.h"
 #include "pwm.h"
 
 static const char *TAG = "driver_pwm";
-
-#define PWM_CHECK(a, str, action, ...)                                      \
-    if (unlikely(!(a))) {                                                   \
-        ESP_LOGE(TAG, str, ##__VA_ARGS__);                                  \
-        action;                                                             \
-    }
 
 typedef struct {
     ledc_timer_config_t ledc_config;
@@ -66,13 +61,13 @@ static esp_err_t power_control_lock_create(void)
 {
     esp_err_t err = ESP_FAIL;
     err = esp_pm_lock_create(ESP_PM_NO_LIGHT_SLEEP, 0, "s_sleep_lock", &s_sleep_lock);
-    PWM_CHECK(err == ESP_OK, "create sleep lock fail", return err);
+    DRIVER_CHECK(err == ESP_OK, "create sleep lock fail", return err);
 
     err = esp_pm_lock_create(ESP_PM_CPU_FREQ_MAX, 0, "cpu_lock", &s_cpu_lock);
-    PWM_CHECK(err == ESP_OK, "create cpu lock fail", return err);
+    DRIVER_CHECK(err == ESP_OK, "create cpu lock fail", return err);
 
     err = esp_pm_lock_create(ESP_PM_APB_FREQ_MAX, 0, "freq_lock", &s_freq_lock);
-    PWM_CHECK(err == ESP_OK, "create freq lock fail", return err);
+    DRIVER_CHECK(err == ESP_OK, "create freq lock fail", return err);
 
     s_create_done = true;
     return err;
@@ -82,11 +77,11 @@ static esp_err_t power_control_lock_create(void)
 esp_err_t pwm_init(driver_pwm_t *config, void(*hook_func)(void *))
 {
     esp_err_t err = ESP_OK;
-    PWM_CHECK(config, "config is null", return ESP_ERR_INVALID_ARG);
-    PWM_CHECK(!s_pwm, "already init done", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(config, "config is null", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(!s_pwm, "already init done", return ESP_ERR_INVALID_ARG);
 
     s_pwm = calloc(1, sizeof(pwm_handle_t));
-    PWM_CHECK(s_pwm, "alloc fail", return ESP_ERR_NO_MEM);
+    DRIVER_CHECK(s_pwm, "alloc fail", return ESP_ERR_NO_MEM);
 
     s_pwm->ledc_config.timer_num = LEDC_TIMER_0;
     s_pwm->ledc_config.freq_hz = config->freq_hz;
@@ -111,7 +106,7 @@ esp_err_t pwm_init(driver_pwm_t *config, void(*hook_func)(void *))
             break;
         }
     }
-    PWM_CHECK(err == ESP_OK, "LEDC timer config fail, please reduce the frequency", goto EXIT);
+    DRIVER_CHECK(err == ESP_OK, "LEDC timer config fail, please reduce the frequency", goto EXIT);
 
     uint32_t grayscale_level = 1 << s_pwm->ledc_config.duty_resolution;
     if (config->phase_delay.flag & PWM_RGB_CHANNEL_PHASE_DELAY_FLAG) {
@@ -138,7 +133,7 @@ esp_err_t pwm_init(driver_pwm_t *config, void(*hook_func)(void *))
     }
 
     err = ledc_fade_func_install(ESP_INTR_FLAG_IRAM);
-    PWM_CHECK(err == ESP_OK, "ledc_fade_func_install fail", goto EXIT);
+    DRIVER_CHECK(err == ESP_OK, "ledc_fade_func_install fail", goto EXIT);
 
     /**
      * Since LEDC uses the XTAL clock source for configuration, there is no need to create a power lock to keep PWM output during in sleep mode.
@@ -147,7 +142,7 @@ esp_err_t pwm_init(driver_pwm_t *config, void(*hook_func)(void *))
      */
 #if CONFIG_PM_ENABLE && CONFIG_IDF_TARGET_ESP32
     err = power_control_lock_create();
-    PWM_CHECK(err == ESP_OK, "power_control_lock_create fail", goto EXIT);
+    DRIVER_CHECK(err == ESP_OK, "power_control_lock_create fail", goto EXIT);
     power_control_disable_sleep();
 #endif
 
@@ -176,7 +171,7 @@ esp_err_t pwm_deinit()
 esp_err_t pwm_regist_channel(pwm_channel_t channel, gpio_num_t gpio_num)
 {
     esp_err_t err = ESP_OK;
-    PWM_CHECK(s_pwm, "pwm_init() must be called first", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_pwm, "pwm_init() must be called first", return ESP_ERR_INVALID_STATE);
 
     // The LEDC will keep outputting during software reset, so we need to load the last value to make sure the lights don't flicker during the initial ledc channel.
     uint32_t duty = ledc_get_duty(s_pwm->ledc_config.speed_mode, channel);
@@ -193,7 +188,7 @@ esp_err_t pwm_regist_channel(pwm_channel_t channel, gpio_num_t gpio_num)
 #endif
     };
     err = ledc_channel_config(&ledc_ch_config);
-    PWM_CHECK(err == ESP_OK, "channel config fail", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(err == ESP_OK, "channel config fail", return ESP_ERR_INVALID_STATE);
     ESP_LOGD(TAG, "channel:%d -> gpio_num:%d", channel, gpio_num);
     s_pwm->registered_channel_mask |= (1 << channel);
 
@@ -203,9 +198,9 @@ esp_err_t pwm_regist_channel(pwm_channel_t channel, gpio_num_t gpio_num)
 esp_err_t pwm_set_channel(pwm_channel_t channel, uint16_t value)
 {
     esp_err_t err = ESP_OK;
-    PWM_CHECK(s_pwm, "pwm_init() must be called first", return ESP_ERR_INVALID_STATE);
-    PWM_CHECK(s_pwm->registered_channel_mask & BIT(channel), "Channel %d not registered", return ESP_ERR_INVALID_STATE, channel);
-    PWM_CHECK((value <= (1 << s_pwm->ledc_config.duty_resolution)), "value out of range", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(s_pwm, "pwm_init() must be called first", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_pwm->registered_channel_mask & BIT(channel), "Channel %d not registered", return ESP_ERR_INVALID_STATE, channel);
+    DRIVER_CHECK((value <= (1 << s_pwm->ledc_config.duty_resolution)), "value out of range", return ESP_ERR_INVALID_ARG);
 
 #if CONFIG_PM_ENABLE && CONFIG_IDF_TARGET_ESP32
     power_control_disable_sleep();
@@ -220,13 +215,13 @@ esp_err_t pwm_set_channel(pwm_channel_t channel, uint16_t value)
 esp_err_t pwm_set_rgb_channel(uint16_t value_r, uint16_t value_g, uint16_t value_b)
 {
     esp_err_t err = ESP_OK;
-    PWM_CHECK(s_pwm, "pwm_init() must be called first", return ESP_ERR_INVALID_STATE);
-    PWM_CHECK((s_pwm->registered_channel_mask & BIT(PWM_CHANNEL_R)) &&
-              (s_pwm->registered_channel_mask & BIT(PWM_CHANNEL_G)) &&
-              (s_pwm->registered_channel_mask & BIT(PWM_CHANNEL_B)), "RGB Channel not registered", return ESP_ERR_INVALID_STATE);
-    PWM_CHECK((value_r <= (1 << s_pwm->ledc_config.duty_resolution)) &&
-              (value_g <= (1 << s_pwm->ledc_config.duty_resolution)) &&
-              (value_b <= (1 << s_pwm->ledc_config.duty_resolution)), "value out of range", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(s_pwm, "pwm_init() must be called first", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK((s_pwm->registered_channel_mask & BIT(PWM_CHANNEL_R)) &&
+                 (s_pwm->registered_channel_mask & BIT(PWM_CHANNEL_G)) &&
+                 (s_pwm->registered_channel_mask & BIT(PWM_CHANNEL_B)), "RGB Channel not registered", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK((value_r <= (1 << s_pwm->ledc_config.duty_resolution)) &&
+                 (value_g <= (1 << s_pwm->ledc_config.duty_resolution)) &&
+                 (value_b <= (1 << s_pwm->ledc_config.duty_resolution)), "value out of range", return ESP_ERR_INVALID_ARG);
 
 #if CONFIG_PM_ENABLE && CONFIG_IDF_TARGET_ESP32
     power_control_disable_sleep();
@@ -248,11 +243,11 @@ esp_err_t pwm_set_rgb_channel(uint16_t value_r, uint16_t value_g, uint16_t value
 esp_err_t pwm_set_cctb_or_cw_channel(uint16_t value_cct_c, uint16_t value_b_w)
 {
     esp_err_t err = ESP_OK;
-    PWM_CHECK(s_pwm, "pwm_init() must be called first", return ESP_ERR_INVALID_STATE);
-    PWM_CHECK(s_pwm->registered_channel_mask & BIT(PWM_CHANNEL_CCT_COLD) &&
-              s_pwm->registered_channel_mask & BIT(PWM_CHANNEL_BRIGHTNESS_WARM), "CCT/Brightness or cold/warm Channel not registered", return ESP_ERR_INVALID_STATE);
-    PWM_CHECK((value_cct_c <= (1 << s_pwm->ledc_config.duty_resolution)) &&
-              (value_b_w <= (1 << s_pwm->ledc_config.duty_resolution)), "value out of range", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(s_pwm, "pwm_init() must be called first", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_pwm->registered_channel_mask & BIT(PWM_CHANNEL_CCT_COLD) &&
+                 s_pwm->registered_channel_mask & BIT(PWM_CHANNEL_BRIGHTNESS_WARM), "CCT/Brightness or cold/warm Channel not registered", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK((value_cct_c <= (1 << s_pwm->ledc_config.duty_resolution)) &&
+                 (value_b_w <= (1 << s_pwm->ledc_config.duty_resolution)), "value out of range", return ESP_ERR_INVALID_ARG);
 
 #if CONFIG_PM_ENABLE && CONFIG_IDF_TARGET_ESP32
     power_control_disable_sleep();
@@ -272,17 +267,17 @@ esp_err_t pwm_set_cctb_or_cw_channel(uint16_t value_cct_c, uint16_t value_b_w)
 esp_err_t pwm_set_rgbcctb_or_rgbcw_channel(uint16_t value_r, uint16_t value_g, uint16_t value_b, uint16_t value_cct_c, uint16_t value_b_w)
 {
     esp_err_t err = ESP_OK;
-    PWM_CHECK(s_pwm, "pwm_init() must be called first", return ESP_ERR_INVALID_STATE);
-    PWM_CHECK(s_pwm->registered_channel_mask & BIT(PWM_CHANNEL_R) &&
-              s_pwm->registered_channel_mask & BIT(PWM_CHANNEL_G) &&
-              s_pwm->registered_channel_mask & BIT(PWM_CHANNEL_B), "RGB Channel not registered", return ESP_ERR_INVALID_STATE);
-    PWM_CHECK(s_pwm->registered_channel_mask & BIT(PWM_CHANNEL_CCT_COLD) &&
-              s_pwm->registered_channel_mask & BIT(PWM_CHANNEL_BRIGHTNESS_WARM), "CCT/Brightness or cold/warm Channel not registered", return ESP_ERR_INVALID_STATE);
-    PWM_CHECK((value_r <= (1 << s_pwm->ledc_config.duty_resolution)) &&
-              (value_g <= (1 << s_pwm->ledc_config.duty_resolution)) &&
-              (value_b <= (1 << s_pwm->ledc_config.duty_resolution)), "value out of range", return ESP_ERR_INVALID_ARG);
-    PWM_CHECK((value_cct_c <= (1 << s_pwm->ledc_config.duty_resolution)) &&
-              (value_b_w <= (1 << s_pwm->ledc_config.duty_resolution)), "value out of range", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(s_pwm, "pwm_init() must be called first", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_pwm->registered_channel_mask & BIT(PWM_CHANNEL_R) &&
+                 s_pwm->registered_channel_mask & BIT(PWM_CHANNEL_G) &&
+                 s_pwm->registered_channel_mask & BIT(PWM_CHANNEL_B), "RGB Channel not registered", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_pwm->registered_channel_mask & BIT(PWM_CHANNEL_CCT_COLD) &&
+                 s_pwm->registered_channel_mask & BIT(PWM_CHANNEL_BRIGHTNESS_WARM), "CCT/Brightness or cold/warm Channel not registered", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK((value_r <= (1 << s_pwm->ledc_config.duty_resolution)) &&
+                 (value_g <= (1 << s_pwm->ledc_config.duty_resolution)) &&
+                 (value_b <= (1 << s_pwm->ledc_config.duty_resolution)), "value out of range", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK((value_cct_c <= (1 << s_pwm->ledc_config.duty_resolution)) &&
+                 (value_b_w <= (1 << s_pwm->ledc_config.duty_resolution)), "value out of range", return ESP_ERR_INVALID_ARG);
 
 #if CONFIG_PM_ENABLE && CONFIG_IDF_TARGET_ESP32
     power_control_disable_sleep();
@@ -308,7 +303,7 @@ esp_err_t pwm_set_rgbcctb_or_rgbcw_channel(uint16_t value_r, uint16_t value_g, u
 esp_err_t pwm_set_shutdown(void)
 {
     esp_err_t err = ESP_OK;
-    PWM_CHECK(s_pwm, "pwm_init() must be called first", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_pwm, "pwm_init() must be called first", return ESP_ERR_INVALID_STATE);
 
 #if CONFIG_PM_ENABLE && CONFIG_IDF_TARGET_ESP32
     power_control_disable_sleep();
@@ -325,9 +320,9 @@ esp_err_t pwm_set_shutdown(void)
 
 esp_err_t pwm_set_hw_fade(pwm_channel_t channel, uint16_t value, int fade_ms)
 {
-    PWM_CHECK(s_pwm, "pwm_init() must be called first", return ESP_ERR_INVALID_STATE);
-    PWM_CHECK(s_pwm->registered_channel_mask & BIT(channel), "Channel %d not registered", return ESP_ERR_INVALID_STATE, channel);
-    PWM_CHECK(value <= ((1 << s_pwm->ledc_config.duty_resolution)), "value out of range", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(s_pwm, "pwm_init() must be called first", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_pwm->registered_channel_mask & BIT(channel), "Channel %d not registered", return ESP_ERR_INVALID_STATE, channel);
+    DRIVER_CHECK(value <= ((1 << s_pwm->ledc_config.duty_resolution)), "value out of range", return ESP_ERR_INVALID_ARG);
 
 #if CONFIG_PM_ENABLE && CONFIG_IDF_TARGET_ESP32
     power_control_disable_sleep();

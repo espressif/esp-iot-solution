@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -13,12 +13,6 @@
 #include "bp57x8d.h"
 
 static const char *TAG = "bp57x8d";
-
-#define BP57x8D_CHECK(a, str, action, ...)                                  \
-    if (unlikely(!(a))) {                                                   \
-        ESP_LOGE(TAG, str, ##__VA_ARGS__);                                  \
-        action;                                                             \
-    }
 
 #define INVALID_ADDR        0xFF
 #define IIC_BASE_UNIT_HZ    1000
@@ -109,9 +103,12 @@ static esp_err_t set_sleep_mode_and_current(bool enable_sleep, uint8_t *current)
     return iic_driver_write(addr, value, sizeof(value));
 }
 
-static void convert_current_value(uint8_t *output, uint8_t *input)
+static esp_err_t convert_current_value(uint8_t *output, uint8_t *input)
 {
     for (int i = 0; i < 5; i++) {
+        if (input[i] > 90) {
+            return ESP_FAIL;
+        }
         if (input[i] >= 64) {
             uint8_t temp = input[i];
             temp -= 62;
@@ -120,11 +117,13 @@ static void convert_current_value(uint8_t *output, uint8_t *input)
     }
     memcpy(output, input, 5);
     ESP_LOGD(TAG, "%d %d %d %d %d", output[0], output[1], output[2], output[3], output[4]);
+
+    return ESP_OK;
 }
 
 esp_err_t bp57x8d_set_standby_mode(bool enable_standby)
 {
-    BP57x8D_CHECK(s_bp5758d, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_bp5758d, "not init", return ESP_ERR_INVALID_STATE);
     bp57x8d_set_shutdown();
 
     return set_sleep_mode_and_current(enable_standby, s_bp5758d->current);
@@ -132,7 +131,7 @@ esp_err_t bp57x8d_set_standby_mode(bool enable_standby)
 
 esp_err_t bp57x8d_set_shutdown(void)
 {
-    BP57x8D_CHECK(s_bp5758d, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_bp5758d, "not init", return ESP_ERR_INVALID_STATE);
     uint8_t _value[10] = { 0 };
     uint8_t addr = BASE_ADDR | BIT_DISABLE_SLEEP_MODE | BIT_OUT1_GRAYSCALE;
 
@@ -141,9 +140,9 @@ esp_err_t bp57x8d_set_shutdown(void)
 
 esp_err_t bp57x8d_regist_channel(bp57x8d_channel_t channel, bp57x8d_out_pin_t pin)
 {
-    BP57x8D_CHECK(s_bp5758d, "not init", return ESP_ERR_INVALID_STATE);
-    BP57x8D_CHECK(channel < BP57x8D_CHANNEL_MAX, "check channel fail", return ESP_ERR_INVALID_ARG);
-    BP57x8D_CHECK(pin < BP57x8D_PIN_OUT_MAX, "check out pin fail", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(s_bp5758d, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(channel < BP57x8D_CHANNEL_MAX, "check channel fail", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(pin < BP57x8D_PIN_OUT_MAX, "check out pin fail", return ESP_ERR_INVALID_ARG);
     ESP_LOGD(TAG, "bp57x8d_regist_channel:[%d]:%d", channel, pin);
 
     s_bp5758d->mapping_addr[channel] = pin;
@@ -152,9 +151,9 @@ esp_err_t bp57x8d_regist_channel(bp57x8d_channel_t channel, bp57x8d_out_pin_t pi
 
 esp_err_t bp57x8d_set_channel(bp57x8d_channel_t channel, uint16_t value)
 {
-    BP57x8D_CHECK(s_bp5758d, "not init", return ESP_ERR_INVALID_STATE);
-    BP57x8D_CHECK(s_bp5758d->mapping_addr[channel] != INVALID_ADDR, "channel:%d not regist", return ESP_ERR_INVALID_STATE, channel);
-    BP57x8D_CHECK(value <= 1023, "value out of range", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(s_bp5758d, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_bp5758d->mapping_addr[channel] != INVALID_ADDR, "channel:%d not regist", return ESP_ERR_INVALID_STATE, channel);
+    DRIVER_CHECK(value <= 1023, "value out of range", return ESP_ERR_INVALID_ARG);
 
     if (!s_bp5758d->init_done) {
         set_sleep_mode_and_current(false, s_bp5758d->current);
@@ -173,8 +172,8 @@ esp_err_t bp57x8d_set_channel(bp57x8d_channel_t channel, uint16_t value)
 
 esp_err_t bp57x8d_set_rgb_channel(uint16_t value_r, uint16_t value_g, uint16_t value_b)
 {
-    BP57x8D_CHECK(s_bp5758d, "not init", return ESP_ERR_INVALID_STATE);
-    BP57x8D_CHECK(s_bp5758d->mapping_addr[0] != INVALID_ADDR || s_bp5758d->mapping_addr[1] != INVALID_ADDR || s_bp5758d->mapping_addr[2] != INVALID_ADDR, "color channel not regist", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(s_bp5758d, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_bp5758d->mapping_addr[0] != INVALID_ADDR || s_bp5758d->mapping_addr[1] != INVALID_ADDR || s_bp5758d->mapping_addr[2] != INVALID_ADDR, "color channel not regist", return ESP_ERR_INVALID_ARG);
 
     if (!s_bp5758d->init_done) {
         set_sleep_mode_and_current(false, s_bp5758d->current);
@@ -197,8 +196,8 @@ esp_err_t bp57x8d_set_rgb_channel(uint16_t value_r, uint16_t value_g, uint16_t v
 
 esp_err_t bp57x8d_set_cw_channel(uint16_t value_c, uint16_t value_w)
 {
-    BP57x8D_CHECK(s_bp5758d, "not init", return ESP_ERR_INVALID_STATE);
-    BP57x8D_CHECK(s_bp5758d->mapping_addr[3] != INVALID_ADDR || s_bp5758d->mapping_addr[4] != INVALID_ADDR, "white channel not regist", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(s_bp5758d, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_bp5758d->mapping_addr[3] != INVALID_ADDR || s_bp5758d->mapping_addr[4] != INVALID_ADDR, "white channel not regist", return ESP_ERR_INVALID_ARG);
 
     if (!s_bp5758d->init_done) {
         set_sleep_mode_and_current(false, s_bp5758d->current);
@@ -218,9 +217,9 @@ esp_err_t bp57x8d_set_cw_channel(uint16_t value_c, uint16_t value_w)
 
 esp_err_t bp57x8d_set_rgbcw_channel(uint16_t value_r, uint16_t value_g, uint16_t value_b, uint16_t value_c, uint16_t value_w)
 {
-    BP57x8D_CHECK(s_bp5758d, "not init", return ESP_ERR_INVALID_STATE);
-    BP57x8D_CHECK(s_bp5758d->mapping_addr[3] != INVALID_ADDR || s_bp5758d->mapping_addr[4] != INVALID_ADDR, "white channel not regist", return ESP_ERR_INVALID_ARG);
-    BP57x8D_CHECK(s_bp5758d->mapping_addr[0] != INVALID_ADDR || s_bp5758d->mapping_addr[1] != INVALID_ADDR || s_bp5758d->mapping_addr[2] != INVALID_ADDR, "color channel not regist", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(s_bp5758d, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_bp5758d->mapping_addr[3] != INVALID_ADDR || s_bp5758d->mapping_addr[4] != INVALID_ADDR, "white channel not regist", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(s_bp5758d->mapping_addr[0] != INVALID_ADDR || s_bp5758d->mapping_addr[1] != INVALID_ADDR || s_bp5758d->mapping_addr[2] != INVALID_ADDR, "color channel not regist", return ESP_ERR_INVALID_ARG);
 
     if (!s_bp5758d->init_done) {
         set_sleep_mode_and_current(false, s_bp5758d->current);
@@ -250,14 +249,15 @@ esp_err_t bp57x8d_set_rgbcw_channel(uint16_t value_r, uint16_t value_g, uint16_t
 esp_err_t bp57x8d_init(driver_bp57x8d_t *config, void(*hook_func)(void *))
 {
     esp_err_t err = ESP_OK;
-    BP57x8D_CHECK(config, "config is null", return ESP_ERR_INVALID_ARG);
-    BP57x8D_CHECK(config->current, "current is null", return ESP_ERR_INVALID_ARG);
-    BP57x8D_CHECK(!s_bp5758d, "already init done", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(config, "config is null", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(config->current, "current is null", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(!s_bp5758d, "already init done", return ESP_ERR_INVALID_ARG);
 
     s_bp5758d = calloc(1, sizeof(bp57x8d_handle_t));
-    BP57x8D_CHECK(s_bp5758d, "alloc fail", return ESP_ERR_NO_MEM);
+    DRIVER_CHECK(s_bp5758d, "alloc fail", return ESP_ERR_NO_MEM);
     memset(s_bp5758d->mapping_addr, INVALID_ADDR, BP57x8D_MAX_PIN);
-    convert_current_value(s_bp5758d->current, config->current);
+    err = convert_current_value(s_bp5758d->current, config->current);
+    DRIVER_CHECK(err == ESP_OK, "current param error", goto EXIT);
 
     if (config->freq_khz > 300) {
         config->freq_khz = 300;
@@ -265,11 +265,11 @@ esp_err_t bp57x8d_init(driver_bp57x8d_t *config, void(*hook_func)(void *))
     }
 
     err |= iic_driver_init(I2C_NUM_0, config->iic_sda, config->iic_clk, config->freq_khz * IIC_BASE_UNIT_HZ);
-    BP57x8D_CHECK(err == ESP_OK, "i2c master init fail", goto EXIT);
+    DRIVER_CHECK(err == ESP_OK, "i2c master init fail", goto EXIT);
 
     if (config->enable_iic_queue) {
         err |= iic_driver_send_task_create();
-        BP57x8D_CHECK(err == ESP_OK, "task create fail", goto EXIT);
+        DRIVER_CHECK(err == ESP_OK, "task create fail", goto EXIT);
     }
 
     return err;
@@ -284,7 +284,7 @@ EXIT:
 
 esp_err_t bp57x8d_deinit(void)
 {
-    BP57x8D_CHECK(s_bp5758d, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_bp5758d, "not init", return ESP_ERR_INVALID_STATE);
 
     bp57x8d_set_shutdown();
     iic_driver_deinit();

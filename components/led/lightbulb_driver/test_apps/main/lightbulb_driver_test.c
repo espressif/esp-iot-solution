@@ -244,7 +244,20 @@ TEST_CASE("SM2135EH", "[Underlying Driver]")
     TEST_ASSERT_EQUAL(ESP_OK, sm2135eh_set_rgbwy_channel(0, 0, 0, 0, 255));
     vTaskDelay(pdMS_TO_TICKS(100));
 
-    //6. deinit
+    //6. Current check
+    TEST_ASSERT_EQUAL(SM2135EH_WY_CURRENT_0MA, sm2135eh_wy_current_mapping(0));
+    TEST_ASSERT_EQUAL(SM2135EH_WY_CURRENT_30MA, sm2135eh_wy_current_mapping(30));
+    TEST_ASSERT_EQUAL(SM2135EH_WY_CURRENT_MAX, sm2135eh_wy_current_mapping(31));
+    TEST_ASSERT_EQUAL(SM2135EH_WY_CURRENT_72MA, sm2135eh_wy_current_mapping(72));
+    TEST_ASSERT_EQUAL(SM2135EH_WY_CURRENT_MAX, sm2135eh_wy_current_mapping(73));
+    TEST_ASSERT_EQUAL(SM2135EH_RGB_CURRENT_MAX, sm2135eh_rgb_current_mapping(0));
+    TEST_ASSERT_EQUAL(SM2135EH_RGB_CURRENT_9MA, sm2135eh_rgb_current_mapping(9));
+    TEST_ASSERT_EQUAL(SM2135EH_RGB_CURRENT_MAX, sm2135eh_rgb_current_mapping(10));
+    TEST_ASSERT_EQUAL(SM2135EH_RGB_CURRENT_34MA, sm2135eh_rgb_current_mapping(34));
+    TEST_ASSERT_EQUAL(SM2135EH_RGB_CURRENT_44MA, sm2135eh_rgb_current_mapping(44));
+    TEST_ASSERT_EQUAL(SM2135EH_RGB_CURRENT_MAX, sm2135eh_rgb_current_mapping(45));
+
+    //7. Deinit
     TEST_ASSERT_EQUAL(ESP_OK, sm2135eh_set_shutdown());
     // Wait for data transmission to complete
     vTaskDelay(pdMS_TO_TICKS(1000));
@@ -365,7 +378,7 @@ TEST_CASE("BP57x8D", "[Underlying Driver]")
     TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_set_rgbcw_channel(0, 0, 255, 0, 0));
     vTaskDelay(pdMS_TO_TICKS(100));
 
-    //6. deinit
+    //6. Deinit
     TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_set_shutdown());
     // Wait for data transmission to complete
     vTaskDelay(pdMS_TO_TICKS(1000));
@@ -411,88 +424,99 @@ TEST_CASE("BP57x8D", "[Application Layer]")
 #ifdef CONFIG_ENABLE_BP1658CJ_DRIVER
 TEST_CASE("BP1658CJ", "[Underlying Driver]")
 {
-    {
-        //1.Status check
-        TEST_ESP_ERR(ESP_ERR_INVALID_STATE, bp1658cj_set_channel(BP1658CJ_CHANNEL_R, 1023));
-        TEST_ESP_ERR(ESP_ERR_INVALID_STATE, bp1658cj_set_rgb_channel(1023, 1023, 0));
-        TEST_ESP_ERR(ESP_ERR_INVALID_STATE, bp1658cj_set_cw_channel(1023, 1023));
+    //1.Status check
+    TEST_ESP_ERR(ESP_ERR_INVALID_STATE, bp1658cj_set_channel(BP1658CJ_CHANNEL_R, 1023));
+    TEST_ESP_ERR(ESP_ERR_INVALID_STATE, bp1658cj_set_rgb_channel(1023, 1023, 0));
+    TEST_ESP_ERR(ESP_ERR_INVALID_STATE, bp1658cj_set_cw_channel(1023, 1023));
 
-        //2. init check
-        driver_bp1658cj_t conf = {
-            .rgb_current = BP1658CJ_RGB_CURRENT_10MA,
-            .cw_current = BP1658CJ_CW_CURRENT_30MA,
-            .iic_clk = 4,
-            .iic_sda = 3,
-            .freq_khz = 300,
-            .enable_iic_queue = true
-        };
-        TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_init(&conf, NULL));
+    //2. init check
+    driver_bp1658cj_t conf = {
+        .rgb_current = BP1658CJ_RGB_CURRENT_10MA,
+        .cw_current = BP1658CJ_CW_CURRENT_30MA,
+        .iic_clk = 4,
+        .iic_sda = 3,
+        .freq_khz = 300,
+        .enable_iic_queue = true
+    };
+    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_init(&conf, NULL));
 
-        //3. regist Check, step 1
-        TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_regist_channel(BP1658CJ_CHANNEL_R, BP1658CJ_PIN_OUT1));
-        TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_regist_channel(BP1658CJ_CHANNEL_G, BP1658CJ_PIN_OUT2));
-        TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_regist_channel(BP1658CJ_CHANNEL_B, BP1658CJ_PIN_OUT3));
-        TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_channel(BP1658CJ_CHANNEL_R, 1));
-        TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_channel(BP1658CJ_CHANNEL_G, 1));
-        TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_channel(BP1658CJ_CHANNEL_B, 1));
-        TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_rgb_channel(1, 1, 1));
-        TEST_ESP_ERR(ESP_ERR_INVALID_STATE, bp1658cj_set_channel(BP1658CJ_CHANNEL_C, 1));
-        TEST_ESP_ERR(ESP_ERR_INVALID_STATE, bp1658cj_set_channel(BP1658CJ_CHANNEL_W, 1));
+    //3. regist Check, step 1
+    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_regist_channel(BP1658CJ_CHANNEL_R, BP1658CJ_PIN_OUT1));
+    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_regist_channel(BP1658CJ_CHANNEL_G, BP1658CJ_PIN_OUT2));
+    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_regist_channel(BP1658CJ_CHANNEL_B, BP1658CJ_PIN_OUT3));
+    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_channel(BP1658CJ_CHANNEL_R, 1));
+    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_channel(BP1658CJ_CHANNEL_G, 1));
+    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_channel(BP1658CJ_CHANNEL_B, 1));
+    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_rgb_channel(1, 1, 1));
+    TEST_ESP_ERR(ESP_ERR_INVALID_STATE, bp1658cj_set_channel(BP1658CJ_CHANNEL_C, 1));
+    TEST_ESP_ERR(ESP_ERR_INVALID_STATE, bp1658cj_set_channel(BP1658CJ_CHANNEL_W, 1));
 
-        //3. regist Check, step 2
-        TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_regist_channel(BP1658CJ_CHANNEL_C, BP1658CJ_PIN_OUT5));
-        TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_regist_channel(BP1658CJ_CHANNEL_W, BP1658CJ_PIN_OUT4));
-        TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_channel(BP1658CJ_CHANNEL_C, 1));
-        TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_channel(BP1658CJ_CHANNEL_W, 1));
-        TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_cw_channel(1, 1));
+    //3. regist Check, step 2
+    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_regist_channel(BP1658CJ_CHANNEL_C, BP1658CJ_PIN_OUT5));
+    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_regist_channel(BP1658CJ_CHANNEL_W, BP1658CJ_PIN_OUT4));
+    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_channel(BP1658CJ_CHANNEL_C, 1));
+    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_channel(BP1658CJ_CHANNEL_W, 1));
+    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_cw_channel(1, 1));
 
-        //4. Data range check
-        TEST_ESP_ERR(ESP_ERR_INVALID_ARG, bp1658cj_set_channel(BP1658CJ_CHANNEL_R, 1024));
+    //4. Data range check
+    TEST_ESP_ERR(ESP_ERR_INVALID_ARG, bp1658cj_set_channel(BP1658CJ_CHANNEL_R, 1024));
 
-        //5. Color check
-        TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_shutdown());
-        vTaskDelay(pdMS_TO_TICKS(100));
-        TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_rgb_channel(255, 0, 0));
-        vTaskDelay(pdMS_TO_TICKS(100));
-        TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_rgb_channel(0, 255, 0));
-        vTaskDelay(pdMS_TO_TICKS(100));
-        TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_rgb_channel(0, 0, 255));
-        vTaskDelay(pdMS_TO_TICKS(100));
-        TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_shutdown());
-        vTaskDelay(pdMS_TO_TICKS(100));
-        TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_cw_channel(255, 0));
-        vTaskDelay(pdMS_TO_TICKS(100));
-        TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_cw_channel(0, 255));
-        vTaskDelay(pdMS_TO_TICKS(100));
-        TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_shutdown());
-        vTaskDelay(pdMS_TO_TICKS(100));
-        TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_rgbcw_channel(255, 0, 0, 0, 0));
-        vTaskDelay(pdMS_TO_TICKS(100));
-        TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_rgbcw_channel(0, 255, 0, 0, 0));
-        vTaskDelay(pdMS_TO_TICKS(100));
-        TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_rgbcw_channel(0, 0, 255, 0, 0));
-        vTaskDelay(pdMS_TO_TICKS(100));
-        TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_rgbcw_channel(0, 0, 0, 255, 0));
-        vTaskDelay(pdMS_TO_TICKS(100));
-        TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_rgbcw_channel(0, 0, 0, 0, 255));
-        vTaskDelay(pdMS_TO_TICKS(100));
-        TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_rgbcw_channel(255, 0, 0, 0, 0));
-        vTaskDelay(pdMS_TO_TICKS(100));
-        bp1658cj_set_sleep_mode(true);
-        vTaskDelay(pdMS_TO_TICKS(100));
-        TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_rgbcw_channel(0, 255, 0, 0, 0));
-        vTaskDelay(pdMS_TO_TICKS(100));
-        bp1658cj_set_sleep_mode(true);
-        vTaskDelay(pdMS_TO_TICKS(100));
-        TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_rgbcw_channel(0, 0, 255, 0, 0));
-        vTaskDelay(pdMS_TO_TICKS(100));
+    //5. Color check
+    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_shutdown());
+    vTaskDelay(pdMS_TO_TICKS(100));
+    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_rgb_channel(255, 0, 0));
+    vTaskDelay(pdMS_TO_TICKS(100));
+    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_rgb_channel(0, 255, 0));
+    vTaskDelay(pdMS_TO_TICKS(100));
+    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_rgb_channel(0, 0, 255));
+    vTaskDelay(pdMS_TO_TICKS(100));
+    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_shutdown());
+    vTaskDelay(pdMS_TO_TICKS(100));
+    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_cw_channel(255, 0));
+    vTaskDelay(pdMS_TO_TICKS(100));
+    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_cw_channel(0, 255));
+    vTaskDelay(pdMS_TO_TICKS(100));
+    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_shutdown());
+    vTaskDelay(pdMS_TO_TICKS(100));
+    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_rgbcw_channel(255, 0, 0, 0, 0));
+    vTaskDelay(pdMS_TO_TICKS(100));
+    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_rgbcw_channel(0, 255, 0, 0, 0));
+    vTaskDelay(pdMS_TO_TICKS(100));
+    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_rgbcw_channel(0, 0, 255, 0, 0));
+    vTaskDelay(pdMS_TO_TICKS(100));
+    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_rgbcw_channel(0, 0, 0, 255, 0));
+    vTaskDelay(pdMS_TO_TICKS(100));
+    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_rgbcw_channel(0, 0, 0, 0, 255));
+    vTaskDelay(pdMS_TO_TICKS(100));
+    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_rgbcw_channel(255, 0, 0, 0, 0));
+    vTaskDelay(pdMS_TO_TICKS(100));
+    bp1658cj_set_sleep_mode(true);
+    vTaskDelay(pdMS_TO_TICKS(100));
+    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_rgbcw_channel(0, 255, 0, 0, 0));
+    vTaskDelay(pdMS_TO_TICKS(100));
+    bp1658cj_set_sleep_mode(true);
+    vTaskDelay(pdMS_TO_TICKS(100));
+    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_rgbcw_channel(0, 0, 255, 0, 0));
+    vTaskDelay(pdMS_TO_TICKS(100));
 
-        //6. deinit
-        TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_shutdown());
-        // Wait for data transmission to complete
-        vTaskDelay(pdMS_TO_TICKS(1000));
-        TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_deinit());
-    }
+    //6. Current check
+    TEST_ASSERT_EQUAL(BP1658CJ_RGB_CURRENT_0MA, bp1658cj_rgb_current_mapping(0));
+    TEST_ASSERT_EQUAL(BP1658CJ_RGB_CURRENT_MAX, bp1658cj_rgb_current_mapping(5));
+    TEST_ASSERT_EQUAL(BP1658CJ_RGB_CURRENT_10MA, bp1658cj_rgb_current_mapping(10));
+    TEST_ASSERT_EQUAL(BP1658CJ_RGB_CURRENT_90MA, bp1658cj_rgb_current_mapping(90));
+    TEST_ASSERT_EQUAL(BP1658CJ_RGB_CURRENT_150MA, bp1658cj_rgb_current_mapping(150));
+    TEST_ASSERT_EQUAL(BP1658CJ_RGB_CURRENT_MAX, bp1658cj_rgb_current_mapping(160));
+    TEST_ASSERT_EQUAL(BP1658CJ_CW_CURRENT_0MA, bp1658cj_cw_current_mapping(0));
+    TEST_ASSERT_EQUAL(BP1658CJ_CW_CURRENT_MAX, bp1658cj_cw_current_mapping(2));
+    TEST_ASSERT_EQUAL(BP1658CJ_CW_CURRENT_50MA, bp1658cj_cw_current_mapping(50));
+    TEST_ASSERT_EQUAL(BP1658CJ_CW_CURRENT_75MA, bp1658cj_cw_current_mapping(75));
+    TEST_ASSERT_EQUAL(BP1658CJ_CW_CURRENT_MAX, bp1658cj_cw_current_mapping(80));
+
+    //7. deinit
+    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_shutdown());
+    // Wait for data transmission to complete
+    vTaskDelay(pdMS_TO_TICKS(1000));
+    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_deinit());
 }
 
 TEST_CASE("BP1658CJ", "[Application Layer]")
@@ -533,7 +557,7 @@ TEST_CASE("BP1658CJ", "[Application Layer]")
 #endif
 
 #ifdef CONFIG_ENABLE_SM2x35EGH_DRIVER
-TEST_CASE("SM2235EGH", "[Underlying Driver]")
+TEST_CASE("SM2x35EGH", "[Underlying Driver]")
 {
     //1.Status check
     TEST_ESP_ERR(ESP_ERR_INVALID_STATE, sm2x35egh_set_channel(SM2x35EGH_CHANNEL_R, 1023));
@@ -610,14 +634,40 @@ TEST_CASE("SM2235EGH", "[Underlying Driver]")
     TEST_ASSERT_EQUAL(ESP_OK, sm2x35egh_set_rgbcw_channel(0, 0, 255, 0, 0));
     vTaskDelay(pdMS_TO_TICKS(100));
 
-    //6. deinit
+    //6. Current
+    TEST_ASSERT_EQUAL(SM2235EGH_RGB_CURRENT_MAX, sm2235egh_rgb_current_mapping(0));
+    TEST_ASSERT_EQUAL(SM2235EGH_RGB_CURRENT_4MA, sm2235egh_rgb_current_mapping(4));
+    TEST_ASSERT_EQUAL(SM2235EGH_RGB_CURRENT_MAX, sm2235egh_rgb_current_mapping(6));
+    TEST_ASSERT_EQUAL(SM2235EGH_RGB_CURRENT_40MA, sm2235egh_rgb_current_mapping(40));
+    TEST_ASSERT_EQUAL(SM2235EGH_RGB_CURRENT_64MA, sm2235egh_rgb_current_mapping(64));
+    TEST_ASSERT_EQUAL(SM2235EGH_RGB_CURRENT_MAX, sm2235egh_rgb_current_mapping(68));
+    TEST_ASSERT_EQUAL(SM2335EGH_RGB_CURRENT_MAX, sm2335egh_rgb_current_mapping(5));
+    TEST_ASSERT_EQUAL(SM2335EGH_RGB_CURRENT_10MA, sm2335egh_rgb_current_mapping(10));
+    TEST_ASSERT_EQUAL(SM2335EGH_RGB_CURRENT_MAX, sm2335egh_rgb_current_mapping(15));
+    TEST_ASSERT_EQUAL(SM2335EGH_RGB_CURRENT_100MA, sm2335egh_rgb_current_mapping(100));
+    TEST_ASSERT_EQUAL(SM2335EGH_RGB_CURRENT_160MA, sm2335egh_rgb_current_mapping(160));
+    TEST_ASSERT_EQUAL(SM2335EGH_RGB_CURRENT_MAX, sm2335egh_rgb_current_mapping(170));
+    TEST_ASSERT_EQUAL(SM2235EGH_CW_CURRENT_MAX, sm2235egh_cw_current_mapping(0));
+    TEST_ASSERT_EQUAL(SM2235EGH_CW_CURRENT_5MA, sm2235egh_cw_current_mapping(5));
+    TEST_ASSERT_EQUAL(SM2235EGH_CW_CURRENT_MAX, sm2235egh_cw_current_mapping(6));
+    TEST_ASSERT_EQUAL(SM2235EGH_CW_CURRENT_55MA, sm2235egh_cw_current_mapping(55));
+    TEST_ASSERT_EQUAL(SM2235EGH_CW_CURRENT_80MA, sm2235egh_cw_current_mapping(80));
+    TEST_ASSERT_EQUAL(SM2235EGH_CW_CURRENT_MAX, sm2235egh_cw_current_mapping(85));
+    TEST_ASSERT_EQUAL(SM2335EGH_CW_CURRENT_MAX, sm2335egh_cw_current_mapping(0));
+    TEST_ASSERT_EQUAL(SM2335EGH_CW_CURRENT_5MA, sm2335egh_cw_current_mapping(5));
+    TEST_ASSERT_EQUAL(SM2335EGH_CW_CURRENT_MAX, sm2335egh_cw_current_mapping(6));
+    TEST_ASSERT_EQUAL(SM2335EGH_CW_CURRENT_55MA, sm2335egh_cw_current_mapping(55));
+    TEST_ASSERT_EQUAL(SM2335EGH_CW_CURRENT_80MA, sm2335egh_cw_current_mapping(80));
+    TEST_ASSERT_EQUAL(SM2335EGH_CW_CURRENT_MAX, sm2335egh_cw_current_mapping(85));
+
+    //7. deinit
     TEST_ASSERT_EQUAL(ESP_OK, sm2x35egh_set_shutdown());
     // Wait for data transmission to complete
     vTaskDelay(pdMS_TO_TICKS(1000));
     TEST_ASSERT_EQUAL(ESP_OK, sm2x35egh_deinit());
 }
 
-TEST_CASE("SM2235EGH", "[Application Layer]")
+TEST_CASE("SM2x35EGH", "[Application Layer]")
 {
     lightbulb_config_t config = {
         .type = DRIVER_SM2x35EGH,
@@ -770,7 +820,25 @@ TEST_CASE("KP18058", "[Underlying Driver]")
     TEST_ASSERT_EQUAL(ESP_OK, kp18058_set_rgbcw_channel(0, 0, 0, 0, 0));
     vTaskDelay(pdMS_TO_TICKS(100));
 
-    //6. deinit
+    //6. Current check
+    TEST_ASSERT_EQUAL(-1, kp18058_rgb_current_mapping(0));
+    TEST_ASSERT_EQUAL(-1, kp18058_rgb_current_mapping(1));
+    TEST_ASSERT_EQUAL(0, kp18058_rgb_current_mapping(1.5));
+    TEST_ASSERT_EQUAL(-1, kp18058_rgb_current_mapping(1.6));
+    TEST_ASSERT_EQUAL(9, kp18058_rgb_current_mapping(15));
+    TEST_ASSERT_EQUAL(31, kp18058_rgb_current_mapping(48));
+    TEST_ASSERT_EQUAL(-1, kp18058_rgb_current_mapping(49.5));
+    TEST_ASSERT_EQUAL(-1, kp18058_cw_current_mapping(-1));
+    TEST_ASSERT_EQUAL(0, kp18058_cw_current_mapping(0));
+    TEST_ASSERT_EQUAL(-1, kp18058_cw_current_mapping(1));
+    TEST_ASSERT_EQUAL(1, kp18058_cw_current_mapping(2.5));
+    TEST_ASSERT_EQUAL(10, kp18058_cw_current_mapping(25));
+    TEST_ASSERT_EQUAL(11, kp18058_cw_current_mapping(27.5));
+    TEST_ASSERT_EQUAL(-1, kp18058_cw_current_mapping(28));
+    TEST_ASSERT_EQUAL(31, kp18058_cw_current_mapping(77.5));
+    TEST_ASSERT_EQUAL(-1, kp18058_cw_current_mapping(80));
+
+    //7. Deinit
     TEST_ASSERT_EQUAL(ESP_OK, kp18058_set_shutdown());
     // Wait for data transmission to complete
     vTaskDelay(pdMS_TO_TICKS(1000));

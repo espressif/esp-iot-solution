@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -168,6 +168,22 @@ esp_err_t sm2135eh_set_standby_mode(bool enable_standby);
  * @return esp_err_t
  */
 esp_err_t sm2135eh_set_max_current(sm2135eh_rgb_current_t rgb, sm2135eh_wy_current_t wy);
+
+/**
+ * @brief Convert the rgb channel current value into the enumeration value required by the driver
+ *
+ * @param current_mA Drive current value, in milliamps, ranges from 9~44mA, starts at 9 mA and can only step in multiples of 5mA
+ * @return sm2135eh_rgb_current_t
+ */
+sm2135eh_rgb_current_t sm2135eh_rgb_current_mapping(int current_mA);
+
+/**
+ * @brief Convert the cw channel current value into the enumeration value required by the driver
+ *
+ * @param current_mA Only the following current values can be used: 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 59, 63, 67, 72
+ * @return sm2135eh_wy_current_t
+ */
+sm2135eh_wy_current_t sm2135eh_wy_current_mapping(int current_mA);
 
 /**
  * @brief Deinitialize sm2135eh and release resources

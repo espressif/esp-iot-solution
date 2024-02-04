@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -176,6 +176,22 @@ esp_err_t bp1658cj_set_sleep_mode(bool enable_sleep);
  * @return esp_err_t
  */
 esp_err_t bp1658cj_set_max_current(bp1658cj_rgb_current_t rgb, bp1658cj_cw_current_t cw);
+
+/**
+ * @brief Convert the rgb channel current value into the enumeration value required by the driver
+ *
+ * @param current_mA Drive current value, in milliamps, ranges from 0~150mA, and can be evenly divided by 10
+ * @return bp1658cj_cw_current_t
+ */
+bp1658cj_rgb_current_t bp1658cj_rgb_current_mapping(int current_mA);
+
+/**
+ * @brief Convert the cw channel current value into the enumeration value required by the driver
+ *
+ * @param current_mA Drive current value, in milliamps, ranges from 0~75mA, and can be evenly divided by 5
+ * @return bp1658cj_cw_current_t
+ */
+bp1658cj_cw_current_t bp1658cj_cw_current_mapping(int current_mA);
 
 /**
  * @brief Deinitialize bp1658cj and release resources

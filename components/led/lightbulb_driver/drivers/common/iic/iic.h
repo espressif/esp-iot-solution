@@ -5,6 +5,7 @@
  */
 
 #include "driver/i2c.h"
+#include "driver_utils.h"
 #pragma once
 
 esp_err_t iic_driver_init(i2c_port_t i2c_master_num, gpio_num_t sda_io_num, gpio_num_t scl_io_num, uint32_t clk_freq_hz);

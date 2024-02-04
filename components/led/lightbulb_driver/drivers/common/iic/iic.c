@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -37,12 +37,6 @@
 #endif
 
 static const char *TAG = "iic";
-
-#define IIC_CHECK(a, str, action, ...)                                      \
-    if (unlikely(!(a))) {                                                   \
-        ESP_LOGE(TAG, str, ##__VA_ARGS__);                                  \
-        action;                                                             \
-    }
 
 typedef struct {
     QueueHandle_t cmd_queue_handle;
@@ -115,13 +109,13 @@ esp_err_t iic_driver_init(i2c_port_t i2c_master_num, gpio_num_t sda_io_num, gpio
     conf.clk_flags = I2C_SCLK_SRC_FLAG_FOR_NOMAL;
 #endif
     err = i2c_param_config(i2c_master_num, &conf);
-    IIC_CHECK(err == ESP_OK, "i2c param config fail", return err);
+    DRIVER_CHECK(err == ESP_OK, "i2c param config fail", return err);
 
     err = i2c_driver_install(i2c_master_num, conf.mode, I2C_MASTER_RX_BUF_DISABLE, I2C_MASTER_TX_BUF_DISABLE, 0);
-    IIC_CHECK(err == ESP_OK, "i2c driver install fail", return err);
+    DRIVER_CHECK(err == ESP_OK, "i2c driver install fail", return err);
 
     s_obj = calloc(1, sizeof(iic_config_t));
-    IIC_CHECK(s_obj, "alloc fail", return ESP_ERR_NO_MEM);
+    DRIVER_CHECK(s_obj, "alloc fail", return ESP_ERR_NO_MEM);
     s_obj->i2c_master_num = i2c_master_num;
 
     return err;
@@ -154,13 +148,13 @@ esp_err_t iic_driver_write(uint8_t addr, uint8_t *data_wr, size_t size)
 
 esp_err_t iic_driver_send_task_create(void)
 {
-    IIC_CHECK(!s_obj->cmd_queue_handle || !s_obj->send_task_handle, "already initialized", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(!s_obj->cmd_queue_handle || !s_obj->send_task_handle, "already initialized", return ESP_ERR_INVALID_STATE);
 
     s_obj->cmd_queue_handle = xQueueCreate(IIC_QUEUE_SIZE, sizeof(i2c_send_data_t));
-    IIC_CHECK(s_obj->cmd_queue_handle, "queue create fail", goto EXIT);
+    DRIVER_CHECK(s_obj->cmd_queue_handle, "queue create fail", goto EXIT);
 
     xTaskCreate(send_task, "send_task", IIC_TASK_STACK, NULL, IIC_TASK_PRIORITY, &s_obj->send_task_handle);
-    IIC_CHECK(s_obj->send_task_handle, "task create fail", goto EXIT);
+    DRIVER_CHECK(s_obj->send_task_handle, "task create fail", goto EXIT);
 
     return ESP_OK;
 
@@ -171,7 +165,7 @@ EXIT:
 
 esp_err_t iic_driver_task_destroy(void)
 {
-    IIC_CHECK(s_obj->cmd_queue_handle || s_obj->send_task_handle, "handle is null", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_obj->cmd_queue_handle || s_obj->send_task_handle, "handle is null", return ESP_ERR_INVALID_STATE);
     clean_up();
     return ESP_OK;
 }

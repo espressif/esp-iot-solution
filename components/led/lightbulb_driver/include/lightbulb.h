@@ -59,7 +59,7 @@ typedef enum {
     DRIVER_SM2135E,     // This version is no longer supported. Please checkout to v0.5.2
     DRIVER_SM2135EH,
     DRIVER_SM2x35EGH,   // Available for SM2235EGH SM2335EGH
-    DRIVER_BP57x8D,     // Available for BP5758 BP57x8D BP5768D
+    DRIVER_BP57x8D,     // Available for BP5758 BP5758D BP5768D
     DRIVER_BP1658CJ,
     DRIVER_KP18058,
 
@@ -179,6 +179,16 @@ typedef enum {
  *
  * @attention Both the variable `value` and the variable `brightness` are used to mark light brightness.
  *            They respectively indicate the brightness of color light and white light.
+ *
+ * @note Due to the differences in led beads, the percentage does not represent color temperature.
+ *       The real meaning is the output ratio of cold and warm led beads: 0% lights up only the warm beads, 50% lights up an equal number of cold and warm beads, and 100% lights up only the cold beads.
+ *       For simplicity, we can roughly assume that 0% represents the lowest color temperature of the beads, and 100% represents the highest color temperature.
+ *       The meaning of intermediate percentages varies under different color temperature calibration schemes:
+ *          - Standard Mode: The percentage is proportionally mapped between the lowest and highest color temperatures.
+ *          - Precise Mode:
+ *              - For hardware CCT schemes (only applicable to PWM-driven): The percentage actually represents the duty cycle of the PWM-driven color temperature channel, with each percentage corresponding to an accurate and real color temperature.
+ *              - For those with CW channels: The percentage represents the proportion of cold and warm beads involved in the output. The increase in percentage does not linearly correspond to the increase in color temperature, and instruments are needed for accurate determination.
+ *              - For those using RGB channels to mix cold and warm colors: The percentage has no real significance and can be ignored. In actual use, it can serve as an index to reference corresponding color temperature values."
  */
 typedef struct {
     lightbulb_works_mode_t mode; /**< The working mode of the lightbulb (color, white, etc.). */
@@ -196,7 +206,7 @@ typedef struct {
      * warm  ->  .. -> cold
      *
      */
-    uint8_t cct_percentage;      /**< Percentage of color temperatures for white light (range: 0-100). */
+    uint8_t cct_percentage;      /**< Cold and warm led bead output ratio (range: 0-100). */
     uint8_t brightness;          /**< Brightness value for white light (range: 0-100). */
 } lightbulb_status_t;
 
@@ -492,6 +502,7 @@ esp_err_t lightbulb_kelvin2percentage(uint16_t kelvin, uint8_t *percentage);
 
 /**
  * @brief Convert percentage to CCT (Color Temperature) kelvin.
+ * @attention
  *
  * @param percentage Percentage value in the range of 0 to 100.
  * @param kelvin Pointer to a variable to store the resulting Color Temperature in kelvin.

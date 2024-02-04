@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -13,12 +13,6 @@
 #include "bp1658cj.h"
 
 static const char *TAG = "driver_bp1658cj";
-
-#define BP1658CJ_CHECK(a, str, action, ...)                                 \
-    if (unlikely(!(a))) {                                                   \
-        ESP_LOGE(TAG, str, ##__VA_ARGS__);                                  \
-        action;                                                             \
-    }
 
 #define INVALID_ADDR        0xFF
 #define IIC_BASE_UNIT_HZ    1000
@@ -90,7 +84,7 @@ static esp_err_t set_mode_and_current(bool enable_sleep_mode, bp1658cj_rgb_curre
 
 esp_err_t bp1658cj_set_max_current(bp1658cj_rgb_current_t rgb, bp1658cj_cw_current_t wy)
 {
-    BP1658CJ_CHECK(s_bp1658cj, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_bp1658cj, "not init", return ESP_ERR_INVALID_STATE);
 
     uint8_t value = 0;
     uint8_t addr = BASE_ADDR | BIT_MAX_CURRENT | BIT_ALL_OUT_ENABLE;
@@ -101,7 +95,7 @@ esp_err_t bp1658cj_set_max_current(bp1658cj_rgb_current_t rgb, bp1658cj_cw_curre
 
 esp_err_t bp1658cj_set_sleep_mode(bool enable_sleep)
 {
-    BP1658CJ_CHECK(s_bp1658cj, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_bp1658cj, "not init", return ESP_ERR_INVALID_STATE);
 
     uint8_t addr = BASE_ADDR | BIT_SLEEP_MODE_ENABLE;
     if (enable_sleep) {
@@ -117,7 +111,7 @@ esp_err_t bp1658cj_set_sleep_mode(bool enable_sleep)
 
 esp_err_t bp1658cj_set_shutdown(void)
 {
-    BP1658CJ_CHECK(s_bp1658cj, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_bp1658cj, "not init", return ESP_ERR_INVALID_STATE);
 
     uint8_t _value[10] = { 0 };
     uint8_t addr = BASE_ADDR | BIT_R_OUT1 | BIT_ALL_OUT_ENABLE;
@@ -127,19 +121,20 @@ esp_err_t bp1658cj_set_shutdown(void)
 
 esp_err_t bp1658cj_regist_channel(bp1658cj_channel_t channel, bp1658cj_out_pin_t pin)
 {
-    BP1658CJ_CHECK(s_bp1658cj, "not init", return ESP_ERR_INVALID_STATE);
-    BP1658CJ_CHECK(channel < BP1658CJ_CHANNEL_MAX, "check channel fail", return ESP_ERR_INVALID_ARG);
-    BP1658CJ_CHECK(pin < BP1658CJ_PIN_OUT_MAX, "check out pin fail", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(s_bp1658cj, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(channel < BP1658CJ_CHANNEL_MAX, "check channel fail", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(pin < BP1658CJ_PIN_OUT_MAX, "check out pin fail", return ESP_ERR_INVALID_ARG);
 
     s_bp1658cj->mapping_addr[channel] = pin;
+
     return ESP_OK;
 }
 
 esp_err_t bp1658cj_set_channel(bp1658cj_channel_t channel, uint16_t value)
 {
-    BP1658CJ_CHECK(s_bp1658cj, "not init", return ESP_ERR_INVALID_STATE);
-    BP1658CJ_CHECK(s_bp1658cj->mapping_addr[channel] != INVALID_ADDR, "channel:%d not regist", return ESP_ERR_INVALID_STATE, channel);
-    BP1658CJ_CHECK(value <= 1023, "value out of range", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(s_bp1658cj, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_bp1658cj->mapping_addr[channel] != INVALID_ADDR, "channel:%d not regist", return ESP_ERR_INVALID_STATE, channel);
+    DRIVER_CHECK(value <= 1023, "value out of range", return ESP_ERR_INVALID_ARG);
 
     if (!s_bp1658cj->init_done) {
         set_mode_and_current(false, s_bp1658cj->rgb_current, s_bp1658cj->cw_current);
@@ -156,8 +151,8 @@ esp_err_t bp1658cj_set_channel(bp1658cj_channel_t channel, uint16_t value)
 
 esp_err_t bp1658cj_set_rgb_channel(uint16_t value_r, uint16_t value_g, uint16_t value_b)
 {
-    BP1658CJ_CHECK(s_bp1658cj, "not init", return ESP_ERR_INVALID_STATE);
-    BP1658CJ_CHECK(s_bp1658cj->mapping_addr[BP1658CJ_CHANNEL_R] != INVALID_ADDR || s_bp1658cj->mapping_addr[BP1658CJ_CHANNEL_G] != INVALID_ADDR || s_bp1658cj->mapping_addr[BP1658CJ_CHANNEL_B] != INVALID_ADDR, "color channel not regist", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_bp1658cj, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_bp1658cj->mapping_addr[BP1658CJ_CHANNEL_R] != INVALID_ADDR || s_bp1658cj->mapping_addr[BP1658CJ_CHANNEL_G] != INVALID_ADDR || s_bp1658cj->mapping_addr[BP1658CJ_CHANNEL_B] != INVALID_ADDR, "color channel not regist", return ESP_ERR_INVALID_STATE);
 
     if (!s_bp1658cj->init_done) {
         set_mode_and_current(false, s_bp1658cj->rgb_current, s_bp1658cj->cw_current);
@@ -180,8 +175,8 @@ esp_err_t bp1658cj_set_rgb_channel(uint16_t value_r, uint16_t value_g, uint16_t 
 
 esp_err_t bp1658cj_set_cw_channel(uint16_t value_c, uint16_t value_w)
 {
-    BP1658CJ_CHECK(s_bp1658cj, "not init", return ESP_ERR_INVALID_STATE);
-    BP1658CJ_CHECK(s_bp1658cj->mapping_addr[BP1658CJ_CHANNEL_C] != INVALID_ADDR || s_bp1658cj->mapping_addr[BP1658CJ_CHANNEL_W] != INVALID_ADDR, "white channel not regist", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_bp1658cj, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_bp1658cj->mapping_addr[BP1658CJ_CHANNEL_C] != INVALID_ADDR || s_bp1658cj->mapping_addr[BP1658CJ_CHANNEL_W] != INVALID_ADDR, "white channel not regist", return ESP_ERR_INVALID_STATE);
 
     if (!s_bp1658cj->init_done) {
         set_mode_and_current(false, s_bp1658cj->rgb_current, s_bp1658cj->cw_current);
@@ -200,9 +195,9 @@ esp_err_t bp1658cj_set_cw_channel(uint16_t value_c, uint16_t value_w)
 
 esp_err_t bp1658cj_set_rgbcw_channel(uint16_t value_r, uint16_t value_g, uint16_t value_b, uint16_t value_c, uint16_t value_w)
 {
-    BP1658CJ_CHECK(s_bp1658cj, "not init", return ESP_ERR_INVALID_STATE);
-    BP1658CJ_CHECK(s_bp1658cj->mapping_addr[BP1658CJ_CHANNEL_R] != INVALID_ADDR || s_bp1658cj->mapping_addr[BP1658CJ_CHANNEL_G] != INVALID_ADDR || s_bp1658cj->mapping_addr[BP1658CJ_CHANNEL_B] != INVALID_ADDR, "color channel not regist", return ESP_ERR_INVALID_STATE);
-    BP1658CJ_CHECK(s_bp1658cj->mapping_addr[BP1658CJ_CHANNEL_C] != INVALID_ADDR || s_bp1658cj->mapping_addr[BP1658CJ_CHANNEL_W] != INVALID_ADDR, "white channel not regist", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_bp1658cj, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_bp1658cj->mapping_addr[BP1658CJ_CHANNEL_R] != INVALID_ADDR || s_bp1658cj->mapping_addr[BP1658CJ_CHANNEL_G] != INVALID_ADDR || s_bp1658cj->mapping_addr[BP1658CJ_CHANNEL_B] != INVALID_ADDR, "color channel not regist", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_bp1658cj->mapping_addr[BP1658CJ_CHANNEL_C] != INVALID_ADDR || s_bp1658cj->mapping_addr[BP1658CJ_CHANNEL_W] != INVALID_ADDR, "white channel not regist", return ESP_ERR_INVALID_STATE);
 
     if (!s_bp1658cj->init_done) {
         set_mode_and_current(false, s_bp1658cj->rgb_current, s_bp1658cj->cw_current);
@@ -228,15 +223,31 @@ esp_err_t bp1658cj_set_rgbcw_channel(uint16_t value_r, uint16_t value_g, uint16_
     return iic_driver_write(addr, _value, sizeof(_value));
 }
 
+bp1658cj_rgb_current_t bp1658cj_rgb_current_mapping(int current_mA)
+{
+    DRIVER_CHECK((current_mA >= 0) && (current_mA <= 150) && (!(current_mA % 10)), "The current value is incorrect and cannot be mapped.", return BP1658CJ_RGB_CURRENT_MAX);
+
+    return (bp1658cj_rgb_current_t)(current_mA / 10);
+}
+
+bp1658cj_cw_current_t bp1658cj_cw_current_mapping(int current_mA)
+{
+    DRIVER_CHECK((current_mA >= 0) && (current_mA <= 75) && (!(current_mA % 5)), "The current value is incorrect and cannot be mapped.", return BP1658CJ_CW_CURRENT_MAX);
+
+    return (bp1658cj_cw_current_t)(current_mA / 5);
+}
+
 esp_err_t bp1658cj_init(driver_bp1658cj_t *config, void(*hook_func)(void *))
 {
     esp_err_t err = ESP_OK;
 
-    BP1658CJ_CHECK(config, "config is null", return ESP_ERR_INVALID_ARG);
-    BP1658CJ_CHECK(!s_bp1658cj, "already init done", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(config, "config is null", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(config->rgb_current >= BP1658CJ_RGB_CURRENT_0MA && config->rgb_current < BP1658CJ_RGB_CURRENT_MAX, "rgb channel current param error", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(config->cw_current >= BP1658CJ_CW_CURRENT_0MA && config->cw_current < BP1658CJ_CW_CURRENT_MAX, "cw channel current param error", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(!s_bp1658cj, "already init done", return ESP_ERR_INVALID_ARG);
 
     s_bp1658cj = calloc(1, sizeof(bp1658cj_handle_t));
-    BP1658CJ_CHECK(s_bp1658cj, "alloc fail", return ESP_ERR_NO_MEM);
+    DRIVER_CHECK(s_bp1658cj, "alloc fail", return ESP_ERR_NO_MEM);
     memset(s_bp1658cj->mapping_addr, INVALID_ADDR, BP1658CJ_MAX_PIN);
 
     s_bp1658cj->rgb_current = config->rgb_current;
@@ -248,11 +259,11 @@ esp_err_t bp1658cj_init(driver_bp1658cj_t *config, void(*hook_func)(void *))
     }
 
     err |= iic_driver_init(I2C_NUM_0, config->iic_sda, config->iic_clk, config->freq_khz * IIC_BASE_UNIT_HZ);
-    BP1658CJ_CHECK(err == ESP_OK, "i2c master init fail", goto EXIT);
+    DRIVER_CHECK(err == ESP_OK, "i2c master init fail", goto EXIT);
 
     if (config->enable_iic_queue) {
         err |= iic_driver_send_task_create();
-        BP1658CJ_CHECK(err == ESP_OK, "task create fail", goto EXIT);
+        DRIVER_CHECK(err == ESP_OK, "task create fail", goto EXIT);
     }
 
     return err;
@@ -267,7 +278,7 @@ EXIT:
 
 esp_err_t bp1658cj_deinit(void)
 {
-    BP1658CJ_CHECK(s_bp1658cj, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_bp1658cj, "not init", return ESP_ERR_INVALID_STATE);
 
     bp1658cj_set_shutdown();
     iic_driver_deinit();

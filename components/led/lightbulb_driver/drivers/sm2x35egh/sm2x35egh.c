@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -14,12 +14,6 @@
 
 /* Driver available for sm2235egh sm2335egh */
 static const char *TAG = "sm2x35egh";
-
-#define SM2x35EGH_CHECK(a, str, action, ...)                                \
-    if (unlikely(!(a))) {                                                   \
-        ESP_LOGE(TAG, str, ##__VA_ARGS__);                                  \
-        action;                                                             \
-    }
 
 #define INVALID_ADDR        0xFF
 #define IIC_BASE_UNIT_HZ    1000
@@ -84,7 +78,7 @@ static uint8_t get_max_current(void)
 
 esp_err_t sm2x35egh_set_standby_mode(bool enable_standby)
 {
-    SM2x35EGH_CHECK(s_sm2x35egh, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_sm2x35egh, "not init", return ESP_ERR_INVALID_STATE);
 
     uint8_t addr = BASE_ADDR | BIT_STANDBY | BIT_R_OUT1;
     uint8_t value[11] = { 0 };
@@ -98,7 +92,7 @@ esp_err_t sm2x35egh_set_standby_mode(bool enable_standby)
 
 esp_err_t sm2x35egh_set_shutdown(void)
 {
-    SM2x35EGH_CHECK(s_sm2x35egh, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_sm2x35egh, "not init", return ESP_ERR_INVALID_STATE);
 
     uint8_t addr = BASE_ADDR | BIT_ALL_CHANNEL | BIT_R_OUT1;
     uint8_t value[11] = { 0 };
@@ -109,9 +103,9 @@ esp_err_t sm2x35egh_set_shutdown(void)
 
 esp_err_t sm2x35egh_regist_channel(sm2x35egh_channel_t channel, sm2x35egh_out_pin_t pin)
 {
-    SM2x35EGH_CHECK(s_sm2x35egh, "not init", return ESP_ERR_INVALID_STATE);
-    SM2x35EGH_CHECK(channel < SM2x35EGH_CHANNEL_MAX, "check channel fail", return ESP_ERR_INVALID_ARG);
-    SM2x35EGH_CHECK(pin < SM2x35EGH_PIN_OUT_MAX, "check out pin fail", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(s_sm2x35egh, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(channel < SM2x35EGH_CHANNEL_MAX, "check channel fail", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(pin < SM2x35EGH_PIN_OUT_MAX, "check out pin fail", return ESP_ERR_INVALID_ARG);
 
     s_sm2x35egh->mapping_addr[channel] = pin;
     return ESP_OK;
@@ -119,9 +113,9 @@ esp_err_t sm2x35egh_regist_channel(sm2x35egh_channel_t channel, sm2x35egh_out_pi
 
 esp_err_t sm2x35egh_set_channel(sm2x35egh_channel_t channel, uint16_t value)
 {
-    SM2x35EGH_CHECK(s_sm2x35egh, "not init", return ESP_ERR_INVALID_STATE);
-    SM2x35EGH_CHECK(s_sm2x35egh->mapping_addr[channel] != INVALID_ADDR, "channel:%d not regist", return ESP_ERR_INVALID_STATE, channel);
-    SM2x35EGH_CHECK(value <= 1023, "value out of range", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(s_sm2x35egh, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_sm2x35egh->mapping_addr[channel] != INVALID_ADDR, "channel:%d not regist", return ESP_ERR_INVALID_STATE, channel);
+    DRIVER_CHECK(value <= 1023, "value out of range", return ESP_ERR_INVALID_ARG);
 
     uint8_t addr = BASE_ADDR | BIT_ALL_CHANNEL | get_mapping_addr(channel);
     uint8_t _value[3] = { 0 };
@@ -135,8 +129,8 @@ esp_err_t sm2x35egh_set_channel(sm2x35egh_channel_t channel, uint16_t value)
 
 esp_err_t sm2x35egh_set_rgb_channel(uint16_t value_r, uint16_t value_g, uint16_t value_b)
 {
-    SM2x35EGH_CHECK(s_sm2x35egh, "not init", return ESP_ERR_INVALID_STATE);
-    SM2x35EGH_CHECK(s_sm2x35egh->mapping_addr[0] != INVALID_ADDR || s_sm2x35egh->mapping_addr[1] != INVALID_ADDR || s_sm2x35egh->mapping_addr[2] != INVALID_ADDR, "color channel not regist", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_sm2x35egh, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_sm2x35egh->mapping_addr[0] != INVALID_ADDR || s_sm2x35egh->mapping_addr[1] != INVALID_ADDR || s_sm2x35egh->mapping_addr[2] != INVALID_ADDR, "color channel not regist", return ESP_ERR_INVALID_STATE);
 
     uint8_t addr = BASE_ADDR | BIT_ALL_CHANNEL | BIT_R_OUT1;
     uint8_t _value[7] = { 0 };
@@ -157,8 +151,8 @@ esp_err_t sm2x35egh_set_rgb_channel(uint16_t value_r, uint16_t value_g, uint16_t
 
 esp_err_t sm2x35egh_set_cw_channel(uint16_t value_c, uint16_t value_w)
 {
-    SM2x35EGH_CHECK(s_sm2x35egh, "not init", return ESP_ERR_INVALID_STATE);
-    SM2x35EGH_CHECK(s_sm2x35egh->mapping_addr[3] != INVALID_ADDR || s_sm2x35egh->mapping_addr[4] != INVALID_ADDR, "white channel not regist", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_sm2x35egh, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_sm2x35egh->mapping_addr[3] != INVALID_ADDR || s_sm2x35egh->mapping_addr[4] != INVALID_ADDR, "white channel not regist", return ESP_ERR_INVALID_STATE);
 
     uint8_t _value[5] = { 0 };
     uint8_t addr = BASE_ADDR | BIT_ALL_CHANNEL | BIT_C_OUT4;
@@ -175,8 +169,8 @@ esp_err_t sm2x35egh_set_cw_channel(uint16_t value_c, uint16_t value_w)
 
 esp_err_t sm2x35egh_set_rgbcw_channel(uint16_t value_r, uint16_t value_g, uint16_t value_b, uint16_t value_c, uint16_t value_w)
 {
-    SM2x35EGH_CHECK(s_sm2x35egh, "not init", return ESP_ERR_INVALID_STATE);
-    SM2x35EGH_CHECK(s_sm2x35egh->mapping_addr[3] != INVALID_ADDR || s_sm2x35egh->mapping_addr[4] != INVALID_ADDR, "white channel not regist", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_sm2x35egh, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_sm2x35egh->mapping_addr[3] != INVALID_ADDR || s_sm2x35egh->mapping_addr[4] != INVALID_ADDR, "white channel not regist", return ESP_ERR_INVALID_STATE);
 
     uint8_t _value[11] = { 0 };
     uint8_t addr = BASE_ADDR | BIT_ALL_CHANNEL | BIT_R_OUT1;
@@ -200,19 +194,50 @@ esp_err_t sm2x35egh_set_rgbcw_channel(uint16_t value_r, uint16_t value_g, uint16
     return iic_driver_write(addr, _value, sizeof(_value));
 }
 
+sm2x35egh_rgb_current_t sm2235egh_rgb_current_mapping(int current_mA)
+{
+    DRIVER_CHECK((current_mA >= 4) && (current_mA <= 64) && (!(current_mA % 4)), "The current value is incorrect and cannot be mapped.", return SM2235EGH_RGB_CURRENT_MAX);
+
+    return (sm2x35egh_rgb_current_t)((current_mA - 4) / 4);
+}
+
+sm2x35egh_rgb_current_t sm2235egh_cw_current_mapping(int current_mA)
+{
+    DRIVER_CHECK((current_mA >= 5) && (current_mA <= 80) && (!(current_mA % 5)), "The current value is incorrect and cannot be mapped.", return SM2235EGH_CW_CURRENT_MAX);
+
+    return (sm2x35egh_rgb_current_t)((current_mA - 5) / 5);
+}
+
+sm2x35egh_rgb_current_t sm2335egh_rgb_current_mapping(int current_mA)
+{
+    DRIVER_CHECK((current_mA >= 10) && (current_mA <= 160) && (!(current_mA % 10)), "The current value is incorrect and cannot be mapped.", return SM2335EGH_RGB_CURRENT_MAX);
+
+    return (sm2x35egh_rgb_current_t)((current_mA - 10) / 10);
+}
+
+sm2x35egh_rgb_current_t sm2335egh_cw_current_mapping(int current_mA)
+{
+    DRIVER_CHECK((current_mA >= 5) && (current_mA <= 80) && (!(current_mA % 5)), "The current value is incorrect and cannot be mapped.", return SM2335EGH_CW_CURRENT_MAX);
+
+    return (sm2x35egh_rgb_current_t)((current_mA - 5) / 5);
+}
+
 esp_err_t sm2x35egh_init(driver_sm2x35egh_t *config, void(*hook_func)(void *))
 {
     esp_err_t err = ESP_OK;
-
-    SM2x35EGH_CHECK(config, "config is null", return ESP_ERR_INVALID_ARG);
-    SM2x35EGH_CHECK(!s_sm2x35egh, "already init done", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(config, "config is null", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(!s_sm2x35egh, "already init done", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(config->rgb_current >= SM2235EGH_RGB_CURRENT_4MA && config->rgb_current < SM2235EGH_RGB_CURRENT_MAX, "rgb channel current param error", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(config->cw_current >= SM2335EGH_CW_CURRENT_5MA && config->cw_current < SM2235EGH_CW_CURRENT_MAX, "cw channel current param error", return ESP_ERR_INVALID_ARG);
 
     s_sm2x35egh = calloc(1, sizeof(sm2x35eh_handle_t));
-    SM2x35EGH_CHECK(s_sm2x35egh, "alloc fail", return ESP_ERR_NO_MEM);
+    DRIVER_CHECK(s_sm2x35egh, "alloc fail", return ESP_ERR_NO_MEM);
     memset(s_sm2x35egh->mapping_addr, INVALID_ADDR, SM2x35EGH_MAX_PIN);
 
     s_sm2x35egh->rgb_current = config->rgb_current;
     s_sm2x35egh->cw_current = config->cw_current;
+
+    NULL;
 
     if (config->freq_khz > 400) {
         config->freq_khz = 400;
@@ -220,11 +245,11 @@ esp_err_t sm2x35egh_init(driver_sm2x35egh_t *config, void(*hook_func)(void *))
     }
 
     err |= iic_driver_init(I2C_NUM_0, config->iic_sda, config->iic_clk, config->freq_khz * IIC_BASE_UNIT_HZ);
-    SM2x35EGH_CHECK(err == ESP_OK, "i2c master init fail", goto EXIT);
+    DRIVER_CHECK(err == ESP_OK, "i2c master init fail", goto EXIT);
 
     if (config->enable_iic_queue) {
         err |= iic_driver_send_task_create();
-        SM2x35EGH_CHECK(err == ESP_OK, "task create fail", goto EXIT);
+        DRIVER_CHECK(err == ESP_OK, "task create fail", goto EXIT);
     }
 
     return err;
@@ -238,7 +263,7 @@ EXIT:
 
 esp_err_t sm2x35egh_deinit(void)
 {
-    SM2x35EGH_CHECK(s_sm2x35egh, "not init", return ESP_ERR_INVALID_STATE);
+    DRIVER_CHECK(s_sm2x35egh, "not init", return ESP_ERR_INVALID_STATE);
 
     sm2x35egh_set_shutdown();
     iic_driver_deinit();

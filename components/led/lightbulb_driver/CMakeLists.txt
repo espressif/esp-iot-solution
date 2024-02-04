@@ -5,7 +5,7 @@ set(srcs "src/hal_driver.c"
 
 set(priv_req nvs_flash driver esp_timer)
 
-set(incs "include")
+set(incs "include" "drivers/common/utils/")
 
 if(CONFIG_ENABLE_PWM_DRIVER)
     list(APPEND srcs "drivers/pwm/pwm.c")
