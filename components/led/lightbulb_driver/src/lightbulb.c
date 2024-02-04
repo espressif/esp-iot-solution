@@ -470,35 +470,35 @@ static uint8_t get_channel_mask(lightbulb_led_beads_comb_t led_beads)
     switch (led_beads) {
     case LED_BEADS_1CH_C:
         // 0 1 0 0 0
-        channel_mask = (1 << CHANNEL_ID_COLD_CCT_WHITE);
+        channel_mask = SELECT_COLD_CCT_WHITE_CHANNEL;
         break;
     case LED_BEADS_1CH_W:
         // 1 0 0 0 0
-        channel_mask = (1 << CHANNEL_ID_WARM_BRIGHTNESS_YELLOW);
+        channel_mask = SELECT_WARM_BRIGHTNESS_YELLOW_CHANNEL;
         break;
     case LED_BEADS_2CH_CW:
         // 1 1 0 0 0
-        channel_mask = (SELECT_WHITE_CHANNEL);
+        channel_mask = SELECT_WHITE_CHANNEL;
         break;
     case LED_BEADS_3CH_RGB:
         // 0 0 1 1 1
-        channel_mask = (SELECT_COLOR_CHANNEL);
+        channel_mask = SELECT_COLOR_CHANNEL;
         break;
     case LED_BEADS_4CH_RGBC:
         // 0 1 1 1 1
-        channel_mask = ((SELECT_COLOR_CHANNEL) | (1 << CHANNEL_ID_COLD_CCT_WHITE));
+        channel_mask = ((SELECT_COLOR_CHANNEL) | (SELECT_COLD_CCT_WHITE_CHANNEL));
         break;
     case LED_BEADS_4CH_RGBCC:
         // 0 1 1 1 1
-        channel_mask = ((SELECT_COLOR_CHANNEL) | (1 << CHANNEL_ID_COLD_CCT_WHITE));
+        channel_mask = ((SELECT_COLOR_CHANNEL) | (SELECT_COLD_CCT_WHITE_CHANNEL));
         break;
     case LED_BEADS_4CH_RGBWW:
         // 0 1 1 1 1
-        channel_mask = ((SELECT_COLOR_CHANNEL) | (1 << CHANNEL_ID_WARM_BRIGHTNESS_YELLOW));
+        channel_mask = ((SELECT_COLOR_CHANNEL) | (SELECT_WARM_BRIGHTNESS_YELLOW_CHANNEL));
         break;
     case LED_BEADS_4CH_RGBW:
         // 1 0 1 1 1
-        channel_mask = ((SELECT_COLOR_CHANNEL) | (1 << CHANNEL_ID_WARM_BRIGHTNESS_YELLOW));
+        channel_mask = ((SELECT_COLOR_CHANNEL) | (SELECT_WARM_BRIGHTNESS_YELLOW_CHANNEL));
         break;
     case LED_BEADS_5CH_RGBCW:
         // 1 1 1 1 1
@@ -514,11 +514,11 @@ static uint8_t get_channel_mask(lightbulb_led_beads_comb_t led_beads)
         break;
     case LED_BEADS_5CH_RGBC:
         // 0 1 1 1 1
-        channel_mask = ((SELECT_COLOR_CHANNEL) | (1 << CHANNEL_ID_COLD_CCT_WHITE));
+        channel_mask = ((SELECT_COLOR_CHANNEL) | (SELECT_COLD_CCT_WHITE_CHANNEL));
         break;
     case LED_BEADS_5CH_RGBW:
         // 1 0 1 1 1
-        channel_mask = ((SELECT_COLOR_CHANNEL) | (1 << CHANNEL_ID_WARM_BRIGHTNESS_YELLOW));
+        channel_mask = ((SELECT_COLOR_CHANNEL) | (SELECT_WARM_BRIGHTNESS_YELLOW_CHANNEL));
         break;
     default:
         break;
@@ -794,7 +794,7 @@ esp_err_t lightbulb_init(lightbulb_config_t *config)
         } else {
             s_lb_obj->cct_manager.kelvin_to_percentage = standard_kelvin_convert_to_percentage;
             s_lb_obj->cct_manager.percentage_to_kelvin = standard_percentage_convert_to_kelvin;
-            if (config->cct_mix_mode.standard.kelvin_min >= config->cct_mix_mode.standard.kelvin_max) {
+            if ((config->cct_mix_mode.standard.kelvin_min >= config->cct_mix_mode.standard.kelvin_max) || (config->cct_mix_mode.standard.kelvin_min < 100) || (config->cct_mix_mode.standard.kelvin_max < 100)) {
                 s_lb_obj->cct_manager.kelvin_range.max = MAX_CCT_K;
                 s_lb_obj->cct_manager.kelvin_range.min = MIN_CCT_K;
                 ESP_LOGW(TAG, "Kelvin value not set or is incorrect, default range (%dk - %dk) will be used", MIN_CCT_K, MAX_CCT_K);
@@ -1251,8 +1251,9 @@ esp_err_t lightbulb_set_cctb(uint16_t cct, uint8_t brightness)
     LIGHTBULB_CHECK(s_lb_obj, "not init", return ESP_ERR_INVALID_ARG);
     LIGHTBULB_CHECK(IS_WHITE_CHANNEL_SELECTED(), "white channel output is disable", return ESP_ERR_INVALID_STATE);
     LIGHTBULB_CHECK(brightness <= 100, "brightness out of range: %d", return ESP_ERR_INVALID_ARG, brightness);
+    LIGHTBULB_CHECK((cct >= s_lb_obj->cct_manager.kelvin_range.min && cct <= s_lb_obj->cct_manager.kelvin_range.max) || ((cct <= 100)), "CCT(%d) is not in valid range and is converted by an internal function", NULL, cct);
+
     if (cct > 100) {
-        LIGHTBULB_CHECK(cct >= s_lb_obj->cct_manager.kelvin_range.min && cct <= s_lb_obj->cct_manager.kelvin_range.max, "cct out of range: %d", NULL, cct);
         ESP_LOGW(TAG, "will convert kelvin to percentage, %dK -> %d%%", cct, s_lb_obj->cct_manager.kelvin_to_percentage(cct));
         cct = s_lb_obj->cct_manager.kelvin_to_percentage(cct);
     }
@@ -1357,10 +1358,14 @@ esp_err_t lightbulb_set_switch(bool status)
         uint16_t value[5] = { 0 };
         uint8_t channel_mask = get_channel_mask(s_lb_obj->cap.led_beads);
 
+        /**
+         * When the hardware CCT is enabled, the CCT channel will not change and only the brightness channel will be turned off.
+         *
+         */
         if (IS_WHITE_OUTPUT_HARDWARE_MIXED()) {
-            hal_set_channel_group(value, channel_mask, fade_time);
+            channel_mask &= (SELECT_COLOR_CHANNEL | SELECT_WARM_BRIGHTNESS_YELLOW_CHANNEL);
+            err = hal_set_channel_group(value, channel_mask, fade_time);
         } else {
-            channel_mask &= (SELECT_COLOR_CHANNEL | CHANNEL_ID_WARM_BRIGHTNESS_YELLOW);
             err = hal_set_channel_group(value, channel_mask, fade_time);
         }
 
@@ -1622,7 +1627,7 @@ esp_err_t lightbulb_basic_effect_start(lightbulb_effect_config_t *config)
     }
 
     if (err == ESP_OK) {
-        s_lb_obj->effect_flag.allow_interrupt = config->interrupt_forbidden;
+        s_lb_obj->effect_flag.allow_interrupt = !config->interrupt_forbidden;
         s_lb_obj->effect_flag.running = true;
         if (config->total_ms > 0) {
             if (!s_lb_obj->effect_timer) {

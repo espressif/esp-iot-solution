@@ -31,8 +31,14 @@ extern "C" {
 #define CHANNEL_ID_BLUE                             2
 #define CHANNEL_ID_COLD_CCT_WHITE                   3
 #define CHANNEL_ID_WARM_BRIGHTNESS_YELLOW           4
+
 #define SELECT_COLOR_CHANNEL                        ((1 << CHANNEL_ID_RED) | (1 << CHANNEL_ID_GREEN) | (1 << CHANNEL_ID_BLUE))
 #define SELECT_WHITE_CHANNEL                        ((1 << CHANNEL_ID_COLD_CCT_WHITE) | (1 << CHANNEL_ID_WARM_BRIGHTNESS_YELLOW))
+#define SELECT_RED_CHANNEL                          (1 << CHANNEL_ID_RED)
+#define SELECT_GREEN_CHANNEL                        (1 << CHANNEL_ID_GREEN)
+#define SELECT_BLUE_CHANNEL                         (1 << CHANNEL_ID_BLUE)
+#define SELECT_COLD_CCT_WHITE_CHANNEL               (1 << CHANNEL_ID_COLD_CCT_WHITE)
+#define SELECT_WARM_BRIGHTNESS_YELLOW_CHANNEL       (1 << CHANNEL_ID_WARM_BRIGHTNESS_YELLOW)
 
 typedef struct {
     lightbulb_driver_t type;

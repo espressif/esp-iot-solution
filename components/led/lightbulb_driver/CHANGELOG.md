@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v1.1.1 - 2024-02-04
+
+### Bug Fixes:
+
+* Add CCT data range check.
+* Fixed the issue of setting interrupt_forbidden to true but the effect is still interrupted.
+
 ## v1.1.0 - 2024-01-30
 
 ### Enhancements:
