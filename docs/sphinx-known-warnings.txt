@@ -78,3 +78,47 @@ If parenthesis in noptr-declarator:
       void(* delete )(struct OpenAI_SpeechResponse *SpeechResponse)
       -------------^
 
+ir_learn.inc:line: WARNING: Error when parsing function declaration.
+If the function has no return type:
+  Invalid C++ declaration: Expected end of definition or ;. [error at 34]
+    SLIST_ENTRY (ir_learn_sub_list_t) next
+    ----------------------------------^
+If the function has a return type:
+  Error in declarator
+  If declarator-id with parameters-and-qualifiers:
+    Invalid C++ declaration: Expected identifier in nested name. [error at 12]
+      SLIST_ENTRY (ir_learn_sub_list_t) next
+      ------------^
+  If parenthesis in noptr-declarator:
+    Error in declarator or parameters-and-qualifiers
+    If pointer to member declarator:
+      Invalid C++ declaration: Expected '::' in pointer to member (function). [error at 32]
+        SLIST_ENTRY (ir_learn_sub_list_t) next
+        --------------------------------^
+    If declarator-id:
+      Invalid C++ declaration: Expecting "(" in parameters-and-qualifiers. [error at 32]
+        SLIST_ENTRY (ir_learn_sub_list_t) next
+        --------------------------------^
+
+ir_learn.inc:line: WARNING: Error when parsing function declaration.
+If the function has no return type:
+  Invalid C++ declaration: Expected end of definition or ;. [error at 30]
+    SLIST_ENTRY (ir_learn_list_t) next
+    ------------------------------^
+If the function has a return type:
+  Error in declarator
+  If declarator-id with parameters-and-qualifiers:
+    Invalid C++ declaration: Expected identifier in nested name. [error at 12]
+      SLIST_ENTRY (ir_learn_list_t) next
+      ------------^
+  If parenthesis in noptr-declarator:
+    Error in declarator or parameters-and-qualifiers
+    If pointer to member declarator:
+      Invalid C++ declaration: Expected '::' in pointer to member (function). [error at 28]
+        SLIST_ENTRY (ir_learn_list_t) next
+        ----------------------------^
+    If declarator-id:
+      Invalid C++ declaration: Expecting "(" in parameters-and-qualifiers. [error at 28]
+        SLIST_ENTRY (ir_learn_list_t) next
+        ----------------------------^
+

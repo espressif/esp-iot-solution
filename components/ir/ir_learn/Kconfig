@@ -15,4 +15,11 @@ menu "IR Learn"
         help
             "Allowable error margin for each symbol level"
 
+    config RMT_SINGLE_RANGE_MAX_US
+        int "SINGLE RANGE MAX TIME (US)"
+        range 10000 32767
+        default 20000
+        help
+            "RMT will stop receiving if one symbol level has kept more than this time"
+
 endmenu

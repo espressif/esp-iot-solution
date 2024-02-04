@@ -238,6 +238,7 @@
   - "components/display/screen/interface_driver/scr_interface_driver.h"
   - "components/display/screen/screen_driver.h"
   - "components/display/touch_panel/touch_panel.h"
+  - "components/ir/ir_learn/include/ir_learn.h"
   - "components/knob/iot_knob.h"
   - "components/led/led_indicator/include/led_indicator.h"
   - "components/motor/esp_sensorless_bldc_control/control/include/bldc_control.h"

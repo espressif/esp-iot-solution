@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -7,7 +7,6 @@
 #pragma once
 
 #include <stdint.h>
-#include <sys/queue.h>
 #include <sys/queue.h>
 #include "driver/rmt_types.h"
 
@@ -20,6 +19,9 @@ extern "C" {
  */
 typedef void *ir_learn_handle_t;
 
+/**
+ * @brief Type of IR learn step
+ */
 typedef enum {
     IR_LEARN_STATE_STEP,        /**< IR learn step, start from 1 */
     IR_LEARN_STATE_READY = 20,  /**< IR learn ready, after successful initialization */
@@ -28,18 +30,46 @@ typedef enum {
     IR_LEARN_STATE_EXIT,        /**< IR learn exit */
 } ir_learn_state_t;
 
-typedef struct ir_learn_sub_list_t {
+/**
+ * @brief An element in the list of infrared (IR) learn data packets.
+ *
+ */
+struct ir_learn_sub_list_t {
     uint32_t timediff;                      /*!< The interval time from the previous packet (ms) */
     rmt_rx_done_event_data_t symbols;       /*!< Received RMT symbols */
     SLIST_ENTRY(ir_learn_sub_list_t) next;  /*!< Pointer to the next packet */
-} ir_learn_sub_list_t;
+};
 
-typedef struct ir_learn_list_t {
-    SLIST_HEAD(ir_learn_sub_list_head, ir_learn_sub_list_t) cmd_sub_node; /*!< Package head of every cmd */
+/**
+ * @cond Doxy command to hide preprocessor definitions from docs
+ *
+ * @brief The head of a singly-linked list for IR learn cmd packets.
+ *
+ */
+SLIST_HEAD(ir_learn_sub_list_head, ir_learn_sub_list_t);
+/**
+ * @endcond
+ */
+
+/**
+ * @brief The head of a list of infrared (IR) learn data packets.
+ *
+ */
+struct ir_learn_list_t {
+    struct ir_learn_sub_list_head cmd_sub_node; /*!< Package head of every cmd */
     SLIST_ENTRY(ir_learn_list_t) next;  /*!< Pointer to the next packet */
-} ir_learn_list_t;
+};
 
+/**
+ * @cond Doxy command to hide preprocessor definitions from docs
+ *
+ * @brief The head of a singly-linked list for IR learn data packets.
+ *
+ */
 SLIST_HEAD(ir_learn_list_head, ir_learn_list_t);
+/**
+ * @endcond
+ */
 
 /**
 * @brief IR learn result user callback.
@@ -83,7 +113,7 @@ esp_err_t ir_learn_new(const ir_learn_cfg_t *cfg, ir_learn_handle_t *handle_out)
 /**
 * @brief Restart IR learn process.
 *
-* @param[in] handle IR learn handle
+* @param[in] ir_learn_hdl IR learn handle
 * @return
 *          - ESP_OK                  Restart process success.
 *          - ESP_ERR_INVALID_ARG     Invalid device handle or argument.
@@ -95,7 +125,7 @@ esp_err_t ir_learn_restart(ir_learn_handle_t ir_learn_hdl);
 * @brief Stop IR learn process.
 * @note Delete all
 *
-* @param[in] handle IR learn handle
+* @param[in] ir_learn_hdl IR learn handle
 * @return
 *          - ESP_OK                  Stop process success.
 *          - ESP_ERR_INVALID_ARG     Invalid device handle or argument.
@@ -141,7 +171,7 @@ esp_err_t ir_learn_clean_data(struct ir_learn_list_head *learn_head);
 /**
 * @brief Delete sub steps.
 *
-* @param[in] learn_head IR learn list head
+* @param[in] sub_head IR learn sub list head
 *          - ESP_OK                  Stop process success.
 *          - ESP_ERR_INVALID_ARG     Invalid device handle or argument.
 *
