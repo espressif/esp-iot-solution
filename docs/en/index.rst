@@ -71,6 +71,7 @@ ESP-IoT-Solution contains device drivers and code frameworks for the development
    GUI <gui/index>
    AI <ai/index>
    Input Device <input_device/index>
+   IR <ir/index>
    Sensors <sensors/index>
    Storage <storage/index>
    Motor <motor/index>

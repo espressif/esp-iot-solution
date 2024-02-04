@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -52,36 +52,39 @@ static ir_learn_handle_t handle = NULL;                 /**< IR learn handle */
 static struct ir_learn_sub_list_head ir_test_result;    /**< IR learn test result */
 
 const uint16_t ir_learn_tx_map[] = {
-    9000, 4500,
-    550, 1660, 550, 550, 550, 550, 550, 1660, 550, 550, 550,
-    550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 1660,
-    550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550,
-    550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 1660,
-    550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550,
-    550, 550, 1660, 550, 550, 550, 1660, 550, 550, 550, 550,
-    550, 1660, 550, 550, 610, 20194,
+    9000,   4500,   550,    1660,   550,    550,    550,    550,    550,    1660,
+    550,    550,    550,    550,    550,    550,    550,    550,    550,    550,
+    550,    550,    550,    1660,   550,    550,    550,    550,    550,    550,
+    550,    550,    550,    550,    550,    550,    550,    550,    550,    550,
+    550,    550,    550,    550,    550,    1660,   550,    550,    550,    550,
+    550,    550,    550,    550,    550,    550,    550,    550,    550,    1660,
+    550,    550,    550,    1660,   550,    550,    550,    550,    550,    1660,
+    550,    550,    610,    20194,
 
-    550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550,
-    550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550,
-    550, 550, 550, 1660, 550, 550, 550, 550, 550, 550, 550, 550,
-    550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550,
-    550, 550, 550, 550, 550, 550, 550, 550, 550, 1660, 550, 550,
-    550, 550, 550, 1660, 610, 40455,
+    550,    550,    550,    550,    550,    550,    550,    550,    550,    550,
+    550,    550,    550,    550,    550,    550,    550,    550,    550,    550,
+    550,    550,    550,    550,    550,    550,    550,    1660,   550,    550,
+    550,    550,    550,    550,    550,    550,    550,    550,    550,    550,
+    550,    550,    550,    550,    550,    550,    550,    550,    550,    550,
+    550,    550,    550,    550,    550,    550,    550,    1660,   550,    550,
+    550,    550,    550,    1660,   610,    40455,
 
-    9000, 4500,
-    550, 1660, 550, 550, 550, 550, 550, 1660, 550, 550, 550, 550,
-    550, 550, 550, 550, 550, 550, 550, 550, 550, 1660, 550, 550,
-    550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550,
-    550, 550, 550, 550, 550, 550, 550, 1660, 550, 550, 550, 550,
-    550, 550, 550, 550, 550, 550, 550, 550, 550, 1660, 550, 1660,
-    550, 1660, 550, 550, 550, 550, 550, 1660, 550, 550, 610, 20194,
+    9000,   4500,   550,    1660,   550,    550,    550,    550,    550,    1660,
+    550,    550,    550,    550,    550,    550,    550,    550,    550,    550,
+    550,    550,    550,    1660,   550,    550,    550,    550,    550,    550,
+    550,    550,    550,    550,    550,    550,    550,    550,    550,    550,
+    550,    550,    550,    550,    550,    1660,   550,    550,    550,    550,
+    550,    550,    550,    550,    550,    550,    550,    550,    550,    1660,
+    550,    1660,   550,    1660,   550,    550,    550,    550,    550,    1660,
+    550,    550,    610,    20194,
 
-    550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550,
-    550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550,
-    550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550,
-    550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550,
-    550, 550, 550, 550, 550, 550, 550, 550, 550, 1660, 550, 1660,
-    550, 1660, 550, 550, 550, 0,
+    550,    550,    550,    550,    550,    550,    550,    550,    550,    550,
+    550,    550,    550,    550,    550,    550,    550,    550,    550,    550,
+    550,    550,    550,    550,    550,    550,    550,    550,    550,    550,
+    550,    550,    550,    550,    550,    550,    550,    550,    550,    550,
+    550,    550,    550,    550,    550,    550,    550,    550,    550,    550,
+    550,    550,    550,    550,    550,    550,    550,    1660,   550,    1660,
+    550,    1660,   550,    550,    550,    0,
 };
 
 static void detect_to_handler(void *arg)
@@ -107,8 +110,8 @@ static void ir_learn_save_result(struct ir_learn_sub_list_head *data_save, struc
 {
     assert(data_src && "rmt_symbols is null");
 
-    ir_learn_sub_list_t *sub_it;
-    ir_learn_sub_list_t *last;
+    struct ir_learn_sub_list_t *sub_it;
+    struct ir_learn_sub_list_t *last;
 
     last = SLIST_FIRST(data_src);
     while ((sub_it = SLIST_NEXT(last, next)) != NULL) {
@@ -137,32 +140,32 @@ static void ir_learn_test_tx_raw(struct ir_learn_sub_list_head *rmt_out)
     };
     ESP_ERROR_CHECK(rmt_apply_carrier(tx_channel, &carrier_cfg));
 
-    rmt_transmit_config_t transmit_config = {
+    rmt_transmit_config_t transmit_cfg = {
         .loop_count = 0, // no loop
     };
 
-    ir_encoder_config_t nec_encoder_cfg = {
+    ir_encoder_config_t raw_encoder_cfg = {
         .resolution = IR_RESOLUTION_HZ,
     };
-    rmt_encoder_handle_t nec_encoder = NULL;
-    ESP_ERROR_CHECK(ir_encoder_new(&nec_encoder_cfg, &nec_encoder));
+    rmt_encoder_handle_t raw_encoder = NULL;
+    ESP_ERROR_CHECK(ir_encoder_new(&raw_encoder_cfg, &raw_encoder));
 
     ESP_ERROR_CHECK(rmt_enable(tx_channel));
 
-    ir_learn_sub_list_t *sub_it;
+    struct ir_learn_sub_list_t *sub_it;
     SLIST_FOREACH(sub_it, rmt_out, next) {
         vTaskDelay(pdMS_TO_TICKS(sub_it->timediff / 1000));
 
-        rmt_symbol_word_t *rmt_nec_symbols = sub_it->symbols.received_symbols;
+        rmt_symbol_word_t *rmt_symbols = sub_it->symbols.received_symbols;
         size_t symbol_num = sub_it->symbols.num_symbols;
 
-        ESP_ERROR_CHECK(rmt_transmit(tx_channel, nec_encoder, rmt_nec_symbols, symbol_num, &transmit_config));
+        ESP_ERROR_CHECK(rmt_transmit(tx_channel, raw_encoder, rmt_symbols, symbol_num, &transmit_cfg));
         rmt_tx_wait_all_done(tx_channel, -1);
     }
 
     rmt_disable(tx_channel);
     rmt_del_channel(tx_channel);
-    nec_encoder->del(nec_encoder);
+    raw_encoder->del(raw_encoder);
 }
 
 static void ir_learn_manual_tx_task(void *arg)
