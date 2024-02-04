@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -28,7 +28,6 @@
 #include "usb/usb_types_stack.h"
 #include "usb/usb_types_ch9.h"
 #include "usb/usb_helpers.h"
-#include "esp_private/usb_phy.h"
 #include "usb_private.h"
 #include "usb_stream_descriptor.h"
 #include "usb_host_helpers.h"
@@ -463,13 +462,38 @@ typedef struct {
     int periodic_out_mps;
 } fifo_mps_limits_t;
 
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
-const fifo_mps_limits_t mps_limits_default = {
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 1, 0)
+
+#ifndef USB_DWC_FIFO_RX_LINES_DEFAULT
+#define USB_DWC_FIFO_RX_LINES_DEFAULT 104
+#endif
+
+#ifndef USB_DWC_FIFO_NPTX_LINES_DEFAULT
+#define USB_DWC_FIFO_NPTX_LINES_DEFAULT 48
+#endif
+
+#ifndef USB_DWC_FIFO_PTX_LINES_DEFAULT
+#define USB_DWC_FIFO_PTX_LINES_DEFAULT 48
+#endif
+
+#ifndef USB_DWC_FIFO_RX_LINES_BIASRX
+#define USB_DWC_FIFO_RX_LINES_BIASRX 152
+#endif
+
+#ifndef USB_DWC_FIFO_NPTX_LINES_BIASRX
+#define USB_DWC_FIFO_NPTX_LINES_BIASRX 16
+#endif
+
+#ifndef USB_DWC_FIFO_PTX_LINES_BIASRX
+#define USB_DWC_FIFO_PTX_LINES_BIASRX 32
+#endif
+
+const fifo_mps_limits_t s_mps_limits_default = {
     .in_mps = (USB_DWC_FIFO_RX_LINES_DEFAULT - 2) * 4,
     .non_periodic_out_mps = USB_DWC_FIFO_NPTX_LINES_DEFAULT * 4,
     .periodic_out_mps = USB_DWC_FIFO_PTX_LINES_DEFAULT * 4,
 };
-const fifo_mps_limits_t mps_limits_bias_rx = {
+const fifo_mps_limits_t s_mps_limits_bias_rx = {
     .in_mps = (USB_DWC_FIFO_RX_LINES_BIASRX - 2) * 4,
     .non_periodic_out_mps = USB_DWC_FIFO_NPTX_LINES_BIASRX * 4,
     .periodic_out_mps = USB_DWC_FIFO_PTX_LINES_BIASRX * 4,
@@ -477,6 +501,8 @@ const fifo_mps_limits_t mps_limits_bias_rx = {
 #else
 extern const fifo_mps_limits_t mps_limits_default;
 extern const fifo_mps_limits_t mps_limits_bias_rx;
+#define s_mps_limits_default mps_limits_default
+#define s_mps_limits_bias_rx mps_limits_bias_rx
 #endif
 
 typedef struct {
@@ -3669,7 +3695,7 @@ esp_err_t usb_streaming_start()
     s_usb_dev.dev_addr = USB_DEVICE_ADDR;
     s_usb_dev.configuration = USB_CONFIG_NUM;
     s_usb_dev.fifo_bias = HCD_PORT_FIFO_BIAS_BALANCED;
-    s_usb_dev.mps_limits = &mps_limits_default;
+    s_usb_dev.mps_limits = &s_mps_limits_default;
 
     if (s_usb_dev.uac_cfg.spk_samples_frequence && s_usb_dev.uac_cfg.spk_bit_resolution) {
         //using samples_frequence and bit_resolution as enable condition
@@ -3723,7 +3749,7 @@ esp_err_t usb_streaming_start()
         s_usb_dev.enabled[STREAM_UVC] = true;
         //if enable uvc, we should set fifo bias to RX
         s_usb_dev.fifo_bias = HCD_PORT_FIFO_BIAS_RX;
-        s_usb_dev.mps_limits = &mps_limits_bias_rx;
+        s_usb_dev.mps_limits = &s_mps_limits_bias_rx;
     }
     UVC_CHECK_GOTO(s_usb_dev.enabled[STREAM_UAC_MIC] == true || s_usb_dev.enabled[STREAM_UAC_SPK] == true || s_usb_dev.enabled[STREAM_UVC] == true, "uac/uvc streaming not configured", free_resource_);
 

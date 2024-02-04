@@ -1,4 +1,4 @@
-version: "1.3.1"
+version: "1.3.2"
 targets:
   - esp32s2
   - esp32s3
@@ -9,7 +9,7 @@ documentation: https://docs.espressif.com/projects/esp-iot-solution/en/latest/us
 issues: https://github.com/espressif/esp-iot-solution/issues
 dependencies:
   idf: ">=4.4.1"
-  cmake_utilities: "0.*"
+  cmake_utilities: "0.5.*"
 examples:
   - path: ../../../examples/usb/host/usb_camera_mic_spk
   - path: ../../../examples/usb/host/usb_camera_lcd_display
