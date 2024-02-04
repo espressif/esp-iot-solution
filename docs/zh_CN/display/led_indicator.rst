@@ -117,9 +117,9 @@ LED 指示灯是最简单的输出外设之一，可以通过不同形式的闪�
 对于支持控制颜色的驱动，我们可以通过 `LED_BLINK_RGB`, `LED_BLINK_RGB_RING`, `LED_BLINK_HSV`, `LED_BLINK_HSV_RING` 来控制颜色。
 
     - `LED_BLINK_RGB`: 通过 RGB 控制颜色，其中 R 占 8 bites（0-255），G 占 8 bites（0-255），B 占 8 bites（0-255）。
-    - `LED_BLINK_RGB_RING`: 通过 RGB 控制颜色渐变，会从上一次的颜色按照色环渐变到当前的设置颜色。
+    - `LED_BLINK_RGB_RING`: 通过 RGB 控制颜色渐变，会从上一次的颜色按照色环渐变到当前的设置颜色。采用 RGB 值插值法。
     - `LED_BLINK_HSV`: 通过 HSV 控制颜色，其中 H 占 9 bites（0-360），S 占 8 bites（0-255），V 占 8 bites（0-255）。
-    - `LED_BLINK_HSV_RING`: 通过 HSV 控制颜色渐变，会从上一次的颜色按照色环渐变到当前的设置颜色。
+    - `LED_BLINK_HSV_RING`: 通过 HSV 控制颜色渐变，会从上一次的颜色按照色环渐变到当前的设置颜色。采用 HSV 值插值法。
 
 例 1. 定义一个颜色设置，让指示灯显示红色。
 
@@ -140,6 +140,12 @@ LED 指示灯是最简单的输出外设之一，可以通过不同形式的闪�
         {LED_BLINK_RGB_RING, SET_RGB(0xFF, 0, 0), 4000},     // step3: fade from blue to red 4000ms
         {LED_BLINK_LOOP, 0, 0},                              // step4: loop from step1
     };
+
+采用 RGB 插值法显示颜色渐变，效果如下。
+
+.. figure:: ../../_static/display/led_indicator_rgb_ring.png
+   :align: center
+   :width: 60%
 
 同时，驱动还支持通过 HSV 颜色来设置，使用方法与 RGB 类似。
 
@@ -164,6 +170,12 @@ LED 指示灯是最简单的输出外设之一，可以通过不同形式的闪�
         {LED_BLINK_HSV_RING, SET_HSV(0,255,255), 4000},     // step3: fade from blue to red 4000ms
         {LED_BLINK_LOOP, 0, 0},                              // step4: loop from step1
     };
+
+采用 HSV 插值法显示颜色渐变，效果如下。这种方式渐变色彩更加丰富。
+
+.. figure:: ../../_static/display/led_indicator_hsv_ring.png
+   :align: center
+   :width: 60%
 
 控制索引
 ^^^^^^^^^^

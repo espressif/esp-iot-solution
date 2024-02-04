@@ -64,6 +64,19 @@ typedef struct {
     };
 } led_indicator_ihsv_t;
 
+typedef struct {
+    union {
+        struct {
+            uint32_t r: 8;      /*!< Red component of the LED color. Range: 0-255. */
+            uint32_t g: 8;    /*!< Green component of the LED color. Range: 0-255. */
+            uint32_t b: 8;     /*!< Blue component of the LED color. Range: 0-255. */
+            uint32_t  : 1;        /*!< Reserved (Not used). */
+            uint32_t index: 7;    /*!< Index of the LED. Range: 0-126; Set to 127 to control all LEDs. */
+        };
+        uint32_t value;           /*!< Combined RGB value of the LED color. */
+    };
+} led_indicator_irgb_t;
+
 /**
  * @brief Convert an RGB color value to an HSV color value.
  *

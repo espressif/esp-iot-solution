@@ -35,6 +35,8 @@ static const char *TAG = "led_indicator";
         action; \
     }
 
+#define MAX3(x, y, z) ((x) > (y) ? ((x) > (z) ? (x) : (z)) : ((y) > (z) ? (y) : (z)))
+
 #define BRIGHTNESS_TICKS   CONFIG_BRIGHTNESS_TICKS
 #define BRIGHTNESS_MAX     UINT8_MAX
 #define BRIGHTNESS_MIN     0
@@ -79,6 +81,8 @@ typedef struct {
     led_indicator_ihsv_t current_fade_value;       /*!< Current fade value */
     led_indicator_ihsv_t last_fade_value;          /*!< Save the last value. */
     uint16_t fade_value_count;                     /*!< Count the number of fade */
+    uint16_t fade_step;                            /*!< Step of fade */
+    uint16_t fade_total_step;                      /*!< Total step of fade */
     uint32_t max_duty;                             /*!< Max duty cycle from duty_resolution : 2^duty_resolution -1 */
     SemaphoreHandle_t mutex;                       /*!< Mutex to achieve thread-safe */
     TimerHandle_t h_timer;                         /*!< LED timer handle, invalid if works in pwm mode */
@@ -249,12 +253,13 @@ static void _blink_list_runner(TimerHandle_t xTimer)
                 break;
             }
 
+            led_indicator_irgb_t currect_rgb_value, last_rgb_value = {0};
+            uint16_t ticks = BRIGHTNESS_TICKS;
+            int16_t diff[3] = {0};
+
             led_indicator_ihsv_t hsv_value = {
                 .value = led_indicator_rgb2hsv(p_blink_step_value.value),
             };
-            hsv_value.i = p_blink_step_value.i;
-            uint16_t ticks = BRIGHTNESS_TICKS;
-            int16_t diff_value = hsv_value.h - p_led_indicator->last_fade_value.h;
 
             if (p_blink_step->hold_time_ms == 0) {
                 p_led_indicator->hal_indicator_set_rgb(p_led_indicator->hardware_data, p_blink_step_value.value);
@@ -265,40 +270,47 @@ static void _blink_list_runner(TimerHandle_t xTimer)
                 break;
             }
 
-            if (diff_value >= 0) {
-                p_led_indicator->current_fade_value.h = p_led_indicator->fade_value_count + p_led_indicator->last_fade_value.h;
-            } else {
-                p_led_indicator->current_fade_value.h = p_led_indicator->last_fade_value.h - p_led_indicator->fade_value_count;
-            }
-            p_led_indicator->current_fade_value.i = p_blink_step_value.i;
+            uint32_t r, g, b = 0;
+            /*!< Get the last fade value's RGB */
+            led_indicator_hsv2rgb(p_led_indicator->last_fade_value.value, &r, &g, &b);
+            last_rgb_value.value = SET_IRGB(p_blink_step_value.i, r, g, b),
+            currect_rgb_value.value = p_blink_step_value.value;
+            diff[0] = currect_rgb_value.r - last_rgb_value.r;
+            diff[1] = currect_rgb_value.g - last_rgb_value.g;
+            diff[2] = currect_rgb_value.b - last_rgb_value.b;
+            int16_t max_diff = MAX3(abs(diff[0]), abs(diff[1]), abs(diff[2]));
 
-            uint32_t r, g, b;
-
-            led_indicator_hsv2rgb(p_led_indicator->current_fade_value.value, &r, &g, &b);
-            led_indicator_ihsv_t irgb_value = {
-                .value = SET_IRGB(p_blink_step_value.i, r, g, b),
-            };
-            p_led_indicator->hal_indicator_set_rgb(p_led_indicator->hardware_data, irgb_value.value);
-
-            if (diff_value == 0) {
+            /*!< Calculate total steps and timer ticks. */
+            if (max_diff == 0) {
                 ticks = p_blink_step->hold_time_ms;
-                p_led_indicator->fade_value_count += 1;
-            } else if (p_blink_step->hold_time_ms > BRIGHTNESS_TICKS * abs(diff_value)) {
-                ticks = p_blink_step->hold_time_ms /  abs(diff_value) ;
-                p_led_indicator->fade_value_count += 1;
+                p_led_indicator->fade_total_step = 1;
+            } else if (p_blink_step->hold_time_ms > ticks * abs(max_diff)) {
+                ticks = p_blink_step->hold_time_ms / abs(max_diff) ;
+                p_led_indicator->fade_total_step = max_diff;
             } else {
-                p_led_indicator->fade_value_count += abs(diff_value) * ticks / p_blink_step->hold_time_ms;
+                p_led_indicator->fade_total_step = p_blink_step->hold_time_ms / ticks;
             }
 
-            ESP_LOGD(TAG, "breathe ticks value: %d", ticks);
+            p_led_indicator->fade_step += 1;
+            ESP_LOGD(TAG, "ticks value: %d, total fade step: %d, fade step: %d", ticks, p_led_indicator->fade_total_step, p_led_indicator->fade_step);
+
+            currect_rgb_value.r = (uint8_t)(last_rgb_value.r + diff[0] * p_led_indicator->fade_step * 1.0 / p_led_indicator->fade_total_step);
+            currect_rgb_value.g = (uint8_t)(last_rgb_value.g + diff[1] * p_led_indicator->fade_step * 1.0 / p_led_indicator->fade_total_step);
+            currect_rgb_value.b = (uint8_t)(last_rgb_value.b + diff[2] * p_led_indicator->fade_step * 1.0 / p_led_indicator->fade_total_step);
+            ESP_LOGD(TAG, "currect_rgb_value: [%d, %d, %d]\n", currect_rgb_value.r, currect_rgb_value.g, currect_rgb_value.b);
+
+            p_led_indicator->hal_indicator_set_rgb(p_led_indicator->hardware_data, currect_rgb_value.value);
+
             leave = true;
             timer_restart = true;
             timer_period_ms = ticks;
 
-            if (p_led_indicator->fade_value_count > abs(diff_value)) {
-                p_led_indicator->fade_value_count = BRIGHTNESS_MIN;
-                p_led_indicator->current_fade_value = hsv_value;
-                p_led_indicator->last_fade_value = hsv_value;
+            if (p_led_indicator->fade_step >= p_led_indicator->fade_total_step) {
+                p_led_indicator->fade_step = 0;
+                p_led_indicator->fade_total_step = 0;
+                p_led_indicator->current_fade_value.value = hsv_value.value;
+                p_led_indicator->current_fade_value.i = p_blink_step_value.i;
+                p_led_indicator->last_fade_value = p_led_indicator->current_fade_value;
                 p_led_indicator->p_blink_steps[active_blink] += 1;
             }
 
@@ -330,7 +342,7 @@ static void _blink_list_runner(TimerHandle_t xTimer)
             }
 
             uint16_t ticks = BRIGHTNESS_TICKS;
-            int16_t diff_value = p_blink_step_value.h - p_led_indicator->last_fade_value.h;
+            int16_t diff[3] = {0};
 
             if (p_blink_step->hold_time_ms == 0) {
                 p_led_indicator->hal_indicator_set_hsv(p_led_indicator->hardware_data, p_blink_step_value.value);
@@ -340,32 +352,39 @@ static void _blink_list_runner(TimerHandle_t xTimer)
                 break;
             }
 
-            if (diff_value >= 0) {
-                p_led_indicator->current_fade_value.h = p_led_indicator->fade_value_count + p_led_indicator->last_fade_value.h;
+            diff[0] = p_blink_step_value.h - p_led_indicator->last_fade_value.h;
+            diff[1] = p_blink_step_value.s - p_led_indicator->last_fade_value.s;
+            diff[2] = p_blink_step_value.v - p_led_indicator->last_fade_value.v;
+            int16_t max_diff = MAX3(abs(diff[0]), abs(diff[1]), abs(diff[2]));
+
+            if (max_diff == 0) {
+                ticks = p_blink_step->hold_time_ms;
+                p_led_indicator->fade_total_step = 1;
+            } else if (p_blink_step->hold_time_ms > ticks * abs(max_diff)) {
+                ticks = p_blink_step->hold_time_ms / abs(max_diff) ;
+                p_led_indicator->fade_total_step = max_diff;
             } else {
-                p_led_indicator->current_fade_value.h = p_led_indicator->last_fade_value.h - p_led_indicator->fade_value_count;
+                p_led_indicator->fade_total_step = p_blink_step->hold_time_ms / ticks;
             }
+
+            p_led_indicator->fade_step += 1;
+            ESP_LOGD(TAG, "hsv ring ticks value: %d, total fade step: %d, fade step: %d", ticks, p_led_indicator->fade_total_step, p_led_indicator->fade_step);
+
+            p_led_indicator->current_fade_value.h = (uint32_t)(p_led_indicator->last_fade_value.h + diff[0] * p_led_indicator->fade_step * 1.0 / p_led_indicator->fade_total_step);
+            p_led_indicator->current_fade_value.s = (uint8_t)(p_led_indicator->last_fade_value.s + diff[1] * p_led_indicator->fade_step * 1.0 / p_led_indicator->fade_total_step);
+            p_led_indicator->current_fade_value.v = (uint8_t)(p_led_indicator->last_fade_value.v + diff[2] * p_led_indicator->fade_step * 1.0 / p_led_indicator->fade_total_step);
+            ESP_LOGD(TAG, "current_fade_value: [%d, %d, %d]\n", p_led_indicator->current_fade_value.h, p_led_indicator->current_fade_value.s, p_led_indicator->current_fade_value.v);
 
             p_led_indicator->current_fade_value.i = p_blink_step_value.i;
             p_led_indicator->hal_indicator_set_hsv(p_led_indicator->hardware_data, p_led_indicator->current_fade_value.value);
 
-            if (diff_value == 0) {
-                ticks = p_blink_step->hold_time_ms;
-                p_led_indicator->fade_value_count += 1;
-            } else if (p_blink_step->hold_time_ms > BRIGHTNESS_TICKS * abs(diff_value)) {
-                ticks = p_blink_step->hold_time_ms /  abs(diff_value) ;
-                p_led_indicator->fade_value_count += 1;
-            } else {
-                p_led_indicator->fade_value_count += abs(diff_value) * ticks / p_blink_step->hold_time_ms;
-            }
-
-            ESP_LOGD(TAG, "hsv ring ticks value: %d", ticks);
             leave = true;
             timer_restart = true;
             timer_period_ms = ticks;
 
-            if (p_led_indicator->fade_value_count > abs(diff_value)) {
-                p_led_indicator->fade_value_count = BRIGHTNESS_MIN;
+            if (p_led_indicator->fade_step >= p_led_indicator->fade_total_step) {
+                p_led_indicator->fade_step = 0;
+                p_led_indicator->fade_total_step = 0;
                 p_led_indicator->current_fade_value = p_blink_step_value;
                 p_led_indicator->last_fade_value = p_blink_step_value;
                 p_led_indicator->p_blink_steps[active_blink] += 1;

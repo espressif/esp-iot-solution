@@ -1,6 +1,11 @@
 
 # ChangeLog
 
+## v0.9.2 - 2024-2-4
+
+* Fixed test_led_indicator.c build in C++ error
+* Upgraded the display effect of color gradient.
+
 ## v0.9.1 - 2024-1-17
 
 * Resolve the issue of calling preempt_stop with a specified blink_type that is not running, causing the current preemptive blink to stop.
