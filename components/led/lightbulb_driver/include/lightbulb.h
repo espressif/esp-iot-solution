@@ -14,6 +14,10 @@
 #include <hal/gpio_hal.h>
 #include <esp_log.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifdef CONFIG_ENABLE_PWM_DRIVER
 #include "pwm.h"
 #endif
@@ -40,10 +44,6 @@
 
 #ifdef CONFIG_ENABLE_KP18058_DRIVER
 #include "kp18058.h"
-#endif
-
-#ifdef __cplusplus
-extern "C" {
 #endif
 
 /**

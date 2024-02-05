@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.1.2 - 2024-02-05
+
+### Bug Fixes:
+
+* fix(lightbulb): incorrect type.
+
 ## v1.1.1 - 2024-02-04
 
 ### Bug Fixes:
