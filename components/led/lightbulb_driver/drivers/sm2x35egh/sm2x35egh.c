@@ -201,11 +201,11 @@ sm2x35egh_rgb_current_t sm2235egh_rgb_current_mapping(int current_mA)
     return (sm2x35egh_rgb_current_t)((current_mA - 4) / 4);
 }
 
-sm2x35egh_rgb_current_t sm2235egh_cw_current_mapping(int current_mA)
+sm2x35egh_cw_current_t sm2235egh_cw_current_mapping(int current_mA)
 {
     DRIVER_CHECK((current_mA >= 5) && (current_mA <= 80) && (!(current_mA % 5)), "The current value is incorrect and cannot be mapped.", return SM2235EGH_CW_CURRENT_MAX);
 
-    return (sm2x35egh_rgb_current_t)((current_mA - 5) / 5);
+    return (sm2x35egh_cw_current_t)((current_mA - 5) / 5);
 }
 
 sm2x35egh_rgb_current_t sm2335egh_rgb_current_mapping(int current_mA)
@@ -215,11 +215,11 @@ sm2x35egh_rgb_current_t sm2335egh_rgb_current_mapping(int current_mA)
     return (sm2x35egh_rgb_current_t)((current_mA - 10) / 10);
 }
 
-sm2x35egh_rgb_current_t sm2335egh_cw_current_mapping(int current_mA)
+sm2x35egh_cw_current_t sm2335egh_cw_current_mapping(int current_mA)
 {
     DRIVER_CHECK((current_mA >= 5) && (current_mA <= 80) && (!(current_mA % 5)), "The current value is incorrect and cannot be mapped.", return SM2335EGH_CW_CURRENT_MAX);
 
-    return (sm2x35egh_rgb_current_t)((current_mA - 5) / 5);
+    return (sm2x35egh_cw_current_t)((current_mA - 5) / 5);
 }
 
 esp_err_t sm2x35egh_init(driver_sm2x35egh_t *config, void(*hook_func)(void *))

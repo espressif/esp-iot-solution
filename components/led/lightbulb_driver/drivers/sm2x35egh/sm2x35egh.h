@@ -221,9 +221,9 @@ sm2x35egh_rgb_current_t sm2235egh_rgb_current_mapping(int current_mA);
  * @brief Convert the cw channel current value into the enumeration value required by the driver
  *
  * @param current_mA Drive current value, in milliamps, ranges from 5~80mA, and can be evenly divided by 5
- * @return sm2x35egh_rgb_current_t
+ * @return sm2x35egh_cw_current_t
  */
-sm2x35egh_rgb_current_t sm2235egh_cw_current_mapping(int current_mA);
+sm2x35egh_cw_current_t sm2235egh_cw_current_mapping(int current_mA);
 
 /**
  * @brief Convert the rgb channel current value into the enumeration value required by the driver
@@ -237,6 +237,6 @@ sm2x35egh_rgb_current_t sm2335egh_rgb_current_mapping(int current_mA);
  * @brief Convert the cw channel current value into the enumeration value required by the driver
  *
  * @param current_mA Drive current value, in milliamps, ranges from 5~80mA, and can be evenly divided by 5
- * @return sm2x35egh_rgb_current_t
+ * @return sm2x35egh_cw_current_t
  */
-sm2x35egh_rgb_current_t sm2335egh_cw_current_mapping(int current_mA);
+sm2x35egh_cw_current_t sm2335egh_cw_current_mapping(int current_mA);
