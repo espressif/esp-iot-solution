@@ -308,32 +308,15 @@ build_example_display_lcd_qspi_with_ram:
   variables:
     EXAMPLE_DIR: examples/display/lcd/qspi_with_ram
 
-build_example_display_lcd_qspi_without_ram:
+build_example_display_lcd_rgb_lcd_8bit:
   extends:
     - .build_examples_template
-    - .rules:build:example_display_lcd_qspi_without_ram
+    - .rules:build:example_display_lcd_rgb_lcd_8bit
   parallel:
     matrix:
-      - IMAGE: espressif/idf:v5.1.2
-      - IMAGE: espressif/idf:release-v5.2
-  before_script:
-    - |
-      if [[ "$IMAGE" == "espressif/idf:release-v5.2" ]]; then
-        export PATCH_PATH="${IOT_SOLUTION_PATH}/examples/display/lcd/qspi_without_ram/patch/support_qspi_without_ram_a9349f4ad4.patch"
-        cd "$(dirname "$(whereis idf.py | awk -F ' ' '{print $2}')")/.."
-        git checkout a9349f4ad4
-        git submodule update --init --recursive
-        ./install.sh
-        . ./export.sh
-      else
-        export PATCH_PATH="${IOT_SOLUTION_PATH}/examples/display/lcd/qspi_without_ram/patch/support_qspi_without_ram_v5.1.2.patch"
-        cd "$(dirname "$(whereis idf.py | awk -F ' ' '{print $2}')")/.."
-        git submodule update --init --recursive
-      fi
-    - git apply ${PATCH_PATH}
-    - cd ${IOT_SOLUTION_PATH}
+      - IMAGE: espressif/idf:release-v5.1
   variables:
-    EXAMPLE_DIR: examples/display/lcd/qspi_without_ram
+    EXAMPLE_DIR: examples/display/lcd/rgb_lcd_8bit
 
 build_example_extended_vfs_gpio_gpio_simple:
   extends:
@@ -765,32 +748,15 @@ build_components_display_lcd_esp_lcd_st7701_test_apps:
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_st7701/test_apps
 
-build_components_display_lcd_esp_lcd_st77903_test_apps:
+build_components_display_lcd_esp_lcd_st77903_rgb_test_apps:
   extends:
     - .build_examples_template
-    - .rules:build:components_display_lcd_esp_lcd_st77903_test_apps
+    - .rules:build:components_display_lcd_esp_lcd_st77903_rgb_test_apps
   parallel:
     matrix:
-      - IMAGE: espressif/idf:v5.1.2
-      - IMAGE: espressif/idf:release-v5.2
-  before_script:
-    - |
-      if [[ "$IMAGE" == "espressif/idf:release-v5.2" ]]; then
-        export PATCH_PATH="${IOT_SOLUTION_PATH}/examples/display/lcd/qspi_without_ram/patch/support_qspi_without_ram_a9349f4ad4.patch"
-        cd "$(dirname "$(whereis idf.py | awk -F ' ' '{print $2}')")/.."
-        git checkout a9349f4ad4
-        git submodule update --init --recursive
-        ./install.sh
-        . ./export.sh
-      else
-        export PATCH_PATH="${IOT_SOLUTION_PATH}/examples/display/lcd/qspi_without_ram/patch/support_qspi_without_ram_v5.1.2.patch"
-        cd "$(dirname "$(whereis idf.py | awk -F ' ' '{print $2}')")/.."
-        git submodule update --init --recursive
-      fi
-    - git apply ${PATCH_PATH}
-    - cd ${IOT_SOLUTION_PATH}
+      - IMAGE: espressif/idf:release-v5.1
   variables:
-    EXAMPLE_DIR: components/display/lcd/esp_lcd_st77903/test_apps
+    EXAMPLE_DIR: components/display/lcd/esp_lcd_st77903_rgb/test_apps
 
 build_components_display_lcd_esp_lcd_st77916_test_apps:
   extends:
@@ -801,6 +767,16 @@ build_components_display_lcd_esp_lcd_st77916_test_apps:
       - IMAGE: espressif/idf:release-v5.1
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_st77916/test_apps
+
+build_components_display_lcd_esp_lcd_st77922_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_display_lcd_esp_lcd_st77922_test_apps
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.1
+  variables:
+    EXAMPLE_DIR: components/display/lcd/esp_lcd_st77922/test_apps
 
 build_components_display_lcd_touch_esp_lcd_touch_spd2010_test_apps:
   extends:
