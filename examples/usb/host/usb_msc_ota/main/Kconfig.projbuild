@@ -1,0 +1,13 @@
+menu "Example Configeration"
+
+    config MSC_OTA_BIN_NAME
+        string "msc ota bin name"
+        default "usb_msc_ota.bin"
+
+    config SIMPLE_MSC_OTA
+        bool "simple msc ota"
+        default y
+        help
+            simple msc ota
+
+endmenu

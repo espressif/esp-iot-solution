@@ -251,6 +251,10 @@ examples/usb/host/usb_cdc_basic:
   enable:
     - if: IDF_TARGET in ["esp32s2","esp32s3"]
 
+examples/usb/host/usb_msc_ota:
+  enable:
+    - if: SOC_USB_OTG_SUPPORTED == 1
+
 examples/utilities/xz_decompress_file:
   enable:
     - if: INCLUDE_DEFAULT == 1
