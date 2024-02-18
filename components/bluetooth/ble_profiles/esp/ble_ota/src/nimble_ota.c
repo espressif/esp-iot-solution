@@ -24,7 +24,7 @@
 esp_decrypt_handle_t decrypt_handle_cmp;
 #endif
 
-#define BUF_LENGTH                          4096
+#define BUF_LENGTH                          4098
 #define OTA_IDX_NB                          4
 #define CMD_ACK_LENGTH                      20
 
@@ -192,12 +192,15 @@ write_ota_data:
     fw_buf_offset += om->om_len - 3;
 
     if (SLIST_NEXT(om, om_next) != NULL) {
-        struct os_mbuf *temp = SLIST_NEXT(om, om_next);
-
-        memcpy(fw_buf + fw_buf_offset, temp->om_data, temp->om_len);
-        fw_buf_offset += temp->om_len;
-
-        temp = NULL;
+        struct os_mbuf *last;
+        last = om;
+        while (SLIST_NEXT(last, om_next) != NULL) {
+            struct os_mbuf *temp = SLIST_NEXT(last, om_next);
+            memcpy(fw_buf + fw_buf_offset, temp->om_data, temp->om_len);
+            fw_buf_offset += temp->om_len;
+            last = SLIST_NEXT(last, om_next);
+            temp = NULL;
+        }
     }
 
     ESP_LOGD(TAG, "DEBUG: Sector:%" PRIu32 ", total length:%" PRIu32 ", length:%d", cur_sector,
@@ -218,8 +221,9 @@ sector_end:
     if (fw_buf_offset < ota_block_size) {
         esp_ble_ota_recv_fw_handler(fw_buf, fw_buf_offset);
     } else {
-        esp_ble_ota_recv_fw_handler(fw_buf, ota_block_size);
+        esp_ble_ota_recv_fw_handler(fw_buf, 4096);
     }
+
     fw_buf_offset = 0;
     memset(fw_buf, 0x0, ota_block_size);
 
