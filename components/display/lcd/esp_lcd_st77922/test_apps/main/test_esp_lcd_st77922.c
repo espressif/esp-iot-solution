@@ -31,7 +31,7 @@
 #define TEST_PIN_NUM_LCD_DATA1      (GPIO_NUM_12)
 #define TEST_PIN_NUM_LCD_DATA2      (GPIO_NUM_13)
 #define TEST_PIN_NUM_LCD_DATA3      (GPIO_NUM_14)
-#define TEST_PIN_NUM_LCD_RST        (GPIO_NUM_17)
+#define TEST_PIN_NUM_LCD_RST        (GPIO_NUM_3)
 #define TEST_PIN_NUM_LCD_DC         (GPIO_NUM_8)
 
 #define TEST_DELAY_TIME_MS          (3000)

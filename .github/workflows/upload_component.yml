@@ -35,6 +35,7 @@ jobs:
             components/display/lcd/esp_lcd_st77916;
             components/display/lcd/esp_lcd_st77922;
             components/display/lcd_touch/esp_lcd_touch_spd2010;
+            components/display/lcd_touch/esp_lcd_touch_st7123;
             components/elf_loader;
             components/extended_vfs;
             components/gprof;

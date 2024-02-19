@@ -1,0 +1,8 @@
+## IDF Component Manager Manifest File
+dependencies:
+  esp_lcd_touch_st7123:
+    version: "*"
+    override_path: "../../../esp_lcd_touch_st7123"
+  esp_lcd_st77922:
+    version: "*"
+    override_path: "../../../../lcd/esp_lcd_st77922"
