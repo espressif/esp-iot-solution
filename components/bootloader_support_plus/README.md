@@ -132,8 +132,6 @@ You can create a project from this example by the following command:
 idf.py create-project-from-example "espressif/bootloader_support_plus=*:simple_ota_example"
 ```
 
-> Note: For the examples downloaded by using this command, you need to comment out the `override_path` line in the main/idf_component.yml and bootloader_components/main/idf_component.yml.
-
 ## Note
 1. If your flash partition has only two partitions, one for storing app.bin and one for storing compressed firmware, then you cannot rollback to the old version if using compression upgrade. In this case, please ensure the availability and correctness of your compressed firmware before upgrading to it.    
 

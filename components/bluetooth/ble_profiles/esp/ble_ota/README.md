@@ -11,5 +11,3 @@ You can create a project from this example by the following command:
 ```
 idf.py create-project-from-example "espressif/ble_ota^0.1.8:ble_ota"
 ```
-
-> Note: For the examples downloaded by using this command, you need to comment out the override_path line in the main/idf_component.yml.
