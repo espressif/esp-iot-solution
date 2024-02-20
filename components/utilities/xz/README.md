@@ -30,5 +30,3 @@ You can create a project from this example by the following command:
 ```shell
 idf.py create-project-from-example "espressif/xz^1.0.0:xz_decompress_file"
 ```
-
-> Note: For the examples downloaded by using this command, you need to comment out the `override_path` line in the main/idf_component.yml.

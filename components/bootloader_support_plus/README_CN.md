@@ -130,8 +130,6 @@ idf.py gen_compressed_ota
 idf.py create-project-from-example "espressif/bootloader_support_plus=*:simple_ota_example"
 ```
 
-> 注意: 使用该命令下载的示例需要注释掉 main/idf_component.yml 和 bootloader_components/main/idf_component.yml 中的`override_path`行。
-
 ## 注意
 
 1. 当使用压缩更新时，双分区情况下，不支持版本回滚。
