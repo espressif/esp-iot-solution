@@ -23,4 +23,8 @@ menu "USB HID Device Example"
         string "Product Name"
         default "HID Demo"
 
+    config ENABLE_FULL_KEY_KEYBOARD
+        bool "Enable Full Key Keyboard"
+        default n
+
 endmenu

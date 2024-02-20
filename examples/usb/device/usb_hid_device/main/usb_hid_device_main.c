@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+/* SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -9,7 +9,6 @@
 #include "esp_log.h"
 #include "sdkconfig.h"
 #include "iot_button.h"
-#include "hal/usb_hal.h"
 #include "esp_private/usb_phy.h"
 #include "tinyusb_hid.h"
 
@@ -40,33 +39,91 @@ static int get_button_gpio(button_handle_t btn_hdl)
 }
 
 #ifdef CONFIG_SUBCLASS_KEYBOARD
+#if CONFIG_ENABLE_FULL_KEY_KEYBOARD
+static uint8_t keycode[15] = {0};
+
+static void add_key(uint8_t key)
+{
+    // USAGE ID for keyboard starts from 4
+    key -= 3;
+    if (key >= 1 && key <= 120) {
+        uint8_t byteIndex = (key - 1) / 8;
+        uint8_t bitIndex = (key - 1) % 8;
+
+        keycode[byteIndex] |= (1 << bitIndex);
+    }
+}
+
+static void remove_key(uint8_t key)
+{
+    // USAGE ID for keyboard starts from 4
+    key -= 3;
+    if (key >= 1 && key <= 120) {
+        uint8_t byteIndex = (key - 1) / 8;
+        uint8_t bitIndex = (key - 1) % 8;
+
+        keycode[byteIndex] &= ~(1 << bitIndex);
+    }
+}
+#else
+static uint8_t keycode[6] = {0};
+
+static bool add_key(uint8_t key)
+{
+    for (size_t i = 0; i < 6; i++) {
+        if (keycode[i] == 0) {
+            keycode[i] = key;
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool remove_key(uint8_t key)
+{
+    for (size_t i = 0; i < 6; i++) {
+        if (keycode[i] == key) {
+            keycode[i] = 0;
+            return true;
+        }
+    }
+    return false;
+}
+#endif
 static void button_keyboard_cb(void *arg, void *arg2)
 {
     button_handle_t button_hdl = (button_handle_t)arg;
     int button_gpio = get_button_gpio(button_hdl);
-    uint8_t _keycode[6] = { 0 };
+    uint8_t key = 0;
     switch (button_gpio) {
     case EXAMPLE_BUTTON_UP:
-        _keycode[0] = HID_KEY_U;
+        key = HID_KEY_U;
         break;
 
     case EXAMPLE_BUTTON_DOWN:
-        _keycode[0] = HID_KEY_D;
+        key = HID_KEY_D;
         break;
 
     case EXAMPLE_BUTTON_LEFT:
-        _keycode[0] = HID_KEY_L;
+        key = HID_KEY_L;
         break;
 
     case EXAMPLE_BUTTON_RIGHT:
-        _keycode[0] = HID_KEY_R;
+        key = HID_KEY_R;
         break;
 
     default:
         break;
     }
-    tinyusb_hid_keyboard_report(_keycode);
-    ESP_LOGI(TAG, "Keyboard %c", _keycode[0] - HID_KEY_A + 'a');
+
+    if (iot_button_get_event(button_hdl) == BUTTON_PRESS_UP) {
+        remove_key(key);
+        ESP_LOGI(TAG, "Remove Keyboard %c", key - HID_KEY_A + 'a');
+    } else {
+        add_key(key);
+        ESP_LOGI(TAG, "Add Keyboard %c", key - HID_KEY_A + 'a');
+    }
+    tinyusb_hid_keyboard_report(0, keycode);
 }
 #elif defined CONFIG_SUBCLASS_MOUSE
 static void button_mouse_cb(void *arg, void *arg2)
@@ -158,6 +215,7 @@ void app_main(void)
     usb_phy_init();
     tud_init(BOARD_TUD_RHPORT);
     xTaskCreate(tusb_device_task, "TinyUSB", 4096, NULL, 5, NULL);
+    tinyusb_hid_init();
 
     /* buttons init, buttons used to simulate keyboard or mouse events */
     button_config_t cfg = {
@@ -189,7 +247,12 @@ void app_main(void)
 
     /* register button callback, send HID report when click button */
     for (size_t i = 0; i < EXAMPLE_BUTTON_NUM; i++) {
+#ifdef CONFIG_SUBCLASS_KEYBOARD
+        iot_button_register_cb(s_button_handles[i], BUTTON_PRESS_DOWN, button_cb, NULL);
+        iot_button_register_cb(s_button_handles[i], BUTTON_PRESS_UP, button_cb, NULL);
+#elif defined CONFIG_SUBCLASS_MOUSE
         iot_button_register_cb(s_button_handles[i], BUTTON_SINGLE_CLICK, button_cb, NULL);
+#endif
     }
 
     while (1) {

@@ -2,13 +2,16 @@
 
 This example demonstrates how to use ESP32-Sx USB function as the HID device. Buttons are used to trigger such signals as a keyboard or mouse.
 
+* Supports traditional six-key keyboard mode
+* Supports full key no-conflict keyboard mode
+
 ## How to use the example
 
 ### Hardware Required
 
 - Any ESP32-S2 or ESP32-S3 development board with **buttons**
- 
-- Hardware Connection： 
+
+- Hardware Connection：
   - GPIO19 to D
   - GPIO20 to D+
 
@@ -43,7 +46,7 @@ By default the buttons act as a mouse, you can use `idf.py menuconfig` change `U
 ## Example Output
 
 ```
-I (393) gpio: GPIO[14]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (393) gpio: GPIO[14]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0
 I (403) HID Example: Button io = 14 created
 I (403) HID Example: HID Mouse demo: press button to simulate mouse
 I (413) HID Example: Wait Mount through USB interface
