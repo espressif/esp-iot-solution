@@ -63,3 +63,8 @@
 
 * BLE-OTA:
   * Fixed ble ota packet index issue.
+
+## v0.1.12 - 2024-02-19
+
+* BLE-OTA:
+  * Add support for ESP32C2 and ESP32C6.

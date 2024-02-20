@@ -16,7 +16,9 @@
 #include "services/gatt/ble_svc_gatt.h"
 #include "host/ble_uuid.h"
 #include "ble_ota.h"
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
 #include "esp_nimble_hci.h"
+#endif
 
 #ifdef CONFIG_PRE_ENC_OTA
 #define SECTOR_END_ID                       2
