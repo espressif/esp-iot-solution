@@ -36,6 +36,10 @@ extern "C" {
 //--------------------------------------------------------------------+
 
 // RHPort number used for device can be defined by board.mk, default to port 0
+#ifndef ESP_PLATFORM
+#define ESP_PLATFORM 1
+#endif
+
 #ifndef BOARD_TUD_RHPORT
 #define BOARD_TUD_RHPORT      0
 #endif

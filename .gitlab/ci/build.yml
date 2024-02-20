@@ -35,7 +35,7 @@
     # For example, using "sdkconf.etc=default" specifies the default sdkconfig file.
     EXAMPLE_CONFIG: "="
   script:
-    - pip install --upgrade idf-component-manager
+    - pip install "idf-component-manager<1.5"
     - pip install "idf_build_apps<2.0"
     - python tools/build_apps.py ${EXAMPLE_DIR} --config ${EXAMPLE_CONFIG} -t all -vv
 
