@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.0.2 - 2024-2-19
+
+### Enhancements:
+
+* Add notes of X coordinate limitation in README.md
+
 ## v0.0.1 - 2024-1-22
 
 ### Enhancements:

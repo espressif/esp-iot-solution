@@ -118,3 +118,21 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
     esp_lcd_panel_init(panel_handle);
     esp_lcd_panel_disp_on_off(panel_handle, true);
 ```
+
+## Notes
+
+* When using `esp_panel_lcd_draw_bitmap()` to refresh the screen, ensure that both `x_start` and `x_end` are divisible by `4`. This is a requirement of ST77922. For LVGL, register the following function into `rounder_cb` of `lv_disp_drv_t` to round the coordinates.
+
+```c
+void lvgl_port_rounder_callback(struct _lv_disp_drv_t * disp_drv, lv_area_t * area)
+{
+    uint16_t x1 = area->x1;
+    uint16_t x2 = area->x2;
+
+    // round the start of coordinate down to the nearest 4M number
+    area->x1 = (x1 >> 2) << 2;
+
+    // round the end of coordinate up to the nearest 4N+3 number
+    area->x2 = ((x2 >> 2) << 2) + 3;
+}
+```
