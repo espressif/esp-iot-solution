@@ -1,0 +1,114 @@
+menu "Example Config"
+
+    menu "Touch Controller"
+        config EXAMPLE_LCD_TOUCH_CONTROLLER_GT911
+            bool "Enable LCD GT911 Touch"
+            default n
+            help
+                Enable this option if you wish to use display touch.
+    endmenu
+
+    menu "Display"
+        config EXAMPLE_LVGL_PORT_TASK_MAX_DELAY_MS
+            int "LVGL timer task maximum delay (ms)"
+            default 500
+            range 2 2000  # Example range, adjust as needed
+            help
+            The maximum delay of the LVGL timer task, in milliseconds.
+
+        config EXAMPLE_LVGL_PORT_TASK_MIN_DELAY_MS
+            int "LVGL timer task minimum delay (ms)"
+            default 10
+            range 1 100  # Example range, adjust as needed
+            help
+            The minimum delay of the LVGL timer task, in milliseconds.
+
+        config EXAMPLE_LVGL_TASK_PRIORITY
+            int "LVGL task priority"
+            default 2
+            help
+                The Board Support Package will create a task that will periodically handle LVGL operation in lv_timer_handler().
+
+        config EXAMPLE_LVGL_TASK_STACK_SIZE_KB
+            int "LVGL task stack size (KB)"
+            default 4
+            help
+                Size(KB) of LVGL task stack.
+
+        config EXAMPLE_LVGL_PORT_TASK_CORE
+            int "LVGL timer task core"
+            default -1
+            range -1 1
+            help
+            The core of the LVGL timer task.
+            Set to -1 to not specify the core.
+            Set to 1 only if the SoCs support dual-core, otherwise set to -1 or 0.
+
+        config EXAMPLE_LVGL_TICK
+            int "LVGL tick period"
+            default 5
+            range 1 100
+            help
+                Period of LVGL tick timer.
+
+        config EXAMPLE_LCD_RGB_BOUNCE_BUFFER_HEIGHT
+            int "Bounce buffer height"
+            default 10
+            help
+                Height of bounce buffer. The width of the buffer is the same as that of the LCD.
+
+        config EXAMPLE_LVGL_AVOID_TEAR
+            bool "Avoid tearing effect"
+            default "n"
+            help
+                Avoid tearing effect through LVGL buffer mode and double frame buffers of RGB LCD. This feature is only available for RGB LCD.
+
+        config EXAMPLE_LVGL_PORT_AVOID_TEARING_MODE
+            int "Select Avoid Tearing Mode"
+            default 0
+            range 0 3
+            help
+                The current tearing prevention mode supports both full refresh mode and direct mode. Tearing prevention mode may consume more PSRAM space
+
+        choice EXAMPLE_LVGL_ROTATION
+            depends on EXAMPLE_LVGL_AVOID_TEAR
+            prompt "Select rotation"
+            default EXAMPLE_LVGL_ROTATION_NONE
+            config EXAMPLE_LVGL_ROTATION_NONE
+                bool "Rotation 0"
+            config EXAMPLE_LVGL_ROTATION_90
+                bool "Rotation 90"
+            config EXAMPLE_LVGL_ROTATION_180
+                bool "Rotation 180"
+            config EXAMPLE_LVGL_ROTATION_270
+                bool "Rotation 270"
+            help
+                Rotate screen when avoid tearing effect is enabled. Need to set EXAMPLE_LCD_RGB_BUFFER_NUMS to 3.
+        endchoice
+
+        config EXAMPLE_LVGL_ROTATION_DEGREE
+            int
+            default 0 if EXAMPLE_LVGL_ROTATION_NONE
+            default 1 if EXAMPLE_LVGL_ROTATION_90
+            default 2 if EXAMPLE_LVGL_ROTATION_180
+            default 3 if EXAMPLE_LVGL_ROTATION_270
+
+        choice EXAMPLE_LVGL_BUF_CAPS
+            depends on !EXAMPLE_LVGL_AVOID_TEAR
+            prompt "Select LVGL buffer memory capability"
+            default EXAMPLE_LVGL_INTERNAL
+            config EXAMPLE_LVGL_PSRAM
+                bool "PSRAM memory"
+            config EXAMPLE_LVGL_INTERNAL
+                bool "Internal memory"
+        endchoice
+
+        config EXAMPLE_LVGL_BUF_HEIGHT
+            depends on !EXAMPLE_LVGL_AVOID_TEAR
+            int "LVGL buffer height"
+            default 100
+            help
+                Height of LVGL buffer. The width of the buffer is the same as that of the LCD.
+    endmenu
+
+endmenu

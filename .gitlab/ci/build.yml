@@ -319,6 +319,16 @@ build_example_display_lcd_rgb_lcd_8bit:
   variables:
     EXAMPLE_DIR: examples/display/lcd/rgb_lcd_8bit
 
+build_example_display_lcd_rgb_avoid_tearing:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_display_lcd_rgb_avoid_tearing
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.1
+  variables:
+    EXAMPLE_DIR: examples/display/lcd/rgb_avoid_tearing
+
 build_example_extended_vfs_gpio_gpio_simple:
   extends:
     - .build_examples_template

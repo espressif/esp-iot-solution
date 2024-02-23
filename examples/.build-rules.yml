@@ -132,6 +132,10 @@ examples/display/lcd/rgb_lcd_8bit:
   enable:
     - if: IDF_TARGET in ["esp32s3"]
 
+examples/display/lcd/rgb_avoid_tearing:
+  enable:
+    - if: IDF_TARGET in ["esp32s3"]
+
 examples/extended_vfs/gpio/gpio_simple:
   enable:
     - if: IDF_TARGET in ["esp32","esp32s2","esp32s3","esp32c3"]

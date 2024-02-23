@@ -226,19 +226,19 @@ Here is the explanation of the functions implemented for ``esp_lcd_panel_handle_
       - Mirror the X and Y axes either through commands or using ``rgb_panel_mirror()`` based on user configuration.
     * - swap_xy()
       - rgb_panel_swap_xy()
-      - esp_lcd_panel_mirror()
+      - esp_lcd_panel_swap_xy()
       - Swap X and Y axes through software using ``rgb_panel_swap_xy()`` without saving and overwriting.
     * - set_gap()
       - rgb_panel_set_gap()
-      - esp_lcd_panel_mirror()
+      - esp_lcd_panel_set_gap()
       - Modify the starting and ending coordinates for drawing through software using ``rgb_panel_set_gap()`` without saving and overwriting.
     * - invert_color()
       - rgb_panel_invert_color()
-      - esp_lcd_panel_mirror()
+      - esp_lcd_panel_invert_color()
       - Invert pixel color data bitwise through hardware using ``rgb_panel_invert_color()`` without saving and overwriting (0xF0F0 -> 0x0F0F).
     * - disp_on_off()
       - rgb_panel_disp_on_off()
-      - esp_lcd_panel_mirror()
+      - esp_lcd_panel_disp_on_off()
       - Implement the on/off control of LCD display based on user configuration. If ``disp_gpio_num`` is not configured, control can be achieved using LCD commands ``LCD_CMD_DISON (29h)`` and ``LCD_CMD_DISOFF (28h)``. Additionally, if ``disp_gpio_num`` is configured, control can be achieved by calling the function ``rgb_panel_disp_on_off()``.
 
 For the majority of RGB LCDs, the commands and parameters of their driver IC are compatible with the implementation details mentioned above. Therefore, the porting process can be completed using the following steps:

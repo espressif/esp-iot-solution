@@ -88,6 +88,35 @@ esp_lcd_touch_handle_t tp = NULL;
 #define EXAMPLE_LVGL_TASK_STACK_SIZE   (4 * 1024)
 #define EXAMPLE_LVGL_TASK_PRIORITY     2
 
+#if CONFIG_EXAMPLE_LCD_CONTROLLER_GC9B71
+// static const gc9b71_lcd_init_cmd_t lcd_init_cmds[] = {
+// //  {cmd, { data }, data_size, delay_ms}
+//    {0xfe, (uint8_t []){0x00}, 0, 0},
+//    {0xef, (uint8_t []){0x00}, 0, 0},
+//    {0x80, (uint8_t []){0x11}, 1, 0},
+//    {0x81, (uint8_t []){0x70}, 1, 0},
+//     ...
+// };
+#elif CONFIG_EXAMPLE_LCD_CONTROLLER_SPD2010
+// static const spd2010_lcd_init_cmd_t lcd_init_cmds[] = {
+// //  {cmd, { data }, data_size, delay_ms}
+//    {0xFF, (uint8_t []){0x20, 0x10, 0x10}, 3, 0},
+//    {0x0C, (uint8_t []){0x11}, 1, 0},
+//    {0x10, (uint8_t []){0x02}, 1, 0},
+//    {0x11, (uint8_t []){0x11}, 1, 0},
+//     ...
+// };
+#elif CONFIG_EXAMPLE_LCD_CONTROLLER_SH8601
+// static const sh8601_lcd_init_cmd_t lcd_init_cmds[] = {
+// //  {cmd, { data }, data_size, delay_ms}
+//    {0x44, (uint8_t []){0x00, 0xc8}, 2, 0},
+//    {0x35, (uint8_t []){0x00}, 0, 0},
+//    {0x53, (uint8_t []){0x20}, 1, 25},
+//    {0x29, (uint8_t []){0x00}, 0, 120},
+//     ...
+// };
+#endif
+
 static bool example_notify_lvgl_flush_ready(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_io_event_data_t *edata, void *user_ctx)
 {
     lv_disp_drv_t *disp_driver = (lv_disp_drv_t *)user_ctx;
@@ -281,12 +310,14 @@ void app_main(void)
     static lv_disp_draw_buf_t disp_buf; // contains internal graphic buffer(s) called draw buffer(s)
     static lv_disp_drv_t disp_drv;      // contains callback functions
 
-    ESP_LOGI(TAG, "Turn off LCD backlight");
-    gpio_config_t bk_gpio_config = {
-        .mode = GPIO_MODE_OUTPUT,
-        .pin_bit_mask = 1ULL << EXAMPLE_PIN_NUM_BK_LIGHT
-    };
-    ESP_ERROR_CHECK(gpio_config(&bk_gpio_config));
+    if (EXAMPLE_PIN_NUM_BK_LIGHT >= 0) {
+        ESP_LOGI(TAG, "Turn off LCD backlight");
+        gpio_config_t bk_gpio_config = {
+            .mode = GPIO_MODE_OUTPUT,
+            .pin_bit_mask = 1ULL << EXAMPLE_PIN_NUM_BK_LIGHT
+        };
+        ESP_ERROR_CHECK(gpio_config(&bk_gpio_config));
+    }
 
     ESP_LOGI(TAG, "Initialize SPI bus");
 #if CONFIG_EXAMPLE_LCD_CONTROLLER_GC9B71
@@ -320,6 +351,8 @@ void app_main(void)
                                                                                 example_notify_lvgl_flush_ready,
                                                                                 &disp_drv);
     gc9b71_vendor_config_t vendor_config = {
+        // .init_cmds = lcd_init_cmds,         // Uncomment these line if use custom initialization commands
+        // .init_cmds_size = sizeof(lcd_init_cmds) / sizeof(gc9b71_lcd_init_cmd_t),
         .flags = {
             .use_qspi_interface = 1,
         },
@@ -329,6 +362,8 @@ void app_main(void)
                                                                                  example_notify_lvgl_flush_ready,
                                                                                  &disp_drv);
     spd2010_vendor_config_t vendor_config = {
+        // .init_cmds = lcd_init_cmds,         // Uncomment these line if use custom initialization commands
+        // .init_cmds_size = sizeof(lcd_init_cmds) / sizeof(spd2010_lcd_init_cmd_t),
         .flags = {
             .use_qspi_interface = 1,
         },
@@ -338,6 +373,8 @@ void app_main(void)
                                                                                 example_notify_lvgl_flush_ready,
                                                                                 &disp_drv);
     sh8601_vendor_config_t vendor_config = {
+        // .init_cmds = lcd_init_cmds,         // Uncomment these line if use custom initialization commands
+        // .init_cmds_size = sizeof(lcd_init_cmds) / sizeof(sh8601_lcd_init_cmd_t),
         .flags = {
             .use_qspi_interface = 1,
         },
@@ -420,8 +457,10 @@ void app_main(void)
 #endif
 #endif // CONFIG_EXAMPLE_LCD_TOUCH_ENABLED
 
-    ESP_LOGI(TAG, "Turn on LCD backlight");
-    gpio_set_level(EXAMPLE_PIN_NUM_BK_LIGHT, EXAMPLE_LCD_BK_LIGHT_ON_LEVEL);
+    if (EXAMPLE_PIN_NUM_BK_LIGHT >= 0) {
+        ESP_LOGI(TAG, "Turn on LCD backlight");
+        gpio_set_level(EXAMPLE_PIN_NUM_BK_LIGHT, EXAMPLE_LCD_BK_LIGHT_ON_LEVEL);
+    }
 
     ESP_LOGI(TAG, "Initialize LVGL library");
     lv_init();

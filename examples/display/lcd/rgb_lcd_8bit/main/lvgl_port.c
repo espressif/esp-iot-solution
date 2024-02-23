@@ -17,7 +17,7 @@
 #include "sdkconfig.h"
 
 #include "lvgl.h"
-#include "lv_port.h"
+#include "lvgl_port.h"
 
 #include "esp_lcd_st77903_rgb.h"
 
@@ -67,11 +67,12 @@ static void lv_port_task(void *arg)
 
     ESP_LOGD(TAG, "Malloc memory for LVGL buffer");
     void *buf1 = NULL;
-    int buffer_size = EXAMPLE_LCD_RGB_H_RES * EXAMPLE_LCD_RGB_V_RES;
-    buf1 = heap_caps_malloc(buffer_size, EXAMPLE_LVGL_BUFFER_MALLOC);
+    int buffer_size = LVGL_H_RES * LVGL_V_RES;
+    buf1 = heap_caps_malloc(buffer_size * sizeof(lv_color_t), EXAMPLE_LVGL_BUFFER_MALLOC);
+    assert(buf1);
 
     ESP_LOGD(TAG, "Register display driver to LVGL");
-    lv_display_t *display = lv_display_create(EXAMPLE_LCD_RGB_H_RES, EXAMPLE_LCD_RGB_V_RES);
+    lv_display_t *display = lv_display_create(LVGL_H_RES, LVGL_V_RES);
     lv_display_set_buffers(display, buf1, NULL, buffer_size, LV_DISPLAY_RENDER_MODE_PARTIAL);
     lv_display_set_flush_cb(display, flush_callback);
     lv_display_set_user_data(display, panel_handle);
@@ -107,7 +108,7 @@ esp_err_t lv_port_init(esp_lcd_panel_handle_t panel_handle)
 
 bool lv_port_lock(int timeout_ms)
 {
-    assert(lvgl_mux && "bsp_lvgl_port_init must be called first");
+    assert(lvgl_mux && "lvgl_port_init must be called first");
 
     const TickType_t timeout_ticks = (timeout_ms < 0) ? portMAX_DELAY : pdMS_TO_TICKS(timeout_ms);
     return xSemaphoreTakeRecursive(lvgl_mux, timeout_ticks) == pdTRUE;
@@ -115,6 +116,6 @@ bool lv_port_lock(int timeout_ms)
 
 void lv_port_unlock(void)
 {
-    assert(lvgl_mux && "bsp_lvgl_port_init must be called first");
+    assert(lvgl_mux && "lvgl_port_init must be called first");
     xSemaphoreGiveRecursive(lvgl_mux);
 }

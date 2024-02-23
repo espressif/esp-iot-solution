@@ -331,6 +331,9 @@
 .patterns-example_display_lcd_rgb_lcd_8bit: &patterns-example_display_lcd_rgb_lcd_8bit
   - "examples/display/lcd/rgb_lcd_8bit/**/*"
 
+.patterns-example_display_lcd_rgb_avoid_tearing: &patterns-example_display_lcd_rgb_avoid_tearing
+  - "examples/display/lcd/rgb_avoid_tearing/**/*"
+
 .patterns-example_extended_vfs_gpio_gpio_simple: &patterns-example_extended_vfs_gpio_gpio_simple
   - "examples/extended_vfs/gpio/gpio_simple/**/*"
 
@@ -668,6 +671,16 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-example_display_lcd_rgb_lcd_8bit
+
+.rules:build:example_display_lcd_rgb_avoid_tearing:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_display_lcd_rgb_avoid_tearing
 
 .rules:build:example_extended_vfs_gpio_gpio_simple:
   rules:

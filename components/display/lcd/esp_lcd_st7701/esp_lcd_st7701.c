@@ -1,9 +1,12 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include "soc/soc_caps.h"
+
+#if SOC_LCD_RGB_SUPPORTED
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/gpio.h"
@@ -26,6 +29,9 @@
 #define ST7701_CMD_BKxSEL_BYTE2     (0x00)
 #define ST7701_CMD_BKxSEL_BYTE3     (0x00)
 #define ST7701_CMD_CN2_BIT          (1 << 4)
+#define ST7701_CMD_BKxSEL_BK0       (0x00)
+#define ST7701_CMD_BKxSEL_BK1       (0x01)
+#define ST7701_CMD_BKxSEL_BK2       (0x03)
 
 typedef struct {
     esp_lcd_panel_io_handle_t io;
@@ -140,7 +146,7 @@ esp_err_t esp_lcd_new_panel_st7701(const esp_lcd_panel_io_handle_t io, const esp
 
     // Create RGB panel
     ESP_GOTO_ON_ERROR(esp_lcd_new_rgb_panel(vendor_config->rgb_config, ret_panel), err, TAG, "create RGB panel failed");
-    ESP_LOGD(TAG, "new RGB panel @%p", ret_panel);
+    ESP_LOGD(TAG, "new RGB panel @%p", *ret_panel);
 
     // Save the original functions of RGB panel
     st7701->init = (*ret_panel)->init;
@@ -346,9 +352,20 @@ static esp_err_t panel_st7701_mirror(esp_lcd_panel_t *panel, bool mirror_x, bool
         } else {
             st7701->madctl_val &= ~LCD_CMD_ML_BIT;
         }
+
+        // Enable the Command2 BK0
+        ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, ST7701_CMD_CND2BKxSEL, (uint8_t []) {
+            ST7701_CMD_BKxSEL_BYTE0, ST7701_CMD_BKxSEL_BYTE1, ST7701_CMD_BKxSEL_BYTE2, ST7701_CMD_BKxSEL_BYTE3,
+                                     ST7701_CMD_BKxSEL_BK0 | ST7701_CMD_CN2_BIT,
+        }, 5), TAG, "send command failed");
         ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, ST7701_CMD_SDIR, (uint8_t[]) {
             sdir_val,
         }, 1), TAG, "send command failed");;
+
+        // Disable Command2
+        ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, ST7701_CMD_CND2BKxSEL, (uint8_t []) {
+            ST7701_CMD_BKxSEL_BYTE0, ST7701_CMD_BKxSEL_BYTE1, ST7701_CMD_BKxSEL_BYTE2, ST7701_CMD_BKxSEL_BYTE3, 0,
+        }, 5), TAG, "send command failed");
         ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, LCD_CMD_MADCTL, (uint8_t[]) {
             st7701->madctl_val,
         }, 1), TAG, "send command failed");;
@@ -380,3 +397,4 @@ static esp_err_t panel_st7701_disp_on_off(esp_lcd_panel_t *panel, bool on_off)
     }
     return ESP_OK;
 }
+#endif /* SOC_LCD_RGB_SUPPORTED */

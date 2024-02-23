@@ -1,16 +1,19 @@
 | Supported Targets | ESP32-S3 |
 | ----------------- | -------- |
 
-| Supported LCD Controllers | ST77903 |
-| ------------------------- | ------- |
+| Supported LCD Controller    | ST7701 |
+| ----------------------------| -------|
 
-# RGB LCD 8BIT Example
+| Supported Touch Controller  |  GT911 |
+| ----------------------------| -------|
+
+# RGB Avoid Tearing Example
 
 [esp_lcd](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/lcd.html) provides several panel drivers out-of box, e.g. ST7789, SSD1306, NT35510. However, there're a lot of other panels on the market, it's beyond `esp_lcd` component's responsibility to include them all.
 
 `esp_lcd` allows user to add their own panel drivers in the project scope (i.e. panel driver can live outside of esp-idf), so that the upper layer code like LVGL porting code can be reused without any modifications, as long as user-implemented panel driver follows the interface defined in the `esp_lcd` component.
 
-This example demonstrates how to drive an RGB interface LCD screen with an 8-bit RGB requirement in an esp-idf project. The example will use the LVGL library to draw a stylish music player.
+This example demonstrates how to avoid tearing when using LVGL with RGB interface screens in an esp-idf project. The example will use the LVGL library to draw a stylish music player.
 
 This example uses the [esp_timer](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/esp_timer.html) to generate the ticks needed by LVGL and uses a dedicated task to run the `lv_timer_handler()`. Since the LVGL APIs are not thread-safe, this example uses a mutex which be invoked before the call of `lv_timer_handler()` and released after it. The same mutex needs to be used in other tasks and threads around every LVGL (lv_...) related function call and code. For more porting guides, please refer to [LVGL porting doc](https://docs.lvgl.io/master/porting/index.html).
 
@@ -21,7 +24,7 @@ This example uses the [esp_timer](https://docs.espressif.com/projects/esp-idf/en
 ### Hardware Required
 
 * An ESP32-S3R8 development board
-* A ST77903 LCD panel, with RGB interface
+* A ST7701 LCD panel, with RGB interface
 * An USB cable for power supply and programming
 
 ### Hardware Connection
@@ -37,7 +40,7 @@ The connection between ESP Board and the LCD is as follows:
 |                       |              |                   |
 |                   PCLK+--------------+PCLK               |
 |                       |              |                   |
-|              DATA[7:0]+--------------+DATA[7:0]          |
+|             DATA[15:0]+--------------+DATA[15:0]         |
 |                       |              |                   |
 |                  HSYNC+--------------+HSYNC              |
 |                       |              |                   |
@@ -52,10 +55,10 @@ The connection between ESP Board and the LCD is as follows:
                                        +-------------------+
 ```
 
-* The LCD parameters and GPIO number used by this example can be changed in [lv_port.h](main/lv_port.h).
+* The LCD parameters and GPIO number used by this example can be changed in [example_rgb_avoid_tearing.c](main/example_rgb_avoid_tearing.c).
 * Especially, please pay attention to the **vendor specific initialization**, it can be different between manufacturers and should consult the LCD supplier for initialization sequence code.
-* Furthermore, pay attention to the voltage level used when turning on the LCD backlight. Some LCD modules require a low voltage level to turn on, while others require a high voltage level. You can modify the macro definition `EXAMPLE_LCD_BK_LIGHT_ON_LEVEL` to change the backlight voltage level in [lv_port.h](main/lv_port.h).
-* If the RGB LCD panel exclusively supports the DE mode, you can even bypass the HSYNC and VSYNC signals by assigning `EXAMPLE_PIN_NUM_HSYNC` and `EXAMPLE_PIN_NUM_VSYNC` with -1.
+* Furthermore, pay attention to the voltage level used when turning on the LCD backlight. Some LCD modules require a low voltage level to turn on, while others require a high voltage level. You can modify the macro definition `EXAMPLE_PIN_NUM_BK_LIGHT` to change the backlight voltage level in [example_rgb_avoid_tearing.c](main/example_rgb_avoid_tearing.c).
+* If the RGB LCD panel exclusively supports the DE mode, you can even bypass the HSYNC and VSYNC signals by assigning `EXAMPLE_LCD_IO_RGB_HSYNC` and `EXAMPLE_LCD_IO_RGB_VSYNC` with -1.
 
 ### Build and Flash
 
@@ -68,6 +71,37 @@ The first time you run `idf.py` for the example will cost extra time as the buil
 (To exit the serial monitor, type ``Ctrl-]``.)
 
 See the [Getting Started Guide](https://docs.espressif.com/projects/esp-idf/en/latest/get-started/index.html) for full steps to configure and use ESP-IDF to build projects.
+
+## Performance Test
+
+### Test Environment
+
+|          Item          |                       Value                       |
+| :--------------------: | :-----------------------------------------------: |
+| Configuration of PSRAM |                    Octal, 120M                    |
+| Configuration of Flash |                     QIO, 120M                     |
+|    Version of LVGL     |                      v8.3.9                       |
+|   Test Demo of LVGL    |                   Music player                    |
+
+### Description of Aoid Tearing Mode
+
+| Aoid Tearing Mode |                    Description                    |
+| :---------------: | :-----------------------------------------------: |
+|     Mode0         | One buffer with 100-line heights in internal SRAM |
+|     Mode1         |  Full-refresh with two frame-size PSRAM buffers   |
+|     Mode2         | Full-refresh with three frame-size PSRAM buffers  |
+|     Mode3         |   Direct-mode with two frame-size PSRAM buffers   |
+
+
+### Average FPS
+
+| Aoid Tearing Mode | Average FPS |
+| :---------------: | :---------: |
+|     Mode0         |     30      |
+|     Mode1         |     23      |
+|     Mode2         |     26      |
+|     Mode3         |     26      |
+
 
 ## Troubleshooting
 

@@ -44,6 +44,8 @@ idf.py -D SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.psram_octal_120m" rec
 idf.py build flash monitor
 ```
 
+**Note:** It is suggested to increase the LVGL task stack to over 30 KB
+
 ### Build and Flash
 
 1. Run `idf.py -p PORT flash monitor` to build, flash and monitor the project.
