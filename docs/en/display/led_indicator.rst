@@ -117,9 +117,9 @@ Controlling Color
 For drivers supporting color control, we can use `LED_BLINK_RGB`, `LED_BLINK_RGB_RING`, `LED_BLINK_HSV`, `LED_BLINK_HSV_RING` to control the color.
 
     - `LED_BLINK_RGB`: Controls color via RGB, where R takes 8 bits (0-255), G takes 8 bits (0-255), and B takes 8 bits (0-255).
-    - `LED_BLINK_RGB_RING`: Controls color gradient through RGB, transitioning from the previous color to the current set color.
+    - `LED_BLINK_RGB_RING`: Controls color gradient through RGB, transitioning from the previous color to the current set color. Use RGB value interpolation method.
     - `LED_BLINK_HSV`: Controls color via HSV, where H takes 9 bits (0-360), S takes 8 bits (0-255), and V takes 8 bits (0-255).
-    - `LED_BLINK_HSV_RING`: Controls color gradient through HSV, transitioning from the previous color to the current set color.
+    - `LED_BLINK_HSV_RING`: Controls color gradient through HSV, transitioning from the previous color to the current set color. Use HSV value interpolation method.
 
 Example 1: Defining a color setting to display red on the indicator light.
 
@@ -140,6 +140,14 @@ Example 2: Defining a color gradient, transitioning the indicator light from red
         {LED_BLINK_RGB_RING, SET_RGB(0xFF, 0, 0), 4000},       // step3: fade from blue to red 4000ms
         {LED_BLINK_LOOP, 0, 0},                                // step4: loop from step1
     };
+
+Display color gradient using RGB interpolation. The effect is as follows.
+
+.. figure:: ../../_static/display/led_indicator_rgb_ring.png
+   :align: center
+   :width: 60%
+
+   RGB Gradient
 
 Additionally, the driver supports setting colors through HSV similarly to RGB.
 
@@ -164,6 +172,12 @@ Example 4: Defining a color gradient, transitioning the indicator light from red
         {LED_BLINK_HSV_RING, SET_HSV(0, 255, 255), 4000},      // step3: fade from blue to red 4000ms
         {LED_BLINK_LOOP, 0, 0},                                // step4: loop from step1
     };
+
+Using HSV interpolation to display color gradient, the effect is as follows. This method creates a more vibrant color gradient.
+
+.. figure:: ../../_static/display/led_indicator_hsv_ring.png
+   :align: center
+   :width: 60%
 
 Controlling Index
 ^^^^^^^^^^^^^^^^^^^

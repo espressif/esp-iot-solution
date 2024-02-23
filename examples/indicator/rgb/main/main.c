@@ -34,7 +34,8 @@ enum {
     BLINK_WHITE_BREATHE_SLOW,
     BLINK_WHITE_BREATHE_FAST,
     BLINK_BLUE_BREATH,
-    BLINK_COLOR_RING,
+    BLINK_COLOR_HSV_RING,
+    BLINK_COLOR_RGB_RING,
     BLINK_MAX,
 };
 
@@ -105,13 +106,26 @@ static const blink_step_t breath_blue_blink[] = {
 };
 
 /**
- * @brief Color gradient with a priority level of 5(lowest).
+ * @brief Color gradient by HSV with a priority level of 5.
  *
  */
-static const blink_step_t color_ring_blink[] = {
+static const blink_step_t color_hsv_ring_blink[] = {
     /*!< Set Color to RED */
     {LED_BLINK_HSV, SET_HSV(0, MAX_SATURATION, MAX_BRIGHTNESS), 0},
-    {LED_BLINK_HSV_RING, SET_HSV(MAX_HUE, MAX_SATURATION, MAX_BRIGHTNESS), 2000},
+    {LED_BLINK_HSV_RING, SET_HSV(240, MAX_SATURATION, 127), 2000},
+    {LED_BLINK_HSV_RING, SET_HSV(0, MAX_SATURATION, MAX_BRIGHTNESS), 2000},
+    {LED_BLINK_LOOP, 0, 0},
+};
+
+/**
+ * @brief Color gradient by RGB with a priority level of 5.
+ *
+ */
+static const blink_step_t color_rgb_ring_blink[] = {
+    /*!< Set Color to Green */
+    {LED_BLINK_RGB, SET_RGB(0, 255, 0), 0},
+    {LED_BLINK_RGB_RING, SET_RGB(255, 0, 255), 2000},
+    {LED_BLINK_RGB_RING, SET_RGB(0, 255, 0), 2000},
     {LED_BLINK_LOOP, 0, 0},
 };
 
@@ -121,7 +135,8 @@ blink_step_t const *led_mode[] = {
     [BLINK_WHITE_BREATHE_SLOW] = breath_white_slow_blink,
     [BLINK_WHITE_BREATHE_FAST] = breath_white_fast_blink,
     [BLINK_BLUE_BREATH] = breath_blue_blink,
-    [BLINK_COLOR_RING] = color_ring_blink,
+    [BLINK_COLOR_HSV_RING] = color_hsv_ring_blink,
+    [BLINK_COLOR_RGB_RING] = color_rgb_ring_blink,
     [BLINK_MAX] = NULL,
 };
 
