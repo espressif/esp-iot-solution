@@ -7,6 +7,7 @@
 #include "esp_log.h"
 #include "xpt2046.h"
 #include "ft5x06.h"
+#include "res4w.h"
 
 static const char *TAG = "touch panel driver";
 
@@ -23,6 +24,9 @@ extern touch_panel_driver_t ft5x06_default_driver;
 #endif
 #ifdef CONFIG_TOUCH_DRIVER_NS2016
 extern touch_panel_driver_t ns2016_default_driver;
+#endif
+#ifdef CONFIG_TOUCH_DRIVER_RES4W
+extern touch_panel_driver_t res4w_default_driver;
 #endif
 
 esp_err_t touch_panel_find_driver(touch_panel_controller_t controller, touch_panel_driver_t *out_driver)
@@ -44,6 +48,11 @@ esp_err_t touch_panel_find_driver(touch_panel_controller_t controller, touch_pan
 #ifdef CONFIG_TOUCH_DRIVER_NS2016
     case TOUCH_PANEL_CONTROLLER_NS2016:
         *out_driver = ns2016_default_driver;
+        break;
+#endif
+#ifdef CONFIG_TOUCH_DRIVER_RES4W
+    case TOUCH_PANEL_CONTROLLER_RES4W:
+        *out_driver = res4w_default_driver;
         break;
 #endif
     default:
