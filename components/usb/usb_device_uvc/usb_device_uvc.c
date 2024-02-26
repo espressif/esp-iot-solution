@@ -11,7 +11,6 @@
 #include "esp_check.h"
 #include "esp_private/usb_phy.h"
 #include "tusb.h"
-#include "usb_descriptors.h"
 #include "usb_device_uvc.h"
 
 static const char *TAG = "usbd_uvc";

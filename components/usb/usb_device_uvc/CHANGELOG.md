@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v0.1.0 2024-2-20
+
+* Break the bidirectional dependency with tinyusb
+
 ## v0.0.2 2023-12-06
 
 * Add documentation : https://docs.espressif.com/projects/esp-iot-solution/en/latest/usb/usb_device/usb_device_uvc.html

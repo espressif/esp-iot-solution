@@ -213,6 +213,9 @@
   - "components/usb/iot_usbh_modem/**/*"
   - "components/tools/cmake_utilities/package_manager.cmake"
 
+.patterns-components_usb_usb_device_uvc: &patterns-components_usb_usb_device_uvc
+  - "components/usb/usb_device_uvc/**/*"
+
 .patterns-components_usb_usb_stream: &patterns-components_usb_usb_stream
   - "components/usb/usb_stream/**/*"
   - "components/tools/cmake_utilities/package_manager.cmake"
@@ -973,6 +976,8 @@
     - <<: *if-trigger-job
     - <<: *if-dev-push
       changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_usb_usb_device_uvc
     - <<: *if-dev-push
       changes: *patterns-example_usb_device_usb_webcam
 
