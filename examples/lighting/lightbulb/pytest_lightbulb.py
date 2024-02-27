@@ -16,4 +16,8 @@ from pytest_embedded import Dut
 @pytest.mark.env('generic')
 
 def test_lightbulb_example(dut: Dut)-> None:
+    # Wait for exmaple's console to initialize
+    time.sleep(3)
+    # Exit example's console test mode, directly run preset lighting effects
+    dut.write('quit')
     dut.expect('Lightbulb Example End', timeout = 120)
