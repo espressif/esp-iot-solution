@@ -14,7 +14,7 @@ As one of the simplest output peripherals, LED indicators can indicate the curre
 | LED TYPES  | ON_OFF | Brightness | Breath | Color | Color ring | Addressable |
 | :--------: | :----: | :--------: | :----: | :---: | :--------: | :---------: |
 |  GPIO LED  |   √    |     ×      |   ×    |   ×   |     ×      |      ×      |
-|  PWN LED   |   √    |     √      |   √    |   ×   |     ×      |      ×      |
+|  PWM LED   |   √    |     √      |   √    |   ×   |     ×      |      ×      |
 |  RGB LED   |   √    |     √      |   √    |   √   |     √      |      ×      |
 | LED strips |   √    |     √      |   √    |   √   |     √      |      √      |
 
