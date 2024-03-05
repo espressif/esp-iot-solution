@@ -4,9 +4,11 @@
  * SPDX-License-Identifier: CC0-1.0
  */
 
+#include <esp_console.h>
 #include <esp_log.h>
 
 #include "lightbulb.h"
+#include "lightbulb_example_cmd.h"
 
 const char *TAG = "lightbulb demo";
 
@@ -128,6 +130,21 @@ void app_main(void)
     }
 
     /**
+     * @brief Initialize console function
+     *
+     */
+    err = lightbulb_example_console_init();
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Unable to initialize console, please check the log.");
+    } else {
+        ESP_LOGW(TAG, "You can use the quit command to exit console mode.");
+        while (lightbulb_example_get_console_status()) {
+            vTaskDelay(pdMS_TO_TICKS(100));
+        }
+    }
+    lightbulb_example_console_deinit();
+
+    /**
      * @brief Some preset lighting unit
      * @note Rainbow
      *
@@ -142,6 +159,7 @@ void app_main(void)
      *      These colors are from the Alexa App Color Control Panel
      *
      */
+    ESP_LOGW(TAG, "Showing some preset lighting effects.");
     uint32_t test_case = LIGHTING_RAINBOW | LIGHTING_ALEXA | LIGHTING_COLOR_EFFECT;
 #if CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_BP5758D || (TEST_PWM_RGBCW_LIGHTBULB && CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_PWM)
     test_case |= LIGHTING_BASIC_FIVE;
