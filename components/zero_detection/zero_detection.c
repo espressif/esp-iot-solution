@@ -53,7 +53,7 @@ typedef struct zero_cross {
 /**
   * @brief  Zero cross detecion driver core function
   */
-void IRAM_ATTR zero_cross_handle_interrupt(void *user_data, const mcpwm_capture_event_data_t *edata)
+static void IRAM_ATTR zero_cross_handle_interrupt(void *user_data, const mcpwm_capture_event_data_t *edata)
 {
     zero_cross_dev_t *zero_cross_dev = user_data;
     int gpio_status = 0;
@@ -197,7 +197,7 @@ static IRAM_ATTR bool zero_source_power_invalid_cb(gptimer_handle_t timer, const
     return false;
 }
 #else
-void IRAM_ATTR zero_source_power_invalid_cb(void *arg)
+static void IRAM_ATTR zero_source_power_invalid_cb(void *arg)
 {
     zero_cross_dev_t *zero_cross_dev = arg;
     zero_cross_dev->zero_source_power_invalid = true;
@@ -213,7 +213,7 @@ void IRAM_ATTR zero_source_power_invalid_cb(void *arg)
 #endif
 
 #if defined(SOC_MCPWM_SUPPORTED)
-esp_err_t zero_detect_mcpwn_init(zero_detect_handle_t zcd_handle)
+static esp_err_t zero_detect_mcpwm_init(zero_detect_handle_t zcd_handle)
 {
     esp_err_t ret = ESP_OK;
     zero_cross_dev_t *zcd = (zero_cross_dev_t *)zcd_handle;
@@ -224,7 +224,7 @@ esp_err_t zero_detect_mcpwn_init(zero_detect_handle_t zcd_handle)
         .clk_src = MCPWM_CAPTURE_CLK_SRC_DEFAULT,
         .group_id = 0,
     };
-    ESP_GOTO_ON_ERROR(mcpwm_new_capture_timer(&cap_conf, &zcd->cap_timer), err, TAG, "Install mcpwn capture timer failed");
+    ESP_GOTO_ON_ERROR(mcpwm_new_capture_timer(&cap_conf, &zcd->cap_timer), err, TAG, "Install mcpwm capture timer failed");
 
     ESP_LOGI(TAG, "Install capture channel");
 
@@ -261,7 +261,7 @@ err:
 }
 #endif
 
-esp_err_t zero_detect_gpio_init(zero_detect_handle_t zcd_handle)
+static esp_err_t zero_detect_gpio_init(zero_detect_handle_t zcd_handle)
 {
     esp_err_t ret = ESP_OK;
     zero_cross_dev_t *zcd = (zero_cross_dev_t *)zcd_handle;
@@ -289,7 +289,7 @@ err:
 }
 
 #if defined(CONFIG_USE_GPTIMER)
-esp_err_t zero_detect_gptime_init(zero_detect_handle_t zcd_handle)
+static esp_err_t zero_detect_gptime_init(zero_detect_handle_t zcd_handle)
 {
     esp_err_t ret = ESP_OK;
     zero_cross_dev_t *zcd = (zero_cross_dev_t *) zcd_handle;
@@ -327,7 +327,7 @@ err:
     return ret;
 }
 #else
-esp_err_t zero_detect_esptimer_init(zero_detect_handle_t zcd_handle)
+static esp_err_t zero_detect_esptimer_init(zero_detect_handle_t zcd_handle)
 {
     esp_err_t ret = ESP_OK;
     zero_cross_dev_t *zcd = (zero_cross_dev_t *) zcd_handle;
@@ -396,7 +396,7 @@ zero_detect_handle_t zero_detect_create(zero_detect_config_t *config)
 
 #if defined(SOC_MCPWM_SUPPORTED)
     if (zcd->zero_driver_type == MCPWM_TYPE) {
-        if (zero_detect_mcpwn_init(zcd) != ESP_OK) {
+        if (zero_detect_mcpwm_init(zcd) != ESP_OK) {
             ESP_LOGE(TAG, "MCPWM_TYPE init failed");
         }
     }

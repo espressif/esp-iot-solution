@@ -1,13 +1,19 @@
 # ChangeLog
 
-## v0.0.4 - 2023-01-10
+## v0.0.5 - 2024-3-12
+
+### Bug Fix:
+
+- Fix improper function naming.
+
+## v0.0.4 - 2024-01-10
 
 ### Enhancements:
 
 - add signal_lost_time parameter detecting signal loss
 - fixed the issue of losing collection interrupts when Ccache is turned off
 
-## v0.0.3 - 2023-01-03
+## v0.0.3 - 2024-01-03
 
 ### Bug Fix:
 
