@@ -752,8 +752,8 @@ TEST_CASE("KP18058", "[Underlying Driver]")
     driver_kp18058_t kp18058 = {
         .rgb_current_multiple = 3,
         .cw_current_multiple = 10,
-        .iic_clk = 4,
-        .iic_sda = 3,
+        .iic_clk = 5,
+        .iic_sda = 10,
         .iic_freq_khz = 300,
         .enable_iic_queue = true,
     };
@@ -847,6 +847,8 @@ TEST_CASE("KP18058", "[Underlying Driver]")
     TEST_ASSERT_EQUAL(KP18058_CHOPPING_4KHZ, kp18058_chopping_freq_mapping(4000));
     TEST_ASSERT_EQUAL(KP18058_CHOPPING_500HZ, kp18058_chopping_freq_mapping(500));
 
+    TEST_ASSERT_EQUAL(ESP_OK, kp18058_set_rgbcw_channel(512, 512, 512, 512, 512));
+    vTaskDelay(pdMS_TO_TICKS(10000));
     //7. Deinit
     TEST_ASSERT_EQUAL(ESP_OK, kp18058_set_shutdown());
     // Wait for data transmission to complete
@@ -860,8 +862,8 @@ TEST_CASE("KP18058", "[Application Layer]")
         .type = DRIVER_KP18058,
         .driver_conf.kp18058.rgb_current_multiple = 3,
         .driver_conf.kp18058.cw_current_multiple = 10,
-        .driver_conf.kp18058.iic_clk = 4,
-        .driver_conf.kp18058.iic_sda = 3,
+        .driver_conf.kp18058.iic_clk = 5,
+        .driver_conf.kp18058.iic_sda = 10,
         .driver_conf.kp18058.iic_freq_khz = 300,
         .driver_conf.kp18058.enable_iic_queue = true,
         .capability.enable_fade = true,

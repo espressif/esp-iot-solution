@@ -17,6 +17,11 @@ static esp_console_repl_t *s_repl = NULL;
 static bool is_active = false;
 
 static struct {
+    struct arg_int *ch;
+    struct arg_end *end;
+} set_ch_args;
+
+static struct {
     struct arg_int *hsv;
     struct arg_end *end;
 } set_hsv_args;
@@ -51,6 +56,24 @@ static int do_set_hsv_cmd(int argc, char **argv)
 
     return 0;
 }
+extern esp_err_t lightbulb_set_channel_group(uint16_t ch1, uint16_t ch2, uint16_t ch3, uint16_t ch4, uint16_t ch5);
+
+static int do_set_ch_cmd(int argc, char **argv)
+{
+    is_active = true;
+    int nerrors = arg_parse(argc, argv, (void **) &set_ch_args);
+    if (nerrors != 0) {
+        arg_print_errors(stderr, set_ch_args.end, argv[0]);
+        return 1;
+    }
+    if (lightbulb_set_channel_group(set_ch_args.ch->ival[0], set_ch_args.ch->ival[1], set_ch_args.ch->ival[2], set_ch_args.ch->ival[3], set_ch_args.ch->ival[4]) != ESP_OK) {
+        return 1;
+    }
+
+    return 0;
+}
+
+extern esp_err_t lightbulb_set_rgb(uint16_t r, uint8_t g, uint8_t b);
 
 static int do_set_rgb_cmd(int argc, char **argv)
 {
@@ -60,14 +83,16 @@ static int do_set_rgb_cmd(int argc, char **argv)
         arg_print_errors(stderr, set_rgb_args.end, argv[0]);
         return 1;
     }
-    uint16_t hsv[3] = {0};
-    if (lightbulb_rgb2hsv(set_rgb_args.rgb->ival[0], set_rgb_args.rgb->ival[1], set_rgb_args.rgb->ival[2], &hsv[0], (uint8_t *)&hsv[1], (uint8_t *)&hsv[2]) != ESP_OK) {
-        return 1;
-    }
+    // uint16_t hsv[3] = {0};
+    // if (lightbulb_rgb2hsv(set_rgb_args.rgb->ival[0], set_rgb_args.rgb->ival[1], set_rgb_args.rgb->ival[2], &hsv[0], (uint8_t *)&hsv[1], (uint8_t *)&hsv[2]) != ESP_OK) {
+    //     return 1;
+    // }
 
-    if (lightbulb_set_hsv(hsv[0], hsv[1], hsv[2]) != ESP_OK) {
-        return 1;
-    }
+    // if (lightbulb_set_hsv(hsv[0], hsv[1], hsv[2]) != ESP_OK) {
+    //     return 1;
+    // }
+
+    lightbulb_set_rgb(set_rgb_args.rgb->ival[0], set_rgb_args.rgb->ival[1], set_rgb_args.rgb->ival[2]);
 
     return 0;
 }
@@ -126,6 +151,17 @@ esp_err_t lightbulb_example_console_init(void)
     err |= esp_console_new_repl_uart(&uart_config, &repl_config, &s_repl);
 
     err |= esp_console_register_help_command();
+
+    set_ch_args.ch = arg_intn(NULL, NULL, NULL, 5, 5, NULL);
+    set_ch_args.end = arg_end(5);
+    const esp_console_cmd_t cmd7 = {
+        .command = "setch",
+        .help = "Use the chlightbulb",
+        .hint = NULL,
+        .argtable = &set_ch_args,
+        .func = &do_set_ch_cmd,
+    };
+    err |= esp_console_cmd_register(&cmd7);
 
     set_hsv_args.hsv = arg_intn(NULL, NULL, NULL, 3, 3, NULL);
     set_hsv_args.end = arg_end(3);

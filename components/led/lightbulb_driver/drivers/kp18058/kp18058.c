@@ -98,7 +98,7 @@ static kp18058_handle_t *s_kp18058 = NULL;
 
 static IRAM_ATTR uint8_t parity_check(uint8_t input)
 {
-#if 0
+#if 1
     uint8_t result = input;
     result ^= result >> 8;
     result ^= result >> 4;

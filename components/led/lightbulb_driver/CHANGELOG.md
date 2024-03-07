@@ -1,4 +1,9 @@
 # ChangeLog
+## v1.3.0 - 2024-06-05
+
+### Enhancements:
+
+* Add precise color control capability.
 
 ## v1.2.0 - 2024-05-22
 
