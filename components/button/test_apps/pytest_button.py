@@ -23,7 +23,7 @@ from pytest_embedded import Dut
         'defaults',
     ],
 )
-def test_usb_stream(dut: Dut)-> None:
+def test_button(dut: Dut)-> None:
     dut.expect_exact('Press ENTER to see the list of tests.')
     dut.write('[auto]')
     dut.expect_unity_test_output(timeout = 300)

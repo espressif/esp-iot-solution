@@ -226,6 +226,7 @@ esp_err_t esp_msc_ota_begin(esp_msc_ota_config_t *config, esp_msc_ota_handle_t *
     return ESP_OK;
 
 msc_cleanup:
+    esp_event_handler_unregister(ESP_MSC_HOST_EVENT, ESP_EVENT_ANY_ID, &_esp_msc_host_handler);
     vEventGroupDelete(msc_ota->mscEventGroup);
     free(msc_ota);
     return ESP_FAIL;
@@ -390,20 +391,20 @@ esp_err_t esp_msc_ota(esp_msc_ota_config_t *config)
     MSC_OTA_CHECK(err == ESP_OK, "esp_msc_ota_begin_fail", err);
 
     do {
-        esp_err_t err = esp_msc_ota_perform(msc_ota_handle);
+        err = esp_msc_ota_perform(msc_ota_handle);
         if (err != ESP_OK) {
+            ESP_LOGE(TAG, "esp_msc_ota_perform: (%s)", esp_err_to_name(err));
             break;
-            ESP_LOGE(TAG, "esp_msc_ota_perform: (%s)\n", esp_err_to_name(err));
         }
     } while (!esp_msc_ota_is_complete_data_received(msc_ota_handle));
 
     if (esp_msc_ota_is_complete_data_received(msc_ota_handle)) {
-        return esp_msc_ota_end(msc_ota_handle);
+        err = esp_msc_ota_end(msc_ota_handle);
     } else {
-        return esp_msc_ota_abort(msc_ota_handle);
+        err |= esp_msc_ota_abort(msc_ota_handle);
     }
 
-    return ESP_OK;
+    return err;
 }
 
 esp_err_t esp_msc_ota_set_msc_connect_state(esp_msc_ota_handle_t handle, bool if_connect)

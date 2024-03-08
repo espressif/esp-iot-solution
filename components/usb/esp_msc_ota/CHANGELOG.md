@@ -1,5 +1,11 @@
 # changelog
 
+## v0.1.2 - 2024-3-8
+
+### Bug Fix
+
+* Fix usb_host_uninstall fail problem.
+
 ## v0.1.1 - 2024-2-1
 
 * Add example: MSC USB OTA

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -71,19 +71,23 @@ TEST_CASE("SIMPLE MSC OTA", "[MSC OTA]")
         .host_config = DEFAULT_USB_HOST_CONFIG()
     };
     esp_msc_host_handle_t host_handle = NULL;
-    esp_msc_host_install(&msc_host_config, &host_handle);
+    TEST_ESP_OK(esp_msc_host_install(&msc_host_config, &host_handle));
     esp_msc_ota_config_t config = {
         .ota_bin_path = "/usb/ota_test.bin",
         .wait_msc_connect = pdMS_TO_TICKS(5000),
     };
-    TEST_ESP_OK(esp_msc_ota(&config));
-    esp_msc_host_uninstall(host_handle);
+    while (1) {
+        if (esp_msc_ota(&config) == ESP_OK) {
+            break;
+        }
+    }
+    TEST_ESP_OK(esp_msc_host_uninstall(host_handle));
     vTaskDelay(1000 / portTICK_PERIOD_MS);
 }
 
 TEST_CASE("Test memory leaks", "[memory leaks][MSC OTA]")
 {
-    esp_event_loop_create_default();
+    // esp_event_loop_create_default();
     esp_msc_host_config_t msc_host_config = {
         .base_path = "/usb",
         .host_driver_config = DEFAULT_MSC_HOST_DRIVER_CONFIG(),
@@ -91,9 +95,9 @@ TEST_CASE("Test memory leaks", "[memory leaks][MSC OTA]")
         .host_config = DEFAULT_USB_HOST_CONFIG()
     };
     esp_msc_host_handle_t host_handle = NULL;
-    esp_msc_host_install(&msc_host_config, &host_handle);
+    TEST_ESP_OK(esp_msc_host_install(&msc_host_config, &host_handle));
     vTaskDelay(1000 / portTICK_PERIOD_MS);
-    esp_msc_host_uninstall(host_handle);
+    TEST_ESP_OK(esp_msc_host_uninstall(host_handle));
     vTaskDelay(1000 / portTICK_PERIOD_MS);
 }
 
@@ -187,7 +191,7 @@ TEST_CASE("Auto MSC OTA", "[MSC OTA][Auto]")
         .host_config = DEFAULT_USB_HOST_CONFIG()
     };
     esp_msc_host_handle_t host_handle = NULL;
-    esp_msc_host_install(&msc_host_config, &host_handle);
+    TEST_ESP_OK(esp_msc_host_install(&msc_host_config, &host_handle));
 
     esp_msc_ota_handle_t msc_ota_handle = NULL;
     esp_msc_ota_config_t config = {
@@ -200,6 +204,6 @@ TEST_CASE("Auto MSC OTA", "[MSC OTA][Auto]")
     TEST_ASSERT_EQUAL(ESP_OK, iot_board_usb_set_mode(USB_DEVICE_MODE));
     TEST_ASSERT_EQUAL(ESP_OK, iot_board_usb_device_set_power(false, false));
 
-    esp_msc_host_uninstall(host_handle);
+    TEST_ESP_OK(esp_msc_host_uninstall(host_handle));
     vTaskDelay(1000 / portTICK_PERIOD_MS);
 }
