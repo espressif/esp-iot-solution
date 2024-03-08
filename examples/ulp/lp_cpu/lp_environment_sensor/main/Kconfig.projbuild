@@ -1,0 +1,26 @@
+menu "LP Environment Sensor Configuration"
+    config LP_CPU_WAKEUP_TIME_SECOND
+        int "LP CPU wakeup time(seconds)"
+        default 6
+        help
+        Set LP CPU wakeup time(seconds).
+
+    config ULP_UART_PRINT
+        bool "Print temperature and humidity data using ULP UART"
+        default n
+        help
+        Enable print temperature and humidity data using ULP UART.
+
+    config REPORT_THS_DATA
+        bool "Report temperature and humidity data to RainMaker"
+        default y
+        help
+        Enable report temperature and humidity data to RainMaker.
+
+    config UPDATE_WEATHER_DATA
+        bool "Get weather data from HTTP"
+        default y
+        depends on REPORT_THS_DATA
+        help
+        Enable get weather data from HTTP.
+endmenu

@@ -1,0 +1,9 @@
+dependencies:
+  espressif/esp_rainmaker: "^1.1.0"
+  qrcode:
+    git: https://github.com/espressif/esp-rainmaker
+    path: examples/common/qrcode
+    version: "*"
+
+  protocol_examples_common:
+    path: ${IDF_PATH}/examples/common_components/protocol_examples_common
