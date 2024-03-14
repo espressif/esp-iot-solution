@@ -15,25 +15,18 @@
 
 static const char *TAG = "esp_msc_host";
 
-#define READY_TO_UNINSTALL (HOST_NO_CLIENT | HOST_ALL_FREE)
-
 ESP_EVENT_DEFINE_BASE(ESP_MSC_HOST_EVENT);
 SemaphoreHandle_t msc_read_semaphore;
 
 typedef struct {
-    bool if_connect;
     EventGroupHandle_t usb_flags;
     const char *base_path;
-    TaskHandle_t usb_event_task_handle;
-    TaskHandle_t msc_host_task_handle;
     esp_vfs_fat_mount_config_t mount_config;
 } esp_msc_host_t;
 
 static esp_msc_host_t *q_msc_host = NULL;
 
 typedef enum {
-    HOST_NO_CLIENT = 0x1,
-    HOST_ALL_FREE = 0x2,
     DEVICE_CONNECTED = 0x4,
     DEVICE_DISCONNECTED = 0x8,
     HOST_TOBE_UNINSTALL = 0x10,
@@ -81,12 +74,10 @@ static void _msc_event_cb(const msc_host_event_t *event, void *arg)
         ESP_LOGI(TAG, "MSC device connected");
         xEventGroupSetBits(msc_host->usb_flags, DEVICE_CONNECTED | (event->device.address << 6));
         esp_msc_host_dispatch_event(ESP_MSC_HOST_CONNECT, NULL, 0);
-        msc_host->if_connect = true;
     } else if (event->event == MSC_DEVICE_DISCONNECTED) {
         ESP_LOGI(TAG, "MSC device disconnected");
         xEventGroupSetBits(msc_host->usb_flags, DEVICE_DISCONNECTED);
         esp_msc_host_dispatch_event(ESP_MSC_HOST_DISCONNECT, NULL, 0);
-        msc_host->if_connect = false;
     }
 }
 
@@ -135,7 +126,6 @@ static void msc_host_task(void *args)
         while (!wait_for_event(msc_host->usb_flags, DEVICE_DISCONNECTED, 200)) {
             vTaskDelay(1000 / portTICK_PERIOD_MS);
         }
-        xEventGroupClearBits(msc_host->usb_flags, READY_TO_UNINSTALL);
 
         // Ensure that no client reads the MSC before unloading the device
         xSemaphoreTake(msc_read_semaphore, portMAX_DELAY);
@@ -152,16 +142,7 @@ install_fail:
     ESP_LOGI(TAG, "Uninstall USB ...");
     err = msc_host_uninstall();
     MSC_OTA_CHECK_CONTINUE(err == ESP_OK, "Failed to uninstall MSC host");
-    if (msc_host->if_connect) {
-        wait_for_event(msc_host->usb_flags, READY_TO_UNINSTALL, portMAX_DELAY);
-    } else {
-        wait_for_event(msc_host->usb_flags, HOST_NO_CLIENT, portMAX_DELAY);
-    }
-    err = usb_host_uninstall();
-    MSC_OTA_CHECK_CONTINUE(err == ESP_OK, "Failed to uninstall USB host");
-    ESP_LOGI(TAG, "Uninstall Done");
 
-    xEventGroupSetBits(msc_host->usb_flags, HOST_UNINSTALL);
     vTaskDelete(NULL);
 }
 
@@ -169,22 +150,25 @@ install_fail:
 static void usb_event_task(void *args)
 {
     esp_msc_host_t *msc_host = (esp_msc_host_t *)args;
+    bool has_clients = true;
     while (1) {
         uint32_t event_flags;
         usb_host_lib_handle_events(portMAX_DELAY, &event_flags);
 
         // Release devices once all clients has deregistered
         if (event_flags & USB_HOST_LIB_EVENT_FLAGS_NO_CLIENTS) {
-            usb_host_device_free_all();
-            xEventGroupSetBits(msc_host->usb_flags, HOST_NO_CLIENT);
+            has_clients = false;
+            if (usb_host_device_free_all() == ESP_OK) {
+                break;
+            }
         }
-        // Give ready_to_uninstall_usb semaphore to indicate that USB Host library
         // can be deinitialized, and terminate this task.
-        if (event_flags & USB_HOST_LIB_EVENT_FLAGS_ALL_FREE) {
-            xEventGroupSetBits(msc_host->usb_flags, HOST_ALL_FREE);
+        if (event_flags & USB_HOST_LIB_EVENT_FLAGS_ALL_FREE && !has_clients) {
+            break;
         }
     }
 
+    xEventGroupSetBits(msc_host->usb_flags, HOST_UNINSTALL);
     vTaskDelete(NULL);
 }
 
@@ -201,6 +185,13 @@ esp_err_t esp_msc_host_install(esp_msc_host_config_t *config, esp_msc_host_handl
     msc_host->base_path = config->base_path;
     memcpy(&msc_host->mount_config, &config->vfs_fat_mount_config, sizeof(esp_vfs_fat_mount_config_t));
 
+    // Ensure that there are no read operations from the MSC by the client before unmounting the device.
+    msc_read_semaphore = xSemaphoreCreateBinary();
+    MSC_OTA_CHECK_GOTO(msc_read_semaphore != NULL, "Failed to create semaphore", install_fail);
+
+    msc_host->usb_flags = xEventGroupCreate();
+    MSC_OTA_CHECK_GOTO(msc_host->usb_flags != NULL, "Failed to create event group", install_fail);
+
     err = usb_host_install(&config->host_config);
     MSC_OTA_CHECK_GOTO(err == ESP_OK, "Failed to install USB host", install_fail);
 
@@ -210,26 +201,24 @@ esp_err_t esp_msc_host_install(esp_msc_host_config_t *config, esp_msc_host_handl
     msc_config.callback = _msc_event_cb;
     msc_config.callback_arg = msc_host;
 
+    BaseType_t task_created = xTaskCreate(usb_event_task, "usb_event", 4096, msc_host, 2, NULL);
+    MSC_OTA_CHECK_GOTO(task_created == pdPASS, "Failed to create USB events task", usb_install_fail);
+
     err = msc_host_install(&msc_config);
     MSC_OTA_CHECK_GOTO(err == ESP_OK, "Failed to install MSC host", usb_install_fail);
 
-    msc_host->usb_flags = xEventGroupCreate();
-    MSC_OTA_CHECK_GOTO(msc_host->usb_flags != NULL, "Failed to create event group", usb_install_fail);
+    task_created = xTaskCreate(msc_host_task, "msc_host", 4096, msc_host, 5, NULL);
+    MSC_OTA_CHECK_GOTO(task_created == pdPASS, "Failed to create MSC host task", msc_install_fail);
 
-    BaseType_t task_created = xTaskCreate(usb_event_task, "usb_event", 4096, msc_host, 2, &msc_host->usb_event_task_handle);
-    MSC_OTA_CHECK_GOTO(task_created == pdPASS, "Failed to create USB events task", usb_install_fail);
-
-    task_created = xTaskCreate(msc_host_task, "msc_host", 4096, msc_host, 5, &msc_host->msc_host_task_handle);
-    MSC_OTA_CHECK_GOTO(task_created == pdPASS, "Failed to create MSC host task", usb_install_fail);
-    ESP_LOGI(TAG, "MSC host installed\n");
-
-    // Ensure that there are no read operations from the MSC by the client before unmounting the device.
-    msc_read_semaphore = xSemaphoreCreateBinary();
-    MSC_OTA_CHECK_GOTO(msc_read_semaphore != NULL, "Failed to create semaphore", usb_install_fail);
     *handle = (esp_msc_host_handle_t)msc_host;
     q_msc_host = msc_host;
 
+    ESP_LOGI(TAG, "MSC Host Install Done\n");
     return ESP_OK;
+
+msc_install_fail:
+    msc_host_uninstall();
+    wait_for_event(msc_host->usb_flags, HOST_UNINSTALL, portMAX_DELAY);
 
 usb_install_fail:
     usb_host_uninstall();
@@ -238,12 +227,11 @@ install_fail:
     if (msc_host->usb_flags != NULL) {
         vEventGroupDelete(msc_host->usb_flags);
     }
-    if (msc_host->usb_event_task_handle != NULL) {
-        vTaskDelete(msc_host->usb_event_task_handle);
+
+    if (msc_read_semaphore) {
+        vSemaphoreDelete(msc_read_semaphore); // free the semaphore
     }
-    if (msc_host->msc_host_task_handle != NULL) {
-        vTaskDelete(msc_host->msc_host_task_handle);
-    }
+
     free(msc_host);
     return ESP_FAIL;
 }
@@ -255,14 +243,15 @@ esp_err_t esp_msc_host_uninstall(esp_msc_host_handle_t handle)
     ESP_LOGI(TAG, "Please remove the USB flash drive.");
     xEventGroupSetBits(msc_host->usb_flags, HOST_TOBE_UNINSTALL);
     wait_for_event(msc_host->usb_flags, HOST_UNINSTALL, portMAX_DELAY);
-    if (msc_host->usb_event_task_handle != NULL) {
-        vTaskDelete(msc_host->usb_event_task_handle);
-    }
+    usb_host_uninstall();
     if (msc_host->usb_flags != NULL) {
         vEventGroupDelete(msc_host->usb_flags);
     }
     free(msc_host);
     q_msc_host = NULL;
-    vSemaphoreDelete(msc_read_semaphore); // free the semaphore
+    if (msc_read_semaphore) {
+        vSemaphoreDelete(msc_read_semaphore); // free the semaphore
+    }
+    ESP_LOGI(TAG, "MSC Host Uninstall Done");
     return ESP_OK;
 }
