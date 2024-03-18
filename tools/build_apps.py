@@ -27,6 +27,10 @@ IGNORE_WARNINGS = [
     r'warning: unknown kconfig symbol \'ESP32S3_DEFAULT_CPU_FREQ_160\' assigned to*',
     r'warning: unknown kconfig symbol \'ESP32S3_DEFAULT_CPU_FREQ_240\' assigned to*',
     r'warning: unknown kconfig symbol \'FATFS_LONG_FILENAMES\' assigned to \'y\' in /builds/ae_group/esp-iot-solution/components/usb/usb_stream/test_apps/*',
+    r'warning High Performance Mode \(QSPI Flash > 80MHz\) is optional feature that depends on flash model. Read Docs First!',
+    r'warning HPM-DC, which helps to run some flash > 80MHz by adjusting dummy cycles, is no longer enabled by default.',
+    r'warning To enable this feature, your bootloader needs to have the support for it \(by explicitly selecting BOOTLOADER_FLASH_DC_AWARE\)',
+    r'warning If your bootloader does not support it, select SPI_FLASH_HPM_DC_DISABLE to suppress the warning. READ DOCS FIRST!',
 ]
 
 def _get_idf_version():
