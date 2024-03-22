@@ -45,6 +45,12 @@ The connection between ESP Board and the LCD is as follows:
 |                       |              |                   |
 |                     DE+--------------+DE                 |
 |                       |              |                   |
+|                     CS+--------------+CS                 |
+|                       |              |                   |
+|                    SCK+--------------+SCK                |
+|                       |              |                   |
+|                    SDA+--------------+SDA                |
+|                       |              |                   |
 |               BK_LIGHT+--------------+BLK                |
 +-----------------------+              |                   |
                                3V3-----+DISP_EN            |
@@ -52,10 +58,12 @@ The connection between ESP Board and the LCD is as follows:
                                        +-------------------+
 ```
 
-* The LCD parameters and GPIO number used by this example can be changed in [lv_port.h](main/lv_port.h).
-* Especially, please pay attention to the **vendor specific initialization**, it can be different between manufacturers and should consult the LCD supplier for initialization sequence code.
-* Furthermore, pay attention to the voltage level used when turning on the LCD backlight. Some LCD modules require a low voltage level to turn on, while others require a high voltage level. You can modify the macro definition `EXAMPLE_LCD_BK_LIGHT_ON_LEVEL` to change the backlight voltage level in [lv_port.h](main/lv_port.h).
-* If the RGB LCD panel exclusively supports the DE mode, you can even bypass the HSYNC and VSYNC signals by assigning `EXAMPLE_PIN_NUM_HSYNC` and `EXAMPLE_PIN_NUM_VSYNC` with -1.
+* The LCD parameters and GPIO number used by this example can be changed in [example_rgb_lcd_8bit.c](main/example_rgb_lcd_8bit.c). Especially, please pay attention to the **vendor specific initialization**, it can be different between manufacturers and should consult the LCD supplier for initialization sequence code.
+* The LVGL parameters can be changed not only through `menuconfig` but also directly in [lvgl_conf.h](components/lvgl/lvgl/lvgl_conf.h)
+
+### Configure the Project
+
+Run `idf.py menuconfig` and navigate to `Example Configuration` menu.
 
 ### Build and Flash
 

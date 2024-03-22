@@ -1,4 +1,4 @@
-version: "1.0.0"
+version: "1.0.1"
 targets:
   - esp32s3
 description: ESP LCD ST7701
