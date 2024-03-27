@@ -7,5 +7,6 @@ Input Device
     :maxdepth: 1
 
     Button <button>
+    Keyboard Button <keyboard_button>
     Knob <knob>
     Touch Panel <touch_panel>

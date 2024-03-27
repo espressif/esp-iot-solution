@@ -75,11 +75,11 @@ esp-iot-solution 编码规范
 .. code:: c
 
     /**
-    * @brief 
-    * 
-    * @param port 
-    * @param conf 
-    * @return i2c_bus_handle_t 
+    * @brief
+    *
+    * @param port
+    * @param conf
+    * @return i2c_bus_handle_t
     */
     i2c_bus_handle_t iot_i2c_bus_create(i2c_port_t port, i2c_config_t* conf);
 
@@ -89,16 +89,16 @@ esp-iot-solution 编码规范
 .. code:: c
 
     /**
-    * @brief Create an I2C bus instance then return a handle if created successfully. 
+    * @brief Create an I2C bus instance then return a handle if created successfully.
     * @note Each I2C bus works in a singleton mode, which means for an i2c port only one group parameter works. When
     * iot_i2c_bus_create is called more than one time for the same i2c port, following parameter will override the previous one.
-    * 
+    *
     * @param[in] port I2C port number
     * @param[in] conf Pointer to I2C parameters
-    * @return i2c_bus_handle_t Return the I2C bus handle if created successfully, return NULL if failed. 
+    * @return i2c_bus_handle_t Return the I2C bus handle if created successfully, return NULL if failed.
     */
     i2c_bus_handle_t iot_i2c_bus_create(i2c_port_t port, i2c_config_t* conf);
-  
+
 
 -  版权声明注释（第三方代码，请保留版权声明信息）
 
@@ -172,17 +172,17 @@ esp-iot-solution 编码规范
 
 -  常用缩写列表
 
-+--------+-----------+--------+---------------+---------+-------------+--------+--------------------------+
-| 缩写   | 全称      | 缩写   | 全称          | 缩写    | 全称        | 缩写   | 全称                     |
-+========+===========+========+===============+=========+=============+========+==========================+
-| addr   | address   | id     | identifier    | len     | length      | ptr    | pointer                  |
-+--------+-----------+--------+---------------+---------+-------------+--------+--------------------------+
-| buf    | buffer    | info   | information   | obj     | object      | ret    | return                   |
-+--------+-----------+--------+---------------+---------+-------------+--------+--------------------------+
-| cfg    | command   | hdr    | header        | param   | parameter   | temp   | temporary、temperature   |
-+--------+-----------+--------+---------------+---------+-------------+--------+--------------------------+
-| cmd    | command   | init   | initialize    | pos     | position    | ts     | timestamp                |
-+--------+-----------+--------+---------------+---------+-------------+--------+--------------------------+
++------+---------+------+-------------+-------+-----------+------+------------------------+
+| 缩写 |  全称   | 缩写 |    全称     | 缩写  |   全称    | 缩写 |          全称          |
++======+=========+======+=============+=======+===========+======+========================+
+| addr | address | id   | identifier  | len   | length    | ptr  | pointer                |
++------+---------+------+-------------+-------+-----------+------+------------------------+
+| buf  | buffer  | info | information | obj   | object    | ret  | return                 |
++------+---------+------+-------------+-------+-----------+------+------------------------+
+| cfg  | config  | hdr  | header      | param | parameter | temp | temporary、temperature |
++------+---------+------+-------------+-------+-----------+------+------------------------+
+| cmd  | command | init | initialize  | pos   | position  | ts   | timestamp              |
++------+---------+------+-------------+-------+-----------+------+------------------------+
 
 类型定义
 --------
@@ -197,10 +197,10 @@ esp-iot-solution 编码规范
 
 .. code:: c
 
-    typedef enum { 
+    typedef enum {
         MODULE_FOO_ONE,
         MODULE_FOO_TWO,
-        MODULE_FOO_THREE 
+        MODULE_FOO_THREE
     } module_foo_t;
 
 格式和排版规范
