@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: CC0-1.0
  */
@@ -38,28 +38,20 @@
 static const char *TAG = "example";
 static SemaphoreHandle_t lvgl_mux = NULL;
 
-#define LCD_HOST    SPI2_HOST
-#define TOUCH_HOST  I2C_NUM_0
-
-#if CONFIG_LV_COLOR_DEPTH == 32
-#define LCD_BIT_PER_PIXEL       (24)
-#elif CONFIG_LV_COLOR_DEPTH == 16
-#define LCD_BIT_PER_PIXEL       (16)
-#endif
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////// Please update the following configuration according to your LCD spec //////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#define EXAMPLE_LCD_HOST               (SPI2_HOST)
+#define EXAMPLE_PIN_NUM_LCD_CS         (GPIO_NUM_9)
+#define EXAMPLE_PIN_NUM_LCD_PCLK       (GPIO_NUM_10)
+#define EXAMPLE_PIN_NUM_LCD_DATA0      (GPIO_NUM_11)
+#define EXAMPLE_PIN_NUM_LCD_DATA1      (GPIO_NUM_12)
+#define EXAMPLE_PIN_NUM_LCD_DATA2      (GPIO_NUM_13)
+#define EXAMPLE_PIN_NUM_LCD_DATA3      (GPIO_NUM_14)
+#define EXAMPLE_PIN_NUM_LCD_RST        (GPIO_NUM_0)     // -1 if not used
+#define EXAMPLE_PIN_NUM_BK_LIGHT       (GPIO_NUM_1)     // -1 if not used
 #define EXAMPLE_LCD_BK_LIGHT_ON_LEVEL  1
 #define EXAMPLE_LCD_BK_LIGHT_OFF_LEVEL !EXAMPLE_LCD_BK_LIGHT_ON_LEVEL
-#define EXAMPLE_PIN_NUM_LCD_CS            (GPIO_NUM_9)
-#define EXAMPLE_PIN_NUM_LCD_PCLK          (GPIO_NUM_10)
-#define EXAMPLE_PIN_NUM_LCD_DATA0         (GPIO_NUM_11)
-#define EXAMPLE_PIN_NUM_LCD_DATA1         (GPIO_NUM_12)
-#define EXAMPLE_PIN_NUM_LCD_DATA2         (GPIO_NUM_13)
-#define EXAMPLE_PIN_NUM_LCD_DATA3         (GPIO_NUM_14)
-#define EXAMPLE_PIN_NUM_LCD_RST           (GPIO_NUM_17)
-#define EXAMPLE_PIN_NUM_BK_LIGHT          (GPIO_NUM_0)
 
 // The pixel number in horizontal and vertical
 #if CONFIG_EXAMPLE_LCD_CONTROLLER_SPD2010
@@ -73,18 +65,32 @@ static SemaphoreHandle_t lvgl_mux = NULL;
 #define EXAMPLE_LCD_V_RES              454
 #endif
 
+#if CONFIG_LV_COLOR_DEPTH == 32
+#define LCD_BIT_PER_PIXEL       (24)
+#elif CONFIG_LV_COLOR_DEPTH == 16
+#define LCD_BIT_PER_PIXEL       (16)
+#endif
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////// Please update the following configuration according to your touch spec ////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #if CONFIG_EXAMPLE_LCD_TOUCH_ENABLED
+#define EXAMPLE_TOUCH_HOST                (I2C_NUM_0)
 #define EXAMPLE_PIN_NUM_TOUCH_SCL         (GPIO_NUM_18)
 #define EXAMPLE_PIN_NUM_TOUCH_SDA         (GPIO_NUM_8)
-#define EXAMPLE_PIN_NUM_TOUCH_RST         (GPIO_NUM_21)
-#define EXAMPLE_PIN_NUM_TOUCH_INT         (GPIO_NUM_47)
+#define EXAMPLE_PIN_NUM_TOUCH_RST         (-1)          // -1 if not used
+#define EXAMPLE_PIN_NUM_TOUCH_INT         (GPIO_NUM_2)  // -1 if not used
 
 esp_lcd_touch_handle_t tp = NULL;
 #endif
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////// Please update the following configuration according to LVGL ///////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#define EXAMPLE_LVGL_BUFF_SIZE         (EXAMPLE_LCD_H_RES * 20)
 #define EXAMPLE_LVGL_TICK_PERIOD_MS    2
 #define EXAMPLE_LVGL_TASK_MAX_DELAY_MS 500
-#define EXAMPLE_LVGL_TASK_MIN_DELAY_MS 1
+#define EXAMPLE_LVGL_TASK_MIN_DELAY_MS 2
 #define EXAMPLE_LVGL_TASK_STACK_SIZE   (4 * 1024)
 #define EXAMPLE_LVGL_TASK_PRIORITY     2
 
@@ -135,41 +141,21 @@ static void example_lvgl_update_cb(lv_disp_drv_t *drv)
         // Rotate LCD display
         esp_lcd_panel_swap_xy(panel_handle, false);
         esp_lcd_panel_mirror(panel_handle, true, false);
-#if CONFIG_EXAMPLE_LCD_TOUCH_ENABLED
-        // Rotate LCD touch
-        esp_lcd_touch_set_mirror_y(tp, false);
-        esp_lcd_touch_set_mirror_x(tp, false);
-#endif
         break;
     case LV_DISP_ROT_90:
         // Rotate LCD display
         esp_lcd_panel_swap_xy(panel_handle, true);
         esp_lcd_panel_mirror(panel_handle, true, true);
-#if CONFIG_EXAMPLE_LCD_TOUCH_ENABLED
-        // Rotate LCD touch
-        esp_lcd_touch_set_mirror_y(tp, false);
-        esp_lcd_touch_set_mirror_x(tp, false);
-#endif
         break;
     case LV_DISP_ROT_180:
         // Rotate LCD display
         esp_lcd_panel_swap_xy(panel_handle, false);
         esp_lcd_panel_mirror(panel_handle, false, true);
-#if CONFIG_EXAMPLE_LCD_TOUCH_ENABLED
-        // Rotate LCD touch
-        esp_lcd_touch_set_mirror_y(tp, false);
-        esp_lcd_touch_set_mirror_x(tp, false);
-#endif
         break;
     case LV_DISP_ROT_270:
         // Rotate LCD display
         esp_lcd_panel_swap_xy(panel_handle, true);
         esp_lcd_panel_mirror(panel_handle, false, false);
-#if CONFIG_EXAMPLE_LCD_TOUCH_ENABLED
-        // Rotate LCD touch
-        esp_lcd_touch_set_mirror_y(tp, false);
-        esp_lcd_touch_set_mirror_x(tp, false);
-#endif
         break;
     }
 }
@@ -208,10 +194,14 @@ static void example_lvgl_touch_cb(lv_indev_drv_t *drv, lv_indev_data_t *data)
     uint16_t tp_x;
     uint16_t tp_y;
     uint8_t tp_cnt = 0;
+#if EXAMPLE_PIN_NUM_TOUCH_INT >= 0
     /* Read data from touch controller into memory */
     if (xSemaphoreTake(touch_mux, 0) == pdTRUE) {
         esp_lcd_touch_read_data(tp);
     }
+#else
+    esp_lcd_touch_read_data(tp);
+#endif
 
     /* Read data from touch controller */
     bool tp_pressed = esp_lcd_touch_get_coordinates(tp, &tp_x, &tp_y, NULL, &tp_cnt, 1);
@@ -276,75 +266,99 @@ static void example_lvgl_port_task(void *arg)
     }
 }
 
+#if CONFIG_EXAMPLE_LCD_CONTROLLER_GC9B71
+// static const gc9b71_lcd_init_cmd_t lcd_init_cmds[] = {
+// //  {cmd, { data }, data_size, delay_ms}
+//    {0xfe, (uint8_t []){0x00}, 0, 0},
+//    {0xef, (uint8_t []){0x00}, 0, 0},
+//    {0x80, (uint8_t []){0x11}, 1, 0},
+//    {0x81, (uint8_t []){0x70}, 1, 0},
+//     ...
+// };
+#elif CONFIG_EXAMPLE_LCD_CONTROLLER_SPD2010
+// static const spd2010_lcd_init_cmd_t lcd_init_cmds[] = {
+// //  {cmd, { data }, data_size, delay_ms}
+//    {0xFF, (uint8_t []){0x20, 0x10, 0x10}, 3, 0},
+//    {0x0C, (uint8_t []){0x11}, 1, 0},
+//    {0x10, (uint8_t []){0x02}, 1, 0},
+//    {0x11, (uint8_t []){0x11}, 1, 0},
+//     ...
+// };
+#elif CONFIG_EXAMPLE_LCD_CONTROLLER_SH8601
+// static const sh8601_lcd_init_cmd_t lcd_init_cmds[] = {
+// //  {cmd, { data }, data_size, delay_ms}
+//    {0x44, (uint8_t []){0x00, 0xc8}, 2, 0},
+//    {0x35, (uint8_t []){0x00}, 0, 0},
+//    {0x53, (uint8_t []){0x20}, 1, 25},
+//    {0x29, (uint8_t []){0x00}, 0, 120},
+//     ...
+// };
+#endif
+
 void app_main(void)
 {
     static lv_disp_draw_buf_t disp_buf; // contains internal graphic buffer(s) called draw buffer(s)
     static lv_disp_drv_t disp_drv;      // contains callback functions
 
-    ESP_LOGI(TAG, "Turn off LCD backlight");
-    gpio_config_t bk_gpio_config = {
-        .mode = GPIO_MODE_OUTPUT,
-        .pin_bit_mask = 1ULL << EXAMPLE_PIN_NUM_BK_LIGHT
-    };
-    ESP_ERROR_CHECK(gpio_config(&bk_gpio_config));
+    if (EXAMPLE_PIN_NUM_BK_LIGHT >= 0) {
+        ESP_LOGI(TAG, "Turn off LCD backlight");
+        gpio_config_t bk_gpio_config = {
+            .mode = GPIO_MODE_OUTPUT,
+            .pin_bit_mask = 1ULL << EXAMPLE_PIN_NUM_BK_LIGHT
+        };
+        ESP_ERROR_CHECK(gpio_config(&bk_gpio_config));
+    }
 
     ESP_LOGI(TAG, "Initialize SPI bus");
+    const spi_bus_config_t buscfg =
 #if CONFIG_EXAMPLE_LCD_CONTROLLER_GC9B71
-    const spi_bus_config_t buscfg = GC9B71_PANEL_BUS_QSPI_CONFIG(EXAMPLE_PIN_NUM_LCD_PCLK,
-                                                                 EXAMPLE_PIN_NUM_LCD_DATA0,
-                                                                 EXAMPLE_PIN_NUM_LCD_DATA1,
-                                                                 EXAMPLE_PIN_NUM_LCD_DATA2,
-                                                                 EXAMPLE_PIN_NUM_LCD_DATA3,
-                                                                 EXAMPLE_LCD_H_RES * EXAMPLE_LCD_V_RES * LCD_BIT_PER_PIXEL / 8);
+        GC9B71_PANEL_BUS_QSPI_CONFIG(EXAMPLE_PIN_NUM_LCD_PCLK, EXAMPLE_PIN_NUM_LCD_DATA0,
+                                     EXAMPLE_PIN_NUM_LCD_DATA1, EXAMPLE_PIN_NUM_LCD_DATA2,
+                                     EXAMPLE_PIN_NUM_LCD_DATA3, EXAMPLE_LCD_H_RES * EXAMPLE_LCD_V_RES * LCD_BIT_PER_PIXEL / 8);
 #elif CONFIG_EXAMPLE_LCD_CONTROLLER_SPD2010
-    const spi_bus_config_t buscfg = SPD2010_PANEL_BUS_QSPI_CONFIG(EXAMPLE_PIN_NUM_LCD_PCLK,
-                                                                  EXAMPLE_PIN_NUM_LCD_DATA0,
-                                                                  EXAMPLE_PIN_NUM_LCD_DATA1,
-                                                                  EXAMPLE_PIN_NUM_LCD_DATA2,
-                                                                  EXAMPLE_PIN_NUM_LCD_DATA3,
-                                                                  EXAMPLE_LCD_H_RES * EXAMPLE_LCD_V_RES * LCD_BIT_PER_PIXEL / 8);
+        SPD2010_PANEL_BUS_QSPI_CONFIG(EXAMPLE_PIN_NUM_LCD_PCLK, EXAMPLE_PIN_NUM_LCD_DATA0,
+                                      EXAMPLE_PIN_NUM_LCD_DATA1, EXAMPLE_PIN_NUM_LCD_DATA2,
+                                      EXAMPLE_PIN_NUM_LCD_DATA3, EXAMPLE_LCD_H_RES * EXAMPLE_LCD_V_RES * LCD_BIT_PER_PIXEL / 8);
 #elif CONFIG_EXAMPLE_LCD_CONTROLLER_SH8601
-    const spi_bus_config_t buscfg = SH8601_PANEL_BUS_QSPI_CONFIG(EXAMPLE_PIN_NUM_LCD_PCLK,
-                                                                 EXAMPLE_PIN_NUM_LCD_DATA0,
-                                                                 EXAMPLE_PIN_NUM_LCD_DATA1,
-                                                                 EXAMPLE_PIN_NUM_LCD_DATA2,
-                                                                 EXAMPLE_PIN_NUM_LCD_DATA3,
-                                                                 EXAMPLE_LCD_H_RES * EXAMPLE_LCD_V_RES * LCD_BIT_PER_PIXEL / 8);
+        SH8601_PANEL_BUS_QSPI_CONFIG(EXAMPLE_PIN_NUM_LCD_PCLK, EXAMPLE_PIN_NUM_LCD_DATA0,
+                                     EXAMPLE_PIN_NUM_LCD_DATA1, EXAMPLE_PIN_NUM_LCD_DATA2,
+                                     EXAMPLE_PIN_NUM_LCD_DATA3, EXAMPLE_LCD_H_RES * EXAMPLE_LCD_V_RES * LCD_BIT_PER_PIXEL / 8);
 #endif
-    ESP_ERROR_CHECK(spi_bus_initialize(LCD_HOST, &buscfg, SPI_DMA_CH_AUTO));
+    ESP_ERROR_CHECK(spi_bus_initialize(EXAMPLE_LCD_HOST, &buscfg, SPI_DMA_CH_AUTO));
 
     ESP_LOGI(TAG, "Install panel IO");
     esp_lcd_panel_io_handle_t io_handle = NULL;
+    const esp_lcd_panel_io_spi_config_t io_config =
 #if CONFIG_EXAMPLE_LCD_CONTROLLER_GC9B71
-    const esp_lcd_panel_io_spi_config_t io_config = GC9B71_PANEL_IO_QSPI_CONFIG(EXAMPLE_PIN_NUM_LCD_CS,
-                                                                                example_notify_lvgl_flush_ready,
-                                                                                &disp_drv);
+        GC9B71_PANEL_IO_QSPI_CONFIG(EXAMPLE_PIN_NUM_LCD_CS, example_notify_lvgl_flush_ready, &disp_drv);
     gc9b71_vendor_config_t vendor_config = {
+        // .init_cmds = lcd_init_cmds,         // Uncomment these line if use custom initialization commands
+        // .init_cmds_size = sizeof(lcd_init_cmds) / sizeof(gc9b71_lcd_init_cmd_t),
         .flags = {
             .use_qspi_interface = 1,
         },
     };
 #elif CONFIG_EXAMPLE_LCD_CONTROLLER_SPD2010
-    const esp_lcd_panel_io_spi_config_t io_config = SPD2010_PANEL_IO_QSPI_CONFIG(EXAMPLE_PIN_NUM_LCD_CS,
-                                                                                 example_notify_lvgl_flush_ready,
-                                                                                 &disp_drv);
+        SPD2010_PANEL_IO_QSPI_CONFIG(EXAMPLE_PIN_NUM_LCD_CS, example_notify_lvgl_flush_ready, &disp_drv);
     spd2010_vendor_config_t vendor_config = {
+        // .init_cmds = lcd_init_cmds,         // Uncomment these line if use custom initialization commands
+        // .init_cmds_size = sizeof(lcd_init_cmds) / sizeof(spd2010_lcd_init_cmd_t),
         .flags = {
             .use_qspi_interface = 1,
         },
     };
 #elif CONFIG_EXAMPLE_LCD_CONTROLLER_SH8601
-    const esp_lcd_panel_io_spi_config_t io_config = SH8601_PANEL_IO_QSPI_CONFIG(EXAMPLE_PIN_NUM_LCD_CS,
-                                                                                example_notify_lvgl_flush_ready,
-                                                                                &disp_drv);
+        SH8601_PANEL_IO_QSPI_CONFIG(EXAMPLE_PIN_NUM_LCD_CS, example_notify_lvgl_flush_ready, &disp_drv);
     sh8601_vendor_config_t vendor_config = {
+        // .init_cmds = lcd_init_cmds,         // Uncomment these line if use custom initialization commands
+        // .init_cmds_size = sizeof(lcd_init_cmds) / sizeof(sh8601_lcd_init_cmd_t),
         .flags = {
             .use_qspi_interface = 1,
         },
     };
 #endif
     // Attach the LCD to the SPI bus
-    ESP_ERROR_CHECK(esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)LCD_HOST, &io_config, &io_handle));
+    ESP_ERROR_CHECK(esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)EXAMPLE_LCD_HOST, &io_config, &io_handle));
 
     esp_lcd_panel_handle_t panel_handle = NULL;
     const esp_lcd_panel_dev_config_t panel_config = {
@@ -353,14 +367,12 @@ void app_main(void)
         .bits_per_pixel = LCD_BIT_PER_PIXEL,
         .vendor_config = &vendor_config,
     };
+    ESP_LOGI(TAG, "Install LCD driver");
 #if CONFIG_EXAMPLE_LCD_CONTROLLER_GC9B71
-    ESP_LOGI(TAG, "Install GC9B71 panel driver");
     ESP_ERROR_CHECK(esp_lcd_new_panel_gc9b71(io_handle, &panel_config, &panel_handle));
 #elif CONFIG_EXAMPLE_LCD_CONTROLLER_SPD2010
-    ESP_LOGI(TAG, "Install SPD2010 panel driver");
     ESP_ERROR_CHECK(esp_lcd_new_panel_spd2010(io_handle, &panel_config, &panel_handle));
 #elif CONFIG_EXAMPLE_LCD_CONTROLLER_SH8601
-    ESP_LOGI(TAG, "Install SH8601 panel driver");
     ESP_ERROR_CHECK(esp_lcd_new_panel_sh8601(io_handle, &panel_config, &panel_handle));
 #endif
 
@@ -379,8 +391,8 @@ void app_main(void)
         .scl_pullup_en = GPIO_PULLUP_ENABLE,
         .master.clk_speed = 400 * 1000,
     };
-    ESP_ERROR_CHECK(i2c_param_config(TOUCH_HOST, &i2c_conf));
-    ESP_ERROR_CHECK(i2c_driver_install(TOUCH_HOST, i2c_conf.mode, 0, 0, 0));
+    ESP_ERROR_CHECK(i2c_param_config(EXAMPLE_TOUCH_HOST, &i2c_conf));
+    ESP_ERROR_CHECK(i2c_driver_install(EXAMPLE_TOUCH_HOST, i2c_conf.mode, 0, 0, 0));
 
     esp_lcd_panel_io_handle_t tp_io_handle = NULL;
 #if CONFIG_EXAMPLE_LCD_TOUCH_CONTROLLER_SPD2010
@@ -389,7 +401,7 @@ void app_main(void)
     const esp_lcd_panel_io_i2c_config_t tp_io_config = ESP_LCD_TOUCH_IO_I2C_CST816S_CONFIG();
 #endif
     // Attach the TOUCH to the I2C bus
-    ESP_ERROR_CHECK(esp_lcd_new_panel_io_i2c((esp_lcd_i2c_bus_handle_t)TOUCH_HOST, &tp_io_config, &tp_io_handle));
+    ESP_ERROR_CHECK(esp_lcd_new_panel_io_i2c((esp_lcd_i2c_bus_handle_t)EXAMPLE_TOUCH_HOST, &tp_io_config, &tp_io_handle));
 
     touch_mux = xSemaphoreCreateBinary();
     assert(touch_mux);
@@ -411,28 +423,29 @@ void app_main(void)
         .interrupt_callback = example_touch_isr_cb,
     };
 
+    ESP_LOGI(TAG, "Initialize touch controller");
 #if CONFIG_EXAMPLE_LCD_CONTROLLER_SPD2010
-    ESP_LOGI(TAG, "Initialize touch controller SPD2010");
     ESP_ERROR_CHECK(esp_lcd_touch_new_i2c_spd2010(tp_io_handle, &tp_cfg, &tp));
 #elif CONFIG_EXAMPLE_LCD_TOUCH_CONTROLLER_CST816S
-    ESP_LOGI(TAG, "Initialize touch controller CST816S");
     ESP_ERROR_CHECK(esp_lcd_touch_new_i2c_cst816s(tp_io_handle, &tp_cfg, &tp));
 #endif
 #endif // CONFIG_EXAMPLE_LCD_TOUCH_ENABLED
 
-    ESP_LOGI(TAG, "Turn on LCD backlight");
-    gpio_set_level(EXAMPLE_PIN_NUM_BK_LIGHT, EXAMPLE_LCD_BK_LIGHT_ON_LEVEL);
+    if (EXAMPLE_PIN_NUM_BK_LIGHT >= 0) {
+        ESP_LOGI(TAG, "Turn on LCD backlight");
+        gpio_set_level(EXAMPLE_PIN_NUM_BK_LIGHT, EXAMPLE_LCD_BK_LIGHT_ON_LEVEL);
+    }
 
     ESP_LOGI(TAG, "Initialize LVGL library");
     lv_init();
     // alloc draw buffers used by LVGL
     // it's recommended to choose the size of the draw buffer(s) to be at least 1/10 screen sized
-    lv_color_t *buf1 = heap_caps_malloc(EXAMPLE_LCD_H_RES * 10 * sizeof(lv_color_t), MALLOC_CAP_DMA);
+    lv_color_t *buf1 = heap_caps_malloc(EXAMPLE_LVGL_BUFF_SIZE * sizeof(lv_color_t), MALLOC_CAP_DMA);
     assert(buf1);
-    lv_color_t *buf2 = heap_caps_malloc(EXAMPLE_LCD_H_RES * 10 * sizeof(lv_color_t), MALLOC_CAP_DMA);
+    lv_color_t *buf2 = heap_caps_malloc(EXAMPLE_LVGL_BUFF_SIZE * sizeof(lv_color_t), MALLOC_CAP_DMA);
     assert(buf2);
     // initialize LVGL draw buffers
-    lv_disp_draw_buf_init(&disp_buf, buf1, buf2, EXAMPLE_LCD_H_RES * 10);
+    lv_disp_draw_buf_init(&disp_buf, buf1, buf2, EXAMPLE_LVGL_BUFF_SIZE);
 
     ESP_LOGI(TAG, "Register display driver to LVGL");
     lv_disp_drv_init(&disp_drv);

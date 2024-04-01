@@ -24,7 +24,7 @@
 #define LCD_OPCODE_READ_CMD         (0x0BULL)
 #define LCD_OPCODE_WRITE_COLOR      (0x32ULL)
 
-#define ST77922_CMD_SET             (0xF1)
+#define ST77922_CMD_SET             (0xF0)
 #define ST77922_PARAM_SET           (0x00)
 
 static const char *TAG = "st77922";
@@ -198,7 +198,7 @@ static const st77922_lcd_init_cmd_t vendor_specific_init_default[] = {
     {0x2B, (uint8_t []){0x00, 0x00, 0x01, 0x2B}, 4, 0},
     {0xD0, (uint8_t []){0x80}, 1, 0},
     // ======================CMD2======================
-    {0xF1, (uint8_t []){0x00}, 1, 0},
+    {0xF1, (uint8_t []){0x00}, 0, 0},
     {0x60, (uint8_t []){0x00, 0x00, 0x00}, 3, 0},
     {0x65, (uint8_t []){0x00}, 1, 0},
     {0x66, (uint8_t []){0x00, 0x3F}, 2, 0},
@@ -242,7 +242,7 @@ static const st77922_lcd_init_cmd_t vendor_specific_init_default[] = {
     {0xB9, (uint8_t []){0x23, 0x23}, 2, 0},
     {0xBF, (uint8_t []){0x0F, 0x13, 0x13, 0x09, 0x09, 0x09}, 6, 0},     // VGHP/VGLP
     // ======================CMD3======================
-    {0xF2, (uint8_t []){0x00}, 1, 0},
+    {0xF2, (uint8_t []){0x00}, 0, 0},
     {0x73, (uint8_t []){0x04, 0xBA, 0x1A, 0x58, 0x5B}, 5, 0},           // VOP= 5v
     {0x77, (uint8_t []){0x6B, 0x5B, 0xFB, 0xC3, 0xC5}, 5, 0},
     {0x7A, (uint8_t []){0x15, 0x27}, 2, 0},
@@ -251,7 +251,7 @@ static const st77922_lcd_init_cmd_t vendor_specific_init_default[] = {
     {0xBF, (uint8_t []){0x36}, 1, 0},
     {0xE3, (uint8_t []){0x43, 0x43}, 2, 0},                             // VMF
     // ======================CMD1======================
-    {0xF0, (uint8_t []){0x00}, 1, 0},
+    {0xF0, (uint8_t []){0x00}, 0, 0},
     {0x21, (uint8_t []){0x00}, 1, 0},
     {0x11, (uint8_t []){0x00}, 1, 120},
     {0x35, (uint8_t []){0x00}, 1, 20},
@@ -311,9 +311,7 @@ static esp_err_t panel_st77922_init(esp_lcd_panel_t *panel)
         vTaskDelay(pdMS_TO_TICKS(init_cmds[i].delay_ms));
 
         // Check if the current cmd is the "command set" cmd
-        if ((init_cmds[i].cmd == ST77922_CMD_SET)) {
-            is_user_set = ((uint8_t *)init_cmds[i].data)[0] == ST77922_PARAM_SET ? true : false;
-        }
+        is_user_set = (init_cmds[i].cmd == ST77922_CMD_SET);
     }
     ESP_LOGD(TAG, "send init commands success");
 

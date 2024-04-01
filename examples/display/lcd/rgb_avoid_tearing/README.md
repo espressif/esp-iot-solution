@@ -1,16 +1,19 @@
 | Supported Targets | ESP32-S3 |
 | ----------------- | -------- |
 
-| Supported LCD Controllers | ST77903 |
-| ------------------------- | ------- |
+| Supported LCD Controller    | ST7701 |
+| ----------------------------| -------|
 
-# RGB LCD 8BIT Example
+| Supported Touch Controller  |  GT911 |
+| ----------------------------| -------|
+
+# RGB Avoid Tearing Example
 
 [esp_lcd](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/lcd.html) provides several panel drivers out-of box, e.g. ST7789, SSD1306, NT35510. However, there're a lot of other panels on the market, it's beyond `esp_lcd` component's responsibility to include them all.
 
 `esp_lcd` allows user to add their own panel drivers in the project scope (i.e. panel driver can live outside of esp-idf), so that the upper layer code like LVGL porting code can be reused without any modifications, as long as user-implemented panel driver follows the interface defined in the `esp_lcd` component.
 
-This example demonstrates how to drive an RGB interface LCD screen with an 8-bit RGB requirement in an esp-idf project. The example will use the LVGL library to draw a stylish music player.
+This example demonstrates how to avoid tearing when using LVGL with RGB interface screens in an esp-idf project. The example will use the LVGL library to draw a stylish music player.
 
 This example uses the [esp_timer](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/esp_timer.html) to generate the ticks needed by LVGL and uses a dedicated task to run the `lv_timer_handler()`. Since the LVGL APIs are not thread-safe, this example uses a mutex which be invoked before the call of `lv_timer_handler()` and released after it. The same mutex needs to be used in other tasks and threads around every LVGL (lv_...) related function call and code. For more porting guides, please refer to [LVGL porting doc](https://docs.lvgl.io/master/porting/index.html).
 
@@ -21,7 +24,7 @@ This example uses the [esp_timer](https://docs.espressif.com/projects/esp-idf/en
 ### Hardware Required
 
 * An ESP32-S3R8 development board
-* A ST77903 LCD panel, with RGB interface
+* A ST7701 LCD panel, with RGB interface
 * An USB cable for power supply and programming
 
 ### Hardware Connection
@@ -37,19 +40,13 @@ The connection between ESP Board and the LCD is as follows:
 |                       |              |                   |
 |                   PCLK+--------------+PCLK               |
 |                       |              |                   |
-|              DATA[7:0]+--------------+DATA[7:0]          |
+|             DATA[15:0]+--------------+DATA[15:0]         |
 |                       |              |                   |
 |                  HSYNC+--------------+HSYNC              |
 |                       |              |                   |
 |                  VSYNC+--------------+VSYNC              |
 |                       |              |                   |
 |                     DE+--------------+DE                 |
-|                       |              |                   |
-|                     CS+--------------+CS                 |
-|                       |              |                   |
-|                    SCK+--------------+SCK                |
-|                       |              |                   |
-|                    SDA+--------------+SDA                |
 |                       |              |                   |
 |               BK_LIGHT+--------------+BLK                |
 +-----------------------+              |                   |
@@ -58,7 +55,7 @@ The connection between ESP Board and the LCD is as follows:
                                        +-------------------+
 ```
 
-* The LCD parameters and GPIO number used by this example can be changed in [example_rgb_lcd_8bit.c](main/example_rgb_lcd_8bit.c). Especially, please pay attention to the **vendor specific initialization**, it can be different between manufacturers and should consult the LCD supplier for initialization sequence code.
+* The LCD parameters and GPIO number used by this example can be changed in [example_rgb_avoid_tearing.c](main/example_rgb_avoid_tearing.c). Especially, please pay attention to the **vendor specific initialization**, it can be different between manufacturers and should consult the LCD supplier for initialization sequence code.
 * The LVGL parameters can be changed not only through `menuconfig` but also directly in [lvgl_conf.h](components/lvgl/lvgl/lvgl_conf.h)
 
 ### Configure the Project

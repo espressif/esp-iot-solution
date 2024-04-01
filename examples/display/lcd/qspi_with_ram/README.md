@@ -62,9 +62,11 @@ The connection between ESP Board and the LCD is as follows:
 └──────────────────────┘              └────────────────────┘
 ```
 
-The GPIO number used by this example can be changed in [example_qspi_with_ram.c](main/example_qspi_with_ram.c).
-Especially, please pay attention to the level used to turn on the LCD backlight, some LCD module needs a low level to turn it on, while others take a high level. You can change the backlight level macro `EXAMPLE_LCD_BK_LIGHT_ON_LEVEL` in [example_qspi_with_ram.c](main/example_qspi_with_ram.c).
-The LCD vendor specific initialization can be different between manufacturers and should consult the LCD supplier for initialization sequence code.
+* The LCD parameters and GPIO number used by this example can be changed in [example_qspi_with_ram.c](main/example_qspi_with_ram.c). Especially, please pay attention to the **vendor specific initialization**, it can be different between manufacturers and should consult the LCD supplier for initialization sequence code.
+
+### Configure the Project
+
+Run `idf.py menuconfig` and navigate to `Example Configuration` menu.
 
 ### Build and Flash
 

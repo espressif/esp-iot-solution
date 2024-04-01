@@ -226,19 +226,19 @@ RGB LCD 驱动流程可大致分为三个部分：初始化接口设备、移植
       - 根据用户配置，既可以通过命令，也可以使用 ``rgb_panel_mirror()`` 通过软件实现镜像 X 轴和 Y 轴。
     * - swap_xy()
       - rgb_panel_swap_xy()
-      - esp_lcd_panel_mirror()
+      - esp_lcd_panel_swap_xy()
       - 无需保存和覆盖，使用 ``rgb_panel_swap_xy()`` 通过软件实现交换 X 轴和 Y 轴。
     * - set_gap()
       - rgb_panel_set_gap()
-      - esp_lcd_panel_mirror()
+      - esp_lcd_panel_set_gap()
       - 无需保存和覆盖，使用 ``rgb_panel_set_gap()`` 通过软件修改画图时的起始和终止坐标，从而实现画图的偏移。
     * - invert_color()
       - rgb_panel_invert_color()
-      - esp_lcd_panel_mirror()
+      - esp_lcd_panel_invert_color()
       - 无需保存和覆盖，使用 ``rgb_panel_invert_color()`` 通过硬件实现像素的色彩数据按位取反（0xF0F0 -> 0x0F0F）。
     * - disp_on_off()
       - rgb_panel_disp_on_off()
-      - esp_lcd_panel_mirror()
+      - esp_lcd_panel_disp_on_off()
       - 根据用户配置来实现 LCD 显示的开关。如果没有配置 ``disp_gpio_num``，则可以通过 LCD 命令 ``LCD_CMD_DISON(29h)`` 和 ``LCD_CMD_DISOFF(28h)`` 来进行控制。另外，如果配置了 ``disp_gpio_num``，则可以通过调用函数 ``rgb_panel_disp_on_off()`` 来实现控制。
 
 对于大多数 RGB LCD，其驱动 IC 的命令及参数与上述实现说明中的兼容，因此可以通过以下步骤完成移植：

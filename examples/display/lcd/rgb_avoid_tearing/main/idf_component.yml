@@ -3,16 +3,14 @@ dependencies:
     version: ">=5.1.0"
 
   lvgl/lvgl:
-    version: "^9"
+    version: ">8.3.9,<9"
     public: true
 
-  esp_lcd_touch:
-    version: "^1"
-    public: true
-
-  esp_lcd_st77903_rgb:
+  esp_lcd_st7701:
     version: "*"
-    override_path: "../../../../../components/display/lcd/esp_lcd_st77903_rgb"
+    override_path: "../../../../../components/display/lcd/esp_lcd_st7701"
+
+  esp_lcd_touch_gt911: "^1"
 
   esp_lcd_panel_io_additions:
     version: "*"

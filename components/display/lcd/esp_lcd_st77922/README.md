@@ -37,7 +37,7 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
  * Uncomment these line if use custom initialization commands.
  * The array should be declared as static const and positioned outside the function.
  */
-// static const ST77922_lcd_init_cmd_t lcd_init_cmds[] = {
+// static const st77922_lcd_init_cmd_t lcd_init_cmds[] = {
 // //  {cmd, { data }, data_size, delay_ms}
 // {0x28, (uint8_t []){0x00}, 0, 0},
 // {0x10, (uint8_t []){0x00}, 0, 0},
@@ -46,11 +46,11 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
 //     ...
 // };
 
-    ESP_LOGI(TAG, "Install ST77922 panel driver");
+    ESP_LOGI(TAG, "Install st77922 panel driver");
     esp_lcd_panel_handle_t panel_handle = NULL;
-    ST77922_vendor_config_t vendor_config = {
+    st77922_vendor_config_t vendor_config = {
         // .init_cmds = lcd_init_cmds,         // Uncomment these line if use custom initialization commands
-        // .init_cmds_size = sizeof(lcd_init_cmds) / sizeof(ST77922_lcd_init_cmd_t),
+        // .init_cmds_size = sizeof(lcd_init_cmds) / sizeof(st77922_lcd_init_cmd_t),
         .flags = {
             .use_qspi_interface = 0,
         },
@@ -88,7 +88,7 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
  * Uncomment these line if use custom initialization commands.
  * The array should be declared as static const and positioned outside the function.
  */
-// static const ST77922_lcd_init_cmd_t lcd_init_cmds[] = {
+// static const st77922_lcd_init_cmd_t lcd_init_cmds[] = {
 // //  {cmd, { data }, data_size, delay_ms}
 // {0x28, (uint8_t []){0x00}, 0, 0},
 // {0x10, (uint8_t []){0x00}, 0, 0},
@@ -97,11 +97,11 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
 //     ...
 // };
 
-    ESP_LOGI(TAG, "Install ST77922 panel driver");
+    ESP_LOGI(TAG, "Install st77922 panel driver");
     esp_lcd_panel_handle_t panel_handle = NULL;
-    ST77922_vendor_config_t vendor_config = {
+    st77922_vendor_config_t vendor_config = {
         // .init_cmds = lcd_init_cmds,         // Uncomment these line if use custom initialization commands
-        // .init_cmds_size = sizeof(lcd_init_cmds) / sizeof(ST77922_lcd_init_cmd_t),
+        // .init_cmds_size = sizeof(lcd_init_cmds) / sizeof(st77922_lcd_init_cmd_t),
         .flags = {
             .use_qspi_interface = 1,
         },
