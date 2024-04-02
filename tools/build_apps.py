@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+# SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -10,10 +10,13 @@ import argparse
 import sys
 import os
 import re
+import logging
 from pathlib import Path
 from typing import List
 
-from idf_build_apps import LOGGER, App, build_apps, find_apps, setup_logging
+from idf_build_apps import App, build_apps, find_apps, setup_logging
+
+logger = logging.getLogger('idf_build_apps')
 
 PROJECT_ROOT = Path(__file__).parent.parent.absolute()
 APPS_BUILD_PER_JOB = 30
@@ -59,8 +62,8 @@ def get_cmake_apps(
         target=target,
         build_dir=f'{idf_ver}/build_@t_@w',
         config_rules_str=config_rules_str,
-        build_log_path='build_log.txt',
-        size_json_path='size.json',
+        build_log_filename='build_log.txt',
+        size_json_filename='size.json',
         check_warnings=True,
         preserve=True,
         default_build_targets=default_build_targets,
@@ -81,8 +84,8 @@ def main(args):  # type: (argparse.Namespace) -> None
     else:
         apps_to_build = apps[:]
 
-    LOGGER.info('Found %d apps after filtering', len(apps_to_build))
-    LOGGER.info(
+    logger.info('Found %d apps after filtering', len(apps_to_build))
+    logger.info(
         'Suggest setting the parallel count to %d for this build job',
         len(apps_to_build) // APPS_BUILD_PER_JOB + 1,
     )

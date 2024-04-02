@@ -1,11 +1,12 @@
 /*
- * SPDX-FileCopyrightText: 2019-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2019-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
 #include <string.h>
 #include "freertos/FreeRTOS.h"
+#include "esp_idf_version.h"
 
 #include "esp_log.h"
 #include "ble_ota.h"
@@ -1076,7 +1077,12 @@ esp_err_t esp_ble_ota_recv_fw_data_callback(esp_ble_ota_recv_fw_cb_t callback)
 esp_err_t esp_ble_ota_host_init(void)
 {
     esp_err_t ret;
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 2, 0)
+    esp_bluedroid_config_t cfg = BT_BLUEDROID_INIT_CONFIG_DEFAULT();
+    ret = esp_bluedroid_init_with_cfg(&cfg);
+#else
     ret = esp_bluedroid_init();
+#endif
     if (ret) {
         ESP_LOGE(TAG, "%s init bluetooth failed: %s\n", __func__, esp_err_to_name(ret));
         return ret;
