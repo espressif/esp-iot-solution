@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -67,16 +67,24 @@ typedef struct {
 } uvc_device_config_t;
 
 /**
- * @brief Initialize the UVC device, after this function is called, the UVC device will be visible to the host
- *       and the host can open the UVC device with the specific format and resolution.
+ * @brief Configure the UVC device by uvc device number
  *
- * @param config Configuration for the UVC device
- *
+ * @param uvc_device_num UVC device number
+ * @param config  Configuration for the UVC device
  * @return ESP_OK on success
  *         ESP_ERR_INVALID_ARG if the configuration is invalid
  *         ESP_FAIL if the UVC device could not be initialized
  */
-esp_err_t uvc_device_init(uvc_device_config_t *config);
+esp_err_t uvc_device_config(int uvc_device_num, uvc_device_config_t *config);
+
+/**
+ * @brief Initialize the UVC device, after this function is called, the UVC device will be visible to the host
+ *       and the host can open the UVC device with the specific format and resolution.
+ *
+ * @return ESP_OK on success
+ *         ESP_FAIL if the UVC device could not be initialized
+ */
+esp_err_t uvc_device_init(void);
 
 /**
  * @brief Deinitialize the UVC device

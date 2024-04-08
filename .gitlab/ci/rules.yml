@@ -394,6 +394,9 @@
 .patterns-example_usb_device_usb_uart_bridge: &patterns-example_usb_device_usb_uart_bridge
   - "examples/usb/device/usb_uart_bridge/**/*"
 
+.patterns-example_usb_device_usb_uvc_device: &patterns-example_usb_device_usb_uvc_device
+  - "examples/usb/device/usb_uvc_device/**/*"
+
 .patterns-example_usb_device_usb_webcam: &patterns-example_usb_device_usb_webcam
   - "examples/usb/device/usb_webcam/**/*"
 
@@ -995,6 +998,18 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-example_usb_device_usb_uart_bridge
+
+.rules:build:example_usb_device_usb_uvc_device:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_usb_usb_device_uvc
+    - <<: *if-dev-push
+      changes: *patterns-example_usb_device_usb_uvc_device
 
 .rules:build:example_usb_device_usb_webcam:
   rules:
