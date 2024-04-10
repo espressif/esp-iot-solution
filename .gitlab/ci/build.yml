@@ -36,7 +36,7 @@
     EXAMPLE_CONFIG: "="
   script:
     - pip install "idf-component-manager<1.5"
-    - pip install "idf_build_apps<2.0"
+    - pip install idf_build_apps
     - python tools/build_apps.py ${EXAMPLE_DIR} --config ${EXAMPLE_CONFIG} -t all -vv
 
 build_example_audio_wav_player:
@@ -58,6 +58,7 @@ build_example_bluetooth_ble_conn_mgr_ble_periodic_adv:
     matrix:
       - IMAGE: espressif/idf:release-v5.0
       - IMAGE: espressif/idf:release-v5.1
+      - IMAGE: espressif/idf:release-v5.2
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_conn_mgr/ble_periodic_adv
 
@@ -69,6 +70,7 @@ build_example_bluetooth_ble_conn_mgr_ble_periodic_sync:
     matrix:
       - IMAGE: espressif/idf:release-v5.0
       - IMAGE: espressif/idf:release-v5.1
+      - IMAGE: espressif/idf:release-v5.2
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_conn_mgr/ble_periodic_sync
 
@@ -78,10 +80,10 @@ build_example_bluetooth_ble_conn_mgr_ble_spp_client:
     - .rules:build:example_bluetooth_ble_conn_mgr
   parallel:
     matrix:
-      - IMAGE: espressif/idf:release-v4.3
       - IMAGE: espressif/idf:release-v4.4
       - IMAGE: espressif/idf:release-v5.0
       - IMAGE: espressif/idf:release-v5.1
+      - IMAGE: espressif/idf:release-v5.2
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_conn_mgr/ble_spp/spp_client
 
@@ -91,10 +93,10 @@ build_example_bluetooth_ble_conn_mgr_ble_spp_server:
     - .rules:build:example_bluetooth_ble_conn_mgr
   parallel:
     matrix:
-      - IMAGE: espressif/idf:release-v4.3
       - IMAGE: espressif/idf:release-v4.4
       - IMAGE: espressif/idf:release-v5.0
       - IMAGE: espressif/idf:release-v5.1
+      - IMAGE: espressif/idf:release-v5.2
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_conn_mgr/ble_spp/spp_server
 
@@ -104,10 +106,10 @@ build_example_bluetooth_ble_anp:
     - .rules:build:example_bluetooth_ble_anp
   parallel:
     matrix:
-      - IMAGE: espressif/idf:release-v4.3
       - IMAGE: espressif/idf:release-v4.4
       - IMAGE: espressif/idf:release-v5.0
       - IMAGE: espressif/idf:release-v5.1
+      - IMAGE: espressif/idf:release-v5.2
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_profiles/ble_anp
 
@@ -117,10 +119,10 @@ build_example_bluetooth_ble_hrp:
     - .rules:build:example_bluetooth_ble_hrp
   parallel:
     matrix:
-      - IMAGE: espressif/idf:release-v4.3
       - IMAGE: espressif/idf:release-v4.4
       - IMAGE: espressif/idf:release-v5.0
       - IMAGE: espressif/idf:release-v5.1
+      - IMAGE: espressif/idf:release-v5.2
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_profiles/ble_hrp
 
@@ -130,10 +132,10 @@ build_example_bluetooth_ble_htp:
     - .rules:build:example_bluetooth_ble_htp
   parallel:
     matrix:
-      - IMAGE: espressif/idf:release-v4.3
       - IMAGE: espressif/idf:release-v4.4
       - IMAGE: espressif/idf:release-v5.0
       - IMAGE: espressif/idf:release-v5.1
+      - IMAGE: espressif/idf:release-v5.2
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_profiles/ble_htp
 
@@ -143,10 +145,10 @@ build_example_bluetooth_ble_services_ble_ans:
     - .rules:build:example_bluetooth_ble_services
   parallel:
     matrix:
-      - IMAGE: espressif/idf:release-v4.3
       - IMAGE: espressif/idf:release-v4.4
       - IMAGE: espressif/idf:release-v5.0
       - IMAGE: espressif/idf:release-v5.1
+      - IMAGE: espressif/idf:release-v5.2
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_services/ble_ans
 
@@ -156,10 +158,10 @@ build_example_bluetooth_ble_services_ble_bas:
     - .rules:build:example_bluetooth_ble_services
   parallel:
     matrix:
-      - IMAGE: espressif/idf:release-v4.3
       - IMAGE: espressif/idf:release-v4.4
       - IMAGE: espressif/idf:release-v5.0
       - IMAGE: espressif/idf:release-v5.1
+      - IMAGE: espressif/idf:release-v5.2
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_services/ble_bas
 
@@ -169,10 +171,10 @@ build_example_bluetooth_ble_services_ble_dis:
     - .rules:build:example_bluetooth_ble_services
   parallel:
     matrix:
-      - IMAGE: espressif/idf:release-v4.3
       - IMAGE: espressif/idf:release-v4.4
       - IMAGE: espressif/idf:release-v5.0
       - IMAGE: espressif/idf:release-v5.1
+      - IMAGE: espressif/idf:release-v5.2
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_services/ble_dis
 
@@ -182,10 +184,10 @@ build_example_bluetooth_ble_services_ble_hrs:
     - .rules:build:example_bluetooth_ble_services
   parallel:
     matrix:
-      - IMAGE: espressif/idf:release-v4.3
       - IMAGE: espressif/idf:release-v4.4
       - IMAGE: espressif/idf:release-v5.0
       - IMAGE: espressif/idf:release-v5.1
+      - IMAGE: espressif/idf:release-v5.2
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_services/ble_hrs
 
@@ -195,10 +197,10 @@ build_example_bluetooth_ble_services_ble_hts:
     - .rules:build:example_bluetooth_ble_services
   parallel:
     matrix:
-      - IMAGE: espressif/idf:release-v4.3
       - IMAGE: espressif/idf:release-v4.4
       - IMAGE: espressif/idf:release-v5.0
       - IMAGE: espressif/idf:release-v5.1
+      - IMAGE: espressif/idf:release-v5.2
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_services/ble_hts
 
@@ -208,10 +210,10 @@ build_example_bluetooth_ble_services_ble_tps:
     - .rules:build:example_bluetooth_ble_services
   parallel:
     matrix:
-      - IMAGE: espressif/idf:release-v4.3
       - IMAGE: espressif/idf:release-v4.4
       - IMAGE: espressif/idf:release-v5.0
       - IMAGE: espressif/idf:release-v5.1
+      - IMAGE: espressif/idf:release-v5.2
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_services/ble_tps
 
@@ -224,6 +226,7 @@ build_example_bluetooth_ble_ota:
       - IMAGE: espressif/idf:release-v4.4
       - IMAGE: espressif/idf:release-v5.0
       - IMAGE: espressif/idf:release-v5.1
+      - IMAGE: espressif/idf:release-v5.2
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_ota
 
@@ -234,6 +237,7 @@ build_example_bluetooth_ble_remote_control:
   parallel:
     matrix:
       - IMAGE: espressif/idf:release-v5.0
+      - IMAGE: espressif/idf:release-v5.2
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_remote_control
 
@@ -410,8 +414,7 @@ build_example_get_started_button_power_save:
   parallel:
     matrix:
       - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:latest
+      - IMAGE: espressif/idf:release-v5.1
   variables:
     EXAMPLE_DIR: examples/get-started/button_power_save
 

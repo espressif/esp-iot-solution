@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -17,6 +17,7 @@
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include "freertos/event_groups.h"
+#include "esp_idf_version.h"
 
 // Example includes
 #include "controller.h"
@@ -167,7 +168,12 @@ esp_err_t ble_config(void)
         return ESP_FAIL;
     }
 
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 2, 0)
+    esp_bluedroid_config_t cfg = BT_BLUEDROID_INIT_CONFIG_DEFAULT();
+    ret = esp_bluedroid_init_with_cfg(&cfg);
+#else
     ret = esp_bluedroid_init();
+#endif
     if (ret) {
         ESP_LOGE(HID_DEMO_TAG, "%s init bluedroid failed\n", __func__);
         return ESP_FAIL;
