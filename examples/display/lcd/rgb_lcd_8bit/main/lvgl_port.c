@@ -19,6 +19,7 @@
 typedef struct {
     esp_lcd_panel_handle_t lcd_handle;
     esp_lcd_touch_handle_t tp_handle;
+    bool is_init;
 } lvgl_port_task_param_t;
 
 static const char *TAG = "lv_port";
@@ -328,8 +329,11 @@ void flush_callback(lv_display_t *disp, const lv_area_t *area, uint8_t *color_p)
     /* Switch the current RGB frame buffer to `next_fb` */
     esp_lcd_panel_draw_bitmap(panel_handle, offsetx1, offsety1, offsetx2 + 1, offsety2 + 1, next_fb);
 #else
-    disp->draw_buf->buf1 = color_p;
-    disp->draw_buf->buf2 = lvgl_port_flush_next_buf;
+    if (disp->buf_act == disp->buf_1) {
+        disp->buf_2->data = lvgl_port_flush_next_buf;
+    } else {
+        disp->buf_1->data = lvgl_port_flush_next_buf;
+    }
     lvgl_port_flush_next_buf = color_p;
 
     /* Switch the current RGB frame buffer to `color_p` */
@@ -498,6 +502,8 @@ static void lvgl_port_task(void *arg)
 #endif
     }
 
+    param->is_init = true;
+
     uint32_t task_delay_ms = LVGL_PORT_TASK_MAX_DELAY_MS;
     while (1) {
         if (lvgl_port_lock(-1)) {
@@ -515,9 +521,10 @@ static void lvgl_port_task(void *arg)
 
 esp_err_t lvgl_port_init(esp_lcd_panel_handle_t lcd_handle, esp_lcd_touch_handle_t tp_handle)
 {
-    lvgl_port_task_param_t param = {
+    lvgl_port_task_param_t lvgl_task_param = {
         .lcd_handle = lcd_handle,
         .tp_handle = tp_handle,
+        .is_init = false
     };
 
     lvgl_mux = xSemaphoreCreateRecursiveMutex();
@@ -525,11 +532,15 @@ esp_err_t lvgl_port_init(esp_lcd_panel_handle_t lcd_handle, esp_lcd_touch_handle
 
     ESP_LOGI(TAG, "Create LVGL task");
     BaseType_t core_id = (LVGL_PORT_TASK_CORE < 0) ? tskNO_AFFINITY : LVGL_PORT_TASK_CORE;
-    BaseType_t ret = xTaskCreatePinnedToCore(lvgl_port_task, "lvgl", LVGL_PORT_TASK_STACK_SIZE, &param,
+    BaseType_t ret = xTaskCreatePinnedToCore(lvgl_port_task, "lvgl", LVGL_PORT_TASK_STACK_SIZE, &lvgl_task_param,
                                              LVGL_PORT_TASK_PRIORITY, &lvgl_task_handle, core_id);
     if (ret != pdPASS) {
         ESP_LOGE(TAG, "Failed to create LVGL task");
         return ESP_FAIL;
+    }
+
+    while (!lvgl_task_param.is_init) {
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
 
     return ESP_OK;
