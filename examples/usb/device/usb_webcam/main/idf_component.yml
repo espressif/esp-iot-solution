@@ -1,6 +1,7 @@
 targets:
   - esp32s2
   - esp32s3
+  - esp32p4
 dependencies:
   esp32-camera:
     version: ">=2.0.5"
@@ -16,5 +17,5 @@ dependencies:
     override_path: "../eyes_show"
   cmake_utilities: "*"
   usb_device_uvc:
-    version: "0.*"
+    version: "1.*"
     override_path: "../../../../../components/usb/usb_device_uvc"

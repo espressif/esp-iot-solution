@@ -34,8 +34,8 @@ static uvc_fb_t* camera_fb_get_cb(void *cb_ctx)
 {
     (void)cb_ctx;
     uint64_t us = (uint64_t)esp_timer_get_time();
-    s_fb.buf = (uint8_t *)jpeg_start;
-    s_fb.len = jpeg_end - jpeg_start;
+    s_fb.buf = (uint8_t *)jpg_start;
+    s_fb.len = jpg_end - jpg_start;
     s_fb.width = WIDTH;
     s_fb.height = HEIGHT;
     s_fb.format = UVC_FORMAT_JPEG;

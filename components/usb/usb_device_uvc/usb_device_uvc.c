@@ -9,7 +9,7 @@
 #include "freertos/task.h"
 #include "esp_timer.h"
 #include "esp_check.h"
-#if CONFIG_IDF_TARGET_ESP32P4
+#if CONFIG_TINYUSB_RHPORT_HS
 #include "soc/hp_sys_clkrst_reg.h"
 #include "soc/hp_system_reg.h"
 #else
@@ -27,9 +27,10 @@ static const char *TAG = "usbd_uvc";
 #endif
 
 typedef struct {
-#if !CONFIG_IDF_TARGET_ESP32P4
+#if !CONFIG_TINYUSB_RHPORT_HS
     usb_phy_handle_t phy_hdl;
 #endif
+    bool uvc_init[UVC_CAM_NUM];
     uvc_format_t format[UVC_CAM_NUM];
     uvc_device_config_t user_config[UVC_CAM_NUM];
     TaskHandle_t uvc_task_hdl[UVC_CAM_NUM];
@@ -40,7 +41,7 @@ static uvc_device_t s_uvc_device;
 
 static void usb_phy_init(void)
 {
-#if !CONFIG_IDF_TARGET_ESP32P4
+#if !CONFIG_TINYUSB_RHPORT_HS
     // Configure USB PHY
     usb_phy_config_t phy_conf = {
         .controller = USB_PHY_CTRL_OTG,
@@ -260,9 +261,9 @@ int tud_video_commit_cb(uint_fast8_t ctl_idx, uint_fast8_t stm_idx,
 }
 #endif
 
-esp_err_t uvc_device_config(int uvc_device_num, uvc_device_config_t *config)
+esp_err_t uvc_device_config(int index, uvc_device_config_t *config)
 {
-    ESP_RETURN_ON_FALSE(uvc_device_num < UVC_CAM_NUM, ESP_ERR_INVALID_ARG, TAG, "uvc_device_num is invalid");
+    ESP_RETURN_ON_FALSE(index < UVC_CAM_NUM, ESP_ERR_INVALID_ARG, TAG, "index is invalid");
     ESP_RETURN_ON_FALSE(config != NULL, ESP_ERR_INVALID_ARG, TAG, "config is NULL");
     ESP_RETURN_ON_FALSE(config->start_cb != NULL, ESP_ERR_INVALID_ARG, TAG, "start_cb is NULL");
     ESP_RETURN_ON_FALSE(config->fb_get_cb != NULL, ESP_ERR_INVALID_ARG, TAG, "fb_get_cb is NULL");
@@ -271,13 +272,19 @@ esp_err_t uvc_device_config(int uvc_device_num, uvc_device_config_t *config)
     ESP_RETURN_ON_FALSE(config->uvc_buffer != NULL, ESP_ERR_INVALID_ARG, TAG, "uvc_buffer is NULL");
     ESP_RETURN_ON_FALSE(config->uvc_buffer_size > 0, ESP_ERR_INVALID_ARG, TAG, "uvc_buffer_size is 0");
 
-    s_uvc_device.user_config[uvc_device_num] = *config;
-    s_uvc_device.interval_ms[uvc_device_num] = 1000 / (uvc_device_num == 0 ? UVC_CAM1_FRAME_RATE : UVC_CAM2_FRAME_RATE);
+    s_uvc_device.user_config[index] = *config;
+    s_uvc_device.interval_ms[index] = 1000 / (index == 0 ? UVC_CAM1_FRAME_RATE : UVC_CAM2_FRAME_RATE);
+    s_uvc_device.uvc_init[index] = true;
     return ESP_OK;
 }
 
 esp_err_t uvc_device_init(void)
 {
+    ESP_RETURN_ON_FALSE(s_uvc_device.uvc_init[0], ESP_ERR_INVALID_STATE, TAG, "uvc device 0 not init");
+#if CONFIG_UVC_SUPPORT_TWO_CAM
+    ESP_RETURN_ON_FALSE(s_uvc_device.uvc_init[1], ESP_ERR_INVALID_STATE, TAG, "uvc device 1 not init, if not use, please disable CONFIG_UVC_SUPPORT_TWO_CAM");
+#endif
+
 #ifdef CONFIG_FORMAT_MJPEG_CAM1
     s_uvc_device.format[0] = UVC_FORMAT_JPEG;
 #endif

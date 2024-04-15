@@ -1,0 +1,9 @@
+menu "AVI Player"
+
+    config AVI_PLAYER_DEBUG_INFO
+        bool "Debug information"
+        default n
+        help
+            Enable debug information.
+
+endmenu

@@ -543,16 +543,18 @@ build_example_usb_device_usb_uart_bridge:
   variables:
     EXAMPLE_DIR: examples/usb/device/usb_uart_bridge
 
-build_example_usb_device_usb_uvc_device:
+build_example_usb_device_usb_dual_uvc_device:
   extends:
     - .build_examples_template
-    - .rules:build:example_usb_device_usb_uvc_device
+    - .rules:build:example_usb_device_usb_dual_uvc_device
   parallel:
     matrix:
       - IMAGE: espressif/idf:release-v4.4
       - IMAGE: espressif/idf:release-v5.0
+      - IMAGE: espressif/idf:release-v5.1
+      - IMAGE: espressif/idf:release-v5.2
   variables:
-    EXAMPLE_DIR: examples/usb/device/usb_uvc_device
+    EXAMPLE_DIR: examples/usb/device/usb_dual_uvc_device
 
 build_example_usb_device_usb_webcam:
   extends:
@@ -562,6 +564,8 @@ build_example_usb_device_usb_webcam:
     matrix:
       - IMAGE: espressif/idf:release-v4.4
       - IMAGE: espressif/idf:release-v5.0
+      - IMAGE: espressif/idf:release-v5.1
+      - IMAGE: espressif/idf:release-v5.2
   variables:
     EXAMPLE_DIR: examples/usb/device/usb_webcam
 

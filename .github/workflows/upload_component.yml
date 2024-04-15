@@ -17,6 +17,7 @@ jobs:
         with:
           directories: >
             components/audio/pwm_audio;
+            components/avi_player;
             components/bluetooth/ble_conn_mgr;
             components/bluetooth/ble_services;
             components/bluetooth/ble_profiles/esp/ble_ota;

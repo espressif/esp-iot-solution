@@ -67,8 +67,8 @@ extern "C" {
 #define CFG_TUSB_DEBUG        0
 #endif
 
-// // Enable Device stack
-// #define CFG_TUD_ENABLED       1
+// Enable Device stack
+#define CFG_TUD_ENABLED       1
 
 /* USB DMA on some MCUs can only access a specific SRAM region with restriction on alignment.
  * Tinyusb use follows macros to declare transferring memory so that they can be put
@@ -119,7 +119,7 @@ extern "C" {
 #else
 #define CFG_TUD_CAM1_VIDEO_STREAMING_BULK 0
 #if CONFIG_TINYUSB_RHPORT_HS
-#define CFG_TUD_CAM1_VIDEO_STREAMING_EP_BUFSIZE  1024
+#define CFG_TUD_CAM1_VIDEO_STREAMING_EP_BUFSIZE  1023
 #else
 #define CFG_TUD_CAM1_VIDEO_STREAMING_EP_BUFSIZE  512
 #endif
@@ -138,7 +138,7 @@ extern "C" {
 #else
 #define CFG_TUD_CAM2_VIDEO_STREAMING_BULK 0
 #if CONFIG_TINYUSB_RHPORT_HS
-#define CFG_TUD_CAM2_VIDEO_STREAMING_EP_BUFSIZE  1024
+#define CFG_TUD_CAM2_VIDEO_STREAMING_EP_BUFSIZE  1023
 #else
 #define CFG_TUD_CAM2_VIDEO_STREAMING_EP_BUFSIZE  512
 #endif

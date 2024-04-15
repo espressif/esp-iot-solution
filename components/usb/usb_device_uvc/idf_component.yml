@@ -1,4 +1,4 @@
-version: "0.2.0"
+version: "1.0.0"
 targets:
   - esp32s2
   - esp32s3
@@ -23,4 +23,4 @@ dependencies:
   cmake_utilities: "*"
 examples:
   - path: ../../../examples/usb/device/usb_webcam
-  - path: ../../../examples/usb/device/usb_uvc_device
+  - path: ../../../examples/usb/device/usb_dual_uvc_device

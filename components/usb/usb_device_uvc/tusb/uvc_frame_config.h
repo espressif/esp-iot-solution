@@ -59,7 +59,7 @@ static const struct {
     int width;
     int height;
     int rate;
-} UVC_FRAMES_INFO[2][4] = {{
+} UVC_FRAMES_INFO[][4] = {{
         {UVC_CAM1_FRAME_WIDTH, UVC_CAM1_FRAME_HEIGHT, UVC_CAM1_FRAME_RATE},
         {640, 480, 15},
         {480, 320, 30},
@@ -72,4 +72,5 @@ static const struct {
     }
 };
 
-#define UVC_FRAME_NUM 4
+#define UVC_FRAME_NUM (sizeof(UVC_FRAMES_INFO[0]) / sizeof(UVC_FRAMES_INFO[0][0]))
+_Static_assert(UVC_FRAME_NUM == 4, "UVC_FRAME_NUM must be 4");

@@ -4,5 +4,8 @@ targets:
   - esp32p4
 dependencies:
   usb_device_uvc:
-    version: "0.*"
+    version: "1.*"
     override_path: "../../../../../components/usb/usb_device_uvc"
+  avi_player:
+    version: "0.*"
+    override_path: "../../../../../components/avi_player"

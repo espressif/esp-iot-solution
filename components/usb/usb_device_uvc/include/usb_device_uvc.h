@@ -69,13 +69,13 @@ typedef struct {
 /**
  * @brief Configure the UVC device by uvc device number
  *
- * @param uvc_device_num UVC device number
+ * @param index UVC device index number [0,1]
  * @param config  Configuration for the UVC device
  * @return ESP_OK on success
  *         ESP_ERR_INVALID_ARG if the configuration is invalid
  *         ESP_FAIL if the UVC device could not be initialized
  */
-esp_err_t uvc_device_config(int uvc_device_num, uvc_device_config_t *config);
+esp_err_t uvc_device_config(int index, uvc_device_config_t *config);
 
 /**
  * @brief Initialize the UVC device, after this function is called, the UVC device will be visible to the host

@@ -14,10 +14,10 @@
 extern "C" {
 #endif
 
-#define UVC_MAX_FRAMESIZE_SIZE     (80*1024)
+#define UVC_MAX_FRAMESIZE_SIZE     (40*1024)
 
-extern const unsigned char jpeg_start[] asm("_binary_800_572_jpeg_start");
-extern const unsigned char jpeg_end[]   asm("_binary_800_572_jpeg_end");
+extern const unsigned char jpg_start[] asm("_binary_esp_1280_720_jpg_start");
+extern const unsigned char jpg_end[]   asm("_binary_esp_1280_720_jpg_end");
 
 /**
  * @brief Init USB Camera 1

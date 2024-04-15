@@ -1,6 +1,6 @@
 # ChangeLog
 
-## v0.2.0 2024-2-20
+## v1.0.0 2024-4-15
 
 * Support trans two cam's picture
 * Support P4
