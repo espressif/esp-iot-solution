@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -10,7 +10,7 @@
 /* arrays of knob parameters for different knob modes */
 
 static const foc_knob_param_t unbound_no_detents[] = {
-    {0, 0, 1 * PI / 180, 0, 0, 1.1, "Unbounded\nNo detents"},
+    {0, 0, 1 * PI / 180, 1, 0, 1.1, "Unbounded\nNo detents"},
 };
 
 static const foc_knob_param_t unbound_fine_detents[] = {
@@ -22,19 +22,19 @@ static const foc_knob_param_t unbound_coarse_detents[] = {
 };
 
 static const foc_knob_param_t bound_no_detents[] = {
-    {360, 180, 1 * PI / 180, 0.05, 0.3, 1.1, "Bounded\nNo detents"},
+    {360, 180, 1 * PI / 180, 0.3, 1, 1.1, "Bounded\nNo detents"},
 };
 
 static const foc_knob_param_t bound_fine_dents[] = {
-    {32, 0, 5 * PI / 180, 0.6, 0.3, 1.1, "Bounded\nFine detents"},
+    {32, 0, 5 * PI / 180, 0.6, 1, 1.1, "Bounded\nFine detents"},
 };
 
 static const foc_knob_param_t bound_coarse_dents[] = {
-    {13, 0, 10 * PI / 180, 1.1, 0.3, 0.55, "Bounded\nStrong detents"},
+    {13, 0, 10 * PI / 180, 1.1, 1, 0.55, "Bounded\nStrong detents"},
 };
 
 static const foc_knob_param_t on_off_strong_dents[] = {
-    { 2, 0, 60 * PI / 180, 1, 0.3, 0.55, "On/Off strong detents"},
+    { 2, 0, 60 * PI / 180, 1, 1, 0.55, "On/Off strong detents"},
 };
 
 /* Initialize an array of pointers to these parameter arrays for easy access */

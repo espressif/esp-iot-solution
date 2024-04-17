@@ -13,7 +13,6 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 #include "esp_err.h"
-#include "pid_ctrl.h"
 
 #ifndef PI
 #define PI 3.14159265358979f
@@ -57,6 +56,8 @@ typedef enum {
     FOC_KNOB_EVENT_MAX,                    /*!< EVENT: Number of events */
 } foc_knob_event_t;
 
+typedef float (*foc_knob_pid_cb_t)(float P, float D, float limit, float error);
+
 /**
  * @brief Knob specified configurations, used when creating a Knob
  */
@@ -65,6 +66,7 @@ typedef struct {
     uint16_t param_list_num;                /*!< foc mode number */
     float max_torque_out_limit;             /*!< max torque out limit */
     float max_torque;                       /*!< max torque in limit */
+    foc_knob_pid_cb_t pid_cb;               /*!< PID callback function */
 } foc_knob_config_t;
 
 /**
