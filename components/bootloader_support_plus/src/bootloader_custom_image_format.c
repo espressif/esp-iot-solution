@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -145,52 +145,52 @@ esp_err_t __wrap_esp_image_verify(esp_image_load_mode_t mode, const esp_partitio
 {
     bootloader_custom_ota_image_type_t image_type = bootloader_custom_ota_get_header_type(part);
 
-#ifndef BOOTLOADER_BUILD
     if (image_type == OTA_IMAGE_TYPE_1) {
+#ifndef BOOTLOADER_BUILD
         ESP_LOGE(TAG, "Not allow to OTA a standard image when customer bootloader enabled");
         return ESP_ERR_IMAGE_INVALID;
-    } else
+#else //in BOOTLOADER_BUILD
+        return __real_esp_image_verify(mode, part, data);
 #endif
-        if (image_type == OTA_IMAGE_TYPE_2 || image_type == OTA_IMAGE_TYPE_3) {
-            bootloader_custom_ota_config_t *custom_ota_config = bootloader_custom_ota_get_config_param();
+    } else if (image_type == OTA_IMAGE_TYPE_2 || image_type == OTA_IMAGE_TYPE_3) {
+        bootloader_custom_ota_config_t *custom_ota_config = bootloader_custom_ota_get_config_param();
 
 #ifndef BOOTLOADER_BUILD
-            custom_ota_config->src_addr = part->offset;
+        custom_ota_config->src_addr = part->offset;
 #endif
 
 #if defined(BOOTLOADER_BUILD)
+        if (image_type == OTA_IMAGE_TYPE_2) {
+            custom_ota_config->src_addr += APP_IMAGE_HEADER_LEN_DEFAULT;   // hard code here, the length of esp original image headers is 0x120
+        }
 
-            if (image_type == OTA_IMAGE_TYPE_2) {
-                custom_ota_config->src_addr += APP_IMAGE_HEADER_LEN_DEFAULT;   // hard code here, the length of esp original image headers is 0x120
-            }
-
-            if (!bootloader_custom_ota_header_check(custom_ota_config->src_addr)) {
-                return ESP_FAIL;
-            }
+        if (!bootloader_custom_ota_header_check(custom_ota_config->src_addr)) {
+            return ESP_FAIL;
+        }
 
 #ifndef CONFIG_SKIP_VALIDATE_CUSTOM_COMPRESSED_DATA
-            if (!bootloader_custom_ota_md5_check(custom_ota_config->src_addr)) {
-                return ESP_FAIL;
-            }
+        if (!bootloader_custom_ota_md5_check(custom_ota_config->src_addr)) {
+            return ESP_FAIL;
+        }
 
 #if defined(CONFIG_SECURE_SIGNED_APPS_RSA_SCHEME) && defined(CONFIG_SECURE_BOOT_V2_ENABLED)
-            if (!bootloader_custom_ota_verify_signature(custom_ota_config->src_addr)) {
-                return ESP_FAIL;
-            }
+        if (!bootloader_custom_ota_verify_signature(custom_ota_config->src_addr)) {
+            return ESP_FAIL;
+        }
 #endif // END CONFIG_SECURE_SIGNED_APPS_RSA_SCHEME && CONFIG_SECURE_BOOT_V2_ENABLED
 #endif // END CONFIG_SKIP_VALIDATE_CUSTOM_COMPRESSED_DATA
 #elif !defined(CONFIG_SKIP_VALIDATE_CUSTOM_COMPRESSED_HEADER) // NOT BOOTLOADER_BUILD
-            if (image_type == OTA_IMAGE_TYPE_2) {
-                custom_ota_config->src_addr += APP_IMAGE_HEADER_LEN_DEFAULT;   // hard code here, the length of esp original image headers is 0x120
-            }
-
-            if (!bootloader_custom_ota_header_check(custom_ota_config->src_addr)) {
-                return ESP_FAIL;
-            }
-#endif
-        } else {
-            return CUSTOM_OTA_IMAGE_TYPE_INVALID;
+        if (image_type == OTA_IMAGE_TYPE_2) {
+            custom_ota_config->src_addr += APP_IMAGE_HEADER_LEN_DEFAULT;   // hard code here, the length of esp original image headers is 0x120
         }
+
+        if (!bootloader_custom_ota_header_check(custom_ota_config->src_addr)) {
+            return ESP_FAIL;
+        }
+#endif
+    } else {
+        return CUSTOM_OTA_IMAGE_TYPE_INVALID;
+    }
 
     return ESP_OK;
 }

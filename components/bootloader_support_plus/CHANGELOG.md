@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.2.4 - 2024-4-11
+
+### Fix:
+
+* Fix flash encryption could not be enabled in the bootloader.
+
 ## v0.2.3 - 2023-12-14
 
 ### Fix:

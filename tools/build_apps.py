@@ -21,6 +21,8 @@ logger = logging.getLogger('idf_build_apps')
 PROJECT_ROOT = Path(__file__).parent.parent.absolute()
 APPS_BUILD_PER_JOB = 30
 IGNORE_WARNINGS = [
+    r'memory region \`iram_loader_seg\' not declared',
+    r'redeclaration of memory region \`iram_loader_seg\'',
     r'1/2 app partitions are too small',
     r'The current IDF version does not support using the gptimer API',
     r'DeprecationWarning: pkg_resources is deprecated as an API',

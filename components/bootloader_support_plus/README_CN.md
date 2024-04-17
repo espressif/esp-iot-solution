@@ -134,6 +134,7 @@ idf.py create-project-from-example "espressif/bootloader_support_plus=*:simple_o
 
 1. 当使用压缩更新时，双分区情况下，不支持版本回滚。
    当您的 flash 分区仅有一个存储 app 的分区，和一个存储压缩固件的分区时，压缩更新将无法提供版本回滚的功能，请在下发压缩固件前验证压缩固件的可用性和正确性。
+2. 当启用 secure boot 和 flash 加密时，存储压缩固件的分区的大小 > （压缩固件的大小 + 8KB）。
 
 ### Q&A
 
