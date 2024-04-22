@@ -59,7 +59,7 @@ The connection between ESP Board and the LCD is as follows:
 ```
 
 * The LCD parameters and GPIO number used by this example can be changed in [example_rgb_lcd_8bit.c](main/example_rgb_lcd_8bit.c). Especially, please pay attention to the **vendor specific initialization**, it can be different between manufacturers and should consult the LCD supplier for initialization sequence code.
-* The LVGL parameters can be changed not only through `menuconfig` but also directly in [lvgl_conf.h](components/lvgl/lvgl/lvgl_conf.h)
+* The LVGL parameters can be changed not only through `menuconfig` but also directly in `lvgl_conf.h`
 
 ### Configure the Project
 
