@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2016-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2016-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -54,6 +54,7 @@ void motor_init(void)
     motor.linkSensor(&mt6701);
     driver.voltage_power_supply = 5;
     driver.voltage_limit = 5;
+    motor.velocity_limit = 10000;
 
 #if USING_MCPWM
     driver.init(0);
@@ -64,6 +65,12 @@ void motor_init(void)
     motor.linkDriver(&driver);
     motor.foc_modulation = SpaceVectorPWM;
     motor.controller = MotionControlType::torque;
+
+    motor.PID_velocity.P = 4.0;
+    motor.PID_velocity.I = 0.0;
+    motor.PID_velocity.D = 0.04;
+    motor.PID_velocity.output_ramp = 10000;
+    motor.PID_velocity.limit = 10;
 
     motor.useMonitoring(Serial);
     motor.init();                                        // initialize motor
@@ -85,16 +92,16 @@ static void button_press_cb(void *arg, void *data)
 
 static void foc_knob_inc_cb(void *arg, void *data)
 {
+    /*!< Do not printf here */
     foc_knob_state_t state;
     foc_knob_get_state(arg, &state);
-    ESP_LOGI(TAG, "foc_knob_inc_cb: position: %" PRId32 "\n", state.position);
 }
 
 static void foc_knob_dec_cb(void *arg, void *data)
 {
+    /*!< Do not printf here */
     foc_knob_state_t state;
     foc_knob_get_state(arg, &state);
-    ESP_LOGI(TAG, "foc_knob_dec_cb: position: %" PRId32 "\n", state.position);
 }
 
 static void foc_knob_h_lim_cb(void *arg, void *data)
@@ -121,6 +128,14 @@ float motor_shake_func(float strength, int delay_cnt)
         motor_shake = false;
         return 0;
     }
+}
+
+static float motor_pid_cb(float P, float D, float limit, float error)
+{
+    motor.PID_velocity.limit = limit;
+    motor.PID_velocity.P = P;
+    motor.PID_velocity.D = D;
+    return motor.PID_velocity(error);
 }
 
 static void motor_task(void *arg)
@@ -157,8 +172,9 @@ extern "C" void app_main(void)
     foc_knob_config_t cfg = {
         .param_lists = default_foc_knob_param_lst,
         .param_list_num = MOTOR_MAX_MODES,
-        .max_torque_out_limit = 3,
-        .max_torque = 2,
+        .max_torque_out_limit = 5,
+        .max_torque = 5,
+        .pid_cb = motor_pid_cb,
     };
 
     foc_knob_handle = foc_knob_create(&cfg);
@@ -168,5 +184,5 @@ extern "C" void app_main(void)
     foc_knob_register_cb(foc_knob_handle, FOC_KNOB_H_LIM, foc_knob_h_lim_cb, NULL);
     foc_knob_register_cb(foc_knob_handle, FOC_KNOB_L_LIM, foc_knob_l_lim_cb, NULL);
 
-    xTaskCreate(motor_task, "motor_task", 2048, NULL, 5, NULL);
+    xTaskCreate(motor_task, "motor_task", 4096, NULL, 5, NULL);
 }
