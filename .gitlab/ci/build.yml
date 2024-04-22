@@ -598,6 +598,8 @@ build_example_usb_device_usb_uf2_nvs:
     matrix:
       - IMAGE: espressif/idf:release-v4.4
       - IMAGE: espressif/idf:release-v5.0
+      - IMAGE: espressif/idf:release-v5.1
+      - IMAGE: espressif/idf:release-v5.2
   variables:
     EXAMPLE_DIR: examples/usb/device/usb_uf2_nvs
 
@@ -609,6 +611,8 @@ build_example_usb_device_usb_uf2_ota:
     matrix:
       - IMAGE: espressif/idf:release-v4.4
       - IMAGE: espressif/idf:release-v5.0
+      - IMAGE: espressif/idf:release-v5.1
+      - IMAGE: espressif/idf:release-v5.2
   variables:
     EXAMPLE_DIR: examples/usb/device/usb_uf2_ota
 
