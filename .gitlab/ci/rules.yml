@@ -1061,8 +1061,6 @@
     - <<: *if-dev-push
       changes: *patterns-build_system
     - <<: *if-dev-push
-      changes: *patterns-components_usb_usb_stream
-    - <<: *if-dev-push
       changes: *patterns-example_usb_host_usb_audio_player
 
 .rules:build:example_usb_host_usb_cdc_4g_module:
