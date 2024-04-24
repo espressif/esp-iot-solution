@@ -217,6 +217,10 @@ examples/usb/device/usb_uart_bridge:
   enable:
     - if: IDF_TARGET in ["esp32s3","esp32s2"]
 
+examples/usb/device/usb_dual_uvc_device:
+  enable:
+    - if: IDF_TARGET in ["esp32s3","esp32s2","esp32p4"]
+
 examples/usb/device/usb_webcam:
   enable:
     - if: IDF_TARGET in ["esp32s3","esp32s2"]

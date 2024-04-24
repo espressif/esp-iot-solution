@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.0.0 2024-4-15
+
+* Support trans two cam's picture
+* Support P4
+* Add api `uvc_device_config`
+
 ## v0.1.0 2024-2-20
 
 * Break the bidirectional dependency with tinyusb

@@ -16,70 +16,160 @@ menu "USB Device UVC"
         string "Product ID"
         default "12345678"
 
-    choice UVC_DEFAULT_FORMAT
-        bool "UVC Default Format"
-        default FORMAT_MJPEG
-        config FORMAT_MJPEG
-            bool "MJPEG"
-    endchoice
-
-    choice UVC_XFER_MODE
-        bool "UVC transfer mode"
-        default UVC_MODE_ISOC
-        config UVC_MODE_ISOC
-            bool "Isochronous"
-        config UVC_MODE_BULK
-            bool "Bulk"
-    endchoice
-
-    choice UVC_DEFAULT_FRAMESIZE
-        bool "UVC Default Resolution"
-        default FRAMESIZE_HD
-        config FRAMESIZE_QVGA
-            bool "QVGA 320x240"
-        config FRAMESIZE_HVGA
-            bool "HVGA 480x320"
-        config FRAMESIZE_VGA
-            bool "VGA 640x480"
-        config FRAMESIZE_SVGA
-            bool "SVGA 800x600"
-        config FRAMESIZE_HD
-            bool "HD 1280x720"
-        config FRAMESIZE_FHD
-            bool "FHD 1920x1080"
-    endchoice
-
-    config UVC_DEFAULT_FRAMERATE
-        int "Frame Rate (FPS)"
-        default 30 if FRAMESIZE_QVGA
-        default 30 if FRAMESIZE_HVGA
-        default 15 if FRAMESIZE_VGA
-        default 15 if FRAMESIZE_SVGA
-        default 15 if FRAMESIZE_HD
-        default 15 if FRAMESIZE_FHD
-
-    config UVC_DEFAULT_FRAMESIZE_WIDTH
-        int
-        default 320 if FRAMESIZE_QVGA
-        default 480 if FRAMESIZE_HVGA
-        default 640 if FRAMESIZE_VGA
-        default 800 if FRAMESIZE_SVGA
-        default 1280 if FRAMESIZE_HD
-        default 1920 if FRAMESIZE_FHD
-
-    config UVC_DEFAULT_FRAMESIZE_HEIGT
-        int
-        default 240 if FRAMESIZE_QVGA
-        default 320 if FRAMESIZE_HVGA
-        default 480 if FRAMESIZE_VGA
-        default 600 if FRAMESIZE_SVGA
-        default 720 if FRAMESIZE_HD
-        default 1080 if FRAMESIZE_FHD
-
-    config UVC_MULTI_FRAMESIZE
-        bool "Enable multiple frames sizes"
-        default y
+    config UVC_SUPPORT_TWO_CAM
+        bool "Support two cameras"
+        default n
         help
-            If enable, add VGA and HVGA to list
+            If enable, support two cameras
 
+    choice TINYUSB_RHPORT
+        depends on IDF_TARGET_ESP32P4
+        prompt "TinyUSB PHY"
+        default TINYUSB_RHPORT_HS
+        help
+            Allows set the USB PHY Controller for TinyUSB: HS (USB OTG2.0 PHY for HighSpeed)
+
+        config TINYUSB_RHPORT_HS
+            bool "HS"
+    endchoice
+
+    menu "USB Cam1 Config"
+
+        choice UVC_CAM1_FORMAT
+            bool "UVC Cam1 Format"
+            default FORMAT_MJPEG_CAM1
+            config FORMAT_MJPEG_CAM1
+                bool "MJPEG"
+        endchoice
+
+        choice UVC_CAM1_XFER_MODE
+            bool "UVC cam1 transfer mode"
+            default UVC_MODE_ISOC_CAM1
+            config UVC_MODE_ISOC_CAM1
+                bool "Isochronous"
+            config UVC_MODE_BULK_CAM1
+                bool "Bulk"
+        endchoice
+
+        choice UVC_CAM1_FRAMESIZE
+            bool "UVC Default Resolution"
+            default FRAMESIZE_HD
+            config FRAMESIZE_QVGA
+                bool "QVGA 320x240"
+            config FRAMESIZE_HVGA
+                bool "HVGA 480x320"
+            config FRAMESIZE_VGA
+                bool "VGA 640x480"
+            config FRAMESIZE_SVGA
+                bool "SVGA 800x600"
+            config FRAMESIZE_HD
+                bool "HD 1280x720"
+            config FRAMESIZE_FHD
+                bool "FHD 1920x1080"
+        endchoice
+
+        config UVC_CAM1_FRAMERATE
+            int "Frame Rate (FPS)"
+            default 30 if FRAMESIZE_QVGA
+            default 30 if FRAMESIZE_HVGA
+            default 15 if FRAMESIZE_VGA
+            default 15 if FRAMESIZE_SVGA
+            default 15 if FRAMESIZE_HD
+            default 15 if FRAMESIZE_FHD
+
+        config UVC_CAM1_FRAMESIZE_WIDTH
+            int "Cam1 Frame Width"
+            default 320 if FRAMESIZE_QVGA
+            default 480 if FRAMESIZE_HVGA
+            default 640 if FRAMESIZE_VGA
+            default 800 if FRAMESIZE_SVGA
+            default 1280 if FRAMESIZE_HD
+            default 1920 if FRAMESIZE_FHD
+
+        config UVC_CAM1_FRAMESIZE_HEIGT
+            int "Cam1 Frame Height"
+            default 240 if FRAMESIZE_QVGA
+            default 320 if FRAMESIZE_HVGA
+            default 480 if FRAMESIZE_VGA
+            default 600 if FRAMESIZE_SVGA
+            default 720 if FRAMESIZE_HD
+            default 1080 if FRAMESIZE_FHD
+
+        config UVC_CAM1_MULTI_FRAMESIZE
+            bool "Enable cam1 multiple frames sizes"
+            default y
+            help
+                If enable, add VGA and HVGA to list
+    endmenu
+
+    menu "USB Cam2 Config"
+        depends on UVC_SUPPORT_TWO_CAM
+
+        choice UVC_CAM2_FORMAT
+            bool "UVC Cam2 Format"
+            default FORMAT_MJPEG_CAM2
+            config FORMAT_MJPEG_CAM2
+                bool "MJPEG"
+        endchoice
+
+        choice UVC_CAM2_XFER_MODE
+            bool "UVC cam2 transfer mode"
+            default UVC_MODE_ISOC_CAM2
+            config UVC_MODE_ISOC_CAM2
+                bool "Isochronous"
+            config UVC_MODE_BULK_CAM2
+                bool "Bulk"
+        endchoice
+
+        choice UVC_CAM2_FRAMESIZE
+            bool "UVC Default Resolution"
+            default FRAMESIZE_HD_2
+            config FRAMESIZE_QVGA_2
+                bool "QVGA 320x240"
+            config FRAMESIZE_HVGA_2
+                bool "HVGA 480x320"
+            config FRAMESIZE_VGA_2
+                bool "VGA 640x480"
+            config FRAMESIZE_SVGA_2
+                bool "SVGA 800x600"
+            config FRAMESIZE_HD_2
+                bool "HD 1280x720"
+            config FRAMESIZE_FHD_2
+                bool "FHD 1920x1080"
+        endchoice
+
+        config UVC_CAM2_FRAMERATE
+            int "Frame Rate (FPS)"
+            default 30 if FRAMESIZE_QVGA_2
+            default 30 if FRAMESIZE_HVGA_2
+            default 15 if FRAMESIZE_VGA_2
+            default 15 if FRAMESIZE_SVGA_2
+            default 15 if FRAMESIZE_HD_2
+            default 15 if FRAMESIZE_FHD_2
+
+        config UVC_CAM2_FRAMESIZE_WIDTH
+            int "Cam2 Frame Width"
+            default 320 if FRAMESIZE_QVGA_2
+            default 480 if FRAMESIZE_HVGA_2
+            default 640 if FRAMESIZE_VGA_2
+            default 800 if FRAMESIZE_SVGA_2
+            default 1280 if FRAMESIZE_HD_2
+            default 1920 if FRAMESIZE_FHD_2
+
+        config UVC_CAM2_FRAMESIZE_HEIGT
+            int "Cam2 Frame Height"
+            default 240 if FRAMESIZE_QVGA_2
+            default 320 if FRAMESIZE_HVGA_2
+            default 480 if FRAMESIZE_VGA_2
+            default 600 if FRAMESIZE_SVGA_2
+            default 720 if FRAMESIZE_HD_2
+            default 1080 if FRAMESIZE_FHD_2
+
+
+        config UVC_CAM2_MULTI_FRAMESIZE
+            bool "Enable cam2 multiple frames sizes"
+            default y
+            help
+                If enable, add VGA and HVGA to list
+    endmenu
 endmenu

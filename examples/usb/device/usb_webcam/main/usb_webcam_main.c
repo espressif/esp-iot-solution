@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -264,13 +264,15 @@ void app_main(void)
     ESP_LOGI(TAG, "Format List");
     ESP_LOGI(TAG, "\tFormat(1) = %s", "MJPEG");
     ESP_LOGI(TAG, "Frame List");
-    ESP_LOGI(TAG, "\tFrame(1) = %d * %d @%dfps", UVC_FRAMES_INFO[0].width, UVC_FRAMES_INFO[0].height, UVC_FRAMES_INFO[0].rate);
+    ESP_LOGI(TAG, "\tFrame(1) = %d * %d @%dfps", UVC_FRAMES_INFO[0][0].width, UVC_FRAMES_INFO[0][0].height, UVC_FRAMES_INFO[0][0].rate);
 #if CONFIG_CAMERA_MULTI_FRAMESIZE
-    ESP_LOGI(TAG, "\tFrame(2) = %d * %d @%dfps", UVC_FRAMES_INFO[1].width, UVC_FRAMES_INFO[1].height, UVC_FRAMES_INFO[1].rate);
-    ESP_LOGI(TAG, "\tFrame(3) = %d * %d @%dfps", UVC_FRAMES_INFO[2].width, UVC_FRAMES_INFO[2].height, UVC_FRAMES_INFO[2].rate);
+    ESP_LOGI(TAG, "\tFrame(2) = %d * %d @%dfps", UVC_FRAMES_INFO[0][1].width, UVC_FRAMES_INFO[0][1].height, UVC_FRAMES_INFO[0][1].rate);
+    ESP_LOGI(TAG, "\tFrame(3) = %d * %d @%dfps", UVC_FRAMES_INFO[0][2].width, UVC_FRAMES_INFO[0][2].height, UVC_FRAMES_INFO[0][2].rate);
+    ESP_LOGI(TAG, "\tFrame(3) = %d * %d @%dfps", UVC_FRAMES_INFO[0][3].width, UVC_FRAMES_INFO[0][3].height, UVC_FRAMES_INFO[0][3].rate);
 #endif
 
-    ESP_ERROR_CHECK(uvc_device_init(&config));
+    ESP_ERROR_CHECK(uvc_device_config(0, &config));
+    ESP_ERROR_CHECK(uvc_device_init());
 
     while (1) {
 #if CONFIG_CAMERA_MODULE_ESP_S3_EYE

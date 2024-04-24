@@ -32,6 +32,9 @@ examples/**/sdkconfig
 examples/**/sdkconfig.old
 examples/**/build
 
+# Example online download files
+examples/usb/device/usb_dual_uvc_device/**/*.avi
+
 # Doc build artifacts
 docs/**/_build/
 docs/**/doxygen-warning-log.txt
