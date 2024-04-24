@@ -6,17 +6,15 @@
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "esp_private/usb_phy.h"
 #include "esp_log.h"
-#include "board_flash.h"
-#include "tusb.h"
-#include "esp_tinyuf2.h"
 #include "esp_rom_gpio.h"
 #include "soc/soc_caps.h"
 #include "soc/gpio_pins.h"
 #include "soc/gpio_sig_map.h"
-#include "hal/usb_phy_hal.h"
-#include "hal/usb_phy_ll.h"
+#include "tusb.h"
+#include "esp_tinyuf2.h"
+#include "esp_private/usb_phy.h"
+#include "board_flash.h"
 #include "uf2.h"
 
 #ifdef CONFIG_ENABLE_UF2_USB_CONSOLE
@@ -34,6 +32,8 @@ static void _usb_otg_phy_init(bool enable)
     static usb_phy_handle_t phy_hdl = NULL;
     usb_phy_config_t phy_conf = {
         .target = USB_PHY_TARGET_INT,
+        .otg_mode = USB_OTG_MODE_DEVICE,
+        .otg_speed = USB_PHY_SPEED_FULL
     };
     if (phy_hdl) {
         usb_del_phy(phy_hdl);
@@ -42,15 +42,13 @@ static void _usb_otg_phy_init(bool enable)
     if (enable) {
         // Configure USB OTG PHY
         phy_conf.controller = USB_PHY_CTRL_OTG;
-        phy_conf.otg_mode = USB_OTG_MODE_DEVICE;
-        phy_conf.otg_speed = USB_PHY_SPEED_FULL;
         usb_new_phy(&phy_conf, &phy_hdl);
     } else {
         // Restore the USB PHY to default state
         // Configure USB JTAG PHY
 #if SOC_USB_SERIAL_JTAG_SUPPORTED
-        //TODO: here if we create a new phy with jtag, usb not appear
-        usb_phy_ll_int_jtag_enable(&USB_SERIAL_JTAG);
+        phy_conf.controller = USB_PHY_CTRL_SERIAL_JTAG;
+        usb_new_phy(&phy_conf, &phy_hdl);
 #endif
     }
 }

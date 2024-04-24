@@ -1,8 +1,12 @@
 # ChangeLog
 
+## v0.2.1 - 2024-04-22
+
+* Fix build with latest ESP-IDF (USB Hal: Change name of usb_phy HAL files to usb_fsls_phy)
+
 ## v0.2.0 - 2023-07-17
 
-* Support `esp_tinyuf2_uninstall` API (Restore the USB hardware to default state, Not teardown TinyUSB stack, )
+* Support `esp_tinyuf2_uninstall` API (Restore the USB hardware to default state, Not teardown TinyUSB stack)
 * Support target test
 
 ## v0.1.0 - 2023-07-05

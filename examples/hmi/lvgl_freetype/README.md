@@ -1,6 +1,6 @@
 # Freetype Example
 
-This demo shows how to add [freetype](https://docs.lvgl.io/8.3/libs/freetype.html) to the lvgl project.
+This demo shows how to add [freetype](https://github.com/espressif/idf-extra-components/tree/master/freetype) to the lvgl project.
 
 ## How to use example
 
