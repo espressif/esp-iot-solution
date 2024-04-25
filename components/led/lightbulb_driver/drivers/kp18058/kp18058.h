@@ -12,6 +12,7 @@
  *
  */
 typedef enum {
+    KP18058_COMPENSATION_VOLTAGE_INVALID = -1,
     KP18058_COMPENSATION_VOLTAGE_140V = 0,
     KP18058_COMPENSATION_VOLTAGE_145V,
     KP18058_COMPENSATION_VOLTAGE_150V,
@@ -34,6 +35,7 @@ typedef enum {
  *
  */
 typedef enum {
+    KP18058_SLOPE_INVALID = -1,
     KP18058_SLOPE_7_5 = 0,
     KP18058_SLOPE_10_0,
     KP18058_SLOPE_12_5,
@@ -45,6 +47,7 @@ typedef enum {
  *
  */
 typedef enum {
+    KP18058_CHOPPING_INVALID = -1,
     KP18058_CHOPPING_2KHZ = 0,
     KP18058_CHOPPING_1KHZ,
     KP18058_CHOPPING_500HZ,
@@ -173,6 +176,30 @@ int kp18058_rgb_current_mapping(float current_mA);
  * @return int
  */
 int kp18058_cw_current_mapping(float current_mA);
+
+/**
+ * @brief Map voltage to compensation enum
+ *
+ * @param voltage_v Input voltage
+ * @return kp18058_compensation_t Corresponding compensation enum value
+ */
+kp18058_compensation_t kp18058_compensation_mapping(int voltage_v);
+
+/**
+ * @brief Map slope value to slope enum
+ *
+ * @param slope Slope value
+ * @return kp18058_slope_t Corresponding slope enum value
+ */
+kp18058_slope_t kp18058_slope_mapping(float slope);
+
+/**
+ * @brief Map frequency to chopping frequency enum
+ *
+ * @param freq_hz Frequency in Hz
+ * @return kp18058_chopping_freq_t Corresponding chopping frequency enum value
+ */
+kp18058_chopping_freq_t kp18058_chopping_freq_mapping(int freq_hz);
 
 /**
  * @brief Stop all channel output

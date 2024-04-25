@@ -299,14 +299,66 @@ int kp18058_cw_current_mapping(float current_mA)
     return (current_mA * 1.0 / 2.5);
 }
 
+kp18058_compensation_t kp18058_compensation_mapping(int voltage_v)
+{
+    DRIVER_CHECK((voltage_v >= 140) && (voltage_v <= 330), "The compensation value is incorrect and cannot be mapped.", return KP18058_COMPENSATION_VOLTAGE_INVALID);
+
+    int voltages[15] = {
+        140, 145, 150, 155, 160, 165, 170,
+        260, 270, 280, 290, 300, 310, 320, 330
+    };
+
+    for (size_t i = 0; i < 15; ++i) {
+        if (voltage_v == voltages[i]) {
+            return (kp18058_compensation_t)i;
+        }
+    }
+    ESP_LOGE(TAG, "The voltage compensation value range is incorrect");
+
+    return KP18058_COMPENSATION_VOLTAGE_INVALID;
+}
+
+kp18058_slope_t kp18058_slope_mapping(float slope)
+{
+    DRIVER_CHECK((slope >= 7.5) && (slope <= 15.0), "The slope value is incorrect and cannot be mapped.", return KP18058_SLOPE_INVALID);
+
+    float slopes[4] = {7.5, 10.0, 12.5, 15.0};
+
+    for (size_t i = 0; i < 4; ++i) {
+        if (slope == slopes[i]) {
+            return (kp18058_slope_t)i;
+        }
+    }
+    ESP_LOGE(TAG, "The slope value range is incorrect");
+
+    return KP18058_SLOPE_INVALID;
+}
+
+kp18058_chopping_freq_t kp18058_chopping_freq_mapping(int freq_hz)
+{
+    DRIVER_CHECK((freq_hz >= 250) && (freq_hz <= 2000), "The slope value is incorrect and cannot be mapped.", return KP18058_CHOPPING_INVALID);
+
+    int freqs[4] = {2000, 1000, 500, 250};
+
+    for (size_t i = 0; i < 4; ++i) {
+        if (freq_hz == freqs[i]) {
+            return (kp18058_chopping_freq_t)i;
+        }
+    }
+
+    ESP_LOGE(TAG, "The chopping freq value range is incorrect");
+
+    return KP18058_CHOPPING_INVALID;
+}
+
 esp_err_t kp18058_init(driver_kp18058_t *config, void(*hook_func)(void *))
 {
     esp_err_t err = ESP_OK;
 
     DRIVER_CHECK(config, "config is null", return ESP_ERR_INVALID_ARG);
     DRIVER_CHECK(!s_kp18058, "already init done", return ESP_ERR_INVALID_ARG);
-    DRIVER_CHECK(config->cw_current_multiple < 31 && config->cw_current_multiple >= 1, "cw channel current data check failed", return ESP_ERR_INVALID_ARG);
-    DRIVER_CHECK(config->rgb_current_multiple < 31 && config->rgb_current_multiple >= 1, "rgb channel current data check failed", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(config->cw_current_multiple <= 31 && config->cw_current_multiple >= 0, "cw channel current data check failed", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(config->rgb_current_multiple <= 31 && config->rgb_current_multiple >= 0, "rgb channel current data check failed", return ESP_ERR_INVALID_ARG);
 
     s_kp18058 = calloc(1, sizeof(kp18058_handle_t));
     DRIVER_CHECK(s_kp18058, "alloc fail", return ESP_ERR_NO_MEM);
@@ -316,19 +368,25 @@ esp_err_t kp18058_init(driver_kp18058_t *config, void(*hook_func)(void *))
     // Byte 1
     if (config->enable_custom_param && config->custom_param.disable_voltage_compensation) {
         s_kp18058->fixed_bit[0] |= BIT_DISABLE_COMPENSATION;
-    } else {
+    } else if (config->enable_custom_param && !config->custom_param.disable_voltage_compensation) {
+        DRIVER_CHECK((config->custom_param.compensation != KP18058_COMPENSATION_VOLTAGE_INVALID) && (config->custom_param.slope != KP18058_SLOPE_INVALID), "Voltage compensation and slope are incorrect", goto EXIT);
         s_kp18058->fixed_bit[0] |= BIT_ENABLE_COMPENSATION;
         s_kp18058->fixed_bit[0] |= config->custom_param.compensation << 3;
         s_kp18058->fixed_bit[0] |= config->custom_param.slope << 1;
+    } else {
+        s_kp18058->fixed_bit[0] |= BIT_ENABLE_COMPENSATION;
+        s_kp18058->fixed_bit[0] |= BIT_DEFAULT_COMPENSATION_VOLTAGE;
+        s_kp18058->fixed_bit[0] |= BIT_DEFAULT_SLOPE_LEVEL;
     }
 
     // Byte 2
-    if (config->enable_custom_param && config->custom_param.disable_chopping_dimming) {
-        s_kp18058->fixed_bit[1] |= BIT_DEFAULT_CHOPPING_FREQ_1KHZ;
-    } else {
+    if (config->enable_custom_param && !config->custom_param.disable_chopping_dimming) {
+        DRIVER_CHECK(config->custom_param.chopping_freq != KP18058_CHOPPING_INVALID, "Chopping freq is incorrect", goto EXIT);
         s_kp18058->fixed_bit[1] |= config->custom_param.chopping_freq << 6;
+    } else {
+        s_kp18058->fixed_bit[1] |= BIT_DEFAULT_CHOPPING_FREQ_1KHZ;
     }
-    s_kp18058->fixed_bit[1] = (config->rgb_current_multiple - 1) << 1;
+    s_kp18058->fixed_bit[1] |= (config->rgb_current_multiple) << 1;
 
     // Byte 3
     if (config->enable_custom_param && config->custom_param.disable_chopping_dimming) {
@@ -341,7 +399,7 @@ esp_err_t kp18058_init(driver_kp18058_t *config, void(*hook_func)(void *))
     } else {
         s_kp18058->fixed_bit[2] |= BIT_DISABLE_RC_FILTER;
     }
-    s_kp18058->fixed_bit[2] = (config->cw_current_multiple - 1) << 1;
+    s_kp18058->fixed_bit[2] |= (config->cw_current_multiple) << 1;
 
     if (config->iic_freq_khz > 300) {
         config->iic_freq_khz = 300;

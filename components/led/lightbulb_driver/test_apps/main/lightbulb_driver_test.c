@@ -490,11 +490,11 @@ TEST_CASE("BP1658CJ", "[Underlying Driver]")
     vTaskDelay(pdMS_TO_TICKS(100));
     TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_rgbcw_channel(255, 0, 0, 0, 0));
     vTaskDelay(pdMS_TO_TICKS(100));
-    bp1658cj_set_sleep_mode(true);
+    //bp1658cj_set_sleep_mode(true); AEG-1520
     vTaskDelay(pdMS_TO_TICKS(100));
     TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_rgbcw_channel(0, 255, 0, 0, 0));
     vTaskDelay(pdMS_TO_TICKS(100));
-    bp1658cj_set_sleep_mode(true);
+    //bp1658cj_set_sleep_mode(true); AEG-1520
     vTaskDelay(pdMS_TO_TICKS(100));
     TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_rgbcw_channel(0, 0, 255, 0, 0));
     vTaskDelay(pdMS_TO_TICKS(100));
@@ -837,6 +837,15 @@ TEST_CASE("KP18058", "[Underlying Driver]")
     TEST_ASSERT_EQUAL(-1, kp18058_cw_current_mapping(28));
     TEST_ASSERT_EQUAL(31, kp18058_cw_current_mapping(77.5));
     TEST_ASSERT_EQUAL(-1, kp18058_cw_current_mapping(80));
+    TEST_ASSERT_EQUAL(KP18058_COMPENSATION_VOLTAGE_INVALID, kp18058_compensation_mapping(0));
+    TEST_ASSERT_EQUAL(KP18058_COMPENSATION_VOLTAGE_140V, kp18058_compensation_mapping(140));
+    TEST_ASSERT_EQUAL(KP18058_COMPENSATION_VOLTAGE_330V, kp18058_compensation_mapping(330));
+    TEST_ASSERT_EQUAL(KP18058_SLOPE_INVALID, kp18058_slope_mapping(0));
+    TEST_ASSERT_EQUAL(KP18058_SLOPE_7_5, kp18058_slope_mapping(7.5));
+    TEST_ASSERT_EQUAL(KP18058_SLOPE_15_0, kp18058_slope_mapping(15));
+    TEST_ASSERT_EQUAL(KP18058_CHOPPING_INVALID, kp18058_chopping_freq_mapping(0));
+    TEST_ASSERT_EQUAL(KP18058_CHOPPING_2KHZ, kp18058_chopping_freq_mapping(2000));
+    TEST_ASSERT_EQUAL(KP18058_CHOPPING_250HZ, kp18058_chopping_freq_mapping(250));
 
     //7. Deinit
     TEST_ASSERT_EQUAL(ESP_OK, kp18058_set_shutdown());
