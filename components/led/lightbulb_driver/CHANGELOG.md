@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.1.3 - 2024-04-24
+
+### Bug Fixes:
+
+* Fix KP18058 chip current data range error
+
 ## v1.1.2 - 2024-02-05
 
 ### Bug Fixes:
