@@ -134,6 +134,7 @@ idf.py create-project-from-example "espressif/bootloader_support_plus=*:simple_o
 
 ## Note
 1. If your flash partition has only two partitions, one for storing app.bin and one for storing compressed firmware, then you cannot rollback to the old version if using compression upgrade. In this case, please ensure the availability and correctness of your compressed firmware before upgrading to it.    
+2. When secure boot or flash encryption are enabled, note that the size of the partition storing compressed firmware > (size of compressed firmware + 8KB).
 
 ### Q&A
 
