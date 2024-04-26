@@ -1,0 +1,5 @@
+## IDF Component Manager Manifest File
+dependencies:
+  esp_lcd_axs15231b:
+    version: "*"
+    override_path: "../../../esp_lcd_axs15231b"

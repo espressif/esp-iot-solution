@@ -54,6 +54,10 @@ components/sensors/radar/at581x/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1
 
+components/display/lcd/esp_lcd_axs15231b/test_apps:
+  enable:
+    - if: INCLUDE_DEFAULT == 1
+
 components/display/lcd/esp_lcd_gc9b71/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1

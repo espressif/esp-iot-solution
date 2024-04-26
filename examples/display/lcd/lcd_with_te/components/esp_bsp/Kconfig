@@ -1,0 +1,13 @@
+menu "Board Support Package"
+    choice BSP_LCD_SUB_BOARD
+        prompt "Select Target Sub board"
+        default BSP_LCD_BOARD_I80_170_560
+        help
+            Select the board of the LCD.
+
+        config BSP_LCD_BOARD_I80_170_560
+            bool "Board with 170x560 I80 LCD"
+        config BSP_LCD_BOARD_QSPI_480_320
+            bool "Board with 480x320 QSPI LCD"
+    endchoice
+endmenu

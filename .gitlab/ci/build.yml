@@ -303,6 +303,16 @@ build_example_check_pedestrian_flow:
   variables:
     EXAMPLE_DIR: examples/check_pedestrian_flow
 
+build_example_display_lcd_lcd_with_te:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_display_lcd_lcd_with_te
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.1
+  variables:
+    EXAMPLE_DIR: examples/display/lcd/lcd_with_te
+
 build_example_display_lcd_qspi_with_ram:
   extends:
     - .build_examples_template
@@ -729,6 +739,16 @@ build_components_button_test_apps:
       - IMAGE: espressif/idf:release-v5.0
   variables:
     EXAMPLE_DIR: components/button/test_apps
+
+build_components_display_lcd_esp_lcd_axs15231b_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_display_lcd_esp_lcd_axs15231b_test_apps
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.1
+  variables:
+    EXAMPLE_DIR: components/display/lcd/esp_lcd_axs15231b/test_apps
 
 build_components_display_lcd_esp_lcd_gc9b71_test_apps:
   extends:

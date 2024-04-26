@@ -65,6 +65,9 @@
 .patterns-components_display_digital_tube_is31fl3xxx: &patterns-components_display_digital_tube_is31fl3xxx
   - "components/display/digital_tube/is31fl3xxx/**/*"
 
+.patterns-components_display_lcd_esp_lcd_axs15231b: &patterns-components_display_lcd_esp_lcd_axs15231b
+  - "components/display/lcd/esp_lcd_axs15231b/**/*"
+
 .patterns-components_display_lcd_esp_lcd_gc9b71: &patterns-components_display_lcd_esp_lcd_gc9b71
   - "components/display/lcd/esp_lcd_gc9b71/**/*"
 
@@ -329,6 +332,9 @@
 
 .patterns-example_common_components_camera: &patterns-example_common_components_camera
   - "examples/common_components/camera/**/*"
+
+.patterns-example_display_lcd_lcd_with_te: &patterns-example_display_lcd_lcd_with_te
+  - "examples/display/lcd/lcd_with_te/**/*"
 
 .patterns-example_display_lcd_qspi_with_ram: &patterns-example_display_lcd_qspi_with_ram
   - "examples/display/lcd/qspi_with_ram/**/*"
@@ -655,6 +661,18 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-example_check_pedestrian_flow
+
+.rules:build:example_display_lcd_lcd_with_te:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_display_lcd_lcd_with_te
+    - <<: *if-dev-push
+      changes: *patterns-components_display_lcd_esp_lcd_axs15231b
 
 .rules:build:example_display_lcd_qspi_with_ram:
   rules:
@@ -1282,6 +1300,17 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_display_digital_tube_is31fl3xxx
+
+.rules:build:components_display_lcd_esp_lcd_axs15231b_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_display_lcd_esp_lcd_axs15231b
 
 .rules:build:components_display_lcd_esp_lcd_gc9b71_test_apps:
   rules:
