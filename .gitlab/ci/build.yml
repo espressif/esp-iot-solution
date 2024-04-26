@@ -535,6 +535,17 @@ build_example_sensors_sensor_hub_monitor:
     EXAMPLE_DIR: examples/sensors/sensor_hub_monitor
     IMAGE: espressif/idf:release-v4.4
 
+build_example_ulp_lp_cpu_lp_environment_sensor:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_ulp_lp_cpu_lp_environment_sensor
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.1
+      - IMAGE: espressif/idf:release-v5.2
+  variables:
+    EXAMPLE_DIR: examples/ulp/lp_cpu/lp_environment_sensor
+
 build_example_usb_device_usb_uart_bridge:
   extends:
     - .build_examples_template
