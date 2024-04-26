@@ -11,6 +11,7 @@ push_to_github:
   image: $CI_DOCKER_REGISTRY/esp32-ci-env
   variables:
     GIT_STRATEGY: clone
+  dependencies: []
   before_script:
     - echo "skip default before_script"
   script:

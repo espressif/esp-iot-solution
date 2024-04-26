@@ -1,0 +1,6 @@
+version: "0.0.1"
+dependencies:
+    idf: ">=5.0"
+    keyboard_button:
+      version: "*"
+      override_path: "../../../keyboard_button"

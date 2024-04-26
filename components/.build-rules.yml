@@ -33,6 +33,7 @@ components/motor/esp_sensorless_bldc_control/test_apps/bldc_adc:
 components/motor/esp_sensorless_bldc_control/test_apps/bldc_comparer:
   disable:
     - if: IDF_TARGET in ["esp32c2"]
+
 components/led/lightbulb_driver/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1
@@ -94,5 +95,9 @@ components/display/lcd_touch/esp_lcd_touch_spd2010/test_apps:
     - if: INCLUDE_DEFAULT == 1
 
 components/display/lcd_touch/esp_lcd_touch_st7123/test_apps:
+  enable:
+    - if: INCLUDE_DEFAULT == 1
+
+components/keyboard_button/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1

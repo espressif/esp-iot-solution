@@ -7,5 +7,6 @@
     :maxdepth: 1
 
     按键 <button>
+    键盘扫描 <keyboard_button>
     旋钮 <knob>
     触摸屏 <touch_panel>
