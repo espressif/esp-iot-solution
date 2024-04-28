@@ -249,6 +249,10 @@ examples/usb/device/usb_hid_device:
   enable:
     - if: IDF_TARGET in ["esp32s2","esp32s3"]
 
+examples/usb/device/usb_lcd_display:
+  enable:
+    - if: IDF_TARGET in ["esp32p4"]
+
 examples/usb/device/usb_msc_wireless_disk:
   enable:
     - if: IDF_TARGET in ["esp32s2","esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
