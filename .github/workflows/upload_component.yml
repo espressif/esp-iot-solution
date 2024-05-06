@@ -50,6 +50,7 @@ jobs:
             components/motor/esp_simplefoc;
             components/openai;
             components/sensors/humiture/aht20;
+            components/sensors/ntc_driver;
             components/sensors/radar/at581x;
             components/usb/esp_msc_ota;
             components/usb/esp_tinyuf2;

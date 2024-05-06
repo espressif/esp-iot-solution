@@ -12,4 +12,5 @@
     环境光传感器 <light_sensor>
     气压传感器 <pressure>
     手势传感器 <gesture>
+    热敏电阻传感器 <ntc_driver>
 

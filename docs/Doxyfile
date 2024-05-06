@@ -54,6 +54,7 @@ INPUT = \
     $(PROJECT_PATH)/components/sensors/sensor_hub/include/hal/light_sensor_hal.h \
     $(PROJECT_PATH)/components/sensors/sensor_hub/include/iot_sensor_hub.h \
     $(PROJECT_PATH)/components/sensors/sensor_hub/include/sensor_type.h \
+    $(PROJECT_PATH)/components/sensors/ntc_driver/include/ntc_driver.h \
     $(PROJECT_PATH)/components/usb/esp_msc_ota/include/esp_msc_ota.h \
     $(PROJECT_PATH)/components/usb/iot_usbh_cdc/include/iot_usbh_cdc.h \
     $(PROJECT_PATH)/components/usb/usb_device_uvc/include/usb_device_uvc.h \
