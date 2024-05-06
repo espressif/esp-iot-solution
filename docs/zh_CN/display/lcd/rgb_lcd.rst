@@ -416,7 +416,7 @@ RGB LCD 驱动流程可大致分为三个部分：初始化接口设备、移植
         // .init_cmds_size = sizeof(lcd_init_cmds) / sizeof(st7701_lcd_init_cmd_t),
         .flags = {          // LCD 驱动 IC 的配置参数
             .mirror_by_cmd = 1,       // 若为 `1` 则使用 LCD 命令实现镜像功能（esp_lcd_panel_mirror()），若为 `0` 则通过软件实现
-            .auto_del_panel_io = 0,   // 若为 `1` 则在删除 LCD 设备时自动删除接口设备，此时应设置所有名称为 `*_by_cmd` 的参数为 `0`，
+            .enable_io_multiplex = 0, // 若为 `1` 则在删除 LCD 设备时自动删除接口设备，此时应设置所有名称为 `*_by_cmd` 的参数为 `0`，
                                       // 若为 `0` 则不删除。如果 3-wire SPI 接口的引脚与 RGB 接口的复用，那么需要设置此参数为 `1`
         },
     };

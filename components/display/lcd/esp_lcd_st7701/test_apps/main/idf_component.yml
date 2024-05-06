@@ -1,6 +1,5 @@
 ## IDF Component Manager Manifest File
 dependencies:
-  idf: ">=5.0.4"
   esp_lcd_panel_io_additions:
     version: "^1"
     public: true

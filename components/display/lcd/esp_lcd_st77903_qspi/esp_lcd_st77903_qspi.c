@@ -1212,6 +1212,9 @@ static const st77903_lcd_init_cmd_t vendor_specific_init_default[] = {
     {0x35, (uint8_t []){0x00}, 1, 0},
     {0x21, (uint8_t []){0x00}, 0, 0},
     {0x11, (uint8_t []){0x00}, 0, 120},
+
+    // {0xb0, (uint8_t []){0xa5}, 1, 0},               /* This part of the parameters can be used for screen self-test */
+    // {0xcc, (uint8_t []){0x40, 0x00, 0x3f, 0x00, 0x14, 0x14, 0x20, 0x20, 0x03}, 9, 0},
 };
 
 static esp_err_t lcd_cmd_config(st77903_qspi_panel_t *panel)

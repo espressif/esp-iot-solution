@@ -77,46 +77,20 @@ LCD 开发指南
     :widths: 10 15
     :header-rows: 1
 
-    * - LCD 控制器
-      - 接口
-    * - `st7789 <https://github.com/espressif/esp-idf/blob/master/components/esp_lcd/src/esp_lcd_panel_st7789.c>`_
-      - SPI/I80
-    * - `nt35510 <https://github.com/espressif/esp-idf/blob/master/components/esp_lcd/src/esp_lcd_panel_nt35510.c>`_
-      - SPI/I80
-    * - `ssd1306 <https://github.com/espressif/esp-idf/blob/master/components/esp_lcd/src/esp_lcd_panel_ssd1306.c>`_
-      - I2C
-    * - `gc9b71 <https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_gc9b71>`_
-      - SPI/QSPI
-    * - `nv3022b <https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_nv3022b>`_
-      - SPI
-    * - `sh8601 <https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_sh8601>`_
-      - SPI/QSPI
-    * - `spd2010 <https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_spd2010>`_
-      - SPI/QSPI
-    * - `st7701 <https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_st7701>`_
-      - 3-wire SPI + RGB
-    * - `st77903_rgb <https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_st77903_rgb>`_
-      - 3-wire SPI + RGB
-    * - `st77903_qspi <https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_st77903>`_
-      - QSPI
-    * - `st77916 <https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_st77916>`_
-      - SPI/QSPI
-    * - `st77922 <https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_st77922>`_
-      - SPI/QSPI
-    * - `gc9503 <https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_gc9503>`_
-      - 3-wire SPI + RGB
-    * - `gc9a01 <https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_gc9a01>`_
-      - SPI
-    * - `ili9341 <https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_ili9341>`_
-      - SPI
-    * - `ra8875 <https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_ra8875>`_
-      - I80
-    * - `sh1107 <https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_sh1107>`_
-      - I2C
-    * - `ssd1681 <https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_ssd1681>`_
-      - SPI
-    * - `st7796 <https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_st7796>`_
-      - SPI/I80
+    * - 接口
+      - LCD 控制器
+    * - I2C
+      - `ssd1306 <https://github.com/espressif/esp-idf/blob/master/components/esp_lcd/src/esp_lcd_panel_ssd1306.c>`_, `sh1107 <https://components.espressif.com/components/espressif/esp_lcd_sh1107>`_
+    * - SPI
+      - `axs15231b <https://components.espressif.com/components/espressif/esp_lcd_axs15231b>`_, `st7789 <https://github.com/espressif/esp-idf/blob/master/components/esp_lcd/src/esp_lcd_panel_st7789.c>`_, `nt35510 <https://github.com/espressif/esp-idf/blob/master/components/esp_lcd/src/esp_lcd_panel_nt35510.c>`_, `gc9b71 <https://components.espressif.com/components/espressif/esp_lcd_gc9b71>`_, `nv3022b <https://components.espressif.com/components/espressif/esp_lcd_nv3022b>`_, `sh8601 <https://components.espressif.com/components/espressif/esp_lcd_sh8601>`_, `spd2010 <https://components.espressif.com/components/espressif/esp_lcd_spd2010>`_, `st77916 <https://components.espressif.com/components/espressif/esp_lcd_st77916>`_, `st77922 <https://components.espressif.com/components/espressif/esp_lcd_st77922>`_, `gc9a01 <https://components.espressif.com/components/espressif/esp_lcd_gc9a01>`_, `ili9341 <https://components.espressif.com/components/espressif/esp_lcd_ili9341>`_, `ssd1681 <https://components.espressif.com/components/espressif/esp_lcd_ssd1681>`_, `st7796 <https://components.espressif.com/components/espressif/esp_lcd_st7796>`_
+    * - QSPI
+      - `axs15231b <https://components.espressif.com/components/espressif/esp_lcd_axs15231b>`_, `gc9b71 <https://components.espressif.com/components/espressif/esp_lcd_gc9b71>`_, `sh8601 <https://components.espressif.com/components/espressif/esp_lcd_sh8601>`_, `spd2010 <https://components.espressif.com/components/espressif/esp_lcd_spd2010>`_, `st77903 <https://components.espressif.com/components/espressif/esp_lcd_st77903_qspi>`_, `st77916 <https://components.espressif.com/components/espressif/esp_lcd_st77916>`_, `st77922 <https://components.espressif.com/components/espressif/esp_lcd_st77922>`_
+    * - I80
+      - `axs15231b <https://components.espressif.com/components/espressif/esp_lcd_axs15231b>`_, `st7789 <https://github.com/espressif/esp-idf/blob/master/components/esp_lcd/src/esp_lcd_panel_st7789.c>`_, `nt35510 <https://github.com/espressif/esp-idf/blob/master/components/esp_lcd/src/esp_lcd_panel_nt35510.c>`_, `ra8875 <https://components.espressif.com/components/espressif/esp_lcd_ra8875>`_, `st7796 <https://components.espressif.com/components/espressif/esp_lcd_st7796>`_
+    * - MIPI-DSI
+      - `ek79007 <https://components.espressif.com/components/espressif/esp_lcd_ek79007>`_, `jd9165 <https://components.espressif.com/components/espressif/esp_lcd_jd9165>`_, `jd9365 <https://components.espressif.com/components/espressif/esp_lcd_jd9365>`_, `st7701 <https://components.espressif.com/components/espressif/esp_lcd_st7701>`_
+    * - 3-wire SPI + RGB
+      - `st7701 <https://components.espressif.com/components/espressif/esp_lcd_st7701>`_, `st77903_rgb <https://components.espressif.com/components/espressif/esp_lcd_st77903_rgb>`_, `st77922 <https://components.espressif.com/components/espressif/esp_lcd_st77922>`_, `gc9503 <https://components.espressif.com/components/espressif/esp_lcd_gc9503>`_
 
 **请注意：**
 
