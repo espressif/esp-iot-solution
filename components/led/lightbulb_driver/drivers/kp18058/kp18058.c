@@ -161,13 +161,13 @@ esp_err_t kp18058_set_standby_mode(bool enable_standby)
 {
     DRIVER_CHECK(s_kp18058, "not init", return ESP_ERR_INVALID_STATE);
 
-    uint8_t addr = BASE_ADDR | BIT_STANDBY | BIT_NEXT_BYTE4;
-    uint8_t value[13] = { 0 };
-
-    if (!enable_standby) {
-        addr |= BIT_ALL_CHANNEL;
+    uint8_t addr = 0x00;
+    uint8_t value[10] = { 0 };
+    if (enable_standby) {
+        addr = BASE_ADDR | BIT_STANDBY | BIT_NEXT_BYTE4;
+    } else {
+        addr = BASE_ADDR | BIT_ALL_CHANNEL | BIT_NEXT_BYTE4;
     }
-    memcpy(&value[0], s_kp18058->fixed_bit, 3);
 
     return _write(addr, value, sizeof(value));
 }
@@ -303,12 +303,12 @@ kp18058_compensation_t kp18058_compensation_mapping(int voltage_v)
 {
     DRIVER_CHECK((voltage_v >= 140) && (voltage_v <= 330), "The compensation value is incorrect and cannot be mapped.", return KP18058_COMPENSATION_VOLTAGE_INVALID);
 
-    int voltages[15] = {
-        140, 145, 150, 155, 160, 165, 170,
+    int voltages[16] = {
+        140, 145, 150, 155, 160, 165, 170, 175,
         260, 270, 280, 290, 300, 310, 320, 330
     };
 
-    for (size_t i = 0; i < 15; ++i) {
+    for (size_t i = 0; i < 16; ++i) {
         if (voltage_v == voltages[i]) {
             return (kp18058_compensation_t)i;
         }
@@ -336,9 +336,9 @@ kp18058_slope_t kp18058_slope_mapping(float slope)
 
 kp18058_chopping_freq_t kp18058_chopping_freq_mapping(int freq_hz)
 {
-    DRIVER_CHECK((freq_hz >= 250) && (freq_hz <= 2000), "The slope value is incorrect and cannot be mapped.", return KP18058_CHOPPING_INVALID);
+    DRIVER_CHECK((freq_hz >= 500) && (freq_hz <= 4000), "The slope value is incorrect and cannot be mapped.", return KP18058_CHOPPING_INVALID);
 
-    int freqs[4] = {2000, 1000, 500, 250};
+    int freqs[4] = {4000, 2000, 1000, 500};
 
     for (size_t i = 0; i < 4; ++i) {
         if (freq_hz == freqs[i]) {

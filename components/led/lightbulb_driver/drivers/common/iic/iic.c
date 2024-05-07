@@ -56,14 +56,18 @@ static iic_config_t *s_obj = NULL;
 static esp_err_t _write(uint8_t addr, uint8_t *data_wr, size_t size)
 {
 #if 0
+    printf("--------start----------\r\n");
     ESP_LOG_BUFFER_HEX_LEVEL(" _write addr:", &addr, 1, ESP_LOG_INFO);
     ESP_LOG_BUFFER_HEX_LEVEL(" _write data:", data_wr, size, ESP_LOG_INFO);
-    printf("--------------------\r\n");
+    printf("--------stop----------\r\n");
 #endif
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
     i2c_master_start(cmd);
     i2c_master_write_byte(cmd, addr, ACK_CHECK_DIS);
-    i2c_master_write(cmd, data_wr, size, ACK_CHECK_DIS);
+    // AEG-1520
+    if (size > 0) {
+        i2c_master_write(cmd, data_wr, size, ACK_CHECK_DIS);
+    }
     i2c_master_stop(cmd);
     s_obj->last_err = i2c_master_cmd_begin(s_obj->i2c_master_num, cmd, pdMS_TO_TICKS(10));
     i2c_cmd_link_delete(cmd);
@@ -134,7 +138,10 @@ esp_err_t iic_driver_write(uint8_t addr, uint8_t *data_wr, size_t size)
         i2c_send_data_t data = { 0 };
         data.addr = addr;
         data.real_data_size = size;
-        memcpy(data.data, data_wr, size);
+        //AEG-1520
+        if (size > 0) {
+            memcpy(data.data, data_wr, size);
+        }
         if (xQueueSend(s_obj->cmd_queue_handle, &data, 0) != pdTRUE) {
             ESP_LOGE(TAG, "queue send data fail");
             ESP_LOG_BUFFER_HEX_LEVEL(TAG, data_wr, size, ESP_LOG_DEBUG);
@@ -165,7 +172,6 @@ EXIT:
 
 esp_err_t iic_driver_task_destroy(void)
 {
-    DRIVER_CHECK(s_obj->cmd_queue_handle || s_obj->send_task_handle, "handle is null", return ESP_ERR_INVALID_STATE);
     clean_up();
     return ESP_OK;
 }

@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v1.1.4 - 2024-05-07
+
+### Bug Fixes:
+
+* Reconfigure KP18052 parameters
+* When the IIC dimming gray scale data size is 0, skip sending the data and only send the address.
+
 ## v1.1.3 - 2024-04-24
 
 ### Bug Fixes:
