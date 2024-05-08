@@ -1,0 +1,45 @@
+menu "LCD ST77903 QSPI Configuration"
+    config LCD_ST77903_ISR_IRAM_SAFE
+        bool "LCD ISR IRAM-Safe"
+        default n
+        help
+            Ensure the LCD interrupt is IRAM-Safe by allowing the interrupt handler to be
+            executable when the cache is disabled (e.g. SPI Flash write).
+            If you want the LCD driver to keep flushing the screen even when cache ops disabled,
+            you can enable this option. Note, this will also increase the IRAM usage.
+
+    config LCD_VSYNC_FRONT_NUM
+        int "LCD VSYNC Front Porch"
+        default 8
+        range 0 65535
+
+    config LCD_VSYNC_BACK_NUM
+        int "LCD VSYNC Back Porch"
+        default 8
+        range 0 65535
+
+    config LCD_LINE_INTERVAL_MIN_US
+        int "Minimum LCD Line Interval (us)"
+        default 42
+        range 40 100
+
+    config LCD_TASK_CHECK_TIME_MS
+        int "LCD Task Check Time (ms)"
+        default 10
+        range 1 100
+
+    config LCD_TASK_STOP_WAIT_TIME_MS
+        int "LCD Task Stop Wait Time (ms)"
+        default 200
+        range 1 1000
+
+    config LCD_TASK_STOP_TIME_MAX_MS
+        int "Maximum LCD Task Stop Time (ms)"
+        default 1000
+        range 1 10000
+
+    config LCD_READ_WAIT_TIME_MAX_MS
+        int "LCD Read Wait Time (ms)"
+        default 10
+        range 1 100
+endmenu

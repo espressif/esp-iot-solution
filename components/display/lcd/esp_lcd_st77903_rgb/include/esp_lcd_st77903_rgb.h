@@ -7,22 +7,9 @@
 #pragma once
 
 #include <stdint.h>
-
-#include "driver/spi_common.h"
-#include "esp_err.h"
 #include "esp_lcd_panel_rgb.h"
 #include "esp_lcd_panel_vendor.h"
 #include "esp_lcd_types.h"
-#include "freertos/FreeRTOS.h"
-#include "soc/soc_caps.h"
-
-#define ST77903_INS_DATA            (0xDE)
-#define ST77903_INS_READ            (0xDD)
-#define ST77903_INS_CMD             (0xD8)
-#define ST77903_CMD_HSYNC           (0x60)
-#define ST77903_CMD_VSYNC           (0x61)
-#define ST77903_CMD_BPC             (0xB5)
-#define ST77903_CMD_DISCN           (0xB6)
 
 #ifdef __cplusplus
 extern "C" {

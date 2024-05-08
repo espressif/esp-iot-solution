@@ -1,0 +1,10 @@
+dependencies:
+  lvgl/lvgl:
+    version: ">8.3.9,<9"
+    public: true
+  esp_lcd_st77903_qspi:
+    version: "*"
+    override_path: "../../../../../components/display/lcd/esp_lcd_st77903_qspi"
+  esp_lcd_touch_cst816s:
+    version: "^1"
+    public: true

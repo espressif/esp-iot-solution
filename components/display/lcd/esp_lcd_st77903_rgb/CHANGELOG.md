@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v0.1.0 - 2024-5-10
+
+### bugfix:
+
+* Fix some errors in README.md
+* Update test_apps
+
 ## v0.0.1 - 2023-1-30
 
 ### Enhancements:

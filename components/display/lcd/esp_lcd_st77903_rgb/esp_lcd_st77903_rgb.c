@@ -23,6 +23,9 @@
 
 #include "esp_lcd_st77903_rgb.h"
 
+#define ST77903_CMD_BPC             (0xB5)
+#define ST77903_CMD_DISCN           (0xB6)
+
 typedef struct {
     esp_lcd_panel_io_handle_t io;
     int reset_gpio_num;

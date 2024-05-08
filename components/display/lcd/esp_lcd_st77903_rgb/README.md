@@ -1,33 +1,18 @@
 # ESP LCD ST77903 RGB
 
-Implementation of the ST77903 LCD controller with [esp_lcd](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/peripherals/lcd.html) component.
+Implementation of the ST77903 RGB LCD controller with [esp_lcd](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/peripherals/lcd.html) component.
 
 | LCD controller | Communication interface | Component name |                                                                            Link to datasheet                                                                             |
 | :------------: | :---------------------: | :------------: | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
-|     ST77903     |        QSPI/RGB         | esp_lcd_ST77903 | [PDF1](https://dl.espressif.com/AE/esp-iot-solution/ST77903_SPEC_P0.5.pdf)|
+|     ST77903     |        RGB         | esp_lcd_ST77903_rgb | [PDF1](https://dl.espressif.com/AE/esp-iot-solution/ST77903_SPEC_P0.5.pdf)|
 
 ## Initialization Code
-### RGB Interface
 
 For most RGB LCDs, they typically use a "3-Wire SPI + Parallel RGB" interface. The "3-Wire SPI" interface is used for transmitting command data and the "Parallel RGB" interface is used for sending pixel data.
 
 It's recommended to use the [esp_lcd_panel_io_additions](https://components.espressif.com/components/espressif/esp_lcd_panel_io_additions) component to bit-bang the "3-Wire SPI" interface through **GPIO** or an **IO expander** (like [TCA9554](https://components.espressif.com/components/espressif/esp_io_expander_tca9554)). To do this, please first add this component to your project manually. Then, refer to the following code to initialize the ST77903 controller.
 
 ```c
-    ESP_LOGI(TAG, "Install 3-wire SPI panel IO");
-    spi_line_config_t line_config = {
-        .cs_io_type = IO_TYPE_EXPANDER,     // Set to `IO_TYPE_GPIO` if using GPIO, same to below
-        .cs_expander_pin = EXAMPLE_LCD_IO_SPI_CS,
-        .scl_io_type = IO_TYPE_GPIO,
-        .scl_gpio_num = EXAMPLE_LCD_IO_SPI_SCK,
-        .sda_io_type = IO_TYPE_GPIO,
-        .sda_gpio_num = EXAMPLE_LCD_IO_SPI_SDO,
-        .io_expander = expander_handle,     // Set to NULL if not using IO expander
-    };
-    esp_lcd_panel_io_3wire_spi_config_t io_config = ST77903_RGB_PANEL_IO_3WIRE_SPI_CONFIG(line_config, 0);
-    esp_lcd_panel_io_handle_t io_handle = NULL;
-    ESP_ERROR_CHECK(esp_lcd_new_panel_io_3wire_spi(&io_config, &io_handle));
-
 /**
  * Uncomment these line if use custom initialization commands.
  * The array should be declared as static const and positioned outside the function.
@@ -39,6 +24,20 @@ It's recommended to use the [esp_lcd_panel_io_additions](https://components.espr
 //    {0xf0, (uint8_t []){0xa5}, 1, 0},
 //     ...
 // };
+
+    ESP_LOGI(TAG, "Install 3-wire SPI panel IO");
+    spi_line_config_t line_config = {
+        .cs_io_type = IO_TYPE_GPIO,     // Set to `IO_TYPE_EXPANDER` if using GPIO, same to below
+        .cs_expander_pin = EXAMPLE_LCD_IO_SPI_CS,
+        .scl_io_type = IO_TYPE_GPIO,
+        .scl_gpio_num = EXAMPLE_LCD_IO_SPI_SCK,
+        .sda_io_type = IO_TYPE_GPIO,
+        .sda_gpio_num = EXAMPLE_LCD_IO_SPI_SDO,
+        .io_expander = NULL,     // Set handle if using IO expander
+    };
+    esp_lcd_panel_io_3wire_spi_config_t io_config = ST77903_RGB_PANEL_IO_3WIRE_SPI_CONFIG(line_config, 0);
+    esp_lcd_panel_io_handle_t io_handle = NULL;
+    ESP_ERROR_CHECK(esp_lcd_new_panel_io_3wire_spi(&io_config, &io_handle));
 
     ESP_LOGI(TAG, "Install st77903 panel driver");
     esp_lcd_panel_handle_t panel_handle = NULL;
@@ -70,7 +69,6 @@ It's recommended to use the [esp_lcd_panel_io_additions](https://components.espr
         // .init_cmds = lcd_init_cmds,         // Uncomment these line if use custom initialization commands
         // .init_cmds_size = sizeof(lcd_init_cmds) / sizeof(st77903_lcd_init_cmd_t),
         .flags = {
-            .use_rgb_interface = 1,
             .mirror_by_cmd = 0,             // Only work when `auto_del_panel_io` is set to 0
             .auto_del_panel_io = 1,         /**
                                              * Send initialization commands and delete the panel IO instance during creation if set to 1.
