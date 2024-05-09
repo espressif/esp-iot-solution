@@ -240,6 +240,10 @@
   - "components/zero_detection/**/*"
   - "components/tools/cmake_utilities/package_manager.cmake"
 
+.patterns-components_ntc_driver: &patterns-components_ntc_driver
+  - "components/sensors/ntc_driver/**/*"
+  - "components/tools/cmake_utilities/package_manager.cmake"
+
 # examples folder, in the alphabetic order
 .patterns-docs: &patterns-docs
   - "docs/**/*"
@@ -271,6 +275,7 @@
   - "components/sensors/sensor_hub/include/hal/light_sensor_hal.h"
   - "components/sensors/sensor_hub/include/iot_sensor_hub.h"
   - "components/sensors/sensor_hub/include/sensor_type.h"
+  - "components/sensors/ntc_driver/include/ntc_driver.h"
   - "components/usb/esp_msc_ota/include/esp_msc_ota.h"
   - "components/usb/iot_usbh_cdc/include/iot_usbh_cdc.h"
   - "components/usb/usb_device_uvc/include/usb_device_uvc.h"
@@ -407,6 +412,9 @@
 
 .patterns-example_ulp_lp_cpu_lp_environment_sensor: &patterns-example_ulp_lp_cpu_lp_environment_sensor
   - "examples/ulp/lp_cpu/lp_environment_sensor/**/*"
+
+.patterns-example_sensors_ntc_temperature_sensor: &patterns-example_sensors_ntc_temperature_sensor
+  - "examples/sensors/ntc_temperature_sensor/**/*"
 
 .patterns-example_usb_device_usb_uart_bridge: &patterns-example_usb_device_usb_uart_bridge
   - "examples/usb/device/usb_uart_bridge/**/*"
@@ -1796,6 +1804,17 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_zero_detection
+
+.rules:build:components_ntc_driver_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_ntc_driver
 
 .rules:build:tools_cmake_utilities_test_apps:
   rules:

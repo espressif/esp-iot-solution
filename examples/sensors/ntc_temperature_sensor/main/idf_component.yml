@@ -1,0 +1,4 @@
+dependencies:
+  idf: ">=5.0"
+  ntc_driver:
+    override_path: "../../../../components/sensors/ntc_driver"
