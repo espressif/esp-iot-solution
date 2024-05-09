@@ -107,7 +107,7 @@ typedef struct OpenAI_EmbeddingResponse {
      *
      * @param embeddingData[in] the point of OpenAI_EmbeddingResponse
      */
-    void (*delete)(struct OpenAI_EmbeddingResponse *embeddingData);
+    void (*deleteResponse)(struct OpenAI_EmbeddingResponse *embeddingData);
 } OpenAI_EmbeddingResponse_t;
 
 /**
@@ -146,7 +146,7 @@ typedef struct OpenAI_ModerationResponse {
      *
      * @param moderationResponse[in] the point of } OpenAI_ModerationResponse_t
      */
-    void (*delete)(struct OpenAI_ModerationResponse *moderationResponse);
+    void (*deleteResponse)(struct OpenAI_ModerationResponse *moderationResponse);
 } OpenAI_ModerationResponse_t;
 
 /**
@@ -185,7 +185,7 @@ typedef struct OpenAI_ImageResponse {
      *
      * @param imageResponse[in] the point of } OpenAI_ImageResponse_t
      */
-    void (*delete)(struct OpenAI_ImageResponse *imageResponse);
+    void (*deleteResponse)(struct OpenAI_ImageResponse *imageResponse);
 } OpenAI_ImageResponse_t;
 
 /**
@@ -230,7 +230,7 @@ typedef struct OpenAI_StringResponse {
      *
      * @param stringResponse[in] the point of OpenAI_StringResponse_t
      */
-    void (*delete)(struct OpenAI_StringResponse *stringResponse);
+    void (*deleteResponse)(struct OpenAI_StringResponse *stringResponse);
 } OpenAI_StringResponse_t;
 
 /**
@@ -259,7 +259,7 @@ typedef struct OpenAI_SpeechResponse {
      *
      * @param SpeechResponse[in] the point of OpenAI_SpeechResponse_t
      */
-    void (*delete)(struct OpenAI_SpeechResponse *SpeechResponse);
+    void (*deleteResponse)(struct OpenAI_SpeechResponse *SpeechResponse);
 
 } OpenAI_SpeechResponse_t;
 
