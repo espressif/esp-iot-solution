@@ -490,11 +490,11 @@ TEST_CASE("BP1658CJ", "[Underlying Driver]")
     vTaskDelay(pdMS_TO_TICKS(100));
     TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_rgbcw_channel(255, 0, 0, 0, 0));
     vTaskDelay(pdMS_TO_TICKS(100));
-    //bp1658cj_set_sleep_mode(true); AEG-1520
+    bp1658cj_set_sleep_mode(true);
     vTaskDelay(pdMS_TO_TICKS(100));
     TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_rgbcw_channel(0, 255, 0, 0, 0));
     vTaskDelay(pdMS_TO_TICKS(100));
-    //bp1658cj_set_sleep_mode(true); AEG-1520
+    bp1658cj_set_sleep_mode(true);
     vTaskDelay(pdMS_TO_TICKS(100));
     TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_rgbcw_channel(0, 0, 255, 0, 0));
     vTaskDelay(pdMS_TO_TICKS(100));
@@ -568,8 +568,8 @@ TEST_CASE("SM2x35EGH", "[Underlying Driver]")
     driver_sm2x35egh_t conf = {
         .rgb_current = SM2235EGH_CW_CURRENT_10MA,
         .cw_current = SM2235EGH_CW_CURRENT_40MA,
-        .iic_clk = 5,
-        .iic_sda = 4,
+        .iic_clk = 4,
+        .iic_sda = 3,
         .freq_khz = 300,
         .enable_iic_queue = true
     };
@@ -673,8 +673,8 @@ TEST_CASE("SM2x35EGH", "[Application Layer]")
         .type = DRIVER_SM2x35EGH,
         .driver_conf.sm2x35egh.rgb_current = SM2235EGH_RGB_CURRENT_20MA,
         .driver_conf.sm2x35egh.cw_current = SM2235EGH_CW_CURRENT_40MA,
-        .driver_conf.sm2x35egh.iic_clk = 5,
-        .driver_conf.sm2x35egh.iic_sda = 4,
+        .driver_conf.sm2x35egh.iic_clk = 4,
+        .driver_conf.sm2x35egh.iic_sda = 3,
         .driver_conf.sm2x35egh.freq_khz = 400,
         .driver_conf.sm2x35egh.enable_iic_queue = true,
         .capability.enable_fade = true,
@@ -750,10 +750,10 @@ TEST_CASE("WS2812", "[Application Layer]")
 TEST_CASE("KP18058", "[Underlying Driver]")
 {
     driver_kp18058_t kp18058 = {
-        .rgb_current_multiple = 10,
+        .rgb_current_multiple = 3,
         .cw_current_multiple = 10,
-        .iic_clk = 5,
-        .iic_sda = 4,
+        .iic_clk = 4,
+        .iic_sda = 3,
         .iic_freq_khz = 300,
         .enable_iic_queue = true,
     };
@@ -844,8 +844,8 @@ TEST_CASE("KP18058", "[Underlying Driver]")
     TEST_ASSERT_EQUAL(KP18058_SLOPE_7_5, kp18058_slope_mapping(7.5));
     TEST_ASSERT_EQUAL(KP18058_SLOPE_15_0, kp18058_slope_mapping(15));
     TEST_ASSERT_EQUAL(KP18058_CHOPPING_INVALID, kp18058_chopping_freq_mapping(0));
-    TEST_ASSERT_EQUAL(KP18058_CHOPPING_2KHZ, kp18058_chopping_freq_mapping(2000));
-    TEST_ASSERT_EQUAL(KP18058_CHOPPING_250HZ, kp18058_chopping_freq_mapping(250));
+    TEST_ASSERT_EQUAL(KP18058_CHOPPING_4KHZ, kp18058_chopping_freq_mapping(4000));
+    TEST_ASSERT_EQUAL(KP18058_CHOPPING_500HZ, kp18058_chopping_freq_mapping(500));
 
     //7. Deinit
     TEST_ASSERT_EQUAL(ESP_OK, kp18058_set_shutdown());
@@ -858,10 +858,10 @@ TEST_CASE("KP18058", "[Application Layer]")
 {
     lightbulb_config_t config = {
         .type = DRIVER_KP18058,
-        .driver_conf.kp18058.rgb_current_multiple = 15,
-        .driver_conf.kp18058.cw_current_multiple = 20,
-        .driver_conf.kp18058.iic_clk = 5,
-        .driver_conf.kp18058.iic_sda = 4,
+        .driver_conf.kp18058.rgb_current_multiple = 3,
+        .driver_conf.kp18058.cw_current_multiple = 10,
+        .driver_conf.kp18058.iic_clk = 4,
+        .driver_conf.kp18058.iic_sda = 3,
         .driver_conf.kp18058.iic_freq_khz = 300,
         .driver_conf.kp18058.enable_iic_queue = true,
         .capability.enable_fade = true,
@@ -887,6 +887,7 @@ TEST_CASE("KP18058", "[Application Layer]")
     TEST_ASSERT_EQUAL(ESP_OK, lightbulb_init(&config));
     vTaskDelay(pdMS_TO_TICKS(1000));
     lightbulb_lighting_output_test(LIGHTING_BASIC_FIVE, 1000);
+    vTaskDelay(pdMS_TO_TICKS(2000));
     TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit());
 }
 #endif
