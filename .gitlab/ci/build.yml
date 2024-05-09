@@ -39,6 +39,15 @@
     - pip install idf_build_apps
     - python tools/build_apps.py ${EXAMPLE_DIR} --config ${EXAMPLE_CONFIG} -t all -vv
 
+.build_idf_release_version:
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
+      - IMAGE: espressif/idf:release-v5.1
+      - IMAGE: espressif/idf:release-v5.2
+      - IMAGE: espressif/idf:release-v5.3
+
 build_example_audio_wav_player:
   extends:
     - .build_examples_template
@@ -571,9 +580,7 @@ build_example_usb_device_usb_uac:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_device_usb_uac
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.1
+    - .build_idf_release_version
   variables:
     EXAMPLE_DIR: examples/usb/device/usb_uac
 
@@ -1014,15 +1021,22 @@ build_components_usb_iot_usbh_cdc_test_apps:
   variables:
     EXAMPLE_DIR: components/usb/iot_usbh_cdc/test_apps
 
-build_components_led_lightbulb_driver_test_apps:
+build_components_usb_usb_device_uac:
   extends:
     - .build_examples_template
-    - .rules:build:components_led_lightbulb_driver_test_apps
+    - .rules:build:components_usb_usb_device_uac
   parallel:
     matrix:
       - IMAGE: espressif/idf:release-v4.4
       - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:release-v5.1
+  variables:
+    EXAMPLE_DIR: components/usb/usb_device_uac
+
+build_components_led_lightbulb_driver_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_led_lightbulb_driver_test_apps
+    - .build_idf_release_version
   variables:
     EXAMPLE_DIR: components/led/lightbulb_driver/test_apps
 

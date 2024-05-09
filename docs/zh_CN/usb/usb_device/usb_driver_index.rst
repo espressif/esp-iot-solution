@@ -6,4 +6,5 @@ USB 设备驱动
 .. toctree::
     :maxdepth: 1
 
-    USB UVC 设备 <usb_device_uvc>
+    USB UVC 视频设备 <usb_device_uvc>
+    USB UAC 音频设备 <usb_device_uac>

@@ -105,3 +105,7 @@ components/display/lcd_touch/esp_lcd_touch_st7123/test_apps:
 components/keyboard_button/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1
+
+components/usb/usb_device_uac/test_apps:
+  enable:
+    - if: SOC_USB_OTG_SUPPORTED == 1 and IDF_VERSION_MAJOR >= 5

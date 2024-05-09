@@ -17,13 +17,13 @@ static const char *TAG = "usb_device_uac_test";
 // Some resources are lazy allocated in GPTimer driver, the threshold is left for that case
 #define TEST_MEMORY_LEAK_THRESHOLD (-300)
 
-static esp_err_t uac_device_output_cb(uint8_t *buf, uint32_t *len, void *arg)
+static esp_err_t uac_device_output_cb(uint8_t *buf, size_t len, void *arg)
 {
     ESP_LOGI(TAG, "uac_device_output_cb");
     return ESP_OK;
 }
 
-static esp_err_t uac_device_input_cb(uint8_t *buf, uint32_t *len, uint32_t *bytes_read, void *arg)
+static esp_err_t uac_device_input_cb(uint8_t *buf, size_t len, size_t *bytes_read, void *arg)
 {
     ESP_LOGI(TAG, "uac_device_input_cb");
     return ESP_OK;
@@ -58,15 +58,13 @@ void tearDown(void)
 
 void app_main(void)
 {
-
-    //   ___ _    ___   ___   _____ ___ ___ _____
-    //  | _ ) |  |   \ / __| |_   _| __/ __|_   _|
-    //  | _ \ |__| |) | (__    | | | _|\__ \ | |
-    //  |___/____|___/ \___|   |_| |___|___/ |_|
-    //
-    printf("  ___ _    ___   ___   _____ ___ ___ _____ \n");
-    printf(" | _ ) |  |   \\ / __| |_   _| __/ __|_   _|\n");
-    printf(" | _ \\ |__| |) | (__    | | | _|\\__ \\ | |  \n");
-    printf(" |___/____|___/ \\___|   |_| |___|___/ |_|  \n");
+    //   _   _  _   ___   _____ ___ ___ _____
+    //  | | | |/_\ / __| |_   _| __/ __|_   _|
+    //  | |_| / _ \ (__    | | | _|\__ \ | |
+    //   \___/_/ \_\___|   |_| |___|___/ |_|
+    printf("  _   _  _   ___   _____ ___ ___ _____ \n");
+    printf(" | | | |/_\\ / __| |_   _| __/ __|_   _|\n");
+    printf(" | |_| / _ \\ (__    | | | _|\\__ \\ | |  \n");
+    printf("  \\___/_/ \\_\\___|   |_| |___|___/ |_|  \n");
     unity_run_menu();
 }

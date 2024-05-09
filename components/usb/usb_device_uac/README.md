@@ -9,11 +9,12 @@ Features:
 1. Supports audio transmission/reception via the UAC interface.
 2. Supports setting the interval for receiving/sending audio.
 3. Supports adjusting volume and setting mute.
+4. Support for synchronous transfer feedback endpoints.
 
 Currently not supported:
 
 1. Dynamic configuration of MIC/SPK sampling rates.
-2. Support for synchronous transfer feedback endpoints.
+2. Cannot be compatible with both Windows and Linux simultaneously. If you need to use it on macOS, please enable the macro `UAC_SUPPORT_MACOS`.
 
 ### Add component to your project
 

@@ -172,4 +172,38 @@ menu "USB Device UVC"
             help
                 If enable, add VGA and HVGA to list
     endmenu
+
+    menu "UVC Task Config"
+        config UVC_TINYUSB_TASK_PRIORITY
+            int "Tinyusb task priority"
+            default 5
+            range 1 15
+
+        config UVC_TINYUSB_TASK_CORE
+            int "Tinyusb task core"
+            default -1
+            range -1 1
+
+        config UVC_CAM1_TASK_PRIORITY
+            int "Cam1 task priority"
+            default 4
+            range 1 15
+
+        config UVC_CAM1_TASK_CORE
+            int "Cam1 task core"
+            default -1
+            range -1 1
+
+        config UVC_CAM2_TASK_PRIORITY
+            int "Cam2 task priority"
+            default 4
+            range 1 15
+            depends on UVC_SUPPORT_TWO_CAM
+
+        config UVC_CAM2_TASK_CORE
+            int "Cam2 task core"
+            default -1
+            range -1 1
+            depends on UVC_SUPPORT_TWO_CAM
+    endmenu
 endmenu

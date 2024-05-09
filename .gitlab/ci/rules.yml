@@ -276,6 +276,7 @@
   - "components/sensors/sensor_hub/include/sensor_type.h"
   - "components/usb/esp_msc_ota/include/esp_msc_ota.h"
   - "components/usb/iot_usbh_cdc/include/iot_usbh_cdc.h"
+  - "components/usb/usb_device_uac/include/usb_device_uac.h"
   - "components/usb/usb_device_uvc/include/usb_device_uvc.h"
   - "components/usb/usb_stream/include/usb_stream.h"
   - "components/zero_detection/include/zero_detection.h"
@@ -1781,6 +1782,17 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_usb_usb_stream
+
+.rules:build:components_usb_usb_device_uac:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_usb_usb_device_uac
 
 .rules:build:components_sensors_humiture_aht20_test_apps:
   rules:

@@ -11,6 +11,7 @@
 #include "esp_check.h"
 #include "esp_err.h"
 #include "esp_private/usb_phy.h"
+#include "esp_timer.h"
 #include "tusb.h"
 #include "uac_config.h"
 #include "usb_device_uac.h"
@@ -43,18 +44,18 @@ const uint8_t mic_resolutions_per_format[CFG_TUD_AUDIO_FUNC_1_N_FORMATS] = {CFG_
 typedef struct {
     usb_phy_handle_t phy_hdl;
     uac_device_config_t user_cfg;
-    int8_t mute[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX + 1];                                              // +1 for master channel 0
-    int16_t volume[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX + 1];                                           // +1 for master channel 0
-    int16_t mic_buf1[CFG_TUD_AUDIO_FUNC_1_EP_IN_SW_BUF_SZ * CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX / 2];   // Buffer for microphone data
-    int16_t mic_buf2[CFG_TUD_AUDIO_FUNC_1_EP_IN_SW_BUF_SZ * CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX / 2];   // Buffer for microphone data
-    int16_t spk_buf[CFG_TUD_AUDIO_FUNC_1_EP_OUT_SW_BUF_SZ * CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX / 2];  // Buffer for speaker data
-    int16_t *mic_buf_write;                                                                           // Pointer to the buffer to write to
-    int16_t *mic_buf_read;                                                                            // Pointer to the buffer to read from
-    int spk_data_size;                                                                                // Speaker data size received in the last frame
+    int8_t mute[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX + 1];         // +1 for master channel 0
+    int16_t volume[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX + 1];      // +1 for master channel 0
+    int16_t mic_buf1[CFG_TUD_AUDIO_FUNC_1_EP_IN_SW_BUF_SZ / 2];  // Buffer for microphone data
+    int16_t mic_buf2[CFG_TUD_AUDIO_FUNC_1_EP_IN_SW_BUF_SZ / 2];  // Buffer for microphone data
+    int16_t spk_buf[CFG_TUD_AUDIO_FUNC_1_EP_OUT_SW_BUF_SZ / 2];  // Buffer for speaker data
+    int16_t *mic_buf_write;                                      // Pointer to the buffer to write to
+    int16_t *mic_buf_read;                                       // Pointer to the buffer to read from
+    int spk_data_size;                                           // Speaker data size received in the last frame
     int mic_data_size;
     uint8_t spk_resolution;
     uint8_t mic_resolution;
-    uint32_t current_sample_rate;                                                                     // Current resolution, update on format change
+    uint32_t current_sample_rate;                                // Current resolution, update on format change
     TaskHandle_t mic_task_handle;
     TaskHandle_t spk_task_handle;
     size_t spk_bytes_per_ms;
@@ -74,8 +75,8 @@ static void usb_phy_init(void)
     usb_phy_config_t phy_conf = {
         .controller = USB_PHY_CTRL_OTG,
         .otg_mode = USB_OTG_MODE_DEVICE,
+        .target = USB_PHY_TARGET_INT,
     };
-    phy_conf.target = USB_PHY_TARGET_INT;
     usb_new_phy(&phy_conf, &s_uac_device->phy_hdl);
 }
 
@@ -178,6 +179,17 @@ static bool tud_audio_clock_set_request(uint8_t rhport, audio_control_request_t 
                 request->bEntityID, request->bControlSelector, request->bRequest);
         return false;
     }
+}
+
+void tud_audio_feedback_params_cb(uint8_t func_id, uint8_t alt_itf, audio_feedback_params_t* feedback_param)
+{
+    (void)func_id;
+    (void)alt_itf;
+    // Set feedback method to fifo counting
+    feedback_param->method = AUDIO_FEEDBACK_METHOD_FIFO_COUNT;
+    feedback_param->sample_freq = s_uac_device->current_sample_rate;
+
+    ESP_LOGD(TAG, "Feedback method: %d, sample freq: %d", feedback_param->method, feedback_param->sample_freq);
 }
 
 // Helper for feature unit get requests
@@ -351,10 +363,32 @@ bool tud_audio_rx_done_post_read_cb(uint8_t rhport, uint16_t n_bytes_received, u
     (void)ep_out;
     (void)cur_alt_setting;
 
+    static bool new_play = false;
+    static int64_t last_time = 0;
+    int64_t now = esp_timer_get_time();
+
+    /**
+     * @brief If no data is received for a certain period, it is considered as the initiation
+     *        of a new audio transmission. At this point, the FIFO data is cleared, and a segment
+     *        of data is buffered in the I2S.
+     */
+    if (now - last_time > 100 * CONFIG_UAC_SPK_NEW_PLAY_INTERVAL) {
+        new_play = true;
+        tud_audio_clear_ep_out_ff();
+    }
+    last_time = now;
+
     int bytes_remained = tud_audio_available();
-    size_t bytes_require = MIC_INTERVAL * s_uac_device->spk_bytes_per_ms;
-    if (bytes_remained < bytes_require) {
-        return true;
+
+    size_t bytes_require = s_uac_device->spk_bytes_per_ms;
+
+    if (new_play) {
+        /*!< Buffer a segment of data in the I2S and control the data size to be half of the UAC FIFO size. */
+        bytes_require = SPK_INTERVAL_MS * s_uac_device->spk_bytes_per_ms / 2;
+        if (bytes_remained < bytes_require) {
+            return true;
+        }
+        new_play = false;
     }
 
     s_uac_device->spk_data_size = tud_audio_read(s_uac_device->spk_buf, bytes_require);
@@ -368,7 +402,7 @@ bool tud_audio_tx_done_pre_load_cb(uint8_t rhport, uint8_t itf, uint8_t ep_in, u
     (void)itf;
     (void)ep_in;
     (void)cur_alt_setting;
-    size_t bytes_require = SPK_INTERVAL * s_uac_device->mic_bytes_per_ms;
+    size_t bytes_require = MIC_INTERVAL_MS * s_uac_device->mic_bytes_per_ms;
 
     tu_fifo_t *sw_in_fifo = tud_audio_get_ep_in_ff();
     uint16_t fifo_remained = tu_fifo_remaining(sw_in_fifo);
@@ -388,7 +422,7 @@ bool tud_audio_tx_done_pre_load_cb(uint8_t rhport, uint8_t itf, uint8_t ep_in, u
 }
 
 #if CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX
-static void usb_spk(void *pvParam)
+static void usb_spk_task(void *pvParam)
 {
     while (1) {
         if (s_uac_device->spk_active == false) {
@@ -410,7 +444,7 @@ static void usb_spk(void *pvParam)
 #endif
 
 #if CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX
-static void usb_mic(void *pvParam)
+static void usb_mic_task(void *pvParam)
 {
     while (1) {
         if (s_uac_device->mic_active == false) {
@@ -420,9 +454,9 @@ static void usb_mic(void *pvParam)
         }
         // clear the notification
         // read data from the microphone chunk by chunk
-        size_t bytes_require = SPK_INTERVAL * s_uac_device->mic_bytes_per_ms;
+        size_t bytes_require = MIC_INTERVAL_MS * s_uac_device->mic_bytes_per_ms;
         if (s_uac_device->user_cfg.input_cb) {
-            uint32_t bytes_read = 0;
+            size_t bytes_read = 0;
             esp_err_t ret = s_uac_device->user_cfg.input_cb((uint8_t *)s_uac_device->mic_buf_write, bytes_require, &bytes_read, s_uac_device->user_cfg.cb_ctx);
             if (ret != ESP_OK) {
                 ESP_LOGE(TAG, "Failed to read data from mic");
@@ -462,16 +496,16 @@ esp_err_t uac_device_init(uac_device_config_t *config)
         ESP_LOGE(TAG, "USB Device Stack Init Fail");
         return ESP_FAIL;
     }
-    BaseType_t ret_val = xTaskCreatePinnedToCore(tusb_device_task, "TinyUSB", 4096, NULL, 5, NULL, 0);
+    BaseType_t ret_val = xTaskCreatePinnedToCore(tusb_device_task, "TinyUSB", 4096, NULL, CONFIG_UAC_TINYUSB_TASK_PRIORITY, NULL, CONFIG_UAC_TINYUSB_TASK_CORE);
     ESP_RETURN_ON_FALSE(ret_val == pdPASS, ESP_FAIL, TAG, "Failed to create TinyUSB task");
 
 #if CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX
-    ret_val = xTaskCreatePinnedToCore(usb_mic, "usb_mic", 4096, NULL, 5, &s_uac_device->mic_task_handle, 0);
+    ret_val = xTaskCreatePinnedToCore(usb_mic_task, "usb_mic_task", 4096, NULL, CONFIG_UAC_MIC_TASK_PRIORITY, &s_uac_device->mic_task_handle, CONFIG_UAC_MIC_TASK_CORE);
     ESP_RETURN_ON_FALSE(ret_val == pdPASS, ESP_FAIL, TAG, "Failed to create usb_mic task");
 #endif
 
 #if CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX
-    ret_val = xTaskCreatePinnedToCore(usb_spk, "usb_spk", 4096, NULL, 5, &s_uac_device->spk_task_handle, 0);
+    ret_val = xTaskCreatePinnedToCore(usb_spk_task, "usb_spk_task", 4096, NULL, CONFIG_UAC_SPK_TASK_PRIORITY, &s_uac_device->spk_task_handle, CONFIG_UAC_SPK_TASK_CORE);
     ESP_RETURN_ON_FALSE(ret_val == pdPASS, ESP_FAIL, TAG, "Failed to create usb_spk task");
 #endif
 

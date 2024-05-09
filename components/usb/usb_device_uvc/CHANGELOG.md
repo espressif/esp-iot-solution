@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v1.0.1 2024-5-20
+
+* Support config task priority and core
+
 ## v1.0.0 2024-4-15
 
 * Support trans two cam's picture

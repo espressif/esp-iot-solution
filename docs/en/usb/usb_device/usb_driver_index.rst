@@ -7,3 +7,4 @@ USB Device Drivers
     :maxdepth: 1
 
     USB UVC Device <usb_device_uvc>
+    USB UAC Device <usb_device_uac>

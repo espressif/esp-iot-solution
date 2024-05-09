@@ -63,20 +63,21 @@ uint8_t const *tud_descriptor_device_cb(void)
 //--------------------------------------------------------------------+
 // Configuration Descriptor
 //--------------------------------------------------------------------+
-#define CONFIG_TOTAL_LEN        (TUD_CONFIG_DESC_LEN + CFG_TUD_AUDIO * TUD_AUDIO_HEADSET_STEREO_DESC_LEN)
-#define EPNUM_AUDIO_IN    0x81
+#define CONFIG_TOTAL_LEN        (TUD_CONFIG_DESC_LEN + CFG_TUD_AUDIO * TUD_AUDIO_DEVICE_DESC_LEN)
 #define EPNUM_AUDIO_OUT   0x01
+#define EPNUM_AUDIO_FB    0x81
+#define EPNUM_AUDIO_IN    0x82
 
 uint8_t const desc_configuration[] = {
     // Config number, interface count, string index, total length, attribute, power in mA
     TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, CONFIG_TOTAL_LEN, 0x00, 100),
     // Interface number, string index, EP Out & EP In address, EP size
 #if CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX && CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX
-    TUD_AUDIO_MIC_SPEAK_DESCRIPTOR(2, EPNUM_AUDIO_OUT, EPNUM_AUDIO_IN)
+    TUD_AUDIO_MIC_SPEAK_DESCRIPTOR(2, EPNUM_AUDIO_OUT, EPNUM_AUDIO_IN, EPNUM_AUDIO_FB)
 #elif CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX
-    TUD_AUDIO_MIC_DESCRIPTOR(1, EPNUM_AUDIO_IN)
+    TUD_AUDIO_MIC_DESCRIPTOR(2, EPNUM_AUDIO_IN)
 #elif CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX
-    TUD_AUDIO_SPEAK_DESCRIPTOR(1, EPNUM_AUDIO_OUT)
+    TUD_AUDIO_SPEAK_DESCRIPTOR(2, EPNUM_AUDIO_OUT, EPNUM_AUDIO_FB)
 #endif
 };
 
@@ -96,11 +97,15 @@ uint8_t const *tud_descriptor_configuration_cb(uint8_t index)
 // array of pointer to string descriptors
 char const *string_desc_arr [] = {
     (const char[]) { 0x09, 0x04 },  // 0: is supported language is English (0x0409)
-    CONFIG_TUSB_MANUFACTURER,                    // 1: Manufacturer
-    CONFIG_TUSB_PRODUCT,                      // 2: Product
-    CONFIG_TUSB_SERIAL_NUM,                       // 3: Serials, should use chip ID
-    "speakers",                     // 4: Audio Interface
-    "microphone",                   // 5: Audio Interface
+    CONFIG_TUSB_MANUFACTURER,       // 1: Manufacturer
+    CONFIG_TUSB_PRODUCT,            // 2: Product
+    CONFIG_TUSB_SERIAL_NUM,         // 3: Serials, should use chip ID
+#if SPEAK_CHANNEL_NUM
+    "speakers",                     // Speak Interface
+#endif
+#if MIC_CHANNEL_NUM
+    "microphone",                   // Mic Interface
+#endif
 };
 
 static uint16_t _desc_str[32];
