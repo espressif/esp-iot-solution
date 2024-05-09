@@ -1,16 +1,8 @@
-// Copyright 2021 Espressif Systems (Shanghai) PTE LTD
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+ * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #include "buzzer.h"
 #include "esp_log.h"
@@ -19,7 +11,7 @@
 #define LEDC_LS_CH0_CHANNEL    LEDC_CHANNEL_0
 #define LEDC_LS_MODE           LEDC_LOW_SPEED_MODE
 
-void buzzer_driver_install(gpio_num_t buzzer_pin)
+esp_err_t buzzer_driver_install(gpio_num_t buzzer_pin)
 {
     ledc_timer_config_t ledc_timer = {
         .duty_resolution = LEDC_TIMER_13_BIT,  //Resolution of PWM duty
@@ -40,6 +32,8 @@ void buzzer_driver_install(gpio_num_t buzzer_pin)
     ledc_channel_config(&ledc_channel);
     ledc_fade_func_install(0);
     ledc_set_duty(ledc_channel.speed_mode, ledc_channel.channel, 0);
+    ledc_update_duty(ledc_channel.speed_mode, ledc_channel.channel);
+    return ESP_OK;
 }
 
 void buzzer_set_voice(bool en)

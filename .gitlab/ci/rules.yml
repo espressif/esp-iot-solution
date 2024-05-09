@@ -210,6 +210,10 @@
 .patterns-components_tools_cmake_utilities_test_component2: &patterns-components_tools_cmake_utilities_test_component2
   - "tools/cmake_utilities/test_apps/components/TEST-component2/**/*"
 
+.patterns-components_touch_touch_proximity_sensor: &patterns-components_touch_touch_proximity_sensor
+  - "components/touch/touch_proximity_sensor/**/*"
+  - "components/tools/cmake_utilities/package_manager.cmake"
+
 .patterns-components_usb_esp_msc_ota: &patterns-components_usb_esp_msc_ota
   - "components/usb/esp_msc_ota/**/*"
   - "components/tools/cmake_utilities/package_manager.cmake"
@@ -282,6 +286,7 @@
   - "components/sensors/sensor_hub/include/iot_sensor_hub.h"
   - "components/sensors/sensor_hub/include/sensor_type.h"
   - "components/sensors/ntc_driver/include/ntc_driver.h"
+  - "components/touch/touch_proximity_sensor/include/touch_proximity_sensor.h"
   - "components/usb/esp_msc_ota/include/esp_msc_ota.h"
   - "components/usb/iot_usbh_cdc/include/iot_usbh_cdc.h"
   - "components/usb/usb_device_uac/include/usb_device_uac.h"
@@ -419,6 +424,9 @@
 
 .patterns-example_usb_device_usb_dongle: &patterns-example_usb_device_usb_dongle
   - "examples/usb/device/usb_dongle/**/*"
+
+.patterns-example_touch_touch_proximity: &patterns-example_touch_touch_proximity
+  - "examples/touch/touch_proximity/**/*"
 
 .patterns-example_ulp_lp_cpu_lp_environment_sensor: &patterns-example_ulp_lp_cpu_lp_environment_sensor
   - "examples/ulp/lp_cpu/lp_environment_sensor/**/*"
@@ -1032,6 +1040,15 @@
       changes: *patterns-components_sensors_sensor_hub
     - <<: *if-dev-push
       changes: *patterns-example_sensors_sensor_hub_monitor
+
+.rules:build:example_touch_touch_proximity:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_touch_touch_proximity
 
 .rules:build:example_ulp_lp_cpu_lp_environment_sensor:
   rules:
@@ -1770,6 +1787,17 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_storage_eeprom_at24c02
+
+.rules:build:components_touch_touch_proximity_sensor_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_touch_touch_proximity_sensor
 
 .rules:build:components_usb_esp_msc_ota_test_apps:
   rules:

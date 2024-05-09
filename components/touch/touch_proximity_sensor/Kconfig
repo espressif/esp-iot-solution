@@ -1,5 +1,4 @@
 menu "Touch Proximity Sensor"
-    
     config ENABLE_TOUCH_PROX_DEBUG
         bool "Enable touch proximity debug mode"
         default n
