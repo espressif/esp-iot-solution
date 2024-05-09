@@ -4,9 +4,11 @@ LCD 显示屏
 :link_to_translation:`en:[English]`
 
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 1
 
     LCD 概述 <lcd_guide>
+    LCD 术语表 <lcd_terms_table>
     LCD 开发指南 <lcd_development_guide>
     SPI LCD 详解 <spi_lcd>
     RGB LCD 详解 <rgb_lcd>
+    LCD 屏幕撕裂详解 <lcd_screen_tearing>

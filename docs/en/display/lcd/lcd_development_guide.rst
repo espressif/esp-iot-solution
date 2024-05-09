@@ -14,6 +14,11 @@ This guide mainly contains the following sections:
   - `Common Problems`_: Lists common problems in developing LCD applications.
   - `Related Documents`_: Links to relevant documentation are listed.
 
+Terminology
+-----------
+
+Please refer to the :ref:`LCD Terms Table <LCD_Terms_Table>` 。
+
 Supported Interface Types
 ----------------------------
 
@@ -30,7 +35,7 @@ Espressif Systems provides comprehensive support for all interface types introdu
       - MIPI-DSI
     * - ESP32
       - |supported|
-      -
+      - |supported|
       -
       -
     * - ESP32-C3
@@ -92,7 +97,7 @@ Driver and Examples
       - 3-wire SPI + RGB
     * - `st77903_rgb <https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_st77903_rgb>`_
       - 3-wire SPI + RGB
-    * - `st77903 <https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_st77903>`_
+    * - `st77903_qspi <https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_st77903>`_
       - QSPI
     * - `st77916 <https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_st77916>`_
       - SPI/QSPI
@@ -105,7 +110,7 @@ Driver and Examples
     * - `ili9341 <https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_ili9341>`_
       - SPI
     * - `ra8875 <https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_ra8875>`_
-      - Parallel Intel 8080
+      - I80
     * - `sh1107 <https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_sh1107>`_
       - I2C
     * - `ssd1681 <https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_ssd1681>`_
@@ -129,6 +134,8 @@ Driver and Examples
 
 Development Framework
 -------------------------
+
+.. _LCD Development Guide_Development_Framework:
 
 Hardware Framework
 ^^^^^^^^^^^^^^^^^^^^^^^^^

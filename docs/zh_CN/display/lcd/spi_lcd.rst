@@ -7,6 +7,11 @@ SPI LCD 详解
     :local:
     :depth: 2
 
+术语表
+-----------
+
+请参阅 :ref:`LCD 术语表 <LCD_术语表>` 。
+
 接口模式
 ---------------------
 
@@ -27,7 +32,7 @@ SPI LCD 详解
     :alt: SPI 接口的引脚描述
 
     SPI 接口的引脚描述
-    
+
 注：SPI 引脚名称：CS、SCK(SCL)、SDA (MOSI)、SDO (MISO)、DC (RS)
 
 .. _spi_interface_I/II_模式:
