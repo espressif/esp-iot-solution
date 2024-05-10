@@ -29,11 +29,19 @@
         action;                                                               \
     }
 
-#else
+#elif CONFIG_LIGHTBULB_CHECK_DEFAULT_LEVEL_1
 
 #define LIGHTBULB_CHECK(a, str, action, ...)                                \
     if (unlikely(!(a))) {                                                   \
         ESP_LOGE(TAG, "Line %d returns an error.", __LINE__);               \
+        action;                                                             \
+    }
+
+#else
+
+#define LIGHTBULB_CHECK(a, str, action, ...)                                \
+    if (unlikely(!(a))) {                                                   \
+        ESP_LOGW(TAG, "Line %d returns an error.", __LINE__);               \
         action;                                                             \
     }
 
