@@ -120,6 +120,8 @@ menu "LightBulb Driver Config"
             help
                 The verbosity of the log output, if you need to save flash size please lower the output level.
 
+            config LIGHTBULB_CHECK_DEFAULT_LEVEL_0
+                bool "Level 0, Print very little log with ESP_LOGW"
             config LIGHTBULB_CHECK_DEFAULT_LEVEL_1
                 bool "Level 1, Print very little log"
             config LIGHTBULB_CHECK_DEFAULT_LEVEL_2

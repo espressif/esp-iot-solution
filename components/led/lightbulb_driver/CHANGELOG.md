@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.1.5 - 2024-05-10
+
+### Improvement:
+
+* Add the configuration option to enable print very little log with ESP_LOGW.
+
 ## v1.1.4 - 2024-05-07
 
 ### Bug Fixes:
