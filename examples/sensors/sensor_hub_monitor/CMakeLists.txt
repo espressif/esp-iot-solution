@@ -12,7 +12,7 @@ endif()
 set(EXTRA_COMPONENT_DIRS ${EXTRA_COMPONENT_DIRS}
                         $ENV{IOT_SOLUTION_PATH}/components/button
                         $ENV{IOT_SOLUTION_PATH}/components/bus
-                        $ENV{IOT_SOLUTION_PATH}/components/sensors
+                        $ENV{IOT_SOLUTION_PATH}/components/sensors/sensor_hub
                         $ENV{IOT_SOLUTION_PATH}/components/sensors/gesture
                         $ENV{IOT_SOLUTION_PATH}/components/sensors/humiture
                         $ENV{IOT_SOLUTION_PATH}/components/sensors/imu
