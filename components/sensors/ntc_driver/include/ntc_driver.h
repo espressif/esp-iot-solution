@@ -10,24 +10,32 @@
 #include "esp_log.h"
 #include "esp_adc/adc_cali.h"
 #include "esp_adc/adc_oneshot.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /**
+ * @brief Supported circuit mode
+ *
+ */
+typedef enum {
+    CIRCUIT_MODE_NTC_VCC = 1,         // Vcc  --------> Rt  --------> Rref  --------> GND
+    CIRCUIT_MODE_NTC_GND = 2,         // Vcc  --------> Rref  --------> Rt  --------> GND
+} ntc_circuit_mode_t;
+
+/**
  * @brief NTC config data type
  */
 typedef struct {
-    uint32_t b_value;       /*!< beta value of NTC (K) */
-    uint32_t r25_ohm;       /*!< 25℃ resistor value of NTC (K) */
-    uint32_t fixed_ohm;     /*!< fixed resistor value (Ω) */
-    uint32_t vdd_mv;        /*!< vdd voltage (mv) */
-    adc_atten_t atten;      /*!< adc atten */
-    adc_channel_t channel;  /*!< adc channel */
-    adc_unit_t unit;        /*!< adc unit */
+    ntc_circuit_mode_t circuit_mode;          /*!< ntc circuit mode */
+    adc_unit_t unit;                          /*!< adc unit */
+    adc_atten_t atten;                        /*!< adc atten */
+    adc_channel_t channel;                    /*!< adc channel */
+    uint32_t b_value;                         /*!< beta value of NTC (K) */
+    uint32_t r25_ohm;                         /*!< 25℃ resistor value of NTC (K) */
+    uint32_t fixed_ohm;                       /*!< fixed resistor value (Ω) */
+    uint32_t vdd_mv;                          /*!< vdd voltage (mv) */
 } ntc_config_t;
 
 typedef void *ntc_device_handle_t;

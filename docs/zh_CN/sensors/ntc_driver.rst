@@ -19,7 +19,14 @@ NTC 关键参数：
 NTC Driver 适用电路：
     单 ADC 通道测量：
     当NTC在上面时,随着温度升高， NTC 的电阻值下降，导致分压电路中 NTC 端的电压下降，固定电阻端的电压上升，最终输出电压会随之变化。而当 NTC 在下面时，情况正好相反， NTC 的电阻值下降会导致分压电路中 NTC 端的电压上升，固定电阻端的电压下降，输出电压也会相应变化。因此， NTC 在上面和下面会得到相反的结果，这一点在设计和使用 NTC 测量电路时需要特别注意，确保正确理解和处理 NTC 的温度特性。
+    
+    当使用以下电路时：
+    Vcc  --------> Rt  --------> Rref  --------> GND
+    需要通过 ```ntc_config_t``` 中的 ```circuit_mode``` 字段选择相应的电路模式。当使用这种电路模式时，应该使用 ```CIRCUIT_MODE_NTC_VCC```。
+
+    当使用以下电路时：
     Vcc  --------> Rref  --------> Rt  --------> GND
+    需要通过 ```ntc_config_t``` 中的 ```circuit_mode``` 字段选择相应的电路模式。当使用这种电路模式时，应该使用 ```CIRCUIT_MODE_NTC_GND```。
 
     关于分压电阻 Rref 取值：
         Rref 的阻值一般取 Rt 在 25 摄氏度的阻值
@@ -45,12 +52,13 @@ NTC 数字温度转换参数，公式为: Rt = R * EXP (B * (1/T1-1/T2))
         .r25_ohm = 10000,
         .fixed_ohm = 10000,
         .vdd_mv = 3300,
-        .atten = ADC_CHANNEL_3,
-        .channel = ADC_ATTEN_DB_11,
+        .circuit_mode = CIRCUIT_MODE_NTC_VCC,
+        .atten = ADC_ATTEN_DB_11,
+        .channel = ADC_CHANNEL_3,
         .unit = ADC_UNIT_1
     };
 
-    ntc_device_handle_t ntc = NULL;;
+    ntc_device_handle_t ntc = NULL;
     adc_oneshot_unit_handle_t adc_handle = NULL;
     ESP_ERROR_CHECK(ntc_dev_create(&ntc_config, &ntc, &adc_handle));
     ESP_ERROR_CHECK(ntc_dev_get_adc_handle(ntc, &adc_handle));
