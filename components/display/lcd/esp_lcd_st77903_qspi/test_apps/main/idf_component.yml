@@ -1,0 +1,7 @@
+## IDF Component Manager Manifest File
+dependencies:
+  idf: ">=5.1.0"
+  esp_lcd_panel_io_additions: "^1"
+  esp_lcd_st77903_qspi:
+    version: "*"
+    override_path: "../../../esp_lcd_st77903_qspi"

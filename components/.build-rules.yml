@@ -82,6 +82,10 @@ components/display/lcd/esp_lcd_st7701/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32s3"]
 
+components/display/lcd/esp_lcd_st77903_qspi:
+  enable:
+    - if: IDF_TARGET in ["esp32s3"]
+
 components/display/lcd/esp_lcd_st77903_rgb:
   enable:
     - if: IDF_TARGET in ["esp32s3"]

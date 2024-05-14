@@ -33,6 +33,7 @@ jobs:
             components/display/lcd/esp_lcd_sh8601;
             components/display/lcd/esp_lcd_spd2010;
             components/display/lcd/esp_lcd_st7701;
+            components/display/lcd/esp_lcd_st77903_qspi;
             components/display/lcd/esp_lcd_st77903_rgb;
             components/display/lcd/esp_lcd_st77916;
             components/display/lcd/esp_lcd_st77922;
