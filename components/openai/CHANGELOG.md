@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.0.0 - 2024-5-15
+
+### Break Changes:
+
+* Changed C++ reserved keyword 'delete' to 'deleteResponse'
+
 ## v0.3.1 - 2023-12-29
 
 ### Enhancements

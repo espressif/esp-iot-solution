@@ -1,7 +1,6 @@
 [![Component Registry](https://components.espressif.com/components/espressif/avi_player/badge.svg)](https://components.espressif.com/components/espressif/avi_player)
 
 # Component: AVI Player
-[Online documentation](https://docs.espressif.com/projects/esp-iot-solution/en/latest/input_device/avi_player.html)
 
 The `avi_player` component can parse avi format data and pass the audio/video frames through callback.
 
