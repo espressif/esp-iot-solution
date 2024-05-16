@@ -92,8 +92,8 @@
     // create gpio button
     button_config_t gpio_btn_cfg = {
         .type = BUTTON_TYPE_GPIO,
-        .long_press_ticks = CONFIG_BUTTON_LONG_PRESS_TIME_MS,
-        .short_press_ticks = CONFIG_BUTTON_SHORT_PRESS_TIME_MS,
+        .long_press_time = CONFIG_BUTTON_LONG_PRESS_TIME_MS,
+        .short_press_time = CONFIG_BUTTON_SHORT_PRESS_TIME_MS,
         .gpio_button_config = {
             .gpio_num = 0,
             .active_level = 0,
@@ -107,8 +107,8 @@
     // create adc button
     button_config_t adc_btn_cfg = {
         .type = BUTTON_TYPE_ADC,
-        .long_press_ticks = CONFIG_BUTTON_LONG_PRESS_TIME_MS,
-        .short_press_ticks = CONFIG_BUTTON_SHORT_PRESS_TIME_MS,
+        .long_press_time = CONFIG_BUTTON_LONG_PRESS_TIME_MS,
+        .short_press_time = CONFIG_BUTTON_SHORT_PRESS_TIME_MS,
         .adc_button_config = {
             .adc_channel = 0,
             .button_index = 0,
