@@ -70,7 +70,7 @@ TEST_CASE("test ChatCompletion", "[ChatCompletion]")
     } else {
         ESP_LOGE(TAG, "Unknown error!");
     }
-    result->delete (result);
+    result->deleteResponse(result);
     // english
     result = chatCompletion->message(chatCompletion, "tell me a joke", false);
     TEST_ASSERT_NOT_NULL(result);
@@ -90,7 +90,7 @@ TEST_CASE("test ChatCompletion", "[ChatCompletion]")
         ESP_LOGE(TAG, "Unknown error!");
     }
 
-    result->delete (result);
+    result->deleteResponse(result);
     openai->chatDelete(chatCompletion);
     OpenAIDelete(openai);
     example_disconnect();
@@ -187,7 +187,7 @@ TEST_CASE("test AudioSpeech", "[AudioSpeech]")
     free(giventext);
     free(finaltext);
     openai->audioTranscriptionDelete(audioTranscription);
-    speechresult->delete (speechresult);
+    speechresult->deleteResponse(speechresult);
     openai->audioSpeechDelete(audioSpeech);
     OpenAIDelete(openai);
     example_disconnect();

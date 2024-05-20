@@ -262,7 +262,7 @@ static OpenAI_EmbeddingResponse_t *OpenAI_EmbeddingResponseCreate(const char *pa
     _embeddingResponse->parent.getLen = &OpenAI_EmbeddingResponseGetLen;
     _embeddingResponse->parent.getData = &OpenAI_EmbeddingResponseGetDate;
     _embeddingResponse->parent.getError = &OpenAI_EmbeddingResponseGetError;
-    _embeddingResponse->parent.delete = &OpenAI_EmbeddingResponseDelete;
+    _embeddingResponse->parent.deleteResponse = &OpenAI_EmbeddingResponseDelete;
     cJSON_Delete(json);
     return &_embeddingResponse->parent;
 end:
@@ -371,7 +371,7 @@ static OpenAI_ModerationResponse_t *OpenAI_ModerationResponseCreate(const char *
     _moderationResponse->parent.getLen = &OpenAI_ModerationResponseGetLen;
     _moderationResponse->parent.getData = &OpenAI_ModerationResponseGetDate;
     _moderationResponse->parent.getError = &OpenAI_ModerationResponseGetError;
-    _moderationResponse->parent.delete = &OpenAI_ModerationResponseDelete;
+    _moderationResponse->parent.deleteResponse = &OpenAI_ModerationResponseDelete;
     return &_moderationResponse->parent;
 end:
     cJSON_Delete(json);
@@ -503,7 +503,7 @@ OpenAI_ImageResponse_t *OpenAI_ImageResponseCreate(const char *payload)
     _imageResponse->parent.getLen = &OpenAI_ImageResponseGetLen;
     _imageResponse->parent.getData = &OpenAI_ImageResponseGetDate;
     _imageResponse->parent.getError = &OpenAI_ImageResponseGetError;
-    _imageResponse->parent.delete = &OpenAI_ImageResponseDelete;
+    _imageResponse->parent.deleteResponse = &OpenAI_ImageResponseDelete;
     return &_imageResponse->parent;
 end:
     cJSON_Delete(json);
@@ -657,7 +657,7 @@ static OpenAI_StringResponse_t *OpenAI_StringResponseCreate(char *payload)
     _stringResponse->parent.getLen = &OpenAI_StringResponseGetLen;
     _stringResponse->parent.getData = &OpenAI_StringResponseGetDate;
     _stringResponse->parent.getError = &OpenAI_StringResponseGetError;
-    _stringResponse->parent.delete = &OpenAI_StringResponseDelete;
+    _stringResponse->parent.deleteResponse = &OpenAI_StringResponseDelete;
     return &_stringResponse->parent;
 end:
     cJSON_Delete(json);
@@ -1903,7 +1903,7 @@ static OpenAI_SpeechResponse_t *OpenAI_SpeechResponseCreate(char *payload, size_
 
     _audioSpeech->parent.getLen = &OpenAI_SpeechBufferGetLen;
     _audioSpeech->parent.getData = &OpenAI_SpeechGetDate;
-    _audioSpeech->parent.delete = &OpenAI_SpeechResponseDelete;
+    _audioSpeech->parent.deleteResponse = &OpenAI_SpeechResponseDelete;
     return &_audioSpeech->parent;
 end:
     free(payload);
