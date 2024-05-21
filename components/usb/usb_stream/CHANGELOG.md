@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v1.4.0 - 2024-05-21
+
+### Improvements:
+
+* UVC:
+  * Add support for Bulk camera with `Multiple Transfers per Sample` (see UVC1.5 section 2.4.3.2.1)
+
 ## v1.3.2 - 2024-02-04
 
 * Fix build error under latest ESP-IDF master (5.3), due to the changes in ``usb_dwc_ll.h``
