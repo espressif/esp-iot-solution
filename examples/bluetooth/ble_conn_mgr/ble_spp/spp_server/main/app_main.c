@@ -90,6 +90,7 @@ static void app_ble_conn_event_handler(void *handler_args, esp_event_base_t base
         break;
     case ESP_BLE_CONN_EVENT_DISCONNECTED:
         ESP_LOGI(TAG, "ESP_BLE_CONN_EVENT_DISCONNECTED\n");
+        connection_handle[0] = 0;
         break;
     default:
         break;
