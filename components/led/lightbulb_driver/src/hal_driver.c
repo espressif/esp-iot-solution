@@ -822,7 +822,7 @@ esp_err_t hal_set_channel_group(uint16_t value[], uint8_t channel_mask, uint16_t
 esp_err_t hal_start_channel_action(int channel, uint16_t value_min, uint16_t value_max, uint16_t period_ms, bool fade_flag)
 {
     LIGHTBULB_CHECK(s_hal_obj, "init() must be called first", return ESP_ERR_INVALID_STATE);
-    LIGHTBULB_CHECK((period_ms > CHANGE_RATE_MS * 2) || (period_ms == 0), "period_ms not allowed", return ESP_ERR_INVALID_ARG);
+    LIGHTBULB_CHECK(period_ms > CHANGE_RATE_MS * 2, "period_ms not allowed", return ESP_ERR_INVALID_ARG);
 
 #ifdef FADE_TICKS_FROM_GPTIMER
     if (s_hal_obj->gptimer_is_active) {
@@ -900,7 +900,7 @@ esp_err_t hal_start_channel_action(int channel, uint16_t value_min, uint16_t val
 esp_err_t hal_start_channel_group_action(uint16_t value_min[], uint16_t value_max[], uint8_t channel_mask, uint16_t period_ms, bool fade_flag)
 {
     LIGHTBULB_CHECK(s_hal_obj, "init() must be called first", return ESP_ERR_INVALID_STATE);
-    LIGHTBULB_CHECK((period_ms > CHANGE_RATE_MS * 2) || (period_ms == 0), "period_ms not allowed", return ESP_ERR_INVALID_ARG);
+    LIGHTBULB_CHECK(period_ms > CHANGE_RATE_MS * 2, "period_ms not allowed", return ESP_ERR_INVALID_ARG);
 
 #ifdef FADE_TICKS_FROM_GPTIMER
     if (s_hal_obj->gptimer_is_active) {
