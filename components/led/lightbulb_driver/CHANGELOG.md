@@ -1,5 +1,13 @@
 # ChangeLog
 
+## v1.2.0 - 2024-05-22
+
+### Enhancements:
+
+* Add more printing to facilitate debugging
+* Refactor the KP18058 code to facilitate configuration by referring to the datasheet
+* The effect interface no longer supports actions with a period of 0ms
+
 ## v1.1.5 - 2024-05-10
 
 ### Improvement:

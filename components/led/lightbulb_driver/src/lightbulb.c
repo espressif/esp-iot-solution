@@ -558,14 +558,12 @@ static bool mix_table_data_check(void)
     return result;
 }
 
-static void print_func(void *priv)
+static void print_func(char *driver_details, char *driver_io)
 {
-    char *name;
-
-    hal_get_driver_feature(QUERY_DRIVER_NAME, &name);
-    ESP_LOGI(TAG, "---------------------------------------------------------------------");
-    ESP_LOGI(TAG, "lightbulb driver component version: %d.%d.%d", LIGHTBULB_DRIVER_VER_MAJOR, LIGHTBULB_DRIVER_VER_MINOR, LIGHTBULB_DRIVER_VER_PATCH);
-    ESP_LOGI(TAG, "driver name: %s", name);
+    ESP_LOGI(TAG, "----------------------Lightbulb Driver Component-----------------------------");
+    ESP_LOGI(TAG, "version: %d.%d.%d", LIGHTBULB_DRIVER_VER_MAJOR, LIGHTBULB_DRIVER_VER_MINOR, LIGHTBULB_DRIVER_VER_PATCH);
+    ESP_LOGI(TAG, "%s", driver_details);
+    ESP_LOGI(TAG, "%s", driver_io);
     ESP_LOGI(TAG, "low power control: %s", s_lb_obj->cap.enable_lowpower ? "enable" : "disable");
     ESP_LOGI(TAG, "status storage: %s", s_lb_obj->cap.enable_status_storage ? "enable" : "disable");
     ESP_LOGI(TAG, "status storage delay %d ms", s_lb_obj->cap.enable_status_storage == true ? s_lb_obj->cap.storage_delay_ms : 0);
@@ -621,41 +619,111 @@ esp_err_t lightbulb_init(lightbulb_config_t *config)
 
     // hal configuration
     void *driver_conf = NULL;
+    char driver_details[224] = {0};
+    char driver_io[32] = {0};
 #ifdef CONFIG_ENABLE_PWM_DRIVER
     if (config->type == DRIVER_ESP_PWM) {
         driver_conf = (void *) & (config->driver_conf.pwm);
+        bool invert_level = 0;
+#if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 4, 0))
+        invert_level = config->driver_conf.pwm.invert_level;
+#endif
+        sprintf(driver_details, "Pwm Freq: %d Hz, Phase Delay Flag: %d, Invert Level: %d", config->driver_conf.pwm.freq_hz, config->driver_conf.pwm.phase_delay.flag, invert_level);
     }
 #endif
 #ifdef CONFIG_ENABLE_SM2135EH_DRIVER
     if (config->type == DRIVER_SM2135EH) {
         driver_conf = (void *) & (config->driver_conf.sm2135eh);
+        sprintf(driver_details, "SM2135EH IIC Freq: %d Khz, Queue: %d, SCL: %d, SDA: %d, RGB Current: %d, WY Current: %d",
+                config->driver_conf.sm2135eh.freq_khz,
+                config->driver_conf.sm2135eh.enable_iic_queue,
+                config->driver_conf.sm2135eh.iic_clk,
+                config->driver_conf.sm2135eh.iic_sda,
+                config->driver_conf.sm2135eh.rgb_current,
+                config->driver_conf.sm2135eh.wy_current);
     }
 #endif
 #ifdef CONFIG_ENABLE_BP57x8D_DRIVER
     if (config->type == DRIVER_BP57x8D) {
         driver_conf = (void *) & (config->driver_conf.bp57x8d);
+        sprintf(driver_details, "BP57x8D IIC Freq: %d Khz, Queue: %d, SCL: %d, SDA: %d, Current List:[%d %d %d %d %d]",
+                config->driver_conf.bp57x8d.freq_khz,
+                config->driver_conf.bp57x8d.enable_iic_queue,
+                config->driver_conf.bp57x8d.iic_clk,
+                config->driver_conf.bp57x8d.iic_sda,
+                config->driver_conf.bp57x8d.current[0],
+                config->driver_conf.bp57x8d.current[1],
+                config->driver_conf.bp57x8d.current[2],
+                config->driver_conf.bp57x8d.current[3],
+                config->driver_conf.bp57x8d.current[4]);
     }
 #endif
 #ifdef CONFIG_ENABLE_BP1658CJ_DRIVER
     if (config->type == DRIVER_BP1658CJ) {
         driver_conf = (void *) & (config->driver_conf.bp1658cj);
+        sprintf(driver_details, "BP1658CJ IIC Freq: %d Khz, Queue: %d, SCL: %d, SDA: %d, RGB Current: %d, CW Current: %d",
+                config->driver_conf.bp1658cj.freq_khz,
+                config->driver_conf.bp1658cj.enable_iic_queue,
+                config->driver_conf.bp1658cj.iic_clk,
+                config->driver_conf.bp1658cj.iic_sda,
+                config->driver_conf.bp1658cj.rgb_current,
+                config->driver_conf.bp1658cj.cw_current);
     }
 #endif
 #ifdef CONFIG_ENABLE_KP18058_DRIVER
     if (config->type == DRIVER_KP18058) {
         driver_conf = (void *) & (config->driver_conf.kp18058);
+        sprintf(driver_details, "KP18058 IIC Freq: %d Khz, Queue: %d, SCL: %d, SDA: %d, RGB Current Multiple: %d, CW Current Multiple: %d, Enable Custom Param: %d",
+                config->driver_conf.kp18058.iic_freq_khz,
+                config->driver_conf.kp18058.enable_iic_queue,
+                config->driver_conf.kp18058.iic_clk,
+                config->driver_conf.kp18058.iic_sda,
+                config->driver_conf.kp18058.rgb_current_multiple,
+                config->driver_conf.kp18058.cw_current_multiple,
+                config->driver_conf.kp18058.enable_custom_param);
+        if (config->driver_conf.kp18058.enable_custom_param) {
+            int offset = strlen(driver_details);
+            sprintf(&driver_details[offset], "\r\n\t\t\tCompensation: %d, Slope, %d, Chopping Freq: %d, Enable Compensation: %d, Enable Chopping Dimming: %d, Enable RC Filter: %d",
+                    config->driver_conf.kp18058.custom_param.compensation,
+                    config->driver_conf.kp18058.custom_param.slope,
+                    config->driver_conf.kp18058.custom_param.chopping_freq,
+                    config->driver_conf.kp18058.custom_param.enable_voltage_compensation,
+                    config->driver_conf.kp18058.custom_param.enable_chopping_dimming,
+                    config->driver_conf.kp18058.custom_param.enable_rc_filter);
+        }
     }
 #endif
 #ifdef CONFIG_ENABLE_SM2x35EGH_DRIVER
     if (config->type == DRIVER_SM2x35EGH) {
         driver_conf = (void *) & (config->driver_conf.sm2x35egh);
+        sprintf(driver_details, "SM2x35EGH IIC Freq: %d Khz, Queue: %d, SCL: %d, SDA: %d, RGB Current: %d, CW Current: %d",
+                config->driver_conf.sm2x35egh.freq_khz,
+                config->driver_conf.sm2x35egh.enable_iic_queue,
+                config->driver_conf.sm2x35egh.iic_clk,
+                config->driver_conf.sm2x35egh.iic_sda,
+                config->driver_conf.sm2x35egh.rgb_current,
+                config->driver_conf.sm2x35egh.cw_current);
     }
 #endif
 #ifdef CONFIG_ENABLE_WS2812_DRIVER
     if (config->type == DRIVER_WS2812) {
         driver_conf = (void *) & (config->driver_conf.ws2812);
+        sprintf(driver_details, "WS2812 Led Num: %d", config->driver_conf.ws2812.led_num);
+        sprintf(driver_io, "IO List:[%d]", config->driver_conf.ws2812.ctrl_io);
     }
 #endif
+
+    if (config->type == DRIVER_ESP_PWM) {
+        sprintf(driver_io, "IO List:[%d %d %d %d %d]", config->io_conf.pwm_io.red, config->io_conf.pwm_io.green, config->io_conf.pwm_io.blue, config->io_conf.pwm_io.cold_cct, config->io_conf.pwm_io.warm_brightness);
+    } else if (config->type >= DRIVER_SM2135E && config->type < DRIVER_WS2812) {
+        sprintf(driver_io, "IO List:[%d %d %d %d %d]", config->io_conf.iic_io.red, config->io_conf.iic_io.green, config->io_conf.iic_io.blue, config->io_conf.iic_io.cold_white, config->io_conf.iic_io.warm_yellow);
+    } else if (config->type == DRIVER_WS2812) {
+        // Nothing
+    } else {
+        ESP_LOGW(TAG, "The driver has not been updated to the component");
+        abort();
+    }
+
     // Config check
     if (config->type != DRIVER_ESP_PWM && config->type != DRIVER_WS2812) {
         if (config->capability.enable_hardware_cct == true) {
@@ -862,7 +930,7 @@ esp_err_t lightbulb_init(lightbulb_config_t *config)
         }
     }
 
-    print_func(config);
+    print_func(driver_details, driver_io);
 
     return ESP_OK;
 
