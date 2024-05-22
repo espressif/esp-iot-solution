@@ -81,8 +81,8 @@ static const char *TAG = "kp18058";
 #define BIT_DISABLE_CHOPPING_CONTROL        0x00
 
 /* B[6] */
-#define BIT_ENABLE_RC_FILTER                0x40
-#define BIT_DISABLE_RC_FILTER               0x00
+#define BIT_ENABLE_RC_FILTER                0x00
+#define BIT_DISABLE_RC_FILTER               0x40
 
 /* B[5:1] */
 #define BIT_DEFAULT_OUT4_5_CURRENT          0x00
@@ -152,9 +152,9 @@ static esp_err_t set_init_data(void)
     uint8_t addr = BASE_ADDR | BIT_ALL_CHANNEL | BIT_NEXT_BYTE1;
     uint8_t value[3] = { 0 };
 
-    memcpy(&value[0], s_kp18058->fixed_bit, sizeof(value));
+    memcpy(&value[0], s_kp18058->fixed_bit, sizeof(value) / sizeof(uint8_t));
 
-    return _write(addr, value, sizeof(value));
+    return _write(addr, value, sizeof(value) / sizeof(uint8_t));
 }
 
 esp_err_t kp18058_set_standby_mode(bool enable_standby)
@@ -169,7 +169,7 @@ esp_err_t kp18058_set_standby_mode(bool enable_standby)
         addr = BASE_ADDR | BIT_ALL_CHANNEL | BIT_NEXT_BYTE4;
     }
 
-    return _write(addr, value, sizeof(value));
+    return _write(addr, value, sizeof(value) / sizeof(uint8_t));
 }
 
 esp_err_t kp18058_set_shutdown(void)
@@ -364,41 +364,44 @@ esp_err_t kp18058_init(driver_kp18058_t *config, void(*hook_func)(void *))
     DRIVER_CHECK(s_kp18058, "alloc fail", return ESP_ERR_NO_MEM);
     memset(s_kp18058->mapping_addr, INVALID_ADDR, KP18058_MAX_PIN);
 
-    // The following configuration defaults value are from the KP18058 data sheet
-    // Byte 1
-    if (config->enable_custom_param && config->custom_param.disable_voltage_compensation) {
-        s_kp18058->fixed_bit[0] |= BIT_DISABLE_COMPENSATION;
-    } else if (config->enable_custom_param && !config->custom_param.disable_voltage_compensation) {
-        DRIVER_CHECK((config->custom_param.compensation != KP18058_COMPENSATION_VOLTAGE_INVALID) && (config->custom_param.slope != KP18058_SLOPE_INVALID), "Voltage compensation and slope are incorrect", goto EXIT);
-        s_kp18058->fixed_bit[0] |= BIT_ENABLE_COMPENSATION;
-        s_kp18058->fixed_bit[0] |= config->custom_param.compensation << 3;
-        s_kp18058->fixed_bit[0] |= config->custom_param.slope << 1;
+    // Custom configuration
+    if (config->enable_custom_param) {
+        // Byte 1
+        if (config->custom_param.enable_voltage_compensation) {
+            DRIVER_CHECK((config->custom_param.compensation != KP18058_COMPENSATION_VOLTAGE_INVALID) && (config->custom_param.slope != KP18058_SLOPE_INVALID), "Voltage compensation and slope are incorrect", goto EXIT);
+            s_kp18058->fixed_bit[0] |= BIT_ENABLE_COMPENSATION;
+            s_kp18058->fixed_bit[0] |= config->custom_param.compensation << 3;
+            s_kp18058->fixed_bit[0] |= config->custom_param.slope << 1;
+        } else {
+            s_kp18058->fixed_bit[0] |= BIT_DISABLE_COMPENSATION;
+        }
+
+        // Byte 2
+        if (config->custom_param.enable_chopping_dimming) {
+            DRIVER_CHECK(config->custom_param.chopping_freq != KP18058_CHOPPING_INVALID, "Chopping freq is incorrect", goto EXIT);
+            s_kp18058->fixed_bit[1] |= config->custom_param.chopping_freq << 6;
+        }
+
+        // Byte 3
+        if (config->custom_param.enable_chopping_dimming) {
+            s_kp18058->fixed_bit[2] |= BIT_ENABLE_CHOPPING_CONTROL;
+        } else {
+            s_kp18058->fixed_bit[2] |= BIT_DISABLE_CHOPPING_CONTROL;
+        }
+        if (config->custom_param.enable_rc_filter) {
+            s_kp18058->fixed_bit[2] |= BIT_ENABLE_RC_FILTER;
+        } else {
+            s_kp18058->fixed_bit[2] |= BIT_DISABLE_RC_FILTER;
+        }
+
     } else {
-        s_kp18058->fixed_bit[0] |= BIT_ENABLE_COMPENSATION;
-        s_kp18058->fixed_bit[0] |= BIT_DEFAULT_COMPENSATION_VOLTAGE;
-        s_kp18058->fixed_bit[0] |= BIT_DEFAULT_SLOPE_LEVEL;
+        // The following configuration defaults value are from the KP18058 datasheet
+        s_kp18058->fixed_bit[0] = BIT_ENABLE_COMPENSATION | BIT_DEFAULT_COMPENSATION_VOLTAGE | BIT_DEFAULT_SLOPE_LEVEL;
+        s_kp18058->fixed_bit[1] = BIT_DEFAULT_CHOPPING_FREQ_1KHZ | BIT_DEFAULT_OUT1_3_CURRENT;
+        s_kp18058->fixed_bit[2] = BIT_ENABLE_CHOPPING_CONTROL | BIT_ENABLE_RC_FILTER | BIT_DEFAULT_OUT4_5_CURRENT;
     }
 
-    // Byte 2
-    if (config->enable_custom_param && !config->custom_param.disable_chopping_dimming) {
-        DRIVER_CHECK(config->custom_param.chopping_freq != KP18058_CHOPPING_INVALID, "Chopping freq is incorrect", goto EXIT);
-        s_kp18058->fixed_bit[1] |= config->custom_param.chopping_freq << 6;
-    } else {
-        s_kp18058->fixed_bit[1] |= BIT_DEFAULT_CHOPPING_FREQ_1KHZ;
-    }
     s_kp18058->fixed_bit[1] |= (config->rgb_current_multiple) << 1;
-
-    // Byte 3
-    if (config->enable_custom_param && config->custom_param.disable_chopping_dimming) {
-        s_kp18058->fixed_bit[2] |= BIT_DISABLE_CHOPPING_CONTROL;
-    } else {
-        s_kp18058->fixed_bit[2] |= BIT_ENABLE_CHOPPING_CONTROL;
-    }
-    if (config->enable_custom_param && config->custom_param.enable_rc_filter) {
-        s_kp18058->fixed_bit[2] |= BIT_ENABLE_RC_FILTER;
-    } else {
-        s_kp18058->fixed_bit[2] |= BIT_DISABLE_RC_FILTER;
-    }
     s_kp18058->fixed_bit[2] |= (config->cw_current_multiple) << 1;
 
     if (config->iic_freq_khz > 300) {
