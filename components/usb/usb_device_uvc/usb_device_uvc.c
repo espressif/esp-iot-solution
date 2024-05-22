@@ -77,7 +77,7 @@ void tud_umount_cb(void)
 
 void tud_suspend_cb(bool remote_wakeup_en)
 {
-    (void) remote_wakeup_en;
+    (void)remote_wakeup_en;
 
     if (s_uvc_device.user_config[0].stop_cb) {
         s_uvc_device.user_config[0].stop_cb(s_uvc_device.user_config[0].cb_ctx);
@@ -113,8 +113,8 @@ static void video_task(void *arg)
 
     while (1) {
         if (!tud_video_n_streaming(0, 0)) {
-            already_start  = 0;
-            frame_num     = 0;
+            already_start = 0;
+            frame_num = 0;
             tx_busy = 0;
             vTaskDelay(1);
             continue;

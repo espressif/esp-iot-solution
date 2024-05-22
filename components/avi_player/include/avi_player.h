@@ -7,6 +7,7 @@
 #define __VIDOPLAYER_H
 
 #include "esp_err.h"
+#include "freertos/FreeRTOS.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -14,6 +15,7 @@ extern "C" {
 
 typedef enum  {
     FORMAT_MJEPG = 0,
+    FORMAT_H264,
 } video_frame_format;
 
 typedef struct {

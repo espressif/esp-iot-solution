@@ -80,6 +80,7 @@ esp_err_t usb_cam1_init(void)
 {
     avi_player_config_t avi_cfg = {
         .avi_play_end_cb = avi_end_cb,
+        .buffer_size = UVC_MAX_FRAMESIZE_SIZE,
     };
 
     avi_player_init(avi_cfg);
@@ -108,7 +109,11 @@ esp_err_t usb_cam1_init(void)
     };
 
     ESP_LOGI(TAG, "Format List");
-    ESP_LOGI(TAG, "\tFormat(1) = %s", "MJPEG");
+#if CONFIG_FORMAT_MJPEG_CAM1
+    ESP_LOGI(TAG, "\tFormat(1) = %s", "H264");
+#else
+    ESP_LOGI(TAG, "\tFormat(1) = %s", "H264");
+#endif
     ESP_LOGI(TAG, "Frame List");
     ESP_LOGI(TAG, "\tFrame(1) = %d * %d @%dfps", UVC_FRAMES_INFO[index - 1][0].width, UVC_FRAMES_INFO[index - 1][0].height, UVC_FRAMES_INFO[index - 1][0].rate);
 #if CONFIG_UVC_CAM2_MULTI_FRAMESIZE

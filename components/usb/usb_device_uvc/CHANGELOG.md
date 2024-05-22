@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v1.0.2 2024-5-20
+
+* Support Frame Based with format H264
+
 ## v1.0.1 2024-5-20
 
 * Support config task priority and core

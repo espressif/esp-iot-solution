@@ -90,8 +90,12 @@ static int strl_parser(avi_typedef *AVI_file, const uint8_t *buffer, uint32_t le
 
     if (VIDS_ID == strh->fourcc_type) {
         ESP_LOGI(TAG, "Find a video stream");
-        if (MJPG_ID != strh->fourcc_codec) {
-            ESP_LOGE(TAG, "only support mjpeg decoder, but needed is 0x%"PRIx32"", strh->fourcc_codec);
+        if (MJPG_ID == strh->fourcc_codec) {
+            AVI_file->vids_format = FORMAT_MJEPG;
+        } else if (H264_ID == strh->fourcc_codec) {
+            AVI_file->vids_format = FORMAT_H264;
+        } else {
+            ESP_LOGE(TAG, "only support mjpeg\\h264 decoder, but needed is 0x%"PRIx32"", strh->fourcc_codec);
             return -1;
         }
         AVI_VIDS_STRF_CHUNK *strf = (AVI_VIDS_STRF_CHUNK*)pdata;

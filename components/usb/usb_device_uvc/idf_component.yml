@@ -1,4 +1,4 @@
-version: "1.0.1"
+version: "1.0.2"
 targets:
   - esp32s2
   - esp32s3
@@ -16,10 +16,11 @@ dependencies:
     version: ">=0.15.0~7"
     rules:
       - if: "idf_version >=5.0"
-  leeebo/tinyusb_src:
-    version: ">=0.16.0~2"
-    rules:
-      - if: "idf_version >=4.4,<5.0"
+    override_path: ../../../../../lijunru-hub/tinyusb
+  # leeebo/tinyusb_src:
+  #   version: ">=0.16.0~2"
+  #   rules:
+  #     - if: "idf_version >=4.4,<5.0"
   cmake_utilities: "*"
 examples:
   - path: ../../../examples/usb/device/usb_webcam

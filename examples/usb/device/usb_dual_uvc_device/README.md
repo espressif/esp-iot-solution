@@ -2,6 +2,19 @@
 
 This example demonstrates how to use the usb_device_uvc component to simulate two virtual cameras. Camera one transmits an AVI video stream, while camera two transmits JPEG images.
 
+|            |          CONFIG          |     CAM1      |    CAM2    |
+| :--------: | :----------------------: | :-----------: | :--------: |
+| ESP32-S2/3 | CONFIG_FORMAT_MJPEG_CAM1 | 640*360 MJPEG | 720P MJPEG |
+| ESP32-S2/3 | CONFIG_FORMAT_H264_CAM1  | 640*360 H264  | 720P MJPEG |
+|  ESP32-P4  | CONFIG_FORMAT_MJPEG_CAM1 |  720P MJPEG   | 720P MJPEG |
+|  ESP32-P4  | CONFIG_FORMAT_H264_CAM1  |   720P H264   | 720P MJPEG |
+
+Note: After modifying the camera transmission format, please also delete the SPIFFS folder accordingly.
+
+```
+  rm -rf build spiffs
+```
+
 ## Hardware
 
 * Development board
@@ -13,9 +26,9 @@ This example demonstrates how to use the usb_device_uvc component to simulate tw
 
 * Connection
 
-    ||USB_DP|USB_DM|
-    |--|--|--|
-    |ESP32-S2/S3|GPIO20|GPIO19|
+    |             | USB_DP | USB_DM |
+    | ----------- | ------ | ------ |
+    | ESP32-S2/S3 | GPIO20 | GPIO19 |
 
 ## Build and Flash
 

@@ -94,17 +94,14 @@ extern "C" {
 #endif
 
 //------------- CLASS -------------//
-// The number of video control interfaces
-#if CONFIG_UVC_SUPPORT_TWO_CAM
-#define CFG_TUD_VIDEO  2
-#else
-#define CFG_TUD_VIDEO  1
-#endif
 
+// The number of video control interfaces
 // The number of video streaming interfaces
 #if CONFIG_UVC_SUPPORT_TWO_CAM
+#define CFG_TUD_VIDEO  2
 #define CFG_TUD_VIDEO_STREAMING  2
 #else
+#define CFG_TUD_VIDEO  1
 #define CFG_TUD_VIDEO_STREAMING  1
 #endif
 
@@ -143,7 +140,6 @@ extern "C" {
 #define CFG_TUD_CAM2_VIDEO_STREAMING_EP_BUFSIZE  512
 #endif
 #endif
-#define CFG_CAM2_VIDEO_DISABLE_MJPEG (!FORMAT_MJPEG_CAM1)
 #endif
 
 #if CONFIG_UVC_SUPPORT_TWO_CAM

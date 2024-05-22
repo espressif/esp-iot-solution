@@ -33,7 +33,7 @@
     IDF_CI_BUILD: "1"
     # By configuring this macro, you can append the compiled configuration file.
     # For example, using "sdkconf.etc=default" specifies the default sdkconfig file.
-    EXAMPLE_CONFIG: "="
+    EXAMPLE_CONFIG: ""
   script:
     - pip install "idf-component-manager<1.5"
     - pip install idf_build_apps
