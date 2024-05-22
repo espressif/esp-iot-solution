@@ -48,6 +48,7 @@ extern const uint8_t lp_core_main_bin_start[] asm("_binary_lp_core_main_bin_star
 extern const uint8_t lp_core_main_bin_end[]   asm("_binary_lp_core_main_bin_end");
 
 /* E-paper power control pin, set to 1 to power off the screen, set to 0 to power on the screen. */
+#define LDO_CHIP_EN                 GPIO_NUM_2
 #define EPAPER_PWR_CTRL             GPIO_NUM_8
 #define EPAPER_BUS_HOST             SPI2_HOST
 #define EPAPER_REFRESH_BIT          BIT(0)
@@ -289,6 +290,15 @@ static void epaper_task(void *pvParameters)
 
 void app_main(void)
 {
+    /*!< Config charge IC enable IO */
+    gpio_config_t io_conf = {
+        .pin_bit_mask = (1ULL << LDO_CHIP_EN),
+        .mode = GPIO_MODE_OUTPUT,
+    };
+    gpio_config(&io_conf);
+    gpio_set_level(LDO_CHIP_EN, 1);
+    gpio_hold_en(LDO_CHIP_EN);
+
     /* To refresh the e-paper screen, it takes at least 1250ms. */
     esp_ths_event_group = xEventGroupCreate();
     if (esp_ths_event_group == NULL) {
