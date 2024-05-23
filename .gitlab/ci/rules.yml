@@ -417,6 +417,9 @@
 .patterns-example_sensors_sensor_hub_monitor: &patterns-example_sensors_sensor_hub_monitor
   - "examples/sensors/sensor_hub_monitor/**/*"
 
+.patterns-example_usb_device_usb_dongle: &patterns-example_usb_device_usb_dongle
+  - "examples/usb/device/usb_dongle/**/*"
+
 .patterns-example_ulp_lp_cpu_lp_environment_sensor: &patterns-example_ulp_lp_cpu_lp_environment_sensor
   - "examples/ulp/lp_cpu/lp_environment_sensor/**/*"
 
@@ -1047,6 +1050,15 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-example_usb_device_usb_hid_device
+
+.rules:build:example_usb_device_usb_dongle:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_usb_device_usb_dongle
 
 .rules:build:example_usb_device_usb_uart_bridge:
   rules:

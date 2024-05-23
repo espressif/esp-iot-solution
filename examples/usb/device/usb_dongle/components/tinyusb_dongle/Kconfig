@@ -1,0 +1,227 @@
+menu "TinyUSB Stack"
+    config TINYUSB_DEBUG_LEVEL
+        int "TinyUSB log level (0-3)"
+        default 1
+        range 0 3
+        help
+            Specify verbosity of TinyUSB log output.
+
+    choice TINYUSB_RHPORT
+        depends on IDF_TARGET_ESP32P4
+        prompt "TinyUSB PHY"
+        default TINYUSB_RHPORT_HS
+        help
+            Allows set the USB PHY Controller for TinyUSB: HS (USB OTG2.0 PHY for HighSpeed)
+
+        config TINYUSB_RHPORT_HS
+            bool "HS"
+    endchoice
+
+    menu "TinyUSB task configuration"
+        config TINYUSB_NO_DEFAULT_TASK
+            bool "Do not create a TinyUSB task"
+            default n
+            help
+                This option allows to not create the FreeRTOS task during the driver initialization.
+                User will have to handle TinyUSB events manually.
+
+        config TINYUSB_TASK_PRIORITY
+            int "TinyUSB task priority"
+            default 5
+            depends on !TINYUSB_NO_DEFAULT_TASK
+            help
+                Set the priority of the default TinyUSB main task.
+
+        config TINYUSB_TASK_STACK_SIZE
+            int "TinyUSB task stack size (bytes)"
+            default 4096
+            depends on !TINYUSB_NO_DEFAULT_TASK
+            help
+                Set the stack size of the default TinyUSB main task.
+
+        choice TINYUSB_TASK_AFFINITY
+            prompt "TinyUSB task affinity"
+            default TINYUSB_TASK_AFFINITY_NO_AFFINITY
+            depends on !TINYUSB_NO_DEFAULT_TASK
+            help
+                Allows setting TinyUSB tasks affinity, i.e. whether the task is pinned to
+                CPU0, pinned to CPU1, or allowed to run on any CPU.
+
+            config TINYUSB_TASK_AFFINITY_NO_AFFINITY
+                bool "No affinity"
+            config TINYUSB_TASK_AFFINITY_CPU0
+                bool "CPU0"
+            config TINYUSB_TASK_AFFINITY_CPU1
+                bool "CPU1"
+                depends on !FREERTOS_UNICORE
+        endchoice
+
+        config TINYUSB_TASK_AFFINITY
+            hex
+            default FREERTOS_NO_AFFINITY if TINYUSB_TASK_AFFINITY_NO_AFFINITY
+            default 0x0 if TINYUSB_TASK_AFFINITY_CPU0
+            default 0x1 if TINYUSB_TASK_AFFINITY_CPU1
+
+        config TINYUSB_INIT_IN_DEFAULT_TASK
+            bool "Initialize TinyUSB stack within the default TinyUSB task"
+            default n
+            depends on !TINYUSB_NO_DEFAULT_TASK
+            help
+                Run TinyUSB stack initialization just after starting the default TinyUSB task.
+                This is especially useful in multicore scenarios, when we need to pin the task
+                to a specific core and, at the same time initialize TinyUSB stack
+                (i.e. install interrupts) on the same core.
+    endmenu
+
+    menu "Descriptor configuration"
+        comment "You can provide your custom descriptors via tinyusb_driver_install()"
+        config TINYUSB_DESC_USE_ESPRESSIF_VID
+            bool "VID: Use Espressif's vendor ID"
+            default y
+            help
+                Enable this option, USB device will use Espressif's vendor ID as its VID.
+                This is helpful at product develop stage.
+
+        config TINYUSB_DESC_CUSTOM_VID
+            hex "VID: Custom vendor ID"
+            default 0xcafe
+            depends on !TINYUSB_DESC_USE_ESPRESSIF_VID
+            help
+                Custom Vendor ID.
+
+        config TINYUSB_DESC_USE_DEFAULT_PID
+            bool "PID: Use a default PID assigned to TinyUSB"
+            default y
+            help
+                Default TinyUSB PID assigning uses values 0x4000...0x4007.
+
+        config TINYUSB_DESC_CUSTOM_PID
+            hex "PID: Custom product ID"
+            default 0x5678
+            depends on !TINYUSB_DESC_USE_DEFAULT_PID
+            help
+                Custom Product ID.
+
+        config TINYUSB_DESC_BCD_DEVICE
+            hex "bcdDevice"
+            default 0x0100
+            help
+                Version of the firmware of the USB device.
+
+        config TINYUSB_DESC_MANUFACTURER_STRING
+            string "Manufacturer name"
+            default "Espressif Systems"
+            help
+                Name of the manufacturer of the USB device.
+
+        config TINYUSB_DESC_PRODUCT_STRING
+            string "Product name"
+            default "Espressif Device"
+            help
+                Name of the USB device.
+
+        config TINYUSB_DESC_SERIAL_STRING
+            string "Serial string"
+            default "123456"
+            help
+                Serial number of the USB device.
+
+        config TINYUSB_DESC_CDC_STRING
+            depends on TINYUSB_CDC_ENABLED
+            string "CDC Device String"
+            default "Espressif CDC Device"
+            help
+                Name of the CDC device.
+
+        config TINYUSB_DESC_BTH_STRING
+            depends on TINYUSB_BTH_ENABLED
+            string "BTH String"
+            default "Espressif BTH Device"
+            help
+                Name of the BTH device.
+
+    endmenu # "Descriptor configuration"
+
+    menu "Communication Device Class (CDC)"
+        config TINYUSB_CDC_ENABLED
+            bool "Enable TinyUSB CDC feature"
+            default n
+            help
+                Enable TinyUSB CDC feature.
+
+        config TINYUSB_CDC_COUNT
+            int "CDC Channel Count"
+            default 1
+            range 1 2
+            depends on TINYUSB_CDC_ENABLED
+            help
+                Number of independent serial ports.
+
+        config TINYUSB_CDC_RX_BUFSIZE
+            depends on TINYUSB_CDC_ENABLED
+            int "CDC FIFO size of RX channel"
+            default 512
+            range 64 10000
+            help
+                CDC FIFO size of RX channel.
+
+        config TINYUSB_CDC_TX_BUFSIZE
+            depends on TINYUSB_CDC_ENABLED
+            int "CDC FIFO size of TX channel"
+            default 512
+            help
+                CDC FIFO size of TX channel.
+    endmenu # "Communication Device Class"
+
+    menu "Device Firmware Upgrade (DFU)"
+        config TINYUSB_DFU_ENABLED
+            bool "Enable TinyUSB DFU feature"
+            default n
+            help
+                Enable TinyUSB DFU feature.
+
+        config TINYUSB_DFU_BUFSIZE
+            depends on TINYUSB_DFU_ENABLED
+            int "DFU XFER BUFFSIZE"
+            default 512
+            help
+                DFU XFER BUFFSIZE.
+    endmenu # Device Firmware Upgrade (DFU)
+
+    menu "Bluetooth Host Class (BTH)"
+        config TINYUSB_BTH_ENABLED
+            bool "Enable TinyUSB BTH feature"
+            default n
+            help
+                Enable TinyUSB BTH feature.
+
+        config TINYUSB_BTH_ISO_ALT_COUNT
+            depends on TINYUSB_BTH_ENABLED
+            int "BTH ISO ALT COUNT"
+            default 0
+            help
+                BTH ISO ALT COUNT.
+    endmenu # "Bluetooth Host Device Class"
+
+    menu "Network driver (ECM/NCM/RNDIS)"
+        choice TINYUSB_NET_MODE
+            prompt "Network mode"
+            default TINYUSB_NET_MODE_NONE
+            help
+                Select network driver you want to use.
+
+            config TINYUSB_NET_MODE_RNDIS
+                bool "RNDIS"
+
+            config TINYUSB_NET_MODE_ECM
+                bool "ECM"
+
+            config TINYUSB_NET_MODE_NCM
+                bool "NCM"
+
+            config TINYUSB_NET_MODE_NONE
+                bool "None"
+        endchoice
+    endmenu # "Network driver (ECM/NCM/RNDIS)"
+
+endmenu # "TinyUSB Stack"
