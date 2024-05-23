@@ -46,8 +46,8 @@ static void usb_phy_init(void)
     usb_phy_config_t phy_conf = {
         .controller = USB_PHY_CTRL_OTG,
         .otg_mode = USB_OTG_MODE_DEVICE,
+        .target = USB_PHY_TARGET_INT,
     };
-    phy_conf.target = USB_PHY_TARGET_INT;
     usb_new_phy(&phy_conf, &s_uvc_device.phy_hdl);
 #endif
 }
@@ -303,11 +303,11 @@ esp_err_t uvc_device_init(void)
         return ESP_FAIL;
     }
 
-    xTaskCreatePinnedToCore(tusb_device_task, "TinyUSB", 4096, NULL, 5, NULL, 0);
+    xTaskCreatePinnedToCore(tusb_device_task, "TinyUSB", 4096, NULL, CONFIG_UVC_TINYUSB_TASK_PRIORITY, NULL, CONFIG_UVC_TINYUSB_TASK_CORE);
 #if (CFG_TUD_VIDEO)
-    xTaskCreatePinnedToCore(video_task, "UVC", 4096, NULL, 4, &s_uvc_device.uvc_task_hdl[0], 0);
+    xTaskCreatePinnedToCore(video_task, "UVC", 4096, NULL, CONFIG_UVC_CAM1_TASK_PRIORITY, &s_uvc_device.uvc_task_hdl[0], CONFIG_UVC_CAM1_TASK_CORE);
 #if CONFIG_UVC_SUPPORT_TWO_CAM
-    xTaskCreatePinnedToCore(video_task2, "UVC2", 4096, NULL, 4, &s_uvc_device.uvc_task_hdl[1], 0);
+    xTaskCreatePinnedToCore(video_task2, "UVC2", 4096, NULL, CONFIG_UVC_CAM2_TASK_PRIORITY, &s_uvc_device.uvc_task_hdl[1], CONFIG_UVC_CAM2_TASK_CORE);
 #endif
 #endif
     ESP_LOGI(TAG, "UVC Device Start, Version: %d.%d.%d", USB_DEVICE_UVC_VER_MAJOR, USB_DEVICE_UVC_VER_MINOR, USB_DEVICE_UVC_VER_PATCH);

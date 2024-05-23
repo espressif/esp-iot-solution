@@ -25,7 +25,7 @@ Please use the component manager command ``add-dependency`` to add the ``usb_dev
 User Reference
 -------------------------------
 
-The component provides only one API to configure the UVC device. As the driver based on the ``TinyUSB`` stack, the deinit API is not provided. 
+The component provides only one API to configure the UVC device. As the driver based on the ``TinyUSB`` stack, the deinit API is not provided.
 
 .. code:: c
 
@@ -65,19 +65,22 @@ The component provides only one API to configure the UVC device. As the driver b
 
     uvc_device_config_t config = {
         .uvc_buffer = uvc_buffer,
-        .uvc_buffer_size = buff_size,
+        .uvc_buffer_size = 40 * 1024,
         .start_cb = camera_start_cb,
         .fb_get_cb = camera_fb_get_cb,
         .fb_return_cb = camera_fb_return_cb,
         .stop_cb = camera_stop_cb,
+        .cb_ctx = NULL,
     };
 
-    ESP_ERROR_CHECK(uvc_device_init(&config));
+    ESP_ERROR_CHECK(uvc_device_config(0, &config));
+    ESP_ERROR_CHECK(uvc_device_init());
 
 Examples
 -------------------------------
 
 :example:`usb/device/usb_webcam`
+:example:`usb/device/usb_dual_uvc_device`
 
 API Reference
 -------------------------------

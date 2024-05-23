@@ -40,8 +40,8 @@ static void usb_phy_init(void)
     usb_phy_config_t phy_conf = {
         .controller = USB_PHY_CTRL_OTG,
         .otg_mode = USB_OTG_MODE_DEVICE,
+        .target = USB_PHY_TARGET_INT,
     };
-    phy_conf.target = USB_PHY_TARGET_INT;
     usb_new_phy(&phy_conf, &s_phy_hdl);
 }
 

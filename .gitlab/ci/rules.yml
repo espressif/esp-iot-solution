@@ -226,6 +226,9 @@
   - "components/usb/iot_usbh_modem/**/*"
   - "components/tools/cmake_utilities/package_manager.cmake"
 
+.patterns-components_usb_usb_device_uac: &patterns-components_usb_usb_device_uac
+  - "components/usb/usb_device_uac/**/*"
+
 .patterns-components_usb_usb_device_uvc: &patterns-components_usb_usb_device_uvc
   - "components/usb/usb_device_uvc/**/*"
 
@@ -281,6 +284,7 @@
   - "components/sensors/ntc_driver/include/ntc_driver.h"
   - "components/usb/esp_msc_ota/include/esp_msc_ota.h"
   - "components/usb/iot_usbh_cdc/include/iot_usbh_cdc.h"
+  - "components/usb/usb_device_uac/include/usb_device_uac.h"
   - "components/usb/usb_device_uvc/include/usb_device_uvc.h"
   - "components/usb/usb_stream/include/usb_stream.h"
   - "components/zero_detection/include/zero_detection.h"
@@ -421,6 +425,9 @@
 
 .patterns-example_usb_device_usb_uart_bridge: &patterns-example_usb_device_usb_uart_bridge
   - "examples/usb/device/usb_uart_bridge/**/*"
+
+.patterns-example_usb_device_usb_uac: &patterns-example_usb_device_usb_uac
+  - "examples/usb/device/usb_uac/**/*"
 
 .patterns-example_usb_device_usb_dual_uvc_device: &patterns-example_usb_device_usb_dual_uvc_device
   - "examples/usb/device/usb_dual_uvc_device/**/*"
@@ -1049,6 +1056,18 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-example_usb_device_usb_uart_bridge
+
+.rules:build:example_usb_device_usb_uac:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_usb_usb_device_uac
+    - <<: *if-dev-push
+      changes: *patterns-example_usb_device_usb_uac
 
 .rules:build:example_usb_device_usb_dual_uvc_device:
   rules:
@@ -1787,6 +1806,17 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_usb_usb_stream
+
+.rules:build:components_usb_usb_device_uac:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_usb_usb_device_uac
 
 .rules:build:components_sensors_humiture_aht20_test_apps:
   rules:
