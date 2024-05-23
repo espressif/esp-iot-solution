@@ -77,3 +77,5 @@ ignore:  # You can also select ignoring files here
     - 'examples/usb/host/usb_cdc_4g_module/components/json_parse/**/*'
     - 'tools/ci/check_copyright_ignore.txt'
     - 'tools/cmake_utilities/test_apps/pytest_cmake_utilities.py'
+    - 'examples/usb/device/usb_dongle/main/CLI_Commands.c'
+    - 'examples/usb/device/usb_dongle/components/FreeRTOS-Plus-CLI/**/*'

@@ -1,0 +1,59 @@
+menu "Example Configuration"
+
+    config UART_ENABLE
+        depends on !TINYUSB_CDCACM_ENABLED
+        bool "Use Uart to Communication"
+        default y
+        help
+            Enable Uart.
+
+    config UART_PORT_NUM
+        depends on UART_ENABLE
+        int "UART port number"
+        range 0 2 if IDF_TARGET_ESP32   || IDF_TARGET_ESP32S3
+        range 0 1 if IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32C3
+        default 2 if IDF_TARGET_ESP32   || IDF_TARGET_ESP32S3
+        default 1 if IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32C3
+        help
+            UART communication port number for the example.
+            See UART documentation for available port numbers.
+
+    config UART_BAUD_RATE
+        depends on UART_ENABLE
+        int "UART communication speed"
+        range 1200 115200
+        default 115200
+        help
+            UART communication speed for Modbus example.
+
+    config UART_RXD
+        depends on UART_ENABLE
+        int "UART RXD pin number"
+        range 0 34 if IDF_TARGET_ESP32
+        range 0 46 if IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
+        range 0 19 if IDF_TARGET_ESP32C3
+        default 5
+        help
+            GPIO number for UART RX pin. See UART documentation for more information
+            about available pin numbers for UART.
+
+    config UART_TXD
+        depends on UART_ENABLE
+        int "UART TXD pin number"
+        range 0 34 if IDF_TARGET_ESP32
+        range 0 46 if IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
+        range 0 19 if IDF_TARGET_ESP32C3
+        default 4
+        help
+            GPIO number for UART TX pin. See UART documentation for more information
+            about available pin numbers for UART.
+
+    config TASK_STACK_SIZE
+        depends on UART_ENABLE
+        int "UART echo example task stack size"
+        range 1024 16384
+        default 4096
+        help
+            Defines stack size for UART echo example. Insufficient stack size can cause crash.
+
+endmenu # "Example Configuration"

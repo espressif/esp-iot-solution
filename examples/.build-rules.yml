@@ -213,6 +213,10 @@ examples/sensors/sensor_hub_monitor:
   enable:
     - if: IDF_TARGET in ["esp32","esp32s2"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
 
+examples/usb/device/usb_dongle:
+  enable:
+    - if: SOC_USB_OTG_SUPPORTED == 1
+
 examples/ulp/lp_cpu/lp_environment_sensor:
   enable:
     - if: IDF_TARGET in ["esp32c6"]
