@@ -70,8 +70,7 @@ Hardware:
 Links:
 ~~~~~~~~
 
-* `usb_stream components <https://components.espressif.com/components/espressif/usb_stream>`_
-* `usb_stream API reference <https://docs.espressif.com/projects/esp-iot-solution/en/latest/usb/usb_host/usb_stream.html>`_
+* `usb_host_uac components <https://components.espressif.com/components/espressif/usb_host_uac>`_
 * `USB Audio Demo video <https://www.bilibili.com/video/BV1LP411975W>`_
 * Example Code: MP3 Music Player + USB Headphones: :example:`usb/host/usb_audio_player`
 

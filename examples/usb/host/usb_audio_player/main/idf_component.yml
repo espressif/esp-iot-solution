@@ -1,6 +1,4 @@
 dependencies:
   chmorgan/esp-audio-player: "1.0.*"
-  idf: ">=5.0"
-  usb_stream:
-    version: "1.*"
-    override_path: "../../../../../components/usb/usb_stream"
+  idf: ">=5.0" # The version of the ESP-IDF that esp-audio-player requires
+  usb_host_uac: "1.0.*"
