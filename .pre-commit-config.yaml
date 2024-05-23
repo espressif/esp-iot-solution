@@ -1,5 +1,8 @@
 # See https://pre-commit.com for more information
 # See https://pre-commit.com/hooks.html for more hooks
+---
+minimum_pre_commit_version: 3.3.0
+default_install_hook_types: [pre-commit,commit-msg]
 
 repos:
   - repo: https://github.com/espressif/check-copyright/
@@ -67,3 +70,8 @@ repos:
         language: python
         pass_filenames: false
         always_run: true
+  - repo: https://github.com/espressif/conventional-precommit-linter
+    rev: v1.8.0
+    hooks:
+      - id: conventional-precommit-linter
+        stages: [commit-msg]
