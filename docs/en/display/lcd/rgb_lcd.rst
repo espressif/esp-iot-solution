@@ -7,6 +7,11 @@ RGB LCD Introduction
     :local:
     :depth: 2
 
+Terminology
+-----------
+
+Please refer to the :ref:`LCD Terms Table <LCD_Terms_Table>` 。
+
 Interface Mode
 ---------------------
 

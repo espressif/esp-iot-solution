@@ -14,6 +14,11 @@ LCD 开发指南
   - `常见问题`_：列出了开发 LCD 应用过程中常见的问题。
   - `相关文档`_：列出了相关文档的链接。
 
+术语表
+-----------
+
+请参阅 :ref:`LCD 术语表 <LCD_术语表>` 。
+
 支持的接口类型
 ----------------------------
 
@@ -30,7 +35,7 @@ LCD 开发指南
       - MIPI-DSI
     * - ESP32
       - |supported|
-      -
+      - |supported|
       -
       -
     * - ESP32-C3
@@ -92,7 +97,7 @@ LCD 开发指南
       - 3-wire SPI + RGB
     * - `st77903_rgb <https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_st77903_rgb>`_
       - 3-wire SPI + RGB
-    * - `st77903 <https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_st77903>`_
+    * - `st77903_qspi <https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_st77903>`_
       - QSPI
     * - `st77916 <https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_st77916>`_
       - SPI/QSPI
@@ -105,7 +110,7 @@ LCD 开发指南
     * - `ili9341 <https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_ili9341>`_
       - SPI
     * - `ra8875 <https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_ra8875>`_
-      - Parallel Intel 8080
+      - I80
     * - `sh1107 <https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_sh1107>`_
       - I2C
     * - `ssd1681 <https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_ssd1681>`_
@@ -129,6 +134,8 @@ LCD 开发指南
 
 开发框架
 -------------------------
+
+.. _LCD_开发指南_硬件框架:
 
 硬件框架
 ^^^^^^^^^^^^^^^^^^^^^^^^^

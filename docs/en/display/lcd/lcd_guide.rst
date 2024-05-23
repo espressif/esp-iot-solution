@@ -24,6 +24,11 @@ This guide contains the following sections:
   - `Typical Connection Methods`_: Typical ways to connect the LCD module, including the general pins of the LCD and various types of interface pins.
   - `Frame Rate`_: The frame rate of LCD applications, including rendering frame rate, interface frame rate, and screen refresh rate.
 
+Terminology
+-----------
+
+Please refer to the :ref:`LCD Terms Table <LCD_Terms_Table>` 。
+
 Structure
 ---------------
 
@@ -338,7 +343,6 @@ The interface frame rate depends on the LCD interface type and the data transfer
     Horizontal\;Period = &Horizontal\;Pulse\;Width + Horizontal\;Back\;Porch + \\ &Horizontal\;Resolution + Horizontal\;Front\;Porch
 
     Vertical\;Period = &Vertical\;Pulse\;Width + Vertical\;Back\;Porch + \\ &Vertical\;Resolution + Vertical\;Front\;Porch
-
 
 Display
 ^^^^^^^^^^^^^^^
