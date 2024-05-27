@@ -53,7 +53,7 @@ static void gpio_reverse(int gpio_num)
 #define MAX_TABLE_SIZE                          (256)                   // Maximum size for linear and gamma correction tables.
 #define DEFAULT_CURVE_COE                       (1.0)                   // Default coefficient for gamma correction curve.
 #define HAL_OUT_MAX_CHANNEL                     (5)                     // Maximum number of output channels in the Hardware Abstraction Layer (HAL).
-#define ERROR_COUNT_THRESHOLD                   (1)                     // Threshold for errors in the lower interface.
+#define ERROR_COUNT_THRESHOLD                   (6)                     // Threshold for errors in the lower interface.
 
 typedef esp_err_t (*x_init_t)(void *config, void(*hook_func)(void *));
 typedef esp_err_t (*x_regist_channel_t)(int channel, int value);
@@ -822,7 +822,7 @@ esp_err_t hal_set_channel_group(uint16_t value[], uint8_t channel_mask, uint16_t
 esp_err_t hal_start_channel_action(int channel, uint16_t value_min, uint16_t value_max, uint16_t period_ms, bool fade_flag)
 {
     LIGHTBULB_CHECK(s_hal_obj, "init() must be called first", return ESP_ERR_INVALID_STATE);
-    LIGHTBULB_CHECK((period_ms > CHANGE_RATE_MS * 2) || (period_ms == 0), "period_ms not allowed", return ESP_ERR_INVALID_ARG);
+    LIGHTBULB_CHECK(period_ms > CHANGE_RATE_MS * 2, "period_ms not allowed", return ESP_ERR_INVALID_ARG);
 
 #ifdef FADE_TICKS_FROM_GPTIMER
     if (s_hal_obj->gptimer_is_active) {
@@ -900,7 +900,7 @@ esp_err_t hal_start_channel_action(int channel, uint16_t value_min, uint16_t val
 esp_err_t hal_start_channel_group_action(uint16_t value_min[], uint16_t value_max[], uint8_t channel_mask, uint16_t period_ms, bool fade_flag)
 {
     LIGHTBULB_CHECK(s_hal_obj, "init() must be called first", return ESP_ERR_INVALID_STATE);
-    LIGHTBULB_CHECK((period_ms > CHANGE_RATE_MS * 2) || (period_ms == 0), "period_ms not allowed", return ESP_ERR_INVALID_ARG);
+    LIGHTBULB_CHECK(period_ms > CHANGE_RATE_MS * 2, "period_ms not allowed", return ESP_ERR_INVALID_ARG);
 
 #ifdef FADE_TICKS_FROM_GPTIMER
     if (s_hal_obj->gptimer_is_active) {

@@ -71,8 +71,8 @@ typedef struct {
         kp18058_compensation_t compensation;
         kp18058_slope_t slope;
         kp18058_chopping_freq_t chopping_freq;
-        bool disable_voltage_compensation : 1;
-        bool disable_chopping_dimming : 1;
+        bool enable_voltage_compensation : 1;
+        bool enable_chopping_dimming : 1;       // If set to false, it is analog dimming.
         bool enable_rc_filter : 1;
     } custom_param;
 } driver_kp18058_t;
