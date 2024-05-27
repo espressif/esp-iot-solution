@@ -53,7 +53,7 @@ static void gpio_reverse(int gpio_num)
 #define MAX_TABLE_SIZE                          (256)                   // Maximum size for linear and gamma correction tables.
 #define DEFAULT_CURVE_COE                       (1.0)                   // Default coefficient for gamma correction curve.
 #define HAL_OUT_MAX_CHANNEL                     (5)                     // Maximum number of output channels in the Hardware Abstraction Layer (HAL).
-#define ERROR_COUNT_THRESHOLD                   (1)                     // Threshold for errors in the lower interface.
+#define ERROR_COUNT_THRESHOLD                   (6)                     // Threshold for errors in the lower interface.
 
 typedef esp_err_t (*x_init_t)(void *config, void(*hook_func)(void *));
 typedef esp_err_t (*x_regist_channel_t)(int channel, int value);
