@@ -1,3 +1,7 @@
+components/touch/touch_proximity_sensor/test_apps:
+  enable:
+    - if: IDF_TARGET in ["esp32s3"]
+
 components/usb/esp_msc_ota/test_apps:
   enable:
     - if: SOC_USB_OTG_SUPPORTED == 1

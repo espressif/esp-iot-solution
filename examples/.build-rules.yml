@@ -217,6 +217,10 @@ examples/usb/device/usb_dongle:
   enable:
     - if: SOC_USB_OTG_SUPPORTED == 1
 
+examples/touch/touch_proximity:
+  enable:
+    - if: IDF_TARGET in ["esp32s3"]
+
 examples/ulp/lp_cpu/lp_environment_sensor:
   enable:
     - if: IDF_TARGET in ["esp32c6"]

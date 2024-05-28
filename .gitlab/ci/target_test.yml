@@ -107,6 +107,25 @@ components_test_esp_msc_ota:
     TEST_FOLDER: components/usb/esp_msc_ota
     TEST_ENV: ${ENV_TAG}
 
+components_test_touch_proximity_sensor:
+  extends:
+    - .pytest_template
+    - .rules:build:components_touch_touch_proximity_sensor_test_apps
+  needs:
+    - job: "build_components_touch_touch_proximity_sensor_test_apps"
+      artifacts: true
+      optional: false
+  parallel:
+    matrix:
+        - IDF_VERSION: ["5.0","5.1","5.2"]
+          IDF_TARGET: esp32s3
+  tags:
+    - ${IDF_TARGET}
+  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
+  variables:
+    TEST_TARGET: esp32s3
+    TEST_FOLDER: components/touch/touch_proximity_sensor
+
 components_test_usb_camera:
   extends:
     - .pytest_template

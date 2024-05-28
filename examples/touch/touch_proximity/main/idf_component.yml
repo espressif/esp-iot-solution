@@ -1,0 +1,4 @@
+dependencies:
+  idf: ">=5.0"
+  touch_proximity_sensor:
+    override_path: "../../../../components/touch/touch_proximity_sensor"
