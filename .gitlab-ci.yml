@@ -49,6 +49,9 @@ before_script:
     - mkdir -p ${LOG_PATH}
     # build some of examples
     - ${IOT_SOLUTION_PATH}/tools/ci/build_examples.sh "${CI_JOB_NAME}"
+  rules:
+    # This branch is deprecated and will no longer compile examples.
+    - when: never
 
 build_examples_00:
   <<: *build_examples_template
