@@ -4,7 +4,8 @@
 
 # build system, if changed, build all apps
 .patterns-build_system: &patterns-build_system
-  - "tools/build_apps.py"
+  # For test
+  # - "tools/build_apps.py"
   - "conftest.py"
   - "pytest.ini"
 

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -14,6 +14,9 @@
 #include "esp_err.h"
 #include "esp_log.h"
 #include "usb_stream.h"
+#ifdef CONFIG_ESP32_S3_USB_OTG
+#include "bsp/esp-bsp.h"
+#endif
 
 static const char *TAG = "uvc_mic_spk_demo";
 /****************** configure the example working mode *******************************/
@@ -215,6 +218,10 @@ static void stream_state_changed_cb(usb_stream_state_t event, void *arg)
 
 void app_main(void)
 {
+#ifdef CONFIG_ESP32_S3_USB_OTG
+    bsp_usb_mode_select_host();
+    bsp_usb_host_power_mode(BSP_USB_HOST_POWER_MODE_USB_DEV, true);
+#endif
     esp_log_level_set("*", ESP_LOG_INFO);
     esp_log_level_set("httpd_txrx", ESP_LOG_INFO);
     esp_err_t ret = ESP_FAIL;

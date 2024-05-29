@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -28,6 +28,10 @@
 
 #ifdef CONFIG_EXAMPLE_PING_NETWORK
 #include "ping/ping_sock.h"
+#endif
+
+#ifdef CONFIG_ESP32_S3_USB_OTG
+#include "bsp/esp-bsp.h"
 #endif
 
 static const char *TAG = "4g_main";
@@ -203,6 +207,10 @@ static void on_ping_timeout(esp_ping_handle_t hdl, void *args)
 
 void app_main(void)
 {
+#ifdef CONFIG_ESP32_S3_USB_OTG
+    bsp_usb_mode_select_host();
+    bsp_usb_host_power_mode(BSP_USB_HOST_POWER_MODE_USB_DEV, true);
+#endif
     /* Initialize led indicator */
     _led_indicator_init();
     /* Initialize NVS for Wi-Fi storage */

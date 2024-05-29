@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -10,6 +10,9 @@
 #include "freertos/task.h"
 #include "esp_log.h"
 #include "iot_usbh_cdc.h"
+#ifdef CONFIG_ESP32_S3_USB_OTG
+#include "bsp/esp-bsp.h"
+#endif
 
 static const char *TAG = "cdc_basic_demo";
 /* USB PIN fixed in esp32-s2/s3, can not use io matrix */
@@ -90,6 +93,10 @@ static void usb_disconnect_callback(void *arg)
 
 void app_main(void)
 {
+#ifdef CONFIG_ESP32_S3_USB_OTG
+    bsp_usb_mode_select_host();
+    bsp_usb_host_power_mode(BSP_USB_HOST_POWER_MODE_USB_DEV, true);
+#endif
     /* install usbh cdc driver with bulk endpoint configs
     and size of internal ringbuffer*/
 #ifdef EXAMPLE_CONFIG_USER_EP_DESC
