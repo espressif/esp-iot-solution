@@ -115,7 +115,7 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '--config',
-        default=['sdkconfig.ci=default', 'sdkconfig.ci.*=', '=default'],
+        default=['sdkconfig.defaults=default', 'sdkconfig.ci.*=', '=default'],
         action='append',
         help='Adds configurations (sdkconfig file names) to build. This can either be '
         'FILENAME[=NAME] or FILEPATTERN. FILENAME is the name of the sdkconfig file, '

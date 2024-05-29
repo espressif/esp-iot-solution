@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+/* SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -10,6 +10,9 @@
 #include "esp_log.h"
 #include "esp_system.h"
 #include "esp_tinyuf2.h"
+#ifdef CONFIG_ESP32_S3_USB_OTG
+#include "bsp/esp-bsp.h"
+#endif
 
 static const char *TAG = "uf2_ota_example";
 
@@ -21,6 +24,9 @@ static void uf2_update_complete_cb()
 
 void app_main(void)
 {
+#ifdef CONFIG_ESP32_S3_USB_OTG
+    bsp_usb_mode_select_device();
+#endif
     /* install UF2 OTA */
     tinyuf2_ota_config_t config = DEFAULT_TINYUF2_OTA_CONFIG();
     config.complete_cb = uf2_update_complete_cb;
