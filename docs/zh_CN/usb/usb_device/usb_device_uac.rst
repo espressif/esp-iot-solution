@@ -7,8 +7,8 @@ ESP Device UAC
 
 特性：
 
-1. 默认支持 ISO FeedBack 通信接口，根据 UAC FIFO 内存剩余大小自动向主机端同步，`参考 <https://github.com/hathach/tinyusb/pull/2328>_`
-2. 支持自定义音频采样率，麦克风通道数，扬声器通道数
+1. 默认支持 ISO FeedBack 通信接口，根据 UAC FIFO 内存剩余大小自动向主机端同步， `参考 <https://github.com/hathach/tinyusb/pull/2328>`__。
+2. 支持自定义音频采样率，麦克风通道数，扬声器通道数。
 3. 支持扬声器数据到来时候先缓冲一段数据，再进行传输，有助于减少音频数据传输的中断频率。
 
 USB Device UAC 用户指南
@@ -20,12 +20,12 @@ USB Device UAC 用户指南
 
 - USB MIC 回调函数
 
-    1. `uac_input_cb_t` 回调函数用于将音频数据传输到 USB 主机端，用户应该按照时间轴传输音频，或者在该回调函数中堵塞的等待音频数据到来。
-    2. 通过设置 `CONFIG_UAC_MIC_INTERVAL_MS` 宏定义来设置回调函数读取音频数据的长度。
-        - 设置 `CONFIG_UAC_MIC_INTERVAL_MS=10` 在 48000HZ 采样率，16 位精度，单通道情况下，每次读取的数据量为 10ms * 48000HZ / 1000 * 2byte = 960byte
-    3. 通过设置 `UAC_SPK_INTERVAL_MS` 宏定义来设置回调函数第一次写入音频的长度，为了防止音频数据传输的中断频率过高，默认为 10ms，后续音频写入会按照大约 1ms 的数据量进行传输。
-    4. `UAC_SPK_NEW_PLAY_INTERVAL` 宏定义用于判断到来的音频是否是新音频，如果是新音频，会先缓冲一段数据，再进行传输，有助于减少音频数据传输的中断频率。
-    5. `UAC_SUPPORT_MACOS` 宏用于支持 Macos 系统，注意开启该宏定义后，windows 系统可能无法识别设备。
+    1. ``uac_input_cb_t`` 回调函数用于将音频数据传输到 USB 主机端，用户应该按照时间轴传输音频，或者在该回调函数中堵塞的等待音频数据到来。
+    2. 通过设置 ``CONFIG_UAC_MIC_INTERVAL_MS`` 宏定义来设置回调函数读取音频数据的长度。
+        - 设置 ``CONFIG_UAC_MIC_INTERVAL_MS=10`` 在 48000HZ 采样率，16 位精度，单通道情况下，每次读取的数据量为 10ms * 48000HZ / 1000 * 2byte = 960byte
+    3. 通过设置 ``UAC_SPK_INTERVAL_MS`` 宏定义来设置回调函数第一次写入音频的长度，为了防止音频数据传输的中断频率过高，默认为 10ms，后续音频写入会按照大约 1ms 的数据量进行传输。
+    4. ``UAC_SPK_NEW_PLAY_INTERVAL`` 宏定义用于判断到来的音频是否是新音频，如果是新音频，会先缓冲一段数据，再进行传输，有助于减少音频数据传输的中断频率。
+    5. ``UAC_SUPPORT_MACOS`` 宏用于支持 Macos 系统，注意开启该宏定义后，windows 系统可能无法识别设备。
 
 USB Device UAC API 参考
 --------------------------
@@ -46,7 +46,7 @@ USB Device UAC API 参考
 Example
 ----------
 
-1. :example:`usb/device/usb_uac`
+- :example:`usb/device/usb_uac`
 
 API Reference
 ----------------
