@@ -24,6 +24,10 @@ Please use the component manager command `add-dependency` to add the `usb_device
 idf.py add-dependency "espressif/usb_device_uac=*"
 ```
 
+### Docs
+
+* [USB Device UAC](https://docs.espressif.com/projects/esp-iot-solution/en/latest/usb/usb_device/usb_device_uac.html)
+
 ### Examples
 
-* [USB UAC](https://github.com/espressif/esp-iot-solution/tree/master/examples/usb/device/usb_UAC)
+* [USB UAC](https://github.com/espressif/esp-iot-solution/tree/master/examples/usb/device/usb_uac)
