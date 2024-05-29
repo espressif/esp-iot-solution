@@ -4,5 +4,5 @@ dependencies:
   idf:
     version: ">=5.0.0"
 
-  espressif/esp32_s3_lcd_ev_board: "2.*"
+  espressif/esp32_s3_lcd_ev_board: "2.1.*"
   espressif/freetype: "2.*"
