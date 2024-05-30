@@ -140,7 +140,7 @@ $ idf.py flash monitor
 
 I (136) wifi: wifi firmware version: 59e5fab
 I (136) wifi: config NVS flash: enabled
-I (136) wifi: config nano formating: disabled
+I (136) wifi: config nano formatting: disabled
 I (136) system_api: Base MAC address is not set, read default base MAC address from BLK0 of EFUSE
 I (146) system_api: Base MAC address is not set, read default base MAC address from BLK0 of EFUSE
 I (186) wifi: Init dynamic tx buffer num: 32

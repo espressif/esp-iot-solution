@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -59,7 +59,7 @@ static esp_err_t _i2s_dac_data_scale(uint8_t *d_buff, uint8_t *s_buff, uint32_t 
     uint32_t j = 0;
     switch (g_bits_per_sample) {
     case 8: {
-        DAC_AUDIO_CHECK(g_max_data_size > len, "write lengh exceed max_data_size you set", ESP_ERR_INVALID_ARG);
+        DAC_AUDIO_CHECK(g_max_data_size > len, "write length exceed max_data_size you set", ESP_ERR_INVALID_ARG);
         uint8_t *b8 = (uint8_t *)s_buff;
         for (int i = 0; i < len; i++) {
             int8_t t = b8[i] ;
@@ -70,7 +70,7 @@ static esp_err_t _i2s_dac_data_scale(uint8_t *d_buff, uint8_t *s_buff, uint32_t 
     }
     break;
     case 16: {
-        DAC_AUDIO_CHECK(g_max_data_size > (len << 1), "write lengh exceed max_data_size you set", ESP_ERR_INVALID_ARG);
+        DAC_AUDIO_CHECK(g_max_data_size > (len << 1), "write length exceed max_data_size you set", ESP_ERR_INVALID_ARG);
         len >>= 1;
         uint16_t *b16 = (uint16_t *)s_buff;
         for (int i = 0; i < len; i++) {
@@ -83,7 +83,7 @@ static esp_err_t _i2s_dac_data_scale(uint8_t *d_buff, uint8_t *s_buff, uint32_t 
     }
     break;
     case 32: {
-        DAC_AUDIO_CHECK(g_max_data_size > (len << 2), "write lengh exceed max_data_size you set", ESP_ERR_INVALID_ARG);
+        DAC_AUDIO_CHECK(g_max_data_size > (len << 2), "write length exceed max_data_size you set", ESP_ERR_INVALID_ARG);
         len >>= 2;
         uint32_t *b32 = (uint32_t *)s_buff;
         for (int i = 0; i < len; i++) {

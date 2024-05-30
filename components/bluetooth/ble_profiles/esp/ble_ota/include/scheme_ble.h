@@ -61,9 +61,9 @@ void esp_ble_ota_scheme_ble_event_cb_free_bt(void *user_data, esp_ble_ota_cb_eve
  * the default UUID will be used.
  *
  * @note    The data being pointed to by the argument must be valid
- *          atleast till ota is started. Upon start, the
+ *          at least till ota is started. Upon start, the
  *          manager will store an internal copy of this UUID, and
- *          this data can be freed or invalidated afterwords.
+ *          this data can be freed or invalidated afterwards.
  *
  * @param[in] uuid128  A custom 128 bit UUID
  *

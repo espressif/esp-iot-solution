@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -179,7 +179,7 @@ esp_err_t lcd_ssd1306_set_rotate(scr_dir_t dir)
     if (SCR_DIR_MAX < dir) {
         dir >>= 5;
     }
-    LCD_CHECK(dir < 8, "Unsupport rotate direction", ESP_ERR_INVALID_ARG);
+    LCD_CHECK(dir < 8, "Unsupported rotate direction", ESP_ERR_INVALID_ARG);
     switch (dir) {
     case SCR_DIR_LRTB:
         g_lcd_handle.width = g_lcd_handle.original_width;
@@ -206,7 +206,7 @@ esp_err_t lcd_ssd1306_set_rotate(scr_dir_t dir)
         g_lcd_handle.height = g_lcd_handle.original_height;
         break;
     default:
-        ESP_LOGE(TAG, "Unsupport rotate direction");
+        ESP_LOGE(TAG, "Unsupported rotate direction");
         g_lcd_handle.width = g_lcd_handle.original_width;
         g_lcd_handle.height = g_lcd_handle.original_height;
         return ESP_ERR_INVALID_ARG;
@@ -239,7 +239,7 @@ esp_err_t lcd_ssd1306_set_window(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t
 
 static esp_err_t lcd_ssd1306_write_ram_data(uint16_t color)
 {
-    ESP_LOGW(TAG, "lcd ssd1306 unsupport write ram data");
+    ESP_LOGW(TAG, "lcd ssd1306 unsupported write ram data");
     return ESP_ERR_NOT_SUPPORTED;
 }
 

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -137,7 +137,7 @@ typedef struct {
 * @brief  I2C address.
 */
 #define LIS2DH12_I2C_ADDRESS   0x19        /*If the SA0 pad is connected to ground, address is 0x18; if connected to vcc, address is 0x19*/
-#define LIS2DH12_I2C_MULTI_REG_ONCE   0x80 /*If read/write multipul register once*/
+#define LIS2DH12_I2C_MULTI_REG_ONCE   0x80 /*If read/write multiple register once*/
 
 /**
 * @brief  Temperature data status register
@@ -607,10 +607,10 @@ esp_err_t lis2dh12_delete(lis2dh12_handle_t *sensor);
 esp_err_t lis2dh12_get_deviceid(lis2dh12_handle_t sensor, uint8_t *deviceid);
 
 /**
- * @brief Set configration of LIS2DH12
+ * @brief Set configuration of LIS2DH12
  *
  * @param sensor object handle of LIS2DH12
- * @param lis2dh12_config a structure pointer of configration
+ * @param lis2dh12_config a structure pointer of configuration
  *
  * @return
  *     - ESP_OK Success
@@ -619,10 +619,10 @@ esp_err_t lis2dh12_get_deviceid(lis2dh12_handle_t sensor, uint8_t *deviceid);
 esp_err_t lis2dh12_set_config(lis2dh12_handle_t sensor, lis2dh12_config_t *lis2dh12_config);
 
 /**
- * @brief Get configration of LIS2DH12
+ * @brief Get configuration of LIS2DH12
  *
  * @param sensor object handle of LIS2DH12
- * @param lis2dh12_config a structure pointer of configration
+ * @param lis2dh12_config a structure pointer of configuration
  *
  * @return
  *     - ESP_OK Success

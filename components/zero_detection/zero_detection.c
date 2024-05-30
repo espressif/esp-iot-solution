@@ -51,7 +51,7 @@ typedef struct zero_cross {
 } zero_cross_dev_t;
 
 /**
-  * @brief  Zero cross detecion driver core function
+  * @brief  Zero cross detection driver core function
   */
 static void IRAM_ATTR zero_cross_handle_interrupt(void *user_data, const mcpwm_capture_event_data_t *edata)
 {
@@ -241,7 +241,7 @@ static esp_err_t zero_detect_mcpwm_init(zero_detect_handle_t zcd_handle)
     mcpwm_capture_event_callbacks_t cbs = {
         .on_cap = zero_detect_mcpwm_cb,
     };
-    ESP_GOTO_ON_ERROR(mcpwm_capture_channel_register_event_callbacks(zcd->cap_chan, &cbs, zcd), err, TAG, "Mcpwm callback create failed");   //Craete a detect callback
+    ESP_GOTO_ON_ERROR(mcpwm_capture_channel_register_event_callbacks(zcd->cap_chan, &cbs, zcd), err, TAG, "Mcpwm callback create failed");   //Create a detect callback
 
     ESP_LOGI(TAG, "Enable capture channel");
     ESP_GOTO_ON_ERROR(mcpwm_capture_channel_enable(zcd->cap_chan), err, TAG, "Mcpwm capture channel enable failed");
@@ -351,7 +351,7 @@ err:
 
 zero_detect_handle_t zero_detect_create(zero_detect_config_t *config)
 {
-    ESP_LOGI(TAG, "IoT Zero Detecion Version: %d.%d.%d", ZERO_DETECTION_VER_MAJOR, ZERO_DETECTION_VER_MINOR, ZERO_DETECTION_VER_PATCH);
+    ESP_LOGI(TAG, "IoT Zero Detection Version: %d.%d.%d", ZERO_DETECTION_VER_MAJOR, ZERO_DETECTION_VER_MINOR, ZERO_DETECTION_VER_PATCH);
     zero_cross_dev_t *zcd = (zero_cross_dev_t *) calloc(1, sizeof(zero_cross_dev_t));
     if (NULL == zcd) {
         ESP_LOGI(TAG, "Calloc device failed");

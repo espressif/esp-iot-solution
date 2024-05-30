@@ -20,12 +20,12 @@
 #define ITF_NUM_CDC   0
 #endif
 
-void esp_data_back(void* data_buf, size_t lenth, bool flush)
+void esp_data_back(void* data_buf, size_t length, bool flush)
 {
 #if CONFIG_UART_ENABLE
-    uart_write_bytes(UART_NUM, (char*)data_buf, lenth);
+    uart_write_bytes(UART_NUM, (char*)data_buf, length);
 #elif CFG_TUD_CDCACM
-    tinyusb_cdcacm_write_queue(ITF_NUM_CDC, (uint8_t*)data_buf, lenth);
+    tinyusb_cdcacm_write_queue(ITF_NUM_CDC, (uint8_t*)data_buf, length);
     if (flush) {
         tinyusb_cdcacm_write_flush(ITF_NUM_CDC, 0);
     }

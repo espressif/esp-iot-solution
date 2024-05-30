@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -167,9 +167,9 @@ typedef struct {
     uint8_t spk_ch_num;                  /*!< speaker channel numbers, UAC_CH_ANY for any channel number  */
     uint8_t mic_ch_num;                  /*!< microphone channel numbers, UAC_CH_ANY for any channel number */
     uint16_t mic_bit_resolution;         /*!< microphone resolution(bits), UAC_BITS_ANY for any bit resolution */
-    uint32_t mic_samples_frequence;      /*!< microphone frequence(Hz), UAC_FREQUENCY_ANY for any frequency */
+    uint32_t mic_samples_frequence;      /*!< microphone frequency(Hz), UAC_FREQUENCY_ANY for any frequency */
     uint16_t spk_bit_resolution;         /*!< speaker resolution(bits), UAC_BITS_ANY for any */
-    uint32_t spk_samples_frequence;      /*!< speaker frequence(Hz), UAC_FREQUENCY_ANY for any frequency */
+    uint32_t spk_samples_frequence;      /*!< speaker frequency(Hz), UAC_FREQUENCY_ANY for any frequency */
     uint32_t spk_buf_size;               /*!< size of speaker send buffer, should be a multiple of spk_ep_mps */
     uint32_t mic_buf_size;               /*!< mic receive buffer size, 0 if not use */
     mic_callback_t mic_cb;               /*!< mic callback, can not block in here!, NULL if not use */
@@ -226,7 +226,7 @@ esp_err_t uac_streaming_config(const uac_config_t *config);
 esp_err_t usb_streaming_start(void);
 
 /**
- * @brief Stop current usb streaming, internal tasks will be delete, related resourse will be free
+ * @brief Stop current usb streaming, internal tasks will be delete, related resource will be free
  *
  * @return
  *         ESP_ERR_INVALID_STATE streaming not started
@@ -306,7 +306,7 @@ esp_err_t uac_spk_streaming_write(void *data, size_t data_bytes, size_t timeout_
 esp_err_t uac_mic_streaming_read(void *buf, size_t buf_size, size_t *data_bytes, size_t timeout_ms);
 
 /**
- * @brief Get the audio frame size list of current stream, the list contains audio channel number, bit resolution and samples frequence.
+ * @brief Get the audio frame size list of current stream, the list contains audio channel number, bit resolution and samples frequency.
  * IF list_size equals 1 and the samples_frequence equals 0, which means the frequency can be set to any value between samples_frequence_min
  * and samples_frequence_max.
  *
@@ -323,13 +323,13 @@ esp_err_t uac_mic_streaming_read(void *buf, size_t buf_size, size_t *data_bytes,
 esp_err_t uac_frame_size_list_get(usb_stream_t stream, uac_frame_size_t *frame_list, size_t *list_size, size_t *cur_index);
 
 /**
- * @brief Reset audio channel number, bit resolution and samples frequence, please reset when the streaming
+ * @brief Reset audio channel number, bit resolution and samples frequency, please reset when the streaming
  * in suspend state. The new configs will be effective after streaming resume.
  *
  * @param stream stream type
  * @param ch_num audio channel numbers
  * @param bit_resolution audio bit resolution
- * @param samples_frequence audio samples frequence
+ * @param samples_frequence audio samples frequency
  * @return esp_err_t
  *       - ESP_ERR_INVALID_ARG Parameter error
  *       - ESP_ERR_INVALID_STATE USB device not active

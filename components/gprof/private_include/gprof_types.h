@@ -13,7 +13,7 @@ extern "C" {
 #endif
 
 #define GPROF_MAGIC         "gmon"      /*!< GProf header magic */
-#define GPROF_VERSION       1           /*!< GProf heade version */
+#define GPROF_VERSION       1           /*!< GProf header version */
 #define HISTFRACTION        2           /*!< GProf histogram fraction */
 #define HASHFRACTION        2           /*!< GProf hash fraction */
 #define ARCDENSITY          3           /*!< GProf arc hash density */

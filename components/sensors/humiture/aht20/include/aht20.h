@@ -30,7 +30,7 @@ typedef void *aht20_dev_handle_t;
  *
  */
 typedef struct {
-    i2c_port_t  i2c_port;           /*!< I2C port used to connecte AHT20 device */
+    i2c_port_t  i2c_port;           /*!< I2C port used to connected AHT20 device */
     uint8_t     i2c_addr;           /*!< I2C address of AHT20 device, can be 0x38 or 0x39 according to A0 pin */
 } aht20_i2c_config_t;
 

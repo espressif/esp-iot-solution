@@ -2,7 +2,7 @@ Pressure Sensor
 =======================
 :link_to_translation:`zh_CN:[中文]`
 
-The pressure sensor can be used to detect the absolute pressure of gases, calculate altitude and etc. It is mainly used in environmental monitoring, altitude measurement and space positioning equipments.
+The pressure sensor can be used to detect the absolute pressure of gases, calculate altitude and etc. It is mainly used in environmental monitoring, altitude measurement and space positioning equipment.
 
 Adapted Products
 ---------------------

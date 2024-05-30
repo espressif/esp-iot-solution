@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -27,7 +27,7 @@ uintptr_t esp_elf_map_sym(esp_elf_t *elf, uintptr_t sym);
  *
  * @param elf - ELF object pointer
  *
- * @return ESP_OK if sucess or other if failed.
+ * @return ESP_OK if success or other if failed.
  */
 int esp_elf_init(esp_elf_t *elf);
 
@@ -37,7 +37,7 @@ int esp_elf_init(esp_elf_t *elf);
  * @param elf - ELF object pointer
  * @param pbuf - ELF data buffer
  *
- * @return ESP_OK if sucess or other if failed.
+ * @return ESP_OK if success or other if failed.
  */
 int esp_elf_relocate(esp_elf_t *elf, const uint8_t *pbuf);
 
@@ -49,7 +49,7 @@ int esp_elf_relocate(esp_elf_t *elf, const uint8_t *pbuf);
  * @param argc - Arguments number
  * @param argv - Arguments value array
  *
- * @return ESP_OK if sucess or other if failed.
+ * @return ESP_OK if success or other if failed.
  */
 int esp_elf_request(esp_elf_t *elf, int opt, int argc, char *argv[]);
 

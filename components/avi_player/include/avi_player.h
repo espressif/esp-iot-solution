@@ -114,7 +114,7 @@ esp_err_t avi_player_get_video_buffer(void **buffer, size_t *buffer_size, video_
  * @brief Get the audio buffer from AVI file
  *
  * @param[out] buffer pointer to the audio buffer
- * @param[inout] buffer_size size of the audio buffer
+ * @param[input] buffer_size size of the audio buffer
  * @param[out] info audio frame information
  * @param[in] ticks_to_wait maximum blocking time in ticks
  *

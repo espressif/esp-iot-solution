@@ -82,7 +82,7 @@ void painter_clear(uint16_t color)
 
 void painter_draw_char(int x, int y, char ascii_char, const font_t *font, uint16_t color)
 {
-    PAINTER_CHECK(ascii_char >= ' ', "ACSII code invalid");
+    PAINTER_CHECK(ascii_char >= ' ', "ASCII code invalid");
     PAINTER_CHECK(NULL != font, "Font pointer invalid");
     int i, j;
     uint16_t char_size = font->Height * (font->Width / 8 + (font->Width % 8 ? 1 : 0));

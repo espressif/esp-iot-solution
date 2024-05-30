@@ -720,7 +720,7 @@ Here are the current available widgets：
     state, the other for the unselected state.
 
     The following image shows the default drawing routine of the list
-    widget. Pease note that at this point you can replace the routines
+    widget. Please note that at this point you can replace the routines
     with your preferred custom rendering routine. The first list on the
     left is a normal single-selection list which shows the scrollbar.
     The second list in the middle is a multi-selection list, also with a

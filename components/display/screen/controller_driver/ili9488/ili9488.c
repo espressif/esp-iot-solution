@@ -186,7 +186,7 @@ esp_err_t lcd_ili9488_set_rotation(scr_dir_t dir)
     if (SCR_DIR_MAX < dir) {
         dir >>= 5;
     }
-    LCD_CHECK(dir < 8, "Unsupport rotate direction", ESP_ERR_INVALID_ARG);
+    LCD_CHECK(dir < 8, "Unsupported rotate direction", ESP_ERR_INVALID_ARG);
     switch (dir) {
     case SCR_DIR_LRTB:
         g_lcd_handle.width = g_lcd_handle.original_width;
@@ -377,7 +377,7 @@ static void lcd_ili9488_init_reg(void)
     LCD_WRITE_DATA(0x02);
     LCD_WRITE_DATA(0x02);
 
-    LCD_WRITE_CMD(ILI9488_IMGFUNCT); // Set Image Functio (Disable 24 bit data)
+    LCD_WRITE_CMD(ILI9488_IMGFUNCT); // Set Image Function (Disable 24 bit data)
     LCD_WRITE_DATA(0x00);
     LCD_WRITE_CMD(ILI9488_ADJCTR3); // Adjust Control (D7 stream, loose)
     LCD_WRITE_DATA(0xa9);

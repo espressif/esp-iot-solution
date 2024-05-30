@@ -4,8 +4,8 @@ menu "Example Configuration"
         prompt "Select SPI Device"
         default SPI_DEVICE_SPI2
         help
-            Select SPI Device for exmaple.
-            please note that not all developemnt boards support all following
+            Select SPI Device for example.
+            please note that not all development boards support all following
             devices.
 
         config SPI_DEVICE_SPI2

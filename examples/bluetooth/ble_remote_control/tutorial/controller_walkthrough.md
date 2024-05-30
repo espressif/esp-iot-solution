@@ -88,7 +88,7 @@ The first portion of the `app_main()` function is dedicated to setting up the re
 - `joystick_init()` : To setup the ADC pins of the joystick for analog input readings.
 - `button_init()`: To setup the digital pins and corresponding interrupt handlers for the controller buttons.
 - `ble_config()`: To setup the bluetooth controller
-- `esp_ble_gap_register_callback()` : An API to register the callback to respond to GAP events (advertisment & establishing connections)
+- `esp_ble_gap_register_callback()` : An API to register the callback to respond to GAP events (advertisement & establishing connections)
 - `esp_ble_gatts_register_callback()` : An API to register GATT server callback, setting the behaviour of the HID device as it responds to the client and sending user input (joystick & buttons) to the client.
 
 ### Controller Input Initialization
@@ -129,7 +129,7 @@ Setting up the button pins involve the following:
 > Note:
 > User should take note of the fields `.pull_up_en` and `.pull_down_en` if using external hardware buttons
 
-> User can consider using the button commponent from the ESP Component Registry for debouncing and various button events (long press, double press etc): [link](https://components.espressif.com/components/espressif/button), [repositry](https://github.com/espressif/esp-iot-solution)
+> User can consider using the button component from the ESP Component Registry for debouncing and various button events (long press, double press etc): [link](https://components.espressif.com/components/espressif/button), [repository](https://github.com/espressif/esp-iot-solution)
 
 > User can pick the Button Pins using `idf.py menuconfig` under `Example Configuration`, the options will be available if `Button input mode (GPIO)` is selected; Alternatively, user can change the macros as defined in `controller.h` to select the button input pins.
 
@@ -386,7 +386,7 @@ Multiple tasks are created to detect changes in user controller input, the behav
 2. `joystick_ext_read()` : (if in `JOYSTICK_INPUT_MODE_ADC`) Read actual joystick inputs based on variable voltage (see [tutorial](hardware_tutorial.md) here) and push to RTOS queue if the changes in voltage is more than the 10% threshold (defined in `controller.h`)
 3. `button_isr_handler()` : (used in both `BUTTON_INPUT` modes) An ISR that sends to RTOS queue whenever a positive edge is detected on the button. 
 
-As a demostration, we defined a simple structure to pass information to `joystick_task()` as follows:
+As a demonstration, we defined a simple structure to pass information to `joystick_task()` as follows:
 
 ```c
 /**
@@ -445,7 +445,7 @@ if (xQueueReceive(input_queue, &input_event, 100) == pdTRUE) {
 > Note: 
 > This feature is only available if both `BUTTON_INPUT_MODE_GPIO` and `EXAMPLE_ENABLE_TEAR_DOWN_DEMO` are enabled in `idf.py menuconfig`
 
-The tear down sequence is triggered when the button sequence representing the `TEAR_DOWN_BIT_MASK` is pressed simultanously. 
+The tear down sequence is triggered when the button sequence representing the `TEAR_DOWN_BIT_MASK` is pressed simultaneously. 
 
 The program would return from `joystick_task()`, and initiate the tear down. 
 
@@ -485,7 +485,7 @@ Creating a BLE Remote Control involved multiple components including:
 - GAP and GATTS for bluetooth connection
 - BLE and HID specifications to define behaviour of controller
 
-We hope that this example would prove useful for anyone who would like to create their own controller using an ESP. The example is written in a way to be easily understandable and customizable for your own use (such as changing HID report descriptor to accomodate extra buttons etc).
+We hope that this example would prove useful for anyone who would like to create their own controller using an ESP. The example is written in a way to be easily understandable and customizable for your own use (such as changing HID report descriptor to accommodate extra buttons etc).
 
 ## Future Reference
 - [Espressif ADC API](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/adc_oneshot.html)

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -28,7 +28,7 @@ static const uint8_t val_batt_level = 0;
 static uint8_t val_bat_cccd[] = {0x01, 0x00};
 // CCCD allows the Central Device to enable/disable notifications/indications
 // 0x0001: bit 0 - to enable Notifications, bit 1 - to enable indications
-// The endianess of the value is little endian (right to left), hence the first byte is 0x01 for notifications
+// The endianness of the value is little endian (right to left), hence the first byte is 0x01 for notifications
 static const uint8_t val_manu_name_str[] = {'E', 's', 'p', 'r', 'e', 's', 's', 'i', 'f'};
 // UTF-8, big endian (left to right)
 static const uint8_t val_pnp_id[] = {0x02, 0x3A, 0x30, 0x64, 0x00, 0x01, 0x00};
@@ -375,12 +375,12 @@ void hid_event_callback(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_
         hid_register_event(gatts_if);
         break;
     case ESP_GATTS_CONNECT_EVT:
-        ESP_LOGI(HID_DEMO_TAG, "Profile Reciving a new connection, conn_id %d", param->connect.conn_id);
+        ESP_LOGI(HID_DEMO_TAG, "Profile Receiving a new connection, conn_id %d", param->connect.conn_id);
         // Save the connection ID, need this for sending notification in send_user_input()
         client.connection_id = param->connect.conn_id;
         break;
     case ESP_GATTS_DISCONNECT_EVT:
-        ESP_LOGI(HID_DEMO_TAG, "Profile Reciving a disconnection, conn_id %d", param->disconnect.conn_id);
+        ESP_LOGI(HID_DEMO_TAG, "Profile Receiving a disconnection, conn_id %d", param->disconnect.conn_id);
         is_connected = false;
         break;
     case ESP_GATTS_CREAT_ATTR_TAB_EVT:
@@ -393,7 +393,7 @@ void hid_event_callback(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_
         break;
     case ESP_GATTS_START_EVT:
         ESP_LOGI(HID_DEMO_TAG, "Start Service %s, service_handle %d",
-                 (param->start.status == ESP_GATT_OK ? "Sucessful" : "Failed"), param->start.service_handle);
+                 (param->start.status == ESP_GATT_OK ? "Successful" : "Failed"), param->start.service_handle);
         break;
     case ESP_GATTS_READ_EVT:
         ESP_LOGI(HID_DEMO_TAG, "Read by Client, conn_id : %d, handle: %d, need response: %s",

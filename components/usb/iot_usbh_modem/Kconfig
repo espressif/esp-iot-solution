@@ -78,7 +78,7 @@ menu "IoT USB Host Modem"
             default 0x81 if MODEM_TARGET_USER
             range 0x81 0x8f
             help
-                USB IN endpoint address (eg.0x81) used for recive data from device
+                USB IN endpoint address (eg.0x81) used for receive data from device
         config MODEM_USB_OUT2_EP_ADDR
             depends on MODEM_SUPPORT_SECONDARY_AT_PORT
             hex "Modem USB CDC2 OUT endpoint address (AT Only)"
@@ -92,14 +92,14 @@ menu "IoT USB Host Modem"
             default 0x86 if MODEM_TARGET_MC610_EU
             range 0x81 0x8f
             help
-                USB IN endpoint address (eg.0x81) used for recive AT from device
+                USB IN endpoint address (eg.0x81) used for receive AT from device
     endmenu
 
     config MODEM_DIAL_RETRY_TIMES
         int "Retry Times During Dial-up"
         default 5
         help
-            Set retry times waitting for modem link with carrier base station
+            Set retry times waiting for modem link with carrier base station
 
     config MODEM_PPP_APN
         string "Set Modem APN"

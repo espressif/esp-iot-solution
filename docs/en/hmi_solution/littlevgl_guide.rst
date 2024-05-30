@@ -752,7 +752,7 @@ etc. The alignment types are shown below.
 
 .. figure:: ../../_static/hmi_solution/littlevgl/align.jpg
     :align: center
-    :alt: Figure 7. Alignment tyoes
+    :alt: Figure 7. Alignment types
 
 Use the function ``lv_obj_create(NULL，NULL)`` to create a screen and
 load it with ``lv_scr_load(screen1)``. The function ``lv_scr_act()``
@@ -1214,7 +1214,7 @@ characters will be placed. For this, use the function
 
 Keyboard contains the *OK* and *Hide* buttons to which the callback
 actions can be assigned with ``lv_kb_set_ok_action(kb, action)`` and
-``lv_kb_set_hide_action(kb, action)`` repectively.
+``lv_kb_set_hide_action(kb, action)`` respectively.
 
 The cursor in the assigned text area can be moved around with the
 keyboard. When the keyboard is assigned, the cursor of the previous text

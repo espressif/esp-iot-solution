@@ -1,7 +1,7 @@
  # Protobuf files for defining ota packet structures
 
 `ble_ota` uses Google Protobuf for language, transport and architecture agnostic protocol communication. These proto files define the protocomm packet structure, separated across multiple fies:
-* ota_send_file.proto - Defines OTA start, subsribe and send file commands and result structures.
+* ota_send_file.proto - Defines OTA start, subscribe and send file commands and result structures.
 Note : These proto files are not automatically compiled during the build process.
 
  # Compilation

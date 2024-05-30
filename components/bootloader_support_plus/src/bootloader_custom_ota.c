@@ -183,14 +183,14 @@ int bootloader_custom_ota_main(bootloader_state_t *bs, int boot_index)
     esp_err_t err_ret = esp_image_verify(ESP_IMAGE_VERIFY_SILENT, &pos, NULL);
 #ifndef CONFIG_ENABLE_LEGACY_ESP_BOOTLOADER_PLUS_V2_SUPPORT
     if (err_ret != ESP_OK) {
-        ESP_LOGE(TAG, "image vefiry err!");
+        ESP_LOGE(TAG, "image verify err!");
         goto exit;
     }
 #else
     if (err_ret == CUSTOM_OTA_IMAGE_TYPE_INVALID) {
         return boot_index;
     } else if (err_ret == ESP_FAIL) {
-        ESP_LOGE(TAG, "image vefiry err!");
+        ESP_LOGE(TAG, "image verify err!");
         goto exit;
     }
 #endif

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -60,9 +60,9 @@ static void mcp23017_test_read_write()
         /*****Normal Test*****/
         TEST_ASSERT(ESP_OK == mcp23017_write_io(device, cnt, MCP23017_GPIOA));
         printf("GPIOA write = :%x\n", cnt);
-        uint8_t readed = mcp23017_read_io(device, MCP23017_GPIOB);
-        printf("GPIOB read = :%x\n", readed);
-        TEST_ASSERT_EQUAL_UINT8(cnt, readed);
+        uint8_t read = mcp23017_read_io(device, MCP23017_GPIOB);
+        printf("GPIOB read = :%x\n", read);
+        TEST_ASSERT_EQUAL_UINT8(cnt, read);
         vTaskDelay(300 / portTICK_RATE_MS);
     }
 }

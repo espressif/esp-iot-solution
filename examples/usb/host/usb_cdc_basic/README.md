@@ -47,9 +47,9 @@ See the Getting Started Guide for full steps to configure and use ESP-IDF to bui
 If your USB device (eg. 4G Module) supports AT command, When host send `AT`, the device usually returns `OK` in most cases.
 
 ```
-I (408) USB_HCDC: Waitting Device Connection
+I (408) USB_HCDC: Waiting Device Connection
 I (438) USB_HCDC: Port=1 init succeed
-W (438) USB_HCDC: Waitting USB Connection
+W (438) USB_HCDC: Waiting USB Connection
 I (688) USB_HCDC: line 261 HCD_PORT_EVENT_CONNECTION
 I (688) USB_HCDC: Resetting Port
 I (748) USB_HCDC: Port speed = 1

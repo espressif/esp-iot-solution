@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -31,8 +31,8 @@
 #ifdef __XTENSA__
 /* Xtensa regitser value offset */
 #define PC_OFF      1           /*!< Xtensa program counter offset */
-#define RA_OFF      3           /*!< Xtensa return address offet */
-#define SP_OFF      4           /*!< Xtensa stack pointer offet */
+#define RA_OFF      3           /*!< Xtensa return address offset */
+#define SP_OFF      4           /*!< Xtensa stack pointer offset */
 
 #define RA2PC(_a)   ((_a) - 0x40000000) /*!< Calculate program counter based on return address */
 
@@ -40,8 +40,8 @@
 #else
 /* RISC-V regitser value offset */
 #define PC_OFF      0           /*!< RISC-V program counter offset */
-#define RA_OFF      1           /*!< RISC-V return address offet */
-#define SP_OFF      2           /*!< RISC-V stack pointer offet */
+#define RA_OFF      1           /*!< RISC-V return address offset */
+#define SP_OFF      2           /*!< RISC-V stack pointer offset */
 #endif
 
 #define PC_PTR(_p)  (((uintptr_t **)(gp->task_handle))[0][PC_OFF])  /*!< Get program counter value */
@@ -332,7 +332,7 @@ static void IRAM_ATTR hist_sample_cb(void)
 /**
  * @brief Initialize GProf data and allocate memory resource.
  *
- * @return ESP_OK if sucess or other if failed.
+ * @return ESP_OK if success or other if failed.
  */
 static int gprof_data_init(esp_gprof_t *gp, void *low_pc, void *high_pc)
 {
@@ -341,25 +341,25 @@ static int gprof_data_init(esp_gprof_t *gp, void *low_pc, void *high_pc)
 
     ESP_LOGD(TAG, "low_pc=%p, high_pc=%p", low_pc, high_pc);
 
-    /* Initialie program information */
+    /* Initialize program information */
 
     gp->low_pc    = (uintptr_t)low_pc;
     gp->high_pc   = (uintptr_t)high_pc;
     gp->text_size = ROUND_UP(high_pc - low_pc, sizeof(from_t));
 
-    /* Initialie time histogram information */
+    /* Initialize time histogram information */
 
     gp->histcnt_bs  = ROUND_UP(gp->text_size / HISTFRACTION, sizeof(void *));
     gp->histcnt_num = gp->histcnt_bs / sizeof(histcnt_t);
 
     ESP_LOGD(TAG, "text_size=%zu, histcnt_num=%zu", gp->text_size, gp->histcnt_bs);
 
-    /* Initialie caller information */
+    /* Initialize caller information */
 
     gp->from_bs  = ROUND_UP(gp->text_size / HASHFRACTION, sizeof(void *));
     gp->from_num = gp->from_bs / sizeof(from_t);
 
-    /* Initialie callee information */
+    /* Initialize callee information */
 
     gp->to_num = gp->text_size * ARCDENSITY / 100;
     gp->to_num = MAX(gp->to_num, MINARCS);
@@ -383,7 +383,7 @@ static int gprof_data_init(esp_gprof_t *gp, void *low_pc, void *high_pc)
     cp += gp->histcnt_bs;
     gp->from = (from_t *)cp;
 
-    /* Initialie hash configurtion */
+    /* Initialize hash configuration */
 
     gp->hashfraction     = HASHFRACTION;
     gp->log_hashfraction = ffs(gp->hashfraction * sizeof(from_t)) - 1;
@@ -397,7 +397,7 @@ static int gprof_data_init(esp_gprof_t *gp, void *low_pc, void *high_pc)
 /**
  * @brief Initialize GProf storage.
  *
- * @return ESP_OK if sucess or other if failed.
+ * @return ESP_OK if success or other if failed.
  */
 static esp_err_t gprof_storage_init(esp_gprof_t *gp)
 {
@@ -410,7 +410,7 @@ static esp_err_t gprof_storage_init(esp_gprof_t *gp)
         return ESP_FAIL;
     }
 
-    /* Erase parition before saving data */
+    /* Erase partition before saving data */
     err = esp_partition_erase_range(gp->part, 0, gp->part->size);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Failed to erase partition");
@@ -423,7 +423,7 @@ static esp_err_t gprof_storage_init(esp_gprof_t *gp)
 /**
  * @brief Initialize GProf.
  *
- * @return ESP_OK if sucess or other if failed.
+ * @return ESP_OK if success or other if failed.
  */
 esp_err_t esp_gprof_init(void)
 {
@@ -473,11 +473,11 @@ esp_err_t esp_gprof_init(void)
 }
 
 /**
- * @brief Save the profiling data of your runing code to the specific partition.
+ * @brief Save the profiling data of your running code to the specific partition.
  *        Later, you can use esp_gprof_dump to printf them out, or use idf.py
  *        gprof to read it out for analysis.
  *
- * @return ESP_OK if sucess or other if failed.
+ * @return ESP_OK if success or other if failed.
  */
 esp_err_t esp_gprof_save(void)
 {
@@ -533,9 +533,9 @@ esp_err_t esp_gprof_save(void)
 }
 
 /**
- * @brief Dump the profiling data of your runing code from the specific partition.
+ * @brief Dump the profiling data of your running code from the specific partition.
  *
- * @return ESP_OK if sucess or other if failed.
+ * @return ESP_OK if success or other if failed.
  */
 esp_err_t esp_gprof_dump(void)
 {
@@ -574,7 +574,7 @@ esp_err_t esp_gprof_dump(void)
         p += sizeof(uint8_t);
 
         /* Dump tag offset and value */
-        ESP_LOGI(TAG, "offet: 0x%" PRIx32, (uint32_t)(p - (const uint8_t *)buf));
+        ESP_LOGI(TAG, "offset: 0x%" PRIx32, (uint32_t)(p - (const uint8_t *)buf));
         ESP_LOGI(TAG, "tag: %02x", tag[0]);
         switch (tag[0]) {
         case GPROF_TAG_TIME_HIST:
@@ -603,7 +603,7 @@ esp_err_t esp_gprof_dump(void)
 /**
  * @brief De-initialize GProf.
  *
- * @return ESP_OK if sucess or other if failed.
+ * @return ESP_OK if success or other if failed.
  */
 esp_err_t esp_gprof_deinit(void)
 {

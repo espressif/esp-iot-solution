@@ -159,7 +159,7 @@ static int jpeg2avi_add_frame(jpeg2avi_data_t *j2a, uint8_t *data, uint32_t len)
             remain -= j2a->write_len;
             j2a->write_len = 0;
             if (remain >= CHUNK_SIZE) {
-                // aligne the remain data to `CHUNK_SIZE` and then write to the avifile.
+                // align the remain data to `CHUNK_SIZE` and then write to the avifile.
                 int count = remain / CHUNK_SIZE;
                 for (size_t i = 0; i < count; i++) {
                     write(j2a->avifile, data, CHUNK_SIZE);

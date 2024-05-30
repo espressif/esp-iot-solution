@@ -146,7 +146,7 @@ def main():
 
     print('src file is: {}'.format(src_file))
 
-    # rebuild the cpmpressed_app directroy
+    # rebuild the cpmpressed_app directory
     cpmoressed_app_directory = 'custom_ota_binaries'
     if os.path.exists(cpmoressed_app_directory):
         shutil.rmtree(cpmoressed_app_directory)

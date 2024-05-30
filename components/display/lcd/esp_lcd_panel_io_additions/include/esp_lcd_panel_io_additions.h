@@ -54,7 +54,7 @@ typedef struct {
 typedef struct {
     spi_line_config_t line_config;  /*!< SPI line configuration */
     uint32_t expect_clk_speed;      /*!< Expected SPI clock speed, in Hz (1 ~ 500000
-                                     *   If this value is 0, it will be set to `PANEL_IO_3WIRE_SPI_CLK_MAX` by defaul
+                                     *   If this value is 0, it will be set to `PANEL_IO_3WIRE_SPI_CLK_MAX` by default
                                      *   The actual frequency may be very different due to the limitation of the software delay */
     uint32_t spi_mode: 2;           /*!< Traditional SPI mode (0 ~ 3) */
     uint32_t lcd_cmd_bytes: 3;      /*!< Bytes of LCD command (1 ~ 4) */

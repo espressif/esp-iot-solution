@@ -66,7 +66,7 @@ Example 2. define a blink loop: turn on 0.05 s, turn off 0.1 s, turn on 0.15 s, 
     typedef enum {
         BLINK_TEST_BLINK_ONE_TIME, /**< test_blink_one_time */
         BLINK_TEST_BLINK_LOOP,     /**< test_blink_loop */
-        BLINK_MAX,                 /**< INVALIED type */
+        BLINK_MAX,                 /**< INVALID type */
     } led_indicator_blink_type_t;
 
     blink_step_t const * led_indicator_blink_lists[] = {
@@ -220,7 +220,7 @@ For instance, in the following example, ``test_blink_one_time`` has higher prior
     typedef enum {
         BLINK_TEST_BLINK_ONE_TIME, /**< test_blink_one_time */
         BLINK_TEST_BLINK_LOOP,     /**< test_blink_loop */
-        BLINK_MAX,                 /**< INVALIED type */
+        BLINK_MAX,                 /**< INVALID type */
     } led_indicator_blink_type_t;
 
 Control Indicator Blinks

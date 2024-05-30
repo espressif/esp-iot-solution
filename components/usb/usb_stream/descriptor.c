@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -222,7 +222,7 @@ void parse_vs_format_mjpeg_desc(const uint8_t *buff, uint8_t *format_idx, uint8_
     }
 }
 
-void parse_vs_frame_mjpeg_desc(const uint8_t *buff, uint8_t *frame_idx, uint16_t *width, uint16_t *heigh, uint8_t *interval_type, const uint32_t **pp_interval, uint32_t *dflt_interval)
+void parse_vs_frame_mjpeg_desc(const uint8_t *buff, uint8_t *frame_idx, uint16_t *width, uint16_t *height, uint8_t *interval_type, const uint32_t **pp_interval, uint32_t *dflt_interval)
 {
     if (buff == NULL) {
         return;
@@ -267,8 +267,8 @@ void parse_vs_frame_mjpeg_desc(const uint8_t *buff, uint8_t *frame_idx, uint16_t
     if (width) {
         *width = desc->wWidth;
     }
-    if (heigh) {
-        *heigh = desc->wHeigh;
+    if (height) {
+        *height = desc->wHeigh;
     }
     if (frame_idx) {
         *frame_idx = desc->bFrameIndex;
@@ -319,7 +319,7 @@ void parse_vs_format_frame_based_desc(const uint8_t *buff, uint8_t *format_idx, 
     }
 }
 
-void parse_vs_frame_frame_based_desc(const uint8_t *buff, uint8_t *frame_idx, uint16_t *width, uint16_t *heigh, uint8_t *interval_type, const uint32_t **pp_interval, uint32_t *dflt_interval)
+void parse_vs_frame_frame_based_desc(const uint8_t *buff, uint8_t *frame_idx, uint16_t *width, uint16_t *height, uint8_t *interval_type, const uint32_t **pp_interval, uint32_t *dflt_interval)
 {
     if (buff == NULL) {
         return;
@@ -364,8 +364,8 @@ void parse_vs_frame_frame_based_desc(const uint8_t *buff, uint8_t *frame_idx, ui
     if (width) {
         *width = desc->wWidth;
     }
-    if (heigh) {
-        *heigh = desc->wHeigh;
+    if (height) {
+        *height = desc->wHeigh;
     }
     if (frame_idx) {
         *frame_idx = desc->bFrameIndex;

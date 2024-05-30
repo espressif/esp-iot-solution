@@ -120,7 +120,7 @@ esp_err_t lcd_ili9486_set_rotation(scr_dir_t dir)
     if (SCR_DIR_MAX < dir) {
         dir >>= 5;
     }
-    LCD_CHECK(dir < 8, "Unsupport rotate direction", ESP_ERR_INVALID_ARG);
+    LCD_CHECK(dir < 8, "Unsupported rotate direction", ESP_ERR_INVALID_ARG);
     switch (dir) {
     case SCR_DIR_LRTB:
         g_lcd_handle.width = g_lcd_handle.original_width;

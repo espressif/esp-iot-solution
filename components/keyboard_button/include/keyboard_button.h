@@ -74,7 +74,7 @@ typedef void *keyboard_btn_cb_handle_t;
 typedef void (*keyboard_btn_callback_t)(keyboard_btn_handle_t kbd_handle, keyboard_btn_report_t kbd_report, void *user_data);
 
 /**
- * @brief keybaord button callback config
+ * @brief keyboard button callback config
  *
  */
 typedef struct {

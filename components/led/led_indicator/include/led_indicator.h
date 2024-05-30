@@ -109,7 +109,7 @@ led_indicator_handle_t led_indicator_create(const led_indicator_config_t *config
 esp_err_t led_indicator_delete(led_indicator_handle_t handle);
 
 /**
- * @brief start a new blink_type on the LED indicator. if mutiple blink_type started simultaneously,
+ * @brief start a new blink_type on the LED indicator. if multiple blink_type started simultaneously,
  * it will be executed according to priority.
  *
  * @param handle LED indicator handle

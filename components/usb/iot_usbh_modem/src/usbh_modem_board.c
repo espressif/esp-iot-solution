@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -51,7 +51,7 @@ ESP_EVENT_DEFINE_BASE(MODEM_BOARD_EVENT);
 #define MODEM_SIM_PIN_PWD                   CONFIG_MODEM_SIM_PIN_PWD
 
 /* user event */
-static const int MODEM_DESTROY_BIT                = BIT0;    /* detroy modem daemon task, trigger by user, clear by daemon task */
+static const int MODEM_DESTROY_BIT                = BIT0;    /* destroy modem daemon task, trigger by user, clear by daemon task */
 static const int PPP_NET_MODE_ON_BIT              = BIT1;    /* dte usb reconnect event, trigger by user, clear by daemon task */
 static const int PPP_NET_MODE_OFF_BIT             = BIT2;    /* dte usb disconnect event, trigger by user, clear by hardware */
 static const int PPP_NET_AUTO_SUSPEND_USER_BIT    = BIT3;    /* suspend ppp net auto reconnect, trigger by user, clear by user */
@@ -160,7 +160,7 @@ esp_err_t modem_board_force_reset(void)
     ESP_LOGI(TAG, "Resetting modem using io=%d, level=%d", MODEM_RESET_GPIO, !MODEM_RESET_GPIO_INACTIVE_LEVEL);
     vTaskDelay(pdMS_TO_TICKS(MODEM_RESET_GPIO_ACTIVE_MS));
     gpio_set_level(MODEM_RESET_GPIO, MODEM_RESET_GPIO_INACTIVE_LEVEL);
-    // waitting for modem re-init ready
+    // waiting for modem re-init ready
     ESP_LOGI(TAG, "Waiting for modem initialize ready");
     vTaskDelay(pdMS_TO_TICKS(MODEM_RESET_GPIO_INACTIVE_MS));
     return ESP_OK;
@@ -370,15 +370,15 @@ static bool _check_network_registration()
     char operater_name[64] = "";
     if (modem_board_get_operator_state(operater_name, sizeof(operater_name)) == ESP_OK) {
         if (strlen(operater_name) > 0) {
-            ESP_LOGI(TAG, "Network registed, Operator: %s", operater_name);
+            ESP_LOGI(TAG, "Network registered, Operator: %s", operater_name);
             return true;
         } else {
-            // no operator name, but registed?
-            ESP_LOGW(TAG, "No operator information, Network not registed ?");
+            // no operator name, but registered?
+            ESP_LOGW(TAG, "No operator information, Network not registered ?");
             return false;
         }
     }
-    ESP_LOGW(TAG, "Get operator failed, Network not registed");
+    ESP_LOGW(TAG, "Get operator failed, Network not registered");
     return false;
 }
 
@@ -442,7 +442,7 @@ static void _modem_daemon_task(void *param)
         EventBits_t bits = xEventGroupWaitBits(s_modem_evt_hdl, (PPP_NET_MODE_ON_BIT | PPP_NET_MODE_OFF_BIT | DTE_USB_RECONNECT_BIT | DTE_USB_DISCONNECT_BIT | PPP_NET_RECONNECTING_BIT |
                                                                  PPP_NET_DISCONNECT_BIT | MODEM_DESTROY_BIT), pdFALSE, pdFALSE, portMAX_DELAY);
         ESP_LOGD(TAG, "Handling bits = %04X, stage = %d, retry = %d ", (unsigned int)bits, modem_stage, stage_retry_times);
-        /* deamon task destroy */
+        /* daemon task destroy */
         if (bits & MODEM_DESTROY_BIT) {
             break;
         }

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -612,14 +612,14 @@ uint8_t apds9960_read_proximity(apds9960_handle_t sensor);
  * @param sensor object handle of apds9960
  * @param low the lower proximity threshold
  * @param high the higher proximity threshold
- * @param persistance count
+ * @param persistence count
  *
  * @return
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
 esp_err_t apds9960_set_proximity_interrupt_threshold(apds9960_handle_t sensor,
-                                                     uint8_t low, uint8_t high, uint8_t persistance);
+                                                     uint8_t low, uint8_t high, uint8_t persistence);
 
 /**
  * @brief Enable gesture engine on APDS9960

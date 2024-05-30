@@ -91,7 +91,7 @@ esp_err_t bh1750_reset_data_register(bh1750_handle_t sensor);
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  * @note
- *        You should call this funtion to set measurement mode before call bh1750_get_data() to acquire data.
+ *        You should call this function to set measurement mode before call bh1750_get_data() to acquire data.
  *        If you set to onetime mode, you just can get one measurement data.
  *        If you set to continuously mode, you can call bh1750_get_data() to acquire data repeatedly.
  */

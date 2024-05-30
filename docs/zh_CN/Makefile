@@ -167,7 +167,7 @@ gh-linkcheck:
 		'https://github.com/espressif/esp-iot-solution/tree\|https://github.com/espressif/esp-iot-solution/blob\|https://github.com/espressif/esp-iot-solution/raw'\
 		); \
 	then \
-		echo "WARNINIG: Some .rst files contain hardcoded Github links."; \
+		echo "WARNING: Some .rst files contain hardcoded Github links."; \
 		echo "Please check above output and replace links with one of the following:"; \
 		echo "- :iot-solution:\`dir\` - points to directory inside ESP-IOT-SOLUTION"; \
 		echo "- :iot-solution_file:\`file\` - points to file inside ESP-IOT-SOLUTION"; \

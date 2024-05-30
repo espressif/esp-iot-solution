@@ -129,7 +129,7 @@ typedef struct {
         struct {
             i2c_bus_handle_t i2c_bus;    /*!< Handle of i2c bus */
             int clk_freq;                /*!< i2c clock frequency */
-            uint8_t i2c_addr;            /*!< screen i2c slave adddress */
+            uint8_t i2c_addr;            /*!< screen i2c slave address */
         } interface_i2c;
 
         /** SPI interface */

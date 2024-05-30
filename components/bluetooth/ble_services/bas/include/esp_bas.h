@@ -170,7 +170,7 @@ typedef struct {
     } power_state;                                                                  /*!< Power State of Battery Level Status */
 
     uint16_t identifier;                                                            /*!< Used as an identifier for a service instance. */
-    uint8_t  battery_level;                                                         /*!< Refer to the Battery Leve */
+    uint8_t  battery_level;                                                         /*!< Refer to the Battery Level */
 
     struct {
         uint8_t service_required: 2;                                                /*!< Service Required */
@@ -247,14 +247,14 @@ typedef struct {
 } __attribute__((packed)) esp_ble_bas_health_status_t;
 
 /**
- * @brief   Battery Health Infomation Characteristic
+ * @brief   Battery Health Information Characteristic
  */
 typedef struct {
     struct {
         uint8_t en_cycle_count_designed_lifetime: 1;                                /*!< Cycle Count Designed Lifetime Present */
         uint8_t min_max_designed_operating_temperature: 1;                          /*!< Min and Max Designed Operating Temperature Present */
         uint8_t reserved: 5;                                                        /*!< Reserve Feature Used */
-    } flags;                                                                        /*!< Flags of Battery Health Infomation */
+    } flags;                                                                        /*!< Flags of Battery Health Information */
 
     uint16_t cycle_count_designed_lifetime;                                         /*!< Represents the designed number of charge cycles supported by the device */
     int8_t   min_designed_operating_temperature;                                    /*!< Represents the minimum designed operating temperature of the battery */
@@ -262,7 +262,7 @@ typedef struct {
 } __attribute__((packed)) esp_ble_bas_health_info_t;
 
 /**
- * @brief   Battery Infomation Characteristic
+ * @brief   Battery Information Characteristic
  */
 typedef struct {
     struct {
@@ -275,13 +275,13 @@ typedef struct {
         uint16_t en_nominalvoltage: 1;                                              /*!< Nominal Voltage Present */
         uint16_t en_aggregation_group: 1;                                           /*!< Battery Aggregation Group Present */
         uint16_t flags_reserved: 8;                                                 /*!< Reserve Feature Used */
-    } flags;                                                                        /*!< Flags of Battery Infomation */
+    } flags;                                                                        /*!< Flags of Battery Information */
 
     struct {
         uint8_t replace_able: 1;                                                    /*!< Battery Replaceable */
         uint8_t recharge_able: 1;                                                   /*!< Battery Rechargeable */
         uint8_t reserved: 7;                                                        /*!< Reserve Feature Used */
-    } features;                                                                     /*!< Features of Battery Infomation */
+    } features;                                                                     /*!< Features of Battery Information */
 
     uint24_t manufacture_date;                                                      /*!< Battery date of manufacture specified as days */
     uint24_t expiration_date;                                                       /*!< Battery expiration date specified as days */
@@ -469,7 +469,7 @@ esp_err_t esp_ble_bas_set_health_status(esp_ble_bas_health_status_t *status);
  *
  * @return
  *  - ESP_OK on successful
- *  - ESP_ERR_INVALID_ARG on wrong battery health infomation
+ *  - ESP_ERR_INVALID_ARG on wrong battery health information
  */
 esp_err_t esp_ble_bas_get_health_info(esp_ble_bas_health_info_t *info);
 
@@ -480,7 +480,7 @@ esp_err_t esp_ble_bas_get_health_info(esp_ble_bas_health_info_t *info);
  *
  * @return
  *  - ESP_OK on successful
- *  - ESP_ERR_INVALID_ARG on wrong battery health infomation
+ *  - ESP_ERR_INVALID_ARG on wrong battery health information
  */
 esp_err_t esp_ble_bas_set_health_info(esp_ble_bas_health_info_t *info);
 
@@ -491,7 +491,7 @@ esp_err_t esp_ble_bas_set_health_info(esp_ble_bas_health_info_t *info);
  *
  * @return
  *  - ESP_OK on successful
- *  - ESP_ERR_INVALID_ARG on wrong battery infomation
+ *  - ESP_ERR_INVALID_ARG on wrong battery information
  */
 esp_err_t esp_ble_bas_get_battery_info(esp_ble_bas_battery_info_t *info);
 
@@ -502,7 +502,7 @@ esp_err_t esp_ble_bas_get_battery_info(esp_ble_bas_battery_info_t *info);
  *
  * @return
  *  - ESP_OK on successful
- *  - ESP_ERR_INVALID_ARG on wrong battery infomation
+ *  - ESP_ERR_INVALID_ARG on wrong battery information
  */
 esp_err_t esp_ble_bas_set_battery_info(esp_ble_bas_battery_info_t *info);
 

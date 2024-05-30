@@ -10,7 +10,7 @@
 #define ONENET_HOST         "183.230.40.39"
 #define ONENET_PORT         (6002)
 
-/* Here needs to be changed accoding to your oneONET configure. */
+/* Here needs to be changed according to your oneONET configure. */
 #define ONENET_DEVICE_ID    CONFIG_DEVICE_ID                    // mqtt client id
 #define ONENET_PROJECT_ID   CONFIG_PROJECT_ID                   // mqtt username
 #define ONENET_AUTH_INFO    CONFIG_AUTH_INFO                    // mqtt password

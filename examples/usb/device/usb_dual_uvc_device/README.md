@@ -23,7 +23,7 @@ Build the project and flash it to the board, then run the monitor tool to view t
 
 * Run `. ./export.sh` to set IDF environment
 * Run `idf.py set-target esp32s3` to set target chip
-* Run `pip install "idf-component-manager~=1.1.4"` to upgrade your component manager if any error happends during last step
+* Run `pip install "idf-component-manager~=1.1.4"` to upgrade your component manager if any error happens during last step
 * Run `idf.py -p PORT flash monitor` to build, flash and monitor the project
 
 (To exit the serial monitor, type `Ctrl-]`.)

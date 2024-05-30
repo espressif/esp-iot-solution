@@ -62,7 +62,7 @@ static esp_err_t panel_st77903_rgb_disp_on_off(esp_lcd_panel_t *panel, bool off)
 esp_err_t esp_lcd_new_panel_st77903_rgb(const esp_lcd_panel_io_handle_t io, const esp_lcd_panel_dev_config_t *panel_dev_config,
                                         esp_lcd_panel_handle_t *ret_panel)
 {
-    ESP_RETURN_ON_FALSE(io && panel_dev_config && ret_panel, ESP_ERR_INVALID_ARG, TAG, "Invalid arguements");
+    ESP_RETURN_ON_FALSE(io && panel_dev_config && ret_panel, ESP_ERR_INVALID_ARG, TAG, "Invalid arguments");
     st77903_vendor_config_t *vendor_config = (st77903_vendor_config_t *)panel_dev_config->vendor_config;
     ESP_RETURN_ON_FALSE(vendor_config, ESP_ERR_INVALID_ARG, TAG, "`vendor_config` is necessary");
     ESP_RETURN_ON_FALSE(!vendor_config->flags.auto_del_panel_io || !vendor_config->flags.mirror_by_cmd,

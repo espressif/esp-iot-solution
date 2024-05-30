@@ -45,7 +45,7 @@ typedef struct {
     size_t fb_num;                  /*!< Number of screen-sized frame buffers that allocated by the driver.
                                       *  By default (set to either 0 or 1) only one frame buffer will be used.
                                       */
-    size_t trans_pool_size;         /*!< Size of one transaction pool. Each pool contains mutiple transactions which used to transfer color data.
+    size_t trans_pool_size;         /*!< Size of one transaction pool. Each pool contains multiple transactions which used to transfer color data.
                                       *  Each transaction contains one line of LCD frame buffer.
                                       *  It also decides the size of bounce buffer if `flags.fb_in_psram` is set to 1.
                                       */

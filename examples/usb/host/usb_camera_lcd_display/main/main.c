@@ -361,7 +361,7 @@ static void switch_button_press_down_cb(void *arg, void *data)
     }
     camera_resolution_info.camera_frame_size.width = camera_resolution_info.camera_frame_list[camera_resolution_info.camera_currect_frame_index].width;
     camera_resolution_info.camera_frame_size.height = camera_resolution_info.camera_frame_list[camera_resolution_info.camera_currect_frame_index].height;
-    ESP_LOGI(TAG, "currect resolution is %d*%d", camera_resolution_info.camera_frame_size.width, camera_resolution_info.camera_frame_size.height);
+    ESP_LOGI(TAG, "current resolution is %d*%d", camera_resolution_info.camera_frame_size.width, camera_resolution_info.camera_frame_size.height);
 
     /* Save the new camera resolution to nvs */
     usb_streaming_control(STREAM_UVC, CTRL_SUSPEND, NULL);

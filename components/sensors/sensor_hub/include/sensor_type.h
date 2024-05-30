@@ -79,7 +79,7 @@ typedef enum {
  *
  */
 typedef enum {
-    COMMAND_SET_MODE, /*!< set measure mdoe */
+    COMMAND_SET_MODE, /*!< set measure mode */
     COMMAND_SET_RANGE, /*!< set measure range */
     COMMAND_SET_ODR, /*!< set output rate */
     COMMAND_SET_POWER, /*!< set power mode */
@@ -125,7 +125,7 @@ typedef enum {
  */
 typedef enum {
     SENSOR_STARTED,                 /*!< sensor started, data acquire will be started */
-    SENSOR_STOPED,                  /*!< sensor stoped, data acquire will be stoped */
+    SENSOR_STOPED,                  /*!< sensor stopped, data acquire will be stopped */
     SENSOR_EVENT_COMMON_END = 9,    /*!< max common events id */
 } sensor_event_id_t;
 

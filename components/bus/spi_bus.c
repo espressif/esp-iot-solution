@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -24,7 +24,7 @@ typedef struct {
     spi_device_handle_t handle;
     spi_bus_handle_t spi_bus;    /*!<spi bus handle */
     spi_device_interface_config_t conf;    /*!<spi device active configuration */
-    SemaphoreHandle_t mutex;    /* mutex to achive device thread-safe*/
+    SemaphoreHandle_t mutex;    /* mutex to achieve device thread-safe*/
 } _spi_device_t;
 
 static const char *TAG = "spi_bus";
@@ -36,9 +36,9 @@ static _spi_bus_t s_spi_bus[2];
         return (ret);                                                                   \
     }
 
-#define SPI_BUS_CHECK_GOTO(a, str, lable) if(!(a)) { \
+#define SPI_BUS_CHECK_GOTO(a, str, label) if(!(a)) { \
         ESP_LOGE(TAG,"%s:%d (%s):%s", __FILE__, __LINE__, __FUNCTION__, str); \
-        goto lable; \
+        goto label; \
     }
 
 #define SPI_DEVICE_MUTEX_TAKE(p_spi_dev, ret) if (!xSemaphoreTake((p_spi_dev)->mutex, ESP_SPI_MUTEX_TICKS_TO_WAIT)) { \
@@ -146,7 +146,7 @@ esp_err_t spi_bus_device_delete(spi_bus_device_handle_t *p_dev_handle)
     return ESP_OK;
 }
 
-/* this function should lable with inline*/
+/* this function should label with inline*/
 inline static esp_err_t _spi_device_polling_transmit(spi_bus_device_handle_t dev_handle, spi_transaction_t *trans)
 {
     SPI_BUS_CHECK(NULL != dev_handle, "Pointer error", ESP_ERR_INVALID_ARG);

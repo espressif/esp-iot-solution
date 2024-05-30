@@ -290,7 +290,7 @@ static int get_spi_device_id(spi_device_handle_t dev)
 
 esp_err_t esp_lcd_new_panel_st77903_qspi(const esp_lcd_panel_dev_config_t *panel_dev_config, esp_lcd_panel_handle_t *ret_panel)
 {
-    ESP_RETURN_ON_FALSE(panel_dev_config && ret_panel, ESP_ERR_INVALID_ARG, TAG, "Invalid arguements");
+    ESP_RETURN_ON_FALSE(panel_dev_config && ret_panel, ESP_ERR_INVALID_ARG, TAG, "Invalid arguments");
     st77903_vendor_config_t *vendor_config = (st77903_vendor_config_t *)panel_dev_config->vendor_config;
 
     ESP_RETURN_ON_FALSE(vendor_config, ESP_ERR_INVALID_ARG, TAG, "`vendor_config` is necessary");
@@ -558,7 +558,7 @@ static esp_err_t panel_st77903_qspi_reset(esp_lcd_panel_t *handle)
 {
     st77903_qspi_panel_t *panel = __containerof(handle, st77903_qspi_panel_t, base);
 
-    // Stop LCD refreh related tasks
+    // Stop LCD refresh related tasks
     ESP_RETURN_ON_ERROR(stop_refresh(panel), TAG, "Stop refresh failed");
 
     // Perform hardware reset
@@ -583,7 +583,7 @@ static esp_err_t panel_st77903_qspi_del(esp_lcd_panel_t *handle)
 {
     st77903_qspi_panel_t *panel = __containerof(handle, st77903_qspi_panel_t, base);
 
-    // Stop LCD refreh related tasks
+    // Stop LCD refresh related tasks
     ESP_RETURN_ON_ERROR(stop_refresh(panel), TAG, "Stop refresh failed");
 
     // Reset gpio

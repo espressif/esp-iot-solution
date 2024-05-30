@@ -181,18 +181,18 @@ esp_err_t zero_detect_delete(zero_detect_handle_t zcd_handle);
 bool zero_detect_get_power_status(zero_detect_handle_t zcd_handle);
 
 /**
- * @brief Get singal invaild status
+ * @brief Get signal invalid status
  *
  * @param zcd_handle A zero detect handle
  *
  * @return
- *      - true  Signal is invaild
- *      - false Signal is vaild
+ *      - true  Signal is invalid
+ *      - false Signal is valid
  */
 bool zero_detect_singal_invaild_status(zero_detect_handle_t zcd_handle);
 
 /**
- * @brief Get singal type
+ * @brief Get signal type
  *
  * @param zcd_handle A zero detect handle
  *

@@ -13,7 +13,7 @@
 ## v0.1.0 - 2023-11-4
 ### Enhancements:
 * FOC:
-    * Support chip whitch without mcpwm driver.
+    * Support chip which without mcpwm driver.
 
 ## V0.0.3 - 2023-8-16
 ### Enhancements:

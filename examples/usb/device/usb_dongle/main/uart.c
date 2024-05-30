@@ -51,7 +51,7 @@ static void uart_receive_task(void *pvParameters)
             bzero(dtmp, RD_BUF_SIZE);
             ESP_LOGI(TAG, "uart[%d] event:", UART_NUM);
             switch (event.type) {
-            //Event of UART receving data
+            //Event of UART receiving data
             /*We'd better handler data event fast, there would be much more data events than
             other types of events. If we take too much time on data event, the queue might
             be full.*/

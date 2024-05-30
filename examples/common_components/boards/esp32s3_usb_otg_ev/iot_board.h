@@ -14,7 +14,7 @@
 
 /**
  * Resource ID on Board,
- * You can use iot_board_get_handle(ID,handle) to refrence Resource's Handle
+ * You can use iot_board_get_handle(ID,handle) to reference Resource's Handle
  * */
 typedef enum {
     NULL_RESOURCE = 0,
@@ -177,7 +177,7 @@ extern "C"
  * @brief Set usb host port power
  *
  * @param on_off true if power on, false if power off.
- * @param from_battery true if power from battery, flase if power from usb device port
+ * @param from_battery true if power from battery, false if power from usb device port
  * @return esp_err_t
  *         ESP_FAIL set power failed, power control gpio not ininted
  *         ESP_OK set power succeed

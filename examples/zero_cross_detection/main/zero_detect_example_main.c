@@ -92,7 +92,7 @@ void IRAM_ATTR zero_detection_event_cb(zero_detect_event_t zero_detect_event, ze
     case SIGNAL_INVALID:
         if (param->signal_invalid_event_data.cap_edge == MCPWM_CAP_EDGE_POS) {
             if (zcd.relay_out_of_range == RELAY_CONTROL_BY_USER) {
-                if (zcd.relay_suspend) { //Opreation is suspend, on or off
+                if (zcd.relay_suspend) { //Operation is suspend, on or off
                     if (zcd.relay_on_off == true) {
                         gpio_ll_set_level(&GPIO, zcd.control_pin, zcd.relay_active_level);
                         relay_open_count++;
@@ -109,7 +109,7 @@ void IRAM_ATTR zero_detection_event_cb(zero_detect_event_t zero_detect_event, ze
             }
         } else if (param->signal_invalid_event_data.cap_edge == MCPWM_CAP_EDGE_NEG) {
             if (zcd.relay_out_of_range == RELAY_CONTROL_BY_USER) {
-                if (zcd.relay_suspend) { //Opreation is suspend, on or off
+                if (zcd.relay_suspend) { //Operation is suspend, on or off
                     if (zcd.relay_on_off == false) {
                         gpio_ll_set_level(&GPIO, zcd.control_pin, !zcd.relay_active_level);
                         relay_off_count++;
@@ -145,7 +145,7 @@ void app_main(void)
     config.zero_driver_type = GPIO_TYPE;
 #endif
     g_zcds = zero_detect_create(&config);
-    relay_on_off(true);  //User API to contorl the relay
+    relay_on_off(true);  //User API to control the relay
 
     //Init the output GPIO
     gpio_config_t io_conf = {};
@@ -172,8 +172,8 @@ void app_main(void)
             ESP_LOGI(TAG, "Set control relay off");
         }
         if (zero_detect_get_power_status(g_zcds)) {
-            ESP_LOGE(TAG, "Source power invaid");
-            relay_on_off(true);    //Try to open relay untill the signal back to normal
+            ESP_LOGE(TAG, "Source power invalid");
+            relay_on_off(true);    //Try to open relay until the signal back to normal
         }
         // g_zcds = zero_detect_create(&config);           //Delete function test
         // printf("After Create%d\n",heap_caps_get_free_size(MALLOC_CAP_8BIT));

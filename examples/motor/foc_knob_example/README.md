@@ -56,4 +56,4 @@ Flash the program and launch IDF Monitor:
 idf.py flash monitor
 ```
 
-![FOC Knob exmaple](https://dl.espressif.com/ae/esp-iot-solution/foc_knob.gif)
+![FOC Knob example](https://dl.espressif.com/ae/esp-iot-solution/foc_knob.gif)

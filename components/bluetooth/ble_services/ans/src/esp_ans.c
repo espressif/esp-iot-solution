@@ -44,7 +44,7 @@ static esp_err_t ble_ans_new_alert_notify(uint8_t cat_id, const char *cat_info)
         .data_len = cat_info_len + 2,
     };
 
-    /* Clear notification to remove old infomation that may persist */
+    /* Clear notification to remove old information that may persist */
     memset(&ble_ans_new_alert_val, 0, BLE_ANS_NEW_ALERT_MAX_LEN);
 
     /* Set ID and count values */
@@ -169,7 +169,7 @@ static esp_err_t esp_ans_unr_alert_stat_cb(const uint8_t *inbuf, uint16_t inlen,
 static esp_err_t esp_ans_alert_notify_ctrl_cb(const uint8_t *inbuf, uint16_t inlen,
                                               uint8_t **outbuf, uint16_t *outlen, void *priv_data)
 {
-    /* ANS Control point command and catagory variables */
+    /* ANS Control point command and category variables */
     uint8_t cmd_id;
     uint8_t cat_id;
     uint8_t cat_bit_mask;

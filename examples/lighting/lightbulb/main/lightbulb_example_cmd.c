@@ -11,7 +11,7 @@
 
 #include "lightbulb.h"
 
-static const char *TAG = "lightbulb exmaple cmd";
+static const char *TAG = "lightbulb example cmd";
 
 static esp_console_repl_t *s_repl = NULL;
 static bool is_active = false;
@@ -160,7 +160,7 @@ esp_err_t lightbulb_example_console_init(void)
     };
     err |= esp_console_cmd_register(&cmd2);
 
-    set_config_args.enable_fade = arg_int0("e", "enable fade", "<enable/disable>", "Enbale or disable fade？");
+    set_config_args.enable_fade = arg_int0("e", "enable fade", "<enable/disable>", "Enable or disable fade？");
     set_config_args.fade_ms = arg_int0("t", "fade time", NULL, "fade time, ms");
     set_config_args.end = arg_end(2);
     const esp_console_cmd_t cmd3 = {

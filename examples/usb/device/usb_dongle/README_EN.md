@@ -175,7 +175,7 @@ MAC platform only supports ECM, USB RNDIS is not recognized.
 
 #### Linux
 
-Linux platform support both ECM and RNDIS. Howerver, if  RNDIS is used, network devices in Linux do not proactively obtain IP addresses when switching between different routers.
+Linux platform support both ECM and RNDIS. However, if  RNDIS is used, network devices in Linux do not proactively obtain IP addresses when switching between different routers.
 
 If embedded Linux is used and network devices are not displayed, the preceding two modules may not be enabled in the kernel. The following two configuration items are enabled in the Linux kernel to support CDC-ECM and RNDIS respectively.
 

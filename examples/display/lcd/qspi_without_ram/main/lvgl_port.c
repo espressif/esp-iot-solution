@@ -199,7 +199,7 @@ static void flush_callback(lv_disp_drv_t *drv, const lv_area_t *area, lv_color_t
             /* Reset flag */
             drv->full_refresh = 0;
 
-            // Roate and copy data from the whole screen LVGL's buffer to the next frame buffer
+            // Rotate and copy data from the whole screen LVGL's buffer to the next frame buffer
             next_fb = flush_get_next_buf(panel_handle);
             rotate_copy_pixel((uint16_t *)color_map, next_fb, offsetx1, offsety1, offsetx2, offsety2, LV_HOR_RES, LV_VER_RES, EXAMPLE_LVGL_PORT_ROTATION_DEGREE);
 

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -26,7 +26,7 @@ typedef struct {
     i2c_port_t i2c_port;    /*!<I2C port number */
     bool is_init;   /*if bus is initialized*/
     i2c_config_t conf_active;    /*!<I2C active configuration */
-    SemaphoreHandle_t mutex;    /* mutex to achive thread-safe*/
+    SemaphoreHandle_t mutex;    /* mutex to achieve thread-safe*/
     int32_t ref_counter;    /*reference count*/
 } i2c_bus_t;
 
@@ -44,9 +44,9 @@ static i2c_bus_t s_i2c_bus[I2C_NUM_MAX];
         return (ret); \
     }
 
-#define I2C_BUS_CHECK_GOTO(a, str, lable) if(!(a)) { \
+#define I2C_BUS_CHECK_GOTO(a, str, label) if(!(a)) { \
         ESP_LOGE(TAG,"%s:%d (%s):%s", __FILE__, __LINE__, __FUNCTION__, str); \
-        goto lable; \
+        goto label; \
     }
 
 #define I2C_BUS_INIT_CHECK(is_init, ret) if(!is_init) { \

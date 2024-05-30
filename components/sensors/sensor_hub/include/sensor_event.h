@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -87,11 +87,11 @@ esp_err_t sensors_event_handler_instance_unregister(esp_event_base_t event_base,
 /**
  * @brief Posts an event to the sensors event loop. The event loop library keeps a copy of event_data and manages
  * the copy's lifetime automatically (allocation + deletion); this ensures that the data the
- * handler recieves is always valid.
+ * handler receives is always valid.
  *
  * @param[in] event_base the event base that identifies the event
  * @param[in] event_id the event id that identifies the event
- * @param[in] event_data the data, specific to the event occurence, that gets passed to the handler
+ * @param[in] event_data the data, specific to the event occurrence, that gets passed to the handler
  * @param[in] event_data_size the size of the event data
  * @param[in] ticks_to_wait number of ticks to block on a full event queue
  *
@@ -111,7 +111,7 @@ esp_err_t sensors_event_post(esp_event_base_t event_base, int32_t event_id,
  *
  * @param[in] event_base the event base that identifies the event
  * @param[in] event_id the event id that identifies the event
- * @param[in] event_data the data, specific to the event occurence, that gets passed to the handler
+ * @param[in] event_data the data, specific to the event occurrence, that gets passed to the handler
  * @param[in] event_data_size the size of the event data; max is 4 bytes
  * @param[out] task_unblocked an optional parameter (can be NULL) which indicates that an event task with
  *                            higher priority than currently running task has been unblocked by the posted event;

@@ -67,7 +67,7 @@ LED 指示灯是最简单的输出外设之一，可以通过不同形式的闪�
     typedef enum {
         BLINK_TEST_BLINK_ONE_TIME, /**< test_blink_one_time */
         BLINK_TEST_BLINK_LOOP,     /**< test_blink_loop */
-        BLINK_MAX,                 /**< INVALIED type */
+        BLINK_MAX,                 /**< INVALID type */
     } led_indicator_blink_type_t;
 
     blink_step_t const * led_indicator_blink_lists[] = {
@@ -216,7 +216,7 @@ LED 指示灯是最简单的输出外设之一，可以通过不同形式的闪�
     typedef enum {
         BLINK_TEST_BLINK_ONE_TIME, /**< test_blink_one_time */
         BLINK_TEST_BLINK_LOOP,     /**< test_blink_loop */
-        BLINK_MAX,                 /**< INVALIED type */
+        BLINK_MAX,                 /**< INVALID type */
     } led_indicator_blink_type_t;
 
 控制指示灯闪烁

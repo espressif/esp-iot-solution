@@ -262,9 +262,9 @@ static void lv_play_arc_set_endangle(lv_obj_t *obj, lv_coord_t v)
     int angle = v;
     lv_arc_set_end_angle(obj, angle);
 
-    char precent[8];
-    sprintf(precent, "%3d%%", v * 100 / 360);
-    lv_label_set_text(precent_label[tab_id], precent);
+    char present[8];
+    sprintf(present, "%3d%%", v * 100 / 360);
+    lv_label_set_text(precent_label[tab_id], present);
 }
 
 static void play_move_end_callback(lv_anim_t *anim)

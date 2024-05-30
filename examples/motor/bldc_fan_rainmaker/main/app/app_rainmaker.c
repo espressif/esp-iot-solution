@@ -186,7 +186,7 @@ esp_err_t app_rainmaker_init()
     fan_device = esp_rmaker_device_create("Fan", ESP_RMAKER_DEVICE_FAN, NULL);                                                   //*!< create device */
     esp_rmaker_device_add_cb(fan_device, app_rainmaker_write_cb, NULL);
 
-    power_param = esp_rmaker_power_param_create(ESP_RMAKER_DEF_POWER_NAME, false);                                               //*!< ceate power param */
+    power_param = esp_rmaker_power_param_create(ESP_RMAKER_DEF_POWER_NAME, false);                                               //*!< create power param */
     esp_rmaker_device_add_param(fan_device, power_param);
     esp_rmaker_device_assign_primary_param(fan_device, power_param);                                                             //*!< set powr param display on home page */
     esp_rmaker_node_add_device(node, fan_device);
