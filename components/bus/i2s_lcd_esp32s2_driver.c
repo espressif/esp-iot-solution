@@ -220,7 +220,6 @@ static esp_err_t i2s_lcd_reg_config(i2s_dev_t *i2s_dev, uint16_t data_width, uin
     i2s_dev->conf.tx_msb_right = 1;
     i2s_dev->conf.tx_dma_equal = 1;
 
-    i2s_dev->conf1.tx_pcm_bypass = 1;
     i2s_dev->conf1.tx_stop_en = 1;
 
     i2s_dev->fifo_conf.val = 0;
@@ -228,7 +227,6 @@ static esp_err_t i2s_lcd_reg_config(i2s_dev_t *i2s_dev, uint16_t data_width, uin
     i2s_dev->fifo_conf.tx_fifo_mod_force_en = 1;
     i2s_dev->fifo_conf.tx_data_num = 32;
     i2s_dev->fifo_conf.tx_fifo_mod = 2;
-    i2s_dev->fifo_conf.tx_24msb_en = 0;
 
     i2s_dev->conf_chan.tx_chan_mod = 0;//remove
     i2s_dev->int_ena.out_eof = 1;
