@@ -89,7 +89,7 @@ typedef struct {
 /*For audio streams, the strf block structure is as follows*/
 typedef struct __attribute__((packed))
 {
-    uint32_t FourCC;             // blcok ID, for audio it is 'strf'
+    uint32_t FourCC;             // block ID, for audio it is 'strf'
     uint32_t size;               // Block size = size of struct struct avi_strh_chunk - the size of ID and size
     uint16_t format_tag;
     uint16_t channels;

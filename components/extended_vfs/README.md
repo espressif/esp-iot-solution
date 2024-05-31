@@ -46,4 +46,4 @@ Executing action: create-project-from-example
 CMakeLists.txt not found in project directory /home/username
 ```
 
-A1. This is because an older version packege manager was used, please run `pip install -U idf-component-manager` in ESP-IDF environment to update.
+A1. This is because an older version package manager was used, please run `pip install -U idf-component-manager` in ESP-IDF environment to update.

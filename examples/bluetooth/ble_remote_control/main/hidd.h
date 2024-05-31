@@ -124,7 +124,7 @@ enum { // HID Service
 /**
  * @brief Struct to store handles of attributes of services
  * @details Handles are needed to send notifications to clients
- * @details Simplified implementation to store attibute handles for the 3 services needed for HID Profile
+ * @details Simplified implementation to store attribute handles for the 3 services needed for HID Profile
 */
 typedef struct {
     uint16_t handles_bat_svc[LEN_BAT_SVC];

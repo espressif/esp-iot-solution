@@ -187,7 +187,7 @@ TEST_CASE("test st7123 to read touch point with interruption", "[st7123][interru
     esp_lcd_panel_io_handle_t tp_io_handle = NULL;
     esp_lcd_touch_handle_t tp_handle = NULL;
 
-    // The RST pin of ST7123 should be pull-up befor the LCD controller is initialized
+    // The RST pin of ST7123 should be pull-up before the LCD controller is initialized
     gpio_config_t io_conf = {
         .pin_bit_mask = BIT64(TEST_PANEL_RST_IO_NUM),
         .mode = GPIO_MODE_OUTPUT,
@@ -247,7 +247,7 @@ TEST_CASE("test st7123 to read touch point with polling", "[st7123][poll]")
     esp_lcd_panel_io_handle_t tp_io_handle = NULL;
     esp_lcd_touch_handle_t tp_handle = NULL;
 
-    // The RST pin of ST7123 should be pull-up befor the LCD controller is initialized
+    // The RST pin of ST7123 should be pull-up before the LCD controller is initialized
     gpio_config_t io_conf = {
         .pin_bit_mask = BIT64(TEST_PANEL_RST_IO_NUM),
         .mode = GPIO_MODE_OUTPUT,

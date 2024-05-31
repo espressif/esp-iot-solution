@@ -16,7 +16,7 @@ See the [README.md](../README.md) file in the upper level [camera](../) director
 
 ### Configure the project
 
-step1: chose your taget chip.
+step1: chose your target chip.
 
 ````
 idf.py menuconfig -> Camera Pin Configuration

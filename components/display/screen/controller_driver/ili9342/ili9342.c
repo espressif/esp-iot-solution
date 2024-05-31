@@ -33,7 +33,7 @@ static const char *TAG = "lcd ili9342";
 #define LCD_PASET   0x2B  // Row Address Set
 #define LCD_RAMWR   0x2C  // Memory Writ
 #define LCD_RAMRD   0x2E  // Memory Read
-#define LCD_MADCTL  0x36  // Memory Data Access Contro
+#define LCD_MADCTL  0x36  // Memory Data Access Control
 
 /* MADCTL Defines */
 #define MADCTL_MY  0x80
@@ -128,7 +128,7 @@ esp_err_t lcd_ili9342_set_rotation(scr_dir_t dir)
     if (SCR_DIR_MAX < dir) {
         dir >>= 5;
     }
-    LCD_CHECK(dir < 8, "Unsupport rotate direction", ESP_ERR_INVALID_ARG);
+    LCD_CHECK(dir < 8, "Unsupported rotate direction", ESP_ERR_INVALID_ARG);
     switch (dir) {
     case SCR_DIR_LRTB:
         g_lcd_handle.width = g_lcd_handle.original_width;

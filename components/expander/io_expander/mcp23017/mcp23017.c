@@ -20,9 +20,9 @@ static const char *TAG = "mcp23017";
         return (ret); \
     }
 
-#define MCP23017_CHECK_GOTO(a, str, lable) if(!(a)) { \
+#define MCP23017_CHECK_GOTO(a, str, label) if(!(a)) { \
         ESP_LOGE(TAG,"%s:%d (%s):%s", __FILE__, __LINE__, __FUNCTION__, str); \
-        goto lable; \
+        goto label; \
     }
 
 /**

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -123,7 +123,7 @@ esp_err_t lcd_rm68120_set_rotation(scr_dir_t dir)
     if (SCR_DIR_MAX < dir) {
         dir >>= 5;
     }
-    LCD_CHECK(dir < 8, "Unsupport rotate direction", ESP_ERR_INVALID_ARG);
+    LCD_CHECK(dir < 8, "Unsupported rotate direction", ESP_ERR_INVALID_ARG);
     switch (dir) {
     case SCR_DIR_LRTB:
         g_lcd_handle.width = g_lcd_handle.original_width;
@@ -253,7 +253,7 @@ static void lcd_rm68120_init_reg(void)
     LCD_WRITE_REG_16B(0xF003, 0x08);
     LCD_WRITE_REG_16B(0xF004, 0x01);
 
-    //GAMMA SETING  RED
+    //GAMMA SETTING  RED
     LCD_WRITE_REG_16B(0xD100, 0x00);
     LCD_WRITE_REG_16B(0xD101, 0x00);
     LCD_WRITE_REG_16B(0xD102, 0x1b);
@@ -307,7 +307,7 @@ static void lcd_rm68120_init_reg(void)
     LCD_WRITE_REG_16B(0xD132, 0x0f);
     LCD_WRITE_REG_16B(0xD133, 0x8e);
     LCD_WRITE_REG_16B(0xD134, 0xff);
-    //GAMMA SETING GREEN
+    //GAMMA SETTING GREEN
     LCD_WRITE_REG_16B(0xD200, 0x00);
     LCD_WRITE_REG_16B(0xD201, 0x00);
     LCD_WRITE_REG_16B(0xD202, 0x1b);
@@ -362,7 +362,7 @@ static void lcd_rm68120_init_reg(void)
     LCD_WRITE_REG_16B(0xD233, 0x8e);
     LCD_WRITE_REG_16B(0xD234, 0xff);
 
-    //GAMMA SETING BLUE
+    //GAMMA SETTING BLUE
     LCD_WRITE_REG_16B(0xD300, 0x00);
     LCD_WRITE_REG_16B(0xD301, 0x00);
     LCD_WRITE_REG_16B(0xD302, 0x1b);
@@ -417,7 +417,7 @@ static void lcd_rm68120_init_reg(void)
     LCD_WRITE_REG_16B(0xD333, 0x8e);
     LCD_WRITE_REG_16B(0xD334, 0xff);
 
-    //GAMMA SETING  RED
+    //GAMMA SETTING  RED
     LCD_WRITE_REG_16B(0xD400, 0x00);
     LCD_WRITE_REG_16B(0xD401, 0x00);
     LCD_WRITE_REG_16B(0xD402, 0x1b);
@@ -472,7 +472,7 @@ static void lcd_rm68120_init_reg(void)
     LCD_WRITE_REG_16B(0xD433, 0x8e);
     LCD_WRITE_REG_16B(0xD434, 0xff);
 
-    //GAMMA SETING GREEN
+    //GAMMA SETTING GREEN
     LCD_WRITE_REG_16B(0xD500, 0x00);
     LCD_WRITE_REG_16B(0xD501, 0x00);
     LCD_WRITE_REG_16B(0xD502, 0x1b);
@@ -527,7 +527,7 @@ static void lcd_rm68120_init_reg(void)
     LCD_WRITE_REG_16B(0xD533, 0x8e);
     LCD_WRITE_REG_16B(0xD534, 0xff);
 
-    //GAMMA SETING BLUE
+    //GAMMA SETTING BLUE
     LCD_WRITE_REG_16B(0xD600, 0x00);
     LCD_WRITE_REG_16B(0xD601, 0x00);
     LCD_WRITE_REG_16B(0xD602, 0x1b);
@@ -668,7 +668,7 @@ static void lcd_rm68120_init_reg(void)
     //SLEEP OUT
     LCD_WRITE_CMD_16B(0x1100);
     vTaskDelay(100 / portTICK_RATE_MS);
-    //DISPLY ON
+    //DISPLAY ON
     LCD_WRITE_CMD_16B(0x2900);
     vTaskDelay(100 / portTICK_RATE_MS);
 

@@ -67,7 +67,7 @@ typedef struct i2c_cfg {
             uint32_t clock; /*!< I2C master clock frequency */
         } master;
         struct {
-            uint32_t max_clock; /*!< I2C slave clock maximium frequency */
+            uint32_t max_clock; /*!< I2C slave clock maximum frequency */
             uint16_t addr;      /*!< I2C slave address */
         } slave;
     };

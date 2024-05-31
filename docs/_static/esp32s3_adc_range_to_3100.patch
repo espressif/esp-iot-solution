@@ -15,7 +15,7 @@ index b28b9d919a..b9faac93d5 100644
 --- a/components/driver/adc.c
 +++ b/components/driver/adc.c
 @@ -844,11 +844,16 @@ static uint16_t s_adc_cali_param[SOC_ADC_PERIPH_NUM][ADC_ATTEN_MAX] = {};
- //This function shoudn't be called inside critical section or ISR
+ //This function shouldn't be called inside critical section or ISR
  uint32_t adc_get_calibration_offset(adc_ll_num_t adc_n, adc_channel_t channel, adc_atten_t atten)
  {
 +#ifdef CONFIG_ENABLE_ADC_USER_CODE_OFFSET
@@ -53,7 +53,7 @@ index ec5f76814c..99c9aff483 100644
  #include "esp_efuse_table.h"
 +#include "esp_efuse_rtc_calib.h"
 
- //Don't introduce new dependency of ADC, keep these macro same as ADC related definations
+ //Don't introduce new dependency of ADC, keep these macro same as ADC related definitions
  #define ADC_ATTEN_MAX    4
 @@ -30,6 +31,44 @@ int esp_efuse_rtc_calib_get_ver(void)
      return cali_version_v1;

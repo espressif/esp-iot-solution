@@ -69,7 +69,7 @@ In order to use compressed updates, you need to make the following changes:
    #endif
    ```
 
-4. Call `bootloader_custom_ota_main()` in `bootloader_components/mian/bootloader_start.c`.
+4. Call `bootloader_custom_ota_main()` in `bootloader_components/main/bootloader_start.c`.
 
    ```c
    ...
@@ -145,7 +145,7 @@ Executing action: create-project-from-example
 CMakeLists.txt not found in project directory /home/username
 ```
 
-A1. This is because an older version packege manager was used, please run `pip install -U idf-component-manager` in ESP-IDF environment to update.
+A1. This is because an older version package manager was used, please run `pip install -U idf-component-manager` in ESP-IDF environment to update.
 
 Q2. Can a device that has used the esp-bootloader-plus solution use the bootloader-support-plus solution?
 

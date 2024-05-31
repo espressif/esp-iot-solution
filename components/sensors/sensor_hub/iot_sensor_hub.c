@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -25,9 +25,9 @@ const char *SENSOR_MODE_STRING[] = {"MODE_DEFAULT", "MODE_POLLING", "MODE_INTERR
         return (ret); \
     }
 
-#define SENSOR_CHECK_GOTO(a, str, lable) if(!(a)) { \
+#define SENSOR_CHECK_GOTO(a, str, label) if(!(a)) { \
         ESP_LOGE(TAG,"%s:%d (%s):%s", __FILE__, __LINE__, __FUNCTION__, str); \
-        goto lable; \
+        goto label; \
     }
 
 #define ESP_INTR_FLAG_DEFAULT 0
@@ -45,7 +45,7 @@ const char *SENSOR_MODE_STRING[] = {"MODE_DEFAULT", "MODE_POLLING", "MODE_INTERR
 static EventGroupHandle_t s_event_group = NULL;
 static uint32_t s_sensor_wait_bits = BIT23_KILL_WAITING_TASK;
 static TaskHandle_t s_sensor_task_handle = NULL;
-static SemaphoreHandle_t s_sensor_node_mutex = NULL;    /* mutex to achive thread-safe*/
+static SemaphoreHandle_t s_sensor_node_mutex = NULL;    /* mutex to achieve thread-safe*/
 #define SENSOR_NODE_MUTEX_TICKS_TO_WAIT 200
 
 #ifdef CONFIG_SENSOR_TASK_PRIORITY
@@ -410,16 +410,16 @@ esp_err_t iot_sensor_create(sensor_id_t sensor_id, const sensor_config_t *config
     /*create a new sensor*/
     sensor->driver_handle = sensor->impl->create(sensor->bus, (sensor->sensor_id & SENSOR_ID_MASK));
     SENSOR_CHECK_GOTO(sensor->driver_handle != NULL, "sensor create failed", cleanup_sensor);
-    /*config sensor work mode, not supported case will be skiped*/
+    /*config sensor work mode, not supported case will be skipped*/
     ret = sensor->impl->control(sensor->driver_handle, COMMAND_SET_MODE, (void *)(config_copy.mode));
     SENSOR_CHECK_GOTO(ESP_OK == ret || ESP_ERR_NOT_SUPPORTED == ret, "set sensor mode failed !!", cleanup_sensor);
-    /*config sensor measuring range, not supported case will be skiped*/
+    /*config sensor measuring range, not supported case will be skipped*/
     ret = sensor->impl->control(sensor->driver_handle, COMMAND_SET_RANGE, (void *)(config_copy.range));
     SENSOR_CHECK_GOTO(ESP_OK == ret || ESP_ERR_NOT_SUPPORTED == ret, "set sensor range failed !!", cleanup_sensor);
-    /*config sensor work mode, not supported case will be skiped*/
+    /*config sensor work mode, not supported case will be skipped*/
     ret = sensor->impl->control(sensor->driver_handle, COMMAND_SET_ODR, (void *)(config_copy.min_delay));
     SENSOR_CHECK_GOTO(ESP_OK == ret || ESP_ERR_NOT_SUPPORTED == ret, "set sensor odr failed !!", cleanup_sensor);
-    /*test if sensor is valid, can not be skiped*/
+    /*test if sensor is valid, can not be skipped*/
     ret = sensor->impl->control(sensor->driver_handle, COMMAND_SELF_TEST, NULL);
     SENSOR_CHECK_GOTO(ret == ESP_OK, "sensor test failed !!", cleanup_sensor);
 
@@ -627,7 +627,7 @@ esp_err_t iot_sensor_delete(sensor_handle_t *p_sensor_handle)
         int timerout_counter = 0;/*wait for task deleted*/
         int  timerout_counter_step = 50;
         while (s_sensor_task_handle) {
-            ESP_LOGW(TAG, "......waitting for sensor default task deleted.....");
+            ESP_LOGW(TAG, "......waiting for sensor default task deleted.....");
             vTaskDelay(timerout_counter_step / portTICK_RATE_MS);
             timerout_counter += timerout_counter_step;
             if (timerout_counter >= SENSOR_DEFAULT_TASK_DELETE_TIMEOUT_MS) {

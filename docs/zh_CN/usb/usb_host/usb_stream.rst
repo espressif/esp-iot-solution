@@ -62,9 +62,9 @@ USB Stream API 参考
 
    uac_config_t uac_config = {
        .mic_bit_resolution = 16, //microphone resolution, bits
-       .mic_samples_frequence = 16000, //microphone frequence, Hz
+       .mic_samples_frequence = 16000, //microphone frequency, Hz
        .spk_bit_resolution = 16, //speaker resolution, bits
-       .spk_samples_frequence = 16000, //speaker frequence, Hz
+       .spk_samples_frequence = 16000, //speaker frequency, Hz
        .spk_buf_size = 16000, //size of speaker send buffer, should be a multiple of spk_ep_mps
        .mic_buf_size = 0, //mic receive buffer size, 0 if not use, else should be a multiple of mic_min_bytes
        .mic_cb = &mic_frame_cb, //mic callback, can not block in here

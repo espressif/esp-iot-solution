@@ -542,7 +542,7 @@ esp_err_t bsp_touch_new(const bsp_display_cfg_t *config, esp_lcd_touch_handle_t 
 {
     esp_err_t ret = ESP_OK;
 
-    /* Initilize I2C */
+    /* Initialize I2C */
     BSP_ERROR_CHECK_RETURN_ERR(bsp_i2c_init());
 
     SemaphoreHandle_t tp_intr_event = NULL;

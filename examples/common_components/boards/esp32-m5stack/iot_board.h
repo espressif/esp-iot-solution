@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -17,7 +17,7 @@
 #define _UNDEFINE
 typedef void* board_res_handle_t;
 
-/*Definations of Board*/
+/*Definitions of Board*/
 #define BOARD_NAME "ESP32-M5Stack"
 #define BOARD_VENDOR "M5Stack"
 #define BOARD_URL "null"
@@ -26,7 +26,7 @@ typedef void* board_res_handle_t;
 
 /**
  * Resource ID on Board,
- * You can use iot_board_get_handle(ID,handle) to refrence Resource's Handle
+ * You can use iot_board_get_handle(ID,handle) to reference Resource's Handle
  * */
 typedef enum {
     NULL_RESOURCE,
@@ -45,7 +45,7 @@ typedef enum {
 #define BOARD_IO_SPI3_MOSI 23
 #define BOARD_IO_SPI3_MISO 19
 
-/*Definations of Peripheral*/
+/*Definitions of Peripheral*/
 #define BOARD_I2C0_MODE I2C_MODE_MASTER
 #define BOARD_I2C0_SPEED (100000)
 #define BOARD_I2C0_SCL_PULLUP_EN _ENABLE

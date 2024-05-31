@@ -33,7 +33,7 @@ Build the project and flash it to the board, then run the monitor tool to view t
 
 * Run `. ./export.sh` to set IDF environment
 * Run `idf.py set-target esp32s3` to set target chip
-* Run `pip install "idf-component-manager~=1.1.4"` to upgrade your component manager if any error happends during last step
+* Run `pip install "idf-component-manager~=1.1.4"` to upgrade your component manager if any error happens during last step
 * Run `idf.py -p PORT flash monitor` to build, flash and monitor the project
 
 (To exit the serial monitor, type `Ctrl-]`.)
@@ -130,7 +130,7 @@ bConfigurationValue 1
 W (568) UVC_STREAM: VS Interface(MPS < 600) NOT found
 W (569) UVC_STREAM: Try with first alt-interface config
 I (569) UVC_STREAM: Actual MJPEG format index = 2, contains 4 frames
-I (569) UVC_STREAM: Actual MJPEG width*heigh: 320*240, frame index = 4
+I (569) UVC_STREAM: Actual MJPEG width*height: 320*240, frame index = 4
 I (570) UVC_STREAM: UVC Streaming Config Succeed
 W (570) UVC_STREAM: UAC 1.0 TYPE1 NOT found
 I (570) UVC_STREAM: Set Device Configuration = 1

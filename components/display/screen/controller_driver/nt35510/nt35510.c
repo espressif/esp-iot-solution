@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -123,7 +123,7 @@ esp_err_t lcd_nt35510_set_rotation(scr_dir_t dir)
     if (SCR_DIR_MAX < dir) {
         dir >>= 5;
     }
-    LCD_CHECK(dir < 8, "Unsupport rotate direction", ESP_ERR_INVALID_ARG);
+    LCD_CHECK(dir < 8, "Unsupported rotate direction", ESP_ERR_INVALID_ARG);
     switch (dir) {
     case SCR_DIR_LRTB:
         g_lcd_handle.width = g_lcd_handle.original_width;
@@ -639,8 +639,8 @@ static void lcd_nt35510_init_reg(void)
     LCD_WRITE_REG_16B(0xbd03, 0x0031); // Normal mode
     LCD_WRITE_REG_16B(0xbe02, 0x0007); // Idle mode
     LCD_WRITE_REG_16B(0xbe03, 0x0031); // Idle mode
-    LCD_WRITE_REG_16B(0xbf02, 0x0007); // Parial mode
-    LCD_WRITE_REG_16B(0xbf03, 0x0031); // Parial mode
+    LCD_WRITE_REG_16B(0xbf02, 0x0007); // Partial mode
+    LCD_WRITE_REG_16B(0xbf03, 0x0031); // Partial mode
 
     // Undocumented registers
     LCD_WRITE_REG_16B(0xff00, 0x00aa);

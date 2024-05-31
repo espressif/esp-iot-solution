@@ -347,7 +347,7 @@ static void ir_learn_manual_send_cb(ir_learn_state_t state, uint8_t sub_step, st
         ir_learn_stop(&handle);
         break;
     case IR_LEARN_STATE_FAIL:
-        ESP_LOGE(TAG, "IR Learn faield, retry");
+        ESP_LOGE(TAG, "IR Learn failed, retry");
         ir_learn_restart(handle);
         break;
     case IR_LEARN_STATE_STEP:
@@ -373,7 +373,7 @@ static void ir_learn_manual_keep_learn_cb(ir_learn_state_t state, uint8_t sub_st
         ir_learn_restart(handle);
         break;
     case IR_LEARN_STATE_FAIL:
-        ESP_LOGI(TAG, "IR Learn faield, retry");
+        ESP_LOGI(TAG, "IR Learn failed, retry");
         ir_learn_restart(handle);
         break;
     case IR_LEARN_STATE_STEP:
@@ -400,7 +400,7 @@ static void ir_learn_auto_learn_cb(ir_learn_state_t state, uint8_t sub_step, str
         ir_learn_stop(&handle);
         break;
     case IR_LEARN_STATE_FAIL:
-        ESP_LOGI(TAG, "IR Learn faield, retry");
+        ESP_LOGI(TAG, "IR Learn failed, retry");
         break;
     case IR_LEARN_STATE_STEP:
     default:

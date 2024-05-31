@@ -134,7 +134,7 @@ static esp_err_t i2c_lcd_write(void *handle, const uint8_t *data, uint32_t lengt
 
 static esp_err_t i2c_lcd_read(void *handle, uint8_t *data, uint32_t length)
 {
-    ESP_LOGW(TAG, "lcd i2c unsupport read");
+    ESP_LOGW(TAG, "lcd i2c unsupported read");
     return ESP_ERR_NOT_SUPPORTED;
 }
 

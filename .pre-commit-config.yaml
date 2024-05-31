@@ -11,12 +11,12 @@ repos:
       - id: check-copyright
         args: ['--config', 'tools/ci/check_copyright_config.yaml', '--ignore', 'tools/ci/check_copyright_ignore.txt']
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.0.1
+    rev: v4.6.0
     hooks:
       - id: file-contents-sorter
         files: 'tools\/ci\/(executable-list\.txt|check_copyright_ignore\.txt)'
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.0.1
+    rev: v4.6.0
     hooks:
       - id: trailing-whitespace
         # note: whitespace exclusions use multiline regex, see https://pre-commit.com/#regular-expressions
@@ -51,7 +51,7 @@ repos:
         name: Do not use uppercase letters in the branch name
         args: ['--pattern', '^[^A-Z]*[A-Z]']
   - repo: https://github.com/espressif/astyle_py.git
-    rev: v1.0.2
+    rev: v1.0.5
     hooks:
       - id: astyle_py
         # If you are modifying astyle version, update tools/format.sh as well
@@ -75,3 +75,8 @@ repos:
     hooks:
       - id: conventional-precommit-linter
         stages: [commit-msg]
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.3.0
+    hooks:
+    - id: codespell
+      args: [-w, "--ignore-words=codespell-ignore-list"]

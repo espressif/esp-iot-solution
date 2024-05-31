@@ -62,7 +62,7 @@ If a lock handle was acquire by ``esp_pm_lock_acquire``, CPU's frequency switche
 .. code:: c
 
     if(esp_pm_lock_acquire(pm_lock) == ESP_OK) {
-        printf("lock acquire successed\n");
+        printf("lock acquire succeeded\n");
         vTaskDelay(2000 / portTICK_PERIOD_MS);
         esp_pm_lock_release(pm_lock);
         vTaskDelay(2000 / portTICK_PERIOD_MS);
@@ -72,7 +72,7 @@ If a lock handle was acquire by ``esp_pm_lock_acquire``, CPU's frequency switche
 Attentions
 ---------------
 
-If ``esp_pm_lock_acquire`` returns ESP_OK, the CPU's frequency will switch to the ``max_cpu_freq``. Before ``esp_pm_lock_release`` is called, the frequency will not change. If ``esp_pm_lock_release`` returned ESP_OK, however, the CPU's freq will not immediately switched to ``min_cpu_freq``, the CPU's frequency will switch to ``min_cpu_freq`` only after all task are suspended. Some examples bellow.
+If ``esp_pm_lock_acquire`` returns ESP_OK, the CPU's frequency will switch to the ``max_cpu_freq``. Before ``esp_pm_lock_release`` is called, the frequency will not change. If ``esp_pm_lock_release`` returned ESP_OK, however, the CPU's freq will not immediately switched to ``min_cpu_freq``, the CPU's frequency will switch to ``min_cpu_freq`` only after all task are suspended. Some examples below.
 
 **For the sake of simplicity, we assume that there is only one task**
 
@@ -103,7 +103,7 @@ If ``esp_pm_lock_acquire`` returns ESP_OK, the CPU's frequency will switch to th
 - during the delay time in line 9 and line 11, the CPU's frequency will switch to `40MHz(RTC_CPU_FREQ_XTAL)`
 
 
-Here is a test to prove this. First, configure LEDC to output 5KHz PWM signal and chosse APB clock as timer clock. So, if chip enter power save mode, the APB clock will switch to 40MHz, and the LEDC's frequency will reduce to half of the original one(2.5kHz). The first picture shows the LEDC waveform when executing code line 3 to line 4, meanwhile, the second one shows the waveform when executing code from line 5 to line 6.
+Here is a test to prove this. First, configure LEDC to output 5KHz PWM signal and choose APB clock as timer clock. So, if chip enter power save mode, the APB clock will switch to 40MHz, and the LEDC's frequency will reduce to half of the original one(2.5kHz). The first picture shows the LEDC waveform when executing code line 3 to line 4, meanwhile, the second one shows the waveform when executing code from line 5 to line 6.
 
 
 
@@ -180,4 +180,4 @@ We created a task to test DFS, and result are as follows:
 |   240MHz  |         39.95mA     |
 +-----------+---------------------+
 
-More informations about DFS, please Visit `Power Management <http://docs.espressif.com/projects/esp-idf/en/stable/api-reference/system/power_management.html>`_
+More information about DFS, please Visit `Power Management <http://docs.espressif.com/projects/esp-idf/en/stable/api-reference/system/power_management.html>`_

@@ -1,4 +1,4 @@
-# Extenal DangerJS
+# External DangerJS
 include:
   - project: espressif/shared-ci-dangerjs
     ref: master

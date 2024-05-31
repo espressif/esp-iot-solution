@@ -122,7 +122,7 @@ void app_main(void)
     }
 
 error_loop:
-    ESP_LOGE(TAG, "ERRO");
+    ESP_LOGE(TAG, "ERROR");
     while (1) {
         vTaskDelay(1000);
     }

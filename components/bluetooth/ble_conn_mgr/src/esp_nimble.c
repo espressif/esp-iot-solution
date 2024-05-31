@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2019-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2019-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -73,12 +73,12 @@ typedef struct svc_uuid_t {
 SLIST_HEAD(svc_uuid_list_t, svc_uuid_t);
 
 /**
- * @brief   This structure maps handler required by UUID which are used to read or writte.
+ * @brief   This structure maps handler required by UUID which are used to read or write.
  */
 typedef struct attr_mbuf_t {
     SLIST_ENTRY(attr_mbuf_t) next;
-    uint8_t *outbuf;                                    /* Data buffer as read or writte for characteristics */
-    uint16_t outlen;                                    /* Data length as read or writte for characteristics */
+    uint8_t *outbuf;                                    /* Data buffer as read or write for characteristics */
+    uint16_t outlen;                                    /* Data length as read or write for characteristics */
     uint16_t attr_handle;                               /* Executed handle when characteristic is read or written */
     uint8_t type;                                       /* Type of the UUID */
     esp_ble_conn_uuid_t uuid;                           /* Universal UUID, to be used for any-UUID static allocation */
@@ -96,7 +96,7 @@ typedef struct {
 } esp_ble_conn_event_ctx_t;
 
 /**
- * @brief   This structure maps handler required by session which are used to BLE connnection management.
+ * @brief   This structure maps handler required by session which are used to BLE connection management.
  */
 typedef struct esp_ble_conn_session_t {
     uint8_t                    *device_name;            /* Name to be displayed to devices scanning */
@@ -1276,7 +1276,7 @@ static int esp_ble_conn_gap_event(struct ble_gap_event *event, void *arg)
             break;
 #if defined(CONFIG_BLE_CONN_MGR_PERIODIC_SYNC)
         case BLE_GAP_EVENT_EXT_DISC:
-            /* An advertisment report was received during GAP discovery. */
+            /* An advertisement report was received during GAP discovery. */
             ESP_LOGD(TAG, "BLE_GAP_EVENT_EXT_DISC");
             struct ble_gap_ext_disc_desc *disc = ((struct ble_gap_ext_disc_desc *)(&event->disc));
             if (disc->sid == 2 && !conn_session->ble_bonding) {
@@ -1660,7 +1660,7 @@ ble_gatt_add_primary_svcs(struct ble_gatt_svc_def *gatt_db_svcs, int char_count)
     gatt_db_svcs->type = BLE_GATT_SVC_TYPE_PRIMARY;
 
     /* Allocate (number of characteristics + 1) memory for characteristics, the
-     * addtional characteristic consist of all 0s indicating end of
+     * additional characteristic consist of all 0s indicating end of
      * characteristics */
     gatt_db_svcs->characteristics = (struct ble_gatt_chr_def *) calloc((char_count + 1), sizeof(struct ble_gatt_chr_def));
     if (gatt_db_svcs->characteristics == NULL) {
@@ -1676,7 +1676,7 @@ esp_ble_conn_populate_gatt_db(esp_ble_conn_session_t *conn_session)
 {
     struct ble_gatt_svc_def *gatt_svr_svcs = NULL;
 
-    /* Allocate (number of services + 1) memory for services, the addtional services
+    /* Allocate (number of services + 1) memory for services, the additional services
      * consist of all 0s indicating end of services */
     gatt_svr_svcs = (struct ble_gatt_svc_def *) calloc(conn_session->nu_lookup_count + 1, sizeof(struct ble_gatt_svc_def));
     if (gatt_svr_svcs == NULL) {
@@ -1736,7 +1736,7 @@ esp_ble_conn_populate_gatt_db(esp_ble_conn_session_t *conn_session)
             /* GATT: Add user description to characteristic no. i*/
             rc = ble_gatt_add_char_dsc((void *)gatt_svr_svcs[index].characteristics, svc_uuid->svc.nu_lookup, i, BLE_GATT_UUID_CHAR_DSC);
             if (rc != 0) {
-                ESP_LOGE(TAG, "Error adding GATT Discriptor !!");
+                ESP_LOGE(TAG, "Error adding GATT Descriptor !!");
                 return rc;
             }
         }

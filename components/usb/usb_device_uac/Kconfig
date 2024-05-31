@@ -38,7 +38,7 @@ menu "USB Device UAC"
         int "UAC SPK interval(ms)"
         default 10
         help
-            SPK: The fisrt interval of reading data from UAC device, in ms. And make SPK FIFO to accommodate data of size n milliseconds.
+            SPK: The first interval of reading data from UAC device, in ms. And make SPK FIFO to accommodate data of size n milliseconds.
 
     config UAC_MIC_INTERVAL_MS
         int "UAC MIC interval(ms)"

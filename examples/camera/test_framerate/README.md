@@ -30,7 +30,7 @@ All the above factors can be specified in the `esp_camera_init()`. You can try t
 
 ### Configure the project
 
-step1: chose your taget chip.
+step1: chose your target chip.
 
 ````
 idf.py menuconfig -> Camera Pin Configuration

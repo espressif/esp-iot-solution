@@ -128,7 +128,7 @@ void app_main(void)
     /* Create a task for USB data processing */
     xTaskCreate(usb_receive_task, "usb_rx", 4096, NULL, 2, NULL);
 
-    /* Repeatly sent AT through USB */
+    /* Repeatedly sent AT through USB */
     char buff[32] = "AT\r\n";
     while (1) {
         int len = usbh_cdc_write_bytes((uint8_t *)buff, strlen(buff));

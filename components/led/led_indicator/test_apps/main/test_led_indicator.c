@@ -133,7 +133,7 @@ void led_indicator_gpio_mode_preempt()
     vTaskDelay(3000 / portTICK_PERIOD_MS);
 
     ESP_LOGI(TAG, "factory_reset.....");
-    ret = led_indicator_start(led_handle_0, BLINK_FACTORY_RESET); //higer priority than connecting
+    ret = led_indicator_start(led_handle_0, BLINK_FACTORY_RESET); //higher priority than connecting
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(3000 / portTICK_PERIOD_MS);
 

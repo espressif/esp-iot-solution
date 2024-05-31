@@ -27,9 +27,9 @@ typedef struct {
 } dac_audio_config_t;
 
 /**
- * @brief initialize i2s build-in dac to play audio with
+ * @brief initialize i2s built-in dac to play audio with
  *
- * @attention only support ESP32, because i2s of ESP32S2 not have a build-in dac
+ * @attention only support ESP32, because i2s of ESP32S2 not have a built-in dac
  *
  * @param cfg configurations - see dac_audio_config_t struct
  *

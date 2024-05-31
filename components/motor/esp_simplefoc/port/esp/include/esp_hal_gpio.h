@@ -57,7 +57,7 @@ int digitalRead(uint8_t pin);
 uint8_t digitalPinToInterrupt(uint8_t pin);
 
 /**
- * @brief Bind funtion to GPIO Interrupt. Arduino style function.
+ * @brief Bind function to GPIO Interrupt. Arduino style function.
  *
  * @param pin gpio pin number
  * @param handler interrupt function

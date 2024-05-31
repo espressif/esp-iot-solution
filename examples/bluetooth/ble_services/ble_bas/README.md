@@ -33,7 +33,7 @@ Use the commands as follows can check the battery services functions.
 | Supported Functions | Commands | Description |
 | ----------------- | ----- | -------- |
 | Battery Level | bas -t 1 -c 1 | Read the value |
-| Battery Level | bas -t 0 -c 1 | Update the value and notify to the client if the Notifiy Properties is enabled |
+| Battery Level | bas -t 0 -c 1 | Update the value and notify to the client if the Notify Properties is enabled |
 | Battery Level Status | bas -t 1 -c 2 | Read the value |
 | Battery Level Status | bas -t 0 -c 2 | Update/Notify the value and indicate to the client if the Indicate Properties is enabled |
 | Estimated Service Date | bas -t 1 -c 3 | Read the value |

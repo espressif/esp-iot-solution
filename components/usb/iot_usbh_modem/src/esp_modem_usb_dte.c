@@ -228,7 +228,7 @@ static void _usb_data_recv_task(void *param)
             }
         }
         if (!(length || length2)) {
-            ulTaskNotifyTake(true, 1);//yield to other task, but unblock as soon as possiable
+            ulTaskNotifyTake(true, 1);//yield to other task, but unblock as soon as possible
         }
     }
     vTaskDelete(NULL);

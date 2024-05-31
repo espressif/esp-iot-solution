@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -40,7 +40,7 @@ typedef enum {
 
 typedef union {
     struct {
-        uint8_t normal_en: 1; /**< Software shutdown contorl. 0:shutdown; 1:normal */
+        uint8_t normal_en: 1; /**< Software shutdown control. 0:shutdown; 1:normal */
         uint8_t breath_en: 1; /**< auto breath enable. 0:PWM mode; 1:auto breath mode */
         uint8_t detect_en: 1; /**< Open/Short Detection. 0:disable; 1:enable */
         uint8_t : 3;         /**< reserve */
@@ -167,7 +167,7 @@ esp_err_t is31fl3736_set_global_current(is31fl3736_handle_t fxled, uint8_t curr_
 esp_err_t is31fl3736_set_resistor(is31fl3736_handle_t fxled, is31fl3736_res_type_t type, is31fl3736_res_t res_val);
 
 /**
- * @brief contorl the LED matrix.
+ * @brief control the LED matrix.
  * @param fxled object handle of is31fl3736
  * @param cs_x_bit  BIT0 ~ BIT8 represent current source channel 0 ~ channel 8
  * @param sw_y_bit  BIT0 ~ BIT12 represent switch channel 0 ~ channel 12
@@ -179,7 +179,7 @@ esp_err_t is31fl3736_set_resistor(is31fl3736_handle_t fxled, is31fl3736_res_type
 esp_err_t is31fl3736_set_led_matrix(is31fl3736_handle_t fxled, uint16_t cs_x_bit, uint16_t sw_y_bit, is31fl3736_led_stau_t status);
 
 /**
- * @brief contorl the LED matrix.
+ * @brief control the LED matrix.
  * @param fxled object handle of is31fl3736
  * @param cs_x_bit  BIT0 ~ BIT8 represent current source channel 0 ~ channel 8
  * @param sw_y_bit  BIT0 ~ BIT12 represent switch channel 0 ~ channel 12

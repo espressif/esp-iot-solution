@@ -58,7 +58,7 @@
 
 ### GATT Server Attribute Table
 
-  charactertistic|UUID|Permissions
+  characteristic|UUID|Permissions
   :-:|:-:|:-:
   SPP_DATA_RECV_CHAR|0xABF1|READ&WRITE_NR
   SPP_DATA_NOTIFY_CHAR|0xABF2|READ&NOTIFY

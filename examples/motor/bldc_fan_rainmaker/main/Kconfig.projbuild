@@ -30,13 +30,13 @@ menu "ESP RainMaker App Wi-Fi Provisioning"
         default y
         prompt "Reset provisioned credentials and state machine after session failure"
         help
-            Enable reseting provisioned credentials and state machine after session failure.
+            Enable resetting provisioned credentials and state machine after session failure.
             This will restart the provisioning service after retries are exhausted.
 
     config APP_WIFI_PROV_MAX_RETRY_CNT
         int
         default 5
-        prompt "Max retries before reseting provisioning state machine"
+        prompt "Max retries before resetting provisioning state machine"
         depends on APP_WIFI_RESET_PROV_ON_FAILURE
         help
             Set the Maximum retry to avoid reconnecting to an inexistent AP or if credentials

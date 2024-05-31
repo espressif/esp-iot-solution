@@ -49,11 +49,11 @@ I (616) HID_RC: Create attribute table successfully, the number handle = 12
 
 I (616) HID_RC_GAP_GATTS: ESP_GAP_BLE_ADV_DATA_SET_COMPLETE_EVT
 I (626) HID_RC_GAP_GATTS: GATTS to be handled by profile, event 12
-I (636) HID_RC: Start Service Sucessful, service_handle 40
+I (636) HID_RC: Start Service Successful, service_handle 40
 I (636) HID_RC_GAP_GATTS: GATTS to be handled by profile, event 12
-I (646) HID_RC: Start Service Sucessful, service_handle 43
+I (646) HID_RC: Start Service Successful, service_handle 43
 I (656) HID_RC_GAP_GATTS: GATTS to be handled by profile, event 12
-I (656) HID_RC: Start Service Sucessful, service_handle 48
+I (656) HID_RC: Start Service Successful, service_handle 48
 I (666) HID_RC_GAP_GATTS: GAP Start Advertising Success
 
 I (666) CONTROLLER: Console input usage:
@@ -63,7 +63,7 @@ I (686) CONTROLLER: 	 Bottom Left(z) 	 Bottom Center(x) 	 Bottom Right(c)
 I (696) CONTROLLER: Press Enter to send input, make sure caps lock is off
 
 I (60716) HID_REMOTE_CONTROL: Not connected, do not send user input yet
-I (63076) HID_RC: Profile Reciving a new connection, conn_id 0
+I (63076) HID_RC: Profile Receiving a new connection, conn_id 0
 I (63476) HID_RC_GAP_GATTS: Update connection params status = 0, min_int = 0, max_int = 0,conn_int = 6,latency = 0, timeout = 500
 I (63976) HID_RC_GAP_GATTS: Update connection params status = 0, min_int = 0, max_int = 0,conn_int = 40,latency = 0, timeout = 500
 I (68626) HID_REMOTE_CONTROL: Console input received

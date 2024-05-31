@@ -10,4 +10,4 @@
 #define ENABLE_FLUSH  1
 #define DISABLE_FLUSH 0
 
-void esp_data_back(void* data_buf, size_t lenth, bool flush);
+void esp_data_back(void* data_buf, size_t length, bool flush);

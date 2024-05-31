@@ -138,7 +138,7 @@ static int strl_parser(avi_typedef *AVI_file, const uint8_t *buffer, uint32_t le
         AVI_file->auds_bits = strf->bits_per_sample;
         pdata += sizeof(AVI_AUDS_STRF_CHUNK);
     } else {
-        ESP_LOGW(TAG, "Unsupport stream 0x%"PRIu32"", strh->fourcc_type);
+        ESP_LOGW(TAG, "Unsupported stream 0x%"PRIu32"", strh->fourcc_type);
     }
     return 0;
 }

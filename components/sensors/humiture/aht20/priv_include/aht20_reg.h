@@ -15,7 +15,7 @@
 #define TEMPERATURE_MIN                     (-40.0f)        /**< chip min operating temperature */
 #define TEMPERATURE_MAX                     (125.0f)        /**< chip max operating temperature */
 
-#define AHT20_START_MEASURMENT_CMD          0xAC            /* start measurment command */
+#define AHT20_START_MEASURMENT_CMD          0xAC            /* start measurement command */
 
 #define AT581X_STATUS_CMP_INT               (2)             /* 1 --Out threshold range; 0 --In threshold range */
 #define AT581X_STATUS_Calibration_Enable    (3)             /* 1 --Calibration enable; 0 --Calibration disable */

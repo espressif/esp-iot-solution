@@ -18,7 +18,7 @@ Description
    of ESP32 are measured in this test, except for RTC GPIO\_37 and RTC
    GPIO\_38.
 
-.. note:: GPIO_37 and GPIO_38 are not tested here, becuase these two pads are not led out to the pin header of the board.
+.. note:: GPIO_37 and GPIO_38 are not tested here, because these two pads are not led out to the pin header of the board.
 
 RTC GPIO
 --------
@@ -51,14 +51,14 @@ from deep sleep.
    -  when the GPIO is configured as low-level triggered, a 10 kΩ
       pull-up resistor should be used;
 
-.. Note:: To achieve lower power consumption, external resistors, instead of internal ones, are recommanded in this case.
+.. Note:: To achieve lower power consumption, external resistors, instead of internal ones, are recommended in this case.
 
 **Test Result**
 
 -  **Wake-up source: EXT(0)**
 
 +------------+------------------------+------------------------+
-| GPIO NUM   | Low-level triggerred   | High-level triggered   |
+| GPIO NUM   | Low-level triggered    | High-level triggered   |
 +============+========================+========================+
 | GPIO\_0    | 6.3 uA                 | 6.2 uA                 |
 +------------+------------------------+------------------------+

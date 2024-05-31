@@ -15,7 +15,7 @@
 
 static const char* TAG = "app_ans";
 
-static const char* cat_info[BLE_ANS_CAT_NUM] = {"Simple Alert", "Email", "News", "Call", "Missed Calll", "SMS", "Voice Mail", "Schedule"};
+static const char* cat_info[BLE_ANS_CAT_NUM] = {"Simple Alert", "Email", "News", "Call", "Missed Call", "SMS", "Voice Mail", "Schedule"};
 
 static esp_err_t app_ans_get_new_alert(uint8_t cat_id)
 {

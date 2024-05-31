@@ -99,7 +99,7 @@ typedef int16_t lv_coord_t;
 /* Size of the memory used by `lv_mem_alloc` in bytes (>= 2kB)*/
 #  define LV_MEM_SIZE    ( CONFIG_LVGL_MEM_SIZE * 1024U)
 
-/* Complier prefix for a big array declaration */
+/* Compiler prefix for a big array declaration */
 #  define LV_MEM_ATTR
 
 /* Set an address for the memory pool instead of allocating it as an array.
@@ -923,7 +923,7 @@ typedef void * lv_font_user_data_t;
  * `LV_BIDI_DIR_AUTO` detect texts base direction */
 #if defined LVGL_BIDI_DIR_LTR
 #  define LV_BIDI_BASE_DIR_DEF      LV_BIDI_DIR_LTR
-#elif defined LVGL_BIDI_DIR_RTL 
+#elif defined LVGL_BIDI_DIR_RTL
 #  define LV_BIDI_BASE_DIR_DEF      LV_BIDI_DIR_RTL
 #elif defined LVGL_BIDI_DIR_AUTO
 #  define LV_BIDI_BASE_DIR_DEF      LV_BIDI_DIR_AUTO
@@ -1007,7 +1007,7 @@ typedef void * lv_obj_user_data_t;
 #if defined (CONFIG_LVGL_WIDGETS_USE_ARC)
     #define LV_USE_ARC      1
 #else
-    #define LV_USE_ARC      0 
+    #define LV_USE_ARC      0
 #endif
 
 /*Bar (dependencies: -)*/
@@ -1294,7 +1294,7 @@ typedef void * lv_obj_user_data_t;
 
 #if LV_USE_TABVIEW != 0
 /*Time of slide animation [ms] (0: no animation)*/
-    #define LV_TABVIEW_DEF_ANIM_TIME    CONFIG_LVGL_WIDGETS_TABVIEW_SLIDE_ANIMATION 
+    #define LV_TABVIEW_DEF_ANIM_TIME    CONFIG_LVGL_WIDGETS_TABVIEW_SLIDE_ANIMATION
 #endif
 
 /*Tileview (dependencies: lv_page) */

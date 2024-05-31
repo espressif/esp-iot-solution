@@ -17,7 +17,7 @@
 
 /**
  * Resource ID on Board,
- * You can use iot_board_get_handle(ID,handle) to refrence Resource's Handle
+ * You can use iot_board_get_handle(ID,handle) to reference Resource's Handle
  * */
 typedef enum {
     NULL_RESOURCE,

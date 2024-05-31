@@ -72,7 +72,7 @@ static void play_audio(const uint8_t *data, size_t wave_size, uint32_t rate, uin
     uint32_t index = 0;
     size_t cnt;
     uint32_t block_w = 2048;
-    ESP_LOGI(TAG, "paramter: samplerate:%d, bits:%d, channel:%d", rate, bits, ch);
+    ESP_LOGI(TAG, "parameter: samplerate:%d, bits:%d, channel:%d", rate, bits, ch);
     dac_audio_set_param(rate, bits, ch);
     dac_audio_start();
 

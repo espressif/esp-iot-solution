@@ -43,7 +43,7 @@ menu "LVGL configuration"
             According to the width of the display (hor. res. / dpi) the
             displays fall in 4 categories. This is the upper limit for medium
             displays.
-    
+
     config LVGL_DISP_LARGE_LIMIT
         int "Large display limit"
         default 70
@@ -67,7 +67,7 @@ menu "LVGL configuration"
                 Set the pixel order of the display.
                 Important only if "subpx fonts" are used.
                 With "normal" font it doesn't matter.
-        
+
         menu "Enable built-in fonts"
             config LVGL_FONT_MONTSERRAT_12
                     bool
@@ -223,7 +223,7 @@ menu "LVGL configuration"
                 bool "Simsun 16 CJK"
                 select LVGL_FONT_SIMSUN_16_CJK
         endchoice
-        
+
         choice LVGL_FONT_DEFAULT_NORMAL
             prompt "Select theme default normal font"
             default LVGL_FONT_DEFAULT_NORMAL_MONTSERRAT_16
@@ -303,7 +303,7 @@ menu "LVGL configuration"
                 bool "Simsun 16 CJK"
                 select LVGL_FONT_SIMSUN_16_CJK
         endchoice
-        
+
         choice LVGL_FONT_DEFAULT_SUBTITLE
             prompt "Select theme default subtitle font"
             default LVGL_FONT_DEFAULT_SUBTITLE_MONTSERRAT_16
@@ -383,7 +383,7 @@ menu "LVGL configuration"
                 bool "Simsun 16 CJK"
                 select LVGL_FONT_SIMSUN_16_CJK
         endchoice
-        
+
         choice LVGL_FONT_DEFAULT_TITLE
             prompt "Select theme default title font"
             default LVGL_FONT_DEFAULT_TITLE_MONTSERRAT_16
@@ -501,7 +501,7 @@ menu "LVGL configuration"
                 bool "Default init for mono theme"
                 select LVGL_THEME_MONO
         endchoice
-        
+
         choice LVGL_THEME_DEFAULT_PRIMARY_COLOR
             depends on !LVGL_THEME_DEFAULT_INIT_MONO
 
@@ -547,7 +547,7 @@ menu "LVGL configuration"
             config LVGL_THEME_DEFAULT_PRIMARY_COLOR_ORANGE
                 bool "Default primary color orange"
         endchoice
-        
+
         choice LVGL_THEME_DEFAULT_SECONDARY_COLOR
             depends on !LVGL_THEME_DEFAULT_INIT_MONO
 
@@ -612,7 +612,7 @@ menu "LVGL configuration"
 
         choice LVGL_THEME_DEFAULT_FLAG
             depends on LVGL_THEME_MATERIAL
-            
+
             prompt "Select theme default flag"
             default LVGL_THEME_DEFAULT_FLAG_LIGHT
             help
@@ -680,13 +680,13 @@ menu "LVGL configuration"
 
             config LVGL_LOG_LEVEL_TRACE
                 bool "Trace - Detailed information"
-            config LVGL_LOG_LEVEL_INFO 
+            config LVGL_LOG_LEVEL_INFO
                 bool "Info  - Log important events"
-            config LVGL_LOG_LEVEL_WARN 
+            config LVGL_LOG_LEVEL_WARN
                 bool "Warn  - Log if something unwanted happened"
             config LVGL_LOG_LEVEL_ERROR
                 bool "Error - Only critical issues"
-            config LVGL_LOG_LEVEL_NONE 
+            config LVGL_LOG_LEVEL_NONE
                 bool "None  - Do not log anything"
         endchoice
 
@@ -694,7 +694,7 @@ menu "LVGL configuration"
             bool "Print the log with 'printf'" if LVGL_USE_LOG
             default y
             help
-                Use printf for log output. 
+                Use printf for log output.
                 If not set the user needs to register a callback with `lv_log_register_print_cb`.
 
     endmenu
@@ -703,7 +703,7 @@ menu "LVGL configuration"
         config LVGL_USE_DEBUG
             bool "Enable Debug"
             default y
-        
+
         config LVGL_USE_ASSERT_NULL
             bool "Check if the parameter is NULL. (Quite fast)"
             default y
@@ -715,19 +715,19 @@ menu "LVGL configuration"
         config LVGL_USE_ASSERT_MEM_INTEGRITY
             bool "Check the integrity of `lv_mem` after critical operations. (Slow)"
             default n
-            
+
         config LVGL_USE_ASSERT_STR
             bool "Search for NULL, very long strings, invalid characters, and unnatural repetitions. (Slow)"
-            help 
+            help
                 If disabled `LV_USE_ASSERT_NULL` will be performed instead (if it's enabled).
             default n
-            
+
         config LVGL_USE_ASSERT_OBJ
             bool "Check NULL, the object's type and existence (e.g. not deleted). (Quite slow)."
-            help 
+            help
                 If disabled `LV_USE_ASSERT_NULL` will be performed instead (if it's enabled)
             default n
-            
+
         config LVGL_USE_ASSERT_STYLE
             bool "Check if the styles are properly initialized. (Fast)"
             default 0
@@ -749,40 +749,40 @@ menu "LVGL configuration"
         config LVGL_TXT_BREAK_CHARS
             string "Can break (wrap) texts on these chars"
             default " ,.;:-_"
-        
+
         config LVGL_TXT_LINE_BREAK_LONG_LEN
             int "Line break long length"
             default 0
             help
-                If a word is at least this long, will break wherever 'prettiest'. 
+                If a word is at least this long, will break wherever 'prettiest'.
                 To disable, set to a value <= 0.
-        
+
         config LVGL_TXT_LINE_BREAK_LONG_PRE_MIN_LEN
             int "Min num chars before break"
             default 3
             help
                 Minimum number of characters in a long word to put on a line before a break.
                 Depends on LV_TXT_LINE_BREAK_LONG_LEN
-                
+
         config LVGL_TXT_LINE_BREAK_LONG_POST_MIN_LEN
             int "Min num chars after break"
             default 3
             help
                 Minimum number of characters in a long word to put on a line after a break.
                 Depends on LV_TXT_LINE_BREAK_LONG_LEN
-                        
+
         config LVGL_TXT_COLOR_CMD
             string "The control character to use for signalling text recoloring"
             default "#"
 
         choice LVGL_USE_BIDI
             prompt "Support bidirectional texts"
-            help 
+            help
                 Allows mixing Left-to-Right and Right-to-Left texts.
                 The direction will be processed according to the Unicode Bidirectioanl Algorithm:
                 https://www.w3.org/International/articles/inline-bidi-markup/uba-basics
             default LVGL_BIDI_NO_SUPPORT
-                                    
+
             config LVGL_BIDI_NO_SUPPORT
                 bool "Bidirectional texts not supported"
             config LVGL_BIDI_DIR_LTR
@@ -796,7 +796,7 @@ menu "LVGL configuration"
         config LVGL_USE_ARABIC_PERSIAN_CHARS
             bool "Enable Arabic/Persian processing"
             default n
-            help 
+            help
                 In these languages characters should be replaced with
                 an other form based on their position in the text.
 
@@ -805,7 +805,7 @@ menu "LVGL configuration"
         default n
 
         config LVGL_SPRINTF_DISABLE_FLOAT
-            bool "Disable float in built-in (v)snprintf functions" if !LVGL_SPRINTF_CUSTOM 
+            bool "Disable float in built-in (v)snprintf functions" if !LVGL_SPRINTF_CUSTOM
             default n
     endmenu
 
@@ -813,7 +813,7 @@ menu "LVGL configuration"
         config LVGL_USE_OBJ_REALIGN
             bool "Enable `lv_obj_realign()` based on `lv_obj_align()` parameters."
             default y
-        
+
         choice LVGL_EXT_CLICK_AREA
             prompt "Enable to make the object clickable on a larger area."
             default LVGL_EXT_CLICK_AREA_TINY
@@ -825,7 +825,7 @@ menu "LVGL configuration"
             config LVGL_EXT_CLICK_AREA_FULL
                 bool "The extra area can be adjusted in all 4 directions (-32k..+32k px)."
         endchoice
-        
+
         config LVGL_WIDGETS_USE_ARC
             bool "Arc."
             default y
@@ -1093,10 +1093,10 @@ menu "LVGL configuration"
             bool "Use the functions and types from the older API if possible."
             default y
     endmenu
-    
+
     menu "Image decoder and cache"
         config LVGL_IMG_CF_INDEXED
-            bool "Enable indexed (pallete) images."
+            bool "Enable indexed (palette) images."
             default y
         config LVGL_IMG_CF_ALPHA
             bool "Enable alpha indexed images."

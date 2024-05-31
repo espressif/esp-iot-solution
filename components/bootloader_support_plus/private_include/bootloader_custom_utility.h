@@ -70,7 +70,7 @@ typedef struct {
 esp_err_t bootloader_custom_utility_updata_ota_data(const bootloader_state_t *bs, int boot_index);
 
 /**
- * @brief Get partition info of currently configured nwe_app partition and compressed_app partiton.
+ * @brief Get partition info of currently configured nwe_app partition and compressed_app partition.
  *
  * @return Pointer to info for custom ota structure.
  */

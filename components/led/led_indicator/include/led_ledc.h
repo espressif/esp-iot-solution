@@ -49,7 +49,7 @@ esp_err_t led_indicator_ledc_deinit(void *ledc_handle);
  * @return esp_err_t
  *     - ESP_OK Success
  *     - ESP_ERR_INVALID_ARG Parameter error
- *     - ESP_FAIL LEDC channel does't init
+ *     - ESP_FAIL LEDC channel doesn't init
  */
 esp_err_t led_indicator_ledc_set_on_off(void *ledc_handle, bool on_off);
 

@@ -714,7 +714,7 @@ void esp_ble_ota_process_recv_data(esp_ble_ota_char_t ota_char, uint8_t *val, ui
             }
 
         } else {
-            ESP_LOGE(TAG, "Unknow Command [0x%02x%02x]", val[1], val[0]);
+            ESP_LOGE(TAG, "Unknown Command [0x%02x%02x]", val[1], val[0]);
         }
         break;
     case RECV_FW_CHAR:

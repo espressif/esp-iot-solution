@@ -14,7 +14,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Sync approved PRs to internal codebase
-        uses: espressif/sync-pr-to-gitlab@v1
+        uses: espressif/sync-pr-to-gitlab@master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLAB_URL: ${{ secrets.GITLAB_URL }}

@@ -202,7 +202,7 @@ extern "C"
  * @brief   Create bme280 handle_t
  *
  * @param  object handle of I2C
- * @param  decice address
+ * @param  device address
  *
  * @return
  *     - bme280_handle_t
@@ -274,7 +274,7 @@ bool bme280_is_reading_calibration(bme280_handle_t sensor);
 esp_err_t bme280_read_coefficients(bme280_handle_t sensor);
 
 /**
- * @brief  setup sensor with given parameters / settings
+ * @brief  setup sensor with gien parameters / settings
  *
  * @param  sensor object handle of bme280
  * @param  Sensor working mode

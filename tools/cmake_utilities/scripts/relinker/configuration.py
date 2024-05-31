@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+# SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
 # SPDX-License-Identifier: Apache-2.0
 
 
@@ -54,12 +54,12 @@ class sdkconfig_c:
         return True
 
 class object_c:
-    def read_dump_info(self, pathes):
+    def read_dump_info(self, paths):
         new_env = os.environ.copy()
         new_env['LC_ALL'] = 'C'
         dumps = list()
-        print('pathes:', pathes)
-        for path in pathes:
+        print('paths:', paths)
+        for path in paths:
             try:
                 dump = StringIO(subprocess.check_output([espidf_objdump, '-t', path], env=new_env).decode())
                 dumps.append(dump.readlines())
@@ -80,12 +80,12 @@ class object_c:
         else:
             raise RuntimeError('%s failed to find section'%(func))
 
-    def __init__(self, name, pathes, libray):
+    def __init__(self, name, paths, library):
         self.name = name
-        self.libray = libray
+        self.library = library
         self.funcs = dict()
-        self.pathes = pathes
-        self.dumps = self.read_dump_info(pathes)
+        self.paths = paths
+        self.dumps = self.read_dump_info(paths)
 
     def append(self, func):
         section = self.get_func_section(self.dumps, func)

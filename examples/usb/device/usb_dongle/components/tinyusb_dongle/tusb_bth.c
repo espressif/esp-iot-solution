@@ -72,7 +72,7 @@ static int host_rcv_pkt(uint8_t *data, uint16_t len)
         free(evt_rx_buf);
         break;
     default:
-        ESP_LOGE(TAG, "Unknow type [0x%02x]", type);
+        ESP_LOGE(TAG, "Unknown type [0x%02x]", type);
         break;
     }
 

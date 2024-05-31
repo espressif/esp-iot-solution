@@ -29,7 +29,7 @@ The wire connections are as following:
 
 ## External button configuration
 
-For this demostration, the buttons are configured with pull-up enabled. 
+For this demonstration, the buttons are configured with pull-up enabled. 
 
 ```c
 const gpio_config_t pin_config = {

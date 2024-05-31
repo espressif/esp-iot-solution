@@ -29,7 +29,7 @@ You need to plug the SDCard into the socket on the board.
 
 ### Configure the project
 
-step1: Chose your taget chip.
+step1: Chose your target chip.
 
 ````
 idf.py menuconfig -> Camera Pin Configuration

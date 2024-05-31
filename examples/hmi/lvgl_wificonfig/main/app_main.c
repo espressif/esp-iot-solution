@@ -352,7 +352,7 @@ static void wifi_scan_done(void)
 
 static void start_wifi_scan(void)
 {
-    lv_label_set_text(g_wifi_config_label, "Scaning...");
+    lv_label_set_text(g_wifi_config_label, "Scanning...");
     preload_create();
     wifi_timeout_timer_create(wifi_scan_timeout_cb, "scan timer", WIFI_SCAN_TIMEOUT);
 }

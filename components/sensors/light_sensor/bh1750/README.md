@@ -10,9 +10,9 @@
     * connect scl of sensor with GPIO19
     * no need to add external pull-up resistors, driver will enable internal pull-up resistors.
 * Bh1750 measurement mode:
-    * one-time mode: bh1750 just measure only one time when receieved the one time measurement command, so you need to send this command when you want to get intensity value every time
-    * continuouly mode: bh1750 will measure continuouly when receieved the continuously measurement command, so you just need to send this command once, and than call `bh1750_get_data()` to get intensity value repeatedly.
-* You can aslo call `bh1750_get_light_intensity()` to get intensity value, the working process of this function is as followed:
+    * one-time mode: bh1750 just measure only one time when received the one time measurement command, so you need to send this command when you want to get intensity value every time
+    * continuouly mode: bh1750 will measure continuouly when received the continuously measurement command, so you just need to send this command once, and than call `bh1750_get_data()` to get intensity value repeatedly.
+* You can also call `bh1750_get_light_intensity()` to get intensity value, the working process of this function is as followed:
     * send measurement command
     * delay longer than measurement time
     * get intensity value

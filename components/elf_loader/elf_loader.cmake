@@ -1,6 +1,6 @@
 # The script is to generate ELF for application
 
-# Trick to temporarily redefine project(). When functions are overriden in CMake, the originals can still be accessed
+# Trick to temporarily redefine project(). When functions are overridden in CMake, the originals can still be accessed
 # using an underscore prefixed function of the same name. The following lines make sure that project  calls
 # the original project(). See https://cmake.org/pipermail/cmake/2015-October/061751.html.
 function(project_elf)

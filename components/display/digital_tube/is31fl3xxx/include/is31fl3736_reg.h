@@ -11,7 +11,7 @@
 #define BIT(x) (1 << (x))
 #endif
 
-/**< contorl regs */
+/**< control regs */
 #define IS31FL3736_REG_CMD         0xfd /*!< Available page 0 to page 3 registers */
 #define IS31FL3736_RET_CMD_LOCK    0xfe /*!< to lock/unlock command reg */
 #define IS31FL3736_REG_INTR_MASK   0XF0 /*!< configure the interrupt func */

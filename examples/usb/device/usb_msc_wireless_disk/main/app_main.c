@@ -43,7 +43,7 @@ static esp_err_t init_fat(sdmmc_card_t **card_handle, const char *base_path)
     ESP_LOGI(TAG, "Mounting FAT filesystem");
     esp_err_t ret = ESP_FAIL;
     // To mount device we need name of device partition, define base_path
-    // and allow format partition in case if it is new one and was not formated before
+    // and allow format partition in case if it is new one and was not formatted before
 #ifdef CONFIG_USE_INTERNAL_FLASH
     // Handle of the wear levelling library instance
     wl_handle_t wl_handle_1 = WL_INVALID_HANDLE;

@@ -136,7 +136,7 @@ I (15058) modem_board: Modem state STAGE_CHECK_SIGNAL, Start
 I (15081) modem_board: Signal quality: rssi=25, ber=99
 I (15081) modem_board: Modem state STAGE_CHECK_SIGNAL, Success!
 I (15182) modem_board: Modem state STAGE_CHECK_REGIST, Start
-I (15205) modem_board: Network registed, Operator: "46000"
+I (15205) modem_board: Network registered, Operator: "46000"
 I (15205) modem_board: Modem state STAGE_CHECK_REGIST, Success!
 I (15306) modem_board: Modem state STAGE_START_PPP, Start
 I (15715) modem_board: Modem state STAGE_START_PPP, Success!
@@ -157,7 +157,7 @@ I (15781) system_api: read default base MAC address from EFUSE
 I (15798) wifi:wifi firmware version: 133d2ca
 I (15798) wifi:wifi certification version: v7.0
 I (15799) wifi:config NVS flash: enabled
-I (15800) wifi:config nano formating: disabled
+I (15800) wifi:config nano formatting: disabled
 I (15804) wifi:Init data frame dynamic rx buffer num: 32
 I (15809) wifi:Init management frame dynamic rx buffer num: 32
 I (15815) wifi:Init management short buffer num: 32

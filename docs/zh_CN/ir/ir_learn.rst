@@ -50,7 +50,7 @@
          break;
       /**< 红外学习失败 */
       case IR_LEARN_STATE_FAIL:
-         ESP_LOGI(TAG, "IR Learn faield, retry");
+         ESP_LOGI(TAG, "IR Learn failed, retry");
          break;
       /**< 红外学习步骤，从1开始 */
       case IR_LEARN_STATE_STEP:

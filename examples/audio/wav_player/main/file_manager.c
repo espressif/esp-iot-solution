@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+/* SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -196,7 +196,7 @@ static void TraverseDir(char *direntName, int level, int indent)
 
         printf("|--- %s", p_dirent->d_name);
 
-        /* Itme is a file */
+        /* Item is a file */
         if (p_dirent->d_type == DT_REG) {
             int curDirentNameLen = strlen(direntName) + strlen(p_dirent->d_name) + 2;
 
@@ -229,7 +229,7 @@ static void TraverseDir(char *direntName, int level, int indent)
             printf("\n");
         }
 
-        /* Itme is a directory */
+        /* Item is a directory */
         if (p_dirent->d_type == DT_DIR) {
             int curDirentNameLen = strlen(direntName) + strlen(p_dirent->d_name) + 2;
 
@@ -354,7 +354,7 @@ const char *fm_get_filename(const char *file)
 
 size_t fm_get_file_size(const char *filepath)
 {
-    struct stat siz =  { 0 };
-    stat(filepath, &siz);
-    return siz.st_size;
+    struct stat size =  { 0 };
+    stat(filepath, &size);
+    return size.st_size;
 }

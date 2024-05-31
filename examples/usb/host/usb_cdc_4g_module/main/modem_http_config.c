@@ -327,7 +327,7 @@ static esp_err_t wlan_general_get_handler(httpd_req_t *req)
     const char *user_password = s_modem_wifi_config->password;
     const char *user_hide_ssid ;
     if (s_modem_wifi_config->ssid_hidden == 0) {
-        user_hide_ssid = "flase";
+        user_hide_ssid = "false";
     } else {
         user_hide_ssid = "true";
     }

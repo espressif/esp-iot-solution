@@ -228,7 +228,7 @@ esp_err_t esp_vfs_tusb_cdc_unregister(char const *path)
 
     if (res) {
         res = ESP_ERR_INVALID_ARG;
-        ESP_LOGE(TAG, "There is no TinyUSB driver registerred to the path '%s' (err: 0x%x)", s_vfstusb.vfs_path, res);
+        ESP_LOGE(TAG, "There is no TinyUSB driver registered to the path '%s' (err: 0x%x)", s_vfstusb.vfs_path, res);
         return res;
     }
 

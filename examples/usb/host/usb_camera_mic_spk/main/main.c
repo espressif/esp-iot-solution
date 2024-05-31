@@ -260,7 +260,7 @@ void app_main(void)
 #endif
 
 #if (ENABLE_UAC_MIC_SPK_FUNCTION)
-    /* match any frequence of audio device we can found
+    /* match any frequency of audio device we can found
      * call uac_frame_size_list_get to get the frame list of current audio device
      */
     uac_config_t uac_config = {

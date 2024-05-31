@@ -103,4 +103,4 @@ T2.0
 2.000
 ```
 
-![FOC exmaple](https://dl.espressif.com/ae/esp-iot-solution/foc_close_loop.gif)
+![FOC example](https://dl.espressif.com/ae/esp-iot-solution/foc_close_loop.gif)

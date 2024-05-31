@@ -35,7 +35,7 @@ ESP_EVENT_DEFINE_BASE(BLE_ANP_EVENTS);
 //4.09 Configure Alert Notification Control Point
 static esp_err_t esp_ble_anp_alert_ctrl_set(uint8_t cmd_id, uint8_t cat_id)
 {
-    /* ANS Control point command and catagory variables */
+    /* ANS Control point command and category variables */
     uint8_t cat_bit_mask;
 
     esp_ble_conn_data_t inbuff = {

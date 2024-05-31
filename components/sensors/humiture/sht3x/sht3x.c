@@ -138,7 +138,7 @@ esp_err_t sht3x_get_humiture(sht3x_handle_t sensor, float *Tem_val, float *Hum_v
     if ((Temperature >= -20) && (Temperature <= 125) && (Humidity >= 0) && (Humidity <= 100)) {
         *Tem_val = Temperature;
         *Hum_val = Humidity;
-        return ESP_OK;                                        /*!< here is mesurement range */
+        return ESP_OK;                                        /*!< here is measurement range */
     } else {
         return ESP_FAIL;
     }

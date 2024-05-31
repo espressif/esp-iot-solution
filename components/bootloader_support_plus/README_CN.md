@@ -67,7 +67,7 @@ bootloader support plus 是乐鑫基于 [ESP-IDF](https://github.com/espressif/e
    #endif
    ```
 
-4. 在 `bootloader_components/mian/bootloader_start.c` 中调用 `bootloader.custom_ota_main（）`:
+4. 在 `bootloader_components/main/bootloader_start.c` 中调用 `bootloader.custom_ota_main（）`:
 
    ```c
    ...

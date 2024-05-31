@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -127,7 +127,7 @@ esp_err_t iot_sensor_stop(sensor_handle_t sensor_handle);
 /**
  * @brief delete and release the sensor resource.
  *
- * @param p_sensor_handle point to sensor handle, will set to NULL if delete suceed.
+ * @param p_sensor_handle point to sensor handle, will set to NULL if delete succeed.
  * @return esp_err_t
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
@@ -177,8 +177,8 @@ esp_err_t iot_sensor_handler_unregister(sensor_handle_t sensor_handle, sensor_ev
  * @brief Register a event handler with sensor_type instead of sensor_handle.
  * the api only care about the event type, don't care who post it.
  *
- * @param sensor_type sensor type decleared in sensor_type_t.
- * @param event_id sensor event decleared in sensor_event_id_t and sensor_data_event_id_t
+ * @param sensor_type sensor type declared in sensor_type_t.
+ * @param event_id sensor event declared in sensor_event_id_t and sensor_data_event_id_t
  * @param handler the handler function which gets called when the event is dispatched
  * @param context An event handler instance object related to the registered event handler and data, can be NULL.
  *                This needs to be kept if the specific callback instance should be unregistered before deleting the whole
@@ -196,8 +196,8 @@ esp_err_t iot_sensor_handler_register_with_type(sensor_type_t sensor_type, int32
  * @brief Unregister a event handler from a event.
  * the api only care about the event type, don't care who post it.
  *
- * @param sensor_type sensor type decleared in sensor_type_t.
- * @param event_id sensor event decleared in sensor_event_id_t and sensor_data_event_id_t
+ * @param sensor_type sensor type declared in sensor_type_t.
+ * @param event_id sensor event declared in sensor_event_id_t and sensor_data_event_id_t
  * @param context the instance object of the registration to be unregistered
  * @return esp_err_t
  *     - ESP_OK Success

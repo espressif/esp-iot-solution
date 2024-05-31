@@ -20,7 +20,7 @@ Before project configuration and build, be sure to set the correct chip target u
 * A development board with any Espressif SoC (e.g., ESP32-DevKitC, ESP-WROVER-KIT, etc.)
 * A USB cable for Power supply and programming
 * Some jumper wires to connect GPIOs.
-* Zero cross singal Source
+* Zero cross signal Source
 
 ### Configure the project
 

@@ -50,7 +50,7 @@ Callback function
          break;
       /**< IR learn failure */
       case IR_LEARN_STATE_FAIL:
-         ESP_LOGI(TAG, "IR Learn faield, retry");
+         ESP_LOGI(TAG, "IR Learn failed, retry");
          break;
       /**< IR learn step, start from 1 */
       case IR_LEARN_STATE_STEP:

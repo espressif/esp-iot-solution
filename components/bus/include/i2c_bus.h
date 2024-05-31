@@ -52,7 +52,7 @@ esp_err_t i2c_bus_delete(i2c_bus_handle_t *p_bus_handle);
  * @param bus_handle I2C bus handle
  * @param buf Pointer to a buffer to save devices' address, if NULL no address will be saved.
  * @param num Maximum number of addresses to save, invalid if buf set to NULL,
- * higer addresses will be discarded if num less-than the total number found on the I2C bus.
+ * higher addresses will be discarded if num less-than the total number found on the I2C bus.
  * @return uint8_t Total number of devices found on the I2C bus
  */
 uint8_t i2c_bus_scan(i2c_bus_handle_t bus_handle, uint8_t *buf, uint8_t num);

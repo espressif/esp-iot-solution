@@ -107,7 +107,7 @@ public:
     bool enable_active_high = true; /*!< enable driver level */
 
     /**
-     * Set phase voltages to the harware.
+     * Set phase voltages to the hardware.
      *
      * @param Ua - phase A voltage
      * @param Ub - phase B voltage
@@ -116,7 +116,7 @@ public:
     void setPwm(float Ua, float Ub, float Uc) override;
 
     /**
-     * @brief Set phase voltages to the harware.
+     * @brief Set phase voltages to the hardware.
      *
      * @param sa phase A state : active / disabled ( high impedance )
      * @param sb phase B state : active / disabled ( high impedance )

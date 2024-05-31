@@ -54,11 +54,11 @@
 
 ### Receiving Data Wirelessly
 
-  The server will receive this data in the characteristic calback.
+  The server will receive this data in the characteristic callback.
 
 ### GATT Server Attribute Table
 
-  charactertistic|UUID|Permissions
+  characteristic|UUID|Permissions
   :-:|:-:|:-:
   SPP_DATA_RECV_CHAR|0xABF1|READ&WRITE_NR
   SPP_DATA_NOTIFY_CHAR|0xABF2|READ&NOTIFY

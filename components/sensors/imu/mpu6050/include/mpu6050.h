@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -108,10 +108,10 @@ typedef enum {
 } mpu6050_acce_fs_t;
 
 typedef enum {
-    GYRO_FS_250DPS  = 0,     /*!< Gyroscope full scale range is +/- 250 degree per sencond */
-    GYRO_FS_500DPS  = 1,     /*!< Gyroscope full scale range is +/- 500 degree per sencond */
-    GYRO_FS_1000DPS = 2,     /*!< Gyroscope full scale range is +/- 1000 degree per sencond */
-    GYRO_FS_2000DPS = 3,     /*!< Gyroscope full scale range is +/- 2000 degree per sencond */
+    GYRO_FS_250DPS  = 0,     /*!< Gyroscope full scale range is +/- 250 degree per second */
+    GYRO_FS_500DPS  = 1,     /*!< Gyroscope full scale range is +/- 500 degree per second */
+    GYRO_FS_1000DPS = 2,     /*!< Gyroscope full scale range is +/- 1000 degree per second */
+    GYRO_FS_2000DPS = 3,     /*!< Gyroscope full scale range is +/- 2000 degree per second */
 } mpu6050_gyro_fs_t;
 
 typedef struct {
@@ -323,7 +323,7 @@ esp_err_t mpu6050_get_acce(mpu6050_handle_t sensor, mpu6050_acce_value_t *acce_v
 esp_err_t mpu6050_get_gyro(mpu6050_handle_t sensor, mpu6050_gyro_value_t *gyro_value);
 
 /**
- * @brief use complimentory filter to caculate roll and pitch
+ * @brief use complimentory filter to calculate roll and pitch
  *
  * @param acce_value accelerometer measurements
  * @param gyro_value gyroscope measurements

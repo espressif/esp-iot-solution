@@ -1,7 +1,7 @@
 # XZ Decompress Example
 
 This example demonstrates how to use function `xz_decompress()` to decompress the specified file.
-The `xz_decompress()` is based on the `XZ Embedded` library, for more information about `XZ Embedded`, please refer to [XZ Embeded](https://tukaani.org/xz/embedded.html).
+The `xz_decompress()` is based on the `XZ Embedded` library, for more information about `XZ Embedded`, please refer to [XZ Embedded](https://tukaani.org/xz/embedded.html).
 
 ### Generate the Compressed File
 
