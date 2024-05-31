@@ -1801,6 +1801,7 @@ static void esp_ble_conn_disconnect_cb(struct ble_gap_event *event, void *arg)
     conn_session->conn_handle = 0;
 
     esp_ble_conn_event_send(conn_session, ESP_BLE_CONN_EVENT_DISCONNECTED, NULL, 0, NULL);
+    esp_event_post(BLE_CONN_MGR_EVENTS, ESP_BLE_CONN_EVENT_DISCONNECTED, NULL, 0, portMAX_DELAY);
 }
 
 static void esp_ble_conn_set_mtu_cb(struct ble_gap_event *event, void *arg)

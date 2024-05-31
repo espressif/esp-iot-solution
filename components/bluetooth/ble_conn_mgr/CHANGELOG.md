@@ -1,3 +1,9 @@
+## v0.1.2 - 2024-5-22
+
+### Bug Fixes:
+
+- Fix esp_ble_conn_mgr not report disconnect event
+
 ## v0.1.1 - 2023-6-12
 
 ### Bug Fixes:
