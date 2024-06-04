@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v0.1.2 - 2024-6-7
+* Add user debugging guide documentation for touch proximity sensor
+* Change the parameter `response_ms` to `meas_count`
+
 ## v0.1.1 - 2024-5-14
 
 ### Enhancements:

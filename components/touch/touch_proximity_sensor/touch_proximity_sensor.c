@@ -295,7 +295,7 @@ esp_err_t touch_proximity_sensor_start(touch_proximity_handle_t proxi_sensor)
     for (int i = 0; i < sensor->configs.channel_num; i++) {
         touch_pad_proximity_enable(sensor->configs.channel_list[i], true);
     }
-    uint32_t count = sensor->configs.response_ms / sensor->configs.channel_num / 2;
+    uint32_t count = sensor->configs.meas_count / sensor->configs.channel_num / 2;
     touch_pad_proximity_set_count(TOUCH_PAD_MAX, count);
     touch_pad_isr_register(_touch_intr_cb, sensor, TOUCH_PAD_INTR_MASK_ALL);
     touch_pad_fsm_start();
