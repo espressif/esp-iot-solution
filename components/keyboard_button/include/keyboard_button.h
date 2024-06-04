@@ -7,6 +7,7 @@
 
 #include "esp_err.h"
 #include "kbd_gpio.h"
+#include "freertos/FreeRTOS.h"
 
 #ifdef __cplusplus
 extern "C" {

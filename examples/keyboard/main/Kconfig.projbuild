@@ -1,0 +1,16 @@
+menu "ESP KeyBoard Example"
+
+    config TUSB_VID
+        hex "USB Device VID"
+        default 0x303A
+    config TUSB_PID
+        hex "USB Device PID"
+        default 0x8000
+    config TUSB_MANUFACTURER
+        string "USB Device Manufacture"
+        default "Espressif"
+    config TUSB_PRODUCT
+        string "Product Name"
+        default "HID Demo"
+
+endmenu

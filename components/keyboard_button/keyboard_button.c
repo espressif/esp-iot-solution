@@ -198,14 +198,16 @@ static void kbd_task(void *args)
                 kbd->can_enter_power_save = true;
             }
             kbd_handler(kbd);
-            if (kbd->enable_power_save && kbd->key_pressed_num == 0 && kbd->can_enter_power_save == true) {
+            if (kbd->enable_power_save && kbd->key_pressed_num == 0 && kbd->can_enter_power_save) {
                 /*!< Enter power save */
-                ESP_LOGD(TAG, "Enter power save");
-                kbd_gptimer_stop(kbd->gptimer_handle);
-                kbd->gptimer_start = false;
+                if (kbd->gptimer_start) {
+                    kbd_gptimer_stop(kbd->gptimer_handle);
+                    kbd->gptimer_start = false;
+                }
                 kbd_gpios_intr_control(kbd->input_gpios, kbd->input_gpio_num, true);
                 kbd_gpios_set_level(kbd->output_gpios, kbd->output_gpio_num, kbd->active_level ? OUTPUT_MASK_HIGE : OUTPUT_MASK_LOW);
                 kbd_gpios_set_hold_en(kbd->output_gpios, kbd->output_gpio_num);
+                ESP_LOGD(TAG, "Enter power save");
             }
 
 #if CONFIG_KEYBOARD_TEST_RUN_TIME

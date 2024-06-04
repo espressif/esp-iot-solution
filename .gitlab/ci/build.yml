@@ -467,6 +467,17 @@ build_example_indicator:
   variables:
     EXAMPLE_DIR: examples/indicator
 
+build_example_keyboard:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_keyboard
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.2
+      - IMAGE: espressif/idf:release-v5.3
+  variables:
+    EXAMPLE_DIR: examples/keyboard
+
 build_example_lighting_lightbulb:
   extends:
     - .build_examples_template

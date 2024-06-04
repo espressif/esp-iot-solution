@@ -172,6 +172,10 @@ examples/indicator:
   enable:
     - if: INCLUDE_DEFAULT == 1
 
+examples/keyboard:
+  enable:
+    - if: IDF_TARGET == "esp32s3"
+
 examples/indicator/ws2812_strips:
   enable:
     - if: SOC_RMT_SUPPORTED == 1

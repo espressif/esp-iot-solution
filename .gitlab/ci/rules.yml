@@ -392,6 +392,9 @@
 .patterns-example_indicator: &patterns-example_indicator
   - "examples/indicator/**/*"
 
+.patterns-example_keyboard: &patterns-example_keyboard
+  - "examples/keyboard/**/*"
+
 .patterns-example_lighting_lightbulb: &patterns-example_lighting_lightbulb
   - "examples/lighting/lightbulb/**/*"
 
@@ -874,6 +877,18 @@
       changes: *patterns-components_led_led_indicator
     - <<: *if-dev-push
       changes: *patterns-example_indicator
+
+.rules:build:example_keyboard:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_keyboard_button
+    - <<: *if-dev-push
+      changes: *patterns-example_keyboard
 
 .rules:build:example_lighting_lightbulb:
   rules:

@@ -1,0 +1,4 @@
+dependencies:
+  idf: ">=5.2"
+  espressif/tinyusb:
+    version: ">=0.15.0~2"

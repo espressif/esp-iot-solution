@@ -57,7 +57,7 @@ void kbd_gpio_deinit(const int *gpios, uint32_t gpio_num);
  * @param gpios Pointer to an array of GPIO numbers
  * @param gpio_num Number of elements in the gpios array
  *
- * @return Bitmask of GPIO levels, bit N is set if GPIO N level is high
+ * @return Bitmask of GPIO levels, bit N is set if gpios[N] level is high
  */
 uint32_t kbd_gpios_read_level(const int *gpios, uint32_t gpio_num);
 
