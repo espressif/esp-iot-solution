@@ -18,6 +18,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLAB_URL: ${{ secrets.GITLAB_URL }}
+          GITLAB_NAMESPACE: ${{ secrets.GITLAB_NAMESPACE }}
           GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
           GIT_CONFIG_NAME: ${{ secrets.GIT_CONFIG_NAME }}
           GIT_CONFIG_EMAIL: ${{ secrets.GIT_CONFIG_EMAIL }}
