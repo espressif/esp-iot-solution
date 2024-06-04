@@ -15,7 +15,8 @@ static const char *TAG = "kbd_gpio";
 esp_err_t kbd_gpio_init(const kbd_gpio_config_t *config)
 {
     ESP_RETURN_ON_FALSE(config, ESP_ERR_INVALID_ARG, TAG, "Pointer of config is invalid");
-    ESP_RETURN_ON_FALSE(config->gpio_num < GPIO_NUM_MAX && config->gpio_num > 0, ESP_ERR_INVALID_ARG, TAG, "Invalid GPIO number");
+    /*!< support max gpio num is 32, because uint32_t is 32 bits */
+    ESP_RETURN_ON_FALSE(config->gpio_num < 33 && config->gpio_num > 0, ESP_ERR_INVALID_ARG, TAG, "Invalid GPIO number");
 
     gpio_config_t gpio_conf = {0};
     esp_err_t ret = ESP_OK;
