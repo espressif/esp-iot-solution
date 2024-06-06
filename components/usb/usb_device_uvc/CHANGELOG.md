@@ -1,6 +1,6 @@
 # ChangeLog
 
-## v1.0.2 2024-5-20
+## v1.0.2 2024-6-1
 
 * Support Frame Based with format H264
 
