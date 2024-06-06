@@ -4,27 +4,61 @@ File System
 
 Supported file systems:
 
-+--------------------------+---------------------------------------------------+--------------------------------------------------+--------------------------------------------------------+
-| Key Features             | NVS Library                                       | FAT File System                                  | SPIFFS File System                                     |
-+==========================+===================================================+==================================================+========================================================+
-| Features                 | Operates on key-value pairs, with safe interfaces | Operation system supported, strong compatibility | Developed for embedded systems, low resource occupancy |
-+--------------------------+---------------------------------------------------+--------------------------------------------------+--------------------------------------------------------+
-| Application Scenarios    | Stores parameters                                 | Stores audio, video and other files              | Stores audio, video and other files                    |
-+--------------------------+---------------------------------------------------+--------------------------------------------------+--------------------------------------------------------+
-| Size                     | KB-MB                                             | GB                                               | < 128 MB                                               |
-+--------------------------+---------------------------------------------------+--------------------------------------------------+--------------------------------------------------------+
-| Directory Support        | X                                                 | √                                                | X                                                      |
-+--------------------------+---------------------------------------------------+--------------------------------------------------+--------------------------------------------------------+
-| Wear Levelling           | √                                                 | Optional                                         | √                                                      |
-+--------------------------+---------------------------------------------------+--------------------------------------------------+--------------------------------------------------------+
-| R/W Efficiency           | 0                                                 | 0                                                | 0                                                      |
-+--------------------------+---------------------------------------------------+--------------------------------------------------+--------------------------------------------------------+
-| Resources Occupancy      | 0                                                 | 0                                                | 1                                                      |
-+--------------------------+---------------------------------------------------+--------------------------------------------------+--------------------------------------------------------+
-| Power Failure Protection | √                                                 | X                                                | X                                                      |
-+--------------------------+---------------------------------------------------+--------------------------------------------------+--------------------------------------------------------+
-| Encryption               | √                                                 | √                                                | X                                                      |
-+--------------------------+---------------------------------------------------+--------------------------------------------------+--------------------------------------------------------+
+
+.. list-table:: File system features comparison
+    :widths: 20 20 20 20 20
+    :header-rows: 1
+
+    * - Key Features
+      - NVS Library
+      - FAT File System
+      - SPIFFS File System
+      - LittleFS File System
+    * - Features
+      - Operates on key-value pairs, with safe interfaces
+      - Operation system supported, strong compatibility
+      - Developed for embedded systems, low resource occupancy
+      - Low resource occupancy, Read, write, erase speed is fast
+    * - Application Scenarios
+      - Stores parameters
+      - Stores audio, video and other files
+      - Stores audio, video and other files
+      - Stores files
+    * - Size
+      - KB-MB
+      - GB
+      - < 128 MB
+      - < 128 MB
+    * - Directory Support
+      - X
+      - √
+      - X
+      - √
+    * - Wear Levelling
+      - √
+      - Optional
+      - √
+      - √
+    * - R/W Efficiency
+      - 0
+      - 0
+      - 0
+      - High
+    * - Resources Occupancy
+      - 0
+      - 0
+      - 1
+      - 1
+    * - Power Failure Protection
+      - √
+      - X
+      - X
+      - √
+    * - Encryption
+      - √
+      - √
+      - X
+      - X
 
 
 .. Note::
@@ -34,7 +68,7 @@ Supported file systems:
 
 
 NVS Library
----------------
+-----------------------
 
 Non-volatile storage (NVS) is used to read and write data stored in the flash NVS partition. NVS operated on key-value pairs. Keys are ASCII strings; values can be integers, strings and variable binary large object (BLOB). NVS supports power loss protection and data encryption, and works best for storing many small values, such as application parameters. If you need to store large blobs or strings, please consider using the facilities provided by the FAT file system on top of the wear levelling library.
 
@@ -49,7 +83,7 @@ Non-volatile storage (NVS) is used to read and write data stored in the flash NV
 - Write a blob: `storage/nvs_rw_blob <https://github.com/espressif/esp-idf/tree/526f682/examples/storage/nvs_rw_blob>`_.
 
 FAT File System
----------------------
+------------------------
 
 ESP-IDF uses the FatFs library to work with FAT file system. FatFs is a file system layer independent to platform and storage media that can realize access to physical devices (e.g., flash, SD card) via a unified interface. Although the library can be used directly, many of its features can be accessed via VFS, using the C standard library and POSIX API functions.
 
@@ -66,7 +100,7 @@ The operating system of FAT is compatible with a wide range of mobile storage de
 * `storage/ext_flash_fatfs <https://github.com/espressif/esp-idf/tree/master/examples/storage/ext_flash_fatfs>`_: access the external flash chip which uses the FAT file system.
 
 SPIFFS File System
-----------------------
+---------------------------
 
 SPIFFS is a file system intended for SPI NOR flash devices on embedded targets. It supports wear levelling, file system consistency checks, and more. Users can directly use the Posix interfaces provided by SPIFFS, or use many of its features via VFS.
 
@@ -81,9 +115,24 @@ As a dedicated file system for SPI NOR flash devices on embedded targets, the SP
 
 * `storage/spiffs <https://github.com/espressif/esp-idf/tree/526f682/examples/storage/spiffs>`_: SPIFFS examples.
 
+LittleFS File System
+---------------------------
+
+LittleFS is a file system intended for SPI NOR flash devices on embedded targets. It supports wear levelling, file system consistency checks, power failure protection and more.
+
+LittleFS as a high integrity embedded SPI NOR Flash file system, it supports efficient read and write speed and occupies less RAM resources.
+
+**Related documents:**
+
+* `LittleFS Filesystem Component SDK <https://github.com/joltwallet/esp_littlefs/tree/v1.14.5>`_ .
+* `LittleFS Filesystem Component Usage Guide <https://components.espressif.com/components/joltwallet/littlefs/versions/1.14.5>`_ .
+
+**Examples:**
+
+* `storage/littlefs <https://github.com/espressif/esp-idf/tree/release/v5.2/examples/storage/littlefs>`_：LittleFS example.
 
 Virtual File System (VFS)
-------------------------------
+-----------------------------------
 
 The Virtual File System (VFS) component from ESP-IDF provides a unified interface for different file systems (FAT, SPIFFS), and also provides a file-like interface for device drivers.
 
