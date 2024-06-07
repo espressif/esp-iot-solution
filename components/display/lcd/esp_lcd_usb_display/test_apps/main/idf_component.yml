@@ -1,0 +1,7 @@
+targets:
+  - esp32p4
+dependencies:
+  idf: ">=5.3"
+  esp_lcd_usb_display:
+    version: "*"
+    override_path: "../../../esp_lcd_usb_display"

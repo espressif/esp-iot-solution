@@ -1,0 +1,10 @@
+targets:
+  - esp32p4
+dependencies:
+  cmake_utilities: "*"
+  lvgl/lvgl:
+    version: "^9"
+    public: true
+  esp_lcd_usb_display:
+    version: "*"
+    override_path: "../../../../../components/display/lcd/esp_lcd_usb_display"

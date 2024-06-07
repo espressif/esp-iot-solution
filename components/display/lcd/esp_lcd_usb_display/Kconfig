@@ -1,0 +1,15 @@
+menu "USB Display"
+
+    config FRAME_BUF_RGB_MAX_NUM
+        int "The maximum number of RGB frame buffers"
+        default 1
+        range 1 3
+        help
+            This option sets the max RGB frame buffers allowed in the system, used to store pixel data for images or graphics. Choose wisely as increasing it may raise memory usage.
+
+    config JPEG_ENC_TASK_MIN_DELAY_MS
+        int "Minimum delay for JPEG encoding tasks"
+        default 2
+        help
+            This option determines the minimum delay (in milliseconds) for JPEG encoding tasks. Raising it could lower system resource usage but might slow down response times. Select a value considering system performance and response time requirements.
+endmenu
