@@ -36,7 +36,7 @@ typedef struct {
     const st77903_lcd_init_cmd_t *init_cmds;
     uint16_t init_cmds_size;
     struct {
-        unsigned int auto_del_panel_io: 1;
+        unsigned int enable_io_multiplex: 1;
         unsigned int display_on_off_use_cmd: 1;
         unsigned int reset_level: 1;
         unsigned int mirror_by_cmd: 1;
@@ -65,8 +65,8 @@ esp_err_t esp_lcd_new_panel_st77903_rgb(const esp_lcd_panel_io_handle_t io, cons
     ESP_RETURN_ON_FALSE(io && panel_dev_config && ret_panel, ESP_ERR_INVALID_ARG, TAG, "Invalid arguments");
     st77903_vendor_config_t *vendor_config = (st77903_vendor_config_t *)panel_dev_config->vendor_config;
     ESP_RETURN_ON_FALSE(vendor_config, ESP_ERR_INVALID_ARG, TAG, "`vendor_config` is necessary");
-    ESP_RETURN_ON_FALSE(!vendor_config->flags.auto_del_panel_io || !vendor_config->flags.mirror_by_cmd,
-                        ESP_ERR_INVALID_ARG, TAG, "`mirror_by_cmd` and `auto_del_panel_io` cannot work together");
+    ESP_RETURN_ON_FALSE(!vendor_config->flags.enable_io_multiplex || !vendor_config->flags.mirror_by_cmd,
+                        ESP_ERR_INVALID_ARG, TAG, "`mirror_by_cmd` and `enable_io_multiplex` cannot work together");
 
     esp_err_t ret = ESP_OK;
     st77903_panel_t *st77903 = (st77903_panel_t *)calloc(1, sizeof(st77903_panel_t));
@@ -114,12 +114,12 @@ esp_err_t esp_lcd_new_panel_st77903_rgb(const esp_lcd_panel_io_handle_t io, cons
     st77903->init_cmds_size = vendor_config->init_cmds_size;
     st77903->hor_res = vendor_config->rgb_config->timings.h_res;
     st77903->ver_res = vendor_config->rgb_config->timings.v_res;
-    st77903->flags.auto_del_panel_io = vendor_config->flags.auto_del_panel_io;
+    st77903->flags.enable_io_multiplex = vendor_config->flags.enable_io_multiplex;
     st77903->flags.display_on_off_use_cmd = (vendor_config->rgb_config->disp_gpio_num >= 0) ? 0 : 1;
     st77903->flags.reset_level = panel_dev_config->flags.reset_active_high;
     st77903->flags.mirror_by_cmd = vendor_config->flags.mirror_by_cmd;
 
-    if (st77903->flags.auto_del_panel_io) {
+    if (st77903->flags.enable_io_multiplex) {
         // Reset st77903
         if (st77903->reset_gpio_num >= 0) {
             gpio_set_level(st77903->reset_gpio_num, !st77903->flags.reset_level);
@@ -214,6 +214,9 @@ const static st77903_lcd_init_cmd_t vendor_specific_init_default[] = {
     {0x21, (uint8_t []){0x00}, 0, 0},
     {0x11, (uint8_t []){0x00}, 0, 120},
     {0x29, (uint8_t []){0x00}, 0, 120},
+
+    // {0xb0, (uint8_t []){0xa5}, 1, 0},               /* This part of the parameters can be used for screen self-test */
+    // {0xcc, (uint8_t []){0x40, 0x00, 0x3f, 0x00, 0x14, 0x14, 0x20, 0x20, 0x03}, 9, 0},
 };
 
 static esp_err_t panel_st77903_rgb_send_init_cmds(st77903_panel_t *st77903)
@@ -304,7 +307,7 @@ static esp_err_t panel_st77903_rgb_init(esp_lcd_panel_t *panel)
 {
     st77903_panel_t *st77903 = (st77903_panel_t *)panel->user_data;
 
-    if (!st77903->flags.auto_del_panel_io) {
+    if (!st77903->flags.enable_io_multiplex) {
         ESP_RETURN_ON_ERROR(panel_st77903_rgb_send_init_cmds(st77903), TAG, "send init commands failed");
     }
     // Init RGB panel
@@ -332,7 +335,7 @@ static esp_err_t panel_st77903_rgb_reset(esp_lcd_panel_t *panel)
     st77903_panel_t *st77903 = (st77903_panel_t *)panel->user_data;
     esp_lcd_panel_io_handle_t io = st77903->io;
 
-    if (!st77903->flags.auto_del_panel_io) {
+    if (!st77903->flags.enable_io_multiplex) {
         // Perform hardware reset
         if (st77903->reset_gpio_num >= 0) {
             gpio_set_level(st77903->reset_gpio_num, !st77903->flags.reset_level);

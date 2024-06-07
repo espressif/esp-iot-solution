@@ -45,11 +45,14 @@ typedef struct {
         unsigned int mirror_by_cmd: 1;          /*<! The `esp_lcd_panel_mirror()` function will be implemented by LCD command if set to 1.
                                                  *   Otherwise, the function will be implemented by software.
                                                  */
-        unsigned int auto_del_panel_io: 1;      /*<! Send initialization commands and delete the panel IO instance during creation if set to 1.
-                                                 *   This flag is only used when `use_rgb_interface` is set to 1.
-                                                 *   If the panel IO pins are sharing other pins of the RGB interface to save GPIOs,
-                                                 *   Please set it to 1 to release the panel IO and its pins (except CS signal).
-                                                 */
+        union {
+            unsigned int auto_del_panel_io: 1;
+            unsigned int enable_io_multiplex: 1;
+        };  /*<! Delete the panel IO instance automatically if set to 1. All `*_by_cmd` flags will be invalid.
+             *   If the panel IO pins are sharing other pins of the RGB interface to save GPIOs,
+             *   Please set it to 1 to release the panel IO and its pins (except CS signal).
+             *   This flag is only valid for the RGB interface.
+             */
     } flags;
 } st77903_vendor_config_t;
 

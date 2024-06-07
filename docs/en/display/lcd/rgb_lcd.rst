@@ -416,7 +416,7 @@ Below is an example code explanation using the `ST7701S <https://components.espr
         // .init_cmds_size = sizeof(lcd_init_cmds) / sizeof(st7701_lcd_init_cmd_t),
         .flags = {          // Configuration parameters for the LCD driver IC
             .mirror_by_cmd = 1,       // If `1`, use LCD command to implement mirroring function (esp_lcd_panel_mirror()), if `0`, implement through software
-            .auto_del_panel_io = 0,   // If `1`, automatically delete the interface device when deleting the LCD device, all parameters named `*_by_cmd` should be set to `0`,
+            .enable_io_multiplex = 0, // If `1`, automatically delete the interface device when deleting the LCD device, all parameters named `*_by_cmd` should be set to `0`,
                                       // if `0`, do not delete. If the pins of the 3-wire SPI interface are multiplexed with the RGB interface, set this parameter to `1`
         },
     };

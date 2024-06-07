@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.1.0 - 2024-05-06
+
+### Enhancements:
+
+* Support MIPI-DSI interface
+
 ## v1.0.1 - 2024-03-25
 
 ### bugfix

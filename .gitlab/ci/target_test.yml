@@ -391,26 +391,6 @@ components_test_esp_lcd_spd2010:
     TEST_FOLDER: components/display/lcd/esp_lcd_spd2010
     TEST_ENV: esp32_s3_lcd_ev_board
 
-components_test_esp_lcd_st7701:
-  extends:
-    - .pytest_template
-    - .rules:build:components_display_lcd_esp_lcd_st7701_test_apps
-  needs:
-    - job: "build_components_display_lcd_esp_lcd_st7701_test_apps"
-      artifacts: true
-      optional: false
-  parallel:
-    matrix:
-        - IDF_VERSION: "5.1"
-  tags:
-    - esp32s3
-    - esp32s3_lcd_ev
-  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
-  variables:
-    TEST_TARGET: esp32s3
-    TEST_FOLDER: components/display/lcd/esp_lcd_st7701
-    TEST_ENV: esp32_s3_lcd_ev_board
-
 components_test_esp_lcd_st77903_qspi:
   extends:
     - .pytest_template

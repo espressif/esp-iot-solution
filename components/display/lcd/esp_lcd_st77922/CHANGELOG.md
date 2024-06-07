@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.1.0 - 2024-5-15
+
+### Enhancements:
+
+* Support RGB interface
+
 ## v0.0.3 - 2024-3-27
 
 ### Enhancements:

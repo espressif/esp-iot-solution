@@ -119,6 +119,87 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
     esp_lcd_panel_disp_on_off(panel_handle, true);
 ```
 
+### RGB Interface
+
+```c
+        ESP_LOGI(TAG, "Install 3-wire SPI panel IO");
+        spi_line_config_t line_config = {
+            .cs_io_type = IO_TYPE_GPIO,
+            .cs_expander_pin = EXAMPLE_PIN_NUM_LCD_SPI_CS,
+            .scl_io_type = IO_TYPE_GPIO,
+            .scl_expander_pin = EXAMPLE_PIN_NUM_LCD_SPI_SCK,
+            .sda_io_type = IO_TYPE_GPIO,
+            .sda_expander_pin = EXAMPLE_PIN_NUM_LCD_SPI_SDO,
+            .io_expander = NULL,
+        };
+        esp_lcd_panel_io_3wire_spi_config_t io_config = ST77922_PANEL_IO_3WIRE_SPI_CONFIG(line_config, 0);
+        EXAMPLE_ESP_OK(esp_lcd_new_panel_io_3wire_spi(&io_config, &io_handle));
+
+/**
+ * Uncomment these line if use custom initialization commands.
+ * The array should be declared as static const and positioned outside the function.
+ */
+// static const st77922_lcd_init_cmd_t lcd_init_cmds[] = {
+// //  {cmd, { data }, data_size, delay_ms}
+// {0x28, (uint8_t []){0x00}, 0, 0},
+// {0x10, (uint8_t []){0x00}, 0, 0},
+// {0x2A, (uint8_t []){0x00, 0x00, 0x02, 0x13}, 4, 0},
+// {0x2B, (uint8_t []){0x00, 0x00, 0x01, 0x2B}, 4, 0},
+//     ...
+// };
+
+        ESP_LOGI(TAG, "Install st77922 panel driver");
+        esp_lcd_rgb_panel_config_t rgb_config = {
+            .clk_src = LCD_CLK_SRC_DEFAULT,
+            .psram_trans_align = 64,
+            .data_width = 8,
+            .bits_per_pixel = 24,
+            .de_gpio_num = EXAMPLE_PIN_NUM_LCD_RGB_DE,
+            .pclk_gpio_num = EXAMPLE_PIN_NUM_LCD_RGB_PCLK,
+            .vsync_gpio_num = EXAMPLE_PIN_NUM_LCD_RGB_VSYNC,
+            .hsync_gpio_num = EXAMPLE_PIN_NUM_LCD_RGB_HSYNC,
+            .disp_gpio_num = EXAMPLE_PIN_NUM_LCD_RGB_DISP,
+            .data_gpio_nums = {
+                EXAMPLE_PIN_NUM_LCD_RGB_DATA0,
+                EXAMPLE_PIN_NUM_LCD_RGB_DATA1,
+                EXAMPLE_PIN_NUM_LCD_RGB_DATA2,
+                EXAMPLE_PIN_NUM_LCD_RGB_DATA3,
+                EXAMPLE_PIN_NUM_LCD_RGB_DATA4,
+                EXAMPLE_PIN_NUM_LCD_RGB_DATA5,
+                EXAMPLE_PIN_NUM_LCD_RGB_DATA6,
+                EXAMPLE_PIN_NUM_LCD_RGB_DATA7,
+            },
+            .timings = ST77922_480_480_PANEL_60HZ_RGB_TIMING(),
+            .flags.fb_in_psram = 1,
+            .bounce_buffer_size_px = EXAMPLE_LCD_H_RES * 10,
+        };
+        rgb_config.timings.h_res = EXAMPLE_LCD_H_RES;
+        rgb_config.timings.v_res = EXAMPLE_LCD_V_RES;
+        st77922_vendor_config_t vendor_config = {
+            .rgb_config = &rgb_config,
+            .flags = {
+                .use_rgb_interface = 1,
+                .enable_io_multiplex = 0,         /**
+                                                * Set to 1 if panel IO is no longer needed after LCD initialization.
+                                                * If the panel IO pins are sharing other pins of the RGB interface to save GPIOs,
+                                                * Please set it to 1 to release the pins.
+                                                */
+                .mirror_by_cmd = 1,             // Set to 0 if `enable_io_multiplex` is enabled
+            },
+        };
+        const esp_lcd_panel_dev_config_t panel_config = {
+            .reset_gpio_num = EXAMPLE_PIN_NUM_LCD_RST,
+            .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_BGR,
+            .bits_per_pixel = EXAMPLE_LCD_BIT_PER_PIXEL,
+            .vendor_config = &vendor_config,
+        };
+        EXAMPLE_ESP_OK(esp_lcd_new_panel_st77922(io_handle, &panel_config, &panel_handle));
+        EXAMPLE_ESP_OK(esp_lcd_panel_reset(panel_handle));
+        EXAMPLE_ESP_OK(esp_lcd_panel_init(panel_handle));
+        EXAMPLE_ESP_OK(esp_lcd_panel_disp_on_off(panel_handle, true));
+```
+
+
 ## Notes
 
 * When using `esp_panel_lcd_draw_bitmap()` to refresh the screen, ensure that both `x_start` and `x_end` are divisible by `4`. This is a requirement of ST77922. For LVGL, register the following function into `rounder_cb` of `lv_disp_drv_t` to round the coordinates.

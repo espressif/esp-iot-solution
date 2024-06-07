@@ -69,8 +69,8 @@ It's recommended to use the [esp_lcd_panel_io_additions](https://components.espr
         // .init_cmds = lcd_init_cmds,         // Uncomment these line if use custom initialization commands
         // .init_cmds_size = sizeof(lcd_init_cmds) / sizeof(st77903_lcd_init_cmd_t),
         .flags = {
-            .mirror_by_cmd = 0,             // Only work when `auto_del_panel_io` is set to 0
-            .auto_del_panel_io = 1,         /**
+            .mirror_by_cmd = 1,             // Only work when `enable_io_multiplex` is set to 0
+            .enable_io_multiplex = 0,       /**
                                              * Send initialization commands and delete the panel IO instance during creation if set to 1.
                                              * This flag is only used when `use_rgb_interface` is set to 1.
                                              * If the panel IO pins are sharing other pins of the RGB interface to save GPIOs,
@@ -85,9 +85,9 @@ It's recommended to use the [esp_lcd_panel_io_additions](https://components.espr
         .vendor_config = &vendor_config,
     };
     ESP_ERROR_CHECK(esp_lcd_new_panel_st77903(io_handle, &panel_config, &panel_handle));    /**
-                                                                                             * Only create RGB when `auto_del_panel_io` is set to 0,
+                                                                                             * Only create RGB when `enable_io_multiplex` is set to 0,
                                                                                              * or initialize ST77903 meanwhile
                                                                                              */
-    ESP_ERROR_CHECK(esp_lcd_panel_reset(panel_handle));     // Only reset RGB when `auto_del_panel_io` is set to 1, or reset ST77903 meanwhile
-    ESP_ERROR_CHECK(esp_lcd_panel_init(panel_handle));      // Only initialize RGB when `auto_del_panel_io` is set to 1, or initialize ST77903 meanwhile
+    ESP_ERROR_CHECK(esp_lcd_panel_reset(panel_handle));     // Only reset RGB when `enable_io_multiplex` is set to 1, or reset ST77903 meanwhile
+    ESP_ERROR_CHECK(esp_lcd_panel_init(panel_handle));      // Only initialize RGB when `enable_io_multiplex` is set to 1, or initialize ST77903 meanwhile
 ```

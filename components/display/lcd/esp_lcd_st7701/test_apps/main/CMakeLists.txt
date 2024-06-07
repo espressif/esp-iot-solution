@@ -1,1 +1,3 @@
-idf_component_register(SRCS "test_esp_lcd_st7701.c")
+idf_component_register(SRC_DIRS "."
+                       INCLUDE_DIRS "."
+                       WHOLE_ARCHIVE)

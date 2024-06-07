@@ -68,6 +68,18 @@
 .patterns-components_display_lcd_esp_lcd_axs15231b: &patterns-components_display_lcd_esp_lcd_axs15231b
   - "components/display/lcd/esp_lcd_axs15231b/**/*"
 
+.patterns-components_display_lcd_esp_lcd_ek79007: &patterns-components_display_lcd_esp_lcd_ek79007
+  - "components/display/lcd/esp_lcd_ek79007/**/*"
+
+.patterns-components_display_lcd_esp_lcd_jd9165: &patterns-components_display_lcd_esp_lcd_jd9165
+  - "components/display/lcd/esp_lcd_jd9165/**/*"
+
+.patterns-components_display_lcd_esp_lcd_jd9365: &patterns-components_display_lcd_esp_lcd_jd9365
+  - "components/display/lcd/esp_lcd_jd9365/**/*"
+
+.patterns-components_display_lcd_esp_lcd_axs15231b: &patterns-components_display_lcd_esp_lcd_axs15231b
+  - "components/display/lcd/esp_lcd_axs15231b/**/*"
+
 .patterns-components_display_lcd_esp_lcd_gc9b71: &patterns-components_display_lcd_esp_lcd_gc9b71
   - "components/display/lcd/esp_lcd_gc9b71/**/*"
 
@@ -1388,6 +1400,39 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_display_lcd_esp_lcd_axs15231b
+
+.rules:build:components_display_lcd_esp_lcd_ek79007_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_display_lcd_esp_lcd_ek79007
+
+.rules:build:components_display_lcd_esp_lcd_jd9165_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_display_lcd_esp_lcd_jd9165
+
+.rules:build:components_display_lcd_esp_lcd_jd9365_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_display_lcd_esp_lcd_jd9365
 
 .rules:build:components_display_lcd_esp_lcd_gc9b71_test_apps:
   rules:
