@@ -21,6 +21,8 @@
 
 #include "bootloader_custom_utility.h"
 
+#include "bootloader_custom_image_format.h"
+
 #ifdef CONFIG_BOOTLOADER_DECOMPRESSOR_XZ
 #include "bootloader_decompressor_xz.h"
 #endif
@@ -153,14 +155,20 @@ int bootloader_custom_ota_main(bootloader_state_t *bs, int boot_index)
     int ota_index = 0; // By default, the extracted data is always placed in partition app_0
     esp_partition_pos_t pos;
 #ifndef CONFIG_ENABLE_LEGACY_ESP_BOOTLOADER_PLUS_V2_SUPPORT
+    pos = bs->ota[boot_index]; // Get the partition pos of the current partition
+
+    // Check if this is standard image compiled from IDF
+    if (bootloader_custom_ota_get_header_type(&pos) == OTA_IMAGE_TYPE_1) {
+        // If standard IDF image, quick boot from this boot index
+        return boot_index;
+    }
+
     const int last_run_index = 0; // Default app_0 partition index = 0
     // If not boot from the last partition, just do the quick boot from this boot index
     if ((boot_index + 1) != bs->app_count) {
         return boot_index;
     }
-
-    // Get the partition pos of the downloaded compressed image
-    pos = bs->ota[boot_index];
+    // If not returned above, the partition `pos` is of the downloaded compressed image
 #else
     if (boot_index <= FACTORY_INDEX) {
         ota_index = 0;
