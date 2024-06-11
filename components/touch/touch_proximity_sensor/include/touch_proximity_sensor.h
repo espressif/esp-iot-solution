@@ -23,7 +23,7 @@ typedef enum {
 typedef struct {
     uint32_t channel_num;                           /*!< Number of touch proximity sensor channels */
     uint32_t channel_list[TOUCH_PROXIMITY_NUM_MAX]; /*!< Touch proximity sensor channel list */
-    uint32_t response_ms;                           /*!< Response time in milliseconds */
+    uint32_t meas_count;                            /*!< Accumulated measurement count */
     float smooth_coef;                              /*!< Smoothing coefficient */
     float baseline_coef;                            /*!< Baseline coefficient */
     float max_p;                                    /*!< Maximum effective positive change rate */
@@ -44,12 +44,13 @@ typedef struct touch_proximity_sensor_t *touch_proximity_handle_t;
 
 #define DEFAULTS_PROX_CONFIGS()\
 {\
-    .response_ms = 100,\
+    .meas_count = 50,\
     .smooth_coef = 0.2,\
-    .baseline_coef = 0.05,\
+    .baseline_coef = 0.1,\
     .max_p = 0.2,\
     .min_n = 0.08,\
-    .hysteresis_p = 0.05,\
+    .threshold_n[0] = 0.002,\
+    .hysteresis_p = 0.2,\
     .noise_p = 0.001,\
     .noise_n = 0.001,\
     .debounce_p = 2,\

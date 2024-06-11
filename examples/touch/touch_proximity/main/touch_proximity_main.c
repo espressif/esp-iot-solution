@@ -36,20 +36,24 @@ void example_proxi_callback(uint32_t channel, proxi_evt_t event, void *cb_arg)
 
 void app_main(void)
 {
-    buzzer_driver_install(IO_BUZZER_CTRL);
+    // buzzer_driver_install(IO_BUZZER_CTRL);
     proxi_config_t config = (proxi_config_t)DEFAULTS_PROX_CONFIGS();
     config.channel_num = 1;
-    config.response_ms = 20;
     config.channel_list[0] = TOUCH_PAD_NUM8;
-    config.max_p = 0.01;
-    config.min_n = 0.01;
-    config.baseline_coef = 0.25;
-    config.threshold_p[0] = 0.00015;
-    config.threshold_n[0] = 0.0002;
+    config.meas_count = 50;
+    config.smooth_coef = 0.2;
+    config.baseline_coef = 0.1;
+    config.max_p = 0.2;
+    config.min_n = 0.08;
+    config.threshold_p[0] = 0.002;
+    config.threshold_n[0] = 0.002;
     config.hysteresis_p = 0.2;
-    config.noise_p = 0.01;
-    config.noise_n = 0.01;
-    config.debounce_p = 6;
+    config.noise_p = 0.001;
+    config.noise_n = 0.001;
+    config.debounce_p = 2;
+    config.debounce_n = 1;
+    config.reset_p = 1000;
+    config.reset_n = 3;
     esp_err_t ret = touch_proximity_sensor_create(&config, &s_touch_proximity_sensor, &example_proxi_callback, NULL);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "touch proximity sense create failed");

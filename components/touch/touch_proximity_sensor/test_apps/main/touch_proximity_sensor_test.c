@@ -79,7 +79,7 @@ TEST_CASE("touch proximity sensor APIs test", "[touch_proximity_sensor][API]")
 {
     proxi_config_t config = (proxi_config_t)DEFAULTS_PROX_CONFIGS();
     config.channel_num = 1;
-    config.response_ms = 50;
+    config.meas_count = 50;
     config.channel_list[0] = TOUCH_PAD_NUM8;
     config.threshold_p[0] = 0.004;
     config.threshold_n[0] = 0.004;
@@ -107,7 +107,7 @@ TEST_CASE("touch proximity sensor create & start test", "[ignore][touch_proximit
     }
     proxi_config_t config = (proxi_config_t)DEFAULTS_PROX_CONFIGS();
     config.channel_num = 1;
-    config.response_ms = 50;
+    config.meas_count = 50;
     config.channel_list[0] = TOUCH_PAD_NUM8;
     config.threshold_p[0] = 0.004;
     config.threshold_n[0] = 0.004;
