@@ -52,7 +52,7 @@ NTC 数字温度转换参数，公式为: Rt = R * EXP (B * (1/T1-1/T2))
         .r25_ohm = 10000,
         .fixed_ohm = 10000,
         .vdd_mv = 3300,
-        .circuit_mode = CIRCUIT_MODE_NTC_VCC,
+        .circuit_mode = CIRCUIT_MODE_NTC_GND,
         .atten = ADC_ATTEN_DB_11,
         .channel = ADC_CHANNEL_3,
         .unit = ADC_UNIT_1
@@ -64,8 +64,10 @@ NTC 数字温度转换参数，公式为: Rt = R * EXP (B * (1/T1-1/T2))
     ESP_ERROR_CHECK(ntc_dev_get_adc_handle(ntc, &adc_handle));
 
     //get ntc temperature
-    float temp = ntc_dev_get_temperature(ntc);
-    ESP_LOGI(TAG, "NTC temperature = %.2f ℃", temp);
+    float temp = 0.0;
+    if (ntc_dev_get_temperature(ntc, &temp) == ESP_OK) {
+        ESP_LOGI(TAG, "NTC temperature = %.2f ℃", temp);
+    }
     
     //delete handle
     TEST_ASSERT_EQUAL(ESP_OK, ntc_dev_delete(ntc));

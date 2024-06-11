@@ -80,11 +80,14 @@ esp_err_t ntc_dev_delete(ntc_device_handle_t ntc_handle);
  * @brief Get the ntc temperature
  *
  * @param ntc_handle A ntc driver handle
+ * @param temperature NTC temperature
  *
- * @return NTC temperature
+ * @return
+ *      - ESP_OK  Success
+ *      - ESP_FAIL Failure
  *
  */
-float ntc_dev_get_temperature(ntc_device_handle_t ntc_handle);
+esp_err_t ntc_dev_get_temperature(ntc_device_handle_t ntc_handle, float *temperature);
 
 #ifdef __cplusplus
 }

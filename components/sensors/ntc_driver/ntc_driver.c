@@ -167,27 +167,25 @@ esp_err_t ntc_dev_delete(ntc_device_handle_t ntc_handle)
     return ret;
 }
 
-static void ntc_voltage_to_temperature(ntc_device_handle_t ntc_handle, uint32_t voltage_mv, float *temperature)
+static esp_err_t ntc_voltage_to_temperature(ntc_device_handle_t ntc_handle, uint32_t voltage_mv, float *temperature)
 {
     ntc_driver_dev_t *ndd = (ntc_driver_dev_t *)ntc_handle;
-    if (ndd->s_ntc_config.b_value) {
+    if (ndd->s_ntc_config.b_value && voltage_mv) {
         uint32_t r_ntc_ohm = 0;
         if (ndd->s_ntc_config.circuit_mode == CIRCUIT_MODE_NTC_VCC) {
             r_ntc_ohm = (ndd->s_ntc_config.vdd_mv - voltage_mv) * ndd->s_ntc_config.fixed_ohm / voltage_mv;
         } else if (ndd->s_ntc_config.circuit_mode == CIRCUIT_MODE_NTC_GND) {
             r_ntc_ohm = voltage_mv * ndd->s_ntc_config.fixed_ohm / (ndd->s_ntc_config.vdd_mv - voltage_mv);
         }
-        float temp = 1.0 / (log(1.0 * r_ntc_ohm / ndd->s_ntc_config.r25_ohm) * 1.0 / ndd->s_ntc_config.b_value + 1.0 / 298.15) - 273.0;
-        *temperature = temp;
+        *temperature = 1.0 / (log(1.0 * r_ntc_ohm / ndd->s_ntc_config.r25_ohm) * 1.0 / ndd->s_ntc_config.b_value + 1.0 / 298.15) - 273.0;
+        return ESP_OK;
     }
+    return ESP_FAIL;
 }
 
-float ntc_dev_get_temperature(ntc_device_handle_t ntc_handle)
+esp_err_t ntc_dev_get_temperature(ntc_device_handle_t ntc_handle, float *temperature)
 {
-    int voltage = 0;
-    int adc_raw = 0;
-    float temperature = 0.0;
-    esp_err_t ret = ESP_OK;
+    int voltage, adc_raw = 0;
 
     if (ntc_handle == NULL) {
         ESP_LOGW(TAG, "Pointer of handle is invalid");
@@ -195,12 +193,14 @@ float ntc_dev_get_temperature(ntc_device_handle_t ntc_handle)
     }
 
     ntc_driver_dev_t *ndd = (ntc_driver_dev_t *)ntc_handle;
-    ret = adc_oneshot_read(ndd->adc_handle, ndd->s_ntc_config.channel, &adc_raw);
+    esp_err_t ret = adc_oneshot_read(ndd->adc_handle, ndd->s_ntc_config.channel, &adc_raw);
     NTC_DRIVER_CHECK(ret == ESP_OK, "adc oneshot read fail", ESP_FAIL);
+    NTC_DRIVER_CHECK(adc_raw != 0, "adc raw data equal to 0", ESP_FAIL);
 
     ret = adc_cali_raw_to_voltage(ndd->adc_cali_handle, adc_raw, &voltage);
     NTC_DRIVER_CHECK(ret == ESP_OK, "adc calibration raw to voltage fail", ESP_FAIL);
-    ntc_voltage_to_temperature(ndd, voltage, &temperature);
+    NTC_DRIVER_CHECK(voltage != 0, "voltage equal to 0", ESP_FAIL);
+    ntc_voltage_to_temperature(ndd, voltage, temperature);
 
-    return temperature;
+    return ESP_OK;
 }

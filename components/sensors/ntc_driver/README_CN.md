@@ -27,7 +27,7 @@ NTC Driver 适用电路：
         .r25_ohm = 10000,
         .fixed_ohm = 10000,
         .vdd_mv = 3300,
-        .circuit_mode = CIRCUIT_MODE_NTC_VCC,
+        .circuit_mode = CIRCUIT_MODE_NTC_GND,
         .atten = ADC_ATTEN_DB_11,
         .channel = ADC_CHANNEL_3,
         .unit = ADC_UNIT_1
@@ -40,8 +40,10 @@ NTC Driver 适用电路：
     ESP_ERROR_CHECK(ntc_dev_get_adc_handle(ntc, &adc_handle));
 
     //3.调用温度函数
-    float temp = ntc_dev_get_temperature(ntc);
-    ESP_LOGI(TAG, "NTC temperature = %.2f ℃", temp);
+    float temp = 0.0;
+    if (ntc_dev_get_temperature(ntc, &temp) == ESP_OK) {
+        ESP_LOGI(TAG, "NTC temperature = %.2f ℃", temp);
+    }
     ESP_ERROR_CHECK(ntc_dev_delete(ntc));
 ```
 
