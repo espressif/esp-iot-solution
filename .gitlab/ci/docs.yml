@@ -9,9 +9,12 @@ variables:
   dependencies: []
   script:
     - cd docs
+    - ./check_lang_folder_sync.sh
     - python -m pip install -r requirements.txt
     - build-docs -bs $DOC_BUILDERS -l $DOCLANG build
-    - ./check_lang_folder_sync.sh
+  parallel:
+    matrix:
+      - DOCLANG: ["en", "zh_CN"]
 
 build_docs_html:
   extends:
@@ -25,7 +28,16 @@ build_docs_html:
     expire_in: 4 days
   variables:
     DOC_BUILDERS: "html"
-  parallel:
-    matrix:
-      - DOCLANG: "en"
-      - DOCLANG: "zh_CN"
+
+build_docs_pdf:
+  extends:
+    - .build_docs_template
+    - .rules:build:docs
+  artifacts:
+    when: always
+    paths:
+      - docs/_build/*/*/latex/*
+      - docs/_build/*/*/*.txt
+    expire_in: 4 days
+  variables:
+    DOC_BUILDERS: "latex"

@@ -309,13 +309,19 @@ Rendering refers to the process by which the main controller calculates and gene
 
 The rendering frame rate depends on the performance of the main controller and is also influenced by the complexity of the animation. For example, animations with localized changes usually have a higher rendering frame rate than those with full-screen changes, and pure color fills typically have a higher rendering frame rate for layer blending. Therefore, the rendering frame rate is generally not fixed during image changes, as shown in the runtime FPS statistics of LVGL.
 
-.. figure:: https://dl.espressif.com/AE/esp-iot-solution/lcd_fps_lvgl.gif
-    :height: 504 px
-    :width: 453 px
-    :align: center
-    :alt: Runtime FPS statistics of LVGL
+.. only:: latex
 
-    Runtime FPS statistics of LVGL
+  See the `GIF for runtime FPS statistics of LVGL <https://dl.espressif.com/AE/esp-iot-solution/lcd_fps_lvgl.gif>`_.
+
+.. only:: html
+
+  .. figure:: https://dl.espressif.com/AE/esp-iot-solution/lcd_fps_lvgl.gif
+      :height: 504 px
+      :width: 453 px
+      :align: center
+      :alt: Runtime FPS statistics of LVGL
+
+      Runtime FPS statistics of LVGL
 
 Transmission
 ^^^^^^^^^^^^^^^

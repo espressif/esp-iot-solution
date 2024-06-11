@@ -22,17 +22,29 @@ Phenomenon
 
 Screen tearing, also known as tearing effect, is a common issue in LCD applications, typically occurring when there is a full-screen or large area change in the GUI. The phenomenon involves displaying different parts of several frames simultaneously on the LCD, causing noticeable visual discontinuities in the image, significantly degrading the visual experience of the GUI. Below are the visual effects of running the LVGL Music example with and without screen tearing.
 
-.. figure:: https://dl.espressif.com/AE/esp-iot-solution/screen_tear_with_tear.gif
-    :align: center
-    :alt: The visual effect of screen tearing occurring
+.. only:: latex
 
-    The visual effect of screen tearing occurring
+  See the `visual effect of screen tearing occurring <https://dl.espressif.com/AE/esp-iot-solution/screen_tear_with_tear.gif>`_.
 
-.. figure:: https://dl.espressif.com/AE/esp-iot-solution/screen_tear_without_tear.gif
-    :align: center
-    :alt: The visual effect diagram without screen tearing
+.. only:: html
 
-    The visual effect diagram without screen tearing
+    .. figure:: https://dl.espressif.com/AE/esp-iot-solution/screen_tear_with_tear.gif
+        :align: center
+        :alt: The visual effect of screen tearing occurring
+
+        The visual effect of screen tearing occurring
+
+.. only:: latex
+
+  See the `visual effect diagram without screen tearing <https://dl.espressif.com/AE/esp-iot-solution/screen_tear_without_tear.gif>`_.
+
+.. only:: html
+
+    .. figure:: https://dl.espressif.com/AE/esp-iot-solution/screen_tear_without_tear.gif
+        :align: center
+        :alt: The visual effect diagram without screen tearing
+
+        The visual effect diagram without screen tearing
 
 Reason
 ^^^^^^
@@ -54,37 +66,62 @@ When the main controller does not perform any synchronization operations during 
 
 1. Assuming that the writing speed is slower than the reading speed (using a speed ratio of 1:2 as an example), during the process of the main controller writing the second frame of the image, the reading position will surpass the writing position. This results in the screen only reading the front half of the second frame of the image, leading to a torn display image. Below is a schematic diagram of the demonstration process.
 
-.. figure:: https://dl.espressif.com/AE/esp-iot-solution/screen_tear_no_sync_1.gif
-    :align: center
-    :alt:  Schematic diagram of asynchronous writing and reading with a speed ratio of 1:2
+.. only:: latex
 
-    Schematic diagram of asynchronous writing and reading with a speed ratio of 1:2
+  See the `schematic diagram of asynchronous writing and reading with a speed ratio of 1:2 <https://dl.espressif.com/AE/esp-iot-solution/screen_tear_no_sync_1.gif>`_.
+
+
+.. only:: html
+
+    .. figure:: https://dl.espressif.com/AE/esp-iot-solution/screen_tear_no_sync_1.gif
+        :align: center
+        :alt:  Schematic diagram of asynchronous writing and reading with a speed ratio of 1:2
+
+        Schematic diagram of asynchronous writing and reading with a speed ratio of 1:2
 
 2. Assuming that the writing speed is faster than the reading speed (using a speed ratio of 2:1 as an example), during the process of the screen reading the first frame of the image, the writing position will surpass the reading position. This results in the screen reading the back half of the second frame of the image, leading to a torn display image. Below is a schematic diagram of the demonstration process.
 
-.. figure:: https://dl.espressif.com/AE/esp-iot-solution/screen_tear_no_sync_2.gif
-    :align: center
-    :alt:  Schematic diagram of asynchronous writing and reading with a speed ratio of 2:1
+.. only:: latex
 
-    Schematic diagram of asynchronous writing and reading with a speed ratio of 2:1
+  See the `schematic diagram of asynchronous writing and reading with a speed ratio of 2:1 <https://dl.espressif.com/AE/esp-iot-solution/screen_tear_no_sync_2.gif>`_.
+
+.. only:: html
+
+    .. figure:: https://dl.espressif.com/AE/esp-iot-solution/screen_tear_no_sync_2.gif
+        :align: center
+        :alt:  Schematic diagram of asynchronous writing and reading with a speed ratio of 2:1
+
+        Schematic diagram of asynchronous writing and reading with a speed ratio of 2:1
 
 When the main controller performs synchronization operations during writing, meaning the initial position and time of writing are synchronized with reading, screen tearing may still occur if the speeds of writing and reading do not match.
 
 1. Assuming that the writing speed is less than half of the reading speed (using a speed ratio of 1:3 as an example), during the process of the main controller writing the second frame of the image, the reading position will surpass the writing position. This results in the screen only reading the front half of the second frame of the image, leading to a torn display image. Below is a schematic diagram of the demonstration process.
 
-.. figure:: https://dl.espressif.com/AE/esp-iot-solution/screen_tear_sync_1.gif
-    :align: center
-    :alt:  Schematic diagram of synchronous writing and reading with a speed ratio of 1:3
+.. only:: latex
 
-    Schematic diagram of synchronous writing and reading with a speed ratio of 1:3
+  See the `schematic diagram of synchronous writing and reading with a speed ratio of 1:3 <https://dl.espressif.com/AE/esp-iot-solution/screen_tear_sync_1.gif>`_.
+
+.. only:: html
+
+    .. figure:: https://dl.espressif.com/AE/esp-iot-solution/screen_tear_sync_1.gif
+        :align: center
+        :alt:  Schematic diagram of synchronous writing and reading with a speed ratio of 1:3
+
+        Schematic diagram of synchronous writing and reading with a speed ratio of 1:3
 
 2. Assuming that the writing speed is greater than or equal to half of the reading speed (using a speed ratio of 1:2 as an example), during the process of the main controller writing the second frame of the image, the reading position will not overlap with the writing position. This allows the screen to read the complete second frame of the image, ensuring that the display image does not tear. Below is a schematic diagram of the demonstration process.
 
-.. figure:: https://dl.espressif.com/AE/esp-iot-solution/screen_tear_sync_2.gif
-    :align: center
-    :alt:  Schematic diagram of synchronous writing and reading with a speed ratio of 1:2
+.. only:: latex
 
-    Schematic diagram of synchronous writing and reading with a speed ratio of 1:2
+  See the `schematic diagram of synchronous writing and reading with a speed ratio of 1:2 <https://dl.espressif.com/AE/esp-iot-solution/screen_tear_sync_2.gif>`_.
+
+.. only:: html
+
+    .. figure:: https://dl.espressif.com/AE/esp-iot-solution/screen_tear_sync_2.gif
+        :align: center
+        :alt:  Schematic diagram of synchronous writing and reading with a speed ratio of 1:2
+
+        Schematic diagram of synchronous writing and reading with a speed ratio of 1:2
 
 Based on the assumptions above, the main reasons for screen tearing include the following two points:
 
@@ -117,11 +154,17 @@ The method based on multiple GRAM
 
 This method is suitable for the situation where GRAM is in the main controller, and requires the main controller to be able to freely adjust the target GRAM for screen reading. The working principle is: by adding additional GRAM to avoid writing and reading operating on the same GRAM simultaneously. The following introduces the anti-tearing method based on dual GRAM, and the schematic diagram of the demonstration process is as follows.
 
-.. figure:: https://dl.espressif.com/AE/esp-iot-solution/screen_tear_multi_gram.gif
-    :align: center
-    :alt:  Schematic diagram of anti-tearing implemented based on dual GRAM
+.. only:: latex
 
-    Schematic diagram of anti-tearing implemented based on dual GRAM
+  See the `schematic diagram of anti-tearing implemented based on dual GRAM <https://dl.espressif.com/AE/esp-iot-solution/screen_tear_multi_gram.gif>`_.
+
+.. only:: html
+
+    .. figure:: https://dl.espressif.com/AE/esp-iot-solution/screen_tear_multi_gram.gif
+        :align: center
+        :alt:  Schematic diagram of anti-tearing implemented based on dual GRAM
+
+        Schematic diagram of anti-tearing implemented based on dual GRAM
 
 From the diagram, it can be seen that initially the main controller is ready to write the second frame image into GRAM2, while the screen is ready to read the first frame image from GRAM1. After the main controller completes the writing, it first needs to set the screen to read from GRAM2 for the next frame, and then wait for the screen to finish reading the current frame image. After the screen finishes reading, it then starts reading the second frame image from GRAM2, while the main controller also starts writing the third frame image into GRAM1. Therefore, writing and reading will not operate on the same GRAM simultaneously, thus avoiding screen tearing.
 
@@ -143,11 +186,17 @@ The method based on the TE signal
 
 This method is suitable for the situation where GRAM is inside the LCD, and requires the LCD to provide an external TE signal pin. The working principle is: controlling the initial state of writing through the TE signal to keep it synchronized with reading, while ensuring that the writing speed is not less than half of the reading speed, thereby avoiding overlap between writing and reading at the middle position of the GRAM. The following introduces the anti-tearing method based on the TE signal, and the schematic diagram of the demonstration process is as follows.
 
-.. figure:: https://dl.espressif.com/AE/esp-iot-solution/screen_tear_te.gif
-    :align: center
-    :alt:  Schematic diagram of anti-tearing implemented based on the TE signal
+.. only:: latex
 
-    Schematic diagram of anti-tearing implemented based on the TE signal
+  See the `schematic diagram of anti-tearing implemented based on the TE signal <https://dl.espressif.com/AE/esp-iot-solution/screen_tear_te.gif>`_.
+
+.. only:: html
+
+    .. figure:: https://dl.espressif.com/AE/esp-iot-solution/screen_tear_te.gif
+        :align: center
+        :alt:  Schematic diagram of anti-tearing implemented based on the TE signal
+
+        Schematic diagram of anti-tearing implemented based on the TE signal
 
 From the diagram, it can be seen that initially the main controller is waiting for the TE signal, while the screen is preparing to enter the blanking area (Porch). When the screen starts reading the first frame image from the GRAM, it sends the TE signal to the main controller. Upon receiving the TE signal, the main controller starts writing the second frame image to the GRAM, ensuring that the ratio of writing speed to reading speed is 2:3. Therefore, writing and reading will not overlap at the middle position of the GRAM, thus avoiding screen tearing.
 

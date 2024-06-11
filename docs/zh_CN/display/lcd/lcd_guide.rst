@@ -309,13 +309,19 @@ RGB 接口
 
 渲染帧率一方面取决于主控的性能，另一方面也受动画复杂程度的影响，比如，局部变化的动画通常比全屏变化的动画渲染帧率更高，纯色填充通常图层混叠的渲染帧率更高。因此，渲染帧率在图像变化时一般是不固定的，如 LVGL 运行时统计的 FPS。
 
-.. figure:: https://dl.espressif.com/AE/esp-iot-solution/lcd_fps_lvgl.gif
-    :height: 504 px
-    :width: 453 px
-    :align: center
-    :alt: LVGL 运行时统计的 FPS
+.. only:: latex
 
-    LVGL 运行时统计的 FPS
+  参考 `LVGL 运行时统计的 FPS <https://dl.espressif.com/AE/esp-iot-solution/lcd_fps_lvgl.gif>`_.
+
+.. only:: html
+
+  .. figure:: https://dl.espressif.com/AE/esp-iot-solution/lcd_fps_lvgl.gif
+      :height: 504 px
+      :width: 453 px
+      :align: center
+      :alt: LVGL 运行时统计的 FPS
+
+      LVGL 运行时统计的 FPS
 
 传输
 ^^^^^^^^^^^^^^^
