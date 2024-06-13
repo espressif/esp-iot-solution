@@ -1,4 +1,4 @@
-version: "1.0.1"
+version: "1.0.2"
 targets:
   - esp32s2
   - esp32s3
@@ -13,11 +13,11 @@ issues: https://github.com/espressif/esp-iot-solution/issues
 dependencies:
   idf: ">=4.4"
   espressif/tinyusb:
-    version: ">=0.15.0~7"
+    version: ">=0.15.0~10"
     rules:
       - if: "idf_version >=5.0"
   leeebo/tinyusb_src:
-    version: ">=0.16.0~2"
+    version: ">=0.16.0~4"
     rules:
       - if: "idf_version >=4.4,<5.0"
   cmake_utilities: "*"

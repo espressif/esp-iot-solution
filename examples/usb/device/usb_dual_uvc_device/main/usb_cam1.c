@@ -47,13 +47,18 @@ static uvc_fb_t* camera_fb_get_cb(void *cb_ctx)
     video_frame_info_t info;
     size_t buf_size = UVC_MAX_FRAMESIZE_SIZE;
     avi_player_get_video_buffer((void **)&s_fb.buf, &buf_size, &info, pdMS_TO_TICKS(200));
+    ESP_LOGD(TAG, "Camera buf_size: %d", buf_size);
     uint64_t us = (uint64_t)esp_timer_get_time();
     s_fb.timestamp.tv_sec = us / 1000000UL;
     s_fb.timestamp.tv_usec = us % 1000000UL;
     s_fb.len = buf_size;
     s_fb.width = info.width;
     s_fb.height = info.height;
+#if CONFIG_FORMAT_MJPEG_CAM1
     s_fb.format = UVC_FORMAT_JPEG;
+#else
+    s_fb.format = UVC_FORMAT_H264;
+#endif
 
     if (s_fb.len > UVC_MAX_FRAMESIZE_SIZE) {
         ESP_LOGE(TAG, "Frame size %d is larger than max frame size %d", s_fb.len, UVC_MAX_FRAMESIZE_SIZE);
@@ -80,6 +85,7 @@ esp_err_t usb_cam1_init(void)
 {
     avi_player_config_t avi_cfg = {
         .avi_play_end_cb = avi_end_cb,
+        .buffer_size = UVC_MAX_FRAMESIZE_SIZE,
     };
 
     avi_player_init(avi_cfg);
@@ -108,7 +114,11 @@ esp_err_t usb_cam1_init(void)
     };
 
     ESP_LOGI(TAG, "Format List");
-    ESP_LOGI(TAG, "\tFormat(1) = %s", "MJPEG");
+#if CONFIG_FORMAT_MJPEG_CAM1
+    ESP_LOGI(TAG, "\tFormat(1) = %s", "H264");
+#else
+    ESP_LOGI(TAG, "\tFormat(1) = %s", "H264");
+#endif
     ESP_LOGI(TAG, "Frame List");
     ESP_LOGI(TAG, "\tFrame(1) = %d * %d @%dfps", UVC_FRAMES_INFO[index - 1][0].width, UVC_FRAMES_INFO[index - 1][0].height, UVC_FRAMES_INFO[index - 1][0].rate);
 #if CONFIG_UVC_CAM2_MULTI_FRAMESIZE

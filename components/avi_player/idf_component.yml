@@ -1,4 +1,4 @@
-version: "0.1.0"
+version: "0.1.1"
 description: Parse the video stream and audio stream of an AVI video file.
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/avi_player
 issues: https://github.com/espressif/esp-iot-solution/issues

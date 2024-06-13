@@ -147,7 +147,8 @@ static esp_err_t avi_player(void)
                              s_avi->config.user_data);
         }
 
-        uint16_t fps_time = 1000 * 1000 / s_avi->avi_data.AVI_file.vids_fps;
+        uint32_t fps_time = 1000 * 1000 / s_avi->avi_data.AVI_file.vids_fps;
+        ESP_LOGD(TAG, "vids_fps=%d", s_avi->avi_data.AVI_file.vids_fps);
         esp_timer_start_periodic(s_avi->timer_handle, fps_time);
 
         if (s_avi->avi_data.mode == PLAY_MEMORY) {
@@ -183,7 +184,7 @@ static esp_err_t avi_player(void)
                         .type = FRAME_TYPE_VIDEO,
                         .video_info.width = s_avi->avi_data.AVI_file.vids_width,
                         .video_info.height = s_avi->avi_data.AVI_file.vids_height,
-                        .video_info.frame_format = FORMAT_MJEPG,
+                        .video_info.frame_format = s_avi->avi_data.AVI_file.vids_format,
                     };
                     s_avi->config.video_cb(&data, s_avi->config.user_data);
                 }
@@ -289,7 +290,7 @@ esp_err_t avi_player_get_video_buffer(void **buffer, size_t *buffer_size, video_
     *buffer_size = s_avi->avi_data.str_size;
     info->width = s_avi->avi_data.AVI_file.vids_width;
     info->height = s_avi->avi_data.AVI_file.vids_height;
-    info->frame_format = FORMAT_MJEPG;
+    info->frame_format = s_avi->avi_data.AVI_file.vids_format;
     return ESP_OK;
 }
 

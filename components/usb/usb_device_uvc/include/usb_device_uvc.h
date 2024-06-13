@@ -19,6 +19,7 @@ extern "C" {
  */
 typedef enum {
     UVC_FORMAT_JPEG,            /*!< JPEG format */
+    UVC_FORMAT_H264,            /*!< H264 format */
 } uvc_format_t;
 
 /**

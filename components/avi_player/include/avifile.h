@@ -8,6 +8,7 @@
 #define __AVIFILE_H
 
 #include "avi_def.h"
+#include "avi_player.h"
 
 /** little_endian */
 #define RIFF_ID     _REV(0x52494646)
@@ -20,6 +21,7 @@
 #define STRF_ID     _REV(0x73747266)
 #define MOVI_ID     _REV(0x6d6f7669)
 #define MJPG_ID     _REV(0x4D4A5047)
+#define H264_ID     _REV(0x48323634)
 #define VIDS_ID     _REV(0x76696473)
 #define AUDS_ID     _REV(0x61756473)
 
@@ -48,6 +50,7 @@ typedef struct {
     uint16_t vids_fps;
     uint16_t vids_width;
     uint16_t vids_height;
+    video_frame_format vids_format;
 
     uint16_t auds_channels;
     uint16_t auds_sample_rate;

@@ -77,7 +77,7 @@ void tud_umount_cb(void)
 
 void tud_suspend_cb(bool remote_wakeup_en)
 {
-    (void) remote_wakeup_en;
+    (void)remote_wakeup_en;
 
     if (s_uvc_device.user_config[0].stop_cb) {
         s_uvc_device.user_config[0].stop_cb(s_uvc_device.user_config[0].cb_ctx);
@@ -113,8 +113,8 @@ static void video_task(void *arg)
 
     while (1) {
         if (!tud_video_n_streaming(0, 0)) {
-            already_start  = 0;
-            frame_num     = 0;
+            already_start = 0;
+            frame_num = 0;
             tx_busy = 0;
             vTaskDelay(1);
             continue;
@@ -303,11 +303,14 @@ esp_err_t uvc_device_init(void)
         return ESP_FAIL;
     }
 
-    xTaskCreatePinnedToCore(tusb_device_task, "TinyUSB", 4096, NULL, CONFIG_UVC_TINYUSB_TASK_PRIORITY, NULL, CONFIG_UVC_TINYUSB_TASK_CORE);
+    BaseType_t core_id = (CONFIG_UVC_TINYUSB_TASK_CORE < 0) ? tskNO_AFFINITY : CONFIG_UVC_TINYUSB_TASK_CORE;
+    xTaskCreatePinnedToCore(tusb_device_task, "TinyUSB", 4096, NULL, CONFIG_UVC_TINYUSB_TASK_PRIORITY, NULL, core_id);
 #if (CFG_TUD_VIDEO)
-    xTaskCreatePinnedToCore(video_task, "UVC", 4096, NULL, CONFIG_UVC_CAM1_TASK_PRIORITY, &s_uvc_device.uvc_task_hdl[0], CONFIG_UVC_CAM1_TASK_CORE);
+    core_id = (CONFIG_UVC_CAM1_TASK_CORE < 0) ? tskNO_AFFINITY : CONFIG_UVC_CAM1_TASK_CORE;
+    xTaskCreatePinnedToCore(video_task, "UVC", 4096, NULL, CONFIG_UVC_CAM1_TASK_PRIORITY, &s_uvc_device.uvc_task_hdl[0], core_id);
 #if CONFIG_UVC_SUPPORT_TWO_CAM
-    xTaskCreatePinnedToCore(video_task2, "UVC2", 4096, NULL, CONFIG_UVC_CAM2_TASK_PRIORITY, &s_uvc_device.uvc_task_hdl[1], CONFIG_UVC_CAM2_TASK_CORE);
+    core_id = (CONFIG_UVC_CAM2_TASK_CORE < 0) ? tskNO_AFFINITY : CONFIG_UVC_CAM2_TASK_CORE;
+    xTaskCreatePinnedToCore(video_task2, "UVC2", 4096, NULL, CONFIG_UVC_CAM2_TASK_PRIORITY, &s_uvc_device.uvc_task_hdl[1], core_id);
 #endif
 #endif
     ESP_LOGI(TAG, "UVC Device Start, Version: %d.%d.%d", USB_DEVICE_UVC_VER_MAJOR, USB_DEVICE_UVC_VER_MINOR, USB_DEVICE_UVC_VER_PATCH);

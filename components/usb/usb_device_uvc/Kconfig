@@ -40,6 +40,10 @@ menu "USB Device UVC"
             default FORMAT_MJPEG_CAM1
             config FORMAT_MJPEG_CAM1
                 bool "MJPEG"
+            config FORMAT_H264_CAM1
+                bool "H264"
+            config FORMAT_UNCOMPR_CAM1
+                bool "uncompressed"
         endchoice
 
         choice UVC_CAM1_XFER_MODE
@@ -110,6 +114,10 @@ menu "USB Device UVC"
             default FORMAT_MJPEG_CAM2
             config FORMAT_MJPEG_CAM2
                 bool "MJPEG"
+            config FORMAT_H264_CAM2
+                bool "H264"
+            config FORMAT_UNCOMPR_CAM2
+                bool "uncompressed"
         endchoice
 
         choice UVC_CAM2_XFER_MODE
@@ -171,6 +179,53 @@ menu "USB Device UVC"
             default y
             help
                 If enable, add VGA and HVGA to list
+
+    endmenu
+
+    menu "UVC_MULTI_FRAME_CONFIG"
+
+        menu  "FRAME_SIZE_1"
+            config UVC_MULTI_FRAME_WIDTH_1
+                int "Enable Multi Frame Size 1"
+                default 640
+
+            config UVC_MULTI_FRAME_HEIGHT_1
+                int "Enable Multi Frame Size 1"
+                default 480
+
+            config UVC_MULTI_FRAME_FPS_1
+                int "Enable Multi Frame Size 1"
+                default 15
+        endmenu
+
+        menu  "FRAME_SIZE_2"
+            config UVC_MULTI_FRAME_WIDTH_2
+                int "Enable Multi Frame Size 2"
+                default 480
+
+            config UVC_MULTI_FRAME_HEIGHT_2
+                int "Enable Multi Frame Size 2"
+                default 320
+
+            config UVC_MULTI_FRAME_FPS_2
+                int "Enable Multi Frame Size 2"
+                default 30
+        endmenu
+
+        menu  "FRAME_SIZE_3"
+            config UVC_MULTI_FRAME_WIDTH_3
+                int "Enable Multi Frame Size 3"
+                default 320
+
+            config UVC_MULTI_FRAME_HEIGHT_3
+                int "Enable Multi Frame Size 3"
+                default 240
+
+            config UVC_MULTI_FRAME_FPS_3
+                int "Enable Multi Frame Size 3"
+                default 30
+        endmenu
+
     endmenu
 
     menu "UVC Task Config"
@@ -206,4 +261,5 @@ menu "USB Device UVC"
             range -1 1
             depends on UVC_SUPPORT_TWO_CAM
     endmenu
+
 endmenu

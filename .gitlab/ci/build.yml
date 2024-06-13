@@ -627,12 +627,7 @@ build_example_usb_device_usb_dual_uvc_device:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_device_usb_dual_uvc_device
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.2
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/usb/device/usb_dual_uvc_device
 

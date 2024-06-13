@@ -14,7 +14,11 @@
 extern "C" {
 #endif
 
-#define UVC_MAX_FRAMESIZE_SIZE     (40*1024)
+#if CONFIG_IDF_TARGET_ESP32P4
+#define UVC_MAX_FRAMESIZE_SIZE     (140*1024)
+#else
+#define UVC_MAX_FRAMESIZE_SIZE     (60*1024)
+#endif
 
 extern const unsigned char jpg_start[] asm("_binary_esp_1280_720_jpg_start");
 extern const unsigned char jpg_end[]   asm("_binary_esp_1280_720_jpg_end");
