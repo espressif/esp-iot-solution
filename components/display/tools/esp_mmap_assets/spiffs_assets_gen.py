@@ -41,15 +41,15 @@ def convert_image_to_simg(input_file):
 
     lenbuf = []
     block_size = SPLIT_HEIGHT
-    spilts = math.ceil(height/block_size)
+    splits = math.ceil(height/block_size)
 
     print('Input:')
     print('\t' + os.path.basename(input_file))
     print('\tRES = ' + str(width) + ' x ' + str(height))
-    print('\tspilts = ', spilts)
+    print('\tspilts = ', splits)
 
-    for i in range(spilts):
-        if i < spilts - 1:
+    for i in range(splits):
+        if i < splits - 1:
             crop = im.crop((0, i * block_size, width, (i + 1) * block_size))
         else:
             crop = im.crop((0, i * block_size, width, height))
@@ -59,7 +59,7 @@ def convert_image_to_simg(input_file):
 
     sjpeg_data = bytearray()
 
-    for i in range(spilts):
+    for i in range(splits):
         with open(os.path.join(input_dir, str(i) + ext), 'rb') as f:
             a = f.read()
         sjpeg_data += a
@@ -83,7 +83,7 @@ def convert_image_to_simg(input_file):
     header += height.to_bytes(2, byteorder='little')
 
     # NUMBER OF ITEMS 2 BYTES
-    header += spilts.to_bytes(2, byteorder='little')
+    header += splits.to_bytes(2, byteorder='little')
 
     # NUMBER OF ITEMS 2 BYTES
     header += SPLIT_HEIGHT.to_bytes(2, byteorder='little')
