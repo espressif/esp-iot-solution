@@ -1,6 +1,9 @@
 ## IDF Component Manager Manifest File
 dependencies:
-  espressif/esp32_s3_lcd_ev_board: "^2.1.0"
+  espressif/esp_codec_dev:
+    public: true
+    version: "1.1.*"
+  espressif/esp32_s3_lcd_ev_board: "2.2.*"
   idf: ">=5.1"
   usb_device_uac:
     version: "0.*"
