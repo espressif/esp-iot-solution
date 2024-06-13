@@ -1,0 +1,6 @@
+## IDF Component Manager Manifest File
+dependencies:
+  idf: ">=5.0"
+  esp_mmap_assets:
+    version: "*"
+    override_path: "../../../esp_mmap_assets"

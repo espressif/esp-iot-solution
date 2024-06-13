@@ -1,0 +1,9 @@
+version: 1.0.0
+dependencies:
+  idf:
+    version: '>=5.0'
+  cmake_utilities: "0.*"
+description: assets map tool
+url: https://github.com/espressif/esp-iot-solution/tree/master/components/display/tools/esp_mmap_assets
+issues: https://github.com/espressif/esp-iot-solution/issues
+repository: https://github.com/espressif/esp-iot-solution.git
