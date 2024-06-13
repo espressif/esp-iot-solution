@@ -27,6 +27,7 @@
       - "**/build*/bootloader/*.bin"
       - "**/build*/bootloader/*.elf"
       - "**/build*/partition_table/*.bin"
+      - "**/build*/mmap_build/*.bin"
       - size_info.txt
     expire_in: 1 week
   variables:
@@ -917,6 +918,17 @@ build_components_display_lcd_touch_esp_lcd_touch_st7123_test_apps:
       - IMAGE: espressif/idf:release-v5.1
   variables:
     EXAMPLE_DIR: components/display/lcd_touch/esp_lcd_touch_st7123/test_apps
+
+build_components_display_tools_esp_mmap_assets_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_display_tools_esp_mmap_assets_test_apps
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.1
+      - IMAGE: espressif/idf:release-v5.0
+  variables:
+    EXAMPLE_DIR: components/display/tools/esp_mmap_assets/test_apps
 
 build_components_keyboard_button_test_apps:
   extends:

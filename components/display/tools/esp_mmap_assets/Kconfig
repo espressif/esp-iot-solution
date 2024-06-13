@@ -1,0 +1,22 @@
+# Kconfig file for MMAP
+
+menu "mmap file support format"
+
+    config MMAP_FILE_SUPPORT_FORMAT
+        string "file format(eg. .bin,.jpg)"
+        default ".jpg"
+        help
+            supported file suffixes, separate with commas.
+
+    config MMAP_SUPPORT_SJPG
+        bool "Enable SJPG mode"
+        default n
+        help
+            Convert jpg to sjpg format.
+
+    config MMAP_SUPPORT_SPNG
+        bool "Enable SPNG mode"
+        default n
+        help
+            Convert jpg to spng format.
+endmenu

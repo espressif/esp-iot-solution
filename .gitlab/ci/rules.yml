@@ -107,6 +107,10 @@
 .patterns-components_display_screen: &patterns-components_display_screen
   - "components/display/screen/**/*"
 
+.patterns-components_display_tools_esp_mmap_assets: &patterns-components_display_tools_esp_mmap_assets
+  - "components/display/tools/esp_mmap_assets/**/*"
+  - "components/tools/cmake_utilities/package_manager.cmake"
+
 .patterns-components_display_touch_panel: &patterns-components_display_touch_panel
   - "components/display/touch_panel/**/*"
 
@@ -1513,6 +1517,17 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_display_screen
+
+.rules:build:components_display_tools_esp_mmap_assets_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_display_tools_esp_mmap_assets
 
 .rules:build:components_display_touch_panel_test:
   rules:
