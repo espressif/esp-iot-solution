@@ -14,7 +14,7 @@ Please first read the [User Guide](https://docs.espressif.com/projects/esp-dev-k
 
 ### Hardware Required
 
-* An ESP32-S3-LCD-EV-Board development board with subboard3 (800x480) or subboard2 (480x480)
+* An ESP32-S3-LCD-EV-Board development board
 * At least one USB Type-C cable for Power supply, programming and USB communication.
 * A speaker
 
