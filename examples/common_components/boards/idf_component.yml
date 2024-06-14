@@ -3,6 +3,8 @@ description: board hal component
 url: https://github.com/espressif/esp-iot-solution
 dependencies:
   idf: ">=4.2"
+  i2c_bus:
+    override_path: "../../../components/i2c_bus"
   bus:
     override_path: "../../../components/bus"
   espressif/button:

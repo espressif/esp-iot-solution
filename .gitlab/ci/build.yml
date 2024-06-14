@@ -1159,6 +1159,14 @@ build_components_led_lightbulb_driver_test_apps:
   variables:
     EXAMPLE_DIR: components/led/lightbulb_driver/test_apps
 
+build_components_i2c_bus_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_i2c_bus_test_apps
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: components/i2c_bus/test_apps
+
 build_tools_cmake_utilities_test_apps:
   extends:
     - .build_examples_template

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -8,10 +8,10 @@
 #define _I2C_BUS_H_
 #include "driver/i2c.h"
 
-#define NULL_I2C_MEM_ADDR 0xFF /*!< set mem_address to NULL_I2C_MEM_ADDR if i2c device has no internal address during read/write */
-#define NULL_I2C_DEV_ADDR 0xFF /*!< invalid i2c device address */
-typedef void *i2c_bus_handle_t; /*!< i2c bus handle */
-typedef void *i2c_bus_device_handle_t; /*!< i2c device handle */
+#define NULL_I2C_MEM_ADDR 0xFF          /*!< set mem_address to NULL_I2C_MEM_ADDR if i2c device has no internal address during read/write */
+#define NULL_I2C_DEV_ADDR 0xFF          /*!< invalid i2c device address */
+typedef void *i2c_bus_handle_t;         /*!< i2c bus handle */
+typedef void *i2c_bus_device_handle_t;  /*!< i2c device handle */
 
 #ifdef __cplusplus
 extern "C"

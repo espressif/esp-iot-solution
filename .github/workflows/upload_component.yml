@@ -48,6 +48,7 @@ jobs:
             components/keyboard_button;
             components/extended_vfs;
             components/gprof;
+            components/i2c_bus;
             components/ir/ir_learn;
             components/knob;
             components/led/led_indicator;
