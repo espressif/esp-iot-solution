@@ -269,6 +269,10 @@
   - "components/sensors/ntc_driver/**/*"
   - "components/tools/cmake_utilities/package_manager.cmake"
 
+.patterns-components_i2c_bus: &patterns-components_i2c_bus
+  - "components/i2c_bus/**/*"
+  - "components/tools/cmake_utilities/package_manager.cmake"
+
 # examples folder, in the alphabetic order
 .patterns-docs: &patterns-docs
   - "docs/**/*"
@@ -280,12 +284,12 @@
   - "components/audio/dac_audio/include/dac_audio.h"
   - "components/audio/pwm_audio/include/pwm_audio.h"
   - "components/bluetooth/ble_conn_mgr/include/esp_ble_conn_mgr.h"
-  - "components/bus/include/i2c_bus.h"
   - "components/bus/include/spi_bus.h"
   - "components/button/include/iot_button.h"
   - "components/display/screen/interface_driver/scr_interface_driver.h"
   - "components/display/screen/screen_driver.h"
   - "components/display/touch_panel/touch_panel.h"
+  - "components/i2c_bus/include/i2c_bus.h"
   - "components/ir/ir_learn/include/ir_learn.h"
   - "components/keyboard_button/include/keyboard_button.h"
   - "components/knob/iot_knob.h"
@@ -1973,6 +1977,17 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_ntc_driver
+
+.rules:build:components_i2c_bus_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_i2c_bus
 
 .rules:build:tools_cmake_utilities_test_apps:
   rules:

@@ -98,6 +98,7 @@ i2c_bus_handle_t i2c_bus_create(i2c_port_t port, const i2c_config_t *conf)
     I2C_BUS_CHECK(ret == ESP_OK, "init error", NULL);
     s_i2c_bus[port].conf_active = *conf;
     s_i2c_bus[port].i2c_port = port;
+    ESP_LOGI(TAG, "I2C Bus Config Succeed, Version: %d.%d.%d", I2C_BUS_VER_MAJOR, I2C_BUS_VER_MINOR, I2C_BUS_VER_PATCH);
     return (i2c_bus_handle_t)&s_i2c_bus[port];
 }
 

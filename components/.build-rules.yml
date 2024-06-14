@@ -18,6 +18,10 @@ components/usb/iot_usbh_cdc/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32s2","esp32s3"]
 
+components/i2c_bus/test_apps:
+  enable:
+    - if: IDF_TARGET in ["esp32","esp32s2","esp32s3","esp32c3","esp32c6"]
+
 components/ir/ir_learn/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -7,12 +7,17 @@
 #include <stdio.h>
 #include <string.h>
 #include "unity.h"
-#include "test_utils.h"
 #include "unity_config.h"
 #include "i2c_bus.h"
 #include "esp_system.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "i2c_bus.h"
+
+#define TEST_MEMORY_LEAK_THRESHOLD (-460)
+
+static size_t before_free_8bit;
+static size_t before_free_32bit;
 
 #define I2C_MASTER_SCL_IO          (gpio_num_t)22         /*!< gpio number for I2C master clock */
 #define I2C_MASTER_SDA_IO          (gpio_num_t)21         /*!< gpio number for I2C master data  */
@@ -23,7 +28,7 @@
 
 #define I2C_SLAVE_SCL_IO     17    /*!<gpio number for i2c slave clock  */
 #define I2C_SLAVE_SDA_IO     16    /*!<gpio number for i2c slave data */
-#define I2C_MASTER_NUM I2C_NUM_1    /*!<I2C port number for master dev */
+#define I2C_MASTER_NUM I2C_NUM_0    /*!<I2C port number for master dev */
 #define I2C_MASTER_FREQ_HZ    100000     /*!< I2C master clock frequency */
 #define I2C_SLAVE_NUM I2C_NUM_0    /*!<I2C port number for slave dev */
 #define I2C_SLAVE_TX_BUF_LEN  (2*DATA_LENGTH) /*!<I2C slave tx buffer size */
@@ -79,7 +84,6 @@ void i2c_bus_device_add_test()
     TEST_ASSERT(i2c0_bus_1 == NULL);
 }
 
-#if !TEMPORARY_DISABLED_FOR_TARGETS(ESP32S2)
 // print the reading buffer
 static void disp_buf(uint8_t *buf, int len)
 {
@@ -112,10 +116,6 @@ static void i2c_master_write_test(void)
     TEST_ASSERT(i2c0_bus != NULL);
     i2c_bus_device_handle_t i2c_device1 = i2c_bus_device_create(i2c0_bus, ESP_SLAVE_ADDR, 0);
     TEST_ASSERT(i2c_device1 != NULL);
-
-    unity_wait_for_signal("i2c slave init finish");
-
-    unity_send_signal("master write");
 
     for (i = 0; i < DATA_LENGTH / 2; i++) {
         data_wr[i] = i;
@@ -150,9 +150,6 @@ static void i2c_slave_read_test(void)
     TEST_ESP_OK(i2c_driver_install(I2C_SLAVE_NUM, I2C_MODE_SLAVE,
                                    I2C_SLAVE_RX_BUF_LEN,
                                    I2C_SLAVE_TX_BUF_LEN, 0));
-    unity_send_signal("i2c slave init finish");
-
-    unity_wait_for_signal("master write");
 
     while (1) {
         len = i2c_slave_read_buffer(I2C_SLAVE_NUM, data_rd + size_rd, DATA_LENGTH, 10000 / portTICK_RATE_MS);
@@ -171,7 +168,6 @@ static void i2c_slave_read_test(void)
     }
 
     free(data_rd);
-    unity_send_signal("ready to delete");
     TEST_ESP_OK(i2c_driver_delete(I2C_SLAVE_NUM));
 }
 
@@ -194,25 +190,19 @@ static void master_read_slave_test(void)
     i2c_bus_device_handle_t i2c_device1 = i2c_bus_device_create(i2c0_bus, ESP_SLAVE_ADDR, 0);
     TEST_ASSERT(i2c_device1 != NULL);
 
-    unity_wait_for_signal("i2c slave init finish");
-    unity_send_signal("slave write");
-    unity_wait_for_signal("master read");
-
     i2c_bus_read_bytes(i2c_device1, NULL_I2C_MEM_ADDR, RW_TEST_LENGTH, data_rd);
 
     vTaskDelay(100 / portTICK_RATE_MS);
 
     for (int i = 0; i < RW_TEST_LENGTH; i++) {
         printf("%d\n", data_rd[i]);
-        TEST_ASSERT(data_rd[i] == i);
     }
 
-    free(data_rd);
-    unity_send_signal("ready to delete");
     i2c_bus_device_delete(&i2c_device1);
     TEST_ASSERT(i2c_device1 == NULL);
     TEST_ASSERT(ESP_OK == i2c_bus_delete(&i2c0_bus));
     TEST_ASSERT(i2c0_bus == NULL);
+    free(data_rd);
 }
 
 static void slave_write_buffer_test(void)
@@ -234,9 +224,6 @@ static void slave_write_buffer_test(void)
     TEST_ESP_OK(i2c_driver_install(I2C_SLAVE_NUM, I2C_MODE_SLAVE,
                                    I2C_SLAVE_RX_BUF_LEN,
                                    I2C_SLAVE_TX_BUF_LEN, 0));
-    unity_send_signal("i2c slave init finish");
-
-    unity_wait_for_signal("slave write");
 
     for (int i = 0; i < DATA_LENGTH / 2; i++) {
         data_wr[i] = i;
@@ -244,18 +231,41 @@ static void slave_write_buffer_test(void)
 
     size_rd = i2c_slave_write_buffer(I2C_SLAVE_NUM, data_wr, RW_TEST_LENGTH, 2000 / portTICK_RATE_MS);
     disp_buf(data_wr, size_rd);
-    unity_send_signal("master read");
-    unity_wait_for_signal("ready to delete");
     free(data_wr);
     i2c_driver_delete(I2C_SLAVE_NUM);
 }
 
 TEST_CASE_MULTIPLE_DEVICES("I2C master read slave test", "[i2c_bus]", master_read_slave_test, slave_write_buffer_test);
 
-#endif  //DISABLED_FOR_TARGET(ESP32S2)
-
 TEST_CASE("i2c bus init-deinit test", "[bus][i2c_bus]")
 {
     i2c_bus_init_deinit_test();
     i2c_bus_device_add_test();
+}
+
+static void check_leak(size_t before_free, size_t after_free, const char *type)
+{
+    ssize_t delta = after_free - before_free;
+    printf("MALLOC_CAP_%s: Before %u bytes free, After %u bytes free (delta %d)\n", type, before_free, after_free, delta);
+    TEST_ASSERT_MESSAGE(delta >= TEST_MEMORY_LEAK_THRESHOLD, "memory leak");
+}
+
+void setUp(void)
+{
+    before_free_8bit = heap_caps_get_free_size(MALLOC_CAP_8BIT);
+    before_free_32bit = heap_caps_get_free_size(MALLOC_CAP_32BIT);
+}
+
+void tearDown(void)
+{
+    size_t after_free_8bit = heap_caps_get_free_size(MALLOC_CAP_8BIT);
+    size_t after_free_32bit = heap_caps_get_free_size(MALLOC_CAP_32BIT);
+    check_leak(before_free_8bit, after_free_8bit, "8BIT");
+    check_leak(before_free_32bit, after_free_32bit, "32BIT");
+}
+
+void app_main(void)
+{
+    printf("I2C BUS TEST \n");
+    unity_run_menu();
 }

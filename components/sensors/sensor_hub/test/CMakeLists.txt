@@ -1,3 +1,3 @@
 idf_component_register(SRC_DIRS "."
                        INCLUDE_DIRS "."
-                       REQUIRES bus unity sensor_hub)
+                       REQUIRES i2c_bus unity sensor_hub)
