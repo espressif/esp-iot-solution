@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v1.1.0 2024-6-13
+
+* Remove support for ESP-IDF < v5.0
+
 ## v1.0.2 2024-6-1
 
 * Support Frame Based with format H264
