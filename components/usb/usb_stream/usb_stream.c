@@ -1978,25 +1978,29 @@ IRAM_ATTR static void _uvc_process_payload(_uvc_stream_handle_t *strmh, size_t r
     uint8_t header_info = 0;
     size_t data_len = 0;
     bool bulk_xfer = (s_usb_dev.uvc->vs_ifc->xfer_type == UVC_XFER_BULK) ? true : false;
-    bool payload_reassembling = (strmh->reassemble_flag) ? true : false;
+    bool reassemble = (strmh->reassemble_flag) ? true : false;
     uint8_t flag_lstp = 0;
     uint8_t flag_zlp = 0;
     uint8_t flag_rsb = 0;
 
-    if (bulk_xfer && payload_reassembling) {
+    // analyze the payload handling logic depending on the transfer type
+    // and the reassembly flag
+    if (bulk_xfer && reassemble) {
         if (payload_len == req_len) {
-            //transfer not complete
+            //payload transfer not complete
             flag_rsb = 1;
         } else if (payload_len == 0) {
+            //payload transfer complete with zero length packet
             flag_zlp = 1;
             ESP_LOGV(TAG, "payload_len == 0");
         } else {
+            //payload transfer complete with short packet
             flag_lstp = 1;
         }
     } else if (bulk_xfer && payload_len < req_len) {
         flag_lstp = 1;
     } else if (payload_len == 0) {
-        // ignore empty payload transfers
+        // ignore empty payload for isoc transfer
         return;
     }
 
@@ -2018,7 +2022,7 @@ IRAM_ATTR static void _uvc_process_payload(_uvc_stream_handle_t *strmh, size_t r
                 && (payload[1] & 0x80)
 #endif
 #ifdef CONFIG_UVC_CHECK_BULK_JPEG_HEADER
-                && (!payload_reassembling || ((payload[payload[0]] == 0xff) && (payload[payload[0] + 1] == 0xd8)))
+                && (!reassemble || ((payload[payload[0]] == 0xff) && (payload[payload[0] + 1] == 0xd8)))
 #endif
            ) {
             header_len = payload[0];
@@ -2105,8 +2109,12 @@ IRAM_ATTR static void _uvc_process_payload(_uvc_stream_handle_t *strmh, size_t r
 
         strmh->got_bytes += data_len;
     }
-    /* Just ignore the EOF bit if using payload reassembling in bulk transfer */
-    if (((header_info & (1 << 1)) && !payload_reassembling) || flag_zlp || flag_lstp) {
+
+    if (flag_lstp || flag_zlp) {
+        strmh->reassembling = 0;
+    }
+
+    if (header_info & (1 << 1)) {
         /* The EOF bit is set, so publish the complete frame */
         if (strmh->got_bytes != 0) {
             _uvc_swap_buffers(strmh);
@@ -2792,6 +2800,8 @@ static void _usb_stream_handle_task(void *arg)
                         if (uvc_dev->uvc_stream_hdl->cur_ctrl.dwMaxPayloadTransferSize < p_itf->bytes_per_packet) {
                             p_itf->bytes_per_packet = uvc_dev->uvc_stream_hdl->cur_ctrl.dwMaxPayloadTransferSize;
                         } else if (uvc_dev->uvc_stream_hdl->cur_ctrl.dwMaxPayloadTransferSize > p_itf->bytes_per_packet) {
+                            // in most case, the payload size is very large in bulk transfer (one sample or part of sample),
+                            // to save memory, we transfer with smaller size, and reassemble payload.
                             uvc_dev->uvc_stream_hdl->reassemble_flag = 1;
                             ESP_LOGD(TAG, "UVC Bulk Packet Reassemble Enable");
                         }
