@@ -305,7 +305,7 @@ uint8_t button_adc_get_key_level(void *button_index)
     }
 
     if (vol <= g_button.ch[ch_index].btns[index].max &&
-            vol > g_button.ch[ch_index].btns[index].min) {
+            vol >= g_button.ch[ch_index].btns[index].min) {
         return 1;
     }
     return 0;
