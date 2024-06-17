@@ -439,10 +439,7 @@ build_example_get_started_button_power_save:
   extends:
     - .build_examples_template
     - .rules:build:example_get_started_button_power_save
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.1
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/get-started/button_power_save
 
@@ -780,10 +777,7 @@ build_components_button_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_button_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: components/button/test_apps
 

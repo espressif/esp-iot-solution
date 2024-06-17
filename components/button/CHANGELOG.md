@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v3.2.2 - 2024-6-17
+
+* Fix the compilation error for chips that do not support ADC.
+
 ## v3.2.1 - 2024-6-17
 
 ### bugfix

@@ -12,9 +12,6 @@
 #include "freertos/event_groups.h"
 #include "esp_idf_version.h"
 #include "esp_log.h"
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
-#include "esp_adc/adc_cali.h"
-#endif
 #include "unity.h"
 #include "iot_button.h"
 #include "sdkconfig.h"
@@ -25,12 +22,6 @@ static const char *TAG = "BUTTON TEST";
 #define BUTTON_IO_NUM  0
 #define BUTTON_ACTIVE_LEVEL   0
 #define BUTTON_NUM 16
-
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
-#define ADC_BUTTON_WIDTH SOC_ADC_RTC_MAX_BITWIDTH
-#else
-#define ADC_BUTTON_WIDTH ADC_WIDTH_MAX - 1
-#endif
 
 static size_t before_free_8bit;
 static size_t before_free_32bit;
@@ -184,6 +175,47 @@ TEST_CASE("gpio button test", "[button][iot]")
     iot_button_delete(g_btns[0]);
 }
 
+TEST_CASE("gpio button get event test", "[button][iot]")
+{
+    const char *EVENT_STR[] = {"BUTTON_PRESS_DOWN",
+                               "BUTTON_PRESS_UP",
+                               "BUTTON_PRESS_REPEAT",
+                               "BUTTON_PRESS_REPEAT_DONE",
+                               "BUTTON_SINGLE_CLICK",
+                               "BUTTON_DOUBLE_CLICK",
+                               "BUTTON_MULTIPLE_CLICK",
+                               "BUTTON_LONG_PRESS_START",
+                               "BUTTON_LONG_PRESS_HOLD",
+                               "BUTTON_LONG_PRESS_UP",
+                              };
+
+    button_config_t cfg = {
+        .type = BUTTON_TYPE_GPIO,
+        .long_press_time = CONFIG_BUTTON_LONG_PRESS_TIME_MS,
+        .short_press_time = CONFIG_BUTTON_SHORT_PRESS_TIME_MS,
+        .gpio_button_config = {
+            .gpio_num = 0,
+            .active_level = 0,
+        },
+    };
+    g_btns[0] = iot_button_create(&cfg);
+    TEST_ASSERT_NOT_NULL(g_btns[0]);
+
+    uint8_t level = 0;
+    level = iot_button_get_key_level(g_btns[0]);
+    ESP_LOGI(TAG, "button level is %d", level);
+
+    while (1) {
+        button_event_t event = iot_button_get_event(g_btns[0]);
+        if (event != BUTTON_NONE_PRESS) {
+            printf("event is %s\n", EVENT_STR[event]);
+        }
+        vTaskDelay(pdMS_TO_TICKS(1));
+    }
+
+    iot_button_delete(g_btns[0]);
+}
+
 TEST_CASE("gpio button test power save", "[button][iot][power save]")
 {
     button_config_t cfg = {
@@ -259,6 +291,7 @@ TEST_CASE("matrix keyboard button test", "[button][matrix key]")
     }
 }
 
+#if CONFIG_SOC_ADC_SUPPORTED
 #if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
 TEST_CASE("adc button test", "[button][iot]")
 {
@@ -303,8 +336,18 @@ TEST_CASE("adc button test", "[button][iot]")
     }
 }
 #else
+
+#include "esp_adc/adc_cali.h"
+
 static esp_err_t adc_calibration_init(adc_unit_t unit, adc_atten_t atten, adc_cali_handle_t *out_handle)
 {
+
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+#define ADC_BUTTON_WIDTH SOC_ADC_RTC_MAX_BITWIDTH
+#else
+#define ADC_BUTTON_WIDTH ADC_WIDTH_MAX - 1
+#endif
+
     adc_cali_handle_t handle = NULL;
     esp_err_t ret = ESP_FAIL;
     bool calibrated = false;
@@ -405,6 +448,7 @@ TEST_CASE("adc button idf5 drive test", "[button][iot]")
     }
 }
 #endif
+#endif // CONFIG_SOC_ADC_SUPPORTED
 
 #define GPIO_OUTPUT_IO_45 45
 static EventGroupHandle_t g_check = NULL;
