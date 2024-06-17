@@ -4,7 +4,7 @@
 
 ### bugfix
 
-- Fixed ignored ADC button tied to GND.
+- Fixed ignored ADC button tied to GND. thanks `demianzenkov` for the fix.
 
 ## v3.2.0 - 2023-11-13
 
