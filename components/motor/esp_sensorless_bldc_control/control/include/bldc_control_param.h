@@ -54,7 +54,7 @@ typedef struct {
     uint8_t phase_change_done;        /*!< Motor phase change successful */
     uint16_t duty;                    /*!< duty cycle */
     uint16_t duty_max;                /*!< duty cycle max */
-    uint16_t drag_time;               /*!< drag time */
+    int16_t drag_time;                /*!< drag time */
     alignment_mode_t alignment_mode;  /*!< alignment mode */
     /* speed */
     uint32_t expect_speed_rpm;        /*!< Expected speed */

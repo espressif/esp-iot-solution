@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v0.2.1 - 2024-6-17
+
+* Fix drag time and modify the filter cap to type uint32_t
+
 ## v0.2.0 - 2023-11-14
 
 ### Enhancements

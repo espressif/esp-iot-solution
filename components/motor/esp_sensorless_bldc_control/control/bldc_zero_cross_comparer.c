@@ -15,7 +15,7 @@ typedef struct {
     control_param_t *control_param;
     int alignment_pin[PHASE_MAX];
     int zero_stable_flag;                        /*!< Over-zero stabilization flag bit */
-    uint32_t alignment_queue_value[PHASE_MAX];
+    uint64_t alignment_queue_value[PHASE_MAX];
     uint16_t queue_filter_state[PHASE_MAX];      /*!< State after three-phase filtering */
 } bldc_zero_cross_comparer_t;
 
