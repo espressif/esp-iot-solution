@@ -1,5 +1,10 @@
 # ChangeLog
 
+## v3.2.1 - 2024-6-17
+
+### bugfix
+
+- Fixed ignored ADC button tied to GND.
 
 ## v3.2.0 - 2023-11-13
 
