@@ -107,7 +107,9 @@ static uint32_t preprocessing_proxi_raw_values(touch_proximity_sensor_t *sensor,
     default:
         break;
     }
-    PRINT_VALUE(sensor->configs.channel_list[channel], raw, sensor->smooth[channel], sensor->baseline[channel]);
+    if (raw != 0) {
+        PRINT_VALUE(sensor->configs.channel_list[channel], raw, sensor->smooth[channel], sensor->baseline[channel]);
+    }
     return 0;
 }
 
