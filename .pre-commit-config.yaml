@@ -75,6 +75,9 @@ repos:
     hooks:
       - id: conventional-precommit-linter
         stages: [commit-msg]
+        args:
+          - --subject-min-length=15
+          - --body-max-line-length=200
   - repo: https://github.com/codespell-project/codespell
     rev: v2.3.0
     hooks:
