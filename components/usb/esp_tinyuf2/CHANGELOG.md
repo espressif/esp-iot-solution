@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.2.2 - 2024-06-19
+
+* Fix usb may not be enumerated after switch from usb-serial-jtag to usb-otg
+* Fix tinyusb debug issue if usb console is enabled
+* Fix power management when frequency dynamic scaling is enabled
+
 ## v0.2.1 - 2024-04-22
 
 * Fix build with latest ESP-IDF (USB Hal: Change name of usb_phy HAL files to usb_fsls_phy)

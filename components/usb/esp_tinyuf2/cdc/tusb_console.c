@@ -99,7 +99,7 @@ static esp_err_t restore_std_streams(FILE **f_in, FILE **f_out, FILE **f_err)
 esp_err_t esp_tusb_init_console(int cdc_intf)
 {
     /* Registering TUSB at VFS */
-    ESP_RETURN_ON_ERROR(esp_vfs_tusb_cdc_register(cdc_intf, NULL), TAG, "");
+    ESP_RETURN_ON_ERROR(esp_vfs_tusb_cdc_register(cdc_intf, VFS_TUSB_PATH_DEFAULT), TAG, "");
     ESP_RETURN_ON_ERROR(redirect_std_streams_to(&con.in, &con.out, &con.err, VFS_TUSB_PATH_DEFAULT), TAG, "Failed to redirect STD streams");
     return ESP_OK;
 }
@@ -107,6 +107,6 @@ esp_err_t esp_tusb_init_console(int cdc_intf)
 esp_err_t esp_tusb_deinit_console(int cdc_intf)
 {
     ESP_RETURN_ON_ERROR(restore_std_streams(&con.in, &con.out, &con.err), TAG, "Failed to restore STD streams");
-    esp_vfs_tusb_cdc_unregister(NULL);
+    esp_vfs_tusb_cdc_unregister(VFS_TUSB_PATH_DEFAULT);
     return ESP_OK;
 }

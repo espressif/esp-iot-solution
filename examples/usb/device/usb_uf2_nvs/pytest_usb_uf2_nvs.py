@@ -20,4 +20,4 @@ from pytest_embedded import Dut
 @pytest.mark.env('usb-otg_camera')
 def test_usb_uf2_nvs(dut: Dut)-> None:
     dut.expect(r'TUF2: UF2 Updater install succeed, Version: (\d+).(\d+).(\d+)', timeout=5)
-    dut.expect(r'tud_mount_cb:', timeout=10)
+    dut.expect(r'TUF2: USB Mounted', timeout=10)
