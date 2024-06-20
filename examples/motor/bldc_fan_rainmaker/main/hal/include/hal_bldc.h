@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -8,26 +8,40 @@
 
 #include "bldc_control.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
- * @brief bldc init
+ * @brief Initializes the bldc
  *
- * @param direction
- * @return esp_err_t
+ * @param direction CW or CCW
+ * @return
+ *    - ESP_OK: Success in initializing the bldc
+ *    - ESP_FAIL: BLDC parameter or resource configuration error
  */
 esp_err_t hal_bldc_init(dir_enum_t direction);
 
 /**
- * @brief set bldc start or stop
+ * @brief Sets bldc operation status
  *
- * @param status
- * @return esp_err_t
+ * @param status 0 for stopping the motor, 1 for starting the motor
+ * @return
+ *    - ESP_OK: Success in setting the status of bldc
+ *    - other: Specific error what went wrong during setting.
  */
 esp_err_t hal_bldc_start_stop(uint8_t status);
 
 /**
- * @brief set bldc speed
+ * @brief Sets bldc speed
  *
- * @param speed
- * @return esp_err_t
+ * @param speed Desired speed of the BLDC
+ * @return
+ *    - ESP_OK: Success in setting the speed of bldc
+ *    - other: Specific error what went wrong during setting.
  */
 esp_err_t hal_bldc_set_speed(uint16_t speed);
+
+#ifdef __cplusplus
+}
+#endif

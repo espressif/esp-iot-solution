@@ -1,29 +1,29 @@
 [![Component Registry](https://components.espressif.com/components/espressif/esp_sensorless_bldc_control/badge.svg)](https://components.espressif.com/components/espressif/esp_sensorless_bldc_control)
 
-## ESP Sensorless bldc control 组件介绍
+## ESP Sensorless BLDC Control Component Introduction
 
-``esp_sensorless_bldc_control`` 是基于 ESP32 系列芯片的 BLDC 无感方波控制库，支持以下功能：
+``esp_sensorless_bldc_control`` is a sensorless BLDC control library based on ESP32 series chips, supporting the following features:
 
-* 支持基于 ADC 采样检测过零点
-* 支持基于比较器检测过零点
-* 支持基于脉冲法实现转子初始相位检测
-* 支持堵转保护
-* 支持过流，过欠压保护[feature]
-* 支持缺相保护[feature]
+* Supports zero-crossing detection based on ADC sampling
+* Supports zero-crossing detection based on comparators
+* Supports initial rotor position detection using pulse method
+* Supports stall protection
+* Supports overcurrent and undervoltage protection [feature]
+* Supports phase loss protection [feature]
 
-### ESP Sensorless bldc control 用户指南
+### ESP Sensorless BLDC Control User Guide
 
-请参考：https://docs.espressif.com/projects/esp-iot-solution/zh_CN/latest/motor/index.html
+Please refer to：https://docs.espressif.com/projects/esp-iot-solution/zh_CN/latest/motor/index.html
 
-### 添加组件到工程
+### Adding the Component to Your Project
 
-1. 请使用组件管理器指令 `add-dependency` 将 `esp_sensorless_bldc_control` 添加到项目的依赖项, 在 `CMake` 执行期间该组件将被自动下载到工程目录。
+1. Use the component manager command `add-dependency` to add `esp_sensorless_bldc_control` to your project's dependencies. The component will be automatically downloaded to the project directory during `CMake` execution.
 
     ```
     idf.py add-dependency "espressif/esp_sensorless_bldc_control=*"
     ```
 
-2. 将 `esp_sensorless_bldc_control/user_cfg/bldc_user_cfg.h.tpl` 文件复制到工程目录下，并更名为 `bldc_user_cfg.h`。并在 `main/CMakeLists.txt` 文件中加入：
+2. Copy the `esp_sensorless_bldc_control/user_cfg/bldc_user_cfg.h` file to your project directory and rename it to `bldc_user_cfg.h`. Add the following to your `main/CMakeLists.txt` file:
 
     ```
     idf_component_get_property(bldc_lib espressif__esp_sensorless_bldc_control COMPONENT_LIB)
@@ -31,9 +31,9 @@
     target_link_libraries(${bldc_lib} PUBLIC ${COMPONENT_LIB})
     ```
 
-    Note: 该文件用于设置电机控制相关参数，一定要包含在工程中。
+    Note: This file is used to set motor control related parameters and must be included in the project.
 
-## 使用示例
+## Example Usage
 
 ```C
     esp_event_loop_create_default();

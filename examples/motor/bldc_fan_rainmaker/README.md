@@ -1,22 +1,24 @@
 # bldc_fan_rainmaker
 
-`bldc_fan_rainmaker` 例程将无刷电机驱动的电风扇接入 ESP Rainmaker 云，实现了以下功能
+The `bldc_fan_rainmaker` example connects a brushless motor-driven fan to the ESP Rainmaker cloud, achieving the following functionalities:
 
-* 风扇无极调速
-* 摇头
-* 自然风
-* 远程启动关闭
-* OTA
-* BLE 配网
+* Stepless fan speed control
+* Oscillation
+* Natural wind mode
+* Remote start and stop
+* OTA updates
+* BLE provisioning
 
-## 组件介绍
+![rainmaker_fan](https://dl.espressif.com/AE/esp-iot-solution/esp_bldc_rainmaker.gif)
 
-* [esp_sensorless_bldc_control](https://components.espressif.com/components/espressif/esp_sensorless_bldc_control) 是基于 ESP32 系列芯片的 BLDC 无感方波控制库。支持以下功能：
-    * 支持基于 ADC 采样检测过零点
-    * 支持基于比较器检测过零点
-    * 支持基于脉冲法实现转子初始相位检测
-    * 支持堵转保护
-    * 支持过流，过欠压保护[feature]
-    * 支持缺相保护[feature]
+## Component Overview
 
-* [esp_rainmaker](https://components.espressif.com/components/espressif/esp_rainmaker) 是一个完整且轻量级的 AIoT 解决方案，能够以简单、经济高效且高效的方式为您的企业实现私有云部署。
+* [esp_sensorless_bldc_control](https://components.espressif.com/components/espressif/esp_sensorless_bldc_control) is a sensorless BLDC square wave control library based on the ESP32 series chips. It supports the following features:
+    * Zero-crossing detection based on ADC sampling
+    * Zero-crossing detection based on a comparator
+    * Initial rotor position detection using pulse method
+    * Stall protection
+    * Overcurrent, over/under-voltage protection [feature]
+    * Phase loss protection [feature]
+
+* [esp_rainmaker](https://components.espressif.com/components/espressif/esp_rainmaker) is a complete and lightweight AIoT solution that enables private cloud deployment for your business in a simple, cost-effective, and efficient manner.

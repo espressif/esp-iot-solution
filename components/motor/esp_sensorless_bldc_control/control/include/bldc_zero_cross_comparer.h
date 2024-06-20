@@ -23,6 +23,16 @@ typedef struct {
 typedef void *bldc_zero_cross_comparer_handle_t;
 
 /**
+ * @brief Used to detect the value of gpio when the top tube and bottom tube are open
+ *
+ * @param timer MCPWM timer handle
+ * @param edata MCPWM timer event data, fed by driver
+ * @param user_data User data, set in `mcpwm_timer_register_event_callbacks()`
+ * @return  Whether a high priority task has been waken up by this function
+ */
+bool read_comparer_on_full(mcpwm_timer_handle_t timer, const mcpwm_timer_event_data_t *edata, void *user_data);
+
+/**
  * @brief Initialize zero cross comparer
  *
  * @param handle pointer to zero cross comparer handle

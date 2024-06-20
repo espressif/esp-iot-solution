@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -11,6 +11,12 @@
 #include "hal_bldc.h"
 #include "iot_button.h"
 #include "esp_timer.h"
+#include "bldc_fan_config.h"
+#include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "app_rainmaker.h"
+#include "esp_rmaker_core.h"
 
 #define PI 3.14159265f
 
@@ -18,6 +24,7 @@
     ((VALUE) < (MIN) ? (MIN) : ((VALUE) > (MAX) ? (MAX) : (VALUE)))
 
 static bldc_control_handle_t bldc_control_handle = NULL;
+const static char *TAG = "hal_bldc";
 
 static void hal_bldc_button_ctrl(void *arg, void *data)
 {
@@ -67,45 +74,101 @@ esp_err_t hal_bldc_button_ctrl_init(gpio_num_t pin)
     return ESP_OK;
 }
 
+static void bldc_control_event_handler(void *arg, esp_event_base_t event_base,
+                                       int32_t event_id, void *event_data)
+{
+    esp_rmaker_param_t *rmaker_param = NULL;
+    switch (event_id) {
+    case BLDC_CONTROL_START:
+        ESP_LOGI(TAG, "BLDC_CONTROL_START");
+        break;
+    case BLDC_CONTROL_STOP:
+        ESP_LOGI(TAG, "BLDC_CONTROL_STOP");
+        motor_parameter.is_start = false;
+        motor_parameter.target_speed = BLDC_MIN_SPEED;
+        break;
+    case BLDC_CONTROL_ALIGNMENT:
+        ESP_LOGI(TAG, "BLDC_CONTROL_ALIGNMENT");
+        break;
+    case BLDC_CONTROL_CLOSED_LOOP:
+        motor_parameter.is_start = true;
+        ESP_LOGI(TAG, "BLDC_CONTROL_CLOSED_LOOP");
+        break;
+    case BLDC_CONTROL_DRAG:
+        ESP_LOGI(TAG, "BLDC_CONTROL_DRAG");
+        break;
+    case BLDC_CONTROL_BLOCKED:
+        ESP_LOGI(TAG, "BLDC_CONTROL_BLOCKED");
+        motor_parameter.is_start = false;
+        hal_bldc_start_stop(0);
+        if (++motor_parameter.restart_count < BLDC_MAX_RESTART_COUNT) {
+            vTaskDelay(500 / portTICK_PERIOD_MS);
+            motor_parameter.target_speed = BLDC_MIN_SPEED;
+            hal_bldc_start_stop(1);
+            motor_parameter.is_start = true;
+        }
+        break;
+    }
+
+    rmaker_param = app_rainmaker_get_param("Power");
+    if (rmaker_param != NULL) {
+        esp_rmaker_param_val_t val = {0};
+        val.val.b = motor_parameter.is_start;
+        val.type = RMAKER_VAL_TYPE_BOOLEAN;
+        esp_rmaker_param_update_and_report(rmaker_param, val);        /*!< Update current motor start status */
+    }
+
+    rmaker_param = app_rainmaker_get_param("Speed");
+    if (rmaker_param != NULL) {
+        esp_rmaker_param_val_t val = {0};
+        val.val.i = motor_parameter.target_speed;
+        val.type = RMAKER_VAL_TYPE_INTEGER;
+        esp_rmaker_param_update_and_report(rmaker_param, val);        /*!< Update current motor speed */
+    }
+}
+
 esp_err_t hal_bldc_init(dir_enum_t direction)
 {
+    esp_event_loop_create_default();
+    ESP_ERROR_CHECK(esp_event_handler_register(BLDC_CONTROL_EVENT, ESP_EVENT_ANY_ID, &bldc_control_event_handler, NULL));
+
     switch_config_t_t upper_switch_config = {
         .control_type = CONTROL_TYPE_MCPWM,
         .bldc_mcpwm = {
             .group_id = 0,
-            .gpio_num = {17, 16, 15},
+            .gpio_num = {UPPER_SWITCH_PIN_U, UPPER_SWITCH_PIN_V, UPPER_SWITCH_PIN_W},
         },
     };
 
     switch_config_t_t lower_switch_config = {
         .control_type = CONTROL_TYPE_GPIO,
         .bldc_gpio[0] = {
-            .gpio_num = 12,
+            .gpio_num = LOWER_SWITCH_PIN_U,
             .gpio_mode = GPIO_MODE_OUTPUT,
         },
         .bldc_gpio[1] = {
-            .gpio_num = 11,
+            .gpio_num = LOWER_SWITCH_PIN_V,
             .gpio_mode = GPIO_MODE_OUTPUT,
         },
         .bldc_gpio[2] = {
-            .gpio_num = 10,
+            .gpio_num = LOWER_SWITCH_PIN_W,
             .gpio_mode = GPIO_MODE_OUTPUT,
         },
     };
 
     bldc_zero_cross_comparer_config_t zero_cross_comparer_config = {
         .comparer_gpio[0] = {
-            .gpio_num = 3,
+            .gpio_num = COMPARER_PIN_U,
             .gpio_mode = GPIO_MODE_INPUT,
             .active_level = 0,
         },
         .comparer_gpio[1] = {
-            .gpio_num = 46,
+            .gpio_num = COMPARER_PIN_V,
             .gpio_mode = GPIO_MODE_INPUT,
             .active_level = 0,
         },
         .comparer_gpio[2] = {
-            .gpio_num = 9,
+            .gpio_num = COMPARER_PIN_W,
             .gpio_mode = GPIO_MODE_INPUT,
             .active_level = 0,
         },

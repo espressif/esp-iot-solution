@@ -9,6 +9,10 @@
 #include "driver/gpio.h"
 #include "esp_timer.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef enum {
     STEP_CW = 0,
     STEP_CCW,
@@ -24,12 +28,18 @@ typedef struct {
 extern stepper_motor_t stepper_motor;
 
 /**
- * @brief stepper init
+ * @brief Initializes the stepper
  *
- * @param pin_1
- * @param pin_2
- * @param pin_3
- * @param pin_4
- * @return esp_err_t
+ * @param pin_1 GPIO number
+ * @param pin_2 GPIO number
+ * @param pin_3 GPIO number
+ * @param pin_4 GPIO number
+ * @return
+ *    - ESP_OK：Success in initializing the stepper
+ *    - ESP_FAIL: Esp timer or gpio resource is not available.
  */
 esp_err_t hal_stepper_motor_init(gpio_num_t pin_1, gpio_num_t pin_2, gpio_num_t pin_3, gpio_num_t pin_4);
+
+#ifdef __cplusplus
+}
+#endif

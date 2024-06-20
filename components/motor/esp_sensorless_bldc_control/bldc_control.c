@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -103,13 +103,19 @@ esp_err_t bldc_control_init(bldc_control_handle_t *handle, bldc_control_config_t
     xTaskCreate(bldc_control_task, "bldc_control_task", 1024 * 4, control, 10, NULL);
 
     switch (config->alignment_mode) {
-    case ALIGNMENT_COMPARER:
+    case ALIGNMENT_COMPARER: {
         ret = bldc_zero_cross_comparer_init(&control->zero_cross_handle, &config->zero_cross_comparer_config, &control->control_param);
         BLDC_CHECK_GOTO(ret == ESP_OK, "bldc_zero_cross_comparer_init failed", deinit);
         control->zero_cross = &bldc_zero_cross_comparer_operation;
+        mcpwm_timer_event_callbacks_t cbs = {
+            .on_full = &read_comparer_on_full,
+        };
+        config->six_step_config.upper_switch_config.bldc_mcpwm.cbs = &cbs;
+        config->six_step_config.upper_switch_config.bldc_mcpwm.timer_cb_user_data = (void *)control->zero_cross_handle;
         break;
+    }
 #if CONFIG_SOC_MCPWM_SUPPORTED
-    case ALIGNMENT_ADC:
+    case ALIGNMENT_ADC: {
         ret = bldc_zero_cross_adc_init(&control->zero_cross_handle, &config->zero_cross_adc_config, &control->control_param);
         BLDC_CHECK_GOTO(ret == ESP_OK, "bldc_zero_cross_comparer_init failed", deinit);
         control->zero_cross = &bldc_zero_cross_adc_operation;
@@ -123,6 +129,7 @@ esp_err_t bldc_control_init(bldc_control_handle_t *handle, bldc_control_config_t
         config->six_step_config.upper_switch_config.bldc_mcpwm.cbs = &cbs;
         config->six_step_config.upper_switch_config.bldc_mcpwm.timer_cb_user_data = (void *)control->zero_cross_handle;
         break;
+    }
 #endif
     default:
         ESP_LOGE(TAG, "control_mode error");
@@ -276,6 +283,8 @@ esp_err_t bldc_control_stop(bldc_control_handle_t *handle)
     default:
         break;
     }
+
+    bldc_control_dispatch_event(BLDC_CONTROL_STOP, NULL, 0);
     return ESP_OK;
 }
 
