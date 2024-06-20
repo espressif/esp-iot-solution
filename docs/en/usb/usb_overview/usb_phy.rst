@@ -38,6 +38,7 @@ The internal USB-PHY corresponds to fixed GPIO pins, as shown in the table below
      - 13
      - 12
 
+.. _external_phy:
 
 Use an external PHY
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
