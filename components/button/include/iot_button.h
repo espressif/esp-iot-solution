@@ -5,7 +5,10 @@
 
 #pragma once
 
+#include "sdkconfig.h"
+#if CONFIG_SOC_ADC_SUPPORTED
 #include "button_adc.h"
+#endif
 #include "button_gpio.h"
 #include "button_matrix.h"
 #include "esp_err.h"
@@ -110,7 +113,9 @@ typedef struct {
     uint16_t short_press_time;                        /**< Trigger time(ms) for short press, if 0 default to BUTTON_SHORT_PRESS_TIME_MS */
     union {
         button_gpio_config_t gpio_button_config;      /**< gpio button configuration */
+#if CONFIG_SOC_ADC_SUPPORTED
         button_adc_config_t adc_button_config;        /**< adc button configuration */
+#endif
         button_matrix_config_t matrix_button_config; /**< matrix key button configuration */
         button_custom_config_t custom_button_config;  /**< custom button configuration */
     }; /**< button configuration */
