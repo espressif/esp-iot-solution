@@ -13,3 +13,4 @@ Sensors
     Pressure sensor <pressure>
     Gesture sensor <gesture>
     NTC Sensor<ntc_driver>
+    Power Monitor<power_monitor>

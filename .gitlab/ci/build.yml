@@ -1046,6 +1046,17 @@ build_components_ntc_driver_test_apps:
   variables:
     EXAMPLE_DIR: components/sensors/ntc_driver/test_apps
 
+build_components_sensors_power_monitor_ina236_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_sensors_power_monitor_ina236_test_apps
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.0
+      - IMAGE: espressif/idf:release-v5.1
+  variables:
+    EXAMPLE_DIR: components/sensors/power_monitor/ina236/test_apps
+
 build_components_openai_test_apps:
   extends:
     - .build_examples_template

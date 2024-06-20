@@ -137,3 +137,7 @@ components/keyboard_button/test_apps:
 components/usb/usb_device_uac/test_apps:
   enable:
     - if: SOC_USB_OTG_SUPPORTED == 1 and IDF_VERSION_MAJOR >= 5
+
+components/sensors/power_monitor/ina236/test_apps:
+  enable:
+    - if:  INCLUDE_DEFAULT == 1
