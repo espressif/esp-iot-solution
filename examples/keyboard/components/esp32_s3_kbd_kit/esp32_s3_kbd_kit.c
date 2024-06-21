@@ -29,7 +29,7 @@ esp_err_t bsp_keyboard_init(keyboard_btn_handle_t *kbd_handle, keyboard_btn_conf
             .input_gpios = (int[])KBD_INPUT_IOS,
             .input_gpio_num = KBD_COL_NUM,
             .active_level = KBD_ATTIVE_LEVEL,
-            .debounce_ticks = 2,
+            .debounce_ticks = 3,
             .ticks_interval = KBD_TICKS_INTERVAL_US,
             .enable_power_save = true,
         };
@@ -49,6 +49,15 @@ esp_err_t bsp_ws2812_init(led_strip_handle_t *led_strip)
         }
         return ESP_OK;
     }
+
+    gpio_config_t io_conf = {
+        .pin_bit_mask = 1ULL << KBD_WS2812_POWER_IO,
+                             .mode = GPIO_MODE_OUTPUT_OD,
+                             .pull_down_en = 0,
+                             .pull_up_en = 0,
+    };
+    gpio_config(&io_conf);
+
     /* LED strip initialization with the GPIO and pixels number*/
     led_strip_config_t strip_config = {
         .strip_gpio_num = LIGHTMAP_GPIO, // The GPIO that connected to the LED strip's data line
@@ -67,6 +76,12 @@ esp_err_t bsp_ws2812_init(led_strip_handle_t *led_strip)
     if (led_strip) {
         *led_strip = s_led_strip;
     }
+    return ESP_OK;
+}
+
+esp_err_t bsp_ws2812_enable(bool enable)
+{
+    gpio_set_level(KBD_WS2812_POWER_IO, !enable);
     return ESP_OK;
 }
 

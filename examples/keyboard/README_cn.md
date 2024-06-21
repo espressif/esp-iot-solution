@@ -21,6 +21,8 @@ ESP-KeyBoard 项目是使用 ESP32-S3 的键盘项目，支持全键无冲，USB
 
 * Demo 视频 [video](https://www.bilibili.com/video/BV1yi421C7qV/?share_source=copy_web&vd_source=7e24f4cefdafbd8477369f33616312a9)
 
+* BSP 介绍文档 [BSP](./components/esp32_s3_kbd_kit/README.md)
+
 ![keyboard_hardware](https://dl.espressif.com/esp-iot-solution/static/keyboard_1.gif)
 
 ### 软件设计
@@ -30,7 +32,7 @@ ESP-KeyBoard 项目是使用 ESP32-S3 的键盘项目，支持全键无冲，USB
 |     连接模式     |    本地灯效     | WIN11 灯效 | 全键无冲 | 回报率 |
 | :--------------: | :-------------: | :--------: | :------: | :----: |
 |       USB        |        √        |     √      |    √     |   1k   |
-|       BLE        | √（默认不开启） |     ×      |    √     |  125k  |
+|       BLE        | √（默认不开启） |     ×      |    √     | 125Hz  |
 | 2.4G（暂不支持） |        √        |     ×      |    √     |   1k   |
 
 本地灯效

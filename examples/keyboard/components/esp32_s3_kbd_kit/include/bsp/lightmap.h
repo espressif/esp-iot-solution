@@ -13,7 +13,7 @@
 extern "C" {
 #endif
 
-#define LIGHTMAP_GPIO            8
+#define LIGHTMAP_GPIO            0
 #define LIGHTMAP_NUM             82
 #define LIGHTMAP_WIDTH           310000   /*!< 31 cm */
 #define LIGHTMAP_HEIGHT          120000   /*!< 12 cm */
