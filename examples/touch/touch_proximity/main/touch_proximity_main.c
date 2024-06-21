@@ -36,7 +36,7 @@ void example_proxi_callback(uint32_t channel, proxi_evt_t event, void *cb_arg)
 
 void app_main(void)
 {
-    // buzzer_driver_install(IO_BUZZER_CTRL);
+    buzzer_driver_install(IO_BUZZER_CTRL);
     proxi_config_t config = (proxi_config_t)DEFAULTS_PROX_CONFIGS();
     config.channel_num = 1;
     config.channel_list[0] = TOUCH_PAD_NUM8;
