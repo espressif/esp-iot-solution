@@ -141,3 +141,7 @@ components/usb/usb_device_uac/test_apps:
 components/sensors/power_monitor/ina236/test_apps:
   enable:
     - if:  INCLUDE_DEFAULT == 1
+
+components/bluetooth/ble_hci/test_apps:
+  enable:
+    - if: IDF_TARGET in ["esp32","esp32c3","esp32s3"]
