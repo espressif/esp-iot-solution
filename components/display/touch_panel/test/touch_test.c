@@ -270,3 +270,85 @@ TEST_CASE("Touch FT5x06 test", "[touch_panel][iot]")
     lcd.deinit();
     scr_interface_delete(interface_drv);
 }
+
+TEST_CASE("Touch RES4W test", "[touch_panel][iot]")
+{
+    spi_config_t spi_cfg = {
+        .miso_io_num = 27,
+        .mosi_io_num = 21,
+        .sclk_io_num = 22,
+        .max_transfer_sz = 320 * 480,
+    };
+    spi_bus_handle_t spi_bus = spi_bus_create(2, &spi_cfg);
+    TEST_ASSERT_NOT_NULL(spi_bus);
+
+    scr_interface_spi_config_t spi_lcd_cfg = {
+        .spi_bus = spi_bus,
+        .pin_num_cs = 5,
+        .pin_num_dc = 19,
+        .clk_freq = 20000000,
+        .swap_data = true,
+    };
+
+    scr_interface_driver_t *interface_drv;
+    TEST_ASSERT(ESP_OK == scr_interface_create(SCREEN_IFACE_SPI, &spi_lcd_cfg, &interface_drv));
+
+    scr_controller_config_t lcd_cfg = {0};
+    lcd_cfg.interface_drv = interface_drv,
+    lcd_cfg.pin_num_rst = 18,
+    lcd_cfg.pin_num_bckl = 23,
+    lcd_cfg.rst_active_level = 0,
+    lcd_cfg.bckl_active_level = 1,
+    lcd_cfg.width = 240;
+    lcd_cfg.height = 320;
+    lcd_cfg.rotate = SCR_DIR_RLTB;
+    TEST_ASSERT(ESP_OK == scr_find_driver(SCREEN_CONTROLLER_ILI9341, &lcd));
+    lcd.init(&lcd_cfg);
+
+    touch_panel_config_t touch_cfg = {
+        .interface_res4w = {
+            .pin_num_yp = 32,
+            .pin_num_ym = 26,
+            .pin_num_xp = 25,
+            .pin_num_xm = 33,
+        },
+        .interface_type = TOUCH_PANEL_IFACE_RES4W,
+        .pin_num_int = -1,
+        .direction = TOUCH_DIR_LRTB,
+        .width = 240,
+        .height = 320,
+    };
+    TEST_ASSERT(ESP_OK == touch_panel_find_driver(TOUCH_PANEL_CONTROLLER_RES4W, &touch));
+    TEST_ASSERT(ESP_OK == touch.init(&touch_cfg));
+    TEST_ASSERT(ESP_ERR_INVALID_STATE == touch.init(&touch_cfg));
+    touch.calibration_run(&lcd, true);
+
+    painter_init(&lcd);
+    painter_clear(COLOR_WHITE);
+
+    while (1) {
+        touch_panel_points_t touch_info;
+        touch.read_point_data(&touch_info);
+        for (int i = 0; i < touch_info.point_num; i++) {
+            ESP_LOGI(TAG, "touch point %d: (%d, %d)", i, touch_info.curx[i], touch_info.cury[i]);
+        }
+
+        if (TOUCH_EVT_PRESS == touch_info.event) {
+            int32_t x = touch_info.curx[0];
+            int32_t y = touch_info.cury[0];
+            ESP_LOGI(TAG, "Draw point at (%d, %d)", x, y);
+            lcd.draw_pixel(x, y, COLOR_RED);
+            lcd.draw_pixel(x + 1, y, COLOR_RED);
+            lcd.draw_pixel(x, y + 1, COLOR_RED);
+            lcd.draw_pixel(x + 1, y + 1, COLOR_RED);
+
+        } else {
+            vTaskDelay(50 / portTICK_RATE_MS);
+        }
+    }
+
+    touch.deinit();
+    lcd.deinit();
+    scr_interface_delete(interface_drv);
+    spi_bus_delete(&spi_bus);
+}
