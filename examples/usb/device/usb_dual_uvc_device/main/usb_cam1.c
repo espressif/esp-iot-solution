@@ -115,13 +115,13 @@ esp_err_t usb_cam1_init(void)
 
     ESP_LOGI(TAG, "Format List");
 #if CONFIG_FORMAT_MJPEG_CAM1
-    ESP_LOGI(TAG, "\tFormat(1) = %s", "H264");
+    ESP_LOGI(TAG, "\tFormat(1) = %s", "MJPEG");
 #else
     ESP_LOGI(TAG, "\tFormat(1) = %s", "H264");
 #endif
     ESP_LOGI(TAG, "Frame List");
     ESP_LOGI(TAG, "\tFrame(1) = %d * %d @%dfps", UVC_FRAMES_INFO[index - 1][0].width, UVC_FRAMES_INFO[index - 1][0].height, UVC_FRAMES_INFO[index - 1][0].rate);
-#if CONFIG_UVC_CAM2_MULTI_FRAMESIZE
+#if CONFIG_UVC_CAM1_MULTI_FRAMESIZE
     ESP_LOGI(TAG, "\tFrame(2) = %d * %d @%dfps", UVC_FRAMES_INFO[index - 1][1].width, UVC_FRAMES_INFO[index - 1][1].height, UVC_FRAMES_INFO[index - 1][1].rate);
     ESP_LOGI(TAG, "\tFrame(3) = %d * %d @%dfps", UVC_FRAMES_INFO[index - 1][2].width, UVC_FRAMES_INFO[index - 1][2].height, UVC_FRAMES_INFO[index - 1][2].rate);
     ESP_LOGI(TAG, "\tFrame(3) = %d * %d @%dfps", UVC_FRAMES_INFO[index - 1][3].width, UVC_FRAMES_INFO[index - 1][3].height, UVC_FRAMES_INFO[index - 1][3].rate);
