@@ -1,26 +1,45 @@
-set(src_cdc)
-set(inc_cdc)
+idf_component_get_property(TUSB_PATH leeebo__tinyusb_src COMPONENT_DIR)
+idf_component_get_property(DCD_CORE_INCLUDES leeebo__tinyusb_src DCD_CORE_INCLUDES)
+idf_component_get_property(DCD_CORE_SRCS leeebo__tinyusb_src DCD_CORE_SRCS)
+idf_component_get_property(TUSB_COMPILE_OPTIONS leeebo__tinyusb_src TUSB_COMPILE_OPTIONS)
+
+message("TinyUSB path: ${TUSB_PATH}")
+message("TinyUSB includes: ${DCD_CORE_INCLUDES}")
+message("TinyUSB sources: ${DCD_CORE_SRCS}")
+message("TinyUSB compile options: ${TUSB_COMPILE_OPTIONS}")
+
+set(src_tusb
+    "${DCD_CORE_SRCS}"
+    "msc/msc.c"
+    "usb_descriptors.c"
+    "${TUSB_PATH}/src/class/cdc/cdc_device.c"
+    "${TUSB_PATH}/src/class/msc/msc_device.c"
+    )
+set(inc_tusb "${DCD_CORE_INCLUDES}" "msc")
+
 if(CONFIG_ENABLE_UF2_USB_CONSOLE)
-set(src_cdc "cdc/cdc.c" "cdc/tusb_cdc_acm.c" "cdc/tusb_console.c" "cdc/vfs_tinyusb.c")
-set(inc_cdc "cdc")
+list(APPEND src_tusb "cdc/cdc.c" "cdc/tusb_cdc_acm.c" "cdc/tusb_console.c" "cdc/vfs_tinyusb.c")
+list(APPEND inc_tusb "cdc")
 endif()
 
 idf_component_register(
                     SRCS
                     "uf2/board_flash.c"
                     "uf2/ghostfat.c"
-                    "msc/msc.c"
-                    "msc/usb_descriptors.c"
                     "esp_tinyuf2.c"
-                    ${src_cdc}
-                    INCLUDE_DIRS "." "msc" ${inc_cdc}
+                    ${src_tusb}
+                    INCLUDE_DIRS "." ${inc_tusb}
                     PRIV_INCLUDE_DIRS "private_include"
                     REQUIRES app_update
-                    PRIV_REQUIRES usb nvs_flash vfs esp_ringbuf)
+                    PRIV_REQUIRES usb nvs_flash vfs esp_ringbuf esp_pm)
 
-idf_component_get_property(tusb_lib leeebo__tinyusb_src COMPONENT_LIB)
-cmake_policy(SET CMP0079 NEW)
-target_link_libraries(${tusb_lib} PRIVATE ${COMPONENT_LIB})
+if(NOT CONFIG_TINYUSB_SOURCE_CODE_ONLY)
+message(FATAL_ERROR "Please disable 'Build tinyusb as a static library' in menuconfig 'TinyUSB soucre'")
+endif()
+
+target_compile_options(${COMPONENT_LIB} PUBLIC
+    ${TUSB_COMPILE_OPTIONS}
+)
 
 execute_process(COMMAND git -C ${IDF_PATH} describe --dirty --always --tags
     OUTPUT_VARIABLE MY_IDF_VERSION

@@ -1,4 +1,4 @@
-version: "0.2.1"
+version: "0.2.2"
 targets:
   - esp32s2
   - esp32s3
@@ -13,7 +13,7 @@ dependencies:
   cmake_utilities: "0.*"
   leeebo/esp-inih: "0.*"
   leeebo/tinyusb_src:
-    version: "~0.0.3"
+    version: ">=0.16.0~5"
 
 examples:
   - path: ../../../examples/usb/device/usb_uf2_ota

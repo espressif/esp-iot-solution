@@ -57,6 +57,12 @@ typedef struct {
     nvs_modified_cb_t modified_cb;    /*! user callback called after uf2 update complete */
 } tinyuf2_nvs_config_t;
 
+typedef enum {
+    TINYUF2_STATE_NOT_INSTALLED = 0,
+    TINYUF2_STATE_INSTALLED,
+    TINYUF2_STATE_MOUNTED,
+} tinyuf2_state_t;
+
 /**
  * @brief Flashing app to specified partition through USB UF2 (Virtual USB Disk)，
  * and support operate NVS partition through USB UF2 CONFIG.ini file.
@@ -78,6 +84,13 @@ esp_err_t esp_tinyuf2_install(tinyuf2_ota_config_t *ota_config, tinyuf2_nvs_conf
  *      - ESP_OK  Success
  */
 esp_err_t esp_tinyuf2_uninstall(void);
+
+/**
+ * @brief Get tinyuf2 current state
+ *
+ * @return tinyuf2_state_t
+ */
+tinyuf2_state_t esp_tinyuf2_current_state(void);
 
 #ifdef __cplusplus
 }

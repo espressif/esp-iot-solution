@@ -15,6 +15,7 @@
 #include "tusb_cdc_acm.h"
 #include "cdc.h"
 #include "sdkconfig.h"
+#include "esp_tinyuf2.h"
 
 #define RX_UNREADBUF_SZ_DEFAULT 64 // buffer storing all unread RX data
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
@@ -272,6 +273,12 @@ size_t tinyusb_cdcacm_write_queue_char(tinyusb_cdcacm_itf_t itf, char ch)
     if (!get_acm(itf)) { // non-initialized
         return 0;
     }
+
+    if (esp_tinyuf2_current_state() < TINYUF2_STATE_MOUNTED) {
+        ESP_LOGD(TAG, "USB is not connected");
+        return 0;
+    }
+
     return tud_cdc_n_write_char(itf, ch);
 }
 
@@ -280,6 +287,12 @@ size_t tinyusb_cdcacm_write_queue(tinyusb_cdcacm_itf_t itf, const uint8_t *in_bu
     if (!get_acm(itf)) { // non-initialized
         return 0;
     }
+
+    if (esp_tinyuf2_current_state() < TINYUF2_STATE_MOUNTED) {
+        ESP_LOGD(TAG, "USB is not connected");
+        return 0;
+    }
+
     const uint32_t size_available = tud_cdc_n_write_available(itf);
     return tud_cdc_n_write(itf, in_buf, MIN(in_size, size_available));
 }
@@ -293,6 +306,11 @@ esp_err_t tinyusb_cdcacm_write_flush(tinyusb_cdcacm_itf_t itf, uint32_t timeout_
 {
     if (!get_acm(itf)) { // non-initialized
         return ESP_FAIL;
+    }
+
+    if (esp_tinyuf2_current_state() < TINYUF2_STATE_MOUNTED) {
+        ESP_LOGD(TAG, "USB is not connected");
+        return ESP_ERR_INVALID_STATE;
     }
 
     if (!timeout_ticks) { // if no timeout - nonblocking mode
