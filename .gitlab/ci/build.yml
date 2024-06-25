@@ -34,7 +34,7 @@
     IDF_CI_BUILD: "1"
     # By configuring this macro, you can append the compiled configuration file.
     # For example, using "sdkconf.etc=default" specifies the default sdkconfig file.
-    EXAMPLE_CONFIG: ""
+    EXAMPLE_CONFIG: "="
   script:
     - pip install "idf-component-manager<1.5"
     - pip install idf_build_apps
@@ -49,7 +49,7 @@
       - IMAGE: espressif/idf:release-v5.2
       - IMAGE: espressif/idf:release-v5.3
 
-.build_idf_version_larger_than_v5_0:
+.build_idf_version_greater_equal_v5_0:
   parallel:
     matrix:
       - IMAGE: espressif/idf:release-v5.0
@@ -601,7 +601,7 @@ build_example_usb_device_usb_dongle:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_device_usb_dongle
-    - .build_idf_version_larger_than_v5_0
+    - .build_idf_version_greater_equal_v5_0
   variables:
     EXAMPLE_DIR: examples/usb/device/usb_dongle
 
@@ -628,7 +628,7 @@ build_example_usb_device_usb_dual_uvc_device:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_device_usb_dual_uvc_device
-    - .build_idf_version_larger_than_v5_0
+    - .build_idf_version_greater_equal_v5_0
   variables:
     EXAMPLE_DIR: examples/usb/device/usb_dual_uvc_device
 
@@ -636,7 +636,7 @@ build_example_usb_device_usb_webcam:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_device_usb_webcam
-    - .build_idf_version_larger_than_v5_0
+    - .build_idf_version_greater_equal_v5_0
   variables:
     EXAMPLE_DIR: examples/usb/device/usb_webcam
 

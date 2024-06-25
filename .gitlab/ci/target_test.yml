@@ -574,12 +574,10 @@ examples_test_usb_uf2_nvs:
     - .rules:build:example_usb_device_usb_uf2_nvs
   needs:
     - job: "build_example_usb_device_usb_uf2_nvs"
-      artifacts: true
-      optional: true
   parallel:
     matrix:
       - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.0"
+        IDF_VERSION: "5.1"
         ENV_TAG: usb-otg_camera
       - IDF_TARGET: esp32s3
         IDF_VERSION: "4.4"
@@ -604,7 +602,7 @@ examples_test_usb_uf2_ota:
   parallel:
     matrix:
       - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.0"
+        IDF_VERSION: "5.1"
         ENV_TAG: usb-otg_camera
       - IDF_TARGET: esp32s3
         IDF_VERSION: "4.4"

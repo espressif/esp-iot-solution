@@ -240,6 +240,10 @@ examples/usb/device/usb_uac:
 examples/usb/device/usb_dual_uvc_device:
   enable:
     - if: IDF_TARGET in ["esp32s3","esp32s2","esp32p4"]
+  disable:
+    - if: IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0
+      temporary: true
+      reason: esp32-s3-usb-otg not supported idf release 5.0 build yet
 
 examples/usb/device/usb_webcam:
   enable:
@@ -248,6 +252,10 @@ examples/usb/device/usb_webcam:
 examples/usb/device/usb_hid_device:
   enable:
     - if: IDF_TARGET in ["esp32s2","esp32s3"]
+  disable:
+    - if: IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0
+      temporary: true
+      reason: esp32-s3-usb-otg not supported idf release 5.0 build yet
 
 examples/usb/device/usb_lcd_display:
   enable:
@@ -256,18 +264,34 @@ examples/usb/device/usb_lcd_display:
 examples/usb/device/usb_msc_wireless_disk:
   enable:
     - if: IDF_TARGET in ["esp32s2","esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
+  disable:
+    - if: IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0
+      temporary: true
+      reason: esp32-s3-usb-otg not supported idf release 5.0 build yet
 
 examples/usb/device/usb_surface_dial:
   enable:
     - if: IDF_TARGET in ["esp32s2","esp32s3"]
+  disable:
+    - if: IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0
+      temporary: true
+      reason: esp32-s3-usb-otg not supported idf release 5.0 build yet
 
 examples/usb/device/usb_uf2_nvs:
   enable:
     - if: IDF_TARGET in ["esp32s2","esp32s3"]
+  disable:
+    - if: IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0
+      temporary: true
+      reason: esp32-s3-usb-otg not supported idf release 5.0 build yet
 
 examples/usb/device/usb_uf2_ota:
   enable:
     - if: IDF_TARGET in ["esp32s2","esp32s3"]
+  disable:
+    - if: IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0
+      temporary: true
+      reason: esp32-s3-usb-otg not supported idf release 5.0 build yet
 
 examples/usb/host/usb_camera_lcd_display:
   enable:
@@ -276,6 +300,10 @@ examples/usb/host/usb_camera_lcd_display:
 examples/usb/host/usb_camera_mic_spk:
   enable:
     - if: IDF_TARGET in ["esp32s2","esp32s3"]
+  disable:
+    - if: IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0
+      temporary: true
+      reason: esp32-s3-usb-otg not supported idf release 5.0 build yet
 
 examples/usb/host/usb_audio_player:
   enable:
@@ -292,6 +320,10 @@ examples/usb/host/usb_cdc_basic:
 examples/usb/host/usb_msc_ota:
   enable:
     - if: SOC_USB_OTG_SUPPORTED == 1
+  disable:
+    - if: IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0
+      temporary: true
+      reason: esp32-s3-usb-otg not supported idf release 5.0 build yet
 
 examples/utilities/xz_decompress_file:
   enable:
