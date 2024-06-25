@@ -1,6 +1,11 @@
 
 # ChangeLog
 
+## v0.9.3 - 2024-6-20
+
+* Setting light brightness perform gamma correction.
+* Resolved the issue of incorrect brightness save. [!376](https://github.com/espressif/esp-iot-solution/issues/376)
+
 ## v0.9.2 - 2024-2-4
 
 * Fixed test_led_indicator.c build in C++ error
