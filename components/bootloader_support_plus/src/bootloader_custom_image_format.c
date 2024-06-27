@@ -141,8 +141,7 @@ esp_err_t __wrap_esp_image_verify(esp_image_load_mode_t mode, const esp_partitio
 
     if (image_type == OTA_IMAGE_TYPE_1) {
 #ifndef BOOTLOADER_BUILD
-        ESP_LOGE(TAG, "Not allow to OTA a standard image when customer bootloader enabled");
-        return ESP_ERR_IMAGE_INVALID;
+        ESP_LOGW(TAG, "OTA into standard image, even when custom bootloder is enabled");
 #else //in BOOTLOADER_BUILD
         return __real_esp_image_verify(mode, part, data);
 #endif
