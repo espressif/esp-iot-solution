@@ -1,5 +1,9 @@
 [![Documentation Status](https://dl.espressif.com/AE/docs/docs_latest.svg)](https://docs.espressif.com/projects/esp-iot-solution/en)
 
+<a href="https://espressif.github.io/esp-launchpad/?flashConfigURL=https://dl.espressif.com/AE/esp-iot-solution/config.toml">
+    <img alt="Try it with ESP Launchpad" src="https://espressif.github.io/esp-launchpad/assets/try_with_launchpad.png" width="200" height="56">
+</a>
+
 ## Espressif IoT Solution Overview
 
 * [中文版](./README_CN.md)
@@ -84,7 +88,7 @@ The registered components in ESP-IoT-Solution are listed below:
 |              [esp_tinyuf2](https://components.espressif.com/components/espressif/esp_tinyuf2)              |              [![Component Registry](https://components.espressif.com/components/espressif/esp_tinyuf2/badge.svg)](https://components.espressif.com/components/espressif/esp_tinyuf2)              |
 |            [extended_vfs](https://components.espressif.com/components/espressif/extended_vfs)            |            [![Component Registry](https://components.espressif.com/components/espressif/extended_vfs/badge.svg)](https://components.espressif.com/components/espressif/extended_vfs)            |
 |                   [gprof](https://components.espressif.com/components/espressif/gprof)                   |                   [![Component Registry](https://components.espressif.com/components/espressif/gprof/badge.svg)](https://components.espressif.com/components/espressif/gprof)                   |
-|                      [i2c_bus](https://components.espressif.com/components/espressif/i2c_bus)                      |                      [![Component Registry](https://components.espressif.com/components/espressif/i2c_bus/badge.svg)](https://components.espressif.com/components/espressif/i2c_bus)   
+|                      [i2c_bus](https://components.espressif.com/components/espressif/i2c_bus)                      |                      [![Component Registry](https://components.espressif.com/components/espressif/i2c_bus/badge.svg)](https://components.espressif.com/components/espressif/i2c_bus)
 |                [iot_usbh](https://components.espressif.com/components/espressif/iot_usbh)                |                [![Component Registry](https://components.espressif.com/components/espressif/iot_usbh/badge.svg)](https://components.espressif.com/components/espressif/iot_usbh)                |
 |            [iot_usbh_cdc](https://components.espressif.com/components/espressif/iot_usbh_cdc)            |            [![Component Registry](https://components.espressif.com/components/espressif/iot_usbh_cdc/badge.svg)](https://components.espressif.com/components/espressif/iot_usbh_cdc)            |
 |          [iot_usbh_modem](https://components.espressif.com/components/espressif/iot_usbh_modem)          |          [![Component Registry](https://components.espressif.com/components/espressif/iot_usbh_modem/badge.svg)](https://components.espressif.com/components/espressif/iot_usbh_modem)          |

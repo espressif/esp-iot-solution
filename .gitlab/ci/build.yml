@@ -22,12 +22,14 @@
       - "**/build*/*.map"
       - "**/build*/*.elf"
       - "**/build*/flasher_args.json"
+      - "**/build*/flash_args"
       - "**/build*/flash_project_args"
       - "**/build*/config/sdkconfig.json"
       - "**/build*/bootloader/*.bin"
       - "**/build*/bootloader/*.elf"
       - "**/build*/partition_table/*.bin"
       - "**/build*/mmap_build/*.bin"
+      - "**/build*/**/*.bin"
       - size_info.txt
     expire_in: 1 week
   variables:
@@ -718,7 +720,7 @@ build_example_usb_host_usb_camera_mic_spk:
   parallel:
     matrix:
       - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
+      - IMAGE: espressif/idf:release-v5.1
   variables:
     EXAMPLE_DIR: examples/usb/host/usb_camera_mic_spk
 
