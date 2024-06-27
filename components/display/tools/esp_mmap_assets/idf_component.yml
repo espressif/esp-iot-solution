@@ -19,3 +19,4 @@ url: https://github.com/espressif/esp-iot-solution/tree/master/components/displa
 documentation: https://docs.espressif.com/projects/esp-iot-solution/en/latest/display/tools/esp_mmap_assets.html
 examples:
   - path: ../../../../examples/hmi/lvgl_spng
+  - path: ../../../../examples/hmi/lvgl_freetype
