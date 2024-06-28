@@ -1,8 +1,8 @@
-menu "Example Configeration"
+menu "Example Configuration"
 
     choice DEVELOPMENT_BOARD_SELECTION
         prompt "Select the development board you are using"
-        default ESP32_S3_GENERIC if IDF_TARGET_ESP32S3
+        default ESP32_S3_USB_OTG if IDF_TARGET_ESP32S3
         default ESP32_S2_GENERIC if IDF_TARGET_ESP32S2
         help
             Select this option to choose the board for the example.
@@ -20,15 +20,5 @@ menu "Example Configeration"
             depends on IDF_TARGET_ESP32S2
 
     endchoice
-
-    config MSC_OTA_BIN_NAME
-        string "msc ota bin name"
-        default "usb_msc_ota.bin"
-
-    config SIMPLE_MSC_OTA
-        bool "simple msc ota"
-        default y
-        help
-            simple msc ota
 
 endmenu

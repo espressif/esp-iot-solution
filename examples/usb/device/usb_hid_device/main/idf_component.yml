@@ -10,3 +10,7 @@ dependencies:
     version: ">=0.15.0~6"
     rules:
       - if: "idf_version >=4.4,<5.0"
+  espressif/esp32_s3_usb_otg:
+    version: "^1.5.1"
+    rules:
+      - if: "target in [esp32s3]"

@@ -3,3 +3,7 @@ dependencies:
   esp_tinyuf2:
     version: "0.*"
     override_path: "../../../../../components/usb/esp_tinyuf2"
+  espressif/esp32_s3_usb_otg:
+    version: "^1.5.1"
+    rules:
+      - if: "target in [esp32s3]"

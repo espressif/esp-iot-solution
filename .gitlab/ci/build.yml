@@ -22,12 +22,14 @@
       - "**/build*/*.map"
       - "**/build*/*.elf"
       - "**/build*/flasher_args.json"
+      - "**/build*/flash_args"
       - "**/build*/flash_project_args"
       - "**/build*/config/sdkconfig.json"
       - "**/build*/bootloader/*.bin"
       - "**/build*/bootloader/*.elf"
       - "**/build*/partition_table/*.bin"
       - "**/build*/mmap_build/*.bin"
+      - "**/build*/**/*.bin"
       - size_info.txt
     expire_in: 1 week
   variables:
@@ -49,7 +51,7 @@
       - IMAGE: espressif/idf:release-v5.2
       - IMAGE: espressif/idf:release-v5.3
 
-.build_idf_version_larger_than_v5_0:
+.build_idf_version_greater_equal_v5_0:
   parallel:
     matrix:
       - IMAGE: espressif/idf:release-v5.0
@@ -598,7 +600,7 @@ build_example_usb_device_usb_dongle:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_device_usb_dongle
-    - .build_idf_version_larger_than_v5_0
+    - .build_idf_version_greater_equal_v5_0
   variables:
     EXAMPLE_DIR: examples/usb/device/usb_dongle
 
@@ -625,7 +627,7 @@ build_example_usb_device_usb_dual_uvc_device:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_device_usb_dual_uvc_device
-    - .build_idf_version_larger_than_v5_0
+    - .build_idf_version_greater_equal_v5_0
   variables:
     EXAMPLE_DIR: examples/usb/device/usb_dual_uvc_device
 
@@ -633,7 +635,7 @@ build_example_usb_device_usb_webcam:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_device_usb_webcam
-    - .build_idf_version_larger_than_v5_0
+    - .build_idf_version_greater_equal_v5_0
   variables:
     EXAMPLE_DIR: examples/usb/device/usb_webcam
 
@@ -715,7 +717,7 @@ build_example_usb_host_usb_camera_mic_spk:
   parallel:
     matrix:
       - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
+      - IMAGE: espressif/idf:release-v5.1
   variables:
     EXAMPLE_DIR: examples/usb/host/usb_camera_mic_spk
 

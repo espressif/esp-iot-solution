@@ -77,6 +77,19 @@ def get_cmake_apps(
 def main(args):  # type: (argparse.Namespace) -> None
     default_build_targets = args.default_build_targets.split(',') if args.default_build_targets else None
     apps = get_cmake_apps(args.paths, args.target, args.config, default_build_targets)
+
+    if args.find:
+        if args.output:
+            os.makedirs(os.path.dirname(os.path.realpath(args.output)), exist_ok=True)
+            with open(args.output, 'w') as fw:
+                for app in apps:
+                    fw.write(app.to_json() + '\n')
+        else:
+            for app in apps:
+                print(app)
+
+        sys.exit(0)
+
     if args.exclude_apps:
         apps_to_build = [app for app in apps if app.name not in args.exclude_apps]
     else:
@@ -115,7 +128,7 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '--config',
-        default=['sdkconfig.ci=default', 'sdkconfig.ci.*=', '=default'],
+        default=['sdkconfig.defaults=default', 'sdkconfig.ci.*=', '=default'],
         action='append',
         help='Adds configurations (sdkconfig file names) to build. This can either be '
         'FILENAME[=NAME] or FILEPATTERN. FILENAME is the name of the sdkconfig file, '
@@ -152,6 +165,15 @@ if __name__ == '__main__':
         '-v', '--verbose',
         action='count', default=0,
         help='Show verbose log message',
+    )
+    parser.add_argument(
+        '--find',
+        action='store_true',
+        help='Find the buildable applications. If enable this option, build options will be ignored.',
+    )
+    parser.add_argument(
+        '-o', '--output',
+        help='Print the found apps to the specified file instead of stdout'
     )
 
     arguments = parser.parse_args()

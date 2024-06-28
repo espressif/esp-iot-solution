@@ -8,9 +8,16 @@
 #include "usb_device_uvc.h"
 #include "usb_cam.h"
 #include "esp_spiffs.h"
+#ifdef CONFIG_ESP32_S3_USB_OTG
+#include "bsp/esp-bsp.h"
+#endif
 
 void app_main(void)
 {
+#ifdef CONFIG_ESP32_S3_USB_OTG
+    bsp_usb_mode_select_device();
+#endif
+
     esp_vfs_spiffs_conf_t conf = {
         .base_path = "/spiffs",
         .partition_label = "avi",

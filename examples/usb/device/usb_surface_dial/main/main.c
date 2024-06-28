@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2016-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2016-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -15,6 +15,9 @@
 #include "tusb_config.h"
 #include "iot_button.h"
 #include "iot_knob.h"
+#ifdef CONFIG_ESP32_S3_USB_OTG
+#include "bsp/esp-bsp.h"
+#endif
 
 #define TAG "DIAL"
 
@@ -22,7 +25,7 @@
 #define GPIO_KNOB_A 1
 #define GPIO_KNOB_B 2
 
-#define REPORT_ID 1
+#define REPORT_ID    1
 #define DIAL_R       0xC8
 #define DIAL_L       0x38
 #define DIAL_PRESS   0x01
@@ -114,6 +117,9 @@ static void _knob_init(void)
 
 void app_main(void)
 {
+#ifdef CONFIG_ESP32_S3_USB_OTG
+    bsp_usb_mode_select_device();
+#endif
     usb_phy_init();
     _button_init();
     _knob_init();

@@ -11,6 +11,9 @@
 #include "esp_msc_host.h"
 #include "esp_msc_ota.h"
 #include "usb/usb_host.h"
+#ifdef CONFIG_ESP32_S3_USB_OTG
+#include "bsp/esp-bsp.h"
+#endif
 
 static const char *TAG = "usb_msc_ota";
 
@@ -71,6 +74,10 @@ static void msc_ota_event_handler(void *arg, esp_event_base_t event_base,
 
 void app_main(void)
 {
+#ifdef CONFIG_ESP32_S3_USB_OTG
+    bsp_usb_mode_select_host();
+    bsp_usb_host_power_mode(BSP_USB_HOST_POWER_MODE_USB_DEV, true);
+#endif
     esp_event_loop_create_default();
     ESP_ERROR_CHECK(esp_event_handler_register(ESP_MSC_OTA_EVENT, ESP_EVENT_ANY_ID, &msc_ota_event_handler, NULL));
     esp_msc_host_config_t msc_host_config = {

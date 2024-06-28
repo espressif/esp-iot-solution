@@ -48,6 +48,9 @@ deploy_docs_preview:
   extends:
     - .deploy_docs_template
     - .rules:deploy:docs_preview
+  environment:
+    name: esp-iot-solution_docs_preview
+    url: ${FINAL_PREVIEW_URL}
   variables:
     TYPE: "preview"
     DOCS_BUILD_DIR: "${CI_PROJECT_DIR}/docs/_build/"
@@ -56,11 +59,17 @@ deploy_docs_preview:
     DOCS_DEPLOY_SERVER_USER: "$DOCS_PREVIEW_SERVER_USER"
     DOCS_DEPLOY_PATH: "$DOCS_PREVIEW_PATH"
     DOCS_DEPLOY_URL_BASE: "$DOCS_PREVIEW_URL_BASE"
+  before_script:
+    - export SANITIZED_BRANCH_NAME=$(echo "$CI_COMMIT_REF_NAME" | tr '/' '-')
+    - export FINAL_PREVIEW_URL="https://preview-docs.espressif.com/projects/esp-iot-solution/zh_CN/$SANITIZED_BRANCH_NAME/index.html"
 
 deploy_docs_production:
   extends:
     - .deploy_docs_template
     - .rules:deploy:docs_production
+  environment:
+    name: esp-iot-solution_docs_preview
+    url: https://docs.espressif.com/projects/esp-iot-solution/zh_CN/latest/index.html
   variables:
     TYPE: "production"
     DOCS_BUILD_DIR: "${CI_PROJECT_DIR}/docs/_build/"
@@ -69,3 +78,48 @@ deploy_docs_production:
     DOCS_DEPLOY_SERVER_USER: "$DOCS_PROD_SERVER_USER"
     DOCS_DEPLOY_PATH: "$DOCS_PROD_PATH"
     DOCS_DEPLOY_URL_BASE: "$DOCS_PROD_URL_BASE"
+
+# Up to 50 jobs can needs
+# Please modify tools/ci/launchpad/upload_project_config.yml at same time.
+pack-upload_files:
+  stage: deploy
+  image: espressif/idf:release-v5.3
+  tags: ['build']
+  needs:
+    - job: "build_example_usb_device_usb_dual_uvc_device: [espressif/idf:release-v5.3]"
+    - job: "build_example_usb_device_usb_webcam: [espressif/idf:release-v5.3]"
+    - job: "build_example_usb_host_usb_camera_lcd_display: [espressif/idf:release-v5.1]"
+    - job: "build_example_usb_host_usb_camera_mic_spk: [espressif/idf:release-v5.1]"
+  artifacts:
+    when: always
+    paths:
+      - binaries/
+    expire_in: 1 week
+  rules:
+    - if: $CI_COMMIT_REF_NAME == "master"
+    - if: $CI_COMMIT_REF_NAME == "feat/usb_device_example_support_usb_otg"
+  script:
+    - pip install rtoml ruamel.yaml --upgrade
+    - pip install idf_build_apps
+    - python tools/build_apps.py . --find -o output.json -t all
+    - echo "Merging binaries and generating config.toml..."
+    - python tools/ci/launchpad/generateFiles.py output.json
+
+include:
+  - project: 'ae_group/test-related/ae_upload_dl'
+    # Use ref to specify the branch name (etc: ref: 'feat/add_esp-dev-kits')
+    file: 'trigger.yml'
+
+upload-dl-trigger:
+  needs:
+    - job: "pack-upload_files"
+      artifacts: false
+  rules:
+    - if: $CI_COMMIT_REF_NAME == "master"
+  environment:
+    name: esp-iot-solution_launchpad
+    url: https://espressif.github.io/esp-launchpad/?flashConfigURL=https://dl.espressif.com/AE/esp-iot-solution/config.toml
+  variables:
+    SOURCE_PROJECT_TOKEN: ${UPLOAD_ACCESS_TOKEN}
+    # Use TRIGGER_REPO_REF to specify the branch name (etc: TRIGGER_REPO_REF: 'feat/add_esp-iot-solution')
+    # Use UPLOAD_TO_DBG_DIR to specify the directory name (etc: UPLOAD_TO_DBG_DIR: '1')

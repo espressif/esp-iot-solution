@@ -1,0 +1,33 @@
+# example/a               // project full path
+#  target: esp32          // target name
+#  sdkconfig:             // sdkconfig name
+#     - a                 // sdkconfig.ci.a
+#     - default           // sdkconfig.default
+#  target: esp32s3        // target name
+#  sdkconfig:             // sdkconfig name
+#     - b                 // sdkconfig.ci.a
+#     - default           // sdkconfig.default
+
+examples/usb/device/usb_dual_uvc_device:
+  esp32s3:
+    sdkconfig:
+      - esp32s3_usb_otg
+  esp32p4:
+    sdkconfig:
+      - default
+
+examples/usb/device/usb_webcam:
+  esp32s3:
+    sdkconfig:
+      - esp32s3_eye
+
+examples/usb/host/usb_camera_lcd_display:
+  esp32s3:
+    sdkconfig:
+      - esp32s3_lcd_ev_board
+
+examples/usb/host/usb_camera_mic_spk:
+  esp32s3:
+    sdkconfig:
+      - esp32s3_usb_otg
+      - default

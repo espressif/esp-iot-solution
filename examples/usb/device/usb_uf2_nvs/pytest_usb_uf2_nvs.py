@@ -18,6 +18,12 @@ from pytest_embedded import Dut
 @pytest.mark.target('esp32s2')
 @pytest.mark.target('esp32s3')
 @pytest.mark.env('usb-otg_camera')
+@pytest.mark.parametrize(
+    'config',
+    [
+        'esp32s3_usb_otg',
+    ],
+)
 def test_usb_uf2_nvs(dut: Dut)-> None:
     dut.expect(r'TUF2: UF2 Updater install succeed, Version: (\d+).(\d+).(\d+)', timeout=5)
     dut.expect(r'TUF2: USB Mounted', timeout=10)

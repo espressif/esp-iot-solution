@@ -112,3 +112,7 @@ XUNIT_RESULT.xml
 
 #format file
 .editorconfig
+
+#launchpad
+binaries/
+output.json

@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+/* SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -15,6 +15,9 @@
 #include "nvs.h"
 #include "nvs_flash.h"
 #include "esp_tinyuf2.h"
+#ifdef CONFIG_ESP32_S3_USB_OTG
+#include "bsp/esp-bsp.h"
+#endif
 
 static const char *TAG = "uf2_nvs_example";
 #define EXAMPLE_ESP_MAXIMUM_RETRY 5
@@ -94,6 +97,9 @@ static void uf2_nvs_modified_cb()
 
 void app_main(void)
 {
+#ifdef CONFIG_ESP32_S3_USB_OTG
+    bsp_usb_mode_select_device();
+#endif
     esp_err_t err = ESP_OK;
     const char *uf2_nvs_partition = "nvs";
     const char *uf2_nvs_namespace = "wifi_config";

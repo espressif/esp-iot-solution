@@ -11,6 +11,9 @@
 #include "iot_button.h"
 #include "esp_private/usb_phy.h"
 #include "tinyusb_hid.h"
+#ifdef CONFIG_ESP32_S3_USB_OTG
+#include "bsp/esp-bsp.h"
+#endif
 
 #define TAG "HID Example"
 
@@ -211,6 +214,9 @@ static void usb_phy_init(void)
 
 void app_main(void)
 {
+#ifdef CONFIG_ESP32_S3_USB_OTG
+    bsp_usb_mode_select_device();
+#endif
     // switch esp usb phy to usb-otg
     usb_phy_init();
     tud_init(BOARD_TUD_RHPORT);
