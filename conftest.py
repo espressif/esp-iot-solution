@@ -53,7 +53,7 @@ def session_tempdir() -> str:
 @multi_dut_argument
 def config(request: FixtureRequest) -> str:
     config_marker = list(request.node.iter_markers(name='config'))
-    return config_marker[0].args[0] if config_marker else 'default'
+    return config_marker[0].args[0] if config_marker else 'defaults'
 
 
 @pytest.fixture

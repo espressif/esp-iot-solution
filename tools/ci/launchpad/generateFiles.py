@@ -32,6 +32,8 @@ class App:
         self.build_info = []
         # App version
         self.app_version = ''
+        # App readme
+        self.readme = ''
 
 current_app = App(None)
 
@@ -131,6 +133,9 @@ def remove_app_from_config(apps):
                 matched_build_info.append(build_info)
         if matched_build_info:
             app['build_info'] = matched_build_info
+            if config_apps[app_dir].get('readme'):
+                print(config_apps[app_dir]['readme'])
+                app['readme'] = config_apps[app_dir]['readme']
             new_apps.append(app)
 
     return new_apps
@@ -208,6 +213,8 @@ def write_app(app):
             toml_obj[support_app] = {}
             toml_obj[support_app]['android_app_url'] = ''
             toml_obj[support_app]['ios_app_url'] = ''
+            if app.get('readme'):
+                toml_obj[support_app]['readme.text'] = app['readme']
         if not toml_obj[support_app].get('chipsets'):
             toml_obj[support_app]['chipsets'] = [f'{build_info["target"]}-{build_info["sdkconfig"]}']
         else:
@@ -225,14 +232,14 @@ def create_config_toml(apps):
 
         # This is a workaround to remove the quotes around the image.<string> in the config.toml file as dot is not allowed in the key by default
         with open('binaries/config.toml', 'r') as toml_file:
-            fixed = replace_image_string(toml_file.read())
+            fixed = replace_image_and_readme_string(toml_file.read())
 
         with open('binaries/config.toml', 'w') as toml_file:
             toml_file.write(fixed)
 
-def replace_image_string(text):
+def replace_image_and_readme_string(text):
     # Define the regular expression pattern to find "image.<string>"
-    pattern = r'"(image\.[\w-]+)"'
+    pattern = r'"((image|readme)\.[\w-]+)"'
     # Use re.sub() to replace the matched pattern with image.<string>
     result = re.sub(pattern, r'\1', text)
     return result
