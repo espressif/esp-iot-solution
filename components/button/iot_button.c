@@ -308,11 +308,14 @@ static void button_cb(void *args)
 #if CONFIG_GPIO_BUTTON_SUPPORT_POWER_SAVE
     if (enter_power_save_flag) {
         /*!< Stop esp timer for power save */
-        esp_timer_stop(g_button_timer_handle);
-        g_is_timer_running = false;
+        if (g_is_timer_running) {
+            esp_timer_stop(g_button_timer_handle);
+            g_is_timer_running = false;
+        }
         for (target = g_head_handle; target; target = target->next) {
             if (target->type == BUTTON_TYPE_GPIO && target->enable_power_save) {
                 button_gpio_intr_control((int)(target->hardware_data), true);
+                button_gpio_enable_gpio_wakeup((uint32_t)(target->hardware_data), target->active_level, true);
             }
         }
     }
@@ -327,6 +330,8 @@ static void IRAM_ATTR button_power_save_isr_handler(void* arg)
         g_is_timer_running = true;
     }
     button_gpio_intr_control((int)arg, false);
+    /*!< disable gpio wakeup not need active level*/
+    button_gpio_enable_gpio_wakeup((uint32_t)arg, 0, false);
 }
 #endif
 
@@ -453,7 +458,7 @@ button_handle_t iot_button_create(const button_config_t *config)
     }
     BTN_CHECK(NULL != btn, "button create failed", NULL);
     btn->type = config->type;
-    if (!btn->enable_power_save) {
+    if (!btn->enable_power_save && !g_is_timer_running) {
         esp_timer_start_periodic(g_button_timer_handle, TICKS_INTERVAL * 1000U);
         g_is_timer_running = true;
     }
