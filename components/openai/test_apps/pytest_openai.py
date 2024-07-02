@@ -22,7 +22,7 @@ from pytest_embedded import Dut
 @pytest.mark.parametrize(
     'config',
     [
-        'defaults',
+        'api_test',
     ],
 )
 def test_openai(dut: Dut)-> None:
