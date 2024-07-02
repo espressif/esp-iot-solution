@@ -97,7 +97,6 @@ pack-upload_files:
     expire_in: 1 week
   rules:
     - if: $CI_COMMIT_REF_NAME == "master"
-    - if: $CI_COMMIT_REF_NAME == "feat/usb_device_example_support_usb_otg"
   script:
     - pip install rtoml ruamel.yaml --upgrade
     - pip install idf_build_apps

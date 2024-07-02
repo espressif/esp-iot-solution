@@ -18,10 +18,11 @@ from pytest_embedded import Dut
 @pytest.mark.target('esp32s2')
 @pytest.mark.target('esp32s3')
 @pytest.mark.env('generic')
+@pytest.mark.timeout(1000)
 @pytest.mark.parametrize(
     'config',
     [
-        'defaults',
+        'api_test',
     ],
 )
 def test_openai(dut: Dut)-> None:
