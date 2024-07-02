@@ -15,6 +15,7 @@
 
 #include "bootloader_custom_utility.h"
 #include "bootloader_flash_priv.h"
+#include "bootloader_custom_image_format.h"
 
 #ifdef CONFIG_SECURE_BOOT_V2_ENABLED
 #include "esp_secure_boot.h"
@@ -23,16 +24,9 @@
 
 static const char *TAG = "custom_image";
 
-typedef enum {
-    OTA_IMAGE_TYPE_1,           // standard image compiled from IDF
-    OTA_IMAGE_TYPE_2,           // image with standard image header and custom ota header
-    OTA_IMAGE_TYPE_3,           // image with custom ota header
-    OTA_IMAGE_TYPE_MAX
-} bootloader_custom_ota_image_type_t;
-
 static bootloader_custom_ota_header_t *custom_ota_header;
 
-static bootloader_custom_ota_image_type_t bootloader_custom_ota_get_header_type(const esp_partition_pos_t *part)
+bootloader_custom_ota_image_type_t bootloader_custom_ota_get_header_type(const esp_partition_pos_t *part)
 {
     uint8_t buf[4];
 
@@ -147,8 +141,7 @@ esp_err_t __wrap_esp_image_verify(esp_image_load_mode_t mode, const esp_partitio
 
     if (image_type == OTA_IMAGE_TYPE_1) {
 #ifndef BOOTLOADER_BUILD
-        ESP_LOGE(TAG, "Not allow to OTA a standard image when customer bootloader enabled");
-        return ESP_ERR_IMAGE_INVALID;
+        ESP_LOGW(TAG, "OTA into standard image, even when custom bootloder is enabled");
 #else //in BOOTLOADER_BUILD
         return __real_esp_image_verify(mode, part, data);
 #endif

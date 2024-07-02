@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.2.6 - 2024-07-01
+
+### Feature:
+
+* Add support to boot into a standard firmware (non-compressed) by checking the image header even if it is at last ota partition (eg. ota_1).
+
 ## v0.2.5 - 2024-4-30
 
 ### Fix:
