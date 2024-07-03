@@ -38,10 +38,12 @@
 
     - 转子用永磁体制成，永磁体的磁极数目大多为 2 到 8 磁极。南磁极和北磁极交替。
 
-.. figure:: ../../../_static/motor/bldc/bldc_run.gif
-    :align: center
-    :width: 50%
-    :alt: BLDC 无刷电机运转方式
+.. only:: html
+
+    .. figure:: ../../../_static/motor/bldc/bldc_run.gif
+        :align: center
+        :width: 50%
+        :alt: BLDC 无刷电机运转方式
 
 如果只给电机通固定的直流电流，电机只会产生不变的磁场。无法转动起来。只有通过适当的顺序来为定子相位供电，在定子上产生一个旋转磁场。转子的固有磁极跟随定子的旋转磁场有序旋转，才能达到转动的目的。
 

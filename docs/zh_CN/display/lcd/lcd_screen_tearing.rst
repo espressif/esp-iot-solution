@@ -22,17 +22,29 @@ LCD 屏幕撕裂详解
 
 屏幕撕裂，通常也称为撕裂效应，是 LCD 应用中常见的问题，通常在 GUI 发生全屏或者较大面积的区域变化时出现，现象是在 LCD 上同时显示了几帧图像中的不同部分，使得人眼能够观察到图像出现明显的断层，大大降低了 GUI 的视觉体验。下面为运行 LVGL Musci 示例时出现和没有出现屏幕撕裂的效果图。
 
-.. figure:: https://dl.espressif.com/AE/esp-iot-solution/screen_tear_with_tear.gif
-    :align: center
-    :alt: 出现屏幕撕裂的效果图
+.. only:: latex
 
-    出现屏幕撕裂的效果图
+  点击链接可参考 `出现屏幕撕裂的效果图 <https://dl.espressif.com/AE/esp-iot-solution/screen_tear_with_tear.gif>`_。
 
-.. figure:: https://dl.espressif.com/AE/esp-iot-solution/screen_tear_without_tear.gif
-    :align: center
-    :alt: 没有出现屏幕撕裂的效果图
+.. only:: html
 
-    没有出现屏幕撕裂的效果图
+    .. figure:: https://dl.espressif.com/AE/esp-iot-solution/screen_tear_with_tear.gif
+        :align: center
+        :alt: 出现屏幕撕裂的效果图
+
+        出现屏幕撕裂的效果图
+
+.. only:: latex
+
+  点击链接可参考 `没有出现屏幕撕裂的效果图 <https://dl.espressif.com/AE/esp-iot-solution/screen_tear_without_tear.gif>`_。
+
+.. only:: html
+
+    .. figure:: https://dl.espressif.com/AE/esp-iot-solution/screen_tear_without_tear.gif
+        :align: center
+        :alt: 没有出现屏幕撕裂的效果图
+
+        没有出现屏幕撕裂的效果图
 
 原因
 ^^^^^^^^^^^^^^
@@ -54,37 +66,61 @@ LCD 屏幕撕裂详解
 
 1. 假设写入的速度比读取慢（以速度比值为 1：2 举例），在主控写入第二帧图像的过程中，读取的位置会超过写入位置，使得屏幕仅读取到第二帧图像的前半部分，从而导致显示图像出现撕裂，下面为演示过程的示意图。
 
-.. figure:: https://dl.espressif.com/AE/esp-iot-solution/screen_tear_no_sync_1.gif
-    :align: center
-    :alt:  写入与读取不同步且速度比值为 1：2 时的示意图
+.. only:: latex
 
-    写入与读取不同步且速度比值为 1：2 时的示意图
+  点击链接可参考 `写入与读取不同步且速度比值为 1：2 时的示意图 <https://dl.espressif.com/AE/esp-iot-solution/screen_tear_no_sync_1.gif>`_。
+
+.. only:: html
+
+    .. figure:: https://dl.espressif.com/AE/esp-iot-solution/screen_tear_no_sync_1.gif
+        :align: center
+        :alt:  写入与读取不同步且速度比值为 1：2 时的示意图
+
+        写入与读取不同步且速度比值为 1：2 时的示意图
 
 2. 假设写入的速度比读取快（以速度比值为 2：1 举例），在屏幕读取第一帧图像的过程中，写入的位置会超过读取的位置，使得屏幕读取到第二帧图像的后半部分，从而导致显示图像出现撕裂，下面为演示过程的示意图。
 
-.. figure:: https://dl.espressif.com/AE/esp-iot-solution/screen_tear_no_sync_2.gif
-    :align: center
-    :alt:  写入与读取不同步且速度比值为 2：1 时的示意图
+.. only:: latex
 
-    写入与读取不同步且速度比值为 2：1 时的示意图
+  点击链接可参考 `写入与读取不同步且速度比值为 2：1 时的示意图 <https://dl.espressif.com/AE/esp-iot-solution/screen_tear_no_sync_2.gif>`_。
+
+.. only:: html
+
+    .. figure:: https://dl.espressif.com/AE/esp-iot-solution/screen_tear_no_sync_2.gif
+        :align: center
+        :alt:  写入与读取不同步且速度比值为 2：1 时的示意图
+
+        写入与读取不同步且速度比值为 2：1 时的示意图
 
 当主控在写入时采取了同步操作，即写入的初始位置以及初始时刻和读取是同步的，如果写入和读取的速度不匹配，那么也有可能会出现屏幕撕裂。
 
 1. 假设写入的速度小于读取的二分之一（以速度比值为 1：3 举例），在主控写入第二帧图像的过程中，读取的位置会超过写入的位置，使得屏幕仅读取到第二帧图像的前半部分，从而导致显示图像出现撕裂，下面为演示过程的示意图。
 
-.. figure:: https://dl.espressif.com/AE/esp-iot-solution/screen_tear_sync_1.gif
-    :align: center
-    :alt:  写入与读取同步且速度比值为 1：3 时的示意图
+.. only:: latex
 
-    写入与读取同步且速度比值为 1：3 时的示意图
+  点击链接可参考 `写入与读取同步且速度比值为 1：3 时的示意图 <https://dl.espressif.com/AE/esp-iot-solution/screen_tear_sync_1.gif>`_。
+
+.. only:: html
+
+    .. figure:: https://dl.espressif.com/AE/esp-iot-solution/screen_tear_sync_1.gif
+        :align: center
+        :alt:  写入与读取同步且速度比值为 1：3 时的示意图
+
+        写入与读取同步且速度比值为 1：3 时的示意图
 
 2. 假设写入的速度大于或等于读取的二分之一（以速度比值为 1：2 举例），在主控写入第二帧图像的过程中，读取的位置不会与写入的位置重叠，使得屏幕能够读取完整的第二帧图像，于是显示图像没有出现撕裂，下面为演示过程的示意图。
 
-.. figure:: https://dl.espressif.com/AE/esp-iot-solution/screen_tear_sync_2.gif
-    :align: center
-    :alt:  写入与读取同步且速度比值为 1：2 时的示意图
+.. only:: latex
 
-    写入与读取同步且速度比值为 1：2 时的示意图
+  点击链接可参考 `写入与读取同步且速度比值为 1：2 时的示意图 <https://dl.espressif.com/AE/esp-iot-solution/screen_tear_sync_2.gif>`_。
+
+.. only:: html
+
+    .. figure:: https://dl.espressif.com/AE/esp-iot-solution/screen_tear_sync_2.gif
+        :align: center
+        :alt:  写入与读取同步且速度比值为 1：2 时的示意图
+
+        写入与读取同步且速度比值为 1：2 时的示意图
 
 基于上述假设进行总结，出现屏幕撕裂的主要原因包含以下两点：
 
@@ -117,11 +153,17 @@ LCD 屏幕撕裂详解
 
 这种方法适用于 GRAM 在主控内的情况，并且要求主控可以自由调整屏幕读取的目标 GRAM，工作原理是：通过增加额外的 GRAM 来避免写入和读取同时操作同一个 GRAM。下面介绍了基于双 GRAM 的防撕裂方法，演示过程的示意图如下。
 
-.. figure:: https://dl.espressif.com/AE/esp-iot-solution/screen_tear_multi_gram.gif
-    :align: center
-    :alt:  基于双 GRAM 实现防撕裂的示意图
+.. only:: latex
 
-    基于双 GRAM 实现防撕裂的示意图
+  点击链接可参考 `基于双 GRAM 实现防撕裂的示意图 <https://dl.espressif.com/AE/esp-iot-solution/screen_tear_multi_gram.gif>`_。
+
+.. only:: html
+
+    .. figure:: https://dl.espressif.com/AE/esp-iot-solution/screen_tear_multi_gram.gif
+        :align: center
+        :alt:  基于双 GRAM 实现防撕裂的示意图
+
+        基于双 GRAM 实现防撕裂的示意图
 
 从图中可以看出，初始时主控准备将第二帧图像写入 GRAM2，而屏幕准备读取 GRAM1 中的第一帧图像。当主控写入完成后，首先需要设置屏幕的下一帧从 GRAM2 读取，然后等待屏幕读取完当前帧图像。当屏幕读取完成后，接着就开始读取 GRAM2 中的第二帧图像，同时主控也开始将第三帧图像写入 GRAM1。因此，写入和读取不会同时操作同一个 GRAM，从而避免了屏幕出现撕裂。
 
@@ -143,11 +185,17 @@ LCD 屏幕撕裂详解
 
 这种方法适用于 GRAM 在 LCD 内的情况，并且要求 LCD 提供对外的 TE 信号引脚，工作原理是：通过 TE 信号控制写入的初始状态，使其与读取保持同步，同时控制写入的速度不小于读取的二分之一，从而避免写入和读取在 GRAM 的中间位置发生重合。下面介绍了基于 TE 信号的防撕裂方法，演示过程的示意图如下。
 
-.. figure:: https://dl.espressif.com/AE/esp-iot-solution/screen_tear_te.gif
-    :align: center
-    :alt:  基于 TE 信号实现防撕裂的示意图
+.. only:: latex
 
-    基于 TE 信号实现防撕裂的示意图
+  点击链接可参考 `基于 TE 信号实现防撕裂的示意图 <https://dl.espressif.com/AE/esp-iot-solution/screen_tear_te.gif>`_。
+
+.. only:: html
+
+    .. figure:: https://dl.espressif.com/AE/esp-iot-solution/screen_tear_te.gif
+        :align: center
+        :alt:  基于 TE 信号实现防撕裂的示意图
+
+        基于 TE 信号实现防撕裂的示意图
 
 从图中可以看出，初始时主控正在等待 TE 信号，而屏幕准备进入消影区域（Porch）。当屏幕开始读取 GRAM 中的第一帧图像时，会向主控发送 TE 信号。当主控接收到 TE 信号后，就开始向 GRAM 写入第二帧图像，并且保证写入和读取的速度比值为 2：3。因此，写入和读取不会在 GRAM 的中间位置发生重合，从而避免了屏幕出现撕裂。
 
