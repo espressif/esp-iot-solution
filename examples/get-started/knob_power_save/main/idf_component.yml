@@ -1,0 +1,6 @@
+version: "0.0.1"
+dependencies:
+    idf: ">=4.4"
+    knob:
+      version: "*"
+      override_path: "../../../../components/knob"

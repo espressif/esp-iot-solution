@@ -1,14 +1,16 @@
 /*
- * SPDX-FileCopyrightText: 2016-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2016-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
 #include <stdio.h>
 #include "driver/gpio.h"
+#include "esp_attr.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "iot_knob.h"
+#include "knob_gpio.h"
 
 static const char *TAG = "Knob";
 
@@ -36,6 +38,7 @@ typedef enum {
 typedef struct Knob {
     bool          encoder_a_change;                            /*<! true means Encoder A phase Inverted*/
     bool          encoder_b_change;                            /*<! true means Encoder B phase Inverted*/
+    bool          enable_power_save;                           /*<! Enable power save function */
     uint8_t       default_direction;                           /*!< 0:positive increase   1:negative increase */
     knob_state_t  state;                                       /*!< knob state machine status */
     uint8_t       debounce_a_cnt;                              /*!< Encoder A phase debounce count */
@@ -66,7 +69,6 @@ static void knob_handler(knob_dev_t *knob)
 {
     uint8_t pha_value = knob->hal_knob_level(knob->encoder_a);
     uint8_t phb_value = knob->hal_knob_level(knob->encoder_b);
-
     if ((knob->state) > 0) {
         knob->ticks++;
     }
@@ -101,6 +103,8 @@ static void knob_handler(knob_dev_t *knob)
             knob->encoder_b_change = false;
             knob->ticks = 0;
             knob->state = KNOB_PHASE_B;
+        } else {
+            knob->event = KNOB_NONE;
         }
         break;
 
@@ -138,6 +142,8 @@ static void knob_handler(knob_dev_t *knob)
             knob->encoder_a_change = false;
             knob->ticks = 0;
             knob->state = KNOB_READY;
+        } else {
+            knob->event = KNOB_NONE;
         }
         break;
 
@@ -175,6 +181,8 @@ static void knob_handler(knob_dev_t *knob)
             knob->encoder_b_change = false;
             knob->ticks = 0;
             knob->state = KNOB_READY;
+        } else {
+            knob->event = KNOB_NONE;
         }
         break;
 
@@ -183,83 +191,102 @@ static void knob_handler(knob_dev_t *knob)
             knob->state = KNOB_READY;
             knob->encoder_a_change = false;
             knob->encoder_b_change = false;
+        } else {
+            knob->event = KNOB_NONE;
         }
         break;
     }
 }
 
-static esp_err_t _knob_gpio_init(uint8_t gpio_num)
-{
-    gpio_config_t gpio_cfg = {
-        .pin_bit_mask = (1ULL << gpio_num),
-        .mode = GPIO_MODE_INPUT,
-        .intr_type = GPIO_INTR_ANYEDGE,
-        .pull_up_en = 1,
-    };
-    esp_err_t ret = gpio_config(&gpio_cfg);
-
-    return ret;
-}
-
-static esp_err_t _knob_gpio_deinit(int gpio_num)
-{
-    /** both disable pullup and pulldown */
-    gpio_config_t gpio_conf = {
-        .intr_type = GPIO_INTR_DISABLE,
-        .mode = GPIO_MODE_INPUT,
-        .pin_bit_mask = (1ULL << gpio_num),
-        .pull_down_en = GPIO_PULLDOWN_DISABLE,
-        .pull_up_en = GPIO_PULLUP_DISABLE,
-    };
-    gpio_config(&gpio_conf);
-    return ESP_OK;
-}
-
-static uint8_t _knob_gpio_get_key_level(void *gpio_num)
-{
-    return (uint8_t)gpio_get_level((uint32_t)gpio_num);
-}
-
 static void knob_cb(void *args)
 {
     knob_dev_t *target;
+    bool enter_power_save_flag = true;
     for (target = s_head_handle; target; target = target->next) {
         knob_handler(target);
+        if (!(target->enable_power_save && target->debounce_a_cnt == 0 && target->debounce_b_cnt == 0 && target->event == KNOB_NONE)) {
+            enter_power_save_flag = false;
+        }
     }
+    if (enter_power_save_flag) {
+        /*!< Stop esp timer for power save */
+        if (s_is_timer_running) {
+            esp_timer_stop(s_knob_timer_handle);
+            s_is_timer_running = false;
+        }
+        for (target = s_head_handle; target; target = target->next) {
+            if (target->enable_power_save) {
+                knob_gpio_wake_up_control((uint32_t)target->encoder_a, !target->encoder_a_level, true);
+                knob_gpio_wake_up_control((uint32_t)target->encoder_b, !target->encoder_b_level, true);
+                knob_gpio_set_intr((uint32_t)target->encoder_a, !target->encoder_a_level == 0 ? GPIO_INTR_LOW_LEVEL : GPIO_INTR_HIGH_LEVEL);
+                knob_gpio_set_intr((uint32_t)target->encoder_b, !target->encoder_b_level == 0 ? GPIO_INTR_LOW_LEVEL : GPIO_INTR_HIGH_LEVEL);
+                knob_gpio_intr_control((uint32_t)(target->encoder_a), true);
+                knob_gpio_intr_control((uint32_t)(target->encoder_b), true);
+            }
+        }
+    }
+}
+
+static void IRAM_ATTR knob_power_save_isr_handler(void* arg)
+{
+    if (!s_is_timer_running) {
+        esp_timer_start_periodic(s_knob_timer_handle, TICKS_INTERVAL * 1000U);
+        s_is_timer_running = true;
+    }
+    knob_gpio_intr_control((uint32_t)arg, false);
+    /*!< disable gpio wake up not need wake up level*/
+    knob_gpio_wake_up_control((uint32_t)arg, 0, false);
 }
 
 knob_handle_t iot_knob_create(const knob_config_t *config)
 {
     KNOB_CHECK(NULL != config, "config pointer can't be NULL!", NULL)
     KNOB_CHECK(config->gpio_encoder_a != config->gpio_encoder_b, "encoder A can't be the same as encoder B", NULL);
-    esp_err_t ret = ESP_OK;
-    ret = _knob_gpio_init(config->gpio_encoder_a);
-    KNOB_CHECK(ESP_OK == ret, "encoder A gpio init failed", NULL);
-    ret = _knob_gpio_init(config->gpio_encoder_b);
-    KNOB_CHECK_GOTO(ESP_OK == ret, "encoder B gpio init failed", _encoder_a_deinit);
 
-    knob_dev_t *knob = (knob_dev_t *) calloc(1, sizeof(knob_dev_t));
-    KNOB_CHECK_GOTO(NULL != knob, "alloc knob failed", _encoder_b_deinit);
+    knob_dev_t *knob = (knob_dev_t *)calloc(1, sizeof(knob_dev_t));
+    KNOB_CHECK(NULL != knob, "alloc knob failed", NULL);
+
+    esp_err_t ret = ESP_OK;
+    ret = knob_gpio_init(config->gpio_encoder_a);
+    KNOB_CHECK(ESP_OK == ret, "encoder A gpio init failed", NULL);
+    ret = knob_gpio_init(config->gpio_encoder_b);
+    KNOB_CHECK_GOTO(ESP_OK == ret, "encoder B gpio init failed", _encoder_deinit);
+
     knob->default_direction = config->default_direction;
-    knob->hal_knob_level = _knob_gpio_get_key_level;
+    knob->hal_knob_level = knob_gpio_get_key_level;
     knob->encoder_a = (void *)(long)config->gpio_encoder_a;
     knob->encoder_b = (void *)(long)config->gpio_encoder_b;
 
     knob->encoder_a_level = knob->hal_knob_level(knob->encoder_a);
     knob->encoder_b_level = knob->hal_knob_level(knob->encoder_b);
 
+    if (config->enable_power_save) {
+        knob->enable_power_save = config->enable_power_save;
+        knob_gpio_init_intr(config->gpio_encoder_a, !knob->encoder_a_level == 0 ? GPIO_INTR_LOW_LEVEL : GPIO_INTR_HIGH_LEVEL, knob_power_save_isr_handler, knob->encoder_a);
+        knob_gpio_init_intr(config->gpio_encoder_b, !knob->encoder_b_level == 0 ? GPIO_INTR_LOW_LEVEL : GPIO_INTR_HIGH_LEVEL, knob_power_save_isr_handler, knob->encoder_b);
+
+        ret = knob_gpio_wake_up_init(config->gpio_encoder_a, !knob->encoder_a_level);
+        KNOB_CHECK_GOTO(ESP_OK == ret, "encoder A wake up gpio init failed", _encoder_deinit);
+        ret = knob_gpio_wake_up_init(config->gpio_encoder_b, !knob->encoder_b_level);
+        KNOB_CHECK_GOTO(ESP_OK == ret, "encoder B wake up gpio init failed", _encoder_deinit);
+    }
+
     knob->state = KNOB_CHECK;
+    knob->event = KNOB_NONE;
 
     knob->next = s_head_handle;
     s_head_handle = knob;
 
-    if (false == s_is_timer_running) {
-        esp_timer_create_args_t knob_timer;
+    if (!s_knob_timer_handle) {
+        esp_timer_create_args_t knob_timer = {0};
         knob_timer.arg = NULL;
         knob_timer.callback = knob_cb;
         knob_timer.dispatch_method = ESP_TIMER_TASK;
         knob_timer.name = "knob_timer";
         esp_timer_create(&knob_timer, &s_knob_timer_handle);
+    }
+
+    if (!knob->enable_power_save && !s_is_timer_running) {
         esp_timer_start_periodic(s_knob_timer_handle, TICKS_INTERVAL * 1000U);
         s_is_timer_running = true;
     }
@@ -267,10 +294,9 @@ knob_handle_t iot_knob_create(const knob_config_t *config)
     ESP_LOGI(TAG, "Iot Knob Config Succeed, encoder A:%d, encoder B:%d, direction:%d, Version: %d.%d.%d", config->gpio_encoder_a, config->gpio_encoder_b, config->default_direction, KNOB_VER_MAJOR, KNOB_VER_MINOR, KNOB_VER_PATCH);
     return (knob_handle_t)knob;
 
-_encoder_b_deinit:
-    _knob_gpio_deinit(config->gpio_encoder_b);
-_encoder_a_deinit:
-    _knob_gpio_deinit(config->gpio_encoder_a);
+_encoder_deinit:
+    knob_gpio_deinit(config->gpio_encoder_b);
+    knob_gpio_deinit(config->gpio_encoder_a);
     return NULL;
 }
 
@@ -279,7 +305,7 @@ esp_err_t iot_knob_delete(knob_handle_t knob_handle)
     esp_err_t ret = ESP_OK;
     KNOB_CHECK(NULL != knob_handle, "Pointer of handle is invalid", ESP_ERR_INVALID_ARG);
     knob_dev_t *knob = (knob_dev_t *)knob_handle;
-    ret = _knob_gpio_deinit((int)(knob->usr_data));
+    ret = knob_gpio_deinit((int)(knob->usr_data));
     KNOB_CHECK(ESP_OK == ret, "knob deinit failed", ESP_FAIL);
     knob_dev_t **curr;
     for (curr = &s_head_handle; *curr;) {
@@ -348,5 +374,27 @@ esp_err_t iot_knob_clear_count_value(knob_handle_t knob_handle)
     KNOB_CHECK(NULL != knob_handle, "Pointer of handle is invalid", ESP_ERR_INVALID_ARG);
     knob_dev_t *knob = (knob_dev_t *) knob_handle;
     knob->count_value = 0;
+    return ESP_OK;
+}
+
+esp_err_t iot_knob_resume(void)
+{
+    KNOB_CHECK(s_knob_timer_handle, "knob timer handle is invalid", ESP_ERR_INVALID_STATE);
+    KNOB_CHECK(!s_is_timer_running, "knob timer is already running", ESP_ERR_INVALID_STATE);
+
+    esp_err_t err = esp_timer_start_periodic(s_knob_timer_handle, TICKS_INTERVAL * 1000U);
+    KNOB_CHECK(ESP_OK == err, "knob timer start failed", ESP_FAIL);
+    s_is_timer_running = true;
+    return ESP_OK;
+}
+
+esp_err_t iot_knob_stop(void)
+{
+    KNOB_CHECK(s_knob_timer_handle, "knob timer handle is invalid", ESP_ERR_INVALID_STATE);
+    KNOB_CHECK(s_is_timer_running, "knob timer is not running", ESP_ERR_INVALID_STATE);
+
+    esp_err_t err = esp_timer_stop(s_knob_timer_handle);
+    KNOB_CHECK(ESP_OK == err, "knob timer stop failed", ESP_FAIL);
+    s_is_timer_running = false;
     return ESP_OK;
 }

@@ -168,6 +168,10 @@ examples/get-started/button_power_save:
   enable:
     - if: INCLUDE_DEFAULT == 1
 
+examples/get-started/knob_power_save:
+  enable:
+    - if: INCLUDE_DEFAULT == 1
+
 examples/indicator:
   enable:
     - if: INCLUDE_DEFAULT == 1

@@ -445,6 +445,14 @@ build_example_get_started_button_power_save:
   variables:
     EXAMPLE_DIR: examples/get-started/button_power_save
 
+build_example_get_started_knob_power_save:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_get_started_knob_power_save
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: examples/get-started/knob_power_save
+
 build_example_gprof_gprof_simple:
   extends:
     - .build_examples_template

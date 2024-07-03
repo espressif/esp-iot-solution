@@ -1,5 +1,10 @@
 # ChangeLog
 
+## v0.1.5 - 2024-7-3
+
+###  Enhancements:
+* Support power save mode
+
 ## v0.1.4 - 2023-11-23
 
 * Fix possible cmake_utilities dependency issue
