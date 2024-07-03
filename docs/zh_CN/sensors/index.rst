@@ -13,4 +13,4 @@
     气压传感器 <pressure>
     手势传感器 <gesture>
     热敏电阻传感器 <ntc_driver>
-
+    功率监视器<power_monitor>

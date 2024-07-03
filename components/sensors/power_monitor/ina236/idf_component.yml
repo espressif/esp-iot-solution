@@ -1,0 +1,10 @@
+version: "0.1.0"
+description: INA236 power monitor component
+url: https://github.com/espressif/esp-iot-solution/tree/master/components/sensors/power_monitor/ina236
+repository: https://github.com/espressif/esp-iot-solution.git
+issues: https://github.com/espressif/esp-iot-solution/issues
+dependencies:
+  idf: ">=4.4.2"
+  i2c_bus:
+    version: "*"
+    override_path: "../../../i2c_bus"

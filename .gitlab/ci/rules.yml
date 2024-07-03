@@ -278,6 +278,10 @@
   - "components/i2c_bus/**/*"
   - "components/tools/cmake_utilities/package_manager.cmake"
 
+.patterns-components_sensors_power_monitor_ina236: &patterns-components_sensors_power_monitor_ina236
+  - "components/sensors/power_monitor/ina236/**/*"
+  - "components/tools/cmake_utilities/package_manager.cmake"
+
 # examples folder, in the alphabetic order
 .patterns-docs: &patterns-docs
   - "docs/**/*"
@@ -310,6 +314,7 @@
   - "components/sensors/sensor_hub/include/iot_sensor_hub.h"
   - "components/sensors/sensor_hub/include/sensor_type.h"
   - "components/sensors/ntc_driver/include/ntc_driver.h"
+  - "components/sensors/power_monitor/ina236/include/ina236.h"
   - "components/touch/touch_proximity_sensor/include/touch_proximity_sensor.h"
   - "components/usb/esp_msc_ota/include/esp_msc_ota.h"
   - "components/usb/iot_usbh_cdc/include/iot_usbh_cdc.h"
@@ -1993,6 +1998,19 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_ntc_driver
+
+.rules:build:components_sensors_power_monitor_ina236_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_power_monitor_ina236
+    - <<: *if-dev-push
+      changes: *patterns-components_bus
 
 .rules:build:components_i2c_bus_test_apps:
   rules:

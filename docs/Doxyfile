@@ -55,6 +55,7 @@ INPUT = \
     $(PROJECT_PATH)/components/sensors/sensor_hub/include/iot_sensor_hub.h \
     $(PROJECT_PATH)/components/sensors/sensor_hub/include/sensor_type.h \
     $(PROJECT_PATH)/components/sensors/ntc_driver/include/ntc_driver.h \
+    $(PROJECT_PATH)/components/sensors/power_monitor/ina236/include/ina236.h \
     $(PROJECT_PATH)/components/touch/touch_proximity_sensor/include/touch_proximity_sensor.h \
     $(PROJECT_PATH)/components/usb/esp_msc_ota/include/esp_msc_ota.h \
     $(PROJECT_PATH)/components/usb/iot_usbh_cdc/include/iot_usbh_cdc.h \
