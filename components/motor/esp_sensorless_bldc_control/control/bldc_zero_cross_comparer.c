@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -15,7 +15,7 @@ typedef struct {
     control_param_t *control_param;
     int alignment_pin[PHASE_MAX];
     int zero_stable_flag;                        /*!< Over-zero stabilization flag bit */
-    uint32_t alignment_queue_value[PHASE_MAX];
+    uint64_t alignment_queue_value[PHASE_MAX];
     uint16_t queue_filter_state[PHASE_MAX];      /*!< State after three-phase filtering */
 } bldc_zero_cross_comparer_t;
 
@@ -46,6 +46,13 @@ static uint8_t bldc_umef_edge(uint8_t val)
     }
 
     return 2;
+}
+
+bool read_comparer_on_full(mcpwm_timer_handle_t timer, const mcpwm_timer_event_data_t *edata, void *user_data)
+{
+    bldc_zero_cross_comparer_t *zero_cross = (bldc_zero_cross_comparer_t *)user_data;
+    alignment_comparer_get_value(zero_cross);
+    return false;
 }
 
 esp_err_t bldc_zero_cross_comparer_init(bldc_zero_cross_comparer_handle_t *handle, bldc_zero_cross_comparer_config_t *config, control_param_t *control_param)
@@ -92,7 +99,6 @@ uint8_t bldc_zero_cross_comparer_operation(void *handle)
 
     bldc_zero_cross_comparer_t *zero_cross = (bldc_zero_cross_comparer_t *)handle;
     uint16_t filterEdge;  /*!< Edge detection after filtering */
-    alignment_comparer_get_value(zero_cross);
     zero_cross->control_param->speed_count++;
 
     for (int i = 0; i < PHASE_MAX; i++) {

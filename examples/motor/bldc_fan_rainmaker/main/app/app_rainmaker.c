@@ -1,11 +1,10 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
 #include "app_rainmaker.h"
-#include "esp_rmaker_core.h"
 #include "esp_rmaker_standard_types.h"
 #include "esp_rmaker_standard_params.h"
 #include "esp_rmaker_standard_devices.h"
@@ -23,13 +22,14 @@
 #include "app_variable.h"
 #include "hal_bldc.h"
 #include "hal_stepper_motor.h"
+#include "bldc_fan_config.h"
 
-static const char *TAG = "APP_RMKER";
-esp_rmaker_device_t *fan_device;
-esp_rmaker_param_t *mode_param;
-esp_rmaker_param_t *speed_param;
-esp_rmaker_param_t *power_param;
-esp_rmaker_param_t *shake_param;
+const static char *TAG = "app_rainmaker";
+static esp_rmaker_device_t *fan_device;
+static esp_rmaker_param_t *mode_param;
+static esp_rmaker_param_t *speed_param;
+static esp_rmaker_param_t *power_param;
+static esp_rmaker_param_t *shake_param;
 
 static esp_err_t app_rainmaker_write_cb(const esp_rmaker_device_t *device, const esp_rmaker_param_t *param, esp_rmaker_param_val_t val, void *priv_data, esp_rmaker_write_ctx_t *ctx)
 {
@@ -43,6 +43,10 @@ static esp_err_t app_rainmaker_write_cb(const esp_rmaker_device_t *device, const
                  val.val.b ? "true" : "false", esp_rmaker_device_get_name(device),
                  esp_rmaker_param_get_name(param));
         motor_parameter.is_start = val.val.b ? 1 : 0;
+        if (motor_parameter.is_start == 0) {
+            motor_parameter.start_count = 0;
+            motor_parameter.target_speed = BLDC_MIN_SPEED;
+        }
         hal_bldc_start_stop(motor_parameter.is_start);
     } else if (strcmp(esp_rmaker_param_get_name(param), ESP_RMAKER_DEF_SPEED_NAME) == 0) {
         //*!< get target speed value */
@@ -156,15 +160,8 @@ static void app_rainmaker_event_handler(void *arg, esp_event_base_t event_base, 
     }
 }
 
-esp_err_t app_rainmaker_init()
+static void rainmaker_task(void *arg)
 {
-    esp_err_t err = nvs_flash_init();                                                                                            //*!< init nvs */
-    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        err = nvs_flash_init();
-    }
-    ESP_ERROR_CHECK(err);
-
     esp_rmaker_console_init();                                                                                                   //*!< init rainmaker console */
     app_wifi_init();                                                                                                             //*!< init wifi, choose wifi or ble */
 
@@ -215,13 +212,41 @@ esp_err_t app_rainmaker_init()
     };
     esp_rmaker_system_service_enable(&system_serv_config);                                                                       //*!< enable system service */
 
+    esp_rmaker_schedule_enable();                                                                                                //*!< enable schedule
+
     esp_rmaker_start();                                                                                                          //*!< start rainmaker */
-    err = app_wifi_start(POP_TYPE_NONE);
+    esp_err_t err = app_wifi_start(POP_TYPE_NONE);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Could not start Wifi. Aborting!!!");
         vTaskDelay(5000 / portTICK_PERIOD_MS);
         abort();
     }
 
-    return ESP_OK;
+    vTaskDelete(NULL);
+}
+
+esp_err_t app_rainmaker_init()
+{
+    esp_err_t err = nvs_flash_init();                                                                                            //*!< init nvs */
+    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        err = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(err);
+    xTaskCreate(rainmaker_task, "rainmaker_task", 4096, NULL, 5, NULL);
+    return ESP_OK;                                              //*!< create stepper motor task */
+}
+
+esp_rmaker_param_t *app_rainmaker_get_param(const char *name)
+{
+    if (!strcmp(name, "Power")) {
+        return power_param;
+    } else if (!strcmp(name, "Speed")) {
+        return speed_param;
+    } else if (!strcmp(name, "Natural")) {
+        return mode_param;
+    } else if (!strcmp(name, "Shake")) {
+        return shake_param;
+    }
+    return NULL;
 }

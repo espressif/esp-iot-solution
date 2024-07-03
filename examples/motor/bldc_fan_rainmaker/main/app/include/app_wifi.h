@@ -5,6 +5,7 @@
  */
 
 #pragma once
+
 #include <esp_err.h>
 #include <esp_event.h>
 
@@ -37,7 +38,19 @@ typedef enum {
     POP_TYPE_NONE
 } app_wifi_pop_type_t;
 
+/**
+ * @brief Initializes the wifi
+ *
+ */
 void app_wifi_init();
+
+/**
+ * @brief Start the wifi
+ *
+ * @return
+ *    - ESP_OK: Success in starting the wifi
+ *    - other: Specific error code indicating what went wrong during start wifi.
+ */
 esp_err_t app_wifi_start(app_wifi_pop_type_t pop_type);
 
 #ifdef __cplusplus

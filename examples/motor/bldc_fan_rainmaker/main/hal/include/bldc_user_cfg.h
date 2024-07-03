@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -72,7 +72,7 @@ extern "C" {
  *        Used to lock the motor in a specific phase
  *        before strong dragging.
  */
-#define ALIGNMENTNMS  (300)              /*!< Duration of alignment, too short may not reach the position, too long may cause the motor to overheat. */
+#define ALIGNMENTNMS  (500)              /*!< Duration of alignment, too short may not reach the position, too long may cause the motor to overheat. */
 #define ALIGNMENTDUTY (PWM_DUTYCYCLE_20) /*!< alignment torque. */
 
 /**
@@ -81,10 +81,10 @@ extern "C" {
  * @note  If the control cycle speeds up, corresponding reductions
  *        should be made to the RAMP_TIM_STA, RAMP_TIM_END, RAMP_TIM_STEP
  */
-#define RAMP_TIM_STA (900)               /*!< The start step time for climbing. A smaller value results in faster startup but may lead to overcurrent issues. */
+#define RAMP_TIM_STA (1500)               /*!< The start step time for climbing. A smaller value results in faster startup but may lead to overcurrent issues. */
 #define RAMP_TIM_END (180)                /*!< The end step time for climbing, adjusted based on the load. If loaded, this value should be relatively larger. */
 #define RAMP_TIM_STEP (15)                /*!< Decremental increment for climbing step time—adjusted in accordance with RAMP_TIM_STA. */
-#define RAMP_DUTY_STA (PWM_DUTYCYCLE_20) /*!< The starting torque for climbing. */
+#define RAMP_DUTY_STA (PWM_DUTYCYCLE_15) /*!< The starting torque for climbing. */
 #define RAMP_DUTY_END (PWM_DUTYCYCLE_40) /*!< The ending torque for climbing. */
 #define RAMP_DUTY_INC (13)               /*!< The incremental torque step for climbing—too small a value may result in failure to start, while too large a value may lead to overcurrent issues. */
 
@@ -101,7 +101,7 @@ extern "C" {
  *
  */
 #define ZERO_STABLE_FLAG_CNT (4)             /*!< After stable detection for multiple revolutions, it is considered to enter a sensorless state. */
-#define ZERO_CROSS_DETECTION_ACCURACY 0xFFFF /*!< Count a valid comparator value every consecutive detection for how many times. */
+#define ZERO_CROSS_DETECTION_ACCURACY 0xFFFFF /*!< Count a valid comparator value every consecutive detection for how many times. */
 
 /**
  * @brief Common parameter for compensated commutation time calculation

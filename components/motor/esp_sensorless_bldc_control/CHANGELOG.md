@@ -1,5 +1,13 @@
 # ChangeLog
 
+
+## v0.3.0 - 2024-6-20
+
+### Bug fix
+
+* Fix drag time and modify the filter cap to type uint32_t
+* Fix Comparator Acquisition Method for MCPWM Trigger
+
 ## v0.2.0 - 2023-11-14
 
 ### Enhancements
