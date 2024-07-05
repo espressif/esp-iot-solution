@@ -1,5 +1,11 @@
 # ChangeLog
 
+
+## v0.2.0 - 2024-7-5
+### Enhancements:
+* FOC:
+    * Support for as5048a encoder added
+
 ## v0.1.2 - 2023-12-11
 ### Bug Fix:
 * FOC:
