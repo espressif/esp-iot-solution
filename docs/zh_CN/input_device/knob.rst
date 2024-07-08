@@ -13,6 +13,14 @@
 
 .. Note:: 如需精确或快速的脉冲计数，请使用 `硬件 PCNT 功能 <https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32/api-reference/peripherals/pcnt.html?highlight=pcnt>`_ 。硬件 PCNT 支持的芯片 ESP32, ESP32-C6, ESP32-H2, ESP32-S2, ESP32-S3。
 
+硬件设计
+---------
+
+旋转编码器的参考设计如下：
+
+.. figure:: ../../_static/input_device/knob/knob_hardware.png
+    :width: 650
+
 旋钮事件
 ---------
 
@@ -74,9 +82,55 @@
 
     static void _knob_left_cb(void *arg, void *data)
     {
-        ESP_LOGI(TAG, "KONB: KONB_LEFT,count_value:%"PRId32"",iot_knob_get_count_value((button_handle_t)arg));
+        ESP_LOGI(TAG, "KNOB: KNOB_LEFT,count_value:%"PRId32"",iot_knob_get_count_value((button_handle_t)arg));
     }
     iot_knob_register_cb(s_knob, KNOB_LEFT, _knob_left_cb, NULL);
+
+低功耗支持
+^^^^^^^^^^^^^^^
+
+在 light_sleep 模式下，esp_timer 定时器会唤醒 CPU，导致功耗居高不下，Knob 组件提供了通过 GPIO 电平唤醒的低功耗方案。
+
+所需配置：
+
+- 在 ``knob_config_t`` 中打开 ``enable_power_save`` 选项
+
+功耗对比：
+
+- 未开启低功耗模式，在 250ms 内旋转一次
+
+    .. figure:: ../../_static/input_device/knob/knob_one_cycle.png
+        :align: center
+        :width: 70%
+        :alt: 未开启低功耗模式，一次旋转
+
+- 开启低功耗模式，在 250ms 内旋转一次
+
+    .. figure:: ../../_static/input_device/knob/knob_power_save_one_cycle.png
+        :align: center
+        :width: 70%
+        :alt: 开启低功耗模式，旋转一次
+
+- 开启低功耗模式，在 4.5s 内旋转十次
+
+    .. figure:: ../../_static/input_device/knob/knob_power_save_ten_cycle.png
+        :align: center
+        :width: 70%
+        :alt: 开启低功耗模式，旋转十次
+
+低功耗模式下的旋钮响应迅速，且功耗更低
+
+开启和关闭
+^^^^^^^^^^^^^
+
+组件支持在任意时刻开启和关闭。
+
+.. code:: c
+
+    // stop knob
+    iot_knob_stop();
+    // resume knob
+    iot_knob_resume();
 
 API Reference
 -----------------

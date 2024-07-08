@@ -301,7 +301,7 @@
   - "components/i2c_bus/include/i2c_bus.h"
   - "components/ir/ir_learn/include/ir_learn.h"
   - "components/keyboard_button/include/keyboard_button.h"
-  - "components/knob/iot_knob.h"
+  - "components/knob/include/iot_knob.h"
   - "components/led/led_indicator/include/led_indicator.h"
   - "components/motor/esp_sensorless_bldc_control/control/include/bldc_control.h"
   - "components/motor/esp_sensorless_bldc_control/control/include/bldc_control_param.h"
@@ -417,6 +417,9 @@
 
 .patterns-example_get_started_button_power_save: &patterns-example_get_started_button_power_save
   - "examples/get-started/button_power_save/**/*"
+
+.patterns-example_get_started_knob_power_save: &patterns-example_get_started_knob_power_save
+  - "examples/get-started/knob_power_save/**/*"
 
 .patterns-example_indicator: &patterns-example_indicator
   - "examples/indicator/**/*"
@@ -884,6 +887,18 @@
       changes: *patterns-components_button
     - <<: *if-dev-push
       changes: *patterns-example_get_started_button_power_save
+
+.rules:build:example_get_started_knob_power_save:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_knob
+    - <<: *if-dev-push
+      changes: *patterns-example_get_started_knob_power_save
 
 .rules:build:example_gprof_gprof_simple:
   rules:
@@ -1634,7 +1649,6 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_keyboard_button
-
 
 .rules:build:components_expander_io_expander_mcp23017_test:
   rules:

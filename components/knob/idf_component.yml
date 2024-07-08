@@ -1,4 +1,4 @@
-version: "0.1.4"
+version: "0.1.5"
 description: Knob driver implemented through software pcnt
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/knob
 documentation: https://docs.espressif.com/projects/esp-iot-solution/en/latest/input_device/knob.html
@@ -9,3 +9,4 @@ dependencies:
   cmake_utilities: "0.*"
 examples:
   - path: ../../examples/usb/device/usb_surface_dial
+  - path: ../../examples/get-started/knob_power_save

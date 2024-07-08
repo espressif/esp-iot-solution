@@ -144,6 +144,6 @@ void tearDown(void)
 
 void app_main(void)
 {
-    printf("USB STREAM TEST \n");
+    printf("IOT KNOB TEST\n");
     unity_run_menu();
 }

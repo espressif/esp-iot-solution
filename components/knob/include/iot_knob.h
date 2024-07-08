@@ -6,6 +6,9 @@
 
 #pragma once
 
+#include <stdint.h>
+#include "esp_err.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -24,6 +27,7 @@ typedef enum {
     KNOB_L_LIM,                        /*!< EVENT: Count reaches the minimum limit */
     KNOB_ZERO,                         /*!< EVENT: Count back to 0 */
     KNOB_EVENT_MAX,                    /*!< EVENT: Number of events */
+    KNOB_NONE,                         /*!< EVENT: No event */
 } knob_event_t;
 
 /**
@@ -34,6 +38,7 @@ typedef struct {
     uint8_t default_direction;          /*!< 0:positive increase   1:negative increase */
     uint8_t gpio_encoder_a;             /*!< Encoder Pin A */
     uint8_t gpio_encoder_b;             /*!< Encoder Pin B */
+    bool enable_power_save;             /*!< Enable power save mode */
 } knob_config_t;
 
 /**
@@ -109,6 +114,24 @@ int iot_knob_get_count_value(knob_handle_t knob_handle);
  *         - ESP_FAIL Failure
  */
 esp_err_t iot_knob_clear_count_value(knob_handle_t knob_handle);
+
+/**
+ * @brief resume knob timer, if knob timer is stopped. Make sure iot_knob_create() is called before calling this API.
+ *
+ * @return
+ *     - ESP_OK on success
+ *     - ESP_ERR_INVALID_STATE   timer state is invalid.
+ */
+esp_err_t iot_knob_resume(void);
+
+/**
+ * @brief stop knob timer, if knob timer is running. Make sure iot_knob_create() is called before calling this API.
+ *
+ * @return
+ *     - ESP_OK on success
+ *     - ESP_ERR_INVALID_STATE   timer state is invalid
+ */
+esp_err_t iot_knob_stop(void);
 
 #ifdef __cplusplus
 }
