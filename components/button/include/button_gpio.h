@@ -72,6 +72,20 @@ esp_err_t button_gpio_set_intr(int gpio_num, gpio_int_type_t intr_type, gpio_isr
  */
 esp_err_t button_gpio_intr_control(int gpio_num, bool enable);
 
+/**
+ * @brief Enable or disable GPIO wakeup functionality.
+ *
+ * This function allows enabling or disabling GPIO wakeup feature.
+ *
+ * @param gpio_num GPIO number for wakeup functionality.
+ * @param active_level Active level of the GPIO when triggered.
+ * @param enable Enable or disable the GPIO wakeup.
+ * @return
+ *      - ESP_OK on success
+ *      - ESP_ERR_INVALID_STATE if trigger was not active or in conflict.
+ */
+esp_err_t button_gpio_enable_gpio_wakeup(uint32_t gpio_num, uint8_t active_level, bool enable);
+
 #ifdef __cplusplus
 }
 #endif

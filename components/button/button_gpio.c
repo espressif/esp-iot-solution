@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+/* SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -78,4 +78,15 @@ esp_err_t button_gpio_intr_control(int gpio_num, bool enable)
         gpio_intr_disable(gpio_num);
     }
     return ESP_OK;
+}
+
+esp_err_t button_gpio_enable_gpio_wakeup(uint32_t gpio_num, uint8_t active_level, bool enable)
+{
+    esp_err_t ret;
+    if (enable) {
+        ret = gpio_wakeup_enable(gpio_num, active_level == 0 ? GPIO_INTR_LOW_LEVEL : GPIO_INTR_HIGH_LEVEL);
+    } else {
+        ret = gpio_wakeup_disable(gpio_num);
+    }
+    return ret;
 }
