@@ -1,0 +1,11 @@
+version: "1.0.0"
+description: ble hci component
+url: https://github.com/espressif/esp-iot-solution/tree/master/components/bluetooth/ble_hci
+repository: https://github.com/espressif/esp-iot-solution.git
+documentation: https://docs.espressif.com/projects/esp-iot-solution/en/latest/bluetooth/ble_hci.html
+issues: https://github.com/espressif/esp-iot-solution/issues
+dependencies:
+  idf: ">=5.0"
+  cmake_utilities: "0.*"
+examples:
+  - path: ../../../examples/bluetooth/ble_hci
