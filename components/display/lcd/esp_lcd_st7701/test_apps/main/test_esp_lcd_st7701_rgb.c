@@ -20,8 +20,6 @@
 #include "esp_lcd_panel_io.h"
 #include "esp_lcd_panel_io_additions.h"
 #include "esp_io_expander_tca9554.h"
-#include "esp_ldo_regulator.h"
-#include "esp_dma_utils.h"
 #include "unity.h"
 #include "unity_test_runner.h"
 #include "unity_test_utils_memory.h"
