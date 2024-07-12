@@ -9,14 +9,14 @@ ESP Sensorless BLDC Control Components
     :local:
     :depth: 2
 
-`esp_sensorless_bldc_control`` 组件是基于 ESP32 系列芯片的 BLDC 无感方波控制库。目前以及支持以下功能：
+`esp_sensorless_bldc_control` 组件是基于 ESP32 系列芯片的 BLDC 无感方波控制库。目前以及支持以下功能：
 
     - 基于ADC 采样检测过零点
     - 基于支持比较器检测过零点
     - 基于脉冲法实现转子初始相位检测
     - 堵转保护
 
-本文主要讲解如何使用 `esp_sensorless_bldc_control`` 组件进行无刷电机开发，不涉及原理讲解，如需了解更多原理请参考
+本文主要讲解如何使用 `esp_sensorless_bldc_control` 组件进行无刷电机开发，不涉及原理讲解，如需了解更多原理请参考
 
     - :doc:`./bldc_overview` 无刷电机控制概述
     - :doc:`./bldc_snls_adc` ADC 采样检测过零点
@@ -24,9 +24,9 @@ ESP Sensorless BLDC Control Components
 
 无感方波控制流程主要可以分为以下部分
 
-    - INJECT：通过脉振高频电压注入得到初始相位 :cpp:enumerator:`INJECT`
-    - ALIGNMENT：将转子固定到初始相位 :cpp:enumerator:`ALIGNMENT`
-    - DRAG：通过六步换向将转子转动起来 :cpp:enumerator:`DRAG`
+    - INJECT：注入阶段，通过脉振高频电压注入得到初始相位 :cpp:enumerator:`INJECT`
+    - ALIGNMENT：对齐阶段，将转子固定到初始相位 :cpp:enumerator:`ALIGNMENT`
+    - DRAG：强托阶段，通过六步换向将转子转动起来 :cpp:enumerator:`DRAG`
     - CLOSED_LOOP：无感闭环控制，通过检测反电动势过零点进行换向 :cpp:enumerator:`CLOSED_LOOP`
     - BLOCKED：电机堵转 :cpp:enumerator:`BLOCKED`
     - STOP: 电机停止 :cpp:enumerator:`STOP`
@@ -44,10 +44,19 @@ INJECT
     :width: 100%
     :alt: BLDC 母线电流采集
 
-.. note::
-    由于电流不能直接被采集到，我们通过一个采样电阻，可以将电流转化为电压。注意，电压需要转化到 ESP32 ADC 能够采集的范围。请参考：`ESP32 ADC <https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32/api-reference/peripherals/adc_oneshot.html#adc-oneshot-unit-configuration>`__
+    BLDC 母线电流采集
 
-由于电流只存在于上下管均导通的情况，所以我们需要在上管导通的时候进行 ADC 采样。将 MCPWM 配置为上升下降模式，并在计数器达到顶峰的时候进行采样，可以采集到准确的母线电压。
+.. note::
+    由于电流不能直接被采集到，因此通过一个采样电阻，可以将电流转化为电压。注意，电压需要转化到 ESP32 ADC 能够采集的范围。请参考：`ESP32 ADC <https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32/api-reference/peripherals/adc_oneshot.html#adc-oneshot-unit-configuration>`__
+
+由于电流只存在于上下管均导通的情况，因此需要在上管导通的时候进行 ADC 采样。将 MCPWM 配置为上升下降模式，并在计数器达到顶峰的时候进行采样，可以采集到准确的母线电压。
+
+.. figure:: ../../../_static/motor/bldc/bldc_mcpwm_rising_falling_mode.png
+    :align: center
+    :width: 100%
+    :alt: BLDC MCPWM 上升下降模式
+
+    MCPWM 上升下降模式
 
 .. note::
     LEDC 驱动不支持在高电平时候触发回调，因此使用 LEDC 方式驱动的方案`无法使用` INJECT 模式。
@@ -58,10 +67,12 @@ INJECT
 
 :c:macro:`CHARGE_TIME` 电感充电时间和脉冲注入时间，该值影响到初始相位检测的精准性。这个值太小会导致采集到的 ADC 值为 0，太大会导致 ADC 值过大。以手动旋转电机，在一圈中可以获得稳定的相位 1-6，不出现错误相位 0 和 7 为佳。
 
+
+
 ALIGNMENT
 -----------
 
-将转子固定到固定相位，为后面的强拖做准备。
+为保障无刷电机能够正常启动，需要确定转子在静止时的位置。在实际的应用中，通过在任意一组绕组上通电一定时间，将转子固定到固定相位，为后面的强拖做准备。
 
 :c:macro:`ALIGNMENTNMS` 对齐时间，时间太长会过流。时间太短可能会导致转子没有对齐到正确的相位。
 
@@ -107,16 +118,19 @@ ADC 采样检测过零点需要采集悬空相电压和电机电源电压，且�
 比较器检测过零点
 ^^^^^^^^^^^^^^^^^
 
-比较器检测过零点是通过硬件比较器比较悬空相反电动势和母线电压，通过 GPIO 检测比较器信号翻转来判断过零点，因为在实际过程中会有很多噪点，所以我们需要多次检测来确认过零点。
+比较器检测过零点是通过硬件比较器比较悬空相反电动势和母线电压，通过 GPIO 检测比较器信号翻转来判断过零点。由于在实际过程中会有很多噪点，需要多次检测来确认过零点。
 
 :c:macro:`ZERO_STABLE_FLAG_CNT` 多次检测到稳定过零点信号后，进入无感控制
 
-:c:macro:`ZERO_CROSS_DETECTION_ACCURACY` 连续 N 次检测到相同信号视为稳定信号 0xFF 为 8次，0XFFFF 为 16 次
+:c:macro:`ZERO_CROSS_DETECTION_ACCURACY` 连续 N 次检测到相同信号视为稳定信号 0xFF 为 8次，0XFFFF 为 16 次。当前支持的最大滤波次数为 0xFFFFFFFF，若依旧无法进入闭环状态，需要排查硬件问题。
+
+.. note::
+    硬件排查方向主要包括采集三相端电压与比较器输出的滤波电容是否设置合理。
 
 提前换向
 ^^^^^^^^^
 
-过零点信号一般在换向前 30° 到来，当我们检测到过零点信号后，只需要延迟 30° 的时间即可。但是因为存在软件滤波和时延等原因，我们需要稍微补偿一下换向时间。
+过零点信号一般在换向前 30° 到来，当检测到过零点信号后，只需要延迟 30° 的时间即可。但在电机旋转过程中，电气周期不固定以及存在软件滤波和时延等原因，需要稍微补偿一下换向时间。
 
 :c:macro:`ZERO_CROSS_ADVANCE` 提前换向时间，提前角度为 180 / ZERO_CROSS_ADVANCE, 默认为 6
 

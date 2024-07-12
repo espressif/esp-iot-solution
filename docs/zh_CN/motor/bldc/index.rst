@@ -4,7 +4,7 @@
 :link_to_translation:`en:[English]`
 
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 1
 
     BLDC 概述 <bldc_overview>
     BLDC ADC 采样过零点方案 <bldc_snls_adc.rst>
