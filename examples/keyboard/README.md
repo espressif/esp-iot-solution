@@ -21,6 +21,8 @@ The ESP-KeyBoard project is a keyboard project using the ESP32-S3, supporting N-
 
 * Demo video [video](https://www.bilibili.com/video/BV1yi421C7qV/?share_source=copy_web&vd_source=7e24f4cefdafbd8477369f33616312a9)
 
+* Board support package introduction documentation [BSP](./components/esp32_s3_kbd_kit/README.md)
+
 ![keyboard_hardware](https://dl.espressif.com/esp-iot-solution/static/keyboard_1.gif)
 
 ### Software Design
@@ -30,7 +32,7 @@ The ESP-KeyBoard project is a keyboard project using the ESP32-S3, supporting N-
 |   Connection Mode    |   Local Lighting    | WIN11 Lighting | N-key Rollover | Report Rate |
 | :------------------: | :-----------------: | :------------: | :------------: | :---------: |
 |         USB          |          √          |       √        |       √        |     1k      |
-|         BLE          | √(Default disabled) |       ×        |       √        |    125k     |
+|         BLE          | √(Default disabled) |       ×        |       √        |    125Hz    |
 | 2.4G (Not Supported) |          √          |       ×        |       √        |     1k      |
 
 本地灯效

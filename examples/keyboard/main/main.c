@@ -60,8 +60,10 @@ void app_main(void)
     btn_progress_set_light_type(sys_param->light_type);
     if (sys_param->report_type == TINYUSB_HID_REPORT) {
         tinyusb_hid_init();
+        bsp_ws2812_enable(1);
     } else if (sys_param->report_type == BLE_HID_REPORT) {
         ble_hid_init();
+        bsp_ws2812_enable(0);
         esp_pm_config_t pm_config = {
             .max_freq_mhz = CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ,
             .min_freq_mhz = 160,

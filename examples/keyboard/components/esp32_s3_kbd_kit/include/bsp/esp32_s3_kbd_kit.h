@@ -17,6 +17,8 @@ esp_err_t bsp_keyboard_init(keyboard_btn_handle_t *kbd_handle, keyboard_btn_conf
 
 esp_err_t bsp_ws2812_init(led_strip_handle_t *led_strip);
 
+esp_err_t bsp_ws2812_enable(bool enable);
+
 esp_err_t bsp_lamp_array_init(uint32_t bind);
 
 esp_err_t bsp_rgb_matrix_init(void);
