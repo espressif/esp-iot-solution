@@ -42,6 +42,21 @@ TEST_CASE("test mt6701", "[sensor][mt6701]")
     mt6701.deinit();
 }
 
+TEST_CASE("test as5048a", "[sensor][as5048a]")
+{
+#if CONFIG_IDF_TARGET_ESP32C3
+    AS5048a as5048a = AS5048a(SPI2_HOST, GPIO_NUM_2, GPIO_NUM_1, (gpio_num_t) -1, GPIO_NUM_3);
+#else
+    AS5048a as5048a = AS5048a(SPI2_HOST, GPIO_NUM_2, GPIO_NUM_1, (gpio_num_t) -1, GPIO_NUM_42);
+#endif
+    as5048a.init();
+    for (int i = 0; i < 10; ++i) {
+        ESP_LOGI(TAG, "angle:%.2f", as5048a.getSensorAngle());
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
+    as5048a.deinit();
+}
+
 TEST_CASE("test esp_simplefoc openloop control", "[single motor][openloop][14pp][ledc][drv8313][c3]")
 {
     BLDCMotor motor = BLDCMotor(14);

@@ -15,3 +15,4 @@
 #include "current_sense/LowsideCurrentSense.h"
 #include "../../angle_sensor/as5600.h"
 #include "../../angle_sensor/mt6701.h"
+#include "../../angle_sensor/as5048a.h"
