@@ -1,0 +1,4 @@
+dependencies:
+  idf: ">=5.0"
+  drv10987:
+    override_path: "../../../../components/motor/drv10987"
