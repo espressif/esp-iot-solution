@@ -507,6 +507,17 @@ build_example_lvgl_freetype:
     EXAMPLE_TARGET: esp32s3
     EXAMPLE_DIR: examples/hmi/lvgl_freetype
 
+build_example_lvgl_spng:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_lvgl_spng
+  parallel:
+    matrix:
+        - IMAGE: espressif/idf:release-v5.1
+  variables:
+    EXAMPLE_TARGET: esp32c3
+    EXAMPLE_DIR: examples/hmi/lvgl_spng
+
 build_example_motor_bldc_fan_rainmaker:
   extends:
     - .build_examples_template

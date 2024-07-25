@@ -4,14 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/**
- * @file
- * @brief ESP BSP: ESP-BOX
- */
-
 #pragma once
 
 #include "esp_err.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * @brief Asset configuration structure, contains the asset table and other configuration information.
@@ -102,3 +101,7 @@ int mmap_assets_get_width(mmap_assets_handle_t handle, int index);
  * @return Height of the asset, or -1 if index is invalid.
  */
 int mmap_assets_get_height(mmap_assets_handle_t handle, int index);
+
+#ifdef __cplusplus
+}
+#endif

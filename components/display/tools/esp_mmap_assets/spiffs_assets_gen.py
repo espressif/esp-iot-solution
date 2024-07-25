@@ -23,8 +23,15 @@ def sort_key(filename):
     basename, extension = os.path.splitext(filename)
     return extension, basename
 
-def convert_image_to_simg(input_file):
-    SPLIT_HEIGHT = 16
+def convert_image_to_simg(input_file, height_str):
+    try:
+        SPLIT_HEIGHT = int(height_str)
+        if SPLIT_HEIGHT <= 0:
+            raise ValueError('Height must be a positive integer')
+    except ValueError as e:
+        print('Error: Height must be a positive integer')
+        sys.exit(1)
+
     OUTPUT_FILE_NAME = ''
 
     input_dir, input_filename = os.path.split(input_file)
@@ -43,10 +50,7 @@ def convert_image_to_simg(input_file):
     block_size = SPLIT_HEIGHT
     splits = math.ceil(height/block_size)
 
-    print('Input:')
-    print('\t' + os.path.basename(input_file))
-    print('\tRES = ' + str(width) + ' x ' + str(height))
-    print('\tspilts = ', splits)
+    print(f'Input: {os.path.basename(input_file)}\tRES: {width} x {height}\tsplits: {splits}')
 
     for i in range(splits):
         if i < splits - 1:
@@ -55,7 +59,7 @@ def convert_image_to_simg(input_file):
             crop = im.crop((0, i * block_size, width, height))
 
         output_path = os.path.join(input_dir, str(i) + ext)
-        crop.save(output_path, quality=90)
+        crop.save(output_path, quality=100)
 
     sjpeg_data = bytearray()
 
@@ -191,7 +195,7 @@ def parse_hex(value):
     except ValueError:
         raise argparse.ArgumentTypeError(f'Invalid hex value: {value}')
 
-def copy_assets_to_build(assets_path, target_path, support_spng, support_sjpg, support_format):
+def copy_assets_to_build(assets_path, target_path, support_spng, support_sjpg, support_format, split_height):
     """
     Copy assets to target_path based on sdkconfig
     """
@@ -205,10 +209,10 @@ def copy_assets_to_build(assets_path, target_path, support_spng, support_sjpg, s
         if any(filename.endswith(suffix) for suffix in format_tuple):
             shutil.copyfile(os.path.join(assets_path, filename), os.path.join(target_path, filename))
             if filename.endswith('.jpg') and sjpg_enable:
-                convert_image_to_simg(os.path.join(target_path, filename))
+                convert_image_to_simg(os.path.join(target_path, filename), split_height)
                 os.remove(os.path.join(target_path, filename))
             elif filename.endswith('.png') and spng_enable:
-                convert_image_to_simg(os.path.join(target_path, filename))
+                convert_image_to_simg(os.path.join(target_path, filename), split_height)
                 os.remove(os.path.join(target_path, filename))
         else:
             print(f'No match found for file: {filename}, format_tuple: {format_tuple}')
@@ -223,12 +227,15 @@ if __name__ == '__main__':
     parser.add_argument('-d6', '--support_spng')
     parser.add_argument('-d7', '--support_sjpg')
     parser.add_argument('-d8', '--support_format')
+    parser.add_argument('-d9', '--split_height')
 
     args = parser.parse_args()
 
+    print('--support_format:',  args.support_format)
     print('--support_spng:',  args.support_spng)
     print('--support_sjpg:',  args.support_sjpg)
-    print('--support_format:',  args.support_format)
+    if args.support_spng != 'OFF' or args.support_sjpg != 'OFF':
+        print('--split_height:', args.split_height)
 
     image_file = args.image_file
     target_path = os.path.dirname(image_file)
@@ -237,7 +244,7 @@ if __name__ == '__main__':
         shutil.rmtree(target_path)
     os.makedirs(target_path)
 
-    copy_assets_to_build(args.assets_path, target_path, args.support_spng, args.support_sjpg, args.support_format)
+    copy_assets_to_build(args.assets_path, target_path, args.support_spng, args.support_sjpg, args.support_format, args.split_height)
     pack_models(target_path, args.main_path, image_file)
 
     total_size = os.path.getsize(os.path.join(target_path, image_file))

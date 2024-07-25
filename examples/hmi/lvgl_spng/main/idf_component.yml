@@ -1,0 +1,9 @@
+description: BSP Display Audio Photo Example
+dependencies:
+  espressif/esp32_c3_lcdkit: "1.0.*"
+  esp_mmap_assets:
+    version: "^1.0"
+    override_path: "../../../../components/display/tools/esp_mmap_assets"
+  esp_lv_spng:
+    version: "*"
+    override_path: "../../../../components/display/tools/esp_lv_spng"
