@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+from itertools import count
 import re
 import sys
 import subprocess
@@ -118,7 +119,14 @@ def remove_app_from_config(apps):
     new_apps = []
     for app in apps:
         # remove './' in string
-        app_dir = app['app_dir'][2:]
+        # if "./" app['app_dir'][2:]
+        # else: app['app_dir
+        # ']
+        if app['app_dir'].startswith('./'):
+            app_dir = app['app_dir'][2:]
+        else:
+            app_dir = app['app_dir']
+        
         if app_dir not in config_apps:
             continue
 
@@ -131,13 +139,22 @@ def remove_app_from_config(apps):
                 build_info.get('sdkconfig') in example.get(target, {}).get('sdkconfig', [])
             ):
                 matched_build_info.append(build_info)
+                if build_info.get('sdkconfig') == "defaults":
+                    matched_build_info[matched_build_info.index(build_info)]['sdkconfig'] = target + '_generic'
+                print(matched_build_info)
+        print(" now app is : ")
+        print(app)
         if matched_build_info:
             app['build_info'] = matched_build_info
             if config_apps[app_dir].get('readme'):
                 print(config_apps[app_dir]['readme'])
                 app['readme'] = config_apps[app_dir]['readme']
+            if config_apps[app_dir].get('description'):
+                print(config_apps[app_dir]['description'])
+                app['description'] = config_apps[app_dir]['description']
             new_apps.append(app)
-
+    print(" next is new_apps")
+    print(new_apps)
     return new_apps
 
 # Squash the json into a list of apps
@@ -177,13 +194,23 @@ def merge_binaries(apps):
     os.makedirs('binaries', exist_ok=True)
     for app in apps:
         # If we are merging binaries for kits
+        sdkcount = {}
+        for build_info in app['build_info']:
+            target = build_info['target']
+            if not sdkcount.get(f'developKits.{target}'):
+                sdkcount[f'developKits.{target}'] = 1
+            else:
+                sdkcount[f'developKits.{target}'] += 1
         for build_info in app['build_info']:
             target = build_info['target']
             sdkconfig = build_info['sdkconfig']
             build_dirs = build_info['build_dir']
             idf_version = build_info['idf_version']
             app_version = app['app_version']
-            bin_name = f'{app["name"]}-{target}' + (f'-{sdkconfig}' if sdkconfig else '') + (f'-{app_version}' if app_version else '') + (f'-{idf_version}' if idf_version else '') + '.bin'
+            if sdkcount.get(f'developKits.{target}') == 1:
+                bin_name = f'{app["name"]}-{target}' + (f'-{app_version}' if app_version else '') + (f'-{idf_version}' if idf_version else '') + '.bin'
+            else:
+                bin_name = f'{app["name"]}' + (f'-{sdkconfig}' if sdkconfig else '') + (f'-{app_version}' if app_version else '') + (f'-{idf_version}' if idf_version else '') + '.bin'
             cmd = ['esptool.py', '--chip', target, 'merge_bin', '-o', bin_name, '@flash_args']
             cwd = os.path.join(app.get('app_dir'), build_dirs)
             print(f'Processing {cwd}')
@@ -203,11 +230,22 @@ def merge_binaries(apps):
 # Write a single app to the toml file
 def write_app(app):
     # If we are working with kits
+    sdkcount = {}
     for build_info in app['build_info']:
+        target = build_info['target']
+        if not sdkcount.get(f'developKits.{target}'):
+            sdkcount[f'developKits.{target}'] = 1
+        else:
+            sdkcount[f'developKits.{target}'] += 1
+    for build_info in app['build_info']:
+        target = build_info['target']
         idf_version = build_info['idf_version']
         app_version = app['app_version']
         sdkconfig = build_info['sdkconfig']
-        bin_name = f'{app["name"]}-{build_info["target"]}' + (f'-{sdkconfig}' if sdkconfig else '') + (f'-{app_version}' if app_version else '') + (f'-{idf_version}' if idf_version else '') + '.bin'
+        if sdkcount.get(f'developKits.{target}') == 1:
+            bin_name = f'{app["name"]}-{target}' + (f'-{app_version}' if app_version else '') + (f'-{idf_version}' if idf_version else '') + '.bin'
+        else:
+            bin_name = f'{app["name"]}' + (f'-{sdkconfig}' if sdkconfig else '') + (f'-{app_version}' if app_version else '') + (f'-{idf_version}' if idf_version else '') + '.bin'
         support_app = f'{app["name"]}'
         if not toml_obj.get(support_app):
             toml_obj[support_app] = {}
@@ -215,11 +253,22 @@ def write_app(app):
             toml_obj[support_app]['ios_app_url'] = ''
             if app.get('readme'):
                 toml_obj[support_app]['readme.text'] = app['readme']
+            if app.get('description'):
+                toml_obj[support_app]['description'] = app['description']
         if not toml_obj[support_app].get('chipsets'):
-            toml_obj[support_app]['chipsets'] = [f'{build_info["target"]}-{build_info["sdkconfig"]}']
+            toml_obj[support_app]['chipsets'] = [f'{target}']
         else:
-            toml_obj[support_app]['chipsets'].append(f'{build_info["target"]}-{build_info["sdkconfig"]}')
-        toml_obj[support_app][f'image.{build_info["target"]}-{build_info["sdkconfig"]}'] = bin_name
+            if f'{target}' not in toml_obj[support_app]['chipsets']:
+                toml_obj[support_app]['chipsets'].append(f'{target}')
+        if not toml_obj[support_app].get(f'developKits.{target}'):
+            if sdkcount.get(f'developKits.{target}') > 1:
+                toml_obj[support_app][f'developKits.{target}'] = [f'{sdkconfig}']
+        else:
+            toml_obj[support_app][f'developKits.{target}'].append(f'{sdkconfig}')
+        if sdkcount.get(f'developKits.{target}') == 1:
+            toml_obj[support_app][f'image.{target}'] = bin_name
+        else:
+            toml_obj[support_app][f'image.{sdkconfig}'] = bin_name
 
 # Create the config.toml file
 def create_config_toml(apps):
@@ -239,7 +288,7 @@ def create_config_toml(apps):
 
 def replace_image_and_readme_string(text):
     # Define the regular expression pattern to find "image.<string>"
-    pattern = r'"((image|readme)\.[\w-]+)"'
+    pattern = r'"((image|readme|developKits)\.[\w-]+)"'
     # Use re.sub() to replace the matched pattern with image.<string>
     result = re.sub(pattern, r'\1', text)
     return result
