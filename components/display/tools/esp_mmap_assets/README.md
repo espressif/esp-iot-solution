@@ -1,8 +1,5 @@
 [![Component Registry](https://components.espressif.com/components/espressif/esp_mmap_assets/badge.svg)](https://components.espressif.com/components/espressif/esp_mmap_assets)
 
-| Supported Targets | ESP32 | ESP32-C2 | ESP32-C3 | ESP32-C6 | ESP32-H2 | ESP32-S2 | ESP32-S3 |
-| ----------------- | ----- | -------- | -------- | -------- | -------- | -------- | -------- |
-
 ## Instructions and Details
 
 This module is primarily used for packaging assets (such as images, fonts, etc.) and directly mapping them for user access.
@@ -24,7 +21,7 @@ This module is primarily used for packaging assets (such as images, fonts, etc.)
 Packages from this repository are uploaded to [Espressif's component service](https://components.espressif.com/).
 You can add them to your project via `idf.py add-dependancy`, e.g.
 ```
-    idf.py add-dependency esp_mmap_assets==1.0.0
+    idf.py add-dependency esp_mmap_assets
 ```
 
 Alternatively, you can create `idf_component.yml`. More is in [Espressif's documentation](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/tools/idf-component-manager.html).

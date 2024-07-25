@@ -1,9 +1,21 @@
-version: 1.0.0
+version: 1.1.0
+targets:
+  - esp32
+  - esp32c2
+  - esp32c3
+  - esp32c6
+  - esp32h2
+  - esp32s2
+  - esp32s3
 dependencies:
+  cmake_utilities:
+    version: 0.*
   idf:
     version: '>=5.0'
-  cmake_utilities: "0.*"
 description: assets map tool
-url: https://github.com/espressif/esp-iot-solution/tree/master/components/display/tools/esp_mmap_assets
 issues: https://github.com/espressif/esp-iot-solution/issues
-repository: https://github.com/espressif/esp-iot-solution.git
+repository: git://github.com/espressif/esp-iot-solution.git
+url: https://github.com/espressif/esp-iot-solution/tree/master/components/display/tools/esp_mmap_assets
+documentation: https://docs.espressif.com/projects/esp-iot-solution/en/latest/display/tools/esp_mmap_assets.html
+examples:
+  - path: ../../../../examples/hmi/lvgl_spng

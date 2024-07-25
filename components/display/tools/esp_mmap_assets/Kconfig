@@ -19,4 +19,12 @@ menu "mmap file support format"
         default n
         help
             Convert jpg to spng format.
+
+    config MMAP_SPLIT_HEIGHT
+        depends on MMAP_SUPPORT_SJPG || MMAP_SUPPORT_SPNG
+        int "image split height"
+        default 16
+        range 1 32767
+        help
+            image split height.
 endmenu

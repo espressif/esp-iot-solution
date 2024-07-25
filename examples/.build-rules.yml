@@ -172,6 +172,10 @@ examples/get-started/knob_power_save:
   enable:
     - if: INCLUDE_DEFAULT == 1
 
+examples/hmi/lvgl_spng:
+  enable:
+    - if: IDF_TARGET == "esp32c3"
+
 examples/indicator:
   enable:
     - if: INCLUDE_DEFAULT == 1
