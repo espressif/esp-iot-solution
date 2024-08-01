@@ -12,6 +12,13 @@
 #  readme:                // readme url must point a README.md link (optional)
 #     <URL>
 
+examples/keyboard:
+  esp32s3:
+    sdkconfig:
+      - defaults
+  description: A full key anti-ghosting keyboard powered by the ESP32S3. https://github.com/espressif/esp-iot-solution/tree/master/examples/keyboard
+  readme: https://raw.githubusercontent.com/espressif/esp-iot-solution/master/examples/keyboard/README.md
+
 examples/usb/device/usb_dual_uvc_device:
   esp32s3:
     sdkconfig:
@@ -71,4 +78,3 @@ examples/usb/host/usb_cdc_basic:
     This is the USB CDC basic example
   readme:
     https://raw.githubusercontent.com/espressif/esp-iot-solution/master/examples/usb/host/sb_cdc_basic/README.md
-

@@ -37,6 +37,8 @@ class App:
         self.readme = ''
         # App description
         self.description = ''
+        # App SDK count
+        self.sdkcount = ''
 
 current_app = App(None)
 
@@ -125,7 +127,7 @@ def remove_app_from_config(apps):
             app_dir = app['app_dir'][2:]
         else:
             app_dir = app['app_dir']
-        
+
         if app_dir not in config_apps:
             continue
 
@@ -138,9 +140,10 @@ def remove_app_from_config(apps):
                 example.get(target) and
                 build_info.get('sdkconfig') in example.get(target, {}).get('sdkconfig', [])
             ):
-                if build_info.get('sdkconfig') == "defaults":
+                if build_info.get('sdkconfig') == 'defaults':
                     build_info['sdkconfig'] = target + '_generic'
                 matched_build_info.append(build_info)
+
                 if not sdkcount.get(f'developKits.{target}'):
                     sdkcount[f'developKits.{target}'] = 1
                 else:
@@ -239,10 +242,12 @@ def write_app(app):
                 toml_obj[support_app]['readme.text'] = app['readme']
             if app.get('description'):
                 toml_obj[support_app]['description'] = app['description']
+
         if not toml_obj[support_app].get('chipsets'):
             toml_obj[support_app]['chipsets'] = [f'{target}']
         elif f'{target}' not in toml_obj[support_app]['chipsets']:
                 toml_obj[support_app]['chipsets'].append(f'{target}')
+
         if sdkcount.get(f'developKits.{target}') > 1:
             if not toml_obj[support_app].get(f'developKits.{target}'):
                 toml_obj[support_app][f'developKits.{target}'] = [f'{sdkconfig}']
