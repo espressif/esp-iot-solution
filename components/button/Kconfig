@@ -2,7 +2,7 @@ menu "IoT Button"
 
     config BUTTON_PERIOD_TIME_MS
         int "BUTTON PERIOD TIME (MS)"
-        range 2 20
+        range 2 50
         default 5
         help
             "Button scan interval"

@@ -47,6 +47,14 @@ static void button_event_cb(void *arg, void *data)
     }
 }
 
+#if CONFIG_ENTER_LIGHT_SLEEP_MODE_MANUALLY
+void button_enter_power_save(void *usr_data)
+{
+    ESP_LOGI(TAG, "Can enter power save now");
+    esp_light_sleep_start();
+}
+#endif
+
 void button_init(uint32_t button_num)
 {
     button_config_t btn_cfg = {
@@ -70,6 +78,15 @@ void button_init(uint32_t button_num)
     err |= iot_button_register_cb(btn, BUTTON_LONG_PRESS_START, button_event_cb, (void *)BUTTON_LONG_PRESS_START);
     err |= iot_button_register_cb(btn, BUTTON_LONG_PRESS_HOLD, button_event_cb, (void *)BUTTON_LONG_PRESS_HOLD);
     err |= iot_button_register_cb(btn, BUTTON_LONG_PRESS_UP, button_event_cb, (void *)BUTTON_LONG_PRESS_UP);
+
+#if CONFIG_ENTER_LIGHT_SLEEP_MODE_MANUALLY
+    /*!< For enter Power Save */
+    button_power_save_config_t config = {
+        .enter_power_save_cb = button_enter_power_save,
+    };
+    err |= iot_button_register_power_save_cb(&config);
+#endif
+
     ESP_ERROR_CHECK(err);
 }
 
@@ -111,6 +128,10 @@ void power_save_init(void)
 
 void app_main(void)
 {
-    power_save_init();
     button_init(BOOT_BUTTON_NUM);
+#if CONFIG_ENTER_LIGHT_SLEEP_AUTO
+    power_save_init();
+#else
+    esp_light_sleep_start();
+#endif
 }

@@ -70,6 +70,9 @@ typedef struct Button {
 static button_dev_t *g_head_handle = NULL;
 static esp_timer_handle_t g_button_timer_handle = NULL;
 static bool g_is_timer_running = false;
+#if CONFIG_GPIO_BUTTON_SUPPORT_POWER_SAVE
+static button_power_save_config_t power_save_usr_cfg = {0};
+#endif
 
 #define TICKS_INTERVAL    CONFIG_BUTTON_PERIOD_TIME_MS
 #define DEBOUNCE_TICKS    CONFIG_BUTTON_DEBOUNCE_TICKS //MAX 8
@@ -317,6 +320,10 @@ static void button_cb(void *args)
                 button_gpio_intr_control((int)(target->hardware_data), true);
                 button_gpio_enable_gpio_wakeup((uint32_t)(target->hardware_data), target->active_level, true);
             }
+        }
+        /*!< Notify the user that the Button has entered power save mode by calling this callback function. */
+        if (power_save_usr_cfg.enter_power_save_cb) {
+            power_save_usr_cfg.enter_power_save_cb(power_save_usr_cfg.usr_data);
         }
     }
 #endif
@@ -764,3 +771,15 @@ esp_err_t iot_button_stop(void)
     g_is_timer_running = false;
     return ESP_OK;
 }
+
+#if CONFIG_GPIO_BUTTON_SUPPORT_POWER_SAVE
+esp_err_t iot_button_register_power_save_cb(const button_power_save_config_t *config)
+{
+    BTN_CHECK(g_head_handle, "No button registered", ESP_ERR_INVALID_STATE);
+    BTN_CHECK(config->enter_power_save_cb, "Enter power save callback is invalid", ESP_ERR_INVALID_ARG);
+
+    power_save_usr_cfg.enter_power_save_cb = config->enter_power_save_cb;
+    power_save_usr_cfg.usr_data = config->usr_data;
+    return ESP_OK;
+}
+#endif
