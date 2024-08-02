@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+from itertools import count
 import re
 import sys
 import subprocess
@@ -34,6 +35,10 @@ class App:
         self.app_version = ''
         # App readme
         self.readme = ''
+        # App description
+        self.description = ''
+        # App SDK count
+        self.sdkcount = ''
 
 current_app = App(None)
 
@@ -118,26 +123,39 @@ def remove_app_from_config(apps):
     new_apps = []
     for app in apps:
         # remove './' in string
-        app_dir = app['app_dir'][2:]
+        if app['app_dir'].startswith('./'):
+            app_dir = app['app_dir'][2:]
+        else:
+            app_dir = app['app_dir']
+
         if app_dir not in config_apps:
             continue
 
         example = config_apps[app_dir]
         matched_build_info = []
+        sdkcount = {}
         for build_info in app['build_info']:
             target = build_info.get('target')
             if (
                 example.get(target) and
                 build_info.get('sdkconfig') in example.get(target, {}).get('sdkconfig', [])
             ):
+                if build_info.get('sdkconfig') == 'defaults':
+                    build_info['sdkconfig'] = target + '_generic'
                 matched_build_info.append(build_info)
+
+                if not sdkcount.get(f'developKits.{target}'):
+                    sdkcount[f'developKits.{target}'] = 1
+                else:
+                    sdkcount[f'developKits.{target}'] += 1
         if matched_build_info:
             app['build_info'] = matched_build_info
+            app['sdkcount'] = sdkcount
             if config_apps[app_dir].get('readme'):
-                print(config_apps[app_dir]['readme'])
                 app['readme'] = config_apps[app_dir]['readme']
+            if config_apps[app_dir].get('description'):
+                app['description'] = config_apps[app_dir]['description']
             new_apps.append(app)
-
     return new_apps
 
 # Squash the json into a list of apps
@@ -183,6 +201,9 @@ def merge_binaries(apps):
             build_dirs = build_info['build_dir']
             idf_version = build_info['idf_version']
             app_version = app['app_version']
+            sdkcount = app['sdkcount']
+            if sdkcount.get(f'developKits.{target}') == 1:
+                sdkconfig = ''
             bin_name = f'{app["name"]}-{target}' + (f'-{sdkconfig}' if sdkconfig else '') + (f'-{app_version}' if app_version else '') + (f'-{idf_version}' if idf_version else '') + '.bin'
             cmd = ['esptool.py', '--chip', target, 'merge_bin', '-o', bin_name, '@flash_args']
             cwd = os.path.join(app.get('app_dir'), build_dirs)
@@ -204,10 +225,14 @@ def merge_binaries(apps):
 def write_app(app):
     # If we are working with kits
     for build_info in app['build_info']:
+        target = build_info['target']
+        sdkconfig = build_info['sdkconfig']
         idf_version = build_info['idf_version']
         app_version = app['app_version']
-        sdkconfig = build_info['sdkconfig']
-        bin_name = f'{app["name"]}-{build_info["target"]}' + (f'-{sdkconfig}' if sdkconfig else '') + (f'-{app_version}' if app_version else '') + (f'-{idf_version}' if idf_version else '') + '.bin'
+        sdkcount = app['sdkcount']
+        if sdkcount.get(f'developKits.{target}') == 1:
+            sdkconfig = ''
+        bin_name = f'{app["name"]}-{target}' + (f'-{sdkconfig}' if sdkconfig else '') + (f'-{app_version}' if app_version else '') + (f'-{idf_version}' if idf_version else '') + '.bin'
         support_app = f'{app["name"]}'
         if not toml_obj.get(support_app):
             toml_obj[support_app] = {}
@@ -215,11 +240,23 @@ def write_app(app):
             toml_obj[support_app]['ios_app_url'] = ''
             if app.get('readme'):
                 toml_obj[support_app]['readme.text'] = app['readme']
+            if app.get('description'):
+                toml_obj[support_app]['description'] = app['description']
+
         if not toml_obj[support_app].get('chipsets'):
-            toml_obj[support_app]['chipsets'] = [f'{build_info["target"]}-{build_info["sdkconfig"]}']
+            toml_obj[support_app]['chipsets'] = [f'{target}']
+        elif f'{target}' not in toml_obj[support_app]['chipsets']:
+                toml_obj[support_app]['chipsets'].append(f'{target}')
+
+        if sdkcount.get(f'developKits.{target}') > 1:
+            if not toml_obj[support_app].get(f'developKits.{target}'):
+                toml_obj[support_app][f'developKits.{target}'] = [f'{sdkconfig}']
+            else:
+                toml_obj[support_app][f'developKits.{target}'].append(f'{sdkconfig}')
+        if sdkcount.get(f'developKits.{target}') == 1:
+            toml_obj[support_app][f'image.{target}'] = bin_name
         else:
-            toml_obj[support_app]['chipsets'].append(f'{build_info["target"]}-{build_info["sdkconfig"]}')
-        toml_obj[support_app][f'image.{build_info["target"]}-{build_info["sdkconfig"]}'] = bin_name
+            toml_obj[support_app][f'image.{sdkconfig}'] = bin_name
 
 # Create the config.toml file
 def create_config_toml(apps):
@@ -232,14 +269,14 @@ def create_config_toml(apps):
 
         # This is a workaround to remove the quotes around the image.<string> in the config.toml file as dot is not allowed in the key by default
         with open('binaries/config.toml', 'r') as toml_file:
-            fixed = replace_image_and_readme_string(toml_file.read())
+            fixed = unquote_config_keys(toml_file.read())
 
         with open('binaries/config.toml', 'w') as toml_file:
             toml_file.write(fixed)
 
-def replace_image_and_readme_string(text):
+def unquote_config_keys(text):
     # Define the regular expression pattern to find "image.<string>"
-    pattern = r'"((image|readme)\.[\w-]+)"'
+    pattern = r'"((image|readme|developKits)\.[\w-]+)"'
     # Use re.sub() to replace the matched pattern with image.<string>
     result = re.sub(pattern, r'\1', text)
     return result
