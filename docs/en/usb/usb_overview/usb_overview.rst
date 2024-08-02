@@ -85,7 +85,7 @@ ESP32-S/C Series USB Peripheral Support
      - USB OTG High-Speed
      - USB OTG Full-Speed
      - USB-Serial-JTAG
-     - Fulls-Peed PHY
+     - Full-Speed PHY
      - High-Speed PHY
    * - **ESP32-P4**
      - √
