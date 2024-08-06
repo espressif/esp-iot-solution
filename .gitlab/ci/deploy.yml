@@ -96,6 +96,7 @@ pack-upload_files:
     - job: "build_example_usb_host_usb_camera_mic_spk: [espressif/idf:release-v5.1]"
     - job: "build_example_usb_host_usb_cdc_4g_module: [espressif/idf:release-v5.1]"
     - job: "build_example_usb_host_usb_cdc_basic: [espressif/idf:release-v5.1]"
+    - job: "build_example_usb_device_usb_extend_screen"
   artifacts:
     when: always
     paths:

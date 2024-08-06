@@ -1,0 +1,76 @@
+menu "Example Configuration"
+
+    config TUSB_VID
+        hex "USB Device VID"
+        default 0x303A
+    config TUSB_PID
+        hex "USB Device PID"
+        default 0x1986
+    config TUSB_MANUFACTURER
+        string "USB Device Manufacture"
+        default "Espressif"
+    config TUSB_PRODUCT
+        string "Product Name"
+        default "Vendor"
+
+    choice TINYUSB_RHPORT
+        depends on IDF_TARGET_ESP32P4
+        prompt "TinyUSB PHY"
+        default TINYUSB_RHPORT_HS
+        help
+            Allows set the USB PHY Controller for TinyUSB: HS (USB OTG2.0 PHY for HighSpeed)
+
+        config TINYUSB_RHPORT_HS
+            bool "HS"
+    endchoice
+
+    config USB_TASK_PRIORITY
+        int "USB Task Priority"
+        default 5
+        range 1 15
+        help
+            TinyUSB main task priority
+
+    config HID_TASK_PRIORITY
+        int "HID Task Priority"
+        default 5
+        range 1 15
+        help
+            Task to transmit touch data to PC
+
+    config TOUCH_TASK_PRIORITY
+        int "Touch Task Priority"
+        default 5
+        range 1 15
+        help
+            Task to read touch data from i2s
+
+    config VENDOR_TASK_PRIORITY
+        int "Vendor Task Priority"
+        default 10
+        range 1 15
+        help
+            Task to receive JPG data from PC
+
+    # Insert UAC config
+    orsource "./uac/Kconfig.uac"
+
+    config EXAMPLE_ENABLE_PRINT_FPS_RATE_VALUE
+        bool "enable print fps rate value"
+        default y
+
+    config EXAMPLE_LCD_BUF_COUNT
+        int "LCD Buffer Count"
+        default 2
+        range 1 3
+
+    choice
+        prompt "Choose the color format of the LCD"
+        default LCD_PIXEL_FORMAT_RGB565
+            config LCD_PIXEL_FORMAT_RGB565
+                bool "RGB565"
+
+            config LCD_PIXEL_FORMAT_RGB888
+                bool "RGB888"
+    endchoice
+endmenu

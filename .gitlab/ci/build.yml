@@ -650,6 +650,14 @@ build_example_usb_device_usb_dual_uvc_device:
   variables:
     EXAMPLE_DIR: examples/usb/device/usb_dual_uvc_device
 
+build_example_usb_device_usb_extend_screen:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_usb_device_usb_extend_screen
+  variables:
+    EXAMPLE_DIR: examples/usb/device/usb_extend_screen
+    IMAGE: espressif/idf:release-v5.3
+
 build_example_usb_device_usb_webcam:
   extends:
     - .build_examples_template

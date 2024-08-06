@@ -1,0 +1,77 @@
+menu "USB Device UAC"
+
+    config UAC_SPEAKER_CHANNEL_NUM
+        int "UAC Speaker channel number"
+        range 0 8
+        default 1
+
+    config UAC_MIC_CHANNEL_NUM
+        int "UAC mic channel number"
+        range 0 4
+        default 1
+
+    config UAC_SAMPLE_RATE
+        int "UAC sample rate"
+        default 48000
+
+    config UAC_SPK_INTERVAL_MS
+        int "UAC SPK interval(ms)"
+        default 10
+        help
+            SPK: The first interval of reading data from UAC device, in ms. And make SPK FIFO to accommodate data of size n milliseconds.
+
+    config UAC_MIC_INTERVAL_MS
+        int "UAC MIC interval(ms)"
+        default 10
+        help
+            MIC: The interval of writing data to UAC device, in ms. Batch fetching data helps reduce latency at the slave end. And make MIC FIFO to accommodate data of size n milliseconds.
+
+    config UAC_SPK_NEW_PLAY_INTERVAL
+        int "UAC SPK new play interval(ms)"
+        default 100
+        help
+            SPK: A new playback is considered if it has been longer than a certain number of milliseconds since the last audio data was received.
+
+    config UAC_SUPPORT_MACOS
+        bool "Support MacOS"
+        default n
+        help
+            Enable conversion from 16.16 to 10.14 format on full-speed devices on MacOS.
+
+    menu "UAC Task Config"
+            config UAC_TINYUSB_TASK_PRIORITY
+                int "Tinyusb task priority"
+                default 5
+                range 1 15
+
+            config UAC_TINYUSB_TASK_CORE
+                int "Tinyusb task core"
+                default -1
+                range -1 1
+
+            config UAC_SPK_TASK_PRIORITY
+                int "SPK task priority"
+                default 5
+                range 1 15
+                depends on UAC_SPEAKER_CHANNEL_NUM != 0
+
+            config UAC_SPK_TASK_CORE
+                int "SPK task core"
+                default -1
+                range -1 1
+                depends on UAC_SPEAKER_CHANNEL_NUM != 0
+
+            config UAC_MIC_TASK_PRIORITY
+                int "MIC task priority"
+                default 5
+                range 1 15
+                depends on UAC_MIC_CHANNEL_NUM != 0
+
+            config UAC_MIC_TASK_CORE
+                int "MIC task core"
+                default -1
+                range -1 1
+                depends on UAC_MIC_CHANNEL_NUM != 0
+    endmenu
+
+endmenu
