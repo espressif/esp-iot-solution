@@ -66,6 +66,15 @@ lightbulb_color_mapping_data_t color_data[COLOR_SZIE] = {
     {.rgbcw_100 = {0.9110, 0.0000, 0.0890}, .rgbcw_50 = {0.5762, 0.2810, 0.1429}, .rgbcw_0 = {0.4000, 0.4190, 0.1810}, .hue = 345}
 };
 
+lightbulb_power_limit_t limit = {
+    .color_max_power = 100,
+    .color_max_value = 100,
+    .color_min_value = 10,
+    .white_max_power = 100,
+    .white_max_brightness = 100,
+    .white_min_brightness = 10
+};
+
 void app_main(void)
 {
     /* Not a warning, just highlighted */
@@ -93,9 +102,9 @@ void app_main(void)
         .type = DRIVER_BP57x8D,
         .driver_conf.bp57x8d.freq_khz = 300,
         .driver_conf.bp57x8d.enable_iic_queue = true,
-        .driver_conf.bp57x8d.iic_clk = CONFIG_BP5758D_IIC_CLK_GPIO,
-        .driver_conf.bp57x8d.iic_sda = CONFIG_BP5758D_IIC_SDA_GPIO,
-        .driver_conf.bp57x8d.current = {15, 16, 15, 25, 25},
+        .driver_conf.bp57x8d.iic_clk = 3,
+        .driver_conf.bp57x8d.iic_sda = 7,
+        .driver_conf.bp57x8d.current = {10, 10, 10, 30, 30},
 #endif
         // 2. Configure the drive capability
         .capability.enable_fade = true,
@@ -106,7 +115,7 @@ void app_main(void)
         .capability.led_beads = LED_BEADS_3CH_RGB,
 #elif CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_BP5758D
 #if TEST_IIC_RGBWW_LIGHTBULB
-        .capability.led_beads = LED_BEADS_5CH_RGBW,
+        .capability.led_beads = LED_BEADS_5CH_RGBCW,
 #else
         .capability.led_beads = LED_BEADS_5CH_RGBCW,
 #endif
@@ -126,14 +135,14 @@ void app_main(void)
         .io_conf.pwm_io.warm_brightness = PWM_W_GPIO,
 #endif
 #ifdef CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_BP5758D
-        .io_conf.iic_io.red = OUT3,
+        .io_conf.iic_io.red = OUT1,
         .io_conf.iic_io.green = OUT2,
-        .io_conf.iic_io.blue = OUT1,
+        .io_conf.iic_io.blue = OUT3,
         .io_conf.iic_io.cold_white = OUT5,
         .io_conf.iic_io.warm_yellow = OUT4,
 #endif
         //4. Limit param
-        .external_limit = NULL,
+        .external_limit = &limit,
 
         //5. Gamma param
         .gamma_conf = NULL,
@@ -142,12 +151,12 @@ void app_main(void)
 #ifdef CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_BP5758D
         .color_mix_mode.precise.table = color_data,
         .color_mix_mode.precise.table_size = COLOR_SZIE,
-        .capability.enable_precise_color_control = 1,
+        .capability.enable_precise_color_control = 0,
 #endif
 #if CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_BP5758D && TEST_IIC_RGBWW_LIGHTBULB
         .cct_mix_mode.precise.table_size = MIX_TABLE_SIZE,
         .cct_mix_mode.precise.table = table,
-        .capability.enable_precise_cct_control = true,
+        .capability.enable_precise_cct_control = 0,
 #else
         .cct_mix_mode.standard.kelvin_max = 6500,
         .cct_mix_mode.standard.kelvin_min = 2200,

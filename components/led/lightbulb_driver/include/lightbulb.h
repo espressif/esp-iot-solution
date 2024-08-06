@@ -147,30 +147,17 @@ typedef struct {
 } lightbulb_cct_mapping_data_t;
 
 /**
- * @brief Color (Correlated Color Temperature) mapping data
+ * @brief Color mode mapping data
  *
- * @note This structure is used for precise color temperature calibration.
- *       Each color temperature value (cct_kelvin) needs to have a corresponding percentage (cct_percentage) determined,
- *       which is used to calibrate the color temperature more accurately.
- *       The rgbcw array specifies the current coefficients for the RGBCW channels.
- *       These coefficients are instrumental in adjusting the intensity of each color channel
- *       (Red, Green, Blue, Cool White, Warm White) to achieve the desired color temperature.
- *       They are also used for power limiting to ensure energy efficiency and LED longevity.
- *       Therefore, the sum of all values in the rgbcw array must equal 1 to maintain the correct power balance.
+ * @note Used for calibrating color accuracy in color mode.
  *
  */
 typedef struct {
-    float rgbcw_100[5];
-    float rgbcw_50[5];
-    float rgbcw_0[5];
+    float rgbcw_100[5]; /**< The RGBCW components required when saturation is 100 at a specific hue. */
+    float rgbcw_50[5];  /**< The RGBCW components required when saturation is 50 at a specific hue. */
+    float rgbcw_0[5];   /**< The RGBCW components required when saturation is 10 at a specific hue. */
     uint16_t hue;
 } lightbulb_color_mapping_data_t;
-
-// typedef struct {
-//     float abcdef_100[5];
-//     float abcdef_50[5];
-//     float abcdef_10[5];
-// } lightbulb_color_data_t;
 
 /**
  * @brief Gamma correction and color balance configuration

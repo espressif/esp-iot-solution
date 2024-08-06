@@ -310,17 +310,18 @@ static void cct_and_brightness_convert_and_power_limit(lightbulb_led_beads_comb_
         hal_get_linear_table_value((uint8_t)value1, &white_value[3]);
         hal_get_linear_table_value((uint8_t)value2, &white_value[4]);
     } else if (led_beads == LED_BEADS_2CH_CW || ((led_beads == LED_BEADS_5CH_RGBCW) && (s_lb_obj->cap.enable_precise_cct_control == false))) {
-        uint16_t max_value = 255;
+        uint16_t max_value;
         float max_power;
         float _c = cct / 100.0;
         float _w = (100 - cct) / 100.0;
 
+        hal_get_driver_feature(QUERY_MAX_INPUT_VALUE, &max_value);
         float baseline = MAX(_c, _w);
         max_power = MIN(max_value * multiple, max_value / baseline);
         _c = max_power * _c * (brightness / 100.0);
         _w = max_power * _w * (brightness / 100.0);
-        hal_get_linear_table_value((uint8_t)_c, &white_value[3]);
-        hal_get_linear_table_value((uint8_t)_w, &white_value[4]);
+        hal_get_linear_table_value((uint16_t)_c, &white_value[3]);
+        hal_get_linear_table_value((uint16_t)_w, &white_value[4]);
     } else {
         uint16_t max_value;
         float max_power;

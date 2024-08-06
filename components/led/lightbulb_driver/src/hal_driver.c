@@ -1047,7 +1047,7 @@ esp_err_t hal_get_driver_feature(hal_feature_query_list_t type, void *out_data)
     return ESP_OK;
 }
 
-esp_err_t hal_get_curve_table_value(uint8_t input, uint16_t *output)
+esp_err_t hal_get_curve_table_value(uint16_t input, uint16_t *output)
 {
     LIGHTBULB_CHECK(s_hal_obj, "init() must be called first", return ESP_ERR_INVALID_STATE);
     LIGHTBULB_CHECK(output, "out_data is null", return ESP_ERR_INVALID_STATE);
@@ -1057,7 +1057,7 @@ esp_err_t hal_get_curve_table_value(uint8_t input, uint16_t *output)
     return ESP_OK;
 }
 
-esp_err_t hal_get_linear_table_value(uint8_t input, uint16_t *output)
+esp_err_t hal_get_linear_table_value(uint16_t input, uint16_t *output)
 {
     LIGHTBULB_CHECK(s_hal_obj, "init() must be called first", return ESP_ERR_INVALID_STATE);
     LIGHTBULB_CHECK(output, "out_data is null", return ESP_ERR_INVALID_STATE);

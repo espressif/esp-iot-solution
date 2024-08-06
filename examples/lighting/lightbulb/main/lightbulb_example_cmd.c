@@ -83,14 +83,6 @@ static int do_set_rgb_cmd(int argc, char **argv)
         arg_print_errors(stderr, set_rgb_args.end, argv[0]);
         return 1;
     }
-    // uint16_t hsv[3] = {0};
-    // if (lightbulb_rgb2hsv(set_rgb_args.rgb->ival[0], set_rgb_args.rgb->ival[1], set_rgb_args.rgb->ival[2], &hsv[0], (uint8_t *)&hsv[1], (uint8_t *)&hsv[2]) != ESP_OK) {
-    //     return 1;
-    // }
-
-    // if (lightbulb_set_hsv(hsv[0], hsv[1], hsv[2]) != ESP_OK) {
-    //     return 1;
-    // }
 
     lightbulb_set_rgb(set_rgb_args.rgb->ival[0], set_rgb_args.rgb->ival[1], set_rgb_args.rgb->ival[2]);
 
