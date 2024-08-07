@@ -36,6 +36,7 @@ const char *button_event_table[] = {
     "BUTTON_LONG_PRESS_START",
     "BUTTON_LONG_PRESS_HOLD",
     "BUTTON_LONG_PRESS_UP",
+    "BUTTON_PRESS_END",
 };
 
 static void button_event_cb(void *arg, void *data)
@@ -78,6 +79,7 @@ void button_init(uint32_t button_num)
     err |= iot_button_register_cb(btn, BUTTON_LONG_PRESS_START, button_event_cb, (void *)BUTTON_LONG_PRESS_START);
     err |= iot_button_register_cb(btn, BUTTON_LONG_PRESS_HOLD, button_event_cb, (void *)BUTTON_LONG_PRESS_HOLD);
     err |= iot_button_register_cb(btn, BUTTON_LONG_PRESS_UP, button_event_cb, (void *)BUTTON_LONG_PRESS_UP);
+    err |= iot_button_register_cb(btn, BUTTON_PRESS_END, button_event_cb, (void *)BUTTON_PRESS_END);
 
 #if CONFIG_ENTER_LIGHT_SLEEP_MODE_MANUALLY
     /*!< For enter Power Save */

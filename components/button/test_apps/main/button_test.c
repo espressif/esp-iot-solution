@@ -187,6 +187,7 @@ TEST_CASE("gpio button get event test", "[button][iot]")
                                "BUTTON_LONG_PRESS_START",
                                "BUTTON_LONG_PRESS_HOLD",
                                "BUTTON_LONG_PRESS_UP",
+                               "BUTTON_PRESS_END",
                               };
 
     button_config_t cfg = {
@@ -463,7 +464,8 @@ static const char* button_event_str[BUTTON_EVENT_MAX] = {
     "BUTTON_MULTIPLE_CLICK",
     "BUTTON_LONG_PRESS_START",
     "BUTTON_LONG_PRESS_HOLD",
-    "BUTTON_LONG_PRESS_UP"
+    "BUTTON_LONG_PRESS_UP",
+    "BUTTON_PRESS_END",
 };
 
 static button_event_t state = BUTTON_PRESS_DOWN;

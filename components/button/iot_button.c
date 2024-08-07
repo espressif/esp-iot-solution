@@ -189,6 +189,8 @@ static void button_handler(button_dev_t *btn)
             CALL_EVENT_CB(BUTTON_PRESS_REPEAT_DONE); // repeat hit
             btn->repeat = 0;
             btn->state = 0;
+            btn->event = (uint8_t)BUTTON_PRESS_END;
+            CALL_EVENT_CB(BUTTON_PRESS_END);
         }
         break;
 
@@ -201,6 +203,8 @@ static void button_handler(button_dev_t *btn)
                 btn->state = 2; //repeat press
             } else {
                 btn->state = 0;
+                btn->event = (uint8_t)BUTTON_PRESS_END;
+                CALL_EVENT_CB(BUTTON_PRESS_END);
             }
         }
         break;
@@ -288,6 +292,8 @@ static void button_handler(button_dev_t *btn)
             CALL_EVENT_CB(BUTTON_PRESS_UP);
             btn->state = 0; //reset
             btn->long_press_hold_cnt = 0;
+            btn->event = (uint8_t)BUTTON_PRESS_END;
+            CALL_EVENT_CB(BUTTON_PRESS_END);
         }
         break;
     }

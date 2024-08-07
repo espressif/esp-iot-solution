@@ -16,8 +16,9 @@ List of supported events:
  * Button long press start
  * Button long press hold
  * Button long press up
+ * Button Press end
 
-![](https://dl.espressif.com/button_v2/button.svg)
+![](https://dl.espressif.com/AE/esp-iot-solution/button_3.3.1.svg)
 
 There are three ways this driver can handle buttons:
 1. Buttons connected to standard digital GPIO

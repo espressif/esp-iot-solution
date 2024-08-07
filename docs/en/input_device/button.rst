@@ -21,34 +21,36 @@ Button event
 
 Triggering conditions for each button event are enlisted in the table below:
 
-+--------------------------+--------------------------------------+
-|          Event           |          Trigger Condition           |
-+==========================+======================================+
-| BUTTON_PRESS_DOWN        | Pressed                              |
-+--------------------------+--------------------------------------+
-| BUTTON_PRESS_UP          | Released                             |
-+--------------------------+--------------------------------------+
-| BUTTON_PRESS_REPEAT      | Pressed and released >= 2 times      |
-+--------------------------+--------------------------------------+
-| BUTTON_PRESS_REPEAT_DONE | Repeated press completed             |
-+--------------------------+--------------------------------------+
-| BUTTON_SINGLE_CLICK      | Pressed and released once            |
-+--------------------------+--------------------------------------+
-| BUTTON_DOUBLE_CLICK      | Pressed and released twice           |
-+--------------------------+--------------------------------------+
-| BUTTON_MULTIPLE_CLICK    | Pressed and released N times         |
-|                          | specified, triggers when achieved    |
-+--------------------------+--------------------------------------+
-| BUTTON_LONG_PRESS_START  | Instant when held for a threshold    |
-|                          | duration of time                     |
-+--------------------------+--------------------------------------+
-| BUTTON_LONG_PRESS_HOLD   | Triggered continuously during        |
-|                          | long press                           |
-+--------------------------+--------------------------------------+
-| BUTTON_LONG_PRESS_UP     | Released after a long press          |
-+--------------------------+--------------------------------------+
-| BUTTON_PRESS_REPEAT_DONE | Repeated press and release ended     |
-+--------------------------+--------------------------------------+
++--------------------------+---------------------------------------------------------------+
+|          Event           |                       Trigger Condition                       |
++==========================+===============================================================+
+| BUTTON_PRESS_DOWN        | Pressed                                                       |
++--------------------------+---------------------------------------------------------------+
+| BUTTON_PRESS_UP          | Released                                                      |
++--------------------------+---------------------------------------------------------------+
+| BUTTON_PRESS_REPEAT      | Pressed and released >= 2 times                               |
++--------------------------+---------------------------------------------------------------+
+| BUTTON_PRESS_REPEAT_DONE | Repeated press completed                                      |
++--------------------------+---------------------------------------------------------------+
+| BUTTON_SINGLE_CLICK      | Pressed and released once                                     |
++--------------------------+---------------------------------------------------------------+
+| BUTTON_DOUBLE_CLICK      | Pressed and released twice                                    |
++--------------------------+---------------------------------------------------------------+
+| BUTTON_MULTIPLE_CLICK    | Pressed and released N times                                  |
+|                          | specified, triggers when achieved                             |
++--------------------------+---------------------------------------------------------------+
+| BUTTON_LONG_PRESS_START  | Instant when held for a threshold                             |
+|                          | duration of time                                              |
++--------------------------+---------------------------------------------------------------+
+| BUTTON_LONG_PRESS_HOLD   | Triggered continuously during                                 |
+|                          | long press                                                    |
++--------------------------+---------------------------------------------------------------+
+| BUTTON_LONG_PRESS_UP     | Released after a long press                                   |
++--------------------------+---------------------------------------------------------------+
+| BUTTON_PRESS_REPEAT_DONE | Repeated press and release ended                              |
++--------------------------+---------------------------------------------------------------+
+| BUTTON_PRESS_END         | Indicate that the button has completed its current detection. |
++--------------------------+---------------------------------------------------------------+
 
 Each button supports **call-back** and **pooling** mode.
 
@@ -59,7 +61,7 @@ Each button supports **call-back** and **pooling** mode.
 
 .. attention:: No blocking operations such as **TaskDelay** are allowed in the call-back function
 
-.. image:: https://dl.espressif.com/button_v2/button.svg
+.. image:: https://dl.espressif.com/AE/esp-iot-solution/button_3.3.1.svg
    :alt: Button
 
 Configuration
