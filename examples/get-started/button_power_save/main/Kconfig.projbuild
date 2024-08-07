@@ -1,5 +1,18 @@
 menu "Example Configuration"
 
+    choice ENTER_LIGHT_SLEEP_MODE
+        prompt "Enter light sleep mode"
+        default ENTER_LIGHT_SLEEP_AUTO
+        depends on PM_ENABLE
+        help
+            Enable light sleep mode to save power.
+
+        config ENTER_LIGHT_SLEEP_AUTO
+            bool "Auto enter Light Sleep"
+        config ENTER_LIGHT_SLEEP_MODE_MANUALLY
+            bool "Manually enter Light Sleep"
+    endchoice
+
     choice EXAMPLE_MAX_CPU_FREQ
         prompt "Maximum CPU frequency"
         default EXAMPLE_MAX_CPU_FREQ_80 if !IDF_TARGET_ESP32H2

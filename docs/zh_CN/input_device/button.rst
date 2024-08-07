@@ -277,6 +277,25 @@ Button 组件支持为多个事件注册回调函数，每个事件都可以注�
     };
     button_handle_t btn = iot_button_create(&btn_cfg);
 
+什么时候进入 Light Sleep
+
+- 使用 Auto Light Sleep: 会在 button 自动关闭 esp_timer 后进入 Light Sleep
+
+- 用户控制 Light Sleep: 需要在 ``enter_power_save_cb`` 回调到来时进入 Light Sleep
+
+.. code:: c
+
+    void btn_enter_power_save(void *usr_data)
+    {
+        ESP_LOGI(TAG, "Can enter power save now");
+    }
+
+    button_power_save_config_t config = {
+        .enter_power_save_cb = btn_enter_power_save,
+    };
+
+    iot_button_register_power_save_cb(&config);
+
 开启和关闭
 ^^^^^^^^^^^^^
 

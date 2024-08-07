@@ -21,35 +21,34 @@ Button event
 
 Triggering conditions for each button event are enlisted in the table below:
 
-
-+--------------------------+-----------------------------------+
-|          Event           |         Trigger Condition         |
-+==========================+===================================+
-| BUTTON_PRESS_DOWN        | Pressed                           |
-+--------------------------+-----------------------------------+
-| BUTTON_PRESS_UP          | Released                          |
-+--------------------------+-----------------------------------+
-| BUTTON_PRESS_REPEAT      | Pressed and released >= 2 times   |
-+--------------------------+-----------------------------------+
-| BUTTON_PRESS_REPEAT_DONE | Repeated press completed          |
-+--------------------------+-----------------------------------+
-| BUTTON_SINGLE_CLICK      | Pressed and released once         |
-+--------------------------+-----------------------------------+
-| BUTTON_DOUBLE_CLICK      | Pressed and released twice        |
-+--------------------------+-----------------------------------+
-| BUTTON_MULTIPLE_CLICK    | Pressed and released N times      |
-|                          | specified, triggers when achieved |
-+--------------------------+-----------------------------------+
-| BUTTON_LONG_PRESS_START  | Instant when held for a threshold |
-|                          | duration of time                  |
-+--------------------------+-----------------------------------+
-| BUTTON_LONG_PRESS_HOLD   | Triggered continuously during     |
-|                          | long press                        |
-+--------------------------+-----------------------------------+
-| BUTTON_LONG_PRESS_UP     | Released after a long press       |
-+--------------------------+-----------------------------------+
-| BUTTON_PRESS_REPEAT_DONE | Repeated press and release ended  |
-+--------------------------+-----------------------------------+
++--------------------------+--------------------------------------+
+|          Event           |          Trigger Condition           |
++==========================+======================================+
+| BUTTON_PRESS_DOWN        | Pressed                              |
++--------------------------+--------------------------------------+
+| BUTTON_PRESS_UP          | Released                             |
++--------------------------+--------------------------------------+
+| BUTTON_PRESS_REPEAT      | Pressed and released >= 2 times      |
++--------------------------+--------------------------------------+
+| BUTTON_PRESS_REPEAT_DONE | Repeated press completed             |
++--------------------------+--------------------------------------+
+| BUTTON_SINGLE_CLICK      | Pressed and released once            |
++--------------------------+--------------------------------------+
+| BUTTON_DOUBLE_CLICK      | Pressed and released twice           |
++--------------------------+--------------------------------------+
+| BUTTON_MULTIPLE_CLICK    | Pressed and released N times         |
+|                          | specified, triggers when achieved    |
++--------------------------+--------------------------------------+
+| BUTTON_LONG_PRESS_START  | Instant when held for a threshold    |
+|                          | duration of time                     |
++--------------------------+--------------------------------------+
+| BUTTON_LONG_PRESS_HOLD   | Triggered continuously during        |
+|                          | long press                           |
++--------------------------+--------------------------------------+
+| BUTTON_LONG_PRESS_UP     | Released after a long press          |
++--------------------------+--------------------------------------+
+| BUTTON_PRESS_REPEAT_DONE | Repeated press and release ended     |
++--------------------------+--------------------------------------+
 
 Each button supports **call-back** and **pooling** mode.
 
@@ -276,6 +275,25 @@ As shown, low-power mode results in more power savings.
         },
     };
     button_handle_t btn = iot_button_create(&btn_cfg);
+
+When to Enter Light Sleep
+
+- Using Auto Light Sleep: The device will enter Light Sleep automatically after the button closes the esp_timer.
+
+- User-Controlled Light Sleep: The device can enter Light Sleep when ``enter_power_save_cb`` is called.
+
+.. code:: c
+
+    void btn_enter_power_save(void *usr_data)
+    {
+        ESP_LOGI(TAG, "Can enter power save now");
+    }
+
+    button_power_save_config_t config = {
+        .enter_power_save_cb = btn_enter_power_save,
+    };
+
+    iot_button_register_power_save_cb(&config);
 
 Stop and resume
 ^^^^^^^^^^^^^^^^^

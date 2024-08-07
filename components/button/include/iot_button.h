@@ -18,6 +18,20 @@ extern "C" {
 #endif
 
 typedef void (* button_cb_t)(void *button_handle, void *usr_data);
+
+#if CONFIG_GPIO_BUTTON_SUPPORT_POWER_SAVE
+typedef void (* button_power_save_cb_t)(void *usr_data);
+
+/**
+ * @brief Structs to store power save callback info
+ *
+ */
+typedef struct {
+    button_power_save_cb_t enter_power_save_cb;
+    void *usr_data;
+} button_power_save_config_t;
+#endif
+
 typedef void *button_handle_t;
 
 /**
@@ -300,6 +314,21 @@ esp_err_t iot_button_resume(void);
  *     - ESP_ERR_INVALID_STATE   timer state is invalid
  */
 esp_err_t iot_button_stop(void);
+
+#if CONFIG_GPIO_BUTTON_SUPPORT_POWER_SAVE
+/**
+ * @brief Register a callback function for power saving.
+ *        The config->enter_power_save_cb function will be called when all keys stop working.
+ *
+ * @param config Button power save config
+ * @return
+ *     - ESP_OK                  on success
+ *     - ESP_ERR_INVALID_STATE   No button registered
+ *     - ESP_ERR_INVALID_ARG     Arguments is invalid
+ *     - ESP_ERR_NO_MEM          Not enough memory
+ */
+esp_err_t iot_button_register_power_save_cb(const button_power_save_config_t *config);
+#endif
 
 #ifdef __cplusplus
 }

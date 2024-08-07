@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v3.3.0 - 2024-8-7
+
+### Enhancements:
+
+* Add Callback **button_power_save_cb_t** to support enter power save manually.
+* Increase the maximum polling interval supported by the button from 20ms to 50ms.
+
 ## v3.2.3 - 2024-7-2
 
 * Fixed the issue where the GPIO button in low-power mode continuously woke up the CPU after being pressed, causing abnormal power consumption.
