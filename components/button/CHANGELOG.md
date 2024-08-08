@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v3.3.1 - 2024-8-8
+
+### Enhancements:
+
+* Add Button Event **BUTTON_PRESS_END**.
+
 ## v3.3.0 - 2024-8-7
 
 ### Enhancements:

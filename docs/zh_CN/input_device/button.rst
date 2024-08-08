@@ -47,6 +47,8 @@
 +--------------------------+-----------------------------------+
 | BUTTON_PRESS_REPEAT_DONE | 多次按下弹起结束                  |
 +--------------------------+-----------------------------------+
+| BUTTON_PRESS_END         | 表示 button 此次检测已结束        |
++--------------------------+-----------------------------------+
 
 每个按键可以有 **回调** 和 **轮询** 两种使用方式：
 
@@ -58,7 +60,7 @@
 
 .. attention:: 回调函数中不能有 TaskDelay 等阻塞的操作
 
-.. image:: https://dl.espressif.com/button_v2/button.svg
+.. image:: https://dl.espressif.com/AE/esp-iot-solution/button_3.3.1.svg
    :alt: Button
 
 配置项
