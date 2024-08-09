@@ -170,6 +170,10 @@
   - "components/led/lightbulb_driver/**/*"
   - "components/tools/cmake_utilities/package_manager.cmake"
 
+.patterns-components_motor_drv10987: &patterns-components_motor_drv10987
+  - "components/motor/drv10987/**/*"
+  - "components/tools/cmake_utilities/package_manager.cmake"
+
 .patterns-components_motor_esp_simplefoc: &patterns-components_motor_esp_simplefoc
   - "components/motor/esp_simplefoc/**/*"
   - "components/tools/cmake_utilities/package_manager.cmake"
@@ -449,6 +453,9 @@
 
 .patterns-example_motor_bldc_fan_rainmaker: &patterns-example_motor_bldc_fan_rainmaker
   - "examples/motor/bldc_fan_rainmaker/**/*"
+
+.patterns-example_motor_drv10987: &patterns-example_motor_drv10987
+  - "examples/motor/drv10987/**/*"
 
 .patterns-example_motor_foc_openloop_control: &patterns-example_motor_foc_openloop_control
   - "examples/motor/foc_openloop_control/**/*"
@@ -995,6 +1002,20 @@
       changes: *patterns-components_motor_esp_sensorless_bldc_control
     - <<: *if-dev-push
       changes: *patterns-example_motor_bldc_fan_rainmaker
+
+.rules:build:example_motor_drv10987:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_motor_drv10987
+    - <<: *if-dev-push
+      changes: *patterns-example_motor_drv10987
+    - <<: *if-dev-push
+      changes: *patterns-components_i2c_bus
 
 .rules:build:example_motor_foc_openloop_control:
   rules:
@@ -1754,6 +1775,19 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_led_lightbulb_driver
+
+.rules:build:components_motor_drv10987_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_motor_drv10987
+    - <<: *if-dev-push
+      changes: *patterns-components_i2c_bus
 
 .rules:build:components_motor_esp_simplefoc_test_apps:
   rules:

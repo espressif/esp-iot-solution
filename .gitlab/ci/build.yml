@@ -526,6 +526,14 @@ build_example_motor_bldc_fan_rainmaker:
     EXAMPLE_DIR: examples/motor/bldc_fan/rainmaker
     IMAGE: espressif/idf:release-v5.0
 
+build_example_motor_drv10987:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_motor_drv10987
+  variables:
+    EXAMPLE_DIR: examples/motor/drv10987
+    IMAGE: espressif/idf:release-v5.0
+
 build_example_motor_foc_openloop_control:
   extends:
     - .build_examples_template
@@ -1040,6 +1048,16 @@ build_components_led_led_indicator_test_apps:
       - IMAGE: espressif/idf:release-v5.0
   variables:
     EXAMPLE_DIR: components/led/led_indicator/test_apps
+
+build_components_motor_drv10987_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_motor_drv10987_test_apps
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.0
+  variables:
+    EXAMPLE_DIR: components/motor/drv10987/test_apps
 
 build_components_motor_esp_sensorless_bldc_control_test_apps:
   extends:

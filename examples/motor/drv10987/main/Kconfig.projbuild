@@ -1,0 +1,9 @@
+menu "Example Configuration"
+
+    config EXAMPLE_MOROT_SPEED
+        int "MOTOR SPEED"
+        range 0 511
+        default 300
+        help
+            Configure the speed value. It must be an integer between 0 and 511.
+endmenu
