@@ -34,6 +34,7 @@
 #define TEST_PIN_NUM_BK_LIGHT           (22)    // set to -1 if not used
 #define TEST_LCD_BK_LIGHT_ON_LEVEL      (1)
 #define TEST_LCD_BK_LIGHT_OFF_LEVEL     !TEST_LCD_BK_LIGHT_ON_LEVEL
+#define TEST_MIPI_DSI_LANE_NUM          (2)
 #define TEST_PIN_NUM_VER_FLIP           (-1)
 #define TEST_PIN_NUM_HOR_FLIP           (-1)
 #define TEST_LCD_ROTATE_LEVEL           (1)
@@ -101,12 +102,10 @@ static void test_init_lcd(void)
     ESP_LOGI(TAG, "Install LCD driver of ek79007");
     esp_lcd_dpi_panel_config_t dpi_config = EK79007_1024_600_PANEL_60HZ_CONFIG(TEST_MIPI_DPI_PX_FORMAT);
     ek79007_vendor_config_t vendor_config = {
-        .flags = {
-            .use_mipi_interface = 1,
-        },
         .mipi_config = {
             .dsi_bus = mipi_dsi_bus,
             .dpi_config = &dpi_config,
+            .lane_num = TEST_MIPI_DSI_LANE_NUM,
         },
     };
     const esp_lcd_panel_dev_config_t panel_config = {

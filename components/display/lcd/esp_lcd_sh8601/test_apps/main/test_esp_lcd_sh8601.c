@@ -34,6 +34,9 @@
 #define TEST_PIN_NUM_LCD_DATA3      (GPIO_NUM_14)
 #define TEST_PIN_NUM_LCD_RST        (GPIO_NUM_17)
 #define TEST_PIN_NUM_LCD_DC         (GPIO_NUM_8)
+#define TEST_PIN_NUM_BK_LIGHT       (GPIO_NUM_0)    // set to -1 if not used
+#define TEST_LCD_BK_LIGHT_ON_LEVEL  (1)
+#define TEST_LCD_BK_LIGHT_OFF_LEVEL !TEST_LCD_BK_LIGHT_ON_LEVEL
 
 #define TEST_DELAY_TIME_MS          (3000)
 
@@ -74,6 +77,16 @@ static void test_draw_bitmap(esp_lcd_panel_handle_t panel_handle)
 
 TEST_CASE("test sh8601 to draw color bar with SPI interface", "[sh8601][spi]")
 {
+#if TEST_PIN_NUM_BK_LIGHT >= 0
+    ESP_LOGI(TAG, "Turn on LCD backlight");
+    gpio_config_t bk_gpio_config = {
+        .mode = GPIO_MODE_OUTPUT,
+        .pin_bit_mask = 1ULL << TEST_PIN_NUM_BK_LIGHT
+    };
+    TEST_ESP_OK(gpio_config(&bk_gpio_config));
+    TEST_ESP_OK(gpio_set_level(TEST_PIN_NUM_BK_LIGHT, TEST_LCD_BK_LIGHT_ON_LEVEL));
+#endif
+
     ESP_LOGI(TAG, "Initialize SPI bus");
     const spi_bus_config_t buscfg = SH8601_PANEL_BUS_SPI_CONFIG(TEST_PIN_NUM_LCD_PCLK,
                                                                 TEST_PIN_NUM_LCD_DATA0,
@@ -104,10 +117,24 @@ TEST_CASE("test sh8601 to draw color bar with SPI interface", "[sh8601][spi]")
     TEST_ESP_OK(esp_lcd_panel_del(panel_handle));
     TEST_ESP_OK(esp_lcd_panel_io_del(io_handle));
     TEST_ESP_OK(spi_bus_free(TEST_LCD_HOST));
+
+#if TEST_PIN_NUM_BK_LIGHT >= 0
+    TEST_ESP_OK(gpio_reset_pin(TEST_PIN_NUM_BK_LIGHT));
+#endif
 }
 
 TEST_CASE("test sh8601 to draw color bar with QSPI interface", "[sh8601][qspi]")
 {
+#if TEST_PIN_NUM_BK_LIGHT >= 0
+    ESP_LOGI(TAG, "Turn on LCD backlight");
+    gpio_config_t bk_gpio_config = {
+        .mode = GPIO_MODE_OUTPUT,
+        .pin_bit_mask = 1ULL << TEST_PIN_NUM_BK_LIGHT
+    };
+    TEST_ESP_OK(gpio_config(&bk_gpio_config));
+    TEST_ESP_OK(gpio_set_level(TEST_PIN_NUM_BK_LIGHT, TEST_LCD_BK_LIGHT_ON_LEVEL));
+#endif
+
     ESP_LOGI(TAG, "Initialize SPI bus");
     const spi_bus_config_t buscfg = SH8601_PANEL_BUS_QSPI_CONFIG(TEST_PIN_NUM_LCD_PCLK,
                                                                  TEST_PIN_NUM_LCD_DATA0,
@@ -146,6 +173,10 @@ TEST_CASE("test sh8601 to draw color bar with QSPI interface", "[sh8601][qspi]")
     TEST_ESP_OK(esp_lcd_panel_del(panel_handle));
     TEST_ESP_OK(esp_lcd_panel_io_del(io_handle));
     TEST_ESP_OK(spi_bus_free(TEST_LCD_HOST));
+
+#if TEST_PIN_NUM_BK_LIGHT >= 0
+    TEST_ESP_OK(gpio_reset_pin(TEST_PIN_NUM_BK_LIGHT));
+#endif
 }
 
 // Some resources are lazy allocated in the LCD driver, the threadhold is left for that case

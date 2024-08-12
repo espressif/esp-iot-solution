@@ -17,14 +17,21 @@
 #include "esp_log.h"
 #include "esp_lcd_ek79007.h"
 
+#define EK79007_PAD_CONTROL     (0xB2)
+#define EK79007_DSI_2_LANE      (0x10)
+#define EK79007_DSI_4_LANE      (0x00)
+
 #define EK79007_CMD_SHLR_BIT    (1ULL << 0)
 #define EK79007_CMD_UPDN_BIT    (1ULL << 1)
+#define EK79007_MDCTL_VALUE_DEFAULT   (0x01)
 
 typedef struct {
     esp_lcd_panel_io_handle_t io;
     int reset_gpio_num;
+    uint8_t madctl_val; // save current value of LCD_CMD_MADCTL register
     const ek79007_lcd_init_cmd_t *init_cmds;
     uint16_t init_cmds_size;
+    uint8_t lane_num;
     struct {
         unsigned int reset_level: 1;
     } flags;
@@ -42,7 +49,6 @@ static esp_err_t panel_ek79007_init(esp_lcd_panel_t *panel);
 static esp_err_t panel_ek79007_reset(esp_lcd_panel_t *panel);
 static esp_err_t panel_ek79007_mirror(esp_lcd_panel_t *panel, bool mirror_x, bool mirror_y);
 static esp_err_t panel_ek79007_invert_color(esp_lcd_panel_t *panel, bool invert_color_data);
-static esp_err_t panel_ek79007_disp_on_off(esp_lcd_panel_t *panel, bool on_off);
 
 esp_err_t esp_lcd_new_panel_ek79007(const esp_lcd_panel_io_handle_t io, const esp_lcd_panel_dev_config_t *panel_dev_config,
                                     esp_lcd_panel_handle_t *ret_panel)
@@ -69,8 +75,10 @@ esp_err_t esp_lcd_new_panel_ek79007(const esp_lcd_panel_io_handle_t io, const es
     ek79007->io = io;
     ek79007->init_cmds = vendor_config->init_cmds;
     ek79007->init_cmds_size = vendor_config->init_cmds_size;
+    ek79007->lane_num = vendor_config->mipi_config.lane_num;
     ek79007->reset_gpio_num = panel_dev_config->reset_gpio_num;
     ek79007->flags.reset_level = panel_dev_config->flags.reset_active_high;
+    ek79007->madctl_val = EK79007_MDCTL_VALUE_DEFAULT;
 
     // Create MIPI DPI panel
     ESP_GOTO_ON_ERROR(esp_lcd_new_panel_dpi(vendor_config->mipi_config.dsi_bus, vendor_config->mipi_config.dpi_config, ret_panel), err, TAG,
@@ -86,7 +94,6 @@ esp_err_t esp_lcd_new_panel_ek79007(const esp_lcd_panel_io_handle_t io, const es
     (*ret_panel)->reset = panel_ek79007_reset;
     (*ret_panel)->mirror = panel_ek79007_mirror;
     (*ret_panel)->invert_color = panel_ek79007_invert_color;
-    (*ret_panel)->disp_on_off = panel_ek79007_disp_on_off;
     (*ret_panel)->user_data = ek79007;
     ESP_LOGD(TAG, "new ek79007 panel @%p", ek79007);
 
@@ -111,7 +118,6 @@ static const ek79007_lcd_init_cmd_t vendor_specific_init_default[] = {
     {0x84, (uint8_t []){0xA8}, 1, 0},
     {0x85, (uint8_t []){0xE3}, 1, 0},
     {0x86, (uint8_t []){0x88}, 1, 0},
-    {0xB2, (uint8_t []){0x10}, 1, 0},
     {0x11, (uint8_t []){0x00}, 0, 120},
 };
 
@@ -120,6 +126,24 @@ static esp_err_t panel_ek79007_send_init_cmds(ek79007_panel_t *ek79007)
     esp_lcd_panel_io_handle_t io = ek79007->io;
     const ek79007_lcd_init_cmd_t *init_cmds = NULL;
     uint16_t init_cmds_size = 0;
+    uint8_t lane_command = EK79007_DSI_2_LANE;
+    bool is_cmd_overwritten = false;
+
+    switch (ek79007->lane_num) {
+    case 0:
+    case 2:
+        lane_command = EK79007_DSI_2_LANE;
+        break;
+    case 4:
+        lane_command = EK79007_DSI_4_LANE;
+        break;
+    default:
+        ESP_LOGE(TAG, "Invalid lane number %d", ek79007->lane_num);
+        return ESP_ERR_INVALID_ARG;
+    }
+    ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, EK79007_PAD_CONTROL, (uint8_t[]) {
+        lane_command,
+    }, 1), TAG, "send command failed");
 
     // vendor specific initialization, it can be different between manufacturers
     // should consult the LCD supplier for initialization sequence code
@@ -132,11 +156,30 @@ static esp_err_t panel_ek79007_send_init_cmds(ek79007_panel_t *ek79007)
     }
 
     for (int i = 0; i < init_cmds_size; i++) {
+        // Check if the command has been used or conflicts with the internal
+        if (init_cmds[i].data_bytes > 0) {
+            switch (init_cmds[i].cmd) {
+            case LCD_CMD_MADCTL:
+                is_cmd_overwritten = true;
+                ek79007->madctl_val = ((uint8_t *)init_cmds[i].data)[0];
+                break;
+            default:
+                is_cmd_overwritten = false;
+                break;
+            }
+
+            if (is_cmd_overwritten) {
+                is_cmd_overwritten = false;
+                ESP_LOGW(TAG, "The %02Xh command has been used and will be overwritten by external initialization sequence",
+                         init_cmds[i].cmd);
+            }
+        }
+
         // Send command
-        ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, init_cmds[i].cmd, init_cmds[i].data, init_cmds[i].data_bytes),
-                            TAG, "send command failed");
+        ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, init_cmds[i].cmd, init_cmds[i].data, init_cmds[i].data_bytes), TAG, "send command failed");
         vTaskDelay(pdMS_TO_TICKS(init_cmds[i].delay_ms));
     }
+
     ESP_LOGD(TAG, "send init commands success");
 
     return ESP_OK;
@@ -190,7 +233,7 @@ static esp_err_t panel_ek79007_mirror(esp_lcd_panel_t *panel, bool mirror_x, boo
 {
     ek79007_panel_t *ek79007 = (ek79007_panel_t *)panel->user_data;
     esp_lcd_panel_io_handle_t io = ek79007->io;
-    uint8_t madctl_val = 0x01;
+    uint8_t madctl_val = ek79007->madctl_val;
 
     ESP_RETURN_ON_FALSE(io, ESP_ERR_INVALID_STATE, TAG, "invalid panel IO");
 
@@ -209,6 +252,7 @@ static esp_err_t panel_ek79007_mirror(esp_lcd_panel_t *panel, bool mirror_x, boo
     ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, LCD_CMD_MADCTL, (uint8_t []) {
         madctl_val
     }, 1), TAG, "send command failed");
+    ek79007->madctl_val = madctl_val;
 
     return ESP_OK;
 }
@@ -229,11 +273,4 @@ static esp_err_t panel_ek79007_invert_color(esp_lcd_panel_t *panel, bool invert_
     ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, command, NULL, 0), TAG, "send command failed");
 
     return ESP_OK;
-}
-
-static esp_err_t panel_ek79007_disp_on_off(esp_lcd_panel_t *panel, bool on_off)
-{
-    ESP_LOGE(TAG, "display on/off is not supported");
-
-    return ESP_ERR_NOT_SUPPORTED;
 }

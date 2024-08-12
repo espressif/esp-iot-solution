@@ -49,6 +49,21 @@ esp_err_t esp_lcd_new_panel_st77922_general(const esp_lcd_panel_io_handle_t io, 
 esp_err_t esp_lcd_new_panel_st77922_rgb(const esp_lcd_panel_io_handle_t io, const esp_lcd_panel_dev_config_t *panel_dev_config, esp_lcd_panel_handle_t *ret_panel);
 #endif
 
+#if SOC_MIPI_DSI_SUPPORTED
+/**
+ * @brief  Initialize ST77922 LCD panel with MIPI interface
+ *
+ * @param[in]  io LCD panel IO handle
+ * @param[in]  panel_dev_config LCD panel device configuration
+ * @param[out] ret_panel LCD panel handle
+ * @return
+ *      - ESP_OK:    Success
+ *      - Otherwise: Fail
+ */
+esp_err_t esp_lcd_new_panel_st77922_mipi(const esp_lcd_panel_io_handle_t io, const esp_lcd_panel_dev_config_t *panel_dev_config,
+                                         esp_lcd_panel_handle_t *ret_panel);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

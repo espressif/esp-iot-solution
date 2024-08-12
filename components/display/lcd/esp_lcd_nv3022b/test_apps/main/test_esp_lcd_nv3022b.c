@@ -72,6 +72,7 @@ IRAM_ATTR static void test_draw_bitmap(esp_lcd_panel_handle_t panel_handle)
 
 TEST_CASE("test nv3022b to draw color bar with SPI interface", "[nv3022b][spi]")
 {
+#if TEST_PIN_NUM_LCD_BL
     ESP_LOGI(TAG, "Turn on the backlight");
     gpio_config_t io_conf = {
         .pin_bit_mask = BIT64(TEST_PIN_NUM_LCD_BL),
@@ -82,6 +83,7 @@ TEST_CASE("test nv3022b to draw color bar with SPI interface", "[nv3022b][spi]")
     };
     gpio_config(&io_conf);
     gpio_set_level(TEST_PIN_NUM_LCD_BL, 1);
+#endif
 
     ESP_LOGI(TAG, "Initialize SPI bus");
     const spi_bus_config_t buscfg = NV3022B_PANEL_BUS_SPI_CONFIG(TEST_PIN_NUM_LCD_PCLK, TEST_PIN_NUM_LCD_DATA0,
@@ -119,7 +121,9 @@ TEST_CASE("test nv3022b to draw color bar with SPI interface", "[nv3022b][spi]")
     test_draw_bitmap(panel_handle);
     vTaskDelay(pdMS_TO_TICKS(TEST_DELAY_TIME_MS));
 
+#if TEST_PIN_NUM_LCD_BL
     gpio_reset_pin(TEST_PIN_NUM_LCD_BL);
+#endif
     TEST_ESP_OK(esp_lcd_panel_del(panel_handle));
     TEST_ESP_OK(esp_lcd_panel_io_del(io_handle));
     TEST_ESP_OK(spi_bus_free(TEST_LCD_HOST));

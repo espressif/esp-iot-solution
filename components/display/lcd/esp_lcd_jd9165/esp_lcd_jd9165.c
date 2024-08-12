@@ -44,8 +44,6 @@ static esp_err_t panel_jd9165_init(esp_lcd_panel_t *panel);
 static esp_err_t panel_jd9165_reset(esp_lcd_panel_t *panel);
 static esp_err_t panel_jd9165_invert_color(esp_lcd_panel_t *panel, bool invert_color_data);
 static esp_err_t panel_jd9165_mirror(esp_lcd_panel_t *panel, bool mirror_x, bool mirror_y);
-static esp_err_t panel_jd9165_swap_xy(esp_lcd_panel_t *panel, bool swap_axes);
-static esp_err_t panel_jd9165_set_gap(esp_lcd_panel_t *panel, int x_gap, int y_gap);
 static esp_err_t panel_jd9165_disp_on_off(esp_lcd_panel_t *panel, bool on_off);
 
 esp_err_t esp_lcd_new_panel_jd9165(const esp_lcd_panel_io_handle_t io, const esp_lcd_panel_dev_config_t *panel_dev_config,
@@ -106,8 +104,6 @@ esp_err_t esp_lcd_new_panel_jd9165(const esp_lcd_panel_io_handle_t io, const esp
     panel_handle->init = panel_jd9165_init;
     panel_handle->reset = panel_jd9165_reset;
     panel_handle->mirror = panel_jd9165_mirror;
-    panel_handle->swap_xy = panel_jd9165_swap_xy;
-    panel_handle->set_gap = panel_jd9165_set_gap;
     panel_handle->invert_color = panel_jd9165_invert_color;
     panel_handle->disp_on_off = panel_jd9165_disp_on_off;
     panel_handle->user_data = jd9165;
@@ -265,18 +261,6 @@ static esp_err_t panel_jd9165_mirror(esp_lcd_panel_t *panel, bool mirror_x, bool
     jd9165->madctl_val = madctl_val;
 
     return ESP_OK;
-}
-
-static esp_err_t panel_jd9165_swap_xy(esp_lcd_panel_t *panel, bool swap_axes)
-{
-    ESP_LOGE(TAG, "swap_xy is not supported by this panel");
-    return ESP_ERR_NOT_SUPPORTED;
-}
-
-static esp_err_t panel_jd9165_set_gap(esp_lcd_panel_t *panel, int x_gap, int y_gap)
-{
-    ESP_LOGE(TAG, "set_gap is not supported by this panel");
-    return ESP_ERR_NOT_SUPPORTED;
 }
 
 static esp_err_t panel_jd9165_disp_on_off(esp_lcd_panel_t *panel, bool on_off)
