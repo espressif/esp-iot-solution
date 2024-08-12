@@ -1,5 +1,5 @@
 dependencies:
-  espressif/esp_rainmaker: "^1.1.0"
+  espressif/esp_rainmaker: "1.1.0"
   qrcode:
     git: https://github.com/espressif/esp-rainmaker
     path: examples/common/qrcode
