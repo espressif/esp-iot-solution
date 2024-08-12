@@ -133,11 +133,10 @@ void lightbulb_lighting_output_test(lightbulb_lighting_unit_t mask, uint16_t spe
         ESP_LOGW(TAG, "color effect");
         lightbulb_set_switch(false);
         lightbulb_effect_config_t effect1 = {
-            .red = 255,
-            .green = 0,
-            .blue = 0,
-            .max_brightness = 100,
-            .min_brightness = 0,
+            .hue = 0,
+            .saturation = 0,
+            .max_value_brightness = 100,
+            .min_value_brightness = 0,
             .effect_cycle_ms = 1000,
             .effect_type = EFFECT_BREATH,
             .mode = WORK_COLOR,
@@ -147,11 +146,10 @@ void lightbulb_lighting_output_test(lightbulb_lighting_unit_t mask, uint16_t spe
         lightbulb_basic_effect_stop();
         vTaskDelay(pdMS_TO_TICKS(speed_ms) * 2);
         lightbulb_effect_config_t effect2 = {
-            .red = 255,
-            .green = 0,
-            .blue = 0,
-            .max_brightness = 100,
-            .min_brightness = 0,
+            .hue = 0,
+            .saturation = 0,
+            .max_value_brightness = 100,
+            .min_value_brightness = 0,
             .effect_cycle_ms = 1000,
             .effect_type = EFFECT_BLINK,
             .mode = WORK_COLOR,
@@ -167,8 +165,8 @@ void lightbulb_lighting_output_test(lightbulb_lighting_unit_t mask, uint16_t spe
         lightbulb_set_switch(false);
         lightbulb_effect_config_t effect1 = {
             .cct = 0,
-            .max_brightness = 100,
-            .min_brightness = 0,
+            .max_value_brightness = 100,
+            .min_value_brightness = 0,
             .effect_cycle_ms = 1000,
             .effect_type = EFFECT_BREATH,
             .mode = WORK_WHITE,
@@ -179,8 +177,8 @@ void lightbulb_lighting_output_test(lightbulb_lighting_unit_t mask, uint16_t spe
         vTaskDelay(pdMS_TO_TICKS(speed_ms) * 2);
         lightbulb_effect_config_t effect2 = {
             .cct = 100,
-            .max_brightness = 100,
-            .min_brightness = 0,
+            .max_value_brightness = 100,
+            .min_value_brightness = 0,
             .effect_cycle_ms = 1000,
             .effect_type = EFFECT_BLINK,
             .mode = WORK_WHITE,

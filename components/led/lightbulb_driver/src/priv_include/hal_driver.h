@@ -55,8 +55,8 @@ esp_err_t hal_output_init(hal_config_t *config, lightbulb_gamma_config_t *gamma,
 esp_err_t hal_output_deinit(void);
 esp_err_t hal_regist_channel(int channel, gpio_num_t gpio_num);
 esp_err_t hal_get_driver_feature(hal_feature_query_list_t type, void *out_data);
-esp_err_t hal_get_curve_table_value(uint8_t input, uint16_t *output);
-esp_err_t hal_get_linear_table_value(uint8_t input, uint16_t *output);
+esp_err_t hal_get_curve_table_value(uint16_t input, uint16_t *output);
+esp_err_t hal_get_linear_table_value(uint16_t input, uint16_t *output);
 esp_err_t hal_set_channel(int channel, uint16_t value, uint16_t fade_ms);
 esp_err_t hal_set_channel_group(uint16_t value[], uint8_t channel_mask, uint16_t fade_ms);
 esp_err_t hal_start_channel_action(int channel, uint16_t value_min, uint16_t value_max, uint16_t period_ms, bool fade_flag);

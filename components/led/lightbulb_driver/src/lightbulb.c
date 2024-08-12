@@ -76,8 +76,15 @@ typedef struct {
         lightbulb_cct_mapping_data_t *mix_table;             // Mapping table for mixing color temperatures
         int table_size;                                      // Size of the mapping table
     } cct_manager;
+    struct {
+        esp_err_t (*hsv_to_rgb)(uint16_t hue, uint8_t saturation, uint8_t value, float *red, float *green, float *blue, float *cold, float *warm);
+        lightbulb_color_mapping_data_t *mix_table;            // Mapping table for mixing color
+        int table_size;                                      // Size of the mapping table
+    } color_manager;
 } lightbulb_obj_t;
 
+static esp_err_t lightbulb_hsv2rgb_adjusted(uint16_t hue, uint8_t saturation, uint8_t value, float *red, float *green, float *blue, float *cold, float *warm);
+static esp_err_t _lightbulb_hsv2rgb(uint16_t hue, uint8_t saturation, uint8_t value, float *red, float *green, float *blue, float *cold, float *warm);
 static lightbulb_obj_t *s_lb_obj = NULL;
 
 esp_err_t lightbulb_status_set_to_nvs(const lightbulb_status_t *value)
@@ -303,17 +310,18 @@ static void cct_and_brightness_convert_and_power_limit(lightbulb_led_beads_comb_
         hal_get_linear_table_value((uint8_t)value1, &white_value[3]);
         hal_get_linear_table_value((uint8_t)value2, &white_value[4]);
     } else if (led_beads == LED_BEADS_2CH_CW || ((led_beads == LED_BEADS_5CH_RGBCW) && (s_lb_obj->cap.enable_precise_cct_control == false))) {
-        uint16_t max_value = 255;
+        uint16_t max_value;
         float max_power;
         float _c = cct / 100.0;
         float _w = (100 - cct) / 100.0;
 
+        hal_get_driver_feature(QUERY_MAX_INPUT_VALUE, &max_value);
         float baseline = MAX(_c, _w);
         max_power = MIN(max_value * multiple, max_value / baseline);
         _c = max_power * _c * (brightness / 100.0);
         _w = max_power * _w * (brightness / 100.0);
-        hal_get_linear_table_value((uint8_t)_c, &white_value[3]);
-        hal_get_linear_table_value((uint8_t)_w, &white_value[4]);
+        hal_get_linear_table_value((uint16_t)_c, &white_value[3]);
+        hal_get_linear_table_value((uint16_t)_w, &white_value[4]);
     } else {
         uint16_t max_value;
         float max_power;
@@ -398,51 +406,22 @@ static uint8_t process_white_brightness_limit(uint8_t brightness)
  *      63,63,63        21,21,21                            42,42,42                            63,63,63
  *
  */
-static void process_color_power_limit(float multiple, uint8_t r, uint8_t g, uint8_t b, uint16_t *out_r, uint16_t *out_g, uint16_t *out_b)
+static void process_color_power_limit(float multiple, float rgbcw[5], uint16_t value, uint16_t out[5])
 {
-    if (r == 0 && g == 0 && b == 0) {
-        *out_r = 0;
-        *out_g = 0;
-        *out_b = 0;
-        return;
-    }
-
     uint16_t max_value;
-    uint16_t _r;
-    uint16_t _g;
-    uint16_t _b;
-
-    // 1. Map the input RGB values to the gamma table to obtain the corresponding mapped values
+    float max_power;
     hal_get_driver_feature(QUERY_MAX_INPUT_VALUE, &max_value);
-    hal_get_curve_table_value(r, &_r);
-    hal_get_curve_table_value(g, &_g);
-    hal_get_curve_table_value(b, &_b);
+    max_power = multiple * (max_value);
 
-    // 2. Calculate the color distribution ratios for the RGB channels
-    float ratio_r = _r * 1.0 / (max_value);
-    float ratio_g = _g * 1.0 / (max_value);
-    float ratio_b = _b * 1.0 / (max_value);
-    ESP_LOGD(TAG, "ratio_r:%f ratio_g:%f rgb_ratio_b:%f max_value:%d", ratio_r, ratio_g, ratio_b, max_value);
-
-    // 3. Calculate the grayscale ratios for the RGB channels (baseline values for power limiting)
-    float grayscale_r = _r / ((_r + _g + _b) * 1.0);
-    float grayscale_g = _g / ((_r + _g + _b) * 1.0);
-    float grayscale_b = _b / ((_r + _g + _b) * 1.0);
-    float baseline = MAX(grayscale_r, grayscale_g);
-    baseline = MAX(baseline,  grayscale_b);
-    ESP_LOGD(TAG, "grayscale_r:%f grayscale_g:%f grayscale_b:%f baseline:%f", grayscale_r, grayscale_g, grayscale_b, baseline);
-
-    // 4. Calculate the maximum allowed output power based on the maximum input value and power limiting factor
-    float max_power = multiple * (max_value);
-    max_power = MIN(max_value, baseline * max_power);
-    ESP_LOGD(TAG, "multiple:%f, max_power:%f ", multiple, max_power);
-
-    // 5. Recalculate the final output values based on the maximum allowed output power and color distribution ratios
-    *out_r = max_power * ratio_r;
-    *out_g = max_power * ratio_g;
-    *out_b = max_power * ratio_b;
-
-    ESP_LOGD(TAG, "[input: %d %d %d], [output:%d %d %d]", r, g, b, *out_r, *out_g, *out_b);
+    float baseline = MAX(rgbcw[0], rgbcw[1]);
+    baseline = MAX(baseline, rgbcw[2]);
+    baseline = MAX(baseline, rgbcw[3]);
+    baseline = MAX(baseline, rgbcw[4]);
+    max_power = MIN(max_power, max_value / baseline);
+    ESP_LOGD(TAG, "%f, %d, %f", max_power, max_value, baseline);
+    for (int i = 0; i < 5; i++) {
+        out[i] = round(max_power * rgbcw[i] * (value / 100.0));
+    }
 }
 
 static void timercb(TimerHandle_t tmr)
@@ -526,7 +505,7 @@ static uint8_t get_channel_mask(lightbulb_led_beads_comb_t led_beads)
     return channel_mask;
 }
 
-static bool mix_table_data_check(void)
+static bool cct_mix_table_data_check(void)
 {
     bool result = true;
 
@@ -554,6 +533,14 @@ static bool mix_table_data_check(void)
             ESP_LOGE(TAG, "%d%%: %dK, mix table data must be sorted from small to large", s_lb_obj->cct_manager.mix_table[i].cct_percentage, s_lb_obj->cct_manager.mix_table[i].cct_kelvin);
         }
     }
+
+    return result;
+}
+
+static bool color_mix_table_data_check(void)
+{
+    bool result = true;
+    //TODO
 
     return result;
 }
@@ -792,6 +779,8 @@ esp_err_t lightbulb_init(lightbulb_config_t *config)
     // Check cct output mode
     if (IS_WHITE_CHANNEL_SELECTED()) {
         if (s_lb_obj->cap.enable_precise_cct_control) {
+            LIGHTBULB_CHECK(config->cct_mix_mode.precise.table_size > 0, "mix table size error", goto EXIT);
+
             s_lb_obj->cct_manager.table_size = config->cct_mix_mode.precise.table_size;
             s_lb_obj->cct_manager.kelvin_to_percentage = precise_kelvin_convert_to_percentage;
             s_lb_obj->cct_manager.percentage_to_kelvin = precise_percentage_convert_to_kelvin;
@@ -873,7 +862,29 @@ esp_err_t lightbulb_init(lightbulb_config_t *config)
         }
     }
     if (s_lb_obj->cct_manager.table_size > 0) {
-        bool result = mix_table_data_check();
+        bool result = cct_mix_table_data_check();
+        err = ESP_ERR_INVALID_ARG;
+        LIGHTBULB_CHECK(result, "mix table check fail", goto EXIT);
+    }
+
+    // Check color output mode
+    if (IS_COLOR_CHANNEL_SELECTED()) {
+        if (s_lb_obj->cap.enable_precise_color_control) {
+            LIGHTBULB_CHECK(config->color_mix_mode.precise.table_size <= 24, "Currently, only < 24 color calibration points are supported", goto EXIT);
+
+            s_lb_obj->color_manager.hsv_to_rgb = lightbulb_hsv2rgb_adjusted;
+            s_lb_obj->color_manager.table_size = config->color_mix_mode.precise.table_size;
+            s_lb_obj->color_manager.mix_table = calloc(s_lb_obj->color_manager.table_size, sizeof(lightbulb_color_mapping_data_t));
+            LIGHTBULB_CHECK(s_lb_obj->color_manager.mix_table, "calloc fail", goto EXIT);
+            for (int i = 0; i < s_lb_obj->color_manager.table_size; i++) {
+                memcpy(&s_lb_obj->color_manager.mix_table[i], &config->color_mix_mode.precise.table[i], sizeof(lightbulb_color_mapping_data_t));
+            }
+        } else {
+            s_lb_obj->color_manager.hsv_to_rgb = _lightbulb_hsv2rgb;
+        }
+    }
+    if (s_lb_obj->cap.enable_precise_color_control && s_lb_obj->color_manager.table_size > 0) {
+        bool result = color_mix_table_data_check();
         err = ESP_ERR_INVALID_ARG;
         LIGHTBULB_CHECK(result, "mix table check fail", goto EXIT);
     }
@@ -965,6 +976,10 @@ esp_err_t lightbulb_deinit(void)
     if (s_lb_obj->cct_manager.mix_table) {
         free(s_lb_obj->cct_manager.mix_table);
         s_lb_obj->cct_manager.mix_table = NULL;
+    }
+    if (s_lb_obj->color_manager.mix_table) {
+        free(s_lb_obj->color_manager.mix_table);
+        s_lb_obj->color_manager.mix_table = NULL;
     }
 
     free(s_lb_obj);
@@ -1078,6 +1093,123 @@ esp_err_t lightbulb_rgb2xyy(uint8_t red, uint8_t green, uint8_t blue, float *x, 
     *Y = _Y;
     *x = _X / (_X + _Y + _Z);
     *y = _Y / (_X + _Y + _Z);
+
+    return ESP_OK;
+}
+
+static float interpolate(float start, float end, float ratio)
+{
+    return start + (end - start) * ratio;
+}
+
+static esp_err_t lightbulb_hsv2rgb_adjusted(uint16_t hue, uint8_t saturation, uint8_t value, float *red, float *green, float *blue, float *cold, float *warm)
+{
+    LIGHTBULB_CHECK(hue <= 360, "hue out of range", return ESP_ERR_INVALID_ARG);
+    LIGHTBULB_CHECK(saturation <= 100, "saturation out of range", return ESP_ERR_INVALID_ARG);
+    LIGHTBULB_CHECK(value <= 100, "value out of range", return ESP_ERR_INVALID_ARG);
+
+    LIGHTBULB_CHECK(red, "red is null", return ESP_ERR_INVALID_ARG);
+    LIGHTBULB_CHECK(green, "green is null", return ESP_ERR_INVALID_ARG);
+    LIGHTBULB_CHECK(blue, "blue is null", return ESP_ERR_INVALID_ARG);
+
+    lightbulb_color_mapping_data_t *table = s_lb_obj->color_manager.mix_table;
+    size_t table_size = s_lb_obj->color_manager.table_size;
+
+    int lower_index = -1;
+    int upper_index = -1;
+
+    for (size_t i = 0; i < table_size; i++) {
+        if (table[i].hue == hue) {
+            lower_index = i;
+            upper_index = i;
+            break;
+        } else if (table[i].hue < hue) {
+            lower_index = i;
+        } else if (table[i].hue > hue) {
+            upper_index = i;
+            break;
+        }
+    }
+
+    if (lower_index == -1) {
+        lower_index = table_size - 1;
+    }
+    if (upper_index == -1) {
+        upper_index = 0;
+    }
+
+    float ratio = 0.0;
+    if (lower_index != upper_index) {
+        uint16_t lower_hue = table[lower_index].hue;
+        uint16_t upper_hue = table[upper_index].hue;
+
+        if (lower_hue > upper_hue) {
+            upper_hue += 360;
+        }
+
+        if (hue < lower_hue) {
+            hue += 360;
+        }
+
+        ratio = (float)(hue - lower_hue) / (float)(upper_hue - lower_hue);
+    }
+
+    float interpolated_rgbcw[5];
+
+    for (int i = 0; i < 5; i++) {
+        float lower_value_100 = table[lower_index].rgbcw_100[i];
+        float upper_value_100 = table[upper_index].rgbcw_100[i];
+        float lower_value_50 = table[lower_index].rgbcw_50[i];
+        float upper_value_50 = table[upper_index].rgbcw_50[i];
+        float lower_value_0 = table[lower_index].rgbcw_0[i];
+        float upper_value_0 = table[upper_index].rgbcw_0[i];
+
+        if (table[lower_index].hue > table[upper_index].hue) {
+            upper_value_100 = table[upper_index].rgbcw_100[i] + (table[upper_index].rgbcw_100[i] - table[lower_index].rgbcw_100[i]);
+            upper_value_50 = table[upper_index].rgbcw_50[i] + (table[upper_index].rgbcw_50[i] - table[lower_index].rgbcw_50[i]);
+            upper_value_0 = table[upper_index].rgbcw_0[i] + (table[upper_index].rgbcw_0[i] - table[lower_index].rgbcw_0[i]);
+        }
+
+        float value_100 = interpolate(lower_value_100, upper_value_100, ratio);
+        float value_50 = interpolate(lower_value_50, upper_value_50, ratio);
+        float value_0 = interpolate(lower_value_0, upper_value_0, ratio);
+
+        if (saturation == 100) {
+            interpolated_rgbcw[i] = value_100;
+        } else if (saturation == 50) {
+            interpolated_rgbcw[i] = value_50;
+        } else if (saturation == 0) {
+            interpolated_rgbcw[i] = value_0;
+        } else if (saturation < 50) {
+            interpolated_rgbcw[i] = interpolate(value_50, value_0, (100 - (float)saturation) / 100);
+        } else {
+            interpolated_rgbcw[i] = interpolate(value_100, value_50, (100 - (float)saturation) / 100.0);
+        }
+    }
+
+    *red = interpolated_rgbcw[0];
+    *green = interpolated_rgbcw[1];
+    *blue = interpolated_rgbcw[2];
+    *cold = interpolated_rgbcw[3];
+    *warm = interpolated_rgbcw[4];
+
+    return ESP_OK;
+}
+
+static esp_err_t _lightbulb_hsv2rgb(uint16_t hue, uint8_t saturation, uint8_t value, float *red, float *green, float *blue, float *cold, float *warm)
+{
+    uint8_t _red = 0;
+    uint8_t _green = 0;
+    uint8_t _blue = 0;
+    lightbulb_hsv2rgb(hue, saturation, value, &_red, &_green, &_blue);
+
+    ESP_LOGI(TAG, "Convert 8 bit value [r:%d g:%d b:%d]", _red, _green, _blue);
+
+    *red = _red / 255.0;
+    *green = _green / 255.0;
+    *blue = _blue / 255.0;
+    *cold = 0;
+    *warm = 0;
 
     return ESP_OK;
 }
@@ -1275,6 +1407,7 @@ esp_err_t lightbulb_set_hsv(uint16_t hue, uint8_t saturation, uint8_t value)
         }
 
         uint16_t color_value[5] = { 0 };
+        float color_param[5] = { 0 };
         uint16_t fade_time = CALCULATE_FADE_TIME();
         uint8_t channel_mask = get_channel_mask(s_lb_obj->cap.led_beads);
         uint8_t _value = value;
@@ -1284,12 +1417,12 @@ esp_err_t lightbulb_set_hsv(uint16_t hue, uint8_t saturation, uint8_t value)
         _value = process_color_value_limit(value);
 
         // 2. convert to r g b
-        lightbulb_hsv2rgb(hue, saturation, _value, (uint8_t *)&color_value[0], (uint8_t *)&color_value[1], (uint8_t *)&color_value[2]);
-        ESP_LOGI(TAG, "8 bit color conversion value [r:%d g:%d b:%d]", color_value[0], color_value[1], color_value[2]);
+        s_lb_obj->color_manager.hsv_to_rgb(hue, saturation, _value, &color_param[0], &color_param[1], &color_param[2], &color_param[3], &color_param[4]);
+        ESP_LOGI(TAG, "Convert write value [r:%0.2f%% g:%0.2f%% b:%0.2f%% c:%0.2f%% w:%0.2f%%]", color_param[0] * 100, color_param[1] * 100, color_param[2] * 100, color_param[3] * 100, color_param[4] * 100);
 
-        // 3. according to power, re-calculate
-        process_color_power_limit(s_lb_obj->power.color_max_power / 100.0, color_value[0], color_value[1], color_value[2], &color_value[0], &color_value[1], &color_value[2]);
-        ESP_LOGI(TAG, "hal write value [r:%d g:%d b:%d], channel_mask:%d fade_ms:%d", color_value[0], color_value[1], color_value[2], channel_mask, fade_time);
+        // 3. Redistribute power
+        process_color_power_limit(s_lb_obj->power.color_max_power / 100.0, color_param, _value, color_value);
+        ESP_LOGI(TAG, "hal write value [r:%d g:%d b:%d c:%d w:%d], channel_mask:%d fade_ms:%d", color_value[0], color_value[1], color_value[2], color_value[3], color_value[4], channel_mask, fade_time);
 
         err = hal_set_channel_group(color_value, channel_mask, fade_time);
         LIGHTBULB_CHECK(err == ESP_OK, "set hal channel group fail", goto EXIT);
@@ -1308,6 +1441,61 @@ SAVE_ONLY:
     if (s_lb_obj->cap.sync_change_brightness_value && IS_WHITE_CHANNEL_SELECTED()) {
         s_lb_obj->status.brightness = value;
     }
+
+EXIT:
+    LB_MUTEX_GIVE();
+    return err;
+}
+
+esp_err_t lightbulb_set_channel_group(uint16_t r_ch, uint16_t g_ch, uint16_t b_ch, uint16_t c_ch, uint16_t w_ch)
+{
+    LIGHTBULB_CHECK(s_lb_obj, "not init", return ESP_ERR_INVALID_ARG);
+    ESP_LOGE(TAG, "Note: This API can only be used in debug/test mode.");
+
+    esp_err_t err;
+    uint16_t color_value[5] = { 0 };
+    uint16_t fade_time = CALCULATE_FADE_TIME();
+    uint8_t channel_mask = 0xff;
+
+    color_value[0] = r_ch;
+    color_value[1] = g_ch;
+    color_value[2] = b_ch;
+    color_value[3] = c_ch;
+    color_value[4] = w_ch;
+
+    err = hal_set_channel_group(color_value, channel_mask, fade_time);
+    LIGHTBULB_CHECK(err == ESP_OK, "set hal channel group fail", goto EXIT);
+
+EXIT:
+    LB_MUTEX_GIVE();
+    return err;
+}
+
+esp_err_t lightbulb_set_rgb(uint8_t r, uint8_t g, uint8_t b)
+{
+    LIGHTBULB_CHECK(s_lb_obj, "not init", return ESP_ERR_INVALID_ARG);
+    ESP_LOGE(TAG, "Note: This API can only be used in debug/test mode.");
+
+    esp_err_t err;
+    uint16_t color_value[5] = { 0 };
+    uint16_t fade_time = CALCULATE_FADE_TIME();
+    uint8_t channel_mask = get_channel_mask(s_lb_obj->cap.led_beads);
+
+    uint16_t max_value;
+    hal_get_driver_feature(QUERY_MAX_INPUT_VALUE, &max_value);
+
+    color_value[0] = r;
+    color_value[1] = g;
+    color_value[2] = b;
+    ESP_LOGI(TAG, "8 bit color conversion value [r:%d g:%d b:%d]", color_value[0], color_value[1], color_value[2]);
+
+    color_value[0] = (float)r / 255 * max_value;
+    color_value[1] = (float)g / 255 * max_value;
+    color_value[2] = (float)b / 255 * max_value;
+    ESP_LOGI(TAG, "hal write value [r:%d g:%d b:%d], channel_mask:%d fade_ms:%d", color_value[0], color_value[1], color_value[2], channel_mask, fade_time);
+
+    err = hal_set_channel_group(color_value, channel_mask, fade_time);
+    LIGHTBULB_CHECK(err == ESP_OK, "set hal channel group fail", goto EXIT);
 
 EXIT:
     LB_MUTEX_GIVE();
@@ -1369,7 +1557,7 @@ esp_err_t lightbulb_set_cctb(uint16_t cct, uint8_t brightness)
         // 1. calculate brightness
         _brightness = process_white_brightness_limit(_brightness);
 
-        // 2. convert to cold warm
+        // 2. convert to cold warm and redistribute power
         cct_and_brightness_convert_and_power_limit(s_lb_obj->cap.led_beads, s_lb_obj->power.white_max_power / 100.0, cct, _brightness, white_value);
         ESP_LOGI(TAG, "hal write value [r:%d g:%d b:%d c:%d w:%d], channel_mask:%d fade_ms:%d", white_value[0], white_value[1], white_value[2], white_value[3], white_value[4], channel_mask, fade_time);
 
@@ -1665,12 +1853,16 @@ esp_err_t lightbulb_basic_effect_start(lightbulb_effect_config_t *config)
     if (config->mode == WORK_COLOR) {
         LIGHTBULB_CHECK(IS_COLOR_CHANNEL_SELECTED(), "color channel output is disable", goto EXIT);
         uint16_t color_value_max[5] = { 0 };
+        float color_param_value_max[5] = { 0 };
         uint16_t color_value_min[5] = { 0 };
+        float color_param_value_min[5] = { 0 };
         uint8_t channel_mask = get_channel_mask(s_lb_obj->cap.led_beads);
         err = ESP_OK;
+        s_lb_obj->color_manager.hsv_to_rgb(config->hue, config->saturation, config->max_value_brightness, &color_param_value_max[0], &color_param_value_max[1], &color_param_value_max[2], &color_param_value_max[3], &color_param_value_max[4]);
+        s_lb_obj->color_manager.hsv_to_rgb(config->hue, config->saturation, config->min_value_brightness, &color_param_value_min[0], &color_param_value_min[1], &color_param_value_min[2], &color_param_value_min[3], &color_param_value_min[4]);
 
-        process_color_power_limit(s_lb_obj->power.color_max_power / 100.0, config->red * config->max_brightness / 100.0, config->green * config->max_brightness / 100.0, config->blue * config->max_brightness / 100.0, &color_value_max[0], &color_value_max[1], &color_value_max[2]);
-        process_color_power_limit(s_lb_obj->power.color_max_power / 100.0, config->red * config->min_brightness / 100.0, config->green * config->min_brightness / 100.0, config->blue * config->min_brightness / 100.0, &color_value_min[0], &color_value_min[1], &color_value_min[2]);
+        process_color_power_limit(s_lb_obj->power.color_max_power / 100.0, color_param_value_max, config->max_value_brightness, color_value_max);
+        process_color_power_limit(s_lb_obj->power.color_max_power / 100.0, color_param_value_min, config->min_value_brightness, color_value_min);
 
         err |= hal_start_channel_group_action(color_value_min, color_value_max, channel_mask, config->effect_cycle_ms, flag);
 
@@ -1686,8 +1878,8 @@ esp_err_t lightbulb_basic_effect_start(lightbulb_effect_config_t *config)
         uint8_t channel_mask = get_channel_mask(s_lb_obj->cap.led_beads);
         err = ESP_OK;
 
-        cct_and_brightness_convert_and_power_limit(s_lb_obj->cap.led_beads, s_lb_obj->power.white_max_power / 100.0, config->cct, config->max_brightness, white_value_max);
-        cct_and_brightness_convert_and_power_limit(s_lb_obj->cap.led_beads, s_lb_obj->power.white_max_power / 100.0, config->cct, config->min_brightness, white_value_min);
+        cct_and_brightness_convert_and_power_limit(s_lb_obj->cap.led_beads, s_lb_obj->power.white_max_power / 100.0, config->cct, config->max_value_brightness, white_value_max);
+        cct_and_brightness_convert_and_power_limit(s_lb_obj->cap.led_beads, s_lb_obj->power.white_max_power / 100.0, config->cct, config->min_value_brightness, white_value_min);
 
         err |= hal_start_channel_group_action(white_value_min, white_value_max, channel_mask, config->effect_cycle_ms, flag);
     } else {
@@ -1722,16 +1914,15 @@ esp_err_t lightbulb_basic_effect_start(lightbulb_effect_config_t *config)
         ESP_LOGI(TAG, "effect config: \r\n"
                  "\teffect type: %d\r\n"
                  "\tmode: %d\r\n"
-                 "\tred:%d\r\n"
-                 "\tgreen:%d\r\n"
-                 "\tblue:%d\r\n"
+                 "\thue:%d\r\n"
+                 "\tsaturation:%d\r\n"
                  "\tcct:%d\r\n"
                  "\tmin_brightness:%d\r\n"
                  "\tmax_brightness:%d\r\n"
                  "\teffect_cycle_ms:%d\r\n"
                  "\ttotal_ms:%d\r\n"
-                 "\tinterrupt_forbidden:%d", config->effect_type, config->mode, config->red, config->green, config->blue,
-                 config->cct, config->min_brightness, config->max_brightness, config->effect_cycle_ms, config->total_ms, config->interrupt_forbidden);
+                 "\tinterrupt_forbidden:%d", config->effect_type, config->mode, config->hue, config->saturation,
+                 config->cct, config->min_value_brightness, config->max_value_brightness, config->effect_cycle_ms, config->total_ms, config->interrupt_forbidden);
         ESP_LOGI(TAG, "This effect will %s to be interrupted", s_lb_obj->effect_flag.allow_interrupt ? "allow" : "not be allowed");
     }
 

@@ -147,6 +147,19 @@ typedef struct {
 } lightbulb_cct_mapping_data_t;
 
 /**
+ * @brief Color mode mapping data
+ *
+ * @note Used for calibrating color accuracy in color mode.
+ *
+ */
+typedef struct {
+    float rgbcw_100[5]; /**< The RGBCW components required when saturation is 100 at a specific hue. */
+    float rgbcw_50[5];  /**< The RGBCW components required when saturation is 50 at a specific hue. */
+    float rgbcw_0[5];   /**< The RGBCW components required when saturation is 10 at a specific hue. */
+    uint16_t hue;
+} lightbulb_color_mapping_data_t;
+
+/**
  * @brief Gamma correction and color balance configuration
  *
  * @note This structure is used for calibrating the brightness proportions and color balance of a lightbulb.
@@ -263,6 +276,7 @@ typedef struct {
     bool enable_status_storage : 1;             /**< Enable this option to store the lightbulb state in NVS. */
     bool enable_hardware_cct : 1;               /**< Enable this option if your driver uses hardware CCT. Some PWM type drivers may need to set this option. */
     bool enable_precise_cct_control : 1;        /**< Enable this option if you need precise CCT control. Must set 'enable_hardware_cct' to false in order to enable it.*/
+    bool enable_precise_color_control : 1;      /**< Enable this option if you need precise Color control. */
     bool sync_change_brightness_value : 1;      /**< Enable this option if you need to use a parameter to mark the brightness of the white and color output. */
     bool disable_auto_on : 1;                   /**< Enable this option if you don't need automatic on when the color/white value is set. */
 } lightbulb_capability_t;
@@ -326,6 +340,13 @@ typedef struct {
         } precise;
     } cct_mix_mode;
 
+    union {
+        struct {
+            lightbulb_color_mapping_data_t *table;
+            int table_size;
+        } precise;
+    } color_mix_mode;
+
     lightbulb_gamma_config_t *gamma_conf;       /**< Pointer to the gamma configuration data. */
     lightbulb_power_limit_t *external_limit;    /**< Pointer to the external power limit configuration. */
 
@@ -357,12 +378,11 @@ typedef struct {
 typedef struct {
     lightbulb_effect_t effect_type;      /**< Type of the effect to be configured. */
     lightbulb_works_mode_t mode;        /**< Working mode of the lightbulb during the effect. */
-    uint8_t red;                        /**< Red component value for the effect (0-255). */
-    uint8_t green;                      /**< Green component value for the effect (0-255). */
-    uint8_t blue;                       /**< Blue component value for the effect (0-255). */
+    uint16_t hue;                        /**< Hue component value for the effect (0-360). */
+    uint8_t saturation;                      /**< Saturation component value for the effect (0-100). */
     uint16_t cct;                       /**< Color temperature value for the effect. */
-    uint8_t min_brightness;             /**< Minimum brightness level for the effect (0-100). */
-    uint8_t max_brightness;             /**< Maximum brightness level for the effect (0-100). */
+    uint8_t min_value_brightness;             /**< Minimum brightness level for the effect (0-100). */
+    uint8_t max_value_brightness;             /**< Maximum brightness level for the effect (0-100). */
     uint16_t effect_cycle_ms;           /**< Cycle time for the effect in milliseconds (ms). */
 
     /*

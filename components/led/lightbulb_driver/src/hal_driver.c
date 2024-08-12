@@ -50,7 +50,7 @@ static void gpio_reverse(int gpio_num)
 #define CHANGE_RATE_MS                          (12)                    // Interval in milliseconds between each update during the lightbulb's fading transition.
 #define FADE_CB_CHECK_MS                        (CHANGE_RATE_MS * 4)    // Maximum wait time in milliseconds when fade_cb is blocked.
 #define HARDWARE_RETAIN_RATE_MS                 (CHANGE_RATE_MS - 2)    // Safety margin in milliseconds for hardware fade interface in PWM scheme.
-#define MAX_TABLE_SIZE                          (256)                   // Maximum size for linear and gamma correction tables.
+//#define s_hal_obj->interface->driver_grayscale_level                          (256)                   // Maximum size for linear and gamma correction tables.
 #define DEFAULT_CURVE_COE                       (1.0)                   // Default coefficient for gamma correction curve.
 #define HAL_OUT_MAX_CHANNEL                     (5)                     // Maximum number of output channels in the Hardware Abstraction Layer (HAL).
 #define ERROR_COUNT_THRESHOLD                   (6)                     // Threshold for errors in the lower interface.
@@ -493,22 +493,22 @@ esp_err_t hal_output_init(hal_config_t *config, lightbulb_gamma_config_t *gamma,
     err = s_hal_obj->interface->init(config->driver_data, driver_default_hook_func);
     LIGHTBULB_CHECK(err == ESP_OK, "driver init fail", goto EXIT);
 
-    s_hal_obj->table_group[0] = calloc(MAX_TABLE_SIZE, sizeof(uint16_t));
+    s_hal_obj->table_group[0] = calloc(s_hal_obj->interface->driver_grayscale_level, sizeof(uint16_t));
     LIGHTBULB_CHECK(s_hal_obj->table_group[0], "curve table buffer alloc fail", goto EXIT);
 
     float curve_coe = gamma ? gamma->curve_coefficient : DEFAULT_CURVE_COE;
     float linear_coe = 1.0;
 
-    gamma_table_create(s_hal_obj->table_group[0], MAX_TABLE_SIZE, curve_coe, s_hal_obj->interface->driver_grayscale_level);
-    s_hal_obj->table_group[0][MAX_TABLE_SIZE - 1] = s_hal_obj->interface->hardware_allow_max_input_value;
+    gamma_table_create(s_hal_obj->table_group[0], s_hal_obj->interface->driver_grayscale_level, curve_coe, s_hal_obj->interface->driver_grayscale_level);
+    s_hal_obj->table_group[0][s_hal_obj->interface->driver_grayscale_level - 1] = s_hal_obj->interface->hardware_allow_max_input_value;
 
     if (linear_coe == curve_coe) {
         s_hal_obj->linear_use_curve_table = true;
     } else {
-        s_hal_obj->table_group[1] = calloc(MAX_TABLE_SIZE, sizeof(uint16_t));
+        s_hal_obj->table_group[1] = calloc(s_hal_obj->interface->driver_grayscale_level, sizeof(uint16_t));
         LIGHTBULB_CHECK(s_hal_obj->table_group[1], "linear table buffer alloc fail", goto EXIT);
-        gamma_table_create(s_hal_obj->table_group[1], MAX_TABLE_SIZE, linear_coe, s_hal_obj->interface->driver_grayscale_level);
-        s_hal_obj->table_group[1][MAX_TABLE_SIZE - 1] = s_hal_obj->interface->hardware_allow_max_input_value;
+        gamma_table_create(s_hal_obj->table_group[1], s_hal_obj->interface->driver_grayscale_level, linear_coe, s_hal_obj->interface->driver_grayscale_level);
+        s_hal_obj->table_group[1][s_hal_obj->interface->driver_grayscale_level - 1] = s_hal_obj->interface->hardware_allow_max_input_value;
     }
 
     for (int i = 0; i < 5; i++) {
@@ -1047,7 +1047,7 @@ esp_err_t hal_get_driver_feature(hal_feature_query_list_t type, void *out_data)
     return ESP_OK;
 }
 
-esp_err_t hal_get_curve_table_value(uint8_t input, uint16_t *output)
+esp_err_t hal_get_curve_table_value(uint16_t input, uint16_t *output)
 {
     LIGHTBULB_CHECK(s_hal_obj, "init() must be called first", return ESP_ERR_INVALID_STATE);
     LIGHTBULB_CHECK(output, "out_data is null", return ESP_ERR_INVALID_STATE);
@@ -1057,7 +1057,7 @@ esp_err_t hal_get_curve_table_value(uint8_t input, uint16_t *output)
     return ESP_OK;
 }
 
-esp_err_t hal_get_linear_table_value(uint8_t input, uint16_t *output)
+esp_err_t hal_get_linear_table_value(uint16_t input, uint16_t *output)
 {
     LIGHTBULB_CHECK(s_hal_obj, "init() must be called first", return ESP_ERR_INVALID_STATE);
     LIGHTBULB_CHECK(output, "out_data is null", return ESP_ERR_INVALID_STATE);
