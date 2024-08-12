@@ -14,4 +14,4 @@ dependencies:
   led_strip:
     version: "^2.5.3"
 
-  lijunru-hub/keyboard_rgb_matrix: "^0.1.0"
+  lijunru-hub/keyboard_rgb_matrix: "^0.1.1"

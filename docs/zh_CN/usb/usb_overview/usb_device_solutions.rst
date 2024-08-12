@@ -98,6 +98,7 @@ USB HID 设备方案基于 HID（Human Interface Device）协议标准，可作�
 
 * `USB HID 键盘和鼠标示例 <https://github.com/espressif/esp-iot-solution/tree/master/examples/usb/device/usb_hid_device>`_
 * `USB HID Surface Dial 示例 <https://github.com/espressif/esp-iot-solution/tree/master/examples/usb/device/usb_surface_dial>`_
+* `USB 客制化键盘示例 <https://github.com/espressif/esp-iot-solution/tree/master/examples/keyboard>`_
 
 U 盘拖拽升级
 ^^^^^^^^^^^^^^^
