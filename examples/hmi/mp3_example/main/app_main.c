@@ -380,7 +380,6 @@ static int read_content(const char *path, uint8_t *filecount)
     uint8_t ret = 0;
     char nextpath[100];
     struct dirent *de;
-    // *filecount = 0;
     DIR *dir = opendir(path);
     while (1) {
         de = readdir(dir);
