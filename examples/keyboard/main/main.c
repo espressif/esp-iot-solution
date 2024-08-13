@@ -18,17 +18,50 @@
 #include "rgb_matrix.h"
 #include "settings.h"
 #include "tinyusb_hid.h"
+#include "esp_timer.h"
 
 static keyboard_btn_handle_t kbd_handle = NULL;
+static TaskHandle_t light_progress_task_handle = NULL;
+uint64_t last_time = 0;
+sys_param_t* sys_param;
 
 static void keyboard_cb(keyboard_btn_handle_t kbd_handle, keyboard_btn_report_t kbd_report, void *user_data)
 {
+    if (sys_param->report_type == BLE_HID_REPORT) {
+        if (eTaskGetState(light_progress_task_handle) == eSuspended) {
+            if (rgb_matrix_is_enabled()) {
+                bsp_ws2812_enable(true);
+                rgb_matrix_set_suspend_state(false);
+                vTaskResume(light_progress_task_handle);
+            }
+        }
+        last_time = esp_timer_get_time();
+    }
+
     btn_progress(kbd_report);
 
     /*!< Lighting with key pressed */
     if (kbd_report.key_change_num > 0) {
         for (int i = 1; i <= kbd_report.key_change_num; i++) {
             process_rgb_matrix(kbd_report.key_data[kbd_report.key_pressed_num - i].output_index, kbd_report.key_data[kbd_report.key_pressed_num - i].input_index, true);
+        }
+    }
+}
+
+static void light_progress_task(void *pvParameters)
+{
+    while (1) {
+        if (bsp_ws2812_is_enable()) {
+            light_progress();
+        }
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+        if (sys_param->report_type == BLE_HID_REPORT) {
+            if (esp_timer_get_time() - last_time > CONFIG_LIGHT_SLEEP_TIMEOUT_MS * 1000) {
+                last_time = esp_timer_get_time();
+                rgb_matrix_set_suspend_state(true);
+                bsp_ws2812_enable(false);
+                vTaskSuspend(NULL);
+            }
         }
     }
 }
@@ -55,15 +88,16 @@ void app_main(void)
     bsp_lamp_array_init(KC_NUM_LOCK);
     bsp_rgb_matrix_init();
     settings_read_parameter_from_nvs();
-    sys_param_t* sys_param = settings_get_parameter();
+    sys_param = settings_get_parameter();
     btn_progress_set_report_type(sys_param->report_type);
     btn_progress_set_light_type(sys_param->light_type);
+    bsp_ws2812_enable(true);
     if (sys_param->report_type == TINYUSB_HID_REPORT) {
         tinyusb_hid_init();
-        bsp_ws2812_enable(1);
     } else if (sys_param->report_type == BLE_HID_REPORT) {
+        /*!< BLE temporarily does not support lighting effects on Windows 11 and is forced to be set to RGB Matrix */
+        btn_progress_set_light_type(RGB_MATRIX);
         ble_hid_init();
-        bsp_ws2812_enable(0);
         esp_pm_config_t pm_config = {
             .max_freq_mhz = CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ,
             .min_freq_mhz = 160,
@@ -80,11 +114,5 @@ void app_main(void)
     };
     keyboard_button_register_cb(kbd_handle, cb_cfg, NULL);
 
-    /*!< Lighting progress */
-    if (sys_param->report_type == TINYUSB_HID_REPORT) {
-        while (1) {
-            light_progress();
-            vTaskDelay(10 / portTICK_PERIOD_MS);
-        }
-    }
+    xTaskCreate(light_progress_task, "light_progress_task", 4096, NULL, 5, &light_progress_task_handle);
 }

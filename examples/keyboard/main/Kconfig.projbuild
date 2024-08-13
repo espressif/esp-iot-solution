@@ -1,16 +1,26 @@
 menu "ESP KeyBoard Example"
 
-    config TUSB_VID
-        hex "USB Device VID"
-        default 0x303A
-    config TUSB_PID
-        hex "USB Device PID"
-        default 0x8000
-    config TUSB_MANUFACTURER
-        string "USB Device Manufacture"
-        default "Espressif"
-    config TUSB_PRODUCT
-        string "Product Name"
-        default "HID Demo"
+    menu "USB Configuration"
+        config TUSB_VID
+            hex "USB Device VID"
+            default 0x303A
+        config TUSB_PID
+            hex "USB Device PID"
+            default 0x8000
+        config TUSB_MANUFACTURER
+            string "USB Device Manufacture"
+            default "Espressif"
+        config TUSB_PRODUCT
+            string "Product Name"
+            default "HID Demo"
+    endmenu
+
+    menu "Wireless Configuration"
+        config LIGHT_SLEEP_TIMEOUT_MS
+            int "Light Sleep Timeout"
+            default 60000
+            help
+                "Time to enter light sleep mode and close all light when no key is pressed"
+    endmenu
 
 endmenu

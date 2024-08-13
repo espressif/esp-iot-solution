@@ -40,6 +40,7 @@ esp_err_t bsp_keyboard_init(keyboard_btn_handle_t *kbd_handle, keyboard_btn_conf
 }
 
 static led_strip_handle_t s_led_strip = NULL;
+static bool s_led_enable = false;
 
 esp_err_t bsp_ws2812_init(led_strip_handle_t *led_strip)
 {
@@ -67,12 +68,16 @@ esp_err_t bsp_ws2812_init(led_strip_handle_t *led_strip)
         .flags.invert_out = false, // whether to invert the output signal (useful when your hardware has a level inverter)
     };
 
-    led_strip_rmt_config_t rmt_config = {
-        .clk_src = RMT_CLK_SRC_DEFAULT, // different clock source can lead to different power consumption
-        .resolution_hz = 20 * 1000 * 1000, // 10MHz
-        .flags.with_dma = false, // whether to enable the DMA feature
+    // LED strip backend configuration: SPI
+    led_strip_spi_config_t spi_config = {
+        .clk_src = SPI_CLK_SRC_XTAL, // different clock source can lead to different power consumption
+        .flags.with_dma = true,         // Using DMA can improve performance and help drive more LEDs
+        .spi_bus = SPI2_HOST,           // SPI bus ID
     };
-    led_strip_new_rmt_device(&strip_config, &rmt_config, &s_led_strip);
+
+    // LED Strip object handle
+    ESP_ERROR_CHECK(led_strip_new_spi_device(&strip_config, &spi_config, &s_led_strip));
+
     if (led_strip) {
         *led_strip = s_led_strip;
     }
@@ -81,8 +86,26 @@ esp_err_t bsp_ws2812_init(led_strip_handle_t *led_strip)
 
 esp_err_t bsp_ws2812_enable(bool enable)
 {
+    if (!enable) {
+        gpio_hold_dis(KBD_WS2812_POWER_IO);
+    }
     gpio_set_level(KBD_WS2812_POWER_IO, !enable);
+    /*!< Make output stable in light sleep */
+    if (enable) {
+        gpio_hold_en(KBD_WS2812_POWER_IO);
+    }
+    s_led_enable = enable;
     return ESP_OK;
+}
+
+esp_err_t bsp_ws2812_clear(void)
+{
+    return led_strip_clear(s_led_strip);
+}
+
+bool bsp_ws2812_is_enable(void)
+{
+    return s_led_enable;
 }
 
 esp_err_t bsp_lamp_array_init(uint32_t bind)

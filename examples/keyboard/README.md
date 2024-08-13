@@ -75,3 +75,11 @@ How to modify key mappings:
 #### license
 
 Note: keyboard_rgb_martix comes from the **QMK** project. Due to the use of the GPL license, if you have product plans based on this example, it is recommended to replace this component.
+
+### Change LOG
+
+* v0.2.0 - 2024-8-12
+
+  * Added support for lighting effects in BLE mode, with the keyboard backlight turning off by default after 60 seconds.
+  * Resolved the issue with adjusting the speed of lighting effects.
+  * Increased the number of default lighting effects to 30.

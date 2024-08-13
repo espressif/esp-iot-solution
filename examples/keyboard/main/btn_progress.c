@@ -15,6 +15,7 @@
 #include "settings.h"
 #include "esp_system.h"
 #include "esp_pm.h"
+#include "bsp/esp-bsp.h"
 
 static btn_report_type_t report_type = TINYUSB_HID_REPORT;
 static light_type_t light_type = RGB_MATRIX;
@@ -114,9 +115,15 @@ void btn_progress(keyboard_btn_report_t kbd_report)
 
         /*!< Change to win11 light or local light */
         case KC_NUM_LOCK:
-            light_type = (light_type == RGB_MATRIX) ? LAMP_ARRAY_MATRIX : RGB_MATRIX;
-            sys_param->light_type = light_type;
-            settings_write_parameter_to_nvs();
+            if (report_type == TINYUSB_HID_REPORT) {
+                light_type = (light_type == RGB_MATRIX) ? LAMP_ARRAY_MATRIX : RGB_MATRIX;
+                sys_param->light_type = light_type;
+                settings_write_parameter_to_nvs();
+            } else if (report_type == BLE_HID_REPORT) {
+                light_type = RGB_MATRIX;
+                sys_param->light_type = light_type;
+                settings_write_parameter_to_nvs();
+            }
             break;
 
         case KC_KB_MUTE:
@@ -150,15 +157,26 @@ void btn_progress(keyboard_btn_report_t kbd_report)
 
         case QK_BACKLIGHT_TOGGLE:
             rgb_matrix_toggle();
+            if (!rgb_matrix_is_enabled()) {
+                bsp_ws2812_clear();
+            }
+            bsp_ws2812_enable(rgb_matrix_is_enabled());
             break;
 
-        case RGB_MODE_FORWARD:
-            rgb_matrix_mode(rgb_matrix_get_mode() + 1);
+        case RGB_MODE_FORWARD: {
+            uint16_t index = (rgb_matrix_get_mode() + 1) % RGB_MATRIX_EFFECT_MAX;
+            rgb_matrix_mode(index);
             break;
+        }
 
-        case RGB_MODE_REVERSE:
-            rgb_matrix_mode(rgb_matrix_get_mode() - 1);
+        case RGB_MODE_REVERSE: {
+            uint16_t index = rgb_matrix_get_mode() - 1;
+            if (index < 1) {
+                index = RGB_MATRIX_EFFECT_MAX - 1;
+            }
+            rgb_matrix_mode(index);
             break;
+        }
 
         case RGB_TOG:
             rgb_matrix_sethsv(hsv_color[hsv_index][0], hsv_color[hsv_index][1], hsv_color[hsv_index][2]);
@@ -174,7 +192,7 @@ void btn_progress(keyboard_btn_report_t kbd_report)
     }
 
     /*!< Find if consumer key release */
-    for (int i = 0; i <= kbd_report.key_release_num; i++) {
+    for (int i = 0; i < kbd_report.key_release_num; i++) {
         uint8_t row = kbd_report.key_release_data[i].output_index;
         uint8_t col = kbd_report.key_release_data[i].input_index;
         uint16_t kc = keymaps[mo_action_layer][row][col];

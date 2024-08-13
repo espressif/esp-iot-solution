@@ -95,6 +95,7 @@ Links:
 
 * `USB HID Keyboard and Mouse Example <https://github.com/espressif/esp-iot-solution/tree/master/examples/usb/device/usb_hid_device>`_
 * `USB HID Surface Dial Example <https://github.com/espressif/esp-iot-solution/tree/master/examples/usb/device/usb_surface_dial>`_
+* `USB Custom Keyboard Example <https://github.com/espressif/esp-iot-solution/tree/master/examples/keyboard>`_
 
 USB Drag-and-Drop OTA Upgrade
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
