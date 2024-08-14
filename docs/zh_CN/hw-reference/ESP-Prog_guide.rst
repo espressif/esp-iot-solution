@@ -66,6 +66,8 @@ ESP-Prog 的整体功能框图：
 
 ESP-Prog 采用 FTDI 公司的 FT2232HL 为 USB Bridge Controller芯片，可通过配置将 USB 2.0接口转换为支持多种工业标准的串行和并行接口。ESP-Prog 使用 FT2232HL默认的双异步串行接口模式，用户只需在电脑上安装相应的 `FT2232HL驱动程序 <http://www.ftdichip.com/Drivers/VCP.htm>`__ 即可使用。
 
+.. Note:: 在 Windows 系统上，如果该功能无法正常工作，可能需要安装额外的驱动程序。请下载 `ESP-PROG 驱动程序 <https://github.com/espressif/esp-win-usb-drivers/releases/tag/ESP-PROG_v1.0.0.0>`__ 并按照 README 中的安装说明进行操作。更多详细信息可以参考 `配置 USB 驱动 <https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32/api-guides/jtag-debugging/configure-ft2232h-jtag.html#usb>`__，该文档中介绍的开发板使用了相同的 USB 转 UART 芯片，可以参考其相关驱动配置。
+
 .. Note:: 电脑端识别出两个端口，端口序号大的是 Program 接口，序号小的是JTAG 接口。
 
 3.2.2. 通讯接口

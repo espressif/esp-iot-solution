@@ -73,6 +73,8 @@ industry standards. ESP-Prog uses FT2232HL's default dual-asynchronous
 serial interface mode, allowing users to use the board easily by
 installing the `FT2232HLdriver <http://www.ftdichip.com/Drivers/VCP.htm>`__ on their PCs.
 
+.. Note:: On Windows, if the function does not work, an additional driver may be required. Downloaded `ESP-PROG driver <https://github.com/espressif/esp-win-usb-drivers/releases/tag/ESP-PROG_v1.0.0.0>`__ and follow the installation instructions in the README. Additional details for this case can be found in Espressif `documentation <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/jtag-debugging/configure-ft2232h-jtag.html#configure-usb-drivers>`__ for another board that contains the same USB-to-UART chip.
+
 .. Note:: The PC is able to identify the ESP-Prog's two ports by their port numbers. The bigger port number represents the Program interface, while the other one represents the JTAG interface.
 
 3.2.2. Communication Interface
