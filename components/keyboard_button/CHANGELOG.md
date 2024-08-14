@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v1.0.0 - 2024-8-14
+
+* Release the official version.
+
 ## v0.1.1 - 2024-6-3
 
 ### Bug Fixes:
