@@ -2101,6 +2101,17 @@
     - <<: *if-dev-push
       changes: *patterns-components_usb_usb_device_uac
 
+.rules:build:components_usb_usb_device_uvc:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_usb_usb_device_uvc
+
 .rules:build:components_sensors_humiture_aht20_test_apps:
   rules:
     - <<: *if-protected

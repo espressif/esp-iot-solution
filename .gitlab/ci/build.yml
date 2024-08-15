@@ -1242,10 +1242,17 @@ build_components_usb_usb_device_uac:
     - .rules:build:components_usb_usb_device_uac
   parallel:
     matrix:
-      - IMAGE: espressif/idf:release-v4.4
       - IMAGE: espressif/idf:release-v5.0
   variables:
     EXAMPLE_DIR: components/usb/usb_device_uac
+
+build_components_usb_usb_device_uvc:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_usb_usb_device_uvc
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: components/usb/usb_device_uvc
 
 build_components_led_lightbulb_driver_test_apps:
   extends:
