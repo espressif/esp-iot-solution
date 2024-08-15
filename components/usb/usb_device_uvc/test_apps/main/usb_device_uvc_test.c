@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "unity.h"
 #include "unity_test_runner.h"
 #include "unity_test_utils_memory.h"

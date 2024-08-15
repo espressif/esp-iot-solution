@@ -13,49 +13,68 @@
 extern "C" {
 #endif
 
+/**
+ * @brief video frame format
+ *
+ */
 typedef enum  {
     FORMAT_MJEPG = 0,
     FORMAT_H264,
 } video_frame_format;
 
+/**
+ * @brief video frame info
+ *
+ */
 typedef struct {
-    /*!< Width of image in pixels */
-    uint32_t width;
-    /*!< Height of image in pixels */
-    uint32_t height;
-    /*!< Pixel data format */
-    video_frame_format frame_format;
+    uint32_t width;                  /*!< Width of image in pixels */
+    uint32_t height;                 /*!< Height of image in pixels */
+    video_frame_format frame_format; /*!< Pixel data format */
 } video_frame_info_t;
 
+/**
+ * @brief audio frame format
+ *
+ */
 typedef enum  {
     FORMAT_PCM = 0,
 } audio_frame_format;
 
+/**
+ * @brief audio frame info
+ *
+ */
 typedef struct {
-    /*!< Audio output channel */
-    uint8_t channel;
-    /*!< Audio bits per sample */
-    uint8_t bits_per_sample;
-    /*!< Audio sample rate */
-    uint32_t sample_rate;
-    /*!< Audio format */
-    audio_frame_format format;
+    uint8_t channel;                /*!< Audio output channel */
+    uint8_t bits_per_sample;        /*!< Audio bits per sample */
+    uint32_t sample_rate;           /*!< Audio sample rate */
+    audio_frame_format format;      /*!< Audio format */
 } audio_frame_info_t;
 
+/**
+ * @brief frame type: video or audio
+ *
+ */
 typedef enum {
     FRAME_TYPE_VIDEO = 0,
     FRAME_TYPE_AUDIO
 } frame_type_t;
 
+/**
+ * @brief frame data
+ *
+ */
 typedef struct {
-    /** Image data for this frame */
-    uint8_t *data;
-    /** Size of image data buffer */
-    size_t data_bytes;
-    frame_type_t type;
+    uint8_t *data;                     /*!< Image data for this frame */
+    size_t data_bytes;                 /*!< Size of image data buffer */
+    frame_type_t type;                 /*!< Frame type: video or audio */
+    /**
+     * @brief frame info
+     *
+     */
     union {
-        video_frame_info_t video_info;
-        audio_frame_info_t audio_info;
+        video_frame_info_t video_info; /*!< Video frame info */
+        audio_frame_info_t audio_info; /*!< Audio frame info */
     };
 } frame_data_t;
 
@@ -64,11 +83,15 @@ typedef void (*audio_write_cb)(frame_data_t *data, void *arg);
 typedef void (*audio_set_clock_cb)(uint32_t rate, uint32_t bits_cfg, uint32_t ch, void *arg);
 typedef void (*avi_play_end_cb)(void *arg);
 
+/**
+ * @brief avi player config
+ *
+ */
 typedef struct {
     size_t buffer_size;                      /*!< Internal buffer size */
     video_write_cb video_cb;                 /*!< Video frame callback */
     audio_write_cb audio_cb;                 /*!< Audio frame callback */
-    audio_set_clock_cb audio_set_clock_cb;   /*!< Audio set clock callba  ck */
+    audio_set_clock_cb audio_set_clock_cb;   /*!< Audio set clock callback */
     avi_play_end_cb avi_play_end_cb;         /*!< AVI play end callback */
     UBaseType_t priority;                    /*!< FreeRTOS task priority */
     BaseType_t coreID;                       /*!< ESP32 core ID */
@@ -116,7 +139,7 @@ esp_err_t avi_player_get_video_buffer(void **buffer, size_t *buffer_size, video_
  * @brief Get the audio buffer from AVI file
  *
  * @param[out] buffer pointer to the audio buffer
- * @param[input] buffer_size size of the audio buffer
+ * @param[in] buffer_size size of the audio buffer
  * @param[out] info audio frame information
  * @param[in] ticks_to_wait maximum blocking time in ticks
  *

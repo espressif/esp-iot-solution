@@ -1,9 +1,5 @@
 # ChangeLog
 
-## v1.0.0 - 2024-8-15
-
-* Publish the official version
-
 ## v0.1.5 - 2024-7-3
 
 ###  Enhancements:

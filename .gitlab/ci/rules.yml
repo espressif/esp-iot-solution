@@ -1429,7 +1429,7 @@
     - <<: *if-dev-push
       changes: *patterns-components_audio_dac_audio
 
-.rules:build:component_audio_pwm_audio_test:
+.rules:build:component_audio_pwm_audio_test_apps:
   rules:
     - <<: *if-protected
     - <<: *if-label-build

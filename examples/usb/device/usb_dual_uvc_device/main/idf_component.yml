@@ -12,7 +12,7 @@ dependencies:
     version: "1.1.*"
     override_path: "../../../../../components/usb/usb_device_uvc"
   avi_player:
-    version: "0.*"
+    version: "1.*"
     override_path: "../../../../../components/avi_player"
   lvgl/lvgl: #temp to workaround bsp issue
     version: "9.2.0"

@@ -475,12 +475,28 @@ esp_err_t pwm_audio_init(const pwm_audio_config_t *cfg)
     /**
      * Get the address of LEDC register to reduce the addressing time
      */
-    g_ledc_left_duty_val = &LEDC.channel_group[handle->ledc_timer.speed_mode].channel[handle->ledc_channel[CHANNEL_LEFT_INDEX].channel].duty.val;
-    g_ledc_left_conf0_val = &LEDC.channel_group[handle->ledc_timer.speed_mode].channel[handle->ledc_channel[CHANNEL_LEFT_INDEX].channel].conf0.val;
-    g_ledc_left_conf1_val = &LEDC.channel_group[handle->ledc_timer.speed_mode].channel[handle->ledc_channel[CHANNEL_LEFT_INDEX].channel].conf1.val;
-    g_ledc_right_duty_val = &LEDC.channel_group[handle->ledc_timer.speed_mode].channel[handle->ledc_channel[CHANNEL_RIGHT_INDEX].channel].duty.val;
-    g_ledc_right_conf0_val = &LEDC.channel_group[handle->ledc_timer.speed_mode].channel[handle->ledc_channel[CHANNEL_RIGHT_INDEX].channel].conf0.val;
-    g_ledc_right_conf1_val = &LEDC.channel_group[handle->ledc_timer.speed_mode].channel[handle->ledc_channel[CHANNEL_RIGHT_INDEX].channel].conf1.val;
+#if defined (CONFIG_IDF_TARGET_ESP32P4) || defined (CONFIG_IDF_TARGET_ESP32C5) || defined (CONFIG_IDF_TARGET_ESP32C61)
+    g_ledc_left_duty_val = &LEDC.channel_group[handle->ledc_timer.speed_mode].
+                           channel[handle->ledc_channel[CHANNEL_LEFT_INDEX].channel].duty_init.val;
+#else
+    g_ledc_left_duty_val = &LEDC.channel_group[handle->ledc_timer.speed_mode].
+                           channel[handle->ledc_channel[CHANNEL_LEFT_INDEX].channel].duty.val;
+#endif
+    g_ledc_left_conf0_val = &LEDC.channel_group[handle->ledc_timer.speed_mode].
+                            channel[handle->ledc_channel[CHANNEL_LEFT_INDEX].channel].conf0.val;
+    g_ledc_left_conf1_val = &LEDC.channel_group[handle->ledc_timer.speed_mode].
+                            channel[handle->ledc_channel[CHANNEL_LEFT_INDEX].channel].conf1.val;
+#if defined (CONFIG_IDF_TARGET_ESP32P4) || defined (CONFIG_IDF_TARGET_ESP32C5) || defined (CONFIG_IDF_TARGET_ESP32C61)
+    g_ledc_right_duty_val = &LEDC.channel_group[handle->ledc_timer.speed_mode].
+                            channel[handle->ledc_channel[CHANNEL_RIGHT_INDEX].channel].duty_init.val;
+#else
+    g_ledc_right_duty_val = &LEDC.channel_group[handle->ledc_timer.speed_mode].
+                            channel[handle->ledc_channel[CHANNEL_RIGHT_INDEX].channel].duty.val;
+#endif
+    g_ledc_right_conf0_val = &LEDC.channel_group[handle->ledc_timer.speed_mode].
+                             channel[handle->ledc_channel[CHANNEL_RIGHT_INDEX].channel].conf0.val;
+    g_ledc_right_conf1_val = &LEDC.channel_group[handle->ledc_timer.speed_mode].
+                             channel[handle->ledc_channel[CHANNEL_RIGHT_INDEX].channel].conf1.val;
 
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
     gptimer_config_t timer_config = {

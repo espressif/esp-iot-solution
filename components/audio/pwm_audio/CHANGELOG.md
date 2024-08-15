@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.1.2 - 2024-08-15
+
+### Enhancements:
+
+* Add test-apps.
+
 ## v1.1.1 - 2023-03-20
 
 ### Bug Fixes:

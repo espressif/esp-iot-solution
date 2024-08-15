@@ -20,4 +20,4 @@ Audio:
 API 参考
 ------------
 
-.. include-build-file:: inc/avi_Player.inc
+.. include-build-file:: inc/avi_player.inc

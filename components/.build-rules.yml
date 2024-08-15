@@ -1,3 +1,7 @@
+components/audio/pwm_audio/test_apps:
+  enable:
+    - if: INCLUDE_DEFAULT == 1
+
 components/avi_player/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32s3", "esp32p4"]
