@@ -34,6 +34,7 @@ examples/**/build
 
 # Example online download files
 examples/usb/device/usb_dual_uvc_device/**/*.avi
+components/avi_player/test_apps/**/*.avi
 
 # Doc build artifacts
 docs/**/_build/

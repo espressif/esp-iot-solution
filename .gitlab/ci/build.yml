@@ -820,6 +820,13 @@ build_example_utilities_xz_decompress_file:
   variables:
     EXAMPLE_DIR: examples/utilities/xz_decompress_file
 
+build_components_avi_player_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_avi_player_test_apps
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: components/avi_player/test_apps
 
 build_components_bluetooth_ble_hci_test_apps:
   extends:

@@ -68,7 +68,7 @@ typedef struct {
     size_t buffer_size;                      /*!< Internal buffer size */
     video_write_cb video_cb;                 /*!< Video frame callback */
     audio_write_cb audio_cb;                 /*!< Audio frame callback */
-    audio_set_clock_cb audio_set_clock_cb;   /*!< Audio set clock callback */
+    audio_set_clock_cb audio_set_clock_cb;   /*!< Audio set clock callba  ck */
     avi_play_end_cb avi_play_end_cb;         /*!< AVI play end callback */
     UBaseType_t priority;                    /*!< FreeRTOS task priority */
     BaseType_t coreID;                       /*!< ESP32 core ID */
