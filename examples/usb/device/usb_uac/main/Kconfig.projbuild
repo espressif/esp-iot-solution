@@ -1,0 +1,20 @@
+menu "Example Configuration"
+
+    choice DEVELOPMENT_BOARD_SELECTION
+        prompt "Select the development board you are using"
+        default ESP32_S3_LCD_EV_BOARD if IDF_TARGET_ESP32S3
+        default ESP32_P4_FUNCTION_EV_BOARD if IDF_TARGET_ESP32P4
+        help
+            Select this option to choose the board for the example.
+
+        config ESP32_S3_LCD_EV_BOARD
+            bool "ESP32 S3 USB OTG"
+            depends on IDF_TARGET_ESP32S3
+
+            config ESP32_P4_FUNCTION_EV_BOARD
+            bool "ESP32-P4 Function EV Board"
+            depends on IDF_TARGET_ESP32P4
+
+    endchoice
+
+endmenu

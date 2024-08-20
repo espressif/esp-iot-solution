@@ -646,7 +646,7 @@ build_example_usb_device_usb_uac:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_device_usb_uac
-    - .build_idf_active_release_version
+    - .build_idf_version_greater_equal_v5_0
   variables:
     EXAMPLE_DIR: examples/usb/device/usb_uac
 

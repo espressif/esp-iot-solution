@@ -14,7 +14,15 @@ Please first read the [User Guide](https://docs.espressif.com/projects/esp-dev-k
 
 ### Hardware Required
 
+For ESP32-S3
+
 * An ESP32-S3-LCD-EV-Board development board
+* At least one USB Type-C cable for Power supply, programming and USB communication.
+* A speaker
+
+For ESP32-P4
+
+* An ESP32_P4_FUNCTION_EV_BOARD development board
 * At least one USB Type-C cable for Power supply, programming and USB communication.
 * A speaker
 

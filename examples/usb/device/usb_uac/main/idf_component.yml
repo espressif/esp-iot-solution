@@ -1,9 +1,21 @@
 ## IDF Component Manager Manifest File
+version: "0.2.0"
+targets:
+  - esp32s3
+  - esp32p4
 dependencies:
-  espressif/esp_codec_dev:
-    public: true
-    version: "1.1.*"
-  espressif/esp32_s3_lcd_ev_board: "2.2.*"
+  espressif/esp32_s3_lcd_ev_board:
+    version: "^2.*"
+    rules:
+      - if: "target in [esp32s3]"
+  bsp_extra:
+    rules:
+      - if: "target in [esp32s3]"
+    override_path: "../common_components/bsp_extra"
+  esp32_p4_function_ev_board:
+    rules:
+      - if: "target in [esp32p4]"
+    override_path: "../common_components/esp32_p4_function_ev_board"
   idf: ">=5.1"
   usb_device_uac:
     version: "0.*"
