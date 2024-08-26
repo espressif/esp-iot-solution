@@ -1,4 +1,4 @@
-version: "0.1.1"
+version: "1.0.0"
 targets:
   - esp32p4
 description: ESP LCD USB Display

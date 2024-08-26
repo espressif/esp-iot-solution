@@ -8,6 +8,8 @@ Implementation of the GC9B71 LCD controller with [esp_lcd](https://docs.espressi
 | :------------: | :---------------------: | :------------: | :---------------------------------------------------------------------------: |
 |     GC9B71     |        SPI/QSPI         | esp_lcd_gc9b71 | [PDF](https://dl.espressif.com/AE/esp-iot-solution/GC9B71_DataSheet_V1.0.pdf) |
 
+For more information on LCD, please refer to the [LCD documentation](https://docs.espressif.com/projects/esp-iot-solution/en/latest/display/lcd/index.html).
+
 ## Add to project
 
 Packages from this repository are uploaded to [Espressif's component service](https://components.espressif.com/).

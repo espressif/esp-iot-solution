@@ -43,22 +43,8 @@ typedef struct {
     struct {
         esp_lcd_dsi_bus_handle_t dsi_bus;               /*!< MIPI-DSI bus configuration */
         const esp_lcd_dpi_panel_config_t *dpi_config;   /*!< MIPI-DPI panel configuration */
+        uint8_t  lane_num;                              /*!< Number of MIPI-DSI lanes, defaults to 2 if set to 0 */
     } mipi_config;
-    struct {
-        unsigned int use_mipi_interface: 1;         /*<! Set to 1 if using MIPI interface, default is RGB interface */
-        unsigned int mirror_by_cmd: 1;              /*<! The `mirror()` function will be implemented by LCD command if set to 1. This flag is only valid for the RGB interface.
-                                                     *   Otherwise, the function will be implemented by software.
-                                                     */
-
-        union {
-            unsigned int auto_del_panel_io: 1;
-            unsigned int enable_io_multiplex: 1;
-        };  /*<! Delete the panel IO instance automatically if set to 1. All `*_by_cmd` flags will be invalid.
-             *   If the panel IO pins are sharing other pins of the RGB interface to save GPIOs,
-             *   Please set it to 1 to release the panel IO and its pins (except CS signal).
-             *   This flag is only valid for the RGB interface.
-             */
-    } flags;
 } ek79007_vendor_config_t;
 
 /**

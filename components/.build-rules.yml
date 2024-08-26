@@ -82,6 +82,10 @@ components/display/lcd/esp_lcd_gc9b71/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1
 
+components/display/lcd/esp_lcd_hx8399/test_apps:
+  enable:
+    - if: IDF_TARGET in ["esp32p4"]
+
 components/display/lcd/esp_lcd_panel_io_additions/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32s3"]

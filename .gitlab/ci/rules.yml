@@ -88,6 +88,9 @@
 .patterns-components_display_lcd_esp_lcd_gc9b71: &patterns-components_display_lcd_esp_lcd_gc9b71
   - "components/display/lcd/esp_lcd_gc9b71/**/*"
 
+.patterns-components_display_lcd_esp_lcd_hx8399: &patterns-components_display_lcd_esp_lcd_hx8399
+  - "components/display/lcd/esp_lcd_hx8399/**/*"
+
 .patterns-components_display_lcd_esp_lcd_panel_io_additions: &patterns-components_display_lcd_esp_lcd_panel_io_additions
   - "components/display/lcd/esp_lcd_panel_io_additions/**/*"
 
@@ -1533,6 +1536,17 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_display_lcd_esp_lcd_gc9b71
+
+.rules:build:components_display_lcd_esp_lcd_hx8399_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_display_lcd_esp_lcd_hx8399
 
 .rules:build:components_display_lcd_esp_lcd_panel_io_additions_test_apps:
   rules:

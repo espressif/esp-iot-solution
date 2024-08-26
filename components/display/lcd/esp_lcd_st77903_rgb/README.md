@@ -6,6 +6,8 @@ Implementation of the ST77903 RGB LCD controller with [esp_lcd](https://docs.esp
 | :------------: | :---------------------: | :------------: | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
 |     ST77903     |        RGB         | esp_lcd_ST77903_rgb | [PDF1](https://dl.espressif.com/AE/esp-iot-solution/ST77903_SPEC_P0.5.pdf)|
 
+For more information on LCD, please refer to the [LCD documentation](https://docs.espressif.com/projects/esp-iot-solution/en/latest/display/lcd/index.html).
+
 ## Initialization Code
 
 For most RGB LCDs, they typically use a "3-Wire SPI + Parallel RGB" interface. The "3-Wire SPI" interface is used for transmitting command data and the "Parallel RGB" interface is used for sending pixel data.

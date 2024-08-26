@@ -8,6 +8,8 @@ Implementation of the ST77916 LCD controller with [esp_lcd](https://docs.espress
 | :------------: | :---------------------: | :------------: | :---------------------------------------------------------------------------: |
 |     ST77916     |        SPI/QSPI         | esp_lcd_st77916 | [PDF](https://dl.espressif.com/AE/esp-iot-solution/ST77916_SPEC_V1.0.pdf) |
 
+For more information on LCD, please refer to the [LCD documentation](https://docs.espressif.com/projects/esp-iot-solution/en/latest/display/lcd/index.html).
+
 ## Add to project
 
 Packages from this repository are uploaded to [Espressif's component service](https://components.espressif.com/).

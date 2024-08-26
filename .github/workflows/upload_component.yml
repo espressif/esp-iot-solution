@@ -31,6 +31,7 @@ jobs:
             components/display/lcd/esp_lcd_jd9165;
             components/display/lcd/esp_lcd_jd9365;
             components/display/lcd/esp_lcd_gc9b71;
+            components/display/lcd/esp_lcd_hx8399;
             components/display/lcd/esp_lcd_panel_io_additions;
             components/display/lcd/esp_lcd_nv3022b;
             components/display/lcd/esp_lcd_sh8601;

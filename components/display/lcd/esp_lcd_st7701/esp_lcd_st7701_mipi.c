@@ -28,8 +28,6 @@ static esp_err_t panel_st7701_reset(esp_lcd_panel_t *panel);
 static esp_err_t panel_st7701_init(esp_lcd_panel_t *panel);
 static esp_err_t panel_st7701_invert_color(esp_lcd_panel_t *panel, bool invert_color_data);
 static esp_err_t panel_st7701_mirror(esp_lcd_panel_t *panel, bool mirror_x, bool mirror_y);
-static esp_err_t panel_st7701_swap_xy(esp_lcd_panel_t *panel, bool swap_axes);
-static esp_err_t panel_st7701_set_gap(esp_lcd_panel_t *panel, int x_gap, int y_gap);
 static esp_err_t panel_st7701_disp_on_off(esp_lcd_panel_t *panel, bool off);
 static esp_err_t panel_st7701_sleep(esp_lcd_panel_t *panel, bool sleep);
 
@@ -118,8 +116,6 @@ esp_err_t esp_lcd_new_panel_st7701_mipi(const esp_lcd_panel_io_handle_t io, cons
     panel_handle->init = panel_st7701_init;
     panel_handle->reset = panel_st7701_reset;
     panel_handle->mirror = panel_st7701_mirror;
-    panel_handle->swap_xy = panel_st7701_swap_xy;
-    panel_handle->set_gap = panel_st7701_set_gap;
     panel_handle->invert_color = panel_st7701_invert_color;
     panel_handle->disp_on_off = panel_st7701_disp_on_off;
     panel_handle->disp_sleep = panel_st7701_sleep;
@@ -342,18 +338,6 @@ static esp_err_t panel_st7701_mirror(esp_lcd_panel_t *panel, bool mirror_x, bool
     }, 1), TAG, "send command failed");;
 
     return ESP_OK;
-}
-
-static esp_err_t panel_st7701_swap_xy(esp_lcd_panel_t *panel, bool swap_axes)
-{
-    ESP_LOGW(TAG, "Swap XY is not supported in ST7701 driver. Please use SW rotation.");
-    return ESP_ERR_NOT_SUPPORTED;
-}
-
-static esp_err_t panel_st7701_set_gap(esp_lcd_panel_t *panel, int x_gap, int y_gap)
-{
-    ESP_LOGE(TAG, "set_gap is not supported by this panel");
-    return ESP_ERR_NOT_SUPPORTED;
 }
 
 static esp_err_t panel_st7701_disp_on_off(esp_lcd_panel_t *panel, bool on_off)

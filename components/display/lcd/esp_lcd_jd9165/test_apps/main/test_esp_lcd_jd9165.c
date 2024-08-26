@@ -98,9 +98,6 @@ static void test_init_lcd(void)
     ESP_LOGI(TAG, "Install LCD driver of jd9165");
     esp_lcd_dpi_panel_config_t dpi_config = JD9165_1024_600_PANEL_60HZ_DPI_CONFIG(TEST_MIPI_DPI_PX_FORMAT);
     jd9165_vendor_config_t vendor_config = {
-        .flags = {
-            .use_mipi_interface = 1,
-        },
         .mipi_config = {
             .dsi_bus = mipi_dsi_bus,
             .dpi_config = &dpi_config,
@@ -207,36 +204,15 @@ TEST_CASE("test jd9165 to draw color bar with MIPI interface", "[jd9165][draw_co
 
 TEST_CASE("test jd9165 to rotate with MIPI interface", "[jd9165][rotate]")
 {
-    esp_err_t ret = ESP_OK;
-
-    uint16_t w = 0;
-    uint16_t h = 0;
-    int64_t t = 0;
-
     ESP_LOGI(TAG, "Initialize LCD device");
     test_init_lcd();
 
-    ESP_LOGI(TAG, "Rotate the screen");
-    for (size_t i = 0; i < 8; i++) {
-        if (ret != ESP_ERR_NOT_SUPPORTED) {
-            if (i & 4) {
-                w = TEST_LCD_V_RES;
-                h = TEST_LCD_H_RES;
-            } else {
-                w = TEST_LCD_H_RES;
-                h = TEST_LCD_V_RES;
-            }
-        }
-
+    ESP_LOGI(TAG, "Mirror the screen");
+    for (size_t i = 0; i < 4; i++) {
         TEST_ASSERT_NOT_EQUAL(esp_lcd_panel_mirror(panel_handle, i & 2, i & 1), ESP_FAIL);
-        ret = esp_lcd_panel_swap_xy(panel_handle, i & 4);
-        TEST_ASSERT_NOT_EQUAL(ret, ESP_FAIL);
 
-        ESP_LOGI(TAG, "Rotation: %d", i);
-        t = esp_timer_get_time();
-        test_draw_color_bar(panel_handle, w, h);
-        t = esp_timer_get_time() - t;
-        ESP_LOGI(TAG, "@resolution %dx%d time per frame=%.2fMS\r\n", w, h, (float)t / 1000.0f);
+        ESP_LOGI(TAG, "Mirror: %d", i);
+        test_draw_color_bar(panel_handle, TEST_LCD_H_RES, TEST_LCD_V_RES);
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
 

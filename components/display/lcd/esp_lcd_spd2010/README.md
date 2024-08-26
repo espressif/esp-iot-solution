@@ -18,6 +18,8 @@ You can add them to your project via `idf.py add-dependancy`, e.g.
 
 Alternatively, you can create `idf_component.yml`. More is in [Espressif's documentation](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/tools/idf-component-manager.html).
 
+For more information on LCD, please refer to the [LCD documentation](https://docs.espressif.com/projects/esp-iot-solution/en/latest/display/lcd/index.html).
+
 ## Initialization Code
 
 ### SPI Interface

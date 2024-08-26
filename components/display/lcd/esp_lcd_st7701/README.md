@@ -10,6 +10,8 @@ Implementation of the ST7701(S) LCD controller with esp_lcd component.
 
 **Note**: MIPI-DSI interface only supports ESP-IDF v5.3 and above versions.
 
+For more information on LCD, please refer to the [LCD documentation](https://docs.espressif.com/projects/esp-iot-solution/en/latest/display/lcd/index.html).
+
 ## Add to project
 
 Packages from this repository are uploaded to [Espressif's component service](https://components.espressif.com/).

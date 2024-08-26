@@ -6,6 +6,8 @@ Implementation of the ST77903 QSPI LCD controller with [esp_lcd](https://docs.es
 | :------------: | :---------------------: | :------------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
 |    ST77903     |          QSPI           | esp_lcd_ST77903_qspi | [PDF1](https://dl.espressif.com/AE/esp-iot-solution/ST77903_SPEC_P0.5.pdf), [PDF2](https://dl.espressif.com/AE/esp-iot-solution/ST77903_Customer_Application_Notes.pdf) |
 
+For more information on LCD, please refer to the [LCD documentation](https://docs.espressif.com/projects/esp-iot-solution/en/latest/display/lcd/index.html).
+
 ## Initialization Code
 
 ```c
