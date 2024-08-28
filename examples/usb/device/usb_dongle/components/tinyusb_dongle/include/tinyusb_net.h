@@ -61,36 +61,14 @@ esp_err_t tinyusb_net_init(tinyusb_usbdev_t usb_dev, const tinyusb_net_config_t 
 /**
  * @brief TinyUSB NET driver send data synchronously
  *
- * @note It is possible to use sync and async send interchangeably.
- * This function needs some synchronization primitives, so using sync mode (even once) uses more heap
- *
  * @param[in] buffer            USB send data
  * @param[in] len               Send data len
  * @param[in] buff_free_arg     Pointer to be passed to the free_tx_buffer() callback
- * @param[in] timeout           Send data len
  * @return  ESP_OK on success == packet has been consumed by tusb and would be eventually freed
  *                              by free_tx_buffer() callback (if non null)
- *          ESP_ERR_TIMEOUT on timeout
  *          ESP_ERR_INVALID_STATE if tusb not initialized, ESP_ERR_NO_MEM on alloc failure
  */
-esp_err_t tinyusb_net_send_sync(void *buffer, uint16_t len, void *buff_free_arg, TickType_t  timeout);
-
-/**
- * @brief TinyUSB NET driver send data asynchronously
- *
- * @note If using asynchronous sends, you must free the buffer using free_tx_buffer() callback.
- * @note It is possible to use sync and async send interchangeably.
- * @note Async flavor of the send is useful when the USB stack runs faster than the caller,
- * since we have no control over the transmitted packets, if they get accepted or discarded.
- *
- * @param[in] buffer            USB send data
- * @param[in] len               Send data len
- * @param[in] buff_free_arg     Pointer to be passed to the free_tx_buffer() callback
- * @return  ESP_OK on success == packet has been consumed by tusb and will be freed
- *                              by free_tx_buffer() callback (if non null)
- *          ESP_ERR_INVALID_STATE if tusb not initialized
- */
-esp_err_t tinyusb_net_send_async(void *buffer, uint16_t len, void *buff_free_arg);
+esp_err_t tinyusb_net_send(void *buffer, uint16_t len, void *buff_free_arg);
 
 #endif // (CONFIG_TINYUSB_NET_MODE_NONE != 1)
 
