@@ -37,10 +37,27 @@ esp_err_t button_gpio_init(const button_gpio_config_t *config)
 
 #if CONFIG_GPIO_BUTTON_SUPPORT_POWER_SAVE
     if (config->enable_power_save) {
+#if CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP
+        if (!esp_sleep_is_valid_wakeup_gpio(config->gpio_num)) {
+            ESP_LOGE(TAG, "GPIO %ld is not a valid wakeup source under CONFIG_GPIO_BUTTON_SUPPORT_POWER_SAVE", config->gpio_num);
+            return ESP_FAIL;
+        }
+        gpio_hold_en(config->gpio_num);
+#endif
         /* Enable wake up from GPIO */
         esp_err_t ret = gpio_wakeup_enable(config->gpio_num, config->active_level == 0 ? GPIO_INTR_LOW_LEVEL : GPIO_INTR_HIGH_LEVEL);
         GPIO_BTN_CHECK(ret == ESP_OK, "Enable gpio wakeup failed", ESP_FAIL);
+#if CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP
+#if SOC_PM_SUPPORT_EXT1_WAKEUP
+        ret = esp_sleep_enable_ext1_wakeup_io((1ULL << config->gpio_num), config->active_level == 0 ? ESP_EXT1_WAKEUP_ANY_LOW : ESP_EXT1_WAKEUP_ANY_HIGH);
+#else
+        /*!< Not support etc: esp32c2, esp32c3. Target must support ext1 wakeup */
+        ret = ESP_FAIL;
+        GPIO_BTN_CHECK(ret == ESP_OK, "Target must support ext1 wakeup", ESP_FAIL);
+#endif
+#else
         ret = esp_sleep_enable_gpio_wakeup();
+#endif
         GPIO_BTN_CHECK(ret == ESP_OK, "Configure gpio as wakeup source failed", ESP_FAIL);
     }
 #endif

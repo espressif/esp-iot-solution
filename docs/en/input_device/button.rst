@@ -297,6 +297,32 @@ When to Enter Light Sleep
 
     iot_button_register_power_save_cb(&config);
 
+**How to Use Buttons Normally After Enabling the CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP Option?**
+
+- When this macro is enabled, the GPIO module will be powered down. To use the button functionality, you must use RTC/LP GPIO and change the wake-up source to EXT 1.
+
+.. list-table::
+    :widths: 40 40 40
+    :header-rows: 1
+
+    * - GPIO Type
+      - CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP Enabled?
+      - Wake-Up Source
+    * - **Digital Pin**
+      - N
+      - GPIO Level Trigger
+    * - **Digital Pin**
+      - Y
+      - None
+    * - **RTC/LP Pin**
+      - N
+      - GPIO Level Trigger / EXT 1
+    * - **RTC/LP Pin**
+      - Y
+      - EXT 1
+
+.. note:: The LP GPIOs of ESP32-C5 and ESP32-C6 support both GPIO level wake-up and EXT 1 wake-up, and you also need to enable ``gpio_hold_en``.
+
 Stop and resume
 ^^^^^^^^^^^^^^^^^
 
