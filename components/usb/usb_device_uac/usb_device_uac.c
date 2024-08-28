@@ -15,6 +15,7 @@
 #include "tusb.h"
 #include "uac_config.h"
 #include "usb_device_uac.h"
+#include "uac_descriptors.h"
 
 static const char *TAG = "usbd_uac";
 
@@ -76,6 +77,9 @@ static void usb_phy_init(void)
         .controller = USB_PHY_CTRL_OTG,
         .otg_mode = USB_OTG_MODE_DEVICE,
         .target = USB_PHY_TARGET_INT,
+#if CONFIG_TINYUSB_RHPORT_HS
+        .otg_speed = USB_PHY_SPEED_HIGH,
+#endif
     };
     usb_new_phy(&phy_conf, &s_uac_device->phy_hdl);
 }
@@ -490,15 +494,19 @@ esp_err_t uac_device_init(uac_device_config_t *config)
     s_uac_device->current_sample_rate = DEFAULT_SAMPLE_RATE;
     s_uac_device->mic_buf_write = s_uac_device->mic_buf1;
     s_uac_device->mic_buf_read = s_uac_device->mic_buf2;
-    usb_phy_init();
-    bool usb_init = tud_init(BOARD_TUD_RHPORT);
-    if (!usb_init) {
-        ESP_LOGE(TAG, "USB Device Stack Init Fail");
-        return ESP_FAIL;
+
+    BaseType_t ret_val;
+    if (!config->skip_tinyusb_init) {
+        usb_phy_init();
+        bool usb_init = tusb_init();
+        if (!usb_init) {
+            ESP_LOGE(TAG, "USB Device Stack Init Fail");
+            return ESP_FAIL;
+        }
+        ret_val = xTaskCreatePinnedToCore(tusb_device_task, "TinyUSB", 4096, NULL, CONFIG_UAC_TINYUSB_TASK_PRIORITY,
+                                          NULL, CONFIG_UAC_TINYUSB_TASK_CORE == -1 ? tskNO_AFFINITY : CONFIG_UAC_TINYUSB_TASK_CORE);
+        ESP_RETURN_ON_FALSE(ret_val == pdPASS, ESP_FAIL, TAG, "Failed to create TinyUSB task");
     }
-    BaseType_t ret_val = xTaskCreatePinnedToCore(tusb_device_task, "TinyUSB", 4096, NULL, CONFIG_UAC_TINYUSB_TASK_PRIORITY,
-                                                 NULL, CONFIG_UAC_TINYUSB_TASK_CORE == -1 ? tskNO_AFFINITY : CONFIG_UAC_TINYUSB_TASK_CORE);
-    ESP_RETURN_ON_FALSE(ret_val == pdPASS, ESP_FAIL, TAG, "Failed to create TinyUSB task");
 
 #if CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX
     ret_val = xTaskCreatePinnedToCore(usb_mic_task, "usb_mic_task", 4096, NULL, CONFIG_UAC_MIC_TASK_PRIORITY,

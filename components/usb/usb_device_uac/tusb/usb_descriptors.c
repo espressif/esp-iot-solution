@@ -25,7 +25,7 @@
  */
 
 #include "tusb.h"
-#include "usb_descriptors.h"
+#include "uac_descriptors.h"
 
 //--------------------------------------------------------------------+
 // Device Descriptors
@@ -72,13 +72,7 @@ uint8_t const desc_configuration[] = {
     // Config number, interface count, string index, total length, attribute, power in mA
     TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, CONFIG_TOTAL_LEN, 0x00, 100),
     // Interface number, string index, EP Out & EP In address, EP size
-#if CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX && CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX
-    TUD_AUDIO_MIC_SPEAK_DESCRIPTOR(2, EPNUM_AUDIO_OUT, EPNUM_AUDIO_IN, EPNUM_AUDIO_FB)
-#elif CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX
-    TUD_AUDIO_MIC_DESCRIPTOR(2, EPNUM_AUDIO_IN)
-#elif CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX
-    TUD_AUDIO_SPEAK_DESCRIPTOR(2, EPNUM_AUDIO_OUT, EPNUM_AUDIO_FB)
-#endif
+    TUD_AUDIO_DESCRIPTOR(ITF_NUM_AUDIO_CONTROL, 4, EPNUM_AUDIO_OUT, EPNUM_AUDIO_IN, EPNUM_AUDIO_FB),
 };
 
 // Invoked when received GET CONFIGURATION DESCRIPTOR
@@ -100,11 +94,12 @@ char const *string_desc_arr [] = {
     CONFIG_TUSB_MANUFACTURER,       // 1: Manufacturer
     CONFIG_TUSB_PRODUCT,            // 2: Product
     CONFIG_TUSB_SERIAL_NUM,         // 3: Serials, should use chip ID
+    "usb uac",                      // 4: UAC control Interface
 #if SPEAK_CHANNEL_NUM
-    "speakers",                     // Speak Interface
+    "speaker",                     // 5: Speak Interface
 #endif
 #if MIC_CHANNEL_NUM
-    "microphone",                   // Mic Interface
+    "microphone",                   // 6: Mic Interface
 #endif
 };
 

@@ -11,9 +11,6 @@
 #include "esp_check.h"
 
 #include "driver/rmt_tx.h"
-#include "driver/gpio.h"
-#include "driver/spi_master.h"
-#include "driver/i2s_std.h"
 #include "led_strip.h"
 #include "led_strip_interface.h"
 
@@ -172,7 +169,7 @@ esp_err_t bsp_extra_codec_volume_set(int volume, int *volume_set)
 esp_err_t bsp_extra_codec_mute_set(bool enable)
 {
     esp_err_t ret = ESP_OK;
-    ret = esp_codec_dev_set_out_mute(play_dev_handle, !enable);
+    ret = esp_codec_dev_set_out_mute(play_dev_handle, enable);
     return ret;
 }
 

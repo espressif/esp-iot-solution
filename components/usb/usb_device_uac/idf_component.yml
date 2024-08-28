@@ -1,7 +1,8 @@
-version: "0.1.1"
+version: "0.2.0"
 targets:
   - esp32s2
   - esp32s3
+  - esp32p4
 
 description: USB Device UAC, Streaming audio to Host
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/usb/usb_device_uac
@@ -12,7 +13,7 @@ issues: https://github.com/espressif/esp-iot-solution/issues
 dependencies:
   idf: ">=4.4"
   leeebo/tinyusb_src:
-    version: ">=0.15.0~7"
+    version: ">=0.16.0~5"
   cmake_utilities: "*"
 examples:
   - path: ../../../examples/usb/device/usb_uac

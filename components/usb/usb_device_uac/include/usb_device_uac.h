@@ -6,7 +6,8 @@
 
 #pragma once
 
-#include "stdint.h"
+#include <stdbool.h>
+#include <stdint.h>
 #include "esp_err.h"
 
 #ifdef __cplusplus
@@ -23,6 +24,7 @@ typedef void (*uac_set_volume_cb_t)(uint32_t volume, void *cb_ctx);
  *
  */
 typedef struct  {
+    bool skip_tinyusb_init;                      /*!< if true, the Tinyusb and usb phy will not be initialized */
     uac_output_cb_t output_cb;                   /*!< callback function for UAC data output, if NULL, output will be disabled */
     uac_input_cb_t input_cb;                     /*!< callback function for UAC data input, if NULL, input will be disabled */
     uac_set_mute_cb_t set_mute_cb;               /*!< callback function for set mute, if NULL, the set mute request will be ignored */

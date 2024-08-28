@@ -8,12 +8,21 @@
 
 #include <stdbool.h>
 #include "esp_err.h"
+#include "driver/gpio.h"
+#include "driver/i2s_std.h"
 
+#include "audio_player.h"
 #include "file_iterator.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#define CODEC_DEFAULT_SAMPLE_RATE          (16000)
+#define CODEC_DEFAULT_BIT_WIDTH            (16)
+#define CODEC_DEFAULT_ADC_VOLUME           (24.0)
+#define CODEC_DEFAULT_CHANNEL              (2)
+#define CODEC_DEFAULT_VOLUME               (60)
 
 /**
  * @brief Player set mute.
@@ -37,6 +46,8 @@ esp_err_t bsp_extra_codec_mute_set(bool enable);
  *    - Others: Fail
  */
 esp_err_t bsp_extra_codec_volume_set(int volume, int *volume_set);
+
+int bsp_extra_codec_volume_get(void);
 
 /**
  * @brief Stop I2S function.
@@ -115,38 +126,21 @@ esp_err_t bsp_extra_codec_init();
  *      - ESP_OK: Success
  *      - Others: Fail
  */
-esp_err_t bsp_extra_player_init(char *path);
+esp_err_t bsp_extra_player_init(void);
 
-/**
- * @brief Set RGB for a specific pixel.
- *
- * @param index: index of pixel to set
- * @param red: red part of color
- * @param green: green part of color
- * @param blue: blue part of color
- *
- * @return
- *      - ESP_OK: Set RGB for a specific pixel successfully
- *      - ESP_ERR_INVALID_ARG: Set RGB for a specific pixel failed because of invalid parameters
- *      - ESP_FAIL: Set RGB for a specific pixel failed because other error occurred
- */
-esp_err_t bsp_extra_led_set_rgb(uint8_t index, uint8_t red, uint8_t green, uint8_t blue);
+esp_err_t bsp_extra_player_del(void);
 
-/**
- * @brief Initialize ws2812.
- *
- * @return
- *      - ESP_OK: Success
- *      - Others: Fail
- */
-esp_err_t bsp_extra_led_init();
+esp_err_t bsp_extra_file_instance_init(const char *path, file_iterator_instance_t **ret_instance);
 
-/**
- * @brief Get file_iterator instance.
- *
- * @return pointer of file_iterator_instance_t
- */
-file_iterator_instance_t *bsp_extra_get_file_instance(void);
+esp_err_t bsp_extra_player_play_index(file_iterator_instance_t *instance, int index);
+
+esp_err_t bsp_extra_player_play_file(const char *file_path);
+
+void bsp_extra_player_register_callback(audio_player_cb_t cb, void *user_data);
+
+bool bsp_extra_player_is_playing_by_path(const char *file_path);
+
+bool bsp_extra_player_is_playing_by_index(file_iterator_instance_t *instance, int index);
 
 #ifdef __cplusplus
 }
