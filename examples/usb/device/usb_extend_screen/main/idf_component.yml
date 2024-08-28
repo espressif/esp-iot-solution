@@ -1,0 +1,8 @@
+version: 0.1.0
+targets:
+  - esp32p4
+dependencies:
+  idf: ">=5.3"
+  leeebo/tinyusb_src:
+    version: "*"
+  espressif/esp_lcd_ek79007: "*"

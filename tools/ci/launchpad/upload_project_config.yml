@@ -32,6 +32,15 @@ examples/usb/device/usb_dual_uvc_device:
   readme:
     https://raw.githubusercontent.com/espressif/esp-iot-solution/master/examples/usb/device/usb_dual_uvc_device/README.md
 
+examples/usb/device/usb_extend_screen:
+  esp32p4:
+    sdkconfig:
+      - defaults
+  description:
+    Using the ESP32-P4-Function-EV-Board as a Windows USB Extension Screen
+  readme:
+    https://raw.githubusercontent.com/espressif/esp-iot-solution/master/examples/usb/device/usb_extend_screen/README.md
+
 examples/usb/device/usb_webcam:
   esp32s3:
     sdkconfig:

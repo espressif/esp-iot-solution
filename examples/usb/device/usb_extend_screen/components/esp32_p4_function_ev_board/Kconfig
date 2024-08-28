@@ -1,0 +1,222 @@
+menu "Board Support Package"
+
+    config BSP_ERROR_CHECK
+        bool "Enable error check in BSP"
+        default y
+        help
+            Error check assert the application before returning the error code.
+
+    choice
+        prompt "Choose Board Type"
+        default BSP_BOARD_TYPE_SAMPLE
+            config BSP_BOARD_TYPE_FLY_LINE
+                bool "Fly Line"
+
+            config BSP_BOARD_TYPE_FIB
+                bool "FIB"
+
+            config BSP_BOARD_TYPE_SAMPLE
+                bool "Customer Sample"
+    endchoice
+
+    menu "I2C"
+        config BSP_I2C_NUM
+            int "I2C peripheral index"
+            default 1
+            range 0 1
+            help
+                ESP32S3 has two I2C peripherals, pick the one you want to use.
+
+        config BSP_I2C_FAST_MODE
+            bool "Enable I2C fast mode"
+            default y
+            help
+                I2C has two speed modes: normal (100kHz) and fast (400kHz).
+
+        config BSP_I2C_CLK_SPEED_HZ
+            int
+            default 400000 if BSP_I2C_FAST_MODE
+            default 100000
+    endmenu
+
+    menu "SPIFFS - Virtual File System"
+        config BSP_SPIFFS_FORMAT_ON_MOUNT_FAIL
+            bool "Format SPIFFS if mounting fails"
+            default n
+            help
+                Format SPIFFS if it fails to mount the filesystem.
+
+        config BSP_SPIFFS_MOUNT_POINT
+            string "SPIFFS mount point"
+            default "/spiffs"
+            help
+                Mount point of SPIFFS in the Virtual File System.
+
+        config BSP_SPIFFS_PARTITION_LABEL
+            string "Partition label of SPIFFS"
+            default "storage"
+            help
+                Partition label which stores SPIFFS.
+
+        config BSP_SPIFFS_MAX_FILES
+            int "Max files supported for SPIFFS VFS"
+            default 5
+            help
+                Supported max files for SPIFFS in the Virtual File System.
+    endmenu
+
+    menu "SD card - Virtual File System"
+        choice
+            prompt "Choose Host"
+            default BSP_SD_HOST_SPI
+            config BSP_SD_HOST_SDMMC
+                bool "SDMMC"
+            config BSP_SD_HOST_SPI
+                bool "SPI"
+        endchoice
+
+        config BSP_SD_FORMAT_ON_MOUNT_FAIL
+            bool "Format SD card if mounting fails"
+            default n
+            help
+                The SDMMC host will format (FAT) the SD card if it fails to mount the filesystem.
+
+        config BSP_SD_MOUNT_POINT
+            string "SD card mount point"
+            default "/sdcard"
+            help
+                Mount point of the SD card in the Virtual File System
+    endmenu
+
+    menu "LCD DSI"
+        choice
+            prompt "Choose LCD Controller"
+            default BSP_LCD_CONTROLLER_ILI9881
+                config BSP_LCD_CONTROLLER_ILI9881
+                    bool "ILI9881"
+
+                config BSP_LCD_CONTROLLER_EK79007
+                    bool "EK79007"
+        endchoice
+
+        config BSP_LCD_DSI_USE_DMA2D
+            bool "Use DMA2D for LCD DSI"
+            default y
+    endmenu
+
+    menu "Display"
+        choice
+            prompt "Choose LVGL Version"
+            default BSP_DISPLAY_LVGL_VERSION_V9
+                config BSP_DISPLAY_LVGL_VERSION_V8
+                    bool "v8"
+
+                config BSP_DISPLAY_LVGL_VERSION_V9
+                    bool "v9"
+        endchoice
+
+        config EXAMPLE_LCD_RGB_BOUNCE_BUFFER_HEIGHT
+            int "RGB Bounce buffer height"
+            default 10
+            help
+                Height of bounce buffer. The width of the buffer is the same as that of the LCD.
+
+        config BSP_DISPLAY_LVGL_TASK_MAX_DELAY_MS
+            int "LVGL timer task maximum delay (ms)"
+            default 500
+            range 2 2000  # Example range, adjust as needed
+            help
+            The maximum delay of the LVGL timer task, in milliseconds.
+
+        config BSP_DISPLAY_LVGL_TASK_MIN_DELAY_MS
+            int "LVGL timer task minimum delay (ms)"
+            default 10
+            range 1 100  # Example range, adjust as needed
+            help
+            The minimum delay of the LVGL timer task, in milliseconds.
+
+        config BSP_DISPLAY_LVGL_TASK_PRIORITY
+            int "LVGL task priority"
+            default 2
+            help
+                The Board Support Package will create a task that will periodically handle LVGL operation in lv_timer_handler().
+
+        config BSP_DISPLAY_LVGL_TASK_STACK_SIZE_KB
+            int "LVGL task stack size (KB)"
+            default 6
+            help
+                Size(KB) of LVGL task stack.
+
+        config BSP_DISPLAY_LVGL_TASK_CORE
+            int "LVGL timer task core"
+            default -1
+            range -1 1
+            help
+            The core of the LVGL timer task.
+            Set to -1 to not specify the core.
+            Set to 1 only if the SoCs support dual-core, otherwise set to -1 or 0.
+
+        config BSP_DISPLAY_LVGL_TICK
+            int "LVGL tick period"
+            default 2
+            range 1 100
+            help
+                Period of LVGL tick timer.
+
+        config BSP_DISPLAY_LVGL_AVOID_TEAR_ENABLE
+            bool "Avoid tearing effect"
+            default "n"
+            help
+                Avoid tearing effect through LVGL buffer mode and double frame buffers of RGB LCD. This feature is only available for RGB LCD.
+
+        choice
+            depends on BSP_DISPLAY_LVGL_AVOID_TEAR_ENABLE
+            prompt "Select Avoid Tearing Mode"
+            default BSP_DISPLAY_LVGL_AVOID_TEAR_ENABLE_MODE_3
+            config BSP_DISPLAY_LVGL_AVOID_TEAR_ENABLE_MODE_1
+                bool "Mode1: LCD double-buffer & LVGL full-refresh"
+            config BSP_DISPLAY_LVGL_AVOID_TEAR_ENABLE_MODE_2
+                bool "Mode2: LCD triple-buffer & LVGL full-refresh"
+            config BSP_DISPLAY_LVGL_AVOID_TEAR_ENABLE_MODE_3
+                bool "Mode3: LCD double-buffer & LVGL direct-mode"
+            help
+                The current tearing prevention mode supports both full refresh mode and direct mode. Tearing prevention mode may consume more PSRAM space
+        endchoice
+
+        config BSP_DISPLAY_LVGL_AVOID_TEAR_ENABLE_MODE
+            depends on BSP_DISPLAY_LVGL_AVOID_TEAR_ENABLE
+            int
+            default 0 if BSP_DISPLAY_LVGL_AVOID_TEAR_ENABLE_MODE_1
+            default 1 if BSP_DISPLAY_LVGL_AVOID_TEAR_ENABLE_MODE_2
+            default 2 if BSP_DISPLAY_LVGL_AVOID_TEAR_ENABLE_MODE_3
+
+        choice
+            depends on !BSP_DISPLAY_LVGL_AVOID_TEAR_ENABLE
+            prompt "Select LVGL buffer memory capability"
+            default BSP_DISPLAY_LVGL_BUF_PSRAM
+            config BSP_DISPLAY_LVGL_BUF_PSRAM
+                bool "PSRAM memory"
+            config BSP_DISPLAY_LVGL_BUF_INTERNAL
+                bool "Internal memory"
+        endchoice
+
+        config BSP_DISPLAY_LVGL_BUF_HEIGHT
+            depends on !BSP_DISPLAY_LVGL_AVOID_TEAR_ENABLE
+            int "LVGL buffer height"
+            default 1280
+            help
+                Height of LVGL buffer. The width of the buffer is the same as that of the LCD.
+
+        config LVGL_PORT_USE_GPU
+            depends on BSP_LCD_DSI_USE_DMA2D && BSP_DISPLAY_LVGL_VERSION_V8 && !BSP_DISPLAY_LVGL_AVOID_TEAR_ENABLE
+            bool "Use GPU"
+            default y
+    endmenu
+
+    config BSP_I2S_NUM
+        int "I2S peripheral index"
+        default 1
+        range 0 1
+        help
+            ESP32S3 has two I2S peripherals, pick the one you want to use.
+endmenu
