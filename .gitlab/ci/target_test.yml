@@ -139,7 +139,7 @@ components_test_touch_proximity_sensor:
       optional: false
   parallel:
     matrix:
-        - IDF_VERSION: ["5.0","5.1","5.2"]
+        - IDF_VERSION: ["5.3"]
           IDF_TARGET: esp32s3
           ENV_TAG: "generic"
   tags:

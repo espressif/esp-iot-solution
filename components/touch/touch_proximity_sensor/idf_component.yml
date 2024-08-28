@@ -1,4 +1,4 @@
-version: "0.1.2"
+version: "0.2.0"
 targets:
   - esp32s3
 description: Touch proximity sensor component for ESP32-S3 (Experimental)
@@ -6,8 +6,12 @@ url: https://github.com/espressif/esp-iot-solution/tree/master/components/touch/
 repository: https://github.com/espressif/esp-iot-solution.git
 issues: https://github.com/espressif/esp-iot-solution/issues
 dependencies:
-  idf: ">=5.0"
-  cmake_utilities: "0.*"
+  idf: ">=5.3"
+  cmake_utilities: "*"
+  touch_sensor_fsm:
+      version: "*"
+  touch_sensor_lowlevel:
+      version: "*"
 examples:
   - path: ../../../examples/touch/touch_proximity
 sbom:

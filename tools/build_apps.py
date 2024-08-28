@@ -63,6 +63,7 @@ def get_cmake_apps(
         build_log_filename='build_log.txt',
         size_json_filename='size.json',
         check_warnings=True,
+        no_preserve=False,
         default_build_targets=default_build_targets,
         manifest_files=[
             str(Path(PROJECT_ROOT) /'components'/'.build-rules.yml'),
