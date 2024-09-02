@@ -6,3 +6,4 @@ dependencies:
   leeebo/tinyusb_src:
     version: "*"
   espressif/esp_lcd_ek79007: "*"
+  espressif/esp_codec_dev: "1.3.0"
