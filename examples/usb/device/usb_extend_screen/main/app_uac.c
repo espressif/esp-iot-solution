@@ -29,13 +29,13 @@ static esp_err_t uac_device_input_cb(uint8_t *buf, size_t len, size_t *bytes_rea
 
 static void uac_device_set_mute_cb(uint32_t mute, void *arg)
 {
-    ESP_LOGI(TAG, "uac_device_set_mute_cb: %"PRIu32"", mute);
+    ESP_LOGD(TAG, "uac_device_set_mute_cb: %"PRIu32"", mute);
     bsp_extra_codec_mute_set(mute);
 }
 
 static void uac_device_set_volume_cb(uint32_t volume, void *arg)
 {
-    ESP_LOGI(TAG, "uac_device_set_volume_cb: %"PRIu32"", volume);
+    ESP_LOGD(TAG, "uac_device_set_volume_cb: %"PRIu32"", volume);
     bsp_extra_codec_volume_set(volume, NULL);
 }
 

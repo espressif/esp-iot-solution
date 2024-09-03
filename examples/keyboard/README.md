@@ -78,6 +78,11 @@ Note: keyboard_rgb_martix comes from the **QMK** project. Due to the use of the 
 
 ### Change LOG
 
+* v0.2.1 - 2024-08-12
+
+- Added debounce time to prevent buttons from being triggered twice consecutively.
+- The speed of the heatmap lighting effect can now be adjusted according to the effect speed, with levels ranging from 1 to 4.
+
 * v0.2.0 - 2024-8-12
 
   * Added support for lighting effects in BLE mode, with the keyboard backlight turning off by default after 60 seconds.

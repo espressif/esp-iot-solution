@@ -11,7 +11,7 @@ extern "C" {
 
 /*!< Keyboard active level */
 #define KBD_ATTIVE_LEVEL      1
-#define KBD_TICKS_INTERVAL_US 500
+#define KBD_TICKS_INTERVAL_US 1000
 
 /*!< Keyboard matrix GPIO */
 #define KBD_ROW_NUM  6
