@@ -8,7 +8,13 @@
 #include "esp_log.h"
 #include "usb_device_uac.h"
 #include "bsp/esp-bsp.h"
+#include "usb_descriptors.h"
+#if CONFIG_IDF_TARGET_ESP32P4
 #include "bsp/bsp_board_extra.h"
+#endif
+#if CONFIG_IDF_TARGET_ESP32S3
+#include "bsp_board_extra.h"
+#endif
 
 static const char *TAG = "app_uac";
 
@@ -45,12 +51,14 @@ esp_err_t app_uac_init(void)
     bsp_extra_codec_set_fs(CONFIG_UAC_SAMPLE_RATE, 16, CONFIG_UAC_SPEAKER_CHANNEL_NUM);
 
     uac_device_config_t config = {
-        .skip_phy_init = true,
+        .skip_tinyusb_init = true,
         .output_cb = uac_device_output_cb,
         .input_cb = uac_device_input_cb,
         .set_mute_cb = uac_device_set_mute_cb,
         .set_volume_cb = uac_device_set_volume_cb,
         .cb_ctx = NULL,
+        .spk_itf_num = ITF_NUM_AUDIO_STREAMING_SPK,
+        .mic_itf_num = ITF_NUM_AUDIO_STREAMING_MIC,
     };
 
     uac_device_init(&config);

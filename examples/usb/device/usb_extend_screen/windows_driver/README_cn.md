@@ -6,9 +6,17 @@ Windows 间接显示驱动程序 (IDD) 模型提供简单的用户模式驱动�
 
 ## 下载链接
 
-[点我下载](https://dl.espressif.com/AE/esp-iot-solution/usb_lcd_windos_driver.zip)
+如不需要修改驱动，直接下载编译好的驱动程序即可。
+
+[点我下载](https://dl.espressif.com/AE/esp-iot-solution/xfz1986_usb_graphic_250224_rc_sign.exe)
 
 ## 如何使用
+
+### 认证驱动
+
+1. 直接双击下载的驱动程序，点击安装
+
+### 自行编译驱动
 
 1. (可忽略) 首先需要关掉 windows 对驱动的检查使用测试模式。
 
@@ -49,9 +57,8 @@ Windows 间接显示驱动程序 (IDD) 模型提供简单的用户模式驱动�
 
 ## 注意事项
 
-* 设备的 VID PID 必须符合驱动文件 INF 中 `DeviceName` 的描述，对于复合设备必须精确到接口号，例如：`USB\VID_303A&PID_2986&MI_00`，修改此文件必须重新编译驱动
+* 设备的 VID PID 必须符合驱动文件 INF 中 `DeviceName` 的描述，对于复合设备请使用 `USB\VID_303A&PID_2986`, 对于纯显示设备请使用 `USB\VID_303A&PID_2987`。
 
 * 该驱动通过 VENDOR 接口与设备进行通信，支持多种分辨率和图片格式，通过接口字符描述符来控制，具体参考 [README](https://github.com/chuanjinpang/win10_idd_xfz1986_usb_graphic_driver_display/blob/main/README.md)
 
 * 驱动仅支持 windows10 及 windows11 系统，其他系统请自行测试
-
