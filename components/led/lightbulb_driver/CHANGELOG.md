@@ -1,4 +1,11 @@
 # ChangeLog
+
+## v1.3.1 - 2024-08-28
+
+### Bug Fixes:
+
+* Delete some conditional judgments and allow external input mix table
+
 ## v1.3.0 - 2024-06-05
 
 ### Enhancements:

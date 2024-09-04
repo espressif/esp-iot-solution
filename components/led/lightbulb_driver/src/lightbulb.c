@@ -779,8 +779,6 @@ esp_err_t lightbulb_init(lightbulb_config_t *config)
     // Check cct output mode
     if (IS_WHITE_CHANNEL_SELECTED()) {
         if (s_lb_obj->cap.enable_precise_cct_control) {
-            LIGHTBULB_CHECK(config->cct_mix_mode.precise.table_size > 0, "mix table size error", goto EXIT);
-
             s_lb_obj->cct_manager.table_size = config->cct_mix_mode.precise.table_size;
             s_lb_obj->cct_manager.kelvin_to_percentage = precise_kelvin_convert_to_percentage;
             s_lb_obj->cct_manager.percentage_to_kelvin = precise_percentage_convert_to_kelvin;
