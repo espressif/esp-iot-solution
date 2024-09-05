@@ -405,7 +405,7 @@ static lv_disp_t *display_init(esp_lcd_panel_handle_t panel_handle)
     st77903_qspi_event_callbacks_t cbs = {
         .on_vsync = qspi_lcd_on_trans_event,
     };
-    esp_lcd_st77903_qspi_register_event_callbacks(lcd_handle, &cbs, NULL);
+    esp_lcd_st77903_qspi_register_event_callbacks(panel_handle, &cbs, NULL);
 #else
     // Normmaly, for QSPI LCD, we just use one buffer for LVGL rendering
     buffer_size = LVGL_PORT_H_RES * LVGL_PORT_BUFFER_HEIGHT;

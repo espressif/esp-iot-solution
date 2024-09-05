@@ -343,6 +343,16 @@ build_example_display_lcd_qspi_with_ram:
   variables:
     EXAMPLE_DIR: examples/display/lcd/qspi_with_ram
 
+build_example_display_lcd_qspi_without_ram:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_display_lcd_qspi_without_ram
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.3
+  variables:
+    EXAMPLE_DIR: examples/display/lcd/qspi_without_ram
+
 build_example_display_lcd_rgb_lcd_8bit:
   extends:
     - .build_examples_template

@@ -404,7 +404,7 @@
   - "examples/display/lcd/qspi_with_ram/**/*"
 
 .patterns-example_display_lcd_qspi_without_ram: &patterns-example_display_lcd_qspi_without_ram
-  - "examples/display/lcd/qspi_without_ram/**"
+  - "examples/display/lcd/qspi_without_ram/**/*"
 
 .patterns-example_display_lcd_rgb_lcd_8bit: &patterns-example_display_lcd_rgb_lcd_8bit
   - "examples/display/lcd/rgb_lcd_8bit/**/*"
