@@ -233,6 +233,7 @@ static void button_handler(button_dev_t *btn)
                     }
                     if (btn->count[0] < btn->size[BUTTON_LONG_PRESS_START] && abs(ticks_time - time) <= TOLERANCE) {
                         do {
+                            btn->event = (uint8_t)BUTTON_LONG_PRESS_START;
                             cb_info[btn->count[0]].cb(btn, cb_info[btn->count[0]].usr_data);
                             btn->count[0]++;
                             if (btn->count[0] >= btn->size[BUTTON_LONG_PRESS_START]) {
