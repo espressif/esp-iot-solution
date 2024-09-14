@@ -177,19 +177,6 @@ TEST_CASE("gpio button test", "[button][iot]")
 
 TEST_CASE("gpio button get event test", "[button][iot]")
 {
-    const char *EVENT_STR[] = {"BUTTON_PRESS_DOWN",
-                               "BUTTON_PRESS_UP",
-                               "BUTTON_PRESS_REPEAT",
-                               "BUTTON_PRESS_REPEAT_DONE",
-                               "BUTTON_SINGLE_CLICK",
-                               "BUTTON_DOUBLE_CLICK",
-                               "BUTTON_MULTIPLE_CLICK",
-                               "BUTTON_LONG_PRESS_START",
-                               "BUTTON_LONG_PRESS_HOLD",
-                               "BUTTON_LONG_PRESS_UP",
-                               "BUTTON_PRESS_END",
-                              };
-
     button_config_t cfg = {
         .type = BUTTON_TYPE_GPIO,
         .long_press_time = CONFIG_BUTTON_LONG_PRESS_TIME_MS,
@@ -209,7 +196,7 @@ TEST_CASE("gpio button get event test", "[button][iot]")
     while (1) {
         button_event_t event = iot_button_get_event(g_btns[0]);
         if (event != BUTTON_NONE_PRESS) {
-            printf("event is %s\n", EVENT_STR[event]);
+            ESP_LOGI(TAG, "event is %s", iot_button_get_event_str(event));
         }
         vTaskDelay(pdMS_TO_TICKS(1));
     }
@@ -454,19 +441,6 @@ TEST_CASE("adc button idf5 drive test", "[button][iot]")
 #define GPIO_OUTPUT_IO_45 45
 static EventGroupHandle_t g_check = NULL;
 static SemaphoreHandle_t g_auto_check_pass = NULL;
-static const char* button_event_str[BUTTON_EVENT_MAX] = {
-    "BUTTON_PRESS_DOWN",
-    "BUTTON_PRESS_UP",
-    "BUTTON_PRESS_REPEAT",
-    "BUTTON_PRESS_REPEAT_DONE",
-    "BUTTON_SINGLE_CLICK",
-    "BUTTON_DOUBLE_CLICK",
-    "BUTTON_MULTIPLE_CLICK",
-    "BUTTON_LONG_PRESS_START",
-    "BUTTON_LONG_PRESS_HOLD",
-    "BUTTON_LONG_PRESS_UP",
-    "BUTTON_PRESS_END",
-};
 
 static button_event_t state = BUTTON_PRESS_DOWN;
 
@@ -545,7 +519,7 @@ static void button_auto_check_cb_1(void *arg, void *data)
 static void button_auto_check_cb(void *arg, void *data)
 {
     if (iot_button_get_event(g_btns[0]) == state) {
-        ESP_LOGI(TAG, "Auto check: button event %s pass", button_event_str[state]);
+        ESP_LOGI(TAG, "Auto check: button event %s pass", iot_button_get_event_str(state));
         xEventGroupSetBits(g_check, BIT(0));
         if (++state >= BUTTON_EVENT_MAX) {
             xSemaphoreGive(g_auto_check_pass);
@@ -664,7 +638,7 @@ static void button_long_press_auto_check_cb(void *arg, void *data)
     uint16_t time = 0xffff & value;
     uint16_t ticks_time = iot_button_get_ticks_time(g_btns[0]);
     if (status == value && abs(ticks_time - time) <= TOLERANCE) {
-        ESP_LOGI(TAG, "Auto check: button event: %s and time: %d pass", button_event_str[event], time);
+        ESP_LOGI(TAG, "Auto check: button event: %s and time: %d pass", iot_button_get_event_str(state), time);
 
         if (event == BUTTON_LONG_PRESS_UP && time == long_press_time[4]) {
             xSemaphoreGive(long_press_auto_check_pass);

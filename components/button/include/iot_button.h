@@ -250,6 +250,33 @@ size_t iot_button_count_event(button_handle_t btn_handle, button_event_t event);
 button_event_t iot_button_get_event(button_handle_t btn_handle);
 
 /**
+ * @brief Get the string representation of a button event.
+ *
+ * This function returns the corresponding string for a given button event.
+ * If the event value is outside the valid range, the function returns error string "event value is invalid".
+ *
+ * @param[in] event The button event to be converted to a string.
+ *
+ * @return
+ *      - Pointer to the event string if the event is valid.
+ *      - "invalid event" if the event value is invalid.
+ */
+const char *iot_button_get_event_str(button_event_t event);
+
+/**
+ * @brief Log the current button event as a string.
+ *
+ * This function prints the string representation of the current event associated with the button.
+ *
+ * @param[in] btn_handle Handle to the button object.
+ *
+ * @return
+ *      - ESP_OK: Successfully logged the event string.
+ *      - ESP_FAIL: Invalid button handle.
+ */
+esp_err_t iot_button_print_event(button_handle_t btn_handle);
+
+/**
  * @brief Get button repeat times
  *
  * @param btn_handle Button handle
