@@ -20,9 +20,9 @@ Overall, during each ADC measurement, there will be 1-2 times ADC reading. For m
 Patch Use Guide
 -------------------
 
-At present, the patch file is developed based on ESP-IDF ``release/v4.4`` branch:
+At present, the patch file is developed based on ESP-IDF ``v4.4.8``:
 
-1. Please make sure ESP-IDF has been ``checked out`` to the ``release/v4.4`` branch
+1. Please make sure ESP-IDF has been ``checked out`` to the ``v4.4.8``
 2. Please download file :download:`esp32s3_adc_range_to_3100.patch <../../_static/esp32s3_adc_range_to_3100.patch>` to anywhere you want
 3. Using command ``git am --signoff < esp32s3_adc_range_to_3100.patch`` to apply the patch to ESP-IDF
 

@@ -35,7 +35,8 @@ repos:
             .*_pb2.py|
             .*.pb-c.h|
             .*.pb-c.c|
-            .*.yuv
+            .*.yuv|
+            .*.patch
           )$
       - id: end-of-file-fixer
         exclude: *whitespace_excludes

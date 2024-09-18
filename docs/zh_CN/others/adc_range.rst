@@ -20,9 +20,9 @@ ESP32-S3 可通过配置寄存器调整 ADC 的偏置电压，再结合高电压
 Patch 使用方法
 -------------------
 
-当前 Patch 基于 ESP-IDF ``release/v4.4`` 分支开发：
+当前 Patch 基于 ESP-IDF ``v4.4.8`` 开发：
 
-1. 确认 ESP-IDF 已经 ``checkout`` 到 ``release/v4.4`` 分支
+1. 确认 ESP-IDF 已经 ``checkout`` 到 ``v4.4.8``
 2. 下载 :download:`esp32s3_adc_range_to_3100.patch <../../_static/esp32s3_adc_range_to_3100.patch>` 文件
 3. 使用指令 ``git am --signoff < esp32s3_adc_range_to_3100.patch`` 将 Patch 应用到 IDF 中
 4. 请注意， 该方案仅对 ``esp_adc_cal_get_voltage`` 接口有效，用户可直接调用该接口获取扩展后的读数
