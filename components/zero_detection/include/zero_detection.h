@@ -61,6 +61,14 @@ typedef enum {
 } zero_signal_type_t;
 
 /**
+ * @brief Zero detection signal edge type
+ */
+typedef enum {
+    CAP_EDGE_POS = 0,
+    CAP_EDGE_NEG,
+} zero_signal_edge_t;
+
+/**
  * @brief Zero detection driver type
  */
 typedef enum {
@@ -78,7 +86,7 @@ typedef union {
      * @brief Signal exceeds frequency range data return type
      */
     struct signal_freq_event_data_t {
-        mcpwm_capture_edge_t cap_edge; /*!< Trigger edge of zero cross signal */
+        zero_signal_edge_t cap_edge; /*!< Trigger edge of zero cross signal */
         uint32_t full_cycle_us;        /*!< Current signal cycle */
     } signal_freq_event_data;          /*!< Signal freq event data struct */
 
@@ -86,7 +94,7 @@ typedef union {
      * @brief Signal valid data return type
      */
     struct signal_valid_event_data_t {
-        mcpwm_capture_edge_t cap_edge; /*!< Trigger edge of zero cross signal */
+        zero_signal_edge_t cap_edge; /*!< Trigger edge of zero cross signal */
         uint32_t full_cycle_us;        /*!< Current signal cycle */
         uint16_t valid_count;          /*!< Counting when the signal is valid */
     } signal_valid_event_data;         /*!< Signal valid event data struct */
@@ -95,7 +103,7 @@ typedef union {
      * @brief Signal invalid data return type
      */
     struct signal_invalid_event_data_t {
-        mcpwm_capture_edge_t cap_edge; /*!< Trigger edge of zero cross signal */
+        zero_signal_edge_t cap_edge; /*!< Trigger edge of zero cross signal */
         uint32_t full_cycle_us;        /*!< Current signal cycle */
         uint16_t invalid_count;        /*!< Counting when the signal is invalid */
     } signal_invalid_event_data;       /*!< Signal invalid event data struct */
