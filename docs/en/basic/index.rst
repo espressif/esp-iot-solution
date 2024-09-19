@@ -6,6 +6,6 @@ Basic Component
 .. toctree::
     :maxdepth: 1
 
-    Communication Bus <bus>
+    Communication Bus <bus/index.rst>
     I2S LCD Driver <i2s_lcd>
     Boards Support<boards>

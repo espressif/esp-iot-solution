@@ -6,9 +6,17 @@
 
 #ifndef _I2C_BUS_H_
 #define _I2C_BUS_H_
+
+#include "esp_idf_version.h"
+
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
+#include "driver/i2c_master.h"
+#else
 #include "driver/i2c.h"
+#endif
 
 #define NULL_I2C_MEM_ADDR 0xFF          /*!< set mem_address to NULL_I2C_MEM_ADDR if i2c device has no internal address during read/write */
+#define NULL_I2C_MEM_16BIT_ADDR 0XFFFF  /*!< set 16bit mem_address to NULL_I2C_MEM_16BIT_ADDR if i2c device has no internal address during read/write */
 #define NULL_I2C_DEV_ADDR 0xFF          /*!< invalid i2c device address */
 typedef void *i2c_bus_handle_t;         /*!< i2c bus handle */
 typedef void *i2c_bus_device_handle_t;  /*!< i2c device handle */
@@ -21,6 +29,25 @@ extern "C"
 #if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0))
 #define gpio_pad_select_gpio esp_rom_gpio_pad_select_gpio
 #define portTICK_RATE_MS portTICK_PERIOD_MS
+#endif
+
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
+/**
+ * @brief I2C initialization parameters
+ */
+typedef struct {
+    i2c_mode_t mode;                    /*!< I2C mode */
+    int sda_io_num;                     /*!< GPIO number for I2C sda signal */
+    int scl_io_num;                     /*!< GPIO number for I2C scl signal */
+    bool sda_pullup_en;                 /*!< Internal GPIO pull mode for I2C sda signal*/
+    bool scl_pullup_en;                 /*!< Internal GPIO pull mode for I2C scl signal*/
+    struct {
+        uint32_t clk_speed;             /*!< I2C clock frequency for master mode, (no higher than 1MHz for now) */
+    } master;                           /*!< I2C master config */
+    uint32_t clk_flags;                 /*!< Bitwise of ``I2C_SCLK_SRC_FLAG_**FOR_DFS**`` for clk source choice*/
+} i2c_config_t;
+
+typedef void *i2c_cmd_handle_t;         /*!< I2C command handle  */
 #endif
 
 /**************************************** Public Functions (Application level)*********************************************/
