@@ -255,6 +255,14 @@ static uint8_t standard_kelvin_convert_to_percentage(uint16_t kelvin)
 static uint8_t precise_kelvin_convert_to_percentage(uint16_t kelvin)
 {
     // Ensure the input kelvin value is within the specified range
+    if (kelvin > s_lb_obj->cct_manager.kelvin_range.max) {
+        kelvin = s_lb_obj->cct_manager.kelvin_range.max;
+    }
+    if (kelvin < s_lb_obj->cct_manager.kelvin_range.min) {
+        kelvin = s_lb_obj->cct_manager.kelvin_range.min;
+    }
+
+    // Ensure the input kelvin value is within the specified range
     lightbulb_cct_mapping_data_t data;
     data = search_mapping_cct_data(kelvin);
 
@@ -841,6 +849,9 @@ esp_err_t lightbulb_init(lightbulb_config_t *config)
                 s_lb_obj->cct_manager.table_size = config->cct_mix_mode.precise.table_size;
                 s_lb_obj->cct_manager.mix_table = calloc(s_lb_obj->cct_manager.table_size, sizeof(lightbulb_cct_mapping_data_t));
                 LIGHTBULB_CHECK(s_lb_obj->cct_manager.mix_table, "calloc fail", goto EXIT);
+
+                s_lb_obj->cct_manager.kelvin_range.min = config->cct_mix_mode.precise.table[0].cct_kelvin;
+                s_lb_obj->cct_manager.kelvin_range.max = config->cct_mix_mode.precise.table[config->cct_mix_mode.precise.table_size - 1].cct_kelvin;
 
                 for (int i = 0; i < s_lb_obj->cct_manager.table_size; i++) {
                     memcpy(&s_lb_obj->cct_manager.mix_table[i], &config->cct_mix_mode.precise.table[i], sizeof(lightbulb_cct_mapping_data_t));
