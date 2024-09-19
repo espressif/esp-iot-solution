@@ -52,15 +52,16 @@ INPUT = \
     $(PROJECT_PATH)/components/motor/esp_sensorless_bldc_control/user_cfg/bldc_user_cfg.h \
     $(PROJECT_PATH)/components/motor/servo/include/iot_servo.h \
     $(PROJECT_PATH)/components/openai/include/OpenAI.h \
+    $(PROJECT_PATH)/components/sensors/ntc_driver/include/ntc_driver.h \
+    $(PROJECT_PATH)/components/sensors/power_monitor/ina236/include/ina236.h \
     $(PROJECT_PATH)/components/sensors/sensor_hub/include/hal/humiture_hal.h \
     $(PROJECT_PATH)/components/sensors/sensor_hub/include/hal/imu_hal.h \
     $(PROJECT_PATH)/components/sensors/sensor_hub/include/hal/light_sensor_hal.h \
     $(PROJECT_PATH)/components/sensors/sensor_hub/include/iot_sensor_hub.h \
     $(PROJECT_PATH)/components/sensors/sensor_hub/include/sensor_type.h \
-    $(PROJECT_PATH)/components/sensors/ntc_driver/include/ntc_driver.h \
-    $(PROJECT_PATH)/components/sensors/power_monitor/ina236/include/ina236.h \
     $(PROJECT_PATH)/components/touch/touch_proximity_sensor/include/touch_proximity_sensor.h \
     $(PROJECT_PATH)/components/usb/esp_msc_ota/include/esp_msc_ota.h \
+    $(PROJECT_PATH)/components/usb/esp_tinyuf2/esp_tinyuf2.h \
     $(PROJECT_PATH)/components/usb/iot_usbh_cdc/include/iot_usbh_cdc.h \
     $(PROJECT_PATH)/components/usb/usb_device_uac/include/usb_device_uac.h \
     $(PROJECT_PATH)/components/usb/usb_device_uvc/include/usb_device_uvc.h \

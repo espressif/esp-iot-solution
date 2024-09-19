@@ -41,10 +41,10 @@ typedef void (*nvs_modified_cb_t)(void);
  *
  */
 typedef struct {
-    esp_partition_subtype_t subtype;  /*! Partition subtype. if ESP_PARTITION_SUBTYPE_ANY will use the next_update_partition by default. */
-    const char *label;                /*! Partition label. Set this value if looking for partition with a specific name. if subtype==ESP_PARTITION_SUBTYPE_ANY, label default to NULL.*/
-    bool if_restart;                  /*! if restart system to new app partition after UF2 flashing done */
-    update_complete_cb_t complete_cb; /*! user callback called after uf2 update complete */
+    esp_partition_subtype_t subtype;  /*!< Partition subtype. if ESP_PARTITION_SUBTYPE_ANY will use the next_update_partition by default. */
+    const char *label;                /*!< Partition label. Set this value if looking for partition with a specific name. if subtype==ESP_PARTITION_SUBTYPE_ANY, label default to NULL.*/
+    bool if_restart;                  /*!< if restart system to new app partition after UF2 flashing done */
+    update_complete_cb_t complete_cb; /*!< user callback called after uf2 update complete */
 } tinyuf2_ota_config_t;
 
 /**
@@ -52,15 +52,18 @@ typedef struct {
  *
  */
 typedef struct {
-    const char *part_name;            /*! Partition name. */
-    const char *namespace_name;       /*! Namespace name. */
-    nvs_modified_cb_t modified_cb;    /*! user callback called after uf2 update complete */
+    const char *part_name;            /*!< Partition name. */
+    const char *namespace_name;       /*!< Namespace name. */
+    nvs_modified_cb_t modified_cb;    /*!< user callback called after uf2 update complete */
 } tinyuf2_nvs_config_t;
 
+/**
+ * @brief tinyuf2 current state
+ */
 typedef enum {
-    TINYUF2_STATE_NOT_INSTALLED = 0,
-    TINYUF2_STATE_INSTALLED,
-    TINYUF2_STATE_MOUNTED,
+    TINYUF2_STATE_NOT_INSTALLED = 0,  /*!< tinyuf2 driver not installed */
+    TINYUF2_STATE_INSTALLED,          /*!< tinyuf2 driver installed */
+    TINYUF2_STATE_MOUNTED,            /*!< USB mounted */
 } tinyuf2_state_t;
 
 /**
@@ -81,6 +84,7 @@ esp_err_t esp_tinyuf2_install(tinyuf2_ota_config_t *ota_config, tinyuf2_nvs_conf
  * @note not release memory due to tinyusb not support teardown
  *
  * @return esp_err_t
+ *      - ESP_ERR_INVALID_STATE tinyuf2 not installed
  *      - ESP_OK  Success
  */
 esp_err_t esp_tinyuf2_uninstall(void);
