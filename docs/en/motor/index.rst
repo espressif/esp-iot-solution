@@ -7,3 +7,4 @@ Motor
 
     BLDC <bldc/index>
     Servo <servo>
+    FOC <foc/esp_simplefoc>

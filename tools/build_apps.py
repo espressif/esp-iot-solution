@@ -63,7 +63,6 @@ def get_cmake_apps(
         build_log_filename='build_log.txt',
         size_json_filename='size.json',
         check_warnings=True,
-        preserve=True,
         default_build_targets=default_build_targets,
         manifest_files=[
             str(Path(PROJECT_ROOT) /'components'/'.build-rules.yml'),
@@ -110,6 +109,7 @@ def main(args):  # type: (argparse.Namespace) -> None
         keep_going=True,
         ignore_warning_strs=IGNORE_WARNINGS,
         copy_sdkconfig=True,
+        no_preserve=False,
     )
 
     sys.exit(ret_code)

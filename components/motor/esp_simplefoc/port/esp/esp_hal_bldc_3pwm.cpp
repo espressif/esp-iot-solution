@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -355,7 +355,11 @@ int BLDCDriver3PWM::init()
                 .duty_resolution = _LEDC_DUTY_RES,
                 .timer_num = LEDC_TIMER_0,
                 .freq_hz = _LEDC_FREQUENCY, // Set output frequency at 20 kHz
+#if CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32H2
+                .clk_cfg = LEDC_AUTO_CLK
+#else
                 .clk_cfg = LEDC_USE_APB_CLK
+#endif
             };
             ESP_ERROR_CHECK(ledc_timer_config(&ledc_timer));
 
@@ -510,7 +514,11 @@ int BLDCDriver3PWM::init(std::vector<int> _ledc_channels)
         .duty_resolution = _LEDC_DUTY_RES,
         .timer_num = LEDC_TIMER_0,
         .freq_hz = _LEDC_FREQUENCY, // Set output frequency at 20 kHz
+#if CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32H2
+        .clk_cfg = LEDC_AUTO_CLK
+#else
         .clk_cfg = LEDC_USE_APB_CLK
+#endif
     };
     ESP_ERROR_CHECK(ledc_timer_config(&ledc_timer));
 

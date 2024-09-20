@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.0.0 - 2024-9-20
+### Enhancements:
+* FOC:
+    * MT6701 encoder supports I2C mode.
+    * Modify the ledc source clock of ESP32C6 and ESP32H2 to auto.
+    * Version maintenance.
 
 ## v0.2.0 - 2024-7-5
 ### Enhancements:

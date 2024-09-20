@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -52,6 +52,14 @@ MT6701::MT6701(spi_host_device_t spi_host, gpio_num_t sclk_io, gpio_num_t miso_i
     is_installed = false;
 }
 
+MT6701::MT6701(i2c_port_t i2c_port, gpio_num_t sclk_io, gpio_num_t miso_io)
+{
+    _i2c_port = i2c_port;
+    _sclk_io = sclk_io;
+    _miso_io = miso_io;
+    is_installed = false;
+}
+
 MT6701::~MT6701()
 {
     if (is_installed) {
@@ -63,46 +71,76 @@ void MT6701::init()
 {
     esp_err_t ret;
 
-    /*!< Configuration for the spi bus */
-    spi_bus_config_t buscfg = {
-        .mosi_io_num = _mosi_io,
-        .miso_io_num = _miso_io,
-        .sclk_io_num = _sclk_io,
-        .quadwp_io_num = -1,
-        .quadhd_io_num = -1,
-        .max_transfer_sz = 1000,
-    };
+    if (_spi_host != SPI_HOST_MAX) {
+        // Configuration for the spi bus
+        spi_bus_config_t buscfg = {
+            .mosi_io_num = _mosi_io,
+            .miso_io_num = _miso_io,
+            .sclk_io_num = _sclk_io,
+            .quadwp_io_num = -1,
+            .quadhd_io_num = -1,
+            .max_transfer_sz = 1000,
+        };
 
-    ret = spi_bus_initialize(_spi_host, &buscfg, SPI_DMA_CH_AUTO);
-    ESP_RETURN_ON_FALSE(ret == ESP_OK,, TAG, "SPI bus init fail");
+        ret = spi_bus_initialize(_spi_host, &buscfg, SPI_DMA_CH_AUTO);
+        ESP_RETURN_ON_FALSE(ret == ESP_OK,, TAG, "SPI bus init fail");
 
-    spi_device_interface_config_t dev_cfg = {
-        .command_bits = 0,
-        .address_bits = 0,
-        .dummy_bits = 0,
-        .mode = 3,
-        .clock_speed_hz = 4000000,
-        .spics_io_num = _cs_io,
-        .flags = 0,
-        .queue_size = 1,
-        .pre_cb = NULL,
-        .post_cb = NULL,
-    };
+        spi_device_interface_config_t dev_cfg = {
+            .command_bits = 0,
+            .address_bits = 0,
+            .dummy_bits = 0,
+            .mode = 3,
+            .clock_speed_hz = 4000000,
+            .spics_io_num = _cs_io,
+            .flags = 0,
+            .queue_size = 1,
+            .pre_cb = NULL,
+            .post_cb = NULL,
+        };
 
-    ret = spi_bus_add_device(_spi_host, &dev_cfg, &spi_device);
-    ESP_RETURN_ON_FALSE(ret == ESP_OK,, TAG, "SPI bus add device fail");
+        ret = spi_bus_add_device(_spi_host, &dev_cfg, &spi_device);
+        ESP_RETURN_ON_FALSE(ret == ESP_OK,, TAG, "SPI bus add device fail");
 
-    is_installed = true;
+        is_installed = true;
+    } else if (_i2c_port != I2C_NUM_MAX) {
+        // Configuration for the i2c bus
+        i2c_config_t i2c_config = {
+            .mode = I2C_MODE_MASTER,
+            .sda_io_num = _miso_io,
+            .scl_io_num = _sclk_io,
+            .sda_pullup_en = GPIO_PULLUP_ENABLE,
+            .scl_pullup_en = GPIO_PULLUP_ENABLE,
+        };
+        i2c_config.master.clk_speed = 400 * 1000;
+
+        ret = i2c_param_config(_i2c_port, &i2c_config);
+        ESP_RETURN_ON_FALSE(ret == ESP_OK,, TAG, "I2C config fail");
+
+        ret = i2c_driver_install(_i2c_port, i2c_config.mode, 0, 0, 0);
+        ESP_RETURN_ON_FALSE(ret == ESP_OK,, TAG, "I2C install fail");
+
+        is_installed = true;
+    } else {
+        is_installed = false;
+    }
+
 }
 
 void MT6701::deinit()
 {
     esp_err_t ret;
-    ret = spi_bus_remove_device(spi_device);
-    ESP_RETURN_ON_FALSE(ret == ESP_OK,, TAG, "SPI remove device fail");
-    ret = spi_bus_free(_spi_host);
-    ESP_RETURN_ON_FALSE(ret == ESP_OK,, TAG, "SPI free fail");
-    is_installed = false;
+
+    if (_spi_host != SPI_HOST_MAX) {
+        ret = spi_bus_remove_device(spi_device);
+        ESP_RETURN_ON_FALSE(ret == ESP_OK,, TAG, "SPI remove device fail");
+        ret = spi_bus_free(_spi_host);
+        ESP_RETURN_ON_FALSE(ret == ESP_OK,, TAG, "SPI free fail");
+        is_installed = false;
+    } else if (_i2c_port != I2C_NUM_MAX) {
+        ret = i2c_driver_delete(_i2c_port);
+        ESP_RETURN_ON_FALSE(ret == ESP_OK,, TAG, "I2C del fail");
+        is_installed = false;
+    }
 }
 
 float MT6701::getSensorAngle()
@@ -111,29 +149,41 @@ float MT6701::getSensorAngle()
     static float angle = 0.0;
     static float previous_angle = 0.0;
 
-    spi_transaction_t spi_transaction = {
-        .flags = SPI_TRANS_USE_RXDATA,
-        .length = 24,
-        .rxlength = 24,
-        .tx_buffer = NULL,
-        .rx_buffer = NULL,
-    };
+    if (_spi_host != SPI_HOST_MAX) {
+        spi_transaction_t spi_transaction = {
+            .flags = SPI_TRANS_USE_RXDATA,
+            .length = 24,
+            .rxlength = 24,
+            .tx_buffer = NULL,
+            .rx_buffer = NULL,
+        };
 
-    ret = spi_device_polling_transmit(spi_device, &spi_transaction);
-    ESP_RETURN_ON_FALSE(ret == ESP_OK, 0.0, TAG, "SPI transaction failed: %s", esp_err_to_name(ret));
+        ret = spi_device_polling_transmit(spi_device, &spi_transaction);
+        ESP_RETURN_ON_FALSE(ret == ESP_OK, 0.0, TAG, "SPI transaction failed: %s", esp_err_to_name(ret));
 
-    uint32_t spi_32 = ((int32_t)spi_transaction.rx_data[0] << 16) | ((int32_t)spi_transaction.rx_data[1] << 8) | spi_transaction.rx_data[2];
-    uint32_t angle_spi = spi_32 >> 10;
+        uint32_t spi_32 = ((int32_t)spi_transaction.rx_data[0] << 16) | ((int32_t)spi_transaction.rx_data[1] << 8) | spi_transaction.rx_data[2];
+        uint32_t angle_spi = spi_32 >> 10;
 
-    uint8_t received_crc = spi_32 & 0x3F;
-    uint8_t calculated_crc = CRC6_43_18bit(spi_32 >> 6);
+        uint8_t received_crc = spi_32 & 0x3F;
+        uint8_t calculated_crc = CRC6_43_18bit(spi_32 >> 6);
 
-    if (received_crc == calculated_crc) {
-        angle = (float)angle_spi * 2 * M_PI / 16384;
-        previous_angle = angle;
-        ESP_LOGD(TAG, "Angle: %f", angle);
-    } else {
-        return previous_angle;
+        if (received_crc == calculated_crc) {
+            angle = (float)angle_spi * 2 * M_PI / 16384;
+            previous_angle = angle;
+            ESP_LOGD(TAG, "Angle: %f", angle);
+        } else {
+            return previous_angle;
+        }
+        return angle;
+    } else if (_i2c_port != I2C_NUM_MAX) {
+        uint8_t raw_angle_addr = 0x03;
+        uint8_t raw_angle_buffer[2] = {0};
+        if (i2c_master_write_read_device(_i2c_port, 0x06, &raw_angle_addr, 1, raw_angle_buffer, 2, 1000 / portTICK_PERIOD_MS) != ESP_OK) {
+            return -1;
+        }
+        angle = ((int)((raw_angle_buffer[0] << 6) | (raw_angle_buffer[1] >> 2))) * 0.00038349519f; /*!< Converts raw data into angle information in radians. */
+        return angle;
     }
-    return angle;
+
+    return -1;
 }
