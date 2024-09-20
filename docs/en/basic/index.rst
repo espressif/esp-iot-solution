@@ -9,3 +9,4 @@ Basic Component
     Communication Bus <bus>
     I2S LCD Driver <i2s_lcd>
     Boards Support<boards>
+    CMake Utilities <cmake_utilities>
