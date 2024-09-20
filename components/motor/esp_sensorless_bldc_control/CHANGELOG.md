@@ -1,5 +1,8 @@
 # ChangeLog
 
+## v1.0.0 - 2024-9-20
+
+* Component version maintenance.
 
 ## v0.3.0 - 2024-6-20
 
