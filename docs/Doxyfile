@@ -35,7 +35,6 @@ INPUT = \
     $(PROJECT_PATH)/components/bluetooth/ble_services/hts/include/esp_hts.h \
     $(PROJECT_PATH)/components/bluetooth/ble_services/tps/include/esp_tps.h \
     $(PROJECT_PATH)/components/bus/include/i2s_lcd_driver.h \
-    $(PROJECT_PATH)/components/bus/include/spi_bus.h \
     $(PROJECT_PATH)/components/button/include/iot_button.h \
     $(PROJECT_PATH)/components/display/screen/interface_driver/scr_interface_driver.h \
     $(PROJECT_PATH)/components/display/screen/screen_driver.h \
@@ -59,6 +58,7 @@ INPUT = \
     $(PROJECT_PATH)/components/sensors/sensor_hub/include/hal/light_sensor_hal.h \
     $(PROJECT_PATH)/components/sensors/sensor_hub/include/iot_sensor_hub.h \
     $(PROJECT_PATH)/components/sensors/sensor_hub/include/sensor_type.h \
+    $(PROJECT_PATH)/components/spi_bus/include/spi_bus.h \
     $(PROJECT_PATH)/components/touch/touch_proximity_sensor/include/touch_proximity_sensor.h \
     $(PROJECT_PATH)/components/usb/esp_msc_ota/include/esp_msc_ota.h \
     $(PROJECT_PATH)/components/usb/esp_tinyuf2/esp_tinyuf2.h \
