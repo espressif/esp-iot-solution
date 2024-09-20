@@ -58,7 +58,7 @@ Supported file systems:
       - √
       - √
       - X
-      - X
+      - √
 
 
 .. Note::
