@@ -57,3 +57,25 @@ you can also use the script [gen_custom_ota.py](https://github.com/espressif/esp
 ```plaintext
 python3 gen_custom_ota.py -hv v3 -i simple_ota.bin --add_app_header
 ```
+
+## Example Output
+
+```
+I (4601) simple_ota_example: Starting OTA example task
+I (4611) simple_ota_example: Attempting to download update from https://192.168.4.102:8070/simple_ota.bin.xz.packed
+I (4621) main_task: Returned from app_main()
+I (5071) esp_https_ota: Starting OTA...
+I (5071) custom_image: OTA to ota_1
+I (5071) esp_https_ota: Writing to partition subtype 17 at offset 0x150000
+I (13131) simple_ota_example: OTA Succeed, Rebooting...
+...
+I (115) boot_custom: bootloader plus version: 0.2.6
+I (252) boot_custom: start OTA to slot 0
+I (10268) boot_custom: OTA success, boot from slot 0
+I (10268) esp_image: segment 0: paddr=00020020 vaddr=3c0c0020 size=2a8cch (174284) map
+I (10299) esp_image: segment 1: paddr=0004a8f4 vaddr=3fc92e00 size=02d88h ( 11656) load
+I (10301) esp_image: segment 2: paddr=0004d684 vaddr=40380000 size=02994h ( 10644) load
+I (10307) esp_image: segment 3: paddr=00050020 vaddr=42000020 size=b1408h (726024) map
+I (10427) esp_image: segment 4: paddr=00101430 vaddr=40382994 size=102b0h ( 66224) load
+I (10445) boot: Loaded app from partition at offset 0x20000
+```
