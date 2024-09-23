@@ -85,7 +85,7 @@ ESP32-S/C 系列 USB 外设支持情况
      - USB OTG High-speed
      - USB OTG Full-speed
      - USB-Serial-JTAG
-     - Fulls-peed PHY
+     - Full-speed PHY
      - High-speed PHY
    * - **ESP32-P4**
      - √
