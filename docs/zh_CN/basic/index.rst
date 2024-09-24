@@ -9,3 +9,4 @@
     通信总线 <bus>
     I2S LCD 驱动 <i2s_lcd>
     板级支持 <boards>
+    CMake 工具集 <cmake_utilities>

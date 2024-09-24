@@ -4,28 +4,15 @@
 
 This component is aiming to provide some useful CMake utilities outside of ESP-IDF.
 
-## Use
+**Supported features:**
 
-1. Add dependency of this component in your component or project's idf_component.yml.
+- `project_include.cmake`: add additional features like `DIAGNOSTICS_COLOR` to the project. The file will be automatically parsed, for details, please refer [project-include-cmake](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-guides/build-system.html#project-include-cmake>).
+- `package_manager.cmake`: provides functions to manager components' versions, etc.
+- `gcc.cmake`: manager the GCC compiler options like `LTO` through menuconfig.
+- `relinker.cmake` provides a way to move IRAM functions to flash to save RAM space.
+- `gen_compressed_ota.cmake`: add new command `idf.py gen_compressed_ota` to generate `xz` compressed OTA binary. please refer [xz](https://github.com/espressif/esp-iot-solution/tree/master/components/utilities/xz).
+- `gen_single_bin.cmake`: add new command `idf.py gen_single_bin` to generate single combined bin file (combine app, bootloader, partition table, etc).
 
-    ```yml
-    dependencies:
-      espressif/cmake_utilities: "0.*"
-    ```
+## User Guide
 
-2. Include the CMake file you need in your component's CMakeLists.txt after `idf_component_register`, or in your project's CMakeLists.txt
-
-    ```cmake
-    // Note: should remove .cmake postfix when using include(), otherwise the requested file will not found
-    // Note: should place this line after `idf_component_register` function
-    // only include the one you needed.
-    include(package_manager)
-    ```
-
-3. Then you can use the corresponding CMake function which is provided by the CMake file.
-
-## Supported features
-
-1. [relinker](https://github.com/espressif/esp-iot-solution/blob/master/tools/cmake_utilities/docs/relinker.md)
-2. [gen_compressed_ota](https://github.com/espressif/esp-iot-solution/blob/master/tools/cmake_utilities/docs/gen_compressed_ota.md)
-3. [GCC Optimization](https://github.com/espressif/esp-iot-solution/blob/master/tools/cmake_utilities/docs/gcc.md)
+[cmake_utilities user guide](https://docs.espressif.com/projects/esp-iot-solution/zh_CN/latest/basic/cmake_utilities.html)
