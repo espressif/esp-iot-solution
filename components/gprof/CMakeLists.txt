@@ -12,4 +12,6 @@ idf_component_register(SRCS ${srcs}
                        REQUIRES "spi_flash" "app_update")
 
 include(package_manager)
-cu_pkg_define_version(${CMAKE_CURRENT_LIST_DIR})
+if(CONFIG_GPROF_ENABLE)
+    cu_pkg_define_version(${CMAKE_CURRENT_LIST_DIR})
+endif()
