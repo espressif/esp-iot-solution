@@ -20,14 +20,32 @@ Overall, during each ADC measurement, there will be 1-2 times ADC reading. For m
 Patch Use Guide
 -------------------
 
-At present, the patch file is developed based on ESP-IDF ``v4.4.8``:
+How to Apply a Patch Based on ESP-IDF ``v4.4.8``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 1. Please make sure ESP-IDF has been ``checked out`` to the ``v4.4.8``
 2. Please download file :download:`esp32s3_adc_range_to_3100.patch <../../_static/esp32s3_adc_range_to_3100.patch>` to anywhere you want
 3. Using command ``git am --signoff < esp32s3_adc_range_to_3100.patch`` to apply the patch to ESP-IDF
 
+How to Apply a Patch Based on ESP-IDF ``v5.3.1``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+1. Please make sure ESP-IDF has been ``checked out`` to the ``v5.3.1``
+2. Please download file :download:`esp32s3_adc_range_to_3100_v531.patch <../../_static/esp32s3_adc_range_to_3100_v531.patch>` to anywhere you want
+3. Using command ``git am --signoff < esp32s3_adc_range_to_3100_v531.patch`` to apply the patch to ESP-IDF
+
 API Guide
 -------------
 
-1. To get the range expansion result, users must directly use ``esp_adc_cal_get_voltage`` to get the voltage of ``ADC1`` or ``ADC2``.
-2. Other APIs of ESP-IDF ADC are not affected, and the read results are consistent with the default results
+The method to obtain the voltage value after ADC range extension varies for different versions of ESP-IDF:
+
+- ESP-IDF ``v4.4.8``
+
+  1. To get the range expansion result, users must directly use ``esp_adc_cal_get_voltage`` to get the voltage of ``ADC1`` or ``ADC2``.
+  2. Other APIs of ESP-IDF ``v4.4.8`` ADC are not affected, and the read results are consistent with the default results
+
+
+- ESP-IDF ``v5.3.1``
+
+  1. To get the range expansion result, users must directly use ``adc_oneshot_get_calibrated_result`` to get the voltage of ``ADC1`` or ``ADC2``.
+  2. Other APIs of ESP-IDF ``v5.3.1`` ADC are not affected, and the read results are consistent with the default results

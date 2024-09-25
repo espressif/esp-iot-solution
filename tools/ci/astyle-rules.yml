@@ -37,6 +37,7 @@ not_formatted_permanent:
     - "components/gui/lvgl_gui/"
     - "components/usb/usb_stream/test_apps/main/wave_1ch_16bits.c"
     - "components/utilities/xz/"
+    - "docs/_static/esp32s3_adc_range_to_3100_v531.patch"
     - "docs/_static/esp32s3_adc_range_to_3100.patch"
     - "docs/doxygen-known-warnings.txt"
     - "docs/sphinx-known-warnings.txt"

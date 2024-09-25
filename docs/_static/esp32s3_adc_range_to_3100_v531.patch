@@ -1,0 +1,202 @@
+From a5c02c9a4a0cb2f8215e7e1ed519402eb4447fc5 Mon Sep 17 00:00:00 2001
+From: yanke <yanke2@espressif.com>
+Date: Thu, 19 Sep 2024 18:07:36 +0800
+Subject: [PATCH] fix(adc): support esp32s3 adc range above 3100mv
+
+---
+ .../efuse/esp32s3/esp_efuse_rtc_calib.c       | 45 +++++++++++++++++++
+ .../esp32s3/include/esp_efuse_rtc_calib.h     | 10 +++++
+ components/esp_adc/adc_oneshot.c              | 33 ++++++++++++++
+ components/esp_hw_support/adc_share_hw_ctrl.c | 11 ++++-
+ 4 files changed, 98 insertions(+), 1 deletion(-)
+
+diff --git a/components/efuse/esp32s3/esp_efuse_rtc_calib.c b/components/efuse/esp32s3/esp_efuse_rtc_calib.c
+index 2ede5610ba..752d072ecb 100644
+--- a/components/efuse/esp32s3/esp_efuse_rtc_calib.c
++++ b/components/efuse/esp32s3/esp_efuse_rtc_calib.c
+@@ -25,6 +25,47 @@ int esp_efuse_rtc_calib_get_ver(void)
+     return cali_version;
+ }
+ 
++#ifdef CONFIG_ENABLE_ADC_USER_CODE_OFFSET
++
++#define ADC_NUM_MAX (ADC_UNIT_2 + 1)
++static const char* TAG = "eFuse";
++
++static uint32_t adc_icode_offset[ADC_NUM_MAX][4] = {0};
++static bool adc_icode_offset_flag[ADC_NUM_MAX][4] = {0};
++
++void esp_efuse_rtc_calib_set_init_code_offset(uint32_t adc_unit, int atten, uint32_t offset)
++{
++    assert(adc_unit < ADC_NUM_MAX);
++    assert(atten < 4);
++    if (adc_icode_offset[adc_unit][atten] != offset) {
++        /* code */
++        adc_icode_offset[adc_unit][atten] = offset;
++        adc_icode_offset_flag[adc_unit][atten] = true;
++        ESP_LOGV(TAG, "adc %lu atten_i %d, offset = %lu", adc_unit+1, atten, offset);
++    } else {
++        ESP_LOGV(TAG, "adc %lu atten_i %d, offset = no change", adc_unit+1, atten);
++    }
++}
++
++uint32_t esp_efuse_rtc_calib_get_init_code_offset(uint32_t adc_unit, int atten)
++{
++    assert(adc_unit < ADC_NUM_MAX);
++    assert(atten < 4);
++    return adc_icode_offset[adc_unit][atten];;
++}
++
++bool esp_efuse_rtc_calib_query_init_code_offset_flag(uint32_t adc_unit, int atten)
++{
++    return adc_icode_offset_flag[adc_unit][atten];
++}
++
++bool esp_efuse_rtc_calib_clear_init_code_offset_flag(uint32_t adc_unit, int atten)
++{
++    adc_icode_offset_flag[adc_unit][atten] = false;
++    return adc_icode_offset_flag[adc_unit][atten];
++}
++#endif
++
+ uint32_t esp_efuse_rtc_calib_get_init_code(int version, uint32_t adc_unit, int atten)
+ {
+     assert((version >= ESP_EFUSE_ADC_CALIB_VER_MIN) &&
+@@ -58,7 +99,11 @@ uint32_t esp_efuse_rtc_calib_get_init_code(int version, uint32_t adc_unit, int a
+         adc_icode[3] = adc_icode_diff[3] + adc_icode[2];
+     }
+ 
++#ifdef CONFIG_ENABLE_ADC_USER_CODE_OFFSET
++    return adc_icode[atten] + adc_icode_offset[adc_unit][atten];
++#else
+     return adc_icode[atten];
++#endif
+ }
+ 
+ esp_err_t esp_efuse_rtc_calib_get_cal_voltage(int version, uint32_t adc_unit, int atten, uint32_t *out_digi, uint32_t *out_vol_mv)
+diff --git a/components/efuse/esp32s3/include/esp_efuse_rtc_calib.h b/components/efuse/esp32s3/include/esp_efuse_rtc_calib.h
+index 49712040a0..edbcc6d85f 100644
+--- a/components/efuse/esp32s3/include/esp_efuse_rtc_calib.h
++++ b/components/efuse/esp32s3/include/esp_efuse_rtc_calib.h
+@@ -57,6 +57,16 @@ esp_err_t esp_efuse_rtc_calib_get_cal_voltage(int version, uint32_t adc_unit, in
+  */
+ esp_err_t esp_efuse_rtc_calib_get_tsens_val(float* tsens_cal);
+ 
++
++#define CONFIG_ENABLE_ADC_USER_CODE_OFFSET 1
++
++#ifdef CONFIG_ENABLE_ADC_USER_CODE_OFFSET
++void esp_efuse_rtc_calib_set_init_code_offset(uint32_t adc_unit, int atten, uint32_t offset);
++uint32_t esp_efuse_rtc_calib_get_init_code_offset(uint32_t adc_unit, int atten);
++bool esp_efuse_rtc_calib_query_init_code_offset_flag(uint32_t adc_unit, int atten);
++bool esp_efuse_rtc_calib_clear_init_code_offset_flag(uint32_t adc_unit, int atten);
++#endif
++
+ #ifdef __cplusplus
+ }
+ #endif
+diff --git a/components/esp_adc/adc_oneshot.c b/components/esp_adc/adc_oneshot.c
+index 0691e22f1a..cccb6ee02e 100644
+--- a/components/esp_adc/adc_oneshot.c
++++ b/components/esp_adc/adc_oneshot.c
+@@ -29,6 +29,7 @@
+ #include "hal/adc_oneshot_hal.h"
+ #include "hal/adc_ll.h"
+ #include "soc/adc_periph.h"
++#include "esp_efuse_rtc_calib.h"
+ 
+ #if CONFIG_ADC_ONESHOT_CTRL_FUNC_IN_IRAM
+ #define ADC_MEM_ALLOC_CAPS   (MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT)
+@@ -166,6 +167,8 @@ esp_err_t adc_oneshot_config_channel(adc_oneshot_unit_handle_t handle, adc_chann
+     return ESP_OK;
+ }
+ 
++extern void adc_calc_hw_calibration_code(adc_unit_t adc_n, adc_atten_t atten);
++
+ esp_err_t adc_oneshot_read(adc_oneshot_unit_handle_t handle, adc_channel_t chan, int *out_raw)
+ {
+     ESP_RETURN_ON_FALSE(handle && out_raw, ESP_ERR_INVALID_ARG, TAG, "invalid argument: null pointer");
+@@ -180,6 +183,8 @@ esp_err_t adc_oneshot_read(adc_oneshot_unit_handle_t handle, adc_channel_t chan,
+ #if SOC_ADC_CALIBRATION_V1_SUPPORTED
+     adc_atten_t atten = adc_ll_get_atten(handle->unit_id, chan);
+     adc_hal_calibration_init(handle->unit_id);
++    // Get the offset first, then set the offset.
++    adc_calc_hw_calibration_code(handle->unit_id, atten);
+     adc_set_hw_calibration_code(handle->unit_id, atten);
+ #endif  // SOC_ADC_CALIBRATION_V1_SUPPORTED
+     bool valid = false;
+@@ -251,10 +256,38 @@ esp_err_t adc_oneshot_del_unit(adc_oneshot_unit_handle_t handle)
+ esp_err_t adc_oneshot_get_calibrated_result(adc_oneshot_unit_handle_t handle, adc_cali_handle_t cali_handle, adc_channel_t chan, int *cali_result)
+ {
+     int raw = 0;
++    int voltage_b = 0;
+     ESP_RETURN_ON_ERROR(adc_oneshot_read(handle, chan, &raw), TAG, "adc oneshot read fail");
+     ESP_LOGD(TAG, "raw: 0d%d", raw);
+     ESP_RETURN_ON_ERROR(adc_cali_raw_to_voltage(cali_handle, raw, cali_result), TAG, "adc calibration fail");
+ 
++#if (CONFIG_IDF_TARGET_ESP32S3 & CONFIG_ENABLE_ADC_USER_CODE_OFFSET)
++    typedef const float ADC_CAL_TYPE;
++    adc_atten_t atten = adc_ll_get_atten(handle->unit_id, chan);
++    if(atten == ADC_ATTEN_DB_12) {
++        if(*cali_result > 2900) {
++            ESP_LOGD(TAG, "first is %u", *cali_result);
++            esp_efuse_rtc_calib_set_init_code_offset(handle->unit_id, atten, 1200);
++            ESP_RETURN_ON_ERROR(adc_oneshot_read(handle, chan, &raw), TAG, "adc oneshot read fail");
++            esp_efuse_rtc_calib_set_init_code_offset(handle->unit_id, atten, 0);
++            ESP_RETURN_ON_ERROR(adc_cali_raw_to_voltage(cali_handle, raw, &voltage_b), TAG, "adc calibration fail");
++            voltage_b += 1000;
++
++            if (voltage_b > 2700) {
++                ESP_LOGD(TAG, "before is %u", voltage_b);
++                ADC_CAL_TYPE a = -0.0000016625088686597596;
++                ADC_CAL_TYPE b = 0.0012152697844402401;
++                ADC_CAL_TYPE c = 7.660092154791914;
++                ADC_CAL_TYPE e = a * voltage_b * voltage_b + b * voltage_b + c;
++                voltage_b = voltage_b * (1 + e / 100);
++                ESP_LOGD(TAG, "after is %u", voltage_b);
++            }
++
++            *cali_result = voltage_b;
++        }
++    }
++#endif
++
+     return ESP_OK;
+ }
+ 
+diff --git a/components/esp_hw_support/adc_share_hw_ctrl.c b/components/esp_hw_support/adc_share_hw_ctrl.c
+index 32f3c67b79..1e2431bacd 100644
+--- a/components/esp_hw_support/adc_share_hw_ctrl.c
++++ b/components/esp_hw_support/adc_share_hw_ctrl.c
+@@ -60,11 +60,16 @@ static uint32_t s_adc_cali_param[SOC_ADC_PERIPH_NUM][SOC_ADC_ATTEN_NUM] = {};
+ 
+ void adc_calc_hw_calibration_code(adc_unit_t adc_n, adc_atten_t atten)
+ {
++#ifdef CONFIG_ENABLE_ADC_USER_CODE_OFFSET
++    if (!esp_efuse_rtc_calib_query_init_code_offset_flag(adc_n, atten)) {
++#endif
+     if (s_adc_cali_param[adc_n][atten]) {
+         ESP_EARLY_LOGV(TAG, "Use calibrated val ADC%d atten=%d: %04" PRIX32, adc_n + 1, atten, s_adc_cali_param[adc_n][atten]);
+         return ;
+     }
+-
++#ifdef CONFIG_ENABLE_ADC_USER_CODE_OFFSET
++    }
++#endif
+     // check if we can fetch the values from eFuse.
+     int version = esp_efuse_rtc_calib_get_ver();
+ 
+@@ -92,6 +97,10 @@ void adc_calc_hw_calibration_code(adc_unit_t adc_n, adc_atten_t atten)
+     }
+ #endif  //SOC_ADC_SELF_HW_CALI_SUPPORTED
+ 
++#ifdef CONFIG_ENABLE_ADC_USER_CODE_OFFSET
++    esp_efuse_rtc_calib_clear_init_code_offset_flag(adc_n, atten);
++#endif
++
+     s_adc_cali_param[adc_n][atten] = init_code;
+     ESP_EARLY_LOGV(TAG, "Calib(V%d) ADC%d atten=%d: %04" PRIX32, version, adc_n + 1, atten, init_code);
+ }
+-- 
+2.34.1
+

@@ -20,15 +20,33 @@ ESP32-S3 可通过配置寄存器调整 ADC 的偏置电压，再结合高电压
 Patch 使用方法
 -------------------
 
-当前 Patch 基于 ESP-IDF ``v4.4.8`` 开发：
+基于 ESP-IDF ``v4.4.8`` 的 Patch 使用方法
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 1. 确认 ESP-IDF 已经 ``checkout`` 到 ``v4.4.8``
 2. 下载 :download:`esp32s3_adc_range_to_3100.patch <../../_static/esp32s3_adc_range_to_3100.patch>` 文件
 3. 使用指令 ``git am --signoff < esp32s3_adc_range_to_3100.patch`` 将 Patch 应用到 IDF 中
 4. 请注意， 该方案仅对 ``esp_adc_cal_get_voltage`` 接口有效，用户可直接调用该接口获取扩展后的读数
 
+基于 ESP-IDF ``v5.3.1`` 的 Patch 使用方法
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+1. 确认 ESP-IDF 已经 ``checkout`` 到 ``v5.3.1``
+2. 下载 :download:`esp32s3_adc_range_to_3100_v531.patch <../../_static/esp32s3_adc_range_to_3100_v531.patch>` 文件
+3. 使用指令 ``git am --signoff < esp32s3_adc_range_to_3100_v531.patch`` 将 Patch 应用到 IDF 中
+4. 请注意， 该方案仅对 ``adc_oneshot_get_calibrated_result`` 接口有效，用户可直接调用该接口获取扩展后的读数
+
 API 使用说明
 --------------
 
-1. 如果想要读取量程扩展后的电压值，用户必须使用 ``esp_adc_cal_get_voltage`` 直接获取 ``ADC1`` 或 ``ADC2`` 的通道电压。
-2. ESP-IDF ADC 其它 API 不受影响，读取的结果和默认结果一致
+对于不同版本的 ESP-IDF，获取 ADC 量程扩展后的电压值方法有所不同：
+
+- ESP-IDF ``v4.4.8``
+
+  1. 如果想要读取量程扩展后的电压值，用户必须使用 ``esp_adc_cal_get_voltage`` 直接获取 ``ADC1`` 或 ``ADC2`` 的通道电压
+  2. ESP-IDF ``v4.4.8`` ADC 其它 API 不受影响，读取的结果和默认结果一致
+
+- ESP-IDF ``v5.3.1``
+
+  1. 如果想要读取量程扩展后的电压值，用户必须使用 ``adc_oneshot_get_calibrated_result`` 直接获取 ``ADC1`` 或 ``ADC2`` 的通道电压
+  2. ESP-IDF ``v5.3.1`` ADC 其它 API 不受影响，读取的结果和默认结果一致
