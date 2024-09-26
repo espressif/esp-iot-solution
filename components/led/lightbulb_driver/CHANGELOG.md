@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.3.2 - 2024-09-19
+
+### Enhancements:
+
+* Added cct range check in precision mode
+
 ## v1.3.1 - 2024-08-28
 
 ### Bug Fixes:
