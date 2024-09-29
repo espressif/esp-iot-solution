@@ -951,6 +951,16 @@ build_components_display_lcd_esp_lcd_st7701_test_apps:
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_st7701/test_apps
 
+build_components_display_lcd_esp_lcd_st7703_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_display_lcd_esp_lcd_st7703_test_apps
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.3
+  variables:
+    EXAMPLE_DIR: components/display/lcd/esp_lcd_st7703/test_apps
+
 build_components_display_lcd_esp_lcd_st77903_qspi_test_apps:
   extends:
     - .build_examples_template

@@ -6,7 +6,7 @@ Implementation of the EK79007 LCD controller with esp_lcd component.
 
 | LCD controller | Communication interface | Component name |                                   Link to datasheet                                   |
 | :------------: | :---------------------: | :------------: | :-----------------------------------------------------------------------------------: |
-|     EK79007     |        MIPI-DSI         | esp_lcd_ek79007 | [PDF](https://dl.espressif.com/AE/esp-iot-solution/EK79007DA-H3_DS_V0.01_20200819.pdf) |
+|     EK79007     |        MIPI-DSI         | esp_lcd_ek79007 | [PDF](https://dl.espressif.com/AE/esp-iot-solution/EK79007.pdf) |
 
 **Note**: MIPI-DSI interface only supports ESP-IDF v5.3 and above versions.
 

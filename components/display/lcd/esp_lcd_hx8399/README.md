@@ -6,7 +6,7 @@ Implementation of the HX8399 LCD controller with esp_lcd component.
 
 | LCD controller | Communication interface | Component name |                                   Link to datasheet                                   |
 | :------------: | :---------------------: | :------------: | :-----------------------------------------------------------------------------------: |
-|     HX8399     |        MIPI-DSI         | esp_lcd_hx8399 | [PDF](https://dl.espressif.com/AE/esp-iot-solution/HX8399DA-H3_DS_V0.01_20200819.pdf) |
+|     HX8399     |        MIPI-DSI         | esp_lcd_hx8399 | [PDF](https://dl.espressif.com/AE/esp-iot-solution/HX8399-C_DS_temporary_v00.06_150714.pdf) |
 
 **Note**: MIPI-DSI interface only supports ESP-IDF v5.3 and above versions.
 
