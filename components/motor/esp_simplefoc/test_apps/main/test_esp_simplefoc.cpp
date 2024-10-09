@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,9 +16,13 @@
 
 const char *TAG = "TEST";
 
-TEST_CASE("test as5600", "[sensor][as5600]")
+TEST_CASE("test as5600", "[sensor][as5600][i2c]")
 {
-    AS5600 as5600 = AS5600(I2C_NUM_0, GPIO_NUM_8, GPIO_NUM_2);
+#if CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32H2
+    AS5600 as5600 = AS5600(I2C_NUM_0, GPIO_NUM_2, GPIO_NUM_1);
+#else
+    AS5600 as5600 = AS5600(I2C_NUM_0, GPIO_NUM_12, GPIO_NUM_13);
+#endif
     as5600.init();
     for (int i = 0; i < 10; ++i) {
         ESP_LOGI(TAG, "angle:%.2f", as5600.getSensorAngle());
@@ -27,9 +31,9 @@ TEST_CASE("test as5600", "[sensor][as5600]")
     as5600.deinit();
 }
 
-TEST_CASE("test mt6701", "[sensor][mt6701]")
+TEST_CASE("test mt6701", "[sensor][mt6701][spi]")
 {
-#if CONFIG_IDF_TARGET_ESP32C3
+#if CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32H2
     MT6701 mt6701 = MT6701(SPI2_HOST, GPIO_NUM_2, GPIO_NUM_1, (gpio_num_t) -1, GPIO_NUM_3);
 #else
     MT6701 mt6701 = MT6701(SPI2_HOST, GPIO_NUM_2, GPIO_NUM_1, (gpio_num_t) -1, GPIO_NUM_42);
@@ -42,9 +46,26 @@ TEST_CASE("test mt6701", "[sensor][mt6701]")
     mt6701.deinit();
 }
 
-TEST_CASE("test as5048a", "[sensor][as5048a]")
+TEST_CASE("test mt6701", "[sensor][mt6701][i2c]")
 {
-#if CONFIG_IDF_TARGET_ESP32C3
+#if CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32H2
+    MT6701 mt6701 = MT6701(I2C_NUM_0, GPIO_NUM_2, GPIO_NUM_1);
+#else
+    MT6701 mt6701 = MT6701(I2C_NUM_0, GPIO_NUM_12, GPIO_NUM_13);
+#endif
+    mt6701.init();
+
+    for (int i = 0; i < 10; ++i) {
+        ESP_LOGI(TAG, "angle:%.2f", mt6701.getSensorAngle());
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
+
+    mt6701.deinit();
+}
+
+TEST_CASE("test as5048a", "[sensor][as5048a][spi]")
+{
+#if CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32H2
     AS5048a as5048a = AS5048a(SPI2_HOST, GPIO_NUM_2, GPIO_NUM_1, (gpio_num_t) -1, GPIO_NUM_3);
 #else
     AS5048a as5048a = AS5048a(SPI2_HOST, GPIO_NUM_2, GPIO_NUM_1, (gpio_num_t) -1, GPIO_NUM_42);

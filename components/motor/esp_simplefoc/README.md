@@ -11,8 +11,25 @@ Features:
 5. Use IQMath to greatly accelerate Foc operations.
 
 
+### Add component to your project
+
+Please use the component manager command `add-dependency` to add the `esp_simplefoc` to your project's dependency, during the `CMake` step the component will be downloaded automatically
+
+```
+idf.py add-dependency "espressif/esp_simplefoc=*"
+```
+
+Alternatively, you can create `idf_component.yml`. More is in [Espressif's documentation](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/tools/idf-component-manager.html).
+
+### User guide
+
+Please refer to：https://docs.espressif.com/projects/esp-iot-solution/zh_CN/latest/motor/foc/esp_simplefoc.html
+
+
 ### Usage Considerations
+
 1. The configTICK_RATE_HZ of Freertos must be set to 1000. If it is not set, a motor exception may occur.
 
 ### License
+
 esp_simplefoc is licensed under the Apache License, see license.txt for more information.
