@@ -1,5 +1,13 @@
 # ChangeLog
 
+## v3.3.2 - 2024-8-28
+
+### Enhancements:
+
+* Support macro CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP in power save mode.
+* Supports retrieving and printing the string corresponding to a button event.
+* Fixed the bug where the event was not assigned to `BUTTON_LONG_PRESS_START` before the `BUTTON_LONG_PRESS_START` event occurred.
+
 ## v3.3.1 - 2024-8-8
 
 ### Enhancements:

@@ -29,6 +29,22 @@ static portMUX_TYPE s_button_lock = portMUX_INITIALIZER_UNLOCKED;
         return (ret_val);                                         \
     }
 
+static const char *button_event_str[] = {
+    "BUTTON_PRESS_DOWN",
+    "BUTTON_PRESS_UP",
+    "BUTTON_PRESS_REPEAT",
+    "BUTTON_PRESS_REPEAT_DONE",
+    "BUTTON_SINGLE_CLICK",
+    "BUTTON_DOUBLE_CLICK",
+    "BUTTON_MULTIPLE_CLICK",
+    "BUTTON_LONG_PRESS_START",
+    "BUTTON_LONG_PRESS_HOLD",
+    "BUTTON_LONG_PRESS_UP",
+    "BUTTON_PRESS_END",
+    "BUTTON_EVENT_MAX",
+    "BUTTON_NONE_PRESS",
+};
+
 /**
  * @brief Structs to store callback info
  *
@@ -232,6 +248,7 @@ static void button_handler(button_dev_t *btn)
                         }
                     }
                     if (btn->count[0] < btn->size[BUTTON_LONG_PRESS_START] && abs(ticks_time - time) <= TOLERANCE) {
+                        btn->event = (uint8_t)BUTTON_LONG_PRESS_START;
                         do {
                             cb_info[btn->count[0]].cb(btn, cb_info[btn->count[0]].usr_data);
                             btn->count[0]++;
@@ -706,6 +723,20 @@ button_event_t iot_button_get_event(button_handle_t btn_handle)
     BTN_CHECK(NULL != btn_handle, "Pointer of handle is invalid", BUTTON_NONE_PRESS);
     button_dev_t *btn = (button_dev_t *) btn_handle;
     return btn->event;
+}
+
+const char *iot_button_get_event_str(button_event_t event)
+{
+    BTN_CHECK(event <= BUTTON_NONE_PRESS && event >= BUTTON_PRESS_DOWN, "event value is invalid", "invalid event");
+    return button_event_str[event];
+}
+
+esp_err_t iot_button_print_event(button_handle_t btn_handle)
+{
+    BTN_CHECK(NULL != btn_handle, "Pointer of handle is invalid", ESP_FAIL);
+    button_dev_t *btn = (button_dev_t *) btn_handle;
+    ESP_LOGI(TAG, "%s", button_event_str[btn->event]);
+    return ESP_OK;
 }
 
 uint8_t iot_button_get_repeat(button_handle_t btn_handle)

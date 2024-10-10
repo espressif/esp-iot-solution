@@ -298,6 +298,32 @@ Button 组件支持为多个事件注册回调函数，每个事件都可以注�
 
     iot_button_register_power_save_cb(&config);
 
+**开启 CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP 选项后，如何正常使用按键？**
+
+- 开启这个宏后，GPIO 模块会下电，如果需要使用按键功能，必须选用 RTC/LP GPIO，并将唤醒源修改为 EXT 1
+
+.. list-table::
+    :widths: 40 40 40
+    :header-rows: 1
+
+    * - GPIO 类型
+      - 是否开启 `CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP`
+      - 唤醒源
+    * - **数字管脚**
+      - N
+      - GPIO 电平触发
+    * - **数字管脚**
+      - Y
+      - 无
+    * - **RTC/LP 管脚**
+      - N
+      - GPIO 电平触发 / EXT 1
+    * - **RTC/LP 管脚**
+      - Y
+      - EXT 1
+
+.. note:: ESP32-C5, ESP32-C6 的 LP GPIO 可以支持 GPIO 电平唤醒和 EXT 1 唤醒，同时也需要开启 ``gpio_hold_en``
+
 开启和关闭
 ^^^^^^^^^^^^^
 
