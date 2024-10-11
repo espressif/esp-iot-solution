@@ -5,7 +5,7 @@ menu "Example Configuration"
         default 0x303A
     config TUSB_PID
         hex "USB Device PID"
-        default 0x1986
+        default 0x2986
     config TUSB_MANUFACTURER
         string "USB Device Manufacture"
         default "Espressif"
