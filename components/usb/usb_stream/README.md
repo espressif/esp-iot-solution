@@ -25,7 +25,7 @@ idf.py add-dependency "espressif/usb_stream=*"
 
 ### Examples
 
-Please use the component manager command `create-project-from-example` to create the project from example template
+Please use the component manager command `create-project-from-example` to create the project from example template.
 
 * USB Camera WIFI picture transfer
 ```
