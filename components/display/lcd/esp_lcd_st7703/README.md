@@ -1,12 +1,12 @@
-# ESP LCD JD9165
+# ESP LCD ST7703
 
-[![Component Registry](https://components.espressif.com/components/espressif/esp_lcd_jd9165/badge.svg)](https://components.espressif.com/components/espressif/esp_lcd_jd9165)
+[![Component Registry](https://components.espressif.com/components/espressif/esp_lcd_st7703/badge.svg)](https://components.espressif.com/components/espressif/esp_lcd_st7703)
 
-Implementation of the JD9165 LCD controller with esp_lcd component.
+Implementation of the ST7703 LCD controller with esp_lcd component.
 
 | LCD controller | Communication interface | Component name |                                   Link to datasheet                                   |
 | :------------: | :---------------------: | :------------: | :-----------------------------------------------------------------------------------: |
-|     JD9165     |        MIPI-DSI         | esp_lcd_jd9165 | [PDF](https://dl.espressif.com/AE/esp-iot-solution/JD9165A-A_DS_V0.0.1-0621.pdf) |
+|     ST7703     |        MIPI-DSI         | esp_lcd_st7703 | [PDF](https://dl.espressif.com/AE/esp-iot-solution/ST7703DA-H3_DS_V0.01_20200819.pdf) |
 
 **Note**: MIPI-DSI interface only supports ESP-IDF v5.3 and above versions.
 
@@ -18,7 +18,7 @@ Packages from this repository are uploaded to [Espressif's component service](ht
 You can add them to your project via `idf.py add-dependancy`, e.g.
 
 ```
-    idf.py add-dependency "espressif/esp_lcd_jd9165"
+    idf.py add-dependency "espressif/esp_lcd_st7703"
 ```
 
 Alternatively, you can create `idf_component.yml`. More is in [Espressif's documentation](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/tools/idf-component-manager.html).
@@ -30,10 +30,12 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
  * Uncomment these line if use custom initialization commands.
  * The array should be declared as static const and positioned outside the function.
  */
-// static const jd9165_lcd_init_cmd_t lcd_init_cmds[] = {
+// static const st7703_lcd_init_cmd_t lcd_init_cmds[] = {
 //  {cmd, { data }, data_size, delay_ms}
-//  {0x11, (uint8_t []){0x00}, 120, 0},
-//  {0x29, (uint8_t []){0x00},  20, 0},
+// {0xE0, (uint8_t []){0x00}, 1, 0},
+// {0xE1, (uint8_t []){0x93}, 1, 0},
+// {0xE2, (uint8_t []){0x65}, 1, 0},
+// {0xE3, (uint8_t []){0xF8}, 1, 0},
 //     ...
 // };
 
@@ -47,21 +49,18 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
 
     ESP_LOGI(TAG, "Initialize MIPI DSI bus");
     esp_lcd_dsi_bus_handle_t mipi_dsi_bus = NULL;
-    esp_lcd_dsi_bus_config_t bus_config = JD9165_PANEL_BUS_DSI_2CH_CONFIG();
+    esp_lcd_dsi_bus_config_t bus_config = ST7703_PANEL_BUS_DSI_2CH_CONFIG();
     ESP_ERROR_CHECK(esp_lcd_new_dsi_bus(&bus_config, &mipi_dsi_bus));
 
     ESP_LOGI(TAG, "Install panel IO");
     esp_lcd_panel_io_handle_t mipi_dbi_io = NULL;
-    esp_lcd_dbi_io_config_t dbi_config = JD9165_PANEL_IO_DBI_CONFIG();
+    esp_lcd_dbi_io_config_t dbi_config = ST7703_PANEL_IO_DBI_CONFIG();
     ESP_ERROR_CHECK(esp_lcd_new_panel_io_dbi(mipi_dsi_bus, &dbi_config, &mipi_dbi_io));
 
-    ESP_LOGI(TAG, "Install JD9165S panel driver");
+    ESP_LOGI(TAG, "Install ST7703 panel driver");
     esp_lcd_panel_handle_t panel_handle = NULL;
-    const esp_lcd_dpi_panel_config_t dpi_config = JD9165_1024_600_PANEL_60HZ_DPI_CONFIG(EXAMPLE_MIPI_DPI_PX_FORMAT);
-    jd9165_vendor_config_t vendor_config = {
-        .flags = {
-            .use_mipi_interface = 1,
-        },
+    const esp_lcd_dpi_panel_config_t dpi_config = ST7703_720_1280_PANEL_60HZ_DPI_CONFIG(EXAMPLE_MIPI_DPI_PX_FORMAT);
+    st7703_vendor_config_t vendor_config = {
         .mipi_config = {
             .dsi_bus = mipi_dsi_bus,
             .dpi_config = &dpi_config,
@@ -73,6 +72,8 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
         .bits_per_pixel = EXAMPLE_LCD_BIT_PER_PIXEL,    // Implemented by LCD command `3Ah` (16/18/24)
         .vendor_config = &vendor_config,
     };
-    ESP_ERROR_CHECK(esp_lcd_new_panel_jd9165(mipi_dbi_io, &panel_config, &panel_handle));
+    ESP_ERROR_CHECK(esp_lcd_new_panel_st7703(mipi_dbi_io, &panel_config, &panel_handle));
+    ESP_ERROR_CHECK(esp_lcd_panel_reset(panel_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_init(panel_handle));
+    ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(panel_handle, true));
 ```

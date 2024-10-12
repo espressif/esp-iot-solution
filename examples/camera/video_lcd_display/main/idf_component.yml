@@ -1,0 +1,10 @@
+dependencies:
+  idf: ">=5.3"
+
+  esp_video:
+    version: "0.7.*"
+    public: true
+
+  espressif/esp_lcd_ek79007:
+    version: "1.*"
+    public: true
