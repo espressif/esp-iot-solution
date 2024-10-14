@@ -11,5 +11,5 @@
 
 ### How to use
 
-[esp_tinyuf2 user guide]()
+[esp_tinyuf2 user guide](https://docs.espressif.com/projects/esp-iot-solution/en/latest/usb/usb_device/esp_tinyuf2.html)
 

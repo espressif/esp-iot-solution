@@ -6,14 +6,14 @@ dependencies:
   idf:
     version: ">=5.0"
   esp32-camera:
-    version: ">=2.0.5"
+    version: "2.0.10"
   esp32_s3_eye:
     version: ^2.0.2
     rules:
-      - if: "target == $EYES_SHOW_TARGET"
+      - if: "${USB_WEBCAM_BOARD} in [esp32_s3_eye]"
   eyes_show:
     rules:
-      - if: "target == $EYES_SHOW_TARGET"
+      - if: "${USB_WEBCAM_BOARD} in [esp32_s3_eye]"
     override_path: "../eyes_show"
   cmake_utilities: "*"
   usb_device_uvc:
