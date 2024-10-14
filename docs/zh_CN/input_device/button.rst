@@ -201,10 +201,10 @@ Button 组件支持为多个事件注册回调函数，每个事件都可以注�
             .event_data.long_press.press_time = 2000,
         };
 
-        iot_button_register_event_cb(gpio_btn, cfg, BUTTON_LONG_PRESS_START, button_long_press_1_cb, NULL);
+        iot_button_register_event_cb(gpio_btn, cfg, button_long_press_1_cb, NULL);
 
         cfg.event_data.long_press.press_time = 5000;
-        iot_button_register_event_cb(gpio_btn, cfg, BUTTON_LONG_PRESS_START, button_long_press_2_cb, NULL);
+        iot_button_register_event_cb(gpio_btn, cfg, button_long_press_2_cb, NULL);
 
 查询按键事件
 ^^^^^^^^^^^^^^
