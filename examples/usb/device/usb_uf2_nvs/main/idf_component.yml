@@ -1,7 +1,7 @@
 dependencies:
   idf: ">=4.4"
   esp_tinyuf2:
-    version: "0.*"
+    version: "*"
     override_path: "../../../../../components/usb/esp_tinyuf2"
   espressif/esp32_s3_usb_otg:
     version: "^1.5.1"

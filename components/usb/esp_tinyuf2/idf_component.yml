@@ -1,4 +1,4 @@
-version: "0.2.2"
+version: "1.0.0"
 targets:
   - esp32s2
   - esp32s3
@@ -6,6 +6,7 @@ targets:
 description: Enhanced TinyUF2 for ESP32Sx, support OTA update and NVS operate through USB MSC
 url: https://github.com/espressif/esp-iot-solution
 repository: https://github.com/espressif/esp-iot-solution.git
+documentation: https://docs.espressif.com/projects/esp-iot-solution/en/latest/usb/usb_device/esp_tinyuf2.html
 issues: https://github.com/espressif/esp-iot-solution/issues
 
 dependencies:
