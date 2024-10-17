@@ -5,7 +5,7 @@ This component implements a simple version of the USB host CDC driver. The API i
 **Features:**
 
 1. Similar API to ESP-IDF UART driver
-2. Support USB CDC device
+2. Support USB CDC device (The notify interface is not supported)
 3. Support USB Vendor device
 4. Support USB CDC multiple interface
 
