@@ -1174,6 +1174,14 @@ build_components_sensors_radar_at581x_test_apps:
   variables:
     EXAMPLE_DIR: components/sensors/radar/at581x/test_apps
 
+build_components_spi_bus_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_spi_bus_test_apps
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: components/spi_bus/test_apps
+
 build_components_touch_touch_proximity_sensor_test_apps:
   extends:
     - .build_examples_template

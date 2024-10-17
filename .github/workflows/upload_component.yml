@@ -62,6 +62,7 @@ jobs:
             components/sensors/humiture/aht20;
             components/sensors/ntc_driver;
             components/sensors/radar/at581x;
+            components/spi_bus;
             components/touch/touch_proximity_sensor;
             components/usb/esp_msc_ota;
             components/usb/esp_tinyuf2;
