@@ -640,6 +640,7 @@ build_example_usb_device_usb_dongle:
     - .build_idf_version_greater_equal_v5_0
   variables:
     EXAMPLE_DIR: examples/usb/device/usb_dongle
+    IMAGE: espressif/idf:release-v5.3
 
 build_example_usb_device_usb_uart_bridge:
   extends:
@@ -659,6 +660,7 @@ build_example_usb_device_usb_uac:
     - .build_idf_version_greater_equal_v5_0
   variables:
     EXAMPLE_DIR: examples/usb/device/usb_uac
+    IMAGE: espressif/idf:release-v5.3
 
 build_example_usb_device_usb_dual_uvc_device:
   extends:
@@ -667,6 +669,7 @@ build_example_usb_device_usb_dual_uvc_device:
     - .build_idf_version_greater_equal_v5_0
   variables:
     EXAMPLE_DIR: examples/usb/device/usb_dual_uvc_device
+    IMAGE: espressif/idf:release-v5.3
 
 build_example_usb_device_usb_extend_screen:
   extends:
@@ -683,6 +686,7 @@ build_example_usb_device_usb_webcam:
     - .build_idf_version_greater_equal_v5_0
   variables:
     EXAMPLE_DIR: examples/usb/device/usb_webcam
+    IMAGE: espressif/idf:release-v5.3
 
 build_example_usb_device_usb_hid_device:
   extends:
@@ -694,6 +698,14 @@ build_example_usb_device_usb_hid_device:
       - IMAGE: espressif/idf:release-v5.0
   variables:
     EXAMPLE_DIR: examples/usb/device/usb_hid_device
+
+build_example_usb_device_usb_lcd_display:
+  extends:
+    - .build_examples_template
+    - .rules:build:build_example_usb_device_usb_lcd_display
+  variables:
+    EXAMPLE_DIR: examples/usb/device/usb_lcd_display
+    IMAGE: espressif/idf:release-v5.3
 
 build_example_usb_device_usb_msc_wireless_disk:
   extends:
