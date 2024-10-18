@@ -1,82 +1,22 @@
-OpenAI.inc:line: WARNING: Error in declarator
-If declarator-id with parameters-and-qualifiers:
-  Invalid C++ declaration: Expected identifier in nested name. [error at 4]
-    void(* delete )(struct OpenAI_EmbeddingResponse *embeddingData)
-    ----^
-If parenthesis in noptr-declarator:
-  Error in declarator or parameters-and-qualifiers
-  If pointer to member declarator:
-    Invalid C++ declaration: Expected identifier in nested name, got keyword: delete [error at 13]
-      void(* delete )(struct OpenAI_EmbeddingResponse *embeddingData)
-      -------------^
-  If declarator-id:
-    Invalid C++ declaration: Expected identifier in nested name, got keyword: delete [error at 13]
-      void(* delete )(struct OpenAI_EmbeddingResponse *embeddingData)
-      -------------^
+lightbulb.inc:line: WARNING: Duplicate C++ declaration, also defined at electrical_lighting_solution/lightbulb_driver:line.
 
-OpenAI.inc:line: WARNING: Error in declarator
-If declarator-id with parameters-and-qualifiers:
-  Invalid C++ declaration: Expected identifier in nested name. [error at 4]
-    void(* delete )(struct OpenAI_ModerationResponse *moderationResponse)
-    ----^
-If parenthesis in noptr-declarator:
-  Error in declarator or parameters-and-qualifiers
-  If pointer to member declarator:
-    Invalid C++ declaration: Expected identifier in nested name, got keyword: delete [error at 13]
-      void(* delete )(struct OpenAI_ModerationResponse *moderationResponse)
-      -------------^
-  If declarator-id:
-    Invalid C++ declaration: Expected identifier in nested name, got keyword: delete [error at 13]
-      void(* delete )(struct OpenAI_ModerationResponse *moderationResponse)
-      -------------^
+Declaration is '.. cpp:member:: lightbulb_color_mapping_data_t * table'.
 
-OpenAI.inc:line: WARNING: Error in declarator
-If declarator-id with parameters-and-qualifiers:
-  Invalid C++ declaration: Expected identifier in nested name. [error at 4]
-    void(* delete )(struct OpenAI_ImageResponse *imageResponse)
-    ----^
-If parenthesis in noptr-declarator:
-  Error in declarator or parameters-and-qualifiers
-  If pointer to member declarator:
-    Invalid C++ declaration: Expected identifier in nested name, got keyword: delete [error at 13]
-      void(* delete )(struct OpenAI_ImageResponse *imageResponse)
-      -------------^
-  If declarator-id:
-    Invalid C++ declaration: Expected identifier in nested name, got keyword: delete [error at 13]
-      void(* delete )(struct OpenAI_ImageResponse *imageResponse)
-      -------------^
+lightbulb.inc:line: WARNING: Duplicate C++ declaration, also defined at electrical_lighting_solution/lightbulb_driver:line.
 
-OpenAI.inc:line: WARNING: Error in declarator
-If declarator-id with parameters-and-qualifiers:
-  Invalid C++ declaration: Expected identifier in nested name. [error at 4]
-    void(* delete )(struct OpenAI_StringResponse *stringResponse)
-    ----^
-If parenthesis in noptr-declarator:
-  Error in declarator or parameters-and-qualifiers
-  If pointer to member declarator:
-    Invalid C++ declaration: Expected identifier in nested name, got keyword: delete [error at 13]
-      void(* delete )(struct OpenAI_StringResponse *stringResponse)
-      -------------^
-  If declarator-id:
-    Invalid C++ declaration: Expected identifier in nested name, got keyword: delete [error at 13]
-      void(* delete )(struct OpenAI_StringResponse *stringResponse)
-      -------------^
+Declaration is '.. cpp:member:: struct lightbulb_config_t::@38::@42 precise'.
 
-OpenAI.inc:line: WARNING: Error in declarator
-If declarator-id with parameters-and-qualifiers:
-  Invalid C++ declaration: Expected identifier in nested name. [error at 4]
-    void(* delete )(struct OpenAI_SpeechResponse *SpeechResponse)
-    ----^
-If parenthesis in noptr-declarator:
-  Error in declarator or parameters-and-qualifiers
-  If pointer to member declarator:
-    Invalid C++ declaration: Expected identifier in nested name, got keyword: delete [error at 13]
-      void(* delete )(struct OpenAI_SpeechResponse *SpeechResponse)
-      -------------^
-  If declarator-id:
-    Invalid C++ declaration: Expected identifier in nested name, got keyword: delete [error at 13]
-      void(* delete )(struct OpenAI_SpeechResponse *SpeechResponse)
-      -------------^
+lightbulb.inc:line: WARNING: Duplicate C++ declaration, also defined at electrical_lighting_solution/lightbulb_driver:line.
+
+Declaration is '.. cpp:member:: lightbulb_iic_out_pin_t red'.
+
+lightbulb.inc:line: WARNING: Duplicate C++ declaration, also defined at electrical_lighting_solution/lightbulb_driver:line.
+
+Declaration is '.. cpp:member:: lightbulb_iic_out_pin_t green'.
+
+lightbulb.inc:line: WARNING: Duplicate C++ declaration, also defined at electrical_lighting_solution/lightbulb_driver:line.
+
+Declaration is '.. cpp:member:: lightbulb_iic_out_pin_t blue'.
 
 ir_learn.inc:line: WARNING: Error when parsing function declaration.
 If the function has no return type:
