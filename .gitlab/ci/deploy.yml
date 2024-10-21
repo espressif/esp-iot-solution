@@ -97,7 +97,7 @@ pack-upload_files:
     - job: "build_example_keyboard: [espressif/idf:release-v5.3]"
     - job: "build_example_usb_device_usb_dongle: [espressif/idf:release-v5.3]"
     - job: "build_example_usb_device_usb_dual_uvc_device: [espressif/idf:release-v5.3]"
-    - job: "build_example_usb_device_usb_extend_screen: [espressif/idf:release-v5.3]"
+    - job: "build_example_usb_device_usb_extend_screen"
     - job: "build_example_usb_device_usb_hid_device: [espressif/idf:release-v5.0]"
     - job: "build_example_usb_device_usb_lcd_display: [espressif/idf:release-v5.3]"
     - job: "build_example_usb_device_usb_msc_wireless_disk: [espressif/idf:release-v5.0]"

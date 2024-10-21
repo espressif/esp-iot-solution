@@ -519,6 +519,9 @@
 .patterns-example_usb_device_usb_hid_device: &patterns-example_usb_device_usb_hid_device
   - "examples/usb/device/usb_hid_device/**/*"
 
+.patterns-example_usb_device_usb_lcd_display: &patterns-example_usb_device_usb_lcd_display
+  - "examples/usb/device/usb_lcd_display/**/*"
+
 .patterns-example_usb_device_usb_msc_wireless_disk: &patterns-example_usb_device_usb_msc_wireless_disk
   - "examples/usb/device/usb_msc_wireless_disk/**/*"
 
@@ -1191,6 +1194,17 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-example_usb_device_usb_hid_device
+
+.rules:build:example_usb_device_usb_lcd_display:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_usb_usb_device_uvc
+    - <<: *if-dev-push
+      changes: *patterns-example_usb_device_usb_lcd_display
 
 .rules:build:example_usb_device_usb_dongle:
   rules:
