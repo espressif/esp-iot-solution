@@ -1,5 +1,16 @@
 # ChangeLog
 
+## v3.4.0 - 2024-10-22
+
+### Enhancements:
+
+* Supports a maximum button polling interval of 500ms.
+* Fixed a potential counter overflow issue.
+
+### Break change:
+
+* The return value of `iot_button_get_ticks_time` has been changed from `uint16_t` to `uint32_t`.
+
 ## v3.3.2 - 2024-8-28
 
 ### Enhancements:

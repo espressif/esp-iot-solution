@@ -292,7 +292,7 @@ uint8_t iot_button_get_repeat(button_handle_t btn_handle);
  *
  * @return Actual time from press down to up (ms).
  */
-uint16_t iot_button_get_ticks_time(button_handle_t btn_handle);
+uint32_t iot_button_get_ticks_time(button_handle_t btn_handle);
 
 /**
  * @brief Get button long press hold count
