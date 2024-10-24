@@ -24,7 +24,6 @@ static const char *TAG = "app_usb";
 //--------------------------------------------------------------------+
 static void usb_phy_init(void)
 {
-#if !CONFIG_TINYUSB_RHPORT_HS
     usb_phy_handle_t phy_hdl;
     // Configure USB PHY
     usb_phy_config_t phy_conf = {
@@ -33,7 +32,6 @@ static void usb_phy_init(void)
     };
     phy_conf.target = USB_PHY_TARGET_INT;
     usb_new_phy(&phy_conf, &phy_hdl);
-#endif
 }
 
 static void tusb_device_task(void *arg)

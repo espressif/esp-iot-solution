@@ -72,7 +72,6 @@ static portMUX_TYPE s_mux = portMUX_INITIALIZER_UNLOCKED;
 
 static void usb_phy_init(void)
 {
-#if !CONFIG_TINYUSB_RHPORT_HS
     // Configure USB PHY
     usb_phy_config_t phy_conf = {
         .controller = USB_PHY_CTRL_OTG,
@@ -80,7 +79,6 @@ static void usb_phy_init(void)
         .target = USB_PHY_TARGET_INT,
     };
     usb_new_phy(&phy_conf, &s_uac_device->phy_hdl);
-#endif
 }
 
 // Invoked when device is mounted
