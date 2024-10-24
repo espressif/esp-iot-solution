@@ -259,7 +259,8 @@ examples/usb/device/usb_uac:
 
 examples/usb/device/usb_dual_uvc_device:
   enable:
-    - if: IDF_TARGET in ["esp32s3","esp32s2","esp32p4"]
+    - if: IDF_TARGET in ["esp32s3","esp32s2"]
+    - if: IDF_TARGET in ["esp32p4"] and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 3)
   disable:
     - if: IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0
       temporary: true

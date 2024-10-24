@@ -12,9 +12,8 @@
 #if CONFIG_TINYUSB_RHPORT_HS
 #include "soc/hp_sys_clkrst_reg.h"
 #include "soc/hp_system_reg.h"
-#else
-#include "esp_private/usb_phy.h"
 #endif
+#include "esp_private/usb_phy.h"
 #include "tusb.h"
 #include "usb_device_uvc.h"
 
@@ -27,9 +26,7 @@ static const char *TAG = "usbd_uvc";
 #endif
 
 typedef struct {
-#if !CONFIG_TINYUSB_RHPORT_HS
     usb_phy_handle_t phy_hdl;
-#endif
     bool uvc_init[UVC_CAM_NUM];
     uvc_format_t format[UVC_CAM_NUM];
     uvc_device_config_t user_config[UVC_CAM_NUM];
@@ -41,15 +38,16 @@ static uvc_device_t s_uvc_device;
 
 static void usb_phy_init(void)
 {
-#if !CONFIG_TINYUSB_RHPORT_HS
     // Configure USB PHY
     usb_phy_config_t phy_conf = {
         .controller = USB_PHY_CTRL_OTG,
         .otg_mode = USB_OTG_MODE_DEVICE,
         .target = USB_PHY_TARGET_INT,
+#if CONFIG_TINYUSB_RHPORT_HS
+        .otg_speed = USB_PHY_SPEED_HIGH,
+#endif
     };
     usb_new_phy(&phy_conf, &s_uvc_device.phy_hdl);
-#endif
 }
 
 static inline uint32_t get_time_millis(void)
