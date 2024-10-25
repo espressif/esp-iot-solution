@@ -375,11 +375,11 @@ static void sdmmc_init()
     sdmmc_card_print_info(stdout, card);
 }
 
-static void read_content(const char *path, uint8_t *filecount)
+static int read_content(const char *path, uint8_t *filecount)
 {
+    uint8_t ret = 0;
     char nextpath[100];
     struct dirent *de;
-    *filecount = 0;
     DIR *dir = opendir(path);
     while (1) {
         de = readdir(dir);
@@ -389,16 +389,21 @@ static void read_content(const char *path, uint8_t *filecount)
             if (strstr(de->d_name, ".mp3") || strstr(de->d_name, ".MP3")) {
                 sprintf(directory[*filecount], "%s/%s", path, de->d_name);
                 printf("%s\n", directory[*filecount]);
-                if ((*filecount)++ >= MAX_PLAY_FILE_NUM) {
+                if (++(*filecount) >= MAX_PLAY_FILE_NUM) {
+                    ret = -1;
                     break;
                 }
             }
         } else if (de->d_type == DT_DIR) {
             sprintf(nextpath, "%s/%s", path, de->d_name);
-            read_content(nextpath, filecount);
+            ret = read_content(nextpath, filecount);
+            if(ret == -1){
+                break;
+            }
         }
     }
     closedir(dir);
+    return ret;
 }
 
 #if USE_ADF_TO_PLAY
