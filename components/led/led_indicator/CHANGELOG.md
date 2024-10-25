@@ -1,5 +1,8 @@
-
 # ChangeLog
+
+## v0.9.4 - 2024-10-28
+
+* make set brightness can set index. [!414](https://github.com/espressif/esp-iot-solution/issues/414)
 
 ## v0.9.3 - 2024-6-20
 
