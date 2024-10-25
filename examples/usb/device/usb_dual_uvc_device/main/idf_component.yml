@@ -14,3 +14,5 @@ dependencies:
   avi_player:
     version: "0.*"
     override_path: "../../../../../components/avi_player"
+  lvgl/lvgl: #temp to workaround bsp issue
+    version: "9.2.0"

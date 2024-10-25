@@ -23,8 +23,9 @@ static const char *TAG = "avi player";
 #define EVENT_START_PLAY      ((1 << 1))
 #define EVENT_STOP_PLAY       ((1 << 2))
 #define EVENT_DEINIT          ((1 << 3))
-#define EVENT_VIDEO_BUF_READY ((1 << 4))
-#define EVENT_AUDIO_BUF_READY ((1 << 5))
+#define EVENT_DEINIT_DONE     ((1 << 4))
+#define EVENT_VIDEO_BUF_READY ((1 << 5))
+#define EVENT_AUDIO_BUF_READY ((1 << 6))
 
 #define EVENT_ALL          (EVENT_FPS_TIME_UP | EVENT_START_PLAY | EVENT_STOP_PLAY | EVENT_DEINIT)
 
@@ -266,6 +267,7 @@ static void avi_player_task(void *args)
         }
 
     }
+    xEventGroupSetBits(s_avi->event_group, EVENT_DEINIT_DONE);
     vTaskDelete(NULL);
 }
 
@@ -393,6 +395,13 @@ esp_err_t avi_player_deinit(void)
 {
     if (s_avi == NULL) {
         return ESP_FAIL;
+    }
+
+    xEventGroupSetBits(s_avi->event_group, EVENT_DEINIT);
+    EventBits_t uxBits = xEventGroupWaitBits(s_avi->event_group, EVENT_DEINIT_DONE, pdTRUE, pdTRUE, pdMS_TO_TICKS(1000));
+    if (!(uxBits & EVENT_DEINIT_DONE)) {
+        ESP_LOGE(TAG, "AVI player deinit timeout");
+        return ESP_ERR_TIMEOUT;
     }
 
     if (s_avi->timer_handle != NULL) {
