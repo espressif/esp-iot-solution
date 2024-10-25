@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "stdio.h"
+#include <stdio.h>
+#include <inttypes.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
@@ -46,7 +47,7 @@ static void button_press_down_cb(void *arg, void *data)
 static void button_press_up_cb(void *arg, void *data)
 {
     TEST_ASSERT_EQUAL_HEX(BUTTON_PRESS_UP, iot_button_get_event(arg));
-    ESP_LOGI(TAG, "BTN%d: BUTTON_PRESS_UP[%d]", get_btn_index((button_handle_t)arg), iot_button_get_ticks_time((button_handle_t)arg));
+    ESP_LOGI(TAG, "BTN%d: BUTTON_PRESS_UP[%"PRIu32"]", get_btn_index((button_handle_t)arg), iot_button_get_ticks_time((button_handle_t)arg));
 }
 
 static void button_press_repeat_cb(void *arg, void *data)
@@ -75,7 +76,7 @@ static void button_long_press_start_cb(void *arg, void *data)
 static void button_long_press_hold_cb(void *arg, void *data)
 {
     TEST_ASSERT_EQUAL_HEX(BUTTON_LONG_PRESS_HOLD, iot_button_get_event(arg));
-    ESP_LOGI(TAG, "BTN%d: BUTTON_LONG_PRESS_HOLD[%d],count is [%d]", get_btn_index((button_handle_t)arg), iot_button_get_ticks_time((button_handle_t)arg), iot_button_get_long_press_hold_cnt((button_handle_t)arg));
+    ESP_LOGI(TAG, "BTN%d: BUTTON_LONG_PRESS_HOLD[%"PRIu32"],count is [%d]", get_btn_index((button_handle_t)arg), iot_button_get_ticks_time((button_handle_t)arg), iot_button_get_long_press_hold_cnt((button_handle_t)arg));
 }
 
 static void button_press_repeat_done_cb(void *arg, void *data)
@@ -636,8 +637,9 @@ static void button_long_press_auto_check_cb(void *arg, void *data)
     uint32_t value = (uint32_t)data;
     uint16_t event = (0xffff0000 & value) >> 16;
     uint16_t time = 0xffff & value;
-    uint16_t ticks_time = iot_button_get_ticks_time(g_btns[0]);
-    if (status == value && abs(ticks_time - time) <= TOLERANCE) {
+    uint32_t ticks_time = iot_button_get_ticks_time(g_btns[0]);
+    int32_t diff = ticks_time - time;
+    if (status == value && abs(diff) <= TOLERANCE) {
         ESP_LOGI(TAG, "Auto check: button event: %s and time: %d pass", iot_button_get_event_str(state), time);
 
         if (event == BUTTON_LONG_PRESS_UP && time == long_press_time[4]) {

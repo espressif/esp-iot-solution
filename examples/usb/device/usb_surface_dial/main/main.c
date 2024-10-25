@@ -67,7 +67,7 @@ static void _button_press_down_cb(void *arg, void *data)
 
 static void _button_press_up_cb(void *arg, void *data)
 {
-    ESP_LOGI(TAG, "BTN: BUTTON_PRESS_UP[%d]", iot_button_get_ticks_time((button_handle_t)arg));
+    ESP_LOGI(TAG, "BTN: BUTTON_PRESS_UP[%"PRIu32"]", iot_button_get_ticks_time((button_handle_t)arg));
     surface_dial_report(DIAL_RELEASE);
 }
 

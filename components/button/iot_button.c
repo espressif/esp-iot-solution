@@ -60,11 +60,10 @@ typedef struct {
  *
  */
 typedef struct Button {
-    uint16_t             ticks;
-    uint16_t             long_press_ticks;     /*! Trigger ticks for long press*/
-    uint16_t             short_press_ticks;    /*! Trigger ticks for repeat press*/
-    uint16_t             long_press_hold_cnt;  /*! Record long press hold count*/
-    uint16_t             long_press_ticks_default;
+    uint32_t             ticks;                    /*!< Count for the current button state. */
+    uint32_t             long_press_ticks;         /*!< Trigger ticks for long press,  */
+    uint32_t             short_press_ticks;        /*!< Trigger ticks for repeat press */
+    uint32_t             long_press_hold_cnt;      /*!< Record long press hold count */
     uint8_t              repeat;
     uint8_t              state: 3;
     uint8_t              debounce_cnt: 3;
@@ -153,9 +152,10 @@ static void button_handler(button_dev_t *btn)
             btn->event = (uint8_t)BUTTON_LONG_PRESS_START;
             btn->state = 4;
             /** Calling callbacks for BUTTON_LONG_PRESS_START */
-            uint16_t ticks_time = iot_button_get_ticks_time(btn);
+            uint32_t ticks_time = iot_button_get_ticks_time(btn);
+            int32_t diff = ticks_time - btn->long_press_ticks * TICKS_INTERVAL;
             if (btn->cb_info[btn->event] && btn->count[0] == 0) {
-                if (abs(ticks_time - (btn->long_press_ticks * TICKS_INTERVAL)) <= TOLERANCE && btn->cb_info[btn->event][btn->count[0]].event_data.long_press.press_time == (btn->long_press_ticks * TICKS_INTERVAL)) {
+                if (abs(diff) <= TOLERANCE && btn->cb_info[btn->event][btn->count[0]].event_data.long_press.press_time == (btn->long_press_ticks * TICKS_INTERVAL)) {
                     do {
                         btn->cb_info[btn->event][btn->count[0]].cb(btn, btn->cb_info[btn->event][btn->count[0]].usr_data);
                         btn->count[0]++;
@@ -234,7 +234,7 @@ static void button_handler(button_dev_t *btn)
                 CALL_EVENT_CB(BUTTON_LONG_PRESS_HOLD);
 
                 /** Calling callbacks for BUTTON_LONG_PRESS_START based on press_time */
-                uint16_t ticks_time = iot_button_get_ticks_time(btn);
+                uint32_t ticks_time = iot_button_get_ticks_time(btn);
                 if (btn->cb_info[BUTTON_LONG_PRESS_START]) {
                     button_cb_info_t *cb_info = btn->cb_info[BUTTON_LONG_PRESS_START];
                     uint16_t time = cb_info[btn->count[0]].event_data.long_press.press_time;
@@ -247,7 +247,7 @@ static void button_handler(button_dev_t *btn)
                             }
                         }
                     }
-                    if (btn->count[0] < btn->size[BUTTON_LONG_PRESS_START] && abs(ticks_time - time) <= TOLERANCE) {
+                    if (btn->count[0] < btn->size[BUTTON_LONG_PRESS_START] && abs((int)ticks_time - (int)time) <= TOLERANCE) {
                         btn->event = (uint8_t)BUTTON_LONG_PRESS_START;
                         do {
                             cb_info[btn->count[0]].cb(btn, cb_info[btn->count[0]].usr_data);
@@ -272,7 +272,7 @@ static void button_handler(button_dev_t *btn)
                             }
                         }
                     }
-                    if (btn->count[1] + 1 < btn->size[BUTTON_LONG_PRESS_UP] && abs(ticks_time - time) <= TOLERANCE) {
+                    if (btn->count[1] + 1 < btn->size[BUTTON_LONG_PRESS_UP] && abs((int)ticks_time - (int)time) <= TOLERANCE) {
                         do {
                             btn->count[1]++;
                             if (btn->count[1] + 1 >= btn->size[BUTTON_LONG_PRESS_UP]) {
@@ -377,7 +377,6 @@ static button_dev_t *button_create_com(uint8_t active_level, uint8_t (*hal_get_k
     btn->hal_button_Level = hal_get_key_state;
     btn->button_level = !active_level;
     btn->long_press_ticks = long_press_ticks;
-    btn->long_press_ticks_default = btn->long_press_ticks;
     btn->short_press_ticks = short_press_ticks;
 
     /** Add handle to list */
@@ -541,7 +540,7 @@ esp_err_t iot_button_register_cb(button_handle_t btn_handle, button_event_t even
     };
 
     if ((event == BUTTON_LONG_PRESS_START || event == BUTTON_LONG_PRESS_UP) && !event_cfg.event_data.long_press.press_time) {
-        event_cfg.event_data.long_press.press_time = btn->long_press_ticks_default * TICKS_INTERVAL;
+        event_cfg.event_data.long_press.press_time = btn->long_press_ticks * TICKS_INTERVAL;
     }
 
     return iot_button_register_event_cb(btn_handle, event_cfg, cb, usr_data);
@@ -746,7 +745,7 @@ uint8_t iot_button_get_repeat(button_handle_t btn_handle)
     return btn->repeat;
 }
 
-uint16_t iot_button_get_ticks_time(button_handle_t btn_handle)
+uint32_t iot_button_get_ticks_time(button_handle_t btn_handle)
 {
     BTN_CHECK(NULL != btn_handle, "Pointer of handle is invalid", 0);
     button_dev_t *btn = (button_dev_t *) btn_handle;
