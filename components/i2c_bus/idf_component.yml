@@ -2,7 +2,7 @@ version: "1.0.0"
 description: I2C bus driver
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/i2c_bus
 repository: https://github.com/espressif/esp-iot-solution.git
-documentation: https://docs.espressif.com/projects/esp-iot-solution/en/latest/input_device/i2c_bus.html
+documentation: https://docs.espressif.com/projects/esp-iot-solution/en/latest/basic/bus/i2c_bus.html
 issues: https://github.com/espressif/esp-iot-solution/issues
 
 dependencies:
