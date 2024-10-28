@@ -1,5 +1,9 @@
 # changelog
 
+## v1.0.0 - 2024-8-15
+
+* Publish the official version
+
 ## v0.1.2 - 2024-3-8
 
 ### Bug Fix

@@ -315,6 +315,7 @@
 
   - "components/audio/dac_audio/include/dac_audio.h"
   - "components/audio/pwm_audio/include/pwm_audio.h"
+  - "components/avi_player/include/avi_player.h"
   - "components/bluetooth/ble_conn_mgr/include/esp_ble_conn_mgr.h"
   - "components/bluetooth/ble_conn_mgr/include/esp_ble_conn_mgr.h"
   - "components/bluetooth/ble_hci/include/ble_hci.h"
@@ -1428,7 +1429,7 @@
     - <<: *if-dev-push
       changes: *patterns-components_audio_dac_audio
 
-.rules:build:component_audio_pwm_audio_test:
+.rules:build:component_audio_pwm_audio_test_apps:
   rules:
     - <<: *if-protected
     - <<: *if-label-build
@@ -1438,6 +1439,17 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_audio_pwm_audio
+
+.rules:build:components_avi_player_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_avi_player
 
 .rules:build:components_bluetooth_ble_hci_test_apps:
   rules:
@@ -2100,6 +2112,17 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_usb_usb_device_uac
+
+.rules:build:components_usb_usb_device_uvc:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_usb_usb_device_uvc
 
 .rules:build:components_sensors_humiture_aht20_test_apps:
   rules:

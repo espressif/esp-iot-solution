@@ -12,3 +12,5 @@ dependencies:
     version: "^1.5.1"
     rules:
       - if: "target in [esp32s3]"
+  lvgl/lvgl: #temp to workaround bsp issue
+    version: "9.2.0"

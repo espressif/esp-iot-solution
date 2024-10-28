@@ -1,3 +1,11 @@
+components/audio/pwm_audio/test_apps:
+  enable:
+    - if: INCLUDE_DEFAULT == 1
+
+components/avi_player/test_apps:
+  enable:
+    - if: IDF_TARGET in ["esp32s3", "esp32p4"]
+
 components/touch/touch_proximity_sensor/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32s3"]
@@ -143,6 +151,10 @@ components/keyboard_button/test_apps:
     - if: INCLUDE_DEFAULT == 1
 
 components/usb/usb_device_uac/test_apps:
+  enable:
+    - if: SOC_USB_OTG_SUPPORTED == 1 and IDF_VERSION_MAJOR >= 5
+
+components/usb/usb_device_uvc/test_apps:
   enable:
     - if: SOC_USB_OTG_SUPPORTED == 1 and IDF_VERSION_MAJOR >= 5
 

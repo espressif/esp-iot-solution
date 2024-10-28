@@ -2,7 +2,7 @@
 
 ## Component Knob
 
-`Knob` is the component that provides the software PCNT, it can be used on chips(esp32c2, esp32c3) that do not have PCNT hardware capabilities. By using this component, you can quickly use a physical encoder, such as the EC11 encoder.
+`Knob` is the component that provides the software quadrature decoding, it can be used on chips(esp32c2, esp32c3) that do not have PCNT hardware capabilities. By using this component, you can quickly use a physical encoder, such as the EC11 encoder.
 
 Features:
 

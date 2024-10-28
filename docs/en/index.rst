@@ -68,6 +68,7 @@ ESP-IoT-Solution contains device drivers and code frameworks for the development
    Display <display/index>
    USB Host&Device <usb/index>
    Audio <audio/index>
+   Multimedia <multimedia/index>
    GUI <gui/index>
    AI <ai/index>
    Input Device <input_device/index>

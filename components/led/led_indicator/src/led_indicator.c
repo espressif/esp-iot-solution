@@ -421,7 +421,7 @@ static void _blink_list_runner(TimerHandle_t xTimer)
 
             p_led_indicator->current_fade_value.v = p_blink_step_value.v;
             p_led_indicator->current_fade_value.i = p_blink_step_value.i;
-            p_led_indicator->hal_indicator_set_brightness(p_led_indicator->hardware_data, led_indicator_get_gamma_value(p_blink_step_value.v));
+            p_led_indicator->hal_indicator_set_brightness(p_led_indicator->hardware_data, _ihsv_convert_to_gamma(p_led_indicator->current_fade_value.value));
             p_led_indicator->last_fade_value = p_led_indicator->current_fade_value;
             if (p_blink_step->hold_time_ms == 0) {
                 break;
@@ -448,7 +448,7 @@ static void _blink_list_runner(TimerHandle_t xTimer)
             // diff_brightness < 0: Fade decrease
             if (p_blink_step->hold_time_ms == 0) {
                 p_led_indicator->current_fade_value.v = brightness_value;
-                p_led_indicator->hal_indicator_set_brightness(p_led_indicator->hardware_data, led_indicator_get_gamma_value(brightness_value));
+                p_led_indicator->hal_indicator_set_brightness(p_led_indicator->hardware_data, _ihsv_convert_to_gamma(p_led_indicator->current_fade_value.value));
                 p_led_indicator->last_fade_value = p_led_indicator->current_fade_value;
                 p_led_indicator->p_blink_steps[active_blink] += 1;
                 break;
@@ -460,7 +460,7 @@ static void _blink_list_runner(TimerHandle_t xTimer)
                 brightness_value = p_led_indicator->last_fade_value.v - p_led_indicator->fade_value_count;
             }
             p_led_indicator->current_fade_value.v = brightness_value;
-            p_led_indicator->hal_indicator_set_brightness(p_led_indicator->hardware_data, led_indicator_get_gamma_value(brightness_value));
+            p_led_indicator->hal_indicator_set_brightness(p_led_indicator->hardware_data, _ihsv_convert_to_gamma(p_led_indicator->current_fade_value.value));
 
             if (diff_value == 0) {
                 ticks = p_blink_step->hold_time_ms;

@@ -1,10 +1,10 @@
-version: "0.9.3"
+version: "1.0.0"
 description: LED indicator driver
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/led/led_indicator
 dependencies:
   idf: ">=4.0"
   led_strip:
-    version: ">=2.5.2"
+    version: "2.5.5"
     public: true
   cmake_utilities: "0.*"
 examples:

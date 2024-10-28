@@ -19,7 +19,7 @@ Note: After modifying the camera transmission format, please also delete the SPI
 
 * Development board
 
-  1. Any `ESP32-S2`, `ESP32-S3`, `ESP32-P3` board with USB Host port can be used.
+  1. Any `ESP32-S2`, `ESP32-S3`, `ESP32-P4` board with USB Host port can be used.
   2. Please note that the `esp32-sx-devkitC` board can not output 5V through USB port, If the OTG conversion cable is used directly, the device cannot be powered.
   3. For `esp32s3-usb-otg` board, please enable the USB Host power domain to power the device
   4. The flash size should be at least 8MB.

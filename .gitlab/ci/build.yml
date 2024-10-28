@@ -820,6 +820,21 @@ build_example_utilities_xz_decompress_file:
   variables:
     EXAMPLE_DIR: examples/utilities/xz_decompress_file
 
+build_components_audio_pwm_audio_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:component_audio_pwm_audio_test_apps
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: components/audio/pwm_audio/test_apps
+
+build_components_avi_player_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_avi_player_test_apps
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: components/avi_player/test_apps
 
 build_components_bluetooth_ble_hci_test_apps:
   extends:
@@ -1242,10 +1257,17 @@ build_components_usb_usb_device_uac:
     - .rules:build:components_usb_usb_device_uac
   parallel:
     matrix:
-      - IMAGE: espressif/idf:release-v4.4
       - IMAGE: espressif/idf:release-v5.0
   variables:
     EXAMPLE_DIR: components/usb/usb_device_uac
+
+build_components_usb_usb_device_uvc:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_usb_usb_device_uvc
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: components/usb/usb_device_uvc
 
 build_components_led_lightbulb_driver_test_apps:
   extends:

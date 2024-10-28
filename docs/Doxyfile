@@ -23,6 +23,7 @@ PROJECT_NAME = "ESP IoT Solution Guide"
 INPUT = \
     $(PROJECT_PATH)/components/audio/dac_audio/include/dac_audio.h \
     $(PROJECT_PATH)/components/audio/pwm_audio/include/pwm_audio.h \
+    $(PROJECT_PATH)/components/avi_player/include/avi_player.h \
     $(PROJECT_PATH)/components/bluetooth/ble_conn_mgr/include/esp_ble_conn_mgr.h \
     $(PROJECT_PATH)/components/bluetooth/ble_hci/include/ble_hci.h \
     $(PROJECT_PATH)/components/bluetooth/ble_profiles/std/ble_anp/include/esp_anp.h \
