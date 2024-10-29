@@ -73,6 +73,7 @@ ESP-IoT-Solution 包含物联网系统开发中常用的外设驱动和代码框
    人工智能 <ai/index>
    输入设备 <input_device/index>
    红外 <ir/index>
+   低功耗方案 <low_power_solution/index>
    传感器集 <sensors/index>
    触摸传感器 <touch/index>
    存储方案 <storage/index>
