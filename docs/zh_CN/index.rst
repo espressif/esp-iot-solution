@@ -52,6 +52,9 @@ ESP-IoT-Solution 包含物联网系统开发中常用的外设驱动和代码框
 .. |HMI 方案| image:: ../_static/hmi_solution.png
 .. _HMI 方案: hmi_solution/index.html
 
+.. |电工&照明 方案| image:: ../_static/electrical_lighting_solution.png
+.. _电工&照明 方案: Electrical_Lighting_solution/index.html
+
 .. |安全&加密| image:: ../_static/security_solution.png
 .. _安全&加密: security_solution/index.html
 
@@ -78,5 +81,6 @@ ESP-IoT-Solution 包含物联网系统开发中常用的外设驱动和代码框
    存储方案 <storage/index>
    电机驱动 <motor/index>
    安全&加密 <security_solution/index>
+   电工&照明 <electrical_lighting_solution/index>
    其它资源 <others/index>
    贡献代码 <contribute/index>

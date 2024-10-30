@@ -52,6 +52,9 @@ ESP-IoT-Solution contains device drivers and code frameworks for the development
 .. |HMI Solution| image:: ../_static/hmi_solution.png
 .. _HMI Solution: hmi_solution/index.html
 
+.. |Electrical&Lighting Solution| image:: ../_static/electrical_lighting_solution.png
+.. _Electrical&Lighting Solution: Electrical_Lighting_solution/index.html
+
 .. |Security&Encryption| image:: ../_static/security_solution.png
 .. _Security&Encryption: security_solution/index.html
 
@@ -78,5 +81,6 @@ ESP-IoT-Solution contains device drivers and code frameworks for the development
    Storage <storage/index>
    Motor <motor/index>
    Security&Encryption <security_solution/index>
+   Electrical&Lighting <electrical_lighting_solution/index>
    Other Resources <others/index>
    Contribute <contribute/index>

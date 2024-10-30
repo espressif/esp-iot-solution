@@ -156,7 +156,7 @@ typedef struct {
     float rgbcw_100[5]; /**< The RGBCW components required when saturation is 100 at a specific hue. */
     float rgbcw_50[5];  /**< The RGBCW components required when saturation is 50 at a specific hue. */
     float rgbcw_0[5];   /**< The RGBCW components required when saturation is 10 at a specific hue. */
-    uint16_t hue;
+    uint16_t hue;       /**< hue. */
 } lightbulb_color_mapping_data_t;
 
 /**
@@ -331,20 +331,24 @@ typedef struct {
      */
     union {
         struct {
-            uint16_t kelvin_min;
-            uint16_t kelvin_max;
-        } standard;
+            uint16_t kelvin_min;        /**< Minimum Kelvin value. */
+            uint16_t kelvin_max;        /**< Maximum Kelvin value. */
+        } standard;                     /**< Standard Mode */
         struct {
-            lightbulb_cct_mapping_data_t *table;
-            int table_size;
-        } precise;
+            lightbulb_cct_mapping_data_t *table; /**< Mixed Color table */
+            int table_size;                      /**< Table size */
+        } precise;                               /**< Precise Mode */
     } cct_mix_mode;
 
+    /**
+     * This configuration is used to set up the color calibration scheme.
+     * Measure certain hue and saturation values as calibration points, and use a linear interpolation method for color calibration.
+    */
     union {
         struct {
-            lightbulb_color_mapping_data_t *table;
-            int table_size;
-        } precise;
+            lightbulb_color_mapping_data_t *table;  /**< Mixed Color table */
+            int table_size;                         /**< Table size */
+        } precise;                                  /**< Precise Mode */
     } color_mix_mode;
 
     lightbulb_gamma_config_t *gamma_conf;       /**< Pointer to the gamma configuration data. */
@@ -352,19 +356,19 @@ typedef struct {
 
     union {
         struct {
-            gpio_num_t red;
-            gpio_num_t green;
-            gpio_num_t blue;
-            gpio_num_t cold_cct;
-            gpio_num_t warm_brightness;
+            gpio_num_t red;                     /**< GPIO Pin for the red LED */
+            gpio_num_t green;                   /**< GPIO Pin for the green LED */
+            gpio_num_t blue;                    /**< GPIO Pin for the blue LED */
+            gpio_num_t cold_cct;                /**< GPIO Pin for the cold or cct LED */
+            gpio_num_t warm_brightness;         /**< GPIO Pin for the warm or brightness LED */
         } pwm_io;                             /**< Configuration for PWM driver I/O pins. */
 
         struct {
-            lightbulb_iic_out_pin_t red;
-            lightbulb_iic_out_pin_t green;
-            lightbulb_iic_out_pin_t blue;
-            lightbulb_iic_out_pin_t cold_white;
-            lightbulb_iic_out_pin_t warm_yellow;
+            lightbulb_iic_out_pin_t red;        /**< Port of the IIC dimming chip for red output */
+            lightbulb_iic_out_pin_t green;      /**< Port of the IIC dimming chip for green output */
+            lightbulb_iic_out_pin_t blue;       /**< Port of the IIC dimming chip for blue output */
+            lightbulb_iic_out_pin_t cold_white; /**< Port of the IIC dimming chip for cold or white output */
+            lightbulb_iic_out_pin_t warm_yellow;    /**< Port of the IIC dimming chip for warm or yellow output */
         } iic_io;                             /**< Configuration for IIC driver I/O pins. */
     } io_conf;                                /**< Union for I/O configuration based on the selected driver type. */
 
