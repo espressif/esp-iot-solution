@@ -350,6 +350,10 @@ examples/usb/host/usb_msc_ota:
       temporary: true
       reason: esp32-s3-usb-otg not supported idf release 5.0 build yet
 
+examples/usb/otg/usb_host_device_mode_manual_switch:
+  enable:
+    - if: SOC_USB_OTG_SUPPORTED == 1
+
 examples/utilities/xz_decompress_file:
   enable:
     - if: INCLUDE_DEFAULT == 1

@@ -250,3 +250,15 @@ examples/usb/host/usb_msc_ota:
     This example demonstrates how to use esp_msc_ota to OTA with USB disk or other MSC devices.
   readme:
     https://raw.githubusercontent.com/espressif/esp-iot-solution/master/examples/usb/host/usb_msc_ota/README.md
+
+examples/usb/otg/usb_host_device_mode_manual_switch:
+  esp32s3:
+    sdkconfig:
+      - defaults
+  esp32p4:
+    sdkconfig:
+      - defaults
+  description:
+    This example demonstrates how to manually switch the USB OTG peripheral from host to device mode.
+  readme:
+    https://raw.githubusercontent.com/espressif/esp-iot-solution/master/examples/usb/otg/usb_host_device_mode_manual_switch/README.md

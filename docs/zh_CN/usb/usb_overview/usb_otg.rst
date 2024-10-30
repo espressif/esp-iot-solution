@@ -81,7 +81,7 @@ USB-OTG 外设内置功能
 ESP32-S2/S3 等内置 USB-OTG 外设的芯片，ROM Code 中内置了 USB 通信设备类 (CDC) 的功能，该功能可用于替代 UART 接口，实现 Log、Console 和固件下载功能。
 
 
-#. 
+#.
    由于 USB OTG Console 默认为关闭状态，如需使用它下载固件，需要通过以下方法完成初次下载：
 
 
@@ -89,7 +89,7 @@ ESP32-S2/S3 等内置 USB-OTG 外设的芯片，ROM Code 中内置了 USB 通信
    #. 手动芯片的 Boot 控制引脚拉低，然后将芯片通过 USB 线连接到 PC，进入下载模式。PC 会发现新的串口设备，Windows 为 ``COM*``\ ，Linux 为 ``/dev/ttyACM*``\ , MacOS 为 ``/dev/cu*``\ 。
    #. 使用 esptool 工具（或直接使用 idf.py flash）配置设备对应的串口号下载固件。
 
-#. 
+#.
    初次下载完成以后，USB OTG Console 功能将自动使能，即可通过 USB 线连接到 PC，PC 会发现新的串口设备，Windows 为 ``COM*``\ ，Linux 为 ``/dev/ttyACM*``\ , MacOS 为 ``/dev/cu*``\ ，LOG 数据将从该虚拟串口打印。
 
 #. 用户无需再手动拉低 Boot 控制引脚，使用 esptool 工具（或直接使用 idf.py flash）配置设备对应的串口号即可下载固件，下载期间，esptool 通过 USB 控制协议自动将设备 Reset 并切换到下载模式。
@@ -129,3 +129,10 @@ USB Host 方案详情，请参考 :doc:`USB Host Solution <./usb_host_solutions>
 USB-OTG 外设支持 USB Device 功能，乐鑫已经官方适配了 TinyUSB 协议栈，用户可以直接使用基于 TinyUSB 开源协议栈开发的 USB 标准设备或自定义设备，例如 HID，MSC，CDC，ECM, UAC 等。
 
 USB Device 方案详情，请参考 :doc:`USB Device Solution <./usb_device_solutions>` 。
+
+动态切换 USB-OTG 外设模式
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+USB-OTG 外设支持动态切换 USB-OTG 外设模式，用户可以通过动态的注册 USB Host Driver 或 USB Device Driver，实现 USB-OTG 外设的动态切换。
+
+* 示例代码: USB OTG 手动切换 :example:`usb/otg/usb_host_device_mode_manual_switch`

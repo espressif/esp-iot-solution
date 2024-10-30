@@ -78,6 +78,8 @@ ignore:  # You can also select ignoring files here
     - 'examples/usb/host/usb_camera_lcd_display/components/esp_painter/font/**/*'
     - 'examples/usb/host/usb_camera_mic_spk/main/wave_1ch_16bits.c'
     - 'examples/usb/host/usb_cdc_4g_module/components/json_parse/**/*'
+    - 'examples/usb/otg/usb_host_device_mode_manual_switch/cdc_device/usb_descriptors.c'
+    - 'examples/usb/otg/usb_host_device_mode_manual_switch/cdc_device/tusb_config.h'
     - 'tools/ci/check_copyright_ignore.txt'
     - 'tools/cmake_utilities/test_apps/pytest_cmake_utilities.py'
     - 'examples/usb/device/usb_dongle/main/CLI_Commands.c'

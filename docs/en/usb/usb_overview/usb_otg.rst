@@ -127,3 +127,10 @@ USB Device development using USB-OTG peripherals
 USB-OTG peripherals support USB Device functionality, and Espressif has officially adapted the ``TinyUSB`` stack. Users can develop USB standard devices or custom devices based on the open-source ``TinyUSB``, such as HID, MSC, CDC, ECM, UAC, and more.
 
 For more details on the USB Device solution, please refer to :doc:`USB Device Solution <./usb_device_solutions>`.
+
+Dynamic Switching of USB-OTG Peripheral Modes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The USB-OTG peripheral supports dynamic switching of its mode. Users can achieve dynamic switching by dynamically registering the USB Host Driver or USB Device Driver.
+
+* Example Code: USB OTG Manual Switching :example:`usb/otg/usb_host_device_mode_manual_switch`
