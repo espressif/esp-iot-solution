@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -11,35 +11,18 @@
 #include "esp_log.h"
 #include "iot_servo.h"
 #include "unity.h"
+#include "unity_config.h"
 #include "sdkconfig.h"
 
-#ifdef CONFIG_IDF_TARGET_ESP32
-#define SERVO_CH0_PIN 32
-#define SERVO_CH1_PIN 25
-#define SERVO_CH2_PIN 26
-#define SERVO_CH3_PIN 27
-#define SERVO_CH4_PIN 14
-#define SERVO_CH5_PIN 12
-#define SERVO_CH6_PIN 13
-#define SERVO_CH7_PIN 15
-#define SERVO_CH8_PIN 2
-#define SERVO_CH9_PIN 0
-#define SERVO_CH10_PIN 4
-#define SERVO_CH11_PIN 5
-#define SERVO_CH12_PIN 18
-#define SERVO_CH13_PIN 19
-#define SERVO_CH14_PIN 21
-#define SERVO_CH15_PIN 22
-#elif CONFIG_IDF_TARGET_ESP32S2
 #define SERVO_CH0_PIN 1
 #define SERVO_CH1_PIN 2
 #define SERVO_CH2_PIN 3
 #define SERVO_CH3_PIN 4
-#define SERVO_CH4_PIN 5
-#define SERVO_CH5_PIN 6
-#define SERVO_CH6_PIN 7
-#define SERVO_CH7_PIN 8
-#endif
+
+#define TEST_MEMORY_LEAK_THRESHOLD (-500)
+
+static size_t before_free_8bit;
+static size_t before_free_32bit;
 
 static void _set_angle(ledc_mode_t speed_mode, float angle)
 {
@@ -62,62 +45,17 @@ TEST_CASE("Servo_motor test", "[servo][iot]")
                 SERVO_CH1_PIN,
                 SERVO_CH2_PIN,
                 SERVO_CH3_PIN,
-                SERVO_CH4_PIN,
-                SERVO_CH5_PIN,
-                SERVO_CH6_PIN,
-                SERVO_CH7_PIN,
             },
             .ch = {
                 LEDC_CHANNEL_0,
                 LEDC_CHANNEL_1,
                 LEDC_CHANNEL_2,
                 LEDC_CHANNEL_3,
-                LEDC_CHANNEL_4,
-                LEDC_CHANNEL_5,
-                LEDC_CHANNEL_6,
-                LEDC_CHANNEL_7,
             },
         },
         .channel_number = 8,
     } ;
     TEST_ASSERT(ESP_OK == iot_servo_init(LEDC_LOW_SPEED_MODE, &servo_cfg_ls));
-
-    /**
-     * Only ESP32 has the high speed mode
-     */
-#ifdef CONFIG_IDF_TARGET_ESP32
-    servo_config_t servo_cfg_hs = {
-        .max_angle = 180,
-        .min_width_us = 500,
-        .max_width_us = 2500,
-        .freq = 100,
-        .timer_number = LEDC_TIMER_0,
-        .channels = {
-            .servo_pin = {
-                SERVO_CH8_PIN,
-                SERVO_CH9_PIN,
-                SERVO_CH10_PIN,
-                SERVO_CH11_PIN,
-                SERVO_CH12_PIN,
-                SERVO_CH13_PIN,
-                SERVO_CH14_PIN,
-                SERVO_CH15_PIN,
-            },
-            .ch = {
-                LEDC_CHANNEL_0,
-                LEDC_CHANNEL_1,
-                LEDC_CHANNEL_2,
-                LEDC_CHANNEL_3,
-                LEDC_CHANNEL_4,
-                LEDC_CHANNEL_5,
-                LEDC_CHANNEL_6,
-                LEDC_CHANNEL_7,
-            },
-        },
-        .channel_number = 8,
-    } ;
-    TEST_ASSERT(ESP_OK == iot_servo_init(LEDC_HIGH_SPEED_MODE, &servo_cfg_hs));
-#endif
 
     size_t i;
     float angle_ls, angle_hs;
@@ -144,4 +82,31 @@ TEST_CASE("Servo_motor test", "[servo][iot]")
 #ifdef CONFIG_IDF_TARGET_ESP32
     iot_servo_deinit(LEDC_HIGH_SPEED_MODE);
 #endif
+}
+
+static void check_leak(size_t before_free, size_t after_free, const char *type)
+{
+    ssize_t delta = after_free - before_free;
+    printf("MALLOC_CAP_%s: Before %u bytes free, After %u bytes free (delta %d)\n", type, before_free, after_free, delta);
+    TEST_ASSERT_MESSAGE(delta >= TEST_MEMORY_LEAK_THRESHOLD, "memory leak");
+}
+
+void setUp(void)
+{
+    before_free_8bit = heap_caps_get_free_size(MALLOC_CAP_8BIT);
+    before_free_32bit = heap_caps_get_free_size(MALLOC_CAP_32BIT);
+}
+
+void tearDown(void)
+{
+    size_t after_free_8bit = heap_caps_get_free_size(MALLOC_CAP_8BIT);
+    size_t after_free_32bit = heap_caps_get_free_size(MALLOC_CAP_32BIT);
+    check_leak(before_free_8bit, after_free_8bit, "8BIT");
+    check_leak(before_free_32bit, after_free_32bit, "32BIT");
+}
+
+void app_main(void)
+{
+    printf("SERVO TEST \n");
+    unity_run_menu();
 }

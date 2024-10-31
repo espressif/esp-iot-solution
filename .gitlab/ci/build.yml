@@ -574,6 +574,16 @@ build_example_motor_foc_knob:
   variables:
     EXAMPLE_DIR: examples/motor/foc_knob_example
 
+build_example_motor_servo:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_motor_servo
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.2
+  variables:
+    EXAMPLE_DIR: components/motor/servo/examples/servo_control
+
 build_example_ota_simple_ota_example:
   extends:
     - .build_examples_template
@@ -1131,6 +1141,14 @@ build_components_motor_esp_simplefoc_test_apps:
       - IMAGE: espressif/idf:release-v5.0
   variables:
     EXAMPLE_DIR: components/motor/esp_simplefoc/test_apps
+
+build_components_motor_servo_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_motor_servo_test_apps
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: components/motor/servo/test_apps
 
 build_components_ntc_driver_test_apps:
   extends:

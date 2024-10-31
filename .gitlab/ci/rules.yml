@@ -190,6 +190,7 @@
 
 .patterns-components_motor_servo: &patterns-components_motor_servo
   - "components/motor/servo/**/*"
+  - "components/tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_openai: &patterns-components_openai
   - "components/openai/**/*"
@@ -477,6 +478,9 @@
 
 .patterns-example_motor_foc_knob: &patterns-example_motor_foc_knob
   - "examples/motor/foc_knob_example/**/*"
+
+.patterns-example_motor_servo: &patterns-example_motor_servo
+  - "components/motor/servo/examples/servo_control/**/*"
 
 .patterns-example_ota_simple_ota_example: &patterns-example_ota_simple_ota_example
   - "examples/ota/simple_ota_example/**/*"
@@ -1069,6 +1073,18 @@
       changes: *patterns-components_motor_esp_simplefoc
     - <<: *if-dev-push
       changes: *patterns-example_motor_foc_knob
+
+.rules:build:example_motor_servo:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_motor_servo
+    - <<: *if-dev-push
+      changes: *patterns-example_motor_servo
 
 .rules:build:example_ota_simple_ota_example:
   rules:
@@ -1871,7 +1887,7 @@
     - <<: *if-dev-push
       changes: *patterns-components_motor_esp_sensorless_bldc_control
 
-.rules:build:components_motor_servo_test:
+.rules:build:components_motor_servo_test_apps:
   rules:
     - <<: *if-protected
     - <<: *if-label-build
