@@ -82,7 +82,8 @@ int esp_elf_arch_relocate(esp_elf_t *elf, const elf32_rela_t *rela,
 
     where = (uint32_t *)esp_elf_map_sym(elf, rela->offset);
 
-    ESP_LOGD(TAG, "where=%p addr=%x offset=%x\n", where, (int)addr, (int)rela->offset);
+    ESP_LOGD(TAG, "where=%p addr=0x%x offset=0x%x\n",
+             where, (int)addr, (int)rela->offset);
 
     switch (ELF_R_TYPE(rela->info)) {
     case R_XTENSA_RELATIVE:

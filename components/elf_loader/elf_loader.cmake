@@ -35,12 +35,18 @@ macro(project_elf project_name)
     # Remove more unused sections
     string(REPLACE "-elf-gcc" "-elf-strip" ${CMAKE_STRIP} ${CMAKE_C_COMPILER})
     set(strip_flags --strip-unneeded
-                    --remove-section=.xt.lit
-                    --remove-section=.xt.prop
                     --remove-section=.comment
-                    --remove-section=.xtensa.info
                     --remove-section=.got.loc
-                    --remove-section=.got)
+                    --remove-section=.got
+                    --remove-section=.dynamic)
+
+    if(CONFIG_IDF_TARGET_ARCH_XTENSA)
+        list(APPEND strip_flags --remove-section=.xt.lit
+                                --remove-section=.xt.prop
+                                --remove-section=.xtensa.info)
+    elseif(CONFIG_IDF_TARGET_ARCH_RISCV)
+        list(APPEND strip_flags --remove-section=.riscv.attributes)
+    endif()
 
     # Link input list of libraries to ELF
     if(ELF_COMPONENTS)

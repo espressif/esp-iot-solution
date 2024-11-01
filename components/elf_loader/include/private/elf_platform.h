@@ -12,12 +12,10 @@
 extern "C" {
 #endif
 
-#ifndef ELF_ALIGN_SIZE
-#define ELF_ALIGN_SIZE 4
-#endif
+/* Notes: align_size needs to be a power of 2 */
 
-#define ELF_ALIGN(_a)   (((_a) + (ELF_ALIGN_SIZE - 1)) & \
-                         (~(ELF_ALIGN_SIZE - 1)))
+#define ELF_ALIGN(_a, align_size) (((_a) + (align_size - 1)) & \
+                                   ~(align_size - 1))
 
 /**
  * @brief Allocate block of memory.

@@ -28,10 +28,20 @@
  */
 void *esp_elf_malloc(uint32_t n, bool exec)
 {
+    uint32_t caps;
+
+#if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
 #ifdef CONFIG_ELF_LOADER_LOAD_PSRAM
-    uint32_t caps = MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT;
+    caps = MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT;
 #else
-    uint32_t caps = exec ? MALLOC_CAP_EXEC : MALLOC_CAP_8BIT;
+    caps = exec ? MALLOC_CAP_EXEC : MALLOC_CAP_8BIT;
+#endif
+#else
+#ifdef CONFIG_ELF_LOADER_LOAD_PSRAM
+    caps = MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT | MALLOC_CAP_CACHE_ALIGNED;
+#else
+    caps = MALLOC_CAP_8BIT | MALLOC_CAP_CACHE_ALIGNED;
+#endif
 #endif
 
     return heap_caps_malloc(n, caps);
