@@ -1,6 +1,19 @@
 # ChangeLog
 
-## v1.0.1 (2024-06-27)
+## v1.3.0 (2024-10-18)
+
+* CMake Enhancements: Transitioned from Kconfig options to CMake arguments, supporting independent parameters for each partition.
+* JPG/PNG to QOI Conversion: Enabled conversion of JPG and PNG to QOI for optimized image handling.
+* LVGL Image Conversion: Added support for converting images to LVGL-compatible binary formats.
+
+## v1.2.0 (2024-07-31)
+
+* Added mmap_enable flag.
+* Added mmap_assets_copy_mem for reading files from flash to memory.
+* Configurable filename length.
+* Support multiple partitions.
+
+## v1.1.0 (2024-06-27)
 
 * Added support for split height setting.
 

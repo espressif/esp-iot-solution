@@ -3,9 +3,58 @@
 # Create a spiffs image of the specified directory on the host during build and optionally
 # have the created image flashed using `idf.py flash`
 function(spiffs_create_partition_assets partition base_dir)
-    set(options FLASH_IN_PROJECT)
+    # Define option flags (BOOL)
+    set(options FLASH_IN_PROJECT
+                MMAP_SUPPORT_SJPG
+                MMAP_SUPPORT_SPNG
+                MMAP_SUPPORT_QOI
+                MMAP_SUPPORT_SQOI
+                MMAP_SUPPORT_RAW
+                MMAP_RAW_DITHER
+                MMAP_RAW_BGR_MODE)
+
+    # Define one-value arguments (STRING and INT)
+    set(one_value_args MMAP_FILE_SUPPORT_FORMAT
+                       MMAP_SPLIT_HEIGHT
+                       MMAP_RAW_FILE_FORMAT
+                       MMAP_RAW_COLOR_FORMAT)
+
+    # Define multi-value arguments
     set(multi DEPENDS)
-    cmake_parse_arguments(arg "${options}" "" "${multi}" "${ARGN}")
+
+    # Parse the arguments passed to the function
+    cmake_parse_arguments(arg
+                          "${options}"
+                          "${one_value_args}"
+                          "${multi}"
+                          "${ARGN}")
+
+    if(NOT DEFINED arg_MMAP_FILE_SUPPORT_FORMAT OR arg_MMAP_FILE_SUPPORT_FORMAT STREQUAL "")
+        message(FATAL_ERROR "MMAP_FILE_SUPPORT_FORMAT is empty. Please input the file suffixes you want (e.g .png, .jpg).")
+    endif()
+
+    if(arg_MMAP_SUPPORT_QOI AND (arg_MMAP_SUPPORT_SJPG OR arg_MMAP_SUPPORT_SPNG))
+        message(FATAL_ERROR "MMAP_SUPPORT_QOI depends on !MMAP_SUPPORT_SJPG && !MMAP_SUPPORT_SPNG.")
+    endif()
+
+    if(arg_MMAP_SUPPORT_SQOI AND NOT arg_MMAP_SUPPORT_QOI)
+        message(FATAL_ERROR "MMAP_SUPPORT_SQOI depends on MMAP_SUPPORT_QOI.")
+    endif()
+
+    if( (arg_MMAP_SUPPORT_SJPG OR arg_MMAP_SUPPORT_SPNG OR arg_MMAP_SUPPORT_SQOI) AND
+        (NOT DEFINED arg_MMAP_SPLIT_HEIGHT OR arg_MMAP_SPLIT_HEIGHT LESS 1) )
+        message(FATAL_ERROR "MMAP_SPLIT_HEIGHT must be defined and its value >= 1 when MMAP_SUPPORT_SJPG, MMAP_SUPPORT_SPNG, or MMAP_SUPPORT_SQOI is enabled.")
+    endif()
+
+    if(DEFINED arg_MMAP_SPLIT_HEIGHT)
+        if(NOT (arg_MMAP_SUPPORT_SJPG OR arg_MMAP_SUPPORT_SPNG OR arg_MMAP_SUPPORT_SQOI))
+            message(FATAL_ERROR "MMAP_SPLIT_HEIGHT depends on MMAP_SUPPORT_SJPG || MMAP_SUPPORT_SPNG || MMAP_SUPPORT_SQOI.")
+        endif()
+    endif()
+
+    if(arg_MMAP_SUPPORT_RAW AND (arg_MMAP_SUPPORT_SJPG OR arg_MMAP_SUPPORT_SPNG OR arg_MMAP_SUPPORT_QOI OR arg_MMAP_SUPPORT_SQOI))
+        message(FATAL_ERROR "MMAP_SUPPORT_RAW and MMAP_SUPPORT_SJPG/MMAP_SUPPORT_SPNG/MMAP_SUPPORT_QOI/MMAP_SUPPORT_SQOI cannot be enabled at the same time.")
+    endif()
 
     # Try to install Pillow using pip
     idf_build_get_property(python PYTHON)
@@ -16,9 +65,7 @@ function(spiffs_create_partition_assets partition base_dir)
         ERROR_QUIET
     )
 
-    if(PIL_FOUND EQUAL 0)
-        message(STATUS "Pillow is installed.")
-    else()
+    if(NOT PIL_FOUND EQUAL 0)
         message(STATUS "Pillow not found. Attempting to install it using pip...")
 
         execute_process(
@@ -37,7 +84,35 @@ function(spiffs_create_partition_assets partition base_dir)
         endif()
     endif()
 
+    # Try to install qoi-conv using pip
+    execute_process(
+        COMMAND ${python} -c "import importlib; importlib.import_module('qoi-conv')"
+        RESULT_VARIABLE PIL_FOUND
+        OUTPUT_QUIET
+        ERROR_QUIET
+    )
+
+    if(NOT PIL_FOUND EQUAL 0)
+        message(STATUS "qoi-conv not found. Attempting to install it using pip...")
+
+        execute_process(
+            COMMAND ${python} -m pip install -U qoi-conv
+            RESULT_VARIABLE result
+            OUTPUT_VARIABLE output
+            ERROR_VARIABLE error
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_STRIP_TRAILING_WHITESPACE
+        )
+
+        if(result)
+            message(FATAL_ERROR "Failed to install qoi-conv using pip. Please install it manually.\nError: ${error}")
+        else()
+            message(STATUS "qoi-conv successfully installed.")
+        endif()
+    endif()
+
     get_filename_component(base_dir_full_path ${base_dir} ABSOLUTE)
+    get_filename_component(base_dir_name "${base_dir_full_path}" NAME)
 
     partition_table_get_partition_info(size "--partition-name ${partition}" "size")
     partition_table_get_partition_info(offset "--partition-name ${partition}" "offset")
@@ -59,31 +134,53 @@ function(spiffs_create_partition_assets partition base_dir)
             message(FATAL_ERROR "Component 'esp_mmap_assets' not found.")
         else()
             idf_component_get_property(TARGET_COMPONENT_PATH ${TARGET_COMPONENT} COMPONENT_DIR)
-            message(STATUS "Component dir: ${TARGET_COMPONENT_PATH}")
         endif()
 
-        set(image_file ${CMAKE_BINARY_DIR}/mmap_build/${partition}.bin)
+        set(image_file ${CMAKE_BINARY_DIR}/mmap_build/${base_dir_name}/${partition}.bin)
         set(MVMODEL_EXE ${TARGET_COMPONENT_PATH}/spiffs_assets_gen.py)
 
-        set(MMAP_SUPPORT_SPNG "$<IF:$<STREQUAL:${CONFIG_MMAP_SUPPORT_SPNG},y>,ON,OFF>")
-        set(MMAP_SUPPORT_SJPG "$<IF:$<STREQUAL:${CONFIG_MMAP_SUPPORT_SJPG},y>,ON,OFF>")
+        if(arg_MMAP_SUPPORT_RAW)
+            foreach(COMPONENT ${build_components})
+            if(COMPONENT MATCHES "^lvgl$" OR COMPONENT MATCHES "^lvgl__lvgl$")
+                set(lvgl_name ${COMPONENT})
+                if(COMPONENT STREQUAL "lvgl")
+                    set(lvgl_ver $ENV{LVGL_VERSION})
+                else()
+                    idf_component_get_property(lvgl_ver ${lvgl_name} COMPONENT_VERSION)
+                endif()
+                break()
+            endif()
+            endforeach()
 
-        if(NOT DEFINED CONFIG_MMAP_SPLIT_HEIGHT OR CONFIG_MMAP_SPLIT_HEIGHT STREQUAL "")
-            set(CONFIG_MMAP_SPLIT_HEIGHT 0)  # Default value
+            if("${lvgl_ver}" STREQUAL "")
+                message("Could not determine LVGL version, assuming v8.x")
+                set(lvgl_ver "8.0.0")
+            endif()
+            message(STATUS "LVGL version: ${lvgl_ver}")
         endif()
+
+        if(NOT arg_MMAP_SPLIT_HEIGHT)
+            set(arg_MMAP_SPLIT_HEIGHT 0) # Default value
+        endif()
+
+        string(TOLOWER "${arg_MMAP_SUPPORT_SJPG}" support_sjpg)
+        string(TOLOWER "${arg_MMAP_SUPPORT_SPNG}" support_spng)
+        string(TOLOWER "${arg_MMAP_SUPPORT_QOI}" support_qoi)
+        string(TOLOWER "${arg_MMAP_SUPPORT_SQOI}" support_sqoi)
+        string(TOLOWER "${arg_MMAP_SUPPORT_RAW}" support_raw)
+        string(TOLOWER "${arg_MMAP_RAW_DITHER}" support_raw_dither)
+        string(TOLOWER "${arg_MMAP_RAW_BGR_MODE}" support_raw_bgr)
+
+        set(CONFIG_FILE_PATH "${CMAKE_BINARY_DIR}/mmap_build/${base_dir_name}/config.json")
+        configure_file(
+            "${TARGET_COMPONENT_PATH}/config_template.json.in"
+            "${CONFIG_FILE_PATH}"
+            @ONLY
+        )
 
         add_custom_target(spiffs_${partition}_bin ALL
             COMMENT "Move and Pack assets..."
-            COMMAND python ${MVMODEL_EXE}
-            -d1 ${PROJECT_DIR}
-            -d2 ${CMAKE_CURRENT_LIST_DIR}
-            -d3 ${base_dir_full_path}
-            -d4 ${size}
-            -d5 ${image_file}
-            -d6 ${MMAP_SUPPORT_SPNG}
-            -d7 ${MMAP_SUPPORT_SJPG}
-            -d8 ${CONFIG_MMAP_FILE_SUPPORT_FORMAT}
-            -d9 ${CONFIG_MMAP_SPLIT_HEIGHT}
+            COMMAND python ${MVMODEL_EXE} --config "${CONFIG_FILE_PATH}"
             DEPENDS ${arg_DEPENDS}
             VERBATIM)
 

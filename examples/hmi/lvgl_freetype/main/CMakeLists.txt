@@ -14,4 +14,9 @@ set(SPIFFS_DIR "${CMAKE_BINARY_DIR}/spiffs_assets")
 file(MAKE_DIRECTORY ${SPIFFS_DIR})
 file(DOWNLOAD ${URL} ${SPIFFS_DIR}/${FILE} SHOW_PROGRESS)
 
-spiffs_create_partition_assets(assets ${SPIFFS_DIR} FLASH_IN_PROJECT)
+spiffs_create_partition_assets(
+    assets
+    ${SPIFFS_DIR}
+    FLASH_IN_PROJECT
+    MMAP_FILE_SUPPORT_FORMAT ".ttf"
+)

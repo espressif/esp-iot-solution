@@ -45,7 +45,8 @@ jobs:
             components/display/lcd/esp_lcd_usb_display;
             components/display/lcd_touch/esp_lcd_touch_spd2010;
             components/display/lcd_touch/esp_lcd_touch_st7123;
-            components/display/tools/esp_lv_spng;
+            components/display/tools/esp_lv_decoder;
+            components/display/tools/esp_lv_fs;
             components/display/tools/esp_mmap_assets;
             components/elf_loader;
             components/keyboard_button;

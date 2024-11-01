@@ -133,8 +133,12 @@
 .patterns-components_display_screen: &patterns-components_display_screen
   - "components/display/screen/**/*"
 
-.patterns-components_display_tools_esp_lv_spng: &patterns-components_display_tools_esp_lv_spng
-  - "components/display/tools/esp_lv_spng/**/*"
+.patterns-components_display_tools_esp_lv_decoder: &patterns-components_display_tools_esp_lv_decoder
+  - "components/display/tools/esp_lv_decoder/**/*"
+  - "components/tools/cmake_utilities/package_manager.cmake"
+
+.patterns-components_display_tools_esp_lv_fs: &patterns-components_display_tools_esp_lv_fs
+  - "components/display/tools/esp_lv_fs/**/*"
   - "components/tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_display_tools_esp_mmap_assets: &patterns-components_display_tools_esp_mmap_assets
@@ -328,7 +332,8 @@
   - "components/button/include/iot_button.h"
   - "components/display/screen/interface_driver/scr_interface_driver.h"
   - "components/display/screen/screen_driver.h"
-  - "components/display/tools/esp_lv_spng/include/esp_lv_spng.h"
+  - "components/display/tools/esp_lv_decoder/include/esp_lv_decoder.h"
+  - "components/display/tools/esp_lv_fs/include/esp_lv_fs.h"
   - "components/display/tools/esp_mmap_assets/include/esp_mmap_assets.h"
   - "components/display/touch_panel/touch_panel.h"
   - "components/i2c_bus/include/i2c_bus.h"
@@ -460,9 +465,6 @@
 .patterns-example_lvgl_freetype: &patterns-example_lvgl_freetype
   - "examples/hmi/lvgl_freetype/**/*"
 
-.patterns-example_lvgl_spng: &patterns-example_lvgl_spng
-  - "examples/hmi/lvgl_spng/**/*"
-
 .patterns-example_motor_bldc_fan_rainmaker: &patterns-example_motor_bldc_fan_rainmaker
   - "examples/motor/bldc_fan_rainmaker/**/*"
 
@@ -480,6 +482,9 @@
 
 .patterns-example_ota_simple_ota_example: &patterns-example_ota_simple_ota_example
   - "examples/ota/simple_ota_example/**/*"
+
+.patterns-example_perf_benchmark: &patterns-example_perf_benchmark
+  - "examples/hmi/perf_benchmark/**/*"
 
 .patterns-example_screen: &patterns-example_screen
   - "examples/screen/**/*"
@@ -994,20 +999,6 @@
     - <<: *if-dev-push
       changes: *patterns-components_display_tools_esp_mmap_assets
 
-.rules:build:example_lvgl_spng:
-  rules:
-    - <<: *if-protected
-    - <<: *if-label-build
-    - <<: *if-trigger-job
-    - <<: *if-dev-push
-      changes: *patterns-build_system
-    - <<: *if-dev-push
-      changes: *patterns-example_lvgl_spng
-    - <<: *if-dev-push
-      changes: *patterns-components_display_tools_esp_mmap_assets
-    - <<: *if-dev-push
-      changes: *patterns-components_display_tools_esp_lv_spng
-
 .rules:build:example_motor_bldc_fan_rainmaker:
   rules:
     - <<: *if-protected
@@ -1081,6 +1072,22 @@
       changes: *patterns-components_bootloader_support_plus
     - <<: *if-dev-push
       changes: *patterns-example_ota_simple_ota_example
+
+.rules:build:example_perf_benchmark:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_perf_benchmark
+    - <<: *if-dev-push
+      changes: *patterns-components_display_tools_esp_mmap_assets
+    - <<: *if-dev-push
+      changes: *patterns-components_display_tools_esp_lv_decoder
+    - <<: *if-dev-push
+      changes: *patterns-components_display_tools_esp_lv_fs
 
 .rules:build:example_screen:
   rules:
@@ -1736,6 +1743,30 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_display_screen
+
+.rules:build:components_display_tools_esp_lv_decoder_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_display_tools_esp_lv_decoder
+
+.rules:build:components_display_tools_esp_lv_fs_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_display_tools_esp_lv_fs
+    - <<: *if-dev-push
+      changes: *patterns-components_display_tools_esp_mmap_assets
 
 .rules:build:components_display_tools_esp_mmap_assets_test_apps:
   rules:

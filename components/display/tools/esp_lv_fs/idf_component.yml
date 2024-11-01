@@ -1,0 +1,24 @@
+version: "0.1.0"
+targets:
+  - esp32
+  - esp32c2
+  - esp32c3
+  - esp32c6
+  - esp32h2
+  - esp32s2
+  - esp32s3
+description: File system for LVGL, supports reading files directly from flash.
+url: https://github.com/espressif/esp-iot-solution/tree/master/components/display/tools/esp_lv_fs
+issues: https://github.com/espressif/esp-iot-solution/issues
+repository: https://github.com/espressif/esp-iot-solution.git
+documentation: https://docs.espressif.com/projects/esp-iot-solution/en/latest/display/tools/esp_lv_fs.html
+dependencies:
+  idf: ">=4.4"
+  lvgl/lvgl:
+    version: ">=8,<10"
+  esp_mmap_assets:
+    version: ">=1.2"
+    override_path: "../esp_mmap_assets"
+  cmake_utilities: "0.*"
+examples:
+  - path: ../../../../examples/hmi/perf_benchmark

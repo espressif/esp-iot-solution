@@ -8,7 +8,7 @@
 #include "freertos/task.h"
 #include "esp_log.h"
 #include "bsp/esp-bsp.h"
-#include "assets_generate.h"
+#include "mmap_generate_spiffs_assets.h"
 
 static const char *TAG = "freetype";
 
@@ -21,8 +21,9 @@ static void image_mmap_init(void)
 {
     const mmap_assets_config_t config = {
         .partition_label = "assets",
-        .max_files = TOTAL_MMAP_FILES,
-        .checksum = MMAP_CHECKSUM,
+        .max_files = MMAP_SPIFFS_ASSETS_FILES,
+        .checksum = MMAP_SPIFFS_ASSETS_CHECKSUM,
+        .flags = {.mmap_enable = true}
     };
 
     ESP_ERROR_CHECK(mmap_assets_new(&config, &asset_handle));
@@ -57,11 +58,11 @@ void freetype_task(void *arg)
         .mem = NULL,
     };
 
-    font30.mem = mmap_assets_get_mem(asset_handle, MMAP_DEJAVUSANS_TTF);
-    font30.mem_size = mmap_assets_get_size(asset_handle, MMAP_DEJAVUSANS_TTF);
+    font30.mem = mmap_assets_get_mem(asset_handle, MMAP_SPIFFS_ASSETS_DEJAVUSANS_TTF);
+    font30.mem_size = mmap_assets_get_size(asset_handle, MMAP_SPIFFS_ASSETS_DEJAVUSANS_TTF);
 
-    font40.mem = mmap_assets_get_mem(asset_handle, MMAP_DEJAVUSANS_TTF);
-    font40.mem_size = mmap_assets_get_size(asset_handle, MMAP_DEJAVUSANS_TTF);
+    font40.mem = mmap_assets_get_mem(asset_handle, MMAP_SPIFFS_ASSETS_DEJAVUSANS_TTF);
+    font40.mem_size = mmap_assets_get_size(asset_handle, MMAP_SPIFFS_ASSETS_DEJAVUSANS_TTF);
 
     bsp_display_lock(0);
 
