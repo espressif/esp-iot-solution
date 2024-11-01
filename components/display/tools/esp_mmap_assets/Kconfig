@@ -2,29 +2,8 @@
 
 menu "mmap file support format"
 
-    config MMAP_FILE_SUPPORT_FORMAT
-        string "file format(eg. .bin,.jpg)"
-        default ".jpg"
-        help
-            supported file suffixes, separate with commas.
-
-    config MMAP_SUPPORT_SJPG
-        bool "Enable SJPG mode"
-        default n
-        help
-            Convert jpg to sjpg format.
-
-    config MMAP_SUPPORT_SPNG
-        bool "Enable SPNG mode"
-        default n
-        help
-            Convert jpg to spng format.
-
-    config MMAP_SPLIT_HEIGHT
-        depends on MMAP_SUPPORT_SJPG || MMAP_SUPPORT_SPNG
-        int "image split height"
+    config MMAP_FILE_NAME_LENGTH
+        int "Max file name length"
         default 16
-        range 1 32767
-        help
-            image split height.
+        range 1 32
 endmenu

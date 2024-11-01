@@ -3,17 +3,50 @@
 import io
 import os
 import argparse
+import json
 import shutil
 import math
 import sys
 import time
-
-sys.dont_write_bytecode = True
+import numpy as np
+import importlib
+import subprocess
+import urllib.request
 
 from PIL import Image
 from datetime import datetime
+from dataclasses import dataclass
+from typing import List
+from pathlib import Path
+from packaging import version
 
-header_file = 'assets_generate.h'
+sys.dont_write_bytecode = True
+
+@dataclass
+class AssetCopyConfig:
+    assets_path: str
+    target_path: str
+    spng_enable: bool
+    sjpg_enable: bool
+    qoi_enable: bool
+    sqoi_enable: bool
+    row_enable: bool
+    support_format: List[str]
+    split_height: int
+
+@dataclass
+class PackModelsConfig:
+    target_path: str
+    main_path: str
+    image_file: str
+    assets_path: str
+    name_length: int
+
+def generate_header_filename(path):
+    asset_name = os.path.basename(path)
+
+    header_filename = f'mmap_generate_{asset_name}.h'
+    return header_filename
 
 def compute_checksum(data):
     checksum = sum(data) & 0xFFFF
@@ -23,34 +56,92 @@ def sort_key(filename):
     basename, extension = os.path.splitext(filename)
     return extension, basename
 
-def convert_image_to_simg(input_file, height_str):
-    try:
-        SPLIT_HEIGHT = int(height_str)
-        if SPLIT_HEIGHT <= 0:
-            raise ValueError('Height must be a positive integer')
-    except ValueError as e:
-        print('Error: Height must be a positive integer')
+def download_v8_script(convert_path):
+    """
+    Ensure that the lvgl_image_converter repository is present at the specified path.
+    If not, clone the repository. Then, checkout to a specific commit.
+
+    Parameters:
+    - convert_path (str): The directory path where lvgl_image_converter should be located.
+    """
+
+    # Check if convert_path is not empty
+    if convert_path:
+        # If the directory does not exist, create it and clone the repository
+        if not os.path.exists(convert_path):
+            os.makedirs(convert_path, exist_ok=True)
+            try:
+                subprocess.run(
+                    ['git', 'clone', 'https://github.com/W-Mai/lvgl_image_converter.git', convert_path],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    check=True
+                )
+            except subprocess.CalledProcessError as e:
+                print(f'Git clone failed: {e}')
+                sys.exit(1)
+
+            # Checkout to the specific commit
+            try:
+                subprocess.run(
+                    ['git', 'checkout', '9174634e9dcc1b21a63668969406897aad650f35'],
+                    cwd=convert_path,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    check=True
+                )
+            except subprocess.CalledProcessError as e:
+                print(f'Failed to checkout to the specific commit: {e}')
+                sys.exit(1)
+    else:
+        print('Error: convert_path is NULL')
         sys.exit(1)
 
-    OUTPUT_FILE_NAME = ''
+def download_v9_script(url: str, destination: str) -> None:
+    """
+    Download a Python script from a URL to a local destination.
 
-    input_dir, input_filename = os.path.split(input_file)
-    base_filename, ext = os.path.splitext(input_filename)
-    OUTPUT_FILE_NAME = base_filename
+    Parameters:
+    - url (str): URL to download the script from.
+    - destination (str): Local path to save the downloaded script.
+
+    Raises:
+    - Exception: If the download fails.
+    """
+    file_path = Path(destination)
+
+    # Check if the file already exists
+    if file_path.exists():
+        if file_path.is_file():
+            return
 
     try:
-        im = Image.open(input_file)
-    except Exception as e:
-        print('Error:', e)
-        sys.exit(0)
+        # Create the parent directories if they do not exist
+        file_path.parent.mkdir(parents=True, exist_ok=True)
 
+        # Open the URL and retrieve the data
+        with urllib.request.urlopen(url) as response, open(file_path, 'wb') as out_file:
+            data = response.read()  # Read the entire response
+            out_file.write(data)    # Write data to the local file
+
+    except urllib.error.HTTPError as e:
+        print(f'HTTP Error: {e.code} - {e.reason} when accessing {url}')
+        sys.exit(1)
+    except urllib.error.URLError as e:
+        print(f'URL Error: {e.reason} when accessing {url}')
+        sys.exit(1)
+    except Exception as e:
+        print(f'An unexpected error occurred: {e}')
+        sys.exit(1)
+
+def split_image(im, block_size, input_dir, ext, convert_to_qoi):
+    """Splits the image into blocks based on the block size."""
     width, height = im.size
 
-    lenbuf = []
-    block_size = SPLIT_HEIGHT
-    splits = math.ceil(height/block_size)
-
-    print(f'Input: {os.path.basename(input_file)}\tRES: {width} x {height}\tsplits: {splits}')
+    if block_size:
+        splits = math.ceil(height / block_size)
+    else:
+        splits = 1
 
     for i in range(splits):
         if i < splits - 1:
@@ -61,21 +152,33 @@ def convert_image_to_simg(input_file, height_str):
         output_path = os.path.join(input_dir, str(i) + ext)
         crop.save(output_path, quality=100)
 
-    sjpeg_data = bytearray()
+        qoi_module = importlib.import_module('qoi-conv.qoi')
+        Qoi = qoi_module.Qoi
+        replace_extension = qoi_module.replace_extension
 
-    for i in range(splits):
-        with open(os.path.join(input_dir, str(i) + ext), 'rb') as f:
-            a = f.read()
-        sjpeg_data += a
-        lenbuf.append(len(a))
-        os.remove(os.path.join(input_dir, str(i) + ext))
+        if convert_to_qoi:
+            with Image.open(output_path) as img:
+                if img.mode != 'RGBA':
+                    img = img.convert('RGBA')
 
+                img_data = np.asarray(img)
+                out_path = qoi_module.replace_extension(output_path, 'qoi')
+                new_image = qoi_module.Qoi().save(out_path, img_data)
+                os.remove(output_path)
+
+
+    return width, height, splits
+
+def create_header(width, height, splits, split_height, lenbuf, ext):
+    """Creates the header for the output file based on the format."""
     header = bytearray()
 
     if ext.lower() == '.jpg':
         header += bytearray('_SJPG__'.encode('UTF-8'))
     elif ext.lower() == '.png':
         header += bytearray('_SPNG__'.encode('UTF-8'))
+    elif ext.lower() == '.qoi':
+        header += bytearray('_SQOI__'.encode('UTF-8'))
 
     # 6 BYTES VERSION
     header += bytearray(('\x00V1.00\x00').encode('UTF-8'))
@@ -89,31 +192,219 @@ def convert_image_to_simg(input_file, height_str):
     # NUMBER OF ITEMS 2 BYTES
     header += splits.to_bytes(2, byteorder='little')
 
-    # NUMBER OF ITEMS 2 BYTES
-    header += SPLIT_HEIGHT.to_bytes(2, byteorder='little')
+    # SPLIT HEIGHT 2 BYTES
+    header += split_height.to_bytes(2, byteorder='little')
 
     for item_len in lenbuf:
-        # WIDTH 2 BYTES
+        # LENGTH 2 BYTES
         header += item_len.to_bytes(2, byteorder='little')
 
-    sjpeg = header + sjpeg_data
+    return header
 
-    if ext.lower() == '.jpg':
-        output_file_path = os.path.join(input_dir, OUTPUT_FILE_NAME + '.sjpg')
-    elif ext.lower() == '.png':
-        output_file_path = os.path.join(input_dir, OUTPUT_FILE_NAME + '.spng')
+def save_image(output_file_path, header, split_data):
+    """Saves the image with the constructed header and split data."""
     with open(output_file_path, 'wb') as f:
-        f.write(sjpeg)
+        if header is not None:
+            f.write(header + split_data)
+        else:
+            f.write(split_data)
 
-    print('Completed, saved as:', os.path.basename(output_file_path), '\n')
+def handle_lvgl_version_v9(input_file: str, input_dir: str,
+                                input_filename: str, convert_path: str) -> None:
+    """
+    Handle conversion for LVGL versions greater than 9.0.
 
-def pack_models(model_path, assets_c_path, out_file):
+    Parameters:
+    - input_file (str): Path to the input image file.
+    - input_dir (str): Directory of the input file.
+    - input_filename (str): Name of the input file.
+    - convert_path (str): Path for conversion scripts and outputs.
+    """
+
+    convert_file = os.path.join(convert_path, 'LVGLImage.py')
+    lvgl_image_url = 'https://raw.githubusercontent.com/lvgl/lvgl/master/scripts/LVGLImage.py'
+
+    download_v9_script(url=lvgl_image_url, destination=convert_file)
+    lvgl_script = Path(convert_file)
+
+    cmd = [
+        'python',
+        str(lvgl_script),
+        '--ofmt', 'BIN',
+        '--cf', config_data['support_raw_cf'],
+        '--compress', 'NONE',
+        '--output', str(input_dir),
+        input_file
+    ]
+
+    try:
+        result = subprocess.run(
+            cmd,
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        print(f'Completed {input_filename} -> BIN')
+    except subprocess.CalledProcessError as e:
+        print('An error occurred while executing LVGLImage.py:')
+        print(e.stderr)
+        sys.exit(e.returncode)
+
+def handle_lvgl_version_v8(input_file: str, input_dir: str, input_filename: str, convert_path: str) -> None:
+    """
+    Handle conversion for supported LVGL versions (<= 9.0).
+
+    Parameters:
+    - input_file (str): Path to the input image file.
+    - input_dir (str): Directory of the input file.
+    - input_filename (str): Name of the input file.
+    - convert_path (str): Path for conversion scripts and outputs.
+    """
+
+    download_v8_script(convert_path=convert_path)
+
+    if convert_path not in sys.path:
+        sys.path.append(convert_path)
+
+    try:
+        import lv_img_conv
+    except ImportError as e:
+        print(f"Failed to import 'lv_img_conv' from '{convert_path}': {e}")
+        sys.exit(1)
+
+    try:
+        lv_img_conv.conv_one_file(
+            root=Path(input_dir),
+            filepath=Path(input_file),
+            f=config_data['support_raw_ff'],
+            cf=config_data['support_raw_cf'],
+            ff='BIN',
+            dither=config_data['support_raw_dither'],
+            bgr_mode=config_data['support_raw_bgr'],
+        )
+        print(f'Completed {input_filename} -> BIN')
+    except KeyError as e:
+        print(f'Missing configuration key: {e}')
+        sys.exit(1)
+    except Exception as e:
+        print(f'An error occurred during conversion: {e}')
+        sys.exit(1)
+
+def process_image(input_file, height_str, output_extension, convert_to_qoi=False):
+    """Main function to process the image and save it as .sjpg, .spng, or .sqoi."""
+    try:
+        SPLIT_HEIGHT = int(height_str)
+        if SPLIT_HEIGHT < 0:
+            raise ValueError('Height must be a positive integer')
+    except ValueError as e:
+        print('Error: Height must be a positive integer')
+        sys.exit(1)
+
+    input_dir, input_filename = os.path.split(input_file)
+    base_filename, ext = os.path.splitext(input_filename)
+    OUTPUT_FILE_NAME = base_filename
+
+    try:
+        im = Image.open(input_file)
+    except Exception as e:
+        print('Error:', e)
+        sys.exit(0)
+
+    width, height, splits = split_image(im, SPLIT_HEIGHT, input_dir, ext, convert_to_qoi)
+
+    split_data = bytearray()
+    lenbuf = []
+
+    if convert_to_qoi:
+        ext = '.qoi'
+
+    for i in range(splits):
+        with open(os.path.join(input_dir, str(i) + ext), 'rb') as f:
+            a = f.read()
+        split_data += a
+        lenbuf.append(len(a))
+        os.remove(os.path.join(input_dir, str(i) + ext))
+
+    header = None
+    if splits == 1 and convert_to_qoi:
+        output_file_path = os.path.join(input_dir, OUTPUT_FILE_NAME + ext)
+    else:
+        header = create_header(width, height, splits, SPLIT_HEIGHT, lenbuf, ext)
+        output_file_path = os.path.join(input_dir, OUTPUT_FILE_NAME + output_extension)
+
+    save_image(output_file_path, header, split_data)
+
+    print('Completed', input_filename, '->', os.path.basename(output_file_path))
+
+def convert_image_to_qoi(input_file, height_str):
+    process_image(input_file, height_str, '.sqoi', convert_to_qoi=True)
+
+def convert_image_to_simg(input_file, height_str):
+    input_dir, input_filename = os.path.split(input_file)
+    _, ext = os.path.splitext(input_filename)
+    output_extension = '.sjpg' if ext.lower() == '.jpg' else '.spng'
+    process_image(input_file, height_str, output_extension, convert_to_qoi=False)
+
+def convert_image_to_raw(input_file: str) -> None:
+    """
+    Convert an image to raw binary format compatible with LVGL.
+
+    Parameters:
+    - input_file (str): Path to the input image file.
+
+    Raises:
+    - FileNotFoundError: If required scripts are not found.
+    - subprocess.CalledProcessError: If the external conversion script fails.
+    - KeyError: If required keys are missing in config_data.
+    """
+    input_dir, input_filename = os.path.split(input_file)
+    _, ext = os.path.splitext(input_filename)
+    convert_path = os.path.join(os.path.dirname(input_file), 'lvgl_image_converter')
+    lvgl_ver_str = config_data.get('lvgl_ver', '9.0.0')
+
+    try:
+        lvgl_version = version.parse(lvgl_ver_str)
+    except version.InvalidVersion:
+        print(f'Invalid LVGL version format: {lvgl_ver_str}')
+        sys.exit(1)
+
+    if lvgl_version >= version.parse('9.0.0'):
+        handle_lvgl_version_v9(
+            input_file=input_file,
+            input_dir=input_dir,
+            input_filename=input_filename,
+            convert_path=convert_path
+        )
+    else:
+        handle_lvgl_version_v8(
+            input_file=input_file,
+            input_dir=input_dir,
+            input_filename=input_filename,
+            convert_path=convert_path
+        )
+
+def pack_assets(config: PackModelsConfig):
+    """
+    Pack models based on the provided configuration.
+    """
+
+    target_path = config.target_path
+    assets_c_path = config.main_path
+    out_file = config.image_file
+    assets_path = config.assets_path
+    max_name_len = config.name_length
+
     merged_data = bytearray()
     file_info_list = []
+    skip_files = ['config.json', 'lvgl_image_converter']
 
-    file_list = sorted(os.listdir(model_path), key=sort_key)
+    file_list = sorted(os.listdir(target_path), key=sort_key)
     for filename in file_list:
-        file_path = os.path.join(model_path, filename)
+        if filename in skip_files:
+            continue
+
+        file_path = os.path.join(target_path, filename)
         file_name = os.path.basename(file_path)
         file_size = os.path.getsize(file_path)
 
@@ -123,7 +414,7 @@ def pack_models(model_path, assets_c_path, out_file):
         except Exception as e:
             # print("Error:", e)
             _, file_extension = os.path.splitext(file_path)
-            if file_extension.lower() in ['.sjpg', '.spng']:
+            if file_extension.lower() in ['.sjpg', '.spng', '.sqoi']:
                 offset = 14
                 with open(file_path, 'rb') as f:
                     f.seek(offset)
@@ -135,6 +426,8 @@ def pack_models(model_path, assets_c_path, out_file):
                 width, height = 0, 0
 
         file_info_list.append((file_name, len(merged_data), file_size, width, height))
+        # Add 0x5A5A prefix to merged_data
+        merged_data.extend(b'\x5A' * 2)
 
         with open(file_path, 'rb') as bin_file:
             bin_data = bin_file.read()
@@ -145,17 +438,20 @@ def pack_models(model_path, assets_c_path, out_file):
 
     mmap_table = bytearray()
     for file_name, offset, file_size, width, height in file_info_list:
-        fixed_name = file_name.ljust(32, '\0')[:32]
+        if len(file_name) > int(max_name_len):
+            print(f'\033[1;33mWarn:\033[0m "{file_name}" exceeds {max_name_len} bytes and will be truncated.')
+        fixed_name = file_name.ljust(int(max_name_len), '\0')[:int(max_name_len)]
         mmap_table.extend(fixed_name.encode('utf-8'))
         mmap_table.extend(file_size.to_bytes(4, byteorder='little'))
         mmap_table.extend(offset.to_bytes(4, byteorder='little'))
-        mmap_table.extend(width.to_bytes(4, byteorder='little'))
-        mmap_table.extend(height.to_bytes(4, byteorder='little'))
+        mmap_table.extend(width.to_bytes(2, byteorder='little'))
+        mmap_table.extend(height.to_bytes(2, byteorder='little'))
 
     combined_data = mmap_table + merged_data
     combined_checksum = compute_checksum(combined_data)
+    combined_data_length = len(combined_data).to_bytes(4, byteorder='little')
     header_data = total_files.to_bytes(4, byteorder='little') + combined_checksum.to_bytes(4, byteorder='little')
-    final_data = header_data + combined_data
+    final_data = header_data + combined_data_length + combined_data
 
     with open(out_file, 'wb') as output_bin:
         output_bin.write(final_data)
@@ -163,7 +459,8 @@ def pack_models(model_path, assets_c_path, out_file):
     os.makedirs(assets_c_path, exist_ok=True)
     current_year = datetime.now().year
 
-    file_path = os.path.join(assets_c_path, header_file)
+    asset_name = os.path.basename(assets_path)
+    file_path = os.path.join(assets_c_path, f'mmap_generate_{asset_name}.h')
     with open(file_path, 'w') as output_header:
         output_header.write('/*\n')
         output_header.write(' * SPDX-FileCopyrightText: 2022-{} Espressif Systems (Shanghai) CO LTD\n'.format(current_year))
@@ -176,83 +473,123 @@ def pack_models(model_path, assets_c_path, out_file):
         output_header.write(' */\n\n')
         output_header.write('#pragma once\n\n')
         output_header.write("#include \"esp_mmap_assets.h\"\n\n")
-        output_header.write(f'#define TOTAL_MMAP_FILES      {total_files}\n')
-        output_header.write(f'#define MMAP_CHECKSUM         0x{combined_checksum:04X}\n\n')
-        output_header.write('enum MMAP_FILES {\n')
+        output_header.write(f'#define MMAP_{asset_name.upper()}_FILES           {total_files}\n')
+        output_header.write(f'#define MMAP_{asset_name.upper()}_CHECKSUM        0x{combined_checksum:04X}\n\n')
+        output_header.write(f'enum MMAP_{asset_name.upper()}_LISTS {{\n')
 
         for i, (file_name, _, _, _, _) in enumerate(file_info_list):
             enum_name = file_name.replace('.', '_')
-            output_header.write(f'    MMAP_{enum_name.upper()} = {i},   /*!< {file_name} */\n')
+            output_header.write(f'    MMAP_{asset_name.upper()}_{enum_name.upper()} = {i},        /*!< {file_name} */\n')
 
         output_header.write('};\n')
 
     print(f'All bin files have been merged into {out_file}')
 
-
-def parse_hex(value):
-    try:
-        return int(value, 16)
-    except ValueError:
-        raise argparse.ArgumentTypeError(f'Invalid hex value: {value}')
-
-def copy_assets_to_build(assets_path, target_path, support_spng, support_sjpg, support_format, split_height):
+def copy_assets(config: AssetCopyConfig):
     """
-    Copy assets to target_path based on sdkconfig
+    Copy assets to target_path based on the provided configuration.
     """
-    format_string = support_format
-    spng_enable = True if support_spng == 'ON' else False
-    sjpg_enable = True if support_sjpg == 'ON' else False
+    format_tuple = tuple(config.support_format)
+    assets_path = config.assets_path
+    target_path = config.target_path
 
-    format_list = format_string.split(',')
-    format_tuple = tuple(format_list)
     for filename in os.listdir(assets_path):
         if any(filename.endswith(suffix) for suffix in format_tuple):
-            shutil.copyfile(os.path.join(assets_path, filename), os.path.join(target_path, filename))
-            if filename.endswith('.jpg') and sjpg_enable:
-                convert_image_to_simg(os.path.join(target_path, filename), split_height)
-                os.remove(os.path.join(target_path, filename))
-            elif filename.endswith('.png') and spng_enable:
-                convert_image_to_simg(os.path.join(target_path, filename), split_height)
-                os.remove(os.path.join(target_path, filename))
+            source_file = os.path.join(assets_path, filename)
+            target_file = os.path.join(target_path, filename)
+            shutil.copyfile(source_file, target_file)
+
+            conversion_map = {
+                '.jpg': [
+                    (config.sjpg_enable, convert_image_to_simg),
+                    (config.qoi_enable, convert_image_to_qoi),
+                ],
+                '.png': [
+                    (config.spng_enable, convert_image_to_simg),
+                    (config.qoi_enable, convert_image_to_qoi),
+                ],
+            }
+
+            file_ext = os.path.splitext(filename)[1].lower()
+            conversions = conversion_map.get(file_ext, [])
+            converted = False
+
+            for enable_flag, convert_func in conversions:
+                if enable_flag:
+                    convert_func(target_file, config.split_height)
+                    os.remove(target_file)
+                    converted = True
+                    break
+
+            if not converted and config.row_enable:
+                convert_image_to_raw(target_file)
+                os.remove(target_file)
         else:
             print(f'No match found for file: {filename}, format_tuple: {format_tuple}')
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Assert generator tool')
-    parser.add_argument('-d1', '--project_path')
-    parser.add_argument('-d2', '--main_path')
-    parser.add_argument('-d3', '--assets_path')
-    parser.add_argument('-d4', '--size', type=parse_hex)
-    parser.add_argument('-d5', '--image_file')
-    parser.add_argument('-d6', '--support_spng')
-    parser.add_argument('-d7', '--support_sjpg')
-    parser.add_argument('-d8', '--support_format')
-    parser.add_argument('-d9', '--split_height')
-
+    parser = argparse.ArgumentParser(description='Move and Pack assets.')
+    parser.add_argument('--config', required=True, help='Path to the configuration file')
     args = parser.parse_args()
 
-    print('--support_format:',  args.support_format)
-    print('--support_spng:',  args.support_spng)
-    print('--support_sjpg:',  args.support_sjpg)
-    if args.support_spng != 'OFF' or args.support_sjpg != 'OFF':
-        print('--split_height:', args.split_height)
+    with open(args.config, 'r') as f:
+        config_data = json.load(f)
 
-    image_file = args.image_file
+    assets_path = config_data['assets_path']
+    image_file = config_data['image_file']
     target_path = os.path.dirname(image_file)
+    main_path = config_data['main_path']
+    name_length = config_data['name_length']
+    split_height = config_data['split_height']
+    support_format = [fmt.strip() for fmt in config_data['support_format'].split(',')]
 
-    if os.path.exists(target_path):
-        shutil.rmtree(target_path)
-    os.makedirs(target_path)
+    copy_config = AssetCopyConfig(
+        assets_path=assets_path,
+        target_path=target_path,
+        spng_enable=config_data['support_spng'],
+        sjpg_enable=config_data['support_sjpg'],
+        qoi_enable=config_data['support_qoi'],
+        sqoi_enable=config_data['support_sqoi'],
+        row_enable=config_data['support_raw'],
+        support_format=support_format,
+        split_height=split_height
+    )
 
-    copy_assets_to_build(args.assets_path, target_path, args.support_spng, args.support_sjpg, args.support_format, args.split_height)
-    pack_models(target_path, args.main_path, image_file)
+    pack_config = PackModelsConfig(
+        target_path=target_path,
+        main_path=main_path,
+        image_file=image_file,
+        assets_path=assets_path,
+        name_length=name_length
+    )
+
+    print('--support_format:', support_format)
+
+    if '.jpg' in support_format or '.png' in support_format:
+        print('--support_spng:', copy_config.spng_enable)
+        print('--support_sjpg:', copy_config.sjpg_enable)
+        print('--support_qoi:', copy_config.qoi_enable)
+        print('--support_raw:', copy_config.row_enable)
+
+        if copy_config.sqoi_enable:
+            print('--support_sqoi:', copy_config.sqoi_enable)
+        if copy_config.spng_enable or copy_config.sjpg_enable or copy_config.sqoi_enable:
+            print('--split_height:', copy_config.split_height)
+        if copy_config.row_enable:
+            print('--lvgl_version:', config_data['lvgl_ver'])
+
+    if os.path.isfile(image_file):
+        os.remove(image_file)
+
+    copy_assets(copy_config)
+    pack_assets(pack_config)
 
     total_size = os.path.getsize(os.path.join(target_path, image_file))
-    recommended_size = int(math.ceil(total_size/1024))
-    partition_size = int(math.ceil(args.size/1024))
+    recommended_size = math.ceil(total_size / 1024)
+    partition_size = math.ceil(int(config_data['assets_size'], 16) / 1024)
 
-    if args.size <= total_size:
-        print('Given assets partition size: %dK' % (partition_size))
-        print('Recommended assets partition size: %dK' % (recommended_size))
+    if int(config_data['assets_size'], 16) <= total_size:
+        print(f'Given assets partition size: {partition_size}K')
+        print(f'Recommended assets partition size: {recommended_size}K')
         print('\033[1;31mError:\033[0m assets partition size is smaller than recommended.')
         sys.exit(1)

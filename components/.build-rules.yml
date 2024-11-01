@@ -146,6 +146,11 @@ components/display/lcd_touch/esp_lcd_touch_st7123/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1
 
+components/display/tools/esp_lv_decoder/test_apps:
+  enable:
+    - if: IDF_TARGET in ["esp32","esp32s2","esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
+    - if: IDF_TARGET in ["esp32","esp32s2","esp32s3","esp32c3","esp32c6", "esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
+
 components/keyboard_button/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1

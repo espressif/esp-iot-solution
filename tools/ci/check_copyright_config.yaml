@@ -82,3 +82,4 @@ ignore:  # You can also select ignoring files here
     - 'tools/cmake_utilities/test_apps/pytest_cmake_utilities.py'
     - 'examples/usb/device/usb_dongle/main/CLI_Commands.c'
     - 'examples/usb/device/usb_dongle/components/FreeRTOS-Plus-CLI/**/*'
+    - 'components/display/tools/esp_lv_decoder/priv_include/qoi.h'

@@ -28,7 +28,7 @@
       - "**/build*/bootloader/*.bin"
       - "**/build*/bootloader/*.elf"
       - "**/build*/partition_table/*.bin"
-      - "**/build*/mmap_build/*.bin"
+      - "**/build*/mmap_build/**/*.bin"
       - "**/build*/**/*.bin"
       - size_info.txt
     expire_in: 1 week
@@ -517,17 +517,6 @@ build_example_lvgl_freetype:
     EXAMPLE_TARGET: esp32s3
     EXAMPLE_DIR: examples/hmi/lvgl_freetype
 
-build_example_lvgl_spng:
-  extends:
-    - .build_examples_template
-    - .rules:build:example_lvgl_spng
-  parallel:
-    matrix:
-        - IMAGE: espressif/idf:release-v5.1
-  variables:
-    EXAMPLE_TARGET: esp32c3
-    EXAMPLE_DIR: examples/hmi/lvgl_spng
-
 build_example_motor_bldc_fan_rainmaker:
   extends:
     - .build_examples_template
@@ -585,6 +574,16 @@ build_example_ota_simple_ota_example:
   variables:
     EXAMPLE_DIR: examples/ota/simple_ota_example
     WARNING_STR: "1/2 app partitions are too small"
+
+build_example_perf_benchmark:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_perf_benchmark
+  parallel:
+    matrix:
+        - IMAGE: espressif/idf:release-v5.3
+  variables:
+    EXAMPLE_DIR: examples/hmi/perf_benchmark
 
 build_example_screen:
   extends:
@@ -1046,6 +1045,28 @@ build_components_display_lcd_touch_esp_lcd_touch_st7123_test_apps:
       - IMAGE: espressif/idf:release-v5.1
   variables:
     EXAMPLE_DIR: components/display/lcd_touch/esp_lcd_touch_st7123/test_apps
+
+build_components_display_tools_esp_lv_decoder_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_display_tools_esp_lv_decoder_test_apps
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.1
+      - IMAGE: espressif/idf:release-v5.0
+  variables:
+    EXAMPLE_DIR: components/display/tools/esp_lv_decoder/test_apps
+
+build_components_display_tools_esp_lv_fs_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_display_tools_esp_lv_fs_test_apps
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.1
+      - IMAGE: espressif/idf:release-v5.0
+  variables:
+    EXAMPLE_DIR: components/display/tools/esp_lv_fs/test_apps
 
 build_components_display_tools_esp_mmap_assets_test_apps:
   extends:

@@ -1,0 +1,7 @@
+# Name,   Type, SubType, Offset,  Size, Flags
+# Note: if you change the phy_init or app partition offset, make sure to change the offset in Kconfig.projbuild
+nvs,      data, nvs,     ,  0x6000,
+phy_init, data, phy,     ,  0x1000,
+factory,  app,  factory, , 1000K,
+assets_A,  data, spiffs,  , 500K,
+assets_B,  data, spiffs,  , 500K,

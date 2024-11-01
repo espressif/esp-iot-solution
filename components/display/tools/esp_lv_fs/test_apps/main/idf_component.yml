@@ -1,0 +1,9 @@
+## IDF Component Manager Manifest File
+dependencies:
+  idf: ">=5.0"
+  esp_lv_fs:
+    version: "*"
+    override_path: "../../../esp_lv_fs"
+
+  lvgl/lvgl:
+    version: ">=8,<9"

@@ -183,9 +183,9 @@ examples/get-started/knob_power_save:
   enable:
     - if: INCLUDE_DEFAULT == 1
 
-examples/hmi/lvgl_spng:
+examples/hmi/perf_benchmark:
   enable:
-    - if: IDF_TARGET == "esp32c3"
+    - if: IDF_TARGET in ["esp32","esp32s3","esp32c3"]
 
 examples/indicator:
   enable:

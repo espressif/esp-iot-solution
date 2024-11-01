@@ -1,0 +1,20 @@
+{
+    "project_dir": "@PROJECT_DIR@",
+    "main_path": "@CMAKE_CURRENT_LIST_DIR@",
+    "assets_path": "@base_dir_full_path@",
+    "image_file": "@image_file@",
+    "lvgl_ver": "@lvgl_ver@",
+    "assets_size": "@size@",
+    "support_format": "@arg_MMAP_FILE_SUPPORT_FORMAT@",
+    "name_length": "@CONFIG_MMAP_FILE_NAME_LENGTH@",
+    "split_height": "@arg_MMAP_SPLIT_HEIGHT@",
+    "support_spng": @support_spng@,
+    "support_sjpg": @support_sjpg@,
+    "support_qoi": @support_qoi@,
+    "support_sqoi": @support_sqoi@,
+    "support_raw": @support_raw@,
+    "support_raw_dither": @support_raw_dither@,
+    "support_raw_bgr": @support_raw_bgr@,
+    "support_raw_ff": "@arg_MMAP_RAW_FILE_FORMAT@",
+    "support_raw_cf": "@arg_MMAP_RAW_COLOR_FORMAT@"
+}

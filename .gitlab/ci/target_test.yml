@@ -431,6 +431,62 @@ components_test_esp_lcd_st77903_rgb:
     TEST_FOLDER: components/display/lcd/esp_lcd_st77903_rgb
     TEST_ENV: esp32_s3_lcd_ev_board
 
+components_test_esp_lv_decoder:
+  extends:
+    - .pytest_template
+    - .rules:build:components_display_tools_esp_lv_decoder_test_apps
+  needs:
+    - job: "build_components_display_tools_esp_lv_decoder_test_apps"
+      artifacts: true
+      optional: false
+  parallel:
+    matrix:
+      - IDF_TARGET: esp32
+        IDF_VERSION: "5.1"
+        ENV_TAG: generic
+      - IDF_TARGET: esp32c3
+        IDF_VERSION: "5.1"
+        ENV_TAG: generic
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "5.1"
+        ENV_TAG: generic
+  tags:
+    - ${IDF_TARGET}
+    - ${ENV_TAG}
+  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
+  variables:
+    TEST_TARGET: ${IDF_TARGET}
+    TEST_FOLDER: components/display/tools/esp_lv_decoder
+    TEST_ENV: ${ENV_TAG}
+
+components_test_esp_lv_fs:
+  extends:
+    - .pytest_template
+    - .rules:build:components_display_tools_esp_lv_fs_test_apps
+  needs:
+    - job: "build_components_display_tools_esp_lv_fs_test_apps"
+      artifacts: true
+      optional: false
+  parallel:
+    matrix:
+      - IDF_TARGET: esp32
+        IDF_VERSION: "5.0"
+        ENV_TAG: generic
+      - IDF_TARGET: esp32c3
+        IDF_VERSION: "5.1"
+        ENV_TAG: generic
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "5.1"
+        ENV_TAG: generic
+  tags:
+    - ${IDF_TARGET}
+    - ${ENV_TAG}
+  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
+  variables:
+    TEST_TARGET: ${IDF_TARGET}
+    TEST_FOLDER: components/display/tools/esp_lv_fs
+    TEST_ENV: ${ENV_TAG}
+
 components_test_esp_mmap_assets:
   extends:
     - .pytest_template
@@ -441,12 +497,15 @@ components_test_esp_mmap_assets:
       optional: false
   parallel:
     matrix:
+      - IDF_TARGET: esp32
+        IDF_VERSION: "5.1"
+        ENV_TAG: generic
+      - IDF_TARGET: esp32c3
+        IDF_VERSION: "5.1"
+        ENV_TAG: generic
       - IDF_TARGET: esp32s3
         IDF_VERSION: "5.1"
-        ENV_TAG: "esp32_s3_lcd_ev_board"
-      - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.0"
-        ENV_TAG: "esp32_s3_lcd_ev_board"
+        ENV_TAG: generic
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
@@ -680,6 +739,43 @@ components_test_ntc_driver:
     TEST_TARGET: ${IDF_TARGET}
     TEST_FOLDER: components/sensors/ntc_driver
     TEST_ENV: ${ENV_TAG}
+
+example_test_perf_benchmark:
+  extends:
+    - .pytest_template
+    - .rules:build:example_perf_benchmark
+  needs:
+    - job: "build_example_perf_benchmark"
+      artifacts: true
+      optional: false
+  parallel:
+    matrix:
+      - IDF_TARGET: esp32
+        IDF_VERSION: "5.3"
+        ENV_TAG: generic
+      - IDF_TARGET: esp32c3
+        IDF_VERSION: "5.3"
+        ENV_TAG: generic
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "5.3"
+        ENV_TAG: generic
+  tags:
+    - ${IDF_TARGET}
+    - ${ENV_TAG}
+  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
+  variables:
+    TEST_TARGET: ${IDF_TARGET}
+    TEST_FOLDER: examples/hmi/perf_benchmark
+    TEST_ENV: ${ENV_TAG}
+  artifacts:
+    when: always
+    paths:
+      - XUNIT_RESULT.xml
+      - "**/**/**/dut.log"
+      - pytest_embedded_log/
+    reports:
+      junit: XUNIT_RESULT.xml
+    expire_in: 4 days
 
 tools_test_cmake_utilities:
   extends:

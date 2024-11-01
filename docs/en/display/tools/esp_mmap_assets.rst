@@ -2,7 +2,7 @@ ESP MMAP ASSETS
 ================
 :link_to_translation:`zh_CN:[中文]`
 
-This module is primarily used for packaging assets (such as images, fonts, etc.) and directly mapping them for user access.
+This module is mainly used to package resources (such as images, fonts, etc.) and map them directly for user access. At the same time, it also integrates rich image preprocessing functions.
 
 Features
 -----------
@@ -14,36 +14,67 @@ Features
    - Need to use ``SJPG`` to parse. Refer to the LVGL `SJPG <https://docs.lvgl.io/8.4/libs/sjpg.html>`__.
 
 **Enable Split PNG**
-   - Need to use ``SPNG`` to parse. Refer to the component `esp_lv_spng <esp_lv_spng.html>`__.
+   - Need to use ``SPNG`` to parse. See the component `esp_lv_decoder <esp_lv_decoder.html>`__.
 
 **Set Split Height**
-   - Set the split height, depends on ``MMAP_SUPPORT_SJPG`` or ``MMAP_SUPPORT_SPNG``.
+   - Set the split height, depends on ``MMAP_SUPPORT_SJPG``, ``MMAP_SUPPORT_SPNG`` or ``MMAP_SUPPORT_SQOI``.
 
-CMake
----------
+**Support QOI**
+   - Supports converting images from JPG and PNG formats to QOI.
+   - Supports split qoi, which requires the use of ``esp_lv_decoder`` for parsing.
+
+**Supporting multiple partitions**
+   - The spiffs_create_partition_assets function allows you to mount multiple partitions, each with its own processing logic.
+
+**Supporting LVGL Image Converter**
+   - By enabling ``MMAP_SUPPORT_RAW`` and related configurations, JPG and PNG can be converted to ``Bin`` so that they can be used in ``LVGL``.
+
+CMake options
+------------------
 Optionally, users can opt to have the image automatically flashed together with the app binaries, partition tables, etc. on idf.py flash by specifying FLASH_IN_PROJECT. For example:
 
 .. code:: c
 
    /* partitions.csv
-    * --------------------------------------------------------
-    * | Name               | Type | SubType | Offset | Size  | Flags     |
+    * -----------------------------------------------------------------------
+    * | Name                | Type | SubType | Offset | Size  | Flags     |
     * --------------------------------------------------------
     * | my_spiffs_partition | data | spiffs  |        | 6000K |           |
-    * --------------------------------------------------------
+    * -----------------------------------------------------------------------
     */
-    spiffs_create_partition_assets(my_spiffs_partition my_folder FLASH_IN_PROJECT)
+    spiffs_create_partition_assets(
+        my_spiffs_partition
+        my_folder
+        FLASH_IN_PROJECT
+        MMAP_FILE_SUPPORT_FORMAT ".png")
+
+The component also supports the following options, which allow you to enable various pre-processing of the image at compile time.
+
+.. code:: c
+
+   set(options FLASH_IN_PROJECT,           // Defines storage type (flash in project)
+                MMAP_SUPPORT_SJPG,         // Enable support for SJPG format
+                MMAP_SUPPORT_SPNG,         // Enable support for SPNG format
+                MMAP_SUPPORT_QOI,          // Enable support for QOI format
+                MMAP_SUPPORT_SQOI,         // Enable support for SQOI format
+                MMAP_SUPPORT_RAW,          // Enable support for RAW format (LVGL conversion only)
+                MMAP_RAW_DITHER,           // Enable dithering for RAW images (LVGL conversion only)
+                MMAP_RAW_BGR_MODE)         // Enable BGR mode for RAW images (LVGL conversion only)
+
+    set(one_value_args MMAP_FILE_SUPPORT_FORMAT,    // Specify supported file format (e.g., .png, .jpg)
+                   MMAP_SPLIT_HEIGHT,               // Define the height for image splitting
+                   MMAP_RAW_FILE_FORMAT)            // Specify the file format for RAW images (LVGL conversion only)
 
 Application Examples
 ---------------------
 
-Generate Header(assets_generate.h)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Generate Header(mmap_generate_my_spiffs_partition.h)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 This header file is automatically generated and includes essential definitions for memory-mapped assets.
 
 .. code:: c
 
-   #include "esp_mmap_assets.h"
+   #include "mmap_generate_my_spiffs_partition.h"
 
    #define TOTAL_MMAP_FILES      2
    #define MMAP_CHECKSUM         0xB043
@@ -55,7 +86,7 @@ This header file is automatically generated and includes essential definitions f
 
 Create Assets Handle
 ^^^^^^^^^^^^^^^^^^^^^
-The assets config ensures consistency with ``assets_generate.h``. It sets the ``max_files`` and ``checksum``, verifying the header and memory-mapped binary file.
+The assets config ensures consistency with ``mmap_generate_my_spiffs_partition.h``. It sets the ``max_files`` and ``checksum``, verifying the header and memory-mapped binary file.
 
 .. code:: c
 
@@ -71,7 +102,7 @@ The assets config ensures consistency with ``assets_generate.h``. It sets the ``
 
 Assets Usage
 ^^^^^^^^^^^^^^^^^^^^^
-You can use the enum defined in ``assets_generate.h`` to get asset information.
+You can use the enum defined in ``mmap_generate_my_spiffs_partition.h`` to get asset information.
 
 .. code:: c
 

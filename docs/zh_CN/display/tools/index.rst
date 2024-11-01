@@ -6,5 +6,6 @@ LCD 工具
 .. toctree::
     :maxdepth: 1
 
-    ESP_LV_SPNG <esp_lv_spng>
+    ESP_LV_DECODER <esp_lv_decoder>
+    ESP_LV_FS <esp_lv_fs>
     ESP_MMAP_ASSETS <esp_mmap_assets>
