@@ -356,3 +356,6 @@ Display
 Display refers to the process in which the LCD driver IC displays the received image data on the screen. The speed of this process can be measured by the **screen refresh rate**.
 
 For LCDs with SPI/I80 interfaces, the screen refresh rate is determined by the LCD driver IC and can typically be set by sending specific commands, such as the *ST7789* command ``FRCTRL2 (C6h)``. For LCDs with RGB interfaces, the screen refresh rate is determined by the main controller and is equivalent to the interface frame rate.
+
+.. note::
+  - If development needs to proceed without an LCD, the `esp_lcd_usb_display component <https://components.espressif.com/components/espressif/esp_lcd_usb_display>`_ can be used to simulate the LCD display on a PC monitor via USB UVC, enabling application debugging. The corresponding example is available at `usb_lcd_display <https://github.com/espressif/esp-iot-solution/tree/master/examples/usb/device/usb_lcd_display>`_.
