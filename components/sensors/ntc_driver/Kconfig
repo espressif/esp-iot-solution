@@ -1,0 +1,19 @@
+menu "NTC Driver Configuration"
+
+    config ENABLE_NTC_ADC_FILTER
+        bool "Enable ADC Filter for NTC"
+        default y
+        help
+        Enable ADC Filter for NTC, the driver will take multiple ADC measurements
+        and then filters them to avoid ADC noise
+
+    config NTC_FILTER_WINDOW_SIZE
+        int "NTC Filter Window Size"
+        default 50
+        depends on ENABLE_NTC_ADC_FILTER
+        help
+        The number of ADC measurements to take before filtering the NTC value, the
+        higher the value the more stable the NTC value will be, but will take longer
+        to update
+
+endmenu
