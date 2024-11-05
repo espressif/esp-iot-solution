@@ -66,8 +66,23 @@ esp_err_t knob_gpio_wake_up_control(uint32_t gpio_num, uint8_t wake_up_level, bo
 {
     esp_err_t ret;
     if (enable) {
+#if CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP
+#if SOC_PM_SUPPORT_EXT1_WAKEUP
+        ret = esp_sleep_enable_ext1_wakeup_io((1ULL << gpio_num), wake_up_level == 0 ? ESP_EXT1_WAKEUP_ANY_LOW : ESP_EXT1_WAKEUP_ANY_HIGH);
+#else
+        /*!< Not support etc: esp32c2, esp32c3. Target must support ext1 wakeup */
+        ret = ESP_FAIL;
+        ESP_RETURN_ON_FALSE(ret == ESP_OK, ESP_FAIL, TAG, "Target must support ext1 wakeup");
+#endif
+#endif
+        /* Enable wake up from GPIO */
         ret = gpio_wakeup_enable(gpio_num, wake_up_level == 0 ? GPIO_INTR_LOW_LEVEL : GPIO_INTR_HIGH_LEVEL);
     } else {
+#if CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP
+#if SOC_PM_SUPPORT_EXT1_WAKEUP
+        ret = esp_sleep_disable_ext1_wakeup_io(1ULL << gpio_num);
+#endif
+#endif
         ret = gpio_wakeup_disable(gpio_num);
     }
     return ret;
@@ -75,11 +90,29 @@ esp_err_t knob_gpio_wake_up_control(uint32_t gpio_num, uint8_t wake_up_level, bo
 
 esp_err_t knob_gpio_wake_up_init(uint32_t gpio_num, uint8_t wake_up_level)
 {
+#if CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP
+    if (!esp_sleep_is_valid_wakeup_gpio(gpio_num)) {
+        ESP_LOGE(TAG, "GPIO %ld is not a valid wakeup source under CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP",
+                 gpio_num);
+        return ESP_FAIL;
+    }
+    gpio_hold_en(gpio_num);
+#endif
     /* Enable wake up from GPIO */
     esp_err_t ret = gpio_wakeup_enable(gpio_num, wake_up_level == 0 ? GPIO_INTR_LOW_LEVEL : GPIO_INTR_HIGH_LEVEL);
     ESP_RETURN_ON_FALSE(ret == ESP_OK, ESP_FAIL, TAG, "Enable gpio wakeup failed");
+
+#if CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP
+#if SOC_PM_SUPPORT_EXT1_WAKEUP
+    ret = esp_sleep_enable_ext1_wakeup_io((1ULL << gpio_num), wake_up_level == 0 ? ESP_EXT1_WAKEUP_ANY_LOW : ESP_EXT1_WAKEUP_ANY_HIGH);
+#else
+    /*!< Not support etc: esp32c2, esp32c3. Target must support ext1 wakeup */
+    ret = ESP_FAIL;
+    ESP_RETURN_ON_FALSE(ret == ESP_OK, ESP_FAIL, TAG, "Target must support ext1 wakeup");
+#endif
+#else
     ret = esp_sleep_enable_gpio_wakeup();
     ESP_RETURN_ON_FALSE(ret == ESP_OK, ESP_FAIL, TAG, "esp sleep enable gpio wakeup failed");
-
+#endif
     return ESP_OK;
 }
