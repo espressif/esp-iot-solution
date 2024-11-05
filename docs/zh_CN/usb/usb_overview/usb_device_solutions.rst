@@ -122,3 +122,31 @@ U 盘拖拽升级
 
 * `U 盘读写 NVS <https://github.com/espressif/esp-iot-solution/tree/master/examples/usb/device/usb_uf2_nvs>`_
 * `虚拟 U 盘 UF2 升级 <https://github.com/espressif/esp-iot-solution/tree/master/examples/usb/device/usb_uf2_ota>`_
+
+USB 扩展屏方案
+^^^^^^^^^^^^^^^^^
+
+USB 扩展屏方案通过 USB 总线将设备作为一块扩展副屏使用。支持通过一根 USB 数据线传输音频，触摸信息，视频图像等数据。可以应用在电脑屏幕，签字屏，扩展屏等应用场景。
+
+上位机驱动
+~~~~~~~~~~~~
+
+USB2.0 驱动不支持 HDMI 传输，因此需要上位机将图像数据传输给设备，本应用方案，暂时仅支持 windows 平台，采用 windows 驱动 `IDD <https://learn.microsoft.com/en-us/windows-hardware/drivers/display/indirect-display-driver-model-overview>`_，通过驱动可以拿到 windows 的桌面图像，因为 USB 速率限制，在驱动中会先将图像处理成 JEPG 等格式，然后通过 USB vendor 接口将图像传输。每一帧图像添加 16 字节的头，包含图像的宽高，图像的格式，图像的长度，图像的压缩类型等。
+
+特性:
+~~~~~~
+
+* 支持通过 USB 传输图像
+* 支持通过 USB 传输音频
+* 支持通过 USB 传输触摸信息
+
+硬件:
+~~~~~~
+
+* 芯片：ESP32-S2，ESP32-S3，ESP32-P4
+* 外设：USB-OTG
+
+链接:
+~~~~~~
+
+* `P4 USB 扩展屏 <https://github.com/espressif/esp-iot-solution/tree/master/examples/usb/device/usb_extend_screen>`_
