@@ -2,3 +2,27 @@ dependencies:
   boards:
     version: "~0.0.1"
     override_path: "../../../common_components/boards"
+  button:
+    public: true
+    override_path: "../../../../components/button"
+  apds9960:
+    public: true
+    override_path: "../../../../components/sensors/gesture/apds9960"
+  sht3x:
+    public: true
+    override_path: "../../../../components/sensors/humiture/sht3x"
+  lis2dh12:
+    public: true
+    override_path: "../../../../components/sensors/imu/lis2dh12"
+  bh1750:
+    public: true
+    override_path: "../../../../components/sensors/light_sensor/bh1750"
+  veml6040:
+    public: true
+    override_path: "../../../../components/sensors/light_sensor/veml6040"
+  veml6075:
+    public: true
+    override_path: "../../../../components/sensors/light_sensor/veml6075"
+  bme280:
+    public: true
+    override_path: "../../../../components/sensors/pressure/bme280"

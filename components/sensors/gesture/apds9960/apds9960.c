@@ -5,7 +5,7 @@
  */
 
 #include <stdio.h>
-#include "driver/i2c.h"
+#include "freertos/FreeRTOS.h"
 #include "apds9960.h"
 
 #define APDS9960_TIMEOUT_MS_DEFAULT   (1000)

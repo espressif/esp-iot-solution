@@ -11,7 +11,6 @@
 extern "C" {
 #endif
 
-#include "driver/i2c.h"
 #include "i2c_bus.h"
 
 typedef void *mvh3004d_handle_t;

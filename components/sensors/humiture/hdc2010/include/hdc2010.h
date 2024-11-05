@@ -12,7 +12,6 @@ extern "C"
 {
 #endif
 
-#include "driver/i2c.h"
 #include "i2c_bus.h"
 #include "esp_log.h"
 #include "math.h"

@@ -10,14 +10,9 @@ if(NOT DEFINED ENV{IOT_SOLUTION_PATH})
 endif()
 
 set(EXTRA_COMPONENT_DIRS ${EXTRA_COMPONENT_DIRS}
-                        $ENV{IOT_SOLUTION_PATH}/components/button
-                        $ENV{IOT_SOLUTION_PATH}/components/i2c_bus
                         $ENV{IOT_SOLUTION_PATH}/components/sensors/sensor_hub
-                        $ENV{IOT_SOLUTION_PATH}/components/sensors/gesture
-                        $ENV{IOT_SOLUTION_PATH}/components/sensors/humiture
-                        $ENV{IOT_SOLUTION_PATH}/components/sensors/imu
-                        $ENV{IOT_SOLUTION_PATH}/components/sensors/light_sensor
-                        $ENV{IOT_SOLUTION_PATH}/components/sensors/pressure
+                        $ENV{IOT_SOLUTION_PATH}/components/sensors/humiture/hts221
+                        $ENV{IOT_SOLUTION_PATH}/components/sensors/imu/mpu6050
                         )
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)

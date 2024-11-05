@@ -1,0 +1,12 @@
+version: "0.1.0"
+description: I2C driver for APDS9960 gesture sensor
+url: https://github.com/espressif/esp-iot-solution/tree/master/components/sensors/gesture/apds9960
+repository: https://github.com/espressif/esp-iot-solution.git
+documentation: https://docs.espressif.com/projects/esp-iot-solution/en/latest/sensors/gesture.html
+issues: https://github.com/espressif/esp-iot-solution/issues
+dependencies:
+  i2c_bus:
+    public: true
+    override_path: "../../../i2c_bus"
+  idf: '>=4.4'
+  cmake_utilities: "0.*"

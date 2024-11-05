@@ -62,9 +62,17 @@ jobs:
             components/motor/esp_sensorless_bldc_control;
             components/motor/esp_simplefoc;
             components/openai;
+            components/sensors/gesture/apds9960;
             components/sensors/humiture/aht20;
+            components/sensors/humiture/hdc2010;
+            components/sensors/humiture/mvh3004d;
+            components/sensors/humiture/sht3x;
+            components/sensors/imu/lis2dh12;
+            components/sensors/light_sensor/veml6040;
+            components/sensors/light_sensor/veml6075;
             components/sensors/ntc_driver;
             components/sensors/power_monitor/ina236;
+            components/sensors/pressure/bme280;
             components/sensors/radar/at581x;
             components/spi_bus;
             components/touch/touch_proximity_sensor;

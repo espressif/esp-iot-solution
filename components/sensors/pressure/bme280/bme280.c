@@ -5,7 +5,7 @@
  */
 
 #include <stdio.h>
-#include "driver/i2c.h"
+#include "freertos/FreeRTOS.h"
 #include "i2c_bus.h"
 #include "bme280.h"
 #include "math.h"
