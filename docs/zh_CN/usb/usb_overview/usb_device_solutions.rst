@@ -131,7 +131,7 @@ USB 扩展屏方案通过 USB 总线将设备作为一块扩展副屏使用。�
 上位机驱动
 ~~~~~~~~~~~~
 
-USB2.0 驱动不支持 HDMI 传输，因此需要上位机将图像数据传输给设备，本应用方案，暂时仅支持 Windows 平台，采用 Windows 驱动 `IDD <https://learn.microsoft.com/en-us/windows-hardware/drivers/display/indirect-display-driver-model-overview>`_，通过驱动可以拿到 Windows 的桌面图像，因为 USB 速率限制，在驱动中会先将图像处理成 JEPG 等格式，然后通过 USB vendor 接口将图像传输到设备。每一帧图像添加 16 字节的头，包含图像的宽高，图像的格式，图像的长度，图像的压缩类型等。
+USB2.0 驱动不支持 HDMI 传输，因此需要上位机将图像数据传输给设备，本应用方案暂时仅支持 Windows 平台，采用 Windows 驱动 `IDD <https://learn.microsoft.com/en-us/windows-hardware/drivers/display/indirect-display-driver-model-overview>`_，通过驱动可以拿到 Windows 的桌面图像，因为 USB 速率限制，在驱动中会先将图像处理成 JEPG 等格式，然后通过 USB vendor 接口将图像传输到设备。每一帧图像添加 16 字节的头，包含图像的宽高，图像的格式，图像的长度，图像的压缩类型等。
 
 特性:
 ~~~~~~
