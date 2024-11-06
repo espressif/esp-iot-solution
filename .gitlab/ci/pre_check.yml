@@ -26,6 +26,7 @@ check_pre_commit:
   extends:
     - .pre_check_template
   before_script:
+    - pip install --upgrade pip
     - pip install pre-commit
   script:
     - |
