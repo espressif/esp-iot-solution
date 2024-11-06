@@ -12,11 +12,16 @@ import shutil
 import yaml
 from pathlib import Path
 
-# Root toml object
-toml_obj = {'esp_toml_version': 1.0, 'firmware_images_url': f'https://dl.espressif.com/AE/esp-iot-solution/', 'supported_apps': []}
-
 PROJECT_ROOT = Path(__file__).parent.absolute()
 PROJECT_CONFIG_FILE = os.path.join(PROJECT_ROOT, 'upload_project_config.yml')
+
+BRANCH_NAME = os.environ.get('CI_COMMIT_BRANCH', '')
+FORMAT_BRANCH_NAME = re.sub(r'[^\w]', '_', BRANCH_NAME)
+DIRECTORY_PATH = os.path.join('binaries', FORMAT_BRANCH_NAME) if (FORMAT_BRANCH_NAME and FORMAT_BRANCH_NAME != 'master') else 'binaries'
+IMAGE_PATH = FORMAT_BRANCH_NAME if (FORMAT_BRANCH_NAME and FORMAT_BRANCH_NAME != 'master') else ''
+
+# Root toml object
+toml_obj = {'esp_toml_version': 1.0, 'firmware_images_url': f'https://dl.espressif.com/AE/esp-iot-solution/{IMAGE_PATH}', 'supported_apps': []}
 
 class App:
 
@@ -192,7 +197,7 @@ def squash_json(input_str):
 
 # Merge binaries for each app
 def merge_binaries(apps):
-    os.makedirs('binaries', exist_ok=True)
+    os.makedirs(DIRECTORY_PATH, exist_ok=True)
     for app in apps:
         # If we are merging binaries for kits
         for build_info in app['build_info']:
@@ -216,10 +221,10 @@ def merge_binaries(apps):
                 continue
 
             try:
-                shutil.move(f'{cwd}/{bin_name}', 'binaries')
+                shutil.move(f'{cwd}/{bin_name}', DIRECTORY_PATH)
             except shutil.Error:
-                os.remove(f'binaries/{bin_name}')
-                shutil.move(f'{cwd}/{bin_name}', 'binaries')
+                os.remove(f'{DIRECTORY_PATH}/{bin_name}')
+                shutil.move(f'{cwd}/{bin_name}', DIRECTORY_PATH)
 
 # Write a single app to the toml file
 def write_app(app):
@@ -264,14 +269,14 @@ def create_config_toml(apps):
         toml_obj['supported_apps'].extend([f'{app["name"]}'])
         write_app(app)
 
-        with open('binaries/config.toml', 'w') as toml_file:
+        with open(f'{DIRECTORY_PATH}/config.toml', 'w') as toml_file:
             rtoml.dump(toml_obj, toml_file)
 
         # This is a workaround to remove the quotes around the image.<string> in the config.toml file as dot is not allowed in the key by default
-        with open('binaries/config.toml', 'r') as toml_file:
+        with open(f'{DIRECTORY_PATH}/config.toml', 'r') as toml_file:
             fixed = unquote_config_keys(toml_file.read())
 
-        with open('binaries/config.toml', 'w') as toml_file:
+        with open(f'{DIRECTORY_PATH}/config.toml', 'w') as toml_file:
             toml_file.write(fixed)
 
 def unquote_config_keys(text):

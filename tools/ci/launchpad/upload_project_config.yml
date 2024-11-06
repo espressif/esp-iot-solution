@@ -16,8 +16,8 @@ examples/keyboard:
   esp32s3:
     sdkconfig:
       - defaults
-  description: A full key anti-ghosting keyboard powered by the ESP32S3. https://github.com/espressif/esp-iot-solution/tree/master/examples/keyboard
-  readme: https://raw.githubusercontent.com/espressif/esp-iot-solution/master/examples/keyboard/README.md
+  description: A full key anti-ghosting keyboard powered by the ESP32S3. https://github.com/espressif/esp-iot-solution/tree/release/v2.0/examples/keyboard
+  readme: https://raw.githubusercontent.com/espressif/esp-iot-solution/release/v2.0/examples/keyboard/README.md
 
 examples/usb/device/usb_dual_uvc_device:
   esp32s3:
@@ -30,7 +30,7 @@ examples/usb/device/usb_dual_uvc_device:
   description:
     This is the USB dual UVC device example
   readme:
-    https://raw.githubusercontent.com/espressif/esp-iot-solution/master/examples/usb/device/usb_dual_uvc_device/README.md
+    https://raw.githubusercontent.com/espressif/esp-iot-solution/release/v2.0/examples/usb/device/usb_dual_uvc_device/README.md
 
 examples/usb/device/usb_extend_screen:
   esp32p4:
@@ -39,7 +39,7 @@ examples/usb/device/usb_extend_screen:
   description:
     Using the ESP32-P4-Function-EV-Board as a Windows USB Extension Screen
   readme:
-    https://raw.githubusercontent.com/espressif/esp-iot-solution/master/examples/usb/device/usb_extend_screen/README.md
+    https://raw.githubusercontent.com/espressif/esp-iot-solution/release/v2.0/examples/usb/device/usb_extend_screen/README.md
 
 examples/usb/device/usb_webcam:
   esp32s3:
@@ -48,7 +48,7 @@ examples/usb/device/usb_webcam:
   description:
     This is the USB webcam example
   readme:
-    https://raw.githubusercontent.com/espressif/esp-iot-solution/master/examples/usb/device/usb_webcam/README.md
+    https://raw.githubusercontent.com/espressif/esp-iot-solution/release/v2.0/examples/usb/device/usb_webcam/README.md
 
 examples/usb/host/usb_camera_lcd_display:
   esp32s3:
@@ -57,7 +57,7 @@ examples/usb/host/usb_camera_lcd_display:
   description:
     This is the USB camera LCD display example
   readme:
-    https://raw.githubusercontent.com/espressif/esp-iot-solution/master/examples/usb/host/usb_camera_lcd_display/README.md
+    https://raw.githubusercontent.com/espressif/esp-iot-solution/release/v2.0/examples/usb/host/usb_camera_lcd_display/README.md
 
 examples/usb/host/usb_camera_mic_spk:
   esp32s3:
@@ -67,7 +67,7 @@ examples/usb/host/usb_camera_mic_spk:
   description:
     This is the USB camera microphone speaker example
   readme:
-    https://raw.githubusercontent.com/espressif/esp-iot-solution/master/examples/usb/host/usb_camera_mic_spk/README.md
+    https://raw.githubusercontent.com/espressif/esp-iot-solution/release/v2.0/examples/usb/host/usb_camera_mic_spk/README.md
 
 examples/usb/host/usb_cdc_4g_module:
   esp32s3:
@@ -77,7 +77,7 @@ examples/usb/host/usb_cdc_4g_module:
   description:
     This is the USB CDC 4G module example
   readme:
-    https://raw.githubusercontent.com/espressif/esp-iot-solution/master/examples/usb/host/usb_cdc_4g_module/README.md
+    https://raw.githubusercontent.com/espressif/esp-iot-solution/release/v2.0/examples/usb/host/usb_cdc_4g_module/README.md
 
 examples/usb/host/usb_cdc_basic:
   esp32s3:
@@ -86,4 +86,4 @@ examples/usb/host/usb_cdc_basic:
   description:
     This is the USB CDC basic example
   readme:
-    https://raw.githubusercontent.com/espressif/esp-iot-solution/master/examples/usb/host/sb_cdc_basic/README.md
+    https://raw.githubusercontent.com/espressif/esp-iot-solution/release/v2.0/examples/usb/host/sb_cdc_basic/README.md

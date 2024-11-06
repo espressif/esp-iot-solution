@@ -104,6 +104,7 @@ pack-upload_files:
     expire_in: 1 week
   rules:
     - if: $CI_COMMIT_REF_NAME == "master"
+    - if: $CI_COMMIT_REF_NAME == "release/v2.0"
   script:
     - pip install rtoml ruamel.yaml --upgrade
     - pip install idf_build_apps
@@ -122,9 +123,10 @@ upload-dl-trigger:
       artifacts: false
   rules:
     - if: $CI_COMMIT_REF_NAME == "master"
+    - if: $CI_COMMIT_REF_NAME == "release/v2.0"
   environment:
     name: esp-iot-solution_launchpad
-    url: https://espressif.github.io/esp-launchpad/?flashConfigURL=https://dl.espressif.com/AE/esp-iot-solution/config.toml
+    url: https://espressif.github.io/esp-launchpad/?flashConfigURL=https://dl.espressif.com/AE/esp-iot-solution/release_v2_0/config.toml
   variables:
     SOURCE_PROJECT_TOKEN: ${UPLOAD_ACCESS_TOKEN}
     # Use TRIGGER_REPO_REF to specify the branch name (etc: TRIGGER_REPO_REF: 'feat/add_esp-iot-solution')
