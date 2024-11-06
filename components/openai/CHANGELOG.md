@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.0.1 - 2024-11-5
+
+### Bug Fixes:
+
+* Fix incorrect free of cjson object's payload memory
+
 ## v1.0.0 - 2024-5-15
 
 ### Break Changes:

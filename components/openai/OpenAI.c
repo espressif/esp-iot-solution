@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+/* SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -587,7 +587,6 @@ static OpenAI_StringResponse_t *OpenAI_StringResponseCreate(char *payload)
 
     // Parse payload
     cJSON *json = cJSON_Parse(payload);
-    free(payload);
 
     // Check for error
     char *error = getJsonError(json);
@@ -653,6 +652,7 @@ static OpenAI_StringResponse_t *OpenAI_StringResponseCreate(char *payload)
     }
 
     cJSON_Delete(json);
+    free(payload);
     _stringResponse->parent.getUsage = &OpenAI_StringResponseGetUsage;
     _stringResponse->parent.getLen = &OpenAI_StringResponseGetLen;
     _stringResponse->parent.getData = &OpenAI_StringResponseGetDate;
@@ -661,6 +661,7 @@ static OpenAI_StringResponse_t *OpenAI_StringResponseCreate(char *payload)
     return &_stringResponse->parent;
 end:
     cJSON_Delete(json);
+    free(payload);
     OpenAI_StringResponseDelete(&_stringResponse->parent);
     return NULL;
 }
@@ -2079,24 +2080,24 @@ static char *OpenAI_AudioTranscriptionFile(OpenAI_AudioTranscription_t *audioTra
     free(data);
     OPENAI_ERROR_CHECK(result != NULL, "Empty result!", NULL);
     cJSON *json = cJSON_Parse(result);
-    free(result);
-    result = NULL;
+    char *result_ret = NULL;
     char *error = getJsonError(json);
     if (error != NULL) {
         if (strcmp(error, "cJSON_Parse failed!") == 0) {
             free(error);
             error = NULL;
         }
-        result = error;
+        result_ret = error;
     } else {
         if (cJSON_HasObjectItem(json, "text")) {
             cJSON *text = cJSON_GetObjectItem(json, "text");
-            result = strdup(cJSON_GetStringValue(text));
+            result_ret = strdup(cJSON_GetStringValue(text));
         }
     }
 
     cJSON_Delete(json);
-    return result;
+    free(result);
+    return result_ret;
 }
 
 static OpenAI_AudioTranscription_t *OpenAI_AudioTranscriptionCreate(OpenAI_t *openai)
@@ -2225,17 +2226,18 @@ static char *OpenAI_AudioTranslationFile(OpenAI_AudioTranslation_t *audioTransla
     OPENAI_ERROR_CHECK(result != NULL, "Empty result!", NULL);
     cJSON *json = cJSON_Parse(result);
     char *error = getJsonError(json);
+    char *result_ret = NULL;
     if (error != NULL) {
         ESP_LOGE(TAG, "%s", error);
     } else {
-        free(result);
         if (cJSON_HasObjectItem(json, "text")) {
             cJSON *text = cJSON_GetObjectItem(json, "text");
-            result = strdup(cJSON_GetStringValue(text));
+            result_ret = strdup(cJSON_GetStringValue(text));
         }
     }
     cJSON_Delete(json);
-    return result;
+    free(result);
+    return result_ret;
 }
 
 static OpenAI_AudioTranslation_t *OpenAI_AudioTranslationCreate(OpenAI_t *openai)
@@ -2397,7 +2399,7 @@ static char *OpenAI_Request(const char *base_url, const char *api_key, const cha
         esp_http_client_get_chunk_length(client, &content_length);
     }
     ESP_LOGD(TAG, "content_length=%d", content_length);
-    OPENAI_ERROR_CHECK_GOTO(content_length >= 0, "HTTP client fetch headers failed!", end);
+    OPENAI_ERROR_CHECK_GOTO(content_length > 0, "HTTP client fetch headers failed!", end);
     result = (char *)malloc(content_length + 1);
     int read = esp_http_client_read_response(client, result, content_length);
     if (read != content_length) {
