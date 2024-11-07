@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v1.0.1 - 2024-11-7
+
+* Fix default initialization parameters and front-back window parameters.
+
 ## v1.0.0 - 2024-8-7
 
 * Support MIPI-DSI interface

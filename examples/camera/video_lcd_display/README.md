@@ -9,7 +9,7 @@ This example is based on the [esp_video](https://github.com/espressif/esp-video-
 
 ## ESP-IDF Required
 
-- Currently, this example only supports compilation and use on the ESP-IDF master branch. The recommended commit for testing is: ac6c54c997f68662ed2c0b6cb07edd3736175c16.
+- This example supports ESP-IDF release/v5.4 and later branches. By default, it runs on ESP-IDF release/v5.4.
 - Please follow the [ESP-IDF Programming Guide](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html) to set up the development environment. **We highly recommend** you [Build Your First Project](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html#build-your-first-project) to get familiar with ESP-IDF and make sure the environment is set up correctly.
 
 ### Prerequisites

@@ -28,12 +28,16 @@ static const char *TAG = "app_video";
 typedef struct {
     uint8_t *camera_buffer[MAX_BUFFER_COUNT];
     size_t camera_buf_size;
+    uint8_t camera_buf_count;
     uint32_t camera_buf_hes;
     uint32_t camera_buf_ves;
     struct v4l2_buffer v4l2_buf;
     uint8_t camera_mem_mode;
     app_video_frame_operation_cb_t user_camera_video_frame_operation_cb;
     TaskHandle_t video_stream_task_handle;
+    uint8_t video_task_core_id;
+    bool video_task_delete;
+    void *video_task_user_data;
 } app_video_t;
 
 static app_video_t app_camera_video;
@@ -170,6 +174,7 @@ esp_err_t app_video_set_bufs(int video_fd, uint32_t fb_num, const void **fb)
 
     memset(&req, 0, sizeof(req));
     req.count = fb_num;
+    app_camera_video.camera_buf_count = fb_num;
     req.type = type;
 
     app_camera_video.camera_mem_mode = req.memory = fb ? V4L2_MEMORY_USERPTR : V4L2_MEMORY_MMAP;
@@ -279,7 +284,8 @@ static inline void video_operation_video_frame(int video_fd)
                         buf_index,
                         app_camera_video.camera_buf_hes,
                         app_camera_video.camera_buf_ves,
-                        app_camera_video.camera_buf_size
+                        app_camera_video.camera_buf_size,
+                        app_camera_video.video_task_user_data
                     );
 }
 
@@ -345,12 +351,21 @@ static void video_stream_task(void *arg)
         video_operation_video_frame(video_fd);
 
         ESP_ERROR_CHECK(video_free_video_frame(video_fd));
+
+        if (app_camera_video.video_task_delete) {
+            app_camera_video.video_task_delete = false;
+            ESP_ERROR_CHECK(video_stream_stop(video_fd));
+            vTaskDelete(NULL);
+        }
     }
     vTaskDelete(NULL);
 }
 
-esp_err_t app_video_stream_task_start(int video_fd, int core_id)
+esp_err_t app_video_stream_task_start(int video_fd, int core_id, void *user_data)
 {
+    app_camera_video.video_task_core_id = core_id;
+    app_camera_video.video_task_user_data = user_data;
+
     video_stream_start(video_fd);
 
     BaseType_t result = xTaskCreatePinnedToCore(video_stream_task, "video stream task", VIDEO_TASK_STACK_SIZE, &video_fd, VIDEO_TASK_PRIORITY, &app_camera_video.video_stream_task_handle, core_id);
@@ -367,14 +382,25 @@ errout:
     return ESP_FAIL;
 }
 
-esp_err_t app_video_stream_task_stop(int video_fd)
+esp_err_t app_video_stream_task_restart(int video_fd)
 {
-    if (app_camera_video.video_stream_task_handle != NULL) {
-        vTaskDelete(app_camera_video.video_stream_task_handle);
-        app_camera_video.video_stream_task_handle = NULL;
+    app_video_set_bufs(video_fd, app_camera_video.camera_buf_count, (const void **)app_camera_video.camera_buffer);
+
+    esp_err_t ret = app_video_stream_task_start(video_fd, app_camera_video.video_task_core_id, app_camera_video.video_task_user_data);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "failed to restart video stream task");
+        goto errout;
     }
 
-    ESP_ERROR_CHECK(video_stream_stop(video_fd));
+    return ESP_OK;
+
+errout:
+    return ESP_FAIL;
+}
+
+esp_err_t app_video_stream_task_stop(int video_fd)
+{
+    app_camera_video.video_task_delete = true;
 
     return ESP_OK;
 }

@@ -71,7 +71,7 @@ static void test_draw_color_bar(esp_lcd_panel_handle_t panel_handle, uint16_t h_
     for (int j = 0; j < byte_per_pixel * 8; j++) {
         for (int i = 0; i < row_line * h_res; i++) {
             for (int k = 0; k < byte_per_pixel; k++) {
-                color[i * byte_per_pixel + k] = (BIT(j) >> (k * 8)) & 0xff;
+                color[i * byte_per_pixel + k] = (SPI_SWAP_DATA_TX(BIT(j), TEST_LCD_BIT_PER_PIXEL) >> (k * 8)) & 0xff;
             }
         }
         TEST_ESP_OK(esp_lcd_panel_draw_bitmap(panel_handle, 0, j * row_line, h_res, (j + 1) * row_line, color));

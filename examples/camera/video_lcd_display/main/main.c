@@ -18,7 +18,7 @@
 
 #define ALIGN_UP(num, align)    (((num) + ((align) - 1)) & ~((align) - 1))
 
-static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf_index, uint32_t camera_buf_hes, uint32_t camera_buf_ves, size_t camera_buf_len);
+static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf_index, uint32_t camera_buf_hes, uint32_t camera_buf_ves, size_t camera_buf_len, void *user_data);
 
 static const char *TAG = "app_main";
 
@@ -86,14 +86,14 @@ void app_main(void)
     ESP_ERROR_CHECK(app_video_register_frame_operation_cb(camera_video_frame_operation));
 
     // Start the camera stream task
-    ESP_ERROR_CHECK(app_video_stream_task_start(video_cam_fd0, 0));
+    ESP_ERROR_CHECK(app_video_stream_task_start(video_cam_fd0, 0, NULL));
 
 #if CONFIG_EXAMPLE_ENABLE_PRINT_FPS_RATE_VALUE
     start_time = esp_timer_get_time();  // Get the initial time for frame rate statistics
 #endif
 }
 
-static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf_index, uint32_t camera_buf_hes, uint32_t camera_buf_ves, size_t camera_buf_len)
+static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf_index, uint32_t camera_buf_hes, uint32_t camera_buf_ves, size_t camera_buf_len, void *user_data)
 {
 #if CONFIG_EXAMPLE_ENABLE_PRINT_FPS_RATE_VALUE
     fps_count++;
