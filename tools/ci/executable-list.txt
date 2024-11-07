@@ -13,3 +13,4 @@ tools/ci/push_to_github.sh
 tools/cmake_utilities/scripts/gen_custom_ota.py
 tools/cmake_utilities/scripts/relinker/configuration.py
 tools/cmake_utilities/scripts/relinker/relinker.py
+tools/release_versions.py
