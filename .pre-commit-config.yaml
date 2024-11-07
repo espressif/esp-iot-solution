@@ -71,6 +71,16 @@ repos:
         language: python
         pass_filenames: false
         always_run: true
+  - repo: local
+    hooks:
+      - id: release_versions
+        name: Update versions in readme
+        entry: tools/release_versions.py
+        language: python
+        types: [executable]
+        additional_dependencies:
+          - pyyaml
+        always_run: true
   - repo: https://github.com/espressif/conventional-precommit-linter
     rev: v1.8.0
     hooks:
