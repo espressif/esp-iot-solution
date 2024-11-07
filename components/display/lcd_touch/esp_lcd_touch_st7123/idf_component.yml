@@ -9,3 +9,6 @@ dependencies:
   esp_lcd_touch:
     version: "^1"
     public: true
+sbom:
+  supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'
+  originator: 'Organization: Espressif Systems (Shanghai) CO LTD'

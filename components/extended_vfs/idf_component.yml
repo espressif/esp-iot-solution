@@ -11,3 +11,6 @@ examples:
   - path:  ../../examples/extended_vfs/ledc/ledc_simple
   - path:  ../../examples/extended_vfs/spi/spi_master_simple
   - path:  ../../examples/extended_vfs/spi/spi_slave_simple
+sbom:
+  supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'
+  originator: 'Organization: Espressif Systems (Shanghai) CO LTD'
