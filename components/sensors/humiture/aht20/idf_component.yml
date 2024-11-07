@@ -1,5 +1,15 @@
-version: 0.1.0~1
+version: 1.0.0
+targets:
+  - esp32
+  - esp32c2
+  - esp32c3
+  - esp32c6
+  - esp32h2
+  - esp32s2
+  - esp32s3
 description: I2C driver for AHT20 humidity and temperature sensor
+issues: https://github.com/espressif/esp-iot-solution/issues
+repository: git://github.com/espressif/esp-iot-solution.git
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/sensors/humiture/aht20
 dependencies:
   idf: '>=4.3'
