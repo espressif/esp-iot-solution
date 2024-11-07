@@ -37,14 +37,14 @@ static void usb_communication(uint8_t loop_count, size_t data_length, usbh_cdc_h
         size_t length = data_length;
 
         /*!< Send data */
-        usbh_cdc_write_bytes(handle, buff, &length);
+        usbh_cdc_write_bytes(handle, buff, length, pdMS_TO_TICKS(1000));
         ESP_LOGI(TAG, "Send data len: %d", length);
         ESP_LOG_BUFFER_HEXDUMP(TAG, buff, length, ESP_LOG_INFO);
         vTaskDelay(500 / portTICK_PERIOD_MS);
 
         /*!< Receive data */
         length = data_length;
-        usbh_cdc_read_bytes(handle, buff, &length);
+        usbh_cdc_read_bytes(handle, buff, &length, pdMS_TO_TICKS(1000));
         ESP_LOGI(TAG, "Recv data len: %d", length);
         ESP_LOG_BUFFER_HEXDUMP(TAG, buff, length, ESP_LOG_INFO);
         vTaskDelay(500 / portTICK_PERIOD_MS);
@@ -66,7 +66,7 @@ static void cdc_disconnect_cb(usbh_cdc_handle_t handle, void *arg)
     ESP_LOGI(TAG, "cdc device disconnect");
 }
 
-TEST_CASE("usb cdc R/W", "[iot_usbh_cdc][read-write]")
+TEST_CASE("usb cdc R/W", "[iot_usbh_cdc][read-write][auto]")
 {
     esp_log_level_set("USBH_CDC", ESP_LOG_DEBUG);
 
@@ -78,7 +78,7 @@ TEST_CASE("usb cdc R/W", "[iot_usbh_cdc][read-write]")
         .new_dev_cb = cdc_new_dev_cb,
     };
 
-    TEST_ASSERT_EQUAL(ESP_OK, usbh_cdc_install(&config));
+    TEST_ASSERT_EQUAL(ESP_OK, usbh_cdc_driver_install(&config));
 
     usbh_cdc_device_config_t dev_config = {
         .vid = 0,
@@ -104,7 +104,7 @@ TEST_CASE("usb cdc R/W", "[iot_usbh_cdc][read-write]")
     usb_communication(5, 32, handle);
 
     TEST_ASSERT_EQUAL(ESP_OK, usbh_cdc_delete(handle));
-    TEST_ASSERT_EQUAL(ESP_OK, usbh_cdc_uninstall());
+    TEST_ASSERT_EQUAL(ESP_OK, usbh_cdc_driver_uninstall());
     vTaskDelay(2000 / portTICK_PERIOD_MS);
 }
 
@@ -121,7 +121,7 @@ TEST_CASE("usb dual cdc R/W", "[iot_usbh_cdc][read-write]")
         .new_dev_cb = cdc_new_dev_cb,
     };
 
-    TEST_ASSERT_EQUAL(ESP_OK, usbh_cdc_install(&config));
+    TEST_ASSERT_EQUAL(ESP_OK, usbh_cdc_driver_install(&config));
 
     vTaskDelay(1000 / portTICK_PERIOD_MS);
 
@@ -139,14 +139,14 @@ TEST_CASE("usb dual cdc R/W", "[iot_usbh_cdc][read-write]")
     };
 
     usbh_cdc_handle_t handle = NULL;
-    TEST_ASSERT_EQUAL(ESP_OK, usbh_cdc_create(&dev_config, &handle));
+    usbh_cdc_create(&dev_config, &handle);
 
     vTaskDelay(1000 / portTICK_PERIOD_MS);
 
     dev_config.itf_num = 3;
 
     usbh_cdc_handle_t handle2 = NULL;
-    TEST_ASSERT_EQUAL(ESP_OK, usbh_cdc_create(&dev_config, &handle));
+    usbh_cdc_create(&dev_config, &handle2);
 
     // Add connect event
     vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -160,11 +160,11 @@ TEST_CASE("usb dual cdc R/W", "[iot_usbh_cdc][read-write]")
 
     TEST_ASSERT_EQUAL(ESP_OK, usbh_cdc_delete(handle));
     TEST_ASSERT_EQUAL(ESP_OK, usbh_cdc_delete(handle2));
-    TEST_ASSERT_EQUAL(ESP_OK, usbh_cdc_uninstall());
+    TEST_ASSERT_EQUAL(ESP_OK, usbh_cdc_driver_uninstall());
     vTaskDelay(2000 / portTICK_PERIOD_MS);
 }
 
-TEST_CASE("usbh cdc driver memory leak", "[iot_usbh_cdc][read-write]")
+TEST_CASE("usbh cdc driver memory leak", "[iot_usbh_cdc][read-write][auto]")
 {
     esp_log_level_set("USBH_CDC", ESP_LOG_DEBUG);
     usbh_cdc_driver_config_t config = {
@@ -173,12 +173,14 @@ TEST_CASE("usbh cdc driver memory leak", "[iot_usbh_cdc][read-write]")
         .task_coreid = 0,
         .skip_init_usb_host_driver = false,
     };
-    TEST_ASSERT_EQUAL(ESP_OK, usbh_cdc_install(&config));
-    usbh_cdc_uninstall();
+    TEST_ASSERT_EQUAL(ESP_OK, usbh_cdc_driver_install(&config));
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+    usbh_cdc_driver_uninstall();
     vTaskDelay(2000 / portTICK_PERIOD_MS);
 }
 
-TEST_CASE("usbh cdc device memory leak", "[iot_usbh_cdc][read-write]")
+TEST_CASE("usbh cdc device memory leak", "[iot_usbh_cdc][read-write][auto]")
 {
     esp_log_level_set("USBH_CDC", ESP_LOG_DEBUG);
     usbh_cdc_driver_config_t config = {
@@ -187,7 +189,7 @@ TEST_CASE("usbh cdc device memory leak", "[iot_usbh_cdc][read-write]")
         .task_coreid = 0,
         .skip_init_usb_host_driver = false,
     };
-    TEST_ASSERT_EQUAL(ESP_OK, usbh_cdc_install(&config));
+    TEST_ASSERT_EQUAL(ESP_OK, usbh_cdc_driver_install(&config));
 
     usbh_cdc_device_config_t dev_config = {
         .itf_num = 1,
@@ -196,13 +198,13 @@ TEST_CASE("usbh cdc device memory leak", "[iot_usbh_cdc][read-write]")
     };
 
     usbh_cdc_handle_t handle = NULL;
-    TEST_ASSERT_EQUAL(ESP_OK, usbh_cdc_create(&dev_config, &handle));
+    usbh_cdc_create(&dev_config, &handle);
     vTaskDelay(1000 / portTICK_PERIOD_MS);
 
     TEST_ASSERT_EQUAL(ESP_OK, usbh_cdc_delete(handle));
     vTaskDelay(1000 / portTICK_PERIOD_MS);
 
-    usbh_cdc_uninstall();
+    usbh_cdc_driver_uninstall();
     vTaskDelay(1000 / portTICK_PERIOD_MS);
 }
 

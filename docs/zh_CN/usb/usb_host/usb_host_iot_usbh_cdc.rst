@@ -8,7 +8,7 @@ USB 主机 CDC
 使用指南
 ---------------
 
-1. 使用 ``usbh_cdc_install`` 配置, 用户可以配置好 USB CDC 驱动程序，并通过设置 ``skip_init_usb_host_driver`` 配置项，在组件内部初始化好 USB HOST Driver 协议栈。
+1. 使用 ``usbh_cdc_driver_install`` 配置, 用户可以配置好 USB CDC 驱动程序，并通过设置 ``skip_init_usb_host_driver`` 配置项，在组件内部初始化好 USB HOST Driver 协议栈。
 
 .. code:: c
 
@@ -53,7 +53,7 @@ USB 主机 CDC
 4. 成功连接后，主机将自动从 CDC 设备接收 USB 数据到内部 ``ringbuffer``，用户可以轮询 ``usbh_cdc_get_rx_buffer_size`` 以读取缓冲数据大小，或者注册接收回调以在数据准备就绪时得到通知。然后 ``usbh_cdc_read_bytes`` 可以用于读取缓冲数据。
 5. ``usbh_cdc_write_bytes`` 可以用于向 USB 设备发送数据。数据首先被写入内部传输 ``ringbuffer``，然后在 USB 总线空闲时发送出去。
 6. ``usbh_cdc_delete`` 可以删除 USB CDC 设备，释放掉 ringbuffer 以及其他资源。
-7. ``usbh_cdc_uninstall`` 可以完全卸载 USB 驱动程序以释放所有资源。
+7. ``usbh_cdc_driver_uninstall`` 可以完全卸载 USB 驱动程序以释放所有资源。
 
 示例代码
 -------------------------------

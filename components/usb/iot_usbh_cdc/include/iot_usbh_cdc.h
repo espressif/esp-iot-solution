@@ -21,6 +21,16 @@ extern "C" {
 typedef struct usbh_cdc_t *usbh_cdc_handle_t;
 
 /**
+ * @brief State of the USB CDC device
+ *
+ */
+typedef enum {
+    USBH_CDC_CLOSE = 0,
+    USBH_CDC_OPEN,
+    USBH_CDC_STATE_MAX,
+} usbh_cdc_state_t;
+
+/**
  * @brief New USB device callback
  *
  * Provides already opened usb_dev, that will be closed after this callback returns.
@@ -31,6 +41,10 @@ typedef struct usbh_cdc_t *usbh_cdc_handle_t;
  */
 typedef void (*usbh_cdc_new_dev_cb_t)(usb_device_handle_t usb_dev);
 
+/**
+ * @brief CDC driver configuration
+ *
+ */
 typedef struct {
     size_t task_stack_size;                    /*!< Stack size of the driver's task */
     unsigned task_priority;                    /*!< Priority of the driver's task */
@@ -44,6 +58,10 @@ typedef struct {
  */
 typedef void (*usbh_cdc_event_cb_t)(usbh_cdc_handle_t cdc_handle, void *user_data);
 
+/**
+ * @brief Callback structure for CDC device events
+ *
+ */
 typedef struct {
     usbh_cdc_event_cb_t connect;            /*!< USB connect callback, set NULL if use */
     usbh_cdc_event_cb_t disconnect;         /*!< USB disconnect callback, set NULL if not use */
@@ -93,7 +111,7 @@ typedef struct usbh_cdc_config {
  *
  * In case of an error, the function will clean up any resources that were allocated before the failure occurred.
  */
-esp_err_t usbh_cdc_install(const usbh_cdc_driver_config_t *config);
+esp_err_t usbh_cdc_driver_install(const usbh_cdc_driver_config_t *config);
 
 /**
  * @brief Uninstall the USB CDC driver
@@ -106,7 +124,7 @@ esp_err_t usbh_cdc_install(const usbh_cdc_driver_config_t *config);
  *     - ESP_ERR_INVALID_STATE: Driver is not installed or devices are still active
  *     - ESP_ERR_NOT_FINISHED: Timeout occurred while waiting for the CDC task to finish
  */
-esp_err_t usbh_cdc_uninstall(void);
+esp_err_t usbh_cdc_driver_uninstall(void);
 
 /**
  * @brief Create a new USB CDC device handle
@@ -131,6 +149,8 @@ esp_err_t usbh_cdc_create(const usbh_cdc_device_config_t *config, usbh_cdc_handl
  *
  * This function deletes the specified USB CDC device handle, freeing its associated resources, including ring buffers and semaphores.
  *
+ * @note When deleting the device, please avoid writing or reading data.
+
  * @param[in] cdc_handle The CDC device handle to delete
  *
  * @return
@@ -148,14 +168,15 @@ esp_err_t usbh_cdc_delete(usbh_cdc_handle_t cdc_handle);
  *
  * @param[in] cdc_handle The CDC device handle
  * @param[in] buf Pointer to the data buffer to write
- * @param[in out] length Pointer to the length of data to write. On success, it remains unchanged, otherwise set to 0.
+ * @param[in] length Pointer to the length of data to write. On success, it remains unchanged, otherwise set to 0.
+ * @param[in] ticks_to_wait The maximum amount of time to wait for the write operation to complete
  *
  * @return
  *     - ESP_OK: Data written successfully
  *     - ESP_ERR_INVALID_ARG: Invalid argument (NULL handle, buffer, or length)
  *     - ESP_ERR_INVALID_STATE: Device is not connected
  */
-esp_err_t usbh_cdc_write_bytes(usbh_cdc_handle_t cdc_handle, const uint8_t *buf, size_t *length);
+esp_err_t usbh_cdc_write_bytes(usbh_cdc_handle_t cdc_handle, const uint8_t *buf, size_t length, TickType_t ticks_to_wait);
 
 /**
  * @brief Read data from the USB CDC device
@@ -165,14 +186,16 @@ esp_err_t usbh_cdc_write_bytes(usbh_cdc_handle_t cdc_handle, const uint8_t *buf,
  *
  * @param[in] cdc_handle The CDC device handle
  * @param[out] buf Pointer to the buffer where the read data will be stored
- * @param[in out] length Pointer to the length of data to read. On success, it is updated with the actual bytes read.
+ * @param[inout] length Pointer to the length of data to read. On success, it is updated with the actual bytes read.
+ * @param[in] ticks_to_wait The maximum amount of time to wait for the read operation to complete
  *
  * @return
  *     - ESP_OK: Data read successfully
+ *     - ESP_FAIL: Failed to read data
  *     - ESP_ERR_INVALID_ARG: Invalid argument (NULL handle, buffer, or length)
  *     - ESP_ERR_INVALID_STATE: Device is not connected
  */
-esp_err_t usbh_cdc_read_bytes(usbh_cdc_handle_t cdc_handle, const uint8_t *buf, size_t *length);
+esp_err_t usbh_cdc_read_bytes(usbh_cdc_handle_t cdc_handle, const uint8_t *buf, size_t *length, TickType_t ticks_to_wait);
 
 /**
  * @brief Flush the receive buffer of the USB CDC device
@@ -218,13 +241,13 @@ esp_err_t usbh_cdc_get_rx_buffer_size(usbh_cdc_handle_t cdc_handle, size_t *size
  * @brief Get the connect state of given interface
  *
  * @param[in] cdc_handle The CDC device handle
+ * @param[out] state Pointer to store the connect state
  *
  * @return
- *      -1: error
- *      0 : disconnected
- *      1 : connected
+ *     - ESP_OK: Size retrieved successfully
+ *     - ESP_ERR_INVALID_ARG: Invalid CDC handle provided
  */
-int usbh_cdc_get_state(usbh_cdc_handle_t cdc_handle);
+esp_err_t usbh_cdc_get_state(usbh_cdc_handle_t cdc_handle, usbh_cdc_state_t *state);
 
 /**
  * @brief Print the USB CDC device descriptors

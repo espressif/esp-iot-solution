@@ -37,4 +37,10 @@ menu "IoT USB Host CDC"
         help
             usb host OUT ringbuffer size
 
+    config DEVICE_ADDRESS_LIST_NUM
+        int "usbh device address list num"
+        default 10
+        help
+            usb host device address list num
+
 endmenu

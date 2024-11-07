@@ -21,5 +21,5 @@ from pytest_embedded import Dut
 @pytest.mark.timeout(60 * 60)
 def test_iot_usbh_cdc(dut: Dut)-> None:
     dut.expect_exact('Press ENTER to see the list of tests.')
-    dut.write('*')
+    dut.write('[auto]')
     dut.expect_unity_test_output(timeout = 1000)

@@ -37,7 +37,7 @@ static void usb_receive_task(void *param)
             /* Polling USB receive buffer to get data */
             usbh_cdc_get_rx_buffer_size(handle[i], &data_len);
             if (data_len > 0) {
-                usbh_cdc_read_bytes(handle[i], buf, &data_len);
+                usbh_cdc_read_bytes(handle[i], buf, &data_len, pdMS_TO_TICKS(100));
                 ESP_LOGI(TAG, "Device %d Receive len=%d: %.*s", i, data_len, data_len, buf);
             } else {
                 vTaskDelay(1);
@@ -72,7 +72,7 @@ void app_main(void)
         .skip_init_usb_host_driver = false,
     };
     /* install USB host CDC driver */
-    usbh_cdc_install(&config);
+    usbh_cdc_driver_install(&config);
 
     usbh_cdc_handle_t handle[EXAMPLE_BULK_ITF_NUM] = {};
 
@@ -107,11 +107,11 @@ void app_main(void)
     char buff[32] = "AT\r\n";
     while (1) {
         size_t len = strlen(buff);
-        usbh_cdc_write_bytes(handle[0], (uint8_t *)buff, &len);
+        usbh_cdc_write_bytes(handle[0], (uint8_t *)buff, len, pdMS_TO_TICKS(100));
         ESP_LOGI(TAG, "Send itf0 len=%d: %s", len, buff);
 #if (EXAMPLE_BULK_ITF_NUM > 1)
         len = strlen(buff);
-        usbh_cdc_write_bytes(handle[1], (uint8_t *)buff, &len);
+        usbh_cdc_write_bytes(handle[1], (uint8_t *)buff, len, pdMS_TO_TICKS(100));
         ESP_LOGI(TAG, "Send itf1 len=%d: %s", len, buff);
 #endif
         vTaskDelay(pdMS_TO_TICKS(1000));

@@ -156,9 +156,9 @@ esp_err_t esp_modem_dce_init(esp_modem_dce_t *dce, esp_modem_dce_config_t *confi
     }
     ESP_LOGI(TAG, "--------- Modem PreDefined Info ------------------");
     ESP_LOGI(TAG, "Model: %s", CONFIG_MODEM_TARGET_NAME);
-    ESP_LOGI(TAG, "Modem itf: IN Addr:0x%02X, OUT Addr:0x%02X", CONFIG_MODEM_USB_IN_EP_ADDR, CONFIG_MODEM_USB_OUT_EP_ADDR);
+    ESP_LOGI(TAG, "Modem itf %d", CONFIG_MODEM_USB_ITF);
 #ifdef CONFIG_MODEM_SUPPORT_SECONDARY_AT_PORT
-    ESP_LOGI(TAG, "Secondary AT itf: IN Addr:0x%02X, OUT Addr:0x%02X", CONFIG_MODEM_USB_IN2_EP_ADDR, CONFIG_MODEM_USB_OUT2_EP_ADDR);
+    ESP_LOGI(TAG, "Secondary AT itf %d", CONFIG_MODEM_USB_ITF2);
 #endif
     ESP_LOGI(TAG, "----------------------------------------------------");
     switch (config->device) {

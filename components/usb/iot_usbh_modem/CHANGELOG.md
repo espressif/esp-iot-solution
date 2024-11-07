@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v1.0.0 - 2024-11-14
+
+* Use iot_usbh_cdc version 1.0.0
+
 ## v0.2.1 - 2023-11-23
 
 * Fix possible cmake_utilities dependency issue
@@ -29,7 +33,7 @@
 
 ## v0.1.3 - 2023-03-08
 
-* Fix NAPT enable issue 
+* Fix NAPT enable issue
 
 ## v0.1.2 - 2023-03-06
 

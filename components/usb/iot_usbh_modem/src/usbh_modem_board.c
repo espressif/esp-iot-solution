@@ -315,7 +315,7 @@ static void on_modem_event(void *arg, esp_event_base_t event_base,
     }
 }
 
-static void _usb_dte_conn_callback(void *arg)
+static void _usb_dte_conn_callback(usbh_cdc_handle_t cdc_handle, void *arg)
 {
     /* first conn callback, dce*/
     xEventGroupSetBits(s_modem_evt_hdl, DTE_USB_RECONNECT_BIT);
@@ -323,7 +323,7 @@ static void _usb_dte_conn_callback(void *arg)
     esp_event_post(MODEM_BOARD_EVENT, MODEM_EVENT_DTE_CONN, NULL, 0, 0);
 }
 
-static void _usb_dte_disconn_callback(void *arg)
+static void _usb_dte_disconn_callback(usbh_cdc_handle_t cdc_handle, void *arg)
 {
     /* withdraw reconnect if disconn happened first */
     xEventGroupSetBits(s_modem_evt_hdl, DTE_USB_DISCONNECT_BIT);

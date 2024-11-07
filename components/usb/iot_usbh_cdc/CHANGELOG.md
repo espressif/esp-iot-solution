@@ -8,11 +8,9 @@
 
 ### API Break Changes:
 
-* Add `usbh_cdc_install()`
-* Add `usbh_cdc_uninstall()`
+* Add `usbh_cdc_create()`
+* Add `usbh_cdc_delete()`
 * Add `usbh_cdc_desc_print()` to print CDC descriptor
-* Rename `usbh_cdc_driver_install()` to `usbh_cdc_create()`
-* Rename `usbh_cdc_driver_delete()` to `usbh_cdc_delete()`
 * Rename `usbh_cdc_get_itf_state()` to `usbh_cdc_get_state()`
 * Remove `usbh_cdc_wait_connect()`
 * Remove `usbh_cdc_itf_write_bytes()`

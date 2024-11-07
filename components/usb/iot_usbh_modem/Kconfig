@@ -45,54 +45,23 @@ menu "IoT USB Host Modem"
         default y if MODEM_TARGET_MC610_EU
         default n if MODEM_TARGET_USER
 
-    menu "USB CDC endpoint address config"
-        visible if MODEM_TARGET_USER
-
-        config MODEM_USB_OUT_EP_ADDR
-            hex "Modem USB CDC OUT endpoint address"
-            default 0x01 if MODEM_TARGET_ML302_DNLM
-            default 0x03 if MODEM_TARGET_AIR724UG_NFM
-            default 0x0f if MODEM_TARGET_EC600N_CNLA_N05
-            default 0x0a if MODEM_TARGET_EC600N_CNLC_N06
-            default 0x0a if MODEM_TARGET_A7600C1
-            default 0X02 if MODEM_TARGET_AIR780_E
-            default 0x03 if MODEM_TARGET_BG95_M3
-            default 0x04 if MODEM_TARGET_BG96_MA
-            default 0x07 if MODEM_TARGET_MC610_EU
-            default 0x01 if MODEM_TARGET_USER
-            range 0x01 0x7f
-            help
-                USB OUT endpoint address (eg.0x01) used for send AT/data to device
-
-        config MODEM_USB_IN_EP_ADDR
-            hex "Modem USB CDC IN endpoint address"
-            default 0x81 if MODEM_TARGET_ML302_DNLM
-            default 0x84 if MODEM_TARGET_AIR724UG_NFM
-            default 0x86 if  MODEM_TARGET_EC600N_CNLA_N05
-            default 0x81 if  MODEM_TARGET_EC600N_CNLC_N06
-            default 0x81 if MODEM_TARGET_A7600C1
-            default 0X84 if MODEM_TARGET_AIR780_E
-            default 0x84 if MODEM_TARGET_BG95_M3
-            default 0x86 if MODEM_TARGET_BG96_MA
-            default 0x87 if MODEM_TARGET_MC610_EU
-            default 0x81 if MODEM_TARGET_USER
-            range 0x81 0x8f
-            help
-                USB IN endpoint address (eg.0x81) used for receive data from device
-        config MODEM_USB_OUT2_EP_ADDR
-            depends on MODEM_SUPPORT_SECONDARY_AT_PORT
-            hex "Modem USB CDC2 OUT endpoint address (AT Only)"
+    menu "USB CDC interface config"
+        config MODEM_USB_ITF
+            hex "Modem USB CDC interface"
+            default 0x00 if MODEM_TARGET_ML302_DNLM
+            default 0x04 if MODEM_TARGET_EC600N_CNLC_N06
             default 0x06 if MODEM_TARGET_MC610_EU
-            range 0x01 0x7f
+            default 0x05 if MODEM_TARGET_A7600C1
             help
-                USB OUT endpoint address (eg.0x01) used for send AT to device
-        config MODEM_USB_IN2_EP_ADDR
+                USB CDC interface (eg.0x00) used for send AT/data to device
+
+        config MODEM_USB_ITF2
+            hex "Modem USB CDC interface 2 (AT Only)"
             depends on MODEM_SUPPORT_SECONDARY_AT_PORT
-            hex "Modem USB CDC2 IN endpoint address (AT Only)"
-            default 0x86 if MODEM_TARGET_MC610_EU
-            range 0x81 0x8f
+            default 0x01 if MODEM_TARGET_USER
+            default 0x05 if MODEM_TARGET_MC610_EU
             help
-                USB IN endpoint address (eg.0x81) used for receive AT from device
+                USB CDC interface 2 (eg.0x01) used for send AT/data to device
     endmenu
 
     config MODEM_DIAL_RETRY_TIMES
