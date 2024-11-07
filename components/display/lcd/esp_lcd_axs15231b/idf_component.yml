@@ -8,3 +8,6 @@ dependencies:
 description: ESP LCD & Touch AXS15231B
 url: https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_axs15231b
 version: 1.0.0
+sbom:
+  supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'
+  originator: 'Organization: Espressif Systems (Shanghai) CO LTD'

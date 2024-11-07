@@ -16,3 +16,6 @@ dependencies:
     version: '>=5.0'
 examples:
   - path: ../../../examples/motor/bldc_fan_rainmaker
+sbom:
+  supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'
+  originator: 'Organization: Espressif Systems (Shanghai) CO LTD'

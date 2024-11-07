@@ -6,3 +6,6 @@ dependencies:
   espressif/cmake_utilities: "0.*"
 examples:
   - path:  ../../../examples/lighting/lightbulb
+sbom:
+  supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'
+  originator: 'Organization: Espressif Systems (Shanghai) CO LTD'
