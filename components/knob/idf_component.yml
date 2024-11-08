@@ -10,3 +10,6 @@ dependencies:
 examples:
   - path: ../../examples/usb/device/usb_surface_dial
   - path: ../../examples/get-started/knob_power_save
+sbom:
+  supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'
+  originator: 'Organization: Espressif Systems (Shanghai) CO LTD'

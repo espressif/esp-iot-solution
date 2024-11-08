@@ -10,3 +10,6 @@ dependencies:
   cmake_utilities: "0.*"
 examples:
   - path: ../../../../examples/display/lcd/rgb_lcd_8bit
+sbom:
+  supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'
+  originator: 'Organization: Espressif Systems (Shanghai) CO LTD'

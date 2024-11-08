@@ -6,3 +6,6 @@ dependencies:
   cmake_utilities: "0.*"
 examples:
   - path: ../../../examples/bluetooth/ble_conn_mgr
+sbom:
+  supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'
+  originator: 'Organization: Espressif Systems (Shanghai) CO LTD'

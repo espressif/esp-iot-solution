@@ -9,3 +9,6 @@ examples:
 dependencies:
   idf: ">=4.0"
   cmake_utilities: "0.*"
+sbom:
+  supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'
+  originator: 'Organization: Espressif Systems (Shanghai) CO LTD'

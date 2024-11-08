@@ -7,3 +7,6 @@ dependencies:
 examples:
   - path:  ../../examples/elf_loader/build_elf_file_example
   - path:  ../../examples/elf_loader/elf_loader_example
+sbom:
+  supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'
+  originator: 'Organization: Espressif Systems (Shanghai) CO LTD'

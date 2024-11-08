@@ -16,3 +16,6 @@ dependencies:
     override_path: "../iot_usbh"
 examples:
   - path: ../../../examples/usb/host/usb_cdc_basic
+sbom:
+  supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'
+  originator: 'Organization: Espressif Systems (Shanghai) CO LTD'

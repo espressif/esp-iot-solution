@@ -8,3 +8,6 @@ dependencies:
   i2c_bus:
     version: "*"
     override_path: "../../../i2c_bus"
+sbom:
+  supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'
+  originator: 'Organization: Espressif Systems (Shanghai) CO LTD'
