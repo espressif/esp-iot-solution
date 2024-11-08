@@ -36,6 +36,8 @@ html_logo = '../_static/espressif-logo.svg'
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['../_static']
 
+versions_url = './_static/js/generic_version.js'
+
 # Extra options required by sphinx_idf_theme
 project_slug = 'esp-iot-solution'
 
