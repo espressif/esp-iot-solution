@@ -14,3 +14,6 @@ dependencies:
   xz: "1.*"
 examples:
   - path: ../../examples/ota/simple_ota_example
+sbom:
+  supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'
+  originator: 'Organization: Espressif Systems (Shanghai) CO LTD'

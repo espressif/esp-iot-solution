@@ -21,3 +21,6 @@ examples:
   - path: ../../../examples/motor/foc_openloop_control
   - path: ../../../examples/motor/foc_velocity_control
   - path: ../../../examples/motor/foc_knob_example
+sbom:
+  supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'
+  originator: 'Organization: Espressif Systems (Shanghai) CO LTD'

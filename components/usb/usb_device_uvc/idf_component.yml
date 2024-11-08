@@ -18,3 +18,6 @@ dependencies:
 examples:
   - path: ../../../examples/usb/device/usb_webcam
   - path: ../../../examples/usb/device/usb_dual_uvc_device
+sbom:
+  supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'
+  originator: 'Organization: Espressif Systems (Shanghai) CO LTD'

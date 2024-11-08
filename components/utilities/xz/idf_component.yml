@@ -5,3 +5,6 @@ dependencies:
   idf: ">=4.1"
 examples:
   - path: ../../../examples/utilities/xz_decompress_file
+sbom:
+  supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'
+  originator: 'Organization: Espressif Systems (Shanghai) CO LTD'
