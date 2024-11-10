@@ -92,10 +92,6 @@ esp_err_t esp_lcd_new_panel_st7701_mipi(const esp_lcd_panel_io_handle_t io, cons
         break;
     }
 
-    uint8_t ID[3];
-    ESP_GOTO_ON_ERROR(esp_lcd_panel_io_rx_param(io, 0x04, ID, 3), err, TAG, "read ID failed");
-    ESP_LOGI(TAG, "LCD ID: %02X %02X %02X", ID[0], ID[1], ID[2]);
-
     st7701->io = io;
     st7701->init_cmds = vendor_config->init_cmds;
     st7701->init_cmds_size = vendor_config->init_cmds_size;
@@ -143,8 +139,8 @@ static esp_err_t panel_st7701_del(esp_lcd_panel_t *panel)
 
     // Delete MIPI DPI panel
     st7701->del(panel);
-    free(st7701);
     ESP_LOGD(TAG, "del st7701 panel @%p", st7701);
+    free(st7701);
 
     return ESP_OK;
 }
@@ -223,6 +219,10 @@ static esp_err_t panel_st7701_init(esp_lcd_panel_t *panel)
     uint16_t init_cmds_size = 0;
     bool is_command2_disable = true;
     bool is_cmd_overwritten = false;
+
+    uint8_t ID[3];
+    ESP_RETURN_ON_ERROR(esp_lcd_panel_io_rx_param(io, 0x04, ID, 3), TAG, "read ID failed");
+    ESP_LOGI(TAG, "LCD ID: %02X %02X %02X", ID[0], ID[1], ID[2]);
 
     // back to CMD_Page 0
     ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, ST7701_CMD_CND2BKxSEL, (uint8_t []) {
