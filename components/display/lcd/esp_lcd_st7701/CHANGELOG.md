@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.1.1 - 2024-11-10
+
+### bugfix:
+
+* Modified the order of reading the ID register
+
 ## v1.1.0 - 2024-05-06
 
 ### Enhancements:

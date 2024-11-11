@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.0.1 - 2024-11-10
+
+### bugfix:
+
+* Modified the known issues with the del interface
+
 ## v1.0.0 - 2024-06-14
 
 ### Enhancements:

@@ -105,10 +105,6 @@ esp_err_t esp_lcd_new_panel_jd9365(const esp_lcd_panel_io_handle_t io, const esp
         break;
     }
 
-    uint8_t ID[3];
-    ESP_GOTO_ON_ERROR(esp_lcd_panel_io_rx_param(io, 0x04, ID, 3), err, TAG, "read ID failed");
-    ESP_LOGI(TAG, "LCD ID: %02X %02X %02X", ID[0], ID[1], ID[2]);
-
     jd9365->io = io;
     jd9365->init_cmds = vendor_config->init_cmds;
     jd9365->init_cmds_size = vendor_config->init_cmds_size;
@@ -347,8 +343,8 @@ static esp_err_t panel_jd9365_del(esp_lcd_panel_t *panel)
     }
     // Delete MIPI DPI panel
     jd9365->del(panel);
-    free(jd9365);
     ESP_LOGD(TAG, "del jd9365 panel @%p", jd9365);
+    free(jd9365);
 
     return ESP_OK;
 }
@@ -383,6 +379,10 @@ static esp_err_t panel_jd9365_init(esp_lcd_panel_t *panel)
         ESP_LOGE(TAG, "Invalid lane number %d", jd9365->lane_num);
         return ESP_ERR_INVALID_ARG;
     }
+
+    uint8_t ID[3];
+    ESP_RETURN_ON_ERROR(esp_lcd_panel_io_rx_param(io, 0x04, ID, 3), TAG, "read ID failed");
+    ESP_LOGI(TAG, "LCD ID: %02X %02X %02X", ID[0], ID[1], ID[2]);
 
     ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, JD9365_CMD_PAGE, (uint8_t[]) {
         JD9365_PAGE_USER

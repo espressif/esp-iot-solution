@@ -80,10 +80,6 @@ esp_err_t esp_lcd_new_panel_jd9165(const esp_lcd_panel_io_handle_t io, const esp
         break;
     }
 
-    uint8_t ID[3];
-    ESP_GOTO_ON_ERROR(esp_lcd_panel_io_rx_param(io, 0x04, ID, 3), err, TAG, "read ID failed");
-    ESP_LOGI(TAG, "LCD ID: %02X %02X %02X", ID[0], ID[1], ID[2]);
-
     jd9165->io = io;
     jd9165->init_cmds = vendor_config->init_cmds;
     jd9165->init_cmds_size = vendor_config->init_cmds_size;
@@ -137,8 +133,8 @@ static esp_err_t panel_jd9165_del(esp_lcd_panel_t *panel)
     }
     // Delete MIPI DPI panel
     jd9165->del(panel);
-    free(jd9165);
     ESP_LOGD(TAG, "del jd9165 panel @%p", jd9165);
+    free(jd9165);
 
     return ESP_OK;
 }
@@ -150,6 +146,9 @@ static esp_err_t panel_jd9165_init(esp_lcd_panel_t *panel)
     const jd9165_lcd_init_cmd_t *init_cmds = NULL;
     uint16_t init_cmds_size = 0;
     bool is_cmd_overwritten = false;
+
+    uint8_t ID[3];
+    ESP_RETURN_ON_ERROR(esp_lcd_panel_io_rx_param(io, 0x04, ID, 3), TAG, "read ID failed");
 
     ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, LCD_CMD_MADCTL, (uint8_t[]) {
         jd9165->madctl_val,

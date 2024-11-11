@@ -167,8 +167,8 @@ static esp_err_t panel_hx8399_del(esp_lcd_panel_t *panel)
     }
     // Delete MIPI DPI panel
     hx8399->del(panel);
-    free(hx8399);
     ESP_LOGD(TAG, "del hx8399 panel @%p", hx8399);
+    free(hx8399);
 
     return ESP_OK;
 }

@@ -209,8 +209,8 @@ static esp_err_t panel_st77922_del(esp_lcd_panel_t *panel)
     }
     // Delete MIPI DPI panel
     st77922->del(panel);
-    free(st77922);
     ESP_LOGD(TAG, "del st77922 panel @%p", st77922);
+    free(st77922);
 
     return ESP_OK;
 }
