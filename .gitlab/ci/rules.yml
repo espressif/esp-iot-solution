@@ -15,51 +15,51 @@
 
 .patterns-components_audio_pwm_audio: &patterns-components_audio_pwm_audio
   - "components/audio/pwm_audio/**/*"
-  - "components/tools/cmake_utilities/package_manager.cmake"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_avi_player: &patterns-components_avi_player
   - "components/avi_player/**/*"
-  - "components/tools/cmake_utilities/package_manager.cmake"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_bluetooth_ble_conn_mgr: &patterns-components_bluetooth_ble_conn_mgr
   - "components/bluetooth/ble_conn_mgr/**/*"
-  - "components/tools/cmake_utilities/package_manager.cmake"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_bluetooth_ble_profiles_std_ble_anp: &patterns-components_bluetooth_ble_profiles_std_ble_anp
   - "components/bluetooth/ble_profiles/std/ble_anp/**/*"
-  - "components/tools/cmake_utilities/package_manager.cmake"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_bluetooth_ble_profiles_std_ble_hrp: &patterns-components_bluetooth_ble_profiles_std_ble_hrp
   - "components/bluetooth/ble_profiles/std/ble_hrp/**/*"
-  - "components/tools/cmake_utilities/package_manager.cmake"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_bluetooth_ble_profiles_std_ble_htp: &patterns-components_bluetooth_ble_profiles_std_ble_htp
   - "components/bluetooth/ble_profiles/std/ble_htp/**/*"
-  - "components/tools/cmake_utilities/package_manager.cmake"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_bluetooth_ble_profiles_esp_ble_ota: &patterns-components_bluetooth_ble_profiles_esp_ble_ota
   - "components/bluetooth/ble_profiles/esp/ble_ota/**/*"
-  - "components/tools/cmake_utilities/package_manager.cmake"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_bluetooth_ble_services: &patterns-components_bluetooth_ble_services
   - "components/bluetooth/ble_services/**/*"
-  - "components/tools/cmake_utilities/package_manager.cmake"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_bluetooth_ble_hci: &patterns-components_bluetooth_ble_hci
   - "components/bluetooth/ble_hci/**/*"
-  - "components/tools/cmake_utilities/package_manager.cmake"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_bootloader_support_plus: &patterns-components_bootloader_support_plus
   - "components/bootloader_support_plus/**/*"
   - "components/utilities/xz/**/*"
-  - "components/tools/cmake_utilities/package_manager.cmake"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_bus: &patterns-components_bus
   - "components/bus/**/*"
 
 .patterns-components_button: &patterns-components_button
   - "components/button/**/*"
-  - "components/tools/cmake_utilities/package_manager.cmake"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_display_digital_tube_ch450: &patterns-components_display_digital_tube_ch450
   - "components/display/digital_tube/ch450/**/*"
@@ -135,15 +135,15 @@
 
 .patterns-components_display_tools_esp_lv_decoder: &patterns-components_display_tools_esp_lv_decoder
   - "components/display/tools/esp_lv_decoder/**/*"
-  - "components/tools/cmake_utilities/package_manager.cmake"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_display_tools_esp_lv_fs: &patterns-components_display_tools_esp_lv_fs
   - "components/display/tools/esp_lv_fs/**/*"
-  - "components/tools/cmake_utilities/package_manager.cmake"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_display_tools_esp_mmap_assets: &patterns-components_display_tools_esp_mmap_assets
   - "components/display/tools/esp_mmap_assets/**/*"
-  - "components/tools/cmake_utilities/package_manager.cmake"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_display_touch_panel: &patterns-components_display_touch_panel
   - "components/display/touch_panel/**/*"
@@ -156,70 +156,75 @@
 
 .patterns-components_extended_vfs: &patterns-components_extended_vfs
   - "components/extended_vfs/**/*"
-  - "components/tools/cmake_utilities/package_manager.cmake"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_gui_lvgl_gui: &patterns-components_gui_lvgl_gui
   - "components/gui/lvgl_gui/**/*"
 
 .patterns-components_ir_ir_learn: &patterns-components_ir_ir_learn
   - "components/ir/ir_learn/**/*"
-  - "components/tools/cmake_utilities/package_manager.cmake"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_knob: &patterns-components_knob
   - "components/knob/**/*"
-  - "components/tools/cmake_utilities/package_manager.cmake"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_led_led_indicator: &patterns-components_led_led_indicator
   - "components/led/led_indicator/**/*"
-  - "components/tools/cmake_utilities/package_manager.cmake"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_led_light: &patterns-components_led_light
   - "components/led/light/**/*"
 
 .patterns-components_led_lightbulb_driver: &patterns-components_led_lightbulb_driver
   - "components/led/lightbulb_driver/**/*"
-  - "components/tools/cmake_utilities/package_manager.cmake"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_motor_drv10987: &patterns-components_motor_drv10987
   - "components/motor/drv10987/**/*"
-  - "components/tools/cmake_utilities/package_manager.cmake"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_motor_esp_simplefoc: &patterns-components_motor_esp_simplefoc
   - "components/motor/esp_simplefoc/**/*"
-  - "components/tools/cmake_utilities/package_manager.cmake"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_motor_esp_sensorless_bldc_control: &patterns-components_motor_esp_sensorless_bldc_control
   - "components/motor/esp_sensorless_bldc_control/**/*"
-  - "components/tools/cmake_utilities/package_manager.cmake"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_motor_servo: &patterns-components_motor_servo
   - "components/motor/servo/**/*"
 
 .patterns-components_openai: &patterns-components_openai
   - "components/openai/**/*"
-  - "components/tools/cmake_utilities/package_manager.cmake"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_sensors_gesture_apds9960: &patterns-components_sensors_gesture_apds9960
   - "components/sensors/gesture/apds9960/**/*"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_sensors_humiture_aht20: &patterns-components_sensors_humiture_aht20
   - "components/sensors/humiture/aht20/**/*"
-  - "components/tools/cmake_utilities/package_manager.cmake"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_sensors_humiture_hdc2010: &patterns-components_sensors_humiture_hdc2010
   - "components/sensors/humiture/hdc2010/**/*"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_sensors_humiture_hts221: &patterns-components_sensors_humiture_hts221
   - "components/sensors/gesture/hts221/**/*"
 
 .patterns-components_sensors_humiture_mvh3004d: &patterns-components_sensors_humiture_mvh3004d
-  - "components/sensors/gesture/mvh3004d/**/*"
+  - "components/sensors/humiture/mvh3004d/**/*"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_sensors_humiture_sht3x: &patterns-components_sensors_humiture_sht3x
-  - "components/sensors/gesture/sht3x/**/*"
+  - "components/sensors/humiture/sht3x/**/*"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_sensors_imu_lis2dh12: &patterns-components_sensors_imu_lis2dh12
   - "components/sensors/imu/lis2dh12/**/*"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_sensors_imu_mpu6050: &patterns-components_sensors_imu_mpu6050
   - "components/sensors/imu/mpu6050/**/*"
@@ -229,23 +234,26 @@
 
 .patterns-components_sensors_light_sensor_veml6040: &patterns-components_sensors_light_sensor_veml6040
   - "components/sensors/light_sensor/veml6040/**/*"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_sensors_light_sensor_veml6075: &patterns-components_sensors_light_sensor_veml6075
   - "components/sensors/light_sensor/veml6075/**/*"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_sensors_pressure_bme280: &patterns-components_sensors_pressure_bme280
   - "components/sensors/pressure/bme280/**/*"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_sensors_radar_at581x: &patterns-components_sensors_radar_at581x
   - "components/sensors/radar/at581x/**/*"
-  - "components/tools/cmake_utilities/package_manager.cmake"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_sensors_sensor_hub: &patterns-components_sensors_sensor_hub
   - "components/sensors/sensor_hub/**/*"
 
 .patterns-components_spi_bus: &patterns-components_spi_bus
   - "components/spi_bus/**/*"
-  - "components/tools/cmake_utilities/package_manager.cmake"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_storage_eeprom_at24c02: &patterns-components_storage_eeprom_at24c02
   - "components/storage/eeprom/at24c02/**/*"
@@ -258,23 +266,23 @@
 
 .patterns-components_touch_touch_proximity_sensor: &patterns-components_touch_touch_proximity_sensor
   - "components/touch/touch_proximity_sensor/**/*"
-  - "components/tools/cmake_utilities/package_manager.cmake"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_usb_esp_msc_ota: &patterns-components_usb_esp_msc_ota
   - "components/usb/esp_msc_ota/**/*"
-  - "components/tools/cmake_utilities/package_manager.cmake"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_usb_iot_usbh: &patterns-components_usb_iot_usbh
   - "components/usb/iot_usbh/**/*"
-  - "components/tools/cmake_utilities/package_manager.cmake"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_usb_iot_usbh_cdc: &patterns-components_usb_iot_usbh_cdc
   - "components/usb/iot_usbh_cdc/**/*"
-  - "components/tools/cmake_utilities/package_manager.cmake"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_usb_iot_usbh_modem: &patterns-components_usb_iot_usbh_modem
   - "components/usb/iot_usbh_modem/**/*"
-  - "components/tools/cmake_utilities/package_manager.cmake"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_usb_usb_device_uac: &patterns-components_usb_usb_device_uac
   - "components/usb/usb_device_uac/**/*"
@@ -284,7 +292,7 @@
 
 .patterns-components_usb_usb_stream: &patterns-components_usb_usb_stream
   - "components/usb/usb_stream/**/*"
-  - "components/tools/cmake_utilities/package_manager.cmake"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_usb_esp_tinyuf2: &patterns-components_usb_esp_tinyuf2
   - "components/usb/esp_tinyuf2/**/*"
@@ -294,19 +302,19 @@
 
 .patterns-components_zero_detection: &patterns-components_zero_detection
   - "components/zero_detection/**/*"
-  - "components/tools/cmake_utilities/package_manager.cmake"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_ntc_driver: &patterns-components_ntc_driver
   - "components/sensors/ntc_driver/**/*"
-  - "components/tools/cmake_utilities/package_manager.cmake"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_i2c_bus: &patterns-components_i2c_bus
   - "components/i2c_bus/**/*"
-  - "components/tools/cmake_utilities/package_manager.cmake"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_sensors_power_monitor_ina236: &patterns-components_sensors_power_monitor_ina236
   - "components/sensors/power_monitor/ina236/**/*"
-  - "components/tools/cmake_utilities/package_manager.cmake"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 # examples folder, in the alphabetic order
 .patterns-docs: &patterns-docs
@@ -1936,7 +1944,7 @@
     - <<: *if-dev-push
       changes: *patterns-components_openai
 
-.rules:build:components_sensors_gesture_apds9960_test:
+.rules:build:components_sensors_gesture_apds9960_test_apps:
   rules:
     - <<: *if-protected
     - <<: *if-label-build
@@ -1947,7 +1955,7 @@
     - <<: *if-dev-push
       changes: *patterns-components_sensors_gesture_apds9960
 
-.rules:build:components_sensors_humiture_hdc2010_test:
+.rules:build:components_sensors_humiture_hdc2010_test_apps:
   rules:
     - <<: *if-protected
     - <<: *if-label-build
@@ -1969,7 +1977,7 @@
     - <<: *if-dev-push
       changes: *patterns-components_sensors_humiture_hts221
 
-.rules:build:components_sensors_humiture_mvh3004d_test:
+.rules:build:components_sensors_humiture_mvh3004d_test_apps:
   rules:
     - <<: *if-protected
     - <<: *if-label-build
@@ -1980,7 +1988,7 @@
     - <<: *if-dev-push
       changes: *patterns-components_sensors_humiture_mvh3004d
 
-.rules:build:components_sensors_humiture_sht3x_test:
+.rules:build:components_sensors_humiture_sht3x_test_apps:
   rules:
     - <<: *if-protected
     - <<: *if-label-build
@@ -1991,7 +1999,7 @@
     - <<: *if-dev-push
       changes: *patterns-components_sensors_humiture_sht3x
 
-.rules:build:components_sensors_imu_lis2dh12_test:
+.rules:build:components_sensors_imu_lis2dh12_test_apps:
   rules:
     - <<: *if-protected
     - <<: *if-label-build
@@ -2024,7 +2032,7 @@
     - <<: *if-dev-push
       changes: *patterns-components_sensors_light_sensor_bh1750
 
-.rules:build:components_sensors_light_sensor_veml6040_test:
+.rules:build:components_sensors_light_sensor_veml6040_test_apps:
   rules:
     - <<: *if-protected
     - <<: *if-label-build
@@ -2035,7 +2043,7 @@
     - <<: *if-dev-push
       changes: *patterns-components_sensors_light_sensor_veml6040
 
-.rules:build:components_sensors_light_sensor_veml6075_test:
+.rules:build:components_sensors_light_sensor_veml6075_test_apps:
   rules:
     - <<: *if-protected
     - <<: *if-label-build
@@ -2046,7 +2054,7 @@
     - <<: *if-dev-push
       changes: *patterns-components_sensors_light_sensor_veml6075
 
-.rules:build:components_sensors_pressure_bme280_test:
+.rules:build:components_sensors_pressure_bme280_test_apps:
   rules:
     - <<: *if-protected
     - <<: *if-label-build

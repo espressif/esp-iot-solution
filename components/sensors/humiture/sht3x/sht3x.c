@@ -5,7 +5,6 @@
  */
 
 #include <stdio.h>
-#include "driver/i2c.h"
 #include "i2c_bus.h"
 #include "esp_log.h"
 #include "esp_system.h"

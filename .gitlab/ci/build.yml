@@ -1196,6 +1196,14 @@ build_components_openai_test_apps:
   variables:
     EXAMPLE_DIR: components/openai/test_apps
 
+build_components_sensors_gesture_apds9960_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_sensors_gesture_apds9960_test_apps
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: components/sensors/gesture/apds9960/test_apps
+
 build_components_sensors_humiture_aht20_test_apps:
   extends:
     - .build_examples_template
@@ -1206,6 +1214,63 @@ build_components_sensors_humiture_aht20_test_apps:
       - IMAGE: espressif/idf:release-v5.0
   variables:
     EXAMPLE_DIR: components/sensors/humiture/aht20/test_apps
+
+build_components_sensors_humiture_hdc2010_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_sensors_humiture_hdc2010_test_apps
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: components/sensors/humiture/hdc2010/test_apps
+
+build_components_sensors_humiture_mvh3004d_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_sensors_humiture_mvh3004d_test_apps
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: components/sensors/humiture/mvh3004d/test_apps
+
+build_components_sensors_humiture_sht3x_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_sensors_humiture_sht3x_test_apps
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: components/sensors/humiture/sht3x/test_apps
+
+build_components_sensors_imu_lis2dh12_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_sensors_imu_lis2dh12_test_apps
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: components/sensors/imu/lis2dh12/test_apps
+
+build_components_sensors_light_sensor_veml6040_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_sensors_light_sensor_veml6040_test_apps
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: components/sensors/light_sensor/veml6040/test_apps
+
+
+build_components_sensors_light_sensor_veml6075_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_sensors_light_sensor_veml6075_test_apps
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: components/sensors/light_sensor/veml6075/test_apps
+
+build_components_sensors_pressure_bme280_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_sensors_pressure_bme280_test_apps
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: components/sensors/pressure/bme280/test_apps
 
 build_components_sensors_radar_at581x_test_apps:
   extends:

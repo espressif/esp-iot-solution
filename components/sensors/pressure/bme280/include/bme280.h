@@ -7,7 +7,6 @@
 #ifndef _BME280_H_
 #define _BME280_H_
 
-#include "driver/i2c.h"
 #include "i2c_bus.h"
 
 #define BME280_I2C_ADDRESS_DEFAULT   (0x76)     /*The device's I2C address is either 0x76 or 0x77.*/
