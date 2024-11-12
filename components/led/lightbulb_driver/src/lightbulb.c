@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -61,6 +61,12 @@ typedef struct {
     TimerHandle_t storage_timer;       // Timer handle related to the storage status of the lightbulb
     TimerHandle_t effect_timer;        // Timer handle related to the flashing, fading
     SemaphoreHandle_t mutex;           // For multi-thread protection
+
+    // Structure containing pointers to gamma correction tables for color and white
+    struct {
+        uint16_t *color_gamma_table;     // Pointer to the color gamma correction table (for RGB)
+        uint16_t *white_gamma_table;     // Pointer to the white gamma correction table (for CCT)
+    } gamma_correction;
 
     // Structure containing flags related to effects
     struct {
@@ -304,23 +310,22 @@ static void cct_and_brightness_convert_and_power_limit(lightbulb_led_beads_comb_
     hal_get_driver_feature(QUERY_MAX_INPUT_VALUE, &max_value);
 
     if (led_beads == LED_BEADS_1CH_C || led_beads == LED_BEADS_4CH_RGBC || led_beads == LED_BEADS_4CH_RGBCC) {
-        uint16_t value = brightness / 100.0 * max_value;
-        hal_get_linear_table_value((uint8_t)value, &white_value[3]);
+        uint16_t value = brightness * max_value / 100;
+        hal_get_curve_table_value(value, &white_value[3]);
         if (led_beads == LED_BEADS_4CH_RGBCC) {
-            hal_get_linear_table_value((uint8_t)value, &white_value[4]);
+            hal_get_curve_table_value(value, &white_value[4]);
         }
     } else if (led_beads == LED_BEADS_1CH_W || led_beads == LED_BEADS_4CH_RGBW || led_beads == LED_BEADS_4CH_RGBWW) {
-        uint16_t value = brightness / 100.0 * max_value;
-        hal_get_linear_table_value(value, &white_value[4]);
-
+        uint16_t value = brightness * max_value / 100;
+        hal_get_curve_table_value(value, &white_value[4]);
         if (led_beads == LED_BEADS_4CH_RGBWW) {
-            hal_get_linear_table_value((uint8_t)value, &white_value[3]);
+            hal_get_curve_table_value(value, &white_value[3]);
         }
     } else if ((led_beads == LED_BEADS_2CH_CW || led_beads == LED_BEADS_5CH_RGBCW) && IS_WHITE_OUTPUT_HARDWARE_MIXED()) {
-        uint16_t value1 = cct / 100.0 * max_value;
-        uint16_t value2 = brightness / 100.0 * max_value;
-        hal_get_linear_table_value((uint8_t)value1, &white_value[3]);
-        hal_get_linear_table_value((uint8_t)value2, &white_value[4]);
+        uint16_t value1 = cct * max_value / 100;
+        uint16_t value2 = brightness * max_value / 100;
+        hal_get_curve_table_value(value1, &white_value[3]);
+        hal_get_curve_table_value(value2, &white_value[4]);
     } else if (led_beads == LED_BEADS_2CH_CW || ((led_beads == LED_BEADS_5CH_RGBCW) && (s_lb_obj->cap.enable_precise_cct_control == false))) {
         float max_power;
         float _c = cct / 100.0;
@@ -330,8 +335,8 @@ static void cct_and_brightness_convert_and_power_limit(lightbulb_led_beads_comb_
         max_power = MIN(max_value * multiple, max_value / baseline);
         _c = max_power * _c * (brightness / 100.0);
         _w = max_power * _w * (brightness / 100.0);
-        hal_get_linear_table_value((uint16_t)_c, &white_value[3]);
-        hal_get_linear_table_value((uint16_t)_w, &white_value[4]);
+        hal_get_curve_table_value(_c, &white_value[3]);
+        hal_get_curve_table_value(_w, &white_value[4]);
     } else {
         float max_power;
         lightbulb_cct_mapping_data_t data = search_mapping_cct_data(cct);
@@ -344,7 +349,8 @@ static void cct_and_brightness_convert_and_power_limit(lightbulb_led_beads_comb_
         max_power = MIN(max_value * multiple, max_value / baseline);
         ESP_LOGD(TAG, "%f, %d, %f", max_power, max_value, baseline);
         for (int i = 0; i < 5; i++) {
-            white_value[i] = round(max_power * data.rgbcw[i] * (brightness / 100.0));
+            float value = round(max_power * data.rgbcw[i] * (brightness / 100.0));
+            hal_get_curve_table_value((uint16_t)value, &white_value[i]);
         }
     }
 }
@@ -371,7 +377,9 @@ static uint8_t process_color_value_limit(uint8_t value)
     float percentage = value / 100.0;
 
     uint8_t result = (s_lb_obj->power.color_max_value - s_lb_obj->power.color_min_value) * percentage + s_lb_obj->power.color_min_value;
+    result = s_lb_obj->gamma_correction.color_gamma_table[result];
     ESP_LOGD(TAG, "color_value convert input:%d output:%d", value, result);
+
     return result;
 }
 
@@ -397,7 +405,9 @@ static uint8_t process_white_brightness_limit(uint8_t brightness)
     float percentage = brightness / 100.0;
 
     uint8_t result = (s_lb_obj->power.white_max_brightness - s_lb_obj->power.white_min_brightness) * percentage + s_lb_obj->power.white_min_brightness;
+    result = s_lb_obj->gamma_correction.white_gamma_table[result];
     ESP_LOGD(TAG, "white_brightness_output input:%d output:%d", brightness, result);
+
     return result;
 }
 
@@ -428,7 +438,8 @@ static void process_color_power_limit(float multiple, float rgbcw[5], uint16_t v
     max_power = MIN(max_power, max_value / baseline);
     ESP_LOGD(TAG, "%f, %d, %f", max_power, max_value, baseline);
     for (int i = 0; i < 5; i++) {
-        out[i] = round(max_power * rgbcw[i] * (value / 100.0));
+        float value = round(max_power * rgbcw[i]);
+        hal_get_curve_table_value((uint16_t)value, &out[i]);
     }
 }
 
@@ -911,6 +922,20 @@ esp_err_t lightbulb_init(lightbulb_config_t *config)
         s_lb_obj->cap.fade_time_ms = MAX(MIN_FADE_MS, s_lb_obj->cap.fade_time_ms);
     }
 
+    //Gamma table create
+    float color_coe = 1.0;
+    float white_coe = 1.0;
+    if (config->gamma_conf) {
+        color_coe = config->gamma_conf->color_curve_coefficient;
+        white_coe = config->gamma_conf->white_curve_coefficient;
+    }
+    s_lb_obj->gamma_correction.color_gamma_table = calloc(101, sizeof(uint16_t));
+    LIGHTBULB_CHECK(s_lb_obj->gamma_correction.color_gamma_table, "curve table buffer alloc fail", goto EXIT);
+    s_lb_obj->gamma_correction.white_gamma_table = calloc(101, sizeof(uint16_t));
+    LIGHTBULB_CHECK(s_lb_obj->gamma_correction.white_gamma_table, "curve table buffer alloc fail", goto EXIT);
+    hal_gamma_table_create(s_lb_obj->gamma_correction.color_gamma_table, 101, color_coe, 100);
+    hal_gamma_table_create(s_lb_obj->gamma_correction.white_gamma_table, 101, white_coe, 100);
+
     // Low power check
     if (config->capability.enable_lowpower) {
         /* Make sure the fade is done and the flash operation is done, then enable light sleep */
@@ -989,6 +1014,15 @@ esp_err_t lightbulb_deinit(void)
     if (s_lb_obj->color_manager.mix_table) {
         free(s_lb_obj->color_manager.mix_table);
         s_lb_obj->color_manager.mix_table = NULL;
+    }
+
+    if (s_lb_obj->gamma_correction.color_gamma_table) {
+        free(s_lb_obj->gamma_correction.color_gamma_table);
+        s_lb_obj->gamma_correction.color_gamma_table = NULL;
+    }
+    if (s_lb_obj->gamma_correction.white_gamma_table) {
+        free(s_lb_obj->gamma_correction.white_gamma_table);
+        s_lb_obj->gamma_correction.white_gamma_table = NULL;
     }
 
     free(s_lb_obj);
@@ -1196,11 +1230,11 @@ static esp_err_t lightbulb_hsv2rgb_adjusted(uint16_t hue, uint8_t saturation, ui
         }
     }
 
-    *red = interpolated_rgbcw[0];
-    *green = interpolated_rgbcw[1];
-    *blue = interpolated_rgbcw[2];
-    *cold = interpolated_rgbcw[3];
-    *warm = interpolated_rgbcw[4];
+    *red = interpolated_rgbcw[0] * value / 100.0;
+    *green = interpolated_rgbcw[1] * value / 100.0;
+    *blue = interpolated_rgbcw[2] * value / 100.0;
+    *cold = interpolated_rgbcw[3] * value / 100.0;
+    *warm = interpolated_rgbcw[4] * value / 100.0;
 
     return ESP_OK;
 }

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -173,9 +173,8 @@ typedef struct {
     float balance_coefficient[5]; /**< Array of float coefficients for adjusting the intensity of each color channel (R, G, B, C, W).
                                        These coefficients help in achieving the desired color balance for the light output. */
 
-    float curve_coefficient;      /**< Coefficient for gamma correction. This value is used to modify the luminance levels
-                                       to suit the non-linear characteristics of human vision, thus improving the overall
-                                       visual appearance of the light. */
+    float color_curve_coefficient;      /**< Coefficient for gamma correction (RGB mode). The default value is 1.0, which is linear.*/
+    float white_curve_coefficient;      /**< Coefficient for gamma correction (CCT mode). The default value is 1.0, which is linear.*/
 } lightbulb_gamma_config_t;
 
 /**
