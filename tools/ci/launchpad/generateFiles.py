@@ -18,7 +18,7 @@ PROJECT_CONFIG_FILE = os.path.join(PROJECT_ROOT, 'upload_project_config.yml')
 BRANCH_NAME = os.environ.get('CI_COMMIT_BRANCH', '')
 FORMAT_BRANCH_NAME = re.sub(r'[^\w]', '_', BRANCH_NAME)
 DIRECTORY_PATH = os.path.join('binaries', FORMAT_BRANCH_NAME) if (FORMAT_BRANCH_NAME and FORMAT_BRANCH_NAME != 'master') else 'binaries'
-IMAGE_PATH = FORMAT_BRANCH_NAME if (FORMAT_BRANCH_NAME and FORMAT_BRANCH_NAME != 'master') else ''
+IMAGE_PATH = f'{FORMAT_BRANCH_NAME}/' if (FORMAT_BRANCH_NAME and FORMAT_BRANCH_NAME != 'master') else ''
 
 # Root toml object
 toml_obj = {'esp_toml_version': 1.0, 'firmware_images_url': f'https://dl.espressif.com/AE/esp-iot-solution/{IMAGE_PATH}', 'supported_apps': []}
