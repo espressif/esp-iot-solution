@@ -204,7 +204,7 @@ esp_err_t esp_lcd_new_panel_st77922(const esp_lcd_panel_io_handle_t io, const es
         .bus_id = 0,                                           \
         .num_data_lanes = 1,                                   \
         .phy_clk_src = MIPI_DSI_PHY_CLK_SRC_DEFAULT,           \
-        .lane_bit_rate_mbps = 300,                             \
+        .lane_bit_rate_mbps = 500,                             \
     }
 
 /**

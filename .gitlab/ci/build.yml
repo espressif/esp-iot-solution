@@ -694,6 +694,14 @@ build_example_usb_device_usb_hid_device:
   variables:
     EXAMPLE_DIR: examples/usb/device/usb_hid_device
 
+build_example_usb_device_usb_lcd_display:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_usb_device_usb_lcd_display
+  variables:
+    EXAMPLE_DIR: examples/usb/device/usb_lcd_display
+    IMAGE: espressif/idf:release-v5.3
+
 build_example_usb_device_usb_msc_wireless_disk:
   extends:
     - .build_examples_template

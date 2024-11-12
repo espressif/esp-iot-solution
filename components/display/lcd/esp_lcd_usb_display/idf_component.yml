@@ -6,6 +6,7 @@ url: https://github.com/espressif/esp-iot-solution/tree/master/components/displa
 repository: https://github.com/espressif/esp-iot-solution.git
 issues: https://github.com/espressif/esp-iot-solution/issues
 dependencies:
+  idf: ">=5.3"
   cmake_utilities: "0.*"
   espressif/usb_device_uvc:
     version: "1.1.*"
