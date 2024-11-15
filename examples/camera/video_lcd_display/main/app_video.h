@@ -33,7 +33,7 @@ typedef enum {
 #define APP_VIDEO_FMT              (APP_VIDEO_FMT_RGB888)
 #endif
 
-typedef void (*app_video_frame_operation_cb_t)(uint8_t *camera_buf, uint8_t camera_buf_index, uint32_t camera_buf_hes, uint32_t camera_buf_ves, size_t camera_buf_len);
+typedef void (*app_video_frame_operation_cb_t)(uint8_t *camera_buf, uint8_t camera_buf_index, uint32_t camera_buf_hes, uint32_t camera_buf_ves, size_t camera_buf_len, void *user_data);
 
 /**
  * @brief Initialize the video camera.
@@ -110,7 +110,21 @@ uint32_t app_video_get_buf_size(void);
  * @param core_id Core ID to which the task will be pinned.
  * @return ESP_OK on success, or ESP_FAIL on failure.
  */
-esp_err_t app_video_stream_task_start(int video_fd, int core_id);
+esp_err_t app_video_stream_task_start(int video_fd, int core_id, void *user_data);
+
+/**
+ * @brief Restart the video stream task.
+ *
+ * This function stops the current video stream task and restarts it with the specified
+ * video device file descriptor. It first sets the necessary buffers for the video stream,
+ * then attempts to start the video stream task on the specified core.
+ *
+ * @param video_fd File descriptor for the video device.
+ * @return
+ * - ESP_OK on successful restart of the video stream task.
+ * - ESP_FAIL if there was an error while restarting the task.
+ */
+esp_err_t app_video_stream_task_restart(int video_fd);
 
 /**
  * @brief Stop the video stream task.

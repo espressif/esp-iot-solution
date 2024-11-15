@@ -356,3 +356,7 @@ RGB 接口
 显示是指 LCD 的驱动 IC 将接收到的图像数据显示到屏幕上的过程，其快慢可以用 **屏幕刷新率** 来衡量。
 
 对于 SPI/I80 接口的 LCD，屏幕刷新率是由 LCD 驱动 IC 决定的，一般可以通过发送特定的命令来设置，如 *ST7789* 的 ``FRCTRL2(C6h)`` 命令；对于 RGB 接口的 LCD，屏幕刷新率是由主控决定的，其等价于接口帧率。
+
+.. note::
+
+  - 若需要在无 LCD 的情况下开发，可以通过 `esp_lcd_usb_display 组件 <https://components.espressif.com/components/espressif/esp_lcd_usb_display>`_ 通过 USB UVC 在 PC 显示器上模拟 LCD 的显示效果，从而调试应用程序。其对应示例为 `usb_lcd_display <https://github.com/espressif/esp-iot-solution/tree/master/examples/usb/device/usb_lcd_display>`_

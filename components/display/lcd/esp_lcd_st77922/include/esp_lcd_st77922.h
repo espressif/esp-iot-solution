@@ -240,9 +240,9 @@ esp_err_t esp_lcd_new_panel_st77922(const esp_lcd_panel_io_handle_t io, const es
             .hsync_back_porch = 40,                           \
             .hsync_pulse_width = 2,                           \
             .hsync_front_porch = 40,                          \
-            .vsync_back_porch = 5,                            \
+            .vsync_back_porch = 6,                            \
             .vsync_pulse_width = 2,                           \
-            .vsync_front_porch = 82,                          \
+            .vsync_front_porch = 117,                         \
         },                                                    \
         .flags.use_dma2d = true,                              \
     }
