@@ -13,12 +13,10 @@
 const char *TAG = "lightbulb demo";
 
 //Based on PWM test 5ch (rgbcw)
-#define TEST_PWM_RGBCW_LIGHTBULB        1
 #define PWM_C_GPIO                      5
 #define PWM_W_GPIO                      4
 
 //Based on BP5758D test 5ch (rgbww)
-#define TEST_IIC_RGBWW_LIGHTBULB        1
 #define MIX_TABLE_SIZE                  15
 lightbulb_cct_mapping_data_t table[MIX_TABLE_SIZE] = {
     {.cct_kelvin = 2200, .cct_percentage = 0, .rgbcw = {0.547, 0.0, 0.0, 0.0, 0.453}},
@@ -102,8 +100,8 @@ void app_main(void)
         .type = DRIVER_BP57x8D,
         .driver_conf.bp57x8d.freq_khz = 300,
         .driver_conf.bp57x8d.enable_iic_queue = true,
-        .driver_conf.bp57x8d.iic_clk = 3,
-        .driver_conf.bp57x8d.iic_sda = 7,
+        .driver_conf.bp57x8d.iic_clk = CONFIG_BP5758D_IIC_CLK_GPIO,
+        .driver_conf.bp57x8d.iic_sda = CONFIG_BP5758D_IIC_SDA_GPIO,
         .driver_conf.bp57x8d.current = {10, 10, 10, 30, 30},
 #endif
         // 2. Configure the drive capability
@@ -114,11 +112,7 @@ void app_main(void)
 #if CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_WS2812
         .capability.led_beads = LED_BEADS_3CH_RGB,
 #elif CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_BP5758D
-#if TEST_IIC_RGBWW_LIGHTBULB
         .capability.led_beads = LED_BEADS_5CH_RGBCW,
-#else
-        .capability.led_beads = LED_BEADS_5CH_RGBCW,
-#endif
 #elif CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_PWM && TEST_PWM_RGBCW_LIGHTBULB
         .capability.led_beads = LED_BEADS_5CH_RGBCW,
 #else
@@ -135,8 +129,8 @@ void app_main(void)
         .io_conf.pwm_io.warm_brightness = PWM_W_GPIO,
 #endif
 #ifdef CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_BP5758D
-        .io_conf.iic_io.red = OUT1,
-        .io_conf.iic_io.green = OUT2,
+        .io_conf.iic_io.red = OUT2,
+        .io_conf.iic_io.green = OUT1,
         .io_conf.iic_io.blue = OUT3,
         .io_conf.iic_io.cold_white = OUT5,
         .io_conf.iic_io.warm_yellow = OUT4,

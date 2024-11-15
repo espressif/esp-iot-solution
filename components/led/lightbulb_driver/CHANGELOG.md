@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.3.3 - 2024-11-07
+
+### Bug Fixes:
+
+* Fixed the issue of low power output in CCT mode.
+
 ## v1.3.2 - 2024-09-19
 
 ### Enhancements:
