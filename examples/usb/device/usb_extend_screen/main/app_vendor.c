@@ -48,6 +48,15 @@ void transfer_task(void *pvParameter)
     }
 }
 
+static bool buffer_skip(frame_info_t *frame_info, uint32_t len)
+{
+    if (frame_info->received + len >= frame_info->total) {
+        return true;
+    }
+    frame_info->received += len;
+    return false;
+}
+
 static bool buffer_fill(frame_t *frame, uint8_t *buf, uint32_t len)
 {
     if (0 == len) {
@@ -68,11 +77,13 @@ static bool buffer_fill(frame_t *frame, uint8_t *buf, uint32_t len)
 void tud_vendor_rx_cb(uint8_t itf)
 {
     static uint8_t rx_buf[CONFIG_USB_VENDOR_RX_BUFSIZE];
+    static bool skip_frame = false;
+    static frame_info_t skip_frame_info = {0};
 
     while (tud_vendor_n_available(itf)) {
         int read_res = tud_vendor_n_read(itf, rx_buf, CONFIG_USB_VENDOR_RX_BUFSIZE);
         if (read_res > 0) {
-            if (!current_frame) {
+            if (!current_frame && !skip_frame) {
                 udisp_frame_header_t *pblt = (udisp_frame_header_t *)rx_buf;
                 switch (pblt->type) {
                 case UDISP_TYPE_RGB565:
@@ -104,6 +115,10 @@ void tud_vendor_rx_cb(uint8_t itf)
                             current_frame = NULL;
                         }
                     } else {
+                        memset(&skip_frame_info, 0, sizeof(skip_frame_info));
+                        skip_frame_info.total = pblt->payload_total;
+                        skip_frame = true;
+                        buffer_skip(&skip_frame_info, read_res - sizeof(udisp_frame_header_t));
                         ESP_LOGE(TAG, "Get frame is null");
                     }
                     break;
@@ -111,6 +126,11 @@ void tud_vendor_rx_cb(uint8_t itf)
                 default:
                     ESP_LOGE(TAG, "error cmd");
                     break;
+                }
+            } else if (skip_frame) {
+                if (buffer_skip(&skip_frame_info, read_res)) {
+                    current_frame = NULL;
+                    skip_frame = false;
                 }
             } else {
                 if (buffer_fill(current_frame, rx_buf, read_res)) {
