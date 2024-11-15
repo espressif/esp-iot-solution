@@ -1,5 +1,5 @@
-version: "0.1.5"
-description: Knob driver implemented through software quadrature decoding.
+version: "1.0.0"
+description: Knob driver implemented through software pcnt
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/knob
 documentation: https://docs.espressif.com/projects/esp-iot-solution/en/latest/input_device/knob.html
 issues: https://github.com/espressif/esp-iot-solution/issues
