@@ -58,3 +58,9 @@ USB 扩展屏示例可以将 P4 开发板作为一块 windows 的副屏。支持
 ### 调高/调低 JPEG 的图片质量
 
 * 修改 `usb_descriptor.c` 文件中的 `string_desc_arr` Vendor 接口字符串，将 `Ejpg4` 修改为所需的图片质量，数字越大质量越高，同样的一帧图像占用内存更多。
+
+### 修改屏幕分辨率
+
+* 修改 `usb_descriptor.c` 文件中的 `string_desc_arr` Vendor 接口字符串，将 `R1024x600` 修改为所需的屏幕大小
+
+Note: 目前驱动不支持竖屏的屏幕，请使用硬件上为横屏的屏幕。

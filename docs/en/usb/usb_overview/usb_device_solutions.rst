@@ -119,3 +119,31 @@ Links:
 
 * `Read/Write NVS with USB Flash Drive <https://github.com/espressif/esp-iot-solution/tree/master/examples/usb/device/usb_uf2_nvs>`_
 * `Virtual USB Flash Drive UF2 OTA Upgrade <https://github.com/espressif/esp-iot-solution/tree/master/examples/usb/device/usb_uf2_ota>`_
+
+USB Extended Screen Solution
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The USB extended screen solution allows a device to function as an additional display through a USB connection. It supports data transmission over a single USB cable, including audio, touch information, and video. This solution can be applied in various scenarios such as computer monitors, signature pads, and extended display setups.
+
+Host-side Driver
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Since USB 2.0 does not support HDMI transmission, the host must transmit image data to the device. Currently, this solution only supports the Windows platform, utilizing the Windows driver model, [`IDD (Indirect Display Driver)`](https://learn.microsoft.com/en-us/windows-hardware/drivers/display/indirect-display-driver-model-overview). This driver captures the desktop image from Windows. Due to USB's speed limitations, the image is first compressed into formats like JPEG, and then transmitted through the USB vendor interface. Each image frame is prepended with a 16-byte header containing details such as image width, height, format, length, and compression type.
+
+Features
+~~~~~~~~~~~~~~~~~
+
+- Supports image transmission via USB
+- Supports audio transmission via USB
+- Supports touch data transmission via USB
+
+Hardware
+~~~~~~~~~~~~~~
+
+- Chips: ESP32-S2, ESP32-S3, ESP32-P4
+- Peripheral: USB-OTG
+
+Links
+~~~~~~~~~~
+
+- [P4 USB Extended Screen Example](https://github.com/espressif/esp-iot-solution/tree/master/examples/usb/device/usb_extend_screen)

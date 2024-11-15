@@ -52,3 +52,9 @@ For preparation, refer to the [windows_driver](./windows_driver/README.md)
 ### Adjusting JPEG Image Quality
 
 * Modify the `string_desc_arr` vendor interface string in the `usb_descriptor.c` file. Change `Ejpg4` to the desired image quality level; the higher the number, the better the quality, but it will use more memory for the same frame.
+
+### Modify Screen Resolution
+
+- Update the `usb_descriptor.c` file by changing the `string_desc_arr` vendor interface string. Modify `R1024x600` to the desired screen resolution.
+
+**Note**: Currently, the driver does not support portrait mode screens. Please use hardware that is designed for landscape orientation.
