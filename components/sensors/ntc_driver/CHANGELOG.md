@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.1.0 - 2024-11-5
+
+### Improvements
+
+* Add NTC ADC filter to reduce the noise.
+
 ## v1.0.0 - 2024-10-15
 
 * Update the version of ntc_driver component.
