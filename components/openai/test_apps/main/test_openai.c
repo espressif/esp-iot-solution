@@ -243,7 +243,7 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
-    // 比较 openai_key 是否是空字符串
+    // Compare whether OpenAI_KEY is an empty string
     if (strlen(openai_key) == 0) {
         ESP_LOGE(TAG, "Please enter your openai_key");
         return;
