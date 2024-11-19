@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.4.0 - 2024-11-15
+
+### Enhancements:
+
+* Example adapted to ESP32-C5 chip
+
 ## v1.3.3 - 2024-11-07
 
 ### Bug Fixes:
