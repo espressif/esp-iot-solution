@@ -1,0 +1,3 @@
+version: 0.0.1
+dependencies:
+  espressif/usb_host_cdc_acm: ^2.0.5

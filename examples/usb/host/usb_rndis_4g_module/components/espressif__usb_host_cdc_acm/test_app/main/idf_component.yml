@@ -1,0 +1,28 @@
+## IDF Component Manager Manifest File
+dependencies:
+  # Needed as DUT
+  espressif/usb_host_cdc_acm:
+    version: "*"
+    override_path: "../../../usb_host_cdc_acm"
+
+  # Needed for CDC mock device
+  espressif/esp_tinyusb:
+    version: "*"
+    override_path: "../../../../../../device/esp_tinyusb"
+
+  # Following components are not needed, but this way we at least built them in CI
+  espressif/esp_modem_usb_dte:
+    version: "*"
+    override_path: "../../../esp_modem_usb_dte"
+  espressif/usb_host_vcp:
+    version: "*"
+    override_path: "../../../usb_host_vcp"
+  espressif/usb_host_ch34x_vcp:
+    version: "*"
+    override_path: "../../../usb_host_ch34x_vcp"
+  espressif/usb_host_cp210x_vcp:
+    version: "*"
+    override_path: "../../../usb_host_cp210x_vcp"
+  espressif/usb_host_ftdi_vcp:
+    version: "*"
+    override_path: "../../../usb_host_ftdi_vcp"
