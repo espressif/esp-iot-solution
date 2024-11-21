@@ -78,6 +78,10 @@ Note: keyboard_rgb_martix comes from the **QMK** project. Due to the use of the 
 
 ### Change LOG
 
+* v0.2.2 - 2024-11-21
+
+  * Added support for waking up a PC from sleep mode (remote wakeup).
+
 * v0.2.1 - 2024-08-12
 
 - Added debounce time to prevent buttons from being triggered twice consecutively.
