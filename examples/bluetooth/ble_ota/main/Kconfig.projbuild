@@ -57,6 +57,11 @@ menu "Example Configuration"
             depends on BT_NIMBLE_ENABLED
             help
                 This enables transferring pre-encrypted file via OTA
+
+        config EXAMPLE_USE_DELTA_OTA
+            bool "Use Delta OTA"
+            help
+                This enables transferring patch file via Delta OTA
     endchoice
 
     config EXAMPLE_EXTENDED_ADV

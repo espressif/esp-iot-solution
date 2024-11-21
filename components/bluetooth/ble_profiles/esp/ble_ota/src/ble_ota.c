@@ -7,6 +7,7 @@
 #include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "esp_idf_version.h"
+#include "freertos/semphr.h"
 
 #include "esp_log.h"
 #include "ble_ota.h"
@@ -700,8 +701,14 @@ void esp_ble_ota_process_recv_data(esp_ble_ota_char_t ota_char, uint8_t *val, ui
         // Stop BLE OTA Process
         else if ((val[0] == 0x02) && (val[1] == 0x00)) {
             if (start_ota) {
+                extern SemaphoreHandle_t notify_sem;
+                xSemaphoreTake(notify_sem, portMAX_DELAY);
+
                 start_ota = false;
                 esp_ble_ota_set_fw_length(0);
+
+                xSemaphoreGive(notify_sem);
+
                 ESP_LOGI(TAG, "recv ota stop cmd");
                 esp_ble_ota_send_ack_data(BLE_OTA_CMD_ACK, BLE_OTA_CMD_SUCCESS, BLE_OTA_STOP_CMD);
 

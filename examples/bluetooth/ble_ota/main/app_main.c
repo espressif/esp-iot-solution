@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2019-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2019-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -14,16 +14,28 @@
 #include "nvs_flash.h"
 #include "esp_bt.h"
 #include "ble_ota.h"
+#include "freertos/semphr.h"
 
 #define OTA_RINGBUF_SIZE                    8192
 #define OTA_TASK_SIZE                       8192
 
 static const char *TAG = "ESP_BLE_OTA";
+static esp_ota_handle_t out_handle;
+SemaphoreHandle_t notify_sem;
 
 #if CONFIG_EXAMPLE_USE_PRE_ENC_OTA
 extern const char rsa_private_pem_start[] asm("_binary_private_pem_start");
 extern const char rsa_private_pem_end[]   asm("_binary_private_pem_end");
 esp_decrypt_handle_t decrypt_handle;
+#endif
+#ifdef CONFIG_EXAMPLE_USE_DELTA_OTA
+#include "esp_delta_ota.h"
+#include "esp_partition.h"
+#include "esp_app_format.h"
+#define PATCH_HEADER_SIZE 64
+#define DIGEST_SIZE 32
+#define IMG_HEADER_LEN sizeof(esp_image_header_t)
+const esp_partition_t *current_partition;
 #endif
 
 #ifdef CONFIG_EXAMPLE_USE_PROTOCOMM
@@ -132,6 +144,97 @@ get_device_service_name(char *service_name, size_t size)
 
 #endif /* CONFIG_EXAMPLE_USE_PROTOCOMM */
 
+#ifdef CONFIG_EXAMPLE_USE_DELTA_OTA
+static bool verify_patch_header(void *img_hdr_data)
+{
+    if (!img_hdr_data) {
+        return false;
+    }
+
+    uint32_t esp_delta_ota_magic = 0xfccdde10;
+    uint32_t recv_magic = *(uint32_t *)img_hdr_data;
+    uint8_t *digest = (uint8_t *)(img_hdr_data + 4);
+    uint8_t sha_256[DIGEST_SIZE] = { 0 };
+
+    if (recv_magic != esp_delta_ota_magic) {
+        ESP_LOGE(TAG, "Invalid magic word in patch");
+        return false;
+    }
+
+    esp_partition_get_sha256(esp_ota_get_running_partition(), sha_256);
+    if (memcmp(sha_256, digest, DIGEST_SIZE) != 0) {
+        ESP_LOGE(TAG, "SHA256 of current firmware differs from than in patch header. Invalid patch for current firmware");
+        return false;
+    }
+
+    return true;
+}
+
+static bool verify_chip_id(void *bin_header_data)
+{
+    esp_image_header_t *header = (esp_image_header_t *)bin_header_data;
+
+    if (header->chip_id != CONFIG_IDF_FIRMWARE_CHIP_ID) {
+        ESP_LOGE(TAG, "Mismatch chip id, expected %d, found %d", CONFIG_IDF_FIRMWARE_CHIP_ID, header->chip_id);
+        return false;
+    }
+
+    return true;
+}
+
+#if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 2, 0))
+static esp_err_t write_cb(const uint8_t *buf_p, size_t size, void *user_data)
+#else
+static esp_err_t write_cb(const uint8_t *buf_p, size_t size)
+#endif
+{
+    if (size <= 0) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    static char header_data[IMG_HEADER_LEN];
+    static bool chip_id_verified = false;
+    static int header_data_read = 0;
+    int index = 0;
+
+    if (!chip_id_verified) {
+        if (header_data_read + size <= IMG_HEADER_LEN) {
+            memcpy(header_data + header_data_read, buf_p, size);
+            header_data_read += size;
+            return ESP_OK;
+        } else {
+            index = IMG_HEADER_LEN - header_data_read;
+            memcpy(header_data + header_data_read, buf_p, index);
+            if (!verify_chip_id(header_data)) {
+                return ESP_ERR_INVALID_VERSION;
+            }
+            chip_id_verified = true;
+
+            // Write data in header_data buffer.
+            esp_err_t err = esp_ota_write(out_handle, header_data, IMG_HEADER_LEN);
+            if (err != ESP_OK) {
+                return err;
+            }
+        }
+    }
+
+    return esp_ota_write(out_handle, buf_p + index, size - index);
+}
+
+static esp_err_t read_cb(uint8_t *buf_p, size_t size, int src_offset)
+{
+    esp_err_t temp;
+
+    if (size <= 0) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    temp = esp_partition_read(current_partition, src_offset, buf_p, size);
+
+    return temp;
+}
+#endif
+
 static RingbufHandle_t s_ringbuf = NULL;
 
 bool
@@ -162,13 +265,54 @@ ota_task(void *arg)
     esp_partition_t *partition_ptr = NULL;
     esp_partition_t partition;
     const esp_partition_t *next_partition = NULL;
-    esp_ota_handle_t out_handle = 0;
 
     uint32_t recv_len = 0;
     uint8_t *data = NULL;
     size_t item_size = 0;
     ESP_LOGI(TAG, "ota_task start");
-    // search ota partition
+
+    notify_sem = xSemaphoreCreateCounting(100, 0);
+    xSemaphoreGive(notify_sem);
+
+#ifdef CONFIG_EXAMPLE_USE_DELTA_OTA
+    esp_err_t err;
+    esp_delta_ota_cfg_t cfg = {
+        .read_cb = &read_cb,
+    };
+
+#if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 2, 0))
+    char *user_data = "ble_delta_ota";
+    cfg.write_cb_with_user_data = &write_cb;
+    cfg.user_data = user_data;
+#else
+    cfg.write_cb = &write_cb;
+#endif
+
+    const esp_partition_t *destination_partition;
+
+    esp_delta_ota_handle_t handle = esp_delta_ota_init(&cfg);
+    if (handle == NULL) {
+        ESP_LOGE(TAG, "delta_ota_set_cfg failed!");
+        goto OTA_ERROR;
+    }
+    /* search ota partition */
+    current_partition = esp_ota_get_running_partition();
+    destination_partition = esp_ota_get_next_update_partition(NULL);
+
+    if (current_partition == NULL || destination_partition == NULL) {
+        ESP_LOGE(TAG, "Error getting partition information");
+        goto OTA_ERROR;
+    }
+    if (current_partition->subtype >= ESP_PARTITION_SUBTYPE_APP_OTA_MAX ||
+            destination_partition->subtype >= ESP_PARTITION_SUBTYPE_APP_OTA_MAX) {
+        goto OTA_ERROR;
+    }
+    err = esp_ota_begin(destination_partition, OTA_SIZE_UNKNOWN, &(out_handle));
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "esp_ota_begin failed: %s", esp_err_to_name(err));
+        goto OTA_ERROR;
+    }
+#else
     partition_ptr = (esp_partition_t *)esp_ota_get_boot_partition();
     if (partition_ptr == NULL) {
         ESP_LOGE(TAG, "boot partition NULL!\r\n");
@@ -202,37 +346,92 @@ ota_task(void *arg)
         ESP_LOGE(TAG, "esp_ota_begin failed!\r\n");
         goto OTA_ERROR;
     }
-
+#endif
     ESP_LOGI(TAG, "wait for data from ringbuf! fw_len = %u", esp_ble_ota_get_fw_length());
     /*deal with all receive packet*/
     for (;;) {
         data = (uint8_t *)xRingbufferReceive(s_ringbuf, &item_size, (TickType_t)portMAX_DELAY);
 
+        xSemaphoreTake(notify_sem, portMAX_DELAY);
+
+#ifdef CONFIG_EXAMPLE_USE_DELTA_OTA
+        static int flag = 0;
+        static char ota_write_data[65] = { 0 };
+
+        /*deal with receive patch header*/
+        if (flag == 0) {
+
+            flag = 1;
+
+            /* Read size equal to patch header to verify the header*/
+            memcpy(ota_write_data, data, PATCH_HEADER_SIZE);
+            if (!verify_patch_header(ota_write_data)) {
+                ESP_LOGE(TAG, "Patch Header verification failed!");
+                goto OTA_ERROR;
+            }
+
+            data += 64;
+            item_size -= 64;
+            recv_len += 64;
+        }
+#endif
         ESP_LOGI(TAG, "recv: %u, recv_total:%"PRIu32"\n", item_size, recv_len + item_size);
+
         if (item_size != 0) {
+#ifdef CONFIG_EXAMPLE_USE_DELTA_OTA
+            if (esp_delta_ota_feed_patch(handle, (const uint8_t *)data, item_size) < 0) {
+                ESP_LOGE(TAG, "Error while applying patch");
+                goto OTA_ERROR;
+            }
+#else
             if (esp_ota_write(out_handle, (const void *)data, item_size) != ESP_OK) {
                 ESP_LOGE(TAG, "esp_ota_write failed!\r\n");
                 goto OTA_ERROR;
             }
+#endif
             recv_len += item_size;
             vRingbufferReturnItem(s_ringbuf, (void *)data);
 
             if (recv_len >= esp_ble_ota_get_fw_length()) {
+                xSemaphoreGive(notify_sem);
                 break;
             }
         }
+        xSemaphoreGive(notify_sem);
     }
+
+#ifdef CONFIG_EXAMPLE_USE_DELTA_OTA
+    err = esp_delta_ota_finalize(handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "esp_delta_ota_finalize() failed : %s", esp_err_to_name(err));
+        goto OTA_ERROR;
+    }
+
+    err = esp_delta_ota_deinit(handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "esp_delta_ota_deinit() failed : %s", esp_err_to_name(err));
+        goto OTA_ERROR;
+    }
+#endif
 
     if (esp_ota_end(out_handle) != ESP_OK) {
         ESP_LOGE(TAG, "esp_ota_end failed!\r\n");
         goto OTA_ERROR;
     }
 
+#ifdef CONFIG_EXAMPLE_USE_DELTA_OTA
+    if (esp_ota_set_boot_partition(destination_partition) != ESP_OK) {
+        ESP_LOGE(TAG, "esp_ota_set_boot_partition failed!\r\n");
+        goto OTA_ERROR;
+    }
+#else
     if (esp_ota_set_boot_partition(&partition) != ESP_OK) {
         ESP_LOGE(TAG, "esp_ota_set_boot_partition failed!\r\n");
         goto OTA_ERROR;
     }
+#endif
 
+    vSemaphoreDelete(notify_sem);
     esp_restart();
 
 OTA_ERROR:
@@ -258,7 +457,6 @@ app_main(void)
 {
     esp_err_t ret;
     esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
-
     // Initialize NVS
     ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -339,12 +537,10 @@ app_main(void)
         ESP_LOGE(TAG, "%s enable controller failed: %s\n", __func__, esp_err_to_name(ret));
         return;
     }
-
     if (esp_ble_ota_host_init() != ESP_OK) {
-        ESP_LOGE(TAG, "%s initialoze ble host fail: %s\n", __func__, esp_err_to_name(ret));
+        ESP_LOGE(TAG, "%s initialize ble host fail: %s\n", __func__, esp_err_to_name(ret));
         return;
     }
-
 #if CONFIG_EXAMPLE_USE_PRE_ENC_OTA
     esp_decrypt_cfg_t cfg = {};
     cfg.rsa_pub_key = rsa_private_pem_start;

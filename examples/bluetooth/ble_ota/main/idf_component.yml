@@ -1,4 +1,5 @@
 dependencies:
+  espressif/esp_delta_ota: "^1.1.0"
   espressif/esp_encrypted_img: "^2.0.1"
   idf: ">=4.4"
   ble_ota:
