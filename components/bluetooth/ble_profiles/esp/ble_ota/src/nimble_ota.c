@@ -16,6 +16,7 @@
 #include "services/gatt/ble_svc_gatt.h"
 #include "host/ble_uuid.h"
 #include "ble_ota.h"
+#include "freertos/semphr.h"
 #if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
 #include "esp_nimble_hci.h"
 #endif
@@ -375,8 +376,14 @@ ble_ota_start_write_chr(struct os_mbuf *om)
             ESP_LOGI(TAG, "Decryption end failed");
         }
 #endif
+        extern SemaphoreHandle_t notify_sem;
+        xSemaphoreTake(notify_sem, portMAX_DELAY);
+
         start_ota = false;
         ota_total_len = 0;
+
+        xSemaphoreGive(notify_sem);
+
         ESP_LOGD(TAG, "recv ota stop cmd");
         cmd_ack[2] = 0x02;
         cmd_ack[3] = 0x00;

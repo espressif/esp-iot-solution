@@ -64,7 +64,7 @@ ACK_Status:
 
 ### 4.1 OTA update ESP32-H2
 
-To construct the BLE OTA demo for the ESP32-H2 device, ensure you're using ESP-IDF version 5.0 or later. Currently, the ESP32-H2 doesn't support NimBLE OTA updates, so omit the instructions in section 5. Maintain the default configuration for the Bluetooth framework, where `Bluedroid - Dual-mode` is selected. To ensure compatibility with the sample app mentioned in section 3, deactivate BLE 5.0 features by navigating to:
+To construct the BLE OTA demo for the ESP32-H2 device, ensure you're using ESP-IDF version 5.0 or later. If `Bluedroid - Dual-mode` is selected, to ensure compatibility with the sample app mentioned in section 3, deactivate BLE 5.0 features by navigating to:
 
 1. `Component config` > `Bluetooth` > `Bluedroid Options` and deselect `Enable BLE 5.0 features`.
 2. `Component config` > `Bluetooth` > `Controller Options` and deselect `Enable BLE 5 feature`.
@@ -77,9 +77,11 @@ To construct the BLE OTA demo for the ESP32-H2 device, ensure you're using ESP-I
 
 - Component config → Bluetooth → Bluetooth → Host → NimBLE - BLE only
 
-Note: For maximum throughput, set maximum MTU using
+- Note: For maximum throughput, set maximum MTU using
 
-- Component config → Bluetooth → NimBLE Options → Preferred MTU size in octets as 517
+  - Component config → Bluetooth → NimBLE Options → Preferred MTU size in octets as 517
+
+Ensure the image that is being transferred over BLE, should have the same FLASHSIZE ( 4MB ) as the one that is set by the ble_ota example. i.e. ensure **ESPTOOLPY_FLASHSIZE_4MB** is set.
 
 ### 5.1 OTA with Protocomm
 
@@ -99,6 +101,54 @@ Note: For maximum throughput, set maximum MTU using
 
 `idf.py menuconfig`
 
-- If using ESP32S3 set Component config → Bluetooth → Bluetooth → NimBLE Options → NimBLE Host task stack size as 8192 
+- If using ESP32S3 set Component config → Bluetooth → Bluetooth → NimBLE Options → NimBLE Host task stack size as 8192
 - Example Configuration → Type of OTA → Use Pre-Encrypted OTA
 - Component config → OTA Manager → Type of OTA → Enable pre encrypted OTA
+
+## 6. Delta OTA
+
+### 6.1  NimBLE OTA
+
+`idf.py menuconfig`
+
+- Component config → Bluetooth → Bluetooth → Host → NimBLE - BLE only
+
+> **_NOTE:_** For maximum throughput, set maximum MTU using
+
+- Component config → Bluetooth → NimBLE Options → Preferred MTU size in octets as 517
+
+- Example Configuration → Type of OTA → Use Delta OTA
+
+- if using ESP32H2, ESP32C6
+    1. Component config → Bluetooth → Bluetooth → NimBLE Options → deselect `Enable BLE 5 feature`
+    2. Example Configuration → deselect `Enable Extended Adv`
+
+### 6.2 Bluedroid
+
+`idf.py menuconfig`
+
+- Component config → Bluetooth → Bluetooth → Host → Bluedroid - Dual-mode
+- Component config → Bluetooth → Bluetooth → Bluedroid Options → deselect `Enable BLE 5.0 feature`
+- Component config → Bluetooth → Bluetooth → Bluedroid Options → deselect `Enable BLE 4.2 feature`
+- Example Configuration → Type of OTA → Use Delta OTA
+
+### Creating Patch
+
+Now we will consider this firmware as the base firmware which we will flash into the device. We need a new firmware to which we want to upgrade to. You can try b
+ilding the `hello_world` example present in ESP-IDF.
+We need to create a patch file for this new firmware.
+
+Install required packages:
+```
+pip install -r tools/requirements.txt
+```
+
+To create a patch file, use the [python tool](./tools/esp_delta_ota_patch_gen.py)
+```
+python esp_delta_ota_patch_gen.py --chip <target> --base_binary <base_binary> --new_binary <new_binary> --patch_file_name <patch_file_name>
+```
+
+This will generate the patch file for the new binary which needs to be hosted on the OTA update server.
+
+> **_NOTE:_** Make sure that the firmware present in the device is used as `base_binary` while creating the patch file. For this purpose, user should keep backup
+of the firmware running in the device as it is required for creating the patch file.
