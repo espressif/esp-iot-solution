@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -26,85 +26,185 @@ EventGroupHandle_t s_event_group_hdl = NULL;
 
 #define TEST_MEMORY_LEAK_THRESHOLD (-400)
 
-static usb_ep_desc_t bulk_out_ep_desc = {
-    .bLength = sizeof(usb_ep_desc_t),
-    .bDescriptorType = USB_B_DESCRIPTOR_TYPE_ENDPOINT,
-    .bEndpointAddress = TEST_EP_OUT0,       //EP 1 OUT
-    .bmAttributes = USB_BM_ATTRIBUTES_XFER_BULK,
-    .wMaxPacketSize = 64,           //MPS of 64 bytes
-    .bInterval = 0,
-};
-
-static usb_ep_desc_t bulk_in_ep_desc = {
-    .bLength = sizeof(usb_ep_desc_t),
-    .bDescriptorType = USB_B_DESCRIPTOR_TYPE_ENDPOINT,
-    .bEndpointAddress = TEST_EP_IN0,       //EP 2 IN
-    .bmAttributes = USB_BM_ATTRIBUTES_XFER_BULK,
-    .wMaxPacketSize = 64,           //MPS of 64 bytes
-    .bInterval = 0,
-};
-
-static void usb_read_task(void *param)
+static void usb_communication(uint8_t loop_count, size_t data_length, usbh_cdc_handle_t handle)
 {
-    size_t data_len = 0;
-    uint8_t buf[IN_RINGBUF_SIZE];
-    while (!(xEventGroupGetBits(s_event_group_hdl) & READ_TASK_KILL_BIT)) {
-        for (size_t i = 0; i < TEST_ITF_NUM; i++) {
-            if (usbh_cdc_get_itf_state(i) == false) {
-                continue;
-            }
-            usbh_cdc_itf_get_buffered_data_len(i, &data_len);
-            if (data_len > 0) {
-                usbh_cdc_itf_read_bytes(i, buf, data_len, 10);
-                ESP_LOGI(TAG, "Itf %d, rcv len=%d: %.*s", i, data_len, data_len, buf);
-            } else {
-                vTaskDelay(1);
-            }
-        }
+    uint8_t buff[512] = {0};
+    for (int i = 0; i < data_length; i++) {
+        buff[i] = i;
     }
-    xEventGroupClearBits(s_event_group_hdl, READ_TASK_KILL_BIT);
-    ESP_LOGW(TAG, "CDC read task deleted");
-    vTaskDelete(NULL);
+
+    while (loop_count--) {
+        size_t length = data_length;
+
+        /*!< Send data */
+        usbh_cdc_write_bytes(handle, buff, length, pdMS_TO_TICKS(1000));
+        ESP_LOGI(TAG, "Send data len: %d", length);
+        ESP_LOG_BUFFER_HEXDUMP(TAG, buff, length, ESP_LOG_INFO);
+        vTaskDelay(500 / portTICK_PERIOD_MS);
+
+        /*!< Receive data */
+        length = data_length;
+        usbh_cdc_read_bytes(handle, buff, &length, pdMS_TO_TICKS(1000));
+        ESP_LOGI(TAG, "Recv data len: %d", length);
+        ESP_LOG_BUFFER_HEXDUMP(TAG, buff, length, ESP_LOG_INFO);
+        vTaskDelay(500 / portTICK_PERIOD_MS);
+    }
+}
+
+static void cdc_new_dev_cb(usb_device_handle_t usb_dev)
+{
+    ESP_LOGI(TAG, "cdc new device found");
+}
+
+static void cdc_connect_cb(usbh_cdc_handle_t handle, void *arg)
+{
+    ESP_LOGI(TAG, "cdc device connect");
+}
+
+static void cdc_disconnect_cb(usbh_cdc_handle_t handle, void *arg)
+{
+    ESP_LOGI(TAG, "cdc device disconnect");
+}
+
+TEST_CASE("usb cdc R/W", "[iot_usbh_cdc][read-write][auto]")
+{
+    esp_log_level_set("USBH_CDC", ESP_LOG_DEBUG);
+
+    usbh_cdc_driver_config_t config = {
+        .task_stack_size = 1024 * 4,
+        .task_priority = 5,
+        .task_coreid = 0,
+        .skip_init_usb_host_driver = false,
+        .new_dev_cb = cdc_new_dev_cb,
+    };
+
+    TEST_ASSERT_EQUAL(ESP_OK, usbh_cdc_driver_install(&config));
+
+    usbh_cdc_device_config_t dev_config = {
+        .vid = 0,
+        .pid = 0,
+        .itf_num = 1,
+        .rx_buffer_size = 0,
+        .tx_buffer_size = 0,
+        .cbs = {
+            .connect = cdc_connect_cb,
+            .disconnect = cdc_disconnect_cb,
+            .user_data = NULL
+        },
+    };
+
+    usbh_cdc_handle_t handle = NULL;
+    usbh_cdc_create(&dev_config, &handle);
+
+    // Add connect event
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+    usb_communication(5, 128, handle);
+    usb_communication(5, 64, handle);
+    usb_communication(5, 32, handle);
+
+    TEST_ASSERT_EQUAL(ESP_OK, usbh_cdc_delete(handle));
+    TEST_ASSERT_EQUAL(ESP_OK, usbh_cdc_driver_uninstall());
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
 }
 
 TEST_CASE("usb dual cdc R/W", "[iot_usbh_cdc][read-write]")
 {
-    for (size_t i = 0; i < 5; i++) {
-        s_event_group_hdl = xEventGroupCreate();
-        TEST_ASSERT(s_event_group_hdl);
-        static usbh_cdc_config_t config = {
-            .bulk_in_ep = &bulk_in_ep_desc,
-            .bulk_out_ep = &bulk_out_ep_desc,
-            .rx_buffer_size = IN_RINGBUF_SIZE,
-            .tx_buffer_size = OUT_RINGBUF_SIZE,
-        };
-        config.itf_num = 2;
-        /* test config with only ep addr */
-        config.bulk_in_ep_addrs[1] = TEST_EP_IN1;
-        config.bulk_out_ep_addrs[1] = TEST_EP_OUT1;
-        config.rx_buffer_sizes[1] = IN_RINGBUF_SIZE;
-        config.tx_buffer_sizes[1] = OUT_RINGBUF_SIZE;
-        TEST_ASSERT_EQUAL(ESP_OK, usbh_cdc_driver_install(&config));
-        /* Waiting for USB device connected */
-        TEST_ASSERT_EQUAL(ESP_OK, usbh_cdc_wait_connect(portMAX_DELAY));
-        xTaskCreate(usb_read_task, "usb_read", 4096, NULL, 2, NULL);
-        uint8_t buff[] = "AT\r\n";
-        uint8_t loop_num = 20;
-        while (--loop_num) {
-            int len = usbh_cdc_itf_write_bytes(0, buff, sizeof(buff));
-            ESP_LOGI(TAG, "Send itf0 len=%d: %s", len, buff);
-            len = usbh_cdc_itf_write_bytes(1, buff, sizeof(buff));
-            ESP_LOGI(TAG, "Send itf1 len=%d: %s", len, buff);
-            vTaskDelay(pdMS_TO_TICKS(50));
-        }
-        xEventGroupSetBits(s_event_group_hdl, READ_TASK_KILL_BIT);
-        ESP_LOGW(TAG, "Waiting CDC read task delete");
-        while (xEventGroupGetBits(s_event_group_hdl) & READ_TASK_KILL_BIT) {
-            vTaskDelay(10 / portTICK_PERIOD_MS);
-        }
-        vEventGroupDelete(s_event_group_hdl);
-        TEST_ASSERT_EQUAL(ESP_OK, usbh_cdc_driver_delete());
-    }
+    esp_log_level_set("USBH_CDC", ESP_LOG_DEBUG);
+
+    // for (size_t i = 0; i < 5; i++) {
+    usbh_cdc_driver_config_t config = {
+        .task_stack_size = 1024 * 4,
+        .task_priority = 5,
+        .task_coreid = 0,
+        .skip_init_usb_host_driver = false,
+        .new_dev_cb = cdc_new_dev_cb,
+    };
+
+    TEST_ASSERT_EQUAL(ESP_OK, usbh_cdc_driver_install(&config));
+
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+    usbh_cdc_device_config_t dev_config = {
+        .vid = 0,
+        .pid = 0,
+        .itf_num = 1,
+        .rx_buffer_size = 0,
+        .tx_buffer_size = 0,
+        .cbs = {
+            .connect = cdc_connect_cb,
+            .disconnect = cdc_disconnect_cb,
+            .user_data = NULL
+        },
+    };
+
+    usbh_cdc_handle_t handle = NULL;
+    usbh_cdc_create(&dev_config, &handle);
+
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+    dev_config.itf_num = 3;
+
+    usbh_cdc_handle_t handle2 = NULL;
+    usbh_cdc_create(&dev_config, &handle2);
+
+    // Add connect event
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+    usb_communication(5, 128, handle);
+    usb_communication(5, 128, handle2);
+    usb_communication(5, 64, handle);
+    usb_communication(5, 64, handle2);
+    usb_communication(5, 32, handle);
+    usb_communication(5, 32, handle2);
+
+    TEST_ASSERT_EQUAL(ESP_OK, usbh_cdc_delete(handle));
+    TEST_ASSERT_EQUAL(ESP_OK, usbh_cdc_delete(handle2));
+    TEST_ASSERT_EQUAL(ESP_OK, usbh_cdc_driver_uninstall());
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+}
+
+TEST_CASE("usbh cdc driver memory leak", "[iot_usbh_cdc][read-write][auto]")
+{
+    esp_log_level_set("USBH_CDC", ESP_LOG_DEBUG);
+    usbh_cdc_driver_config_t config = {
+        .task_stack_size = 1024 * 4,
+        .task_priority = 5,
+        .task_coreid = 0,
+        .skip_init_usb_host_driver = false,
+    };
+    TEST_ASSERT_EQUAL(ESP_OK, usbh_cdc_driver_install(&config));
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+    usbh_cdc_driver_uninstall();
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+}
+
+TEST_CASE("usbh cdc device memory leak", "[iot_usbh_cdc][read-write][auto]")
+{
+    esp_log_level_set("USBH_CDC", ESP_LOG_DEBUG);
+    usbh_cdc_driver_config_t config = {
+        .task_stack_size = 1024 * 4,
+        .task_priority = 5,
+        .task_coreid = 0,
+        .skip_init_usb_host_driver = false,
+    };
+    TEST_ASSERT_EQUAL(ESP_OK, usbh_cdc_driver_install(&config));
+
+    usbh_cdc_device_config_t dev_config = {
+        .itf_num = 1,
+        .rx_buffer_size = 0,
+        .tx_buffer_size = 0,
+    };
+
+    usbh_cdc_handle_t handle = NULL;
+    usbh_cdc_create(&dev_config, &handle);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+    TEST_ASSERT_EQUAL(ESP_OK, usbh_cdc_delete(handle));
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+    usbh_cdc_driver_uninstall();
     vTaskDelay(1000 / portTICK_PERIOD_MS);
 }
 

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -45,8 +45,10 @@ typedef struct {
     int data_buffer_size;                   /*!< data buffer size in data mode */
     int pattern_queue_size;                 /*!< UART pattern queue size */
     int conn_state;                         /*!< DTE connection state, 0 if disconnect, 1 if connect */
-    usbh_cdc_cb_t conn_callback;            /*!< DTE connect callback */
-    usbh_cdc_cb_t disconn_callback;         /*!< DTE disconnect callback */
+    usbh_cdc_event_cb_t conn_callback;            /*!< DTE connect callback */
+    usbh_cdc_event_cb_t disconn_callback;         /*!< DTE disconnect callback */
+    usbh_cdc_handle_t cdc_hdl;              /*!< USB CDC handle */
+    usbh_cdc_handle_t cdc_hdl2;              /*!< USB CDC handle */
 } esp_modem_dte_internal_t;
 
 #ifdef __cplusplus

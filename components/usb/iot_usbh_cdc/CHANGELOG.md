@@ -1,5 +1,23 @@
 # ChangeLog
 
+## v1.0.0 - 2024-10-31
+
+### Break Changes:
+
+* Remove the dependency on the `iot_usbh` component and use `usb_host_driver` instead.
+
+### API Break Changes:
+
+* Add `usbh_cdc_create()`
+* Add `usbh_cdc_delete()`
+* Add `usbh_cdc_desc_print()` to print CDC descriptor
+* Rename `usbh_cdc_get_itf_state()` to `usbh_cdc_get_state()`
+* Remove `usbh_cdc_wait_connect()`
+* Remove `usbh_cdc_itf_write_bytes()`
+* Remove `usbh_cdc_get_buffered_data_len()`
+* Remove `usbh_cdc_itf_get_buffered_data_len()`
+* Remove `usbh_cdc_itf_read_bytes()`
+
 ## v0.2.2 - 2023-12-08
 
 * Add doc and example

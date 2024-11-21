@@ -6,7 +6,7 @@ dependencies:
   json_parser:
     version: "1.0.3"
   iot_usbh_modem:
-    version: ">=0.2.0"
+    version: "^1.0.0"
     override_path: "../../../../../components/usb/iot_usbh_modem"
   espressif/esp32_s3_usb_otg:
     version: "^1.5.1"

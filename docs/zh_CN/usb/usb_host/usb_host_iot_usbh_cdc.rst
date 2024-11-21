@@ -1,4 +1,4 @@
-USB 主机 CDC 
+USB 主机 CDC
 =====================
 
 :link_to_translation:`en:[English]`
@@ -8,41 +8,52 @@ USB 主机 CDC
 使用指南
 ---------------
 
-1. 使用 ``usbh_cdc_driver_install`` 配置，用户可以简单配置 bulk 端点地址和内部 ringbuffer 的大小，除此之外，用户还可以配置热插拔相关的回调函数 ``conn_callback`` ``disconn_callback``：
+1. 使用 ``usbh_cdc_driver_install`` 配置, 用户可以配置好 USB CDC 驱动程序，并通过设置 ``skip_init_usb_host_driver`` 配置项，在组件内部初始化好 USB HOST Driver 协议栈。
+
+.. code:: c
+
+    /* 安装 USB CDC 驱动，并由驱动内部初始化好 USB Host Driver 协议栈 */
+    usbh_cdc_driver_config_t config = {
+        .driver_task_stack_size = 1024 * 4,
+        .driver_task_priority = 5,
+        .xCoreID = 0,
+        .skip_init_usb_host_driver = false,
+        .new_dev_cb = cdc_new_dev_cb,
+    };
+
+2. 使用 ``usbh_cdc_create`` 配置，用户可以简单配置 itf_num 接口号和内部 ringbuffer 的大小，除此之外，用户还可以配置热插拔相关的回调函数 ``connect`` ``disconnect`` ``revc_data``：
 
 .. code:: c
 
     /* 安装 USB 主机 CDC 驱动程序，配置 bulk 端点地址和内部 ringbuffer 的大小 */
-    static usbh_cdc_config_t config = {
-        /* use default endpoint descriptor with user address */
-        .bulk_in_ep_addr = EXAMPLE_BULK_IN_EP_ADDR,
-        .bulk_out_ep_addr = EXAMPLE_BULK_OUT_EP_ADDR,
-        .rx_buffer_size = IN_RINGBUF_SIZE,
-        .tx_buffer_size = OUT_RINGBUF_SIZE,
-        .conn_callback = usb_connect_callback,
-        .disconn_callback = usb_disconnect_callback,
+    usbh_cdc_device_config_t dev_config = {
+        .vid = 0,
+        .pid = 0,
+        .itf_num = 1,
+        /* 如果设置为 0，则使用默认值 */
+        .rx_buffer_size = 0,
+        .tx_buffer_size = 0,
+        .cbs = {
+            .connect = cdc_connect_cb,
+            .disconnect = cdc_disconnect_cb,
+            .user_data = NULL
+        },
     };
+
+    usbh_cdc_handle_t handle = NULL;
+    usbh_cdc_create(&dev_config, &handle);
     /* 如果用户想要使用多个接口，可以像这样配置 */
     #if (EXAMPLE_BULK_ITF_NUM > 1)
-    config.itf_num = 2;
-    config.bulk_in_ep_addrs[1] = EXAMPLE_BULK_IN1_EP_ADDR;
-    config.bulk_out_ep_addrs[1] = EXAMPLE_BULK_OUT1_EP_ADDR;
-    config.rx_buffer_sizes[1] = IN_RINGBUF_SIZE;
-    config.tx_buffer_sizes[1] = OUT_RINGBUF_SIZE;
+    config.itf_num = 3;
+    usbh_cdc_handle_t handle2 = NULL;
+    usbh_cdc_create(&dev_config, &handle2);
     #endif
 
-    /* 安装 USB 主机 CDC 驱动程序 */
-    usbh_cdc_driver_install(&config);
-
-    /* 等待 USB 设备连接 */
-    usbh_cdc_wait_connect(portMAX_DELAY);
-
-2. 驱动程序初始化后，内部状态机将自动处理 USB 的热插拔。
-3. ``usbh_cdc_wait_connect`` 可以用于阻塞任务，直到 USB CDC 设备连接或超时。
-4. 成功连接后，主机将自动从 CDC 设备接收 USB 数据到内部 ``ringbuffer``，用户可以轮询 ``usbh_cdc_get_buffered_data_len`` 以读取缓冲数据大小，或者注册接收回调以在数据准备就绪时得到通知。然后 ``usbh_cdc_read_bytes`` 可以用于读取缓冲数据。
+3. 驱动程序初始化后，内部状态机将自动处理 USB 的热插拔。
+4. 成功连接后，主机将自动从 CDC 设备接收 USB 数据到内部 ``ringbuffer``，用户可以轮询 ``usbh_cdc_get_rx_buffer_size`` 以读取缓冲数据大小，或者注册接收回调以在数据准备就绪时得到通知。然后 ``usbh_cdc_read_bytes`` 可以用于读取缓冲数据。
 5. ``usbh_cdc_write_bytes`` 可以用于向 USB 设备发送数据。数据首先被写入内部传输 ``ringbuffer``，然后在 USB 总线空闲时发送出去。
-6. ``usbh_cdc_driver_delete`` 可以完全卸载 USB 驱动程序以释放所有资源。
-7. 如果配置多个 CDC 接口，每个接口都包含一个 IN 和 OUT 端点。用户可以使用 ``usbh_cdc_itf_read_bytes`` 和 ``usbh_cdc_itf_write_bytes`` 与指定的接口通信。
+6. ``usbh_cdc_delete`` 可以删除 USB CDC 设备，释放掉 ringbuffer 以及其他资源。
+7. ``usbh_cdc_driver_uninstall`` 可以完全卸载 USB 驱动程序以释放所有资源。
 
 示例代码
 -------------------------------

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -79,8 +79,8 @@ typedef struct {
     uint32_t event_task_stack_size; /*!< UART Event Task Stack size */
     int event_task_priority;        /*!< UART Event Task Priority */
     int line_buffer_size;           /*!< Line buffer size for command mode */
-    usbh_cdc_cb_t conn_callback;
-    usbh_cdc_cb_t disconn_callback;
+    usbh_cdc_event_cb_t conn_callback;
+    usbh_cdc_event_cb_t disconn_callback;
 } esp_modem_dte_config_t;
 
 /**
@@ -99,8 +99,8 @@ typedef struct {
         .rx_io_num = 26,                        \
         .rts_io_num = 27,                       \
         .cts_io_num = 23,                       \
-        .rx_buffer_size = 1024,                 \
-        .tx_buffer_size = 512,                  \
+        .rx_buffer_size = 2048,                 \
+        .tx_buffer_size = 2048,                  \
         .pattern_queue_size = 20,               \
         .event_queue_size = 30,                 \
         .event_task_stack_size = 2048,          \

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+# SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
 # SPDX-License-Identifier: Apache-2.0
 
 '''
@@ -21,5 +21,5 @@ from pytest_embedded import Dut
 @pytest.mark.timeout(60 * 60)
 def test_iot_usbh_cdc(dut: Dut)-> None:
     dut.expect_exact('Press ENTER to see the list of tests.')
-    dut.write('*')
+    dut.write('[auto]')
     dut.expect_unity_test_output(timeout = 1000)
