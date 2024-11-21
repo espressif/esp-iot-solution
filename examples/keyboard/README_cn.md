@@ -78,6 +78,10 @@ Note: keyboard_rgb_martix 来自 **QMK** 工程，由于使用 GPL 协议，如�
 
 #### Change LOG
 
+* v0.2.2 - 2024-11-21
+
+  * 支持唤醒睡眠状态下的 PC (remote wakeup)
+
 * v0.2.1 - 2024-8-12
 
   * 增加消抖时间，避免按键连续触发两次
