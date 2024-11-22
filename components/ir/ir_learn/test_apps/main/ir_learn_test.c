@@ -32,7 +32,6 @@
 #include "ir_learn.h"
 #include "ir_encoder.h"
 
-static const int NEED_DELETE    = BIT0;
 static const int DELETE_END     = BIT1;
 
 #define TEST_MEMORY_LEAK_THRESHOLD      (-400)
@@ -44,7 +43,6 @@ static const int DELETE_END     = BIT1;
 #define IR_TX_DETECT_IO                 GPIO_NUM_0
 
 #define IR_LEARN_COUNT                  4
-#define IR_OUT_SYMBOL_LEN               20
 
 static const char *TAG = "ir_learn_test";
 
@@ -104,6 +102,18 @@ static void detect_to_handler(void *arg)
     if (task_woken == pdTRUE) {
         portYIELD_FROM_ISR();
     }
+}
+
+static void ir_learn_enable_rx_ctl()
+{
+    const gpio_config_t io_enable_cfg = {
+        .pin_bit_mask = BIT64(IR_RX_CTRL_GPIO_NUM),
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = true,
+    };
+
+    ESP_ERROR_CHECK(gpio_config(&io_enable_cfg));
+    gpio_set_level(IR_RX_CTRL_GPIO_NUM, 0);
 }
 
 static void ir_learn_save_result(struct ir_learn_sub_list_head *data_save, struct ir_learn_sub_list_head *data_src)
@@ -174,12 +184,6 @@ static void ir_learn_manual_tx_task(void *arg)
     struct ir_learn_sub_list_head tx_data;
     QueueHandle_t tx_queue = NULL;
 
-    const gpio_config_t io_enable_cfg = {
-        .pin_bit_mask = BIT64(IR_RX_CTRL_GPIO_NUM),
-        .mode = GPIO_MODE_OUTPUT,
-        .pull_up_en = true,
-    };
-
     const gpio_config_t io_detect_cfg = {
         .intr_type = GPIO_INTR_ANYEDGE,
         .mode = GPIO_MODE_INPUT,
@@ -194,21 +198,17 @@ static void ir_learn_manual_tx_task(void *arg)
     tx_queue = xQueueCreate(1, sizeof(rmt_rx_done_event_data_t));
     ESP_GOTO_ON_FALSE(tx_queue, ESP_FAIL, err, TAG, "Queue creation failed");
 
-    ESP_ERROR_CHECK(gpio_config(&io_enable_cfg));
-    gpio_set_level(IR_RX_CTRL_GPIO_NUM, 0);
+    ir_learn_enable_rx_ctl();
 
     ESP_ERROR_CHECK(gpio_config(&io_detect_cfg));
     gpio_install_isr_service(0);
     ESP_ERROR_CHECK(gpio_isr_handler_add(IR_TX_DETECT_IO, detect_to_handler, tx_queue));
 
     while (1) {
-        if ((NEED_DELETE & xEventGroupGetBits(event))) {
-            break;
-        }
 
         if (xQueueReceive(tx_queue, &tx_data, pdMS_TO_TICKS(500)) == pdPASS) {
             ir_learn_test_tx_raw(&tx_data);
-            xEventGroupSetBits(event, NEED_DELETE);
+            break;
         }
     }
 
@@ -236,17 +236,10 @@ static void ir_learn_auto_tx_task(void *arg)
 
     static struct ir_learn_sub_list_head ir_auto_test_forward;      /**< IR learn auto test send data */
 
-    const gpio_config_t io_enable_cfg = {
-        .pin_bit_mask = BIT64(IR_RX_CTRL_GPIO_NUM),
-        .mode = GPIO_MODE_OUTPUT,
-        .pull_up_en = true,
-    };
-
     EventGroupHandle_t event = (EventGroupHandle_t)(arg);
     ESP_GOTO_ON_FALSE(event, ESP_ERR_INVALID_ARG, err, TAG, "Pointer of event is invalid");
 
-    ESP_ERROR_CHECK(gpio_config(&io_enable_cfg));
-    gpio_set_level(IR_RX_CTRL_GPIO_NUM, 0);
+    ir_learn_enable_rx_ctl();
 
     total_symbol_num = 0;
     symbol_num = (sizeof(ir_learn_tx_map)) / (sizeof(uint16_t)) / 2;
@@ -255,15 +248,18 @@ static void ir_learn_auto_tx_task(void *arg)
     ESP_GOTO_ON_FALSE(out_symbols, ESP_ERR_NO_MEM, err, TAG, "create tx symbols failed");
 
     for (int i = 0; i < (sizeof(ir_learn_tx_map)) / (sizeof(uint16_t)) / 2; i++) {
-        out_symbols[total_symbol_num].duration0 = ir_learn_tx_map[2 * i + 0];
+        uint16_t duration0 = ir_learn_tx_map[2 * i + 0];
+        uint16_t duration1 = ir_learn_tx_map[2 * i + 1];
+
+        out_symbols[total_symbol_num].duration0 = duration0;
         out_symbols[total_symbol_num].level0 = 1;
 
-        if (ir_learn_tx_map[2 * i + 1] > 0x7FFF) {
-            duration_part = ir_learn_tx_map[2 * i + 1] / 0x7FFF + ((ir_learn_tx_map[2 * i + 1] % 0x7FFF) ? 1 : 0);
+        if (duration1 > 0x7FFF) {
+            duration_part = duration1 / 0x7FFF + ((duration1 % 0x7FFF) ? 1 : 0);
             symbol_num += duration_part / 2;
             ESP_LOGI(TAG, "[%d] level-1 overflow:[%d], duration part:[%d], need add symbol:[%d -> %d]", \
                      i,
-                     ir_learn_tx_map[2 * i + 1],
+                     duration1,
                      duration_part,
                      duration_part / 2,
                      symbol_num);
@@ -277,10 +273,10 @@ static void ir_learn_auto_tx_task(void *arg)
 
             for (int j = 0; j < duration_part / 2; j++) {
                 if (j == (duration_part / 2 - 1)) {
-                    out_symbols[total_symbol_num].duration0 = (ir_learn_tx_map[2 * i + 1] - 0x7FFF - 0x7FFF * j * 2) / 2;
+                    out_symbols[total_symbol_num].duration0 = (duration1 - 0x7FFF - 0x7FFF * j * 2) / 2;
                     out_symbols[total_symbol_num].level0 = 0;
 
-                    out_symbols[total_symbol_num].duration1 = (ir_learn_tx_map[2 * i + 1] - 0x7FFF - 0x7FFF * j * 2) / 2;
+                    out_symbols[total_symbol_num].duration1 = (duration1 - 0x7FFF - 0x7FFF * j * 2) / 2;
                     out_symbols[total_symbol_num].level1 = 0;
                 } else {
                     out_symbols[total_symbol_num].duration0 = 0x7FFF;
@@ -293,7 +289,7 @@ static void ir_learn_auto_tx_task(void *arg)
             }
             continue;
         } else {
-            out_symbols[total_symbol_num].duration1 = ir_learn_tx_map[2 * i + 1];
+            out_symbols[total_symbol_num].duration1 = duration1;
             out_symbols[total_symbol_num].level1 = 0;
         }
         total_symbol_num++;
@@ -305,18 +301,10 @@ static void ir_learn_auto_tx_task(void *arg)
     };
     ir_learn_add_sub_list_node(&ir_auto_test_forward, 0, &symbol_package);
 
-    while (1) {
-        if ((NEED_DELETE & xEventGroupGetBits(event))) {
-            break;
-        }
-
-        if (count < IR_LEARN_COUNT) {
-            vTaskDelay(pdMS_TO_TICKS(2000));
-            ir_learn_test_tx_raw(&ir_auto_test_forward);
-            count++;
-        } else {
-            xEventGroupSetBits(event, NEED_DELETE);
-        }
+    while (count < IR_LEARN_COUNT) {
+        vTaskDelay(pdMS_TO_TICKS(2000));
+        ir_learn_test_tx_raw(&ir_auto_test_forward);
+        count++;
     }
 
 err:
@@ -434,9 +422,6 @@ static esp_err_t ir_learn_manual_test(ir_learn_result_cb cb)
     ESP_ERROR_CHECK(ir_learn_new(&config, &handle));
     xEventGroupWaitBits(learn_event_group, DELETE_END, true, true, portMAX_DELAY);
 
-    if (handle) {
-        ir_learn_stop(&handle);
-    }
     ir_learn_clean_sub_data(&ir_test_result);
     vEventGroupDelete(learn_event_group);
 
@@ -471,9 +456,6 @@ static esp_err_t ir_learn_auto_test(ir_learn_result_cb cb)
 
     ret = SLIST_EMPTY(&ir_test_result) ? ESP_FAIL : ESP_OK;
 
-    if (handle) {
-        ir_learn_stop(&handle);
-    }
     ir_learn_clean_sub_data(&ir_test_result);
     vEventGroupDelete(learn_event_group);
 

@@ -2,6 +2,7 @@ variables:
   # There is no target-test-env-v4.4
   DOCKER_TARGET_TEST_v5_0_ENV_IMAGE: "$CI_DOCKER_REGISTRY/target-test-env-v5.0:3"
   DOCKER_TARGET_TEST_v5_1_ENV_IMAGE: "$CI_DOCKER_REGISTRY/target-test-env-v5.1:1"
+  DOCKER_TARGET_TEST_v5_4_ENV_IMAGE: "$CI_DOCKER_REGISTRY/target-test-env-v5.4:1"
 
 .test_template: &test_template
   image: DOCKER_TARGET_TEST_v5_0_ENV_IMAGE
@@ -310,6 +311,26 @@ components_test_openai:
     TEST_TARGET: esp32s3
     TEST_FOLDER: components/openai
 
+components_test_esp_lcd_axs15231b:
+  extends:
+    - .pytest_template
+    - .rules:build:components_display_lcd_esp_lcd_axs15231b_test_apps
+  needs:
+    - job: "build_components_display_lcd_esp_lcd_axs15231b_test_apps"
+      artifacts: true
+      optional: false
+  parallel:
+    matrix:
+        - IDF_VERSION: "5.1"
+  tags:
+    - esp32s3
+    - esp32s3_lcd_ev
+  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
+  variables:
+    TEST_TARGET: esp32s3
+    TEST_FOLDER: components/display/lcd/esp_lcd_axs15231b
+    TEST_ENV: esp32_s3_lcd_ev_board
+
 components_test_esp_lcd_gc9b71:
   extends:
     - .pytest_template
@@ -506,10 +527,13 @@ components_test_esp_mmap_assets:
       - IDF_TARGET: esp32s3
         IDF_VERSION: "5.1"
         ENV_TAG: generic
+      - IDF_TARGET: esp32p4
+        IDF_VERSION: "5.3"
+        ENV_TAG: generic
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
+  image: $DOCKER_TARGET_TEST_v5_4_ENV_IMAGE
   variables:
     TEST_TARGET: ${IDF_TARGET}
     TEST_FOLDER: components/display/tools/esp_mmap_assets

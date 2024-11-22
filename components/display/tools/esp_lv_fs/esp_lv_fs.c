@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <string.h>
 #include "esp_log.h"
 #include "esp_check.h"
 #include "esp_lv_fs.h"
@@ -155,7 +156,11 @@ static void *fs_dir_open(lv_fs_drv_t *drv, const char *path)
     return NULL;
 }
 
+#if LVGL_VERSION_MAJOR >= 9
+static lv_fs_res_t fs_dir_read(lv_fs_drv_t * drv, void * dir_p, char * fn, uint32_t fn_len)
+#else
 static lv_fs_res_t fs_dir_read(lv_fs_drv_t *drv, void *dir_p, char *fn)
+#endif
 {
     LV_UNUSED(drv);
     // Return an error indicating that write operations are not supported
