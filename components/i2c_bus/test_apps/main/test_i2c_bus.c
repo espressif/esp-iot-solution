@@ -41,7 +41,7 @@ static size_t before_free_32bit;
 
 #define ESP_SLAVE_ADDR 0x28         /*!< ESP32 slave address, you can set any 7bit value */
 
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0) && !CONFIG_I2C_BUS_BACKWARD_CONFIG
 static QueueHandle_t s_receive_queue;
 
 static IRAM_ATTR bool test_i2c_rx_done_callback(i2c_slave_dev_handle_t channel, const i2c_slave_rx_done_event_data_t *edata, void *user_data)
@@ -134,7 +134,7 @@ static void i2c_master_write_test(void)
     i2c_bus_device_handle_t i2c_device1 = i2c_bus_device_create(i2c0_bus, ESP_SLAVE_ADDR, 0);
     TEST_ASSERT(i2c_device1 != NULL);
 
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0) && !CONFIG_I2C_BUS_BACKWARD_CONFIG
     unity_wait_for_signal("i2c slave init finish");
     unity_send_signal("master write");
 #endif
@@ -146,7 +146,7 @@ static void i2c_master_write_test(void)
     i2c_bus_write_bytes(i2c_device1, NULL_I2C_MEM_ADDR, DATA_LENGTH / 2, data_wr);
     disp_buf(data_wr, i);
     free(data_wr);
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0) && !CONFIG_I2C_BUS_BACKWARD_CONFIG
     unity_wait_for_signal("ready to delete");
 #endif
     i2c_bus_device_delete(&i2c_device1);
@@ -159,7 +159,7 @@ static void i2c_slave_read_test(void)
 {
     uint8_t *data_rd = (uint8_t *) malloc(DATA_LENGTH);
 
-#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 3, 0)
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 3, 0) || CONFIG_I2C_BUS_BACKWARD_CONFIG
     int len = 0;
     int size_rd = 0;
 
@@ -250,7 +250,7 @@ static void master_read_slave_test(void)
     i2c_bus_device_handle_t i2c_device1 = i2c_bus_device_create(i2c0_bus, ESP_SLAVE_ADDR, 0);
     TEST_ASSERT(i2c_device1 != NULL);
 
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0) && !CONFIG_I2C_BUS_BACKWARD_CONFIG
     unity_send_signal("i2c master init finish");
     unity_wait_for_signal("slave write");
 #endif
@@ -259,7 +259,7 @@ static void master_read_slave_test(void)
     vTaskDelay(100 / portTICK_RATE_MS);
 
     disp_buf(data_rd, RW_TEST_LENGTH);
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0) && !CONFIG_I2C_BUS_BACKWARD_CONFIG
     unity_send_signal("ready to delete");
 #endif
     i2c_bus_device_delete(&i2c_device1);
@@ -273,7 +273,7 @@ static void slave_write_buffer_test(void)
 {
     uint8_t *data_wr = (uint8_t *) malloc(RW_TEST_LENGTH);
 
-#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 3, 0)
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 3, 0) || CONFIG_I2C_BUS_BACKWARD_CONFIG
     i2c_config_t conf_slave = {
         .mode = I2C_MODE_SLAVE,
         .sda_io_num = I2C_SLAVE_SDA_IO,
@@ -320,7 +320,7 @@ static void slave_write_buffer_test(void)
     disp_buf(data_wr, RW_TEST_LENGTH);
     free(data_wr);
 
-#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 3, 0)
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 3, 0) || CONFIG_I2C_BUS_BACKWARD_CONFIG
     i2c_driver_delete(I2C_SLAVE_NUM);
 #else
     unity_wait_for_signal("ready to delete");
@@ -414,7 +414,7 @@ void tearDown(void)
 
 void app_main(void)
 {
-#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 3, 0)
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 3, 0) || CONFIG_I2C_BUS_BACKWARD_CONFIG
     printf("I2C BUS TEST \n");
 #else
     printf("I2C BUS V2 TEST \n");

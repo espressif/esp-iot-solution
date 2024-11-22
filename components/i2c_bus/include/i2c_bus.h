@@ -10,7 +10,11 @@
 #include "esp_idf_version.h"
 
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
+#if CONFIG_I2C_BUS_BACKWARD_CONFIG
+#include "driver/i2c.h"
+#else
 #include "driver/i2c_master.h"
+#endif
 #else
 #include "driver/i2c.h"
 #endif
@@ -32,6 +36,7 @@ extern "C"
 #endif
 
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
+#if !CONFIG_I2C_BUS_BACKWARD_CONFIG
 /**
  * @brief I2C initialization parameters
  */
@@ -46,6 +51,7 @@ typedef struct {
     } master;                           /*!< I2C master config */
     uint32_t clk_flags;                 /*!< Bitwise of ``I2C_SCLK_SRC_FLAG_**FOR_DFS**`` for clk source choice*/
 } i2c_config_t;
+#endif
 
 typedef void *i2c_cmd_handle_t;         /*!< I2C command handle  */
 #endif

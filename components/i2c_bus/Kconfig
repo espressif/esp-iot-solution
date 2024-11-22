@@ -1,6 +1,10 @@
 menu "Bus Options"
 
     menu "I2C Bus Options"
+        config ESP_IDF_VERSION
+            string
+            option env="ESP_IDF_VERSION"
+
         config I2C_BUS_DYNAMIC_CONFIG
             bool "enable dynamic configuration"
             default y
@@ -14,6 +18,13 @@ menu "Bus Options"
             range 50 5000
             help
                 task block time when try to take the bus, unit:milliseconds
+
+        config I2C_BUS_BACKWARD_CONFIG
+            bool "Enable backward compatibility for the I2C driver (force use of the old i2c_driver above v5.3)"
+            default n
+            depends on ESP_IDF_VERSION >= 5.3
+            help
+                Enable this option for backward compatibility with the old I2C driver
     endmenu
 
 endmenu
