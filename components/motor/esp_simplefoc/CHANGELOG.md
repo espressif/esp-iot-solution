@@ -1,5 +1,10 @@
 # ChangeLog
 
+## v1.1.0 - 2024-11-26
+### Enhancements:
+* FOC:
+    * Support 6PWM driver. Note that only chips that support ``MCPWM`` can use 6PWM driver.
+
 ## v1.0.0 - 2024-9-20
 ### Enhancements:
 * FOC:

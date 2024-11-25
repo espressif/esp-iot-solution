@@ -78,6 +78,21 @@ TEST_CASE("test as5048a", "[sensor][as5048a][spi]")
     as5048a.deinit();
 }
 
+#if CONFIG_SOC_MCPWM_SUPPORTED
+TEST_CASE("test 6pwm driver", "[driver][6pwm]")
+{
+    BLDCDriver6PWM driver = BLDCDriver6PWM(1, 2, 3, 4, 5, 6);
+    TEST_ASSERT_EQUAL(driver.init(), 1);
+    driver.dc_a = 0.2;
+    driver.dc_b = 0.4;
+    driver.dc_c = 0.8;
+
+    driver.halPwmWrite();
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+    driver.deinit();
+}
+#endif
+
 TEST_CASE("test esp_simplefoc openloop control", "[single motor][openloop][14pp][ledc][drv8313][c3]")
 {
     BLDCMotor motor = BLDCMotor(14);
