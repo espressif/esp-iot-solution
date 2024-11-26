@@ -73,3 +73,7 @@
 
 * BLE-OTA:
   * Add support for Delta OTA.
+
+## v0.1.14 - 2024-11-21
+* BLE-OTA:
+  * Add support for enabling BLE 5.0 for NimBLE

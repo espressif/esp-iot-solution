@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2019-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2019-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
 */
@@ -655,14 +655,15 @@ esp_ble_ota_ext_advertise(void)
 
     /* enable connectable advertising */
     params.connectable = 1;
+    params.scannable = 1;
 
     /* advertise using random addr */
     params.own_addr_type = BLE_OWN_ADDR_PUBLIC;
 
     params.primary_phy = BLE_HCI_LE_PHY_1M;
-    params.secondary_phy = BLE_HCI_LE_PHY_2M;
-    //params.tx_power = 127;
+    params.secondary_phy = BLE_HCI_LE_PHY_1M;
     params.sid = 1;
+    params.legacy_pdu = 1;
 
     params.itvl_min = BLE_GAP_ADV_FAST_INTERVAL1_MIN;
     params.itvl_max = BLE_GAP_ADV_FAST_INTERVAL1_MIN;
