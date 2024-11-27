@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v1.0.0 (2024-11-27)
+
+* Release the official version.
+
 ## v0.2.0 (2024-07-31)
 
 * Support USB High speed

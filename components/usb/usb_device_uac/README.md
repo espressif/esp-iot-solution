@@ -2,7 +2,7 @@
 
 ## USB Device UAC Component
 
-`usb_device_uac` is a USB `UAC` device driver for ESP32-S2/ESP32-S3. Support for transmitting/receiving audio from the host side, with a maximum of 8 speaker channels, 4 microphone channels, and configurable sampling rates.
+`usb_device_uac` is a USB `UAC` device driver for ESP32-S2/ESP32-S3/ESP32-P4. Support for transmitting/receiving audio from the host side, with a maximum of 8 speaker channels, 4 microphone channels, and configurable sampling rates.
 
 Features:
 
