@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.1.0 - 2024-11-22
+
+### Enhancements:
+
+- Support manual selection of ``driver/i2c`` or ``esp_driver_i2c`` in idf v5.3 and above.
+
 ## v1.0.0 - 2024-9-19
 
 ### Enhancements:
