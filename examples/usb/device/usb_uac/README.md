@@ -46,7 +46,7 @@ After the programming is completed, insert the USB interface on the development 
     . $HOME/esp/esp-idf/export.sh
     ```
 
-3. Set ESP-IDF build target to `esp32s2` or `esp32s3`
+3. Set ESP-IDF build target to `esp32s3` or `esp32-p4`
 
     ```bash
     idf.py set-target esp32s3
