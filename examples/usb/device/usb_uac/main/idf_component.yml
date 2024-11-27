@@ -18,5 +18,5 @@ dependencies:
     override_path: "../common_components/esp32_p4_function_ev_board"
   idf: ">=5.1"
   usb_device_uac:
-    version: "0.*"
+    version: "1.*"
     override_path: "../../../../../components/usb/usb_device_uac"
