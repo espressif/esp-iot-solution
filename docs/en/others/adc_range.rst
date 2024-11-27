@@ -24,15 +24,15 @@ How to Apply a Patch Based on ESP-IDF ``v4.4.8``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 1. Please make sure ESP-IDF has been ``checked out`` to the ``v4.4.8``
-2. Please download file :download:`esp32s3_adc_range_to_3100.patch <../../_static/esp32s3_adc_range_to_3100.patch>` to anywhere you want
-3. Using command ``git am --signoff < esp32s3_adc_range_to_3100.patch`` to apply the patch to ESP-IDF
+2. Please download file :download:`esp32s3_adc_range_to_3300.patch <../../_static/esp32s3_adc_range_to_3300.patch>` to anywhere you want
+3. Using command ``git am --signoff < esp32s3_adc_range_to_3300.patch`` to apply the patch to ESP-IDF
 
 How to Apply a Patch Based on ESP-IDF ``v5.3.1``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 1. Please make sure ESP-IDF has been ``checked out`` to the ``v5.3.1``
-2. Please download file :download:`esp32s3_adc_range_to_3100_v531.patch <../../_static/esp32s3_adc_range_to_3100_v531.patch>` to anywhere you want
-3. Using command ``git am --signoff < esp32s3_adc_range_to_3100_v531.patch`` to apply the patch to ESP-IDF
+2. Please download file :download:`esp32s3_adc_range_to_3300_v531.patch <../../_static/esp32s3_adc_range_to_3300_v531.patch>` to anywhere you want
+3. Using command ``git am --signoff < esp32s3_adc_range_to_3300_v531.patch`` to apply the patch to ESP-IDF
 
 API Guide
 -------------
