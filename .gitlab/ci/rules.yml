@@ -82,9 +82,6 @@
 .patterns-components_display_lcd_esp_lcd_jd9365: &patterns-components_display_lcd_esp_lcd_jd9365
   - "components/display/lcd/esp_lcd_jd9365/**/*"
 
-.patterns-components_display_lcd_esp_lcd_axs15231b: &patterns-components_display_lcd_esp_lcd_axs15231b
-  - "components/display/lcd/esp_lcd_axs15231b/**/*"
-
 .patterns-components_display_lcd_esp_lcd_gc9b71: &patterns-components_display_lcd_esp_lcd_gc9b71
   - "components/display/lcd/esp_lcd_gc9b71/**/*"
 
