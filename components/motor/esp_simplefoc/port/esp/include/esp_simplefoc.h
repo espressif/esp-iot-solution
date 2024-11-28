@@ -8,6 +8,7 @@
 #include "esp_platform.h"
 #include "BLDCMotor.h"
 #include "esp_hal_bldc_3pwm.h"
+#include "esp_hal_bldc_6pwm.h"
 #include "communication/SimpleFOCDebug.h"
 #include "communication/Commander.h"
 #include "sensors/GenericSensor.h"

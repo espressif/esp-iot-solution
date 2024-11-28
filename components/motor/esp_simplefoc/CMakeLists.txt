@@ -9,8 +9,12 @@ set(SRC_FILES
     "port/angle_sensor/mt6701.cpp"
     "port/angle_sensor/as5048a.cpp")
 
+if(CONFIG_SOC_MCPWM_SUPPORTED)
+    list(APPEND SRC_FILES "port/esp/esp_hal_bldc_6pwm.cpp")
+endif()
+
 set(INC_FILES "port/esp/include/" "port/angle_sensor")
-set(IGNORE_FILES "port/esp/esp_hal_adc.cpp" "port/esp/esp_hal_mcpwm.cpp"
+set(IGNORE_FILES "port/esp/esp_hal_adc.cpp" "port/esp/esp_hal_bldc_6pwm.cpp"
                  "port/esp/esp_hal_bldc_3pwm.cpp" "port/angle_sensor/mt6701.cpp" "port/angle_sensor/as5048a.cpp")
 
 idf_component_register(
