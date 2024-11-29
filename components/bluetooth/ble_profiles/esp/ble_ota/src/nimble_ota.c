@@ -221,10 +221,18 @@ write_ota_data:
     return;
 
 sector_end:
+    // Check crc 
+    uint16_t cal_crc = crc16_ccitt(fw_buf, fw_buf_offset - 2);
+    uint8_t crc_L = fw_buf[fw_buf_offset - 2];
+    uint8_t crc_H = fw_buf[fw_buf_offset - 1];
+    uint16_t crc = crc_H << 8 | crc_L;
+    bool match = (cal_crc == crc ? true : false);
+    if (match){
     if (fw_buf_offset < ota_block_size) {
         esp_ble_ota_recv_fw_handler(fw_buf, fw_buf_offset);
     } else {
         esp_ble_ota_recv_fw_handler(fw_buf, 4096);
+    }
     }
 
     fw_buf_offset = 0;
@@ -232,7 +240,10 @@ sector_end:
 
     cmd_ack[0] = om->om_data[0];
     cmd_ack[1] = om->om_data[1];
-    cmd_ack[2] = 0x00; //success
+     if (match)
+        cmd_ack[2] = 0x00; // success
+    else
+        cmd_ack[2] = 0x01; // crc error
     cmd_ack[3] = 0x00;
     crc16 = crc16_ccitt(cmd_ack, 18);
     cmd_ack[18] = crc16 & 0xff;
