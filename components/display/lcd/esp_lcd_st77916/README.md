@@ -26,8 +26,8 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
 
 ```c
     ESP_LOGI(TAG, "Initialize SPI bus");
-    const spi_bus_config_t bus_config = ST77916_PANEL_BUS_SPI_CONFIG(EXAMPLE_PIN_NUM_LCD_PCLK, EXAMPLE_PIN_NUM_LCD_DATA0, EXAMPLE_LCD_H_RES * 80 * sizeof(uint16_t));
-    ESP_ERROR_CHECK(spi_bus_initialize(EXAMPLE_LCD_HOST, &bus_config, SPI_DMA_CH_AUTO));
+    const spi_bus_config_t buscfg = ST77916_PANEL_BUS_SPI_CONFIG(EXAMPLE_PIN_NUM_LCD_PCLK, EXAMPLE_PIN_NUM_LCD_DATA0, EXAMPLE_LCD_H_RES * 80 * sizeof(uint16_t));
+    ESP_ERROR_CHECK(spi_bus_initialize(EXAMPLE_LCD_HOST, &buscfg, SPI_DMA_CH_AUTO));
 
     ESP_LOGI(TAG, "Install panel IO");
     esp_lcd_panel_io_handle_t io_handle = NULL;
@@ -39,7 +39,7 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
  * Uncomment these line if use custom initialization commands.
  * The array should be declared as static const and positioned outside the function.
  */
-// static const ST77916_lcd_init_cmd_t lcd_init_cmds[] = {
+// static const st77916_lcd_init_cmd_t lcd_init_cmds[] = {
 // //  {cmd, { data }, data_size, delay_ms}
 //  {0xF0, (uint8_t []){0x08}, 1, 0},
 //  {0xF2, (uint8_t []){0x08}, 1, 0},
@@ -50,9 +50,9 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
 
     ESP_LOGI(TAG, "Install ST77916 panel driver");
     esp_lcd_panel_handle_t panel_handle = NULL;
-    ST77916_vendor_config_t vendor_config = {
+    const st77916_vendor_config_t vendor_config = {
         // .init_cmds = lcd_init_cmds,         // Uncomment these line if use custom initialization commands
-        // .init_cmds_size = sizeof(lcd_init_cmds) / sizeof(ST77916_lcd_init_cmd_t),
+        // .init_cmds_size = sizeof(lcd_init_cmds) / sizeof(st77916_lcd_init_cmd_t),
         .flags = {
             .use_qspi_interface = 0,
         },
@@ -73,12 +73,12 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
 
 ```c
     ESP_LOGI(TAG, "Initialize QSPI bus");
-    const esp_lcd_panel_io_spi_config_t io_config = ST77916_PANEL_BUS_QSPI_CONFIG(EXAMPLE_PIN_NUM_LCD_PCLK,
-                                                                                 EXAMPLE_PIN_NUM_LCD_DATA0,
-                                                                                 EXAMPLE_PIN_NUM_LCD_DATA1,
-                                                                                 EXAMPLE_PIN_NUM_LCD_DATA2,
-                                                                                 EXAMPLE_PIN_NUM_LCD_DATA3
-                                                                                 EXAMPLE_LCD_H_RES * 80 * sizeof(uint16_t));
+    const spi_bus_config_t buscfg = ST77916_PANEL_BUS_QSPI_CONFIG(EXAMPLE_PIN_NUM_LCD_PCLK,
+                                                                    EXAMPLE_PIN_NUM_LCD_DATA0,
+                                                                    EXAMPLE_PIN_NUM_LCD_DATA1,
+                                                                    EXAMPLE_PIN_NUM_LCD_DATA2,
+                                                                    EXAMPLE_PIN_NUM_LCD_DATA3,
+                                                                    EXAMPLE_LCD_H_RES * 80 * sizeof(uint16_t));
     ESP_ERROR_CHECK(spi_bus_initialize(EXAMPLE_LCD_HOST, &buscfg, SPI_DMA_CH_AUTO));
 
     ESP_LOGI(TAG, "Install panel IO");
@@ -90,7 +90,7 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
  * Uncomment these line if use custom initialization commands.
  * The array should be declared as static const and positioned outside the function.
  */
-// static const ST77916_lcd_init_cmd_t lcd_init_cmds[] = {
+// static const st77916_lcd_init_cmd_t lcd_init_cmds[] = {
 // //  {cmd, { data }, data_size, delay_ms}
 //  {0xF0, (uint8_t []){0x08}, 1, 0},
 //  {0xF2, (uint8_t []){0x08}, 1, 0},
@@ -101,9 +101,9 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
 
     ESP_LOGI(TAG, "Install ST77916 panel driver");
     esp_lcd_panel_handle_t panel_handle = NULL;
-    ST77916_vendor_config_t vendor_config = {
+    const st77916_vendor_config_t vendor_config = {
         // .init_cmds = lcd_init_cmds,         // Uncomment these line if use custom initialization commands
-        // .init_cmds_size = sizeof(lcd_init_cmds) / sizeof(ST77916_lcd_init_cmd_t),
+        // .init_cmds_size = sizeof(lcd_init_cmds) / sizeof(st77916_lcd_init_cmd_t),
         .flags = {
             .use_qspi_interface = 1,
         },
