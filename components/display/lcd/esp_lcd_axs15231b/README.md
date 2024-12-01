@@ -25,10 +25,10 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
 
 ```c
     ESP_LOGI(TAG, "Initialize SPI bus");
-    const spi_bus_config_t bus_config = AXS15231B_PANEL_BUS_SPI_CONFIG(EXAMPLE_PIN_NUM_LCD_PCLK,
+    const spi_bus_config_t buscfg = AXS15231B_PANEL_BUS_SPI_CONFIG(EXAMPLE_PIN_NUM_LCD_PCLK,
                                                                     EXAMPLE_PIN_NUM_LCD_DATA0,
                                                                     EXAMPLE_LCD_H_RES * 80 * sizeof(uint16_t));
-    ESP_ERROR_CHECK(spi_bus_initialize(EXAMPLE_LCD_HOST, &bus_config, SPI_DMA_CH_AUTO));
+    ESP_ERROR_CHECK(spi_bus_initialize(EXAMPLE_LCD_HOST, &buscfg, SPI_DMA_CH_AUTO));
 
     ESP_LOGI(TAG, "Install panel IO");
     esp_lcd_panel_io_handle_t io_handle = NULL;
@@ -74,12 +74,12 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
 
 ```c
     ESP_LOGI(TAG, "Initialize QSPI bus");
-    const esp_lcd_panel_io_spi_config_t io_config = AXS15231B_PANEL_BUS_QSPI_CONFIG(EXAMPLE_PIN_NUM_LCD_PCLK,
-                                                                                 EXAMPLE_PIN_NUM_LCD_DATA0,
-                                                                                 EXAMPLE_PIN_NUM_LCD_DATA1,
-                                                                                 EXAMPLE_PIN_NUM_LCD_DATA2,
-                                                                                 EXAMPLE_PIN_NUM_LCD_DATA3,
-                                                                                 EXAMPLE_LCD_H_RES * 80 * sizeof(uint16_t));
+    const spi_bus_config_t buscfg = AXS15231B_PANEL_BUS_QSPI_CONFIG(EXAMPLE_PIN_NUM_LCD_PCLK,
+                                                                        EXAMPLE_PIN_NUM_LCD_DATA0,
+                                                                        EXAMPLE_PIN_NUM_LCD_DATA1,
+                                                                        EXAMPLE_PIN_NUM_LCD_DATA2,
+                                                                        EXAMPLE_PIN_NUM_LCD_DATA3,
+                                                                        EXAMPLE_LCD_H_RES * 80 * sizeof(uint16_t));
     ESP_ERROR_CHECK(spi_bus_initialize(EXAMPLE_LCD_HOST, &buscfg, SPI_DMA_CH_AUTO));
 
     ESP_LOGI(TAG, "Install panel IO");
@@ -102,7 +102,7 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
 
     ESP_LOGI(TAG, "Install AXS15231B panel driver");
     esp_lcd_panel_handle_t panel_handle = NULL;
-    axs15231b_vendor_config_t vendor_config = {
+    const axs15231b_vendor_config_t vendor_config = {
         // .init_cmds = lcd_init_cmds,         // Uncomment these line if use custom initialization commands
         // .init_cmds_size = sizeof(lcd_init_cmds) / sizeof(axs15231b_lcd_init_cmd_t),
         .flags = {

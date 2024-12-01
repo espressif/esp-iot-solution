@@ -52,7 +52,7 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
 
     ESP_LOGI(TAG, "Install GC9B71 panel driver");
     esp_lcd_panel_handle_t panel_handle = NULL;
-    gc9b71_vendor_config_t vendor_config = {
+    const gc9b71_vendor_config_t vendor_config = {
         // .init_cmds = lcd_init_cmds,         // Uncomment these line if use custom initialization commands
         // .init_cmds_size = sizeof(lcd_init_cmds) / sizeof(gc9b71_lcd_init_cmd_t),
         .flags = {
@@ -75,12 +75,12 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
 
 ```c
     ESP_LOGI(TAG, "Initialize QSPI bus");
-    const esp_lcd_panel_io_spi_config_t io_config = GC9B71_PANEL_BUS_QSPI_CONFIG(EXAMPLE_PIN_NUM_LCD_PCLK,
-                                                                                 EXAMPLE_PIN_NUM_LCD_DATA0,
-                                                                                 EXAMPLE_PIN_NUM_LCD_DATA1,
-                                                                                 EXAMPLE_PIN_NUM_LCD_DATA2,
-                                                                                 EXAMPLE_PIN_NUM_LCD_DATA3,
-                                                                                 EXAMPLE_LCD_H_RES * 80 * sizeof(uint16_t));
+    const spi_bus_config_t buscfg = GC9B71_PANEL_BUS_QSPI_CONFIG(EXAMPLE_PIN_NUM_LCD_PCLK,
+                                                                    EXAMPLE_PIN_NUM_LCD_DATA0,
+                                                                    EXAMPLE_PIN_NUM_LCD_DATA1,
+                                                                    EXAMPLE_PIN_NUM_LCD_DATA2,
+                                                                    EXAMPLE_PIN_NUM_LCD_DATA3,
+                                                                    EXAMPLE_LCD_H_RES * 80 * sizeof(uint16_t));
     ESP_ERROR_CHECK(spi_bus_initialize(EXAMPLE_LCD_HOST, &buscfg, SPI_DMA_CH_AUTO));
 
     ESP_LOGI(TAG, "Install panel IO");
@@ -103,7 +103,7 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
 
     ESP_LOGI(TAG, "Install GC9B71 panel driver");
     esp_lcd_panel_handle_t panel_handle = NULL;
-    gc9b71_vendor_config_t vendor_config = {
+    const gc9b71_vendor_config_t vendor_config = {
         // .init_cmds = lcd_init_cmds,         // Only useful when `use_external_init_cmds` is set to 1
         // .init_cmds_size = sizeof(lcd_init_cmds) / sizeof(gc9b71_lcd_init_cmd_t),
         .flags = {
