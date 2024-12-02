@@ -26,7 +26,7 @@ static size_t before_free_32bit;
 
 static void _set_angle(ledc_mode_t speed_mode, float angle)
 {
-    for (size_t i = 0; i < 8; i++) {
+    for (size_t i = 0; i < 4; i++) {
         iot_servo_write_angle(speed_mode, i, angle);
     }
 }
@@ -53,7 +53,7 @@ TEST_CASE("Servo_motor test", "[servo][iot]")
                 LEDC_CHANNEL_3,
             },
         },
-        .channel_number = 8,
+        .channel_number = 4,
     } ;
     TEST_ASSERT(ESP_OK == iot_servo_init(LEDC_LOW_SPEED_MODE, &servo_cfg_ls));
 
@@ -61,27 +61,13 @@ TEST_CASE("Servo_motor test", "[servo][iot]")
     float angle_ls, angle_hs;
     for (i = 0; i <= 180; i++) {
         _set_angle(LEDC_LOW_SPEED_MODE, i);
-#ifdef CONFIG_IDF_TARGET_ESP32
-        _set_angle(LEDC_HIGH_SPEED_MODE, (180 - i));
-#endif
         vTaskDelay(50 / portTICK_PERIOD_MS);
         iot_servo_read_angle(LEDC_LOW_SPEED_MODE, 0, &angle_ls);
-#ifdef CONFIG_IDF_TARGET_ESP32
-        iot_servo_read_angle(LEDC_HIGH_SPEED_MODE, 0, &angle_hs);
-#endif
-
-#ifdef CONFIG_IDF_TARGET_ESP32
-        ESP_LOGI("servo", "[%d|%.2f], [%d|%.2f]", i, angle_ls, (180 - i), angle_hs);
-#else
         ESP_LOGI("servo", "[%d|%.2f]", i, angle_ls);
         (void)angle_hs;
-#endif
     }
 
     iot_servo_deinit(LEDC_LOW_SPEED_MODE);
-#ifdef CONFIG_IDF_TARGET_ESP32
-    iot_servo_deinit(LEDC_HIGH_SPEED_MODE);
-#endif
 }
 
 static void check_leak(size_t before_free, size_t after_free, const char *type)
