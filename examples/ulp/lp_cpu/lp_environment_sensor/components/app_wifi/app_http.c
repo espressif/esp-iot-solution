@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <string.h>
 #include "cJSON.h"
 #include "esp_crt_bundle.h"
 #include "esp_log.h"
@@ -107,13 +108,20 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt)
     return ESP_OK;
 }
 
-esp_err_t http_rest_with_url(char *district_id, char *text, char *wind_class,
+esp_err_t http_rest_with_url(char *district_id, char *city, char *name, char *text, char *wind_class,
                              char *wind_dir, char *uptime, char *week, int *high, int *low)
 {
     char local_response_buffer[MAX_HTTP_OUTPUT_BUFFER] = {0};
-    char weather_http_url[120] = "https://api.map.baidu.com/weather/v1/?district_id=";
+    char weather_http_url[120] = {0};
+#ifdef CONFIG_REGION_OVERSEAS
+    strcat(weather_http_url, "https://api.map.baidu.com/weather_abroad/v1/?district_id=");
+    strcat(weather_http_url, district_id);
+    strcat(weather_http_url, "&data_type=all&language=en&ak=uKBj61fKPRDbXzv5w3ecFaVove3ZqwlT");
+#elif CONFIG_REGION_DOMESTIC
+    strcat(weather_http_url, "https://api.map.baidu.com/weather/v1/?district_id=");
     strcat(weather_http_url, district_id);
     strcat(weather_http_url, "&data_type=all&ak=uKBj61fKPRDbXzv5w3ecFaVove3ZqwlT");
+#endif
     esp_http_client_config_t config = {
         .url = weather_http_url,
         .event_handler = _http_event_handler,
@@ -126,10 +134,13 @@ esp_err_t http_rest_with_url(char *district_id, char *text, char *wind_class,
 
     cJSON *root = cJSON_Parse(local_response_buffer);
     cJSON *result = cJSON_GetObjectItem(root, "result");
+    cJSON *location = cJSON_GetObjectItem(result, "location");
     cJSON *now = cJSON_GetObjectItem(result, "now");
     cJSON *forecasts = cJSON_GetObjectItem(result, "forecasts");
     cJSON *first_forecast = cJSON_GetArrayItem(forecasts, 0);
 
+    char *pre_city = cJSON_GetObjectItem(location, "city")->valuestring;
+    char *pre_name = cJSON_GetObjectItem(location, "name")->valuestring;
     char *pre_text = cJSON_GetObjectItem(now, "text")->valuestring;
     char *pre_wind_class = cJSON_GetObjectItem(now, "wind_class")->valuestring;
     char *pre_wind_dir = cJSON_GetObjectItem(now, "wind_dir")->valuestring;
@@ -138,6 +149,8 @@ esp_err_t http_rest_with_url(char *district_id, char *text, char *wind_class,
     *low = cJSON_GetObjectItem(first_forecast, "low")->valueint;
     char *pre_week = cJSON_GetObjectItem(first_forecast, "week")->valuestring;
 
+    memcpy(city, pre_city, strlen(pre_city));
+    memcpy(name, pre_name, strlen(pre_name));
     memcpy(text, pre_text, strlen(pre_text));
     memcpy(wind_class, pre_wind_class, strlen(pre_wind_class));
     memcpy(wind_dir, pre_wind_dir, strlen(pre_wind_dir));

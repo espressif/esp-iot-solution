@@ -38,10 +38,6 @@
 #include "driver/gpio.h"
 #include "app_epaper.h"
 
-#ifndef CONFIG_UPDATE_WEATHER_DATA
-#define CONFIG_UPDATE_WEATHER_DATA 0
-#endif
-
 static const char *TAG = "LP_Environment_Sensor";
 
 extern const uint8_t lp_core_main_bin_start[] asm("_binary_lp_core_main_bin_start");
@@ -64,11 +60,11 @@ static esp_rmaker_device_t *temp_sensor_device;
 
 static epaper_handle_t s_epaper = NULL;
 
-static char *city_name = "Shanghai";    // City name for weather information retrieval
-static char *district_name = "Pudong";  // District name for weather information retrieval
 #if CONFIG_UPDATE_WEATHER_DATA
-static char *district_id = "310115";    // District ID for weather information retrieval (needs to be queried on Baidu Developer Platform)
+static char *district_id = CONFIG_CITY_DISTRICT_ID;    // District ID for weather information retrieval (needs to be queried on Baidu Developer Platform)
 #endif
+static RTC_SLOW_ATTR char city_name[10] = {0};      // City name for weather information retrieval
+static RTC_SLOW_ATTR char district_name[10] = {0};  // District name for weather information retrieval
 static RTC_SLOW_ATTR char text[10] = {0};
 static RTC_SLOW_ATTR char wind_class[10] = {0};
 static RTC_SLOW_ATTR char wind_dir[15] = {0};
@@ -208,7 +204,7 @@ static void http_task(void *pvParameters)
     while (1) {
         EventBits_t bits = xEventGroupWaitBits(esp_ths_event_group, WIFI_CONNECT_DONE_BIT, pdTRUE, pdFALSE, portMAX_DELAY);
         if (bits & WIFI_CONNECT_DONE_BIT) {
-            if (http_rest_with_url(district_id, text, wind_class, wind_dir, uptime, week, &high, &low) == ESP_OK) {
+            if (http_rest_with_url(district_id, city_name, district_name, text, wind_class, wind_dir, uptime, week, &high, &low) == ESP_OK) {
                 xEventGroupSetBits(esp_ths_event_group, WEATHER_DATA_UPDATE_BIT);
                 ESP_LOGI(TAG, "Weather data get done.");
             }
@@ -249,6 +245,11 @@ static void epaper_task(void *pvParameters)
         .wind_dir = wind_dir,
         .uptime = uptime,
     };
+
+#ifdef CONFIG_REGION_DOMESTIC
+    epaper_display_data.city = CONFIG_DOMESTIC_CITY_NAME;
+    epaper_display_data.district = CONFIG_DOMESTIC_DISTRICT_NAME;
+#endif
 
     while (1) {
         if (data->enable_http == true) {
@@ -345,7 +346,7 @@ void app_main(void)
         /* Load LP Core binary and start the coprocessor */
         lp_core_init();
     } else if (cause == ESP_SLEEP_WAKEUP_ULP) {
-        ESP_LOGI(TAG, "wake up by LP CPU.");
+        printf("wake up by ULP.\n");
         float *temp = (float*)(&ulp_temp);
         float *hum = (float *)(&ulp_hum);
         bool weather_data_report = false;
@@ -400,6 +401,6 @@ void app_main(void)
     /* Setup wakeup triggers */
     ESP_ERROR_CHECK(esp_sleep_enable_ulp_wakeup());
     /* Enter Deep Sleep */
-    ESP_LOGI(TAG, "Enter deep sleep.");
+    printf("Enter deep sleep.\n");
     esp_deep_sleep_start();
 }

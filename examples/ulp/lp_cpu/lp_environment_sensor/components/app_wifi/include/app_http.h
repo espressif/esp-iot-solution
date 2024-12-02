@@ -12,7 +12,7 @@ extern "C" {
 
 #define MAX_HTTP_OUTPUT_BUFFER      2048
 
-esp_err_t http_rest_with_url(char *district_id, char *text, char *wind_class,
+esp_err_t http_rest_with_url(char *district_id, char *city, char *name, char *text, char *wind_class,
                              char *wind_dir, char *uptime, char *week, int *high, int *low);
 #ifdef __cplusplus
 }
