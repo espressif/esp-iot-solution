@@ -1,0 +1,27 @@
+menu "Example Configuration"
+
+    config TUSB_VID
+        hex "USB Device VID"
+        default 0x303A
+    config TUSB_PID
+        hex "USB Device PID"
+        default 0x5678
+    config TUSB_MANUFACTURER
+        string "USB Device Manufacture"
+        default "Espressif"
+    config TUSB_PRODUCT
+        string "Product Name"
+        default "CDC ACM"
+
+    choice TINYUSB_RHPORT
+        depends on IDF_TARGET_ESP32P4
+        prompt "TinyUSB PHY"
+        default TINYUSB_RHPORT_HS
+        help
+            Allows set the USB PHY Controller for TinyUSB: HS (USB OTG2.0 PHY for HighSpeed)
+
+        config TINYUSB_RHPORT_HS
+            bool "HS"
+    endchoice
+
+endmenu
