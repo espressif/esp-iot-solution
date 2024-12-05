@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -163,59 +163,6 @@ esp_err_t sht3x_set_measure_mode(sht3x_handle_t sensor, sht3x_cmd_measure_t sht3
  *      the default condition of heater is disabled
  */
 esp_err_t sht3x_heater(sht3x_handle_t sensor, sht3x_cmd_measure_t sht3x_heater_condition);
-
-/***implements of humiture hal interface****/
-#ifdef CONFIG_SENSOR_HUMITURE_INCLUDED_SHT3X
-
-/**
- * @brief initialize sht3x with default configurations
- *
- * @param i2c_bus i2c bus handle the sensor will attached to
- * @return
- *     - ESP_OK Success
- *     - ESP_FAIL Fail
- */
-esp_err_t humiture_sht3x_init(i2c_bus_handle_t handle);
-
-/**
- * @brief de-initialize sht3x
- *
- * @return
- *     - ESP_OK Success
- *     - ESP_FAIL Fail
- */
-esp_err_t humiture_sht3x_deinit(void);
-
-/**
- * @brief test if sht3x is active
- *
- * @return
- *     - ESP_OK Success
- *     - ESP_FAIL Fail
- */
-esp_err_t humiture_sht3x_test(void);
-
-/**
- * @brief acquire relative humidity result one time.
- *
- * @param h point to result data (unit:percentage)
- * @return esp_err_t
- *     - ESP_OK Success
- *     - ESP_FAIL Fail
- */
-esp_err_t humiture_sht3x_acquire_humidity(float *h);
-
-/**
- * @brief acquire temperature result one time.
- *
- * @param t point to result data (unit:dCelsius)
- * @return esp_err_t
- *     - ESP_OK Success
- *     - ESP_FAIL Fail
- */
-esp_err_t humiture_sht3x_acquire_temperature(float *t);
-
-#endif
 
 #ifdef __cplusplus
 }

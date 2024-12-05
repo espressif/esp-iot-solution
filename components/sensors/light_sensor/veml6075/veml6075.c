@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -8,6 +8,7 @@
 #include <string.h>
 #include <math.h>
 #include "veml6075.h"
+#include "iot_sensor_hub.h"
 
 veml6075_handle_t veml6075_create(i2c_bus_handle_t bus, uint8_t dev_addr)
 {
@@ -191,17 +192,17 @@ uint16_t veml6075_get_raw_ir(veml6075_handle_t sensor)
     return sens->raw_data.raw_ir;
 }
 
-#ifdef CONFIG_SENSOR_LIGHT_INCLUDED_VEML6075
+#ifdef CONFIG_SENSOR_INCLUDED_LIGHT
 
 static veml6075_handle_t veml6075 = NULL;
 static bool is_init = false;
 
-esp_err_t light_sensor_veml6075_init(i2c_bus_handle_t i2c_bus)
+esp_err_t light_sensor_veml6075_init(i2c_bus_handle_t i2c_bus, uint8_t addr)
 {
     if (is_init || !i2c_bus) {
         return ESP_FAIL;
     }
-    veml6075 = veml6075_create(i2c_bus, VEML6075_I2C_ADDRESS);
+    veml6075 = veml6075_create(i2c_bus, addr);
     if (!veml6075) {
         return ESP_FAIL;
     }
@@ -250,5 +251,26 @@ esp_err_t light_sensor_veml6075_acquire_uv(float *uv, float *uva, float *uvb)
     *uv = veml6075_get_uv_index(veml6075);
     return ESP_OK;
 }
+
+static esp_err_t light_sensor_veml6075_null_acquire_light_function(float* l)
+{
+    return ESP_ERR_NOT_SUPPORTED;
+}
+
+static esp_err_t light_sensor_veml6075_null_acquire_rgbw_function(float* r, float* g, float* b, float* w)
+{
+    return ESP_ERR_NOT_SUPPORTED;
+}
+
+static light_impl_t veml6075_impl = {
+    .init = light_sensor_veml6075_init,
+    .deinit = light_sensor_veml6075_deinit,
+    .test = light_sensor_veml6075_test,
+    .acquire_light = light_sensor_veml6075_null_acquire_light_function,
+    .acquire_rgbw = light_sensor_veml6075_null_acquire_rgbw_function,
+    .acquire_uv = light_sensor_veml6075_acquire_uv,
+};
+
+SENSOR_HUB_DETECT_FN(LIGHT_SENSOR_ID, veml6075, &veml6075_impl);
 
 #endif

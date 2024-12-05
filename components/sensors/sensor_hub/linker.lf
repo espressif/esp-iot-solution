@@ -1,0 +1,13 @@
+[sections:sensors_detect]
+entries:
+    .sensor_hub_detect_fn+
+
+[scheme:sensors_detect_default]
+entries:
+    sensors_detect -> flash_rodata
+
+[mapping:sensors_detect]
+archive: *
+entries:
+    * (sensors_detect_default);
+        sensors_detect -> flash_rodata KEEP() SURROUND(_sensor_hub_detect_fn_array)

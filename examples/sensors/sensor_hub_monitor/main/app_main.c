@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -10,72 +10,98 @@
 
 #define SENSOR_PERIOD CONFIG_SENSOR_EXAMPLE_PERIOD
 
+#if CONFIG_SENSOR_INCLUDED_HUMITURE
+static sensor_handle_t sht3x_handle = NULL;
+static sensor_event_handler_instance_t sht3x_handler_handle = NULL;
+#endif
+
+#if CONFIG_SENSOR_INCLUDED_IMU
+static sensor_handle_t lis2dh12_handle = NULL;
+static sensor_event_handler_instance_t lis2dh12_handler_handle = NULL;
+#endif
+
+#if CONFIG_SENSOR_INCLUDED_LIGHT
+static sensor_handle_t veml6040_handle = NULL;
+static sensor_event_handler_instance_t veml6040_handler_handle = NULL;
+#endif
+
 #define TAG "Sensors Monitor"
 
 static void sensor_event_handler(void *handler_args, esp_event_base_t base, int32_t id, void *event_data)
 {
     sensor_data_t *sensor_data = (sensor_data_t *)event_data;
-    sensor_type_t sensor_type = (sensor_type_t)((sensor_data->sensor_id) >> 4 & SENSOR_ID_MASK);
 
-    if (sensor_type >= SENSOR_TYPE_MAX) {
-        ESP_LOGE(TAG, "sensor_id invalid, id=%d", sensor_data->sensor_id);
-        return;
-    }
     switch (id) {
     case SENSOR_STARTED:
-        ESP_LOGI(TAG, "Timestamp = %llu - %s SENSOR_STARTED",
+        ESP_LOGI(TAG, "Timestamp = %llu - %s_0x%x STARTED",
                  sensor_data->timestamp,
-                 SENSOR_TYPE_STRING[sensor_type]);
+                 sensor_data->sensor_name,
+                 sensor_data->sensor_addr);
         break;
     case SENSOR_STOPED:
-        ESP_LOGI(TAG, "Timestamp = %llu - %s SENSOR_STOPED",
+        ESP_LOGI(TAG, "Timestamp = %llu - %s_0x%x STOPPED",
                  sensor_data->timestamp,
-                 SENSOR_TYPE_STRING[sensor_type]);
+                 sensor_data->sensor_name,
+                 sensor_data->sensor_addr);
         break;
     case SENSOR_HUMI_DATA_READY:
-        ESP_LOGI(TAG, "Timestamp = %llu - SENSOR_HUMI_DATA_READY - "
+        ESP_LOGI(TAG, "Timestamp = %llu - %s_0x%x HUMI_DATA_READY - "
                  "humiture=%.2f",
                  sensor_data->timestamp,
+                 sensor_data->sensor_name,
+                 sensor_data->sensor_addr,
                  sensor_data->humidity);
         break;
     case SENSOR_TEMP_DATA_READY:
-        ESP_LOGI(TAG, "Timestamp = %llu - SENSOR_TEMP_DATA_READY - "
+        ESP_LOGI(TAG, "Timestamp = %llu - %s_0x%x TEMP_DATA_READY - "
                  "temperature=%.2f\n",
                  sensor_data->timestamp,
+                 sensor_data->sensor_name,
+                 sensor_data->sensor_addr,
                  sensor_data->temperature);
         break;
     case SENSOR_ACCE_DATA_READY:
-        ESP_LOGI(TAG, "Timestamp = %llu - SENSOR_ACCE_DATA_READY - "
+        ESP_LOGI(TAG, "Timestamp = %llu - %s_0x%x ACCE_DATA_READY - "
                  "acce_x=%.2f, acce_y=%.2f, acce_z=%.2f\n",
                  sensor_data->timestamp,
+                 sensor_data->sensor_name,
+                 sensor_data->sensor_addr,
                  sensor_data->acce.x, sensor_data->acce.y, sensor_data->acce.z);
         break;
     case SENSOR_GYRO_DATA_READY:
-        ESP_LOGI(TAG, "Timestamp = %llu - SENSOR_GYRO_DATA_READY - "
+        ESP_LOGI(TAG, "Timestamp = %llu - %s_0x%x GYRO_DATA_READY - "
                  "gyro_x=%.2f, gyro_y=%.2f, gyro_z=%.2f\n",
                  sensor_data->timestamp,
+                 sensor_data->sensor_name,
+                 sensor_data->sensor_addr,
                  sensor_data->gyro.x, sensor_data->gyro.y, sensor_data->gyro.z);
         break;
     case SENSOR_LIGHT_DATA_READY:
-        ESP_LOGI(TAG, "Timestamp = %llu - SENSOR_LIGHT_DATA_READY - "
+        ESP_LOGI(TAG, "Timestamp = %llu - %s_0x%x LIGHT_DATA_READY - "
                  "light=%.2f",
                  sensor_data->timestamp,
+                 sensor_data->sensor_name,
+                 sensor_data->sensor_addr,
                  sensor_data->light);
         break;
     case SENSOR_RGBW_DATA_READY:
-        ESP_LOGI(TAG, "Timestamp = %llu - SENSOR_RGBW_DATA_READY - "
+        ESP_LOGI(TAG, "Timestamp = %llu - %s_0x%x RGBW_DATA_READY - "
                  "r=%.2f, g=%.2f, b=%.2f, w=%.2f\n",
                  sensor_data->timestamp,
+                 sensor_data->sensor_name,
+                 sensor_data->sensor_addr,
                  sensor_data->rgbw.r, sensor_data->rgbw.r, sensor_data->rgbw.b, sensor_data->rgbw.w);
         break;
     case SENSOR_UV_DATA_READY:
-        ESP_LOGI(TAG, "Timestamp = %llu - SENSOR_UV_DATA_READY - "
+        ESP_LOGI(TAG, "Timestamp = %llu - %s_0x%x UV_DATA_READY - "
                  "uv=%.2f, uva=%.2f, uvb=%.2f\n",
                  sensor_data->timestamp,
+                 sensor_data->sensor_name,
+                 sensor_data->sensor_addr,
                  sensor_data->uv.uv, sensor_data->uv.uva, sensor_data->uv.uvb);
         break;
     default:
-        ESP_LOGI(TAG, "Timestamp = %llu - event id = %d", sensor_data->timestamp, id);
+        ESP_LOGI(TAG, "Timestamp = %" PRIi64 " - event id = %" PRIi32, sensor_data->timestamp, id);
         break;
     }
 }
@@ -95,27 +121,70 @@ void app_main(void)
         goto error_loop;
     }
 
-    /*register handler with NULL specific typeID, thus all events posted to sensor_loop will be handled*/
-    ESP_ERROR_CHECK(iot_sensor_handler_register_with_type(NULL_ID, NULL_ID, sensor_event_handler, NULL));
+    /*scan the sensor drivers already loaded in the current project.*/
+    iot_sensor_scan();
 
-    /*create sensors based on sensor scan result*/
-    sensor_info_t* sensor_infos[10];
-    sensor_handle_t sensor_handle[10] = {NULL};
-    sensor_config_t sensor_config = {
-        .bus = i2c0_bus_handle, /*which bus sensors will connect to*/
-        .mode = MODE_POLLING, /*data acquire mode*/
-        .min_delay = SENSOR_PERIOD /*data acquire period*/
+    /*create sensors*/
+#if CONFIG_SENSOR_INCLUDED_HUMITURE
+    sensor_config_t sht3x_config = {
+        .bus = i2c0_bus_handle,
+        .addr = 0x44,
+        .type = HUMITURE_ID,
+        .mode = MODE_POLLING,
+        .min_delay = SENSOR_PERIOD,
     };
-    int num = iot_sensor_scan(i2c0_bus_handle, sensor_infos, 10); /*scan for valid sensors based on active i2c address*/
-    for (size_t i = 0; i < num && i < 10; i++) {
-
-        if (ESP_OK != iot_sensor_create(sensor_infos[i]->sensor_id, &sensor_config, &sensor_handle[i])) { /*create a sensor with specific sensor_id and configurations*/
-            goto error_loop;
-        }
-
-        iot_sensor_start(sensor_handle[i]); /*start a sensor, data ready events will be posted once data acquired successfully*/
-        ESP_LOGI(TAG, "%s (%s) created", sensor_infos[i]->name, sensor_infos[i]->desc);
+    if (ESP_OK != iot_sensor_create("sht3x", &sht3x_config, &sht3x_handle)) {
+        goto error_loop;
     }
+    if (ESP_OK != iot_sensor_handler_register(sht3x_handle, sensor_event_handler, &sht3x_handler_handle)) {
+        goto error_loop;
+    }
+    if (ESP_OK != iot_sensor_start(sht3x_handle)) {
+        goto error_loop;
+    }
+#endif
+
+#if CONFIG_SENSOR_INCLUDED_IMU
+    sensor_config_t lis2dh12_config = {
+        .bus = i2c0_bus_handle,
+        .addr = 0x19,
+        .type = IMU_ID,
+        .mode = MODE_POLLING,
+        .min_delay = SENSOR_PERIOD,
+    };
+    if (ESP_OK != iot_sensor_create("lis2dh12", &lis2dh12_config, &lis2dh12_handle)) {
+        goto error_loop;
+    }
+
+    if (ESP_OK != iot_sensor_handler_register(lis2dh12_handle, sensor_event_handler, &lis2dh12_handler_handle)) {
+        goto error_loop;
+    }
+
+    if (ESP_OK != iot_sensor_start(lis2dh12_handle)) {
+        goto error_loop;
+    }
+#endif
+
+#if CONFIG_SENSOR_INCLUDED_LIGHT
+    sensor_config_t veml6040_config = {
+        .bus = i2c0_bus_handle,
+        .addr = 0x10,
+        .type = LIGHT_SENSOR_ID,
+        .mode = MODE_POLLING,
+        .min_delay = SENSOR_PERIOD,
+    };
+    if (ESP_OK != iot_sensor_create("veml6040", &veml6040_config, &veml6040_handle)) {
+        goto error_loop;
+    }
+
+    if (ESP_OK != iot_sensor_handler_register(veml6040_handle, sensor_event_handler, &veml6040_handler_handle)) {
+        goto error_loop;
+    }
+
+    if (ESP_OK != iot_sensor_start(veml6040_handle)) {
+        goto error_loop;
+    }
+#endif
 
     while (1) {
         vTaskDelay(1000);

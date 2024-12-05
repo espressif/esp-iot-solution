@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include "esp_log.h"
 #include "mvh3004d.h"
+#include "iot_sensor_hub.h"
 
 static const char *TAG = "mvh3004d";
 typedef struct {
@@ -69,3 +70,97 @@ esp_err_t mvh3004d_get_temperature(mvh3004d_handle_t sensor, float *tp)
 {
     return mvh3004d_get_data(sensor, tp, NULL);
 }
+
+#ifdef CONFIG_SENSOR_INCLUDED_HUMITURE
+
+static mvh3004d_handle_t mvh3004d = NULL;
+static bool is_init = false;
+
+esp_err_t humiture_mvh3004d_init(i2c_bus_handle_t i2c_bus, uint8_t addr)
+{
+    if (is_init || !i2c_bus) {
+        return ESP_FAIL;
+    }
+
+    mvh3004d = mvh3004d_create(i2c_bus, addr);
+
+    if (!mvh3004d) {
+        return ESP_FAIL;
+    }
+
+    is_init = true;
+    return ESP_OK;
+}
+
+esp_err_t humiture_mvh3004d_deinit(void)
+{
+    if (!is_init) {
+        return ESP_FAIL;
+    }
+
+    esp_err_t ret = mvh3004d_delete(&mvh3004d);
+
+    if (ret != ESP_OK) {
+        return ESP_FAIL;
+    }
+
+    is_init = false;
+    return ESP_OK;
+}
+
+esp_err_t humiture_mvh3004d_test(void)
+{
+    if (!is_init) {
+        return ESP_FAIL;
+    }
+
+    return ESP_OK;
+}
+
+esp_err_t humiture_mvh3004d_acquire_humidity(float *h)
+{
+    if (!is_init) {
+        return ESP_FAIL;
+    }
+
+    float humidity = 0;
+    esp_err_t ret = mvh3004d_get_huminity(mvh3004d, &humidity);
+
+    if (ret == ESP_OK) {
+        *h = humidity;
+        return ESP_OK;
+    }
+
+    *h = 0;
+    return ESP_FAIL;
+}
+
+esp_err_t humiture_mvh3004d_acquire_temperature(float *t)
+{
+    if (!is_init) {
+        return ESP_FAIL;
+    }
+
+    float temperature = 0;
+    esp_err_t ret = mvh3004d_get_temperature(mvh3004d, &temperature);
+
+    if (ret == ESP_OK) {
+        *t = temperature;
+        return ESP_OK;
+    }
+
+    *t = 0;
+    return ESP_FAIL;
+}
+
+static humiture_impl_t mvh3004d_impl = {
+    .init = humiture_mvh3004d_init,
+    .deinit = humiture_mvh3004d_deinit,
+    .test = humiture_mvh3004d_test,
+    .acquire_humidity = humiture_mvh3004d_acquire_humidity,
+    .acquire_temperature = humiture_mvh3004d_acquire_temperature,
+};
+
+SENSOR_HUB_DETECT_FN(HUMITURE_ID, mvh3004d, &mvh3004d_impl);
+
+#endif

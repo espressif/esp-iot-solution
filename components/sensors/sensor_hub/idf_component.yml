@@ -1,0 +1,12 @@
+version: "0.1.0"
+description: Unified Framework for Sensor Management
+dependencies:
+  i2c_bus:
+    public: true
+    version: "1.*"
+    override_path: "../../i2c_bus"
+  idf: ">=4.4"
+  cmake_utilities: "0.*"
+sbom:
+  supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'
+  originator: 'Organization: Espressif Systems (Shanghai) CO LTD'

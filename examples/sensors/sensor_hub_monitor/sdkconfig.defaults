@@ -1,35 +1,4 @@
 #
-# Sensor Hub Options
-#
-
-#
-# Sensor Hal Options
-#
-
-#
-# IMU Hal Options
-#
-CONFIG_SENSOR_IMU_INCLUDED_MPU6050=y
-CONFIG_SENSOR_IMU_INCLUDED_LIS2DH12=y
-# end of IMU Hal Options
-
-#
-# Humiture Hal Options
-#
-CONFIG_SENSOR_HUMITURE_INCLUDED_SHT3X=y
-CONFIG_SENSOR_HUMITURE_INCLUDED_HTS221=y
-# end of Humiture Hal Options
-
-#
-# Light Sensor Hal Options
-#
-CONFIG_SENSOR_LIGHT_INCLUDED_BH1750=y
-CONFIG_SENSOR_LIGHT_INCLUDED_VEML6040=y
-CONFIG_SENSOR_LIGHT_INCLUDED_VEML6075=y
-# end of Light Sensor Hal Options
-# end of Sensor Hal Options
-
-#
 # Sensor Build Options
 #
 CONFIG_SENSOR_INCLUDED_IMU=y

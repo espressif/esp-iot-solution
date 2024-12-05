@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -158,52 +158,6 @@ float veml6040_get_lux(veml6040_handle_t sensor);
  *    - white value
  */
 float veml6040_get_cct(veml6040_handle_t sensor, float offset);
-
-/**implements of light sensor hal interface**/
-#ifdef CONFIG_SENSOR_LIGHT_INCLUDED_VEML6040
-/**
- * @brief initialize veml6040 with default configurations
- *
- * @param i2c_bus i2c bus handle the sensor will attached to
- * @return
- *     - ESP_OK Success
- *     - ESP_FAIL Fail
- */
-esp_err_t light_sensor_veml6040_init(i2c_bus_handle_t handle);
-
-/**
- * @brief de-initialize veml6040
- *
- * @return
- *     - ESP_OK Success
- *     - ESP_FAIL Fail
- */
-esp_err_t light_sensor_veml6040_deinit(void);
-
-/**
- * @brief test if veml6040 is active
- *
- * @return
- *     - ESP_OK Success
- *     - ESP_FAIL Fail
- */
-esp_err_t light_sensor_veml6040_test(void);
-
-/**
- * @brief Acquire light sensor color result result one time.
- * light color includes red green blue and white.
- *
- * @param r red result (unit:lux)
- * @param g green result (unit:lux)
- * @param b blue result (unit:lux)
- * @param w white result (unit:lux)
- * @return
- *     - ESP_OK Success
- *     - ESP_FAIL Fail
- */
-esp_err_t light_sensor_veml6040_acquire_rgbw(float *r, float *g, float *b, float *w);
-
-#endif
 
 #ifdef __cplusplus
 }

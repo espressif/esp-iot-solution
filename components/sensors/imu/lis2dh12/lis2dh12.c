@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include "lis2dh12.h"
 #include "esp_log.h"
+#include "iot_sensor_hub.h"
 
 static const char *TAG = "lis2dh12";
 #define IOT_CHECK(tag, a, ret)  if(!(a)) {                                 \
@@ -273,18 +274,18 @@ esp_err_t lis2dh12_get_acce(lis2dh12_handle_t sensor, lis2dh12_acce_value_t *acc
 }
 
 /***sensors hal interface****/
-#ifdef CONFIG_SENSOR_IMU_INCLUDED_LIS2DH12
+#ifdef CONFIG_SENSOR_INCLUDED_IMU
 
 static lis2dh12_handle_t lis2dh12 = NULL;
 static bool is_init = false;
 
-esp_err_t imu_lis2dh12_init(i2c_bus_handle_t i2c_bus)
+esp_err_t imu_lis2dh12_init(i2c_bus_handle_t i2c_bus, uint8_t addr)
 {
     if (is_init || !i2c_bus) {
         return ESP_FAIL;
     }
 
-    lis2dh12 = lis2dh12_create(i2c_bus, LIS2DH12_I2C_ADDRESS);
+    lis2dh12 = lis2dh12_create(i2c_bus, addr);
 
     if (!lis2dh12) {
         return ESP_FAIL;
@@ -355,5 +356,20 @@ esp_err_t imu_lis2dh12_acquire_acce(float *acce_x, float *acce_y, float *acce_z)
     *acce_z = 0;
     return ESP_FAIL;
 }
+
+static esp_err_t imu_lis2dh12_null_acquire_function(float *x, float *y, float *z)
+{
+    return ESP_ERR_NOT_SUPPORTED;
+}
+
+static imu_impl_t lis2dh12_impl = {
+    .init = imu_lis2dh12_init,
+    .deinit = imu_lis2dh12_deinit,
+    .test = imu_lis2dh12_test,
+    .acquire_acce = imu_lis2dh12_acquire_acce,
+    .acquire_gyro = imu_lis2dh12_null_acquire_function,
+};
+
+SENSOR_HUB_DETECT_FN(IMU_ID, lis2dh12, &lis2dh12_impl);
 
 #endif

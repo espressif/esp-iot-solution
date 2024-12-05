@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -9,6 +9,7 @@
 #include "esp_log.h"
 #include "esp_system.h"
 #include "esp_timer.h"
+#include "iot_sensor_hub.h"
 #include "sht3x.h"
 
 typedef struct {
@@ -217,18 +218,18 @@ esp_err_t sht3x_heater(sht3x_handle_t sensor, sht3x_cmd_measure_t sht3x_heater_c
     return ret;
 }
 
-#ifdef CONFIG_SENSOR_HUMITURE_INCLUDED_SHT3X
+#ifdef CONFIG_SENSOR_INCLUDED_HUMITURE
 
 static sht3x_handle_t sht3x = NULL;
 static bool is_init = false;
 
-esp_err_t humiture_sht3x_init(i2c_bus_handle_t i2c_bus)
+esp_err_t humiture_sht3x_init(i2c_bus_handle_t i2c_bus, uint8_t addr)
 {
     if (is_init || !i2c_bus) {
         return ESP_FAIL;
     }
 
-    sht3x = sht3x_create(i2c_bus, SHT3x_ADDR_PIN_SELECT_VSS);
+    sht3x = sht3x_create(i2c_bus, addr);
 
     if (!sht3x) {
         return ESP_FAIL;
@@ -283,7 +284,6 @@ esp_err_t humiture_sht3x_acquire_humidity(float *h)
         *h = humidity;
         return ESP_OK;
     }
-
     *h = 0;
     return ESP_FAIL;
 }
@@ -306,5 +306,15 @@ esp_err_t humiture_sht3x_acquire_temperature(float *t)
     *t = 0;
     return ESP_FAIL;
 }
+
+static humiture_impl_t sht3x_impl = {
+    .init = humiture_sht3x_init,
+    .deinit = humiture_sht3x_deinit,
+    .test = humiture_sht3x_test,
+    .acquire_humidity = humiture_sht3x_acquire_humidity,
+    .acquire_temperature = humiture_sht3x_acquire_temperature,
+};
+
+SENSOR_HUB_DETECT_FN(HUMITURE_ID, sht3x, &sht3x_impl);
 
 #endif

@@ -1,35 +1,5 @@
 menu "Sensor Hub Options"
 
-    menu "Sensor Hal Options"
-        menu "IMU Hal Options"
-            config SENSOR_IMU_INCLUDED_MPU6050
-                bool "include MPU6050 driver"
-                default y
-            config SENSOR_IMU_INCLUDED_LIS2DH12
-                bool "include LIS2DH12 driver"
-                default y
-        endmenu
-        menu "Humiture Hal Options"
-            config SENSOR_HUMITURE_INCLUDED_SHT3X
-                bool "include SHT3X driver"
-                default y
-            config SENSOR_HUMITURE_INCLUDED_HTS221
-                bool "include HTS221 driver"
-                default y
-        endmenu
-        menu "Light Sensor Hal Options"
-            config SENSOR_LIGHT_INCLUDED_BH1750
-                bool "include BH1750 driver"
-                default y
-            config SENSOR_LIGHT_INCLUDED_VEML6040
-                bool "include VEML6040 driver"
-                default y
-            config SENSOR_LIGHT_INCLUDED_VEML6075
-                bool "include VEML6075 driver"
-                default y
-        endmenu
-    endmenu
-
     menu "Sensor Build Options"
         config SENSOR_INCLUDED_IMU
             bool "include imu sensor driver in sensor hub"

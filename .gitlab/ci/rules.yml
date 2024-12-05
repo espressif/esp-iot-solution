@@ -248,6 +248,7 @@
 
 .patterns-components_sensors_sensor_hub: &patterns-components_sensors_sensor_hub
   - "components/sensors/sensor_hub/**/*"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_spi_bus: &patterns-components_spi_bus
   - "components/spi_bus/**/*"
@@ -2093,7 +2094,7 @@
     - <<: *if-dev-push
       changes: *patterns-components_sensors_pressure_bme280
 
-.rules:build:components_sensors_sensor_hub_test:
+.rules:build:components_sensors_sensor_hub_test_apps:
   rules:
     - <<: *if-protected
     - <<: *if-label-build

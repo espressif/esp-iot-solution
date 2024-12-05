@@ -1,4 +1,4 @@
-version: "0.1.0"
+version: "0.2.0"
 description: I2C driver for SHT3X humiture sensor
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/sensors/humiture/sht3x
 repository: https://github.com/espressif/esp-iot-solution.git
@@ -8,5 +8,8 @@ dependencies:
   i2c_bus:
     public: true
     override_path: "../../../i2c_bus"
+  sensor_hub:
+    public: true
+    override_path: "../../sensor_hub"
   idf: '>=4.4'
   cmake_utilities: "0.*"

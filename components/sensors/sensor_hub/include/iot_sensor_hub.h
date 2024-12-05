@@ -24,51 +24,22 @@
 #include "sensor_event.h"
 #include "sensor_type.h"
 
-/** @cond **/
-/* SENSORS IMU EVENTS BASE */
-ESP_EVENT_DECLARE_BASE(SENSOR_IMU_EVENTS);
-ESP_EVENT_DECLARE_BASE(SENSOR_HUMITURE_EVENTS);
-ESP_EVENT_DECLARE_BASE(SENSOR_LIGHTSENSOR_EVENTS);
-/** @endcond **/
+typedef void *sensor_handle_t;                                                                                                        /*!< sensor handle*/
+typedef void *sensor_event_handler_instance_t;                                                                                        /*!< sensor event handler handle*/
+typedef const char *sensor_event_base_t;                                                                                              /*!< unique pointer to a subsystem that exposes events */
 
-typedef void *sensor_handle_t;  /*!< sensor handle*/
-typedef void *sensor_event_handler_instance_t;  /*!< sensor event handler handle*/
-typedef const char *sensor_event_base_t; /*!< unique pointer to a subsystem that exposes events */
-
-typedef void (*sensor_event_handler_t)(void *event_handler_arg, sensor_event_base_t event_base, int32_t event_id, void *event_data); /*!< function called when an event is posted to the queue */
+typedef void (*sensor_event_handler_t)(void *event_handler_arg, sensor_event_base_t event_base, int32_t event_id, void *event_data);  /*!< function called when an event is posted to the queue */
 
 extern const char *SENSOR_TYPE_STRING[];
 extern const char *SENSOR_MODE_STRING[];
 
 /**
- * @brief sensor id, used for iot_sensor_create
- *
- */
-typedef enum {
-#ifdef CONFIG_SENSOR_INCLUDED_HUMITURE
-    SENSOR_SHT3X_ID = (HUMITURE_ID << SENSOR_ID_OFFSET) | SHT3X_ID, /*!< sht3x sensor id*/
-    SENSOR_HTS221_ID = (HUMITURE_ID << SENSOR_ID_OFFSET) | HTS221_ID, /*!< hts221 sensor id*/
-#endif
-#ifdef CONFIG_SENSOR_INCLUDED_IMU
-    SENSOR_MPU6050_ID = ((IMU_ID << SENSOR_ID_OFFSET) | MPU6050_ID), /*!< mpu6050 sensor id*/
-    SENSOR_LIS2DH12_ID = ((IMU_ID << SENSOR_ID_OFFSET) | LIS2DH12_ID), /*!< lis2dh12 sensor id*/
-#endif
-#ifdef CONFIG_SENSOR_INCLUDED_LIGHT
-    SENSOR_BH1750_ID = (LIGHT_SENSOR_ID << SENSOR_ID_OFFSET) | BH1750_ID, /*!< bh1750 sensor id*/
-    SENSOR_VEML6040_ID = (LIGHT_SENSOR_ID << SENSOR_ID_OFFSET) | VEML6040_ID, /*!< veml6040 sensor id*/
-    SENSOR_VEML6075_ID = (LIGHT_SENSOR_ID << SENSOR_ID_OFFSET) | VEML6075_ID, /*!< veml6075 sensor id*/
-#endif
-} sensor_id_t;
-
-/**
- * @brief sensor information type
+ * @brief sensor information, written by the driver developer.
  *
  */
 typedef struct {
-    const char* name;  /*!< sensor name*/
-    const char* desc;  /*!< sensor descriptive message*/
-    sensor_id_t sensor_id;  /*!< sensor id*/
-    const uint8_t *addrs;  /*!< sensor address list*/
+    const char *name;          /*!< sensor name */
+    sensor_type_t sensor_type; /*!< sensor type */
 } sensor_info_t;
 
 /**
@@ -76,13 +47,67 @@ typedef struct {
  *
  */
 typedef struct {
-    bus_handle_t bus;                           /*!< i2c/spi bus handle*/
-    sensor_mode_t mode;                         /*!< set acquire mode detiled in sensor_mode_t*/
-    sensor_range_t range;                       /*!< set measuring range*/
-    uint32_t min_delay;                         /*!< set minimum acquisition interval*/
-    int intr_pin;                               /*!< set interrupt pin */
-    int intr_type;                              /*!< set interrupt type*/
+    bus_handle_t bus;     /*!< i2c/spi bus handle*/
+    uint8_t addr;         /*!< set addr of sensor*/
+    sensor_type_t type;   /*!< sensor type */
+    sensor_mode_t mode;   /*!< set acquire mode detiled in sensor_mode_t*/
+    sensor_range_t range; /*!< set measuring range*/
+    uint32_t min_delay;   /*!< set minimum acquisition interval*/
+    int intr_pin;         /*!< set interrupt pin */
+    int intr_type;        /*!< set interrupt type*/
 } sensor_config_t;
+
+/**
+ * @brief Detection function interface for sensors
+ */
+typedef struct {
+    /**
+     * @brief Function pointer for sensor detection
+     *
+     * This function detects a sensor based on the provided sensor information.
+     *
+     * @param sensor_info Pointer to the sensor information structure
+     * @return void* Pointer to the detected sensor instance, or NULL if detection failed
+     */
+    void* (*fn)(sensor_info_t *sensor_info);
+} sensor_hub_detect_fn_t;
+
+/**
+ * @brief Defines a sensor detection function to be executed automatically in the application layer.
+ *
+ * @param type_id  The sensor type identifier.
+ * @param name_id  The unique name identifier for the sensor.
+ * @param impl     The implementation returned on successful detection.
+ *
+ * This macro defines a function and its corresponding metadata to facilitate automatic sensor detection
+ * and initialization. The function must return the implementation (`impl`) on success; otherwise,
+ * an error is logged, and the automatic detection process in the application layer will be aborted.
+ *
+ * To prevent the linker from optimizing out the sensor driver, the driver must include at least one
+ * undefined symbol that is explicitly referenced during the linking phase. This ensures that the linker
+ * retains the driver, even if no other files directly depend on its symbols.
+ *
+ * For example, in the sensor driver's `CMakeLists.txt`, include the following to force the linker
+ * to keep the required symbol:
+ *
+ *  target_link_libraries(${COMPONENT_LIB} INTERFACE "-u <symbol_name>")
+ *
+ * Replace `<symbol_name>` with an appropriate symbol, such as `sht3x_init`, defined in the driver.
+ */
+#define SENSOR_HUB_DETECT_FN(type_id, name_id, impl) \
+    static void*  __sensor_hub_detect_fn_##name_id(sensor_info_t *sensor_info); \
+    __attribute__((used)) _SECTION_ATTR_IMPL(".sensor_hub_detect_fn", __COUNTER__) \
+        sensor_hub_detect_fn_t sensor_hub_detect_fn_##name_id = { \
+            .fn = __sensor_hub_detect_fn_##name_id, \
+        }; \
+    static void* __sensor_hub_detect_fn_##name_id(sensor_info_t *sensor_info) { \
+        sensor_info->name = #name_id; \
+        sensor_info->sensor_type = type_id; \
+        return impl; \
+    }
+
+extern sensor_hub_detect_fn_t __sensor_hub_detect_fn_array_start;
+extern sensor_hub_detect_fn_t __sensor_hub_detect_fn_array_end;
 
 #ifdef __cplusplus
 extern "C"
@@ -90,16 +115,16 @@ extern "C"
 #endif
 
 /**
- * @brief Create a sensor instance with specified sensor_id and desired configurations.
+ * @brief Create a sensor instance with specified name and desired configurations.
  *
- * @param sensor_id sensor's id detailed in sensor_id_t.
+ * @param sensor_name sensor's name. Sensor information will be registered by ESP_SENSOR_DETECT_FN
  * @param config sensor's configurations detailed in sensor_config_t
  * @param p_sensor_handle return sensor handle if succeed, NULL if failed.
  * @return esp_err_t
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_sensor_create(sensor_id_t sensor_id, const sensor_config_t *config, sensor_handle_t *p_sensor_handle);
+esp_err_t iot_sensor_create(const char *sensor_name, const sensor_config_t *config, sensor_handle_t *p_sensor_handle);
 
 /**
  * @brief start sensor acquisition, post data ready events when data acquired.
@@ -127,12 +152,12 @@ esp_err_t iot_sensor_stop(sensor_handle_t sensor_handle);
 /**
  * @brief delete and release the sensor resource.
  *
- * @param p_sensor_handle point to sensor handle, will set to NULL if delete succeed.
+ * @param p_sensor_handle sensor handle, will set to NULL if delete succeed.
  * @return esp_err_t
  *     - ESP_OK Success
  *     - ESP_FAIL Fail
  */
-esp_err_t iot_sensor_delete(sensor_handle_t *p_sensor_handle);
+esp_err_t iot_sensor_delete(sensor_handle_t p_sensor_handle);
 
 /**
  * @brief Scan for valid sensors attached on bus
@@ -143,7 +168,13 @@ esp_err_t iot_sensor_delete(sensor_handle_t *p_sensor_handle);
  * latter sensors will be discarded if num less-than the total number found on the bus.
  * @return uint8_t total number of valid sensors found on the bus
  */
-uint8_t iot_sensor_scan(bus_handle_t bus, sensor_info_t* buf[], uint8_t num);
+
+/**
+ * @brief Scan for valid sensors registered in the system
+ *
+ * @return int number of valid sensors
+ */
+int iot_sensor_scan();
 
 /**
  * @brief Register a event handler to a sensor's event with sensor_handle.
