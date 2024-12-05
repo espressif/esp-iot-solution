@@ -15,7 +15,26 @@ In the ESP ROM Code, the configuration of USB descriptors is as follows:
      - ESP32S2
      - ESP32S3
      - ESP32C3
+     - ESP32C5
+     - ESP32C6
+     - ESP32C61
+     - ESP32H2
+     - ESP32P4
+   * - **Interface**
+     - usb-otg
+     - usb-serial-jtag
+     - usb-serial-jtag
+     - usb-serial-jtag
+     - usb-serial-jtag
+     - usb-serial-jtag
+     - usb-serial-jtag
+     - usb-serial-jtag
    * - **VID**
+     - 0x303a
+     - 0x303a
+     - 0x303a
+     - 0x303a
+     - 0x303a
      - 0x303a
      - 0x303a
      - 0x303a
@@ -23,13 +42,32 @@ In the ESP ROM Code, the configuration of USB descriptors is as follows:
      - 0x0002
      - 0x1001
      - 0x1001
+     - 0x1001
+     - 0x1001
+     - 0x1001
+     - 0x1001
+     - 0x1001
+   * - **Revision (bcdDevice)**
+     - N/A
+     - v1.01
+     - v1.01
+     - v1.02
+     - v1.02
+     - v1.02
+     - v1.02
+     - v1.02
    * - **Serial**
      - 0
      - MAC address
      - MAC address
+     - MAC address
+     - MAC address
+     - MAC address
+     - MAC address
+     - MAC address
 
 * For ESP32S2 with USB On-The-Go (usb-otg), the Serial is a constant 0, and it remains the same for every device, resulting in consistent COM port numbers.
-* For ESP32S3 (usb-serial-jtag) and ESP32C3 (usb-serial-jtag), the Serial is set to the device MAC address. Each device has a unique MAC address, leading to different COM port numbers by default with incremental assignment.
+* For ESP32S3 (usb-serial-jtag) or other chips with usb-serial-jtag interface, the Serial is set to the device MAC address. Each device has a unique MAC address, leading to different COM port numbers by default with incremental assignment.
 
 Incrementing COM numbers pose additional challenges for mass production programming. For customers requiring firmware downloads via USB, it is recommended to modify the Windows rules for incrementing the COM number to prevent incrementing the number based on the Serial number.
 
@@ -40,6 +78,12 @@ Solution
 
 .. code-block:: shell
 
-   REG ADD HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\usbflags\303A10010101 /V IgnoreHWSerNum /t REG_BINARY /d 01
+    REG ADD HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\usbflags\303A10010101 /V IgnoreHWSerNum /t REG_BINARY /d 01
+    REG ADD HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\usbflags\303A10010102 /V IgnoreHWSerNum /t REG_BINARY /d 01
 
-Users have the option to download the script :download:`ignore_hwserial_esp32s3c3.bat <../../../_static/ignore_hwserial_esp32s3c3.bat>` , then run it with administrative privileges by right-clicking and selecting **Run as Administrator**.
+Users have the option to download the script :download:`ignore_hwserial_usb_serial_jtag.bat <../../../_static/ignore_hwserial_usb_serial_jtag.bat>` , then run it with administrative privileges by right-clicking and selecting **Run as Administrator**.
+
+
+.. Note::
+
+    The above command is for Windows 10/11. For Windows 7 or other versions, the registry path is different. Please download the script :download:`ignore_hwserial_usb_serial_jtag_win7.bat <../../../_static/ignore_hwserial_usb_serial_jtag_win7.bat>` and run it with Administrative privileges.
