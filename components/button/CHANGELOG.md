@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v3.4.1 - 2024-12-6
+
+### Fix:
+
+* Fix the issue where `BUTTON_LONG_PRESS_START` is not triggered when the polling interval exceeds 20ms.
+* Remove the `BUTTON_LONG_PRESS_TOLERANCE_MS` configuration option.
+
 ## v3.4.0 - 2024-10-22
 
 ### Enhancements:
