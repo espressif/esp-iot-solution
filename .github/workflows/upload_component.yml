@@ -61,6 +61,7 @@ jobs:
             components/motor/drv10987;
             components/motor/esp_sensorless_bldc_control;
             components/motor/esp_simplefoc;
+            components/motor/servo;
             components/openai;
             components/sensors/gesture/apds9960;
             components/sensors/humiture/aht20;
