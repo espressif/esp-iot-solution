@@ -580,6 +580,7 @@ build_example_motor_servo:
     - .rules:build:example_motor_servo
   parallel:
     matrix:
+      - IMAGE: espressif/idf:release-v4.4
       - IMAGE: espressif/idf:release-v5.2
   variables:
     EXAMPLE_DIR: components/motor/servo/examples/servo_control
