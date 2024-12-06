@@ -94,7 +94,7 @@ static button_power_save_config_t power_save_usr_cfg = {0};
 #define SHORT_TICKS       (CONFIG_BUTTON_SHORT_PRESS_TIME_MS /TICKS_INTERVAL)
 #define LONG_TICKS        (CONFIG_BUTTON_LONG_PRESS_TIME_MS /TICKS_INTERVAL)
 #define SERIAL_TICKS      (CONFIG_BUTTON_SERIAL_TIME_MS /TICKS_INTERVAL)
-#define TOLERANCE         CONFIG_BUTTON_LONG_PRESS_TOLERANCE_MS
+#define TOLERANCE         (CONFIG_BUTTON_PERIOD_TIME_MS*4)
 
 #define CALL_EVENT_CB(ev)                                                   \
     if (btn->cb_info[ev]) {                                                 \
@@ -148,7 +148,7 @@ static void button_handler(button_dev_t *btn)
             btn->ticks = 0;
             btn->state = 2;
 
-        } else if (btn->ticks > btn->long_press_ticks) {
+        } else if (btn->ticks >= btn->long_press_ticks) {
             btn->event = (uint8_t)BUTTON_LONG_PRESS_START;
             btn->state = 4;
             /** Calling callbacks for BUTTON_LONG_PRESS_START */
