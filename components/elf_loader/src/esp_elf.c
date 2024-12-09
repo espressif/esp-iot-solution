@@ -477,6 +477,10 @@ int esp_elf_relocate(esp_elf_t *elf, const uint8_t *pbuf)
  */
 int esp_elf_request(esp_elf_t *elf, int opt, int argc, char *argv[])
 {
+    if (!elf || !(elf->entry)) {
+        return -EINVAL;
+    }
+
     elf->entry(argc, argv);
 
     return 0;

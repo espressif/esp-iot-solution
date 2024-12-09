@@ -6,5 +6,5 @@ targets:
   - esp32p4
 dependencies:
   elf_loader:
-    version: "0.*"
+    version: "1.*"
     override_path: "../../../../components/elf_loader"

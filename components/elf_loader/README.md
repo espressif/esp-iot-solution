@@ -22,7 +22,7 @@ Add a dependency on this component in your component or project's idf_component.
 
     ```yml
     dependencies:
-      espressif/elf_loader: "0.*"
+      espressif/elf_loader: "1.*"
     ```
 
 Enable ELF loader in the menuconfig:

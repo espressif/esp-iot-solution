@@ -48,9 +48,9 @@ macro(project_elf project_name)
     endif()
 
     # Link input list of libraries to ELF
-    list(APPEND ELF_COMPONENTS "main")
+    list(PREPEND ELF_COMPONENTS "main")
     if(ELF_COMPONENTS)
-        foreach(c "${ELF_COMPONENTS}")
+        foreach(c ${ELF_COMPONENTS})
             list(APPEND elf_libs "esp-idf/${c}/lib${c}.a")
             list(APPEND elf_dependeces "idf::${c}")
         endforeach()
