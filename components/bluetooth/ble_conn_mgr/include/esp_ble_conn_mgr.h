@@ -153,6 +153,7 @@ typedef struct {
     const char *extended_adv_rsp_data;              /*!< Extended advertising responses data */
 
     uint16_t    include_service_uuid: 1;            /*!< If include service UUID in advertising */
+    uint16_t    adv_uuid16;                         /*!< NOTE: Only Support one 16-bit UUID */
 } esp_ble_conn_config_t;
 
 /**
