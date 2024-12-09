@@ -1,15 +1,15 @@
 menu "Espressif ELF Loader Configuration"
-    visible if (IDF_TARGET_ESP32 || IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3 || IDF_TARGET_ESP32P4)
+    visible if (IDF_TARGET_ESP32 || IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3 || IDF_TARGET_ESP32C6 || IDF_TARGET_ESP32P4)
 
     config ELF_LOADER_BUS_ADDRESS_MIRROR
         bool
         default y if (IDF_TARGET_ESP32 || IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3)
-        default n if IDF_TARGET_ESP32P4
+        default n if (IDF_TARGET_ESP32C6 || IDF_TARGET_ESP32P4)
 
     config ELF_LOADER
         bool "Enable Espressif ELF Loader"
         default y
-        depends on (IDF_TARGET_ESP32 || IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3 || IDF_TARGET_ESP32P4)
+        depends on (IDF_TARGET_ESP32 || IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3 || IDF_TARGET_ESP32C6 || IDF_TARGET_ESP32P4)
         help
             Select this option to enable ELF Loader and show the submenu with ELF Loader configuration choices.
 

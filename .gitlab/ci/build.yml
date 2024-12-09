@@ -1344,6 +1344,7 @@ build_example_elf_loader_build_elf_file_example:
       - IMAGE: espressif/idf:release-v5.1
       - IMAGE: espressif/idf:release-v5.2
       - IMAGE: espressif/idf:release-v5.3
+      - IMAGE: espressif/idf:release-v5.4
   variables:
     EXAMPLE_DIR: examples/elf_loader/build_elf_file_example
 

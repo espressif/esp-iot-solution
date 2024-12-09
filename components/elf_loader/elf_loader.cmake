@@ -37,7 +37,6 @@ macro(project_elf project_name)
     set(strip_flags --strip-unneeded
                     --remove-section=.comment
                     --remove-section=.got.loc
-                    --remove-section=.got
                     --remove-section=.dynamic)
 
     if(CONFIG_IDF_TARGET_ARCH_XTENSA)
