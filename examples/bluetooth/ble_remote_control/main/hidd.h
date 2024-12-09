@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -140,6 +140,7 @@ typedef struct {
     esp_gatt_if_t gatt_if;
     uint16_t connection_id;
     uint16_t attr_handle;
+    uint16_t bat_attr_handle;
 } client_info_t;
 
 /**
@@ -164,3 +165,11 @@ void set_hid_report_values(uint8_t joystick_x, uint8_t joystick_y, uint8_t butto
  * @brief Send the HID Report to the client (notification)
 */
 esp_err_t send_user_input(void);
+
+/**
+ * @brief Set the hid battery level value to be sent
+ *
+ * @note Values to be set depends on the device specification
+ * @note The value is capped at 100
+*/
+esp_err_t set_hid_battery_level(uint8_t value);

@@ -76,7 +76,7 @@ void joystick_task()
     uint8_t hat_switch = 0; // unused in this example
     uint8_t button_in = 0;
     uint8_t throttle = 0;   // unused in this example
-
+    uint8_t battery_level = 0;
     while (true) {
         DELAY(HID_LATENCY);
 
@@ -121,6 +121,8 @@ void joystick_task()
             set_hid_report_values(x_axis, y_axis, button_in, hat_switch, throttle);
             print_user_input_report(x_axis, y_axis, hat_switch, button_in, throttle);
             ret = send_user_input();
+            battery_level = (battery_level + 1) % 100;
+            set_hid_battery_level(battery_level);
         }
 
         // Alternatively, to simply poll user input can do:
