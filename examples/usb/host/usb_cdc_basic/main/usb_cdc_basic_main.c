@@ -21,7 +21,7 @@ static const char *TAG = "cdc_basic_demo";
 #define OUT_RINGBUF_SIZE (1024 * 1)
 
 /* enable interface num */
-#define EXAMPLE_BULK_ITF_NUM 0
+#define EXAMPLE_BULK_ITF_NUM 1
 
 /* choose if use user endpoint descriptors */
 #define EXAMPLE_CONFIG_USER_EP_DESC
@@ -33,7 +33,7 @@ static void usb_receive_task(void *param)
     uint8_t buf[IN_RINGBUF_SIZE];
 
     while (1) {
-        for (size_t i = 0; i <= EXAMPLE_BULK_ITF_NUM; i++) {
+        for (size_t i = 0; i < EXAMPLE_BULK_ITF_NUM; i++) {
             /* Polling USB receive buffer to get data */
             usbh_cdc_get_rx_buffer_size(handle[i], &data_len);
             if (data_len > 0) {
@@ -91,7 +91,7 @@ void app_main(void)
 
     usbh_cdc_create(&dev_config, &handle[0]);
 
-#if (EXAMPLE_BULK_ITF_NUM > 0)
+#if (EXAMPLE_BULK_ITF_NUM > 1)
     config.itf_num = 1;
     config.cbs = {0};
     ESP_LOGI(TAG, "Open interface num: %d with first USB CDC Device", config.itf_num);
