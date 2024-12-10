@@ -1,4 +1,0 @@
-dependencies:
-  espressif/servo:
-    version: "*"
-    override_path: '../../../'

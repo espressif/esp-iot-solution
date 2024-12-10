@@ -7,3 +7,5 @@ documentation: https://docs.espressif.com/projects/esp-iot-solution/en/latest/mo
 dependencies:
   idf:
     version: '>=4.4'
+examples:
+  - path: ../../../examples/motor/servo_control

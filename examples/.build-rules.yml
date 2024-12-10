@@ -219,6 +219,10 @@ examples/motor/foc_knob_example:
   enable:
     - if: IDF_TARGET in ["esp32","esp32s3"]
 
+examples/motor/servo_control:
+  enable:
+    - if: INCLUDE_DEFAULT == 1
+
 examples/ota/simple_ota_example:
   enable:
     - if: IDF_TARGET in ["esp32c2","esp32c3","esp32"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
