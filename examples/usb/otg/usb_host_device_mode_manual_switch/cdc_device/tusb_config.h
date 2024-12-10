@@ -107,7 +107,7 @@ extern "C" {
 // CDC FIFO size of TX and RX
 #define CFG_TUD_CDC_RX_BUFSIZE      512
 #define CFG_TUD_CDC_TX_BUFSIZE      512
-#define CFG_TUD_CDC_EP_BUFSIZE      CONFIG_USB_HS ? 512 : 64
+#define CFG_TUD_CDC_EP_BUFSIZE      (CONFIG_USB_HS ? 512 : 64)
 
 #ifdef __cplusplus
 }

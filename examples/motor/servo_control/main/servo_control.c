@@ -17,8 +17,8 @@
 
 static const char *TAG = "Servo Control";
 
-static uint16_t calibration_value_0 = 30; // Real 0 degree angle
-uint16_t calibration_value_180 = 195; // Real 0 degree angle
+static uint16_t calibration_value_0 = 30;    // Real 0 degree angle
+static uint16_t calibration_value_180 = 195; // Real 0 degree angle
 
 // Task to test the servo
 static void servo_test_task(void *arg)

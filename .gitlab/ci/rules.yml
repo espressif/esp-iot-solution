@@ -486,8 +486,8 @@
 .patterns-example_motor_foc_knob: &patterns-example_motor_foc_knob
   - "examples/motor/foc_knob_example/**/*"
 
-.patterns-example_motor_servo: &patterns-example_motor_servo
-  - "components/motor/servo/examples/servo_control/**/*"
+.patterns-example_motor_servo_control: &patterns-example_motor_servo_control
+  - "examples/motor/servo_control/**/*"
 
 .patterns-example_ota_simple_ota_example: &patterns-example_ota_simple_ota_example
   - "examples/ota/simple_ota_example/**/*"
@@ -1076,7 +1076,7 @@
     - <<: *if-dev-push
       changes: *patterns-example_motor_foc_knob
 
-.rules:build:example_motor_servo:
+.rules:build:example_motor_servo_control:
   rules:
     - <<: *if-protected
     - <<: *if-label-build
@@ -1086,7 +1086,7 @@
     - <<: *if-dev-push
       changes: *patterns-components_motor_servo
     - <<: *if-dev-push
-      changes: *patterns-example_motor_servo
+      changes: *patterns-example_motor_servo_control
 
 .rules:build:example_ota_simple_ota_example:
   rules:

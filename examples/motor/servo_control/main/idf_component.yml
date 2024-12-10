@@ -1,0 +1,4 @@
+dependencies:
+  espressif/servo:
+    version: "*"
+    override_path: "../../../../components/motor/servo"

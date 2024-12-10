@@ -563,14 +563,11 @@ build_example_motor_foc_knob:
   variables:
     EXAMPLE_DIR: examples/motor/foc_knob_example
 
-build_example_motor_servo:
+build_example_motor_servo_control:
   extends:
     - .build_examples_template
-    - .rules:build:example_motor_servo
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.2
+    - .rules:build:example_motor_servo_control
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: components/motor/servo/examples/servo_control
 

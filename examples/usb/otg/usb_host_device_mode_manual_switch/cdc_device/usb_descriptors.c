@@ -38,7 +38,7 @@
 #endif
 
 //------------- Interfaces enumeration -------------//
-typedef enum {
+enum {
     ITF_NUM_CDC = 0,
     ITF_NUM_CDC_DATA,
     ITF_NUM_TOTAL,

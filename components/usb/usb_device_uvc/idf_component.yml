@@ -13,7 +13,8 @@ issues: https://github.com/espressif/esp-iot-solution/issues
 dependencies:
   idf: ">=5.0"
   espressif/tinyusb:
-    version: ">=0.15.0~10"
+    # Pinned to version 0.15.0~10 until https://github.com/espressif/tinyusb/pull/36 is merged.
+    version: "0.15.0~10"
   cmake_utilities: "*"
 examples:
   - path: ../../../examples/usb/device/usb_webcam
