@@ -595,7 +595,7 @@ TEST_CASE("gpio button auto-test", "[button][iot][auto]")
     vTaskDelay(pdMS_TO_TICKS(100));
 }
 
-#define TOLERANCE CONFIG_BUTTON_LONG_PRESS_TOLERANCE_MS
+#define TOLERANCE (CONFIG_BUTTON_PERIOD_TIME_MS * 4)
 
 uint16_t long_press_time[5] = {2000, 2500, 3000, 3500, 4000};
 static SemaphoreHandle_t long_press_check = NULL;
