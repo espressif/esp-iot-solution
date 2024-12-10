@@ -24,10 +24,6 @@ menu "IoT Button"
         range 500 5000
         default 1500
 
-    config BUTTON_LONG_PRESS_TOLERANCE_MS
-        int "BUTTON LONG PRESS TOLERANCE TIME (MS)"
-        default 20
-
     config BUTTON_SERIAL_TIME_MS
         int "BUTTON SERIAL TIME (MS)"
         range 2 1000
