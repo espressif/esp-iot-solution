@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.5.0 - 2024-12-10
+
+### Improvements:
+
+* Make header EOF(1 << 1) check can be disabled by `CONFIG_UVC_CHECK_HEADER_EOF`. Because some non-standard cameras set this bit in the header of every frame.
+
 ## v1.4.0 - 2024-05-21
 
 ### Improvements:
