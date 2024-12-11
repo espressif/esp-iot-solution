@@ -2114,6 +2114,7 @@ IRAM_ATTR static void _uvc_process_payload(_uvc_stream_handle_t *strmh, size_t r
         strmh->reassembling = 0;
     }
 
+#if CONFIG_UVC_CHECK_HEADER_EOF
     if (header_info & (1 << 1)) {
         /* The EOF bit is set, so publish the complete frame */
         if (strmh->got_bytes != 0) {
@@ -2121,6 +2122,7 @@ IRAM_ATTR static void _uvc_process_payload(_uvc_stream_handle_t *strmh, size_t r
         }
         strmh->reassembling = 0;
     }
+#endif
 }
 
 /**

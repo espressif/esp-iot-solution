@@ -81,11 +81,17 @@ menu "USB Stream"
         config UVC_CHECK_HEADER_EOH
             bool "Check EOH bit in payload header"
             default n
+        config UVC_CHECK_HEADER_EOF
+            bool "Check EOF bit in payload header"
+            default y
+            help
+                "If EOF(1 << 1) is set in the header, it means the current image frame has been completely received."
         config UVC_CHECK_BULK_JPEG_HEADER
             bool "Check JPEG (ff d8) header in bulk payload"
             default y
         config UVC_DROP_NO_EOF_FRAME
             bool "Drop no EOF image frames"
+            depends on UVC_CHECK_HEADER_EOF
             default n
         config UVC_DROP_OVERFLOW_FRAME
             bool "Drop overflow image frames"
