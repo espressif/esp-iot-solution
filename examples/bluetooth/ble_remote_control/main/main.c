@@ -261,6 +261,7 @@ void app_main(void)
 #else //CONFIG_JOYSTICK_INPUT_MODE_ADC
     xTaskCreate(joystick_ext_read, "ext_hardware_joystick", 2048, NULL, tskIDLE_PRIORITY, NULL);
 #endif
+    // Create a timer to update battery level periodically (add 1 each time as an example)
     TimerHandle_t  battery_timer = xTimerCreate(NULL, pdMS_TO_TICKS(5000), true, NULL, battery_timer_cb);
     if (xTimerStart(battery_timer, 0) != pdPASS) {
         ESP_LOGE(HID_DEMO_TAG, "Failed to start battery timer");
