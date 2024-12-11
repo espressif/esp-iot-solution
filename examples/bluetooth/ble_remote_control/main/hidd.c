@@ -23,7 +23,7 @@ client_info_t client;
 extern bool is_connected; // Need this here in the case of disconnection
 
 // Characteristic Values
-static const uint8_t val_batt_level = 0;
+static uint8_t val_batt_level = 0;
 // 0% battery level (assume battery not present, for user to modify if need)
 static uint8_t val_bat_cccd[] = {0x01, 0x00};
 // CCCD allows the Central Device to enable/disable notifications/indications
@@ -479,6 +479,7 @@ esp_err_t copy_attribute_handles(int instance_id, uint16_t *handles, int num_han
     switch (instance_id) {
     case INST_ID_BAT_SVC:
         memcpy(handle_table.handles_bat_svc, handles, num_handle * sizeof(uint16_t));
+        client.bat_attr_handle = handles[IDX_BAT_LVL_VAL];
         return ESP_OK;
     case INST_ID_HID:
         memcpy(handle_table.handles_hid_svc, handles, num_handle * sizeof(uint16_t));
@@ -555,6 +556,24 @@ esp_err_t send_user_input(void)
                client.attr_handle,     // attr_handle
                sizeof(val_hid_report) / sizeof(val_hid_report[0]), // value_len
                val_hid_report, // value
+               false   // need_confirm
+           );
+}
+
+esp_err_t set_hid_battery_level(uint8_t value)
+{
+    if (value > 100) {
+        value = 100;
+    }
+
+    val_batt_level = value;
+
+    return esp_ble_gatts_send_indicate(
+               client.gatt_if, // gatts_if
+               client.connection_id,   // conn_id
+               client.bat_attr_handle,     // attr_handle
+               1, // value_len
+               &val_batt_level, // value
                false   // need_confirm
            );
 }
