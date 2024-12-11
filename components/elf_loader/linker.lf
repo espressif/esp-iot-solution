@@ -1,6 +1,7 @@
 [sections:elf_loader_got_plt]
 entries:
     .got.plt
+    .got
 
 [scheme:elf_loader_default]
 entries:

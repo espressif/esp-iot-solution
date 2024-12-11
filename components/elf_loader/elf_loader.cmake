@@ -48,19 +48,22 @@ macro(project_elf project_name)
     endif()
 
     # Link input list of libraries to ELF
+    list(APPEND ELF_COMPONENTS "main")
     if(ELF_COMPONENTS)
         foreach(c "${ELF_COMPONENTS}")
-            set(elf_libs "${elf_libs}" "esp-idf/${c}/lib${c}.a")
+            list(APPEND elf_libs "esp-idf/${c}/lib${c}.a")
+            list(APPEND elf_dependeces "idf::${c}")
         endforeach()
     endif()
-
-    set(elf_libs ${elf_libs} "${ELF_LIBS}" "esp-idf/main/libmain.a")
+    if (ELF_LIBS)
+        list(APPEND elf_libs "${ELF_LIBS}")
+    endif()
     spaces2list(elf_libs)
 
     add_custom_command(OUTPUT elf_app
         COMMAND ${CMAKE_C_COMPILER} ${cflags} ${elf_libs} -o ${elf_app}
         COMMAND ${CMAKE_STRIP} ${strip_flags} ${elf_app}
-        DEPENDS ${elf_libs}
+        DEPENDS ${elf_dependeces}
         COMMENT "Build ELF: ${elf_app}"
         )
     add_custom_target(elf ALL DEPENDS elf_app)
