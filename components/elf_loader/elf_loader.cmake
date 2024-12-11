@@ -60,7 +60,7 @@ macro(project_elf project_name)
     add_custom_command(OUTPUT elf_app
         COMMAND ${CMAKE_C_COMPILER} ${cflags} ${elf_libs} -o ${elf_app}
         COMMAND ${CMAKE_STRIP} ${strip_flags} ${elf_app}
-        DEPENDS idf::main
+        DEPENDS ${elf_libs}
         COMMENT "Build ELF: ${elf_app}"
         )
     add_custom_target(elf ALL DEPENDS elf_app)

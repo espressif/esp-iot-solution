@@ -1,8 +1,8 @@
 
 if(CONFIG_ELF_LOADER)
     set(srcs  "src/esp_elf_symbol.c"
-            "src/esp_elf.c"
-            "src/esp_elf_adapter.c")
+              "src/esp_elf.c"
+              "src/esp_elf_adapter.c")
 
     if(CONFIG_IDF_TARGET_ARCH_XTENSA)
         list(APPEND srcs "src/arch/esp_elf_xtensa.c")
@@ -16,6 +16,7 @@ if(CONFIG_ELF_LOADER)
     endif()
 
     set(include_dirs  "include")
+    set(ldfragments "linker.lf")
 endif()
 
 if(CONFIG_IDF_TARGET_ESP32P4)
@@ -26,7 +27,8 @@ endif()
 
 idf_component_register(SRCS ${srcs}
                        INCLUDE_DIRS ${include_dirs}
-                       PRIV_REQUIRES spi_flash ${priv_req})
+                       PRIV_REQUIRES spi_flash ${priv_req}
+                       LDFRAGMENTS ${ldfragments})
 
 include(package_manager)
 if(CONFIG_ELF_LOADER)
