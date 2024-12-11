@@ -86,7 +86,8 @@ static uint16_t receive_fw_val;
 static uint16_t ota_status_val;
 static uint16_t command_val;
 static uint16_t custom_val;
-
+static uint16_t sector_crc = 0;
+static uint16_t crc16_cal = 0;
 static int
 esp_ble_ota_gap_event(struct ble_gap_event *event, void *arg);
 static esp_ble_ota_char_t
@@ -99,6 +100,7 @@ esp_ble_ota_notification_data(uint16_t conn_handle, uint16_t attr_handle, uint8_
 /*----------------------------------------------------
  * Common api's
  *----------------------------------------------------*/
+static uint16_t crc16_ccitt_update(uint16_t crc16, uint8_t *buf, int len);//Crc with crc16 input
 
 void ble_store_config_init(void);
 static uint16_t
@@ -128,9 +130,12 @@ esp_ble_ota_write_chr(struct os_mbuf *om)
     err = os_mbuf_copydata(om, 3, pargs.data_in_len, pargs.data_in);
 
     if (om->om_data[2] == 0xff) {
+        uint8_t crc1 = pargs.data_in[pargs.data_in_len - 2];
+        uint8_t crc2 = pargs.data_in[pargs.data_in_len - 1];
+        sector_crc = crc2 << 8 | crc1;
         pargs.data_in_len -= SECTOR_END_ID;
     }
-
+    crc16_cal = crc16_ccitt_update(crc16_cal, pargs.data_in, pargs.data_in_len);
     err = esp_encrypted_img_decrypt_data(decrypt_handle_cmp, &pargs);
     if (err != ESP_OK && err != ESP_ERR_NOT_FINISHED) {
         return;
@@ -222,11 +227,14 @@ write_ota_data:
 
 sector_end:
     // Check crc 
-    uint16_t cal_crc = crc16_ccitt(fw_buf, fw_buf_offset - 2);
-    uint8_t crc_L = fw_buf[fw_buf_offset - 2];
-    uint8_t crc_H = fw_buf[fw_buf_offset - 1];
-    uint16_t crc = crc_H << 8 | crc_L;
-    bool match = (cal_crc == crc ? true : false);
+    #ifndef CONFIG_PRE_ENC_OTA
+    crc16_cal = crc16_ccitt(fw_buf, fw_buf_offset - 2);
+    sector_crc = fw_buf[fw_buf_offset - 1] << 8 | fw_buf[fw_buf_offset - 2];
+    #endif
+    bool match = (sector_crc == crc16_cal ? true : false);
+    ESP_LOGD(TAG, "DEBUG : Get crc is %d ,cal crc is %d ,reseult is %d", sector_crc, crc16_cal, match);
+    sector_crc = 0;
+    crc16_cal = 0;
     if (match){
     if (fw_buf_offset < ota_block_size) {
         esp_ble_ota_recv_fw_handler(fw_buf, fw_buf_offset);
@@ -266,6 +274,29 @@ static uint16_t crc16_ccitt(const unsigned char *buf, int len)
             if (crc16 & 0x8000) {
                 crc16 = (crc16 << 1) ^ 0x1021;
             } else {
+                crc16 = crc16 << 1;
+            }
+        }
+    }
+
+    return crc16;
+}
+static uint16_t crc16_ccitt_update(uint16_t crc16, uint8_t *buf, int len)
+{
+    int32_t i;
+
+    while (len--)
+    {
+        crc16 ^= *buf++ << 8;
+
+        for (i = 0; i < 8; i++)
+        {
+            if (crc16 & 0x8000)
+            {
+                crc16 = (crc16 << 1) ^ 0x1021;
+            }
+            else
+            {
                 crc16 = crc16 << 1;
             }
         }
