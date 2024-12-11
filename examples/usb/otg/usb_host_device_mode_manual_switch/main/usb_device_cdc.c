@@ -18,7 +18,6 @@ static const char *TAG = "tusb_cdc_acm";
 static usb_phy_handle_t phy_hdl =  NULL;
 static TaskHandle_t uvc_task_hdl = NULL;
 static TaskHandle_t cdc_task_hdl = NULL;
-static EventGroupHandle_t usb_cdc_device;
 
 //****************************************************TinyUSB callbacks*/
 // CDC-ACM
@@ -82,8 +81,6 @@ esp_err_t device_cdc_init(void)
         ESP_LOGE(TAG, "USB Device Stack Init Fail");
         return ESP_FAIL;
     }
-
-    usb_cdc_device = xEventGroupCreate();
 
     xTaskCreate(tusb_device_task, "tusb_device_task", 4096, NULL, 5, &uvc_task_hdl);
     xTaskCreate(cdc_task, "cdc_task", 4096, NULL, 5, &cdc_task_hdl);
