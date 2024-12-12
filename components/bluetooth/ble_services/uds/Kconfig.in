@@ -1,0 +1,26 @@
+# User Data Service
+
+menuconfig BLE_UDS
+    bool "GATT User Data Service"
+
+if BLE_UDS
+
+config BLE_UDS_CHARACTERISTIC_ENABLE
+    bool "User Data Service Characteristic"
+    default n
+    help
+      Set y to support UDS characteristic or n to disable it.
+
+config BLE_UDS_FEATURE_DB_CHG_NTF_ENABLE
+    bool "UDS Databash change Increment Notification"
+    default n
+    help
+      Set y to support Notification or n to disable it.
+
+config BLE_UDS_REGISTER_USER_ENABLE
+    bool "Body Composition Feature Indication"
+    default n
+    help
+      Set y to support Registered or n to disable it.
+
+endif # BLE_UDS

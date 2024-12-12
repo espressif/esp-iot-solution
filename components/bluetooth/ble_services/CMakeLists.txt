@@ -39,6 +39,11 @@ list(APPEND srcs            "bcs/src/esp_bcs.c")
 list(APPEND include         "bcs/include")
 endif()
 
+if(CONFIG_BLE_UDS)
+list(APPEND srcs            "uds/src/esp_uds.c")
+list(APPEND include         "uds/include")
+endif()
+
 list(APPEND req "ble_conn_mgr")
 
 idf_component_register(SRCS "${srcs}"

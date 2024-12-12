@@ -12,6 +12,7 @@
 
 #include "esp_ble_conn_mgr.h"
 #include "esp_bcs.h"
+#include "esp_log.h"
 
 typedef struct {
     uint8_t len;

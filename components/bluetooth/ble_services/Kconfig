@@ -7,5 +7,6 @@ menu "BLE Standard Services"
     orsource "./hrs/Kconfig.in"
     orsource "./hts/Kconfig.in"
     orsource "./tps/Kconfig.in"
+    orsource "./uds/Kconfig.in"
 
 endmenu
