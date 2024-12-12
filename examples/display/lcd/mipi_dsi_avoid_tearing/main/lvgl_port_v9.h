@@ -18,11 +18,22 @@ extern "C" {
 #endif
 
 /**
+ * @brief LVGL port interface type
+ *
+ */
+typedef enum {
+    LVGL_PORT_INTERFACE_RGB,
+    LVGL_PORT_INTERFACE_MIPI_DSI_DMA,
+    LVGL_PORT_INTERFACE_MIPI_DSI_NO_DMA,
+    LVGL_PORT_INTERFACE_MAX,
+} lvgl_port_interface_t;
+
+/**
  * LVGL related parameters, can be adjusted by users
  *
  */
-#define LVGL_PORT_H_RES             (320)
-#define LVGL_PORT_V_RES             (480)
+#define LVGL_PORT_H_RES             (1024)
+#define LVGL_PORT_V_RES             (600)
 #define LVGL_PORT_TICK_PERIOD_MS    (CONFIG_EXAMPLE_LVGL_PORT_TICK)
 
 /**
@@ -70,6 +81,14 @@ extern "C" {
 #define LVGL_PORT_AVOID_TEAR_MODE       (CONFIG_EXAMPLE_LVGL_PORT_AVOID_TEAR_MODE)
 
 /**
+ * Set the PPA rotation enable:
+ *      - 0: Disable PPA rotation
+ *      - 1: Enable PPA rotation
+ *
+ */
+#define LVGL_PORT_PPA_ROTATION_ENABLE   (CONFIG_EXAMPLE_LVGL_PORT_PPA_ROTATION_ENABLE)
+
+/**
  * Set the rotation degree of the LCD panel when the avoid tearing function is enabled:
  *      - 0: 0 degree
  *      - 90: 90 degree
@@ -84,13 +103,13 @@ extern "C" {
  *
  */
 #if LVGL_PORT_AVOID_TEAR_MODE == 1
-#define LVGL_PORT_LCD_RGB_BUFFER_NUMS   (2)
+#define LVGL_PORT_LCD_BUFFER_NUMS   (2)
 #define LVGL_PORT_FULL_REFRESH          (1)
 #elif LVGL_PORT_AVOID_TEAR_MODE == 2
-#define LVGL_PORT_LCD_RGB_BUFFER_NUMS   (3)
+#define LVGL_PORT_LCD_BUFFER_NUMS   (3)
 #define LVGL_PORT_FULL_REFRESH          (1)
 #elif LVGL_PORT_AVOID_TEAR_MODE == 3
-#define LVGL_PORT_LCD_RGB_BUFFER_NUMS   (2)
+#define LVGL_PORT_LCD_BUFFER_NUMS   (2)
 #define LVGL_PORT_DIRECT_MODE           (1)
 #endif /* LVGL_PORT_AVOID_TEAR_MODE */
 
@@ -104,13 +123,13 @@ extern "C" {
 #elif EXAMPLE_LVGL_PORT_ROTATION_DEGREE == 270
 #define EXAMPLE_LVGL_PORT_ROTATION_270  (1)
 #endif
-#ifdef LVGL_PORT_LCD_RGB_BUFFER_NUMS
-#undef LVGL_PORT_LCD_RGB_BUFFER_NUMS
-#define LVGL_PORT_LCD_RGB_BUFFER_NUMS   (3)
+#ifdef LVGL_PORT_LCD_BUFFER_NUMS
+#undef LVGL_PORT_LCD_BUFFER_NUMS
+#define LVGL_PORT_LCD_BUFFER_NUMS   (3)
 #endif
 #endif /* EXAMPLE_LVGL_PORT_ROTATION_DEGREE */
 #else
-#define LVGL_PORT_LCD_RGB_BUFFER_NUMS   (1)
+#define LVGL_PORT_LCD_BUFFER_NUMS   (1)
 #define LVGL_PORT_FULL_REFRESH          (0)
 #define LVGL_PORT_DIRECT_MODE           (0)
 #endif /* LVGL_PORT_AVOID_TEAR_ENABLE */
@@ -126,7 +145,7 @@ extern "C" {
  *      - ESP_ERR_INVALID_ARG: Invalid argument
  *      - Others: Fail
  */
-esp_err_t lvgl_port_init(esp_lcd_panel_handle_t lcd_handle, esp_lcd_touch_handle_t tp_handle);
+esp_err_t lvgl_port_init(esp_lcd_panel_handle_t lcd_handle, esp_lcd_touch_handle_t tp_handle, lvgl_port_interface_t interface);
 
 /**
  * @brief Take LVGL mutex
@@ -152,7 +171,7 @@ void lvgl_port_unlock(void);
  *      - true:  The tasks need to be re-scheduled
  *      - false: The tasks don't need to be re-scheduled
  */
-bool lvgl_port_notify_rgb_vsync(void);
+bool lvgl_port_notify_lcd_vsync(void);
 
 #ifdef __cplusplus
 }

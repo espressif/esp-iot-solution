@@ -436,8 +436,14 @@
 .patterns-example_common_components_camera: &patterns-example_common_components_camera
   - "examples/common_components/camera/**/*"
 
+.patterns-example_display_lcd_lcd_layer_blending: &patterns-example_display_lcd_lcd_layer_blending
+  - "examples/display/lcd/lcd_layer_blending/**/*"
+
 .patterns-example_display_lcd_lcd_with_te: &patterns-example_display_lcd_lcd_with_te
   - "examples/display/lcd/lcd_with_te/**/*"
+
+.patterns-example_display_lcd_mipi_dsi_avoid_tearing: &patterns-example_display_lcd_mipi_dsi_avoid_tearing
+  - "examples/display/lcd/mipi_dsi_avoid_tearing/**/*"
 
 .patterns-example_display_lcd_qspi_with_ram: &patterns-example_display_lcd_qspi_with_ram
   - "examples/display/lcd/qspi_with_ram/**/*"
@@ -807,6 +813,18 @@
     - <<: *if-dev-push
       changes: *patterns-example_check_pedestrian_flow
 
+.rules:build:example_display_lcd_lcd_layer_blending:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_display_lcd_esp_lcd_ek79007
+    - <<: *if-dev-push
+      changes: *patterns-example_display_lcd_lcd_layer_blending
+
 .rules:build:example_display_lcd_lcd_with_te:
   rules:
     - <<: *if-protected
@@ -818,6 +836,18 @@
       changes: *patterns-example_display_lcd_lcd_with_te
     - <<: *if-dev-push
       changes: *patterns-components_display_lcd_esp_lcd_axs15231b
+
+.rules:build:example_display_lcd_mipi_dsi_avoid_tearing:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_display_lcd_esp_lcd_ek79007
+    - <<: *if-dev-push
+      changes: *patterns-example_display_lcd_mipi_dsi_avoid_tearing
 
 .rules:build:example_display_lcd_qspi_with_ram:
   rules:

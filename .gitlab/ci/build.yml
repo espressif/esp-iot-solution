@@ -375,6 +375,16 @@ build_example_check_pedestrian_flow:
   variables:
     EXAMPLE_DIR: examples/check_pedestrian_flow
 
+build_example_display_lcd_lcd_layer_blending:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_display_lcd_lcd_layer_blending
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.4
+  variables:
+    EXAMPLE_DIR: examples/display/lcd/lcd_layer_blending
+
 build_example_display_lcd_lcd_with_te:
   extends:
     - .build_examples_template
@@ -384,6 +394,16 @@ build_example_display_lcd_lcd_with_te:
       - IMAGE: espressif/idf:release-v5.1
   variables:
     EXAMPLE_DIR: examples/display/lcd/lcd_with_te
+
+build_example_display_lcd_mipi_dsi_avoid_tearing:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_display_lcd_mipi_dsi_avoid_tearing
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.4
+  variables:
+    EXAMPLE_DIR: examples/display/lcd/mipi_dsi_avoid_tearing
 
 build_example_display_lcd_qspi_with_ram:
   extends:

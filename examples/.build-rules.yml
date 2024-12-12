@@ -159,6 +159,14 @@ examples/check_pedestrian_flow:
   enable:
     - if: IDF_TARGET in ["esp32","esp32s2","esp32s3","esp32c3"]
 
+examples/display/lcd/lcd_layer_blending:
+  enable:
+    - if: IDF_TARGET in ["esp32p4"]
+
+examples/display/lcd/mipi_dsi_avoid_tearing:
+  enable:
+    - if: IDF_TARGET in ["esp32p4"]
+
 examples/display/lcd/qspi_with_ram:
   enable:
     - if: IDF_TARGET in ["esp32","esp32c2","esp32c3","esp32c6","esp32h2","esp32s2", "esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)

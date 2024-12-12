@@ -6,14 +6,7 @@ menu "Example Configuration"
             help
                 Enable this option if you wish to use display touch.
     endmenu
-
     menu "Display"
-        config EXAMPLE_LCD_RGB_BOUNCE_BUFFER_HEIGHT
-            int "RGB Bounce buffer height"
-            default 20
-            help
-                Height of bounce buffer. The width of the buffer is the same as that of the LCD.
-
         config EXAMPLE_LVGL_PORT_TASK_MAX_DELAY_MS
             int "LVGL timer task maximum delay (ms)"
             default 500
@@ -115,11 +108,9 @@ menu "Example Configuration"
         choice
             depends on !EXAMPLE_LVGL_PORT_AVOID_TEAR_ENABLE
             prompt "Select LVGL buffer memory capability"
-            default EXAMPLE_LVGL_PORT_BUF_INTERNAL
+            default EXAMPLE_LVGL_PORT_BUF_PSRAM
             config EXAMPLE_LVGL_PORT_BUF_PSRAM
                 bool "PSRAM memory"
-            config EXAMPLE_LVGL_PORT_BUF_INTERNAL
-                bool "Internal memory"
         endchoice
 
         config EXAMPLE_LVGL_PORT_BUF_HEIGHT
