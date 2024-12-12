@@ -31,6 +31,7 @@ INPUT = \
     $(PROJECT_PATH)/components/bluetooth/ble_profiles/std/ble_htp/include/esp_htp.h \
     $(PROJECT_PATH)/components/bluetooth/ble_services/ans/include/esp_ans.h \
     $(PROJECT_PATH)/components/bluetooth/ble_services/bas/include/esp_bas.h \
+    $(PROJECT_PATH)/components/bluetooth/ble_services/bcs/include/esp_bcs.h \
     $(PROJECT_PATH)/components/bluetooth/ble_services/dis/include/esp_dis.h \
     $(PROJECT_PATH)/components/bluetooth/ble_services/hrs/include/esp_hrs.h \
     $(PROJECT_PATH)/components/bluetooth/ble_services/hts/include/esp_hts.h \

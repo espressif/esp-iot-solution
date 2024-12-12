@@ -1,8 +1,9 @@
 menu "BLE Standard Services"
 
     orsource "./ans/Kconfig.in"
-    orsource "./dis/Kconfig.in"
     orsource "./bas/Kconfig.in"
+    orsource "./bcs/Kconfig.in"
+    orsource "./dis/Kconfig.in"
     orsource "./hrs/Kconfig.in"
     orsource "./hts/Kconfig.in"
     orsource "./tps/Kconfig.in"
