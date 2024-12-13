@@ -35,6 +35,7 @@ The example will be downloaded to the current folder. You can navigate into it f
 7. [ble_hts](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_services/ble_hts)
 8. [ble_tps](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_services/ble_tps)
 9. [ble_uds](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_services/ble_uds)
+10. [ble_wss](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_services/ble_wss)
 
 ### Q&A
 

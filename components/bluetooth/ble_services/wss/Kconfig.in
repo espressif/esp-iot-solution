@@ -1,0 +1,8 @@
+# Weight Scale Service
+
+menuconfig BLE_WSS
+    bool "GATT Weight Scale Service"
+
+if BLE_WSS
+
+endif # BLE_WSS

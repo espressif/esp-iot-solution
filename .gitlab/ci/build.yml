@@ -276,6 +276,19 @@ build_example_bluetooth_ble_services_ble_uds:
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_services/ble_uds
 
+build_example_bluetooth_ble_services_ble_wss:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_bluetooth_ble_services
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.0
+      - IMAGE: espressif/idf:release-v5.1
+      - IMAGE: espressif/idf:release-v5.2
+  variables:
+    EXAMPLE_DIR: examples/bluetooth/ble_services/ble_wss
+
 build_example_bluetooth_ble_ota:
   extends:
     - .build_examples_template

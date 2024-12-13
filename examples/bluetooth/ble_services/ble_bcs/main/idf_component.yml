@@ -4,5 +4,5 @@ dependencies:
     version: "~0.*"
     override_path: "../../../../../components/bluetooth/ble_conn_mgr"
   ble_services:
-    version: "~0.*"
+    version: "~1.*"
     override_path: "../../../../../components/bluetooth/ble_services"
