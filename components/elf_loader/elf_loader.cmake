@@ -35,27 +35,35 @@ macro(project_elf project_name)
     # Remove more unused sections
     string(REPLACE "-elf-gcc" "-elf-strip" ${CMAKE_STRIP} ${CMAKE_C_COMPILER})
     set(strip_flags --strip-unneeded
-                    --remove-section=.xt.lit
-                    --remove-section=.xt.prop
                     --remove-section=.comment
-                    --remove-section=.xtensa.info
                     --remove-section=.got.loc
-                    --remove-section=.got)
+                    --remove-section=.dynamic)
 
-    # Link input list of libraries to ELF
-    if(ELF_COMPONENTS)
-        foreach(c "${ELF_COMPONENTS}")
-            set(elf_libs "${elf_libs}" "esp-idf/${c}/lib${c}.a")
-        endforeach()
+    if(CONFIG_IDF_TARGET_ARCH_XTENSA)
+        list(APPEND strip_flags --remove-section=.xt.lit
+                                --remove-section=.xt.prop
+                                --remove-section=.xtensa.info)
+    elseif(CONFIG_IDF_TARGET_ARCH_RISCV)
+        list(APPEND strip_flags --remove-section=.riscv.attributes)
     endif()
 
-    set(elf_libs ${elf_libs} "${ELF_LIBS}" "esp-idf/main/libmain.a")
+    # Link input list of libraries to ELF
+    list(APPEND ELF_COMPONENTS "main")
+    if(ELF_COMPONENTS)
+        foreach(c "${ELF_COMPONENTS}")
+            list(APPEND elf_libs "esp-idf/${c}/lib${c}.a")
+            list(APPEND elf_dependeces "idf::${c}")
+        endforeach()
+    endif()
+    if (ELF_LIBS)
+        list(APPEND elf_libs "${ELF_LIBS}")
+    endif()
     spaces2list(elf_libs)
 
     add_custom_command(OUTPUT elf_app
         COMMAND ${CMAKE_C_COMPILER} ${cflags} ${elf_libs} -o ${elf_app}
         COMMAND ${CMAKE_STRIP} ${strip_flags} ${elf_app}
-        DEPENDS idf::main
+        DEPENDS ${elf_dependeces}
         COMMENT "Build ELF: ${elf_app}"
         )
     add_custom_target(elf ALL DEPENDS elf_app)

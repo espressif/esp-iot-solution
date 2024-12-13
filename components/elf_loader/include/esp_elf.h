@@ -69,7 +69,16 @@ void esp_elf_deinit(esp_elf_t *elf);
  *
  * @return None
  */
-void esp_elf_print_hdr(const uint8_t *pbuf);
+void esp_elf_print_ehdr(const uint8_t *pbuf);
+
+/**
+ * @brief Print program header description information of ELF.
+ *
+ * @param pbuf - ELF data buffer
+ *
+ * @return None
+ */
+void esp_elf_print_phdr(const uint8_t *pbuf);
 
 /**
  * @brief Print section header description information of ELF.

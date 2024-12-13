@@ -1,0 +1,14 @@
+[sections:elf_loader_got_plt]
+entries:
+    .got.plt
+    .got
+
+[scheme:elf_loader_default]
+entries:
+    elf_loader_got_plt -> flash_rodata
+
+[mapping:elf_loader]
+archive: *
+entries:
+    * (elf_loader_default);
+        elf_loader_got_plt -> flash_rodata KEEP() SURROUND(_esp_elf_loader_got_plt)

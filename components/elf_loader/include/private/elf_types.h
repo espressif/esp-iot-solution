@@ -18,6 +18,29 @@ extern "C" {
 
 #define EI_NIDENT       16              /*!< Magic number and other information length */
 
+/** @brief Type of segment */
+
+#define PT_NULL         0               /*!< Program header table entry unused */
+#define PT_LOAD         1               /*!< Loadable program segment */
+#define PT_DYNAMIC      2               /*!< Dynamic linking information */
+#define PT_INTERP       3               /*!< Program interpreter */
+#define PT_NOTE         4               /*!< Auxiliary information */
+#define PT_SHLIB        5               /*!< Reserved */
+#define PT_PHDR         6               /*!< Entry for header table itself */
+#define PT_TLS          7               /*!< Thread-local storage segment */
+#define PT_NUM          8               /*!< Number of defined types */
+#define PT_LOOS         0x60000000      /*!< Start of OS-specific */
+#define PT_GNU_EH_FRAME 0x6474e550      /*!< GCC .eh_frame_hdr segment */
+#define PT_GNU_STACK    0x6474e551      /*!< Indicates stack executability */
+#define PT_GNU_RELRO    0x6474e552      /*!< Read-only after relocation */
+#define PT_LOSUNW       0x6ffffffa
+#define PT_SUNWBSS      0x6ffffffa      /*!< Sun Specific segment */
+#define PT_SUNWSTACK    0x6ffffffb      /*!< Stack segment */
+#define PT_HISUNW       0x6fffffff
+#define PT_HIOS         0x6fffffff      /*!< End of OS-specific */
+#define PT_LOPROC       0x70000000      /*!< Start of processor-specific */
+#define PT_HIPROC       0x7fffffff      /*!< End of processor-specific */
+
 /** @brief Section Type */
 
 #define SHT_NULL        0               /*!< invalid section header */
@@ -82,6 +105,8 @@ extern "C" {
 #define ELF_SYMTAB      ".symtab"       /*!< symbol table */
 #define ELF_TEXT        ".text"         /*!< code */
 #define ELF_DATA_REL_RO ".data.rel.ro"  /*!< dynamic read-only data */
+#define ELF_PLT         ".plt"          /*!< procedure linkage table. */
+#define ELF_GOT_PLT     ".got.plt"      /*!< a table where resolved addresses from external functions are stored */
 
 /** @brief ELF section and symbol operation */
 
@@ -129,6 +154,19 @@ typedef struct elf32_hdr {
     Elf32_Half      shnum;              /*!< number of section header entries */
     Elf32_Half      shstrndx;           /*!< section header table's "section header string table" entry offset */
 } elf32_hdr_t;
+
+/** @brief Program Header */
+
+typedef struct elf32_phdr {
+    Elf32_Word type;                         /* segment type */
+    Elf32_Off  offset;                       /* segment offset */
+    Elf32_Addr vaddr;                        /* virtual address of segment */
+    Elf32_Addr paddr;                        /* physical address - ignored? */
+    Elf32_Word filesz;                       /* number of bytes in file for seg. */
+    Elf32_Word memsz;                        /* number of bytes in mem. for seg. */
+    Elf32_Word flags;                        /* flags */
+    Elf32_Word align;                        /* memory alignment */
+} elf32_phdr_t;
 
 /** @brief Section Header */
 
@@ -184,6 +222,10 @@ typedef struct esp_elf_sec {
 /** @brief ELF object */
 
 typedef struct esp_elf {
+    unsigned char   *psegment;          /*!< segment buffer pointer */
+
+    uint32_t         svaddr;            /*!< start virtual address of segment */
+
     unsigned char   *ptext;             /*!< instruction buffer pointer */
 
     unsigned char   *pdata;             /*!< data buffer pointer */
