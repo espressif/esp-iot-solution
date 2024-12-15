@@ -21,6 +21,7 @@ typedef struct {
 #if CONFIG_GPIO_BUTTON_SUPPORT_POWER_SAVE
     bool enable_power_save;        /**< enable power save mode */
 #endif
+    bool disable_pull;            /**< disable internal pull or not */
 } button_gpio_config_t;
 
 /**
