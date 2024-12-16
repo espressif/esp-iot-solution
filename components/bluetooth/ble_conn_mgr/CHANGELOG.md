@@ -1,3 +1,11 @@
+# ChangeLog
+
+## v0.1.3 - 2024-12-09
+
+### Enhancements:
+
+* Support Config UUID Information in BLE broadcasting.
+
 ## v0.1.2 - 2024-5-22
 
 ### Bug Fixes:

@@ -1892,6 +1892,8 @@ esp_err_t esp_ble_conn_init(esp_ble_conn_config_t *config)
 #endif
 
 #else
+    uint8_t offset = 0;
+    esp_nimble_maps_t uuid_data;
     /* Store BLE announce data internally */
     esp_nimble_maps_t announce_data[] = {
         {
@@ -1905,6 +1907,13 @@ esp_err_t esp_ble_conn_init(esp_ble_conn_config_t *config)
         /* Add extra bytes required per entry, i.e.
          * length (1 byte) + type (1 byte) = 2 bytes */
         conn_session->adv_data_len += announce_data[i].length + 2;
+    }
+
+    if (config->include_service_uuid) {
+        uuid_data.type = BLE_CONN_DATA_UUID16_ALL;
+        uuid_data.length = sizeof(config->adv_uuid16);
+        uuid_data.value = (uint8_t *)(&(config->adv_uuid16));
+        conn_session->adv_data_len += uuid_data.length + 2;
     }
 
     if (conn_session->adv_data_len > BLE_ADV_DATA_LEN_MAX) {
@@ -1925,6 +1934,14 @@ esp_err_t esp_ble_conn_init(esp_ble_conn_config_t *config)
         conn_session->adv_data_buf[len++] = announce_data[i].type;
         memcpy(&conn_session->adv_data_buf[len], announce_data[i].value, announce_data[i].length);
         len += announce_data[i].length;
+        offset = len;
+    }
+
+    if (config->include_service_uuid) {
+        conn_session->adv_data_buf[offset++] = uuid_data.length + 1;
+        conn_session->adv_data_buf[offset++] = uuid_data.type;
+        memcpy(&conn_session->adv_data_buf[offset], uuid_data.value, uuid_data.length);
+        offset += uuid_data.length;
     }
 
     /* Store BLE scan response data internally */
