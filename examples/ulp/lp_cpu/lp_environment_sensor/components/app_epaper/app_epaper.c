@@ -557,7 +557,7 @@ esp_err_t epaper_display(epaper_handle_t paper, epaper_display_data_t display_da
     epaper_print_string(paper, 30, 78, "Humidity", 12, BLACK);
     epaper_draw_line(paper, 1, 92, 119, 92, BLACK);
 
-#if CONFIG_REGION_OVERSEAS
+#if CONFIG_REGION_INTERNATIONAL
     if (strstr(display_data.text, "Sunny") != NULL) {
         epaper_print_string(paper, 145, 5, "Sunny", 16, BLACK);
         epaper_display_picture(paper, 141, 25, 48, 48, SUNNY, WHITE);
@@ -577,7 +577,7 @@ esp_err_t epaper_display(epaper_handle_t paper, epaper_display_data_t display_da
         epaper_print_string(paper, 150, 5, "Haze", 16, BLACK);
         epaper_display_picture(paper, 141, 25, 48, 48, HAZE, WHITE);
     } else {
-        epaper_print_string(paper, 140, 5, "No data", 16, BLACK);
+        epaper_print_string(paper, 140, 5, "No Wifi", 16, BLACK);
         epaper_display_picture(paper, 141, 25, 48, 48, NO_WEATHER, WHITE);
     }
 #else
@@ -600,7 +600,7 @@ esp_err_t epaper_display(epaper_handle_t paper, epaper_display_data_t display_da
         epaper_print_string(paper, 150, 5, "Haze", 16, BLACK);
         epaper_display_picture(paper, 141, 25, 48, 48, HAZE, WHITE);
     } else {
-        epaper_print_string(paper, 140, 5, "No data", 16, BLACK);
+        epaper_print_string(paper, 140, 5, "No Wifi", 16, BLACK);
         epaper_display_picture(paper, 141, 25, 48, 48, NO_WEATHER, WHITE);
     }
 #endif
@@ -629,7 +629,7 @@ esp_err_t epaper_display(epaper_handle_t paper, epaper_display_data_t display_da
     wind_speed[strlen(wind_speed) + 1] = '\0';
     epaper_print_string(paper, 214, 19, wind_speed, 12, BLACK);
 
-#if CONFIG_REGION_OVERSEAS
+#if CONFIG_REGION_INTERNATIONAL
     int wind_dir_len = strlen(display_data.wind_dir);
     epaper_print_string(paper, 254 - (wind_dir_len * 3), 32, display_data.wind_dir, 12, BLACK);
 #else
@@ -659,7 +659,7 @@ esp_err_t epaper_display(epaper_handle_t paper, epaper_display_data_t display_da
 
     epaper_draw_rectangle(paper, 212, 1, 296, 46, BLACK, 0);
 
-#if CONFIG_REGION_OVERSEAS
+#if CONFIG_REGION_INTERNATIONAL
     int week_len = strlen(display_data.week);
     epaper_print_string(paper, 254 - (week_len * 4), 48, display_data.week, 16, BLACK);
 #else

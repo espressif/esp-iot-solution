@@ -108,18 +108,19 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt)
     return ESP_OK;
 }
 
-esp_err_t http_rest_with_url(char *district_id, char *city, char *name, char *text, char *wind_class,
-                             char *wind_dir, char *uptime, char *week, int *high, int *low)
+esp_err_t get_http_weather_data_with_url(http_weather_data_t *weather_data)
 {
+    esp_err_t ret = ESP_OK;
     char local_response_buffer[MAX_HTTP_OUTPUT_BUFFER] = {0};
     char weather_http_url[120] = {0};
-#ifdef CONFIG_REGION_OVERSEAS
+    snprintf(weather_data->district_id, sizeof(weather_data->district_id), "%s", CONFIG_CITY_DISTRICT_ID);
+#ifdef CONFIG_REGION_INTERNATIONAL
     strcat(weather_http_url, "https://api.map.baidu.com/weather_abroad/v1/?district_id=");
-    strcat(weather_http_url, district_id);
+    strcat(weather_http_url, weather_data->district_id);
     strcat(weather_http_url, "&data_type=all&language=en&ak=uKBj61fKPRDbXzv5w3ecFaVove3ZqwlT");
-#elif CONFIG_REGION_DOMESTIC
+#elif CONFIG_REGION_CHINA
     strcat(weather_http_url, "https://api.map.baidu.com/weather/v1/?district_id=");
-    strcat(weather_http_url, district_id);
+    strcat(weather_http_url, weather_data->district_id);
     strcat(weather_http_url, "&data_type=all&ak=uKBj61fKPRDbXzv5w3ecFaVove3ZqwlT");
 #endif
     esp_http_client_config_t config = {
@@ -130,7 +131,11 @@ esp_err_t http_rest_with_url(char *district_id, char *city, char *name, char *te
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
 
-    esp_http_client_perform(client);
+    ret = esp_http_client_perform(client);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "HTTP GET request failed: %s", esp_err_to_name(ret));
+        return ret;
+    }
 
     cJSON *root = cJSON_Parse(local_response_buffer);
     cJSON *result = cJSON_GetObjectItem(root, "result");
@@ -145,19 +150,25 @@ esp_err_t http_rest_with_url(char *district_id, char *city, char *name, char *te
     char *pre_wind_class = cJSON_GetObjectItem(now, "wind_class")->valuestring;
     char *pre_wind_dir = cJSON_GetObjectItem(now, "wind_dir")->valuestring;
     char *pre_uptime = cJSON_GetObjectItem(now, "uptime")->valuestring;
-    *high = cJSON_GetObjectItem(first_forecast, "high")->valueint;
-    *low = cJSON_GetObjectItem(first_forecast, "low")->valueint;
     char *pre_week = cJSON_GetObjectItem(first_forecast, "week")->valuestring;
+    int pre_high = cJSON_GetObjectItem(first_forecast, "high")->valueint;
+    int pre_low = cJSON_GetObjectItem(first_forecast, "low")->valueint;
 
-    memcpy(city, pre_city, strlen(pre_city));
-    memcpy(name, pre_name, strlen(pre_name));
-    memcpy(text, pre_text, strlen(pre_text));
-    memcpy(wind_class, pre_wind_class, strlen(pre_wind_class));
-    memcpy(wind_dir, pre_wind_dir, strlen(pre_wind_dir));
-    memcpy(uptime, pre_uptime, strlen(pre_uptime));
-    memcpy(week, pre_week, strlen(pre_week));
+    snprintf(weather_data->city_name, sizeof(weather_data->city_name), "%s", pre_city);
+    snprintf(weather_data->district_name, sizeof(weather_data->district_name), "%s", pre_name);
+    snprintf(weather_data->text, sizeof(weather_data->text), "%s", pre_text);
+    snprintf(weather_data->wind_class, sizeof(weather_data->wind_class), "%s", pre_wind_class);
+    snprintf(weather_data->wind_dir, sizeof(weather_data->wind_dir), "%s", pre_wind_dir);
+    snprintf(weather_data->uptime, sizeof(weather_data->uptime), "%s", pre_uptime);
+    snprintf(weather_data->week, sizeof(weather_data->week), "%s", pre_week);
+    weather_data->temp_high = pre_high;
+    weather_data->temp_low = pre_low;
 
     cJSON_Delete(root);
-    esp_http_client_cleanup(client);
+    ret = esp_http_client_cleanup(client);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "HTTP cleanup failed: %s", esp_err_to_name(ret));
+        return ret;
+    }
     return ESP_OK;
 }

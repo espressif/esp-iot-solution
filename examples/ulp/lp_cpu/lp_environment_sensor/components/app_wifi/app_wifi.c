@@ -40,10 +40,12 @@
 
 ESP_EVENT_DEFINE_BASE(APP_WIFI_EVENT);
 static const char *TAG = "app_wifi";
-static const int WIFI_CONNECTED_EVENT = BIT0;
-static int s_retry_num = 0;
-static EventGroupHandle_t wifi_event_group;
-static EventGroupHandle_t second_wifi_event_group = NULL;
+
+static EventGroupHandle_t wifi_event_group = NULL;
+
+#define EXAMPLE_ESP_MAXIMUM_RETRY   3
+#define WIFI_CONNECT_SUCCESS_EVENT  BIT0
+#define WIFI_CONNECT_FAIL_EVENT     BIT1
 
 #define PROV_QR_VERSION "v1"
 
@@ -153,6 +155,7 @@ static void app_wifi_print_qr(const char *name, const char *pop, const char *tra
 static void event_handler(void* arg, esp_event_base_t event_base,
                           int32_t event_id, void* event_data)
 {
+    static int retry_cnt = 0;
 #ifdef CONFIG_APP_WIFI_RESET_PROV_ON_FAILURE
     static int retries = 0;
 #endif
@@ -219,11 +222,17 @@ static void event_handler(void* arg, esp_event_base_t event_base,
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
         ESP_LOGI(TAG, "Connected with IP Address:" IPSTR, IP2STR(&event->ip_info.ip));
+        retry_cnt = 0;
         /* Signal main application to continue execution */
-        xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_EVENT);
+        xEventGroupSetBits(wifi_event_group, WIFI_CONNECT_SUCCESS_EVENT);
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
         ESP_LOGI(TAG, "Disconnected. Connecting to the AP again...");
-        esp_wifi_connect();
+        retry_cnt++;
+        if (retry_cnt >= EXAMPLE_ESP_MAXIMUM_RETRY) {
+            xEventGroupSetBits(wifi_event_group, WIFI_CONNECT_FAIL_EVENT);
+        } else {
+            esp_wifi_connect();
+        }
     }
 }
 
@@ -415,6 +424,7 @@ esp_err_t app_wifi_start_timer(void)
 
 esp_err_t app_first_time_wifi_start(app_wifi_pop_type_t pop_type)
 {
+    esp_err_t err = ESP_OK;
     /* Configuration for the provisioning manager */
     wifi_prov_mgr_config_t config = {
         /* What is the Provisioning Scheme that we want ?
@@ -547,35 +557,47 @@ esp_err_t app_first_time_wifi_start(app_wifi_pop_type_t pop_type)
         custom_mfg_data_len = 0;
     }
     /* Wait for Wi-Fi connection */
-    xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED_EVENT, false, true, portMAX_DELAY);
-    return ESP_OK;
+    EventBits_t uxBits;
+    uxBits = xEventGroupWaitBits(wifi_event_group,
+                                 WIFI_CONNECT_SUCCESS_EVENT | WIFI_CONNECT_FAIL_EVENT,
+                                 pdFALSE,
+                                 pdFALSE,
+                                 portMAX_DELAY);
+    if (uxBits & WIFI_CONNECT_SUCCESS_EVENT) {
+        ESP_LOGI(TAG, "Wi-Fi connected successfully!");
+        err = ESP_OK;
+    } else if (uxBits & WIFI_CONNECT_FAIL_EVENT) {
+        ESP_LOGE(TAG, "Wi-Fi connection failed!");
+        err = ESP_FAIL;
+    }
+    return err;
 }
 
 static void second_time_event_handler(void* arg, esp_event_base_t event_base,
                                       int32_t event_id, void* event_data)
 {
+    static int retry_cnt = 0;
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
         esp_wifi_connect();
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
-        if (s_retry_num < EXAMPLE_ESP_MAXIMUM_RETRY) {
+        if (retry_cnt < EXAMPLE_ESP_MAXIMUM_RETRY) {
             esp_wifi_connect();
-            s_retry_num++;
+            retry_cnt++;
             ESP_LOGI(TAG, "retry to connect to the AP");
         } else {
-            xEventGroupSetBits(second_wifi_event_group, WIFI_FAIL_BIT);
+            xEventGroupSetBits(wifi_event_group, WIFI_CONNECT_FAIL_EVENT);
         }
-        ESP_LOGI(TAG, "connect to the AP fail");
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
         ESP_LOGI(TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
-        s_retry_num = 0;
-        xEventGroupSetBits(second_wifi_event_group, WIFI_CONNECTED_BIT);
+        retry_cnt = 0;
+        xEventGroupSetBits(wifi_event_group, WIFI_CONNECT_SUCCESS_EVENT);
     }
 }
 
 void app_second_time_wifi_init(void)
 {
-    second_wifi_event_group = xEventGroupCreate();
+    wifi_event_group = xEventGroupCreate();
 
     ESP_ERROR_CHECK(esp_netif_init());
 
@@ -630,21 +652,21 @@ esp_err_t app_second_time_wifi_start(void)
     esp_wifi_set_ps(WIFI_PS_NONE);
     ESP_LOGI(TAG, "wifi_init_sta finished.");
 
-    /* Waiting until either the connection is established (WIFI_CONNECTED_BIT) or connection failed for the maximum
+    /* Waiting until either the connection is established (WIFI_CONNECT_SUCCESS_EVENT) or connection failed for the maximum
      * number of re-tries (WIFI_FAIL_BIT). The bits are set by event_handler() (see above) */
-    EventBits_t bits = xEventGroupWaitBits(second_wifi_event_group,
-                                           WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
+    EventBits_t bits = xEventGroupWaitBits(wifi_event_group,
+                                           WIFI_CONNECT_SUCCESS_EVENT | WIFI_CONNECT_FAIL_EVENT,
                                            pdFALSE,
                                            pdFALSE,
                                            portMAX_DELAY);
 
     /* xEventGroupWaitBits() returns the bits before the call returned, hence we can test which event actually
      * happened. */
-    if (bits & WIFI_CONNECTED_BIT) {
+    if (bits & WIFI_CONNECT_SUCCESS_EVENT) {
         ret = ESP_OK;
         ESP_LOGI(TAG, "connected to ap SSID:%s password:%s",
                  wifi_config.sta.ssid, wifi_config.sta.password);
-    } else if (bits & WIFI_FAIL_BIT) {
+    } else if (bits & WIFI_CONNECT_FAIL_EVENT) {
         ret = ESP_FAIL;
         ESP_LOGI(TAG, "Failed to connect to SSID:%s, password:%s",
                  wifi_config.sta.ssid, wifi_config.sta.password);

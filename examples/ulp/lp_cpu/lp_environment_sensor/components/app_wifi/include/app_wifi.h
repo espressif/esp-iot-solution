@@ -25,10 +25,6 @@ extern "C" {
 
 #define MFG_DATA_DEVICE_EXTRA_CODE          0x00
 
-#define EXAMPLE_ESP_MAXIMUM_RETRY           3
-#define WIFI_CONNECTED_BIT                  BIT0
-#define WIFI_FAIL_BIT                       BIT1
-
 /** ESP RainMaker Event Base */
 ESP_EVENT_DECLARE_BASE(APP_WIFI_EVENT);
 

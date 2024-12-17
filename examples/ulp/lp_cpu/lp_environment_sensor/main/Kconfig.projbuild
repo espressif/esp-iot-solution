@@ -26,14 +26,14 @@ menu "LP Environment Sensor Configuration"
 
 choice
     prompt "Select Region Type"
-    default REGION_DOMESTIC
+    default REGION_CHINA
     depends on UPDATE_WEATHER_DATA
 
-    config REGION_OVERSEAS
-        bool "Overseas"
+    config REGION_INTERNATIONAL
+        bool "International"
 
-    config REGION_DOMESTIC
-        bool "Domestic"
+    config REGION_CHINA
+        bool "China"
 endchoice
 
     config CITY_DISTRICT_ID
@@ -43,16 +43,16 @@ endchoice
         help
         Specify the district ID to get weather data from HTTP.
 
-    config DOMESTIC_CITY_NAME
-        string "Domestic City Name"
-        depends on REGION_DOMESTIC
+    config CHINA_CITY_NAME
+        string "China City Name"
+        depends on REGION_CHINA
         default "Shanghai"
         help
         Specify the name of the domestic city (e.g., Shanghai).
 
-    config DOMESTIC_DISTRICT_NAME
-        string "Domestic District Name"
-        depends on REGION_DOMESTIC
+    config CHINA_DISTRICT_NAME
+        string "China District Name"
+        depends on REGION_CHINA
         default "Pudong"
         help
         Specify the name of the domestic district (e.g., Pudong).
