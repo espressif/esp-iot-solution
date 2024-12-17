@@ -216,7 +216,6 @@ write_ota_data:
 #endif
     if (om->om_data[2] == 0xff) {
         cur_packet = 0;
-        cur_sector++;
         ESP_LOGD(TAG, "DEBUG: recv %" PRIu32 " sector", cur_sector);
         goto sector_end;
     } else {
@@ -236,6 +235,7 @@ sector_end:
     sector_crc = 0;
     crc16_cal = 0;
     if (match){
+    cur_sector++;
     if (fw_buf_offset < ota_block_size) {
         esp_ble_ota_recv_fw_handler(fw_buf, fw_buf_offset);
     } else {
