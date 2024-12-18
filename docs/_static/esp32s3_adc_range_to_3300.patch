@@ -1,24 +1,58 @@
-From 9696f0479565203ec3638cff3f2f38e0dfbcba4b Mon Sep 17 00:00:00 2001
+From ea8f5411ab7bb0bc76c02a7c72e6c3e108375688 Mon Sep 17 00:00:00 2001
 From: yanke <yanke2@espressif.com>
-Date: Wed, 18 Sep 2024 16:36:27 +0800
-Subject: [PATCH] fix(adc): support esp32s3 adc range above 3100mv
+Date: Thu, 12 Dec 2024 15:00:02 +0800
+Subject: [PATCH] feat(adc): support esp32s3 adc range above 3100mV
 
 ---
+ components/driver/Kconfig                     | 22 +++++++++
  components/driver/adc.c                       |  9 ++++
  .../efuse/esp32s3/esp_efuse_rtc_calib.c       | 45 ++++++++++++++++++-
- .../esp32s3/include/esp_efuse_rtc_calib.h     |  9 ++++
- components/esp_adc_cal/esp_adc_cal_common.c   | 44 ++++++++++++++++++
- 4 files changed, 106 insertions(+), 1 deletion(-)
+ .../esp32s3/include/esp_efuse_rtc_calib.h     |  7 +++
+ components/esp_adc_cal/esp_adc_cal_common.c   | 45 +++++++++++++++++++
+ 5 files changed, 127 insertions(+), 1 deletion(-)
 
+diff --git a/components/driver/Kconfig b/components/driver/Kconfig
+index 7b838784cb..5d23f5a8b0 100644
+--- a/components/driver/Kconfig
++++ b/components/driver/Kconfig
+@@ -41,6 +41,28 @@ menu "Driver configurations"
+                 If you stick to this, you can enable this option to force use ADC2 under above conditions.
+                 For more details, you can search for errata on espressif website.
+ 
++        menu "ADC User Code Offset"
++            depends on IDF_TARGET_ESP32S3
++            config ENABLE_ADC_USER_CODE_OFFSET
++                bool "Enable ADC user code offset"
++                default y
++                help
++                    On ESP32S3, you can enable the USER_CODE_OFFSET setting to adjust the ADC range to 1000mV - 3300mV.
++
++            choice
++                prompt "ADC calibration type"
++                depends on ENABLE_ADC_USER_CODE_OFFSET
++                default ADC_CAL_TYPE_FLOAT
++                config ADC_CAL_TYPE_FLOAT
++                    bool "Float"
++                    help
++                        Use float type for ADC calibration calculations.
++                config ADC_CAL_TYPE_DOUBLE
++                    bool "Double"
++                    help
++                        Use double type for ADC calibration calculations.
++            endchoice
++        endmenu
+     endmenu  # ADC Configuration
+ 
+     menu "MCPWM configuration"
 diff --git a/components/driver/adc.c b/components/driver/adc.c
-index 756ec9f26c..4743dae082 100644
+index 756ec9f26c..9fb2a5cb1a 100644
 --- a/components/driver/adc.c
 +++ b/components/driver/adc.c
 @@ -866,11 +866,17 @@ static uint16_t s_adc_cali_param[SOC_ADC_PERIPH_NUM][ADC_ATTEN_MAX] = {};
  //This function shoudn't be called inside critical section or ISR
  uint32_t adc_get_calibration_offset(adc_ll_num_t adc_n, adc_channel_t channel, adc_atten_t atten)
  {
-+#ifdef CONFIG_ENABLE_ADC_USER_CODE_OFFSET
++#if (CONFIG_ENABLE_ADC_USER_CODE_OFFSET & CONFIG_IDF_TARGET_ESP32S3)
 +    if (!esp_efuse_rtc_calib_query_init_code_offset_flag(adc_n, atten)) {
 +#endif
      if (s_adc_cali_param[adc_n][atten]) {
@@ -26,7 +60,7 @@ index 756ec9f26c..4743dae082 100644
          return (uint32_t)s_adc_cali_param[adc_n][atten];
      }
  
-+#ifdef CONFIG_ENABLE_ADC_USER_CODE_OFFSET
++#if (CONFIG_ENABLE_ADC_USER_CODE_OFFSET & CONFIG_IDF_TARGET_ESP32S3)
 +    }
 +#endif
      // check if we can fetch the values from eFuse.
@@ -36,14 +70,14 @@ index 756ec9f26c..4743dae082 100644
          sar_periph_ctrl_adc_oneshot_power_release();
      }
  
-+#ifdef CONFIG_ENABLE_ADC_USER_CODE_OFFSET
++#if (CONFIG_ENABLE_ADC_USER_CODE_OFFSET & CONFIG_IDF_TARGET_ESP32S3)
 +    esp_efuse_rtc_calib_clear_init_code_offset_flag(adc_n, atten);
 +#endif
      s_adc_cali_param[adc_n][atten] = init_code;
      ESP_LOGV(ADC_TAG, "Calib(V%d) ADC%d atten=%d: %04X", version, adc_n, atten, init_code);
  
 diff --git a/components/efuse/esp32s3/esp_efuse_rtc_calib.c b/components/efuse/esp32s3/esp_efuse_rtc_calib.c
-index 7fdcdc46b9..8966976ff6 100644
+index 7fdcdc46b9..dfcc8f3f9f 100644
 --- a/components/efuse/esp32s3/esp_efuse_rtc_calib.c
 +++ b/components/efuse/esp32s3/esp_efuse_rtc_calib.c
 @@ -9,6 +9,7 @@
@@ -58,7 +92,7 @@ index 7fdcdc46b9..8966976ff6 100644
      return cali_version_v1;
  }
  
-+#ifdef CONFIG_ENABLE_ADC_USER_CODE_OFFSET
++#if (CONFIG_ENABLE_ADC_USER_CODE_OFFSET & CONFIG_IDF_TARGET_ESP32S3)
 +static uint32_t adc_icode_offset[ADC_NUM_MAX][4] = {0};
 +static bool adc_icode_offset_flag[ADC_NUM_MAX][4] = {0};
 +
@@ -104,7 +138,7 @@ index 7fdcdc46b9..8966976ff6 100644
      }
  
 -    return adc_icode[atten];
-+#ifdef CONFIG_ENABLE_ADC_USER_CODE_OFFSET
++#if (CONFIG_ENABLE_ADC_USER_CODE_OFFSET & CONFIG_IDF_TARGET_ESP32S3)
 +    return adc_icode[atten] + adc_icode_offset[adc_unit][atten];
 +#else
 +   return adc_icode[atten];
@@ -113,16 +147,14 @@ index 7fdcdc46b9..8966976ff6 100644
  
  esp_err_t esp_efuse_rtc_calib_get_cal_voltage(int version, uint32_t adc_unit, int atten, uint32_t *out_digi, uint32_t *out_vol_mv)
 diff --git a/components/efuse/esp32s3/include/esp_efuse_rtc_calib.h b/components/efuse/esp32s3/include/esp_efuse_rtc_calib.h
-index e2f5b54329..9d215ac057 100644
+index e2f5b54329..4d6110d865 100644
 --- a/components/efuse/esp32s3/include/esp_efuse_rtc_calib.h
 +++ b/components/efuse/esp32s3/include/esp_efuse_rtc_calib.h
-@@ -54,6 +54,15 @@ esp_err_t esp_efuse_rtc_calib_get_cal_voltage(int version, uint32_t adc_unit, in
+@@ -54,6 +54,13 @@ esp_err_t esp_efuse_rtc_calib_get_cal_voltage(int version, uint32_t adc_unit, in
   */
  float esp_efuse_rtc_calib_get_cal_temp(int version);
  
-+#define CONFIG_ENABLE_ADC_USER_CODE_OFFSET 1
-+
-+#ifdef CONFIG_ENABLE_ADC_USER_CODE_OFFSET
++#if (CONFIG_ENABLE_ADC_USER_CODE_OFFSET & CONFIG_IDF_TARGET_ESP32S3)
 +void esp_efuse_rtc_calib_set_init_code_offset(uint32_t adc_unit, int atten, uint32_t offset);
 +uint32_t esp_efuse_rtc_calib_get_init_code_offset(uint32_t adc_unit, int atten);
 +bool esp_efuse_rtc_calib_query_init_code_offset_flag(uint32_t adc_unit, int atten);
@@ -133,7 +165,7 @@ index e2f5b54329..9d215ac057 100644
  }
  #endif
 diff --git a/components/esp_adc_cal/esp_adc_cal_common.c b/components/esp_adc_cal/esp_adc_cal_common.c
-index 09878cc015..7910359718 100644
+index 09878cc015..5c7f9bf456 100644
 --- a/components/esp_adc_cal/esp_adc_cal_common.c
 +++ b/components/esp_adc_cal/esp_adc_cal_common.c
 @@ -12,6 +12,7 @@
@@ -144,7 +176,7 @@ index 09878cc015..7910359718 100644
  #include "esp_adc_cal.h"
  #include "esp_adc_cal_internal.h"
  
-@@ -33,11 +34,54 @@ esp_err_t esp_adc_cal_get_voltage(adc_channel_t channel,
+@@ -33,11 +34,55 @@ esp_err_t esp_adc_cal_get_voltage(adc_channel_t channel,
      } else {
          ESP_RETURN_ON_FALSE(channel < SOC_ADC_CHANNEL_NUM(1), ESP_ERR_INVALID_ARG, TAG, "Invalid channel");
          ret = adc2_get_raw(channel, chars->bit_width, &adc_reading);
@@ -158,10 +190,11 @@ index 09878cc015..7910359718 100644
          *voltage = esp_adc_cal_raw_to_voltage((uint32_t)adc_reading, chars);
      }
 +
-+#if (CONFIG_IDF_TARGET_ESP32S3 & CONFIG_ENABLE_ADC_USER_CODE_OFFSET) //1000mv ~ 3500mV
-+#if 0 //using double type
++#if (CONFIG_IDF_TARGET_ESP32S3 & CONFIG_ENABLE_ADC_USER_CODE_OFFSET)
++
++#if CONFIG_ADC_CAL_TYPE_DOUBLE
 +        typedef const double ADC_CAL_TYPE;
-+#else //using float type
++#else
 +        typedef const float ADC_CAL_TYPE;
 +#endif
 +    if(chars->atten == ADC_ATTEN_DB_12) {

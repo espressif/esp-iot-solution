@@ -1,0 +1,169 @@
+From 9964b799053269c4f2106629d583e4e44d3cdb5e Mon Sep 17 00:00:00 2001
+From: yanke <yanke2@espressif.com>
+Date: Thu, 12 Dec 2024 15:32:09 +0800
+Subject: [PATCH] feat(adc): support esp32s2 adc range above 2500mv
+
+---
+ components/driver/Kconfig                    | 23 ++++++++++++
+ components/driver/adc_common.c               | 26 ++++++++++++++
+ components/esp_adc_cal/esp32s2/esp_adc_cal.c |  5 +++
+ components/esp_adc_cal/esp_adc_cal_common.c  | 37 ++++++++++++++++++++
+ 4 files changed, 91 insertions(+)
+
+diff --git a/components/driver/Kconfig b/components/driver/Kconfig
+index 7b838784cb..cb24eccf8f 100644
+--- a/components/driver/Kconfig
++++ b/components/driver/Kconfig
+@@ -41,6 +41,29 @@ menu "Driver configurations"
+                 If you stick to this, you can enable this option to force use ADC2 under above conditions.
+                 For more details, you can search for errata on espressif website.
+ 
++        menu "ADC User Code Offset"
++            depends on IDF_TARGET_ESP32S2
++            config ENABLE_ADC_USER_CODE_OFFSET
++                bool "Enable ADC user code offset"
++                default y
++                help
++                    On ESP32S2, you can enable the USER_CODE_OFFSET setting to adjust the ADC range to 1000mV - 3300mV.
++
++            choice
++                prompt "ADC calibration type"
++                depends on ENABLE_ADC_USER_CODE_OFFSET
++                default ADC_CAL_TYPE_FLOAT
++                config ADC_CAL_TYPE_FLOAT
++                    bool "Float"
++                    help
++                        Use float type for ADC calibration calculations.
++                config ADC_CAL_TYPE_DOUBLE
++                    bool "Double"
++                    help
++                        Use double type for ADC calibration calculations.
++            endchoice
++
++        endmenu
+     endmenu  # ADC Configuration
+ 
+     menu "MCPWM configuration"
+diff --git a/components/driver/adc_common.c b/components/driver/adc_common.c
+index 93dbb2f4f6..dd162b0297 100644
+--- a/components/driver/adc_common.c
++++ b/components/driver/adc_common.c
+@@ -390,6 +390,25 @@ esp_err_t adc1_lock_release(void)
+     return ESP_OK;
+ }
+ 
++#if (CONFIG_ENABLE_ADC_USER_CODE_OFFSET & CONFIG_IDF_TARGET_ESP32S2)
++static int16_t g_adc_cal_delta = 0;
++static int16_t g_adc_cal_delta_actual = 0;
++/**
++ * @brief Set adc1 calibration delta value
++ * 
++ * @param delta_mv delta value in mv, This value will be added to the calibration value. 
++ *
++ */
++void adc1_set_cal_delta(int16_t delta_mv)
++{
++    g_adc_cal_delta = delta_mv * 1.54f;
++}
++int16_t adc1_get_cal_delta()
++{
++    return g_adc_cal_delta_actual;
++}
++#endif
++
+ int adc1_get_raw(adc1_channel_t channel)
+ {
+     int adc_value;
+@@ -399,7 +418,14 @@ int adc1_get_raw(adc1_channel_t channel)
+ #if SOC_ADC_CALIBRATION_V1_SUPPORTED
+     // Get calibration value before going into critical section
+     uint32_t cal_val = get_calibration_offset(ADC_NUM_1, channel);
++#if (CONFIG_ENABLE_ADC_USER_CODE_OFFSET & CONFIG_IDF_TARGET_ESP32S2)
++    uint32_t cal_val_new = cal_val + g_adc_cal_delta;
++    cal_val_new = cal_val_new > 4095 ? 4095 : cal_val_new;
++    g_adc_cal_delta_actual = cal_val_new - cal_val;
++    adc_hal_set_calibration_param(ADC_NUM_1, cal_val_new);
++#else
+     adc_hal_set_calibration_param(ADC_NUM_1, cal_val);
++#endif
+ #endif  //SOC_ADC_CALIBRATION_V1_SUPPORTED
+ 
+     SARADC1_ENTER();
+diff --git a/components/esp_adc_cal/esp32s2/esp_adc_cal.c b/components/esp_adc_cal/esp32s2/esp_adc_cal.c
+index 3da83880d3..bc2b6bec0c 100644
+--- a/components/esp_adc_cal/esp32s2/esp_adc_cal.c
++++ b/components/esp_adc_cal/esp32s2/esp_adc_cal.c
+@@ -196,5 +196,10 @@ esp_adc_cal_value_t esp_adc_cal_characterize(adc_unit_t adc_num,
+ uint32_t esp_adc_cal_raw_to_voltage(uint32_t adc_reading, const esp_adc_cal_characteristics_t *chars)
+ {
+     assert(chars != NULL);
++#if (CONFIG_ENABLE_ADC_USER_CODE_OFFSET & CONFIG_IDF_TARGET_ESP32S2)
++    extern int16_t adc1_get_cal_delta();
++    return (adc_reading + adc1_get_cal_delta() * 2) * chars->coeff_a / coeff_a_scaling + chars->coeff_b / coeff_b_scaling;
++#else
+     return adc_reading * chars->coeff_a / coeff_a_scaling + chars->coeff_b / coeff_b_scaling;
++#endif
+ }
+diff --git a/components/esp_adc_cal/esp_adc_cal_common.c b/components/esp_adc_cal/esp_adc_cal_common.c
+index 09878cc015..3e60ce0e6b 100644
+--- a/components/esp_adc_cal/esp_adc_cal_common.c
++++ b/components/esp_adc_cal/esp_adc_cal_common.c
+@@ -17,6 +17,10 @@
+ 
+ const static char *TAG = "ADC_CALI";
+ 
++#if (CONFIG_ENABLE_ADC_USER_CODE_OFFSET & CONFIG_IDF_TARGET_ESP32S2)
++extern void adc1_set_cal_delta(int16_t delta_mv);
++#endif
++
+ esp_err_t esp_adc_cal_get_voltage(adc_channel_t channel,
+                                   const esp_adc_cal_characteristics_t *chars,
+                                   uint32_t *voltage)
+@@ -33,11 +37,44 @@ esp_err_t esp_adc_cal_get_voltage(adc_channel_t channel,
+     } else {
+         ESP_RETURN_ON_FALSE(channel < SOC_ADC_CHANNEL_NUM(1), ESP_ERR_INVALID_ARG, TAG, "Invalid channel");
+         ret = adc2_get_raw(channel, chars->bit_width, &adc_reading);
++        if (ret != ESP_OK) {
++            ESP_LOGD(TAG, "adc2_get_raw error, please retry");
++            return ret;
++        }
+     }
+ 
+     if (ret == ESP_OK) {
+         *voltage = esp_adc_cal_raw_to_voltage((uint32_t)adc_reading, chars);
+     }
++
++#if (CONFIG_ENABLE_ADC_USER_CODE_OFFSET & CONFIG_IDF_TARGET_ESP32S2)
++
++#if CONFIG_ADC_CAL_TYPE_FLOAT
++    typedef const float ADC_CAL_TYPE;
++#else
++    typedef const double ADC_CAL_TYPE;
++#endif
++    if (chars->atten == ADC_ATTEN_DB_12) {
++        if (*voltage > 2600) {
++            ESP_LOGV(TAG, "first is %u", *voltage);
++            adc1_set_cal_delta(1000);
++            adc_reading = adc1_get_raw(channel);
++            adc1_set_cal_delta(0);
++            uint32_t voltage_b = esp_adc_cal_raw_to_voltage((uint32_t)adc_reading, chars);
++
++            ADC_CAL_TYPE a = -0.0000050800531;
++            ADC_CAL_TYPE b =  0.02334678273232382;
++            ADC_CAL_TYPE c =  -26.699083271336267;
++            ADC_CAL_TYPE e = a * voltage_b * voltage_b + b * voltage_b + c;
++
++            voltage_b = voltage_b * (1 + e / 100);
++
++            ESP_LOGD(TAG, "after is %u", voltage_b);
++            *voltage = voltage_b;
++        }
++    }
++#endif
++
+     return ret;
+ }
+ 
+-- 
+2.34.1
+
