@@ -7,5 +7,8 @@ cmake_minimum_required(VERSION 3.5)
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(hello_world)
 
+# Set other components to link to the ELF file
+# e.g: set(ELF_COMPONENTS "log" "esp_wifi")
+
 include(elf_loader)
 project_elf(hello_world)

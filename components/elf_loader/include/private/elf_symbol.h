@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "private/elf_types.h"
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
