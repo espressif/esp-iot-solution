@@ -28,8 +28,8 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
 
 ```c
     ESP_LOGI(TAG, "Initialize SPI bus");
-    const spi_bus_config_t bus_config = ST77922_PANEL_BUS_SPI_CONFIG(EXAMPLE_PIN_NUM_LCD_PCLK, EXAMPLE_PIN_NUM_LCD_DATA0, EXAMPLE_LCD_H_RES * 80 * sizeof(uint16_t));
-    ESP_ERROR_CHECK(spi_bus_initialize(EXAMPLE_LCD_HOST, &bus_config, SPI_DMA_CH_AUTO));
+    const spi_bus_config_t buscfg = ST77922_PANEL_BUS_SPI_CONFIG(EXAMPLE_PIN_NUM_LCD_PCLK, EXAMPLE_PIN_NUM_LCD_DATA0, EXAMPLE_LCD_H_RES * 80 * sizeof(uint16_t));
+    ESP_ERROR_CHECK(spi_bus_initialize(EXAMPLE_LCD_HOST, &buscfg, SPI_DMA_CH_AUTO));
 
     ESP_LOGI(TAG, "Install panel IO");
     esp_lcd_panel_io_handle_t io_handle = NULL;
@@ -52,7 +52,7 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
 
     ESP_LOGI(TAG, "Install st77922 panel driver");
     esp_lcd_panel_handle_t panel_handle = NULL;
-    st77922_vendor_config_t vendor_config = {
+    const st77922_vendor_config_t vendor_config = {
         // .init_cmds = lcd_init_cmds,         // Uncomment these line if use custom initialization commands
         // .init_cmds_size = sizeof(lcd_init_cmds) / sizeof(st77922_lcd_init_cmd_t),
         .flags = {
@@ -75,11 +75,11 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
 
 ```c
     ESP_LOGI(TAG, "Initialize QSPI bus");
-    const esp_lcd_panel_io_spi_config_t io_config = ST77922_PANEL_BUS_QSPI_CONFIG(EXAMPLE_PIN_NUM_LCD_PCLK,
+    const spi_bus_config_t buscfg = ST77922_PANEL_BUS_QSPI_CONFIG(EXAMPLE_PIN_NUM_LCD_PCLK,
                                                                                  EXAMPLE_PIN_NUM_LCD_DATA0,
                                                                                  EXAMPLE_PIN_NUM_LCD_DATA1,
                                                                                  EXAMPLE_PIN_NUM_LCD_DATA2,
-                                                                                 EXAMPLE_PIN_NUM_LCD_DATA3
+                                                                                 EXAMPLE_PIN_NUM_LCD_DATA3,
                                                                                  EXAMPLE_LCD_H_RES * 80 * sizeof(uint16_t));
     ESP_ERROR_CHECK(spi_bus_initialize(EXAMPLE_LCD_HOST, &buscfg, SPI_DMA_CH_AUTO));
 
@@ -103,7 +103,7 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
 
     ESP_LOGI(TAG, "Install st77922 panel driver");
     esp_lcd_panel_handle_t panel_handle = NULL;
-    st77922_vendor_config_t vendor_config = {
+    const st77922_vendor_config_t vendor_config = {
         // .init_cmds = lcd_init_cmds,         // Uncomment these line if use custom initialization commands
         // .init_cmds_size = sizeof(lcd_init_cmds) / sizeof(st77922_lcd_init_cmd_t),
         .flags = {
@@ -196,7 +196,7 @@ void lvgl_port_rounder_callback(struct _lv_disp_drv_t * disp_drv, lv_area_t * ar
         };
         rgb_config.timings.h_res = EXAMPLE_LCD_H_RES;
         rgb_config.timings.v_res = EXAMPLE_LCD_V_RES;
-        st77922_vendor_config_t vendor_config = {
+        const st77922_vendor_config_t vendor_config = {
             .rgb_config = &rgb_config,
             .flags = {
                 .use_rgb_interface = 1,
@@ -252,7 +252,7 @@ void lvgl_port_rounder_callback(struct _lv_disp_drv_t * disp_drv, lv_area_t * ar
     ESP_LOGI(TAG, "Install LCD driver of st77922");
     esp_lcd_panel_handle_t panel_handle = NULL;
     esp_lcd_dpi_panel_config_t dpi_config = ST77922_480_360_PANEL_60HZ_DPI_CONFIG(EXAMPLE_MIPI_DPI_PX_FORMAT);
-    st77922_vendor_config_t vendor_config = {
+    const st77922_vendor_config_t vendor_config = {
         // .init_cmds = lcd_init_cmds,      // Uncomment these line if use custom initialization commands
         // .init_cmds_size = sizeof(lcd_init_cmds) / sizeof(st77922_lcd_init_cmd_t),
         .flags.use_mipi_interface = 1,
