@@ -86,8 +86,8 @@ int esp_elf_arch_relocate(esp_elf_t *elf, const elf32_rela_t *rela,
     assert(elf && rela);
 
     where = (uint32_t *)((uint8_t *)elf->psegment + rela->offset + elf->svaddr);
-    ESP_LOGD(TAG, "where=%p addr=0x%x offset=0x%x",
-             where, (int)elf->psegment, (int)rela->offset);
+    ESP_LOGD(TAG, "type: %d, where=%p addr=0x%x offset=0x%x",
+             ELF_R_TYPE(rela->info), where, (int)elf->psegment, (int)rela->offset);
 
     /* Do relocation based on relocation type */
 
