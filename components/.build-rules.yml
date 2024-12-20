@@ -38,6 +38,10 @@ components/knob/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1
 
+components/sensors/power_measure/test_apps:
+  enable:
+    - if: INCLUDE_DEFAULT == 1
+
 components/led/led_indicator/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1

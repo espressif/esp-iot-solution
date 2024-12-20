@@ -183,6 +183,10 @@ examples/get-started/knob_power_save:
   enable:
     - if: INCLUDE_DEFAULT == 1
 
+examples/sensors/power_measure:
+  enable:
+    - if: INCLUDE_DEFAULT == 1
+
 examples/hmi/perf_benchmark:
   enable:
     - if: IDF_TARGET in ["esp32","esp32s3","esp32c3"]
