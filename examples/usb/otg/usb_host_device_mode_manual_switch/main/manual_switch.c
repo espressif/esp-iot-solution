@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -37,15 +37,14 @@ static void usb_otg_mode_switch_cb(void *arg, void *data)
 
 static void usb_otg_mode_switch_init(void)
 {
-    button_config_t cfg = {
-        .type = BUTTON_TYPE_GPIO,
-        .gpio_button_config = {
-            .gpio_num = 0,
-            .active_level = 0,
-        },
+    const button_config_t btn_cfg = {0};
+    const button_gpio_config_t btn_gpio_cfg = {
+        .gpio_num = 0,
+        .active_level = 0,
     };
-    button_handle_t btn = iot_button_create(&cfg);
-    iot_button_register_cb(btn, BUTTON_PRESS_DOWN, usb_otg_mode_switch_cb, NULL);
+    button_handle_t btn = NULL;
+    iot_button_new_gpio_device(&btn_cfg, &btn_gpio_cfg, &btn);
+    iot_button_register_cb(btn, BUTTON_PRESS_DOWN, NULL, usb_otg_mode_switch_cb, NULL);
 }
 
 void app_main(void)

@@ -12,6 +12,7 @@
 #include "iot_button.h"
 #include "esp_sleep.h"
 #include "esp_idf_version.h"
+#include "button_gpio.h"
 
 /* Most development boards have "boot" button attached to GPIO0.
  * You can also change this to another pin.
@@ -44,38 +45,37 @@ void button_enter_power_save(void *usr_data)
 
 void button_init(uint32_t button_num)
 {
-    button_config_t btn_cfg = {
-        .type = BUTTON_TYPE_GPIO,
-        .gpio_button_config = {
-            .gpio_num = button_num,
-            .active_level = BUTTON_ACTIVE_LEVEL,
-#if CONFIG_GPIO_BUTTON_SUPPORT_POWER_SAVE
-            .enable_power_save = true,
-#endif
-        },
+    button_config_t btn_cfg = {0};
+    button_gpio_config_t gpio_cfg = {
+        .gpio_num = button_num,
+        .active_level = BUTTON_ACTIVE_LEVEL,
+        .enable_power_save = true,
     };
-    button_handle_t btn = iot_button_create(&btn_cfg);
-    assert(btn);
-    esp_err_t err = iot_button_register_cb(btn, BUTTON_PRESS_DOWN, button_event_cb, NULL);
-    err |= iot_button_register_cb(btn, BUTTON_PRESS_UP, button_event_cb, NULL);
-    err |= iot_button_register_cb(btn, BUTTON_PRESS_REPEAT, button_event_cb, NULL);
-    err |= iot_button_register_cb(btn, BUTTON_PRESS_REPEAT_DONE, button_event_cb, NULL);
-    err |= iot_button_register_cb(btn, BUTTON_SINGLE_CLICK, button_event_cb, NULL);
-    err |= iot_button_register_cb(btn, BUTTON_DOUBLE_CLICK, button_event_cb, NULL);
-    err |= iot_button_register_cb(btn, BUTTON_LONG_PRESS_START, button_event_cb, NULL);
-    err |= iot_button_register_cb(btn, BUTTON_LONG_PRESS_HOLD, button_event_cb, NULL);
-    err |= iot_button_register_cb(btn, BUTTON_LONG_PRESS_UP, button_event_cb, NULL);
-    err |= iot_button_register_cb(btn, BUTTON_PRESS_END, button_event_cb, NULL);
+
+    button_handle_t btn;
+    esp_err_t ret = iot_button_new_gpio_device(&btn_cfg, &gpio_cfg, &btn);
+    assert(ret == ESP_OK);
+
+    ret = iot_button_register_cb(btn, BUTTON_PRESS_DOWN, NULL, button_event_cb, NULL);
+    ret |= iot_button_register_cb(btn, BUTTON_PRESS_UP, NULL, button_event_cb, NULL);
+    ret |= iot_button_register_cb(btn, BUTTON_PRESS_REPEAT, NULL, button_event_cb, NULL);
+    ret |= iot_button_register_cb(btn, BUTTON_PRESS_REPEAT_DONE, NULL, button_event_cb, NULL);
+    ret |= iot_button_register_cb(btn, BUTTON_SINGLE_CLICK, NULL, button_event_cb, NULL);
+    ret |= iot_button_register_cb(btn, BUTTON_DOUBLE_CLICK, NULL, button_event_cb, NULL);
+    ret |= iot_button_register_cb(btn, BUTTON_LONG_PRESS_START, NULL, button_event_cb, NULL);
+    ret |= iot_button_register_cb(btn, BUTTON_LONG_PRESS_HOLD, NULL, button_event_cb, NULL);
+    ret |= iot_button_register_cb(btn, BUTTON_LONG_PRESS_UP, NULL, button_event_cb, NULL);
+    ret |= iot_button_register_cb(btn, BUTTON_PRESS_END, NULL, button_event_cb, NULL);
 
 #if CONFIG_ENTER_LIGHT_SLEEP_MODE_MANUALLY
     /*!< For enter Power Save */
     button_power_save_config_t config = {
         .enter_power_save_cb = button_enter_power_save,
     };
-    err |= iot_button_register_power_save_cb(&config);
+    ret |= iot_button_register_power_save_cb(&config);
 #endif
 
-    ESP_ERROR_CHECK(err);
+    ESP_ERROR_CHECK(ret);
 }
 
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 1, 0)

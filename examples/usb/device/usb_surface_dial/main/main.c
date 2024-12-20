@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2016-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2016-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -14,6 +14,7 @@
 #include "tusb.h"
 #include "tusb_config.h"
 #include "iot_button.h"
+#include "button_gpio.h"
 #include "iot_knob.h"
 #ifdef CONFIG_ESP32_S3_USB_OTG
 #include "bsp/esp-bsp.h"
@@ -95,6 +96,7 @@ static void _button_init(void)
         },
     };
     s_btn = iot_button_create(&cfg);
+
     iot_button_register_cb(s_btn, BUTTON_PRESS_DOWN, _button_press_down_cb, NULL);
     iot_button_register_cb(s_btn, BUTTON_PRESS_UP, _button_press_up_cb, NULL);
 }
