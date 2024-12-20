@@ -1,0 +1,14 @@
+# Body Composition Service
+
+menuconfig BLE_BCS
+    bool "GATT Body Composition Service"
+
+if BLE_BCS
+
+config BLE_BCS_FEATURE_INDICATE_ENABLE
+    bool "Body Composition Feature Indication"
+    default n
+    help
+      Set y to support Indication or n to disable it.
+
+endif # BLE_BCS

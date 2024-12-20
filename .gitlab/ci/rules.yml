@@ -331,6 +331,7 @@
   - "components/bluetooth/ble_hci/include/ble_hci.h"
   - "components/bluetooth/ble_services/ans/include/esp_ans.h"
   - "components/bluetooth/ble_services/bas/include/esp_bas.h"
+  - "components/bluetooth/ble_services/bcs/include/esp_bcs.h"
   - "components/bluetooth/ble_services/dis/include/esp_dis.h"
   - "components/bluetooth/ble_services/hrs/include/esp_hrs.h"
   - "components/bluetooth/ble_services/hts/include/esp_hts.h"

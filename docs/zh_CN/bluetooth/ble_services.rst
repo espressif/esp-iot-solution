@@ -7,6 +7,7 @@ BLE 服务
 
     警报通知服务 <ble_ans>
     电池服务 <ble_bas>
+    人体组织成分服务 <ble_bcs>
     设备信息服务 <ble_dis>
     心率服务 <ble_hrs>
     健康温度计服务 <ble_hts>

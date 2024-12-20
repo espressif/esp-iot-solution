@@ -28,10 +28,11 @@ The example will be downloaded to the current folder. You can navigate into it f
 > You can use this command to download other examples. Or you can download examples from esp-iot-solution repository:
 1. [ble_ans](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_services/ble_ans)
 2. [ble_bas](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_services/ble_bas)
-3. [ble_dis](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_services/ble_dis)
-4. [ble_hrs](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_services/ble_hrs)
-5. [ble_hts](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_services/ble_hts)
-5. [ble_tps](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_services/ble_tps)
+3. [ble_bcs](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_services/ble_bcs)
+4. [ble_dis](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_services/ble_dis)
+5. [ble_hrs](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_services/ble_hrs)
+6. [ble_hts](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_services/ble_hts)
+7. [ble_tps](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_services/ble_tps)
 
 ### Q&A
 
