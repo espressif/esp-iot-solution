@@ -1,0 +1,7 @@
+menu "power_measure"
+    config BL0937_IRAM_OPTIMIZED
+    bool "Enable IRAM optimization for BL0937"
+    default n
+    help
+        Enable IRAM optimization for BL0937
+endmenu

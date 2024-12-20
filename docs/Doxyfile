@@ -48,6 +48,7 @@ INPUT = \
     $(PROJECT_PATH)/components/ir/ir_learn/include/ir_learn.h \
     $(PROJECT_PATH)/components/keyboard_button/include/keyboard_button.h \
     $(PROJECT_PATH)/components/knob/include/iot_knob.h \
+    $(PROJECT_PATH)/components/sensors/power_measure/include/power_measure.h \
     $(PROJECT_PATH)/components/led/led_indicator/include/led_indicator.h \
     $(PROJECT_PATH)/components/led/lightbulb_driver/include/lightbulb.h \
     $(PROJECT_PATH)/components/motor/esp_sensorless_bldc_control/control/include/bldc_control_param.h \

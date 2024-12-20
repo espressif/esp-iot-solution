@@ -197,6 +197,10 @@
   - "components/openai/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
 
+.patterns-components_sensors_power_measure: &patterns-components_sensors_power_measure
+  - "components/sensors/power_measure/**/*"
+  - "components/tools/cmake_utilities/package_manager.cmake"
+
 .patterns-components_sensors_gesture_apds9960: &patterns-components_sensors_gesture_apds9960
   - "components/sensors/gesture/apds9960/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
@@ -516,6 +520,9 @@
 
 .patterns-example_sensors_ntc_temperature_sensor: &patterns-example_sensors_ntc_temperature_sensor
   - "examples/sensors/ntc_temperature_sensor/**/*"
+
+.patterns-example_sensors_power_measure: &patterns-example_sensors_power_measure
+  - "examples/sensors/power_measure/**/*"
 
 .patterns-example_usb_device_usb_uart_bridge: &patterns-example_usb_device_usb_uart_bridge
   - "examples/usb/device/usb_uart_bridge/**/*"
@@ -956,6 +963,15 @@
       changes: *patterns-components_knob
     - <<: *if-dev-push
       changes: *patterns-example_get_started_knob_power_save
+
+.rules:build:example_sensors_power_measure:
+ rules:
+   - <<: *if-protected
+   - <<: *if-label-build
+   - <<: *if-dev-push
+     changes: *patterns-components_sensors_power_measure
+   - <<: *if-dev-push
+     changes: *patterns-example_sensors_power_measure
 
 .rules:build:example_gprof_gprof_simple:
   rules:
@@ -1541,6 +1557,17 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_button
+
+.rules:build:components_sensors_power_measure_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_power_measure
 
 .rules:build:components_display_digital_tube_ch450_test:
   rules:

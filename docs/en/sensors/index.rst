@@ -14,3 +14,4 @@ Sensors
     Gesture sensor <gesture>
     NTC Sensor<ntc_driver>
     Power Monitor<power_monitor>
+    Power Measure<power_measure>

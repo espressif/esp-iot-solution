@@ -311,6 +311,29 @@ components_test_openai:
     TEST_TARGET: esp32s3
     TEST_FOLDER: components/openai
 
+components_test_power_measure:
+  extends:
+    - .pytest_template
+    - .rules:build:components_sensors_power_measure_test_apps
+  needs:
+    - job: "build_components_sensors_power_measure_test_apps"
+      artifacts: true
+      optional: false
+  parallel:
+    matrix:
+      - IDF_TARGET: esp32c3
+        IDF_VERSION: "4.4"
+      - IDF_TARGET: esp32c3
+        IDF_VERSION: "5.0"
+  tags:
+    - esp32c3
+    - generic
+  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
+  variables:
+    TEST_TARGET: esp32c3
+    TEST_FOLDER: components/sensors/power_measure
+    TEST_ENV: generic
+
 components_test_esp_lcd_axs15231b:
   extends:
     - .pytest_template

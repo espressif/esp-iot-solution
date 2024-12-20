@@ -463,6 +463,14 @@ build_example_get_started_knob_power_save:
   variables:
     EXAMPLE_DIR: examples/get-started/knob_power_save
 
+build_example_sensors_power_measure:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_sensors_power_measure
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: examples/sensors/power_measure
+
 build_example_gprof_gprof_simple:
   extends:
     - .build_examples_template
@@ -1220,6 +1228,17 @@ build_components_openai_test_apps:
       - IMAGE: espressif/idf:release-v5.0
   variables:
     EXAMPLE_DIR: components/openai/test_apps
+
+build_components_sensors_power_measure_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_sensors_power_measure_test_apps
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.0
+      - IMAGE: espressif/idf:release-v4.4
+  variables:
+    EXAMPLE_DIR: components/sensors/power_measure/test_apps
 
 build_components_sensors_gesture_apds9960_test_apps:
   extends:

@@ -63,6 +63,7 @@ jobs:
             components/motor/esp_simplefoc;
             components/motor/servo;
             components/openai;
+            components/sensors/power_measure;
             components/sensors/gesture/apds9960;
             components/sensors/humiture/aht20;
             components/sensors/humiture/hdc2010;
