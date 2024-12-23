@@ -41,6 +41,7 @@ i2c_bus = i2c_bus_create(I2C_MASTER_NUM, &conf);
 
 //Step2: Init bme280
 bme280 = bme280_create(i2c_bus, BME280_I2C_ADDRESS_DEFAULT);
+bme280_default_init(bme280);
 
 //Step3: Read temperature, humidity and pressure
 float temperature = 0.0, humidity = 0.0, pressure = 0.0;
