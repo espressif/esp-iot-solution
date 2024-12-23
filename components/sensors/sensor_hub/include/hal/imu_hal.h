@@ -1,11 +1,13 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
 #ifndef _IMU_HAL_H_
 #define _IMU_HAL_H_
+
+#ifdef CONFIG_SENSOR_INCLUDED_IMU
 
 #include "i2c_bus.h"
 #include "esp_err.h"
@@ -14,28 +16,96 @@
 typedef void *sensor_imu_handle_t; /*!< imu sensor handle*/
 
 /**
- * @brief imu sensor id, used for imu_create
+ * @brief Implementation Interface for IMU Sensors
  *
  */
-typedef enum {
-    MPU6050_ID = 0x01, /*!< MPU6050 imu sensor id*/
-    LIS2DH12_ID, /*!< LIS2DH12 imu sensor id*/
-    IMU_MAX_ID, /*!< max imu sensor id*/
-} imu_id_t;
+typedef struct {
+    /**
+     * @brief Initialize the IMU sensor
+     *
+     * @param handle The bus handle
+     * @param addr The I2C address of the sensor
+     * @return esp_err_t Result of initialization
+     */
+    esp_err_t (*init)(bus_handle_t, uint8_t addr);
+
+    /**
+     * @brief Deinitialize the IMU sensor
+     *
+     * @return esp_err_t Result of deinitialization
+     */
+    esp_err_t (*deinit)(void);
+
+    /**
+     * @brief Test the IMU sensor
+     *
+     * @return esp_err_t Result of the test
+     */
+    esp_err_t (*test)(void);
+
+    /**
+     * @brief Acquire accelerometer data
+     *
+     * @param[out] acce_x Pointer to store the X-axis accelerometer data
+     * @param[out] acce_y Pointer to store the Y-axis accelerometer data
+     * @param[out] acce_z Pointer to store the Z-axis accelerometer data
+     * @return esp_err_t Result of acquiring data
+     */
+    esp_err_t (*acquire_acce)(float *acce_x, float *acce_y, float *acce_z);
+
+    /**
+     * @brief Acquire gyroscope data
+     *
+     * @param[out] gyro_x Pointer to store the X-axis gyroscope data
+     * @param[out] gyro_y Pointer to store the Y-axis gyroscope data
+     * @param[out] gyro_z Pointer to store the Z-axis gyroscope data
+     * @return esp_err_t Result of acquiring data
+     */
+    esp_err_t (*acquire_gyro)(float *gyro_x, float *gyro_y, float *gyro_z);
+
+    /**
+     * @brief Put the IMU sensor to sleep
+     *
+     * @return esp_err_t Result of the sleep operation
+     */
+    esp_err_t (*sleep)(void);
+
+    /**
+     * @brief Wake up the IMU sensor
+     *
+     * @return esp_err_t Result of the wake-up operation
+     */
+    esp_err_t (*wakeup)(void);
+
+    /**
+     * @brief Set sensor work mode
+     *
+     * @return esp_err_t Result of setting work mode
+     */
+    esp_err_t (*set_mode)(sensor_mode_t work_mode);
+
+    /**
+     * @brief Set sensor measurement range
+     *
+     * @return esp_err_t Result of setting measurement range
+     */
+    esp_err_t (*set_range)(sensor_range_t range);
+} imu_impl_t;
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
+
 /**
  * @brief Create a Inertial Measurement Unit sensor instance.
- * Same series' sensor or sensor with same address can only be created once.
  *
- * @param bus i2c bus handle the sensor attached to
- * @param imu_id id declared in imu_id_t
+ * @param bus i2c/spi bus handle the sensor attached to
+ * @param sensor_name name of sensor
+ * @param addr addr of sensor
  * @return sensor_imu_handle_t return imu sensor handle if succeed, NULL is failed.
  */
-sensor_imu_handle_t imu_create(bus_handle_t bus, int imu_id);
+sensor_imu_handle_t imu_create(bus_handle_t bus, const char *sensor_name, uint8_t addr);
 
 /**
  * @brief Delete and release the sensor resource.
@@ -129,6 +199,8 @@ esp_err_t imu_control(sensor_imu_handle_t sensor, sensor_command_t cmd, void *ar
 #ifdef __cplusplus
 extern "C"
 }
+#endif
+
 #endif
 
 #endif

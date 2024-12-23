@@ -49,66 +49,34 @@
 
 ### 示例输出结果
 
-以下是挂载了`BH1750` 光照度传感器、 `SHT31` 温湿度传感器、`MPU6050` 陀螺仪加速度计三个传感器模块的测试输出结果：
+以下是挂载了`VEML6040` 光照度传感器、 `SHT31` 温湿度传感器、`LIS2DH12` 陀螺仪加速度计三个传感器模块的测试输出结果：
 
 1. 发现三个 i2c 设备，并根据地址推断出传感器型号：
 
 ```
-I (348) i2c_bus: i2c0 bus inited
-I (348) Board: Board Info: ESP32-Devkitc
-I (358) Board: Board Init Done ...
-I (358) SENSOR_LOOP: event loop created succeed
-I (368) SENSOR_LOOP: register a new handler to event loop succeed
-I (378) i2c_bus: found i2c device address = 0x23
-I (388) i2c_bus: found i2c device address = 0x44
-I (398) i2c_bus: found i2c device address = 0x68
-I (398) SENSOR_HUB: address 0x23 might be BH1750 (Light Intensity sensor)
-
-I (408) SENSOR_HUB: address 0x23 found 1 matched info
-
-I (418) SENSOR_HUB: address 0x44 might be SHT31 (Humi/Temp sensor)
-
-I (428) SENSOR_HUB: address 0x44 found 1 matched info
-
-I (428) SENSOR_HUB: address 0x68 might be MPU6050 (Gyro/Acce sensor)
-
-I (438) SENSOR_HUB: address 0x68 found 1 matched info
+I (319) Board_Common: Board Init Done !
+I (329) SENSOR_HUB: Find lis2dh12 driver, type: IMU
+I (329) SENSOR_HUB: Find sht3x driver, type: HUMITURE
+I (339) SENSOR_HUB: Find veml6040 driver, type: LIGHTSENSOR
+I (349) SENSOR_HUB: Find sht3x driver, type: HUMITURE
 ```
 
-2. 分别创建并启动了这三个传感器：
+2. 创建并启动了对应的传感器：
 
 ```
-I (448) SENSOR_HUB: Sensor created, Task name = SENSOR_HUB, Type = LIGHTSENSOR, Sensor ID = 49, Mode = MODE_POLLING, Min Delay = 200 ms
-I (458) SENSOR_HUB: task: sensor_default_task created!
-I (468) Sensors Monitor: Timestamp = 226526 - LIGHTSENSOR SENSOR_STARTED
-I (478) Sensors Monitor: BH1750 (Light Intensity sensor) created
-I (488) SENSOR_HUB: Sensor created, Task name = SENSOR_HUB, Type = HUMITURE, Sensor ID = 17, Mode = MODE_POLLING, Min Delay = 200 ms
-I (498) Sensors Monitor: Timestamp = 253110 - HUMITURE SENSOR_STARTED
-I (498) Sensors Monitor: SHT31 (Humi/Temp sensor) created
-I (508) MPU6050: mpu6050 device address is: 0x68
-
-I (518) SENSOR_HUB: Sensor created, Task name = SENSOR_HUB, Type = IMU, Sensor ID = 33, Mode = MODE_POLLING, Min Delay = 200 ms
-
-I (528) Sensors Monitor: Timestamp = 283925 - IMU SENSOR_STARTED
-I (538) Sensors Monitor: MPU6050 (Gyro/Acce sensor) created
+I (349) SENSOR_HUB: Sensor created, Task name = SENSOR_HUB, Type = HUMITURE, Sensor Name = sht3x, Mode = MODE_POLLING, Min Delay = 200 ms
+I (359) SENSOR_HUB: task: sensor_default_task created!
+I (369) SENSOR_LOOP: event loop created succeed
+I (379) SENSOR_LOOP: register a new handler to event loop succeed
+I (379) Sensors Monitor: Timestamp = 850604 - sht3x_0x44 STARTED
 ```
 
 3. 传感器启动以后，以设定的周期采集数据，并发送事件消息：
 
 ```
-I (698) Sensors Monitor: Timestamp = 450729 - SENSOR_LIGHT_DATA_READY - light=353.33
-I (698) Sensors Monitor: Timestamp = 451679 - SENSOR_TEMP_DATA_READY - temperature=24.47
+I (579) Sensors Monitor: Timestamp = 1044096 - sht3x_0x44 HUMI_DATA_READY - humiture=45.78
+I (779) Sensors Monitor: Timestamp = 1243127 - sht3x_0x44 TEMP_DATA_READY - temperature=25.00
 
-I (698) Sensors Monitor: Timestamp = 451679 - SENSOR_HUMI_DATA_READY - humiture=38.58
-I (728) Sensors Monitor: Timestamp = 483688 - SENSOR_GYRO_DATA_READY - gyro_x=0.26, gyro_y=-2.00, gyro_z=-0.92
-
-I (728) Sensors Monitor: Timestamp = 483688 - SENSOR_ACCE_DATA_READY - acce_x=0.07, acce_y=0.43, acce_z=0.80
-
-I (898) Sensors Monitor: Timestamp = 650686 - SENSOR_LIGHT_DATA_READY - light=353.33
-I (898) Sensors Monitor: Timestamp = 651049 - SENSOR_TEMP_DATA_READY - temperature=24.47
-
-I (898) Sensors Monitor: Timestamp = 651049 - SENSOR_HUMI_DATA_READY - humiture=38.58
-I (928) Sensors Monitor: Timestamp = 683593 - SENSOR_GYRO_DATA_READY - gyro_x=0.44, gyro_y=-2.18, gyro_z=-0.93
-
-I (928) Sensors Monitor: Timestamp = 683593 - SENSOR_ACCE_DATA_READY - acce_x=0.08, acce_y=0.43, acce_z=0.80
+I (779) Sensors Monitor: Timestamp = 1243127 - sht3x_0x44 HUMI_DATA_READY - humiture=45.78
+I (979) Sensors Monitor: Timestamp = 1444101 - sht3x_0x44 TEMP_DATA_READY - temperature=25.00
 ```

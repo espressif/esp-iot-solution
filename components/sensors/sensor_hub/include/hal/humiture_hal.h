@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -7,20 +7,85 @@
 #ifndef _HUMITURE_HAL_H_
 #define _HUMITURE_HAL_H_
 
+#ifdef CONFIG_SENSOR_INCLUDED_HUMITURE
+
 #include "i2c_bus.h"
 #include "sensor_type.h"
 
 typedef void *sensor_humiture_handle_t; /*!< humiture sensor handle*/
 
 /**
- * @brief humiture sensor id, used for humiture_create
+ * @brief Implementation Interface for Humiture Sensors
  *
  */
-typedef enum {
-    SHT3X_ID = 0x01, /*!< sht3x humiture sensor id*/
-    HTS221_ID, /*!< hts221 humiture sensor id*/
-    HUMITURE_MAX_ID, /*!< max humiture sensor id*/
-} humiture_id_t;
+typedef struct {
+    /**
+     * @brief Initialize the humiture sensor
+     *
+     * @param handle The bus handle
+     * @param addr The I2C address of the sensor
+     * @return esp_err_t Result of initialization
+     */
+    esp_err_t (*init)(bus_handle_t handle, uint8_t addr);
+
+    /**
+     * @brief Deinitialize the humiture sensor
+     *
+     * @return esp_err_t Result of deinitialization
+     */
+    esp_err_t (*deinit)(void);
+
+    /**
+     * @brief Test the humiture sensor
+     *
+     * @return esp_err_t Result of the test
+     */
+    esp_err_t (*test)(void);
+
+    /**
+     * @brief Acquire humidity data from the sensor
+     *
+     * @param[out] humidity Pointer to store the humidity data
+     * @return esp_err_t Result of acquiring data
+     */
+    esp_err_t (*acquire_humidity)(float *humidity);
+
+    /**
+     * @brief Acquire temperature data from the sensor
+     *
+     * @param[out] temperature Pointer to store the temperature data
+     * @return esp_err_t Result of acquiring data
+     */
+    esp_err_t (*acquire_temperature)(float *temperature);
+
+    /**
+     * @brief Put the humiture sensor to sleep
+     *
+     * @return esp_err_t Result of the sleep operation
+     */
+    esp_err_t (*sleep)(void);
+
+    /**
+     * @brief Wake up the humiture sensor
+     *
+     * @return esp_err_t Result of the wake-up operation
+     */
+    esp_err_t (*wakeup)(void);
+
+    /**
+     * @brief Set sensor work mode
+     *
+     * @return esp_err_t Result of setting work mode
+     */
+    esp_err_t (*set_mode)(sensor_mode_t work_mode);
+
+    /**
+     * @brief Set sensor measurement range
+     *
+     * @return esp_err_t Result of setting measurement range
+     */
+    esp_err_t (*set_range)(sensor_range_t range);
+} humiture_impl_t;
 
 #ifdef __cplusplus
 extern "C"
@@ -28,14 +93,14 @@ extern "C"
 #endif
 
 /**
- * @brief Create a humiture/temperature/humidity sensor instance.
- * Same series' sensor or sensor with same address can only be created once.
+ * @brief Create a humiture/temperature sensor instance.
  *
- * @param bus i2c bus handle the sensor attached to
- * @param id id declared in humiture_id_t
+ * @param bus i2c/spi bus handle the sensor attached to
+ * @param sensor_name name of sensor
+ * @param addr addr of sensor
  * @return sensor_humiture_handle_t return humiture sensor handle if succeed, return NULL if create failed.
  */
-sensor_humiture_handle_t humiture_create(bus_handle_t bus, int id);
+sensor_humiture_handle_t humiture_create(bus_handle_t bus, const char *sensor_name, uint8_t addr);
 
 /**
  * @brief Delete and release the sensor resource.
@@ -129,6 +194,8 @@ esp_err_t humiture_control(sensor_humiture_handle_t sensor, sensor_command_t cmd
 #ifdef __cplusplus
 extern "C"
 }
+#endif
+
 #endif
 
 #endif

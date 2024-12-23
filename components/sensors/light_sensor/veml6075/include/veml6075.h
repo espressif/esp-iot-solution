@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -223,51 +223,6 @@ uint16_t veml6075_get_raw_vis(veml6075_handle_t sensor);
  * @return uint16_t
  */
 uint16_t veml6075_get_raw_ir(veml6075_handle_t sensor);
-
-/**implements of light sensor hal interface**/
-#ifdef CONFIG_SENSOR_LIGHT_INCLUDED_VEML6075
-/**
- * @brief initialize veml6040 with default configurations
- *
- * @param i2c_bus i2c bus handle the sensor will attached to
- * @return
- *     - ESP_OK Success
- *     - ESP_FAIL Fail
- */
-esp_err_t light_sensor_veml6075_init(i2c_bus_handle_t handle);
-
-/**
- * @brief de-initialize veml6040
- *
- * @return
- *     - ESP_OK Success
- *     - ESP_FAIL Fail
- */
-esp_err_t light_sensor_veml6075_deinit(void);
-
-/**
- * @brief test if veml6040 is active
- *
- * @return
- *     - ESP_OK Success
- *     - ESP_FAIL Fail
- */
-esp_err_t light_sensor_veml6075_test(void);
-
-/**
- * @brief Acquire light sensor ultra violet result one time.
- * light Ultraviolet includes UVA UVB and UV
- *
- * @param uv Ultraviolet result (unit:lux)
- * @param uva Ultraviolet A data (unit:lux)
- * @param uvb  Ultraviolet B data (unit:lux)
- * @return
- *     - ESP_OK Success
- *     - ESP_FAIL Fail
- */
-esp_err_t light_sensor_veml6075_acquire_uv(float* uv, float* uva, float* uvb);
-
-#endif
 
 #ifdef __cplusplus
 }

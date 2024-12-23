@@ -76,6 +76,7 @@ jobs:
             components/sensors/power_monitor/ina236;
             components/sensors/pressure/bme280;
             components/sensors/radar/at581x;
+            components/sensors/sensor_hub;
             components/spi_bus;
             components/touch/touch_proximity_sensor;
             components/usb/esp_msc_ota;

@@ -789,48 +789,6 @@ esp_err_t lis2dh12_get_raw_acce(lis2dh12_handle_t sensor, lis2dh12_raw_acce_valu
  */
 esp_err_t lis2dh12_get_acce(lis2dh12_handle_t sensor, lis2dh12_acce_value_t *acce_value);
 
-/***implements of imu hal interface****/
-#ifdef CONFIG_SENSOR_IMU_INCLUDED_LIS2DH12
-
-/**
- * @brief initialize lis2dh12 with default configurations
- *
- * @param i2c_bus i2c bus handle the sensor will attached to
- * @return
- *     - ESP_OK Success
- *     - ESP_FAIL Fail
- */
-esp_err_t imu_lis2dh12_init(i2c_bus_handle_t i2c_bus);
-
-/**
- * @brief
- *
- * @return esp_err_t
- */
-esp_err_t imu_lis2dh12_deinit(void);
-
-/**
- * @brief de-initialize lis2dh12
- *
- * @return
- *     - ESP_OK Success
- *     - ESP_FAIL Fail
- */
-esp_err_t imu_lis2dh12_test(void);
-
-/**
- * @brief acquire lis2dh12 accelerometer result one time.
- *
- * @param acce_x result data (unit:g)
- * @param acce_y result data (unit:g)
- * @param acce_z result data (unit:g)
- * @return
- *     - ESP_OK Success
- *     - ESP_FAIL Fail
- */
-esp_err_t imu_lis2dh12_acquire_acce(float *acce_x, float *acce_y, float *acce_z);
-#endif
-
 #ifdef __cplusplus
 }
 #endif

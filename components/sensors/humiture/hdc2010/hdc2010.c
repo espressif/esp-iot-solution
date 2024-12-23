@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -8,6 +8,7 @@
 #include "i2c_bus.h"
 #include "esp_log.h"
 #include "hdc2010.h"
+#include "iot_sensor_hub.h"
 
 #define WRITE_BIT                       I2C_MASTER_WRITE  /*!< I2C master write */
 #define READ_BIT                        I2C_MASTER_READ   /*!< I2C master read */
@@ -289,3 +290,81 @@ esp_err_t hdc2010_default_init(hdc2010_handle_t sensor)
 
     return ESP_OK;
 }
+
+#ifdef CONFIG_SENSOR_INCLUDED_HUMITURE
+
+static hdc2010_handle_t hdc2010 = NULL;
+static bool is_init = false;
+
+esp_err_t humiture_hdc2010_init(i2c_bus_handle_t i2c_bus, uint8_t addr)
+{
+    if (is_init || !i2c_bus) {
+        return ESP_FAIL;
+    }
+
+    hdc2010 = hdc2010_create(i2c_bus, addr);
+
+    if (!hdc2010) {
+        return ESP_FAIL;
+    }
+
+    is_init = true;
+    return ESP_OK;
+}
+
+esp_err_t humiture_hdc2010_deinit(void)
+{
+    if (!is_init) {
+        return ESP_FAIL;
+    }
+
+    esp_err_t ret = hdc2010_delete(&hdc2010);
+
+    if (ret != ESP_OK) {
+        return ESP_FAIL;
+    }
+
+    is_init = false;
+    return ESP_OK;
+}
+
+esp_err_t humiture_hdc2010_test(void)
+{
+    if (!is_init) {
+        return ESP_FAIL;
+    }
+
+    return ESP_OK;
+}
+
+esp_err_t humiture_hdc2010_acquire_humidity(float *h)
+{
+    if (!is_init) {
+        return ESP_FAIL;
+    }
+
+    *h = hdc2010_get_humidity(hdc2010);
+    return ESP_OK;
+}
+
+esp_err_t humiture_hdc2010_acquire_temperature(float *t)
+{
+    if (!is_init) {
+        return ESP_FAIL;
+    }
+
+    *t = hdc2010_get_temperature(hdc2010);
+    return ESP_OK;
+}
+
+static humiture_impl_t hdc2010_impl = {
+    .init = humiture_hdc2010_init,
+    .deinit = humiture_hdc2010_deinit,
+    .test = humiture_hdc2010_test,
+    .acquire_humidity = humiture_hdc2010_acquire_humidity,
+    .acquire_temperature = humiture_hdc2010_acquire_temperature,
+};
+
+SENSOR_HUB_DETECT_FN(HUMITURE_ID, hdc2010, &hdc2010_impl);
+
+#endif
