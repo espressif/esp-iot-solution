@@ -17,34 +17,20 @@ To enable the ``sensor_hub`` to locate the sensor component, please refer to the
 
 ```c
 static imu_impl_t virtual_mpu6050_impl = {
-    .name = "virtual_mpu6050",
-    .sensor_type = IMU_ID,
     .init = virtual_imu_init,
     .deinit = virtual_imu_deinit,
     .test = virtual_imu_test,
     .acquire_acce = virtual_imu_acquire_acce,
     .acquire_gyro = virtual_imu_acquire_gyro,
-    .sleep = virtual_imu_null_function,
-    .wakeup = virtual_imu_null_function,
 };
 
-void *virtual_mpu6050_detect(sensor_info_t *sensor_info)
-{
-    sensor_info->snesor_type = IMU_ID;
-    sensor_info->name = virtual_mpu6050_impl.name;
-    return (void*)&virtual_mpu6050_impl;
-}
-
-ESP_SENSOR_DETECT_FN(virtual_mpu6050_detect)
-{
-    return virtual_mpu6050_detect(sensor_info);
-}
+SENSOR_HUB_DETECT_FN(IMU_ID, virtual_mpu6050, &virtual_mpu6050_impl);
 ```
 
 3. Modify the CMakeLists of the sensor driver to link the sensor registration function.
 
 ```cmake
-target_link_libraries(${COMPONENT_LIB} INTERFACE "-u virtual_mpu6050_detect")
+target_link_libraries(${COMPONENT_LIB} INTERFACE "-u virtual_imu_init")
 ```
 
 The `test_apps` of `sensor_hub` provide examples of virtual sensor registration, which you can refer to when registering your own sensor.
