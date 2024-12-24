@@ -557,6 +557,30 @@ esp_err_t epaper_display(epaper_handle_t paper, epaper_display_data_t display_da
     epaper_print_string(paper, 30, 78, "Humidity", 12, BLACK);
     epaper_draw_line(paper, 1, 92, 119, 92, BLACK);
 
+#if CONFIG_REGION_INTERNATIONAL
+    if (strstr(display_data.text, "Sunny") != NULL) {
+        epaper_print_string(paper, 145, 5, "Sunny", 16, BLACK);
+        epaper_display_picture(paper, 141, 25, 48, 48, SUNNY, WHITE);
+    } else if (strstr(display_data.text, "Partly Cloudy") != NULL) {
+        epaper_print_string(paper, 128, 5, "Partly Cloudy", 12, BLACK);
+        epaper_display_picture(paper, 141, 25, 48, 48, PARTLY_CLOUDY, WHITE);
+    } else if (strstr(display_data.text, "Cloudy") != NULL) {
+        epaper_print_string(paper, 140, 5, "Cloudy", 16, BLACK);
+        epaper_display_picture(paper, 141, 25, 48, 48, CLOUDY, WHITE);
+    } else if (strstr(display_data.text, "Snowy") != NULL) {
+        epaper_print_string(paper, 145, 5, "Snowy", 16, BLACK);
+        epaper_display_picture(paper, 141, 25, 48, 48, SNOWY, WHITE);
+    } else if (strstr(display_data.text, "Rain") != NULL) {
+        epaper_print_string(paper, 150, 5, "Rain", 16, BLACK);
+        epaper_display_picture(paper, 141, 25, 48, 48, RAIN, WHITE);
+    } else if (strstr(display_data.text, "Haze") != NULL) {
+        epaper_print_string(paper, 150, 5, "Haze", 16, BLACK);
+        epaper_display_picture(paper, 141, 25, 48, 48, HAZE, WHITE);
+    } else {
+        epaper_print_string(paper, 140, 5, "No Wifi", 16, BLACK);
+        epaper_display_picture(paper, 141, 25, 48, 48, NO_WEATHER, WHITE);
+    }
+#else
     if (strstr(display_data.text, "晴") != NULL) {
         epaper_print_string(paper, 145, 5, "Sunny", 16, BLACK);
         epaper_display_picture(paper, 141, 25, 48, 48, SUNNY, WHITE);
@@ -572,10 +596,14 @@ esp_err_t epaper_display(epaper_handle_t paper, epaper_display_data_t display_da
     } else if (strstr(display_data.text, "雨") != NULL) {
         epaper_print_string(paper, 150, 5, "Rain", 16, BLACK);
         epaper_display_picture(paper, 141, 25, 48, 48, RAIN, WHITE);
+    } else if (strstr(display_data.text, "霾") != NULL) {
+        epaper_print_string(paper, 150, 5, "Haze", 16, BLACK);
+        epaper_display_picture(paper, 141, 25, 48, 48, HAZE, WHITE);
     } else {
-        epaper_print_string(paper, 140, 5, "No data", 16, BLACK);
+        epaper_print_string(paper, 140, 5, "No Wifi", 16, BLACK);
         epaper_display_picture(paper, 141, 25, 48, 48, NO_WEATHER, WHITE);
     }
+#endif
 
     char high_temp[10];
     char low_temp[10];
@@ -585,9 +613,11 @@ esp_err_t epaper_display(epaper_handle_t paper, epaper_display_data_t display_da
     strcat(temp_str, high_temp);
     strcat(temp_str, low_temp);
 
+    int city_len = strlen(display_data.city);
+    int district_len = strlen(display_data.district);
     epaper_print_string(paper, 132, 75, temp_str, 16, BLACK);
-    epaper_print_string(paper, 134, 92, display_data.city, 16, BLACK);
-    epaper_print_string(paper, 140, 108, display_data.district, 16, BLACK);
+    epaper_print_string(paper, 166 - (city_len * 4), 92, display_data.city, 16, BLACK);
+    epaper_print_string(paper, 166 - (district_len * 4), 108, display_data.district, 16, BLACK);
 
     epaper_draw_rectangle(paper, 122, 1, 210, 128, BLACK, 0);
 
@@ -599,66 +629,78 @@ esp_err_t epaper_display(epaper_handle_t paper, epaper_display_data_t display_da
     wind_speed[strlen(wind_speed) + 1] = '\0';
     epaper_print_string(paper, 214, 19, wind_speed, 12, BLACK);
 
-    if (strstr(display_data.wind_dir, "北风") != NULL) {
-        epaper_print_string(paper, 214, 32, "Direction:N", 12, BLACK);
+#if CONFIG_REGION_INTERNATIONAL
+    int wind_dir_len = strlen(display_data.wind_dir);
+    epaper_print_string(paper, 254 - (wind_dir_len * 3), 32, display_data.wind_dir, 12, BLACK);
+#else
+    char wind_direction[15] = {0};
+    if (strstr(display_data.wind_dir, "西北风") != NULL) {
+        strcat(wind_direction, "Northwest");
     } else if (strstr(display_data.wind_dir, "东北风") != NULL) {
-        epaper_print_string(paper, 214, 32, "Direction:NE", 12, BLACK);
-    } else if (strstr(display_data.wind_dir, "东风") != NULL) {
-        epaper_print_string(paper, 214, 32, "Direction:E", 12, BLACK);
-    } else if (strstr(display_data.wind_dir, "东南风") != NULL) {
-        epaper_print_string(paper, 214, 32, "Direction:SE", 12, BLACK);
-    } else if (strstr(display_data.wind_dir, "南风") != NULL) {
-        epaper_print_string(paper, 214, 32, "Direction:S", 12, BLACK);
+        strcat(wind_direction, "Northeast");
     } else if (strstr(display_data.wind_dir, "西南风") != NULL) {
-        epaper_print_string(paper, 214, 32, "Direction:SW", 12, BLACK);
+        strcat(wind_direction, "Southwest");
+    } else if (strstr(display_data.wind_dir, "东南风") != NULL) {
+        strcat(wind_direction, "Southeast");
+    } else if (strstr(display_data.wind_dir, "北风") != NULL) {
+        strcat(wind_direction, "North");
+    } else if (strstr(display_data.wind_dir, "南风") != NULL) {
+        strcat(wind_direction, "South");
     } else if (strstr(display_data.wind_dir, "西风") != NULL) {
-        epaper_print_string(paper, 214, 32, "Direction:W", 12, BLACK);
-    } else if (strstr(display_data.wind_dir, "西北风") != NULL) {
-        epaper_print_string(paper, 214, 32, "Direction:NW", 12, BLACK);
+        strcat(wind_direction, "West");
+    } else if (strstr(display_data.wind_dir, "东风") != NULL) {
+        strcat(wind_direction, "East");
     } else {
-        epaper_print_string(paper, 214, 32, "Direction:..", 12, BLACK);
+        strcat(wind_direction, "No data");
     }
+    int wind_dir_len = strlen(wind_direction);
+    epaper_print_string(paper, 254 - (wind_dir_len * 3), 32, wind_direction, 12, BLACK);
+#endif
 
     epaper_draw_rectangle(paper, 212, 1, 296, 46, BLACK, 0);
 
+#if CONFIG_REGION_INTERNATIONAL
+    int week_len = strlen(display_data.week);
+    epaper_print_string(paper, 254 - (week_len * 4), 48, display_data.week, 16, BLACK);
+#else
+    char week_str[15] = {0};
     if (strstr(display_data.week, "一") != NULL) {
-        epaper_print_string(paper, 230, 48, "Monday", 16, BLACK);
+        strcat(week_str, "Monday");
     } else if (strstr(display_data.week, "二") != NULL) {
-        epaper_print_string(paper, 226, 48, "Tuesday", 16, BLACK);
+        strcat(week_str, "Tuesday");
     } else if (strstr(display_data.week, "三") != NULL) {
-        epaper_print_string(paper, 218, 48, "Wednesday", 16, BLACK);
+        strcat(week_str, "Wednesday");
     } else if (strstr(display_data.week, "四") != NULL) {
-        epaper_print_string(paper, 226, 48, "Thursday", 16, BLACK);
+        strcat(week_str, "Thursday");
     } else if (strstr(display_data.week, "五") != NULL) {
-        epaper_print_string(paper, 230, 48, "Friday", 16, BLACK);
+        strcat(week_str, "Friday");
     } else if (strstr(display_data.week, "六") != NULL) {
-        epaper_print_string(paper, 222, 48, "Saturday", 16, BLACK);
+        strcat(week_str, "Saturday");
     } else {
-        epaper_print_string(paper, 230, 48, "Sunday", 16, BLACK);
+        strcat(week_str, "Sunday");
     }
+    int week_len = strlen(week_str);
+    epaper_print_string(paper, 254 - (week_len * 4), 48, week_str, 16, BLACK);
+#endif
 
     char uptime_str[12];
     uint8_t index = 0;
     for (int i = 0; i < 8; i++) {
-        uptime_str[index] = display_data.uptime[i + 4];
+        uptime_str[index] = display_data.uptime[i];
         index++;
-        if (index == 2) {
-            uptime_str[index] = '.';
+        if (index == 4) {
+            uptime_str[index] = '/';
             index++;
         }
-        if (index == 5) {
-            uptime_str[index] = ' ';
+        if (index == 7) {
+            uptime_str[index] = '/';
             index++;
         }
-        if (index == 8) {
-            uptime_str[index] = ':';
-            index++;
-        }
-        if (index == 11) {
+        if (index == 10) {
             uptime_str[index] = '\0';
         }
     }
-    epaper_print_string(paper, 222, 66, uptime_str, 12, BLACK);
+    epaper_print_string(paper, 225, 66, uptime_str, 12, BLACK);
     epaper_display_picture(paper, 236, 85, 36, 36, ESP_LOGO, WHITE);
     epaper_draw_rectangle(paper, 212, 48, 296, 128, BLACK, 0);
 

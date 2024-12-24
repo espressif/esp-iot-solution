@@ -38,10 +38,6 @@
 #include "driver/gpio.h"
 #include "app_epaper.h"
 
-#ifndef CONFIG_UPDATE_WEATHER_DATA
-#define CONFIG_UPDATE_WEATHER_DATA 0
-#endif
-
 static const char *TAG = "LP_Environment_Sensor";
 
 extern const uint8_t lp_core_main_bin_start[] asm("_binary_lp_core_main_bin_start");
@@ -52,9 +48,11 @@ extern const uint8_t lp_core_main_bin_end[]   asm("_binary_lp_core_main_bin_end"
 #define EPAPER_PWR_CTRL             GPIO_NUM_8
 #define EPAPER_BUS_HOST             SPI2_HOST
 #define EPAPER_REFRESH_BIT          BIT(0)
-#define WIFI_CONNECT_DONE_BIT       BIT(1)
-#define RMAKER_DATA_REPORT_BIT      BIT(2)
-#define WEATHER_DATA_UPDATE_BIT     BIT(3)
+#define WIFI_CONNECT_SUCCESS_BIT    BIT(1)
+#define WIFI_CONNECT_FAIL_BIT       BIT(2)
+#define RMAKER_DATA_REPORT_BIT      BIT(3)
+#define WEATHER_DATA_UPDATE_BIT     BIT(4)
+#define WIFI_UNAVAILABLE            BIT(5)
 
 static EventGroupHandle_t esp_ths_event_group = NULL;
 
@@ -64,18 +62,20 @@ static esp_rmaker_device_t *temp_sensor_device;
 
 static epaper_handle_t s_epaper = NULL;
 
-static char *city_name = "Shanghai";    // City name for weather information retrieval
-static char *district_name = "Pudong";  // District name for weather information retrieval
-#if CONFIG_UPDATE_WEATHER_DATA
-static char *district_id = "310115";    // District ID for weather information retrieval (needs to be queried on Baidu Developer Platform)
-#endif
-static RTC_SLOW_ATTR char text[10] = {0};
-static RTC_SLOW_ATTR char wind_class[10] = {0};
-static RTC_SLOW_ATTR char wind_dir[15] = {0};
-static RTC_SLOW_ATTR char uptime[15] = {0};
-static RTC_SLOW_ATTR char week[10] = {0};
-static RTC_SLOW_ATTR int high = 0;
-static RTC_SLOW_ATTR int low = 0;
+static RTC_SLOW_ATTR http_weather_data_t weather_data = {
+    // District ID for weather information retrieval (needs to be queried on Baidu Developer Platform)
+    .district_id = {0},
+    .city_name = {0},
+    .district_name = {0},
+    .text = {0},
+    .wind_class = {0},
+    .wind_dir = {0},
+    .uptime = {0},
+    .week = {0},
+    .temp_high = 0,
+    .temp_low = 0
+};
+
 typedef struct {
     float temp;
     float hum;
@@ -153,6 +153,16 @@ static void rmaker_data_report_done_event_handler(void* arg, esp_event_base_t ev
     }
 }
 
+static void rmaker_mqtt_disconnected_event_handler(void* arg, esp_event_base_t event_base,
+                                                   int32_t event_id, void* event_data)
+{
+    if (event_base == RMAKER_COMMON_EVENT) {
+        if (event_id == RMAKER_MQTT_EVENT_DISCONNECTED) {
+            xEventGroupSetBits(esp_ths_event_group, WIFI_UNAVAILABLE);
+        }
+    }
+}
+
 static void rmaker_task(void *pvParameters)
 {
     esp_ths_data_type_t *data = (esp_ths_data_type_t *)pvParameters;
@@ -170,7 +180,8 @@ static void rmaker_task(void *pvParameters)
 
     esp_event_handler_register(RMAKER_COMMON_EVENT, RMAKER_MQTT_EVENT_PUBLISHED,
                                &rmaker_data_report_done_event_handler, NULL);
-
+    esp_event_handler_register(RMAKER_COMMON_EVENT, RMAKER_MQTT_EVENT_DISCONNECTED,
+                               &rmaker_mqtt_disconnected_event_handler, NULL);
     esp_rmaker_config_t rainmaker_cfg = {
         .enable_time_sync = false,
     };
@@ -188,11 +199,15 @@ static void rmaker_task(void *pvParameters)
 
     if (data->hum == 0) {
         if (app_first_time_wifi_start(POP_TYPE_RANDOM) == ESP_OK) {
-            xEventGroupSetBits(esp_ths_event_group, WIFI_CONNECT_DONE_BIT);
+            xEventGroupSetBits(esp_ths_event_group, WIFI_CONNECT_SUCCESS_BIT);
+        } else {
+            xEventGroupSetBits(esp_ths_event_group, WIFI_CONNECT_FAIL_BIT);
         }
     } else {
         if (app_second_time_wifi_start() == ESP_OK) {
-            xEventGroupSetBits(esp_ths_event_group, WIFI_CONNECT_DONE_BIT);
+            xEventGroupSetBits(esp_ths_event_group, WIFI_CONNECT_SUCCESS_BIT);
+        } else {
+            xEventGroupSetBits(esp_ths_event_group, WIFI_CONNECT_FAIL_BIT);
         }
     }
     while (1) {
@@ -206,16 +221,24 @@ static void rmaker_task(void *pvParameters)
 static void http_task(void *pvParameters)
 {
     while (1) {
-        EventBits_t bits = xEventGroupWaitBits(esp_ths_event_group, WIFI_CONNECT_DONE_BIT, pdTRUE, pdFALSE, portMAX_DELAY);
-        if (bits & WIFI_CONNECT_DONE_BIT) {
-            if (http_rest_with_url(district_id, text, wind_class, wind_dir, uptime, week, &high, &low) == ESP_OK) {
-                xEventGroupSetBits(esp_ths_event_group, WEATHER_DATA_UPDATE_BIT);
+        EventBits_t bits = xEventGroupWaitBits(esp_ths_event_group,
+                                               WIFI_CONNECT_SUCCESS_BIT | WIFI_CONNECT_FAIL_BIT,
+                                               pdFALSE,
+                                               pdFALSE,
+                                               portMAX_DELAY);
+        if (bits & WIFI_CONNECT_SUCCESS_BIT) {
+            if (get_http_weather_data_with_url(&weather_data) == ESP_OK) {
                 ESP_LOGI(TAG, "Weather data get done.");
+                xEventGroupSetBits(esp_ths_event_group, WEATHER_DATA_UPDATE_BIT);
+            } else {
+                ESP_LOGE(TAG, "Weather data get failed.");
+                xEventGroupSetBits(esp_ths_event_group, WIFI_UNAVAILABLE);
             }
+        } else {
+            ESP_LOGE(TAG, "Wi-Fi connection failed.");
         }
-        vTaskDelay(10 / portTICK_PERIOD_MS);
+        vTaskDelete(NULL);
     }
-    vTaskDelete(NULL);
 }
 #endif
 
@@ -237,32 +260,48 @@ static void epaper_task(void *pvParameters)
     }
 
     epaper_display_data_t epaper_display_data = {
-        .city = city_name,
-        .district = district_name,
+        .city = weather_data.city_name,
+        .district = weather_data.district_name,
         .temp = data->temp,
         .hum = data->hum,
-        .text = text,
-        .week = week,
-        .max_temp = high,
-        .min_temp = low,
-        .wind_class = wind_class,
-        .wind_dir = wind_dir,
-        .uptime = uptime,
+        .text = weather_data.text,
+        .week = weather_data.week,
+        .max_temp = weather_data.temp_high,
+        .min_temp = weather_data.temp_low,
+        .wind_class = weather_data.wind_class,
+        .wind_dir = weather_data.wind_dir,
+        .uptime = weather_data.uptime,
     };
+
+#ifdef CONFIG_REGION_CHINA
+    epaper_display_data.city = CONFIG_CHINA_CITY_NAME;
+    epaper_display_data.district = CONFIG_CHINA_DISTRICT_NAME;
+#endif
 
     while (1) {
         if (data->enable_http == true) {
             if (CONFIG_UPDATE_WEATHER_DATA) {
-                EventBits_t bits = xEventGroupWaitBits(esp_ths_event_group, WEATHER_DATA_UPDATE_BIT, pdTRUE, pdFALSE, portMAX_DELAY);
+                EventBits_t bits = xEventGroupWaitBits(esp_ths_event_group,
+                                                       WEATHER_DATA_UPDATE_BIT | WIFI_UNAVAILABLE | WIFI_CONNECT_FAIL_BIT,
+                                                       pdFALSE,
+                                                       pdFALSE,
+                                                       portMAX_DELAY);
                 if (bits & WEATHER_DATA_UPDATE_BIT) {
                     ESP_LOGI(TAG, "http get data done.");
-                    ESP_LOGI(TAG, "week: %s", week);
-                    ESP_LOGI(TAG, "Highest temp: %d, lowest temp: %d", high, low);
-                    ESP_LOGI(TAG, "weather: %s", text);
-                    ESP_LOGI(TAG, "wind class: %s, wind dir: %s", wind_class, wind_dir);
-                    ESP_LOGI(TAG, "uptime: %s", uptime);
-                    epaper_display_data.max_temp = high;
-                    epaper_display_data.min_temp = low;
+                    ESP_LOGI(TAG, "week: %s", weather_data.week);
+                    ESP_LOGI(TAG, "Highest temp: %d, lowest temp: %d", weather_data.temp_high, weather_data.temp_low);
+                    ESP_LOGI(TAG, "weather: %s", weather_data.text);
+                    ESP_LOGI(TAG, "wind class: %s, wind dir: %s", weather_data.wind_class, weather_data.wind_dir);
+                    ESP_LOGI(TAG, "uptime: %s", weather_data.uptime);
+                    epaper_display_data.max_temp = weather_data.temp_high;
+                    epaper_display_data.min_temp = weather_data.temp_low;
+                    epaper_display(s_epaper, epaper_display_data);
+                    gpio_set_level(EPAPER_PWR_CTRL, 1);
+                    xEventGroupSetBits(esp_ths_event_group, EPAPER_REFRESH_BIT);
+                } else {
+                    ESP_LOGE(TAG, "http get data failed.");
+                    epaper_display_data.text = "No Wifi";
+                    snprintf(weather_data.text, sizeof(weather_data.text), "%s", "No Wifi");
                     epaper_display(s_epaper, epaper_display_data);
                     gpio_set_level(EPAPER_PWR_CTRL, 1);
                     xEventGroupSetBits(esp_ths_event_group, EPAPER_REFRESH_BIT);
@@ -276,6 +315,15 @@ static void epaper_task(void *pvParameters)
                 }
             }
         } else {
+            EventBits_t bits = xEventGroupWaitBits(esp_ths_event_group,
+                                                   WIFI_CONNECT_SUCCESS_BIT | WIFI_CONNECT_FAIL_BIT,
+                                                   pdFALSE,
+                                                   pdFALSE,
+                                                   portMAX_DELAY);
+            if (bits & WIFI_CONNECT_FAIL_BIT) {
+                epaper_display_data.text = "No Wifi";
+                snprintf(weather_data.text, sizeof(weather_data.text), "%s", "No Wifi");
+            }
             if (refresh_times) {
                 epaper_display(s_epaper, epaper_display_data);
                 xEventGroupSetBits(esp_ths_event_group, EPAPER_REFRESH_BIT);
@@ -283,14 +331,14 @@ static void epaper_task(void *pvParameters)
                 refresh_times--;
             }
         }
-        vTaskDelay(10 / portTICK_PERIOD_MS);
+        vTaskDelete(NULL);
     }
-    vTaskDelete(NULL);
 }
 
 void app_main(void)
 {
     /*!< Config charge IC enable IO */
+    gpio_set_level(LDO_CHIP_EN, 1);
     gpio_config_t io_conf = {
         .pin_bit_mask = (1ULL << LDO_CHIP_EN),
         .mode = GPIO_MODE_OUTPUT,
@@ -321,18 +369,30 @@ void app_main(void)
 #endif
         xTaskCreate(epaper_task, "epaper_task", 1024 * 8, (void *)&sensor_data, 8, NULL);
         /* Wait for the e-paper refresh to be completed. */
-        EventBits_t bits = xEventGroupWaitBits(esp_ths_event_group, EPAPER_REFRESH_BIT, pdTRUE, pdFALSE, portMAX_DELAY);
+        EventBits_t bits = xEventGroupWaitBits(esp_ths_event_group,
+                                               EPAPER_REFRESH_BIT,
+                                               pdTRUE,
+                                               pdFALSE,
+                                               portMAX_DELAY);
         if (bits & EPAPER_REFRESH_BIT) {
             ESP_LOGI(TAG, "E-paper refresh done.");
-            epaper_delete(&s_epaper);
         }
+        epaper_delete(&s_epaper);
 #ifdef CONFIG_REPORT_THS_DATA
         /* Wait for successful reporting of temperature and humidity data to
          * Rainmaker before proceeding to the next step.
          */
-        bits = xEventGroupWaitBits(esp_ths_event_group, RMAKER_DATA_REPORT_BIT, pdTRUE, pdFALSE, portMAX_DELAY);
+        bits = xEventGroupWaitBits(esp_ths_event_group,
+                                   RMAKER_DATA_REPORT_BIT | WIFI_UNAVAILABLE | WIFI_CONNECT_FAIL_BIT,
+                                   pdFALSE,
+                                   pdFALSE,
+                                   portMAX_DELAY);
         if (bits & RMAKER_DATA_REPORT_BIT) {
             ESP_LOGI(TAG, "Report esp-ths data done.");
+        } else if (bits & WIFI_UNAVAILABLE) {
+            ESP_LOGE(TAG, "WiFi is unavailable.");
+        } else {
+            ESP_LOGE(TAG, "Wi-Fi connection failed.");
         }
         vTaskDelay(10 / portTICK_PERIOD_MS);
 #endif
@@ -345,7 +405,7 @@ void app_main(void)
         /* Load LP Core binary and start the coprocessor */
         lp_core_init();
     } else if (cause == ESP_SLEEP_WAKEUP_ULP) {
-        ESP_LOGI(TAG, "wake up by LP CPU.");
+        printf("wake up by ULP.\n");
         float *temp = (float*)(&ulp_temp);
         float *hum = (float *)(&ulp_hum);
         bool weather_data_report = false;
@@ -374,18 +434,30 @@ void app_main(void)
             esp_rmaker_float(roundf((*temp) * 10.0) / 10.0));
 #endif
         /* Wait for the e-paper refresh to be completed. */
-        EventBits_t bits = xEventGroupWaitBits(esp_ths_event_group, EPAPER_REFRESH_BIT, pdTRUE, pdFALSE, portMAX_DELAY);
+        EventBits_t bits = xEventGroupWaitBits(esp_ths_event_group,
+                                               EPAPER_REFRESH_BIT,
+                                               pdTRUE,
+                                               pdFALSE,
+                                               portMAX_DELAY);
         if (bits & EPAPER_REFRESH_BIT) {
             ESP_LOGI(TAG, "E-paper refresh done.");
-            epaper_delete(&s_epaper);
         }
+        epaper_delete(&s_epaper);
 #ifdef CONFIG_REPORT_THS_DATA
         /* Wait for successful reporting of temperature and humidity data to
          * Rainmaker before proceeding to the next step.
          */
-        bits = xEventGroupWaitBits(esp_ths_event_group, RMAKER_DATA_REPORT_BIT, pdTRUE, pdFALSE, portMAX_DELAY);
+        bits = xEventGroupWaitBits(esp_ths_event_group,
+                                   RMAKER_DATA_REPORT_BIT | WIFI_UNAVAILABLE | WIFI_CONNECT_FAIL_BIT,
+                                   pdFALSE,
+                                   pdFALSE,
+                                   portMAX_DELAY);
         if (bits & RMAKER_DATA_REPORT_BIT) {
             ESP_LOGI(TAG, "Report esp-ths data done.");
+        } else if (bits & WIFI_UNAVAILABLE) {
+            ESP_LOGE(TAG, "WiFi is unavailable.");
+        } else {
+            ESP_LOGE(TAG, "Wi-Fi connection failed.");
         }
         vTaskDelay(10 / portTICK_PERIOD_MS);
 #endif
@@ -396,10 +468,11 @@ void app_main(void)
         }
 #endif
         ulp_sensor_data_report = 0;
+        printf("wake up by ULP.\n");
     }
     /* Setup wakeup triggers */
     ESP_ERROR_CHECK(esp_sleep_enable_ulp_wakeup());
     /* Enter Deep Sleep */
-    ESP_LOGI(TAG, "Enter deep sleep.");
+    printf("Enter deep sleep.\n");
     esp_deep_sleep_start();
 }

@@ -23,4 +23,38 @@ menu "LP Environment Sensor Configuration"
         depends on REPORT_THS_DATA
         help
         Enable get weather data from HTTP.
+
+choice
+    prompt "Select Region Type"
+    default REGION_CHINA
+    depends on UPDATE_WEATHER_DATA
+
+    config REGION_INTERNATIONAL
+        bool "International"
+
+    config REGION_CHINA
+        bool "China"
+endchoice
+
+    config CITY_DISTRICT_ID
+        string "District ID for weather data"
+        default "310115"
+        depends on UPDATE_WEATHER_DATA
+        help
+        Specify the district ID to get weather data from HTTP.
+
+    config CHINA_CITY_NAME
+        string "China City Name"
+        depends on REGION_CHINA
+        default "Shanghai"
+        help
+        Specify the name of the domestic city (e.g., Shanghai).
+
+    config CHINA_DISTRICT_NAME
+        string "China District Name"
+        depends on REGION_CHINA
+        default "Pudong"
+        help
+        Specify the name of the domestic district (e.g., Pudong).
+
 endmenu

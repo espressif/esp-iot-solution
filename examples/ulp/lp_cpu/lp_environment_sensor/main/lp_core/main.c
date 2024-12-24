@@ -13,7 +13,7 @@
 #include "ulp_lp_core_print.h"
 #endif
 
-#define AHT21_SENSOR_I2C_ADDR           0x38
+#define AHT30_SENSOR_I2C_ADDR           0x38
 #define WEATHER_UPDATE_INTERVAL_TIMES   (3 * (3600 / CONFIG_LP_CPU_WAKEUP_TIME_SECOND)) // Update interval is 3 hours
 #define LP_I2C_TRANS_TIMEOUT_CYCLES     5000
 #define LP_I2C_TRANS_WAIT_FOREVER       -1
@@ -30,14 +30,14 @@ uint32_t measure_times = 0;
 uint32_t weather_data_update = 0;
 #endif
 
-static void lp_read_aht21_data(float *temperature, float *humidity)
+static void lp_read_aht30_data(float *temperature, float *humidity)
 {
     uint8_t data_write[3] = { 0xAC, 0x33, 0x00 };
-    lp_core_i2c_master_write_to_device(LP_I2C_NUM_0, AHT21_SENSOR_I2C_ADDR, data_write, sizeof(data_write), LP_I2C_TRANS_WAIT_FOREVER);
+    lp_core_i2c_master_write_to_device(LP_I2C_NUM_0, AHT30_SENSOR_I2C_ADDR, data_write, sizeof(data_write), LP_I2C_TRANS_WAIT_FOREVER);
 
     uint32_t raw_data;
     uint8_t buf[7] = { 0 };
-    lp_core_i2c_master_read_from_device(LP_I2C_NUM_0, AHT21_SENSOR_I2C_ADDR, buf, sizeof(buf), LP_I2C_TRANS_TIMEOUT_CYCLES);
+    lp_core_i2c_master_read_from_device(LP_I2C_NUM_0, AHT30_SENSOR_I2C_ADDR, buf, sizeof(buf), LP_I2C_TRANS_TIMEOUT_CYCLES);
 
     raw_data = buf[1];
     raw_data = raw_data << 8;
@@ -69,7 +69,7 @@ int main(void)
         int temp_int = 0;
         float *temp_f = (float *)&temp;
         float *hum_f = (float *)&hum;
-        lp_read_aht21_data(temp_f, hum_f);
+        lp_read_aht30_data(temp_f, hum_f);
         /* Wake up the CPU to report temperature and humidity data
          * when the temperature changes by 0.5 degree Celsius or the humidity changes by 5.
          */
