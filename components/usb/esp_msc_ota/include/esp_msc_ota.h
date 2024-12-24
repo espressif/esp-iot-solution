@@ -52,6 +52,7 @@ typedef enum {
 typedef struct {
     const char *ota_bin_path;    /*!< OTA binary name, must be an exact match. Note: By default file names cannot exceed 11 bytes e.g. "/usb/ota.bin" */
     bool bulk_flash_erase;       /*!< Erase entire flash partition during initialization. By default flash partition is erased during write operation and in chunk of 4K sector size */
+    bool skip_msc_connect_wait;  /*!< Skip waiting for MSC device to connect, if true means MSC device is already connected */
     TickType_t wait_msc_connect; /*!< Wait time for MSC device to connect */
     size_t buffer_size;          /*!< Buffer size for OTA write operation, must larger than 1024 */
 } esp_msc_ota_config_t;

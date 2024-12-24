@@ -18,6 +18,7 @@
 #include "esp_msc_host.h"
 #include "esp_msc_ota.h"
 #include "usb/usb_host.h"
+#include "bsp/esp-bsp.h"
 
 static const char *TAG = "esp_msc_ota_test";
 
@@ -206,4 +207,22 @@ TEST_CASE("Auto MSC OTA", "[MSC OTA][Auto]")
 
     TEST_ESP_OK(esp_msc_host_uninstall(host_handle));
     vTaskDelay(1000 / portTICK_PERIOD_MS);
+}
+
+TEST_CASE("Test msc ota without msc host", "[MSC OTA][WITHOUT MSC HOST]")
+{
+    esp_event_loop_create_default();
+    bsp_sdcard_mount();
+
+    char path[256];
+    sprintf(path, "%s/ota_test.bin", CONFIG_BSP_uSD_MOUNT_POINT);
+
+    esp_msc_ota_handle_t msc_ota_handle = NULL;
+    esp_msc_ota_config_t config = {
+        .ota_bin_path = path,
+        .skip_msc_connect_wait = true,
+    };
+    TEST_ESP_OK(esp_msc_ota_begin(&config, &msc_ota_handle));
+    TEST_ESP_OK(esp_msc_ota_abort(msc_ota_handle));
+    bsp_sdcard_unmount();
 }

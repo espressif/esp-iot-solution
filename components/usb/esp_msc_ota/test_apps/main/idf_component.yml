@@ -1,2 +1,3 @@
 dependencies:
-  idf: ">=5.0"
+  idf: '>=5.0'
+  espressif/esp32_s3_usb_otg: ^1.6.1
