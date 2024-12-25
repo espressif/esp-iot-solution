@@ -7,7 +7,7 @@ if BLE_BCS
 
 config BLE_BCS_FEATURE_INDICATE_ENABLE
     bool "Body Composition Feature Indication"
-    default n
+    default y
     help
       Set y to support Indication or n to disable it.
 

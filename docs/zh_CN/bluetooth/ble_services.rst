@@ -12,3 +12,4 @@ BLE 服务
     心率服务 <ble_hrs>
     健康温度计服务 <ble_hts>
     TX 电源服务 <ble_tps>
+    用户数据服务 <ble_uds>
