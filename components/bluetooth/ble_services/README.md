@@ -29,11 +29,12 @@ The example will be downloaded to the current folder. You can navigate into it f
 1. [ble_ans](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_services/ble_ans)
 2. [ble_bas](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_services/ble_bas)
 3. [ble_bcs](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_services/ble_bcs)
-4. [ble_dis](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_services/ble_dis)
-5. [ble_hrs](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_services/ble_hrs)
-6. [ble_hts](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_services/ble_hts)
-7. [ble_tps](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_services/ble_tps)
-8. [ble_uds](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_services/ble_uds)
+4. [ble_cts](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_services/ble_cts)
+5. [ble_dis](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_services/ble_dis)
+6. [ble_hrs](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_services/ble_hrs)
+7. [ble_hts](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_services/ble_hts)
+8. [ble_tps](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_services/ble_tps)
+9. [ble_uds](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_services/ble_uds)
 
 ### Q&A
 

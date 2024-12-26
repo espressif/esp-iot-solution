@@ -1,0 +1,33 @@
+# Current Time Service
+
+menuconfig BLE_CTS
+    bool "GATT Current Time Service"
+
+if BLE_CTS
+
+config BLE_CTS_CURRENT_TIME_WRITE_ENABLE
+    bool "Current time write enable"
+    default y
+    help
+      Set y to enable write or n to disable it.
+
+config BLE_CTS_LOCAL_TIME_CHAR_ENABLE
+    bool "Local Time Information Characteristic"
+    default y
+    help
+      Set y to support CTS Local time characteristic or n to disable it.
+
+config BLE_CTS_LOCAL_TIME_WRITE_ENABLE
+    bool "Local time write enable"
+    default y
+    depends on BLE_CTS_LOCAL_TIME_CHAR_ENABLE
+    help
+      Set y to enable write or n to disable it.
+
+config BLE_CTS_REF_TIME_CHAR_ENABLE
+    bool "Reference Time Information Characteristic"
+    default y
+    help
+      Set y to support CTS Reference time characteristic or n to disable it.
+
+endif # BLE_CTS
