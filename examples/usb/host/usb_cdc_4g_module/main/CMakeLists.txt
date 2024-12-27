@@ -5,5 +5,5 @@ if(CONFIG_EXAMPLE_ENABLE_WEB_ROUTER)
 else()
     idf_component_register(SRC_DIRS "."
                     INCLUDE_DIRS "."
-                    EXCLUDE_SRCS "modem_http_config.c" "modem_http_config.h" )
+                    EXCLUDE_SRCS "modem_http_config.c")
 endif()

@@ -22,6 +22,8 @@ menu "IoT USB Host Modem"
             bool "BG96MA"
         config MODEM_TARGET_MC610_EU
             bool "MC610_EU"
+        config MODEM_TARGET_EC20_CE
+            bool "EC20_CE"
         config MODEM_TARGET_USER
             bool "User Defined"
     endchoice
@@ -37,6 +39,7 @@ menu "IoT USB Host Modem"
         default "BG95M3" if MODEM_TARGET_BG95_M3
         default "BG96MA" if MODEM_TARGET_BG96_MA
         default "MC610_EU" if MODEM_TARGET_MC610_EU
+        default "EC20_CE" if MODEM_TARGET_EC20_CE
         default "User Defined" if MODEM_TARGET_USER
 
     config MODEM_SUPPORT_SECONDARY_AT_PORT
@@ -52,6 +55,7 @@ menu "IoT USB Host Modem"
             default 0x04 if MODEM_TARGET_EC600N_CNLC_N06
             default 0x06 if MODEM_TARGET_MC610_EU
             default 0x05 if MODEM_TARGET_A7600C1
+            default 0x02 if MODEM_TARGET_EC20_CE
             help
                 USB CDC interface (eg.0x00) used for send AT/data to device
 

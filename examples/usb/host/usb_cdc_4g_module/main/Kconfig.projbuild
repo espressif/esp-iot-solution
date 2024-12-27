@@ -57,6 +57,7 @@ menu "4G Modem Example Config"
     config EXAMPLE_AUTO_UPDATE_DNS
         bool "Auto update Wi-Fi soft ap DNS address"
         default y
+        default n if IDF_TARGET_ESP32P4
         help
             If true using dns address got from ppp
 

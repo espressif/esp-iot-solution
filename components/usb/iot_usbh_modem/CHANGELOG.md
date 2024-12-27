@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v1.1.0 - 2024-11-28
+
+* Support ESP32-P4 with EC20_CE cat.4 module
+
 ## v1.0.0 - 2024-11-14
 
 * Use iot_usbh_cdc version 1.0.0
@@ -14,7 +18,6 @@
 * Add new model AIR780E
 * Fix concurrency issue in AT command mode
 * Fix memory stamp issue in `common_get_operator_after_mode_format`
-
 
 ## v0.1.6 - 2023-04-17
 

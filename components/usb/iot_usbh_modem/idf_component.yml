@@ -1,4 +1,4 @@
-version: "1.0.0"
+version: "1.1.0"
 targets:
   - esp32s2
   - esp32s3
@@ -13,6 +13,10 @@ dependencies:
   iot_usbh_cdc:
     version: "1.*"
     override_path: "../iot_usbh_cdc"
+  espressif/esp_wifi_remote:
+    version: "0.*"
+    rules:
+      - if: "target in [esp32p4]"
 examples:
   - path: ../../../examples/usb/host/usb_cdc_4g_module
 sbom:
