@@ -38,6 +38,7 @@ INPUT = \
     $(PROJECT_PATH)/components/bluetooth/ble_services/hts/include/esp_hts.h \
     $(PROJECT_PATH)/components/bluetooth/ble_services/tps/include/esp_tps.h \
     $(PROJECT_PATH)/components/bluetooth/ble_services/uds/include/esp_uds.h \
+    $(PROJECT_PATH)/components/bluetooth/ble_services/wss/include/esp_wss.h \
     $(PROJECT_PATH)/components/bus/include/i2s_lcd_driver.h \
     $(PROJECT_PATH)/components/button/include/iot_button.h \
     $(PROJECT_PATH)/components/display/screen/interface_driver/scr_interface_driver.h \

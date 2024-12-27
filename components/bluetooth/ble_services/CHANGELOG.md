@@ -1,3 +1,10 @@
+## v1.0.0 - 2024.12.27
+
+Features:
+- BCS: Support Body Composition Service
+- CTS: Support Body Composition Service
+- UDS: Support Body Composition Service
+
 ## v0.2.0 - 2024.10.31
 
 Features:

@@ -14,3 +14,4 @@ BLE Services
     Health Thermometer Service <ble_hts>
     TX Power Service <ble_tps>
     User Data Service <ble_uds>
+    Weight Scale Service <ble_wss>
