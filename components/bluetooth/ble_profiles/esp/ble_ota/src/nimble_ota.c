@@ -248,10 +248,15 @@ sector_end:
 
     cmd_ack[0] = om->om_data[0];
     cmd_ack[1] = om->om_data[1];
-     if (match)
+    if (match){
         cmd_ack[2] = 0x00; // success
-    else
+    }else
+    {
         cmd_ack[2] = 0x01; // crc error
+        // Request the sector again
+        cmd_ack[4] = cur_sector & 0xff;
+        cmd_ack[5] = (cur_sector & 0xff00) >> 8;
+    }
     cmd_ack[3] = 0x00;
     crc16 = crc16_ccitt(cmd_ack, 18);
     cmd_ack[18] = crc16 & 0xff;
