@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -7,8 +7,8 @@
 #pragma once
 
 #include "common/base_classes/Sensor.h"
-#include "driver/i2c.h"
 #include "driver/gpio.h"
+#include "i2c_bus.h"
 
 class AS5600 : public Sensor {
 public:
@@ -47,13 +47,12 @@ public:
     float getSensorAngle();
 
 private:
+    i2c_bus_handle_t _i2c_bus;
+    i2c_bus_device_handle_t _i2c_device;
     i2c_port_t _i2c_port;
     gpio_num_t _scl_io;
     gpio_num_t _sda_io;
-    bool is_installed;
-    uint8_t device_addr = 0x36;
-    uint8_t raw_angle_addr = 0x0C;
-    uint8_t raw_angle_buf[2] = {0};
-    uint16_t raw_angle;
-    float angle;
+    bool _is_installed;
+    uint16_t _raw_angle;
+    float _angle;
 };

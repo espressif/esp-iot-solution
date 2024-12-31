@@ -33,11 +33,7 @@ TEST_CASE("test as5600", "[sensor][as5600][i2c]")
 
 TEST_CASE("test mt6701", "[sensor][mt6701][spi]")
 {
-#if CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32H2
     MT6701 mt6701 = MT6701(SPI2_HOST, GPIO_NUM_2, GPIO_NUM_1, (gpio_num_t) -1, GPIO_NUM_3);
-#else
-    MT6701 mt6701 = MT6701(SPI2_HOST, GPIO_NUM_2, GPIO_NUM_1, (gpio_num_t) -1, GPIO_NUM_42);
-#endif
     mt6701.init();
     for (int i = 0; i < 10; ++i) {
         ESP_LOGI(TAG, "angle:%.2f", mt6701.getSensorAngle());
@@ -65,11 +61,7 @@ TEST_CASE("test mt6701", "[sensor][mt6701][i2c]")
 
 TEST_CASE("test as5048a", "[sensor][as5048a][spi]")
 {
-#if CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32H2
     AS5048a as5048a = AS5048a(SPI2_HOST, GPIO_NUM_2, GPIO_NUM_1, (gpio_num_t) -1, GPIO_NUM_3);
-#else
-    AS5048a as5048a = AS5048a(SPI2_HOST, GPIO_NUM_2, GPIO_NUM_1, (gpio_num_t) -1, GPIO_NUM_42);
-#endif
     as5048a.init();
     for (int i = 0; i < 10; ++i) {
         ESP_LOGI(TAG, "angle:%.2f", as5048a.getSensorAngle());

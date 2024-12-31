@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -8,8 +8,8 @@
 
 #include "common/base_classes/Sensor.h"
 #include "driver/spi_master.h"
-#include "driver/i2c.h"
 #include "driver/gpio.h"
+#include "i2c_bus.h"
 
 class MT6701 : public Sensor {
 public:
@@ -60,11 +60,13 @@ public:
 
 private:
     spi_host_device_t _spi_host = SPI_HOST_MAX;
-    spi_device_handle_t spi_device;
+    spi_device_handle_t _spi_device;
+    i2c_bus_handle_t _i2c_bus;
+    i2c_bus_device_handle_t _i2c_device;
     i2c_port_t _i2c_port = I2C_NUM_MAX;
     gpio_num_t _sclk_io;
     gpio_num_t _miso_io;
     gpio_num_t _mosi_io;
     gpio_num_t _cs_io;
-    bool is_installed;
+    bool _is_installed;
 };

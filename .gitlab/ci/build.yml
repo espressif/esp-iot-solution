@@ -1232,9 +1232,7 @@ build_components_motor_esp_simplefoc_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_motor_esp_simplefoc_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.0
+    - .build_idf_version_greater_equal_v5_0
   variables:
     EXAMPLE_DIR: components/motor/esp_simplefoc/test_apps
 
