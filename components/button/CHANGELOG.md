@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v3.5.0 - 2024-12-27
+
+### Enhancements:
+
+* Add config to disable gpio button internal pull resistor.
+
 ## v3.4.1 - 2024-12-6
 
 ### Fix:
