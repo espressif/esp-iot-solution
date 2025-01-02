@@ -46,7 +46,7 @@ esp_err_t modem_http_deinit(httpd_handle_t server);
 esp_err_t modem_http_init(modem_wifi_config_t *wifi_config);
 
 /**
- * @brief Read the stored wifi configuration information from nsv and loaded into the structure wifi_config
+ * @brief Read the stored wifi configuration information from nvs and loaded into the structure wifi_config
  *
  * @param wifi_config wifi Configure Information
  * @return esp_err_t

@@ -1,3 +1,8 @@
+if(BOOTLOADER_BUILD)
+    idf_component_register()
+    return()
+endif()
+
 idf_component_get_property(TUSB_PATH leeebo__tinyusb_src COMPONENT_DIR)
 idf_component_get_property(DCD_CORE_INCLUDES leeebo__tinyusb_src DCD_CORE_INCLUDES)
 idf_component_get_property(DCD_CORE_SRCS leeebo__tinyusb_src DCD_CORE_SRCS)

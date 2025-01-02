@@ -272,6 +272,14 @@ examples/sensors/sensor_hub_monitor:
   enable:
     - if: IDF_TARGET in ["esp32","esp32s2"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
 
+examples/usb/device/bootloader_uf2:
+  enable:
+    - if: SOC_USB_OTG_SUPPORTED == 1
+  disable:
+    - if: IDF_TARGET in ["esp32s2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR < 3)
+      temporary: true
+      reason: ESP32-S2 may encounter toolchain errors when using IDF versions below 5.3.
+
 examples/usb/device/usb_dongle:
   enable:
     - if: SOC_USB_OTG_SUPPORTED == 1

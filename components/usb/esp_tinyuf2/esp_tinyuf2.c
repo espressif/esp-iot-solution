@@ -12,7 +12,10 @@
 #include "soc/soc_caps.h"
 #include "soc/gpio_pins.h"
 #include "soc/gpio_sig_map.h"
+#if CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3
 #include "soc/rtc_cntl_struct.h"
+#endif
+#include "esp_private/system_internal.h"
 #include "tusb.h"
 #include "esp_tinyuf2.h"
 #include "esp_private/usb_phy.h"
@@ -136,6 +139,7 @@ static void usb_device_task(void* param)
 }
 
 // To generate a disconnect event
+#if CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3
 static void usbd_vbus_enable(bool enable)
 {
     esp_rom_gpio_connect_in_signal(enable ? GPIO_MATRIX_CONST_ONE_INPUT : GPIO_MATRIX_CONST_ZERO_INPUT, USB_OTG_VBUSVALID_IN_IDX, 0);
@@ -143,6 +147,7 @@ static void usbd_vbus_enable(bool enable)
     esp_rom_gpio_connect_in_signal(enable ? GPIO_MATRIX_CONST_ONE_INPUT : GPIO_MATRIX_CONST_ZERO_INPUT, USB_SRP_SESSEND_IN_IDX, 1);
     return;
 }
+#endif
 
 static esp_err_t tinyusb_init()
 {
@@ -154,7 +159,11 @@ static esp_err_t tinyusb_init()
     // init device stack on configured roothub port
     // This should be called after scheduler/kernel is started.
     // Otherwise it could cause kernel issue since USB IRQ handler does use RTOS queue API.
-    tud_init(BOARD_TUD_RHPORT);
+    bool usb_init = tusb_init();
+    if (!usb_init) {
+        ESP_LOGE(TAG, "USB Device Stack Init Fail");
+        return ESP_FAIL;
+    }
     xTaskCreatePinnedToCore(usb_device_task, "usbd", 4096, NULL, 5, &_task_handle, 0);
     return ESP_OK;
 }
@@ -171,8 +180,10 @@ static esp_err_t tinyusb_deinit()
 {
     //prepare to exit the task
     xTaskNotify(_task_handle, (uint32_t)xTaskGetCurrentTaskHandle(), eSetValueWithOverwrite);
+#if CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3
     //we give a false signal to make disconnect event happen
     usbd_vbus_enable(false);
+#endif
     //wait for the task exit
     uint32_t notify = ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(2000));
     if (!notify) {
@@ -202,10 +213,17 @@ esp_err_t esp_tinyuf2_install(tinyuf2_ota_config_t *ota_config, tinyuf2_nvs_conf
     }
 
     if (ota_config) {
+#ifndef CONFIG_UF2_OTA_FACTORY_ONLY
         if (ota_config->subtype < ESP_PARTITION_SUBTYPE_APP_OTA_MIN || (ota_config->subtype > ESP_PARTITION_SUBTYPE_APP_OTA_MAX && ota_config->subtype != ESP_PARTITION_SUBTYPE_ANY)) {
             ESP_LOGE(TAG, "Invalid partition type");
             return ESP_ERR_INVALID_ARG;
         }
+#else
+        if (ota_config->subtype != ESP_PARTITION_SUBTYPE_APP_FACTORY) {
+            ESP_LOGE(TAG, "Invalid partition type, only support factory partition");
+            return ESP_ERR_INVALID_ARG;
+        }
+#endif
         if (ota_config->if_restart) {
             ESP_LOGW(TAG, "Enable restart, SoC will restart after update complete");
         }
@@ -251,4 +269,10 @@ esp_err_t esp_tinyuf2_uninstall(void)
 tinyuf2_state_t esp_tinyuf2_current_state(void)
 {
     return _uf2_state;
+}
+
+void esp_restart_from_tinyuf2(void)
+{
+    esp_reset_reason_set_hint(UF2_RESET_REASON_VALUE);
+    esp_restart();
 }

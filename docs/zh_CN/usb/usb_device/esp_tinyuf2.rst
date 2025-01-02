@@ -37,7 +37,7 @@ UF2 是 Microsoft 开发的文件格式 `PXT <https://github.com/Microsoft/pxt>`
 -  ``USB Virtual Disk size(MB)``: 虚拟 USB 驱动器在文件资源管理器中显示的大小，默认情况下为 8MB
 -  ``Max APP size(MB)``: 最大应用大小，默认情况下 4MB
 -  ``Flash cache size(KB)``: 缓存大小，用于缓存即将烧录的 bin 片段，默认情况下为 32KB
--  ``USB Device VID``: Espressif VID (默认 0x303A) 
+-  ``USB Device VID``: Espressif VID (默认 0x303A)
 -  ``USB Device PID``: Espressif test PID (默认 0x8000), 如需申请 PID 请参考 `esp-usb-pid <https://github.com/espressif/usb-pids>`__.
 -  ``USB Disk Name``: 虚拟 USB 驱动器在文件资源管理器中显示的名称, ``ESP32Sx-UF2`` 默认
 -  ``USB Device Manufacture``: 制造商 ``Espressif`` 默认
@@ -68,6 +68,15 @@ UF2 是 Microsoft 开发的文件格式 `PXT <https://github.com/Microsoft/pxt>`
 
 .. figure:: ../../../_static/usb/uf2_disk.png
    :alt: UF2 Disk
+
+UF2 NVS 隐藏
+------------------
+
+通过 menuconfig ``(Top) → Component config → TinyUF2 Config → UF2 ini file hide NVS value``, NVS 的值将会被加密并替换为 ``****``.
+
+.. code:: C
+
+   esp_tinyuf2_add_key_hidden("password")
 
 使用 UF2 USB Console
 -----------------------
@@ -106,6 +115,63 @@ UF2 是 Microsoft 开发的文件格式 `PXT <https://github.com/Microsoft/pxt>`
 -----
 
 -  要连续使用 UF2 OTA 功能，必须在更新的应用中同样启用 tinyuf2.
+
+在 Bootloader 中使用 UF2
+--------------------------
+
+通过将带有 UF2 功能的特殊 APP Bin 隐藏到 Bootloader 中，可以做到以下功能
+1. 当 ``factory/test/ota`` 分区无固件时自动进入 UF2 下载模式
+2. 手动拉低 ``BOOT_UF2`` 引脚自动进入 UF2 下载模式
+3. 在用户 APP 中手动调用 ``esp_restart_from_tinyuf2()`` 函数进入 UF2 下载模式
+
+示例
+^^^^^^
+
+:example:`usb/device/bootloader_uf2`
+
+使用说明：
+
+1. 默认仅支持 ``nvs/phy_init/factory`` 分区，如需支持 ``test/ota/spiffs`` 分区，请手动修改分区表，并重新编译。
+2. 拖拽升级默认升级 ``factory`` 分区，请确保存在 ``factory`` 分区或手动修改代码。
+3. 默认 ``CONFIG_PARTITION_TABLE_OFFSET`` 大小为 0x60000, 如固件过大，请修改该值
+4. 默认选用的 ``nvs`` 分区名称为 ``CONFIG_BOOTLOADER_UF2_NVS_PART_NAME`` ("nvs"), 默认的 ``nvs`` 命名空间为 ``CONFIG_BOOTLOADER_UF2_NVS_NAMESPACE_NAME`` ("uf2_nvs")，请确保用户固件中使用的 NVS 分区名称和命名空间与 bootloader 中一致才支持修改。
+5. 默认支持工作指示灯闪烁，指示灯默认为 ``CONFIG_BOOTLOADER_UF2_LED_INDICATOR_GPIO_NUM`` (2), 请确保与硬件连接保持一致。
+
+Flash 分区参考：
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. figure:: ../../../_static/usb/bootloader_uf2.drawio.svg
+   :align: center
+
+注意事项
+^^^^^^^^^^^^^^^^^^
+
+- ``Bootloader UF2`` bin 应该烧录在 ``CONFIG_MMU_PAGE_SIZE`` 对齐的整数倍地址上，否则将无法正常工作。
+
+Note: ESP32-S2/ESP32-S3/ESP32-P4 的 ``CONFIG_MMU_PAGE_SIZE`` 默认为 64KB（0x10000），因此需要烧录在 64KB（0x10000） 对齐的地址上。
+
+- 需要将 ``CONFIG_PARTITION_TABLE_OFFSET`` 配置大小改为 ``bootloader.bin + bootloader_uf2.bin`` 的大小，否则无法烧录进去 ``bootloader_uf2.bin``。
+
+- 需要将 ``CONFIG_ENABLE_BOOTLOADER_UF2`` 宏打开
+
+- 需要将 ``CONFIG_SPI_FLASH_DANGEROUS_WRITE_ALLOWED`` 宏打开：因为 bootloader_uf2.bin 烧录位置并未显示在 partition-tables 中，所以需要关闭检查。
+
+- 需要将 Bin 文件按照以下方式地址烧录进固件：
+
+   1. CONFIG_BOOTLOADER_OFFSET_IN_FLASH(The starting addresses vary for different chips.) - bootloader.bin
+   2. 0x10000 - bootloader_uf2.bin
+   3. CONFIG_PARTITION_TABLE_OFFSET(0x6000) - partition-table.bin
+
+   可以将下列片段添加到工程的 CMakeLists.txt 中，会在编译结束后自行合成 Bin 文件：
+
+.. code:: cmake
+
+   add_custom_command(
+      TARGET app
+      POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E echo "Flash merged bin merge_uf2.bin to address ${CONFIG_BOOTLOADER_OFFSET_IN_FLASH}"
+      COMMAND ${ESPTOOLPY} --chip ${IDF_TARGET} merge_bin -o merge_uf2.bin ${CONFIG_BOOTLOADER_OFFSET_IN_FLASH} ${BUILD_DIR}/bootloader/bootloader.bin 0x10000 ${BUILD_DIR}/${PROJECT_BIN} ${CONFIG_PARTITION_TABLE_OFFSET} ${BUILD_DIR}/partition_table/partition-table.bin
+   )
 
 API 参考
 -------------

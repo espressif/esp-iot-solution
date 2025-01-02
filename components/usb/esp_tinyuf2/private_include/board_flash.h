@@ -47,6 +47,8 @@
 #define BOARD_UF2_FAMILY_ID     0xbfdd4eee
 #elif CONFIG_IDF_TARGET_ESP32S3
 #define BOARD_UF2_FAMILY_ID     0xc47e5767
+#elif CONFIG_IDF_TARGET_ESP32P4
+#define BOARD_UF2_FAMILY_ID     0x3d308e94
 #else
 #error unsupported MCUs
 #endif

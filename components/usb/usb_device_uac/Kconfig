@@ -21,7 +21,7 @@ menu "USB Device UAC Configuration"
         default "12345678"
 
     choice TINYUSB_RHPORT
-        prompt "TinyUSB PHY"
+        prompt "TinyUSB Root Port"
         default TINYUSB_RHPORT_HS if IDF_TARGET_ESP32P4
         default TINYUSB_RHPORT_FS
         help
