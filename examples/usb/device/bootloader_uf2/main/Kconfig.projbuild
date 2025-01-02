@@ -1,0 +1,30 @@
+menu "Bootloader UF2 APP Config"
+
+    config BOOTLOADER_UF2_NVS_PART_NAME
+        string "NVS partition name"
+        default "nvs"
+        help
+            The name of the NVS partition to use for bootloader UF2.
+
+    config BOOTLOADER_UF2_NVS_NAMESPACE_NAME
+        string  "NVS namespace name"
+        default "uf2_nvs"
+        help
+            The name of the NVS namespace to use for bootloader UF2.
+
+    config BOOTLOADER_UF2_LED_INDICATOR_ENABLE
+        bool "Enable LED indicator"
+        default y
+        help
+            Enable LED indicator for bootloader UF2.
+
+    config BOOTLOADER_UF2_LED_INDICATOR_GPIO_NUM
+        int "LED indicator GPIO number"
+        depends on  BOOTLOADER_UF2_LED_INDICATOR_ENABLE
+        default 2
+        range 0 46 if IDF_TARGET_ESP32S2
+        range 0 48 if IDF_TARGET_ESP32S3
+        range 0 54 if IDF_TARGET_ESP32P4
+        help
+            GPIO number for LED indicator for bootloader UF2.
+endmenu

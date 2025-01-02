@@ -56,6 +56,27 @@ examples/keyboard:
   description: A full key anti-ghosting keyboard powered by the ESP32S3. https://github.com/espressif/esp-iot-solution/tree/master/examples/keyboard
   readme: https://raw.githubusercontent.com/espressif/esp-iot-solution/master/examples/keyboard/README.md
 
+examples/usb/device/bootloader_uf2:
+  esp32s3:
+    sdkconfig:
+      - singleapp_2m
+      - singleapp_4m
+      - singleapp_8m
+  esp32s2:
+    sdkconfig:
+      - singleapp_2m
+      - singleapp_4m
+      - singleapp_8m
+  esp32p4:
+    sdkconfig:
+      - singleapp_2m
+      - singleapp_4m
+      - singleapp_8m
+  description:
+    USB can be used as a UF2 feature for drag-and-drop flashing and modifying NVS.
+  readme:
+    https://raw.githubusercontent.com/espressif/esp-iot-solution/master/examples/usb/device/bootloader_uf2/README.md
+
 examples/usb/device/usb_dongle:
   esp32s3:
     sdkconfig:

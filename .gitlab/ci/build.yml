@@ -648,6 +648,14 @@ build_example_ulp_lp_cpu_lp_environment_sensor:
   variables:
     EXAMPLE_DIR: examples/ulp/lp_cpu/lp_environment_sensor
 
+build_example_usb_device_bootloader_uf2:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_usb_device_bootloader_uf2
+    - .build_idf_version_greater_equal_v5_0
+  variables:
+    EXAMPLE_DIR: examples/usb/device/bootloader_uf2
+
 build_example_usb_device_usb_dongle:
   extends:
     - .build_examples_template

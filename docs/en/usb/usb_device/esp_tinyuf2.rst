@@ -69,13 +69,22 @@ Support UF2 OTA/NVS in Your Project
 .. figure:: ../../../_static/usb/uf2_disk.png
    :alt: UF2 Disk
 
-Enable UF2 USB Console
+UF2 NVS Hidden
 -----------------------
+
+By enabling **UF2_INI_NVS_VALUE_HIDDEN** via menuconfig (`(Top) → Component config → TinyUF2 Config → Enable UF2 ini file hide NVS value`), the values in NVS will be encrypted and replaced with `****`.
+
+.. code:: C
+
+   esp_tinyuf2_add_key_hidden("password")
+
+Enable UF2 USB Console
+-------------------------
 
 Through menuconfig ``(Top) → Component config → TinyUF2 Config → Enable USB Console For log``, the log will be output to the USB Serial port (Output to UART by default).
 
 Build APP to UF2 format
------------------------
+--------------------------
 
 The new command ``idf.py uf2-ota`` is added by this component, which can be used to build the APP to UF2 format. After the build is complete, the UF2 file (``${PROJECT_NAME}.uf2``) will be generated in the current ``project`` directory.
 
@@ -84,7 +93,7 @@ The new command ``idf.py uf2-ota`` is added by this component, which can be used
    idf.py uf2-ota
 
 Convert Existing APP to UF2 Format
-----------------------------------
+------------------------------------
 
 To convert your existing APP binary to UF2 format, simply use the `uf2conv.py <https://github.com/espressif/esp-iot-solution/blob/master/components/usb/esp_tinyuf2/utils/uf2conv.py>`__ on a ``.bin`` file, specifying the family id as ``ESP32S2``, ``ESP32S3`` or their magic number as follows. And you must specify the address of 0x00 with the ``-b`` switch, the tinyuf2 will use it as offset to write to the OTA partition.
 
@@ -107,7 +116,64 @@ Note
 
 -  To use the UF2 OTA function continuously, the TinyUF2 function must be enabled in the updated APP.
 
+Using UF2 in Bootloader
+--------------------------
+
+By embedding a specific APP bin with UF2 functionality into the Bootloader, the following features can be achieved:
+1. Automatically enter UF2 download mode when the ``factory/test/ota`` partitions do not contain firmware.
+2. Manually enter UF2 download mode by pulling the ``BOOT_UF2`` pin low.
+3. Manually enter UF2 download mode by calling `esp_restart_from_tinyuf2()` function in user app.
+
+Example
+^^^^^^^^^^^^
+
+:example:`usb/device/bootloader_uf2`
+
+Instructions:
+
+1. By default, only ``nvs/phy_init/factory`` partitions are supported. To support ``test/ota/spiffs`` partitions, modify the partition table manually and recompile.
+2. Drag-and-drop upgrades default to the ``factory`` partition. Ensure the ``factory`` partition exists or modify the code manually.
+3. The default ``CONFIG_PARTITION_TABLE_OFFSET`` is set to 0x60000. If the firmware is too large, modify this value.
+4. The default ``nvs`` partition name is ``CONFIG_BOOTLOADER_UF2_NVS_PART_NAME`` ("nvs"), and the default NVS namespace is ``CONFIG_BOOTLOADER_UF2_NVS_NAMESPACE_NAME`` ("uf2_nvs"). Ensure the user firmware uses the same NVS partition name and namespace as the bootloader for proper functionality.
+5. A working indicator LED is supported by default. The default LED GPIO is ``CONFIG_BOOTLOADER_UF2_LED_INDICATOR_GPIO_NUM`` (2). Ensure this matches the hardware connection.
+
+Flash Partition Reference:
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. figure:: ../../../_static/usb/bootloader_uf2.drawio.svg
+   :align: center
+
+Notes
+^^^^^^^^^^^^
+
+- The ``Bootloader UF2`` bin must be flashed at an address aligned to a multiple of ``CONFIG_MMU_PAGE_SIZE``; otherwise, it will not work.
+
+Note: The ``CONFIG_MMU_PAGE_SIZE`` for ESP32-S2/ESP32-S3/ESP32-P4 defaults to 64KB (0x10000), so flashing must align to a 64KB (0x10000) boundary.
+
+- Configure ``CONFIG_PARTITION_TABLE_OFFSET`` to accommodate the combined size of ``bootloader.bin + bootloader_uf2.bin``; otherwise, ``bootloader_uf2.bin`` cannot be flashed.
+
+- Enable the ``CONFIG_ENABLE_BOOTLOADER_UF2`` macro.
+
+- Enable the ``CONFIG_SPI_FLASH_DANGEROUS_WRITE_ALLOWED`` macro: Since the position for bootloader_uf2.bin is not explicitly shown in the partition table, the checks must be disabled.
+
+- Flash the Bin files to the firmware according to the following addresses:
+
+   1. CONFIG_BOOTLOADER_OFFSET_IN_FLASH(The starting addresses vary for different chips.) - bootloader.bin
+   2. 0x10000 - bootloader_uf2.bin
+   3. CONFIG_PARTITION_TABLE_OFFSET (0x6000) - partition-table.bin
+
+   Add the following snippet to your project's `CMakeLists.txt` to automatically generate a merged Bin file after compilation:
+
+.. code:: cmake
+
+   add_custom_command(
+      TARGET app
+      POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E echo "Flash merged bin merge_uf2.bin to address ${CONFIG_BOOTLOADER_OFFSET_IN_FLASH}"
+      COMMAND ${ESPTOOLPY} --chip ${IDF_TARGET} merge_bin -o merge_uf2.bin ${CONFIG_BOOTLOADER_OFFSET_IN_FLASH} ${BUILD_DIR}/bootloader/bootloader.bin 0x10000 ${BUILD_DIR}/${PROJECT_BIN} ${CONFIG_PARTITION_TABLE_OFFSET} ${BUILD_DIR}/partition_table/partition-table.bin
+   )
+
 API Reference
--------------
+---------------
 
 .. include-build-file:: inc/esp_tinyuf2.inc

@@ -36,13 +36,12 @@ extern "C" {
 //--------------------------------------------------------------------+
 
 // RHPort number used for device can be defined by board.mk, default to port 0
-#ifndef BOARD_TUD_RHPORT
-#define BOARD_TUD_RHPORT     0
-#endif
-
-// RHPort max operational speed can defined by board.mk
-#ifndef BOARD_TUD_MAX_SPEED
-#define BOARD_TUD_MAX_SPEED   OPT_MODE_DEFAULT_SPEED
+#ifdef CONFIG_TINYUSB_RHPORT_HS
+#   define CFG_TUSB_RHPORT1_MODE    OPT_MODE_DEVICE | OPT_MODE_HIGH_SPEED
+#   define CONFIG_USB_HS            1
+#else
+#   define CFG_TUSB_RHPORT0_MODE    OPT_MODE_DEVICE | OPT_MODE_FULL_SPEED
+#   define CONFIG_USB_HS            0
 #endif
 
 //--------------------------------------------------------------------
@@ -60,7 +59,7 @@ extern "C" {
 #endif
 
 // Espressif IDF requires "freertos/" prefix in include path
-#if TU_CHECK_MCU(OPT_MCU_ESP32S2, OPT_MCU_ESP32S3)
+#if TU_CHECK_MCU(OPT_MCU_ESP32S2, OPT_MCU_ESP32S3, OPT_MCU_ESP32P4)
 #define CFG_TUSB_OS_INC_PATH  freertos/
 #endif
 
@@ -71,9 +70,6 @@ extern "C" {
 
 // Enable Device stack
 #define CFG_TUD_ENABLED       1
-
-// Default is max speed that hardware controller could support with on-chip PHY
-#define CFG_TUD_MAX_SPEED     BOARD_TUD_MAX_SPEED
 
 /* USB DMA on some MCUs can only access a specific SRAM region with restriction on alignment.
  * Tinyusb use follows macros to declare transferring memory so that they can be put
@@ -110,11 +106,11 @@ extern "C" {
 #define CFG_TUD_VENDOR           0
 
 // CDC FIFO size of TX and RX
-#define CFG_TUD_CDC_RX_BUFSIZE   (TUD_OPT_HIGH_SPEED ? 512 : 64)
-#define CFG_TUD_CDC_TX_BUFSIZE   (TUD_OPT_HIGH_SPEED ? 512 : 64)
+#define CFG_TUD_CDC_RX_BUFSIZE   (CONFIG_USB_HS ? 512 : 64)
+#define CFG_TUD_CDC_TX_BUFSIZE   (CONFIG_USB_HS ? 512 : 64)
 
 // CDC Endpoint transfer buffer size, more is faster
-#define CFG_TUD_CDC_EP_BUFSIZE   (TUD_OPT_HIGH_SPEED ? 512 : 64)
+#define CFG_TUD_CDC_EP_BUFSIZE   (CONFIG_USB_HS ? 512 : 64)
 
 // MSC Buffer size of Device Mass storage
 #define CFG_TUD_MSC_EP_BUFSIZE   512

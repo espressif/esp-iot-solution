@@ -1,0 +1,23 @@
+menu "Bootloader UF2 enter config"
+    config BOOTLOADER_UF2_GPIO_NUM
+        int "GPIO number for UF2 bootloader"
+        default 1
+        range 0 46 if IDF_TARGET_ESP32S2
+        range 0 48 if IDF_TARGET_ESP32S3
+        range 0 54 if IDF_TARGET_ESP32P4
+        help
+            The GPIO number to use for enter the UF2 bootloader.
+
+    config BOOTLOADER_UF2_GPIO_LEVEL
+        bool "GPIO level for enter the UF2 bootloader"
+        default 0
+        help
+            The GPIO level to use for enter the UF2 bootloader.
+
+    config BOOTLOADER_UF2_GPIO_PULL_TIME_SECONDS
+        int "GPIO pull time for enter the UF2 bootloader (seconds)"
+        default 1
+        help
+            The GPIO pull time to use for enter the UF2 bootloader.
+
+endmenu

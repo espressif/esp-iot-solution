@@ -2,7 +2,7 @@ menu "TinyUF2 Config"
     # We not support disable now
     config ENABLE_UF2_FLASHING
         bool
-        default y if IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
+        default y if IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3 || IDF_TARGET_ESP32P4
         select TINYUSB_SOURCE_CODE_ONLY
         help
             Enable UF2, only support ESP SoC with USB-OTG
@@ -38,6 +38,7 @@ menu "TinyUF2 Config"
         depends on ENABLE_UF2_FLASHING
         default "ESP32S2-UF2" if IDF_TARGET_ESP32S2
         default "ESP32S3-UF2" if IDF_TARGET_ESP32S3
+        default "ESP32P4-UF2" if IDF_TARGET_ESP32P4
     config TUSB_MANUFACTURER
         string "USB Device Manufacture"
         depends on ENABLE_UF2_FLASHING
@@ -59,4 +60,38 @@ menu "TinyUF2 Config"
         depends on ENABLE_UF2_FLASHING
         default 512
         range 256 2048
+    config UF2_INI_NVS_VALUE_HIDDEN
+        bool "Enable UF2 ini file hide NVS value"
+        depends on ENABLE_UF2_FLASHING
+        default n
+    config UF2_INI_NVS_HIDDEN_MAX_NUM
+        int "UF2 ini file hide NVS value max number"
+        depends on UF2_INI_NVS_VALUE_HIDDEN
+        default 32
+    config UF2_OTA_FACTORY_ONLY
+        bool "OTA Factory Only"
+        help
+            Enable this option to limit the OTA updates to the factory partition only.
+    config UF2_OTA_RESET_REASON_VALUE
+        hex "OTA Reset Reason Value"
+        depends on ENABLE_UF2_FLASHING
+        default 0xF2
+        help
+            The reset value for uf2 ota reset.
+
+    choice TINYUSB_RHPORT
+        prompt "TinyUSB Root Port"
+        default TINYUSB_RHPORT_HS if IDF_TARGET_ESP32P4
+        default TINYUSB_RHPORT_FS
+        help
+            Allows set the USB PHY Controller for TinyUSB: HS (USB OTG2.0 PHY for HighSpeed)
+
+        config TINYUSB_RHPORT_HS
+            depends on IDF_TARGET_ESP32P4
+            bool "High Speed"
+
+        config TINYUSB_RHPORT_FS
+            bool "Full Speed"
+    endchoice
+
 endmenu

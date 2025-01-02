@@ -34,15 +34,17 @@
 #include "nvs.h"
 #include "esp_inih.h"
 #include "esp_tinyuf2.h"
+#include "esp_check.h"
 
-#define PRINTF(...)           ESP_LOGI("uf2", __VA_ARGS__)
-#define PRINTFE(...)          ESP_LOGE("uf2", __VA_ARGS__)
-#define PRINTFD(...)          ESP_LOGD("uf2", __VA_ARGS__)
-#define PRINT_LOCATION()      ESP_LOGI("uf2", "%s: %d", __PRETTY_FUNCTION__, __LINE__)
-#define PRINT_MESS(x)         ESP_LOGI("uf2", "%s", (char*)(x))
-#define PRINT_STR(x)          ESP_LOGI("uf2", #x " = %s"   , (char*)(x) )
-#define PRINT_INT(x)          ESP_LOGI("uf2", #x " = %d"  , (int32_t) (x) )
-#define PRINT_HEX(x)          ESP_LOGI("uf2", #x " = 0x%X", (uint32_t) (x) )
+#define TAG                   "uf2"
+#define PRINTF(...)           ESP_LOGI(TAG, __VA_ARGS__)
+#define PRINTFE(...)          ESP_LOGE(TAG, __VA_ARGS__)
+#define PRINTFD(...)          ESP_LOGD(TAG, __VA_ARGS__)
+#define PRINT_LOCATION()      ESP_LOGI(TAG, "%s: %d", __PRETTY_FUNCTION__, __LINE__)
+#define PRINT_MESS(x)         ESP_LOGI(TAG, "%s", (char*)(x))
+#define PRINT_STR(x)          ESP_LOGI(TAG, #x " = %s"   , (char*)(x) )
+#define PRINT_INT(x)          ESP_LOGI(TAG, #x " = %d"  , (int32_t) (x) )
+#define PRINT_HEX(x)          ESP_LOGI(TAG, #x " = 0x%X", (uint32_t) (x) )
 
 #define PRINT_BUFFER(buf, n) \
   do {\
@@ -62,6 +64,11 @@ char *_ini_file_dummy = NULL;
 static nvs_modified_cb_t _modified_cb = NULL;
 static char _part_name[16] = "";
 static char _namespace_name[16] = "";
+#ifdef CONFIG_UF2_INI_NVS_VALUE_HIDDEN
+char *HIDDEN_STR[CONFIG_UF2_INI_NVS_HIDDEN_MAX_NUM];
+size_t hidden_str_num = 0;
+bool if_all_hidden = false;
+#endif
 
 uint8_t board_usb_get_serial(uint8_t serial_id[16])
 {
@@ -103,11 +110,13 @@ void board_flash_init(esp_partition_subtype_t subtype, const char *label, update
         PRINTFE("Partition argument not found in partition table");
         assert(0);
     }
+#ifndef CONFIG_UF2_OTA_FACTORY_ONLY
     esp_partition_t const* runing_ota_ptt = esp_ota_get_running_partition();
     if (runing_ota_ptt == _part_ota) {
         PRINTFE("Can not write to running partition");
         assert(0);
     }
+#endif
     _fl_buf = heap_caps_malloc(FLASH_CACHE_SIZE, MALLOC_CAP_32BIT);
     if (_fl_buf == NULL || (uint32_t)_fl_buf % 4 != 0) {
         PRINTFE("Can not allocate memory for flash cache");
@@ -147,6 +156,39 @@ static void ini_insert_pair(const char *key, const char *value)
     sprintf(p, "%s = %s\r\n", key, value);
 }
 
+#ifdef CONFIG_UF2_INI_NVS_VALUE_HIDDEN
+esp_err_t esp_tinyuf2_set_all_key_hidden(bool if_hidden)
+{
+    if_all_hidden = if_hidden;
+    return ESP_OK;
+}
+
+esp_err_t esp_tinyuf2_add_key_hidden(const char *key)
+{
+    ESP_RETURN_ON_FALSE(key != NULL, ESP_ERR_INVALID_ARG, TAG, "key is NULL");
+    ESP_RETURN_ON_FALSE(hidden_str_num < CONFIG_UF2_INI_NVS_HIDDEN_MAX_NUM, ESP_ERR_NO_MEM, TAG, "hidden_str_num >= CONFIG_UF2_INI_NVS_HIDDEN_MAX_NUM");
+    hidden_str[hidden_str_num] = (char *)malloc(strlen(key) + 1);
+    ESP_RETURN_ON_FALSE(hidden_str[hidden_str_num ] != NULL, ESP_ERR_NO_MEM, TAG, "malloc failed");
+    strcpy(hidden_str[hidden_str_num], key);
+    hidden_str_num++;
+    return ESP_OK;
+}
+
+static bool check_value_if_hidden(const char *key)
+{
+    ESP_RETURN_ON_FALSE(key != NULL, false, TAG, "key is NULL");
+    if (if_all_hidden) {
+        return true;
+    }
+    for (int i = 0; i < hidden_str_num; i++) {
+        if (strcmp(key, hidden_str[i]) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+#endif
+
 static void ini_gen_from_nvs(const char *part, const char *name)
 {
     if (part == NULL || name == NULL || _ini_file == NULL) {
@@ -158,7 +200,7 @@ static void ini_gen_from_nvs(const char *part, const char *name)
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
     result = nvs_entry_find(part, name, NVS_TYPE_STR, &it);
     if (result == ESP_ERR_NVS_NOT_FOUND) {
-        PRINTFE("No such entry was found");
+        PRINTFE("No such namespace entry was found");
         return;
     }
 
@@ -169,7 +211,7 @@ static void ini_gen_from_nvs(const char *part, const char *name)
 #else
     it = nvs_entry_find(part, name, NVS_TYPE_STR);
     if (it == NULL) {
-        PRINTFE("No such entry was found");
+        PRINTFE("No such namespace entry was found");
         return;
     }
 #endif
@@ -189,7 +231,14 @@ static void ini_gen_from_nvs(const char *part, const char *name)
         if ((result = nvs_get_str(nvs, info.key, NULL, &len)) == ESP_OK) {
             char *str = (char *)malloc(len);
             if ((result = nvs_get_str(nvs, info.key, str, &len)) == ESP_OK) {
-                ini_insert_pair(info.key, str);
+#ifdef CONFIG_UF2_INI_NVS_VALUE_HIDDEN
+                if (!check_value_if_hidden(info.key)) {
+                    ini_insert_pair(info.key, "****");
+                } else
+#endif
+                {
+                    ini_insert_pair(info.key, str);
+                }
                 PRINTFD("Add namespace '%s', key '%s', value '%s' \n",
                         name, info.key, str);
             }

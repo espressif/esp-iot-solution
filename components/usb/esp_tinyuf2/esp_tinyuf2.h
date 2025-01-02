@@ -24,6 +24,8 @@ extern "C" {
     .namespace_name = "tuf2",             \
 }
 
+#define UF2_RESET_REASON_VALUE (CONFIG_UF2_OTA_RESET_REASON_VALUE)
+
 /**
  * @brief user callback called after uf2 update complete
  *
@@ -95,6 +97,45 @@ esp_err_t esp_tinyuf2_uninstall(void);
  * @return tinyuf2_state_t
  */
 tinyuf2_state_t esp_tinyuf2_current_state(void);
+
+/**
+ * @brief Restart system and set reset reason to UF2_RESET_REASON_VALUE
+ *
+ */
+void esp_restart_from_tinyuf2(void);
+
+#ifdef CONFIG_UF2_INI_NVS_VALUE_HIDDEN
+/**
+ * @brief Set the state of the "all keys hidden" flag.
+ *
+ * This function updates the global flag indicating whether all keys
+ * should be treated as hidden.
+ *
+ * @param[in] if_hidden Boolean flag to indicate the hidden state:
+ *                      - true: Set all keys as hidden.
+ *                      - false: Set all keys as visible.
+ *
+ * @return
+ *      - ESP_OK: Operation was successful.
+ */
+esp_err_t esp_tinyuf2_set_all_key_hidden(bool if_hidden)
+
+/**
+ * @brief Add a key to the hidden keys list.
+ *
+ * This function dynamically allocates memory to store a copy of the
+ * provided key and adds it to the list of hidden keys. It ensures
+ * that the maximum limit of hidden keys is not exceeded (CONFIG_UF2_INI_NVS_HIDDEN_MAX_NUM).
+ *
+ * @param[in] key A pointer to the null-terminated string representing the key to hide.
+ *
+ * @return
+ *      - ESP_OK: Key added successfully.
+ *      - ESP_ERR_INVALID_ARG: Provided key is NULL.
+ *      - ESP_ERR_NO_MEM: Memory allocation failed or maximum number of hidden keys exceeded.
+ */
+esp_err_t esp_tinyuf2_add_key_hidden(const char *key)
+#endif
 
 #ifdef __cplusplus
 }

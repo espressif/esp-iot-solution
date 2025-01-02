@@ -510,6 +510,9 @@
 .patterns-example_sensors_sensor_hub_monitor: &patterns-example_sensors_sensor_hub_monitor
   - "examples/sensors/sensor_hub_monitor/**/*"
 
+.patterns-example_usb_device_bootloader_uf2: &patterns-example_usb_device_bootloader_uf2
+  - "examples/usb/device/bootloader_uf2/**/*"
+
 .patterns-example_usb_device_usb_dongle: &patterns-example_usb_device_usb_dongle
   - "examples/usb/device/usb_dongle/**/*"
 
@@ -1255,6 +1258,17 @@
       changes: *patterns-components_usb_usb_device_uvc
     - <<: *if-dev-push
       changes: *patterns-example_usb_device_usb_lcd_display
+
+.rules:build:example_usb_device_bootloader_uf2:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_usb_esp_tinyuf2
+    - <<: *if-dev-push
+      changes: *patterns-example_usb_device_bootloader_uf2
 
 .rules:build:example_usb_device_usb_dongle:
   rules:
