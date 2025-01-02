@@ -2,7 +2,9 @@
 
 # USB CDC 4G Module
 
-该示例程序可实现 ESP32-S2，ESP32-S3 系列 SoC 作为 USB 主机驱动 4G Cat.1 模组 PPP 拨号上网，同时可开启 ESP32-SX Wi-Fi AP 功能，分享互联网给物联网设备或手持设备，实现低成本 “中高速” 互联网接入。同时配有路由器管理界面，可以在线进行路由器配置和查看已连接设备信息。
+该示例程序可实现 **ESP32-S2**，**ESP32-S3** 系列 SoC 作为 USB 主机驱动 4G Cat.1 模组 PPP 拨号上网，同时可开启 ESP32-SX Wi-Fi AP 功能，分享互联网给物联网设备或手持设备，实现低成本 “中高速” 互联网接入。同时配有路由器管理界面，可以在线进行路由器配置和查看已连接设备信息。
+
+此外对于 **ESP32-P4** 支持了 4G Cat.4 模组（EC20），速率更快，暂时仅支持自身上网功能。
 
 **已实现功能：**
 
@@ -20,10 +22,11 @@
 
 ## 硬件准备
 
-**已支持 ESP 芯片型号：** 
+**已支持 ESP 芯片型号：**
 
 * ESP32-S2
 * ESP32-S3
+* ESP32-P4
 
 > 建议使用集成 4MB 及以上 Flash，2MB 及以上 PSRAM 的 ESP 模组或芯片。示例程序默认不开启 PSRAM，用户可自行添加测试，理论上增大缓冲区大小可以提高数据平均吞吐率
 
@@ -121,8 +124,8 @@ I (9659) esp-modem: --------- Modem PreDefined Info ------------------
 I (9666) esp-modem: Model: ML302-DNLM/CNLM
 I (9671) esp-modem: Modem itf: IN Addr:0x81, OUT Addr:0x01
 I (9677) esp-modem: ----------------------------------------------------
-I (9684) gpio: GPIO[12]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 
-I (9694) gpio: GPIO[13]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 
+I (9684) gpio: GPIO[12]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0
+I (9694) gpio: GPIO[13]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0
 W (9704) USB_HCDC: rx0 flush -0 = 0
 W (9707) modem_board: DTE reconnect, reconnecting ...
 
@@ -197,7 +200,7 @@ I (15954) modem_wifi: NAT is enabled
 
 **1. 调试模式**
 
-   可在 `menuconfig` 打开 `4G Modem Configuration -> Dump system task status` 选项打印 task 详细信息，也可打开 `Component config → USB Host CDC ->Trace internal memory status ` 选项打印 usb 内部 buffer 使用信息。
+   可在 `menuconfig` 打开 `4G Modem Configuration -> Dump system task status` 选项打印 task 详细信息。
 
 	```
     I (79530) main: Task dump
@@ -216,14 +219,6 @@ I (15954) modem_wifi: NAT is enabled
     I (79577) main: 0.00    1092    sys_evt         20
     I (79582) main: Free heap=37088 bigst=16384, internal=36968 bigst=16384
     I (79589) main: ..............
-    
-    I (79593) USB_HCDC: USBH CDC Transfer Buffer Dump:
-    I (79599) USB_HCDC: usb transfer Buffer size, out = 3000, in = 1500
-    I (79606) USB_HCDC: usb transfer Max packet size, out = 46, in = 48
-    
-    I (79613) USB_HCDC: USBH CDC Ringbuffer Dump:
-    I (79618) USB_HCDC: usb ringbuffer size, out = 15360, in = 15360
-    I (79625) USB_HCDC: usb ringbuffer High water mark, out = 46, in = 48
 	```
 
 **2. 性能优化**
@@ -255,3 +250,7 @@ I (15954) modem_wifi: NAT is enabled
 
 > **4G Cat.1 理论峰值下载速率 10 Mbps，峰值上传速率 5 Mbps**
 > 实际通信速率受运营商网络、测试软件、Wi-Fi 干扰情况、终端连接数影响，以实际使用为准
+
+## 已知问题
+
+* ESP32-P4 暂不支持通过 esp_wifi_remote 开启 softAP 功能。

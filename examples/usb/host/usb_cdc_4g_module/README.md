@@ -2,7 +2,9 @@
 
 # USB CDC 4G Module
 
-This example demonstrates the ESP32-S2, ESP32-S3 series SoC as a USB host to dial-up 4G Cat.1 through PPP to access the Internet, with the help of ESP32-SX Wi-Fi softAP function, share the Internet with IoT devices or mobile devices. Realize low-cost "medium-high-speed" Internet access.It is also equipped with a router management interface, which allows you to configure the router online and view the information of connected devices.
+This example demonstrates the **ESP32-S2**, **ESP32-S3** series SoC as a USB host to dial-up 4G Cat.1 through PPP to access the Internet, with the help of ESP32-SX Wi-Fi softAP function, share the Internet with IoT devices or mobile devices. Realize low-cost "medium-high-speed" Internet access.It is also equipped with a router management interface, which allows you to configure the router online and view the information of connected devices.
+
+In addition, the **ESP32-P4** supports the 4G Cat.4 module (EC20) with faster speeds, but it currently only supports internet access for itself.
 
 **Features Supported:**
 
@@ -20,10 +22,11 @@ This example demonstrates the ESP32-S2, ESP32-S3 series SoC as a USB host to dia
 
 ## Hardware requirement
 
-**Supported ESP Soc:** 
+**Supported ESP Soc:**
 
 * ESP32-S2
 * ESP32-S3
+* ESP32-P4
 
 > We recommend using ESP modules or chips that integrate 4MB above Flash, and 2MB above PSRAM. The example does not enable PSRAM by default, but users can add to tests by themselves. In theory, increasing the Wi-Fi buffer size can increase the average data throughput rate.
 
@@ -116,8 +119,8 @@ I (9659) esp-modem: --------- Modem PreDefined Info ------------------
 I (9666) esp-modem: Model: ML302-DNLM/CNLM
 I (9671) esp-modem: Modem itf: IN Addr:0x81, OUT Addr:0x01
 I (9677) esp-modem: ----------------------------------------------------
-I (9684) gpio: GPIO[12]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 
-I (9694) gpio: GPIO[13]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 
+I (9684) gpio: GPIO[12]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0
+I (9694) gpio: GPIO[13]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0
 W (9704) USB_HCDC: rx0 flush -0 = 0
 W (9707) modem_board: DTE reconnect, reconnecting ...
 
@@ -188,11 +191,11 @@ I (15948) modem_wifi: softap ssid: esp_4g_router password: 12345678
 I (15954) modem_wifi: NAT is enabled
 ```
 
-## Debugging method 
+## Debugging method
 
 **1. Debugging mode**
 
-Enable the `4G Modem Configuration -> Dump system task status` option in `menuconfig` to print task detailed information, or open the `Component config → USB Host CDC ->Trace internal memory status` option to print usb internal buffer usage information.
+Enable the `4G Modem Configuration -> Dump system task status` option in `menuconfig` to print task detailed information.
 
 	```
     I (79530) main: Task dump
@@ -211,14 +214,6 @@ Enable the `4G Modem Configuration -> Dump system task status` option in `menuco
     I (79577) main: 0.00    1092    sys_evt         20
     I (79582) main: Free heap=37088 bigst=16384, internal=36968 bigst=16384
     I (79589) main: ..............
-    
-    I (79593) USB_HCDC: USBH CDC Transfer Buffer Dump:
-    I (79599) USB_HCDC: usb transfer Buffer size, out = 3000, in = 1500
-    I (79606) USB_HCDC: usb transfer Max packet size, out = 46, in = 48
-    
-    I (79613) USB_HCDC: USBH CDC Ringbuffer Dump:
-    I (79618) USB_HCDC: usb ringbuffer size, out = 15360, in = 15360
-    I (79625) USB_HCDC: usb ringbuffer High water mark, out = 46, in = 48
 	```
 
 **2. Performance optimization**
@@ -249,3 +244,7 @@ Enable the `4G Modem Configuration -> Dump system task status` option in `menuco
 
 > **4G Cat.1 theoretical peak download rate is 10 Mbps, peak upload rate is 5 Mbps**
 > The actual communication rate is affected by the operator's network, test software, Wi-Fi interference, and the number of terminal connections, etc.
+
+## Known Issues
+
+* ESP32-P4 currently does not support enabling the softAP function via `esp_wifi_remote`.
