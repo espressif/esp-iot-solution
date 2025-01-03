@@ -2,11 +2,7 @@ PWM Audio
 ==============
 :link_to_translation:`zh_CN:[中文]`
 
-==================  ===========  ===============  =============== =============
- Supported Socs       ESP32        ESP32-S2          ESP32-S3        ESP32-C3    
-==================  ===========  ===============  =============== =============
-
-The PWM audio function uses the internal LEDC peripheral in ESP32 to generate PWM audio, which does not need an external audio Codec chip. This is mainly used for cost-sensitive applications with low audio quality requirements.
+The PWM audio function uses the internal LEDC peripheral in the ESP32 series chips to generate PWM audio, which does not need an external audio Codec chip. This is mainly used for cost-sensitive applications with low audio quality requirements.
 
 Features
 ----------------
