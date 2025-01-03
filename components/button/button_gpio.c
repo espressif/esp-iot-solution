@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+/* SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -26,12 +26,17 @@ esp_err_t button_gpio_init(const button_gpio_config_t *config)
     gpio_conf.intr_type = GPIO_INTR_DISABLE;
     gpio_conf.mode = GPIO_MODE_INPUT;
     gpio_conf.pin_bit_mask = (1ULL << config->gpio_num);
-    if (config->active_level) {
-        gpio_conf.pull_down_en = GPIO_PULLDOWN_ENABLE;
+    if (config->disable_pull) {
+        gpio_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
         gpio_conf.pull_up_en = GPIO_PULLUP_DISABLE;
     } else {
-        gpio_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
-        gpio_conf.pull_up_en = GPIO_PULLUP_ENABLE;
+        if (config->active_level) {
+            gpio_conf.pull_down_en = GPIO_PULLDOWN_ENABLE;
+            gpio_conf.pull_up_en = GPIO_PULLUP_DISABLE;
+        } else {
+            gpio_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
+            gpio_conf.pull_up_en = GPIO_PULLUP_ENABLE;
+        }
     }
     gpio_config(&gpio_conf);
 
