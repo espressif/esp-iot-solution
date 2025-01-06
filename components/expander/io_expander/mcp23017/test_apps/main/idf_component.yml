@@ -1,0 +1,4 @@
+dependencies:
+    mcp23017:
+      version: "*"
+      override_path: "../../../mcp23017"

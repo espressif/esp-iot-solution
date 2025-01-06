@@ -1169,6 +1169,14 @@ build_components_display_tools_esp_mmap_assets_test_apps:
   variables:
     EXAMPLE_DIR: components/display/tools/esp_mmap_assets/test_apps
 
+build_components_expander_io_expander_mcp23017_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_expander_io_expander_mcp23017_test_apps
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: components/expander/io_expander/mcp23017/test_apps
+
 build_components_keyboard_button_test_apps:
   extends:
     - .build_examples_template
