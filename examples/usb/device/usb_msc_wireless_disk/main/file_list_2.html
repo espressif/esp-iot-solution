@@ -1,0 +1,34 @@
+    </tbody>
+  </table>
+</div>
+
+<script>
+  const path = getPath();
+  const path_div = document.getElementById("path")
+  path_div.innerText = path;
+  path_div.addEventListener("click", () => {
+    alert(`Current Path is: ${path}`);
+  })
+
+  if (path !== "/") {
+    const pathSegments = path.split("/");
+    pathSegments.pop();
+    const currentPath = (
+      "/" +
+      pathSegments.filter((segment) => segment).join("/") +
+      "/"
+    ).replace(/\/+/g, "/");
+    pathSegments.pop();
+    const parentPath = (
+      "/" +
+      pathSegments.filter((segment) => segment).join("/") +
+      "/"
+    ).replace(/\/+/g, "/");
+
+    const upload_button = document.getElementById("upload-button");
+    upload_button.href =
+      "/upload.html#" + encodeURIComponent(currentPath || "/");
+  } else {
+    document.getElementById("parent-path-table-row").style = "display: none;";
+  }
+</script>

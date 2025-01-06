@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width" />
+  <title>ESP32 USB File Server</title>
+  <link href="/styles.css" rel="stylesheet" />
+</head>
+
+<div class="settings-header link-white">
+  <a class="header-left" id="return-button" href="/">
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width=".75em"
+      height="1.5em"
+      viewBox="0 0 12 24"
+    >
+      <path
+        fill="currentColor"
+        fill-rule="evenodd"
+        d="m3.343 12l7.071 7.071L9 20.485l-7.778-7.778a1 1 0 0 1 0-1.414L9 3.515l1.414 1.414z"
+      />
+    </svg>
+  </a>
+  <div class="header-center">ESP USB File Server</div>
+  <div class="header-right">
+    <span id="remain"></span>
+  </div>
+</div>
+
+<div style="margin-bottom: 3em"></div>
+
+<div class="settings-main">
+  <form>
+    <table class="w100">
+      <tr>
+        <td style="font-weight: bold">WIFI Mode</td>
+        <td>
+          <input type="radio" id="ap" name="wifimode" value="ap" required />
+          <label for="ap"> AP </label>
+          <input type="radio" id="sta" name="wifimode" value="sta" />
+          <label for="ap"> STA </label>
+        </td>
+      </tr>
+      <tr>
+        <td style="font-weight: bold">
+          <label for="ssid"> WIFI SSID </label>
+        </td>
+        <td>
+          <input
+            type="text"
+            id="ssid"
+            name="ssid"
+            pattern="[-a-zA-Z0-9\_\.]+"
+            class="w100"
+            required
+          />
+        </td>
+      </tr>
+      <tr>
+        <td style="font-weight: bold">
+          <label for="password"> Password </label>
+        </td>
+        <td>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            pattern="[a-zA-Z0-9\-\_\.]{8,20}"
+            class="w100"
+            placeholder="Leave blank to indicate no password"
+          />
+        </td>
+      </tr>
+    </table>
+    <button type="submit" class="w100">Submit!</button>
+  </form>
+</div>

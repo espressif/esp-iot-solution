@@ -53,6 +53,45 @@ static esp_err_t favicon_get_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+/* Handler to respond with an style file embedded in flash.
+ * Browsers expect to GET website style at URI /styles.css.
+ * This can be overridden by uploading file with same name */
+static esp_err_t styles_get_handler(httpd_req_t *req)
+{
+    extern const unsigned char styles_css_start[] asm("_binary_styles_css_start");
+    extern const unsigned char styles_css_end[]   asm("_binary_styles_css_end");
+    const size_t styles_css_size = (styles_css_end - styles_css_start);
+    httpd_resp_set_type(req, "text/css");
+    httpd_resp_send(req, (const char *)styles_css_start, styles_css_size);
+    return ESP_OK;
+}
+
+/* Handler to respond with an upload page embedded in flash.
+ * Browsers expect to GET website page at URI /upload.html.
+ * This can be overridden by uploading file with same name */
+static esp_err_t upload_page_get_handler(httpd_req_t *req)
+{
+    extern const unsigned char upload_html_start[] asm("_binary_upload_html_start");
+    extern const unsigned char upload_html_end[]   asm("_binary_upload_html_end");
+    const size_t upload_html_size = (upload_html_end - upload_html_start);
+    httpd_resp_set_type(req, "text/html");
+    httpd_resp_send(req, (const char *)upload_html_start, upload_html_size);
+    return ESP_OK;
+}
+
+/* Handler to respond with an upload page embedded in flash.
+ * Browsers expect to GET website page at URI /settings.html.
+ * This can be overridden by uploading file with same name */
+static esp_err_t settings_page_get_handler(httpd_req_t *req)
+{
+    extern const unsigned char settings_html_start[] asm("_binary_settings_html_start");
+    extern const unsigned char settings_html_end[]   asm("_binary_settings_html_end");
+    const size_t settings_html_size = (settings_html_end - settings_html_start);
+    httpd_resp_set_type(req, "text/html");
+    httpd_resp_send(req, (const char *)settings_html_start, settings_html_size);
+    return ESP_OK;
+}
+
 /* Send HTTP response with a run-time generated html consisting of
  * a list of all files and folders under the requested path.
  * In case of SPIFFS this returns empty list when path is any
@@ -79,23 +118,16 @@ static esp_err_t http_resp_dir_html(httpd_req_t *req, const char *dirpath)
         return ESP_FAIL;
     }
 
-    /* Send HTML file header */
-    httpd_resp_sendstr_chunk(req, "<!DOCTYPE html><html><body>");
+    /* Get handle to embedded file the header of file list page */
+    extern const unsigned char file_list_1_start[] asm("_binary_file_list_1_html_start");
+    extern const unsigned char file_list_1_end[]   asm("_binary_file_list_1_html_end");
+    const size_t file_list_1_size = (file_list_1_end - file_list_1_start);
 
-    /* Get handle to embedded file upload script */
-    extern const unsigned char upload_script_start[] asm("_binary_upload_script_html_start");
-    extern const unsigned char upload_script_end[]   asm("_binary_upload_script_html_end");
-    const size_t upload_script_size = (upload_script_end - upload_script_start);
+    extern const unsigned char file_list_2_start[] asm("_binary_file_list_2_html_start");
+    extern const unsigned char file_list_2_end[]   asm("_binary_file_list_2_html_end");
+    const size_t file_list_2_size = (file_list_2_end - file_list_2_start);
 
-    /* Add file upload form and script which on execution sends a POST request to /upload */
-    httpd_resp_send_chunk(req, (const char *)upload_script_start, upload_script_size);
-
-    /* Send file-list table definition and column labels */
-    httpd_resp_sendstr_chunk(req,
-                             "<table class=\"fixed\" border=\"1\">"
-                             "<col width=\"800px\" /><col width=\"300px\" /><col width=\"300px\" /><col width=\"100px\" />"
-                             "<thead><tr><th>Name</th><th>Type</th><th>Size (Bytes)</th><th>Delete</th></tr></thead>"
-                             "<tbody>");
+    httpd_resp_send_chunk(req, (const char *)file_list_1_start, file_list_1_size);
 
     /* Iterate over all files / folders and fetch their names and sizes */
     while ((entry = readdir(dir)) != NULL) {
@@ -110,7 +142,9 @@ static esp_err_t http_resp_dir_html(httpd_req_t *req, const char *dirpath)
         ESP_LOGI(TAG, "Found %s : %s (%s bytes)", entrytype, entry->d_name, entrysize);
 
         /* Send chunk of HTML file containing table entries with file name and size */
-        httpd_resp_sendstr_chunk(req, "<tr><td><a href=\"");
+        httpd_resp_sendstr_chunk(req, "<tr><td class=\"");
+        httpd_resp_sendstr_chunk(req, entrytype);
+        httpd_resp_sendstr_chunk(req, "\"><a href=\"");
         httpd_resp_sendstr_chunk(req, req->uri);
         httpd_resp_sendstr_chunk(req, entry->d_name);
         if (entry->d_type == DT_DIR) {
@@ -119,8 +153,6 @@ static esp_err_t http_resp_dir_html(httpd_req_t *req, const char *dirpath)
         httpd_resp_sendstr_chunk(req, "\">");
         httpd_resp_sendstr_chunk(req, entry->d_name);
         httpd_resp_sendstr_chunk(req, "</a></td><td>");
-        httpd_resp_sendstr_chunk(req, entrytype);
-        httpd_resp_sendstr_chunk(req, "</td><td>");
         httpd_resp_sendstr_chunk(req, entrysize);
         httpd_resp_sendstr_chunk(req, "</td><td>");
         httpd_resp_sendstr_chunk(req, "<form method=\"post\" action=\"/delete");
@@ -132,10 +164,7 @@ static esp_err_t http_resp_dir_html(httpd_req_t *req, const char *dirpath)
     closedir(dir);
 
     /* Finish the file list table */
-    httpd_resp_sendstr_chunk(req, "</tbody></table>");
-
-    /* Send remaining chunk of HTML file to complete it */
-    httpd_resp_sendstr_chunk(req, "</body></html>");
+    httpd_resp_send_chunk(req, (const char *)file_list_2_start, file_list_2_size);
 
     /* Send empty chunk to signal HTTP response completion */
     httpd_resp_sendstr_chunk(req, NULL);
@@ -152,8 +181,12 @@ static esp_err_t set_content_type_from_file(httpd_req_t *req, const char *filena
         return httpd_resp_set_type(req, "application/pdf");
     } else if (IS_FILE_EXT(filename, ".html")) {
         return httpd_resp_set_type(req, "text/html");
-    } else if (IS_FILE_EXT(filename, ".jpeg")) {
+    } else if (IS_FILE_EXT(filename, ".png")) {
+        return httpd_resp_set_type(req, "image/png");
+    } else if (IS_FILE_EXT(filename, ".jpg") || IS_FILE_EXT(filename, ".jpeg")) {
         return httpd_resp_set_type(req, "image/jpeg");
+    } else if (IS_FILE_EXT(filename, ".gif")) {
+        return httpd_resp_set_type(req, "image/gif");
     } else if (IS_FILE_EXT(filename, ".ico")) {
         return httpd_resp_set_type(req, "image/x-icon");
     }
@@ -219,7 +252,13 @@ static esp_err_t download_get_handler(httpd_req_t *req)
             return index_html_get_handler(req);
         } else if (strcmp(filename, "/favicon.ico") == 0) {
             return favicon_get_handler(req);
-        }
+        } else if (strcmp(filename, "/settings.html") == 0) {
+            return settings_page_get_handler(req);
+        } else if (strcmp(filename, "/upload.html") == 0) {
+            return upload_page_get_handler(req);
+        } else if (strcmp(filename, "/styles.css") == 0) {
+            return styles_get_handler(req);
+        } 
         ESP_LOGE(TAG, "Failed to stat file : %s", filepath);
         /* Respond with 404 Not Found */
         httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "File does not exist");
