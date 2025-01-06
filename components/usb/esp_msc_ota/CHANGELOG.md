@@ -1,5 +1,9 @@
 # changelog
 
+## v1.1.0 - 2024-12-24
+
+* Add the `skip_msc_connect_wait` configuration to allow users to mount the file system manually.
+
 ## v1.0.0 - 2024-8-15
 
 * Publish the official version

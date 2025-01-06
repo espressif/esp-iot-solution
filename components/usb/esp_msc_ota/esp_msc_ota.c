@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -28,6 +28,29 @@ _Static_assert(DEFAULT_OTA_BUF_SIZE > (sizeof(esp_image_header_t) + sizeof(esp_i
 
 /* Setting event group */
 #define MSC_CONNECT (1 << 0) // MSC device connect
+
+/**
+ * @brief To prevent the VFS from being unregistered during file read and write operations.
+ *
+ * @param semaphore Semaphore to take.
+ * @return esp_err_t
+ *       - ESP_OK on success or if the semaphore is NULL.
+ *       - ESP_FAIL if taking the semaphore fails.
+ */
+#define SEMAPHORE_TAKE(semaphore) \
+    ((semaphore == NULL) ? ESP_OK : \
+    ((xSemaphoreTake(semaphore, pdMS_TO_TICKS(10)) == pdTRUE) ? ESP_OK : ESP_FAIL))
+
+/**
+ * @brief To prevent the VFS from being unregistered during file read and write operations.
+ *
+ * @param semaphore Semaphore to give.
+ * @return esp_err_t
+ *       - ESP_OK on success or if the semaphore is NULL.
+ */
+#define SEMAPHORE_GIVE(semaphore) \
+    ((semaphore == NULL) ? ESP_OK : \
+    (xSemaphoreGive(semaphore), ESP_OK))
 
 typedef struct {
     EventGroupHandle_t mscEventGroup;
@@ -107,6 +130,7 @@ esp_msc_ota_status_t esp_msc_ota_get_status(esp_msc_ota_handle_t handle)
 
 static esp_err_t _read_header(esp_msc_ota_t *msc_ota)
 {
+    esp_err_t err = ESP_OK;
     EventBits_t bits = xEventGroupWaitBits(msc_ota->mscEventGroup, MSC_CONNECT, pdFALSE, pdFALSE, 0);
     MSC_OTA_CHECK(bits & MSC_CONNECT, "msc can't be disconnect", ESP_ERR_INVALID_STATE);
     /*
@@ -115,6 +139,8 @@ static esp_err_t _read_header(esp_msc_ota_t *msc_ota)
     int data_read_size = IMAGE_HEADER_SIZE;
     int data_read = 0;
 
+    err = SEMAPHORE_TAKE(msc_read_semaphore);
+    MSC_OTA_CHECK(err == ESP_OK, "take msc_read_semaphore failed", ESP_FAIL);
     FILE *file = fopen(msc_ota->ota_bin_path, "rb");
     MSC_OTA_CHECK(file != NULL, "Failed to open file for reading", ESP_ERR_NOT_FOUND);
 
@@ -125,27 +151,28 @@ static esp_err_t _read_header(esp_msc_ota_t *msc_ota)
     data_read_size = data_read_size > fileLength ? fileLength : data_read_size;
     ESP_LOGI(TAG, "Reading file %s, size: %d, total size: %"PRIu32"", msc_ota->ota_bin_path, data_read_size, fileLength);
 
-    BaseType_t ret = xSemaphoreTake(msc_read_semaphore, pdMS_TO_TICKS(10));
-    MSC_OTA_CHECK(ret == pdTRUE, "take msc_read_semaphore failed", ESP_FAIL);
     data_read = fread(msc_ota->ota_upgrade_buf, 1, data_read_size, file);
-    xSemaphoreGive(msc_read_semaphore);
 
     if (data_read == data_read_size) {
         msc_ota->binary_file_read_len = data_read;
-        fclose(file);
-        return ESP_OK;
+        err = ESP_OK;
+        goto file_close;
     } else if (data_read > 0 && data_read < data_read_size) {
         msc_ota->binary_file_read_len = data_read;
-        fclose(file);
-        return ESP_OK;
+        err = ESP_OK;
+        goto file_close;
     } else if (ferror(file)) {
+        err = ESP_FAIL;
         ESP_LOGI(TAG, "Error reading from file");
     } else if (feof(file)) {
-        ESP_LOGI(TAG, "End of file reached.\n");
+        err = ESP_FAIL;
+        ESP_LOGI(TAG, "End of file reached.");
     }
 
+file_close:
     fclose(file);
-    return ESP_FAIL;
+    SEMAPHORE_GIVE(msc_read_semaphore);
+    return err;
 }
 
 static esp_err_t _ota_verify_chip_id(const void *arg)
@@ -198,9 +225,14 @@ esp_err_t esp_msc_ota_begin(esp_msc_ota_config_t *config, esp_msc_ota_handle_t *
 
     esp_event_handler_register(ESP_MSC_HOST_EVENT, ESP_EVENT_ANY_ID, &_esp_msc_host_handler, msc_ota);
 
-    ESP_LOGI(TAG, "Waiting for MSC device to connect...");
-    EventBits_t bits = xEventGroupWaitBits(msc_ota->mscEventGroup, MSC_CONNECT, pdFALSE, pdFALSE, config->wait_msc_connect);
-    MSC_OTA_CHECK_GOTO(bits & MSC_CONNECT, "TIMEOUT: MSC device not connected", msc_cleanup);
+    if (!config->skip_msc_connect_wait) {
+        ESP_LOGI(TAG, "Waiting for MSC device to connect...");
+        EventBits_t bits = xEventGroupWaitBits(msc_ota->mscEventGroup, MSC_CONNECT, pdFALSE, pdFALSE, config->wait_msc_connect);
+        MSC_OTA_CHECK_GOTO(bits & MSC_CONNECT, "TIMEOUT: MSC device not connected", msc_cleanup);
+    } else {
+        xEventGroupSetBits(msc_ota->mscEventGroup, MSC_CONNECT);
+        ESP_LOGI(TAG, "skip_msc_connect_wait is true, set MSC_CONNECT event directly");
+    }
 
     msc_ota->update_partition = NULL;
     ESP_LOGI(TAG, "Starting OTA...");
@@ -272,9 +304,12 @@ esp_err_t esp_msc_ota_perform(esp_msc_ota_handle_t handle)
         MSC_OTA_CHECK(bits & MSC_CONNECT, "msc can't be disconnect", ESP_ERR_INVALID_STATE);
         if (msc_ota->file == NULL) {
 
+            err = SEMAPHORE_TAKE(msc_read_semaphore);
+            MSC_OTA_CHECK(err == ESP_OK, "take msc_read_semaphore failed", ESP_FAIL);
             FILE *file = fopen(msc_ota->ota_bin_path, "rb");
             MSC_OTA_CHECK(file != NULL, "Failed to open file for reading", ESP_ERR_NOT_FOUND);
             fseek(file, msc_ota->binary_file_read_len, SEEK_CUR);
+            SEMAPHORE_GIVE(msc_read_semaphore);
             msc_ota->file = file;
         }
         uint32_t *fileLength = &msc_ota->binary_file_read_len;
@@ -282,10 +317,10 @@ esp_err_t esp_msc_ota_perform(esp_msc_ota_handle_t handle)
         if (*fileLength < *totalLength) {
             size_t readLength = *fileLength > msc_ota->ota_upgrade_buf_size ? msc_ota->ota_upgrade_buf_size : *fileLength;
 
-            BaseType_t ret = xSemaphoreTake(msc_read_semaphore, pdMS_TO_TICKS(10));
-            MSC_OTA_CHECK(ret == pdTRUE, "take msc_read_semaphore failed", ESP_FAIL);
+            err = SEMAPHORE_TAKE(msc_read_semaphore);
+            MSC_OTA_CHECK(err == ESP_OK, "take msc_read_semaphore failed", ESP_FAIL);
             data_read = fread(msc_ota->ota_upgrade_buf, 1, readLength, msc_ota->file);
-            xSemaphoreGive(msc_read_semaphore);
+            SEMAPHORE_GIVE(msc_read_semaphore);
 
             MSC_OTA_CHECK(data_read > 0, "Failed to read file", ESP_ERR_INVALID_SIZE);
             err = esp_ota_write(msc_ota->update_handle, (const void *)msc_ota->ota_upgrade_buf, data_read);
@@ -299,7 +334,10 @@ esp_err_t esp_msc_ota_perform(esp_msc_ota_handle_t handle)
         }
         if (*fileLength >= *totalLength) {
             msc_ota->status = ESP_MSC_OTA_SUCCESS;
+            err = SEMAPHORE_TAKE(msc_read_semaphore);
+            MSC_OTA_CHECK(err == ESP_OK, "take msc_read_semaphore failed", ESP_FAIL);
             fclose(msc_ota->file);
+            SEMAPHORE_GIVE(msc_read_semaphore);
             return ESP_OK;
         }
         return ESP_OK;
@@ -338,6 +376,7 @@ esp_err_t esp_msc_ota_end(esp_msc_ota_handle_t handle)
         }
     }
     esp_event_handler_unregister(ESP_MSC_HOST_EVENT, ESP_EVENT_ANY_ID, &_esp_msc_host_handler);
+    vEventGroupDelete(msc_ota->mscEventGroup);
     free(msc_ota);
     esp_msc_ota_dispatch_event(ESP_MSC_OTA_FINISH, NULL, 0);
     return err;
@@ -353,7 +392,10 @@ esp_err_t esp_msc_ota_abort(esp_msc_ota_handle_t handle)
     case ESP_MSC_OTA_SUCCESS:
     case ESP_MSC_OTA_IN_PROGRESS:
         if (msc_ota->file) {
+            err = SEMAPHORE_TAKE(msc_read_semaphore);
+            MSC_OTA_CHECK(err == ESP_OK, "take msc_read_semaphore failed", ESP_FAIL);
             fclose(msc_ota->file);
+            SEMAPHORE_GIVE(msc_read_semaphore);
         }
         err = esp_ota_abort(msc_ota->update_handle);
         [[fallthrough]];
