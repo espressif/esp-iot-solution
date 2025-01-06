@@ -64,7 +64,7 @@ components/motor/esp_sensorless_bldc_control/test_apps/bldc_test_step_by_step:
 
 components/motor/esp_simplefoc/test_apps:
   enable:
-    - if: IDF_TARGET in ["esp32s3"]
+    - if: IDF_TARGET in ["esp32","esp32s2","esp32s3","esp32c3","esp32c6"]
 
 components/openai/test_apps:
   enable:

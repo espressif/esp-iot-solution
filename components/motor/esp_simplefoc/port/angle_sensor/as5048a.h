@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -55,7 +55,6 @@ private:
     gpio_num_t _miso_io;
     gpio_num_t _mosi_io;
     gpio_num_t _cs_io;
-    spi_device_handle_t spi_device;
-    bool is_installed;
-
+    spi_device_handle_t _spi_device;
+    bool _is_installed;
 };

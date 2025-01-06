@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -19,12 +19,12 @@ AS5048a::AS5048a(spi_host_device_t spi_host, gpio_num_t sclk_io, gpio_num_t miso
     _miso_io = miso_io;
     _mosi_io = mosi_io;
     _cs_io = cs_io;
-    is_installed = false;
+    _is_installed = false;
 }
 
 AS5048a::~AS5048a()
 {
-    if (is_installed) {
+    if (_is_installed) {
         deinit();
     }
 }
@@ -32,11 +32,11 @@ AS5048a::~AS5048a()
 void AS5048a::deinit()
 {
     esp_err_t ret;
-    ret = spi_bus_remove_device(spi_device);
+    ret = spi_bus_remove_device(_spi_device);
     ESP_RETURN_ON_FALSE(ret == ESP_OK,, TAG, "SPI remove device fail");
     ret = spi_bus_free(_spi_host);
     ESP_RETURN_ON_FALSE(ret == ESP_OK,, TAG, "SPI free fail");
-    is_installed = false;
+    _is_installed = false;
 }
 
 void AS5048a::init()
@@ -66,10 +66,10 @@ void AS5048a::init()
         .queue_size = 1,
     };
 
-    ret = spi_bus_add_device(_spi_host, &devcfg, &spi_device);
+    ret = spi_bus_add_device(_spi_host, &devcfg, &_spi_device);
     ESP_RETURN_ON_FALSE(ret == ESP_OK,, TAG, "SPI bus add device fail");
 
-    is_installed = true;
+    _is_installed = true;
 }
 
 uint8_t AS5048a::calculateParity(uint16_t value)
@@ -97,14 +97,14 @@ uint16_t AS5048a::readRegister(uint16_t reg_address)
     t.length = 16; // 16 bits
     t.tx_buffer = tx_buffer;
     t.rx_buffer = NULL;
-    spi_device_transmit(spi_device, &t);
+    spi_device_transmit(_spi_device, &t);
 
     uint8_t rx_buffer[2] = {};
     t.length = 16; // 16 bits
     t.tx_buffer = NULL;
     t.rxlength = 16; // 16 bits
     t.rx_buffer = rx_buffer;
-    spi_device_transmit(spi_device, &t);
+    spi_device_transmit(_spi_device, &t);
 
     uint16_t reg_value = (rx_buffer[0] << 8) | rx_buffer[1];
     return reg_value & 0x3FFF; // Masking to get 14 bits angle value

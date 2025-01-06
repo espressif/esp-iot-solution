@@ -1,4 +1,4 @@
-version: 1.1.0
+version: 1.2.0
 targets:
   - esp32
   - esp32s2
@@ -13,6 +13,10 @@ issues: https://github.com/espressif/esp-iot-solution/issues
 dependencies:
   idf:
     version: '>=5.0'
+  i2c_bus:
+    public: true
+    version: "1.*"
+    override_path: "../../i2c_bus"
   espressif/arduino-foc:
     version: ">=2.3.0~3"
     public: true
