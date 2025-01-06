@@ -143,7 +143,7 @@ esp_err_t mcp23017_read(mcp23017_handle_t dev, uint8_t reg_start_addr,
 esp_err_t mcp23017_set_pullup(mcp23017_handle_t dev, uint16_t pins)
 {
     uint8_t data[] = { MCP23017_PORT_A_BYTE(pins), MCP23017_PORT_B_BYTE(pins) };
-    return mcp23017_write(dev, MCP23017_REG_GPIOA, sizeof(data), data); //set REG_GPIOA(); REG_GPIOB();
+    return mcp23017_write(dev, MCP23017_REG_GPPUA, sizeof(data), data); //set REG_GPPUA(); REG_GPPUB();
 }
 
 esp_err_t mcp23017_interrupt_en(mcp23017_handle_t dev, uint16_t pins,

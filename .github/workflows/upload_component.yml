@@ -50,6 +50,7 @@ jobs:
             components/display/tools/esp_lv_fs;
             components/display/tools/esp_mmap_assets;
             components/elf_loader;
+            components/expander/io_expander/mcp23017;
             components/extended_vfs;
             components/gprof;
             components/i2c_bus;

@@ -150,6 +150,7 @@
 
 .patterns-components_expander_io_expander_mcp23017: &patterns-components_expander_io_expander_mcp23017
   - "components/expander/io_expander/mcp23017/**/*"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_extended_vfs: &patterns-components_extended_vfs
   - "components/extended_vfs/**/*"
@@ -1894,7 +1895,7 @@
     - <<: *if-dev-push
       changes: *patterns-components_keyboard_button
 
-.rules:build:components_expander_io_expander_mcp23017_test:
+.rules:build:components_expander_io_expander_mcp23017_test_apps:
   rules:
     - <<: *if-protected
     - <<: *if-label-build
