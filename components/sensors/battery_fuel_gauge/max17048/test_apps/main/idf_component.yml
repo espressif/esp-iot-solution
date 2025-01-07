@@ -1,0 +1,4 @@
+dependencies:
+    max17048:
+      version: "*"
+      override_path: "../../../max17048"
