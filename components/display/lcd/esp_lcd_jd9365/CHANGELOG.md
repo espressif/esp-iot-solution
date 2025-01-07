@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.0.2 - 2025-01-13
+
+### bugfix:
+
+* Fixed the issue with macro inclusion
+
 ## v1.0.1 - 2024-11-10
 
 ### bugfix:

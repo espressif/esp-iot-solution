@@ -112,8 +112,9 @@ esp_err_t esp_lcd_new_panel_ek79007(const esp_lcd_panel_io_handle_t io, const es
         },                                                       \
         .flags.use_dma2d = true,                                 \
     }
-#endif
 
 #ifdef __cplusplus
 }
+#endif
+
 #endif
