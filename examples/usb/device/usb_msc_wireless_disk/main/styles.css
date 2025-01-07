@@ -173,13 +173,13 @@ html {
     margin-top: 5px;
 }
 
-button {
+#uploadForm button {
     padding: 10px 10px;
     font-size: 16px;
     cursor: pointer;
 }
 
-button:disabled {
+#uploadForm button:disabled {
     background-color: #ccc;
     cursor: not-allowed;
 }

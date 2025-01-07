@@ -180,9 +180,6 @@
     const uploadPath = uploadPathInput.value;
     const fileName = fileNameInput.value;
 
-    const formData = new FormData();
-    formData.append("file", selectedFile);
-
     const url = `/upload${uploadPath}${fileName}`;
     const xhr = new XMLHttpRequest();
     xhr.open("POST", url, true);
@@ -192,7 +189,13 @@
     fileNameInput.disabled = true;
 
     xhr.upload.onprogress = (event) => {
-      progressDiv.textContent = `Uploading...`;
+      // progressDiv.textContent = `Uploading...`;
+      if (event.lengthComputable) {
+        const percentComplete = (event.loaded / event.total) * 100;
+        progressDiv.textContent = `Uploading... ${percentComplete.toFixed(2)}%`;
+      } else {
+        progressDiv.textContent = `Uploading...`;
+      }
     };
 
     xhr.onload = () => {
@@ -211,6 +214,6 @@
       alert("Upload failed: Network error");
     };
 
-    xhr.send(formData);
+    xhr.send(selectedFile);
   });
 </script>
