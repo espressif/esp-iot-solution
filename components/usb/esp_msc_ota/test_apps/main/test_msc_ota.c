@@ -215,7 +215,7 @@ TEST_CASE("Test msc ota without msc host", "[MSC OTA][WITHOUT MSC HOST]")
     bsp_sdcard_mount();
 
     char path[256];
-    sprintf(path, "%s/ota_test.bin", CONFIG_BSP_uSD_MOUNT_POINT);
+    sprintf(path, "%s/ota_test.bin", CONFIG_BSP_SD_MOUNT_POINT);
 
     esp_msc_ota_handle_t msc_ota_handle = NULL;
     esp_msc_ota_config_t config = {
