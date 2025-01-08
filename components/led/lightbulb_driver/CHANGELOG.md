@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.7.0 - 2025-02-24
+
+### Improve:
+
+- Update the version of dependent cmake_utilities to *
+
 ## v1.6.1 - 2025-02-19
 
 ### Bug Fix:
