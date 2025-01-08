@@ -14,7 +14,7 @@
 #include "driver/i2c.h"
 #include "unity.h"
 #include "unity_test_runner.h"
-#include "esp_lcd_panel_io_interface.h"
+#include "esp_lcd_panel_io.h"
 #include "esp_lcd_panel_ops.h"
 #include "driver/spi_master.h"
 #include "esp_lcd_st77922.h"

@@ -14,7 +14,6 @@
 #include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "esp_lcd_panel_io.h"
-#include "esp_lcd_panel_io_interface.h"
 #include "esp_lcd_panel_ops.h"
 #include "unity.h"
 #include "unity_test_runner.h"
