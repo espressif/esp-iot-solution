@@ -17,35 +17,35 @@ html {
     font-weight: bold;
 }
 
-.header, 
-.upload-header, 
+.header,
+.upload-header,
 .settings-header {
-    width: 100%; 
-    height: 2em; 
-    position: absolute; 
-    top: 0; 
+    width: 100%;
+    height: 2em;
+    position: absolute;
+    top: 0;
     left: 0;
-    background-color: #444444; 
-    display: grid; 
-    grid-template-columns: 1fr 1fr 1fr; 
-    margin: auto; 
+    background-color: #444444;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    margin: auto;
     align-items: center;
 }
 
 .header-center {
-    text-align: center; 
-    font-weight: 700; 
+    text-align: center;
+    font-weight: 700;
     font-size: larger;
 }
 
 .header-right {
-    text-align: right; 
+    text-align: right;
     margin-right: 10px;
 }
 
 @media (max-width: 700px) {
     .header {
-        grid-template-columns: 1fr 0em; 
+        grid-template-columns: 1fr 0em;
     }
 
     .header-center {
@@ -54,15 +54,15 @@ html {
 }
 
 .header-left {
-    text-align: left; 
-    margin-left: 10px; 
+    text-align: left;
+    margin-left: 10px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.link-white a, 
-.link-white a:visited, 
+.link-white a,
+.link-white a:visited,
 .link-white a:active {
     color: white;
     text-decoration: none;
@@ -97,7 +97,7 @@ html {
     border-bottom: 2px solid #ddd;
 }
 
-.table_component thead td, 
+.table_component thead td,
 .table_component tbody td {
     padding: 8px;
     text-align: left;
@@ -190,7 +190,7 @@ html {
 }
 
 .settings-main table {
-    border-collapse:separate; 
+    border-collapse:separate;
     border-spacing:0px 10px;
 }
 
@@ -212,7 +212,7 @@ html {
 }
 
 .buttons-wrap {
-    margin-top: 3em; 
+    margin-top: 3em;
     margin-bottom: 1em;
 }
 
@@ -221,11 +221,11 @@ html {
 }
 
 .button {
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    background-color: #444; 
-    height: 2em; 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #444;
+    height: 2em;
     width: 6em;
 }
 

@@ -134,3 +134,31 @@ Dynamic Switching of USB-OTG Peripheral Modes
 The USB-OTG peripheral supports dynamic switching of its mode. Users can achieve dynamic switching by dynamically registering the USB Host Driver or USB Device Driver.
 
 * Example Code: USB OTG Manual Switching :example:`usb/otg/usb_host_device_mode_manual_switch`
+
+Using USB-OTG to Proactively Disconnect from the Host
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+You can proactively disconnect from the host by pulling the USB OTG ``VBUSVALID`` signal low, simulating the disconnection of the USB OTG peripheral. Note that if you need to reattach the device, you must wait at least **10ms** before doing so.
+
+.. note:: This functionality currently supports USB OTG FullSpeed peripherals. USB OTG HighSpeed peripherals are not yet supported.
+
+.. code::c
+
+  #if defined (CONFIG_IDF_TARGET_ESP32S2) || defined (CONFIG_IDF_TARGET_ESP32S3)
+  // To generate a disconnect event
+  static void usbd_vbus_enable(bool enable)
+  {
+      esp_rom_gpio_connect_in_signal(enable ? GPIO_MATRIX_CONST_ONE_INPUT : GPIO_MATRIX_CONST_ZERO_INPUT, USB_OTG_VBUSVALID_IN_IDX, 0);
+      esp_rom_gpio_connect_in_signal(enable ? GPIO_MATRIX_CONST_ONE_INPUT : GPIO_MATRIX_CONST_ZERO_INPUT, USB_SRP_BVALID_IN_IDX, 0);
+      esp_rom_gpio_connect_in_signal(enable ? GPIO_MATRIX_CONST_ONE_INPUT : GPIO_MATRIX_CONST_ZERO_INPUT, USB_SRP_SESSEND_IN_IDX, 1);
+      return;
+  }
+  #elif defined (CONFIG_IDF_TARGET_ESP32P4)
+  static void usbd_vbus_enable(bool enable)
+  {
+      esp_rom_gpio_connect_in_signal(enable ? GPIO_MATRIX_CONST_ONE_INPUT : GPIO_MATRIX_CONST_ZERO_INPUT, USB_OTG11_VBUSVALID_PAD_IN_IDX, 0);
+      esp_rom_gpio_connect_in_signal(enable ? GPIO_MATRIX_CONST_ONE_INPUT : GPIO_MATRIX_CONST_ZERO_INPUT, USB_SRP_BVALID_PAD_IN_IDX, 0);
+      esp_rom_gpio_connect_in_signal(enable ? GPIO_MATRIX_CONST_ONE_INPUT : GPIO_MATRIX_CONST_ZERO_INPUT, USB_SRP_SESSEND_PAD_IN_IDX, 1);
+      return;
+  }
+  #endif

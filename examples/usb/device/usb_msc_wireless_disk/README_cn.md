@@ -34,8 +34,8 @@
 
 * 您可以在 `menuconfig → USB MSC Device Demo → Wi-Fi Settings` 中配置 Wi-Fi AP 的 SSID 和密码，以更改 esp32-sx 的热点名称。
 * 您也可以设置 Wi-Fi STA 的 SSID 和密码，以使 esp32-sx 同时连接到路由器。
+* 您还可以通过网页端的 `settings` 来配置 Wi-Fi 的相关信息。
 
 ### 已知问题
 
-1. 通过 Web 上传的文件无法被主机自动感知，因此 Windows 的“文件资源管理器”无法自动更新文件列表。请重新挂载磁盘以更新文件列表（弹出重新加载）。此问题将在后续修复。
-2. 通过 USB 磁盘添加或删除的文件，有时无法通过 Web 刷新找到。
+* 通过 USB 磁盘添加或删除的文件后，请主动刷新网页

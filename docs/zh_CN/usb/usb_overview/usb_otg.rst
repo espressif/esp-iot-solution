@@ -136,3 +136,31 @@ USB Device 方案详情，请参考 :doc:`USB Device Solution <./usb_device_solu
 USB-OTG 外设支持动态切换 USB-OTG 外设模式，用户可以通过动态的注册 USB Host Driver 或 USB Device Driver，实现 USB-OTG 外设的动态切换。
 
 * 示例代码: USB OTG 手动切换 :example:`usb/otg/usb_host_device_mode_manual_switch`
+
+使用 USB-OTG 主动断开与主机的连接
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+可以通过将 USB OTG VBUSVALID 信号拉低，主动断开与主机的连接，从而实现 USB OTG 外设的断开。注意如果需要重新挂载设备，需要至少等待 10ms。
+
+.. Note:: 此功能目前经支持 USB OTG FullSpeed 外设，对于 USB OTG HighSpeed 暂不支持。
+
+.. code::c
+
+  #if defined (CONFIG_IDF_TARGET_ESP32S2) || defined (CONFIG_IDF_TARGET_ESP32S3)
+  // To generate a disconnect event
+  static void usbd_vbus_enable(bool enable)
+  {
+      esp_rom_gpio_connect_in_signal(enable ? GPIO_MATRIX_CONST_ONE_INPUT : GPIO_MATRIX_CONST_ZERO_INPUT, USB_OTG_VBUSVALID_IN_IDX, 0);
+      esp_rom_gpio_connect_in_signal(enable ? GPIO_MATRIX_CONST_ONE_INPUT : GPIO_MATRIX_CONST_ZERO_INPUT, USB_SRP_BVALID_IN_IDX, 0);
+      esp_rom_gpio_connect_in_signal(enable ? GPIO_MATRIX_CONST_ONE_INPUT : GPIO_MATRIX_CONST_ZERO_INPUT, USB_SRP_SESSEND_IN_IDX, 1);
+      return;
+  }
+  #elif defined (CONFIG_IDF_TARGET_ESP32P4)
+  static void usbd_vbus_enable(bool enable)
+  {
+      esp_rom_gpio_connect_in_signal(enable ? GPIO_MATRIX_CONST_ONE_INPUT : GPIO_MATRIX_CONST_ZERO_INPUT, USB_OTG11_VBUSVALID_PAD_IN_IDX, 0);
+      esp_rom_gpio_connect_in_signal(enable ? GPIO_MATRIX_CONST_ONE_INPUT : GPIO_MATRIX_CONST_ZERO_INPUT, USB_SRP_BVALID_PAD_IN_IDX, 0);
+      esp_rom_gpio_connect_in_signal(enable ? GPIO_MATRIX_CONST_ONE_INPUT : GPIO_MATRIX_CONST_ZERO_INPUT, USB_SRP_SESSEND_PAD_IN_IDX, 1);
+      return;
+  }
+  #endif

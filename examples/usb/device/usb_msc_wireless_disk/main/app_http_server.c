@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+/* SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -8,6 +8,8 @@
 #include "esp_log.h"
 #include "esp_vfs.h"
 #include "esp_http_server.h"
+#include "esp_rom_gpio.h"
+#include "soc/gpio_sig_map.h"
 
 /* Max length a file path can have on storage */
 #define FILE_PATH_MAX (ESP_VFS_PATH_MAX + CONFIG_SPIFFS_OBJ_NAME_LEN)
@@ -230,7 +232,6 @@ static esp_err_t download_get_handler(httpd_req_t *req)
     char filepath[FILE_PATH_MAX];
     FILE *fd = NULL;
     struct stat file_stat;
-
     const char *filename = get_path_from_uri(filepath, ((struct file_server_data *)req->user_ctx)->base_path,
                                              req->uri, sizeof(filepath));
     if (!filename) {
@@ -258,7 +259,7 @@ static esp_err_t download_get_handler(httpd_req_t *req)
             return upload_page_get_handler(req);
         } else if (strcmp(filename, "/styles.css") == 0) {
             return styles_get_handler(req);
-        } 
+        }
         ESP_LOGE(TAG, "Failed to stat file : %s", filepath);
         /* Respond with 404 Not Found */
         httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "File does not exist");
@@ -307,6 +308,25 @@ static esp_err_t download_get_handler(httpd_req_t *req)
     httpd_resp_send_chunk(req, NULL, 0);
     return ESP_OK;
 }
+
+#if defined (CONFIG_IDF_TARGET_ESP32S2) || defined (CONFIG_IDF_TARGET_ESP32S3)
+// To generate a disconnect event
+static void usbd_vbus_enable(bool enable)
+{
+    esp_rom_gpio_connect_in_signal(enable ? GPIO_MATRIX_CONST_ONE_INPUT : GPIO_MATRIX_CONST_ZERO_INPUT, USB_OTG_VBUSVALID_IN_IDX, 0);
+    esp_rom_gpio_connect_in_signal(enable ? GPIO_MATRIX_CONST_ONE_INPUT : GPIO_MATRIX_CONST_ZERO_INPUT, USB_SRP_BVALID_IN_IDX, 0);
+    esp_rom_gpio_connect_in_signal(enable ? GPIO_MATRIX_CONST_ONE_INPUT : GPIO_MATRIX_CONST_ZERO_INPUT, USB_SRP_SESSEND_IN_IDX, 1);
+    return;
+}
+#elif defined (CONFIG_IDF_TARGET_ESP32P4)
+static void usbd_vbus_enable(bool enable)
+{
+    esp_rom_gpio_connect_in_signal(enable ? GPIO_MATRIX_CONST_ONE_INPUT : GPIO_MATRIX_CONST_ZERO_INPUT, USB_OTG11_VBUSVALID_PAD_IN_IDX, 0);
+    esp_rom_gpio_connect_in_signal(enable ? GPIO_MATRIX_CONST_ONE_INPUT : GPIO_MATRIX_CONST_ZERO_INPUT, USB_SRP_BVALID_PAD_IN_IDX, 0);
+    esp_rom_gpio_connect_in_signal(enable ? GPIO_MATRIX_CONST_ONE_INPUT : GPIO_MATRIX_CONST_ZERO_INPUT, USB_SRP_SESSEND_PAD_IN_IDX, 1);
+    return;
+}
+#endif
 
 /* Handler to upload a file onto the server */
 static esp_err_t upload_post_handler(httpd_req_t *req)
@@ -416,6 +436,10 @@ static esp_err_t upload_post_handler(httpd_req_t *req)
     httpd_resp_set_status(req, "303 See Other");
     httpd_resp_set_hdr(req, "Location", "/");
     httpd_resp_sendstr(req, "File uploaded successfully");
+
+    usbd_vbus_enable(false);
+    vTaskDelay(20 / portTICK_PERIOD_MS);
+    usbd_vbus_enable(true);
     return ESP_OK;
 }
 
@@ -457,6 +481,52 @@ static esp_err_t delete_post_handler(httpd_req_t *req)
     httpd_resp_set_status(req, "303 See Other");
     httpd_resp_set_hdr(req, "Location", "/");
     httpd_resp_sendstr(req, "File deleted successfully");
+
+    usbd_vbus_enable(false);
+    vTaskDelay(20 / portTICK_PERIOD_MS);
+    usbd_vbus_enable(true);
+    return ESP_OK;
+}
+
+extern esp_err_t app_wifi_set_wifi(char * mode, char *ap_ssid, char *ap_passwd, char *sta_ssid, char *sta_passwd);
+
+/* Handler to set a setting from the server */
+static esp_err_t setting_get_handler(httpd_req_t *req)
+{
+    char query[160];
+    char mode[16], ap_ssid[32], ap_passwd[32], sta_ssid[32], sta_passwd[32];
+
+    if (httpd_req_get_url_query_str(req, query, sizeof(query)) == ESP_OK) {
+        ESP_LOGI(TAG, "Query: %s", query);
+
+        if (httpd_query_key_value(query, "wifimode", mode, sizeof(mode)) == ESP_OK) {
+            ESP_LOGI(TAG, "WIFI Mode: %s", mode);
+        }
+
+        if (httpd_query_key_value(query, "apssid", ap_ssid, sizeof(ap_ssid)) == ESP_OK) {
+            ESP_LOGI(TAG, "AP SSID: %s", ap_ssid);
+        }
+
+        if (httpd_query_key_value(query, "appassword", ap_passwd, sizeof(ap_passwd)) == ESP_OK) {
+            ESP_LOGI(TAG, "AP password: %s", ap_passwd);
+        }
+
+        if (httpd_query_key_value(query, "stassid", sta_ssid, sizeof(sta_ssid)) == ESP_OK) {
+            ESP_LOGI(TAG, "STA SSID: %s", sta_ssid);
+        }
+
+        if (httpd_query_key_value(query, "stapassword", sta_passwd, sizeof(sta_passwd)) == ESP_OK) {
+            ESP_LOGI(TAG, "STA password: %s", sta_passwd);
+        }
+
+        app_wifi_set_wifi(mode, ap_ssid, ap_passwd, sta_ssid, sta_passwd);
+    } else {
+        return settings_page_get_handler(req);
+    }
+
+    httpd_resp_send(req, "Settings updated! Please reconnect!", HTTPD_RESP_USE_STRLEN);
+    // Reset to configured wifi mode
+    esp_restart();
     return ESP_OK;
 }
 
@@ -498,6 +568,15 @@ esp_err_t start_file_server(const char *base_path)
         ESP_LOGE(TAG, "Failed to start file server!");
         return ESP_FAIL;
     }
+
+    /* URI handler for set a setting from server */
+    httpd_uri_t setting = {
+        .uri       = "/settings.html*",   // Match all URIs of type /delete/path/to/file
+        .method    = HTTP_GET,
+        .handler   = setting_get_handler,
+        .user_ctx  = server_data    // Pass server data as context
+    };
+    httpd_register_uri_handler(server, &setting);
 
     /* URI handler for getting uploaded files */
     httpd_uri_t file_download = {

@@ -6,10 +6,10 @@ Using ESP32-Sx as a USB Disk with Wireless accessibility. HTTP file server be us
 
 ### Hardware
 
-- Board：ESP32-S3-USB-OTG, or any ESP32-Sx board 
+- Board：ESP32-S3-USB-OTG, or any ESP32-Sx board
 - MCU：ESP32-S2, ESP32-S3
 - Flash：4MB NOR Flash
-- Hardware Connection： 
+- Hardware Connection：
   - GPIO19 to D-
   - GPIO20 to D+
   - SDCard IO varies from boards, you can defined your own in code.
@@ -34,8 +34,8 @@ Note: If you are a self-powered device, please check [Self-Powered Device](https
 
 * You can config wi-fi AP ssid and password in `menuconfig → USB MSC Device Demo → Wi-Fi Settings`, to change the esp32-sx hotspot name.
 * You can set wi-fi STA ssid and password also, to make esp32-sx connect to a router at the same time.
+* You can also configure Wi-Fi settings through the `settings` page on the web interface.
 
 ### Known Issues
 
-1. Files uploaded through web can not be aware by host , so Windows  `files resource manager` can not update the files list automatically. Please remount the disk to update the files list (弹出重新加载) . This bug will be fixed later.
-2. Files added or removed through USB disk, sometimes can not be found by web refresh.
+* After deleting or adding files through USB disk, please refresh the web interface.
