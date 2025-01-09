@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.5.0 - 2024-12-25
+
+### Enhancements:
+
+* Remove linear dimming, default to enabling curve dimming for all. 
+
 ## v1.4.0 - 2024-11-15
 
 ### Enhancements:
@@ -16,7 +22,7 @@
 
 ### Enhancements:
 
-* Added cct range check in precision mode
+* Added CCT range check in precision mode
 
 ## v1.3.1 - 2024-08-28
 
@@ -75,7 +81,7 @@
 ### Enhancements:
 
 * Added the conversion function of IIC current values to the enumeration values required by the driver.
-* Added driver layer parameter checking macro and allowed to configure the detail level of the output log through menuconfig.
+* Added driver layer parameter checking macro and allowed configuring the detail level of the output log through menuconfig.
 
 ## v1.0.0 - 2024-01-16
 

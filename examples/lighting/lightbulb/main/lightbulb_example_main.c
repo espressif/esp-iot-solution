@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: CC0-1.0
  */
@@ -13,10 +13,12 @@
 const char *TAG = "lightbulb demo";
 
 //Based on PWM test 5ch (rgbcw)
+#define TEST_PWM_RGBCW_LIGHTBULB      1
 #define PWM_C_GPIO                      5
 #define PWM_W_GPIO                      4
 
 //Based on BP5758D test 5ch (rgbww)
+#define TEST_IIC_RGBWW_LIGHTBULB      1
 #define MIX_TABLE_SIZE                  15
 lightbulb_cct_mapping_data_t table[MIX_TABLE_SIZE] = {
     {.cct_kelvin = 2200, .cct_percentage = 0, .rgbcw = {0.547, 0.0, 0.0, 0.0, 0.453}},
@@ -71,6 +73,12 @@ lightbulb_power_limit_t limit = {
     .white_max_power = 100,
     .white_max_brightness = 100,
     .white_min_brightness = 10
+};
+
+lightbulb_gamma_config_t Gamma = {
+    .balance_coefficient = {1.0, 1.0, 1.0, 1.0, 1.0},
+    .color_curve_coefficient = 2.0,
+    .white_curve_coefficient = 2.0,
 };
 
 void app_main(void)
@@ -139,18 +147,18 @@ void app_main(void)
         .external_limit = &limit,
 
         //5. Gamma param
-        .gamma_conf = NULL,
+        .gamma_conf = &Gamma,
 
         //6. Mix table config (optional)
 #ifdef CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_BP5758D
         .color_mix_mode.precise.table = color_data,
         .color_mix_mode.precise.table_size = COLOR_SZIE,
-        .capability.enable_precise_color_control = 0,
+        .capability.enable_precise_color_control = 1,
 #endif
 #if CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_BP5758D && TEST_IIC_RGBWW_LIGHTBULB
         .cct_mix_mode.precise.table_size = MIX_TABLE_SIZE,
         .cct_mix_mode.precise.table = table,
-        .capability.enable_precise_cct_control = 0,
+        .capability.enable_precise_cct_control = 1,
 #else
         .cct_mix_mode.standard.kelvin_max = 6500,
         .cct_mix_mode.standard.kelvin_min = 2200,

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -100,10 +100,7 @@ typedef struct {
     hal_obj_t *interface;
     int s_err_count;
     bool use_hw_fade;
-    bool linear_use_curve_table;
-    // index 0: curve table
-    // index 1: linear table
-    uint16_t *table_group[2];
+    uint16_t *table_group;
     // R G B C W
     float balance_coefficient[5];
     SemaphoreHandle_t fade_mutex;
@@ -252,7 +249,7 @@ static float final_processing(uint8_t channel, uint16_t src_value)
     return s_hal_obj->balance_coefficient[channel] * src_value;
 }
 
-static esp_err_t gamma_table_create(uint16_t *output_gamma_table, uint16_t table_size, float gamma_curve_coefficient, int32_t grayscale_level)
+esp_err_t hal_gamma_table_create(uint16_t *output_gamma_table, uint16_t table_size, float gamma_curve_coefficient, int32_t grayscale_level)
 {
     float value_tmp = 0;
 
@@ -290,13 +287,9 @@ static void force_stop_all_ch(void)
 
 static void cleanup(void)
 {
-    if (s_hal_obj->table_group[0]) {
-        free(s_hal_obj->table_group[0]);
-        s_hal_obj->table_group[0] = NULL;
-    }
-    if (s_hal_obj->table_group[1]) {
-        free(s_hal_obj->table_group[1]);
-        s_hal_obj->table_group[1] = NULL;
+    if (s_hal_obj->table_group) {
+        free(s_hal_obj->table_group);
+        s_hal_obj->table_group = NULL;
     }
     if (s_hal_obj->fade_mutex) {
         vSemaphoreDelete(s_hal_obj->fade_mutex);
@@ -493,38 +486,34 @@ esp_err_t hal_output_init(hal_config_t *config, lightbulb_gamma_config_t *gamma,
     err = s_hal_obj->interface->init(config->driver_data, driver_default_hook_func);
     LIGHTBULB_CHECK(err == ESP_OK, "driver init fail", goto EXIT);
 
-    s_hal_obj->table_group[0] = calloc(s_hal_obj->interface->driver_grayscale_level, sizeof(uint16_t));
-    LIGHTBULB_CHECK(s_hal_obj->table_group[0], "curve table buffer alloc fail", goto EXIT);
+    /**
+     * @brief Differential configuration for different chips
+     *
+     */
+    int table_size = s_hal_obj->interface->driver_grayscale_level;
+    if (s_hal_obj->interface->type == DRIVER_ESP_PWM) {
+#if CONFIG_PWM_ENABLE_HW_FADE
+        s_hal_obj->use_hw_fade = true;
+#endif
+        // PWM
+        // 10bit: 0~1024, size: 1024 + 1
+        table_size += 1;
 
-    float curve_coe = gamma ? gamma->curve_coefficient : DEFAULT_CURVE_COE;
-    float linear_coe = 1.0;
-
-    gamma_table_create(s_hal_obj->table_group[0], s_hal_obj->interface->driver_grayscale_level, curve_coe, s_hal_obj->interface->driver_grayscale_level);
-    s_hal_obj->table_group[0][s_hal_obj->interface->driver_grayscale_level - 1] = s_hal_obj->interface->hardware_allow_max_input_value;
-
-    if (linear_coe == curve_coe) {
-        s_hal_obj->linear_use_curve_table = true;
-    } else {
-        s_hal_obj->table_group[1] = calloc(s_hal_obj->interface->driver_grayscale_level, sizeof(uint16_t));
-        LIGHTBULB_CHECK(s_hal_obj->table_group[1], "linear table buffer alloc fail", goto EXIT);
-        gamma_table_create(s_hal_obj->table_group[1], s_hal_obj->interface->driver_grayscale_level, linear_coe, s_hal_obj->interface->driver_grayscale_level);
-        s_hal_obj->table_group[1][s_hal_obj->interface->driver_grayscale_level - 1] = s_hal_obj->interface->hardware_allow_max_input_value;
+        // I2C Chip
+        // 10bit: 0~1023, size: 1024
     }
+
+    s_hal_obj->table_group = calloc(table_size, sizeof(uint16_t));
+    LIGHTBULB_CHECK(s_hal_obj->table_group, "curve table buffer alloc fail", goto EXIT);
+
+    //Currently only used as a mapping table, it will be used for fade to achieve curve sliding changes in the future
+    float curve_coe = DEFAULT_CURVE_COE;
+    hal_gamma_table_create(s_hal_obj->table_group, table_size, curve_coe, s_hal_obj->interface->hardware_allow_max_input_value);
 
     for (int i = 0; i < 5; i++) {
         float balance = gamma ? gamma->balance_coefficient[i] : 1.0;
         LIGHTBULB_CHECK(balance >= 0.0 && balance <= 1.0, "balance data error", goto EXIT);
         s_hal_obj->balance_coefficient[i] = balance;
-    }
-
-    /**
-     * @brief Differential configuration for different chips
-     *
-     */
-    if (s_hal_obj->interface->type == DRIVER_ESP_PWM) {
-#if CONFIG_PWM_ENABLE_HW_FADE
-        s_hal_obj->use_hw_fade = true;
-#endif
     }
 
 #ifdef FADE_TICKS_FROM_GPTIMER
@@ -1052,21 +1041,7 @@ esp_err_t hal_get_curve_table_value(uint16_t input, uint16_t *output)
     LIGHTBULB_CHECK(s_hal_obj, "init() must be called first", return ESP_ERR_INVALID_STATE);
     LIGHTBULB_CHECK(output, "out_data is null", return ESP_ERR_INVALID_STATE);
 
-    *output = s_hal_obj->table_group[0][input];
-
-    return ESP_OK;
-}
-
-esp_err_t hal_get_linear_table_value(uint16_t input, uint16_t *output)
-{
-    LIGHTBULB_CHECK(s_hal_obj, "init() must be called first", return ESP_ERR_INVALID_STATE);
-    LIGHTBULB_CHECK(output, "out_data is null", return ESP_ERR_INVALID_STATE);
-
-    if (s_hal_obj->linear_use_curve_table) {
-        *output = s_hal_obj->table_group[0][input];
-    } else {
-        *output = s_hal_obj->table_group[1][input];
-    }
+    *output = s_hal_obj->table_group[input];
 
     return ESP_OK;
 }
