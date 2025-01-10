@@ -241,6 +241,14 @@ build_example_bluetooth_ble_services_ble_tps:
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_services/ble_tps
 
+build_example_bluetooth_ble_services_ble_ots:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_bluetooth_ble_services
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: examples/bluetooth/ble_services/ble_ots
+
 build_example_bluetooth_ble_services_ble_uds:
   extends:
     - .build_examples_template

@@ -436,6 +436,7 @@
   - "components/bluetooth/ble_services/dis/include/esp_dis.h"
   - "components/bluetooth/ble_services/hrs/include/esp_hrs.h"
   - "components/bluetooth/ble_services/hts/include/esp_hts.h"
+  - "components/bluetooth/ble_services/ots/include/esp_ots.h"
   - "components/bluetooth/ble_services/tps/include/esp_tps.h"
   - "components/bluetooth/ble_services/uds/include/esp_uds.h"
   - "components/bluetooth/ble_services/wss/include/esp_wss.h"

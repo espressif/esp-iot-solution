@@ -1,21 +1,15 @@
 | Supported Targets | ESP32 | ESP32-C3 | ESP32-C2 | ESP32-S3 | ESP32-H2 |
 | ----------------- | ----- | -------- | -------- | -------- | -------- |
 
-# BLE User Data Service Example
+# BLE Object Transfer Service Example
 
 (See the README.md file in the upper level 'examples' directory for more information about examples.)
 
-This example creates a GATT server and starts advertising, waiting to be connected by a GATT client.
+This example creates a GATT server implementing the BLE Object Transfer Service (OTS) and starts advertising, waiting to be connected by a GATT client.
 
-The device information service exposes manufacturer and/or vendor information about a device.
+It demonstrates BLE connection management and OTS-related GATT procedures.
 
-It uses Bluetooth controller based on BLE connection management.
-
-This example aims at understanding BLE user data service and BLE connection management APIs.
-
-To test this demo, any BLE scanner app can be used.
-
-## How to Use Example
+This example focuses on testing basic OTS service communication functionality. A generic BLE scanner app can be used for basic discovery and connection testing. Note that this example demonstrates fundamental OTS GATT procedures and does not implement full OTS functionality such as object operations (create, delete, read, write), OACP (Object Action Control Point) and OLCP (Object List Control Point) procedures, or metadata handling.
 
 Before project configuration and build, be sure to set the correct chip target using:
 
@@ -25,7 +19,7 @@ idf.py set-target <chip_name>
 
 ### Hardware Required
 
-* A development board with ESP32/ESP32-C3/ESP32-C2/ESP32-S3 SoC
+* A development board with ESP32/ESP32-C3/ESP32-C2/ESP32-S3/ESP32-H2 SoC
 * A USB cable for Power supply and programming
 
 See [Development Boards](https://www.espressif.com/en/products/devkits) for more information about it.
@@ -40,11 +34,11 @@ idf.py menuconfig
 
 In the `Example Configuration` menu:
 
-* Select advertisement name of device from `Example Configuration --> Advertisement name`, default is `BLE_UDS`.
+* Select advertisement name of device from `Example Configuration --> Advertisement name`, default is `BLE_OTS`.
 
 In the `BLE Standard Services` menu:
 
-* Select the optional functions of device from `GATT User Data Service`, default is disable.
+* Configure OTS options in `BLE Standard Services --> GATT Object Transfer Service` (enabled by default via sdkconfig.defaults).
 
 ### Build and Flash
 
@@ -60,7 +54,7 @@ See the [Getting Started Guide](https://idf.espressif.com/) for full steps to co
 
 ## Example Output
 
-There is this console output when the device is connected and characteristic is read:
+Sample console output after boot and advertising starts:
 
 ```
 I (330) BLE_INIT: BT controller compile version [9359a4d]
