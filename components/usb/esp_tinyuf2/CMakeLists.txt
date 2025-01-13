@@ -39,7 +39,7 @@ idf_component_register(
                     PRIV_REQUIRES usb nvs_flash vfs esp_ringbuf esp_pm)
 
 if(NOT CONFIG_TINYUSB_SOURCE_CODE_ONLY)
-message(FATAL_ERROR "Please disable 'Build tinyusb as a static library' in menuconfig 'TinyUSB soucre'")
+message(FATAL_ERROR "Please disable 'Build tinyusb as a static library' in menuconfig 'TinyUSB source'")
 endif()
 
 target_compile_options(${COMPONENT_LIB} PUBLIC
