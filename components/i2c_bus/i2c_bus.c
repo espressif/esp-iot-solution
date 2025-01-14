@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -13,9 +13,12 @@
 
 #include "esp_log.h"
 #include "i2c_bus.h"
+#if CONFIG_I2C_BUS_SUPPORT_SOFTWARE
+#include "i2c_bus_soft.h"
+#endif
 
-#define I2C_ACK_CHECK_EN 0x1     /*!< I2C master will check ack from slave*/
-#define I2C_ACK_CHECK_DIS 0x0     /*!< I2C master will not check ack from slave */
+#define I2C_ACK_CHECK_EN 0x1                       /*!< I2C master will check ack from slave*/
+#define I2C_ACK_CHECK_DIS 0x0                      /*!< I2C master will not check ack from slave */
 #define I2C_BUS_FLG_DEFAULT (0)
 #define I2C_BUS_MASTER_BUF_LEN (0)
 #define I2C_BUS_MS_TO_WAIT CONFIG_I2C_MS_TO_WAIT
@@ -23,21 +26,29 @@
 #define I2C_BUS_MUTEX_TICKS_TO_WAIT (I2C_BUS_MS_TO_WAIT/portTICK_RATE_MS)
 
 typedef struct {
-    i2c_port_t i2c_port;    /*!<I2C port number */
-    bool is_init;   /*if bus is initialized*/
-    i2c_config_t conf_active;    /*!<I2C active configuration */
-    SemaphoreHandle_t mutex;    /* mutex to achieve thread-safe*/
-    int32_t ref_counter;    /*reference count*/
+    i2c_port_t i2c_port;                           /*!< I2C port number */
+    bool is_init;                                  /*!< if bus is initialized */
+    i2c_config_t conf_active;                      /*!< I2C active configuration */
+    SemaphoreHandle_t mutex;                       /*!< mutex to achieve thread-safe */
+    int32_t ref_counter;                           /*!< reference count */
+#if CONFIG_I2C_BUS_SUPPORT_SOFTWARE
+    i2c_master_soft_bus_handle_t soft_bus_handle;  /*!< I2C master soft bus handle */
+#endif
 } i2c_bus_t;
 
 typedef struct {
-    uint8_t dev_addr;   /*device address*/
-    i2c_config_t conf;    /*!<I2C active configuration */
-    i2c_bus_t *i2c_bus;    /*!<I2C bus*/
+    uint8_t dev_addr;                              /*!< device address */
+    i2c_config_t conf;                             /*!< I2C active configuration */
+    i2c_bus_t *i2c_bus;                            /*!< I2C bus */
 } i2c_bus_device_t;
 
 static const char *TAG = "i2c_bus";
+
+#if CONFIG_I2C_BUS_SUPPORT_SOFTWARE
+static i2c_bus_t s_i2c_bus[I2C_NUM_SW_MAX];                                                             /*!< If software I2C is enabled, additional space is required to store the port. */
+#else
 static i2c_bus_t s_i2c_bus[I2C_NUM_MAX];
+#endif
 
 #define I2C_BUS_CHECK(a, str, ret) if(!(a)) { \
         ESP_LOGE(TAG,"%s:%d (%s):%s", __FILE__, __LINE__, __FUNCTION__, str); \
@@ -78,14 +89,18 @@ inline static bool i2c_config_compare(i2c_port_t port, const i2c_config_t *conf)
 
 i2c_bus_handle_t i2c_bus_create(i2c_port_t port, const i2c_config_t *conf)
 {
+#if CONFIG_I2C_BUS_SUPPORT_SOFTWARE
+    I2C_BUS_CHECK(((i2c_sw_port_t)port < I2C_NUM_SW_MAX) || (port == I2C_NUM_MAX), "I2C port error", NULL);
+#else
     I2C_BUS_CHECK(port < I2C_NUM_MAX, "I2C port error", NULL);
+#endif
     I2C_BUS_CHECK(conf != NULL, "pointer = NULL error", NULL);
     I2C_BUS_CHECK(conf->mode == I2C_MODE_MASTER, "i2c_bus only supports master mode", NULL);
 
     if (s_i2c_bus[port].is_init) {
         /**if i2c_bus has been inited and configs not changed, return the handle directly**/
         if (i2c_config_compare(port, conf)) {
-            ESP_LOGW(TAG, "i2c%d has been inited, return handle directly, ref_counter=%"PRIu32"", port, s_i2c_bus[port].ref_counter);
+            ESP_LOGW(TAG, "i2c%d has been inited, return handle directly, ref_counter=%"PRIi32"", port, s_i2c_bus[port].ref_counter);
             return (i2c_bus_handle_t)&s_i2c_bus[port];
         }
     } else {
@@ -111,7 +126,7 @@ esp_err_t i2c_bus_delete(i2c_bus_handle_t *p_bus)
 
     /** if ref_counter == 0, de-init the bus**/
     if ((i2c_bus->ref_counter) > 0) {
-        ESP_LOGW(TAG, "i2c%d is also handled by others ref_counter=%"PRIu32", won't be de-inited", i2c_bus->i2c_port, i2c_bus->ref_counter);
+        ESP_LOGW(TAG, "i2c%d is also handled by others ref_counter=%"PRIi32", won't be de-inited", i2c_bus->i2c_port, i2c_bus->ref_counter);
         return ESP_OK;
     }
 
@@ -128,14 +143,22 @@ uint8_t i2c_bus_scan(i2c_bus_handle_t bus_handle, uint8_t *buf, uint8_t num)
     i2c_bus_t *i2c_bus = (i2c_bus_t *)bus_handle;
     I2C_BUS_INIT_CHECK(i2c_bus->is_init, 0);
     uint8_t device_count = 0;
+    esp_err_t ret = ESP_FAIL;
     I2C_BUS_MUTEX_TAKE_MAX_DELAY(i2c_bus->mutex, 0);
-    for (uint8_t dev_address = 1; dev_address < 127; dev_address++) {
-        i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-        i2c_master_start(cmd);
-        i2c_master_write_byte(cmd, (dev_address << 1) | I2C_MASTER_WRITE, I2C_ACK_CHECK_EN);
-        i2c_master_stop(cmd);
-        esp_err_t ret = i2c_master_cmd_begin(i2c_bus->i2c_port, cmd, I2C_BUS_TICKS_TO_WAIT);
 
+    for (uint8_t dev_address = 1; dev_address < 127; dev_address++) {
+#if CONFIG_I2C_BUS_SUPPORT_SOFTWARE
+        if (i2c_bus->i2c_port > I2C_NUM_MAX) {
+            ret  = i2c_master_soft_bus_probe(i2c_bus->soft_bus_handle, dev_address);
+        } else
+#endif
+        {
+            i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+            i2c_master_start(cmd);
+            i2c_master_write_byte(cmd, (dev_address << 1) | I2C_MASTER_WRITE, I2C_ACK_CHECK_EN);
+            i2c_master_stop(cmd);
+            ret = i2c_master_cmd_begin(i2c_bus->i2c_port, cmd, I2C_BUS_TICKS_TO_WAIT);
+        }
         if (ret == ESP_OK) {
             ESP_LOGI(TAG, "found i2c device address = 0x%02x", dev_address);
             if (buf != NULL && device_count < num) {
@@ -143,8 +166,6 @@ uint8_t i2c_bus_scan(i2c_bus_handle_t bus_handle, uint8_t *buf, uint8_t num)
             }
             device_count++;
         }
-
-        i2c_cmd_link_delete(cmd);
     }
     I2C_BUS_MUTEX_GIVE(i2c_bus->mutex, 0);
     return device_count;
@@ -332,22 +353,31 @@ static esp_err_t i2c_bus_read_reg8(i2c_bus_device_handle_t dev_handle, uint8_t m
     I2C_BUS_CHECK(dev_handle != NULL, "device handle error", ESP_ERR_INVALID_ARG);
     I2C_BUS_CHECK(data != NULL, "data pointer error", ESP_ERR_INVALID_ARG);
     i2c_bus_device_t *i2c_device = (i2c_bus_device_t *)dev_handle;
+    esp_err_t ret = ESP_FAIL;
     I2C_BUS_INIT_CHECK(i2c_device->i2c_bus->is_init, ESP_ERR_INVALID_STATE);
     I2C_BUS_MUTEX_TAKE(i2c_device->i2c_bus->mutex, ESP_ERR_TIMEOUT);
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
 
-    if (mem_address != NULL_I2C_MEM_ADDR) {
+#if CONFIG_I2C_BUS_SUPPORT_SOFTWARE
+    if (i2c_device->i2c_bus->i2c_port > I2C_NUM_MAX) {
+        ret = i2c_master_soft_bus_change_frequency(i2c_device->i2c_bus->soft_bus_handle, i2c_device->conf.master.clk_speed);
+        ret = i2c_master_soft_bus_read_reg8(i2c_device->i2c_bus->soft_bus_handle, i2c_device->dev_addr, mem_address, data_len, data);
+    } else
+#endif
+    {
+        i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+        if (mem_address != NULL_I2C_MEM_ADDR) {
+            i2c_master_start(cmd);
+            i2c_master_write_byte(cmd, (i2c_device->dev_addr << 1) | I2C_MASTER_WRITE, I2C_ACK_CHECK_EN);
+            i2c_master_write_byte(cmd, mem_address, I2C_ACK_CHECK_EN);
+        }
+
         i2c_master_start(cmd);
-        i2c_master_write_byte(cmd, (i2c_device->dev_addr << 1) | I2C_MASTER_WRITE, I2C_ACK_CHECK_EN);
-        i2c_master_write_byte(cmd, mem_address, I2C_ACK_CHECK_EN);
+        i2c_master_write_byte(cmd, (i2c_device->dev_addr << 1) | I2C_MASTER_READ, I2C_ACK_CHECK_EN);
+        i2c_master_read(cmd, data, data_len, I2C_MASTER_LAST_NACK);
+        i2c_master_stop(cmd);
+        ret = i2c_master_cmd_begin_with_conf(i2c_device->i2c_bus->i2c_port, cmd, I2C_BUS_TICKS_TO_WAIT, &i2c_device->conf);
+        i2c_cmd_link_delete(cmd);
     }
-
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (i2c_device->dev_addr << 1) | I2C_MASTER_READ, I2C_ACK_CHECK_EN);
-    i2c_master_read(cmd, data, data_len, I2C_MASTER_LAST_NACK);
-    i2c_master_stop(cmd);
-    esp_err_t ret = i2c_master_cmd_begin_with_conf(i2c_device->i2c_bus->i2c_port, cmd, I2C_BUS_TICKS_TO_WAIT, &i2c_device->conf);
-    i2c_cmd_link_delete(cmd);
     I2C_BUS_MUTEX_GIVE(i2c_device->i2c_bus->mutex, ESP_FAIL);
     return ret;
 }
@@ -359,23 +389,31 @@ esp_err_t i2c_bus_read_reg16(i2c_bus_device_handle_t dev_handle, uint16_t mem_ad
     i2c_bus_device_t *i2c_device = (i2c_bus_device_t *)dev_handle;
     I2C_BUS_INIT_CHECK(i2c_device->i2c_bus->is_init, ESP_ERR_INVALID_STATE);
     uint8_t memAddress8[2];
+    esp_err_t ret = ESP_OK;
     memAddress8[0] = (uint8_t)((mem_address >> 8) & 0x00FF);
     memAddress8[1] = (uint8_t)(mem_address & 0x00FF);
     I2C_BUS_MUTEX_TAKE(i2c_device->i2c_bus->mutex, ESP_ERR_TIMEOUT);
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
 
-    if (mem_address != NULL_I2C_MEM_16BIT_ADDR) {
+#if CONFIG_I2C_BUS_SUPPORT_SOFTWARE
+    if (i2c_device->i2c_bus->i2c_port > I2C_NUM_MAX) {
+        ret = i2c_master_soft_bus_change_frequency(i2c_device->i2c_bus->soft_bus_handle, i2c_device->conf.master.clk_speed);
+        ret = i2c_master_soft_bus_read_reg16(i2c_device->i2c_bus->soft_bus_handle, i2c_device->dev_addr, mem_address, data_len, data);
+    } else
+#endif
+    {
+        i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+        if (mem_address != NULL_I2C_MEM_16BIT_ADDR) {
+            i2c_master_start(cmd);
+            i2c_master_write_byte(cmd, (i2c_device->dev_addr << 1) | I2C_MASTER_WRITE, I2C_ACK_CHECK_EN);
+            i2c_master_write(cmd, memAddress8, 2, I2C_ACK_CHECK_EN);
+        }
         i2c_master_start(cmd);
-        i2c_master_write_byte(cmd, (i2c_device->dev_addr << 1) | I2C_MASTER_WRITE, I2C_ACK_CHECK_EN);
-        i2c_master_write(cmd, memAddress8, 2, I2C_ACK_CHECK_EN);
+        i2c_master_write_byte(cmd, (i2c_device->dev_addr << 1) | I2C_MASTER_READ, I2C_ACK_CHECK_EN);
+        i2c_master_read(cmd, data, data_len, I2C_MASTER_LAST_NACK);
+        i2c_master_stop(cmd);
+        ret = i2c_master_cmd_begin_with_conf(i2c_device->i2c_bus->i2c_port, cmd, I2C_BUS_TICKS_TO_WAIT, &i2c_device->conf);
+        i2c_cmd_link_delete(cmd);
     }
-
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (i2c_device->dev_addr << 1) | I2C_MASTER_READ, I2C_ACK_CHECK_EN);
-    i2c_master_read(cmd, data, data_len, I2C_MASTER_LAST_NACK);
-    i2c_master_stop(cmd);
-    esp_err_t ret = i2c_master_cmd_begin_with_conf(i2c_device->i2c_bus->i2c_port, cmd, I2C_BUS_TICKS_TO_WAIT, &i2c_device->conf);
-    i2c_cmd_link_delete(cmd);
     I2C_BUS_MUTEX_GIVE(i2c_device->i2c_bus->mutex, ESP_FAIL);
     return ret;
 }
@@ -385,20 +423,28 @@ static esp_err_t i2c_bus_write_reg8(i2c_bus_device_handle_t dev_handle, uint8_t 
     I2C_BUS_CHECK(dev_handle != NULL, "device handle error", ESP_ERR_INVALID_ARG);
     I2C_BUS_CHECK(data != NULL, "data pointer error", ESP_ERR_INVALID_ARG);
     i2c_bus_device_t *i2c_device = (i2c_bus_device_t *)dev_handle;
+    esp_err_t ret = ESP_OK;
     I2C_BUS_INIT_CHECK(i2c_device->i2c_bus->is_init, ESP_ERR_INVALID_STATE);
     I2C_BUS_MUTEX_TAKE(i2c_device->i2c_bus->mutex, ESP_ERR_TIMEOUT);
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (i2c_device->dev_addr << 1) | I2C_MASTER_WRITE, I2C_ACK_CHECK_EN);
 
-    if (mem_address != NULL_I2C_MEM_ADDR) {
-        i2c_master_write_byte(cmd, mem_address, I2C_ACK_CHECK_EN);
+#if CONFIG_I2C_BUS_SUPPORT_SOFTWARE
+    if (i2c_device->i2c_bus->i2c_port > I2C_NUM_MAX) {
+        ret = i2c_master_soft_bus_change_frequency(i2c_device->i2c_bus->soft_bus_handle, i2c_device->conf.master.clk_speed);
+        ret = i2c_master_soft_bus_write_reg8(i2c_device->i2c_bus->soft_bus_handle, i2c_device->dev_addr, mem_address, data_len, data);
+    } else
+#endif
+    {
+        i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+        i2c_master_start(cmd);
+        i2c_master_write_byte(cmd, (i2c_device->dev_addr << 1) | I2C_MASTER_WRITE, I2C_ACK_CHECK_EN);
+        if (mem_address != NULL_I2C_MEM_ADDR) {
+            i2c_master_write_byte(cmd, mem_address, I2C_ACK_CHECK_EN);
+        }
+        i2c_master_write(cmd, (uint8_t *)data, data_len, I2C_ACK_CHECK_EN);
+        i2c_master_stop(cmd);
+        ret = i2c_master_cmd_begin_with_conf(i2c_device->i2c_bus->i2c_port, cmd, I2C_BUS_TICKS_TO_WAIT, &i2c_device->conf);
+        i2c_cmd_link_delete(cmd);
     }
-
-    i2c_master_write(cmd, (uint8_t *)data, data_len, I2C_ACK_CHECK_EN);
-    i2c_master_stop(cmd);
-    esp_err_t ret = i2c_master_cmd_begin_with_conf(i2c_device->i2c_bus->i2c_port, cmd, I2C_BUS_TICKS_TO_WAIT, &i2c_device->conf);
-    i2c_cmd_link_delete(cmd);
     I2C_BUS_MUTEX_GIVE(i2c_device->i2c_bus->mutex, ESP_FAIL);
     return ret;
 }
@@ -410,21 +456,31 @@ esp_err_t i2c_bus_write_reg16(i2c_bus_device_handle_t dev_handle, uint16_t mem_a
     i2c_bus_device_t *i2c_device = (i2c_bus_device_t *)dev_handle;
     I2C_BUS_INIT_CHECK(i2c_device->i2c_bus->is_init, ESP_ERR_INVALID_STATE);
     uint8_t memAddress8[2];
+    esp_err_t ret = ESP_OK;
     memAddress8[0] = (uint8_t)((mem_address >> 8) & 0x00FF);
     memAddress8[1] = (uint8_t)(mem_address & 0x00FF);
     I2C_BUS_MUTEX_TAKE(i2c_device->i2c_bus->mutex, ESP_ERR_TIMEOUT);
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (i2c_device->dev_addr << 1) | I2C_MASTER_WRITE, I2C_ACK_CHECK_EN);
 
-    if (mem_address != NULL_I2C_MEM_16BIT_ADDR) {
-        i2c_master_write(cmd, memAddress8, 2, I2C_ACK_CHECK_EN);
+#if CONFIG_I2C_BUS_SUPPORT_SOFTWARE
+    if (i2c_device->i2c_bus->i2c_port > I2C_NUM_MAX) {
+        ret = i2c_master_soft_bus_change_frequency(i2c_device->i2c_bus->soft_bus_handle, i2c_device->conf.master.clk_speed);
+        ret = i2c_master_soft_bus_write_reg16(i2c_device->i2c_bus->soft_bus_handle, i2c_device->dev_addr, mem_address, data_len, data);
+    } else
+#endif
+    {
+        i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+        i2c_master_start(cmd);
+        i2c_master_write_byte(cmd, (i2c_device->dev_addr << 1) | I2C_MASTER_WRITE, I2C_ACK_CHECK_EN);
+
+        if (mem_address != NULL_I2C_MEM_16BIT_ADDR) {
+            i2c_master_write(cmd, memAddress8, 2, I2C_ACK_CHECK_EN);
+        }
+
+        i2c_master_write(cmd, (uint8_t *)data, data_len, I2C_ACK_CHECK_EN);
+        i2c_master_stop(cmd);
+        ret = i2c_master_cmd_begin_with_conf(i2c_device->i2c_bus->i2c_port, cmd, I2C_BUS_TICKS_TO_WAIT, &i2c_device->conf);
+        i2c_cmd_link_delete(cmd);
     }
-
-    i2c_master_write(cmd, (uint8_t *)data, data_len, I2C_ACK_CHECK_EN);
-    i2c_master_stop(cmd);
-    esp_err_t ret = i2c_master_cmd_begin_with_conf(i2c_device->i2c_bus->i2c_port, cmd, I2C_BUS_TICKS_TO_WAIT, &i2c_device->conf);
-    i2c_cmd_link_delete(cmd);
     I2C_BUS_MUTEX_GIVE(i2c_device->i2c_bus->mutex, ESP_FAIL);
     return ret;
 }
@@ -432,19 +488,39 @@ esp_err_t i2c_bus_write_reg16(i2c_bus_device_handle_t dev_handle, uint16_t mem_a
 /**************************************** Private Functions*********************************************/
 static esp_err_t i2c_driver_reinit(i2c_port_t port, const i2c_config_t *conf)
 {
+#if CONFIG_I2C_BUS_SUPPORT_SOFTWARE
+    I2C_BUS_CHECK(((i2c_sw_port_t)port < I2C_NUM_SW_MAX) || (port == I2C_NUM_MAX), "I2C port error", ESP_ERR_INVALID_ARG);
+#else
     I2C_BUS_CHECK(port < I2C_NUM_MAX, "i2c port error", ESP_ERR_INVALID_ARG);
+#endif
     I2C_BUS_CHECK(conf != NULL, "pointer = NULL error", ESP_ERR_INVALID_ARG);
+    esp_err_t ret = ESP_OK;
 
     if (s_i2c_bus[port].is_init) {
-        i2c_driver_delete(port);
+#if CONFIG_I2C_BUS_SUPPORT_SOFTWARE
+        if (port > I2C_NUM_MAX) {
+            i2c_del_master_soft_bus(s_i2c_bus[port].soft_bus_handle);
+        } else
+#endif
+        {
+            i2c_driver_delete(port);
+        }
         s_i2c_bus[port].is_init = false;
         ESP_LOGI(TAG, "i2c%d bus deinited", port);
     }
 
-    esp_err_t ret = i2c_param_config(port, conf);
-    I2C_BUS_CHECK(ret == ESP_OK, "i2c param config failed", ret);
-    ret = i2c_driver_install(port, conf->mode, I2C_BUS_MASTER_BUF_LEN, I2C_BUS_MASTER_BUF_LEN, I2C_BUS_FLG_DEFAULT);
-    I2C_BUS_CHECK(ret == ESP_OK, "i2c driver install failed", ret);
+#if CONFIG_I2C_BUS_SUPPORT_SOFTWARE
+    if (port > I2C_NUM_MAX) {
+        ret = i2c_new_master_soft_bus(conf, &s_i2c_bus[port].soft_bus_handle);
+        I2C_BUS_CHECK(ret == ESP_OK, "i2c software driver install failed", ret);
+    } else
+#endif
+    {
+        ret = i2c_param_config(port, conf);
+        I2C_BUS_CHECK(ret == ESP_OK, "i2c param config failed", ret);
+        ret = i2c_driver_install(port, conf->mode, I2C_BUS_MASTER_BUF_LEN, I2C_BUS_MASTER_BUF_LEN, I2C_BUS_FLG_DEFAULT);
+        I2C_BUS_CHECK(ret == ESP_OK, "i2c driver install failed", ret);
+    }
     s_i2c_bus[port].is_init = true;
     ESP_LOGI(TAG, "i2c%d bus inited", port);
     return ESP_OK;
@@ -452,9 +528,22 @@ static esp_err_t i2c_driver_reinit(i2c_port_t port, const i2c_config_t *conf)
 
 static esp_err_t i2c_driver_deinit(i2c_port_t port)
 {
+#if CONFIG_I2C_BUS_SUPPORT_SOFTWARE
+    I2C_BUS_CHECK(((i2c_sw_port_t)port < I2C_NUM_SW_MAX) || (port == I2C_NUM_MAX), "I2C port error", ESP_ERR_INVALID_ARG);
+#else
     I2C_BUS_CHECK(port < I2C_NUM_MAX, "i2c port error", ESP_ERR_INVALID_ARG);
+#endif
     I2C_BUS_CHECK(s_i2c_bus[port].is_init == true, "i2c not inited", ESP_ERR_INVALID_STATE);
-    i2c_driver_delete(port); //always return ESP_OK
+
+#if CONFIG_I2C_BUS_SUPPORT_SOFTWARE
+    if (port > I2C_NUM_MAX) {
+        esp_err_t ret = i2c_del_master_soft_bus(s_i2c_bus[port].soft_bus_handle);
+        I2C_BUS_CHECK(ret == ESP_OK, "i2c software driver delete failed", ret);
+    } else
+#endif
+    {
+        i2c_driver_delete(port); //always return ESP_OK
+    }
     s_i2c_bus[port].is_init = false;
     ESP_LOGI(TAG, "i2c%d bus deinited", port);
     return ESP_OK;

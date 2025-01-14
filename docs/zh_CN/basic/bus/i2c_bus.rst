@@ -45,6 +45,7 @@ i2c_bus 的使用方法：
 
     1. 当寄存器地址为 16 位时，可以使用 :cpp:func:`i2c_bus_read_reg16` 或 :cpp:func:`i2c_bus_write_reg16` 进行读写操作；
     2. 对于需要跳过地址阶段或者需要增加命令阶段的设备，可以使用 :cpp:func:`i2c_bus_cmd_begin` 结合 `I2C command link <https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32/api-reference/peripherals/i2c.html?highlight=i2c#communication-as-master>`_ 进行操作。
+    3. 对于 I2C 端口不足或者需要软件 I2C 调试的场景下，可以使用 ``menuconfig`` 在 ``(Top) → Component config → Bus Options → I2C Bus Options`` 中开启 ``Enable software I2C support``，并在 :cpp:func:`i2c_bus_create` 的 ``port`` 中传入 ``i2c_sw_port_t`` 类型的 ``port``，例如 ``I2C_NUM_SW_0``。
 
 
 已适配 IDF 版本

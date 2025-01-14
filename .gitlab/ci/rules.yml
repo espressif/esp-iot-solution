@@ -1077,6 +1077,8 @@
       changes: *patterns-components_motor_esp_simplefoc
     - <<: *if-dev-push
       changes: *patterns-example_motor_foc_openloop_control
+    - <<: *if-dev-push
+      changes: *patterns-components_i2c_bus
 
 .rules:build:example_motor_foc_velocity_control:
   rules:
@@ -2041,6 +2043,8 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_sensors_gesture_apds9960
+    - <<: *if-dev-push
+      changes: *patterns-components_i2c_bus
 
 .rules:build:components_sensors_humiture_hdc2010_test_apps:
   rules:
@@ -2052,6 +2056,8 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_sensors_humiture_hdc2010
+    - <<: *if-dev-push
+      changes: *patterns-components_i2c_bus
 
 .rules:build:components_sensors_humiture_hts221_test:
   rules:
@@ -2074,6 +2080,8 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_sensors_humiture_mvh3004d
+    - <<: *if-dev-push
+      changes: *patterns-components_i2c_bus
 
 .rules:build:components_sensors_humiture_sht3x_test_apps:
   rules:
@@ -2085,6 +2093,8 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_sensors_humiture_sht3x
+    - <<: *if-dev-push
+      changes: *patterns-components_i2c_bus
 
 .rules:build:components_sensors_imu_lis2dh12_test_apps:
   rules:
@@ -2096,6 +2106,8 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_sensors_imu_lis2dh12
+    - <<: *if-dev-push
+      changes: *patterns-components_i2c_bus
 
 .rules:build:components_sensors_imu_mpu6050_test:
   rules:
@@ -2129,6 +2141,8 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_sensors_light_sensor_veml6040
+    - <<: *if-dev-push
+      changes: *patterns-components_i2c_bus
 
 .rules:build:components_sensors_light_sensor_veml6075_test_apps:
   rules:
@@ -2140,6 +2154,8 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_sensors_light_sensor_veml6075
+    - <<: *if-dev-push
+      changes: *patterns-components_i2c_bus
 
 .rules:build:components_sensors_pressure_bme280_test_apps:
   rules:
@@ -2151,6 +2167,8 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_sensors_pressure_bme280
+    - <<: *if-dev-push
+      changes: *patterns-components_i2c_bus
 
 .rules:build:components_sensors_sensor_hub_test_apps:
   rules:
@@ -2162,6 +2180,8 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_sensors_sensor_hub
+    - <<: *if-dev-push
+      changes: *patterns-components_i2c_bus
 
 .rules:build:components_spi_bus_test_apps:
   rules:
@@ -2320,6 +2340,8 @@
       changes: *patterns-components_sensors_power_monitor_ina236
     - <<: *if-dev-push
       changes: *patterns-components_bus
+    - <<: *if-dev-push
+      changes: *patterns-components_i2c_bus
 
 .rules:build:components_i2c_bus_test_apps:
   rules:
