@@ -198,9 +198,28 @@
       }
     };
 
-    xhr.onload = () => {
+
+
+    xhr.onload = async () => {
       if (xhr.status === 200) {
-        alert("Upload complete!");
+        try {
+            const cookies = document.cookie.split('; ').reduce((acc, cookie) => {
+            const [name, value] = cookie.split('=');
+            acc[name] = value;
+            return acc;
+          }, {});
+          let userConfirmation = true;
+          if (!cookies['auto_reset_msc']) {
+            userConfirmation = confirm('Upload complete! Do you want to reset the USB connection?');
+          } else {
+            alert("Upload complete!");
+          }
+          if (userConfirmation) {
+            await fetch('/reset_msc', { method: 'GET' });
+          }
+        } catch (error) {
+          console.error('Error resetting USB connection:', error);
+        }
         window.location.href = uploadPath;
       } else {
         alert("Upload failed: " + xhr.responseText);

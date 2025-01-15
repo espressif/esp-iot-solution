@@ -157,10 +157,10 @@ static esp_err_t http_resp_dir_html(httpd_req_t *req, const char *dirpath)
         httpd_resp_sendstr_chunk(req, "</a></td><td>");
         httpd_resp_sendstr_chunk(req, entrysize);
         httpd_resp_sendstr_chunk(req, "</td><td>");
-        httpd_resp_sendstr_chunk(req, "<form method=\"post\" action=\"/delete");
+        httpd_resp_sendstr_chunk(req, "<button class=\"deleteButton\" filepath=\"");
         httpd_resp_sendstr_chunk(req, req->uri);
         httpd_resp_sendstr_chunk(req, entry->d_name);
-        httpd_resp_sendstr_chunk(req, "\"><button type=\"submit\">Delete</button></form>");
+        httpd_resp_sendstr_chunk(req, "\">Delete</button>");
         httpd_resp_sendstr_chunk(req, "</td></tr>\n");
     }
     closedir(dir);
@@ -437,9 +437,6 @@ static esp_err_t upload_post_handler(httpd_req_t *req)
     httpd_resp_set_hdr(req, "Location", "/");
     httpd_resp_sendstr(req, "File uploaded successfully");
 
-    usbd_vbus_enable(false);
-    vTaskDelay(20 / portTICK_PERIOD_MS);
-    usbd_vbus_enable(true);
     return ESP_OK;
 }
 
@@ -481,10 +478,6 @@ static esp_err_t delete_post_handler(httpd_req_t *req)
     httpd_resp_set_status(req, "303 See Other");
     httpd_resp_set_hdr(req, "Location", "/");
     httpd_resp_sendstr(req, "File deleted successfully");
-
-    usbd_vbus_enable(false);
-    vTaskDelay(20 / portTICK_PERIOD_MS);
-    usbd_vbus_enable(true);
     return ESP_OK;
 }
 
@@ -527,6 +520,18 @@ static esp_err_t setting_get_handler(httpd_req_t *req)
     httpd_resp_send(req, "Settings updated! Please reconnect!", HTTPD_RESP_USE_STRLEN);
     // Reset to configured wifi mode
     esp_restart();
+    return ESP_OK;
+}
+
+static esp_err_t reset_msc_get_handler(httpd_req_t *req)
+{
+    usbd_vbus_enable(false);
+    vTaskDelay(20 / portTICK_PERIOD_MS);
+    usbd_vbus_enable(true);
+
+    httpd_resp_set_status(req, "200 OK");
+    httpd_resp_set_type(req, "text/plain");
+    httpd_resp_sendstr(req, "MSC Reset Success");
     return ESP_OK;
 }
 
@@ -577,6 +582,15 @@ esp_err_t start_file_server(const char *base_path)
         .user_ctx  = server_data    // Pass server data as context
     };
     httpd_register_uri_handler(server, &setting);
+
+    /* URI handler for reset_msc */
+    httpd_uri_t reset_msc = {
+        .uri       = "/reset_msc",   // Match all URIs of type /delete/path/to/file
+        .method    = HTTP_GET,
+        .handler   = reset_msc_get_handler,
+        .user_ctx  = server_data    // Pass server data as context
+    };
+    httpd_register_uri_handler(server, &reset_msc);
 
     /* URI handler for getting uploaded files */
     httpd_uri_t file_download = {

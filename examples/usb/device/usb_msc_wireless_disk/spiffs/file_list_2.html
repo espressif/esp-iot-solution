@@ -31,4 +31,13 @@
   } else {
     document.getElementById("parent-path-table-row").style = "display: none;";
   }
+
+  document.getElementById('file-list').addEventListener('click', function (event) {
+    if (event.target.classList.contains('deleteButton')) {
+      const filepath = event.target.getAttribute('filepath');
+      if (filepath) {
+          deleteFile(filepath);
+      }
+    }
+  });
 </script>

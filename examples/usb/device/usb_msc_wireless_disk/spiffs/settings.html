@@ -29,7 +29,16 @@
 
 <div style="margin-bottom: 3em"></div>
 
-<div class="settings-main">
+
+
+<div class="settings-main"  >
+  <div style="margin-bottom: 1rem;">
+    <label for="autoResetMsc">
+      <input type="checkbox" id="autoResetMsc" />
+      Enable Auto Reset MSC
+    </label>
+  </div>
+
   <form id="wifiForm">
     <table>
       <!-- Wi-Fi Mode Selection -->
@@ -164,6 +173,24 @@
         e.preventDefault();
         return;
       }
+    }
+  });
+
+  const autoResetMscCheckbox = document.getElementById('autoResetMsc');
+
+  const cookies = document.cookie.split('; ').reduce((acc, cookie) => {
+    const [name, value] = cookie.split('=');
+    acc[name] = value;
+    return acc;
+  }, {});
+
+  autoResetMscCheckbox.checked = cookies['auto_reset_msc'] === 'true';
+
+  autoResetMscCheckbox.addEventListener('change', () => {
+    if (autoResetMscCheckbox.checked) {
+      document.cookie = `auto_reset_msc=true; path=/; max-age=${180 * 24 * 60 * 60}`;
+    } else {
+      document.cookie = 'auto_reset_msc=; path=/; max-age=0';
     }
   });
 </script>
