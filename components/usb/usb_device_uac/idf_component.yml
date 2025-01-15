@@ -1,4 +1,4 @@
-version: "1.0.0"
+version: "1.1.0"
 targets:
   - esp32s2
   - esp32s3
@@ -11,9 +11,9 @@ repository: https://github.com/espressif/esp-iot-solution.git
 issues: https://github.com/espressif/esp-iot-solution/issues
 
 dependencies:
-  idf: ">=4.4"
-  leeebo/tinyusb_src:
-    version: ">=0.16.0~5"
+  idf: ">=5.0"
+  espressif/tinyusb:
+    version: "^0.17.0~2"
   cmake_utilities: "*"
 examples:
   - path: ../../../examples/usb/device/usb_uac

@@ -193,7 +193,7 @@ void tud_audio_feedback_params_cb(uint8_t func_id, uint8_t alt_itf, audio_feedba
     feedback_param->method = AUDIO_FEEDBACK_METHOD_FIFO_COUNT;
     feedback_param->sample_freq = s_uac_device->current_sample_rate;
 
-    ESP_LOGD(TAG, "Feedback method: %d, sample freq: %d", feedback_param->method, feedback_param->sample_freq);
+    ESP_LOGD(TAG, "Feedback method: %d, sample freq: %"PRIu32"", feedback_param->method, feedback_param->sample_freq);
 }
 
 // Helper for feature unit get requests
