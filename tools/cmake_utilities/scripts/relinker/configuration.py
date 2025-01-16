@@ -84,13 +84,13 @@ class object_c:
         self.name = name
         self.library = library
         self.funcs = dict()
-        self.pathes = paths
+        self.paths = paths
         self.dumps = self.read_dump_info(paths)
         self.section_all = False
-    
+
     def append(self, func):
         section = None
-        
+
         if func == '.text.*':
             section = '.literal .literal.* .text .text.*'
             self.section_all = True
@@ -102,7 +102,7 @@ class object_c:
             self.section_all = True
         elif func == '.wifirxiram.*':
             section = '.wifirxiram .wifirxiram.*'
-            self.section_all = True  
+            self.section_all = True
         else:
             section = self.get_func_section(self.dumps, func)
 

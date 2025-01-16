@@ -16,7 +16,7 @@ include(relinker)
 
 The relinker feature is disabled by default, in order to use it, you need to enable the option `CU_RELINKER_ENABLE` in menuconfig.
 
-Here are the default configuration files in the folder `cmake_utilities/scripts/relinker/examples/XXX (XXX=esp32c2, esp32c3...)` for specific SoC platform, it's just used as a reference. If you would like to use your own configuration files, please enable option `CU_RELINKER_ENABLE_CUSTOMIZED_CONFIGURATION_FILES` and set the path of your configuration files as following, this path is evaluated relative to the project root directory:
+Here are the default configuration files in the folder `cmake_utilities/scripts/relinker/examples/flash_suspend/XXX (XXX=esp32c2, esp32c3...)` for specific SoC platform when flash_suspend and relinker feature are enabled, please note that the configuration files may be slightly different for different ESP-IDF versions, it's just used as a reference. If you would like to use your own configuration files, please enable option `CU_RELINKER_ENABLE_CUSTOMIZED_CONFIGURATION_FILES` and set the path of your configuration files as following, this path is evaluated relative to the project root directory:
 
 ```
 [*]     Enable customized relinker configuration files
@@ -49,7 +49,7 @@ You can refer to the files in the directory of `cmake_utilities/scripts/relinker
 
 1. iram_strip
 
-    For `example/iram_strip`, if you want to link function `__getreent` from SRAM to Flash, firstly you should add it to `function.csv` file as following:
+    For `example/iram_strip`, it includes the functions which you want to relink into Flash after enable the option `CU_RELINKER_ENABLE` and disable the option `CU_RELINKER_LINK_SPECIFIC_FUNCTIONS_TO_IRAM` in menuconfig. If you want to link function `__getreent` from SRAM to Flash, firstly you should add it to `function.csv` file as following:
 
     ```
     libfreertos.a,tasks.c.obj,__getreent,
@@ -57,7 +57,7 @@ You can refer to the files in the directory of `cmake_utilities/scripts/relinker
 
 2. flash_suspend
 
-    For `example/flash_suspend`, if you want to link function `__getreent` into SRAM no matter its original locations, firstly you should add it to `function.csv` file as following:
+    For `example/flash_suspend`, it includes the functions which you want to relink into SRAM after enable the options: `SPI_FLASH_AUTO_SUSPEND`, `CU_RELINKER_ENABLE`, `CU_RELINKER_LINK_SPECIFIC_FUNCTIONS_TO_IRAM` in menuconfig. If you want to link function `__getreent` into SRAM no matter its original locations, firstly you should add it to `function.csv` file as following:
 
     ```
     libfreertos.a,tasks.c.obj,__getreent,
@@ -90,3 +90,13 @@ libfreertos.a,./esp-idf/freertos/libfreertos.a
 This means library `libfreertos.a`'s location is `./esp-idf/freertos/libfreertos.a` relative to `build`.
 
 If above related data has exists in corresponding files, please don't add this repeatedly.
+
+## Test Results Reference
+
+| Chip     | example         |                   | SRAM used (Bytes) |                                    |
+| -------- | --------------- | ----------------- | ----------------- | ---------------------------------  |
+|          |                 | Default options   | Enable relinker   | Enable relinker and flash-suspend  |
+| ESP32-C2 | power_save      | 101408            | 91728             | 51360                              |
+| ESP32-C3 | power_save      | 118728            | 99864             | 58312                              |
+
+All of the above examples are compiled on ESP-IDF Tag/v5.3.2 and version v1.1.0 of `cmake_utilities` component, you can view the memory type usage summary by using `idf.py size`, the above data is for reference only.

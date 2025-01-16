@@ -1,6 +1,7 @@
-## v0.6.0 - 2023-08-23
+## v1.1.0 - 2025-01-16
 
-* relinker: support ESP32-C3 and SRAM optimization for flash-suspend 
+* relinker: support ESP32-C3 and SRAM optimization for flash-suspend
+* relinker: add IDF v5.3.x support
 
 ## v0.5.3 - 2023-09-15
 

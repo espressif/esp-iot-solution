@@ -19,6 +19,7 @@ sys.path.append(os.environ['IDF_PATH'] + '/tools/ldgen/ldgen')
 from entity import EntityDB
 
 espidf_objdump = None
+espidf_version = None
 
 def lib_secs(lib, file, lib_path):
     new_env = os.environ.copy()
@@ -148,10 +149,9 @@ class relink_c:
 
             for j in lib.objs:
                 obj = lib.objs[j]
-                self.targets.append(target_c(lib.name, lib.path, obj.name,
-                                             ' '.join(obj.sections())))
-        # for i in self.targets:
-        #     print(i)
+                target = target_c(lib.name, lib.path, obj.name, ' '.join(obj.sections()))
+                self.targets.append(target)
+
         self.__transform__()
 
     def __transform__(self):
@@ -190,6 +190,10 @@ class relink_c:
 
         iram_start = False
         flash_done = False
+        flash_text = '(.stub)'
+
+        if espidf_version == '5.0':
+            flash_text = '(.stub .gnu.warning'
 
         for i in range(0, len(lines) - 1):
             l = lines[i]
@@ -202,7 +206,7 @@ class relink_c:
             elif is_iram_desc(l):
                 if iram_start:
                     lines[i] = '%s\n%s\n'%(self.iram1_exclude, self.iram1_include)
-            elif '(.stub .gnu.warning' in l:
+            elif flash_text in l:
                 if not flash_done:
                     lines[i] = '%s\n\n%s'%(self.flash_include, l)
             elif self.flash_include in l:
@@ -256,7 +260,7 @@ class relink_c:
 
         return False
 
-    def save(self, input, output):
+    def save(self, input, output, target):
         lines = open(input).read().splitlines()
         lines = self.__replace__(lines)
         open(output, 'w+').write('\n'.join(lines))
@@ -315,33 +319,40 @@ class relink2_c:
         # print(self.iram_in)
         # print(self.iram_ex)
 
-    def save(self, input, output):
+    def save(self, input, output, target):
         lines = open(input).read().splitlines()
-        lines = self.__replace__(lines)
+        lines = self.__replace__(lines, target)
         open(output, 'w+').write('\n'.join(lines))
 
-    def __replace__(self, lines):
+    def __replace__(self, lines, target):
         iram_start = False
 
         new_lines = list()
         iram_cache = list()
+
+        flash_text = '*(.stub)'
+        iram_text = '*(.iram1 .iram1.*)'
+        if espidf_version == '5.3' and target == 'esp32c2':
+            iram_text = '_iram_text_start = ABSOLUTE(.);'
+        elif espidf_version == '5.0':
+                flash_text =  '*(.stub .gnu.warning'
+
         for i in range(0, len(lines)):
             l = lines[i]
-
             if iram_start == False:
-                if '*(.iram1 .iram1.*)' in l:
+                if iram_text in l:
                     new_lines.append('%s\n'%(self.iram_in))
                     iram_start = True
                 elif ' _text_start = ABSOLUTE(.);' in l:
                     new_lines.append('%s\n\n%s'%(l, self.iram_ex))
                     continue
-                elif '*(.stub .gnu.warning' in l:
+                elif flash_text in l:
                     new_lines += iram_cache
                     iram_cache = list()
             else:
                 if '} > iram0_0_seg' in l:
                     iram_start = False
-                
+
             if iram_start == False:
                 new_lines.append(l)
             else:
@@ -354,7 +365,7 @@ class relink2_c:
 
                 if need_skip == False:
                     iram_cache.append(l)
-        
+
         return new_lines
 
 def main():
@@ -391,6 +402,16 @@ def main():
         type=str)
 
     argparser.add_argument(
+        '--target', '-t',
+        help='target chip',
+        type=str)
+
+    argparser.add_argument(
+        '--version', '-v',
+        help='IDF version',
+        type=str)
+
+    argparser.add_argument(
         '--objdump', '-g',
         help='GCC objdump command',
         type=str)
@@ -421,6 +442,7 @@ def main():
     logging.debug('library:  %s'%(args.library))
     logging.debug('object:   %s'%(args.object))
     logging.debug('function: %s'%(args.function))
+    logging.debug('version:  %s'%(args.version))
     logging.debug('sdkconfig:%s'%(args.sdkconfig))
     logging.debug('objdump:  %s'%(args.objdump))
     logging.debug('debug:    %s'%(args.debug))
@@ -429,13 +451,14 @@ def main():
     global espidf_objdump
     espidf_objdump = args.objdump
 
+    global espidf_version
+    espidf_version = args.version
+
     if args.link_to_iram == False:
         relink = relink_c(args.input, args.library, args.object, args.function, args.sdkconfig, args.missing_function_info)
-        
     else:
         relink = relink2_c(args.input, args.library, args.object, args.function, args.sdkconfig, args.missing_function_info)
-    
-    relink.save(args.input, args.output)
+    relink.save(args.input, args.output, args.target)
 
 if __name__ == '__main__':
     main()

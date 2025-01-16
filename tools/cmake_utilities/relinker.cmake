@@ -11,6 +11,9 @@ if(CONFIG_CU_RELINKER_ENABLE)
             message(FATAL_ERROR "Other targets are not supported.")
         endif()
 
+        set(idf_version "${CONFIG_IDF_INIT_VERSION}")
+        string(REGEX MATCH "^([0-9]+\\.[0-9]+)" version_prefix "${idf_version}")
+
         if(CONFIG_CU_RELINKER_ENABLE_CUSTOMIZED_CONFIGURATION_FILES)
             idf_build_get_property(project_dir PROJECT_DIR)
             get_filename_component(cfg_file_path "${CONFIG_CU_RELINKER_CUSTOMIZED_CONFIGURATION_FILES_PATH}"
@@ -22,10 +25,14 @@ if(CONFIG_CU_RELINKER_ENABLE)
         else()
             set(cfg_file_path ${PROJECT_DIR}/relinker/${target})
             if(NOT EXISTS ${cfg_file_path})
-                if(CONFIG_CU_RELINKER_LINK_SPECIFIC_FUNCTIONS_TO_IRAM)
-                    set(cfg_file_path ${CMAKE_CURRENT_LIST_DIR}/scripts/relinker/examples/flash_suspend/${target})
+                if(version_prefix STREQUAL "5.0" OR version_prefix STREQUAL "5.3")
+                    if(CONFIG_CU_RELINKER_LINK_SPECIFIC_FUNCTIONS_TO_IRAM)
+                        set(cfg_file_path ${CMAKE_CURRENT_LIST_DIR}/scripts/relinker/examples/flash_suspend/${target}/${version_prefix})
+                    else()
+                        set(cfg_file_path ${CMAKE_CURRENT_LIST_DIR}/scripts/relinker/examples/iram_strip/${target}/${version_prefix})
+                    endif()
                 else()
-                    set(cfg_file_path ${CMAKE_CURRENT_LIST_DIR}/scripts/relinker/examples/iram_strip/${target})
+                    message(FATAL_ERROR "There is no configuration file corresponding to esp-idf/v${version_prefix}, please make a request in github issue")
                 endif()
             endif()
         endif()
@@ -48,6 +55,8 @@ if(CONFIG_CU_RELINKER_ENABLE)
                           --object    ${object_file}
                           --function  ${function_file}
                           --sdkconfig ${sdkconfig}
+                          --target    ${target}
+                          --version   ${version_prefix}
                           --objdump   ${cmake_objdump})
 
         if(CONFIG_CU_RELINKER_ENABLE_PRINT_ERROR_INFO_WHEN_MISSING_FUNCTION)
@@ -60,20 +69,20 @@ if(CONFIG_CU_RELINKER_ENABLE)
 
         idf_build_get_property(link_depends __LINK_DEPENDS)
 
-        add_custom_command(OUTPUT ${link_dst_file}
-                            COMMAND ${python} -B ${relinker_script}
-                                    ${relinker_opts}
-                            COMMAND ${CMAKE_COMMAND} -E copy
-                                    ${link_dst_file}
-                                    ${link_src_file}
-                            COMMAND ${CMAKE_COMMAND} -E echo
-                                    /*relinker*/ >>
-                                    ${link_dst_file}
-                            DEPENDS "${link_depends}"
-                                    "${library_file}"
-                                    "${object_file}"
-                                    "${function_file}"
-                            VERBATIM)
+        add_custom_command(OUTPUT  ${link_dst_file}
+                           COMMAND ${python} -B ${relinker_script}
+                                   ${relinker_opts}
+                           COMMAND ${CMAKE_COMMAND} -E copy
+                                   ${link_dst_file}
+                                   ${link_src_file}
+                           COMMAND ${CMAKE_COMMAND} -E echo
+                                   /*relinker*/ >>
+                                   ${link_dst_file}
+                           DEPENDS "${link_depends}"
+                                   "${library_file}"
+                                   "${object_file}"
+                                   "${function_file}"
+                           VERBATIM)
 
         add_custom_target(customer_sections DEPENDS ${link_dst_file})
         add_dependencies(${project_elf} customer_sections)
