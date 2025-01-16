@@ -16,3 +16,4 @@
     功率监视器<power_monitor>
     功率测量<power_measure>
     电池电量计<battery_fuel_gauge>
+    ADC传感器<adc> 

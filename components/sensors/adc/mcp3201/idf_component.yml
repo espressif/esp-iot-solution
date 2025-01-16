@@ -1,0 +1,12 @@
+version: 0.1.0
+description: SPI driver for MCP3201 adc sensor
+url: https://github.com/espressif/esp-iot-solution/tree/master/components/sensor/adc/mcp3201
+repository: https://github.com/espressif/esp-iot-solution.git
+documentation: https://docs.espressif.com/projects/esp-iot-solution/en/latest/sensors/adc.html
+issues: https://github.com/espressif/esp-iot-solution/issues
+dependencies:
+  spi_bus:
+    public: true
+    override_path: "../../../spi_bus"
+  idf: '>=4.4'
+  cmake_utilities: "0.*"
