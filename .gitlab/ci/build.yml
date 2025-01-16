@@ -1303,6 +1303,14 @@ build_components_sensors_power_measure_test_apps:
   variables:
     EXAMPLE_DIR: components/sensors/power_measure/test_apps
 
+build_components_sensors_adc_mcp3201_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_sensors_adc_mcp3201_test_apps
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: components/sensors/adc/mcp3201/test_apps
+
 build_components_sensors_battery_fuel_gauge_max17048_test_apps:
   extends:
     - .build_examples_template

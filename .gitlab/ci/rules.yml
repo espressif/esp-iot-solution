@@ -202,6 +202,10 @@
   - "components/sensors/power_measure/**/*"
   - "components/tools/cmake_utilities/package_manager.cmake"
 
+.patterns-components_sensors_adc_mcp3201: &patterns-components_sensors_adc_mcp3201
+  - "components/sensors/adc/mcp3201/**/*"
+  - "tools/cmake_utilities/package_manager.cmake"
+
 .patterns-components_sensors_battery_fuel_gauge_max17048: &patterns-components_sensors_battery_fuel_gauge_max17048
   - "components/sensors/battery_fuel_gauge/max17048/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
@@ -2019,6 +2023,17 @@
     - <<: *if-trigger-job
     - <<: *if-dev-push
       changes: *patterns-components_openai
+
+.rules:build:components_sensors_adc_mcp3201_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_adc_mcp3201
 
 .rules:build:components_sensors_battery_fuel_gauge_max17048_test_apps:
   rules:

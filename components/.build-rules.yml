@@ -70,6 +70,10 @@ components/openai/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1
 
+components/sensors/adc/mcp3201:
+  enable:
+    - if: IDF_TARGET in ["esp32s3"]
+
 components/sensors/radar/at581x/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1
