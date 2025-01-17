@@ -73,13 +73,13 @@ static void _button_press_up_cb(void *arg, void *data)
 
 static void _knob_right_cb(void *arg, void *data)
 {
-    ESP_LOGI(TAG, "KONB: KONB_RIGHT,count_value:%"PRId32"", iot_knob_get_count_value((button_handle_t)arg));
+    ESP_LOGI(TAG, "KONB: KONB_RIGHT,count_value:%d", iot_knob_get_count_value((button_handle_t)arg));
     surface_dial_report(DIAL_L);
 }
 
 static void _knob_left_cb(void *arg, void *data)
 {
-    ESP_LOGI(TAG, "KONB: KONB_LEFT,count_value:%"PRId32"", iot_knob_get_count_value((button_handle_t)arg));
+    ESP_LOGI(TAG, "KONB: KONB_LEFT,count_value:%d", iot_knob_get_count_value((button_handle_t)arg));
     surface_dial_report(DIAL_R);
 }
 
