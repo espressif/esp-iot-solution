@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.2.0 - 2025-1-14
+
+### Enhancements:
+
+- Support enabling software I2C to extend the number of I2C ports.
+
 ## v1.1.0 - 2024-11-22
 
 ### Enhancements:

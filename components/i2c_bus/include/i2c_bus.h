@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -28,6 +28,25 @@ typedef void *i2c_bus_device_handle_t;  /*!< i2c device handle */
 #ifdef __cplusplus
 extern "C"
 {
+#endif
+
+#if CONFIG_I2C_BUS_SUPPORT_SOFTWARE
+typedef enum {
+    I2C_NUM_SW_0 = I2C_NUM_MAX + 1,
+#if CONFIG_I2C_BUS_SOFTWARE_MAX_PORT >= 2
+    I2C_NUM_SW_1,
+#endif
+#if CONFIG_I2C_BUS_SOFTWARE_MAX_PORT >= 3
+    I2C_NUM_SW_2,
+#endif
+#if CONFIG_I2C_BUS_SOFTWARE_MAX_PORT >= 4
+    I2C_NUM_SW_3,
+#endif
+#if CONFIG_I2C_BUS_SOFTWARE_MAX_PORT >= 5
+    I2C_NUM_SW_4,
+#endif
+    I2C_NUM_SW_MAX,
+} i2c_sw_port_t;
 #endif
 
 #if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0))
@@ -63,7 +82,7 @@ typedef void *i2c_cmd_handle_t;         /*!< I2C command handle  */
  * which means for an i2c port only one group parameter works. When i2c_bus_create is called more than one time for the
  * same i2c port, following parameter will override the previous one.
  *
- * @param port I2C port number
+ * @param port I2C port number. Please note that enabling I2C_BUS_SUPPORT_SOFTWARE in menuconfig allows you to use ports in i2c_sw_port_t to enable software I2C.
  * @param conf Pointer to I2C bus configuration
  * @return i2c_bus_handle_t Return the I2C bus handle if created successfully, return NULL if failed.
  */

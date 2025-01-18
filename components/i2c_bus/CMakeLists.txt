@@ -6,8 +6,14 @@ else()
     set(REQ esp_driver_i2c driver)
 endif()
 
+if (CONFIG_I2C_BUS_SUPPORT_SOFTWARE)
+    list(APPEND SRC_FILE "i2c_bus_soft.c")
+endif()
+
 idf_component_register(SRCS ${SRC_FILE}
                         INCLUDE_DIRS "include"
+                        PRIV_INCLUDE_DIRS "private_include"
                         REQUIRES ${REQ})
+
 include(package_manager)
 cu_pkg_define_version(${CMAKE_CURRENT_LIST_DIR})

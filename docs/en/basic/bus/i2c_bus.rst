@@ -45,7 +45,7 @@ Example:
 
     1. When the address of a register is 16-bit, you can use :cpp:func:`i2c_bus_read_reg16` or :cpp:func:`i2c_bus_write_reg16` to read or write its data;
     2. For devices that need to skip the address phase or need to add a command phase, you can operate using :cpp:func:`i2c_bus_cmd_begin` combined with `I2C command link <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/i2c.html?highlight=i2c#communication-as-master>`_.
-
+    3. For scenarios where I2C ports are insufficient or software I2C debugging is required, you can enable ``Enable software I2C support`` in ``menuconfig`` under ``(Top) → Component config → Bus Options → I2C Bus Options``. Then, pass a ``port`` of type ``i2c_sw_port_t`` (e.g., ``I2C_NUM_SW_0``) to the ``port`` parameter in the :cpp:func:`i2c_bus_create` function.
 
 Adapted IDF Versions
 ---------------------------

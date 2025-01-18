@@ -25,6 +25,22 @@ menu "Bus Options"
             depends on ESP_IDF_VERSION >= 5.3
             help
                 Enable this option for backward compatibility with the old I2C driver
+
+        config I2C_BUS_SUPPORT_SOFTWARE
+            bool "Enable software I2C support"
+            default n
+            help
+                Enable this option to use a software-implemented I2C driver. This can be useful for scenarios where
+                hardware I2C is unavailable or additional I2C buses are needed beyond the hardware support.
+
+        config I2C_BUS_SOFTWARE_MAX_PORT
+            int "Maximum number of software I2C ports"
+            default 2
+            range 1 5
+            depends on I2C_BUS_SUPPORT_SOFTWARE
+            help
+                Set the maximum number of software I2C ports that can be used. This option is only applicable when
+                software I2C support is enabled.
     endmenu
 
 endmenu

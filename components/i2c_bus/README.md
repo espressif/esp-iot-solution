@@ -6,6 +6,8 @@ The I2C bus component (Bus) is a set of application-layer code built on top of t
 1. Simplified peripheral initialization processes
 2. Thread-safe device operations
 3. Simple and flexible RW operations
+4. Compatible with `driver/i2c` and `esp_driver_i2c`
+5. Supports additional software I2C
 
 This component abstracts the following concepts:
 
