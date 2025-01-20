@@ -765,7 +765,6 @@ build_example_usb_device_usb_hid_device:
     - .rules:build:example_usb_device_usb_hid_device
   parallel:
     matrix:
-      - IMAGE: espressif/idf:release-v4.4
       - IMAGE: espressif/idf:release-v5.0
   variables:
     EXAMPLE_DIR: examples/usb/device/usb_hid_device
@@ -795,7 +794,6 @@ build_example_usb_device_usb_surface_dial:
     - .rules:build:example_usb_device_usb_surface_dial
   parallel:
     matrix:
-      - IMAGE: espressif/idf:release-v4.4
       - IMAGE: espressif/idf:release-v5.0
   variables:
     EXAMPLE_DIR: examples/usb/device/usb_surface_dial
