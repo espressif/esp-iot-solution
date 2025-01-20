@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width" />
+  <title>ESP32 USB File Server</title>
+  <link href="/styles.css" rel="stylesheet" />
+</head>
+
+<div class="settings-header link-white">
+  <a class="header-left" id="return-button" href="/">
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width=".75em"
+      height="1.5em"
+      viewBox="0 0 12 24"
+    >
+      <path
+        fill="currentColor"
+        fill-rule="evenodd"
+        d="m3.343 12l7.071 7.071L9 20.485l-7.778-7.778a1 1 0 0 1 0-1.414L9 3.515l1.414 1.414z"
+      />
+    </svg>
+  </a>
+  <div class="header-center">ESP USB File Server</div>
+  <div class="header-right">
+    <span id="remain"></span>
+  </div>
+</div>
+
+<div style="margin-bottom: 3em"></div>
+
+
+
+<div class="settings-main"  >
+  <div style="margin-bottom: 1rem;">
+    <label for="autoResetMsc">
+      <input type="checkbox" id="autoResetMsc" />
+      Enable Auto Reset MSC
+    </label>
+  </div>
+
+  <form id="wifiForm">
+    <table>
+      <!-- Wi-Fi Mode Selection -->
+      <tr>
+        <td style="font-weight: bold">WIFI Mode</td>
+        <td>
+          <input type="radio" id="ap" name="wifimode" value="ap" required />
+          <label for="ap">AP</label>
+          <input type="radio" id="sta" name="wifimode" value="sta" />
+          <label for="sta">STA</label>
+          <input type="radio" id="apsta" name="wifimode" value="apsta" />
+          <label for="apsta">AP+STA</label>
+        </td>
+      </tr>
+    </table>
+
+    <!-- AP Mode Fields -->
+    <div id="apFields" class="hidden">
+      <table style="width: 98%;">
+        <tr>
+          <td style="font-weight: bold">
+            <label for="apssid">AP SSID</label>
+          </td>
+          <td>
+            <input
+              type="text"
+              id="apssid"
+              name="apssid"
+              pattern="[-a-zA-Z0-9\_\.]+"
+              class="w100"
+              placeholder="Enter AP SSID"
+            />
+          </td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold">
+            <label for="appassword">AP Password</label>
+          </td>
+          <td>
+            <input
+              type="password"
+              id="appassword"
+              name="appassword"
+              pattern="[a-zA-Z0-9\-\_\.]{8,20}"
+              class="w100"
+              placeholder="Leave blank for no password"
+            />
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- STA Mode Fields -->
+    <div id="staFields" class="hidden">
+      <table style="width: 98%;">
+        <tr>
+          <td style="font-weight: bold">
+            <label for="stassid">STA SSID</label>
+          </td>
+          <td>
+            <input
+              type="text"
+              id="stassid"
+              name="stassid"
+              pattern="[-a-zA-Z0-9\_\.]+"
+              class="w100"
+              placeholder="Enter STA SSID"
+            />
+          </td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold">
+            <label for="stapassword">STA Password</label>
+          </td>
+          <td>
+            <input
+              type="password"
+              id="stapassword"
+              name="stapassword"
+              pattern="[a-zA-Z0-9\-\_\.]{8,20}"
+              class="w100"
+              placeholder="Leave blank for no password"
+            />
+          </td>
+        </tr>
+      </table>
+    </div>
+    <button type="submit" class="w100">Submit!</button>
+  </form>
+</div>
+
+<script>
+  const apRadio = document.getElementById('ap');
+  const staRadio = document.getElementById('sta');
+  const apstaRadio = document.getElementById('apsta');
+  const apFields = document.getElementById('apFields');
+  const staFields = document.getElementById('staFields');
+  const form = document.getElementById('wifiForm');
+
+  document.querySelectorAll('input[name="wifimode"]').forEach((radio) => {
+    radio.addEventListener('change', () => {
+      if (apRadio.checked) {
+        apFields.classList.remove('hidden');
+        staFields.classList.add('hidden');
+      } else if (staRadio.checked) {
+        apFields.classList.add('hidden');
+        staFields.classList.remove('hidden');
+      } else if (apstaRadio.checked) {
+        apFields.classList.remove('hidden');
+        staFields.classList.remove('hidden');
+      }
+    });
+  });
+
+  form.addEventListener('submit', (e) => {
+    const apChecked = apRadio.checked || apstaRadio.checked;
+    const staChecked = staRadio.checked || apstaRadio.checked;
+
+    if (apChecked) {
+      const apSsid = document.getElementById('apssid');
+      if (!apSsid.value) {
+        alert('AP SSID is required for AP mode');
+        e.preventDefault();
+        return;
+      }
+    }
+
+    if (staChecked) {
+      const staSsid = document.getElementById('stassid');
+      if (!staSsid.value) {
+        alert('STA SSID is required for STA mode');
+        e.preventDefault();
+        return;
+      }
+    }
+  });
+
+  const autoResetMscCheckbox = document.getElementById('autoResetMsc');
+
+  const cookies = document.cookie.split('; ').reduce((acc, cookie) => {
+    const [name, value] = cookie.split('=');
+    acc[name] = value;
+    return acc;
+  }, {});
+
+  autoResetMscCheckbox.checked = cookies['auto_reset_msc'] === 'true';
+
+  autoResetMscCheckbox.addEventListener('change', () => {
+    if (autoResetMscCheckbox.checked) {
+      document.cookie = `auto_reset_msc=true; path=/; max-age=${180 * 24 * 60 * 60}`;
+    } else {
+      document.cookie = 'auto_reset_msc=; path=/; max-age=0';
+    }
+  });
+</script>
