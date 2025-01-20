@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v1.1.1 - 2025-1-20
+
+* Fix the issue of crashes and reboots caused by reinstalling the USB PHY.
+
 ## v1.1.0 - 2024-12-11
 
 * Support bootloader uf2

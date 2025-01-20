@@ -113,6 +113,8 @@ static void _usb_otg_phy_init(bool enable)
         // Configure USB JTAG PHY
 #if SOC_USB_SERIAL_JTAG_SUPPORTED
         phy_conf.controller = USB_PHY_CTRL_SERIAL_JTAG;
+        phy_conf.otg_mode = USB_PHY_MODE_DEFAULT;
+        phy_conf.otg_speed = USB_PHY_SPEED_UNDEFINED;
         usb_new_phy(&phy_conf, &phy_hdl);
 #endif
     }
