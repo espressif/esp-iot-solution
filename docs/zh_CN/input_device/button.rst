@@ -54,14 +54,14 @@
 
 - 回调：一个按键的每个事件都可以为其注册一个回调函数，产生事件时回调函数将会被调用。这种方式的效率和实时性高，不会丢失事件。
 
-- 轮询：在程序中周期性调用 :c:func:`iot_button_get_event` 查询按键当前的事件。这种方式使用简单，适合任务简单的场合
+- 轮询：在程序中周期性调用 :c:func:`iot_button_get_event` 查询按键当前的事件。这种方式使用简单，适合任务简单的场合。并不是所有的按键事件都会及时的拿到，存在丢失事件的风险。
 
 当然你也可以将以上两种方式组合使用。
 
 .. attention:: 回调函数中不能有 TaskDelay 等阻塞的操作
 
 .. image:: https://dl.espressif.com/AE/esp-iot-solution/button_3.3.1.svg
-   :alt: Button
+    :alt: Button
 
 配置项
 -----------
@@ -78,11 +78,9 @@
 
 - ADC_BUTTON_MAX_BUTTON_PER_CHANNEL : ADC 一个通道最多的按钮数
 
-- ADC_BUTTON_SAMPLE_TIMES : 每次扫描的样本数
+- ADC_BUTTON_SAMPLE_TIMES : 每次 ADC 扫描的样本数
 
-- BUTTON_SERIAL_TIME_MS : 长按期间触发的 CALLBACK 间隔时间
-
-- BUTTON_LONG_PRESS_TOLERANCE_MS : 用于设置长按的容错时间。
+- BUTTON_LONG_PRESS_HOLD_SERIAL_TIME_MS : 长按期间触发的 CALLBACK 间隔时间
 
 应用示例
 -----------
@@ -92,54 +90,49 @@
 .. code:: c
 
     // create gpio button
-    button_config_t gpio_btn_cfg = {
-        .type = BUTTON_TYPE_GPIO,
-        .long_press_time = CONFIG_BUTTON_LONG_PRESS_TIME_MS,
-        .short_press_time = CONFIG_BUTTON_SHORT_PRESS_TIME_MS,
-        .gpio_button_config = {
-            .gpio_num = 0,
-            .active_level = 0,
-        },
+    const button_config_t btn_cfg = {0};
+    const button_gpio_config_t btn_gpio_cfg = {
+        .gpio_num = 0,
+        .active_level = 0,
     };
-    button_handle_t gpio_btn = iot_button_create(&gpio_btn_cfg);
+    button_handle_t gpio_btn = NULL;
+    esp_err_t ret = iot_button_new_gpio_device(&btn_cfg, &btn_gpio_cfg, &gpio_btn);
     if(NULL == gpio_btn) {
         ESP_LOGE(TAG, "Button create failed");
     }
 
     // create adc button
-    button_config_t adc_btn_cfg = {
-        .type = BUTTON_TYPE_ADC,
-        .long_press_time = CONFIG_BUTTON_LONG_PRESS_TIME_MS,
-        .short_press_time = CONFIG_BUTTON_SHORT_PRESS_TIME_MS,
-        .adc_button_config = {
-            .adc_channel = 0,
-            .button_index = 0,
-            .min = 100,
-            .max = 400,
-        },
+    const button_config_t btn_cfg = {0};
+    button_adc_config_t btn_adc_cfg = {
+        .unit_id = ADC_UNIT_1,
+        .adc_channel = 0,
+        .button_index = 0,
+        .min = 100,
+        .max = 400,
     };
-    button_handle_t adc_btn = iot_button_create(&adc_btn_cfg);
+
+    button_handle_t adc_btn = NULL;
+    esp_err_t ret = iot_button_new_adc_device(&btn_cfg, &btn_adc_cfg, &adc_btn);
     if(NULL == adc_btn) {
         ESP_LOGE(TAG, "Button create failed");
     }
 
     // create matrix keypad button
-    button_config_t matrix_button_cfg = {
-        .type = BUTTON_TYPE_MATRIX,
-        .long_press_time = CONFIG_BUTTON_LONG_PRESS_TIME_MS,
-        .short_press_time = CONFIG_BUTTON_SHORT_PRESS_TIME_MS,
-        .matrix_button_config = {
-            .row_gpio_num = 0,
-            .col_gpio_num = 1,
-        }
+    const button_config_t btn_cfg = {0};
+    const button_matrix_config_t matrix_cfg = {
+        .row_gpios = (int32_t[]){4, 5, 6, 7},
+        .col_gpios = (int32_t[]){3, 8, 16, 15},
+        .row_gpio_num = 4,
+        .col_gpio_num = 4,
     };
-    button_handle_t matrix_button = iot_button_create(&matrix_button_cfg);
+    button_handle_t matrix_button = NULL;
+    esp_err_t ret = iot_button_new_matrix_device(&btn_cfg, &matrix_cfg, btns, &matrix_button);
     if(NULL == matrix_button) {
         ESP_LOGE(TAG, "Button create failed");
     }
 
 .. Note::
-    当 IDF 版本大于等于 release/5.0 时， ADC 按钮使用的是 ADC1 ,当项目中还有其他地方使用到了 ADC1 时，请传入 adc_handle 和 adc_channel 来配置 ADC 按钮。
+    当 ADC 按钮使用的是 ADC1 ,当项目中还有其他地方使用到了 ADC1 时，请传入 adc_handle 和 adc_channel 来配置 ADC 按钮。
 
     .. code::C
         adc_oneshot_unit_handle_t adc1_handle;
@@ -148,15 +141,19 @@
         };
         //-------------ADC1 Init---------------//
         adc_oneshot_new_unit(&init_config1, &adc1_handle);
-        // create adc button
-        button_config_t adc_btn_cfg = {
-            .type = BUTTON_TYPE_ADC,
-            .adc_button_config = {
-                .adc_handle = &adc1_handle,
-                .adc_channel = 1,
-            },
+
+        const button_config_t btn_cfg = {0};
+        button_adc_config_t btn_adc_cfg = {
+            .adc_handle = &adc1_handle,
+            .unit_id = ADC_UNIT_1,
+            .adc_channel = 0,
+            .button_index = 0,
+            .min = 100,
+            .max = 400,
         };
-        button_handle_t adc_btn = iot_button_create(&adc_btn_cfg);
+
+        button_handle_t adc_btn = NULL;
+        esp_err_t ret = iot_button_new_adc_device(&btn_cfg, &btn_adc_cfg, &adc_btn);
         if(NULL == adc_btn) {
             ESP_LOGE(TAG, "Button create failed");
         }
@@ -181,7 +178,7 @@ Button 组件支持为多个事件注册回调函数，每个事件都可以注�
             ESP_LOGI(TAG, "BUTTON_SINGLE_CLICK");
         }
 
-        iot_button_register_cb(gpio_btn, BUTTON_SINGLE_CLICK, button_single_click_cb,NULL);
+        iot_button_register_cb(gpio_btn, BUTTON_SINGLE_CLICK, NULL, button_single_click_cb,NULL);
 
 - 多个回调函数写法
 
@@ -196,15 +193,15 @@ Button 组件支持为多个事件注册回调函数，每个事件都可以注�
         {
             ESP_LOGI(TAG, "BUTTON_LONG_PRESS_START_2");
         }
-        button_event_config_t cfg = {
-            .event = BUTTON_LONG_PRESS_START,
-            .event_data.long_press.press_time = 2000,
+
+        button_event_args_t args = {
+            .long_press.press_time = 2000,
         };
 
-        iot_button_register_event_cb(gpio_btn, cfg, button_long_press_1_cb, NULL);
+        iot_button_register_cb(gpio_btn, BUTTON_LONG_PRESS_START, &args, button_auto_check_cb_1, NULL);
 
-        cfg.event_data.long_press.press_time = 5000;
-        iot_button_register_event_cb(gpio_btn, cfg, button_long_press_2_cb, NULL);
+        args.long_press.press_time = 5000;
+        iot_button_register_cb(gpio_btn, BUTTON_LONG_PRESS_START, &args, button_long_press_2_cb, NULL);
 
 查询按键事件
 ^^^^^^^^^^^^^^
@@ -228,7 +225,6 @@ Button 组件支持为多个事件注册回调函数，每个事件都可以注�
 
 所需配置：
 
-- 打开 `CONFIG_GPIO_BUTTON_SUPPORT_POWER_SAVE` 选项， 会在组件中增加低功耗相关代码
 - 确保创建的所有按键类型为 GPIO 按键， 并且都开启了 `enable_power_save`，如存在其他按键，会导致低功耗模式失效
 
 .. Note:: 该功能只保证 Button 组件只在使用中才唤醒 CPU, 不保证 CPU 一定会进入低功耗模式
@@ -269,15 +265,15 @@ Button 组件支持为多个事件注册回调函数，每个事件都可以注�
 
 .. code:: c
 
-    button_config_t btn_cfg = {
-        .type = BUTTON_TYPE_GPIO,
-        .gpio_button_config = {
-            .gpio_num = button_num,
-            .active_level = BUTTON_ACTIVE_LEVEL,
-            .enable_power_save = true,
-        },
+    button_config_t btn_cfg = {0};
+    button_gpio_config_t gpio_cfg = {
+        .gpio_num = button_num,
+        .active_level = BUTTON_ACTIVE_LEVEL,
+        .enable_power_save = true,
     };
-    button_handle_t btn = iot_button_create(&btn_cfg);
+
+    button_handle_t btn;
+    iot_button_new_gpio_device(&btn_cfg, &gpio_cfg, &btn);
 
 什么时候进入 Light Sleep
 

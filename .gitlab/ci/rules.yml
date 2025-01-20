@@ -1365,8 +1365,6 @@
     - <<: *if-dev-push
       changes: *patterns-build_system
     - <<: *if-dev-push
-      changes: *patterns-components_button
-    - <<: *if-dev-push
       changes: *patterns-components_knob
     - <<: *if-dev-push
       changes: *patterns-example_usb_device_usb_surface_dial

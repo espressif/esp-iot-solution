@@ -1,75 +1,56 @@
-/* SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+/* SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
 #pragma once
 
-#include "esp_idf_version.h"
 #include "driver/gpio.h"
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
 #include "esp_adc/adc_oneshot.h"
-#else
-#include "driver/adc.h"
-#endif
+#include "button_types.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#define ADC_BUTTON_COMBINE(channel, index) ((channel)<<8 | (index))
-#define ADC_BUTTON_SPLIT_INDEX(data) ((uint32_t)(data)&0xff)
-#define ADC_BUTTON_SPLIT_CHANNEL(data) (((uint32_t)(data) >> 8) & 0xff)
 
 /**
  * @brief adc button configuration
  *
  */
 typedef struct {
+    adc_oneshot_unit_handle_t *adc_handle;           /**< handle of adc unit, if NULL will create new one internal, else will use the handle */
+    adc_unit_t unit_id;                              /**< ADC unit */
     uint8_t adc_channel;                             /**< Channel of ADC */
     uint8_t button_index;                            /**< button index on the channel */
     uint16_t min;                                    /**< min voltage in mv corresponding to the button */
     uint16_t max;                                    /**< max voltage in mv corresponding to the button */
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
-    adc_oneshot_unit_handle_t *adc_handle;           /**< handle of adc unit, if NULL will create new one internal, else will use the handle */
-#endif
 } button_adc_config_t;
 
 /**
- * @brief Initialize gpio button
+ * @brief Create a new ADC button device
  *
- * @param config pointer of configuration struct
+ * This function initializes and configures a new ADC button device using the given configuration parameters.
+ * It manages the ADC unit, channels, and button-specific parameters, and ensures proper resource allocation
+ * for the ADC button object.
  *
- * @return
- *      - ESP_OK on success
- *      - ESP_ERR_INVALID_ARG   Arguments is NULL.
- *      - ESP_ERR_NOT_SUPPORTED Arguments out of range.
- *      - ESP_ERR_INVALID_STATE State is error.
- */
-esp_err_t button_adc_init(const button_adc_config_t *config);
-
-/**
- * @brief Deinitialize gpio button
- *
- * @param channel ADC channel
- * @param button_index Button index on the channel
+ * @param[in] button_config Configuration for the button device, including callbacks and debounce parameters.
+ * @param[in] adc_config Configuration for the ADC channel and button, including the ADC unit, channel,
+ *                        button index, and voltage range (min and max).
+ * @param[out] ret_button Handle to the newly created button device.
  *
  * @return
- *      - ESP_OK on success
- *      - ESP_ERR_INVALID_ARG   Arguments is invalid.
- */
-esp_err_t button_adc_deinit(uint8_t channel, int button_index);
-
-/**
- * @brief Get the adc button level
+ *     - ESP_OK: Successfully created the ADC button device.
+ *     - ESP_ERR_INVALID_ARG: Invalid argument provided.
+ *     - ESP_ERR_NO_MEM: Memory allocation failed.
+ *     - ESP_ERR_INVALID_STATE: The requested button index or channel is already in use, or no channels are available.
+ *     - ESP_FAIL: Failed to initialize or configure the ADC or button device.
  *
- * @param button_index It is compressed by ADC channel and button index, use the macro ADC_BUTTON_COMBINE to generate. It will be treated as a uint32_t variable.
- *
- * @return
- *      - 0 Not pressed
- *      - 1 Pressed
+ * @note
+ * - If the ADC unit is not already configured, it will be initialized with the provided or default settings.
+ * - If the ADC channel is not initialized, it will be configured for the specified unit and calibrated.
+ * - This function ensures that ADC resources are reused whenever possible to optimize resource allocation.
  */
-uint8_t button_adc_get_key_level(void *button_index);
+esp_err_t iot_button_new_adc_device(const button_config_t *button_config, const button_adc_config_t *adc_config, button_handle_t *ret_button);
 
 #ifdef __cplusplus
 }

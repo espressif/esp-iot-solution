@@ -936,7 +936,7 @@ build_components_button_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_button_test_apps
-    - .build_idf_active_release_version
+    - .build_idf_version_greater_equal_v5_0
   variables:
     EXAMPLE_DIR: components/button/test_apps
 

@@ -256,9 +256,6 @@ components_test_button:
   parallel:
     matrix:
       - IDF_TARGET: esp32s3
-        IDF_VERSION: "4.4"
-        ENV_TAG: "button"
-      - IDF_TARGET: esp32s3
         IDF_VERSION: "5.0"
         ENV_TAG: "button"
   tags:

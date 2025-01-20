@@ -4,7 +4,7 @@ dependencies:
       version: "^1.0.0"
       override_path: ../../../../../components/usb/esp_msc_ota
   espressif/button:
-      version: "^3.0.0"
+      version: "^4.0.0"
       override_path: ../../../../../components/button
   espressif/tinyusb:
     version: "0.17.*"
