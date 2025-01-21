@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.0.1 - 2025-01-13
+
+### bugfix:
+
+* Fix issues of QSPI interface
+
 ## v1.0.0 - 2024-08-12
 
 ### Enhancements:

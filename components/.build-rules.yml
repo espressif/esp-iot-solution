@@ -146,6 +146,10 @@ components/display/lcd/esp_lcd_usb_display/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32p4"]
 
+components/display/lcd_touch/esp_lcd_touch_ili2118/test_apps:
+  enable:
+    - if: INCLUDE_DEFAULT == 1
+
 components/display/lcd_touch/esp_lcd_touch_spd2010/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1

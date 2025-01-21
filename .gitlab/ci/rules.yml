@@ -121,6 +121,9 @@
 .patterns-components_display_lcd_esp_lcd_usb_display: &patterns-components_display_lcd_esp_lcd_usb_display
   - "components/display/lcd/esp_lcd_usb_display/**/*"
 
+.patterns-components_display_lcd_touch_esp_lcd_touch_ili2118: &patterns-components_display_lcd_touch_esp_lcd_touch_ili2118
+  - "components/display/lcd_touch/esp_lcd_touch_ili2118/**/*"
+
 .patterns-components_display_lcd_touch_esp_lcd_touch_spd2010: &patterns-components_display_lcd_touch_esp_lcd_touch_spd2010
   - "components/display/lcd_touch/esp_lcd_touch_spd2010/**/*"
 
@@ -1812,6 +1815,17 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_display_lcd_esp_lcd_usb_display
+
+.rules:build:components_display_lcd_touch_esp_lcd_touch_ili2118_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_display_lcd_touch_esp_lcd_touch_ili2118
 
 .rules:build:components_display_lcd_touch_esp_lcd_touch_spd2010_test_apps:
   rules:

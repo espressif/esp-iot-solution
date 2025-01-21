@@ -1112,6 +1112,16 @@ build_components_display_lcd_esp_lcd_usb_display_test_apps:
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_usb_display/test_apps
 
+build_components_display_lcd_touch_esp_lcd_touch_ili2118_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_display_lcd_touch_esp_lcd_touch_ili2118_test_apps
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.1
+  variables:
+    EXAMPLE_DIR: components/display/lcd_touch/esp_lcd_touch_ili2118/test_apps
+
 build_components_display_lcd_touch_esp_lcd_touch_spd2010_test_apps:
   extends:
     - .build_examples_template
