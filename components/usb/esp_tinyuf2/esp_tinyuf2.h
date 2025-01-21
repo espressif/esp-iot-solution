@@ -118,7 +118,7 @@ void esp_restart_from_tinyuf2(void);
  * @return
  *      - ESP_OK: Operation was successful.
  */
-esp_err_t esp_tinyuf2_set_all_key_hidden(bool if_hidden)
+esp_err_t esp_tinyuf2_set_all_key_hidden(bool);
 
 /**
  * @brief Add a key to the hidden keys list.
@@ -134,7 +134,7 @@ esp_err_t esp_tinyuf2_set_all_key_hidden(bool if_hidden)
  *      - ESP_ERR_INVALID_ARG: Provided key is NULL.
  *      - ESP_ERR_NO_MEM: Memory allocation failed or maximum number of hidden keys exceeded.
  */
-esp_err_t esp_tinyuf2_add_key_hidden(const char *key)
+esp_err_t esp_tinyuf2_add_key_hidden(const char *);
 #endif
 
 #ifdef __cplusplus

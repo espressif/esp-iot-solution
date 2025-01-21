@@ -65,7 +65,7 @@ static nvs_modified_cb_t _modified_cb = NULL;
 static char _part_name[16] = "";
 static char _namespace_name[16] = "";
 #ifdef CONFIG_UF2_INI_NVS_VALUE_HIDDEN
-char *HIDDEN_STR[CONFIG_UF2_INI_NVS_HIDDEN_MAX_NUM];
+char *hidden_str[CONFIG_UF2_INI_NVS_HIDDEN_MAX_NUM];
 size_t hidden_str_num = 0;
 bool if_all_hidden = false;
 #endif
@@ -232,7 +232,7 @@ static void ini_gen_from_nvs(const char *part, const char *name)
             char *str = (char *)malloc(len);
             if ((result = nvs_get_str(nvs, info.key, str, &len)) == ESP_OK) {
 #ifdef CONFIG_UF2_INI_NVS_VALUE_HIDDEN
-                if (!check_value_if_hidden(info.key)) {
+                if (check_value_if_hidden(info.key)) {
                     ini_insert_pair(info.key, "****");
                 } else
 #endif
