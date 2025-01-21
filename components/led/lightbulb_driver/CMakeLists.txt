@@ -5,6 +5,10 @@ set(srcs "src/hal_driver.c"
 
 set(priv_req nvs_flash driver esp_timer)
 
+if("${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}" VERSION_GREATER_EQUAL "5.2.4")
+list(APPEND priv_req "esp_driver_i2c")
+endif()
+
 set(incs "include" "drivers/common/utils/")
 
 if(CONFIG_ENABLE_PWM_DRIVER)

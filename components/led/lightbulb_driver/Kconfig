@@ -51,8 +51,15 @@ menu "LightBulb Driver Config"
             help
                 Enable ws2812 output.
 
-        menu "IIC Send Task Config"
+        menu "IIC Config"
             depends on ENABLE_KP18058_DRIVER || ENABLE_BP1658CJ_DRIVER || ENABLE_BP57x8D_DRIVER || ENABLE_SM2x35EGH_DRIVER || ENABLE_SM2135EH_DRIVER || ENABLE_SM2135E_DRIVER
+
+            config LB_ENABLE_NEW_IIC_DRIVER
+                depends on ESP_IDF_VERSION >= 5.2.4
+                bool "Enable new I2C driver"
+                default "y"
+                help
+                    Enable new I2C driver.
 
             config LB_IIC_TASK_STACK
                 int "IIC Send Task stack"

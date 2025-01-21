@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.6.0 - 2025-01-13
+
+### Enhancements:
+
+* Update to the latest version of I2C driver
+
 ## v1.5.0 - 2024-12-25
 
 ### Enhancements:
