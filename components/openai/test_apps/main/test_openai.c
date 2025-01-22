@@ -53,7 +53,7 @@ TEST_CASE("test ChatCompletion", "[ChatCompletion]")
     chatCompletion->setFrequencyPenalty(chatCompletion, 0);     //float between -2.0 and 2.0. Positive values decrease the model's likelihood to repeat the same line verbatim.
     chatCompletion->setUser(chatCompletion, "OpenAI-ESP32");    //A unique identifier representing your end-user, which can help OpenAI to monitor and detect abuse.
     // chinese
-    OpenAI_StringResponse_t *result = chatCompletion->message(chatCompletion, "给我讲一个笑话", false);
+    OpenAI_StringResponse_t *result = chatCompletion->message(chatCompletion, "text", "给我讲一个笑话", false);
     TEST_ASSERT_NOT_NULL(result);
     if (result->getLen(result) == 1) {
         ESP_LOGI(TAG, "Received message. Tokens: %"PRIu32"", result->getUsage(result));
@@ -72,7 +72,25 @@ TEST_CASE("test ChatCompletion", "[ChatCompletion]")
     }
     result->deleteResponse(result);
     // english
-    result = chatCompletion->message(chatCompletion, "tell me a joke", false);
+    result = chatCompletion->message(chatCompletion, "text", "tell me a joke", false);
+    TEST_ASSERT_NOT_NULL(result);
+    if (result->getLen(result) == 1) {
+        ESP_LOGI(TAG, "Received message. Tokens: %"PRIu32"", result->getUsage(result));
+        char *response = result->getData(result, 0);
+        ESP_LOGI(TAG, "%s", response);
+    } else if (result->getLen(result) > 1) {
+        ESP_LOGI(TAG, "Received %"PRIu32" messages. Tokens: %"PRIu32"", result->getLen(result), result->getUsage(result));
+        for (int i = 0; i < result->getLen(result); ++i) {
+            char *response = result->getData(result, i);
+            ESP_LOGI(TAG, "Message[%d]: %s", i, response);
+        }
+    } else if (result->getError(result)) {
+        ESP_LOGE(TAG, "Error! %s", result->getError(result));
+    } else {
+        ESP_LOGE(TAG, "Unknown error!");
+    }
+    // image
+    result = chatCompletion->message(chatCompletion, "image_url", "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg", false);
     TEST_ASSERT_NOT_NULL(result);
     if (result->getLen(result) == 1) {
         ESP_LOGI(TAG, "Received message. Tokens: %"PRIu32"", result->getUsage(result));
@@ -148,6 +166,15 @@ TEST_CASE("test AudioTranscription cn", "[AudioTranscription]")
     vTaskDelay(1000 / portTICK_PERIOD_MS);
 }
 
+uint8_t *speech_stream_data = NULL;
+size_t speech_stream_len = 0;
+static void on_stream(const uint8_t *data, size_t length)
+{
+    speech_stream_data = (uint8_t*)realloc(speech_stream_data, speech_stream_len + length);
+    memcpy(speech_stream_data + speech_stream_len, data, length);
+    speech_stream_len += length;
+}
+
 TEST_CASE("test AudioSpeech", "[AudioSpeech]")
 {
     /* This helper function configures Wi-Fi or Ethernet, as selected in menuconfig.
@@ -184,6 +211,16 @@ TEST_CASE("test AudioSpeech", "[AudioSpeech]")
     TEST_ASSERT_NOT_NULL(finaltext);
     ESP_LOGI(TAG, "Final Text: %s", finaltext);
     TEST_ASSERT_TRUE(strcmp(giventext, finaltext) == 0);
+
+    /*stream mode*/
+    audioSpeech->speechStream(audioSpeech, giventext, on_stream);
+    TEST_ASSERT_NOT_NULL(speech_stream_data);
+    char *finaltext2 = audioTranscription->file(audioTranscription, (uint8_t *)speech_stream_data, speech_stream_len, OPENAI_AUDIO_INPUT_FORMAT_MP3);
+    TEST_ASSERT_NOT_NULL(finaltext2);
+    ESP_LOGI(TAG, "Final Text: %s", finaltext2);
+    TEST_ASSERT_TRUE(strcmp(giventext, finaltext2) == 0);
+
+    free(speech_stream_data);
     free(giventext);
     free(finaltext);
     openai->audioTranscriptionDelete(audioTranscription);
@@ -251,3 +288,4 @@ void app_main(void)
 
     unity_run_menu();
 }
+
