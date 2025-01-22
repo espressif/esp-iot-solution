@@ -1,4 +1,4 @@
-version: "1.0.2"
+version: "1.1.0"
 description: OpenAI library compatible with ESP-IDF
 url: https://github.com/espressif/esp-iot-solution
 repository: https://github.com/espressif/esp-iot-solution.git

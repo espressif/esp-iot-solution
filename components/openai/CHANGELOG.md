@@ -1,10 +1,17 @@
 # ChangeLog
 
+## v1.1.0 - 2025-7-24
+
+### Enhancements
+
+* Chat completion supports multi-modal input [#464](https://github.com/espressif/esp-iot-solution/pull/464)
+* Text-to-speech supports streaming output [#464](https://github.com/espressif/esp-iot-solution/pull/464)
+
 ## v1.0.2 - 2025-2-11
 
 ### Bug Fixes:
 
-* Fix OpenAI_Request not handling chunked data correctly [!467](https://github.com/espressif/esp-iot-solution/pull/467)
+* Fix OpenAI_Request not handling chunked data correctly [#467](https://github.com/espressif/esp-iot-solution/pull/467)
 
 ## v1.0.1 - 2024-11-5
 

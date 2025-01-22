@@ -30,6 +30,7 @@ extern const uint8_t turn_on_tv_en_mp3_start[] asm("_binary_turn_on_tv_en_mp3_st
 extern const uint8_t turn_on_tv_en_mp3_end[]   asm("_binary_turn_on_tv_en_mp3_end");
 extern const uint8_t introduce_espressif_mp3_start[] asm("_binary_introduce_espressif_mp3_start");
 extern const uint8_t introduce_espressif_mp3_end[]   asm("_binary_introduce_espressif_mp3_end");
+extern const char introduce_espressif_base64[] asm("_binary_introduce_espressif_base64_start");
 
 TEST_CASE("test ChatCompletion", "[ChatCompletion]")
 {
@@ -46,7 +47,7 @@ TEST_CASE("test ChatCompletion", "[ChatCompletion]")
     chatCompletion->setFrequencyPenalty(chatCompletion, 0);     //float between -2.0 and 2.0. Positive values decrease the model's likelihood to repeat the same line verbatim.
     chatCompletion->setUser(chatCompletion, "OpenAI-ESP32");    //A unique identifier representing your end-user, which can help OpenAI to monitor and detect abuse.
     // chinese
-    OpenAI_StringResponse_t *result = chatCompletion->message(chatCompletion, "给我讲一个笑话", false);
+    OpenAI_StringResponse_t *result = chatCompletion->message(chatCompletion, "text", "给我讲一个笑话", false);
     TEST_ASSERT_NOT_NULL(result);
     if (result->getLen(result) == 1) {
         ESP_LOGI(TAG, "Received message. Tokens: %"PRIu32"", result->getUsage(result));
@@ -65,7 +66,7 @@ TEST_CASE("test ChatCompletion", "[ChatCompletion]")
     }
     result->deleteResponse(result);
     // english
-    result = chatCompletion->message(chatCompletion, "tell me a joke", false);
+    result = chatCompletion->message(chatCompletion, "text", "tell me a joke", false);
     TEST_ASSERT_NOT_NULL(result);
     if (result->getLen(result) == 1) {
         ESP_LOGI(TAG, "Received message. Tokens: %"PRIu32"", result->getUsage(result));
@@ -83,6 +84,82 @@ TEST_CASE("test ChatCompletion", "[ChatCompletion]")
         ESP_LOGE(TAG, "Unknown error!");
     }
 
+    result->deleteResponse(result);
+    openai->chatDelete(chatCompletion);
+    OpenAIDelete(openai);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+}
+
+TEST_CASE("test ImageChatCompletion", "[ChatCompletion][Image]")
+{
+    OpenAI_t *openai = OpenAICreate(openai_key);
+    TEST_ASSERT_NOT_NULL(openai);
+    OpenAI_ChatCompletion_t *chatCompletion = openai->chatCreate(openai);
+    TEST_ASSERT_NOT_NULL(chatCompletion);
+    chatCompletion->setModel(chatCompletion, "gpt-4.1");  //Model to use for completion.
+    chatCompletion->setSystem(chatCompletion, "You are a helpful assistant.");     //Description of the required assistant
+    chatCompletion->setMaxTokens(chatCompletion, 1024);         //The maximum number of tokens to generate in the completion.
+    chatCompletion->setTemperature(chatCompletion, 0.2);        //float between 0 and 1. Higher value gives more random results.
+    chatCompletion->setStop(chatCompletion, "\r");              //Up to 4 sequences where the API will stop generating further tokens.
+    chatCompletion->setPresencePenalty(chatCompletion, 0);      //float between -2.0 and 2.0. Positive values increase the model's likelihood to talk about new topics.
+    chatCompletion->setFrequencyPenalty(chatCompletion, 0);     //float between -2.0 and 2.0. Positive values decrease the model's likelihood to repeat the same line verbatim.
+    chatCompletion->setUser(chatCompletion, "OpenAI-ESP32");    //A unique identifier representing your end-user, which can help OpenAI to monitor and detect abuse.
+    // audio
+    OpenAI_StringResponse_t *result = chatCompletion->message(chatCompletion, "image_url", "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg", false);
+    TEST_ASSERT_NOT_NULL(result);
+    if (result->getLen(result) == 1) {
+        ESP_LOGI(TAG, "Received message. Tokens: %"PRIu32"", result->getUsage(result));
+        char *response = result->getData(result, 0);
+        ESP_LOGI(TAG, "%s", response);
+    } else if (result->getLen(result) > 1) {
+        ESP_LOGI(TAG, "Received %"PRIu32" messages. Tokens: %"PRIu32"", result->getLen(result), result->getUsage(result));
+        for (int i = 0; i < result->getLen(result); ++i) {
+            char *response = result->getData(result, i);
+            ESP_LOGI(TAG, "Message[%d]: %s", i, response);
+        }
+    } else if (result->getError(result)) {
+        ESP_LOGE(TAG, "Error! %s", result->getError(result));
+    } else {
+        ESP_LOGE(TAG, "Unknown error!");
+    }
+    result->deleteResponse(result);
+    openai->chatDelete(chatCompletion);
+    OpenAIDelete(openai);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+}
+
+TEST_CASE("test AudioChatCompletion", "[ChatCompletion][Audio]")
+{
+    OpenAI_t *openai = OpenAICreate(openai_key);
+    TEST_ASSERT_NOT_NULL(openai);
+    OpenAI_ChatCompletion_t *chatCompletion = openai->chatCreate(openai);
+    TEST_ASSERT_NOT_NULL(chatCompletion);
+    chatCompletion->setModel(chatCompletion, "gpt-4o-mini-audio-preview");  //Model to use for completion.
+    chatCompletion->setSystem(chatCompletion, "You are a helpful assistant.");     //Description of the required assistant
+    chatCompletion->setMaxTokens(chatCompletion, 1024);         //The maximum number of tokens to generate in the completion.
+    chatCompletion->setTemperature(chatCompletion, 0.2);        //float between 0 and 1. Higher value gives more random results.
+    chatCompletion->setStop(chatCompletion, "\r");              //Up to 4 sequences where the API will stop generating further tokens.
+    chatCompletion->setPresencePenalty(chatCompletion, 0);      //float between -2.0 and 2.0. Positive values increase the model's likelihood to talk about new topics.
+    chatCompletion->setFrequencyPenalty(chatCompletion, 0);     //float between -2.0 and 2.0. Positive values decrease the model's likelihood to repeat the same line verbatim.
+    chatCompletion->setUser(chatCompletion, "OpenAI-ESP32");    //A unique identifier representing your end-user, which can help OpenAI to monitor and detect abuse.
+    // audio
+    OpenAI_StringResponse_t *result = chatCompletion->message(chatCompletion, "input_audio", introduce_espressif_base64, false);
+    TEST_ASSERT_NOT_NULL(result);
+    if (result->getLen(result) == 1) {
+        ESP_LOGI(TAG, "Received message. Tokens: %"PRIu32"", result->getUsage(result));
+        char *response = result->getData(result, 0);
+        ESP_LOGI(TAG, "%s", response);
+    } else if (result->getLen(result) > 1) {
+        ESP_LOGI(TAG, "Received %"PRIu32" messages. Tokens: %"PRIu32"", result->getLen(result), result->getUsage(result));
+        for (int i = 0; i < result->getLen(result); ++i) {
+            char *response = result->getData(result, i);
+            ESP_LOGI(TAG, "Message[%d]: %s", i, response);
+        }
+    } else if (result->getError(result)) {
+        ESP_LOGE(TAG, "Error! %s", result->getError(result));
+    } else {
+        ESP_LOGE(TAG, "Unknown error!");
+    }
     result->deleteResponse(result);
     openai->chatDelete(chatCompletion);
     OpenAIDelete(openai);
@@ -126,6 +203,15 @@ TEST_CASE("test AudioTranscription cn", "[AudioTranscription]")
     vTaskDelay(1000 / portTICK_PERIOD_MS);
 }
 
+uint8_t *speech_stream_data = NULL;
+size_t speech_stream_len = 0;
+static void on_stream(const uint8_t *data, size_t length)
+{
+    speech_stream_data = (uint8_t*)realloc(speech_stream_data, speech_stream_len + length);
+    memcpy(speech_stream_data + speech_stream_len, data, length);
+    speech_stream_len += length;
+}
+
 TEST_CASE("test AudioSpeech", "[AudioSpeech]")
 {
     OpenAI_t *openai = OpenAICreate(openai_key);
@@ -156,6 +242,16 @@ TEST_CASE("test AudioSpeech", "[AudioSpeech]")
     TEST_ASSERT_NOT_NULL(finaltext);
     ESP_LOGI(TAG, "Final Text: %s", finaltext);
     TEST_ASSERT_TRUE(strcmp(giventext, finaltext) == 0);
+
+    /*stream mode*/
+    audioSpeech->speechStream(audioSpeech, giventext, on_stream);
+    TEST_ASSERT_NOT_NULL(speech_stream_data);
+    char *finaltext2 = audioTranscription->file(audioTranscription, (uint8_t *)speech_stream_data, speech_stream_len, OPENAI_AUDIO_INPUT_FORMAT_MP3);
+    TEST_ASSERT_NOT_NULL(finaltext2);
+    ESP_LOGI(TAG, "Final Text: %s", finaltext2);
+    TEST_ASSERT_TRUE(strcmp(giventext, finaltext2) == 0);
+
+    free(speech_stream_data);
     free(giventext);
     free(finaltext);
     openai->audioTranscriptionDelete(audioTranscription);

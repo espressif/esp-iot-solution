@@ -36,7 +36,8 @@ repos:
             .*.pb-c.h|
             .*.pb-c.c|
             .*.yuv|
-            .*.patch
+            .*.patch|
+            .*.base64
           )$
       - id: end-of-file-fixer
         exclude: *whitespace_excludes
@@ -93,4 +94,4 @@ repos:
     rev: v2.3.0
     hooks:
     - id: codespell
-      args: [-w, "--ignore-words=codespell-ignore-list", "--skip=*.js,*.vue,*/pnpm-lock.yaml,*/package-lock.json,*/yarn.lock"]
+      args: [-w, "--ignore-words=codespell-ignore-list", "--skip=*.js,*.vue,*/pnpm-lock.yaml,*/package-lock.json,*/yarn.lock,*.base64"]
