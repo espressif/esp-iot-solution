@@ -167,6 +167,20 @@ zero_detect_handle_t zero_detect_create(zero_detect_config_t *config);
 void zero_show_data(zero_detect_handle_t zcd_handle);
 
 /**
+ * @brief Pause zero detect
+ *
+ * @param zcd_handle A zero detect handle
+ */
+void zero_detect_pause(zero_detect_handle_t zcd_handle);
+
+/**
+ * @brief Resume zero detect
+ *
+ * @param zcd_handle A zero detect handle
+ */
+void zero_detect_resume(zero_detect_handle_t zcd_handle);
+
+/**
  * @brief Delete a zero detect device
  *
  * @param zcd_handle A zero detect handle

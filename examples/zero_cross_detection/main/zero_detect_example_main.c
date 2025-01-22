@@ -162,6 +162,19 @@ void app_main(void)
         vTaskDelay(500 / portTICK_PERIOD_MS);
         zero_show_data(g_zcds);           //Show zero cross data
         printf("EVENT: OUT OF RANGE COUNT:%d OFF COUNT:%d OPEN COUNT:%d\n", freq_out_of_range_count, relay_off_count, relay_open_count);
+
+        // Test pause and resume function
+        if (freq_out_of_range_count > 5) {
+            ESP_LOGI(TAG, "Pausing zero detection......");
+            zero_detect_pause(g_zcds);
+        }
+
+        if (relay_open_count > 5) {
+            ESP_LOGI(TAG, "Resuming zero detection......");
+            zero_detect_resume(g_zcds);
+            relay_open_count = 0;
+        }
+
         if (zcd.relay_suspend) {
             ESP_LOGW(TAG, "Process suspened, please wait till relay open");
         }

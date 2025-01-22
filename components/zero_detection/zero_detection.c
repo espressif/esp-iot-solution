@@ -28,6 +28,7 @@ typedef struct zero_cross {
 
     bool zero_source_power_invalid;  //Power loss flag when signal source is lost
     bool zero_singal_invaild;        //Signal is in an invalid range
+    bool is_paused;                  //Pause flag for zero cross detection
 
     zero_signal_type_t zero_signal_type;  //Zero crossing signal type
     zero_driver_type_t zero_driver_type;  //Zero crossing driver type
@@ -56,6 +57,9 @@ typedef struct zero_cross {
 static void IRAM_ATTR zero_cross_handle_interrupt(void *user_data, const mcpwm_capture_event_data_t *edata)
 {
     zero_cross_dev_t *zero_cross_dev = user_data;
+    if (zero_cross_dev->is_paused) {
+        return;
+    }
     int gpio_status = 0;
     if (zero_cross_dev->zero_driver_type == GPIO_TYPE) {
         //Retrieve the current GPIO level and determine the rising or falling edge
@@ -186,6 +190,44 @@ static void IRAM_ATTR zero_detect_gpio_cb(void *arg)
 {
     mcpwm_capture_event_data_t edata = {0};
     zero_cross_handle_interrupt(arg, &edata);
+}
+
+void zero_detect_pause(zero_detect_handle_t zcd_handle)
+{
+    if (zcd_handle == NULL) {
+        ESP_LOGE(TAG, "ERROR: zcd_handle is NULL");
+        return;
+    }
+    zero_cross_dev_t *zcd = (zero_cross_dev_t *)zcd_handle;
+    zcd->is_paused = true;
+
+#if defined(SOC_MCPWM_SUPPORTED)
+    if (zcd->zero_driver_type == MCPWM_TYPE) {
+        mcpwm_capture_channel_disable(zcd->cap_chan);
+    }
+#endif
+    if (zcd->zero_driver_type == GPIO_TYPE) {
+        gpio_isr_handler_remove(zcd->capture_pin);
+    }
+}
+
+void zero_detect_resume(zero_detect_handle_t zcd_handle)
+{
+    if (zcd_handle == NULL) {
+        ESP_LOGE(TAG, "ERROR: zcd_handle is NULL");
+        return;
+    }
+    zero_cross_dev_t *zcd = (zero_cross_dev_t *)zcd_handle;
+    zcd->is_paused = false;
+
+#if defined(SOC_MCPWM_SUPPORTED)
+    if (zcd->zero_driver_type == MCPWM_TYPE) {
+        mcpwm_capture_channel_enable(zcd->cap_chan);
+    }
+#endif
+    if (zcd->zero_driver_type == GPIO_TYPE) {
+        gpio_isr_handler_add(zcd->capture_pin, zero_detect_gpio_cb, zcd);
+    }
 }
 
 #if defined(CONFIG_USE_GPTIMER)
