@@ -10,6 +10,6 @@ dependencies:
   bus:
     override_path: "../../../components/bus"
   espressif/button:
-    version: "~2.5.0"
+    version: "^3.0.0"
   espressif/led_strip:
     version: "~1.1.0-alpha" #please use version 2.0.0 if idf5.0

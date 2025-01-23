@@ -1482,6 +1482,8 @@
     - <<: *if-dev-push
       changes: *patterns-build_system
     - <<: *if-dev-push
+      changes: *patterns-components_button
+    - <<: *if-dev-push
       changes: *patterns-components_usb_esp_msc_ota
     - <<: *if-dev-push
       changes: *patterns-example_usb_otg_usb_host_device_mode_manual_switch

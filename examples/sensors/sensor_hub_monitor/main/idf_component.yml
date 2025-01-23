@@ -2,9 +2,6 @@ dependencies:
   boards:
     version: "~0.0.1"
     override_path: "../../../common_components/boards"
-  button:
-    public: true
-    override_path: "../../../../components/button"
   sensor_hub:
     public: true
     override_path: "../../../../components/sensors/sensor_hub"

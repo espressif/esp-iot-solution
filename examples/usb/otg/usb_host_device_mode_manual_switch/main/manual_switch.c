@@ -10,6 +10,7 @@
 #include "usb_host_msc.h"
 #include "usb_device_cdc.h"
 #include "iot_button.h"
+#include "button_gpio.h"
 
 static const char *TAG = "manual_switch";
 
