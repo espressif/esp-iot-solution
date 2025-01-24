@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -192,11 +192,12 @@ esp_err_t esp_ble_uds_set_reg_user(esp_ble_uds_reg_user_t *in_val, bool need_sen
 }
 
 static esp_err_t uds_db_chg_cb(const uint8_t *inbuf, uint16_t inlen,
-                               uint8_t **outbuf, uint16_t *outlen, void *priv_data)
+                               uint8_t **outbuf, uint16_t *outlen, void *priv_data, uint8_t *att_status)
 {
     uint8_t len = sizeof(s_db_chg_val.db_buf);
 
     if (!outbuf || !outlen) {
+        *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -209,36 +210,45 @@ static esp_err_t uds_db_chg_cb(const uint8_t *inbuf, uint16_t inlen,
 
     *outbuf = calloc(1, s_db_chg_val.len);
     if (!(*outbuf)) {
+        *att_status = ESP_IOT_ATT_INSUF_RESOURCE;
         return ESP_ERR_NO_MEM;
     }
 
     memcpy(*outbuf, s_db_chg_val.db_buf, s_db_chg_val.len);
     *outlen = s_db_chg_val.len;
 
+    *att_status = ESP_IOT_ATT_SUCCESS;
+
     return ESP_OK;
 }
 
 static esp_err_t uds_user_index_cb(const uint8_t *inbuf, uint16_t inlen,
-                                   uint8_t **outbuf, uint16_t *outlen, void *priv_data)
+                                   uint8_t **outbuf, uint16_t *outlen, void *priv_data, uint8_t *att_status)
 {
     if (inbuf || !outbuf || !outlen) {
+        *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
         return ESP_ERR_INVALID_ARG;
     }
 
     *outlen = sizeof(s_user_index);
     *outbuf = (uint8_t *)calloc(1, *outlen);
     if (!(*outbuf)) {
+        *att_status = ESP_IOT_ATT_INSUF_RESOURCE;
         return ESP_ERR_NO_MEM;
     }
 
     memcpy(*outbuf, &s_user_index, *outlen);
 
+    *att_status = ESP_IOT_ATT_SUCCESS;
+
     return ESP_OK;
 }
 
 static esp_err_t uds_user_ctrl_cb(const uint8_t *inbuf, uint16_t inlen,
-                                  uint8_t **outbuf, uint16_t *outlen, void *priv_data)
+                                  uint8_t **outbuf, uint16_t *outlen, void *priv_data, uint8_t *att_status)
 {
+    *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
+
     if (!outbuf || !outlen) {
         return ESP_ERR_INVALID_ARG;
     }
@@ -251,6 +261,7 @@ static esp_err_t uds_user_ctrl_cb(const uint8_t *inbuf, uint16_t inlen,
         s_user_ctrl.op_code = inbuf[0];
         memcpy(s_user_ctrl.parameter, inbuf + 1, MIN(sizeof(s_user_ctrl.parameter), (inlen - 1)));
         esp_event_post(BLE_UDS_EVENTS, BLE_UDS_CHR_UUID16_USER_CTRL, ((uint8_t *)(&s_user_ctrl)), sizeof(esp_ble_uds_user_ctrl_t), portMAX_DELAY);
+        *att_status = ESP_IOT_ATT_SUCCESS;
         return ESP_OK;
     }
 

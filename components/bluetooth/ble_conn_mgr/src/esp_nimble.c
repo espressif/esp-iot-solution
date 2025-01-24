@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2019-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2019-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -1393,6 +1393,7 @@ static int esp_ble_conn_gap_event(struct ble_gap_event *event, void *arg)
 static int esp_ble_conn_access_cb(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctxt, void *arg)
 {
     esp_err_t rc = ESP_OK;
+    uint8_t att_status = ESP_IOT_ATT_SUCCESS;
     char buf[BLE_UUID_STR_LEN];
 
     uint8_t *data_buf = NULL;
@@ -1407,22 +1408,26 @@ static int esp_ble_conn_access_cb(uint16_t conn_handle, uint16_t attr_handle, st
         case BLE_GATT_ACCESS_OP_READ_CHR:
             ESP_LOGI(TAG, "Read attempted for characteristic UUID = %s, attr_handle = %d",
                             ble_uuid_to_str(ctxt->chr->uuid, buf), attr_handle);
-            if (chr && chr->uuid_fn && !chr->uuid_fn(NULL, 0, &outbuf, &outlen, NULL)) {
+            if (chr && chr->uuid_fn && !chr->uuid_fn(NULL, 0, &outbuf, &outlen, NULL, &att_status)) {
                 esp_ble_conn_on_gatts_attr_value_set(attr_handle, ctxt->chr->uuid, outlen, outbuf);
             }
 
-            rc = esp_ble_conn_on_gatts_attr_value_get(attr_handle, &outlen, &outbuf);
-            if (rc != 0) {
+            if (esp_ble_conn_on_gatts_attr_value_get(attr_handle, &outlen, &outbuf) != 0) {
                 ESP_LOGE(TAG, "Failed to read characteristic with attr_handle = %d", attr_handle);
-                return rc;
+                return ESP_IOT_ATT_INTERNAL_ERROR;
             }
-            rc = os_mbuf_append(ctxt->om, outbuf, outlen);
+
+            if (os_mbuf_append(ctxt->om, outbuf, outlen) != 0) {
+                ESP_LOGE(TAG, "Failed to append mbuf");
+                return ESP_IOT_ATT_INTERNAL_ERROR;
+            }
+
             break;
         case BLE_GATT_ACCESS_OP_WRITE_CHR:
             /* If empty packet is received, return */
             if (ctxt->om->om_len == 0) {
                 ESP_LOGD(TAG,"Empty packet");
-                return ESP_OK;
+                return ESP_IOT_ATT_SUCCESS;
             }
 
             /* Save the length of entire data */
@@ -1433,19 +1438,19 @@ static int esp_ble_conn_access_cb(uint16_t conn_handle, uint16_t attr_handle, st
             data_buf = calloc(1, data_len);
             if (data_buf == NULL) {
                 ESP_LOGE(TAG, "Error allocating memory for characteristic value");
-                return BLE_ATT_ERR_INSUFFICIENT_RES;
+                return ESP_IOT_ATT_INSUF_RESOURCE;
             }
 
             rc = ble_hs_mbuf_to_flat(ctxt->om, data_buf, data_len, &data_buf_len);
             if (rc != 0) {
                 ESP_LOGE(TAG, "Error getting data from memory buffers");
                 free(data_buf);
-                return BLE_ATT_ERR_UNLIKELY;
+                return ESP_IOT_ATT_ERR_UNLIKELY;
             }
 
             if (chr) {
                 if (chr->uuid_fn) {
-                    rc = chr->uuid_fn(data_buf, data_buf_len, &outbuf, &outlen, NULL);
+                    rc = chr->uuid_fn(data_buf, data_buf_len, &outbuf, &outlen, NULL, &att_status);
                 } else {
                     esp_ble_conn_event_send(s_conn_session, ESP_BLE_CONN_EVENT_DATA_RECEIVE, data_buf, data_buf_len, NULL);
                 }
@@ -1453,18 +1458,21 @@ static int esp_ble_conn_access_cb(uint16_t conn_handle, uint16_t attr_handle, st
                 ESP_LOGE(TAG, "Error getting character from uuid buffers");
             }
 
-            rc = esp_ble_conn_on_gatts_attr_value_set(attr_handle, ctxt->chr->uuid, outlen, outbuf);
+            if (esp_ble_conn_on_gatts_attr_value_set(attr_handle, ctxt->chr->uuid, outlen, outbuf)!= 0) {
+                ESP_LOGE(TAG, "Failed to read characteristic with attr_handle = %d", attr_handle);
+                return ESP_IOT_ATT_INTERNAL_ERROR;
+            }
 
             free(data_buf);
             data_buf = NULL;
             break;
 
         default:
-            rc = BLE_ATT_ERR_UNLIKELY;
+            att_status = ESP_IOT_ATT_ERR_UNLIKELY;
             break;
     }
 
-    return rc;
+    return att_status;
 }
 
 static void esp_ble_conn_on_reset(int reason)
@@ -1504,6 +1512,7 @@ static void esp_ble_conn_on_gatts_register(struct ble_gatt_register_ctxt *ctxt, 
 {
     char buf[BLE_UUID_STR_LEN];
     uint8_t *outbuf = NULL;
+    uint8_t att_status = ESP_IOT_ATT_SUCCESS;
     uint16_t outlen = 0;
     esp_ble_conn_character_t *chr = NULL;
 
@@ -1523,7 +1532,7 @@ static void esp_ble_conn_on_gatts_register(struct ble_gatt_register_ctxt *ctxt, 
         chr = esp_ble_conn_find_character_with_uuid(ctxt->chr.chr_def->uuid);
         if (chr) {
             if (chr->uuid_fn) {
-                chr->uuid_fn(NULL, 0, &outbuf, &outlen, NULL);
+                chr->uuid_fn(NULL, 0, &outbuf, &outlen, NULL, &att_status);
             }
         } else {
             ESP_LOGI(TAG, "No characteristic(%s) found", ble_uuid_to_str(ctxt->chr.chr_def->uuid, buf));

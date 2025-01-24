@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2019-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2019-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,18 +16,22 @@
 static int8_t s_ble_tps_tx_power_level;
 
 static esp_err_t esp_tps_tx_power_level_cb(const uint8_t *inbuf, uint16_t inlen,
-                                           uint8_t **outbuf, uint16_t *outlen, void *priv_data)
+                                           uint8_t **outbuf, uint16_t *outlen, void *priv_data, uint8_t *att_status)
 {
     if (inbuf || !outbuf || !outlen) {
+        *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
         return ESP_ERR_INVALID_ARG;
     }
 
     *outlen = sizeof(s_ble_tps_tx_power_level);
     *outbuf = (uint8_t *)calloc(1, *outlen);
     if (!(*outbuf)) {
+        *att_status = ESP_IOT_ATT_INSUF_RESOURCE;
         return ESP_ERR_NO_MEM;
     }
     memcpy(*outbuf, &s_ble_tps_tx_power_level, *outlen);
+
+    *att_status = ESP_IOT_ATT_SUCCESS;
 
     return ESP_OK;
 }

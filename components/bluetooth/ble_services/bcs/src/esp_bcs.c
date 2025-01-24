@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -179,18 +179,22 @@ esp_err_t esp_ble_bcs_set_measurement(esp_bcs_val_t *in_val, bool need_send)
 }
 
 static esp_err_t bcs_feature_cb(const uint8_t *inbuf, uint16_t inlen,
-                                uint8_t **outbuf, uint16_t *outlen, void *priv_data)
+                                uint8_t **outbuf, uint16_t *outlen, void *priv_data, uint8_t *att_status)
 {
     if (inbuf || !outbuf || !outlen) {
+        *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
         return ESP_ERR_INVALID_ARG;
     }
 
     *outlen = sizeof(body_composition_feature);
     *outbuf = (uint8_t *)calloc(1, *outlen);
     if (!(*outbuf)) {
+        *att_status = ESP_IOT_ATT_INSUF_RESOURCE;
         return ESP_ERR_NO_MEM;
     }
     memcpy(*outbuf, &body_composition_feature, *outlen);
+
+    *att_status = ESP_IOT_ATT_SUCCESS;
 
     return ESP_OK;
 }

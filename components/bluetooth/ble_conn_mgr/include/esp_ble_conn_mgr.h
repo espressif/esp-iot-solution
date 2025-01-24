@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2019-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2019-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -13,6 +13,64 @@
 extern "C"
 {
 #endif
+
+/**
+ * Success code and error codes
+ */
+#define ESP_IOT_ATT_SUCCESS                        0x00
+#define ESP_IOT_ATT_INVALID_HANDLE                 0x01
+#define ESP_IOT_ATT_READ_NOT_PERMIT                0x02
+#define ESP_IOT_ATT_WRITE_NOT_PERMIT               0x03
+#define ESP_IOT_ATT_INVALID_PDU                    0x04
+#define ESP_IOT_ATT_INSUF_AUTHENTICATION           0x05
+#define ESP_IOT_ATT_REQ_NOT_SUPPORTED              0x06
+#define ESP_IOT_ATT_INVALID_OFFSET                 0x07
+#define ESP_IOT_ATT_INSUF_AUTHORIZATION            0x08
+#define ESP_IOT_ATT_PREPARE_Q_FULL                 0x09
+#define ESP_IOT_ATT_NOT_FOUND                      0x0a
+#define ESP_IOT_ATT_NOT_LONG                       0x0b
+#define ESP_IOT_ATT_INSUF_KEY_SIZE                 0x0c
+#define ESP_IOT_ATT_INVALID_ATTR_LEN               0x0d
+#define ESP_IOT_ATT_ERR_UNLIKELY                   0x0e
+#define ESP_IOT_ATT_INSUF_ENCRYPTION               0x0f
+#define ESP_IOT_ATT_UNSUPPORT_GRP_TYPE             0x10
+#define ESP_IOT_ATT_INSUF_RESOURCE                 0x11
+#define ESP_IOT_ATT_DATABASE_OUT_OF_SYNC           0x12
+#define ESP_IOT_ATT_VALUE_NOT_ALLOWED              0x13
+
+/**
+ * Application error codes
+ */
+#define ESP_IOT_ATT_NO_RESOURCES                   0x80
+#define ESP_IOT_ATT_INTERNAL_ERROR                 0x81
+#define ESP_IOT_ATT_WRONG_STATE                    0x82
+#define ESP_IOT_ATT_DB_FULL                        0x83
+#define ESP_IOT_ATT_BUSY                           0x84
+#define ESP_IOT_ATT_ERROR                          0x85
+#define ESP_IOT_ATT_CMD_STARTED                    0x86
+#define ESP_IOT_ATT_ILLEGAL_PARAMETER              0x87
+#define ESP_IOT_ATT_PENDING                        0x88
+#define ESP_IOT_ATT_AUTH_FAIL                      0x89
+#define ESP_IOT_ATT_MORE                           0x8a
+#define ESP_IOT_ATT_INVALID_CFG                    0x8b
+#define ESP_IOT_ATT_SERVICE_STARTED                0x8c
+#define ESP_IOT_ATT_ENCRYPED_MITM                  ESP_IOT_ATT_SUCCESS
+#define ESP_IOT_ATT_ENCRYPED_NO_MITM               0x8d
+#define ESP_IOT_ATT_NOT_ENCRYPTED                  0x8e
+#define ESP_IOT_ATT_CONGESTED                      0x8f
+#define ESP_IOT_ATT_DUP_REG                        0x90
+#define ESP_IOT_ATT_ALREADY_OPEN                   0x91
+#define ESP_IOT_ATT_CANCEL                         0x92
+
+/**
+ * Common profile and service error codes
+ */
+#define ESP_IOT_ATT_STACK_RSP                      0xE0
+#define ESP_IOT_ATT_APP_RSP                        0xE1
+#define ESP_IOT_ATT_UNKNOWN_ERROR                  0XEF
+#define ESP_IOT_ATT_CCC_CFG_ERR                    0xFD
+#define ESP_IOT_ATT_PRC_IN_PROGRESS                0xFE
+#define ESP_IOT_ATT_OUT_OF_RANGE                   0xFF
 
 /**
  * BLE device name cannot be larger than this value
@@ -37,6 +95,7 @@ extern "C"
  * @param[out] outbuf       Variable to store data, it'll free by connection management component
  * @param[out] outlen       Variable to store data length
  * @param[in] priv_data     Private data context
+ * @param[in] att_status    The attribute return status
  *
  * @return
  *  - ESP_OK on successful
@@ -47,7 +106,8 @@ typedef esp_err_t (*esp_ble_conn_cb_t)(const uint8_t *inbuf,
                                        uint16_t inlen,
                                        uint8_t **outbuf,
                                        uint16_t *outlen,
-                                       void *priv_data);
+                                       void *priv_data,
+                                       uint8_t *att_status);
 
 /** @cond **/
 /* BLE CONN_MGR EVENTS BASE */

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2019-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2019-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -82,20 +82,24 @@ static esp_err_t ble_hts_temp_notify(bool notify, uint16_t uuid16, esp_ble_hts_t
 
 #ifdef CONFIG_BLE_HTS_TEMPERATURE_TYPE
 static esp_err_t esp_hts_temperature_type_cb(const uint8_t *inbuf, uint16_t inlen,
-                                             uint8_t **outbuf, uint16_t *outlen, void *priv_data)
+                                             uint8_t **outbuf, uint16_t *outlen, void *priv_data, uint8_t *att_status)
 {
     if (inbuf || !outbuf || !outlen) {
+        *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
         return ESP_ERR_INVALID_ARG;
     }
 
     uint8_t len = sizeof(s_ble_hts_data.temp_type);
     *outbuf = calloc(1, len);
     if (!(*outbuf)) {
+        *att_status = ESP_IOT_ATT_INSUF_RESOURCE;
         return ESP_ERR_NO_MEM;
     }
 
     memcpy(*outbuf, &s_ble_hts_data.temp_type, len);
     *outlen = len;
+
+    *att_status = ESP_IOT_ATT_SUCCESS;
 
     return ESP_OK;
 }
@@ -103,11 +107,12 @@ static esp_err_t esp_hts_temperature_type_cb(const uint8_t *inbuf, uint16_t inle
 
 #ifdef CONFIG_BLE_HTS_MEASUREMENT_INTERVAL
 static esp_err_t esp_hts_measurement_interval_cb(const uint8_t *inbuf, uint16_t inlen,
-                                                 uint8_t **outbuf, uint16_t *outlen, void *priv_data)
+                                                 uint8_t **outbuf, uint16_t *outlen, void *priv_data, uint8_t *att_status)
 {
     uint8_t len = sizeof(s_ble_hts_data.measurement_interval);
 
     if (!outbuf || !outlen) {
+        *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -117,17 +122,21 @@ static esp_err_t esp_hts_measurement_interval_cb(const uint8_t *inbuf, uint16_t 
         memcpy(&s_ble_hts_data.measurement_interval, inbuf, MIN(len, inlen));
         esp_event_post(BLE_HTS_EVENTS, BLE_HTS_CHR_UUID16_MEASUREMENT_INTERVAL, &s_ble_hts_data.measurement_interval, len, portMAX_DELAY);
 #else
+        *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
         return ESP_ERR_INVALID_ARG;
 #endif
     }
 
     *outbuf = calloc(1, len);
     if (!(*outbuf)) {
+        *att_status = ESP_IOT_ATT_INSUF_RESOURCE;
         return ESP_ERR_NO_MEM;
     }
 
     memcpy(*outbuf, &s_ble_hts_data.measurement_interval, len);
     *outlen = len;
+
+    *att_status = ESP_IOT_ATT_SUCCESS;
 
     return ESP_OK;
 }

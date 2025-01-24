@@ -20,7 +20,7 @@
   The spp server has two characteristic and one event processing functions:
 
 ```c
-  esp_spp_chr_cb(const uint8_t *inbuf, uint16_t inlen, uint8_t **outbuf, uint16_t *outlen, void *priv_data);
+  esp_spp_chr_cb(const uint8_t *inbuf, uint16_t inlen, uint8_t **outbuf, uint16_t *outlen, void *priv_data, uint8_t *att_status);
   app_ble_conn_event_handler(void *handler_args, esp_event_base_t base, int32_t id, void *event_data);
 ```
 

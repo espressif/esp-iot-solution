@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -127,21 +127,25 @@ esp_err_t esp_ble_wss_set_measurement(esp_ble_wss_measurement_t *in_val, bool ne
 }
 
 static esp_err_t wss_feature_cb(const uint8_t *inbuf, uint16_t inlen,
-                                uint8_t **outbuf, uint16_t *outlen, void *priv_data)
+                                uint8_t **outbuf, uint16_t *outlen, void *priv_data, uint8_t *att_status)
 {
     uint8_t len = sizeof(s_wss_feature);
 
     if (inbuf || !outbuf || !outlen) {
+        *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
         return ESP_ERR_INVALID_ARG;
     }
 
     *outbuf = calloc(1, len);
     if (!(*outbuf)) {
+        *att_status = ESP_IOT_ATT_INSUF_RESOURCE;
         return ESP_ERR_NO_MEM;
     }
 
     memcpy(*outbuf, &s_wss_feature, len);
     *outlen = len;
+
+    *att_status = ESP_IOT_ATT_SUCCESS;
 
     return ESP_OK;
 }
