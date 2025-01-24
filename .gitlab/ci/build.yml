@@ -1430,6 +1430,14 @@ build_components_spi_bus_test_apps:
   variables:
     EXAMPLE_DIR: components/spi_bus/test_apps
 
+build_components_storage_eeprom_at24c02_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_storage_eeprom_at24c02_test_apps
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: components/storage/eeprom/at24c02/test_apps
+
 build_components_touch_touch_proximity_sensor_test_apps:
   extends:
     - .build_examples_template
