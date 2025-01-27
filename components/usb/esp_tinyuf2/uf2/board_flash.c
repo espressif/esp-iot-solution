@@ -314,7 +314,7 @@ void board_flash_nvs_update(const char *ini_str)
     }
     ini_parse_to_nvs(ini_str);
     if (_modified_cb) {
-        _modified_cb();
+        _modified_cb(ini_str);
     }
 }
 

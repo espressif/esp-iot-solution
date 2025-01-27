@@ -36,7 +36,7 @@ typedef void (*update_complete_cb_t)(void);
  * @brief user callback called after nvs modified
  *
  */
-typedef void (*nvs_modified_cb_t)(void);
+typedef void (*nvs_modified_cb_t)(const char*);
 
 /**
  * @brief tinyuf2 configurations
