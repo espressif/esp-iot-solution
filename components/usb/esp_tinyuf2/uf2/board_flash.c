@@ -233,7 +233,7 @@ static void ini_gen_from_nvs(const char *part, const char *name)
             if ((result = nvs_get_str(nvs, info.key, str, &len)) == ESP_OK) {
 #ifdef CONFIG_UF2_INI_NVS_VALUE_HIDDEN
                 if (check_value_if_hidden(info.key)) {
-                    ini_insert_pair(info.key, "****");
+                    ini_insert_pair(info.key, NVS_HIDDEN_PLACEHOLDER);
                 } else
 #endif
                 {
@@ -259,6 +259,10 @@ static void ini_gen_from_nvs(const char *part, const char *name)
 static int nvs_write_back(void* user, const char* section, const char* name,
                           const char* value)
 {
+    if (check_value_if_hidden(name) && strcmp(value, NVS_HIDDEN_PLACEHOLDER) == 0)
+    {
+	 return 1;
+    }
     nvs_handle_t nvs = (nvs_handle_t)user;
     PRINTFD("... [%s]", section);
     PRINTFD("... (%s=%s)", name, value);

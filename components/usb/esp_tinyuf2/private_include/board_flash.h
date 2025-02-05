@@ -74,6 +74,7 @@
 #define CFG_UF2_INI_FILE_SIZE        CONFIG_UF2_INI_FILE_SIZE
 extern char *_ini_file;
 extern char *_ini_file_dummy;
+#define NVS_HIDDEN_PLACEHOLDER "****"
 
 //--------------------------------------------------------------------+
 // Basic API
