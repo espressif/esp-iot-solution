@@ -57,7 +57,7 @@
 static uint32_t _fl_addr = FLASH_CACHE_INVALID_ADDR;
 static uint8_t *_fl_buf = NULL;
 static bool _if_restart = false;
-static update_complete_cb_t _complete_cb = NULL;
+static update_event_cb_t _event_cb = NULL;
 static esp_partition_t const* _part_ota = NULL;
 char *_ini_file = NULL;
 char *_ini_file_dummy = NULL;
@@ -77,14 +77,17 @@ uint8_t board_usb_get_serial(uint8_t serial_id[16])
     return 6;
 }
 
+void board_event_cb(uf2_update_event_t e, uint32_t p) {
+    if (!_event_cb)
+        return;
+    _event_cb(e, p);
+}
+
 void board_dfu_complete(void)
 {
     esp_ota_set_boot_partition(_part_ota);
 
-    if (_complete_cb) {
-        PRINTF("dfu_complete: run user callback");
-        _complete_cb();
-    }
+    board_event_cb(TINYUF2_UPDATE_COMPLETE, 0);
 
     if (_if_restart) {
         /* code */
@@ -94,11 +97,11 @@ void board_dfu_complete(void)
     }
 }
 
-void board_flash_init(esp_partition_subtype_t subtype, const char *label, update_complete_cb_t complete_cb, bool if_restart)
+void board_flash_init(esp_partition_subtype_t subtype, const char *label, update_event_cb_t event_cb, bool if_restart)
 {
     _fl_addr = FLASH_CACHE_INVALID_ADDR;
     _if_restart = if_restart;
-    _complete_cb = complete_cb;
+    _event_cb = event_cb;
 
     if (subtype == ESP_PARTITION_SUBTYPE_ANY) {
         _part_ota = esp_ota_get_next_update_partition(NULL);
@@ -261,6 +264,7 @@ static int nvs_write_back(void* user, const char* section, const char* name,
 {
     if (check_value_if_hidden(name) && strcmp(value, NVS_HIDDEN_PLACEHOLDER) == 0)
     {
+	 PRINTFD("Ignore %s", name); 
 	 return 1;
     }
     nvs_handle_t nvs = (nvs_handle_t)user;

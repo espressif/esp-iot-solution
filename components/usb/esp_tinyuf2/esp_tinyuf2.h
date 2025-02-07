@@ -26,11 +26,17 @@ extern "C" {
 
 #define UF2_RESET_REASON_VALUE (CONFIG_UF2_OTA_RESET_REASON_VALUE)
 
+typedef enum {
+    TINYUF2_UPDATE_COMPLETE = 0,
+    TINYUF2_UPDATE_PCT = 1,
+    TINYUF2_UPDATE_MOUNT = 2,
+} uf2_update_event_t;
+
 /**
  * @brief user callback called after uf2 update complete
  *
  */
-typedef void (*update_complete_cb_t)(void);
+typedef void (*update_event_cb_t)(uf2_update_event_t, uint32_t);
 
 /**
  * @brief user callback called after nvs modified
@@ -46,7 +52,7 @@ typedef struct {
     esp_partition_subtype_t subtype;  /*!< Partition subtype. if ESP_PARTITION_SUBTYPE_ANY will use the next_update_partition by default. */
     const char *label;                /*!< Partition label. Set this value if looking for partition with a specific name. if subtype==ESP_PARTITION_SUBTYPE_ANY, label default to NULL.*/
     bool if_restart;                  /*!< if restart system to new app partition after UF2 flashing done */
-    update_complete_cb_t complete_cb; /*!< user callback called after uf2 update complete */
+    update_event_cb_t event_cb; /*!< user callback called after uf2 update complete */
 } tinyuf2_ota_config_t;
 
 /**

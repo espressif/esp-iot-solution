@@ -83,6 +83,9 @@ extern char *_ini_file_dummy;
 // DFU is complete, should reset or jump to application mode and not return
 void board_dfu_complete(void);
 
+// Access to user callback from msc.c, etc
+void board_event_cb(uf2_update_event_t, uint32_t);
+
 // Fill Serial Number and return its length (limit to 16 bytes)
 uint8_t board_usb_get_serial(uint8_t serial_id[16]);
 
@@ -91,7 +94,7 @@ uint8_t board_usb_get_serial(uint8_t serial_id[16]);
 //--------------------------------------------------------------------+
 
 // Initialize flash for DFU
-void board_flash_init(esp_partition_subtype_t subtype, const char *label, update_complete_cb_t complete_cb, bool if_restart);
+void board_flash_init(esp_partition_subtype_t subtype, const char *label, update_event_cb_t event_cb, bool if_restart);
 void board_flash_deinit(void);
 
 // Initialize flash for NVS
