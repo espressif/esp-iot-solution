@@ -272,6 +272,7 @@
 
 .patterns-components_storage_eeprom_at24c02: &patterns-components_storage_eeprom_at24c02
   - "components/storage/eeprom/at24c02/**/*"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_tools_cmake_utilities_test_component1: &patterns-components_tools_cmake_utilities_test_component1
   - "tools/cmake_utilities/test_apps/components/test_component1/**/*"
@@ -2223,7 +2224,7 @@
     - <<: *if-dev-push
       changes: *patterns-components_spi_bus
 
-.rules:build:components_storage_eeprom_at24c02_test:
+.rules:build:components_storage_eeprom_at24c02_test_apps:
   rules:
     - <<: *if-protected
     - <<: *if-label-build
@@ -2233,6 +2234,8 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_storage_eeprom_at24c02
+    - <<: *if-dev-push
+      changes: *patterns-components_i2c_bus
 
 .rules:build:components_touch_touch_proximity_sensor_test_apps:
   rules:

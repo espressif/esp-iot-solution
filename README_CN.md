@@ -58,6 +58,7 @@ ESP-IoT-Solution 中注册的组件如下:
 | --- | --- |
 | [aht20](https://components.espressif.com/components/espressif/aht20) | [![Component Registry](https://components.espressif.com/components/espressif/aht20/badge.svg)](https://components.espressif.com/components/espressif/aht20) |
 | [apds9960](https://components.espressif.com/components/espressif/apds9960) | [![Component Registry](https://components.espressif.com/components/espressif/apds9960/badge.svg)](https://components.espressif.com/components/espressif/apds9960) |
+| [at24c02](https://components.espressif.com/components/espressif/at24c02) | [![Component Registry](https://components.espressif.com/components/espressif/at24c02/badge.svg)](https://components.espressif.com/components/espressif/at24c02) |
 | [at581x](https://components.espressif.com/components/espressif/at581x) | [![Component Registry](https://components.espressif.com/components/espressif/at581x/badge.svg)](https://components.espressif.com/components/espressif/at581x) |
 | [avi_player](https://components.espressif.com/components/espressif/avi_player) | [![Component Registry](https://components.espressif.com/components/espressif/avi_player/badge.svg)](https://components.espressif.com/components/espressif/avi_player) |
 | [ble_anp](https://components.espressif.com/components/espressif/ble_anp) | [![Component Registry](https://components.espressif.com/components/espressif/ble_anp/badge.svg)](https://components.espressif.com/components/espressif/ble_anp) |

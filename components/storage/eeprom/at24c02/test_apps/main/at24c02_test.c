@@ -1,21 +1,24 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#define AT24C02_TEST_CODE 1
-#if AT24C02_TEST_CODE
-
 #include <stdio.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "unity.h"
 #include "esp_log.h"
-#include "driver/i2c.h"
 #include "at24c02.h"
 
-#define I2C_MASTER_SCL_IO           22          /*!< gpio number for I2C master clock IO21*/
-#define I2C_MASTER_SDA_IO           21          /*!< gpio number for I2C master data  IO15*/
-#define I2C_MASTER_NUM              I2C_NUM_1   /*!< I2C port number for master device */
+#define TEST_MEMORY_LEAK_THRESHOLD (-400)
+
+static size_t before_free_8bit;
+static size_t before_free_32bit;
+
+#define I2C_MASTER_SCL_IO           2           /*!< gpio number for I2C master clock IO2*/
+#define I2C_MASTER_SDA_IO           1           /*!< gpio number for I2C master data  IO1*/
+#define I2C_MASTER_NUM              I2C_NUM_0   /*!< I2C port number for master device */
 #define I2C_MASTER_TX_BUF_DISABLE   0           /*!< I2C master do not need buffer */
 #define I2C_MASTER_RX_BUF_DISABLE   0           /*!< I2C master do not need buffer */
 #define I2C_MASTER_FREQ_HZ          100000      /*!< I2C master clock frequency */
@@ -159,4 +162,29 @@ TEST_CASE("at24c02 bits operations", "[at24c02][eeprom][i2c_bus][storage]")
     at24c02_deinit();
 }
 
-#endif
+static void check_leak(size_t before_free, size_t after_free, const char *type)
+{
+    ssize_t delta = after_free - before_free;
+    printf("MALLOC_CAP_%s: Before %u bytes free, After %u bytes free (delta %d)\n", type, before_free, after_free, delta);
+    TEST_ASSERT_MESSAGE(delta >= TEST_MEMORY_LEAK_THRESHOLD, "memory leak");
+}
+
+void setUp(void)
+{
+    before_free_8bit = heap_caps_get_free_size(MALLOC_CAP_8BIT);
+    before_free_32bit = heap_caps_get_free_size(MALLOC_CAP_32BIT);
+}
+
+void tearDown(void)
+{
+    size_t after_free_8bit = heap_caps_get_free_size(MALLOC_CAP_8BIT);
+    size_t after_free_32bit = heap_caps_get_free_size(MALLOC_CAP_32BIT);
+    check_leak(before_free_8bit, after_free_8bit, "8BIT");
+    check_leak(before_free_32bit, after_free_32bit, "32BIT");
+}
+
+void app_main(void)
+{
+    printf("AT24C02 TEST \n");
+    unity_run_menu();
+}
