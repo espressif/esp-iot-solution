@@ -388,6 +388,9 @@
   - "components/usb/usb_stream/include/usb_stream.h"
   - "components/zero_detection/include/zero_detection.h"
 # examples folder, in the alphabetic order
+.patterns-example_ai_esp_dl_human_activity_recognition: &patterns-example_ai_esp_dl_human_activity_recognition
+  - "examples/ai/esp_dl/human_activity_recognition/**/*"
+
 .patterns-example_audio_wav_player: &patterns-example_audio_wav_player
   - "examples/audio/**/*"
 
@@ -648,6 +651,16 @@
   if: '$BOT_LABEL_DEPLOY || $CI_MERGE_REQUEST_LABELS =~ /^(?:[^,\n\r]+,)*deploy(?:,[^,\n\r]+)*$/i'
 
 # rules for examples
+.rules:build:example_ai_esp_dl_human_activity_recognition:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_ai_esp_dl_human_activity_recognition
+
 .rules:build:example_audio_wav_player:
   rules:
     - <<: *if-protected

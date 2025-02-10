@@ -3,6 +3,10 @@
 #    *  A == 1 or (B == 2 and C in [1,2,3])
 #    *  (A == 1 and B == 2) or (C not in ["3", "4", 5])
 
+examples/ai/esp_dl/human_activity_recognition:
+  enable:
+    - if: IDF_TARGET in ["esp32s3","esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 3)
+
 examples/audio/wav_player:
   enable:
     - if: INCLUDE_DEFAULT == 1
