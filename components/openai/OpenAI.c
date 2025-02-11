@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+/* SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -128,8 +128,7 @@ typedef struct {
 
     char *(*get)(const char *base_url, const char *api_key, const char *endpoint);                                                     /*!<  Perform an HTTP GET request. */
     char *(*del)(const char *base_url, const char *api_key, const char *endpoint);                                                     /*!<  Perform an HTTP DELETE request. */
-    char *(*post)(const char *base_url, const char *api_key, const char *endpoint, char *jsonBody);                                    /*!<  Perform an HTTP POST request. */
-    char *(*speechpost)(const char *base_url, const char *api_key, const char *endpoint, char *jsonBody, size_t *output_len);          /*!<  Perform an HTTP POST request for speech. */
+    char *(*post)(const char *base_url, const char *api_key, const char *endpoint, char *jsonBody,  size_t *output_len);               /*!<  Perform an HTTP POST request. */
     char *(*upload)(const char *base_url, const char *api_key, const char *endpoint, const char *boundary, uint8_t *data, size_t len); /*!<  Upload data using an HTTP request. */
 } _OpenAI_t;
 
@@ -575,7 +574,7 @@ static char *OpenAI_StringResponseGetError(OpenAI_StringResponse_t *stringRespon
     return _stringResponse->error_str;
 }
 
-static OpenAI_StringResponse_t *OpenAI_StringResponseCreate(char *payload)
+static OpenAI_StringResponse_t *OpenAI_StringResponseCreate(const char *payload)
 {
     cJSON *u, *tokens, *d;
     int dl;
@@ -652,7 +651,6 @@ static OpenAI_StringResponse_t *OpenAI_StringResponseCreate(char *payload)
     }
 
     cJSON_Delete(json);
-    free(payload);
     _stringResponse->parent.getUsage = &OpenAI_StringResponseGetUsage;
     _stringResponse->parent.getLen = &OpenAI_StringResponseGetLen;
     _stringResponse->parent.getData = &OpenAI_StringResponseGetDate;
@@ -661,7 +659,6 @@ static OpenAI_StringResponse_t *OpenAI_StringResponseCreate(char *payload)
     return &_stringResponse->parent;
 end:
     cJSON_Delete(json);
-    free(payload);
     OpenAI_StringResponseDelete(&_stringResponse->parent);
     return NULL;
 }
@@ -873,11 +870,13 @@ static OpenAI_StringResponse_t *OpenAI_CompletionPrompt(OpenAI_Completion_t *com
     }
     char *jsonBody = cJSON_Print(req);
     cJSON_Delete(req);
-    char *res = _completion->oai->post(_completion->oai->base_url, _completion->oai->api_key, endpoint, jsonBody);
+    char *res = _completion->oai->post(_completion->oai->base_url, _completion->oai->api_key, endpoint, jsonBody, NULL);
     free(jsonBody);
     OPENAI_ERROR_CHECK(res != NULL, "OpenAI API call failed", NULL);
 
-    return OpenAI_StringResponseCreate(res);
+    result = OpenAI_StringResponseCreate(res);
+    free(res);
+    return result;
 }
 
 static OpenAI_Completion_t *OpenAI_CompletionCreate(OpenAI_t *openai)
@@ -1149,7 +1148,7 @@ OpenAI_StringResponse_t *OpenAI_ChatCompletionMessage(OpenAI_ChatCompletion_t *c
     }
     char *jsonBody = cJSON_Print(req);
     cJSON_Delete(req);
-    char *res = _chatCompletion->oai->post(_chatCompletion->oai->base_url, _chatCompletion->oai->api_key, endpoint, jsonBody);
+    char *res = _chatCompletion->oai->post(_chatCompletion->oai->base_url, _chatCompletion->oai->api_key, endpoint, jsonBody, NULL);
     free(jsonBody);
     OPENAI_ERROR_CHECK(res != NULL, "Empty result!", result);
     if (save) {
@@ -1164,9 +1163,12 @@ OpenAI_StringResponse_t *OpenAI_ChatCompletionMessage(OpenAI_ChatCompletion_t *c
                 ESP_LOGE(TAG, "createChatMessage failed!");
             }
         }
+        free(res);
         return r;
     }
-    return OpenAI_StringResponseCreate(res);
+    result = OpenAI_StringResponseCreate(res);
+    free(res);
+    return result;
 }
 
 static OpenAI_ChatCompletion_t *OpenAI_ChatCompletionCreate(OpenAI_t *openai)
@@ -1287,10 +1289,12 @@ OpenAI_StringResponse_t *OpenAI_EditProcess(OpenAI_Edit_t *edit, char *instructi
     }
     char *jsonBody = cJSON_Print(req);
     cJSON_Delete(req);
-    char *res = _edit->oai->post(_edit->oai->base_url, _edit->oai->api_key, endpoint, jsonBody);
+    char *res = _edit->oai->post(_edit->oai->base_url, _edit->oai->api_key, endpoint, jsonBody, NULL);
     free(jsonBody);
     OPENAI_ERROR_CHECK(res != NULL, "Empty result!", result);
-    return OpenAI_StringResponseCreate(res);
+    result = OpenAI_StringResponseCreate(res);
+    free(res);
+    return result;
 }
 
 static OpenAI_Edit_t *OpenAI_EditCreate(OpenAI_t *openai)
@@ -1409,7 +1413,7 @@ OpenAI_ImageResponse_t *OpenAI_ImageGenerationPrompt(OpenAI_ImageGeneration_t *i
     }
     char *jsonBody = cJSON_Print(req);
     cJSON_Delete(req);
-    char *res = _imageGeneration->oai->post(_imageGeneration->oai->base_url, _imageGeneration->oai->api_key, endpoint, jsonBody);
+    char *res = _imageGeneration->oai->post(_imageGeneration->oai->base_url, _imageGeneration->oai->api_key, endpoint, jsonBody, NULL);
     free(jsonBody);
     OPENAI_ERROR_CHECK(res != NULL, "Empty result!", result);
     return OpenAI_ImageResponseCreate(res);
@@ -1731,7 +1735,10 @@ static OpenAI_ImageResponse_t *OpenAI_ImageEditImage(OpenAI_ImageEdit_t *imageEd
     char *res = _imageEdit->oai->upload(_imageEdit->oai->base_url, _imageEdit->oai->api_key, endpoint, boundary, data, len);
     free(data);
     OPENAI_ERROR_CHECK(res != NULL, "Empty result!", NULL);
-    return OpenAI_ImageResponseCreate(res);
+    OpenAI_ImageResponse_t *response = OpenAI_ImageResponseCreate(res);
+
+    free(res);
+    return response;
 }
 
 static OpenAI_ImageEdit_t *OpenAI_ImageEditCreate(OpenAI_t *openai)
@@ -1887,7 +1894,7 @@ static char *OpenAI_SpeechGetDate(OpenAI_SpeechResponse_t *audioSpeech)
     return (_audioSpeech->data);
 }
 
-static OpenAI_SpeechResponse_t *OpenAI_SpeechResponseCreate(char *payload, size_t dataLength)
+static OpenAI_SpeechResponse_t *OpenAI_SpeechResponseCreate(const char *payload, size_t dataLength)
 {
     _OpenAI_SpeechResponse_t  *_audioSpeech = (_OpenAI_SpeechResponse_t *)calloc(1, sizeof(_OpenAI_SpeechResponse_t));
     OPENAI_ERROR_CHECK(NULL != _audioSpeech, "calloc failed!", NULL);
@@ -1900,14 +1907,11 @@ static OpenAI_SpeechResponse_t *OpenAI_SpeechResponseCreate(char *payload, size_
     OPENAI_ERROR_CHECK_GOTO(_audioSpeech->data != NULL, "malloc failed!", end);
     memcpy(_audioSpeech->data, payload, dataLength);
 
-    free(payload);
-
     _audioSpeech->parent.getLen = &OpenAI_SpeechBufferGetLen;
     _audioSpeech->parent.getData = &OpenAI_SpeechGetDate;
     _audioSpeech->parent.deleteResponse = &OpenAI_SpeechResponseDelete;
     return &_audioSpeech->parent;
 end:
-    free(payload);
     OpenAI_SpeechResponseDelete(&_audioSpeech->parent);
     return NULL;
 }
@@ -1932,10 +1936,12 @@ OpenAI_SpeechResponse_t *OpenAI_AudioSpeechMessage(OpenAI_AudioSpeech_t *audioSp
     char *jsonBody = cJSON_Print(req);
     ESP_LOGD(TAG, "json body for Speech Message %s", jsonBody);
     cJSON_Delete(req);
-    char *res = _audioSpeech->oai->speechpost(_audioSpeech->oai->base_url, _audioSpeech->oai->api_key, endpoint, jsonBody, &dataLength);
+    char *res = _audioSpeech->oai->post(_audioSpeech->oai->base_url, _audioSpeech->oai->api_key, endpoint, jsonBody, &dataLength);
     free(jsonBody);
     OPENAI_ERROR_CHECK(res != NULL, "Empty result!", result);
-    return OpenAI_SpeechResponseCreate(res, dataLength);
+    result = OpenAI_SpeechResponseCreate(res, dataLength);
+    free(res);
+    return result;
 }
 
 static OpenAI_AudioSpeech_t *OpenAI_AudioSpeechCreate(OpenAI_t *openai)
@@ -2291,10 +2297,12 @@ OpenAI_EmbeddingResponse_t *OpenAI_EmbeddingCreate(OpenAI_t *openai, char *input
     char *jsonBody = cJSON_Print(req);
     cJSON_Delete(req);
     _OpenAI_t *_openai = __containerof(openai, _OpenAI_t, parent);
-    char *response = _openai->post(_openai->base_url, _openai->api_key, endpoint, jsonBody);
+    char *response = _openai->post(_openai->base_url, _openai->api_key, endpoint, jsonBody, NULL);
     free(jsonBody);
     OPENAI_ERROR_CHECK(response != NULL, "Empty response!", NULL);
-    return OpenAI_EmbeddingResponseCreate(response);
+    result = OpenAI_EmbeddingResponseCreate(response);
+    free(response);
+    return result;
 }
 
 // moderations { //Classifies if text violates OpenAI's Content Policy
@@ -2330,10 +2338,12 @@ OpenAI_ModerationResponse_t *OpenAI_ModerationCreate(OpenAI_t *openai, char *inp
     char *jsonBody = cJSON_Print(req);
     cJSON_Delete(req);
     _OpenAI_t *_openai = __containerof(openai, _OpenAI_t, parent);
-    res = _openai->post(_openai->base_url, _openai->api_key, endpoint, jsonBody);
+    res = _openai->post(_openai->base_url, _openai->api_key, endpoint, jsonBody, NULL);
     free(jsonBody);
     OPENAI_ERROR_CHECK(res != NULL, "Empty result!", NULL);
-    return OpenAI_ModerationResponseCreate(res);
+    result = OpenAI_ModerationResponseCreate(res);
+    free(res);
+    return result;
 }
 
 void OpenAIDelete(OpenAI_t *oai)
@@ -2359,11 +2369,13 @@ void OpenAIChangeBaseURL(OpenAI_t *oai, const char *baseURL)
     _oai->base_url = strdup(baseURL);
 }
 
-static char *OpenAI_Request(const char *base_url, const char *api_key, const char *endpoint, const char *content_type, esp_http_client_method_t method, const char *boundary, uint8_t *data, size_t len)
+static char *OpenAI_Request(const char *base_url, const char *api_key, const char *endpoint, const char *content_type, esp_http_client_method_t method, const char *boundary, uint8_t *data, size_t len, size_t *output_len)
 {
     ESP_LOGD(TAG, "\"%s\", len=%u", endpoint, len);
     char *url = NULL;
     char *result = NULL;
+    int read_len = 0;
+    int total_read = 0;
     asprintf(&url, "%s%s", base_url, endpoint);
     OPENAI_ERROR_CHECK(url != NULL, "Failed to allocate url!", NULL);
     esp_http_client_config_t config = {
@@ -2394,47 +2406,30 @@ static char *OpenAI_Request(const char *base_url, const char *api_key, const cha
         int wlen = esp_http_client_write(client, (const char *)data, len);
         OPENAI_ERROR_CHECK_GOTO(wlen >= 0, "Failed to write client!", end);
     }
+
     int content_length = esp_http_client_fetch_headers(client);
-    ESP_LOGI(TAG, "content_length=%d", content_length);
+    OPENAI_ERROR_CHECK_GOTO(content_length >= 0, "HTTP client fetch headers failed!", end);
+    ESP_LOGD(TAG, "chunk_length=%d", content_length);
+    content_length = (content_length > 0) ? content_length : CONFIG_DEFAULT_HTTP_CHUNK_SIZE;
 
-    int buffer_size = (content_length > 0) ? content_length : 4096;
-    int total_read = 0;
-    result = malloc(buffer_size);
-    OPENAI_ERROR_CHECK_GOTO(result != NULL, "Failed to allocate memory", end);
-
-    while (1)
-    {
-        int read_len = esp_http_client_read_response(client, result + total_read, buffer_size - total_read);
-        if (read_len <= 0)
-            break;
-        total_read += read_len;
-
-        if (total_read >= buffer_size - 1)
-        {
-            ESP_LOGD(TAG, "Buffer size exceeded, reallocating memory");
-            buffer_size *= 2;
-            char *new_buffer = realloc(result, buffer_size);
-            if (new_buffer == NULL)
-            {
-                ESP_LOGE(TAG, "Failed to allocate memory");
-                free(result);
-                result = NULL;
-                goto end;
-            }
-            result = new_buffer;
+    do {
+        char *new_result = (char *)realloc(result, total_read + content_length + 1);
+        if (!new_result) {
+            ESP_LOGE(TAG, "Chunk Data reallocated Failed");
+            free(result);
+            result = NULL;
+            goto end;
         }
+        result = new_result;
+        read_len = esp_http_client_read_response(client, result + total_read, content_length);
+        total_read += read_len;
+        ESP_LOGD(TAG, "HTTP_READ:=%d", read_len);
+    } while (read_len > 0);
 
-        if (esp_http_client_is_complete_data_received(client))
-            break;
-    }
-
-    if (total_read > 0)
-    {
+    if (total_read > 0) {
         result[total_read] = '\0';
         ESP_LOGD(TAG, "result: %s, size: %d", result, total_read);
-    }
-    else
-    {
+    } else {
         free(result);
         result = NULL;
         ESP_LOGE(TAG, "No data received");
@@ -2444,95 +2439,30 @@ end:
     free(url);
     esp_http_client_close(client);
     esp_http_client_cleanup(client);
+    if (output_len) {
+        *output_len = total_read;
+    }
     return result != NULL ? result : NULL;
-}
-
-static char *OpenAI_Speech_Request(const char *base_url, const char *api_key, const char *endpoint, const char *content_type, esp_http_client_method_t method, const char *boundary, uint8_t *data, size_t len, size_t *output_len)
-{
-    ESP_LOGD(TAG, "\"%s\", len=%u", endpoint, len);
-    char *url = NULL;
-    char *result = NULL;
-    asprintf(&url, "%s%s", base_url, endpoint);
-    OPENAI_ERROR_CHECK(url != NULL, "Failed to allocate url!", NULL);
-    esp_http_client_config_t config = {
-        .url = url,
-        .method = method,
-        .timeout_ms = 60000,
-        .crt_bundle_attach = esp_crt_bundle_attach,
-    };
-    esp_http_client_handle_t client = esp_http_client_init(&config);
-    char *headers = NULL;
-    if (boundary) {
-        asprintf(&headers, "%s; boundary=%s", content_type, boundary);
-    } else {
-        asprintf(&headers, "%s", content_type);
-    }
-    OPENAI_ERROR_CHECK_GOTO(headers != NULL, "Failed to allocate headers!", end);
-    esp_http_client_set_header(client, "Content-Type", headers);
-    ESP_LOGD(TAG, "headers:\r\n%s", headers);
-    free(headers);
-
-    asprintf(&headers, "Bearer %s", api_key);
-    OPENAI_ERROR_CHECK_GOTO(headers != NULL, "Failed to allocate headers!", end);
-    esp_http_client_set_header(client, "Authorization", headers);
-    free(headers);
-
-    esp_err_t err = esp_http_client_open(client, len);
-    ESP_LOGD(TAG, "data:\r\n%s", data);
-
-    OPENAI_ERROR_CHECK_GOTO(err == ESP_OK, "Failed to open client!", end);
-    if (len > 0) {
-        int wlen = esp_http_client_write(client, (const char *)data, len);
-        OPENAI_ERROR_CHECK_GOTO(wlen >= 0, "Failed to write client!", end);
-    }
-    int content_length = esp_http_client_fetch_headers(client);
-    if (esp_http_client_is_chunked_response(client)) {
-        esp_http_client_get_chunk_length(client, &content_length);
-    }
-    ESP_LOGD(TAG, "chunk_length=%d", content_length); //4096
-    OPENAI_ERROR_CHECK_GOTO(content_length > 0, "HTTP client fetch headers failed!", end);
-
-    int read_len = 0;
-    *output_len = 0;
-    do {
-        result = (char *)realloc(result, *output_len + content_length + 1);
-        OPENAI_ERROR_CHECK_GOTO(result != NULL, "Chunk Data reallocated Failed", end);
-        read_len = esp_http_client_read_response(client, result + (int) * output_len, content_length);
-        *output_len += read_len;
-        ESP_LOGD(TAG, "HTTP_READ:=%d", read_len);
-    } while (read_len > 0);
-    ESP_LOGD(TAG, "output_len: %d\n", (int)*output_len);
-
-end:
-    free(url);
-    esp_http_client_close(client);
-    esp_http_client_cleanup(client);
-    return result != NULL ? result : NULL;
-}
-
-static char *OpenAI_Speech_Post(const char *base_url, const char *api_key, const char *endpoint, char *jsonBody, size_t *output_len)
-{
-    return OpenAI_Speech_Request(base_url, api_key, endpoint, "application/json", HTTP_METHOD_POST, NULL, (uint8_t *)jsonBody, strlen(jsonBody), output_len);
 }
 
 static char *OpenAI_Upload(const char *base_url, const char *api_key, const char *endpoint, const char *boundary, uint8_t *data, size_t len)
 {
-    return OpenAI_Request(base_url, api_key, endpoint, "multipart/form-data", HTTP_METHOD_POST, boundary, data, len);
+    return OpenAI_Request(base_url, api_key, endpoint, "multipart/form-data", HTTP_METHOD_POST, boundary, data, len, NULL);
 }
 
-static char *OpenAI_Post(const char *base_url, const char *api_key, const char *endpoint, char *jsonBody)
+static char *OpenAI_Post(const char *base_url, const char *api_key, const char *endpoint, char *jsonBody, size_t *output_len)
 {
-    return OpenAI_Request(base_url, api_key, endpoint, "application/json", HTTP_METHOD_POST, NULL, (uint8_t *)jsonBody, strlen(jsonBody));
+    return OpenAI_Request(base_url, api_key, endpoint, "application/json", HTTP_METHOD_POST, NULL, (uint8_t *)jsonBody, strlen(jsonBody), output_len);
 }
 
 static char *OpenAI_Get(const char *base_url, const char *api_key, const char *endpoint)
 {
-    return OpenAI_Request(base_url, api_key, endpoint, "application/json", HTTP_METHOD_GET, NULL, NULL, 0);
+    return OpenAI_Request(base_url, api_key, endpoint, "application/json", HTTP_METHOD_GET, NULL, NULL, 0, NULL);
 }
 
 static char *OpenAI_Del(const char *base_url, const char *api_key, const char *endpoint)
 {
-    return OpenAI_Request(base_url, api_key, endpoint, "application/json", HTTP_METHOD_DELETE, NULL, NULL, 0);
+    return OpenAI_Request(base_url, api_key, endpoint, "application/json", HTTP_METHOD_DELETE, NULL, NULL, 0, NULL);
 }
 
 OpenAI_t *OpenAICreate(const char *api_key)
@@ -2599,7 +2529,6 @@ OpenAI_t *OpenAICreate(const char *api_key)
     _oai->get = &OpenAI_Get;
     _oai->del = &OpenAI_Del;
     _oai->post = &OpenAI_Post;
-    _oai->speechpost = &OpenAI_Speech_Post;
     _oai->upload = &OpenAI_Upload;
     return &_oai->parent;
 }

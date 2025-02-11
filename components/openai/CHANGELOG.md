@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.0.2 - 2025-2-11
+
+### Bug Fixes:
+
+* Fix OpenAI_Request not handling chunked data correctly [!467](https://github.com/espressif/esp-iot-solution/pull/467)
+
 ## v1.0.1 - 2024-11-5
 
 ### Bug Fixes:

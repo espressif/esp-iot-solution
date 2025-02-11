@@ -6,6 +6,12 @@ menu "OpenAI"
         help
         Default Base URL for OpenAI API
 
+    config DEFAULT_HTTP_CHUNK_SIZE
+        int "default HTTP Chunk Size"
+        default 512
+        help
+        Default buffer size for HTTP chunked transfer
+
     config ENABLE_EMBEDDING
         bool "Enable Embedding"
         default y
@@ -24,20 +30,17 @@ menu "OpenAI"
         help
         Enable OpenAI Completion
 
-
     config ENABLE_CHAT_COMPLETION
         bool "Enable Chat Completion"
         default y
         help
         Enable OpenAI Chat Completion
 
-
     config ENABLE_EDIT
         bool "Enable Edit"
         default y
         help
         Enable OpenAI Edit
-
 
     config ENABLE_IMAGE_GENERATION
         bool "Enable ImageGeneration"
