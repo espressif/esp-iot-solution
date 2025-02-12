@@ -49,7 +49,7 @@ The connection between ESP Board and the LCD is as follows:
 └──────────────────────┘              └────────────────────┘
 ```
 
-The LCD parameters and GPIO number used by this example can be changed in [lv_port.h](main/lv_port.h).
+The LCD parameters and GPIO number used by this example can be changed in [lvgl_port.h](main/lvgl_port.h).
 Especially, please pay attention to the **vendor specific initialization**, it can be different between manufacturers and should consult the LCD supplier for initialization sequence code.
 
 ### Build and Flash
