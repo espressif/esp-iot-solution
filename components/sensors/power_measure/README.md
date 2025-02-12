@@ -2,7 +2,7 @@
 
 ## Overview
 
-This example demonstrates how to use the **BL0937** power measurement chip to detect electrical parameters such as voltage, current, active power, and energy consumption. It is implemented for **ESP32** using FreeRTOS, and shows how to configure and interface with the BL0937 power measurement chip. The example initializes the power measurement system, fetches various parameters, and logs them at regular intervals.
+This example demonstrates how to use the **BL0937** power measurement chip to detect electrical parameters such as voltage, current, active power, and energy consumption. It is implemented for **ESP32 series chips** using FreeRTOS, and shows how to configure and interface with the BL0937 power measurement chip. The example initializes the power measurement system, fetches various parameters, and logs them at regular intervals.
 
 This example supports the **BL0937** power measurement chip, which is capable of measuring:
 
@@ -23,7 +23,7 @@ The primary goal is to demonstrate how to configure the hardware pins, initializ
 
 ## Hardware Requirements
 
-The example uses the **BL0937** power measurement chip. To connect it, the following pins must be configured on the ESP32:
+The example uses the **BL0937** power measurement chip and ESP32-C3(C2) for test. To connect it, the following pins must be configured on the ESP32-C3(C2):
 
 | Variable            | GPIO Pin       | Chip Pin |
 | ------------------- | -------------- | -------- |
