@@ -617,6 +617,9 @@
 .patterns-example_utilities_xz_decompress_file: &patterns-example_utilities_xz_decompress_file
   - "examples/utilities/xz_decompress_file/**/*"
 
+.patterns-example_vision_opencv_color_tracker: &patterns-example_vision_opencv_color_tracker
+  - "examples/vision/opencv/color_tracker/**/*"
+
 .patterns-example_gprof_gprof_simple: &patterns-example_gprof_gprof_simple
   - "examples/gprof/gprof_simple/**/*"
 
@@ -1570,6 +1573,16 @@
       changes: *patterns-components_utilities_xz
     - <<: *if-dev-push
       changes: *patterns-example_utilities_xz_decompress_file
+
+.rules:build:example_vision_opencv_color_tracker:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_vision_opencv_color_tracker
 
 .rules:build:example_elf_loader_elf_loader_example:
   rules:

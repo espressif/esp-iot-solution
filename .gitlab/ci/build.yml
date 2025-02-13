@@ -944,6 +944,16 @@ build_example_utilities_xz_decompress_file:
   variables:
     EXAMPLE_DIR: examples/utilities/xz_decompress_file
 
+build_example_vision_opencv_color_tracker:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_vision_opencv_color_tracker
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.4
+  variables:
+    EXAMPLE_DIR: examples/vision/opencv/color_tracker
+
 build_components_audio_adc_mic_test_apps:
   extends:
     - .build_examples_template
