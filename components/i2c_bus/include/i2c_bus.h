@@ -98,6 +98,18 @@ i2c_bus_handle_t i2c_bus_create(i2c_port_t port, const i2c_config_t *conf);
  */
 esp_err_t i2c_bus_delete(i2c_bus_handle_t *p_bus_handle);
 
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
+#if !CONFIG_I2C_BUS_BACKWARD_CONFIG
+/**
+ * @brief Get internal idf bus_handle from i2c_bus_handle
+ *
+ * @param bus_handle I2C bus handle
+ * @return i2c_master_bus_handle_t Return the idf bus_handle if obtained successfully, return NULL if failed.
+ */
+i2c_master_bus_handle_t i2c_bus_get_internal_bus_handle(i2c_bus_handle_t bus_handle);
+#endif
+#endif
+
 /**
  * @brief Scan i2c devices attached on i2c bus
  *

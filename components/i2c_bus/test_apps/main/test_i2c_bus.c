@@ -372,6 +372,46 @@ TEST_CASE("i2c bus init-deinit test", "[bus][i2c_bus]")
     i2c_bus_device_add_test();
 }
 
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0) && !CONFIG_I2C_BUS_BACKWARD_CONFIG
+TEST_CASE("I2C bus uses external bus handle test", "[bus][i2c_bus]")
+{
+    uint8_t *data_wr = (uint8_t *) malloc(RW_TEST_LENGTH);
+    for (int i = 0; i < RW_TEST_LENGTH; i++) {
+        data_wr[i] = i;
+    }
+
+    i2c_master_bus_config_t i2c_mst_config = {
+        .clk_source = I2C_CLK_SRC_DEFAULT,
+        .i2c_port = I2C_MASTER_NUM,
+        .scl_io_num = I2C_MASTER_SCL_IO,
+        .sda_io_num = I2C_MASTER_SDA_IO,
+        .flags.enable_internal_pullup = true,
+    };
+    i2c_master_bus_handle_t bus_handle;
+
+    TEST_ESP_OK(i2c_new_master_bus(&i2c_mst_config, &bus_handle));
+
+    i2c_config_t conf = {
+        .mode = I2C_MODE_MASTER,
+        .sda_io_num = I2C_MASTER_SDA_IO,
+        .sda_pullup_en = GPIO_PULLUP_ENABLE,
+        .scl_io_num = I2C_MASTER_SCL_IO,
+        .scl_pullup_en = GPIO_PULLUP_ENABLE,
+        .master.clk_speed = I2C_MASTER_FREQ_HZ,
+    };
+
+    i2c_bus_handle_t i2c_bus = i2c_bus_create(I2C_MASTER_NUM, &conf);
+
+    i2c_bus_device_handle_t i2c_device1 = i2c_bus_device_create(i2c_bus, 0x01, 400000);
+    TEST_ASSERT(i2c_device1 != NULL);
+    i2c_bus_write_bytes(i2c_device1, NULL_I2C_MEM_ADDR, RW_TEST_LENGTH, data_wr);
+    i2c_bus_device_delete(&i2c_device1);
+    free(data_wr);
+    TEST_ASSERT(ESP_OK == i2c_bus_delete(&i2c_bus));
+    TEST_ASSERT(i2c_bus == NULL);
+}
+#endif
+
 TEST_CASE("I2C bus scan test", "[i2c_bus][scan]")
 {
     uint8_t addrs[I2C_SCAN_ADDR_NUM] = {0};
