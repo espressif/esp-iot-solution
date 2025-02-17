@@ -2395,20 +2395,49 @@ static char *OpenAI_Request(const char *base_url, const char *api_key, const cha
         OPENAI_ERROR_CHECK_GOTO(wlen >= 0, "Failed to write client!", end);
     }
     int content_length = esp_http_client_fetch_headers(client);
-    if (esp_http_client_is_chunked_response(client)) {
-        esp_http_client_get_chunk_length(client, &content_length);
+    ESP_LOGI(TAG, "content_length=%d", content_length);
+
+    int buffer_size = (content_length > 0) ? content_length : 4096;
+    int total_read = 0;
+    result = malloc(buffer_size);
+    OPENAI_ERROR_CHECK_GOTO(result != NULL, "Failed to allocate memory", end);
+
+    while (1)
+    {
+        int read_len = esp_http_client_read_response(client, result + total_read, buffer_size - total_read);
+        if (read_len <= 0)
+            break;
+        total_read += read_len;
+
+        if (total_read >= buffer_size - 1)
+        {
+            ESP_LOGD(TAG, "Buffer size exceeded, reallocating memory");
+            buffer_size *= 2;
+            char *new_buffer = realloc(result, buffer_size);
+            if (new_buffer == NULL)
+            {
+                ESP_LOGE(TAG, "Failed to allocate memory");
+                free(result);
+                result = NULL;
+                goto end;
+            }
+            result = new_buffer;
+        }
+
+        if (esp_http_client_is_complete_data_received(client))
+            break;
     }
-    ESP_LOGD(TAG, "content_length=%d", content_length);
-    OPENAI_ERROR_CHECK_GOTO(content_length > 0, "HTTP client fetch headers failed!", end);
-    result = (char *)malloc(content_length + 1);
-    int read = esp_http_client_read_response(client, result, content_length);
-    if (read != content_length) {
-        ESP_LOGE(TAG, "HTTP_ERROR: read=%d, length=%d", read, content_length);
+
+    if (total_read > 0)
+    {
+        result[total_read] = '\0';
+        ESP_LOGD(TAG, "result: %s, size: %d", result, total_read);
+    }
+    else
+    {
         free(result);
         result = NULL;
-    } else {
-        result[content_length] = 0;
-        ESP_LOGD(TAG, "result: %s, size: %d", result, strlen(result));
+        ESP_LOGE(TAG, "No data received");
     }
 
 end:
