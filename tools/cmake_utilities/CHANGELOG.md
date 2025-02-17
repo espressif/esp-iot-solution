@@ -1,3 +1,8 @@
+## v1.1.0 - 2025-01-16
+
+* relinker: support ESP32-C3 and SRAM optimization for flash-suspend
+* relinker: add IDF v5.3.x support
+
 ## v0.5.3 - 2023-09-15
 
 * fix `add_dependencies called with incorrect number of arguments` in `relinker.cmake`
@@ -5,7 +10,7 @@
 
 ## v0.5.2 - 2023-09-15
 
-* Support work on older ESP-IDF, eg: 4.3.x
+* Support work on older ESP-IDF, eg: 4.3.x 
 
 ## v0.5.1 - 2023-08-22
 
