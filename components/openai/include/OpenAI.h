@@ -50,8 +50,13 @@ typedef enum {
     OPENAI_AUDIO_OUTPUT_FORMAT_MP3,
     OPENAI_AUDIO_OUTPUT_FORMAT_OPUS,
     OPENAI_AUDIO_OUTPUT_FORMAT_AAC,
-    OPENAI_AUDIO_OUTPUT_FORMAT_FLAC
+    OPENAI_AUDIO_OUTPUT_FORMAT_FLAC,
+    OPENAI_AUDIO_OUTPUT_FORMAT_WAV,
+    OPENAI_AUDIO_OUTPUT_FORMAT_PCM,
+    OPENAI_AUDIO_OUTPUT_FORMAT_MAX,
 } OpenAI_Audio_Output_Format;
+
+typedef void (*OpenAI_StreamCallback)(const uint8_t *data, size_t length);
 
 /**
  * @brief Struct for Embedding data
@@ -456,11 +461,13 @@ typedef struct OpenAI_ChatCompletion {
      * @brief Send the message for completion. Save it with the first response if selected.
      *
      * @param chatCompletion[in] the point of OpenAI_ChatCompletion
+     * @param type[in] the type of the message for completion
      * @param p[in] the message for completion
      * @param save[in] save it with the first response if selected
      * @return OpenAI_StringResponse_t*
      */
-    OpenAI_StringResponse_t *(*message)(struct OpenAI_ChatCompletion *chatCompletion, const char *p, bool save);
+    OpenAI_StringResponse_t *(*message)(struct OpenAI_ChatCompletion *chatCompletion, const char *type, const char *p, bool save);
+
 } OpenAI_ChatCompletion_t;
 
 /**
@@ -752,6 +759,15 @@ typedef struct OpenAI_AudioSpeech {
      * @return *
      */
     OpenAI_SpeechResponse_t *(*speech)(struct OpenAI_AudioSpeech *createSpeech, char *p);
+
+    /**
+     * @brief Send the message for completion. Save it with the first response if selected.
+     *
+     * @param createSpeech[in] the point of OpenAI_SpeechResponse_t
+     * @param p[in] the message for audio generation
+     * @param stream_callback[in] the callback function for audio stream
+     */
+    void (*speechStream)(struct OpenAI_AudioSpeech *createSpeech, char *p, OpenAI_StreamCallback stream_callback);
 
 } OpenAI_AudioSpeech_t;
 
