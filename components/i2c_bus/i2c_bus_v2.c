@@ -100,6 +100,18 @@ i2c_bus_handle_t i2c_bus_create(i2c_port_t port, const i2c_config_t *conf)
     I2C_BUS_CHECK(conf != NULL, "pointer = NULL error", NULL);
     I2C_BUS_CHECK(conf->mode == I2C_MODE_MASTER, "i2c_bus only supports master mode", NULL);
 
+    if (i2c_master_get_bus_handle(port, &s_i2c_bus[port].bus_handle) == ESP_OK) {
+        s_i2c_bus[port].is_init = true;
+        s_i2c_bus[port].conf_activate = *conf;
+        s_i2c_bus[port].bus_config.i2c_port = port;
+        s_i2c_bus[port].device_config.scl_speed_hz = conf->master.clk_speed;
+        s_i2c_bus[port].mutex = xSemaphoreCreateMutex();
+        I2C_BUS_CHECK(s_i2c_bus[port].mutex != NULL, "i2c_bus xSemaphoreCreateMutex failed", NULL);
+        s_i2c_bus[port].ref_counter = 0;
+        ESP_LOGI(TAG, "I2C Bus V2 uses the externally initialized bus handle");
+        return (i2c_bus_handle_t)&s_i2c_bus[port];
+    }
+
     if (s_i2c_bus[port].is_init) {
         // if i2c_bus has been inited and configs not changed, return the handle directly
         if (i2c_config_compare(port, conf)) {
@@ -139,6 +151,14 @@ esp_err_t i2c_bus_delete(i2c_bus_handle_t *p_bus)
     vSemaphoreDelete(i2c_bus->mutex);
     *p_bus = NULL;
     return ESP_OK;
+}
+
+i2c_master_bus_handle_t i2c_bus_get_internal_bus_handle(i2c_bus_handle_t bus_handle)
+{
+    I2C_BUS_CHECK(bus_handle != NULL, "Null Bus Handle", NULL);
+    i2c_bus_t *i2c_bus = (i2c_bus_t *)bus_handle;
+    I2C_BUS_INIT_CHECK(i2c_bus->is_init, NULL);
+    return i2c_bus->bus_handle;
 }
 
 uint32_t i2c_bus_get_current_clk_speed(i2c_bus_handle_t bus_handle)
