@@ -13,7 +13,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "lv_demos.h"
-#include "lvgl_port.h"
+#include "lvgl_port_v9.h"
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////// Please update the following configuration according to your LCD spec //////////////////////////////
@@ -49,12 +49,7 @@ static const char *TAG = "example";
 
 IRAM_ATTR static bool rgb_lcd_on_vsync_event(esp_lcd_panel_handle_t panel, const esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)
 {
-    BaseType_t need_yield = pdFALSE;
-
-    if (lvgl_port_notify_rgb_vsync()) {
-        need_yield = pdTRUE;
-    }
-    return (need_yield == pdTRUE);
+    return lvgl_port_notify_lcd_vsync();
 }
 
 // static const st77903_lcd_init_cmd_t lcd_init_cmds[] = {
@@ -67,14 +62,14 @@ IRAM_ATTR static bool rgb_lcd_on_vsync_event(esp_lcd_panel_handle_t panel, const
 
 void app_main()
 {
-    if (EXAMPLE_PIN_NUM_BK_LIGHT >= 0) {
-        ESP_LOGI(TAG, "Turn off LCD backlight");
-        gpio_config_t bk_gpio_config = {
-            .mode = GPIO_MODE_OUTPUT,
-            .pin_bit_mask = 1ULL << EXAMPLE_PIN_NUM_BK_LIGHT
-        };
-        ESP_ERROR_CHECK(gpio_config(&bk_gpio_config));
-    }
+#if EXAMPLE_PIN_NUM_BK_LIGHT >= 0
+    ESP_LOGI(TAG, "Turn off LCD backlight");
+    gpio_config_t bk_gpio_config = {
+        .mode = GPIO_MODE_OUTPUT,
+        .pin_bit_mask = 1ULL << EXAMPLE_PIN_NUM_BK_LIGHT
+    };
+    ESP_ERROR_CHECK(gpio_config(&bk_gpio_config));
+#endif
 
     ESP_LOGI(TAG, "Install 3-wire SPI panel IO");
     spi_line_config_t line_config = {
@@ -114,7 +109,7 @@ void app_main()
         },
         .timings = ST77903_RGB_320_480_PANEL_48HZ_RGB_TIMING(),
         .flags.fb_in_psram = 1,
-        .num_fbs = LVGL_PORT_LCD_RGB_BUFFER_NUMS,
+        .num_fbs = LVGL_PORT_LCD_BUFFER_NUMS,
         .bounce_buffer_size_px = EXAMPLE_RGB_BOUNCE_BUFFER_SIZE,
     };
     rgb_config.timings.h_res = EXAMPLE_LCD_H_RES;
@@ -144,7 +139,7 @@ void app_main()
     ESP_ERROR_CHECK(esp_lcd_panel_init(lcd_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(lcd_handle, true));
 
-    ESP_ERROR_CHECK(lvgl_port_init(lcd_handle, NULL));
+    ESP_ERROR_CHECK(lvgl_port_init(lcd_handle, NULL, LVGL_PORT_INTERFACE_RGB));
 
     esp_lcd_rgb_panel_event_callbacks_t cbs = {
 #if EXAMPLE_RGB_BOUNCE_BUFFER_SIZE > 0
@@ -155,10 +150,10 @@ void app_main()
     };
     esp_lcd_rgb_panel_register_event_callbacks(lcd_handle, &cbs, NULL);
 
-    if (EXAMPLE_PIN_NUM_BK_LIGHT >= 0) {
-        ESP_LOGI(TAG, "Turn on LCD backlight");
-        gpio_set_level(EXAMPLE_PIN_NUM_BK_LIGHT, EXAMPLE_LCD_BK_LIGHT_ON_LEVEL);
-    }
+#if EXAMPLE_PIN_NUM_BK_LIGHT >= 0
+    ESP_LOGI(TAG, "Turn on LCD backlight");
+    gpio_set_level(EXAMPLE_PIN_NUM_BK_LIGHT, EXAMPLE_LCD_BK_LIGHT_ON_LEVEL);
+#endif
 
     ESP_LOGI(TAG, "Display LVGL demos");
     // Lock the mutex due to the LVGL APIs are not thread-safe

@@ -17,7 +17,7 @@
 #include "esp_lcd_touch_gt911.h"
 #include "esp_lcd_st7701.h"
 #include "lv_demos.h"
-#include "lvgl_port.h"
+#include "lvgl_port_v8.h"
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////// Please update the following configuration according to your LCD spec //////////////////////////////
@@ -72,7 +72,7 @@ static const char *TAG = "example";
 
 IRAM_ATTR static bool rgb_lcd_on_vsync_event(esp_lcd_panel_handle_t panel, const esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)
 {
-    return lvgl_port_notify_rgb_vsync();
+    return lvgl_port_notify_lcd_vsync();
 }
 
 static const st7701_lcd_init_cmd_t lcd_init_cmds[] = {
@@ -115,14 +115,14 @@ static const st7701_lcd_init_cmd_t lcd_init_cmds[] = {
 
 void app_main()
 {
-    if (EXAMPLE_PIN_NUM_BK_LIGHT >= 0) {
-        ESP_LOGI(TAG, "Turn off LCD backlight");
-        gpio_config_t bk_gpio_config = {
-            .mode = GPIO_MODE_OUTPUT,
-            .pin_bit_mask = 1ULL << EXAMPLE_PIN_NUM_BK_LIGHT
-        };
-        ESP_ERROR_CHECK(gpio_config(&bk_gpio_config));
-    }
+#if EXAMPLE_PIN_NUM_BK_LIGHT >= 0
+    ESP_LOGI(TAG, "Turn off LCD backlight");
+    gpio_config_t bk_gpio_config = {
+        .mode = GPIO_MODE_OUTPUT,
+        .pin_bit_mask = 1ULL << EXAMPLE_PIN_NUM_BK_LIGHT
+    };
+    ESP_ERROR_CHECK(gpio_config(&bk_gpio_config));
+#endif
 
     ESP_LOGI(TAG, "Install 3-wire SPI panel IO");
     spi_line_config_t line_config = {
@@ -170,7 +170,7 @@ void app_main()
         },
         .timings = ST7701_480_480_PANEL_60HZ_RGB_TIMING(),
         .flags.fb_in_psram = 1,
-        .num_fbs = LVGL_PORT_LCD_RGB_BUFFER_NUMS,
+        .num_fbs = LVGL_PORT_LCD_BUFFER_NUMS,
         .bounce_buffer_size_px = EXAMPLE_RGB_BOUNCE_BUFFER_SIZE,
     };
     rgb_config.timings.h_res = EXAMPLE_LCD_H_RES;
@@ -197,7 +197,16 @@ void app_main()
     ESP_ERROR_CHECK(esp_lcd_new_panel_st7701(io_handle, &panel_config, &lcd_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_reset(lcd_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_init(lcd_handle));
-    esp_lcd_panel_disp_on_off(lcd_handle, true);
+    ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(lcd_handle, true));
+
+    esp_lcd_rgb_panel_event_callbacks_t cbs = {
+#if EXAMPLE_RGB_BOUNCE_BUFFER_SIZE > 0
+        .on_bounce_frame_finish = rgb_lcd_on_vsync_event,
+#else
+        .on_vsync = rgb_lcd_on_vsync_event,
+#endif
+    };
+    esp_lcd_rgb_panel_register_event_callbacks(lcd_handle, &cbs, NULL);
 
     esp_lcd_touch_handle_t tp_handle = NULL;
 #if CONFIG_EXAMPLE_LCD_TOUCH_CONTROLLER_GT911
@@ -238,21 +247,12 @@ void app_main()
     ESP_ERROR_CHECK(esp_lcd_touch_new_i2c_gt911(tp_io_handle, &tp_cfg, &tp_handle));
 #endif // CONFIG_EXAMPLE_LCD_TOUCH_CONTROLLER_GT911
 
-    ESP_ERROR_CHECK(lvgl_port_init(lcd_handle, tp_handle));
+    ESP_ERROR_CHECK(lvgl_port_init(lcd_handle, tp_handle, LVGL_PORT_INTERFACE_RGB));
 
-    esp_lcd_rgb_panel_event_callbacks_t cbs = {
-#if EXAMPLE_RGB_BOUNCE_BUFFER_SIZE > 0
-        .on_bounce_frame_finish = rgb_lcd_on_vsync_event,
-#else
-        .on_vsync = rgb_lcd_on_vsync_event,
+#if EXAMPLE_PIN_NUM_BK_LIGHT >= 0
+    ESP_LOGI(TAG, "Turn on LCD backlight");
+    gpio_set_level(EXAMPLE_PIN_NUM_BK_LIGHT, EXAMPLE_LCD_BK_LIGHT_ON_LEVEL);
 #endif
-    };
-    esp_lcd_rgb_panel_register_event_callbacks(lcd_handle, &cbs, NULL);
-
-    if (EXAMPLE_PIN_NUM_BK_LIGHT >= 0) {
-        ESP_LOGI(TAG, "Turn on LCD backlight");
-        gpio_set_level(EXAMPLE_PIN_NUM_BK_LIGHT, EXAMPLE_LCD_BK_LIGHT_ON_LEVEL);
-    }
 
     ESP_LOGI(TAG, "Display LVGL demos");
     // Lock the mutex due to the LVGL APIs are not thread-safe
