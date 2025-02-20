@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.6.1 - 2025-02-19
+
+### Bug Fix:
+
+* Change led_num to uint16_t for ws2812
+
 ## v1.6.0 - 2025-01-13
 
 ### Enhancements:

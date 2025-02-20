@@ -16,7 +16,7 @@ extern "C" {
  *
  */
 typedef struct {
-    uint8_t led_num;
+    uint16_t led_num;
     gpio_num_t ctrl_io;
 } driver_ws2812_t;
 
