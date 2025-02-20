@@ -12,4 +12,5 @@ LCD Screen
     SPI LCD Introduction <spi_lcd>
     RGB LCD Introduction <rgb_lcd>
     LCD Screen Tearing Introduction <lcd_screen_tearing>
-    LCD Application solution <lcd_application_solution>
+    LCD Application Solution <lcd_application_solution>
+    GUI Optimization Solutions <gui_solution>

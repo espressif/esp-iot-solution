@@ -13,3 +13,4 @@ LCD 显示屏
     RGB LCD 详解 <rgb_lcd>
     LCD 屏幕撕裂详解 <lcd_screen_tearing>
     LCD 应用解决方案 <lcd_application_solution>
+    GUI 优化解决方案 <gui_solution>

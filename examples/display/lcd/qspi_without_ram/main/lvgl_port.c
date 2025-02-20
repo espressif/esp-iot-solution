@@ -347,7 +347,11 @@ IRAM_ATTR static bool qspi_lcd_on_trans_event(esp_lcd_panel_handle_t panel, cons
     }
 #elif LVGL_PORT_AVOID_TEAR_ENABLE
     // Notify that the current QSPI frame buffer has been transmitted
-    xTaskNotifyFromISR(lvgl_task_handle, ULONG_MAX, eNoAction, &need_yield);
+    if (lvgl_task_handle) {
+        xTaskNotifyFromISR(lvgl_task_handle, ULONG_MAX, eNoAction, &need_yield);
+    } else {
+        ESP_LOGE(TAG, "lvgl_task_handle is NULL");
+    }
 #endif
 
     return (need_yield == pdTRUE);
