@@ -17,7 +17,7 @@ extern "C" {
  * of the native XZ decoder API. The single-call mode can be used only when
  * both input and output buffers are available as a single chunk, i.e. when
  * fill() and flush() won't be used.
- * 
+ *
  * @param[in]  in pointer to the input buffer to be decompressed
  * @param[in]  in_size size of the input buffer
  * @param[in]  fill pointer to the function used to read compressed data
@@ -34,7 +34,7 @@ int xz_decompress(unsigned char *in, int in_size,
 	int (*fill)(void *dest, unsigned int size),
 	int (*flush)(void *src, unsigned int size),
 	unsigned char *out, int *in_used,
-	void (*error)(char *x));
+	void (*error)(const char *x));
 
 #ifdef __cplusplus
 }

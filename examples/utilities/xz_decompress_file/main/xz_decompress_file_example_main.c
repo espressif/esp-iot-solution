@@ -24,7 +24,7 @@ static size_t filled_length;
 
 static const char *TAG = "xz decompress";
 
-static void error(char *msg)
+static void error(const char *msg)
 {
     ESP_LOGE("xz_test", "%s", msg);
 }
@@ -53,7 +53,7 @@ static void test_buf_to_buf(void)
      * Read compressed data from in_buf, and write decompressed data to out_buf.
      * When you can estimate how much data will be extracted, you can use this API like this.
      */
-    int ret = xz_decompress((unsigned char *)xz_compressed_file_start, compressed_file_length, NULL, NULL, (unsigned char *)out_buf, &decompressed_count, error);
+    int ret = xz_decompress((unsigned char *)xz_compressed_file_start, compressed_file_length, NULL, NULL, (unsigned char *)out_buf, &decompressed_count, &error);
     // Display the read contents from the decompressed buf
     ESP_LOGI(TAG, "decompress data:\n%s", out_buf);
     ESP_LOGI(TAG, "ret = %d, decompressed count is %d", ret, decompressed_count);
