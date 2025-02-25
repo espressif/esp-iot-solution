@@ -56,7 +56,7 @@ libheap.a,heap_caps.c.obj,esp-idf/heap/CMakeFiles/__idf_heap.dir/heap_caps.c.obj
 libheap.a,multi_heap.c.obj,./esp-idf/heap/CMakeFiles/__idf_heap.dir/multi_heap.c.obj
 liblog.a,log_freertos.c.obj,esp-idf/log/CMakeFiles/__idf_log.dir/log_freertos.c.obj
 liblog.a,log.c.obj,esp-idf/log/CMakeFiles/__idf_log.dir/log.c.obj
-libmbedcrypto.a,esp_mem.c.obj,esp-idf/mbedtls/mbedtls/library/CMakeFiles/mbedcrypto.dir/__/__/port/esp_mem.c.obj
+libmbedcrypto.a,esp_mem.c.obj,esp-idf/mbedtls/mbedtls/library/CMakeFiles/mbedcrypto.dir/$IDF_PATH/components/mbedtls/port/esp_mem.c.obj
 libnewlib.a,assert.c.obj,esp-idf/newlib/CMakeFiles/__idf_newlib.dir/assert.c.obj
 libnewlib.a,heap.c.obj,esp-idf/newlib/CMakeFiles/__idf_newlib.dir/heap.c.obj
 libnewlib.a,locks.c.obj,esp-idf/newlib/CMakeFiles/__idf_newlib.dir/locks.c.obj

@@ -40,7 +40,7 @@ libesp_timer.a,system_time.c.obj,esp-idf/esp_timer/CMakeFiles/__idf_esp_timer.di
 libesp_wifi.a,esp_adapter.c.obj,esp-idf/esp_wifi/CMakeFiles/__idf_esp_wifi.dir/esp32c3/esp_adapter.c.obj
 libfreertos.a,list.c.obj,esp-idf/freertos/CMakeFiles/__idf_freertos.dir/FreeRTOS-Kernel/list.c.obj
 libfreertos.a,port.c.obj,esp-idf/freertos/CMakeFiles/__idf_freertos.dir/FreeRTOS-Kernel/portable/riscv/port.c.obj
-libfreertos.a,port_common.c.obj,esp-idf/freertos/CMakeFiles/__idf_freertos.dir/FreeRTOS-Kernel/portable/port_common.c.obj
+libfreertos.a,port_common.c.obj,esp-idf/freertos/CMakeFiles/__idf_freertos.dir/port_common.c.obj
 libfreertos.a,port_systick.c.obj,esp-idf/freertos/CMakeFiles/__idf_freertos.dir/FreeRTOS-Kernel/portable/port_systick.c.obj
 libfreertos.a,queue.c.obj,esp-idf/freertos/CMakeFiles/__idf_freertos.dir/FreeRTOS-Kernel/queue.c.obj
 libfreertos.a,tasks.c.obj,esp-idf/freertos/CMakeFiles/__idf_freertos.dir/FreeRTOS-Kernel/tasks.c.obj

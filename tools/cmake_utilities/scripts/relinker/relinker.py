@@ -72,8 +72,8 @@ class filter_c:
         self.libs_desc = ''
         self.libs = ''
         for line in lines:
-            if ') .iram1 EXCLUDE_FILE(*' in line and ') .iram1.*)' in l:
-                desc = '\(EXCLUDE_FILE\((.*)\) .iram1 '
+            if ') .iram1 EXCLUDE_FILE(*' in line and ') .iram1.*)' in line:
+                desc = r'\(EXCLUDE_FILE\((.*)\) .iram1 '
                 self.libs_desc = re.search(desc, line)[1]
                 self.libs = self.libs_desc.replace('*', '')
                 return

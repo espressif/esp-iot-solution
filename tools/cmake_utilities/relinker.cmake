@@ -11,7 +11,7 @@ if(CONFIG_CU_RELINKER_ENABLE)
             message(FATAL_ERROR "Other targets are not supported.")
         endif()
 
-        set(idf_version "${CONFIG_IDF_INIT_VERSION}")
+        set(idf_version "$ENV{IDF_VERSION}")
         string(REGEX MATCH "^([0-9]+\\.[0-9]+)" version_prefix "${idf_version}")
 
         if(CONFIG_CU_RELINKER_ENABLE_CUSTOMIZED_CONFIGURATION_FILES)
