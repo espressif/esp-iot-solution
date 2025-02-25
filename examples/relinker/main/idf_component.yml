@@ -1,0 +1,5 @@
+dependencies:
+  cmake_utilities:
+    version: "*"
+    # Please comment the following line, if this example is installed by idf.py create-project-from-example.
+    override_path: "../../../tools/cmake_utilities"

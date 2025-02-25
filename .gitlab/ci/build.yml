@@ -1565,6 +1565,17 @@ build_tools_cmake_utilities_test_apps:
   variables:
     EXAMPLE_DIR: tools/cmake_utilities/test_apps
 
+build_example_relinker:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_relinker
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.0
+      - IMAGE: espressif/idf:release-v5.3
+  variables:
+    EXAMPLE_DIR: examples/relinker
+
 build_example_elf_loader_elf_loader_example:
   extends:
     - .build_examples_template

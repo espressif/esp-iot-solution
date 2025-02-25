@@ -619,6 +619,10 @@
 .patterns-example_zero_cross_detection_example: &patterns-example_zero_cross_detection_example
   - "examples/zero_cross_detecion/**/*"
 
+.patterns-example_relinker: &patterns-example_relinker
+  - "examples/relinker/**/*"
+  - "tools/cmake_utilities/scripts/relinker/**/*"
+
 # tools folder, in the alphabetic order
 .patterns-tools_cmake_utilities: &patterns-tools_cmake_utilities
   - "tools/cmake_utilities/**/*"
@@ -1563,6 +1567,16 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-example_elf_loader_build_elf_file_example
+
+.rules:build:example_relinker:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_relinker
 
 # rules for ut
 .rules:build:component_audio_dac_audio_test:
