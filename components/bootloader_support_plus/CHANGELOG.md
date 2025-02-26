@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.2.7 - 2025-2-26
+
+### Fix:
+
+* Fix the issue of a `-Wincompatible-pointer-types` compilation error.
+
 ## v0.2.6 - 2024-07-01
 
 ### Feature:
