@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -227,8 +227,8 @@ static void usb_event_cb(const usb_host_client_event_msg_t *event_msg, void *arg
         const usb_device_desc_t *device_desc;
         ESP_ERROR_CHECK(usb_host_get_device_descriptor(current_device, &device_desc));
 
-        bool opened = false;
         usbh_cdc_t *cdc;
+        bool if_opened = false;
         SLIST_FOREACH(cdc, &p_usbh_cdc_obj->cdc_devices_list, list_entry) {
             if ((cdc->vid != CDC_HOST_ANY_VID && cdc->vid != device_desc->idVendor) ||
                     (cdc->pid != CDC_HOST_ANY_PID && cdc->pid != device_desc->idProduct)) {
@@ -243,14 +243,14 @@ static void usb_event_cb(const usb_host_client_event_msg_t *event_msg, void *arg
             if (_cdc_open(cdc) != ESP_OK) {
                 ESP_LOGE(TAG, "Failed to open cdc device: %d", event_msg->new_dev.address);
             } else {
-                opened = true;
+                if_opened = true;
                 ESP_LOGI(TAG, "Opened cdc device: %d", event_msg->new_dev.address);
             }
         }
-        if (!opened) {
+
+        if (!if_opened) {
             usb_host_device_close(p_usbh_cdc_obj->cdc_client_hdl, current_device); // Gracefully continue on error
         }
-
         ESP_LOGI(TAG, "New device connected, address: %d", event_msg->new_dev.address);
         break;
     }
@@ -394,7 +394,9 @@ static void in_xfer_cb(usb_transfer_t *in_xfer)
             // if ringbuffer overflow, drop the data
             ESP_LOGD(TAG, "in ringbuf full");
         } else {
-            _ringbuf_push(cdc->in_ringbuf_handle, in_xfer->data_buffer, in_xfer->actual_num_bytes, pdMS_TO_TICKS(TIMEOUT_USB_RINGBUF_MS));
+            if (_ringbuf_push(cdc->in_ringbuf_handle, in_xfer->data_buffer, in_xfer->actual_num_bytes, pdMS_TO_TICKS(TIMEOUT_USB_RINGBUF_MS)) != ESP_OK) {
+                ESP_LOGE(TAG, "in ringbuf push failed");
+            }
         }
 
         usb_host_transfer_submit(in_xfer);
@@ -607,6 +609,10 @@ static esp_err_t _cdc_open(usbh_cdc_t *cdc)
     assert(cdc);
     ESP_RETURN_ON_FALSE(cdc->state == USBH_CDC_CLOSE, ESP_OK, TAG,);
 
+    if (cdc->cbs.connect) {
+        cdc->cbs.connect((usbh_cdc_handle_t)cdc, cdc->cbs.user_data);
+    }
+
     // Get Device and Configuration descriptors
     const usb_config_desc_t *config_desc;
     const usb_device_desc_t *device_desc;
@@ -616,7 +622,7 @@ static esp_err_t _cdc_open(usbh_cdc_t *cdc)
     cdc_parsed_info_t cdc_info;
     ret = cdc_parse_interface_descriptor(device_desc, config_desc, cdc->intf_idx, &cdc->data.intf_desc, &cdc_info);
     if (ret != ESP_OK) {
-        usb_host_device_close(p_usbh_cdc_obj->cdc_client_hdl, cdc->dev_hdl); // Gracefully continue on error
+        goto err;
     }
 
     _ring_buffer_flush(cdc->in_ringbuf_handle);
@@ -632,14 +638,9 @@ static esp_err_t _cdc_open(usbh_cdc_t *cdc)
     cdc->vid = device_desc->idVendor;
     cdc->pid = device_desc->idProduct;
 
-    if (cdc->cbs.connect) {
-        cdc->cbs.connect((usbh_cdc_handle_t)cdc, cdc->cbs.user_data);
-    }
-
     return ESP_OK;
 
 err:
-    usb_host_device_close(p_usbh_cdc_obj->cdc_client_hdl, cdc->dev_hdl); // Gracefully continue on error
     return ret;
 }
 
@@ -718,6 +719,9 @@ fail:
     }
     if (cdc->data.out_xfer_free_sem) {
         vSemaphoreDelete(cdc->data.out_xfer_free_sem);
+    }
+    if (cdc->dev_hdl) {
+        usb_host_device_close(p_usbh_cdc_obj->cdc_client_hdl, cdc->dev_hdl);
     }
     if (cdc) {
         free(cdc);
@@ -842,7 +846,6 @@ esp_err_t usbh_cdc_desc_print(usbh_cdc_handle_t cdc_handle)
 {
     ESP_RETURN_ON_FALSE(cdc_handle != NULL, ESP_ERR_INVALID_ARG, TAG, "cdc_handle is NULL");
     usbh_cdc_t *cdc = (usbh_cdc_t *) cdc_handle;
-    ESP_RETURN_ON_FALSE(cdc->state == USBH_CDC_OPEN, ESP_ERR_INVALID_STATE, TAG, "Device is not connected");
     ESP_RETURN_ON_FALSE(cdc->dev_hdl != NULL, ESP_ERR_INVALID_STATE, TAG, "Device is not open yet");
 
     const usb_device_desc_t *device_desc;

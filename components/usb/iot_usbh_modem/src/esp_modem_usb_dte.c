@@ -186,7 +186,9 @@ static void _usb_conn_callback(usbh_cdc_handle_t cdc_handle, void *arg)
     esp_modem_dte_internal_t *esp_dte = (esp_modem_dte_internal_t *)arg;
     esp_dte->conn_state = 1;
 
+#if CONFIG_MODEM_PRINT_DEVICE_DESCRIPTOR
     usbh_cdc_desc_print(cdc_handle);
+#endif
 
     if (esp_dte->conn_callback) {
         esp_dte->conn_callback(cdc_handle, NULL);

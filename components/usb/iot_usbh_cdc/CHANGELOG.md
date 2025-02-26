@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.0.1 - 2025-2-26
+
+### Bug Fixes:
+
+* Fix the cdc can't open the setting's interface cause crash issue.
+
 ## v1.0.0 - 2024-10-31
 
 ### Break Changes:

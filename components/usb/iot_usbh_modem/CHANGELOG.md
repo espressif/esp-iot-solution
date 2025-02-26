@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v1.1.1 - 2024-11-28
+
+* Add Kconfig MODEM_PRINT_DEVICE_DESCRIPTOR
+ 
 ## v1.1.0 - 2024-11-28
 
 * Support ESP32-P4 with EC20_CE cat.4 module
