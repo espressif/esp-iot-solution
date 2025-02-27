@@ -11,6 +11,8 @@
 #include "button_gpio.h"
 #include "nvs_flash.h"
 
+#include "digital_tube.h"
+
 static void button_event_cb(void *arg, void *data)
 {
     bool state = get_touch_dight_normalize_state();
@@ -45,4 +47,7 @@ extern "C" void app_main(void)
     iot_button_register_cb(btn, BUTTON_PRESS_DOWN, NULL, button_event_cb, NULL);
 
     touch_digit_init();
+
+    digital_tube_driver_install(I2C_NUM_0, GPIO_NUM_37, GPIO_NUM_38);
+    digital_tube_enable();
 }

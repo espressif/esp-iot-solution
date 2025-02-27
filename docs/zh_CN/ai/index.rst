@@ -8,4 +8,4 @@
     :maxdepth: 1
 
     OpenAI <openai>
-
+    Touch 手写数字识别 <touch_digit_recognition>

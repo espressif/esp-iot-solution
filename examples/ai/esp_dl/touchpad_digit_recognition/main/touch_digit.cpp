@@ -17,6 +17,12 @@
 #include "driver/touch_sensor.h"
 #include "normalization_save.h"
 #include "touch_image.h"
+#include "dl_model_base.hpp"
+#include "fbs_loader.hpp"
+#include "dl_tensor_base.hpp"
+
+#include "touch_digit_recognition.h"
+#include "digital_tube.h"
 
 static const char *TAG = "touch_digit";
 
@@ -28,10 +34,12 @@ static const char *TAG = "touch_digit";
 #define CHANNEL_NUM 13
 #define CHANNEL_LIST {1,2,3,4,5,6,7,8,9,10,11,12,13}
 
-#define ROW_CHANNEL_INDEX {1,3,5,7,9,11,13}
-#define COL_CHANNEL_INDEX {8,6,4,2,10,12}
+#define ROW_CHANNEL_INDEX {4,6,8,7,10,9,12}
+#define COL_CHANNEL_INDEX {2,1,3,5,13,11}
 
 typedef uint32_t data_array_t[CHANNEL_NUM];
+
+QueueHandle_t xImageQueue;
 
 typedef enum {
     WAIT_WRITE,
@@ -179,6 +187,11 @@ static bool touch_digit_detect(data_array_t data_array, int *x, int *y)
     return true;
 }
 
+typedef struct {
+    uint8_t *data;
+    size_t size;
+} image_data_t;
+
 static void touch_digit_task(void *arg)
 {
 #define IDEL_CNT_MAX 90
@@ -194,7 +207,7 @@ static void touch_digit_task(void *arg)
 
 #if REALLY_DATA_PRINT
             for (int i = 0; i < CHANNEL_NUM; i++) {
-                printf("%d ", data_array[i]);
+                printf("%"PRIu32, data_array[i]);
                 if (i != CHANNEL_NUM - 1) {
                     printf(",");
                 }
@@ -234,7 +247,16 @@ static void touch_digit_task(void *arg)
                 break;
             case END_WRITE:
                 // send data to dl inference
+
                 g_image.print();
+                image_data_t image_data;
+                image_data.size = g_image.col_length * g_image.row_length;
+                image_data.data = new uint8_t[image_data.size];
+                if (image_data.data != NULL) {
+                    memcpy(image_data.data, g_image.data, image_data.size);
+                    xQueueSend(xImageQueue, &image_data, portMAX_DELAY);
+                }
+
                 g_image.clear();
                 state = WAIT_WRITE;
                 break;
@@ -257,11 +279,32 @@ static void state_cb(uint32_t channel, touch_lowlevel_state_t state, void *state
     return;
 }
 
+void touch_digit_recognition_task(void *arg)
+{
+    image_data_t image_data = {};
+
+    TouchDigitRecognition *touch_digit_recognition = new TouchDigitRecognition("model", 25 * 30);
+
+    while (1) {
+        if (xQueueReceive(xImageQueue, &image_data, portMAX_DELAY) == pdTRUE) {
+            // printf("Result:%d\n", touch_digit_recognition->predict(image_data.data));
+            digital_tube_write_num(0, touch_digit_recognition->predict(image_data.data));
+            delete [] image_data.data;
+        }
+    }
+
+    delete touch_digit_recognition;
+    vTaskDelete(NULL);
+}
+
 esp_err_t touch_digit_init(void)
 {
     // Init touch_digit_data
     get_normalization_data(&g_data);
     printf_touch_digit_data();
+
+    // Create queue
+    xImageQueue = xQueueCreate(10, sizeof(image_data_t));
 
     uint32_t channel_list[] = CHANNEL_LIST;
     touch_lowlevel_type_t channel_type[CHANNEL_NUM];
@@ -285,6 +328,7 @@ esp_err_t touch_digit_init(void)
     touch_lowlevel_handle_t handle = NULL;
     TaskHandle_t task_handle = NULL;
     xTaskCreate(touch_digit_task, "touch_digit_task", 4096, data_queue, 5, &task_handle);
+    xTaskCreate(touch_digit_recognition_task, "touch_digit_recognition_task", 4096, NULL, 5, &task_handle);
     touch_sensor_lowlevel_register(channel_list[0], &state_cb, data_queue, &handle);
     return ESP_OK;
 }

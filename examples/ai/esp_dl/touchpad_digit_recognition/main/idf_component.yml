@@ -16,3 +16,4 @@ dependencies:
   #   public: true
   espressif/touch_sensor_lowlevel: ^0.6.0
   espressif/button: "^4.0.0"
+  espressif/esp-dl: "=3.1.0"
