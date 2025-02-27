@@ -821,6 +821,31 @@ example_test_perf_benchmark:
       junit: XUNIT_RESULT.xml
     expire_in: 4 days
 
+example_relinker:
+  extends:
+    - .pytest_template
+    - .rules:build:example_relinker
+  needs:
+    - job: "build_example_relinker"
+      artifacts: true
+      optional: true
+  parallel:
+    matrix:
+      - IDF_TARGET: esp32c2
+        IDF_VERSION: "5.3"
+        ENV_TAG: xtal_26mhz
+      - IDF_TARGET: esp32c3
+        IDF_VERSION: "5.3"
+        ENV_TAG: generic
+  tags:
+    - ${IDF_TARGET}
+    - ${ENV_TAG}
+  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
+  variables:
+    TEST_ENV: ${ENV_TAG}
+    TEST_TARGET: ${IDF_TARGET}
+    TEST_FOLDER: examples/relinker
+
 tools_test_cmake_utilities:
   extends:
     - .pytest_template

@@ -1,3 +1,10 @@
+## v1.1.1 - 2025-02-25
+
+* relinker: some typo
+* relinker: add CI for relinker func
+* relinker: relinker.py:76: SyntaxWarning: invalid escape sequence '('
+* relinker: incorrect IDF_VERSION for IDF 5.0
+
 ## v1.1.0 - 2025-01-16
 
 * relinker: support ESP32-C3 and SRAM optimization for flash-suspend
