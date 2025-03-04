@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2019-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2019-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -48,17 +48,21 @@ static esp_ble_dis_data_t s_ble_dis_data = {
 
 #ifdef CONFIG_BLE_DIS_SYSTEM_ID
 static esp_err_t esp_dis_system_id_cb(const uint8_t *inbuf, uint16_t inlen,
-                                      uint8_t **outbuf, uint16_t *outlen, void *priv_data)
+                                      uint8_t **outbuf, uint16_t *outlen, void *priv_data, uint8_t *att_status)
 {
     if (inbuf || !outbuf || !outlen) {
+        *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
         return ESP_ERR_INVALID_ARG;
     }
 
     *outlen = strlen(s_ble_dis_data.system_id);
     *outbuf = (uint8_t *)strndup(s_ble_dis_data.system_id, *outlen);
     if (!(*outbuf)) {
+        *att_status = ESP_IOT_ATT_INSUF_RESOURCE;
         return ESP_ERR_NO_MEM;
     }
+
+    *att_status = ESP_IOT_ATT_SUCCESS;
 
     return ESP_OK;
 }
@@ -66,17 +70,21 @@ static esp_err_t esp_dis_system_id_cb(const uint8_t *inbuf, uint16_t inlen,
 
 #ifdef CONFIG_BLE_DIS_MODEL
 static esp_err_t esp_dis_model_number_cb(const uint8_t *inbuf, uint16_t inlen,
-                                         uint8_t **outbuf, uint16_t *outlen, void *priv_data)
+                                         uint8_t **outbuf, uint16_t *outlen, void *priv_data, uint8_t *att_status)
 {
     if (inbuf || !outbuf || !outlen) {
+        *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
         return ESP_ERR_INVALID_ARG;
     }
 
     *outlen = strlen(s_ble_dis_data.model_number);
     *outbuf = (uint8_t *)strndup(s_ble_dis_data.model_number, *outlen);
     if (!(*outbuf)) {
+        *att_status = ESP_IOT_ATT_INSUF_RESOURCE;
         return ESP_ERR_NO_MEM;
     }
+
+    *att_status = ESP_IOT_ATT_SUCCESS;
 
     return ESP_OK;
 }
@@ -84,17 +92,21 @@ static esp_err_t esp_dis_model_number_cb(const uint8_t *inbuf, uint16_t inlen,
 
 #ifdef CONFIG_BLE_DIS_SERIAL_NUMBER
 static esp_err_t esp_dis_serial_number_cb(const uint8_t *inbuf, uint16_t inlen,
-                                          uint8_t **outbuf, uint16_t *outlen, void *priv_data)
+                                          uint8_t **outbuf, uint16_t *outlen, void *priv_data, uint8_t *att_status)
 {
     if (inbuf || !outbuf || !outlen) {
+        *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
         return ESP_ERR_INVALID_ARG;
     }
 
     *outlen = strlen(s_ble_dis_data.serial_number);
     *outbuf = (uint8_t *)strndup(s_ble_dis_data.serial_number, *outlen);
     if (!(*outbuf)) {
+        *att_status = ESP_IOT_ATT_INSUF_RESOURCE;
         return ESP_ERR_NO_MEM;
     }
+
+    *att_status = ESP_IOT_ATT_SUCCESS;
 
     return ESP_OK;
 }
@@ -102,17 +114,21 @@ static esp_err_t esp_dis_serial_number_cb(const uint8_t *inbuf, uint16_t inlen,
 
 #ifdef CONFIG_BLE_DIS_FW_REV
 static esp_err_t esp_dis_firmware_revision_cb(const uint8_t *inbuf, uint16_t inlen,
-                                              uint8_t **outbuf, uint16_t *outlen, void *priv_data)
+                                              uint8_t **outbuf, uint16_t *outlen, void *priv_data, uint8_t *att_status)
 {
     if (inbuf || !outbuf || !outlen) {
+        *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
         return ESP_ERR_INVALID_ARG;
     }
 
     *outlen = strlen(s_ble_dis_data.firmware_revision);
     *outbuf = (uint8_t *)strndup(s_ble_dis_data.firmware_revision, *outlen);
     if (!(*outbuf)) {
+        *att_status = ESP_IOT_ATT_INSUF_RESOURCE;
         return ESP_ERR_NO_MEM;
     }
+
+    *att_status = ESP_IOT_ATT_SUCCESS;
 
     return ESP_OK;
 }
@@ -120,17 +136,21 @@ static esp_err_t esp_dis_firmware_revision_cb(const uint8_t *inbuf, uint16_t inl
 
 #ifdef CONFIG_BLE_DIS_HW_REV
 static esp_err_t esp_dis_hardware_revision_cb(const uint8_t *inbuf, uint16_t inlen,
-                                              uint8_t **outbuf, uint16_t *outlen, void *priv_data)
+                                              uint8_t **outbuf, uint16_t *outlen, void *priv_data, uint8_t *att_status)
 {
     if (inbuf || !outbuf || !outlen) {
+        *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
         return ESP_ERR_INVALID_ARG;
     }
 
     *outlen = strlen(s_ble_dis_data.hardware_revision);
     *outbuf = (uint8_t *)strndup(s_ble_dis_data.hardware_revision, *outlen);
     if (!(*outbuf)) {
+        *att_status = ESP_IOT_ATT_INSUF_RESOURCE;
         return ESP_ERR_NO_MEM;
     }
+
+    *att_status = ESP_IOT_ATT_SUCCESS;
 
     return ESP_OK;
 }
@@ -138,17 +158,21 @@ static esp_err_t esp_dis_hardware_revision_cb(const uint8_t *inbuf, uint16_t inl
 
 #ifdef CONFIG_BLE_DIS_SW_REV
 static esp_err_t esp_dis_software_revision_cb(const uint8_t *inbuf, uint16_t inlen,
-                                              uint8_t **outbuf, uint16_t *outlen, void *priv_data)
+                                              uint8_t **outbuf, uint16_t *outlen, void *priv_data, uint8_t *att_status)
 {
     if (inbuf || !outbuf || !outlen) {
+        *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
         return ESP_ERR_INVALID_ARG;
     }
 
     *outlen = strlen(s_ble_dis_data.software_revision);
     *outbuf = (uint8_t *)strndup(s_ble_dis_data.software_revision, *outlen);
     if (!(*outbuf)) {
+        *att_status = ESP_IOT_ATT_INSUF_RESOURCE;
         return ESP_ERR_NO_MEM;
     }
+
+    *att_status = ESP_IOT_ATT_SUCCESS;
 
     return ESP_OK;
 }
@@ -156,17 +180,21 @@ static esp_err_t esp_dis_software_revision_cb(const uint8_t *inbuf, uint16_t inl
 
 #ifdef CONFIG_BLE_DIS_MANUF
 static esp_err_t esp_dis_manufacturer_name_chr_cb(const uint8_t *inbuf, uint16_t inlen,
-                                                  uint8_t **outbuf, uint16_t *outlen, void *priv_data)
+                                                  uint8_t **outbuf, uint16_t *outlen, void *priv_data, uint8_t *att_status)
 {
     if (inbuf || !outbuf || !outlen) {
+        *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
         return ESP_ERR_INVALID_ARG;
     }
 
     *outlen = strlen(s_ble_dis_data.manufacturer_name);
     *outbuf = (uint8_t *)strndup(s_ble_dis_data.manufacturer_name, *outlen);
     if (!(*outbuf)) {
+        *att_status = ESP_IOT_ATT_INSUF_RESOURCE;
         return ESP_ERR_NO_MEM;
     }
+
+    *att_status = ESP_IOT_ATT_SUCCESS;
 
     return ESP_OK;
 }
@@ -174,18 +202,22 @@ static esp_err_t esp_dis_manufacturer_name_chr_cb(const uint8_t *inbuf, uint16_t
 
 #ifdef CONFIG_BLE_DIS_PNP
 static esp_err_t esp_dis_pnp_id_chr_cb(const uint8_t *inbuf, uint16_t inlen,
-                                       uint8_t **outbuf, uint16_t *outlen, void *priv_data)
+                                       uint8_t **outbuf, uint16_t *outlen, void *priv_data, uint8_t *att_status)
 {
     if (inbuf || !outbuf || !outlen) {
+        *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
         return ESP_ERR_INVALID_ARG;
     }
 
     *outlen = sizeof(esp_ble_dis_pnp_t);
     *outbuf = calloc(1, *outlen);
     if (!(*outbuf)) {
+        *att_status = ESP_IOT_ATT_INSUF_RESOURCE;
         return ESP_ERR_NO_MEM;
     }
     memcpy(*outbuf, &s_ble_dis_data.pnp_id, *outlen);
+
+    *att_status = ESP_IOT_ATT_SUCCESS;
 
     return ESP_OK;
 }

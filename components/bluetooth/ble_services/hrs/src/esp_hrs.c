@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2019-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2019-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -56,20 +56,24 @@ static esp_err_t ble_hrs_hrm_notify(esp_ble_hrs_hrm_t *hrm)
 
 #ifdef CONFIG_BLE_HRS_BODY_SENSOR_LOCATION
 static esp_err_t esp_hrs_body_sensor_cb(const uint8_t *inbuf, uint16_t inlen,
-                                        uint8_t **outbuf, uint16_t *outlen, void *priv_data)
+                                        uint8_t **outbuf, uint16_t *outlen, void *priv_data, uint8_t *att_status)
 {
     if (inbuf || !outbuf || !outlen) {
+        *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
         return ESP_ERR_INVALID_ARG;
     }
 
     uint8_t len = sizeof(s_location);
     *outbuf = calloc(1, len);
     if (!(*outbuf)) {
+        *att_status = ESP_IOT_ATT_INSUF_RESOURCE;
         return ESP_ERR_NO_MEM;
     }
 
     memcpy(*outbuf, &s_location, len);
     *outlen = len;
+
+    *att_status = ESP_IOT_ATT_SUCCESS;
 
     return ESP_OK;
 }
@@ -77,11 +81,12 @@ static esp_err_t esp_hrs_body_sensor_cb(const uint8_t *inbuf, uint16_t inlen,
 
 #ifdef CONFIG_BLE_HRS_CONTROL_POINT
 static esp_err_t esp_hrs_ctrl_cb(const uint8_t *inbuf, uint16_t inlen,
-                                 uint8_t **outbuf, uint16_t *outlen, void *priv_data)
+                                 uint8_t **outbuf, uint16_t *outlen, void *priv_data, uint8_t *att_status)
 {
     uint8_t cmd_id = 0;
 
     if (!inbuf || !outbuf || !outlen) {
+        *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -94,6 +99,8 @@ static esp_err_t esp_hrs_ctrl_cb(const uint8_t *inbuf, uint16_t inlen,
     default:
         break;
     }
+
+    *att_status = ESP_IOT_ATT_SUCCESS;
 
     return ESP_OK;
 }

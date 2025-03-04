@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2019-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2019-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -77,30 +77,34 @@ static esp_err_t ble_ans_unr_alert_notify(uint8_t cat_id)
 }
 
 static esp_err_t esp_ans_sup_new_alert_cat_cb(const uint8_t *inbuf, uint16_t inlen,
-                                              uint8_t **outbuf, uint16_t *outlen, void *priv_data)
+                                              uint8_t **outbuf, uint16_t *outlen, void *priv_data, uint8_t *att_status)
 {
     uint8_t len = 0;
     if (inbuf || !outbuf || !outlen) {
+        *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
         return ESP_ERR_INVALID_ARG;
     }
 
     len = sizeof(ble_ans_new_alert_cat);
     *outbuf = calloc(1, len);
     if (!(*outbuf)) {
+        *att_status = ESP_IOT_ATT_INSUF_RESOURCE;
         return ESP_ERR_NO_MEM;
     }
 
     memcpy(*outbuf, &ble_ans_new_alert_cat, len);
     *outlen = len;
+    *att_status = ESP_IOT_ATT_SUCCESS;
 
     return ESP_OK;
 }
 
 static esp_err_t esp_ans_new_alert_cb(const uint8_t *inbuf, uint16_t inlen,
-                                      uint8_t **outbuf, uint16_t *outlen, void *priv_data)
+                                      uint8_t **outbuf, uint16_t *outlen, void *priv_data, uint8_t *att_status)
 {
     uint8_t len = MIN(inlen, sizeof(ble_ans_new_alert_val));
     if (!outbuf || !outlen) {
+        *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -112,40 +116,48 @@ static esp_err_t esp_ans_new_alert_cb(const uint8_t *inbuf, uint16_t inlen,
 
     *outbuf = calloc(1, len);
     if (!(*outbuf)) {
+        *att_status = ESP_IOT_ATT_INSUF_RESOURCE;
         return ESP_ERR_NO_MEM;
     }
 
     memcpy(*outbuf, ble_ans_new_alert_val, len);
     *outlen = len;
 
+    *att_status = ESP_IOT_ATT_SUCCESS;
+
     return ESP_OK;
 }
 
 static esp_err_t esp_ans_sup_unr_alert_cat_cb(const uint8_t *inbuf, uint16_t inlen,
-                                              uint8_t **outbuf, uint16_t *outlen, void *priv_data)
+                                              uint8_t **outbuf, uint16_t *outlen, void *priv_data, uint8_t *att_status)
 {
     uint8_t len = 0;
     if (inbuf || !outbuf || !outlen) {
+        *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
         return ESP_ERR_INVALID_ARG;
     }
 
     len = sizeof(ble_ans_unr_alert_cat);
     *outbuf = calloc(1, len);
     if (!(*outbuf)) {
+        *att_status = ESP_IOT_ATT_INSUF_RESOURCE;
         return ESP_ERR_NO_MEM;
     }
 
     memcpy(*outbuf, &ble_ans_unr_alert_cat, len);
     *outlen = len;
 
+    *att_status = ESP_IOT_ATT_SUCCESS;
+
     return ESP_OK;
 }
 
 static esp_err_t esp_ans_unr_alert_stat_cb(const uint8_t *inbuf, uint16_t inlen,
-                                           uint8_t **outbuf, uint16_t *outlen, void *priv_data)
+                                           uint8_t **outbuf, uint16_t *outlen, void *priv_data, uint8_t *att_status)
 {
     uint8_t len = MIN(inlen, sizeof(ble_ans_unr_alert_stat));
     if (!outbuf || !outlen) {
+        *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -157,17 +169,20 @@ static esp_err_t esp_ans_unr_alert_stat_cb(const uint8_t *inbuf, uint16_t inlen,
 
     *outbuf = calloc(1, len);
     if (!(*outbuf)) {
+        *att_status = ESP_IOT_ATT_INSUF_RESOURCE;
         return ESP_ERR_NO_MEM;
     }
 
     memcpy(*outbuf, ble_ans_unr_alert_stat, len);
     *outlen = len;
 
+    *att_status = ESP_IOT_ATT_SUCCESS;
+
     return ESP_OK;
 }
 
 static esp_err_t esp_ans_alert_notify_ctrl_cb(const uint8_t *inbuf, uint16_t inlen,
-                                              uint8_t **outbuf, uint16_t *outlen, void *priv_data)
+                                              uint8_t **outbuf, uint16_t *outlen, void *priv_data, uint8_t *att_status)
 {
     /* ANS Control point command and category variables */
     uint8_t cmd_id;
@@ -175,6 +190,7 @@ static esp_err_t esp_ans_alert_notify_ctrl_cb(const uint8_t *inbuf, uint16_t inl
     uint8_t cat_bit_mask;
     uint8_t len = MIN(inlen, sizeof(ble_ans_alert_not_ctrl_pt));
     if (!inbuf || !outbuf || !outlen) {
+        *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -191,6 +207,7 @@ static esp_err_t esp_ans_alert_notify_ctrl_cb(const uint8_t *inbuf, uint16_t inl
         cat_bit_mask = cat_id;
     } else {
         /* invalid category ID */
+        *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -232,8 +249,11 @@ static esp_err_t esp_ans_alert_notify_ctrl_cb(const uint8_t *inbuf, uint16_t inl
         }
         break;
     default:
+        *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
         return ESP_ERR_INVALID_ARG;
     }
+
+    *att_status = ESP_IOT_ATT_SUCCESS;
 
     return ESP_OK;
 }

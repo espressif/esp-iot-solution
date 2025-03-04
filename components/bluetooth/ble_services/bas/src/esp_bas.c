@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2019-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2019-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -246,9 +246,12 @@ static esp_err_t esp_ble_bas_data_handle(bool notify, uint16_t uuid16, uint8_t *
 }
 
 static esp_err_t esp_bas_level_cb(const uint8_t *inbuf, uint16_t inlen,
-                                  uint8_t **outbuf, uint16_t *outlen, void *priv_data)
+                                  uint8_t **outbuf, uint16_t *outlen, void *priv_data, uint8_t *att_status)
 {
+    *att_status = ESP_IOT_ATT_SUCCESS;
+
     if (inbuf || !outbuf || !outlen) {
+        *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -257,9 +260,12 @@ static esp_err_t esp_bas_level_cb(const uint8_t *inbuf, uint16_t inlen,
 
 #ifdef CONFIG_BLE_BAS_BATTERY_LEVEL_STATUS
 static esp_err_t esp_bas_level_status_cb(const uint8_t *inbuf, uint16_t inlen,
-                                         uint8_t **outbuf, uint16_t *outlen, void *priv_data)
+                                         uint8_t **outbuf, uint16_t *outlen, void *priv_data, uint8_t *att_status)
 {
+    *att_status = ESP_IOT_ATT_SUCCESS;
+
     if (inbuf || !outbuf || !outlen) {
+        *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -269,9 +275,12 @@ static esp_err_t esp_bas_level_status_cb(const uint8_t *inbuf, uint16_t inlen,
 
 #ifdef CONFIG_BLE_BAS_ESTIMATED_SERVICE_DATE
 static esp_err_t esp_bas_estimated_date_cb(const uint8_t *inbuf, uint16_t inlen,
-                                           uint8_t **outbuf, uint16_t *outlen, void *priv_data)
+                                           uint8_t **outbuf, uint16_t *outlen, void *priv_data, uint8_t *att_status)
 {
+    *att_status = ESP_IOT_ATT_SUCCESS;
+
     if (inbuf || !outbuf || !outlen) {
+        *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -281,9 +290,12 @@ static esp_err_t esp_bas_estimated_date_cb(const uint8_t *inbuf, uint16_t inlen,
 
 #ifdef CONFIG_BLE_BAS_BATTERY_CRITICAL_STATUS
 static esp_err_t esp_bas_critical_status_cb(const uint8_t *inbuf, uint16_t inlen,
-                                            uint8_t **outbuf, uint16_t *outlen, void *priv_data)
+                                            uint8_t **outbuf, uint16_t *outlen, void *priv_data, uint8_t *att_status)
 {
+    *att_status = ESP_IOT_ATT_SUCCESS;
+
     if (inbuf || !outbuf || !outlen) {
+        *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -293,9 +305,12 @@ static esp_err_t esp_bas_critical_status_cb(const uint8_t *inbuf, uint16_t inlen
 
 #ifdef CONFIG_BLE_BAS_BATTERY_ENERGY_STATUS
 static esp_err_t esp_bas_energy_status_cb(const uint8_t *inbuf, uint16_t inlen,
-                                          uint8_t **outbuf, uint16_t *outlen, void *priv_data)
+                                          uint8_t **outbuf, uint16_t *outlen, void *priv_data, uint8_t *att_status)
 {
+    *att_status = ESP_IOT_ATT_SUCCESS;
+
     if (inbuf || !outbuf || !outlen) {
+        *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -305,9 +320,12 @@ static esp_err_t esp_bas_energy_status_cb(const uint8_t *inbuf, uint16_t inlen,
 
 #ifdef CONFIG_BLE_BAS_BATTERY_TIME_STATUS
 static esp_err_t esp_bas_time_status_cb(const uint8_t *inbuf, uint16_t inlen,
-                                        uint8_t **outbuf, uint16_t *outlen, void *priv_data)
+                                        uint8_t **outbuf, uint16_t *outlen, void *priv_data, uint8_t *att_status)
 {
+    *att_status = ESP_IOT_ATT_SUCCESS;
+
     if (inbuf || !outbuf || !outlen) {
+        *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -317,9 +335,12 @@ static esp_err_t esp_bas_time_status_cb(const uint8_t *inbuf, uint16_t inlen,
 
 #ifdef CONFIG_BLE_BAS_BATTERY_HEALTH_STATUS
 static esp_err_t esp_bas_health_status_cb(const uint8_t *inbuf, uint16_t inlen,
-                                          uint8_t **outbuf, uint16_t *outlen, void *priv_data)
+                                          uint8_t **outbuf, uint16_t *outlen, void *priv_data, uint8_t *att_status)
 {
+    *att_status = ESP_IOT_ATT_SUCCESS;
+
     if (inbuf || !outbuf || !outlen) {
+        *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -329,9 +350,12 @@ static esp_err_t esp_bas_health_status_cb(const uint8_t *inbuf, uint16_t inlen,
 
 #ifdef CONFIG_BLE_BAS_BATTERY_HEALTH_INFORMATION
 static esp_err_t esp_bas_health_info_cb(const uint8_t *inbuf, uint16_t inlen,
-                                        uint8_t **outbuf, uint16_t *outlen, void *priv_data)
+                                        uint8_t **outbuf, uint16_t *outlen, void *priv_data, uint8_t *att_status)
 {
+    *att_status = ESP_IOT_ATT_SUCCESS;
+
     if (inbuf || !outbuf || !outlen) {
+        *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -341,9 +365,12 @@ static esp_err_t esp_bas_health_info_cb(const uint8_t *inbuf, uint16_t inlen,
 
 #ifdef CONFIG_BLE_BAS_BATTERY_INFORMATION
 static esp_err_t esp_bas_battery_info_cb(const uint8_t *inbuf, uint16_t inlen,
-                                         uint8_t **outbuf, uint16_t *outlen, void *priv_data)
+                                         uint8_t **outbuf, uint16_t *outlen, void *priv_data, uint8_t *att_status)
 {
+    *att_status = ESP_IOT_ATT_SUCCESS;
+
     if (inbuf || !outbuf || !outlen) {
+        *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
         return ESP_ERR_INVALID_ARG;
     }
 
