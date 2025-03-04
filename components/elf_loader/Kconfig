@@ -14,6 +14,16 @@ menu "Espressif ELF Loader Configuration"
             Select this option to enable ELF Loader and show the submenu with ELF Loader configuration choices.
 
     if ELF_LOADER
+        config ELF_DYNAMIC_LOAD_SHARED_OBJECT
+            bool "Enable dynamic load shared object"
+            default n
+            help
+                Select this option to enable ELF dynamic load shared object.
+
+        config ELF_FILE_SYSTEM_BASE_PATH
+            string "File-system base path"
+            default "/storage"
+
         config ELF_LOADER_CACHE_OFFSET
             bool
             default n

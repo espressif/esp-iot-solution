@@ -9,8 +9,11 @@
 #include <string.h>
 #include <sys/errno.h>
 #include <sys/param.h>
+#include <inttypes.h>
+#include <fcntl.h>
 
 #include "esp_log.h"
+#include "esp_elf.h"
 #include "soc/soc_caps.h"
 
 #if SOC_CACHE_INTERNAL_MEM_VIA_L1CACHE
@@ -30,8 +33,102 @@
 #define SYMBOL_TABLES_NO            (32)
 #endif
 
+#ifdef CONFIG_ELF_FILE_SYSTEM_BASE_PATH
+#define FS_PATH                     CONFIG_ELF_FILE_SYSTEM_BASE_PATH
+#else
+#define FS_PATH                     "/storage"
+#endif
+
 static const char *TAG = "ELF";
 static esp_elf_symbol_table_t *g_symbol_tables[SYMBOL_TABLES_NO];
+
+/**
+ * @brief Open and load an ELF file into memory.
+ *
+ * @param file - Pointer to elf_file_t structure to store loaded file content
+ * @param name - Filename (without path) of the ELF file to open
+ *
+ * @return 0 on success, -1 on failure with errno set. Error cases include:
+ *         - Invalid parameters
+ *         - Path generation failure
+ *         - File open/read errors
+ *         - Memory allocation failures
+ *
+ * @note The actual file path will be constructed as "FS_PATH/name"
+ * @note Allocates memory for file content using esp_elf_malloc()
+ */
+int esp_elf_open(elf_file_t *file, const char *name)
+{
+    int ret;
+    int fd;
+    char *file_path;
+    off_t size;
+    uint8_t *pbuf;
+
+    ret = asprintf(&file_path, FS_PATH"/%s", name);
+    if (ret < 0) {
+        ESP_LOGE(TAG, "Failed to generate path errno=%d", errno);
+        return -1;
+    }
+
+    fd = open(file_path, O_RDONLY);
+    if (fd < 0) {
+        ESP_LOGE(TAG, "Failed to open file %s errno=%d", file_path, errno);
+        goto errout_open_file;
+    }
+
+    size = lseek(fd, 0, SEEK_END);
+    if (size == -1) {
+        ESP_LOGE(TAG, "Failed to seek file %s errno=%d", file_path, errno);
+        goto errout_lseek_end;
+    }
+
+    ret = lseek(fd, 0, SEEK_SET);
+    if (ret == -1) {
+        ESP_LOGE(TAG, "Failed to seek file %s errno=%d", file_path, errno);
+        goto errout_lseek_end;
+    }
+
+    pbuf = esp_elf_malloc(size, false);
+    if (!pbuf) {
+        ESP_LOGE(TAG, "Failed to malloc %lu bytes", size);
+        goto errout_lseek_end;
+    }
+
+    ret = read(fd, pbuf, size);
+    if (ret != size) {
+        ESP_LOGE(TAG, "Failed to read ret=%d", ret);
+        goto errout_read_fs;
+    }
+
+    free(file_path);
+    close(fd);
+    file->payload = pbuf;
+    file->size = size;
+
+    return 0;
+
+errout_read_fs:
+    esp_elf_free(pbuf);
+errout_lseek_end:
+    close(fd);
+errout_open_file:
+    free(file_path);
+    return -1;
+}
+
+/**
+ * @brief Close ELF file and release associated resources.
+ *
+ * @param file - Pointer to opened elf_file_t structure
+ *
+ * @note Releases memory allocated by esp_elf_open() for payload data
+ * @note Should be called paired with esp_elf_open() to prevent memory leaks
+ */
+void esp_elf_close(elf_file_t *file)
+{
+    esp_elf_free(file->payload);
+}
 
 #if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
 
@@ -128,6 +225,8 @@ static int esp_elf_load_section(esp_elf_t *elf, const uint8_t *pbuf)
 
     elf->ptext = esp_elf_malloc(elf->sec[ELF_SEC_TEXT].size, true);
     if (!elf->ptext) {
+        ESP_LOGE(TAG, "Failed to malloc %d bytes for text section",
+                 elf->sec[ELF_SEC_TEXT].size);
         return -ENOMEM;
     }
 
@@ -138,6 +237,7 @@ static int esp_elf_load_section(esp_elf_t *elf, const uint8_t *pbuf)
     if (size) {
         elf->pdata = esp_elf_malloc(size, false);
         if (!elf->pdata) {
+            ESP_LOGE(TAG, "Failed to malloc %"PRIu32" bytes for data section", size);
             esp_elf_free(elf->ptext);
             return -ENOMEM;
         }
@@ -256,7 +356,7 @@ static int esp_elf_load_segment(esp_elf_t *elf, const uint8_t *pbuf)
             }
         } else {
             if (phdr[i].vaddr < vaddr_e) {
-                ESP_LOGE(TAG, "Invalid segment[%d], should not overlap, vaddr: 0x%x, vaddr_e: 0x%x\n",
+                ESP_LOGE(TAG, "Invalid segment[%d], should not overlap, vaddr: 0x%x, vaddr_e: 0x%x",
                          i, phdr[i].vaddr, vaddr_e);
                 return -EINVAL;
             }
@@ -268,7 +368,7 @@ static int esp_elf_load_segment(esp_elf_t *elf, const uint8_t *pbuf)
 
             vaddr_e = phdr[i].vaddr + phdr[i].memsz;
             if (vaddr_e < phdr[i].vaddr) {
-                ESP_LOGE(TAG, "Invalid segment[%d], address overflow, vaddr: 0x%x, vaddr_e: 0x%x\n",
+                ESP_LOGE(TAG, "Invalid segment[%d], address overflow, vaddr: 0x%x, vaddr_e: 0x%x",
                          i, phdr[i].vaddr, vaddr_e);
                 return -EINVAL;
             }
@@ -297,9 +397,8 @@ static int esp_elf_load_segment(esp_elf_t *elf, const uint8_t *pbuf)
         if (phdr[i].type == PT_LOAD) {
             memcpy(elf->psegment + phdr[i].vaddr - vaddr_s,
                    (uint8_t *)pbuf + phdr[i].offset, phdr[i].filesz);
-            ESP_LOGD(TAG, "Copy segment[%d], mem_addr: 0x%x, vaddr: 0x%x, size: 0x%08x",
-                     i, (int)((uint8_t *)elf->psegment + phdr[i].vaddr - vaddr_s),
-                     phdr[i].vaddr, phdr[i].filesz);
+            ESP_LOGD(TAG, "Copy segment[%d], mem_addr: 0x%x, size: 0x%08x",
+                     i, (int)((uint8_t *)elf->psegment + phdr[i].vaddr - vaddr_s), phdr[i].filesz);
         }
     }
 
@@ -368,6 +467,8 @@ int esp_elf_relocate(esp_elf_t *elf, const uint8_t *pbuf)
     const elf32_hdr_t *ehdr;
     const elf32_shdr_t *shdr;
     const char *shstrab;
+    const elf32_sym_t *symtab;
+    const char *strtab;
 
     if (!elf || !pbuf) {
         return -EINVAL;
@@ -398,8 +499,6 @@ int esp_elf_relocate(esp_elf_t *elf, const uint8_t *pbuf)
         if (stype(&shdr[i], SHT_RELA)) {
             uint32_t nr_reloc;
             const elf32_rela_t *rela;
-            const elf32_sym_t *symtab;
-            const char *strtab;
 
             nr_reloc = shdr[i].size / sizeof(elf32_rela_t);
             rela     = (const elf32_rela_t *)(pbuf + shdr[i].offset);
@@ -423,15 +522,18 @@ int esp_elf_relocate(esp_elf_t *elf, const uint8_t *pbuf)
 
                     if (comm_name[0]) {
                         addr = elf_find_sym(comm_name);
-
+#if CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT
+                        if (!addr && sym->shndx != SHN_UNDEF) {
+#if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
+                            addr = (uintptr_t)(elf->sec[ELF_SEC_DATA].addr + sym->value - elf->sec[ELF_SEC_DATA].v_addr);
+#else
+                            addr = (uintptr_t)(elf->psegment + sym->value - elf->svaddr);
+#endif
+                        }
+#endif
                         if (!addr) {
                             ESP_LOGE(TAG, "Can't find common %s", strtab + sym->name);
-#if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
-                            esp_elf_free(elf->pdata);
-                            esp_elf_free(elf->ptext);
-#else
-                            esp_elf_free(elf->psegment);
-#endif
+                            esp_elf_deinit(elf);
                             return -ENOSYS;
                         }
 
@@ -446,14 +548,18 @@ int esp_elf_relocate(esp_elf_t *elf, const uint8_t *pbuf)
                         addr = elf_find_sym(func_name);
                     }
 
+#if CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT
+                    if (!addr && sym->shndx != SHN_UNDEF) {
+#if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
+                        addr = (uintptr_t)(elf->sec[ELF_SEC_TEXT].addr + sym->value - elf->sec[ELF_SEC_TEXT].v_addr);
+#else
+                        addr = (uintptr_t)(elf->psegment + sym->value - elf->svaddr);
+#endif
+                    }
+#endif
                     if (!addr) {
                         ESP_LOGE(TAG, "Can't find symbol %s", func_name);
-#if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
-                        esp_elf_free(elf->pdata);
-                        esp_elf_free(elf->ptext);
-#else
-                        esp_elf_free(elf->psegment);
-#endif
+                        esp_elf_deinit(elf);
                         return -ENOSYS;
                     }
 
@@ -462,6 +568,57 @@ int esp_elf_relocate(esp_elf_t *elf, const uint8_t *pbuf)
 
                 esp_elf_arch_relocate(elf, &rela_buf, sym, addr);
             }
+#if CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT
+        } else {
+            if (strcmp((const char *)(shstrab + shdr[i].name), ELF_DYNSYM) == 0) {
+                int j;
+                uint32_t len;
+                uint16_t num = 0;
+                elf->num = 0;
+                symtab   = (const elf32_sym_t *)(pbuf + shdr[i].offset);
+                strtab   = (const char *)(pbuf + shdr[shdr[i].link].offset);
+                for (j = 0; j < shdr[i].size / sizeof(elf32_sym_t); j++) {
+                    if ((ELF_ST_BIND(symtab[j].info) == STB_GLOBAL) &&
+                        (ELF_ST_TYPE(symtab[j].info) == STT_FUNC)) {
+                        elf->num++;
+                    }
+                }
+
+                if (elf->num) {
+                    elf->symtab = (esp_symtab_t *)esp_elf_malloc(elf->num * sizeof(esp_symtab_t), false);
+                    if (!elf->symtab) {
+                        ESP_LOGE(TAG, "Failed to malloc for symbol table");
+                        esp_elf_deinit(elf);
+                        return -ENOMEM;
+                    }
+                }
+
+                for (j = 0; j < shdr[i].size / sizeof(elf32_sym_t); j++) {
+                    if ((ELF_ST_BIND(symtab[j].info) == STB_GLOBAL) &&
+                        (ELF_ST_TYPE(symtab[j].info) == STT_FUNC)) {
+                        len = strlen((const char *)(strtab + symtab[j].name)) + 1;
+#if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
+                        elf->symtab[num].addr =
+                            (void *)(elf->ptext + symtab[j].value - elf->sec[ELF_SEC_TEXT].v_addr);
+#else
+                        elf->symtab[num].addr =
+                            (void *)(elf->psegment + symtab[j].value - elf->svaddr);
+#endif
+                        elf->symtab[num].name = esp_elf_malloc(len, false);
+                        if (!elf->symtab[num].name) {
+                            ESP_LOGE(TAG, "Failed to malloc for symbol table name");
+                            esp_elf_deinit(elf);
+                            return -ENOMEM;
+                        }
+
+                        memset((void *)elf->symtab[num].name, 0, len);
+                        memcpy((void *)elf->symtab[num].name, strtab + symtab[j].name, len);
+                        ESP_LOGI(TAG, "elf->symtab[%d], func: %s", num, strtab + symtab[j].name);
+                        num++;
+                    }
+                }
+            }
+#endif
         }
     }
 
@@ -514,13 +671,25 @@ void esp_elf_deinit(esp_elf_t *elf)
     }
 #else
     if (elf->psegment) {
-        esp_elf_free(elf->ptext);
-        elf->ptext = NULL;
+        esp_elf_free(elf->psegment);
+        elf->psegment = NULL;
     }
 #endif
 
 #ifdef CONFIG_ELF_LOADER_SET_MMU
     esp_elf_arch_deinit_mmu(elf);
+#endif
+
+#if CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT
+    if (elf->num && elf->symtab) {
+        for (int i = 0; i < elf->num; i++) {
+            if (elf->symtab[i].name) {
+                esp_elf_free(elf->symtab[i].name);
+            }
+        }
+
+        esp_elf_free(elf->symtab);
+    }
 #endif
 }
 

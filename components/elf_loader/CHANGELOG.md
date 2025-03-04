@@ -1,5 +1,10 @@
 # ChangeLog
 
+## v1.2.0 - 2025-03-04
+
+### Features
+* Add dynamic load shared object support.
+
 ## v1.2.0 - 2026-01-05
 
 * Support compiling ELF application into main binary firmware

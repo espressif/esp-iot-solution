@@ -1705,6 +1705,21 @@ build_example_elf_loader_elf_embed_example:
   variables:
     EXAMPLE_DIR: examples/elf_loader/elf_embed_example
 
+build_example_elf_loader_elf_console_example:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_elf_loader_elf_console_example
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.0
+      - IMAGE: espressif/idf:release-v5.1
+      - IMAGE: espressif/idf:release-v5.2
+      - IMAGE: espressif/idf:release-v5.3
+      - IMAGE: espressif/idf:release-v5.4
+      - IMAGE: espressif/idf:release-v5.5
+  variables:
+    EXAMPLE_DIR: examples/elf_loader/elf_console_example
+
 build_components_utilities_adc_tp_calibration_test_apps:
   extends:
     - .build_examples_template

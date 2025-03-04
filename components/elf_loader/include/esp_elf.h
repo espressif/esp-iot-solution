@@ -13,6 +13,47 @@
 extern "C" {
 #endif
 
+typedef struct elf_file {
+    uint8_t *payload;
+    int size;
+} elf_file_t;
+
+/**
+ * @brief Open and load an ELF file into memory.
+ *
+ * @param file - Pointer to elf_file_t structure to store loaded file content
+ * @param name - Filename (without path) of the ELF file to open
+ *
+ * @return 0 on success, -1 on failure with errno set. Error cases include:
+ *         - Invalid parameters
+ *         - Path generation failure
+ *         - File open/read errors
+ *         - Memory allocation failures
+ *
+ * @note The actual file path will be constructed as "FS_PATH/name"
+ * @note Allocates memory for file content using esp_elf_malloc()
+ */
+int esp_elf_open(elf_file_t *file, const char *name);
+
+/**
+ * @brief Close ELF file and release associated resources.
+ *
+ * @param file - Pointer to opened elf_file_t structure
+ *
+ * @note Releases memory allocated by esp_elf_open() for payload data
+ * @note Should be called paired with esp_elf_open() to prevent memory leaks
+ */
+void esp_elf_close(elf_file_t *file);
+
+/**
+ * @brief Free memory of ELF object.
+ *
+ * @param elf - ELF object pointer
+ *
+ * @return None
+ */
+void esp_object_free(esp_elf_t *elf);
+
 /**
  * @brief Symbol table type
  *
