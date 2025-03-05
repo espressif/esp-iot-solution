@@ -5,6 +5,7 @@
 ### Bug Fix:
 
 * Enable new IIC driver in v5.2.6 instead of v5.2.4
+* Fixed the color power calculation error
 
 ## v1.7.0 - 2025-02-24
 
