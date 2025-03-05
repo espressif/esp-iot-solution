@@ -55,9 +55,9 @@ menu "LightBulb Driver Config"
             depends on ENABLE_KP18058_DRIVER || ENABLE_BP1658CJ_DRIVER || ENABLE_BP57x8D_DRIVER || ENABLE_SM2x35EGH_DRIVER || ENABLE_SM2135EH_DRIVER || ENABLE_SM2135E_DRIVER
 
             config LB_ENABLE_NEW_IIC_DRIVER
-                depends on ESP_IDF_VERSION >= 5.2.4
+                depends on ESP_IDF_VERSION >= 5.2.6
                 bool "Enable new I2C driver"
-                default "y"
+                default "n"
                 help
                     Enable new I2C driver.
 

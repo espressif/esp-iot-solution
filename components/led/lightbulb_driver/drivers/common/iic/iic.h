@@ -11,7 +11,7 @@
 #endif
 
 // Need to include this commit: https://github.com/espressif/esp-idf/commit/a245a316a518215c5655ffd2fe24fc920044b094
-#if ((ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 2, 4)) && (ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 3, 0))) || \
+#if ((ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 2, 6)) && (ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 3, 0))) || \
     ((ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 3)) && (ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 4, 0))) || \
     (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 4, 1)) && \
     (CONFIG_LB_ENABLE_NEW_IIC_DRIVER)
