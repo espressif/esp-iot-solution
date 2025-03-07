@@ -34,6 +34,14 @@ Component config  --->
         [*] Enable Espressif ELF Loader
 ```
 
+You can then optionally enable dynamic load shared object in the menuconfig:
+
+```
+Component config  --->
+    ESP-ELFLoader Configuration  --->
+        [*] Enable dynamic load shared object
+```
+
 Add API calls in your project as follows:
 
 ```c
@@ -47,6 +55,21 @@ Add API calls in your project as follows:
     esp_elf_relocate(&elf, elf_file_data_bytes);
     esp_elf_request(&elf, 0, argc, argv);
     esp_elf_deinit(&elf);
+```
+
+If dynamic load shared object is enabled, you can use the following APIs in your project:
+
+```c
+#include "esp_dlfcn.h"
+
+typedef int (*lib_func1)(void);
+
+    const char *filename = "FilePath/lib.so";
+    lib_func1 test_function;
+    void *handle = dlopen(filename, RTLD_LAZY);
+    test_function = (lib_func1)dlsym(handle, "function1");
+    test_function();
+    dlclose(handle);
 ```
 
 #### ELF APP
@@ -108,3 +131,4 @@ Alternatively, you can download examples from the esp-iot-solution repository:
 1. [build_elf_file_example](https://github.com/espressif/esp-iot-solution/tree/master/examples/elf_loader/build_elf_file_example)
 2. [elf_embed_example](https://github.com/espressif/esp-iot-solution/tree/master/examples/elf_loader/elf_embed_example)
 3. [elf_loader_example](https://github.com/espressif/esp-iot-solution/tree/master/examples/elf_loader/elf_loader_example)
+4. [elf_console_example](https://github.com/espressif/esp-iot-solution/tree/master/examples/elf_loader/elf_console_example)

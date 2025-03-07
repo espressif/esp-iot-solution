@@ -127,6 +127,10 @@ errout_open_file:
  */
 void esp_elf_close(elf_file_t *file)
 {
+    if (!file) {
+        return;
+    }
+
     esp_elf_free(file->payload);
 }
 
@@ -579,7 +583,7 @@ int esp_elf_relocate(esp_elf_t *elf, const uint8_t *pbuf)
                 strtab   = (const char *)(pbuf + shdr[shdr[i].link].offset);
                 for (j = 0; j < shdr[i].size / sizeof(elf32_sym_t); j++) {
                     if ((ELF_ST_BIND(symtab[j].info) == STB_GLOBAL) &&
-                        (ELF_ST_TYPE(symtab[j].info) == STT_FUNC)) {
+                            (ELF_ST_TYPE(symtab[j].info) == STT_FUNC)) {
                         elf->num++;
                     }
                 }
@@ -595,7 +599,7 @@ int esp_elf_relocate(esp_elf_t *elf, const uint8_t *pbuf)
 
                 for (j = 0; j < shdr[i].size / sizeof(elf32_sym_t); j++) {
                     if ((ELF_ST_BIND(symtab[j].info) == STB_GLOBAL) &&
-                        (ELF_ST_TYPE(symtab[j].info) == STT_FUNC)) {
+                            (ELF_ST_TYPE(symtab[j].info) == STT_FUNC)) {
                         len = strlen((const char *)(strtab + symtab[j].name)) + 1;
 #if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
                         elf->symtab[num].addr =
@@ -659,6 +663,10 @@ int esp_elf_request(esp_elf_t *elf, int opt, int argc, char *argv[])
  */
 void esp_elf_deinit(esp_elf_t *elf)
 {
+    if (!elf) {
+        return;
+    }
+
 #if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
     if (elf->pdata) {
         esp_elf_free(elf->pdata);

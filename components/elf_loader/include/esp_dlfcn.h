@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#pragma once
+
 #ifndef __DLFCN_H__
 #define __DLFCN_H__
 

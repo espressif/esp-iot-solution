@@ -3,6 +3,8 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+ 
+ #pragma once
 
 #ifndef __DLMOD_H__
 #define __DLMOD_H__

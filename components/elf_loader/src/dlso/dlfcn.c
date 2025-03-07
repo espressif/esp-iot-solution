@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <assert.h>
 #include <string.h>
 
 #include "esp_log.h"
@@ -24,7 +23,10 @@ static const char *TAG = "DLFCN";
  */
 void *dlinsmod(const char *path)
 {
-    assert(path != NULL);
+    if (!path) {
+        ESP_LOGE(TAG, "Invalid NULL path");
+        return NULL;
+    }
 
     char filename[FILE_NAME_MAX] = {0};
     if (!dlmod_getname(path, filename, FILE_NAME_MAX)) {
@@ -46,7 +48,10 @@ void *dlinsmod(const char *path)
  */
 int dlrmmod(const char *path)
 {
-    assert(path != NULL);
+    if (!path) {
+        ESP_LOGE(TAG, "Invalid NULL path");
+        return -1;
+    }
 
     char filename[FILE_NAME_MAX] = {0};
     if (!dlmod_getname(path, filename, FILE_NAME_MAX)) {
@@ -67,7 +72,10 @@ int dlrmmod(const char *path)
  */
 void *dlopen(const char *path, int flags)
 {
-    assert(path != NULL);
+    if (!path) {
+        ESP_LOGE(TAG, "Invalid NULL path");
+        return NULL;
+    }
 
     char filename[FILE_NAME_MAX] = {0};
     if (!dlmod_getname(path, filename, FILE_NAME_MAX)) {

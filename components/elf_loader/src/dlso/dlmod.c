@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <assert.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -68,7 +67,7 @@ void *dlmod_gethandle(const char *name)
     }
 
     if (SLIST_EMPTY(&g_dlmod_slist_head)) {
-        ESP_LOGD(TAG, "The list is empty, creating a new node.");
+        ESP_LOGD(TAG, "The list is empty, no module found.");
         return NULL;
     }
 
@@ -110,11 +109,13 @@ void dlmod_listsymbol(void)
     }
 
     struct dlmod_slist_t *current;
+    char *name;
     ESP_LOGI(TAG, "Shared objects symbols table in the list:");
     SLIST_FOREACH(current, &g_dlmod_slist_head, next) {
         if (current && current->elf && current->elf->num) {
             for (int i = 0; i < current->elf->num; i++) {
-                ESP_LOGI(TAG, "%s, addr: %p", current->elf->symtab[i].name,
+                name = current->elf->symtab[i].name;
+                ESP_LOGI(TAG, "%s, addr: %p", name ? name : "(null)",
                          current->elf->symtab[i].addr);
             }
         }
@@ -141,10 +142,17 @@ void *dlmod_relocate(const char *path)
     ESP_LOGD(TAG, "Open file:%s, len=%d", path, file.size);
 
     esp_elf_t *elf_dl = (esp_elf_t *)esp_elf_malloc(sizeof(esp_elf_t), false);
+    if (!elf_dl) {
+        ESP_LOGE(TAG, "Failed to allocate memory for ELF");
+        esp_elf_close(&file);
+        return NULL;
+    }
+
     ret = esp_elf_init(elf_dl);
     if (ret < 0) {
         ESP_LOGE(TAG, "Failed to initialize ELF file errno=%d", ret);
         esp_elf_free(elf_dl);
+        esp_elf_close(&file);
         return NULL;
     }
 
@@ -152,6 +160,7 @@ void *dlmod_relocate(const char *path)
     if (ret < 0) {
         ESP_LOGE(TAG, "Failed to relocate ELF file errno=%d", ret);
         esp_elf_free(elf_dl);
+        esp_elf_close(&file);
         return NULL;
     }
 
@@ -226,7 +235,7 @@ int dlmod_remove(void *handle)
             if (prev == NULL) {
                 SLIST_REMOVE_HEAD(&g_dlmod_slist_head, next);
             } else {
-                SLIST_REMOVE_AFTER(prev, next);
+                SLIST_REMOVE(&g_dlmod_slist_head, current, dlmod_slist_t, next);
             }
 
             ESP_LOGI(TAG, "Removed node with name: %s.so", current->name);
@@ -260,7 +269,7 @@ void *dlmod_getaddr(const char *sym_name)
         if (current && current->elf && current->elf->num) {
             for (int i = 0; i < current->elf->num; i++) {
                 if (strcmp(current->elf->symtab[i].name, sym_name) == 0) {
-                    ESP_LOGD(TAG,"Found node with sym_name: %s, addr: %p",
+                    ESP_LOGD(TAG, "Found node with sym_name: %s, addr: %p",
                              sym_name, current->elf->symtab[i].addr);
                     return current->elf->symtab[i].addr;
                 }

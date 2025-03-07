@@ -1,0 +1,36 @@
+menu "Shell"
+    config ELF_SHELL
+        bool "Enable ELF shell command"
+        default n
+
+    if ELF_SHELL
+        config SHELL_PROMPT
+            string "Shell prompt"
+            default "ELF>"
+
+        menu "Shell Command List"
+            config SHELL_CMD_FREE
+                bool "free"
+                default y
+
+            config SHELL_CMD_LS
+                bool "ls"
+                default y
+
+            if ELF_DYNAMIC_LOAD_SHARED_OBJECT
+                config SHELL_CMD_EXEC
+                    bool "exec"
+                    default y
+                config SHELL_CMD_INSMOD
+                    bool "insmod"
+                    default y
+                config SHELL_CMD_LIST
+                    bool "list"
+                    default y
+                config SHELL_CMD_RMMOD
+                    bool "rmmod"
+                    default y
+            endif
+        endmenu
+    endif
+endmenu
