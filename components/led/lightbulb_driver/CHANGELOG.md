@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v1.7.1 - 2025-03-05
+
+### Bug Fix:
+
+* Enable new IIC driver in v5.2.6 instead of v5.2.4
+* Fixed the color power calculation error
+
 ## v1.7.0 - 2025-02-24
 
 ### Improve:

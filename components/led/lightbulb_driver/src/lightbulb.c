@@ -1251,6 +1251,11 @@ static esp_err_t _lightbulb_hsv2rgb(uint16_t hue, uint8_t saturation, uint8_t va
     *red = _red / 255.0;
     *green = _green / 255.0;
     *blue = _blue / 255.0;
+
+    float total = *red + *green + *blue;
+    *red = *red / total;
+    *green = *green / total;
+    *blue = *blue / total;
     *cold = 0;
     *warm = 0;
 
