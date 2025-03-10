@@ -56,6 +56,7 @@ ESP-IoT-Solution 中注册的组件如下:
 
 | 组件 | 版本 |
 | --- | --- |
+| [adc_mic](https://components.espressif.com/components/espressif/adc_mic) | [![Component Registry](https://components.espressif.com/components/espressif/adc_mic/badge.svg)](https://components.espressif.com/components/espressif/adc_mic) |
 | [aht20](https://components.espressif.com/components/espressif/aht20) | [![Component Registry](https://components.espressif.com/components/espressif/aht20/badge.svg)](https://components.espressif.com/components/espressif/aht20) |
 | [apds9960](https://components.espressif.com/components/espressif/apds9960) | [![Component Registry](https://components.espressif.com/components/espressif/apds9960/badge.svg)](https://components.espressif.com/components/espressif/apds9960) |
 | [at24c02](https://components.espressif.com/components/espressif/at24c02) | [![Component Registry](https://components.espressif.com/components/espressif/at24c02/badge.svg)](https://components.espressif.com/components/espressif/at24c02) |

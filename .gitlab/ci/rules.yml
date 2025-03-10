@@ -10,6 +10,9 @@
   - "pytest.ini"
 
 # components folder, in the alphabetic order
+.patterns-components_audio_adc_mic: &patterns-components_audio_adc_mic
+  - "components/audio/adc_mic/**/*"
+
 .patterns-components_audio_dac_audio: &patterns-components_audio_dac_audio
   - "components/audio/dac_audio/**/*"
 
@@ -1579,6 +1582,17 @@
       changes: *patterns-example_relinker
 
 # rules for ut
+.rules:build:component_audio_adc_mic_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_audio_adc_mic
+
 .rules:build:component_audio_dac_audio_test:
   rules:
     - <<: *if-protected
