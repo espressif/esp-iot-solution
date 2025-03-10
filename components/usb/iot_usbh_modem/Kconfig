@@ -86,6 +86,10 @@ menu "IoT USB Host Modem"
         help
             Set Pin of sim card if have
 
+    config MODEM_PRINT_DEVICE_DESCRIPTOR
+        bool "Print device descriptor"
+        default y
+
     menu "GPIO Config"
         config MODEM_POWER_GPIO
             int "Modem power control gpio, set 0 if not use"
