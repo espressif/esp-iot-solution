@@ -19,12 +19,16 @@ typedef struct {
     int32_t col_gpio_num;          /**< col gpio */
 } button_matrix_obj;
 
-static esp_err_t button_matrix_gpio_init(int32_t gpio_num, gpio_mode_t mode)
+static esp_err_t button_matrix_gpio_init(int32_t gpio_num, gpio_mode_t mode, bool scan_inverted)
 {
     ESP_RETURN_ON_FALSE(GPIO_IS_VALID_GPIO(gpio_num), ESP_ERR_INVALID_ARG, TAG, "gpio_num error");
     gpio_config_t gpio_conf = {0};
     gpio_conf.intr_type = GPIO_INTR_DISABLE;
-    gpio_conf.pull_down_en = GPIO_PULLDOWN_ENABLE;
+    if (scan_inverted) {
+        gpio_conf.pull_up_en = GPIO_PULLUP_ENABLE;
+    } else {
+        gpio_conf.pull_down_en = GPIO_PULLDOWN_ENABLE;
+    }
     gpio_conf.pin_bit_mask = (1ULL << gpio_num);
     gpio_conf.mode = mode;
     gpio_config(&gpio_conf);
@@ -50,6 +54,15 @@ uint8_t button_matrix_get_key_level(button_driver_t *button_driver)
     return level;
 }
 
+uint8_t button_matrix_get_key_level_inverted(button_driver_t *button_driver)
+{
+    button_matrix_obj *matrix_btn = __containerof(button_driver, button_matrix_obj, base);
+    gpio_set_level(matrix_btn->row_gpio_num, 0);
+    uint8_t level = !gpio_get_level(matrix_btn->col_gpio_num);
+    gpio_set_level(matrix_btn->row_gpio_num, 1);
+    return level;
+}
+
 esp_err_t iot_button_new_matrix_device(const button_config_t *button_config, const button_matrix_config_t *matrix_config, button_handle_t *ret_button, size_t *size)
 {
     esp_err_t ret = ESP_OK;
@@ -60,15 +73,22 @@ esp_err_t iot_button_new_matrix_device(const button_config_t *button_config, con
 
     button_matrix_obj *matrix_btn = calloc(*size, sizeof(button_matrix_obj));
     for (int i = 0; i < matrix_config->row_gpio_num; i++) {
-        button_matrix_gpio_init(matrix_config->row_gpios[i], GPIO_MODE_OUTPUT);
+        button_matrix_gpio_init(matrix_config->row_gpios[i], GPIO_MODE_OUTPUT, matrix_config->scan_inverted);
     }
 
     for (int i = 0; i < matrix_config->col_gpio_num; i++) {
-        button_matrix_gpio_init(matrix_config->col_gpios[i], GPIO_MODE_INPUT);
+        button_matrix_gpio_init(matrix_config->col_gpios[i], GPIO_MODE_INPUT, matrix_config->scan_inverted);
+    }
+
+    uint8_t (*get_key_level)(button_driver_t *button_driver);
+    if (matrix_config->scan_inverted) {
+        get_key_level = button_matrix_get_key_level_inverted;
+    } else {
+        get_key_level = button_matrix_get_key_level;
     }
 
     for (int i = 0; i < *size; i++) {
-        matrix_btn[i].base.get_key_level = button_matrix_get_key_level;
+        matrix_btn[i].base.get_key_level = get_key_level;
         matrix_btn[i].base.del = button_matrix_del;
         matrix_btn[i].row_gpio_num = matrix_config->row_gpios[i / matrix_config->col_gpio_num];
         matrix_btn[i].col_gpio_num = matrix_config->col_gpios[i % matrix_config->col_gpio_num];
