@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -95,6 +95,11 @@ esp_err_t led_indicator_rgb_set_on_off(void *rgb_handle, bool on_off)
     if (on_off) {
         uint32_t rgb[3] = {0};
         led_indicator_hsv2rgb(p_rgb->hsv.value, &rgb[0], &rgb[1], &rgb[2]);
+
+        for (int i = 0; i < 3; i++) {
+            rgb[i] = rgb[i] * p_rgb->max_duty / UINT8_MAX;
+        }
+
         ret = led_indicator_rgb_set_duty(p_rgb, rgb);
         LED_RGB_CHECK(ESP_OK == ret, "LEDC set duty error", return ret);
     } else {

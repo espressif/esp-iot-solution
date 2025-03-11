@@ -1,10 +1,16 @@
 # ChangeLog
 
+## v1.1.1 - 2025-03-11
+
+### Bugfix
+
+* Fix: Scale RGB values (0-255) to PWM duty range (0-8191)
+
 ## v1.1.0 - 2025-02-24
 
 ### Improve:
 
-- Update the version of dependent cmake_utilities to *
+* Update the version of dependent cmake_utilities to *
 
 ## v1.0.0 - 2024-8-14
 
