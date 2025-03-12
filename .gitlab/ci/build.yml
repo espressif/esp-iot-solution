@@ -50,6 +50,7 @@
       - IMAGE: espressif/idf:release-v5.1
       - IMAGE: espressif/idf:release-v5.2
       - IMAGE: espressif/idf:release-v5.3
+      - IMAGE: espressif/idf:release-v5.4
 
 .build_idf_version_greater_equal_v5_0:
   parallel:
@@ -58,6 +59,7 @@
       - IMAGE: espressif/idf:release-v5.1
       - IMAGE: espressif/idf:release-v5.2
       - IMAGE: espressif/idf:release-v5.3
+      - IMAGE: espressif/idf:release-v5.4
 
 build_example_ai_esp_dl_human_activity_recognition:
   extends:
@@ -701,9 +703,9 @@ build_example_sensors_sensor_hub_monitor:
   extends:
     - .build_examples_template
     - .rules:build:example_sensors_sensor_hub_monitor
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/sensors/sensor_hub_monitor
-    IMAGE: espressif/idf:release-v4.4
 
 build_example_touch_touch_proximity:
   extends:
