@@ -45,7 +45,8 @@ push_to_github:
     - add_doc_server_ssh_keys $DOCS_DEPLOY_PRIVATEKEY $DOCS_DEPLOY_SERVER $DOCS_DEPLOY_SERVER_USER
     - export GIT_VER=$(git describe --always)
     - pip install -r ${CI_PROJECT_DIR}/docs/requirements.txt
-    - deploy-docs
+    - mkdir -p logs
+    - deploy-docs | tee logs/doc-url.txt
 
 deploy_docs_preview:
   extends:
@@ -65,6 +66,11 @@ deploy_docs_preview:
   before_script:
     - export SANITIZED_BRANCH_NAME=$(echo "$CI_COMMIT_REF_NAME" | tr '/' '-')
     - export FINAL_PREVIEW_URL="https://preview-docs.espressif.com/projects/esp-iot-solution/zh_CN/$SANITIZED_BRANCH_NAME/index.html"
+  artifacts:
+    when: always
+    paths:
+      - logs/doc-url.txt
+    expire_in: 4 days
 
 deploy_docs_production:
   extends:
@@ -81,6 +87,19 @@ deploy_docs_production:
     DOCS_DEPLOY_SERVER_USER: "$DOCS_PROD_SERVER_USER"
     DOCS_DEPLOY_PATH: "$DOCS_PROD_PATH"
     DOCS_DEPLOY_URL_BASE: "$DOCS_PROD_URL_BASE"
+
+post_links:
+  stage: deploy
+  tags: [deploy_docs]
+  image: $ESP_DOCS_ENV_IMAGE
+  needs:
+    - deploy_docs_preview
+  rules:
+    # Run for all changes to a merge request's source branch
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+  script:
+    - ls -al logs
+    - python3 ${CI_PROJECT_DIR}/tools/ci/post-mr-note.py $GITLAB_MR_NOTE_TOKEN $CI_PROJECT_PATH $CI_MERGE_REQUEST_IID
 
 # Up to 50 jobs can needs
 # Please modify tools/ci/launchpad/upload_project_config.yml at same time.

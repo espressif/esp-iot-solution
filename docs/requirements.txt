@@ -1,1 +1,5 @@
 esp-docs==1.*
+
+linuxdoc
+urllib3
+python-gitlab
