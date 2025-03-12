@@ -266,4 +266,5 @@ esp_err_t usbh_cdc_get_state(usbh_cdc_handle_t cdc_handle, usbh_cdc_state_t *sta
 esp_err_t usbh_cdc_desc_print(usbh_cdc_handle_t cdc_handle);
 
 #ifdef __cplusplus
+}
 #endif
