@@ -1,4 +1,4 @@
-version: "1.0.1"
+version: "1.0.2"
 targets:
   - esp32s2
   - esp32s3
@@ -10,7 +10,7 @@ documentation: https://docs.espressif.com/projects/esp-iot-solution/en/latest/us
 issues: https://github.com/espressif/esp-iot-solution/issues
 dependencies:
   idf: ">=4.4.1"
-  cmake_utilities: "0.*"
+  cmake_utilities: "*"
 examples:
   - path: ../../../examples/usb/host/usb_cdc_basic
 sbom:
