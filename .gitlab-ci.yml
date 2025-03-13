@@ -4,6 +4,7 @@ stages:
   - target_test
   - build_docs
   - deploy
+  - post_deploy
 
 workflow:
   rules:

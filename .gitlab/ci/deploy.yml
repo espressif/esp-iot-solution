@@ -89,14 +89,13 @@ deploy_docs_production:
     DOCS_DEPLOY_URL_BASE: "$DOCS_PROD_URL_BASE"
 
 post_links:
-  stage: deploy
+  stage: post_deploy
+  extends:
+    - .rules:deploy:docs_preview
   tags: [deploy_docs]
   image: $ESP_DOCS_ENV_IMAGE
   needs:
     - deploy_docs_preview
-  rules:
-    # Run for all changes to a merge request's source branch
-    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
   script:
     - ls -al logs
     - python3 ${CI_PROJECT_DIR}/tools/ci/post-mr-note.py $GITLAB_MR_NOTE_TOKEN $CI_PROJECT_PATH $CI_MERGE_REQUEST_IID
