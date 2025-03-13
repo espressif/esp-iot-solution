@@ -120,8 +120,10 @@ components_test_touch_button_sensor:
     matrix:
         - IDF_VERSION: ["5.3"]
           IDF_TARGET: ["esp32s3", "esp32s2", "esp32p4"]
+          ENV_TAG: "generic"
   tags:
     - ${IDF_TARGET}
+    - ${ENV_TAG}
   image: $DOCKER_TARGET_TEST_v5_4_ENV_IMAGE
   variables:
     TEST_TARGET: ${IDF_TARGET}
@@ -139,8 +141,10 @@ components_test_touch_proximity_sensor:
     matrix:
         - IDF_VERSION: ["5.0","5.1","5.2"]
           IDF_TARGET: esp32s3
+          ENV_TAG: "generic"
   tags:
     - ${IDF_TARGET}
+    - ${ENV_TAG}
   image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_TARGET: esp32s3
@@ -297,10 +301,14 @@ components_test_led_indicator:
   parallel:
     matrix:
         - IDF_VERSION: "4.4"
+          IDF_TARGET: esp32s3
+          ENV_TAG: "led_indicator"
         - IDF_VERSION: "5.0"
+          IDF_TARGET: esp32s3
+          ENV_TAG: "led_indicator"
   tags:
-    - esp32s3
-    - led_indicator
+    - ${IDF_TARGET}
+    - ${ENV_TAG}
   image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_TARGET: esp32s3
@@ -317,11 +325,15 @@ components_test_openai:
       optional: true
   parallel:
     matrix:
-        - IDF_VERSION: "4.4"
-        - IDF_VERSION: "5.0"
+        - IDF_TARGET: esp32s3
+          IDF_VERSION: "4.4"
+          ENV_TAG: "openai"
+        - IDF_TARGET: esp32s3
+          IDF_VERSION: "5.0"
+          ENV_TAG: "openai"
   tags:
-    - esp32s3
-    - openai
+    - ${IDF_TARGET}
+    - ${ENV_TAG}
   image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_TARGET: esp32s3
@@ -339,11 +351,13 @@ components_test_power_measure:
     matrix:
       - IDF_TARGET: esp32c3
         IDF_VERSION: "4.4"
+        ENV_TAG: "generic"
       - IDF_TARGET: esp32c3
         IDF_VERSION: "5.0"
+        ENV_TAG: "generic"
   tags:
-    - esp32c3
-    - generic
+    - ${IDF_TARGET}
+    - ${ENV_TAG}
   image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_TARGET: esp32c3
@@ -360,10 +374,12 @@ components_test_esp_lcd_axs15231b:
       optional: false
   parallel:
     matrix:
-        - IDF_VERSION: "5.1"
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "5.1"
+        ENV_TAG: "esp32s3_lcd_ev"
   tags:
-    - esp32s3
-    - esp32s3_lcd_ev
+    - ${IDF_TARGET}
+    - ${ENV_TAG}
   image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_TARGET: esp32s3
@@ -380,10 +396,12 @@ components_test_esp_lcd_gc9b71:
       optional: false
   parallel:
     matrix:
-        - IDF_VERSION: "5.1"
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "5.1"
+        ENV_TAG: "esp32s3_lcd_ev"
   tags:
-    - esp32s3
-    - esp32s3_lcd_ev
+    - ${IDF_TARGET}
+    - ${ENV_TAG}
   image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_TARGET: esp32s3
@@ -400,11 +418,15 @@ components_test_esp_lcd_panel_io_additions:
       optional: false
   parallel:
     matrix:
-        - IDF_VERSION: "4.4"
-        - IDF_VERSION: "5.0"
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "4.4"
+        ENV_TAG: "esp32s3_lcd_ev"
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "5.0"
+        ENV_TAG: "esp32s3_lcd_ev"
   tags:
-    - esp32s3
-    - esp32s3_lcd_ev
+    - ${IDF_TARGET}
+    - ${ENV_TAG}
   image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_TARGET: esp32s3
@@ -421,10 +443,12 @@ components_test_esp_lcd_sh8601:
       optional: false
   parallel:
     matrix:
-        - IDF_VERSION: "5.1"
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "5.1"
+        ENV_TAG: "esp32s3_lcd_ev"
   tags:
-    - esp32s3
-    - esp32s3_lcd_ev
+    - ${IDF_TARGET}
+    - ${ENV_TAG}
   image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_TARGET: esp32s3
@@ -441,10 +465,12 @@ components_test_esp_lcd_spd2010:
       optional: false
   parallel:
     matrix:
-        - IDF_VERSION: "5.1"
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "5.1"
+        ENV_TAG: "esp32s3_lcd_ev"
   tags:
-    - esp32s3
-    - esp32s3_lcd_ev
+    - ${IDF_TARGET}
+    - ${ENV_TAG}
   image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_TARGET: esp32s3
@@ -462,9 +488,11 @@ components_test_esp_lcd_st77903_qspi:
   parallel:
     matrix:
         - IDF_VERSION: "5.3"
+          IDF_TARGET: esp32s3
+          ENV_TAG: "esp32s3_lcd_ev"
   tags:
-    - esp32s3
-    - esp32s3_lcd_ev
+    - ${IDF_TARGET}
+    - ${ENV_TAG}
   image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_TARGET: esp32s3
@@ -481,10 +509,12 @@ components_test_esp_lcd_st77903_rgb:
       optional: false
   parallel:
     matrix:
-        - IDF_VERSION: "5.1"
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "5.1"
+        ENV_TAG: "esp32s3_lcd_ev"
   tags:
-    - esp32s3
-    - esp32s3_lcd_ev
+    - ${IDF_TARGET}
+    - ${ENV_TAG}
   image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_TARGET: esp32s3
@@ -588,10 +618,12 @@ components_test_esp_lcd_nv3022b:
       optional: false
   parallel:
     matrix:
-        - IDF_VERSION: "5.1"
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "5.1"
+        ENV_TAG: "esp32s3_lcd_ev"
   tags:
-    - esp32s3
-    - esp32s3_lcd_ev
+    - ${IDF_TARGET}
+    - ${ENV_TAG}
   image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_TARGET: esp32s3
@@ -608,10 +640,12 @@ components_test_esp_lcd_st77916:
       optional: false
   parallel:
     matrix:
-        - IDF_VERSION: "5.1"
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "5.1"
+        ENV_TAG: "esp32s3_lcd_ev"
   tags:
-    - esp32s3
-    - esp32s3_lcd_ev
+    - ${IDF_TARGET}
+    - ${ENV_TAG}
   image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_TARGET: esp32s3
@@ -628,10 +662,12 @@ components_test_esp_lcd_st77922:
       optional: false
   parallel:
     matrix:
-        - IDF_VERSION: "5.1"
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "5.1"
+        ENV_TAG: "esp32s3_lcd_ev"
   tags:
-    - esp32s3
-    - esp32s3_lcd_ev
+    - ${IDF_TARGET}
+    - ${ENV_TAG}
   image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_TARGET: esp32s3
@@ -650,19 +686,25 @@ components_led_lightbulb_driver_test:
     matrix:
       - IDF_TARGET: esp32s2
         IDF_VERSION: "4.4"
+        ENV_TAG: generic
       - IDF_TARGET: esp32s3
         IDF_VERSION: "4.4"
+        ENV_TAG: generic
       - IDF_TARGET: esp32s2
         IDF_VERSION: "5.0"
+        ENV_TAG: generic
       - IDF_TARGET: esp32s3
         IDF_VERSION: "5.0"
+        ENV_TAG: generic
       - IDF_TARGET: esp32s2
         IDF_VERSION: "5.1"
+        ENV_TAG: generic
       - IDF_TARGET: esp32s3
         IDF_VERSION: "5.1"
+        ENV_TAG: generic
   tags:
     - ${IDF_TARGET}
-    - generic
+    - ${ENV_TAG}
   image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_TARGET: ${IDF_TARGET}
@@ -681,10 +723,13 @@ example_lighting_lightbulb:
     matrix:
       - IDF_TARGET: esp32s2
         IDF_VERSION: "5.1"
+        ENV_TAG: generic
       - IDF_TARGET: esp32s3
         IDF_VERSION: "5.1"
+        ENV_TAG: generic
   tags:
     - ${IDF_TARGET}
+    - ${ENV_TAG}
   image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_TARGET: ${IDF_TARGET}
@@ -852,11 +897,15 @@ tools_test_cmake_utilities:
     matrix:
       - IDF_TARGET: esp32s3
         IDF_VERSION: "4.4"
+        ENV_TAG: "generic"
       - IDF_TARGET: esp32s3
         IDF_VERSION: "5.0"
+        ENV_TAG: "generic"
   tags:
     - ${IDF_TARGET}
+    - ${ENV_TAG}
   image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_TARGET: ${IDF_TARGET}
     TEST_FOLDER: tools/cmake_utilities
+    TEST_ENV: ${ENV_TAG}

@@ -127,6 +127,6 @@ Examples
 - :example:`touch/touch_button`
 
 API Reference
-------------
+---------------
 
 .. include-build-file:: inc/touch_button_sensor.inc
