@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.2 - 2025-3-12
+
+### Bug Fixes:
+
+- Fix alignment issue of `sensors_detect` target in sensor_hub linker fragment file
+
 ## v0.1.1 - 2024-12-24
 
 ### Bug Fixes:
