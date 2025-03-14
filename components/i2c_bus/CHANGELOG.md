@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.4.0 - 2025-3-13
+
+### Enhancements:
+
+- Support removing the restriction on ``NULL_I2C_MEM_ADDR``, allowing users to refer to all eligible register addresses.
+
 ## v1.3.0 - 2025-2-13
 
 ### Enhancements:

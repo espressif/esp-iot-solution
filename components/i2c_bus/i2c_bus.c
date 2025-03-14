@@ -365,11 +365,17 @@ static esp_err_t i2c_bus_read_reg8(i2c_bus_device_handle_t dev_handle, uint8_t m
 #endif
     {
         i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+#if !CONFIG_I2C_BUS_REMOVE_NULL_MEM_ADDR
         if (mem_address != NULL_I2C_MEM_ADDR) {
+#endif
             i2c_master_start(cmd);
             i2c_master_write_byte(cmd, (i2c_device->dev_addr << 1) | I2C_MASTER_WRITE, I2C_ACK_CHECK_EN);
             i2c_master_write_byte(cmd, mem_address, I2C_ACK_CHECK_EN);
+#if !CONFIG_I2C_BUS_REMOVE_NULL_MEM_ADDR
+        } else {
+            ESP_LOGD(TAG, "register address 0x%X is skipped and will not be sent", NULL_I2C_MEM_ADDR);
         }
+#endif
 
         i2c_master_start(cmd);
         i2c_master_write_byte(cmd, (i2c_device->dev_addr << 1) | I2C_MASTER_READ, I2C_ACK_CHECK_EN);
@@ -402,11 +408,17 @@ esp_err_t i2c_bus_read_reg16(i2c_bus_device_handle_t dev_handle, uint16_t mem_ad
 #endif
     {
         i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+#if !CONFIG_I2C_BUS_REMOVE_NULL_MEM_ADDR
         if (mem_address != NULL_I2C_MEM_16BIT_ADDR) {
+#endif
             i2c_master_start(cmd);
             i2c_master_write_byte(cmd, (i2c_device->dev_addr << 1) | I2C_MASTER_WRITE, I2C_ACK_CHECK_EN);
             i2c_master_write(cmd, memAddress8, 2, I2C_ACK_CHECK_EN);
+#if !CONFIG_I2C_BUS_REMOVE_NULL_MEM_ADDR
+        } else {
+            ESP_LOGD(TAG, "register address 0x%X is skipped and will not be sent", NULL_I2C_MEM_16BIT_ADDR);
         }
+#endif
         i2c_master_start(cmd);
         i2c_master_write_byte(cmd, (i2c_device->dev_addr << 1) | I2C_MASTER_READ, I2C_ACK_CHECK_EN);
         i2c_master_read(cmd, data, data_len, I2C_MASTER_LAST_NACK);
@@ -437,9 +449,15 @@ static esp_err_t i2c_bus_write_reg8(i2c_bus_device_handle_t dev_handle, uint8_t 
         i2c_cmd_handle_t cmd = i2c_cmd_link_create();
         i2c_master_start(cmd);
         i2c_master_write_byte(cmd, (i2c_device->dev_addr << 1) | I2C_MASTER_WRITE, I2C_ACK_CHECK_EN);
+#if !CONFIG_I2C_BUS_REMOVE_NULL_MEM_ADDR
         if (mem_address != NULL_I2C_MEM_ADDR) {
+#endif
             i2c_master_write_byte(cmd, mem_address, I2C_ACK_CHECK_EN);
+#if !CONFIG_I2C_BUS_REMOVE_NULL_MEM_ADDR
+        } else {
+            ESP_LOGD(TAG, "register address 0x%X is skipped and will not be sent", NULL_I2C_MEM_ADDR);
         }
+#endif
         i2c_master_write(cmd, (uint8_t *)data, data_len, I2C_ACK_CHECK_EN);
         i2c_master_stop(cmd);
         ret = i2c_master_cmd_begin_with_conf(i2c_device->i2c_bus->i2c_port, cmd, I2C_BUS_TICKS_TO_WAIT, &i2c_device->conf);
@@ -472,9 +490,15 @@ esp_err_t i2c_bus_write_reg16(i2c_bus_device_handle_t dev_handle, uint16_t mem_a
         i2c_master_start(cmd);
         i2c_master_write_byte(cmd, (i2c_device->dev_addr << 1) | I2C_MASTER_WRITE, I2C_ACK_CHECK_EN);
 
+#if !CONFIG_I2C_BUS_REMOVE_NULL_MEM_ADDR
         if (mem_address != NULL_I2C_MEM_16BIT_ADDR) {
+#endif
             i2c_master_write(cmd, memAddress8, 2, I2C_ACK_CHECK_EN);
+#if !CONFIG_I2C_BUS_REMOVE_NULL_MEM_ADDR
+        } else {
+            ESP_LOGD(TAG, "register address 0x%X is skipped and will not be sent", NULL_I2C_MEM_16BIT_ADDR);
         }
+#endif
 
         i2c_master_write(cmd, (uint8_t *)data, data_len, I2C_ACK_CHECK_EN);
         i2c_master_stop(cmd);
