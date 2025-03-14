@@ -172,7 +172,7 @@ JTAG interfaces, using the pin headers shown in the figure below.
    :widths: auto
 
    ========  ===============
-    SoC       Strapping pin 
+    SoC       Boot Strapping pin 
    ========  ===============
    ESP8266   GPIO0
    ESP32     GPIO0
