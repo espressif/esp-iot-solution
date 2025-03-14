@@ -158,12 +158,30 @@ JTAG interfaces, using the pin headers shown in the figure below.
    interface is 5V. When this pin is connected to 3.3V, the power output
    of the interface is 3.3V.
 
--  **IO0 On/Off Pin**
-   Pin IO0 can be set to select ESP8266's and ESP32's boot modes. This
-   pin can be used as a common GPIO, after the chip is powered on. Users
-   can then disconnect Pin IO0 manually to protect the operation of the
-   user board from the influence of ESP-Prog's automatic downloading
-   circuit.
+-  **IO0 On/Off Strapping Pin**
+   `IO0` is the bootstrapping pin for Espressif modules.  
+   In the ESP32 and ESP8266, the original strapping pin was GPIO0 — which is why it's called IO0.  
+   
+   Today, different Espressif SoCs have different designated strapping pins.  
+   The table below details the strapping pins for specific SoCs.  
+   After the chip is powered on, this pin can function as a regular GPIO.  
+   At that point, users can manually disconnect the strapping pin to prevent the ESP-PROG's automatic download circuit from interfering with the user board's operation.  
+
+
+.. table::
+   :widths: auto
+
+   ========  ===============
+    SoC       Boot Strapping pin 
+   ========  ===============
+   ESP8266   GPIO0
+   ESP32     GPIO0
+   ESP32-S3  GPIO0
+   ESP32-C3  GPIO9
+   ESP32-C6  GPIO
+   ========  ===============
+
+
 
 .. figure:: ../../_static/hw-reference/esp-prog/prog_power_sel.jpg
    :align: center
