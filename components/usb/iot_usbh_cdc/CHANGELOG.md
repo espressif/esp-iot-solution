@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v1.0.2 - 2025-3-13
+
+### Bug Fixes:
+
+* Close 'extern C' block
+* flush the ringbuffer when usb disconnect
+
 ## v1.0.1 - 2025-2-26
 
 ### Bug Fixes:

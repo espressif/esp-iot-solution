@@ -1,9 +1,13 @@
 # ChangeLog
 
-## v1.1.1 - 2024-11-28
+## v1.1.2 - 2024-3-14
+
+* Avoid `_usb_data_recv_task` from consuming too much time slice.
+
+## v1.1.1 - 2024-3-11
 
 * Add Kconfig MODEM_PRINT_DEVICE_DESCRIPTOR
- 
+
 ## v1.1.0 - 2024-11-28
 
 * Support ESP32-P4 with EC20_CE cat.4 module

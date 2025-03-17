@@ -664,6 +664,9 @@ static esp_err_t _cdc_close(usbh_cdc_t *cdc)
     usb_host_device_close(p_usbh_cdc_obj->cdc_client_hdl, cdc->dev_hdl);
     cdc->state = USBH_CDC_CLOSE;
 
+    _ring_buffer_flush(cdc->in_ringbuf_handle);
+    _ring_buffer_flush(cdc->out_ringbuf_handle);
+
     if (cdc->cbs.disconnect) {
         cdc->cbs.disconnect((usbh_cdc_handle_t)cdc, cdc->cbs.user_data);
     }
