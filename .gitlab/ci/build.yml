@@ -723,9 +723,7 @@ build_example_touch_touch_proximity:
     - .rules:build:example_touch_touch_proximity
   parallel:
     matrix:
-      - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.2
+      - IMAGE: espressif/idf:release-v5.3
   variables:
     EXAMPLE_DIR: examples/touch/touch_proximity
 
@@ -1482,9 +1480,7 @@ build_components_touch_touch_proximity_sensor_test_apps:
     - .rules:build:components_touch_touch_proximity_sensor_test_apps
   parallel:
     matrix:
-      - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.2
+      - IMAGE: espressif/idf:release-v5.3
   variables:
     EXAMPLE_DIR: components/touch/touch_proximity_sensor/test_apps
 

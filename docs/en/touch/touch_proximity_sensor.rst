@@ -44,100 +44,67 @@ Configuration Reference
 Create Proximity Sensing Sensor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Using the ``touch_proximity_sensor`` component, the proximity sensing sensor can be configured via the :cpp:type:`proxi_config_t` structure.
+Using the ``touch_proximity_sensor`` component, the proximity sensing sensor can be configured via the :cpp:type:`touch_proxi_config_t` structure.
 
 .. code:: c
 
-    // Configuration structure for touch proximity sensor
     typedef struct {
-        uint32_t channel_num;
-        uint32_t channel_list[TOUCH_PROXIMITY_NUM_MAX];
-        uint32_t meas_count;
-        float smooth_coef;
-        float baseline_coef;
-        float max_p;
-        float min_n;
-        float threshold_p[TOUCH_PROXIMITY_NUM_MAX];
-        float threshold_n[TOUCH_PROXIMITY_NUM_MAX];
-        float hysteresis_p;
-        float noise_p;
-        float noise_n;
-        uint32_t debounce_p;
-        uint32_t debounce_n;
-        uint32_t reset_p;
-        uint32_t reset_n;
-        uint32_t gold_value[TOUCH_PROXIMITY_NUM_MAX];
-    } proxi_config_t;
+        uint32_t channel_num;                           /*!< Number of touch proximity sensor channels */
+        uint32_t *channel_list;                         /*!< Touch channel list */
+        float *channel_threshold;                       /*!< Threshold for touch detection for each channel */
+        uint32_t debounce_times;                        /*!< Number of consecutive readings needed to confirm state change */
+        uint32_t *channel_gold_value;                   /*!< Reference values for touch channels */
+        bool skip_lowlevel_init;                        /*!< Skip low level initialization when working with existing touch driver */
+    } touch_proxi_config_t;
 
-Specific parameter descriptions are as follows:
+The main parameters are:
 
-+-------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
-| Configuration Parameter |                                                                 Description                                                                  |
-+=========================+==============================================================================================================================================+
-| channel_num             | Number of proximity sensing channels, up to 3                                                                                                |
-+-------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
-| channel_list            | List of proximity sensing channels, i.e., touch channels                                                                                     |
-+-------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
-| meas_count              | Cumulative measurement count for proximity sensing channels                                                                                  |
-+-------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
-| smooth_coef             | Smoothing coefficient for data                                                                                                               |
-+-------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
-| baseline_coef           | Baseline coefficient determining the rate of baseline adjustment                                                                             |
-+-------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
-| max_p                   | Maximum effective positive change rate                                                                                                       |
-+-------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
-| min_n                   | Minimum effective negative change rate                                                                                                       |
-+-------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
-| threshold_p             | Positive trigger threshold                                                                                                                   |
-+-------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
-| threshold_n             | Negative trigger threshold                                                                                                                   |
-+-------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
-| hysteresis_p            | Positive threshold hysteresis coefficient, providing a buffer zone between trigger and release triggers to prevent continuous false triggers |
-+-------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
-| noise_p                 | Positive noise threshold, related to baseline update                                                                                         |
-+-------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
-| noise_n                 | Negative noise threshold, related to baseline update                                                                                         |
-+-------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
-| debounce_p              | Debounce count for positive threshold to reduce false triggering                                                                             |
-+-------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
-| debounce_n              | Debounce count for negative threshold to reduce false release triggering                                                                     |
-+-------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
-| reset_p                 | Positive threshold for trigger baseline reset                                                                                                |
-+-------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
-| reset_n                 | Negative threshold for trigger baseline reset                                                                                                |
-+-------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
-| gold_value              | Gold standard value, used to restore normal values under special circumstances                                                               |
-+-------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
++--------------------+---------------------------------------------------------------+
+|     Parameter      |                          Description                          |
++====================+===============================================================+
+| channel_num        | Number of touch proximity sensor channels, up to 3            |
++--------------------+---------------------------------------------------------------+
+| channel_list       | Array of touch channel numbers to be used                     |
++--------------------+---------------------------------------------------------------+
+| channel_threshold  | Array of threshold values for each channel                    |
++--------------------+---------------------------------------------------------------+
+| debounce_times     | Number of consecutive readings needed to confirm state change |
++--------------------+---------------------------------------------------------------+
+| channel_gold_value | Optional reference values for touch channels                  |
++--------------------+---------------------------------------------------------------+
+| skip_lowlevel_init | Skip low level init when working with existing touch driver   |
++--------------------+---------------------------------------------------------------+
 
-Then use :cpp:func:`touch_proximity_sensor_create` to configure and create the proximity sensing sensor object.
+After configuring the parameters, create the proximity sensor using :cpp:func:`touch_proximity_sensor_create`:
 
 .. code:: c
 
-    proxi_config_t config = (proxi_config_t)DEFAULTS_PROX_CONFIGS();
-    esp_err_t ret = touch_proximity_sensor_create(&config, &s_touch_proximity_sensor, &example_proxi_callback, NULL);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "touch proximity sense create failed");
+    touch_proxi_config_t config = {
+        .channel_num = 1,
+        .channel_list = channel_list,
+        .channel_threshold = channel_threshold,
+        .debounce_times = 2,
+    };
+    
+    esp_err_t ret = touch_proximity_sensor_create(&config, &sensor_handle, callback_func, NULL);
+
+Event Handling
+^^^^^^^^^^^^^^^^^^^^^
+
+The proximity sensor requires periodic event handling to update states and trigger callbacks. This can be done in a task:
+
+.. code:: c
+
+    void proximity_task(void *arg)
+    {
+        while (1) {
+            touch_proximity_sensor_handle_events(sensor_handle);
+            vTaskDelay(pdMS_TO_TICKS(20));
+        }
     }
 
-Here, `s_touch_proximity_sensor` is the handle of the touch proximity sensor, and `example_proxi_callback` is the proximity sensing sensor event callback function.
-
-Start and Stop the Proximity Sensing Sensor
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Use :cpp:func:`touch_proximity_sensor_start` to start the proximity sensing sensor:
-
-.. code:: c
-
-    // Start the touch proximity sensor
-    touch_proximity_sensor_start(s_touch_proximity_sensor);
-
-Use :cpp:func:`touch_proximity_sensor_stop` to stop the proximity sensing sensor:
-
-.. code:: c
-
-    // Stop the touch proximity sensor
-    touch_proximity_sensor_stop(s_touch_proximity_sensor);
-
-.. Note:: Starting and stopping the proximity sensing sensor process takes some time to complete. Therefore, it is necessary to add a waiting time after calling the start and stop APIs. Typically, the startup time is 300 ms, and the stop process requires 200 ms. Please refer to the example program for details.
+    // Create task
+    xTaskCreate(proximity_task, "proximity_task", 2048, NULL, 5, NULL);
 
 Delete the Proximity Sensing Sensor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -146,61 +113,57 @@ Use :cpp:func:`touch_proximity_sensor_delete` to delete the proximity sensing se
 .. code:: c
 
     // Delete the touch proximity sensor
-    touch_proximity_sensor_delete(s_touch_proximity_sensor);
+    touch_proximity_sensor_delete(sensor_handle);
 
 Parameter Adjustment Reference
 -----------------------------------
 
 * The maximum value for `channel_num` is 3.
 * The `channel_list` array must be assigned values from the `touch_pad_t` enumeration variable.
-* Increasing `meas_count` slows down the update rate of new data from the touch sensor.
-* `smooth_coef` is the coefficient used for data smoothing. The smoothed value `smooth` equals `smooth * (1.0 - smooth_coef) + raw * smooth_coef` . A larger `smooth_coef` gives more weight to `raw` , resulting in poorer smoothing of the waveform, faster response to `raw` , and weaker resistance to interference. Conversely, a smaller `smooth_coef` gives less weight to `raw`, resulting in better smoothing of the waveform, slower response to `raw`, and stronger resistance to interference.
-* `baseline_coef` is the coefficient for baseline updating. The new baseline value equals `baseline * (1.0 - baseline_coef) + smooth * baseline_coef` . A larger value for `baseline_coef` causes the baseline to follow `smooth` more quickly, resulting in slower response time and stronger resistance to interference.
-* When the difference between `raw` and `baseline` exceeds `baseline * max_p` , the `raw` value is considered an outlier and ignored.
-* When the difference between `baseline` and `raw` exceeds `baseline * min_n` , the `raw` value is considered an outlier and ignored.
+* `meas_count` has a default value of 20. Increasing `meas_count` slows down the update rate of new data from the touch sensor.
+* `smooth_coef` has a default value of 0.7. It is the coefficient used for data smoothing. The smoothed value `smooth` equals `smooth * (1.0 - smooth_coef) + raw * smooth_coef` . A larger `smooth_coef` gives more weight to `raw` , resulting in poorer smoothing of the waveform, faster response to `raw` , and weaker resistance to interference. Conversely, a smaller `smooth_coef` gives less weight to `raw`, resulting in better smoothing of the waveform, slower response to `raw`, and stronger resistance to interference.
+* `baseline_coef` has a default value of 0.05. It is the coefficient for baseline updating. The new baseline value equals `baseline * (1.0 - baseline_coef) + smooth * baseline_coef` . A larger value for `baseline_coef` causes the baseline to follow `smooth` more quickly, resulting in slower response time and stronger resistance to interference.
+* `max_p` has a default value of 0.5. When the difference between `raw` and `baseline` exceeds `baseline * max_p` , the `raw` value is considered an outlier and ignored.
+* `min_n` has a default value of 0.05. When the difference between `baseline` and `raw` exceeds `baseline * min_n` , the `raw` value is considered an outlier and ignored.
 * Increasing `threshold_p` and `threshold_n` values reduces the sensing distance for proximity sensing, but improves resistance to interference.
-* Larger values for `noise_p` and `noise_n` make it easier for the baseline to follow `smooth` , resulting in a smaller sensing distance for proximity sensing and better resistance to interference.
+* `noise_p` has a default value of 0.1, and `noise_n` has a default value of 0.2. Larger values for `noise_p` and `noise_n` make it easier for the baseline to follow `smooth` , resulting in a smaller sensing distance for proximity sensing and better resistance to interference.
 * `debounce_p` and `debounce_n` values need to be adjusted based on the value of `meas_count` . Smaller `meas_count` values require larger `debounce_p` and `debounce_n` values to increase resistance to interference.
+* `reset_p` has a default value of 0, used for baseline reset positive debounce. Setting to 0 disables this feature.
+* `reset_n` has a default value of 50, used for baseline reset negative debounce.
 
 Parameter Adjustment Comparison
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 The default configuration parameters for the touch proximity sensor are as follows:
 
-+----------------+----------------+
-|   Parameter    | Default Value  |
-+================+================+
-| channel_num    | 1              |
-+----------------+----------------+
-| channel_list   | TOUCH_PAD_NUM8 |
-+----------------+----------------+
-| meas_count     | 50             |
-+----------------+----------------+
-| smooth_coef    | 0.2            |
-+----------------+----------------+
-| baseline_coef  | 0.1            |
-+----------------+----------------+
-| max_p          | 0.2            |
-+----------------+----------------+
-| min_n          | 0.08           |
-+----------------+----------------+
-| threshold_p    | 0.002          |
-+----------------+----------------+
-| threshold_n    | 0.002          |
-+----------------+----------------+
-| hysteresis_p   | 0.2            |
-+----------------+----------------+
-| noise_p        | 0.001          |
-+----------------+----------------+
-| noise_n        | 0.001          |
-+----------------+----------------+
-| debounce_p     | 2              |
-+----------------+----------------+
-| debounce_n     | 1              |
-+----------------+----------------+
-| reset_p        | 1000           |
-+----------------+----------------+
-| reset_n        | 3              |
-+----------------+----------------+
++---------------+----------------+
+|   Parameter   | Default Value  |
++===============+================+
+| channel_num   | 1              |
++---------------+----------------+
+| channel_list  | TOUCH_PAD_NUM8 |
++---------------+----------------+
+| meas_count    | 20             |
++---------------+----------------+
+| smooth_coef   | 0.7            |
++---------------+----------------+
+| baseline_coef | 0.05           |
++---------------+----------------+
+| max_p         | 0.5            |
++---------------+----------------+
+| min_n         | 0.05           |
++---------------+----------------+
+| noise_p       | 0.1            |
++---------------+----------------+
+| noise_n       | 0.2            |
++---------------+----------------+
+| debounce_p    | 2              |
++---------------+----------------+
+| debounce_n    | 50             |
++---------------+----------------+
+| reset_p       | 0              |
++---------------+----------------+
+| reset_n       | 50             |
++---------------+----------------+
 
 The following parameter adjustment comparisons will be made based on modifying **only one parameter** from the above parameters:
 

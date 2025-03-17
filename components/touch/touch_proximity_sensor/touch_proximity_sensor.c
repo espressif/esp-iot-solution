@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -7,328 +7,256 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <inttypes.h>
+#include <time.h>
 #include "soc/soc_caps.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/semphr.h"
-#include "freertos/queue.h"
-#include "driver/touch_pad.h"
+#include "esp_err.h"
 #include "esp_log.h"
 #include "esp_check.h"
-#include "esp_timer.h"
 #include "touch_proximity_sensor.h"
+#include "touch_sensor_fsm.h"
+#include "touch_sensor_lowlevel.h"
 
 const static char *TAG = "touch-prox-sensor";
-//todo: SOC_TOUCH_PROXIMITY_MEAS_DONE_SUPPORTED
-#ifdef CONFIG_ENABLE_TOUCH_PROX_DEBUG
+
+#if CONFIG_TOUCH_PROXIMITY_SENSOR_DEBUG
+static uint64_t start_time = 0;
+static uint64_t get_time_in_ms(void)
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    uint64_t current_time = (uint64_t)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+    if (start_time == 0) {
+        start_time = current_time;
+    }
+    return current_time - start_time;
+}
+
 // print touch values(raw, smooth, benchmark) of each enabled channel, every 50ms
-#define PRINT_VALUE(pad_num, raw, smooth, benchmark) printf("vl,%lld,%"PRIu32",%"PRIu32",%"PRIu32",%"PRIu32"\n", esp_timer_get_time() / 1000, pad_num, raw, smooth, benchmark)
+#define PRINT_VALUE(pad_num, raw, smooth, benchmark) printf("vl,%"PRId64",%"PRIu32",%"PRIu32",%"PRIu32",%"PRIu32"\n", get_time_in_ms(), pad_num, raw, smooth, benchmark)
 // print trigger if touch active/inactive happens
-#define PRINT_TRIGGER(pad_num, smooth, if_active) printf("tg,%lld,%"PRIu32",%"PRIu32",%d,%d,%d,%d,%d\n", esp_timer_get_time() / 1000, pad_num, smooth, if_active?1:0, if_active?0:1,0,0,0)
+#define PRINT_TRIGGER(pad_num, smooth, if_active) printf("tg,%"PRId64",%"PRIu32",%"PRIu32",%d,%d,%d,%d,%d\n", get_time_in_ms(), pad_num, smooth, if_active?1:0, if_active?0:1,0,0,0)
 #else
 #define PRINT_VALUE(pad_num, raw, smooth, benchmark)
 #define PRINT_TRIGGER(pad_num, smooth, if_active)
 #endif
 
-typedef enum {
-    OPERATE_RESET = -1,
-    OPERATE_UPDATE,
-    OPERATE_INIT,
-    OPERATE_NONE,
-} operate_t;
-
 typedef struct {
-    proxi_config_t configs;
-    uint32_t baseline[TOUCH_PROXIMITY_NUM_MAX];
-    uint32_t smooth[TOUCH_PROXIMITY_NUM_MAX];
-    uint32_t active[TOUCH_PROXIMITY_NUM_MAX];
+    uint32_t channel_num;
+    uint32_t *channel_list;
+    fsm_handle_t fsm_handle;
     proxi_cb_t proximity_callback;
     void *proximity_cb_arg;
-    SemaphoreHandle_t proximity_daemon_task_stop;
-} touch_proximity_sensor_t;
+    bool channels_active[SOC_TOUCH_PROXIMITY_CHANNEL_NUM];
+    touch_lowlevel_handle_t lowlevel_handle[SOC_TOUCH_PROXIMITY_CHANNEL_NUM];
+    bool skip_lowlevel_init;
+    bool is_initialized;
+} proxi_sensor_t;
 
-typedef struct touch_msg {
-    touch_pad_intr_mask_t intr_mask;
-    uint32_t pad_num;
-    uint32_t pad_status;
-    uint32_t pad_val;
-} touch_event_t;
-
-static QueueHandle_t s_queue = NULL;
-
-static uint32_t preprocessing_proxi_raw_values(touch_proximity_sensor_t *sensor, uint32_t channel, uint32_t raw, operate_t opt)
+static void fsm_state_callback(fsm_handle_t handle, uint32_t channel, fsm_state_t state, uint32_t data, void *user_data)
 {
-    static int init_stage = 0;
-    static float smooth_coef = 0.0;
-    static float baseline_coef = 0.0;
-    static float max_positive = 0.0;
-    static float min_negative = 0.0;
-    static float noise_positive = 0.0;
-    static float noise_negative = 0.0;
-    switch (opt) {
-    case OPERATE_INIT:
-        for (size_t i = 0; i < sensor->configs.channel_num; i++) {
-            sensor->smooth[i] = 0;
-            sensor->baseline[i] = 0;
-        }
-        smooth_coef = sensor->configs.smooth_coef;
-        baseline_coef = sensor->configs.baseline_coef;
-        max_positive = sensor->configs.max_p;
-        min_negative = sensor->configs.min_n;
-        noise_positive = sensor->configs.noise_p;
-        noise_negative = sensor->configs.noise_n;
-        init_stage = 1;
-        break;
-    case OPERATE_RESET:
-        sensor->baseline[channel] = raw;
-        break;
-    case OPERATE_UPDATE: {
-        int32_t diff = (int32_t)(raw - sensor->baseline[channel]);
-        if (init_stage == 2 && ((diff > 0 && diff >= max_positive * sensor->baseline[channel])
-                                || (diff < 0 && abs(diff) >= min_negative * sensor->baseline[channel]))) {
-            ESP_LOGD(TAG, "CH%"PRIu32", %"PRIu32" is not an effective value", channel, raw);
-        } else {
-            if (init_stage == 1) {
-                sensor->smooth[channel] = raw;
-                sensor->baseline[channel] = sensor->smooth[channel];
-                init_stage = 2;
-            }
-            sensor->smooth[channel] = sensor->smooth[channel] * (1.0 - smooth_coef) + raw * smooth_coef;
-            diff = (int32_t)(sensor->smooth[channel] - sensor->baseline[channel]);
-            if ((diff > 0 && diff <= noise_positive * sensor->baseline[channel])
-                    || (diff < 0 && abs(diff) <= noise_negative * sensor->baseline[channel])) {
-                sensor->baseline[channel] = sensor->baseline[channel] * (1.0 - baseline_coef) + sensor->smooth[channel] * baseline_coef;
-            } else {
-                sensor->baseline[channel] = sensor->baseline[channel] * (1.0 - baseline_coef / 4) + sensor->smooth[channel] * baseline_coef / 4;
-            }
-        }
-    }
-    break;
-    default:
-        break;
-    }
-    if (raw != 0) {
-        PRINT_VALUE(sensor->configs.channel_list[channel], raw, sensor->smooth[channel], sensor->baseline[channel]);
-    }
-    return 0;
-}
+    proxi_sensor_t *sensor = (proxi_sensor_t *)user_data;
 
-static uint32_t processing_proxi_state(touch_proximity_sensor_t *sensor, uint32_t channel, operate_t opt)
-{
-    static uint32_t debounce_p = 0;
-    static uint32_t debounce_n = 0;
-    static uint32_t reset_p = 0;
-    static uint32_t reset_n = 0;
-    static uint32_t debounce_p_counter[TOUCH_PROXIMITY_NUM_MAX] = {0};
-    static uint32_t debounce_n_counter[TOUCH_PROXIMITY_NUM_MAX] = {0};
-    static uint32_t reset_n_counter[TOUCH_PROXIMITY_NUM_MAX] = {0};
-    static float threshold_p[TOUCH_PROXIMITY_NUM_MAX] = {0.0};
-    static float threshold_n[TOUCH_PROXIMITY_NUM_MAX] = {0.0};
-    static float hysteresis_p = 0.0;
-    switch (opt) {
-    case OPERATE_INIT:
-    case OPERATE_RESET:
-        for (size_t i = 0; i < sensor->configs.channel_num; i++) {
-            debounce_p_counter[i] = 0;
-            debounce_n_counter[i] = 0;
-            reset_n_counter[i] = 0;
-            threshold_p[i] = sensor->configs.threshold_p[i];
-            threshold_n[i] = sensor->configs.threshold_n[i];
+    bool is_active = (state == FSM_STATE_ACTIVE);
+    for (int i = 0; i < sensor->channel_num; i++) {
+        if (sensor->channel_list[i] == channel) {
+            sensor->channels_active[i] = is_active;
+            PRINT_TRIGGER(channel, data, is_active);
+            if (sensor->proximity_callback) {
+                proxi_state_t event = is_active ? PROXI_STATE_ACTIVE : PROXI_STATE_INACTIVE;
+                sensor->proximity_callback(channel, event, sensor->proximity_cb_arg);
+            }
+            return;
         }
-        debounce_p = sensor->configs.debounce_p;
-        debounce_n = sensor->configs.debounce_n;
-        reset_p = sensor->configs.reset_p;
-        reset_n = sensor->configs.reset_n;
-        hysteresis_p = sensor->configs.hysteresis_p;
-        break;
-    case OPERATE_UPDATE: {
-        int32_t diff = (int32_t)(sensor->smooth[channel] - sensor->baseline[channel]);
-        if (diff > 0) {
-            if (sensor->active[channel] == 0) {
-                if (diff > threshold_p[channel] * sensor->baseline[channel] * (hysteresis_p + 1.0)) {
-                    debounce_p_counter[channel] += 1;
-                    if (debounce_p_counter[channel] >= debounce_p) {
-                        sensor->active[channel] = 1;
-                        ESP_LOGD(TAG, "CH%"PRIu32", active !", channel);
-                        PRINT_TRIGGER(sensor->configs.channel_list[channel], sensor->smooth[channel], 1);
-                        sensor->proximity_callback(sensor->configs.channel_list[channel], PROXI_EVT_ACTIVE, sensor->proximity_cb_arg);
-                    }
-                } else {
-                    debounce_p_counter[channel] = 0;
-                }
-            }
-            if (sensor->active[channel] == 1) {
-                if (diff > threshold_p[channel] * sensor->baseline[channel] * (hysteresis_p + 1.0)) {
-                    debounce_p_counter[channel] += 1;
-                    debounce_n_counter[channel] = 0;
-                    if (debounce_p_counter[channel] >= reset_p) {
-                        //reset baseline and trigger release
-                        debounce_p_counter[channel] = 0;
-                        debounce_n_counter[channel] = 0;
-                        sensor->active[channel] = 0;
-                        PRINT_TRIGGER(sensor->configs.channel_list[channel], sensor->smooth[channel], 0);
-                        ESP_LOGD(TAG, "CH%"PRIu32", inactive", channel);
-                        ESP_LOGD(TAG, "Reset baseline");
-                        preprocessing_proxi_raw_values(sensor, channel, sensor->smooth[channel], OPERATE_RESET);
-                        sensor->proximity_callback(sensor->configs.channel_list[channel], PROXI_EVT_INACTIVE, sensor->proximity_cb_arg);
-                    }
-                } else if (diff < threshold_p[channel] * sensor->baseline[channel] * (1.0 - hysteresis_p)) {
-                    debounce_n_counter[channel] += 1;
-                    debounce_p_counter[channel] = 0;
-                    if (debounce_n_counter[channel] >= debounce_n) {
-                        debounce_n_counter[channel] = 0;
-                        sensor->active[channel] = 0;
-                        PRINT_TRIGGER(sensor->configs.channel_list[channel], sensor->smooth[channel], 0);
-                        ESP_LOGD(TAG, "CH%"PRIu32", inactive", channel);
-                        sensor->proximity_callback(sensor->configs.channel_list[channel], PROXI_EVT_INACTIVE, sensor->proximity_cb_arg);
-                    }
-                } else {
-                    debounce_p_counter[channel] = 0;
-                    debounce_n_counter[channel] = 0;
-                }
-            }
-        } else {
-            if (abs(diff) > threshold_n[channel] * sensor->baseline[channel]) {
-                reset_n_counter[channel] += 1;
-                if (reset_n_counter[channel] >= reset_n) {
-                    reset_n_counter[channel] = 0;
-                    ESP_LOGD(TAG, "Reset baseline");
-                    preprocessing_proxi_raw_values(sensor, channel, sensor->smooth[channel], OPERATE_RESET);
-                }
-            }
-        }
-    }
-    break;
-    default:
-        break;
-    }
-    ESP_LOGD(TAG, "CH%"PRIu32" %"PRIu32", debounce_p_n = %"PRIu32", %"PRIu32";  reset_n = %"PRIu32"", channel, sensor->active[channel], debounce_p_counter[channel], debounce_n_counter[channel], reset_n_counter[channel]);
-    return sensor->active[channel];
-}
-
-static void _touch_intr_cb(void *arg)
-{
-    int task_awoken = pdFALSE;
-    touch_event_t evt = {0};
-    evt.intr_mask = touch_pad_read_intr_status_mask();
-    evt.pad_status = touch_pad_get_status();
-    evt.pad_num = touch_pad_get_current_meas_channel();
-    if (!evt.intr_mask) {
-        return;
-    }
-    if (evt.intr_mask & TOUCH_PAD_INTR_MASK_PROXI_MEAS_DONE) {
-        touch_pad_proximity_get_data(evt.pad_num, &evt.pad_val);
-    }
-    xQueueSendFromISR(s_queue, &evt, &task_awoken);
-    if (task_awoken == pdTRUE) {
-        portYIELD_FROM_ISR();
     }
 }
 
-static void proxi_daemon_task(void *pvParameter)
+static void _touch_intr_cb(uint32_t channel, touch_lowlevel_state_t state, void *state_data, void *arg)
 {
-    touch_proximity_sensor_t *sensor = (touch_proximity_sensor_t *)pvParameter;
-    touch_event_t evt = {0};
-    ESP_LOGI(TAG, "proxi daemon task start!");
-    sensor->proximity_daemon_task_stop = xSemaphoreCreateBinary();
-    if (sensor->proximity_daemon_task_stop == NULL) {
-        ESP_LOGE(TAG, "proxi daemon task ctrl semaphore create failed!");
+    proxi_sensor_t *sensor = (proxi_sensor_t *)arg;
+    if (state == TOUCH_LOWLEVEL_STATE_NEW_DATA) {
+        uint32_t raw_data = *(uint32_t *)state_data;
+        touch_sensor_fsm_update_data(sensor->fsm_handle, channel, raw_data, true);
     }
-    touch_pad_intr_enable(TOUCH_PAD_INTR_MASK_ALL);
-    /* Wait touch sensor init done */
-    vTaskDelay(200 / portTICK_PERIOD_MS);
-    xQueueReset(s_queue);
-    preprocessing_proxi_raw_values(sensor, 0, 0, OPERATE_INIT);
-    processing_proxi_state(sensor, 0, OPERATE_INIT);
-    while (1) {
-        if (xSemaphoreTake(sensor->proximity_daemon_task_stop, pdMS_TO_TICKS(1)) == pdTRUE) {
-            break;
-        }
-        int ret = xQueueReceive(s_queue, &evt, pdMS_TO_TICKS(50));
-        if (ret != pdTRUE) {
-            continue;
-        }
-        if (evt.intr_mask & TOUCH_PAD_INTR_MASK_PROXI_MEAS_DONE) {
-            int i = 0;
-            for (; i < sensor->configs.channel_num; i++) {
-                if (sensor->configs.channel_list[i] == evt.pad_num) {
-                    break;
-                }
-            }
-            preprocessing_proxi_raw_values(sensor, i, evt.pad_val, OPERATE_UPDATE);
-            processing_proxi_state(sensor, i, OPERATE_UPDATE);
-        }
-    }
-    touch_pad_intr_disable(TOUCH_PAD_INTR_MASK_ALL);
-    touch_pad_intr_clear(TOUCH_PAD_INTR_MASK_ALL);
-    ESP_LOGI(TAG, "proxi daemon task exit!");
-    vSemaphoreDelete(sensor->proximity_daemon_task_stop);
-    sensor->proximity_daemon_task_stop = NULL;
-    vTaskDelete(NULL);
 }
 
-esp_err_t touch_proximity_sensor_create(proxi_config_t *config, touch_proximity_handle_t *sensor_handle, proxi_cb_t cb, void *cb_arg)
+esp_err_t touch_proximity_sensor_create(touch_proxi_config_t *config, touch_proximity_handle_t *sensor_handle, proxi_cb_t cb, void *cb_arg)
 {
-    touch_proximity_sensor_t *proxi_sensor = (touch_proximity_sensor_t *) calloc(1, sizeof(touch_proximity_sensor_t));
-    ESP_RETURN_ON_FALSE(proxi_sensor, ESP_ERR_NO_MEM, TAG, "Failed to allocate memory for touch_proximity_sensor_t.");
-    proxi_sensor->configs = *config;
-    proxi_sensor->proximity_callback = cb;
-    proxi_sensor->proximity_cb_arg = cb_arg;
-    *sensor_handle = (touch_proximity_handle_t)proxi_sensor;
-    return ESP_OK;
-}
+    ESP_RETURN_ON_FALSE(config && sensor_handle, ESP_ERR_INVALID_ARG, TAG, "Invalid arguments");
+    ESP_RETURN_ON_FALSE(config->channel_num > 0 && config->channel_list, ESP_ERR_INVALID_ARG, TAG, "Invalid channel config");
+    ESP_RETURN_ON_FALSE(config->channel_num <= SOC_TOUCH_PROXIMITY_CHANNEL_NUM, ESP_ERR_INVALID_ARG, TAG, "Too many channels");
 
-esp_err_t touch_proximity_sensor_start(touch_proximity_handle_t proxi_sensor)
-{
-    /* Initialize touch pad peripheral. */
-    ESP_LOGI(TAG, "IoT Touch Proximity Driver Version: %d.%d.%d",
+    proxi_sensor_t *sensor = calloc(1, sizeof(proxi_sensor_t));
+    ESP_RETURN_ON_FALSE(sensor, ESP_ERR_NO_MEM, TAG, "Failed to allocate memory");
+
+    sensor->channel_num = config->channel_num;
+    sensor->channel_list = malloc(config->channel_num * sizeof(uint32_t));
+
+    esp_err_t ret = ESP_OK;
+    ESP_GOTO_ON_FALSE(sensor->channel_list, ESP_ERR_NO_MEM, cleanup, TAG, "Failed to allocate channel list");
+    memcpy(sensor->channel_list, config->channel_list, config->channel_num * sizeof(uint32_t));
+
+    sensor->proximity_callback = cb;
+    sensor->proximity_cb_arg = cb_arg;
+    sensor->skip_lowlevel_init = config->skip_lowlevel_init;
+
+    if (!config->skip_lowlevel_init) {
+        touch_lowlevel_type_t *channel_type = calloc(config->channel_num, sizeof(touch_lowlevel_type_t));
+        ESP_GOTO_ON_FALSE(channel_type, ESP_ERR_NO_MEM, cleanup, TAG, "Failed to allocate channel types");
+
+        for (int i = 0; i < config->channel_num; i++) {
+            channel_type[i] = TOUCH_LOWLEVEL_TYPE_PROXIMITY;
+        }
+
+        touch_lowlevel_config_t low_config = {
+            .channel_num = config->channel_num,
+            .channel_list = config->channel_list,
+            .channel_type = channel_type,
+            .proximity_count = CONFIG_TOUCH_PROXIMITY_MEAS_COUNT,
+        };
+        esp_err_t ret = touch_sensor_lowlevel_create(&low_config);
+        free(channel_type);
+        ESP_GOTO_ON_ERROR(ret, cleanup, TAG, "Failed to create touch sensor lowlevel");
+    }
+
+    fsm_config_t fsm_config = {
+        .mode = FSM_MODE_USER_PUSH,
+        .state_cb = fsm_state_callback,
+        .channel_num = config->channel_num,
+        .channel_list = config->channel_list,
+        .threshold_p = config->channel_threshold,
+        .threshold_n = NULL, // not use negative logic
+        .gold_value = config->channel_gold_value,
+        .debounce_p = config->debounce_times,
+        .debounce_n = config->debounce_times,
+        .smooth_coef = CONFIG_TOUCH_PROXIMITY_SMOOTH_COEF_X1000 / 1000.0f,
+        .baseline_coef = CONFIG_TOUCH_PROXIMITY_BASELINE_COEF_X1000 / 1000.0f,
+        .max_p = CONFIG_TOUCH_PROXIMITY_MAX_P_X1000 / 1000.0f,
+        .min_n = CONFIG_TOUCH_PROXIMITY_MIN_N_X1000 / 1000.0f,
+        .hysteresis_p = 0.1f, // 10% hysteresis
+        .noise_p = config->channel_threshold[0] / CONFIG_TOUCH_PROXIMITY_NOISE_P_SNR,
+        .noise_n = config->channel_threshold[0] / CONFIG_TOUCH_PROXIMITY_NOISE_N_SNR,
+        .reset_p = CONFIG_TOUCH_PROXIMITY_RESET_P,
+        .reset_n = CONFIG_TOUCH_PROXIMITY_RESET_N,
+        .raw_buf_size = CONFIG_TOUCH_PROXIMITY_RAW_BUF_SIZE,
+        .scale_factor = 1,
+        .user_data = sensor,
+    };
+
+    ESP_GOTO_ON_ERROR(
+        touch_sensor_fsm_create(&fsm_config, &sensor->fsm_handle),
+        cleanup, TAG, "Failed to create FSM"
+    );
+
+    for (int i = 0; i < config->channel_num; i++) {
+        ESP_GOTO_ON_ERROR(
+            touch_sensor_lowlevel_register(config->channel_list[i], _touch_intr_cb, sensor, &sensor->lowlevel_handle[i]),
+            cleanup, TAG, "Failed to register channel %d", i
+        );
+    }
+
+    ESP_GOTO_ON_ERROR(
+        touch_sensor_fsm_control(sensor->fsm_handle, FSM_CTRL_START, NULL),
+        cleanup, TAG, "Failed to start FSM"
+    );
+
+    if (!config->skip_lowlevel_init) {
+        ESP_GOTO_ON_ERROR(
+            touch_sensor_lowlevel_start(),
+            cleanup, TAG, "Failed to start touch sensor lowlevel"
+        );
+    }
+
+    sensor->is_initialized = true;
+    *sensor_handle = (touch_proximity_handle_t)sensor;
+    ESP_LOGI(TAG, "Touch Proximity Driver Version: %d.%d.%d",
              TOUCH_PROXIMITY_SENSOR_VER_MAJOR, TOUCH_PROXIMITY_SENSOR_VER_MINOR, TOUCH_PROXIMITY_SENSOR_VER_PATCH);
-    ESP_RETURN_ON_FALSE(proxi_sensor, ESP_ERR_INVALID_ARG, TAG, "touch proximity sense not created yet, please create first.");
-    touch_proximity_sensor_t *sensor = (touch_proximity_sensor_t *)(proxi_sensor);
-    touch_pad_init();
-    for (int i = 0; i < sensor->configs.channel_num; i++) {
-        touch_pad_config(sensor->configs.channel_list[i]);
-    }
-    s_queue = xQueueCreate(32, sizeof(touch_event_t));
-    ESP_RETURN_ON_FALSE(s_queue, ESP_FAIL, TAG, "Failed to create queue for touch pad.");
-    /* Enable touch sensor clock. Work mode is "timer trigger". */
-    touch_pad_set_fsm_mode(TOUCH_FSM_MODE_TIMER);
-    ESP_RETURN_ON_FALSE(sensor->configs.channel_num, ESP_ERR_INVALID_ARG, TAG, "The number of touch proximity sensor channels equals zero.");
-    for (int i = 0; i < sensor->configs.channel_num; i++) {
-        touch_pad_proximity_enable(sensor->configs.channel_list[i], true);
-    }
-    uint32_t count = sensor->configs.meas_count / sensor->configs.channel_num / 2;
-    touch_pad_proximity_set_count(TOUCH_PAD_MAX, count);
-    touch_pad_isr_register(_touch_intr_cb, sensor, TOUCH_PAD_INTR_MASK_ALL);
-    touch_pad_fsm_start();
-    vTaskDelay(40 / portTICK_PERIOD_MS);
-    /* Start task to read values by pads. */
-    xTaskCreate(&proxi_daemon_task, "proxi_daemon", 4096, sensor, 5, NULL);
     return ESP_OK;
-}
 
-esp_err_t touch_proximity_sensor_stop(touch_proximity_handle_t proxi_sensor)
-{
-    if (proxi_sensor == NULL) {
-        return ESP_OK;
-    }
-    touch_proximity_sensor_t *sensor = (touch_proximity_sensor_t *)(proxi_sensor);
-    touch_pad_fsm_stop();
-    xSemaphoreGive(sensor->proximity_daemon_task_stop);
-    touch_pad_deinit();
-    return ESP_OK;
+cleanup:
+    touch_proximity_sensor_delete((touch_proximity_handle_t)sensor);
+    return ret;
 }
 
 esp_err_t touch_proximity_sensor_delete(touch_proximity_handle_t proxi_sensor)
 {
-    if (proxi_sensor == NULL) {
+    if (!proxi_sensor) {
         return ESP_OK;
     }
-    touch_proximity_sensor_t *sensor = (touch_proximity_sensor_t *)(proxi_sensor);
-    vQueueDelete(s_queue);
-    s_queue = NULL;
-    memset(&sensor->configs, 0, sizeof(sensor->configs));
+    proxi_sensor_t *sensor = (proxi_sensor_t *)proxi_sensor;
+    ESP_RETURN_ON_FALSE(sensor->is_initialized, ESP_ERR_INVALID_STATE, TAG, "Sensor not initialized");
+
+    if (!sensor->skip_lowlevel_init) {
+        touch_sensor_lowlevel_stop();
+    }
+
+    if (sensor->fsm_handle) {
+        touch_sensor_fsm_control(sensor->fsm_handle, FSM_CTRL_STOP, NULL);
+        touch_sensor_fsm_delete(sensor->fsm_handle);
+    }
+
+    for (int i = 0; i < sensor->channel_num; i++) {
+        touch_sensor_lowlevel_unregister(sensor->lowlevel_handle[i]);
+    }
+
+    if (!sensor->skip_lowlevel_init) {
+        touch_sensor_lowlevel_delete();
+    }
+
+    free(sensor->channel_list);
     free(sensor);
-    proxi_sensor = NULL;
+    return ESP_OK;
+}
+
+esp_err_t touch_proximity_sensor_get_data(touch_proximity_handle_t handle, uint32_t channel, uint32_t *data)
+{
+    ESP_RETURN_ON_FALSE(handle && data, ESP_ERR_INVALID_ARG, TAG, "Invalid arguments");
+    proxi_sensor_t *sensor = (proxi_sensor_t *)handle;
+    ESP_RETURN_ON_FALSE(sensor->is_initialized, ESP_ERR_INVALID_STATE, TAG, "Sensor not initialized");
+
+    uint32_t raw_data[3] = {0};
+    ESP_RETURN_ON_ERROR(
+        touch_sensor_fsm_get_data(sensor->fsm_handle, channel, raw_data),
+        TAG, "Failed to get FSM data"
+    );
+
+    *data = raw_data[FSM_DATA_SMOOTH];
+    return ESP_OK;
+}
+
+esp_err_t touch_proximity_sensor_get_state(touch_proximity_handle_t handle, uint32_t channel, proxi_state_t *state)
+{
+    ESP_RETURN_ON_FALSE(handle && state, ESP_ERR_INVALID_ARG, TAG, "Invalid arguments");
+    proxi_sensor_t *sensor = (proxi_sensor_t *)handle;
+    ESP_RETURN_ON_FALSE(sensor->is_initialized, ESP_ERR_INVALID_STATE, TAG, "Sensor not initialized");
+
+    for (int i = 0; i < sensor->channel_num; i++) {
+        if (sensor->channel_list[i] == channel) {
+            *state = sensor->channels_active[i] ? PROXI_STATE_ACTIVE : PROXI_STATE_INACTIVE;
+            return ESP_OK;
+        }
+    }
+
+    return ESP_ERR_NOT_FOUND;
+}
+
+esp_err_t touch_proximity_sensor_handle_events(touch_proximity_handle_t handle)
+{
+    ESP_RETURN_ON_FALSE(handle, ESP_ERR_INVALID_ARG, TAG, "Invalid argument");
+    proxi_sensor_t *sensor = (proxi_sensor_t *)handle;
+    ESP_RETURN_ON_FALSE(sensor->is_initialized, ESP_ERR_INVALID_STATE, TAG, "Sensor not initialized");
+
+    ESP_RETURN_ON_ERROR(touch_sensor_fsm_handle_events(sensor->fsm_handle), TAG, "Failed to handle FSM events");
+#if CONFIG_TOUCH_PROXIMITY_SENSOR_DEBUG
+    uint32_t raw_data[3] = {0};
+    for (int j = 0; j < sensor->channel_num; j++) {
+        // TODO: handle P4 using offset
+        ESP_RETURN_ON_ERROR(
+            touch_sensor_fsm_get_data(sensor->fsm_handle, sensor->channel_list[j], raw_data),
+            TAG, "Failed to get FSM data"
+        );
+        PRINT_VALUE(sensor->channel_list[j], raw_data[FSM_DATA_RAW], raw_data[FSM_DATA_SMOOTH], raw_data[FSM_DATA_BASELINE]);
+    }
+#endif
     return ESP_OK;
 }
