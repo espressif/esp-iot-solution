@@ -7,3 +7,4 @@
     :maxdepth: 1
 
     触摸接近感应传感器 <touch_proximity_sensor>
+    触摸按键传感器 <touch_button_sensor>

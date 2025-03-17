@@ -51,7 +51,6 @@ INPUT = \
     $(PROJECT_PATH)/components/ir/ir_learn/include/ir_learn.h \
     $(PROJECT_PATH)/components/keyboard_button/include/keyboard_button.h \
     $(PROJECT_PATH)/components/knob/include/iot_knob.h \
-    $(PROJECT_PATH)/components/sensors/power_measure/include/power_measure.h \
     $(PROJECT_PATH)/components/led/led_indicator/include/led_indicator.h \
     $(PROJECT_PATH)/components/led/lightbulb_driver/include/lightbulb.h \
     $(PROJECT_PATH)/components/motor/esp_sensorless_bldc_control/control/include/bldc_control_param.h \
@@ -60,6 +59,7 @@ INPUT = \
     $(PROJECT_PATH)/components/motor/servo/include/iot_servo.h \
     $(PROJECT_PATH)/components/openai/include/OpenAI.h \
     $(PROJECT_PATH)/components/sensors/ntc_driver/include/ntc_driver.h \
+    $(PROJECT_PATH)/components/sensors/power_measure/include/power_measure.h \
     $(PROJECT_PATH)/components/sensors/power_monitor/ina236/include/ina236.h \
     $(PROJECT_PATH)/components/sensors/sensor_hub/include/hal/humiture_hal.h \
     $(PROJECT_PATH)/components/sensors/sensor_hub/include/hal/imu_hal.h \
@@ -67,6 +67,7 @@ INPUT = \
     $(PROJECT_PATH)/components/sensors/sensor_hub/include/iot_sensor_hub.h \
     $(PROJECT_PATH)/components/sensors/sensor_hub/include/sensor_type.h \
     $(PROJECT_PATH)/components/spi_bus/include/spi_bus.h \
+    $(PROJECT_PATH)/components/touch/touch_button_sensor/include/touch_button_sensor.h \
     $(PROJECT_PATH)/components/touch/touch_proximity_sensor/include/touch_proximity_sensor.h \
     $(PROJECT_PATH)/components/usb/esp_msc_ota/include/esp_msc_ota.h \
     $(PROJECT_PATH)/components/usb/esp_tinyuf2/esp_tinyuf2.h \
