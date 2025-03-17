@@ -1,4 +1,3 @@
-
 document.addEventListener("DOMContentLoaded", function () {
     var script = document.createElement("script");
     script.src = "https://widget.kapa.ai/kapa-widget.bundle.js";
@@ -18,10 +17,11 @@ document.addEventListener("DOMContentLoaded", function () {
     script.setAttribute("data-button-image-width", "100%");
     script.setAttribute("data-button-padding", "0");
     script.setAttribute("data-button-hover-animation-enabled", "false");
-    script.setAttribute("data-button-position-top", "10px");
-    script.setAttribute("data-button-position-left", "1048px");
+    script.setAttribute("data-button-position-top", "50px");
+    script.setAttribute("data-button-position-left", "305px");
     script.setAttribute("data-button-box-shadow", "0px 6px 12px 1px rgba(0,0,0,0.16)");
     script.setAttribute("data-modal-override-open-class", "test-ai");
+    script.setAttribute("data-user-analytics-fingerprint-enabled", "true");
     script.setAttribute("data-modal-disclaimer", "This custom large language model (LLM), trained on official documentation from espressif.com, is designed to provide technical support and answers related to Espressif’s products and services. Give it a try, share your thoughts, and let us know your feedback—we truly appreciate it! \n\n**Note**: AI-generated information may be incomplete or inaccurate. Always verify critical information with official sources.");
     script.setAttribute("data-modal-example-questions", "How to add button to my project?,Does ESP32-S3 support USB Camera?");
     script.async = true;

@@ -35,8 +35,6 @@ html_logo = '../_static/espressif-logo.svg'
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['../_static']
-html_js_files = ['js/chatbot_widget.js']
-html_css_files = ['js/chatbot_widget.css']
 
 versions_url = './_static/js/generic_version.js'
 
