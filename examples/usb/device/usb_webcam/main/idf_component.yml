@@ -6,7 +6,7 @@ dependencies:
   idf:
     version: ">=5.0"
   esp32-camera:
-    version: "2.0.10"
+    version: "2.0.15"
   esp32_s3_eye:
     version: ^2.0.2
     rules:
