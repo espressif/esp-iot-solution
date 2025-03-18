@@ -1,0 +1,12 @@
+targets:
+  - esp32
+  - esp32s2
+  - esp32s3
+  - esp32p4
+  - linux
+dependencies:
+  idf: ">=4.4"
+  cmake_utilities: "0.*"
+  touch_button:
+    version: "*"
+    override_path: "../../../../components/touch/touch_button"
