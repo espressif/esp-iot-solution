@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v1.8.0 - 2025-03-28
+
+### Improve:
+
+- Added new dimming driver SM2182E
+- Modify some kconfig names. Please refer to [sdkconfig.rename](./sdkconfig.rename)
+
 ## v1.7.1 - 2025-03-05
 
 ### Bug Fix:

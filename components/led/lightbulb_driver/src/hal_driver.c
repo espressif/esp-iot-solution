@@ -100,6 +100,7 @@ typedef struct {
     hal_obj_t *interface;
     int s_err_count;
     bool use_hw_fade;
+    bool enable_multi_ch_write;
     uint16_t *table_group;
     // R G B C W
     float balance_coefficient[5];
@@ -130,6 +131,21 @@ static hal_obj_t s_hal_obj_group[] = {
         .set_hw_fade = (x_set_hw_fade_t)pwm_set_hw_fade,
         .deinit = (x_deinit_t)pwm_deinit,
         .set_sleep_status = (x_set_sleep_t)pwm_set_sleep,
+    },
+#endif
+#ifdef CONFIG_ENABLE_SM2182E_DRIVER
+    {
+        .type = DRIVER_SM2182E,
+        .name = "SM2182E",
+        .driver_grayscale_level = (1 << 10),
+        .channel_num = 5,
+        .hardware_allow_max_input_value = (1 << 10) - 1,
+        .init = (x_init_t)sm2182e_init,
+        .set_wy_or_ct_channel = (x_set_wy_or_cb_channel_t)sm2182e_set_cw_channel,
+        .regist_channel = (x_regist_channel_t)sm2182e_regist_channel,
+        .set_shutdown = (x_set_shutdown_t)sm2182e_set_shutdown,
+        .deinit = (x_deinit_t)sm2182e_deinit,
+        .set_sleep_status = (x_set_sleep_t)sm2182e_set_standby_mode,
     },
 #endif
 #ifdef CONFIG_ENABLE_SM2135EH_DRIVER
@@ -315,15 +331,15 @@ static void cleanup(void)
     }
 }
 
-#define WRITE_TO_HW(CH, VALUE)                                                                                  \
-{                                                                                                               \
-    if (s_hal_obj->use_hw_fade && s_hal_obj->interface->type == DRIVER_ESP_PWM) {                               \
-        err |= s_hal_obj->interface->set_hw_fade(CH, s_hal_obj->fade_data[CH].cur, HARDWARE_RETAIN_RATE_MS);    \
-    } else if (s_hal_obj->interface->type != DRIVER_WS2812) {                                                   \
-        err |= s_hal_obj->interface->set_channel(CH, s_hal_obj->fade_data[channel].cur);                        \
-    } else {                                                                                                    \
-    /* Nothing */                                                                                               \
-    }                                                                                                           \
+#define WRITE_TO_HW(CH, VALUE)                                                                                      \
+{                                                                                                                   \
+    if(!s_hal_obj->enable_multi_ch_write) {                                                                         \
+        if (s_hal_obj->use_hw_fade) {                                                                               \
+            err |= s_hal_obj->interface->set_hw_fade(CH, s_hal_obj->fade_data[CH].cur, HARDWARE_RETAIN_RATE_MS);    \
+        } else {                                                                                                    \
+            err |= s_hal_obj->interface->set_channel(CH, s_hal_obj->fade_data[channel].cur);                        \
+        }                                                                                                           \
+   }                                                                                                                \
 }
 
 /**
@@ -426,10 +442,16 @@ static void fade_cb(void *priv)
         }
     }
 
-    // Enable multi-channel set only for ws2812 driver
-    if (s_hal_obj->interface->type == DRIVER_WS2812) {
-        s_hal_obj->interface->set_rgb_channel(s_hal_obj->fade_data[0].cur, s_hal_obj->fade_data[1].cur, s_hal_obj->fade_data[2].cur);
+    if (s_hal_obj->enable_multi_ch_write) {
+        if (s_hal_obj->interface->set_rgb_channel) {
+            s_hal_obj->interface->set_rgb_channel(s_hal_obj->fade_data[0].cur, s_hal_obj->fade_data[1].cur, s_hal_obj->fade_data[2].cur);
+        } else if (s_hal_obj->interface->set_wy_or_ct_channel) {
+            s_hal_obj->interface->set_wy_or_ct_channel(s_hal_obj->fade_data[3].cur, s_hal_obj->fade_data[4].cur);
+        } else if (s_hal_obj->interface->set_rgbwy_or_rgbct_channel) {
+            s_hal_obj->interface->set_rgbwy_or_rgbct_channel(s_hal_obj->fade_data[0].cur, s_hal_obj->fade_data[1].cur, s_hal_obj->fade_data[2].cur, s_hal_obj->fade_data[3].cur, s_hal_obj->fade_data[4].cur);
+        }
     }
+
 #ifdef FADE_TICKS_FROM_GPTIMER
     if (idle_channel_num >= s_hal_obj->interface->channel_num) {
         if (s_hal_obj->gptimer_is_active) {
@@ -501,6 +523,11 @@ esp_err_t hal_output_init(hal_config_t *config, lightbulb_gamma_config_t *gamma,
 
         // I2C Chip
         // 10bit: 0~1023, size: 1024
+        //Nothing
+
+        // WS2812 and SM2182E can only use multi-channel write
+    } else if (s_hal_obj->interface->type == DRIVER_WS2812 || s_hal_obj->interface->type == DRIVER_SM2182E) {
+        s_hal_obj->enable_multi_ch_write = true;
     }
 
     s_hal_obj->table_group = calloc(table_size, sizeof(uint16_t));

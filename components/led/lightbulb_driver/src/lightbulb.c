@@ -577,7 +577,7 @@ static void print_func(char *driver_details, char *driver_io)
     ESP_LOGI(TAG, "fade %d ms", s_lb_obj->cap.enable_fade == true ? s_lb_obj->cap.fade_time_ms : 0);
     ESP_LOGI(TAG, "led_beads: %d", s_lb_obj->cap.led_beads);
     ESP_LOGI(TAG, "hardware cct: %s", s_lb_obj->cap.enable_hardware_cct ? "Yes" : "No");
-    ESP_LOGI(TAG, "precise cct control: %s", s_lb_obj->cap.enable_precise_cct_control ? "disable" : "enable");
+    ESP_LOGI(TAG, "precise cct control: %s", s_lb_obj->cap.enable_precise_cct_control ?  "enable" : "disable");
     ESP_LOGI(TAG, "sync change: %s", s_lb_obj->cap.sync_change_brightness_value ? "enable" : "disable");
     ESP_LOGI(TAG, "auto on: %s", s_lb_obj->cap.disable_auto_on ? "disable" : "enable");
 
@@ -647,6 +647,21 @@ esp_err_t lightbulb_init(lightbulb_config_t *config)
                 config->driver_conf.sm2135eh.iic_sda,
                 config->driver_conf.sm2135eh.rgb_current,
                 config->driver_conf.sm2135eh.wy_current);
+    }
+#endif
+#ifdef CONFIG_ENABLE_SM2182E_DRIVER
+    if (config->type == DRIVER_SM2182E) {
+        driver_conf = (void *) & (config->driver_conf.sm2182e);
+        sprintf(driver_details, "SM2182E IIC Freq: %d Khz, Queue: %d, SCL: %d, SDA: %d, CW Current: %d",
+                config->driver_conf.sm2182e.freq_khz,
+                config->driver_conf.sm2182e.enable_iic_queue,
+                config->driver_conf.sm2182e.iic_clk,
+                config->driver_conf.sm2182e.iic_sda,
+                config->driver_conf.sm2182e.cw_current);
+        if (config->capability.led_beads > LED_BEADS_2CH_CW) {
+            ESP_LOGW(TAG, "The SM2182E chip only allows the configuration of cold and warm led beads");
+            goto EXIT;
+        }
     }
 #endif
 #ifdef CONFIG_ENABLE_BP57x8D_DRIVER
@@ -721,6 +736,8 @@ esp_err_t lightbulb_init(lightbulb_config_t *config)
 
     if (config->type == DRIVER_ESP_PWM) {
         sprintf(driver_io, "IO List:[%d %d %d %d %d]", config->io_conf.pwm_io.red, config->io_conf.pwm_io.green, config->io_conf.pwm_io.blue, config->io_conf.pwm_io.cold_cct, config->io_conf.pwm_io.warm_brightness);
+    } else if (config->type == DRIVER_SM2182E) {
+        sprintf(driver_io, "IO List:[%d %d]", config->io_conf.iic_io.cold_white, config->io_conf.iic_io.warm_yellow);
     } else if (config->type >= DRIVER_SM2135E && config->type < DRIVER_WS2812) {
         sprintf(driver_io, "IO List:[%d %d %d %d %d]", config->io_conf.iic_io.red, config->io_conf.iic_io.green, config->io_conf.iic_io.blue, config->io_conf.iic_io.cold_white, config->io_conf.iic_io.warm_yellow);
     } else if (config->type == DRIVER_WS2812) {
