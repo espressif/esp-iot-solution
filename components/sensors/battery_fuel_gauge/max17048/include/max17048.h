@@ -7,6 +7,10 @@
 
 #include "i2c_bus.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define MAX17048_I2C_ADDR_DEFAULT 0x36
 
 #define MAX17048_VCELL_REG 0x02    /*!< ADC measurement of VCELL. */
@@ -394,3 +398,7 @@ esp_err_t max17048_set_sleep(max17048_handle_t sensor, bool sleep);
  *      - Other esp_err_t codes Errors that may occur during I2C transactions or hardware interaction
  */
 esp_err_t max17048_is_sleeping(max17048_handle_t sensor, bool *is_sleeping);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
