@@ -431,6 +431,33 @@ TEST_CASE("I2C bus scan test", "[i2c_bus][scan]")
     TEST_ASSERT(i2c_bus == NULL);
 }
 
+TEST_CASE("I2C bus register address restriction test", "[i2c_bus][NULL_I2C_MEM_ADDR]")
+{
+    uint8_t *data_wr = (uint8_t *) malloc(RW_TEST_LENGTH);
+    for (int i = 0; i < RW_TEST_LENGTH; i++) {
+        data_wr[i] = i;
+    }
+
+    i2c_config_t conf = {
+        .mode = I2C_MODE_MASTER,
+        .sda_io_num = I2C_MASTER_SDA_IO,
+        .sda_pullup_en = GPIO_PULLUP_ENABLE,
+        .scl_io_num = I2C_MASTER_SCL_IO,
+        .scl_pullup_en = GPIO_PULLUP_ENABLE,
+        .master.clk_speed = I2C_MASTER_FREQ_HZ,
+    };
+    i2c_bus_handle_t i2c_bus = i2c_bus_create(I2C_NUM_0, &conf);
+    TEST_ASSERT(i2c_bus != NULL);
+    i2c_bus_device_handle_t i2c_device1 = i2c_bus_device_create(i2c_bus, 0x01, I2C_MASTER_FREQ_HZ);
+    TEST_ASSERT(i2c_device1 != NULL);
+    i2c_bus_write_bytes(i2c_device1, NULL_I2C_MEM_ADDR, RW_TEST_LENGTH, data_wr);
+    i2c_bus_device_delete(&i2c_device1);
+    TEST_ASSERT(i2c_device1 == NULL);
+    TEST_ASSERT(ESP_OK == i2c_bus_delete(&i2c_bus));
+    free(data_wr);
+    TEST_ASSERT(i2c_bus == NULL);
+}
+
 #if CONFIG_I2C_BUS_SUPPORT_SOFTWARE
 
 TEST_CASE("I2C soft bus init-deinit test", "[soft][bus][i2c_bus]")
