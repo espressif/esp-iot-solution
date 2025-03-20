@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v1.1.3 - 2024-3-20
+
+* Support 4g module `EG25_GL` and `AIR780E`
+
 ## v1.1.2 - 2024-3-14
 
 * Avoid `_usb_data_recv_task` from consuming too much time slice.
