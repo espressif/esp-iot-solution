@@ -13,13 +13,8 @@
 
 static const char *TAG = "elf_loader";
 
-#if CONFIG_IDF_TARGET_ARCH_XTENSA
-extern const uint8_t test_elf_start[] asm("_binary_test_xtensa_elf_start");
-extern const uint8_t test_elf_end[]   asm("_binary_test_xtensa_elf_end");
-#elif CONFIG_IDF_TARGET_ARCH_RISCV
-extern const uint8_t test_elf_start[] asm("_binary_test_riscv_elf_start");
-extern const uint8_t test_elf_end[]   asm("_binary_test_riscv_elf_end");
-#endif
+extern const uint8_t test_elf_start[] asm("_binary_test_elf_bin_start");
+extern const uint8_t test_elf_end[]   asm("_binary_test_elf_bin_end");
 
 #ifdef CONFIG_ELF_LOADER_MAIN_ARGS
 static int elf_args_decode(const char *str, int *argc, char ***argv)
