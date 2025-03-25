@@ -119,7 +119,7 @@ components_test_touch_button_sensor:
   parallel:
     matrix:
         - IDF_VERSION: ["5.3"]
-          IDF_TARGET: ["esp32s3", "esp32s2", "esp32p4"]
+          IDF_TARGET: ["esp32", "esp32s3", "esp32s2", "esp32p4"]
           ENV_TAG: "generic"
   tags:
     - ${IDF_TARGET}

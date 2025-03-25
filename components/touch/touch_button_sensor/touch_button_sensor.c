@@ -124,6 +124,7 @@ static void fsm_state_cb(fsm_handle_t handle, uint32_t channel, fsm_state_t stat
     }
 }
 
+#if !CONFIG_IDF_TARGET_ESP32
 static void touch_sensor_callback(uint32_t channel, touch_lowlevel_state_t state, void *state_data, void *arg)
 {
     touch_button_sensor_t *sensor = (touch_button_sensor_t *)arg;
@@ -136,6 +137,19 @@ static void touch_sensor_callback(uint32_t channel, touch_lowlevel_state_t state
         }
     }
 }
+#else
+static void polling_callback(fsm_handle_t handle, uint32_t channel, uint32_t *raw_data, void *user_data)
+{
+    uint32_t data[SOC_TOUCH_SAMPLE_CFG_NUM] = {0};
+    // give the first frequency data only for esp32p4
+    if (touch_sensor_lowlevel_get_data(channel, data) == ESP_OK) {
+        // For simplicity, use the first data slot as raw data
+        *raw_data = data[0];
+    } else {
+        *raw_data = 0;
+    }
+}
+#endif
 
 esp_err_t touch_button_sensor_create(touch_button_config_t *config, touch_button_handle_t *handle, touch_cb_t cb, void *cb_arg)
 {
@@ -157,6 +171,27 @@ esp_err_t touch_button_sensor_create(touch_button_config_t *config, touch_button
     sensor->user_data = cb_arg;
     sensor->skip_lowlevel_init = config->skip_lowlevel_init;  // Store this flag
 
+    // Allocate memory for noise thresholds
+    float *noise_p = malloc(config->channel_num * sizeof(float));
+    float *noise_n = malloc(config->channel_num * sizeof(float));
+    if (!noise_p || !noise_n) {
+        if (noise_p) {
+            free(noise_p);
+        }
+        if (noise_n) {
+            free(noise_n);
+        }
+        free(sensor->channel_list);
+        free(sensor);
+        return ESP_ERR_NO_MEM;
+    }
+
+    // Initialize noise thresholds for each channel
+    for (uint32_t i = 0; i < config->channel_num; i++) {
+        noise_p[i] = config->channel_threshold[i] / CONFIG_TOUCH_BUTTON_SENSOR_NOISE_P_SNR;
+        noise_n[i] = config->channel_threshold[i] / CONFIG_TOUCH_BUTTON_SENSOR_NOISE_N_SNR;
+    }
+
     // Initialize touch sensor low level if needed
     if (!config->skip_lowlevel_init) {
         touch_lowlevel_config_t ll_config = {
@@ -170,7 +205,10 @@ esp_err_t touch_button_sensor_create(touch_button_config_t *config, touch_button
         );
     }
 
+    // Initialize FSMs
+    fsm_config_t fsm_cfg = DEFAULTS_TOUCH_SENSOR_FSM_CONFIG();
     // Register callbacks for each channel
+#if !CONFIG_IDF_TARGET_ESP32
     for (uint32_t i = 0; i < config->channel_num; i++) {
         TOUCH_BUTTON_CHECK_GOTO(
             touch_sensor_lowlevel_register(config->channel_list[i],
@@ -180,10 +218,18 @@ esp_err_t touch_button_sensor_create(touch_button_config_t *config, touch_button
             "Failed to register touch sensor callback", cleanup
         );
     }
-
-    // Initialize FSMs
-    fsm_config_t fsm_cfg = DEFAULTS_TOUCH_SENSOR_FSM_CONFIG();
     fsm_cfg.mode = FSM_MODE_USER_PUSH;
+    fsm_cfg.active_low = false;
+    fsm_cfg.calibration_times = CONFIG_TOUCH_BUTTON_SENSOR_CALIBRATION_TIMES;
+    fsm_cfg.debounce_inactive = CONFIG_TOUCH_BUTTON_SENSOR_DEBOUNCE_INACTIVE;
+#else
+    fsm_cfg.mode = FSM_MODE_POLLING;
+    fsm_cfg.polling_interval = CONFIG_TOUCH_BUTTON_SENSOR_POLLING_INTERVAL;
+    fsm_cfg.polling_cb = polling_callback;
+    fsm_cfg.active_low = true;
+    fsm_cfg.calibration_times = CONFIG_TOUCH_BUTTON_SENSOR_CALIBRATION_TIMES;
+    fsm_cfg.debounce_inactive = CONFIG_TOUCH_BUTTON_SENSOR_DEBOUNCE_INACTIVE;
+#endif
     fsm_cfg.state_cb = fsm_state_cb;
     fsm_cfg.channel_num = config->channel_num;
     fsm_cfg.channel_list = config->channel_list;
@@ -194,17 +240,17 @@ esp_err_t touch_button_sensor_create(touch_button_config_t *config, touch_button
     fsm_cfg.threshold_n = NULL;
 #endif
     fsm_cfg.gold_value = config->channel_gold_value;
-    fsm_cfg.debounce_p = config->debounce_times;
-    fsm_cfg.debounce_n = config->debounce_times;
+    fsm_cfg.debounce_active = config->debounce_times;
     fsm_cfg.smooth_coef = CONFIG_TOUCH_BUTTON_SENSOR_SMOOTH_COEF_X1000 / 1000.0f;
     fsm_cfg.baseline_coef = CONFIG_TOUCH_BUTTON_SENSOR_BASELINE_COEF_X1000 / 1000.0f;
     fsm_cfg.max_p = CONFIG_TOUCH_BUTTON_SENSOR_MAX_P_X1000 / 1000.0f;
     fsm_cfg.min_n = CONFIG_TOUCH_BUTTON_SENSOR_MIN_N_X1000 / 1000.0f;
-    fsm_cfg.hysteresis_p = 0.1f;
-    fsm_cfg.noise_p = config->channel_threshold[0] / CONFIG_TOUCH_BUTTON_SENSOR_NOISE_P_SNR;
-    fsm_cfg.noise_n = config->channel_threshold[0] / CONFIG_TOUCH_BUTTON_SENSOR_NOISE_N_SNR;
-    fsm_cfg.reset_p = CONFIG_TOUCH_BUTTON_SENSOR_RESET_P;
-    fsm_cfg.reset_n = CONFIG_TOUCH_BUTTON_SENSOR_RESET_N;
+    fsm_cfg.hysteresis_active = 0.1f;
+    fsm_cfg.hysteresis_inactive = 0.1f;
+    fsm_cfg.noise_p = noise_p;
+    fsm_cfg.noise_n = noise_n;
+    fsm_cfg.reset_cover = CONFIG_TOUCH_BUTTON_SENSOR_RESET_COVER;
+    fsm_cfg.reset_calibration = CONFIG_TOUCH_BUTTON_SENSOR_RESET_CALIBRATION;
     fsm_cfg.raw_buf_size = CONFIG_TOUCH_BUTTON_SENSOR_RAW_BUF_SIZE;
     fsm_cfg.scale_factor = CONFIG_TOUCH_BUTTON_SENSOR_SCALE_FACTOR;
     fsm_cfg.user_data = sensor;
@@ -213,6 +259,10 @@ esp_err_t touch_button_sensor_create(touch_button_config_t *config, touch_button
         TOUCH_BUTTON_CHECK_GOTO(touch_sensor_fsm_create(&fsm_cfg, &sensor->fsm_handles[i]) == ESP_OK, "Failed to create FSM", cleanup);
         TOUCH_BUTTON_CHECK_GOTO(touch_sensor_fsm_control(sensor->fsm_handles[i], FSM_CTRL_START, NULL) == ESP_OK, "Failed to start FSM", cleanup);
     }
+
+    // Free the noise threshold arrays as they've been copied during FSM creation
+    free(noise_p);
+    free(noise_n);
 
     if (!config->skip_lowlevel_init) {
         TOUCH_BUTTON_CHECK_GOTO(touch_sensor_lowlevel_start() == ESP_OK, "Failed to start touch sensor low level", cleanup);
@@ -223,6 +273,12 @@ esp_err_t touch_button_sensor_create(touch_button_config_t *config, touch_button
     return ESP_OK;
 
 cleanup:
+    if (noise_p) {
+        free(noise_p);
+    }
+    if (noise_n) {
+        free(noise_n);
+    }
     touch_button_sensor_delete(sensor);
     return ESP_FAIL;
 }
@@ -248,9 +304,11 @@ esp_err_t touch_button_sensor_delete(touch_button_handle_t handle)
     }
 
     // Unregister all channels
+#if !CONFIG_IDF_TARGET_ESP32
     for (int i = 0; i < sensor->channel_num; i++) {
         touch_sensor_lowlevel_unregister(sensor->lowlevel_handle[i]);
     }
+#endif
 
     // Delete FSMs
     for (int i = 0; i < SOC_TOUCH_SAMPLE_CFG_NUM; i++) {

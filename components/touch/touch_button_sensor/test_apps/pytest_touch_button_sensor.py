@@ -15,6 +15,7 @@ Steps to run these cases:
 import pytest
 from pytest_embedded import Dut
 
+@pytest.mark.target('esp32')
 @pytest.mark.target('esp32s2')
 @pytest.mark.target('esp32s3')
 @pytest.mark.target('esp32p4')

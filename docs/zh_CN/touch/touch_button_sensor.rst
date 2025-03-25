@@ -122,7 +122,7 @@ API 使用示例
 示例
 --------
 
-- :example:`touch/touch_button`
+- :example:`touch/touch_button_sensor`
 
 API 参考
 ------------

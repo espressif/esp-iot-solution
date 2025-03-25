@@ -8,7 +8,8 @@ components/avi_player/test_apps:
 
 components/touch/touch_button_sensor/test_apps:
   enable:
-    - if: IDF_TARGET in ["esp32s2", "esp32s3", "esp32p4"]
+    - if: IDF_TARGET in ["esp32", "esp32s2", "esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
+    - if: IDF_TARGET in ["esp32", "esp32s2", "esp32s3", "esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 3)
 
 components/touch/touch_proximity_sensor/test_apps:
   enable:

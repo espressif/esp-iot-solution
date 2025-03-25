@@ -707,15 +707,17 @@ build_example_sensors_sensor_hub_monitor:
   variables:
     EXAMPLE_DIR: examples/sensors/sensor_hub_monitor
 
-build_example_touch_button:
+build_example_touch_button_sensor:
   extends:
     - .build_examples_template
-    - .rules:build:example_touch_touch_button
+    - .rules:build:example_touch_touch_button_sensor
   parallel:
     matrix:
-      - IMAGE: espressif/idf:release-v5.3
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.1
+      - IMAGE: espressif/idf:release-v5.4
   variables:
-    EXAMPLE_DIR: examples/touch/touch_button
+    EXAMPLE_DIR: examples/touch/touch_button_sensor
 
 build_example_touch_touch_proximity:
   extends:
@@ -1490,6 +1492,7 @@ build_components_touch_touch_button_sensor_test_apps:
     - .rules:build:components_touch_touch_button_sensor_test_apps
   parallel:
     matrix:
+      - IMAGE: espressif/idf:release-v5.1
       - IMAGE: espressif/idf:release-v5.3
   variables:
     EXAMPLE_DIR: components/touch/touch_button_sensor/test_apps

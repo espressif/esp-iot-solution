@@ -543,7 +543,7 @@
   - "examples/usb/device/usb_dongle/**/*"
 
 .patterns-example_touch_touch_button: &patterns-example_touch_touch_button
-  - "examples/touch/touch_button/**/*"
+  - "examples/touch/touch_button_sensor/**/*"
 
 .patterns-example_touch_touch_proximity: &patterns-example_touch_touch_proximity
   - "examples/touch/touch_proximity/**/*"
@@ -1290,7 +1290,7 @@
     - <<: *if-dev-push
       changes: *patterns-example_sensors_sensor_hub_monitor
 
-.rules:build:example_touch_touch_button:
+.rules:build:example_touch_touch_button_sensor:
   rules:
     - <<: *if-protected
     - <<: *if-label-build

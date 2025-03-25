@@ -1,10 +1,11 @@
 targets:
+  - esp32
   - esp32s2
   - esp32s3
   - esp32p4
   - linux
 dependencies:
-  idf: ">=5.0"
+  idf: ">=4.4"
   cmake_utilities: "0.*"
   touch_button_sensor:
     version: "*"
