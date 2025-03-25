@@ -944,6 +944,14 @@ build_example_utilities_xz_decompress_file:
   variables:
     EXAMPLE_DIR: examples/utilities/xz_decompress_file
 
+build_components_audio_adc_mic_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:component_audio_adc_mic_test_apps
+    - .build_idf_version_greater_equal_v5_0
+  variables:
+    EXAMPLE_DIR: components/audio/adc_mic/test_apps
+
 build_components_audio_pwm_audio_test_apps:
   extends:
     - .build_examples_template

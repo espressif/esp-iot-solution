@@ -1,3 +1,9 @@
+components/audio/adc_mic/test_apps:
+  enable:
+    - if: SOC_ADC_DMA_SUPPORTED == 1
+  disable:
+    - if: IDF_TARGET in ["esp32h2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
+
 components/audio/pwm_audio/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1

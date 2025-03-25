@@ -21,6 +21,7 @@ PROJECT_NAME = "ESP IoT Solution Guide"
 ## and used to include in API reference documentation
 
 INPUT = \
+    $(PROJECT_PATH)/components/audio/adc_mic/adc_mic.h \
     $(PROJECT_PATH)/components/audio/dac_audio/include/dac_audio.h \
     $(PROJECT_PATH)/components/audio/pwm_audio/include/pwm_audio.h \
     $(PROJECT_PATH)/components/avi_player/include/avi_player.h \

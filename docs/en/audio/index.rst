@@ -9,4 +9,4 @@ Audio
 
     PWM Audio <pwm_audio>
     DAC Audio <dac_audio>
-
+    ADC MIC <adc_mic>

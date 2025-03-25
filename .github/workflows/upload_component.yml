@@ -16,6 +16,7 @@ jobs:
         uses: espressif/upload-components-ci-action@v1
         with:
           directories: >
+            components/audio/adc_mic;
             components/audio/pwm_audio;
             components/avi_player;
             components/bluetooth/ble_conn_mgr;
