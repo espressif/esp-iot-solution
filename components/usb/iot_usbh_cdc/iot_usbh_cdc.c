@@ -86,7 +86,7 @@ static size_t _get_ringbuf_len(RingbufHandle_t ringbuf_hdl)
 
 static esp_err_t _ringbuf_pop(RingbufHandle_t ringbuf_hdl, uint8_t *buf, size_t req_bytes, size_t *read_bytes, TickType_t ticks_to_wait)
 {
-    uint8_t *buf_rcv = xRingbufferReceiveUpTo(ringbuf_hdl, read_bytes, ticks_to_wait, req_bytes);
+    uint8_t *buf_rcv = xRingbufferReceiveUpTo(ringbuf_hdl, read_bytes, pdMS_TO_TICKS(1000), req_bytes);
     if (!buf_rcv) {
         return ESP_FAIL;
     }
@@ -802,7 +802,7 @@ esp_err_t usbh_cdc_read_bytes(usbh_cdc_handle_t cdc_handle, const uint8_t *buf, 
 
     ret = _ringbuf_pop(cdc->in_ringbuf_handle, (uint8_t *)buf, data_len, length, ticks_to_wait);
     if (ret != ESP_OK) {
-        ESP_LOGD(TAG, "cdc read failed");
+        ESP_LOGI(TAG, "cdc read failed");
         *length = 0;
         return ret;
     }
