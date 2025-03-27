@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -92,9 +92,9 @@ void app_main(void)
     usbh_cdc_create(&dev_config, &handle[0]);
 
 #if (EXAMPLE_BULK_ITF_NUM > 1)
-    config.itf_num = 1;
-    config.cbs = {0};
-    ESP_LOGI(TAG, "Open interface num: %d with first USB CDC Device", config.itf_num);
+    dev_config.itf_num = 3;
+    memset(&dev_config.cbs, 0, sizeof(dev_config.cbs));
+    ESP_LOGI(TAG, "Open interface num: %d with first USB CDC Device", dev_config.itf_num);
     usbh_cdc_create(&dev_config, &handle[1]);
 #endif
     /*!< Wait for the USB device to be connected */
