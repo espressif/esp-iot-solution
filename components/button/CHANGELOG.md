@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v4.1.2 - 2025-03-24
+
+### Fix:
+
+* fix incorrect long press start and release check.
+
 ## v4.1.1 - 2025-03-13
 
 ### Improve:

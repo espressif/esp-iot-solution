@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+/* SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -232,54 +232,54 @@ static void button_handler(button_dev_t *btn)
                 btn->event = (uint8_t)BUTTON_LONG_PRESS_HOLD;
                 btn->long_press_hold_cnt++;
                 CALL_EVENT_CB(BUTTON_LONG_PRESS_HOLD);
+            }
 
-                /** Calling callbacks for BUTTON_LONG_PRESS_START based on press_time */
-                uint32_t ticks_time = iot_button_get_ticks_time(btn);
-                if (btn->cb_info[BUTTON_LONG_PRESS_START]) {
-                    button_cb_info_t *cb_info = btn->cb_info[BUTTON_LONG_PRESS_START];
-                    uint16_t time = cb_info[btn->count[0]].event_args.long_press.press_time;
-                    if (btn->long_press_ticks * TICKS_INTERVAL > time) {
-                        for (int i = btn->count[0] + 1; i < btn->size[BUTTON_LONG_PRESS_START]; i++) {
-                            time = cb_info[i].event_args.long_press.press_time;
-                            if (btn->long_press_ticks * TICKS_INTERVAL <= time) {
-                                btn->count[0] = i;
-                                break;
-                            }
+            /** Calling callbacks for BUTTON_LONG_PRESS_START based on press_time */
+            uint32_t ticks_time = iot_button_get_ticks_time(btn);
+            if (btn->cb_info[BUTTON_LONG_PRESS_START]) {
+                button_cb_info_t *cb_info = btn->cb_info[BUTTON_LONG_PRESS_START];
+                uint16_t time = cb_info[btn->count[0]].event_args.long_press.press_time;
+                if (btn->long_press_ticks * TICKS_INTERVAL > time) {
+                    for (int i = btn->count[0] + 1; i < btn->size[BUTTON_LONG_PRESS_START]; i++) {
+                        time = cb_info[i].event_args.long_press.press_time;
+                        if (btn->long_press_ticks * TICKS_INTERVAL <= time) {
+                            btn->count[0] = i;
+                            break;
                         }
-                    }
-                    if (btn->count[0] < btn->size[BUTTON_LONG_PRESS_START] && abs((int)ticks_time - (int)time) <= TOLERANCE) {
-                        btn->event = (uint8_t)BUTTON_LONG_PRESS_START;
-                        do {
-                            cb_info[btn->count[0]].cb(btn, cb_info[btn->count[0]].usr_data);
-                            btn->count[0]++;
-                            if (btn->count[0] >= btn->size[BUTTON_LONG_PRESS_START]) {
-                                break;
-                            }
-                        } while (time == cb_info[btn->count[0]].event_args.long_press.press_time);
                     }
                 }
+                if (btn->count[0] < btn->size[BUTTON_LONG_PRESS_START] && abs((int)ticks_time - (int)time) <= TOLERANCE) {
+                    btn->event = (uint8_t)BUTTON_LONG_PRESS_START;
+                    do {
+                        cb_info[btn->count[0]].cb(btn, cb_info[btn->count[0]].usr_data);
+                        btn->count[0]++;
+                        if (btn->count[0] >= btn->size[BUTTON_LONG_PRESS_START]) {
+                            break;
+                        }
+                    } while (time == cb_info[btn->count[0]].event_args.long_press.press_time);
+                }
+            }
 
-                /** Updating counter for BUTTON_LONG_PRESS_UP press_time */
-                if (btn->cb_info[BUTTON_LONG_PRESS_UP]) {
-                    button_cb_info_t *cb_info = btn->cb_info[BUTTON_LONG_PRESS_UP];
-                    uint16_t time = cb_info[btn->count[1] + 1].event_args.long_press.press_time;
-                    if (btn->long_press_ticks * TICKS_INTERVAL > time) {
-                        for (int i = btn->count[1] + 1; i < btn->size[BUTTON_LONG_PRESS_UP]; i++) {
-                            time = cb_info[i].event_args.long_press.press_time;
-                            if (btn->long_press_ticks * TICKS_INTERVAL <= time) {
-                                btn->count[1] = i;
-                                break;
-                            }
+            /** Updating counter for BUTTON_LONG_PRESS_UP press_time */
+            if (btn->cb_info[BUTTON_LONG_PRESS_UP]) {
+                button_cb_info_t *cb_info = btn->cb_info[BUTTON_LONG_PRESS_UP];
+                uint16_t time = cb_info[btn->count[1] + 1].event_args.long_press.press_time;
+                if (btn->long_press_ticks * TICKS_INTERVAL > time) {
+                    for (int i = btn->count[1] + 1; i < btn->size[BUTTON_LONG_PRESS_UP]; i++) {
+                        time = cb_info[i].event_args.long_press.press_time;
+                        if (btn->long_press_ticks * TICKS_INTERVAL <= time) {
+                            btn->count[1] = i;
+                            break;
                         }
                     }
-                    if (btn->count[1] + 1 < btn->size[BUTTON_LONG_PRESS_UP] && abs((int)ticks_time - (int)time) <= TOLERANCE) {
-                        do {
-                            btn->count[1]++;
-                            if (btn->count[1] + 1 >= btn->size[BUTTON_LONG_PRESS_UP]) {
-                                break;
-                            }
-                        } while (time == cb_info[btn->count[1] + 1].event_args.long_press.press_time);
-                    }
+                }
+                if (btn->count[1] + 1 < btn->size[BUTTON_LONG_PRESS_UP] && abs((int)ticks_time - (int)time) <= TOLERANCE) {
+                    do {
+                        btn->count[1]++;
+                        if (btn->count[1] + 1 >= btn->size[BUTTON_LONG_PRESS_UP]) {
+                            break;
+                        }
+                    } while (time == cb_info[btn->count[1] + 1].event_args.long_press.press_time);
                 }
             }
         } else { //releasd
