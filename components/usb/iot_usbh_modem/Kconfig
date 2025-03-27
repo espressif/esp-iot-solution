@@ -4,51 +4,59 @@ menu "IoT USB Host Modem"
         prompt "Choose Modem Board"
         default MODEM_TARGET_ML302_DNLM
 
+        config MODEM_TARGET_USER
+            bool "User Defined"
         config MODEM_TARGET_ML302_DNLM
             bool "ML302-DNLM/CNLM"
         config MODEM_TARGET_AIR724UG_NFM
+            depends on n
             bool "AIR724UG-NFM"
         config MODEM_TARGET_AIR780_E
             bool "AIR780E"
         config MODEM_TARGET_EC600N_CNLA_N05
             bool "EC600NCNLA-N05"
+            depends on n
         config MODEM_TARGET_EC600N_CNLC_N06
             bool "EC600NCNLC-N06"
         config MODEM_TARGET_A7600C1
             bool "A7600C1"
+            depends on n
         config MODEM_TARGET_BG95_M3
             bool "BG95M3"
+            depends on n
         config MODEM_TARGET_BG96_MA
             bool "BG96MA"
+            depends on n
         config MODEM_TARGET_MC610_EU
             bool "MC610_EU"
         config MODEM_TARGET_EC20_CE
             bool "EC20_CE"
-        config MODEM_TARGET_USER
-            bool "User Defined"
+        config MODEM_TARGET_EG25_GL
+            bool "EC25_GL"
     endchoice
 
     config MODEM_TARGET_NAME
         string
         default "ML302-DNLM/CNLM" if MODEM_TARGET_ML302_DNLM
-        default "AIR724UG-NFM" if MODEM_TARGET_AIR724UG_NFM
-        default "EC600NCNLA-N05" if MODEM_TARGET_EC600N_CNLA_N05
         default "EC600NCNLC-N06" if MODEM_TARGET_EC600N_CNLC_N06
-        default "A7600C1" if MODEM_TARGET_A7600C1
         default "AIR780E" if MODEM_TARGET_AIR780_E
         default "BG95M3" if MODEM_TARGET_BG95_M3
         default "BG96MA" if MODEM_TARGET_BG96_MA
         default "MC610_EU" if MODEM_TARGET_MC610_EU
         default "EC20_CE" if MODEM_TARGET_EC20_CE
+        default "EG25_GL" if MODEM_TARGET_EG25_GL
         default "User Defined" if MODEM_TARGET_USER
 
     config MODEM_SUPPORT_SECONDARY_AT_PORT
         bool "Enable Dual CDC Mode"
-        depends on (MODEM_TARGET_MC610_EU || MODEM_TARGET_USER)
+        depends on (MODEM_TARGET_MC610_EU || MODEM_TARGET_USER || MODEM_TARGET_EG25_GL)
         default y if MODEM_TARGET_MC610_EU
+        default y if MODEM_TARGET_EG25_GL
         default n if MODEM_TARGET_USER
 
     menu "USB CDC interface config"
+        visible if MODEM_TARGET_USER
+
         config MODEM_USB_ITF
             hex "Modem USB CDC interface"
             default 0x00 if MODEM_TARGET_ML302_DNLM
@@ -56,6 +64,9 @@ menu "IoT USB Host Modem"
             default 0x06 if MODEM_TARGET_MC610_EU
             default 0x05 if MODEM_TARGET_A7600C1
             default 0x02 if MODEM_TARGET_EC20_CE
+            default 0x03 if MODEM_TARGET_AIR780_E
+            default 0x03 if MODEM_TARGET_EG25_GL
+            default 0x00 if MODEM_TARGET_USER
             help
                 USB CDC interface (eg.0x00) used for send AT/data to device
 
@@ -64,6 +75,7 @@ menu "IoT USB Host Modem"
             depends on MODEM_SUPPORT_SECONDARY_AT_PORT
             default 0x01 if MODEM_TARGET_USER
             default 0x05 if MODEM_TARGET_MC610_EU
+            default 0x02 if MODEM_TARGET_EG25_GL
             help
                 USB CDC interface 2 (eg.0x01) used for send AT/data to device
     endmenu
