@@ -98,6 +98,34 @@ void esp_elf_print_shdr(const uint8_t *pbuf);
  */
 void esp_elf_print_sec(esp_elf_t *elf);
 
+/**
+ * @brief Register symbol table to global symbol tables array.
+ *
+ * @param symbol_tables - Pointer to symbol table structure
+ *
+ * @return 0 if success, -EEXIST if already registered, -ENOMEM if no space.
+ */
+int esp_elf_register_symbol(const void *symbol_tables);
+
+/**
+ * @brief Unregister symbol table from global symbol tables array.
+ *
+ * @param symbol_tables - Pointer to symbol table structure to remove
+ *
+ * @return 0 if success, -EINVAL if symbol table not found.
+ */
+int esp_elf_unregister_symbol(const void *symbol_tables);
+
+/**
+ * @brief Find symbol address by symbol name in registered tables.
+ *
+ * @param sym_name - Symbol name string to search
+ *
+ * @return Symbol address if found, 0 if not found.
+ * @note Search order is reverse registration order (latest registered first).
+ */
+uintptr_t esp_elf_find_symbol(const char *sym_name);
+
 #ifdef __cplusplus
 }
 #endif

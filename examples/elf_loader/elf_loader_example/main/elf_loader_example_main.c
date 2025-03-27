@@ -11,6 +11,8 @@
 #include "esp_log.h"
 #include "esp_elf.h"
 
+#include "private/elf_symbol.h"
+
 static const char *TAG = "elf_loader";
 
 extern const uint8_t test_elf_start[] asm("_binary_test_elf_bin_start");
@@ -95,6 +97,12 @@ int app_main(void)
         return ret;
     }
 
+    extern const struct esp_elfsym g_esp_hello_world_elfsyms[];
+
+    ESP_LOGI(TAG, "Register symbol table");
+
+    esp_elf_register_symbol((const void *)g_esp_hello_world_elfsyms);
+
     ret = esp_elf_relocate(&elf, buffer);
     if (ret < 0) {
         ESP_LOGE(TAG, "Failed to relocate ELF file errno=%d", ret);
@@ -104,6 +112,10 @@ int app_main(void)
     ESP_LOGI(TAG, "Start to run ELF file");
 
     esp_elf_request(&elf, 0, argc, argv);
+
+    ESP_LOGI(TAG, "Unregister symbol table");
+
+    esp_elf_unregister_symbol(g_esp_hello_world_elfsyms);
 
     ESP_LOGI(TAG, "Success to exit from ELF file");
 

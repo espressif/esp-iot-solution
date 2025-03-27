@@ -24,7 +24,14 @@
 #define sflags(_s, _f)              (((_s)->flags & (_f)) == (_f))
 #define ADDR_OFFSET                 (0x400)
 
+#ifdef CONFIG_ELF_LOADER_NUMBER_SYMBOLS
+#define SYMBOL_TABLES_NO            CONFIG_ELF_LOADER_NUMBER_SYMBOLS
+#else
+#define SYMBOL_TABLES_NO            (32)
+#endif
+
 static const char *TAG = "ELF";
+static const void *g_symbol_tables[SYMBOL_TABLES_NO];
 
 #if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
 
@@ -383,7 +390,7 @@ int esp_elf_relocate(esp_elf_t *elf, const uint8_t *pbuf)
         return ret;
     }
 
-    ESP_LOGI(TAG, "elf->entry=%p\n", elf->entry);
+    ESP_LOGI(TAG, "elf->entry=%p", elf->entry);
 
     /* Relocation section data */
 
@@ -646,4 +653,71 @@ void esp_elf_print_sec(esp_elf_t *elf)
     }
 
     ESP_LOGI(TAG, "entry:  %p", elf->entry);
+}
+
+/**
+ * @brief Register symbol table to global symbol tables array.
+ *
+ * @param symbol_tables - Pointer to symbol table structure
+ *
+ * @return 0 if success, -EEXIST if already registered, -ENOMEM if no space.
+ */
+int esp_elf_register_symbol(const void *symbol_tables)
+{
+    for (int i = 0; i < SYMBOL_TABLES_NO; i++) {
+        if (g_symbol_tables[i] == symbol_tables) {
+            return -EEXIST;
+        } else if (g_symbol_tables[i] == NULL) {
+            g_symbol_tables[i] = symbol_tables;
+            return 0;
+        }
+    }
+
+    return -ENOMEM;
+}
+
+/**
+ * @brief Unregister symbol table from global symbol tables array.
+ *
+ * @param symbol_tables - Pointer to symbol table structure to remove
+ *
+ * @return 0 if success, -EINVAL if symbol table not found.
+ */
+int esp_elf_unregister_symbol(const void *symbol_tables)
+{
+    for (int i = 0; i < SYMBOL_TABLES_NO; i++) {
+        if (g_symbol_tables[i] == symbol_tables) {
+            g_symbol_tables[i] = NULL;
+            return 0;
+        }
+    }
+
+    return -EINVAL;
+}
+
+/**
+ * @brief Find symbol address by symbol name in registered tables.
+ *
+ * @param sym_name - Symbol name string to search
+ *
+ * @return Symbol address if found, 0 if not found.
+ * @note Search order is reverse registration order (latest registered first).
+ */
+uintptr_t esp_elf_find_symbol(const char *sym_name)
+{
+    const struct esp_elfsym *syms;
+    for (int i = SYMBOL_TABLES_NO - 1; i >= 0; i--) {
+        if (g_symbol_tables[i]) {
+            syms = (const struct esp_elfsym *)g_symbol_tables[i];
+            while (syms->name) {
+                if (!strcmp(syms->name, sym_name)) {
+                    return (uintptr_t)syms->sym;
+                }
+
+                syms++;
+            }
+        }
+    }
+
+    return 0;
 }

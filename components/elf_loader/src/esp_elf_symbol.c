@@ -19,6 +19,7 @@
 
 #include "rom/ets_sys.h"
 
+#include "esp_elf.h"
 #include "private/elf_symbol.h"
 
 extern int __ltdf2(double a, double b);
@@ -199,7 +200,8 @@ uintptr_t elf_find_sym(const char *sym_name)
 
         syms++;
     }
+
 #endif
 
-    return 0;
+    return esp_elf_find_symbol(sym_name);
 }
