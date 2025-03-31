@@ -9,9 +9,9 @@ dependencies:
   idf: ">=5.3"
   cmake_utilities: "*"
   touch_sensor_fsm:
-      version: "*"
+      version: "0.5.*"
   touch_sensor_lowlevel:
-      version: "*"
+      version: "0.8.*"
 examples:
   - path: ../../../examples/touch/touch_proximity
 sbom:
