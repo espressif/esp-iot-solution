@@ -1,5 +1,11 @@
 menu "USB Device UAC"
 
+    config USB_DEVICE_UAC_AS_PART
+        bool "Using customer tinyusb configs and descriptors"
+        default n
+        help
+            If enable this feature, will need to write the `tusb_config.h` and `usb_descriptors.c` files in the project.
+
     config UAC_SPEAKER_CHANNEL_NUM
         int "UAC Speaker channel number"
         range 0 8
