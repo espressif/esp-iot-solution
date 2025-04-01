@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.0.4 - 2025-4-1
+
+### Bug Fixes:
+
+* Fix USB host interface release when URB is not cleared.
+
 ## v1.0.3 - 2025-3-27
 
 ### Bug Fixes:

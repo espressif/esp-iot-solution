@@ -39,7 +39,11 @@ components/usb/iot_usbh/test_apps:
 
 components/usb/iot_usbh_cdc/test_apps:
   enable:
-    - if: IDF_TARGET in ["esp32s2","esp32s3"]
+    - if: IDF_TARGET in ["esp32s2","esp32s3","esp32p4"]
+
+components/usb/iot_usbh_modem/test_apps:
+  enable:
+    - if: IDF_TARGET in ["esp32s2","esp32s3","esp32p4"]
 
 components/i2c_bus/test_apps:
   enable:

@@ -190,11 +190,11 @@ esp_err_t esp_modem_netif_clear_default_handlers(esp_modem_netif_driver_t *h)
 {
     esp_modem_netif_driver_t *driver = h;
     esp_err_t ret;
-    ret = esp_modem_remove_event_handler(driver->dte, esp_netif_action_start);
+    ret = esp_modem_remove_event_handler(driver->dte, esp_netif_action_start, ESP_MODEM_EVENT_PPP_START);
     if (ret != ESP_OK) {
         goto clear_event_failed;
     }
-    ret = esp_modem_remove_event_handler(driver->dte, esp_netif_action_stop);
+    ret = esp_modem_remove_event_handler(driver->dte, esp_netif_action_stop, ESP_MODEM_EVENT_PPP_STOP);
     if (ret != ESP_OK) {
         goto clear_event_failed;
     }

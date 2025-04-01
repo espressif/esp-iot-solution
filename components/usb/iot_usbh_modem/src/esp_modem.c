@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -24,10 +24,10 @@ esp_err_t esp_modem_set_event_handler(esp_modem_dte_t *dte, esp_event_handler_t 
     return esp_event_handler_register_with(esp_dte->event_loop_hdl, ESP_MODEM_EVENT, event_id, handler, handler_args);
 }
 
-esp_err_t esp_modem_remove_event_handler(esp_modem_dte_t *dte, esp_event_handler_t handler)
+esp_err_t esp_modem_remove_event_handler(esp_modem_dte_t *dte, esp_event_handler_t handler, int32_t event_id)
 {
     esp_modem_dte_internal_t *esp_dte = __containerof(dte, esp_modem_dte_internal_t, parent);
-    return esp_event_handler_unregister_with(esp_dte->event_loop_hdl, ESP_MODEM_EVENT, ESP_EVENT_ANY_ID, handler);
+    return esp_event_handler_unregister_with(esp_dte->event_loop_hdl, ESP_MODEM_EVENT, event_id, handler);
 }
 
 esp_err_t esp_modem_post_event(esp_modem_dte_t *dte, int32_t event_id, void* event_data, size_t event_data_size, TickType_t ticks_to_wait)
@@ -102,7 +102,7 @@ esp_err_t esp_modem_default_destroy(esp_modem_dte_t *dte)
     esp_modem_dce_t *dce = dte->dce;
     ESP_MODEM_ERR_CHECK(dce && netif_adapter, "Cannot destroy dce or netif_adapter", err_params);
     ESP_MODEM_ERR_CHECK(esp_modem_netif_clear_default_handlers(netif_adapter) == ESP_OK,
-                        "modem_netif failed to clread handlers", err);
+                        "modem_netif failed to clear handlers", err);
     esp_modem_netif_destroy(netif_adapter);
     dte->netif_adapter = NULL;
     ESP_MODEM_ERR_CHECK(dce->deinit(dce) == ESP_OK, "failed to deinit dce", err);
@@ -139,6 +139,7 @@ esp_err_t esp_modem_default_attach(esp_modem_dte_t *dte, esp_modem_dce_t *dce, e
                         "modem_netif failed to set handlers", err);
     ESP_MODEM_ERR_CHECK(esp_netif_attach(ppp_netif, modem_netif_adapter) == ESP_OK,
                         "attach netif to modem adapter failed", err);
+    dte->netif_adapter = modem_netif_adapter;
     ESP_MODEM_ERR_CHECK(esp_modem_notify_initialized(dte) == ESP_OK, "DTE init notification failed", err);
     return ESP_OK;
 err:
