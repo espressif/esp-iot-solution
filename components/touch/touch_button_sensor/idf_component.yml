@@ -1,5 +1,6 @@
-version: "0.1.0"
+version: "0.2.1"
 targets:
+  - esp32
   - esp32s2
   - esp32s3
   - esp32p4
@@ -9,12 +10,12 @@ url: https://github.com/espressif/esp-iot-solution/tree/master/components/touch/
 repository: https://github.com/espressif/esp-iot-solution.git
 issues: https://github.com/espressif/esp-iot-solution/issues
 dependencies:
-  idf: ">=5.3" #only 5.3 version library is provided
+  idf: ">=4.4"
   cmake_utilities: "0.*"
   touch_sensor_fsm:
-    version: "0.5.*"
+    version: ">=0.7.0"
   touch_sensor_lowlevel:
-    version: ">=0.6.0"
+    version: ">=0.8.1"
     public: true
 files:
   exclude:

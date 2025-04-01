@@ -117,3 +117,6 @@ XUNIT_RESULT.xml
 #launchpad
 binaries/
 output.json
+
+#components cache
+**/dist/

@@ -124,7 +124,7 @@ The touch button sensor component provides an event handling mechanism to proces
 Examples
 --------
 
-- :example:`touch/touch_button`
+- :example:`touch/touch_button_sensor`
 
 API Reference
 ---------------
