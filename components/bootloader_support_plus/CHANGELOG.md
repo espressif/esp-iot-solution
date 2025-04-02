@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.3.8 - 2025-04-02
+
+### Fix:
+
+- Fix symbols that cannot be displayed properly in readme.
+
 ## v0.3.7 - 2025-02-28
 
 ### Improve:
