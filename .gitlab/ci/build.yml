@@ -966,6 +966,16 @@ build_example_usb_host_usb_hub_dual_camera:
   variables:
     EXAMPLE_DIR: examples/usb/host/usb_hub_dual_camera
 
+build_example_usb_host_usb_host_eth_example:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_usb_host_usb_host_eth_example
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.4
+  variables:
+    EXAMPLE_DIR: examples/usb/host/usb_host_eth_example
+
 build_example_usb_host_usb_msc_ota:
   extends:
     - .build_examples_template

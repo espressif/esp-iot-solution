@@ -652,6 +652,9 @@
 .patterns-example_usb_host_usb_rndis_4g_module: &patterns-example_usb_host_usb_rndis_4g_module
   - "examples/usb/host/usb_rndis_4g_module/**/*"
 
+.patterns-example_usb_host_usb_host_eth_example: &patterns-example_usb_host_usb_host_eth_example
+  - "examples/usb/host/usb_host_eth_example/**/*"
+
 .patterns-example_usb_otg_usb_host_device_mode_manual_switch: &patterns-example_usb_otg_usb_host_device_mode_manual_switch
   - "examples/usb/otg/usb_host_device_mode_manual_switch/**/*"
 
@@ -1649,6 +1652,16 @@
       changes: *patterns-components_iot_eth
     - <<: *if-dev-push
       changes: *patterns-example_usb_host_usb_rndis_4g_module
+
+.rules:build:example_usb_host_usb_host_eth_example:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_usb_host_usb_host_eth_example
 
 .rules:build:example_usb_otg_usb_host_device_mode_manual_switch:
   rules:
