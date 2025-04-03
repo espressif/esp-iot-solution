@@ -1,4 +1,4 @@
-version: "1.1.1"
+version: "1.2.0"
 targets:
   - esp32
   - esp32s2
@@ -13,6 +13,7 @@ dependencies:
   espressif/cmake_utilities: "0.*"
 examples:
   - path:  ../../examples/elf_loader/build_elf_file_example
+  - path:  ../../examples/elf_loader/elf_embed_example
   - path:  ../../examples/elf_loader/elf_loader_example
 sbom:
   supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'

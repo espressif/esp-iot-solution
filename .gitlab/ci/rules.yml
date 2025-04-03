@@ -752,6 +752,9 @@
 .patterns-example_elf_loader_build_elf_file_example: &patterns-example_elf_loader_build_elf_file_example
   - "examples/elf_loader/build_elf_file_example/**/*"
 
+.patterns-example_elf_loader_elf_embed_example: &patterns-example_elf_loader_elf_embed_example
+  - "examples/elf_loader/elf_embed_example/**/*"
+
 .patterns-example_zero_cross_detection_example: &patterns-example_zero_cross_detection_example
   - "examples/zero_cross_detecion/**/*"
 
@@ -1888,6 +1891,16 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-example_elf_loader_build_elf_file_example
+
+.rules:build:example_elf_loader_elf_embed_example:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_elf_loader_elf_embed_example
 
 .rules:build:example_relinker:
   rules:

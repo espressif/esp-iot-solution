@@ -51,6 +51,7 @@ menu "Espressif ELF Loader Configuration"
 
             config ELF_LOADER_NUMBER_SYMBOLS
                 int "Maximum Number of registered symbol tables"
+                range 1 4096
                 default 32
                 help
                     This configuration is the maximum number of registered symbol tables,

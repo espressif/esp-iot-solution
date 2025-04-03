@@ -59,9 +59,9 @@ macro(project_elf project_name)
                         COMMAND +${CMAKE_MAKE_PROGRAM} "__idf_${c}/fast"
                         COMMENT "Build Component: ${c}"
                 )
-                list(APPEND elf_dependeces "elf_${c}_app")
+                list(APPEND elf_dependencies "elf_${c}_app")
             else()
-                list(APPEND elf_dependeces "idf::${c}")
+                list(APPEND elf_dependencies "idf::${c}")
             endif()
         endforeach()
     endif()
@@ -70,7 +70,7 @@ macro(project_elf project_name)
     endif()
     spaces2list(elf_libs)
 
-    # Create a custom target to generate the ELF file
+    # Define how to build the ELF file
     add_custom_command(
         OUTPUT ${elf_app}
         COMMAND ${CMAKE_C_COMPILER} ${cflags} ${elf_libs} -o ${elf_app}

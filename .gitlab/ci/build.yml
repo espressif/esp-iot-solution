@@ -1692,6 +1692,14 @@ build_example_elf_loader_build_elf_file_example:
   variables:
     EXAMPLE_DIR: examples/elf_loader/build_elf_file_example
 
+build_example_elf_loader_elf_embed_example:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_elf_loader_elf_embed_example
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: examples/elf_loader/elf_embed_example
+
 build_components_utilities_adc_tp_calibration_test_apps:
   extends:
     - .build_examples_template

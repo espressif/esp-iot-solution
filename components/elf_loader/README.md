@@ -106,4 +106,5 @@ This command will download the example elf_loader_example into the current folde
 
 Alternatively, you can download examples from the esp-iot-solution repository:
 1. [build_elf_file_example](https://github.com/espressif/esp-iot-solution/tree/master/examples/elf_loader/build_elf_file_example)
-2. [elf_loader_example](https://github.com/espressif/esp-iot-solution/tree/master/examples/elf_loader/elf_loader_example)
+2. [elf_embed_example](https://github.com/espressif/esp-iot-solution/tree/master/examples/elf_loader/elf_embed_example)
+3. [elf_loader_example](https://github.com/espressif/esp-iot-solution/tree/master/examples/elf_loader/elf_loader_example)

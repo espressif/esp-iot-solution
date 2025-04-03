@@ -7,6 +7,8 @@ docs/check_lang_folder_sync.sh
 docs/zh_CN/conf.py
 docs/zh_CN/conf.py
 examples/bluetooth/ble_ota/tools/esp_delta_ota_patch_gen.py
+examples/elf_loader/elf_loader_example/main/test_riscv.elf
+examples/elf_loader/elf_loader_example/main/test_xtensa.elf
 examples/usb/device/bootloader_uf2/utils/redirect.sh
 examples/usb/device/usb_msc_wireless_disk/tools/analyze_upload_log_en.py
 examples/usb/device/usb_msc_wireless_disk/tools/upload_speed_test.py

@@ -14,10 +14,12 @@ function(elf_embed_binary app_name app_path output_bin)
     set(gen_dir "${build_dir}/generated/${app_name}")
     file(MAKE_DIRECTORY ${gen_dir})
 
-    # File paths
-    set(elf_app_dir "${build_dir}/elf_${app_name}")
+    # Compile project files paths
+    set(elf_app_dir "${CMAKE_CURRENT_BINARY_DIR}/elf_${app_name}")
     set(elf_file "${elf_app_dir}/${app_name}.app.elf")
     set(elf_output_bin "${build_dir}/${output_bin}.bin")
+
+    # Script paths
     set(symbols_script "${PY_PATH}/tool/symbols.py")
     set(symbol_c_file "${gen_dir}/esp_${app_name}.c")
 
@@ -28,19 +30,18 @@ function(elf_embed_binary app_name app_path output_bin)
         CMAKE_ARGS
             -DIDF_PATH=${idf_path}
             -DIDF_TARGET=${idf_target}
-            -DSDKCONFIG=${elf_app_dir}/sdkconfig
+            -DSDKCONFIG=${app_path}/sdkconfig
         BINARY_DIR ${elf_app_dir}
         BUILD_BYPRODUCTS ${elf_file}
         BUILD_ALWAYS 1
+        CMAKE_GENERATOR "Unix Makefiles"
+        BUILD_COMMAND make elf
     )
 
     # Binary file generation
     add_custom_command(
         OUTPUT ${elf_output_bin}
         COMMAND ${CMAKE_COMMAND} -E copy ${elf_file} ${elf_output_bin}
-        COMMAND ${CMAKE_COMMAND} -E copy
-                "${elf_file}"
-                "${elf_output_bin}"
         DEPENDS ${app_name}
         COMMENT "Generating BIN file"
     )
