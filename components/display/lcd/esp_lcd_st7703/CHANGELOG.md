@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.0.3 - 2025-04-03
+
+### bugfix:
+
+* Added configuration for sending initialization parameters in command mode
+
 ## v1.0.2 - 2025-01-13
 
 ### bugfix:

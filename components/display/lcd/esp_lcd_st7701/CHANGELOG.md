@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.1.2 - 2025-04-03
+
+### bugfix:
+
+* Fixed the issue where the ST7701 RGB interface mirror and swap were ineffective
+
 ## v1.1.1 - 2024-11-10
 
 ### bugfix:

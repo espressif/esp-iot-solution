@@ -12,6 +12,18 @@ Implementation of the ST7703 LCD controller with esp_lcd component.
 
 For more information on LCD, please refer to the [LCD documentation](https://docs.espressif.com/projects/esp-iot-solution/en/latest/display/lcd/index.html).
 
+If the screen still fails to turn on after confirming that the initialization register parameters and timing parameters are correct, you can try enabling the `init_in_command_mode` parameter in the `st7703_vendor_config_t` configuration.
+
+```c
+
+    st7703_vendor_config_t vendor_config = {
+        ...
+        .init_in_command_mode = true,
+        ...
+    };
+
+```
+
 ## Add to project
 
 Packages from this repository are uploaded to [Espressif's component service](https://components.espressif.com/).
