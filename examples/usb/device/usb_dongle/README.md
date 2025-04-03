@@ -65,14 +65,7 @@ ESP BOARD          USB CONNECTOR (type A)
     >
     ```
 
-3. 确认已经完整下载  `ESP-IOT-SOLUTION` 仓库。
-
-    ```
-    >git clone -b usb/add_usb_solutions --recursive https://github.com/espressif/esp-iot-solution
-    >
-    ```
-
-4. 设置编译目标为 `esp32s2` 或 `esp32s3`。
+3. 设置编译目标为 `esp32s2` 或 `esp32s3`。
 
     ```
     >idf.py set-target esp32s2

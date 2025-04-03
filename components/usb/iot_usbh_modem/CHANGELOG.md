@@ -1,5 +1,10 @@
 # ChangeLog
 
+## v1.1.4 - 2024-3-20
+
+* Support 4g module `YM310_X09`
+* Add a debug print
+
 ## v1.1.3 - 2024-3-20
 
 * Support 4g module `EG25_GL` and `AIR780E`

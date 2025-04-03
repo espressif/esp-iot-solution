@@ -110,9 +110,8 @@ static esp_err_t _ringbuf_pop(RingbufHandle_t ringbuf_hdl, uint8_t *buf, size_t 
 static esp_err_t _ringbuf_push(RingbufHandle_t ringbuf_hdl, const uint8_t *buf, size_t write_bytes, TickType_t ticks_to_wait)
 {
     int res = xRingbufferSend(ringbuf_hdl, buf, write_bytes, ticks_to_wait);
-
     if (res != pdTRUE) {
-        ESP_LOGW(TAG, "The in buffer is too small, the data has been lost");
+        ESP_LOGW(TAG, "The ringbuffer is full, the data has been lost");
         return ESP_FAIL;
     }
     return ESP_OK;
@@ -392,8 +391,9 @@ static void in_xfer_cb(usb_transfer_t *in_xfer)
         if (data_len + in_xfer->actual_num_bytes >= cdc->in_ringbuf_size) {
             // TODO: add notify cb for user
             // if ringbuffer overflow, drop the data
-            ESP_LOGD(TAG, "in ringbuf full");
+            ESP_LOGW(TAG, "CDC in ringbuf is full!");
         } else {
+            ESP_LOG_BUFFER_HEXDUMP(TAG, in_xfer->data_buffer, in_xfer->actual_num_bytes, ESP_LOG_DEBUG);
             if (_ringbuf_push(cdc->in_ringbuf_handle, in_xfer->data_buffer, in_xfer->actual_num_bytes, pdMS_TO_TICKS(TIMEOUT_USB_RINGBUF_MS)) != ESP_OK) {
                 ESP_LOGE(TAG, "in ringbuf push failed");
             }
@@ -619,7 +619,7 @@ static esp_err_t _cdc_open(usbh_cdc_t *cdc)
     ESP_ERROR_CHECK(usb_host_get_active_config_descriptor(cdc->dev_hdl, &config_desc));
     ESP_ERROR_CHECK(usb_host_get_device_descriptor(cdc->dev_hdl, &device_desc));
 
-    cdc_parsed_info_t cdc_info;
+    cdc_parsed_info_t cdc_info = {0};
     ret = cdc_parse_interface_descriptor(device_desc, config_desc, cdc->intf_idx, &cdc->data.intf_desc, &cdc_info);
     if (ret != ESP_OK) {
         goto err;
@@ -795,12 +795,12 @@ esp_err_t usbh_cdc_read_bytes(usbh_cdc_handle_t cdc_handle, const uint8_t *buf, 
     usbh_cdc_t *cdc = (usbh_cdc_t *) cdc_handle;
     ESP_GOTO_ON_FALSE(cdc->state == USBH_CDC_OPEN, ESP_ERR_INVALID_STATE, fail, TAG, "Device is not connected");
 
-    size_t data_len = _get_ringbuf_len(cdc->in_ringbuf_handle);
-    if (data_len > *length) {
-        data_len = *length;
+    size_t data_len = *length;
+    if (data_len > CONFIG_IN_RINGBUFFER_SIZE) {
+        data_len = CONFIG_IN_RINGBUFFER_SIZE;
     }
 
-    ret = _ringbuf_pop(cdc->in_ringbuf_handle, (uint8_t *)buf, data_len, length, pdMS_TO_TICKS(TIMEOUT_USB_RINGBUF_MS));
+    ret = _ringbuf_pop(cdc->in_ringbuf_handle, (uint8_t *)buf, data_len, length, ticks_to_wait);
     if (ret != ESP_OK) {
         ESP_LOGD(TAG, "cdc read failed");
         *length = 0;

@@ -71,14 +71,6 @@ Refer to `soc/usb_pins.h` to find the real GPIO number of **USBPHY_DP_NUM** and 
     >
     ```
 
-* Confirm that the `ESP-IOT-SOLUTION` repository has been completely downloaded, and switch to the `usb/add_usb_solutions` branch.
-
-    ```
-    >git clone -b usb/add_usb_solutions --recursive https://github.com/espressif/esp-iot-solution
-    >cd esp-iot-solution/example/usb/device/usb_dongle
-    >
-    ```
-
 * Set the compilation target to `esp32s2` or `esp32s3`
 
     ```

@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v1.0.3 - 2025-3-27
+
+### Bug Fixes:
+
+* Fixed an incorrect `ring_buffer pop` request value of 0.
+* Fixed uninitialized structure issue.
+
 ## v1.0.2 - 2025-3-13
 
 ### Bug Fixes:

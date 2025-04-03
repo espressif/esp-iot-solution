@@ -101,6 +101,7 @@ err:
 esp_err_t esp_modem_dce_handle_response_default(esp_modem_dce_t *dce, const char *line)
 {
     esp_err_t err = ESP_FAIL;
+    ESP_LOGD(TAG, "Received line:%s\n", line);
     if (strstr(line, MODEM_RESULT_CODE_SUCCESS)) {
         err = esp_modem_process_command_done(dce, ESP_MODEM_STATE_SUCCESS);
     } else if (strstr(line, MODEM_RESULT_CODE_ERROR)) {
