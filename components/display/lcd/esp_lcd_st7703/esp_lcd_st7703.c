@@ -26,6 +26,7 @@ typedef struct {
     uint8_t colmod_val; // save surrent value of LCD_CMD_COLMOD register
     const st7703_lcd_init_cmd_t *init_cmds;
     uint16_t init_cmds_size;
+    bool init_in_command_mode;
     struct {
         unsigned int reset_level: 1;
     } flags;
@@ -97,6 +98,7 @@ esp_err_t esp_lcd_new_panel_st7703(const esp_lcd_panel_io_handle_t io, const esp
     st7703->init_cmds_size = vendor_config->init_cmds_size;
     st7703->reset_gpio_num = panel_dev_config->reset_gpio_num;
     st7703->flags.reset_level = panel_dev_config->flags.reset_active_high;
+    st7703->init_in_command_mode = vendor_config->init_in_command_mode;
 
     // Create MIPI DPI panel
     esp_lcd_panel_handle_t panel_handle = NULL;
@@ -181,7 +183,9 @@ static esp_err_t panel_st7703_init(esp_lcd_panel_t *panel)
     uint16_t init_cmds_size = 0;
     bool is_cmd_overwritten = false;
 
-    ESP_RETURN_ON_ERROR(st7703->init(panel), TAG, "init MIPI DPI panel failed");
+    if (!st7703->init_in_command_mode) {
+        ESP_RETURN_ON_ERROR(st7703->init(panel), TAG, "init MIPI DPI panel failed");
+    }
 
     uint8_t ID[3];
     ESP_RETURN_ON_ERROR(esp_lcd_panel_io_rx_param(io, 0x04, ID, 3), TAG, "read ID failed");
@@ -233,6 +237,10 @@ static esp_err_t panel_st7703_init(esp_lcd_panel_t *panel)
         vTaskDelay(pdMS_TO_TICKS(init_cmds[i].delay_ms));
     }
     ESP_LOGD(TAG, "send init commands success");
+
+    if (st7703->init_in_command_mode) {
+        ESP_RETURN_ON_ERROR(st7703->init(panel), TAG, "init MIPI DPI panel failed");
+    }
 
     return ESP_OK;
 }

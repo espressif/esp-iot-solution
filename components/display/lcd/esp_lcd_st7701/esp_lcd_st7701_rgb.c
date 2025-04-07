@@ -338,9 +338,20 @@ static esp_err_t panel_st7701_mirror(esp_lcd_panel_t *panel, bool mirror_x, bool
         } else {
             st7701->madctl_val &= ~LCD_CMD_ML_BIT;
         }
+
+        // Enable the Command2 BK0
+        ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, ST7701_CMD_CND2BKxSEL, (uint8_t []) {
+            ST7701_CMD_BKxSEL_BYTE0, ST7701_CMD_BKxSEL_BYTE1, ST7701_CMD_BKxSEL_BYTE2, ST7701_CMD_BKxSEL_BYTE3,
+                                     ST7701_CMD_BKxSEL_BK0 | ST7701_CMD_CN2_BIT,
+        }, 5), TAG, "send command failed");
         ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, ST7701_CMD_SDIR, (uint8_t[]) {
             sdir_val,
         }, 1), TAG, "send command failed");;
+
+        // Disable Command2
+        ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, ST7701_CMD_CND2BKxSEL, (uint8_t []) {
+            ST7701_CMD_BKxSEL_BYTE0, ST7701_CMD_BKxSEL_BYTE1, ST7701_CMD_BKxSEL_BYTE2, ST7701_CMD_BKxSEL_BYTE3, 0,
+        }, 5), TAG, "send command failed");
         ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, LCD_CMD_MADCTL, (uint8_t[]) {
             st7701->madctl_val,
         }, 1), TAG, "send command failed");;

@@ -19,6 +19,9 @@ GPATH
 # eclipse setting
 .settings
 
+# clangd cache directory files
+.cache
+
 # MacOS directory files
 .DS_Store
 

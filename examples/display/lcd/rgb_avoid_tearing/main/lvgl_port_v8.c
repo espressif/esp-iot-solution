@@ -595,6 +595,7 @@ esp_err_t lvgl_port_init(esp_lcd_panel_handle_t lcd_handle, esp_lcd_touch_handle
     ESP_ERROR_CHECK(tick_init());
 
     lvgl_port_interface = interface;
+#if LVGL_PORT_AVOID_TEAR_ENABLE
     switch (interface) {
 #if SOC_LCDCAM_RGB_LCD_SUPPORTED
     case LVGL_PORT_INTERFACE_RGB:
@@ -613,6 +614,7 @@ esp_err_t lvgl_port_init(esp_lcd_panel_handle_t lcd_handle, esp_lcd_touch_handle
         ESP_LOGE(TAG, "Invalid interface type");
         return ESP_ERR_INVALID_ARG;
     }
+#endif
 
     lv_disp_t *disp = display_init(lcd_handle);
     assert(disp);
