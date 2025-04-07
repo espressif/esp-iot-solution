@@ -25,6 +25,7 @@
 #include "usb/usb_host.h"
 #include "usb/cdc_acm_host.h"
 #include "usb_host_eth.h"  // Include our new header
+#include "app_wifi.h"
 
 #define EXAMPLE_USB_HOST_PRIORITY   (20)
 #define USE_CH397A
@@ -199,6 +200,7 @@ static void usb_lib_task(void *arg)
  */
 void app_main(void)
 {
+    app_wifi_main();
     device_disconnected_sem = xSemaphoreCreateBinary();
     assert(device_disconnected_sem);
 
