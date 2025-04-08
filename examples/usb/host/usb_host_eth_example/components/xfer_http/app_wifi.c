@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -19,7 +19,11 @@
 #include "lwip/err.h"
 #include "lwip/sys.h"
 #include "lwip/ip_addr.h"
-
+#include "lwip/opt.h"
+#include "lwip/err.h"
+#include "lwip/sys.h"
+#include "lwip/lwip_napt.h"
+#include "dhcpserver/dhcpserver.h"
 /* The examples use WiFi configuration that you can set via 'make menuconfig'.
 
    If you'd rather not, just change the below entries to strings with
@@ -54,6 +58,8 @@ static void event_handler(void* arg, esp_event_base_t event_base,
         wifi_event_ap_staconnected_t* event = (wifi_event_ap_staconnected_t*) event_data;
         ESP_LOGI(TAG, "station "MACSTR" join, AID=%d",
                  MAC2STR(event->mac), event->aid);
+        ip_napt_enable(_g_esp_netif_soft_ap_ip.ip.addr, true);
+        ESP_LOGI(TAG, "ip_napt_enable");
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_AP_STADISCONNECTED) {
         wifi_event_ap_stadisconnected_t* event = (wifi_event_ap_stadisconnected_t*) event_data;
         ESP_LOGI(TAG, "station "MACSTR" leave, AID=%d",
@@ -77,6 +83,15 @@ void wifi_init_softap(esp_netif_t *wifi_netif)
         ESP_ERROR_CHECK(esp_netif_set_ip_info(wifi_netif, &ip));
         ESP_ERROR_CHECK(esp_netif_dhcps_start(wifi_netif));
     }
+    // Configure DNS server to 8.8.8.8
+    esp_netif_dns_info_t dns;
+    dns.ip.u_addr.ip4.addr = ipaddr_addr("8.8.8.8");
+    dns.ip.type = IPADDR_TYPE_V4;
+    dhcps_offer_t dhcps_dns_value = OFFER_DNS;
+    ESP_ERROR_CHECK(esp_netif_dhcps_stop(wifi_netif));
+    ESP_ERROR_CHECK(esp_netif_dhcps_option(wifi_netif, ESP_NETIF_OP_SET, ESP_NETIF_DOMAIN_NAME_SERVER, &dhcps_dns_value, sizeof(dhcps_dns_value)));
+    ESP_ERROR_CHECK(esp_netif_set_dns_info(wifi_netif, ESP_NETIF_DNS_MAIN, &dns));
+    ESP_ERROR_CHECK(esp_netif_dhcps_start(wifi_netif));
     wifi_config_t wifi_config;
     memset(&wifi_config, 0, sizeof(wifi_config_t));
     snprintf((char*)wifi_config.ap.ssid, 32, "%s", EXAMPLE_ESP_WIFI_AP_SSID);
