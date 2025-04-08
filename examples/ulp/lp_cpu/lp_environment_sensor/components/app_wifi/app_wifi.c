@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -107,6 +107,14 @@ static void intro_print(bool provisioned)
 
 static uint8_t *custom_mfg_data = NULL;
 static size_t custom_mfg_data_len = 0;
+
+static esp_err_t qrcode_display(const char *text)
+{
+#define MAX_QRCODE_VERSION 5
+    esp_qrcode_config_t cfg = ESP_QRCODE_CONFIG_DEFAULT();
+    cfg.max_qrcode_version = MAX_QRCODE_VERSION;
+    return esp_qrcode_generate(&cfg, text);
+}
 
 esp_err_t app_wifi_set_custom_mfg_data(uint16_t device_type, uint8_t device_subtype)
 {
