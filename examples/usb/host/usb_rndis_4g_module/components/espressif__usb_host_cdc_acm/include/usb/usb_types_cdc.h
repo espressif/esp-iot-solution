@@ -246,3 +246,32 @@ typedef struct {
         uint8_t val;
     } bmCapabilities;
 } __attribute__((packed)) cdc_acm_acm_desc_t;
+
+/**
+ * @brief Line Coding structure
+ * @see Table 17, USB CDC-PSTN specification rev. 1.2
+ */
+typedef struct {
+    uint32_t dwDTERate;  // in bits per second
+    uint8_t bCharFormat; // 0: 1 stopbit, 1: 1.5 stopbits, 2: 2 stopbits
+    uint8_t bParityType; // 0: None, 1: Odd, 2: Even, 3: Mark, 4: Space
+    uint8_t bDataBits;   // 5, 6, 7, 8 or 16
+} __attribute__((packed)) cdc_acm_line_coding_t;
+
+/**
+ * @brief UART State Bitmap
+ * @see Table 31, USB CDC-PSTN specification rev. 1.2
+ */
+typedef union {
+    struct {
+        uint16_t bRxCarrier : 1;  // State of receiver carrier detection mechanism of device. This signal corresponds to V.24 signal 109 and RS-232 signal DCD.
+        uint16_t bTxCarrier : 1;  // State of transmission carrier. This signal corresponds to V.24 signal 106 and RS-232 signal DSR.
+        uint16_t bBreak : 1;      // State of break detection mechanism of the device.
+        uint16_t bRingSignal : 1; // State of ring signal detection of the device.
+        uint16_t bFraming : 1;    // A framing error has occurred.
+        uint16_t bParity : 1;     // A parity error has occurred.
+        uint16_t bOverRun : 1;    // Received data has been discarded due to overrun in the device.
+        uint16_t reserved : 9;
+    };
+    uint16_t val;
+} cdc_acm_uart_state_t;

@@ -8,7 +8,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include "usb/usb_helpers.h"
 
-#include "cdc_descriptors.hpp"
+#include "descriptors/cdc_descriptors.hpp"
 #include "test_parsing_checker.hpp"
 #include "cdc_host_descriptor_parsing.h"
 #include "usb/cdc_acm_host.h"

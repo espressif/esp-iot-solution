@@ -1,3 +1,8 @@
+## 2.0.6
+
+- Fixed device opening for devices with CDC class defined in Device descriptor https://github.com/espressif/esp-usb/pull/89
+- Fixed driver installation from a task with priority >= CDC driver priority
+
 ## 2.0.5
 
 - Fixed CDC descriptor parsing logic, when some CDC devices could not be opened

@@ -7,27 +7,21 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_err.h"
+#include "esp_log.h"
 #include "esp_netif.h"
-#include "usbh_rndis.h"
-#include "app_wifi.h"
+#include "usb_host_rndis.h"
 #include "nvs_flash.h"
 #include "nvs.h"
 #include "esp_event.h"
 #include "dhcpserver/dhcpserver_options.h"
 #include "ping/ping_sock.h"
+#include "usb_host_rndis.h"
+#include "app_wifi.h"
+#include "usb/usb_host.h"
+#include "usb/cdc_acm_host.h"
 
 static const char *TAG = "4g_module";
-static esp_netif_t *s_netif = NULL;
-esp_netif_t *ap_netif = NULL;
-static modem_wifi_config_t s_modem_wifi_config = MODEM_WIFI_DEFAULT_CONFIG();
-
-void driver_free_rx_buffer(void *h, void* buffer)
-{
-    // assert(h == s_netif);
-    assert(buffer != NULL);
-    printf("!!! free %p\n", buffer);
-    free(buffer - 44);
-}
+#define EXAMPLE_USB_HOST_PRIORITY   (5)
 
 static void on_ping_success(esp_ping_handle_t hdl, void *args)
 {
@@ -54,98 +48,69 @@ static void on_ping_timeout(esp_ping_handle_t hdl, void *args)
     // Add Wait or Reset logic
 }
 
-/** Event handler for Ethernet events */
-static void eth_on_got_ip(void *arg, esp_event_base_t event_base,
-                          int32_t event_id, void *event_data)
+/**
+ * @brief USB Host library handling task
+ *
+ * @param arg Unused
+ */
+static void usb_lib_task(void *arg)
 {
-    ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
-    // if (!example_is_our_netif(EXAMPLE_NETIF_DESC_ETH, event->esp_netif)) {
-    //     return;
-    // }
-    ESP_LOGI(TAG, "Got IPv4 event: Interface \"%s\" address: " IPSTR, esp_netif_get_desc(event->esp_netif), IP2STR(&event->ip_info.ip));
-    esp_netif_dns_info_t dns_info;
-    esp_netif_get_dns_info(s_netif, ESP_NETIF_DNS_MAIN, &dns_info);
-    ESP_LOGI(TAG, "Main DNS server : " IPSTR, IP2STR(&dns_info.ip.u_addr.ip4));
-    esp_netif_ip_info_t ip_info = {};
-    esp_netif_get_ip_info(event->esp_netif, &ip_info);
-    ESP_LOGI(TAG, "Assigned IP address:"IPSTR ",", IP2STR(&ip_info.ip));
-}
-
-typedef struct {
-    esp_netif_driver_base_t base;
-    void *h;
-} app_rndis_netif_driver_t;
-
-esp_err_t app_rndis_attach_start(esp_netif_t * esp_netif, void *args)
-{
-    ESP_LOGI(TAG, "app_rndis_attach_start");
-    app_rndis_netif_driver_t *driver = args;
-    esp_netif_driver_ifconfig_t driver_cfg = {
-        .handle = (void *)1,                // not using an instance, USB-NCM is a static singleton (must be != NULL)
-        .transmit = usbh_rndis_eth_output,  // point to static Tx function
-        .driver_free_rx_buffer = driver_free_rx_buffer,    // point to Free Rx buffer function
+    const usb_host_config_t host_config = {
+        .skip_phy_setup = false,
+        .intr_flags = ESP_INTR_FLAG_LEVEL1,
+#if ENABLE_ENUM_FILTER_CALLBACK
+        .enum_filter_cb = set_config_cb,
+#endif
     };
-    driver->base.netif = esp_netif;
-    ESP_ERROR_CHECK(esp_netif_set_driver_config(esp_netif, &driver_cfg));
-    return ESP_OK;
+    ESP_ERROR_CHECK(usb_host_install(&host_config));
+    bool has_clients = true;
+    bool has_devices = false;
+    while (has_clients) {
+        uint32_t event_flags;
+        ESP_ERROR_CHECK(usb_host_lib_handle_events(portMAX_DELAY, &event_flags));
+        if (event_flags & USB_HOST_LIB_EVENT_FLAGS_NO_CLIENTS) {
+            ESP_LOGI(TAG, "Get FLAGS_NO_CLIENTS");
+            if (ESP_OK == usb_host_device_free_all()) {
+                ESP_LOGI(TAG, "All devices marked as free, no need to wait FLAGS_ALL_FREE event");
+                has_clients = false;
+            } else {
+                ESP_LOGI(TAG, "Wait for the FLAGS_ALL_FREE");
+                has_devices = true;
+            }
+        }
+        if (has_devices && event_flags & USB_HOST_LIB_EVENT_FLAGS_ALL_FREE) {
+            ESP_LOGI(TAG, "Get FLAGS_ALL_FREE");
+            has_clients = false;
+        }
+    }
+    ESP_LOGI(TAG, "No more clients and devices, uninstall USB Host library");
+
+    // Clean up USB Host
+    vTaskDelay(100); // Short delay to allow clients clean-up
+    usb_host_uninstall();
+    ESP_LOGD(TAG, "USB Host library is uninstalled");
+    vTaskDelete(NULL);
 }
 
 void app_main(void)
 {
-    esp_err_t ret = nvs_flash_init();
-    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        ret = nvs_flash_init();
-    }
-    ESP_ERROR_CHECK(ret);
+    // Install USB Host driver. Should only be called once in entire application
+    ESP_LOGI(TAG, "Installing USB Host");
 
-    ESP_ERROR_CHECK(esp_netif_init());
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
-    usbh_rndis_init();
+    // Create a task that will handle USB library events
+    BaseType_t task_created = xTaskCreate(usb_lib_task, "usb_lib", 4096, xTaskGetCurrentTaskHandle(), EXAMPLE_USB_HOST_PRIORITY, NULL);
+    assert(task_created == pdTRUE);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    const usb_host_rndis_config_t cfg = {0};
+    usbh_rndis_init(&cfg);
 
     usbh_rndis_create();
+    vTaskDelay(100 / portTICK_PERIOD_MS);
 
     usbh_rndis_open();
+    vTaskDelay(5000 / portTICK_PERIOD_MS);
 
-    ap_netif = modem_wifi_ap_init();
-    assert(ap_netif != NULL);
-    ESP_ERROR_CHECK(modem_wifi_set(&s_modem_wifi_config));
-
-    esp_netif_inherent_config_t esp_netif_config = ESP_NETIF_INHERENT_DEFAULT_ETH();
-
-    esp_netif_driver_ifconfig_t driver_cfg = {
-        .handle = (void *)1,                // not using an instance, USB-NCM is a static singleton (must be != NULL)
-        .transmit = usbh_rndis_eth_output,  // point to static Tx function
-        .driver_free_rx_buffer = driver_free_rx_buffer,    // point to Free Rx buffer function
-    };
-
-    esp_netif_config_t spi_config = {
-        .base = &esp_netif_config,
-        .driver = &driver_cfg,
-        .stack = ESP_NETIF_NETSTACK_DEFAULT_ETH,
-    };
-
-    // 2) Use static config for driver's config pointing only to static transmit and free functions
-    s_netif = esp_netif_new(&spi_config);
-
-    // uint8_t *mac = usbh_rndis_get_mac();
-    // uint8_t mac[6];
-    // esp_wifi_get_mac(WIFI_IF_STA, mac);
-    uint8_t mac[6] = {  0x01, 0x01, 0x5E, 0x01, 0x01, 0x01 };
-    esp_netif_set_mac(s_netif, mac);
-
-    app_rndis_netif_driver_t *driver = calloc(1, sizeof(app_rndis_netif_driver_t));
-    driver->base.post_attach = app_rndis_attach_start;
-    driver->base.netif = s_netif;
-    driver->h = s_netif;
-
-    esp_netif_attach(s_netif, driver);
-    esp_netif_action_start(s_netif, 0, 0, 0);
-    esp_netif_action_connected(s_netif, NULL, 0, NULL);
-
-    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_ETH_GOT_IP, &eth_on_got_ip, NULL));
-
-    xTaskCreate(usbh_rndis_rx_thread, "usb_lib_task", 4096, s_netif, 5, NULL);
+    app_wifi_main();
 
     ip_addr_t target_addr;
     memset(&target_addr, 0, sizeof(target_addr));
@@ -169,7 +134,7 @@ void app_main(void)
     esp_ping_new_session(&ping_config, &cbs, &ping);
 
     while (1) {
-        // esp_ping_start(ping);
+        esp_ping_start(ping);
         usbh_rndis_keepalive();
         vTaskDelay(5000 / portTICK_PERIOD_MS);
     }

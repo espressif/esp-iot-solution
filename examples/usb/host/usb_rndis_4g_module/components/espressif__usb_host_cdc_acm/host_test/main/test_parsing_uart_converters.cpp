@@ -9,7 +9,7 @@
 #include "usb/usb_helpers.h"
 // #include "usb/usb_host.h"
 
-#include "cdc_descriptors.hpp"
+#include "descriptors/cdc_descriptors.hpp"
 #include "test_parsing_checker.hpp"
 #include "cdc_host_descriptor_parsing.h"
 #include "usb/cdc_acm_host.h"

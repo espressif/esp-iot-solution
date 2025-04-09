@@ -20,6 +20,7 @@
 #include "usb/usb_host.h"
 #include "usb/cdc_acm_host.h"
 #include "cdc_host_descriptor_parsing.h"
+#include "cdc_host_types.h"
 
 static const char *TAG = "cdc_acm";
 
@@ -71,36 +72,6 @@ static const cdc_acm_host_driver_config_t cdc_acm_driver_config_default = {
     .driver_task_priority = 10,
     .xCoreID = 0,
     .new_dev_cb = NULL,
-};
-
-typedef struct cdc_dev_s cdc_dev_t;
-struct cdc_dev_s {
-    usb_device_handle_t dev_hdl;          // USB device handle
-    void *cb_arg;                         // Common argument for user's callbacks (data IN and Notification)
-    struct {
-        usb_transfer_t *out_xfer;         // OUT data transfer
-        usb_transfer_t *in_xfer;          // IN data transfer
-        cdc_acm_data_callback_t in_cb;    // User's callback for async (non-blocking) data IN
-        uint16_t in_mps;                  // IN endpoint Maximum Packet Size
-        uint8_t *in_data_buffer_base;     // Pointer to IN data buffer in usb_transfer_t
-        const usb_intf_desc_t *intf_desc; // Pointer to data interface descriptor
-        SemaphoreHandle_t out_mux;        // OUT mutex
-    } data;
-
-    struct {
-        usb_transfer_t *xfer;             // IN notification transfer
-        const usb_intf_desc_t *intf_desc; // Pointer to notification interface descriptor, can be NULL if there is no notification channel in the device
-        cdc_acm_host_dev_callback_t cb;   // User's callback for device events
-    } notif;                              // Structure with Notif pipe data
-
-    usb_transfer_t *ctrl_transfer;        // CTRL (endpoint 0) transfer
-    SemaphoreHandle_t ctrl_mux;           // CTRL mutex
-    cdc_acm_uart_state_t serial_state;    // Serial State
-    cdc_comm_protocol_t comm_protocol;
-    cdc_data_protocol_t data_protocol;
-    int cdc_func_desc_cnt;                // Number of CDC Functional descriptors in following array
-    cdc_func_array_t *cdc_func_desc;      // CDC Functional descriptors
-    SLIST_ENTRY(cdc_dev_s) list_entry;
 };
 
 /**
@@ -187,7 +158,7 @@ static void cdc_acm_reset_in_transfer(cdc_dev_t *cdc_dev)
  */
 static void cdc_acm_client_task(void *arg)
 {
-    vTaskSuspend(NULL); // Task will be resumed from cdc_acm_host_install()
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
     cdc_acm_obj_t *cdc_acm_obj = p_cdc_acm_obj; // Make local copy of the driver's handle
     assert(cdc_acm_obj->cdc_acm_client_hdl);
 
@@ -440,7 +411,7 @@ esp_err_t cdc_acm_host_install(const cdc_acm_host_driver_config_t *driver_config
     CDC_ACM_EXIT_CRITICAL();
 
     // Everything OK: Start CDC-Driver task and return
-    vTaskResume(driver_task_h);
+    xTaskNotifyGive(driver_task_h);
     return ESP_OK;
 
 client_err:
@@ -674,8 +645,8 @@ esp_err_t cdc_acm_host_open(uint16_t vid, uint16_t pid, uint8_t interface_idx, c
     ESP_GOTO_ON_ERROR(cdc_acm_start(cdc_dev, dev_config->event_cb, dev_config->data_cb, dev_config->user_arg), err, TAG,);
     *cdc_hdl_ret = (cdc_acm_dev_hdl_t)cdc_dev;
     xSemaphoreGive(p_cdc_acm_obj->open_close_mutex);
-    printf("data_intf %d, notif_intf %d\n", cdc_info.data_intf->bInterfaceNumber, cdc_info.notif_intf->bInterfaceNumber);
     return ESP_OK;
+
 err:
     cdc_acm_device_remove(cdc_dev);
 exit:
@@ -792,7 +763,7 @@ static bool cdc_acm_is_transfer_completed(usb_transfer_t *transfer)
 
 static void in_xfer_cb(usb_transfer_t *transfer)
 {
-    ESP_LOGI(TAG, "in xfer cb");
+    ESP_LOGD(TAG, "in xfer cb");
     cdc_dev_t *cdc_dev = (cdc_dev_t *)transfer->context;
 
     if (!cdc_acm_is_transfer_completed(transfer)) {
@@ -848,7 +819,7 @@ static void in_xfer_cb(usb_transfer_t *transfer)
 
 static void notif_xfer_cb(usb_transfer_t *transfer)
 {
-    ESP_LOGI(TAG, "notif xfer cb");
+    ESP_LOGD(TAG, "notif xfer cb");
     cdc_dev_t *cdc_dev = (cdc_dev_t *)transfer->context;
 
     if (cdc_acm_is_transfer_completed(transfer)) {
@@ -1120,13 +1091,12 @@ esp_err_t cdc_acm_host_cdc_desc_get(cdc_acm_dev_hdl_t cdc_hdl, cdc_desc_subtype_
     cdc_dev_t *cdc_dev = (cdc_dev_t *)cdc_hdl;
     esp_err_t ret = ESP_ERR_NOT_FOUND;
     *desc_out = NULL;
-    cdc_func_array_t *func_desc = cdc_dev->cdc_func_desc;
 
     for (int i = 0; i < cdc_dev->cdc_func_desc_cnt; i++) {
-        cdc_header_desc_t *_desc = (cdc_header_desc_t *)((*func_desc)[i]);
+        const cdc_header_desc_t *_desc = (const cdc_header_desc_t *)((*(cdc_dev->cdc_func_desc))[i]);
         if (_desc->bDescriptorSubtype == desc_type) {
             ret = ESP_OK;
-            *desc_out = (*func_desc)[i];
+            *desc_out = (const usb_standard_desc_t *)_desc;
             break;
         }
     }

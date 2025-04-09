@@ -1,3 +1,6 @@
 version: 0.0.1
 dependencies:
   espressif/usb_host_cdc_acm: ^2.0.5
+  usb_host_rndis:
+    version: "*"
+    override_path: ../../../../../components/usb/usb_host_rndis

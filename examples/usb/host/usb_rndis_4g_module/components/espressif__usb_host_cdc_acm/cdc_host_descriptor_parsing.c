@@ -35,16 +35,20 @@ static const char *TAG = "cdc_acm_parsing";
 static bool cdc_parse_is_cdc_compliant(const usb_device_desc_t *device_desc, const usb_config_desc_t *config_desc, uint8_t intf_idx)
 {
     int desc_offset = 0;
-    if (device_desc->bDeviceClass == USB_CLASS_PER_INTERFACE) {
+
+    if (device_desc->bDeviceClass == USB_CLASS_PER_INTERFACE ||
+            device_desc->bDeviceClass == USB_CLASS_COMM) {
         const usb_intf_desc_t *intf_desc = usb_parse_interface_descriptor(config_desc, intf_idx, 0, NULL);
         if (intf_desc->bInterfaceClass == USB_CLASS_COMM) {
             // 1. This is a Communication Device Class: Class defined in Interface descriptor
             return true;
         }
-    } else if (((device_desc->bDeviceClass == USB_CLASS_MISC) && (device_desc->bDeviceSubClass == USB_SUBCLASS_COMMON) &&
-                (device_desc->bDeviceProtocol == USB_DEVICE_PROTOCOL_IAD)) ||
-               ((device_desc->bDeviceClass == USB_CLASS_PER_INTERFACE) && (device_desc->bDeviceSubClass == USB_SUBCLASS_NULL) &&
-                (device_desc->bDeviceProtocol == USB_PROTOCOL_NULL))) {
+    }
+
+    if (((device_desc->bDeviceClass == USB_CLASS_MISC) && (device_desc->bDeviceSubClass == USB_SUBCLASS_COMMON) &&
+            (device_desc->bDeviceProtocol == USB_DEVICE_PROTOCOL_IAD)) ||
+            ((device_desc->bDeviceClass == USB_CLASS_PER_INTERFACE) && (device_desc->bDeviceSubClass == USB_SUBCLASS_NULL) &&
+             (device_desc->bDeviceProtocol == USB_PROTOCOL_NULL))) {
         const usb_standard_desc_t *this_desc = (const usb_standard_desc_t *)config_desc;
         while ((this_desc = usb_parse_next_descriptor_of_type(this_desc, config_desc->wTotalLength, USB_B_DESCRIPTOR_TYPE_INTERFACE_ASSOCIATION, &desc_offset))) {
             const usb_iad_desc_t *iad_desc = (const usb_iad_desc_t *)this_desc;

@@ -1,0 +1,10 @@
+version: "0.1.0"
+description: USB Host ETH Driver
+dependencies:
+  idf: ">=4.4"
+  espressif/usb_host_cdc_acm:
+    version: "*"
+targets:
+  - esp32s2
+  - esp32s3
+  - esp32p4

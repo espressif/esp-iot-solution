@@ -13,9 +13,11 @@
 #include "freertos/queue.h"
 #include "freertos/ringbuf.h"
 #include "usbh_rndis_protocol.h"
-#include "usb/usb_host.h"
 #include "usb/cdc_acm_host.h"
 #include "esp_netif.h"
+#include "esp_mac.h"
+#include "esp_event.h"
+#include "usb_host_rndis.h"
 
 static const char *TAG = "usbh_rndis";
 
@@ -31,6 +33,7 @@ static uint8_t g_rndis_rx_buffer[CONFIG_USBHOST_RNDIS_ETH_MAX_RX_SIZE];
 static uint8_t g_rndis_tx_buffer[CONFIG_USBHOST_RNDIS_ETH_MAX_TX_SIZE];
 
 typedef struct {
+    esp_netif_t *netif;
     cdc_acm_dev_hdl_t cdc_dev;
     uint8_t minor;
     uint32_t request_id;
@@ -44,53 +47,19 @@ typedef struct {
     size_t rndis_msg_buf_len;
     RingbufHandle_t in_ringbuf_handle;   /*!< in ringbuffer handle of corresponding interface */
     QueueHandle_t in_queue_handle;   /*!< in queue handle of corresponding interface */
+    QueueHandle_t tx_queue_handle;   /*!< in queue handle of corresponding interface */
     size_t in_ringbuf_size;
 
     void *user_data;
 } usbh_rndis_t;
 
+// Structure for TX packets
+typedef struct {
+    void *buffer;
+    uint32_t length;
+} usb_ecm_tx_packet_t;
+
 static usbh_rndis_t *rndis = NULL;
-
-static void usb_lib_task(void *arg)
-{
-    // Install USB Host driver. Should only be called once in entire application
-    const usb_host_config_t host_config = {
-        .skip_phy_setup = false,
-        .intr_flags = ESP_INTR_FLAG_LEVEL1,
-    };
-    ESP_ERROR_CHECK(usb_host_install(&host_config));
-
-    //Signalize the usbh_cdc_driver_install, the USB host library has been installed
-    xTaskNotifyGive(arg);
-
-    bool has_clients = true;
-    bool has_devices = false;
-    while (has_clients) {
-        uint32_t event_flags;
-        ESP_ERROR_CHECK(usb_host_lib_handle_events(portMAX_DELAY, &event_flags));
-        if (event_flags & USB_HOST_LIB_EVENT_FLAGS_NO_CLIENTS) {
-            ESP_LOGI(TAG, "Get FLAGS_NO_CLIENTS");
-            if (ESP_OK == usb_host_device_free_all()) {
-                ESP_LOGI(TAG, "All devices marked as free, no need to wait FLAGS_ALL_FREE event");
-                has_clients = false;
-            } else {
-                ESP_LOGI(TAG, "Wait for the FLAGS_ALL_FREE");
-                has_devices = true;
-            }
-        }
-        if (has_devices && event_flags & USB_HOST_LIB_EVENT_FLAGS_ALL_FREE) {
-            ESP_LOGI(TAG, "Get FLAGS_ALL_FREE");
-            has_clients = false;
-        }
-    }
-    ESP_LOGI(TAG, "No more clients and devices, uninstall USB Host library");
-
-    // Clean up USB Host
-    vTaskDelay(100); // Short delay to allow clients clean-up
-    usb_host_uninstall();
-    ESP_LOGD(TAG, "USB Host library is uninstalled");
-    vTaskDelete(NULL);
-}
 
 /*--------------------------------- CDC Buffer Handle Code --------------------------------------*/
 static size_t _get_ringbuf_len(RingbufHandle_t ringbuf_hdl)
@@ -157,13 +126,51 @@ static void _ring_buffer_flush(RingbufHandle_t ringbuf_hdl)
     }
 }
 
+static void got_ip_event_handler(void *arg, esp_event_base_t event_base,
+                                 int32_t event_id, void *event_data)
+{
+    ip_event_got_ip_t *event = (ip_event_got_ip_t *) event_data;
+    const esp_netif_ip_info_t *ip_info = &event->ip_info;
+    // s_got_ip = true;
+    ESP_LOGI(TAG, "Ethernet Got IP Address");
+    ESP_LOGI(TAG, "~~~~~~~~~~~");
+    ESP_LOGI(TAG, "ETHIP:" IPSTR, IP2STR(&ip_info->ip));
+    ESP_LOGI(TAG, "ETHMASK:" IPSTR, IP2STR(&ip_info->netmask));
+    ESP_LOGI(TAG, "ETHGW:" IPSTR, IP2STR(&ip_info->gw));
+    ESP_LOGI(TAG, "~~~~~~~~~~~");
+}
+
+static void usb_rndis_free_rx_buffer(void *h, void *buffer)
+{
+    if (buffer) {
+        free(buffer - 44);
+    }
+}
+
 #define USB_RNDIS_MSG_BUF_SIZE 512
 #define USB_RNDIS_IN_RINGBUF_SIZE 2048*2
 
-esp_err_t usbh_rndis_init(void)
+esp_err_t usbh_rndis_init(const usb_host_rndis_config_t *config)
 {
-    esp_err_t ret = ESP_OK;
-    ESP_LOGI(TAG, "Installing USB Host");
+    ESP_RETURN_ON_FALSE(config != NULL, ESP_ERR_INVALID_ARG, TAG, "Invalid argument");
+
+    // Init TCP/IP network interface (should be called only once in application)
+    esp_err_t ret = esp_netif_init();
+    if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) { // Already initialized is OK
+        ESP_LOGE(TAG, "Failed to initialize TCP/IP stack");
+        return ret;
+    }
+
+    // Create default event loop that runs in background if not already created
+    ret = esp_event_loop_create_default();
+    if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) { // Already initialized is OK
+        ESP_LOGE(TAG, "Failed to create event loop");
+        return ret;
+    }
+
+    // Register event handlers
+    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_ETH_GOT_IP, &got_ip_event_handler, NULL));
+
     rndis = calloc(1, sizeof(usbh_rndis_t));
     ESP_RETURN_ON_FALSE(rndis != NULL, ESP_ERR_NO_MEM, TAG, "Failed to allocate memory for rndis");
 
@@ -177,20 +184,46 @@ esp_err_t usbh_rndis_init(void)
     rndis->in_queue_handle = xQueueCreate(10, sizeof(size_t));
     ESP_RETURN_ON_FALSE(rndis->in_queue_handle != NULL, ESP_ERR_NO_MEM, TAG, "Failed to create queue");
 
-    // Create a task that will handle USB library events
-    BaseType_t task_created = xTaskCreate(usb_lib_task, "usb_lib", 4096, xTaskGetCurrentTaskHandle(), 5, NULL);
-    assert(task_created == pdTRUE); // Task should always be created
+    rndis->tx_queue_handle = xQueueCreate(10, sizeof(usb_ecm_tx_packet_t));
+    ESP_RETURN_ON_FALSE(rndis->tx_queue_handle != NULL, ESP_ERR_NO_MEM, TAG, "Failed to create queue");
 
-    // Wait unit the USB host library is installed
-    uint32_t notify_value = ulTaskNotifyTake(false, pdMS_TO_TICKS(1000));
-    if (notify_value == 0) {
-        ESP_LOGE(TAG, "USB host library not installed");
-        return ESP_FAIL;
+    // Create network interface for USB ECM with default config
+    esp_netif_config_t netif_cfg = ESP_NETIF_DEFAULT_ETH();
+    rndis->netif = esp_netif_new(&netif_cfg);
+    if (!rndis->netif) {
+        ESP_LOGE(TAG, "Failed to create netif");
+        return ESP_ERR_NO_MEM;
     }
 
+    esp_netif_driver_ifconfig_t driver_cfg = {
+        .handle = rndis->netif,                // not using an instance, USB-NCM is a static singleton (must be != NULL)
+        .transmit = usbh_rndis_eth_output,  // point to static Tx function
+        .driver_free_rx_buffer = usb_rndis_free_rx_buffer,    // point to Free Rx buffer function
+    };
+
+    // Set the driver configuration for the netif
+    ret = esp_netif_set_driver_config(rndis->netif, &driver_cfg);
+    if (ret != ESP_OK) {
+        esp_netif_destroy(rndis->netif);
+        rndis->netif = NULL;
+        return ret;
+    }
+
+    // Generate a MAC address for the interface
+    uint8_t mac_addr[6];
+    // uint8_t mac_addr[6] = {  0x01, 0x01, 0x5E, 0x01, 0x01, 0x01 };
+
+    esp_read_mac(mac_addr, ESP_MAC_ETH);
+    mac_addr[5] ^= 0x01; // Make it unique from the default Ethernet MAC
+    ESP_ERROR_CHECK(esp_netif_set_mac(rndis->netif, mac_addr));
+
+    ESP_LOGI(TAG, "USB RNDIS MAC: %02x:%02x:%02x:%02x:%02x:%02x",
+             mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
+
+    ESP_LOGI(TAG, "USB RNDIS network interface initialized");
     ESP_LOGI(TAG, "Installing CDC-ACM driver");
     ESP_ERROR_CHECK(cdc_acm_host_install(NULL));
-    return ret;
+    return ESP_OK;
 }
 
 /**
@@ -208,7 +241,6 @@ static bool handle_rx(const uint8_t *data, size_t data_len, void *arg)
     usbh_rndis_t *rndis = (usbh_rndis_t *)arg;
     if (_ringbuf_push(rndis->in_ringbuf_handle, data, data_len, pdMS_TO_TICKS(1000)) == ESP_OK) {
         xQueueSend(rndis->in_queue_handle, &data_len, pdMS_TO_TICKS(1000));
-        printf("!!!!Received %d bytes\n", data_len);
     }
 
     return true;
@@ -237,9 +269,37 @@ static void handle_event(const cdc_acm_host_dev_event_data_t *event, void *user_
         ESP_LOGI(TAG, "Serial state notif 0x%04X", event->data.serial_state.val);
         break;
     case CDC_ACM_HOST_NETWORK_CONNECTION:
+        break;
     default:
         ESP_LOGW(TAG, "Unsupported CDC event: %i", event->type);
         break;
+    }
+}
+
+// USB ECM transmit task
+static void usb_rndis_tx_task(void *arg)
+{
+    usb_ecm_tx_packet_t tx_packet;
+    printf("usb_rndis_tx_task started\n");
+    while (1) {
+        if (xQueueReceive(rndis->tx_queue_handle, &tx_packet, portMAX_DELAY) == pdTRUE) {
+            // if (!s_cdc_dev) {
+            //     // Device disconnected, free buffer and continue
+            //     free(tx_packet.buffer);
+            //     continue;
+            // }
+
+            // Send packet through USB ECM interface
+            ESP_LOGD(TAG, "Transmitting packet, len=%lu", tx_packet.length);
+            esp_err_t ret = cdc_acm_host_data_tx_blocking(rndis->cdc_dev, tx_packet.buffer,
+                                                          tx_packet.length, 1000);
+            if (ret != ESP_OK) {
+                ESP_LOGE(TAG, "Failed to transmit packet: %s", esp_err_to_name(ret));
+            }
+
+            // Free the buffer after transmitting
+            free(tx_packet.buffer);
+        }
     }
 }
 
@@ -247,7 +307,7 @@ esp_err_t usbh_rndis_create(void)
 {
     const cdc_acm_host_device_config_t dev_config = {
         .connection_timeout_ms = 1000,
-        .out_buffer_size = 512,
+        .out_buffer_size = 2048,
         // TODO: make this configurable
         .in_buffer_size = 2048,
         .event_cb = handle_event,
@@ -267,6 +327,7 @@ esp_err_t usbh_rndis_create(void)
         break;
     }
     cdc_acm_host_desc_print(rndis->cdc_dev);
+    xTaskCreate(usb_rndis_tx_task, "usb_rndis_tx_task", 4096, rndis, 10, NULL);
     return ESP_OK;
 }
 
@@ -507,6 +568,11 @@ esp_err_t usbh_rndis_open(void)
 
     ESP_LOGI(TAG, "Register RNDIS success");
     // usbh_rndis_run(rndis);
+
+    xTaskCreate(usbh_rndis_rx_thread, "usbh_rndis_rx_thread", 4096, rndis->netif, 5, NULL);
+
+    esp_netif_action_start(rndis->netif, NULL, 0, NULL);
+    esp_netif_action_connected(rndis->netif, NULL, 0, NULL);
     return ret;
 query_errorout:
     ESP_LOGE(TAG, "rndis query iod:%08x error", oid);
@@ -557,7 +623,7 @@ void usbh_rndis_rx_thread(void *arg)
             pmg_offset = 0;
             uint32_t total_len = rx_length;
             while (rx_length > 0) {
-                ESP_LOGI(TAG, "rndis rx thread rx_length %d\r\n", rx_length);
+                ESP_LOGD(TAG, "rndis rx thread rx_length %d\r\n", rx_length);
                 size_t read_len = 0;
                 // TODO: if can get read_len < sizeof(rndis_query_cmplt_t)
                 ret = _ringbuf_pop(rndis->in_ringbuf_handle, data_buffer, rx_length, &read_len, pdMS_TO_TICKS(1000));
@@ -617,8 +683,9 @@ esp_err_t usbh_rndis_eth_output(void *h, void *buffer, size_t buflen)
         return ESP_ERR_INVALID_STATE;
     }
 
-    hdr = (rndis_data_packet_t *)g_rndis_tx_buffer;
-    memset(hdr, 0, sizeof(rndis_data_packet_t));
+    hdr = (rndis_data_packet_t *)malloc(sizeof(rndis_data_packet_t) + buflen);
+    // (rndis_data_packet_t *)g_rndis_tx_buffer;
+    // memset(hdr, 0, sizeof(rndis_data_packet_t));
 
     hdr->MessageType = REMOTE_NDIS_PACKET_MSG;
     hdr->MessageLength = sizeof(rndis_data_packet_t) + buflen;
@@ -626,15 +693,27 @@ esp_err_t usbh_rndis_eth_output(void *h, void *buffer, size_t buflen)
     hdr->DataLength = buflen;
 
     len = hdr->MessageLength;
-    ESP_LOGI(TAG, "rndis tx length %"PRIu32"", len);
-    memcpy(g_rndis_tx_buffer + sizeof(rndis_data_packet_t), buffer, buflen);
+    ESP_LOGD(TAG, "rndis tx length %"PRIu32"", len);
+    memcpy((uint8_t *)hdr + sizeof(rndis_data_packet_t), buffer, buflen);
     // ESP_LOG_BUFFER_HEX("rndis tx data", g_rndis_tx_buffer, len);
-    if (len > CONFIG_USBHOST_RNDIS_ETH_MAX_TX_SIZE) {
-        ESP_LOGE(TAG, "rndis tx length %"PRIu32" is too large", len);
-        return ESP_ERR_INVALID_SIZE;
-    }
+    // if (len > CONFIG_USBHOST_RNDIS_ETH_MAX_TX_SIZE) {
+    //     ESP_LOGE(TAG, "rndis tx length %"PRIu32" is too large", len);
+    //     return ESP_ERR_INVALID_SIZE;
+    // }
 
-    cdc_acm_host_data_tx_blocking(rndis->cdc_dev, g_rndis_tx_buffer, len, pdMS_TO_TICKS(1000));
+    // Create packet structure
+    usb_ecm_tx_packet_t tx_packet = {
+        .buffer = hdr,
+        .length = len
+    };
+
+    // Send packet to transmit queue
+    if (xQueueSend(rndis->tx_queue_handle, &tx_packet, pdMS_TO_TICKS(100)) != pdTRUE) {
+        ESP_LOGE(TAG, "TX queue full, dropping packet");
+        free(hdr);
+        return ESP_ERR_TIMEOUT;
+    }
+    // cdc_acm_host_data_tx_blocking(rndis->cdc_dev, g_rndis_tx_buffer, len, pdMS_TO_TICKS(1000));
     return ESP_OK;
 }
 

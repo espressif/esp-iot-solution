@@ -27,7 +27,7 @@
             - Qualcomm / Option SimTech, Incorporated (SIM7600E)
             - Qualcomm / Option SimTech SIM7000 (SIM7000E)
             - NOT TESTED: Qualcomm / Option SimTech SIM7080 (SIM7080G)
-            - NOT TESTED: Qualcomm / Option A76XX Series LTE Module (SIMA7672E)
+            - Qualcomm / Option A76XX Series LTE Module (SIMA7672E)
         - USB dongle:
             - NOT TESTED: Shenzhen Rapoo Technology Co., Ltd. Rapoo 2.4G Wireless Device
             - NOT TESTED: Cambridge Silicon Radio, Ltd Bluetooth Dongle (HCI mode)
