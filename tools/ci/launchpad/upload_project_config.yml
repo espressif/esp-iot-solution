@@ -283,3 +283,12 @@ examples/usb/otg/usb_host_device_mode_manual_switch:
     This example demonstrates how to manually switch the USB OTG peripheral from host to device mode.
   readme:
     https://raw.githubusercontent.com/espressif/esp-iot-solution/master/examples/usb/otg/usb_host_device_mode_manual_switch/README.md
+
+examples/vision/opencv/color_tracker:
+  esp32p4:
+    sdkconfig:
+      - defaults
+  description:
+    This example demonstrates how to use the ESP32-P4-Function-EV-Board with OpenCV to achieve color tracking.
+  readme:
+    https://raw.githubusercontent.com/espressif/esp-iot-solution/master/examples/vision/opencv/color_tracker/README.md

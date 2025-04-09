@@ -420,6 +420,10 @@ examples/utilities/xz_decompress_file:
   enable:
     - if: INCLUDE_DEFAULT == 1
 
+examples/vision/opencv/color_tracker:
+  enable:
+    - if: IDF_TARGET in ["esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 4)
+
 examples/gprof/gprof_simple:
   enable:
     - if: IDF_TARGET in ["esp32","esp32s2","esp32s3","esp32c3"]
