@@ -31,5 +31,4 @@ latex_documents = [
    u'2016 - {}, Espressif Systems (Shanghai) CO., LTD'.format(current_year), 'manual'),
 ]
 
-html_js_files = ['js/chatbot_widget.js']
-html_css_files = ['js/chatbot_widget.css']
+html_js_files = ['js/chatbot_widget_en.js']
