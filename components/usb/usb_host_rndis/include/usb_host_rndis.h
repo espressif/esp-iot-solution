@@ -1,11 +1,12 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 #pragma once
 
 #include "esp_err.h"
+#include "iot_eth_interface.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -15,29 +16,30 @@ extern "C" {
  * @brief USB Host Ethernet ECM Configuration
  */
 typedef struct {
-    uint16_t vid;                      /*!< USB device vendor ID */
-    uint16_t pid;                      /*!< USB device product ID */
-    uint16_t out_buffer_size;          /*!< Size of the USB OUT buffer */
-    uint16_t in_buffer_size;           /*!< Size of the USB IN buffer */
-    uint32_t connection_timeout_ms;    /*!< Connection timeout in milliseconds */
-    void (*on_connection_cb)(bool connected); /*!< Connection status change callback */
+    bool auto_detect;                         /*!< Auto detect RNDIS device */
+    TickType_t auto_detect_timeout;           /*!< Auto detect timeout in ticks */
+    uint16_t vid;                             /*!< USB device vendor ID */
+    uint16_t pid;                             /*!< USB device product ID */
+    int itf_num;                              /*!< interface numbers */
+    uint16_t rx_buffer_size;                  /*!< Size of the USB IN buffer */
+    uint16_t tx_buffer_size;                  /*!< Size of the USB OUT buffer */
 } usb_host_rndis_config_t;
 
-esp_err_t usbh_rndis_init(const usb_host_rndis_config_t *config);
-
-esp_err_t usbh_rndis_create(void);
-
-esp_err_t usbh_rndis_keepalive(void);
-
-esp_err_t usbh_rndis_open(void);
-
-esp_err_t usbh_rndis_close(void);
-
-esp_err_t usbh_rndis_eth_output(void *h, void *buffer, size_t buflen);
-
-void usbh_rndis_rx_thread(void *arg);
-
-uint8_t *usbh_rndis_get_mac(void);
+/**
+ * @brief Create a new USB RNDIS Ethernet driver.
+ *
+ * This function initializes a new USB RNDIS Ethernet driver with the specified configuration.
+ * It allocates memory for the driver, sets up the driver functions, and returns a handle to the driver.
+ *
+ * @param config Pointer to the RNDIS configuration structure.
+ * @param ret_handle Pointer to a location where the handle to the new Ethernet driver will be stored.
+ *
+ * @return
+ *     - ESP_OK: Driver created successfully
+ *     - ESP_ERR_INVALID_ARG: Invalid argument (NULL config or ret_handle)
+ *     - ESP_ERR_NO_MEM: Memory allocation failed
+ */
+esp_err_t iot_eth_new_usb_rndis(const usb_host_rndis_config_t *config, iot_eth_driver_t **ret_handle);
 
 #ifdef __cplusplus
 }

@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include "esp_err.h"
 #include "usb/usb_host.h"
-
+#include "iot_usbh_cdc_type.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -39,7 +39,7 @@ typedef enum {
  * @attention This callback is called from USB Host context, so the CDC device can't be opened here.
  *
  */
-typedef void (*usbh_cdc_new_dev_cb_t)(usb_device_handle_t usb_dev);
+typedef void (*usbh_cdc_new_dev_cb_t)(usb_device_handle_t usb_dev, void *user_data);
 
 /**
  * @brief CDC driver configuration
@@ -51,12 +51,15 @@ typedef struct {
     int task_coreid;                           /*!< Core of the driver's task, Set it to -1 to not specify the core. */
     bool skip_init_usb_host_driver;            /*!< Skip initialization of USB host driver */
     usbh_cdc_new_dev_cb_t new_dev_cb;          /*!< Callback function when a new device is connected */
+    void *user_data;                           /*!< Pointer to user data that will be passed to the callbacks */
 } usbh_cdc_driver_config_t;
 
 /**
  * @brief Callback structure for CDC device events
  */
 typedef void (*usbh_cdc_event_cb_t)(usbh_cdc_handle_t cdc_handle, void *user_data);
+
+typedef void (*usbh_cdc_notif_cb_t)(usbh_cdc_handle_t cdc_handle, iot_cdc_notification_t *notif, void *user_data);
 
 /**
  * @brief Callback structure for CDC device events
@@ -66,6 +69,7 @@ typedef struct {
     usbh_cdc_event_cb_t connect;            /*!< USB connect callback, set NULL if use */
     usbh_cdc_event_cb_t disconnect;         /*!< USB disconnect callback, set NULL if not use */
     usbh_cdc_event_cb_t revc_data;          /*!< USB receive data callback, set NULL if not use */
+    usbh_cdc_notif_cb_t notif_cb;           /*!< USB notification callback, set NULL if not use */
     void *user_data;                        /*!< Pointer to user data that will be passed to the callbacks */
 } usbh_cdc_event_callbacks_t;
 
@@ -159,6 +163,8 @@ esp_err_t usbh_cdc_create(const usbh_cdc_device_config_t *config, usbh_cdc_handl
  *     - ESP_ERR_INVALID_ARG: Invalid CDC handle provided
  */
 esp_err_t usbh_cdc_delete(usbh_cdc_handle_t cdc_handle);
+
+esp_err_t usbh_cdc_send_custom_request(usbh_cdc_handle_t cdc_handle, uint8_t bmRequestType, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, uint16_t wLength, uint8_t *data);
 
 /**
  * @brief Write data to the USB CDC device

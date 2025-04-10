@@ -4,3 +4,6 @@ dependencies:
   usb_host_rndis:
     version: "*"
     override_path: ../../../../../components/usb/usb_host_rndis
+  espressif/iot_eth:
+    version: "*"
+    override_path: ../../../../../components/iot_eth

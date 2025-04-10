@@ -1,27 +1,29 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/event_groups.h"
 #include "esp_err.h"
 #include "esp_log.h"
-#include "esp_netif.h"
-#include "usb_host_rndis.h"
-#include "nvs_flash.h"
-#include "nvs.h"
+#include "esp_check.h"
 #include "esp_event.h"
 #include "dhcpserver/dhcpserver_options.h"
 #include "ping/ping_sock.h"
 #include "usb_host_rndis.h"
 #include "app_wifi.h"
-#include "usb/usb_host.h"
-#include "usb/cdc_acm_host.h"
+#include "iot_eth.h"
 
 static const char *TAG = "4g_module";
-#define EXAMPLE_USB_HOST_PRIORITY   (5)
+
+static EventGroupHandle_t usb_rndis_event_group;
+static const int USB_RNDIS_CONNECTED_BIT = BIT0;
+// static const int USB_RNDIS_DISCONNECTED_BIT = BIT1;
+// static const int USB_RNDIS_LINK_UP_BIT = BIT2;
+// static const int USB_RNDIS_LINK_DOWN_BIT = BIT3;
 
 static void on_ping_success(esp_ping_handle_t hdl, void *args)
 {
@@ -48,69 +50,61 @@ static void on_ping_timeout(esp_ping_handle_t hdl, void *args)
     // Add Wait or Reset logic
 }
 
-/**
- * @brief USB Host library handling task
- *
- * @param arg Unused
- */
-static void usb_lib_task(void *arg)
+static esp_err_t _on_lowlevel_init_done(iot_eth_handle_t handle)
 {
-    const usb_host_config_t host_config = {
-        .skip_phy_setup = false,
-        .intr_flags = ESP_INTR_FLAG_LEVEL1,
-#if ENABLE_ENUM_FILTER_CALLBACK
-        .enum_filter_cb = set_config_cb,
-#endif
-    };
-    ESP_ERROR_CHECK(usb_host_install(&host_config));
-    bool has_clients = true;
-    bool has_devices = false;
-    while (has_clients) {
-        uint32_t event_flags;
-        ESP_ERROR_CHECK(usb_host_lib_handle_events(portMAX_DELAY, &event_flags));
-        if (event_flags & USB_HOST_LIB_EVENT_FLAGS_NO_CLIENTS) {
-            ESP_LOGI(TAG, "Get FLAGS_NO_CLIENTS");
-            if (ESP_OK == usb_host_device_free_all()) {
-                ESP_LOGI(TAG, "All devices marked as free, no need to wait FLAGS_ALL_FREE event");
-                has_clients = false;
-            } else {
-                ESP_LOGI(TAG, "Wait for the FLAGS_ALL_FREE");
-                has_devices = true;
-            }
-        }
-        if (has_devices && event_flags & USB_HOST_LIB_EVENT_FLAGS_ALL_FREE) {
-            ESP_LOGI(TAG, "Get FLAGS_ALL_FREE");
-            has_clients = false;
-        }
-    }
-    ESP_LOGI(TAG, "No more clients and devices, uninstall USB Host library");
+    ESP_LOGI(TAG, "USB RNDIS driver initialized");
+    xEventGroupSetBits(usb_rndis_event_group, USB_RNDIS_CONNECTED_BIT);
+    return ESP_OK;
+}
 
-    // Clean up USB Host
-    vTaskDelay(100); // Short delay to allow clients clean-up
-    usb_host_uninstall();
-    ESP_LOGD(TAG, "USB Host library is uninstalled");
-    vTaskDelete(NULL);
+static esp_err_t _on_lowlevel_deinit(iot_eth_handle_t handle)
+{
+    ESP_LOGI(TAG, "USB RNDIS driver deinitialized");
+    return ESP_OK;
 }
 
 void app_main(void)
 {
-    // Install USB Host driver. Should only be called once in entire application
-    ESP_LOGI(TAG, "Installing USB Host");
+    usb_rndis_event_group = xEventGroupCreate();
+    usb_host_rndis_config_t rndis_cfg = {
+        .auto_detect = true,
+        .auto_detect_timeout = pdMS_TO_TICKS(1000),
+        .rx_buffer_size = 1024 * 4,
+        .tx_buffer_size = 1024 * 4,
+    };
 
-    // Create a task that will handle USB library events
-    BaseType_t task_created = xTaskCreate(usb_lib_task, "usb_lib", 4096, xTaskGetCurrentTaskHandle(), EXAMPLE_USB_HOST_PRIORITY, NULL);
-    assert(task_created == pdTRUE);
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
-    const usb_host_rndis_config_t cfg = {0};
-    usbh_rndis_init(&cfg);
+    iot_eth_driver_t *rndis_handle = NULL;
+    esp_err_t ret = iot_eth_new_usb_rndis(&rndis_cfg, &rndis_handle);
+    if (ret != ESP_OK || rndis_handle == NULL) {
+        ESP_LOGE(TAG, "Failed to create USB RNDIS driver");
+        return;
+    }
 
-    usbh_rndis_create();
-    vTaskDelay(100 / portTICK_PERIOD_MS);
+    iot_eth_config_t eth_cfg = {
+        .driver = rndis_handle,
+        .on_lowlevel_init_done = _on_lowlevel_init_done,
+        .on_lowlevel_deinit = _on_lowlevel_deinit,
+        .stack_input = NULL,
+        .user_data = NULL,
+    };
 
-    usbh_rndis_open();
-    vTaskDelay(5000 / portTICK_PERIOD_MS);
+    iot_eth_handle_t eth_handle = NULL;
+    ret = iot_eth_install(&eth_cfg, &eth_handle);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to install USB RNDIS driver");
+        return;
+    }
 
-    app_wifi_main();
+    while (1) {
+        ret = iot_eth_start(eth_handle);
+        if (ret != ESP_OK) {
+            ESP_LOGW(TAG, "Failed to start USB RNDIS driver, try again...");
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
+            continue;
+        }
+        break;
+    }
+    // app_wifi_main();
 
     ip_addr_t target_addr;
     memset(&target_addr, 0, sizeof(target_addr));
@@ -135,8 +129,6 @@ void app_main(void)
 
     while (1) {
         esp_ping_start(ping);
-        usbh_rndis_keepalive();
         vTaskDelay(5000 / portTICK_PERIOD_MS);
     }
-    // TODO: keep alive
 }
