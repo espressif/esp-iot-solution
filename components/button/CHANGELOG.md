@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v4.1.3 - 2025-04-11
+
+### Fix:
+
+* Added initialization for gpio_config. [!485](https://github.com/espressif/esp-iot-solution/pull/485)
+
 ## v4.1.2 - 2025-03-24
 
 ### Fix:
