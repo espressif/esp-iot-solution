@@ -6,7 +6,6 @@
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "freertos/event_groups.h"
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_check.h"
@@ -18,12 +17,6 @@
 #include "iot_eth.h"
 
 static const char *TAG = "4g_module";
-
-static EventGroupHandle_t usb_rndis_event_group;
-static const int USB_RNDIS_CONNECTED_BIT = BIT0;
-// static const int USB_RNDIS_DISCONNECTED_BIT = BIT1;
-// static const int USB_RNDIS_LINK_UP_BIT = BIT2;
-// static const int USB_RNDIS_LINK_DOWN_BIT = BIT3;
 
 static void on_ping_success(esp_ping_handle_t hdl, void *args)
 {
@@ -53,7 +46,6 @@ static void on_ping_timeout(esp_ping_handle_t hdl, void *args)
 static esp_err_t _on_lowlevel_init_done(iot_eth_handle_t handle)
 {
     ESP_LOGI(TAG, "USB RNDIS driver initialized");
-    xEventGroupSetBits(usb_rndis_event_group, USB_RNDIS_CONNECTED_BIT);
     return ESP_OK;
 }
 
@@ -65,7 +57,6 @@ static esp_err_t _on_lowlevel_deinit(iot_eth_handle_t handle)
 
 void app_main(void)
 {
-    usb_rndis_event_group = xEventGroupCreate();
     usb_host_rndis_config_t rndis_cfg = {
         .auto_detect = true,
         .auto_detect_timeout = pdMS_TO_TICKS(1000),
@@ -104,7 +95,8 @@ void app_main(void)
         }
         break;
     }
-    // app_wifi_main();
+
+    app_wifi_main();
 
     ip_addr_t target_addr;
     memset(&target_addr, 0, sizeof(target_addr));

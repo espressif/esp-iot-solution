@@ -321,6 +321,10 @@
 .patterns-components_usb_usb_device_uvc: &patterns-components_usb_usb_device_uvc
   - "components/usb/usb_device_uvc/**/*"
 
+.patterns-components_usb_usb_host_rndis: &patterns-components_usb_usb_host_rndis
+  - "components/usb/usb_host_rndis/**/*"
+  - "tools/cmake_utilities/package_manager.cmake"
+
 .patterns-components_usb_usb_stream: &patterns-components_usb_usb_stream
   - "components/usb/usb_stream/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
@@ -341,6 +345,10 @@
 
 .patterns-components_i2c_bus: &patterns-components_i2c_bus
   - "components/i2c_bus/**/*"
+  - "tools/cmake_utilities/package_manager.cmake"
+
+.patterns-components_iot_eth: &patterns-components_iot_eth
+  - "components/iot_eth/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_sensors_power_monitor_ina236: &patterns-components_sensors_power_monitor_ina236

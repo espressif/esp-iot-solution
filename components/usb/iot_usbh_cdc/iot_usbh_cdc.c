@@ -61,7 +61,7 @@ typedef struct usbh_cdc_s {
         usb_transfer_t *in_xfer;           // IN data transfer
         uint16_t in_mps;                   // IN endpoint Maximum Packet Size
         uint8_t *in_data_buffer_base;      // Pointer to IN data buffer in usb_transfer_t
-        usb_intf_desc_t *intf_desc;  // Pointer to data interface descriptor
+        const usb_intf_desc_t *intf_desc;  // Pointer to data interface descriptor
     } data;
     struct {
         usb_transfer_t *xfer;
@@ -404,7 +404,7 @@ static void notif_xfer_cb(usb_transfer_t *notif_xfer)
         // Start polling for new data again
         ESP_LOGD(TAG, "Submitting poll for INTR IN transfer");
         usb_host_transfer_submit(cdc->notif.xfer);
-        break;
+        return;
     }
     case USB_TRANSFER_STATUS_NO_DEVICE:
     case USB_TRANSFER_STATUS_CANCELED:
@@ -601,9 +601,6 @@ static void _cdc_transfers_free(usbh_cdc_t *cdc)
     }
     if (cdc->data.out_xfer) {
         usb_host_transfer_free(cdc->data.out_xfer);
-        if (cdc->data.out_xfer_free_sem) {
-            vSemaphoreDelete(cdc->data.out_xfer_free_sem);
-        }
     }
 }
 
@@ -873,6 +870,9 @@ esp_err_t usbh_cdc_delete(usbh_cdc_handle_t cdc_handle)
     if (cdc->out_ringbuf_handle) {
         vRingbufferDelete(cdc->out_ringbuf_handle);
     }
+    if (cdc->data.out_xfer_free_sem) {
+        vSemaphoreDelete(cdc->data.out_xfer_free_sem);
+    }
 
     if (cdc) {
         free(cdc);
@@ -974,8 +974,8 @@ esp_err_t usbh_cdc_read_bytes(usbh_cdc_handle_t cdc_handle, const uint8_t *buf, 
     ESP_GOTO_ON_FALSE(cdc->state == USBH_CDC_OPEN, ESP_ERR_INVALID_STATE, fail, TAG, "Device is not connected");
 
     size_t data_len = *length;
-    if (data_len > CONFIG_IN_RINGBUFFER_SIZE) {
-        data_len = CONFIG_IN_RINGBUFFER_SIZE;
+    if (data_len > cdc->in_ringbuf_size) {
+        data_len = cdc->in_ringbuf_size;
     }
 
     ret = _ringbuf_pop(cdc->in_ringbuf_handle, (uint8_t *)buf, data_len, length, ticks_to_wait);

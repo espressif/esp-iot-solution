@@ -130,6 +130,7 @@ esp_err_t iot_eth_on_stage_changed(iot_eth_mediator_t *mediator, iot_eth_stage_t
 
 esp_err_t iot_eth_install(iot_eth_config_t *config, iot_eth_handle_t *handle)
 {
+    ESP_LOGI(TAG, "IoT ETH Version: %d.%d.%d", IOT_ETH_VER_MAJOR, IOT_ETH_VER_MINOR, IOT_ETH_VER_PATCH);
     ESP_RETURN_ON_FALSE(config != NULL, ESP_ERR_INVALID_ARG, TAG, "config is NULL");
     ESP_RETURN_ON_FALSE(handle != NULL, ESP_ERR_INVALID_ARG, TAG, "handle is NULL");
 
@@ -156,24 +157,19 @@ esp_err_t iot_eth_install(iot_eth_config_t *config, iot_eth_handle_t *handle)
         ret = esp_event_handler_register(IP_EVENT, IP_EVENT_ETH_GOT_IP, &iot_eth_got_ip_event_handler, NULL);
         ESP_GOTO_ON_FALSE(ret == ESP_OK, ESP_FAIL, err, TAG, "Failed to register event handler");
 
-        printf("555\n");
-
         eth->stack_input = iot_eth_stack_input_default;
         // Prepare network interface for the driver
         esp_netif_config_t netif_cfg = ESP_NETIF_DEFAULT_ETH();
         eth->netif = esp_netif_new(&netif_cfg);
-        printf("666\n");
         ESP_RETURN_ON_FALSE(eth->netif != NULL, ESP_ERR_NO_MEM, TAG, "Failed to create netif");
         esp_netif_driver_ifconfig_t driver_ifconfig = {
             .handle = eth,
             .transmit = iot_eth_transmit_default,
             .driver_free_rx_buffer = iot_eth_free_rx_buffer,
         };
-        printf("777\n");
 
         ret = esp_netif_set_driver_config(eth->netif, &driver_ifconfig);
         ESP_GOTO_ON_FALSE(ret == ESP_OK, ESP_FAIL, err, TAG, "Failed to set driver config");
-        printf("888\n");
         esp_netif_set_hostname(eth->netif, eth->driver->name);
     } else {
         eth->stack_input = config->stack_input;

@@ -13,7 +13,7 @@ menu "HTTP Transfer Settings"
 
     config ESP_WIFI_AP_SSID
         string "WiFi AP SSID"
-        default "ESP32S3-UVC"
+        default "ESP-RNDIS-4G"
         help
         AP SSID (network name) to create or empty for Off.
 

@@ -56,6 +56,7 @@ jobs:
             components/extended_vfs;
             components/gprof;
             components/i2c_bus;
+            components/iot_eth;
             components/ir/ir_learn;
             components/keyboard_button;
             components/knob;
@@ -95,6 +96,7 @@ jobs:
             components/usb/iot_usbh_modem;
             components/usb/usb_device_uac;
             components/usb/usb_device_uvc;
+            components/usb/usb_host_rndis;
             components/usb/usb_stream;
             components/utilities/adc_tp_calibration;
             components/utilities/xz;

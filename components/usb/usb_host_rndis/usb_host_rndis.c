@@ -168,14 +168,14 @@ esp_err_t usbh_rndis_get_connect_status(usbh_rndis_t *rndis)
     return ret;
 }
 
-esp_err_t usbh_rndis_keepalive(void)
+esp_err_t usbh_rndis_keepalive(usbh_rndis_t *handle)
 {
     esp_err_t ret = ESP_OK;
     uint8_t data[256];
     rndis_keepalive_msg_t *cmd;
     rndis_keepalive_cmplt_t *resp;
 
-    usbh_rndis_t *rndis = rndis;
+    usbh_rndis_t *rndis = handle;
 
     cmd = (rndis_keepalive_msg_t *)data;
 
@@ -296,15 +296,17 @@ static esp_err_t usbh_rndis_handle_recv_data(usbh_rndis_t *rndis)
     esp_err_t ret;
     uint32_t pmg_offset;
     rndis_data_packet_t pmsg = {0};
-    size_t rx_length = 0;
-    usbh_cdc_get_rx_buffer_size(rndis->cdc_dev, &rx_length);
+    int rx_length = 0;
+    usbh_cdc_get_rx_buffer_size(rndis->cdc_dev, (size_t *)&rx_length);
 
     while (rx_length > 0) {
-        size_t read_len = sizeof(rndis_data_packet_t);
-        ret = usbh_cdc_read_bytes(rndis->cdc_dev, (uint8_t *)&pmsg, &read_len, 0);
+        int read_len = sizeof(rndis_data_packet_t);
+        if (rx_length < read_len) {
+            return ESP_ERR_INVALID_STATE;
+        }
+        ret = usbh_cdc_read_bytes(rndis->cdc_dev, (uint8_t *)&pmsg, (size_t *)&read_len, 0);
         if (ret != ESP_OK) {
             ESP_LOGE(TAG, "Failed to read rndis_data_packet_t from CDC");
-            usbh_cdc_flush_rx_buffer(rndis->cdc_dev);
             return ret;
         }
 
@@ -314,16 +316,23 @@ static esp_err_t usbh_rndis_handle_recv_data(usbh_rndis_t *rndis)
 
             uint8_t *buf = malloc(pmsg.DataLength);
             ESP_RETURN_ON_FALSE(buf != NULL, ESP_ERR_NO_MEM, TAG, "Failed to allocate memory for buf");
-            ESP_LOGI(TAG, "pmsg.DataLength %d, rx_length: %d", pmsg.DataLength, rx_length);
+            ESP_LOGD(TAG, "pmsg.DataLength %d, rx_length: %d", pmsg.DataLength, rx_length);
             read_len = pmsg.DataLength;
-            ret = usbh_cdc_read_bytes(rndis->cdc_dev, buf, &read_len, 0);
+            int recv_len = 0;
+            while (read_len > 0) {
+                ret = usbh_cdc_read_bytes(rndis->cdc_dev, buf + recv_len, (size_t *)&read_len, pdMS_TO_TICKS(1000));
+                recv_len += read_len;
+                read_len = pmsg.DataLength - recv_len;
+            }
+            ESP_LOGD(TAG, "recv data length: %d", pmsg.DataLength);
+
             if (ret != ESP_OK) {
                 ESP_LOGE(TAG, "Failed to read data from CDC");
                 free(buf);
                 return ret;
             }
 
-            rx_length -= read_len;
+            rx_length -= pmsg.DataLength;
             rndis->mediator->stack_input(rndis->mediator, buf, pmsg.DataLength);
         } else {
             ESP_LOGE(TAG, "Error rndis packet message");
@@ -434,6 +443,9 @@ static void _usbh_rndis_cdc_new_dev_cb(usb_device_handle_t usb_dev, void *user_d
         return;
     }
 
+    usb_print_device_descriptor(device_desc);
+    usb_print_config_descriptor(config_desc, NULL);
+
     // TODO: May need to filter out HUB devices here
 
     int itf_num = 0;
@@ -474,7 +486,6 @@ static void _usbh_rndis_recv_data_cb(usbh_cdc_handle_t cdc_handle, void *arg)
  */
 static void _usbh_rndis_notif_cb(usbh_cdc_handle_t cdc_handle, iot_cdc_notification_t *notif, void *arg)
 {
-    usbh_rndis_t *rndis = (usbh_rndis_t *)arg;
     ESP_LOGI(TAG, "USB RNDIS CDC notification");
 }
 
@@ -496,11 +507,12 @@ static void _usbh_rndis_task(void *arg)
         }
         if (events & RNDIS_DISCONNECTED) {
             ESP_LOGI(TAG, "RNDIS disconnected");
+            rndis->request_id = 0;
             iot_eth_link_t link = IOT_ETH_LINK_DOWN;
             rndis->mediator->on_stage_changed(rndis->mediator, IOT_ETH_STAGE_LINK, &link);
         }
         if (events & RNDIS_DATA_RECEIVED) {
-            ESP_LOGI(TAG, "RNDIS received data");
+            ESP_LOGD(TAG, "RNDIS received data");
             usbh_rndis_handle_recv_data(rndis);
         }
         if (events & RNDIS_LINE_CHANGE) {
@@ -524,7 +536,7 @@ static void _usbh_rndis_task(void *arg)
                 ret = usbh_rndis_keepalive(rndis);
             }
 
-            ESP_LOGD(TAG, "No events for 5s, sending keepalive");
+            ESP_LOGI(TAG, "No events for 5s, sending keepalive");
             ret = usbh_rndis_keepalive(rndis);
             if (ret != ESP_OK) {
                 ESP_LOGW(TAG, "Failed to send keepalive");
@@ -578,8 +590,12 @@ static esp_err_t usbh_rndis_start(iot_eth_driver_t *driver)
     };
 
     ret = usbh_cdc_create(&dev_config, &rndis->cdc_dev);
-    ESP_RETURN_ON_ERROR(ret, TAG, "Failed to create CDC handle");
+    if (!rndis->config.auto_detect && ret == ESP_ERR_NOT_FOUND) {
+        ESP_LOGW(TAG, "The device not connect yet");
+        ret = ESP_OK;
+    }
 
+    ESP_RETURN_ON_ERROR(ret, TAG, "Failed to create CDC handle");
     xTaskCreate(_usbh_rndis_task, "_usbh_rndis_task", 4096, rndis, 5, NULL);
     return ret;
 }
@@ -685,6 +701,7 @@ static esp_err_t usbh_rndis_deinit(iot_eth_driver_t *driver)
 
 esp_err_t iot_eth_new_usb_rndis(const usb_host_rndis_config_t *config, iot_eth_driver_t **ret_handle)
 {
+    ESP_LOGI(TAG, "USB HOST RNDIS Version: %d.%d.%d", USB_HOST_RNDIS_VER_MAJOR, USB_HOST_RNDIS_VER_MINOR, USB_HOST_RNDIS_VER_PATCH);
     ESP_RETURN_ON_FALSE(config != NULL, ESP_ERR_INVALID_ARG, TAG, "config is NULL");
     ESP_RETURN_ON_FALSE(ret_handle != NULL, ESP_ERR_INVALID_ARG, TAG, "ret_handle is NULL");
 

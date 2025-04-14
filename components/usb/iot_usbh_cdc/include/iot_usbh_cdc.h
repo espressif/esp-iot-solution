@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -164,6 +164,29 @@ esp_err_t usbh_cdc_create(const usbh_cdc_device_config_t *config, usbh_cdc_handl
  */
 esp_err_t usbh_cdc_delete(usbh_cdc_handle_t cdc_handle);
 
+/**
+ * @brief Send a custom control request to the USB CDC device
+ *
+ * This function sends a custom control request to the USB CDC device with the specified parameters.
+ * It can be used for both IN and OUT transfers.
+ *
+ * @param[in] cdc_handle The CDC device handle
+ * @param[in] bmRequestType The request type bitmask
+ * @param[in] bRequest The request ID
+ * @param[in] wValue The request value
+ * @param[in] wIndex The request index
+ * @param[in] wLength The length of data to transfer
+ * @param[in,out] data Pointer to the data buffer:
+ *                     - For OUT transfers: data to be sent to device
+ *                     - For IN transfers: buffer to store received data
+ *
+ * @return
+ *     - ESP_OK: Request sent successfully
+ *     - ESP_ERR_INVALID_ARG: Invalid arguments (NULL handle/data buffer)
+ *     - ESP_ERR_INVALID_STATE: Device is not connected
+ *     - ESP_ERR_TIMEOUT: Control transfer timed out
+ *     - ESP_ERR_INVALID_RESPONSE: Control transfer failed
+ */
 esp_err_t usbh_cdc_send_custom_request(usbh_cdc_handle_t cdc_handle, uint8_t bmRequestType, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, uint16_t wLength, uint8_t *data);
 
 /**

@@ -1,5 +1,9 @@
 version: "0.1.0"
-description: USB Host ETH Driver
+targets:
+  - esp32s2
+  - esp32s3
+  - esp32p4
+description: USB Host ETH RNDIS Driver
 dependencies:
   idf: ">=4.4"
   espressif/iot_usbh_cdc:
@@ -8,8 +12,5 @@ dependencies:
   espressif/iot_eth:
     version: "*"
     override_path: "../../iot_eth"
-
-targets:
-  - esp32s2
-  - esp32s3
-  - esp32p4
+    public: true
+  cmake_utilities: "*"
