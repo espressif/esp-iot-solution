@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.2.1 - 2025-4-15
+
+### Bug Fix:
+* FOC:
+    *  Fix uninitialized local driver struct variables causing assignment issues under compiler optimization.
+
 ## v1.2.0 - 2024-12-31
 ### Enhancements:
 * FOC:

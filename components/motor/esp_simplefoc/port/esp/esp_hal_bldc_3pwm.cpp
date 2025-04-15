@@ -365,7 +365,7 @@ int BLDCDriver3PWM::init()
 
             int pins[3] = {pwmA, pwmB, pwmC}; // save pins
 
-            ledc_channel_config_t ledc_channel;
+            ledc_channel_config_t ledc_channel = {};
             for (int i = 0; i < 3; i++) {
                 ledc_channel.speed_mode = _LEDC_MODE;
                 ledc_channel.timer_sel = LEDC_TIMER_0;
@@ -524,7 +524,7 @@ int BLDCDriver3PWM::init(std::vector<int> _ledc_channels)
 
     int pins[3] = {pwmA, pwmB, pwmC}; // save pins
 
-    ledc_channel_config_t ledc_channel;
+    ledc_channel_config_t ledc_channel = {};
     for (int i = 0; i < 3; i++) {
         ledc_channel.speed_mode = _LEDC_MODE;
         ledc_channel.timer_sel = LEDC_TIMER_0;
