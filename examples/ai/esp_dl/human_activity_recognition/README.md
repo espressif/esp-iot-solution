@@ -209,7 +209,7 @@ value: array([-32, -41,  82, -54, -51, -51], dtype=int8)
 
 ### Load model in ESP Platform
 
-You can load models from ``rodata``, ``partition``, or ``sdcard``. In this example, the ``partition`` method is used; for more details, please refer to [how_to_load_model](https://github.com/espressif/esp-dl/blob/master/docs/en/tutorials/how_to_load_model.rst).
+You can load models from ``rodata``, ``partition``, or ``sdcard``. In this example, the ``partition`` method is used; for more details, please refer to [how_to_load_model](https://github.com/espressif/esp-dl/blob/master/docs/en/tutorials/how_to_load_test_profile_model.rst).
 
 Additionally, to ensure the model outputs the expected results, you need to preprocess the data following the inference process on the PC and parse the model's inference results. You can refer to the data preprocessing and post-processing steps in this example.
 
