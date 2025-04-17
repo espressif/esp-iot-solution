@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -8,7 +8,7 @@
 #include "lightbulb.h"
 
 /*
- * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -552,6 +552,81 @@ TEST_CASE("BP1658CJ", "[Application Layer]")
     TEST_ASSERT_EQUAL(ESP_OK, lightbulb_init(&config));
     vTaskDelay(pdMS_TO_TICKS(1000));
     lightbulb_lighting_output_test(LIGHTING_BASIC_FIVE, 1000);
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit());
+}
+#endif
+
+#ifdef CONFIG_ENABLE_SM2182E_DRIVER
+TEST_CASE("SM2182E", "[Underlying Driver]")
+{
+    //1.Status check
+    TEST_ESP_ERR(ESP_ERR_INVALID_STATE, sm2182e_set_cw_channel(1024, 1024));
+
+    //2. init check
+    driver_sm2182e_t conf = {
+        .cw_current = SM2182E_CW_CURRENT_30MA,
+        .iic_clk = 4,
+        .iic_sda = 3,
+        .freq_khz = 300,
+        .enable_iic_queue = true
+    };
+    TEST_ASSERT_EQUAL(ESP_OK, sm2182e_init(&conf, NULL));
+
+    //3. regist Check, step 1
+    TEST_ASSERT_EQUAL(ESP_OK, sm2182e_regist_channel(SM2182E_CHANNEL_C, SM2182E_PIN_OUT1));
+    TEST_ASSERT_EQUAL(ESP_OK, sm2182e_regist_channel(SM2182E_CHANNEL_W, SM2182E_PIN_OUT2));
+
+    //4. Data range check
+    TEST_ESP_ERR(ESP_ERR_INVALID_ARG, sm2182e_set_cw_channel(SM2182E_CHANNEL_C, 1024));
+
+    //5. Color check
+    TEST_ASSERT_EQUAL(ESP_OK, sm2182e_set_shutdown());
+    vTaskDelay(pdMS_TO_TICKS(100));
+    TEST_ASSERT_EQUAL(ESP_OK, sm2182e_set_cw_channel(0, 1023));
+    vTaskDelay(pdMS_TO_TICKS(100));
+    TEST_ASSERT_EQUAL(ESP_OK, sm2182e_set_cw_channel(1023, 0));
+
+    //6. Current
+    TEST_ASSERT_EQUAL(SM2182E_CW_CURRENT_5MA, sm2182e_cw_current_mapping(5));
+    TEST_ASSERT_EQUAL(SM2182E_CW_CURRENT_80MA, sm2182e_cw_current_mapping(80));
+    TEST_ASSERT_EQUAL(SM2182E_CW_CURRENT_MAX, sm2182e_cw_current_mapping(6));
+
+    //7. deinit
+    TEST_ASSERT_EQUAL(ESP_OK, sm2182e_set_shutdown());
+    // Wait for data transmission to complete
+    vTaskDelay(pdMS_TO_TICKS(1000));
+    TEST_ASSERT_EQUAL(ESP_OK, sm2182e_deinit());
+}
+
+TEST_CASE("SM2182E", "[Application Layer]")
+{
+    lightbulb_config_t config = {
+        .type = DRIVER_SM2182E,
+        .driver_conf.sm2182e.cw_current = SM2182E_CW_CURRENT_30MA,
+        .driver_conf.sm2182e.iic_clk = 4,
+        .driver_conf.sm2182e.iic_sda = 3,
+        .driver_conf.sm2182e.freq_khz = 300,
+        .driver_conf.sm2182e.enable_iic_queue = true,
+        .capability.enable_fade = true,
+        .capability.fade_time_ms = 800,
+        .capability.enable_lowpower = false,
+        .capability.enable_status_storage = false,
+        .capability.led_beads = LED_BEADS_2CH_CW,
+        .capability.storage_cb = NULL,
+        .capability.sync_change_brightness_value = true,
+        .io_conf.iic_io.cold_white = OUT1,
+        .io_conf.iic_io.warm_yellow = OUT2,
+        .external_limit = NULL,
+        .gamma_conf = NULL,
+        .init_status.mode = WORK_WHITE,
+        .init_status.on = true,
+        .init_status.hue = 0,
+        .init_status.brightness = 100,
+        .init_status.cct_percentage = 0,
+    };
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_init(&config));
+    vTaskDelay(pdMS_TO_TICKS(1000));
+    lightbulb_lighting_output_test(LIGHTING_COLD_TO_WARM | LIGHTING_WARM_TO_COLD, 1000);
     TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit());
 }
 #endif

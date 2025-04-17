@@ -21,6 +21,12 @@ menu "LightBulb Driver Config"
             help
                 Enable SM2135eh output.
 
+        config ENABLE_SM2182E_DRIVER
+            bool "Enable sm2182e interface"
+            default "y"
+            help
+                Enable SN2182e output.
+
         config ENABLE_SM2X35EGH_DRIVER
             bool "Enable sm2x35egh(sm2235egh sm2335egh) interface"
             default "y"

@@ -22,6 +22,10 @@ extern "C" {
 #include "pwm.h"
 #endif
 
+#ifdef CONFIG_ENABLE_SM2182E_DRIVER
+#include "sm2182e.h"
+#endif
+
 #ifdef CONFIG_ENABLE_SM2135EH_DRIVER
 #include "sm2135eh.h"
 #endif
@@ -56,15 +60,16 @@ typedef enum {
     DRIVER_ESP_PWM = 1,
 
     /* IIC */
-    DRIVER_SM2135E,     // This version is no longer supported. Please checkout to v0.5.2
+    DRIVER_SM2135E = 10,        // This version is no longer supported. Please checkout to v0.5.2
     DRIVER_SM2135EH,
-    DRIVER_SM2x35EGH,   // Available for SM2235EGH SM2335EGH
-    DRIVER_BP57x8D,     // Available for BP5758 BP5758D BP5768D
-    DRIVER_BP1658CJ,
-    DRIVER_KP18058,
+    DRIVER_SM2182E,
+    DRIVER_SM2x35EGH,           // Available for SM2235EGH SM2335EGH
+    DRIVER_BP1658CJ = 20,
+    DRIVER_BP57x8D,             // Available for BP5758 BP5758D BP5768D
+    DRIVER_KP18058 = 40,
 
     /* Single Bus */
-    DRIVER_WS2812,
+    DRIVER_WS2812 = 100,
 
     DRIVER_SELECT_MAX,
 } lightbulb_driver_t;
@@ -304,6 +309,9 @@ typedef struct {
 #endif
 #ifdef CONFIG_ENABLE_SM2135EH_DRIVER
         driver_sm2135eh_t sm2135eh;
+#endif
+#ifdef CONFIG_ENABLE_SM2182E_DRIVER
+        driver_sm2182e_t sm2182e;
 #endif
 #ifdef CONFIG_ENABLE_BP57x8D_DRIVER
         driver_bp57x8d_t bp57x8d;

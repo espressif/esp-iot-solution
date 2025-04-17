@@ -23,6 +23,13 @@ if(CONFIG_ENABLE_SM2135EH_DRIVER)
     list(APPEND incs "drivers/common/iic/")
 endif()
 
+if(CONFIG_ENABLE_SM2182E_DRIVER)
+    list(APPEND srcs "drivers/sm2182e/sm2182e.c")
+    list(APPEND incs "drivers/sm2182e")
+    list(APPEND srcs "drivers/common/iic/iic.c")
+    list(APPEND incs "drivers/common/iic/")
+endif()
+
 if(CONFIG_ENABLE_SM2x35EGH_DRIVER)
     list(APPEND srcs "drivers/sm2x35egh/sm2x35egh.c")
     list(APPEND incs "drivers/sm2x35egh")
