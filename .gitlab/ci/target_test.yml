@@ -684,23 +684,23 @@ components_led_lightbulb_driver_test:
       optional: true
   parallel:
     matrix:
-      - IDF_TARGET: esp32s2
-        IDF_VERSION: "4.4"
-        ENV_TAG: generic
       - IDF_TARGET: esp32s3
         IDF_VERSION: "4.4"
-        ENV_TAG: generic
-      - IDF_TARGET: esp32s2
-        IDF_VERSION: "5.0"
         ENV_TAG: generic
       - IDF_TARGET: esp32s3
         IDF_VERSION: "5.0"
         ENV_TAG: generic
-      - IDF_TARGET: esp32s2
+      - IDF_TARGET: esp32s3
         IDF_VERSION: "5.1"
         ENV_TAG: generic
       - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.1"
+        IDF_VERSION: "5.2"
+        ENV_TAG: generic
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "5.3"
+        ENV_TAG: generic
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "5.4"
         ENV_TAG: generic
   tags:
     - ${IDF_TARGET}
