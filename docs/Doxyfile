@@ -76,6 +76,7 @@ INPUT = \
     $(PROJECT_PATH)/components/usb/usb_device_uac/include/usb_device_uac.h \
     $(PROJECT_PATH)/components/usb/usb_device_uvc/include/usb_device_uvc.h \
     $(PROJECT_PATH)/components/usb/usb_stream/include/usb_stream.h \
+    $(PROJECT_PATH)/components/utilities/adc_tp_calibration/include/adc_tp_calibration.h \
     $(PROJECT_PATH)/components/zero_detection/include/zero_detection.h \
 
 ## Get warnings for functions that have no documentation for their parameters or return value

@@ -1,0 +1,51 @@
+menu "Example Configuration"
+
+    menu "ESP32 ADC Configuration"
+        depends on IDF_TARGET_ESP32
+        config ADC1_CHANNEL
+            int "ADC1 Channel Number"
+            range 0 7
+            default 6
+            help
+                ADC1 channel number (0-7).
+
+        config ADC2_CHANNEL
+            int "ADC2 Channel Number"
+            range 0 9
+            default 9
+            help
+                ADC1 channel number (0-9).
+    endmenu
+
+    menu "ESP32S2 ADC Configuration"
+        depends on IDF_TARGET_ESP32S2
+        config ADC1_CHANNEL
+            int "ADC1 Channel Number"
+            range 0 9
+            default 6
+            help
+                ADC1 channel number (0-9).
+
+        config ADC2_CHANNEL
+            int "ADC2 Channel Number"
+            range 0 9
+            default 9
+            help
+                ADC1 channel number (0-9).
+    endmenu
+
+    config ADC_READ_TIMES
+        int "Number of times to read ADC"
+        range 20 100
+        default 50
+        help
+            Number of times to read ADC for each voltage level.
+
+    config ADC_ERROR_TOLERANCE_RANGE
+        int "ADC Error Tolerance Range (mV)"
+        range 1 30
+        default 30
+        help
+            The error tolerance range for ADC readings.
+
+endmenu
