@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.8.1 - 2025-04-17
+
+### Bug Fix:
+
+- Modify some compilation conditions
+
 ## v1.8.0 - 2025-03-28
 
 ### Improve:
