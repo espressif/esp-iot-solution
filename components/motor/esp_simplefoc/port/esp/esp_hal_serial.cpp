@@ -16,6 +16,7 @@ HardwareSerial::HardwareSerial()
     _rtsPin = -1;
     _rxBufferSize = 256;
     _txBufferSize = 0;
+    _uart_config = {};
 }
 
 HardwareSerial::~HardwareSerial()

@@ -27,7 +27,7 @@ AS5600::~AS5600()
 
 void AS5600::init()
 {
-    i2c_config_t conf;
+    i2c_config_t conf = {};
     conf.mode = I2C_MODE_MASTER;
     conf.sda_io_num = _sda_io;
     conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
