@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.8.2 - 2025-04-17
+
+### Bug Fix:
+
+- Adjust the power calculation algorithm
+
 ## v1.8.1 - 2025-04-17
 
 ### Bug Fix:
