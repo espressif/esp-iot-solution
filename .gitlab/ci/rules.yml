@@ -206,7 +206,7 @@
 
 .patterns-components_sensors_power_measure: &patterns-components_sensors_power_measure
   - "components/sensors/power_measure/**/*"
-  - "components/tools/cmake_utilities/package_manager.cmake"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_sensors_adc_mcp3201: &patterns-components_sensors_adc_mcp3201
   - "components/sensors/adc/mcp3201/**/*"
@@ -285,6 +285,10 @@
 
 .patterns-components_touch_touch_proximity_sensor: &patterns-components_touch_touch_proximity_sensor
   - "components/touch/touch_proximity_sensor/**/*"
+  - "tools/cmake_utilities/package_manager.cmake"
+
+.patterns-components_touch_touch_button: &patterns-components_touch_touch_button
+  - "components/touch/touch_button/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_touch_touch_button_sensor: &patterns-components_touch_touch_button_sensor
@@ -1295,6 +1299,17 @@
       changes: *patterns-components_sensors_sensor_hub
     - <<: *if-dev-push
       changes: *patterns-example_sensors_sensor_hub_monitor
+
+.rules:build:example_touch_touch_button:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_touch_touch_button
+    - <<: *if-dev-push
+      changes: *patterns-components_touch_touch_button
 
 .rules:build:example_touch_touch_button_sensor:
   rules:
@@ -2351,6 +2366,17 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_touch_touch_proximity_sensor
+
+.rules:build:components_touch_touch_button_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_touch_touch_button
 
 .rules:build:components_touch_touch_button_sensor_test_apps:
   rules:

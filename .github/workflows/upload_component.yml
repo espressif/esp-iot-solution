@@ -84,6 +84,7 @@ jobs:
             components/sensors/sensor_hub;
             components/spi_bus;
             components/storage/eeprom/at24c02;
+            components/touch/touch_button;
             components/touch/touch_button_sensor;
             components/touch/touch_proximity_sensor;
             components/usb/esp_msc_ota;

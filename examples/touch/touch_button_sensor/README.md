@@ -1,4 +1,4 @@
-# Touch Button Example
+# Touch Button Sensor Example
 
 **Note:** This example is for developers testing only. It is not intended for production use.
 
@@ -76,7 +76,7 @@ I (340) TOUCH_SENSOR: Touch channel detected: Active
 ...
 ```
 
-## Implementation Details 
+## Implementation Details
 
 The example demonstrates:
 

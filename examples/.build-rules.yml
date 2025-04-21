@@ -296,6 +296,10 @@ examples/usb/device/usb_dongle:
   enable:
     - if: SOC_USB_OTG_SUPPORTED == 1
 
+examples/touch/touch_button:
+  enable:
+    - if: SOC_TOUCH_SENSOR_SUPPORTED == 1
+
 examples/touch/touch_button_sensor:
   enable:
     - if: IDF_TARGET in ["esp32", "esp32s2", "esp32s3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)

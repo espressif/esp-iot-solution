@@ -1,0 +1,25 @@
+version: "0.1.0"
+targets:
+  - esp32
+  - esp32s2
+  - esp32s3
+  - esp32p4
+description: Provide a complete set of button detection methods based on `iot_button` to drive the touch FSM.
+url: https://github.com/espressif/esp-iot-solution/tree/master/components/touch/
+repository: https://github.com/espressif/esp-iot-solution.git
+issues: https://github.com/espressif/esp-iot-solution/issues
+examples:
+  - path: ../../../examples/touch/touch_button
+dependencies:
+  idf: ">=4.4"
+  cmake_utilities: "*"
+  espressif/button:
+    version: "^4"
+    public: true
+  espressif/touch_button_sensor:
+    version: "^0.2.1"
+    override_path: ../touch_button_sensor
+    public: true
+sbom:
+  supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'
+  originator: 'Organization: Espressif Systems (Shanghai) CO LTD'
