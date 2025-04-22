@@ -4,6 +4,10 @@ targets:
   - esp32s3
   - esp32p4
 description: USB Host ETH RNDIS Driver
+url: https://github.com/espressif/esp-iot-solution
+repository: https://github.com/espressif/esp-iot-solution.git
+documentation: https://docs.espressif.com/projects/esp-iot-solution/en/latest/usb/usb_host/usb_rndis.html
+issues: https://github.com/espressif/esp-iot-solution/issues
 dependencies:
   idf: ">=4.4"
   espressif/iot_usbh_cdc:

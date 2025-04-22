@@ -2,6 +2,7 @@ version: "0.1.0"
 description: Ethernet driver for USB Ethernet adapter
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/iot_eth
 repository: https://github.com/espressif/esp-iot-solution.git
+documentation: https://docs.espressif.com/projects/esp-iot-solution/en/latest/solution/4g/iot_eth.html
 issues: https://github.com/espressif/esp-iot-solution/issues
 examples:
   - path: ../../examples/usb/host/usb_rndis_4g_module
