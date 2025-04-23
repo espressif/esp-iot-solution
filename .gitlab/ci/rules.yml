@@ -612,6 +612,9 @@
 .patterns-example_usb_host_usb_cdc_basic: &patterns-example_usb_host_usb_cdc_basic
   - "examples/usb/host/usb_cdc_basic/**/*"
 
+.patterns-example_usb_host_usb_hub_dual_camera: &patterns-example_usb_host_usb_hub_dual_camera
+  - "examples/usb/host/usb_hub_dual_camera/**/*"
+
 .patterns-example_usb_host_usb_msc_ota: &patterns-example_usb_host_usb_msc_ota
   - "examples/usb/host/usb_msc_ota/**/*"
 
@@ -1550,6 +1553,16 @@
       changes: *patterns-components_usb_iot_usbh_cdc
     - <<: *if-dev-push
       changes: *patterns-example_usb_host_usb_cdc_basic
+
+.rules:build:example_usb_host_usb_hub_dual_camera:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_usb_host_usb_hub_dual_camera
 
 .rules:build:example_usb_host_usb_msc_ota:
   rules:

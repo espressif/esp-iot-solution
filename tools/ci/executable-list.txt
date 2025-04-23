@@ -8,6 +8,7 @@ examples/elf_loader/elf_loader_example/main/test_riscv.elf
 examples/elf_loader/elf_loader_example/main/test_xtensa.elf
 examples/usb/device/bootloader_uf2/utils/redirect.sh
 examples/usb/host/usb_camera_mic_spk/components/xfer_http/www/compress_pages.sh
+examples/usb/host/usb_hub_dual_camera/scripts/gzip_webserver_files.sh
 tools/ci/check_components.py
 tools/ci/check_executables.py
 tools/ci/check_readme_links.py
