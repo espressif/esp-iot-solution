@@ -131,6 +131,7 @@ pack-upload_files:
     - job: "build_example_usb_host_usb_camera_mic_spk: [espressif/idf:release-v5.1]"
     - job: "build_example_usb_host_usb_cdc_4g_module: [espressif/idf:release-v5.1]"
     - job: "build_example_usb_host_usb_cdc_basic: [espressif/idf:release-v5.1]"
+    - job: "build_example_usb_host_usb_hub_dual_camera: [espressif/idf:release-v5.4]"
     - job: "build_example_usb_host_usb_msc_ota: [espressif/idf:release-v5.1]"
     - job: "build_example_vision_opencv_color_tracker: [espressif/idf:release-v5.4]"
 

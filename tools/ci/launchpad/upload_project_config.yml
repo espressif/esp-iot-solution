@@ -257,7 +257,19 @@ examples/usb/host/usb_cdc_basic:
   description:
     This is the USB CDC basic example
   readme:
-    https://raw.githubusercontent.com/espressif/esp-iot-solution/master/examples/usb/host/sb_cdc_basic/README.md
+    https://raw.githubusercontent.com/espressif/esp-iot-solution/master/examples/usb/host/usb_cdc_basic/README.md
+
+examples/usb/host/usb_hub_dual_camera:
+  esp32s3:
+    sdkconfig:
+      - defaults
+  esp32p4:
+    sdkconfig:
+      - defaults
+  description:
+    This is the USB Host Dual UVC example
+  readme:
+    https://raw.githubusercontent.com/espressif/esp-iot-solution/master/examples/usb/host/usb_hub_dual_camera/README.md
 
 examples/usb/host/usb_msc_ota:
   esp32s3:

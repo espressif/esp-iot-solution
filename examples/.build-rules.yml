@@ -408,6 +408,10 @@ examples/usb/host/usb_cdc_basic:
   enable:
     - if: IDF_TARGET in ["esp32s2","esp32s3"]
 
+examples/usb/host/usb_hub_dual_camera:
+  enable:
+    - if: IDF_TARGET in ["esp32s2", "esp32s3","esp32p4"]
+
 examples/usb/host/usb_msc_ota:
   enable:
     - if: SOC_USB_OTG_SUPPORTED == 1
