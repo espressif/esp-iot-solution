@@ -5,6 +5,7 @@
 function(spiffs_create_partition_assets partition base_dir)
     # Define option flags (BOOL)
     set(options FLASH_IN_PROJECT
+                FLASH_APPEND_APP
                 MMAP_SUPPORT_SJPG
                 MMAP_SUPPORT_SPNG
                 MMAP_SUPPORT_QOI
@@ -171,30 +172,46 @@ function(spiffs_create_partition_assets partition base_dir)
         string(TOLOWER "${arg_MMAP_RAW_DITHER}" support_raw_dither)
         string(TOLOWER "${arg_MMAP_RAW_BGR_MODE}" support_raw_bgr)
 
-        set(CONFIG_FILE_PATH "${CMAKE_BINARY_DIR}/mmap_build/${base_dir_name}/config.json")
+        set(app_bin_path "${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}.bin")
+
+        set(CONFIG_FILE_PATH "${CMAKE_BINARY_DIR}/mmap_build/${base_dir_name}.json")
         configure_file(
             "${TARGET_COMPONENT_PATH}/config_template.json.in"
             "${CONFIG_FILE_PATH}"
             @ONLY
         )
 
-        add_custom_target(spiffs_${partition}_bin ALL
+        add_custom_target(assets_${partition}_bin ALL
             COMMENT "Move and Pack assets..."
             COMMAND python ${MVMODEL_EXE} --config "${CONFIG_FILE_PATH}"
             DEPENDS ${arg_DEPENDS}
             VERBATIM)
 
-        set_property(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" APPEND PROPERTY
-            ADDITIONAL_CLEAN_FILES
-            ${image_file})
+        if(arg_FLASH_APPEND_APP)
+            add_custom_target(assets_${partition}_merge_bin ALL
+            COMMENT "Merge Bin..."
+            COMMAND python ${TARGET_COMPONENT_PATH}/spiffs_assets_gen.py --config "${CONFIG_FILE_PATH}" --merge
+            COMMAND ${CMAKE_COMMAND} -E rm "${build_dir}/.bin_timestamp" # Remove the timestamp file to force re-run
+            DEPENDS assets_${partition}_bin app
+            VERBATIM)
+        endif()
 
         if(arg_FLASH_IN_PROJECT)
-            esptool_py_flash_to_partition(flash "${partition}" "${image_file}")
-            add_dependencies(flash spiffs_${partition}_bin)
+            set(assets_target "assets_${partition}_bin")
+
+            if(arg_FLASH_APPEND_APP)
+                set(assets_target "assets_${partition}_merge_bin")
+                add_dependencies(app-flash ${assets_target})
+            else()
+                esptool_py_flash_to_partition(flash "${partition}" "${image_file}")
+            endif()
+
+            add_dependencies(flash ${assets_target})
         endif()
+
     else()
         set(message "Failed to create assets bin for partition '${partition}'. "
                     "Check project configuration if using the correct partition table file.")
-        fail_at_build_time(spiffs_${partition}_bin "${message}")
+        fail_at_build_time(assets_${partition}_bin "${message}")
     endif()
 endfunction()
