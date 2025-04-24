@@ -56,9 +56,22 @@ typedef struct {
 
 /**
  * @brief Callback structure for CDC device events
+ *
+ * @param[in] cdc_handle Handle to the CDC device that sent the notification
+ * @param[in] user_data User data pointer that was passed during callback registration
  */
 typedef void (*usbh_cdc_event_cb_t)(usbh_cdc_handle_t cdc_handle, void *user_data);
 
+/**
+ * @brief Callback function for CDC device notifications
+ *
+ * This callback is invoked when a CDC device sends a notification event. The notification
+ * data is passed through the notif parameter.
+ *
+ * @param[in] cdc_handle Handle to the CDC device that sent the notification
+ * @param[in] notif Pointer to the notification data structure containing notification details
+ * @param[in] user_data User data pointer that was passed during callback registration
+ */
 typedef void (*usbh_cdc_notif_cb_t)(usbh_cdc_handle_t cdc_handle, iot_cdc_notification_t *notif, void *user_data);
 
 /**

@@ -764,6 +764,8 @@ static esp_err_t _cdc_close(usbh_cdc_t *cdc)
         ESP_ERROR_CHECK(_cdc_reset_transfer_endpoint(cdc->dev_hdl, cdc->data.in_xfer));
     }
 
+    ESP_ERROR_CHECK(_cdc_reset_transfer_endpoint(cdc->dev_hdl, cdc->data.out_xfer));
+
     if (cdc->notif.xfer) {
         ESP_ERROR_CHECK(_cdc_reset_transfer_endpoint(cdc->dev_hdl, cdc->notif.xfer));
     }

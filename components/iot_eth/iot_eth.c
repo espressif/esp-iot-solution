@@ -153,7 +153,6 @@ esp_err_t iot_eth_install(iot_eth_config_t *config, iot_eth_handle_t *handle)
     eth->driver = config->driver;
     // default stack input to esp_netif_receive(TCP/IP stack)
     if (config->stack_input == NULL) {
-        // TODO: 如果不创建 netif 是否还需要这个？
         ret = esp_event_handler_register(IP_EVENT, IP_EVENT_ETH_GOT_IP, &iot_eth_got_ip_event_handler, NULL);
         ESP_GOTO_ON_FALSE(ret == ESP_OK, ESP_FAIL, err, TAG, "Failed to register event handler");
 

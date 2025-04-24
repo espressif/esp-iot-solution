@@ -696,6 +696,9 @@ static esp_err_t usbh_rndis_deinit(iot_eth_driver_t *driver)
     if (rndis->event_group != NULL) {
         vEventGroupDelete(rndis->event_group);
     }
+    if (rndis) {
+        free(rndis);
+    }
     return ESP_OK;
 }
 

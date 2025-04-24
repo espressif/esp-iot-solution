@@ -2458,6 +2458,18 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_touch_touch_slider_sensor
+.rules:build:components_usb_usb_host_rndis_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_usb_usb_host_rndis
+    - <<: *if-dev-push
+      changes: *patterns-components_usb_iot_usbh_cdc
 
 .rules:build:components_usb_esp_msc_ota_test_apps:
   rules:
