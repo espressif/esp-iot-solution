@@ -1,0 +1,156 @@
+menu "Touch Slider Sensor Configuration"
+
+    config TOUCH_SLIDER_SENSOR_DEBUG
+        bool "Enable touch slider sensor debug mode"
+        default n
+        help
+            Enable touch slider sensor debug mode.
+
+    config TOUCH_SLIDER_SENSOR_CALIBRATION_TIMES
+        int "Calibration times"
+        default 50 if !IDF_TARGET_ESP32
+        default 20
+        range 10 1000
+        help
+            Number of readings used for initial calibration.
+
+    config TOUCH_SLIDER_SENSOR_DEBOUNCE_INACTIVE
+        int "Debounce inactive count"
+        default 3 if !IDF_TARGET_ESP32
+        default 1
+        range 1 50
+        help
+            Number of consecutive readings below threshold needed to confirm inactive state.
+
+    config TOUCH_SLIDER_SENSOR_POLLING_INTERVAL
+        int "Polling interval (ms)"
+        default 10
+        range 5 100
+        depends on IDF_TARGET_ESP32
+        help
+            Interval between polling touch readings in milliseconds (for ESP32 only).
+
+    config TOUCH_SLIDER_SENSOR_SMOOTH_COEF_X1000
+        int "Smooth coefficient (/1000)"
+        default 200 if IDF_TARGET_ESP32S3 || IDF_TARGET_ESP32S2
+        default 300 if IDF_TARGET_ESP32
+        default 600 if IDF_TARGET_ESP32P4
+        default 500
+        range 0 1000
+        help
+            Coefficient for smooth filter, multiplied by 1000.
+            For example, 200 means 0.2
+
+    config TOUCH_SLIDER_SENSOR_BASELINE_COEF_X1000
+        int "Baseline coefficient (/1000)"
+        default 100 if IDF_TARGET_ESP32S3 || IDF_TARGET_ESP32S2
+        default 150 if IDF_TARGET_ESP32
+        default 200 if IDF_TARGET_ESP32P4
+        default 100
+        range 0 1000
+        help
+            Coefficient for baseline filter, multiplied by 1000.
+            For example, 100 means 0.1
+
+    config TOUCH_SLIDER_SENSOR_MAX_P_X1000
+        int "Maximum positive change ratio (/1000)"
+        default 200
+        range 0 1000
+        help
+            Maximum positive change ratio from baseline, multiplied by 1000.
+            For example, 200 means 0.2. 0 means no limit.
+
+    config TOUCH_SLIDER_SENSOR_MIN_N_X1000
+        int "Minimum negative change ratio (/1000)"
+        default 200
+        range 0 1000
+        help
+            Minimum negative change ratio from baseline, multiplied by 1000.
+            For example, 200 means 0.2. 0 means no limit.
+
+    config TOUCH_SLIDER_SENSOR_NEGATIVE_LOGIC
+        bool "Using negative logic to detect touch"
+        default n
+        help
+            Using both positive and negative threshold to detect touch.
+
+    config TOUCH_SLIDER_SENSOR_NOISE_P_SNR
+        int "Positive noise SNR"
+        default 4
+        range 3 100
+        help
+            Signal-to-noise for positive Noise
+
+    config TOUCH_SLIDER_SENSOR_NOISE_N_SNR
+        int "Negative noise SNR"
+        default 4
+        range 2 100
+        help
+            Signal-to-noise for negative Noise
+
+    config TOUCH_SLIDER_SENSOR_RESET_COVER
+        int "Reset count from cover"
+        default 1000 if !IDF_TARGET_ESP32
+        default 300
+        range 0 5000
+        help
+            Reset count if cover is detected. 0 means no reset.
+
+    config TOUCH_SLIDER_SENSOR_RESET_CALIBRATION
+        int "Reset count from calibration error"
+        default 3
+        range 0 100
+        help
+            Reset count for negative threshold. 0 means no reset.
+
+    config TOUCH_SLIDER_SENSOR_RAW_BUF_SIZE
+        int "Raw buffer size"
+        default 40 if !IDF_TARGET_ESP32
+        default 10
+        range 10 100
+        help
+            Size of raw data buffer.
+
+    config TOUCH_SLIDER_SENSOR_SCALE_FACTOR
+        int "Scale factor"
+        default 100 if !IDF_TARGET_ESP32
+        default 1000
+        range 10 1000
+        help
+            Scale factor for threshold calculation.
+
+    config TOUCH_SLIDER_SENSOR_QUANTIFY_LOWER_THRESHOLD_X1000
+        int "Quantify lower threshold (/1000)"
+        default 300
+        range 0 10000
+        help
+            Ratio of activation to quantify as 0.
+
+    config TOUCH_SLIDER_SENSOR_BENCHMARK_UPDATE_TIME
+        int "Benchmark update time"
+        default 500
+        range 100 10000
+        help
+            Delay after sensor is released before benchmark is updated.
+
+    config TOUCH_SLIDER_SENSOR_POS_FILTER_SIZE
+        int "Position filter size"
+        default 10
+        range 1 100
+        help
+            Window size of slider position IIR filter.
+
+    config TOUCH_SLIDER_SENSOR_POS_FILTER_FACTOR
+        int "Position filter factor"
+        default 2
+        range 1 10
+        help
+            Divisor of slider position IIR filter.
+
+    config TOUCH_SLIDER_SENSOR_CALCULATE_CHANNEL
+        int "Position calculation window"
+        default 3
+        range 1 10
+        help
+            Number of channels in position calculation
+endmenu

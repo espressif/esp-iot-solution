@@ -70,6 +70,7 @@ INPUT = \
     $(PROJECT_PATH)/components/spi_bus/include/spi_bus.h \
     $(PROJECT_PATH)/components/touch/touch_button_sensor/include/touch_button_sensor.h \
     $(PROJECT_PATH)/components/touch/touch_proximity_sensor/include/touch_proximity_sensor.h \
+    $(PROJECT_PATH)/components/touch/touch_slider_sensor/include/touch_slider_sensor.h \
     $(PROJECT_PATH)/components/usb/esp_msc_ota/include/esp_msc_ota.h \
     $(PROJECT_PATH)/components/usb/esp_tinyuf2/esp_tinyuf2.h \
     $(PROJECT_PATH)/components/usb/iot_usbh_cdc/include/iot_usbh_cdc.h \

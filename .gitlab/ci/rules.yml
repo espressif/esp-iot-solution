@@ -291,6 +291,10 @@
   - "components/touch/touch_button_sensor/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
 
+.patterns-components_touch_touch_slider_sensor: &patterns-components_touch_touch_slider_sensor
+  - "components/touch/touch_slider_sensor/**/*"
+  - "tools/cmake_utilities/package_manager.cmake"
+
 .patterns-components_usb_esp_msc_ota: &patterns-components_usb_esp_msc_ota
   - "components/usb/esp_msc_ota/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
@@ -550,6 +554,9 @@
 
 .patterns-example_touch_touch_proximity: &patterns-example_touch_touch_proximity
   - "examples/touch/touch_proximity/**/*"
+
+.patterns-example_touch_touch_slider: &patterns-example_touch_touch_slider
+  - "examples/touch/touch_slider_sensor/**/*"
 
 .patterns-example_ulp_lp_cpu_lp_environment_sensor: &patterns-example_ulp_lp_cpu_lp_environment_sensor
   - "examples/ulp/lp_cpu/lp_environment_sensor/**/*"
@@ -1317,6 +1324,17 @@
       changes: *patterns-example_touch_touch_proximity
     - <<: *if-dev-push
       changes: *patterns-components_touch_touch_proximity_sensor
+
+.rules:build:example_touch_touch_slider_sensor:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_touch_touch_slider
+    - <<: *if-dev-push
+      changes: *patterns-components_touch_touch_slider_sensor
 
 .rules:build:example_ulp_lp_cpu_lp_environment_sensor:
   rules:
@@ -2362,6 +2380,17 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_touch_touch_button_sensor
+
+.rules:build:components_touch_touch_slider_sensor_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_touch_touch_slider_sensor
 
 .rules:build:components_usb_esp_msc_ota_test_apps:
   rules:
