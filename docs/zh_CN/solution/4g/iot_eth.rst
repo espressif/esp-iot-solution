@@ -18,7 +18,7 @@ IOT ETH 以太网
 
 .. code:: c
 
-    usb_host_rndis_config_t rndis_cfg = {
+    iot_usbh_rndis_config_t rndis_cfg = {
         .auto_detect = true,  // auto detect 4G module
         .auto_detect_timeout = pdMS_TO_TICKS(1000),  // auto detect timeout
         .rx_buffer_size = 1024 * 4,  // rx ringbuffer size
@@ -38,8 +38,6 @@ IOT ETH 以太网
 
     iot_eth_config_t eth_cfg = {
         .driver = rndis_handle,
-        .on_lowlevel_init_done = NULL,
-        .on_lowlevel_deinit = NULL,
         .stack_input = NULL,
         .user_data = NULL,
     };
@@ -73,9 +71,9 @@ IOT ETH 以太网
 已支持的网络接口
 ------------------
 
-- 基于 USB 接口的 RNDIS :doc:`/usb/usb_host/usb_rndis.rst`
+- 基于 USB 接口的 RNDIS :doc:`/usb/usb_host/usb_rndis`
 
-- 基于 USB 接口的 PPP :doc:`/usb/usb_host/usb_ppp.rst`
+- 基于 USB 接口的 PPP :doc:`/usb/usb_host/usb_ppp`
 
 API 参考
 ---------

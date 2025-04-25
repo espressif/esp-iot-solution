@@ -6,4 +6,4 @@
 .. toctree::
     :maxdepth: 2
 
-    4G 解决方案 <4g_solution/index>
+    4G 解决方案 <4g/index>

@@ -18,7 +18,7 @@ User Guide
 
 .. code:: c
 
-    usb_host_rndis_config_t rndis_cfg = {
+    iot_usbh_rndis_config_t rndis_cfg = {
         .auto_detect = true,  // auto detect 4G module
         .auto_detect_timeout = pdMS_TO_TICKS(1000),  // auto detect timeout
         .rx_buffer_size = 1024 * 4,  // rx ringbuffer size
@@ -38,8 +38,6 @@ User Guide
 
     iot_eth_config_t eth_cfg = {
         .driver = rndis_handle,
-        .on_lowlevel_init_done = NULL,
-        .on_lowlevel_deinit = NULL,
         .stack_input = NULL,
         .user_data = NULL,
     };
@@ -73,9 +71,9 @@ Using Other Network Interfaces
 Supported Network Interfaces
 -----------------------------
 
-- USB interface-based RNDIS :doc:`/usb/usb_host/usb_rndis.rst`
+- USB interface-based RNDIS :doc:`/usb/usb_host/usb_rndis`
 
-- USB interface-based PPP :doc:`/usb/usb_host/usb_ppp.rst`
+- USB interface-based PPP :doc:`/usb/usb_host/usb_ppp`
 
 API Reference
 -------------

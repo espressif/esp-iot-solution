@@ -22,37 +22,37 @@ Features:
 Supported Module Models:
 -------------------------
 
-The following table lists the supported 4G module models. They can be configured directly in menuconfig through the :macro:`MODEM_TARGET` macro. If the configuration is not effective, please select `MODEM_TARGET_USER` in menuconfig and manually configure the ITF interface.
+The following table lists the supported 4G module models. They can be configured directly in menuconfig through the :c:macro:`MODEM_TARGET` macro. If the configuration is not effective, please select :c:macro:`MODEM_TARGET_USER` in menuconfig and manually configure the ITF interface.
 
 .. note::
 
     The same module may have multiple functional firmwares. Please consult the module manufacturer for PPP dial-up support.
 
-+------------------+
-| Module Model     |
-+==================+
++-----------------+
+|  Module Model   |
++=================+
 | ML302-DNLM/CNLM |
-+------------------+
++-----------------+
 | EC600NCNLC-N06  |
-+------------------+
++-----------------+
 | AIR780E         |
-+------------------+
++-----------------+
 | MC610_EU        |
-+------------------+
++-----------------+
 | EC20_CE         |
-+------------------+
++-----------------+
 | EG25_GL         |
-+------------------+
++-----------------+
 | YM310_X09       |
-+------------------+
++-----------------+
 | SIM7600E        |
-+------------------+
++-----------------+
 | A7670E          |
-+------------------+
++-----------------+
 | SIM7070G        |
-+------------------+
++-----------------+
 | SIM7080G        |
-+------------------+
++-----------------+
 
 Setting up PPP Interface
 -------------------------
@@ -106,12 +106,12 @@ Example USB descriptor:
             wMaxPacketSize 64
             bInterval 0
 
-After identifying the PPP interface, you can configure :macro:`MODEM_TARGET` as `MODEM_TARGET_USER` and set :macro:`MODEM_USB_ITF` to the bInterfaceNumber of the PPP interface.
+After identifying the PPP interface, you can configure :c:macro:`MODEM_TARGET` as :c:macro:`MODEM_TARGET_USER` and set :c:macro:`MODEM_USB_ITF` to the bInterfaceNumber of the PPP interface.
 
 Dual PPP Interface
 ~~~~~~~~~~~~~~~~~~~~
 
-To enable AT command transmission while transferring data, you can use two PPP interfaces - one for data transfer and another for AT commands. This requires additional configuration of :macro:`MODEM_USB_ITF2`.
+To enable AT command transmission while transferring data, you can use two PPP interfaces - one for data transfer and another for AT commands. This requires additional configuration of :c:macro:`MODEM_USB_ITF2`.
 
 .. note::
 

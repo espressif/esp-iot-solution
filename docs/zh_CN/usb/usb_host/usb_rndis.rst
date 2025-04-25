@@ -3,7 +3,7 @@ USB RNDIS 主机驱动
 
 :link_to_translation:`en:[English]`
 
-`usb_host_rndis <https://components.espressif.com/components/espressif/usb_host_rndis>`_ 是基于 USB 接口的 RNDIS 协议的主机驱动。
+`iot_usbh_rndis <https://components.espressif.com/components/espressif/iot_usbh_rndis>`_ 是基于 USB 接口的 RNDIS 协议的主机驱动。
 
 RNDIS 协议
 ------------
@@ -105,4 +105,4 @@ ESP32-S3 连接 4G 网卡，并开始 softAP，手机连接 softAP 进行网络�
 API 参考
 ---------
 
-.. include-build-file:: inc/usb_host_rndis.inc
+.. include-build-file:: inc/iot_usbh_rndis.inc

@@ -3,7 +3,7 @@ USB RNDIS Host Driver
 
 :link_to_translation:`zh_CN:[中文]`
 
-``usb_host_rndis`` is a host driver for the RNDIS protocol based on USB interface.
+``iot_usbh_rndis`` is a host driver for the RNDIS protocol based on USB interface.
 
 RNDIS Protocol
 ---------------
@@ -95,13 +95,13 @@ Speed Test
 
 ESP32-S3 connected to 4G network card and started softAP, mobile phone connected to softAP for network speed test:
 
-+----------+------------+------------+
-|   Chip   | Upload(Mbps)| Download(Mbps)|
-+==========+============+============+
-| ESP32-S3 | 0.8        | 7.9        |
-+----------+------------+------------+
++----------+--------------+----------------+
+|   Chip   | Upload(Mbps) | Download(Mbps) |
++==========+==============+================+
+| ESP32-S3 | 0.8          | 7.9            |
++----------+--------------+----------------+
 
 API Reference
 --------------
 
-.. include-build-file:: inc/usb_host_rndis.inc
+.. include-build-file:: inc/iot_usbh_rndis.inc

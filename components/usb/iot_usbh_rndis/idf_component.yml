@@ -13,6 +13,7 @@ dependencies:
   espressif/iot_usbh_cdc:
     version: "*"
     override_path: "../iot_usbh_cdc"
+    public: true
   espressif/iot_eth:
     version: "*"
     override_path: "../../iot_eth"

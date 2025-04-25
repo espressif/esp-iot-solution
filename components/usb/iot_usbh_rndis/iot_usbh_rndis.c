@@ -15,8 +15,8 @@
 #include "usbh_rndis_protocol.h"
 #include "esp_mac.h"
 #include "esp_event.h"
-#include "usb_host_rndis.h"
-#include "usb_host_rndis_descriptor.h"
+#include "iot_usbh_rndis.h"
+#include "iot_usbh_rndis_descriptor.h"
 #include "iot_eth_types.h"
 #include "iot_usbh_cdc_type.h"
 
@@ -35,7 +35,7 @@ static const char *TAG = "usbh_rndis";
 typedef struct {
     iot_eth_driver_t base;
     iot_eth_mediator_t *mediator;
-    usb_host_rndis_config_t config;
+    iot_usbh_rndis_config_t config;
     usbh_cdc_handle_t cdc_dev;
     EventGroupHandle_t event_group;
     uint32_t request_id;
@@ -48,7 +48,7 @@ typedef struct {
     void *user_data;
 } usbh_rndis_t;
 
-esp_err_t usbh_rndis_init_msg_transfer(usbh_rndis_t * rndis)
+static esp_err_t usbh_rndis_init_msg_request(usbh_rndis_t * rndis)
 {
     esp_err_t ret = ESP_OK;
     uint8_t data[256];
@@ -83,7 +83,7 @@ esp_err_t usbh_rndis_init_msg_transfer(usbh_rndis_t * rndis)
     return ESP_OK;
 }
 
-esp_err_t usbh_rndis_query_msg_transfer(usbh_rndis_t *rndis, uint32_t oid, uint32_t query_len, uint8_t *info, uint32_t *info_len)
+static esp_err_t usbh_rndis_query_msg_request(usbh_rndis_t *rndis, uint32_t oid, uint32_t query_len, uint8_t *info, uint32_t *info_len)
 {
     esp_err_t ret = ESP_OK;
     uint8_t data[256];
@@ -115,7 +115,7 @@ esp_err_t usbh_rndis_query_msg_transfer(usbh_rndis_t *rndis, uint32_t oid, uint3
     return ret;
 }
 
-static esp_err_t usbh_rndis_set_msg_transfer(usbh_rndis_t *rndis, uint32_t oid, uint8_t *info, uint32_t info_len)
+static esp_err_t usbh_rndis_set_msg_request(usbh_rndis_t *rndis, uint32_t oid, uint8_t *info, uint32_t info_len)
 {
     esp_err_t ret = 0;
     uint8_t data[256];
@@ -141,18 +141,18 @@ static esp_err_t usbh_rndis_set_msg_transfer(usbh_rndis_t *rndis, uint32_t oid, 
     resp = (rndis_set_cmplt_t *)data;
     req_type = USB_BM_REQUEST_TYPE_TYPE_CLASS | USB_BM_REQUEST_TYPE_RECIP_INTERFACE | USB_BM_REQUEST_TYPE_DIR_IN;
     ret = usbh_cdc_send_custom_request(rndis->cdc_dev, req_type, CDC_REQ_GET_ENCAPSULATED_RESPONSE, 0, 0, 256, (uint8_t *)resp);
-    ESP_LOGI(TAG, "resp->Status: %d", resp->Status);
+    ESP_LOGI(TAG, "resp->Status: %"PRIu32"", resp->Status);
     ESP_RETURN_ON_ERROR(ret, TAG, "oid:%08x recv error, ret: %s", (unsigned int)oid, esp_err_to_name(ret));
     return ret;
 }
 
-esp_err_t usbh_rndis_get_connect_status(usbh_rndis_t *rndis)
+static esp_err_t usbh_rndis_get_connect_status(usbh_rndis_t *rndis)
 {
     esp_err_t ret = ESP_OK;
     uint8_t data[32];
     uint32_t data_len = 0;
     bool connect_status = false;
-    ret = usbh_rndis_query_msg_transfer(rndis, OID_GEN_MEDIA_CONNECT_STATUS, 4, data, &data_len);
+    ret = usbh_rndis_query_msg_request(rndis, OID_GEN_MEDIA_CONNECT_STATUS, 4, data, &data_len);
     ESP_RETURN_ON_ERROR(ret, TAG, "Failed to query OID_GEN_MEDIA_CONNECT_STATUS");
     if (NDIS_MEDIA_STATE_CONNECTED == data[0]) {
         connect_status = true;
@@ -168,7 +168,7 @@ esp_err_t usbh_rndis_get_connect_status(usbh_rndis_t *rndis)
     return ret;
 }
 
-esp_err_t usbh_rndis_keepalive(usbh_rndis_t *handle)
+static esp_err_t usbh_rndis_keepalive(usbh_rndis_t *handle)
 {
     esp_err_t ret = ESP_OK;
     uint8_t data[256];
@@ -207,9 +207,9 @@ static esp_err_t usbh_rndis_connect(usbh_rndis_t *handle)
     uint8_t data[32];
     uint32_t data_len;
     ESP_RETURN_ON_FALSE(rndis, ESP_ERR_INVALID_STATE, TAG, "rndis not init");
-    ret = usbh_rndis_init_msg_transfer(rndis);
+    ret = usbh_rndis_init_msg_request(rndis);
     ESP_RETURN_ON_ERROR(ret, TAG, "Failed to init rndis");
-    ret = usbh_rndis_query_msg_transfer(rndis, OID_GEN_SUPPORTED_LIST, 0, tmp_buffer, &data_len);
+    ret = usbh_rndis_query_msg_request(rndis, OID_GEN_SUPPORTED_LIST, 0, tmp_buffer, &data_len);
     ESP_RETURN_ON_ERROR(ret, TAG, "Failed to query OID_GEN_SUPPORTED_LIST");
 
     oid_num = (data_len / 4);
@@ -220,20 +220,20 @@ static esp_err_t usbh_rndis_connect(usbh_rndis_t *handle)
         oid = oid_support_list[i];
         switch (oid) {
         case OID_GEN_PHYSICAL_MEDIUM:
-            ret = usbh_rndis_query_msg_transfer(rndis, OID_GEN_PHYSICAL_MEDIUM, 4, data, &data_len);
+            ret = usbh_rndis_query_msg_request(rndis, OID_GEN_PHYSICAL_MEDIUM, 4, data, &data_len);
             ESP_GOTO_ON_ERROR(ret, query_errorout, TAG,);
             break;
         case OID_GEN_MAXIMUM_FRAME_SIZE:
-            ret = usbh_rndis_query_msg_transfer(rndis, OID_GEN_MAXIMUM_FRAME_SIZE, 4, data, &data_len);
+            ret = usbh_rndis_query_msg_request(rndis, OID_GEN_MAXIMUM_FRAME_SIZE, 4, data, &data_len);
             ESP_GOTO_ON_ERROR(ret, query_errorout, TAG, "OID_GEN_MAXIMUM_FRAME_SIZE query error, ret: %s", esp_err_to_name(ret));
             break;
         case OID_GEN_LINK_SPEED:
-            ret = usbh_rndis_query_msg_transfer(rndis, OID_GEN_LINK_SPEED, 4, data, &data_len);
+            ret = usbh_rndis_query_msg_request(rndis, OID_GEN_LINK_SPEED, 4, data, &data_len);
             ESP_GOTO_ON_ERROR(ret, query_errorout, TAG, "OID_GEN_LINK_SPEED query error, ret: %s", esp_err_to_name(ret));
             memcpy(&rndis->link_speed, data, 4);
             break;
         case OID_GEN_MEDIA_CONNECT_STATUS:
-            ret = usbh_rndis_query_msg_transfer(rndis, OID_GEN_MEDIA_CONNECT_STATUS, 4, data, &data_len);
+            ret = usbh_rndis_query_msg_request(rndis, OID_GEN_MEDIA_CONNECT_STATUS, 4, data, &data_len);
             ESP_GOTO_ON_ERROR(ret, query_errorout, TAG, "OID_GEN_MEDIA_CONNECT_STATUS query error, ret: %s", esp_err_to_name(ret));
             if (NDIS_MEDIA_STATE_CONNECTED == data[0]) {
                 rndis->connect_status = true;
@@ -242,22 +242,22 @@ static esp_err_t usbh_rndis_connect(usbh_rndis_t *handle)
             }
             break;
         case OID_802_3_MAXIMUM_LIST_SIZE:
-            ret = usbh_rndis_query_msg_transfer(rndis, OID_802_3_MAXIMUM_LIST_SIZE, 4, data, &data_len);
+            ret = usbh_rndis_query_msg_request(rndis, OID_802_3_MAXIMUM_LIST_SIZE, 4, data, &data_len);
             ESP_GOTO_ON_ERROR(ret, query_errorout, TAG, "OID_802_3_MAXIMUM_LIST_SIZE query error, ret: %s", esp_err_to_name(ret));
             break;
         case OID_802_3_CURRENT_ADDRESS:
-            ret = usbh_rndis_query_msg_transfer(rndis, OID_802_3_CURRENT_ADDRESS, 6, data, &data_len);
+            ret = usbh_rndis_query_msg_request(rndis, OID_802_3_CURRENT_ADDRESS, 6, data, &data_len);
             ESP_GOTO_ON_ERROR(ret, query_errorout, TAG, "OID_802_3_CURRENT_ADDRESS query error, ret: %s", esp_err_to_name(ret));
             for (uint8_t j = 0; j < 6; j++) {
                 rndis->eth_mac_addr[j] = data[j];
             }
             break;
         case OID_802_3_PERMANENT_ADDRESS:
-            ret = usbh_rndis_query_msg_transfer(rndis, OID_802_3_PERMANENT_ADDRESS, 6, data, &data_len);
+            ret = usbh_rndis_query_msg_request(rndis, OID_802_3_PERMANENT_ADDRESS, 6, data, &data_len);
             ESP_GOTO_ON_ERROR(ret, query_errorout, TAG,);
             break;
         case OID_GEN_MAXIMUM_TOTAL_SIZE:
-            ret = usbh_rndis_query_msg_transfer(rndis, OID_GEN_MAXIMUM_TOTAL_SIZE, 4, data, &data_len);
+            ret = usbh_rndis_query_msg_request(rndis, OID_GEN_MAXIMUM_TOTAL_SIZE, 4, data, &data_len);
             ESP_GOTO_ON_ERROR(ret, query_errorout, TAG,);
             break;
         default:
@@ -268,11 +268,11 @@ static esp_err_t usbh_rndis_connect(usbh_rndis_t *handle)
     }
 
     uint32_t packet_filter = 0x0f;
-    ret = usbh_rndis_set_msg_transfer(rndis, OID_GEN_CURRENT_PACKET_FILTER, (uint8_t *)&packet_filter, 4);
+    ret = usbh_rndis_set_msg_request(rndis, OID_GEN_CURRENT_PACKET_FILTER, (uint8_t *)&packet_filter, 4);
     ESP_RETURN_ON_ERROR(ret, TAG, "Failed to set OID_GEN_CURRENT_PACKET_FILTER");
     ESP_LOGI(TAG, "rndis set OID_GEN_CURRENT_PACKET_FILTER success");
 
-    ret = usbh_rndis_set_msg_transfer(rndis, OID_802_3_MULTICAST_LIST, rndis->mac_addr, 6);
+    ret = usbh_rndis_set_msg_request(rndis, OID_802_3_MULTICAST_LIST, rndis->mac_addr, 6);
     ESP_RETURN_ON_ERROR(ret, TAG, "Failed to set OID_802_3_MULTICAST_LIST");
     ESP_LOGI(TAG, "rndis set OID_802_3_MULTICAST_LIST success");
 
@@ -316,7 +316,7 @@ static esp_err_t usbh_rndis_handle_recv_data(usbh_rndis_t *rndis)
 
             uint8_t *buf = malloc(pmsg.DataLength);
             ESP_RETURN_ON_FALSE(buf != NULL, ESP_ERR_NO_MEM, TAG, "Failed to allocate memory for buf");
-            ESP_LOGD(TAG, "pmsg.DataLength %d, rx_length: %d", pmsg.DataLength, rx_length);
+            ESP_LOGD(TAG, "pmsg.DataLength %"PRIu32", rx_length: %d", pmsg.DataLength, rx_length);
             read_len = pmsg.DataLength;
             int recv_len = 0;
             while (read_len > 0) {
@@ -324,8 +324,8 @@ static esp_err_t usbh_rndis_handle_recv_data(usbh_rndis_t *rndis)
                 recv_len += read_len;
                 read_len = pmsg.DataLength - recv_len;
             }
-            ESP_LOGD(TAG, "recv data length: %d", pmsg.DataLength);
 
+            ESP_LOGD(TAG, "recv data length: %"PRIu32"", pmsg.DataLength);
             if (ret != ESP_OK) {
                 ESP_LOGE(TAG, "Failed to read data from CDC");
                 free(buf);
@@ -397,7 +397,7 @@ static esp_err_t usbh_rndis_transmit(iot_eth_driver_t *h, uint8_t *buffer, size_
  * @return
  *     - ESP_OK: MAC address retrieved successfully
  */
-esp_err_t usbh_rndis_get_addr(iot_eth_driver_t *driver, uint8_t *mac_address)
+static esp_err_t usbh_rndis_get_addr(iot_eth_driver_t *driver, uint8_t *mac_address)
 {
     usbh_rndis_t *rndis = __containerof(driver, usbh_rndis_t, base);
     ESP_RETURN_ON_FALSE(rndis->eth_mac_addr != NULL, ESP_ERR_INVALID_STATE, TAG, "MAC address can not be NULL");
@@ -583,7 +583,7 @@ static esp_err_t usbh_rndis_start(iot_eth_driver_t *driver)
         .cbs = {
             .connect = _usbh_rndis_conn_cb,
             .disconnect = _usbh_rndis_disconn_cb,
-            .revc_data = _usbh_rndis_recv_data_cb,
+            .recv_data = _usbh_rndis_recv_data_cb,
             .notif_cb = _usbh_rndis_notif_cb,
             .user_data = rndis,
         },
@@ -651,22 +651,12 @@ esp_err_t usbh_rndis_init(iot_eth_driver_t *driver)
     esp_read_mac(rndis->mac_addr, ESP_MAC_ETH);
     rndis->mac_addr[5] ^= 0x01; // Make it unique from the default Ethernet MAC
 
-    usbh_cdc_driver_config_t config = {
-        .task_stack_size = 1024 * 4,
-        .task_priority = 5,
-        .task_coreid = 0,
-        .skip_init_usb_host_driver = false,
-    };
-
     if (rndis->config.auto_detect) {
-        config.new_dev_cb = _usbh_rndis_cdc_new_dev_cb;
-        config.user_data = rndis;
+        ret = usbh_cdc_register_new_dev_cb(_usbh_rndis_cdc_new_dev_cb, rndis);
+        ESP_GOTO_ON_FALSE(ret == ESP_OK, ESP_FAIL, err, TAG, "Failed to register new device callback");
     }
 
-    ret = usbh_cdc_driver_install(&config);
-
-    ESP_GOTO_ON_FALSE(ret == ESP_OK, ESP_FAIL, err, TAG, "Failed to install CDC driver");
-    rndis->mediator->on_stage_changed(rndis->mediator, IOT_ETH_STAGE_LLINIT, NULL);
+    rndis->mediator->on_stage_changed(rndis->mediator, IOT_ETH_STAGE_LL_INIT, NULL);
     ESP_LOGI(TAG, "USB RNDIS network interface init success");
     return ESP_OK;
 err:
@@ -691,8 +681,10 @@ static esp_err_t usbh_rndis_deinit(iot_eth_driver_t *driver)
 {
     esp_err_t ret = ESP_OK;
     usbh_rndis_t *rndis = __containerof(driver, usbh_rndis_t, base);
-    ret = usbh_cdc_driver_uninstall();
-    ESP_RETURN_ON_ERROR(ret, TAG, "Failed to uninstall CDC driver");
+    if (rndis->config.auto_detect) {
+        ret = usbh_cdc_unregister_new_dev_cb(_usbh_rndis_cdc_new_dev_cb);
+        ESP_RETURN_ON_ERROR(ret, TAG, "Failed to unregister new device callback");
+    }
     if (rndis->event_group != NULL) {
         vEventGroupDelete(rndis->event_group);
     }
@@ -702,16 +694,16 @@ static esp_err_t usbh_rndis_deinit(iot_eth_driver_t *driver)
     return ESP_OK;
 }
 
-esp_err_t iot_eth_new_usb_rndis(const usb_host_rndis_config_t *config, iot_eth_driver_t **ret_handle)
+esp_err_t iot_eth_new_usb_rndis(const iot_usbh_rndis_config_t *config, iot_eth_driver_t **ret_handle)
 {
-    ESP_LOGI(TAG, "USB HOST RNDIS Version: %d.%d.%d", USB_HOST_RNDIS_VER_MAJOR, USB_HOST_RNDIS_VER_MINOR, USB_HOST_RNDIS_VER_PATCH);
+    ESP_LOGI(TAG, "IOT USBH RNDIS Version: %d.%d.%d", IOT_USBH_RNDIS_VER_MAJOR, IOT_USBH_RNDIS_VER_MINOR, IOT_USBH_RNDIS_VER_PATCH);
     ESP_RETURN_ON_FALSE(config != NULL, ESP_ERR_INVALID_ARG, TAG, "config is NULL");
     ESP_RETURN_ON_FALSE(ret_handle != NULL, ESP_ERR_INVALID_ARG, TAG, "ret_handle is NULL");
 
     usbh_rndis_t *rndis = calloc(1, sizeof(usbh_rndis_t));
     ESP_RETURN_ON_FALSE(rndis != NULL, ESP_ERR_NO_MEM, TAG, "Failed to allocate memory for usbh_rndis_t");
 
-    memcpy(&rndis->config, config, sizeof(usb_host_rndis_config_t));
+    memcpy(&rndis->config, config, sizeof(iot_usbh_rndis_config_t));
     rndis->base.name = "usb_rndis";
     rndis->base.init = usbh_rndis_init;
     rndis->base.set_mediator = usbh_rndis_set_mediator;

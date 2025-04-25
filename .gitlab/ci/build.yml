@@ -969,6 +969,19 @@ build_example_usb_host_usb_msc_ota:
   variables:
     EXAMPLE_DIR: examples/usb/host/usb_msc_ota
 
+build_example_usb_host_usb_rndis_4g_module:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_usb_host_usb_rndis_4g_module
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.1
+      - IMAGE: espressif/idf:release-v5.2
+      - IMAGE: espressif/idf:release-v5.3
+      - IMAGE: espressif/idf:release-v5.4
+  variables:
+    EXAMPLE_DIR: examples/usb/host/usb_rndis_4g_module
+
 build_example_usb_otg_usb_host_device_mode_manual_switch:
   extends:
     - .build_examples_template
@@ -1597,15 +1610,13 @@ build_components_usb_esp_msc_ota_test_apps:
     IMAGE: espressif/idf:release-v5.1
     EXAMPLE_DIR: components/usb/esp_msc_ota/test_apps
 
-build_components_usb_usb_host_rndis_test_apps:
+build_components_usb_iot_usbh_rndis_test_apps:
   extends:
     - .build_examples_template
-    - .rules:build:components_usb_usb_host_rndis_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.4
+    - .rules:build:components_usb_iot_usbh_rndis_test_apps
+    - .build_idf_version_greater_equal_v5_0
   variables:
-    EXAMPLE_DIR: components/usb/usb_host_rndis/test_apps
+    EXAMPLE_DIR: components/usb/iot_usbh_rndis/test_apps
 
 build_components_usb_usb_stream_test_apps:
   extends:

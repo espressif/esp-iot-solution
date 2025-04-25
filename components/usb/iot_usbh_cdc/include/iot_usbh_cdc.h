@@ -81,7 +81,7 @@ typedef void (*usbh_cdc_notif_cb_t)(usbh_cdc_handle_t cdc_handle, iot_cdc_notifi
 typedef struct {
     usbh_cdc_event_cb_t connect;            /*!< USB connect callback, set NULL if use */
     usbh_cdc_event_cb_t disconnect;         /*!< USB disconnect callback, set NULL if not use */
-    usbh_cdc_event_cb_t revc_data;          /*!< USB receive data callback, set NULL if not use */
+    usbh_cdc_event_cb_t recv_data;          /*!< USB receive data callback, set NULL if not use */
     usbh_cdc_notif_cb_t notif_cb;           /*!< USB notification callback, set NULL if not use */
     void *user_data;                        /*!< Pointer to user data that will be passed to the callbacks */
 } usbh_cdc_event_callbacks_t;
@@ -278,6 +278,33 @@ esp_err_t usbh_cdc_flush_tx_buffer(usbh_cdc_handle_t cdc_handle);
  *     - ESP_ERR_INVALID_ARG: Invalid CDC handle provided
  */
 esp_err_t usbh_cdc_get_rx_buffer_size(usbh_cdc_handle_t cdc_handle, size_t *size);
+
+/**
+ * @brief Register an additional callback function for new device detection
+ *
+ * This function registers a callback that will be invoked when a new USB CDC device is connected.
+ * The callback will be automatically unregistered when usbh_cdc_driver_uninstall() is called.
+ *
+ * @param[in] new_dev_cb Callback function to be called when a new device is connected
+ * @param[in] user_data User data pointer that will be passed to the callback function
+ *
+ * @return
+ *     - ESP_OK: Callback registered successfully
+ *     - ESP_ERR_INVALID_ARG: Invalid CDC handle or callback function
+ *     - ESP_ERR_NO_MEM: Failed to allocate memory for callback registration
+ */
+esp_err_t usbh_cdc_register_new_dev_cb(usbh_cdc_new_dev_cb_t new_dev_cb, void *user_data);
+
+/**
+ * @brief Unregister the new device callback which same as the one registered by usbh_cdc_register_new_dev_cb
+ *
+ * @param[in] new_dev_cb The new device callback function to unregister
+ *
+ * @return
+ *     - ESP_OK: Callback unregistered successfully
+ *     - ESP_ERR_INVALID_ARG: Invalid callback function
+ */
+esp_err_t usbh_cdc_unregister_new_dev_cb(usbh_cdc_new_dev_cb_t new_dev_cb);
 
 /**
  * @brief Get the connect state of given interface

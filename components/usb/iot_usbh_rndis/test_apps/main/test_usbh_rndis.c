@@ -9,7 +9,7 @@
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
 #include "unity.h"
-#include "usb_host_rndis.h"
+#include "iot_usbh_rndis.h"
 #include "iot_eth.h"
 #include "esp_log.h"
 
@@ -17,9 +17,9 @@
 
 #define TEST_MEMORY_LEAK_THRESHOLD (-400)
 
-TEST_CASE("usbh rndis device memory leak", "[usb_host_rndis][read-write][auto]")
+TEST_CASE("usbh rndis device memory leak", "[iot_usbh_rndis][read-write][auto]")
 {
-    usb_host_rndis_config_t rndis_cfg = {
+    iot_usbh_rndis_config_t rndis_cfg = {
         .auto_detect = true,
         .auto_detect_timeout = pdMS_TO_TICKS(1000),
         .rx_buffer_size = 1024 * 4,
@@ -35,8 +35,6 @@ TEST_CASE("usbh rndis device memory leak", "[usb_host_rndis][read-write][auto]")
 
     iot_eth_config_t eth_cfg = {
         .driver = rndis_handle,
-        .on_lowlevel_init_done = NULL,
-        .on_lowlevel_deinit = NULL,
         .stack_input = NULL,
         .user_data = NULL,
     };
@@ -91,6 +89,6 @@ void tearDown(void)
 
 void app_main(void)
 {
-    printf("USB HOST RNDIS TEST \n");
+    printf("IOT USBH RNDIS TEST \n");
     unity_run_menu();
 }

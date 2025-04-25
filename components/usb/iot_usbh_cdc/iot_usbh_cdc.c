@@ -35,12 +35,17 @@ static portMUX_TYPE cdc_lock =  portMUX_INITIALIZER_UNLOCKED;
 #define TIMEOUT_USB_RINGBUF_MS  200                      /*! Timeout for ring buffer operate */
 #define CDC_CTRL_TIMEOUT_MS     5000                     /*! Timeout for control transfer */
 
+typedef struct new_dev_cb_s {
+    usbh_cdc_new_dev_cb_t cb;
+    void *user_data;
+    SLIST_ENTRY(new_dev_cb_s) list_entry;
+} new_dev_cb_t;
+
 typedef struct {
     usb_host_client_handle_t cdc_client_hdl;             /*!< USB Host handle reused for all CDC-ACM devices in the system */
     EventGroupHandle_t event_group;
     SemaphoreHandle_t mutex;
-    usbh_cdc_new_dev_cb_t new_dev_cb;
-    void *user_data;
+    SLIST_HEAD(list_cb, new_dev_cb_s) new_dev_cb_list;
     SLIST_HEAD(list_dev, usbh_cdc_s) cdc_devices_list;   /*!< List of open pseudo devices */
 } usbh_cdc_obj_t;
 
@@ -228,9 +233,11 @@ static void usb_event_cb(const usb_host_client_event_msg_t *event_msg, void *arg
         }
         assert(current_device);
 
-        /*!< Call new dev callback */
-        if (p_usbh_cdc_obj->new_dev_cb) {
-            p_usbh_cdc_obj->new_dev_cb(current_device, p_usbh_cdc_obj->user_data);
+        new_dev_cb_t *new_dev_cb;
+        SLIST_FOREACH(new_dev_cb, &p_usbh_cdc_obj->new_dev_cb_list, list_entry) {
+            if (new_dev_cb->cb) {
+                new_dev_cb->cb(current_device, new_dev_cb->user_data);
+            }
         }
 
         const usb_device_desc_t *device_desc;
@@ -334,8 +341,13 @@ esp_err_t usbh_cdc_driver_install(const usbh_cdc_driver_config_t *config)
     p_usbh_cdc_obj->cdc_client_hdl = usb_client;
     p_usbh_cdc_obj->event_group = event_group;
     p_usbh_cdc_obj->mutex = mutex;
-    p_usbh_cdc_obj->new_dev_cb = config->new_dev_cb;
-    p_usbh_cdc_obj->user_data = config->user_data;
+    SLIST_INIT(&(p_usbh_cdc_obj->new_dev_cb_list));
+    if (config->new_dev_cb) {
+        new_dev_cb_t *new_dev_cb = (new_dev_cb_t *) calloc(1, sizeof(new_dev_cb_t));
+        new_dev_cb->cb = config->new_dev_cb;
+        new_dev_cb->user_data = config->user_data;
+        SLIST_INSERT_HEAD(&(p_usbh_cdc_obj->new_dev_cb_list), new_dev_cb, list_entry);
+    }
 
     xTaskNotifyGive(driver_task_h);
     return ESP_OK;
@@ -370,6 +382,13 @@ esp_err_t usbh_cdc_driver_uninstall(void)
         goto unblock;
     }
     CDC_EXIT_CRITICAL();
+
+    // Free all new device callbacks
+    new_dev_cb_t *current, *tmp;
+    SLIST_FOREACH_SAFE(current, &p_usbh_cdc_obj->new_dev_cb_list, list_entry, tmp) {
+        SLIST_REMOVE(&p_usbh_cdc_obj->new_dev_cb_list, current, new_dev_cb_s, list_entry);
+        free(current);
+    }
 
     // Signal to CDC task to stop, unblock it and wait for its deletion
     xEventGroupSetBits(p_usbh_cdc_obj->event_group, CDC_TEARDOWN);
@@ -408,7 +427,7 @@ static void notif_xfer_cb(usb_transfer_t *notif_xfer)
     }
     case USB_TRANSFER_STATUS_NO_DEVICE:
     case USB_TRANSFER_STATUS_CANCELED:
-        break;
+        return;
     default:
         // Any other error
         break;
@@ -449,8 +468,8 @@ static void in_xfer_cb(usb_transfer_t *in_xfer)
 
         usb_host_transfer_submit(in_xfer);
 
-        if (cdc->cbs.revc_data) {
-            cdc->cbs.revc_data((usbh_cdc_handle_t)cdc, cdc->cbs.user_data);
+        if (cdc->cbs.recv_data) {
+            cdc->cbs.recv_data((usbh_cdc_handle_t)cdc, cdc->cbs.user_data);
         }
 
         return;
@@ -781,7 +800,7 @@ static esp_err_t _cdc_close(usbh_cdc_t *cdc)
     // wait for transfers to complete
     vTaskDelay(10 / portTICK_PERIOD_MS);
     // Release all interfaces
-    ESP_ERROR_CHECK(usb_host_interface_release(p_usbh_cdc_obj->cdc_client_hdl, cdc->dev_hdl, cdc->intf_idx));
+    ESP_ERROR_CHECK(usb_host_interface_release(p_usbh_cdc_obj->cdc_client_hdl, cdc->dev_hdl, cdc->data.intf_desc->bInterfaceNumber));
 
     _cdc_transfers_free(cdc);
     usb_host_device_close(p_usbh_cdc_obj->cdc_client_hdl, cdc->dev_hdl);
@@ -1014,6 +1033,32 @@ esp_err_t usbh_cdc_get_rx_buffer_size(usbh_cdc_handle_t cdc_handle, size_t *size
     ESP_RETURN_ON_FALSE(cdc_handle != NULL, ESP_ERR_INVALID_ARG, TAG, "cdc_handle is NULL");
     usbh_cdc_t *cdc = (usbh_cdc_t *) cdc_handle;
     *size = _get_ringbuf_len(cdc->in_ringbuf_handle);
+    return ESP_OK;
+}
+
+esp_err_t usbh_cdc_register_new_dev_cb(usbh_cdc_new_dev_cb_t new_dev_cb, void *user_data)
+{
+    ESP_RETURN_ON_FALSE(p_usbh_cdc_obj, ESP_ERR_INVALID_STATE, TAG, "usbh cdc not installed");
+    ESP_RETURN_ON_FALSE(new_dev_cb, ESP_ERR_INVALID_ARG, TAG, "new_dev_cb is NULL");
+    new_dev_cb_t *cb = (new_dev_cb_t *) calloc(1, sizeof(new_dev_cb_t));
+    cb->cb = new_dev_cb;
+    cb->user_data = user_data;
+    SLIST_INSERT_HEAD(&(p_usbh_cdc_obj->new_dev_cb_list), cb, list_entry);
+    return ESP_OK;
+}
+
+esp_err_t usbh_cdc_unregister_new_dev_cb(usbh_cdc_new_dev_cb_t new_dev_cb)
+{
+    ESP_RETURN_ON_FALSE(p_usbh_cdc_obj, ESP_ERR_INVALID_STATE, TAG, "usbh cdc not installed");
+    ESP_RETURN_ON_FALSE(new_dev_cb, ESP_ERR_INVALID_ARG, TAG, "new_dev_cb is NULL");
+    // remove the new_dev_cb from the list
+    new_dev_cb_t *current, *tmp;
+    SLIST_FOREACH_SAFE(current, &p_usbh_cdc_obj->new_dev_cb_list, list_entry, tmp) {
+        if (current->cb == new_dev_cb) {
+            SLIST_REMOVE(&(p_usbh_cdc_obj->new_dev_cb_list), current, new_dev_cb_s, list_entry);
+            free(current);
+        }
+    }
     return ESP_OK;
 }
 

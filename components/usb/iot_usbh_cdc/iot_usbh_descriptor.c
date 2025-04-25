@@ -5,6 +5,7 @@
  */
 
 #include <string.h>
+#include <stdbool.h>
 #include "esp_err.h"
 #include "esp_check.h"
 #include "usb/usb_helpers.h"

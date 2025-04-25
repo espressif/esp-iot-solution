@@ -96,7 +96,7 @@ jobs:
             components/usb/iot_usbh_modem;
             components/usb/usb_device_uac;
             components/usb/usb_device_uvc;
-            components/usb/usb_host_rndis;
+            components/usb/iot_usbh_rndis;
             components/usb/usb_stream;
             components/utilities/adc_tp_calibration;
             components/utilities/xz;

@@ -9,5 +9,5 @@ USB Host Drivers
     USB UVC/UAC Host <usb_stream>
     USB MSC OTA <esp_msc_ota>
     USB CDC Host <usb_host_iot_usbh_cdc>
-    USB RNDIS Host <usb_host_rndis>
+    USB RNDIS Host <usb_rndis>
     USB PPP Host <usb_ppp>

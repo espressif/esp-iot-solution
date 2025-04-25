@@ -23,7 +23,7 @@ typedef struct {
     int itf_num;                              /*!< interface numbers, used when auto_detect is false */
     uint16_t rx_buffer_size;                  /*!< Size of the USB IN buffer, if 0, use CONFIG_IN_RINGBUFFER_SIZE */
     uint16_t tx_buffer_size;                  /*!< Size of the USB OUT buffer, if 0, use CONFIG_OUT_RINGBUFFER_SIZE */
-} usb_host_rndis_config_t;
+} iot_usbh_rndis_config_t;
 
 /**
  * @brief Create a new USB RNDIS Ethernet driver.
@@ -39,7 +39,7 @@ typedef struct {
  *     - ESP_ERR_INVALID_ARG: Invalid argument (NULL config or ret_handle)
  *     - ESP_ERR_NO_MEM: Memory allocation failed
  */
-esp_err_t iot_eth_new_usb_rndis(const usb_host_rndis_config_t *config, iot_eth_driver_t **ret_handle);
+esp_err_t iot_eth_new_usb_rndis(const iot_usbh_rndis_config_t *config, iot_eth_driver_t **ret_handle);
 
 #ifdef __cplusplus
 }

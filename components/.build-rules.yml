@@ -33,6 +33,10 @@ components/usb/esp_msc_ota/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32s3"]
 
+components/usb/iot_usbh_rndis/test_apps:
+  enable:
+    - if: SOC_USB_OTG_SUPPORTED == 1
+
 components/usb/usb_stream/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32s2","esp32s3"]
