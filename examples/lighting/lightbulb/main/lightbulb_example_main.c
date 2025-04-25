@@ -150,7 +150,7 @@ void app_main(void)
         .gamma_conf = &Gamma,
 
         //6. Mix table config (optional)
-#ifdef CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_BP5758D
+#if CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_BP5758D
         .color_mix_mode.precise.table = color_data,
         .color_mix_mode.precise.table_size = COLOR_SZIE,
         .capability.enable_precise_color_control = 1,

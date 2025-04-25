@@ -28,7 +28,7 @@ static const char *TAG = "hal_manage";
 #define PROBE_GPIO 4
 #define FADE_DEBUG_LOG_OUTPUT 0
 
-static void create_gpio_probe(int gpio_num, int level)
+void create_gpio_probe(int gpio_num, int level)
 {
     gpio_config_t io_conf;
     io_conf.intr_type = GPIO_INTR_DISABLE;
@@ -40,7 +40,7 @@ static void create_gpio_probe(int gpio_num, int level)
     gpio_set_level(gpio_num, level);
 }
 
-static void gpio_reverse(int gpio_num)
+void gpio_reverse(int gpio_num)
 {
     static int level = 0;
     gpio_set_level(gpio_num, (level++) % 2);
@@ -102,6 +102,7 @@ typedef struct {
     bool use_hw_fade;
     bool enable_multi_ch_write;
     uint16_t *table_group;
+    uint16_t table_size;
     // R G B C W
     float balance_coefficient[5];
     SemaphoreHandle_t fade_mutex;
@@ -530,12 +531,13 @@ esp_err_t hal_output_init(hal_config_t *config, lightbulb_gamma_config_t *gamma,
         s_hal_obj->enable_multi_ch_write = true;
     }
 
-    s_hal_obj->table_group = calloc(table_size, sizeof(uint16_t));
+    s_hal_obj->table_size = table_size;
+    s_hal_obj->table_group = calloc(s_hal_obj->table_size, sizeof(uint16_t));
     LIGHTBULB_CHECK(s_hal_obj->table_group, "curve table buffer alloc fail", goto EXIT);
 
     //Currently only used as a mapping table, it will be used for fade to achieve curve sliding changes in the future
     float curve_coe = DEFAULT_CURVE_COE;
-    hal_gamma_table_create(s_hal_obj->table_group, table_size, curve_coe, s_hal_obj->interface->hardware_allow_max_input_value);
+    hal_gamma_table_create(s_hal_obj->table_group, s_hal_obj->table_size, curve_coe, s_hal_obj->interface->hardware_allow_max_input_value);
 
     for (int i = 0; i < 5; i++) {
         float balance = gamma ? gamma->balance_coefficient[i] : 1.0;
