@@ -96,7 +96,7 @@ esp_err_t pwm_init(driver_pwm_t *config, void(*hook_func)(void *))
     s_pwm->ledc_config.speed_mode = LEDC_LOW_SPEED_MODE;
     s_pwm->ledc_config.clk_cfg = LEDC_USE_XTAL_CLK;
 #endif
-    uint32_t preset_bit = LEDC_TIMER_13_BIT;
+    uint32_t preset_bit = LEDC_TIMER_12_BIT;
     for (s_pwm->ledc_config.duty_resolution = preset_bit; s_pwm->ledc_config.duty_resolution >= LEDC_TIMER_10_BIT; s_pwm->ledc_config.duty_resolution--) {
         err = ledc_timer_config(&s_pwm->ledc_config);
         if (err == ESP_OK) {
