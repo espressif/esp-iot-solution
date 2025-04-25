@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -11,6 +11,8 @@
 #include "device/usbd.h"
 #include "tusb_config.h"
 #include "usb_descriptors.h"
+
+#if CFG_TUD_HID
 
 static const char *TAG = "tinyusb_hid.h";
 
@@ -24,7 +26,6 @@ static tinyusb_hid_t *s_tinyusb_hid = NULL;
 //--------------------------------------------------------------------+
 // HID callbacks
 //--------------------------------------------------------------------+
-#if CFG_TUD_HID
 
 void tinyusb_hid_keyboard_report(hid_report_t report)
 {
@@ -66,7 +67,6 @@ static void tinyusb_hid_task(void *arg)
         }
     }
 }
-#endif
 
 esp_err_t app_hid_init(void)
 {
@@ -144,3 +144,5 @@ void tud_hid_set_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t rep
     }
     }
 }
+
+#endif

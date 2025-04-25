@@ -14,7 +14,11 @@
 extern "C" {
 #endif
 
-#define JPEG_BUFFER_SIZE (300*1024)
+// #if CONFIG_IDF_TARGET_ESP32P4
+// #define JPEG_BUFFER_SIZE (300*1024)
+// #elif CONFIG_IDF_TARGET_ESP32S3
+// #define JPEG_BUFFER_SIZE (100*1024)
+// #endif
 
 typedef struct {
     uint8_t press_down;
@@ -25,7 +29,7 @@ typedef struct {
     uint16_t height;
 } __attribute__((packed)) touch_report_t;
 
-_Static_assert(CONFIG_ESP_LCD_TOUCH_MAX_POINTS == 5, "CONFIG_ESP_LCD_TOUCH_MAX_POINTS must be 4");
+_Static_assert(CONFIG_ESP_LCD_TOUCH_MAX_POINTS == 5, "CONFIG_ESP_LCD_TOUCH_MAX_POINTS must be 5");
 
 typedef struct {
     uint32_t report_id;    // Report identifier

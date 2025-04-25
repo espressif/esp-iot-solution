@@ -113,7 +113,7 @@ usb_descriptors.h 文件（可选）
 
 可以参考以下文件示例：
 
-- :example_file:`../components/usb/usb_device_uac/tusb/uac_descriptors.h`
+- :example_file:`../components/usb/usb_device_uac/tusb_uac/uac_descriptors.h`
 - :example_file:`../components/usb/usb_device_uvc/tusb/usb_descriptors.h`
 - :example_file:`/usb/device/usb_hid_device/hid_device/usb_descriptors.h`
 

@@ -42,8 +42,8 @@ tusb_desc_device_t const desc_device = {
     .bDeviceProtocol    = MISC_PROTOCOL_IAD,
     .bMaxPacketSize0    = CFG_TUD_ENDPOINT0_SIZE,
 
-    .idVendor           = CONFIG_TUSB_VID,
-    .idProduct          = CONFIG_TUSB_PID,
+    .idVendor           = CONFIG_UAC_TUSB_VID,
+    .idProduct          = CONFIG_UAC_TUSB_PID,
     .bcdDevice          = 0x0100,
 
     .iManufacturer      = 0x01,
@@ -91,9 +91,9 @@ uint8_t const *tud_descriptor_configuration_cb(uint8_t index)
 // array of pointer to string descriptors
 char const *string_desc_arr [] = {
     (const char[]) { 0x09, 0x04 },  // 0: is supported language is English (0x0409)
-    CONFIG_TUSB_MANUFACTURER,       // 1: Manufacturer
-    CONFIG_TUSB_PRODUCT,            // 2: Product
-    CONFIG_TUSB_SERIAL_NUM,         // 3: Serials, should use chip ID
+    CONFIG_UAC_TUSB_MANUFACTURER,       // 1: Manufacturer
+    CONFIG_UAC_TUSB_PRODUCT,            // 2: Product
+    CONFIG_UAC_TUSB_SERIAL_NUM,         // 3: Serials, should use chip ID
     "usb uac",                      // 4: UAC control Interface
 #if SPEAK_CHANNEL_NUM
     "speaker",                     // 5: Speak Interface

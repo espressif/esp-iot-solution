@@ -12,14 +12,14 @@
 #include "freertos/task.h"
 #include "esp_err.h"
 #include "esp_lcd_panel_ops.h"
-#include "driver/ppa.h"
+#include "bsp/esp-bsp.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define EXAMPLE_LCD_H_RES                   (1024)
-#define EXAMPLE_LCD_V_RES                   (600)
+#define EXAMPLE_LCD_H_RES                   (CONFIG_USB_EXTEND_SCREEN_HEIGHT)
+#define EXAMPLE_LCD_V_RES                   (CONFIG_USB_EXTEND_SCREEN_WIDTH)
 
 #define EXAMPLE_LCD_BUF_NUM                 (CONFIG_EXAMPLE_LCD_BUF_COUNT)
 
@@ -27,14 +27,6 @@ extern "C" {
 #define EXAMPLE_LCD_BIT_PER_PIXEL           (16)
 #elif CONFIG_LCD_PIXEL_FORMAT_RGB888
 #define EXAMPLE_LCD_BIT_PER_PIXEL           (24)
-#endif
-
-#if EXAMPLE_LCD_BIT_PER_PIXEL == 24
-#define EXAMPLE_MIPI_DPI_PX_FORMAT          (LCD_COLOR_PIXEL_FORMAT_RGB888)
-#elif EXAMPLE_LCD_BIT_PER_PIXEL == 18
-#define EXAMPLE_MIPI_DPI_PX_FORMAT          (LCD_COLOR_PIXEL_FORMAT_RGB666)
-#elif EXAMPLE_LCD_BIT_PER_PIXEL == 16
-#define EXAMPLE_MIPI_DPI_PX_FORMAT          (LCD_COLOR_PIXEL_FORMAT_RGB565)
 #endif
 
 #define EXAMPLE_LCD_BUF_LEN                 EXAMPLE_LCD_H_RES * EXAMPLE_LCD_V_RES * EXAMPLE_LCD_BIT_PER_PIXEL / 8

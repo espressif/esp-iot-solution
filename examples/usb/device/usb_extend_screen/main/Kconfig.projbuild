@@ -1,28 +1,75 @@
 menu "Example Configuration"
 
-    config TUSB_VID
-        hex "USB Device VID"
-        default 0x303A
-    config TUSB_PID
-        hex "USB Device PID"
-        default 0x2986
-    config TUSB_MANUFACTURER
-        string "USB Device Manufacture"
-        default "Espressif"
-    config TUSB_PRODUCT
-        string "Product Name"
-        default "Vendor"
+    menu "TinyUSB Configuration"
 
-    choice TINYUSB_RHPORT
-        depends on IDF_TARGET_ESP32P4
-        prompt "TinyUSB PHY"
-        default TINYUSB_RHPORT_HS
-        help
-            Allows set the USB PHY Controller for TinyUSB: HS (USB OTG2.0 PHY for HighSpeed)
+        config TUSB_VID
+            hex "USB Device VID"
+            default 0x303A
+        config TUSB_PID
+            hex "USB Device PID"
+            default 0x2986 if HID_TOUCH_ENABLE || UAC_AUDIO_ENABLE
+            default 0x2987 if !HID_TOUCH_ENABLE && !UAC_AUDIO_ENABLE
+        config TUSB_MANUFACTURER
+            string "USB Device Manufacture"
+            default "Espressif"
+        config TUSB_PRODUCT
+            string "Product Name"
+            default "Vendor"
 
-        config TINYUSB_RHPORT_HS
-            bool "HS"
-    endchoice
+        choice TINYUSB_RHPORT
+            depends on IDF_TARGET_ESP32P4
+            prompt "TinyUSB PHY"
+            default TINYUSB_RHPORT_HS
+            help
+                Allows set the USB PHY Controller for TinyUSB: HS (USB OTG2.0 PHY for HighSpeed)
+
+            config TINYUSB_RHPORT_HS
+                bool "HS"
+        endchoice
+
+    endmenu
+
+    menu "USB extend screen configuration"
+        config USB_EXTEND_SCREEN_HEIGHT
+            int "USB extend screen height"
+            default 1024 if IDF_TARGET_ESP32P4
+            default 480 if IDF_TARGET_ESP32S3
+            default 320
+            help
+                USB extend screen height
+
+        config USB_EXTEND_SCREEN_WIDTH
+            int "USB extend screen width"
+            default 576 if IDF_TARGET_ESP32P4
+            default 480 if IDF_TARGET_ESP32S3
+            default 240
+            help
+                USB extend screen width
+
+        config USB_EXYEEND_SCREEN_JEPG_QUALITY
+            int "USB extend screen jpeg quality"
+            default 6
+            range 1 10
+            help
+                USB extend screen jpeg quality
+
+        config USB_EXTEND_SCREEN_MAX_FPS
+            int "USB extend screen max fps"
+            default 60 if IDF_TARGET_ESP32P4
+            default 15 if IDF_TARGET_ESP32S3
+            default 30
+            range 1 60
+            help
+                USB extend screen max fps
+
+        config USB_EXTEND_SCREEN_FRAME_LIMIT_B
+            int "Maximum frame image (B)"
+            default 300000 if IDF_TARGET_ESP32P4
+            default 100000 if IDF_TARGET_ESP32S3
+            default 100000
+            help
+                The maximum length of a single frame image transmitted from Windows.
+    endmenu
 
     config USB_TASK_PRIORITY
         int "USB Task Priority"
@@ -31,20 +78,6 @@ menu "Example Configuration"
         help
             TinyUSB main task priority
 
-    config HID_TASK_PRIORITY
-        int "HID Task Priority"
-        default 5
-        range 1 15
-        help
-            Task to transmit touch data to PC
-
-    config TOUCH_TASK_PRIORITY
-        int "Touch Task Priority"
-        default 5
-        range 1 15
-        help
-            Task to read touch data from i2s
-
     config VENDOR_TASK_PRIORITY
         int "Vendor Task Priority"
         default 10
@@ -52,8 +85,35 @@ menu "Example Configuration"
         help
             Task to receive JPG data from PC
 
-    # Insert UAC config
-    orsource "./uac/Kconfig.uac"
+    config HID_TOUCH_ENABLE
+        bool "Enable HID Touch Report"
+        default y
+        help
+            Enable this option to allow HID touch events to be reported.
+            If disabled, touch events will not be processed or sent.
+
+    config HID_TASK_PRIORITY
+        int "HID Task Priority"
+        depends on  HID_TOUCH_ENABLE
+        default 5
+        range 1 15
+        help
+            Task to transmit touch data to PC
+
+    config TOUCH_TASK_PRIORITY
+        int "Touch Task Priority"
+        depends on  HID_TOUCH_ENABLE
+        default 5
+        range 1 15
+        help
+            Task to read touch data from i2s
+
+    config UAC_AUDIO_ENABLE
+        bool "Enable UAC Audio"
+        default y
+        help
+            Enable this option to allow UAC audio to be processed.
+            If disabled, audio will not be processed or sent.
 
     config EXAMPLE_ENABLE_PRINT_FPS_RATE_VALUE
         bool "enable print fps rate value"
@@ -61,6 +121,7 @@ menu "Example Configuration"
 
     config EXAMPLE_LCD_BUF_COUNT
         int "LCD Buffer Count"
+        depends on IDF_TARGET_ESP32P4
         default 2
         range 1 3
 
@@ -72,5 +133,6 @@ menu "Example Configuration"
 
             config LCD_PIXEL_FORMAT_RGB888
                 bool "RGB888"
+                depends on IDF_TARGET_ESP32P4
     endchoice
 endmenu

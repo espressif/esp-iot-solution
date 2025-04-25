@@ -30,6 +30,10 @@ typedef struct  {
     uac_set_mute_cb_t set_mute_cb;               /*!< callback function for set mute, if NULL, the set mute request will be ignored */
     uac_set_volume_cb_t set_volume_cb;           /*!< callback function for set volume, if NULL, the set volume request will be ignored */
     void *cb_ctx;                                /*!< callback context, for user specific usage */
+#if CONFIG_USB_DEVICE_UAC_AS_PART
+    int spk_itf_num;                             /*!< If CONFIG_USB_DEVICE_UAC_AS_PART is enabled, you need to provide the speaker interface number */
+    int mic_itf_num;                             /*!< If CONFIG_USB_DEVICE_UAC_AS_PART is enabled, you need to provide the mic interface number */
+#endif
 } uac_device_config_t;
 
 /**
