@@ -95,6 +95,7 @@ jobs:
             components/usb/usb_device_uac;
             components/usb/usb_device_uvc;
             components/usb/usb_stream;
+            components/utilities/adc_tp_calibration;
             components/utilities/xz;
             components/zero_detection;
             tools/cmake_utilities;

@@ -194,6 +194,10 @@ components/usb/usb_device_uvc/test_apps:
   enable:
     - if: SOC_USB_OTG_SUPPORTED == 1 and IDF_VERSION_MAJOR >= 5
 
+components/utilities/adc_tp_calibration/test_apps:
+  enable:
+      - if: IDF_TARGET in ["esp32", "esp32s2"]
+
 components/sensors/power_monitor/ina236/test_apps:
   enable:
     - if:  INCLUDE_DEFAULT == 1

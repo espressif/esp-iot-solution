@@ -976,6 +976,18 @@ build_example_utilities_xz_decompress_file:
   variables:
     EXAMPLE_DIR: examples/utilities/xz_decompress_file
 
+build_example_utilities_adc_tp_calibration:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_utilities_adc_tp_calibration
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.0
+      - IMAGE: espressif/idf:release-v5.1
+      - IMAGE: espressif/idf:release-v5.2
+  variables:
+    EXAMPLE_DIR: examples/utilities/adc_tp_calibration
+
 build_example_vision_opencv_color_tracker:
   extends:
     - .build_examples_template
@@ -1683,6 +1695,14 @@ build_example_elf_loader_build_elf_file_example:
       - IMAGE: espressif/idf:release-v5.4
   variables:
     EXAMPLE_DIR: examples/elf_loader/build_elf_file_example
+
+build_components_utilities_adc_tp_calibration_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_utilities_adc_tp_calibration_test_apps
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: components/utilities/adc_tp_calibration/test_apps
 
 build_components_zero_detection_test_apps:
   extends:

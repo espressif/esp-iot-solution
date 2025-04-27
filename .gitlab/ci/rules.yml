@@ -343,6 +343,10 @@
   - "components/sensors/power_monitor/ina236/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
 
+.patterns-components_utilities_adc_tp_calibration: &patterns-components_utilities_adc_tp_calibration
+  - "components/utilities/adc_tp_calibration/**/*"
+  - "tools/cmake_utilities/package_manager.cmake"
+
 # examples folder, in the alphabetic order
 .patterns-docs: &patterns-docs
   - "docs/**/*"
@@ -397,6 +401,7 @@
   - "components/usb/usb_device_uac/include/usb_device_uac.h"
   - "components/usb/usb_device_uvc/include/usb_device_uvc.h"
   - "components/usb/usb_stream/include/usb_stream.h"
+  - "components/utilities/adc_tp_calibration/include/adc_tp_calibration.h"
   - "components/zero_detection/include/zero_detection.h"
 # examples folder, in the alphabetic order
 .patterns-example_ai_esp_dl_human_activity_recognition: &patterns-example_ai_esp_dl_human_activity_recognition
@@ -620,6 +625,9 @@
 
 .patterns-example_usb_otg_usb_host_device_mode_manual_switch: &patterns-example_usb_otg_usb_host_device_mode_manual_switch
   - "examples/usb/otg/usb_host_device_mode_manual_switch/**/*"
+
+.patterns-example_utilities_adc_tp_calibration: &patterns-example_utilities_adc_tp_calibration
+  - "examples/utilities/adc_tp_calibration/**/*"
 
 .patterns-example_utilities_xz_decompress_file: &patterns-example_utilities_xz_decompress_file
   - "examples/utilities/xz_decompress_file/**/*"
@@ -1590,6 +1598,18 @@
     - <<: *if-dev-push
       changes: *patterns-example_usb_otg_usb_host_device_mode_manual_switch
 
+.rules:build:example_utilities_adc_tp_calibration:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_utilities_adc_tp_calibration
+    - <<: *if-dev-push
+      changes: *patterns-example_utilities_adc_tp_calibration
+
 .rules:build:example_utilities_xz_decompress_file:
   rules:
     - <<: *if-protected
@@ -2469,6 +2489,17 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_usb_usb_device_uvc
+
+.rules:build:components_utilities_adc_tp_calibration_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_utilities_adc_tp_calibration
 
 .rules:build:components_sensors_humiture_aht20_test_apps:
   rules:
