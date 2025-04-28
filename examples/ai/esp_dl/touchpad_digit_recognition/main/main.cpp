@@ -33,8 +33,8 @@ extern "C" void app_main(void)
         ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK(ret);
-    /* Initialize button */
 
+    /* Initialize button */
     const button_config_t btn_cfg = {};
     const button_gpio_config_t btn_gpio_cfg = {
         .gpio_num = 0,

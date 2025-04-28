@@ -9,6 +9,35 @@ Touch Principle and Data Acquisition
 Touch Principle
 ^^^^^^^^^^^^^^^^^^
 
+The `ESP_Touch_Kit_Touchpad <https://dl.espressif.com/dl/schematics/SCH_ESP-Touch-Kit-Touchpad_V1.0_20210406.pdf>`_ is used as the touch pad. This touchpad consists of a 6*7 array of touch channels.
+
+.. figure:: ../../_static/ai/touch_kit_pad.png
+    :align: center
+
+    Physical Touch Pad
+
+When a finger moves across the touch pad, it changes the capacitance values of the touch channels, allowing us to detect the finger position by monitoring these capacitance changes.
+
+Detection Algorithm
+^^^^^^^^^^^^^^^^^^^^
+
+1. Due to hardware variations, each channel has different maximum and minimum trigger values. Therefore, the capacitance values need to be normalized. This is done by recording the maximum and minimum values as the finger slides across the pad.
+
+2. During finger movement, one channel will show the highest rate of capacitance change. By identifying this channel and its adjacent channel with the next highest change rate, we can locate two neighboring channels.
+
+3. Using a ratio-based calculation between these two channels' values, we can determine the relative coordinate of the finger along that direction (the offset from the center point between the two channels).
+
+.. math::
+
+   x = \frac{Fa - Fb}{Fa + Fb}
+
+4. By applying the above steps, we can obtain relative coordinates in both directions, thus determining the finger's position.
+
+.. note::
+
+    An appropriate trigger threshold needs to be set to determine whether the finger is moving on the touch pad.
+
+5. When finger lift-off is detected, the drawn data can be saved.
 
 Data Collection
 ^^^^^^^^^^^^^^^^^^^
@@ -284,7 +313,7 @@ To facilitate model debugging, ESP-DL provides the functionality to add test dat
 .. code-block:: bash
 
     test outputs value:
-    %23, shape: [1, 10], exponents: [0], 
+    %23, shape: [1, 10], exponents: [0],
     value: array([9.85415445e-34, 1.92874989e-22, 7.46892081e-43, 1.60381094e-28,
         3.22134028e-27, 1.05306175e-20, 4.07960022e-41, 1.42516404e-21,
         2.38026637e-26, 1.00000000e+00, 0.00000000e+00, 0.00000000e+00],

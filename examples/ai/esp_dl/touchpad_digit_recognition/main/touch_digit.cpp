@@ -26,10 +26,8 @@
 
 static const char *TAG = "touch_digit";
 
+#define REALLY_DATA_PRINT 0  // If you need to collect data using the host computer, please set this macro to true
 #define SCAN_TIME_MEASURE 0
-#define REALLY_DATA_PRINT 0
-#define TOUCH_DIGIT_DATA_PRINT 1
-#define NORMALIZE_DATA_PRINT 1
 
 #define CHANNEL_NUM 13
 #define CHANNEL_LIST {1,2,3,4,5,6,7,8,9,10,11,12,13}
@@ -213,7 +211,7 @@ static void touch_digit_task(void *arg)
                 }
             }
             printf("\n");
-#endif
+#else
 
 #if SCAN_TIME_MEASURE
             uint32_t now_time = esp_timer_get_time();
@@ -247,7 +245,6 @@ static void touch_digit_task(void *arg)
                 break;
             case END_WRITE:
                 // send data to dl inference
-
                 g_image.print();
                 image_data_t image_data;
                 image_data.size = g_image.col_length * g_image.row_length;
@@ -263,6 +260,7 @@ static void touch_digit_task(void *arg)
             default:
                 break;
             }
+#endif
         }
     }
 }
@@ -287,7 +285,7 @@ void touch_digit_recognition_task(void *arg)
 
     while (1) {
         if (xQueueReceive(xImageQueue, &image_data, portMAX_DELAY) == pdTRUE) {
-            // printf("Result:%d\n", touch_digit_recognition->predict(image_data.data));
+            printf("Result:%d\n", touch_digit_recognition->predict(image_data.data));
             digital_tube_write_num(0, touch_digit_recognition->predict(image_data.data));
             delete [] image_data.data;
         }
