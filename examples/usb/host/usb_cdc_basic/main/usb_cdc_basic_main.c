@@ -79,7 +79,7 @@ void app_main(void)
     usbh_cdc_device_config_t dev_config = {
         .vid = 0,
         .pid = 0,
-        .itf_num = 0,
+        .itf_num = 1,
         .rx_buffer_size = IN_RINGBUF_SIZE,
         .tx_buffer_size = OUT_RINGBUF_SIZE,
         .cbs = {

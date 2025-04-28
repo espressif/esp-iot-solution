@@ -1609,6 +1609,17 @@ build_components_usb_iot_usbh_cdc_test_apps:
   variables:
     EXAMPLE_DIR: components/usb/iot_usbh_cdc/test_apps
 
+build_components_usb_iot_usbh_modem_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_usb_iot_usbh_modem_test
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.3
+  variables:
+    EXAMPLE_DIR: components/usb/iot_usbh_modem/test_apps
+
 build_components_usb_usb_device_uac:
   extends:
     - .build_examples_template

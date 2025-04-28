@@ -524,7 +524,6 @@ static esp_err_t _cdc_reset_transfer_endpoint(usb_device_handle_t dev_hdl, usb_t
 {
     assert(dev_hdl);
     assert(transfer);
-
     ESP_RETURN_ON_ERROR(usb_host_endpoint_halt(dev_hdl, transfer->bEndpointAddress), TAG,);
     ESP_RETURN_ON_ERROR(usb_host_endpoint_flush(dev_hdl, transfer->bEndpointAddress), TAG,);
     usb_host_endpoint_clear(dev_hdl, transfer->bEndpointAddress);
@@ -652,17 +651,24 @@ static esp_err_t _cdc_close(usbh_cdc_t *cdc)
         return ESP_ERR_INVALID_STATE;
     }
 
+    cdc->state = USBH_CDC_CLOSE;
+
     // Cancel polling of BULK IN
     if (cdc->data.in_xfer) {
         ESP_ERROR_CHECK(_cdc_reset_transfer_endpoint(cdc->dev_hdl, cdc->data.in_xfer));
     }
 
+    if (cdc->data.out_xfer) {
+        ESP_ERROR_CHECK(_cdc_reset_transfer_endpoint(cdc->dev_hdl, cdc->data.out_xfer));
+    }
+
+    // wait for transfers to complete
+    vTaskDelay(10 / portTICK_PERIOD_MS);
     // Release all interfaces
-    ESP_ERROR_CHECK(usb_host_interface_release(p_usbh_cdc_obj->cdc_client_hdl, cdc->dev_hdl, cdc->data.intf_desc->bInterfaceNumber));
+    ESP_ERROR_CHECK(usb_host_interface_release(p_usbh_cdc_obj->cdc_client_hdl, cdc->dev_hdl, cdc->intf_idx));
 
     _cdc_transfers_free(cdc);
     usb_host_device_close(p_usbh_cdc_obj->cdc_client_hdl, cdc->dev_hdl);
-    cdc->state = USBH_CDC_CLOSE;
 
     _ring_buffer_flush(cdc->in_ringbuf_handle);
     _ring_buffer_flush(cdc->out_ringbuf_handle);
@@ -802,7 +808,7 @@ esp_err_t usbh_cdc_read_bytes(usbh_cdc_handle_t cdc_handle, const uint8_t *buf, 
 
     ret = _ringbuf_pop(cdc->in_ringbuf_handle, (uint8_t *)buf, data_len, length, ticks_to_wait);
     if (ret != ESP_OK) {
-        ESP_LOGD(TAG, "cdc read failed");
+        ESP_LOGE(TAG, "cdc read failed");
         *length = 0;
         return ret;
     }
