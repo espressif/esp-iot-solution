@@ -139,6 +139,14 @@ examples/bluetooth/ble_remote_control:
   enable:
     - if: IDF_TARGET in ["esp32","esp32s3","esp32c3"]
 
+examples/bluetooth/ble_adv/bthome/dimmer:
+  enable:
+    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3","esp32c6","esp32h2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
+
+examples/bluetooth/ble_adv/bthome/bulb:
+  enable:
+    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3","esp32c6","esp32h2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
+
 examples/camera/basic:
   enable:
     - if: IDF_TARGET in ["esp32s2","esp32s3"]
