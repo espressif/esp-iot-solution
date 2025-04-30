@@ -10,7 +10,7 @@
 #include "touch_button_sensor.h"
 
 #if CONFIG_IDF_TARGET_ESP32P4
-uint32_t channel_list[] = {7, 9, 11}; // gpio 9, 11, 13
+uint32_t channel_list[] = {7, 9, 11};           // gpio 9, 11, 13
 float channel_threshold[] = {0.01, 0.01, 0.01}; // 1%
 #define TOUCH_DEBOUNCE_TIMES 2
 #elif CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S2

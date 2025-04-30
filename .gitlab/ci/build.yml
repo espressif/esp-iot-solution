@@ -736,6 +736,18 @@ build_example_touch_button_sensor:
   variables:
     EXAMPLE_DIR: examples/touch/touch_button_sensor
 
+build_example_touch_slider_sensor:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_touch_touch_slider_sensor
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.1
+      - IMAGE: espressif/idf:release-v5.4
+  variables:
+    EXAMPLE_DIR: examples/touch/touch_slider_sensor
+
 build_example_touch_touch_proximity:
   extends:
     - .build_examples_template
@@ -1566,6 +1578,16 @@ build_components_touch_touch_button_sensor_test_apps:
       - IMAGE: espressif/idf:release-v5.3
   variables:
     EXAMPLE_DIR: components/touch/touch_button_sensor/test_apps
+
+build_components_touch_touch_slider_sensor_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_touch_touch_slider_sensor_test_apps
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.3
+  variables:
+    EXAMPLE_DIR: components/touch/touch_slider_sensor/test_apps
 
 build_components_usb_esp_msc_ota_test_apps:
   extends:

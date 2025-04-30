@@ -87,6 +87,7 @@ jobs:
             components/touch/touch_button;
             components/touch/touch_button_sensor;
             components/touch/touch_proximity_sensor;
+            components/touch/touch_slider_sensor;
             components/usb/esp_msc_ota;
             components/usb/esp_tinyuf2;
             components/usb/iot_usbh;
