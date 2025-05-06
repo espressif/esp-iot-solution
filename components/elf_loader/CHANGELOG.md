@@ -1,7 +1,8 @@
 # ChangeLog
 
-## Unreleased - 2024-12-27
+## v1.1.0 - 2025-05-06
 
+* Added fast build for ELF application
 * Added a script to generate the symbol table for the ELF APP:
   * Supports generating symbols table based on ELF file
   * Supports generating symbols table based on static libraries

@@ -10,4 +10,16 @@ Before project configuration and build, be sure to set the correct chip target u
 
 ### Build and Flash
 
-Run `idf.py elf` to build project, and when compiling is done you can see `hello_world.app.elf` in `build` directory.
+To reduce the compilation time, please run the following command to force the use of Makefile: 
+
+```bash
+idf.py -G 'Unix Makefiles' set-target <chip-name>
+```
+
+Then input the ELF APP build command as follows:
+
+```bash
+idf.py elf
+```
+
+After compilation, you can find `hello_world.app.elf` in the `build` directory.
