@@ -56,6 +56,7 @@ The registered components in ESP-IoT-Solution are listed below:
 
 | Component | Version |
 | --- | --- |
+| [adc_battery_estimation](https://components.espressif.com/components/espressif/adc_battery_estimation) | [![Component Registry](https://components.espressif.com/components/espressif/adc_battery_estimation/badge.svg)](https://components.espressif.com/components/espressif/adc_battery_estimation) |
 | [adc_mic](https://components.espressif.com/components/espressif/adc_mic) | [![Component Registry](https://components.espressif.com/components/espressif/adc_mic/badge.svg)](https://components.espressif.com/components/espressif/adc_mic) |
 | [adc_tp_calibration](https://components.espressif.com/components/espressif/adc_tp_calibration) | [![Component Registry](https://components.espressif.com/components/espressif/adc_tp_calibration/badge.svg)](https://components.espressif.com/components/espressif/adc_tp_calibration) |
 | [aht20](https://components.espressif.com/components/espressif/aht20) | [![Component Registry](https://components.espressif.com/components/espressif/aht20/badge.svg)](https://components.espressif.com/components/espressif/aht20) |

@@ -1,0 +1,44 @@
+menu "ADC Battery Estimation"
+
+    choice OCV_SOC_MODEL
+        bool "Select default OCV and battery capacity model"
+        default OCV_SOC_MODEL_1
+        help
+            Select Model
+
+        config OCV_SOC_MODEL_1
+            bool "OCV_SOC Model 1"
+            help
+                This model is based on TI's document: Battery Fuel Gauging Algorithm Comparison
+                You can find the document here: https://www.ti.com/lit/SLUAAR3
+
+        config OCV_SOC_MODEL_2
+            bool "OCV_OSC Model 2"
+            help
+                This model is based on Analog Devices' document:
+                "Characterizing a Lithium-Ion (Li+) Cell for Use with an Open-Circuit-Voltage (OCV) Based Fuel Gauge"
+                You can find the document at:
+                https://www.analog.com/en/resources/design-notes/characterizing-a-lithiumion-li-cell-for-use-with-an-opencircuitvoltage-ocv-based-fuel-gauge.html
+    endchoice
+
+    config ADC_FILTER_WINDOW_SIZE
+        int "ADC Filter Window size"
+        range 5 15
+        default 10
+        help
+            The number of ADC measurements to take before filtering the battery voltage, the
+            higher the value the more stable the battery voltage will be, but will take longer
+            to update
+
+    config BATTERY_CAPACITY_LPF_COEFFICIENT
+        int "Battery Capacity LPF Coefficient (/10)"
+        range 1 10
+        default 2
+        help
+            First-order low-pass filter coefficient for battery capacity calculation.
+            The value is divided by 10 to get the actual coefficient (e.g., 2 means 0.2).
+            Lower values provide more smoothing but slower response to changes.
+            Higher values provide less smoothing but faster response to changes.
+
+
+endmenu
