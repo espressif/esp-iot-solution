@@ -1,160 +1,308 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+/*
+ * @File: aht20.c
+ *
+ * @brief: AHT20 driver function definitions
+ *
+ * @Date: May 2, 2025
+ *
+ * @Author: Rohan Jeet <jeetrohan92@gmail.com>
+ *
+ */
 
-#include <inttypes.h>
 #include <stdio.h>
-#include <string.h>
 #include "aht20.h"
-#include "driver/gpio.h"
-#include "esp_log.h"
-#include "esp_check.h"
 
-#include "aht20_reg.h"
+static const char *s_TAG = "AHT20";
 
-const static char *TAG = "AHT20";
+/**
+* @brief a function used to handle resetting of registers of the device, if not found calibrated when initialized
+*
+* @param[in] aht20_handle AHT20 device handle
+*
+* @param[in] read_buffer storage for read values
+*
+* @param[in] read_size data size to read
+*
+*/
+static esp_err_t aht20_read_reg(aht20_handle_t sensor, uint8_t * read_buffer, uint8_t read_size);
 
-typedef struct {
-    i2c_port_t  i2c_port;
-    uint8_t     i2c_addr;
-} aht20_dev_t;
+/**
+* @brief a function used to handle resetting of registers of the device, if not found calibrated when initialized
+*
+* @param[in] aht20_handle AHT20 device handle
+*
+* @param[in] cmd AHT20 command to be written
+*
+* @param[in] write_size data size to write
+*
+*/
+static esp_err_t aht20_write_reg(aht20_handle_t sensor, uint8_t * cmd, uint8_t write_size);
 
-static esp_err_t aht20_write_reg(aht20_dev_handle_t dev, uint8_t reg_addr, uint8_t *data, uint8_t len)
+/**
+* @brief a function used to handle reinitialization of registers of the device, if not found calibrated when initialized
+*
+* @param[in] aht20_handle AHT20 device handle
+*
+*/
+static esp_err_t aht20_Start_Init(aht20_handle_t aht20_handle);
+
+/**
+* @brief a function used to handle resetting of registers of the device, if not found calibrated when initialized
+*
+* @param[in] aht20_handle AHT20 device handle
+*
+* @param[in] addr AHT20 internal register, undocumented in datasheet
+*
+*/
+static esp_err_t aht_JH_Reset_REG(aht20_handle_t aht20_handle, uint8_t addr);
+
+/**
+* @brief check crc validity of response received
+*
+* @param[in] message AHT reading
+*
+*
+* @param[in] num Data bytes to check in message for crc
+*
+* @return  crc calculated from the provided message
+*
+*/
+static uint8_t calc_CRC8(uint8_t *message, uint8_t Num);
+
+static esp_err_t aht20_read_reg(aht20_handle_t sensor, uint8_t * read_buffer, uint8_t read_size)
 {
-    aht20_dev_t *sens = (aht20_dev_t *) dev;
-    esp_err_t  ret;
+    ESP_RETURN_ON_ERROR(i2c_bus_read_bytes(sensor->i2c_dev, NULL_I2C_MEM_ADDR, read_size, read_buffer),
+                        s_TAG, "unable to read from aht20");
 
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    ret = i2c_master_start(cmd);
-    assert(ESP_OK == ret);
-    ret = i2c_master_write_byte(cmd, sens->i2c_addr | I2C_MASTER_WRITE, true);
-    assert(ESP_OK == ret);
-    ret = i2c_master_write_byte(cmd, reg_addr, true);
-    assert(ESP_OK == ret);
-    if (len) {
-        ret = i2c_master_write(cmd, data, len, true);
-        assert(ESP_OK == ret);
-    }
-    ret = i2c_master_stop(cmd);
-    assert(ESP_OK == ret);
-    ret = i2c_master_cmd_begin(sens->i2c_port, cmd, 5000 / portTICK_PERIOD_MS);
-    i2c_cmd_link_delete(cmd);
-
-    return ret;
+    return ESP_OK;
 }
 
-static esp_err_t aht20_read_reg(aht20_dev_handle_t dev, uint8_t *data, size_t len)
+static esp_err_t aht20_write_reg(aht20_handle_t sensor, uint8_t * cmd, uint8_t write_size)
 {
-    aht20_dev_t *sens = (aht20_dev_t *) dev;
-    esp_err_t ret;
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    ret = i2c_master_start(cmd);
-    assert(ESP_OK == ret);
-    ret = i2c_master_write_byte(cmd, sens->i2c_addr | I2C_MASTER_READ, true);
-    assert(ESP_OK == ret);
-    ret = i2c_master_read(cmd, data, len, I2C_MASTER_LAST_NACK);
-    assert(ESP_OK == ret);
-    ret = i2c_master_stop(cmd);
-    assert(ESP_OK == ret);
-    ret = i2c_master_cmd_begin(sens->i2c_port, cmd, 1000 / portTICK_PERIOD_MS);
-    i2c_cmd_link_delete(cmd);
+    ESP_RETURN_ON_ERROR(i2c_bus_write_bytes(sensor->i2c_dev, NULL_I2C_MEM_ADDR, write_size, cmd),
+                        s_TAG, "unable to set mode for AHT20\n");
 
-    return ret;
+    return ESP_OK;
 }
 
-static uint8_t aht20_calc_crc(uint8_t *data, uint8_t len)
+static uint8_t calc_CRC8(uint8_t *message, uint8_t Num)
 {
     uint8_t i;
     uint8_t byte;
     uint8_t crc = 0xFF;
-
-    for (byte = 0; byte < len; byte++) {
-        crc ^= data[byte];
+    for (byte = 0; byte < Num; byte++) {
+        crc ^= (message[byte]);
         for (i = 8; i > 0; --i) {
-            if ((crc & 0x80) != 0) {
+            if (crc & 0x80) {
                 crc = (crc << 1) ^ 0x31;
             } else {
-                crc = crc << 1;
+                crc = (crc << 1);
             }
         }
     }
-
     return crc;
 }
 
-esp_err_t aht20_read_temperature_humidity(aht20_dev_handle_t handle,
-                                          uint32_t *temperature_raw, float *temperature,
-                                          uint32_t *humidity_raw, float *humidity)
+esp_err_t aht20_read_raw(aht20_handle_t aht20_handle, aht20_raw_reading_t *raw_read)
 {
-    uint8_t status;
-    uint8_t buf[7];
-    uint32_t raw_data;
+    ESP_RETURN_ON_FALSE((aht20_handle != NULL), ESP_ERR_INVALID_ARG, s_TAG, "empty handle, provide a valid AHT20 handle");
 
-    ESP_RETURN_ON_FALSE(handle, ESP_ERR_INVALID_ARG, TAG, "invalid device handle pointer");
+    uint8_t measure_cmd[] = {AHT20_MEASURE_CYC, 0x33, 0x00};
 
-    buf[0] = 0x33;
-    buf[1] = 0x00;
-    ESP_RETURN_ON_ERROR(aht20_write_reg(handle, AHT20_START_MEASURMENT_CMD, buf, 2), TAG, "I2C read/write error");
+    ESP_RETURN_ON_ERROR(aht20_write_reg(aht20_handle, measure_cmd, sizeof(measure_cmd)),
+                        s_TAG, "unable to set mode for AHT20\n");
 
-    vTaskDelay(pdMS_TO_TICKS(100));
+    uint8_t read_measurement[7], read_bytes = 6;;
+#ifdef CONFIG_AHT20_CHECK_CRC
+    read_bytes = 7;
+#endif
 
-    ESP_RETURN_ON_ERROR(aht20_read_reg(handle, &status, 1), TAG, "I2C read/write error");
-
-    if ((status & BIT(AT581X_STATUS_Calibration_Enable)) &&
-            (status & BIT(AT581X_STATUS_CRC_FLAG)) &&
-            ((status & BIT(AT581X_STATUS_BUSY_INDICATION)) == 0)) {
-        ESP_RETURN_ON_ERROR(aht20_read_reg(handle, buf, 7), TAG, "I2C read/write error");
-        ESP_RETURN_ON_ERROR((aht20_calc_crc(buf, 6) != buf[6]), TAG, "crc is error");
-
-        raw_data = buf[1];
-        raw_data = raw_data << 8;
-        raw_data += buf[2];
-        raw_data = raw_data << 8;
-        raw_data += buf[3];
-        raw_data = raw_data >> 4;
-        *humidity_raw = raw_data;
-        *humidity = (float)raw_data * 100 / 1048576;
-
-        raw_data = buf[3] & 0x0F;
-        raw_data = raw_data << 8;
-        raw_data += buf[4];
-        raw_data = raw_data << 8;
-        raw_data += buf[5];
-        *temperature_raw = raw_data;
-        *temperature = (float)raw_data * 200 / 1048576 - 50;
-        return ESP_OK;
-    } else {
-        ESP_LOGI(TAG, "data is not ready");
-        return ESP_ERR_NOT_FINISHED;
+    bool busy = true;
+    while (busy) {
+        aht20_busy_status(aht20_handle, &busy);    // wait for measurement
     }
-}
 
-esp_err_t aht20_new_sensor(const aht20_i2c_config_t *i2c_conf, aht20_dev_handle_t *handle_out)
-{
-    ESP_LOGI(TAG, "%-15s: %d.%d.%d", CHIP_NAME, AHT20_VER_MAJOR, AHT20_VER_MINOR, AHT20_VER_PATCH);
-    ESP_LOGI(TAG, "%-15s: %1.1f - %1.1fV", "SUPPLY_VOLTAGE", SUPPLY_VOLTAGE_MIN, SUPPLY_VOLTAGE_MAX);
-    ESP_LOGI(TAG, "%-15s: %.2f - %.2f℃", "TEMPERATURE", TEMPERATURE_MIN, TEMPERATURE_MAX);
+    ESP_RETURN_ON_ERROR(aht20_read_reg(aht20_handle, read_measurement, read_bytes),
+                        s_TAG, "unable to read raw measurement");
 
-    ESP_RETURN_ON_FALSE(i2c_conf, ESP_ERR_INVALID_ARG, TAG, "invalid device config pointer");
-    ESP_RETURN_ON_FALSE(handle_out, ESP_ERR_INVALID_ARG, TAG, "invalid device handle pointer");
+#ifdef CONFIG_AHT20_CHECK_CRC
+    ESP_RETURN_ON_FALSE((calc_CRC8(read_measurement, 6) == read_measurement[6]),
+                        ESP_ERR_INVALID_RESPONSE,
+                        s_TAG, "CRC match failed, invalid response received from AHT20");
+#endif
 
-    aht20_dev_t *handle = calloc(1, sizeof(aht20_dev_t));
-    ESP_RETURN_ON_FALSE(handle, ESP_ERR_NO_MEM, TAG, "memory allocation for device handler failed");
+    raw_read->humidity = ((read_measurement[1] << 16) | (read_measurement[2] << 8) | read_measurement[3]) >> 4;
+    raw_read->temperature = ((read_measurement[3] << 16) | (read_measurement[4] << 8) | read_measurement[5]) & 0xfffff;
 
-    handle->i2c_port = i2c_conf->i2c_port;
-    handle->i2c_addr = i2c_conf->i2c_addr;
-
-    *handle_out = handle;
     return ESP_OK;
 }
 
-esp_err_t aht20_del_sensor(aht20_dev_handle_t handle)
+esp_err_t aht20_read_humiture(aht20_handle_t aht20_handle)
 {
-    ESP_RETURN_ON_FALSE(handle, ESP_ERR_INVALID_ARG, TAG, "invalid device handle pointer");
+    aht20_raw_reading_t raw_read;
+    ESP_RETURN_ON_ERROR(aht20_read_raw(aht20_handle, &raw_read),
+                        "", "");
 
-    free(handle);
+    aht20_handle->humiture.humidity = raw_read.humidity * 100.0 / 1024 / 1024; //Calculated humidity value
+    aht20_handle->humiture.temperature = (raw_read.temperature * 200.0 / 1024 / 1024) - 50; //Calculated temperature value
 
     return ESP_OK;
+}
+
+esp_err_t aht20_read_humidity(aht20_handle_t aht20_handle, float_t *humidity)
+{
+    aht20_raw_reading_t raw_read;
+    ESP_RETURN_ON_ERROR(aht20_read_raw(aht20_handle, &raw_read),
+                        "", "");
+
+    *humidity = raw_read.humidity * 100.0 / 1024 / 1024; //Calculated humidity value
+    return ESP_OK;
+}
+
+esp_err_t aht20_read_temperature(aht20_handle_t aht20_handle, float_t *temperature)
+{
+    aht20_raw_reading_t raw_read;
+    ESP_RETURN_ON_ERROR(aht20_read_raw(aht20_handle, &raw_read),
+                        "", "");
+
+    *temperature = (raw_read.temperature * 200.0 / 1024 / 1024) - 50; //Calculated temperature value
+
+    return ESP_OK;
+}
+
+esp_err_t aht20_calibration_status(aht20_handle_t aht20_handle, bool *calibration)
+{
+    ESP_RETURN_ON_FALSE((aht20_handle != NULL), ESP_ERR_INVALID_ARG,
+                        s_TAG, "empty handle, initialize AHT20 handle");
+
+    ESP_RETURN_ON_FALSE((calibration != NULL), ESP_ERR_INVALID_ARG,
+                        s_TAG, "provide a variable to store status value");
+
+    uint8_t read_status;
+
+    ESP_RETURN_ON_ERROR(aht20_read_reg(aht20_handle, &read_status, sizeof(read_status)),
+                        s_TAG, "unable to read status");
+
+    if (read_status & BIT3) {
+        *calibration = true;
+    } else {
+        *calibration = false;
+    }
+
+    return ESP_OK;
+}
+
+esp_err_t aht20_busy_status(aht20_handle_t aht20_handle, bool *busy)
+{
+    ESP_RETURN_ON_FALSE((aht20_handle != NULL), ESP_ERR_INVALID_ARG,
+                        s_TAG, "empty handle, initialize AHT20 handle");
+
+    ESP_RETURN_ON_FALSE((busy != NULL), ESP_ERR_INVALID_ARG,
+                        s_TAG, "provide a variable to store status value");
+    uint8_t read_status;
+    ESP_RETURN_ON_ERROR(aht20_read_reg(aht20_handle, &read_status, sizeof(read_status)),
+                        s_TAG, "unable to read status");
+
+    if (read_status & BIT7) {
+        *busy = true;
+    } else {
+        *busy = false;
+    }
+
+    return ESP_OK;
+}
+
+static esp_err_t aht_JH_Reset_REG(aht20_handle_t aht20_handle, uint8_t addr)
+{
+
+    uint8_t reset_cmd[] = {addr, 0x00, 0x00}, read_bytes[3];
+
+    ESP_RETURN_ON_ERROR(aht20_write_reg(aht20_handle, reset_cmd, sizeof(reset_cmd)),
+                        s_TAG, "unable to reset, check log");
+
+    ESP_RETURN_ON_ERROR(aht20_read_reg(aht20_handle, read_bytes, sizeof(read_bytes)),
+                        s_TAG, "unable to reset, check log");
+
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+    reset_cmd[0] = 0xB0 | addr;
+    reset_cmd[1] = read_bytes[1];
+    reset_cmd[2] = read_bytes[2];
+
+    ESP_RETURN_ON_ERROR(aht20_write_reg(aht20_handle, reset_cmd, sizeof(reset_cmd)),
+                        s_TAG, "unable to reset, check log");
+
+    return ESP_OK;
+}
+
+static esp_err_t aht20_Start_Init(aht20_handle_t aht20_handle)
+{
+    ESP_RETURN_ON_ERROR(aht_JH_Reset_REG(aht20_handle, 0x1b), "", "");
+    ESP_RETURN_ON_ERROR(aht_JH_Reset_REG(aht20_handle, 0x1c), "", "");
+    ESP_RETURN_ON_ERROR(aht_JH_Reset_REG(aht20_handle, 0x1e), "", "");
+
+    return ESP_OK;
+}
+
+esp_err_t aht20_init(aht20_handle_t aht20_handle)
+{
+    ESP_RETURN_ON_FALSE((aht20_handle != NULL), ESP_ERR_INVALID_ARG, s_TAG, "empty handle, initialize AHT20 handle");
+
+    vTaskDelay(20 / portTICK_PERIOD_MS); //time for AHT20 SCL to stabilize
+
+    /***********************************************************************************/
+    /** // This is undocumented in user manual
+        //The first time the power is turned on, read the status word at 0x71, determine whether the status word is 0x18,
+        //if it is not 0x18,  reset the registers
+    **/
+    uint8_t read_status;
+
+    ESP_RETURN_ON_ERROR(aht20_read_reg(aht20_handle, &read_status, sizeof(read_status)),
+                        s_TAG, "unable to read status");
+
+    if ((read_status & 0x18) != 0x18) {
+        ESP_RETURN_ON_ERROR(aht20_Start_Init(aht20_handle),
+                            s_TAG, "reset failed, retry");
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+    }
+    /***********************************************************************************/
+
+    // initialize AHT20
+    uint8_t aht20_init_cmd [] =  { AHT20_INIT_REG, 0x08, 0x00 };
+
+    ESP_RETURN_ON_ERROR(aht20_write_reg(aht20_handle, aht20_init_cmd, sizeof(aht20_init_cmd)),
+                        s_TAG, "unable to initialize AHT20\n");
+
+    ESP_LOGI(s_TAG, "AHT20 initialized\n");
+
+    return ESP_OK;
+
+}
+
+aht20_handle_t aht20_create(i2c_bus_handle_t bus_handle, uint8_t aht20_address)
+{
+    ESP_LOGI(s_TAG, "adding aht20 as device to bus\n");
+    i2c_bus_device_handle_t dev_handle = i2c_bus_device_create(bus_handle, aht20_address, CONFIG_AHT20_I2C_CLK_SPEED);
+    ESP_RETURN_ON_FALSE((dev_handle != NULL), NULL,
+                        s_TAG, "unable to create device\n");
+    ESP_LOGI(s_TAG, "device added to bus\n");
+
+    aht20_handle_t my_aht20_handle = malloc(sizeof(aht20_dev_config_t));
+
+    ESP_RETURN_ON_FALSE((my_aht20_handle != NULL), NULL,
+                        s_TAG, "unable to allocate memory to initialize aht20 handle");
+
+    my_aht20_handle->i2c_dev =  dev_handle;
+    return my_aht20_handle;
+}
+
+void aht20_remove(aht20_handle_t *aht20ptr)
+{
+    i2c_bus_device_delete(&((*aht20ptr)->i2c_dev));
+    free(*aht20ptr);
+    *aht20ptr = NULL; // now AHT20 handle is not a dangling pointer
 }

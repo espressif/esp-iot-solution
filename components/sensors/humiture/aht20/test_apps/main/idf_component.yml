@@ -1,0 +1,4 @@
+dependencies:
+  aht20:
+    version: "*"
+    override_path: "../../"
