@@ -54,6 +54,7 @@ ignore:  # You can also select ignoring files here
     - 'components/display/touch_panel/calibration/basic_painter/fonts/**/*'
     - 'components/gui/lvgl_gui/**/*'
     - 'components/usb/esp_tinyuf2/**/*'
+    - 'components/usb/iot_usbh_rndis/priv_include/ndis.h'
     - 'components/usb/usb_device_uvc/tusb/**/*'
     - 'components/usb/usb_device_uac/tusb/**/*'
     - 'components/usb/usb_device_uac/tusb_uac/**/*'

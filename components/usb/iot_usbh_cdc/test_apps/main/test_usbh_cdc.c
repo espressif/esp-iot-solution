@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -51,13 +51,14 @@ static void usb_communication(uint8_t loop_count, size_t data_length, usbh_cdc_h
     }
 }
 
-static void cdc_new_dev_cb(usb_device_handle_t usb_dev)
+static void cdc_new_dev_cb(usb_device_handle_t usb_dev, void *arg)
 {
     ESP_LOGI(TAG, "cdc new device found");
 }
 
 static void cdc_connect_cb(usbh_cdc_handle_t handle, void *arg)
 {
+    usbh_cdc_desc_print(handle);
     ESP_LOGI(TAG, "cdc device connect");
 }
 
@@ -83,7 +84,7 @@ TEST_CASE("usb cdc R/W", "[iot_usbh_cdc][read-write][auto]")
     usbh_cdc_device_config_t dev_config = {
         .vid = 0,
         .pid = 0,
-        .itf_num = 1,
+        .itf_num = 0,
         .rx_buffer_size = 0,
         .tx_buffer_size = 0,
         .cbs = {

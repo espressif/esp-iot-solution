@@ -1,5 +1,13 @@
 # ChangeLog
 
+## v1.1.0 - 2025-04-21
+
+### Features:
+
+* Support control transfer and notification transfer.
+
+* Support usbh_cdc_send_custom_request() to send custom request.
+
 ## v1.0.4 - 2025-4-1
 
 ### Bug Fixes:

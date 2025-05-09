@@ -48,6 +48,7 @@ static void usb_receive_task(void *param)
 
 static void usb_connect_callback(usbh_cdc_handle_t cdc_handle, void *user_data)
 {
+    usbh_cdc_desc_print(cdc_handle);
     TaskHandle_t task_hdl = (TaskHandle_t)user_data;
     vTaskResume(task_hdl);
     ESP_LOGI(TAG, "Device Connected!");

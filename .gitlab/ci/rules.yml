@@ -315,11 +315,19 @@
   - "components/usb/iot_usbh_modem/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
 
+.patterns-components_usb_usb_host_rndis_test_apps: &patterns-components_usb_usb_host_rndis_test_apps
+  - "components/usb/usb_host_rndis/test_apps/**/*"
+  - "tools/cmake_utilities/package_manager.cmake"
+
 .patterns-components_usb_usb_device_uac: &patterns-components_usb_usb_device_uac
   - "components/usb/usb_device_uac/**/*"
 
 .patterns-components_usb_usb_device_uvc: &patterns-components_usb_usb_device_uvc
   - "components/usb/usb_device_uvc/**/*"
+
+.patterns-components_usb_iot_usbh_rndis: &patterns-components_usb_iot_usbh_rndis
+  - "components/usb/iot_usbh_rndis/**/*"
+  - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_usb_usb_stream: &patterns-components_usb_usb_stream
   - "components/usb/usb_stream/**/*"
@@ -341,6 +349,10 @@
 
 .patterns-components_i2c_bus: &patterns-components_i2c_bus
   - "components/i2c_bus/**/*"
+  - "tools/cmake_utilities/package_manager.cmake"
+
+.patterns-components_iot_eth: &patterns-components_iot_eth
+  - "components/iot_eth/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_sensors_power_monitor_ina236: &patterns-components_sensors_power_monitor_ina236
@@ -629,6 +641,9 @@
 
 .patterns-example_usb_host_usb_msc_ota: &patterns-example_usb_host_usb_msc_ota
   - "examples/usb/host/usb_msc_ota/**/*"
+
+.patterns-example_usb_host_usb_rndis_4g_module: &patterns-example_usb_host_usb_rndis_4g_module
+  - "examples/usb/host/usb_rndis_4g_module/**/*"
 
 .patterns-example_usb_otg_usb_host_device_mode_manual_switch: &patterns-example_usb_otg_usb_host_device_mode_manual_switch
   - "examples/usb/otg/usb_host_device_mode_manual_switch/**/*"
@@ -1602,6 +1617,22 @@
     - <<: *if-dev-push
       changes: *patterns-example_usb_host_usb_msc_ota
 
+.rules:build:example_usb_host_usb_rndis_4g_module:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_usb_iot_usbh_cdc
+    - <<: *if-dev-push
+      changes: *patterns-components_usb_iot_usbh_rndis
+    - <<: *if-dev-push
+      changes: *patterns-components_iot_eth
+    - <<: *if-dev-push
+      changes: *patterns-example_usb_host_usb_rndis_4g_module
+
 .rules:build:example_usb_otg_usb_host_device_mode_manual_switch:
   rules:
     - <<: *if-protected
@@ -2450,6 +2481,32 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_touch_touch_slider_sensor
+
+.rules:build:components_usb_usb_host_rndis_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_usb_usb_host_rndis_test_apps
+    - <<: *if-dev-push
+      changes: *patterns-components_usb_iot_usbh_cdc
+
+.rules:build:components_usb_iot_usbh_rndis_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_usb_iot_usbh_rndis
+    - <<: *if-dev-push
+      changes: *patterns-components_usb_iot_usbh_cdc
 
 .rules:build:components_usb_esp_msc_ota_test_apps:
   rules:
