@@ -33,6 +33,8 @@ The following table lists the supported 4G module models. They can be configured
 +=================+
 | ML302-DNLM/CNLM |
 +-----------------+
+| NT26            |
++-----------------+
 | EC600NCNLC-N06  |
 +-----------------+
 | AIR780E         |
