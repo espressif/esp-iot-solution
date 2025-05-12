@@ -103,12 +103,12 @@ esp_err_t esp_lcd_new_panel_hx8399(const esp_lcd_panel_io_handle_t io, const esp
         .video_timing = {                                        \
             .h_size = 1080,                                      \
             .v_size = 1920,                                      \
-            .hsync_back_porch = 140,                             \
-            .hsync_pulse_width = 40,                             \
-            .hsync_front_porch = 40,                             \
-            .vsync_back_porch = 16,                              \
-            .vsync_pulse_width = 4,                              \
-            .vsync_front_porch = 16,                             \
+            .hsync_back_porch = 20,                             \
+            .hsync_pulse_width = 22,                             \
+            .hsync_front_porch = 22,                             \
+            .vsync_back_porch = 7,                              \
+            .vsync_pulse_width = 7,                              \
+            .vsync_front_porch = 9,                             \
         },                                                       \
         .flags.use_dma2d = true,                                 \
     }

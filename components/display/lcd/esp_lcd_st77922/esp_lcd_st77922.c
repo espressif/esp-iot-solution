@@ -11,7 +11,7 @@
 #include "st77922_interface.h"
 #include "esp_lcd_st77922.h"
 
-const char *TAG = "st77922";
+static const char *TAG = "st77922";
 
 esp_err_t esp_lcd_new_panel_st77922(const esp_lcd_panel_io_handle_t io, const esp_lcd_panel_dev_config_t *panel_dev_config,
                                     esp_lcd_panel_handle_t *ret_panel)
