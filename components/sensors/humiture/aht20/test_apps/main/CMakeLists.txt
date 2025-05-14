@@ -1,3 +1,3 @@
-idf_component_register(SRC_DIRS "."
-                       PRIV_INCLUDE_DIRS "."
-                       PRIV_REQUIRES unity test_utils aht20)
+idf_component_register(SRCS "aht20_test_app.c"
+                    INCLUDE_DIRS "."
+                    PRIV_REQUIRES unity test_utils aht20)
