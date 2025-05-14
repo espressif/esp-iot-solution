@@ -1,4 +1,4 @@
-# aht20
+# Component: AHT20
 I2C driver for Aosong AHT20 humidity and temperature sensor using esp-idf.
 Tested with AHT20 using ESP32 and ESP32-S3 devkits.
 
@@ -47,23 +47,23 @@ Tested with AHT20 using ESP32 and ESP32-S3 devkits.
 
 This driver includes a demo example project.
 
-    Follow the example to learn how to initialize the driver and read the sensor data.
+Follow the example to learn how to initialize the driver and read the sensor data.
 
-    All public APIs are documented in aht20.h.
+All public APIs are documented in aht20.h.
 
 
 
-However, following are the general guiedlines.
+Following are the general guidelines.
 ```c
     //create a AHT20 device object and receive a device handle for it
     // my_i2c_bus_handle is a preintialized i2c_bus_handle_t object
-    aht20_handle_t aht20_handle =  aht20_create( my_i2c_bus_handle, AHT20_ADDRESS_LOW ); //addresses are in aht.h
+    aht20_handle_t aht20_handle =  aht20_create( my_i2c_bus_handle, AHT20_ADDRESS_LOW ); //addresses are in aht20.h
 
     //use the previously created AHT20 device handle for initializing the associated device
     aht20_init(aht20_handle);
     
     //read both humidity and temperature at once from device, using AHT20 device handle
-    aht20_read_humiture(aht20_handle); //Other public APIs are documented in AHT20.h.
+    aht20_read_humiture(aht20_handle); //Other public APIs are documented in aht20.h.
 
     //access the results stored in AHT20 device object, using the AHT20 device handle
     //other apis require user to explicitly pass variable address to hold data
@@ -77,7 +77,7 @@ However, following are the general guiedlines.
 
 
 # How to Configure CRC and I2C clock speed
-Additionally, select in menuconfig under Component Config → AHT20,; to use CRC(default is not used)
+Additionally, select in menuconfig under Component Config → AHT20; to use CRC(default is not used)
 or change the clock speed of device (default is 100KHz). 
 
 Note : It is recommended to use clock speeds in upper ranges of 100kHz to 200kHz.

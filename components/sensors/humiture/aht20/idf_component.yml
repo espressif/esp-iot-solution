@@ -20,6 +20,9 @@ dependencies:
 
   idf: ">=4.0"
 
+examples:
+  - path: ../../../examples/sensors/aht20_demo
+
 targets:
   - esp32
   - esp32c2

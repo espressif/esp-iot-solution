@@ -59,7 +59,7 @@ static esp_err_t aht20_Start_Init(aht20_handle_t aht20_handle);
 * @param[in] addr AHT20 internal register, undocumented in datasheet
 *
 */
-static esp_err_t aht_JH_Reset_REG(aht20_handle_t aht20_handle, uint8_t addr);
+static esp_err_t aht20_JH_Reset_REG(aht20_handle_t aht20_handle, uint8_t addr);
 
 /**
 * @brief check crc validity of response received
@@ -217,7 +217,7 @@ esp_err_t aht20_busy_status(aht20_handle_t aht20_handle, bool *busy)
     return ESP_OK;
 }
 
-static esp_err_t aht_JH_Reset_REG(aht20_handle_t aht20_handle, uint8_t addr)
+static esp_err_t aht20_JH_Reset_REG(aht20_handle_t aht20_handle, uint8_t addr)
 {
 
     uint8_t reset_cmd[] = {addr, 0x00, 0x00}, read_bytes[3];
@@ -241,9 +241,9 @@ static esp_err_t aht_JH_Reset_REG(aht20_handle_t aht20_handle, uint8_t addr)
 
 static esp_err_t aht20_Start_Init(aht20_handle_t aht20_handle)
 {
-    ESP_RETURN_ON_ERROR(aht_JH_Reset_REG(aht20_handle, 0x1b), "", "");
-    ESP_RETURN_ON_ERROR(aht_JH_Reset_REG(aht20_handle, 0x1c), "", "");
-    ESP_RETURN_ON_ERROR(aht_JH_Reset_REG(aht20_handle, 0x1e), "", "");
+    ESP_RETURN_ON_ERROR(aht20_JH_Reset_REG(aht20_handle, 0x1b), "", "");
+    ESP_RETURN_ON_ERROR(aht20_JH_Reset_REG(aht20_handle, 0x1c), "", "");
+    ESP_RETURN_ON_ERROR(aht20_JH_Reset_REG(aht20_handle, 0x1e), "", "");
 
     return ESP_OK;
 }

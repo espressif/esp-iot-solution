@@ -55,6 +55,8 @@ void tearDown(void)
 {
     after_free_8bit = heap_caps_get_free_size(MALLOC_CAP_8BIT);
     after_free_32bit = heap_caps_get_free_size(MALLOC_CAP_32BIT);
+    check_leak(before_free_8bit, after_free_8bit, "8BIT");
+    check_leak(before_free_32bit, after_free_32bit, "32BIT");
 }
 
 /************************** Memory Leak Checks Completed********************/
@@ -97,6 +99,7 @@ esp_err_t aht20_init_test()
 void aht20_deinit_test(void)
 {
     aht20_remove(&aht20_handle);
+    i2c_del_master_bus(my_i2c_bus_handle);
 }
 /*******************************AHT20 Device Deinitializtion Over****************************/
 
