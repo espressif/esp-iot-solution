@@ -80,6 +80,7 @@ INPUT = \
     $(PROJECT_PATH)/components/usb/usb_stream/include/usb_stream.h \
     $(PROJECT_PATH)/components/utilities/adc_tp_calibration/include/adc_tp_calibration.h \
     $(PROJECT_PATH)/components/usb/iot_usbh_rndis/include/iot_usbh_rndis.h \
+    $(PROJECT_PATH)/components/usb/iot_usbh_ecm/include/iot_usbh_ecm.h \
     $(PROJECT_PATH)/components/zero_detection/include/zero_detection.h \
 
 ## Get warnings for functions that have no documentation for their parameters or return value

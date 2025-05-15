@@ -98,6 +98,7 @@ jobs:
             components/usb/usb_device_uac;
             components/usb/usb_device_uvc;
             components/usb/iot_usbh_rndis;
+            components/usb/iot_usbh_ecm;
             components/usb/usb_stream;
             components/utilities/adc_tp_calibration;
             components/utilities/xz;

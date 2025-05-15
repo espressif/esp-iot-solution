@@ -7,8 +7,10 @@
 
 #include <stdint.h>
 #include "esp_err.h"
+#include "freertos/FreeRTOS.h"
 #include "usb/usb_host.h"
 #include "iot_usbh_cdc_type.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -95,8 +97,8 @@ typedef struct usbh_cdc_config {
     uint16_t pid;                           /*!< Product ID: If set, the `vid` parameter must be configured
                                                  If not set, it will default to opening the first connected device */
     int itf_num;                            /*!< interface numbers */
-    size_t rx_buffer_size;                  /*!< Size of the receive buffer, default is 1024 bytes if set to 0 */
-    size_t tx_buffer_size;                  /*!< Size of the transmit buffer, default is 1024 bytes if set to 0 */
+    size_t rx_buffer_size;                  /*!< Size of the receive ringbuffer size, if set to 0, not use ringbuffer */
+    size_t tx_buffer_size;                  /*!< Size of the transmit ringbuffer size, if set to 0, not use ringbuffer */
     usbh_cdc_event_callbacks_t cbs;         /*!< Event callbacks for the CDC device */
 } usbh_cdc_device_config_t;
 
@@ -205,8 +207,11 @@ esp_err_t usbh_cdc_send_custom_request(usbh_cdc_handle_t cdc_handle, uint8_t bmR
 /**
  * @brief Write data to the USB CDC device
  *
- * This function writes data to the specified USB CDC device by pushing the data into the output ring buffer.
+ * With internal ring buffer, this function writes data to the specified USB CDC device by pushing the data into the output ring buffer.
  * If the buffer is full or the device is not connected, the write will fail.
+ *
+ * Without internal ring buffer, this function writes data to the specified USB CDC device by sending data directly to the device.
+ * Please set the ticks_to_wait for blocking write.
  *
  * @param[in] cdc_handle The CDC device handle
  * @param[in] buf Pointer to the data buffer to write
@@ -223,8 +228,11 @@ esp_err_t usbh_cdc_write_bytes(usbh_cdc_handle_t cdc_handle, const uint8_t *buf,
 /**
  * @brief Read data from the USB CDC device
  *
- * This function reads data from the specified USB CDC device by popping data from the input ring buffer.
+ * With internal ring buffer, this function reads data from the specified USB CDC device by popping data from the input ring buffer.
  * If no data is available or the device is not connected, the read will fail.
+ *
+ * Without internal ring buffer, this function reads data from the specified USB CDC device by receiving data directly from the device. You can call this function in the recv_data callback function.
+ * Please set ticks_to_wait to zero for non-blocking read.
  *
  * @param[in] cdc_handle The CDC device handle
  * @param[out] buf Pointer to the buffer where the read data will be stored
@@ -237,18 +245,21 @@ esp_err_t usbh_cdc_write_bytes(usbh_cdc_handle_t cdc_handle, const uint8_t *buf,
  *     - ESP_ERR_INVALID_ARG: Invalid argument (NULL handle, buffer, or length)
  *     - ESP_ERR_INVALID_STATE: Device is not connected
  */
-esp_err_t usbh_cdc_read_bytes(usbh_cdc_handle_t cdc_handle, const uint8_t *buf, size_t *length, TickType_t ticks_to_wait);
+esp_err_t usbh_cdc_read_bytes(usbh_cdc_handle_t cdc_handle, uint8_t *buf, size_t *length, TickType_t ticks_to_wait);
 
 /**
  * @brief Flush the receive buffer of the USB CDC device
  *
  * This function clears the receive buffer, discarding any data currently in the buffer.
  *
+ * Not supported for no internal ring buffer mode.
+ *
  * @param[in] cdc_handle The CDC device handle
  *
  * @return
  *     - ESP_OK: Receive buffer flushed successfully
  *     - ESP_ERR_INVALID_ARG: Invalid CDC handle provided
+ *     - ESP_ERR_NOT_SUPPORTED: Not supported for no internal ring buffer mode
  */
 esp_err_t usbh_cdc_flush_rx_buffer(usbh_cdc_handle_t cdc_handle);
 
@@ -257,11 +268,14 @@ esp_err_t usbh_cdc_flush_rx_buffer(usbh_cdc_handle_t cdc_handle);
  *
  * This function clears the transmit buffer, discarding any data currently in the buffer.
  *
+ * Not supported for no internal ring buffer mode.
+ *
  * @param[in] cdc_handle The CDC device handle
  *
  * @return
  *     - ESP_OK: Transmit buffer flushed successfully
  *     - ESP_ERR_INVALID_ARG: Invalid CDC handle provided
+ *     - ESP_ERR_NOT_SUPPORTED: Not supported for no internal ring buffer mode
  */
 esp_err_t usbh_cdc_flush_tx_buffer(usbh_cdc_handle_t cdc_handle);
 
@@ -269,6 +283,8 @@ esp_err_t usbh_cdc_flush_tx_buffer(usbh_cdc_handle_t cdc_handle);
  * @brief Get the size of the receive buffer of the USB CDC device
  *
  * This function retrieves the current size of the receive buffer in bytes.
+ *
+ * For no internal ring buffer, you can call this function in the recv_data callback function.
  *
  * @param[in] cdc_handle The CDC device handle
  * @param[out] size Pointer to store the size of the receive buffer

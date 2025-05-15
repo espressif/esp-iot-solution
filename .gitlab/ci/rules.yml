@@ -319,6 +319,10 @@
   - "components/usb/iot_usbh_modem/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
 
+.patterns-components_usb_iot_usbh_ecm: &patterns-components_usb_iot_usbh_ecm
+  - "components/usb/iot_usbh_ecm/**/*"
+  - "tools/cmake_utilities/package_manager.cmake"
+
 .patterns-components_usb_usb_host_rndis_test_apps: &patterns-components_usb_usb_host_rndis_test_apps
   - "components/usb/usb_host_rndis/test_apps/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
@@ -418,6 +422,8 @@
   - "components/usb/esp_msc_ota/include/esp_msc_ota.h"
   - "components/usb/esp_tinyuf2/esp_tinyuf2.h"
   - "components/usb/iot_usbh_cdc/include/iot_usbh_cdc.h"
+  - "components/usb/iot_usbh_ecm/include/iot_usbh_ecm.h"
+  - "components/usb/iot_usbh_rndis/include/iot_usbh_rndis.h"
   - "components/usb/usb_device_uac/include/usb_device_uac.h"
   - "components/usb/usb_device_uvc/include/usb_device_uvc.h"
   - "components/usb/usb_stream/include/usb_stream.h"
@@ -652,8 +658,8 @@
 .patterns-example_usb_host_usb_rndis_4g_module: &patterns-example_usb_host_usb_rndis_4g_module
   - "examples/usb/host/usb_rndis_4g_module/**/*"
 
-.patterns-example_usb_host_usb_host_eth_example: &patterns-example_usb_host_usb_host_eth_example
-  - "examples/usb/host/usb_host_eth_example/**/*"
+.patterns-example_usb_host_usb_ecm_4g_module: &patterns-example_usb_host_usb_ecm_4g_module
+  - "examples/usb/host/usb_ecm_4g_module/**/*"
 
 .patterns-example_usb_otg_usb_host_device_mode_manual_switch: &patterns-example_usb_otg_usb_host_device_mode_manual_switch
   - "examples/usb/otg/usb_host_device_mode_manual_switch/**/*"
@@ -1637,6 +1643,22 @@
     - <<: *if-dev-push
       changes: *patterns-example_usb_host_usb_msc_ota
 
+.rules:build:example_usb_host_usb_ecm_4g_module:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_usb_iot_usbh_ecm
+    - <<: *if-dev-push
+      changes: *patterns-example_usb_host_usb_ecm_4g_module
+    - <<: *if-dev-push
+      changes: *patterns-components_usb_iot_usbh_cdc
+    - <<: *if-dev-push
+      changes: *patterns-components_iot_eth
+
 .rules:build:example_usb_host_usb_rndis_4g_module:
   rules:
     - <<: *if-protected
@@ -1652,16 +1674,6 @@
       changes: *patterns-components_iot_eth
     - <<: *if-dev-push
       changes: *patterns-example_usb_host_usb_rndis_4g_module
-
-.rules:build:example_usb_host_usb_host_eth_example:
-  rules:
-    - <<: *if-protected
-    - <<: *if-label-build
-    - <<: *if-trigger-job
-    - <<: *if-dev-push
-      changes: *patterns-build_system
-    - <<: *if-dev-push
-      changes: *patterns-example_usb_host_usb_host_eth_example
 
 .rules:build:example_usb_otg_usb_host_device_mode_manual_switch:
   rules:

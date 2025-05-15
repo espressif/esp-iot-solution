@@ -1,9 +1,0 @@
-## IDF Component Manager Manifest File
-dependencies:
-  usb_host_eth:
-    version: "0.1.*"
-    override_path: ../../../../../components/usb/usb_host_eth
-  leeebo/usb_host_cdc_acm:
-    version: "2.0.*"
-    registry_url: https://components-staging.espressif.com
-    public: true

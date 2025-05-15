@@ -1,0 +1,9 @@
+menu "IoT USB Host ECM"
+
+    config ECM_PRINTF_USB_DESCRIPTION
+        bool "Enable printf usb description"
+        default y
+        help
+            Enable printf usb description
+
+endmenu

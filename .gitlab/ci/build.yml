@@ -966,15 +966,13 @@ build_example_usb_host_usb_hub_dual_camera:
   variables:
     EXAMPLE_DIR: examples/usb/host/usb_hub_dual_camera
 
-build_example_usb_host_usb_host_eth_example:
+build_example_usb_host_usb_ecm_4g_module:
   extends:
     - .build_examples_template
-    - .rules:build:example_usb_host_usb_host_eth_example
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.4
+    - .rules:build:example_usb_host_usb_ecm_4g_module
+    - .build_idf_version_greater_equal_v5_0
   variables:
-    EXAMPLE_DIR: examples/usb/host/usb_host_eth_example
+    EXAMPLE_DIR: examples/usb/host/usb_ecm_4g_module
 
 build_example_usb_host_usb_msc_ota:
   extends:
@@ -991,12 +989,7 @@ build_example_usb_host_usb_rndis_4g_module:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_host_usb_rndis_4g_module
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.2
-      - IMAGE: espressif/idf:release-v5.3
-      - IMAGE: espressif/idf:release-v5.4
+    - .build_idf_version_greater_equal_v5_0
   variables:
     EXAMPLE_DIR: examples/usb/host/usb_rndis_4g_module
 

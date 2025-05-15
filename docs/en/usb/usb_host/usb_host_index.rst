@@ -11,3 +11,4 @@ USB Host Drivers
     USB CDC Host <usb_host_iot_usbh_cdc>
     USB RNDIS Host <usb_rndis>
     USB PPP Host <usb_ppp>
+    USB ECM Host <usb_ecm>

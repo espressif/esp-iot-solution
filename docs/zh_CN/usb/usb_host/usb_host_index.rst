@@ -11,3 +11,4 @@ USB 主机驱动
     USB CDC 主机 <usb_host_iot_usbh_cdc>
     USB PPP 主机 <usb_ppp>
     USB RNDIS 主机 <usb_rndis>
+    USB ECM 主机 <usb_ecm>

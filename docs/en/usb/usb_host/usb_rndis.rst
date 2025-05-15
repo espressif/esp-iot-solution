@@ -98,7 +98,7 @@ ESP32-S3 connected to 4G network card and started softAP, mobile phone connected
 +----------+--------------+----------------+
 |   Chip   | Upload(Mbps) | Download(Mbps) |
 +==========+==============+================+
-| ESP32-S3 | 0.8          | 7.9            |
+| ESP32-S3 | 5.8          | 7.9            |
 +----------+--------------+----------------+
 
 API Reference

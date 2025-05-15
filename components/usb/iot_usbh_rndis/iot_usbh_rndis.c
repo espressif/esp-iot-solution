@@ -25,12 +25,11 @@ static const char *TAG = "usbh_rndis";
 #define RNDIS_AUTO_DETECT (1 << 0)
 #define RNDIS_CONNECTED (1 << 1)
 #define RNDIS_DISCONNECTED (1 << 2)
-#define RNDIS_DATA_RECEIVED (1 << 3)
-#define RNDIS_LINE_CHANGE (1 << 4)
-#define RNDIS_STOP (1 << 5)
-#define RNDIS_STOP_DONE (1 << 6)
+#define RNDIS_LINE_CHANGE (1 << 3)
+#define RNDIS_STOP (1 << 4)
+#define RNDIS_STOP_DONE (1 << 5)
 
-#define RNDIS_EVENT_ALL (RNDIS_CONNECTED | RNDIS_DISCONNECTED | RNDIS_DATA_RECEIVED | RNDIS_LINE_CHANGE | RNDIS_STOP | RNDIS_STOP_DONE)
+#define RNDIS_EVENT_ALL (RNDIS_CONNECTED | RNDIS_DISCONNECTED | RNDIS_LINE_CHANGE | RNDIS_STOP | RNDIS_STOP_DONE)
 
 typedef struct {
     iot_eth_driver_t base;
@@ -294,48 +293,38 @@ query_errorout:
 static esp_err_t usbh_rndis_handle_recv_data(usbh_rndis_t *rndis)
 {
     esp_err_t ret;
-    uint32_t pmg_offset;
     rndis_data_packet_t pmsg = {0};
     int rx_length = 0;
     usbh_cdc_get_rx_buffer_size(rndis->cdc_dev, (size_t *)&rx_length);
-
-    while (rx_length > 0) {
+    if (rx_length > 0) {
         int read_len = sizeof(rndis_data_packet_t);
         if (rx_length < read_len) {
             return ESP_ERR_INVALID_STATE;
         }
-        ret = usbh_cdc_read_bytes(rndis->cdc_dev, (uint8_t *)&pmsg, (size_t *)&read_len, 0);
+        uint8_t *buf = malloc(rx_length);
+        ESP_RETURN_ON_FALSE(buf != NULL, ESP_ERR_NO_MEM, TAG, "Failed to allocate memory for buffer");
+        ret = usbh_cdc_read_bytes(rndis->cdc_dev, buf, (size_t *)&rx_length, 0);
         if (ret != ESP_OK) {
             ESP_LOGE(TAG, "Failed to read rndis_data_packet_t from CDC");
+            free(buf);
             return ret;
         }
 
+        pmsg = *(rndis_data_packet_t *)buf;
         if (pmsg.MessageType == REMOTE_NDIS_PACKET_MSG) {
-            pmg_offset += pmsg.MessageLength;
-            rx_length -= sizeof(rndis_data_packet_t);
-
-            uint8_t *buf = malloc(pmsg.DataLength);
-            ESP_RETURN_ON_FALSE(buf != NULL, ESP_ERR_NO_MEM, TAG, "Failed to allocate memory for buf");
-            ESP_LOGD(TAG, "pmsg.DataLength %"PRIu32", rx_length: %d", pmsg.DataLength, rx_length);
-            read_len = pmsg.DataLength;
-            int recv_len = 0;
-            while (read_len > 0) {
-                ret = usbh_cdc_read_bytes(rndis->cdc_dev, buf + recv_len, (size_t *)&read_len, pdMS_TO_TICKS(1000));
-                recv_len += read_len;
-                read_len = pmsg.DataLength - recv_len;
-            }
-
-            ESP_LOGD(TAG, "recv data length: %"PRIu32"", pmsg.DataLength);
-            if (ret != ESP_OK) {
-                ESP_LOGE(TAG, "Failed to read data from CDC");
+            uint8_t *data = malloc(pmsg.DataLength);
+            if (data == NULL) {
+                ESP_LOGE(TAG, "Failed to allocate memory for data");
                 free(buf);
-                return ret;
+                return ESP_ERR_NO_MEM;
             }
+            memcpy(data, (uint8_t *)buf + sizeof(rndis_data_packet_t), pmsg.DataLength);
 
-            rx_length -= pmsg.DataLength;
-            rndis->mediator->stack_input(rndis->mediator, buf, pmsg.DataLength);
+            rndis->mediator->stack_input(rndis->mediator, data, pmsg.DataLength);
+            free(buf);
         } else {
             ESP_LOGE(TAG, "Error rndis packet message");
+            free(buf);
             return ESP_ERR_INVALID_STATE;
         }
     }
@@ -478,7 +467,7 @@ static void _usbh_rndis_disconn_cb(usbh_cdc_handle_t cdc_handle, void *arg)
 static void _usbh_rndis_recv_data_cb(usbh_cdc_handle_t cdc_handle, void *arg)
 {
     usbh_rndis_t *rndis = (usbh_rndis_t *)arg;
-    xEventGroupSetBits(rndis->event_group, RNDIS_DATA_RECEIVED);
+    usbh_rndis_handle_recv_data(rndis);
 }
 
 /**
@@ -510,10 +499,6 @@ static void _usbh_rndis_task(void *arg)
             rndis->request_id = 0;
             iot_eth_link_t link = IOT_ETH_LINK_DOWN;
             rndis->mediator->on_stage_changed(rndis->mediator, IOT_ETH_STAGE_LINK, &link);
-        }
-        if (events & RNDIS_DATA_RECEIVED) {
-            ESP_LOGD(TAG, "RNDIS received data");
-            usbh_rndis_handle_recv_data(rndis);
         }
         if (events & RNDIS_LINE_CHANGE) {
             ESP_LOGI(TAG, "RNDIS line change: %d", rndis->connect_status);
@@ -578,8 +563,8 @@ static esp_err_t usbh_rndis_start(iot_eth_driver_t *driver)
         .vid = rndis->config.vid,
         .pid = rndis->config.pid,
         .itf_num = rndis->config.itf_num,
-        .rx_buffer_size = rndis->config.rx_buffer_size,
-        .tx_buffer_size = rndis->config.tx_buffer_size,
+        .rx_buffer_size = 0,                      // Not use internal ringbuf
+        .tx_buffer_size = 0,                      // Not use internal ringbuf
         .cbs = {
             .connect = _usbh_rndis_conn_cb,
             .disconnect = _usbh_rndis_disconn_cb,

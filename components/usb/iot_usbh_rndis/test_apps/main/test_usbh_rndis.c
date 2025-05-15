@@ -22,8 +22,6 @@ TEST_CASE("usbh rndis device memory leak", "[iot_usbh_rndis][read-write][auto]")
     iot_usbh_rndis_config_t rndis_cfg = {
         .auto_detect = true,
         .auto_detect_timeout = pdMS_TO_TICKS(1000),
-        .rx_buffer_size = 1024 * 4,
-        .tx_buffer_size = 1024 * 4,
     };
 
     iot_eth_driver_t *rndis_handle = NULL;

@@ -1,8 +1,8 @@
 /*
  * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
- *
- * SPDX-License-Identifier: Apache-2.0
- */
+*
+* SPDX-License-Identifier: Apache-2.0
+*/
 
 #include <stdio.h>
 #include <string.h>
@@ -72,10 +72,10 @@ typedef struct usbh_cdc_s {
         usb_transfer_t *xfer;
         SemaphoreHandle_t mux;
     } ctrl;
-    usbh_cdc_event_callbacks_t cbs;         // Callbacks for the pseudo device
-    RingbufHandle_t in_ringbuf_handle;   /*!< in ringbuffer handle of corresponding interface */
+    usbh_cdc_event_callbacks_t cbs;        // Callbacks for the pseudo device
+    RingbufHandle_t in_ringbuf_handle;     /*!< in ringbuffer handle of corresponding interface */
     size_t in_ringbuf_size;
-    RingbufHandle_t out_ringbuf_handle;  /*!< if interface is ready */
+    RingbufHandle_t out_ringbuf_handle;    /*!< out ringbuffer handle of corresponding interface */
     size_t out_ringbuf_size;
     cdc_parsed_info_t info;                // Parsed interface descriptor
     SLIST_ENTRY(usbh_cdc_s) list_entry;
@@ -91,7 +91,7 @@ static void _cdc_transfers_free(usbh_cdc_t *cdc);
 
 static void _cdc_tx_xfer_submit(usb_transfer_t *out_xfer);
 
-/*--------------------------------- CDC Buffer Handle Code --------------------------------------*/
+/*--------------------------------- CDC Buffer Handle Code [RINGBUF_TYPE_BYTEBUF] --------------------------------------*/
 static size_t _get_ringbuf_len(RingbufHandle_t ringbuf_hdl)
 {
     size_t uxItemsWaiting = 0;
@@ -132,7 +132,7 @@ static esp_err_t _ringbuf_push(RingbufHandle_t ringbuf_hdl, const uint8_t *buf, 
     return ESP_OK;
 }
 
-static void _ring_buffer_flush(RingbufHandle_t ringbuf_hdl)
+static void _ringbuf_flush(RingbufHandle_t ringbuf_hdl)
 {
     assert(ringbuf_hdl);
     size_t read_bytes = 0;
@@ -460,24 +460,25 @@ static void in_xfer_cb(usb_transfer_t *in_xfer)
 
     switch (in_xfer->status) {
     case USB_TRANSFER_STATUS_COMPLETED: {
-        size_t data_len = _get_ringbuf_len(cdc->in_ringbuf_handle);
-        if (data_len + in_xfer->actual_num_bytes >= cdc->in_ringbuf_size) {
-            // TODO: add notify cb for user
-            // if ringbuffer overflow, drop the data
-            ESP_LOGW(TAG, "CDC in ringbuf is full!");
-        } else {
-            ESP_LOG_BUFFER_HEXDUMP(TAG, in_xfer->data_buffer, in_xfer->actual_num_bytes, ESP_LOG_DEBUG);
-            if (_ringbuf_push(cdc->in_ringbuf_handle, in_xfer->data_buffer, in_xfer->actual_num_bytes, pdMS_TO_TICKS(TIMEOUT_USB_RINGBUF_MS)) != ESP_OK) {
-                ESP_LOGE(TAG, "in ringbuf push failed");
+        if (cdc->in_ringbuf_handle) {
+            size_t data_len = _get_ringbuf_len(cdc->in_ringbuf_handle);
+            if (data_len + in_xfer->actual_num_bytes >= cdc->in_ringbuf_size) {
+                // TODO: add notify cb for user
+                // if ringbuffer overflow, drop the data
+                ESP_LOGW(TAG, "CDC in ringbuf is full!");
+            } else {
+                ESP_LOG_BUFFER_HEXDUMP(TAG, in_xfer->data_buffer, in_xfer->actual_num_bytes, ESP_LOG_DEBUG);
+                if (_ringbuf_push(cdc->in_ringbuf_handle, in_xfer->data_buffer, in_xfer->actual_num_bytes, pdMS_TO_TICKS(TIMEOUT_USB_RINGBUF_MS)) != ESP_OK) {
+                    ESP_LOGE(TAG, "in ringbuf push failed");
+                }
             }
         }
-
-        usb_host_transfer_submit(in_xfer);
 
         if (cdc->cbs.recv_data) {
             cdc->cbs.recv_data((usbh_cdc_handle_t)cdc, cdc->cbs.user_data);
         }
 
+        usb_host_transfer_submit(in_xfer);
         return;
     }
     case USB_TRANSFER_STATUS_NO_DEVICE:
@@ -502,7 +503,11 @@ static void out_xfer_cb(usb_transfer_t *out_xfer)
 
     switch (out_xfer->status) {
     case USB_TRANSFER_STATUS_COMPLETED: {
-        _cdc_tx_xfer_submit(out_xfer);
+        if (cdc->out_ringbuf_handle) {
+            _cdc_tx_xfer_submit(out_xfer);
+        } else {
+            xSemaphoreGive(cdc->data.out_xfer_free_sem);
+        }
         return;
     }
     case USB_TRANSFER_STATUS_NO_DEVICE:
@@ -522,19 +527,20 @@ static void _cdc_tx_xfer_submit(usb_transfer_t *out_xfer)
     usbh_cdc_t *cdc = (usbh_cdc_t *) out_xfer->context;
     assert(cdc);
 
-    size_t data_len = _get_ringbuf_len(cdc->out_ringbuf_handle);
-    if (data_len > 0) {
-        if (data_len > out_xfer->data_buffer_size) {
-            data_len = out_xfer->data_buffer_size;
+    if (cdc->out_ringbuf_handle) {
+        size_t data_len = _get_ringbuf_len(cdc->out_ringbuf_handle);
+        if (data_len > 0) {
+            if (data_len > out_xfer->data_buffer_size) {
+                data_len = out_xfer->data_buffer_size;
+            }
+            size_t actual_num_bytes = 0;
+            _ringbuf_pop(cdc->out_ringbuf_handle, out_xfer->data_buffer, data_len, &actual_num_bytes, 0);
+            out_xfer->num_bytes = actual_num_bytes;
+        } else {
+            xSemaphoreGive(cdc->data.out_xfer_free_sem);
         }
-        size_t actual_num_bytes = 0;
-        _ringbuf_pop(cdc->out_ringbuf_handle, out_xfer->data_buffer, data_len, &actual_num_bytes, 0);
-        assert(actual_num_bytes == data_len);
-        out_xfer->num_bytes = actual_num_bytes;
-        usb_host_transfer_submit(out_xfer);
-    } else {
-        xSemaphoreGive(cdc->data.out_xfer_free_sem);
     }
+    usb_host_transfer_submit(out_xfer);
 }
 
 static esp_err_t _cdc_transfers_allocate(usbh_cdc_t *cdc, const usb_ep_desc_t *notif_ep_desc, const usb_ep_desc_t *in_ep_desc, const usb_ep_desc_t *out_ep_desc)
@@ -757,8 +763,12 @@ static esp_err_t _cdc_open(usbh_cdc_t *cdc)
     // Must have data interface descriptor
     cdc->data.intf_desc = cdc_info.data_intf;
 
-    _ring_buffer_flush(cdc->in_ringbuf_handle);
-    _ring_buffer_flush(cdc->out_ringbuf_handle);
+    if (cdc->in_ringbuf_handle) {
+        _ringbuf_flush(cdc->in_ringbuf_handle);
+    }
+    if (cdc->out_ringbuf_handle) {
+        _ringbuf_flush(cdc->out_ringbuf_handle);
+    }
 
     ESP_GOTO_ON_ERROR(
         _cdc_transfers_allocate(cdc, cdc_info.notif_ep, cdc_info.in_ep, cdc_info.out_ep),
@@ -817,8 +827,12 @@ static esp_err_t _cdc_close(usbh_cdc_t *cdc)
     _cdc_transfers_free(cdc);
     usb_host_device_close(p_usbh_cdc_obj->cdc_client_hdl, cdc->dev_hdl);
 
-    _ring_buffer_flush(cdc->in_ringbuf_handle);
-    _ring_buffer_flush(cdc->out_ringbuf_handle);
+    if (cdc->in_ringbuf_handle) {
+        _ringbuf_flush(cdc->in_ringbuf_handle);
+    }
+    if (cdc->out_ringbuf_handle) {
+        _ringbuf_flush(cdc->out_ringbuf_handle);
+    }
 
     if (cdc->cbs.disconnect) {
         cdc->cbs.disconnect((usbh_cdc_handle_t)cdc, cdc->cbs.user_data);
@@ -841,13 +855,21 @@ esp_err_t usbh_cdc_create(const usbh_cdc_device_config_t *config, usbh_cdc_handl
     cdc->pid = config->pid;
     cdc->intf_idx = config->itf_num;
 
-    cdc->in_ringbuf_size = config->rx_buffer_size ? config->rx_buffer_size : CONFIG_IN_RINGBUFFER_SIZE;
-    cdc->in_ringbuf_handle = xRingbufferCreate(cdc->in_ringbuf_size, RINGBUF_TYPE_BYTEBUF);
-    ESP_GOTO_ON_FALSE(cdc->in_ringbuf_handle != NULL, ESP_ERR_NO_MEM, fail, TAG, "Failed to create ring buffer");
+    cdc->in_ringbuf_size = config->rx_buffer_size;
+    if (cdc->in_ringbuf_size != 0) {
+        cdc->in_ringbuf_handle = xRingbufferCreate(cdc->in_ringbuf_size, RINGBUF_TYPE_BYTEBUF);
+        ESP_GOTO_ON_FALSE(cdc->in_ringbuf_handle != NULL, ESP_ERR_NO_MEM, fail, TAG, "Failed to create ring buffer");
+    } else {
+        ESP_LOGW(TAG, "rx_buffer_size is 0, not create ring buffer");
+    }
 
-    cdc->out_ringbuf_size = config->tx_buffer_size ? config->tx_buffer_size : CONFIG_OUT_RINGBUFFER_SIZE;
-    cdc->out_ringbuf_handle = xRingbufferCreate(cdc->out_ringbuf_size, RINGBUF_TYPE_BYTEBUF);
-    ESP_GOTO_ON_FALSE(cdc->out_ringbuf_handle != NULL, ESP_ERR_NO_MEM, fail, TAG, "Failed to create ring buffer");
+    cdc->out_ringbuf_size = config->tx_buffer_size;
+    if (cdc->out_ringbuf_size != 0) {
+        cdc->out_ringbuf_handle = xRingbufferCreate(cdc->out_ringbuf_size, RINGBUF_TYPE_BYTEBUF);
+        ESP_GOTO_ON_FALSE(cdc->out_ringbuf_handle != NULL, ESP_ERR_NO_MEM, fail, TAG, "Failed to create ring buffer");
+    } else {
+        ESP_LOGW(TAG, "tx_buffer_size is 0, not create ring buffer");
+    }
 
     cdc->cbs = config->cbs;
 
@@ -980,23 +1002,38 @@ esp_err_t usbh_cdc_write_bytes(usbh_cdc_handle_t cdc_handle, const uint8_t *buf,
     usbh_cdc_t *cdc = (usbh_cdc_t *) cdc_handle;
     ESP_GOTO_ON_FALSE(cdc->state == USBH_CDC_OPEN, ESP_ERR_INVALID_STATE, fail, TAG, "Device is not connected");
 
-    ret = _ringbuf_push(cdc->out_ringbuf_handle, buf, length, ticks_to_wait);
-    if (ret != ESP_OK) {
-        ESP_LOGD(TAG, "cdc write buf = %p, len = %d", buf, length);
-        return ret;
-    }
+    // if ringbuf is created, push data to ringbuf
+    if (cdc->out_ringbuf_handle) {
+        ret = _ringbuf_push(cdc->out_ringbuf_handle, buf, length, ticks_to_wait);
+        if (ret != ESP_OK) {
+            ESP_LOGD(TAG, "cdc write buf = %p, len = %d", buf, length);
+            return ret;
+        }
 
-    if (xSemaphoreTake(cdc->data.out_xfer_free_sem, 0) == pdTRUE) {
-        // here need a critical
+        if (xSemaphoreTake(cdc->data.out_xfer_free_sem, 0) == pdTRUE) {
+            // here need a critical
+            _cdc_tx_xfer_submit(cdc->data.out_xfer);
+        }
+
+        return ESP_OK;
+    } else {
+        ESP_RETURN_ON_FALSE(length <= cdc->data.out_xfer->data_buffer_size, ESP_ERR_INVALID_SIZE, TAG, "data length larger than transfer buffer size");
+        // if ringbuf is not created, write data to usb
+        BaseType_t taken = xSemaphoreTake(cdc->data.out_xfer_free_sem, ticks_to_wait);
+        if (taken != pdTRUE) {
+            return ESP_ERR_TIMEOUT;
+        }
+
+        memcpy(cdc->data.out_xfer->data_buffer, buf, length);
+        cdc->data.out_xfer->num_bytes = length;
         _cdc_tx_xfer_submit(cdc->data.out_xfer);
+        return ESP_OK;
     }
-
-    return ESP_OK;
 fail:
     return ret;
 }
 
-esp_err_t usbh_cdc_read_bytes(usbh_cdc_handle_t cdc_handle, const uint8_t *buf, size_t *length, TickType_t ticks_to_wait)
+esp_err_t usbh_cdc_read_bytes(usbh_cdc_handle_t cdc_handle, uint8_t *buf, size_t *length, TickType_t ticks_to_wait)
 {
     esp_err_t ret = ESP_OK;
     ESP_GOTO_ON_FALSE(cdc_handle != NULL, ESP_ERR_INVALID_ARG, fail, TAG, "cdc_handle is NULL");
@@ -1004,20 +1041,30 @@ esp_err_t usbh_cdc_read_bytes(usbh_cdc_handle_t cdc_handle, const uint8_t *buf, 
     ESP_GOTO_ON_FALSE(length != NULL, ESP_ERR_INVALID_ARG, fail, TAG, "length is NULL");
 
     usbh_cdc_t *cdc = (usbh_cdc_t *) cdc_handle;
+    ESP_GOTO_ON_FALSE(cdc->in_ringbuf_handle != NULL || ticks_to_wait == 0, ESP_ERR_INVALID_ARG, fail, TAG, "not create rx ringbuf, can't set timeout");
     ESP_GOTO_ON_FALSE(cdc->state == USBH_CDC_OPEN, ESP_ERR_INVALID_STATE, fail, TAG, "Device is not connected");
 
-    size_t data_len = *length;
-    if (data_len > cdc->in_ringbuf_size) {
-        data_len = cdc->in_ringbuf_size;
-    }
+    if (cdc->in_ringbuf_handle) {
+        size_t data_len = *length;
+        if (data_len > cdc->in_ringbuf_size) {
+            data_len = cdc->in_ringbuf_size;
+        }
 
-    ret = _ringbuf_pop(cdc->in_ringbuf_handle, (uint8_t *)buf, data_len, length, ticks_to_wait);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "cdc read failed");
-        *length = 0;
-        return ret;
+        ret = _ringbuf_pop(cdc->in_ringbuf_handle, buf, data_len, length, ticks_to_wait);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "cdc read failed");
+            *length = 0;
+            return ret;
+        }
+    } else {
+        if (*length < cdc->data.in_xfer->actual_num_bytes) {
+            ESP_LOGE(TAG, "cdc read failed, length is too small");
+            *length = cdc->data.in_xfer->actual_num_bytes;
+            return ESP_ERR_INVALID_ARG;
+        }
+        memcpy((void *)buf, cdc->data.in_xfer->data_buffer, cdc->data.in_xfer->actual_num_bytes);
+        *length = cdc->data.in_xfer->actual_num_bytes;
     }
-
     return ESP_OK;
 fail:
     *length = 0;
@@ -1028,7 +1075,8 @@ esp_err_t usbh_cdc_flush_rx_buffer(usbh_cdc_handle_t cdc_handle)
 {
     ESP_RETURN_ON_FALSE(cdc_handle != NULL, ESP_ERR_INVALID_ARG, TAG, "cdc_handle is NULL");
     usbh_cdc_t *cdc = (usbh_cdc_t *) cdc_handle;
-    _ring_buffer_flush(cdc->in_ringbuf_handle);
+    ESP_RETURN_ON_FALSE(cdc->in_ringbuf_handle != NULL, ESP_ERR_NOT_SUPPORTED, TAG, "rx ringbuf is not created");
+    _ringbuf_flush(cdc->in_ringbuf_handle);
     return ESP_OK;
 }
 
@@ -1036,7 +1084,8 @@ esp_err_t usbh_cdc_flush_tx_buffer(usbh_cdc_handle_t cdc_handle)
 {
     ESP_RETURN_ON_FALSE(cdc_handle != NULL, ESP_ERR_INVALID_ARG, TAG, "cdc_handle is NULL");
     usbh_cdc_t *cdc = (usbh_cdc_t *) cdc_handle;
-    _ring_buffer_flush(cdc->out_ringbuf_handle);
+    ESP_RETURN_ON_FALSE(cdc->out_ringbuf_handle != NULL, ESP_ERR_NOT_SUPPORTED, TAG, "tx ringbuf is not created");
+    _ringbuf_flush(cdc->out_ringbuf_handle);
     return ESP_OK;
 }
 
@@ -1044,7 +1093,11 @@ esp_err_t usbh_cdc_get_rx_buffer_size(usbh_cdc_handle_t cdc_handle, size_t *size
 {
     ESP_RETURN_ON_FALSE(cdc_handle != NULL, ESP_ERR_INVALID_ARG, TAG, "cdc_handle is NULL");
     usbh_cdc_t *cdc = (usbh_cdc_t *) cdc_handle;
-    *size = _get_ringbuf_len(cdc->in_ringbuf_handle);
+    if (cdc->in_ringbuf_handle) {
+        *size = _get_ringbuf_len(cdc->in_ringbuf_handle);
+    } else {
+        *size = cdc->data.in_xfer->actual_num_bytes;
+    }
     return ESP_OK;
 }
 
