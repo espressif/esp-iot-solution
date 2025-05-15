@@ -68,6 +68,7 @@ jobs:
             components/motor/servo;
             components/openai;
             components/sensors/adc/mcp3201;
+            components/sensors/battery_fuel_gauge/adc_battery_estimation;
             components/sensors/battery_fuel_gauge/max17048;
             components/sensors/power_measure;
             components/sensors/gesture/apds9960;
