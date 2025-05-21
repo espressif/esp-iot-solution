@@ -285,7 +285,6 @@ void touch_digit_recognition_task(void *arg)
 
     while (1) {
         if (xQueueReceive(xImageQueue, &image_data, portMAX_DELAY) == pdTRUE) {
-            printf("Result:%d\n", touch_digit_recognition->predict(image_data.data));
             digital_tube_write_num(0, touch_digit_recognition->predict(image_data.data));
             delete [] image_data.data;
         }

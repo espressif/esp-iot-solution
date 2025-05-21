@@ -14,7 +14,7 @@ In this example, we will demonstrate how to implement the touch driver, train an
 
 ### Touch Processing Flow
 
-
+When a finger moves on the Touchpad, it changes the capacitance value of the Touch channel. By detecting changes in capacitance, the finger's position can be determined. Additionally, through a software interpolation algorithm, the original 6x7 Touch data is expanded to 30x25 for model training. For more details on Touch, you can refer to [Touch Digit Recognition](https://docs.espressif.com/projects/esp-iot-solution/en/latest/ai/touch_digit_recognition.html).
 
 ### AI Processing Flow
 
