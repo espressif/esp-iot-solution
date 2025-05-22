@@ -8,3 +8,4 @@ AI
     :maxdepth: 1
 
     OpenAI <openai>
+    TouchDigitRecognition <touch_digit_recognition>

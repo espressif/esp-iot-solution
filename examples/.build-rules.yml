@@ -7,6 +7,10 @@ examples/ai/esp_dl/human_activity_recognition:
   enable:
     - if: IDF_TARGET in ["esp32s3","esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 3)
 
+examples/ai/esp_dl/touchpad_digit_recognition:
+  enable:
+    - if: IDF_TARGET in ["esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 3)
+
 examples/audio/wav_player:
   enable:
     - if: INCLUDE_DEFAULT == 1

@@ -427,6 +427,9 @@
 .patterns-example_ai_esp_dl_human_activity_recognition: &patterns-example_ai_esp_dl_human_activity_recognition
   - "examples/ai/esp_dl/human_activity_recognition/**/*"
 
+.patterns-example_ai_esp_dl_touchpad_digit_recognition: &patterns-example_ai_esp_dl_touchpad_digit_recognition
+  - "examples/ai/esp_dl/touchpad_digit_recognition/**/*"
+
 .patterns-example_audio_wav_player: &patterns-example_audio_wav_player
   - "examples/audio/**/*"
 
@@ -724,6 +727,16 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-example_ai_esp_dl_human_activity_recognition
+
+.rules:build:example_ai_esp_dl_touchpad_digit_recognition:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_ai_esp_dl_touchpad_digit_recognition
 
 .rules:build:example_audio_wav_player:
   rules:
