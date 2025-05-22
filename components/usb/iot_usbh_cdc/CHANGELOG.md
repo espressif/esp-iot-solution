@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.1.0 - 2025-05-13
+
+### Features:
+
+* Skip open usb hub device.
+
 ## v1.1.0 - 2025-04-21
 
 ### Features:

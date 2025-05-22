@@ -248,11 +248,9 @@ void app_main(void)
     modem_http_init(&s_modem_wifi_config);
 #endif
 
-#if !CONFIG_IDF_TARGET_ESP32P4
     esp_netif_t *ap_netif = modem_wifi_ap_init();
     assert(ap_netif != NULL);
     ESP_ERROR_CHECK(modem_wifi_set(&s_modem_wifi_config));
-#endif
 
 #ifdef CONFIG_EXAMPLE_PING_NETWORK
     ip_addr_t target_addr;

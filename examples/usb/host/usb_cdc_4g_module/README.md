@@ -4,7 +4,7 @@
 
 This example demonstrates the **ESP32-S2**, **ESP32-S3** series SoC as a USB host to dial-up 4G Cat.1 through PPP to access the Internet, with the help of ESP32-SX Wi-Fi softAP function, share the Internet with IoT devices or mobile devices. Realize low-cost "medium-high-speed" Internet access.It is also equipped with a router management interface, which allows you to configure the router online and view the information of connected devices.
 
-In addition, the **ESP32-P4** supports the 4G Cat.4 module (EC20) with faster speeds, but it currently only supports internet access for itself.
+In addition, the **ESP32-P4** supports the 4G Cat.4 module (EC20) with faster speeds. It can also enable hotspot sharing by connecting an external ESP32 chip with Wi-Fi capability.
 
 **Features Supported:**
 
@@ -236,7 +236,3 @@ Enable the `4G Modem Configuration -> Dump system task status` option in `menuco
 
 > **4G Cat.1 theoretical peak download rate is 10 Mbps, peak upload rate is 5 Mbps**
 > The actual communication rate is affected by the operator's network, test software, Wi-Fi interference, and the number of terminal connections, etc.
-
-## Known Issues
-
-* ESP32-P4 currently does not support enabling the softAP function via `esp_wifi_remote`.

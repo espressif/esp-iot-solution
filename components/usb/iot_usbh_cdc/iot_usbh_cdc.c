@@ -233,15 +233,21 @@ static void usb_event_cb(const usb_host_client_event_msg_t *event_msg, void *arg
         }
         assert(current_device);
 
+        const usb_device_desc_t *device_desc;
+        ESP_ERROR_CHECK(usb_host_get_device_descriptor(current_device, &device_desc));
+
+        if (device_desc->bDeviceClass == USB_CLASS_HUB) {
+            ESP_LOGI(TAG, "Detect hub device, skip");
+            usb_host_device_close(p_usbh_cdc_obj->cdc_client_hdl, current_device);
+            return;
+        }
+
         new_dev_cb_t *new_dev_cb;
         SLIST_FOREACH(new_dev_cb, &p_usbh_cdc_obj->new_dev_cb_list, list_entry) {
             if (new_dev_cb->cb) {
                 new_dev_cb->cb(current_device, new_dev_cb->user_data);
             }
         }
-
-        const usb_device_desc_t *device_desc;
-        ESP_ERROR_CHECK(usb_host_get_device_descriptor(current_device, &device_desc));
 
         usbh_cdc_t *cdc;
         bool if_opened = false;
@@ -706,6 +712,12 @@ static esp_err_t _cdc_find_and_open_usb_device(usbh_cdc_t *cdc)
         assert(current_device);
         const usb_device_desc_t *device_desc;
         ESP_ERROR_CHECK(usb_host_get_device_descriptor(current_device, &device_desc));
+
+        if (device_desc->bDeviceClass == USB_CLASS_HUB) {
+            ESP_LOGD(TAG, "Detect hub device, skip");
+            usb_host_device_close(p_usbh_cdc_obj->cdc_client_hdl, current_device);
+            continue;
+        }
 
         if ((cdc->vid == device_desc->idVendor || cdc->vid == CDC_HOST_ANY_VID) &&
                 (cdc->pid == device_desc->idProduct || cdc->pid == CDC_HOST_ANY_PID)) {
