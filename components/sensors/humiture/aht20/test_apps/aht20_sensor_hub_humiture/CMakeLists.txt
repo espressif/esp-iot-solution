@@ -2,7 +2,8 @@
 # in this exact order for cmake to work correctly
 cmake_minimum_required(VERSION 3.5)
 
-set(EXTRA_COMPONENT_DIRS "$ENV{IDF_PATH}/tools/unit-test-app/components"
-                         "../../aht20")
+#et(COMPONENTS main)
+set(EXTRA_COMPONENT_DIRS "$ENV{IDF_PATH}/tools/unit-test-app/components")
+
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
-project(aht20_test)
+project(aht20_sensor_hub_humiture)

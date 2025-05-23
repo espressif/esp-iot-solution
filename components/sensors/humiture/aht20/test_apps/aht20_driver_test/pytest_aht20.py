@@ -6,10 +6,10 @@ Steps to run these cases:
 - Build
   - . ${IDF_PATH}/export.sh
   - pip install idf_build_apps
-  - python tools/build_apps.py components/sensor/radar/at581x/test_apps -t esp32s3
+  - python tools/build_apps.py components/sensors/humiture/aht20/test_apps -t esp32s3
 - Test
   - pip install -r tools/requirements/requirement.pytest.txt
-  - pytest components/sensor/radar/at581x/test_apps --target esp32s3
+  - pytest components/sensors/humiture/aht20/test_apps --target esp32s3
 '''
 
 import pytest
