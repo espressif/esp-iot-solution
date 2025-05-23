@@ -15,6 +15,9 @@
  */
 
 #include <stdio.h>
+
+#include "iot_sensor_hub.h"
+
 #include "aht20.h"
 
 static const char *s_TAG = "AHT20";
@@ -300,9 +303,104 @@ aht20_handle_t aht20_create(i2c_bus_handle_t bus_handle, uint8_t aht20_address)
     return my_aht20_handle;
 }
 
-void aht20_remove(aht20_handle_t *aht20ptr)
+esp_err_t aht20_remove(aht20_handle_t *aht20ptr)
 {
+    if (*aht20ptr == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
     i2c_bus_device_delete(&((*aht20ptr)->i2c_dev));
     free(*aht20ptr);
     *aht20ptr = NULL; // now AHT20 handle is not a dangling pointer
+    return ESP_OK;
 }
+
+#ifdef CONFIG_SENSOR_INCLUDED_HUMITURE
+
+static aht20_handle_t aht20 = NULL;
+static bool is_init = false;
+
+esp_err_t humiture_aht20_init(i2c_bus_handle_t i2c_bus, uint8_t addr)
+{
+    if (is_init || !i2c_bus) {
+        return ESP_FAIL;
+    }
+
+    aht20 = aht20_create(i2c_bus, addr);
+
+    if (!aht20) {
+        return ESP_FAIL;
+    }
+
+    ESP_RETURN_ON_ERROR(aht20_init(aht20), s_TAG, "");
+
+    is_init = true;
+    return ESP_OK;
+}
+
+esp_err_t humiture_aht20_deinit(void)
+{
+    if (!is_init) {
+        return ESP_FAIL;
+    }
+
+    ESP_RETURN_ON_ERROR(aht20_remove(&aht20), s_TAG, "");
+
+    is_init = false;
+    return ESP_OK;
+}
+
+esp_err_t humiture_aht20_test(void)
+{
+    if (!is_init) {
+        return ESP_FAIL;
+    }
+
+    return ESP_OK;
+}
+
+esp_err_t humiture_aht20_acquire_humidity(float *h)
+{
+    if (!is_init) {
+        return ESP_FAIL;
+    }
+
+    float humidity = 0;
+    esp_err_t ret = aht20_read_humidity(aht20, &humidity);
+
+    if (ret == ESP_OK) {
+        *h = humidity;
+        return ESP_OK;
+    }
+    *h = 0;
+    return ESP_FAIL;
+}
+
+esp_err_t humiture_aht20_acquire_temperature(float *t)
+{
+    if (!is_init) {
+        return ESP_FAIL;
+    }
+
+    float temperature = 0;
+    esp_err_t ret = aht20_read_temperature(aht20, &temperature);
+
+    if (ret == ESP_OK) {
+        *t = temperature;
+        return ESP_OK;
+    }
+
+    *t = 0;
+    return ESP_FAIL;
+}
+
+static humiture_impl_t aht20_impl = {
+    .init = humiture_aht20_init,
+    .deinit = humiture_aht20_deinit,
+    .test = humiture_aht20_test,
+    .acquire_humidity = humiture_aht20_acquire_humidity,
+    .acquire_temperature = humiture_aht20_acquire_temperature,
+};
+
+SENSOR_HUB_DETECT_FN(HUMITURE_ID, aht20, &aht20_impl);
+
+#endif

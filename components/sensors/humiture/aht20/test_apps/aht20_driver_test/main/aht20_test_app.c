@@ -28,7 +28,7 @@
 #define I2C_MASTER_FREQ_HZ      100000
 
 // Global handles
-i2c_master_bus_handle_t my_i2c_bus_handle = NULL;
+i2c_bus_handle_t my_i2c_bus_handle = NULL;
 aht20_handle_t aht20_handle = NULL;
 
 /*******************************Memory Leak Checks****************************/
@@ -64,17 +64,17 @@ void tearDown(void)
 /*******************************I2C Master Bus Initialization****************************/
 void i2c_master_init(void)
 {
-    i2c_master_bus_config_t i2c_mst_config = {
-        .clk_source = I2C_CLK_SRC_DEFAULT,
-        .i2c_port = I2C_MASTER_NUM,
-        .scl_io_num = I2C_MASTER_SCL_IO,
+    const i2c_config_t conf = {
+        .mode = I2C_MODE_MASTER,
         .sda_io_num = I2C_MASTER_SDA_IO,
-        .glitch_ignore_cnt = 7,
-        .flags.enable_internal_pullup = true,
+        .sda_pullup_en = GPIO_PULLUP_ENABLE,
+        .scl_io_num = I2C_MASTER_SCL_IO,
+        .scl_pullup_en = GPIO_PULLUP_ENABLE,
+        .master.clk_speed = I2C_MASTER_FREQ_HZ,
     };
 
     printf("Requesting I2C bus handle\n");
-    ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_mst_config, &my_i2c_bus_handle));
+    my_i2c_bus_handle = i2c_bus_create(I2C_MASTER_NUM, &conf);
     printf("I2C bus handle acquired\n");
 }
 /*******************************I2C Master Bus Initialization Over****************************/
@@ -99,7 +99,7 @@ esp_err_t aht20_init_test()
 void aht20_deinit_test(void)
 {
     aht20_remove(&aht20_handle);
-    i2c_del_master_bus(my_i2c_bus_handle);
+    i2c_bus_delete(&my_i2c_bus_handle);
 }
 /*******************************AHT20 Device Deinitializtion Over****************************/
 

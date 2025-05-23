@@ -18,10 +18,15 @@ dependencies:
     public: true
     override_path: "../../../i2c_bus"
 
+  sensor_hub:
+    public: true
+    override_path: "../../sensor_hub"
+
   idf: ">=4.0"
 
 examples:
   - path: ../../../examples/sensors/aht20_demo
+  - path: ../../../examples/sensors/aht20_Sensor_Hub
 
 targets:
   - esp32

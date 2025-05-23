@@ -196,11 +196,13 @@ aht20_handle_t aht20_create(i2c_bus_handle_t bus_handle, uint8_t aht20_address);
 /**
 * @brief free the resources associated with AHT20 device
 *
-* @param[in] aht20_handler address of
- AHT20 device handle
+* @param[in] aht20_handler address of AHT20 device handle
 *
+* @return
+*      - ESP_ERR_INVALID_ARG: Invalid argument
+*      - ESP_OK : successful
 */
-void aht20_remove(aht20_handle_t *aht20_handler);
+esp_err_t aht20_remove(aht20_handle_t *aht20_handler);
 
 #ifdef __cplusplus
 }

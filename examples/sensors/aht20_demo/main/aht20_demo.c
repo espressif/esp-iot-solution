@@ -47,14 +47,18 @@ void read_aht20(void *my_aht20_handle)
 
     aht20_handle_t aht20_handle = (aht20_handle_t) my_aht20_handle; //retrieve the AHT20 device handle copy
     vTaskDelay(400 / portTICK_PERIOD_MS);
-    while (1) {
+    for (int i = 0; i < 5; i++) {
         //read both humidity and temperature at once from device, using AHT20 device handle
         aht20_read_humiture(aht20_handle);
         //access the results stored in AHT20 device object, using the AHT20 device handle
         //other apis require user to explicitly pass variable address to hold data
         printf("tempertature = %.2fC  humidity = %.3f \n", aht20_handle->humiture.temperature, aht20_handle->humiture.humidity);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        vTaskDelay(2000 / portTICK_PERIOD_MS);
     }
+    printf("end of demo\n");
+    aht20_remove(&aht20_handle);
+    i2c_bus_delete(&my_i2c_bus_handle);
+    vTaskDelete(NULL);
 }
 
 void init_aht20()
@@ -67,7 +71,7 @@ void init_aht20()
     while (aht20_init(aht20_handle) != ESP_OK) { // wait until it is initialized
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
-    printf("aht20 initialized\n");
+    printf("\naht20 initialized\n");
 
     //creating a task to read from AHT20, passing the AHT20 device handle copy
     xTaskCreate(read_aht20, "aht20_tester", 2500, aht20_handle, 5, NULL);
