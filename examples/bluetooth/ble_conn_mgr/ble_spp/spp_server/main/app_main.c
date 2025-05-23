@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2019-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2019-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -35,9 +35,10 @@ QueueHandle_t spp_common_uart_queue = NULL;
 uint16_t connection_handle[ATTRIBUTE_MAX_CONNECTIONS];
 
 static esp_err_t esp_spp_chr_cb(const uint8_t *inbuf, uint16_t inlen,
-                                uint8_t **outbuf, uint16_t *outlen, void *priv_data)
+                                uint8_t **outbuf, uint16_t *outlen, void *priv_data, uint8_t *att_status)
 {
     if (!outbuf || !outlen) {
+        *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -51,6 +52,8 @@ static esp_err_t esp_spp_chr_cb(const uint8_t *inbuf, uint16_t inlen,
         memcpy(*outbuf, inbuf, inlen);
         *outlen = inlen;
     }
+
+    *att_status = ESP_IOT_ATT_SUCCESS;
 
     return ESP_OK;
 }

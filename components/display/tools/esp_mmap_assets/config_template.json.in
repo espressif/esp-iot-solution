@@ -16,5 +16,6 @@
     "support_raw_dither": @support_raw_dither@,
     "support_raw_bgr": @support_raw_bgr@,
     "support_raw_ff": "@arg_MMAP_RAW_FILE_FORMAT@",
-    "support_raw_cf": "@arg_MMAP_RAW_COLOR_FORMAT@"
+    "support_raw_cf": "@arg_MMAP_RAW_COLOR_FORMAT@",
+    "app_bin_path": "@app_bin_path@"
 }

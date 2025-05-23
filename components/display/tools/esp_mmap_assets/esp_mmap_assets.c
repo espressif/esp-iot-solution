@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -10,6 +10,8 @@
 #include <spi_flash_mmap.h>
 #include <esp_attr.h>
 #include <esp_partition.h>
+#include "esp_ota_ops.h"
+#include "esp_image_format.h"
 #include "esp_mmap_assets.h"
 
 static const char *TAG = "mmap_assets";
@@ -76,7 +78,10 @@ esp_err_t mmap_assets_new(const mmap_assets_config_t *config, mmap_assets_handle
 
     map_asset->flags.mmap_enable = config->flags.mmap_enable;
 
-    const esp_partition_t *partition = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_ANY, config->partition_label);
+    const esp_partition_t *running = esp_ota_get_running_partition();
+    ESP_GOTO_ON_FALSE(running, ESP_ERR_NOT_FOUND, err, TAG, "Can not find running partition");
+
+    const esp_partition_t *partition = esp_partition_find_first(ESP_PARTITION_TYPE_ANY, ESP_PARTITION_SUBTYPE_ANY, config->partition_label);
     ESP_GOTO_ON_FALSE(partition, ESP_ERR_NOT_FOUND, err, TAG, "Can not find \"%s\" in partition table", config->partition_label);
     map_asset->partition = partition;
 
@@ -85,15 +90,34 @@ esp_err_t mmap_assets_new(const mmap_assets_config_t *config, mmap_assets_handle
     uint32_t stored_chksum = 0;
     uint32_t calculated_checksum = 0;
 
+    uint32_t offset = 0;
+    uint32_t size = 0;
+
+    if ((partition->address == running->address) && (partition->size == running->size)) {
+
+        const esp_partition_pos_t part = {
+            .offset = running->address,
+            .size = running->size,
+        };
+        esp_image_metadata_t metadata;
+        esp_image_get_metadata(&part, &metadata);
+
+        offset = metadata.image_len;
+        ESP_LOGD(TAG, "partition:%s(0x%x), offset:0x%X", partition->label, (unsigned int)partition->address, (unsigned int)offset);
+        ESP_GOTO_ON_FALSE(partition->size > offset, ESP_ERR_INVALID_SIZE, err, TAG, "Partition %s size is insufficient", partition->label);
+    }
+
+    size = partition->size - offset;
+
     if (map_asset->flags.mmap_enable) {
         int free_pages = spi_flash_mmap_get_free_pages(ESP_PARTITION_MMAP_DATA);
         uint32_t storage_size = free_pages * 64 * 1024;
         ESP_LOGD(TAG, "The storage free size is %ld KB", storage_size / 1024);
-        ESP_LOGD(TAG, "The partition size is %ld KB", partition->size / 1024);
-        ESP_GOTO_ON_FALSE((storage_size > partition->size), ESP_ERR_INVALID_SIZE, err, TAG, "The free size is less than %s partition required", partition->label);
+        ESP_LOGD(TAG, "The partition size is %ld KB", size / 1024);
+        ESP_GOTO_ON_FALSE((storage_size > size), ESP_ERR_INVALID_SIZE, err, TAG, "The free size is less than %s partition required", partition->label);
 
         mmap_handle = (esp_partition_mmap_handle_t *)malloc(sizeof(esp_partition_mmap_handle_t));
-        ESP_GOTO_ON_ERROR(esp_partition_mmap(partition, 0, partition->size, ESP_PARTITION_MMAP_DATA, &root, mmap_handle), err, TAG, "esp_partition_mmap failed");
+        ESP_GOTO_ON_ERROR(esp_partition_mmap(partition, offset, size, ESP_PARTITION_MMAP_DATA, &root, mmap_handle), err, TAG, "esp_partition_mmap failed");
 
         stored_files = *(int *)(root + ASSETS_FILE_NUM_OFFSET);
         stored_chksum = *(uint32_t *)(root + ASSETS_CHECKSUM_OFFSET);
@@ -275,7 +299,7 @@ const uint8_t *mmap_assets_get_mem(mmap_assets_handle_t handle, int index)
     }
 }
 
-const char * mmap_assets_get_name(mmap_assets_handle_t handle, int index)
+const char *mmap_assets_get_name(mmap_assets_handle_t handle, int index)
 {
     assert(handle && "handle is invalid");
     mmap_assets_t *map_asset = (mmap_assets_t *)(handle);

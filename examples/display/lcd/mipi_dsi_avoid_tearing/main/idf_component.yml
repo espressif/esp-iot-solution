@@ -1,0 +1,13 @@
+dependencies:
+  idf:
+    version: ">=5.3.0"
+
+  lvgl/lvgl:
+    version: "^9"
+    public: true
+
+  esp_lcd_ek79007:
+    version: "*"
+    override_path: "../../../../../components/display/lcd/esp_lcd_ek79007"
+
+  esp_lcd_touch_gt911: "^1"

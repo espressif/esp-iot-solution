@@ -1,11 +1,12 @@
-/* SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+/* SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
 #pragma once
 
-#include "driver/gpio.h"
+#include "esp_err.h"
+#include "button_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -18,74 +19,34 @@ extern "C" {
 typedef struct {
     int32_t gpio_num;              /**< num of gpio */
     uint8_t active_level;          /**< gpio level when press down */
-#if CONFIG_GPIO_BUTTON_SUPPORT_POWER_SAVE
     bool enable_power_save;        /**< enable power save mode */
-#endif
-    bool disable_pull;            /**< disable internal pull or not */
+    bool disable_pull;             /**< disable internal pull up or down */
 } button_gpio_config_t;
 
 /**
- * @brief Initialize gpio button
+ * @brief Create a new GPIO button device
  *
- * @param config pointer of configuration struct
+ * This function initializes and configures a GPIO-based button device using the given configuration parameters.
+ * It sets up the GPIO pin, configures its input mode, and optionally enables power-saving features or wake-up functionality.
+ *
+ * @param[in] button_config Configuration for the button device, including callbacks and debounce parameters.
+ * @param[in] gpio_cfg Configuration for the GPIO, including the pin number, active level, and power-save options.
+ * @param[out] ret_button Handle to the newly created GPIO button device.
  *
  * @return
- *      - ESP_OK on success
- *      - ESP_ERR_INVALID_ARG   Arguments is NULL.
+ *     - ESP_OK: Successfully created the GPIO button device.
+ *     - ESP_ERR_INVALID_ARG: Invalid argument provided, such as an invalid GPIO number.
+ *     - ESP_ERR_NO_MEM: Memory allocation failed.
+ *     - ESP_ERR_INVALID_STATE: Failed to configure GPIO wake-up or interrupt settings.
+ *     - ESP_FAIL: General failure, such as unsupported wake-up configuration on the target.
+ *
+ * @note
+ * - If power-saving is enabled, the GPIO will be configured as a wake-up source for light sleep.
+ * - Pull-up or pull-down resistors are configured based on the `active_level` and the `disable_pull` flag.
+ * - This function checks for the validity of the GPIO as a wake-up source when power-saving is enabled.
+ * - If power-saving is not supported by the hardware or configuration, the function will return an error.
  */
-esp_err_t button_gpio_init(const button_gpio_config_t *config);
-
-/**
- * @brief Deinitialize gpio button
- *
- * @param gpio_num gpio number of button
- *
- * @return Always return ESP_OK
- */
-esp_err_t button_gpio_deinit(int gpio_num);
-
-/**
- * @brief Get current level on button gpio
- *
- * @param gpio_num gpio number of button, it will be treated as a uint32_t variable.
- *
- * @return Level on gpio
- */
-uint8_t button_gpio_get_key_level(void *gpio_num);
-
-/**
- * @brief Sets up interrupt for GPIO button.
- *
- * @param gpio_num gpio number of button
- * @param intr_type The type of GPIO interrupt.
- * @param isr_handler The ISR (Interrupt Service Routine) handler function.
- * @param args Arguments to be passed to the ISR handler function.
- * @return Always return ESP_OK
- */
-esp_err_t button_gpio_set_intr(int gpio_num, gpio_int_type_t intr_type, gpio_isr_t isr_handler, void *args);
-
-/**
- * @brief Enable or disable interrupt for GPIO button.
- *
- * @param gpio_num gpio number of button
- * @param enable enable or disable
- * @return Always return ESP_OK
- */
-esp_err_t button_gpio_intr_control(int gpio_num, bool enable);
-
-/**
- * @brief Enable or disable GPIO wakeup functionality.
- *
- * This function allows enabling or disabling GPIO wakeup feature.
- *
- * @param gpio_num GPIO number for wakeup functionality.
- * @param active_level Active level of the GPIO when triggered.
- * @param enable Enable or disable the GPIO wakeup.
- * @return
- *      - ESP_OK on success
- *      - ESP_ERR_INVALID_STATE if trigger was not active or in conflict.
- */
-esp_err_t button_gpio_enable_gpio_wakeup(uint32_t gpio_num, uint8_t active_level, bool enable);
+esp_err_t iot_button_new_gpio_device(const button_config_t *button_config, const button_gpio_config_t *gpio_config, button_handle_t *ret_button);
 
 #ifdef __cplusplus
 }

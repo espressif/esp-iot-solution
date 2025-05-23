@@ -1,6 +1,17 @@
 # ChangeLog
 
+## v0.2.0 - 2025-1-20
+
+### Break changes:
+
+* Simplify the touch proximity sensor configs
+
+### Enhancements:
+
+* Refactor using esp_touch_fsm component
+
 ## v0.1.2 - 2024-6-7
+
 * Add user debugging guide documentation for touch proximity sensor
 * Change the parameter `response_ms` to `meas_count`
 

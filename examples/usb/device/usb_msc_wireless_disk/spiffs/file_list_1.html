@@ -1,0 +1,80 @@
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width" />
+  <title>ESP32 USB File Server</title>
+  <link href="/styles.css" rel="stylesheet" />
+
+  <script>
+    function getPath() {
+      const pathname = window.location.pathname;
+      return pathname;
+    }
+    async function deleteFile(filepath) {
+    try {
+      const deleteResponse = await fetch(`/delete${filepath}`, { method: 'POST' });
+      if (![200, 303].includes(deleteResponse.status)) {
+        alert('Failed to delete the file.');
+        return;
+      }
+      const cookies = document.cookie.split('; ').reduce((acc, cookie) => {
+        const [name, value] = cookie.split('=');
+        acc[name] = value;
+        return acc;
+      }, {});
+      if (!cookies['auto_reset_msc']) {
+        const userConfirmation = confirm('Do you want to reset the USB connection?');
+        if (!userConfirmation) {
+          location.reload();
+          return;
+        }
+      }
+      await fetch('/reset_msc', { method: 'GET' });
+      location.reload();
+    } catch (error) {
+      console.error('Error occurred:', error);
+      alert('An error occurred while processing your request.');
+    }
+  }
+  </script>
+</head>
+
+<div class="header link-white">
+  <div class="header-left">
+    <a href="/" class="text-bold"> Home </a>&gt;
+    <span id="path"></span>
+  </div>
+  <div class="header-center">ESP USB File Server</div>
+  <div class="header-right">
+  </div>
+</div>
+
+<div class="link-white buttons-wrap">
+  <div class="buttons-container">
+    <a id="setting-button" class="settings settings-button button" href="/settings.html">
+      Settings
+    </a>
+    <a id="refresh-button" class="refresh-button button" href="">
+      Refresh
+    </a>
+    <a id="upload-button" class="upload-button button" href="/upload.html#%2F">
+      Upload
+    </a>
+  </div>
+</div>
+
+<div class="table_component link-white">
+  <table>
+    <thead>
+      <tr>
+        <td>File Name</td>
+        <td>Size</td>
+        <td>Actions</td>
+      </tr>
+    </thead>
+    <tbody id="file-list">
+      <tr id="parent-path-table-row">
+        <td class="folder"><a href="../">.. (Parent Path)</a></td>
+        <td></td>
+        <td></td>
+      </tr>
+      <!-- Add files here -->

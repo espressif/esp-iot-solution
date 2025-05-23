@@ -1,5 +1,17 @@
 # ChangeLog
 
+## v1.4.0 - 2025-3-13
+
+### Enhancements:
+
+- Support removing the restriction on ``NULL_I2C_MEM_ADDR``, allowing users to refer to all eligible register addresses.
+
+## v1.3.0 - 2025-2-13
+
+### Enhancements:
+
+- ``i2c_bus_v2`` supports initialization using the bus_handle provided by ``esp_driver_i2c``, and also supports returning the internal bus_handle of ``esp_driver_i2c``.
+
 ## v1.2.0 - 2025-1-14
 
 ### Enhancements:

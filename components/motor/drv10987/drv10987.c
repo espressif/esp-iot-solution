@@ -5,6 +5,8 @@
  */
 
 #include <string.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "drv10987.h"
 #include "driver/gpio.h"
 #include "drv10987_reg.h"

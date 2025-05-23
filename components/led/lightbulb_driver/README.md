@@ -13,6 +13,7 @@ The lightbulb component encapsulates several commonly used dimming schemes for l
 
   - ~~SM2135E~~
   - SM2135EH
+  - SM2182E
   - SM2X35EGH (SM2235EGH/SM2335EGH)
   - BP57x8D (BP5758/BP5758D/BP5768)
   - BP1658CJ

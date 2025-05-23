@@ -1,5 +1,26 @@
 # ChangeLog
 
+## v1.1.5 - 2024-4-1
+
+* Support `modem_board_deinit()`.
+
+## v1.1.4 - 2024-3-20
+
+* Support 4g module `YM310_X09`
+* Add a debug print
+
+## v1.1.3 - 2024-3-20
+
+* Support 4g module `EG25_GL` and `AIR780E`
+
+## v1.1.2 - 2024-3-14
+
+* Avoid `_usb_data_recv_task` from consuming too much time slice.
+
+## v1.1.1 - 2024-3-11
+
+* Add Kconfig MODEM_PRINT_DEVICE_DESCRIPTOR
+
 ## v1.1.0 - 2024-11-28
 
 * Support ESP32-P4 with EC20_CE cat.4 module

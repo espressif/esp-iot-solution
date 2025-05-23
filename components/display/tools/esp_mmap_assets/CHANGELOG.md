@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v1.3.1 (2025-03-17)
+
+* Allow appending files to the end of the app_bin.
+
 ## v1.3.0 (2024-10-18)
 
 * CMake Enhancements: Transitioned from Kconfig options to CMake arguments, supporting independent parameters for each partition.

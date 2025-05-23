@@ -114,7 +114,7 @@ This file is mainly used to place custom USB descriptors. Tinyusb provides many 
 
 Refer to the following file examples:
 
-- :example_file:`../components/usb/usb_device_uac/tusb/uac_descriptors.h`
+- :example_file:`../components/usb/usb_device_uac/tusb_uac/uac_descriptors.h`
 - :example_file:`../components/usb/usb_device_uvc/tusb/usb_descriptors.h`
 - :example_file:`/usb/device/usb_hid_device/hid_device/usb_descriptors.h`
 

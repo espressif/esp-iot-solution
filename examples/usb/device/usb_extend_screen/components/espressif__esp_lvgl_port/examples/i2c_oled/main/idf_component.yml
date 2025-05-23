@@ -1,0 +1,7 @@
+dependencies:
+  idf: ">=4.4"
+  lvgl/lvgl: "^8"
+  esp_lcd_sh1107: "^1"
+  esp_lvgl_port:
+    version: "*"
+    override_path: "../../../"

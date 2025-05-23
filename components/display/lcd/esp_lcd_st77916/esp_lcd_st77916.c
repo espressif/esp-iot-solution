@@ -545,9 +545,9 @@ static esp_err_t panel_st77916_swap_xy(esp_lcd_panel_t *panel, bool swap_axes)
     } else {
         st77916->madctl_val &= ~LCD_CMD_MV_BIT;
     }
-    esp_lcd_panel_io_tx_param(io, LCD_CMD_MADCTL, (uint8_t[]) {
+    ESP_RETURN_ON_ERROR(tx_param(st77916, io, LCD_CMD_MADCTL, (uint8_t[]) {
         st77916->madctl_val
-    }, 1);
+    }, 1), TAG, "send command failed");
     return ESP_OK;
 }
 

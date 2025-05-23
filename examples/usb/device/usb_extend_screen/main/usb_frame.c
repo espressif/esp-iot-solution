@@ -13,7 +13,9 @@
 #include "freertos/semphr.h"
 #include "freertos/task.h"
 #include "usb_frame.h"
+#if CONFIG_IDF_TARGET_ESP32P4
 #include "driver/jpeg_decode.h"
+#endif
 
 static QueueHandle_t empty_fb_queue = NULL;
 static QueueHandle_t filled_fb_queue = NULL;
@@ -22,9 +24,6 @@ static const char *TAG = "usb_frame";
 esp_err_t frame_allocate(int nb_of_fb, size_t fb_size)
 {
     esp_err_t ret;
-    jpeg_decode_memory_alloc_cfg_t tx_mem_cfg = {
-        .buffer_direction = JPEG_DEC_ALLOC_INPUT_BUFFER,
-    };
 
     // We will be passing the frame buffers by reference
     empty_fb_queue = xQueueCreate(nb_of_fb, sizeof(frame_t *));
@@ -35,9 +34,15 @@ esp_err_t frame_allocate(int nb_of_fb, size_t fb_size)
         // Allocate the frame buffer
         frame_t *this_fb = malloc(sizeof(frame_t));
         ESP_RETURN_ON_FALSE(this_fb, ESP_ERR_NO_MEM,  TAG, "Not enough memory for frame buffers %d", fb_size);
-        // uint8_t *this_data = malloc(fb_size);
+#if CONFIG_IDF_TARGET_ESP32P4
         size_t malloc_size = 0;
+        jpeg_decode_memory_alloc_cfg_t tx_mem_cfg = {
+            .buffer_direction = JPEG_DEC_ALLOC_INPUT_BUFFER,
+        };
         uint8_t *this_data = (uint8_t*)jpeg_alloc_decoder_mem(fb_size, &tx_mem_cfg, &malloc_size);
+#elif CONFIG_IDF_TARGET_ESP32S3
+        uint8_t *this_data = (uint8_t *)heap_caps_aligned_alloc(16, fb_size, MALLOC_CAP_SPIRAM);
+#endif
         if (!this_data) {
             free(this_fb);
             ret = ESP_ERR_NO_MEM;

@@ -54,6 +54,8 @@ typedef struct {
     int16_t *mic_buf_read;                                       // Pointer to the buffer to read from
     int spk_data_size;                                           // Speaker data size received in the last frame
     int mic_data_size;
+    int spk_itf_num;
+    int mic_itf_num;
     uint8_t spk_resolution;
     uint8_t mic_resolution;
     uint32_t current_sample_rate;                                // Current resolution, update on format change
@@ -91,6 +93,7 @@ static void tusb_device_task(void *arg)
     }
 }
 
+#if !CONFIG_USB_DEVICE_UAC_AS_PART
 // Invoked when device is mounted
 void tud_mount_cb(void)
 {
@@ -106,7 +109,7 @@ void tud_umount_cb(void)
 }
 
 // Invoked when usb bus is suspended
-// remote_wakeup_en : if host allow us  to perform remote wakeup
+// remote_wakeup_en : if host allow us to perform remote wakeup
 // Within 7ms, device must draw an average of current less than 2.5 mA from bus
 void tud_suspend_cb(bool remote_wakeup_en)
 {
@@ -121,6 +124,7 @@ void tud_resume_cb(void)
 {
     ESP_LOGI(TAG, "USB resumed");
 }
+#endif
 
 // Helper for clock get requests
 static bool tud_audio_clock_get_request(uint8_t rhport, audio_control_request_t const *request)
@@ -309,7 +313,7 @@ bool tud_audio_set_itf_close_EP_cb(uint8_t rhport, tusb_control_request_t const 
     uint8_t const alt = tu_u16_low(tu_le16toh(p_request->wValue));
 
 #if CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX
-    if (ITF_NUM_AUDIO_STREAMING_SPK == itf && alt == 0) {
+    if (s_uac_device->spk_itf_num == itf && alt == 0) {
         TU_LOG2("Speaker interface closed");
         s_uac_device->spk_data_size = 0;
         s_uac_device->spk_active = false;
@@ -317,7 +321,7 @@ bool tud_audio_set_itf_close_EP_cb(uint8_t rhport, tusb_control_request_t const 
 #endif
 
 #if CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX
-    if (ITF_NUM_AUDIO_STREAMING_MIC == itf && alt == 0) {
+    if (s_uac_device->mic_itf_num == itf && alt == 0) {
         TU_LOG2("Microphone interface closed");
         s_uac_device->mic_data_size = 0;
         s_uac_device->mic_active = false;
@@ -336,24 +340,26 @@ bool tud_audio_set_itf_cb(uint8_t rhport, tusb_control_request_t const *p_reques
     TU_LOG2("Set interface %d alt %d\r\n", itf, alt);
 
 #if CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX
-    if (ITF_NUM_AUDIO_STREAMING_SPK == itf && alt != 0) {
+    if (s_uac_device->spk_itf_num == itf && alt != 0) {
         s_uac_device->spk_data_size = 0;
         s_uac_device->spk_resolution = spk_resolutions_per_format[alt - 1];
         s_uac_device->spk_active = true;
         s_uac_device->spk_bytes_per_ms = s_uac_device->current_sample_rate / 1000 * SPEAK_CHANNEL_NUM * s_uac_device->spk_resolution / 8;
         xTaskNotifyGive(s_uac_device->spk_task_handle);
         TU_LOG1("Speaker interface %d-%d opened", itf, alt);
+        printf("Speaker interface %d-%d opened\n", itf, alt);
     }
 #endif
 
 #if CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX
-    if (ITF_NUM_AUDIO_STREAMING_MIC == itf && alt != 0) {
+    if (s_uac_device->mic_itf_num == itf && alt != 0) {
         s_uac_device->mic_data_size = 0;
         s_uac_device->mic_resolution = mic_resolutions_per_format[alt - 1];
         s_uac_device->mic_active = true;
         s_uac_device->mic_bytes_per_ms = s_uac_device->current_sample_rate / 1000 * MIC_CHANNEL_NUM * s_uac_device->mic_resolution / 8;
         xTaskNotifyGive(s_uac_device->mic_task_handle);
         TU_LOG1("Microphone interface %d-%d opened", itf, alt);
+        printf("Microphone interface %d-%d opened\n", itf, alt);
     }
 #endif
 
@@ -494,6 +500,14 @@ esp_err_t uac_device_init(uac_device_config_t *config)
     s_uac_device->current_sample_rate = DEFAULT_SAMPLE_RATE;
     s_uac_device->mic_buf_write = s_uac_device->mic_buf1;
     s_uac_device->mic_buf_read = s_uac_device->mic_buf2;
+
+#if CONFIG_USB_DEVICE_UAC_AS_PART
+    s_uac_device->spk_itf_num = config->spk_itf_num;
+    s_uac_device->mic_itf_num = config->mic_itf_num;
+#else
+    s_uac_device->spk_itf_num = ITF_NUM_AUDIO_STREAMING_SPK;
+    s_uac_device->mic_itf_num = ITF_NUM_AUDIO_STREAMING_MIC;
+#endif
 
     BaseType_t ret_val;
     if (!config->skip_tinyusb_init) {

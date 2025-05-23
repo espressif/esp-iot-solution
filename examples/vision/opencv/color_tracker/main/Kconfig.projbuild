@@ -1,0 +1,142 @@
+menu "Example Configuration"
+
+    config EXAMPLE_ENABLE_MIPI_CSI_CAM_SENSOR
+        bool "Enable MIPI CSI Camera Sensor"
+        default y
+        depends on SOC_MIPI_CSI_SUPPORTED
+
+    if EXAMPLE_ENABLE_MIPI_CSI_CAM_SENSOR
+        config EXAMPLE_MIPI_CSI_SCCB_I2C_PORT
+            int "MIPI CSI SCCB I2C Port Number"
+            default 0
+            range 0 1
+
+        config EXAMPLE_MIPI_CSI_SCCB_I2C_SCL_PIN
+            int "MIPI CSI SCCB I2C SCL Pin"
+            default 34
+            range -1 56
+
+        config EXAMPLE_MIPI_CSI_SCCB_I2C_SDA_PIN
+            int "MIPI CSI SCCB I2C SDA Pin"
+            default 31
+            range -1 56
+
+        config EXAMPLE_MIPI_CSI_SCCB_I2C_FREQ
+            int "MIPI CSI SCCB I2C Frequency"
+            default 100000
+            range 100000 400000
+            help
+                Increasing this value can reduce the initialization time of the camera sensor.
+                Please refer to the relevant instructions of the camera sensor to adjust the value.
+
+        config EXAMPLE_MIPI_CSI_CAM_SENSOR_RESET_PIN
+            int "MIPI CSI Camera Sensor Reset Pin"
+            default -1
+            range -1 56
+
+        config EXAMPLE_MIPI_CSI_CAM_SENSOR_PWDN_PIN
+            int "MIPI CSI Camera Sensor Power Down Pin"
+            default -1
+            range -1 56
+    endif
+
+    config EXAMPLE_CV_CONTOUR_FILTER_AREA_THRESHOLD
+        int "Contour Filtering Area Threshold"
+        default 5000
+        help
+            Contours with an area smaller than this value will be filtered out.
+            Helps remove noise and small irrelevant shapes during image processing.
+
+    config EXAMPLE_LCD_BUF_COUNT
+        int "LCD Buffer Count"
+        default 2
+        range 2 3
+
+    menu "Primary Color Range"
+        config PRIMARY_COLOR_LOWER_H
+            int "Primary Lower H (Hue)"
+            range 0 255
+            default 0
+            help
+                Specifies the minimum hue value for the primary color range.
+
+        config PRIMARY_COLOR_LOWER_S
+            int "Primary Lower S (Saturation)"
+            range 0 255
+            default 120
+            help
+                Specifies the minimum saturation value for the primary color range.
+
+        config PRIMARY_COLOR_LOWER_V
+            int "Primary Lower V (Value)"
+            range 0 255
+            default 70
+            help
+                Specifies the minimum value for the primary color range.
+
+        config PRIMARY_COLOR_UPPER_H
+            int "Primary Upper H (Hue)"
+            range 0 255
+            default 10
+            help
+                Specifies the maximum hue value for the primary color range.
+
+        config PRIMARY_COLOR_UPPER_S
+            int "Primary Upper S (Saturation)"
+            range 0 255
+            default 255
+            help
+                Specifies the maximum saturation value for the primary color range.
+
+        config PRIMARY_COLOR_UPPER_V
+            int "Primary Upper V (Value)"
+            range 0 255
+            default 255
+            help
+                Specifies the maximum value for the primary color range.
+    endmenu
+
+    menu "Secondary Color Range"
+        config SECONDARY_COLOR_LOWER_H
+            int "Secondary Lower H (Hue)"
+            range 0 255
+            default 170
+            help
+                Specifies the minimum hue value for the secondary color range.
+
+        config SECONDARY_COLOR_LOWER_S
+            int "Secondary Lower S (Saturation)"
+            range 0 255
+            default 120
+            help
+                Specifies the minimum saturation value for the secondary color range.
+
+        config SECONDARY_COLOR_LOWER_V
+            int "Secondary Lower V (Value)"
+            range 0 255
+            default 70
+            help
+                Specifies the minimum value for the secondary color range.
+
+        config SECONDARY_COLOR_UPPER_H
+            int "Secondary Upper H (Hue)"
+            range 0 255
+            default 180
+            help
+                Specifies the maximum hue value for the secondary color range.
+
+        config SECONDARY_COLOR_UPPER_S
+            int "Secondary Upper S (Saturation)"
+            range 0 255
+            default 255
+            help
+                Specifies the maximum saturation value for the secondary color range.
+
+        config SECONDARY_COLOR_UPPER_V
+            int "Secondary Upper V (Value)"
+            range 0 255
+            default 255
+            help
+                Specifies the maximum value for the secondary color range.
+    endmenu
+endmenu

@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+/* SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -8,6 +8,8 @@
 #include "esp_log.h"
 #include "esp_vfs.h"
 #include "esp_http_server.h"
+#include "esp_rom_gpio.h"
+#include "soc/gpio_sig_map.h"
 
 /* Max length a file path can have on storage */
 #define FILE_PATH_MAX (ESP_VFS_PATH_MAX + CONFIG_SPIFFS_OBJ_NAME_LEN)
@@ -53,6 +55,45 @@ static esp_err_t favicon_get_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+/* Handler to respond with an style file embedded in flash.
+ * Browsers expect to GET website style at URI /styles.css.
+ * This can be overridden by uploading file with same name */
+static esp_err_t styles_get_handler(httpd_req_t *req)
+{
+    extern const unsigned char styles_css_start[] asm("_binary_styles_css_start");
+    extern const unsigned char styles_css_end[]   asm("_binary_styles_css_end");
+    const size_t styles_css_size = (styles_css_end - styles_css_start);
+    httpd_resp_set_type(req, "text/css");
+    httpd_resp_send(req, (const char *)styles_css_start, styles_css_size);
+    return ESP_OK;
+}
+
+/* Handler to respond with an upload page embedded in flash.
+ * Browsers expect to GET website page at URI /upload.html.
+ * This can be overridden by uploading file with same name */
+static esp_err_t upload_page_get_handler(httpd_req_t *req)
+{
+    extern const unsigned char upload_html_start[] asm("_binary_upload_html_start");
+    extern const unsigned char upload_html_end[]   asm("_binary_upload_html_end");
+    const size_t upload_html_size = (upload_html_end - upload_html_start);
+    httpd_resp_set_type(req, "text/html");
+    httpd_resp_send(req, (const char *)upload_html_start, upload_html_size);
+    return ESP_OK;
+}
+
+/* Handler to respond with an upload page embedded in flash.
+ * Browsers expect to GET website page at URI /settings.html.
+ * This can be overridden by uploading file with same name */
+static esp_err_t settings_page_get_handler(httpd_req_t *req)
+{
+    extern const unsigned char settings_html_start[] asm("_binary_settings_html_start");
+    extern const unsigned char settings_html_end[]   asm("_binary_settings_html_end");
+    const size_t settings_html_size = (settings_html_end - settings_html_start);
+    httpd_resp_set_type(req, "text/html");
+    httpd_resp_send(req, (const char *)settings_html_start, settings_html_size);
+    return ESP_OK;
+}
+
 /* Send HTTP response with a run-time generated html consisting of
  * a list of all files and folders under the requested path.
  * In case of SPIFFS this returns empty list when path is any
@@ -79,23 +120,16 @@ static esp_err_t http_resp_dir_html(httpd_req_t *req, const char *dirpath)
         return ESP_FAIL;
     }
 
-    /* Send HTML file header */
-    httpd_resp_sendstr_chunk(req, "<!DOCTYPE html><html><body>");
+    /* Get handle to embedded file the header of file list page */
+    extern const unsigned char file_list_1_start[] asm("_binary_file_list_1_html_start");
+    extern const unsigned char file_list_1_end[]   asm("_binary_file_list_1_html_end");
+    const size_t file_list_1_size = (file_list_1_end - file_list_1_start);
 
-    /* Get handle to embedded file upload script */
-    extern const unsigned char upload_script_start[] asm("_binary_upload_script_html_start");
-    extern const unsigned char upload_script_end[]   asm("_binary_upload_script_html_end");
-    const size_t upload_script_size = (upload_script_end - upload_script_start);
+    extern const unsigned char file_list_2_start[] asm("_binary_file_list_2_html_start");
+    extern const unsigned char file_list_2_end[]   asm("_binary_file_list_2_html_end");
+    const size_t file_list_2_size = (file_list_2_end - file_list_2_start);
 
-    /* Add file upload form and script which on execution sends a POST request to /upload */
-    httpd_resp_send_chunk(req, (const char *)upload_script_start, upload_script_size);
-
-    /* Send file-list table definition and column labels */
-    httpd_resp_sendstr_chunk(req,
-                             "<table class=\"fixed\" border=\"1\">"
-                             "<col width=\"800px\" /><col width=\"300px\" /><col width=\"300px\" /><col width=\"100px\" />"
-                             "<thead><tr><th>Name</th><th>Type</th><th>Size (Bytes)</th><th>Delete</th></tr></thead>"
-                             "<tbody>");
+    httpd_resp_send_chunk(req, (const char *)file_list_1_start, file_list_1_size);
 
     /* Iterate over all files / folders and fetch their names and sizes */
     while ((entry = readdir(dir)) != NULL) {
@@ -110,7 +144,9 @@ static esp_err_t http_resp_dir_html(httpd_req_t *req, const char *dirpath)
         ESP_LOGI(TAG, "Found %s : %s (%s bytes)", entrytype, entry->d_name, entrysize);
 
         /* Send chunk of HTML file containing table entries with file name and size */
-        httpd_resp_sendstr_chunk(req, "<tr><td><a href=\"");
+        httpd_resp_sendstr_chunk(req, "<tr><td class=\"");
+        httpd_resp_sendstr_chunk(req, entrytype);
+        httpd_resp_sendstr_chunk(req, "\"><a href=\"");
         httpd_resp_sendstr_chunk(req, req->uri);
         httpd_resp_sendstr_chunk(req, entry->d_name);
         if (entry->d_type == DT_DIR) {
@@ -119,23 +155,18 @@ static esp_err_t http_resp_dir_html(httpd_req_t *req, const char *dirpath)
         httpd_resp_sendstr_chunk(req, "\">");
         httpd_resp_sendstr_chunk(req, entry->d_name);
         httpd_resp_sendstr_chunk(req, "</a></td><td>");
-        httpd_resp_sendstr_chunk(req, entrytype);
-        httpd_resp_sendstr_chunk(req, "</td><td>");
         httpd_resp_sendstr_chunk(req, entrysize);
         httpd_resp_sendstr_chunk(req, "</td><td>");
-        httpd_resp_sendstr_chunk(req, "<form method=\"post\" action=\"/delete");
+        httpd_resp_sendstr_chunk(req, "<button class=\"deleteButton\" filepath=\"");
         httpd_resp_sendstr_chunk(req, req->uri);
         httpd_resp_sendstr_chunk(req, entry->d_name);
-        httpd_resp_sendstr_chunk(req, "\"><button type=\"submit\">Delete</button></form>");
+        httpd_resp_sendstr_chunk(req, "\">Delete</button>");
         httpd_resp_sendstr_chunk(req, "</td></tr>\n");
     }
     closedir(dir);
 
     /* Finish the file list table */
-    httpd_resp_sendstr_chunk(req, "</tbody></table>");
-
-    /* Send remaining chunk of HTML file to complete it */
-    httpd_resp_sendstr_chunk(req, "</body></html>");
+    httpd_resp_send_chunk(req, (const char *)file_list_2_start, file_list_2_size);
 
     /* Send empty chunk to signal HTTP response completion */
     httpd_resp_sendstr_chunk(req, NULL);
@@ -152,8 +183,12 @@ static esp_err_t set_content_type_from_file(httpd_req_t *req, const char *filena
         return httpd_resp_set_type(req, "application/pdf");
     } else if (IS_FILE_EXT(filename, ".html")) {
         return httpd_resp_set_type(req, "text/html");
-    } else if (IS_FILE_EXT(filename, ".jpeg")) {
+    } else if (IS_FILE_EXT(filename, ".png")) {
+        return httpd_resp_set_type(req, "image/png");
+    } else if (IS_FILE_EXT(filename, ".jpg") || IS_FILE_EXT(filename, ".jpeg")) {
         return httpd_resp_set_type(req, "image/jpeg");
+    } else if (IS_FILE_EXT(filename, ".gif")) {
+        return httpd_resp_set_type(req, "image/gif");
     } else if (IS_FILE_EXT(filename, ".ico")) {
         return httpd_resp_set_type(req, "image/x-icon");
     }
@@ -197,7 +232,6 @@ static esp_err_t download_get_handler(httpd_req_t *req)
     char filepath[FILE_PATH_MAX];
     FILE *fd = NULL;
     struct stat file_stat;
-
     const char *filename = get_path_from_uri(filepath, ((struct file_server_data *)req->user_ctx)->base_path,
                                              req->uri, sizeof(filepath));
     if (!filename) {
@@ -219,6 +253,12 @@ static esp_err_t download_get_handler(httpd_req_t *req)
             return index_html_get_handler(req);
         } else if (strcmp(filename, "/favicon.ico") == 0) {
             return favicon_get_handler(req);
+        } else if (strcmp(filename, "/settings.html") == 0) {
+            return settings_page_get_handler(req);
+        } else if (strcmp(filename, "/upload.html") == 0) {
+            return upload_page_get_handler(req);
+        } else if (strcmp(filename, "/styles.css") == 0) {
+            return styles_get_handler(req);
         }
         ESP_LOGE(TAG, "Failed to stat file : %s", filepath);
         /* Respond with 404 Not Found */
@@ -268,6 +308,25 @@ static esp_err_t download_get_handler(httpd_req_t *req)
     httpd_resp_send_chunk(req, NULL, 0);
     return ESP_OK;
 }
+
+#if defined (CONFIG_IDF_TARGET_ESP32S2) || defined (CONFIG_IDF_TARGET_ESP32S3)
+// To generate a disconnect event
+static void usbd_vbus_enable(bool enable)
+{
+    esp_rom_gpio_connect_in_signal(enable ? GPIO_MATRIX_CONST_ONE_INPUT : GPIO_MATRIX_CONST_ZERO_INPUT, USB_OTG_VBUSVALID_IN_IDX, 0);
+    esp_rom_gpio_connect_in_signal(enable ? GPIO_MATRIX_CONST_ONE_INPUT : GPIO_MATRIX_CONST_ZERO_INPUT, USB_SRP_BVALID_IN_IDX, 0);
+    esp_rom_gpio_connect_in_signal(enable ? GPIO_MATRIX_CONST_ONE_INPUT : GPIO_MATRIX_CONST_ZERO_INPUT, USB_SRP_SESSEND_IN_IDX, 1);
+    return;
+}
+#elif defined (CONFIG_IDF_TARGET_ESP32P4)
+static void usbd_vbus_enable(bool enable)
+{
+    esp_rom_gpio_connect_in_signal(enable ? GPIO_MATRIX_CONST_ONE_INPUT : GPIO_MATRIX_CONST_ZERO_INPUT, USB_OTG11_VBUSVALID_PAD_IN_IDX, 0);
+    esp_rom_gpio_connect_in_signal(enable ? GPIO_MATRIX_CONST_ONE_INPUT : GPIO_MATRIX_CONST_ZERO_INPUT, USB_SRP_BVALID_PAD_IN_IDX, 0);
+    esp_rom_gpio_connect_in_signal(enable ? GPIO_MATRIX_CONST_ONE_INPUT : GPIO_MATRIX_CONST_ZERO_INPUT, USB_SRP_SESSEND_PAD_IN_IDX, 1);
+    return;
+}
+#endif
 
 /* Handler to upload a file onto the server */
 static esp_err_t upload_post_handler(httpd_req_t *req)
@@ -377,6 +436,7 @@ static esp_err_t upload_post_handler(httpd_req_t *req)
     httpd_resp_set_status(req, "303 See Other");
     httpd_resp_set_hdr(req, "Location", "/");
     httpd_resp_sendstr(req, "File uploaded successfully");
+
     return ESP_OK;
 }
 
@@ -421,6 +481,60 @@ static esp_err_t delete_post_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+extern esp_err_t app_wifi_set_wifi(char * mode, char *ap_ssid, char *ap_passwd, char *sta_ssid, char *sta_passwd);
+
+/* Handler to set a setting from the server */
+static esp_err_t setting_get_handler(httpd_req_t *req)
+{
+    char query[160];
+    char mode[16], ap_ssid[32], ap_passwd[32], sta_ssid[32], sta_passwd[32];
+
+    if (httpd_req_get_url_query_str(req, query, sizeof(query)) == ESP_OK) {
+        ESP_LOGI(TAG, "Query: %s", query);
+
+        if (httpd_query_key_value(query, "wifimode", mode, sizeof(mode)) == ESP_OK) {
+            ESP_LOGI(TAG, "WIFI Mode: %s", mode);
+        }
+
+        if (httpd_query_key_value(query, "apssid", ap_ssid, sizeof(ap_ssid)) == ESP_OK) {
+            ESP_LOGI(TAG, "AP SSID: %s", ap_ssid);
+        }
+
+        if (httpd_query_key_value(query, "appassword", ap_passwd, sizeof(ap_passwd)) == ESP_OK) {
+            ESP_LOGI(TAG, "AP password: %s", ap_passwd);
+        }
+
+        if (httpd_query_key_value(query, "stassid", sta_ssid, sizeof(sta_ssid)) == ESP_OK) {
+            ESP_LOGI(TAG, "STA SSID: %s", sta_ssid);
+        }
+
+        if (httpd_query_key_value(query, "stapassword", sta_passwd, sizeof(sta_passwd)) == ESP_OK) {
+            ESP_LOGI(TAG, "STA password: %s", sta_passwd);
+        }
+
+        app_wifi_set_wifi(mode, ap_ssid, ap_passwd, sta_ssid, sta_passwd);
+    } else {
+        return settings_page_get_handler(req);
+    }
+
+    httpd_resp_send(req, "Settings updated! Please reconnect!", HTTPD_RESP_USE_STRLEN);
+    // Reset to configured wifi mode
+    esp_restart();
+    return ESP_OK;
+}
+
+static esp_err_t reset_msc_get_handler(httpd_req_t *req)
+{
+    usbd_vbus_enable(false);
+    vTaskDelay(20 / portTICK_PERIOD_MS);
+    usbd_vbus_enable(true);
+
+    httpd_resp_set_status(req, "200 OK");
+    httpd_resp_set_type(req, "text/plain");
+    httpd_resp_sendstr(req, "MSC Reset Success");
+    return ESP_OK;
+}
+
 /* Function to start the file server */
 esp_err_t start_file_server(const char *base_path)
 {
@@ -459,6 +573,24 @@ esp_err_t start_file_server(const char *base_path)
         ESP_LOGE(TAG, "Failed to start file server!");
         return ESP_FAIL;
     }
+
+    /* URI handler for set a setting from server */
+    httpd_uri_t setting = {
+        .uri       = "/settings.html*",   // Match all URIs of type /delete/path/to/file
+        .method    = HTTP_GET,
+        .handler   = setting_get_handler,
+        .user_ctx  = server_data    // Pass server data as context
+    };
+    httpd_register_uri_handler(server, &setting);
+
+    /* URI handler for reset_msc */
+    httpd_uri_t reset_msc = {
+        .uri       = "/reset_msc",   // Match all URIs of type /delete/path/to/file
+        .method    = HTTP_GET,
+        .handler   = reset_msc_get_handler,
+        .user_ctx  = server_data    // Pass server data as context
+    };
+    httpd_register_uri_handler(server, &reset_msc);
 
     /* URI handler for getting uploaded files */
     httpd_uri_t file_download = {

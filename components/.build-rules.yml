@@ -1,3 +1,9 @@
+components/audio/adc_mic/test_apps:
+  enable:
+    - if: SOC_ADC_DMA_SUPPORTED == 1
+  disable:
+    - if: IDF_TARGET in ["esp32h2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
+
 components/audio/pwm_audio/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1
@@ -6,13 +12,30 @@ components/avi_player/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32s3", "esp32p4"]
 
+components/touch/touch_button/test_apps:
+  enable:
+    - if: IDF_TARGET in ["esp32s2", "esp32s3", "esp32p4"]
+
+components/touch/touch_button_sensor/test_apps:
+  enable:
+    - if: IDF_TARGET in ["esp32", "esp32s2", "esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
+    - if: IDF_TARGET in ["esp32", "esp32s2", "esp32s3", "esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 3)
+
 components/touch/touch_proximity_sensor/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32s3"]
 
+components/touch/touch_slider_sensor/test_apps:
+  enable:
+    - if: IDF_TARGET in ["esp32", "esp32s2", "esp32s3", "esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 3)
+
 components/usb/esp_msc_ota/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32s3"]
+
+components/usb/iot_usbh_rndis/test_apps:
+  enable:
+    - if: SOC_USB_OTG_SUPPORTED == 1
 
 components/usb/usb_stream/test_apps:
   enable:
@@ -24,7 +47,11 @@ components/usb/iot_usbh/test_apps:
 
 components/usb/iot_usbh_cdc/test_apps:
   enable:
-    - if: IDF_TARGET in ["esp32s2","esp32s3"]
+    - if: IDF_TARGET in ["esp32s2","esp32s3","esp32p4"]
+
+components/usb/iot_usbh_modem/test_apps:
+  enable:
+    - if: IDF_TARGET in ["esp32s2","esp32s3","esp32p4"]
 
 components/i2c_bus/test_apps:
   enable:
@@ -146,6 +173,10 @@ components/display/lcd/esp_lcd_usb_display/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32p4"]
 
+components/display/lcd_touch/esp_lcd_touch_ili2118/test_apps:
+  enable:
+    - if: INCLUDE_DEFAULT == 1
+
 components/display/lcd_touch/esp_lcd_touch_spd2010/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1
@@ -174,6 +205,10 @@ components/usb/usb_device_uac/test_apps:
 components/usb/usb_device_uvc/test_apps:
   enable:
     - if: SOC_USB_OTG_SUPPORTED == 1 and IDF_VERSION_MAJOR >= 5
+
+components/utilities/adc_tp_calibration/test_apps:
+  enable:
+      - if: IDF_TARGET in ["esp32", "esp32s2"]
 
 components/sensors/power_monitor/ina236/test_apps:
   enable:

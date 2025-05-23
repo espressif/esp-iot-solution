@@ -89,7 +89,7 @@ size_t mmap_assets_copy_mem(mmap_assets_handle_t handle, size_t offset, void *de
  *
  * @return Pointer to the asset name, or NULL if index is invalid.
  */
-const char * mmap_assets_get_name(mmap_assets_handle_t handle, int index);
+const char *mmap_assets_get_name(mmap_assets_handle_t handle, int index);
 
 /**
  * @brief Get the size of the asset at the specified index.

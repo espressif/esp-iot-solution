@@ -40,6 +40,7 @@ typedef struct {
                                                      *   Please refer to `vendor_specific_init_default` in source file.
                                                      */
     uint16_t init_cmds_size;                        /*<! Number of commands in above array */
+    bool init_in_command_mode;                      /*!< Send LCD initialization commands in command-mode, default in video-mode */
     struct {
         esp_lcd_dsi_bus_handle_t dsi_bus;               /*!< MIPI-DSI bus configuration */
         const esp_lcd_dpi_panel_config_t *dpi_config;   /*!< MIPI-DPI panel configuration */
@@ -113,8 +114,9 @@ esp_err_t esp_lcd_new_panel_st7703(const esp_lcd_panel_io_handle_t io, const esp
         },                                               \
         .flags.use_dma2d = true,                         \
     }
-#endif
 
 #ifdef __cplusplus
 }
+#endif
+
 #endif

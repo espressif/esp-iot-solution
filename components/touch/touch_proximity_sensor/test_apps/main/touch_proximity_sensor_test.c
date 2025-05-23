@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -8,66 +8,27 @@
 #include <stdlib.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "driver/ledc.h"
 #include "esp_log.h"
 #include "unity.h"
+#include "touch_sensor_lowlevel.h"
 #include "touch_proximity_sensor.h"
 
 const static char *TAG = "touch-proximity-sensor-test";
 
 #define TEST_MEMORY_LEAK_THRESHOLD (-200)
-#define IO_BUZZER_CTRL          36
-#define LEDC_LS_TIMER           LEDC_TIMER_1
-#define LEDC_LS_CH0_CHANNEL     LEDC_CHANNEL_0
-#define LEDC_LS_MODE            LEDC_LOW_SPEED_MODE
 
-static bool s_buzzer_driver_installed = false;
 static touch_proximity_handle_t s_touch_proximity_sensor = NULL;
 
 static size_t before_free_8bit;
 static size_t before_free_32bit;
 
-static esp_err_t buzzer_driver_install(gpio_num_t buzzer_pin)
-{
-    ledc_timer_config_t ledc_timer = {
-        .duty_resolution = LEDC_TIMER_13_BIT,  //Resolution of PWM duty
-        .freq_hz = 5000,                       //Frequency of PWM signal
-        .speed_mode = LEDC_LS_MODE,            //Timer mode
-        .timer_num = LEDC_LS_TIMER,            //Timer index
-        .clk_cfg = LEDC_AUTO_CLK,              //Auto select the source clock (REF_TICK or APB_CLK or RTC_8M_CLK)
-    };
-    TEST_ESP_OK(ledc_timer_config(&ledc_timer));
-    ledc_channel_config_t ledc_channel = {
-        .channel    = LEDC_LS_CH0_CHANNEL,
-        .duty       = 4096,
-        .gpio_num   = buzzer_pin,
-        .speed_mode = LEDC_LS_MODE,
-        .hpoint     = 0,
-        .timer_sel  = LEDC_LS_TIMER            //Let timer associate with LEDC channel (Timer1)
-    };
-    TEST_ESP_OK(ledc_channel_config(&ledc_channel));
-    TEST_ESP_OK(ledc_fade_func_install(0));
-    TEST_ESP_OK(ledc_set_duty(ledc_channel.speed_mode, ledc_channel.channel, 0));
-    TEST_ESP_OK(ledc_update_duty(ledc_channel.speed_mode, ledc_channel.channel));
-    return ESP_OK;
-}
-
-static void buzzer_set_voice(bool en)
-{
-    uint32_t freq = en ? 5000 : 0;
-    ledc_set_duty(LEDC_LS_MODE, LEDC_LS_CH0_CHANNEL, freq);
-    ledc_update_duty(LEDC_LS_MODE, LEDC_LS_CH0_CHANNEL);
-}
-
-static void example_proxi_callback(uint32_t channel, proxi_evt_t event, void *cb_arg)
+static void example_proxi_callback(uint32_t channel, proxi_state_t event, void *cb_arg)
 {
     switch (event) {
-    case PROXI_EVT_ACTIVE:
-        buzzer_set_voice(1);
+    case PROXI_STATE_ACTIVE:
         ESP_LOGI(TAG, "CH%"PRIu32", active!", channel);
         break;
-    case PROXI_EVT_INACTIVE:
-        buzzer_set_voice(0);
+    case PROXI_STATE_INACTIVE:
         ESP_LOGI(TAG, "CH%"PRIu32", inactive!", channel);
         break;
     default:
@@ -75,58 +36,141 @@ static void example_proxi_callback(uint32_t channel, proxi_evt_t event, void *cb
     }
 }
 
-TEST_CASE("touch proximity sensor APIs test", "[touch_proximity_sensor][API]")
+TEST_CASE("touch proximity sensor loop get test", "[touch_proximity_sensor][loop]")
 {
-    proxi_config_t config = (proxi_config_t)DEFAULTS_PROX_CONFIGS();
-    config.channel_num = 1;
-    config.meas_count = 50;
-    config.channel_list[0] = TOUCH_PAD_NUM8;
-    config.threshold_p[0] = 0.004;
-    config.threshold_n[0] = 0.004;
-    config.noise_p = 0.001;
-    config.debounce_p = 1;
-    esp_err_t ret = touch_proximity_sensor_create(&config, &s_touch_proximity_sensor, &example_proxi_callback, NULL);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "touch proximity sense create failed");
+    uint32_t channel_list[] = {TOUCH_PAD_NUM8};
+    float channel_threshold[] = {0.004f};
+    touch_proxi_config_t config = {
+        .channel_num = 1,
+        .channel_list = channel_list,
+        .channel_threshold = channel_threshold,
+        .debounce_times = 2,
+        .skip_lowlevel_init = false,
+    };
+
+    // Test create
+    TEST_ESP_OK(touch_proximity_sensor_create(&config, &s_touch_proximity_sensor, NULL, NULL));
+    TEST_ASSERT_NOT_NULL(s_touch_proximity_sensor);
+
+    int counter = 0;
+    while (counter++ < 100) {
+        uint32_t data;
+        proxi_state_t state;
+        TEST_ESP_OK(touch_proximity_sensor_handle_events(s_touch_proximity_sensor));
+        TEST_ESP_OK(touch_proximity_sensor_get_state(s_touch_proximity_sensor, TOUCH_PAD_NUM8, &state));
+        TEST_ESP_OK(touch_proximity_sensor_get_data(s_touch_proximity_sensor, TOUCH_PAD_NUM8, &data));
+        printf("CH%d, state: %d, data: %"PRIu32"\n", TOUCH_PAD_NUM8, state, data);
+        vTaskDelay(20 / portTICK_PERIOD_MS);
     }
-    touch_proximity_sensor_start(s_touch_proximity_sensor);
-    vTaskDelay(300 / portTICK_PERIOD_MS);
-    touch_proximity_sensor_stop(s_touch_proximity_sensor);
-    vTaskDelay(200 / portTICK_PERIOD_MS);
-    touch_proximity_sensor_delete(s_touch_proximity_sensor);
+
+    // Test delete
+    TEST_ESP_OK(touch_proximity_sensor_delete(s_touch_proximity_sensor));
+    s_touch_proximity_sensor = NULL;
 }
 
-TEST_CASE("touch proximity sensor create & start test", "[ignore][touch_proximity_sensor][create & start]")
+TEST_CASE("touch proximity sensor callback test", "[touch_proximity_sensor][callback]")
 {
-    if (s_buzzer_driver_installed == false) {
-        if (buzzer_driver_install(IO_BUZZER_CTRL) == ESP_OK) {
-            s_buzzer_driver_installed = true;
-        } else {
-            ESP_LOGW(TAG, "Buzzer driver install failed, skipping test");
-        }
+    uint32_t channel_list[] = {TOUCH_PAD_NUM8};
+    float channel_threshold[] = {0.004f};
+    touch_proxi_config_t config = {
+        .channel_num = 1,
+        .channel_list = channel_list,
+        .channel_threshold = channel_threshold,
+        .debounce_times = 2,
+        .skip_lowlevel_init = false,
+    };
+
+    TEST_ESP_OK(touch_proximity_sensor_create(&config, &s_touch_proximity_sensor, &example_proxi_callback, NULL));
+
+    ESP_LOGI(TAG, "touch proximity sensor started - approach the touch pad to test proximity detection");
+    for (int i = 0; i < 100; i++) {
+        touch_proximity_sensor_handle_events(s_touch_proximity_sensor);
+        vTaskDelay(20 / portTICK_PERIOD_MS);
     }
-    proxi_config_t config = (proxi_config_t)DEFAULTS_PROX_CONFIGS();
-    config.channel_num = 1;
-    config.meas_count = 50;
-    config.channel_list[0] = TOUCH_PAD_NUM8;
-    config.threshold_p[0] = 0.004;
-    config.threshold_n[0] = 0.004;
-    config.noise_p = 0.001;
-    config.debounce_p = 1;
-    esp_err_t ret = touch_proximity_sensor_create(&config, &s_touch_proximity_sensor, &example_proxi_callback, NULL);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "touch proximity sense create failed");
-    }
-    touch_proximity_sensor_start(s_touch_proximity_sensor);
-    vTaskDelay(200 / portTICK_PERIOD_MS);
-    ESP_LOGI(TAG, "touch proximity sensor has started! when you approach the touch sub-board, the buzzer will sound.");
+
+    TEST_ESP_OK(touch_proximity_sensor_delete(s_touch_proximity_sensor));
+    s_touch_proximity_sensor = NULL;
 }
 
-TEST_CASE("touch proximity sensor stop & delete test", "[ignore][touch_proximity_sensor][stop & delete]")
+TEST_CASE("touch proximity sensor skip lowlevel init", "[touch_proximity_sensor][loop]")
 {
-    touch_proximity_sensor_stop(s_touch_proximity_sensor);
-    vTaskDelay(200 / portTICK_PERIOD_MS);
-    touch_proximity_sensor_delete(s_touch_proximity_sensor);
+    // First initialize the low level touch sensor
+    uint32_t channel_list[] = {TOUCH_PAD_NUM8};
+    touch_lowlevel_type_t channel_type[] = {TOUCH_LOWLEVEL_TYPE_PROXIMITY};
+    touch_lowlevel_config_t low_config = {
+        .channel_num = 1,
+        .channel_list = channel_list,
+        .channel_type = channel_type,
+        .proximity_count = CONFIG_TOUCH_PROXIMITY_MEAS_COUNT,
+    };
+    TEST_ESP_OK(touch_sensor_lowlevel_create(&low_config));
+
+    // Now create two proximity sensors that use the same touch hardware
+    touch_proximity_handle_t sensor1 = NULL;
+    touch_proximity_handle_t sensor2 = NULL;
+
+    float threshold1[] = {0.008f};
+    float threshold2[] = {0.01f}; // Different threshold for testing
+
+    // Configure first sensor
+    touch_proxi_config_t config1 = {
+        .channel_num = 1,
+        .channel_list = channel_list,
+        .channel_threshold = threshold1,
+        .debounce_times = 2,
+        .skip_lowlevel_init = true, // Skip since we already initialized
+    };
+
+    // Configure second sensor
+    touch_proxi_config_t config2 = {
+        .channel_num = 1,
+        .channel_list = channel_list,
+        .channel_threshold = threshold2,
+        .debounce_times = 3, // Different debounce for testing
+        .skip_lowlevel_init = true,
+    };
+
+    // Create both sensors
+    TEST_ESP_OK(touch_proximity_sensor_create(&config1, &sensor1, NULL, NULL));
+    TEST_ESP_OK(touch_proximity_sensor_create(&config2, &sensor2, NULL, NULL));
+    TEST_ASSERT_NOT_NULL(sensor1);
+    TEST_ASSERT_NOT_NULL(sensor2);
+    TEST_ESP_OK(touch_sensor_lowlevel_start());
+
+    // Test both sensors for a while
+    for (int i = 0; i < 100; i++) {
+        uint32_t data1, data2;
+        proxi_state_t state1, state2;
+
+        // Handle events and get data from both sensors
+        TEST_ESP_OK(touch_proximity_sensor_handle_events(sensor1));
+        TEST_ESP_OK(touch_proximity_sensor_handle_events(sensor2));
+
+        // Get data from both sensors
+        TEST_ESP_OK(touch_proximity_sensor_get_data(sensor1, TOUCH_PAD_NUM8, &data1));
+        TEST_ESP_OK(touch_proximity_sensor_get_data(sensor2, TOUCH_PAD_NUM8, &data2));
+
+        // Get states from both sensors
+        TEST_ESP_OK(touch_proximity_sensor_get_state(sensor1, TOUCH_PAD_NUM8, &state1));
+        TEST_ESP_OK(touch_proximity_sensor_get_state(sensor2, TOUCH_PAD_NUM8, &state2));
+
+        // Both sensors should get similar raw data since they use the same hardware
+        TEST_ASSERT_UINT32_WITHIN(100, data1, data2);
+
+        // States might differ due to different thresholds and debounce settings
+        printf("Sensor1: data=%"PRIu32", state=%d; Sensor2: data=%"PRIu32", state=%d\n",
+               data1, state1, data2, state2);
+
+        vTaskDelay(20 / portTICK_PERIOD_MS);
+    }
+
+    // Clean up in reverse order
+    TEST_ESP_OK(touch_proximity_sensor_delete(sensor2));
+    TEST_ESP_OK(touch_proximity_sensor_delete(sensor1));
+
+    // Finally clean up the low level touch sensor
+    TEST_ESP_OK(touch_sensor_lowlevel_stop());
+    TEST_ESP_OK(touch_sensor_lowlevel_delete());
 }
 
 static void check_leak(size_t before_free, size_t after_free, const char *type)

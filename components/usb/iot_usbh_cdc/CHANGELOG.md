@@ -1,5 +1,39 @@
 # ChangeLog
 
+## v1.1.0 - 2025-04-21
+
+### Features:
+
+* Support control transfer and notification transfer.
+
+* Support usbh_cdc_send_custom_request() to send custom request.
+
+## v1.0.4 - 2025-4-1
+
+### Bug Fixes:
+
+* Fix USB host interface release when URB is not cleared.
+
+## v1.0.3 - 2025-3-27
+
+### Bug Fixes:
+
+* Fixed an incorrect `ring_buffer pop` request value of 0.
+* Fixed uninitialized structure issue.
+
+## v1.0.2 - 2025-3-13
+
+### Bug Fixes:
+
+* Close 'extern C' block
+* flush the ringbuffer when usb disconnect
+
+## v1.0.1 - 2025-2-26
+
+### Bug Fixes:
+
+* Fix the cdc can't open the setting's interface cause crash issue.
+
 ## v1.0.0 - 2024-10-31
 
 ### Break Changes:

@@ -5,6 +5,10 @@ set(srcs "src/hal_driver.c"
 
 set(priv_req nvs_flash driver esp_timer)
 
+if("${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}" VERSION_GREATER_EQUAL "5.2.6")
+list(APPEND priv_req "esp_driver_i2c")
+endif()
+
 set(incs "include" "drivers/common/utils/")
 
 if(CONFIG_ENABLE_PWM_DRIVER)
@@ -15,6 +19,13 @@ endif()
 if(CONFIG_ENABLE_SM2135EH_DRIVER)
     list(APPEND srcs "drivers/sm2135eh/sm2135eh.c")
     list(APPEND incs "drivers/sm2135eh")
+    list(APPEND srcs "drivers/common/iic/iic.c")
+    list(APPEND incs "drivers/common/iic/")
+endif()
+
+if(CONFIG_ENABLE_SM2182E_DRIVER)
+    list(APPEND srcs "drivers/sm2182e/sm2182e.c")
+    list(APPEND incs "drivers/sm2182e")
     list(APPEND srcs "drivers/common/iic/iic.c")
     list(APPEND incs "drivers/common/iic/")
 endif()

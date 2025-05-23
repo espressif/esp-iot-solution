@@ -1,0 +1,5 @@
+dependencies:
+  idf:
+    version: '>=5.0'
+  adc_tp_calibration:
+    override_path: "../../../../components/utilities/adc_tp_calibration"

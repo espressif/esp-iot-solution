@@ -1,17 +1,16 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 #pragma once
 
+#include "esp_err.h"
+#include "button_types.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#define MATRIX_BUTTON_COMBINE(row_gpio, col_gpio) ((row_gpio)<<8 | (col_gpio))
-#define MATRIX_BUTTON_SPLIT_COL(data) ((uint32_t)(data)&0xff)
-#define MATRIX_BUTTON_SPLIT_ROW(data) (((uint32_t)(data) >> 8) & 0xff)
 
 /**
  * @brief Button matrix key configuration.
@@ -34,46 +33,37 @@ extern "C" {
  *          but buttons within the same row can be detected without conflicts.
  */
 typedef struct {
-    int32_t row_gpio_num;        /**< GPIO number associated with the row */
-    int32_t col_gpio_num;        /**< GPIO number associated with the column */
+    int32_t *row_gpios;        /**< GPIO number list for the row */
+    int32_t *col_gpios;        /**< GPIO number list for the column */
+    uint32_t row_gpio_num;     /**< Number of GPIOs associated with the row */
+    uint32_t col_gpio_num;     /**< Number of GPIOs associated with the column */
 } button_matrix_config_t;
 
 /**
- * @brief Initialize a button matrix keyboard.
+ * @brief Create a new button matrix device
  *
- * @param config Pointer to the button matrix key configuration.
+ * This function initializes and configures a button matrix device using the specified row and column GPIOs.
+ * Each button in the matrix is represented as an independent button object, and its handle is returned in the `ret_button` array.
+ *
+ * @param[in] button_config Configuration for the button device, including callbacks and debounce parameters.
+ * @param[in] matrix_config Configuration for the matrix, including row and column GPIOs and their counts.
+ * @param[out] ret_button Array of handles for the buttons in the matrix.
+ * @param[inout] size Pointer to the total number of buttons in the matrix. Must match the product of row and column GPIO counts.
+ *                    On success, this value is updated to reflect the size of the button matrix.
+ *
  * @return
- *      - ESP_OK on success
- *      - ESP_ERR_INVALID_ARG if the argument is NULL.
+ *     - ESP_OK: Successfully created the button matrix device.
+ *     - ESP_ERR_INVALID_ARG: Invalid argument provided, such as null pointers or mismatched matrix dimensions.
+ *     - ESP_ERR_NO_MEM: Memory allocation failed.
+ *     - ESP_FAIL: General failure, such as button creation failure for one or more buttons.
  *
- * @note When initializing the button matrix keyboard, the row GPIO pins will be set as outputs,
- *       and the column GPIO pins will be set as inputs, both with pull-down resistors enabled.
+ * @note
+ * - Each row GPIO is configured as an output, while each column GPIO is configured as an input.
+ * - The total number of buttons in the matrix must equal the product of the row and column GPIO counts.
+ * - The `ret_button` array must be large enough to store handles for all buttons in the matrix.
+ * - If any button creation fails, the function will free all allocated resources and return an error.
  */
-esp_err_t button_matrix_init(const button_matrix_config_t *config);
-
-/**
- * @brief Deinitialize a button in the matrix keyboard.
- *
- * @param row_gpio_num GPIO number of the row where the button is located.
- * @param col_gpio_num GPIO number of the column where the button is located.
- * @return
- *      - ESP_OK if the button is successfully deinitialized
- *
- * @note When deinitializing a button, please exercise caution and avoid deinitializing a button individually, as it may affect the proper functioning of other buttons in the same row or column.
- */
-esp_err_t button_matrix_deinit(int row_gpio_num, int col_gpio_num);
-
-/**
- * @brief Get the key level from the button matrix hardware.
- *
- * @param hardware_data Pointer to hardware-specific data containing information about row GPIO and column GPIO.
- * @return uint8_t[out] The key level read from the hardware.
- *
- * @note This function retrieves the key level from the button matrix hardware.
- *       The `hardware_data` parameter should contain information about the row and column GPIO pins,
- *       and you can access this information using the `MATRIX_BUTTON_SPLIT_COL` and `MATRIX_BUTTON_SPLIT_ROW` macros.
- */
-uint8_t button_matrix_get_key_level(void *hardware_data);
+esp_err_t iot_button_new_matrix_device(const button_config_t *button_config, const button_matrix_config_t *matrix_config, button_handle_t *ret_button, size_t *size);
 
 #ifdef __cplusplus
 }

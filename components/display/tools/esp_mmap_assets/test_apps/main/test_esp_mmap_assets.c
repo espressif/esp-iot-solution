@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -15,7 +15,8 @@
 #include "unity_test_runner.h"
 #include "unity_test_utils_memory.h"
 
-#include "mmap_generate_spiffs_assets.h"
+#include "mmap_generate_assert_append.h"
+#include "mmap_generate_assert_independ.h"
 
 static const char *TAG = "assets_test";
 
@@ -37,14 +38,34 @@ static int is_jpg(const uint8_t *raw_data, size_t len)
     return memcmp(jpg_signature, raw_data, sizeof(jpg_signature)) == 0;
 }
 
-TEST_CASE("test assets mmap table", "[mmap_assets][mmap_enable]")
+void print_file_list(mmap_assets_handle_t handle, int file_num)
+{
+    for (int i = 0; i < MMAP_ASSERT_INDEPEND_FILES; i++) {
+        const char *name = mmap_assets_get_name(handle, i);
+        const uint8_t *mem = mmap_assets_get_mem(handle, i);
+        int size = mmap_assets_get_size(handle, i);
+        int width = mmap_assets_get_width(handle, i);
+        int height = mmap_assets_get_height(handle, i);
+
+        ESP_LOGI(TAG, "name:[%s], mem:[%p], size:[%d bytes], w:[%d], h:[%d]", name, mem, size, width, height);
+
+        if (strstr(name, ".png")) {
+            TEST_ASSERT_TRUE(is_png(mem, size));
+        } else if (strstr(name, ".jpg")) {
+            TEST_ASSERT_TRUE(is_jpg(mem, size));
+        }
+    }
+
+}
+
+TEST_CASE("test assets mmap table", "[mmap_assets][mmap_enable][Independent partition]")
 {
     mmap_assets_handle_t asset_handle;
 
     const mmap_assets_config_t config = {
         .partition_label = "assets",
-        .max_files = MMAP_SPIFFS_ASSETS_FILES,
-        .checksum = MMAP_SPIFFS_ASSETS_CHECKSUM,
+        .max_files = MMAP_ASSERT_INDEPEND_FILES,
+        .checksum = MMAP_ASSERT_INDEPEND_CHECKSUM,
         .flags = {
             .mmap_enable = true,
             .app_bin_check = false,
@@ -58,33 +79,43 @@ TEST_CASE("test assets mmap table", "[mmap_assets][mmap_enable]")
     int stored_files = mmap_assets_get_stored_files(asset_handle);
     ESP_LOGI(TAG, "stored_files:%d", stored_files);
 
-    for (int i = 0; i < MMAP_SPIFFS_ASSETS_FILES; i++) {
-        const char *name = mmap_assets_get_name(asset_handle, i);
-        const uint8_t *mem = mmap_assets_get_mem(asset_handle, i);
-        int size = mmap_assets_get_size(asset_handle, i);
-        int width = mmap_assets_get_width(asset_handle, i);
-        int height = mmap_assets_get_height(asset_handle, i);
-
-        ESP_LOGI(TAG, "name:[%s], mem:[%p], size:[%d bytes], w:[%d], h:[%d]", name, mem, size, width, height);
-
-        if (strstr(name, ".png")) {
-            TEST_ASSERT_TRUE(is_png(mem, size));
-        } else if (strstr(name, ".jpg")) {
-            TEST_ASSERT_TRUE(is_jpg(mem, size));
-        }
-    }
+    print_file_list(asset_handle, MMAP_ASSERT_INDEPEND_FILES);
 
     mmap_assets_del(asset_handle);
 }
 
-TEST_CASE("test assets mmap table", "[mmap_assets][mmap_disable]")
+TEST_CASE("test assets mmap table", "[mmap_assets][mmap_enable][Append Partition]")
+{
+    mmap_assets_handle_t asset_handle;
+
+    const mmap_assets_config_t config = {
+        .partition_label = "factory",
+        .max_files = MMAP_ASSERT_APPEND_FILES,
+        .checksum = MMAP_ASSERT_APPEND_CHECKSUM,
+        .flags = {
+            .mmap_enable = true,
+            .full_check = true,
+        },
+    };
+
+    TEST_ESP_OK(mmap_assets_new(&config, &asset_handle));
+
+    int stored_files = mmap_assets_get_stored_files(asset_handle);
+    ESP_LOGI(TAG, "stored_files:%d", stored_files);
+
+    print_file_list(asset_handle, MMAP_ASSERT_APPEND_FILES);
+
+    mmap_assets_del(asset_handle);
+}
+
+TEST_CASE("test assets mmap table", "[mmap_assets][mmap_disable][Independent partition]")
 {
     mmap_assets_handle_t asset_handle;
 
     const mmap_assets_config_t config = {
         .partition_label = "assets",
-        .max_files = MMAP_SPIFFS_ASSETS_FILES,
-        .checksum = MMAP_SPIFFS_ASSETS_CHECKSUM,
+        .max_files = MMAP_ASSERT_INDEPEND_FILES,
+        .checksum = MMAP_ASSERT_INDEPEND_CHECKSUM,
         .flags = {
             .mmap_enable = false,
             .app_bin_check = false,
@@ -98,7 +129,7 @@ TEST_CASE("test assets mmap table", "[mmap_assets][mmap_disable]")
     int stored_files = mmap_assets_get_stored_files(asset_handle);
     ESP_LOGI(TAG, "stored_files:%d", stored_files);
 
-    for (int i = 0; i < MMAP_SPIFFS_ASSETS_FILES; i++) {
+    for (int i = 0; i < MMAP_ASSERT_INDEPEND_FILES; i++) {
         const char *name = mmap_assets_get_name(asset_handle, i);
         const uint8_t *mem = mmap_assets_get_mem(asset_handle, i);
         int size = mmap_assets_get_size(asset_handle, i);

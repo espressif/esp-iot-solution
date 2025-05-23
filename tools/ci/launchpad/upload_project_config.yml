@@ -103,9 +103,13 @@ examples/usb/device/usb_dual_uvc_device:
     https://raw.githubusercontent.com/espressif/esp-iot-solution/master/examples/usb/device/usb_dual_uvc_device/README.md
 
 examples/usb/device/usb_extend_screen:
+  esp32s3:
+    sdkconfig:
+      - esp32_s3_lcd_ev_board_480_480
+      - esp32_s3_lcd_ev_board_800_480
   esp32p4:
     sdkconfig:
-      - defaults
+      - esp32_p4_function_ev_board
   description:
     Using the ESP32-P4-Function-EV-Board as a Windows USB Extension Screen
   readme:
@@ -257,7 +261,19 @@ examples/usb/host/usb_cdc_basic:
   description:
     This is the USB CDC basic example
   readme:
-    https://raw.githubusercontent.com/espressif/esp-iot-solution/master/examples/usb/host/sb_cdc_basic/README.md
+    https://raw.githubusercontent.com/espressif/esp-iot-solution/master/examples/usb/host/usb_cdc_basic/README.md
+
+examples/usb/host/usb_hub_dual_camera:
+  esp32s3:
+    sdkconfig:
+      - defaults
+  esp32p4:
+    sdkconfig:
+      - defaults
+  description:
+    This is the USB Host Dual UVC example
+  readme:
+    https://raw.githubusercontent.com/espressif/esp-iot-solution/master/examples/usb/host/usb_hub_dual_camera/README.md
 
 examples/usb/host/usb_msc_ota:
   esp32s3:
@@ -283,3 +299,12 @@ examples/usb/otg/usb_host_device_mode_manual_switch:
     This example demonstrates how to manually switch the USB OTG peripheral from host to device mode.
   readme:
     https://raw.githubusercontent.com/espressif/esp-iot-solution/master/examples/usb/otg/usb_host_device_mode_manual_switch/README.md
+
+examples/vision/opencv/color_tracker:
+  esp32p4:
+    sdkconfig:
+      - defaults
+  description:
+    This example demonstrates how to use the ESP32-P4-Function-EV-Board with OpenCV to achieve color tracking.
+  readme:
+    https://raw.githubusercontent.com/espressif/esp-iot-solution/master/examples/vision/opencv/color_tracker/README.md

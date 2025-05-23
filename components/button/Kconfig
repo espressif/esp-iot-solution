@@ -24,22 +24,12 @@ menu "IoT Button"
         range 500 5000
         default 1500
 
-    config BUTTON_SERIAL_TIME_MS
-        int "BUTTON SERIAL TIME (MS)"
+    config BUTTON_LONG_PRESS_HOLD_SERIAL_TIME_MS
+        int "BUTTON LONG_PRESS_HOLD SERIAL TIME (MS)"
         range 2 1000
         default 20
         help
-            "Serial trigger interval"
-
-    config GPIO_BUTTON_SUPPORT_POWER_SAVE
-        bool "GPIO BUTTON SUPPORT POWER SAVE"
-        default n
-        help
-            Enable GPIO button power save
-
-            The function enables the use of GPIO buttons during light sleep,
-            but enabling this function prevents the simultaneous use of other
-            types of buttons.
+            "Long press hold Serial trigger interval"
 
     config ADC_BUTTON_MAX_CHANNEL
         int "ADC BUTTON MAX CHANNEL"

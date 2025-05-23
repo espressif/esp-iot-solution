@@ -1,7 +1,7 @@
-set(incs "include")
+set(incs "include"
+         "xz-embedded/linux/include/linux")
 
 set(priv_incs "port/include"
-              "xz-embedded/linux/include/linux"
               "xz-embedded/linux/lib/xz")
 
 set(srcs "src/xz_decompress.c"

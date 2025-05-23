@@ -320,4 +320,5 @@ void app_main(void)
 #endif
         vTaskDelay(pdMS_TO_TICKS(10000));
     }
+    modem_board_deinit();
 }

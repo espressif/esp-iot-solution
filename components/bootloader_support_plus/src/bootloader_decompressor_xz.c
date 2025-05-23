@@ -16,7 +16,7 @@
 
 static const char *TAG = "boot_xz";
 
-static void bootloader_decompressor_xz_error(char *msg)
+static void bootloader_decompressor_xz_error(const char *msg)
 {
     ESP_LOGE(TAG, "%s", msg);
 }

@@ -304,7 +304,7 @@ static uint8_t precise_kelvin_convert_to_percentage(uint16_t kelvin)
  * @param brightness Brightness value in the range 0-100
  * @param white_value Array to store the calculated cold and warm values for white output
  */
-static void cct_and_brightness_convert_and_power_limit(lightbulb_led_beads_comb_t led_beads, float multiple, uint8_t cct, uint8_t brightness, uint16_t white_value[])
+static esp_err_t cct_and_brightness_convert_and_power_limit(lightbulb_led_beads_comb_t led_beads, float multiple, uint8_t cct, uint8_t brightness, uint16_t white_value[])
 {
     uint16_t max_value = 0;
     hal_get_driver_feature(QUERY_MAX_INPUT_VALUE, &max_value);
@@ -353,6 +353,18 @@ static void cct_and_brightness_convert_and_power_limit(lightbulb_led_beads_comb_
             hal_get_curve_table_value((uint16_t)value, &white_value[i]);
         }
     }
+
+#if CONFIG_ENABLE_LIGHTBULB_DEBUG
+    uint16_t test_power =  white_value[0] + white_value[1] + white_value[2] + white_value[3] +  white_value[4];
+    uint16_t limit_power = max_value * multiple * (brightness / 100.0);
+
+    if (test_power > limit_power) {
+        ESP_LOGE(TAG, "Power exceeds expected, current: %d, expected:%d", test_power, limit_power);
+        return ESP_FAIL;
+    }
+#endif
+
+    return ESP_OK;
 }
 
 /**
@@ -414,33 +426,72 @@ static uint8_t process_white_brightness_limit(uint8_t brightness)
 /**
  * @brief Recalculate color power
  * @attention 300% = 100% + 100% + 100% : Full power output on each channel. If single channel output is 3w then total output is 9w.
- * @note
- *      input           output(color_max_power = 100)       output(color_max_power = 200)       output(color_max_power = 300)
- *      255,255,0       127,127,0                           255,255,0                           255,255,0
- *      127,127,0       63,63,0                             127,127,0                           127,127,0
- *      63,63,0         31,31,0                             63,63,0                             63,63,0
- *      255,255,255     85,85,85                            170,170,170                         255,255,255
- *      127,127,127     42,42,42                            84,84,84                            127,127,127
- *      63,63,63        21,21,21                            42,42,42                            63,63,63
  *
+ * lightbulb_power_limit_t limit = {
+ *   .color_max_power = 100,
+ *   .color_max_value = 100,
+ *   .color_min_value = 10,
+ *   .white_max_power = 100,
+ *   .white_max_brightness = 100,
+ *   .white_min_brightness = 10
+ * };
+ *
+ * lightbulb_gamma_config_t Gamma = {
+ *  .balance_coefficient = {1.0, 1.0, 1.0, 1.0, 1.0},
+ *  .color_curve_coefficient = 2.0,
+ *  .white_curve_coefficient = 2.0,
+ * };
+ *
+ * @note
+ *      input(hsv)          output(color_max_power = 100)       output(color_max_power = 200)       output(color_max_power = 300)
+ *      0,100,100           255,0,0                             255,0,0                             255,0,0
+ *      0,100,1             79,0,0                              79,0,0                              79,0,0
+ *      60,100,100          127,127,0                           255,255,0                           255,255,0
+ *      60,100,1            39,39,0                             79,79,0                             79,79,0
+ *      0,50,100            127,63,63                           255,127,127                         255,127,127
+ *      0,50,1              40,19,19                            79,38,38                            79,38,38
+ *      60,50,100           102,102,50                          204,204,101                         254,254,126
+ *      60,50,1             31,31,15                            63,63,30                            79,79,38
+ *      0,0,100             85,85,85                            170,170,170                         255,255,255
+ *      0,0,1               26,26,26                            52,52,52                            79,79,79
  */
-static void process_color_power_limit(float multiple, float rgbcw[5], uint16_t value, uint16_t out[5])
+static esp_err_t process_color_power_limit(float multiple, float rgbcw[5], uint16_t value, uint16_t out[5])
 {
     uint16_t max_value;
-    float max_power;
     hal_get_driver_feature(QUERY_MAX_INPUT_VALUE, &max_value);
-    max_power = multiple * (max_value);
 
-    float baseline = MAX(rgbcw[0], rgbcw[1]);
-    baseline = MAX(baseline, rgbcw[2]);
-    baseline = MAX(baseline, rgbcw[3]);
-    baseline = MAX(baseline, rgbcw[4]);
-    max_power = MIN(max_power, max_value / baseline);
-    ESP_LOGD(TAG, "%f, %d, %f", max_power, max_value, baseline);
-    for (int i = 0; i < 5; i++) {
-        float value = round(max_power * rgbcw[i]);
-        hal_get_curve_table_value((uint16_t)value, &out[i]);
+    float scaled[5];
+    float max_scale = 0.0f;
+    float max_scale_limit = (float)max_value;
+
+    for (int i = 0; i < 5; ++i) {
+        scaled[i] = rgbcw[i] * multiple;
+        if (scaled[i] > max_scale) {
+            max_scale = scaled[i];
+        }
     }
+
+    float scale_factor = 1.0f;
+    if (max_scale > 1.0f) {
+        scale_factor = max_scale_limit / (max_scale * max_scale_limit);
+    }
+
+    for (int i = 0; i < 5; ++i) {
+        float value_f = scaled[i] * scale_factor * max_value * (value / 100.0);
+        hal_get_curve_table_value((uint16_t)value_f, &out[i]);
+    }
+
+#if CONFIG_ENABLE_LIGHTBULB_DEBUG
+    uint16_t test_power = out[0] + out[1] + out[2] + out[3] + out[4];
+    uint16_t limit_power = max_value * multiple * (value / 100.0);
+
+    if (test_power > limit_power) {
+        ESP_LOGE(TAG, "Power exceeds expected, current: %d, expected:%d", test_power, limit_power);
+        return ESP_FAIL;
+    }
+#endif
+
+    return ESP_OK;
 }
 
 static void timercb(TimerHandle_t tmr)
@@ -577,7 +628,7 @@ static void print_func(char *driver_details, char *driver_io)
     ESP_LOGI(TAG, "fade %d ms", s_lb_obj->cap.enable_fade == true ? s_lb_obj->cap.fade_time_ms : 0);
     ESP_LOGI(TAG, "led_beads: %d", s_lb_obj->cap.led_beads);
     ESP_LOGI(TAG, "hardware cct: %s", s_lb_obj->cap.enable_hardware_cct ? "Yes" : "No");
-    ESP_LOGI(TAG, "precise cct control: %s", s_lb_obj->cap.enable_precise_cct_control ? "disable" : "enable");
+    ESP_LOGI(TAG, "precise cct control: %s", s_lb_obj->cap.enable_precise_cct_control ?  "enable" : "disable");
     ESP_LOGI(TAG, "sync change: %s", s_lb_obj->cap.sync_change_brightness_value ? "enable" : "disable");
     ESP_LOGI(TAG, "auto on: %s", s_lb_obj->cap.disable_auto_on ? "disable" : "enable");
 
@@ -647,6 +698,21 @@ esp_err_t lightbulb_init(lightbulb_config_t *config)
                 config->driver_conf.sm2135eh.iic_sda,
                 config->driver_conf.sm2135eh.rgb_current,
                 config->driver_conf.sm2135eh.wy_current);
+    }
+#endif
+#ifdef CONFIG_ENABLE_SM2182E_DRIVER
+    if (config->type == DRIVER_SM2182E) {
+        driver_conf = (void *) & (config->driver_conf.sm2182e);
+        sprintf(driver_details, "SM2182E IIC Freq: %d Khz, Queue: %d, SCL: %d, SDA: %d, CW Current: %d",
+                config->driver_conf.sm2182e.freq_khz,
+                config->driver_conf.sm2182e.enable_iic_queue,
+                config->driver_conf.sm2182e.iic_clk,
+                config->driver_conf.sm2182e.iic_sda,
+                config->driver_conf.sm2182e.cw_current);
+        if (config->capability.led_beads > LED_BEADS_2CH_CW) {
+            ESP_LOGW(TAG, "The SM2182E chip only allows the configuration of cold and warm led beads");
+            goto EXIT;
+        }
     }
 #endif
 #ifdef CONFIG_ENABLE_BP57x8D_DRIVER
@@ -721,6 +787,8 @@ esp_err_t lightbulb_init(lightbulb_config_t *config)
 
     if (config->type == DRIVER_ESP_PWM) {
         sprintf(driver_io, "IO List:[%d %d %d %d %d]", config->io_conf.pwm_io.red, config->io_conf.pwm_io.green, config->io_conf.pwm_io.blue, config->io_conf.pwm_io.cold_cct, config->io_conf.pwm_io.warm_brightness);
+    } else if (config->type == DRIVER_SM2182E) {
+        sprintf(driver_io, "IO List:[%d %d]", config->io_conf.iic_io.cold_white, config->io_conf.iic_io.warm_yellow);
     } else if (config->type >= DRIVER_SM2135E && config->type < DRIVER_WS2812) {
         sprintf(driver_io, "IO List:[%d %d %d %d %d]", config->io_conf.iic_io.red, config->io_conf.iic_io.green, config->io_conf.iic_io.blue, config->io_conf.iic_io.cold_white, config->io_conf.iic_io.warm_yellow);
     } else if (config->type == DRIVER_WS2812) {
@@ -1230,11 +1298,11 @@ static esp_err_t lightbulb_hsv2rgb_adjusted(uint16_t hue, uint8_t saturation, ui
         }
     }
 
-    *red = interpolated_rgbcw[0] * value / 100.0;
-    *green = interpolated_rgbcw[1] * value / 100.0;
-    *blue = interpolated_rgbcw[2] * value / 100.0;
-    *cold = interpolated_rgbcw[3] * value / 100.0;
-    *warm = interpolated_rgbcw[4] * value / 100.0;
+    *red = interpolated_rgbcw[0];
+    *green = interpolated_rgbcw[1];
+    *blue = interpolated_rgbcw[2];
+    *cold = interpolated_rgbcw[3];
+    *warm = interpolated_rgbcw[4];
 
     return ESP_OK;
 }
@@ -1248,9 +1316,21 @@ static esp_err_t _lightbulb_hsv2rgb(uint16_t hue, uint8_t saturation, uint8_t va
 
     ESP_LOGI(TAG, "Convert 8 bit value [r:%d g:%d b:%d]", _red, _green, _blue);
 
-    *red = _red / 255.0;
-    *green = _green / 255.0;
-    *blue = _blue / 255.0;
+    if (value == 0) {
+        *red = 0;
+        *green = 0;
+        *blue = 0;
+    } else {
+        *red = _red / 255.0;
+        *green = _green / 255.0;
+        *blue = _blue / 255.0;
+        float total = *red + *green + *blue;
+
+        *red = *red / total;
+        *green = *green / total;
+        *blue = *blue / total;
+    }
+
     *cold = 0;
     *warm = 0;
 
@@ -1464,10 +1544,10 @@ esp_err_t lightbulb_set_hsv(uint16_t hue, uint8_t saturation, uint8_t value)
         ESP_LOGI(TAG, "Convert write value [r:%0.2f%% g:%0.2f%% b:%0.2f%% c:%0.2f%% w:%0.2f%%]", color_param[0] * 100, color_param[1] * 100, color_param[2] * 100, color_param[3] * 100, color_param[4] * 100);
 
         // 3. Redistribute power
-        process_color_power_limit(s_lb_obj->power.color_max_power / 100.0, color_param, _value, color_value);
+        err |= process_color_power_limit(s_lb_obj->power.color_max_power / 100.0, color_param, _value, color_value);
         ESP_LOGI(TAG, "hal write value [r:%d g:%d b:%d c:%d w:%d], channel_mask:%d fade_ms:%d", color_value[0], color_value[1], color_value[2], color_value[3], color_value[4], channel_mask, fade_time);
 
-        err = hal_set_channel_group(color_value, channel_mask, fade_time);
+        err |= hal_set_channel_group(color_value, channel_mask, fade_time);
         LIGHTBULB_CHECK(err == ESP_OK, "set hal channel group fail", goto EXIT);
 
         s_lb_obj->status.on = true;
@@ -1601,10 +1681,10 @@ esp_err_t lightbulb_set_cctb(uint16_t cct, uint8_t brightness)
         _brightness = process_white_brightness_limit(_brightness);
 
         // 2. convert to cold warm and redistribute power
-        cct_and_brightness_convert_and_power_limit(s_lb_obj->cap.led_beads, s_lb_obj->power.white_max_power / 100.0, cct, _brightness, white_value);
+        err |= cct_and_brightness_convert_and_power_limit(s_lb_obj->cap.led_beads, s_lb_obj->power.white_max_power / 100.0, cct, _brightness, white_value);
         ESP_LOGI(TAG, "hal write value [r:%d g:%d b:%d c:%d w:%d], channel_mask:%d fade_ms:%d", white_value[0], white_value[1], white_value[2], white_value[3], white_value[4], channel_mask, fade_time);
 
-        err = hal_set_channel_group(white_value, channel_mask, fade_time);
+        err |= hal_set_channel_group(white_value, channel_mask, fade_time);
         LIGHTBULB_CHECK(err == ESP_OK, "set hal channel group fail", goto EXIT);
 
         s_lb_obj->status.on = true;

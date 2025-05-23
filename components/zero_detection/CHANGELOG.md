@@ -1,5 +1,17 @@
 # ChangeLog
 
+## v0.1.0 - 2025-02-24
+
+### Improve:
+
+- Update the version of dependent cmake_utilities to *
+
+## v0.0.7 - 2025-1-2
+
+### Enhancements:
+
+- add pause command to zero_detect component
+
 ## v0.0.6 - 2024-9-19
 
 ### Bug Fix:

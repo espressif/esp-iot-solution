@@ -45,7 +45,8 @@ push_to_github:
     - add_doc_server_ssh_keys $DOCS_DEPLOY_PRIVATEKEY $DOCS_DEPLOY_SERVER $DOCS_DEPLOY_SERVER_USER
     - export GIT_VER=$(git describe --always)
     - pip install -r ${CI_PROJECT_DIR}/docs/requirements.txt
-    - deploy-docs
+    - mkdir -p logs
+    - deploy-docs | tee logs/doc-url.txt
 
 deploy_docs_preview:
   extends:
@@ -65,6 +66,11 @@ deploy_docs_preview:
   before_script:
     - export SANITIZED_BRANCH_NAME=$(echo "$CI_COMMIT_REF_NAME" | tr '/' '-')
     - export FINAL_PREVIEW_URL="https://preview-docs.espressif.com/projects/esp-iot-solution/zh_CN/$SANITIZED_BRANCH_NAME/index.html"
+  artifacts:
+    when: always
+    paths:
+      - logs/doc-url.txt
+    expire_in: 4 days
 
 deploy_docs_production:
   extends:
@@ -82,6 +88,18 @@ deploy_docs_production:
     DOCS_DEPLOY_PATH: "$DOCS_PROD_PATH"
     DOCS_DEPLOY_URL_BASE: "$DOCS_PROD_URL_BASE"
 
+post_links:
+  stage: post_deploy
+  extends:
+    - .rules:deploy:docs_preview
+  tags: [deploy_docs]
+  image: $ESP_DOCS_ENV_IMAGE
+  needs:
+    - deploy_docs_preview
+  script:
+    - ls -al logs
+    - python3 ${CI_PROJECT_DIR}/tools/ci/post-mr-note.py $GITLAB_MR_NOTE_TOKEN $CI_PROJECT_PATH $CI_MERGE_REQUEST_IID
+
 # Up to 50 jobs can needs
 # Please modify tools/ci/launchpad/upload_project_config.yml at same time.
 pack-upload_files:
@@ -92,13 +110,13 @@ pack-upload_files:
     - job: "build_example_display_lcd_lcd_with_te: [espressif/idf:release-v5.1]"
     - job: "build_example_display_lcd_qspi_with_ram: [espressif/idf:release-v5.1]"
     - job: "build_example_display_lcd_qspi_without_ram: [espressif/idf:release-v5.3]"
-    - job: "build_example_display_lcd_rgb_avoid_tearing: [espressif/idf:release-v5.1]"
-    - job: "build_example_display_lcd_rgb_lcd_8bit: [espressif/idf:release-v5.1]"
+    - job: "build_example_display_lcd_rgb_avoid_tearing: [espressif/idf:release-v5.3]"
+    - job: "build_example_display_lcd_rgb_lcd_8bit: [espressif/idf:release-v5.3]"
     - job: "build_example_keyboard: [espressif/idf:release-v5.3]"
     - job: "build_example_usb_device_bootloader_uf2: [espressif/idf:release-v5.3]"
     - job: "build_example_usb_device_usb_dongle: [espressif/idf:release-v5.3]"
     - job: "build_example_usb_device_usb_dual_uvc_device: [espressif/idf:release-v5.3]"
-    - job: "build_example_usb_device_usb_extend_screen"
+    - job: "build_example_usb_device_usb_extend_screen: [espressif/idf:release-v5.4]"
     - job: "build_example_usb_device_usb_hid_device: [espressif/idf:release-v5.0]"
     - job: "build_example_usb_device_usb_lcd_display"
     - job: "build_example_usb_device_usb_msc_wireless_disk: [espressif/idf:release-v5.0]"
@@ -113,7 +131,9 @@ pack-upload_files:
     - job: "build_example_usb_host_usb_camera_mic_spk: [espressif/idf:release-v5.1]"
     - job: "build_example_usb_host_usb_cdc_4g_module: [espressif/idf:release-v5.1]"
     - job: "build_example_usb_host_usb_cdc_basic: [espressif/idf:release-v5.1]"
+    - job: "build_example_usb_host_usb_hub_dual_camera: [espressif/idf:release-v5.4]"
     - job: "build_example_usb_host_usb_msc_ota: [espressif/idf:release-v5.1]"
+    - job: "build_example_vision_opencv_color_tracker: [espressif/idf:release-v5.4]"
 
   artifacts:
     when: always

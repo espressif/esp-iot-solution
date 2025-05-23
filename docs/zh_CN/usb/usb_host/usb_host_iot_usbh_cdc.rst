@@ -21,7 +21,7 @@ USB 主机 CDC
         .new_dev_cb = cdc_new_dev_cb,
     };
 
-2. 使用 ``usbh_cdc_create`` 配置，用户可以简单配置 itf_num 接口号和内部 ringbuffer 的大小，除此之外，用户还可以配置热插拔相关的回调函数 ``connect`` ``disconnect`` ``revc_data``：
+2. 使用 ``usbh_cdc_create`` 配置，用户可以简单配置 itf_num 接口号和内部 ringbuffer 的大小，除此之外，用户还可以配置热插拔相关的回调函数 ``connect`` ``disconnect`` ``recv_data``：
 
 .. code:: c
 

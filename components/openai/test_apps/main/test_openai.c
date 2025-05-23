@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -33,13 +33,6 @@ extern const uint8_t introduce_espressif_mp3_end[]   asm("_binary_introduce_espr
 
 TEST_CASE("test ChatCompletion", "[ChatCompletion]")
 {
-    /* This helper function configures Wi-Fi or Ethernet, as selected in menuconfig.
-     * Read "Establishing Wi-Fi or Ethernet Connection" section in
-     * examples/protocols/README.md for more information about this function.
-     */
-    ESP_ERROR_CHECK(example_connect());
-    ESP_LOGI(TAG, "Connected to AP, begin http example");
-
     OpenAI_t *openai = OpenAICreate(openai_key);
     TEST_ASSERT_NOT_NULL(openai);
     OpenAI_ChatCompletion_t *chatCompletion = openai->chatCreate(openai);
@@ -93,18 +86,11 @@ TEST_CASE("test ChatCompletion", "[ChatCompletion]")
     result->deleteResponse(result);
     openai->chatDelete(chatCompletion);
     OpenAIDelete(openai);
-    example_disconnect();
     vTaskDelay(1000 / portTICK_PERIOD_MS);
 }
 
 TEST_CASE("test AudioTranscription en", "[AudioTranscription]")
 {
-    /* This helper function configures Wi-Fi or Ethernet, as selected in menuconfig.
-     * Read "Establishing Wi-Fi or Ethernet Connection" section in
-     * examples/protocols/README.md for more information about this function.
-     */
-    ESP_ERROR_CHECK(example_connect());
-    ESP_LOGI(TAG, "Connected to AP, begin http example");
     OpenAI_t *openai = OpenAICreate(openai_key);
     OpenAI_AudioTranscription_t *audioTranscription = openai->audioTranscriptionCreate(openai);
     TEST_ASSERT_NOT_NULL(audioTranscription);
@@ -118,18 +104,11 @@ TEST_CASE("test AudioTranscription en", "[AudioTranscription]")
     free(text);
     openai->audioTranscriptionDelete(audioTranscription);
     OpenAIDelete(openai);
-    example_disconnect();
     vTaskDelay(1000 / portTICK_PERIOD_MS);
 }
 
 TEST_CASE("test AudioTranscription cn", "[AudioTranscription]")
 {
-    /* This helper function configures Wi-Fi or Ethernet, as selected in menuconfig.
-     * Read "Establishing Wi-Fi or Ethernet Connection" section in
-     * examples/protocols/README.md for more information about this function.
-     */
-    ESP_ERROR_CHECK(example_connect());
-    ESP_LOGI(TAG, "Connected to AP, begin http example");
     OpenAI_t *openai = OpenAICreate(openai_key);
     OpenAI_AudioTranscription_t *audioTranscription = openai->audioTranscriptionCreate(openai);
     TEST_ASSERT_NOT_NULL(audioTranscription);
@@ -144,18 +123,11 @@ TEST_CASE("test AudioTranscription cn", "[AudioTranscription]")
     free(text);
     openai->audioTranscriptionDelete(audioTranscription);
     OpenAIDelete(openai);
-    example_disconnect();
     vTaskDelay(1000 / portTICK_PERIOD_MS);
 }
 
 TEST_CASE("test AudioSpeech", "[AudioSpeech]")
 {
-    /* This helper function configures Wi-Fi or Ethernet, as selected in menuconfig.
-     * Read "Establishing Wi-Fi or Ethernet Connection" section in
-     * examples/protocols/README.md for more information about this function.
-     */
-    ESP_ERROR_CHECK(example_connect());
-    ESP_LOGI(TAG, "Connected to AP, begin http example");
     OpenAI_t *openai = OpenAICreate(openai_key);
     OpenAI_AudioTranscription_t *audioTranscription = openai->audioTranscriptionCreate(openai);
     OpenAI_AudioSpeech_t *audioSpeech = openai->audioSpeechCreate(openai);
@@ -190,7 +162,27 @@ TEST_CASE("test AudioSpeech", "[AudioSpeech]")
     speechresult->deleteResponse(speechresult);
     openai->audioSpeechDelete(audioSpeech);
     OpenAIDelete(openai);
-    example_disconnect();
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+}
+
+TEST_CASE("test image generation", "[image]")
+{
+    OpenAI_t *openai = OpenAICreate(openai_key);
+    OpenAI_ImageGeneration_t *imageGeneration = openai->imageGenerationCreate(openai);
+    imageGeneration->setSize(imageGeneration, OPENAI_IMAGE_SIZE_256x256);
+    imageGeneration->setN(imageGeneration, 1);
+    imageGeneration->setResponseFormat(imageGeneration, OPENAI_IMAGE_RESPONSE_FORMAT_URL);
+    OpenAI_ImageResponse_t *imageResponse = imageGeneration->prompt(imageGeneration, "A cute cat");
+    TEST_ASSERT_NOT_NULL(imageResponse);
+    if (imageResponse->getLen) {
+        char *image_url = imageResponse->getData(imageResponse, 0);
+        ESP_LOGI(TAG, "Image URL: %s\n", image_url);
+    } else {
+        ESP_LOGE(TAG, "Image generation failed");
+    }
+    imageResponse->deleteResponse(imageResponse);
+    openai->imageGenerationDelete(imageGeneration);
+    OpenAIDelete(openai);
     vTaskDelay(1000 / portTICK_PERIOD_MS);
 }
 
@@ -248,6 +240,13 @@ void app_main(void)
         ESP_LOGE(TAG, "Please enter your openai_key");
         return;
     }
+
+    /* This helper function configures Wi-Fi or Ethernet, as selected in menuconfig.
+     * Read "Establishing Wi-Fi or Ethernet Connection" section in
+     * examples/protocols/README.md for more information about this function.
+     */
+    ESP_ERROR_CHECK(example_connect());
+    ESP_LOGI(TAG, "Connected to AP, begin http example");
 
     unity_run_menu();
 }

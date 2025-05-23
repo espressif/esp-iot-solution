@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -113,12 +113,14 @@ esp_err_t esp_ble_cts_set_reference_time(esp_ble_cts_ref_time_t *in_val)
 
 #ifdef CONFIG_BLE_CTS_REF_TIME_CHAR_ENABLE
 static esp_err_t cts_ref_time_cb(const uint8_t *inbuf, uint16_t inlen,
-                                 uint8_t **outbuf, uint16_t *outlen, void *priv_data)
+                                 uint8_t **outbuf, uint16_t *outlen, void *priv_data, uint8_t *att_status)
 {
     uint8_t len = sizeof(s_ref_time);
 
     memcpy(&s_ref_time, inbuf, MIN(len, inlen));
     esp_event_post(BLE_CTS_EVENTS, BLE_CTS_CHR_UUID16_REFERENCE_TIME, ((uint8_t *)(&s_ref_time)), sizeof(esp_ble_cts_ref_time_t), portMAX_DELAY);
+
+    *att_status = ESP_IOT_ATT_SUCCESS;
 
     return ESP_OK;
 }
@@ -126,7 +128,7 @@ static esp_err_t cts_ref_time_cb(const uint8_t *inbuf, uint16_t inlen,
 
 #ifdef CONFIG_BLE_CTS_LOCAL_TIME_CHAR_ENABLE
 static esp_err_t cts_local_time_cb(const uint8_t *inbuf, uint16_t inlen,
-                                   uint8_t **outbuf, uint16_t *outlen, void *priv_data)
+                                   uint8_t **outbuf, uint16_t *outlen, void *priv_data, uint8_t *att_status)
 {
     uint8_t len = sizeof(s_local_time);
 
@@ -139,23 +141,27 @@ static esp_err_t cts_local_time_cb(const uint8_t *inbuf, uint16_t inlen,
 #endif
 
     if (!outbuf || !outlen) {
+        *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
         return ESP_ERR_INVALID_ARG;
     }
 
     *outbuf = calloc(1, len);
     if (!(*outbuf)) {
+        *att_status = ESP_IOT_ATT_INSUF_RESOURCE;
         return ESP_ERR_NO_MEM;
     }
 
     memcpy(*outbuf, &s_local_time, len);
     *outlen = len;
 
+    *att_status = ESP_IOT_ATT_SUCCESS;
+
     return ESP_OK;
 }
 #endif
 
 static esp_err_t cts_cur_time_cb(const uint8_t *inbuf, uint16_t inlen,
-                                 uint8_t **outbuf, uint16_t *outlen, void *priv_data)
+                                 uint8_t **outbuf, uint16_t *outlen, void *priv_data, uint8_t *att_status)
 {
     uint8_t len = sizeof(s_cur_time);
 
@@ -168,16 +174,20 @@ static esp_err_t cts_cur_time_cb(const uint8_t *inbuf, uint16_t inlen,
 #endif
 
     if (!outbuf || !outlen) {
+        *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
         return ESP_ERR_INVALID_ARG;
     }
 
     *outbuf = calloc(1, len);
     if (!(*outbuf)) {
+        *att_status = ESP_IOT_ATT_INSUF_RESOURCE;
         return ESP_ERR_NO_MEM;
     }
 
     memcpy(*outbuf, &s_cur_time, len);
     *outlen = len;
+
+    *att_status = ESP_IOT_ATT_SUCCESS;
 
     return ESP_OK;
 }

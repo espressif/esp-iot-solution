@@ -16,6 +16,7 @@ jobs:
         uses: espressif/upload-components-ci-action@v1
         with:
           directories: >
+            components/audio/adc_mic;
             components/audio/pwm_audio;
             components/avi_player;
             components/bluetooth/ble_conn_mgr;
@@ -44,6 +45,7 @@ jobs:
             components/display/lcd/esp_lcd_st77916;
             components/display/lcd/esp_lcd_st77922;
             components/display/lcd/esp_lcd_usb_display;
+            components/display/lcd_touch/esp_lcd_touch_ili2118;
             components/display/lcd_touch/esp_lcd_touch_spd2010;
             components/display/lcd_touch/esp_lcd_touch_st7123;
             components/display/tools/esp_lv_decoder;
@@ -54,6 +56,7 @@ jobs:
             components/extended_vfs;
             components/gprof;
             components/i2c_bus;
+            components/iot_eth;
             components/ir/ir_learn;
             components/keyboard_button;
             components/knob;
@@ -81,7 +84,11 @@ jobs:
             components/sensors/radar/at581x;
             components/sensors/sensor_hub;
             components/spi_bus;
+            components/storage/eeprom/at24c02;
+            components/touch/touch_button;
+            components/touch/touch_button_sensor;
             components/touch/touch_proximity_sensor;
+            components/touch/touch_slider_sensor;
             components/usb/esp_msc_ota;
             components/usb/esp_tinyuf2;
             components/usb/iot_usbh;
@@ -89,7 +96,9 @@ jobs:
             components/usb/iot_usbh_modem;
             components/usb/usb_device_uac;
             components/usb/usb_device_uvc;
+            components/usb/iot_usbh_rndis;
             components/usb/usb_stream;
+            components/utilities/adc_tp_calibration;
             components/utilities/xz;
             components/zero_detection;
             tools/cmake_utilities;

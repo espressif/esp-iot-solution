@@ -21,13 +21,19 @@ menu "LightBulb Driver Config"
             help
                 Enable SM2135eh output.
 
-        config ENABLE_SM2x35EGH_DRIVER
+        config ENABLE_SM2182E_DRIVER
+            bool "Enable sm2182e interface"
+            default "y"
+            help
+                Enable SN2182e output.
+
+        config ENABLE_SM2X35EGH_DRIVER
             bool "Enable sm2x35egh(sm2235egh sm2335egh) interface"
             default "y"
             help
                 Enable SM2x35egh output.
 
-        config ENABLE_BP57x8D_DRIVER
+        config ENABLE_BP57X8D_DRIVER
             bool "Enable bp57x8d(bp5758d bp5768d) interface"
             default "y"
             help
@@ -51,8 +57,15 @@ menu "LightBulb Driver Config"
             help
                 Enable ws2812 output.
 
-        menu "IIC Send Task Config"
-            depends on ENABLE_KP18058_DRIVER || ENABLE_BP1658CJ_DRIVER || ENABLE_BP57x8D_DRIVER || ENABLE_SM2x35EGH_DRIVER || ENABLE_SM2135EH_DRIVER || ENABLE_SM2135E_DRIVER
+        menu "IIC Config"
+            depends on ENABLE_KP18058_DRIVER || ENABLE_BP1658CJ_DRIVER || ENABLE_BP57X8D_DRIVER || ENABLE_SM2X35EGH_DRIVER || ENABLE_SM2135EH_DRIVER || ENABLE_SM2135E_DRIVER
+
+            config LB_ENABLE_NEW_IIC_DRIVER
+                depends on ESP_IDF_VERSION >= 5.2.6
+                bool "Enable new I2C driver"
+                default "n"
+                help
+                    Enable new I2C driver.
 
             config LB_IIC_TASK_STACK
                 int "IIC Send Task stack"

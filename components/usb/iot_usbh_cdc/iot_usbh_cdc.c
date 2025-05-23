@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -33,12 +33,19 @@ static portMUX_TYPE cdc_lock =  portMUX_INITIALIZER_UNLOCKED;
 #define CDC_TEARDOWN_COMPLETE   BIT1
 
 #define TIMEOUT_USB_RINGBUF_MS  200                      /*! Timeout for ring buffer operate */
+#define CDC_CTRL_TIMEOUT_MS     5000                     /*! Timeout for control transfer */
+
+typedef struct new_dev_cb_s {
+    usbh_cdc_new_dev_cb_t cb;
+    void *user_data;
+    SLIST_ENTRY(new_dev_cb_s) list_entry;
+} new_dev_cb_t;
 
 typedef struct {
     usb_host_client_handle_t cdc_client_hdl;             /*!< USB Host handle reused for all CDC-ACM devices in the system */
     EventGroupHandle_t event_group;
     SemaphoreHandle_t mutex;
-    usbh_cdc_new_dev_cb_t new_dev_cb;
+    SLIST_HEAD(list_cb, new_dev_cb_s) new_dev_cb_list;
     SLIST_HEAD(list_dev, usbh_cdc_s) cdc_devices_list;   /*!< List of open pseudo devices */
 } usbh_cdc_obj_t;
 
@@ -50,13 +57,21 @@ typedef struct usbh_cdc_s {
     uint16_t vid;                          // Vendor ID
     uint16_t pid;                          // Product ID
     struct {
+        usb_transfer_t *xfer;         // Notification transfer
+        const usb_intf_desc_t *intf_desc;
+    } notif;
+    struct {
         usb_transfer_t *out_xfer;          // OUT data transfer
         SemaphoreHandle_t out_xfer_free_sem;
         usb_transfer_t *in_xfer;           // IN data transfer
         uint16_t in_mps;                   // IN endpoint Maximum Packet Size
         uint8_t *in_data_buffer_base;      // Pointer to IN data buffer in usb_transfer_t
-        usb_intf_desc_t *intf_desc;  // Pointer to data interface descriptor
+        const usb_intf_desc_t *intf_desc;  // Pointer to data interface descriptor
     } data;
+    struct {
+        usb_transfer_t *xfer;
+        SemaphoreHandle_t mux;
+    } ctrl;
     usbh_cdc_event_callbacks_t cbs;         // Callbacks for the pseudo device
     RingbufHandle_t in_ringbuf_handle;   /*!< in ringbuffer handle of corresponding interface */
     size_t in_ringbuf_size;
@@ -110,9 +125,8 @@ static esp_err_t _ringbuf_pop(RingbufHandle_t ringbuf_hdl, uint8_t *buf, size_t 
 static esp_err_t _ringbuf_push(RingbufHandle_t ringbuf_hdl, const uint8_t *buf, size_t write_bytes, TickType_t ticks_to_wait)
 {
     int res = xRingbufferSend(ringbuf_hdl, buf, write_bytes, ticks_to_wait);
-
     if (res != pdTRUE) {
-        ESP_LOGW(TAG, "The in buffer is too small, the data has been lost");
+        ESP_LOGW(TAG, "The ringbuffer is full, the data has been lost");
         return ESP_FAIL;
     }
     return ESP_OK;
@@ -219,16 +233,18 @@ static void usb_event_cb(const usb_host_client_event_msg_t *event_msg, void *arg
         }
         assert(current_device);
 
-        /*!< Call new dev callback */
-        if (p_usbh_cdc_obj->new_dev_cb) {
-            p_usbh_cdc_obj->new_dev_cb(current_device);
+        new_dev_cb_t *new_dev_cb;
+        SLIST_FOREACH(new_dev_cb, &p_usbh_cdc_obj->new_dev_cb_list, list_entry) {
+            if (new_dev_cb->cb) {
+                new_dev_cb->cb(current_device, new_dev_cb->user_data);
+            }
         }
 
         const usb_device_desc_t *device_desc;
         ESP_ERROR_CHECK(usb_host_get_device_descriptor(current_device, &device_desc));
 
-        bool opened = false;
         usbh_cdc_t *cdc;
+        bool if_opened = false;
         SLIST_FOREACH(cdc, &p_usbh_cdc_obj->cdc_devices_list, list_entry) {
             if ((cdc->vid != CDC_HOST_ANY_VID && cdc->vid != device_desc->idVendor) ||
                     (cdc->pid != CDC_HOST_ANY_PID && cdc->pid != device_desc->idProduct)) {
@@ -243,14 +259,14 @@ static void usb_event_cb(const usb_host_client_event_msg_t *event_msg, void *arg
             if (_cdc_open(cdc) != ESP_OK) {
                 ESP_LOGE(TAG, "Failed to open cdc device: %d", event_msg->new_dev.address);
             } else {
-                opened = true;
+                if_opened = true;
                 ESP_LOGI(TAG, "Opened cdc device: %d", event_msg->new_dev.address);
             }
         }
-        if (!opened) {
+
+        if (!if_opened) {
             usb_host_device_close(p_usbh_cdc_obj->cdc_client_hdl, current_device); // Gracefully continue on error
         }
-
         ESP_LOGI(TAG, "New device connected, address: %d", event_msg->new_dev.address);
         break;
     }
@@ -325,7 +341,13 @@ esp_err_t usbh_cdc_driver_install(const usbh_cdc_driver_config_t *config)
     p_usbh_cdc_obj->cdc_client_hdl = usb_client;
     p_usbh_cdc_obj->event_group = event_group;
     p_usbh_cdc_obj->mutex = mutex;
-    p_usbh_cdc_obj->new_dev_cb = config->new_dev_cb;
+    SLIST_INIT(&(p_usbh_cdc_obj->new_dev_cb_list));
+    if (config->new_dev_cb) {
+        new_dev_cb_t *new_dev_cb = (new_dev_cb_t *) calloc(1, sizeof(new_dev_cb_t));
+        new_dev_cb->cb = config->new_dev_cb;
+        new_dev_cb->user_data = config->user_data;
+        SLIST_INSERT_HEAD(&(p_usbh_cdc_obj->new_dev_cb_list), new_dev_cb, list_entry);
+    }
 
     xTaskNotifyGive(driver_task_h);
     return ESP_OK;
@@ -361,6 +383,13 @@ esp_err_t usbh_cdc_driver_uninstall(void)
     }
     CDC_EXIT_CRITICAL();
 
+    // Free all new device callbacks
+    new_dev_cb_t *current, *tmp;
+    SLIST_FOREACH_SAFE(current, &p_usbh_cdc_obj->new_dev_cb_list, list_entry, tmp) {
+        SLIST_REMOVE(&p_usbh_cdc_obj->new_dev_cb_list, current, new_dev_cb_s, list_entry);
+        free(current);
+    }
+
     // Signal to CDC task to stop, unblock it and wait for its deletion
     xEventGroupSetBits(p_usbh_cdc_obj->event_group, CDC_TEARDOWN);
     usb_host_client_unblock(p_usbh_cdc_obj->cdc_client_hdl);
@@ -375,6 +404,43 @@ esp_err_t usbh_cdc_driver_uninstall(void)
 
 unblock:
     return ret;
+}
+
+static void notif_xfer_cb(usb_transfer_t *notif_xfer)
+{
+    ESP_LOGD(TAG, "notif xfer cb");
+    usbh_cdc_t *cdc = (usbh_cdc_t *)notif_xfer->context;
+    if (cdc->state != USBH_CDC_OPEN) {
+        notif_xfer->status = USB_TRANSFER_STATUS_CANCELED;
+    }
+
+    switch (notif_xfer->status) {
+    case USB_TRANSFER_STATUS_COMPLETED: {
+        if (cdc->cbs.notif_cb) {
+            iot_cdc_notification_t *notif = (iot_cdc_notification_t *)notif_xfer->data_buffer;
+            cdc->cbs.notif_cb((usbh_cdc_handle_t)cdc, notif, cdc->cbs.user_data);
+        }
+        // Start polling for new data again
+        ESP_LOGD(TAG, "Submitting poll for INTR IN transfer");
+        usb_host_transfer_submit(cdc->notif.xfer);
+        return;
+    }
+    case USB_TRANSFER_STATUS_NO_DEVICE:
+    case USB_TRANSFER_STATUS_CANCELED:
+        return;
+    default:
+        // Any other error
+        break;
+    }
+
+    ESP_LOGE(TAG, "Notif xfer failed, status %d", notif_xfer->status);
+}
+
+static void control_xfer_cb(usb_transfer_t *ctrl_xfer)
+{
+    ESP_LOGD(TAG, "control xfer cb");
+    assert(ctrl_xfer->context);
+    xSemaphoreGive((SemaphoreHandle_t)ctrl_xfer->context);
 }
 
 static void in_xfer_cb(usb_transfer_t *in_xfer)
@@ -392,15 +458,18 @@ static void in_xfer_cb(usb_transfer_t *in_xfer)
         if (data_len + in_xfer->actual_num_bytes >= cdc->in_ringbuf_size) {
             // TODO: add notify cb for user
             // if ringbuffer overflow, drop the data
-            ESP_LOGD(TAG, "in ringbuf full");
+            ESP_LOGW(TAG, "CDC in ringbuf is full!");
         } else {
-            _ringbuf_push(cdc->in_ringbuf_handle, in_xfer->data_buffer, in_xfer->actual_num_bytes, pdMS_TO_TICKS(TIMEOUT_USB_RINGBUF_MS));
+            ESP_LOG_BUFFER_HEXDUMP(TAG, in_xfer->data_buffer, in_xfer->actual_num_bytes, ESP_LOG_DEBUG);
+            if (_ringbuf_push(cdc->in_ringbuf_handle, in_xfer->data_buffer, in_xfer->actual_num_bytes, pdMS_TO_TICKS(TIMEOUT_USB_RINGBUF_MS)) != ESP_OK) {
+                ESP_LOGE(TAG, "in ringbuf push failed");
+            }
         }
 
         usb_host_transfer_submit(in_xfer);
 
-        if (cdc->cbs.revc_data) {
-            cdc->cbs.revc_data(cdc->cbs.user_data, cdc->cbs.user_data);
+        if (cdc->cbs.recv_data) {
+            cdc->cbs.recv_data((usbh_cdc_handle_t)cdc, cdc->cbs.user_data);
         }
 
         return;
@@ -462,9 +531,33 @@ static void _cdc_tx_xfer_submit(usb_transfer_t *out_xfer)
     }
 }
 
-static esp_err_t _cdc_transfers_allocate(usbh_cdc_t *cdc, const usb_ep_desc_t *in_ep_desc, const usb_ep_desc_t *out_ep_desc)
+static esp_err_t _cdc_transfers_allocate(usbh_cdc_t *cdc, const usb_ep_desc_t *notif_ep_desc, const usb_ep_desc_t *in_ep_desc, const usb_ep_desc_t *out_ep_desc)
 {
     esp_err_t ret = ESP_OK;
+
+    if (notif_ep_desc) {
+        ESP_GOTO_ON_ERROR(
+            usb_host_transfer_alloc(USB_EP_DESC_GET_MPS(notif_ep_desc), 0, &cdc->notif.xfer),
+            err, TAG,
+        );
+        cdc->notif.xfer->device_handle = cdc->dev_hdl;
+        cdc->notif.xfer->bEndpointAddress = notif_ep_desc->bEndpointAddress;
+        cdc->notif.xfer->callback = notif_xfer_cb;
+        cdc->notif.xfer->context = cdc;
+        cdc->notif.xfer->num_bytes = USB_EP_DESC_GET_MPS(notif_ep_desc);
+    }
+
+    ESP_GOTO_ON_ERROR(
+        usb_host_transfer_alloc(CONFIG_CONTROL_TRANSFER_BUFFER_SIZE, 0, &cdc->ctrl.xfer),
+        err, TAG,);
+    cdc->ctrl.xfer->timeout_ms = 1000;
+    cdc->ctrl.xfer->bEndpointAddress = 0;
+    cdc->ctrl.xfer->device_handle = cdc->dev_hdl;
+    cdc->ctrl.xfer->callback = control_xfer_cb;
+    cdc->ctrl.xfer->context = xSemaphoreCreateBinary();
+    ESP_GOTO_ON_FALSE(cdc->ctrl.xfer->context, ESP_ERR_NO_MEM, err, TAG,);
+    cdc->ctrl.mux = xSemaphoreCreateMutex();
+    ESP_GOTO_ON_FALSE(cdc->ctrl.mux, ESP_ERR_NO_MEM, err, TAG,);
 
     const size_t in_buf_len = CONFIG_IN_TRANSFER_BUFFER_SIZE;
     if (in_ep_desc) {
@@ -500,7 +593,6 @@ static esp_err_t _cdc_transfers_allocate(usbh_cdc_t *cdc, const usb_ep_desc_t *i
             cdc->data.out_xfer->num_bytes = out_buf_len;
         }
     }
-
     return ret;
 err:
     _cdc_transfers_free(cdc);
@@ -510,6 +602,19 @@ err:
 static void _cdc_transfers_free(usbh_cdc_t *cdc)
 {
     assert(cdc);
+
+    if (cdc->ctrl.xfer) {
+        if (cdc->ctrl.xfer->context) {
+            vSemaphoreDelete(cdc->ctrl.xfer->context);
+        }
+        if (cdc->ctrl.mux) {
+            vSemaphoreDelete(cdc->ctrl.mux);
+        }
+        usb_host_transfer_free(cdc->ctrl.xfer);
+    }
+    if (cdc->notif.xfer) {
+        usb_host_transfer_free(cdc->notif.xfer);
+    }
     if (cdc->data.in_xfer) {
         usb_host_transfer_free(cdc->data.in_xfer);
     }
@@ -522,7 +627,6 @@ static esp_err_t _cdc_reset_transfer_endpoint(usb_device_handle_t dev_hdl, usb_t
 {
     assert(dev_hdl);
     assert(transfer);
-
     ESP_RETURN_ON_ERROR(usb_host_endpoint_halt(dev_hdl, transfer->bEndpointAddress), TAG,);
     ESP_RETURN_ON_ERROR(usb_host_endpoint_flush(dev_hdl, transfer->bEndpointAddress), TAG,);
     usb_host_endpoint_clear(dev_hdl, transfer->bEndpointAddress);
@@ -543,6 +647,21 @@ static esp_err_t _cdc_start(usbh_cdc_t *cdc)
     if (cdc->data.in_xfer) {
         ESP_LOGD(TAG, "Submitting poll for BULK IN transfer");
         ESP_ERROR_CHECK(usb_host_transfer_submit(cdc->data.in_xfer));
+    }
+
+    if (cdc->notif.xfer) {
+        // If notification are supported, claim its interface and start polling its IN endpoint
+        if (cdc->notif.intf_desc != cdc->data.intf_desc) {
+            ESP_GOTO_ON_ERROR(
+                usb_host_interface_claim(
+                    p_usbh_cdc_obj->cdc_client_hdl,
+                    cdc->dev_hdl,
+                    cdc->notif.intf_desc->bInterfaceNumber,
+                    cdc->notif.intf_desc->bAlternateSetting),
+                err, TAG, "Could not claim interface");
+        }
+        ESP_LOGD(TAG, "Submitting poll for INTR IN transfer");
+        ESP_ERROR_CHECK(usb_host_transfer_submit(cdc->notif.xfer));
     }
 
     return ESP_OK;
@@ -613,17 +732,24 @@ static esp_err_t _cdc_open(usbh_cdc_t *cdc)
     ESP_ERROR_CHECK(usb_host_get_active_config_descriptor(cdc->dev_hdl, &config_desc));
     ESP_ERROR_CHECK(usb_host_get_device_descriptor(cdc->dev_hdl, &device_desc));
 
-    cdc_parsed_info_t cdc_info;
-    ret = cdc_parse_interface_descriptor(device_desc, config_desc, cdc->intf_idx, &cdc->data.intf_desc, &cdc_info);
+    cdc_parsed_info_t cdc_info = {0};
+    ret = cdc_parse_interface_descriptor(device_desc, config_desc, cdc->intf_idx, &cdc_info);
     if (ret != ESP_OK) {
-        usb_host_device_close(p_usbh_cdc_obj->cdc_client_hdl, cdc->dev_hdl); // Gracefully continue on error
+        goto err;
     }
+
+    if (cdc_info.notif_ep) {
+        cdc->notif.intf_desc = cdc_info.notif_intf;
+    }
+
+    // Must have data interface descriptor
+    cdc->data.intf_desc = cdc_info.data_intf;
 
     _ring_buffer_flush(cdc->in_ringbuf_handle);
     _ring_buffer_flush(cdc->out_ringbuf_handle);
 
     ESP_GOTO_ON_ERROR(
-        _cdc_transfers_allocate(cdc, cdc_info.in_ep, cdc_info.out_ep),
+        _cdc_transfers_allocate(cdc, cdc_info.notif_ep, cdc_info.in_ep, cdc_info.out_ep),
         err, TAG,);
 
     ESP_GOTO_ON_ERROR(_cdc_start(cdc), err, TAG,);
@@ -639,7 +765,6 @@ static esp_err_t _cdc_open(usbh_cdc_t *cdc)
     return ESP_OK;
 
 err:
-    usb_host_device_close(p_usbh_cdc_obj->cdc_client_hdl, cdc->dev_hdl); // Gracefully continue on error
     return ret;
 }
 
@@ -651,17 +776,37 @@ static esp_err_t _cdc_close(usbh_cdc_t *cdc)
         return ESP_ERR_INVALID_STATE;
     }
 
+    cdc->state = USBH_CDC_CLOSE;
+
     // Cancel polling of BULK IN
     if (cdc->data.in_xfer) {
         ESP_ERROR_CHECK(_cdc_reset_transfer_endpoint(cdc->dev_hdl, cdc->data.in_xfer));
     }
 
+    ESP_ERROR_CHECK(_cdc_reset_transfer_endpoint(cdc->dev_hdl, cdc->data.out_xfer));
+
+    if (cdc->notif.xfer) {
+        ESP_ERROR_CHECK(_cdc_reset_transfer_endpoint(cdc->dev_hdl, cdc->notif.xfer));
+    }
+
+    if ((cdc->notif.intf_desc != NULL) && cdc->notif.intf_desc != cdc->data.intf_desc) {
+        ESP_ERROR_CHECK(usb_host_interface_release(p_usbh_cdc_obj->cdc_client_hdl, cdc->dev_hdl, cdc->notif.intf_desc->bInterfaceNumber));
+    }
+
+    if (cdc->data.out_xfer) {
+        ESP_ERROR_CHECK(_cdc_reset_transfer_endpoint(cdc->dev_hdl, cdc->data.out_xfer));
+    }
+
+    // wait for transfers to complete
+    vTaskDelay(10 / portTICK_PERIOD_MS);
     // Release all interfaces
     ESP_ERROR_CHECK(usb_host_interface_release(p_usbh_cdc_obj->cdc_client_hdl, cdc->dev_hdl, cdc->data.intf_desc->bInterfaceNumber));
 
     _cdc_transfers_free(cdc);
     usb_host_device_close(p_usbh_cdc_obj->cdc_client_hdl, cdc->dev_hdl);
-    cdc->state = USBH_CDC_CLOSE;
+
+    _ring_buffer_flush(cdc->in_ringbuf_handle);
+    _ring_buffer_flush(cdc->out_ringbuf_handle);
 
     if (cdc->cbs.disconnect) {
         cdc->cbs.disconnect((usbh_cdc_handle_t)cdc, cdc->cbs.user_data);
@@ -719,6 +864,9 @@ fail:
     if (cdc->data.out_xfer_free_sem) {
         vSemaphoreDelete(cdc->data.out_xfer_free_sem);
     }
+    if (cdc->dev_hdl) {
+        usb_host_device_close(p_usbh_cdc_obj->cdc_client_hdl, cdc->dev_hdl);
+    }
     if (cdc) {
         free(cdc);
     }
@@ -746,10 +894,68 @@ esp_err_t usbh_cdc_delete(usbh_cdc_handle_t cdc_handle)
     if (cdc->data.out_xfer_free_sem) {
         vSemaphoreDelete(cdc->data.out_xfer_free_sem);
     }
+
     if (cdc) {
         free(cdc);
     }
     return ESP_OK;
+}
+
+esp_err_t usbh_cdc_send_custom_request(usbh_cdc_handle_t cdc_handle, uint8_t bmRequestType, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, uint16_t wLength, uint8_t *data)
+{
+    esp_err_t ret = ESP_OK;
+    ESP_RETURN_ON_FALSE(cdc_handle != NULL, ESP_ERR_INVALID_ARG, TAG, "cdc_handle is NULL");
+    if (wLength > 0) {
+        ESP_RETURN_ON_FALSE(data != NULL, ESP_ERR_INVALID_ARG, TAG, "data is NULL");
+    }
+    usbh_cdc_t *cdc = (usbh_cdc_t *) cdc_handle;
+    ESP_RETURN_ON_FALSE(cdc->ctrl.xfer->data_buffer_size >= wLength, ESP_ERR_INVALID_ARG, TAG, "data buffer size is too small");
+    ESP_RETURN_ON_FALSE(cdc->state == USBH_CDC_OPEN, ESP_ERR_INVALID_STATE, TAG, "Device is not connected");
+
+    BaseType_t taken = xSemaphoreTake(cdc->ctrl.mux, pdMS_TO_TICKS(CDC_CTRL_TIMEOUT_MS));
+    if (taken == pdFALSE) {
+        return ESP_ERR_TIMEOUT;
+    }
+
+    usb_setup_packet_t *req = (usb_setup_packet_t *) cdc->ctrl.xfer->data_buffer;
+    uint8_t *start_of_data = (uint8_t *)req + sizeof(usb_setup_packet_t);
+    req->bmRequestType = bmRequestType;
+    req->bRequest = bRequest;
+    req->wValue = wValue;
+    req->wIndex = wIndex;
+    req->wLength = wLength;
+
+    // For IN transfers we must transfer data ownership to CDC driver
+    const bool in_transfer = bmRequestType & USB_BM_REQUEST_TYPE_DIR_IN;
+    if (!in_transfer) {
+        memcpy(start_of_data, data, wLength);
+    }
+
+    cdc->ctrl.xfer->num_bytes = wLength + sizeof(usb_setup_packet_t);
+    ESP_GOTO_ON_ERROR(
+        usb_host_transfer_submit_control(p_usbh_cdc_obj->cdc_client_hdl, cdc->ctrl.xfer),
+        unblock, TAG, "CTRL transfer failed");
+
+    taken = xSemaphoreTake((SemaphoreHandle_t)cdc->ctrl.xfer->context, pdMS_TO_TICKS(CDC_CTRL_TIMEOUT_MS));
+    if (!taken) {
+        // Transfer was not finished, error in USB LIB. Reset the endpoint
+        _cdc_reset_transfer_endpoint(cdc->dev_hdl, cdc->ctrl.xfer);
+        ret = ESP_ERR_TIMEOUT;
+        goto unblock;
+    }
+
+    ESP_LOGD(TAG, "cdc->ctrl.xfer->actual_num_bytes = %d\n", cdc->ctrl.xfer->actual_num_bytes);
+    ESP_GOTO_ON_FALSE(cdc->ctrl.xfer->status == USB_TRANSFER_STATUS_COMPLETED, ESP_ERR_INVALID_RESPONSE, unblock, TAG, "Control transfer error");
+
+    // For OUT transfers, we must transfer data ownership to user
+    if (in_transfer) {
+        memcpy(data, start_of_data, wLength);
+    }
+    ret = ESP_OK;
+
+unblock:
+    xSemaphoreGive(cdc->ctrl.mux);
+    return ret;
 }
 
 esp_err_t usbh_cdc_write_bytes(usbh_cdc_handle_t cdc_handle, const uint8_t *buf, size_t length, TickType_t ticks_to_wait)
@@ -788,14 +994,14 @@ esp_err_t usbh_cdc_read_bytes(usbh_cdc_handle_t cdc_handle, const uint8_t *buf, 
     usbh_cdc_t *cdc = (usbh_cdc_t *) cdc_handle;
     ESP_GOTO_ON_FALSE(cdc->state == USBH_CDC_OPEN, ESP_ERR_INVALID_STATE, fail, TAG, "Device is not connected");
 
-    size_t data_len = _get_ringbuf_len(cdc->in_ringbuf_handle);
-    if (data_len > *length) {
-        data_len = *length;
+    size_t data_len = *length;
+    if (data_len > cdc->in_ringbuf_size) {
+        data_len = cdc->in_ringbuf_size;
     }
 
-    ret = _ringbuf_pop(cdc->in_ringbuf_handle, (uint8_t *)buf, data_len, length, pdMS_TO_TICKS(TIMEOUT_USB_RINGBUF_MS));
+    ret = _ringbuf_pop(cdc->in_ringbuf_handle, (uint8_t *)buf, data_len, length, ticks_to_wait);
     if (ret != ESP_OK) {
-        ESP_LOGD(TAG, "cdc read failed");
+        ESP_LOGE(TAG, "cdc read failed");
         *length = 0;
         return ret;
     }
@@ -830,6 +1036,32 @@ esp_err_t usbh_cdc_get_rx_buffer_size(usbh_cdc_handle_t cdc_handle, size_t *size
     return ESP_OK;
 }
 
+esp_err_t usbh_cdc_register_new_dev_cb(usbh_cdc_new_dev_cb_t new_dev_cb, void *user_data)
+{
+    ESP_RETURN_ON_FALSE(p_usbh_cdc_obj, ESP_ERR_INVALID_STATE, TAG, "usbh cdc not installed");
+    ESP_RETURN_ON_FALSE(new_dev_cb, ESP_ERR_INVALID_ARG, TAG, "new_dev_cb is NULL");
+    new_dev_cb_t *cb = (new_dev_cb_t *) calloc(1, sizeof(new_dev_cb_t));
+    cb->cb = new_dev_cb;
+    cb->user_data = user_data;
+    SLIST_INSERT_HEAD(&(p_usbh_cdc_obj->new_dev_cb_list), cb, list_entry);
+    return ESP_OK;
+}
+
+esp_err_t usbh_cdc_unregister_new_dev_cb(usbh_cdc_new_dev_cb_t new_dev_cb)
+{
+    ESP_RETURN_ON_FALSE(p_usbh_cdc_obj, ESP_ERR_INVALID_STATE, TAG, "usbh cdc not installed");
+    ESP_RETURN_ON_FALSE(new_dev_cb, ESP_ERR_INVALID_ARG, TAG, "new_dev_cb is NULL");
+    // remove the new_dev_cb from the list
+    new_dev_cb_t *current, *tmp;
+    SLIST_FOREACH_SAFE(current, &p_usbh_cdc_obj->new_dev_cb_list, list_entry, tmp) {
+        if (current->cb == new_dev_cb) {
+            SLIST_REMOVE(&(p_usbh_cdc_obj->new_dev_cb_list), current, new_dev_cb_s, list_entry);
+            free(current);
+        }
+    }
+    return ESP_OK;
+}
+
 esp_err_t usbh_cdc_get_state(usbh_cdc_handle_t cdc_handle, usbh_cdc_state_t *state)
 {
     ESP_RETURN_ON_FALSE(cdc_handle != NULL, ESP_ERR_INVALID_ARG, TAG, "cdc_handle is NULL");
@@ -842,7 +1074,6 @@ esp_err_t usbh_cdc_desc_print(usbh_cdc_handle_t cdc_handle)
 {
     ESP_RETURN_ON_FALSE(cdc_handle != NULL, ESP_ERR_INVALID_ARG, TAG, "cdc_handle is NULL");
     usbh_cdc_t *cdc = (usbh_cdc_t *) cdc_handle;
-    ESP_RETURN_ON_FALSE(cdc->state == USBH_CDC_OPEN, ESP_ERR_INVALID_STATE, TAG, "Device is not connected");
     ESP_RETURN_ON_FALSE(cdc->dev_hdl != NULL, ESP_ERR_INVALID_STATE, TAG, "Device is not open yet");
 
     const usb_device_desc_t *device_desc;

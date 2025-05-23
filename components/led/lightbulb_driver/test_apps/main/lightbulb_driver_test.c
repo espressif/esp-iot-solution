@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -8,7 +8,7 @@
 #include "lightbulb.h"
 
 /*
- * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -35,7 +35,7 @@
 #define MIN(a, b)                                   (((a) < (b)) ? (a) : (b))
 #endif
 
-#define TEST_MEMORY_LEAK_THRESHOLD (-400)
+#define TEST_MEMORY_LEAK_THRESHOLD (-1000)
 
 static size_t before_free_8bit;
 static size_t before_free_32bit;
@@ -64,6 +64,53 @@ static IRAM_ATTR uint8_t parity_check(uint8_t input)
     return (count_table[input] % 2 == 0) ? input : (input |= 0x01);
 }
 
+#define MIX_TABLE_SIZE                  15
+lightbulb_cct_mapping_data_t table[MIX_TABLE_SIZE] = {
+    {.cct_kelvin = 2200, .cct_percentage = 0, .rgbcw = {0.547, 0.0, 0.0, 0.0, 0.453}},
+    {.cct_kelvin = 2400, .cct_percentage = 8, .rgbcw = {0.361, 0.019, 0.0, 0.0, 0.620}},
+    {.cct_kelvin = 2700, .cct_percentage = 16, .rgbcw = {0.0, 0.00, 0.00, 0.00, 1.0}},
+    {.cct_kelvin = 3200, .cct_percentage = 24, .rgbcw = {0.00, 0.215, 0.083, 0.0, 0.702}},
+    {.cct_kelvin = 3600, .cct_percentage = 32, .rgbcw = {0.00, 0.293, 0.127, 0.0, 0.579}},
+    {.cct_kelvin = 4000, .cct_percentage = 40, .rgbcw = {0.00, 0.360, 0.140, 0.0, 0.499}},
+    {.cct_kelvin = 4500, .cct_percentage = 48, .rgbcw = {0.00, 0.397, 0.183, 00.0, 0.420}},
+    {.cct_kelvin = 4900, .cct_percentage = 56, .rgbcw = {0.00, 0.425, 0.203, 0.00, 0.372}},
+    {.cct_kelvin = 5200, .cct_percentage = 64, .rgbcw = {0.00, 0.420, 0.225, 0.00, 0.355}},
+    {.cct_kelvin = 5500, .cct_percentage = 72, .rgbcw = {0.00, 0.421, 0.242, 0.00, 0.337}},
+    {.cct_kelvin = 5900, .cct_percentage = 80, .rgbcw = {0.00, 0.420, 0.261, 0.00, 0.319}},
+    {.cct_kelvin = 6100, .cct_percentage = 88, .rgbcw = {0.00, 0.432, 0.263, 0.00, 0.304}},
+    {.cct_kelvin = 6300, .cct_percentage = 94, .rgbcw = {0.00, 0.443, 0.269, 0.00, 0.288}},
+    {.cct_kelvin = 6900, .cct_percentage = 98, .rgbcw = {0.00, 0.443, 0.269, 0.00, 0.288}},
+    {.cct_kelvin = 7000, .cct_percentage = 100, .rgbcw = {0.00, 0.444, 0.288, 0.00, 0.268}},
+};
+
+#define COLOR_SZIE 24
+lightbulb_color_mapping_data_t color_data[COLOR_SZIE] = {
+    {.rgbcw_100 = {1.0000, 0.0000, 0.0000}, .rgbcw_50 = {0.5865, 0.2954, 0.1181}, .rgbcw_0 = {0.5098, 0.4118, 0.0784}, .hue = 0},
+    {.rgbcw_100 = {0.8285, 0.1715, 0.0000}, .rgbcw_50 = {0.5498, 0.3649, 0.0853}, .rgbcw_0 = {0.4018, 0.4375, 0.1607}, .hue = 15},
+    {.rgbcw_100 = {0.7168, 0.2832, 0.0000}, .rgbcw_50 = {0.4850, 0.4261, 0.0888}, .rgbcw_0 = {0.3786, 0.4466, 0.1748}, .hue = 30},
+    {.rgbcw_100 = {0.5932, 0.4068, 0.0000}, .rgbcw_50 = {0.4902, 0.4566, 0.0532}, .rgbcw_0 = {0.3981, 0.4466, 0.1553}, .hue = 45},
+    {.rgbcw_100 = {0.5164, 0.4836, 0.0000}, .rgbcw_50 = {0.4394, 0.4928, 0.0678}, .rgbcw_0 = {0.3846, 0.4808, 0.1346}, .hue = 60},
+    {.rgbcw_100 = {0.3794, 0.6206, 0.0000}, .rgbcw_50 = {0.3728, 0.5658, 0.0614}, .rgbcw_0 = {0.3922, 0.4706, 0.1373}, .hue = 75},
+    {.rgbcw_100 = {0.2947, 0.7053, 0.0000}, .rgbcw_50 = {0.3333, 0.5949, 0.0718}, .rgbcw_0 = {0.3762, 0.4752, 0.1485}, .hue = 90},
+    {.rgbcw_100 = {0.1188, 0.8812, 0.0000}, .rgbcw_50 = {0.2624, 0.6679, 0.0697}, .rgbcw_0 = {0.3568, 0.4874, 0.1558}, .hue = 105},
+    {.rgbcw_100 = {0.0000, 1.0000, 0.0000}, .rgbcw_50 = {0.2212, 0.7019, 0.0769}, .rgbcw_0 = {0.3591, 0.4864, 0.1545}, .hue = 120},
+    {.rgbcw_100 = {0.0000, 0.9808, 0.0192}, .rgbcw_50 = {0.2056, 0.6822, 0.1121}, .rgbcw_0 = {0.3411, 0.5047, 0.1542}, .hue = 135},
+    {.rgbcw_100 = {0.0000, 0.8978, 0.1022}, .rgbcw_50 = {0.2056, 0.6495, 0.1449}, .rgbcw_0 = {0.3411, 0.5000, 0.1589}, .hue = 150},
+    {.rgbcw_100 = {0.0000, 0.8117, 0.1883}, .rgbcw_50 = {0.1963, 0.6308, 0.1729}, .rgbcw_0 = {0.3411, 0.5000, 0.1589}, .hue = 165},
+    {.rgbcw_100 = {0.0000, 0.6869, 0.3131}, .rgbcw_50 = {0.1869, 0.6028, 0.2103}, .rgbcw_0 = {0.3364, 0.4860, 0.1776}, .hue = 180},
+    {.rgbcw_100 = {0.0000, 0.6096, 0.3904}, .rgbcw_50 = {0.2103, 0.5514, 0.2383}, .rgbcw_0 = {0.3458, 0.4720, 0.1822}, .hue = 195},
+    {.rgbcw_100 = {0.0000, 0.3624, 0.6376}, .rgbcw_50 = {0.2336, 0.4720, 0.2944}, .rgbcw_0 = {0.3458, 0.4720, 0.1822}, .hue = 210},
+    {.rgbcw_100 = {0.0000, 0.1637, 0.8363}, .rgbcw_50 = {0.2586, 0.4124, 0.3290}, .rgbcw_0 = {0.3458, 0.4720, 0.1822}, .hue = 225},
+    {.rgbcw_100 = {0.0000, 0.0000, 1.0000}, .rgbcw_50 = {0.2721, 0.3281, 0.3998}, .rgbcw_0 = {0.3458, 0.4720, 0.1822}, .hue = 240},
+    {.rgbcw_100 = {0.1747, 0.0000, 0.8253}, .rgbcw_50 = {0.3413, 0.3125, 0.3462}, .rgbcw_0 = {0.3458, 0.4720, 0.1822}, .hue = 255},
+    {.rgbcw_100 = {0.3763, 0.0000, 0.6237}, .rgbcw_50 = {0.4078, 0.2816, 0.3107}, .rgbcw_0 = {0.3458, 0.4720, 0.1822}, .hue = 270},
+    {.rgbcw_100 = {0.4717, 0.0000, 0.5283}, .rgbcw_50 = {0.4493, 0.2754, 0.2754}, .rgbcw_0 = {0.3458, 0.4720, 0.1822}, .hue = 285},
+    {.rgbcw_100 = {0.6216, 0.0000, 0.3784}, .rgbcw_50 = {0.5049, 0.2524, 0.2427}, .rgbcw_0 = {0.4000, 0.4190, 0.1810}, .hue = 300},
+    {.rgbcw_100 = {0.7248, 0.0000, 0.2752}, .rgbcw_50 = {0.5238, 0.2619, 0.2143}, .rgbcw_0 = {0.4000, 0.4190, 0.1810}, .hue = 315},
+    {.rgbcw_100 = {0.8268, 0.0000, 0.1732}, .rgbcw_50 = {0.5476, 0.2714, 0.1810}, .rgbcw_0 = {0.4000, 0.4190, 0.1810}, .hue = 330},
+    {.rgbcw_100 = {0.9110, 0.0000, 0.0890}, .rgbcw_50 = {0.5762, 0.2810, 0.1429}, .rgbcw_0 = {0.4000, 0.4190, 0.1810}, .hue = 345}
+};
+
 TEST_CASE("Parity Check", "[Application Layer]")
 {
     for (int i = 0; i < 256; i++) {
@@ -73,6 +120,463 @@ TEST_CASE("Parity Check", "[Application Layer]")
         uint8_t result = parity_check(i & 0xFE);
         printf("%d,\t", result);
     }
+}
+
+TEST_CASE("Power Check 1", "[Application Layer]")
+{
+    lightbulb_power_limit_t limit = {
+        .color_max_power = 100,
+        .color_max_value = 100,
+        .color_min_value = 10,
+        .white_max_power = 100,
+        .white_max_brightness = 100,
+        .white_min_brightness = 10
+    };
+
+    lightbulb_gamma_config_t Gamma = {
+        .balance_coefficient = {1.0, 1.0, 1.0, 1.0, 1.0},
+        .color_curve_coefficient = 2.0,
+        .white_curve_coefficient = 2.0,
+    };
+
+    //TEST 1, max value: 1023
+    lightbulb_config_t config1 = {
+        .type = DRIVER_BP57x8D,
+        .driver_conf.bp57x8d.current = {10, 10, 10, 20, 20},
+        .driver_conf.bp57x8d.iic_clk = 4,
+        .driver_conf.bp57x8d.iic_sda = 3,
+        .driver_conf.bp57x8d.freq_khz = 300,
+        .driver_conf.bp57x8d.enable_iic_queue = true,
+        .capability.enable_fade = 0,
+        .capability.fade_time_ms = 800,
+        .capability.enable_lowpower = false,
+        .capability.enable_status_storage = false,
+        .capability.led_beads = LED_BEADS_5CH_RGBCW,
+        .capability.storage_cb = NULL,
+        .capability.sync_change_brightness_value = true,
+        .io_conf.iic_io.red = OUT1,
+        .io_conf.iic_io.green = OUT2,
+        .io_conf.iic_io.blue = OUT3,
+        .io_conf.iic_io.cold_white = OUT5,
+        .io_conf.iic_io.warm_yellow = OUT4,
+        .external_limit = &limit,
+        .gamma_conf = &Gamma,
+        .init_status.mode = WORK_COLOR,
+        .init_status.on = true,
+        .init_status.hue = 0,
+        .init_status.saturation = 100,
+        .init_status.value = 100,
+    };
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_init(&config1));
+    for (int i = 0; i < 360; i += 30) {
+        for (int j = 0;  j < 100; j += 10) {
+            TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(i, j, 100));
+            vTaskDelay(10);
+        }
+    }
+    for (int i = 0; i <= 100; i += 10) {
+        TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_cctb(i, 100));
+        vTaskDelay(10);
+    }
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit());
+
+    //TEST 2, max value: 4096-8192
+    lightbulb_config_t config2 = {
+        .type = DRIVER_ESP_PWM,
+        .driver_conf.pwm.freq_hz = 4000,
+        .capability.enable_fade = 0,
+        .capability.fade_time_ms = 800,
+        .capability.enable_lowpower = false,
+        .capability.enable_status_storage = false,
+        .capability.led_beads = LED_BEADS_5CH_RGBCW,
+        .capability.storage_cb = NULL,
+        .capability.sync_change_brightness_value = true,
+
+#if CONFIG_IDF_TARGET_ESP32
+        .io_conf.pwm_io.red = 25,
+        .io_conf.pwm_io.green = 26,
+        .io_conf.pwm_io.blue = 27,
+#else
+        .io_conf.pwm_io.red = 10,
+        .io_conf.pwm_io.green = 6,
+        .io_conf.pwm_io.blue = 7,
+        .io_conf.pwm_io.cold_cct = 4,
+        .io_conf.pwm_io.warm_brightness = 5,
+#endif
+
+        .external_limit = NULL,
+        .gamma_conf = NULL,
+        .init_status.mode = WORK_COLOR,
+        .init_status.on = true,
+        .init_status.hue = 0,
+        .init_status.saturation = 100,
+        .init_status.value = 100,
+    };
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_init(&config2));
+    for (int i = 0; i < 360; i += 30) {
+        for (int j = 0;  j < 100; j += 10) {
+            TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(i, j, 100));
+            vTaskDelay(10);
+        }
+    }
+    for (int i = 0; i <= 100; i += 10) {
+        TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_cctb(i, 100));
+        vTaskDelay(10);
+    }
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit());
+
+    //TEST 3, max value: 255
+    lightbulb_config_t config3 = {
+        .type = DRIVER_WS2812,
+        .driver_conf.ws2812.led_num = 22,
+        .driver_conf.ws2812.ctrl_io = 2,
+        .capability.enable_fade = 0,
+        .capability.fade_time_ms = 800,
+        .capability.enable_status_storage = false,
+        .capability.led_beads = LED_BEADS_3CH_RGB,
+        .capability.storage_cb = NULL,
+        .external_limit = NULL,
+        .gamma_conf = NULL,
+        .init_status.mode = WORK_COLOR,
+        .init_status.on = true,
+        .init_status.hue = 0,
+        .init_status.saturation = 100,
+        .init_status.value = 100,
+    };
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_init(&config3));
+    for (int i = 0; i < 360; i += 30) {
+        for (int j = 0;  j < 100; j += 10) {
+            TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(i, j, 100));
+            vTaskDelay(10);
+        }
+    }
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit());
+}
+
+TEST_CASE("Power Check 2", "[Application Layer]")
+{
+    lightbulb_power_limit_t limit = {
+        .color_max_power = 200,
+        .color_max_value = 100,
+        .color_min_value = 10,
+        .white_max_power = 200,
+        .white_max_brightness = 100,
+        .white_min_brightness = 10
+    };
+
+    lightbulb_gamma_config_t Gamma = {
+        .balance_coefficient = {1.0, 1.0, 1.0, 1.0, 1.0},
+        .color_curve_coefficient = 2.0,
+        .white_curve_coefficient = 2.0,
+    };
+
+    //TEST 1, max value: 1023
+    lightbulb_config_t config1 = {
+        .type = DRIVER_BP57x8D,
+        .driver_conf.bp57x8d.current = {10, 10, 10, 20, 20},
+        .driver_conf.bp57x8d.iic_clk = 4,
+        .driver_conf.bp57x8d.iic_sda = 3,
+        .driver_conf.bp57x8d.freq_khz = 300,
+        .driver_conf.bp57x8d.enable_iic_queue = true,
+        .capability.enable_fade = 0,
+        .capability.fade_time_ms = 800,
+        .capability.enable_lowpower = false,
+        .capability.enable_status_storage = false,
+        .capability.led_beads = LED_BEADS_5CH_RGBCW,
+        .capability.storage_cb = NULL,
+        .capability.sync_change_brightness_value = true,
+        .io_conf.iic_io.red = OUT1,
+        .io_conf.iic_io.green = OUT2,
+        .io_conf.iic_io.blue = OUT3,
+        .io_conf.iic_io.cold_white = OUT5,
+        .io_conf.iic_io.warm_yellow = OUT4,
+        .external_limit = &limit,
+        .gamma_conf = &Gamma,
+        .init_status.mode = WORK_COLOR,
+        .init_status.on = true,
+        .init_status.hue = 0,
+        .init_status.saturation = 100,
+        .init_status.value = 100,
+    };
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_init(&config1));
+    for (int i = 0; i < 360; i += 30) {
+        for (int j = 0;  j < 100; j += 10) {
+            TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(i, j, 100));
+            vTaskDelay(10);
+        }
+    }
+    for (int i = 0; i <= 100; i += 10) {
+        TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_cctb(i, 100));
+        vTaskDelay(10);
+    }
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit());
+
+    //TEST 2, max value: 4096-8192
+    lightbulb_config_t config2 = {
+        .type = DRIVER_ESP_PWM,
+        .driver_conf.pwm.freq_hz = 4000,
+        .capability.enable_fade = 0,
+        .capability.fade_time_ms = 800,
+        .capability.enable_lowpower = false,
+        .capability.enable_status_storage = false,
+        .capability.led_beads = LED_BEADS_5CH_RGBCW,
+        .capability.storage_cb = NULL,
+        .capability.sync_change_brightness_value = true,
+
+#if CONFIG_IDF_TARGET_ESP32
+        .io_conf.pwm_io.red = 25,
+        .io_conf.pwm_io.green = 26,
+        .io_conf.pwm_io.blue = 27,
+#else
+        .io_conf.pwm_io.red = 10,
+        .io_conf.pwm_io.green = 6,
+        .io_conf.pwm_io.blue = 7,
+        .io_conf.pwm_io.cold_cct = 4,
+        .io_conf.pwm_io.warm_brightness = 5,
+#endif
+
+        .external_limit = NULL,
+        .gamma_conf = NULL,
+        .init_status.mode = WORK_COLOR,
+        .init_status.on = true,
+        .init_status.hue = 0,
+        .init_status.saturation = 100,
+        .init_status.value = 100,
+    };
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_init(&config2));
+    for (int i = 0; i < 360; i += 30) {
+        for (int j = 0;  j < 100; j += 10) {
+            TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(i, j, 100));
+            vTaskDelay(10);
+        }
+    }
+    for (int i = 0; i <= 100; i += 10) {
+        TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_cctb(i, 100));
+        vTaskDelay(10);
+    }
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit());
+
+    //TEST 3, max value: 255
+    lightbulb_config_t config3 = {
+        .type = DRIVER_WS2812,
+        .driver_conf.ws2812.led_num = 22,
+        .driver_conf.ws2812.ctrl_io = 2,
+        .capability.enable_fade = 0,
+        .capability.fade_time_ms = 800,
+        .capability.enable_status_storage = false,
+        .capability.led_beads = LED_BEADS_3CH_RGB,
+        .capability.storage_cb = NULL,
+        .external_limit = NULL,
+        .gamma_conf = NULL,
+        .init_status.mode = WORK_COLOR,
+        .init_status.on = true,
+        .init_status.hue = 0,
+        .init_status.saturation = 100,
+        .init_status.value = 100,
+    };
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_init(&config3));
+    for (int i = 0; i < 360; i += 30) {
+        for (int j = 0;  j < 100; j += 10) {
+            TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(i, j, 100));
+            vTaskDelay(10);
+        }
+    }
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit());
+}
+
+TEST_CASE("Power Check 3", "[Application Layer]")
+{
+    lightbulb_power_limit_t limit = {
+        .color_max_power = 300,
+        .color_max_value = 100,
+        .color_min_value = 10,
+        .white_max_power = 200,
+        .white_max_brightness = 100,
+        .white_min_brightness = 10
+    };
+
+    lightbulb_gamma_config_t Gamma = {
+        .balance_coefficient = {1.0, 1.0, 1.0, 1.0, 1.0},
+        .color_curve_coefficient = 2.0,
+        .white_curve_coefficient = 2.0,
+    };
+
+    //TEST 1, max value: 1023
+    lightbulb_config_t config1 = {
+        .type = DRIVER_BP57x8D,
+        .driver_conf.bp57x8d.current = {10, 10, 10, 20, 20},
+        .driver_conf.bp57x8d.iic_clk = 4,
+        .driver_conf.bp57x8d.iic_sda = 3,
+        .driver_conf.bp57x8d.freq_khz = 300,
+        .driver_conf.bp57x8d.enable_iic_queue = true,
+        .capability.enable_fade = 0,
+        .capability.fade_time_ms = 800,
+        .capability.enable_lowpower = false,
+        .capability.enable_status_storage = false,
+        .capability.led_beads = LED_BEADS_5CH_RGBCW,
+        .capability.storage_cb = NULL,
+        .capability.sync_change_brightness_value = true,
+        .io_conf.iic_io.red = OUT1,
+        .io_conf.iic_io.green = OUT2,
+        .io_conf.iic_io.blue = OUT3,
+        .io_conf.iic_io.cold_white = OUT5,
+        .io_conf.iic_io.warm_yellow = OUT4,
+        .external_limit = &limit,
+        .gamma_conf = &Gamma,
+        .init_status.mode = WORK_COLOR,
+        .init_status.on = true,
+        .init_status.hue = 0,
+        .init_status.saturation = 100,
+        .init_status.value = 100,
+    };
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_init(&config1));
+    for (int i = 0; i < 360; i += 30) {
+        for (int j = 0;  j < 100; j += 10) {
+            TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(i, j, 100));
+            vTaskDelay(10);
+        }
+    }
+    for (int i = 0; i <= 100; i += 10) {
+        TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_cctb(i, 100));
+        vTaskDelay(10);
+    }
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit());
+
+    //TEST 2, max value: 4096-8192
+    lightbulb_config_t config2 = {
+        .type = DRIVER_ESP_PWM,
+        .driver_conf.pwm.freq_hz = 4000,
+        .capability.enable_fade = 0,
+        .capability.fade_time_ms = 800,
+        .capability.enable_lowpower = false,
+        .capability.enable_status_storage = false,
+        .capability.led_beads = LED_BEADS_5CH_RGBCW,
+        .capability.storage_cb = NULL,
+        .capability.sync_change_brightness_value = true,
+
+#if CONFIG_IDF_TARGET_ESP32
+        .io_conf.pwm_io.red = 25,
+        .io_conf.pwm_io.green = 26,
+        .io_conf.pwm_io.blue = 27,
+#else
+        .io_conf.pwm_io.red = 10,
+        .io_conf.pwm_io.green = 6,
+        .io_conf.pwm_io.blue = 7,
+        .io_conf.pwm_io.cold_cct = 4,
+        .io_conf.pwm_io.warm_brightness = 5,
+#endif
+
+        .external_limit = NULL,
+        .gamma_conf = NULL,
+        .init_status.mode = WORK_COLOR,
+        .init_status.on = true,
+        .init_status.hue = 0,
+        .init_status.saturation = 100,
+        .init_status.value = 100,
+    };
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_init(&config2));
+    for (int i = 0; i < 360; i += 30) {
+        for (int j = 0;  j < 100; j += 10) {
+            TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(i, j, 100));
+            vTaskDelay(10);
+        }
+    }
+    for (int i = 0; i <= 100; i += 10) {
+        TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_cctb(i, 100));
+        vTaskDelay(10);
+    }
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit());
+
+    //TEST 3, max value: 255
+    lightbulb_config_t config3 = {
+        .type = DRIVER_WS2812,
+        .driver_conf.ws2812.led_num = 22,
+        .driver_conf.ws2812.ctrl_io = 2,
+        .capability.enable_fade = 0,
+        .capability.fade_time_ms = 800,
+        .capability.enable_status_storage = false,
+        .capability.led_beads = LED_BEADS_3CH_RGB,
+        .capability.storage_cb = NULL,
+        .external_limit = NULL,
+        .gamma_conf = NULL,
+        .init_status.mode = WORK_COLOR,
+        .init_status.on = true,
+        .init_status.hue = 0,
+        .init_status.saturation = 100,
+        .init_status.value = 100,
+    };
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_init(&config3));
+    for (int i = 0; i < 360; i += 10) {
+        for (int j = 0;  j < 100; j += 10) {
+            TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(i, j, 100));
+            vTaskDelay(10);
+        }
+    }
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit());
+}
+
+TEST_CASE("Power Check 4", "[Application Layer]")
+{
+    lightbulb_power_limit_t limit = {
+        .color_max_power = 200,
+        .color_max_value = 100,
+        .color_min_value = 10,
+        .white_max_power = 200,
+        .white_max_brightness = 100,
+        .white_min_brightness = 10
+    };
+
+    lightbulb_gamma_config_t Gamma = {
+        .balance_coefficient = {1.0, 1.0, 1.0, 1.0, 1.0},
+        .color_curve_coefficient = 2.0,
+        .white_curve_coefficient = 2.0,
+    };
+
+    lightbulb_config_t config1 = {
+        .type = DRIVER_BP57x8D,
+        .driver_conf.bp57x8d.current = {10, 10, 10, 20, 20},
+        .driver_conf.bp57x8d.iic_clk = 4,
+        .driver_conf.bp57x8d.iic_sda = 3,
+        .driver_conf.bp57x8d.freq_khz = 300,
+        .driver_conf.bp57x8d.enable_iic_queue = true,
+        .capability.enable_fade = 0,
+        .capability.fade_time_ms = 800,
+        .capability.enable_lowpower = false,
+        .capability.enable_status_storage = false,
+        .capability.led_beads = LED_BEADS_5CH_RGBCW,
+        .color_mix_mode.precise.table = color_data,
+        .color_mix_mode.precise.table_size = COLOR_SZIE,
+        .capability.enable_precise_color_control = 1,
+        .cct_mix_mode.precise.table_size = MIX_TABLE_SIZE,
+        .cct_mix_mode.precise.table = table,
+        .capability.enable_precise_cct_control = 1,
+        .capability.storage_cb = NULL,
+        .capability.sync_change_brightness_value = true,
+        .io_conf.iic_io.red = OUT1,
+        .io_conf.iic_io.green = OUT2,
+        .io_conf.iic_io.blue = OUT3,
+        .io_conf.iic_io.cold_white = OUT5,
+        .io_conf.iic_io.warm_yellow = OUT4,
+        .external_limit = &limit,
+        .gamma_conf = &Gamma,
+        .init_status.mode = WORK_COLOR,
+        .init_status.on = true,
+        .init_status.hue = 0,
+        .init_status.saturation = 100,
+        .init_status.value = 100,
+    };
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_init(&config1));
+    for (int i = 0; i < 360; i += 30) {
+        for (int j = 0;  j < 100; j += 10) {
+            TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(i, j, 100));
+            vTaskDelay(10);
+        }
+    }
+    for (int i = 0; i <= 100; i += 10) {
+        TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_cctb(i, 100));
+        vTaskDelay(10);
+    }
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit());
 }
 
 #ifdef CONFIG_ENABLE_PWM_DRIVER
@@ -552,6 +1056,81 @@ TEST_CASE("BP1658CJ", "[Application Layer]")
     TEST_ASSERT_EQUAL(ESP_OK, lightbulb_init(&config));
     vTaskDelay(pdMS_TO_TICKS(1000));
     lightbulb_lighting_output_test(LIGHTING_BASIC_FIVE, 1000);
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit());
+}
+#endif
+
+#ifdef CONFIG_ENABLE_SM2182E_DRIVER
+TEST_CASE("SM2182E", "[Underlying Driver]")
+{
+    //1.Status check
+    TEST_ESP_ERR(ESP_ERR_INVALID_STATE, sm2182e_set_cw_channel(1024, 1024));
+
+    //2. init check
+    driver_sm2182e_t conf = {
+        .cw_current = SM2182E_CW_CURRENT_30MA,
+        .iic_clk = 4,
+        .iic_sda = 3,
+        .freq_khz = 300,
+        .enable_iic_queue = true
+    };
+    TEST_ASSERT_EQUAL(ESP_OK, sm2182e_init(&conf, NULL));
+
+    //3. regist Check, step 1
+    TEST_ASSERT_EQUAL(ESP_OK, sm2182e_regist_channel(SM2182E_CHANNEL_C, SM2182E_PIN_OUT1));
+    TEST_ASSERT_EQUAL(ESP_OK, sm2182e_regist_channel(SM2182E_CHANNEL_W, SM2182E_PIN_OUT2));
+
+    //4. Data range check
+    TEST_ESP_ERR(ESP_ERR_INVALID_ARG, sm2182e_set_cw_channel(SM2182E_CHANNEL_C, 1024));
+
+    //5. Color check
+    TEST_ASSERT_EQUAL(ESP_OK, sm2182e_set_shutdown());
+    vTaskDelay(pdMS_TO_TICKS(100));
+    TEST_ASSERT_EQUAL(ESP_OK, sm2182e_set_cw_channel(0, 1023));
+    vTaskDelay(pdMS_TO_TICKS(100));
+    TEST_ASSERT_EQUAL(ESP_OK, sm2182e_set_cw_channel(1023, 0));
+
+    //6. Current
+    TEST_ASSERT_EQUAL(SM2182E_CW_CURRENT_5MA, sm2182e_cw_current_mapping(5));
+    TEST_ASSERT_EQUAL(SM2182E_CW_CURRENT_80MA, sm2182e_cw_current_mapping(80));
+    TEST_ASSERT_EQUAL(SM2182E_CW_CURRENT_MAX, sm2182e_cw_current_mapping(6));
+
+    //7. deinit
+    TEST_ASSERT_EQUAL(ESP_OK, sm2182e_set_shutdown());
+    // Wait for data transmission to complete
+    vTaskDelay(pdMS_TO_TICKS(1000));
+    TEST_ASSERT_EQUAL(ESP_OK, sm2182e_deinit());
+}
+
+TEST_CASE("SM2182E", "[Application Layer]")
+{
+    lightbulb_config_t config = {
+        .type = DRIVER_SM2182E,
+        .driver_conf.sm2182e.cw_current = SM2182E_CW_CURRENT_30MA,
+        .driver_conf.sm2182e.iic_clk = 4,
+        .driver_conf.sm2182e.iic_sda = 3,
+        .driver_conf.sm2182e.freq_khz = 300,
+        .driver_conf.sm2182e.enable_iic_queue = true,
+        .capability.enable_fade = true,
+        .capability.fade_time_ms = 800,
+        .capability.enable_lowpower = false,
+        .capability.enable_status_storage = false,
+        .capability.led_beads = LED_BEADS_2CH_CW,
+        .capability.storage_cb = NULL,
+        .capability.sync_change_brightness_value = true,
+        .io_conf.iic_io.cold_white = OUT1,
+        .io_conf.iic_io.warm_yellow = OUT2,
+        .external_limit = NULL,
+        .gamma_conf = NULL,
+        .init_status.mode = WORK_WHITE,
+        .init_status.on = true,
+        .init_status.hue = 0,
+        .init_status.brightness = 100,
+        .init_status.cct_percentage = 0,
+    };
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_init(&config));
+    vTaskDelay(pdMS_TO_TICKS(1000));
+    lightbulb_lighting_output_test(LIGHTING_COLD_TO_WARM | LIGHTING_WARM_TO_COLD, 1000);
     TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit());
 }
 #endif

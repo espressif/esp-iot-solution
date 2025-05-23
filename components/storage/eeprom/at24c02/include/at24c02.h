@@ -6,7 +6,7 @@
 
 #ifndef _AT24C02_H_
 #define _AT24C02_H_
-#include "driver/i2c.h"
+
 #include "i2c_bus.h"
 
 #define AT24C02_I2C_ADDRESS_DEFAULT   (0x50)    //1 0 1 0 A2 A1 A0 R/W

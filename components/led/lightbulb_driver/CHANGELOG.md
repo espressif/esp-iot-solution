@@ -1,5 +1,50 @@
 # ChangeLog
 
+## v1.8.2 - 2025-04-17
+
+### Bug Fix:
+
+- Adjust the power calculation algorithm
+- Adjust the upper limit of pwm resolution to 12bit
+
+## v1.8.1 - 2025-04-17
+
+### Bug Fix:
+
+- Modify some compilation conditions
+
+## v1.8.0 - 2025-03-28
+
+### Improve:
+
+- Added new dimming driver SM2182E
+- Modify some kconfig names. Please refer to [sdkconfig.rename](./sdkconfig.rename)
+
+## v1.7.1 - 2025-03-05
+
+### Bug Fix:
+
+* Enable new IIC driver in v5.2.6 instead of v5.2.4
+* Fixed the color power calculation error
+
+## v1.7.0 - 2025-02-24
+
+### Improve:
+
+- Update the version of dependent cmake_utilities to *
+
+## v1.6.1 - 2025-02-19
+
+### Bug Fix:
+
+* Change led_num to uint16_t for ws2812
+
+## v1.6.0 - 2025-01-13
+
+### Enhancements:
+
+* Update to the latest version of I2C driver
+
 ## v1.5.0 - 2024-12-25
 
 ### Enhancements:

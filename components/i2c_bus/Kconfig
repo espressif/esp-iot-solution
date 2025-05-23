@@ -41,6 +41,13 @@ menu "Bus Options"
             help
                 Set the maximum number of software I2C ports that can be used. This option is only applicable when
                 software I2C support is enabled.
+
+        config I2C_BUS_REMOVE_NULL_MEM_ADDR
+            bool "Remove the limitation of NULL_MEM_ADDR, any register address will be sent"
+            default n
+            help
+                Enable this option to disable NULL_MEM_ADDR. This allows any register address to be sent.
+
     endmenu
 
 endmenu

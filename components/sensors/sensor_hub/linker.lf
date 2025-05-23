@@ -10,4 +10,4 @@ entries:
 archive: *
 entries:
     * (sensors_detect_default);
-        sensors_detect -> flash_rodata KEEP() SURROUND(_sensor_hub_detect_fn_array)
+        sensors_detect -> flash_rodata KEEP() ALIGN(4, pre, post) SURROUND(_sensor_hub_detect_fn_array)

@@ -1,0 +1,8 @@
+dependencies:
+  idf: ">=5.0"
+  esp_lcd_touch_gt1151:
+    version: "^1"
+    override_path: "../../../../lcd_touch/esp_lcd_touch_gt1151/"
+  esp_lvgl_port:
+    version: "*"
+    override_path: "../../../"

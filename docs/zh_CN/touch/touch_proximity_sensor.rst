@@ -41,102 +41,69 @@
 ------------
 
 创建接近感应传感器
-^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-使用 ``touch_proximity_sensor`` 组件，可通过 :cpp:type:`proxi_config_t` 结构体来配置接近感应传感器。
+使用 ``touch_proximity_sensor`` 组件，可通过 :cpp:type:`touch_proxi_config_t` 结构体来配置接近感应传感器。
 
 .. code:: c
 
-    // Configuration structure for touch proximity sensor
     typedef struct {
-        uint32_t channel_num;
-        uint32_t channel_list[TOUCH_PROXIMITY_NUM_MAX];
-        uint32_t meas_count;
-        float smooth_coef;
-        float baseline_coef;
-        float max_p;
-        float min_n;
-        float threshold_p[TOUCH_PROXIMITY_NUM_MAX];
-        float threshold_n[TOUCH_PROXIMITY_NUM_MAX];
-        float hysteresis_p;
-        float noise_p;
-        float noise_n;
-        uint32_t debounce_p;
-        uint32_t debounce_n;
-        uint32_t reset_p;
-        uint32_t reset_n;
-        uint32_t gold_value[TOUCH_PROXIMITY_NUM_MAX];
-    } proxi_config_t;
+        uint32_t channel_num;                           /*!< 触摸接近感应通道数量 */
+        uint32_t *channel_list;                         /*!< 触摸通道列表 */
+        float *channel_threshold;                       /*!< 每个通道的触发阈值 */
+        uint32_t debounce_times;                        /*!< 确认状态改变所需的连续读数次数 */
+        uint32_t *channel_gold_value;                   /*!< 触摸通道参考值 */
+        bool skip_lowlevel_init;                        /*!< 使用现有触摸驱动时跳过低级初始化 */
+    } touch_proxi_config_t;
 
-具体参数说明如下：
+主要参数说明：
 
-+----------------+------------------------------------------------------------------+
-|    配置参数    |                               说明                               |
-+================+==================================================================+
-| channel_num    | 触摸接近感应通道数量，最多支持 3 个                              |
-+----------------+------------------------------------------------------------------+
-| channel_list   | 触摸接近感应通道列表，即触摸通道                                 |
-+----------------+------------------------------------------------------------------+
-| meas_count     | 接近感应通道的累计测量次数，值越大，数据更新越慢                 |
-+----------------+------------------------------------------------------------------+
-| smooth_coef    | 数据平滑处理系数，降低数据波动                                   |
-+----------------+------------------------------------------------------------------+
-| baseline_coef  | 基线系数，确定基线调整的速率，用于消除环境变化的影响             |
-+----------------+------------------------------------------------------------------+
-| max_p          | 最大有效正变化率                                                 |
-+----------------+------------------------------------------------------------------+
-| min_n          | 最小有效负变化率                                                 |
-+----------------+------------------------------------------------------------------+
-| threshold_p    | 正向触发阈值                                                     |
-+----------------+------------------------------------------------------------------+
-| threshold_n    | 负向触发阈值                                                     |
-+----------------+------------------------------------------------------------------+
-| hysteresis_p   | 正阈值迟滞系数，在触发和解除触发之间提供缓冲区，以防止连续误触发 |
-+----------------+------------------------------------------------------------------+
-| noise_p        | 正噪声阈值，基线更新与该值有关                                   |
-+----------------+------------------------------------------------------------------+
-| noise_n        | 负噪声阈值，基线更新与该值有关                                   |
-+----------------+------------------------------------------------------------------+
-| debounce_p     | 正阈值的去抖动次数，以减少误触发                                 |
-+----------------+------------------------------------------------------------------+
-| debounce_n     | 负阈值的去抖动次数，以减少误解除触发                             |
-+----------------+------------------------------------------------------------------+
-| reset_p        | 触发基线重置的正向阈值                                           |
-+----------------+------------------------------------------------------------------+
-| reset_n        | 触发基线重置的负向阈值                                           |
-+----------------+------------------------------------------------------------------+
-| gold_value     | 金标准值，用于在特殊情况下恢复正常值                             |
-+----------------+------------------------------------------------------------------+
++--------------------+-------------------------------------+
+|        参数        |                说明                 |
++====================+=====================================+
+| channel_num        | 触摸接近感应通道数量，最多支持 3 个 |
++--------------------+-------------------------------------+
+| channel_list       | 触摸通道列表                        |
++--------------------+-------------------------------------+
+| channel_threshold  | 每个通道的触发阈值数组              |
++--------------------+-------------------------------------+
+| debounce_times     | 确认状态改变所需的连续读数次数      |
++--------------------+-------------------------------------+
+| channel_gold_value | 可选的触摸通道参考值                |
++--------------------+-------------------------------------+
+| skip_lowlevel_init | 使用现有触摸驱动时跳过低级初始化    |
++--------------------+-------------------------------------+
 
-然后使用 :cpp:func:`touch_proximity_sensor_create` 配置并创建接近感应传感器对象。
+配置参数后，使用 :cpp:func:`touch_proximity_sensor_create` 创建接近感应传感器：
 
 .. code:: c
 
-    proxi_config_t config = (proxi_config_t)DEFAULTS_PROX_CONFIGS();
-    esp_err_t ret = touch_proximity_sensor_create(&config, &s_touch_proximity_sensor, &example_proxi_callback, NULL);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "touch proximity sense create failed");
+    touch_proxi_config_t config = {
+        .channel_num = 1,
+        .channel_list = channel_list,
+        .channel_threshold = channel_threshold,
+        .debounce_times = 2,
+    };
+    
+    esp_err_t ret = touch_proximity_sensor_create(&config, &sensor_handle, callback_func, NULL);
+
+事件处理
+^^^^^^^^^^^^^^^^^^^^^
+
+接近感应传感器需要定期处理事件以更新状态和触发回调。这可以在任务中完成：
+
+.. code:: c
+
+    void proximity_task(void *arg)
+    {
+        while (1) {
+            touch_proximity_sensor_handle_events(sensor_handle);
+            vTaskDelay(pdMS_TO_TICKS(20));
+        }
     }
 
-其中， `s_touch_proximity_sensor` 为触摸接近感应传感器句柄， `example_proxi_callback` 为接近感应传感器事件回调函数。
-
-启动和停止接近感应传感器
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-使用 :cpp:func:`touch_proximity_sensor_start` 启动接近感应传感器：
-
-.. code:: c
-
-    // Start the touch proximity sensor
-    touch_proximity_sensor_start(s_touch_proximity_sensor);
-
-使用 :cpp:func:`touch_proximity_sensor_stop` 停止接近感应传感器：
-
-.. code:: c
-
-    // Stop the touch proximity sensor
-    touch_proximity_sensor_stop(s_touch_proximity_sensor);
-
-.. Note:: 接近感应传感器的启动和停止过程需要一定时间才能完成，因此，在调用启动和停止 API 之后，添加等待时间是有必要的，通常，启动时间为 300 ms，停止过程需 200 ms，详情请参考示例程序。
+    // 创建任务
+    xTaskCreate(proximity_task, "proximity_task", 2048, NULL, 5, NULL);
 
 删除接近感应传感器
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -145,62 +112,58 @@
 .. code:: c
 
     // Delete the touch proximity sensor
-    touch_proximity_sensor_delete(s_touch_proximity_sensor);
+    touch_proximity_sensor_delete(sensor_handle);
 
 参数调节参考
 ------------------
 
 * channel_num 最大为 3。
 * channel_list 数组必须赋值为 `touch_pad_t` 枚举变量中的值。
-* meas_count 数值越大，触摸传感器新数据的更新速率越慢。
-* smooth_coef 是数据平滑处理系数，平滑后的 `smooth` 值等于 `smooth * (1.0 - smooth_coef) + raw * smooth_coef`， `smooth_coef` 数值越大， `raw` 的权重就越大，平滑效果越差， `smooth` 波形越抖， `smooth` 跟随 `raw` 值速度越快，触发响应越快，抗干扰能力越弱； `smooth_coef` 数值越小， `raw` 的权重就越小，平滑效果越好， `smooth` 波形越平滑， `smooth` 跟随 `raw` 值速度越慢，触发响应越慢，抗干扰能力越强。
-* baseline_coef 是基线更新系数，基线新值等于 `baseline * (1.0 - baseline_coef) + smooth * baseline_coef`，该值越大，基线跟随 `smooth` 速度越快，触发响应越慢，抗干扰能力越强。
-* max_p 当 `raw - baseline` 的值大于 `baseline * max_p` 时， `raw` 值为异常值，忽略掉。
-* min_n 当 `baseline - raw` 的值大于 `baseline * min_n` 时， `raw` 值为异常值，忽略掉。
+* meas_count 默认值为 20，数值越大，触摸传感器新数据的更新速率越慢。
+* smooth_coef 默认值为 0.7，是数据平滑处理系数，平滑后的 `smooth` 值等于 `smooth * (1.0 - smooth_coef) + raw * smooth_coef`， `smooth_coef` 数值越大， `raw` 的权重就越大，平滑效果越差， `smooth` 波形越抖， `smooth` 跟随 `raw` 值速度越快，触发响应越快，抗干扰能力越弱； `smooth_coef` 数值越小， `raw` 的权重就越小，平滑效果越好， `smooth` 波形越平滑， `smooth` 跟随 `raw` 值速度越慢，触发响应越慢，抗干扰能力越强。
+* baseline_coef 默认值为 0.05，是基线更新系数，基线新值等于 `baseline * (1.0 - baseline_coef) + smooth * baseline_coef`，该值越大，基线跟随 `smooth` 速度越快，触发响应越慢，抗干扰能力越强。
+* max_p 默认值为 0.5，当 `raw - baseline` 的值大于 `baseline * max_p` 时， `raw` 值为异常值，忽略掉。
+* min_n 默认值为 0.05，当 `baseline - raw` 的值大于 `baseline * min_n` 时， `raw` 值为异常值，忽略掉。
 * threshold_p 值越大，接近感应触发的距离越近，抗干扰能力越强，反之相反。
 * threshold_n 值越大，接近感应触发的距离越近，抗干扰能力越强，反之相反。
-* noise_p 和 noise_n 的值越大，基线更容易跟随 `smooth`，接近感应距离会相应变小，抗干扰能力越好。
+* noise_p 默认值为 0.1，和 noise_n 默认值为 0.2，的值越大，基线更容易跟随 `smooth`，接近感应距离会相应变小，抗干扰能力越好。
 * debounce_p 和 debounce_n 的值需要参考 `meas_count` 的值进行调整， `meas_count` 越小， `debounce_p` 和 `debounce_n` 应相应增大，以提高抗干扰能力。
+* reset_p 默认值为 0，用于基线重置正向去抖动，设置为 0 表示禁用。
+* reset_n 默认值为 50，用于基线重置负向去抖动。
 
 调参波形对比
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 默认的触摸接近感应传感器配置参数如下：
 
-+----------------+----------------+
-|      参数      |     默认值     |
-+================+================+
-| channel_num    | 1              |
-+----------------+----------------+
-| channel_list   | TOUCH_PAD_NUM8 |
-+----------------+----------------+
-| meas_count     | 50             |
-+----------------+----------------+
-| smooth_coef    | 0.2            |
-+----------------+----------------+
-| baseline_coef  | 0.1            |
-+----------------+----------------+
-| max_p          | 0.2            |
-+----------------+----------------+
-| min_n          | 0.08           |
-+----------------+----------------+
-| threshold_p    | 0.002          |
-+----------------+----------------+
-| threshold_n    | 0.002          |
-+----------------+----------------+
-| hysteresis_p   | 0.2            |
-+----------------+----------------+
-| noise_p        | 0.001          |
-+----------------+----------------+
-| noise_n        | 0.001          |
-+----------------+----------------+
-| debounce_p     | 2              |
-+----------------+----------------+
-| debounce_n     | 1              |
-+----------------+----------------+
-| reset_p        | 1000           |
-+----------------+----------------+
-| reset_n        | 3              |
-+----------------+----------------+
++---------------+----------------+
+|     参数      |     默认值     |
++===============+================+
+| channel_num   | 1              |
++---------------+----------------+
+| channel_list  | TOUCH_PAD_NUM8 |
++---------------+----------------+
+| meas_count    | 20             |
++---------------+----------------+
+| smooth_coef   | 0.7            |
++---------------+----------------+
+| baseline_coef | 0.05           |
++---------------+----------------+
+| max_p         | 0.5            |
++---------------+----------------+
+| min_n         | 0.05           |
++---------------+----------------+
+| noise_p       | 0.1            |
++---------------+----------------+
+| noise_n       | 0.2            |
++---------------+----------------+
+| debounce_p    | 2              |
++---------------+----------------+
+| debounce_n    | 50             |
++---------------+----------------+
+| reset_p       | 0              |
++---------------+----------------+
+| reset_n       | 50             |
++---------------+----------------+
 
 以下调参对比都将在以上参数基础上 **仅修改一个参数** 进行对比。
 

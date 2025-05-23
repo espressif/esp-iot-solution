@@ -1,5 +1,23 @@
 # ChangeLog
 
+## v0.3.8 - 2025-04-02
+
+### Fix:
+
+- Fix symbols that cannot be displayed properly in readme.
+
+## v0.3.7 - 2025-02-28
+
+### Improve:
+
+- Update the version of dependent cmake_utilities to *
+
+## v0.2.7 - 2025-2-26
+
+### Fix:
+
+* Fix the issue of a `-Wincompatible-pointer-types` compilation error.
+
 ## v0.2.6 - 2024-07-01
 
 ### Feature:

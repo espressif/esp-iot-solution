@@ -1,0 +1,35 @@
+menu "4G Modem Example Config"
+        config MODEM_WIFI_SSID
+            string "WiFi SSID"
+            default "esp_4g_router"
+            help
+                SSID (network name) for the example to connect to.
+        config MODEM_WIFI_PASSWORD
+            string "WiFi Password"
+            default "12345678"
+            help
+                WiFi password (WPA or WPA2) for the example to use.
+        config MODEM_WIFI_CHANNEL
+            int "WiFi Channel"
+            range 1 13
+            default 6
+            help
+                WiFi channel (network channel) for the example to use.
+        choice
+            prompt "WiFi Bandwidth"
+            default WIFI_BANDWIFTH_40
+
+            config WIFI_BANDWIFTH_20
+                bool "20MHz"
+            config WIFI_BANDWIFTH_40
+                bool "40MHz"
+        endchoice
+        config MODEM_WIFI_MAX_STA
+            int "Maximal STA connections"
+            default 10
+            help
+                Max number of the STA connects to AP.
+        config MODEM_WIFI_DEFAULT_DNS
+            string  "WiFi softap default DNS address"
+            default "8.8.8.8"
+endmenu

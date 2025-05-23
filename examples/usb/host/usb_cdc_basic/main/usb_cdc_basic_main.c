@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -48,6 +48,7 @@ static void usb_receive_task(void *param)
 
 static void usb_connect_callback(usbh_cdc_handle_t cdc_handle, void *user_data)
 {
+    usbh_cdc_desc_print(cdc_handle);
     TaskHandle_t task_hdl = (TaskHandle_t)user_data;
     vTaskResume(task_hdl);
     ESP_LOGI(TAG, "Device Connected!");
@@ -79,7 +80,7 @@ void app_main(void)
     usbh_cdc_device_config_t dev_config = {
         .vid = 0,
         .pid = 0,
-        .itf_num = 0,
+        .itf_num = 1,
         .rx_buffer_size = IN_RINGBUF_SIZE,
         .tx_buffer_size = OUT_RINGBUF_SIZE,
         .cbs = {
@@ -92,9 +93,9 @@ void app_main(void)
     usbh_cdc_create(&dev_config, &handle[0]);
 
 #if (EXAMPLE_BULK_ITF_NUM > 1)
-    config.itf_num = 1;
-    config.cbs = {0};
-    ESP_LOGI(TAG, "Open interface num: %d with first USB CDC Device", config.itf_num);
+    dev_config.itf_num = 3;
+    memset(&dev_config.cbs, 0, sizeof(dev_config.cbs));
+    ESP_LOGI(TAG, "Open interface num: %d with first USB CDC Device", dev_config.itf_num);
     usbh_cdc_create(&dev_config, &handle[1]);
 #endif
     /*!< Wait for the USB device to be connected */

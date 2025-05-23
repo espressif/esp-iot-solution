@@ -13,6 +13,12 @@ menu "IoT USB Host CDC"
         help
             usb task base priority
 
+    config CONTROL_TRANSFER_BUFFER_SIZE
+        int "usbh control transfer size"
+        default 512
+        help
+            usb host control transfer size
+
     config IN_TRANSFER_BUFFER_SIZE
         int "usbh IN transfer buffer size"
         default 512

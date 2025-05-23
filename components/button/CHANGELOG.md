@@ -1,5 +1,49 @@
 # ChangeLog
 
+## v4.1.3 - 2025-04-11
+
+### Fix:
+
+* Added initialization for gpio_config. [!485](https://github.com/espressif/esp-iot-solution/pull/485)
+
+## v4.1.2 - 2025-03-24
+
+### Fix:
+
+* fix incorrect long press start and release check.
+
+## v4.1.1 - 2025-03-13
+
+### Improve:
+
+* include stdbool.h before using bool
+
+## v4.1.0 - 2025-02-28
+
+### Improve:
+
+* Update the version of dependent cmake_utilities to *
+
+## v4.0.0 - 2025-1-9
+
+### Enhancements:
+
+* Use the factory pattern to reduce the build size.
+* Change the state machine to use enumerated values.
+
+### Break change:
+
+* Standardize the return value of the iot_button interface to esp_err_t.
+* Remove support for the old ADC driver.
+* Modify the callback registration interface to:
+    ```c
+    esp_err_t iot_button_register_cb(button_handle_t btn_handle, button_event_t event, button_event_args_t *event_args, button_cb_t cb, void *usr_data);
+    ```
+* Modify the callback unregistration interface to:
+    ```c
+    esp_err_t iot_button_unregister_cb(button_handle_t btn_handle, button_event_t event, button_event_args_t *event_args);
+    ```
+
 ## v3.5.0 - 2024-12-27
 
 ### Enhancements:

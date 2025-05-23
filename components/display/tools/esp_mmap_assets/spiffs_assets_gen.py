@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+# SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
 # SPDX-License-Identifier: Apache-2.0
 import io
 import os
@@ -21,6 +21,10 @@ from pathlib import Path
 from packaging import version
 
 sys.dont_write_bytecode = True
+
+GREEN = '\033[1;32m'
+RED = '\033[1;31m'
+RESET = '\033[0m'
 
 @dataclass
 class AssetCopyConfig:
@@ -483,7 +487,7 @@ def pack_assets(config: PackModelsConfig):
 
         output_header.write('};\n')
 
-    print(f'All bin files have been merged into {out_file}')
+    print(f'All bin files have been merged into {os.path.basename(out_file)}')
 
 def copy_assets(config: AssetCopyConfig):
     """
@@ -527,14 +531,7 @@ def copy_assets(config: AssetCopyConfig):
         else:
             print(f'No match found for file: {filename}, format_tuple: {format_tuple}')
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Move and Pack assets.')
-    parser.add_argument('--config', required=True, help='Path to the configuration file')
-    args = parser.parse_args()
-
-    with open(args.config, 'r') as f:
-        config_data = json.load(f)
-
+def process_assets_build(config_data):
     assets_path = config_data['assets_path']
     image_file = config_data['image_file']
     target_path = os.path.dirname(image_file)
@@ -578,18 +575,73 @@ if __name__ == '__main__':
         if copy_config.row_enable:
             print('--lvgl_version:', config_data['lvgl_ver'])
 
-    if os.path.isfile(image_file):
-        os.remove(image_file)
+    if not os.path.exists(target_path):
+        os.makedirs(target_path, exist_ok=True)
+    for filename in os.listdir(target_path):
+        file_path = os.path.join(target_path, filename)
+        if os.path.isfile(file_path) or os.path.islink(file_path):
+            os.unlink(file_path)
+        elif os.path.isdir(file_path):
+            shutil.rmtree(file_path)
 
     copy_assets(copy_config)
     pack_assets(pack_config)
 
     total_size = os.path.getsize(os.path.join(target_path, image_file))
     recommended_size = math.ceil(total_size / 1024)
-    partition_size = math.ceil(int(config_data['assets_size'], 16) / 1024)
+    partition_size = math.ceil(int(config_data['assets_size'], 16))
+
+    print(f'{"Total size:":<30} {GREEN}{total_size / 1024:>8.2f}K ({total_size}){RESET}')
+    print(f'{"Partition size:":<30} {GREEN}{partition_size / 1024:>8.2f}K ({partition_size}){RESET}')
 
     if int(config_data['assets_size'], 16) <= total_size:
-        print(f'Given assets partition size: {partition_size}K')
-        print(f'Recommended assets partition size: {recommended_size}K')
-        print('\033[1;31mError:\033[0m assets partition size is smaller than recommended.')
+        print(f'Recommended partition size: {GREEN}{recommended_size}K{RESET}')
+        print(f'{RED}Error:Binary size exceeds partition size.{RESET}')
         sys.exit(1)
+
+def process_assets_merge(config_data):
+    app_bin_path = config_data['app_bin_path']
+    image_file = config_data['image_file']
+    target_path = os.path.dirname(image_file)
+
+    combined_bin_path = os.path.join(target_path, 'combined.bin')
+    append_bin_path = os.path.join(target_path, image_file)
+
+    app_size = os.path.getsize(app_bin_path)
+    asset_size = os.path.getsize(append_bin_path)
+    total_size = asset_size + app_size
+    recommended_size = math.ceil(total_size / 1024)
+    partition_size = math.ceil(int(config_data['assets_size'], 16))
+
+    print(f'{"Asset size:":<30} {GREEN}{asset_size / 1024:>8.2f}K ({asset_size}){RESET}')
+    print(f'{"App size:":<30} {GREEN}{app_size / 1024:>8.2f}K ({app_size}){RESET}')
+    print(f'{"Total size:":<30} {GREEN}{total_size / 1024:>8.2f}K ({total_size}){RESET}')
+    print(f'{"Partition size:":<30} {GREEN}{partition_size / 1024:>8.2f}K ({partition_size}){RESET}')
+
+    if total_size > partition_size:
+        print(f'Recommended partition size: {GREEN}{recommended_size}K{RESET}')
+        print(f'{RED}Error:Binary size exceeds partition size.{RESET}')
+        sys.exit(1)
+
+    with open(combined_bin_path, 'wb') as combined_bin:
+        with open(app_bin_path, 'rb') as app_bin:
+            combined_bin.write(app_bin.read())
+        with open(append_bin_path, 'rb') as img_bin:
+            combined_bin.write(img_bin.read())
+
+    shutil.move(combined_bin_path, app_bin_path)
+    print(f'Append bin created: {os.path.basename(app_bin_path)}')
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Move and Pack assets.')
+    parser.add_argument('--config', required=True, help='Path to the configuration file')
+    parser.add_argument('--merge', action='store_true', help='Merge assets with app binary')
+    args = parser.parse_args()
+
+    with open(args.config, 'r') as f:
+        config_data = json.load(f)
+
+    if args.merge:
+        process_assets_merge(config_data)
+    else:
+        process_assets_build(config_data)

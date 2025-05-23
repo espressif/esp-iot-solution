@@ -10,7 +10,7 @@ menu "Example Configuration"
     menu "Display"
         config EXAMPLE_LCD_RGB_BOUNCE_BUFFER_HEIGHT
             int "RGB Bounce buffer height"
-            default 10
+            default 20
             help
                 Height of bounce buffer. The width of the buffer is the same as that of the LCD.
 
@@ -23,14 +23,14 @@ menu "Example Configuration"
 
         config EXAMPLE_LVGL_PORT_TASK_MIN_DELAY_MS
             int "LVGL timer task minimum delay (ms)"
-            default 10
+            default 5
             range 1 100  # Example range, adjust as needed
             help
             The minimum delay of the LVGL timer task, in milliseconds.
 
         config EXAMPLE_LVGL_PORT_TASK_PRIORITY
             int "LVGL task priority"
-            default 2
+            default 4
             help
                 The Board Support Package will create a task that will periodically handle LVGL operation in lv_timer_handler().
 
@@ -96,6 +96,14 @@ menu "Example Configuration"
             config EXAMPLE_LVGL_PORT_ROTATION_270
                 bool "Rotation 270"
         endchoice
+
+        config EXAMPLE_LVGL_PORT_PPA_ROTATION_ENABLE
+            depends on EXAMPLE_LVGL_PORT_AVOID_TEAR_ENABLE && IDF_TARGET_ESP32P4 && !EXAMPLE_LVGL_PORT_ROTATION_0
+            bool "Enable PPA Rotation"
+            default n
+            help
+                Enable this option to use PPA (Pixel Processor Assembly) for display rotation.
+                This feature allows hardware-based rotation for improved performance
 
         config EXAMPLE_LVGL_PORT_ROTATION_DEGREE
             int

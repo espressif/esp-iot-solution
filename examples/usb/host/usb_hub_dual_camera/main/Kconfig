@@ -1,0 +1,58 @@
+menu "USB Hub Dual Camera Demo"
+
+    config PRINTF_CAMERA_USB_DESC
+        bool "Print USB Camera Descriptor"
+        default y
+        help
+            Print USB Camera Descriptor
+
+    menu "WiFi Settings"
+        config ESP_WIFI_SSID
+            string "WiFi SSID"
+            default ""
+            help
+            WiFi SSID (network name) to connect to or empty for Off.
+
+        config ESP_WIFI_PASSWORD
+            string "WiFi Password"
+            default ""
+            help
+            WiFi Password if WEP/WPA/WPA2 or empty if Open.
+
+        config ESP_WIFI_SOFTAP_SSID
+            string "WiFi SoftAP  SSID"
+            default "ESP-USB-UVC-Demo"
+            help
+            softAP SSID (network name) to create or empty for Off.
+
+        config ESP_WIFI_SOFTAP_PASSWORD
+            string "WiFi softAP Password"
+            default ""
+            help
+            softAP password for WPA2 or empty for Open.
+
+        config ESP_WIFI_SOFTAP_MAX_STA
+            int "Maximal STA connections"
+            default 5
+            help
+            Max number of the STA connects to softAP.
+
+        config ESP_WIFI_AP_CHANNEL
+            int "WiFi softAP Channel"
+            default 1
+            help
+            softAP channel for better connection performance.
+
+        config SERVER_IP
+            string "WiFi softAP IP Address"
+            default "192.168.4.1"
+            help
+                IP address that the ESP will assign to it's softAP interface. You can use this IP to connect to the camera after flashing.
+
+        config ESP_MAXIMUM_RETRY
+            int "Maximum retry"
+            default 5
+            help
+            Set the Maximum retry to avoid station reconnecting to the softAP unlimited when the softAP is really inexistent.
+    endmenu
+endmenu

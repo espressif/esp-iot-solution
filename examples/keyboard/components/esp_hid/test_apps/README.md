@@ -3,7 +3,7 @@
 
 # esp_hid unit tests
 
-The unit tests are currently run only on the chips listed above just to save CI resources. If you are adding some tests which need to run on a different chip, update [.build-test-rules.yml](../.build-test-rules.yml), adding the chip you need.
+The unit tests are currently run only on the chips listed above just to save CI resources. If you are adding some tests which need to run on a different chip, update [.build-test-rules.yml](.build-test-rules.yml), adding the chip you need.
 
 When adding new test cases, check if the `depends_components` list in `.build-test-rules.yml` needs to be updated to include additional components. The test app will only be built and tested when these components are modified.
 

@@ -115,85 +115,73 @@
 **Log**
 
 ```
-I (9634) IOT_USBH: Set Device Configuration = 1
-I (9639) IOT_USBH: Set Device Configuration Done
-I (9644) IOT_USBH: Pipe init succeed, addr: 81
-I (9649) IOT_USBH: Pipe init succeed, addr: 01
-I (9654) USB_HCDC: CDC Device Connected
-I (9659) esp-modem: --------- Modem PreDefined Info ------------------
-I (9666) esp-modem: Model: ML302-DNLM/CNLM
-I (9671) esp-modem: Modem itf: IN Addr:0x81, OUT Addr:0x01
-I (9677) esp-modem: ----------------------------------------------------
-I (9684) gpio: GPIO[12]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0
-I (9694) gpio: GPIO[13]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0
-W (9704) USB_HCDC: rx0 flush -0 = 0
-W (9707) modem_board: DTE reconnect, reconnecting ...
+I (540) 4g_main: ====================================
+I (540) 4g_main:      ESP 4G Cat.1 Wi-Fi Router
+I (540) 4g_main: ====================================
+I (544) modem_board: iot_usbh_modem, version: 1.1.4
+I (549) modem_board: Force reset modem board....
+I (553) gpio: GPIO[13]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0
+I (561) modem_board: Resetting modem using io=13, level=0
+I (766) modem_board: Waiting for modem initialize ready
+I (5766) USBH_CDC: iot usbh cdc version: 1.1.0
+I (5796) esp-modem: --------- Modem PreDefined Info ------------------
+I (5797) esp-modem: Model: User Defined
+I (5797) esp-modem: Modem itf 3
+I (5798) esp-modem: ----------------------------------------------------
+I (5805) gpio: GPIO[12]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0
+I (5813) gpio: GPIO[13]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0
+Found NOTIF endpoint: 138
+Found IN endpoint: 130
+Found OUT endpoint: 1
+....
+I (7634) modem_board: DTE reconnect, reconnecting ...
 
-W (10713) modem_board: reconnect after 5s...
-W (11713) modem_board: reconnect after 4s...
-W (12713) modem_board: reconnect after 3s...
-W (13713) modem_board: reconnect after 2s...
-W (14713) modem_board: reconnect after 1s...
-I (14713) modem_board: Modem state STAGE_SYNC, Start
-W (14824) modem_board: Network Auto reconnecting ...
-I (14824) modem_board: Modem state STAGE_SYNC, Success!
-I (14924) modem_board: Modem state STAGE_CHECK_SIM, Start
-I (14958) modem_board: SIM Card Ready
-I (14958) modem_board: Modem state STAGE_CHECK_SIM, Success!
-I (15058) modem_board: Modem state STAGE_CHECK_SIGNAL, Start
-I (15081) modem_board: Signal quality: rssi=25, ber=99
-I (15081) modem_board: Modem state STAGE_CHECK_SIGNAL, Success!
-I (15182) modem_board: Modem state STAGE_CHECK_REGIST, Start
-I (15205) modem_board: Network registered, Operator: "46000"
-I (15205) modem_board: Modem state STAGE_CHECK_REGIST, Success!
-I (15306) modem_board: Modem state STAGE_START_PPP, Start
-I (15715) modem_board: Modem state STAGE_START_PPP, Success!
-W (15716) modem_board: Modem event! 0
-I (15727) esp-netif_lwip-ppp: Connected
-I (15727) esp-netif_lwip-ppp: Name Server1: 211.136.150.86
-I (15727) esp-netif_lwip-ppp: Name Server2: 0.0.0.0
-I (15732) modem_board: IP event! 6
-I (15736) modem_board: Modem Connected to PPP Server
-I (15742) modem_board: ppp ip: 10.84.162.74, mask: 255.255.255.255, gw: 192.168.0.1
-I (15750) modem_board: Main DNS: 211.136.150.86
-I (15755) modem_board: Backup DNS: 0.0.0.0
-I (15761) pp: pp rom version: e7ae62f
-I (15765) net80211: net80211 rom version: e7ae62f
-I (15771) wifi:wifi driver task: 3fcb04d8, prio:23, stack:6656, core=0
-I (15776) system_api: Base MAC address is not set
-I (15781) system_api: read default base MAC address from EFUSE
-I (15798) wifi:wifi firmware version: 133d2ca
-I (15798) wifi:wifi certification version: v7.0
-I (15799) wifi:config NVS flash: enabled
-I (15800) wifi:config nano formatting: disabled
-I (15804) wifi:Init data frame dynamic rx buffer num: 32
-I (15809) wifi:Init management frame dynamic rx buffer num: 32
-I (15815) wifi:Init management short buffer num: 32
-I (15815) modem_board: Modem state STAGE_WAIT_IP, Start
-I (15819) wifi:Init dynamic tx buffer num: 32
-I (15825) modem_board: Modem state STAGE_WAIT_IP, Success!
-I (15829) wifi:Init static tx FG buffer num: 2
-I (15840) wifi:Init static rx buffer size: 1600
-I (15844) wifi:Init static rx buffer num: 10
-I (15848) wifi:Init dynamic rx buffer num: 32
-I (15852) wifi_init: tcpip mbox: 32
-I (15856) wifi_init: udp mbox: 6
-I (15860) wifi_init: tcp mbox: 6
-I (15864) wifi_init: tcp tx win: 5744
-I (15868) wifi_init: tcp rx win: 5744
-I (15873) wifi_init: tcp mss: 1440
-I (15877) wifi_init: WiFi IRAM OP enabled
-I (15881) wifi_init: WiFi RX IRAM OP enabled
-I (15886) wifi_init: LWIP IRAM OP enabled
-I (15892) phy_init: phy_version 503,13653eb,Jun  1 2022,17:47:08
-I (15931) wifi:mode : softAP (7c:df:a1:e0:91:01)
-I (15934) wifi:Total power save buffer number: 16
-I (15934) wifi:Init max length of beacon: 752/752
-I (15934) wifi:Init max length of beacon: 752/752
-I (15939) modem_wifi: Wi-Fi AP started
-I (15947) wifi:Total power save buffer number: 16
-I (15948) modem_wifi: softap ssid: esp_4g_router password: 12345678
-I (15954) modem_wifi: NAT is enabled
+I (7639) 4g_main: Modem Board Event: USB connected
+I (7643) USBH_CDC: Opened cdc device: 1
+I (7647) USBH_CDC: New device connected, address: 1
+I (8639) modem_board: reconnect after 5s...
+I (9639) modem_board: reconnect after 4s...
+I (10639) modem_board: reconnect after 3s...
+I (11639) modem_board: reconnect after 2s...
+I (12639) modem_board: reconnect after 1s...
+I (12639) modem_board: Modem state STAGE_SYNC, Start
+I (12649) modem_board: Network Auto reconnecting ...
+I (12650) modem_board: Modem state STAGE_SYNC, Success!
+W (12650) 4g_main: Modem Board Event: Network disconnected
+I (12750) modem_board: Modem state STAGE_CHECK_SIM, Start
+I (12751) modem_board: SIM Card Ready
+I (12752) modem_board: Modem state STAGE_CHECK_SIM, Success!
+I (12752) 4g_main: Modem Board Event: SIM Card Connected
+I (12852) modem_board: Modem state STAGE_CHECK_SIGNAL, Start
+I (12852) modem_board: Signal quality: rssi=26, ber=99
+I (12853) modem_board: Modem state STAGE_CHECK_SIGNAL, Success!
+I (12956) modem_board: Modem state STAGE_CHECK_REGIST, Start
+I (12956) modem_board: Network registered, Operator: "46000"
+I (12957) modem_board: Modem state STAGE_CHECK_REGIST, Success!
+I (13061) modem_board: Modem state STAGE_START_PPP, Start
+I (13062) modem_board: Modem state STAGE_START_PPP, Success!
+I (13162) modem_board: Modem state STAGE_WAIT_IP, Start
+W (13162) modem_board: Modem event! 0
+I (13742) esp-netif_lwip-ppp: Connected
+I (13742) modem_board: IP event! 6
+I (13742) modem_board: Modem Connected to PPP Server
+I (13742) modem_board: ppp ip: 10.101.18.249, mask: 255.255.255.255, gw: 10.64.64.64
+I (13750) modem_board: Main DNS: 211.136.150.86
+I (13754) modem_board: Backup DNS: 211.136.150.88
+I (13758) modem_board: Modem state STAGE_WAIT_IP, Success!
+I (13758) esp-modem-netif: PPP state changed event 0: (NETIF_PPP_ERRORNONE)
+I (13770) 4g_main: Modem Board Event: Network connected
+I (13758) 4g_router_server: ssid : Can't find in NVS!
+I (13780) 4g_router_server: password : Can't find in NVS!
+I (13785) 4g_router_server: auth_mode : Can't find in NVS!
+I (13790) 4g_router_server: channel : Can't find in NVS!
+I (13795) 4g_router_server: hide_ssid : Can't find in NVS!
+I (13800) 4g_router_server: bandwidth : Can't find in NVS!
+I (13806) 4g_router_server: max_connection : Can't find in NVS!
+I (13849) 4g_router_server: Partition size: total: 956561, used: 182477
+I (13850) 4g_router_server: Starting server on port: '80'
+I (13851) 4g_router_server: Registering URI handlers
+I (13855) 4g_router_server: Starting webserver
 ```
 
 ## 代码调试

@@ -81,4 +81,4 @@ The example using `ESP32-S3-OTG` board by default, the IO configuration is as fo
 
 ### Wireless USB UART Bridge
 
-Please refer to [Wireless USB UART Bridge](https://github.com/espressif/esp-dev-kits/tree/master/esp32-s3-usb-bridge/examples/usb_wireless_bridge).
+Please refer to [Wireless USB UART Bridge](https://github.com/espressif/esp-dev-kits/tree/master/examples/esp32-s3-usb-bridge/examples/usb_wireless_bridge).

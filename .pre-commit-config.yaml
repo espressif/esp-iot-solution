@@ -93,4 +93,4 @@ repos:
     rev: v2.3.0
     hooks:
     - id: codespell
-      args: [-w, "--ignore-words=codespell-ignore-list"]
+      args: [-w, "--ignore-words=codespell-ignore-list", "--skip=*.js,*.vue,*/pnpm-lock.yaml,*/package-lock.json,*/yarn.lock"]

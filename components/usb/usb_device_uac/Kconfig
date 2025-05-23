@@ -1,39 +1,41 @@
 menu "USB Device UAC Configuration"
 
-    config TUSB_VID
-        hex "USB Device VID"
-        default 0x303A
+    if !USB_DEVICE_UAC_AS_PART
+        config UAC_TUSB_VID
+            hex "USB Device VID"
+            default 0x303A
 
-    config TUSB_PID
-        hex "USB Device PID"
-        default 0x8000
+        config UAC_TUSB_PID
+            hex "USB Device PID"
+            default 0x8000
 
-    config TUSB_MANUFACTURER
-        string "USB Device Manufacture"
-        default "Espressif"
+        config UAC_TUSB_MANUFACTURER
+            string "USB Device Manufacture"
+            default "Espressif"
 
-    config TUSB_PRODUCT
-        string "Product Name"
-        default "ESP UAC Device"
+        config UAC_TUSB_PRODUCT
+            string "Product Name"
+            default "ESP UAC Device"
 
-    config TUSB_SERIAL_NUM
-        string "Product ID"
-        default "12345678"
+        config UAC_TUSB_SERIAL_NUM
+            string "Product ID"
+            default "12345678"
 
-    choice TINYUSB_RHPORT
-        prompt "TinyUSB Root Port"
-        default TINYUSB_RHPORT_HS if IDF_TARGET_ESP32P4
-        default TINYUSB_RHPORT_FS
-        help
-            Allows set the USB PHY Controller for TinyUSB: HS (USB OTG2.0 PHY for HighSpeed)
+        choice TINYUSB_RHPORT
+            prompt "TinyUSB Root Port"
+            default TINYUSB_RHPORT_HS if IDF_TARGET_ESP32P4
+            default TINYUSB_RHPORT_FS
+            help
+                Allows set the USB PHY Controller for TinyUSB: HS (USB OTG2.0 PHY for HighSpeed)
 
-        config TINYUSB_RHPORT_HS
-            depends on IDF_TARGET_ESP32P4
-            bool "High Speed"
+            config TINYUSB_RHPORT_HS
+                depends on IDF_TARGET_ESP32P4
+                bool "High Speed"
 
-        config TINYUSB_RHPORT_FS
-            bool "Full Speed"
-    endchoice
+            config TINYUSB_RHPORT_FS
+                bool "Full Speed"
+        endchoice
+    endif
 
     # Insert UAC config
     orsource "./Kconfig.uac"

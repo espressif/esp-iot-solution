@@ -6,9 +6,15 @@ This driver is based on [chuanjinpang/win10_idd_xfz1986_usb_graphic_driver_displ
 
 ## Download Link
 
-[Click here to download](https://dl.espressif.com/AE/esp-iot-solution/usb_lcd_windos_driver.zip)
+[Click here to download](https://dl.espressif.com/AE/esp-iot-solution/xfz1986_usb_graphic_250224_rc_sign.exe)
 
 ## How to Use
+
+### Certified Driver
+
+1. Double-click the downloaded driver and click Install.
+
+### Self-Compiled Driver
 
 1. (Optional) First, disable Windows driver signature enforcement using test mode.
 
@@ -50,7 +56,7 @@ This driver is based on [chuanjinpang/win10_idd_xfz1986_usb_graphic_driver_displ
 
 ## Notes
 
-* The device's VID and PID must match the `DeviceName` description in the driver INF file. For composite devices, it must be precise to the interface number, e.g., `USB\VID_303A&PID_2986&MI_00`. Modifying this file requires recompiling the driver.
+* The device's VID and PID must match the description of `DeviceName` in the driver INF file. For composite devices, use `USB\VID_303A&PID_2986`; for display-only devices, use `USB\VID_303A&PID_2987`.
 
 * The driver communicates with the device through the VENDOR interface, supporting multiple resolutions and image formats, controlled via the interface string descriptor. For details, refer to the [README](https://github.com/chuanjinpang/win10_idd_xfz1986_usb_graphic_driver_display/blob/main/README.md).
 
