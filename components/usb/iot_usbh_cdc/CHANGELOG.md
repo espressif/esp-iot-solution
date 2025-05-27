@@ -1,6 +1,18 @@
 # ChangeLog
 
-## v1.1.0 - 2025-05-13
+## v2.0.0 - 2025-05-20
+
+### Features:
+
+* Support no internal ring buffer mode..
+
+### Break Changes:
+
+* Set rx_buffer_size to 0 to disable internal ring buffer.
+
+* Remove macro IN_RINGBUFFER_SIZE and OUT_RINGBUFFER_SIZE.
+
+## v1.1.1 - 2025-05-13
 
 ### Features:
 

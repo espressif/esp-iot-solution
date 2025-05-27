@@ -21,8 +21,6 @@ typedef struct {
     uint16_t vid;                             /*!< USB device vendor ID, used when auto_detect is false */
     uint16_t pid;                             /*!< USB device product ID, used when auto_detect is false */
     int itf_num;                              /*!< interface numbers, used when auto_detect is false */
-    uint16_t rx_buffer_size;                  /*!< Size of the USB IN buffer, if 0, use CONFIG_IN_RINGBUFFER_SIZE */
-    uint16_t tx_buffer_size;                  /*!< Size of the USB OUT buffer, if 0, use CONFIG_OUT_RINGBUFFER_SIZE */
 } iot_usbh_rndis_config_t;
 
 /**

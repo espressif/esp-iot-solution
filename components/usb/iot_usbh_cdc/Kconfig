@@ -31,18 +31,6 @@ menu "IoT USB Host CDC"
         help
             usb host OUT transfer buffer size
 
-    config IN_RINGBUFFER_SIZE
-        int "usbh IN ringbuffer size"
-        default 1024
-        help
-            usb host IN ringbuffer size
-
-    config OUT_RINGBUFFER_SIZE
-        int "usbh OUT ringbuffer size"
-        default 1024
-        help
-            usb host OUT ringbuffer size
-
     config DEVICE_ADDRESS_LIST_NUM
         int "usbh device address list num"
         default 10

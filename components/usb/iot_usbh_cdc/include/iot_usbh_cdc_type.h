@@ -13,7 +13,7 @@ extern "C" {
 
 typedef struct {
     uint8_t bmRequestType;
-    int32_t bNotificationCode;
+    uint8_t bNotificationCode;
     uint16_t wValue;
     uint16_t wIndex;
     uint16_t wLength;

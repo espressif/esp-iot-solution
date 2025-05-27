@@ -422,6 +422,15 @@ examples/usb/host/usb_hub_dual_camera:
   enable:
     - if: IDF_TARGET in ["esp32s2", "esp32s3","esp32p4"]
 
+examples/usb/host/usb_ecm_4g_module:
+  enable:
+    - if: IDF_TARGET in ["esp32s2", "esp32s3"]
+    - if: IDF_TARGET in ["esp32p4"] and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 3)
+  disable:
+    - if: IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0
+      temporary: true
+      reason: "/opt/esp/idf/components/esp_http_server/src/util/ctrl_sock.c:23:14: error: 'TAG' undeclared (first use in this function)"
+
 examples/usb/host/usb_msc_ota:
   enable:
     - if: SOC_USB_OTG_SUPPORTED == 1
@@ -434,6 +443,10 @@ examples/usb/host/usb_rndis_4g_module:
   enable:
     - if: IDF_TARGET in ["esp32s2", "esp32s3"]
     - if: IDF_TARGET in ["esp32p4"] and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 3)
+  disable:
+    - if: IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0
+      temporary: true
+      reason: "/opt/esp/idf/components/esp_http_server/src/util/ctrl_sock.c:23:14: error: 'TAG' undeclared (first use in this function)"
 
 examples/usb/otg/usb_host_device_mode_manual_switch:
   enable:
