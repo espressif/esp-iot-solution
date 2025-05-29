@@ -6,7 +6,7 @@ We welcome contributions to the esp-iot-solution project!
 How to Contribute
 --------------------
 
-Contributions to esp-iot-solution - fixing bugs, adding features, adding documentation - are welcome. We accept contributions via `Github Pull Requests <https://help.github.com/articles/about-pull-requests>`_.
+Contributions to esp-iot-solution - fixing bugs, adding features, adding documentation - are welcome. We accept contributions via `GitHub Pull Requests <https://help.github.com/articles/about-pull-requests>`_.
 
 Before Contributing
 ----------------------
