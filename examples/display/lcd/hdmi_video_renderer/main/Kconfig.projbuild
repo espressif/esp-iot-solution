@@ -1,0 +1,71 @@
+menu "HDMI MP4 Player Configuration"
+
+    menu "Video File Configuration"
+        config MP4_FILENAME
+            string "Video File Name"
+            default "test_video.mp4"
+            help
+                Name of the video file to be played.
+    endmenu
+
+    menu "Display Configuration"
+
+        config USE_LCD_BUFFER
+            bool "Use LCD Internal Buffer"
+            default y
+            help
+                Use the internal LCD buffer for frame rendering.
+                When enabled, uses the DPI panel's built-in frame buffer for efficient rendering.
+                When disabled, allocates separate frame buffers in external memory.
+
+                Important notes when using LCD internal buffer:
+                1. MP4 video resolution must match the HDMI output resolution
+                2. This mode provides the highest possible frame rate
+
+    endmenu
+
+    menu "Audio Decoder Configuration"
+
+        config AUDIO_DEC_FLAC_ENABLE
+            bool "Enable FLAC Decoder"
+            default n
+            help
+                Enable FLAC audio decoder support.
+                FLAC (Free Lossless Audio Codec) is a lossless audio compression format.
+
+        config AUDIO_DEC_OPUS_ENABLE
+            bool "Enable OPUS Decoder"
+            default n
+            help
+                Enable OPUS audio decoder support.
+                Opus is a lossy audio coding format developed for internet streaming.
+
+        config AUDIO_DEC_VORBIS_ENABLE
+            bool "Enable VORBIS Decoder"
+            default n
+            help
+                Enable Vorbis audio decoder support.
+                Vorbis is a free and open-source lossy audio compression format.
+
+        config AUDIO_DEC_ADPCM_ENABLE
+            bool "Enable ADPCM Decoder"
+            default n
+            help
+                Enable ADPCM (Adaptive Differential Pulse Code Modulation) audio decoder support.
+                ADPCM is a variant of PCM that encodes the differences between samples.
+
+    endmenu
+
+    menu "Video Synchronization Configuration"
+
+        config HDMI_VIDEO_SYNC_ENABLED
+            bool "Enable Audio-Video Synchronization"
+            default y
+            help
+                Enable synchronization between audio and video playback.
+                This ensures audio and video tracks are played in sync.
+                When disabled, audio and video will play independently without timing coordination.
+
+    endmenu
+
+endmenu

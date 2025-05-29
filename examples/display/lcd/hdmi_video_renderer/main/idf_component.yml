@@ -1,0 +1,9 @@
+dependencies:
+  idf: ">=5.4"
+
+  espressif/esp32_p4_function_ev_board:
+    version: "^5.0.0"
+
+  espressif/esp_audio_codec:
+    version: "^2.3.0"
+    public: true

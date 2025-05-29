@@ -1,0 +1,56 @@
+menu "Extractor Configuration"
+
+    config WAV_EXTRACTOR_SUPPORT
+        bool "Support WAV Extractor"
+        default y
+        help
+            Enable this option to register WAV Extractor
+
+    config MP4_EXTRACTOR_SUPPORT
+        bool "Support MP4 Extractor"
+        default y
+        help
+            Enable this option to register MP4 Extractor
+
+    config TS_EXTRACTOR_SUPPORT
+        bool "Support TS Extractor"
+        default y
+        help
+            Enable this option to register TS Extractor
+
+    config HLS_EXTRACTOR_SUPPORT
+        bool "Support HLS (m3u8) Extractor"
+        default y
+        help
+            Enable this option to register HLS Extractor
+
+    config OGG_EXTRACTOR_SUPPORT
+        bool "Support OGG Extractor"
+        default y
+        help
+            Enable this option to register OGG extractor
+
+    config AVI_EXTRACTOR_SUPPORT
+        bool "Support AVI Extractor"
+        default y
+        help
+            Enable this option to register AVI Extractor
+
+    config AUDIO_ES_EXTRACTOR_SUPPORT
+        bool "Support Audio ES Extractor"
+        default y
+        help
+            Enable this option to register (aac, mp3, flac, amr etc) Extractor
+
+    config CAF_EXTRACTOR_SUPPORT
+        bool "Support CALF Extractor"
+        default y
+        help
+            Enable this option to register CALF Extractor
+
+    config FLV_EXTRACTOR_SUPPORT
+        bool "Support FLV Extractor"
+        default y
+        help
+            Enable this option to register FLV Extractor
+ endmenu

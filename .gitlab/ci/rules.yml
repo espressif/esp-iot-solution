@@ -484,6 +484,9 @@
 .patterns-example_common_components_camera: &patterns-example_common_components_camera
   - "examples/common_components/camera/**/*"
 
+.patterns-example_display_lcd_hdmi_video_renderer: &patterns-example_display_lcd_hdmi_video_renderer
+  - "examples/display/lcd/hdmi_video_renderer/**/*"
+
 .patterns-example_display_lcd_lcd_layer_blending: &patterns-example_display_lcd_lcd_layer_blending
   - "examples/display/lcd/lcd_layer_blending/**/*"
 
@@ -905,6 +908,12 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-example_check_pedestrian_flow
+
+.rules:build:example_display_lcd_hdmi_video_renderer:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
 
 .rules:build:example_display_lcd_lcd_layer_blending:
   rules:
