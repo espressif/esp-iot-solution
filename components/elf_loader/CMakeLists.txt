@@ -4,6 +4,10 @@ if(CONFIG_ELF_LOADER)
               "src/esp_elf.c"
               "src/esp_elf_adapter.c")
 
+    if(CONFIG_ELF_LOADER_CUSTOMER_SYMBOLS)
+        list(APPEND srcs "src/esp_all_symbol.c")
+    endif()
+
     if(CONFIG_IDF_TARGET_ARCH_XTENSA)
         list(APPEND srcs "src/arch/esp_elf_xtensa.c")
 

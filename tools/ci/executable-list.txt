@@ -1,3 +1,4 @@
+components/elf_loader/tool/symbols.py
 components/gprof/scripts/gprof.py
 components/usb/esp_tinyuf2/utils/uf2conv.py
 components/utilities/xz/xz-embedded/linux/scripts/xz_wrap.sh
