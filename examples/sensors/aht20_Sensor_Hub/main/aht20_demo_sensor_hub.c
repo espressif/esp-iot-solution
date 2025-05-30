@@ -59,7 +59,7 @@ static void sensor_event_handler(void *handler_args, esp_event_base_t base, int3
                  sensor_data->temperature);
         break;
     case SENSOR_HUMI_DATA_READY:
-        ESP_LOGI(TAG, "Timestamp = %llu - %s_0x%x TEMP_DATA_READY - "
+        ESP_LOGI(TAG, "Timestamp = %llu - %s_0x%x HUMIDITY_DATA_READY - "
                  "humidity=%.2f\n",
                  sensor_data->timestamp,
                  sensor_data->sensor_name,
@@ -100,19 +100,24 @@ void init_aht20()
         .min_delay = SENSOR_PERIOD         /*data acquire period*/
     };
 
-    iot_sensor_create("aht20", &sensor_config, &sensor_handle); /*create a sensor with specific sensor_id and configurations*/
+    /*create a sensor with specific sensor_id and configurations*/
+    iot_sensor_create("aht20", &sensor_config, &sensor_handle);
 
     /*register handler with sensor's handle*/
     iot_sensor_handler_register(sensor_handle, sensor_event_handler, NULL);
 
-    iot_sensor_start(sensor_handle); /*start a sensor, data ready events will be posted once data acquired successfully*/
+    /*start a sensor, data ready events will be posted once data acquired successfully*/
+    iot_sensor_start(sensor_handle);
 
 }
 
 void app_main(void)
 {
-    i2c_master_init(); //initialize i2c master
-    init_aht20();    // user defined function for aht20 initialization
+    //initialize i2c master
+    i2c_master_init();
+
+    // user defined function for aht20 initialization
+    init_aht20();
 
     while (1) {
         vTaskDelay(1000);

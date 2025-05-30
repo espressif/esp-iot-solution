@@ -1,5 +1,5 @@
 # Component: AHT20
-I2C driver for Aosong AHT20 humidity and temperature sensor using esp-idf.
+I2C driver with Sensor Hub support for Aosong AHT20 humidity and temperature sensor using esp-idf.
 Tested with AHT20 using ESP32 and ESP32-S3 devkits.
 
 # Features
@@ -45,13 +45,13 @@ Tested with AHT20 using ESP32 and ESP32-S3 devkits.
 
 # How To Use
 
-This driver includes a demo example project.
+This driver includes demo examples.
 
-Follow the example to learn how to initialize the driver and read the sensor data.
+Follow the examples to learn how to initialize the driver or use Sensor Hub  and read the sensor data.
 
 All public APIs are documented in aht20.h.
 
-
+## Driver
 
 Following are the general guidelines.
 ```c
@@ -75,8 +75,23 @@ Following are the general guidelines.
     printf("tempertature = %uC  humidity = %u \n", raw_value.temperature, raw_value.humidity);
 ```
 
+## Senosr Hub
 
-# How to Configure CRC and I2C clock speed
+Following are the general guidelines. The sensor config and event handler used are in example.
+``` 
+    
+    /*create a sensor with specific sensor_id and configurations*/
+    iot_sensor_create("aht20", &sensor_config, &sensor_handle); 
+   
+     /*register handler with sensor's handle*/
+    iot_sensor_handler_register(sensor_handle, sensor_event_handler, NULL);
+
+    /*start the sensor, data ready events will be posted once data is acquired successfully*/
+    iot_sensor_start(sensor_handle); 
+ 
+```
+
+## How to Configure CRC and I2C clock speed
 Additionally, select in menuconfig under Component Config → AHT20; to use CRC(default is not used)
 or change the clock speed of device (default is 100KHz). 
 
