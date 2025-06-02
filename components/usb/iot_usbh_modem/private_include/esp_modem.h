@@ -224,11 +224,12 @@ esp_err_t esp_modem_set_event_handler(esp_modem_dte_t *dte, esp_event_handler_t 
  *
  * @param dte modem_dte_t type object
  * @param handler event handler to unregister
+ * @param event_id event id to unregister
  * @return esp_err_t
  *      - ESP_OK on success
  *      - ESP_ERR_INVALID_ARG on invalid combination of event base and event id
  */
-esp_err_t esp_modem_remove_event_handler(esp_modem_dte_t *dte, esp_event_handler_t handler);
+esp_err_t esp_modem_remove_event_handler(esp_modem_dte_t *dte, esp_event_handler_t handler, int32_t event_id);
 
 esp_err_t esp_modem_post_event(esp_modem_dte_t *dte, int32_t event_id, void* event_data, size_t event_data_size, TickType_t ticks_to_wait);
 

@@ -495,7 +495,7 @@ esp_modem_dte_t *esp_modem_dte_new(const esp_modem_dte_config_t *config)
         .cbs = {
             .connect = _usb_conn_callback,
             .disconnect = _usb_disconn_callback,
-            .revc_data = _usb_recv_date_cb,
+            .recv_data = _usb_recv_date_cb,
             .user_data = esp_dte,
         },
     };
@@ -511,7 +511,7 @@ esp_modem_dte_t *esp_modem_dte_new(const esp_modem_dte_config_t *config)
     dev_config.cbs.connect = NULL;
     dev_config.cbs.disconnect = NULL;
     dev_config.cbs.user_data = NULL;
-    dev_config.cbs.revc_data = NULL;
+    dev_config.cbs.recv_data = NULL;
     handle = NULL;
     usbh_cdc_create(&dev_config, &handle);
     ESP_MODEM_ERR_CHECK(handle != NULL, "usb cdc device create failed", err_usb_config);

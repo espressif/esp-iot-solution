@@ -49,6 +49,7 @@ INPUT = \
     $(PROJECT_PATH)/components/display/tools/esp_mmap_assets/include/esp_mmap_assets.h \
     $(PROJECT_PATH)/components/display/touch_panel/touch_panel.h \
     $(PROJECT_PATH)/components/i2c_bus/include/i2c_bus.h \
+    $(PROJECT_PATH)/components/iot_eth/include/iot_eth.h \
     $(PROJECT_PATH)/components/ir/ir_learn/include/ir_learn.h \
     $(PROJECT_PATH)/components/keyboard_button/include/keyboard_button.h \
     $(PROJECT_PATH)/components/knob/include/iot_knob.h \
@@ -70,6 +71,7 @@ INPUT = \
     $(PROJECT_PATH)/components/spi_bus/include/spi_bus.h \
     $(PROJECT_PATH)/components/touch/touch_button_sensor/include/touch_button_sensor.h \
     $(PROJECT_PATH)/components/touch/touch_proximity_sensor/include/touch_proximity_sensor.h \
+    $(PROJECT_PATH)/components/touch/touch_slider_sensor/include/touch_slider_sensor.h \
     $(PROJECT_PATH)/components/usb/esp_msc_ota/include/esp_msc_ota.h \
     $(PROJECT_PATH)/components/usb/esp_tinyuf2/esp_tinyuf2.h \
     $(PROJECT_PATH)/components/usb/iot_usbh_cdc/include/iot_usbh_cdc.h \
@@ -77,6 +79,8 @@ INPUT = \
     $(PROJECT_PATH)/components/usb/usb_device_uvc/include/usb_device_uvc.h \
     $(PROJECT_PATH)/components/usb/usb_stream/include/usb_stream.h \
     $(PROJECT_PATH)/components/utilities/adc_tp_calibration/include/adc_tp_calibration.h \
+    $(PROJECT_PATH)/components/usb/iot_usbh_rndis/include/iot_usbh_rndis.h \
+    $(PROJECT_PATH)/components/usb/iot_usbh_ecm/include/iot_usbh_ecm.h \
     $(PROJECT_PATH)/components/zero_detection/include/zero_detection.h \
 
 ## Get warnings for functions that have no documentation for their parameters or return value

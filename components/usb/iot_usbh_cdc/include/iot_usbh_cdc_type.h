@@ -1,0 +1,79 @@
+/*
+ * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+#pragma once
+
+#include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef struct {
+    uint8_t bmRequestType;
+    uint8_t bNotificationCode;
+    uint16_t wValue;
+    uint16_t wIndex;
+    uint16_t wLength;
+    uint8_t Data[];
+} __attribute__((packed)) iot_cdc_notification_t;
+
+/**
+ * @brief USB CDC Request Codes
+ *
+ * @see Table 19, USB CDC specification rev. 1.2
+ */
+typedef enum {
+    CDC_REQ_SEND_ENCAPSULATED_COMMAND = 0x00,
+    CDC_REQ_GET_ENCAPSULATED_RESPONSE = 0x01,
+    CDC_REQ_SET_COMM_FEATURE = 0x02,
+    CDC_REQ_GET_COMM_FEATURE = 0x03,
+    CDC_REQ_CLEAR_COMM_FEATURE = 0x04,
+    CDC_REQ_SET_AUX_LINE_STATE = 0x10,
+    CDC_REQ_SET_HOOK_STATE = 0x11,
+    CDC_REQ_PULSE_SETUP = 0x12,
+    CDC_REQ_SEND_PULSE = 0x13,
+    CDC_REQ_SET_PULSE_TIME = 0x14,
+    CDC_REQ_RING_AUX_JACK = 0x15,
+    CDC_REQ_SET_LINE_CODING = 0x20,
+    CDC_REQ_GET_LINE_CODING = 0x21,
+    CDC_REQ_SET_CONTROL_LINE_STATE = 0x22,
+    CDC_REQ_SEND_BREAK = 0x23,
+    CDC_REQ_SET_RINGER_PARMS = 0x30,
+    CDC_REQ_GET_RINGER_PARMS = 0x31,
+    CDC_REQ_SET_OPERATION_PARMS = 0x32,
+    CDC_REQ_GET_OPERATION_PARMS = 0x33,
+    CDC_REQ_SET_LINE_PARMS = 0x34,
+    CDC_REQ_GET_LINE_PARMS = 0x35,
+    CDC_REQ_DIAL_DIGITS = 0x36,
+    CDC_REQ_SET_UNIT_PARAMETER = 0x37,
+    CDC_REQ_GET_UNIT_PARAMETER = 0x38,
+    CDC_REQ_CLEAR_UNIT_PARAMETER = 0x39,
+    CDC_REQ_GET_PROFILE = 0x3A,
+    CDC_REQ_SET_ETHERNET_MULTICAST_FILTERS = 0x40,
+    CDC_REQ_SET_ETHERNET_POWER_MANAGEMENT_PATTERN_FILTER = 0x41,
+    CDC_REQ_GET_ETHERNET_POWER_MANAGEMENT_PATTERN_FILTER = 0x42,
+    CDC_REQ_SET_ETHERNET_PACKET_FILTER = 0x43,
+    CDC_REQ_GET_ETHERNET_STATISTIC = 0x44,
+    CDC_REQ_SET_ATM_DATA_FORMAT = 0x50,
+    CDC_REQ_GET_ATM_DEVICE_STATISTICS = 0x51,
+    CDC_REQ_SET_ATM_DEFAULT_VC = 0x52,
+    CDC_REQ_GET_ATM_VC_STATISTICS = 0x53,
+    CDC_REQ_GET_NTB_PARAMETERS = 0x80,
+    CDC_REQ_GET_NET_ADDRESS = 0x81,
+    CDC_REQ_SET_NET_ADDRESS = 0x82,
+    CDC_REQ_GET_NTB_FORMAT = 0x83,
+    CDC_REQ_SET_NTB_FORMAT = 0x84,
+    CDC_REQ_GET_NTB_INPUT_SIZE = 0x85,
+    CDC_REQ_SET_NTB_INPUT_SIZE = 0x86,
+    CDC_REQ_GET_MAX_DATAGRAM_SIZE = 0x87,
+    CDC_REQ_SET_MAX_DATAGRAM_SIZE = 0x88,
+    CDC_REQ_GET_CRC_MODE = 0x89,
+    CDC_REQ_SET_CRC_MODE = 0x8A
+} __attribute__((packed)) iot_cdc_request_code_t;
+
+#ifdef __cplusplus
+}
+#endif

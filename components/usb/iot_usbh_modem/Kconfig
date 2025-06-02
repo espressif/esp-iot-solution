@@ -6,6 +6,8 @@ menu "IoT USB Host Modem"
 
         config MODEM_TARGET_USER
             bool "User Defined"
+        config MODEM_TARGET_NT26
+            bool "NT26"
         config MODEM_TARGET_ML302_DNLM
             bool "ML302-DNLM/CNLM"
         config MODEM_TARGET_AIR724UG_NFM
@@ -46,6 +48,7 @@ menu "IoT USB Host Modem"
 
     config MODEM_TARGET_NAME
         string
+        default "NT26" if MODEM_TARGET_NT26
         default "ML302-DNLM/CNLM" if MODEM_TARGET_ML302_DNLM
         default "EC600NCNLC-N06" if MODEM_TARGET_EC600N_CNLC_N06
         default "AIR780E" if MODEM_TARGET_AIR780_E
@@ -74,6 +77,7 @@ menu "IoT USB Host Modem"
 
         config MODEM_USB_ITF
             hex "Modem USB CDC interface"
+            default 0x03 if MODEM_TARGET_NT26
             default 0x00 if MODEM_TARGET_ML302_DNLM
             default 0x04 if MODEM_TARGET_EC600N_CNLC_N06
             default 0x06 if MODEM_TARGET_MC610_EU

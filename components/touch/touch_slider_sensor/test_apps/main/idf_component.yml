@@ -1,0 +1,6 @@
+dependencies:
+  idf: ">=5.0"
+  cmake_utilities: "0.*"
+  touch_slider_sensor:
+    version: "*"
+    override_path: "../../../touch_slider_sensor"

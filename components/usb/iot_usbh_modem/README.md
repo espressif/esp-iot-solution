@@ -1,6 +1,6 @@
 # IoT USB Modem
 
-This component using ESP32-S2, ESP32-S3 series SoC as a USB host to dial-up 4G Cat.1 through PPP to access the Internet, with the help of ESP32-Sx Wi-Fi softAP function, share the Internet with IoT devices or mobile devices. Realize low-cost "medium-high-speed" Internet access.
+This component using ESP32-S2, ESP32-S3, ESP32-P4 series SoC as a USB host to dial-up 4G Cat.1 through PPP to access the Internet, with the help of ESP32-Sx Wi-Fi softAP function, share the Internet with IoT devices or mobile devices. Realize low-cost "medium-high-speed" Internet access.
 
 **Features Supported:**
 
@@ -10,7 +10,7 @@ This component using ESP32-S2, ESP32-S3 series SoC as a USB host to dial-up 4G C
 * Network self-recovery
 * Wi-Fi hotspot
 
-**Supported 4G Cat.1 Module:** 
+**Supported 4G Cat.1 Module:**
 
 |      Name       |   PPP   | Secondary AT Port |
 | :-------------: | :-----: | :---------------: |
@@ -25,7 +25,7 @@ This component using ESP32-S2, ESP32-S3 series SoC as a USB host to dial-up 4G C
 
 > Secondary AT Port can be used for AT command when main modem port is in ppp network mode
 
-> There are different sub-models of the above modules. The communication stands may be different. For example, LTE-FDD 5(UL)/10(DL), LTE-TDD 1(UL)/8(DL). And endpoint address may different also, if you encounter problems, try modifying parameters using a custom device mode.
+> There are different sub-models of the above modules. The communication stands may be different. For example, LTE-FDD 5(UL)/10(DL), LTE-TDD 1(UL)/8(DL). And interface number may different also, if you encounter problems, try modifying parameters using a custom device mode.
 
 **Other 4G Cat.1 module adaptation methods**
 
@@ -33,18 +33,17 @@ This component using ESP32-S2, ESP32-S3 series SoC as a USB host to dial-up 4G C
 2. Confirm whether the 4G module **supports USB PPP dial-up interface**;
 3. Confirm that the **4G SIM card is activated** and the Internet access is turned on;
 4. Confirm that the **necessary signal wires have been connected** in accordance with the hardware wiring;
-5. Confirm the module's PPP interface input endpoint (IN) and output endpoint (OUT) addresses, and modify the following options in `menuconfig`: 
+5. Confirm the module's PPP interface input endpoint (IN) and output endpoint (OUT) addresses, and modify the following options in `menuconfig`:
 
    * Choose a `User Defined` board:
    ```
    Component config → ESP-MODEM → Choose Modem Board → User Defined
-                                
+
    ```
-   * Configure the endpoint address of 4G Modem:
+   * Configure the interface number of 4G Modem:
    ```
-   Component config → ESP-MODEM → USB CDC endpoint address config
-                                        → Modem USB CDC IN endpoint address
-                                        → Modem USB CDC OUT endpoint address
+   Component config → ESP-MODEM → USB CDC interface config
+                                        → Modem USB CDC interface
    ```
 
 6. Check outputs log to confirm that the `AT` command can be executed;
