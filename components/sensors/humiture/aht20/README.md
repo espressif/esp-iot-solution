@@ -8,9 +8,9 @@ Tested with AHT20 using ESP32 and ESP32-S3 devkits.
 
     Thread-safe via esp-i2c-driver
 
-    CRC checksum verification (optional via menuconfig)
+    CRC checksum verification (optional, only via menuconfig)
 
-    Configurable I2C clock speed (pre-compilation, not runtime,via menuconfig))
+    Configurable I2C clock speed (pre-compilation, not runtime, only via menuconfig)
 
     Unit tested 
          
@@ -45,10 +45,6 @@ Tested with AHT20 using ESP32 and ESP32-S3 devkits.
 
 # How To Use
 
-This driver includes demo examples.
-
-Follow the examples to learn how to initialize the driver or use Sensor Hub  and read the sensor data.
-
 All public APIs are documented in aht20.h.
 
 ## Driver
@@ -56,28 +52,30 @@ All public APIs are documented in aht20.h.
 Following are the general guidelines.
 ```c
     //create a AHT20 device object and receive a device handle for it
-    // my_i2c_bus_handle is a preintialized i2c_bus_handle_t object
+    // my_i2c_bus_handle here is a preintialized i2c_bus_handle_t i2c_bus object
     aht20_handle_t aht20_handle =  aht20_create( my_i2c_bus_handle, AHT20_ADDRESS_LOW ); //addresses are in aht20.h
 
-    //use the previously created AHT20 device handle for initializing the associated device
+    //use the previously created AHT20 device handle for initializing the AHT20 
     aht20_init(aht20_handle);
     
-    //read both humidity and temperature at once from device, using AHT20 device handle
-    aht20_read_humiture(aht20_handle); //Other public APIs are documented in aht20.h.
+    float_t temperature;
 
-    //access the results stored in AHT20 device object, using the AHT20 device handle
-    //other apis require user to explicitly pass variable address to hold data
-    printf("tempertature = %.2fC  humidity = %.3f \n", aht20_handle->humiture.temperature, aht20_handle->humiture.humidity);
+    aht20_read_temperature( aht20_handle, &temperature);
 
-    //to get reaw values create a object of following data type
-    aht20_raw_reading_t raw_value;
-    aht20_read_raw( aht20_handle, &raw_value);
-    printf("tempertature = %uC  humidity = %u \n", raw_value.temperature, raw_value.humidity);
+    printf("Temperature = %.2f°C\n", temperature);
+
+    vTaskDelay(pdMS_TO_TICKS(2000));
+    
+    float_t temperature;
+
+    aht20_read_temperature( aht20_handle, &temperature);
+
+    printf("Temperature = %.2f°C\n", temperature);
 ```
 
 ## Senosr Hub
 
-Following are the general guidelines. The sensor config and event handler used are in example.
+Following are the general guidelines.
 ``` 
     
     /*create a sensor with specific sensor_id and configurations*/

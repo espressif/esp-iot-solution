@@ -20,7 +20,17 @@
 
 #include "aht20.h"
 
+/******************************************** Private *********************************************/
+
 static const char *s_TAG = "AHT20";
+
+/**
+ *@brief AHT20 raw result
+ */
+typedef struct {
+    uint32_t humidity;  /*!< raw humidity reading. */
+    uint32_t temperature;   /*!< raw temperature reading. */
+} aht20_raw_reading_t;
 
 /**
 * @brief a function used to handle resetting of registers of the device, if not found calibrated when initialized
@@ -77,6 +87,20 @@ static esp_err_t aht20_JH_Reset_REG(aht20_handle_t aht20_handle, uint8_t addr);
 */
 static uint8_t calc_CRC8(uint8_t *message, uint8_t Num);
 
+/**
+* @brief check AHT20 measurement status
+*
+* @param[in] aht20_handle AHT20 device handle
+*
+* @param[out]busy busy in measurement if value is true
+*
+* @return
+*      - ESP_OK: successfully read AHT20 busy status
+*      - other error codes : failure in reading AHT20 busy status
+*
+*/
+static esp_err_t aht20_busy_status(aht20_handle_t aht20_handle, bool *busy);
+
 static esp_err_t aht20_read_reg(aht20_handle_t sensor, uint8_t * read_buffer, uint8_t read_size)
 {
     ESP_RETURN_ON_ERROR(i2c_bus_read_bytes(sensor->i2c_dev, NULL_I2C_MEM_ADDR, read_size, read_buffer),
@@ -93,114 +117,7 @@ static esp_err_t aht20_write_reg(aht20_handle_t sensor, uint8_t * cmd, uint8_t w
     return ESP_OK;
 }
 
-static uint8_t calc_CRC8(uint8_t *message, uint8_t Num)
-{
-    uint8_t i;
-    uint8_t byte;
-    uint8_t crc = 0xFF;
-    for (byte = 0; byte < Num; byte++) {
-        crc ^= (message[byte]);
-        for (i = 8; i > 0; --i) {
-            if (crc & 0x80) {
-                crc = (crc << 1) ^ 0x31;
-            } else {
-                crc = (crc << 1);
-            }
-        }
-    }
-    return crc;
-}
-
-esp_err_t aht20_read_raw(aht20_handle_t aht20_handle, aht20_raw_reading_t *raw_read)
-{
-    ESP_RETURN_ON_FALSE((aht20_handle != NULL), ESP_ERR_INVALID_ARG, s_TAG, "empty handle, provide a valid AHT20 handle");
-
-    uint8_t measure_cmd[] = {AHT20_MEASURE_CYC, 0x33, 0x00};
-
-    ESP_RETURN_ON_ERROR(aht20_write_reg(aht20_handle, measure_cmd, sizeof(measure_cmd)),
-                        s_TAG, "unable to set mode for AHT20\n");
-
-    uint8_t read_measurement[7], read_bytes = 6;;
-#ifdef CONFIG_AHT20_CHECK_CRC
-    read_bytes = 7;
-#endif
-
-    bool busy = true;
-    while (busy) {
-        aht20_busy_status(aht20_handle, &busy);    // wait for measurement
-    }
-
-    ESP_RETURN_ON_ERROR(aht20_read_reg(aht20_handle, read_measurement, read_bytes),
-                        s_TAG, "unable to read raw measurement");
-
-#ifdef CONFIG_AHT20_CHECK_CRC
-    ESP_RETURN_ON_FALSE((calc_CRC8(read_measurement, 6) == read_measurement[6]),
-                        ESP_ERR_INVALID_RESPONSE,
-                        s_TAG, "CRC match failed, invalid response received from AHT20");
-#endif
-
-    raw_read->humidity = ((read_measurement[1] << 16) | (read_measurement[2] << 8) | read_measurement[3]) >> 4;
-    raw_read->temperature = ((read_measurement[3] << 16) | (read_measurement[4] << 8) | read_measurement[5]) & 0xfffff;
-
-    return ESP_OK;
-}
-
-esp_err_t aht20_read_humiture(aht20_handle_t aht20_handle)
-{
-    aht20_raw_reading_t raw_read;
-    ESP_RETURN_ON_ERROR(aht20_read_raw(aht20_handle, &raw_read),
-                        "", "");
-
-    aht20_handle->humiture.humidity = raw_read.humidity * 100.0 / 1024 / 1024; //Calculated humidity value
-    aht20_handle->humiture.temperature = (raw_read.temperature * 200.0 / 1024 / 1024) - 50; //Calculated temperature value
-
-    return ESP_OK;
-}
-
-esp_err_t aht20_read_humidity(aht20_handle_t aht20_handle, float_t *humidity)
-{
-    aht20_raw_reading_t raw_read;
-    ESP_RETURN_ON_ERROR(aht20_read_raw(aht20_handle, &raw_read),
-                        "", "");
-
-    *humidity = raw_read.humidity * 100.0 / 1024 / 1024; //Calculated humidity value
-    return ESP_OK;
-}
-
-esp_err_t aht20_read_temperature(aht20_handle_t aht20_handle, float_t *temperature)
-{
-    aht20_raw_reading_t raw_read;
-    ESP_RETURN_ON_ERROR(aht20_read_raw(aht20_handle, &raw_read),
-                        "", "");
-
-    *temperature = (raw_read.temperature * 200.0 / 1024 / 1024) - 50; //Calculated temperature value
-
-    return ESP_OK;
-}
-
-esp_err_t aht20_calibration_status(aht20_handle_t aht20_handle, bool *calibration)
-{
-    ESP_RETURN_ON_FALSE((aht20_handle != NULL), ESP_ERR_INVALID_ARG,
-                        s_TAG, "empty handle, initialize AHT20 handle");
-
-    ESP_RETURN_ON_FALSE((calibration != NULL), ESP_ERR_INVALID_ARG,
-                        s_TAG, "provide a variable to store status value");
-
-    uint8_t read_status;
-
-    ESP_RETURN_ON_ERROR(aht20_read_reg(aht20_handle, &read_status, sizeof(read_status)),
-                        s_TAG, "unable to read status");
-
-    if (read_status & BIT3) {
-        *calibration = true;
-    } else {
-        *calibration = false;
-    }
-
-    return ESP_OK;
-}
-
-esp_err_t aht20_busy_status(aht20_handle_t aht20_handle, bool *busy)
+static esp_err_t aht20_busy_status(aht20_handle_t aht20_handle, bool *busy)
 {
     ESP_RETURN_ON_FALSE((aht20_handle != NULL), ESP_ERR_INVALID_ARG,
                         s_TAG, "empty handle, initialize AHT20 handle");
@@ -251,6 +168,81 @@ static esp_err_t aht20_Start_Init(aht20_handle_t aht20_handle)
     return ESP_OK;
 }
 
+static uint8_t calc_CRC8(uint8_t *message, uint8_t Num)
+{
+    uint8_t i;
+    uint8_t byte;
+    uint8_t crc = 0xFF;
+    for (byte = 0; byte < Num; byte++) {
+        crc ^= (message[byte]);
+        for (i = 8; i > 0; --i) {
+            if (crc & 0x80) {
+                crc = (crc << 1) ^ 0x31;
+            } else {
+                crc = (crc << 1);
+            }
+        }
+    }
+    return crc;
+}
+
+/**************************************************************************************************/
+
+/******************************************** Public *********************************************/
+
+esp_err_t aht20_read_raw(aht20_handle_t aht20_handle, aht20_raw_reading_t *raw_read)
+{
+    ESP_RETURN_ON_FALSE((aht20_handle != NULL), ESP_ERR_INVALID_ARG, s_TAG, "empty handle, provide a valid AHT20 handle");
+
+    uint8_t measure_cmd[] = {AHT20_MEASURE_CYC, 0x33, 0x00};
+
+    ESP_RETURN_ON_ERROR(aht20_write_reg(aht20_handle, measure_cmd, sizeof(measure_cmd)),
+                        s_TAG, "unable to set mode for AHT20\n");
+
+    uint8_t read_measurement[7], read_bytes = 6;;
+#ifdef CONFIG_AHT20_CHECK_CRC
+    read_bytes = 7;
+#endif
+
+    bool busy = true;
+    while (busy) {
+        aht20_busy_status(aht20_handle, &busy);    // wait for measurement
+    }
+
+    ESP_RETURN_ON_ERROR(aht20_read_reg(aht20_handle, read_measurement, read_bytes),
+                        s_TAG, "unable to read raw measurement");
+
+#ifdef CONFIG_AHT20_CHECK_CRC
+    ESP_RETURN_ON_FALSE((calc_CRC8(read_measurement, 6) == read_measurement[6]),
+                        ESP_ERR_INVALID_RESPONSE,
+                        s_TAG, "CRC match failed, invalid response received from AHT20");
+#endif
+
+    raw_read->humidity = ((read_measurement[1] << 16) | (read_measurement[2] << 8) | read_measurement[3]) >> 4;
+    raw_read->temperature = ((read_measurement[3] << 16) | (read_measurement[4] << 8) | read_measurement[5]) & 0xfffff;
+
+    return ESP_OK;
+}
+
+esp_err_t aht20_read_humidity(aht20_handle_t aht20_handle, float_t *humidity)
+{
+    aht20_raw_reading_t raw_read;
+    ESP_RETURN_ON_ERROR(aht20_read_raw(aht20_handle, &raw_read), "", "");
+
+    *humidity = raw_read.humidity * 100.0 / 1024 / 1024; //Calculated humidity value
+    return ESP_OK;
+}
+
+esp_err_t aht20_read_temperature(aht20_handle_t aht20_handle, float_t *temperature)
+{
+    aht20_raw_reading_t raw_read;
+    ESP_RETURN_ON_ERROR(aht20_read_raw(aht20_handle, &raw_read), "", "");
+
+    *temperature = (raw_read.temperature * 200.0 / 1024 / 1024) - 50; //Calculated temperature value
+
+    return ESP_OK;
+}
+
 esp_err_t aht20_init(aht20_handle_t aht20_handle)
 {
     ESP_RETURN_ON_FALSE((aht20_handle != NULL), ESP_ERR_INVALID_ARG, s_TAG, "empty handle, initialize AHT20 handle");
@@ -290,14 +282,12 @@ aht20_handle_t aht20_create(i2c_bus_handle_t bus_handle, uint8_t aht20_address)
 {
     ESP_LOGI(s_TAG, "adding aht20 as device to bus\n");
     i2c_bus_device_handle_t dev_handle = i2c_bus_device_create(bus_handle, aht20_address, CONFIG_AHT20_I2C_CLK_SPEED);
-    ESP_RETURN_ON_FALSE((dev_handle != NULL), NULL,
-                        s_TAG, "unable to create device\n");
+    ESP_RETURN_ON_FALSE((dev_handle != NULL), NULL, s_TAG, "unable to create device\n");
     ESP_LOGI(s_TAG, "device added to bus\n");
 
     aht20_handle_t my_aht20_handle = malloc(sizeof(aht20_dev_config_t));
 
-    ESP_RETURN_ON_FALSE((my_aht20_handle != NULL), NULL,
-                        s_TAG, "unable to allocate memory to initialize aht20 handle");
+    ESP_RETURN_ON_FALSE((my_aht20_handle != NULL), NULL, s_TAG, "unable to allocate memory to initialize aht20 handle");
 
     my_aht20_handle->i2c_dev =  dev_handle;
     return my_aht20_handle;
@@ -314,6 +304,9 @@ esp_err_t aht20_remove(aht20_handle_t *aht20ptr)
     return ESP_OK;
 }
 
+/*************************************************************************************************/
+
+/******************************************** Sensor Hub *********************************************/
 #ifdef CONFIG_SENSOR_INCLUDED_HUMITURE
 
 static aht20_handle_t aht20 = NULL;
@@ -404,3 +397,5 @@ static humiture_impl_t aht20_impl = {
 SENSOR_HUB_DETECT_FN(HUMITURE_ID, aht20, &aht20_impl);
 
 #endif
+
+/**********************************************************************************************/
