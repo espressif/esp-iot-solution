@@ -7,6 +7,10 @@ examples/ai/esp_dl/human_activity_recognition:
   enable:
     - if: IDF_TARGET in ["esp32s3","esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 3)
 
+examples/ai/esp_dl/touchpad_digit_recognition:
+  enable:
+    - if: IDF_TARGET in ["esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 3)
+
 examples/audio/wav_player:
   enable:
     - if: INCLUDE_DEFAULT == 1
@@ -310,6 +314,12 @@ examples/touch/touch_proximity:
   enable:
     - if: IDF_TARGET in ["esp32s3"]
 
+examples/touch/touch_slider_sensor:
+  enable:
+    - if: IDF_TARGET in ["esp32", "esp32s2", "esp32s3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
+    - if: IDF_TARGET in ["esp32", "esp32s2", "esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
+    - if: IDF_TARGET in ["esp32", "esp32s2", "esp32s3", "esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 4)
+
 examples/ulp/lp_cpu/lp_environment_sensor:
   enable:
     - if: IDF_TARGET in ["esp32c6"]
@@ -412,6 +422,15 @@ examples/usb/host/usb_hub_dual_camera:
   enable:
     - if: IDF_TARGET in ["esp32s2", "esp32s3","esp32p4"]
 
+examples/usb/host/usb_ecm_4g_module:
+  enable:
+    - if: IDF_TARGET in ["esp32s2", "esp32s3"]
+    - if: IDF_TARGET in ["esp32p4"] and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 3)
+  disable:
+    - if: IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0
+      temporary: true
+      reason: "/opt/esp/idf/components/esp_http_server/src/util/ctrl_sock.c:23:14: error: 'TAG' undeclared (first use in this function)"
+
 examples/usb/host/usb_msc_ota:
   enable:
     - if: SOC_USB_OTG_SUPPORTED == 1
@@ -419,6 +438,15 @@ examples/usb/host/usb_msc_ota:
     - if: IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0
       temporary: true
       reason: esp32-s3-usb-otg not supported idf release 5.0 build yet
+
+examples/usb/host/usb_rndis_4g_module:
+  enable:
+    - if: IDF_TARGET in ["esp32s2", "esp32s3"]
+    - if: IDF_TARGET in ["esp32p4"] and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 3)
+  disable:
+    - if: IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0
+      temporary: true
+      reason: "/opt/esp/idf/components/esp_http_server/src/util/ctrl_sock.c:23:14: error: 'TAG' undeclared (first use in this function)"
 
 examples/usb/otg/usb_host_device_mode_manual_switch:
   enable:

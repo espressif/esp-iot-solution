@@ -83,5 +83,6 @@ ESP-IoT-Solution 包含物联网系统开发中常用的外设驱动和代码框
    电机驱动 <motor/index>
    安全&加密 <security_solution/index>
    电工&照明 <electrical_lighting_solution/index>
+   解决方案 <solution/index>
    其它资源 <others/index>
    贡献代码 <contribute/index>

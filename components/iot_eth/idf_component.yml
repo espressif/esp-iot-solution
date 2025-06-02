@@ -1,0 +1,14 @@
+version: "0.1.0"
+description: Ethernet interface driver for cellular modems and USB-to-Ethernet adapters
+url: https://github.com/espressif/esp-iot-solution/tree/master/components/iot_eth
+repository: https://github.com/espressif/esp-iot-solution.git
+documentation: https://docs.espressif.com/projects/esp-iot-solution/en/latest/solution/4g/iot_eth.html
+issues: https://github.com/espressif/esp-iot-solution/issues
+examples:
+  - path: ../../examples/usb/host/usb_rndis_4g_module
+dependencies:
+  idf: ">=4.4"
+  cmake_utilities: "*"
+sbom:
+  supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'
+  originator: 'Organization: Espressif Systems (Shanghai) CO LTD'

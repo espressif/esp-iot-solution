@@ -81,6 +81,7 @@ ESP-IoT-Solution contains device drivers and code frameworks for the development
    Touch <touch/index>
    Storage <storage/index>
    Motor <motor/index>
+   Solution <solution/index>
    Security&Encryption <security_solution/index>
    Electrical&Lighting <electrical_lighting_solution/index>
    Other Resources <others/index>

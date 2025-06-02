@@ -56,6 +56,7 @@ jobs:
             components/extended_vfs;
             components/gprof;
             components/i2c_bus;
+            components/iot_eth;
             components/ir/ir_learn;
             components/keyboard_button;
             components/knob;
@@ -67,6 +68,7 @@ jobs:
             components/motor/servo;
             components/openai;
             components/sensors/adc/mcp3201;
+            components/sensors/battery_fuel_gauge/adc_battery_estimation;
             components/sensors/battery_fuel_gauge/max17048;
             components/sensors/power_measure;
             components/sensors/gesture/apds9960;
@@ -87,6 +89,7 @@ jobs:
             components/touch/touch_button;
             components/touch/touch_button_sensor;
             components/touch/touch_proximity_sensor;
+            components/touch/touch_slider_sensor;
             components/usb/esp_msc_ota;
             components/usb/esp_tinyuf2;
             components/usb/iot_usbh;
@@ -94,6 +97,8 @@ jobs:
             components/usb/iot_usbh_modem;
             components/usb/usb_device_uac;
             components/usb/usb_device_uvc;
+            components/usb/iot_usbh_rndis;
+            components/usb/iot_usbh_ecm;
             components/usb/usb_stream;
             components/utilities/adc_tp_calibration;
             components/utilities/xz;

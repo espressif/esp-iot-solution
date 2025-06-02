@@ -1,5 +1,13 @@
 # ChangeLog
 
+## v1.2.0 - 2025-05-20
+
+* update iot_usbh_cdc to 2.0.0
+
+## v1.1.5 - 2024-4-1
+
+* Support `modem_board_deinit()`.
+
 ## v1.1.4 - 2024-3-20
 
 * Support 4g module `YM310_X09`

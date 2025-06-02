@@ -1,5 +1,37 @@
 # ChangeLog
 
+## v2.0.0 - 2025-05-20
+
+### Features:
+
+* Support no internal ring buffer mode..
+
+### Break Changes:
+
+* Set rx_buffer_size to 0 to disable internal ring buffer.
+
+* Remove macro IN_RINGBUFFER_SIZE and OUT_RINGBUFFER_SIZE.
+
+## v1.1.1 - 2025-05-13
+
+### Features:
+
+* Skip open usb hub device.
+
+## v1.1.0 - 2025-04-21
+
+### Features:
+
+* Support control transfer and notification transfer.
+
+* Support usbh_cdc_send_custom_request() to send custom request.
+
+## v1.0.4 - 2025-4-1
+
+### Bug Fixes:
+
+* Fix USB host interface release when URB is not cleared.
+
 ## v1.0.3 - 2025-3-27
 
 ### Bug Fixes:

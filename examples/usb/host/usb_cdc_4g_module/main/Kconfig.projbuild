@@ -87,11 +87,14 @@ menu "4G Modem Example Config"
 
     config EXAMPLE_LED_RED_SYSTEM_GPIO
         int "System status led (red) gpio, set 0 if not use"
+        default 21 if IDF_TARGET_ESP32P4
         default 15
     config EXAMPLE_LED_BLUE_WIFI_GPIO
         int "Wi-Fi status led (blue) gpio, set 0 if not use"
+        default 22 if IDF_TARGET_ESP32P4
         default 17
     config EXAMPLE_LED_GREEN_4GMODEM_GPIO
         int "Modem status led (green) gpio, set 0 if not use"
+        default 26 if IDF_TARGET_ESP32P4
         default 16
 endmenu

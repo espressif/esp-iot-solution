@@ -69,6 +69,14 @@ build_example_ai_esp_dl_human_activity_recognition:
     IMAGE: espressif/idf:release-v5.3
     EXAMPLE_DIR: examples/ai/esp_dl/human_activity_recognition
 
+build_example_ai_esp_dl_touchpad_digit_recognition:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_ai_esp_dl_touchpad_digit_recognition
+  variables:
+    IMAGE: espressif/idf:release-v5.3
+    EXAMPLE_DIR: examples/ai/esp_dl/touchpad_digit_recognition
+
 build_example_audio_wav_player:
   extends:
     - .build_examples_template
@@ -736,6 +744,18 @@ build_example_touch_button_sensor:
   variables:
     EXAMPLE_DIR: examples/touch/touch_button_sensor
 
+build_example_touch_slider_sensor:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_touch_touch_slider_sensor
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.1
+      - IMAGE: espressif/idf:release-v5.4
+  variables:
+    EXAMPLE_DIR: examples/touch/touch_slider_sensor
+
 build_example_touch_touch_proximity:
   extends:
     - .build_examples_template
@@ -946,6 +966,14 @@ build_example_usb_host_usb_hub_dual_camera:
   variables:
     EXAMPLE_DIR: examples/usb/host/usb_hub_dual_camera
 
+build_example_usb_host_usb_ecm_4g_module:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_usb_host_usb_ecm_4g_module
+    - .build_idf_version_greater_equal_v5_0
+  variables:
+    EXAMPLE_DIR: examples/usb/host/usb_ecm_4g_module
+
 build_example_usb_host_usb_msc_ota:
   extends:
     - .build_examples_template
@@ -956,6 +984,14 @@ build_example_usb_host_usb_msc_ota:
       - IMAGE: espressif/idf:release-v5.1
   variables:
     EXAMPLE_DIR: examples/usb/host/usb_msc_ota
+
+build_example_usb_host_usb_rndis_4g_module:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_usb_host_usb_rndis_4g_module
+    - .build_idf_version_greater_equal_v5_0
+  variables:
+    EXAMPLE_DIR: examples/usb/host/usb_rndis_4g_module
 
 build_example_usb_otg_usb_host_device_mode_manual_switch:
   extends:
@@ -1417,6 +1453,16 @@ build_components_sensors_adc_mcp3201_test_apps:
   variables:
     EXAMPLE_DIR: components/sensors/adc/mcp3201/test_apps
 
+build_components_sensors_battery_fuel_gauge_adc_battery_estimation_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_sensors_battery_fuel_gauge_adc_battery_estimation_test_apps
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.4
+  variables:
+    EXAMPLE_DIR: components/sensors/battery_fuel_gauge/adc_battery_estimation/test_apps
+
 build_components_sensors_battery_fuel_gauge_max17048_test_apps:
   extends:
     - .build_examples_template
@@ -1567,6 +1613,16 @@ build_components_touch_touch_button_sensor_test_apps:
   variables:
     EXAMPLE_DIR: components/touch/touch_button_sensor/test_apps
 
+build_components_touch_touch_slider_sensor_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_touch_touch_slider_sensor_test_apps
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.3
+  variables:
+    EXAMPLE_DIR: components/touch/touch_slider_sensor/test_apps
+
 build_components_usb_esp_msc_ota_test_apps:
   extends:
     - .build_examples_template
@@ -1575,15 +1631,22 @@ build_components_usb_esp_msc_ota_test_apps:
     IMAGE: espressif/idf:release-v5.1
     EXAMPLE_DIR: components/usb/esp_msc_ota/test_apps
 
+build_components_usb_iot_usbh_rndis_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_usb_iot_usbh_rndis_test_apps
+    - .build_idf_version_greater_equal_v5_0
+  variables:
+    EXAMPLE_DIR: components/usb/iot_usbh_rndis/test_apps
+
 build_components_usb_usb_stream_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_usb_usb_stream_test
   parallel:
     matrix:
-      - IMAGE: espressif/idf:release-v4.4
       - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:latest
+      - IMAGE: espressif/idf:release-v5.4
   variables:
     EXAMPLE_DIR: components/usb/usb_stream/test_apps
 
@@ -1608,6 +1671,17 @@ build_components_usb_iot_usbh_cdc_test_apps:
       - IMAGE: espressif/idf:release-v5.0
   variables:
     EXAMPLE_DIR: components/usb/iot_usbh_cdc/test_apps
+
+build_components_usb_iot_usbh_modem_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_usb_iot_usbh_modem_test
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.3
+  variables:
+    EXAMPLE_DIR: components/usb/iot_usbh_modem/test_apps
 
 build_components_usb_usb_device_uac:
   extends:

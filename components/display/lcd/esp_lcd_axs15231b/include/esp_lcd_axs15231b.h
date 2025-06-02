@@ -176,6 +176,7 @@ esp_err_t esp_lcd_touch_new_i2c_axs15231b(const esp_lcd_panel_io_handle_t io, co
  * @brief Touch IO configuration structure
  *
  */
+
 #define ESP_LCD_TOUCH_IO_I2C_AXS15231B_CONFIG()             \
     {                                                       \
         .dev_addr = ESP_LCD_TOUCH_IO_I2C_AXS15231B_ADDRESS, \
@@ -186,6 +187,19 @@ esp_err_t esp_lcd_touch_new_i2c_axs15231b(const esp_lcd_panel_io_handle_t io, co
         {                                                   \
             .disable_control_phase = 1,                     \
         }                                                   \
+    }
+
+#define ESP_LCD_TOUCH_IO_I2C_AXS15231B_CONFIG_EX(scl_speed_hz)     \
+    {                                                           \
+        .dev_addr = ESP_LCD_TOUCH_IO_I2C_AXS15231B_ADDRESS,     \
+        .control_phase_bytes = 1,                               \
+        .dc_bit_offset = 0,                                     \
+        .lcd_cmd_bits = 8,                                      \
+        .flags =                                                \
+        {                                                       \
+            .disable_control_phase = 1,                         \
+        },                                                      \
+        .scl_speed_hz = scl_speed_hz,                         \
     }
 
 #ifdef __cplusplus
