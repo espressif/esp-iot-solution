@@ -1,7 +1,0 @@
-dependencies:
-  aht20:
-    version: "*"
-    override_path: "../../../"
-  sensor_hub:
-    public: true
-    override_path: "../../../../../sensor_hub"

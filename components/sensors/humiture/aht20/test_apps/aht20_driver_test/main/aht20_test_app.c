@@ -3,16 +3,6 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-/*-
- * @File: aht20_test_app.c
- *
- * @brief: AHT20 driver unity test app
- *
- * @Date: May 2, 2025
- *
- * @Author: Rohan Jeet <jeetrohan92@gmail.com>
- *
- */
 
 #include <stdio.h>
 #include "unity.h"
@@ -87,7 +77,7 @@ esp_err_t aht20_init_test()
 
     printf("Initializing AHT20 sensor\n");
     while (aht20_init(aht20_handle) != ESP_OK) {
-        vTaskDelay(100 / portTICK_PERIOD_MS);
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
     printf("AHT20 initialized\n");
 
@@ -104,17 +94,24 @@ void aht20_deinit_test(void)
 /*******************************AHT20 Device Deinitializtion Over****************************/
 
 /*******************************AHT20 Read sensor****************************/
-void aht20_read_test(void)
+void aht20_check_humidity(void)
 {
-    vTaskDelay(400 / portTICK_PERIOD_MS);
+    float_t humidity;
 
-    TEST_ASSERT(ESP_OK == aht20_read_humiture(aht20_handle));
+    TEST_ASSERT(ESP_OK == aht20_read_humidity(aht20_handle, &humidity));
 
-    printf("Temperature = %.2f°C, Humidity = %.3f%%\n",
-           aht20_handle->humiture.temperature,
-           aht20_handle->humiture.humidity);
+    printf("Humidity = %.2f%%\n", humidity);
 
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+}
+
+void aht20_check_temprature(void)
+{
+    float_t temperature;
+
+    TEST_ASSERT(ESP_OK == aht20_read_temperature(aht20_handle, &temperature));
+
+    printf("Temperature = %.2f°C\n", temperature);
+
 }
 /*******************************AHT20 AHT20 Read sensor Over*****************************/
 
@@ -123,7 +120,9 @@ void aht20_read_test(void)
 TEST_CASE("AHT20 Sensor", "[aht20][sensor]")
 {
     aht20_init_test();
-    aht20_read_test();
+    aht20_check_humidity();
+    vTaskDelay(pdMS_TO_TICKS(2000));
+    aht20_check_temprature();
     aht20_deinit_test();
 }
 /*************************************Test Case Over**************************/

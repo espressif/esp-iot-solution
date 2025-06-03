@@ -3,16 +3,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-/*
- * @File: aht20.h
- *
- * @brief: AHT20 driver function declarations and typedefinitons
- *
- * @Date: May 2, 2025
- *
- * @Author: Rohan Jeet <jeetrohan92@gmail.com>
- *
- */
+
 #ifndef AHT20_H
 #define AHT20_H
 
@@ -43,33 +34,9 @@ extern "C" {
 #define AHT20_MEASURE_CYC     0xAC  /*!< trigger measurement in cycle mode */
 
 /**
- *@brief AHT20 result
- */
-typedef struct {
-    float_t humidity;   /*!< humidity reading. */
-    float_t temperature;    /*!< temperature reading. */
-} aht20_reading_t;
-
-/**
- *@brief AHT20 raw result
- */
-typedef struct {
-    uint32_t humidity;  /*!< raw humidity reading. */
-    uint32_t temperature;   /*!< raw temperature reading. */
-} aht20_raw_reading_t;
-
-/**
- * @brief AHT20 device object
- */
-typedef struct {
-    i2c_bus_device_handle_t i2c_dev;   /*!< i2c device handle. */
-    aht20_reading_t humiture;             /*!< AHT20 reading. */
-} aht20_dev_config_t;
-
-/**
  * @brief AHT20 device handle
  */
-typedef aht20_dev_config_t *aht20_handle_t;
+typedef void * aht20_handle_t;
 
 /**
 * @brief soft reset AHT20
@@ -84,32 +51,6 @@ typedef aht20_dev_config_t *aht20_handle_t;
 esp_err_t aht20_reset(aht20_handle_t aht20_handle);
 
 /**
-* @brief get AHT20 sensor raw readings
-*-
-* @param[in] aht20_handle AHT20 device handle
-*
-* @param[out] raw_read raw reading
-*
-* @return
-*      - ESP_OK: successful read
-*      - other error codes : failed to read
-*
-*/
-esp_err_t aht20_read_raw(aht20_handle_t aht20_handle, aht20_raw_reading_t *raw_read);
-
-/**
-* @brief get AHT20 sensor readings
-*-
-* @param[in] aht20_handle AHT20 device handle
-*
-* @return
-*      - ESP_OK: successful read
-*      - other error codes : failed to read
-*
-*/
-esp_err_t aht20_read_humiture(aht20_handle_t aht20_handle);
-
-/**
 * @brief get AHT20 humidity readings
 *
 * @param[in] aht20_handle AHT20 device handle
@@ -121,6 +62,7 @@ esp_err_t aht20_read_humiture(aht20_handle_t aht20_handle);
 *      - other error codes : failed to read
 *
 */
+
 esp_err_t aht20_read_humidity(aht20_handle_t aht20_handle, float_t *humidity);
 
 /**
@@ -136,34 +78,6 @@ esp_err_t aht20_read_humidity(aht20_handle_t aht20_handle, float_t *humidity);
 *
 */
 esp_err_t aht20_read_temperature(aht20_handle_t aht20_handle, float_t *temperature);
-
-/**
-* @brief check AHT20 calibration status
-*
-* @param[in] aht20_handle AHT20 device handle
-*
-* @param[out] calibration calibrated if value is true
-*
-* @return
-*      - ESP_OK: successfully read AHT20 calibration status
-*      - other error codes : failure in reading AHT20 calibration status
-*
-*/
-esp_err_t aht20_calibration_status(aht20_handle_t aht20_handle, bool *calibration);
-
-/**
-* @brief check AHT20 measurement status
-*
-* @param[in] aht20_handle AHT20 device handle
-*
-* @param[out]busy busy in measurement if value is true
-*
-* @return
-*      - ESP_OK: successfully read AHT20 busy status
-*      - other error codes : failure in reading AHT20 busy status
-*
-*/
-esp_err_t aht20_busy_status(aht20_handle_t aht20_handle, bool *busy);
 
 /**
 * @brief Initialize the AHT20
