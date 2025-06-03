@@ -3,16 +3,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-/*
- * @File: aht20.h
- *
- * @brief: AHT20 driver function declarations and typedefinitons
- *
- * @Date: May 2, 2025
- *
- * @Author: Rohan Jeet <jeetrohan92@gmail.com>
- *
- */
+
 #ifndef AHT20_H
 #define AHT20_H
 
@@ -43,16 +34,9 @@ extern "C" {
 #define AHT20_MEASURE_CYC     0xAC  /*!< trigger measurement in cycle mode */
 
 /**
- * @brief AHT20 device object
- */
-typedef struct {
-    i2c_bus_device_handle_t i2c_dev;   /*!< i2c device handle. */
-} aht20_dev_config_t;
-
-/**
  * @brief AHT20 device handle
  */
-typedef aht20_dev_config_t *aht20_handle_t;
+typedef void * aht20_handle_t;
 
 /**
 * @brief soft reset AHT20
