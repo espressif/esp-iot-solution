@@ -73,31 +73,17 @@ Following are the general guidelines.
     printf("Temperature = %.2f°C\n", temperature);
 ```
 
-## Senosr Hub
 
-Following are the general guidelines.
-``` 
-    
-    /*create a sensor with specific sensor_id and configurations*/
-    iot_sensor_create("aht20", &sensor_config, &sensor_handle); 
-   
-     /*register handler with sensor's handle*/
-    iot_sensor_handler_register(sensor_handle, sensor_event_handler, NULL);
-
-    /*start the sensor, data ready events will be posted once data is acquired successfully*/
-    iot_sensor_start(sensor_handle); 
- 
-```
-
-## How to Configure CRC and I2C clock speed
+## How to Configure CRC 
 Additionally, select in menuconfig under Component Config → AHT20; to use CRC(default is not used)
 or change the clock speed of device (default is 100KHz). 
 
 Note : It is recommended to use clock speeds in upper ranges of 100kHz to 200kHz.
 Higher clock speeds may cause occasional data inconsistencies depending on your board layout and wiring.
 
-![image](https://github.com/user-attachments/assets/fc8680fb-1567-477c-92f8-52dd126e6f9d)
+![image](https://github.com/user-attachments/assets/58a07cc9-5d87-4afe-9675-637b3e776faa)
+
 
 or 
 In sdkconfig under Component Config → AHT20,
-![image](https://github.com/user-attachments/assets/1f9612df-8d73-4ad1-bec7-75cbe6ed327a)
+

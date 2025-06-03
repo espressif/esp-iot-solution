@@ -3,16 +3,6 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-/*-
- * @File: aht20_test_app.c
- *
- * @brief: AHT20 driver unity test app
- *
- * @Date: May 2, 2025
- *
- * @Author: Rohan Jeet <jeetrohan92@gmail.com>
- *
- */
 
 #include <stdio.h>
 #include "unity.h"

@@ -6,13 +6,4 @@ menu "AHT20 : CONFIGURATION"
             CRC check to be performed on results or not?.
 	default n
 
-
-    config AHT20_I2C_CLK_SPEED
-        int "I2C clock speed"
-		default 100000
-	range 1 400000
-        help
-            Clock speed used for i2c communication by AHT20 device.
-	    Limited to maximum of 400KHZ.
-
 endmenu
