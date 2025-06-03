@@ -138,7 +138,7 @@ static int _adc_data_read(const audio_codec_data_if_t *h, uint8_t *data, int siz
         for (int i = 0; i < item_count; i++) {
             uint16_t raw_value = buffer[i].val;
             // Left shift to amplify audio.
-            p[i] = (raw_value << 4) - 32768;
+            p[i] = (raw_value << CONFIG_ADC_MIC_APPLY_GAIN) - CONFIG_ADC_MIC_OFFSET;
         }
 
         cnt += ret_num;
@@ -154,7 +154,7 @@ static int _adc_data_read(const audio_codec_data_if_t *h, uint8_t *data, int siz
         for (int i = 0; i < item_count; i++) {
             uint16_t raw_value = buffer[i].val & 0xFFFF;
             // Left shift to amplify audio.
-            p[i] = (raw_value << 4) - 32768;
+            p[i] = (raw_value << CONFIG_ADC_MIC_APPLY_GAIN) - CONFIG_ADC_MIC_OFFSET;
         }
         cnt += ret_num / 2;
         left_size -= ret_num / 2;

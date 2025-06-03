@@ -1,4 +1,4 @@
-version: "0.1.0"
+version: "0.2.0"
 description: ADC mic input driver for ESP32 Series socs
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/audio/adc_mic
 repository: https://github.com/espressif/esp-iot-solution.git
