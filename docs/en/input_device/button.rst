@@ -91,54 +91,49 @@ Create a button
 .. code:: c
 
     // create gpio button
-    button_config_t gpio_btn_cfg = {
-        .type = BUTTON_TYPE_GPIO,
-        .long_press_time = CONFIG_BUTTON_LONG_PRESS_TIME_MS,
-        .short_press_time = CONFIG_BUTTON_SHORT_PRESS_TIME_MS,
-        .gpio_button_config = {
-            .gpio_num = 0,
-            .active_level = 0,
-        },
+    const button_config_t btn_cfg = {0};
+    const button_gpio_config_t btn_gpio_cfg = {
+        .gpio_num = 0,
+        .active_level = 0,
     };
-    button_handle_t gpio_btn = iot_button_create(&gpio_btn_cfg);
+    button_handle_t gpio_btn = NULL;
+    esp_err_t ret = iot_button_new_gpio_device(&btn_cfg, &btn_gpio_cfg, &gpio_btn);
     if(NULL == gpio_btn) {
         ESP_LOGE(TAG, "Button create failed");
     }
 
     // create adc button
-    button_config_t adc_btn_cfg = {
-        .type = BUTTON_TYPE_ADC,
-        .long_press_time = CONFIG_BUTTON_LONG_PRESS_TIME_MS,
-        .short_press_time = CONFIG_BUTTON_SHORT_PRESS_TIME_MS,
-        .adc_button_config = {
-            .adc_channel = 0,
-            .button_index = 0,
-            .min = 100,
-            .max = 400,
-        },
+    const button_config_t btn_cfg = {0};
+    button_adc_config_t btn_adc_cfg = {
+        .unit_id = ADC_UNIT_1,
+        .adc_channel = 0,
+        .button_index = 0,
+        .min = 100,
+        .max = 400,
     };
-    button_handle_t adc_btn = iot_button_create(&adc_btn_cfg);
+
+    button_handle_t adc_btn = NULL;
+    esp_err_t ret = iot_button_new_adc_device(&btn_cfg, &btn_adc_cfg, &adc_btn);
     if(NULL == adc_btn) {
         ESP_LOGE(TAG, "Button create failed");
     }
 
     // create matrix keypad button
-    button_config_t matrix_button_cfg = {
-        .type = BUTTON_TYPE_MATRIX,
-        .long_press_time = CONFIG_BUTTON_LONG_PRESS_TIME_MS,
-        .short_press_time = CONFIG_BUTTON_SHORT_PRESS_TIME_MS,
-        .matrix_button_config = {
-            .row_gpio_num = 0,
-            .col_gpio_num = 1,
-        }
+    const button_config_t btn_cfg = {0};
+    const button_matrix_config_t matrix_cfg = {
+        .row_gpios = (int32_t[]){4, 5, 6, 7},
+        .col_gpios = (int32_t[]){3, 8, 16, 15},
+        .row_gpio_num = 4,
+        .col_gpio_num = 4,
     };
-    button_handle_t matrix_button = iot_button_create(&matrix_button_cfg);
+    button_handle_t matrix_button = NULL;
+    esp_err_t ret = iot_button_new_matrix_device(&btn_cfg, &matrix_cfg, btns, &matrix_button);
     if(NULL == matrix_button) {
         ESP_LOGE(TAG, "Button create failed");
     }
 
 .. Note::
-    When the IDF version is greater than or equal to release/5.0, the ADC button uses ADC1. If ADC1 is used elsewhere in the project, please provide the `adc_handle` and `adc_channel` to configure the ADC button.
+    When using ADC1 for ADC buttons and ADC1 is also used elsewhere in the project, please pass in adc_handle and adc_channel to configure the ADC button.
 
     .. code::C
         adc_oneshot_unit_handle_t adc1_handle;
@@ -147,15 +142,19 @@ Create a button
         };
         //-------------ADC1 Init---------------//
         adc_oneshot_new_unit(&init_config1, &adc1_handle);
-        // create adc button
-        button_config_t adc_btn_cfg = {
-            .type = BUTTON_TYPE_ADC,
-            .adc_button_config = {
-                .adc_handle = &adc1_handle,
-                .adc_channel = 1,
-            },
+
+        const button_config_t btn_cfg = {0};
+        button_adc_config_t btn_adc_cfg = {
+            .adc_handle = &adc1_handle,
+            .unit_id = ADC_UNIT_1,
+            .adc_channel = 0,
+            .button_index = 0,
+            .min = 100,
+            .max = 400,
         };
-        button_handle_t adc_btn = iot_button_create(&adc_btn_cfg);
+
+        button_handle_t adc_btn = NULL;
+        esp_err_t ret = iot_button_new_adc_device(&btn_cfg, &btn_adc_cfg, &adc_btn);
         if(NULL == adc_btn) {
             ESP_LOGE(TAG, "Button create failed");
         }
