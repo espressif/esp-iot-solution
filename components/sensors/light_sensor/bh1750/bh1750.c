@@ -5,6 +5,8 @@
  */
 
 #include <stdio.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "bh1750.h"
 
 #define WRITE_BIT  I2C_MASTER_WRITE  /*!< I2C master write */

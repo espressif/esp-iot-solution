@@ -1,0 +1,8 @@
+dependencies:
+  idf: ">=4.4"
+  bh1750:
+    version: "*"
+    override_path: "../../../bh1750"
+  i2c_bus:
+    version: "*"
+    override_path: "../../../../../i2c_bus"

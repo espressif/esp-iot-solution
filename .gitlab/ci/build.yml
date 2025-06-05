@@ -1522,6 +1522,14 @@ build_components_sensors_imu_lis2dh12_test_apps:
   variables:
     EXAMPLE_DIR: components/sensors/imu/lis2dh12/test_apps
 
+build_components_sensors_light_sensor_bh1750_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_sensors_light_sensor_bh1750_test_apps
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: components/sensors/light_sensor/bh1750/test_apps
+
 build_components_sensors_light_sensor_veml6040_test_apps:
   extends:
     - .build_examples_template
