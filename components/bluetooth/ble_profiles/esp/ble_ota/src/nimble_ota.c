@@ -117,14 +117,9 @@ esp_ble_ota_write_chr(struct os_mbuf *om)
     esp_err_t err;
     pre_enc_decrypt_arg_t pargs = {};
 
-    pargs.data_in_len = om->om_len - 3;
+    pargs.data_in_len = os_mbuf_len(om) - 3;
 
-    if (SLIST_NEXT(om, om_next) != NULL) {
-        struct os_mbuf *temp2 = SLIST_NEXT(om, om_next);
-        pargs.data_in_len += temp2->om_len;
-    }
-
-    pargs.data_in = (const char *)malloc(pargs.data_in_len * sizeof(char *));
+    pargs.data_in = (const char *)malloc(pargs.data_in_len);
     err = os_mbuf_copydata(om, 3, pargs.data_in_len, pargs.data_in);
 
     if (om->om_data[2] == 0xff) {
@@ -191,23 +186,11 @@ write_ota_data:
     ESP_LOGD(TAG, "DEBUG: Sector:%" PRIu32 ", total length:%" PRIu32 ", length:%d", cur_sector,
              fw_buf_offset, pargs.data_out_len);
 #else
-    memcpy(fw_buf + fw_buf_offset, om->om_data + 3, om->om_len - 3);
-    fw_buf_offset += om->om_len - 3;
-
-    if (SLIST_NEXT(om, om_next) != NULL) {
-        struct os_mbuf *last;
-        last = om;
-        while (SLIST_NEXT(last, om_next) != NULL) {
-            struct os_mbuf *temp = SLIST_NEXT(last, om_next);
-            memcpy(fw_buf + fw_buf_offset, temp->om_data, temp->om_len);
-            fw_buf_offset += temp->om_len;
-            last = SLIST_NEXT(last, om_next);
-            temp = NULL;
-        }
-    }
+    os_mbuf_copydata(om, 3, os_mbuf_len(om) - 3, fw_buf + fw_buf_offset);
+    fw_buf_offset += os_mbuf_len(om) - 3;
 
     ESP_LOGD(TAG, "DEBUG: Sector:%" PRIu32 ", total length:%" PRIu32 ", length:%d", cur_sector,
-             fw_buf_offset, om->om_len - 3);
+             fw_buf_offset, os_mbuf_len(om) - 3);
 #endif
     if (om->om_data[2] == 0xff) {
         cur_packet = 0;
@@ -446,7 +429,7 @@ ble_ota_gatt_handler(uint16_t conn_handle, uint16_t attr_handle,
     case BLE_GATT_ACCESS_OP_WRITE_CHR:
 
         ota_char = find_ota_char_and_desr_by_handle(attr_handle);
-        ESP_LOGD(TAG, "client write; len = %d", ctxt->om->om_len);
+        ESP_LOGD(TAG, "client write; len = %d", os_mbuf_len(ctxt->om));
 
         if (ota_char == RECV_FW_CHAR) {
             if (start_ota) {
