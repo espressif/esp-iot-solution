@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -160,4 +160,14 @@ void ble_hid_keyboard_report(hid_report_t report)
     default:
         break;
     }
+}
+
+void ble_hid_battery_report(int battery_level)
+{
+    if (s_ble_hid_param.is_connected == false) {
+        return;
+    }
+
+    ESP_LOGI(TAG, "Report level: %d", battery_level);
+    esp_hidd_dev_battery_set(s_ble_hid_param.hid_dev, (uint8_t)battery_level);
 }

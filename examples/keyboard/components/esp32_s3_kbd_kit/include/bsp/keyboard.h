@@ -49,7 +49,8 @@ extern "C" {
 #define KBD_WS2812_POWER_IO  1
 
 /*!< Battery monitor GPIO */
-#define KBD_BATTERY_MONITOR_IO  2
+#define KBD_BATTERY_MONITOR_IO      2
+#define KBD_BATTERY_MONITOR_CHANNEL ADC_CHANNEL_1
 
 #ifdef __cplusplus
 }
