@@ -54,11 +54,9 @@ esp_err_t battery_adc_init(void)
     };
     ESP_ERROR_CHECK(adc_oneshot_config_channel(adc1_handle, KBD_BATTERY_MONITOR_CHANNEL, &channel_config));
 
-    ESP_LOGI(TAG, "Free memory size: %"PRIu32, esp_get_free_heap_size());
     if (xTaskCreate(battery_monitor_task, "battery_monitor", 4096, NULL, 2, &battery_task_handle) != pdPASS) {
         return ESP_ERR_NO_MEM;
     }
-    ESP_LOGI(TAG, "Free memory size: %"PRIu32, esp_get_free_heap_size());
 
     return ESP_OK;
 }
