@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width" />
+  <title>ESP32 USB File Server</title>
+  <link href="/styles.css" rel="stylesheet" />
+</head>
+
+<div class="upload-header link-white">
+  <div class="header-left" id="return-button">
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width=".75em"
+      height="1.5em"
+      viewBox="0 0 12 24"
+    >
+      <path
+        fill="currentColor"
+        fill-rule="evenodd"
+        d="m3.343 12l7.071 7.071L9 20.485l-7.778-7.778a1 1 0 0 1 0-1.414L9 3.515l1.414 1.414z"
+      />
+    </svg>
+  </div>
+  <div class="header-center">ESP USB File Server</div>
+  <div class="header-right">
+    <span id="remain"></span>
+  </div>
+</div>
+
+<div style="margin-bottom: 3em"></div>
+
+<noscript> Please enable JavaScript to upload. </noscript>
+
+<div id="uploadArea" class="upload-area">
+  Drag & Drop a file here or click to browse
+</div>
+
+<div id="uploadForm" class="upload-form">
+  <table class="w100">
+    <tr>
+      <td>
+        <label for="uploadPath">Upload Path:</label>
+      </td>
+      <td>
+        <input type="text" id="uploadPath" class="w100" />
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <label for="fileName">File Name:</label>
+      </td>
+      <td>
+        <input type="text" id="fileName" maxlength="32" class="w100" />
+      </td>
+    </tr>
+  </table>
+
+  <div id="pathError" class="error"></div>
+  <div id="nameError" class="error"></div>
+
+  <button id="uploadButton" disabled style="margin: 10px auto; width: 100%">
+    Upload
+  </button>
+  <div id="progress" style="margin-top: 15px; text-align: center"></div>
+</div>
+
+<script>
+  /* Max size of an individual file. Make sure this
+   * value is same as that set in file_server.c */
+  const MAX_FILE_SIZE = 20 * 1024 * 1024;
+  const uploadArea = document.getElementById("uploadArea");
+  const uploadForm = document.getElementById("uploadForm");
+  const uploadPathInput = document.getElementById("uploadPath");
+  const fileNameInput = document.getElementById("fileName");
+  const pathError = document.getElementById("pathError");
+  const nameError = document.getElementById("nameError");
+  const uploadButton = document.getElementById("uploadButton");
+  const progressDiv = document.getElementById("progress");
+  let selectedFile = null;
+
+  function getUploadPath() {
+    const hash = window.location.hash;
+    if (hash !== null && hash !== "" && hash !== "#") {
+      if (hash.startsWith("#")) {
+        return decodeURIComponent(hash.substring(1));
+      } else {
+        return decodeURIComponent(hash);
+      }
+    } else return "/";
+  }
+  document.getElementById("return-button").addEventListener("click", () => {
+    window.location = getUploadPath();
+  });
+
+  // Initialize
+  uploadPathInput.value = getUploadPath();
+
+  // Drag & drop functionality
+  uploadArea.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    uploadArea.classList.add("drag-over");
+  });
+  uploadArea.addEventListener("dragleave", () => {
+    uploadArea.classList.remove("drag-over");
+  });
+  uploadArea.addEventListener("drop", (e) => {
+    e.preventDefault();
+    uploadArea.classList.remove("drag-over");
+    handleFile(e.dataTransfer.files[0]);
+  });
+
+  // Click to upload
+  uploadArea.addEventListener("click", () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.onchange = (e) => handleFile(e.target.files[0]);
+    input.click();
+  });
+
+  // Handle file selection
+  function handleFile(file) {
+    if (!file) return;
+    if (file.size > MAX_FILE_SIZE) {
+      alert(
+        `File is too large! Maximum file size is ${
+          MAX_FILE_SIZE / 1024 / 1024
+        } MB`
+      );
+      return;
+    }
+    selectedFile = file;
+    uploadArea.innerHTML = `
+          <div><code>${file.name}</code></div>
+          <div>File Size: ${(file.size / 1024).toFixed(2)} KB</div>
+          <div>(Click here to change the file)</div>
+        `;
+    uploadForm.style.display = "block";
+    fileNameInput.value = file.name;
+    validateInputs();
+  }
+
+  function validateInputs() {
+    const uploadPath = uploadPathInput.value;
+    const fileName = fileNameInput.value;
+
+    if (
+      !uploadPath.startsWith("/") ||
+      !uploadPath.endsWith("/") ||
+      /[^a-zA-Z0-9\.\/\_\-]/.test(uploadPath) ||
+      uploadPath.startsWith("/upload/") ||
+      uploadPath.startsWith("/api/") ||
+      /\/\//.test(uploadPath)
+    ) {
+      pathError.textContent = "Invalid upload path.";
+    } else {
+      pathError.textContent = "";
+    }
+
+    if (
+      /[^a-zA-Z0-9\.\_\-]/.test(fileName) ||
+      fileName.length > 32 ||
+      fileName === "upload.html" ||
+      fileName === "api" ||
+      fileName === "settings.html"
+    ) {
+      nameError.textContent = "Invalid file name.";
+    } else {
+      nameError.textContent = "";
+    }
+
+    uploadButton.disabled =
+      pathError.textContent || nameError.textContent || !selectedFile;
+  }
+
+  uploadPathInput.addEventListener("input", validateInputs);
+  fileNameInput.addEventListener("input", validateInputs);
+
+  uploadButton.addEventListener("click", async () => {
+    if (!selectedFile) return;
+    const uploadPath = uploadPathInput.value;
+    const fileName = fileNameInput.value;
+
+    const url = `/upload${uploadPath}${fileName}`;
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url, true);
+
+    uploadButton.disabled = true;
+    uploadPathInput.disabled = true;
+    fileNameInput.disabled = true;
+
+    xhr.upload.onprogress = (event) => {
+      // progressDiv.textContent = `Uploading...`;
+      if (event.lengthComputable) {
+        const percentComplete = (event.loaded / event.total) * 100;
+        progressDiv.textContent = `Uploading... ${percentComplete.toFixed(2)}%`;
+      } else {
+        progressDiv.textContent = `Uploading...`;
+      }
+    };
+
+
+
+    xhr.onload = async () => {
+      if (xhr.status === 200) {
+        try {
+            const cookies = document.cookie.split('; ').reduce((acc, cookie) => {
+            const [name, value] = cookie.split('=');
+            acc[name] = value;
+            return acc;
+          }, {});
+          let userConfirmation = true;
+          if (!cookies['auto_reset_msc']) {
+            userConfirmation = confirm('Upload complete! Do you want to reset the USB connection?');
+          } else {
+            alert("Upload complete!");
+          }
+          if (userConfirmation) {
+            await fetch('/reset_msc', { method: 'GET' });
+          }
+        } catch (error) {
+          console.error('Error resetting USB connection:', error);
+        }
+        window.location.href = uploadPath;
+      } else {
+        alert("Upload failed: " + xhr.responseText);
+        uploadButton.disabled = false;
+        uploadPathInput.disabled = false;
+        fileNameInput.disabled = false;
+      }
+    };
+
+    xhr.onerror = () => {
+      alert("Upload failed: Network error");
+    };
+
+    xhr.send(selectedFile);
+  });
+</script>
