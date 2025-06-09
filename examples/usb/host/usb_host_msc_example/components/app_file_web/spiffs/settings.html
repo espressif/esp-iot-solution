@@ -1,9 +1,3 @@
-<!DOCTYPE html>
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width" />
-  <title>ESP32 USB File Server</title>
-  <link href="/styles.css" rel="stylesheet" />
 </head>
 
 <div class="settings-header link-white">
@@ -32,7 +26,7 @@
 
 
 <div class="settings-main"  >
-  <div style="margin-bottom: 1rem;">
+  <div style="margin-bottom: 1rem; display: none;" id="autoResetMscContainer">
     <label for="autoResetMsc">
       <input type="checkbox" id="autoResetMsc" />
       Enable Auto Reset MSC
@@ -137,6 +131,11 @@
   const apFields = document.getElementById('apFields');
   const staFields = document.getElementById('staFields');
   const form = document.getElementById('wifiForm');
+  const autoResetMscContainer = document.getElementById('autoResetMscContainer');
+
+  if (typeof enableResetButton !== 'undefined' && enableResetButton === true) {
+    autoResetMscContainer.style.display = 'block';
+  }
 
   document.querySelectorAll('input[name="wifimode"]').forEach((radio) => {
     radio.addEventListener('change', () => {

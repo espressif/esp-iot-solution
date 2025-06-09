@@ -11,6 +11,7 @@
 #include "esp_rom_gpio.h"
 #include "soc/gpio_sig_map.h"
 #include "app_wifi.h"
+#include "sdkconfig.h"
 
 /* Max length a file path can have on storage */
 #define FILE_PATH_MAX (ESP_VFS_PATH_MAX + CONFIG_SPIFFS_OBJ_NAME_LEN)
@@ -22,6 +23,23 @@
 
 /* Scratch buffer size */
 #define SCRATCH_BUFSIZE  8192
+
+#ifdef CONFIG_ENABLE_RESET_BUTTON
+#define JS_ENABLE_RESET_BUTTON "true"
+#else
+#define JS_ENABLE_RESET_BUTTON "false"
+#endif
+
+#define HTML_FILE_HEADER \
+    "<!DOCTYPE html>\n" \
+    "<head>\n" \
+    "  <meta charset=\"UTF-8\" />\n" \
+    "  <meta name=\"viewport\" content=\"width=device-width\" />\n" \
+    "  <title>ESP32 USB File Server</title>\n" \
+    "  <link href=\"/styles.css\" rel=\"stylesheet\" />\n" \
+    "  <script>\n" \
+    "    var enableResetButton = " JS_ENABLE_RESET_BUTTON ";\n" \
+    "  </script>\n"
 
 struct file_server_data {
     /* Base path of file storage */
@@ -78,7 +96,9 @@ static esp_err_t upload_page_get_handler(httpd_req_t *req)
     extern const unsigned char upload_html_end[]   asm("_binary_upload_html_end");
     const size_t upload_html_size = (upload_html_end - upload_html_start);
     httpd_resp_set_type(req, "text/html");
-    httpd_resp_send(req, (const char *)upload_html_start, upload_html_size);
+    httpd_resp_sendstr_chunk(req, HTML_FILE_HEADER);
+    httpd_resp_send_chunk(req, (const char *)upload_html_start, upload_html_size);
+    httpd_resp_sendstr_chunk(req, NULL);
     return ESP_OK;
 }
 
@@ -91,7 +111,9 @@ static esp_err_t settings_page_get_handler(httpd_req_t *req)
     extern const unsigned char settings_html_end[]   asm("_binary_settings_html_end");
     const size_t settings_html_size = (settings_html_end - settings_html_start);
     httpd_resp_set_type(req, "text/html");
-    httpd_resp_send(req, (const char *)settings_html_start, settings_html_size);
+    httpd_resp_sendstr_chunk(req, HTML_FILE_HEADER);
+    httpd_resp_send_chunk(req, (const char *)settings_html_start, settings_html_size);
+    httpd_resp_sendstr_chunk(req, NULL);
     return ESP_OK;
 }
 
@@ -130,6 +152,7 @@ static esp_err_t http_resp_dir_html(httpd_req_t *req, const char *dirpath)
     extern const unsigned char file_list_2_end[]   asm("_binary_file_list_2_html_end");
     const size_t file_list_2_size = (file_list_2_end - file_list_2_start);
 
+    httpd_resp_sendstr_chunk(req, HTML_FILE_HEADER);
     httpd_resp_send_chunk(req, (const char *)file_list_1_start, file_list_1_size);
 
     /* Iterate over all files / folders and fetch their names and sizes */
@@ -522,6 +545,7 @@ static esp_err_t setting_get_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+#ifdef CONFIG_ENABLE_RESET_BUTTON
 static esp_err_t reset_msc_get_handler(httpd_req_t *req)
 {
     usbd_vbus_enable(false);
@@ -533,6 +557,7 @@ static esp_err_t reset_msc_get_handler(httpd_req_t *req)
     httpd_resp_sendstr(req, "MSC Reset Success");
     return ESP_OK;
 }
+#endif // CONFIG_ENABLE_RESET_BUTTON
 
 /* Function to start the file server */
 esp_err_t start_file_server(const char *base_path)
@@ -582,6 +607,7 @@ esp_err_t start_file_server(const char *base_path)
     };
     httpd_register_uri_handler(server, &setting);
 
+#ifdef CONFIG_ENABLE_RESET_BUTTON
     /* URI handler for reset_msc */
     httpd_uri_t reset_msc = {
         .uri       = "/reset_msc",   // Match all URIs of type /delete/path/to/file
@@ -590,6 +616,7 @@ esp_err_t start_file_server(const char *base_path)
         .user_ctx  = server_data    // Pass server data as context
     };
     httpd_register_uri_handler(server, &reset_msc);
+#endif // CONFIG_ENABLE_RESET_BUTTON
 
     /* URI handler for getting uploaded files */
     httpd_uri_t file_download = {

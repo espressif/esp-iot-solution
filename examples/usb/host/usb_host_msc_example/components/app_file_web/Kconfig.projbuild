@@ -52,6 +52,10 @@ menu "USB Host MSC Demo"
             default 5
             help
             Set the Maximum retry to avoid station reconnecting to the softAP unlimited when the softAP is really inexistent.
+        
+        config ENABLE_RESET_BUTTON
+            bool
+            default n
     endmenu
 
 endmenu

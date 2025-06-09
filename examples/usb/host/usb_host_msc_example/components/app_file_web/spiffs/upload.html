@@ -1,24 +1,10 @@
-<!DOCTYPE html>
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width" />
-  <title>ESP32 USB File Server</title>
-  <link href="/styles.css" rel="stylesheet" />
 </head>
 
 <div class="upload-header link-white">
   <div class="header-left" id="return-button">
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width=".75em"
-      height="1.5em"
-      viewBox="0 0 12 24"
-    >
-      <path
-        fill="currentColor"
-        fill-rule="evenodd"
-        d="m3.343 12l7.071 7.071L9 20.485l-7.778-7.778a1 1 0 0 1 0-1.414L9 3.515l1.414 1.414z"
-      />
+    <svg xmlns="http://www.w3.org/2000/svg" width=".75em" height="1.5em" viewBox="0 0 12 24">
+      <path fill="currentColor" fill-rule="evenodd"
+        d="m3.343 12l7.071 7.071L9 20.485l-7.778-7.778a1 1 0 0 1 0-1.414L9 3.515l1.414 1.414z" />
     </svg>
   </div>
   <div class="header-center">ESP USB File Server</div>
@@ -122,8 +108,7 @@
     if (!file) return;
     if (file.size > MAX_FILE_SIZE) {
       alert(
-        `File is too large! Maximum file size is ${
-          MAX_FILE_SIZE / 1024 / 1024
+        `File is too large! Maximum file size is ${MAX_FILE_SIZE / 1024 / 1024
         } MB`
       );
       return;
@@ -202,8 +187,14 @@
 
     xhr.onload = async () => {
       if (xhr.status === 200) {
+        if (!enableResetButton) {
+          alert("Upload complete!");
+          window.location.href = uploadPath;
+          return;
+        }
+
         try {
-            const cookies = document.cookie.split('; ').reduce((acc, cookie) => {
+          const cookies = document.cookie.split('; ').reduce((acc, cookie) => {
             const [name, value] = cookie.split('=');
             acc[name] = value;
             return acc;
