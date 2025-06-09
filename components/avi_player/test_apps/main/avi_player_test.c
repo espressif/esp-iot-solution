@@ -12,6 +12,7 @@
 #include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "esp_timer.h"
+#include "esp_idf_version.h"
 #include "esp_spiffs.h"
 #include "avi_player.h"
 
@@ -54,16 +55,22 @@ TEST_CASE("avi_player_test", "[avi_player]")
         .video_cb = video_write,
         .audio_set_clock_cb = audio_set_clock,
         .avi_play_end_cb = avi_play_end,
+        .stack_size = 4096,
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 1, 0)
+        // It must not be set to `true` when reading data from flash.
+        .stack_in_psram = false,
+#endif
     };
 
-    avi_player_init(config);
+    avi_player_handle_t handle;
+    avi_player_init(config, &handle);
 
-    avi_player_play_from_file("/spiffs/p4_introduce.avi");
+    avi_player_play_from_file(handle, "/spiffs/p4_introduce.avi");
 
     while (!end_play) {
         vTaskDelay(500 / portTICK_PERIOD_MS);
     }
-    avi_player_deinit();
+    avi_player_deinit(handle);
     vTaskDelay(500 / portTICK_PERIOD_MS);
 }
 
