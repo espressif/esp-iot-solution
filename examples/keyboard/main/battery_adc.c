@@ -15,12 +15,9 @@
 #include "bsp/esp-bsp.h"
 #include "adc_battery_estimation.h"
 
-int g_battery_percent;
-
 static const char *TAG = "BATTERY-ADC";
 
 static TaskHandle_t battery_monitor_task_handle;
-
 static void battery_monitor_task(void *pvParameters);
 
 /* Pull up resistor value. Unit: KOhm */
