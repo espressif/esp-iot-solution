@@ -79,6 +79,7 @@ HumanActivityRecognition::HumanActivityRecognition(const char *model_name,
                                                    size_t feature_size)
 {
     m_model = new dl::Model(model_name, fbs::MODEL_LOCATION_IN_FLASH_PARTITION);
+    m_model->minimize();
     m_preprocessor = new DataPreprocessor(m_model, mean, std, feature_size);
     m_postprocessor = new DataPostprocessor(m_model);
     m_feature_size = feature_size;
