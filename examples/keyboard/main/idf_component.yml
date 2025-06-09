@@ -1,5 +1,6 @@
 version: 0.2.2
 dependencies:
-  idf: ">=5.2"
+  idf: '>=5.2'
   espressif/tinyusb:
-    version: ">=0.15.0~2"
+    version: '>=0.15.0~2'
+  espressif/adc_battery_estimation: =*
