@@ -7,4 +7,8 @@ dependencies:
   esp_msc_ota:
     version: "*"
     override_path: "../../../../../components/usb/esp_msc_ota"
-  idf: '>=5'
+  idf: '>=5.0'
+  espressif/esp_wifi_remote:
+    version: "^0.9.0"
+    rules:
+      - if: "target in [esp32p4]"

@@ -1,35 +1,35 @@
 # USB Host MSC Example
 
-This example demonstrates how to use USB Host MSC functionality and provides a web page to manage MSC devices.
+该实例展示了如何使用USB Host MSC功能，并提供了一个Web页面来管理 MSC 设备。
 
-## Hardware Requirements
+## 硬件要求
 
-- ESP32 chip that supports USB OTG, such as ESP32-S2, ESP32-S3, ESP32-P4
-- A USB flash drive formatted as FAT32/exFAT
+- 支持 USB OTG 的 ESP32 芯片，如 ESP32-S2, ESP32-S3, ESP32-P4
+- 一个 U 盘，文件格式为 FAT32/exFAT
 
-### exFat Support (Not Enabled by Default)
+### exFat 支持（默认不启用）
 
-* To enable exFat support, set the `FF_FS_EXFAT` macro to `1` in the `components/fatfs/src/ffconf.h` file of the esp-idf SDK directory
+* exFat 的支持需要将 esp-idf SDK 目录中的 ``components/fatfs/src/ffconf.h`` 文件中的 ``FF_FS_EXFAT`` 宏定义设置为 ``1``
 
-* Also set the macros `CONFIG_FATFS_LFN_HEAP` to `y` and `CONFIG_FATFS_USE_LABEL` to `y`
+* 并将宏 ``CONFIG_FATFS_LFN_HEAP`` 设置为 ``y`` 和 ``CONFIG_FATFS_USE_LABEL`` 设置为 ``y``
 
-Note: exFat requires a paid license.
+Note: exFat 是付费许可。
 
-## Web Page Features
+## 网页功能
 
-- Display files and directories on the MSC device
-- Upload files to the MSC device
-- Download files from the MSC device
-- Delete files from the MSC device
-- Configure Wi-Fi network settings
+- 显示 MSC 设备中的文件和目录
+- 上传文件到 MSC 设备
+- 下载文件从 MSC 设备
+- 删除文件从 MSC 设备
+- 设置 Wi-Fi 网络
 
 ![file_web_page](./.static/file_web.jpg)
 
-## How to Use
+## 使用说明
 
-1. Insert the USB flash drive into the development board's USB port, ensure it's properly powered
-2. Connect to the default Wi-Fi network `ESP-Host-MSC-Demo` with no password
-3. Open a browser and visit `http://192.168.4.1` to access the file management page
+1. 将 U 盘插入开发板的 USB 端口，确保 U 盘被成功供电
+2. 连接默认的 Wi-Fi 网络 ``ESP-Host-MSC-Demo``，密码为空
+3. 打开浏览器，访问 ``http://192.168.4.1``，即可看到文件管理页面
 
 ## Example Output
 

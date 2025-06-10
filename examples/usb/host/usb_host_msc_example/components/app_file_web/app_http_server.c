@@ -16,11 +16,6 @@
 /* Max length a file path can have on storage */
 #define FILE_PATH_MAX (ESP_VFS_PATH_MAX + CONFIG_SPIFFS_OBJ_NAME_LEN)
 
-/* Max size of an individual file. Make sure this
- * value is same as that set in upload_script.html */
-#define MAX_FILE_SIZE   (20*1024*1024) // 20 MB
-#define MAX_FILE_SIZE_STR "20MB"
-
 /* Scratch buffer size */
 #define SCRATCH_BUFSIZE  8192
 
@@ -333,6 +328,7 @@ static esp_err_t download_get_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+#ifdef CONFIG_ENABLE_RESET_BUTTON
 #if defined (CONFIG_IDF_TARGET_ESP32S2) || defined (CONFIG_IDF_TARGET_ESP32S3)
 // To generate a disconnect event
 static void usbd_vbus_enable(bool enable)
@@ -350,6 +346,7 @@ static void usbd_vbus_enable(bool enable)
     esp_rom_gpio_connect_in_signal(enable ? GPIO_MATRIX_CONST_ONE_INPUT : GPIO_MATRIX_CONST_ZERO_INPUT, USB_SRP_SESSEND_PAD_IN_IDX, 1);
     return;
 }
+#endif
 #endif
 
 /* Handler to upload a file onto the server */
@@ -380,18 +377,6 @@ static esp_err_t upload_post_handler(httpd_req_t *req)
         ESP_LOGE(TAG, "File already exists : %s", filepath);
         /* Respond with 400 Bad Request */
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "File already exists");
-        return ESP_FAIL;
-    }
-
-    /* File cannot be larger than a limit */
-    if (req->content_len > MAX_FILE_SIZE) {
-        ESP_LOGE(TAG, "File too large : %d bytes", req->content_len);
-        /* Respond with 400 Bad Request */
-        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST,
-                            "File size must be less than "
-                            MAX_FILE_SIZE_STR "!");
-        /* Return failure to close underlying connection else the
-         * incoming file content will keep the socket busy */
         return ESP_FAIL;
     }
 
