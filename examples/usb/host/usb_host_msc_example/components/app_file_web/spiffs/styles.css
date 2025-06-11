@@ -1,0 +1,262 @@
+body {
+    background-color: #222222;
+    min-width: 300px;
+}
+
+html {
+    font-family: -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    color: white;
+}
+
+.w100 {
+    width: 100%;
+}
+
+.text-bold {
+    font-weight: bold;
+}
+
+.header,
+.upload-header,
+.settings-header {
+    width: 100%;
+    height: 2em;
+    position: absolute;
+    top: 0;
+    left: 0;
+    background-color: #444444;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    margin: auto;
+    align-items: center;
+}
+
+.header-center {
+    text-align: center;
+    font-weight: 700;
+    font-size: larger;
+}
+
+.header-right {
+    text-align: right;
+    margin-right: 10px;
+}
+
+@media (max-width: 700px) {
+    .header {
+        grid-template-columns: 1fr 0em;
+    }
+
+    .header-center {
+        display: none;
+    }
+}
+
+.header-left {
+    text-align: left;
+    margin-left: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.link-white a,
+.link-white a:visited,
+.link-white a:active {
+    color: white;
+    text-decoration: none;
+}
+
+.table_component {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.table_component table {
+    max-width: 100%;
+    min-width: 700px;
+    border-collapse: collapse;
+    table-layout: fixed;
+    margin: 0 auto;
+}
+
+@media (max-width: 700px) {
+    .table_component table {
+        min-width: 300px;
+    }
+}
+
+.table_component thead {
+    font-weight: bold;
+    border-top: 2px solid #ddd;
+    border-bottom: 1px solid #ddd;
+}
+
+.table_component tbody {
+    border-bottom: 2px solid #ddd;
+}
+
+.table_component thead td,
+.table_component tbody td {
+    padding: 8px;
+    text-align: left;
+}
+
+.table_component tbody tr:hover {
+    background-color: #444;
+}
+
+.table_component thead td:nth-child(1),
+.table_component tbody td:nth-child(1) {
+    max-width: 1000px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.table_component thead td:nth-child(2),
+.table_component tbody td:nth-child(2) {
+    max-width: 8em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.table_component thead td:nth-child(3),
+.table_component tbody td:nth-child(3) {
+    width: 4em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@media (max-width: 700px) {
+    .table_component thead td:nth-child(2),
+    .table_component tbody td:nth-child(2) {
+        display: none;
+    }
+}
+
+.upload-form {
+    margin: 0 auto;
+    width: 400px;
+    display: none;
+}
+
+.upload-area {
+    width: 400px;
+    height: 150px;
+    margin: 0 auto 10pt auto;
+    border: 2px dashed #ccc;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #BBB;
+    transition: border-color 0.3s ease, color 0.3s ease;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.upload-area.drag-over {
+    border-color: #007bff;
+    color: #007bff;
+}
+
+.error {
+    color: red;
+    font-size: 12px;
+    text-align: center;
+    margin-top: 5px;
+}
+
+#uploadForm button {
+    padding: 10px 10px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+#uploadForm button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+.settings-main {
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.settings-main table {
+    border-collapse:separate;
+    border-spacing:0px 10px;
+}
+
+.directory::before,
+.folder::before {
+    content: url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="white" d="M10 4H4c-1.11 0-2 .89-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8z"/></svg>');
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    margin-right: 5px;
+}
+
+.file::before {
+    content: url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="white" d="M13 9V3.5L18.5 9M6 2c-1.11 0-2 .89-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/></svg>');
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    margin-right: 5px;
+}
+
+.buttons-wrap {
+    margin-top: 3em;
+    margin-bottom: 1em;
+}
+
+.buttons-container {
+    display: flex; justify-content: center; margin: auto; gap: 0.3em;
+}
+
+.button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #444;
+    height: 2em;
+    width: 6em;
+}
+
+.button:hover {
+    background-color: #555;
+}
+
+.settings-button::before {
+    content: url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="white" d="M12 15.5A3.5 3.5 0 0 1 8.5 12A3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5a3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97s-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0 0 14 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1s.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64z" /></svg>');
+    display: inline-flex;
+    width: 1em;
+    height: 1em;
+    margin-right: .1em;
+}
+
+.refresh-button::before {
+    content: url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="white" d="M17.65 6.35A7.96 7.96 0 0 0 12 4a8 8 0 0 0-8 8a8 8 0 0 0 8 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18a6 6 0 0 1-6-6a6 6 0 0 1 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4z" /></svg>');
+    display: inline-flex;
+    width: 1em;
+    height: 1em;
+    margin-right: .1em;
+}
+
+.upload-button::before {
+    content: url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" ><path fill="white" d="M9 16v-6H5l7-7l7 7h-4v6zm-4 4v-2h14v2z" /></svg>');
+    display: inline-flex;
+    width: 1em;
+    height: 1em;
+    margin-right: .1em;
+}
+
+.hidden {
+    display: none;
+}
