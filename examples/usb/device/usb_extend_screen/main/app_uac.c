@@ -57,8 +57,12 @@ esp_err_t app_uac_init(void)
         .set_mute_cb = uac_device_set_mute_cb,
         .set_volume_cb = uac_device_set_volume_cb,
         .cb_ctx = NULL,
+#if CONFIG_UAC_SPEAKER_CHANNEL_NUM > 0
         .spk_itf_num = ITF_NUM_AUDIO_STREAMING_SPK,
+#endif
+#if CONFIG_UAC_MIC_CHANNEL_NUM > 0
         .mic_itf_num = ITF_NUM_AUDIO_STREAMING_MIC,
+#endif
     };
 
     uac_device_init(&config);

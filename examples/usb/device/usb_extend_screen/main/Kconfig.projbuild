@@ -73,14 +73,14 @@ menu "Example Configuration"
 
     config USB_TASK_PRIORITY
         int "USB Task Priority"
-        default 5
+        default 6
         range 1 15
         help
             TinyUSB main task priority
 
     config VENDOR_TASK_PRIORITY
         int "Vendor Task Priority"
-        default 10
+        default 5
         range 1 15
         help
             Task to receive JPG data from PC

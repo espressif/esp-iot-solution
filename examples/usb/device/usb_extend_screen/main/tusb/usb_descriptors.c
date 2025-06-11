@@ -94,6 +94,16 @@ uint8_t const * tud_hid_descriptor_report_cb(uint8_t instance)
 }
 #endif
 
+enum {
+    STR_INDEX_VENDOR = 4,
+#if CFG_TUD_HID
+    STR_INDEX_HID,
+#endif
+#if CFG_TUD_AUDIO
+    STR_INDEX_AUDIO,
+#endif
+};
+
 //--------------------------------------------------------------------+
 // Configuration Descriptor
 //--------------------------------------------------------------------+
@@ -107,14 +117,14 @@ uint8_t const desc_fs_configuration[] = {
     TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, CONFIG_TOTAL_LEN, 0, 100),
     // Interface number, string index, EP Out & IN address, EP size
 #if CFG_TUD_VENDOR
-    TUD_VENDOR_DESCRIPTOR(ITF_NUM_VENDOR, 4, EPNUM_VENDOR, 0x80 | EPNUM_VENDOR, CFG_TUD_VENDOR_EPSIZE),
+    TUD_VENDOR_DESCRIPTOR(ITF_NUM_VENDOR, STR_INDEX_VENDOR, EPNUM_VENDOR, 0x80 | EPNUM_VENDOR, CFG_TUD_VENDOR_EPSIZE),
 #endif
 #if CFG_TUD_HID
     // Interface number, string index, protocol, report descriptor len, EP In address, size & polling interval
-    TUD_HID_DESCRIPTOR(ITF_NUM_HID, 5, HID_ITF_PROTOCOL_NONE, sizeof(desc_hid_report), (0x80 | EPNUM_HID_DATA), CFG_TUD_HID_EP_BUFSIZE, 10),
+    TUD_HID_DESCRIPTOR(ITF_NUM_HID, STR_INDEX_HID, HID_ITF_PROTOCOL_NONE, sizeof(desc_hid_report), (0x80 | EPNUM_HID_DATA), CFG_TUD_HID_EP_BUFSIZE, 10),
 #endif
 #if CFG_TUD_AUDIO
-    TUD_AUDIO_DESCRIPTOR(ITF_NUM_AUDIO_CONTROL, 6, EPNUM_AUDIO_OUT, (0x80 | EPNUM_AUDIO_IN), (0x80 | EPNUM_AUDIO_FB)),
+    TUD_AUDIO_DESCRIPTOR(ITF_NUM_AUDIO_CONTROL, STR_INDEX_AUDIO, EPNUM_AUDIO_OUT, (0x80 | EPNUM_AUDIO_IN), (0x80 | EPNUM_AUDIO_FB)),
 #endif
 };
 
