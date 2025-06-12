@@ -41,7 +41,7 @@ class AssetCopyConfig:
 @dataclass
 class PackModelsConfig:
     target_path: str
-    main_path: str
+    include_path: str
     image_file: str
     assets_path: str
     name_length: int
@@ -394,7 +394,7 @@ def pack_assets(config: PackModelsConfig):
     """
 
     target_path = config.target_path
-    assets_c_path = config.main_path
+    assets_include_path = config.include_path
     out_file = config.image_file
     assets_path = config.assets_path
     max_name_len = config.name_length
@@ -460,11 +460,11 @@ def pack_assets(config: PackModelsConfig):
     with open(out_file, 'wb') as output_bin:
         output_bin.write(final_data)
 
-    os.makedirs(assets_c_path, exist_ok=True)
+    os.makedirs(assets_include_path, exist_ok=True)
     current_year = datetime.now().year
 
     asset_name = os.path.basename(assets_path)
-    file_path = os.path.join(assets_c_path, f'mmap_generate_{asset_name}.h')
+    file_path = os.path.join(assets_include_path, f'mmap_generate_{asset_name}.h')
     with open(file_path, 'w') as output_header:
         output_header.write('/*\n')
         output_header.write(' * SPDX-FileCopyrightText: 2022-{} Espressif Systems (Shanghai) CO LTD\n'.format(current_year))
@@ -535,7 +535,7 @@ def process_assets_build(config_data):
     assets_path = config_data['assets_path']
     image_file = config_data['image_file']
     target_path = os.path.dirname(image_file)
-    main_path = config_data['main_path']
+    include_path = config_data['include_path']
     name_length = config_data['name_length']
     split_height = config_data['split_height']
     support_format = [fmt.strip() for fmt in config_data['support_format'].split(',')]
@@ -554,7 +554,7 @@ def process_assets_build(config_data):
 
     pack_config = PackModelsConfig(
         target_path=target_path,
-        main_path=main_path,
+        include_path=include_path,
         image_file=image_file,
         assets_path=assets_path,
         name_length=name_length

@@ -1,7 +1,8 @@
+set(IMPORT_PATH "${CMAKE_SOURCE_DIR}")
 
 idf_component_register(
     SRC_DIRS "."
-    INCLUDE_DIRS "."
+    INCLUDE_DIRS "." "${IMPORT_PATH}"
 )
 
 set(DIR_SRC         "${PROJECT_DIR}/spiffs_assets")
@@ -26,4 +27,5 @@ spiffs_create_partition_assets(
     FLASH_IN_PROJECT
     FLASH_APPEND_APP
     MMAP_FILE_SUPPORT_FORMAT ".jpg,.png,.ttf"
+    IMPORT_INC_PATH "${IMPORT_PATH}"
 )

@@ -60,6 +60,8 @@ General Options
    - ``FLASH_IN_PROJECT``: Users can opt to have the image automatically flashed together with the app binaries, partition tables, etc. on ``idf.py flash``.
    
    - ``FLASH_APPEND_APP``: Enables appending binary data (``bin``) to the application binary (``app_bin``).
+
+   - ``IMPORT_INC_PATH``: Target path for generated include files. Defaults to referencing component location.
    
    - ``MMAP_FILE_SUPPORT_FORMAT``: Specifies supported file formats (e.g., ``.png``, ``.jpg``, ``.ttf``).
    
