@@ -11,6 +11,7 @@
 #include "usb_device_cdc.h"
 #include "iot_button.h"
 #include "button_gpio.h"
+#include "driver/gpio.h"
 
 #if CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S2
 #define BOOT_GPIO GPIO_NUM_0
