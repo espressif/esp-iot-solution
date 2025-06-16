@@ -7,7 +7,7 @@ dependencies:
       version: "^4.0.0"
       override_path: ../../../../../components/button
   espressif/tinyusb:
-    version: "0.17.*"
+    version: "0.18.*"
   ## Required IDF version
   idf:
     version: ">=5.0"
