@@ -6,7 +6,7 @@ BLE Connection Management
  Supported Socs       ESP32        ESP32-C2          ESP32-C3        ESP32-S3    
 ==================  ===========  ===============  =============== =============
 
-The BLE connection management provide a simplified API interface for accessing the commonly used BLE functionality. It supports common scenarios like peripheral, central among others. 
+The BLE connection management provides a simplified API interface for accessing the commonly used BLE functionality. It supports common scenarios like peripheral, central among others. 
 
 Application Example
 ---------------------------
