@@ -536,11 +536,13 @@ static void _cdc_tx_xfer_submit(usb_transfer_t *out_xfer)
             size_t actual_num_bytes = 0;
             _ringbuf_pop(cdc->out_ringbuf_handle, out_xfer->data_buffer, data_len, &actual_num_bytes, 0);
             out_xfer->num_bytes = actual_num_bytes;
+            usb_host_transfer_submit(out_xfer);
         } else {
             xSemaphoreGive(cdc->data.out_xfer_free_sem);
         }
+    } else {
+        usb_host_transfer_submit(out_xfer);
     }
-    usb_host_transfer_submit(out_xfer);
 }
 
 static esp_err_t _cdc_transfers_allocate(usbh_cdc_t *cdc, const usb_ep_desc_t *notif_ep_desc, const usb_ep_desc_t *in_ep_desc, const usb_ep_desc_t *out_ep_desc)
