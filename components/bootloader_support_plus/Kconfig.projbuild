@@ -31,10 +31,10 @@ menu "Bootloader config (Custom)"
 
     config ENABLE_LEGACY_ESP_BOOTLOADER_PLUS_V2_SUPPORT
         bool "Enable legacy esp bootloader plus v2 support"
+        default n
+        depends on IDF_TARGET_ESP32 || IDF_TARGET_ESP32C2 || IDF_TARGET_ESP32C3
         help
             This option is reserved to support devices already using esp-bootloader-plus scheme.
             The triggering decompression mechanism in esp-bootloader-plus scheme and bootloader-support-plus scheme is different,
             so they are not compatible. Please make sure you only enable this option when you need the support of esp-bootloader-plus scheme.
-        default n
-
 endmenu

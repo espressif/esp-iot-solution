@@ -1,7 +1,8 @@
-version: "0.3.8"
+version: "0.3.9"
 targets:
   - esp32c2
   - esp32c3
+  - esp32c5
   - esp32c6
   - esp32
   - esp32h2

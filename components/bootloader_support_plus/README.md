@@ -7,13 +7,14 @@
 ## Overview
 The `bootloader support plus` is an enhanced bootloader based on [custom_bootloader](https://github.com/espressif/esp-idf/tree/master/examples/custom_bootloader) . The firmware update function is supported in the bootloader stage by decompressing the compressed firmware. In this solution, you can directly use the original OTA APIs (such as [esp_ota](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/ota.html#api-reference)、[esp_https_ota](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/esp_https_ota.html#api-reference)). The following table shows the Espressif SoCs that are compatible with `bootloader support plus` and their corresponding ESP-IDF versions.
 
-| Chip     | ESP-IDF Release/v5.0                                         | ESP-IDF Release/v5.1                           |
-| -------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| ESP32-C3 | Supported | Supported |
-| ESP32-C2 | Supported | Supported |
-| ESP32 | Supported | Supported |
-| ESP32C6 | N/A | Supported |
-| ESP32H2 | N/A | Supported |
+| Chip     | ESP-IDF Release/v5.0                                         | ESP-IDF Release/v5.1                                  | ESP-IDF Release/v5.4+                 |
+| -------- | ------------------------------------------------------------ | ------------------------------------------------------------ |------------------------------ |
+| ESP32 | Supported | Supported | Supported |
+| ESP32-C2 | Supported | Supported | Supported |
+| ESP32-C3 | Supported | Supported | Supported |
+| ESP32-C5 | N/A | N/A | Supported |
+| ESP32-C6 | N/A | Supported | Supported |
+| ESP32-H2 | N/A | Supported | Supported |
 
 ## Compression ratio
 
@@ -84,7 +85,7 @@ In order to use compressed updates, you need to make the following changes:
    #endif
    ```
 
-5. Add `bootloader_support_plus` component to your project. You can add this component to your project via `idf.py add-dependancy`, e.g.
+5. Add `bootloader_support_plus` component to your project. You can add this component to your project via `idf.py add-dependency`, e.g.
 
    ```shell
    idf.py add-dependency "espressif/bootloader_support_plus=*"
