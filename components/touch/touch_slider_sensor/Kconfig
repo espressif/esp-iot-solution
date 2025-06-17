@@ -8,7 +8,6 @@ menu "Touch Slider Sensor Configuration"
 
     config TOUCH_SLIDER_SENSOR_CALIBRATION_TIMES
         int "Calibration times"
-        default 50 if !IDF_TARGET_ESP32
         default 20
         range 10 1000
         help
@@ -54,19 +53,19 @@ menu "Touch Slider Sensor Configuration"
 
     config TOUCH_SLIDER_SENSOR_MAX_P_X1000
         int "Maximum positive change ratio (/1000)"
-        default 200
+        default 0
         range 0 1000
         help
             Maximum positive change ratio from baseline, multiplied by 1000.
-            For example, 200 means 0.2. 0 means no limit.
+            For example, 200 means 0.2. 0 means automatically calculated.
 
     config TOUCH_SLIDER_SENSOR_MIN_N_X1000
         int "Minimum negative change ratio (/1000)"
-        default 200
+        default 0
         range 0 1000
         help
             Minimum negative change ratio from baseline, multiplied by 1000.
-            For example, 200 means 0.2. 0 means no limit.
+            For example, 200 means 0.2. 0 means automatically calculated.
 
     config TOUCH_SLIDER_SENSOR_NEGATIVE_LOGIC
         bool "Using negative logic to detect touch"
@@ -90,7 +89,6 @@ menu "Touch Slider Sensor Configuration"
 
     config TOUCH_SLIDER_SENSOR_RESET_COVER
         int "Reset count from cover"
-        default 1000 if !IDF_TARGET_ESP32
         default 300
         range 0 5000
         help
@@ -105,7 +103,7 @@ menu "Touch Slider Sensor Configuration"
 
     config TOUCH_SLIDER_SENSOR_RAW_BUF_SIZE
         int "Raw buffer size"
-        default 40 if !IDF_TARGET_ESP32
+        default 20 if !IDF_TARGET_ESP32
         default 10
         range 10 100
         help
@@ -147,10 +145,4 @@ menu "Touch Slider Sensor Configuration"
         help
             Divisor of slider position IIR filter.
 
-    config TOUCH_SLIDER_SENSOR_CALCULATE_CHANNEL
-        int "Position calculation window"
-        default 3
-        range 1 10
-        help
-            Number of channels in position calculation
 endmenu

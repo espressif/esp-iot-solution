@@ -57,10 +57,11 @@ TEST_CASE("touch slider sensor create/delete test", "[touch_slider][create]")
         .position_range = 10000,
         .channel_gold_value = NULL,
         .debounce_times = 3,
+        .calculate_window = 0,  // Test default value (should auto-select based on channel_num)
         .skip_lowlevel_init = false
     };
 
-    // Test successful creation
+    // Test successful creation with default calculate_window
     TEST_ASSERT_EQUAL(ESP_OK, touch_slider_sensor_create(&config, &s_touch_slider, touch_slider_event_callback, NULL));
     TEST_ASSERT_NOT_NULL(s_touch_slider);
 
@@ -79,6 +80,7 @@ TEST_CASE("touch slider sensor position test", "[touch_slider][events]")
         .position_range = 10000,
         .channel_gold_value = NULL,
         .debounce_times = 0,
+        .calculate_window = 0,  // Test default value
         .skip_lowlevel_init = false
     };
 
@@ -114,6 +116,7 @@ TEST_CASE("touch slider sensor event handling test", "[touch_slider][events]")
         .swipe_hysterisis = 40,
         .channel_gold_value = NULL,
         .debounce_times = 0,
+        .calculate_window = 3,  // Explicitly set to 3 for testing
         .skip_lowlevel_init = false
     };
 

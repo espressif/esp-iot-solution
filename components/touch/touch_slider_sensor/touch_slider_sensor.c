@@ -59,6 +59,7 @@ typedef struct touch_slider_sensor_t {
     uint32_t filter_reset_times;
     float quantify_signal_array[SOC_TOUCH_SENSOR_NUM];                    // Slider re-quantization array
     uint32_t position_range;
+    uint8_t calculate_window;                                             // Window size for position calculation
     float swipe_threshold;
     float swipe_hysterisis;
     float swipe_alpha;
@@ -155,6 +156,21 @@ esp_err_t touch_slider_sensor_create(touch_slider_config_t *config, touch_slider
     ESP_RETURN_ON_FALSE(config && handle, ESP_ERR_INVALID_ARG, TAG, "Invalid arguments");
     ESP_RETURN_ON_FALSE(config->channel_num > 1 && config->channel_list, ESP_ERR_INVALID_ARG, TAG, "Invalid channel config");
 
+    // Set default calculate_window if not specified or invalid (for backward compatibility)
+    if (config->calculate_window == 0) {
+        // Recommended default values based on channel count
+        if (config->channel_num == 2) {
+            config->calculate_window = 2;  // Use all channels for 2-channel setup
+        } else {
+            config->calculate_window = 3;  // Optimal balance for 3+ channels
+        }
+        ESP_LOGI(TAG, "Using default calculate_window: %"PRIu8, config->calculate_window);
+    }
+
+    // Validate calculation window size
+    ESP_RETURN_ON_FALSE(config->calculate_window >= 2 && config->calculate_window <= config->channel_num,
+                        ESP_ERR_INVALID_ARG, TAG, "Invalid calculate_window: must be >= 2 and <= channel_num (%"PRIu32")", config->channel_num);
+
     touch_slider_sensor_t *sensor = calloc(1, sizeof(touch_slider_sensor_t));
     ESP_RETURN_ON_FALSE(sensor, ESP_ERR_NO_MEM, TAG, "Failed to allocate memory");
 
@@ -174,6 +190,7 @@ esp_err_t touch_slider_sensor_create(touch_slider_config_t *config, touch_slider
     sensor->channel_bcm_update_cnt = CONFIG_TOUCH_SLIDER_SENSOR_BENCHMARK_UPDATE_TIME; // update at first time
     sensor->filter_reset_cnt = config->filter_reset_times;
     sensor->position_range = config->position_range;
+    sensor->calculate_window = config->calculate_window;                               // Store calculate window size
     sensor->swipe_threshold = config->swipe_threshold;
     sensor->swipe_hysterisis = config->swipe_hysterisis;
     sensor->swipe_alpha = config->swipe_alpha;
@@ -385,22 +402,23 @@ static inline void slider_quantify_signal(touch_slider_handle_t slider_handle)
  *
  * This function will figure out the max sum subarray from the
  * input array, return the max sum and max sum start index
- *
  */
-static inline float slider_search_max_subarray(const float *array, int array_size, int *max_array_idx)
+static inline float slider_search_max_subarray(const float *array, uint8_t array_size, uint8_t window_size, uint8_t *max_array_idx)
 {
     *max_array_idx = 0;
     float max_array_sum = 0;
     float current_array_sum = 0;
-    for (int idx = 0; idx <= (array_size - CONFIG_TOUCH_SLIDER_SENSOR_CALCULATE_CHANNEL); idx++) {
-        for (int x = idx; x < idx + CONFIG_TOUCH_SLIDER_SENSOR_CALCULATE_CHANNEL; x++) {
+    uint8_t max_start_idx = array_size - window_size;
+
+    for (uint8_t idx = 0; idx <= max_start_idx; idx++) {
+        current_array_sum = 0;
+        for (uint8_t x = idx; x < idx + window_size; x++) {
             current_array_sum += array[x];
         }
         if (max_array_sum < current_array_sum) {
             max_array_sum = current_array_sum;
             *max_array_idx = idx;
         }
-        current_array_sum = 0;
     }
     return max_array_sum;
 }
@@ -411,26 +429,34 @@ static inline float slider_search_max_subarray(const float *array, int array_siz
  * This function will figure out the number of non-zero items from
  * the subarray
  */
-static inline uint8_t slider_get_non_zero_num(const float *array, uint8_t array_idx)
+static inline uint8_t slider_get_non_zero_num(const float *array, uint8_t array_idx, uint8_t window_size, uint8_t array_size)
 {
     uint8_t zero_cnt = 0;
-    for (int idx = array_idx; idx < array_idx + CONFIG_TOUCH_SLIDER_SENSOR_CALCULATE_CHANNEL; idx++) {
+    // Prevent uint8_t overflow and ensure we don't exceed array bounds
+    uint8_t end_idx = (array_idx + window_size > array_size) ? array_size : array_idx + window_size;
+
+    for (uint8_t idx = array_idx; idx < end_idx; idx++) {
         zero_cnt += (array[idx] > 0) ? 1 : 0;
     }
     return zero_cnt;
 }
 
-static inline uint32_t slider_calculate_position(touch_slider_handle_t slider_handle, int subarray_index, float subarray_sum, int non_zero_num)
+static inline uint32_t slider_calculate_position(touch_slider_handle_t slider_handle, uint8_t subarray_index, float subarray_sum, uint8_t non_zero_num)
 {
-    int range = slider_handle->position_range;
-    int array_size = slider_handle->channel_num;
+    uint32_t range = slider_handle->position_range;
+    uint8_t array_size = slider_handle->channel_num;
+    uint8_t window_size = slider_handle->calculate_window;  // Use user-configured window size
     float scale = (float)range / (slider_handle->channel_num - 1);
     const float *array = slider_handle->quantify_signal_array;
     uint32_t position = 0;
+
     if (non_zero_num == 0) {
         position = slider_handle->position;
     } else if (non_zero_num == 1) {
-        for (int index = subarray_index; index < subarray_index + CONFIG_TOUCH_SLIDER_SENSOR_CALCULATE_CHANNEL; index++) {
+        // Search for non-zero elements within actual window range
+        uint8_t end_idx = (subarray_index + window_size > array_size) ? array_size : subarray_index + window_size;
+
+        for (uint8_t index = subarray_index; index < end_idx; index++) {
             if (0 != array[index]) {
                 if (index == array_size - 1) {
                     position = range;
@@ -441,7 +467,9 @@ static inline uint32_t slider_calculate_position(touch_slider_handle_t slider_ha
             }
         }
     } else {
-        for (int idx = subarray_index; idx < subarray_index + CONFIG_TOUCH_SLIDER_SENSOR_CALCULATE_CHANNEL; idx++) {
+        // Multiple channels have signals, use weighted average
+        uint8_t end_idx = (subarray_index + window_size > array_size) ? array_size : subarray_index + window_size;  // Prevent uint8_t overflow and ensure we don't exceed array bounds
+        for (uint8_t idx = subarray_index; idx < end_idx; idx++) {
             position += ((float)idx * array[idx]);
         }
         position = position * scale / subarray_sum;
@@ -495,14 +523,14 @@ static inline uint32_t slider_filter_iir(uint32_t in_now, uint32_t out_last, uin
  */
 static void slider_update_position(touch_slider_handle_t slider_handle)
 {
-    int max_array_idx = 0;
+    uint8_t max_array_idx = 0;
     float max_array_sum;
     uint8_t non_zero_num;
     uint32_t current_position;
 
     slider_quantify_signal(slider_handle);
-    max_array_sum = slider_search_max_subarray(slider_handle->quantify_signal_array, slider_handle->channel_num, &max_array_idx);
-    non_zero_num = slider_get_non_zero_num(slider_handle->quantify_signal_array, max_array_idx);
+    max_array_sum = slider_search_max_subarray(slider_handle->quantify_signal_array, slider_handle->channel_num, slider_handle->calculate_window, &max_array_idx);
+    non_zero_num = slider_get_non_zero_num(slider_handle->quantify_signal_array, max_array_idx, slider_handle->calculate_window, slider_handle->channel_num);
     current_position = slider_calculate_position(slider_handle, max_array_idx, max_array_sum, non_zero_num);
     uint32_t position_average = slider_filter_average(slider_handle, current_position);
     slider_handle->last_position = slider_handle->position == 0 ? position_average : slider_handle->position;

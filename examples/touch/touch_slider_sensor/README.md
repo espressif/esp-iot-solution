@@ -2,7 +2,7 @@
 
 **Note:** This example is for developers testing only. It is not intended for production use.
 
-This example demonstrates how to use the touch_slider_sensor component to implement touch button functionality on ESP32 devices.
+This example demonstrates how to use the touch_slider_sensor component to implement touch slider functionality on ESP32 devices.
 
 ## How to Use Example
 

@@ -42,7 +42,8 @@ The touch button can be configured via the :cpp:type:`touch_slider_config_t` str
         uint32_t *channel_gold_value; /*!< (Optional) Reference values for touch channels */
         uint32_t debounce_times;      /*!< Number of consecutive readings needed to confirm state change */
         uint32_t filter_reset_times;  /*!< Number of consecutive readings to reset position filter */
-        uint32_t position_range;       /*!< The right region of touch slider position range, [0, position_range (less than or equal to 255)] */
+        uint32_t position_range;       /*!< Maximum position value of touch slider, range [0, position_range]. Higher values provide better position resolution */
+        uint8_t calculate_window;    /*!< Window size for position calculation (should be <= channel_num). Set to 0 for auto-default: 2 for 2-channel, 3 for 3+ channels */
         float swipe_threshold;        /*!< The threshold for identifying swiping */
         float swipe_hysterisis;       /*!< The hysterisis for identifying swiping */
         float swipe_alpha;            /*!< Filter parameter for estimating speed */
@@ -52,31 +53,57 @@ The touch button can be configured via the :cpp:type:`touch_slider_config_t` str
 Parameter Descriptions
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-+--------------------+------------------------------------------------+---------------+
-|     Parameter      |                  Description                   | Default Value |
-+====================+================================================+===============+
-| channel_num        | Number of touch slider sensor channels         | -             |
-+--------------------+------------------------------------------------+---------------+
-| channel_list       | Array of touch channel numbers to use          | -             |
-+--------------------+------------------------------------------------+---------------+
-| channel_threshold  | Array of threshold values for each channel     | -             |
-+--------------------+------------------------------------------------+---------------+
-| channel_gold_value | Reference values for touch channels (optional) | NULL          |
-+--------------------+------------------------------------------------+---------------+
-| debounce_times     | Consecutive readings for state change          | 3             |
-+--------------------+------------------------------------------------+---------------+
-| filter_reset_times | Consecutive readings to reset position filter  | -             |
-+--------------------+------------------------------------------------+---------------+
-| position_range     | The rightmost range of slider region           | -             |
-+--------------------+------------------------------------------------+---------------+
-| swipe_threshold    | Speed threshold for identifying swiping        | -             |
-+--------------------+------------------------------------------------+---------------+
-| swipe_hysterisis   | Speed hysteresis for identifying swiping       | -             |
-+--------------------+------------------------------------------------+---------------+
-| swipe_alpha        | Filter parameter for estimating swipe speed    | -             |
-+--------------------+------------------------------------------------+---------------+
-| skip_lowlevel_init | Skip touch driver initialization if exists     | false         |
-+--------------------+------------------------------------------------+---------------+
++--------------------+------------------------------------------------------------+---------------+
+|     Parameter      |                        Description                         | Default Value |
++====================+============================================================+===============+
+| channel_num        | Number of touch slider sensor channels                     | -             |
++--------------------+------------------------------------------------------------+---------------+
+| channel_list       | Array of touch channel numbers to use                      | -             |
++--------------------+------------------------------------------------------------+---------------+
+| channel_threshold  | Array of threshold values for each channel                 | -             |
++--------------------+------------------------------------------------------------+---------------+
+| channel_gold_value | Reference values for touch channels (optional)             | NULL          |
++--------------------+------------------------------------------------------------+---------------+
+| debounce_times     | Consecutive readings for state change                      | 3             |
++--------------------+------------------------------------------------------------+---------------+
+| filter_reset_times | Consecutive readings to reset position filter              | -             |
++--------------------+------------------------------------------------------------+---------------+
+| position_range     | Maximum slider position value (higher = better resolution) | -             |
++--------------------+------------------------------------------------------------+---------------+
+| calculate_window   | Window size for position calculation                       | Auto (0)      |
++--------------------+------------------------------------------------------------+---------------+
+| swipe_threshold    | Speed threshold for identifying swiping                    | -             |
++--------------------+------------------------------------------------------------+---------------+
+| swipe_hysterisis   | Speed hysteresis for identifying swiping                   | -             |
++--------------------+------------------------------------------------------------+---------------+
+| swipe_alpha        | Filter parameter for estimating swipe speed                | -             |
++--------------------+------------------------------------------------------------+---------------+
+| skip_lowlevel_init | Skip touch driver initialization if exists                 | false         |
++--------------------+------------------------------------------------------------+---------------+
+
+Calculate Window Configuration
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``calculate_window`` parameter determines how many adjacent touch channels are used for position calculation. This affects the precision and noise immunity of the slider.
+
+**Default Values (when set to 0):**
+
+- **2 channels**: ``calculate_window = 2`` (uses all available channels)
+- **3+ channels**: ``calculate_window = 3`` (optimal balance between precision and noise immunity)
+
+**Manual Configuration:**
+
+- You can explicitly set any value from 2 to ``channel_num``
+- Smaller values (2): Higher sensitivity but more susceptible to noise
+- Larger values (3+): Better noise immunity but potentially lower resolution
+- For high-precision applications: Recommended value is ``min(3, channel_num)``
+- **Note**: Minimum value is 2, as slider position calculation requires at least 2 adjacent channels
+
+**Backward Compatibility:**
+
+- Setting ``calculate_window = 0`` enables automatic default selection
+- Existing code that doesn't initialize this field will use optimal defaults
+- Explicitly set values continue to work as before
 
 API Usage Examples
 ---------------------
@@ -99,6 +126,7 @@ Create and Initialize
         .swipe_hysterisis = 40,
         .channel_gold_value = NULL,
         .debounce_times = 0,
+        .calculate_window = 0,  // Use default value (auto-selected as 3 for 6 channels)
         .skip_lowlevel_init = false
     };
 
