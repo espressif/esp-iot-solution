@@ -6,6 +6,7 @@ set(srcs "src/led_ledc.c"
         "src/led_rgb.c"
         "src/led_strips.c"
         "src/led_convert.c"
+        "src/led_custom.c"
         )
 
 idf_component_register( SRCS ${srcs}

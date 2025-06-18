@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -10,11 +10,15 @@
 #include "esp_log.h"
 #include "esp_system.h"
 #include "esp_idf_version.h"
-#include "led_indicator.h"
 #include "led_indicator_blink_default.h"
 #include "unity.h"
 #include "led_gamma.h"
 #include "led_convert.h"
+#include "led_strips.h"
+#include "led_gpio.h"
+#include "led_ledc.h"
+#include "led_custom.h"
+#include "led_rgb.h"
 
 // Some resources are lazy allocated in pulse_cnt driver, the threshold is left for that case
 #define TEST_MEMORY_LEAK_THRESHOLD (-200)
@@ -38,14 +42,12 @@ void led_indicator_init()
         .gpio_num = LED_IO_NUM_0,              /**< num of GPIO */
     };
 
-    led_indicator_config_t config = {
-        .mode = LED_GPIO_MODE,
-        .led_indicator_gpio_config = &led_indicator_gpio_config,
+    led_config_t config = {
         .blink_lists = (void *)NULL,
         .blink_list_num = 0,
     };
 
-    led_handle_0 = led_indicator_create(&config);
+    led_handle_0 = iot_led_new_gpio_device(&config, &led_indicator_gpio_config);
     TEST_ASSERT_NOT_NULL(led_handle_0);
 }
 
@@ -121,7 +123,7 @@ void led_indicator_gpio_mode_test_all()
 TEST_CASE("blink test all in order", "[LED][indicator]")
 {
     led_indicator_init();
-    led_indicator_gpio_mode_test_all();
+    led_indicator_gpio_mode_test_all();//测试所有状态的正常切换，不涉及优先级。
     led_indicator_deinit();
 }
 
@@ -150,7 +152,7 @@ void led_indicator_gpio_mode_preempt()
 
 TEST_CASE("blink test with preempt", "[LED][indicator]")
 {
-    led_indicator_init();
+    led_indicator_init();//测试高优先级状态能否抢占低优先级，以及抢占后能否恢复。
     led_indicator_gpio_mode_preempt();
     led_indicator_deinit();
 }
@@ -162,20 +164,18 @@ void led_indicator_all_init()
         .is_active_level_high = 1,
     };
 
-    led_indicator_config_t config = {
-        .led_indicator_gpio_config = &led_indicator_gpio_config,
-        .mode = LED_GPIO_MODE,
+    led_config_t config = {
         .blink_lists = NULL,
         .blink_list_num = 0,
     };
 
-    led_handle_0 = led_indicator_create(&config);
+    led_handle_0 = iot_led_new_gpio_device(&config, &led_indicator_gpio_config);
     TEST_ASSERT_NOT_NULL(led_handle_0);
     led_indicator_gpio_config.gpio_num = LED_IO_NUM_1;
-    led_handle_1 = led_indicator_create(&config);
+    led_handle_1 = iot_led_new_gpio_device(&config, &led_indicator_gpio_config);
     TEST_ASSERT_NOT_NULL(led_handle_1);
     led_indicator_gpio_config.gpio_num = LED_IO_NUM_2;
-    led_handle_2 = led_indicator_create(&config);
+    led_handle_2 = iot_led_new_gpio_device(&config, &led_indicator_gpio_config);
     TEST_ASSERT_NOT_NULL(led_handle_2);
 }
 
@@ -336,14 +336,16 @@ TEST_CASE("User defined blink", "[LED][indicator]")
         .is_active_level_high = 1,
     };
 
-    led_indicator_config_t config = {
-        .led_indicator_gpio_config = &led_indicator_gpio_config,
-        .mode = LED_GPIO_MODE,
+    led_config_t config = {
         .blink_lists = led_blink_lst,
         .blink_list_num = BLINK_NUM,
     };
+    /*
+        如果 blink_lists 用的是默认的 default_led_indicator_blink_lists，就用 BLINK_FACTORY_RESET 这类枚举。
+        如果 blink_lists 用的是自定义的 led_blink_lst，就用 BLINK_25_BRIGHTNESS 这类枚举。
+    */
 
-    led_handle_0 = led_indicator_create(&config);
+    led_handle_0 = iot_led_new_gpio_device(&config, &led_indicator_gpio_config);
     TEST_ASSERT_NOT_NULL(led_handle_0);
 
     ESP_LOGI(TAG, "double blink.....");
@@ -372,14 +374,12 @@ TEST_CASE("Preempt blink lists test", "[LED][indicator]")
         . is_active_level_high = 1,
     };
 
-    led_indicator_config_t config = {
-        .led_indicator_gpio_config = &led_indicator_gpio_config,
-        .mode = LED_GPIO_MODE,
+    led_config_t config = {
         .blink_lists = led_blink_lst,
         .blink_list_num = BLINK_NUM,
     };
 
-    led_handle_0 = led_indicator_create(&config);
+    led_handle_0 = iot_led_new_gpio_device(&config, &led_indicator_gpio_config);
     TEST_ASSERT_NOT_NULL(led_handle_0);
 
     ESP_LOGI(TAG, "double blink.....");
@@ -415,14 +415,12 @@ TEST_CASE("breathe test", "[LED][indicator]")
         .channel = LEDC_CHANNEL_0,
     };
 
-    led_indicator_config_t config = {
-        .mode = LED_LEDC_MODE,
-        .led_indicator_ledc_config = &led_indicator_ledc_config,
+    led_config_t config = {
         .blink_lists = led_blink_lst,
         .blink_list_num = BLINK_NUM,
     };
 
-    led_handle_0 = led_indicator_create(&config);
+    led_handle_0 = iot_led_new_ledc_device(&config, &led_indicator_ledc_config);
     TEST_ASSERT_NOT_NULL(led_handle_0);
 
     ESP_LOGI(TAG, "breathe 25/100 blink.....");
@@ -476,14 +474,12 @@ TEST_CASE("custom mode test", "[LED][indicator]")
         .hardware_data = (void *)LEDC_CHANNEL_0,
     };
 
-    led_indicator_config_t config = {
-        .led_indicator_custom_config = &led_indicator_custom_config,
-        .mode = LED_CUSTOM_MODE,
+    led_config_t config = {
         .blink_lists = led_blink_lst,
         .blink_list_num = BLINK_NUM,
     };
 
-    led_handle_0 = led_indicator_create(&config);
+    led_handle_0 = iot_led_new_custom_device(&config, &led_indicator_custom_config);
     TEST_ASSERT_NOT_NULL(led_handle_0);
 
     ESP_LOGI(TAG, "breathe 25/100 blink.....");
@@ -524,15 +520,13 @@ TEST_CASE("test led preempt func with breath", "[LED][preempt][breath]")
         .channel = LEDC_CHANNEL_0,
     };
 
-    led_indicator_config_t config = {
-        .mode = LED_LEDC_MODE,
-        .led_indicator_ledc_config = &led_indicator_ledc_config,
+    led_config_t config = {
         .blink_lists = led_blink_lst,
         .blink_list_num = BLINK_NUM,
     };
     int cnt0 = 3;
     while (cnt0--) {
-        led_handle_0 = led_indicator_create(&config);
+        led_handle_0 = iot_led_new_ledc_device(&config, &led_indicator_ledc_config);
         TEST_ASSERT_NOT_NULL(led_handle_0);
 
         ESP_LOGI(TAG, "breathe blink .....");
@@ -706,16 +700,15 @@ TEST_CASE("TEST LED RGB", "[LED RGB][RGB]")
         .blue_channel = LEDC_CHANNEL_2,
     };
 
-    led_indicator_config_t config = {
-        .mode = LED_RGB_MODE,
-        .led_indicator_rgb_config = &led_grb_cfg,
+    led_config_t config = {
         .blink_lists = led_rgb_blink_lst,
         .blink_list_num = BLINK_RGB_NUM,
     };
 
-    led_handle_0 = led_indicator_create(&config);
-    TEST_ASSERT_NOT_NULL(led_handle_0);
+    led_handle_0 = iot_led_new_rgb_device(&config, &led_grb_cfg);
     esp_err_t ret = ESP_OK;
+
+    TEST_ASSERT_NOT_NULL(led_handle_0);
 
     ESP_LOGI(TAG, "breathe 25/100 blink.....");
     ret = led_indicator_start(led_handle_0, BLINK_RGB_25_BRIGHTNESS);
@@ -829,16 +822,14 @@ TEST_CASE("TEST LED Strips by RGB", "[LED Strips][RGB]")
         .led_strip_rmt_cfg = rmt_config,
     };
 
-    led_indicator_config_t config = {
-        .mode = LED_STRIPS_MODE,
-        .led_indicator_strips_config = &led_indicator_strips_config,
+    led_config_t config = {
         .blink_lists = led_rgb_blink_lst,
         .blink_list_num = BLINK_RGB_NUM,
     };
-
-    led_handle_0 = led_indicator_create(&config);
-    TEST_ASSERT_NOT_NULL(led_handle_0);
     esp_err_t ret = ESP_OK;
+    led_handle_0 = iot_led_new_strips_device(&config, &led_indicator_strips_config);
+
+    TEST_ASSERT_NOT_NULL(led_handle_0);
 
     ESP_LOGI(TAG, "breathe 25/100 blink.....");
     ret = led_indicator_start(led_handle_0, BLINK_RGB_25_BRIGHTNESS);
@@ -949,16 +940,12 @@ TEST_CASE("TEST LED RGB control Real time ", "[LED RGB][Real time]")
         .led_strip_rmt_cfg = rmt_config,
     };
 
-    led_indicator_config_t config = {
-        .mode = LED_STRIPS_MODE,
-        .led_indicator_strips_config = &led_indicator_strips_config,
+    led_config_t config = {
         .blink_lists = led_rgb_blink_lst,
         .blink_list_num = BLINK_RGB_NUM,
     };
-
-    led_handle_0 = led_indicator_create(&config);
-
     esp_err_t ret = ESP_OK;
+    led_handle_0 = iot_led_new_strips_device(&config, &led_indicator_strips_config);
 
     ESP_LOGI(TAG, "set red by rgb_value one by one .....");
 

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -13,29 +13,7 @@ extern "C" {
 #include <stdbool.h>
 #include <stdint.h>
 #include "esp_err.h"
-
-/**
- * @brief LED duty should be consistent with the physical resolution of the indicator.
- * eg. LED_GPIO_MODE should with LED_DUTY_1_BIT
- *
- */
-typedef enum {
-    LED_DUTY_1_BIT = 1,    /*!< LED duty resolution of 1 bits */
-    LED_DUTY_2_BIT,        /*!< LED duty resolution of 2 bits */
-    LED_DUTY_3_BIT,        /*!< LED duty resolution of 3 bits */
-    LED_DUTY_4_BIT,        /*!< LED duty resolution of 4 bits */
-    LED_DUTY_5_BIT,        /*!< LED duty resolution of 5 bits */
-    LED_DUTY_6_BIT,        /*!< LED duty resolution of 6 bits */
-    LED_DUTY_7_BIT,        /*!< LED duty resolution of 7 bits */
-    LED_DUTY_8_BIT,        /*!< LED duty resolution of 8 bits */
-    LED_DUTY_9_BIT,        /*!< LED duty resolution of 9 bits */
-    LED_DUTY_10_BIT,       /*!< LED duty resolution of 10 bits */
-    LED_DUTY_11_BIT,       /*!< LED duty resolution of 11 bits */
-    LED_DUTY_12_BIT,       /*!< LED duty resolution of 12 bits */
-    LED_DUTY_13_BIT,       /*!< LED duty resolution of 13 bits */
-    LED_DUTY_14_BIT,       /*!< LED duty resolution of 14 bits */
-    LED_DUTY_15_BIT,       /*!< LED duty resolution of 15 bits */
-} led_indicator_duty_t;
+#include "led_indicator.h"
 
 /**
  * @brief LED custom configuration
@@ -53,6 +31,21 @@ typedef struct {
     void *hardware_data;                                                                   /*!< user hardware data*/
 } led_indicator_custom_config_t;
 
+/**
+ * @brief Create a new custom LED indicator device.
+ *
+ * This function initializes a new LED indicator device using the provided LED configuration
+ * and custom configuration parameters.
+ *
+ * @param led_config    Pointer to the LED configuration structure.
+ * @param custom_cfg    Pointer to the custom configuration structure for the LED indicator.
+ * @param handle pointer to LED indicator handle
+ * @return esp_err_t
+ *     - ESP_ERR_INVALID_ARG if parameter is invalid
+ *     - ESP_OK Success
+ *     - ESP_FAIL Delete fail
+ */
+led_indicator_handle_t iot_led_new_custom_device(const led_config_t *led_config, const led_indicator_custom_config_t *custom_cfg);
 #ifdef __cplusplus
 }
 #endif

@@ -1,11 +1,12 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 #pragma once
 
 #include "driver/ledc.h"
+#include "led_indicator.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -96,6 +97,22 @@ esp_err_t led_indicator_rgb_set_hsv(void *rgb_handle, uint32_t hsv_value);
  *     - ESP_FAIL: Failed to set brightness
  */
 esp_err_t led_indicator_rgb_set_brightness(void *rgb_handle, uint32_t brightness);
+
+/**
+ * @brief Create a new RGB LED device instance.
+ *
+ * This function initializes a new RGB LED device using the specified LED configuration
+ * and RGB-specific configuration parameters.
+ *
+ * @param led_config Pointer to the general LED configuration structure.
+ * @param rgb_cfg Pointer to the RGB-specific configuration structure.
+ * @param handle pointer to LED indicator handle
+ * @return esp_err_t
+ *     - ESP_ERR_INVALID_ARG if parameter is invalid
+ *     - ESP_OK Success
+ *     - ESP_FAIL Delete fail
+ */
+led_indicator_handle_t iot_led_new_rgb_device(const led_config_t *led_config, const led_indicator_rgb_config_t *rgb_cfg);
 
 #ifdef __cplusplus
 }

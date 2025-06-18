@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -7,6 +7,7 @@
 #pragma once
 
 #include "driver/gpio.h"
+#include "led_indicator.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -54,6 +55,22 @@ esp_err_t led_indicator_gpio_deinit(void *handle);
  */
 esp_err_t led_indicator_gpio_set_on_off(void *handle, bool on_off);
 
+/**
+ * @brief Create a new LED indicator device using a GPIO pin.
+ *
+ * This function initializes a new LED indicator device based on the provided LED configuration
+ * and GPIO configuration. It returns a handle to the created LED indicator device, which can be
+ * used for further control and management.
+ *
+ * @param led_config   Pointer to the LED configuration structure.
+ * @param gpio_cfg     Pointer to the GPIO configuration structure for the LED.
+ * @param handle pointer to LED indicator handle
+ * @return esp_err_t
+ *     - ESP_ERR_INVALID_ARG if parameter is invalid
+ *     - ESP_OK Success
+ *     - ESP_FAIL Delete fail
+ */
+led_indicator_handle_t iot_led_new_gpio_device(const led_config_t *led_config, const led_indicator_gpio_config_t *gpio_cfg);
 #ifdef __cplusplus
 }
 #endif

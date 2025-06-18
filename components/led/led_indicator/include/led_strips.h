@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -9,6 +9,7 @@
 #include "led_strip.h"
 #include "led_strip_types.h"
 #include "esp_idf_version.h"
+#include "led_indicator.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -107,6 +108,21 @@ esp_err_t led_indicator_strips_set_hsv(void *strips, uint32_t ihsv_value);
  */
 esp_err_t led_indicator_strips_set_brightness(void *strips, uint32_t ibrightness);
 
+/**
+ * @brief Create a new LED indicator device using LED strips.
+ *
+ * This function initializes and returns a handle to a new LED indicator device
+ * based on the provided LED configuration and LED strips configuration.
+ *
+ * @param led_config    Pointer to the LED configuration structure.
+ * @param strips_cfg    Pointer to the LED strips specific configuration structure.
+ * @param handle pointer to LED indicator handle
+ * @return esp_err_t
+ *     - ESP_ERR_INVALID_ARG if parameter is invalid
+ *     - ESP_OK Success
+ *     - ESP_FAIL Delete fail
+ */
+led_indicator_handle_t iot_led_new_strips_device(const led_config_t *led_config, const led_indicator_strips_config_t *strips_cfg);
 #ifdef __cplusplus
 }
 #endif

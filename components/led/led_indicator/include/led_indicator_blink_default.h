@@ -5,7 +5,7 @@
  */
 
 #pragma once
-
+#include "led_indicator.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
