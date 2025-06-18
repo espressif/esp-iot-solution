@@ -111,8 +111,6 @@ esp_err_t led_indicator_strips_set_brightness(void *strips, uint32_t ibrightness
 /**
  * @brief Create a new LED indicator device using LED strips.
  *
- * This function initializes and returns a handle to a new LED indicator device
- * based on the provided LED configuration and LED strips configuration.
  *
  * @param led_config    Pointer to the LED configuration structure.
  * @param strips_cfg    Pointer to the LED strips specific configuration structure.

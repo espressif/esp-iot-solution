@@ -226,16 +226,15 @@ LED 指示灯是最简单的输出外设之一，可以通过不同形式的闪�
 
 .. code:: c
 
-    led_indicator_config_t config = {
-        .mode = LED_GPIO_MODE,
-        .led_gpio_config = {
-            .active_level = 1,
-            .gpio_num = 1,
-        },
+   led_indicator_gpio_config_t led_indicator_gpio_config = {
+        .gpio_num = 1,              /**< num of GPIO */
+        .is_active_level_high = 1,
+    };
+    led_config_t config = {
         .blink_lists = led_indicator_get_sample_lists(),
         .blink_list_num = led_indicator_get_sample_lists_num(),
     };
-    led_indicator_handle_t led_handle = led_indicator_create(8, &config); // attach to gpio 8
+    led_indicator_handle_t led_handle  = iot_led_new_gpio_device(&config, &led_indicator_gpio_config);
 
 
 开始/停止闪烁：控制指示灯开启/停止指定闪烁类型，函数调用后立刻返回，内部由定时器控制闪烁流程。同一个指示灯可以开启多种闪烁类型，将根据闪烁类型优先级依次执行。
@@ -285,15 +284,16 @@ LED 指示灯是最简单的输出外设之一，可以通过不同形式的闪�
         [BLINK_NUM] = NULL,
     };
 
-    led_indicator_config_t config = {
-        .mode = LED_GPIO_MODE,
-        .led_gpio_config = {
-            .active_level = 1,
-            .gpio_num = 1,
-        },
-        .blink_lists = led_blink_lst,
-        .blink_list_num = BLINK_MAX,
+    led_indicator_gpio_config_t led_indicator_gpio_config = {
+        .gpio_num = 1,              /**< num of GPIO */
+        .is_active_level_high = 1,
     };
+
+    led_config_t config = {
+        .blink_lists = led_blink_lst,,
+        .blink_list_num = BLINK_MAX,,
+    };
+
 
 通过定义 ``led_blink_lst[]`` 实现自定义指示灯。
 

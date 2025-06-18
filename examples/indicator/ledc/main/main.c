@@ -148,13 +148,11 @@ void app_main(void)
     };
 
     const led_indicator_config_t config = {
-        .mode = LED_LEDC_MODE,
-        .led_indicator_ledc_config = &ledc_config,
         .blink_lists = led_mode,
         .blink_list_num = BLINK_MAX,
     };
 
-    led_handle = led_indicator_create(&config);
+    led_handle = iot_led_new_ledc_device(&config, &ledc_config);
     assert(led_handle != NULL);
 
 #if CONFIG_EXAMPLE_ENABLE_CONSOLE_CONTROL

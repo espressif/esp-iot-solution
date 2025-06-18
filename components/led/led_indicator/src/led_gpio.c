@@ -77,7 +77,6 @@ led_indicator_handle_t iot_led_new_gpio_device(const led_config_t *led_config, c
     bool if_blink_default_list = false;
 
     ESP_LOGI(TAG, "LED Indicator Version: %d.%d.%d", LED_INDICATOR_VER_MAJOR, LED_INDICATOR_VER_MINOR, LED_INDICATOR_VER_PATCH);
-    LED_INDICATOR_CHECK(led_config != NULL, "invalid config pointer", return NULL);
     LED_INDICATOR_CHECK(gpio_cfg != NULL, "invalid config pointer", return NULL);
     _led_indicator_com_config_t com_cfg = {0};
     _led_indicator_t *p_led_indicator = NULL;

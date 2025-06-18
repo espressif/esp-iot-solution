@@ -58,9 +58,6 @@ esp_err_t led_indicator_gpio_set_on_off(void *handle, bool on_off);
 /**
  * @brief Create a new LED indicator device using a GPIO pin.
  *
- * This function initializes a new LED indicator device based on the provided LED configuration
- * and GPIO configuration. It returns a handle to the created LED indicator device, which can be
- * used for further control and management.
  *
  * @param led_config   Pointer to the LED configuration structure.
  * @param gpio_cfg     Pointer to the GPIO configuration structure for the LED.

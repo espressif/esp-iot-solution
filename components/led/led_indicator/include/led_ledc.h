@@ -69,8 +69,6 @@ esp_err_t led_indicator_ledc_set_brightness(void *ledc_handle, uint32_t brightne
 /**
  * @brief Create a new LED indicator device using the LEDC (LED Controller) peripheral.
  *
- * This function initializes a new LED indicator device with the specified configuration,
- * utilizing the ESP32's LEDC hardware for PWM control.
  *
  * @param led_config   Pointer to the general LED configuration structure.
  * @param ledc_cfg     Pointer to the LEDC-specific configuration structure.

@@ -34,8 +34,6 @@ typedef struct {
 /**
  * @brief Create a new custom LED indicator device.
  *
- * This function initializes a new LED indicator device using the provided LED configuration
- * and custom configuration parameters.
  *
  * @param led_config    Pointer to the LED configuration structure.
  * @param custom_cfg    Pointer to the custom configuration structure for the LED indicator.

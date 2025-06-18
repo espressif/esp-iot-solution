@@ -230,16 +230,15 @@ Create an indicator by specifying an IO and a set of configuration information.
 
 .. code:: c
 
-    led_indicator_config_t config = {
-        .mode = LED_GPIO_MODE,
-        .led_gpio_config = {
-            .active_level = 1,
-            .gpio_num = 1,
-        },
+   led_indicator_gpio_config_t led_indicator_gpio_config = {
+        .gpio_num = 1,              /**< num of GPIO */
+        .is_active_level_high = 1,
+    };
+    led_config_t config = {
         .blink_lists = led_indicator_get_sample_lists(),
         .blink_list_num = led_indicator_get_sample_lists_num(),
     };
-    led_indicator_handle_t led_handle = led_indicator_create(8, &config); // attach to gpio 8
+    led_indicator_handle_t led_handle  = iot_led_new_gpio_device(&config, &led_indicator_gpio_config);
 
 
 Start/stop blinking: control your indicator to start/stop a specified type of blink by calling corresponding functions. The functions are returned immediately after calling, and the blink process is controlled by the internal timer. The same indicator can perform multiple blink types in turn based on their priorities.
@@ -288,14 +287,14 @@ Custom light blink
         [BLINK_NUM] = NULL,
     };
 
-    led_indicator_config_t config = {
-        .mode = LED_GPIO_MODE,
-        .led_gpio_config = {
-            .active_level = 1,
-            .gpio_num = 1,
-        },
-        .blink_lists = led_blink_lst,
-        .blink_list_num = BLINK_MAX,
+    led_indicator_gpio_config_t led_indicator_gpio_config = {
+        .gpio_num = 1,              /**< num of GPIO */
+        .is_active_level_high = 1,
+    };
+
+    led_config_t config = {
+        .blink_lists = led_blink_lst,,
+        .blink_list_num = BLINK_MAX,,
     };
 
 By defining ``led_blink_lst[]`` to achieve the custom indicator.

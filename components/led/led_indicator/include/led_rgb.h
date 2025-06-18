@@ -101,8 +101,6 @@ esp_err_t led_indicator_rgb_set_brightness(void *rgb_handle, uint32_t brightness
 /**
  * @brief Create a new RGB LED device instance.
  *
- * This function initializes a new RGB LED device using the specified LED configuration
- * and RGB-specific configuration parameters.
  *
  * @param led_config Pointer to the general LED configuration structure.
  * @param rgb_cfg Pointer to the RGB-specific configuration structure.
