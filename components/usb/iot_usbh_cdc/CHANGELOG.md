@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v2.0.1 - 2025-06-17
+
+### Bug Fixes:
+
+* Fix the issue of incorrectly initiating `tx_xfer` multiple times.
+
 ## v2.0.0 - 2025-05-20
 
 ### Features:
