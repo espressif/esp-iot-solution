@@ -60,6 +60,8 @@ CMake 选项
    - ``FLASH_IN_PROJECT``: 用户可以选择在 ``idf.py flash`` 时自动将图像与应用程序二进制文件、分区表等一起烧录。
    
    - ``FLASH_APPEND_APP``: 启用将二进制数据（``bin``）附加到应用程序二进制文件（``app_bin``）。
+
+   - ``IMPORT_INC_PATH``: 指定生成头文件的目标路径。默认与引用组件位置相同。
    
    - ``MMAP_FILE_SUPPORT_FORMAT``: 指定支持的文件格式（例如，``.png``、``.jpg``、``.ttf``）。
    

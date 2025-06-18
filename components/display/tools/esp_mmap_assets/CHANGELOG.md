@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v1.3.1~1 (2025-05-30)
+
+* Add IMPORT_INC_PATH support.
+
 ## v1.3.1 (2025-03-17)
 
 * Allow appending files to the end of the app_bin.
