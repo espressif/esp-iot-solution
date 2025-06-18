@@ -149,7 +149,7 @@ led_indicator_handle_t iot_led_new_ledc_device(const led_config_t *led_config, c
     p_led_indicator = _led_indicator_create_com(&com_cfg);
 
     LED_INDICATOR_CHECK(NULL != p_led_indicator, "LED indicator create failed", return NULL);
-    p_led_indicator->mode = LED_GPIO_MODE;
+    p_led_indicator->mode = LED_LEDC_MODE;
     _led_indicator_add_node(p_led_indicator);
     ESP_LOGI(TAG, "Indicator create successfully. type:LEDC mode, hardware_data:%p, blink_lists:%s", p_led_indicator->hardware_data, if_blink_default_list ? "default" : "custom");
     return (led_indicator_handle_t)p_led_indicator;
