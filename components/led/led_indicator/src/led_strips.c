@@ -33,7 +33,7 @@ typedef struct {
     led_indicator_ihsv_t ihsv;      /*!< IHSV: I [0-127] 7 bits -  H [0-360] - 9 bits, S [0-255] - 8 bits, V [0-255] - 8 bits*/
 } led_strips_t;
 
-esp_err_t led_indicator_strips_init(void *param, void **ret_strips)
+static esp_err_t led_indicator_strips_init(void *param, void **ret_strips)
 {
     esp_err_t ret = ESP_OK;
     const led_indicator_strips_config_t *cfg = (led_indicator_strips_config_t *)param;
@@ -73,7 +73,7 @@ fail:
     return ret;
 }
 
-esp_err_t led_indicator_strips_deinit(void *strips)
+static esp_err_t led_indicator_strips_deinit(void *strips)
 {
     LED_STRIPS_CHECK(NULL != strips, "param pointer invalid", return ESP_ERR_INVALID_ARG);
     led_strips_t *p_strip = (led_strips_t *)strips;
@@ -84,7 +84,7 @@ esp_err_t led_indicator_strips_deinit(void *strips)
     return ESP_OK;
 }
 
-esp_err_t led_indicator_strips_set_on_off(void *strips, bool on_off)
+static esp_err_t led_indicator_strips_set_on_off(void *strips, bool on_off)
 {
     led_strips_t *p_strip = (led_strips_t *)strips;
     p_strip->ihsv.v = on_off ? MAX_BRIGHTNESS : 0;
@@ -108,7 +108,7 @@ esp_err_t led_indicator_strips_set_on_off(void *strips, bool on_off)
     return ESP_OK;
 }
 
-esp_err_t led_indicator_strips_set_rgb(void *strips, uint32_t irgb_value)
+static esp_err_t led_indicator_strips_set_rgb(void *strips, uint32_t irgb_value)
 {
     led_strips_t *p_strip = (led_strips_t *)strips;
     uint8_t i, r, g, b;
@@ -139,7 +139,7 @@ esp_err_t led_indicator_strips_set_rgb(void *strips, uint32_t irgb_value)
     return ESP_OK;
 }
 
-esp_err_t led_indicator_strips_set_hsv(void *strips, uint32_t ihsv_value)
+static esp_err_t led_indicator_strips_set_hsv(void *strips, uint32_t ihsv_value)
 {
     led_strips_t *p_strip = (led_strips_t *)strips;
     p_strip->ihsv.value = ihsv_value;
@@ -164,7 +164,7 @@ esp_err_t led_indicator_strips_set_hsv(void *strips, uint32_t ihsv_value)
     return ESP_OK;
 }
 
-esp_err_t led_indicator_strips_set_brightness(void *strips, uint32_t ihsv)
+static esp_err_t led_indicator_strips_set_brightness(void *strips, uint32_t ihsv)
 {
     led_strips_t *p_strip = (led_strips_t *)strips;
     p_strip->ihsv.i = GET_INDEX(ihsv);
@@ -224,7 +224,6 @@ led_indicator_handle_t iot_led_new_strips_device(const led_config_t *led_config,
     p_led_indicator = _led_indicator_create_com(&com_cfg);
 
     LED_INDICATOR_CHECK(NULL != p_led_indicator, "LED indicator create failed", return NULL);
-    p_led_indicator->mode = LED_STRIPS_MODE;
     _led_indicator_add_node(p_led_indicator);
     ESP_LOGI(TAG, "Indicator create successfully. type:LED Strips mode, hardware_data:%p, blink_lists:%s", p_led_indicator->hardware_data, if_blink_default_list ? "default" : "custom");
     return (led_indicator_handle_t)p_led_indicator;

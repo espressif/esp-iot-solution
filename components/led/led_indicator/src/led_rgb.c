@@ -28,7 +28,7 @@ typedef struct {
     led_indicator_ihsv_t hsv;      /*!< HSV: H [0-360] - 9 bits, S [0-255] - 8 bits, V [0-255] - 8 bits*/
 } led_rgb_t;
 
-esp_err_t led_indicator_rgb_init(void *param, void **ret_rgb)
+static esp_err_t led_indicator_rgb_init(void *param, void **ret_rgb)
 {
     esp_err_t ret = ESP_OK;
     const led_indicator_rgb_config_t *cfg = (const led_indicator_rgb_config_t *)param;
@@ -63,7 +63,7 @@ EXIT:
     return ret;
 }
 
-esp_err_t led_indicator_rgb_deinit(void *rgb_handle)
+static esp_err_t led_indicator_rgb_deinit(void *rgb_handle)
 {
     LED_RGB_CHECK(NULL != rgb_handle, "rgb_handle pointer invalid", return ESP_ERR_INVALID_ARG);
     free(rgb_handle);
@@ -87,7 +87,7 @@ static esp_err_t led_indicator_rgb_set_duty(led_rgb_t *p_rgb, uint32_t rgb[])
     return ESP_OK;
 }
 
-esp_err_t led_indicator_rgb_set_on_off(void *rgb_handle, bool on_off)
+static esp_err_t led_indicator_rgb_set_on_off(void *rgb_handle, bool on_off)
 {
     esp_err_t ret;
     LED_RGB_CHECK(NULL != rgb_handle, "rgb_handle pointer invalid", return ESP_ERR_INVALID_ARG);
@@ -112,7 +112,7 @@ esp_err_t led_indicator_rgb_set_on_off(void *rgb_handle, bool on_off)
     return ESP_OK;
 }
 
-esp_err_t led_indicator_rgb_set_rgb(void *rgb_handle, uint32_t rgb_value)
+static esp_err_t led_indicator_rgb_set_rgb(void *rgb_handle, uint32_t rgb_value)
 {
     esp_err_t ret;
     led_rgb_t *p_rgb = (led_rgb_t *)rgb_handle;
@@ -127,7 +127,7 @@ esp_err_t led_indicator_rgb_set_rgb(void *rgb_handle, uint32_t rgb_value)
     return ESP_OK;
 }
 
-esp_err_t led_indicator_rgb_set_hsv(void *rgb_handle, uint32_t hsv_value)
+static esp_err_t led_indicator_rgb_set_hsv(void *rgb_handle, uint32_t hsv_value)
 {
     esp_err_t ret;
     led_rgb_t *p_rgb = (led_rgb_t *)rgb_handle;
@@ -143,7 +143,7 @@ esp_err_t led_indicator_rgb_set_hsv(void *rgb_handle, uint32_t hsv_value)
     return ESP_OK;
 }
 
-esp_err_t led_indicator_rgb_set_brightness(void *rgb_handle, uint32_t brightness)
+static esp_err_t led_indicator_rgb_set_brightness(void *rgb_handle, uint32_t brightness)
 {
     esp_err_t ret;
     led_rgb_t *p_rgb = (led_rgb_t *)rgb_handle;
@@ -193,7 +193,6 @@ led_indicator_handle_t iot_led_new_rgb_device(const led_config_t *led_config, co
     p_led_indicator = _led_indicator_create_com(&com_cfg);
 
     LED_INDICATOR_CHECK(NULL != p_led_indicator, "LED indicator create failed", return NULL);
-    p_led_indicator->mode = LED_RGB_MODE;
     _led_indicator_add_node(p_led_indicator);
     ESP_LOGI(TAG, "Indicator create successfully. type:LED RGB mode, hardware_data:%p, blink_lists:%s", p_led_indicator->hardware_data, if_blink_default_list ? "default" : "custom");
     return (led_indicator_handle_t)p_led_indicator;

@@ -10,7 +10,6 @@
 #include <string.h>
 #include <sys/queue.h>
 #include "esp_log.h"
-#include "led_custom.h"
 #include "led_indicator.h"
 #include "led_indicator_blink_default.h"
 #include "led_gpio.h"

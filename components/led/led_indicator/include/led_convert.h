@@ -16,29 +16,6 @@ extern "C" {
 #define MAX_BRIGHTNESS 255
 #define MAX_INDEX 127
 
-/**
- * @brief LED duty should be consistent with the physical resolution of the indicator.
- * eg. LED_GPIO_MODE should with LED_DUTY_1_BIT
- *
- */
-typedef enum {
-    LED_DUTY_1_BIT = 1,    /*!< LED duty resolution of 1 bits */
-    LED_DUTY_2_BIT,        /*!< LED duty resolution of 2 bits */
-    LED_DUTY_3_BIT,        /*!< LED duty resolution of 3 bits */
-    LED_DUTY_4_BIT,        /*!< LED duty resolution of 4 bits */
-    LED_DUTY_5_BIT,        /*!< LED duty resolution of 5 bits */
-    LED_DUTY_6_BIT,        /*!< LED duty resolution of 6 bits */
-    LED_DUTY_7_BIT,        /*!< LED duty resolution of 7 bits */
-    LED_DUTY_8_BIT,        /*!< LED duty resolution of 8 bits */
-    LED_DUTY_9_BIT,        /*!< LED duty resolution of 9 bits */
-    LED_DUTY_10_BIT,       /*!< LED duty resolution of 10 bits */
-    LED_DUTY_11_BIT,       /*!< LED duty resolution of 11 bits */
-    LED_DUTY_12_BIT,       /*!< LED duty resolution of 12 bits */
-    LED_DUTY_13_BIT,       /*!< LED duty resolution of 13 bits */
-    LED_DUTY_14_BIT,       /*!< LED duty resolution of 14 bits */
-    LED_DUTY_15_BIT,       /*!< LED duty resolution of 15 bits */
-} led_indicator_duty_t;
-
 #define SET_RGB(r, g, b) \
         ((((r) & 0xFF) << 16) | (((g) & 0xFF) << 8) | ((b) & 0xFF))
 

@@ -17,7 +17,6 @@
 #include "led_strips.h"
 #include "led_gpio.h"
 #include "led_ledc.h"
-#include "led_custom.h"
 #include "led_rgb.h"
 
 // Some resources are lazy allocated in pulse_cnt driver, the threshold is left for that case
@@ -442,65 +441,6 @@ TEST_CASE("breathe test", "[LED][indicator]")
     ret = led_indicator_start(led_handle_0, BLINK_BREATHE);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(8000 / portTICK_PERIOD_MS);
-
-    led_indicator_deinit();
-}
-
-static esp_err_t custom_ledc_init(void *param)
-{
-    led_indicator_ledc_config_t led_indicator_ledc_config = {
-        .is_active_level_high = 1,
-        .timer_inited = false,
-        .timer_num = LEDC_TIMER_0,
-        .gpio_num = LED_IO_NUM_0,
-        .channel = LEDC_CHANNEL_0,
-    };
-
-    esp_err_t ret = led_indicator_ledc_init(&led_indicator_ledc_config);
-    return ret;
-}
-
-TEST_CASE("custom mode test", "[LED][indicator]")
-{
-    led_indicator_custom_config_t led_indicator_custom_config = {
-        .is_active_level_high = 1,
-        .duty_resolution = LED_DUTY_13_BIT,
-        .hal_indicator_init = custom_ledc_init,
-        .hal_indicator_deinit = led_indicator_ledc_deinit,
-        .hal_indicator_set_on_off = led_indicator_ledc_set_on_off,
-        .hal_indicator_set_brightness = led_indicator_ledc_set_brightness,
-        .hal_indicator_set_rgb = NULL,
-        .hal_indicator_set_hsv = NULL,
-        .hardware_data = (void *)LEDC_CHANNEL_0,
-    };
-
-    led_config_t config = {
-        .blink_lists = led_blink_lst,
-        .blink_list_num = BLINK_NUM,
-    };
-
-    led_handle_0 = iot_led_new_custom_device(&config, &led_indicator_custom_config);
-    TEST_ASSERT_NOT_NULL(led_handle_0);
-
-    ESP_LOGI(TAG, "breathe 25/100 blink.....");
-    esp_err_t ret = led_indicator_start(led_handle_0, BLINK_25_BRIGHTNESS);
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
-    TEST_ASSERT(ret == ESP_OK);
-
-    ESP_LOGI(TAG, "breathe 50/100 blink.....");
-    ret = led_indicator_start(led_handle_0, BLINK_50_BRIGHTNESS);
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
-    TEST_ASSERT(ret == ESP_OK);
-
-    ESP_LOGI(TAG, "breathe 75/100 blink.....");
-    ret = led_indicator_start(led_handle_0, BLINK_75_BRIGHTNESS);
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
-    TEST_ASSERT(ret == ESP_OK);
-
-    ESP_LOGI(TAG, "breathe blink .....");
-    ret = led_indicator_start(led_handle_0, BLINK_BREATHE);
-    TEST_ASSERT(ret == ESP_OK);
-    vTaskDelay(6000 / portTICK_PERIOD_MS);
 
     led_indicator_deinit();
 }

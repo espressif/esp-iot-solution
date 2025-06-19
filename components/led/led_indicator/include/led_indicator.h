@@ -17,6 +17,7 @@ extern "C" {
 #include "freertos/semphr.h"
 #include "esp_err.h"
 #include "led_convert.h"
+#include "led_types.h"
 
 #define LED_INDICATOR_CHECK(a, str, action) if(!(a)) { \
         ESP_LOGE(TAG,"%s:%d (%s):%s", __FILE__, __LINE__, __FUNCTION__, str); \
@@ -27,108 +28,28 @@ extern "C" {
         ESP_LOGW(TAG,"%s:%d (%s):%s", __FILE__, __LINE__, __FUNCTION__, str); \
         action; \
     }
-/**
- * @brief LED state: 0-100, only hardware that supports to set brightness can adjust brightness.
- *
- */
-enum {
-    LED_STATE_OFF = 0,           /*!< turn off the LED */
-    LED_STATE_25_PERCENT = 64,   /*!< 25% brightness, must support to set brightness */
-    LED_STATE_50_PERCENT = 128,  /*!< 50% brightness, must support to set brightness */
-    LED_STATE_75_PERCENT = 191,  /*!< 75% brightness, must support to set brightness */
-    LED_STATE_ON = UINT8_MAX,    /*!< turn on the LED */
-};
 
 /**
- * @brief actions in this type
+ * @brief Creates a new LED indicator instance with the specified configuration.
  *
- */
-typedef enum {
-    LED_BLINK_STOP = -1,   /*!< stop the blink */
-    LED_BLINK_HOLD,        /*!< hold the on-off state */
-    LED_BLINK_BREATHE,     /*!< breathe state */
-    LED_BLINK_BRIGHTNESS,  /*!< set the brightness, it will transition from the old brightness to the new brightness */
-    LED_BLINK_RGB,         /*!< color change with R(0-255) G(0-255) B(0-255) */
-    LED_BLINK_RGB_RING,    /*!< Gradual color transition from old color to new color in a color ring */
-    LED_BLINK_HSV,         /*!< color change with H(0-360) S(0-255) V(0-255) */
-    LED_BLINK_HSV_RING,    /*!< Gradual color transition from old color to new color in a color ring */
-    LED_BLINK_LOOP,        /*!< loop from first step */
-} blink_step_type_t;
-
-/**
- * @brief one blink step, a meaningful signal consists of a group of steps
+ * @param cfg Pointer to a configuration structure of type _led_indicator_com_config_t
+ *            containing initialization parameters for the LED indicator.
  *
+ * @return Pointer to the created _led_indicator_t instance on success, or NULL on failure.
  */
-typedef struct {
-    blink_step_type_t type;          /*!< action type in this step */
-    uint32_t value;                  /*!< hold on or off, set 0 if LED_BLINK_STOP() or LED_BLINK_LOOP */
-    uint32_t hold_time_ms;           /*!< hold time(ms), set 0 if not LED_BLINK_HOLD */
-} blink_step_t;
-
-/**
- * @brief LED indicator blink mode, as a member of led_indicator_config_t
- *
- */
-typedef enum {
-    LED_GPIO_MODE,         /*!< blink with max brightness */
-    LED_LEDC_MODE,         /*!< blink with LEDC driver */
-    LED_RGB_MODE,          /*!< blink with RGB driver */
-    LED_STRIPS_MODE,       /*!< blink with LEDC strips driver */
-    LED_CUSTOM_MODE,       /*!< blink with custom driver */
-} led_indicator_mode_t;
-
-typedef struct {
-    esp_err_t (*hal_indicator_set_on_off)(void *hardware_data, bool on_off);              /*!< Pointer function for setting on or off */
-    esp_err_t (*hal_indicator_deinit)(void *hardware_data);                               /*!< Pointer function for Deinitialization */
-    esp_err_t (*hal_indicator_set_brightness)(void *hardware_data, uint32_t brightness);  /*!< Pointer function for setting brightness, must be supported by hardware */
-    esp_err_t (*hal_indicator_set_rgb)(void *hardware, uint32_t rgb_value);               /*!< Pointer function for setting rgb, must be supported by hardware */
-    esp_err_t (*hal_indicator_set_hsv)(void *hardware, uint32_t hsv_value);               /*!< Pointer function for setting hsv, must be supported by hardware */
-    void *hardware_data;                           /*!< Hardware data of the LED indicator */
-    led_indicator_mode_t mode;                     /*!< LED work mode, eg. GPIO or pwm mode */
-    int active_blink;                              /*!< Active blink list*/
-    int preempt_blink;                             /*!< Highest priority blink list*/
-    int *p_blink_steps;                            /*!< Stage of each blink list */
-    led_indicator_ihsv_t current_fade_value;       /*!< Current fade value */
-    led_indicator_ihsv_t last_fade_value;          /*!< Save the last value. */
-    uint16_t fade_value_count;                     /*!< Count the number of fade */
-    uint16_t fade_step;                            /*!< Step of fade */
-    uint16_t fade_total_step;                      /*!< Total step of fade */
-    uint32_t max_duty;                             /*!< Max duty cycle from duty_resolution : 2^duty_resolution -1 */
-    SemaphoreHandle_t mutex;                       /*!< Mutex to achieve thread-safe */
-    TimerHandle_t h_timer;                         /*!< LED timer handle, invalid if works in pwm mode */
-    blink_step_t const **blink_lists;              /*!< User defined LED blink lists */
-    uint16_t blink_list_num;                       /*!< Number of blink lists */
-} _led_indicator_t;
-
-typedef struct _led_indicator_com_config {
-    esp_err_t (*hal_indicator_set_on_off)(void *hardware_data, bool on_off);              /*!< Pointer function for setting on or off */
-    esp_err_t (*hal_indicator_deinit)(void *hardware_data);                               /*!< Pointer function for Deinitialization */
-    esp_err_t (*hal_indicator_set_brightness)(void *hardware_data, uint32_t brightness);  /*!< Pointer function for setting brightness, must be supported by hardware */
-    esp_err_t (*hal_indicator_set_rgb)(void *hardware, uint32_t rgb_value);               /*!< Pointer function for setting rgb, must be supported by hardware */
-    esp_err_t (*hal_indicator_set_hsv)(void *hardware, uint32_t hsv_value);               /*!< Pointer function for setting hsv, must be supported by hardware */
-    void *hardware_data;                  /*!< GPIO number of the LED indicator */
-    blink_step_t const **blink_lists;     /*!< User defined LED blink lists */
-    uint16_t blink_list_num;              /*!< Number of blink lists */
-    led_indicator_duty_t duty_resolution; /*!< Resolution of duty setting in number of bits. The range of duty values is [0, (2**duty_resolution) -1]. If the brightness cannot be set, set this as 1. */
-} _led_indicator_com_config_t;
-
-typedef struct {
-    blink_step_t const **blink_lists;           /*!< user defined LED blink lists */
-    uint16_t blink_list_num;                    /*!< number of blink lists */
-} led_config_t;
-
-typedef void *led_indicator_handle_t; /*!< LED indicator operation handle */
-
 _led_indicator_t *_led_indicator_create_com(_led_indicator_com_config_t *cfg);
 
-esp_err_t _led_indicator_add_node(_led_indicator_t *p_led_indicator);
-
 /**
- * @brief create a LED indicator instance with GPIO number and configuration
+ * @brief Add a new node to the LED indicator instance.
  *
- * @param config configuration of the LED, eg. GPIO level when LED off
- * @return led_indicator_handle_t handle of the LED indicator, NULL if create failed.
+ * @param[in,out] p_led_indicator Pointer to the LED indicator instance to which the node will be added.
+ *
+ * @return esp_err_t
+ *     - ESP_ERR_INVALID_ARG if parameter is invalid
+ *     - ESP_ERR_NOT_FOUND no predefined blink_type found
+ *     - ESP_OK Success
  */
+esp_err_t _led_indicator_add_node(_led_indicator_t *p_led_indicator);
 
 /**
  * @brief delete the LED indicator and release resource

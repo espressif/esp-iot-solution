@@ -16,7 +16,7 @@ typedef struct {
     uint32_t io_num;
 } led_gpio_t;
 
-esp_err_t led_indicator_gpio_init(void *param, void **ret_handle)
+static esp_err_t led_indicator_gpio_init(void *param, void **ret_handle)
 {
     const led_indicator_gpio_config_t *cfg = (const led_indicator_gpio_config_t *)param;
 
@@ -44,7 +44,7 @@ esp_err_t led_indicator_gpio_init(void *param, void **ret_handle)
     return ESP_OK;
 }
 
-esp_err_t led_indicator_gpio_deinit(void *handle)
+static esp_err_t led_indicator_gpio_deinit(void *handle)
 {
     if (handle == NULL) {
         return ESP_ERR_INVALID_ARG;
@@ -60,7 +60,7 @@ esp_err_t led_indicator_gpio_deinit(void *handle)
     return ESP_OK;
 }
 
-esp_err_t led_indicator_gpio_set_on_off(void *handle, bool on_off)
+static esp_err_t led_indicator_gpio_set_on_off(void *handle, bool on_off)
 {
     if (handle == NULL) {
         return ESP_ERR_INVALID_ARG;
@@ -71,6 +71,7 @@ esp_err_t led_indicator_gpio_set_on_off(void *handle, bool on_off)
     }
     return gpio_set_level(p_gpio->io_num, on_off);
 }
+
 led_indicator_handle_t iot_led_new_gpio_device(const led_config_t *led_config, const led_indicator_gpio_config_t *gpio_cfg)
 {
     esp_err_t ret = ESP_OK;
@@ -103,7 +104,6 @@ led_indicator_handle_t iot_led_new_gpio_device(const led_config_t *led_config, c
     p_led_indicator = _led_indicator_create_com(&com_cfg);
 
     LED_INDICATOR_CHECK(NULL != p_led_indicator, "LED indicator create failed", return NULL);
-    p_led_indicator->mode = LED_GPIO_MODE;
     _led_indicator_add_node(p_led_indicator);
     ESP_LOGI(TAG, "Indicator create successfully. type:GPIO mode, hardware_data:%p, blink_lists:%s", p_led_indicator->hardware_data, if_blink_default_list ? "default" : "custom");
     return (led_indicator_handle_t)p_led_indicator;
