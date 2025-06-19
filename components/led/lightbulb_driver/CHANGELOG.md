@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.8.3 - 2025-06-19
+
+### Bug Fix:
+
+- Fixed a compilation issue on IDF 6.0
+
 ## v1.8.2 - 2025-04-17
 
 ### Bug Fix:

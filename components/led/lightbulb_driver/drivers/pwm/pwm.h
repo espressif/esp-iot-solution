@@ -6,6 +6,7 @@
 
 #pragma once
 #include "esp_idf_version.h"
+#include "driver/gpio.h"
 
 #define PWM_RGB_CHANNEL_PHASE_DELAY_FLAG        0X01
 #define PWM_CW_CHANNEL_PHASE_DELAY_FLAG         0X02
