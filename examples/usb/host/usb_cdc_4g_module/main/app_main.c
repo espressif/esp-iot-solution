@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -113,26 +113,23 @@ static void _led_indicator_init()
         .is_active_level_high = LED_ACTIVE_LEVEL,
     };
 
-    led_indicator_config_t led_config = {
-        .led_indicator_gpio_config = &led_indicator_gpio_config,
-        .mode = LED_GPIO_MODE,
-    };
+    led_indicator_config_t led_config ;
 
     if (LED_RED_SYSTEM_GPIO) {
         led_indicator_gpio_config.gpio_num = LED_RED_SYSTEM_GPIO;
-        s_led_system_handle = led_indicator_create(&led_config);
+        s_led_system_handle = iot_led_new_gpio_device(&led_config, &led_indicator_gpio_config);
         assert(s_led_system_handle != NULL);
     }
     if (LED_BLUE_WIFI_GPIO) {
         led_indicator_gpio_config.gpio_num = LED_BLUE_WIFI_GPIO;
-        s_led_wifi_handle = led_indicator_create(&led_config);
+        s_led_wifi_handle = iot_led_new_gpio_device(&led_config, &led_indicator_gpio_config);
         assert(s_led_wifi_handle != NULL);
         led_indicator_stop(s_led_wifi_handle, BLINK_CONNECTED);
         led_indicator_start(s_led_wifi_handle, BLINK_CONNECTING);
     }
     if (LED_GREEN_4GMODEM_GPIO) {
         led_indicator_gpio_config.gpio_num = LED_GREEN_4GMODEM_GPIO;
-        s_led_4g_handle = led_indicator_create(&led_config);
+        s_led_4g_handle = iot_led_new_gpio_device(&led_config, &led_indicator_gpio_config);
         assert(s_led_4g_handle != NULL);
         led_indicator_stop(s_led_4g_handle, BLINK_CONNECTED);
         led_indicator_start(s_led_4g_handle, BLINK_CONNECTING);
