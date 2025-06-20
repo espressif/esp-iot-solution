@@ -133,11 +133,7 @@ esp_err_t ina236_get_current(ina236_handle_t handle, float *curr)
     uint16_t buffer = 0;
     ina236_t *ina236 = (ina236_t *)handle;
     ina236_read_reg(ina236, INA236_REG_VSHUNT, &buffer);
-    if ((buffer & 0x8000) >> 15) {
-        *curr = 0;
-    } else {
-        *curr = buffer / 3970.0f;
-    }
+    *curr = (int16_t)buffer / 3970.0f;
     return ESP_OK;
 }
 
