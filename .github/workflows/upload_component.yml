@@ -101,6 +101,7 @@ jobs:
             components/usb/iot_usbh_ecm;
             components/usb/usb_stream;
             components/utilities/adc_tp_calibration;
+            components/utilities/log_router;
             components/utilities/xz;
             components/zero_detection;
             tools/cmake_utilities;
