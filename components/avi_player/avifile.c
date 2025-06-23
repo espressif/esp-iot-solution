@@ -68,19 +68,19 @@ static int strl_parser(avi_typedef *AVI_file, const uint8_t *buffer, uint32_t le
     }
 #ifdef CONFIG_AVI_PLAYER_DEBUG_INFO
     printf("-----strh info------\r\n");
-    printf("fourcc_type:0x%x\r\n", strh->fourcc_type);
-    printf("fourcc_codec:0x%x\r\n", strh->fourcc_codec);
-    printf("flags:%d\r\n", strh->flags);
+    printf("fourcc_type:0x%lx\r\n", strh->fourcc_type);
+    printf("fourcc_codec:0x%"PRIx32"\r\n", strh->fourcc_codec);
+    printf("flags:%"PRIu32"\r\n", strh->flags);
     printf("Priority:%d\r\n", strh->priority);
     printf("Language:%d\r\n", strh->language);
-    printf("InitFrames:%d\r\n", strh->init_frames);
-    printf("Scale:%d\r\n", strh->scale);
-    printf("Rate:%d\r\n", strh->rate);
-    printf("Start:%d\r\n", strh->start);
-    printf("Length:%d\r\n", strh->length);
-    printf("RefBufSize:%d\r\n", strh->suggest_buff_size);
-    printf("Quality:%d\r\n", strh->quality);
-    printf("SampleSize:%d\r\n", strh->sample_size);
+    printf("InitFrames:%"PRIu32"\r\n", strh->init_frames);
+    printf("Scale:%"PRIu32"\r\n", strh->scale);
+    printf("Rate:%"PRIu32"\r\n", strh->rate);
+    printf("Start:%"PRIu32"\r\n", strh->start);
+    printf("Length:%"PRIu32"\r\n", strh->length);
+    printf("RefBufSize:%"PRIu32"\r\n", strh->suggest_buff_size);
+    printf("Quality:%"PRIu32"\r\n", strh->quality);
+    printf("SampleSize:%"PRIu32"\r\n", strh->sample_size);
     printf("FrameLeft:%d\r\n", strh->rcFrame.left);
     printf("FrameTop:%d\r\n", strh->rcFrame.top);
     printf("FrameRight:%d\r\n", strh->rcFrame.right);
@@ -104,17 +104,17 @@ static int strl_parser(avi_typedef *AVI_file, const uint8_t *buffer, uint32_t le
         }
 #ifdef CONFIG_AVI_PLAYER_DEBUG_INFO
         printf("-----video strf info------\r\n");
-        printf("Size of this structure:%d\r\n", strf->size1);
-        printf("Width of image:%d\r\n", strf->width);
-        printf("Height of image:%d\r\n", strf->height);
+        printf("Size of this structure:%"PRIu32"\r\n", strf->size1);
+        printf("Width of image:%"PRIu32"\r\n", strf->width);
+        printf("Height of image:%"PRIu32"\r\n", strf->height);
         printf("Number of planes:%d\r\n", strf->planes);
         printf("Number of bits per pixel:%d\r\n", strf->bitcount);
-        printf("Compression type:0x%x\r\n", strf->fourcc_compression);
-        printf("Image size:%d\r\n", strf->image_size);
-        printf("Horizontal resolution:%d\r\n", strf->x_pixels_per_meter);
-        printf("Vertical resolution:%d\r\n", strf->y_pixels_per_meter);
-        printf("Number of colors in palette:%d\r\n", strf->num_colors);
-        printf("Number of important colors:%d\r\n\n", strf->imp_colors);
+        printf("Compression type:0x%"PRIx32"\r\n", strf->fourcc_compression);
+        printf("Image size:%"PRIu32"\r\n", strf->image_size);
+        printf("Horizontal resolution:%"PRIu32"\r\n", strf->x_pixels_per_meter);
+        printf("Vertical resolution:%"PRIu32"\r\n", strf->y_pixels_per_meter);
+        printf("Number of colors in palette:%"PRIu32"\r\n", strf->num_colors);
+        printf("Number of important colors:%"PRIu32"\r\n\n", strf->imp_colors);
 #endif
         AVI_file->vids_fps = strh->rate / strh->scale;
         AVI_file->vids_width = strf->width;
@@ -132,10 +132,10 @@ static int strl_parser(avi_typedef *AVI_file, const uint8_t *buffer, uint32_t le
         printf("strf data block info(audio stream):");
         printf("format tag:%d\r\n", strf->format_tag);
         printf("number of channels:%d\r\n", strf->channels);
-        printf("sampling rate:%d\r\n", strf->samples_per_sec);
-        printf("bitrate:%d\r\n", strf->avg_bytes_per_sec);
+        printf("sampling rate:%"PRIu32"\r\n", strf->samples_per_sec);
+        printf("bitrate:%"PRIu32"\r\n", strf->avg_bytes_per_sec);
         printf("block align:%d\r\n", strf->block_align);
-        printf("sample size:%d\r\n\n", strf->bits_per_sample);
+        printf("sample size:%"PRIu32"\r\n\n", strf->bits_per_sample);
 #endif
         AVI_file->auds_channels = strf->channels;
         AVI_file->auds_sample_rate = strf->samples_per_sec;
@@ -176,16 +176,16 @@ int avi_parser(avi_typedef *AVI_file, const uint8_t *buffer, uint32_t length)
 
 #ifdef CONFIG_AVI_PLAYER_DEBUG_INFO
     printf("-----avih info------\r\n");
-    printf("us_per_frame:%d\r\n", avih->us_per_frame);
-    printf("max_bytes_per_sec:%d\r\n", avih->max_bytes_per_sec);
-    printf("padding:%d\r\n", avih->padding);
-    printf("flags:%d\r\n", avih->flags);
-    printf("total_frames:%d\r\n", avih->total_frames);
-    printf("init_frames:%d\r\n", avih->init_frames);
-    printf("streams:%d\r\n", avih->streams);
-    printf("suggest_buff_size:%d\r\n", avih->suggest_buff_size);
-    printf("Width:%d\r\n", avih->width);
-    printf("Height:%d\r\n\n", avih->height);
+    printf("us_per_frame:%"PRIu32"\r\n", avih->us_per_frame);
+    printf("max_bytes_per_sec:%"PRIu32"\r\n", avih->max_bytes_per_sec);
+    printf("padding:%"PRIu32"\r\n", avih->padding);
+    printf("flags:%"PRIu32"\r\n", avih->flags);
+    printf("total_frames:%"PRIu32"\r\n", avih->total_frames);
+    printf("init_frames:%"PRIu32"\r\n", avih->init_frames);
+    printf("streams:%"PRIu32"\r\n", avih->streams);
+    printf("suggest_buff_size:%"PRIu32"\r\n", avih->suggest_buff_size);
+    printf("Width:%"PRIu32"\r\n", avih->width);
+    printf("Height:%"PRIu32"\r\n\n", avih->height);
 #endif
 
     pdata += sizeof(AVI_AVIH_CHUNK);

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -9,10 +9,12 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
+#include "freertos/idf_additions.h"
 #include "esp_timer.h"
 #include "esp_log.h"
 #include "esp_err.h"
 #include "esp_check.h"
+#include "esp_idf_version.h"
 
 #include "avifile.h"
 #include "avi_player.h"
@@ -64,9 +66,7 @@ typedef struct {
     esp_timer_handle_t timer_handle;
     avi_player_config_t config;
     avi_data_t avi_data;
-} avi_player_handle_t;
-
-static avi_player_handle_t *s_avi = NULL;
+} avi_player_t;
 
 static uint32_t _REV(uint32_t value)
 {
@@ -116,113 +116,112 @@ static uint32_t read_frame(avi_data_t *avi, uint8_t *buffer, uint32_t length, ui
     return head.size;
 }
 
-static esp_err_t avi_player(void)
+static esp_err_t avi_player(avi_player_handle_t handle, size_t *BytesRD, uint32_t *Strtype)
 {
-    static size_t BytesRD;
-    static uint32_t Strtype;
-    uint32_t buffer_size = s_avi->config.buffer_size;
+    avi_player_t *player = (avi_player_t *)handle;
+    uint32_t buffer_size = player->config.buffer_size;
     int ret;
 
-    switch (s_avi->avi_data.state) {
+    switch (player->avi_data.state) {
     case AVI_PARSER_HEADER: {
-        if (s_avi->avi_data.mode == PLAY_MEMORY) {
-            memcpy(s_avi->avi_data.pbuffer, s_avi->avi_data.memory.data, buffer_size);
-            BytesRD = buffer_size;
+        if (player->avi_data.mode == PLAY_MEMORY) {
+            memcpy(player->avi_data.pbuffer, player->avi_data.memory.data, buffer_size);
+            *BytesRD = buffer_size;
         } else {
-            BytesRD = fread(s_avi->avi_data.pbuffer, buffer_size, 1, s_avi->avi_data.file.avi_file);
+            *BytesRD = fread(player->avi_data.pbuffer, buffer_size, 1, player->avi_data.file.avi_file);
         }
 
-        ret = avi_parser(&s_avi->avi_data.AVI_file, s_avi->avi_data.pbuffer, BytesRD);
+        ret = avi_parser(&player->avi_data.AVI_file, player->avi_data.pbuffer, *BytesRD);
         if (0 > ret) {
             ESP_LOGE(TAG, "parse failed (%d)", ret);
-            xEventGroupSetBits(s_avi->event_group, EVENT_STOP_PLAY);
+            xEventGroupSetBits(player->event_group, EVENT_STOP_PLAY);
             return ESP_FAIL;
         }
 
         /*!< Set the video callback */
-        if (s_avi->config.audio_set_clock_cb) {
-            s_avi->config.audio_set_clock_cb(
-                             s_avi->avi_data.AVI_file.auds_sample_rate,
-                             s_avi->avi_data.AVI_file.auds_bits,
-                             s_avi->avi_data.AVI_file.auds_channels,
-                             s_avi->config.user_data);
+        if (player->config.audio_set_clock_cb) {
+            player->config.audio_set_clock_cb(
+                              player->avi_data.AVI_file.auds_sample_rate,
+                              player->avi_data.AVI_file.auds_bits,
+                              player->avi_data.AVI_file.auds_channels,
+                              player->config.user_data);
         }
 
-        uint32_t fps_time = 1000 * 1000 / s_avi->avi_data.AVI_file.vids_fps;
-        ESP_LOGD(TAG, "vids_fps=%d", s_avi->avi_data.AVI_file.vids_fps);
-        esp_timer_start_periodic(s_avi->timer_handle, fps_time);
+        uint32_t fps_time = 1000 * 1000 / player->avi_data.AVI_file.vids_fps;
+        ESP_LOGD(TAG, "vids_fps=%d", player->avi_data.AVI_file.vids_fps);
+        esp_timer_start_periodic(player->timer_handle, fps_time);
 
-        if (s_avi->avi_data.mode == PLAY_MEMORY) {
-            s_avi->avi_data.memory.read_offset = s_avi->avi_data.AVI_file.movi_start;
+        if (player->avi_data.mode == PLAY_MEMORY) {
+            player->avi_data.memory.read_offset = player->avi_data.AVI_file.movi_start;
         } else {
-            fseek(s_avi->avi_data.file.avi_file, s_avi->avi_data.AVI_file.movi_start, SEEK_SET);
+            fseek(player->avi_data.file.avi_file, player->avi_data.AVI_file.movi_start, SEEK_SET);
         }
 
-        s_avi->avi_data.state = AVI_PARSER_DATA;
-        BytesRD = 0;
+        player->avi_data.state = AVI_PARSER_DATA;
+        *BytesRD = 0;
     }
     case AVI_PARSER_DATA: {
         /*!< clear event */
-        xEventGroupClearBits(s_avi->event_group, EVENT_AUDIO_BUF_READY | EVENT_VIDEO_BUF_READY);
+        xEventGroupClearBits(player->event_group, EVENT_AUDIO_BUF_READY | EVENT_VIDEO_BUF_READY);
         while (1) {
-            s_avi->avi_data.str_size = read_frame(&s_avi->avi_data, s_avi->avi_data.pbuffer, buffer_size, &Strtype);
-            ESP_LOGD(TAG, "type=%"PRIu32", size=%"PRIu32"", Strtype, s_avi->avi_data.str_size);
-            BytesRD += s_avi->avi_data.str_size + 8;
+            player->avi_data.str_size = read_frame(&player->avi_data, player->avi_data.pbuffer, buffer_size, Strtype);
+            ESP_LOGD(TAG, "type=%"PRIu32", size=%"PRIu32"", *Strtype, player->avi_data.str_size);
+            *BytesRD += player->avi_data.str_size + 8;
 
-            if (BytesRD >= s_avi->avi_data.AVI_file.movi_size) {
+            if (*BytesRD >= player->avi_data.AVI_file.movi_size) {
                 ESP_LOGI(TAG, "play end");
-                s_avi->avi_data.state = AVI_PARSER_END;
-                xEventGroupSetBits(s_avi->event_group, EVENT_STOP_PLAY);
+                player->avi_data.state = AVI_PARSER_END;
+                xEventGroupSetBits(player->event_group, EVENT_STOP_PLAY);
                 return ESP_OK;
             }
 
-            if ((Strtype & 0xFFFF0000) == DC_ID) { // Display frame
+            if ((*Strtype & 0xFFFF0000) == DC_ID) { // Display frame
                 int64_t fr_end = esp_timer_get_time();
-                if (s_avi->config.video_cb) {
+                if (player->config.video_cb) {
                     frame_data_t data = {
-                        .data = s_avi->avi_data.pbuffer,
-                        .data_bytes = s_avi->avi_data.str_size,
+                        .data = player->avi_data.pbuffer,
+                        .data_bytes = player->avi_data.str_size,
                         .type = FRAME_TYPE_VIDEO,
-                        .video_info.width = s_avi->avi_data.AVI_file.vids_width,
-                        .video_info.height = s_avi->avi_data.AVI_file.vids_height,
-                        .video_info.frame_format = s_avi->avi_data.AVI_file.vids_format,
+                        .video_info.width = player->avi_data.AVI_file.vids_width,
+                        .video_info.height = player->avi_data.AVI_file.vids_height,
+                        .video_info.frame_format = player->avi_data.AVI_file.vids_format,
                     };
-                    s_avi->config.video_cb(&data, s_avi->config.user_data);
+                    player->config.video_cb(&data, player->config.user_data);
                 }
-                xEventGroupSetBits(s_avi->event_group, EVENT_VIDEO_BUF_READY);
+                xEventGroupSetBits(player->event_group, EVENT_VIDEO_BUF_READY);
                 ESP_LOGD(TAG, "Draw %"PRIu32"ms", (uint32_t)((esp_timer_get_time() - fr_end) / 1000));
                 break;
-            } else if ((Strtype & 0xFFFF0000) == WB_ID) { // Audio output
-                if (s_avi->config.audio_cb) {
+            } else if ((*Strtype & 0xFFFF0000) == WB_ID) { // Audio output
+                if (player->config.audio_cb) {
                     frame_data_t data = {
-                        .data = s_avi->avi_data.pbuffer,
-                        .data_bytes = s_avi->avi_data.str_size,
+                        .data = player->avi_data.pbuffer,
+                        .data_bytes = player->avi_data.str_size,
                         .type = FRAME_TYPE_AUDIO,
-                        .audio_info.channel = s_avi->avi_data.AVI_file.auds_channels,
-                        .audio_info.bits_per_sample = s_avi->avi_data.AVI_file.auds_bits,
-                        .audio_info.sample_rate = s_avi->avi_data.AVI_file.auds_sample_rate,
+                        .audio_info.channel = player->avi_data.AVI_file.auds_channels,
+                        .audio_info.bits_per_sample = player->avi_data.AVI_file.auds_bits,
+                        .audio_info.sample_rate = player->avi_data.AVI_file.auds_sample_rate,
                         .audio_info.format = FORMAT_PCM,
                     };
-                    s_avi->config.audio_cb(&data, s_avi->config.user_data);
+                    player->config.audio_cb(&data, player->config.user_data);
                 }
-                xEventGroupSetBits(s_avi->event_group, EVENT_AUDIO_BUF_READY);
+                xEventGroupSetBits(player->event_group, EVENT_AUDIO_BUF_READY);
             } else {
-                ESP_LOGE(TAG, "unknown frame %"PRIx32"", Strtype);
-                xEventGroupSetBits(s_avi->event_group, EVENT_STOP_PLAY);
+                ESP_LOGE(TAG, "unknown frame %"PRIx32"", *Strtype);
+                xEventGroupSetBits(player->event_group, EVENT_STOP_PLAY);
                 return ESP_FAIL;
             }
         }
         break;
     }
     case AVI_PARSER_END:
-        esp_timer_stop(s_avi->timer_handle);
-        if (s_avi->avi_data.mode == PLAY_FILE) {
-            fclose(s_avi->avi_data.file.avi_file);
+        esp_timer_stop(player->timer_handle);
+        if (player->avi_data.mode == PLAY_FILE) {
+            fclose(player->avi_data.file.avi_file);
         }
 
-        s_avi->avi_data.state = AVI_PARSER_NONE;
-        if (s_avi->config.avi_play_end_cb) {
-            s_avi->config.avi_play_end_cb(s_avi->config.user_data);
+        player->avi_data.state = AVI_PARSER_NONE;
+        if (player->config.avi_play_end_cb) {
+            player->config.avi_play_end_cb(player->config.user_data);
         }
 
         break;
@@ -234,30 +233,33 @@ static esp_err_t avi_player(void)
 
 static void avi_player_task(void *args)
 {
+    avi_player_t *player = (avi_player_t *)args;
     EventBits_t uxBits;
     bool exit = false;
+    size_t BytesRD = 0;
+    uint32_t Strtype = 0;
     while (!exit) {
-        uxBits = xEventGroupWaitBits(s_avi->event_group, EVENT_ALL, pdTRUE, pdFALSE, portMAX_DELAY);
+        uxBits = xEventGroupWaitBits(player->event_group, EVENT_ALL, pdTRUE, pdFALSE, portMAX_DELAY);
         if (uxBits & EVENT_STOP_PLAY) {
-            s_avi->avi_data.state = AVI_PARSER_END;
-            esp_err_t ret = avi_player();
+            player->avi_data.state = AVI_PARSER_END;
+            esp_err_t ret = avi_player(player, &BytesRD, &Strtype);
             if (ret != ESP_OK) {
-                ESP_LOGI(TAG, "AVI Perse failed");
+                ESP_LOGE(TAG, "AVI Perse failed");
             }
         }
 
         if (uxBits & EVENT_START_PLAY) {
-            s_avi->avi_data.state = AVI_PARSER_HEADER;
-            esp_err_t ret = avi_player();
+            player->avi_data.state = AVI_PARSER_HEADER;
+            esp_err_t ret = avi_player(player, &BytesRD, &Strtype);
             if (ret != ESP_OK) {
-                ESP_LOGI(TAG, "AVI Perse failed");
+                ESP_LOGE(TAG, "AVI Perse failed");
             }
         }
 
         if (uxBits & EVENT_FPS_TIME_UP) {
-            esp_err_t ret = avi_player();
+            esp_err_t ret = avi_player(player, &BytesRD, &Strtype);
             if (ret != ESP_OK) {
-                ESP_LOGI(TAG, "AVI Perse failed");
+                ESP_LOGE(TAG, "AVI Perse failed");
             }
         }
 
@@ -267,157 +269,179 @@ static void avi_player_task(void *args)
         }
 
     }
-    xEventGroupSetBits(s_avi->event_group, EVENT_DEINIT_DONE);
+    xEventGroupSetBits(player->event_group, EVENT_DEINIT_DONE);
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 1, 0)
+    vTaskDeleteWithCaps(NULL);
+#else
     vTaskDelete(NULL);
+#endif
 }
 
-esp_err_t avi_player_get_video_buffer(void **buffer, size_t *buffer_size, video_frame_info_t *info, TickType_t ticks_to_wait)
+esp_err_t avi_player_get_video_buffer(avi_player_handle_t handle, void **buffer, size_t *buffer_size, video_frame_info_t *info, TickType_t ticks_to_wait)
 {
+    avi_player_t *player = (avi_player_t *)handle;
     ESP_RETURN_ON_FALSE(buffer != NULL, ESP_ERR_INVALID_ARG, TAG, "buffer can’t be NULL");
     ESP_RETURN_ON_FALSE(info != NULL, ESP_ERR_INVALID_ARG, TAG, "info can’t be NULL");
     ESP_RETURN_ON_FALSE(buffer_size != NULL, ESP_ERR_INVALID_ARG, TAG, "buffer_size can’t be 0");
 
     /*!< Get the EVENT_VIDEO_BUF_READY */
-    EventBits_t uxBits = xEventGroupWaitBits(s_avi->event_group, EVENT_VIDEO_BUF_READY, pdTRUE, pdFALSE, ticks_to_wait);
+    EventBits_t uxBits = xEventGroupWaitBits(player->event_group, EVENT_VIDEO_BUF_READY, pdTRUE, pdFALSE, ticks_to_wait);
     if (!(uxBits & EVENT_VIDEO_BUF_READY)) {
         return ESP_ERR_TIMEOUT;
     }
 
-    if (*buffer_size < s_avi->avi_data.str_size) {
+    if (*buffer_size < player->avi_data.str_size) {
         ESP_LOGE(TAG, "buffer size is too small");
         return ESP_ERR_NO_MEM;
     }
 
-    memcpy(*buffer, s_avi->avi_data.pbuffer, s_avi->avi_data.str_size);
-    *buffer_size = s_avi->avi_data.str_size;
-    info->width = s_avi->avi_data.AVI_file.vids_width;
-    info->height = s_avi->avi_data.AVI_file.vids_height;
-    info->frame_format = s_avi->avi_data.AVI_file.vids_format;
+    memcpy(*buffer, player->avi_data.pbuffer, player->avi_data.str_size);
+    *buffer_size = player->avi_data.str_size;
+    info->width = player->avi_data.AVI_file.vids_width;
+    info->height = player->avi_data.AVI_file.vids_height;
+    info->frame_format = player->avi_data.AVI_file.vids_format;
     return ESP_OK;
 }
 
-esp_err_t avi_player_get_audio_buffer(void **buffer, size_t *buffer_size, audio_frame_info_t *info, TickType_t ticks_to_wait)
+esp_err_t avi_player_get_audio_buffer(avi_player_handle_t handle, void **buffer, size_t *buffer_size, audio_frame_info_t *info, TickType_t ticks_to_wait)
 {
+    avi_player_t *player = (avi_player_t *)handle;
     ESP_RETURN_ON_FALSE(buffer != NULL, ESP_ERR_INVALID_ARG, TAG, "buffer can’t be NULL");
     ESP_RETURN_ON_FALSE(info != NULL, ESP_ERR_INVALID_ARG, TAG, "info can’t be NULL");
     ESP_RETURN_ON_FALSE(buffer_size != NULL, ESP_ERR_INVALID_ARG, TAG, "buffer_size can’t be 0");
 
     /*!< Get the EVENT_AUDIO_BUF_READY */
-    EventBits_t uxBits = xEventGroupWaitBits(s_avi->event_group, EVENT_AUDIO_BUF_READY, pdTRUE, pdFALSE, ticks_to_wait);
+    EventBits_t uxBits = xEventGroupWaitBits(player->event_group, EVENT_AUDIO_BUF_READY, pdTRUE, pdFALSE, ticks_to_wait);
     if (!(uxBits & EVENT_AUDIO_BUF_READY)) {
         return ESP_ERR_TIMEOUT;
     }
 
-    if (*buffer_size < s_avi->avi_data.str_size) {
+    if (*buffer_size < player->avi_data.str_size) {
         ESP_LOGE(TAG, "buffer size is too small");
         return ESP_ERR_NO_MEM;
     }
 
-    memcpy(*buffer, s_avi->avi_data.pbuffer, s_avi->avi_data.str_size);
-    *buffer_size = s_avi->avi_data.str_size;
-    info->channel = s_avi->avi_data.AVI_file.auds_channels;
-    info->bits_per_sample = s_avi->avi_data.AVI_file.auds_bits;
-    info->sample_rate = s_avi->avi_data.AVI_file.auds_sample_rate;
+    memcpy(*buffer, player->avi_data.pbuffer, player->avi_data.str_size);
+    *buffer_size = player->avi_data.str_size;
+    info->channel = player->avi_data.AVI_file.auds_channels;
+    info->bits_per_sample = player->avi_data.AVI_file.auds_bits;
+    info->sample_rate = player->avi_data.AVI_file.auds_sample_rate;
     info->format = FORMAT_PCM;
     return ESP_OK;
 }
 
-esp_err_t avi_player_play_from_memory(uint8_t *avi_data, size_t avi_size)
+esp_err_t avi_player_play_from_memory(avi_player_handle_t handle, uint8_t *avi_data, size_t avi_size)
 {
-    ESP_RETURN_ON_FALSE(s_avi->avi_data.state == AVI_PARSER_NONE, ESP_ERR_INVALID_STATE, TAG, "AVI player not ready");
-    s_avi->avi_data.mode = PLAY_MEMORY;
-    s_avi->avi_data.memory.data = avi_data;
-    s_avi->avi_data.memory.size = avi_size;
-    s_avi->avi_data.memory.read_offset = 0;
-    xEventGroupSetBits(s_avi->event_group, EVENT_START_PLAY);
+    avi_player_t *player = (avi_player_t *)handle;
+    ESP_RETURN_ON_FALSE(player->avi_data.state == AVI_PARSER_NONE, ESP_ERR_INVALID_STATE, TAG, "AVI player not ready");
+    player->avi_data.mode = PLAY_MEMORY;
+    player->avi_data.memory.data = avi_data;
+    player->avi_data.memory.size = avi_size;
+    player->avi_data.memory.read_offset = 0;
+    xEventGroupSetBits(player->event_group, EVENT_START_PLAY);
     return ESP_OK;
 }
 
-esp_err_t avi_player_play_from_file(const char *filename)
+esp_err_t  avi_player_play_from_file(avi_player_handle_t handle, const char *filename)
 {
-    ESP_RETURN_ON_FALSE(s_avi->avi_data.state == AVI_PARSER_NONE, ESP_ERR_INVALID_STATE, TAG, "AVI player not ready");
+    avi_player_t *player = (avi_player_t *)handle;
+    ESP_RETURN_ON_FALSE(player->avi_data.state == AVI_PARSER_NONE, ESP_ERR_INVALID_STATE, TAG, "AVI player not ready");
 
-    s_avi->avi_data.mode = PLAY_FILE;
-    s_avi->avi_data.file.avi_file = fopen(filename, "rb");
-    if (s_avi->avi_data.file.avi_file == NULL) {
+    player->avi_data.mode = PLAY_FILE;
+    player->avi_data.file.avi_file = fopen(filename, "rb");
+    if (player->avi_data.file.avi_file == NULL) {
         ESP_LOGE(TAG, "Cannot open %s", filename);
         return ESP_FAIL;
     }
-    xEventGroupSetBits(s_avi->event_group, EVENT_START_PLAY);
+    xEventGroupSetBits(player->event_group, EVENT_START_PLAY);
     return ESP_OK;
 }
 
-esp_err_t avi_player_play_stop(void)
+esp_err_t avi_player_play_stop(avi_player_handle_t handle)
 {
-    ESP_RETURN_ON_FALSE(s_avi->avi_data.state == AVI_PARSER_HEADER || s_avi->avi_data.state == AVI_PARSER_DATA,
+    avi_player_t *player = (avi_player_t *)handle;
+    ESP_RETURN_ON_FALSE(player->avi_data.state == AVI_PARSER_HEADER || player->avi_data.state == AVI_PARSER_DATA,
                         ESP_ERR_INVALID_STATE, TAG, "AVI player not playing");
-    xEventGroupSetBits(s_avi->event_group, EVENT_STOP_PLAY);
+    xEventGroupSetBits(player->event_group, EVENT_STOP_PLAY);
     return ESP_OK;
 }
 
 static void esp_timer_cb(void *arg)
 {
+    avi_player_t *player = (avi_player_t *)arg;
     /*!< Give the Event */
-    xEventGroupSetBits(s_avi->event_group, EVENT_FPS_TIME_UP);
+    xEventGroupSetBits(player->event_group, EVENT_FPS_TIME_UP);
 }
 
-esp_err_t avi_player_init(avi_player_config_t config)
+esp_err_t avi_player_init(avi_player_config_t config, avi_player_handle_t *handle)
 {
     ESP_LOGI(TAG, "AVI Player Version: %d.%d.%d", AVI_PLAYER_VER_MAJOR, AVI_PLAYER_VER_MINOR, AVI_PLAYER_VER_PATCH);
-    ESP_RETURN_ON_FALSE(s_avi == NULL, ESP_ERR_INVALID_STATE, TAG, "avi player already initialized");
-    s_avi = (avi_player_handle_t *)calloc(1, sizeof(avi_player_handle_t));
-    s_avi->config = config;
+    avi_player_t *player = (avi_player_t *)calloc(1, sizeof(avi_player_t));
+    player->config = config;
 
-    if (s_avi->config.buffer_size == 0) {
-        s_avi->config.buffer_size = 20 * 1024;
+    if (player->config.buffer_size == 0) {
+        player->config.buffer_size = 20 * 1024;
     }
-    if (s_avi->config.priority == 0) {
-        s_avi->config.priority = 5;
+    if (player->config.priority == 0) {
+        player->config.priority = 5;
+    }
+    if (player->config.stack_size == 0) {
+        player->config.stack_size = 4096;
     }
 
-    s_avi->avi_data.pbuffer = malloc(s_avi->config.buffer_size);
-    ESP_RETURN_ON_FALSE(s_avi->avi_data.pbuffer != NULL, ESP_ERR_NO_MEM, TAG, "Cannot alloc memory for player");
+    player->avi_data.pbuffer = malloc(player->config.buffer_size);
+    ESP_RETURN_ON_FALSE(player->avi_data.pbuffer != NULL, ESP_ERR_NO_MEM, TAG, "Cannot alloc memory for player");
 
     esp_timer_create_args_t timer = {0};
-    timer.arg = NULL;
+    timer.arg = player;
     timer.callback = esp_timer_cb;
     timer.dispatch_method = ESP_TIMER_TASK;
     timer.name = "avi_player_timer";
-    s_avi->event_group = xEventGroupCreate();
-    ESP_RETURN_ON_FALSE(s_avi->event_group != NULL, ESP_ERR_NO_MEM, TAG, "Cannot create event group");
+    esp_timer_create(&timer, &player->timer_handle);
 
-    esp_timer_create(&timer, &s_avi->timer_handle);
-    xTaskCreatePinnedToCore(avi_player_task, "avi_player", 4096, NULL, s_avi->config.priority, NULL, s_avi->config.coreID);
+    player->event_group = xEventGroupCreate();
+    assert(player->event_group);
+    ESP_RETURN_ON_FALSE(player->event_group != NULL, ESP_ERR_NO_MEM, TAG, "Cannot create event group");
+
+    *handle = (avi_player_handle_t *)player;
+
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 1, 0)
+    int stack_caps = config.stack_in_psram ? MALLOC_CAP_SPIRAM : MALLOC_CAP_INTERNAL;
+    xTaskCreatePinnedToCoreWithCaps(avi_player_task, "avi_player", player->config.stack_size, player, player->config.priority, NULL, player->config.coreID, stack_caps);
+#else
+    xTaskCreatePinnedToCore(avi_player_task, "avi_player", player->config.stack_size, player, player->config.priority, NULL, player->config.coreID);
+#endif
     return ESP_OK;
 }
 
-esp_err_t avi_player_deinit(void)
+esp_err_t avi_player_deinit(avi_player_handle_t handle)
 {
-    if (s_avi == NULL) {
+    avi_player_t *player = (avi_player_t *)handle;
+    if (player == NULL) {
         return ESP_FAIL;
     }
 
-    xEventGroupSetBits(s_avi->event_group, EVENT_DEINIT);
-    EventBits_t uxBits = xEventGroupWaitBits(s_avi->event_group, EVENT_DEINIT_DONE, pdTRUE, pdTRUE, pdMS_TO_TICKS(1000));
+    xEventGroupSetBits(player->event_group, EVENT_DEINIT);
+    EventBits_t uxBits = xEventGroupWaitBits(player->event_group, EVENT_DEINIT_DONE, pdTRUE, pdTRUE, pdMS_TO_TICKS(1000));
     if (!(uxBits & EVENT_DEINIT_DONE)) {
         ESP_LOGE(TAG, "AVI player deinit timeout");
         return ESP_ERR_TIMEOUT;
     }
 
-    if (s_avi->timer_handle != NULL) {
-        esp_timer_stop(s_avi->timer_handle);
-        esp_timer_delete(s_avi->timer_handle);
+    if (player->timer_handle != NULL) {
+        esp_timer_stop(player->timer_handle);
+        esp_timer_delete(player->timer_handle);
     }
 
-    if (s_avi->avi_data.pbuffer != NULL) {
-        free(s_avi->avi_data.pbuffer);
+    if (player->avi_data.pbuffer != NULL) {
+        free(player->avi_data.pbuffer);
     }
 
-    if (s_avi->event_group != NULL) {
-        vEventGroupDelete(s_avi->event_group);
+    if (player->event_group != NULL) {
+        vEventGroupDelete(player->event_group);
     }
 
-    free(s_avi);
-    s_avi = NULL;
+    free(player);
+    player = NULL;
     return ESP_OK;
 }

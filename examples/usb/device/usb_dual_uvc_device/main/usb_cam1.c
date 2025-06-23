@@ -18,12 +18,13 @@
 static const char *TAG = "usb_cam1";
 static uvc_fb_t s_fb;
 static bool running = false;
+static avi_player_handle_t avi_handle;
 
 static void camera_stop_cb(void *cb_ctx)
 {
     (void)cb_ctx;
     if (running) {
-        avi_player_play_stop();
+        avi_player_play_stop(avi_handle);
         running = false;
     }
     ESP_LOGI(TAG, "Camera:%"PRIu32" Stop", (uint32_t)cb_ctx);
@@ -36,7 +37,7 @@ static esp_err_t camera_start_cb(uvc_format_t format, int width, int height, int
     ESP_LOGI(TAG, "Format: %d, width: %d, height: %d, rate: %d", format, width, height, rate);
 
     running = true;
-    avi_player_play_from_file("/spiffs/p4_introduce.avi");
+    avi_player_play_from_file(avi_handle, "/spiffs/p4_introduce.avi");
 
     return ESP_OK;
 }
@@ -46,7 +47,7 @@ static uvc_fb_t* camera_fb_get_cb(void *cb_ctx)
     (void)cb_ctx;
     video_frame_info_t info;
     size_t buf_size = UVC_MAX_FRAMESIZE_SIZE;
-    avi_player_get_video_buffer((void **)&s_fb.buf, &buf_size, &info, pdMS_TO_TICKS(200));
+    avi_player_get_video_buffer(avi_handle, (void **)&s_fb.buf, &buf_size, &info, pdMS_TO_TICKS(200));
     ESP_LOGD(TAG, "Camera buf_size: %d", buf_size);
     uint64_t us = (uint64_t)esp_timer_get_time();
     s_fb.timestamp.tv_sec = us / 1000000UL;
@@ -77,7 +78,7 @@ static void camera_fb_return_cb(uvc_fb_t *fb, void *cb_ctx)
 static void avi_end_cb(void *arg)
 {
     if (running) {
-        avi_player_play_from_file("/spiffs/p4_introduce.avi");
+        avi_player_play_from_file(avi_handle, "/spiffs/p4_introduce.avi");
     }
 }
 
@@ -88,7 +89,7 @@ esp_err_t usb_cam1_init(void)
         .buffer_size = UVC_MAX_FRAMESIZE_SIZE,
     };
 
-    avi_player_init(avi_cfg);
+    avi_player_init(avi_cfg, &avi_handle);
 
     s_fb.buf = (uint8_t *)malloc(UVC_MAX_FRAMESIZE_SIZE);
     if (s_fb.buf == NULL) {

@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v2.0.0 - 2025-06-09
+
+* Support multiple instances.
+
 ## v1.0.0 - 2024-8-15
 
 * publish official version

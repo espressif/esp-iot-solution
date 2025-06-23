@@ -8,6 +8,7 @@
 
 #include "esp_err.h"
 #include "freertos/FreeRTOS.h"
+#include "esp_idf_version.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -83,6 +84,8 @@ typedef void (*audio_write_cb)(frame_data_t *data, void *arg);
 typedef void (*audio_set_clock_cb)(uint32_t rate, uint32_t bits_cfg, uint32_t ch, void *arg);
 typedef void (*avi_play_end_cb)(void *arg);
 
+typedef void *avi_player_handle_t;
+
 /**
  * @brief avi player config
  *
@@ -96,6 +99,10 @@ typedef struct {
     UBaseType_t priority;                    /*!< FreeRTOS task priority */
     BaseType_t coreID;                       /*!< ESP32 core ID */
     void *user_data;                         /*!< User data */
+    int stack_size;                          /*!< Stack size for the player task */
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 1, 0)
+    bool stack_in_psram;                     /*!< If you read file/data from flash, do not set true*/
+#endif
 } avi_player_config_t;
 
 /**
@@ -103,25 +110,28 @@ typedef struct {
  *
  * This function initializes and plays an AVI file from a memory buffer.
  *
- * @param avi_data Pointer to the AVI file data in memory.
- * @param avi_size Size of the AVI file data in bytes.
+ * @param[in] handle AVI player handle
+ * @param[in] avi_data Pointer to the AVI file data in memory.
+ * @param[in] avi_size Size of the AVI file data in bytes.
  * @return esp_err_t ESP_OK if successful, otherwise an error code.
  */
-esp_err_t avi_player_play_from_memory(uint8_t *avi_data, size_t avi_size);
+esp_err_t avi_player_play_from_memory(avi_player_handle_t handle, uint8_t *avi_data, size_t avi_size);
 
 /**
  * @brief Plays an AVI file from the filesystem. The buffer of the AVI will be passed through the set callback function.
  *
  * This function initializes and plays an AVI file from the filesystem using its filename.
  *
- * @param filename Path to the AVI file on the filesystem.
+ * @param[in] handle AVI player handle
+ * @param[in] filename Path to the AVI file on the filesystem.
  * @return esp_err_t ESP_OK if successful, otherwise an error code.
  */
-esp_err_t avi_player_play_from_file(const char *filename);
+esp_err_t avi_player_play_from_file(avi_player_handle_t handle, const char *filename);
 
 /**
  * @brief Get one video frame from AVI stream
  *
+ * @param[in] handle AVI player handle
  * @param[out] buffer        Pointer to external buffer to hold one frame
  * @param[in,out] buffer_size Size of external buffer
  * @param[out] info          Information of the video frame
@@ -133,11 +143,12 @@ esp_err_t avi_player_play_from_file(const char *filename);
  *      - ESP_ERR_INVALID_ARG  NULL arguments
  *      - ESP_ERR_NO_MEM  External buffer not enough
  */
-esp_err_t avi_player_get_video_buffer(void **buffer, size_t *buffer_size, video_frame_info_t *info, TickType_t ticks_to_wait);
+esp_err_t avi_player_get_video_buffer(avi_player_handle_t handle, void **buffer, size_t *buffer_size, video_frame_info_t *info, TickType_t ticks_to_wait);
 
 /**
  * @brief Get the audio buffer from AVI file
  *
+ * @param[in] handle AVI player handle
  * @param[out] buffer pointer to the audio buffer
  * @param[in] buffer_size size of the audio buffer
  * @param[out] info audio frame information
@@ -149,37 +160,40 @@ esp_err_t avi_player_get_video_buffer(void **buffer, size_t *buffer_size, video_
  *      - ESP_ERR_INVALID_ARG if buffer or info is NULL or buffer_size is zero
  *      - ESP_ERR_NO_MEM if buffer size is not enough
  */
-esp_err_t avi_player_get_audio_buffer(void **buffer, size_t *buffer_size, audio_frame_info_t *info, TickType_t ticks_to_wait);
+esp_err_t avi_player_get_audio_buffer(avi_player_handle_t handle, void **buffer, size_t *buffer_size, audio_frame_info_t *info, TickType_t ticks_to_wait);
 
 /**
  * @brief Stop AVI player
  *
+ * @param[in] handle AVI player handle
  * @return
  *      - ESP_OK: Stop AVI player successfully
  *      - ESP_ERR_INVALID_STATE: AVI player not playing
  */
-esp_err_t avi_player_play_stop(void);
+esp_err_t avi_player_play_stop(avi_player_handle_t handle);
 
 /**
  * @brief Initialize the AVI player
  *
  * @param[in] config Configuration of AVI player
+ * @param[out] handle Pointer to store the AVI player handle
  *
  * @return
  *      - ESP_OK: succeed
  *      - ESP_ERR_NO_MEM: Cannot allocate memory for AVI player
  *      - ESP_ERR_INVALID_STATE: AVI player has already been initialized
  */
-esp_err_t avi_player_init(avi_player_config_t config);
+esp_err_t avi_player_init(avi_player_config_t config, avi_player_handle_t *handle);
 
 /**
  * @brief Deinitializes the AVI player.
  *
  * This function deinitializes and cleans up resources used by the AVI player.
  *
+ * @param[in] handle AVI player handle
  * @return esp_err_t ESP_OK if successful, otherwise an error code.
  */
-esp_err_t avi_player_deinit(void);
+esp_err_t avi_player_deinit(avi_player_handle_t handle);
 
 #ifdef __cplusplus
 }

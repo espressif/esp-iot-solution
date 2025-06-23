@@ -1,12 +1,12 @@
-version: "1.0.0"
+dependencies:
+  espressif/cmake_utilities: "*"
+  idf: '>=4.4'
 description: Parse the video stream and audio stream of an AVI video file.
-url: https://github.com/espressif/esp-iot-solution/tree/master/components/avi_player
 documentation: https://docs.espressif.com/projects/esp-iot-solution/en/latest/multimedia/avi_player.html
 issues: https://github.com/espressif/esp-iot-solution/issues
-repository: https://github.com/espressif/esp-iot-solution.git
-dependencies:
-  idf: ">=4.4"
-  cmake_utilities: "0.*"
-sbom:
-  supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'
-  originator: 'Organization: Espressif Systems (Shanghai) CO LTD'
+repository: git://github.com/espressif/esp-iot-solution.git
+repository_info:
+  commit_sha: a4fdf46f42e57aa20521159dab5146fc511142a4
+  path: components/avi_player
+url: https://github.com/espressif/esp-iot-solution/tree/master/components/avi_player
+version: 2.0.0
