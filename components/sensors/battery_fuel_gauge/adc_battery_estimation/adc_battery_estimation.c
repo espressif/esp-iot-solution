@@ -8,6 +8,7 @@
 #include <math.h>
 #include "esp_log.h"
 #include "esp_check.h"
+#include "esp_timer.h"
 #include "adc_battery_estimation.h"
 
 static const char* TAG = "adc_battery_estimation";
@@ -22,11 +23,16 @@ typedef struct {
     size_t battery_points_count;
     adc_battery_charging_detect_cb_t charging_detect_cb;
     void *charging_detect_user_data;
-    float last_capacity;          /*!< Last calculated battery capacity in percentage */
-    bool is_first_read;           /*!< Flag for first capacity reading */
-    bool last_charging_state;     /*!< Last charging state */
-    float voltage_divider_ratio;  /*!< Voltage divider ratio */
-    float filter_alpha;           /*!< Low-pass filter coefficient (0 < alpha < 1) */
+    float last_capacity;                                                           /*!< Last calculated battery capacity in percentage */
+    bool is_first_read;                                                            /*!< Flag for first capacity reading */
+    bool last_charging_state;                                                      /*!< Last charging state */
+    float voltage_divider_ratio;                                                   /*!< Voltage divider ratio */
+    float filter_alpha;                                                            /*!< Low-pass filter coefficient (0 < alpha < 1) */
+#if CONFIG_BATTERY_STATE_SOFTWARE_ESTIMATION
+    uint64_t last_time_ms;                                                         /*!< Last time in milliseconds */
+    int battery_state_estimation_buffer[CONFIG_SOFTWARE_ESTIMATION_SAMPLE_COUNT];  /*!< Buffer to store ADC readings */
+    int battery_state_estimation_index;                                            /*!< Current index in the buffer */
+#endif
 } adc_battery_estimation_ctx_t;
 
 // Helper function to calculate battery capacity based on voltage
@@ -51,6 +57,32 @@ static float calculate_battery_capacity(float voltage, const battery_point_t *po
     } else {
         return points[points_count - 1].capacity;
     }
+}
+
+// Helper function to analyze battery trend
+static bool analyze_battery_trend(const int *buffer, int buffer_size, bool last_charging_state)
+{
+    int increasing_count = 0;
+    int decreasing_count = 0;
+
+    // Count increasing and decreasing points
+    for (int i = 1; i < buffer_size; i++) {
+        if (buffer[i] > buffer[i - 1]) {
+            increasing_count++;
+        } else if (buffer[i] < buffer[i - 1]) {
+            decreasing_count++;
+        }
+    }
+
+    // Log the analysis results
+    ESP_LOGD(TAG, "Trend analysis: increasing=%d, decreasing=%d", increasing_count, decreasing_count);
+
+    // If increasing and decreasing counts are equal, keep the last state
+    if (increasing_count == decreasing_count) {
+        return last_charging_state;
+    }
+    // Otherwise, determine by increasing/decreasing trend
+    return increasing_count > decreasing_count;
 }
 
 adc_battery_estimation_handle_t adc_battery_estimation_create(adc_battery_estimation_t *config)
@@ -127,6 +159,11 @@ adc_battery_estimation_handle_t adc_battery_estimation_create(adc_battery_estima
     ctx->voltage_divider_ratio = config->lower_resistor / total_resistance;
     ctx->filter_alpha = CONFIG_BATTERY_CAPACITY_LPF_COEFFICIENT / 10.0f;
 
+#if CONFIG_BATTERY_STATE_SOFTWARE_ESTIMATION
+    ctx->battery_state_estimation_index = 0;
+    ctx->last_time_ms = 0;
+#endif
+
     return (adc_battery_estimation_handle_t) ctx;
 }
 
@@ -172,11 +209,19 @@ esp_err_t adc_battery_estimation_get_capacity(adc_battery_estimation_handle_t ha
 
     adc_battery_estimation_ctx_t *ctx = (adc_battery_estimation_ctx_t *) handle;
     bool is_charging = false;
-
+#if CONFIG_BATTERY_STATE_SOFTWARE_ESTIMATION
+    uint64_t current_time_ms = esp_timer_get_time() / 1000;
+#endif
     // Check charging state if callback is provided
     if (ctx->charging_detect_cb) {
         is_charging = ctx->charging_detect_cb(ctx->charging_detect_user_data);
     }
+#if CONFIG_BATTERY_STATE_SOFTWARE_ESTIMATION
+    else {
+        // Use last charging state if no callback is provided
+        is_charging = ctx->last_charging_state;
+    }
+#endif
 
     // Get ADC reading via filtering
     int vol[CONFIG_ADC_FILTER_WINDOW_SIZE] = {0};
@@ -215,9 +260,33 @@ esp_err_t adc_battery_estimation_get_capacity(adc_battery_estimation_handle_t ha
         filtered_result = filtered_vol / filtered_count;
     }
 
+#if CONFIG_BATTERY_STATE_SOFTWARE_ESTIMATION
+    // Record filtered_result every CONFIG_SOFTWARE_ESTIMATION_SAMPLE_INTERVAL ms
+    if (current_time_ms - ctx->last_time_ms >= CONFIG_SOFTWARE_ESTIMATION_SAMPLE_INTERVAL) {
+        // Store the new value at current index
+        ctx->battery_state_estimation_buffer[ctx->battery_state_estimation_index] = filtered_result;
+        // Update index, wrap around when reaching the end
+        ctx->battery_state_estimation_index = (ctx->battery_state_estimation_index + 1) % CONFIG_SOFTWARE_ESTIMATION_SAMPLE_COUNT;
+
+        // If buffer is full (index is 0), analyze the trend
+        if (ctx->battery_state_estimation_index == 0) {
+            bool trend_is_charging = analyze_battery_trend(ctx->battery_state_estimation_buffer,
+                                                           CONFIG_SOFTWARE_ESTIMATION_SAMPLE_COUNT,
+                                                           ctx->last_charging_state);
+            ESP_LOGD(TAG, "Battery trend analysis: %s", trend_is_charging ? "Charging" : "Discharging");
+
+            // Update last charging state
+            ctx->last_charging_state = trend_is_charging;
+            // If no charging detection callback is provided, use trend analysis
+            if (!ctx->charging_detect_cb) {
+                is_charging = trend_is_charging;
+            }
+        }
+        ctx->last_time_ms = current_time_ms;
+    }
+#endif
     // Convert ADC voltage (mV) to battery voltage (V)
     float battery_voltage = (float)filtered_result / 1000.0f / ctx->voltage_divider_ratio;
-    ESP_LOGD(TAG, "Battery voltage: %.2fV", battery_voltage);
 
     // Calculate battery capacity based on voltage
     float current_capacity = calculate_battery_capacity(battery_voltage, ctx->battery_points, ctx->battery_points_count);
@@ -265,8 +334,7 @@ esp_err_t adc_battery_estimation_get_charging_state(adc_battery_estimation_handl
     if (ctx->charging_detect_cb) {
         *is_charging = ctx->charging_detect_cb(ctx->charging_detect_user_data);
     } else {
-        ESP_LOGE(TAG, "Charging detection callback is not set");
-        return ESP_ERR_INVALID_STATE;
+        *is_charging = ctx->last_charging_state;
     }
 
     return ESP_OK;
