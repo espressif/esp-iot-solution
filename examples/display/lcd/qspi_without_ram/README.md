@@ -1,5 +1,5 @@
-| Supported Targets | ESP32-S3 |
-| ----------------- | -------- |
+| Supported Targets | ESP32-S3 | ESP32-C5 |
+| ----------------- | -------- | -------- |
 
 | Supported LCD Controllers | ST77903 |
 | ------------------------- | ------- |

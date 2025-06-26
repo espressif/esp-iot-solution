@@ -394,6 +394,16 @@ build_example_check_pedestrian_flow:
   variables:
     EXAMPLE_DIR: examples/check_pedestrian_flow
 
+build_example_display_lcd_hdmi_video_renderer:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_display_lcd_hdmi_video_renderer
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.4
+  variables:
+    EXAMPLE_DIR: examples/display/lcd/hdmi_video_renderer
+
 build_example_display_lcd_lcd_layer_blending:
   extends:
     - .build_examples_template
