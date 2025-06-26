@@ -211,7 +211,7 @@ esp_err_t button_adc_del(button_driver_t *button_driver)
     return ESP_OK;
 }
 
-static uint32_t get_adc_volatge(adc_unit_t unit_id, uint8_t channel)
+static uint32_t get_adc_voltage(adc_unit_t unit_id, uint8_t channel)
 {
     uint32_t adc_reading = 0;
     int adc_raw = 0;
@@ -241,7 +241,7 @@ uint8_t button_adc_get_key_level(button_driver_t *button_driver)
 
     /** It starts only when the elapsed time is more than 1ms */
     if ((esp_timer_get_time() - g_button.unit[adc_btn->unit_id].ch[ch_index].last_time) > 1000) {
-        vol = get_adc_volatge(adc_btn->unit_id, ch);
+        vol = get_adc_voltage(adc_btn->unit_id, ch);
         g_button.unit[adc_btn->unit_id].ch[ch_index].last_time = esp_timer_get_time();
     }
 
