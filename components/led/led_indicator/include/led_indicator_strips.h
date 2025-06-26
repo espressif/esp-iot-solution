@@ -50,7 +50,7 @@ typedef struct {
  *     - ESP_OK Success
  *     - ESP_FAIL Delete fail
  */
-led_indicator_handle_t led_indicator_new_strips_device(const led_config_t *led_config, const led_indicator_strips_config_t *strips_cfg);
+led_indicator_handle_t led_indicator_new_strips_device(const led_indicator_config_t *led_config, const led_indicator_strips_config_t *strips_cfg);
 #ifdef __cplusplus
 }
 #endif

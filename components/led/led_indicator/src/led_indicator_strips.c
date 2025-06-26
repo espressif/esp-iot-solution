@@ -190,7 +190,7 @@ static esp_err_t led_indicator_strips_set_brightness(void *strips, uint32_t ihsv
     return ESP_OK;
 }
 
-led_indicator_handle_t led_indicator_new_strips_device(const led_config_t *led_config, const led_indicator_strips_config_t *strips_cfg)
+led_indicator_handle_t led_indicator_new_strips_device(const led_indicator_config_t *led_config, const led_indicator_strips_config_t *strips_cfg)
 {
     esp_err_t ret = ESP_OK;
     bool if_blink_default_list = false;

@@ -41,7 +41,7 @@ void led_indicator_init()
         .gpio_num = LED_IO_NUM_0,              /**< num of GPIO */
     };
 
-    led_config_t config = {
+    led_indicator_config_t config = {
         .blink_lists = (void *)NULL,
         .blink_list_num = 0,
     };
@@ -122,7 +122,7 @@ void led_indicator_gpio_mode_test_all()
 TEST_CASE("blink test all in order", "[LED][indicator]")
 {
     led_indicator_init();
-    led_indicator_gpio_mode_test_all();//测试所有状态的正常切换，不涉及优先级。
+    led_indicator_gpio_mode_test_all();
     led_indicator_deinit();
 }
 
@@ -151,7 +151,7 @@ void led_indicator_gpio_mode_preempt()
 
 TEST_CASE("blink test with preempt", "[LED][indicator]")
 {
-    led_indicator_init();//测试高优先级状态能否抢占低优先级，以及抢占后能否恢复。
+    led_indicator_init();
     led_indicator_gpio_mode_preempt();
     led_indicator_deinit();
 }
@@ -163,7 +163,7 @@ void led_indicator_all_init()
         .is_active_level_high = 1,
     };
 
-    led_config_t config = {
+    led_indicator_config_t config = {
         .blink_lists = NULL,
         .blink_list_num = 0,
     };
@@ -335,14 +335,10 @@ TEST_CASE("User defined blink", "[LED][indicator]")
         .is_active_level_high = 1,
     };
 
-    led_config_t config = {
+    led_indicator_config_t config = {
         .blink_lists = led_blink_lst,
         .blink_list_num = BLINK_NUM,
     };
-    /*
-        如果 blink_lists 用的是默认的 default_led_indicator_blink_lists，就用 BLINK_FACTORY_RESET 这类枚举。
-        如果 blink_lists 用的是自定义的 led_blink_lst，就用 BLINK_25_BRIGHTNESS 这类枚举。
-    */
 
     led_handle_0 = led_indicator_new_gpio_device(&config, &led_indicator_gpio_config);
     TEST_ASSERT_NOT_NULL(led_handle_0);
@@ -373,7 +369,7 @@ TEST_CASE("Preempt blink lists test", "[LED][indicator]")
         . is_active_level_high = 1,
     };
 
-    led_config_t config = {
+    led_indicator_config_t config = {
         .blink_lists = led_blink_lst,
         .blink_list_num = BLINK_NUM,
     };
@@ -414,7 +410,7 @@ TEST_CASE("breathe test", "[LED][indicator]")
         .channel = LEDC_CHANNEL_0,
     };
 
-    led_config_t config = {
+    led_indicator_config_t config = {
         .blink_lists = led_blink_lst,
         .blink_list_num = BLINK_NUM,
     };
@@ -460,7 +456,7 @@ TEST_CASE("test led preempt func with breath", "[LED][preempt][breath]")
         .channel = LEDC_CHANNEL_0,
     };
 
-    led_config_t config = {
+    led_indicator_config_t config = {
         .blink_lists = led_blink_lst,
         .blink_list_num = BLINK_NUM,
     };
@@ -640,7 +636,7 @@ TEST_CASE("TEST LED RGB", "[LED RGB][RGB]")
         .blue_channel = LEDC_CHANNEL_2,
     };
 
-    led_config_t config = {
+    led_indicator_config_t config = {
         .blink_lists = led_rgb_blink_lst,
         .blink_list_num = BLINK_RGB_NUM,
     };
@@ -762,7 +758,7 @@ TEST_CASE("TEST LED Strips by RGB", "[LED Strips][RGB]")
         .led_strip_rmt_cfg = rmt_config,
     };
 
-    led_config_t config = {
+    led_indicator_config_t config = {
         .blink_lists = led_rgb_blink_lst,
         .blink_list_num = BLINK_RGB_NUM,
     };
@@ -880,7 +876,7 @@ TEST_CASE("TEST LED RGB control Real time ", "[LED RGB][Real time]")
         .led_strip_rmt_cfg = rmt_config,
     };
 
-    led_config_t config = {
+    led_indicator_config_t config = {
         .blink_lists = led_rgb_blink_lst,
         .blink_list_num = BLINK_RGB_NUM,
     };

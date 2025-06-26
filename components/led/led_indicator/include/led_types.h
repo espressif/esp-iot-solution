@@ -106,7 +106,7 @@ typedef struct _led_indicator_com_config {
 typedef struct {
     blink_step_t const **blink_lists;           /*!< user defined LED blink lists */
     uint16_t blink_list_num;                    /*!< number of blink lists */
-} led_config_t;
+} led_indicator_config_t;
 
 typedef void *led_indicator_handle_t; /*!< LED indicator operation handle */
 

@@ -72,7 +72,7 @@ static esp_err_t led_indicator_gpio_set_on_off(void *handle, bool on_off)
     return gpio_set_level(p_gpio->io_num, on_off);
 }
 
-led_indicator_handle_t led_indicator_new_gpio_device(const led_config_t *led_config, const led_indicator_gpio_config_t *gpio_cfg)
+led_indicator_handle_t led_indicator_new_gpio_device(const led_indicator_config_t *led_config, const led_indicator_gpio_config_t *gpio_cfg)
 {
     esp_err_t ret = ESP_OK;
     bool if_blink_default_list = false;
