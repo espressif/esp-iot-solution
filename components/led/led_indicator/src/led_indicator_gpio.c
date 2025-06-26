@@ -72,19 +72,19 @@ static esp_err_t led_indicator_gpio_set_on_off(void *handle, bool on_off)
     return gpio_set_level(p_gpio->io_num, on_off);
 }
 
-led_indicator_handle_t led_indicator_new_gpio_device(const led_indicator_config_t *led_config, const led_indicator_gpio_config_t *gpio_cfg)
+esp_err_t led_indicator_new_gpio_device(const led_indicator_config_t *led_config, const led_indicator_gpio_config_t *gpio_cfg, led_indicator_handle_t *handle)
 {
     esp_err_t ret = ESP_OK;
     bool if_blink_default_list = false;
 
     ESP_LOGI(TAG, "LED Indicator Version: %d.%d.%d", LED_INDICATOR_VER_MAJOR, LED_INDICATOR_VER_MINOR, LED_INDICATOR_VER_PATCH);
-    LED_INDICATOR_CHECK(gpio_cfg != NULL, "invalid config pointer", return NULL);
+    LED_INDICATOR_CHECK(gpio_cfg != NULL, "invalid config pointer", return ESP_ERR_INVALID_ARG);
     _led_indicator_com_config_t com_cfg = {0};
     _led_indicator_t *p_led_indicator = NULL;
 
     void *hardware_data = NULL;
     ret = led_indicator_gpio_init((void *)gpio_cfg, &hardware_data);
-    LED_INDICATOR_CHECK(ESP_OK == ret, "LED rgb init failed", return NULL);
+    LED_INDICATOR_CHECK(ESP_OK == ret, "LED rgb init failed", return ESP_FAIL);
     com_cfg.hardware_data = hardware_data;
     com_cfg.hal_indicator_set_on_off = led_indicator_gpio_set_on_off;
     com_cfg.hal_indicator_deinit = led_indicator_gpio_deinit;
@@ -103,8 +103,9 @@ led_indicator_handle_t led_indicator_new_gpio_device(const led_indicator_config_
 
     p_led_indicator = _led_indicator_create_com(&com_cfg);
 
-    LED_INDICATOR_CHECK(NULL != p_led_indicator, "LED indicator create failed", return NULL);
+    LED_INDICATOR_CHECK(NULL != p_led_indicator, "LED indicator create failed", return ESP_FAIL);
     _led_indicator_add_node(p_led_indicator);
     ESP_LOGI(TAG, "Indicator create successfully. type:GPIO mode, hardware_data:%p, blink_lists:%s", p_led_indicator->hardware_data, if_blink_default_list ? "default" : "custom");
-    return (led_indicator_handle_t)p_led_indicator;
+    *handle = (led_indicator_handle_t)p_led_indicator;
+    return ESP_OK;
 }
