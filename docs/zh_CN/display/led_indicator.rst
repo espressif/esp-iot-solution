@@ -230,7 +230,7 @@ LED 指示灯是最简单的输出外设之一，可以通过不同形式的闪�
         .gpio_num = 1,              /**< num of GPIO */
         .is_active_level_high = 1,
     };
-    led_config_t config = {
+    led_indicator_config_t config = {
         .blink_lists = led_indicator_get_sample_lists(),
         .blink_list_num = led_indicator_get_sample_lists_num(),
     };
@@ -289,7 +289,7 @@ LED 指示灯是最简单的输出外设之一，可以通过不同形式的闪�
         .is_active_level_high = 1,
     };
 
-    led_config_t config = {
+    led_indicator_config_t config = {
         .blink_lists = led_blink_lst,,
         .blink_list_num = BLINK_MAX,,
     };

@@ -234,7 +234,7 @@ Create an indicator by specifying an IO and a set of configuration information.
         .gpio_num = 1,              /**< num of GPIO */
         .is_active_level_high = 1,
     };
-    led_config_t config = {
+    led_indicator_config_t config = {
         .blink_lists = led_indicator_get_sample_lists(),
         .blink_list_num = led_indicator_get_sample_lists_num(),
     };
@@ -292,7 +292,7 @@ Custom light blink
         .is_active_level_high = 1,
     };
 
-    led_config_t config = {
+    led_indicator_config_t config = {
         .blink_lists = led_blink_lst,,
         .blink_list_num = BLINK_MAX,,
     };
