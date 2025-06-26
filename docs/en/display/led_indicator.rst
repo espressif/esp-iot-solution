@@ -238,7 +238,7 @@ Create an indicator by specifying an IO and a set of configuration information.
         .blink_lists = led_indicator_get_sample_lists(),
         .blink_list_num = led_indicator_get_sample_lists_num(),
     };
-    led_indicator_handle_t led_handle  = iot_led_new_gpio_device(&config, &led_indicator_gpio_config);
+    esp_err_t ret = led_indicator_new_gpio_device(&config, &led_indicator_gpio_config, &led_handle);
 
 
 Start/stop blinking: control your indicator to start/stop a specified type of blink by calling corresponding functions. The functions are returned immediately after calling, and the blink process is controlled by the internal timer. The same indicator can perform multiple blink types in turn based on their priorities.

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -11,7 +11,7 @@
 #include "cmd_led_indicator.h"
 #include "esp_idf_version.h"
 #include "esp_log.h"
-#include "led_indicator.h"
+#include "led_indicator_strips.h"
 
 #define WS2812_GPIO_NUM       CONFIG_EXAMPLE_WS2812_GPIO_NUM
 #define WS2812_STRIPS_NUM     CONFIG_EXAMPLE_WS2812_STRIPS_NUM
@@ -216,7 +216,8 @@ void app_main(void)
         .blink_list_num = BLINK_MAX,
     };
 
-    led_handle = iot_led_new_strips_device(&config, &strips_config);
+    esp_err_t ret = led_indicator_new_strips_device(&config, &strips_config, &led_handle);
+    ESP_ERROR_CHECK(ret);
     assert(led_handle != NULL);
 
 #if CONFIG_EXAMPLE_ENABLE_CONSOLE_CONTROL

@@ -234,7 +234,7 @@ LED 指示灯是最简单的输出外设之一，可以通过不同形式的闪�
         .blink_lists = led_indicator_get_sample_lists(),
         .blink_list_num = led_indicator_get_sample_lists_num(),
     };
-    led_indicator_handle_t led_handle  = iot_led_new_gpio_device(&config, &led_indicator_gpio_config);
+    esp_err_t ret = led_indicator_new_gpio_device(&config, &led_indicator_gpio_config, &led_handle);
 
 
 开始/停止闪烁：控制指示灯开启/停止指定闪烁类型，函数调用后立刻返回，内部由定时器控制闪烁流程。同一个指示灯可以开启多种闪烁类型，将根据闪烁类型优先级依次执行。
