@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -18,7 +18,7 @@
 #include "nvs_flash.h"
 #include "nvs.h"
 #include "esp_netif.h"
-#include "led_indicator.h"
+#include "led_indicator_gpio.h"
 #include "led_indicator_blink_default.h"
 #include "usbh_modem_board.h"
 #include "usbh_modem_wifi.h"
@@ -114,25 +114,28 @@ static void _led_indicator_init()
     };
 
     led_indicator_config_t led_config = {
-        .led_indicator_gpio_config = &led_indicator_gpio_config,
-        .mode = LED_GPIO_MODE,
+        .blink_lists = NULL,
+        .blink_list_num = 0,
     };
 
     if (LED_RED_SYSTEM_GPIO) {
         led_indicator_gpio_config.gpio_num = LED_RED_SYSTEM_GPIO;
-        s_led_system_handle = led_indicator_create(&led_config);
+        esp_err_t ret = led_indicator_new_gpio_device(&led_config, &led_indicator_gpio_config, &s_led_system_handle);
+        ESP_ERROR_CHECK(ret);
         assert(s_led_system_handle != NULL);
     }
     if (LED_BLUE_WIFI_GPIO) {
         led_indicator_gpio_config.gpio_num = LED_BLUE_WIFI_GPIO;
-        s_led_wifi_handle = led_indicator_create(&led_config);
+        ret = led_indicator_new_gpio_device(&led_config, &led_indicator_gpio_config, &s_led_wifi_handle);
+        ESP_ERROR_CHECK(ret);
         assert(s_led_wifi_handle != NULL);
         led_indicator_stop(s_led_wifi_handle, BLINK_CONNECTED);
         led_indicator_start(s_led_wifi_handle, BLINK_CONNECTING);
     }
     if (LED_GREEN_4GMODEM_GPIO) {
         led_indicator_gpio_config.gpio_num = LED_GREEN_4GMODEM_GPIO;
-        s_led_4g_handle = led_indicator_create(&led_config);
+        ret = led_indicator_new_gpio_device(&led_config, &led_indicator_gpio_config, &s_led_4g_handle);
+        ESP_ERROR_CHECK(ret);
         assert(s_led_4g_handle != NULL);
         led_indicator_stop(s_led_4g_handle, BLINK_CONNECTED);
         led_indicator_start(s_led_4g_handle, BLINK_CONNECTING);
