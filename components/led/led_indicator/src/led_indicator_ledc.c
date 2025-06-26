@@ -118,7 +118,7 @@ static esp_err_t led_indicator_ledc_set_brightness(void *channel, uint32_t brigh
     return ESP_OK;
 }
 
-led_indicator_handle_t iot_led_new_ledc_device(const led_config_t *led_config, const led_indicator_ledc_config_t *ledc_cfg)
+led_indicator_handle_t led_indicator_new_ledc_device(const led_config_t *led_config, const led_indicator_ledc_config_t *ledc_cfg)
 {
     esp_err_t ret = ESP_OK;
     bool if_blink_default_list = false;

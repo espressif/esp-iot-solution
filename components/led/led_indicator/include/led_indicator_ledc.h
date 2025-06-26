@@ -33,7 +33,7 @@ typedef struct {
  *     - ESP_OK Success
  *     - ESP_FAIL Delete fail
  */
-led_indicator_handle_t iot_led_new_ledc_device(const led_config_t *led_config, const led_indicator_ledc_config_t *ledc_cfg);
+led_indicator_handle_t led_indicator_new_ledc_device(const led_config_t *led_config, const led_indicator_ledc_config_t *ledc_cfg);
 
 #ifdef __cplusplus
 }
