@@ -6,7 +6,7 @@
 
 #include "driver/gpio.h"
 #include "esp_log.h"
-#include "led_gpio.h"
+#include "led_indicator_gpio.h"
 #include "led_indicator_blink_default.h"
 
 #define TAG "led_gpio"

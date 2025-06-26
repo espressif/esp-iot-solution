@@ -14,10 +14,10 @@
 #include "unity.h"
 #include "led_gamma.h"
 #include "led_convert.h"
-#include "led_strips.h"
-#include "led_gpio.h"
-#include "led_ledc.h"
-#include "led_rgb.h"
+#include "led_indicator_strips.h"
+#include "led_indicator_gpio.h"
+#include "led_indicator_ledc.h"
+#include "led_indicator_rgb.h"
 
 // Some resources are lazy allocated in pulse_cnt driver, the threshold is left for that case
 #define TEST_MEMORY_LEAK_THRESHOLD (-200)

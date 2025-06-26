@@ -12,7 +12,7 @@
 
 #include <math.h>
 #include "esp_log.h"
-#include "led_strips.h"
+#include "led_indicator_strips.h"
 #include "led_strip.h"
 #include "led_strip_types.h"
 #include "led_convert.h"

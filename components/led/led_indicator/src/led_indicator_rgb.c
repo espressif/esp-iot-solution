@@ -7,7 +7,7 @@
 #include <math.h>
 #include "driver/ledc.h"
 #include "esp_log.h"
-#include "led_rgb.h"
+#include "led_indicator_rgb.h"
 #include "led_common.h"
 #include "led_convert.h"
 #include "led_indicator_blink_default.h"
