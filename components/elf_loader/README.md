@@ -13,6 +13,7 @@ This ELF loader supports following SoCs:
 - ESP32-S3, support running ELF in PSRAM
 - ESP32-P4, support running ELF in PSRAM
 - ESP32-C6
+- ESP32-C61, support running ELF in PSRAM
 
 ### Usage
 
