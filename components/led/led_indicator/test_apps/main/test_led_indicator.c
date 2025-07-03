@@ -31,6 +31,16 @@
 #define TAG "LED indicator Test"
 
 static led_indicator_handle_t led_handle_0 = NULL;
+
+void led_indicator_deinit()
+{
+    ESP_LOGI(TAG, "deinit.....");
+    esp_err_t ret = led_indicator_delete(led_handle_0);
+    TEST_ASSERT(ret == ESP_OK);
+    led_handle_0 = NULL;
+}
+
+#ifndef CONFIG_USE_MI_BLINK_DEFAULT
 static led_indicator_handle_t led_handle_1 = NULL;
 static led_indicator_handle_t led_handle_2 = NULL;
 
@@ -49,14 +59,6 @@ void led_indicator_init()
     esp_err_t ret = led_indicator_new_gpio_device(&config, &led_indicator_gpio_config, &led_handle_0);
     TEST_ASSERT(ret == ESP_OK);
     TEST_ASSERT_NOT_NULL(led_handle_0);
-}
-
-void led_indicator_deinit()
-{
-    ESP_LOGI(TAG, "deinit.....");
-    esp_err_t ret = led_indicator_delete(led_handle_0);
-    TEST_ASSERT(ret == ESP_OK);
-    led_handle_0 = NULL;
 }
 
 void led_indicator_gpio_mode_test_all()
@@ -262,6 +264,8 @@ TEST_CASE("blink three LED", "[LED][indicator]")
     led_indicator_gpio_mode_three_led();
     led_indicator_all_deinit();
 }
+
+#endif
 
 typedef enum {
     BLINK_25_BRIGHTNESS,
@@ -918,6 +922,146 @@ TEST_CASE("TEST LED RGB control Real time ", "[LED RGB][Real time]")
     led_indicator_deinit();
 }
 
+#endif
+
+#ifdef CONFIG_USE_MI_BLINK_DEFAULT
+TEST_CASE("TEST LED RGB MI DEFAULT", "[LED RGB][RGB]")
+{
+    led_indicator_rgb_config_t led_grb_cfg = {
+        .is_active_level_high = 1,
+        .timer_inited = false,
+        .timer_num = LEDC_TIMER_0,
+        .red_gpio_num = LED_RGB_RED_GPIO,
+        .green_gpio_num = LED_RGB_GREEN_GPIO,
+        .blue_gpio_num = LED_RGB_BLUE_GPIO,
+        .red_channel = LEDC_CHANNEL_0,
+        .green_channel = LEDC_CHANNEL_1,
+        .blue_channel = LEDC_CHANNEL_2,
+    };
+
+    led_indicator_config_t config = {
+        .blink_lists = NULL,
+        .blink_list_num = 0,
+    };
+
+    esp_err_t ret = led_indicator_new_rgb_device(&config, &led_grb_cfg, &led_handle_0);
+    TEST_ASSERT(ret == ESP_OK);
+    TEST_ASSERT_NOT_NULL(led_handle_0);
+
+    ESP_LOGI(TAG, "MI wait connect.....");
+    ret = led_indicator_start(led_handle_0, BLINK_MI_WAIT_CONNECT);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
+    ret = led_indicator_stop(led_handle_0, BLINK_MI_WAIT_CONNECT);
+    TEST_ASSERT(ret == ESP_OK);
+
+    ESP_LOGI(TAG, "MI connecting.....");
+    ret = led_indicator_start(led_handle_0, BLINK_MI_CONNECTING);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
+    ret = led_indicator_stop(led_handle_0, BLINK_MI_CONNECTING);
+    TEST_ASSERT(ret == ESP_OK);
+
+    ESP_LOGI(TAG, "MI online.....");
+    ret = led_indicator_start(led_handle_0, BLINK_MI_ONLINE);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
+    ret = led_indicator_stop(led_handle_0, BLINK_MI_ONLINE);
+    TEST_ASSERT(ret == ESP_OK);
+
+    ESP_LOGI(TAG, "MI fault.....");
+    ret = led_indicator_start(led_handle_0, BLINK_MI_FAULT);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
+    ret = led_indicator_stop(led_handle_0, BLINK_MI_FAULT);
+    TEST_ASSERT(ret == ESP_OK);
+
+    ESP_LOGI(TAG, "MI reconnecting.....");
+    ret = led_indicator_start(led_handle_0, BLINK_MI_RECONNECTING);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
+    ret = led_indicator_stop(led_handle_0, BLINK_MI_RECONNECTING);
+    TEST_ASSERT(ret == ESP_OK);
+
+    ESP_LOGI(TAG, "MI ota_updating.....");
+    ret = led_indicator_start(led_handle_0, BLINK_MI_OTA_UPDATING);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
+    ret = led_indicator_stop(led_handle_0, BLINK_MI_OTA_UPDATING);
+    TEST_ASSERT(ret == ESP_OK);
+
+    ESP_LOGI(TAG, "MI wifi provision off.....");
+    ret = led_indicator_start(led_handle_0, BLINK_MI_WIFI_PROVISION_OFF);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
+    ret = led_indicator_stop(led_handle_0, BLINK_MI_WIFI_PROVISION_OFF);
+    TEST_ASSERT(ret == ESP_OK);
+
+    ESP_LOGI(TAG, "MI working.....");
+    ret = led_indicator_start(led_handle_0, BLINK_MI_WORKING);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
+    ret = led_indicator_stop(led_handle_0, BLINK_MI_WORKING);
+    TEST_ASSERT(ret == ESP_OK);
+
+    ESP_LOGI(TAG, "MI work abnormal.....");
+    ret = led_indicator_start(led_handle_0, BLINK_MI_WORK_ABNORMAL);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
+    ret = led_indicator_stop(led_handle_0, BLINK_MI_WORK_ABNORMAL);
+    TEST_ASSERT(ret == ESP_OK);
+
+    ESP_LOGI(TAG, "MI env good.....");
+    ret = led_indicator_start(led_handle_0, BLINK_MI_ENV_GOOD);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
+    ret = led_indicator_stop(led_handle_0, BLINK_MI_ENV_GOOD);
+    TEST_ASSERT(ret == ESP_OK);
+
+    ESP_LOGI(TAG, "MI env moderate.....");
+    ret = led_indicator_start(led_handle_0, BLINK_MI_ENV_MODERATE);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
+    ret = led_indicator_stop(led_handle_0, BLINK_MI_ENV_MODERATE);
+    TEST_ASSERT(ret == ESP_OK);
+
+    ESP_LOGI(TAG, "MI env severe.....");
+    ret = led_indicator_start(led_handle_0, BLINK_MI_ENV_SEVERE);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
+    ret = led_indicator_stop(led_handle_0, BLINK_MI_ENV_SEVERE);
+    TEST_ASSERT(ret == ESP_OK);
+
+    ESP_LOGI(TAG, "MI setting.....");
+    ret = led_indicator_start(led_handle_0, BLINK_MI_SETTING);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
+    ret = led_indicator_stop(led_handle_0, BLINK_MI_SETTING);
+    TEST_ASSERT(ret == ESP_OK);
+
+    ESP_LOGI(TAG, "MI low battery.....");
+    ret = led_indicator_start(led_handle_0, BLINK_MI_LOW_BATTERY);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
+    ret = led_indicator_stop(led_handle_0, BLINK_MI_LOW_BATTERY);
+    TEST_ASSERT(ret == ESP_OK);
+
+    ESP_LOGI(TAG, "MI charging.....");
+    ret = led_indicator_start(led_handle_0, BLINK_MI_CHARGING);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(10000 / portTICK_PERIOD_MS);
+    ret = led_indicator_stop(led_handle_0, BLINK_MI_CHARGING);
+    TEST_ASSERT(ret == ESP_OK);
+
+    ESP_LOGI(TAG, "MI charged.....");
+    ret = led_indicator_start(led_handle_0, BLINK_MI_CHARGED);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
+    ret = led_indicator_stop(led_handle_0, BLINK_MI_CHARGED);
+    TEST_ASSERT(ret == ESP_OK);
+
+    led_indicator_deinit();
+}
 #endif
 
 static size_t before_free_8bit;
