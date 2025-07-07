@@ -270,3 +270,14 @@ TEST_CASE("Touch FT5x06 test", "[touch_panel][iot]")
     lcd.deinit();
     scr_interface_delete(interface_drv);
 }
+
+void app_main(void)
+{
+    printf(" _____                _       ____                  _   _____         _   \n");
+    printf("|_   _|__  _   _  ___| |__   |  _ \\ __ _ _ __   ___| | |_   _|__  ___| |_ \n");
+    printf("  | |/ _ \\| | | |/ __| '_ \\  | |_) / _` | '_ \\ / _ \\ |   | |/ _ \\/ __| __|\n");
+    printf("  | | (_) | |_| | (__| | | | |  __/ (_| | | | |  __/ |   | |  __/\\__ \\ |_ \n");
+    printf("  |_|\\___/ \\__,_|\\___|_| |_| |_|   \\__,_|_| |_|\\___|_|   |_|\\___||___/\\__|\n");
+    printf("                                                                           \n");
+    unity_run_menu();
+}
