@@ -7,7 +7,6 @@
 #ifndef _IOT_FT5X06_H_
 #define _IOT_FT5X06_H_
 
-#include "driver/i2c.h"
 #include "i2c_bus.h"
 #include "touch_panel.h"
 
