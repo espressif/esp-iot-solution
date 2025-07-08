@@ -4,16 +4,17 @@
 
   * [English Version](https://github.com/espressif/esp-iot-solution/blob/master/components/bootloader_support_plus/README.md)
 
-  ## 概述
+## 概述
 bootloader support plus 是乐鑫基于 [ESP-IDF](https://github.com/espressif/esp-idf) 的 [custom_bootloader](https://github.com/espressif/esp-idf/tree/master/examples/custom_bootloader)  推出的增强版 bootloader，支持在 bootloader 阶段对`压缩`的固件进行 `解压缩`，来升级原有固件。在该方案中，您可以直接使用 ESP-IDF 中原生的 OTA 接口（比如 [esp_ota](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/ota.html#api-reference)、[esp_https_ota](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/esp_https_ota.html#api-reference)）。下表总结了适配 `bootloader support plus` 的乐鑫芯片以及其对应的 ESP-IDF 版本：
 
-| Chip     | ESP-IDF Release/v5.0                                         | ESP-IDF Release/v5.1                                  |
-| -------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| ESP32-C3 | Supported | Supported |
-| ESP32-C2 | Supported | Supported |
-| ESP32 | Supported | Supported |
-| ESP32C6 | N/A | Supported |
-| ESP32H2 | N/A | Supported |
+| Chip     | ESP-IDF Release/v5.0                                         | ESP-IDF Release/v5.1                                  | ESP-IDF Release/v5.4+                 |
+| -------- | ------------------------------------------------------------ | ------------------------------------------------------------ |------------------------------ |
+| ESP32 | Supported | Supported | Supported |
+| ESP32-C2 | Supported | Supported | Supported |
+| ESP32-C3 | Supported | Supported | Supported |
+| ESP32-C5 | N/A | N/A | Supported |
+| ESP32-C6 | N/A | Supported | Supported |
+| ESP32-H2 | N/A | Supported | Supported |
 
 ## 压缩率
 
@@ -82,7 +83,7 @@ bootloader support plus 是乐鑫基于 [ESP-IDF](https://github.com/espressif/e
    #endif
    ```
 
-5. 添加 `bootloader_support_plus` 组件。你可以通过 `idf.py add-dependancy`, 命令添加该组件，如：
+5. 添加 `bootloader_support_plus` 组件。你可以通过 `idf.py add-dependency`, 命令添加该组件，如：
 
    ```shell
    idf.py add-dependency "espressif/bootloader_support_plus=*"
