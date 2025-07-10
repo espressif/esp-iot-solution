@@ -109,6 +109,10 @@ components/display/lcd/esp_lcd_axs15231b/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1
 
+components/display/lcd/esp_lcd_co5300/test_apps:
+  enable:
+    - if: IDF_TARGET in ["esp32p4"]
+
 components/display/lcd/esp_lcd_ek79007/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32p4"]
@@ -121,7 +125,15 @@ components/display/lcd/esp_lcd_jd9365/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32p4"]
 
+components/display/lcd/esp_lcd_gc9107/test_apps:
+  enable:
+    - if: INCLUDE_DEFAULT == 1
+
 components/display/lcd/esp_lcd_gc9b71/test_apps:
+  enable:
+    - if: INCLUDE_DEFAULT == 1
+
+components/display/lcd/esp_lcd_gc9d01/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1
 
@@ -136,6 +148,10 @@ components/display/lcd/esp_lcd_panel_io_additions/test_apps:
 components/display/lcd/esp_lcd_nv3022b/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1
+
+components/display/lcd/esp_lcd_nv3052/test_apps:
+  enable:
+    - if: IDF_TARGET in ["esp32s3", "esp32p4"]
 
 components/display/lcd/esp_lcd_sh8601/test_apps:
   enable:

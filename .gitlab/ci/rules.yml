@@ -76,6 +76,9 @@
 .patterns-components_display_lcd_esp_lcd_axs15231b: &patterns-components_display_lcd_esp_lcd_axs15231b
   - "components/display/lcd/esp_lcd_axs15231b/**/*"
 
+.patterns-components_display_lcd_esp_lcd_co5300: &patterns-components_display_lcd_esp_lcd_co5300
+  - "components/display/lcd/esp_lcd_co5300/**/*"
+
 .patterns-components_display_lcd_esp_lcd_ek79007: &patterns-components_display_lcd_esp_lcd_ek79007
   - "components/display/lcd/esp_lcd_ek79007/**/*"
 
@@ -85,8 +88,14 @@
 .patterns-components_display_lcd_esp_lcd_jd9365: &patterns-components_display_lcd_esp_lcd_jd9365
   - "components/display/lcd/esp_lcd_jd9365/**/*"
 
+.patterns-components_display_lcd_esp_lcd_gc9107: &patterns-components_display_lcd_esp_lcd_gc9107
+  - "components/display/lcd/esp_lcd_gc9107/**/*"
+
 .patterns-components_display_lcd_esp_lcd_gc9b71: &patterns-components_display_lcd_esp_lcd_gc9b71
   - "components/display/lcd/esp_lcd_gc9b71/**/*"
+
+.patterns-components_display_lcd_esp_lcd_gc9d01: &patterns-components_display_lcd_esp_lcd_gc9d01
+  - "components/display/lcd/esp_lcd_gc9d01/**/*"
 
 .patterns-components_display_lcd_esp_lcd_hx8399: &patterns-components_display_lcd_esp_lcd_hx8399
   - "components/display/lcd/esp_lcd_hx8399/**/*"
@@ -96,6 +105,9 @@
 
 .patterns-components_display_lcd_esp_lcd_nv3022b: &patterns-components_display_lcd_esp_lcd_nv3022b
   - "components/display/lcd/esp_lcd_nv3022b/**/*"
+
+.patterns-components_display_lcd_esp_lcd_nv3052: &patterns-components_display_lcd_esp_lcd_nv3052
+  - "components/display/lcd/esp_lcd_nv3052/**/*"
 
 .patterns-components_display_lcd_esp_lcd_sh8601: &patterns-components_display_lcd_esp_lcd_sh8601
   - "components/display/lcd/esp_lcd_sh8601/**/*"
@@ -1910,6 +1922,17 @@
     - <<: *if-dev-push
       changes: *patterns-components_display_lcd_esp_lcd_axs15231b
 
+.rules:build:components_display_lcd_esp_lcd_co5300_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_display_lcd_esp_lcd_co5300
+
 .rules:build:components_display_lcd_esp_lcd_ek79007_test_apps:
   rules:
     - <<: *if-protected
@@ -1943,6 +1966,17 @@
     - <<: *if-dev-push
       changes: *patterns-components_display_lcd_esp_lcd_jd9365
 
+.rules:build:components_display_lcd_esp_lcd_gc9107_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_display_lcd_esp_lcd_gc9107
+
 .rules:build:components_display_lcd_esp_lcd_gc9b71_test_apps:
   rules:
     - <<: *if-protected
@@ -1953,6 +1987,17 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_display_lcd_esp_lcd_gc9b71
+
+.rules:build:components_display_lcd_esp_lcd_gc9d01_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_display_lcd_esp_lcd_gc9d01
 
 .rules:build:components_display_lcd_esp_lcd_hx8399_test_apps:
   rules:
@@ -1986,6 +2031,17 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_display_lcd_esp_lcd_nv3022b
+
+.rules:build:components_display_lcd_esp_lcd_nv3052_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_display_lcd_esp_lcd_nv3052
 
 .rules:build:components_display_lcd_esp_lcd_sh8601_test_apps:
   rules:

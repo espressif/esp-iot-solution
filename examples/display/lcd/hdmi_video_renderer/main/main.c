@@ -3,6 +3,8 @@
  *
  * SPDX-License-Identifier: CC0-1.0
  */
+
+#include <inttypes.h>
 #include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -190,7 +192,7 @@ static void play_media_file(const char *filename)
 
     // Continuous playback loop
     while (1) {
-        ESP_LOGI(TAG, "Starting playback loop #%u", ++loop_count);
+        ESP_LOGI(TAG, "Starting playback loop #%" PRIu32, ++loop_count);
 
         // Start playback
         ret = app_stream_adapter_start(stream_adapter);
@@ -212,7 +214,7 @@ static void play_media_file(const char *filename)
                     stable_count++;
                     // If frame count hasn't changed for 3 consecutive checks, assume end
                     if (stable_count >= 3) {
-                        ESP_LOGI(TAG, "Playback loop #%u finished (%u frames), restarting...",
+                        ESP_LOGI(TAG, "Playback loop #%" PRIu32 " finished (%" PRIu32 " frames), restarting...",
                                  loop_count, stats.frames_processed);
                         break;
                     }

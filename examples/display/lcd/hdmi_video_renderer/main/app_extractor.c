@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: CC0-1.0
  */
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
@@ -210,12 +211,12 @@ static void audio_task(void *arg)
 
             // Log every 100 frames to reduce overhead
             if (processed_frames % 100 == 0) {
-                ESP_LOGD(TAG, "Audio processed %u frames", processed_frames);
+                ESP_LOGD(TAG, "Audio processed %" PRIu32 " frames", processed_frames);
             }
         }
     }
 
-    ESP_LOGI(TAG, "Audio task stopped, processed %u frames", processed_frames);
+    ESP_LOGI(TAG, "Audio task stopped, processed %" PRIu32 " frames", processed_frames);
     extractor->audio_task_handle = NULL;
     vTaskDelete(NULL);
 }
@@ -393,7 +394,7 @@ static esp_err_t init_audio_decoder(app_extractor_t *extractor)
     // Set decoder type based on audio format
     switch (extractor->audio_format) {
     case EXTRACTOR_AUDIO_FORMAT_AAC: {
-        ESP_LOGI(TAG, "Using AAC decoder (sample_rate=%d, channel=%d, bits=%d)",
+        ESP_LOGI(TAG, "Using AAC decoder (sample_rate=%" PRIu32 ", channel=%u, bits=%u)",
                  extractor->audio_sample_rate, extractor->audio_channels, extractor->audio_bits);
 
         // AAC decoder specific configuration
@@ -430,7 +431,7 @@ static esp_err_t init_audio_decoder(app_extractor_t *extractor)
         }
 
         extractor->audio_decoder_open = true;
-        ESP_LOGI(TAG, "AAC decoder initialized with parameters: sample_rate=%d, channel=%d, bits=%d",
+        ESP_LOGI(TAG, "AAC decoder initialized with parameters: sample_rate=%" PRIu32 ", channel=%u, bits=%u",
                  extractor->audio_sample_rate, extractor->audio_channels, extractor->audio_bits);
         break;
     }
@@ -779,7 +780,7 @@ static esp_err_t get_stream_info(app_extractor_t *extractor)
             extractor->audio_bits = audio_info->bits_per_sample;
             extractor->audio_duration = stream_info.duration;
 
-            ESP_LOGI(TAG, "Audio: format=%d, %"PRIu32"Hz, %dch, %dbits",
+            ESP_LOGI(TAG, "Audio: format=%d, %" PRIu32 "Hz, %dch, %dbits",
                      (int)extractor->audio_format, audio_info->sample_rate,
                      audio_info->channel, audio_info->bits_per_sample);
         }
@@ -804,9 +805,9 @@ static esp_err_t get_stream_info(app_extractor_t *extractor)
         extractor->video_fps = video_info->fps;
         extractor->video_duration = stream_info.duration;
 
-        ESP_LOGI(TAG, "Video: format=%d, %"PRIu32"x%"PRIu32", %"PRIu32"fps",
+        ESP_LOGI(TAG, "Video: format=%d, %" PRIu32 "x%" PRIu32 ", %" PRIu32 "fps",
                  (int)video_info->format, video_info->width, video_info->height,
-                 video_info->fps);
+                 (uint32_t)video_info->fps);
     } else {
         ESP_LOGE(TAG, "No video streams found");
         return ESP_ERR_NOT_FOUND;
@@ -1010,7 +1011,7 @@ esp_err_t app_extractor_start(app_extractor_handle_t handle,
         }
     }
 
-    ESP_LOGI(TAG, "Extraction started: fps=%dms, audio=%s",
+    ESP_LOGI(TAG, "Extraction started: fps=%" PRIu32 "ms, audio=%s",
              extractor->frame_interval_ms, extractor->extract_audio ? "yes" : "no");
     return ESP_OK;
 }
