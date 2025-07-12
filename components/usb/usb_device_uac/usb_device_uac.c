@@ -312,7 +312,7 @@ bool tud_audio_set_itf_close_EP_cb(uint8_t rhport, tusb_control_request_t const 
     uint8_t const itf = tu_u16_low(tu_le16toh(p_request->wIndex));
     uint8_t const alt = tu_u16_low(tu_le16toh(p_request->wValue));
 
-#if CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX
+#if CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX
     if (s_uac_device->spk_itf_num == itf && alt == 0) {
         TU_LOG2("Speaker interface closed");
         s_uac_device->spk_data_size = 0;
@@ -320,7 +320,7 @@ bool tud_audio_set_itf_close_EP_cb(uint8_t rhport, tusb_control_request_t const 
     }
 #endif
 
-#if CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX
+#if CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX
     if (s_uac_device->mic_itf_num == itf && alt == 0) {
         TU_LOG2("Microphone interface closed");
         s_uac_device->mic_data_size = 0;
@@ -339,7 +339,7 @@ bool tud_audio_set_itf_cb(uint8_t rhport, tusb_control_request_t const *p_reques
 
     TU_LOG2("Set interface %d alt %d\r\n", itf, alt);
 
-#if CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX
+#if CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX
     if (s_uac_device->spk_itf_num == itf && alt != 0) {
         s_uac_device->spk_data_size = 0;
         s_uac_device->spk_resolution = spk_resolutions_per_format[alt - 1];
@@ -351,7 +351,7 @@ bool tud_audio_set_itf_cb(uint8_t rhport, tusb_control_request_t const *p_reques
     }
 #endif
 
-#if CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX
+#if CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX
     if (s_uac_device->mic_itf_num == itf && alt != 0) {
         s_uac_device->mic_data_size = 0;
         s_uac_device->mic_resolution = mic_resolutions_per_format[alt - 1];
@@ -431,7 +431,7 @@ bool tud_audio_tx_done_pre_load_cb(uint8_t rhport, uint8_t itf, uint8_t ep_in, u
     return true;
 }
 
-#if CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX
+#if CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX
 static void usb_spk_task(void *pvParam)
 {
     while (1) {
@@ -453,7 +453,7 @@ static void usb_spk_task(void *pvParam)
 }
 #endif
 
-#if CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX
+#if CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX
 static void usb_mic_task(void *pvParam)
 {
     while (1) {
@@ -522,13 +522,13 @@ esp_err_t uac_device_init(uac_device_config_t *config)
         ESP_RETURN_ON_FALSE(ret_val == pdPASS, ESP_FAIL, TAG, "Failed to create TinyUSB task");
     }
 
-#if CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX
+#if CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX
     ret_val = xTaskCreatePinnedToCore(usb_mic_task, "usb_mic_task", 4096, NULL, CONFIG_UAC_MIC_TASK_PRIORITY,
                                       &s_uac_device->mic_task_handle, CONFIG_UAC_MIC_TASK_CORE == -1 ? tskNO_AFFINITY : CONFIG_UAC_MIC_TASK_CORE);
     ESP_RETURN_ON_FALSE(ret_val == pdPASS, ESP_FAIL, TAG, "Failed to create usb_mic task");
 #endif
 
-#if CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX
+#if CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX
     ret_val = xTaskCreatePinnedToCore(usb_spk_task, "usb_spk_task", 4096, NULL, CONFIG_UAC_SPK_TASK_PRIORITY,
                                       &s_uac_device->spk_task_handle, CONFIG_UAC_SPK_TASK_CORE == -1 ? tskNO_AFFINITY : CONFIG_UAC_SPK_TASK_CORE);
     ESP_RETURN_ON_FALSE(ret_val == pdPASS, ESP_FAIL, TAG, "Failed to create usb_spk task");
