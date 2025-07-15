@@ -11,6 +11,8 @@
 3. 支持通过 UAC Control 接口控制麦克风音量、静音等特性
 4. 支持对数据流暂停和恢复
 
+> Note: 对于 ESP-IDF V5.3.3 及以上的版本，若使能 UVC，请在 `Component config → USB-OTG → Hardware FIFO size biasing` 中使能 `Bias IN`
+
 ### USB Stream 用户指南
 
 请参考：https://docs.espressif.com/projects/esp-iot-solution/zh_CN/latest/usb/usb_host/usb_stream.html

@@ -1670,10 +1670,7 @@ build_components_usb_usb_stream_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_usb_usb_stream_test
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:release-v5.4
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: components/usb/usb_stream/test_apps
 

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -14,6 +14,7 @@
 #include "esp_private/usb_phy.h"
 #include "usb_host_helpers.h"
 #include "esp_intr_alloc.h"
+#include "esp_bit_defs.h"
 
 #define USB_PORT_NUM 1  //Default port number
 static const char *TAG = "USB_STREAM";
@@ -195,16 +196,31 @@ hcd_port_handle_t _usb_port_init(hcd_port_callback_t callback, void *callback_ar
     UVC_CHECK(ESP_OK == ret, "USB PHY init failed", NULL);
     hcd_config_t hcd_config = {
         .intr_flags = ESP_INTR_FLAG_LEVEL2,
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 4, 1)
+        .peripheral_map = BIT0,
+        .fifo_config = NULL,
+#endif
     };
     ret = hcd_install(&hcd_config);
     UVC_CHECK_GOTO(ESP_OK == ret, "HCD Install failed", hcd_init_err);
     hcd_port_config_t port_cfg = {
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 3, 3)
         .fifo_bias = HCD_PORT_FIFO_BIAS_BALANCED,
+#endif
         .callback = callback,
         .callback_arg = callback_arg,
         .context = phy_handle,
     };
+
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 4, 1)
+    int root_port_index = 0;
+    if (hcd_config.peripheral_map & BIT1) {
+        root_port_index = 1;
+    }
+    ret = hcd_port_init(root_port_index, &port_cfg, &port_hdl);
+#else
     ret = hcd_port_init(USB_PORT_NUM, &port_cfg, &port_hdl);
+#endif
     UVC_CHECK_GOTO(ESP_OK == ret, "HCD Port init failed", port_init_err);
     ret = hcd_port_command(port_hdl, HCD_PORT_CMD_POWER_ON);
     UVC_CHECK_GOTO(ESP_OK == ret, "HCD Port Power on failed", port_power_err);

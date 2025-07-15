@@ -11,6 +11,8 @@ Features:
 3. Support volume, mute and other features control through the UAC Control interface
 4. Support stream separately suspend and resume
 
+> Note: For ESP-IDF V5.3.3 and above, if you enable UVC, please also enable `Bias IN` in `Component config → USB-OTG → Hardware FIFO size biasing`.
+
 ### USB Stream User Guide
 
 Please refer: https://docs.espressif.com/projects/esp-iot-solution/en/latest/usb/usb_host/usb_stream.html
