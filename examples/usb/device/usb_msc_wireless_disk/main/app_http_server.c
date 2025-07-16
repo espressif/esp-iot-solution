@@ -5,6 +5,7 @@
 
 #include <sys/param.h>
 #include <dirent.h>
+#include <ctype.h>
 #include "esp_log.h"
 #include "esp_vfs.h"
 #include "esp_http_server.h"
@@ -12,7 +13,7 @@
 #include "soc/gpio_sig_map.h"
 
 /* Max length a file path can have on storage */
-#define FILE_PATH_MAX (ESP_VFS_PATH_MAX + CONFIG_SPIFFS_OBJ_NAME_LEN)
+#define FILE_PATH_MAX (ESP_VFS_PATH_MAX + CONFIG_FATFS_MAX_LFN)
 
 /* Max size of an individual file. Make sure this
  * value is same as that set in upload_script.html */
@@ -31,6 +32,82 @@ struct file_server_data {
 };
 
 static const char *TAG = "file_server";
+
+/* URL decode function to convert percent-encoded characters to their original form */
+static size_t url_decode(char *dst, const char *src, size_t dst_size)
+{
+    size_t dst_len = 0;
+    const char *src_ptr = src;
+    char *dst_ptr = dst;
+
+    while (*src_ptr && dst_len < dst_size - 1) {
+        if (*src_ptr == '%' && src_ptr[1] && src_ptr[2]) {
+            /* Check if next two characters are valid hex digits */
+            if (isxdigit((unsigned char)src_ptr[1]) && isxdigit((unsigned char)src_ptr[2])) {
+                /* Convert hex digits to character */
+                uint8_t hex1 = isdigit((unsigned char)src_ptr[1]) ? src_ptr[1] - '0' :
+                               tolower((unsigned char)src_ptr[1]) - 'a' + 10;
+                uint8_t hex2 = isdigit((unsigned char)src_ptr[2]) ? src_ptr[2] - '0' :
+                               tolower((unsigned char)src_ptr[2]) - 'a' + 10;
+
+                *dst_ptr++ = (char)((hex1 << 4) | hex2);
+                src_ptr += 3;
+                dst_len++;
+            } else {
+                /* Invalid hex sequence, copy as-is */
+                *dst_ptr++ = *src_ptr++;
+                dst_len++;
+            }
+        } else if (*src_ptr == '+') {
+            /* Convert '+' to space (mainly for query parameters, but harmless in paths) */
+            *dst_ptr++ = ' ';
+            src_ptr++;
+            dst_len++;
+        } else {
+            /* Copy character as-is */
+            *dst_ptr++ = *src_ptr++;
+            dst_len++;
+        }
+    }
+
+    *dst_ptr = '\0';
+    return dst_len;
+}
+
+/* URL encode function to convert characters to percent-encoded form for safe use in URLs */
+static size_t url_encode(char *dst, const char *src, size_t dst_size)
+{
+    size_t dst_len = 0;
+    const char *src_ptr = src;
+    char *dst_ptr = dst;
+
+    while (*src_ptr && dst_len < dst_size - 1) {
+        char c = *src_ptr;
+
+        /* Check if character needs encoding */
+        if (isalnum((unsigned char)c) || c == '-' || c == '_' || c == '.' || c == '~' || c == '/') {
+            /* Safe character, copy as-is */
+            *dst_ptr++ = c;
+            dst_len++;
+        } else {
+            /* Unsafe character, encode as %XX */
+            if (dst_len + 3 >= dst_size) {
+                /* Not enough space for encoding */
+                break;
+            }
+            uint8_t high = (c >> 4) & 0x0F;
+            uint8_t low = c & 0x0F;
+            *dst_ptr++ = '%';
+            *dst_ptr++ = (high < 10) ? ('0' + high) : ('A' + high - 10);
+            *dst_ptr++ = (low < 10) ? ('0' + low) : ('A' + low - 10);
+            dst_len += 3;
+        }
+        src_ptr++;
+    }
+
+    *dst_ptr = '\0';
+    return dst_len;
+}
 
 /* Handler to redirect incoming GET request for /index.html to /
  * This can be overridden by uploading file with same name */
@@ -143,12 +220,16 @@ static esp_err_t http_resp_dir_html(httpd_req_t *req, const char *dirpath)
         sprintf(entrysize, "%ld", entry_stat.st_size);
         ESP_LOGI(TAG, "Found %s : %s (%s bytes)", entrytype, entry->d_name, entrysize);
 
+        /* URL encode the filename for safe use in HTML href attributes */
+        char encoded_filename[CONFIG_FATFS_MAX_LFN * 3 + 1];
+        url_encode(encoded_filename, entry->d_name, sizeof(encoded_filename));
+
         /* Send chunk of HTML file containing table entries with file name and size */
         httpd_resp_sendstr_chunk(req, "<tr><td class=\"");
         httpd_resp_sendstr_chunk(req, entrytype);
         httpd_resp_sendstr_chunk(req, "\"><a href=\"");
         httpd_resp_sendstr_chunk(req, req->uri);
-        httpd_resp_sendstr_chunk(req, entry->d_name);
+        httpd_resp_sendstr_chunk(req, encoded_filename);
         if (entry->d_type == DT_DIR) {
             httpd_resp_sendstr_chunk(req, "/");
         }
@@ -159,7 +240,7 @@ static esp_err_t http_resp_dir_html(httpd_req_t *req, const char *dirpath)
         httpd_resp_sendstr_chunk(req, "</td><td>");
         httpd_resp_sendstr_chunk(req, "<button class=\"deleteButton\" filepath=\"");
         httpd_resp_sendstr_chunk(req, req->uri);
-        httpd_resp_sendstr_chunk(req, entry->d_name);
+        httpd_resp_sendstr_chunk(req, encoded_filename);
         httpd_resp_sendstr_chunk(req, "\">Delete</button>");
         httpd_resp_sendstr_chunk(req, "</td></tr>\n");
     }
@@ -198,7 +279,7 @@ static esp_err_t set_content_type_from_file(httpd_req_t *req, const char *filena
 }
 
 /* Copies the full path into destination buffer and returns
- * pointer to path (skipping the preceding base path) */
+ * pointer to path (skipping the preceding base path) with URL decoding */
 static const char *get_path_from_uri(char *dest, const char *base_path, const char *uri, size_t destsize)
 {
     const size_t base_pathlen = strlen(base_path);
@@ -213,14 +294,23 @@ static const char *get_path_from_uri(char *dest, const char *base_path, const ch
         pathlen = MIN(pathlen, hash - uri);
     }
 
-    if (base_pathlen + pathlen + 1 > destsize) {
+    /* Create temporary buffer for URL decoding */
+    char *temp_uri = alloca(pathlen + 1);
+    strlcpy(temp_uri, uri, pathlen + 1);
+
+    /* URL decode the path portion */
+    char *decoded_path = alloca(pathlen + 1);
+    size_t decoded_len = url_decode(decoded_path, temp_uri, pathlen + 1);
+
+    /* Check if full path (base + decoded path) fits in destination buffer */
+    if (base_pathlen + decoded_len + 1 > destsize) {
         /* Full path string won't fit into destination buffer */
         return NULL;
     }
 
-    /* Construct full path (base + path) */
+    /* Construct full path (base + decoded path) */
     strcpy(dest, base_path);
-    strlcpy(dest + base_pathlen, uri, pathlen + 1);
+    strcpy(dest + base_pathlen, decoded_path);
 
     /* Return pointer to path, skipping the base */
     return dest + base_pathlen;
