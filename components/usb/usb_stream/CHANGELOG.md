@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.5.1 - 2025-7-15
+
+### Bug Fixes:
+
+* Fix compilation errors on esp-idf release v5.3 and above.
+
 ## v1.5.0 - 2024-12-10
 
 ### Improvements:
