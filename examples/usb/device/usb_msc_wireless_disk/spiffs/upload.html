@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width" />
@@ -8,17 +9,9 @@
 
 <div class="upload-header link-white">
   <div class="header-left" id="return-button">
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width=".75em"
-      height="1.5em"
-      viewBox="0 0 12 24"
-    >
-      <path
-        fill="currentColor"
-        fill-rule="evenodd"
-        d="m3.343 12l7.071 7.071L9 20.485l-7.778-7.778a1 1 0 0 1 0-1.414L9 3.515l1.414 1.414z"
-      />
+    <svg xmlns="http://www.w3.org/2000/svg" width=".75em" height="1.5em" viewBox="0 0 12 24">
+      <path fill="currentColor" fill-rule="evenodd"
+        d="m3.343 12l7.071 7.071L9 20.485l-7.778-7.778a1 1 0 0 1 0-1.414L9 3.515l1.414 1.414z" />
     </svg>
   </div>
   <div class="header-center">ESP USB File Server</div>
@@ -122,8 +115,7 @@
     if (!file) return;
     if (file.size > MAX_FILE_SIZE) {
       alert(
-        `File is too large! Maximum file size is ${
-          MAX_FILE_SIZE / 1024 / 1024
+        `File is too large! Maximum file size is ${MAX_FILE_SIZE / 1024 / 1024
         } MB`
       );
       return;
@@ -139,31 +131,55 @@
     validateInputs();
   }
 
+  // Calculate UTF-8 byte length of a string
+  function getByteLength(str) {
+    return new TextEncoder().encode(str).length;
+  }
+
+  // Check for invalid filesystem characters
+  function hasInvalidPathChars(path) {
+    // Invalid characters for paths: control chars, <, >, :, ", |, ?, *, \
+    return /[\x00-\x1f<>:"|?*\\]/.test(path);
+  }
+
+  function hasInvalidFileNameChars(fileName) {
+    // Invalid characters for filenames: control chars, <, >, :, ", |, ?, *, \, /
+    return /[\x00-\x1f<>:"|?*\\/]/.test(fileName);
+  }
+
   function validateInputs() {
     const uploadPath = uploadPathInput.value;
     const fileName = fileNameInput.value;
 
+    // Validate upload path
     if (
       !uploadPath.startsWith("/") ||
       !uploadPath.endsWith("/") ||
-      /[^a-zA-Z0-9\.\/\_\-]/.test(uploadPath) ||
+      hasInvalidPathChars(uploadPath) ||
       uploadPath.startsWith("/upload/") ||
       uploadPath.startsWith("/api/") ||
-      /\/\//.test(uploadPath)
+      /\/\//.test(uploadPath) ||
+      getByteLength(uploadPath) > 255
     ) {
-      pathError.textContent = "Invalid upload path.";
+      pathError.textContent = "Invalid upload path. Path must start and end with /, contain no invalid characters, not exceed 255 bytes, and not start with /upload/ or /api/.";
     } else {
       pathError.textContent = "";
     }
 
+    // Validate file name
     if (
-      /[^a-zA-Z0-9\.\_\-]/.test(fileName) ||
-      fileName.length > 32 ||
+      hasInvalidFileNameChars(fileName) ||
+      getByteLength(fileName) > 64 ||
       fileName === "upload.html" ||
       fileName === "api" ||
-      fileName === "settings.html"
+      fileName === "settings.html" ||
+      fileName.trim() !== fileName ||
+      fileName.endsWith(".") ||
+      fileName === "" ||
+      fileName === "." ||
+      fileName === ".."
     ) {
-      nameError.textContent = "Invalid file name.";
+      nameError.textContent = "Invalid file name. Must not contain invalid characters (< > : \" | ? * \\ /), not exceed 64 bytes, and not be a reserved name.";
     } else {
       nameError.textContent = "";
     }
@@ -189,13 +205,7 @@
     fileNameInput.disabled = true;
 
     xhr.upload.onprogress = (event) => {
-      // progressDiv.textContent = `Uploading...`;
-      if (event.lengthComputable) {
-        const percentComplete = (event.loaded / event.total) * 100;
-        progressDiv.textContent = `Uploading... ${percentComplete.toFixed(2)}%`;
-      } else {
-        progressDiv.textContent = `Uploading...`;
-      }
+      progressDiv.textContent = `Uploading...`;
     };
 
 
@@ -203,7 +213,7 @@
     xhr.onload = async () => {
       if (xhr.status === 200) {
         try {
-            const cookies = document.cookie.split('; ').reduce((acc, cookie) => {
+          const cookies = document.cookie.split('; ').reduce((acc, cookie) => {
             const [name, value] = cookie.split('=');
             acc[name] = value;
             return acc;
