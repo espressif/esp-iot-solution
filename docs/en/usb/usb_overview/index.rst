@@ -19,3 +19,4 @@ USB Host & Device
     USB Signal Quality Test <usb_signal_quality>
     TinyUSB Guide <tinyusb_guide>
     Native TinyUSB Development Guide <tinyusb_development_guide>
+    USB Type-C Hardware Design Guide <usb_typec_hardware_guide>
