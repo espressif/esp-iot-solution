@@ -218,8 +218,8 @@ static void knob_cb(void *args)
             if (target->enable_power_save) {
                 knob_gpio_wake_up_control((uint32_t)target->encoder_a, !target->encoder_a_level, true);
                 knob_gpio_wake_up_control((uint32_t)target->encoder_b, !target->encoder_b_level, true);
-                knob_gpio_set_intr((uint32_t)target->encoder_a, !target->encoder_a_level == 0 ? GPIO_INTR_LOW_LEVEL : GPIO_INTR_HIGH_LEVEL);
-                knob_gpio_set_intr((uint32_t)target->encoder_b, !target->encoder_b_level == 0 ? GPIO_INTR_LOW_LEVEL : GPIO_INTR_HIGH_LEVEL);
+                knob_gpio_set_intr((uint32_t)target->encoder_a, !(target->encoder_a_level == 0) ? GPIO_INTR_LOW_LEVEL : GPIO_INTR_HIGH_LEVEL);
+                knob_gpio_set_intr((uint32_t)target->encoder_b, !(target->encoder_b_level == 0) ? GPIO_INTR_LOW_LEVEL : GPIO_INTR_HIGH_LEVEL);
                 knob_gpio_intr_control((uint32_t)(target->encoder_a), true);
                 knob_gpio_intr_control((uint32_t)(target->encoder_b), true);
             }
@@ -262,8 +262,8 @@ knob_handle_t iot_knob_create(const knob_config_t *config)
 
     if (config->enable_power_save) {
         knob->enable_power_save = config->enable_power_save;
-        knob_gpio_init_intr(config->gpio_encoder_a, !knob->encoder_a_level == 0 ? GPIO_INTR_LOW_LEVEL : GPIO_INTR_HIGH_LEVEL, knob_power_save_isr_handler, knob->encoder_a);
-        knob_gpio_init_intr(config->gpio_encoder_b, !knob->encoder_b_level == 0 ? GPIO_INTR_LOW_LEVEL : GPIO_INTR_HIGH_LEVEL, knob_power_save_isr_handler, knob->encoder_b);
+        knob_gpio_init_intr(config->gpio_encoder_a, !(knob->encoder_a_level == 0) ? GPIO_INTR_LOW_LEVEL : GPIO_INTR_HIGH_LEVEL, knob_power_save_isr_handler, knob->encoder_a);
+        knob_gpio_init_intr(config->gpio_encoder_b, !(knob->encoder_b_level == 0) ? GPIO_INTR_LOW_LEVEL : GPIO_INTR_HIGH_LEVEL, knob_power_save_isr_handler, knob->encoder_b);
 
         ret = knob_gpio_wake_up_init(config->gpio_encoder_a, !knob->encoder_a_level);
         KNOB_CHECK_GOTO(ESP_OK == ret, "encoder A wake up gpio init failed", _encoder_deinit);
