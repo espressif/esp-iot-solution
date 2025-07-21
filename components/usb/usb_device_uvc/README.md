@@ -8,7 +8,10 @@ Features:
 
 1. Support video stream through the UVC Stream interface
 2. Support both isochronous and bulk mode
-2. Support multiple resolutions and frame rates
+3. Support multiple resolutions and frame rates
+4. Support trans two cam's picture
+
+> Note: If `UVC_SUPPORT_TWO_CAM` is enabled in `Kconfig` and multiple camera switches are required, please set both `UVC_CAM1_XFER_MODE` and `UVC_CAM2_XFER_MODE` to Isochronous mode.
 
 ### Add component to your project
 

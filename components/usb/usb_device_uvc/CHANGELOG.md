@@ -1,4 +1,9 @@
 # ChangeLog
+
+## v1.1.3 2025-7-21
+
+* Fix incorrect `_stridx` in UVC descriptors when using dual cameras. 
+
 ## v1.1.2 2024-10-25
 
 * Add test-apps
