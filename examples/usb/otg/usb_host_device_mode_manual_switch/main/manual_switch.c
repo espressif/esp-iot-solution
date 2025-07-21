@@ -11,6 +11,13 @@
 #include "usb_device_cdc.h"
 #include "iot_button.h"
 #include "button_gpio.h"
+#include "driver/gpio.h"
+
+#if CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S2
+#define BOOT_GPIO GPIO_NUM_0
+#elif CONFIG_IDF_TARGET_ESP32P4
+#define BOOT_GPIO GPIO_NUM_35
+#endif
 
 static const char *TAG = "manual_switch";
 
@@ -40,7 +47,7 @@ static void usb_otg_mode_switch_init(void)
 {
     const button_config_t btn_cfg = {0};
     const button_gpio_config_t btn_gpio_cfg = {
-        .gpio_num = 0,
+        .gpio_num = BOOT_GPIO,
         .active_level = 0,
     };
     button_handle_t btn = NULL;

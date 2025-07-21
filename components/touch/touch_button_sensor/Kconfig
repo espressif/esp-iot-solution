@@ -8,7 +8,6 @@ menu "Touch Button Sensor Configuration"
 
     config TOUCH_BUTTON_SENSOR_CALIBRATION_TIMES
         int "Calibration times"
-        default 50 if !IDF_TARGET_ESP32
         default 20
         range 10 1000
         help
@@ -16,15 +15,15 @@ menu "Touch Button Sensor Configuration"
 
     config TOUCH_BUTTON_SENSOR_DEBOUNCE_INACTIVE
         int "Debounce inactive count"
-        default 3 if !IDF_TARGET_ESP32
-        default 1
+        default 1 if IDF_TARGET_ESP32
+        default 2
         range 1 50
         help
             Number of consecutive readings below threshold needed to confirm inactive state.
 
     config TOUCH_BUTTON_SENSOR_POLLING_INTERVAL
         int "Polling interval (ms)"
-        default 10
+        default 20
         range 5 100
         depends on IDF_TARGET_ESP32
         help
@@ -32,10 +31,7 @@ menu "Touch Button Sensor Configuration"
 
     config TOUCH_BUTTON_SENSOR_SMOOTH_COEF_X1000
         int "Smooth coefficient (/1000)"
-        default 200 if IDF_TARGET_ESP32S3 || IDF_TARGET_ESP32S2
-        default 300 if IDF_TARGET_ESP32
-        default 600 if IDF_TARGET_ESP32P4
-        default 500
+        default 400
         range 0 1000
         help
             Coefficient for smooth filter, multiplied by 1000.
@@ -43,9 +39,7 @@ menu "Touch Button Sensor Configuration"
 
     config TOUCH_BUTTON_SENSOR_BASELINE_COEF_X1000
         int "Baseline coefficient (/1000)"
-        default 100 if IDF_TARGET_ESP32S3 || IDF_TARGET_ESP32S2
         default 150 if IDF_TARGET_ESP32
-        default 200 if IDF_TARGET_ESP32P4
         default 100
         range 0 1000
         help
@@ -54,19 +48,19 @@ menu "Touch Button Sensor Configuration"
 
     config TOUCH_BUTTON_SENSOR_MAX_P_X1000
         int "Maximum positive change ratio (/1000)"
-        default 200
+        default 0
         range 0 1000
         help
             Maximum positive change ratio from baseline, multiplied by 1000.
-            For example, 200 means 0.2. 0 means no limit.
+            For example, 200 means 0.2. 0 means automatically set limit based on threshold.
 
     config TOUCH_BUTTON_SENSOR_MIN_N_X1000
         int "Minimum negative change ratio (/1000)"
-        default 200
+        default 0
         range 0 1000
         help
             Minimum negative change ratio from baseline, multiplied by 1000.
-            For example, 200 means 0.2. 0 means no limit.
+            For example, 200 means 0.2. 0 means automatically set limit based on threshold.
 
     config TOUCH_BUTTON_SENSOR_NEGATIVE_LOGIC
         bool "Using negative logic to detect touch"
@@ -90,8 +84,7 @@ menu "Touch Button Sensor Configuration"
 
     config TOUCH_BUTTON_SENSOR_RESET_COVER
         int "Reset count from cover"
-        default 1000 if !IDF_TARGET_ESP32
-        default 300
+        default 1000
         range 0 5000
         help
             Reset count if cover is detected. 0 means no reset.
@@ -105,9 +98,8 @@ menu "Touch Button Sensor Configuration"
 
     config TOUCH_BUTTON_SENSOR_RAW_BUF_SIZE
         int "Raw buffer size"
-        default 40 if !IDF_TARGET_ESP32
         default 10
-        range 10 100
+        range 5 100
         help
             Size of raw data buffer.
 
@@ -118,5 +110,24 @@ menu "Touch Button Sensor Configuration"
         range 10 1000
         help
             Scale factor for threshold calculation.
+
+    config TOUCH_BUTTON_SENSOR_SIMULTANEOUS_TRIGGER_WINDOW_MS
+        int "Simultaneous trigger window (ms)"
+        default 40
+        range 10 200
+        help
+            Time window in milliseconds for considering triggers as simultaneous.
+            Multiple frequency triggers within this window will be considered as
+            a single touch event. Smaller values make detection more strict,
+            larger values make detection more tolerant to timing variations.
+
+    config TOUCH_BUTTON_SENSOR_TRIGGER_CLEANUP_TIMEOUT_MS
+        int "Trigger cleanup timeout (ms)"
+        default 200
+        range 50 1000
+        help
+            Timeout in milliseconds for cleaning up old trigger records.
+            Trigger records older than this timeout will be automatically
+            cleared to prevent memory accumulation and false detections.
 
 endmenu

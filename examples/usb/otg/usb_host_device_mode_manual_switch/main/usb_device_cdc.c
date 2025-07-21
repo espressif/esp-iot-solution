@@ -91,7 +91,7 @@ esp_err_t device_cdc_init(void)
 esp_err_t device_cdc_deinit(void)
 {
     esp_err_t ret = ESP_OK;
-    tud_deinit(0);
+    tusb_teardown();
     vTaskDelete(uvc_task_hdl);
     vTaskDelete(cdc_task_hdl);
     usb_del_phy(phy_hdl);

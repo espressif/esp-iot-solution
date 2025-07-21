@@ -1,6 +1,6 @@
 {
     "project_dir": "@PROJECT_DIR@",
-    "main_path": "@CMAKE_CURRENT_LIST_DIR@",
+    "include_path": "@import_include_path@",
     "assets_path": "@base_dir_full_path@",
     "image_file": "@image_file@",
     "lvgl_ver": "@lvgl_ver@",

@@ -18,7 +18,8 @@ function(spiffs_create_partition_assets partition base_dir)
     set(one_value_args MMAP_FILE_SUPPORT_FORMAT
                        MMAP_SPLIT_HEIGHT
                        MMAP_RAW_FILE_FORMAT
-                       MMAP_RAW_COLOR_FORMAT)
+                       MMAP_RAW_COLOR_FORMAT
+                       IMPORT_INC_PATH)
 
     # Define multi-value arguments
     set(multi DEPENDS)
@@ -162,6 +163,13 @@ function(spiffs_create_partition_assets partition base_dir)
 
         if(NOT arg_MMAP_SPLIT_HEIGHT)
             set(arg_MMAP_SPLIT_HEIGHT 0) # Default value
+        endif()
+
+        # Handle IMPORT_INC_PATH parameter
+        if(DEFINED arg_IMPORT_INC_PATH)
+            set(import_include_path ${arg_IMPORT_INC_PATH})
+        else()
+            set(import_include_path ${CMAKE_CURRENT_LIST_DIR})
         endif()
 
         string(TOLOWER "${arg_MMAP_SUPPORT_SJPG}" support_sjpg)

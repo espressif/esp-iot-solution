@@ -184,7 +184,7 @@ static void usb_event_task(void *args)
 
     // Clean up USB Host
     vTaskDelay(100); // Short delay to allow clients clean-up
-    usb_host_uninstall();
+    ESP_ERROR_CHECK(usb_host_uninstall());
     ESP_LOGD(TAG, "USB Host library is uninstalled");
     xEventGroupSetBits(msc_host->usb_flags, HOST_UNINSTALL);
     vTaskDelete(NULL);

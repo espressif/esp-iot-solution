@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.0.3 - 2025-05-12
+
+### bugfix:
+
+* Fixed the issue with using user instruction registers
+
 ## v1.0.2 - 2025-01-13
 
 ### bugfix:

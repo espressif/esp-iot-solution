@@ -40,5 +40,33 @@ menu "ADC Battery Estimation"
             Lower values provide more smoothing but slower response to changes.
             Higher values provide less smoothing but faster response to changes.
 
+    config BATTERY_STATE_SOFTWARE_ESTIMATION
+        bool "Battery State Software Estimation"
+        default y
+        help
+            Enable software-based estimation of the battery state to determine
+            whether the battery is charging or discharging.
+
+    menu "Software Estimation Configuration"
+        depends on BATTERY_STATE_SOFTWARE_ESTIMATION
+
+        config SOFTWARE_ESTIMATION_SAMPLE_COUNT
+            int "Software Estimation Sample Count"
+            range 10 15
+            default 10
+            help
+                The number of samples to collect for software-based battery state estimation.
+                A higher number of samples can provide more accurate estimation but may increase
+                the time required for estimation.
+
+        config SOFTWARE_ESTIMATION_SAMPLE_INTERVAL
+            int "Software Estimation Sample Interval (ms)"
+            range 10000 100000
+            default 20000
+            help
+                The interval in milliseconds between each sample for software-based battery state estimation.
+                A shorter interval allows for quicker detection of changes in battery state but may consume
+                more power.
+    endmenu
 
 endmenu

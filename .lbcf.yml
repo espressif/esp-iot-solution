@@ -1,0 +1,81 @@
+####################################
+# Shared Configuration
+####################################
+
+#syntax_version: version of this YMAL file. This configuration is shared by all documents in one project.
+syntax_version: v0.62
+
+
+######################################
+# Document-specific Configuration
+######################################
+
+documents:
+#######################################################
+# 1. ESP-IoT-Solution Programming Guide, SDK latest
+#######################################################
+
+    - document_name: ESP-IoT-Solution Programming Guide, SDK latest
+      doc_id: 9063
+      translation_docid: 9065
+      chip_series: all
+      product_name:
+        - ESP-IoT-Solution latest
+      product_name_old_website:
+        - ESP32-C5
+        - ESP32-C6
+        - ESP32-C3
+        - ESP32-H2
+        - ESP32
+        - ESP8684
+        - ESP32-S2
+        - ESP32-S3
+        - ESP32-P4
+      soc_series_base_filter: all
+      document_type: guide # or errata, datasheet, reference, book, guide, application note
+      document_type_old_website: guide
+      document_status: active
+      version: Latest # or specific version number
+      revision_date:
+      language: en # or cn
+      document_storage: docs
+      document_link: https://docs.espressif.com/projects/esp-iot-solution/en/latest/index.html
+      document_summary: This is the documentation for ESP-IoT-Solution Development Framework.
+      notify_subscribers: false
+      visibility_on_website: show # or hide
+      scheduled_release_date:
+      document_classification: public
+#############################################
+# 2. ESP-IoT-Solution 编程指南，SDK latest
+#############################################
+
+    - document_name: ESP-IoT-Solution 编程指南, SDK latest
+      doc_id: 9065
+      translation_docid: 9063
+      chip_series: all
+      product_name:
+        - ESP-IoT-Solution latest
+      product_name_old_website:
+        - ESP32-C5
+        - ESP32-C6
+        - ESP32-C3
+        - ESP32-H2
+        - ESP32
+        - ESP8684
+        - ESP32-S2
+        - ESP32-S3
+        - ESP32-P4
+      soc_series_base_filter: all
+      document_type: guide # or errata, datasheet, reference, book, guide, application note
+      document_type_old_website: guide
+      document_status: active
+      version: Latest # or specific version number
+      revision_date:
+      language: cn # or cn
+      document_storage: docs
+      document_link: https://docs.espressif.com/projects/esp-iot-solution/zh_CN/latest/index.html
+      document_summary: 这里是乐鑫 ESP-IoT-Solution 开发框架的文档中心。
+      notify_subscribers: false
+      visibility_on_website: show # or hide
+      scheduled_release_date:
+      document_classification: public

@@ -16,7 +16,7 @@ float channel_threshold[] = {0.01, 0.01, 0.01}; // 1%
 #elif CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S2
 uint32_t channel_list[] = {8, 10, 12}; // gpio 8, 10, 12
 float channel_threshold[] = {0.02, 0.02, 0.02}; // 2%
-#define TOUCH_DEBOUNCE_TIMES 5
+#define TOUCH_DEBOUNCE_TIMES 2
 #elif CONFIG_IDF_TARGET_ESP32
 uint32_t channel_list[] = {8, 6, 4}; // gpio 33, 14, 13
 float channel_threshold[] = {0.01, 0.01, 0.01}; // 1%

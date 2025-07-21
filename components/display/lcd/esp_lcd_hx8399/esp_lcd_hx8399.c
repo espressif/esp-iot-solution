@@ -19,6 +19,12 @@
 #include "driver/gpio.h"
 #include "esp_lcd_hx8399.h"
 
+#define HX8399_CMD_PAGE         (0xB9)
+#define HX8399_BKxSEL_BYTE0     (0xFF)
+#define HX8399_BKxSEL_BYTE1     (0x83)
+#define HX8399_BKxSEL_BYTE2     (0x99)
+#define HX8399_CMD_CLOSE        (0x00)
+
 #define HX8399_CMD_DSI_INT0     (0xBA)
 #define HX8399_DSI_1_LANE       (0x00)
 #define HX8399_DSI_2_LANE       (0x01)
@@ -203,6 +209,9 @@ static esp_err_t panel_hx8399_init(esp_lcd_panel_t *panel)
         return ESP_ERR_INVALID_ARG;
     }
 
+    ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, HX8399_CMD_PAGE, (uint8_t[]) {
+        HX8399_CMD_CLOSE,
+    }, 1), TAG, "send command failed");
     ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, LCD_CMD_SLPOUT, NULL, 0), TAG,
                         "io tx param failed");
     vTaskDelay(pdMS_TO_TICKS(120));
@@ -212,6 +221,10 @@ static esp_err_t panel_hx8399_init(esp_lcd_panel_t *panel)
     ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, LCD_CMD_COLMOD, (uint8_t[]) {
         hx8399->colmod_val,
     }, 1), TAG, "send command failed");
+
+    ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, HX8399_CMD_PAGE, (uint8_t[]) {
+        HX8399_BKxSEL_BYTE0, HX8399_BKxSEL_BYTE1, HX8399_BKxSEL_BYTE2
+    }, 3), TAG, "send command failed");
     ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, HX8399_CMD_DSI_INT0, (uint8_t[]) {
         lane_command,
     }, 1), TAG, "send command failed");
@@ -294,6 +307,9 @@ static esp_err_t panel_hx8399_invert_color(esp_lcd_panel_t *panel, bool invert_c
     } else {
         command = LCD_CMD_INVOFF;
     }
+    ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, HX8399_CMD_PAGE, (uint8_t[]) {
+        HX8399_CMD_CLOSE,
+    }, 1), TAG, "send command failed");
     ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, command, NULL, 0), TAG, "send command failed");
 
     return ESP_OK;
@@ -310,6 +326,9 @@ static esp_err_t panel_hx8399_disp_on_off(esp_lcd_panel_t *panel, bool on_off)
     } else {
         command = LCD_CMD_DISPOFF;
     }
+    ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, HX8399_CMD_PAGE, (uint8_t[]) {
+        HX8399_CMD_CLOSE,
+    }, 1), TAG, "send command failed");
     ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, command, NULL, 0), TAG, "send command failed");
     return ESP_OK;
 }

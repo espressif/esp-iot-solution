@@ -11,7 +11,7 @@
 #include "esp_lcd_st7701_interface.h"
 #include "esp_lcd_st7701.h"
 
-const char *TAG = "st7701";
+static const char *TAG = "st7701";
 
 esp_err_t esp_lcd_new_panel_st7701(const esp_lcd_panel_io_handle_t io, const esp_lcd_panel_dev_config_t *panel_dev_config,
                                    esp_lcd_panel_handle_t *ret_panel)

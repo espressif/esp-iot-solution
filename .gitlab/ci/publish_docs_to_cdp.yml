@@ -1,0 +1,68 @@
+.publish_to_cdp_template:
+  stage: deploy
+  image: $ESP_DOCS_ENV_IMAGE
+  tags:
+    - deploy_docs
+  script:
+    - git config --global credential.helper store
+    # Pass GitLab credentials
+    - echo "https://gitlab-ci-token:${CI_JOB_TOKEN}@{CI_SERVER_HOST}:${CI_SERVER_PORT}/documentation" >> ~/.git-credentials
+    - TOOLS_URL="${CI_SERVER_PROTOCOL}://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}:${CI_SERVER_PORT}/documentation/documentation-tools.git"
+    - echo $TOOLS_URL
+    - git clone -b feature/add_dmf_tool $TOOLS_URL
+    - ls -al # debugging
+    # Read labels from MR
+    - chmod +x ./documentation-tools/dmf-tool/parse_labels.sh
+    - ./documentation-tools/dmf-tool/parse_labels.sh
+    - cat parse_labels_output.txt
+    # Read parsed PRODUCT_NAME
+    - source parse_labels_output.txt
+    # Skip if no product to publish
+    - |
+      if [ -z "$PRODUCT_NAME" ]; then
+        echo "No product to publish, exiting job."
+        exit 0
+      fi
+    # Generate DMFs
+    - python documentation-tools/dmf-tool/generate-dmf.py -p . -t documentation-tools/dmf-tool/dmf-template.yml
+    - mkdir -p logs
+    - mv ESP*.yml logs/
+    - |
+        if [ -n "$CI_MERGE_REQUEST_IID" ]; then
+            TRACKING_REF="$CI_PROJECT_URL/-/merge_requests/$CI_MERGE_REQUEST_IID"
+        else
+            TRACKING_REF="$CI_PROJECT_URL/-/pipelines/$CI_PIPELINE_ID"
+        fi
+
+        for file in logs/*.yml; do
+            echo "tracking_reference: $TRACKING_REF" >> "$file"
+            echo "revision_date: $(date +%Y-%m-%d)" >> "$file"
+        done
+
+      # Publish to CDP
+    - chmod +x ./documentation-tools/dmf-tool/publish_cdp.sh
+    - ./documentation-tools/dmf-tool/publish_cdp.sh
+  artifacts:
+    when: always
+    paths:
+      - 'logs/*.yml'
+    expire_in: 1 week
+
+publish_to_cdp_qa_with_dmf_files:
+  needs:
+    - deploy_docs_preview
+  extends:
+    - .publish_to_cdp_template
+    - .rules:deploy:docs_preview
+  variables:
+    MR_BASE_URL: " $CI_MERGE_REQUEST_PROJECT_URL/-/merge_requests"
+    CDP_API_ENDPOINT: "$CDP_API_ENDPOINT_QA"
+
+publish_to_cdp_prod_with_dmf_files:
+  needs:
+    - deploy_docs_production
+  extends:
+    - .publish_to_cdp_template
+    - .rules:deploy:docs_production
+  variables:
+    CDP_API_ENDPOINT: "$CDP_API_ENDPOINT_PROD"

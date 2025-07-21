@@ -484,6 +484,9 @@
 .patterns-example_common_components_camera: &patterns-example_common_components_camera
   - "examples/common_components/camera/**/*"
 
+.patterns-example_display_lcd_hdmi_video_renderer: &patterns-example_display_lcd_hdmi_video_renderer
+  - "examples/display/lcd/hdmi_video_renderer/**/*"
+
 .patterns-example_display_lcd_lcd_layer_blending: &patterns-example_display_lcd_lcd_layer_blending
   - "examples/display/lcd/lcd_layer_blending/**/*"
 
@@ -648,6 +651,9 @@
 
 .patterns-example_usb_host_usb_cdc_basic: &patterns-example_usb_host_usb_cdc_basic
   - "examples/usb/host/usb_cdc_basic/**/*"
+
+.patterns-example_usb_host_usb_host_msc_example: &patterns-example_usb_host_usb_host_msc_example
+  - "examples/usb/host/usb_host_msc_example/**/*"
 
 .patterns-example_usb_host_usb_hub_dual_camera: &patterns-example_usb_host_usb_hub_dual_camera
   - "examples/usb/host/usb_hub_dual_camera/**/*"
@@ -905,6 +911,12 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-example_check_pedestrian_flow
+
+.rules:build:example_display_lcd_hdmi_video_renderer:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
 
 .rules:build:example_display_lcd_lcd_layer_blending:
   rules:
@@ -1620,6 +1632,18 @@
       changes: *patterns-components_usb_iot_usbh_cdc
     - <<: *if-dev-push
       changes: *patterns-example_usb_host_usb_cdc_basic
+
+.rules:build:example_usb_host_usb_host_msc_example:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_usb_host_usb_host_msc_example
+    - <<: *if-dev-push
+      changes: *patterns-components_usb_esp_msc_ota
 
 .rules:build:example_usb_host_usb_hub_dual_camera:
   rules:
@@ -2404,7 +2428,7 @@
     - <<: *if-dev-push
       changes: *patterns-components_sensors_imu_mpu6050
 
-.rules:build:components_sensors_light_sensor_bh1750_test:
+.rules:build:components_sensors_light_sensor_bh1750_test_apps:
   rules:
     - <<: *if-protected
     - <<: *if-label-build
@@ -2414,6 +2438,8 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_sensors_light_sensor_bh1750
+    - <<: *if-dev-push
+      changes: *patterns-components_i2c_bus
 
 .rules:build:components_sensors_light_sensor_veml6040_test_apps:
   rules:

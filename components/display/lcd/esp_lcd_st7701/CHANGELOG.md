@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.1.3 - 2025-6-23
+
+### bugfix：
+
+*  Fixed the log TAG issue
+
 ## v1.1.2 - 2025-04-03
 
 ### bugfix:

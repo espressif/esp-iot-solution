@@ -167,6 +167,10 @@ examples/check_pedestrian_flow:
   enable:
     - if: IDF_TARGET in ["esp32","esp32s2","esp32s3","esp32c3"]
 
+examples/display/lcd/hdmi_video_renderer:
+  enable:
+    - if: IDF_TARGET in ["esp32p4"]
+
 examples/display/lcd/lcd_layer_blending:
   enable:
     - if: IDF_TARGET in ["esp32p4"]
@@ -417,6 +421,10 @@ examples/usb/host/usb_cdc_4g_module:
 examples/usb/host/usb_cdc_basic:
   enable:
     - if: IDF_TARGET in ["esp32s2","esp32s3"]
+
+examples/usb/host/usb_host_msc_example:
+  enable:
+    - if: SOC_USB_OTG_SUPPORTED == 1
 
 examples/usb/host/usb_hub_dual_camera:
   enable:

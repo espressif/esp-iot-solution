@@ -12,6 +12,7 @@
 #include "soc/soc_caps.h"
 #include "esp_check.h"
 #include "esp_log.h"
+#include "esp_timer.h"
 #include "touch_sensor_lowlevel.h"
 #include "touch_sensor_fsm.h"
 #include "touch_button_sensor.h"
@@ -40,6 +41,20 @@ static uint64_t get_time_in_ms(void)
 #define PRINT_TRIGGER(pad_num, smooth, if_active)
 #endif
 
+// Time window constants in milliseconds (configurable via menuconfig)
+#define SIMULTANEOUS_TRIGGER_WINDOW_MS CONFIG_TOUCH_BUTTON_SENSOR_SIMULTANEOUS_TRIGGER_WINDOW_MS
+#define TRIGGER_CLEANUP_TIMEOUT_MS CONFIG_TOUCH_BUTTON_SENSOR_TRIGGER_CLEANUP_TIMEOUT_MS
+
+// Optimized time retrieval function (called only once per event handling cycle)
+static uint64_t get_current_time_ms(void)
+{
+#if CONFIG_TOUCH_BUTTON_SENSOR_DEBUG
+    return get_time_in_ms();
+#else
+    return esp_timer_get_time() / 1000;  // Convert from microseconds to milliseconds
+#endif
+}
+
 #define TOUCH_BUTTON_CHECK_GOTO(a, str, label) \
     if (!(a)) { \
         FSM_LOGE(TAG, "%s(%d): %s", __FUNCTION__, __LINE__, str); \
@@ -53,6 +68,8 @@ typedef struct touch_button_sensor_t {
     uint32_t last_smooth_data[SOC_TOUCH_SENSOR_NUM][SOC_TOUCH_SAMPLE_CFG_NUM];
     volatile uint32_t active_freq_bitmap[SOC_TOUCH_SENSOR_NUM];
     volatile uint32_t active_freq_bitmap_last[SOC_TOUCH_SENSOR_NUM];
+    volatile uint64_t freq_trigger_time[SOC_TOUCH_SENSOR_NUM][SOC_TOUCH_SAMPLE_CFG_NUM];  // Time for each frequency trigger
+    uint64_t current_time_ms;      // Current time cached for one handle_events cycle
     bool channels_active[SOC_TOUCH_SENSOR_NUM];
     touch_cb_t state_change_cb;
     void *user_data;
@@ -60,6 +77,19 @@ typedef struct touch_button_sensor_t {
     touch_lowlevel_handle_t lowlevel_handle[SOC_TOUCH_SENSOR_NUM];
     bool skip_lowlevel_init;
 } touch_button_sensor_t;
+
+// Clean up old triggers that are no longer relevant
+static void cleanup_old_triggers(touch_button_sensor_t *sensor, uint32_t channel_idx, uint64_t current_time)
+{
+    for (int i = 0; i < SOC_TOUCH_SAMPLE_CFG_NUM; i++) {
+        if (sensor->freq_trigger_time[channel_idx][i] > 0 &&
+                (current_time - sensor->freq_trigger_time[channel_idx][i]) > TRIGGER_CLEANUP_TIMEOUT_MS) {
+            // Clear both the trigger time and the corresponding bit in active_freq_bitmap
+            sensor->freq_trigger_time[channel_idx][i] = 0;
+            sensor->active_freq_bitmap[channel_idx] &= ~(1 << i);
+        }
+    }
+}
 
 static esp_err_t find_channel_index(touch_button_sensor_t *sensor, uint32_t channel, uint32_t *channel_idx)
 {
@@ -87,6 +117,7 @@ static void fsm_state_cb(fsm_handle_t handle, uint32_t channel, fsm_state_t stat
     touch_button_sensor_t *sensor = (touch_button_sensor_t *)user_data;
     int frequency = get_fsm_frequency_index(sensor, handle);
     uint32_t channel_idx = 0;
+    uint64_t current_time = sensor->current_time_ms;  // Use cached time from handle_events
 
     if (frequency < 0 || find_channel_index(sensor, channel, &channel_idx) != ESP_OK) {
         return;
@@ -94,20 +125,48 @@ static void fsm_state_cb(fsm_handle_t handle, uint32_t channel, fsm_state_t stat
 
     if (state == FSM_STATE_ACTIVE) {
         sensor->active_freq_bitmap[channel_idx] |= (1 << frequency);
+        sensor->freq_trigger_time[channel_idx][frequency] = current_time;
+        if (frequency) {
+            PRINT_TRIGGER(channel + frequency, data, true);
+        }
     } else if (state == FSM_STATE_INACTIVE) {
         sensor->active_freq_bitmap[channel_idx] &= ~(1 << frequency);
         sensor->active_freq_bitmap_last[channel_idx] &= ~(1 << frequency);
-    }
-
-    uint32_t active_count = 0;
-    for (int i = 0; i < SOC_TOUCH_SAMPLE_CFG_NUM; i++) {
-        if (sensor->active_freq_bitmap[channel_idx] & (1 << i)) {
-            active_count++;
+        sensor->freq_trigger_time[channel_idx][frequency] = 0;  // Clear trigger time
+        if (frequency) {
+            PRINT_TRIGGER(channel + frequency, data, false);
         }
     }
 
-    // State change detection
-    if (active_count && active_count >= SOC_TOUCH_SAMPLE_CFG_NUM - 1 && !sensor->channels_active[channel_idx]) {
+    // Count active frequencies and check if they are within the time window
+    uint32_t simultaneous_active_count = 0;
+    uint64_t earliest_trigger_time = UINT64_MAX;
+
+    // Find the earliest trigger time among active frequencies
+    for (int i = 0; i < SOC_TOUCH_SAMPLE_CFG_NUM; i++) {
+        if (sensor->active_freq_bitmap[channel_idx] & (1 << i)) {
+            uint64_t trigger_time = sensor->freq_trigger_time[channel_idx][i];
+            if (trigger_time > 0 && trigger_time < earliest_trigger_time) {
+                earliest_trigger_time = trigger_time;
+            }
+        }
+    }
+
+    // Count frequencies that triggered within the time window
+    if (earliest_trigger_time != UINT64_MAX) {
+        for (int i = 0; i < SOC_TOUCH_SAMPLE_CFG_NUM; i++) {
+            if (sensor->active_freq_bitmap[channel_idx] & (1 << i)) {
+                uint64_t trigger_time = sensor->freq_trigger_time[channel_idx][i];
+                if (trigger_time > 0 &&
+                        (trigger_time - earliest_trigger_time) <= SIMULTANEOUS_TRIGGER_WINDOW_MS) {
+                    simultaneous_active_count++;
+                }
+            }
+        }
+    }
+
+    // State change detection - require simultaneous triggers within time window
+    if (simultaneous_active_count >= SOC_TOUCH_SAMPLE_CFG_NUM - 1 && !sensor->channels_active[channel_idx]) {
         sensor->channels_active[channel_idx] = true;
         sensor->active_freq_bitmap_last[channel_idx] = sensor->active_freq_bitmap[channel_idx];
         PRINT_TRIGGER(channel, data, true);
@@ -121,6 +180,10 @@ static void fsm_state_cb(fsm_handle_t handle, uint32_t channel, fsm_state_t stat
             sensor->state_change_cb(sensor, channel, TOUCH_STATE_INACTIVE, sensor->user_data);
         }
         sensor->active_freq_bitmap[channel_idx] = 0;
+        // Clear all trigger times for this channel
+        for (int i = 0; i < SOC_TOUCH_SAMPLE_CFG_NUM; i++) {
+            sensor->freq_trigger_time[channel_idx][i] = 0;
+        }
     }
 }
 
@@ -198,6 +261,7 @@ esp_err_t touch_button_sensor_create(touch_button_config_t *config, touch_button
             .channel_num = config->channel_num,
             .channel_list = config->channel_list,
             .channel_type = NULL,  // Using default channel type
+            .sample_period_ms = config->channel_num > 7 ? 20 : 10,  // Use 20ms for more than 7 channels, otherwise 10ms
         };
         TOUCH_BUTTON_CHECK_GOTO(
             touch_sensor_lowlevel_create(&ll_config) == ESP_OK,
@@ -243,8 +307,30 @@ esp_err_t touch_button_sensor_create(touch_button_config_t *config, touch_button
     fsm_cfg.debounce_active = config->debounce_times;
     fsm_cfg.smooth_coef = CONFIG_TOUCH_BUTTON_SENSOR_SMOOTH_COEF_X1000 / 1000.0f;
     fsm_cfg.baseline_coef = CONFIG_TOUCH_BUTTON_SENSOR_BASELINE_COEF_X1000 / 1000.0f;
-    fsm_cfg.max_p = CONFIG_TOUCH_BUTTON_SENSOR_MAX_P_X1000 / 1000.0f;
-    fsm_cfg.min_n = CONFIG_TOUCH_BUTTON_SENSOR_MIN_N_X1000 / 1000.0f;
+    if (CONFIG_TOUCH_BUTTON_SENSOR_MAX_P_X1000 == 0) {
+        // set max_p to the 2 times of maximum of the threshold_p
+        float max_threshold = 0.0f;
+        for (uint32_t i = 0; i < config->channel_num; i++) {
+            if (config->channel_threshold[i] > max_threshold) {
+                max_threshold = config->channel_threshold[i];
+            }
+        }
+        fsm_cfg.max_p = max_threshold * 2.0f;
+    } else {
+        fsm_cfg.max_p = CONFIG_TOUCH_BUTTON_SENSOR_MAX_P_X1000 / 1000.0f;
+    }
+    if (CONFIG_TOUCH_BUTTON_SENSOR_MIN_N_X1000 == 0) {
+        // set min_n to the 2 times of minimum of the threshold_p
+        float min_threshold = 0.0f;
+        for (uint32_t i = 0; i < config->channel_num; i++) {
+            if (config->channel_threshold[i] > min_threshold) {
+                min_threshold = config->channel_threshold[i];
+            }
+        }
+        fsm_cfg.min_n = min_threshold * 2.0f;
+    } else {
+        fsm_cfg.min_n = CONFIG_TOUCH_BUTTON_SENSOR_MIN_N_X1000 / 1000.0f;
+    }
     fsm_cfg.hysteresis_active = 0.1f;
     fsm_cfg.hysteresis_inactive = 0.1f;
     fsm_cfg.noise_p = noise_p;
@@ -385,6 +471,14 @@ esp_err_t touch_button_sensor_handle_events(touch_button_handle_t handle)
     touch_button_sensor_t *sensor = (touch_button_sensor_t *)handle;
     ESP_RETURN_ON_FALSE(sensor->is_initialized, ESP_ERR_INVALID_STATE, TAG, "Sensor not initialized");
 
+    // Get current time once for this entire event handling cycle
+    sensor->current_time_ms = get_current_time_ms();
+
+    // Periodic cleanup of old triggers for all channels using the cached time
+    for (uint32_t ch = 0; ch < sensor->channel_num; ch++) {
+        cleanup_old_triggers(sensor, ch, sensor->current_time_ms);
+    }
+
     for (int i = 0; i < SOC_TOUCH_SAMPLE_CFG_NUM; i++) {
         if (sensor->fsm_handles[i]) {
             ESP_RETURN_ON_ERROR(
@@ -394,12 +488,11 @@ esp_err_t touch_button_sensor_handle_events(touch_button_handle_t handle)
 #if CONFIG_TOUCH_BUTTON_SENSOR_DEBUG
             uint32_t raw_data[3] = {0};
             for (int j = 0; j < sensor->channel_num; j++) {
-                // TODO: handle P4 using offset
                 ESP_RETURN_ON_ERROR(
                     touch_sensor_fsm_get_data(sensor->fsm_handles[i], sensor->channel_list[j], raw_data),
                     TAG, "Failed to get FSM data"
                 );
-                PRINT_VALUE(sensor->channel_list[j], raw_data[FSM_DATA_RAW], raw_data[FSM_DATA_SMOOTH], raw_data[FSM_DATA_BASELINE]);
+                PRINT_VALUE(sensor->channel_list[j] + i * 100, raw_data[FSM_DATA_RAW], raw_data[FSM_DATA_SMOOTH], raw_data[FSM_DATA_BASELINE]);
             }
 #endif
         }

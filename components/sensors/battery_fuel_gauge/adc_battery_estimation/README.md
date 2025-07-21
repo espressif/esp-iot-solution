@@ -5,6 +5,7 @@
 1. Provides basic battery level information while ensuring consistency in the estimated capacity
 2. Supports both user-provided external ADC Handle or automatic creation by the component internally
 3. Supports filtering of collected ADC data and estimated battery capacity
+4. Provides a software-based charging state estimation method. If the user cannot provide a charging indicator pin and `BATTERY_STATE_SOFTWARE_ESTIMATION` is enabled in Kconfig, software charging state estimation will be activated
 
 This component provides two OCV-SOC models, from [Ti](https://www.ti.com/lit/SLUAAR3) and [Analog Device](https://www.analog.com/en/resources/design-notes/characterizing-a-lithiumion-li-cell-for-use-with-an-opencircuitvoltage-ocv-based-fuel-gauge.html) respectively. Additionally, it supports user-defined custom OCV-SOC models.
 
