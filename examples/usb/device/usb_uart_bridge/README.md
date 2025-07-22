@@ -1,3 +1,5 @@
+| Supported Targets | ESP32-S2 | ESP32-S3 |
+| ----------------- | -------- | -------- |
 ## USB to UART Bridge
 
 USB to serial bridge tool using the USB and UART capabilities of the ESP32-S2/S3 microcontroller. This tool serves as a debugging and downloading utility with the following features:

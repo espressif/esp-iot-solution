@@ -1,3 +1,5 @@
+| Supported Targets | ESP32 | ESP32-S2 | ESP32-S3 | ESP32-C3 |
+| ----------------- | ----- | -------- | -------- | -------- |
 # WAV Player Example
 
 This example will show how to configure and operate the LEDC peripheral to play WAV files that store in flash or sdcard.

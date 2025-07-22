@@ -1,3 +1,5 @@
+| Supported Targets | ESP32-S2 | ESP32-S3 | ESP32-P4 |
+| ----------------- | -------- | -------- | -------- |
 # USB Host MSC Example
 
 This example demonstrates how to use USB Host MSC functionality and provides a web page to manage MSC devices.

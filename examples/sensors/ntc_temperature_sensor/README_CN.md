@@ -1,3 +1,5 @@
+| Supported Targets | ESP32-C2 | ESP32-C3 | ESP32 | ESP32-C6 | ESP32-S3 |
+| ----------------- | -------- | -------- | ----- | -------- | -------- |
 # 温度传感器应用示例
 
 [English Version](./README.md)
