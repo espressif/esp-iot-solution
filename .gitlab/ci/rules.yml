@@ -371,6 +371,10 @@
   - "components/utilities/adc_tp_calibration/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
 
+.patterns-components_utilities_log_router: &patterns-components_utilities_log_router
+  - "components/utilities/log_router/**/*"
+  - "tools/cmake_utilities/package_manager.cmake"
+
 # examples folder, in the alphabetic order
 .patterns-docs: &patterns-docs
   - "docs/**/*"
@@ -2680,6 +2684,17 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_utilities_adc_tp_calibration
+
+.rules:build:components_utilities_log_router_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_utilities_log_router
 
 .rules:build:components_sensors_humiture_aht20_test_apps:
   rules:

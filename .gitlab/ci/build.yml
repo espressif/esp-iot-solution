@@ -1802,6 +1802,14 @@ build_components_utilities_adc_tp_calibration_test_apps:
   variables:
     EXAMPLE_DIR: components/utilities/adc_tp_calibration/test_apps
 
+build_components_utilities_log_router_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_utilities_log_router_test_apps
+    - .build_idf_version_greater_equal_v5_0
+  variables:
+    EXAMPLE_DIR: components/utilities/log_router/test_apps
+
 build_components_zero_detection_test_apps:
   extends:
     - .build_examples_template
