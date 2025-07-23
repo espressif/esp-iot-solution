@@ -681,9 +681,10 @@ static esp_err_t process_frame(extractor_frame_info_t *frame, app_extractor_t *e
         break;
     }
 
-    // Release frame buffer
+    // Release frame buffer back to output pool (prevent memory leak)
     if (frame->frame_buffer) {
         mem_pool_free(esp_extractor_get_output_pool(extractor->extractor), frame->frame_buffer);
+        frame->frame_buffer = NULL;
     }
 
     return ret;
@@ -1193,4 +1194,32 @@ esp_err_t app_extractor_deinit(app_extractor_handle_t handle)
 
     ESP_LOGI(TAG, "App extractor deinitialized");
     return ESP_OK;
+}
+
+esp_err_t app_extractor_probe_video_info(const char *filename,
+                                         uint32_t *width, uint32_t *height,
+                                         uint32_t *fps, uint32_t *duration)
+{
+    if (filename == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    app_extractor_handle_t probe;
+    esp_err_t ret = app_extractor_init(NULL, NULL, &probe);
+    if (ret != ESP_OK) {
+        return ret;
+    }
+
+    ret = app_extractor_start(probe, filename, true, false);
+    if (ret != ESP_OK) {
+        app_extractor_deinit(probe);
+        return ret;
+    }
+
+    ret = app_extractor_get_video_info(probe, width, height, fps, duration);
+
+    app_extractor_stop(probe);
+    app_extractor_deinit(probe);
+
+    return ret;
 }

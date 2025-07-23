@@ -78,6 +78,10 @@ esp_err_t app_extractor_get_audio_info(app_extractor_handle_t extractor,
                                        uint32_t *sample_rate, uint8_t *channels,
                                        uint8_t *bits, uint32_t *duration);
 
+esp_err_t app_extractor_probe_video_info(const char *filename,
+                                         uint32_t *width, uint32_t *height,
+                                         uint32_t *fps, uint32_t *duration);
+
 /**
  * @brief Seek to position in milliseconds
  */

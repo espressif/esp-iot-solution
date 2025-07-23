@@ -6,6 +6,10 @@ dependencies:
     version: "^9"
     public: true
 
+  lvgl_port:
+    version: "*"
+    override_path: "../../../../../components/display/lvgl_port"
+
   esp_lcd_touch:
     version: "^1"
     public: true

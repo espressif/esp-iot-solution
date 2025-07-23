@@ -16,6 +16,56 @@ The LVGL-related parameter configurations, such as LVGL's registered resolution,
 
 This example uses the [esp_timer](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/esp_timer.html) to generate the ticks needed by LVGL and uses a dedicated task to run the `lv_timer_handler()`. Since the LVGL APIs are not thread-safe, this example uses a mutex which be invoked before the call of `lv_timer_handler()` and released after it. The same mutex needs to be used in other tasks and threads around every LVGL (lv_...) related function call and code. For more porting guides, please refer to [LVGL porting doc](https://docs.lvgl.io/master/porting/index.html).
 
+## Mode 4 optimization and temporary patch
+
+### Why prioritize Mode 4
+
+- In 90°/270° rotation scenarios, Mode 4’s data path is more efficient, and combined with PPA, it can greatly improve rotation performance.
+- Trade-off: consumes more SRAM (used for LVGL rendering buffers). Actual usage can be allocated as needed; in principle, the more allocated, the higher the frame rate.
+
+### Temporary patch (PPA freeze fix)
+
+To fully leverage Mode 4’s performance benefits in rotation and anti-tearing, and to avoid a known sporadic PPA freeze, you need to **temporarily apply the patch provided in this repository**:
+
+`examples/display/lcd/mipi_dsi_avoid_tearing/main/0001-bugfix-lcd-Fixed-PPA-freeze.patch`
+
+This patch targets ESP-IDF release v5.5 at commit `02c5f2dbb95859bc4a35fb6d82bbc0784968efc5`. It fixes a register configuration on the PPA SRM path to avoid freezes under heavy workloads.
+
+### How to apply the patch on ESP-IDF v5.5 (commit 02c5f2d)
+
+1. Prepare the exact ESP-IDF commit:
+
+```
+# assuming you already have an esp-idf repository locally
+export IDF_PATH=/path/to/esp-idf
+cd $IDF_PATH
+git fetch --all
+git checkout 02c5f2dbb95859bc4a35fb6d82bbc0784968efc5
+git submodule update --init --recursive
+```
+
+2. Apply the example-provided patch (using `git am`):
+
+```
+# point to this repository path (replace with your actual path)
+export IOT_SOLUTION=/path/to/esp-iot-solution
+
+cd $IDF_PATH
+git am $IOT_SOLUTION/examples/display/lcd/mipi_dsi_avoid_tearing/main/0001-bugfix-lcd-Fixed-PPA-freeze.patch
+```
+
+3. With the patched ESP-IDF, go back to this example’s root and follow the “Build and Flash” steps below to build, flash, and verify.
+
+To revert or if you encounter conflicts:
+
+```
+# if conflicts occur during apply
+git am --abort
+
+# if already applied and you want to undo the last patch
+git reset --hard HEAD~1
+```
+
 ## How to use the example
 
 ## ESP-IDF Required

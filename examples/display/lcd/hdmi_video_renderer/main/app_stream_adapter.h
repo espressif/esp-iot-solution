@@ -129,6 +129,22 @@ esp_err_t app_stream_adapter_get_stats(app_stream_adapter_handle_t handle,
                                        app_stream_stats_t *stats);
 
 /**
+ * @brief Resize buffers
+ *
+ */
+esp_err_t app_stream_adapter_resize_buffers(app_stream_adapter_handle_t handle,
+                                            void **decode_buffers,
+                                            uint32_t buffer_count,
+                                            uint32_t buffer_size);
+
+/**
+ * @brief Probe video info
+ */
+esp_err_t app_stream_adapter_probe_video_info(const char *filename,
+                                              uint32_t *width, uint32_t *height,
+                                              uint32_t *fps, uint32_t *duration);
+
+/**
  * @brief Cleanup and free resources
  */
 esp_err_t app_stream_adapter_deinit(app_stream_adapter_handle_t handle);

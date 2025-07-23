@@ -123,6 +123,14 @@ static esp_err_t decode_jpeg_frame(
     *out_width = pic_info.width;
     *out_height = pic_info.height;
 
+    uint32_t bytes_per_pixel = (adapter->jpeg_config.output_format == APP_STREAM_JPEG_OUTPUT_RGB888) ? 3 : 2;
+    uint32_t required_size = pic_info.width * pic_info.height * bytes_per_pixel;
+
+    if (required_size > adapter->buffer_size) {
+        ESP_LOGE(TAG, "Buffer too small: required=%u, available=%u", required_size, adapter->buffer_size);
+        return ESP_ERR_NO_MEM;
+    }
+
     // Select next buffer in round-robin fashion
     adapter->current_buffer = (adapter->current_buffer + 1) % adapter->buffer_count;
     void *current_decode_buffer = adapter->decode_buffers[adapter->current_buffer];
@@ -210,7 +218,8 @@ static esp_err_t extractor_frame_callback(uint8_t *buffer,
 
     if (adapter->frame_cb) {
         void *current_buffer = adapter->decode_buffers[adapter->current_buffer];
-        ret = adapter->frame_cb(current_buffer, decoded_size, width, height, adapter->frame_count - 1, adapter->user_data);
+        uint32_t frame_index = (adapter->frame_count > 0) ? (adapter->frame_count - 1) : 0;
+        ret = adapter->frame_cb(current_buffer, decoded_size, width, height, frame_index, adapter->user_data);
     }
 
     xSemaphoreGive(adapter->frame_mutex);
@@ -337,6 +346,28 @@ esp_err_t app_stream_adapter_init(const app_stream_adapter_config_t *config,
 {
     if (config == NULL || ret_adapter == NULL) {
         return ESP_ERR_INVALID_ARG;
+    }
+
+    if (config->buffer_count == 0) {
+        ESP_LOGE(TAG, "buffer_count cannot be zero");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (config->decode_buffers == NULL) {
+        ESP_LOGE(TAG, "decode_buffers cannot be NULL");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (config->buffer_size == 0) {
+        ESP_LOGE(TAG, "buffer_size cannot be zero");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    for (uint32_t i = 0; i < config->buffer_count; i++) {
+        if (config->decode_buffers[i] == NULL) {
+            ESP_LOGE(TAG, "decode_buffers[%d] is NULL", i);
+            return ESP_ERR_INVALID_ARG;
+        }
     }
 
     app_stream_adapter_t *adapter = (app_stream_adapter_t *)calloc(1, sizeof(app_stream_adapter_t));
@@ -644,4 +675,34 @@ esp_err_t app_stream_adapter_deinit(app_stream_adapter_handle_t handle)
 
     ESP_LOGI(TAG, "Stream adapter deinitialized");
     return ESP_OK;
+}
+
+esp_err_t app_stream_adapter_resize_buffers(app_stream_adapter_handle_t handle,
+                                            void **decode_buffers,
+                                            uint32_t buffer_count,
+                                            uint32_t buffer_size)
+{
+    if (handle == NULL || decode_buffers == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    app_stream_adapter_t *adapter = (app_stream_adapter_t *)handle;
+
+    if (adapter->running) {
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    adapter->decode_buffers = decode_buffers;
+    adapter->buffer_count = buffer_count;
+    adapter->buffer_size = buffer_size;
+    adapter->current_buffer = buffer_count - 1;
+
+    return ESP_OK;
+}
+
+esp_err_t app_stream_adapter_probe_video_info(const char *filename,
+                                              uint32_t *width, uint32_t *height,
+                                              uint32_t *fps, uint32_t *duration)
+{
+    return app_extractor_probe_video_info(filename, width, height, fps, duration);
 }

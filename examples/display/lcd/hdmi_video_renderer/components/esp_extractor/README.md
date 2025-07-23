@@ -34,9 +34,7 @@ The extracted stream data is formed by one or multiple frames which can be easil
 Notes:
     Since TS and FLV do not officially support MJPEG. We add MJPEG support for TS and FLV using following methods:
   - FLV use codec id 1 for MJPEG codec
-  - TS use stream id 6 for MJPEG codec
-
-    Users can check [ffmpeg_mjpeg.patch](ffmpeg_mjpeg.patch) for technical details and patch it to support them in ffmpeg.   
+  - TS use stream id 6 for MJPEG codec 
 
 ## Usage
 
