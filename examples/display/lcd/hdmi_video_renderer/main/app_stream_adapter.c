@@ -3,6 +3,8 @@
  *
  * SPDX-License-Identifier: CC0-1.0
  */
+
+#include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
@@ -178,7 +180,7 @@ static esp_err_t extractor_frame_callback(uint8_t *buffer,
     }
 
     if (buffer_size > adapter->jpeg_buffer_size) {
-        ESP_LOGE(TAG, "JPEG frame too large: %u > %u", buffer_size, adapter->jpeg_buffer_size);
+        ESP_LOGE(TAG, "JPEG frame too large: %" PRIu32 " > %" PRIu32, buffer_size, adapter->jpeg_buffer_size);
         return ESP_ERR_NO_MEM;
     }
 
@@ -482,7 +484,7 @@ esp_err_t app_stream_adapter_start(app_stream_adapter_handle_t handle)
         adapter->duration = duration;
         adapter->has_info = true;
 
-        ESP_LOGI(TAG, "Video info: %ux%u, %u fps, %u ms",
+        ESP_LOGI(TAG, "Video info: %" PRIu32 "x%" PRIu32 ", %" PRIu32 " fps, %" PRIu32 " ms",
                  width, height, fps, duration);
     }
 
@@ -493,7 +495,7 @@ esp_err_t app_stream_adapter_start(app_stream_adapter_handle_t handle)
         ret = app_extractor_get_audio_info(adapter->extractor_handle,
                                            &sample_rate, &channels, &bits, &duration);
         if (ret == ESP_OK) {
-            ESP_LOGI(TAG, "Audio info: %u Hz, %u ch, %u bits, %u ms",
+            ESP_LOGI(TAG, "Audio info: %" PRIu32 " Hz, %u ch, %u bits, %" PRIu32 " ms",
                      sample_rate, channels, bits, duration);
         }
     }
@@ -539,7 +541,7 @@ esp_err_t app_stream_adapter_seek(app_stream_adapter_handle_t handle, uint32_t p
     app_stream_adapter_t *adapter = (app_stream_adapter_t *)handle;
     esp_err_t ret = ESP_OK;
 
-    ESP_LOGI(TAG, "Seeking to position %u ms", position);
+    ESP_LOGI(TAG, "Seeking to position %" PRIu32 " ms", position);
 
     bool was_running = adapter->extract_task_handle != NULL;
     if (was_running) {
