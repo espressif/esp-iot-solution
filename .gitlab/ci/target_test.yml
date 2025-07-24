@@ -186,13 +186,17 @@ components_test_iot_usbh_cdc:
   needs:
     - job: "build_components_usb_iot_usbh_cdc_test_apps"
       artifacts: true
+      optional: false
   retry:
     max: 2
   parallel:
     matrix:
-      - IDF_TARGET: esp32s3
-        IDF_VERSION: ["5.1", "5.2", "5.3", "5.4", "5.5"]
-        ENV_TAG: usb_4g
+      - IDF_TARGET: esp32p4
+        IDF_VERSION: ["5.3", "5.4"]
+        ENV_TAG: usb_4g_ec801e_modem
+      - IDF_TARGET: esp32p4
+        IDF_VERSION: ["5.5"]
+        ENV_TAG: usb_4g_ec801e_modem
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}

@@ -352,10 +352,6 @@
   - "components/usb/iot_usbh_ecm/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
 
-.patterns-components_usb_usb_host_rndis_test_apps: &patterns-components_usb_usb_host_rndis_test_apps
-  - "components/usb/usb_host_rndis/test_apps/**/*"
-  - "tools/cmake_utilities/package_manager.cmake"
-
 .patterns-components_usb_usb_device_uac: &patterns-components_usb_usb_device_uac
   - "components/usb/usb_device_uac/**/*"
 
@@ -1711,13 +1707,13 @@
     - <<: *if-dev-push
       changes: *patterns-build_system
     - <<: *if-dev-push
-      changes: *patterns-components_led_led_indicator
-    - <<: *if-dev-push
-      changes: *patterns-components_usb_iot_usbh
-    - <<: *if-dev-push
       changes: *patterns-components_usb_iot_usbh_cdc
     - <<: *if-dev-push
       changes: *patterns-components_usb_iot_usbh_modem
+    - <<: *if-dev-push
+      changes: *patterns-components_modem_at
+    - <<: *if-dev-push
+      changes: *patterns-components_iot_eth
     - <<: *if-dev-push
       changes: *patterns-example_usb_host_usb_cdc_4g_module
 
@@ -2788,19 +2784,6 @@
     - <<: *if-dev-push
       changes: *patterns-components_touch_touch_slider_sensor
 
-.rules:build:components_usb_usb_host_rndis_test_apps:
-  rules:
-    - <<: *if-protected
-    - <<: *if-label-build
-    - <<: *if-label-target_test
-    - <<: *if-trigger-job
-    - <<: *if-dev-push
-      changes: *patterns-build_system
-    - <<: *if-dev-push
-      changes: *patterns-components_usb_usb_host_rndis_test_apps
-    - <<: *if-dev-push
-      changes: *patterns-components_usb_iot_usbh_cdc
-
 .rules:build:components_usb_iot_usbh_rndis_test_apps:
   rules:
     - <<: *if-protected
@@ -2813,6 +2796,23 @@
       changes: *patterns-components_usb_iot_usbh_rndis
     - <<: *if-dev-push
       changes: *patterns-components_usb_iot_usbh_cdc
+    - <<: *if-dev-push
+      changes: *patterns-components_iot_eth
+
+.rules:build:components_usb_iot_usbh_ecm_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_usb_iot_usbh_ecm
+    - <<: *if-dev-push
+      changes: *patterns-components_usb_iot_usbh_cdc
+    - <<: *if-dev-push
+      changes: *patterns-components_iot_eth
 
 .rules:build:components_usb_esp_msc_ota_test_apps:
   rules:
@@ -2885,6 +2885,8 @@
       changes: *patterns-components_usb_iot_usbh_cdc
     - <<: *if-dev-push
       changes: *patterns-components_usb_iot_usbh_modem
+    - <<: *if-dev-push
+      changes: *patterns-components_iot_eth
 
 .rules:build:components_usb_usb_stream_test:
   rules:

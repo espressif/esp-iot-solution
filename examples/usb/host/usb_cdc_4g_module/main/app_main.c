@@ -5,41 +5,48 @@
  */
 
 #include <stdio.h>
-#include <inttypes.h>
 #include <string.h>
 #include <stdlib.h>
-
 #include <arpa/inet.h>
 #include "freertos/FreeRTOS.h"
-#include "freertos/queue.h"
 #include "freertos/task.h"
+#include "freertos/event_groups.h"
 #include "esp_system.h"
+#include "esp_check.h"
 #include "esp_log.h"
 #include "nvs_flash.h"
-#include "nvs.h"
 #include "esp_netif.h"
-#include "led_indicator_gpio.h"
-#include "led_indicator_blink_default.h"
-#include "usbh_modem_board.h"
-#include "usbh_modem_wifi.h"
+#include "iot_eth.h"
+#include "iot_eth_netif_glue.h"
+#include "esp_netif_ppp.h"
+#include "iot_usbh_modem.h"
+#include "app_wifi.h"
+#include "iot_eth.h"
+#include "ping/ping_sock.h"
+#include "at_3gpp_ts_27_007.h"
+#include "network_test.h"
 #ifdef CONFIG_EXAMPLE_ENABLE_WEB_ROUTER
 #include "modem_http_config.h"
 #endif
 
-#ifdef CONFIG_EXAMPLE_PING_NETWORK
-#include "ping/ping_sock.h"
-#endif
-
-static const char *TAG = "4g_main";
-#define LED_RED_SYSTEM_GPIO                 CONFIG_EXAMPLE_LED_RED_SYSTEM_GPIO
-#define LED_BLUE_WIFI_GPIO                  CONFIG_EXAMPLE_LED_BLUE_WIFI_GPIO
-#define LED_GREEN_4GMODEM_GPIO              CONFIG_EXAMPLE_LED_GREEN_4GMODEM_GPIO
-#define LED_ACTIVE_LEVEL                    1
+static const char *TAG = "PPP_4G_main";
 
 static modem_wifi_config_t s_modem_wifi_config = MODEM_WIFI_DEFAULT_CONFIG();
-static led_indicator_handle_t s_led_system_handle = NULL;
-static led_indicator_handle_t s_led_wifi_handle = NULL;
-static led_indicator_handle_t s_led_4g_handle = NULL;
+static EventGroupHandle_t s_event_group;
+#define EVENT_GOT_IP_BIT                   (BIT0)
+
+// All supported modem IDs
+static const usb_modem_id_t usb_modem_id_list[] = {
+    {.match_id = {USB_DEVICE_ID_MATCH_VID_PID, 0x1782, 0x4d11}, 2, -1, "China Mobile, ML302/Fibocom, MC610-EU"},
+    {.match_id = {USB_DEVICE_ID_MATCH_VID_PID, 0x1E0E, 0x9011}, 5, -1, "SIMCOM, A7600C1/SIMCOM, A7670E"},
+    {.match_id = {USB_DEVICE_ID_MATCH_VID_PID, 0x1E0E, 0x9205}, 2, -1, "SIMCOM, SIM7080G"},
+    {.match_id = {USB_DEVICE_ID_MATCH_VID_PID, 0x2CB7, 0x0D01}, 2, 6, "Fibocom, LE270-CN"},
+    {.match_id = {USB_DEVICE_ID_MATCH_VID_PID, 0x2C7C, 0x6001}, 4, -1, "Quectel, EC600N-CN"},
+    {.match_id = {USB_DEVICE_ID_MATCH_VID_PID, 0x2C7C, 0x0125}, 2, -1, "Quectel, EC20"},
+    {.match_id = {USB_DEVICE_ID_MATCH_VID_PID, 0x19D1, 0x1003}, 2, -1, "YUGE, YM310 X09"},
+    {.match_id = {USB_DEVICE_ID_MATCH_VID_PID, 0x19D1, 0x0001}, 2, -1, "Luat, Air780E"},
+    {.match_id = {0}}, // End of list marker
+};
 
 #ifdef CONFIG_DUMP_SYSTEM_STATUS
 #define TASK_MAX_COUNT 32
@@ -103,116 +110,71 @@ static void _system_dump()
 }
 #endif
 
-static void _led_indicator_init()
+static void iot_event_handle(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
-    esp_err_t ret = ESP_OK;
-    led_indicator_gpio_config_t led_indicator_gpio_config = {
-        .is_active_level_high = LED_ACTIVE_LEVEL,
-    };
-
-    led_indicator_config_t led_config = {
-        .blink_lists = NULL,
-        .blink_list_num = 0,
-    };
-
-    if (LED_RED_SYSTEM_GPIO) {
-        led_indicator_gpio_config.gpio_num = LED_RED_SYSTEM_GPIO;
-        ret = led_indicator_new_gpio_device(&led_config, &led_indicator_gpio_config, &s_led_system_handle);
-        ESP_ERROR_CHECK(ret);
-        assert(s_led_system_handle != NULL);
-    }
-    if (LED_BLUE_WIFI_GPIO) {
-        led_indicator_gpio_config.gpio_num = LED_BLUE_WIFI_GPIO;
-        ret = led_indicator_new_gpio_device(&led_config, &led_indicator_gpio_config, &s_led_wifi_handle);
-        ESP_ERROR_CHECK(ret);
-        assert(s_led_wifi_handle != NULL);
-        led_indicator_stop(s_led_wifi_handle, BLINK_CONNECTED);
-        led_indicator_start(s_led_wifi_handle, BLINK_CONNECTING);
-    }
-    if (LED_GREEN_4GMODEM_GPIO) {
-        led_indicator_gpio_config.gpio_num = LED_GREEN_4GMODEM_GPIO;
-        ret = led_indicator_new_gpio_device(&led_config, &led_indicator_gpio_config, &s_led_4g_handle);
-        ESP_ERROR_CHECK(ret);
-        assert(s_led_4g_handle != NULL);
-        led_indicator_stop(s_led_4g_handle, BLINK_CONNECTED);
-        led_indicator_start(s_led_4g_handle, BLINK_CONNECTING);
-    }
-}
-
-static void on_modem_event(void *arg, esp_event_base_t event_base,
-                           int32_t event_id, void *event_data)
-{
-    if (event_base == MODEM_BOARD_EVENT) {
-        if (event_id == MODEM_EVENT_SIMCARD_DISCONN) {
-            ESP_LOGW(TAG, "Modem Board Event: SIM Card disconnected");
-            led_indicator_start(s_led_system_handle, BLINK_CONNECTED);
-        } else if (event_id == MODEM_EVENT_SIMCARD_CONN) {
-            ESP_LOGI(TAG, "Modem Board Event: SIM Card Connected");
-            led_indicator_stop(s_led_system_handle, BLINK_CONNECTED);
-        } else if (event_id == MODEM_EVENT_DTE_DISCONN) {
-            ESP_LOGW(TAG, "Modem Board Event: USB disconnected");
-            led_indicator_start(s_led_system_handle, BLINK_CONNECTING);
-        } else if (event_id == MODEM_EVENT_DTE_CONN) {
-            ESP_LOGI(TAG, "Modem Board Event: USB connected");
-            led_indicator_stop(s_led_system_handle, BLINK_CONNECTED);
-            led_indicator_stop(s_led_system_handle, BLINK_CONNECTING);
-        } else if (event_id == MODEM_EVENT_DTE_RESTART) {
-            ESP_LOGW(TAG, "Modem Board Event: Hardware restart");
-            led_indicator_start(s_led_system_handle, BLINK_CONNECTED);
-        } else if (event_id == MODEM_EVENT_DTE_RESTART_DONE) {
-            ESP_LOGI(TAG, "Modem Board Event: Hardware restart done");
-            led_indicator_stop(s_led_system_handle, BLINK_CONNECTED);
-        } else if (event_id == MODEM_EVENT_NET_CONN) {
-            ESP_LOGI(TAG, "Modem Board Event: Network connected");
-            led_indicator_start(s_led_4g_handle, BLINK_CONNECTED);
-        } else if (event_id == MODEM_EVENT_NET_DISCONN) {
-            ESP_LOGW(TAG, "Modem Board Event: Network disconnected");
-            led_indicator_stop(s_led_4g_handle, BLINK_CONNECTED);
-        } else if (event_id == MODEM_EVENT_WIFI_STA_CONN) {
-            ESP_LOGI(TAG, "Modem Board Event: Station connected");
-            led_indicator_start(s_led_wifi_handle, BLINK_CONNECTED);
-        } else if (event_id == MODEM_EVENT_WIFI_STA_DISCONN) {
-            ESP_LOGW(TAG, "Modem Board Event: All stations disconnected");
-            led_indicator_stop(s_led_wifi_handle, BLINK_CONNECTED);
+    if (event_base == IOT_ETH_EVENT) {
+        switch (event_id) {
+        case IOT_ETH_EVENT_START:
+            ESP_LOGI(TAG, "IOT_ETH_EVENT_START");
+            break;
+        case IOT_ETH_EVENT_STOP:
+            ESP_LOGI(TAG, "IOT_ETH_EVENT_STOP");
+            break;
+        case IOT_ETH_EVENT_CONNECTED:
+            ESP_LOGI(TAG, "IOT_ETH_EVENT_CONNECTED");
+            break;
+        case IOT_ETH_EVENT_DISCONNECTED:
+            ESP_LOGI(TAG, "IOT_ETH_EVENT_DISCONNECTED");
+            xEventGroupClearBits(s_event_group, EVENT_GOT_IP_BIT);
+            stop_ping_timer();
+            break;
+        default:
+            ESP_LOGI(TAG, "IOT_ETH_EVENT_UNKNOWN");
+            break;
+        }
+    } else if (event_base == IP_EVENT) {
+        if (event_id == IP_EVENT_PPP_GOT_IP) {
+            ESP_LOGI(TAG, "GOT_IP");
+            xEventGroupSetBits(s_event_group, EVENT_GOT_IP_BIT);
+            start_ping_timer();
+        } else if (event_id == IP_EVENT_PPP_LOST_IP) {
+            ESP_LOGW(TAG, "LOST_IP");
+            xEventGroupClearBits(s_event_group, EVENT_GOT_IP_BIT);
+            stop_ping_timer();
         }
     }
 }
 
-#ifdef CONFIG_EXAMPLE_PING_NETWORK
-static void on_ping_success(esp_ping_handle_t hdl, void *args)
-{
-    uint8_t ttl;
-    uint16_t seqno;
-    uint32_t elapsed_time, recv_len;
-    ip_addr_t target_addr;
-    esp_ping_get_profile(hdl, ESP_PING_PROF_SEQNO, &seqno, sizeof(seqno));
-    esp_ping_get_profile(hdl, ESP_PING_PROF_TTL, &ttl, sizeof(ttl));
-    esp_ping_get_profile(hdl, ESP_PING_PROF_IPADDR, &target_addr, sizeof(target_addr));
-    esp_ping_get_profile(hdl, ESP_PING_PROF_SIZE, &recv_len, sizeof(recv_len));
-    esp_ping_get_profile(hdl, ESP_PING_PROF_TIMEGAP, &elapsed_time, sizeof(elapsed_time));
-    ESP_LOGI(TAG, "%"PRIu32" bytes from %s icmp_seq=%u ttl=%u time=%"PRIu32" ms\n", recv_len, ipaddr_ntoa(&target_addr), seqno, ttl, elapsed_time);
-}
-
-static void on_ping_timeout(esp_ping_handle_t hdl, void *args)
-{
-    uint16_t seqno;
-    ip_addr_t target_addr;
-    esp_ping_get_profile(hdl, ESP_PING_PROF_SEQNO, &seqno, sizeof(seqno));
-    esp_ping_get_profile(hdl, ESP_PING_PROF_IPADDR, &target_addr, sizeof(target_addr));
-    ESP_LOGW(TAG, "From %s icmp_seq=%u timeout\n", ipaddr_ntoa(&target_addr), seqno);
-    // Users can add logic to handle ping timeout
-    // Add Wait or Reset logic
-}
-#endif
-
 void app_main(void)
 {
 #ifdef CONFIG_ESP32_S3_USB_OTG
-    bsp_usb_mode_select_host();
-    bsp_usb_host_power_mode(BSP_USB_HOST_POWER_MODE_USB_DEV, true);
+    // USB mode select host
+    const gpio_config_t io_config = {
+        .pin_bit_mask = BIT64(GPIO_NUM_18),
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE
+    };
+    ESP_ERROR_CHECK(gpio_config(&io_config));
+    ESP_ERROR_CHECK(gpio_set_level(GPIO_NUM_18, 1));
+
+    // Set host usb dev power mode
+    const gpio_config_t power_io_config = {
+        .pin_bit_mask = BIT64(GPIO_NUM_17) | BIT64(GPIO_NUM_12) | BIT64(GPIO_NUM_13),
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE
+    };
+    ESP_ERROR_CHECK(gpio_config(&power_io_config));
+
+    ESP_ERROR_CHECK(gpio_set_level(GPIO_NUM_17, 1)); // Configure the limiter 500mA
+    ESP_ERROR_CHECK(gpio_set_level(GPIO_NUM_12, 0));
+    ESP_ERROR_CHECK(gpio_set_level(GPIO_NUM_13, 0)); // Turn power off
+    vTaskDelay(pdMS_TO_TICKS(10));
+    ESP_ERROR_CHECK(gpio_set_level(GPIO_NUM_12, 1)); // Turn on usb dev power mode
 #endif
-    /* Initialize led indicator */
-    _led_indicator_init();
     /* Initialize NVS for Wi-Fi storage */
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -226,97 +188,61 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
+    s_event_group = xEventGroupCreate();
+    ESP_RETURN_ON_FALSE(s_event_group != NULL,, TAG, "Failed to create event group");
+    esp_event_handler_register(IP_EVENT, IP_EVENT_PPP_GOT_IP, iot_event_handle, NULL);
+    esp_event_handler_register(IP_EVENT, IP_EVENT_PPP_LOST_IP, iot_event_handle, NULL);
+    esp_event_handler_register(IOT_ETH_EVENT, ESP_EVENT_ANY_ID, iot_event_handle, NULL);
+
+    // install usbh cdc driver
+    usbh_cdc_driver_config_t config = {
+        .task_stack_size = 1024 * 4,
+        .task_priority = configMAX_PRIORITIES - 1,
+        .task_coreid = 0,
+        .skip_init_usb_host_driver = false,
+    };
+    ESP_ERROR_CHECK(usbh_cdc_driver_install(&config));
+
     /* Waiting for modem powerup */
     ESP_LOGI(TAG, "====================================");
     ESP_LOGI(TAG, "     ESP 4G Cat.1 Wi-Fi Router");
     ESP_LOGI(TAG, "====================================");
 
     /* Initialize modem board. Dial-up internet */
-    modem_config_t modem_config = MODEM_DEFAULT_CONFIG();
-    /* Modem init flag, used to control init process */
-#ifndef CONFIG_EXAMPLE_ENTER_PPP_DURING_INIT
-    /* if Not enter ppp, modem will enter command mode after init */
-    modem_config.flags |= MODEM_FLAGS_INIT_NOT_ENTER_PPP;
-    /* if Not waiting for modem ready, just return after modem init */
-    modem_config.flags |= MODEM_FLAGS_INIT_NOT_BLOCK;
-#endif
-    modem_config.handler = on_modem_event;
-    modem_board_init(&modem_config);
+    usbh_modem_config_t modem_config = {
+        .modem_id_list = usb_modem_id_list,
+        .at_tx_buffer_size = 256,
+        .at_rx_buffer_size = 256,
+    };
+    usbh_modem_install(&modem_config);
+    ESP_LOGI(TAG, "modem board installed");
+
+    xEventGroupWaitBits(s_event_group, EVENT_GOT_IP_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
 
 #ifdef CONFIG_EXAMPLE_ENABLE_WEB_ROUTER
     modem_http_get_nvs_wifi_config(&s_modem_wifi_config);
     modem_http_init(&s_modem_wifi_config);
 #endif
+    app_wifi_main(&s_modem_wifi_config);
+    esp_netif_set_default_netif(usbh_modem_get_netif());
 
-    esp_netif_t *ap_netif = modem_wifi_ap_init();
-    assert(ap_netif != NULL);
-    ESP_ERROR_CHECK(modem_wifi_set(&s_modem_wifi_config));
-
-#ifdef CONFIG_EXAMPLE_PING_NETWORK
-    ip_addr_t target_addr;
-    memset(&target_addr, 0, sizeof(target_addr));
-    char *ping_addr_s = NULL;
-#ifdef CONFIG_EXAMPLE_PING_MANUAL_ADDR
-    // Ping users defined address
-    ping_addr_s = CONFIG_EXAMPLE_PING_MANUAL_ADDR;
-#else
-    // otherwise Ping DNS server
-    esp_netif_dns_info_t dns2;
-    modem_board_get_dns_info(ESP_NETIF_DNS_MAIN, &dns2);
-    ping_addr_s = ip4addr_ntoa((ip4_addr_t *)(&dns2.ip.u_addr.ip4));
-#endif
-    esp_ping_config_t ping_config = ESP_PING_DEFAULT_CONFIG();
-    ipaddr_aton(ping_addr_s, &target_addr);
-    ping_config.target_addr = target_addr;
-    ping_config.timeout_ms = CONFIG_EXAMPLE_PING_TIMEOUT;
-    ping_config.task_stack_size = 4096;
-    ping_config.count = 1;
-
-    /* set callback functions */
-    esp_ping_callbacks_t cbs = {
-        .on_ping_success = on_ping_success,
-        .on_ping_timeout = on_ping_timeout,
-        .on_ping_end = NULL,
-        .cb_args = NULL,
-    };
-    esp_ping_handle_t ping;
-    esp_ping_new_session(&ping_config, &cbs, &ping);
-#endif
-
-#ifdef CONFIG_EXAMPLE_AUTO_UPDATE_DNS
-    uint32_t ap_dns_addr = 0;
-#endif
     while (1) {
-
-#if !defined(CONFIG_EXAMPLE_ENTER_PPP_DURING_INIT) || defined(CONFIG_MODEM_SUPPORT_SECONDARY_AT_PORT)
-        // if you want to send AT command during ppp network working, make sure the modem support secondary AT port,
-        // otherwise, the modem interface must switch to command mode before send command
-        int rssi = 0, ber = 0;
-        modem_board_get_signal_quality(&rssi, &ber);
-        ESP_LOGI(TAG, "rssi=%d, ber=%d", rssi, ber);
+        EventBits_t bits = xEventGroupWaitBits(s_event_group, EVENT_GOT_IP_BIT, pdTRUE, pdFALSE, pdMS_TO_TICKS(10000));
+        if (bits & EVENT_GOT_IP_BIT) {
+            vTaskDelay(pdMS_TO_TICKS(1000)); // Wait a bit for DNS to be ready
+            test_query_public_ip(); // Query public IP via HTTP
+#if CONFIG_EXAMPLE_USB_PPP_DOWNLOAD_SPEED_TEST
+            test_download_speed("http://mirrors.ustc.edu.cn/ros/ubuntu/db/references.db");
 #endif
-
-        // If manual DNS not defined, set DNS when got address, user better to add a queue to handle this
-#ifdef CONFIG_EXAMPLE_AUTO_UPDATE_DNS
-        esp_netif_dns_info_t dns;
-        modem_board_get_dns_info(ESP_NETIF_DNS_MAIN, &dns);
-        uint32_t _ap_dns_addr = dns.ip.u_addr.ip4.addr;
-        if (_ap_dns_addr != ap_dns_addr) {
-            modem_wifi_set_dns(ap_netif, _ap_dns_addr);
-            ap_dns_addr = _ap_dns_addr;
-            ESP_LOGI(TAG, "changed: ap dns addr (auto): %s", inet_ntoa(ap_dns_addr));
+            char str[64] = {0};
+            at_cmd_get_manufacturer_id(usbh_modem_get_atparser(), str, sizeof(str));
+            ESP_LOGI(TAG, "Manufacturer ID: %s", str);
         }
-#endif
-
-#ifdef CONFIG_EXAMPLE_PING_NETWORK
-        ESP_LOGI(TAG, "Ping addr %s Restart..", ping_addr_s);
-        esp_ping_start(ping);
-#endif
 
 #ifdef CONFIG_DUMP_SYSTEM_STATUS
         _system_dump();
 #endif
-        vTaskDelay(pdMS_TO_TICKS(10000));
     }
-    modem_board_deinit();
+    usbh_modem_uninstall();
+    usbh_cdc_driver_uninstall();
 }

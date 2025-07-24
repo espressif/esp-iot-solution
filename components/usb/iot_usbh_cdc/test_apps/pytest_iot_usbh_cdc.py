@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+# SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
 # SPDX-License-Identifier: Apache-2.0
 
 '''
@@ -17,9 +17,33 @@ from pytest_embedded import Dut
 
 @pytest.mark.target('esp32s2')
 @pytest.mark.target('esp32s3')
-@pytest.mark.env('usb_4g')
+@pytest.mark.env('generic')
 @pytest.mark.timeout(60 * 60)
 def test_iot_usbh_cdc(dut: Dut)-> None:
-    dut.expect_exact('Press ENTER to see the list of tests.')
-    dut.write('[auto]')
-    dut.expect_unity_test_output(timeout = 1000)
+    dut.run_all_single_board_cases(group='auto')
+
+# Test on ESP32-P4 ECO4
+@pytest.mark.target('esp32p4')
+@pytest.mark.env('usb_4g_ec801e_modem')
+@pytest.mark.parametrize(
+    'config',
+    [
+        'defaults',
+    ],
+)
+@pytest.mark.timeout(60 * 60)
+def test_iot_usbh_cdc_p4_eco4(dut: Dut)-> None:
+    dut.run_all_single_board_cases(group='auto')
+
+# Test on ESP32-P4 ECO5
+# @pytest.mark.target('esp32p4')
+# @pytest.mark.env('usb_4g_ec801e_modem')
+# @pytest.mark.parametrize(
+#     'config',
+#     [
+#         'p4rev3',
+#     ],
+# )
+# @pytest.mark.timeout(60 * 60)
+# def test_iot_usbh_cdc_p4_eco_default(dut: Dut)-> None:
+#     dut.run_all_single_board_cases(group='auto')
