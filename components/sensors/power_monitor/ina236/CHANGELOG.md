@@ -1,7 +1,12 @@
 # ChangeLog
 
+## v0.1.1 - 2025-7-24
 
-## v1.0.0 - 2024-5-23
+### Bug Fixes:
+
+* Fix missing handling of negative current
+
+## v0.1.0 - 2024-5-23
 
 ### Enhancements:
 
