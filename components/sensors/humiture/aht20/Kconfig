@@ -1,0 +1,9 @@
+menu "AHT20 : CONFIGURATION"
+
+    config AHT20_CHECK_CRC
+        bool "perform crc check on AHT20 readings"
+        help
+            CRC check to be performed on results or not?.
+	default n
+
+endmenu

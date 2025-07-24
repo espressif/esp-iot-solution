@@ -1,32 +1,89 @@
-[![Component Registry](https://components.espressif.com/components/espressif/aht20/badge.svg)](https://components.espressif.com/components/espressif/aht20)
-
 # Component: AHT20
-I2C driver and definition of AHT20 humidity and temperature sensor. 
+I2C driver with Sensor Hub support for Aosong AHT20 humidity and temperature sensor using esp-idf.
+Tested with AHT20 using ESP32 and ESP32-S3 devkits.
 
-Components compatible with AHT30 and AHT21 (AHT21 is deprecated).
+# Features
 
-See [AHT20 datasheet](http://www.aosong.com/en/products-32.html), [AHT30 datasheet](http://www.aosong.com/en/products-131.html).
+    Temperature and humidity measurement
+
+    Thread-safe via esp-i2c-driver
+
+    CRC checksum verification (optional, only via menuconfig)
+
+    Configurable I2C clock speed (pre-compilation, not runtime, only via menuconfig)
+
+    Unit tested 
+         
+         
+         ┌───────────────────┐
+         │    Application    │
+         └────────┬──────────┘
+                  │
+                  ▼
+         ┌───────────────────┐
+         │    AHT20 Driver   │
+         │ (this component)  │
+         └────────┬──────────┘
+                  │
+                  ▼
+         ┌───────────────────┐
+         │ i2c_bus component │
+         └────────┬──────────┘
+                  │
+                  ▼
+         ┌───────────────────┐
+         │     I2C Bus       │
+         └────────┬──────────┘
+                  │
+                  ▼
+     ┌────────────────────────────┐
+     │ AHT20 Temperature/Humidity │
+     │          Sensor            │
+     └────────────────────────────┘
 
 
-## Usage
 
-### Initialization
-> Note: Note: You need to initialize the I2C bus first.
+# How To Use
+
+All public APIs are documented in aht20.h.
+
+## Driver
+
+Following are the general guidelines.
 ```c
-    aht20_i2c_config_t i2c_conf = {
-        .i2c_port = I2C_MASTER_NUM,
-        .i2c_addr = AHT20_ADDRRES_0,
-    };
-    aht20_new_sensor(&i2c_conf, &handle);
+    //create a AHT20 device object and receive a device handle for it
+    // my_i2c_bus_handle here is a preintialized i2c_bus_handle_t i2c_bus object
+    aht20_handle_t aht20_handle =  aht20_create( my_i2c_bus_handle, AHT20_ADDRESS_LOW ); //addresses are in aht20.h
+
+    //use the previously created AHT20 device handle for initializing the AHT20 
+    aht20_init(aht20_handle);
+    
+    float_t temperature;
+
+    aht20_read_temperature( aht20_handle, &temperature);
+
+    printf("Temperature = %.2f°C\n", temperature);
+
+    vTaskDelay(pdMS_TO_TICKS(2000));
+    
+    float_t temperature;
+
+    aht20_read_temperature( aht20_handle, &temperature);
+
+    printf("Temperature = %.2f°C\n", temperature);
 ```
 
-### Read data
-> The user can periodically call the aht20_read_temp_hum API to retrieve real-time data.
-```c
-    uint32_t temp_raw, hum_raw;
-    float temp, hum;
 
-    aht20_read_temp_hum(aht20, &temp_raw, &temp, &hum_raw, &hum);
-    ESP_LOGI(TAG, "Humidity      : %2.2f %%", hum);
-    ESP_LOGI(TAG, "Temperature   : %2.2f degC", temp);
-```
+## How to Configure CRC 
+Additionally, select in menuconfig under Component Config → AHT20; to use CRC(default is not used)
+or change the clock speed of device (default is 100KHz). 
+
+Note : It is recommended to use clock speeds in upper ranges of 100kHz to 200kHz.
+Higher clock speeds may cause occasional data inconsistencies depending on your board layout and wiring.
+
+![image](https://github.com/user-attachments/assets/58a07cc9-5d87-4afe-9675-637b3e776faa)
+
+
+or 
+In sdkconfig under Component Config → AHT20,
+
