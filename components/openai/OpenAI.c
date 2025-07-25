@@ -437,7 +437,7 @@ static char *OpenAI_ImageResponseGetError(OpenAI_ImageResponse_t *imageResponse)
     return _imageResponse->error_str;
 }
 
-OpenAI_ImageResponse_t *OpenAI_ImageResponseCreate(const char *payload)
+static OpenAI_ImageResponse_t *OpenAI_ImageResponseCreate(const char *payload)
 {
     cJSON *d;
     int dl;
@@ -1181,7 +1181,7 @@ static cJSON *createMultiModalChatMessage(const char *role, const char *type, co
     return message;
 }
 
-OpenAI_StringResponse_t *OpenAI_ChatCompletionMultiModalMessage(OpenAI_ChatCompletion_t *chatCompletion, const char *type, const char *contentValue, bool save)
+static OpenAI_StringResponse_t *OpenAI_ChatCompletionMultiModalMessage(OpenAI_ChatCompletion_t *chatCompletion, const char *type, const char *contentValue, bool save)
 {
     const char *role = "user";
     const char *endpoint = "chat/completions";
@@ -1294,7 +1294,7 @@ OpenAI_StringResponse_t *OpenAI_ChatCompletionMultiModalMessage(OpenAI_ChatCompl
     return result;
 }
 
-OpenAI_StringResponse_t *OpenAI_ChatCompletionMessage(OpenAI_ChatCompletion_t *chatCompletion, const char *contentValue, bool save)
+static OpenAI_StringResponse_t *OpenAI_ChatCompletionMessage(OpenAI_ChatCompletion_t *chatCompletion, const char *contentValue, bool save)
 {
     return OpenAI_ChatCompletionMultiModalMessage(chatCompletion, "text", contentValue, save);
 }
@@ -1395,7 +1395,7 @@ static void OpenAI_EditSetN(OpenAI_Edit_t *edit, uint32_t n)
     }
 }
 
-OpenAI_StringResponse_t *OpenAI_EditProcess(OpenAI_Edit_t *edit, char *instruction, char *input)
+static OpenAI_StringResponse_t *OpenAI_EditProcess(OpenAI_Edit_t *edit, char *instruction, char *input)
 {
     const char *endpoint = "edits";
     OpenAI_StringResponse_t *result = NULL;
@@ -1520,7 +1520,7 @@ static void OpenAI_ImageGenerationSetUser(OpenAI_ImageGeneration_t *imageGenerat
     _imageGeneration->user = strdup(u);
 }
 
-OpenAI_ImageResponse_t *OpenAI_ImageGenerationPrompt(OpenAI_ImageGeneration_t *imageGeneration, char *p)
+static OpenAI_ImageResponse_t *OpenAI_ImageGenerationPrompt(OpenAI_ImageGeneration_t *imageGeneration, char *p)
 {
     const char *endpoint = "images/generations";
     OpenAI_ImageResponse_t *result = NULL;
@@ -2045,7 +2045,7 @@ end:
     return NULL;
 }
 
-OpenAI_SpeechResponse_t *OpenAI_AudioSpeechMessage(OpenAI_AudioSpeech_t *audioSpeech, char *p)
+static OpenAI_SpeechResponse_t *OpenAI_AudioSpeechMessage(OpenAI_AudioSpeech_t *audioSpeech, char *p)
 {
     size_t dataLength = 0;
     const char *endpoint = "audio/speech";
@@ -2073,7 +2073,7 @@ OpenAI_SpeechResponse_t *OpenAI_AudioSpeechMessage(OpenAI_AudioSpeech_t *audioSp
     return result;
 }
 
-void OpenAI_AudioSpeechMessageStream(OpenAI_AudioSpeech_t *audioSpeech, char *p, OpenAI_StreamCallback stream_callback)
+static void OpenAI_AudioSpeechMessageStream(OpenAI_AudioSpeech_t *audioSpeech, char *p, OpenAI_StreamCallback stream_callback)
 {
     size_t dataLength = 0;
     const char *endpoint = "audio/speech";
@@ -2449,7 +2449,7 @@ static OpenAI_AudioTranslation_t *OpenAI_AudioTranslationCreate(OpenAI_t *openai
  * @param user A unique identifier representing your end-user, which can help OpenAI to monitor and detect abuse.
  * @return Pointer to the OpenAI_EmbeddingResponse_t.
  */
-OpenAI_EmbeddingResponse_t *OpenAI_EmbeddingCreate(OpenAI_t *openai, char *input, const char *model, const char *user)
+static OpenAI_EmbeddingResponse_t *OpenAI_EmbeddingCreate(OpenAI_t *openai, char *input, const char *model, const char *user)
 {
     const char *endpoint = "embeddings";
     OpenAI_EmbeddingResponse_t *result = NULL;
@@ -2491,7 +2491,7 @@ OpenAI_EmbeddingResponse_t *OpenAI_EmbeddingCreate(OpenAI_t *openai, char *input
  * @param model Two content moderations models are available: text-moderation-stable and text-moderation-latest.
  * @return Pointer to the OpenAI_ModerationResponse_t
  */
-OpenAI_ModerationResponse_t *OpenAI_ModerationCreate(OpenAI_t *openai, char *input, const char *model)
+static OpenAI_ModerationResponse_t *OpenAI_ModerationCreate(OpenAI_t *openai, char *input, const char *model)
 {
     const char *endpoint = "moderations";
     OpenAI_ModerationResponse_t *result = NULL;

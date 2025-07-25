@@ -461,12 +461,23 @@ typedef struct OpenAI_ChatCompletion {
      * @brief Send the message for completion. Save it with the first response if selected.
      *
      * @param chatCompletion[in] the point of OpenAI_ChatCompletion
-     * @param type[in] the type of the message for completion
      * @param p[in] the message for completion
      * @param save[in] save it with the first response if selected
      * @return OpenAI_StringResponse_t*
      */
-    OpenAI_StringResponse_t *(*message)(struct OpenAI_ChatCompletion *chatCompletion, const char *type, const char *p, bool save);
+    OpenAI_StringResponse_t *(*message)(struct OpenAI_ChatCompletion *chatCompletion, const char *p, bool save);
+
+    /**
+     * @brief Send a multi-modal message (text / image_url / input_audio) for completion.
+     *        This is an extended API supporting richer content types.
+     *
+     * @param chatCompletion[in] The chat completion object
+     * @param type[in] The content type string ("text", "image_url", "input_audio", etc.)
+     * @param p[in]    The content value corresponding to the type
+     * @param save[in] Save conversation with the first assistant response if true
+     * @return OpenAI_StringResponse_t* The response from OpenAI
+     */
+    OpenAI_StringResponse_t *(*multiModalMessage)(struct OpenAI_ChatCompletion *chatCompletion, const char *type, const char *p, bool save);
 
 } OpenAI_ChatCompletion_t;
 
@@ -752,7 +763,7 @@ typedef struct OpenAI_AudioSpeech {
     void (*setResponseFormat)(struct OpenAI_AudioSpeech *createSpeech, OpenAI_Audio_Output_Format rf);
 
     /**
-     * @brief Send the message for completion. Save it with the first response if selected.
+     * @brief Send the message for completion.
      *
      * @param createSpeech[in] the point of OpenAI_SpeechResponse_t
      * @param p[in] the message for audio generation
@@ -761,7 +772,7 @@ typedef struct OpenAI_AudioSpeech {
     OpenAI_SpeechResponse_t *(*speech)(struct OpenAI_AudioSpeech *createSpeech, char *p);
 
     /**
-     * @brief Send the message for completion. Save it with the first response if selected.
+     * @brief Send the message for completion.
      *
      * @param createSpeech[in] the point of OpenAI_SpeechResponse_t
      * @param p[in] the message for audio generation
