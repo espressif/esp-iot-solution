@@ -11,3 +11,7 @@ You can create a project from this example by the following command:
 ```
 idf.py create-project-from-example "espressif/ble_ota^0.1.8:ble_ota"
 ```
+
+> ![TIP]
+>
+> When using NimBLE, it may be necessary to increase `CONFIG_BT_NIMBLE_HOST_TASK_STACK_SIZE`。

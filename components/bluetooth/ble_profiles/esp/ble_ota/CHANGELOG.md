@@ -77,3 +77,7 @@
 ## v0.1.14 - 2024-11-21
 * BLE-OTA:
   * Add support for enabling BLE 5.0 for NimBLE
+
+## v0.1.15 - 2025-07-29
+* BLE-OTA:
+  * Fixed BLE OTA data corruption issue caused by incomplete NimBLE's mbufs reading [#502](https://github.com/espressif/esp-iot-solution/pull/502)

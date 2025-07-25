@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2019-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2019-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
 */
@@ -19,6 +19,25 @@
 #include "freertos/semphr.h"
 #if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
 #include "esp_nimble_hci.h"
+
+/*
+ * This is a workaround for the missing os_mbuf_len function in NimBLE.
+ * It is not present in NimBLE 1.3, but is present in NimBLE 1.4.
+ * This function is used to get the length of an os_mbuf.
+ */
+uint16_t
+os_mbuf_len(const struct os_mbuf *om)
+{
+    uint16_t len;
+
+    len = 0;
+    while (om != NULL) {
+        len += om->om_len;
+        om = SLIST_NEXT(om, om_next);
+    }
+
+    return len;
+}
 #endif
 
 #ifdef CONFIG_PRE_ENC_OTA
