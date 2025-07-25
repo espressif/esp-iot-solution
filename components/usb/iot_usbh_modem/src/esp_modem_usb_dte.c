@@ -163,11 +163,11 @@ static void esp_handle_usb2_data(esp_modem_dte_internal_t *esp_dte)
     }
     length = MIN(esp_dte->data_buffer_size, length);
     uint8_t *temp_buffer = (uint8_t *)calloc(1, length);
-    usbh_cdc_read_bytes(esp_dte->cdc_hdl2, esp_dte->data_buffer, &length, pdMS_TO_TICKS(100));
+    usbh_cdc_read_bytes(esp_dte->cdc_hdl2, temp_buffer, &length, pdMS_TO_TICKS(100));
     /* pass the input data to configured callback */
     if (length) {
-        ESP_LOGI(TAG, "Intf2 not handle date, just dump:");
-        ESP_LOG_BUFFER_HEXDUMP("esp-modem-dte: inf2", temp_buffer, length, ESP_LOG_INFO);
+        ESP_LOGI(TAG, "Unsolicited data on secondary itf, dumping:");
+        ESP_LOG_BUFFER_HEXDUMP("esp-modem-dte: intf2", temp_buffer, length, ESP_LOG_INFO);
     }
     free(temp_buffer);
 }
