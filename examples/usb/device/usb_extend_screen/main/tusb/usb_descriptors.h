@@ -26,6 +26,7 @@
 
 #pragma once
 #include "tusb.h"
+#include "sdkconfig.h"
 
 enum {
     REPORT_ID_TOUCH = 1,
@@ -40,8 +41,12 @@ enum {
 #endif
 #if CFG_TUD_AUDIO
     ITF_NUM_AUDIO_CONTROL,
+#if CONFIG_UAC_SPEAKER_CHANNEL_NUM > 0
     ITF_NUM_AUDIO_STREAMING_SPK,
+#endif
+#if CONFIG_UAC_MIC_CHANNEL_NUM > 0
     ITF_NUM_AUDIO_STREAMING_MIC,
+#endif
 #endif
     ITF_NUM_TOTAL,
 };

@@ -121,6 +121,8 @@ void tud_vendor_rx_cb(uint8_t itf, uint8_t const* buffer, uint16_t bufsize)
                         skip_frame = true;
                         buffer_skip(&skip_frame_info, read_res - sizeof(udisp_frame_header_t));
                         ESP_LOGE(TAG, "Get frame is null");
+                        // Feed the task dog
+                        vTaskDelay(1 / portTICK_PERIOD_MS);
                     }
                     break;
                 }
@@ -146,6 +148,6 @@ void tud_vendor_rx_cb(uint8_t itf, uint8_t const* buffer, uint16_t bufsize)
 
 esp_err_t app_vendor_init(void)
 {
-    xTaskCreatePinnedToCore(transfer_task, "transfer_task", 4096, NULL, CONFIG_VENDOR_TASK_PRIORITY, NULL, 0);
+    xTaskCreatePinnedToCore(transfer_task, "transfer_task", 4096, NULL, CONFIG_VENDOR_TASK_PRIORITY, NULL, 1);
     return ESP_OK;
 }
