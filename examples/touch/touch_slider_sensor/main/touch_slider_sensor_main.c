@@ -54,6 +54,7 @@ void app_main(void)
         .swipe_hysterisis = 40,
         .channel_gold_value = NULL,
         .debounce_times = 0,
+        .calculate_window = 0, // 0 means auto select window size
         .skip_lowlevel_init = false
     };
 
