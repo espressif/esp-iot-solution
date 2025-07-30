@@ -22,14 +22,13 @@ First, create the following directory structure:
     project_name
     |
     |-- main
-    |   |-- CMakeLists.txt
-    |   |-- idf_component.yml
-    |   |-- main.c
-    |
-    |-- tusb
-        |-- tusb_config.h
-        |-- usb_descriptors.c
-        |-- usb_descriptors.h
+        |-- CMakeLists.txt
+        |-- idf_component.yml
+        |-- main.c
+        |-- tusb
+            |-- tusb_config.h
+            |-- usb_descriptors.c
+            |-- usb_descriptors.h
 
 Add component dependencies in the main component of the project, referencing :ref:`espressif/tinyusb <espressif/tinyusb>`.
 
