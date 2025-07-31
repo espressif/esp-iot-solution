@@ -10,6 +10,11 @@
         alert('Failed to delete the file.');
         return;
       }
+      if (!enableResetButton) {
+        alert("File deleted!");
+        location.reload();
+        return;
+      }
       const cookies = document.cookie.split('; ').reduce((acc, cookie) => {
         const [name, value] = cookie.split('=');
         acc[name] = value;
