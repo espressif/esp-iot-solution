@@ -15,6 +15,19 @@ This example demonstrates how to use USB Host MSC functionality and provides a w
 
 Note: exFat requires a paid license.
 
+### FATFS Multilingual Filename Support (Enabled by Default)
+
+This demo has enabled FATFS OEM multi-code page support. To manually adjust multi-language support for filenames, please adjust the following options in menuconfig:
+
+- (Top) → <kbd>Component config</kbd> → <kbd>FAT Filesystem support</kbd> → <kbd>OEM Code Page</kbd>
+  - This example defaults to <kbd>Dynamic (all code pages supported)</kbd>.
+  - When set to <kbd>Dynamic (all code pages supported)</kbd> (`FATFS_CODEPAGE_DYNAMIC`), FATFS will support all code pages, but it will increase the size of the compiled output by about 500 kB.
+  - If you choose another code page, make sure that the selected code page matches the character set used in the filenames; otherwise it may cause garbled text, file not found errors, or other latent issues.
+- (Top) → <kbd>Component config</kbd> → <kbd>FAT Filesystem support</kbd> → <kbd>API character encoding</kbd>
+  - This example defaults to <kbd>API uses UTF-8 encoding</kbd> (`FATFS_API_ENCODING_UTF_8`).
+  - This option controls the encoding method used by the filenames read by the FATFS API. For more details, please refer to the configuration help.
+  - For web development, it is recommended to use UTF-8 encoding.
+
 ## Web Page Features
 
 - Display files and directories on the MSC device

@@ -15,6 +15,19 @@
 
 Note: exFat 是付费许可。
 
+### FATFS 文件名多语言支持（默认启用）
+
+此 Demo 已启用 FATFS 的 OEM 多代码页支持。如需手动调整文件名的多语言支持，请在 menuconfig 中调整下列选项：
+
+- (Top) → <kbd>Component config</kbd> → <kbd>FAT Filesystem support</kbd> → <kbd>OEM Code Page</kbd>
+  - 本例程默认为 <kbd>Dynamic (all code pages supported)</kbd>。
+  - 将其设置为 <kbd>Dynamic (all code pages supported)</kbd> （`FATFS_CODEPAGE_DYNAMIC`）时，FATFS 将支持所有代码页，但会使编译产物体积增加约 500 kB。
+  - 若选择其他代码页，请确保所选代码页与文件名字符集匹配，否则会导致乱码、无法找到文件或其他隐性问题。
+- (Top) → <kbd>Component config</kbd> → <kbd>FAT Filesystem support</kbd> → <kbd>API character encoding</kbd>
+  - 本例程默认为 <kbd>API uses UTF-8 encoding</kbd> (`FATFS_API_ENCODING_UTF_8`)。
+  - 该选项控制 FATFS API 读出的文件名所使用的编码方式，详见该配置项的说明。
+  - 若进行 Web 开发，建议使用 UTF 8 编码。
+
 ## 网页功能
 
 - 显示 MSC 设备中的文件和目录

@@ -42,9 +42,9 @@
 
 - (Top) → <kbd>Component config</kbd> → <kbd>FAT Filesystem support</kbd> → <kbd>OEM Code Page</kbd>
   - 本例程默认为 <kbd>Dynamic (all code pages supported)</kbd>。
-  - 设置为 <kbd>Dynamic (all code pages supported)</kbd> （`FATFS_CODEPAGE_DYNAMIC`）时，FATFS 将支持所有代码页，但会使编译产物增大 ~500kB。
-  - 设置为其他代码页时，需要选择与文件名字符集相匹配的代码页，否则会导致乱码、无法找到文件或其他隐性问题。
+  - 将其设置为 <kbd>Dynamic (all code pages supported)</kbd> （`FATFS_CODEPAGE_DYNAMIC`）时，FATFS 将支持所有代码页，但会使编译产物体积增加约 500 kB。
+  - 若选择其他代码页，请确保所选代码页与文件名字符集匹配，否则会导致乱码、无法找到文件或其他隐性问题。
 - (Top) → <kbd>Component config</kbd> → <kbd>FAT Filesystem support</kbd> → <kbd>API character encoding</kbd>
   - 本例程默认为 <kbd>API uses UTF-8 encoding</kbd> (`FATFS_API_ENCODING_UTF_8`)。
-  - 该选项会控制 FATFS API 读出的文件名所用的编码，详见该配置项的说明。
+  - 该选项控制 FATFS API 读出的文件名所使用的编码方式，详见该配置项的说明。
   - 若进行 Web 开发，建议使用 UTF 8 编码。
