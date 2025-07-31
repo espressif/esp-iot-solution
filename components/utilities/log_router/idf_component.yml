@@ -1,0 +1,12 @@
+version: "0.1.0"
+description: LogRouter redirects and filters ESP logs to various storage media
+url: https://github.com/espressif/esp-iot-solution/tree/master/components/utilities/log_router
+repository: https://github.com/espressif/esp-iot-solution.git
+issues: https://github.com/espressif/esp-iot-solution/issues
+
+dependencies:
+  idf: ">=5.0"
+  cmake_utilities: "*"
+sbom:
+  supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'
+  originator: 'Organization: Espressif Systems (Shanghai) CO LTD'

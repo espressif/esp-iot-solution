@@ -29,7 +29,8 @@ typedef struct {
     uint32_t *channel_gold_value; /*!< (Optional) Reference values for touch channels */
     uint32_t debounce_times;      /*!< Number of consecutive readings needed to confirm state change */
     uint32_t filter_reset_times;  /*!< Number of consecutive readings to reset position filter */
-    uint32_t position_range;       /*!< The right region of touch slider position range, [0, position_range (less than or equal to 255)] */
+    uint32_t position_range;      /*!< Maximum position value of touch slider, range [0, position_range]. Higher values provide better position resolution */
+    uint8_t calculate_window;     /*!< Window size for position calculation (should be <= channel_num). Set to 0 for auto-default: 2 for 2-channel, 3 for 3+ channels */
     float swipe_threshold;        /*!< The speed threshold for identifying swiping */
     float swipe_hysterisis;       /*!< The speed hysterisis for identifying swiping */
     float swipe_alpha;            /*!< Filter parameter for estimating speed */
@@ -54,6 +55,13 @@ typedef void (*touch_slider_event_cb_t)(touch_slider_handle_t handle, touch_slid
  * This function initializes the touch sensor hardware (unless skip_lowlevel_init is true),
  * sets up FSM instances for touch detection, and registers callbacks for touch events.
  *
+ * @note The calculate_window parameter determines how many adjacent channels are used
+ *       for position calculation. For backward compatibility, if set to 0, default
+ *       values will be used:
+ *       - 2 channels: window_size = 2 (use all channels)
+ *       - 3+ channels: window_size = 3 (optimal balance between precision and noise immunity)
+ *       - For high-precision applications: window_size = min(3, channel_num)
+ *
  * @param config   Touch slider sensor configuration
  * @param handle   Pointer to receive the created touch slider sensor handle
  * @param cb       Callback function for touch slider events
@@ -61,7 +69,8 @@ typedef void (*touch_slider_event_cb_t)(touch_slider_handle_t handle, touch_slid
  *
  * @return
  *     - ESP_OK on success
- *     - ESP_ERR_INVALID_ARG if config, handle, or required config fields are NULL
+ *     - ESP_ERR_INVALID_ARG if config, handle, or required config fields are NULL,
+ *       or if calculate_window is less than 2 or greater than channel_num (0 is acceptable for auto-default)
  *     - ESP_ERR_NO_MEM if memory allocation fails
  *     - ESP_FAIL if touch sensor or FSM initialization fails
  */

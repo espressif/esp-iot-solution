@@ -36,6 +36,15 @@ Note: If you are a self-powered device, please check [Self-Powered Device](https
 * You can set wi-fi STA ssid and password also, to make esp32-sx connect to a router at the same time.
 * You can also configure Wi-Fi settings through the `settings` page on the web interface.
 
-### Known Issues
+### Multi-language Support
 
-* After deleting or adding files through USB disk, please refresh the web interface.
+This demo has enabled FATFS OEM multi-code page support. To manually adjust multi-language support for filenames, please adjust the following options in menuconfig:
+
+- (Top) → <kbd>Component config</kbd> → <kbd>FAT Filesystem support</kbd> → <kbd>OEM Code Page</kbd>
+  - This example defaults to <kbd>Dynamic (all code pages supported)</kbd>.
+  - When set to <kbd>Dynamic (all code pages supported)</kbd> (`FATFS_CODEPAGE_DYNAMIC`), FATFS will support all code pages, but will increase the compiled binary size by ~500kB.
+  - When set to other code pages, you need to select a code page that matches the character set of the filenames, otherwise it may cause garbled characters, inability to find files, or other hidden issues.
+- (Top) → <kbd>Component config</kbd> → <kbd>FAT Filesystem support</kbd> → <kbd>API character encoding</kbd>
+  - This example defaults to <kbd>API uses UTF-8 encoding</kbd> (`FATFS_API_ENCODING_UTF_8`).
+  - This option controls the encoding used by FATFS API for reading filenames. Please refer to the description of this configuration item for details.
+  - For web development, it is recommended to use UTF-8 encoding.

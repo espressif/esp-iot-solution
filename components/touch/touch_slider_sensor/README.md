@@ -7,7 +7,8 @@ A component providing enhanced touch slider detection functionality for ESP32 se
 ## Features
 
 - FSM-based touch detection with configurable thresholds
-- Support for slider gesture detection
+- Support for slider gesture detection with configurable position calculation window
+- Automatic default value selection for optimal performance
 - Callback-based event notification
 
 ## Dependencies
@@ -15,6 +16,26 @@ A component providing enhanced touch slider detection functionality for ESP32 se
 - [touch_sensor_fsm](https://components.espressif.com/components/espressif/touch_sensor_fsm)
 - [touch_sensor_lowlevel](https://components.espressif.com/components/espressif/touch_sensor_lowlevel)
 
+## Configuration Options
+
+### Calculate Window (`calculate_window`)
+
+The `calculate_window` parameter determines how many adjacent touch channels are used for position calculation. This affects the precision and noise immunity of the slider.
+
+**Default Values (when set to 0):**
+- **2 channels**: `calculate_window = 2` (uses all available channels)
+- **3+ channels**: `calculate_window = 3` (optimal balance between precision and noise immunity)
+
+**Manual Configuration:**
+- You can explicitly set any value from 1 to `channel_num`
+- Smaller values (1-2): Higher sensitivity but more susceptible to noise
+- Larger values (3+): Better noise immunity but potentially lower resolution
+- For high-precision applications: Recommended value is `min(3, channel_num)`
+
+**Backward Compatibility:**
+- Setting `calculate_window = 0` enables automatic default selection
+- Existing code that doesn't initialize this field will use optimal defaults
+- Explicitly set values continue to work as before
 
 ## Example
 
@@ -70,6 +91,7 @@ void app_main(void)
         .swipe_hysterisis = 40,
         .channel_gold_value = NULL,
         .debounce_times = 0,
+        .calculate_window = 0,  // Use default value (auto-selected based on channel count)
         .skip_lowlevel_init = false
     };
 

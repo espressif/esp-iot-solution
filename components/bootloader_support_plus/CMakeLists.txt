@@ -34,9 +34,7 @@ idf_component_register(SRCS ${srcs}
                     PRIV_REQUIRES ${requires})
 
 if(BOOTLOADER_BUILD)
-    if (CONFIG_IDF_TARGET_ESP32C2 OR CONFIG_IDF_TARGET_ESP32C3 OR CONFIG_IDF_TARGET_ESP32C6 OR CONFIG_IDF_TARGET_ESP32H2 OR CONFIG_IDF_TARGET_ESP32)
-        target_linker_script(${COMPONENT_LIB} INTERFACE "ld/${CONFIG_IDF_TARGET}/linker.lf")
-    endif()
+    target_linker_script(${COMPONENT_LIB} INTERFACE "ld/${CONFIG_IDF_TARGET}/linker.lf")
 else()
     if(CONFIG_BOOTLOADER_COMPRESSED_ENABLED)
         target_link_libraries(${COMPONENT_LIB} INTERFACE "-Wl,--wrap=esp_ota_get_next_update_partition")

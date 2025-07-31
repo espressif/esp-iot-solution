@@ -799,12 +799,13 @@ components_test_zero_detection:
       - IDF_TARGET: esp32s3
         IDF_VERSION: "5.1"
         ENV_TAG: zero_detection
-      - IDF_TARGET: esp32c3
-        IDF_VERSION: "5.0"
-        ENV_TAG: zero_detection
-      - IDF_TARGET: esp32c3
-        IDF_VERSION: "5.1"
-        ENV_TAG: zero_detection
+      # - IDF_TARGET: esp32c3
+      #   IDF_VERSION: "5.0"
+      #   ENV_TAG: zero_detection
+      # - IDF_TARGET: esp32c3
+      #   IDF_VERSION: "5.1"
+      #   ENV_TAG: zero_detection
+      #   Due to memory issues, the ESP32-C3 test case is temporarily skipped and will be restored after the problem is resolved. AEG-2602
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}

@@ -36,6 +36,15 @@
 * 您也可以设置 Wi-Fi STA 的 SSID 和密码，以使 esp32-sx 同时连接到路由器。
 * 您还可以通过网页端的 `settings` 来配置 Wi-Fi 的相关信息。
 
-### 已知问题
+### 多语言支持
 
-* 通过 USB 磁盘添加或删除的文件后，请主动刷新网页
+此演示已启用 FATFS 的 OEM 多代码页支持。如需手动调整文件名的多语言支持，请在 menuconfig 中调整下列选项：
+
+- (Top) → <kbd>Component config</kbd> → <kbd>FAT Filesystem support</kbd> → <kbd>OEM Code Page</kbd>
+  - 本例程默认为 <kbd>Dynamic (all code pages supported)</kbd>。
+  - 设置为 <kbd>Dynamic (all code pages supported)</kbd> （`FATFS_CODEPAGE_DYNAMIC`）时，FATFS 将支持所有代码页，但会使编译产物增大 ~500kB。
+  - 设置为其他代码页时，需要选择与文件名字符集相匹配的代码页，否则会导致乱码、无法找到文件或其他隐性问题。
+- (Top) → <kbd>Component config</kbd> → <kbd>FAT Filesystem support</kbd> → <kbd>API character encoding</kbd>
+  - 本例程默认为 <kbd>API uses UTF-8 encoding</kbd> (`FATFS_API_ENCODING_UTF_8`)。
+  - 该选项会控制 FATFS API 读出的文件名所用的编码，详见该配置项的说明。
+  - 若进行 Web 开发，建议使用 UTF 8 编码。

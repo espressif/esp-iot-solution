@@ -29,12 +29,16 @@ jobs:
             components/bootloader_support_plus;
             components/button;
             components/display/lcd/esp_lcd_axs15231b;
+            components/display/lcd/esp_lcd_co5300;
             components/display/lcd/esp_lcd_ek79007;
+            components/display/lcd/esp_lcd_gc9107;
             components/display/lcd/esp_lcd_gc9b71;
+            components/display/lcd/esp_lcd_gc9d01;
             components/display/lcd/esp_lcd_hx8399;
             components/display/lcd/esp_lcd_jd9165;
             components/display/lcd/esp_lcd_jd9365;
             components/display/lcd/esp_lcd_nv3022b;
+            components/display/lcd/esp_lcd_nv3052;
             components/display/lcd/esp_lcd_panel_io_additions;
             components/display/lcd/esp_lcd_sh8601;
             components/display/lcd/esp_lcd_spd2010;
@@ -101,6 +105,7 @@ jobs:
             components/usb/iot_usbh_ecm;
             components/usb/usb_stream;
             components/utilities/adc_tp_calibration;
+            components/utilities/log_router;
             components/utilities/xz;
             components/zero_detection;
             tools/cmake_utilities;

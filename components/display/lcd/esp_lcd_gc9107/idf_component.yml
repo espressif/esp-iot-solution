@@ -1,0 +1,6 @@
+version: "1.0.0"
+description: ESP LCD GC9107
+url: https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_gc9107
+dependencies:
+  idf: ">=5.3"
+  cmake_utilities: "0.*"
