@@ -1,7 +1,7 @@
 Flash 加密
 ****************
 
-flash 加密是 ESP32 系列芯片的重要安全特性，用于保护存储在外部 flash 中固件和数据的机密性。启用 flash 加密后，flash 中的内容将被透明加密，防止通过物理方式读取获得明文数据。
+flash 加密是 ESP32 系列芯片的重要安全特性，用于保护存储在外部 flash 中固件和数据的机密性。启用 flash 加密后，flash 中的内容将被透明加密，防止通过物理方式读取获得明文固件和数据。
 
 flash 加密的核心特点：
 
@@ -36,6 +36,27 @@ flash 加密会自动加密以下内容：
 **重要提示**：NVS 分区加密和 flash 加密是两个独立的功能。需要使用 NVS 加密功能。详见：`NVS 加密文档 <https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32s3/api-reference/storage/nvs_encryption.html>`_
 
 加密范围详细说明：`加密分区 <https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32s3/security/flash-encryption.html#encrypted-partitions>`_
+
+flash 加密功能支持列表
+~~~~~~~~~~~~~~~~~~~~~~~
+
+以下是根据知识源整理的 ESP32 系列芯片 Flash 加密功能对比表，包含加密算法、密钥长度/类型、硬件支持、密钥存储方式、密钥来源（精简描述）：
+
+| 芯片型号 |       支持的加密算法       |   密钥长度/类型    | 硬件加速/支持 |           密钥存储方式           |             密钥来源              |
+| :------: | :------------------------: | :----------------: | :-----------: | :------------------------------: | :-------------------------------: |
+|  ESP32   |   AES-256（自定义实现）    |      256-bit       |      有       |              eFuse               |          硬件随机数生成           |
+| ESP32-S2 | XTS-AES-128<br>XTS-AES-256 | 256-bit 或 512-bit |      有       |       eFuse（BLOCK_KEYN）        |       硬件随机数或主机生成        |
+| ESP32-S3 | XTS-AES-128<br>XTS-AES-256 | 256-bit 或 512-bit |      有       |       eFuse（BLOCK_KEYN）        |       硬件随机数或主机生成        |
+| ESP32-C2 |        XTS-AES-128         |      256-bit       |      有       |       eFuse（BLOCK_KEY0）        |       硬件随机数或主机生成        |
+| ESP32-C3 |        XTS-AES-128         |      256-bit       |      有       |       eFuse（BLOCK_KEYN）        |       硬件随机数或主机生成        |
+| ESP32-C5 |        XTS-AES-128         |      256-bit       |      有       | eFuse（BLOCK_KEYN）或Key Manager | 硬件随机数、主机生成或Key Manager |
+| ESP32-C6 |        XTS-AES-128         |      256-bit       |      有       |       eFuse（BLOCK_KEYN）        |       硬件随机数或主机生成        |
+| ESP32-H2 |        XTS-AES-128         |      256-bit       |      有       |       eFuse（BLOCK_KEYN）        |       硬件随机数或主机生成        |
+| ESP32-P4 | XTS-AES-128<br>XTS-AES-256 | 256-bit 或 512-bit |      有       |       eFuse（BLOCK_KEYN）        |       硬件随机数或主机生成        |
+
+**说明：**
+- ESP32-C5 支持 Key Manager 作为密钥来源和存储方式[ESP32-C5 SoC Capability Macros](https://docs.espressif.com/projects/esp-idf/en/latest/esp32c5/api-reference/system/soc_caps.html#macros)。
+- 其它芯片均为 eFuse 存储，密钥可由硬件随机数生成或主机生成后烧录[ESP32-S2 Flash Encryption](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s2/security/flash-encryption.html#key-points-about-flash-encryption)[ESP32-C3 Flash Encryption](https://docs.espressif.com/projects/esp-idf/en/latest/esp32c3/security/flash-encryption.html)。
 
 开发模式和发布模式
 ~~~~~~~~~~~~~~~~~~~~~
