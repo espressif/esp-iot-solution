@@ -62,6 +62,29 @@ project_elf(XXXX)
 
 Build the project as an ordinary ESP-IDF project, and then the ELF file named `XXXX.app.elf` is in the build directory.
 
+### ELF APP Fast Build
+
+Users can enable ELF fast build functionality by configuring CMAKE's generator as Unit Makefile. The reference command is as follows:
+
+```bash
+idf.py -G 'Unix Makefiles' set-target <chip-name>
+```
+
+Then input the ELF APP build command as follows:
+
+```
+idf.py elf
+```
+
+The build system will only build ELF target components and show the following logs:
+
+```
+Building C object esp-idf/main/CMakeFiles/__idf_main.dir/main.c.obj
+Linking C static library libmain.a
+Build ELF: hello_world.app.elf
+Built target elf
+```
+
 ### Adding the Component to Your Project
 
 Please use the component manager command add-dependency to add the elf_loader component as a dependency in your project. During the CMake step, the component will be downloaded automatically.

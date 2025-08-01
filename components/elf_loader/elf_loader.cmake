@@ -52,7 +52,16 @@ macro(project_elf project_name)
     if(ELF_COMPONENTS)
         foreach(c ${ELF_COMPONENTS})
             list(APPEND elf_libs "esp-idf/${c}/lib${c}.a")
-            list(APPEND elf_dependeces "idf::${c}")
+
+            if(${CMAKE_GENERATOR} STREQUAL "Unix Makefiles")
+                add_custom_command(OUTPUT elf_${c}_app
+                        COMMAND +${CMAKE_MAKE_PROGRAM} "__idf_${c}/fast"
+                        COMMENT "Build Component: ${c}"
+                )
+                list(APPEND elf_dependeces "elf_${c}_app")
+            else()
+                list(APPEND elf_dependeces "idf::${c}")
+            endif()
         endforeach()
     endif()
     if (ELF_LIBS)
