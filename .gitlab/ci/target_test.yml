@@ -316,6 +316,8 @@ components_test_led_indicator:
     TEST_ENV: led_indicator
 
 components_test_openai:
+  # To avoid factors such as unstable wifi or expired openai-key, allow ci test to fail.
+  allow_failure: true
   extends:
     - .pytest_template
     - .rules:build:components_openai_test_apps
@@ -323,6 +325,8 @@ components_test_openai:
     - job: "build_components_openai_test_apps"
       artifacts: true
       optional: true
+  retry:
+    max: 2
   parallel:
     matrix:
         - IDF_TARGET: esp32s3
@@ -331,10 +335,13 @@ components_test_openai:
         - IDF_TARGET: esp32s3
           IDF_VERSION: "5.0"
           ENV_TAG: "openai"
+        - IDF_TARGET: esp32s3
+          IDF_VERSION: "5.4"
+          ENV_TAG: "openai"
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
+  image: $DOCKER_TARGET_TEST_v5_4_ENV_IMAGE
   variables:
     TEST_TARGET: esp32s3
     TEST_FOLDER: components/openai

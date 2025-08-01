@@ -1490,6 +1490,7 @@ build_components_openai_test_apps:
       - IMAGE: espressif/idf:v4.4.6   # Due to a bug in the ESP32-S3 not being able to scan for AP in release/v4.4,
                                       # temporarily using version v4.4.6 and awaiting the next update in release/v4.4.
       - IMAGE: espressif/idf:release-v5.0
+      - IMAGE: espressif/idf:release-v5.4
   variables:
     EXAMPLE_DIR: components/openai/test_apps
 
