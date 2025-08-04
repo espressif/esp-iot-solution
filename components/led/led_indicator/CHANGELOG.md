@@ -1,5 +1,13 @@
 # ChangeLog
 
+## v2.0.0 - 2025-7-30
+
+### Improve:
+
+* Refactor with Factory Pattern
+* Update the version of `led_strip` to v3.0
+* Add Xiaomi Blink support
+
 ## v1.1.1 - 2025-03-11
 
 ### Bugfix

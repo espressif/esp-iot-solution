@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -13,89 +13,18 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 #include "esp_err.h"
-#include "led_gpio.h"
-#include "led_ledc.h"
-#include "led_rgb.h"
-#include "led_strips.h"
 #include "led_convert.h"
-#include "led_custom.h"
+#include "led_types.h"
 
-/**
- * @brief LED state: 0-100, only hardware that supports to set brightness can adjust brightness.
- *
- */
-enum {
-    LED_STATE_OFF = 0,           /*!< turn off the LED */
-    LED_STATE_25_PERCENT = 64,   /*!< 25% brightness, must support to set brightness */
-    LED_STATE_50_PERCENT = 128,  /*!< 50% brightness, must support to set brightness */
-    LED_STATE_75_PERCENT = 191,  /*!< 75% brightness, must support to set brightness */
-    LED_STATE_ON = UINT8_MAX,    /*!< turn on the LED */
-};
+#define LED_INDICATOR_CHECK(a, str, action) if(!(a)) { \
+        ESP_LOGE(TAG,"%s:%d (%s):%s", __FILE__, __LINE__, __FUNCTION__, str); \
+        action; \
+    }
 
-/**
- * @brief actions in this type
- *
- */
-typedef enum {
-    LED_BLINK_STOP = -1,   /*!< stop the blink */
-    LED_BLINK_HOLD,        /*!< hold the on-off state */
-    LED_BLINK_BREATHE,     /*!< breathe state */
-    LED_BLINK_BRIGHTNESS,  /*!< set the brightness, it will transition from the old brightness to the new brightness */
-    LED_BLINK_RGB,         /*!< color change with R(0-255) G(0-255) B(0-255) */
-    LED_BLINK_RGB_RING,    /*!< Gradual color transition from old color to new color in a color ring */
-    LED_BLINK_HSV,         /*!< color change with H(0-360) S(0-255) V(0-255) */
-    LED_BLINK_HSV_RING,    /*!< Gradual color transition from old color to new color in a color ring */
-    LED_BLINK_LOOP,        /*!< loop from first step */
-} blink_step_type_t;
-
-/**
- * @brief one blink step, a meaningful signal consists of a group of steps
- *
- */
-typedef struct {
-    blink_step_type_t type;          /*!< action type in this step */
-    uint32_t value;                  /*!< hold on or off, set 0 if LED_BLINK_STOP() or LED_BLINK_LOOP */
-    uint32_t hold_time_ms;           /*!< hold time(ms), set 0 if not LED_BLINK_HOLD */
-} blink_step_t;
-
-/**
- * @brief LED indicator blink mode, as a member of led_indicator_config_t
- *
- */
-typedef enum {
-    LED_GPIO_MODE,         /*!< blink with max brightness */
-    LED_LEDC_MODE,         /*!< blink with LEDC driver */
-    LED_RGB_MODE,          /*!< blink with RGB driver */
-    LED_STRIPS_MODE,       /*!< blink with LEDC strips driver */
-    LED_CUSTOM_MODE,       /*!< blink with custom driver */
-} led_indicator_mode_t;
-
-/**
- * @brief LED indicator specified configurations, as a arg when create a new indicator
- *
- */
-typedef struct {
-    led_indicator_mode_t mode;                  /*!< LED work mode, eg. GPIO or pwm mode */
-    union {
-        led_indicator_gpio_config_t *led_indicator_gpio_config;       /*!< LED GPIO configuration */
-        led_indicator_ledc_config_t *led_indicator_ledc_config;       /*!< LED LEDC configuration */
-        led_indicator_rgb_config_t *led_indicator_rgb_config;         /*!< LED RGB configuration */
-        led_indicator_strips_config_t *led_indicator_strips_config;   /*!< LED LEDC rgb configuration */
-        led_indicator_custom_config_t *led_indicator_custom_config;   /*!< LED custom configuration */
-    }; /**< LED configuration */
-    blink_step_t const **blink_lists;           /*!< user defined LED blink lists */
-    uint16_t blink_list_num;                    /*!< number of blink lists */
-} led_indicator_config_t;
-
-typedef void *led_indicator_handle_t; /*!< LED indicator operation handle */
-
-/**
- * @brief create a LED indicator instance with GPIO number and configuration
- *
- * @param config configuration of the LED, eg. GPIO level when LED off
- * @return led_indicator_handle_t handle of the LED indicator, NULL if create failed.
- */
-led_indicator_handle_t led_indicator_create(const led_indicator_config_t *config);
+#define LED_INDICATOR_CHECK_WARNING(a, str, action) if(!(a)) { \
+        ESP_LOGW(TAG,"%s:%d (%s):%s", __FILE__, __LINE__, __FUNCTION__, str); \
+        action; \
+    }
 
 /**
  * @brief delete the LED indicator and release resource

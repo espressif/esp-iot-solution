@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -11,7 +11,7 @@
 #include "cmd_led_indicator.h"
 #include "esp_idf_version.h"
 #include "esp_log.h"
-#include "led_indicator.h"
+#include "led_indicator_strips.h"
 
 #define WS2812_GPIO_NUM       CONFIG_EXAMPLE_WS2812_GPIO_NUM
 #define WS2812_STRIPS_NUM     CONFIG_EXAMPLE_WS2812_STRIPS_NUM
@@ -187,22 +187,18 @@ void app_main(void)
 {
 
     led_strip_config_t strip_config = {
-        .strip_gpio_num = WS2812_GPIO_NUM,              // The GPIO that connected to the LED strip's data line
-        .max_leds = WS2812_STRIPS_NUM,                  // The number of LEDs in the strip,
-        .led_pixel_format = LED_PIXEL_FORMAT_GRB,       // Pixel format of your LED strip
-        .led_model = LED_MODEL_WS2812,                  // LED strip model
-        .flags.invert_out = false,                      // whether to invert the output signal
+        .strip_gpio_num = WS2812_GPIO_NUM,                            // The GPIO that connected to the LED strip's data line
+        .max_leds = WS2812_STRIPS_NUM,                                // The number of LEDs in the strip,
+        .color_component_format = LED_STRIP_COLOR_COMPONENT_FMT_GRB,  // Pixel format of your LED strip
+        .led_model = LED_MODEL_WS2812,                                // LED strip model
+        .flags.invert_out = false,                                    // whether to invert the output signal
     };
 
     // LED strip backend configuration: RMT
     led_strip_rmt_config_t rmt_config = {
-#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
-        .rmt_channel = 0,
-#else
         .clk_src = RMT_CLK_SRC_DEFAULT,        // different clock source can lead to different power consumption
         .resolution_hz = LED_STRIP_RMT_RES_HZ, // RMT counter clock frequency
         .flags.with_dma = false,               // DMA feature is available on ESP target like ESP32-S3
-#endif
     };
 
     led_indicator_strips_config_t strips_config = {
@@ -212,13 +208,12 @@ void app_main(void)
     };
 
     const led_indicator_config_t config = {
-        .mode = LED_STRIPS_MODE,
-        .led_indicator_strips_config = &strips_config,
         .blink_lists = led_mode,
         .blink_list_num = BLINK_MAX,
     };
 
-    led_handle = led_indicator_create(&config);
+    esp_err_t ret = led_indicator_new_strips_device(&config, &strips_config, &led_handle);
+    ESP_ERROR_CHECK(ret);
     assert(led_handle != NULL);
 
 #if CONFIG_EXAMPLE_ENABLE_CONSOLE_CONTROL

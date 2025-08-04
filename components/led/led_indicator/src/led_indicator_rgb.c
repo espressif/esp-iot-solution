@@ -7,9 +7,10 @@
 #include <math.h>
 #include "driver/ledc.h"
 #include "esp_log.h"
-#include "led_rgb.h"
+#include "led_indicator_rgb.h"
 #include "led_common.h"
 #include "led_convert.h"
+#include "led_indicator_blink_default.h"
 
 #define TAG "led_rgb"
 
@@ -27,7 +28,7 @@ typedef struct {
     led_indicator_ihsv_t hsv;      /*!< HSV: H [0-360] - 9 bits, S [0-255] - 8 bits, V [0-255] - 8 bits*/
 } led_rgb_t;
 
-esp_err_t led_indicator_rgb_init(void *param, void **ret_rgb)
+static esp_err_t led_indicator_rgb_init(void *param, void **ret_rgb)
 {
     esp_err_t ret = ESP_OK;
     const led_indicator_rgb_config_t *cfg = (const led_indicator_rgb_config_t *)param;
@@ -62,7 +63,7 @@ EXIT:
     return ret;
 }
 
-esp_err_t led_indicator_rgb_deinit(void *rgb_handle)
+static esp_err_t led_indicator_rgb_deinit(void *rgb_handle)
 {
     LED_RGB_CHECK(NULL != rgb_handle, "rgb_handle pointer invalid", return ESP_ERR_INVALID_ARG);
     free(rgb_handle);
@@ -86,7 +87,7 @@ static esp_err_t led_indicator_rgb_set_duty(led_rgb_t *p_rgb, uint32_t rgb[])
     return ESP_OK;
 }
 
-esp_err_t led_indicator_rgb_set_on_off(void *rgb_handle, bool on_off)
+static esp_err_t led_indicator_rgb_set_on_off(void *rgb_handle, bool on_off)
 {
     esp_err_t ret;
     LED_RGB_CHECK(NULL != rgb_handle, "rgb_handle pointer invalid", return ESP_ERR_INVALID_ARG);
@@ -111,7 +112,7 @@ esp_err_t led_indicator_rgb_set_on_off(void *rgb_handle, bool on_off)
     return ESP_OK;
 }
 
-esp_err_t led_indicator_rgb_set_rgb(void *rgb_handle, uint32_t rgb_value)
+static esp_err_t led_indicator_rgb_set_rgb(void *rgb_handle, uint32_t rgb_value)
 {
     esp_err_t ret;
     led_rgb_t *p_rgb = (led_rgb_t *)rgb_handle;
@@ -126,7 +127,7 @@ esp_err_t led_indicator_rgb_set_rgb(void *rgb_handle, uint32_t rgb_value)
     return ESP_OK;
 }
 
-esp_err_t led_indicator_rgb_set_hsv(void *rgb_handle, uint32_t hsv_value)
+static esp_err_t led_indicator_rgb_set_hsv(void *rgb_handle, uint32_t hsv_value)
 {
     esp_err_t ret;
     led_rgb_t *p_rgb = (led_rgb_t *)rgb_handle;
@@ -142,7 +143,7 @@ esp_err_t led_indicator_rgb_set_hsv(void *rgb_handle, uint32_t hsv_value)
     return ESP_OK;
 }
 
-esp_err_t led_indicator_rgb_set_brightness(void *rgb_handle, uint32_t brightness)
+static esp_err_t led_indicator_rgb_set_brightness(void *rgb_handle, uint32_t brightness)
 {
     esp_err_t ret;
     led_rgb_t *p_rgb = (led_rgb_t *)rgb_handle;
@@ -155,5 +156,53 @@ esp_err_t led_indicator_rgb_set_brightness(void *rgb_handle, uint32_t brightness
 
     ret = led_indicator_rgb_set_duty(p_rgb, rgb);
     LED_RGB_CHECK(ESP_OK == ret, "LEDC set duty error", return ret);
+    return ESP_OK;
+}
+
+esp_err_t led_indicator_new_rgb_device(const led_indicator_config_t *led_config, const led_indicator_rgb_config_t *rgb_cfg, led_indicator_handle_t *handle)
+{
+    esp_err_t ret = ESP_OK;
+    bool if_blink_default_list = false;
+
+    ESP_LOGI(TAG, "LED Indicator Version: %d.%d.%d", LED_INDICATOR_VER_MAJOR, LED_INDICATOR_VER_MINOR, LED_INDICATOR_VER_PATCH);
+    LED_INDICATOR_CHECK(rgb_cfg != NULL, "invalid config pointer", return ESP_ERR_INVALID_ARG);
+    LED_INDICATOR_CHECK(rgb_cfg->timer_num < LEDC_TIMER_MAX, "invalid timer number", return ESP_ERR_INVALID_ARG);
+    LED_INDICATOR_CHECK(GPIO_IS_VALID_GPIO(rgb_cfg->red_gpio_num), "invalid red GPIO number", return ESP_ERR_INVALID_ARG);
+    LED_INDICATOR_CHECK(GPIO_IS_VALID_GPIO(rgb_cfg->green_gpio_num), "invalid green GPIO number", return ESP_ERR_INVALID_ARG);
+    LED_INDICATOR_CHECK(GPIO_IS_VALID_GPIO(rgb_cfg->blue_gpio_num), "invalid blue GPIO number", return ESP_ERR_INVALID_ARG);
+    LED_INDICATOR_CHECK(rgb_cfg->red_channel < LEDC_CHANNEL_MAX, "invalid red LEDC channel", return ESP_ERR_INVALID_ARG);
+    LED_INDICATOR_CHECK(rgb_cfg->green_channel < LEDC_CHANNEL_MAX, "invalid green LEDC channel", return ESP_ERR_INVALID_ARG);
+    LED_INDICATOR_CHECK(rgb_cfg->blue_channel < LEDC_CHANNEL_MAX, "invalid blue LEDC channel", return ESP_ERR_INVALID_ARG);
+
+    _led_indicator_com_config_t com_cfg = {0};
+    _led_indicator_t *p_led_indicator = NULL;
+
+    void *hardware_data = NULL;
+    ret = led_indicator_rgb_init((void *)rgb_cfg, &hardware_data);
+    LED_INDICATOR_CHECK(ESP_OK == ret, "RGB mode init failed", return ESP_FAIL);
+    com_cfg.hardware_data = hardware_data;
+    com_cfg.hal_indicator_set_on_off = led_indicator_rgb_set_on_off;
+    com_cfg.hal_indicator_deinit = led_indicator_rgb_deinit;
+    com_cfg.hal_indicator_set_brightness = led_indicator_rgb_set_brightness;
+    com_cfg.hal_indicator_set_rgb = led_indicator_rgb_set_rgb;
+    com_cfg.hal_indicator_set_hsv = led_indicator_rgb_set_hsv;
+    com_cfg.duty_resolution = LED_DUTY_8_BIT;
+
+    if (led_config->blink_lists == NULL) {
+        ESP_LOGI(TAG, "blink_lists is null, use default blink list");
+        com_cfg.blink_lists = default_led_indicator_blink_lists;
+        com_cfg.blink_list_num = DEFAULT_BLINK_LIST_NUM;
+        if_blink_default_list = true;
+    } else {
+        com_cfg.blink_lists = led_config->blink_lists;
+        com_cfg.blink_list_num = led_config->blink_list_num;
+    }
+
+    p_led_indicator = _led_indicator_create_com(&com_cfg);
+
+    LED_INDICATOR_CHECK(NULL != p_led_indicator, "LED indicator create failed", return ESP_FAIL);
+    _led_indicator_add_node(p_led_indicator);
+    ESP_LOGI(TAG, "Indicator create successfully. type:LED RGB mode, hardware_data:%p, blink_lists:%s", p_led_indicator->hardware_data, if_blink_default_list ? "default" : "custom");
+    *handle = (led_indicator_handle_t)p_led_indicator;
     return ESP_OK;
 }

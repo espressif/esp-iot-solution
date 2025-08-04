@@ -300,9 +300,6 @@ components_test_led_indicator:
       optional: true
   parallel:
     matrix:
-        - IDF_VERSION: "4.4"
-          IDF_TARGET: esp32s3
-          ENV_TAG: "led_indicator"
         - IDF_VERSION: "5.0"
           IDF_TARGET: esp32s3
           ENV_TAG: "led_indicator"
