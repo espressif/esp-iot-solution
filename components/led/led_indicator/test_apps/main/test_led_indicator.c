@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -10,11 +10,14 @@
 #include "esp_log.h"
 #include "esp_system.h"
 #include "esp_idf_version.h"
-#include "led_indicator.h"
 #include "led_indicator_blink_default.h"
 #include "unity.h"
 #include "led_gamma.h"
 #include "led_convert.h"
+#include "led_indicator_strips.h"
+#include "led_indicator_gpio.h"
+#include "led_indicator_ledc.h"
+#include "led_indicator_rgb.h"
 
 // Some resources are lazy allocated in pulse_cnt driver, the threshold is left for that case
 #define TEST_MEMORY_LEAK_THRESHOLD (-200)
@@ -28,6 +31,16 @@
 #define TAG "LED indicator Test"
 
 static led_indicator_handle_t led_handle_0 = NULL;
+
+void led_indicator_deinit()
+{
+    ESP_LOGI(TAG, "deinit.....");
+    esp_err_t ret = led_indicator_delete(led_handle_0);
+    TEST_ASSERT(ret == ESP_OK);
+    led_handle_0 = NULL;
+}
+
+#ifndef CONFIG_USE_MI_RGB_BLINK_DEFAULT
 static led_indicator_handle_t led_handle_1 = NULL;
 static led_indicator_handle_t led_handle_2 = NULL;
 
@@ -39,22 +52,13 @@ void led_indicator_init()
     };
 
     led_indicator_config_t config = {
-        .mode = LED_GPIO_MODE,
-        .led_indicator_gpio_config = &led_indicator_gpio_config,
         .blink_lists = (void *)NULL,
         .blink_list_num = 0,
     };
 
-    led_handle_0 = led_indicator_create(&config);
-    TEST_ASSERT_NOT_NULL(led_handle_0);
-}
-
-void led_indicator_deinit()
-{
-    ESP_LOGI(TAG, "deinit.....");
-    esp_err_t ret = led_indicator_delete(led_handle_0);
+    esp_err_t ret = led_indicator_new_gpio_device(&config, &led_indicator_gpio_config, &led_handle_0);
     TEST_ASSERT(ret == ESP_OK);
-    led_handle_0 = NULL;
+    TEST_ASSERT_NOT_NULL(led_handle_0);
 }
 
 void led_indicator_gpio_mode_test_all()
@@ -163,19 +167,20 @@ void led_indicator_all_init()
     };
 
     led_indicator_config_t config = {
-        .led_indicator_gpio_config = &led_indicator_gpio_config,
-        .mode = LED_GPIO_MODE,
         .blink_lists = NULL,
         .blink_list_num = 0,
     };
 
-    led_handle_0 = led_indicator_create(&config);
+    esp_err_t ret = led_indicator_new_gpio_device(&config, &led_indicator_gpio_config, &led_handle_0);
+    TEST_ASSERT(ret == ESP_OK);
     TEST_ASSERT_NOT_NULL(led_handle_0);
     led_indicator_gpio_config.gpio_num = LED_IO_NUM_1;
-    led_handle_1 = led_indicator_create(&config);
+    ret = led_indicator_new_gpio_device(&config, &led_indicator_gpio_config, &led_handle_1);
+    TEST_ASSERT(ret == ESP_OK);
     TEST_ASSERT_NOT_NULL(led_handle_1);
     led_indicator_gpio_config.gpio_num = LED_IO_NUM_2;
-    led_handle_2 = led_indicator_create(&config);
+    ret = led_indicator_new_gpio_device(&config, &led_indicator_gpio_config, &led_handle_2);
+    TEST_ASSERT(ret == ESP_OK);
     TEST_ASSERT_NOT_NULL(led_handle_2);
 }
 
@@ -260,6 +265,8 @@ TEST_CASE("blink three LED", "[LED][indicator]")
     led_indicator_all_deinit();
 }
 
+#endif
+
 typedef enum {
     BLINK_25_BRIGHTNESS,
     BLINK_50_BRIGHTNESS,
@@ -337,17 +344,16 @@ TEST_CASE("User defined blink", "[LED][indicator]")
     };
 
     led_indicator_config_t config = {
-        .led_indicator_gpio_config = &led_indicator_gpio_config,
-        .mode = LED_GPIO_MODE,
         .blink_lists = led_blink_lst,
         .blink_list_num = BLINK_NUM,
     };
 
-    led_handle_0 = led_indicator_create(&config);
+    esp_err_t ret = led_indicator_new_gpio_device(&config, &led_indicator_gpio_config, &led_handle_0);
+    TEST_ASSERT(ret == ESP_OK);
     TEST_ASSERT_NOT_NULL(led_handle_0);
 
     ESP_LOGI(TAG, "double blink.....");
-    esp_err_t ret = led_indicator_start(led_handle_0, BLINK_DOUBLE);
+    ret = led_indicator_start(led_handle_0, BLINK_DOUBLE);
     TEST_ASSERT(ret == ESP_OK);
     vTaskDelay(2000 / portTICK_PERIOD_MS);
     ret = led_indicator_stop(led_handle_0, BLINK_DOUBLE);
@@ -373,17 +379,16 @@ TEST_CASE("Preempt blink lists test", "[LED][indicator]")
     };
 
     led_indicator_config_t config = {
-        .led_indicator_gpio_config = &led_indicator_gpio_config,
-        .mode = LED_GPIO_MODE,
         .blink_lists = led_blink_lst,
         .blink_list_num = BLINK_NUM,
     };
 
-    led_handle_0 = led_indicator_create(&config);
+    esp_err_t ret = led_indicator_new_gpio_device(&config, &led_indicator_gpio_config, &led_handle_0);
+    TEST_ASSERT(ret == ESP_OK);
     TEST_ASSERT_NOT_NULL(led_handle_0);
 
     ESP_LOGI(TAG, "double blink.....");
-    esp_err_t ret = led_indicator_start(led_handle_0, BLINK_DOUBLE);
+    ret = led_indicator_start(led_handle_0, BLINK_DOUBLE);
     vTaskDelay(1000 / portTICK_PERIOD_MS);
     TEST_ASSERT(ret == ESP_OK);
 
@@ -416,17 +421,16 @@ TEST_CASE("breathe test", "[LED][indicator]")
     };
 
     led_indicator_config_t config = {
-        .mode = LED_LEDC_MODE,
-        .led_indicator_ledc_config = &led_indicator_ledc_config,
         .blink_lists = led_blink_lst,
         .blink_list_num = BLINK_NUM,
     };
 
-    led_handle_0 = led_indicator_create(&config);
+    esp_err_t ret = led_indicator_new_ledc_device(&config, &led_indicator_ledc_config, &led_handle_0);
+    TEST_ASSERT(ret == ESP_OK);
     TEST_ASSERT_NOT_NULL(led_handle_0);
 
     ESP_LOGI(TAG, "breathe 25/100 blink.....");
-    esp_err_t ret = led_indicator_start(led_handle_0, BLINK_25_BRIGHTNESS);
+    ret = led_indicator_start(led_handle_0, BLINK_25_BRIGHTNESS);
     vTaskDelay(2000 / portTICK_PERIOD_MS);
     TEST_ASSERT(ret == ESP_OK);
 
@@ -448,67 +452,6 @@ TEST_CASE("breathe test", "[LED][indicator]")
     led_indicator_deinit();
 }
 
-static esp_err_t custom_ledc_init(void *param)
-{
-    led_indicator_ledc_config_t led_indicator_ledc_config = {
-        .is_active_level_high = 1,
-        .timer_inited = false,
-        .timer_num = LEDC_TIMER_0,
-        .gpio_num = LED_IO_NUM_0,
-        .channel = LEDC_CHANNEL_0,
-    };
-
-    esp_err_t ret = led_indicator_ledc_init(&led_indicator_ledc_config);
-    return ret;
-}
-
-TEST_CASE("custom mode test", "[LED][indicator]")
-{
-    led_indicator_custom_config_t led_indicator_custom_config = {
-        .is_active_level_high = 1,
-        .duty_resolution = LED_DUTY_13_BIT,
-        .hal_indicator_init = custom_ledc_init,
-        .hal_indicator_deinit = led_indicator_ledc_deinit,
-        .hal_indicator_set_on_off = led_indicator_ledc_set_on_off,
-        .hal_indicator_set_brightness = led_indicator_ledc_set_brightness,
-        .hal_indicator_set_rgb = NULL,
-        .hal_indicator_set_hsv = NULL,
-        .hardware_data = (void *)LEDC_CHANNEL_0,
-    };
-
-    led_indicator_config_t config = {
-        .led_indicator_custom_config = &led_indicator_custom_config,
-        .mode = LED_CUSTOM_MODE,
-        .blink_lists = led_blink_lst,
-        .blink_list_num = BLINK_NUM,
-    };
-
-    led_handle_0 = led_indicator_create(&config);
-    TEST_ASSERT_NOT_NULL(led_handle_0);
-
-    ESP_LOGI(TAG, "breathe 25/100 blink.....");
-    esp_err_t ret = led_indicator_start(led_handle_0, BLINK_25_BRIGHTNESS);
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
-    TEST_ASSERT(ret == ESP_OK);
-
-    ESP_LOGI(TAG, "breathe 50/100 blink.....");
-    ret = led_indicator_start(led_handle_0, BLINK_50_BRIGHTNESS);
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
-    TEST_ASSERT(ret == ESP_OK);
-
-    ESP_LOGI(TAG, "breathe 75/100 blink.....");
-    ret = led_indicator_start(led_handle_0, BLINK_75_BRIGHTNESS);
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
-    TEST_ASSERT(ret == ESP_OK);
-
-    ESP_LOGI(TAG, "breathe blink .....");
-    ret = led_indicator_start(led_handle_0, BLINK_BREATHE);
-    TEST_ASSERT(ret == ESP_OK);
-    vTaskDelay(6000 / portTICK_PERIOD_MS);
-
-    led_indicator_deinit();
-}
-
 TEST_CASE("test gamma table", "[LED][indicator]")
 {
     led_indicator_new_gamma_table(2.3);
@@ -525,18 +468,17 @@ TEST_CASE("test led preempt func with breath", "[LED][preempt][breath]")
     };
 
     led_indicator_config_t config = {
-        .mode = LED_LEDC_MODE,
-        .led_indicator_ledc_config = &led_indicator_ledc_config,
         .blink_lists = led_blink_lst,
         .blink_list_num = BLINK_NUM,
     };
     int cnt0 = 3;
     while (cnt0--) {
-        led_handle_0 = led_indicator_create(&config);
+        esp_err_t ret = led_indicator_new_ledc_device(&config, &led_indicator_ledc_config, &led_handle_0);
+        TEST_ASSERT(ret == ESP_OK);
         TEST_ASSERT_NOT_NULL(led_handle_0);
 
         ESP_LOGI(TAG, "breathe blink .....");
-        esp_err_t ret = led_indicator_start(led_handle_0, BLINK_BREATHE);
+        ret = led_indicator_start(led_handle_0, BLINK_BREATHE);
         TEST_ASSERT(ret == ESP_OK);
         bool preempted = false;
         int cnt = 3;
@@ -707,15 +649,13 @@ TEST_CASE("TEST LED RGB", "[LED RGB][RGB]")
     };
 
     led_indicator_config_t config = {
-        .mode = LED_RGB_MODE,
-        .led_indicator_rgb_config = &led_grb_cfg,
         .blink_lists = led_rgb_blink_lst,
         .blink_list_num = BLINK_RGB_NUM,
     };
 
-    led_handle_0 = led_indicator_create(&config);
+    esp_err_t ret = led_indicator_new_rgb_device(&config, &led_grb_cfg, &led_handle_0);
+    TEST_ASSERT(ret == ESP_OK);
     TEST_ASSERT_NOT_NULL(led_handle_0);
-    esp_err_t ret = ESP_OK;
 
     ESP_LOGI(TAG, "breathe 25/100 blink.....");
     ret = led_indicator_start(led_handle_0, BLINK_RGB_25_BRIGHTNESS);
@@ -805,22 +745,18 @@ TEST_CASE("TEST LED RGB", "[LED RGB][RGB]")
 TEST_CASE("TEST LED Strips by RGB", "[LED Strips][RGB]")
 {
     led_strip_config_t strip_config = {
-        .strip_gpio_num = LED_STRIP_BLINK_GPIO,   // The GPIO that connected to the LED strip's data line
-        .max_leds = MAX_LED_NUM,                  // The number of LEDs in the strip,
-        .led_pixel_format = LED_PIXEL_FORMAT_GRB, // Pixel format of your LED strip
-        .led_model = LED_MODEL_WS2812,            // LED strip model
-        .flags.invert_out = false,                // whether to invert the output signal
+        .strip_gpio_num = LED_STRIP_BLINK_GPIO,                        // The GPIO that connected to the LED strip's data line
+        .max_leds = MAX_LED_NUM,                                       // The number of LEDs in the strip,
+        .color_component_format  = LED_STRIP_COLOR_COMPONENT_FMT_GRB,  // Pixel format of your LED strip
+        .led_model = LED_MODEL_WS2812,                                 // LED strip model
+        .flags.invert_out = false,                                     // whether to invert the output signal
     };
 
     // LED strip backend configuration: RMT
     led_strip_rmt_config_t rmt_config = {
-#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
-        .rmt_channel = 0,
-#else
         .clk_src = RMT_CLK_SRC_DEFAULT,        // different clock source can lead to different power consumption
         .resolution_hz = LED_STRIP_RMT_RES_HZ, // RMT counter clock frequency
         .flags.with_dma = false,               // DMA feature is available on ESP target like ESP32-S3
-#endif
     };
 
     led_indicator_strips_config_t led_indicator_strips_config = {
@@ -830,15 +766,13 @@ TEST_CASE("TEST LED Strips by RGB", "[LED Strips][RGB]")
     };
 
     led_indicator_config_t config = {
-        .mode = LED_STRIPS_MODE,
-        .led_indicator_strips_config = &led_indicator_strips_config,
         .blink_lists = led_rgb_blink_lst,
         .blink_list_num = BLINK_RGB_NUM,
     };
-
-    led_handle_0 = led_indicator_create(&config);
-    TEST_ASSERT_NOT_NULL(led_handle_0);
     esp_err_t ret = ESP_OK;
+    ret = led_indicator_new_strips_device(&config, &led_indicator_strips_config, &led_handle_0);
+    TEST_ASSERT(ret == ESP_OK);
+    TEST_ASSERT_NOT_NULL(led_handle_0);
 
     ESP_LOGI(TAG, "breathe 25/100 blink.....");
     ret = led_indicator_start(led_handle_0, BLINK_RGB_25_BRIGHTNESS);
@@ -925,22 +859,18 @@ TEST_CASE("TEST LED Strips by RGB", "[LED Strips][RGB]")
 TEST_CASE("TEST LED RGB control Real time ", "[LED RGB][Real time]")
 {
     led_strip_config_t strip_config = {
-        .strip_gpio_num = LED_STRIP_BLINK_GPIO,   // The GPIO that connected to the LED strip's data line
-        .max_leds = MAX_LED_NUM,                  // The number of LEDs in the strip,
-        .led_pixel_format = LED_PIXEL_FORMAT_GRB, // Pixel format of your LED strip
-        .led_model = LED_MODEL_WS2812,            // LED strip model
-        .flags.invert_out = false,                // whether to invert the output signal
+        .strip_gpio_num = LED_STRIP_BLINK_GPIO,                        // The GPIO that connected to the LED strip's data line
+        .max_leds = MAX_LED_NUM,                                       // The number of LEDs in the strip,
+        .color_component_format  = LED_STRIP_COLOR_COMPONENT_FMT_GRB,  // Pixel format of your LED strip
+        .led_model = LED_MODEL_WS2812,                                 // LED strip model
+        .flags.invert_out = false,                                     // whether to invert the output signal
     };
 
     // LED strip backend configuration: RMT
     led_strip_rmt_config_t rmt_config = {
-#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
-        .rmt_channel = 0,
-#else
         .clk_src = RMT_CLK_SRC_DEFAULT,        // different clock source can lead to different power consumption
         .resolution_hz = LED_STRIP_RMT_RES_HZ, // RMT counter clock frequency
         .flags.with_dma = false,               // DMA feature is available on ESP target like ESP32-S3
-#endif
     };
 
     led_indicator_strips_config_t led_indicator_strips_config = {
@@ -950,15 +880,13 @@ TEST_CASE("TEST LED RGB control Real time ", "[LED RGB][Real time]")
     };
 
     led_indicator_config_t config = {
-        .mode = LED_STRIPS_MODE,
-        .led_indicator_strips_config = &led_indicator_strips_config,
         .blink_lists = led_rgb_blink_lst,
         .blink_list_num = BLINK_RGB_NUM,
     };
-
-    led_handle_0 = led_indicator_create(&config);
-
     esp_err_t ret = ESP_OK;
+    ret = led_indicator_new_strips_device(&config, &led_indicator_strips_config, &led_handle_0);
+    TEST_ASSERT(ret == ESP_OK);
+    TEST_ASSERT_NOT_NULL(led_handle_0);
 
     ESP_LOGI(TAG, "set red by rgb_value one by one .....");
 
@@ -986,6 +914,146 @@ TEST_CASE("TEST LED RGB control Real time ", "[LED RGB][Real time]")
     led_indicator_deinit();
 }
 
+#endif
+
+#ifdef CONFIG_USE_MI_RGB_BLINK_DEFAULT
+TEST_CASE("TEST LED RGB MI DEFAULT", "[LED RGB][RGB]")
+{
+    led_indicator_rgb_config_t led_grb_cfg = {
+        .is_active_level_high = 1,
+        .timer_inited = false,
+        .timer_num = LEDC_TIMER_0,
+        .red_gpio_num = LED_RGB_RED_GPIO,
+        .green_gpio_num = LED_RGB_GREEN_GPIO,
+        .blue_gpio_num = LED_RGB_BLUE_GPIO,
+        .red_channel = LEDC_CHANNEL_0,
+        .green_channel = LEDC_CHANNEL_1,
+        .blue_channel = LEDC_CHANNEL_2,
+    };
+
+    led_indicator_config_t config = {
+        .blink_lists = NULL,
+        .blink_list_num = 0,
+    };
+
+    esp_err_t ret = led_indicator_new_rgb_device(&config, &led_grb_cfg, &led_handle_0);
+    TEST_ASSERT(ret == ESP_OK);
+    TEST_ASSERT_NOT_NULL(led_handle_0);
+
+    ESP_LOGI(TAG, "MI wait connect.....");
+    ret = led_indicator_start(led_handle_0, BLINK_MI_WAIT_CONNECT);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
+    ret = led_indicator_stop(led_handle_0, BLINK_MI_WAIT_CONNECT);
+    TEST_ASSERT(ret == ESP_OK);
+
+    ESP_LOGI(TAG, "MI connecting.....");
+    ret = led_indicator_start(led_handle_0, BLINK_MI_CONNECTING);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
+    ret = led_indicator_stop(led_handle_0, BLINK_MI_CONNECTING);
+    TEST_ASSERT(ret == ESP_OK);
+
+    ESP_LOGI(TAG, "MI online.....");
+    ret = led_indicator_start(led_handle_0, BLINK_MI_ONLINE);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
+    ret = led_indicator_stop(led_handle_0, BLINK_MI_ONLINE);
+    TEST_ASSERT(ret == ESP_OK);
+
+    ESP_LOGI(TAG, "MI fault.....");
+    ret = led_indicator_start(led_handle_0, BLINK_MI_FAULT);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
+    ret = led_indicator_stop(led_handle_0, BLINK_MI_FAULT);
+    TEST_ASSERT(ret == ESP_OK);
+
+    ESP_LOGI(TAG, "MI reconnecting.....");
+    ret = led_indicator_start(led_handle_0, BLINK_MI_RECONNECTING);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
+    ret = led_indicator_stop(led_handle_0, BLINK_MI_RECONNECTING);
+    TEST_ASSERT(ret == ESP_OK);
+
+    ESP_LOGI(TAG, "MI ota_updating.....");
+    ret = led_indicator_start(led_handle_0, BLINK_MI_OTA_UPDATING);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
+    ret = led_indicator_stop(led_handle_0, BLINK_MI_OTA_UPDATING);
+    TEST_ASSERT(ret == ESP_OK);
+
+    ESP_LOGI(TAG, "MI wifi provision off.....");
+    ret = led_indicator_start(led_handle_0, BLINK_MI_WIFI_PROVISION_OFF);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
+    ret = led_indicator_stop(led_handle_0, BLINK_MI_WIFI_PROVISION_OFF);
+    TEST_ASSERT(ret == ESP_OK);
+
+    ESP_LOGI(TAG, "MI working.....");
+    ret = led_indicator_start(led_handle_0, BLINK_MI_WORKING);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
+    ret = led_indicator_stop(led_handle_0, BLINK_MI_WORKING);
+    TEST_ASSERT(ret == ESP_OK);
+
+    ESP_LOGI(TAG, "MI work abnormal.....");
+    ret = led_indicator_start(led_handle_0, BLINK_MI_WORK_ABNORMAL);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
+    ret = led_indicator_stop(led_handle_0, BLINK_MI_WORK_ABNORMAL);
+    TEST_ASSERT(ret == ESP_OK);
+
+    ESP_LOGI(TAG, "MI env good.....");
+    ret = led_indicator_start(led_handle_0, BLINK_MI_ENV_GOOD);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
+    ret = led_indicator_stop(led_handle_0, BLINK_MI_ENV_GOOD);
+    TEST_ASSERT(ret == ESP_OK);
+
+    ESP_LOGI(TAG, "MI env moderate.....");
+    ret = led_indicator_start(led_handle_0, BLINK_MI_ENV_MODERATE);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
+    ret = led_indicator_stop(led_handle_0, BLINK_MI_ENV_MODERATE);
+    TEST_ASSERT(ret == ESP_OK);
+
+    ESP_LOGI(TAG, "MI env severe.....");
+    ret = led_indicator_start(led_handle_0, BLINK_MI_ENV_SEVERE);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
+    ret = led_indicator_stop(led_handle_0, BLINK_MI_ENV_SEVERE);
+    TEST_ASSERT(ret == ESP_OK);
+
+    ESP_LOGI(TAG, "MI setting.....");
+    ret = led_indicator_start(led_handle_0, BLINK_MI_SETTING);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
+    ret = led_indicator_stop(led_handle_0, BLINK_MI_SETTING);
+    TEST_ASSERT(ret == ESP_OK);
+
+    ESP_LOGI(TAG, "MI low battery.....");
+    ret = led_indicator_start(led_handle_0, BLINK_MI_LOW_BATTERY);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
+    ret = led_indicator_stop(led_handle_0, BLINK_MI_LOW_BATTERY);
+    TEST_ASSERT(ret == ESP_OK);
+
+    ESP_LOGI(TAG, "MI charging.....");
+    ret = led_indicator_start(led_handle_0, BLINK_MI_CHARGING);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(10000 / portTICK_PERIOD_MS);
+    ret = led_indicator_stop(led_handle_0, BLINK_MI_CHARGING);
+    TEST_ASSERT(ret == ESP_OK);
+
+    ESP_LOGI(TAG, "MI charged.....");
+    ret = led_indicator_start(led_handle_0, BLINK_MI_CHARGED);
+    TEST_ASSERT(ret == ESP_OK);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
+    ret = led_indicator_stop(led_handle_0, BLINK_MI_CHARGED);
+    TEST_ASSERT(ret == ESP_OK);
+
+    led_indicator_deinit();
+}
 #endif
 
 static size_t before_free_8bit;

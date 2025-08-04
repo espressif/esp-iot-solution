@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -11,7 +11,7 @@
 #include "cmd_led_indicator.h"
 #include "esp_idf_version.h"
 #include "esp_log.h"
-#include "led_indicator.h"
+#include "led_indicator_gpio.h"
 
 #define GPIO_LED_PIN       CONFIG_EXAMPLE_GPIO_NUM
 #define GPIO_ACTIVE_LEVEL  CONFIG_EXAMPLE_GPIO_ACTIVE_LEVEL
@@ -120,13 +120,12 @@ void app_main(void)
     };
 
     const led_indicator_config_t config = {
-        .mode = LED_GPIO_MODE,
-        .led_indicator_gpio_config = &gpio_config,
         .blink_lists = led_mode,
         .blink_list_num = BLINK_MAX,
     };
 
-    led_handle = led_indicator_create(&config);
+    esp_err_t ret = led_indicator_new_gpio_device(&config, &gpio_config, &led_handle);
+    ESP_ERROR_CHECK(ret);
     assert(led_handle != NULL);
 
 #if CONFIG_EXAMPLE_ENABLE_CONSOLE_CONTROL

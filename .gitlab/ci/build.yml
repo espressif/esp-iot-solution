@@ -587,10 +587,7 @@ build_example_indicator:
   extends:
     - .build_examples_template
     - .rules:build:example_indicator
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v4.4
+    - .build_idf_version_greater_equal_v5_0
   variables:
     EXAMPLE_DIR: examples/indicator
 
@@ -1417,10 +1414,7 @@ build_components_led_led_indicator_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_led_led_indicator_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
+    - .build_idf_version_greater_equal_v5_0
   variables:
     EXAMPLE_DIR: components/led/led_indicator/test_apps
 
