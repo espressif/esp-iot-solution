@@ -21,14 +21,13 @@
     project_name
     |
     |-- main
-    |   |-- CMakeLists.txt
-    |   |-- idf_component.yml
-    |   |-- main.c
-    |
-    |-- tusb
-        |-- tusb_config.h
-        |-- usb_descriptors.c
-        |-- usb_descriptors.h
+        |-- CMakeLists.txt
+        |-- idf_component.yml
+        |-- main.c
+        |-- tusb
+            |-- tusb_config.h
+            |-- usb_descriptors.c
+            |-- usb_descriptors.h
 
 在该工程的 main 组件中添加组件依赖，:ref:`espressif/tinyusb <espressif/tinyusb>`。
 
