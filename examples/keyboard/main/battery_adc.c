@@ -4,15 +4,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <driver/adc.h>
-
-#include "battery_adc.h"
-
-#include "ble_hid.h"
 #include <esp_log.h>
 #include <esp_adc/adc_oneshot.h>
-
+#include "ble_hid.h"
 #include "bsp/esp-bsp.h"
+#include "battery_adc.h"
 #include "adc_battery_estimation.h"
 
 static const char *TAG = "BATTERY-ADC";

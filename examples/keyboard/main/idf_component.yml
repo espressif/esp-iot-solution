@@ -1,4 +1,4 @@
-version: 0.2.2
+version: 0.3.0
 dependencies:
   idf: '>=5.2'
   espressif/tinyusb:
