@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -22,6 +22,7 @@ static const char *TAG = "usb_device_uvc_test";
 #define UVC_MAX_FRAMESIZE_SIZE     (60*1024)
 #define WIDTH   CONFIG_UVC_CAM1_FRAMESIZE_WIDTH
 #define HEIGHT  CONFIG_UVC_CAM1_FRAMESIZE_HEIGT
+#define TEST_COUNT (15)
 
 extern const unsigned char jpg_start[] asm("_binary_esp_1280_720_jpg_start");
 extern const unsigned char jpg_end[]   asm("_binary_esp_1280_720_jpg_end");
@@ -85,9 +86,12 @@ TEST_CASE("usb_device_uvc_test", "[usb_device_uvc]")
     };
     uvc_device_config(0, &config);
     uvc_device_init();
-    while (1) {
+    for (int i = 0; i < TEST_COUNT; i++) {
         vTaskDelay(1000 / portTICK_PERIOD_MS);
+        ESP_LOGI(TAG, "UVC Device Test: %d", i);
     }
+    uvc_device_deinit();
+    free(uvc_buffer);
 }
 
 static size_t before_free_8bit;
