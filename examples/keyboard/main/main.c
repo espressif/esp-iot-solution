@@ -10,6 +10,7 @@
 #include "bsp/esp-bsp.h"
 #include "bsp/keycodes.h"
 #include "btn_progress.h"
+#include "battery_adc.h"
 #include "esp_log.h"
 #include "esp_pm.h"
 #include "keyboard_button.h"
@@ -115,4 +116,5 @@ void app_main(void)
     keyboard_button_register_cb(kbd_handle, cb_cfg, NULL);
 
     xTaskCreate(light_progress_task, "light_progress_task", 4096, NULL, 5, &light_progress_task_handle);
+    battery_adc_init();
 }

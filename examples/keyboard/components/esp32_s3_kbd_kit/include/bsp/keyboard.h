@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -49,7 +49,9 @@ extern "C" {
 #define KBD_WS2812_POWER_IO  1
 
 /*!< Battery monitor GPIO */
-#define KBD_BATTERY_MONITOR_IO  2
+#define KBD_BATTERY_MONITOR_ADC_UNIT ADC_UNIT_1
+#define KBD_BATTERY_MONITOR_IO       2
+#define KBD_BATTERY_MONITOR_CHANNEL  ADC_CHANNEL_1
 
 #ifdef __cplusplus
 }

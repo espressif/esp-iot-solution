@@ -8,6 +8,7 @@ The ESP-KeyBoard project is a keyboard project using the ESP32-S3, supporting N-
 * Supports low-power key scanning
 * Supports USB 1K report rate
 * Supports BLE 125Hz report rate
+* Supports BLE battery level reporting
 * Supports local lighting control with over 40 types
 * Supports `Windows 11` dynamic lighting control
 
@@ -77,6 +78,11 @@ How to modify key mappings:
 Note: keyboard_rgb_martix comes from the **QMK** project. Due to the use of the GPL license, if you have product plans based on this example, it is recommended to replace this component.
 
 ### Change LOG
+
+* v0.3.0 - 2025-08-04
+
+  * Added BLE battery level reporting with ADC-based battery monitoring.
+  * Improved battery capacity estimation using resistor voltage divider circuit.
 
 * v0.2.2 - 2024-11-21
 
