@@ -1,4 +1,4 @@
-version: "2.0.0"
+version: "2.0.1"
 description: LED indicator driver
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/led/led_indicator
 dependencies:

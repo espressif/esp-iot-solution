@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v2.0.1 - 2025-8-12
+
+### Bugfix
+
+* Fix: For LEDs driven by the LEDC driver with active-low enable, use the LEDC inversion function to avoid the LED turning on immediately after creation due to an initial low-level output.
+
 ## v2.0.0 - 2025-7-30
 
 ### Improve:
