@@ -19,12 +19,41 @@ menu "USB Device UAC"
     config UAC_SAMPLE_RATE
         int "UAC sample rate"
         default 48000
+    
+    choice UAC_SPK_SAMPLE_FORMAT
+        prompt "UAC SPK sample format"
+        default UAC_SPK_SAMPLE_FORMAT_PCM
+        help
+            SPK: Select in which data type samples shall be expected from USB host.
+            Currently supports PCM (16-bit signed integer) or IEEE Floating Point (32-bit).
+        
+        config UAC_SPK_SAMPLE_FORMAT_PCM
+            bool "PCM (16-bit)"
+        
+        config UAC_SPK_SAMPLE_FORMAT_FLOAT
+            bool "IEEE Floating Point (32-bit)"
+    endchoice
 
     config UAC_SPK_INTERVAL_MS
         int "UAC SPK interval(ms)"
         default 10
         help
             SPK: The first interval of reading data from UAC device, in ms. And make SPK FIFO to accommodate data of size n milliseconds.
+
+    choice UAC_MIC_SAMPLE_FORMAT
+        prompt "UAC MIC sample format"
+        default UAC_MIC_SAMPLE_FORMAT_PCM
+        help
+            MIC: Select in which data type samples are sent to USB host.
+            Currently supports PCM (16-bit signed integer) or IEEE Floating Point (32-bit).
+            Only affects data rate calculation and USB descriptor! Library user must ensure correct data format.
+        
+        config UAC_MIC_SAMPLE_FORMAT_PCM
+            bool "PCM (16-bit)"
+        
+        config UAC_MIC_SAMPLE_FORMAT_FLOAT
+            bool "IEEE Floating Point (32-bit)"
+    endchoice
 
     config UAC_MIC_INTERVAL_MS
         int "UAC MIC interval(ms)"
