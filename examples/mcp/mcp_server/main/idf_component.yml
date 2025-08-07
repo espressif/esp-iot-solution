@@ -1,0 +1,10 @@
+## IDF Component Manager Manifest File
+dependencies:
+  ## Required IDF version
+  idf:
+    version: ">=5.4.0"
+  espressif/mcp-c-sdk:
+    version: "0.1.0"
+    override_path: "../../../../components/mcp-c-sdk"
+  protocol_examples_common:
+    path: ${IDF_PATH}/examples/common_components/protocol_examples_common

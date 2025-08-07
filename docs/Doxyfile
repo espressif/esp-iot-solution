@@ -64,6 +64,11 @@ INPUT = \
     $(PROJECT_PATH)/components/motor/esp_sensorless_bldc_control/include/bldc_control.h \
     $(PROJECT_PATH)/components/motor/esp_sensorless_bldc_control/user_cfg/bldc_user_cfg.h \
     $(PROJECT_PATH)/components/motor/servo/include/iot_servo.h \
+    $(PROJECT_PATH)/components/mcp-c-sdk/include/esp_mcp.h \
+    $(PROJECT_PATH)/components/mcp-c-sdk/include/esp_mcp_server.h \
+    $(PROJECT_PATH)/components/mcp-c-sdk/include/esp_mcp_tool.h \
+    $(PROJECT_PATH)/components/mcp-c-sdk/include/esp_mcp_data.h \
+    $(PROJECT_PATH)/components/mcp-c-sdk/include/esp_mcp_property.h \
     $(PROJECT_PATH)/components/openai/include/OpenAI.h \
     $(PROJECT_PATH)/components/sensors/ntc_driver/include/ntc_driver.h \
     $(PROJECT_PATH)/components/sensors/power_measure/include/power_measure.h \

@@ -1505,6 +1505,14 @@ build_components_motor_servo_test_apps:
   variables:
     EXAMPLE_DIR: components/motor/servo/test_apps
 
+build_example_mcp_server:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_mcp_server
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: examples/mcp/mcp_server
+
 build_components_ntc_driver_test_apps:
   extends:
     - .build_examples_template
