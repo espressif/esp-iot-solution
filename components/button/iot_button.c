@@ -191,13 +191,7 @@ static void button_handler(button_dev_t *btn)
             /** Calling the callbacks for MULTIPLE BUTTON CLICKS */
             for (int i = 0; i < btn->size[btn->event]; i++) {
                 if (btn->repeat == btn->cb_info[btn->event][i].event_args.multiple_clicks.clicks) {
-                    do {
-                        btn->cb_info[btn->event][i].cb(btn, btn->cb_info[btn->event][i].usr_data);
-                        i++;
-                        if (i >= btn->size[btn->event]) {
-                            break;
-                        }
-                    } while (btn->cb_info[btn->event][i].event_args.multiple_clicks.clicks == btn->repeat);
+                    btn->cb_info[btn->event][i].cb(btn, btn->cb_info[btn->event][i].usr_data);
                 }
             }
 
