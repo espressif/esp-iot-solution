@@ -17,6 +17,11 @@
 #include "soc/soc_caps.h"
 
 static const char *TAG = "adc_if";
+
+#ifndef CONFIG_ADC_MIC_TASK_CORE
+#define CONFIG_ADC_MIC_TASK_CORE tskNO_AFFINITY
+#endif
+
 typedef struct {
     audio_codec_data_if_t       base;
     adc_continuous_handle_t     handle;
@@ -31,7 +36,91 @@ typedef struct {
 #if SOC_ADC_DIGI_RESULT_BYTES != 2
     uint32_t                    *conv_data;
 #endif
+    TaskHandle_t                worker_task_handle;
+    QueueHandle_t               worker_queue;
 } adc_data_t;
+
+/* Actions handled by the worker task to ensure all start/stop are executed in the same task */
+typedef enum {
+    ADC_MIC_ACTION_NONE = 0,
+    ADC_MIC_ACTION_ENABLE,
+    ADC_MIC_ACTION_DISABLE,
+    ADC_MIC_ACTION_DESTROY,
+} adc_mic_action_t;
+
+typedef struct {
+    adc_mic_action_t action;
+    TaskHandle_t     msg_sender_task;  /* Notify this task when action is handled */
+    int              *result_ptr;      /* Where to store operation result (ESP_CODEC_DEV_OK/ERR) */
+} adc_mic_msg_t;
+
+static void adc_mic_worker_task(void *arg)
+{
+    adc_data_t *adc_data = (adc_data_t *)arg;
+    adc_mic_msg_t msg;
+    while (true) {
+        if (xQueueReceive(adc_data->worker_queue, &msg, portMAX_DELAY)) {
+            switch (msg.action) {
+            case ADC_MIC_ACTION_ENABLE: {
+                esp_err_t ret = ESP_OK;
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 2, 0)
+                ret = adc_continuous_flush_pool(adc_data->handle);
+                if (ret != ESP_OK) {
+                    if (msg.result_ptr) {
+                        *msg.result_ptr = ESP_CODEC_DEV_DRV_ERR;
+                    }
+                    break;
+                }
+#endif
+                ret = adc_continuous_start(adc_data->handle);
+                if (ret == ESP_OK) {
+                    adc_data->enable = true;
+                    if (msg.result_ptr) {
+                        *msg.result_ptr = ESP_CODEC_DEV_OK;
+                    }
+                } else {
+                    if (msg.result_ptr) {
+                        *msg.result_ptr = ESP_CODEC_DEV_DRV_ERR;
+                    }
+                }
+                break;
+            }
+            case ADC_MIC_ACTION_DISABLE: {
+                esp_err_t ret = adc_continuous_stop(adc_data->handle);
+                if (ret == ESP_OK) {
+                    adc_data->enable = false;
+                    if (msg.result_ptr) {
+                        *msg.result_ptr = ESP_CODEC_DEV_OK;
+                    }
+                } else {
+                    if (msg.result_ptr) {
+                        *msg.result_ptr = ESP_CODEC_DEV_DRV_ERR;
+                    }
+                }
+                break;
+            }
+            case ADC_MIC_ACTION_DESTROY: {
+                if (adc_data->enable) {
+                    (void)adc_continuous_stop(adc_data->handle);
+                    adc_data->enable = false;
+                }
+                adc_data->worker_task_handle = NULL;
+                if (msg.msg_sender_task) {
+                    xTaskNotifyGive(msg.msg_sender_task);
+                }
+                vTaskDelete(NULL);
+                assert(0); /* should not reach here */
+            }
+            case ADC_MIC_ACTION_NONE:
+            default:
+                break;
+            }
+            if (msg.msg_sender_task) {
+                xTaskNotifyGive(msg.msg_sender_task);
+            }
+        }
+    }
+}
 
 static esp_err_t adc_channel_config(adc_data_t *adc_data, uint8_t *channel, uint8_t channel_num, int sample_freq_hz, adc_atten_t atten)
 {
@@ -82,22 +171,19 @@ static int _adc_data_enable(const audio_codec_data_if_t *h, esp_codec_dev_type_t
     ESP_RETURN_ON_FALSE(adc_data != NULL, ESP_CODEC_DEV_INVALID_ARG, TAG, "adc_data is NULL");
     ESP_RETURN_ON_FALSE(adc_data->is_open, ESP_CODEC_DEV_WRONG_STATE, TAG, "adc_data is not open");
     ESP_RETURN_ON_FALSE(dev_type == ESP_CODEC_DEV_TYPE_IN, ESP_CODEC_DEV_INVALID_ARG, TAG, "Invalid device type");
-    esp_err_t ret = ESP_OK;
-    if (enable) {
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 2, 0)
-        ret = adc_continuous_flush_pool(adc_data->handle);
-        ESP_RETURN_ON_FALSE(ret == ESP_OK, ESP_CODEC_DEV_DRV_ERR, TAG, "adc_continuous_flush_pool failed");
-#endif
-        ret = adc_continuous_start(adc_data->handle);
-        ESP_RETURN_ON_FALSE(ret == ESP_OK, ESP_CODEC_DEV_DRV_ERR, TAG, "adc_continuous_start failed");
-    } else {
-        ret = adc_continuous_stop(adc_data->handle);
-        ESP_RETURN_ON_FALSE(ret == ESP_OK, ESP_CODEC_DEV_DRV_ERR, TAG, "adc_continuous_stop failed");
-    }
+    // Route start/stop into the dedicated worker task to avoid cross-task mutex issues
+    ESP_RETURN_ON_FALSE(adc_data->worker_queue != NULL, ESP_CODEC_DEV_WRONG_STATE, TAG, "worker not initialized");
 
-    adc_data->enable = enable;
-
-    return ret;
+    int op_result = ESP_CODEC_DEV_OK;
+    adc_mic_msg_t msg = {
+        .action = enable ? ADC_MIC_ACTION_ENABLE : ADC_MIC_ACTION_DISABLE,
+        .msg_sender_task = xTaskGetCurrentTaskHandle(),
+        .result_ptr = &op_result,
+    };
+    BaseType_t ok = xQueueSend(adc_data->worker_queue, &msg, portMAX_DELAY);
+    ESP_RETURN_ON_FALSE(ok == pdTRUE, ESP_CODEC_DEV_DRV_ERR, TAG, "worker queue send failed");
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+    return op_result;
 }
 
 /**
@@ -169,6 +255,19 @@ static int _adc_data_close(const audio_codec_data_if_t *h)
     adc_data_t *adc_data = (adc_data_t *) h;
     ESP_RETURN_ON_FALSE(adc_data != NULL, ESP_CODEC_DEV_INVALID_ARG, TAG, "adc_data is NULL");
     ESP_RETURN_ON_FALSE(adc_data->enable == false, ESP_CODEC_DEV_WRONG_STATE, TAG, "adc_data is enable, please disable it first");
+
+    // Ensure worker task is destroyed before deinit
+    if (adc_data->worker_queue && adc_data->worker_task_handle) {
+        adc_mic_msg_t msg = {
+            .action = ADC_MIC_ACTION_DESTROY,
+            .msg_sender_task = xTaskGetCurrentTaskHandle(),
+            .result_ptr = NULL,
+        };
+        (void)xQueueSend(adc_data->worker_queue, &msg, portMAX_DELAY);
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        vQueueDelete(adc_data->worker_queue);
+        adc_data->worker_queue = NULL;
+    }
 
     if (!adc_data->if_config_by_user) {
         adc_continuous_deinit(adc_data->handle);
@@ -268,10 +367,30 @@ const audio_codec_data_if_t *audio_codec_new_adc_data(audio_codec_adc_cfg_t *adc
     adc_data->base.close = _adc_data_close;
 
     adc_data->is_open = true;
+
+    adc_data->worker_queue = xQueueCreate(8, sizeof(adc_mic_msg_t));
+    if (adc_data->worker_queue == NULL) {
+        goto err;
+    }
+    BaseType_t task_ok = xTaskCreatePinnedToCore(
+                             adc_mic_worker_task,
+                             "adc_mic_task",
+                             CONFIG_ADC_MIC_TASK_STACK_SIZE,
+                             adc_data,
+                             CONFIG_ADC_MIC_TASK_PRIORITY,
+                             &adc_data->worker_task_handle,
+                             (BaseType_t) CONFIG_ADC_MIC_TASK_CORE
+                         );
+    if (task_ok != pdPASS) {
+        goto err;
+    }
     return &adc_data->base;
 
 err:
     if (adc_data) {
+        if (adc_data->worker_queue) {
+            vQueueDelete(adc_data->worker_queue);
+        }
         free(adc_data);
     }
     return NULL;
