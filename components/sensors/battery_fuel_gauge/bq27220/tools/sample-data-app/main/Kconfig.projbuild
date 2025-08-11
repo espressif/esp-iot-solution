@@ -1,0 +1,14 @@
+menu "BQ27220 Sample APP Config"
+    config I2C_SCL_IO
+        int "GPIO number for I2C SCL"
+        default 1
+    config I2C_SDA_IO
+        int "GPIO number for I2C SDA"
+        default 2
+    config DISCHARGE_ENABLE_IO
+        int "GPIO number for discharge enable"
+        default 4
+    config END_DISCHAGE_VOLTAGE
+        int "End discharge voltage (mV)"
+        default 3300
+endmenu
