@@ -340,6 +340,10 @@
   - "components/usb/iot_usbh_cdc/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
 
+.patterns-components_modem_at: &patterns-components_modem_at
+  - "components/modem_at/**/*"
+  - "tools/cmake_utilities/package_manager.cmake"
+
 .patterns-components_usb_iot_usbh_modem: &patterns-components_usb_iot_usbh_modem
   - "components/usb/iot_usbh_modem/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
@@ -2831,6 +2835,17 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_usb_iot_usbh
+
+.rules:build:components_modem_at_test:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_modem_at
 
 .rules:build:components_usb_iot_usbh_cdc_test:
   rules:

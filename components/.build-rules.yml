@@ -42,6 +42,10 @@ components/usb/usb_stream/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32s2","esp32s3"]
 
+components/modem_at/test_apps:
+  enable:
+    - if: SOC_USB_OTG_SUPPORTED == 1
+
 components/usb/iot_usbh/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32s2","esp32s3"]
