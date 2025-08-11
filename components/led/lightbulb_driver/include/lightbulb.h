@@ -681,6 +681,14 @@ bool lightbulb_get_switch(void);
 lightbulb_works_mode_t lightbulb_get_mode(void);
 
 /**
+ * @brief Get the power limit of the lightbulb.
+ *
+ * @param power_limit A pointer to a `lightbulb_power_limit_t` structure where the power limit details will be stored.
+ * @return esp_err_t An error code indicating the success or failure of the operation.
+ */
+esp_err_t lightbulb_get_power_limit(lightbulb_power_limit_t *power_limit);
+
+/**
  * @brief Get all the status details of the lightbulb.
  *
  * @param status A pointer to a `lightbulb_status_t` structure where the status details will be stored.
