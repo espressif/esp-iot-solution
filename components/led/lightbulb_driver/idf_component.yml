@@ -1,4 +1,4 @@
-version: "1.8.3"
+version: "1.9.0"
 description: Provide multiple dimming driver solutions to easily build lightbulb applications
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/led/lightbulb_driver
 dependencies:

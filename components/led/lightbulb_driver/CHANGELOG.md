@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.9.0 - 2025-08-11
+
+### Improve:
+
+- Add API for get power limit
+
 ## v1.8.3 - 2025-06-19
 
 ### Bug Fix:

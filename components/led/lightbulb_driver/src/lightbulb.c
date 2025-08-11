@@ -1939,6 +1939,18 @@ lightbulb_works_mode_t lightbulb_get_mode(void)
     return result;
 }
 
+esp_err_t lightbulb_get_power_limit(lightbulb_power_limit_t *power_limit)
+{
+    LIGHTBULB_CHECK(power_limit, "power_limit is null", return ESP_FAIL);
+    LIGHTBULB_CHECK(s_lb_obj, "not init", return ESP_ERR_INVALID_ARG);
+
+    LB_MUTEX_TAKE(portMAX_DELAY);
+    memcpy(power_limit, &s_lb_obj->power, sizeof(lightbulb_power_limit_t));
+    LB_MUTEX_GIVE();
+
+    return ESP_OK;
+}
+
 esp_err_t lightbulb_update_status(lightbulb_status_t *new_status, bool trigger)
 {
     LIGHTBULB_CHECK(new_status, "new_status is null", return ESP_FAIL);
