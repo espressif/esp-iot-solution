@@ -5,6 +5,7 @@
  */
 
 #include <math.h>
+#include "driver/gpio.h"
 #include "driver/ledc.h"
 #include "esp_log.h"
 #include "led_indicator_ledc.h"
@@ -56,6 +57,7 @@ static esp_err_t led_indicator_ledc_init(void *param)
     ledc_channel_t ch = cfg->channel;
     LED_LEDC_CHECK(!s_ledc->ledc_channel[ch].is_init, "LEDC channel is already initialized!", goto EXIT);
     ledc_channel_config_t ledc_ch_cfg = LEDC_CHANNEL_CONFIG(cfg->timer_num, cfg->channel, cfg->gpio_num);
+    ledc_ch_cfg.flags.output_invert = cfg->is_active_level_high ? false : true;
     ret = ledc_channel_config(&ledc_ch_cfg);
     LED_LEDC_CHECK(ESP_OK == ret, "ledc_channel_config fail!", goto EXIT);
     s_ledc->ledc_channel[ch].channel = ch;
@@ -93,9 +95,6 @@ static esp_err_t led_indicator_ledc_set_on_off(void *channel, bool on_off)
     uint32_t ch = (uint32_t)channel;
     LED_LEDC_CHECK(s_ledc->ledc_channel[ch].is_init, "LEDC channel doesn't init", return ESP_FAIL);
     uint32_t duty = on_off ? s_ledc->max_duty : 0;
-    if (!s_ledc->ledc_channel[ch].is_active_level_high) {
-        duty = s_ledc->max_duty - duty;
-    }
 
     ret = ledc_set_duty(LEDC_MODE, s_ledc->ledc_channel[ch].channel, duty);
     LED_LEDC_CHECK(ESP_OK == ret, "LEDC set duty error", return ret);
@@ -110,7 +109,6 @@ static esp_err_t led_indicator_ledc_set_brightness(void *channel, uint32_t brigh
     uint32_t ch = (uint32_t)channel;
     LED_LEDC_CHECK(s_ledc->ledc_channel[ch].is_init, "LEDC channel doesn't init", return ESP_FAIL);
     LED_LEDC_CHECK(brightness <= UINT8_MAX, "brightness can't be larger than UINT8_MAX", return ESP_FAIL);
-    brightness = s_ledc->ledc_channel[ch].is_active_level_high ? brightness : (UINT8_MAX - brightness);
     ret = ledc_set_duty(LEDC_MODE, s_ledc->ledc_channel[ch].channel, brightness * s_ledc->max_duty / UINT8_MAX);
     LED_LEDC_CHECK(ESP_OK == ret, "LEDC set duty error", return ret);
     ret = ledc_update_duty(LEDC_MODE, s_ledc->ledc_channel[ch].channel);

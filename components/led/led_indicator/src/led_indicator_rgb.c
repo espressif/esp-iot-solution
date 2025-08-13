@@ -5,6 +5,7 @@
  */
 
 #include <math.h>
+#include "driver/gpio.h"
 #include "driver/ledc.h"
 #include "esp_log.h"
 #include "led_indicator_rgb.h"
@@ -42,12 +43,15 @@ static esp_err_t led_indicator_rgb_init(void *param, void **ret_rgb)
     }
 
     ledc_channel_config_t red_ch_cfg = LEDC_CHANNEL_CONFIG(cfg->timer_num, cfg->red_channel, cfg->red_gpio_num);
+    red_ch_cfg.flags.output_invert = cfg->is_active_level_high ? false : true;
     ret = ledc_channel_config(&red_ch_cfg);
     LED_RGB_CHECK(ESP_OK == ret, "red ledc_channel_config fail!", goto EXIT);
     ledc_channel_config_t green_ch_cfg = LEDC_CHANNEL_CONFIG(cfg->timer_num, cfg->green_channel, cfg->green_gpio_num);
+    green_ch_cfg.flags.output_invert = cfg->is_active_level_high ? false : true;
     ret = ledc_channel_config(&green_ch_cfg);
     LED_RGB_CHECK(ESP_OK == ret, "green ledc_channel_config fail!", goto EXIT);
     ledc_channel_config_t blue_ch_cfg = LEDC_CHANNEL_CONFIG(cfg->timer_num, cfg->blue_channel, cfg->blue_gpio_num);
+    blue_ch_cfg.flags.output_invert = cfg->is_active_level_high ? false : true;
     ret = ledc_channel_config(&blue_ch_cfg);
     LED_RGB_CHECK(ESP_OK == ret, "blud ledc_channel_config fail!", goto EXIT);
     rgb->rgb_channel[0] = cfg->red_channel;
@@ -73,11 +77,6 @@ static esp_err_t led_indicator_rgb_deinit(void *rgb_handle)
 static esp_err_t led_indicator_rgb_set_duty(led_rgb_t *p_rgb, uint32_t rgb[])
 {
     esp_err_t ret;
-    if (!p_rgb->is_active_level_high) {
-        rgb[0] = p_rgb->max_duty - rgb[0];
-        rgb[1] = p_rgb->max_duty - rgb[1];
-        rgb[2] = p_rgb->max_duty - rgb[2];
-    }
     for (int i = 0; i < 3; i++) {
         ret = ledc_set_duty(LEDC_MODE, p_rgb->rgb_channel[i], rgb[i]);
         LED_RGB_CHECK(ESP_OK == ret, "LEDC set duty error", return ret);
