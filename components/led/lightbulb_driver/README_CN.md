@@ -10,7 +10,6 @@
 
   - RGB + C/W
   - RGB + CCT/Brightness
-
 - IIC 调光芯片方案
 
   - ~~SM2135E~~
@@ -20,10 +19,10 @@
   - BP57x8D (BP5758/BP5758D/BP5768)
   - BP1658CJ
   - KP18058
-
 - 单总线方案
 
   - WS2812
+  - SM16825E
 
 ## 已支持的常用功能如下
 
@@ -132,7 +131,9 @@ lightbulb_init(&config);
 
 ## 单总线方案使用示例
 
-单总线方案使用 SPI 驱动输出 WS2812 所需要的数据，数据封装顺序为 GRB。
+### WS2812 使用示例
+
+单总线方案之一使用 SPI 驱动输出 WS2812 所需要的数据，数据封装顺序为 GRB。
 
 ```c
 lightbulb_config_t config = {
@@ -166,6 +167,139 @@ lightbulb_config_t config = {
 lightbulb_init(&config);
 ```
 
+### SM16825E 使用示例
+
+SM16825E 是一款支持 RGBWY 五通道的 LED 驱动器，使用 SPI 接口和 RZ 编码协议，支持 16 位灰度控制和电流调节。
+
+```cpp
+lightbulb_config_t config = {
+    //1. 选择 SM16825E 输出并进行参数配置
+    .type = DRIVER_SM16825E,
+    .driver_conf.sm16825e.led_num = 1,        // LED 芯片数量
+    .driver_conf.sm16825e.ctrl_io = 9,        // 控制 GPIO 引脚
+    .driver_conf.sm16825e.freq_hz = 3333000,  // SPI 频率 (默认 3.33MHz，基于 RZ 协议时序要求自动计算)
+
+    //2. 驱动功能选择，根据你的需要启用/禁用
+    .capability.enable_fade = true,
+    .capability.fade_time_ms = 800,
+    .capability.enable_lowpower = false,
+    .capability.enable_status_storage = true,
+    .capability.led_beads = LED_BEADS_5CH_RGBCW,  // 支持 5 通道 RGBWY
+    .capability.storage_cb = NULL,
+    .capability.sync_change_brightness_value = true,
+
+    //3. 限制参数，使用细则请参考后面小节
+    .external_limit = NULL,
+
+    //4. 颜色校准参数
+    .gamma_conf = NULL,
+
+    //5. 初始化照明参数，如果 on 置位将在初始化驱动时点亮球泡灯
+    .init_status.mode = WORK_COLOR,
+    .init_status.on = true,
+    .init_status.hue = 0,
+    .init_status.saturation = 100,
+    .init_status.value = 100,
+};
+lightbulb_init(&config);
+
+// 可选：配置通道映射（如果需要自定义引脚映射）
+sm16825e_regist_channel(SM16825E_CHANNEL_R, SM16825E_PIN_OUTR);
+sm16825e_regist_channel(SM16825E_CHANNEL_G, SM16825E_PIN_OUTG);
+sm16825e_regist_channel(SM16825E_CHANNEL_B, SM16825E_PIN_OUTB);
+sm16825e_regist_channel(SM16825E_CHANNEL_W, SM16825E_PIN_OUTW);
+sm16825e_regist_channel(SM16825E_CHANNEL_Y, SM16825E_PIN_OUTY);
+
+// 可选：设置通道电流 (10-300mA)
+sm16825e_set_channel_current(SM16825E_CHANNEL_R, 100);  // 100mA
+sm16825e_set_channel_current(SM16825E_CHANNEL_G, 100);  // 100mA
+sm16825e_set_channel_current(SM16825E_CHANNEL_B, 100);  // 100mA
+sm16825e_set_channel_current(SM16825E_CHANNEL_W, 100);  // 100mA
+sm16825e_set_channel_current(SM16825E_CHANNEL_Y, 100);  // 100mA
+
+// 可选：启用/禁用待机模式
+sm16825e_set_standby(false);  // 禁用待机模式，启用正常工作
+
+// 可选：关闭所有通道
+// sm16825e_set_shutdown();
+```
+
+**SM16825E 特性：**
+
+- 支持 RGBWY 五通道独立控制
+- 16 位灰度分辨率 (65,536 级)
+- 可调节电流控制 (每通道 10-300mA)
+- 支持待机模式 (功耗 <2mW)
+- RZ 编码协议，800Kbps 数据传输率，1200ns 码周期
+- 支持多芯片级联
+- 自动时序计算：基于数据手册参数动态计算 SPI 频率和位模式
+- 灵活的通道映射：支持逻辑通道到物理引脚的任意映射
+- 优化的 SPI 传输：使用 3.33MHz SPI 频率，每个 SM16825E 位用 4 个 SPI 位编码
+
+#### SM16825E 高级功能
+
+##### 通道映射配置
+
+SM16825E 支持灵活的通道映射，可以将逻辑通道（R、G、B、W、Y）映射到任意物理引脚：
+
+```c
+// 自定义通道映射示例
+sm16825e_regist_channel(SM16825E_CHANNEL_R, SM16825E_PIN_OUT1);  // 红色映射到 OUT1
+sm16825e_regist_channel(SM16825E_CHANNEL_G, SM16825E_PIN_OUT2);  // 绿色映射到 OUT2
+sm16825e_regist_channel(SM16825E_CHANNEL_B, SM16825E_PIN_OUT3);  // 蓝色映射到 OUT3
+sm16825e_regist_channel(SM16825E_CHANNEL_W, SM16825E_PIN_OUT4);  // 白色映射到 OUT4
+sm16825e_regist_channel(SM16825E_CHANNEL_Y, SM16825E_PIN_OUT5);  // 黄色映射到 OUT5
+```
+
+##### 电流控制
+
+每个通道可以独立设置电流值，范围 10-300mA：
+
+```c
+// 为不同通道设置电流
+sm16825e_set_channel_current(SM16825E_CHANNEL_R, config->current[SM16825E_CHANNEL_R]);  // 红色通道
+sm16825e_set_channel_current(SM16825E_CHANNEL_G, config->current[SM16825E_CHANNEL_G]);  // 绿色通道
+sm16825e_set_channel_current(SM16825E_CHANNEL_B, config->current[SM16825E_CHANNEL_B]);  // 蓝色通道
+sm16825e_set_channel_current(SM16825E_CHANNEL_W, config->current[SM16825E_CHANNEL_W]);  // 白色通道
+sm16825e_set_channel_current(SM16825E_CHANNEL_Y, config->current[SM16825E_CHANNEL_Y]);  // 黄色通道
+```
+
+##### 待机模式控制
+
+支持待机模式以降低功耗：
+
+```c
+// 启用待机模式（功耗 <2mW）
+sm16825e_set_standby(true);
+
+// 禁用待机模式，恢复正常工作
+sm16825e_set_standby(false);
+```
+
+##### 直接通道控制
+
+可以直接设置 RGBWY 各通道的值（0-255）：
+
+```c
+// 设置各通道值
+sm16825e_set_rgbwy_channel(255, 128, 64, 192, 96);
+// 参数顺序：红色、绿色、蓝色、白色、黄色
+
+// 关闭所有通道
+sm16825e_set_shutdown();
+```
+
+##### 时序优化说明
+
+驱动基于数据手册参数自动计算最优时序：
+
+- **RZ 编码**：800Kbps 有效传输率，1200ns 码周期
+- **SPI 频率**：3.33MHz，每个 SM16825E 位用 4 个 SPI 位编码
+- **时序参数**：
+  - T0 位：300ns 高电平 + 900ns 低电平
+  - T1 位：900ns 高电平 + 300ns 低电平
+  - 复位信号：最小 200μs 低电平
+
 ## 限制参数使用说明
 
 限制参数主要用途为限制输出的最大功率，以及将亮度参数限制在一个区间。该组件彩光与白光可独立控制，所以存在 2 组最大/最小亮度参数及功率参数。彩光使用 `HSV` 模型，`value` 代表彩光亮度，白光使用 `brightness` 参数。`value` 与 `brightness` 数据输入范围为 0 <= x <= 100。
@@ -197,16 +331,14 @@ input   output
 
 功率限制在亮度参数限制后进一步进行，对于 RGB 通道调整区间为 100 <= x <= 300，输入与输出的关系如下：
 
-```c
-input           output(color_max_power = 100)       output(color_max_power = 200)       output(color_max_power = 300)
-255,255,0       127,127,0                           255,255,0                           255,255,0
-127,127,0       63,63,0                             127,127,0                           127,127,0
-63,63,0         31,31,0                             63,63,0                             63,63,0
-255,255,255     85,85,85                            170,170,170                         255,255,255
-127,127,127     42,42,42                            84,84,84                            127,127,127
-63,63,63        21,21,21                            42,42,42                            63,63,63
-
-```
+|    input    | output(color_max_power = 100) | output(color_max_power = 200) | output(color_max_power = 300) |
+| :---------: | :---------------------------: | :---------------------------: | :---------------------------: |
+|  255,255,0  |           127,127,0           |           255,255,0           |           255,255,0           |
+|  127,127,0  |            63,63,0            |           127,127,0           |           127,127,0           |
+|   63,63,0   |            31,31,0            |            63,63,0            |            63,63,0            |
+| 255,255,255 |           85,85,85           |          170,170,170          |          255,255,255          |
+| 127,127,127 |           42,42,42           |           84,84,84           |          127,127,127          |
+|  63,63,63  |           21,21,21           |           42,42,42           |           63,63,63           |
 
 ## 颜色校准参数
 

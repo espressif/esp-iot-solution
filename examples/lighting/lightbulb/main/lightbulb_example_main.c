@@ -93,6 +93,17 @@ void app_main(void)
         .driver_conf.ws2812.led_num = CONFIG_WS2812_LED_NUM,
         .driver_conf.ws2812.ctrl_io = CONFIG_WS2812_LED_GPIO,
 #endif
+#ifdef CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_SM16825E
+        .type = DRIVER_SM16825E,
+        .driver_conf.sm16825e.led_num = CONFIG_SM16825E_LED_NUM,
+        .driver_conf.sm16825e.ctrl_io = CONFIG_SM16825E_LED_GPIO,
+        .io_conf.sm16825e_io.red = OUT4,
+        .io_conf.sm16825e_io.green = OUT1,
+        .io_conf.sm16825e_io.blue = OUT5,
+        .io_conf.sm16825e_io.white = OUT3,
+        .io_conf.sm16825e_io.yellow = OUT2,
+        .driver_conf.sm16825e.current = {150, 150, 150, 150, 150},
+#endif
 #ifdef CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_PWM
         .type = DRIVER_ESP_PWM,
         .driver_conf.pwm.freq_hz = CONFIG_PWM_FREQ_HZ,
@@ -119,6 +130,8 @@ void app_main(void)
 
 #if CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_WS2812
         .capability.led_beads = LED_BEADS_3CH_RGB,
+#elif CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_SM16825E
+        .capability.led_beads = LED_BEADS_5CH_RGBCW,
 #elif CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_BP5758D
         .capability.led_beads = LED_BEADS_5CH_RGBCW,
 #elif CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_PWM && TEST_PWM_RGBCW_LIGHTBULB
@@ -209,11 +222,10 @@ void app_main(void)
      */
     ESP_LOGW(TAG, "Showing some preset lighting effects.");
     uint32_t test_case = LIGHTING_RAINBOW | LIGHTING_ALEXA | LIGHTING_COLOR_EFFECT;
-#if CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_BP5758D || (TEST_PWM_RGBCW_LIGHTBULB && CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_PWM)
+#if CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_BP5758D || CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_SM16825E || (TEST_PWM_RGBCW_LIGHTBULB && CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_PWM)
     test_case |= LIGHTING_BASIC_FIVE;
     test_case |= LIGHTING_WHITE_EFFECT;
 #endif
-
     lightbulb_lighting_output_test(test_case, 2000);
     lightbulb_deinit();
     vTaskDelay(pdMS_TO_TICKS(2000));

@@ -21,6 +21,7 @@
 #include <unity.h>
 #include <nvs_flash.h>
 #include <esp_log.h>
+#include <driver/spi_master.h>
 
 #include <lightbulb.h>
 
@@ -1470,6 +1471,193 @@ TEST_CASE("KP18058", "[Application Layer]")
     lightbulb_lighting_output_test(LIGHTING_BASIC_FIVE, 1000);
     vTaskDelay(pdMS_TO_TICKS(2000));
     TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit());
+}
+#endif
+
+#ifdef CONFIG_ENABLE_SM16825E_DRIVER
+TEST_CASE("SM16825E", "[Underlying Driver]")
+{
+    driver_sm16825e_t conf = {
+        .led_num = 1,
+        .ctrl_io = 9,
+        .current = {150, 150, 150, 150, 150},
+    };
+    TEST_ASSERT_EQUAL(ESP_OK, sm16825e_init(&conf, NULL));
+
+    TEST_ASSERT_EQUAL(ESP_OK, sm16825e_regist_channel(SM16825E_CHANNEL_R, SM16825E_PIN_OUTW));
+    TEST_ASSERT_EQUAL(ESP_OK, sm16825e_regist_channel(SM16825E_CHANNEL_G, SM16825E_PIN_OUTR));
+    TEST_ASSERT_EQUAL(ESP_OK, sm16825e_regist_channel(SM16825E_CHANNEL_B, SM16825E_PIN_OUTY));
+    TEST_ASSERT_EQUAL(ESP_OK, sm16825e_regist_channel(SM16825E_CHANNEL_W, SM16825E_PIN_OUTB));
+    TEST_ASSERT_EQUAL(ESP_OK, sm16825e_regist_channel(SM16825E_CHANNEL_Y, SM16825E_PIN_OUTG));
+
+    TEST_ESP_ERR(ESP_ERR_INVALID_ARG, sm16825e_set_channel_current(SM16825E_CHANNEL_R, 9));
+    TEST_ESP_ERR(ESP_ERR_INVALID_ARG, sm16825e_set_channel_current(SM16825E_CHANNEL_R, 301));
+    TEST_ASSERT_EQUAL(ESP_OK, sm16825e_set_channel_current(SM16825E_CHANNEL_R, 10));
+    TEST_ASSERT_EQUAL(ESP_OK, sm16825e_set_channel_current(SM16825E_CHANNEL_G, 300));
+
+    TEST_ASSERT_EQUAL(ESP_OK, sm16825e_set_shutdown());
+    vTaskDelay(pdMS_TO_TICKS(100));
+    TEST_ASSERT_EQUAL(ESP_OK, sm16825e_set_rgbwy_channel(65535, 0, 0, 0, 0));
+    vTaskDelay(pdMS_TO_TICKS(100));
+    TEST_ASSERT_EQUAL(ESP_OK, sm16825e_set_rgbwy_channel(0, 65535, 0, 0, 0));
+    vTaskDelay(pdMS_TO_TICKS(100));
+    TEST_ASSERT_EQUAL(ESP_OK, sm16825e_set_rgbwy_channel(0, 0, 65535, 0, 0));
+    vTaskDelay(pdMS_TO_TICKS(100));
+    TEST_ASSERT_EQUAL(ESP_OK, sm16825e_set_rgbwy_channel(0, 0, 0, 65535, 0));
+    vTaskDelay(pdMS_TO_TICKS(100));
+    TEST_ASSERT_EQUAL(ESP_OK, sm16825e_set_rgbwy_channel(0, 0, 0, 0, 65535));
+    vTaskDelay(pdMS_TO_TICKS(100));
+
+    TEST_ASSERT_EQUAL(ESP_OK, sm16825e_set_standby(true));
+    vTaskDelay(pdMS_TO_TICKS(1000));
+    TEST_ASSERT_EQUAL(ESP_OK, sm16825e_set_rgbwy_channel(1000, 0, 0, 0, 0));
+    vTaskDelay(pdMS_TO_TICKS(1000));
+
+    TEST_ASSERT_EQUAL(ESP_OK, sm16825e_set_standby(true));
+    vTaskDelay(pdMS_TO_TICKS(1000));
+    TEST_ASSERT_EQUAL(ESP_OK, sm16825e_set_rgbwy_channel(0, 2000, 0, 0, 0));
+    vTaskDelay(pdMS_TO_TICKS(1000));
+
+    TEST_ASSERT_EQUAL(ESP_OK, sm16825e_set_standby(true));
+    vTaskDelay(pdMS_TO_TICKS(1000));
+    TEST_ASSERT_EQUAL(ESP_OK, sm16825e_set_shutdown());
+    vTaskDelay(pdMS_TO_TICKS(1000));
+    TEST_ASSERT_EQUAL(ESP_OK, sm16825e_set_rgbwy_channel(0, 0, 3000, 0, 0));
+    vTaskDelay(pdMS_TO_TICKS(1000));
+
+    TEST_ASSERT_EQUAL(ESP_OK, sm16825e_set_standby(false));
+    vTaskDelay(pdMS_TO_TICKS(1000));
+    TEST_ASSERT_EQUAL(ESP_OK, sm16825e_set_rgbwy_channel(0, 0, 0, 4000, 0));
+    vTaskDelay(pdMS_TO_TICKS(1000));
+
+    TEST_ASSERT_EQUAL(ESP_OK, sm16825e_set_shutdown());
+    vTaskDelay(pdMS_TO_TICKS(500));
+    TEST_ASSERT_EQUAL(ESP_OK, sm16825e_deinit());
+    // Free SPI bus for next SM16825E test
+    spi_bus_free(SPI2_HOST);
+}
+
+TEST_CASE("SM16825E", "[Application Layer]")
+{
+    lightbulb_config_t config = {
+        .type = DRIVER_SM16825E,
+        .driver_conf.sm16825e.led_num = 1,
+        .driver_conf.sm16825e.ctrl_io = 9,
+        .driver_conf.sm16825e.current = {150, 150, 150, 150, 150},
+        .capability.enable_fade = true,
+        .capability.fade_time_ms = 800,
+        .capability.enable_lowpower = false,
+        .capability.enable_status_storage = false,
+        .capability.led_beads = LED_BEADS_5CH_RGBCW,
+        .capability.storage_cb = NULL,
+        .capability.sync_change_brightness_value = true,
+        .io_conf.sm16825e_io.red = OUT4,
+        .io_conf.sm16825e_io.green = OUT1,
+        .io_conf.sm16825e_io.blue = OUT5,
+        .io_conf.sm16825e_io.white = OUT3,
+        .io_conf.sm16825e_io.yellow = OUT2,
+        .external_limit = NULL,
+        .gamma_conf = NULL,
+        .init_status.mode = WORK_COLOR,
+        .init_status.on = true,
+        .init_status.hue = 0,
+        .init_status.saturation = 100,
+        .init_status.value = 100,
+    };
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_init(&config));
+    vTaskDelay(pdMS_TO_TICKS(1000));
+    lightbulb_lighting_output_test(LIGHTING_BASIC_FIVE, 1000);
+    vTaskDelay(pdMS_TO_TICKS(2000));
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit());
+    spi_bus_free(SPI2_HOST);
+}
+
+TEST_CASE("SM16825E partial channel registration", "[Underlying Driver]")
+{
+    // Case 0: 0 channel
+    {
+        driver_sm16825e_t conf = {
+            .led_num = 1,
+            .ctrl_io = 9,
+            .current = {100, 100, 100, 100, 100},
+        };
+        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_init(&conf, NULL));
+        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_set_rgbwy_channel(1000, 2000, 3000, 4000, 5000));
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_deinit());
+        spi_bus_free(SPI2_HOST);
+    }
+
+    // Case 1: Only register 2 channels (W, Y)
+    {
+        driver_sm16825e_t conf = {
+            .led_num = 1,
+            .ctrl_io = 9,
+            .current = {100, 100, 100, 100, 100},
+        };
+        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_init(&conf, NULL));
+        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_regist_channel(SM16825E_CHANNEL_W, SM16825E_PIN_OUTW));
+        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_regist_channel(SM16825E_CHANNEL_Y, SM16825E_PIN_OUTY));
+        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_set_rgbwy_channel(0, 0, 0, 65535, 65535));
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_deinit());
+        spi_bus_free(SPI2_HOST);
+    }
+
+    // Case 2: Only register 3 channels (R, G, B)
+    {
+        driver_sm16825e_t conf = {
+            .led_num = 1,
+            .ctrl_io = 9,
+            .current = {100, 100, 100, 100, 100},
+        };
+        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_init(&conf, NULL));
+        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_regist_channel(SM16825E_CHANNEL_R, SM16825E_PIN_OUTR));
+        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_regist_channel(SM16825E_CHANNEL_G, SM16825E_PIN_OUTG));
+        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_regist_channel(SM16825E_CHANNEL_B, SM16825E_PIN_OUTB));
+        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_set_rgbwy_channel(65535, 65535, 65535, 0, 0));
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_deinit());
+        spi_bus_free(SPI2_HOST);
+    }
+
+    // Case 3: Register 5 channels (R, G, B, W, Y), in standard mapping order
+    {
+        driver_sm16825e_t conf = {
+            .led_num = 1,
+            .ctrl_io = 9,
+            .current = {100, 100, 100, 100, 100},
+        };
+        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_init(&conf, NULL));
+        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_regist_channel(SM16825E_CHANNEL_R, SM16825E_PIN_OUTR));
+        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_regist_channel(SM16825E_CHANNEL_G, SM16825E_PIN_OUTG));
+        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_regist_channel(SM16825E_CHANNEL_B, SM16825E_PIN_OUTB));
+        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_regist_channel(SM16825E_CHANNEL_W, SM16825E_PIN_OUTW));
+        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_regist_channel(SM16825E_CHANNEL_Y, SM16825E_PIN_OUTY));
+        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_set_rgbwy_channel(100, 200, 300, 400, 500));
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_deinit());
+        spi_bus_free(SPI2_HOST);
+    }
+
+    // Case 4: Register in random order (shuffle mapping), then write a full frame, confirm that it does not crash
+    {
+        driver_sm16825e_t conf = {
+            .led_num = 1,
+            .ctrl_io = 9,
+            .current = {100, 100, 100, 100, 100},
+        };
+        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_init(&conf, NULL));
+        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_regist_channel(SM16825E_CHANNEL_R, SM16825E_PIN_OUTW));
+        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_regist_channel(SM16825E_CHANNEL_G, SM16825E_PIN_OUTR));
+        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_regist_channel(SM16825E_CHANNEL_B, SM16825E_PIN_OUTY));
+        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_regist_channel(SM16825E_CHANNEL_W, SM16825E_PIN_OUTB));
+        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_regist_channel(SM16825E_CHANNEL_Y, SM16825E_PIN_OUTG));
+        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_set_rgbwy_channel(123, 456, 789, 321, 654));
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_deinit());
+        spi_bus_free(SPI2_HOST);
+    }
 }
 #endif
 

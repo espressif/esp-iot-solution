@@ -784,6 +784,12 @@ esp_err_t lightbulb_init(lightbulb_config_t *config)
         sprintf(driver_io, "IO List:[%d]", config->driver_conf.ws2812.ctrl_io);
     }
 #endif
+#ifdef CONFIG_ENABLE_SM16825E_DRIVER
+    if (config->type == DRIVER_SM16825E) {
+        driver_conf = (void *) & (config->driver_conf.sm16825e);
+        sprintf(driver_details, "SM16825E Led Num: %d", config->driver_conf.sm16825e.led_num);
+    }
+#endif
 
     if (config->type == DRIVER_ESP_PWM) {
         sprintf(driver_io, "IO List:[%d %d %d %d %d]", config->io_conf.pwm_io.red, config->io_conf.pwm_io.green, config->io_conf.pwm_io.blue, config->io_conf.pwm_io.cold_cct, config->io_conf.pwm_io.warm_brightness);
@@ -793,13 +799,15 @@ esp_err_t lightbulb_init(lightbulb_config_t *config)
         sprintf(driver_io, "IO List:[%d %d %d %d %d]", config->io_conf.iic_io.red, config->io_conf.iic_io.green, config->io_conf.iic_io.blue, config->io_conf.iic_io.cold_white, config->io_conf.iic_io.warm_yellow);
     } else if (config->type == DRIVER_WS2812) {
         // Nothing
+    } else if (config->type == DRIVER_SM16825E) {
+        sprintf(driver_io, "IO List:[%d %d %d %d %d]", config->io_conf.sm16825e_io.red, config->io_conf.sm16825e_io.green, config->io_conf.sm16825e_io.blue, config->io_conf.sm16825e_io.white, config->io_conf.sm16825e_io.yellow);
     } else {
         ESP_LOGW(TAG, "The driver has not been updated to the component");
         abort();
     }
 
     // Config check
-    if (config->type != DRIVER_ESP_PWM && config->type != DRIVER_WS2812) {
+    if (config->type >= DRIVER_SM2135E && config->type <= DRIVER_KP18058) {
         if (config->capability.enable_hardware_cct == true) {
             config->capability.enable_hardware_cct = false;
             ESP_LOGW(TAG, "The IIC dimming chip must enable CCT mix, rewrite the enable_hardware_cct variable to false.");
@@ -838,6 +846,8 @@ esp_err_t lightbulb_init(lightbulb_config_t *config)
             || s_lb_obj->cap.led_beads == LED_BEADS_5CH_RGBCW || s_lb_obj->cap.led_beads == LED_BEADS_5CH_RGBC || s_lb_obj->cap.led_beads == LED_BEADS_5CH_RGBCC || s_lb_obj->cap.led_beads == LED_BEADS_5CH_RGBWW) {
         if (config->type == DRIVER_ESP_PWM) {
             hal_regist_channel(CHANNEL_ID_COLD_CCT_WHITE, config->io_conf.pwm_io.cold_cct);
+        } else if (config->type == DRIVER_SM16825E) {
+            hal_regist_channel(CHANNEL_ID_COLD_CCT_WHITE, config->io_conf.sm16825e_io.white);
         } else {
             hal_regist_channel(CHANNEL_ID_COLD_CCT_WHITE, config->io_conf.iic_io.cold_white);
         }
@@ -846,6 +856,8 @@ esp_err_t lightbulb_init(lightbulb_config_t *config)
             || s_lb_obj->cap.led_beads == LED_BEADS_5CH_RGBCW || s_lb_obj->cap.led_beads == LED_BEADS_5CH_RGBW || s_lb_obj->cap.led_beads == LED_BEADS_5CH_RGBCC || s_lb_obj->cap.led_beads == LED_BEADS_5CH_RGBWW) {
         if (config->type == DRIVER_ESP_PWM) {
             hal_regist_channel(CHANNEL_ID_WARM_BRIGHTNESS_YELLOW, config->io_conf.pwm_io.warm_brightness);
+        } else if (config->type == DRIVER_SM16825E) {
+            hal_regist_channel(CHANNEL_ID_WARM_BRIGHTNESS_YELLOW, config->io_conf.sm16825e_io.yellow);
         } else {
             hal_regist_channel(CHANNEL_ID_WARM_BRIGHTNESS_YELLOW, config->io_conf.iic_io.warm_yellow);
         }
@@ -856,6 +868,10 @@ esp_err_t lightbulb_init(lightbulb_config_t *config)
             hal_regist_channel(CHANNEL_ID_RED, config->io_conf.pwm_io.red);
             hal_regist_channel(CHANNEL_ID_GREEN, config->io_conf.pwm_io.green);
             hal_regist_channel(CHANNEL_ID_BLUE, config->io_conf.pwm_io.blue);
+        } else if (config->type == DRIVER_SM16825E) {
+            hal_regist_channel(CHANNEL_ID_RED, config->io_conf.sm16825e_io.red);
+            hal_regist_channel(CHANNEL_ID_GREEN, config->io_conf.sm16825e_io.green);
+            hal_regist_channel(CHANNEL_ID_BLUE, config->io_conf.sm16825e_io.blue);
         } else {
             hal_regist_channel(CHANNEL_ID_RED, config->io_conf.iic_io.red);
             hal_regist_channel(CHANNEL_ID_GREEN, config->io_conf.iic_io.green);
