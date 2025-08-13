@@ -4,16 +4,12 @@ dependencies:
   idf:
     version: ">=5.0"
   espressif/button:
-    version: ">=2.3.0"
-    override_path: "../../../../../components/button"
+    version: ">=4.1.0"
   espressif/tinyusb:
-    version: ">=0.15.0~2"
+    version: ">=0.18.0~1"
   espressif/knob:
-    version: ">=0.1.0"
-    override_path: "../../../../../components/knob"
+    version: ">=1.0.0"
   espressif/esp32_s3_usb_otg:
-    version: "^1.5.1"
+    version: ">=2.0.0"
     rules:
       - if: "target in [esp32s3]"
-  lvgl/lvgl: #temp to workaround bsp issue
-    version: "9.2.0"

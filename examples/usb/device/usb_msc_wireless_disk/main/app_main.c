@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+/* SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -169,7 +169,19 @@ void app_main(void)
 
     ESP_LOGI(TAG, "USB MSC initialization");
 
-    const tinyusb_config_t tusb_cfg = {0};
+    tinyusb_config_t tusb_cfg = {0};
+
+#if CONFIG_SELF_POWERED_DEVICE
+    tusb_cfg.self_powered = true;
+    tusb_cfg.vbus_monitor_io = CONFIG_VBUS_MONITOR_IO;
+
+    static const uint8_t descriptor_fs_cfg[] = {
+        // Configuration number, interface count, string index, total length, attribute, power in mA
+        TUD_CONFIG_DESCRIPTOR(1, 1, 0, (TUD_CONFIG_DESC_LEN + CFG_TUD_MSC * TUD_MSC_DESC_LEN), TUSB_DESC_CONFIG_ATT_SELF_POWERED, 100),
+        TUD_MSC_DESCRIPTOR(0, 4, 0x01, 0x81, 64),
+    };
+    tusb_cfg.configuration_descriptor = descriptor_fs_cfg;
+#endif
 
     ESP_ERROR_CHECK(tinyusb_driver_install(&tusb_cfg));
     ESP_LOGI(TAG, "USB MSC initialization DONE");
