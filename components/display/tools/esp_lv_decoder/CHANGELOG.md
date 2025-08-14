@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v0.1.2~1 (2025-08-13)
+
+* Support all target.
+
 ## v0.1.2 (2024-10-18)
 
 * Added support for parsing split PNG images from the filesystem.

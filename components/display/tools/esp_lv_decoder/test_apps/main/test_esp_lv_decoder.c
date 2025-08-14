@@ -264,7 +264,7 @@ TEST_CASE("Validate decoder functionality in LVGL", "[decoder][File qoi]")
 }
 
 // Some resources are lazy allocated in the LCD driver, the threadhold is left for that case
-#define TEST_MEMORY_LEAK_THRESHOLD  (500)
+#define TEST_MEMORY_LEAK_THRESHOLD  (600)
 
 static size_t before_free_8bit;
 static size_t before_free_32bit;

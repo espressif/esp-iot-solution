@@ -1,13 +1,4 @@
-version: "1.0.0"
-targets:
-  - esp32
-  - esp32c2
-  - esp32c3
-  - esp32c6
-  - esp32h2
-  - esp32s2
-  - esp32s3
-  - esp32p4
+version: "1.0.0~1"
 description: File system for LVGL, supports reading files directly from flash.
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/display/tools/esp_lv_fs
 issues: https://github.com/espressif/esp-iot-solution/issues

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -7,8 +7,10 @@
 #include <stdio.h>
 #include "unity.h"
 #include "sdkconfig.h"
-#include "driver/i2c.h"
+#include "i2c_bus.h"
 #include "at581x.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "esp_system.h"
 #include "esp_log.h"
 
@@ -21,6 +23,7 @@
 #define RADAR_OUTPUT_IO     CONFIG_RADAR_OUTPUT         /*!< Radar output IO */
 
 static at581x_dev_handle_t at581x = NULL;
+static i2c_bus_handle_t i2c_bus = NULL;
 
 static void IRAM_ATTR at581x_isr_callback(void *arg)
 {
@@ -28,12 +31,11 @@ static void IRAM_ATTR at581x_isr_callback(void *arg)
     esp_rom_printf("[%s],GPIO[%d] intr, val: %d\n", __FUNCTION__, config->int_gpio_num, gpio_get_level(config->int_gpio_num));
 }
 
-/**
- * @brief i2c master initialization
- */
-static void i2c_bus_init(void)
+static void i2c_sensor_at581x_init(void)
 {
-    const i2c_config_t i2c_conf = {
+    const at581x_default_cfg_t def_cfg = ATH581X_INITIALIZATION_CONFIG();
+
+    const i2c_config_t i2c_bus_conf = {
         .mode = I2C_MODE_MASTER,
         .sda_io_num = (gpio_num_t)I2C_MASTER_SDA_IO,
         .sda_pullup_en = GPIO_PULLUP_DISABLE,
@@ -41,19 +43,11 @@ static void i2c_bus_init(void)
         .scl_pullup_en = GPIO_PULLUP_DISABLE,
         .master.clk_speed = I2C_MASTER_FREQ_HZ
     };
-    esp_err_t ret = i2c_param_config(I2C_MASTER_NUM, &i2c_conf);
-    TEST_ASSERT_EQUAL_MESSAGE(ESP_OK, ret, "I2C config returned error");
+    i2c_bus = i2c_bus_create(I2C_MASTER_NUM, &i2c_bus_conf);
+    TEST_ASSERT_NOT_NULL_MESSAGE(i2c_bus, "i2c_bus create returned NULL");
 
-    ret = i2c_driver_install(I2C_MASTER_NUM, i2c_conf.mode, 0, 0, 0);
-    TEST_ASSERT_EQUAL_MESSAGE(ESP_OK, ret, "I2C install returned error");
-}
-
-static void i2c_sensor_at581x_init(void)
-{
-    const at581x_default_cfg_t def_cfg = ATH581X_INITIALIZATION_CONFIG();
-
-    const at581x_i2c_config_t i2c_conf = {
-        .i2c_port = I2C_MASTER_NUM,
+    at581x_i2c_config_t i2c_conf = {
+        .bus_inst = i2c_bus,
         .i2c_addr = AT581X_ADDRRES_0,
 
         .int_gpio_num = RADAR_OUTPUT_IO,
@@ -63,7 +57,6 @@ static void i2c_sensor_at581x_init(void)
         .def_conf = &def_cfg,
     };
 
-    i2c_bus_init();
     at581x_new_sensor(&i2c_conf, &at581x);
     TEST_ASSERT_NOT_NULL_MESSAGE(at581x, "AT581X create returned NULL");
 }
@@ -77,7 +70,7 @@ TEST_CASE("sensor at581x test", "[at581x][iot][sensor]")
     vTaskDelay(pdMS_TO_TICKS(8000 * 1));
 
     at581x_del_sensor(at581x);
-    ret = i2c_driver_delete(I2C_MASTER_NUM);
+    ret = i2c_bus_delete(&i2c_bus);
     TEST_ASSERT_EQUAL(ESP_OK, ret);
 }
 

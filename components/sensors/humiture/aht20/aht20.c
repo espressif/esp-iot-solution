@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -7,6 +7,8 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "aht20.h"
 #include "driver/gpio.h"
 #include "esp_log.h"
@@ -16,52 +18,16 @@
 
 const static char *TAG = "AHT20";
 
-typedef struct {
-    i2c_port_t  i2c_port;
-    uint8_t     i2c_addr;
-} aht20_dev_t;
-
-static esp_err_t aht20_write_reg(aht20_dev_handle_t dev, uint8_t reg_addr, uint8_t *data, uint8_t len)
+static esp_err_t aht20_write_reg(aht20_dev_handle_t handle, uint8_t reg_addr, uint8_t *data, uint8_t len)
 {
-    aht20_dev_t *sens = (aht20_dev_t *) dev;
-    esp_err_t  ret;
-
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    ret = i2c_master_start(cmd);
-    assert(ESP_OK == ret);
-    ret = i2c_master_write_byte(cmd, sens->i2c_addr | I2C_MASTER_WRITE, true);
-    assert(ESP_OK == ret);
-    ret = i2c_master_write_byte(cmd, reg_addr, true);
-    assert(ESP_OK == ret);
-    if (len) {
-        ret = i2c_master_write(cmd, data, len, true);
-        assert(ESP_OK == ret);
-    }
-    ret = i2c_master_stop(cmd);
-    assert(ESP_OK == ret);
-    ret = i2c_master_cmd_begin(sens->i2c_port, cmd, 5000 / portTICK_PERIOD_MS);
-    i2c_cmd_link_delete(cmd);
-
-    return ret;
+    i2c_bus_device_handle_t bus_inst = (i2c_bus_device_handle_t)handle;
+    return i2c_bus_write_bytes(bus_inst, reg_addr, len, data);
 }
 
-static esp_err_t aht20_read_reg(aht20_dev_handle_t dev, uint8_t *data, size_t len)
+static esp_err_t aht20_read_reg(aht20_dev_handle_t handle, uint8_t *data, size_t len)
 {
-    aht20_dev_t *sens = (aht20_dev_t *) dev;
-    esp_err_t ret;
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    ret = i2c_master_start(cmd);
-    assert(ESP_OK == ret);
-    ret = i2c_master_write_byte(cmd, sens->i2c_addr | I2C_MASTER_READ, true);
-    assert(ESP_OK == ret);
-    ret = i2c_master_read(cmd, data, len, I2C_MASTER_LAST_NACK);
-    assert(ESP_OK == ret);
-    ret = i2c_master_stop(cmd);
-    assert(ESP_OK == ret);
-    ret = i2c_master_cmd_begin(sens->i2c_port, cmd, 1000 / portTICK_PERIOD_MS);
-    i2c_cmd_link_delete(cmd);
-
-    return ret;
+    i2c_bus_device_handle_t bus_inst = (i2c_bus_device_handle_t)handle;
+    return i2c_bus_read_bytes(bus_inst, NULL_I2C_MEM_ADDR, len, data);
 }
 
 static uint8_t aht20_calc_crc(uint8_t *data, uint8_t len)
@@ -96,16 +62,16 @@ esp_err_t aht20_read_temperature_humidity(aht20_dev_handle_t handle,
 
     buf[0] = 0x33;
     buf[1] = 0x00;
-    ESP_RETURN_ON_ERROR(aht20_write_reg(handle, AHT20_START_MEASURMENT_CMD, buf, 2), TAG, "I2C read/write error");
+    ESP_RETURN_ON_ERROR(aht20_write_reg(handle, AHT20_START_MEASURMENT_CMD, buf, 2), TAG, "I2C write error");
 
     vTaskDelay(pdMS_TO_TICKS(100));
 
-    ESP_RETURN_ON_ERROR(aht20_read_reg(handle, &status, 1), TAG, "I2C read/write error");
+    ESP_RETURN_ON_ERROR(aht20_read_reg(handle, &status, 1), TAG, "I2C read error");
 
     if ((status & BIT(AT581X_STATUS_Calibration_Enable)) &&
             (status & BIT(AT581X_STATUS_CRC_FLAG)) &&
             ((status & BIT(AT581X_STATUS_BUSY_INDICATION)) == 0)) {
-        ESP_RETURN_ON_ERROR(aht20_read_reg(handle, buf, 7), TAG, "I2C read/write error");
+        ESP_RETURN_ON_ERROR(aht20_read_reg(handle, buf, 7), TAG, "I2C read error");
         ESP_RETURN_ON_ERROR((aht20_calc_crc(buf, 6) != buf[6]), TAG, "crc is error");
 
         raw_data = buf[1];
@@ -140,21 +106,25 @@ esp_err_t aht20_new_sensor(const aht20_i2c_config_t *i2c_conf, aht20_dev_handle_
     ESP_RETURN_ON_FALSE(i2c_conf, ESP_ERR_INVALID_ARG, TAG, "invalid device config pointer");
     ESP_RETURN_ON_FALSE(handle_out, ESP_ERR_INVALID_ARG, TAG, "invalid device handle pointer");
 
-    aht20_dev_t *handle = calloc(1, sizeof(aht20_dev_t));
-    ESP_RETURN_ON_FALSE(handle, ESP_ERR_NO_MEM, TAG, "memory allocation for device handler failed");
+    i2c_bus_device_handle_t i2c_device_handle = i2c_bus_device_create(i2c_conf->bus_inst, i2c_conf->i2c_addr, 0);
+    if (NULL == i2c_device_handle) {
+        ESP_LOGE(TAG, "i2c_bus_device_create failed");
+        return ESP_FAIL;
+    }
 
-    handle->i2c_port = i2c_conf->i2c_port;
-    handle->i2c_addr = i2c_conf->i2c_addr;
-
-    *handle_out = handle;
+    *handle_out = i2c_device_handle;
     return ESP_OK;
 }
 
 esp_err_t aht20_del_sensor(aht20_dev_handle_t handle)
 {
     ESP_RETURN_ON_FALSE(handle, ESP_ERR_INVALID_ARG, TAG, "invalid device handle pointer");
-
-    free(handle);
+    i2c_bus_device_handle_t bus_inst = (i2c_bus_device_handle_t)handle;
+    esp_err_t ret = i2c_bus_device_delete(&bus_inst);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "i2c_bus_device_delete failed");
+        return ret;
+    }
 
     return ESP_OK;
 }
