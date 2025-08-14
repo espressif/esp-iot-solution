@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v1.3.1~2 (2025-08-13)
+
+* Support all target.
+
 ## v1.3.1~1 (2025-05-30)
 
 * Add IMPORT_INC_PATH support.

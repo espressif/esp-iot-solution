@@ -1,6 +1,6 @@
 version: "1.0.1"
 description: ESP LCD & Touch AXS15231B
-url: https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_axs15231b
+url: https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_axs15231b
 issues: https://github.com/espressif/esp-iot-solution/issues
 repository: https://github.com/espressif/esp-iot-solution.git
 dependencies:

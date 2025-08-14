@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -13,11 +13,11 @@ extern "C" {
 #include "esp_types.h"
 #include "esp_err.h"
 
-#include "driver/i2c.h"
+#include "i2c_bus.h"
 
 /* AHT20 address: CE pin low - 0x38, CE pin high - 0x39 */
-#define AHT20_ADDRRES_0 (0x38<<1)
-#define AHT20_ADDRESS_1 (0x39<<1)
+#define AHT20_ADDRRES_0 (0x38)
+#define AHT20_ADDRESS_1 (0x39)
 
 /**
  * @brief Type of AHT20 device handle
@@ -30,7 +30,7 @@ typedef void *aht20_dev_handle_t;
  *
  */
 typedef struct {
-    i2c_port_t  i2c_port;           /*!< I2C port used to connected AHT20 device */
+    i2c_bus_handle_t bus_inst;    /*!< I2C bus instance handle used to communicate with the AHT20 device */
     uint8_t     i2c_addr;           /*!< I2C address of AHT20 device, can be 0x38 or 0x39 according to A0 pin */
 } aht20_i2c_config_t;
 

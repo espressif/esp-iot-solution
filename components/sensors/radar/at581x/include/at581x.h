@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -12,13 +12,12 @@ extern "C" {
 
 #include "esp_types.h"
 #include "esp_err.h"
-
-#include "driver/i2c.h"
-#include "at581x_reg.h"
+#include "driver/gpio.h"
+#include "i2c_bus.h"
 #include "at581x_reg.h"
 
 /* AT581X address */
-#define AT581X_ADDRRES_0 (0x28<<1)
+#define AT581X_ADDRRES_0 (0x28)
 
 /**
  * @brief Type of AT581X device handle
@@ -47,8 +46,8 @@ typedef struct {
  *
  */
 typedef struct {
-    i2c_port_t  i2c_port;           /*!< I2C port used to connect AT581X device */
-    uint8_t     i2c_addr;           /*!< I2C address of AT581X device */
+    i2c_bus_handle_t bus_inst;      /*!< I2C bus instance handle */
+    uint8_t i2c_addr;               /*!< I2C address of AT581X device */
 
     gpio_num_t int_gpio_num;        /*!< GPIO number of interrupt pin */
     unsigned int interrupt_level;   /*!< Active Level of interrupt pin */
