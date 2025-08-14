@@ -110,11 +110,14 @@ esp_err_t i2c_master_soft_bus_write_reg8(i2c_master_soft_bus_handle_t bus_handle
 
     ESP_RETURN_ON_ERROR(i2c_master_soft_bus_wait_ack(bus_handle), TAG, "No ACK for device address");
 
+#if !CONFIG_I2C_BUS_REMOVE_NULL_MEM_ADDR
     if (mem_address != NULL_I2C_MEM_ADDR) {
+#endif
         ESP_RETURN_ON_ERROR(i2c_master_soft_bus_write_byte(bus_handle, mem_address), TAG, "Failed to write memory address");
         ESP_RETURN_ON_ERROR(i2c_master_soft_bus_wait_ack(bus_handle), TAG, "No ACK for device address");
+#if !CONFIG_I2C_BUS_REMOVE_NULL_MEM_ADDR
     }
-
+#endif
     // Write data
     for (size_t i = 0; i < data_len; i++) {
         ESP_RETURN_ON_ERROR(i2c_master_soft_bus_write_byte(bus_handle, data[i]), TAG, "Failed to write data byte");
@@ -136,12 +139,16 @@ esp_err_t i2c_master_soft_bus_write_reg16(i2c_master_soft_bus_handle_t bus_handl
     ESP_RETURN_ON_ERROR(i2c_master_soft_bus_write_byte(bus_handle, address_byte), TAG, "Failed to write device address");
     ESP_RETURN_ON_ERROR(i2c_master_soft_bus_wait_ack(bus_handle), TAG, "No ACK for device address");
 
+#if !CONFIG_I2C_BUS_REMOVE_NULL_MEM_ADDR
     if (mem_address != NULL_I2C_MEM_16BIT_ADDR) {
+#endif
         ESP_RETURN_ON_ERROR(i2c_master_soft_bus_write_byte(bus_handle, (uint8_t)((mem_address >> 8) & 0x00FF)), TAG, "Failed to write memory address");
         ESP_RETURN_ON_ERROR(i2c_master_soft_bus_wait_ack(bus_handle), TAG, "No ACK for mem address");
         ESP_RETURN_ON_ERROR(i2c_master_soft_bus_write_byte(bus_handle, (uint8_t)(mem_address & 0x00FF)), TAG, "Failed to write memory address");
         ESP_RETURN_ON_ERROR(i2c_master_soft_bus_wait_ack(bus_handle), TAG, "No ACK for mem address");
+#if !CONFIG_I2C_BUS_REMOVE_NULL_MEM_ADDR
     }
+#endif
 
     // Write data
     for (size_t i = 0; i < data_len; i++) {
@@ -159,7 +166,9 @@ esp_err_t i2c_master_soft_bus_read_reg8(i2c_master_soft_bus_handle_t bus_handle,
     ESP_RETURN_ON_FALSE(bus_handle, ESP_ERR_INVALID_ARG, TAG, "Invalid I2C bus handle");
 
     // Send memory address
+#if !CONFIG_I2C_BUS_REMOVE_NULL_MEM_ADDR
     if (mem_address != NULL_I2C_MEM_ADDR) {
+#endif
         // Generate START condition
         ESP_RETURN_ON_ERROR(i2c_master_soft_bus_start(bus_handle), TAG, "Failed to initiate start signal");
 
@@ -169,7 +178,9 @@ esp_err_t i2c_master_soft_bus_read_reg8(i2c_master_soft_bus_handle_t bus_handle,
         ESP_RETURN_ON_ERROR(i2c_master_soft_bus_wait_ack(bus_handle), TAG, "No ACK for device address");
         ESP_RETURN_ON_ERROR(i2c_master_soft_bus_write_byte(bus_handle, mem_address), TAG, "Failed to write memory address");
         ESP_RETURN_ON_ERROR(i2c_master_soft_bus_wait_ack(bus_handle), TAG, "No ACK for mem address");
+#if !CONFIG_I2C_BUS_REMOVE_NULL_MEM_ADDR
     }
+#endif
 
     // Generate RESTART condition
     ESP_RETURN_ON_ERROR(i2c_master_soft_bus_start(bus_handle), TAG, "Failed to initiate repeated start signal");
@@ -198,7 +209,9 @@ esp_err_t i2c_master_soft_bus_read_reg16(i2c_master_soft_bus_handle_t bus_handle
     ESP_RETURN_ON_FALSE(bus_handle, ESP_ERR_INVALID_ARG, TAG, "Invalid I2C bus handle");
 
     // Send memory address
+#if !CONFIG_I2C_BUS_REMOVE_NULL_MEM_ADDR
     if (mem_address != NULL_I2C_MEM_16BIT_ADDR) {
+#endif
         // Generate START condition
         ESP_RETURN_ON_ERROR(i2c_master_soft_bus_start(bus_handle), TAG, "Failed to initiate start signal");
 
@@ -210,7 +223,9 @@ esp_err_t i2c_master_soft_bus_read_reg16(i2c_master_soft_bus_handle_t bus_handle
         ESP_RETURN_ON_ERROR(i2c_master_soft_bus_wait_ack(bus_handle), TAG, "No ACK for mem address");
         ESP_RETURN_ON_ERROR(i2c_master_soft_bus_write_byte(bus_handle, (uint8_t)(mem_address & 0x00FF)), TAG, "Failed to write memory address");
         ESP_RETURN_ON_ERROR(i2c_master_soft_bus_wait_ack(bus_handle), TAG, "No ACK for mem address");
+#if !CONFIG_I2C_BUS_REMOVE_NULL_MEM_ADDR
     }
+#endif
 
     // Generate RESTART condition
     ESP_RETURN_ON_ERROR(i2c_master_soft_bus_start(bus_handle), TAG, "Failed to initiate repeated start signal");
