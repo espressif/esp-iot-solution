@@ -56,6 +56,18 @@ enum {
 #define UAC2_ENTITY_MIC_FEATURE_TERMINAL 0x12
 #define UAC2_ENTITY_MIC_OUTPUT_TERMINAL  0x13
 
+#if SPK_FORMAT_PCM
+#define SPK_SAMPLE_FORMAT AUDIO_DATA_FORMAT_TYPE_I_PCM
+#elif SPK_FORMAT_FLOAT
+#define SPK_SAMPLE_FORMAT AUDIO_DATA_FORMAT_TYPE_I_IEEE_FLOAT
+#endif
+
+#if MIC_FORMAT_PCM
+#define MIC_SAMPLE_FORMAT AUDIO_DATA_FORMAT_TYPE_I_PCM
+#elif MIC_FORMAT_FLOAT
+#define MIC_SAMPLE_FORMAT AUDIO_DATA_FORMAT_TYPE_I_IEEE_FLOAT
+#endif
+
 #if SPEAK_CHANNEL_NUM && MIC_CHANNEL_NUM
 #define NUM_INTERFACES 3
 #elif SPEAK_CHANNEL_NUM || MIC_CHANNEL_NUM
@@ -175,7 +187,7 @@ enum {
     /* Interface 1, Alternate 1 - alternate interface for data streaming */\
     TUD_AUDIO_DESC_STD_AS_INT(/*_itfnum*/ _itfnum + 1, /*_altset*/ 0x01, /*_nEPs*/ 0x02, /*_stridx*/ _stridx + 1),\
     /* Class-Specific AS Interface Descriptor(4.9.2) */\
-    TUD_AUDIO_DESC_CS_AS_INT(/*_termid*/ UAC2_ENTITY_SPK_INPUT_TERMINAL, /*_ctrl*/ AUDIO_CTRL_NONE, /*_formattype*/ AUDIO_FORMAT_TYPE_I, /*_formats*/ AUDIO_DATA_FORMAT_TYPE_I_PCM, /*_nchannelsphysical*/ SPEAK_CHANNEL_NUM, /*_channelcfg*/ AUDIO_CHANNEL_CONFIG_NON_PREDEFINED, /*_stridx*/ 0x00),\
+    TUD_AUDIO_DESC_CS_AS_INT(/*_termid*/ UAC2_ENTITY_SPK_INPUT_TERMINAL, /*_ctrl*/ AUDIO_CTRL_NONE, /*_formattype*/ AUDIO_FORMAT_TYPE_I, /*_formats*/ SPK_SAMPLE_FORMAT, /*_nchannelsphysical*/ SPEAK_CHANNEL_NUM, /*_channelcfg*/ AUDIO_CHANNEL_CONFIG_NON_PREDEFINED, /*_stridx*/ 0x00),\
     /* Type I Format Type Descriptor(2.3.1.6 - Audio Formats) */\
     TUD_AUDIO_DESC_TYPE_I_FORMAT(CFG_TUD_AUDIO_FUNC_1_FORMAT_1_N_BYTES_PER_SAMPLE_RX, CFG_TUD_AUDIO_FUNC_1_FORMAT_1_RESOLUTION_RX),\
     /* Standard AS Isochronous Audio Data Endpoint Descriptor(4.10.1.1) */\
@@ -191,7 +203,7 @@ enum {
     /* Interface 2, Alternate 1 - alternate interface for data streaming */\
     TUD_AUDIO_DESC_STD_AS_INT(/*_itfnum*/ _itfnum + 2, /*_altset*/ 0x01, /*_nEPs*/ 0x01, /*_stridx*/ _stridx + 2),\
     /* Class-Specific AS Interface Descriptor(4.9.2) */\
-    TUD_AUDIO_DESC_CS_AS_INT(/*_termid*/ UAC2_ENTITY_MIC_OUTPUT_TERMINAL, /*_ctrl*/ AUDIO_CTRL_NONE, /*_formattype*/ AUDIO_FORMAT_TYPE_I, /*_formats*/ AUDIO_DATA_FORMAT_TYPE_I_PCM, /*_nchannelsphysical*/ MIC_CHANNEL_NUM, /*_channelcfg*/ AUDIO_CHANNEL_CONFIG_FRONT_CENTER, /*_stridx*/ 0x00),\
+    TUD_AUDIO_DESC_CS_AS_INT(/*_termid*/ UAC2_ENTITY_MIC_OUTPUT_TERMINAL, /*_ctrl*/ AUDIO_CTRL_NONE, /*_formattype*/ AUDIO_FORMAT_TYPE_I, /*_formats*/ MIC_SAMPLE_FORMAT, /*_nchannelsphysical*/ MIC_CHANNEL_NUM, /*_channelcfg*/ AUDIO_CHANNEL_CONFIG_FRONT_CENTER, /*_stridx*/ 0x00),\
     /* Type I Format Type Descriptor(2.3.1.6 - Audio Formats) */\
     TUD_AUDIO_DESC_TYPE_I_FORMAT(CFG_TUD_AUDIO_FUNC_1_FORMAT_1_N_BYTES_PER_SAMPLE_TX, CFG_TUD_AUDIO_FUNC_1_FORMAT_1_RESOLUTION_TX),\
     /* Standard AS Isochronous Audio Data Endpoint Descriptor(4.10.1.1) */\
@@ -226,7 +238,7 @@ enum {
     /* Interface 1, Alternate 1 - alternate interface for data streaming */\
     TUD_AUDIO_DESC_STD_AS_INT(/*_itfnum*/ _itfnum + 1, /*_altset*/ 0x01, /*_nEPs*/ 0x01, /*_stridx*/ _stridx + 1),\
     /* Class-Specific AS Interface Descriptor(4.9.2) */\
-    TUD_AUDIO_DESC_CS_AS_INT(/*_termid*/ UAC2_ENTITY_MIC_OUTPUT_TERMINAL, /*_ctrl*/ AUDIO_CTRL_NONE, /*_formattype*/ AUDIO_FORMAT_TYPE_I, /*_formats*/ AUDIO_DATA_FORMAT_TYPE_I_PCM, /*_nchannelsphysical*/ MIC_CHANNEL_NUM, /*_channelcfg*/ AUDIO_CHANNEL_CONFIG_FRONT_CENTER, /*_stridx*/ 0x00),\
+    TUD_AUDIO_DESC_CS_AS_INT(/*_termid*/ UAC2_ENTITY_MIC_OUTPUT_TERMINAL, /*_ctrl*/ AUDIO_CTRL_NONE, /*_formattype*/ AUDIO_FORMAT_TYPE_I, /*_formats*/ MIC_SAMPLE_FORMAT, /*_nchannelsphysical*/ MIC_CHANNEL_NUM, /*_channelcfg*/ AUDIO_CHANNEL_CONFIG_FRONT_CENTER, /*_stridx*/ 0x00),\
     /* Type I Format Type Descriptor(2.3.1.6 - Audio Formats) */\
     TUD_AUDIO_DESC_TYPE_I_FORMAT(CFG_TUD_AUDIO_FUNC_1_FORMAT_1_N_BYTES_PER_SAMPLE_TX, CFG_TUD_AUDIO_FUNC_1_FORMAT_1_RESOLUTION_TX),\
     /* Standard AS Isochronous Audio Data Endpoint Descriptor(4.10.1.1) */\
@@ -261,7 +273,7 @@ enum {
     /* Interface 1, Alternate 1 - alternate interface for data streaming */\
     TUD_AUDIO_DESC_STD_AS_INT(/*_itfnum*/ _itfnum + 1, /*_altset*/ 0x01, /*_nEPs*/ 0x02, /*_stridx*/ _stridx + 1),\
     /* Class-Specific AS Interface Descriptor(4.9.2) */\
-    TUD_AUDIO_DESC_CS_AS_INT(/*_termid*/ UAC2_ENTITY_SPK_INPUT_TERMINAL, /*_ctrl*/ AUDIO_CTRL_NONE, /*_formattype*/ AUDIO_FORMAT_TYPE_I, /*_formats*/ AUDIO_DATA_FORMAT_TYPE_I_PCM, /*_nchannelsphysical*/ SPEAK_CHANNEL_NUM, /*_channelcfg*/ AUDIO_CHANNEL_CONFIG_NON_PREDEFINED, /*_stridx*/ 0x00),\
+    TUD_AUDIO_DESC_CS_AS_INT(/*_termid*/ UAC2_ENTITY_SPK_INPUT_TERMINAL, /*_ctrl*/ AUDIO_CTRL_NONE, /*_formattype*/ AUDIO_FORMAT_TYPE_I, /*_formats*/ SPK_SAMPLE_FORMAT, /*_nchannelsphysical*/ SPEAK_CHANNEL_NUM, /*_channelcfg*/ AUDIO_CHANNEL_CONFIG_NON_PREDEFINED, /*_stridx*/ 0x00),\
     /* Type I Format Type Descriptor(2.3.1.6 - Audio Formats) */\
     TUD_AUDIO_DESC_TYPE_I_FORMAT(CFG_TUD_AUDIO_FUNC_1_FORMAT_1_N_BYTES_PER_SAMPLE_RX, CFG_TUD_AUDIO_FUNC_1_FORMAT_1_RESOLUTION_RX),\
     /* Standard AS Isochronous Audio Data Endpoint Descriptor(4.10.1.1) */\
