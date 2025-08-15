@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v1.1.1 - 2025-06-26
+
+* Added support for ESP32-C61
+
 ## v1.1.0 - 2025-05-06
 
 * Added fast build for ELF application

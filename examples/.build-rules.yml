@@ -481,12 +481,14 @@ examples/elf_loader/elf_loader_example:
     - if: IDF_TARGET in ["esp32","esp32s2","esp32s3"]
     - if: IDF_TARGET in ["esp32p4"] and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 3)
     - if: IDF_TARGET in ["esp32c6"] and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 1)
+    - if: IDF_TARGET in ["esp32c61"] and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 5 and IDF_VERSION_PATCH >= 1)
 
 examples/elf_loader/build_elf_file_example:
   enable:
     - if: IDF_TARGET in ["esp32","esp32s2","esp32s3"]
     - if: IDF_TARGET in ["esp32p4"] and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 3)
     - if: IDF_TARGET in ["esp32c6"] and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 1)
+    - if: IDF_TARGET in ["esp32c61"] and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 5 and IDF_VERSION_PATCH >= 1)
 
 examples/relinker:
   enable:

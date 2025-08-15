@@ -1810,6 +1810,7 @@ build_example_elf_loader_elf_loader_example:
       - IMAGE: espressif/idf:release-v5.2
       - IMAGE: espressif/idf:release-v5.3
       - IMAGE: espressif/idf:release-v5.4
+      - IMAGE: espressif/idf:release-v5.5
         EXAMPLE_CONFIG: "sdkconfig.ci=default"
   variables:
     EXAMPLE_DIR: examples/elf_loader/elf_loader_example
@@ -1826,6 +1827,7 @@ build_example_elf_loader_build_elf_file_example:
       - IMAGE: espressif/idf:release-v5.2
       - IMAGE: espressif/idf:release-v5.3
       - IMAGE: espressif/idf:release-v5.4
+      - IMAGE: espressif/idf:release-v5.5
   variables:
     EXAMPLE_DIR: examples/elf_loader/build_elf_file_example
 

@@ -6,11 +6,11 @@ This example shows how to use ELF loader to run ELF file.
 
 Before project configuration and build, be sure to set the correct chip target using `idf.py set-target <chip_name>`.
 
-* Note: Only ESP32, ESP32-S2, ESP32-S3 and ESP32-P4 are supported
+* Note: Only ESP32, ESP32-S2, ESP32-S3, ESP32-C6, ESP32-C61 and ESP32-P4 are supported
 
 ### Hardware Required
 
-* A development board based on espressif ESP32/ESP32-S2/ESP32-S3/ESP32-C6/ESP32-P4 SoC
+* A development board based on espressif ESP32/ESP32-S2/ESP32-S3/ESP32-C6/ESP32-C61/ESP32-P4 SoC
 * A USB cable for power supply and programming
 
 ### Configure the Project
