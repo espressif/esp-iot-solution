@@ -1,3 +1,5 @@
+| Supported Targets | ESP32-S2 | ESP32-S3 | ESP32-P4 |
+| ----------------- | -------- | -------- | -------- |
 ## USB Host Audio Player Example
 
 This example demonstrates how to use `usb_host_uac` component to handle an USB Headset device.

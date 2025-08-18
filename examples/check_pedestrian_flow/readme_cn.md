@@ -1,3 +1,5 @@
+| Supported Targets | ESP32 |
+| ----------------- | ----- |
 # ESP32 基于 Wi-Fi Sniffer 的人流量检测及 OneNET 数据云端统计
 
 [ESP32](https://www.espressif.com/zh-hans/products/socs/esp32) 是一颗低功耗、高集成度、性能稳定的 Wi-Fi/BLE 芯片，是物联网开发的首选设备。人流量监控在安保，商场，旅游等诸多行业具有重要作用。我们利用 ESP32 Wi-Fi 的混杂接收模式，接受全部可以获得的空中包，然后对其解析，筛选得到周围无线设备发送的 Probe Request 帧，通过对 Probe Request 帧的来源和强度进行分析和汇总，从而计算出周围一定区域内的设备设备使用量（人流量）。  

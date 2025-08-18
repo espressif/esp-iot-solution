@@ -1,3 +1,5 @@
+| Supported Targets | ESP32 | ESP32-S3 | ESP32-C3 |
+| ----------------- | ----- | -------- | -------- |
 # Decoder Example
 
 This demo shows how to use [esp_mmap_assets](https://components.espressif.com/components/espressif/esp_mmap_assets) ,[esp_lv_fs](https://components.espressif.com/components/espressif/esp_lv_fs),[esp_lv_decoder](https://components.espressif.com/components/espressif/esp_lv_decoder) in project.

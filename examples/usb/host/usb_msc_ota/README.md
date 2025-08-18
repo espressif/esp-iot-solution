@@ -1,3 +1,5 @@
+| Supported Targets | ESP32-S2 | ESP32-S3 |
+| ----------------- | -------- | -------- |
 # USB Host MSC OTA Example
 
 This example demonstrates how to use [esp_msc_ota](https://components.espressif.com/components/espressif/esp_msc_ota) to OTA with USB disk or other MSC devices.
