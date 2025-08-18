@@ -509,8 +509,12 @@ esp_err_t uac_device_init(uac_device_config_t *config)
     s_uac_device->spk_itf_num = config->spk_itf_num;
     s_uac_device->mic_itf_num = config->mic_itf_num;
 #else
+#if SPEAK_CHANNEL_NUM
     s_uac_device->spk_itf_num = ITF_NUM_AUDIO_STREAMING_SPK;
+#endif
+#if MIC_CHANNEL_NUM
     s_uac_device->mic_itf_num = ITF_NUM_AUDIO_STREAMING_MIC;
+#endif
 #endif
 
     BaseType_t ret_val;

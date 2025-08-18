@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v1.2.1 (2025-8-4)
+
+* Fix build issue and audio path for MIC-only configuration.
+
 ## v1.2.0 (2025-3-31)
 
 * Supports integration into other TinyUSB projects.
