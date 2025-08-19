@@ -1,5 +1,12 @@
 # ChangeLog
 
+## V1.4.1 - 2025-8-14
+
+### Bug Fix:
+
+- Soft i2c supports removing the restriction on ``NULL_I2C_MEM_ADDR``, allowing users to refer to all eligible register addresses.
+- Modify the `ESP_IDF_VERSION` naming in Kconfig to avoid conflicts with other components.
+
 ## v1.4.0 - 2025-3-13
 
 ### Enhancements:

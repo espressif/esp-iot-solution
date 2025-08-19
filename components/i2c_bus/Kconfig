@@ -1,7 +1,7 @@
 menu "Bus Options"
 
     menu "I2C Bus Options"
-        config ESP_IDF_VERSION
+        config ESP_IDF_VERSION_FOR_I2C
             string
             option env="ESP_IDF_VERSION"
 
@@ -22,7 +22,7 @@ menu "Bus Options"
         config I2C_BUS_BACKWARD_CONFIG
             bool "Enable backward compatibility for the I2C driver (force use of the old i2c_driver above v5.3)"
             default n
-            depends on ESP_IDF_VERSION >= 5.3
+            depends on ESP_IDF_VERSION_FOR_I2C >= 5.3
             help
                 Enable this option for backward compatibility with the old I2C driver
 
