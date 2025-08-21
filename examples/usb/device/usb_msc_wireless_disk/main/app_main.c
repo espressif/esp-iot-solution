@@ -28,8 +28,15 @@ static const char *TAG = "usb_msc_wireless";
 #elif defined(CONFIG_SDCARD_INTFC_SDIO) && defined(SOC_SDMMC_HOST_SUPPORTED)
 #define SDCARD_SDIO_CLK_PIN      CONFIG_SDCARD_SDIO_CLK_PIN
 #define SDCARD_SDIO_CMD_PIN      CONFIG_SDCARD_SDIO_CMD_PIN
-#define SDCARD_SDIO_DO_PIN       CONFIG_SDCARD_SDIO_DO_PIN
+#define SDCARD_SDIO_D0_PIN       CONFIG_SDCARD_SDIO_D0_PIN
+#if CONFIG_SDCARD_SDIO_DATA_WIDTH_4
+#define SDCARD_SDIO_DATA_WIDTH   4
+#define SDCARD_SDIO_D1_PIN       CONFIG_SDCARD_SDIO_D1_PIN
+#define SDCARD_SDIO_D2_PIN       CONFIG_SDCARD_SDIO_D2_PIN
+#define SDCARD_SDIO_D3_PIN       CONFIG_SDCARD_SDIO_D3_PIN
+#else
 #define SDCARD_SDIO_DATA_WIDTH   1
+#endif
 #include "driver/sdmmc_host.h"
 #else
 #error "Not supported interface"
@@ -53,7 +60,7 @@ static esp_err_t init_fat(sdmmc_card_t **card_handle, const char *base_path)
     ESP_LOGI(TAG, "using internal flash");
     const esp_vfs_fat_mount_config_t mount_config = {
         .format_if_mount_failed = true,
-        .max_files = 9,
+        .max_files = 5,
         .allocation_unit_size = CONFIG_WL_SECTOR_SIZE
     };
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
@@ -102,15 +109,20 @@ static esp_err_t init_fat(sdmmc_card_t **card_handle, const char *base_path)
 #elif defined(CONFIG_SDCARD_INTFC_SDIO) && defined(SOC_SDMMC_HOST_SUPPORTED)
     ESP_LOGI(TAG, "Using SDIO Interface");
     sdmmc_host_t host = SDMMC_HOST_DEFAULT();
+    host.max_freq_khz = SDMMC_FREQ_HIGHSPEED;
 
     // This initializes the slot without card detect (CD) and write protect (WP) signals.
     // Modify slot_config.gpio_cd and slot_config.gpio_wp if your board has these signals.
     sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
     slot_config.clk = SDCARD_SDIO_CLK_PIN;
     slot_config.cmd = SDCARD_SDIO_CMD_PIN;
-    slot_config.d0 = SDCARD_SDIO_DO_PIN;
-    // To use 1-line SD mode, change this to 1:
+    slot_config.d0 = SDCARD_SDIO_D0_PIN;
     slot_config.width = SDCARD_SDIO_DATA_WIDTH;
+#if CONFIG_SDCARD_SDIO_DATA_WIDTH_4
+    slot_config.d1 = SDCARD_SDIO_D1_PIN;
+    slot_config.d2 = SDCARD_SDIO_D2_PIN;
+    slot_config.d3 = SDCARD_SDIO_D3_PIN;
+#endif
     // Enable internal pullup on enabled pins. The internal pullup
     // are insufficient however, please make sure 10k external pullup are
     // connected on the bus. This is for debug / example purpose only.
