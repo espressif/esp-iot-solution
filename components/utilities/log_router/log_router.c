@@ -119,7 +119,7 @@ int esp_log_router_flash_vprintf(const char *format, va_list args)
 
     // Lock mutex for thread safety
     if (g_log_router_mutex) {
-        xSemaphoreTake(g_log_router_mutex, pdMS_TO_TICKS(100));
+        xSemaphoreTake(g_log_router_mutex, portMAX_DELAY);
     }
 
     // Write to all files that match the log level
