@@ -1,10 +1,10 @@
 dependencies:
   idf: ">=5.0"
   espressif/button:
-    version: "~2.5.0"
+    version: "^4.0.0"
   espressif/tinyusb:
-    version: ">=0.15.0~2"
+    version: ">=0.18.0~1"
   espressif/esp32_s3_usb_otg:
-    version: "^1.5.1"
+    version: "^2.0.0"
     rules:
       - if: "target in [esp32s3]"
