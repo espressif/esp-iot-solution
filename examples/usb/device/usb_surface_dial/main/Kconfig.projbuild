@@ -21,4 +21,21 @@ menu "Example Configuration"
 
     endchoice
 
+    config SELF_POWERED_DEVICE
+        bool "Self-powered device"
+        default n
+        help
+            Select 'y' if the device is self-powered and does not draw power from USB VBUS.
+
+    config VBUS_MONITOR_IO
+        int "VBUS monitor GPIO number"
+        depends on SELF_POWERED_DEVICE
+        range 0 46 if IDF_TARGET_ESP32S2
+        range 0 48 if IDF_TARGET_ESP32S3
+        default 2
+        help
+            Connect VBUS to a voltage comparator chip/circuit that can detect
+            the thresholds (4.35 V and 4.75 V) and output a 3.3 V logic level
+            to the ESP32-S2/S3, indicating whether VBUS is valid.
+
 endmenu
