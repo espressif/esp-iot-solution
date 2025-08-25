@@ -11,6 +11,7 @@
 #include "tinyusb.h"
 #include "sdmmc_cmd.h"
 #include "esp_idf_version.h"
+#include "esp_heap_caps.h"
 #ifdef CONFIG_ESP32_S3_USB_OTG
 #include "bsp/esp-bsp.h"
 #endif
@@ -59,9 +60,11 @@ static esp_err_t init_fat(sdmmc_card_t **card_handle, const char *base_path)
     wl_handle_t wl_handle_1 = WL_INVALID_HANDLE;
     ESP_LOGI(TAG, "using internal flash");
     const esp_vfs_fat_mount_config_t mount_config = {
+#ifdef CONFIG_FORMAT_IF_MOUNT_FAILED
         .format_if_mount_failed = true,
-        .max_files = 5,
-        .allocation_unit_size = CONFIG_WL_SECTOR_SIZE
+        .allocation_unit_size = CONFIG_WL_SECTOR_SIZE,
+#endif
+        .max_files = CONFIG_FATFS_MAX_FILES
     };
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
     ret = esp_vfs_fat_spiflash_mount_rw_wl(base_path, "storage", &mount_config, &wl_handle_1);
@@ -78,9 +81,11 @@ static esp_err_t init_fat(sdmmc_card_t **card_handle, const char *base_path)
     sdmmc_card_t *card;
     ESP_LOGI(TAG, "using external sdcard");
     esp_vfs_fat_sdmmc_mount_config_t mount_config = {
+#ifdef CONFIG_FORMAT_IF_MOUNT_FAILED
         .format_if_mount_failed = true,
-        .max_files = 5,
-        .allocation_unit_size = CONFIG_DISK_BLOCK_SIZE
+        .allocation_unit_size = CONFIG_DISK_BLOCK_SIZE,
+#endif
+        .max_files = CONFIG_FATFS_MAX_FILES
     };
 
 #ifdef CONFIG_SDCARD_INTFC_SPI
@@ -197,6 +202,23 @@ void app_main(void)
 
     ESP_ERROR_CHECK(tinyusb_driver_install(&tusb_cfg));
     ESP_LOGI(TAG, "USB MSC initialization DONE");
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+
+    /* Print memory status information at startup */
+    size_t internal_free = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+    size_t internal_largest = heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL);
+    ESP_LOGI(TAG, "Memory status:");
+    ESP_LOGI(TAG, "  Internal RAM: free %u bytes (%.1f KB), largest block: %u bytes (%.1f KB)",
+             internal_free, internal_free / 1024.0,
+             internal_largest, internal_largest / 1024.0);
+
+#if CONFIG_SPIRAM
+    size_t psram_free = heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
+    size_t psram_largest = heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM);
+    ESP_LOGI(TAG, "  PSRAM: free %u bytes (%.1f KB), largest block: %u bytes (%.1f KB)",
+             psram_free, psram_free / 1024.0,
+             psram_largest, psram_largest / 1024.0);
+#endif
 }
 
 static uint8_t s_pdrv = 0;

@@ -60,7 +60,6 @@
 <script>
   /* Max size of an individual file. Make sure this
    * value is same as that set in file_server.c */
-  const MAX_FILE_SIZE = 20 * 1024 * 1024;
   const uploadArea = document.getElementById("uploadArea");
   const uploadForm = document.getElementById("uploadForm");
   const uploadPathInput = document.getElementById("uploadPath");
@@ -113,13 +112,7 @@
   // Handle file selection
   function handleFile(file) {
     if (!file) return;
-    if (file.size > MAX_FILE_SIZE) {
-      alert(
-        `File is too large! Maximum file size is ${MAX_FILE_SIZE / 1024 / 1024
-        } MB`
-      );
-      return;
-    }
+  if (!file) return;
     selectedFile = file;
     uploadArea.innerHTML = `
           <div><code>${file.name}</code></div>
