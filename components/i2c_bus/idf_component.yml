@@ -1,4 +1,4 @@
-version: "1.4.1"
+version: "1.4.2"
 description: The I2C Bus Driver supports both hardware and software I2C.
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/i2c_bus
 repository: https://github.com/espressif/esp-iot-solution.git
