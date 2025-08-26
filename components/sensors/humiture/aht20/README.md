@@ -5,7 +5,7 @@ I2C driver and definition of AHT20 humidity and temperature sensor.
 
 Components compatible with AHT30 and AHT21 (AHT21 is deprecated).
 
-See [AHT20 datasheet](http://www.aosong.com/en/products-32.html), [AHT30 datasheet](http://www.aosong.com/en/products-131.html).
+See [AHT20 datasheet](https://asairsensors.com/wp-content/uploads/2021/09/Data-Sheet-AHT20-Humidity-and-Temperature-Sensor-ASAIR-V1.0.03.pdf), [AHT30 datasheet](https://asairsensors.com/product/aht30-integrated-temperature-and-humidity-sensor/).
 
 ## Usage
 
