@@ -15,7 +15,7 @@ ESP MSC OTA
 
 硬件需求：
 
-    - 任何带有 USB 接口的 ESP32-S2/ESP32-S3 开发板, 且 USB 接口需要能够向外供电
+    - 任何带有 USB 接口的 ESP32-S2/ESP32-S3/ESP32-P4 开发板, 且 USB 接口需要能够向外供电
     - 使用 BOT（仅限大容量传输）协议和 Transparent SCSI 命令集的 U 盘。
 
 分区表：

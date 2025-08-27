@@ -3,7 +3,7 @@ USB Device UVC
 
 :link_to_translation:`en:[English]`
 
-``usb_device_uvc`` 是用于 ESP32-S2/ESP32-S3 的 USB ``UVC`` 设备驱动程序，它支持将 JPEG 帧流传输到 USB 主机。用户可以通过回调函数将相机或任何设备包装成符合 UVC 标准的设备。
+``usb_device_uvc`` 是用于 ESP32-S2/ESP32-S3/ESP32-P4 的 USB ``UVC`` 设备驱动程序，它支持将 JPEG 帧流传输到 USB 主机。用户可以通过回调函数将相机或任何设备包装成符合 UVC 标准的设备。
 
 特性：
 
