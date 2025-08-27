@@ -1,9 +1,11 @@
 if("${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}" VERSION_LESS "5.3" OR CONFIG_I2C_BUS_BACKWARD_CONFIG)
     set(SRC_FILE "i2c_bus.c")
     set(REQ driver)
+    message(STATUS "Using driver/i2c (SRC_FILE=i2c_bus.c, REQ=driver)")
 else()
     set(SRC_FILE "i2c_bus_v2.c")
     set(REQ esp_driver_i2c driver)
+    message(STATUS "Using esp_driver_i2c (SRC_FILE=i2c_bus_v2.c, REQ=esp_driver_i2c driver)")
 endif()
 
 if (CONFIG_I2C_BUS_SUPPORT_SOFTWARE)
