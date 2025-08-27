@@ -1085,7 +1085,24 @@ esp_err_t hal_get_curve_table_value(uint16_t input, uint16_t *output)
     LIGHTBULB_CHECK(s_hal_obj, "init() must be called first", return ESP_ERR_INVALID_STATE);
     LIGHTBULB_CHECK(output, "out_data is null", return ESP_ERR_INVALID_STATE);
 
-    *output = s_hal_obj->table_group[input];
+    uint32_t max_input = s_hal_obj->interface->hardware_allow_max_input_value;
+    uint32_t table_size = s_hal_obj->table_size;
+
+    if (table_size == 0) {
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    uint32_t in = input;
+    if (in > max_input) {
+        in = max_input;
+    }
+
+    // Scale input to table index range
+    uint32_t idx = (table_size > 1) ? (in * (table_size - 1)) / MAX(1u, max_input) : 0u;
+    if (idx >= table_size) {
+        idx = table_size - 1;
+    }
+    *output = s_hal_obj->table_group[idx];
 
     return ESP_OK;
 }
