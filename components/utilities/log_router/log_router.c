@@ -118,9 +118,7 @@ int esp_log_router_flash_vprintf(const char *format, va_list args)
     }
 
     // Lock mutex for thread safety
-    if (g_log_router_mutex) {
-        xSemaphoreTake(g_log_router_mutex, pdMS_TO_TICKS(100));
-    }
+    xSemaphoreTake(g_log_router_mutex, portMAX_DELAY);
 
     // Write to all files that match the log level
     esp_log_router_slist_t *item;
@@ -244,9 +242,7 @@ int esp_log_router_flash_vprintf(const char *format, va_list args)
     }
 
     // Release mutex
-    if (g_log_router_mutex) {
-        xSemaphoreGive(g_log_router_mutex);
-    }
+    xSemaphoreGive(g_log_router_mutex);
 
     return ret;
 }
@@ -290,6 +286,15 @@ static void esp_log_router_shutdown(void)
 
 esp_err_t esp_log_router_to_file(const char* file_path, const char* tag, esp_log_level_t level)
 {
+    // Create mutex for thread safety, the first time this function is called.
+    if (g_log_router_mutex == NULL) {
+        g_log_router_mutex = xSemaphoreCreateMutex();
+        if (g_log_router_mutex == NULL) {
+            ESP_LOGE(TAG, "Failed to create mutex for log router");
+            return ESP_ERR_NO_MEM;
+        }
+    }
+
     if (!file_path) {
         return ESP_ERR_INVALID_ARG;
     }
@@ -376,12 +381,6 @@ esp_err_t esp_log_router_to_file(const char* file_path, const char* tag, esp_log
         SLIST_INSERT_HEAD(&g_esp_log_router_slist_head, new_log_router, next);
         g_esp_log_router_vprintf = esp_log_set_vprintf(esp_log_router_flash_vprintf);
         esp_register_shutdown_handler(esp_log_router_shutdown);
-
-        // Create mutex for thread safety when first node is added
-        g_log_router_mutex = xSemaphoreCreateMutex();
-        if (g_log_router_mutex == NULL) {
-            ESP_LOGW(TAG, "Failed to create mutex for log router");
-        }
     } else {
         // Find the last node and insert after it
         esp_log_router_slist_t *last = SLIST_FIRST(&g_esp_log_router_slist_head);
