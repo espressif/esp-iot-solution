@@ -44,6 +44,21 @@ menu "USB HID Device Example"
         string "Product Name"
         default "HID Demo"
 
+    choice TINYUSB_RHPORT
+        prompt "TinyUSB Root Port"
+        default TINYUSB_RHPORT_HS if IDF_TARGET_ESP32P4
+        default TINYUSB_RHPORT_FS
+        help
+            Allows set the USB PHY Controller for TinyUSB: HS (USB OTG2.0 PHY for HighSpeed)
+
+        config TINYUSB_RHPORT_HS
+            depends on IDF_TARGET_ESP32P4
+            bool "High Speed"
+
+        config TINYUSB_RHPORT_FS
+            bool "Full Speed"
+    endchoice
+
     config ENABLE_FULL_KEY_KEYBOARD
         bool "Enable Full Key Keyboard"
         default n

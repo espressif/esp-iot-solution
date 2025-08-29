@@ -1,6 +1,6 @@
 ## USB HID Device example
 
-This example demonstrates how to use ESP32-Sx USB function as the HID device. Buttons are used to trigger such signals as a keyboard or mouse.
+This example demonstrates how to use ESP32-S2/S3/P4 USB function as the HID device. Buttons are used to trigger such signals as a keyboard or mouse.
 
 * Supports traditional six-key keyboard mode
 * Supports full key no-conflict keyboard mode
@@ -9,17 +9,21 @@ This example demonstrates how to use ESP32-Sx USB function as the HID device. Bu
 
 ### Hardware Required
 
-- Any ESP32-S2 or ESP32-S3 development board with **buttons**
+- Any ESP32-S2/S3/P4 development board with **buttons**
 
 - Hardware Connection：
-  - GPIO19 to D
-  - GPIO20 to D+
+
+|              | USB_DP | USB_DM |
+| ------------ | ------ | ------ |
+| ESP32-S2/S3  | GPIO20 | GPIO19 |
+| ESP32-P4 2.0 | pin 50 | pin 49 |
+| ESP32-P4 1.1 | GPIO27 | GPIO26 |
 
 ### Configure the project
 
 By default the buttons act as a mouse, you can use `idf.py menuconfig` change `USB HID Device Demo->hid class subclass` to `keyboard`.
 
-![](_static/choose_subclass.png)
+![](https://dl.espressif.com/AE/esp-iot-solution/usb_hid_device_choose_subclass.png)
 
 ### Build and Flash
 
@@ -31,7 +35,7 @@ By default the buttons act as a mouse, you can use `idf.py menuconfig` change `U
     . $HOME/esp/esp-idf/export.sh
     ```
 
-3. Set ESP-IDF build target to `esp32s2` or `esp32s3`
+3. Set ESP-IDF build target to `esp32s2` or `esp32s3` or `esp32p4`
 
     ```bash
     idf.py set-target esp32s2

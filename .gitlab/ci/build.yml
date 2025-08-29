@@ -851,9 +851,7 @@ build_example_usb_device_usb_hid_device:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_device_usb_hid_device
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.0
+    - .build_idf_version_greater_equal_v5_0
   variables:
     EXAMPLE_DIR: examples/usb/device/usb_hid_device
 
