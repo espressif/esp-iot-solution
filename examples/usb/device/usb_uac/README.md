@@ -1,3 +1,5 @@
+| Supported Targets | ESP32-S3 | ESP32-P4 |
+| ----------------- | -------- | -------- |
 ## USB UAC Example
 
 This example demonstrates how to utilize the USB function of ESP32-Sx to implement a UAC (USB Audio Class) device.

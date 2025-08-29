@@ -1,3 +1,5 @@
+| Supported Targets | ESP32-S2 | ESP32-S3 |
+| ----------------- | -------- | -------- |
 ## USB WebCam Example
 
 This example demonstrates how to use ESP32-Sx USB function as the USB Web Camera (UVC device). 
