@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.1.0 - 2024-08-12
+
+### Enhancements:
+
+* Refacotr the spd2010 touch driver, code improvement
+
 ## v1.0.0 - 2024-08-12
 
 ### Enhancements:
