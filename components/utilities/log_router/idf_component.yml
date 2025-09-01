@@ -1,4 +1,4 @@
-version: "0.1.0"
+version: "0.1.1"
 description: LogRouter redirects and filters ESP logs to various storage media
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/utilities/log_router
 repository: https://github.com/espressif/esp-iot-solution.git
