@@ -237,7 +237,6 @@ esp_err_t iot_sensor_handler_register_with_type(sensor_type_t sensor_type, int32
 esp_err_t iot_sensor_handler_unregister_with_type(sensor_type_t sensor_type, int32_t event_id, sensor_event_handler_instance_t context);
 
 #ifdef __cplusplus
-extern "C"
 }
 #endif
 #endif
