@@ -51,7 +51,6 @@ Linux 如下图所示：
 使用 USB-Serial-JTAG 打印系统 LOG
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-
 * 用户可通过 ``menuconfig-> Component config → ESP System Settings → Channel for console secondary output`` 配置 USB-Serial-JTAG LOG 功能的使能状态。
 * LOG 功能使能以后，可以直接使用 USB 线连接到 PC，然后使用 ``idf.py monitor`` 或其它串口工具打开 USB-Serial-JTAG 设备对应的串口号（Windows 为 ``COM*``\ ，Linux 为 ``/dev/ttyACM*``\ , MacOS 为 ``/dev/cu*``\ ），即可打印系统 LOG。
 * ``USB-Serial-JTAG`` 仅在主机接入后才会打印 LOG，如果主机未接入，\ ``USB-Serial-JTAG`` 不会被初始化，也不会打印 LOG。

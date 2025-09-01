@@ -3,14 +3,12 @@ USB Device UVC
 
 :link_to_translation:`zh_CN:[中文]`
 
-``usb_device_uvc`` is a USB ``UVC`` device driver for ESP32-S2/ESP32-S3, which supports streaming JPEG frames to the USB Host. User can wrapper the Camera or any devices as a UVC standard device through the callback functions.
+``usb_device_uvc`` is a USB ``UVC`` device driver for ESP32-S2/ESP32-S3/ESP32-P4, which supports streaming JPEG frames to the USB Host. User can wrapper the Camera or any devices as a UVC standard device through the callback functions.
 
 Features:
 
 1. Support video stream through the UVC Stream interface
-
 2. Support both ``Isochronous`` and ``Bulk`` mode
-
 3. Support multiple resolutions and frame rates
 
 Add component to your project

@@ -34,3 +34,5 @@ USB USB certification is an optional process, but it is mandatory in the followi
 * If a product intends to use the USB logo, trademark, or references USB certification in promotional materials.
 
 For specific certification processes and requirements, please refer to https://www.usb.org or contact the `USB-IF Authorized Testing Laboratory <https://www.usb.org/labs>`_\ .
+
+In addition, for detailed steps and firmware related to USB signal quality testing, please refer to :doc:`USB Signal Quality Test <./usb_signal_quality>`

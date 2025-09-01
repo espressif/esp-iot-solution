@@ -1,4 +1,3 @@
-
 USB Host 方案
 ----------------
 
@@ -140,7 +139,6 @@ ESP USB 存储方案
 * `usb_host_msc 组件 <https://components.espressif.com/components/espressif/usb_host_msc>`_
 * `U 盘 OTA 组件 <https://github.com/espressif/esp-iot-solution/tree/master/components/usb/esp_msc_ota>`_
 * `挂载 U 盘 + 文件系统访问示例 <https://github.com/espressif/esp-idf/tree/master/examples/peripherals/usb/host/msc>`_
-
 
 ESP USB Hub 方案
 ^^^^^^^^^^^^^^^^^^^

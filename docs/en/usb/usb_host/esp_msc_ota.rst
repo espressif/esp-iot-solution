@@ -15,7 +15,7 @@ User Guide
 
 Hardware requirements:
 
-    - Any ESP32-S2/ESP32-S3 development board with a USB interface capable of providing external power.
+    - Any ESP32-S2/ESP32-S3/ESP32-P4 development board with a USB interface capable of providing external power.
     - A USB flash drive using the BOT (Bulk-Only Transport) protocol and Transparent SCSI command set.
 
 Partition Table:

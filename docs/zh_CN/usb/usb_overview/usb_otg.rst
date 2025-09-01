@@ -83,20 +83,20 @@ ESP32-S2/S3/P4 USB-OTG Full Speed 总线传输速率为 12 Mbps，但由于 USB 
      - 1024字节
      - 512字节
      - 1024字节
-   * - 每毫秒传输包数量
+   * - 每微帧传输包数量
      - *
      - 6
      - 13
      - 7
    * - 理论有效速率
      - *
-     - 6144000 Bytes/s
-     - 6656000 Bytes/s
-     - 7168000 Bytes/s
+     - 49152000 Bytes/s
+     - 53248000 Bytes/s
+     - 57344000 Bytes/s
 ..
 
 
-   * 传输速率的计算公式为：传输速率 (Bytes/s) = 传输的最大尺寸 * 每毫秒传输包数量 * 1000
+   * 传输速率的计算公式为：传输速率 (Bytes/s) = 传输的最大尺寸 * 每微帧传输包数量 * 8000
    * 控制传输用于传输设备控制信息，包含多个阶段，有效传输速率需要按照协议栈的实现来计算。
 
 
@@ -109,16 +109,13 @@ USB-OTG 外设内置功能
 ESP32-S2/S3 等内置 USB-OTG 外设的芯片，ROM Code 中内置了 USB 通信设备类 (CDC) 的功能，该功能可用于替代 UART 接口，实现 Log、Console 和固件下载功能。
 
 
-#.
-   由于 USB OTG Console 默认为关闭状态，如需使用它下载固件，需要通过以下方法完成初次下载：
-
+#. 由于 USB OTG Console 默认为关闭状态，如需使用它下载固件，需要通过以下方法完成初次下载：
 
    #. 在 ``menuconfig`` 中先使能 USB OTG Console 功能，然后编译固件
    #. 手动芯片的 Boot 控制引脚拉低，然后将芯片通过 USB 线连接到 PC，进入下载模式。PC 会发现新的串口设备，Windows 为 ``COM*``\ ，Linux 为 ``/dev/ttyACM*``\ , MacOS 为 ``/dev/cu*``\ 。
    #. 使用 esptool 工具（或直接使用 idf.py flash）配置设备对应的串口号下载固件。
 
-#.
-   初次下载完成以后，USB OTG Console 功能将自动使能，即可通过 USB 线连接到 PC，PC 会发现新的串口设备，Windows 为 ``COM*``\ ，Linux 为 ``/dev/ttyACM*``\ , MacOS 为 ``/dev/cu*``\ ，LOG 数据将从该虚拟串口打印。
+#. 初次下载完成以后，USB OTG Console 功能将自动使能，即可通过 USB 线连接到 PC，PC 会发现新的串口设备，Windows 为 ``COM*``\ ，Linux 为 ``/dev/ttyACM*``\ , MacOS 为 ``/dev/cu*``\ ，LOG 数据将从该虚拟串口打印。
 
 #. 用户无需再手动拉低 Boot 控制引脚，使用 esptool 工具（或直接使用 idf.py flash）配置设备对应的串口号即可下载固件，下载期间，esptool 通过 USB 控制协议自动将设备 Reset 并切换到下载模式。
 

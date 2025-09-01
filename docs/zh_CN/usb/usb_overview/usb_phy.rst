@@ -66,7 +66,7 @@ ESP32-S2/S3/C3 内部集成了 USB PHY，因此无需外接 PHY 芯片，可以�
 
 .. _external_phy:
 
-使用外部 PHY
+使用外部 PHY （ESP32-S2/S3）
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 通过增加一个外部 PHY，可以实现 USB-OTG 和 USB-Serial-JTAG 两个外设同时工作。

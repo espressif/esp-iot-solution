@@ -4,12 +4,12 @@ USB-OTG Peripheral Introduction
 
 :link_to_translation:`zh_CN:[中文]`
 
-The ESP32-S2/S3 and other chips come with built-in USB On-The-Go (USB-OTG) peripherals. They include a USB controller and USB PHY, supporting connection to a PC via a USB cable, enabling USB Host and USB Device functionalities.
+The ESP32-S2/S3/P4 and other chips come with built-in USB On-The-Go (USB-OTG) peripherals. They include a USB controller and USB PHY, supporting connection to a PC via a USB cable, enabling USB Host and USB Device functionalities.
 
 USB-OTG Transfer Rate
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-For the ESP32-S2/S3, the USB On-The-Go (USB-OTG) Full Speed bus transfer rate is 12 Mbps. However, due to the presence of checksum and synchronization mechanisms in USB transfers, the actual effective transfer rate will be lower than 12 Mbps. The specific values depend on the transfer type and are outlined in the table below:
+For the ESP32-S2/S3/P4, the USB On-The-Go (USB-OTG) Full Speed bus transfer rate is 12 Mbps. However, due to the presence of checksum and synchronization mechanisms in USB transfers, the actual effective transfer rate will be lower than 12 Mbps. The specific values depend on the transfer type and are outlined in the table below:
 
 .. list-table::
    :header-rows: 1
@@ -68,7 +68,35 @@ For the ESP32-S2/S3, the USB On-The-Go (USB-OTG) Full Speed bus transfer rate is
 
 ..
 
-   * Calculation Formula for Transfer Rate: Transfer Rate (Bytes/s) = Maximum Packet Size * Number of Packets Transferred Per Millisecond * 1000
+For ESP32-P4 USB-OTG High Speed bus transfer rate is 480 Mbps, compared to Full Speed, there are some differences in the maximum transfer size, number of packets transferred per millisecond, and theoretical effective rate, as shown in the table below:
+
+.. list-table::
+   :header-rows: 1
+
+   * - **Transfer Types**
+     - **Control**
+     - **Interrupt**
+     - **Bulk**
+     - **Isochronous**
+   * - Maximum Transfer Size
+     - 64 Bytes
+     - 1024 Bytes
+     - 512 Bytes
+     - 1024 Bytes
+   * - Number of Packets per Microframe
+     - *
+     - 6
+     - 13
+     - 7
+   * - Theoretical Effective Rate
+     - *
+     - 49152000 Bytes/s
+     - 53248000 Bytes/s
+     - 57344000 Bytes/s
+..
+
+
+   * Calculation Formula for Transfer Rate: Transfer Rate (Bytes/s) = Maximum Packet Size * Number of Packets per Microframe * 8000
    * Control transfers are used for transmitting device control information and involve multiple stages. The effective transfer rate needs to be calculated based on the implementation of the protocol stack.
 
 
@@ -77,7 +105,6 @@ USB-OTG Peripheral Built-in Features
 
 Using USB OTG Console for Firmware Download and Logging
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 
 For chips like ESP32-S2/S3 with built-in USB On-The-Go (USB-OTG) peripherals, the ROM Code contains the functionality of USB Communication Device Class (CDC). This feature can be utilized as an alternative to UART interfaces, enabling functions such as logging, console access, and firmware downloads.
 
@@ -100,7 +127,7 @@ For chips like ESP32-S2/S3 with built-in USB On-The-Go (USB-OTG) peripherals, th
 Download firmware using USB OTG DFU
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-For chips like ESP32-S2/S3 with built-in USB On-The-Go (USB-OTG) peripherals, the ROM Code contains the functionality of USB DFU (Device Firmware Upgrade). This feature enables the implementation of a standard DFU download mode.
+For chips like ESP32-S2/S3/P4 with built-in USB On-The-Go (USB-OTG) peripherals, the ROM Code contains the functionality of USB DFU (Device Firmware Upgrade). This feature enables the implementation of a standard DFU download mode.
 
 
 #. To download firmware using DFU, users need to manually enter download mode each time by pulling down the Boot control pin of the chip and connecting it to the PC via USB.
@@ -138,27 +165,4 @@ The USB-OTG peripheral supports dynamic switching of its mode. Users can achieve
 Using USB-OTG to Proactively Disconnect from the Host
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-You can proactively disconnect from the host by pulling the USB OTG ``VBUSVALID`` signal low, simulating the disconnection of the USB OTG peripheral. Note that if you need to reattach the device, you must wait at least **10ms** before doing so.
-
-.. note:: This functionality currently supports USB OTG FullSpeed peripherals. USB OTG HighSpeed peripherals are not yet supported.
-
-.. code::c
-
-  #if defined (CONFIG_IDF_TARGET_ESP32S2) || defined (CONFIG_IDF_TARGET_ESP32S3)
-  // To generate a disconnect event
-  static void usbd_vbus_enable(bool enable)
-  {
-      esp_rom_gpio_connect_in_signal(enable ? GPIO_MATRIX_CONST_ONE_INPUT : GPIO_MATRIX_CONST_ZERO_INPUT, USB_OTG_VBUSVALID_IN_IDX, 0);
-      esp_rom_gpio_connect_in_signal(enable ? GPIO_MATRIX_CONST_ONE_INPUT : GPIO_MATRIX_CONST_ZERO_INPUT, USB_SRP_BVALID_IN_IDX, 0);
-      esp_rom_gpio_connect_in_signal(enable ? GPIO_MATRIX_CONST_ONE_INPUT : GPIO_MATRIX_CONST_ZERO_INPUT, USB_SRP_SESSEND_IN_IDX, 1);
-      return;
-  }
-  #elif defined (CONFIG_IDF_TARGET_ESP32P4)
-  static void usbd_vbus_enable(bool enable)
-  {
-      esp_rom_gpio_connect_in_signal(enable ? GPIO_MATRIX_CONST_ONE_INPUT : GPIO_MATRIX_CONST_ZERO_INPUT, USB_OTG11_VBUSVALID_PAD_IN_IDX, 0);
-      esp_rom_gpio_connect_in_signal(enable ? GPIO_MATRIX_CONST_ONE_INPUT : GPIO_MATRIX_CONST_ZERO_INPUT, USB_SRP_BVALID_PAD_IN_IDX, 0);
-      esp_rom_gpio_connect_in_signal(enable ? GPIO_MATRIX_CONST_ONE_INPUT : GPIO_MATRIX_CONST_ZERO_INPUT, USB_SRP_SESSEND_PAD_IN_IDX, 1);
-      return;
-  }
-  #endif
+You can proactively disconnect from the host by pulling the USB OTG ``VBUSVALID`` signal low, simulating the disconnection of the USB OTG peripheral. Note that if you need to reattach the device, you must wait at least **10ms** before doing so. Please refer to :doc:`USB Device Self Power <./usb_device_self_power>`.

@@ -10,7 +10,6 @@ RNDIS 协议
 
 RNDIS(Remote NDIS) 通过将 TCP/IP 封装在 USB 报文里，实现网络通信。
 
-
 USB 描述符
 ---------------
 
