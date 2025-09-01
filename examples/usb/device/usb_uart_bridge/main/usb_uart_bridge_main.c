@@ -70,7 +70,11 @@ static void board_uart_init(void)
         .parity = CFG_PARITY(s_parity_active),
         .stop_bits = CFG_STOP_BITS(s_stop_bits_active),
         .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+#if CONFIG_IDF_TARGET_ESP32P4
+        .source_clk = UART_SCLK_DEFAULT,
+#else
         .source_clk = UART_SCLK_APB,
+#endif
     };
 
     uart_driver_install(BOARD_UART_PORT, UART_RX_BUF_SIZE, UART_TX_BUF_SIZE, 0, NULL, 0);
