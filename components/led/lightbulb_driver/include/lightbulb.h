@@ -46,6 +46,10 @@ extern "C" {
 #include "ws2812.h"
 #endif
 
+#ifdef CONFIG_ENABLE_SM16825E_DRIVER
+#include "sm16825e.h"
+#endif
+
 #ifdef CONFIG_ENABLE_KP18058_DRIVER
 #include "kp18058.h"
 #endif
@@ -70,6 +74,7 @@ typedef enum {
 
     /* Single Bus */
     DRIVER_WS2812 = 100,
+    DRIVER_SM16825E = 101,
 
     DRIVER_SELECT_MAX,
 } lightbulb_driver_t;
@@ -286,16 +291,21 @@ typedef struct {
 } lightbulb_capability_t;
 
 /**
- * @brief Port enumeration names for IIC chips.
+ * @brief Port enumeration names for multiple output channel chips.
  */
 typedef enum {
-    OUT1 = 0,   /**< IIC output port 1. */
-    OUT2,       /**< IIC output port 2. */
-    OUT3,       /**< IIC output port 3. */
-    OUT4,       /**< IIC output port 4. */
-    OUT5,       /**< IIC output port 5. */
-    OUT_MAX,    /**< The maximum value for the IIC output port enumeration, this is invalid value. */
-} lightbulb_iic_out_pin_t;
+    OUT1 = 0,   /**< Chip output port 1/RED. */
+    OUT2,       /**< Chip output port 2/GREEN. */
+    OUT3,       /**< Chip output port 3/BLUE. */
+    OUT4,       /**< Chip output port 4/WHITE. */
+    OUT5,       /**< Chip output port 5/YELLOW. */
+    OUT_MAX,    /**< The maximum value for the Chip output port enumeration, this is invalid value. */
+} lightbulb_chip_out_pin_t;
+
+/**
+ * @brief IIC dimming chip output port definition
+ */
+typedef lightbulb_chip_out_pin_t lightbulb_iic_out_pin_t;
 
 /**
  * @brief Lightbulb Configuration Options.
@@ -327,6 +337,9 @@ typedef struct {
 #endif
 #ifdef CONFIG_ENABLE_WS2812_DRIVER
         driver_ws2812_t ws2812;
+#endif
+#ifdef CONFIG_ENABLE_SM16825E_DRIVER
+        driver_sm16825e_t sm16825e;
 #endif
     } driver_conf;                          /**< Configuration specific to the lightbulb driver. */
 
@@ -371,12 +384,20 @@ typedef struct {
         } pwm_io;                             /**< Configuration for PWM driver I/O pins. */
 
         struct {
-            lightbulb_iic_out_pin_t red;        /**< Port of the IIC dimming chip for red output */
-            lightbulb_iic_out_pin_t green;      /**< Port of the IIC dimming chip for green output */
-            lightbulb_iic_out_pin_t blue;       /**< Port of the IIC dimming chip for blue output */
-            lightbulb_iic_out_pin_t cold_white; /**< Port of the IIC dimming chip for cold or white output */
-            lightbulb_iic_out_pin_t warm_yellow;    /**< Port of the IIC dimming chip for warm or yellow output */
+            lightbulb_chip_out_pin_t red;        /**< IIC dimming driver output channel for red LED */
+            lightbulb_chip_out_pin_t green;      /**< IIC dimming driver output channel for green LED */
+            lightbulb_chip_out_pin_t blue;       /**< IIC dimming driver output channel for blue LED */
+            lightbulb_chip_out_pin_t cold_white; /**< IIC dimming driver output channel for cold or white LED */
+            lightbulb_chip_out_pin_t warm_yellow;    /**< IIC dimming driver output channel for warm or yellow LED */
         } iic_io;                             /**< Configuration for IIC driver I/O pins. */
+
+        struct {
+            lightbulb_chip_out_pin_t red;                     /**< GPIO Pin for the red LED for SM16825E driver */
+            lightbulb_chip_out_pin_t green;                   /**< GPIO Pin for the green LED for SM16825E driver */
+            lightbulb_chip_out_pin_t blue;                    /**< GPIO Pin for the blue LED for SM16825E driver */
+            lightbulb_chip_out_pin_t white;                   /**< GPIO Pin for the white LED for SM16825E driver */
+            lightbulb_chip_out_pin_t yellow;                  /**< GPIO Pin for the yellow LED for SM16825E driver */
+        } sm16825e_io;                        /**< Configuration for SM16825E driver I/O pins. */
     } io_conf;                                /**< Union for I/O configuration based on the selected driver type. */
 
     lightbulb_capability_t capability;        /**< Lightbulb capability configuration. */

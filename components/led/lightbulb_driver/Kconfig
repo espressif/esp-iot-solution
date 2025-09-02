@@ -57,6 +57,12 @@ menu "LightBulb Driver Config"
             help
                 Enable ws2812 output.
 
+        config ENABLE_SM16825E_DRIVER
+            bool "Enable sm16825e interface"
+            default "y"
+            help
+                Enable SM16825E output.
+
         menu "IIC Config"
             depends on ENABLE_KP18058_DRIVER || ENABLE_BP1658CJ_DRIVER || ENABLE_BP57X8D_DRIVER || ENABLE_SM2X35EGH_DRIVER || ENABLE_SM2135EH_DRIVER || ENABLE_SM2135E_DRIVER
 

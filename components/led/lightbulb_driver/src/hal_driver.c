@@ -236,6 +236,21 @@ static hal_obj_t s_hal_obj_group[] = {
         .deinit = (x_deinit_t)ws2812_deinit,
     },
 #endif
+#ifdef CONFIG_ENABLE_SM16825E_DRIVER
+    {
+        .type = DRIVER_SM16825E,
+        .name = "SM16825E",
+        .driver_grayscale_level = (1 << 10),
+        .channel_num = 5,
+        .hardware_allow_max_input_value = (1 << 16) - 1,
+        .init = (x_init_t)sm16825e_init,
+        .regist_channel = (x_regist_channel_t)sm16825e_regist_channel,
+        .set_rgbwy_or_rgbct_channel = (x_set_rgbwy_or_rgbct_channel_t)sm16825e_set_rgbwy_channel,
+        .set_shutdown = (x_set_shutdown_t)sm16825e_set_shutdown,
+        .deinit = (x_deinit_t)sm16825e_deinit,
+        .set_sleep_status = (x_set_sleep_t)sm16825e_set_standby,
+    },
+#endif
     {
         .type = DRIVER_SELECT_MAX,
     }
@@ -526,8 +541,8 @@ esp_err_t hal_output_init(hal_config_t *config, lightbulb_gamma_config_t *gamma,
         // 10bit: 0~1023, size: 1024
         //Nothing
 
-        // WS2812 and SM2182E can only use multi-channel write
-    } else if (s_hal_obj->interface->type == DRIVER_WS2812 || s_hal_obj->interface->type == DRIVER_SM2182E) {
+        // WS2812, SM2182E and SM16825E can only use multi-channel write
+    } else if (s_hal_obj->interface->type == DRIVER_WS2812 || s_hal_obj->interface->type == DRIVER_SM2182E || s_hal_obj->interface->type == DRIVER_SM16825E) {
         s_hal_obj->enable_multi_ch_write = true;
     }
 
@@ -1070,7 +1085,24 @@ esp_err_t hal_get_curve_table_value(uint16_t input, uint16_t *output)
     LIGHTBULB_CHECK(s_hal_obj, "init() must be called first", return ESP_ERR_INVALID_STATE);
     LIGHTBULB_CHECK(output, "out_data is null", return ESP_ERR_INVALID_STATE);
 
-    *output = s_hal_obj->table_group[input];
+    uint32_t max_input = s_hal_obj->interface->hardware_allow_max_input_value;
+    uint32_t table_size = s_hal_obj->table_size;
+
+    if (table_size == 0) {
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    uint32_t in = input;
+    if (in > max_input) {
+        in = max_input;
+    }
+
+    // Scale input to table index range
+    uint32_t idx = (table_size > 1) ? (in * (table_size - 1)) / MAX(1u, max_input) : 0u;
+    if (idx >= table_size) {
+        idx = table_size - 1;
+    }
+    *output = s_hal_obj->table_group[idx];
 
     return ESP_OK;
 }

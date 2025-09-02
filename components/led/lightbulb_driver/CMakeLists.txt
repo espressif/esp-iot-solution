@@ -63,6 +63,11 @@ if(CONFIG_ENABLE_WS2812_DRIVER)
     list(APPEND incs "drivers/ws2812")
 endif()
 
+if(CONFIG_ENABLE_SM16825E_DRIVER)
+    list(APPEND srcs "drivers/sm16825e/sm16825e.c")
+    list(APPEND incs "drivers/sm16825e")
+endif()
+
 idf_component_register(SRCS ${srcs}
                         INCLUDE_DIRS ${incs}
                         PRIV_INCLUDE_DIRS "src/priv_include"

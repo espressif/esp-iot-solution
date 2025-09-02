@@ -11,6 +11,8 @@ menu "Lightbulb Demo Configuration"
                 bool "Demo BP5758D"
             config LIGHTBULB_DEMO_DRIVER_SELECT_WS2812
                 bool "Demo WS2812"
+            config LIGHTBULB_DEMO_DRIVER_SELECT_SM16825E
+                bool "Demo SM16825E"
             config LIGHTBULB_DEMO_DRIVER_SELECT_PWM
                 bool "Demo PWM"
     endchoice
@@ -33,6 +35,25 @@ menu "Lightbulb Demo Configuration"
         depends on LIGHTBULB_DEMO_DRIVER_SELECT_WS2812
         help
             Set the WS2812 LED NUM.
+
+    config SM16825E_LED_GPIO
+        int "SM16825E LED GPIO"
+        default 9 if IDF_TARGET_ESP32C3 || IDF_TARGET_ESP32H2 || IDF_TARGET_ESP32C6
+        default 21 if IDF_TARGET_ESP32S2
+        default 46 if IDF_TARGET_ESP32S3
+        default 18 if IDF_TARGET_ESP32C2
+        default 26 if IDF_TARGET_ESP32C5
+        default 23
+        depends on LIGHTBULB_DEMO_DRIVER_SELECT_SM16825E
+        help
+            Set the SM16825E RGB LED GPIO.
+
+    config SM16825E_LED_NUM
+        int "SM16825E LED NUM"
+        default 1
+        depends on LIGHTBULB_DEMO_DRIVER_SELECT_SM16825E
+        help
+            Set the SM16825E LED NUM.
 
     config PWM_FREQ_HZ
         int "PWM Frequency (hz)"

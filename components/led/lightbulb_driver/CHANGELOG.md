@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.10.0 - 2025-08-19
+
+### Improve:
+
+* Added new dimming driver SM16825E
+
 ## v1.9.0 - 2025-08-11
 
 ### Improve:
@@ -61,7 +67,7 @@
 
 ### Enhancements:
 
-* Remove linear dimming, default to enabling curve dimming for all. 
+* Remove linear dimming, default to enabling curve dimming for all.
 
 ## v1.4.0 - 2024-11-15
 
@@ -151,7 +157,7 @@
 * The driver now supports setting white balance parameters for all channels. This means that you can adjust the white balance individually for each channel, allowing for precise control and customization of the lighting output.
 * Increased the power limit range from 100-300 to 100-500, facilitating power setting for RGBWW beads.
 * Introduced CCT output modes: standard mode (consistent with original scheme, mapping percentage to Kelvin values proportionally) and precise mode (setting individual percentages for each Kelvin value and predetermining current coefficients for each channel, scaling these coefficients proportionally during writing).
-* Some configuration changes: 
+* Some configuration changes:
   * Removed mode_mask from capability, now using led_beads to set the LED panel bead combination
   * Renamed enable_mix_cct to enable_hardware_cct, fades_ms to fade_time_ms, and enable_fades to enable_fade
   * Removed hardware_monitor_cb
@@ -194,6 +200,7 @@
 * Add a phase delay function to the PWM drive, and after enabling this function, all channel outputs will be in a complementary state.
 
 ## v0.4.1 - 2023-8-30
+
 ### Bug Fixes:
 
 * Fixed a thread safety issue.
@@ -347,8 +354,8 @@
 ### Enhancements:
 
 * Initial version
-
 * The following dimming solutions are supported
+
   * PWM
     * RGB + CW
     * RGB + CCT/Brightness
@@ -360,13 +367,14 @@
     * BP5758/BP5758D/BP5768D
   * Single Line
     * WS2812
-
 * Support for power limit
 * Support for color calibration
 * Support for effect
+
   * Blink
   * Breathe
 * Support for application layer capability configuration
+
   * Status memory
   * Fade
   * Mix CCT
