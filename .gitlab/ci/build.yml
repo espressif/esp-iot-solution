@@ -12,7 +12,6 @@
 
 .build_examples_template: &build_examples_template
   <<: *build_template
-  allow_failure: true   # Temporarily disable build CI check, remove this line to restore strict checking after issues are fixed
   artifacts:
     when: always
     paths:
@@ -403,6 +402,7 @@ build_example_display_lcd_hdmi_video_renderer:
       - IMAGE: espressif/idf:release-v5.4
   variables:
     EXAMPLE_DIR: examples/display/lcd/hdmi_video_renderer
+  allow_failure: true # Temporarily disable build CI check, remove this line to restore strict checking after issues are fixed
 
 build_example_display_lcd_lcd_layer_blending:
   extends:
@@ -947,6 +947,7 @@ build_example_usb_host_usb_cdc_4g_module:
     - .build_idf_version_greater_equal_v5_0
   variables:
     EXAMPLE_DIR: examples/usb/host/usb_cdc_4g_module
+  allow_failure: true # Temporarily disable build CI check, remove this line to restore strict checking after issues are fixed
 
 build_example_usb_host_usb_cdc_basic:
   extends:
@@ -1208,6 +1209,7 @@ build_components_display_lcd_esp_lcd_nv3052_test_apps:
       - IMAGE: espressif/idf:release-v5.3
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_nv3052/test_apps
+  allow_failure: true # Temporarily disable build CI check, remove this line to restore strict checking after issues are fixed
 
 build_components_display_lcd_esp_lcd_sh8601_test_apps:
   extends:
