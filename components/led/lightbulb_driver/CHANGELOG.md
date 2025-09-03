@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.10.1 - 2025-09-03
+
+### Bug Fix:
+
+* Modify the variable names associated with sm16825e to ensure consistency.
+
 ## v1.10.0 - 2025-08-19
 
 ### Improve:

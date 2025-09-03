@@ -800,7 +800,7 @@ esp_err_t lightbulb_init(lightbulb_config_t *config)
     } else if (config->type == DRIVER_WS2812) {
         // Nothing
     } else if (config->type == DRIVER_SM16825E) {
-        sprintf(driver_io, "IO List:[%d %d %d %d %d]", config->io_conf.sm16825e_io.red, config->io_conf.sm16825e_io.green, config->io_conf.sm16825e_io.blue, config->io_conf.sm16825e_io.white, config->io_conf.sm16825e_io.yellow);
+        sprintf(driver_io, "IO List:[%d %d %d %d %d]", config->io_conf.sm16825e_io.red, config->io_conf.sm16825e_io.green, config->io_conf.sm16825e_io.blue, config->io_conf.sm16825e_io.cold_white, config->io_conf.sm16825e_io.warm_yellow);
     } else {
         ESP_LOGW(TAG, "The driver has not been updated to the component");
         abort();
@@ -847,7 +847,7 @@ esp_err_t lightbulb_init(lightbulb_config_t *config)
         if (config->type == DRIVER_ESP_PWM) {
             hal_regist_channel(CHANNEL_ID_COLD_CCT_WHITE, config->io_conf.pwm_io.cold_cct);
         } else if (config->type == DRIVER_SM16825E) {
-            hal_regist_channel(CHANNEL_ID_COLD_CCT_WHITE, config->io_conf.sm16825e_io.white);
+            hal_regist_channel(CHANNEL_ID_COLD_CCT_WHITE, config->io_conf.sm16825e_io.cold_white);
         } else {
             hal_regist_channel(CHANNEL_ID_COLD_CCT_WHITE, config->io_conf.iic_io.cold_white);
         }
@@ -857,7 +857,7 @@ esp_err_t lightbulb_init(lightbulb_config_t *config)
         if (config->type == DRIVER_ESP_PWM) {
             hal_regist_channel(CHANNEL_ID_WARM_BRIGHTNESS_YELLOW, config->io_conf.pwm_io.warm_brightness);
         } else if (config->type == DRIVER_SM16825E) {
-            hal_regist_channel(CHANNEL_ID_WARM_BRIGHTNESS_YELLOW, config->io_conf.sm16825e_io.yellow);
+            hal_regist_channel(CHANNEL_ID_WARM_BRIGHTNESS_YELLOW, config->io_conf.sm16825e_io.warm_yellow);
         } else {
             hal_regist_channel(CHANNEL_ID_WARM_BRIGHTNESS_YELLOW, config->io_conf.iic_io.warm_yellow);
         }

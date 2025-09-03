@@ -395,8 +395,8 @@ typedef struct {
             lightbulb_chip_out_pin_t red;                     /**< GPIO Pin for the red LED for SM16825E driver */
             lightbulb_chip_out_pin_t green;                   /**< GPIO Pin for the green LED for SM16825E driver */
             lightbulb_chip_out_pin_t blue;                    /**< GPIO Pin for the blue LED for SM16825E driver */
-            lightbulb_chip_out_pin_t white;                   /**< GPIO Pin for the white LED for SM16825E driver */
-            lightbulb_chip_out_pin_t yellow;                  /**< GPIO Pin for the yellow LED for SM16825E driver */
+            lightbulb_chip_out_pin_t cold_white;                   /**< GPIO Pin for the white LED for SM16825E driver */
+            lightbulb_chip_out_pin_t warm_yellow;                  /**< GPIO Pin for the yellow LED for SM16825E driver */
         } sm16825e_io;                        /**< Configuration for SM16825E driver I/O pins. */
     } io_conf;                                /**< Union for I/O configuration based on the selected driver type. */
 
