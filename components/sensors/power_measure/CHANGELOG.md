@@ -1,3 +1,9 @@
+## v0.2.0 - 2025-9-5
+
+### Improve:
+
+* Integrate power measurement equipment into a unified management component.
+
 ## v0.1.0 - 2024-11-5
 
 ### Enhancements:

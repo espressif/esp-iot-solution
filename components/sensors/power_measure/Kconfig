@@ -1,7 +1,100 @@
 menu "power_measure"
+    choice POWER_MEASURE_CHIP_TYPE
+        prompt "Power measurement chip type"
+        default POWER_MEASURE_CHIP_BL0937
+        help
+            Select the power measurement chip type to use
+
+        config POWER_MEASURE_CHIP_BL0937
+            bool "BL0937"
+            help
+                BL0937 is a single-phase power measurement IC with high accuracy
+                Features: Voltage, Current, Power, Power Factor, Energy measurement
+                Interface: GPIO (CF, CF1, SEL pins)
+
+        config POWER_MEASURE_CHIP_INA236
+            bool "INA236"
+            help
+                INA236 is a precision digital power monitor with I2C interface
+                Features: Voltage, Current, Power measurement
+                Interface: I2C
+                Note: Does not support energy measurement or power factor
+    endchoice
+
     config BL0937_IRAM_OPTIMIZED
-    bool "Enable IRAM optimization for BL0937"
-    default n
-    help
-        Enable IRAM optimization for BL0937
+        bool "Enable IRAM optimization for BL0937"
+        default n
+        depends on POWER_MEASURE_CHIP_BL0937
+        help
+            Enable IRAM optimization for BL0937
+
+    menu "BL0937 Hardware Configuration"
+        config BL0937_VREF_MV
+            int "Internal voltage reference (mV)"
+            default 1218
+            help
+                Internal voltage reference value for BL0937 in millivolts (1218 = 1.218V)
+
+        config BL0937_R_CURRENT_MOHM
+            int "Current sampling resistor (mOhm)"
+            default 1
+            help
+                Value of the current sampling resistor in milliohms (1 = 1mOhm for ~30A max measurement)
+
+        config BL0937_R_VOLTAGE
+            int "Voltage divider resistor (Ohm)"
+            default 2010
+            help
+                Value of the voltage divider resistor (typically 6x 470K upstream + 1K downstream = 2010)
+
+        config BL0937_F_OSC
+            int "Internal oscillator frequency (Hz)"
+            default 2000000
+            help
+                Frequency of the BL0937 internal clock
+
+        config BL0937_PULSE_TIMEOUT_US
+            int "Pulse timeout (microseconds)"
+            default 1000000
+            help
+                Timeout for pulse detection. Higher values allow better precision but reduce sampling rate.
+                Lower values increase sampling rate but reduce precision.
+                Values below 500000 (0.5s) are not recommended.
+    endmenu
+
+    menu "GPIO Pin Configuration"
+        menu "BL0937 GPIO Pins"
+            config BL0937_CF_GPIO
+                int "CF GPIO pin number"
+                default 3
+                help
+                    GPIO pin connected to BL0937 CF pin (current frequency output)
+
+            config BL0937_SEL_GPIO
+                int "SEL GPIO pin number"
+                default 4
+                help
+                    GPIO pin connected to BL0937 SEL pin (selection pin)
+
+            config BL0937_CF1_GPIO
+                int "CF1 GPIO pin number"
+                default 7
+                help
+                    GPIO pin connected to BL0937 CF1 pin (power frequency output)
+        endmenu
+
+        menu "INA236 I2C GPIO Pins"
+            config INA236_I2C_SCL_GPIO
+                int "I2C SCL GPIO pin number"
+                default 13
+                help
+                    GPIO pin for I2C clock line
+
+            config INA236_I2C_SDA_GPIO
+                int "I2C SDA GPIO pin number"
+                default 20
+                help
+                    GPIO pin for I2C data line
+        endmenu
+    endmenu
 endmenu
