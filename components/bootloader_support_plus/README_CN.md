@@ -15,6 +15,7 @@ bootloader support plus 是乐鑫基于 [ESP-IDF](https://github.com/espressif/e
 | ESP32-C5 | N/A | N/A | Supported |
 | ESP32-C6 | N/A | Supported | Supported |
 | ESP32-H2 | N/A | Supported | Supported |
+| ESP32-C61 | N/A | N/A  | Supported |
 
 ## 压缩率
 

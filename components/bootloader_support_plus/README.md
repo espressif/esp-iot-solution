@@ -15,6 +15,7 @@ The `bootloader support plus` is an enhanced bootloader based on [custom_bootloa
 | ESP32-C5 | N/A | N/A | Supported |
 | ESP32-C6 | N/A | Supported | Supported |
 | ESP32-H2 | N/A | Supported | Supported |
+| ESP32-C61 | N/A | N/A  | Supported |
 
 ## Compression ratio
 

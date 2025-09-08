@@ -225,13 +225,8 @@ int bootloader_custom_ota_main(bootloader_state_t *bs, int boot_index)
     so we can know whether the watchdog reset will be triggered here at the test stage.
     */
 #ifdef CONFIG_BOOTLOADER_WDT_ENABLE
-#if (defined(CONFIG_IDF_TARGET_ESP32C6) || defined(CONFIG_IDF_TARGET_ESP32C5))
     wdt_hal_context_t rtc_wdt_ctx = RWDT_HAL_CONTEXT_DEFAULT();
-#elif CONFIG_IDF_TARGET_ESP32H2
-    wdt_hal_context_t rtc_wdt_ctx = {.inst = WDT_RWDT, .rwdt_dev = &LP_WDT};
-#else
-    wdt_hal_context_t rtc_wdt_ctx = {.inst = WDT_RWDT, .rwdt_dev = &RTCCNTL};
-#endif
+
     if ((custom_ota_config.dst_addr % FLASH_SECTOR_SIZE) != 0 || (custom_ota_config.dst_size % FLASH_SECTOR_SIZE != 0)) {
         return ESP_ERR_INVALID_SIZE;
     }
