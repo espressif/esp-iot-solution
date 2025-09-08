@@ -15,8 +15,8 @@
 #include "unity_test_runner.h"
 #include "unity_test_utils_memory.h"
 
-#include "mmap_generate_assert_append.h"
-#include "mmap_generate_assert_independ.h"
+#include "mmap_generate_factory.h"
+#include "mmap_generate_assets.h"
 
 static const char *TAG = "assets_test";
 
@@ -40,7 +40,7 @@ static int is_jpg(const uint8_t *raw_data, size_t len)
 
 void print_file_list(mmap_assets_handle_t handle, int file_num)
 {
-    for (int i = 0; i < MMAP_ASSERT_INDEPEND_FILES; i++) {
+    for (int i = 0; i < file_num; i++) {
         const char *name = mmap_assets_get_name(handle, i);
         const uint8_t *mem = mmap_assets_get_mem(handle, i);
         int size = mmap_assets_get_size(handle, i);
@@ -64,8 +64,8 @@ TEST_CASE("test assets mmap table", "[mmap_assets][mmap_enable][Independent part
 
     const mmap_assets_config_t config = {
         .partition_label = "assets",
-        .max_files = MMAP_ASSERT_INDEPEND_FILES,
-        .checksum = MMAP_ASSERT_INDEPEND_CHECKSUM,
+        .max_files = MMAP_ASSETS_FILES,
+        .checksum = MMAP_ASSETS_CHECKSUM,
         .flags = {
             .mmap_enable = true,
             .app_bin_check = false,
@@ -79,7 +79,7 @@ TEST_CASE("test assets mmap table", "[mmap_assets][mmap_enable][Independent part
     int stored_files = mmap_assets_get_stored_files(asset_handle);
     ESP_LOGI(TAG, "stored_files:%d", stored_files);
 
-    print_file_list(asset_handle, MMAP_ASSERT_INDEPEND_FILES);
+    print_file_list(asset_handle, MMAP_ASSETS_FILES);
 
     mmap_assets_del(asset_handle);
 }
@@ -90,8 +90,8 @@ TEST_CASE("test assets mmap table", "[mmap_assets][mmap_enable][Append Partition
 
     const mmap_assets_config_t config = {
         .partition_label = "factory",
-        .max_files = MMAP_ASSERT_APPEND_FILES,
-        .checksum = MMAP_ASSERT_APPEND_CHECKSUM,
+        .max_files = MMAP_FACTORY_FILES,
+        .checksum = MMAP_FACTORY_CHECKSUM,
         .flags = {
             .mmap_enable = true,
             .full_check = true,
@@ -103,7 +103,7 @@ TEST_CASE("test assets mmap table", "[mmap_assets][mmap_enable][Append Partition
     int stored_files = mmap_assets_get_stored_files(asset_handle);
     ESP_LOGI(TAG, "stored_files:%d", stored_files);
 
-    print_file_list(asset_handle, MMAP_ASSERT_APPEND_FILES);
+    print_file_list(asset_handle, MMAP_FACTORY_FILES);
 
     mmap_assets_del(asset_handle);
 }
@@ -114,8 +114,8 @@ TEST_CASE("test assets mmap table", "[mmap_assets][mmap_disable][Independent par
 
     const mmap_assets_config_t config = {
         .partition_label = "assets",
-        .max_files = MMAP_ASSERT_INDEPEND_FILES,
-        .checksum = MMAP_ASSERT_INDEPEND_CHECKSUM,
+        .max_files = MMAP_ASSETS_FILES,
+        .checksum = MMAP_ASSETS_CHECKSUM,
         .flags = {
             .mmap_enable = false,
             .app_bin_check = false,
@@ -129,7 +129,7 @@ TEST_CASE("test assets mmap table", "[mmap_assets][mmap_disable][Independent par
     int stored_files = mmap_assets_get_stored_files(asset_handle);
     ESP_LOGI(TAG, "stored_files:%d", stored_files);
 
-    for (int i = 0; i < MMAP_ASSERT_INDEPEND_FILES; i++) {
+    for (int i = 0; i < MMAP_ASSETS_FILES; i++) {
         const char *name = mmap_assets_get_name(asset_handle, i);
         const uint8_t *mem = mmap_assets_get_mem(asset_handle, i);
         int size = mmap_assets_get_size(asset_handle, i);

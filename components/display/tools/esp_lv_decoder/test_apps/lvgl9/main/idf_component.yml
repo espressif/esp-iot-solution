@@ -1,0 +1,10 @@
+## IDF Component Manager Manifest File
+dependencies:
+  idf: ">=5.0"
+  lvgl/lvgl: ^9
+  esp_lv_decoder:
+    version: "*"
+    override_path: "../../../../esp_lv_decoder"
+  esp_mmap_assets:
+    version: "*"
+    override_path: "../../../../esp_mmap_assets"

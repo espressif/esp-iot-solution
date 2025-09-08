@@ -12,10 +12,13 @@
     "support_sjpg": @support_sjpg@,
     "support_qoi": @support_qoi@,
     "support_sqoi": @support_sqoi@,
+    "support_pjpg": @support_pjpg@,
     "support_raw": @support_raw@,
     "support_raw_dither": @support_raw_dither@,
     "support_raw_bgr": @support_raw_bgr@,
     "support_raw_ff": "@arg_MMAP_RAW_FILE_FORMAT@",
     "support_raw_cf": "@arg_MMAP_RAW_COLOR_FORMAT@",
-    "app_bin_path": "@app_bin_path@"
+    "app_bin_path": "@app_bin_path@",
+    "pjpg_processor": "@PJPG_PROCESSOR_PATH@"
+    ,"header_asset_name": "@partition@"
 }

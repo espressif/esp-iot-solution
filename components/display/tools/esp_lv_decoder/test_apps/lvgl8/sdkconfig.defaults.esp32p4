@@ -1,0 +1,13 @@
+# This file was generated using idf.py save-defconfig. It can be edited manually.
+# Espressif IoT Development Framework (ESP-IDF) 5.5.0 Project Minimal Configuration
+#
+CONFIG_IDF_TARGET="esp32p4"
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_SPEED_200M=y
+CONFIG_IDF_EXPERIMENTAL_FEATURES=y
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=5584
+CONFIG_ESP_TASK_WDT_EN=n
+CONFIG_FATFS_LFN_HEAP=y
+CONFIG_LV_USE_FS_POSIX=y
+CONFIG_LV_FS_POSIX_LETTER=65
