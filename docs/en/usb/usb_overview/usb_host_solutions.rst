@@ -102,14 +102,18 @@ Hardware:
 
 * Chips: ESP32-S2, ESP32-S3, ESP32-P4
 * Peripherals: USB-OTG
-* 4G Modules: Supports Cat.1, Cat.4, and other network standard 4G modules, requiring module support for the PPP protocol.
+* 4G Modules: Supports Cat.1, Cat.4, and other network standard 4G modules, requiring module support for the PPP/ECM/RNDIS protocol.
 
 Links:
 ~~~~~~~
 
 * `USB 4G Demo video <https://www.bilibili.com/video/BV1fj411K7bW>`_
 * `iot_usbh_modem component <https://components.espressif.com/components/espressif/iot_usbh_modem>`_
-* Example Code: 4G Wi-Fi Router: :example:`usb/host/usb_cdc_4g_module`
+* `iot_usbh_ecm 组件 <https://components.espressif.com/components/espressif/iot_usbh_ecm>`_
+* `iot_usbh_rndis 组件 <https://components.espressif.com/components/espressif/iot_usbh_rndis>`_
+* Example code: 4G PPP dial-up :example:`usb/host/usb_cdc_4g_module`
+* Example code: 4G RNDIS :example:`usb/host/usb_rndis_4g_module`
+* Example code: 4G ECM :example:`usb/host/usb_ecm_4g_module`
 
 ESP USB Storage Solution
 ^^^^^^^^^^^^^^^^^^^^^^^^^
