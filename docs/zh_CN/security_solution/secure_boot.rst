@@ -37,17 +37,59 @@
 安全启动功能支持列表
 ~~~~~~~~~~~~~~~~~~~~
 
-|        芯片型号         |                支持算法（曲线/位数）                 |                      签名验证时间（CPU频率）                       | 最大公钥数量 |                                                                                           备注/特殊说明                                                                                           |
-| :---------------------: | :--------------------------------------------------: | :----------------------------------------------------------------: | :----------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-|    ESP32 （ECO V3+）    |         RSA-3072（RSA-PSS，V2）<br>AES（V1）         |                             未明确给出                             |      1       | 仅支持1把公钥，V2需ECO V3及以上                                                                                                                                                                   |
-|        ESP32-S2         |                 RSA-3072（RSA-PSS）                  |                             未明确给出                             |      3       | 最多3把公钥，可吊销                                                                                                                                                                               |
-|        ESP32-S3         |                 RSA-3072（RSA-PSS）                  |                             未明确给出                             |      3       | 最多3把公钥，可吊销                                                                                                                                                                               |
-|        ESP32-C2         | ECDSA-192（NISTP192）<br>ECDSA-256（NISTP256，推荐） |                             未明确给出                             |      1       | 仅支持ECDSA，且仅1把公钥 [ESP32-C2 Kconfig Reference]（https://docs.espressif.com/projects/esp-idf/en/latest/esp32c2/api-reference/kconfig-reference.html#config-secure-boot-ecdsa-key-len-size） |
-| ESP32-C3 （v0.3及以上） |                 RSA-3072（RSA-PSS）                  |                             未明确给出                             |      3       | 最多3把公钥，可吊销                                                                                                                                                                               |
-|        ESP32-C5         | RSA-3072<br>ECDSA-256（P-256）<br>ECDSA-384（P-384） | RSA-3072: 12.1ms<br>ECDSA-256: 5.6ms<br>ECDSA-384: 20.6ms（48MHz） |      3       | 仅可选一种算法 [ESP32-C5 Secure Boot v2]（https://docs.espressif.com/projects/esp-idf/en/latest/esp32c5/security/secure-boot-v2.html#secure-boot-v2-scheme-selection）                            |
-|        ESP32-C6         |            RSA-3072<br>ECDSA-256（P-256）            |           RSA-3072: 10.2ms<br>ECDSA-256: 83.9ms（40MHz）           |      3       | 仅可选一种算法 [ESP32-C6 Secure Boot v2]（https://docs.espressif.com/projects/esp-idf/en/latest/esp32c6/security/secure-boot-v2.html#secure-boot-v2-scheme-selection）                            |
-|        ESP32-H2         |            RSA-3072<br>ECDSA-256（P-256）            |           RSA-3072: 18.3ms<br>ECDSA-256: 76.2ms（32MHz）           |      3       | 仅可选一种算法 [ESP32-H2 Secure Boot v2]（https://docs.espressif.com/projects/esp-idf/en/latest/esp32h2/security/secure-boot-v2.html#secure-boot-v2-scheme-selection）                            |
-|        ESP32-P4         |            RSA-3072<br>ECDSA-256（P-256）            |           RSA-3072: 14.8ms<br>ECDSA-256: 61.1ms（40MHz）           |      3       | 仅可选一种算法 [ESP32-P4 Secure Boot v2]（https://docs.espressif.com/projects/esp-idf/en/latest/esp32p4/security/secure-boot-v2.html#secure-boot-v2-scheme-selection）                            |
+.. list-table:: 安全启动功能支持列表
+    :header-rows: 1
+
+    * - 芯片型号
+      - 支持算法（曲线/位数）
+      - 签名验证时间（CPU频率）
+      - 最大公钥数量
+      - 备注/特殊说明
+    * - ESP32 （ECO V3+）
+      - RSA-3072（RSA-PSS，V2）<br>AES（V1）
+      - 未明确给出
+      - 1
+      - 仅支持1把公钥，V2需ECO V3及以上
+    * - ESP32-S2
+      - RSA-3072（RSA-PSS）
+      - 未明确给出
+      - 3
+      - 最多3把公钥，可吊销
+    * - ESP32-S3
+      - RSA-3072（RSA-PSS）
+      - 未明确给出
+      - 3
+      - 最多3把公钥，可吊销
+    * - ESP32-C2
+      - ECDSA-192（NISTP192）<br>ECDSA-256（NISTP256，推荐）
+      - 未明确给出
+      - 1
+      - 仅支持ECDSA，且仅1把公钥 `ESP32-C2 Kconfig Reference <https://docs.espressif.com/projects/esp-idf/en/latest/esp32c2/api-reference/kconfig-reference.html#config-secure-boot-ecdsa-key-len-size>`_
+    * - ESP32-C3 （v0.3及以上）
+      - RSA-3072（RSA-PSS）
+      - 未明确给出
+      - 3
+      - 最多3把公钥，可吊销
+    * - ESP32-C5
+      - RSA-3072<br>ECDSA-256（P-256）<br>ECDSA-384（P-384）
+      - RSA-3072: 12.1ms<br>ECDSA-256: 5.6ms<br>ECDSA-384: 20.6ms（48MHz）
+      - 3
+      - 仅可选一种算法 `ESP32-C5 Secure Boot v2 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32c5/security/secure-boot-v2.html#secure-boot-v2-scheme-selection>`_
+    * - ESP32-C6
+      - RSA-3072<br>ECDSA-256（P-256）
+      - RSA-3072: 10.2ms<br>ECDSA-256: 83.9ms（40MHz）
+      - 3
+      - 仅可选一种算法 `ESP32-C6 Secure Boot v2 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32c6/security/secure-boot-v2.html#secure-boot-v2-scheme-selection>`_
+    * - ESP32-H2
+      - RSA-3072<br>ECDSA-256（P-256）
+      - RSA-3072: 18.3ms<br>ECDSA-256: 76.2ms（32MHz）
+      - 3
+      - 仅可选一种算法 `ESP32-H2 Secure Boot v2 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32h2/security/secure-boot-v2.html#secure-boot-v2-scheme-selection>`_
+    * - ESP32-P4
+      - RSA-3072<br>ECDSA-256（P-256）
+      - RSA-3072: 14.8ms<br>ECDSA-256: 61.1ms（40MHz）
+      - 3
+      - 仅可选一种算法 `ESP32-P4 Secure Boot v2 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32p4/security/secure-boot-v2.html#secure-boot-v2-scheme-selection>`_
 
 **说明：**
 - “最大公钥数量”指可在 eFuse 中存储的公钥数量，部分芯片支持密钥吊销。
@@ -90,11 +132,11 @@
 1. 打开项目配置菜单 ``Security features`` 启用 ``Enable hardware Secure Boot in bootloader``
 2. 选择 ``Secure Boot v2`` 签名方案，根据不同芯片，可选的签名算法为``RSA`` 或 ``ECDSA``
 3. 指定签名密钥文件路径，密钥文件（例如 RSA 3072）可通过 ``idf.py secure-generate-signing-key`` 或 ``openssl genrsa`` 指令生成
-5. 使用 ``idf.py build`` 指令将直接编译、对齐填充、生成附带签名块的 ``app`` 镜像
-6. 使用 ``idf.py bootloader`` 指令生成启用了安全启动且已经附带签名块的 bootloader 镜像
-7. 为了安全起见，默认情况下启用了安全启动的 bootloader 需要使用 ``esptool.py write_flash`` 指令单独烧写，``idf.py flash`` 只能烧写应用程序和分区表等分区
-8. 重启设备，bootloader 会在首次运行时自动烧写 eFuse 以启用 Secure Boot，并将计算出签名块的公钥摘要写入 eFuse，并撤销未使用的密钥槽
-9. 之后的启动过程中，eFuse 中的公钥摘要将用于验证 bootloader 和 app 镜像的签名，确保设备仅运行对应私钥签名后的固件
+4. 使用 ``idf.py build`` 指令将直接编译、对齐填充、生成附带签名块的 ``app`` 镜像
+5. 使用 ``idf.py bootloader`` 指令生成启用了安全启动且已经附带签名块的 bootloader 镜像
+6. 为了安全起见，默认情况下启用了安全启动的 bootloader 需要使用 ``esptool.py write_flash`` 指令单独烧写，``idf.py flash`` 只能烧写应用程序和分区表等分区
+7. 重启设备，bootloader 会在首次运行时自动烧写 eFuse 以启用 Secure Boot，并将计算出签名块的公钥摘要写入 eFuse，并撤销未使用的密钥槽
+8. 之后的启动过程中，eFuse 中的公钥摘要将用于验证 bootloader 和 app 镜像的签名，确保设备仅运行对应私钥签名后的固件
 
 **注意事项**：启用安全启动后，bootloader 镜像大小将增加，可能需要重新调整分区表大小。私钥必须妥善保管，如果私钥泄露，攻击者可以生成有效签名的恶意固件，如果密钥丢失，设备将无法更新固件。
 
@@ -165,33 +207,49 @@
 
 **软件签名 vs 硬件安全启动**：
 
-+-------------------------+----------------------------------------+------------------------------------------+
-|          项目           |       🛡️ Secure Boot v2（硬件）        |   🔓 软件签名验证机制（无 Secure Boot）   |
-+=========================+========================================+==========================================+
-| 启动时验证              | ✅ 验证 bootloader 和 app 镜像签名      | ❌ 不验证当前 app，假定其可信             |
-+-------------------------+----------------------------------------+------------------------------------------+
-| OTA 更新验证            | ✅ 使用 eFuse 中密钥验证新 app 签名     | ✅ 使用当前 app 的签名块公钥验证新 app    |
-+-------------------------+----------------------------------------+------------------------------------------+
-| 安全根（Root of Trust） | eFuse 中烧录的公钥摘要                 | 当前运行 app 的签名块中的公钥            |
-+-------------------------+----------------------------------------+------------------------------------------+
-| eFuse 配置要求          | 必须烧录 SECURE_BOOT_EN 和 KEY_DIGESTx | 无需烧录 Secure Boot 相关 eFuse          |
-+-------------------------+----------------------------------------+------------------------------------------+
-| 密钥撤销机制            | ✅ 支持 KEY_REVOKEX 和激进撤销策略      | ❌ 不支持密钥撤销                         |
-+-------------------------+----------------------------------------+------------------------------------------+
-| 签名块支持数量          | ✅ 最多 3 个签名块，支持多密钥验证      | ❌ 仅使用第一个签名块，忽略其他           |
-+-------------------------+----------------------------------------+------------------------------------------+
-| 防篡改能力              | ✅ 防止 flash 被替换或注入恶意代码      | ❌ 无法防止物理攻击或 flash 替换          |
-+-------------------------+----------------------------------------+------------------------------------------+
-| 启动性能                | ❌ 启动时有签名验证开销                 | ✅ 启动更快，无验证延迟                   |
-+-------------------------+----------------------------------------+------------------------------------------+
-| 开发便利性              | ❌ 启用 eFuse 后不可逆，需谨慎操作      | ✅ 无不可逆操作，适合开发调试             |
-+-------------------------+----------------------------------------+------------------------------------------+
-| 适用场景                | 量产部署、高安全性要求设备             | 开发测试、启动速度敏感、物理安全可控环境 |
-+-------------------------+----------------------------------------+------------------------------------------+
-| 密钥管理灵活性          | ✅ 支持多密钥轮换与撤销                 | ❌ 仅依赖当前 app 的公钥，无法轮换        |
-+-------------------------+----------------------------------------+------------------------------------------+
-| 推荐使用                | ✅ 官方推荐用于正式产品                 | ⚠️ 仅在明确威胁模型下使用，需谨慎评估    |
-+-------------------------+----------------------------------------+------------------------------------------+
+.. list-table:: 软件签名 vs 硬件安全启动
+    :header-rows: 1
+    :widths: 20 40 40
+
+    * - 项目
+      - 🛡️ Secure Boot v2（硬件）
+      - 🔓 软件签名验证机制（无 Secure Boot）
+    * - 启动时验证
+      - ✅ 验证 bootloader 和 app 镜像签名
+      - ❌ 不验证当前 app，假定其可信
+    * - OTA 更新验证
+      - ✅ 使用 eFuse 中密钥验证新 app 签名
+      - ✅ 使用当前 app 的签名块公钥验证新 app
+    * - 安全根（Root of Trust）
+      - eFuse 中烧录的公钥摘要
+      - 当前运行 app 的签名块中的公钥
+    * - eFuse 配置要求
+      - 必须烧录 SECURE_BOOT_EN 和 KEY_DIGESTx
+      - 无需烧录 Secure Boot 相关 eFuse
+    * - 密钥撤销机制
+      - ✅ 支持 KEY_REVOKE_x 和激进撤销策略
+      - ❌ 不支持密钥撤销
+    * - 签名块支持数量
+      - ✅ 最多 3 个签名块，支持多密钥验证
+      - ❌ 仅使用第一个签名块，忽略其他
+    * - 防篡改能力
+      - ✅ 防止 flash 被替换或注入恶意代码
+      - ❌ 无法防止物理攻击或 flash 替换
+    * - 启动性能
+      - ❌ 启动时有签名验证开销
+      - ✅ 启动更快，无验证延迟
+    * - 开发便利性
+      - ❌ 启用 eFuse 后不可逆，需谨慎操作
+      - ✅ 无不可逆操作，适合开发调试
+    * - 适用场景
+      - 量产部署、高安全性要求设备
+      - 开发测试、启动速度敏感、物理安全可控环境
+    * - 密钥管理灵活性
+      - ✅ 支持多密钥轮换与撤销
+      - ❌ 仅依赖当前 app 的公钥，无法轮换
+    * - 推荐使用
+      - ✅ 官方推荐用于正式产品
+      - ⚠️ 仅在明确威胁模型下使用，需谨慎评估
 
 **配置方法**：
 
