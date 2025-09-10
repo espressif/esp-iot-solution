@@ -237,3 +237,8 @@ ESP-IDF 虚拟文件系统 (VFS) 组件可以为不同文件系统 (FAT, SPIFFS)
 **参考文档：**
 
 * `文件系统注意事项 <https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32s3/api-guides/file-system-considerations.html>`_。
+
+常见问题 (FAQ)
+~~~~~~~~~~~~~~~~~
+
+* 请参考：`ESP-FAQ 存储部分 <https://docs.espressif.com/projects/esp-faq/zh_CN/latest/software-framework/storage/index.html>`_

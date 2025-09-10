@@ -284,3 +284,8 @@
 7. **制定密钥轮换策略**
 
 更多最佳实践：`安全启动最佳实践 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/security/secure-boot-v2.html#secure-boot-best-practices>`_
+
+常见问题 (FAQ)
+~~~~~~~~~~~~~~~~~
+
+* 请参考：`ESP-FAQ 安全部分 <https://docs.espressif.com/projects/esp-faq/zh_CN/latest/software-framework/security.html>`_

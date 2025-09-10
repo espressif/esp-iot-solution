@@ -216,3 +216,8 @@ flash 加密的基本过程：
 5. **测试 OTA 更新流程**
 
 更多最佳实践：`flash 加密最佳实践 <https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32s3/security/flash-encryption.html#flash-encrypt-best-practices>`_
+
+常见问题 (FAQ)
+~~~~~~~~~~~~~~~~~
+
+* 请参考：`ESP-FAQ 安全部分 <https://docs.espressif.com/projects/esp-faq/zh_CN/latest/software-framework/security.html>`_
