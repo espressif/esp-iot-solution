@@ -3,11 +3,11 @@ Declaration is '.. cpp:member:: lightbulb_color_mapping_data_t * table'.
 lightbulb.inc:line: WARNING: Duplicate C++ declaration, also defined at electrical_lighting_solution/lightbulb_driver:line.
 Declaration is '.. cpp:member:: struct lightbulb_config_t::@40::@44 precise'.
 lightbulb.inc:line: WARNING: Duplicate C++ declaration, also defined at electrical_lighting_solution/lightbulb_driver:line.
-Declaration is '.. cpp:member:: lightbulb_iic_out_pin_t red'.
+Declaration is '.. cpp:member:: lightbulb_chip_out_pin_t red'.
 lightbulb.inc:line: WARNING: Duplicate C++ declaration, also defined at electrical_lighting_solution/lightbulb_driver:line.
-Declaration is '.. cpp:member:: lightbulb_iic_out_pin_t green'.
+Declaration is '.. cpp:member:: lightbulb_chip_out_pin_t green'.
 lightbulb.inc:line: WARNING: Duplicate C++ declaration, also defined at electrical_lighting_solution/lightbulb_driver:line.
-Declaration is '.. cpp:member:: lightbulb_iic_out_pin_t blue'.
+Declaration is '.. cpp:member:: lightbulb_chip_out_pin_t blue'.
 ir_learn.inc:line: WARNING: Error when parsing function declaration.
 If the function has no return type:
   Invalid C++ declaration: Expected end of definition or ;. [error at 34]
