@@ -7,7 +7,7 @@
 #pragma once
 
 #include <stdint.h>
-#include "esp_idf_version.h"
+
 #include "esp_lcd_panel_vendor.h"
 
 #ifdef __cplusplus
@@ -76,7 +76,6 @@ esp_err_t esp_lcd_new_panel_sh8601(const esp_lcd_panel_io_handle_t io, const esp
         .data2_io_num = d2,                                     \
         .data3_io_num = d3,                                     \
         .max_transfer_sz = max_trans_sz,                        \
-        .flags = SPICOMMON_BUSFLAG_MASTER | SPICOMMON_BUSFLAG_QUAD, \
     }
 
 /**
@@ -106,17 +105,10 @@ esp_err_t esp_lcd_new_panel_sh8601(const esp_lcd_panel_io_handle_t io, const esp
         .user_ctx = cb_ctx,                                     \
         .lcd_cmd_bits = 32,                                     \
         .lcd_param_bits = 8,                                    \
-        /* Only set flags.quad_mode for ESP-IDF < v6.0.0 */     \
-        _IF_IDF_LESS_THAN_6(.flags = { .quad_mode = true },)    \
+        .flags = {                                              \
+            .quad_mode = true,                                  \
+        },                                                      \
     }
-
-#ifndef _IF_IDF_LESS_THAN_6
-#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(6, 0, 0)
-#define _IF_IDF_LESS_THAN_6(...) __VA_ARGS__
-#else
-#define _IF_IDF_LESS_THAN_6(...)
-#endif
-#endif
 
 #ifdef __cplusplus
 }
