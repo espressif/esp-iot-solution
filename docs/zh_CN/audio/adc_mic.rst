@@ -15,6 +15,17 @@ ADC 麦克风
 参考电路
 ----------
 
+外部参考电路如下，客户可以选择跨阻放大器或者同相/反相放大电路对 MIC 输入信号进行放大。关于前端 MIC 放大器的更多设计参考信息，请参考 `Single-Supply, Electret Microphone Pre-Amplifier Reference Design <https://www.ti.com/lit/ug/tidu765/tidu765.pdf>`__。
+注意：
+- 偏置：ADC 端要有中点偏置（如 Vref/2），并在运放输出侧 AC 耦合，避免直流顶死 ADC。 
+- 电源：MIC 供电最好使用 LDO 进行稳压，避免电源波动影响 ADC 采样。如果不使用外部 LDO，请在电源侧进行单独的 RC 滤波。
+- 推荐选择灵敏度大于 -46dB 的 MIC，避免 MIC 灵敏度不足导致 ADC 采样误差。并根据麦克风的灵敏度调整放大倍数。
+
+.. figure:: ../../_static/audio/adc_mic_hardware_ref_design.png
+    :align: center
+    :alt: ADC mic hardware reference design
+
+    ADC mic hardware reference design
 
 外部配置 ADC Continuous
 --------------------------
