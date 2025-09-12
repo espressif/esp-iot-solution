@@ -92,4 +92,3 @@ To simplify the calculation process, the same voltage divider ratio is used for 
 
 .. note::
     Note that the voltage needs to be converted to a range that the ESP32 ADC can collect. Please refer to: `ESP32 ADC <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/adc_oneshot.html>`__
-

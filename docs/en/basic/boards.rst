@@ -11,7 +11,7 @@ This document mainly introduces the use of a board support component (Boards). A
 2. Provides default peripheral configuration parameters
 3. Provides unified board-level initialization interfaces
 4. Provides hardware control interfaces for development boards
-  
+
 The following figure shows the structure of the Boards component:
 
 .. figure:: ../../_static/boards_diagram.png
@@ -34,7 +34,7 @@ The following figure shows the structure of the Boards component:
 
 .. note::
 
-     The Boards component is provided in ``examples/common_components/boards``.
+    The Boards component is provided in ``examples/common_components/boards``.
 
 Instructions
 ------------------

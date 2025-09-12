@@ -21,7 +21,6 @@
 
 为获取初始状态下的转子位置，`esp_sensorless_bldc_control` 组件在启动时按照顺序施加电压脉冲，获取采样电阻上的电流脉冲，比较 6 个矢量的大小以确定最大矢量所在区间。
 
-
 .. table:: 脉冲注入顺序
    :align: center
 
@@ -71,6 +70,7 @@
 
 ADC 方案的过零点采样原理
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 当 BLDC 电机转动时，反电势过零点发生在浮空相。通过检测各相各相对地电压，并与直流母线电压对比。当端电压等于直流母线电压一半时，即发生过零事件。在基于ADC的过零点检测方案中，同时测量端电压与直流母线电压并进行对比，获得过零信号。
 
 .. figure:: ../../../_static/motor/bldc/bldc_adc_zero_cossing_points.png
@@ -81,6 +81,7 @@ ADC 方案的过零点采样原理
 
 ADC 方案的过零点采样硬件
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 .. figure:: ../../../_static/motor/bldc/bldc_adc_hardware.png
     :align: center
     :width: 90%
@@ -91,4 +92,3 @@ ADC 方案的过零点采样硬件
 
 .. note::
     注意，电压需要转化到 ESP32 ADC 能够采集的范围。请参考：`ESP32 ADC <https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32/api-reference/peripherals/adc_oneshot.html#adc-oneshot-unit-configuration>`__
-

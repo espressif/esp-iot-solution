@@ -21,27 +21,22 @@ Zero Detection event
 
 Triggering conditions for each zero detection event are enlisted in the table below:
 
-+--------------------------+-----------------------------------+
-|          Event           |         Trigger Condition         |
-+==========================+===================================+
-| SIGNAL_RISING_EDGE       | Rising edge                       |
-+--------------------------+-----------------------------------+
-| SIGNAL_FALLING_EDGE      | Falling edge                      |
-+--------------------------+-----------------------------------+
-| SIGNAL_VALID             | The number of times the frequency |
-|                          | is within the valid range exceeds |
-|                          | the valid times.                  |
-+--------------------------+-----------------------------------+
-| SIGNAL_INVALID           | The number of times the frequency |
-|                          | is within the invalid range       |
-|                          | exceeds the invalid times.        |
-+--------------------------+-----------------------------------+
-| SIGNAL_LOST              | No rising or falling edges in the |
-|                          | signal within 100ms.              |
-+--------------------------+-----------------------------------+
-| SIGNAL_FREQ_OUT_OF_RANGE | The calculated frequency is       |
-|                          | outside the set frequency range   |
-+--------------------------+-----------------------------------+
++--------------------------+------------------------------------------------------------------------------------------+
+| Event                    | Trigger Condition                                                                        |
++==========================+==========================================================================================+
+| SIGNAL_RISING_EDGE       | Rising edge                                                                              |
++--------------------------+------------------------------------------------------------------------------------------+
+| SIGNAL_FALLING_EDGE      | Falling edge                                                                             |
++--------------------------+------------------------------------------------------------------------------------------+
+| SIGNAL_VALID             | The number of times the frequency is within the valid range exceeds the valid times.     |
++--------------------------+------------------------------------------------------------------------------------------+
+| SIGNAL_INVALID           | The number of times the frequency is within the invalid range exceeds the invalid times. |
++--------------------------+------------------------------------------------------------------------------------------+
+| SIGNAL_LOST              | No rising or falling edges in the signal within 100ms.                                   |
++--------------------------+------------------------------------------------------------------------------------------+
+| SIGNAL_FREQ_OUT_OF_RANGE | The calculated frequency is outside the set frequency range.                             |
++--------------------------+------------------------------------------------------------------------------------------+
+
 
 .. attention:: No blocking operations such as **TaskDelay** are allowed in the call-back function
 
