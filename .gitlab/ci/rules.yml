@@ -395,20 +395,26 @@
   - "**/*.md"
 
 .patterns-docs_inc: &patterns-docs_inc
-
+  - "components/audio/adc_mic/adc_mic.h"
   - "components/audio/dac_audio/include/dac_audio.h"
   - "components/audio/pwm_audio/include/pwm_audio.h"
   - "components/avi_player/include/avi_player.h"
   - "components/bluetooth/ble_conn_mgr/include/esp_ble_conn_mgr.h"
-  - "components/bluetooth/ble_conn_mgr/include/esp_ble_conn_mgr.h"
   - "components/bluetooth/ble_hci/include/ble_hci.h"
+  - "components/bluetooth/ble_profiles/std/ble_anp/include/esp_anp.h"
+  - "components/bluetooth/ble_profiles/std/ble_hrp/include/esp_hrp.h"
+  - "components/bluetooth/ble_profiles/std/ble_htp/include/esp_htp.h"
   - "components/bluetooth/ble_services/ans/include/esp_ans.h"
   - "components/bluetooth/ble_services/bas/include/esp_bas.h"
   - "components/bluetooth/ble_services/bcs/include/esp_bcs.h"
+  - "components/bluetooth/ble_services/cts/include/esp_cts.h"
   - "components/bluetooth/ble_services/dis/include/esp_dis.h"
   - "components/bluetooth/ble_services/hrs/include/esp_hrs.h"
   - "components/bluetooth/ble_services/hts/include/esp_hts.h"
   - "components/bluetooth/ble_services/tps/include/esp_tps.h"
+  - "components/bluetooth/ble_services/uds/include/esp_uds.h"
+  - "components/bluetooth/ble_services/wss/include/esp_wss.h"
+  - "components/bus/include/i2s_lcd_driver.h"
   - "components/button/include/iot_button.h"
   - "components/display/screen/interface_driver/scr_interface_driver.h"
   - "components/display/screen/screen_driver.h"
@@ -417,16 +423,21 @@
   - "components/display/tools/esp_mmap_assets/include/esp_mmap_assets.h"
   - "components/display/touch_panel/touch_panel.h"
   - "components/i2c_bus/include/i2c_bus.h"
+  - "components/iot_eth/include/iot_eth.h"
   - "components/ir/ir_learn/include/ir_learn.h"
   - "components/keyboard_button/include/keyboard_button.h"
   - "components/knob/include/iot_knob.h"
   - "components/led/led_indicator/include/led_indicator.h"
-  - "components/motor/esp_sensorless_bldc_control/control/include/bldc_control.h"
+  - "components/led/lightbulb_driver/include/lightbulb.h"
   - "components/motor/esp_sensorless_bldc_control/control/include/bldc_control_param.h"
+  - "components/motor/esp_sensorless_bldc_control/include/bldc_control.h"
   - "components/motor/esp_sensorless_bldc_control/user_cfg/bldc_user_cfg.h"
   - "components/motor/servo/include/iot_servo.h"
   - "components/openai/include/OpenAI.h"
+
+.patterns-docs_inc_2: &patterns-docs_inc_2
   - "components/sensors/ntc_driver/include/ntc_driver.h"
+  - "components/sensors/power_measure/include/power_measure.h"
   - "components/sensors/power_monitor/ina236/include/ina236.h"
   - "components/sensors/sensor_hub/include/hal/humiture_hal.h"
   - "components/sensors/sensor_hub/include/hal/imu_hal.h"
@@ -434,17 +445,20 @@
   - "components/sensors/sensor_hub/include/iot_sensor_hub.h"
   - "components/sensors/sensor_hub/include/sensor_type.h"
   - "components/spi_bus/include/spi_bus.h"
+  - "components/touch/touch_button_sensor/include/touch_button_sensor.h"
   - "components/touch/touch_proximity_sensor/include/touch_proximity_sensor.h"
+  - "components/touch/touch_slider_sensor/include/touch_slider_sensor.h"
   - "components/usb/esp_msc_ota/include/esp_msc_ota.h"
   - "components/usb/esp_tinyuf2/esp_tinyuf2.h"
   - "components/usb/iot_usbh_cdc/include/iot_usbh_cdc.h"
-  - "components/usb/iot_usbh_ecm/include/iot_usbh_ecm.h"
-  - "components/usb/iot_usbh_rndis/include/iot_usbh_rndis.h"
   - "components/usb/usb_device_uac/include/usb_device_uac.h"
   - "components/usb/usb_device_uvc/include/usb_device_uvc.h"
   - "components/usb/usb_stream/include/usb_stream.h"
   - "components/utilities/adc_tp_calibration/include/adc_tp_calibration.h"
+  - "components/usb/iot_usbh_rndis/include/iot_usbh_rndis.h"
+  - "components/usb/iot_usbh_ecm/include/iot_usbh_ecm.h"
   - "components/zero_detection/include/zero_detection.h"
+
 # examples folder, in the alphabetic order
 .patterns-example_ai_esp_dl_human_activity_recognition: &patterns-example_ai_esp_dl_human_activity_recognition
   - "examples/ai/esp_dl/human_activity_recognition/**/*"
@@ -2849,6 +2863,8 @@
       changes: *patterns-docs
     - <<: *if-dev-push
       changes: *patterns-docs_inc
+    - <<: *if-dev-push
+      changes: *patterns-docs_inc_2
 
 .rules:deploy:docs_preview:
   rules:
@@ -2860,6 +2876,8 @@
       changes: *patterns-docs
     - <<: *if-dev-push
       changes: *patterns-docs_inc
+    - <<: *if-dev-push
+      changes: *patterns-docs_inc_2
 
 .rules:deploy:docs_production:
   rules:

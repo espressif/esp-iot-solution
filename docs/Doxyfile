@@ -20,6 +20,10 @@ PROJECT_NAME = "ESP IoT Solution Guide"
 ## These files are placed in '_inc' directory
 ## and used to include in API reference documentation
 
+## IF YOU ADD NEW FILES HERE
+## DO NOT FORGET TO ADD THEM TO THE .patterns-docs_inc PATTERN
+## IN THE .gitlab/ci/rules.yml FILE
+
 INPUT = \
     $(PROJECT_PATH)/components/audio/adc_mic/adc_mic.h \
     $(PROJECT_PATH)/components/audio/dac_audio/include/dac_audio.h \
