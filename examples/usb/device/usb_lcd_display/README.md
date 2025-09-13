@@ -1,3 +1,5 @@
+| Supported Targets | ESP32-P4 |
+| ----------------- | -------- |
 ## USB LCD Display Example
 
 This example demonstrates how to use the esp_lcd_usb_display component to compress generated image data into a JPEG frame stream and transmit it to the USB host.

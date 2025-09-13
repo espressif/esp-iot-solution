@@ -1,3 +1,5 @@
+| Supported Targets | ESP32-S2 | ESP32-S3 | ESP32-P4 |
+| ----------------- | -------- | -------- | -------- |
 # USB Hub Dual Camera Example
 
 This example demonstrates how to use the [usb_host_uvc](https://components.espressif.com/components/espressif/usb_host_uvc) component to connect USB cameras and preview camera images via an HTTP server.

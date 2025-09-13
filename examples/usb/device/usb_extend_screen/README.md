@@ -1,3 +1,5 @@
+| Supported Targets | ESP32-S3 | ESP32-P4 |
+| ----------------- | -------- | -------- |
 ## USB Extended Display Example
 
 Use [LaunchPad](https://espressif.github.io/esp-launchpad/?flashConfigURL=https://dl.espressif.com/AE/esp-iot-solution/config.toml) to flash this example.

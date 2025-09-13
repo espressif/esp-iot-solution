@@ -1,3 +1,5 @@
+| Supported Targets | ESP32-S2 | ESP32-S3 |
+| ----------------- | -------- | -------- |
 ## USB HID Surface Dial
 
 This example shows how to use the ESP32-Sx USB function to emulate a Windows knob that allows volume control, page up and down, and more.

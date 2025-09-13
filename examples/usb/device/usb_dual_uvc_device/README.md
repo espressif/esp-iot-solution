@@ -1,3 +1,5 @@
+| Supported Targets | ESP32-S2 | ESP32-S3 | ESP32-P4 |
+| ----------------- | -------- | -------- | -------- |
 ## USB UVC Device Example
 
 This example demonstrates how to use the usb_device_uvc component to simulate two virtual cameras. Camera one transmits an AVI video stream, while camera two transmits JPEG images.
