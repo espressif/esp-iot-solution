@@ -109,6 +109,7 @@ static void _system_dump()
 
 static void _led_indicator_init()
 {
+    esp_err_t ret = ESP_OK;
     led_indicator_gpio_config_t led_indicator_gpio_config = {
         .is_active_level_high = LED_ACTIVE_LEVEL,
     };
@@ -120,7 +121,7 @@ static void _led_indicator_init()
 
     if (LED_RED_SYSTEM_GPIO) {
         led_indicator_gpio_config.gpio_num = LED_RED_SYSTEM_GPIO;
-        esp_err_t ret = led_indicator_new_gpio_device(&led_config, &led_indicator_gpio_config, &s_led_system_handle);
+        ret = led_indicator_new_gpio_device(&led_config, &led_indicator_gpio_config, &s_led_system_handle);
         ESP_ERROR_CHECK(ret);
         assert(s_led_system_handle != NULL);
     }

@@ -942,7 +942,6 @@ build_example_usb_host_usb_cdc_4g_module:
     - .build_idf_version_greater_equal_v5_0
   variables:
     EXAMPLE_DIR: examples/usb/host/usb_cdc_4g_module
-  allow_failure: true # Temporarily disable build CI check, remove this line to restore strict checking after issues are fixed
 
 build_example_usb_host_usb_cdc_basic:
   extends:
