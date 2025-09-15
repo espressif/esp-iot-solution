@@ -1,4 +1,3 @@
-
 Developing with Native tinyusb
 --------------------------------
 
@@ -58,6 +57,12 @@ Most of tinyusb's functionalities are controlled through macros, so we need to d
 
         #define CFG_TUSB_RHPORT0_MODE    (OPT_MODE_DEVICE | OPT_MODE_FULL_SPEED)
 
+- **CFG_TUSB_RHPORT1_MODE**: Defines the connection method and speed to the USB Phy. The following method indicates a USB device with USB high speed.
+
+    .. code:: C
+
+        #define CFG_TUSB_RHPORT1_MODE    (OPT_MODE_DEVICE | OPT_MODE_HIGH_SPEED)
+
 - **ESP_PLATFORM**: This macro needs to be enabled when using the esp-idf platform for compilation.
 
 - **CFG_TUSB_OS**: Defines the operating system for tinyusb. If using FreeRTOS, this macro needs to be enabled. It can also be disabled if not using an OS.
@@ -77,6 +82,12 @@ Most of tinyusb's functionalities are controlled through macros, so we need to d
     .. code:: C
 
         #define CFG_TUSB_DEBUG         0
+
+- **CFG_TUSB_DEBUG_PRINTF**: Defines the log printing function for tinyusb.
+
+    .. code:: C
+
+        #define CFG_TUSB_DEBUG_PRINTF      esp_rom_printf 
 
 - **CFG_TUD_ENABLED**: Set to 1 to enable tinyusb device functionality.
 

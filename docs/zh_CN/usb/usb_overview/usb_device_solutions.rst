@@ -1,10 +1,9 @@
-
 USB Device 方案
 ------------------
 
 :link_to_translation:`en:[English]`
 
-ESP32-S2/S3 等芯片内置 USB-OTG 外设，支持 USB 设备模式，可以通过 USB 连接到 PC 或者其他 USB 主机设备。结合设备 TinyUSB 协议栈和设备类驱动，可用于开发多种 USB 设备，如 HID 设备、CDC 设备、复合设备等。以下介绍基于 USB 设备的相关解决方案。
+ESP32-S2/S3/P4 等芯片内置 USB-OTG 外设，支持 USB 设备模式，可以通过 USB 连接到 PC 或者其他 USB 主机设备。结合设备 TinyUSB 协议栈和设备类驱动，可用于开发多种 USB 设备，如 HID 设备、CDC 设备、复合设备等。以下介绍基于 USB 设备的相关解决方案。
 
 USB 音频设备方案
 ^^^^^^^^^^^^^^^^^
@@ -21,7 +20,7 @@ USB 音频设备方案基于 UAC 2.0 （USB Audio Class）协议标准 ，使乐
 硬件：
 ~~~~~~
 
-* 芯片：ESP32-S2，ESP32-S3
+* 芯片：ESP32-S2，ESP32-S3，ESP32-P4
 * 外设：USB-OTG
 
 链接：
@@ -44,7 +43,7 @@ USB UVC 设备方案基于 UVC（USB Video Class）协议标准，使乐鑫 SoC 
 硬件：
 ~~~~~~
 
-* 芯片：ESP32-S2，ESP32-S3
+* 芯片：ESP32-S2，ESP32-S3，ESP32-P4
 * 外设：USB-OTG
 
 链接：
@@ -67,7 +66,7 @@ USB 存储设备方案基于 MSC（Mass Storage Class）协议标准，结合 Wi
 硬件：
 ~~~~~~
 
-* 芯片：ESP32-S2，ESP32-S3
+* 芯片：ESP32-S2，ESP32-S3，ESP32-P4
 * 外设：USB-OTG
 
 链接：
@@ -90,7 +89,7 @@ USB HID 设备方案基于 HID（Human Interface Device）协议标准，可作�
 硬件：
 ~~~~~~
 
-* 芯片：ESP32-S2，ESP32-S3
+* 芯片：ESP32-S2，ESP32-S3，ESP32-P4
 * 外设：USB-OTG
 
 链接：

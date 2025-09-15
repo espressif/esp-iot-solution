@@ -4,7 +4,7 @@ USB PHY/Transceiver 介绍
 
 :link_to_translation:`en:[English]`
 
-USB Full-speed PHY/Transceiver 的功能是将 USB 控制器的数字信号转换为 USB 总线信号电平，提供总线驱动能力，检测接收错误等。ESP32-S2/S3 等芯片已内置一个 USB Full-speed PHY，用户可直接使用芯片指定的 USB D+ D- 与外部 USB 系统通信。此外，ESP32-S2/S3 还保留了外部 PHY 的扩展接口，用户可在需要时连接外部 PHY。
+USB PHY/Transceiver 的功能是将 USB 控制器的数字信号转换为 USB 总线信号电平，提供总线驱动能力，检测接收错误等。ESP32-S2/S3/P4 芯片已内置一个 USB Full-speed PHY，用户可直接使用芯片指定的 USB D+ D- 与外部 USB 系统通信。同时，ESP32-P4 还内置 USB High-Speed PHY。此外，ESP32-S2/S3 还保留了外部 PHY 的扩展接口，用户可在需要时连接外部 PHY。
 
 使用内部 PHY
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -38,9 +38,35 @@ ESP32-S2/S3/C3 内部集成了 USB PHY，因此无需外接 PHY 芯片，可以�
      - 13
      - 12
 
+对于 ESP32-P4 而言，内部集成了两个 USB Full-speed PHY 与一个 USB High-speed PHY。
+
+.. image:: ../../../_static/usb/esp32p4_usb.png
+   :target: ../../../_static/usb/esp32p4_usb.png
+   :alt: esp32p4_usb
+
+内部 USB-PHY 对应的 GPIO，如下表所示：
+
+.. list-table::
+   :header-rows: 1
+
+   * -
+     - D+
+     - D-
+   * - ESP32-P4 FS_PHY1
+     - 25
+     - 24
+   * - ESP32-P4 FS_PHY2
+     - 27
+     - 26
+   * - ESP32-P4 HS_PHY
+     - pin 50
+     - pin 49
+
+默认情况下，FS_PHY1 连接到 USB 串行/JTAG 控制器，FS_PHY2 连接到 OTG_FS。用户可以通过 EFUSE_USB_PHY_SEL 更改连接关系。
+
 .. _external_phy:
 
-使用外部 PHY
+使用外部 PHY （ESP32-S2/S3）
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 通过增加一个外部 PHY，可以实现 USB-OTG 和 USB-Serial-JTAG 两个外设同时工作。
@@ -71,7 +97,7 @@ USB PHY 默认配置
 方法 1： 通过配置寄存器，将 USB-PHY 连接切换为 USB-OTG。
 
 
-* USB Host Driver 或 TinyUSB 协议栈内部通过配置 USB PHY 寄存器，将内部 USB-PHY 连接切换为 USB-OTG，如需了解更多信息，请参考 `USB PHY 配置 API <https://github.com/espressif/esp-idf/blob/master/components/usb/include/esp_private/usb_phy.h>`_\ 。
+* USB Host Driver 或 TinyUSB 协议栈内部通过配置 USB PHY 寄存器，将内部 USB-PHY 连接切换为 USB-OTG，如需了解更多信息，请参考 `USB PHY 配置 API <https://github.com/espressif/esp-idf/blob/master/components/esp_hw_support/include/esp_private/usb_phy.h>`_\ 。
 
 方法 2：通过烧写 efuse usb_phy_sel 位为 1，将 USB-PHY 默认连接切换为 USB-OTG：
 

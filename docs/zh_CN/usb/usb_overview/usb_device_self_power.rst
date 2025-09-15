@@ -8,7 +8,7 @@
 
 USB 设备 VBUS 检测方法一般有两种方法：由 USB PHY 硬件检测，或\ **借助 ADC/GPIO 由软件检测**\ 。
 
-由于 ESP32S2/S3 内部 USB PHY 不支持硬件检测逻辑，该功能需要借助 ADC/GPIO 由软件实现，其中使用 GPIO 检测方法最为简便，实现方法如下：
+由于 ESP32S2/S3/P4 内部 USB PHY 不支持硬件检测逻辑，该功能需要借助 ADC/GPIO 由软件实现，其中使用 GPIO 检测方法最为简便，实现方法如下：
 
 **对于 ESP-IDF 4.4 及更早版本:**
 
@@ -22,7 +22,7 @@ USB 设备 VBUS 检测方法一般有两种方法：由 USB PHY 硬件检测，�
     *
     * @brief For USB Self-power device, the VBUS voltage must be monitored to achieve hot-plug,
     *        The simplest solution is detecting GPIO level as voltage signal.
-    *        A divider resistance Must be used due to ESP32S2/S3 has no 5V tolerate pin.
+    *        A divider resistance Must be used due to ESP32S2/S3/P4 has no 5V tolerate pin.
     *
     *   5V VBUS ┌──────┐    ┌──────┐   GND
     *    ───────┤ 100K ├─┬──┤ 100K ├──────

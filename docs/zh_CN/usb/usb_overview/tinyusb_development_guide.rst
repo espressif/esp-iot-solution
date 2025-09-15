@@ -51,11 +51,17 @@ tinyusb 大部分的功能的启用和关闭都是通过宏来控制，所以需
 
 **系统设置的宏**：
 
-- **CFG_TUSB_RHPORT0_MODE**：用于定义连接到 USB Phy 的方式和速率，下面的方式表示是 USB device 设备，并且速率为USB 全速。
+- **CFG_TUSB_RHPORT0_MODE**：用于定义连接到 USB Phy 的方式和速率，下面的方式表示是 USB device 设备，并且速率为 USB 全速。
 
     .. code:: C
 
         #define CFG_TUSB_RHPORT0_MODE    (OPT_MODE_DEVICE | OPT_MODE_FULL_SPEED)
+
+- **CFG_TUSB_RHPORT1_MODE**：用于定义连接到 USB Phy 的方式和速率，下面的方式表示是 USB device 设备，并且速率为 USB 高速。
+
+    .. code:: C
+
+        #define CFG_TUSB_RHPORT1_MODE    (OPT_MODE_DEVICE | OPT_MODE_HIGH_SPEED)
 
 - **ESP_PLATFORM**：使用 esp-idf 平台进行编译，需启用该宏。
 
@@ -76,6 +82,12 @@ tinyusb 大部分的功能的启用和关闭都是通过宏来控制，所以需
     .. code:: C
 
         #define CFG_TUSB_DEBUG         0
+
+- **CFG_TUSB_DEBUG_PRINTF**: 用于定义 tinyusb 的 log 打印函数。
+
+    .. code:: C
+
+        #define CFG_TUSB_DEBUG_PRINTF      esp_rom_printf 
 
 - **CFG_TUD_ENABLED**：设为 1 启用 tinyusb device 功能。
 

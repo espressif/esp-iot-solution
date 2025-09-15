@@ -8,7 +8,7 @@ According to the USB protocol requirements, self-powered USB devices must detect
 
 There are generally two methods for USB device VBUS detection: detection by USB PHY hardware, or \ **detection by software with the help of ADC/GPIO**\.
 
-The internal USB PHY of ESP32S2/S3 does not support hardware detection logic, this function needs to be implemented by software with the help of ADC/GPIO. Among them, using the GPIO detection method is the simplest. The implementation is as follows:
+The internal USB PHY of ESP32S2/S3/P4 does not support hardware detection logic, this function needs to be implemented by software with the help of ADC/GPIO. Among them, using the GPIO detection method is the simplest. The implementation is as follows:
 
 **For ESP-IDF 4.4 and earlier versions:**
 
@@ -22,7 +22,7 @@ The internal USB PHY of ESP32S2/S3 does not support hardware detection logic, th
     *
     * @brief For USB Self-power device, the VBUS voltage must be monitored to achieve hot-plug,
     *        The simplest solution is detecting GPIO level as voltage signal.
-    *        A divider resistance Must be used due to ESP32S2/S3 has no 5V tolerate pin.
+    *        A divider resistance Must be used due to ESP32S2/S3/P4 has no 5V tolerate pin.
     *
     *   5V VBUS ┌──────┐    ┌──────┐   GND
     *    ───────┤ 100K ├─┬──┤ 100K ├──────

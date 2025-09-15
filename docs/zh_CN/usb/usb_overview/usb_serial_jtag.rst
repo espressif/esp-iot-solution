@@ -3,7 +3,7 @@ USB-Serial-JTAG 外设介绍
 
 :link_to_translation:`en:[English]`
 
-ESP32-S3/C3 等芯片内置 USB-Serial-JTAG 外设，它包含了 USB-to-serial 转换器和 USB-to-JTAG 转换器，支持通过 USB 线连接到 PC，实现固件下载、调试和打印系统 LOG 等功能。USB-Serial-JTAG 外设的内部结构可参考 `ESP32-C3 技术参考手册-USB Serial/JTAG Controller <https://www.espressif.com/sites/default/files/documentation/esp32-c3_technical_reference_manual_en.pdf>`_\ 。
+ESP32-S3/C3/P4 等芯片内置 USB-Serial-JTAG 外设，它包含了 USB-to-serial 转换器和 USB-to-JTAG 转换器，支持通过 USB 线连接到 PC，实现固件下载、调试和打印系统 LOG 等功能。USB-Serial-JTAG 外设的内部结构可参考 `ESP32-C3 技术参考手册-USB Serial/JTAG Controller <https://www.espressif.com/sites/default/files/documentation/esp32-c3_technical_reference_manual_en.pdf>`_\ 。
 
 USB-Serial-JTAG 外设驱动
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -51,7 +51,6 @@ Linux 如下图所示：
 使用 USB-Serial-JTAG 打印系统 LOG
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-
 * 用户可通过 ``menuconfig-> Component config → ESP System Settings → Channel for console secondary output`` 配置 USB-Serial-JTAG LOG 功能的使能状态。
 * LOG 功能使能以后，可以直接使用 USB 线连接到 PC，然后使用 ``idf.py monitor`` 或其它串口工具打开 USB-Serial-JTAG 设备对应的串口号（Windows 为 ``COM*``\ ，Linux 为 ``/dev/ttyACM*``\ , MacOS 为 ``/dev/cu*``\ ），即可打印系统 LOG。
 * ``USB-Serial-JTAG`` 仅在主机接入后才会打印 LOG，如果主机未接入，\ ``USB-Serial-JTAG`` 不会被初始化，也不会打印 LOG。
@@ -67,3 +66,26 @@ Linux 如下图所示：
 * 用户也可以修改寄存器值 ``USB_SERIAL_JTAG.conf0.dp_pullup = 0;`` 将 USB D+ 上拉电阻禁用。
 
 需要特别注意的是 USB D+ 引脚的上拉电阻在上电时刻即存在，用户在调用软件禁用上拉电阻之前，USB D+ 引脚已经被拉高，导致 D+ 引脚做为 GPIO 时，初始阶段为高电平，如果用户需要在上电后 USB D+ 引脚立即为低电平，需要在硬件设计时，将 USB D+ 引脚通过外部电路拉低。
+
+若用户希望再次使用 USB-Serial-JTAG 功能，请参考如下代码：
+
+.. code:: C
+
+    #include "soc/soc_caps.h"
+    #include "soc/usb_serial_jtag_reg.h"
+    #include "hal/usb_serial_jtag_ll.h"
+
+        SET_PERI_REG_MASK(USB_SERIAL_JTAG_CONF0_REG, USB_SERIAL_JTAG_PAD_PULL_OVERRIDE);
+        CLEAR_PERI_REG_MASK(USB_SERIAL_JTAG_CONF0_REG, USB_SERIAL_JTAG_DP_PULLUP);
+        SET_PERI_REG_MASK(USB_SERIAL_JTAG_CONF0_REG, USB_SERIAL_JTAG_DP_PULLDOWN);
+        vTaskDelay(pdMS_TO_TICKS(10));
+    #if USB_SERIAL_JTAG_LL_EXT_PHY_SUPPORTED
+        usb_serial_jtag_ll_phy_enable_external(false);  // Use internal PHY
+        usb_serial_jtag_ll_phy_enable_pad(true);        // Enable USB PHY pads
+    #else // USB_SERIAL_JTAG_LL_EXT_PHY_SUPPORTED
+        usb_serial_jtag_ll_phy_set_defaults();          // External PHY not supported. Set default values.
+    #endif // USB_WRAP_LL_EXT_PHY_SUPPORTED
+        CLEAR_PERI_REG_MASK(USB_SERIAL_JTAG_CONF0_REG, USB_SERIAL_JTAG_DP_PULLDOWN);
+        SET_PERI_REG_MASK(USB_SERIAL_JTAG_CONF0_REG, USB_SERIAL_JTAG_DP_PULLUP);
+        CLEAR_PERI_REG_MASK(USB_SERIAL_JTAG_CONF0_REG, USB_SERIAL_JTAG_PAD_PULL_OVERRIDE);
+

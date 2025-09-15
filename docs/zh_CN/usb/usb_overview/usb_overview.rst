@@ -11,7 +11,7 @@ USB（Universal Serial Bus）是一种通用的总线标准，用于连接主机
 
 USB IF（USB Implementers Forum）是 USB 标准的制定者，它制定了 USB 标准，包括 USB 1.1、USB 2.0、USB 3.0 等，定义了 USB 接口的物理层、数据链路层、传输层、会话层、表示层等协议，以及 USB 设备类（Device Class）标准，常见的设备类包括 HID（Human Interface Device，人机接口设备）、MSC（Mass Storage Class，大容量存储设备）、CDC（Communication Device Class，通信设备）、Audio、Video 等。
 
-乐鑫 ESP32-S2/S3/C3 等芯片均已内置 USB-OTG 或 USB-Serial-JTAG 外设，支持各种各样的 USB 应用，包括 USB 多媒体类应用，USB 通信类应用，USB 存储类应用，USB 人机交互类应用等。
+乐鑫 ESP32-S2/S3/C3/P4 等芯片均已内置 USB-OTG 或 USB-Serial-JTAG 外设，支持各种各样的 USB 应用，包括 USB 多媒体类应用，USB 通信类应用，USB 存储类应用，USB 人机交互类应用等。
 
 
 .. image:: ../../../_static/usb_solutions.png
@@ -61,6 +61,15 @@ ESP-IDF 从 v4.4 开始已经包含 USB Host 和 USB Device 协议栈和各种�
 
 更多介绍，请参考\ :doc:`USB-OTG 控制器介绍 <./usb_otg>` 。
 
+USB-OTG High-speed 控制器简介
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**USB OTG High-speed 控制器**\ 是指同时具有 USB-OTG，USB Host 和 USB Device 模式的控制器，支持模式的协商和切换。支持 High-speed (480Mbps)，Full-speed (12Mbps) 和 Low-speed (1.5Mbps) 三种速率，支持 USB 2.0 协议。
+
+ESP-IDF 从 v5.5 开始，ESP32-P4 原本独立的 USB PHY 实现已合并至与 S2/S3 共用的 PHY 模块，统一驱动结构，简化维护。
+
+更多介绍，请参考\ :doc:`USB-OTG 控制器介绍 <./usb_otg>` 。
+
 USB-Serial-JTAG 控制器简介
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -75,7 +84,7 @@ USB Full-speed PHY 简介
 
 更多介绍，请参考\ :doc:`USB-PHY 介绍 <./usb_phy>` 。
 
-ESP32-S/C 系列 USB 外设支持情况
+ESP32-S/P/C 系列 USB 外设支持情况
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. list-table::
@@ -172,3 +181,14 @@ ESP32-S3 内置两个 USB 控制器，分别是  **USB OTG Full-speed Controller
    :target: ../../../_static/usb/esp32s3_usb.png
    :alt: esp32s3_usb
 
+ESP32-P4 USB 功能介绍
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+ESP32-P4 内置了三个 USB 控制器，分别是 **USB OTG High-speed Controller** 、 **USB OTG Full-speed Controller** 和 **USB-Serial-JTAG Controller** ，内置一个 **USB High-speed PHY** 与两个 **USB Full-speed PHY** 。默认情况下，FS_PHY1 连接到 USB 串行/JTAG 控制器，FS_PHY2 连接到 OTG_FS。用户可以通过 EFUSE_USB_PHY_SEL 更改连接关系。
+
+- 0：FS_PHY1 连接 USB 串行/JTAG 控制器，FS_PHY2 连接 OTG_FS。
+- 1：FS_PHY2 连接 USB 串行/JTAG 控制器，FS_PHY1 连接 OTG_FS。
+
+.. image:: ../../../_static/usb/esp32p4_usb.png
+   :target: ../../../_static/usb/esp32p4_usb.png
+   :alt: esp32p4_usb

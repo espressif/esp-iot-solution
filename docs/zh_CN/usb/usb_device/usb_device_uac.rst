@@ -3,7 +3,7 @@ ESP Device UAC
 
 :link_to_translation:`en:[English]`
 
-`esp_device_uac` 是基于 TinyUSB 的 USB Audio Class 驱动库，它支持将 ESP 芯片模拟成为一个音频设备，支持自定义音频采样率，麦克风通道数，扬声器通道数等。
+``esp_device_uac`` 是基于 TinyUSB 的 USB Audio Class 驱动库，它支持将 ESP 芯片模拟成为一个音频设备，支持自定义音频采样率，麦克风通道数，扬声器通道数等。
 
 特性：
 
@@ -16,7 +16,7 @@ USB Device UAC 用户指南
 
 - 开发板
 
-    1. 可以使用任何带有 USB 接口的 ESP32-S2/ESP32-S3 开发板
+    1. 可以使用任何带有 USB 接口的 ESP32-S2/ESP32-S3/ESP32-P4 开发板
 
 - USB MIC 回调函数
 

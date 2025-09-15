@@ -11,7 +11,7 @@ USB (Universal Serial Bus) is a universal bus standard used to connect hosts and
 
 USB-IF (USB Implementers Forum) is the organization responsible for establishing USB standards. It defines USB standards, including USB 1.1, USB 2.0, USB 3.0, and others. USB-IF specifies protocols for the physical layer, data link layer, transport layer, session layer, presentation layer, and more for the USB interface. It also defines USB Device Class standards, with common device classes such as HID (Human Interface Device), MSC (Mass Storage Class), CDC (Communication Device Class), Audio, Video, and more.
 
-Espressif's ESP32-S2/S3/C3 chips come with built-in USB-OTG or USB-Serial-JTAG peripherals, supporting a variety of USB applications. These include USB multimedia applications, USB communication applications, USB storage applications, USB human interface applications, and more.
+Espressif's ESP32-S2/S3/C3/P4 chips come with built-in USB-OTG or USB-Serial-JTAG peripherals, supporting a variety of USB applications. These include USB multimedia applications, USB communication applications, USB storage applications, USB human interface applications, and more.
 
 
 .. image:: ../../../_static/usb_solutions.png
@@ -61,6 +61,15 @@ Starting from ESP-IDF version 4.4, it includes USB Host and USB Device protocol 
 
 For more information, please refer to the :doc:`USB-OTG Controller Introduction <./usb_otg>`.
 
+USB-OTG High-speed Controller Introduction
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**USB OTG High-speed Controller**\ is a controller that simultaneously supports USB-OTG, USB Host, and USB Device modes, with the capability for mode negotiation and switching. It supports three speeds: High-speed (480Mbps), Full-speed (12Mbps), and Low-speed (1.5Mbps), and is compatible with USB 2.0 protocol.
+
+Starting from ESP-IDF version 5.5, the originally independent USB PHY implementation of ESP32-P4 has been merged into the shared PHY module with S2/S3, unified driving structure, simplified maintenance.
+
+For more information, please refer to the :doc:`USB-OTG Controller Introduction <./usb_otg>`.
+
 Introduction to USB-Serial-JTAG Controller
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -75,7 +84,7 @@ USB Full-Speed PHY Introduction
 
 For more information, please refer to the :doc:`USB-PHY Introduction <./usb_phy>`.
 
-ESP32-S/C Series USB Peripheral Support
+ESP32-S/P/C Series USB Peripheral Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. list-table::
@@ -172,3 +181,14 @@ The ESP32-S3 is equipped with two built-in USB controllers. **USB OTG Full-Speed
    :target: ../../../_static/usb/esp32s3_usb.png
    :alt: esp32s3_usb
 
+ESP32-P4 USB Function Overview
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+ESP32-P4 is equipped with three built-in USB controllers. **USB OTG High-speed Controller** , **USB OTG Full-speed Controller** and **USB-Serial-JTAG Controller**\ , Additionally, there is an integrated USB High-speed PHY and two USB Full-speed PHYs. The default connection is FS_PHY1 connected to the USB Serial/JTAG controller, and FS_PHY2 connected to OTG_FS. The user can change the connection relationship through EFUSE_USB_PHY_SEL.
+
+- 0：FS_PHY1 connected to the USB Serial/JTAG controller, and FS_PHY2 connected to OTG_FS.
+- 1：FS_PHY2 connected to the USB Serial/JTAG controller, and FS_PHY1 connected to OTG_FS.
+
+.. image:: ../../../_static/usb/esp32p4_usb.png
+   :target: ../../../_static/usb/esp32p4_usb.png
+   :alt: esp32p4_usb
