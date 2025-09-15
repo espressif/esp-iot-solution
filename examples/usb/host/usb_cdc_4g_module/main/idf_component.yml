@@ -2,7 +2,7 @@ dependencies:
   idf: ">=4.4.1"
   cmake_utilities: "0.*"
   led_indicator:
-    version: "~0.3.0"
+    override_path: "../../../../../components/led/led_indicator"
   json_parser:
     version: "1.0.3"
   iot_usbh_modem:
@@ -13,8 +13,6 @@ dependencies:
     rules:
       - if: "target in [esp32p4]"
   espressif/esp32_s3_usb_otg:
-    version: "^1.5.1"
+    version: "^2.0"
     rules:
       - if: "target in [esp32s3]"
-  lvgl/lvgl: #temp to workaround bsp issue
-    version: "9.2.0"
