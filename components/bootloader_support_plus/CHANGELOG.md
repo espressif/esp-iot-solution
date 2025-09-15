@@ -4,7 +4,7 @@
 
 ### Improve:
 
-- Add ESP32-C61 support.
+- Add ESP32-C61 and ESP32-S3 support.
 
 ## v0.3.9 - 2025-06-17
 
