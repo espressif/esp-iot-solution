@@ -1,4 +1,4 @@
-version: "1.0.2"
+version: "1.0.3"
 targets:
   - esp32p4
 description: ESP LCD EK79007(MIPI-DSI)
