@@ -19,8 +19,8 @@ typedef enum {
     SM16825E_CHANNEL_R = 0,    /**< Red channel */
     SM16825E_CHANNEL_G,        /**< Green channel */
     SM16825E_CHANNEL_B,        /**< Blue channel */
-    SM16825E_CHANNEL_W,        /**< White channel */
-    SM16825E_CHANNEL_Y,        /**< Yellow channel */
+    SM16825E_CHANNEL_W,        /**< Cold white channel */
+    SM16825E_CHANNEL_Y,        /**< Warm yellow channel */
     SM16825E_CHANNEL_MAX,
 } sm16825e_channel_t;
 
@@ -32,13 +32,13 @@ typedef enum {
     SM16825E_PIN_OUTR = 0,     /**< OUTR pin (Standard pins for red output) */
     SM16825E_PIN_OUTG,         /**< OUTG pin (Standard pins for green output) */
     SM16825E_PIN_OUTB,         /**< OUTB pin (Standard pins for blue output) */
-    SM16825E_PIN_OUTW,         /**< OUTW pin (Standard pins for white output) */
-    SM16825E_PIN_OUTY,         /**< OUTY pin (Standard pins for yellow output) */
+    SM16825E_PIN_OUTW,         /**< OUTW pin (Standard pins for cold white output) */
+    SM16825E_PIN_OUTY,         /**< OUTY pin (Standard pins for warm yellow output) */
     SM16825E_PIN_OUT1 = 0,     /**< OUTR pin (Standard pins for red output) */
     SM16825E_PIN_OUT2,         /**< OUTG pin (Standard pins for green output) */
     SM16825E_PIN_OUT3,         /**< OUTB pin (Standard pins for blue output) */
-    SM16825E_PIN_OUT4,         /**< OUTW pin (Standard pins for white output) */
-    SM16825E_PIN_OUT5,         /**< OUTY pin (Standard pins for yellow output) */
+    SM16825E_PIN_OUT4,         /**< OUTW pin (Standard pins for cold white output) */
+    SM16825E_PIN_OUT5,         /**< OUTY pin (Standard pins for warm yellow output) */
     SM16825E_PIN_OUT_MAX,
 } sm16825e_out_pin_t;
 
@@ -83,8 +83,8 @@ esp_err_t sm16825e_regist_channel(sm16825e_channel_t channel, sm16825e_out_pin_t
  * @param value_r Output red value (0-255)
  * @param value_g Output green value (0-255)
  * @param value_b Output blue value (0-255)
- * @param value_w Output white value (0-255)
- * @param value_y Output yellow value (0-255)
+ * @param value_w Output cold white value (0-255)
+ * @param value_y Output warm yellow value (0-255)
  * @return esp_err_t
  */
 esp_err_t sm16825e_set_rgbwy_channel(uint16_t value_r, uint16_t value_g, uint16_t value_b,

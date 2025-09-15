@@ -222,8 +222,8 @@ static esp_err_t set_config_data(uint8_t *buf, uint32_t start_bit_index)
  * @param red Red channel value (0-255)
  * @param green Green channel value (0-255)
  * @param blue Blue channel value (0-255)
- * @param white White channel value (0-255)
- * @param yellow Yellow channel value (0-255)
+ * @param cold_white White channel value (0-255)
+ * @param warm_yellow Yellow channel value (0-255)
  * @param out_buf Output buffer
  *
  * @note Data frame: 80 bits (5×16 bits gray) + 32 bits (config) = 112 bits total
@@ -232,7 +232,7 @@ static esp_err_t set_config_data(uint8_t *buf, uint32_t start_bit_index)
  *       Frame duration: 112 × 1200ns = 134.4μs per chip
  */
 static esp_err_t generate_data(uint32_t index, uint16_t red, uint16_t green, uint16_t blue,
-                               uint16_t white, uint16_t yellow, uint8_t *out_buf)
+                               uint16_t cold_white, uint16_t warm_yellow, uint8_t *out_buf)
 {
     uint8_t *chip_buf = out_buf + (index * SM16825E_LED_BUF);
     memset(chip_buf, 0, SM16825E_LED_BUF);
@@ -240,7 +240,7 @@ static esp_err_t generate_data(uint32_t index, uint16_t red, uint16_t green, uin
     uint32_t bit_index = 0;
 
     // Create array of channel values in logical order (R,G,B,W,Y)
-    uint16_t channel_values[5] = {red, green, blue, white, yellow};
+    uint16_t channel_values[5] = {red, green, blue, cold_white, warm_yellow};
 
     // Set gray data for each channel (16 bits each, MSB first)
     // get mapping address from mapping_addr array, and set gray data to the corresponding physical pin

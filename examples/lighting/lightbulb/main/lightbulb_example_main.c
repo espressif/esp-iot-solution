@@ -100,8 +100,8 @@ void app_main(void)
         .io_conf.sm16825e_io.red = OUT4,
         .io_conf.sm16825e_io.green = OUT1,
         .io_conf.sm16825e_io.blue = OUT5,
-        .io_conf.sm16825e_io.white = OUT3,
-        .io_conf.sm16825e_io.yellow = OUT2,
+        .io_conf.sm16825e_io.cold_white = OUT3,
+        .io_conf.sm16825e_io.warm_yellow = OUT2,
         .driver_conf.sm16825e.current = {150, 150, 150, 150, 150},
 #endif
 #ifdef CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_PWM
