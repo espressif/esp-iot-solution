@@ -17,10 +17,10 @@ Reference Circuit
 
 The external reference circuit is shown below. Customers can choose between transimpedance amplifier or inverting/non-inverting amplifier circuits to amplify the MIC input signal. For more design reference information about front-end MIC amplifiers, please refer to `Single-Supply, Electret Microphone Pre-Amplifier Reference Design <https://www.ti.com/lit/ug/tidu765/tidu765.pdf>`__.
 
-Notes:
-- Bias: The ADC side needs midpoint bias (such as Vref/2), and AC coupling on the op-amp output side to avoid DC saturation of the ADC.
-- Power supply: It is recommended to use LDO for MIC power supply regulation to avoid power supply fluctuations affecting ADC sampling. If external LDO is not used, please add separate RC filtering on the power supply side.
-- It is recommended to select MIC with sensitivity greater than -46dB to avoid ADC sampling errors due to insufficient MIC sensitivity. Adjust the amplification factor according to the microphone sensitivity.
+.. note::
+    - Bias: The ADC side needs midpoint bias (such as Vref/2), and AC coupling on the op-amp output side to avoid DC saturation of the ADC.
+    - Power supply: It is recommended to use LDO for MIC power supply regulation to avoid power supply fluctuations affecting ADC sampling. If external LDO is not used, please add separate RC filtering on the power supply side.
+    - It is recommended to select MIC with sensitivity greater than -46dB to avoid ADC sampling errors due to insufficient MIC sensitivity. Adjust the amplification factor according to the microphone sensitivity.
 
 .. figure:: ../../_static/audio/adc_mic_hardware_ref_design.png
     :align: center
