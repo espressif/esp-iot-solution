@@ -333,7 +333,7 @@ esp_codec_dev_handle_t bsp_audio_codec_microphone_init(void);
     {                                                     \
         .bus_id = 0,                                      \
         .num_data_lanes = lane_num,                       \
-        .phy_clk_src = MIPI_DSI_PHY_CLK_SRC_DEFAULT,      \
+        .phy_clk_src = 0,                                 \
         .lane_bit_rate_mbps = lane_mbps,                  \
     }
 #define ILI9881_PANEL_IO_DBI_CONFIG() \

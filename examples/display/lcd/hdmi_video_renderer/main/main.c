@@ -74,7 +74,7 @@ void app_main()
     bsp_display_config_t display_config = {
         .hdmi_resolution = BSP_HDMI_RES_1280x720,
         .dsi_bus = {
-            .phy_clk_src = MIPI_DSI_PHY_CLK_SRC_DEFAULT,
+            .phy_clk_src = 0,
             .lane_bit_rate_mbps = BSP_LCD_MIPI_DSI_LANE_BITRATE_MBPS,
         }
     };
