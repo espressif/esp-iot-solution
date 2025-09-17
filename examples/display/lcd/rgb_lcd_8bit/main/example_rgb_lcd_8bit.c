@@ -13,7 +13,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "lv_demos.h"
-#include "lvgl_port_v9.h"
+#include "lvgl_port.h"
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////// Please update the following configuration according to your LCD spec //////////////////////////////
@@ -159,8 +159,8 @@ void app_main()
     // Lock the mutex due to the LVGL APIs are not thread-safe
     if (lvgl_port_lock(-1)) {
         // lv_demo_stress();
-        // lv_demo_benchmark();
-        lv_demo_music();
+        lv_demo_benchmark();
+        // lv_demo_music();
         // lv_demo_widgets();
 
         // Release the mutex

@@ -108,9 +108,9 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
 //     ...
 // };
 
-    ESP_LOGI(TAG, "Install SH8601 panel driver");
+    ESP_LOGI(TAG, "Install CO5300 panel driver");
     esp_lcd_panel_handle_t panel_handle = NULL;
-    const sh8601_vendor_config_t vendor_config = {
+    const co5300_vendor_config_t vendor_config = {
         // .init_cmds = lcd_init_cmds,         // Uncomment these line if use custom initialization commands
         // .init_cmds_size = sizeof(lcd_init_cmds) / sizeof(co5300_lcd_init_cmd_t),
         .flags = {
@@ -123,7 +123,7 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
         .bits_per_pixel = 16,                                     // Implemented by LCD command `3Ah`
         .vendor_config = &vendor_config,
     };
-    ESP_ERROR_CHECK(esp_lcd_new_panel_sh8601(io_handle, &panel_config, &panel_handle));
+    ESP_ERROR_CHECK(esp_lcd_new_panel_co5300(io_handle, &panel_config, &panel_handle));
 
     esp_lcd_panel_reset(panel_handle);
     esp_lcd_panel_init(panel_handle);

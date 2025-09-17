@@ -240,7 +240,7 @@ The hardware design of the LCD with the ``SPI`` interface can be referred to the
 .. note::
 
   - ``Interface I Mode`` requires only the ``SDA`` data line, while ``Interface II Mode`` requires both ``MISO & MOSI`` data lines.
-  - In most cases, reading data from the LCD is not necessary, so the ``MOSI`` connection may be omitted. If needed, please be aware that the maximum clock frequency for reading from SPI LCDs is often much lower than the writing frequency.
+  - In most cases, reading data from the LCD is not necessary, so the ``MISO`` connection may be omitted. If needed, please be aware that the maximum clock frequency for reading from SPI LCDs is often much lower than the writing frequency.
   - Due to the ``3-line Mode`` (no D/C signal line), where each unit of data transfer (usually a byte) requires transmitting the D/C signal first (1-bit), and the current ESP's SPI peripheral does not support direct transmission of 9-bit data, the commonly used ``4-line Mode`` shown in the above diagram is preferred.
 
 QSPI Interface

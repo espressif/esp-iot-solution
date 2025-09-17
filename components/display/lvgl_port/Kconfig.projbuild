@@ -6,7 +6,28 @@ menu "Example Configuration"
             help
                 Enable this option if you wish to use display touch.
     endmenu
+
     menu "Display"
+        config EXAMPLE_LCD_RGB_BOUNCE_BUFFER_HEIGHT
+            int "RGB Bounce buffer height"
+            default 20
+            help
+                Height of bounce buffer. The width of the buffer is the same as that of the LCD.
+
+        config EXAMPLE_LVGL_PORT_H_RES
+            int "LVGL horizontal resolution (H_RES)"
+            default 1024
+            range 128 4096
+            help
+                Display horizontal resolution used by LVGL port. Can be overridden per example.
+
+        config EXAMPLE_LVGL_PORT_V_RES
+            int "LVGL vertical resolution (V_RES)"
+            default 600
+            range 128 4096
+            help
+                Display vertical resolution used by LVGL port. Can be overridden per example.
+
         config EXAMPLE_LVGL_PORT_TASK_MAX_DELAY_MS
             int "LVGL timer task maximum delay (ms)"
             default 500
@@ -65,8 +86,12 @@ menu "Example Configuration"
                 bool "Mode2: LCD triple-buffer & LVGL full-refresh"
             config EXAMPLE_LVGL_PORT_AVOID_TEAR_MODE_3
                 bool "Mode3: LCD double-buffer & LVGL direct-mode"
+            config EXAMPLE_LVGL_PORT_AVOID_TEAR_MODE_4
+                bool "Mode4: LCD triple-buffer & LVGL partial-mode"
             help
-                The current tearing prevention mode supports both full refresh mode and direct mode. Tearing prevention mode may consume more PSRAM space
+                The current tearing prevention mode supports both full refresh mode, direct mode, and differential copy mode.
+                Mode 4 provides optimal performance by using triple buffering with differential copy algorithm.
+                Tearing prevention mode may consume more PSRAM space.
         endchoice
 
         config EXAMPLE_LVGL_PORT_AVOID_TEAR_MODE
@@ -75,6 +100,7 @@ menu "Example Configuration"
             default 1 if EXAMPLE_LVGL_PORT_AVOID_TEAR_MODE_1
             default 2 if EXAMPLE_LVGL_PORT_AVOID_TEAR_MODE_2
             default 3 if EXAMPLE_LVGL_PORT_AVOID_TEAR_MODE_3
+            default 4 if EXAMPLE_LVGL_PORT_AVOID_TEAR_MODE_4
 
         choice
             depends on EXAMPLE_LVGL_PORT_AVOID_TEAR_ENABLE
@@ -92,6 +118,7 @@ menu "Example Configuration"
 
         config EXAMPLE_LVGL_PORT_PPA_ROTATION_ENABLE
             depends on EXAMPLE_LVGL_PORT_AVOID_TEAR_ENABLE && IDF_TARGET_ESP32P4 && !EXAMPLE_LVGL_PORT_ROTATION_0
+            depends on EXAMPLE_LVGL_PORT_AVOID_TEAR_MODE != 4 || ESP_PPA_FREEZE_FIX_APPLIED
             bool "Enable PPA Rotation"
             default n
             help
@@ -105,19 +132,48 @@ menu "Example Configuration"
             default 180 if EXAMPLE_LVGL_PORT_ROTATION_180
             default 270 if EXAMPLE_LVGL_PORT_ROTATION_270
 
-        choice
+        config EXAMPLE_LVGL_PORT_BUF_PSRAM
+            bool "Use PSRAM for LVGL buffer"
             depends on !EXAMPLE_LVGL_PORT_AVOID_TEAR_ENABLE
-            prompt "Select LVGL buffer memory capability"
-            default EXAMPLE_LVGL_PORT_BUF_PSRAM
-            config EXAMPLE_LVGL_PORT_BUF_PSRAM
-                bool "PSRAM memory"
-        endchoice
+            default y
 
         config EXAMPLE_LVGL_PORT_BUF_HEIGHT
-            depends on !EXAMPLE_LVGL_PORT_AVOID_TEAR_ENABLE
+            depends on !EXAMPLE_LVGL_PORT_AVOID_TEAR_ENABLE || (EXAMPLE_LVGL_PORT_AVOID_TEAR_MODE_4)
             int "LVGL buffer height"
-            default 100
+            default 50
             help
                 Height of LVGL buffer. The width of the buffer is the same as that of the LCD.
+
+        config EXAMPLE_LVGL_FPS_STATS_ENABLE
+            bool "Enable LVGL FPS Statistics"
+            default n
+            help
+                Enable real-time FPS statistics collection and logging in LVGL flush callback.
+
+        choice
+            depends on EXAMPLE_LVGL_FPS_STATS_ENABLE
+            prompt "FPS Statistics Mode"
+            default EXAMPLE_LVGL_FPS_STATS_MODE_SIMPLE
+            config EXAMPLE_LVGL_FPS_STATS_MODE_SIMPLE
+                bool "Simple - Average FPS only"
+            config EXAMPLE_LVGL_FPS_STATS_MODE_DETAILED
+                bool "Detailed - Instant + Average + Min/Max"
+        endchoice
+
+        config EXAMPLE_LVGL_FPS_STATS_LOG_INTERVAL_MS
+            int "FPS statistics log interval (ms)"
+            depends on EXAMPLE_LVGL_FPS_STATS_ENABLE
+            default 1000
+            range 500 10000
+            help
+                Interval for logging FPS statistics to console.
+
+        config EXAMPLE_LVGL_FPS_STATS_WINDOW_SIZE
+            int "FPS averaging window size"
+            depends on EXAMPLE_LVGL_FPS_STATS_ENABLE
+            default 30
+            range 10 120
+            help
+                Number of recent frames to use for averaging FPS calculation.
     endmenu
 endmenu

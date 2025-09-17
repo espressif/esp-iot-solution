@@ -6,6 +6,10 @@ dependencies:
     version: ">8.3.9,<9"
     public: true
 
+  lvgl_port:
+    version: "*"
+    override_path: "../../../../../components/display/lvgl_port"
+
   esp_lcd_st7701:
     version: "*"
     override_path: "../../../../../components/display/lcd/esp_lcd_st7701"

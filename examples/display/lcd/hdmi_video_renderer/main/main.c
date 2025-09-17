@@ -20,17 +20,16 @@
 
 static const char *TAG = "main";
 
-// Calculate buffer size based on RGB format configuration
 #ifdef CONFIG_BSP_LCD_COLOR_FORMAT_RGB888
-#define DISPLAY_BUFFER_SIZE (1280 * 720 * 3)  // RGB888: 3 bytes per pixel
+#define DISPLAY_BUFFER_SIZE (BSP_LCD_H_RES * BSP_LCD_V_RES * 3)
 #define BYTES_PER_PIXEL 3
 #else
-#define DISPLAY_BUFFER_SIZE (1280 * 720 * 2)  // RGB565: 2 bytes per pixel
+#define DISPLAY_BUFFER_SIZE (BSP_LCD_H_RES * BSP_LCD_V_RES * 2)
 #define BYTES_PER_PIXEL 2
 #endif
 
 #define MP4_FILENAME   BSP_SD_MOUNT_POINT "/" CONFIG_MP4_FILENAME
-#define ENABLE_LOOP_PLAYBACK    1    // Set to 0 to disable loop playback
+#define ENABLE_LOOP_PLAYBACK    1
 
 static esp_lcd_panel_handle_t lcd_panel;
 static esp_lcd_panel_io_handle_t lcd_io;
@@ -135,7 +134,7 @@ void app_main()
 
     app_stream_adapter_config_t adapter_config = {
         .frame_cb = display_decoded_frame,
-        .user_data = custom_user_data,          // Pass user data to callback
+        .user_data = custom_user_data,
         .decode_buffers = lcd_buffer,
         .buffer_count = CONFIG_BSP_LCD_DPI_BUFFER_NUMS,
         .buffer_size = DISPLAY_BUFFER_SIZE,

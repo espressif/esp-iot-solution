@@ -32,8 +32,8 @@ typedef enum {
  * LVGL related parameters, can be adjusted by users
  *
  */
-#define LVGL_PORT_H_RES             (1024)
-#define LVGL_PORT_V_RES             (600)
+#define LVGL_PORT_H_RES             (CONFIG_EXAMPLE_LVGL_PORT_H_RES)
+#define LVGL_PORT_V_RES             (CONFIG_EXAMPLE_LVGL_PORT_V_RES)
 #define LVGL_PORT_TICK_PERIOD_MS    (CONFIG_EXAMPLE_LVGL_PORT_TICK)
 
 /**
@@ -59,13 +59,13 @@ typedef enum {
  */
 #if CONFIG_EXAMPLE_LVGL_PORT_BUF_PSRAM
 #define LVGL_PORT_BUFFER_MALLOC_CAPS    (MALLOC_CAP_SPIRAM)
-#elif CONFIG_EXAMPLE_LVGL_PORT_BUF_INTERNAL
+#else
 #define LVGL_PORT_BUFFER_MALLOC_CAPS    (MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT)
 #endif
 #define LVGL_PORT_BUFFER_HEIGHT         (CONFIG_EXAMPLE_LVGL_PORT_BUF_HEIGHT)
 
 /**
- * Avoid tering related configurations, can be adjusted by users.
+ * Avoid tearing related configurations, can be adjusted by users.
  *
  */
 #define LVGL_PORT_AVOID_TEAR_ENABLE     (CONFIG_EXAMPLE_LVGL_PORT_AVOID_TEAR_ENABLE) // Set to 1 to enable
@@ -76,6 +76,7 @@ typedef enum {
  *      - 1: LCD double-buffer & LVGL full-refresh
  *      - 2: LCD triple-buffer & LVGL full-refresh
  *      - 3: LCD double-buffer & LVGL direct-mode (recommended)
+ *      - 4: LCD triple-buffer & LVGL partial-refresh with differential copy
  *
  */
 #define LVGL_PORT_AVOID_TEAR_MODE       (CONFIG_EXAMPLE_LVGL_PORT_AVOID_TEAR_MODE)
@@ -111,6 +112,10 @@ typedef enum {
 #elif LVGL_PORT_AVOID_TEAR_MODE == 3
 #define LVGL_PORT_LCD_BUFFER_NUMS   (2)
 #define LVGL_PORT_DIRECT_MODE           (1)
+#elif LVGL_PORT_AVOID_TEAR_MODE == 4
+#define LVGL_PORT_LCD_BUFFER_NUMS   (3)
+#define LVGL_PORT_FULL_REFRESH          (0)
+#define LVGL_PORT_DIRECT_MODE           (0)
 #endif /* LVGL_PORT_AVOID_TEAR_MODE */
 
 #if EXAMPLE_LVGL_PORT_ROTATION_DEGREE == 0
@@ -139,6 +144,7 @@ typedef enum {
  *
  * @param[in] lcd_handle: LCD panel handle
  * @param[in] tp_handle: Touch panel handle
+ * @param[in] interface: LVGL port interface type
  *
  * @return
  *      - ESP_OK: Success

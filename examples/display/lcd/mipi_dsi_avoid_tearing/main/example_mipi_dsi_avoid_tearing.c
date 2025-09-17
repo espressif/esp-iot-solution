@@ -17,7 +17,7 @@
 #include "esp_lcd_mipi_dsi.h"
 #include "esp_lcd_touch_gt911.h"
 #include "esp_lcd_ek79007.h"
-#include "lvgl_port_v9.h"
+#include "lvgl_port.h"
 #include "lv_demos.h"
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -26,7 +26,7 @@
 #define EXAMPLE_LCD_H_RES                       (1024)
 #define EXAMPLE_LCD_V_RES                       (600)
 #define EXAMPLE_LCD_BIT_PER_PIXEL               (16)
-#define EXAMPLE_LCD_COLOR_SPACE                 (ESP_LCD_COLOR_SPACE_RGB)
+#define EXAMPLE_LCD_COLOR_SPACE                 (LCD_RGB_ELEMENT_ORDER_RGB)
 #define EXAMPLE_LCD_IO_RST                      (GPIO_NUM_27)             // -1 if not used
 #define EXAMPLE_PIN_NUM_BK_LIGHT                (-1)                      // -1 if not used
 #define EXAMPLE_LCD_BK_LIGHT_ON_LEVEL           (1)
@@ -172,8 +172,8 @@ void app_main()
         },
         .flags = {
             .swap_xy = 0,
-            .mirror_x = 1,
-            .mirror_y = 1,
+            .mirror_x = 0,
+            .mirror_y = 0,
         },
     };
     ESP_ERROR_CHECK(esp_lcd_touch_new_i2c_gt911(tp_io_handle, &tp_cfg, &tp_handle));
@@ -192,8 +192,8 @@ void app_main()
     // Lock the mutex due to the LVGL APIs are not thread-safe
     if (lvgl_port_lock(-1)) {
         // lv_demo_stress();
-        // lv_demo_benchmark();
-        lv_demo_music();
+        lv_demo_benchmark();
+        // lv_demo_music();
         // lv_demo_widgets();
 
         // Release the mutex
