@@ -11,5 +11,6 @@ LCD Screen
     LCD Development Guide <lcd_development_guide>
     SPI LCD Introduction <spi_lcd>
     RGB LCD Introduction <rgb_lcd>
+    MIPI DSI LCD Introduction <mipi_dsi_lcd>
     LCD Screen Tearing Introduction <lcd_screen_tearing>
     LCD Application solution <lcd_application_solution>
