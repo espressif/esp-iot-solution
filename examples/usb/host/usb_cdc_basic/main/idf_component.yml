@@ -3,7 +3,3 @@ dependencies:
   iot_usbh_cdc:
     version: "^2.0.0"
     override_path: "../../../../../components/usb/iot_usbh_cdc"
-  espressif/esp32_s3_usb_otg:
-    version: "^1.5.1"
-    rules:
-      - if: "target in [esp32s3]"
