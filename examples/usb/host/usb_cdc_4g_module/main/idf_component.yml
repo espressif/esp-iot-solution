@@ -1,5 +1,5 @@
 dependencies:
-  idf: ">=4.4.1"
+  idf: ">=5.0"
   cmake_utilities: "0.*"
   led_indicator:
     override_path: "../../../../../components/led/led_indicator"
@@ -12,7 +12,3 @@ dependencies:
     version: "^0.9.0"
     rules:
       - if: "target in [esp32p4]"
-  espressif/esp32_s3_usb_otg:
-    version: "^2.0"
-    rules:
-      - if: "target in [esp32s3]"

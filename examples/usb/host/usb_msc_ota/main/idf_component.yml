@@ -1,14 +1,5 @@
-version: 0.0.1
-targets:
-  - esp32s2
-  - esp32s3
 dependencies:
+  idf: ">=5.0"
   esp_msc_ota:
     version: "*"
     override_path: "../../../../../components/usb/esp_msc_ota"
-  espressif/esp32_s3_usb_otg:
-    version: "^1.5.1"
-    rules:
-      - if: "target in [esp32s3]"
-  lvgl/lvgl: #temp to workaround bsp issue
-    version: "9.2.0"
