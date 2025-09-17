@@ -1,33 +1,13 @@
-esp_anp.inc:line: WARNING: Error in declarator or parameters-and-qualifiers
-If pointer to member declarator:
-  Invalid C++ declaration: Expected identifier in nested name. [error at 24]
-    union esp_ble_anp_data_t
-    ------------------------^
-If declarator-id:
-  Invalid C++ declaration: Expected identifier in nested name. [error at 24]
-    union esp_ble_anp_data_t
-    ------------------------^
-
 lightbulb.inc:line: WARNING: Duplicate C++ declaration, also defined at electrical_lighting_solution/lightbulb_driver:line.
 Declaration is '.. cpp:member:: lightbulb_color_mapping_data_t * table'.
 lightbulb.inc:line: WARNING: Duplicate C++ declaration, also defined at electrical_lighting_solution/lightbulb_driver:line.
-Declaration is '.. cpp:member:: struct lightbulb_config_t precise'.
+Declaration is '.. cpp:member:: struct lightbulb_config_t::@40::@44 precise'.
 lightbulb.inc:line: WARNING: Duplicate C++ declaration, also defined at electrical_lighting_solution/lightbulb_driver:line.
 Declaration is '.. cpp:member:: lightbulb_chip_out_pin_t red'.
 lightbulb.inc:line: WARNING: Duplicate C++ declaration, also defined at electrical_lighting_solution/lightbulb_driver:line.
 Declaration is '.. cpp:member:: lightbulb_chip_out_pin_t green'.
 lightbulb.inc:line: WARNING: Duplicate C++ declaration, also defined at electrical_lighting_solution/lightbulb_driver:line.
 Declaration is '.. cpp:member:: lightbulb_chip_out_pin_t blue'.
-touch_panel.inc:line: WARNING: Error in declarator or parameters-and-qualifiers
-If pointer to member declarator:
-  Invalid C++ declaration: Expected identifier in nested name. [error at 26]
-    union touch_panel_config_t
-    --------------------------^
-If declarator-id:
-  Invalid C++ declaration: Expected identifier in nested name. [error at 26]
-    union touch_panel_config_t
-    --------------------------^
-
 ir_learn.inc:line: WARNING: Error when parsing function declaration.
 If the function has no return type:
   Invalid C++ declaration: Expected end of definition or ;. [error at 34]
@@ -71,14 +51,4 @@ If the function has a return type:
       Invalid C++ declaration: Expecting "(" in parameters-and-qualifiers. [error at 28]
         SLIST_ENTRY (ir_learn_list_t) next
         ----------------------------^
-
-avi_player.inc:line: WARNING: Error in declarator or parameters-and-qualifiers
-If pointer to member declarator:
-  Invalid C++ declaration: Expected identifier in nested name. [error at 18]
-    union frame_data_t
-    ------------------^
-If declarator-id:
-  Invalid C++ declaration: Expected identifier in nested name. [error at 18]
-    union frame_data_t
-    ------------------^
 

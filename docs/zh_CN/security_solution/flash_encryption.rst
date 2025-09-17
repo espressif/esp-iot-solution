@@ -1,5 +1,5 @@
 Flash 加密
-****************
+*****************
 
 Flash 加密是 ESP32 系列芯片的重要安全特性，用于保护存储在外部 Flash 中固件和数据的机密性。启用 Flash 加密后，Flash 中的内容将被透明加密，防止通过物理方式读取获得明文固件和数据。
 
@@ -107,8 +107,8 @@ Flash 加密功能支持列表
       - 硬件随机数或主机生成
 
 **说明：**
-- ESP32-C5 支持 Key Manager 作为密钥来源和存储方式 [ESP32-C5 SoC Capability Macros](https://docs.espressif.com/projects/esp-idf/en/latest/esp32c5/api-reference/system/soc_caps.html#macros)。
-- 其它芯片均为 eFuse 存储，密钥可由硬件随机数生成或主机生成后烧录 [ESP32-S2 Flash Encryption](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s2/security/flash-encryption.html#key-points-about-flash-encryption)[ESP32-C3 Flash Encryption](https://docs.espressif.com/projects/esp-idf/en/latest/esp32c3/security/flash-encryption.html)。
+- ESP32-C5 支持 Key Manager 作为密钥来源和存储方式（参考：`ESP32-C5 SoC 功能宏定义 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32c5/api-reference/system/soc_caps.html#macros>`_）。
+- 其它芯片均为 eFuse 存储，密钥可由硬件随机数生成或主机生成后烧录（参考：`ESP32-S2 Flash 加密 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s2/security/flash-encryption.html#key-points-about-flash-encryption>`_ 和 `ESP32-C3 Flash 加密 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32c3/security/flash-encryption.html>`_）。
 
 开发模式和发布模式
 ~~~~~~~~~~~~~~~~~~~~~
@@ -142,7 +142,7 @@ Flash 加密提供两种模式：
 Flash 加密的基本过程：
 
 1. **首次启动**：检测 eFuse 状态，启动加密流程
-2. **密钥生成**：生成随机加密密钥并存储到 eFuse （可跳过，支持烧录自定义密钥）
+2. **密钥生成**：生成随机加密密钥并存储到 eFuse (可跳过，支持烧录自定义密钥)
 3. **就地加密**：加密 Flash 中的指定分区内容
 4. **设置标志**：标记 Flash 加密已启用
 5. **重启系统**：开始正常的加密模式运行
@@ -185,7 +185,7 @@ Flash 加密的基本过程：
 取消加密
 ~~~~~~~~~~~
 
-**仅开发模式支持**（发布模式无法取消）：在加密状态下通过烧录 eFuse ``SPI_BOOT_CRYPT_CNT`` 以禁用 Flash 加密。
+**仅开发模式支持**：在加密状态下通过烧录 eFuse ``SPI_BOOT_CRYPT_CNT`` 以禁用 Flash 加密（发布模式无法取消）。
 
 **警告**：每个芯片只有有限次数的开关加密次数，通常为 3 次（关闭->开启->关闭->开启），请谨慎操作。
 

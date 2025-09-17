@@ -1,6 +1,5 @@
-
 快速入门
-=================
+==================
 
 :link_to_translation:`en:[English]`
 
@@ -153,4 +152,3 @@ ESP-IoT-Solution 提供了丰富的示例程序，帮助用户快速上手。以
         idf.py -p <PORT> monitor
 
 更多示例请见 ``examples/`` 目录，具体使用方法请参考各示例下的 README 文件。
-

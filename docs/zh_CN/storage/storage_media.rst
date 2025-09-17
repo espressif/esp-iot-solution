@@ -1,5 +1,5 @@
 存储媒介
-==========
+===========
 :link_to_translation:`en:[English]`
 
 已支持存储媒介列表：
@@ -30,7 +30,7 @@
      - GB
      - SDIO/SPI
      - 20/40 MHz 1 线/4 线
-     - `SD/SDIO/MMC Driver <https://github.com/espressif/esp-idf/tree/master/components/sdmmc>`__
+     - `SD/SDIO/MMC Driver for SD <https://github.com/espressif/esp-idf/tree/master/components/sdmmc>`__
      - \*1
    * - `eMMC <https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32/api-reference/storage/sdmmc.html>`_
      - 大容量、高速读写
@@ -38,7 +38,7 @@
      - GB
      - SDIO
      - 20/40 MHz 1 线/4 线/8 线
-     - `SD/SDIO/MMC Driver <https://github.com/espressif/esp-idf/tree/master/components/sdmmc>`__
+     - `SD/SDIO/MMC Driver for eMMC <https://github.com/espressif/esp-idf/tree/master/components/sdmmc>`__
      - \*2
    * - `USB 闪存盘 <https://components.espressif.com/components/espressif/usb_host_msc>`_
      - 大容量、可插拔
@@ -54,7 +54,7 @@
      - MB
      - I2C
      - 100 ~ 400 kHz
-     - :component:`eeprom <storage/eeprom>`
+     - :component:`eeprom driver <storage/eeprom>`
      - 
 
 .. Note::
@@ -145,7 +145,7 @@ EEPROM（如 AT24C0X 系列）是 1024-16384 位的串行电可擦写存储器�
      - I2C
      - Atmel
      - `规格书 <https://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-8871F-SEEPROM-AT24C01D-02D-Datasheet.pdf>`__
-     - :component:`eeprom <storage/eeprom/at24c02>`
+     - :component:`AT24C02 driver <storage/eeprom/at24c02>`
 
 
 常见问题 (FAQ)
