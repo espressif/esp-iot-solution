@@ -1,8 +1,14 @@
 # ChangeLog
 
-## v0.1.2~1 (2025-08-13)
+## v0.3.0 (2025-09-12)
 
-* Support all target.
+* Adapted PJPG format for parsing transparency scenarios
+* Added hardware JPEG support
+* Integrated compatibility with LVGL v9
+
+## v0.2.0 (2025-04-08)
+
+* Added support for LVGL v9 JPG format.
 
 ## v0.1.2 (2024-10-18)
 

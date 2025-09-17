@@ -1,9 +1,15 @@
 ## IDF Component Manager Manifest File
 dependencies:
-  idf: ">=5.0"
+  idf: ">=5.3"
+
+  lvgl/lvgl:
+    version: ">8.3.9,<9"
+    public: true
+
   esp_lv_fs:
     version: "*"
     override_path: "../../../../components/display/tools/esp_lv_fs"
+
   esp_lv_decoder:
     version: "*"
     override_path: "../../../../components/display/tools/esp_lv_decoder"

@@ -2,6 +2,7 @@ variables:
   # There is no target-test-env-v4.4
   DOCKER_TARGET_TEST_v5_0_ENV_IMAGE: "$CI_DOCKER_REGISTRY/target-test-env-v5.0:3"
   DOCKER_TARGET_TEST_v5_1_ENV_IMAGE: "$CI_DOCKER_REGISTRY/target-test-env-v5.1:1"
+  DOCKER_TARGET_TEST_v5_3_ENV_IMAGE: "$CI_DOCKER_REGISTRY/target-test-env-v5.3:1"
   DOCKER_TARGET_TEST_v5_4_ENV_IMAGE: "$CI_DOCKER_REGISTRY/target-test-env-v5.4:2"
 
 .test_template: &test_template
@@ -535,19 +536,19 @@ components_test_esp_lv_decoder:
       optional: false
   parallel:
     matrix:
-      - IDF_TARGET: esp32
-        IDF_VERSION: "5.1"
-        ENV_TAG: generic
       - IDF_TARGET: esp32c3
-        IDF_VERSION: "5.1"
+        IDF_VERSION: "5.3"
         ENV_TAG: generic
       - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.1"
+        IDF_VERSION: "5.3"
+        ENV_TAG: generic
+      - IDF_TARGET: esp32p4
+        IDF_VERSION: "5.3"
         ENV_TAG: generic
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
+  image: $DOCKER_TARGET_TEST_v5_3_ENV_IMAGE
   variables:
     TEST_TARGET: ${IDF_TARGET}
     TEST_FOLDER: components/display/tools/esp_lv_decoder

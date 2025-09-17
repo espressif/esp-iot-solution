@@ -34,6 +34,7 @@ class AssetCopyConfig:
     sjpg_enable: bool
     qoi_enable: bool
     sqoi_enable: bool
+    pjpg_enable: bool
     row_enable: bool
     support_format: List[str]
     split_height: int
@@ -166,7 +167,9 @@ def split_image(im, block_size, input_dir, ext, convert_to_qoi):
                     img = img.convert('RGBA')
 
                 img_data = np.asarray(img)
-                out_path = qoi_module.replace_extension(output_path, 'qoi')
+                base_name, _ = os.path.splitext(os.path.basename(output_path))
+                out_path = os.path.join(input_dir, base_name + '.qoi')
+                os.makedirs(os.path.dirname(out_path), exist_ok=True)
                 new_image = qoi_module.Qoi().save(out_path, img_data)
                 os.remove(output_path)
 
@@ -231,8 +234,11 @@ def handle_lvgl_version_v9(input_file: str, input_dir: str,
     download_v9_script(url=lvgl_image_url, destination=convert_file)
     lvgl_script = Path(convert_file)
 
+    python_exe = sys.executable
+    print(python_exe)
+
     cmd = [
-        'python',
+        python_exe,
         str(lvgl_script),
         '--ofmt', 'BIN',
         '--cf', config_data['support_raw_cf'],
@@ -426,6 +432,14 @@ def pack_assets(config: PackModelsConfig):
                     height_bytes = f.read(2)
                     width = int.from_bytes(width_bytes, byteorder='little')
                     height = int.from_bytes(height_bytes, byteorder='little')
+            elif file_extension.lower() == '.pjpg':
+                with open(file_path, 'rb') as f:
+                    header = f.read(22)
+                    if len(header) >= 12 and header[:7] == b'_PJPG__':
+                        width = int.from_bytes(header[8:10], byteorder='little')
+                        height = int.from_bytes(header[10:12], byteorder='little')
+                    else:
+                        width, height = 0, 0
             else:
                 width, height = 0, 0
 
@@ -463,7 +477,7 @@ def pack_assets(config: PackModelsConfig):
     os.makedirs(assets_include_path, exist_ok=True)
     current_year = datetime.now().year
 
-    asset_name = os.path.basename(assets_path)
+    asset_name = config_data.get('header_asset_name', os.path.basename(assets_path))
     file_path = os.path.join(assets_include_path, f'mmap_generate_{asset_name}.h')
     with open(file_path, 'w') as output_header:
         output_header.write('/*\n')
@@ -511,6 +525,7 @@ def copy_assets(config: AssetCopyConfig):
                 '.png': [
                     (config.spng_enable, convert_image_to_simg),
                     (config.qoi_enable, convert_image_to_qoi),
+                    (config.pjpg_enable, None),
                 ],
             }
 
@@ -520,8 +535,48 @@ def copy_assets(config: AssetCopyConfig):
 
             for enable_flag, convert_func in conversions:
                 if enable_flag:
-                    convert_func(target_file, config.split_height)
-                    os.remove(target_file)
+                    if convert_func is None:
+                        try:
+                            # Optional guard: skip PJPG conversion for small images
+                            # Default threshold is 128x128; can be overridden by config key 'pjpg_min_side'
+                            min_side = int(config_data.get('pjpg_min_side', 128))
+                            try:
+                                with Image.open(target_file) as _im_probe:
+                                    _w, _h = _im_probe.size
+                                if _w < min_side or _h < min_side:
+                                    print(f'Skip PJPG for small image: {filename} ({_w}x{_h}) < {min_side}x{min_side}')
+                                    # Mark as handled so we don't further convert or remove it
+                                    converted = True
+                                    break
+                            except Exception:
+                                # If probe failed, continue with original flow
+                                pass
+
+                            p = config_data.get('pjpg_processor', '')
+                            if not p or not os.path.exists(p):
+                                raise RuntimeError('pjpg_processor not found')
+                            out_base, _ = os.path.splitext(target_file)
+                            out_pjpg = out_base + '.pjpg'
+                            python_exe = sys.executable
+                            cmd = [python_exe, p, target_file, '-o', out_pjpg, '--convert-only']
+                            subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                            produced = None
+                            if os.path.exists(out_pjpg):
+                                produced = out_pjpg
+                            else:
+                                out_png = out_base + '.png'
+                                if os.path.exists(out_png):
+                                    produced = out_png
+                            if produced is None:
+                                raise RuntimeError('PJPG conversion produced no output')
+                            if os.path.abspath(produced) != os.path.abspath(target_file):
+                                os.remove(target_file)
+                        except Exception as e:
+                            print(f'PJPG convert failed: {e}')
+                            pass
+                    else:
+                        convert_func(target_file, config.split_height)
+                        os.remove(target_file)
                     converted = True
                     break
 
@@ -547,6 +602,7 @@ def process_assets_build(config_data):
         sjpg_enable=config_data['support_sjpg'],
         qoi_enable=config_data['support_qoi'],
         sqoi_enable=config_data['support_sqoi'],
+        pjpg_enable=config_data.get('support_pjpg', False),
         row_enable=config_data['support_raw'],
         support_format=support_format,
         split_height=split_height
@@ -566,6 +622,7 @@ def process_assets_build(config_data):
         print('--support_spng:', copy_config.spng_enable)
         print('--support_sjpg:', copy_config.sjpg_enable)
         print('--support_qoi:', copy_config.qoi_enable)
+        print('--support_pjpg:', copy_config.pjpg_enable)
         print('--support_raw:', copy_config.row_enable)
 
         if copy_config.sqoi_enable:
