@@ -18,7 +18,7 @@
 安全启动与 Flash 加密是互补的安全功能：
 
 - **安全启动**：保证代码完整性，防止运行未授权固件
-- **Flash 加密**：保护数据机密性，防止读取 flash 代码和数据
+- **Flash 加密**：保护数据机密性，防止读取 Flash 代码和数据
 
 建议在生产环境中同时启用两项功能以获得最佳安全保护。详情参考：`安全启动与 Flash 加密 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/security/secure-boot-v2.html#secure-boot-flash-encryption>`_
 
@@ -46,10 +46,10 @@
       - 最大公钥数量
       - 备注/特殊说明
     * - ESP32 （ECO V3+）
-      - RSA-3072（RSA-PSS，V2）<br>AES（V1）
+      - RSA-3072（RSA-PSS，Secure Boot V2）<br>AES（V1）
       - 未明确给出
       - 1
-      - 仅支持1把公钥，V2需ECO V3及以上
+      - 仅支持1把公钥，Secure Boot V2 需ECO V3及以上
     * - ESP32-S2
       - RSA-3072（RSA-PSS）
       - 未明确给出
@@ -72,22 +72,22 @@
       - 最多3把公钥，可吊销
     * - ESP32-C5
       - RSA-3072<br>ECDSA-256（P-256）<br>ECDSA-384（P-384）
-      - RSA-3072: 12.1ms<br>ECDSA-256: 5.6ms<br>ECDSA-384: 20.6ms（48MHz）
+      - RSA-3072: 12.1 ms<br>ECDSA-256: 5.6 ms<br>ECDSA-384: 20.6 ms（48 MHz）
       - 3
       - 仅可选一种算法 `ESP32-C5 Secure Boot v2 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32c5/security/secure-boot-v2.html#secure-boot-v2-scheme-selection>`_
     * - ESP32-C6
       - RSA-3072<br>ECDSA-256（P-256）
-      - RSA-3072: 10.2ms<br>ECDSA-256: 83.9ms（40MHz）
+      - RSA-3072: 10.2 ms<br>ECDSA-256: 83.9 ms（40 MHz）
       - 3
       - 仅可选一种算法 `ESP32-C6 Secure Boot v2 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32c6/security/secure-boot-v2.html#secure-boot-v2-scheme-selection>`_
     * - ESP32-H2
       - RSA-3072<br>ECDSA-256（P-256）
-      - RSA-3072: 18.3ms<br>ECDSA-256: 76.2ms（32MHz）
+      - RSA-3072: 18.3 ms<br>ECDSA-256: 76.2 ms（32 MHz）
       - 3
       - 仅可选一种算法 `ESP32-H2 Secure Boot v2 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32h2/security/secure-boot-v2.html#secure-boot-v2-scheme-selection>`_
     * - ESP32-P4
       - RSA-3072<br>ECDSA-256（P-256）
-      - RSA-3072: 14.8ms<br>ECDSA-256: 61.1ms（40MHz）
+      - RSA-3072: 14.8 ms<br>ECDSA-256: 61.1 ms（40 MHz）
       - 3
       - 仅可选一种算法 `ESP32-P4 Secure Boot v2 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32p4/security/secure-boot-v2.html#secure-boot-v2-scheme-selection>`_
 
@@ -233,8 +233,8 @@
       - ✅ 最多 3 个签名块，支持多密钥验证
       - ❌ 仅使用第一个签名块，忽略其他
     * - 防篡改能力
-      - ✅ 防止 flash 被替换或注入恶意代码
-      - ❌ 无法防止物理攻击或 flash 替换
+      - ✅ 防止 Flash 被替换或注入恶意代码
+      - ❌ 无法防止物理攻击或 Flash 替换
     * - 启动性能
       - ❌ 启动时有签名验证开销
       - ✅ 启动更快，无验证延迟

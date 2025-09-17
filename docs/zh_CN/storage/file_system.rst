@@ -31,18 +31,18 @@
     * - 容量
       - KB-MB
       - GB
-      - <= 128 MB
+      - ≤ 128 MB
       - < 128 MB
     * - 目录支持
-      - X
-      - √
-      - X
-      - √
+      - ❌
+      - ✅
+      - ❌
+      - ✅
     * - 磨损均衡
-      - √
+      - ✅
       - 可选
-      - √
-      - √
+      - ✅
+      - ✅
     * - 读写效率
       - 高
       - 中
@@ -54,29 +54,28 @@
       - 低
       - 极低
     * - 掉电保护
-      - √
-      - X
-      - X
-      - √
+      - ✅
+      - ❌
+      - ❌
+      - ✅
     * - 加密
-      - √
-      - √
-      - X
-      - √
+      - ✅
+      - ✅
+      - ❌
+      - ✅
 
 
 .. Note::
 
-    * √：支持该特性
-    * X：不支持该特性  
-    * 表格中的数据基于ESP-IDF最新版本测试结果，具体性能可能因应用场景和配置而异。
+    * ✅：支持该特性
+    * ❌：不支持该特性  
     * 读写效率和资源占用为相对比较，实际性能取决于具体配置和使用场景。
 
 
 NVS 库
 ----------------------
 
-非易失性存储 (NVS) 库主要用于读写在 Flash NVS 分区中存储的数据。NVS 中的数据以键值对的方式保存，其中键是 ASCII 字符串，值可以是整数、字符串、二进制数据 (BLOB) 类型。
+非易失性存储 (NVS) 库主要用于读写在 Flash NVS 分区中存储的数据。NVS 中的数据以键值对的方式保存，其中键是 ASCII 字符串，值可以是整数、字符串、二进制数据（BLOB）类型。
 
 **主要特性：**
 
@@ -88,20 +87,20 @@ NVS 库
 **使用限制：**
 
 * **适用场景**：仅适合配置数据，不适合频繁写入或大数据
-* **分区大小**：推荐不超过 128 kB
+* **分区大小**：推荐不超过 128 KB
 * **空间要求**：需要足够空间同时存储新旧数据
 
 如需存储较大的 BLOB 或者字符串，请考虑使用基于磨损均衡库的 FAT 文件系统。
 
 **参考文档：**
 
-- `非易失性存储库 <https://docs.espressif.com/projects/esp-idf/zh_CN/release-v5.3/esp32s3/api-reference/storage/nvs_flash.html>`_。
-- 批量生产时，可以使用 `NVS 分区生成工具 <https://docs.espressif.com/projects/esp-idf/zh_CN/release-v5.3/esp32s3/api-reference/storage/nvs_partition_gen.html>`_。
+- `非易失性存储库 <https://docs.espressif.com/projects/esp-idf/zh_CN/release-v5.4/esp32s3/api-reference/storage/nvs_flash.html>`_。
+- 批量生产时，可以使用 `NVS 分区生成工具 <https://docs.espressif.com/projects/esp-idf/zh_CN/release-v5.4/esp32s3/api-reference/storage/nvs_partition_gen.html>`_。
 
 **示例程序：**
 
-- 写入单个整数值：`storage/nvs_rw_value <https://github.com/espressif/esp-idf/tree/release/v5.3/examples/storage/nvs_rw_value>`_。
-- 写入二进制大对象：`storage/nvs_rw_blob <https://github.com/espressif/esp-idf/tree/release/v5.3/examples/storage/nvs_rw_blob>`_。
+- 写入单个整数值：`storage/nvs_rw_value <https://github.com/espressif/esp-idf/tree/release/v5.4/examples/storage/nvs_rw_value>`_。
+- 写入二进制大对象：`storage/nvs_rw_blob <https://github.com/espressif/esp-idf/tree/release/v5.4/examples/storage/nvs_rw_blob>`_。
 
 FAT 文件系统
 -------------------------
@@ -113,7 +112,7 @@ ESP-IDF 使用 FatFs 库实现了对 FAT 文件系统的支持，FatFs 是独立
 * **广泛兼容性**：与 PC 和其他平台兼容，支持标准 FAT 格式
 * **多存储介质**：支持 SPI Flash，SD/MMC 卡 和 USB 闪存盘等多种存储介质
 * **目录支持**：支持多级目录结构，适合存储大量文件
-* **加密支持**：支持分区加密 （`Flash Encryption <https://docs.espressif.com/projects/esp-idf/zh_CN/release-v5.3/esp32s3/security/flash-encryption.html>`_）
+* **加密支持**：支持分区加密 （`Flash Encryption <https://docs.espressif.com/projects/esp-idf/zh_CN/release-v5.4/esp32s3/security/flash-encryption.html>`_）
 
 **使用限制：**
 
@@ -122,19 +121,19 @@ ESP-IDF 使用 FatFs 库实现了对 FAT 文件系统的支持，FatFs 是独立
 
 **参考文档：**
 
-- `FatFs 与 VFS 配合使用 <https://docs.espressif.com/projects/esp-idf/zh_CN/release-v5.3/esp32s3/api-reference/storage/fatfs.html#fatfs-vfs>`_。
-- `生成和解析 FATFS 镜像工具 <https://docs.espressif.com/projects/esp-idf/zh_CN/release-v5.3/esp32s3/api-reference/storage/fatfsgen.html>`_。
+- `FatFs 与 VFS 配合使用 <https://docs.espressif.com/projects/esp-idf/zh_CN/release-v5.4/esp32s3/api-reference/storage/fatfs.html#fatfs-vfs>`_。
+- `生成和解析 FATFS 镜像工具 <https://docs.espressif.com/projects/esp-idf/zh_CN/release-v5.4/esp32s3/api-reference/storage/fatfsgen.html>`_。
 
 **示例程序：**
 
-* `storage/sd_card <https://github.com/espressif/esp-idf/tree/release/v5.3/examples/storage/sd_card>`_：访问使用 FAT 文件系统的 SD 卡。
-* `storage/ext_flash_fatfs <https://github.com/espressif/esp-idf/tree/release/v5.3/examples/storage/ext_flash_fatfs>`_：访问使用 FAT 文件系统的外部 Flash 芯片。
-* `peripherals/usb/host/msc <https://github.com/espressif/esp-idf/tree/release/v5.3/examples/peripherals/usb/host/msc>`_：访问使用 FAT 文件系统的 USB 闪存盘（需要 ESP32-S2/ESP32-S3）。
+* `storage/sd_card <https://github.com/espressif/esp-idf/tree/release/v5.4/examples/storage/sd_card>`_：访问使用 FAT 文件系统的 SD 卡。
+* `storage/ext_flash_fatfs <https://github.com/espressif/esp-idf/tree/release/v5.4/examples/storage/ext_flash_fatfs>`_：访问使用 FAT 文件系统的外部 Flash 芯片。
+* `peripherals/usb/host/msc <https://github.com/espressif/esp-idf/tree/release/v5.4/examples/peripherals/usb/host/msc>`_：访问使用 FAT 文件系统的 USB 闪存盘（需要 ESP32-S2/ESP32-S3）。
 
 SPIFFS 文件系统
 ----------------------------
 
-SPIFFS 是一个专用于 SPI NOR flash 的嵌入式文件系统，原生支持磨损均衡、文件系统一致性检查等功能。用户可以直接调用 SPIFFS 提供的 Posix 样式接口，也可以通过 VFS 操作 SPIFFS 的大多数功能。
+SPIFFS 是一个专用于 SPI NOR Flash 的嵌入式文件系统，原生支持磨损均衡、文件系统一致性检查等功能。用户可以直接调用 SPIFFS 提供的 Posix 样式接口，也可以通过 VFS 操作 SPIFFS 的大多数功能。
 
 **主要特性：**
 
@@ -151,13 +150,13 @@ SPIFFS 是一个专用于 SPI NOR flash 的嵌入式文件系统，原生支持�
 
 **参考文档：**
 
-* `SPIFFS 文件系统 <https://docs.espressif.com/projects/esp-idf/zh_CN/release-v5.3/esp32s3/api-reference/storage/spiffs.html>`_。
-* `生成 SPIFFS 镜像的工具 <https://docs.espressif.com/projects/esp-idf/zh_CN/release-v5.3/esp32s3/api-reference/storage/spiffs.html#id5>`_。
+* `SPIFFS 文件系统 <https://docs.espressif.com/projects/esp-idf/zh_CN/release-v5.4/esp32s3/api-reference/storage/spiffs.html>`_。
+* `生成 SPIFFS 镜像的工具 <https://docs.espressif.com/projects/esp-idf/zh_CN/release-v5.4/esp32s3/api-reference/storage/spiffs.html#id5>`_。
 
 **示例程序：**
 
-* `storage/spiffs <https://github.com/espressif/esp-idf/tree/release/v5.3/examples/storage/spiffs>`_：SPIFFS 使用示例。
-* `storage/spiffsgen <https://github.com/espressif/esp-idf/tree/release/v5.3/examples/storage/spiffsgen>`_：演示如何使用 SPIFFS 镜像生成工具在构建过程中自动从主机文件夹创建 SPIFFS 镜像。
+* `storage/spiffs <https://github.com/espressif/esp-idf/tree/release/v5.4/examples/storage/spiffs>`_：SPIFFS 使用示例。
+* `storage/spiffsgen <https://github.com/espressif/esp-idf/tree/release/v5.4/examples/storage/spiffsgen>`_：演示如何使用 SPIFFS 镜像生成工具在构建过程中自动从主机文件夹创建 SPIFFS 镜像。
 
 LittleFS 文件系统
 ------------------------------
@@ -188,16 +187,16 @@ LittleFS 目前推荐用于一般类型的应用场景，特别是对断电保�
 
 **示例程序：**
 
-* `storage/littlefs <https://github.com/espressif/esp-idf/tree/release/v5.3/examples/storage/littlefs>`_：LittleFS 使用示例。
+* `storage/littlefs <https://github.com/espressif/esp-idf/tree/release/v5.4/examples/storage/littlefs>`_：LittleFS 使用示例。
 
 虚拟文件系统 (VFS)
 ------------------------------
 
-ESP-IDF 虚拟文件系统 (VFS) 组件可以为不同文件系统 (FAT, SPIFFS) 提供统一的接口，也可以为设备驱动程序提供类似文件读写的操作接口。
+ESP-IDF 虚拟文件系统 (VFS) 组件可以为不同文件系统 (FAT，SPIFFS) 提供统一的接口，也可以为设备驱动程序提供类似文件读写的操作接口。
 
 **参考文档：**
 
-* `虚拟文件系统组件 <https://docs.espressif.com/projects/esp-idf/zh_CN/release-v5.3/esp32s3/api-reference/storage/vfs.html>`_。
+* `虚拟文件系统组件 <https://docs.espressif.com/projects/esp-idf/zh_CN/release-v5.4/esp32s3/api-reference/storage/vfs.html>`_。
 
 存储安全
 ------------------------------
@@ -210,7 +209,7 @@ ESP-IDF 虚拟文件系统 (VFS) 组件可以为不同文件系统 (FAT, SPIFFS)
 
 **参考文档：**
 
-* `存储安全 <https://docs.espressif.com/projects/esp-idf/zh_CN/release-v5.3/esp32s3/api-reference/storage/storage-security.html>`_。
+* `存储安全 <https://docs.espressif.com/projects/esp-idf/zh_CN/release-v5.4/esp32s3/api-reference/storage/storage-security.html>`_。
 
 文件系统设计建议
 ------------------------------
