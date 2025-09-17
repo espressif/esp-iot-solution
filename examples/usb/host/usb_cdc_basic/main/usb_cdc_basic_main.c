@@ -8,11 +8,9 @@
 #include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "driver/gpio.h"
 #include "esp_log.h"
 #include "iot_usbh_cdc.h"
-#ifdef CONFIG_ESP32_S3_USB_OTG
-#include "bsp/esp-bsp.h"
-#endif
 
 static const char *TAG = "cdc_basic_demo";
 
@@ -62,8 +60,32 @@ static void usb_disconnect_callback(usbh_cdc_handle_t cdc_handle, void *user_dat
 void app_main(void)
 {
 #ifdef CONFIG_ESP32_S3_USB_OTG
-    bsp_usb_mode_select_host();
-    bsp_usb_host_power_mode(BSP_USB_HOST_POWER_MODE_USB_DEV, true);
+    // USB mode select host
+    const gpio_config_t io_config = {
+        .pin_bit_mask = BIT64(GPIO_NUM_18),
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE
+    };
+    ESP_ERROR_CHECK(gpio_config(&io_config));
+    ESP_ERROR_CHECK(gpio_set_level(GPIO_NUM_18, 1));
+
+    // Set host usb dev power mode
+    const gpio_config_t power_io_config = {
+        .pin_bit_mask = BIT64(GPIO_NUM_17) | BIT64(GPIO_NUM_12) | BIT64(GPIO_NUM_13),
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE
+    };
+    ESP_ERROR_CHECK(gpio_config(&power_io_config));
+
+    ESP_ERROR_CHECK(gpio_set_level(GPIO_NUM_17, 1)); // Configure the limiter 500mA
+    ESP_ERROR_CHECK(gpio_set_level(GPIO_NUM_12, 0));
+    ESP_ERROR_CHECK(gpio_set_level(GPIO_NUM_13, 0)); // Turn power off
+    vTaskDelay(pdMS_TO_TICKS(10));
+    ESP_ERROR_CHECK(gpio_set_level(GPIO_NUM_12, 1)); // Turn on usb dev power mode
 #endif
     /* install usbh cdc driver with skip_init_usb_host_driver */
     usbh_cdc_driver_config_t config = {

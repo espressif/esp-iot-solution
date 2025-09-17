@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+/* SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -9,15 +9,13 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
+#include "driver/gpio.h"
 #include "esp_log.h"
 #include "esp_system.h"
 #include "esp_wifi.h"
 #include "nvs.h"
 #include "nvs_flash.h"
 #include "esp_tinyuf2.h"
-#ifdef CONFIG_ESP32_S3_USB_OTG
-#include "bsp/esp-bsp.h"
-#endif
 
 static const char *TAG = "uf2_nvs_example";
 #define EXAMPLE_ESP_MAXIMUM_RETRY 5
@@ -98,7 +96,15 @@ static void uf2_nvs_modified_cb()
 void app_main(void)
 {
 #ifdef CONFIG_ESP32_S3_USB_OTG
-    bsp_usb_mode_select_device();
+    const gpio_config_t io_config = {
+        .pin_bit_mask = BIT64(GPIO_NUM_18),
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE
+    };
+    ESP_ERROR_CHECK(gpio_config(&io_config));
+    ESP_ERROR_CHECK(gpio_set_level(GPIO_NUM_18, 0));
 #endif
     esp_err_t err = ESP_OK;
     const char *uf2_nvs_partition = "nvs";

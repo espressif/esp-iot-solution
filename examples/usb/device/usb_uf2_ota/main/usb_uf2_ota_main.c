@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+/* SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -7,12 +7,10 @@
 #include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "driver/gpio.h"
 #include "esp_log.h"
 #include "esp_system.h"
 #include "esp_tinyuf2.h"
-#ifdef CONFIG_ESP32_S3_USB_OTG
-#include "bsp/esp-bsp.h"
-#endif
 
 static const char *TAG = "uf2_ota_example";
 
@@ -25,7 +23,15 @@ static void uf2_update_complete_cb()
 void app_main(void)
 {
 #ifdef CONFIG_ESP32_S3_USB_OTG
-    bsp_usb_mode_select_device();
+    const gpio_config_t io_config = {
+        .pin_bit_mask = BIT64(GPIO_NUM_18),
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE
+    };
+    ESP_ERROR_CHECK(gpio_config(&io_config));
+    ESP_ERROR_CHECK(gpio_set_level(GPIO_NUM_18, 0));
 #endif
     /* install UF2 OTA */
     tinyuf2_ota_config_t config = DEFAULT_TINYUF2_OTA_CONFIG();
