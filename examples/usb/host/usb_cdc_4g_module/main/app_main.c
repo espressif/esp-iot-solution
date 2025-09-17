@@ -30,10 +30,6 @@
 #include "ping/ping_sock.h"
 #endif
 
-#ifdef CONFIG_ESP32_S3_USB_OTG
-#include "bsp/esp-bsp.h"
-#endif
-
 static const char *TAG = "4g_main";
 #define LED_RED_SYSTEM_GPIO                 CONFIG_EXAMPLE_LED_RED_SYSTEM_GPIO
 #define LED_BLUE_WIFI_GPIO                  CONFIG_EXAMPLE_LED_BLUE_WIFI_GPIO

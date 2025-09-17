@@ -1,9 +1,5 @@
 dependencies:
-  idf: ">=4.4.1"
+  idf: ">=5.0"
   usb_stream:
     version: ">=1.0.5"
     override_path: "../../../../../components/usb/usb_stream"
-  espressif/esp32_s3_usb_otg:
-    version: "^1.5.1"
-    rules:
-      - if: "target in [esp32s3]"
