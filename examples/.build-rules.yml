@@ -278,7 +278,8 @@ examples/motor/servo_control:
 examples/ota/simple_ota_example:
   enable:
     - if: IDF_TARGET in ["esp32c2","esp32c3","esp32"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
-    - if: IDF_TARGET in ["esp32c2","esp32c3","esp32","esp32c6"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
+    - if: IDF_TARGET in ["esp32c2","esp32c3","esp32","esp32c6","esp32h2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
+    - if: IDF_TARGET in ["esp32c61","esp32c5"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
 
 examples/screen:
   enable:
