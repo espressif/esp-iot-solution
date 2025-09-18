@@ -69,7 +69,7 @@ menu "LightBulb Driver Config"
             config LB_ENABLE_NEW_IIC_DRIVER
                 depends on ESP_IDF_VERSION >= 5.2.6
                 bool "Enable new I2C driver"
-                default "n"
+                default "y"
                 help
                     Enable new I2C driver.
 

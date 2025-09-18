@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.11.0 - 2025-09-17
+
+### Refactor:
+
+* Clean up the component dependency, don't depend on the `driver` component directly
+
 ## v1.10.1 - 2025-09-03
 
 ### Bug Fix:
