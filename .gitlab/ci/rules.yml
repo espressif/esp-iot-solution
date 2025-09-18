@@ -232,6 +232,10 @@
   - "components/sensors/battery_fuel_gauge/max17048/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
 
+.patterns-components_sensors_battery_fuel_gauge_bq27220: &patterns-components_sensors_battery_fuel_gauge_bq27220
+  - "components/sensors/battery_fuel_gauge/bq27220/**/*"
+  - "tools/cmake_utilities/package_manager.cmake"
+
 .patterns-components_sensors_gesture_apds9960: &patterns-components_sensors_gesture_apds9960
   - "components/sensors/gesture/apds9960/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
@@ -2414,6 +2418,17 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_sensors_battery_fuel_gauge_max17048
+
+.rules:build:components_sensors_battery_fuel_gauge_bq27220_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_battery_fuel_gauge_bq27220
 
 .rules:build:components_sensors_gesture_apds9960_test_apps:
   rules:
