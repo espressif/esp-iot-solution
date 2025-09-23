@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v1.2.2 (2025-9-23)
+
+* Remove usb component dependency for idf 6.0 and higher
+
 ## v1.2.1 (2025-8-4)
 
 * Fix build issue and audio path for MIC-only configuration.
