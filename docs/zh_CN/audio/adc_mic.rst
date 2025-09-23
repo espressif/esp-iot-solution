@@ -2,7 +2,7 @@ ADC 麦克风
 ==============
 :link_to_translation:`en:[English]`
 
-使用 ADC 采集模拟麦克风数据，无需使用外部的音频 codec 芯片，适用于对采样率要求不太高且成本敏感的应用。在代码结构上采用 `esp_codec_dev <https://components.espressif.com/components/espressif/esp_codec_dev>`__ 的工程模式。
+使用 ADC 采集模拟麦克风数据，无需使用外部的音频 codec 芯片，适用于对采样精度要求不太高且成本敏感的应用。在代码结构上采用 `esp_codec_dev <https://components.espressif.com/components/espressif/esp_codec_dev>`__ 的工程模式。
 
 特性
 ------
@@ -15,6 +15,18 @@ ADC 麦克风
 参考电路
 ----------
 
+外部参考电路如下，可以选择跨阻放大器或者同相/反相放大电路对 MIC 输入信号进行放大。在大多数情况下，使用跨阻放大器可以取得更佳的信噪比，在本示例中 R29 用于为 MIC 添加直流偏置，使用通用运放 LMV321 作为运算放大器，通过 R26 与 C19 构成反馈电路，使运放工作在跨阻放大模式，其中阻容根据 MIC 的灵敏度进行调整。R31 与 R30 用于设定中位电压，以避免交越失真，R27 与 R32 用于提供直流偏置，避免 ADC 采集时失真。关于前端 MIC 放大器的更多设计参考信息，请参考 `Single-Supply, Electret Microphone Pre-Amplifier Reference Design <https://www.ti.com/lit/ug/tidu765/tidu765.pdf>`__。
+
+.. note::
+   - 偏置：ADC 端的中点偏置是必须的（如 Vref/2），避免 ADC 采集失真，默认情况下 ESP32-C3 的 Vref 约为 0.9V。 
+   - 电源：MIC 供电最好使用 LDO 进行稳压，避免电源波动影响 ADC 采样。如果不使用外部 LDO，请在电源侧进行单独的 RC 滤波（在本示例中 R28 与 C23 用于滤波）， MIC 推荐与运放独立供电。
+   - 推荐选择灵敏度大于 -46dB 的 MIC，避免放大后的信噪比过低。并根据 MIC 的灵敏度调整放大倍数。
+
+.. figure:: ../../_static/audio/adc_mic_hardware_ref_design.png
+    :align: center
+    :alt: ADC mic hardware reference design
+
+    ADC mic hardware reference design
 
 外部配置 ADC Continuous
 --------------------------
