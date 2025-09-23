@@ -123,3 +123,5 @@ output.json
 
 #components cache
 **/dist/
+
+*.log

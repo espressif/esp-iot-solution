@@ -78,7 +78,7 @@ The APIs included in the [esp32-camera](https://github.com/espressif/esp32-camer
 Convert image buffer to RGB565 buffer.
 
 ### Header File
-- [esp32-camera/conversions/include/esp_jpg_decode.h](https://github.com/espressif/esp32-camera/blob/master/conversions/include/esp_jpg_decode.h)
+- [esp32-camera/conversions/include/esp_jpg_decode.h](https://github.com/espressif/esp32-camera/blob/v2.0.0/conversions/include/esp_jpg_decode.h)
 #### Functions
 - `esp_err_t esp_jpg_decode(size_t len, jpg_scale_t scale, jpg_reader_cb reader, jpg_writer_cb writer, void * arg)`  
 JPEG scaling function.

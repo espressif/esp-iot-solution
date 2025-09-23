@@ -4,11 +4,11 @@ Very simple example for demonstration of initialization and usage of the `esp_lv
 
 ## 1. LCD HW initialization - `app_lcd_init()`
 
-Standard HW initialization of the LCD using [`esp_lcd`](https://github.com/espressif/esp-idf/tree/master/components/esp_lcd) component. Settings of this example are fully compatible with [ESP-BOX](https://github.com/espressif/esp-bsp/tree/master/esp-box) board.
+Standard HW initialization of the LCD using [`esp_lcd`](https://github.com/espressif/esp-idf/tree/master/components/esp_lcd) component. Settings of this example are fully compatible with [ESP-BOX](https://github.com/espressif/esp-bsp/tree/master/bsp/esp-box-3) board.
 
 ## 2. Touch HW initialization - `app_touch_init()`
 
-Standard HW initialization of the LCD touch using [`esp_lcd_touch`](https://github.com/espressif/esp-bsp/tree/master/components/lcd_touch/esp_lcd_touch) component. Settings of this example are fully compatible with [ESP-BOX](https://github.com/espressif/esp-bsp/tree/master/esp-box) board.
+Standard HW initialization of the LCD touch using [`esp_lcd_touch`](https://github.com/espressif/esp-bsp/tree/master/components/lcd_touch/esp_lcd_touch) component. Settings of this example are fully compatible with [ESP-BOX](https://github.com/espressif/esp-bsp/tree/master/bsp/esp-box-3) board.
 
 ## 3. LVGL port initialization - `app_lvgl_init()`
 
