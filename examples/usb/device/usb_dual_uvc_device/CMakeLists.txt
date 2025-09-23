@@ -28,10 +28,12 @@ endif()
 set(OUTPUT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/spiffs")
 file(MAKE_DIRECTORY ${OUTPUT_DIR})
 
-file(GLOB AVI_FILES "${OUTPUT_DIR}/*.avi")
-if(NOT AVI_FILES)
-    file(DOWNLOAD ${URL} ${OUTPUT_DIR}/p4_introduce.avi)
-    message(STATUS "File downloaded from ${URL} to: ${OUTPUT_DIR}/p4_introduce.avi")
-else()
-    message(STATUS "AVI file(s) already exist(s) in the output directory: ${OUTPUT_DIR}")
+set(OUTPUT_FILE "${OUTPUT_DIR}/p4_introduce.avi")
+
+if(EXISTS ${OUTPUT_FILE})
+    file(REMOVE ${OUTPUT_FILE})
+    message(STATUS "Old AVI file removed: ${OUTPUT_FILE}")
 endif()
+
+file(DOWNLOAD ${URL} ${OUTPUT_FILE})
+message(STATUS "File downloaded from ${URL} to: ${OUTPUT_FILE}")

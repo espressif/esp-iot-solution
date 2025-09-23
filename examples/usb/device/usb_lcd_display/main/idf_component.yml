@@ -8,3 +8,6 @@ dependencies:
   esp_lcd_usb_display:
     version: "*"
     override_path: "../../../../../components/display/lcd/esp_lcd_usb_display"
+  usb_device_uvc:
+    version: "*"
+    override_path: "../../../../../components/usb/usb_device_uvc"
