@@ -192,7 +192,6 @@ esp_err_t humiture_acquire(sensor_humiture_handle_t sensor, sensor_data_group_t 
 esp_err_t humiture_control(sensor_humiture_handle_t sensor, sensor_command_t cmd, void *args);
 
 #ifdef __cplusplus
-extern "C"
 }
 #endif
 

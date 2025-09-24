@@ -197,7 +197,6 @@ esp_err_t imu_acquire(sensor_imu_handle_t sensor, sensor_data_group_t *data_grou
 esp_err_t imu_control(sensor_imu_handle_t sensor, sensor_command_t cmd, void *args);
 
 #ifdef __cplusplus
-extern "C"
 }
 #endif
 

@@ -101,7 +101,7 @@ static iot_sensor_impl_t s_sensor_impls[] = {
     {
         .type = HUMITURE_ID,
         .create = humiture_create,
-        .delete = humiture_delete,
+        .remove = humiture_delete,
         .acquire = humiture_acquire,
         .control = humiture_control,
     },
@@ -110,7 +110,7 @@ static iot_sensor_impl_t s_sensor_impls[] = {
     {
         .type = IMU_ID,
         .create = imu_create,
-        .delete = imu_delete,
+        .remove = imu_delete,
         .acquire = imu_acquire,
         .control = imu_control,
     },
@@ -119,7 +119,7 @@ static iot_sensor_impl_t s_sensor_impls[] = {
     {
         .type = LIGHT_SENSOR_ID,
         .create = light_sensor_create,
-        .delete = light_sensor_delete,
+        .remove = light_sensor_delete,
         .acquire = light_sensor_acquire,
         .control = light_sensor_control,
     },
@@ -567,7 +567,7 @@ esp_err_t iot_sensor_delete(sensor_handle_t p_sensor_handle)
         ESP_LOGW(TAG, "sensor set power failed ret = %s", esp_err_to_name(ret));
     }
 
-    ret = sensor->impl->delete (&sensor->driver_handle);
+    ret = sensor->impl->remove(&sensor->driver_handle);
     SENSOR_CHECK(ret == ESP_OK && sensor->driver_handle == NULL, "sensor driver delete failed", ret);
 
     /*free the resource then set handle to NULL*/
