@@ -10,7 +10,6 @@ dependencies:
   cmake_utilities: "0.*"
   espressif/usb_device_uvc:
     version: "1.1.*"
-    override_path: "../../../../components/usb/usb_device_uvc"
 sbom:
   supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'
   originator: 'Organization: Espressif Systems (Shanghai) CO LTD'

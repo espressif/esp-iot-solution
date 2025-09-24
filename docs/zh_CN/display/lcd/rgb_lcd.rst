@@ -481,6 +481,13 @@ RGB LCD 驱动流程可大致分为三个部分：初始化接口设备、移植
         };
         ESP_ERROR_CHECK(esp_lcd_rgb_panel_register_event_callbacks(panel_handle, &cbs, &example_user_ctx));
 
+.. note::
+
+  针对 ESP32-P4 RGB 屏幕使用场景的说明：
+
+  - 由于 ESP32-P4 有多路 VDDPST，其控制对应区域的 GPIO 最大输出电平（对应关系见 Datasheet）。因此如果不配置 VDDPST，可能部分 GPIO 最大输出 1.8V 导致引脚电压不足，从而导致 RGB 屏幕颜色异常。
+  - ESP32-S3 最大可支持 30 M 的 RGB 时钟频率。而 ESP32-P4 的 RGB 时钟频率无 30M 限制，因此接口帧率可以更高，可支持更大分辨率的 RGB 屏幕。
+
 相关文档
 ---------------------
 
