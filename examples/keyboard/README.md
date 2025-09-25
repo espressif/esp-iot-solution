@@ -1,3 +1,5 @@
+| Supported Targets | ESP32-S3 |
+| ----------------- | -------- |
 # KeyBoard Example
 
 The ESP-KeyBoard project is a keyboard project using the ESP32-S3, supporting N-key rollover, dual-mode USB and Bluetooth output, over 40 types of local lighting effects, and WIN11 lighting effect synchronization. It also supports low-power Bluetooth, significantly extending the keyboard's wireless usage time.
