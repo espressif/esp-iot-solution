@@ -156,7 +156,7 @@ static const struct esp_elfsym g_esp_espidf_elfsyms[] = {
  *
  * @return Symbol address if success or 0 if failed.
  */
-uintptr_t elf_find_sym(const char *sym_name)
+uintptr_t elf_find_sym_default(const char *sym_name)
 {
     const struct esp_elfsym *syms;
 
