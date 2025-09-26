@@ -19,6 +19,7 @@
 
 #include "rom/ets_sys.h"
 
+#include "esp_log.h"
 #include "esp_elf.h"
 
 #if CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT
@@ -31,6 +32,8 @@ extern unsigned int __fixunsdfsi(double a);
 extern int __gtdf2(double a, double b);
 extern double __floatunsidf(unsigned int i);
 extern double __divdf3(double a, double b);
+
+static const char *TAG = "ELF_SYMBOL";
 
 /** @brief Libc public functions symbols look-up table */
 
@@ -161,8 +164,13 @@ static const struct esp_elfsym g_esp_espidf_elfsyms[] = {
  *
  * @return Symbol address if success or 0 if failed.
  */
-uintptr_t elf_find_sym(const char *sym_name)
+uintptr_t elf_find_sym_default(const char *sym_name)
 {
+    if (!sym_name) {
+        ESP_LOGE(TAG, "Invalid parameter: sym_name is NULL");
+        return 0;
+    }
+
     esp_elf_symbol_table_t *syms;
 
 #ifdef CONFIG_ELF_LOADER_LIBC_SYMBOLS
