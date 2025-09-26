@@ -205,6 +205,14 @@ components/display/tools/esp_lv_decoder/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32s3","esp32c3", "esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 3)
 
+components/display/tools/esp_lvgl_adapter/test_apps:
+  enable:
+    - if: IDF_TARGET in ["esp32s3", "esp32p4", "esp32c3"] and ((IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5) or IDF_VERSION_MAJOR == 6)
+
+components/display/tools/esp_lvgl_adapter/benchmark:
+  enable:
+    - if: IDF_TARGET in ["esp32s3", "esp32p4", "esp32c2", "esp32c3", "esp32c5", "esp32c6"] and ((IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5) or IDF_VERSION_MAJOR == 6)
+
 components/expander/io_expander/mcp23017/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1

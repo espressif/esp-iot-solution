@@ -1,0 +1,71 @@
+menu "ESP LV Adapter"
+
+config ESP_LVGL_ADAPTER_ENABLE_FS
+    bool "Enable esp_lv_fs integration"
+    default n
+
+config ESP_LVGL_ADAPTER_ENABLE_DECODER
+    bool "Enable esp_lv_decoder integration"
+    default n
+
+config ESP_LVGL_ADAPTER_ENABLE_FREETYPE
+    bool "Enable FreeType font support"
+    default n
+    help
+        Enable FreeType library for rendering TrueType/OpenType vector fonts.
+        Fonts are auto-cleaned up in esp_lv_adapter_deinit().
+
+        Requirements:
+        - Enable CONFIG_LV_USE_FREETYPE in LVGL configuration
+
+        Stack Configuration:
+        - LVGL v8: Set CONFIG_ESP_MAIN_TASK_STACK_SIZE >= 32768
+        - LVGL v9: Set CONFIG_LV_DRAW_THREAD_STACK_SIZE >= 32768
+
+        Limitations:
+        - LVGL v8: Cannot use LVGL virtual filesystem (lv_fs) for fonts
+        - LVGL v9: Can use virtual filesystem paths like "F:font.ttf"
+
+config ESP_LVGL_ADAPTER_ENABLE_FPS_STATS
+    bool "Enable FPS statistics"
+    default n
+    help
+        Enable FPS (Frames Per Second) statistics for display performance monitoring.
+        When enabled, you can use esp_lv_adapter_fps_* APIs to get real-time FPS.
+        Performance overhead is negligible (< 2 microseconds per frame).
+
+config ESP_LVGL_ADAPTER_ENABLE_BUTTON
+    bool "Enable button input support"
+    default n
+    help
+        Enable navigation buttons input device support.
+        Requires espressif/button component.
+
+        When enabled:
+        - Button navigation APIs are available
+        - Supports 3-button navigation (prev, next, enter)
+        - Compatible with both button component v3 and v4+
+
+        When disabled:
+        - Button-related code will not be compiled
+        - Saves ~5-10KB of flash space
+        - espressif/button dependency can be removed from your project
+
+config ESP_LVGL_ADAPTER_ENABLE_KNOB
+    bool "Enable knob/encoder input support"
+    default n
+    help
+        Enable rotary encoder (knob) input device support.
+        Requires espressif/knob component.
+
+        When enabled:
+        - Encoder APIs are available
+        - Supports rotary encoder with optional button
+        - Ideal for menu navigation without touch screen
+
+        When disabled:
+        - Knob-related code will not be compiled
+        - Saves ~8-12KB of flash space
+        - espressif/knob dependency can be removed from your project
+
+endmenu

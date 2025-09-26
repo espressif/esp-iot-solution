@@ -3,62 +3,21 @@ GUI 优化解决方案
 
 :link_to_translation:`en:[English]`
 
-.. _lvgl-tearing-prevention-and-frame-rate-optimization:
+.. _ESP LVGL Adapter:
 
-LVGL 防撕裂与帧率优化
------------------------------------
-
-- 支持基于 full_fresh、direct_mode、partial_mode 三种模式的防撕裂机制
-- 支持针对 RGB 接口和 MIPI-DSI 接口的全屏幕旋转优化
-
-适用场景：
-
-- 需要兼顾防撕裂和帧率优化
-
-- 需要进行 LVGL 整屏旋转的场景
-
-相关示例：
-
-- https://github.com/espressif/esp-iot-solution/tree/master/examples/display/lcd/mipi_dsi_avoid_tearing
-- https://github.com/espressif/esp-iot-solution/tree/master/examples/display/lcd/rgb_avoid_tearing
-
-.. _lvgl-decoder-component:
-
-LVGL 图像解码组件
+ESP LVGL Adapter
 -------------------------
 
-- 支持 LVGL v8 和 v9 版本
-- 支持 PNG、JPG、QOI、PJPG、SJPG、SPNG 等格式解码，并优化了解码速率
-- 针对 ESP32-P4 支持 JPEG 硬件解码
-- 针对 ESP32-S3 支持 JPEG 解码加速
+ESP LVGL Adapter 是专为 ESP32 全系列芯片设计的高性能 LVGL 适配层，针对屏幕撕裂与帧率进行了深度优化，并无缝集成了图片解码、FreeType 字体渲染和 Dummy Draw 等高级特性，为开发者提供真正的开箱即用体验。
 
-对于其中特殊格式的说明：
+组件链接：https://components.espressif.com/components/espressif/esp_lvgl_adapter
 
-- PJPG 格式： 基于 PNG 格式转换，支持透明度，支持硬件 JPEG 解码
-- SJPG 格式、SPNG 格式：分段解码，适用于 ESP32-C 系列 RAM 较小且没有 PSRAM 的场景
-- QOI 格式：对比软件 JPEG，QOI 解码速度更快，但是压缩率更低
-
-组件链接：https://github.com/espressif/esp-iot-solution/tree/master/components/display/tools/esp_lv_decoder
-
-相关示例：https://github.com/espressif/esp-iot-solution/tree/master/examples/hmi/perf_benchmark
-
-.. _mmap-file-system-and-script-tool:
-
-基于 MMAP 的文件系统与脚本工具
------------------------------------
-
-- 自动打包用户文件
-- 脚本自动转换格式，支持 SJPG，SPNG，QOI，PJPG 格式等
-- 通过文件系统以 mmap 的方式读取素材
-
-适用场景：
-
-- 不满足于 SPIFFS 等文件系统的读取速度，可使用 mmap 的方式读取素材。
-- 需要 SJPG，SPNG，QOI，PJPG 等格式的图片素材
-
-组件链接：https://components.espressif.com/components/espressif/esp_mmap_assets
-
-相关示例：https://github.com/espressif/esp-iot-solution/tree/master/examples/hmi/perf_benchmark
+相关示例：
+- https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_common_demo
+- https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_dummy_draw
+- https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_decode_image
+- https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_freetype_font
+- https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_multi_screen
 
 .. _Thorvg component:
 
@@ -72,21 +31,6 @@ Thorvg 组件
 相关示例：
 
 - Lottie：https://components.espressif.com/components/espressif/thorvg/versions/0.13.8/examples/thorvg-example
-
-.. _freetype-label-component:
-
-freetype_label 组件
--------------------------
-
-基于 freetype 的用户组件，支持字体字号管理，渲染，着色，支持中英文，支持 swap16
-
-适用场景：
-
-- 支持图片和文件的直接渲染
-
-组件链接：https://github.com/espressif/idf-extra-components/tree/master/freetype
-
-相关示例：https://github.com/espressif/esp-iot-solution/tree/master/examples/hmi/lvgl_freetype
 
 .. _tinyGL 3D graphics library:
 

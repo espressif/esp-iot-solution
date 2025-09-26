@@ -1,0 +1,27 @@
+menu "Example LCD Configuration"
+
+    choice EXAMPLE_LCD_ROTATION
+        prompt "LCD Rotation Angle"
+        default EXAMPLE_LCD_ROTATION_0
+        help
+            Select the rotation angle of the LCD display.
+            Note: Rotation of 90 or 270 degrees requires 3 frame buffers.
+
+        config EXAMPLE_LCD_ROTATION_0
+            bool "0 degree (No rotation)"
+        config EXAMPLE_LCD_ROTATION_90
+            bool "90 degree (Clockwise)"
+        config EXAMPLE_LCD_ROTATION_180
+            bool "180 degree"
+        config EXAMPLE_LCD_ROTATION_270
+            bool "270 degree (Counter-clockwise)"
+    endchoice
+
+    config EXAMPLE_LCD_ROTATION
+        int
+        default 0 if EXAMPLE_LCD_ROTATION_0
+        default 90 if EXAMPLE_LCD_ROTATION_90
+        default 180 if EXAMPLE_LCD_ROTATION_180
+        default 270 if EXAMPLE_LCD_ROTATION_270
+
+endmenu

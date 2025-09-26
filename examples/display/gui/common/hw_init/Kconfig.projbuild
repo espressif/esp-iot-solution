@@ -1,0 +1,79 @@
+menu "Hardware Configuration"
+
+choice EXAMPLE_LCD_INTERFACE
+    prompt "LCD Interface Type"
+    default EXAMPLE_LCD_INTERFACE_MIPI_DSI if IDF_TARGET_ESP32P4
+    default EXAMPLE_LCD_INTERFACE_SPI_WITH_PSRAM if IDF_TARGET_ESP32S3
+    default EXAMPLE_LCD_INTERFACE_SPI_WITHOUT_PSRAM if IDF_TARGET_ESP32C3
+    default EXAMPLE_LCD_INTERFACE_SPI_WITH_PSRAM
+    help
+        Select the LCD interface type for your display.
+        Resolution and input device will be set automatically based on the interface.
+
+    config EXAMPLE_LCD_INTERFACE_MIPI_DSI
+        bool "MIPI DSI Interface (1024x600, Touch)"
+        depends on IDF_TARGET_ESP32P4
+        help
+            MIPI DSI interface for high-resolution displays.
+            Resolution: 1024x600
+            Input: Touch panel
+            Only available on ESP32-P4.
+
+    config EXAMPLE_LCD_INTERFACE_QSPI
+        bool "QSPI Interface (360x360, Touch)"
+        depends on !IDF_TARGET_ESP32C3
+        help
+            QSPI (Quad SPI) interface for medium-resolution displays.
+            Resolution: 360x360
+            Input: Touch panel
+            Requires PSRAM. Not available on ESP32-C3.
+
+    config EXAMPLE_LCD_INTERFACE_RGB
+        bool "RGB Interface (800x480, Touch)"
+        depends on IDF_TARGET_ESP32S3 || IDF_TARGET_ESP32P4
+        help
+            RGB parallel interface for medium to high-resolution displays.
+            Resolution: 800x480
+            Input: Touch panel
+            Requires PSRAM. Available on ESP32-S3 and ESP32-P4.
+
+    config EXAMPLE_LCD_INTERFACE_SPI_WITH_PSRAM
+        bool "SPI Interface with PSRAM (320x240, Touch)"
+        depends on !IDF_TARGET_ESP32C3
+        help
+            Standard SPI interface with PSRAM support.
+            Resolution: 320x240
+            Input: Touch panel
+            Not available on ESP32-C3.
+
+    config EXAMPLE_LCD_INTERFACE_SPI_WITHOUT_PSRAM
+        bool "SPI Interface without PSRAM (240x240, Encoder)"
+        help
+            Standard SPI interface without PSRAM.
+            Resolution: 240x240
+            Input: Encoder/Knob
+            Suitable for resource-constrained chips.
+endchoice
+
+choice EXAMPLE_DISPLAY_ROTATION
+    prompt "Display Rotation"
+    default EXAMPLE_DISPLAY_ROTATION_0
+    help
+        Select the rotation applied to both the LCD panel and the touch controller
+        so that LVGL coordinates match the screen orientation.
+
+config EXAMPLE_DISPLAY_ROTATION_0
+    bool "Rotate 0 degrees"
+
+config EXAMPLE_DISPLAY_ROTATION_90
+    bool "Rotate 90 degrees clockwise"
+
+config EXAMPLE_DISPLAY_ROTATION_180
+    bool "Rotate 180 degrees"
+
+config EXAMPLE_DISPLAY_ROTATION_270
+    bool "Rotate 270 degrees clockwise"
+
+endchoice
+
+endmenu

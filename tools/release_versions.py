@@ -13,7 +13,7 @@ def get_components_versions(path):
         for file in files:
             if file == 'idf_component.yml':
                 file_path = os.path.join(root, file)
-                if 'test_apps' in file_path:
+                if 'test_apps' in file_path or 'benchmark' in file_path:
                     #print(f"Skipped {file_path} (in test_apps)")
                     continue
 

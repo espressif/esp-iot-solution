@@ -27,6 +27,12 @@ check_pre_commit:
     - .pre_check_template
   before_script:
     - pip install pre-commit
+  rules:
+    # Pipelines triggered via the API might not have a base commit SHA, so failures are allowed.
+    - if: '$CI_PIPELINE_SOURCE == "api"'
+      allow_failure: true
+    - when: always
+      allow_failure: false
   script:
     - |
       # merged results pipelines, by default

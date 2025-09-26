@@ -3,62 +3,21 @@ GUI Optimization Solutions
 
 :link_to_translation:`zh:[中文]`
 
-.. _lvgl-tearing-prevention-and-frame-rate-optimization:
+.. _ESP LVGL Adapter:
 
-LVGL Tearing Prevention and Frame Rate Optimization
----------------------------------------------------
+ESP LVGL Adapter
+----------------
 
-- Supports tearing prevention mechanism based on full_fresh, direct_mode, and partial_mode
-- Supports full screen rotation optimization for RGB interface and MIPI-DSI interface
+ESP LVGL Adapter is a high-performance LVGL adaptation layer designed specifically for the entire ESP32 chip family. It provides deep optimizations for screen tearing and frame rate, and seamlessly integrates advanced features such as image decoding, FreeType font rendering, and Dummy Draw mode, delivering a true out-of-the-box experience for developers.
 
-Applicable Scenarios:
+Component Link: https://components.espressif.com/components/espressif/esp_lvgl_adapter
 
-- Need to balance tearing prevention and frame rate optimization
-
-- Scenarios requiring full screen rotation in LVGL
-
-Related Examples:
-
-- https://github.com/espressif/esp-iot-solution/tree/master/examples/display/lcd/mipi_dsi_avoid_tearing
-- https://github.com/espressif/esp-iot-solution/tree/master/examples/display/lcd/rgb_avoid_tearing
-
-.. _lvgl-decoder-component:
-
-LVGL Image Decoder Component
-----------------------------
-
-- Supports LVGL v8 and v9 versions
-- Supports PNG, JPG, QOI, PJPG, SJPG, SPNG format decoding with optimized decoding speed
-- Supports JPEG hardware decoding for ESP32-P4
-- Supports JPEG decoding acceleration for ESP32-S3
-
-Description of special formats:
-
-- PJPG format: Based on PNG format conversion, supports transparency and hardware JPEG decoding
-- SJPG format, SPNG format: Segmented decoding, suitable for ESP32-C series with small RAM and no PSRAM
-- QOI format: Compared to software JPEG, QOI decoding is faster but with lower compression ratio
-
-Component Link: https://github.com/espressif/esp-iot-solution/tree/master/components/display/tools/esp_lv_decoder
-
-Related Example: https://github.com/espressif/esp-iot-solution/tree/master/examples/hmi/perf_benchmark
-
-.. _mmap-file-system-and-script-tool:
-
-MMAP File System and Script Tool
---------------------------------
-
-- Automatically packages user files
-- Script automatically converts formats, supporting SJPG, SPNG, QOI, PJPG formats, etc.
-- Reads materials through file system using mmap method
-
-Applicable Scenarios:
-
-- When SPIFFS and other file systems do not meet reading speed requirements, mmap can be used to read materials.
-- Need image materials in SJPG, SPNG, QOI, PJPG and other formats
-
-Component Link: https://components.espressif.com/components/espressif/esp_mmap_assets
-
-Related Example: https://github.com/espressif/esp-iot-solution/tree/master/examples/hmi/perf_benchmark
+Related Example:
+- https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_common_demo
+- https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_dummy_draw
+- https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_decode_image
+- https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_freetype_font
+- https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_multi_screen
 
 .. _Thorvg component:
 
@@ -72,21 +31,6 @@ Component Link: https://components.espressif.com/components/espressif/thorvg
 Related Example:
 
 - Lottie: https://components.espressif.com/components/espressif/thorvg/versions/0.13.8/examples/thorvg-example
-
-.. _freetype-label-component:
-
-freetype_label Component
-------------------------
-
-User component based on freetype, supports font size management, rendering, coloring, supports Chinese and English, supports swap16
-
-Applicable Scenarios:
-
-- Supports direct rendering of images and files
-
-Component Link: https://github.com/espressif/idf-extra-components/tree/master/freetype
-
-Related Example: https://github.com/espressif/esp-iot-solution/tree/master/examples/hmi/lvgl_freetype
 
 .. _tinyGL 3D graphics library:
 

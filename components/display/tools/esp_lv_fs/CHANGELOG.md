@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v1.0.1
+
+* Fix the missing dependency.
+
 ## v1.0.0~1 (2025-08-13)
 
 * Support all target.
