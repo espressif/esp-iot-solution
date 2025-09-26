@@ -2,10 +2,9 @@ File System
 =============
 :link_to_translation:`zh_CN:[中文]`
 
-Supported file systems:
+Supported file systems list:
 
-
-.. list-table:: File system features comparison
+.. list-table:: File System Feature Comparison
     :widths: 20 20 20 20 20
     :header-rows: 1
 
@@ -14,128 +13,210 @@ Supported file systems:
       - FAT File System
       - SPIFFS File System
       - LittleFS File System
-    * - Features
-      - Operates on key-value pairs, with safe interfaces
-      - Operation system supported, strong compatibility
-      - Developed for embedded systems, low resource occupancy
-      - Low resource occupancy, Read, write, erase speed is fast
+    * - Characteristics
+      - Key-value pair storage, secure interface
+      - Operating system support, strong compatibility
+      - Designed for embedded development, low resource usage
+      - Low resource usage, fast read, write, erase speed
     * - Application Scenarios
-      - Stores parameters
-      - Stores audio, video and other files
-      - Stores audio, video and other files
-      - Stores files
-    * - Size
+      - Parameter storage
+      - Audio/video, file storage
+      - Audio/video, file storage
+      - File storage
+    * - Storage Media
+      - SPI NOR Flash
+      - SPI NOR Flash, SD/MMC card, USB flash drive
+      - SPI NOR Flash
+      - SPI NOR Flash, SD/MMC card
+    * - Capacity
       - KB-MB
       - GB
-      - < 128 MB
+      - ≤ 128 MB
       - < 128 MB
     * - Directory Support
-      - X
-      - √
-      - X
-      - √
+      - ❌
+      - ✅
+      - ❌
+      - ✅
     * - Wear Levelling
-      - √
+      - ✅
       - Optional
-      - √
-      - √
-    * - R/W Efficiency
-      - 0
-      - 0
-      - 0
+      - ✅
+      - ✅
+    * - Read/Write Efficiency
       - High
-    * - Resources Occupancy
-      - 0
-      - 0
-      - 1
-      - 1
-    * - Power Failure Protection
-      - √
-      - X
-      - X
-      - √
+      - Medium
+      - Medium
+      - High
+    * - Resource Usage
+      - Low
+      - Medium
+      - Low
+      - Very Low
+    * - Power-down Protection
+      - ✅
+      - ❌
+      - ❌
+      - ✅
     * - Encryption
-      - √
-      - √
-      - X
-      - √
+      - ✅
+      - ✅
+      - ❌
+      - ✅
 
 
 .. Note::
 
-    * 0: data not available or not for comparison.
-    * 1: low RAM occupancy.
+    * ✅: Supports this feature
+    * ❌: Does not support this feature  
+    * Read/write efficiency and resource usage are relative comparisons, actual performance depends on specific configuration and usage scenarios.
 
 
 NVS Library
 -----------------------
 
-Non-volatile storage (NVS) is used to read and write data stored in the flash NVS partition. NVS operated on key-value pairs. Keys are ASCII strings; values can be integers, strings and variable binary large object (BLOB). NVS supports power loss protection and data encryption, and works best for storing many small values, such as application parameters. If you need to store large blobs or strings, please consider using the facilities provided by the FAT file system on top of the wear levelling library.
+The Non-Volatile Storage (NVS) library is mainly used to read and write data stored in Flash NVS partitions. Data in NVS is saved in key-value pairs, where keys are ASCII strings and values can be integers, strings, or binary data (BLOB) types.
 
-**Related documents:**
+**Main Features:**
 
-- `Non-volatile storage library <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/nvs_flash.html>`_.
-- For mass production, you can use the `NVS Partition Generator Utility <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/nvs_partition_gen.html>`_.
+* **Key-value pair storage**: Supports multiple data types including integers, strings, BLOB
+* **Power-down protection**: Atomic updates, ensuring data consistency
+* **Encryption support**: Supports AES-XTS encryption
+* **Wear levelling**: Built-in wear levelling mechanism
 
-**Examples:**
+**Usage Limitations:**
 
-- Write a single integer value: `storage/nvs_rw_value <https://github.com/espressif/esp-idf/tree/526f682/examples/storage/nvs_rw_value>`_.
-- Write a blob: `storage/nvs_rw_blob <https://github.com/espressif/esp-idf/tree/526f682/examples/storage/nvs_rw_blob>`_.
+* **Applicable scenarios**: Only suitable for configuration data, not suitable for frequent writes or large data
+* **Partition size**: Recommended not to exceed 128 KB
+* **Space requirements**: Requires sufficient space to store both old and new data simultaneously
+
+If you need to store larger BLOBs or strings, please consider using the FAT file system based on the wear levelling library.
+
+**Reference Documentation:**
+
+- `Non-Volatile Storage Library <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/nvs_flash.html>`_.
+- For mass production, you can use the `NVS Partition Generator Tool <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/nvs_partition_gen.html>`_.
+
+**Example Programs:**
+
+- Write a single integer value: `storage/nvs_rw_value <https://github.com/espressif/esp-idf/tree/release/v5.4/examples/storage/nvs_rw_value>`_.
+- Write binary large object: `storage/nvs_rw_blob <https://github.com/espressif/esp-idf/tree/release/v5.4/examples/storage/nvs_rw_blob>`_.
 
 FAT File System
-------------------------
+--------------------------
 
-ESP-IDF uses the FatFs library to work with FAT file system. FatFs is a file system layer independent to platform and storage media that can realize access to physical devices (e.g., flash, SD card) via a unified interface. Although the library can be used directly, many of its features can be accessed via VFS, using the C standard library and POSIX API functions.
+ESP-IDF uses the FatFs library to implement support for the FAT file system. FatFs is a file system layer independent of platform and storage media, providing access to physical devices (such as Flash, SD card, USB flash drive) through a unified interface. Users can directly call FatFs interface operations, or use most of the FatFs library functionality through C standard library and POSIX API via VFS (Virtual File System).
 
-The operating system of FAT is compatible with a wide range of mobile storage devices such as USB memory disc or SD cards. And ESP32 series chips can access these common storage devices by supporting the FAT file system.
+**Main Features:**
 
-**Related documents:**
+* **Wide compatibility**: Compatible with PC and other platforms, supports standard FAT format
+* **Multiple storage media**: Supports SPI Flash, SD/MMC cards, USB flash drives and other storage media
+* **Directory support**: Supports multi-level directory structure, suitable for storing large numbers of files
+* **Encryption support**: Supports partition encryption (`Flash Encryption <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/security/flash-encryption.html>`_)
+
+**Usage Limitations:**
+
+* **Power-down recovery**: Relatively weak power-down recovery capability
+* **Partition size**: Minimum 8 sectors required when wear levelling is enabled
+
+**Reference Documentation:**
 
 - `Using FatFs with VFS <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/fatfs.html#fatfs-vfs>`_.
-- `Using FatFs with VFS and SD cards <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/fatfs.html#fatfs-vfs-sd>`_.
+- `FATFS Image Generation and Parsing Tool <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/fatfsgen.html>`_.
 
-**Examples:**
+**Example Programs:**
 
-* `storage/sd_card <https://github.com/espressif/esp-idf/tree/526f682/examples/storage/sd_card>`_: access the SD card which uses the FAT file system.
-* `storage/ext_flash_fatfs <https://github.com/espressif/esp-idf/tree/master/examples/storage/ext_flash_fatfs>`_: access the external flash chip which uses the FAT file system.
+* `storage/sd_card <https://github.com/espressif/esp-idf/tree/release/v5.4/examples/storage/sd_card>`_: Access SD card using FAT file system.
+* `storage/ext_flash_fatfs <https://github.com/espressif/esp-idf/tree/release/v5.4/examples/storage/ext_flash_fatfs>`_: Access external Flash chip using FAT file system.
+* `peripherals/usb/host/msc <https://github.com/espressif/esp-idf/tree/release/v5.4/examples/peripherals/usb/host/msc>`_: Access USB flash drive using FAT file system (requires ESP32-S2/ESP32-S3).
 
 SPIFFS File System
----------------------------
+------------------------------
 
-SPIFFS is a file system intended for SPI NOR flash devices on embedded targets. It supports wear levelling, file system consistency checks, and more. Users can directly use the Posix interfaces provided by SPIFFS, or use many of its features via VFS.
+SPIFFS is an embedded file system dedicated to SPI NOR Flash, natively supporting wear levelling, file system consistency checks and other functions. Users can directly call the POSIX-style interfaces provided by SPIFFS, or operate most of SPIFFS functionality through VFS.
 
-As a dedicated file system for SPI NOR flash devices on embedded targets, the SPIFFS occupies less RAM resources than FAT and is only used to support flash chips with capacities less than 128 MB.
+**Main Features:**
 
-**Related documents:**
+* **Embedded optimization**: Designed specifically for NOR Flash, low RAM usage
+* **Static wear levelling**: Built-in wear levelling algorithm
+* **Power-down recovery**: Certain degree of post-power-down repair functionality
 
-* `SPIFFS Filesystem <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/spiffs.html>`_.
-* `Two Tools to Generate SPIFFS Images <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/spiffs.html#id6>`_.
+**Usage Limitations:**
 
-**Examples:**
+* **No directory support**: Only supports flat file structure
+* **Capacity limitation**: Maximum support for 128 MB Flash
+* **Performance degradation**: Significant performance degradation when usage exceeds 70%
+* **Development stopped**: Maintenance has been discontinued
 
-* `storage/spiffs <https://github.com/espressif/esp-idf/tree/526f682/examples/storage/spiffs>`_: SPIFFS examples.
+**Reference Documentation:**
+
+* `SPIFFS File System <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/spiffs.html>`_.
+* `SPIFFS Image Generation Tool <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/spiffs.html#id5>`_.
+
+**Example Programs:**
+
+* `storage/spiffs <https://github.com/espressif/esp-idf/tree/release/v5.4/examples/storage/spiffs>`_: SPIFFS usage example.
+* `storage/spiffsgen <https://github.com/espressif/esp-idf/tree/release/v5.4/examples/storage/spiffsgen>`_: Demonstrates how to use the SPIFFS image generation tool to automatically create SPIFFS images from host folders during the build process.
 
 LittleFS File System
----------------------------
+-------------------------------
 
-LittleFS is a file system intended for SPI NOR flash devices on embedded targets. It supports wear levelling, file system consistency checks, power failure protection and more.
+LittleFS is a block-based file system designed specifically for microcontrollers and embedded devices, natively supporting wear levelling, file system consistency checks, power-down protection and other functions.
 
-LittleFS as a high integrity embedded SPI NOR Flash file system, it supports efficient read and write speed and occupies less RAM resources.
+**Main Features:**
 
-**Related documents:**
+* **Excellent power-down recovery**: Fault-safe features, strong power-down protection capability
+* **Dynamic wear levelling**: Adaptive wear levelling algorithm
+* **Extremely low RAM usage**: Fixed and extremely low RAM usage
+* **Multiple storage media**: Supports SPI Flash and SD/MMC cards
+* **Complete directory support**: Supports directory and subdirectory structure
 
-* `LittleFS Filesystem Component SDK <https://github.com/joltwallet/esp_littlefs/tree/v1.14.5>`_ .
-* `LittleFS Filesystem Component Usage Guide <https://components.espressif.com/components/joltwallet/littlefs/versions/1.14.5>`_ .
+**Usage Limitations:**
 
-**Examples:**
+* **Platform compatibility**: Less compatible with other platforms than FAT (mainly for embedded use)
+* **Capacity recommendation**: Recommended to be less than 128 MB for optimal performance
+* **Third-party maintenance**: Needs to be obtained through ESP Component Registry
+* **Documentation resources**: Fewer documentation resources compared to FAT file system
 
-* `storage/littlefs <https://github.com/espressif/esp-idf/tree/release/v5.2/examples/storage/littlefs>`_：LittleFS example.
+LittleFS is currently recommended for general application scenarios, especially applications with high power-down protection requirements.
+
+**Reference Documentation:**
+
+* `LittleFS File System Component Repository <https://github.com/joltwallet/esp_littlefs/tree/v1.14.5>`_ .
+* `LittleFS File System Component Usage Guide <https://components.espressif.com/components/joltwallet/littlefs/versions/1.14.5>`_ .
+
+**Example Programs:**
+
+* `storage/littlefs <https://github.com/espressif/esp-idf/tree/release/v5.4/examples/storage/littlefs>`_: LittleFS usage example.
 
 Virtual File System (VFS)
+-------------------------------
+
+The ESP-IDF Virtual File System (VFS) component can provide a unified interface for different file systems (FAT, SPIFFS), and can also provide file-like read/write operation interfaces for device drivers.
+
+**Reference Documentation:**
+
+* `Virtual File System Component <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/vfs.html>`_.
+
+Storage Security
+-------------------------------
+
+When selecting and using file systems, please note the following security-related matters:
+
+* **Data encryption**: NVS and FAT file systems support data encryption, LittleFS also supports encryption functionality, SPIFFS currently does not support encryption.
+* **Power-down protection**: NVS and LittleFS have good power-down protection mechanisms, FAT and SPIFFS may have data corruption risks during power-down events.
+* **Integrity checks**: It is recommended to regularly perform file system integrity checks, especially in production environments.
+
+**Reference Documentation:**
+
+* `Storage Security <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/storage-security.html>`_.
+
+File System Design Recommendations
 -----------------------------------
 
-The Virtual File System (VFS) component from ESP-IDF provides a unified interface for different file systems (FAT, SPIFFS), and also provides a file-like interface for device drivers.
+* Please refer to: `File handling design considerations <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-guides/file-system-considerations.html#file-handling-design-considerations>`_.
 
-**Related documents:**
+Frequently Asked Questions (FAQ)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-* `Virtual Filesystem Component <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/vfs.html>`_.
+* Please refer to: `ESP-FAQ Storage Section <https://docs.espressif.com/projects/esp-faq/en/latest/software-framework/storage/index.html>`_

@@ -9,7 +9,7 @@ This routine demonstrates how to use the [usb_stream](https://components.espress
 
 ## Try the example through the esp-launchpad
 
-<a href="https://espressif.github.io/esp-launchpad/?flashConfigURL=https://raw.githubusercontent.com/espressif/esp-dev-kits/master/launch.toml">
+<a href="https://espressif.github.io/esp-launchpad/?flashConfigURL=https://dl.espressif.com/AE/esp-iot-solution/config.toml">
     <img alt="Try it with ESP Launchpad" src="https://espressif.github.io/esp-launchpad/assets/try_with_launchpad.png" width="200" height="56">
 </a>
 

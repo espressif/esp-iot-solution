@@ -1,196 +1,291 @@
 安全启动
-****************
+*****************
 
-概述
-~~~~~~~~
+安全启动是 ESP32 系列芯片的关键安全防护机制，通过在启动过程和 OTA 更新时对软件实施数字签名验证，确保设备只能执行经过授权的固件。该机制建立了从引导加载程序到应用程序的完整信任链，为设备提供完备的代码完整性保护。
 
--  Secure Boot
-   的目的是保证芯片只运行用户指定的程序，芯片每次启动时都会验证从 flash
-   中加载的 partition table 和 app images 是否是用户指定的
--  Secure Boot 中采用 ECDSA 签名算法对 partition table 和 app images
-   进行签名和验证，ECDSA
-   签名算法使用公钥/私钥对，秘钥用于对指定的二进制文件签名，公钥用于验证签名
--  由于 partition table 和 app images 是在软件 bootloader
-   中被验证的，所以为了防止攻击者篡改软件 bootloader
-   从而跳过签名验证，Secure Boot 过程中会在 ROM bootloader 时检查软件
-   bootloader image 是否被篡改，检查用到的 secure boot key
-   由硬件随机数生成器产生，保存的 efuse 中，对于软件是读写保护的
+安全启动的核心特点：
 
-所用资源
-~~~~~~~~
+- **代码完整性保护**：通过密码学验证确保固件代码未被篡改或替换，防止运行未经授权的恶意程序
+- **完整信任链保护**：建立从引导加载程序到应用程序的端到端验证机制，确保启动流程中的每个环节都经过验证
+- **支持多种签名算法**：可选择 RSA-PSS 或 ECDSA 作为签名算法，并通过硬件加速确保高效验证
+- **硬件安全存储**：将签名密钥摘要存储在受保护的 eFuse 中，提供严格的硬件级读写保护机制
 
--  ECDSA 算法公钥/私钥对
+更多详细信息请参考：`ESP-IDF 安全启动 v2 文档 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/security/secure-boot-v2.html>`_
 
-   -  烧写 flash 前在 PC 端生成
-   -  公钥会被编译到 bootloader image 中，软件 bootloader
-      在执行时会读取公钥，使用公钥验证 flash 中partition table 和 app
-      images 是否是经过相应的私钥签名的
-   -  私钥在编译时被用于对 partition table 和 app images
-      签名，私钥必须被保密好，一旦泄露任何使用此私钥签名的 image
-      都能通过 boot 时的签名验证
+安全启动与 Flash 加密
+~~~~~~~~~~~~~~~~~~~~~~~
 
--  secure bootloader key
+安全启动与 Flash 加密是互补的安全功能：
 
-   -  这是一个 256-bit AES key，在第一次 Secure Boot
-      时由硬件随机数生成，保存在 efuse 中，软件无法读取
-   -  使用此 key 验证软件 bootloader image 是否被修改
+- **安全启动**：保证代码完整性，防止运行未授权固件
+- **Flash 加密**：保护数据机密性，防止读取 Flash 代码和数据
 
-执行过程
-~~~~~~~~
+建议在生产环境中同时启用两项功能以获得最佳安全保护。详情参考：`安全启动与 Flash 加密 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/security/secure-boot-v2.html#secure-boot-flash-encryption>`_
 
-1. 编译 bootloader image 时发现 menuconfig 中使能了 secure
-   boot，于是根据 menuconfig 中指定的公钥/秘钥文件路径将公钥编译到
-   bootloader image 中，bootloader 被编译成支持 secure boot
-2. 编译 partition table 和 app images
-   时使用秘钥计算出签名，将签名编译到相应的二进制文件中
-3. 芯片第一次 boot 时，软件 bootloader 根据一下步骤使能 secure boot：
+安全启动信任链
+~~~~~~~~~~~~~~~~
 
-   -  硬件产生一个 secure boot key，将这个 key 保存在 efuse 中，利用这个
-      key、一个随机数 IV 和 bootloader image 计算出 secure digest
-   -  secure digest 与随机数 IV 保存在 flash 的 0x0 地址，用于在后续
-      boot 时验证 bootloader image 是否被篡改
-   -  若 menuconfig 中选择了禁止 JTAG 中断和 ROM BASIC 中断，bootloader
-      会将 efuse
-      中的一些标志位设置为禁止这些中断（强烈建议禁止这些中断）
-   -  bootloader 通过烧写 efuse 中的 ABS\_DONE\_0 永久使能 secure boot
+安全启动会验证以下软件组件：
 
-4. 芯片在后面的 boot 中，ROM bootloader 发现 efuse 中的 ABS\_DONE\_0
-   被烧写，于是从 flash 的地址 0x0 读取第一次 boot 时保存的 secure
-   digest 和随机数 IV，硬件使用 efuse 中的 secure boot key 、随机数 IV
-   与当前的 bootloader image 计算当前的 secure digest，若与 flash 中的
-   secure digest 不同，则 boot 不会继续，否则就执行软件 bootloader。
-5. 软件 bootloader 使用 bootloader image 中保存的公钥对 flash 中的
-   partition table 和 app images 签字进行验证，验证成功之后才会 boot 到
-   app 代码中
+- 一级引导加载程序（ROM 代码）作为芯片固化代码，无法被更改或破坏，作为信任链的根基
+- 一级引导加载程序通过数字签名验证二级引导加载程序（bootloader）的完整性和真实性
+- 二级引导加载程序通过数字签名验证应用程序（app）二进制文件的完整性和真实性
+- 应用程序在 OTA 升级过程中验证新固件的数字签名，确保更新的安全性
 
-使用步骤
-~~~~~~~~
+详细验证过程：`安全启动 v2 过程 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/security/secure-boot-v2.html#secure-boot-v2-process>`_
 
-1. make menuconfig 选择 "enable secure boot in bootloader"
-2. make menuconfig 设置保存公钥/秘钥对的文件
-3. 生成公钥和秘钥，先执行 "make"
-   命令，此时由于还没有公钥/秘钥对，所以命令行中会提示生成公钥/秘钥对的命令，按提示执行命令即可。但在产品级使用中，建议使用
-   openssl 或者其他工业级加密程序生成公钥/秘钥对。例如使用
-   openssl：“openssl ecparam -name prime256v1 -genkey -noout -out
-   my\_secure\_boot\_signing\_key.pem”（若使用现有的公钥/秘钥对文件，可以跳过此步）
-4. 运行命令 "make bootloader" 产生一个使能 secure boot 的 bootloader
-   image
-5. 执行完4后命令行会提示下一步烧写 bootloader image
-   的命令，按提示烧写即可
-6. 运行命令 "make flash" 编译并烧写 partition table 和 app images
-7. 重启芯片，软件 bootloader 会使能 secure boot ，查看串口打印确保
-   secure boot 成功启用。
+安全启动功能支持列表
+~~~~~~~~~~~~~~~~~~~~
 
-注意事项
-~~~~~~~~
+.. list-table:: 安全启动功能支持列表
+    :header-rows: 1
 
--  正常使用情况下， bootloader image 只能烧写一次，partition table 和
-   app images 可以重复烧写
--  秘钥必须保密，一旦泄露 secure boot 将失去作用
--  用于 OTA 的 image 必须进行秘钥签名，OTA 时会使用公钥进行验证
--  **在默认设置下， bootloader的从0x1000地址开始，最大长度为 28KB（bootloader)。如果发现 Secure Boot 发送错误, 请先检查是否因为 Bootloader 地址过大。 通过在menuconfig中调整Bootloader的log等级，可以有效降低编译后的Bootloader大小。**
+    * - 芯片型号
+      - 支持算法（曲线/位数）
+      - 签名验证时间（CPU频率）
+      - 最大公钥数量
+      - 备注/特殊说明
+    * - ESP32 （ECO V3+）
+      - RSA-3072（RSA-PSS，Secure Boot V2）<br>AES（V1）
+      - 未明确给出
+      - 1
+      - 仅支持1把公钥，Secure Boot V2 需ECO V3及以上
+    * - ESP32-S2
+      - RSA-3072（RSA-PSS）
+      - 未明确给出
+      - 3
+      - 最多3把公钥，可吊销
+    * - ESP32-S3
+      - RSA-3072（RSA-PSS）
+      - 未明确给出
+      - 3
+      - 最多3把公钥，可吊销
+    * - ESP32-C2
+      - ECDSA-192（NISTP192）<br>ECDSA-256（NISTP256，推荐）
+      - 未明确给出
+      - 1
+      - 仅支持ECDSA，且仅1把公钥 `ESP32-C2 Kconfig Reference <https://docs.espressif.com/projects/esp-idf/en/latest/esp32c2/api-reference/kconfig-reference.html#config-secure-boot-ecdsa-key-len-size>`_
+    * - ESP32-C3 （v0.3及以上）
+      - RSA-3072（RSA-PSS）
+      - 未明确给出
+      - 3
+      - 最多3把公钥，可吊销
+    * - ESP32-C5
+      - RSA-3072<br>ECDSA-256（P-256）<br>ECDSA-384（P-384）
+      - RSA-3072: 12.1 ms<br>ECDSA-256: 5.6 ms<br>ECDSA-384: 20.6 ms（48 MHz）
+      - 3
+      - 仅可选一种算法 `ESP32-C5 Secure Boot v2 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32c5/security/secure-boot-v2.html#secure-boot-v2-scheme-selection>`_
+    * - ESP32-C6
+      - RSA-3072<br>ECDSA-256（P-256）
+      - RSA-3072: 10.2 ms<br>ECDSA-256: 83.9 ms（40 MHz）
+      - 3
+      - 仅可选一种算法 `ESP32-C6 Secure Boot v2 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32c6/security/secure-boot-v2.html#secure-boot-v2-scheme-selection>`_
+    * - ESP32-H2
+      - RSA-3072<br>ECDSA-256（P-256）
+      - RSA-3072: 18.3 ms<br>ECDSA-256: 76.2 ms（32 MHz）
+      - 3
+      - 仅可选一种算法 `ESP32-H2 Secure Boot v2 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32h2/security/secure-boot-v2.html#secure-boot-v2-scheme-selection>`_
+    * - ESP32-P4
+      - RSA-3072<br>ECDSA-256（P-256）
+      - RSA-3072: 14.8 ms<br>ECDSA-256: 61.1 ms（40 MHz）
+      - 3
+      - 仅可选一种算法 `ESP32-P4 Secure Boot v2 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32p4/security/secure-boot-v2.html#secure-boot-v2-scheme-selection>`_
 
-可重复烧写 bootloader
-~~~~~~~~~~~~~~~~~~~~~
+**说明：**
+- “最大公钥数量”指可在 eFuse 中存储的公钥数量，部分芯片支持密钥吊销。
+- “签名验证时间”指 ROM 引导加载器验证 bootloader 镜像签名所需时间，实际启动时间可能略有不同。
+- 若需更详细的配置和使用建议，请查阅对应芯片的官方文档。
 
--  默认情况下 bootloader image
-   只能烧写一次，在产品中强烈建议这样做，因为 bootloader image
-   可以重新烧写的情况下可以通过修改 bootloader 跳过后续 image
-   的验证过程，这样 secure boot 就失去作用
--  可重复烧写 bootloader 模式下，secure bootloader key 是在 PC
-   端产生的，此 key 必须保密，一旦 key 被泄露，其它使用此 key 生成digest
-   的 bootloader image 也能通过硬件检查
--  使用步骤：
+签名与密钥管理
+~~~~~~~~~~~~~~~
 
-   1. make menuconfig 中选择 "secure bootloader mode"->"Reflashable"
-   2. 按“使用步骤”一节步骤2和3生成公钥与秘钥
-   3. 运行指令 "make bootloader" ，一个 256-bit secure boot key
-      会根据用于签名的私钥计算出，命令行会打印两个后续步骤，按循序执行：
+在信息安全中，数字签名（Digital Signature）是一种基于非对称加密的完整性验证机制。它的核心目的是：证明数据的来源真实性（Authenticity），以及确保数据在传输或存储过程中未被篡改（Integrity）。
 
-      -  将 PC 端生成的 secure boot key 烧入 efuse 中的命令
-      -  将编译好的带有预计算出的 secure digest 的 bootloader image
-         烧写到 flash 中
+签名过程使用的是一对密钥：
 
-   4. 从“使用步骤”一节的步骤6继续执行
+- 私钥（Private Key）：用于对数据进行签名，私钥必须严格保密，保存在安全的环境中（本地固件开发环境或远程签名服务器）。
+- 公钥（Public Key）：用于验证签名的合法性，公钥可以安全地分发给任何需要验证签名的实体。
 
-Secure Boot 与 Flash Encryption 流程图
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+安全启动 v2 支持多种非对称加密算法，具体取决于芯片型号：
 
--  第一次 boot 时 secure boot 与 flash encrypt
-   的生效过程如下图所示，图中蓝色框是 secure boot 的步骤，绿色框是 flash
-   encrypt 的步骤
+- **RSA-PSS**：RSA-3072 密钥，适用于快速启动的场景
+- **ECDSA**：支持 P-256 和 P-192 曲线，密钥长度更短但验证时间较长（受限于当前 ECDSA 硬件加速能力）
 
-.. figure:: ../../_static/secure_encrypt/secure_encrypt_first_boot.png
-   :align: center
+签名块格式
+~~~~~~~~~~~~~
 
--  后续 boot
-   时流程图如下，图中绿色框中的步骤会执行解密，解密是由硬件自动完成的
+签名块（Signature Block）是 ESP32-S3 Secure Boot v2 中用于验证镜像完整性和来源可信性的关键结构。它是附加在 bootloader 或应用程序镜像末尾的一个固定格式数据块，包含签名信息、公钥以及辅助验证字段。
 
-.. figure:: ../../_static/secure_encrypt/secure_encrypt_subsequent_boot.png
-   :align: center
+- 签名块主要包含镜像的 SHA-256 哈希值、公钥、签名结果等
+- 签名块本身占据 1216 字节，位于镜像末尾的 4KB 对齐边界，且具有 CRC32 校验
+- 每个镜像可附加最多 3 个签名块，用于支持多密钥验证与撤销机制
 
+签名块详细定义：`签名块格式 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/security/secure-boot-v2.html#signature-block-format>`_
 
-开发阶段使用可重复烧写 flash 的 Secure Boot 与 Flash encryption
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+启用硬件安全启动
+~~~~~~~~~~~~~~~~~~~~~~~
 
-1. make menuconfig 中使能 secure boot 和 flash encrypt，“Secure
-   bootloader mode”选择“Reflashable”，并设置你的公钥/私钥.pem文件路径
-2. 编译 bootloader 并生成 secure boot key：
+**方法一：通过配置项启用（menuconfig）**：
 
-   ::
+在 ESP-IDF 中启用 Secure Boot v2 最简单的方式是通过 ``menuconfig`` 配置项。在构建 ``bootloader`` 时，构建系统会在编译 ``bootloader`` 和 ``app`` 镜像时自动插入签名流程。首次启动时，bootloader 会自动烧写 eFuse 以启用 Secure Boot，并撤销未使用的密钥槽。这种方式适合开发阶段，流程自动化、集成度高，但由于密钥撤销不可逆，量产时需谨慎使用。
 
-       make bootloader
+1. 打开项目配置菜单 ``Security features`` 启用 ``Enable hardware Secure Boot in bootloader``
+2. 选择 ``Secure Boot v2`` 签名方案，根据不同芯片，可选的签名算法为``RSA`` 或 ``ECDSA``
+3. 指定签名密钥文件路径，密钥文件（例如 RSA 3072）可通过 ``idf.py secure-generate-signing-key`` 或 ``openssl genrsa`` 指令生成
+4. 使用 ``idf.py build`` 指令将直接编译、对齐填充、生成附带签名块的 ``app`` 镜像
+5. 使用 ``idf.py bootloader`` 指令生成启用了安全启动且已经附带签名块的 bootloader 镜像
+6. 为了安全起见，默认情况下启用了安全启动的 bootloader 需要使用 ``esptool.py write_flash`` 指令单独烧写，``idf.py flash`` 只能烧写应用程序和分区表等分区
+7. 重启设备，bootloader 会在首次运行时自动烧写 eFuse 以启用 Secure Boot，并将计算出签名块的公钥摘要写入 eFuse，并撤销未使用的密钥槽
+8. 之后的启动过程中，eFuse 中的公钥摘要将用于验证 bootloader 和 app 镜像的签名，确保设备仅运行对应私钥签名后的固件
 
-3. 使用 key 和 bootloader 计算带 digest 的 bootloader
+**注意事项**：启用安全启动后，bootloader 镜像大小将增加，可能需要重新调整分区表大小。私钥必须妥善保管，如果私钥泄露，攻击者可以生成有效签名的恶意固件，如果密钥丢失，设备将无法更新固件。
 
-   ::
+**方法二：外部工具启用**：
 
-       python $IDF_PATH/components/esptool_py/esptool/espsecure.py digest_secure_bootloader --keyfile ./build/bootloader/secure_boot_key.bin -o ./build/bootloader/bootloader_with_digest.bin ./build/bootloader/bootloader.bin
+另一种方式是使用 ``espefuse.py`` 工具在烧录前手动配置 eFuse，包括写入公钥摘要、设置密钥用途、启用 ``Secure Boot`` 标志位等。这种方式不会触发 ``bootloader`` 的自动密钥撤销逻辑，因此可以保留未使用的密钥槽，便于未来密钥轮换或 OTA 签名更新。它适合量产环境，安全性高、控制精细，但操作复杂，需要严格的密钥管理和烧录流程。此外，你可以使用 `远程签名 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/security/secure-boot-v2.html#remote-signing-of-images>`_ 或 `外部 HSM <https://docs.espressif.com/projects/esptool/en/latest/esp32c2/espsecure/index.html#remote-signing-using-an-external-hsm>`_ 来生成签名块，进一步提升私钥安全性
 
-4. 编译 partition\_table 与 app
+1. 生成私钥（可在本地或远程环境中生成）：创建用于签名固件的私钥
+2. 生成公钥摘要：对公钥进行 SHA-256 哈希计算
+3. 烧录摘要：将公钥摘要写入 eFuse 特定区域
+4. 启用安全启动：置位相关 eFuse 标志位
+5. 撤销未用密钥槽：防止未授权密钥被添加
+6. 烧录安全配置：设置其他安全相关的 eFuse 位
+7. 配置项目：禁用自动签名以使用外部签名工具
+8. 签名镜像：对 bootloader 和 app 进行签名
+9. 烧录镜像：将签名后的固件写入设备
+10. 启用安全下载：最终锁定所有安全配置
 
-   ::
+详细配置方法和指令详见：`外部启用 v2 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/security/security-features-enablement-workflows.html#enable-secure-boot-v2-externally>`_
 
-       make partition_table
-       make app
+密钥撤销
+~~~~~~~~~~~
 
-5. 加密三个 bin 文件
+对于已烧录多个公钥的芯片，可以通过撤销密钥防止已泄露或不再使用的密钥被利用。撤销密钥后，使用该密钥签名的固件将无法通过验证，从而保护设备免受潜在攻击。
 
-   ::
+**实施前提**：
 
-       python $IDF_PATH/components/esptool_py/esptool/espsecure.py encrypt_flash_data --keyfile flash_encrypt_key.bin --address 0x0 -o build/bootloader/bootloader_digest_encrypt.bin build/bootloader/bootloader_with_digest.bi
-       python $IDF_PATH/components/esptool_py/esptool/espsecure.py encrypt_flash_data --keyfile flash_encrypt_key.bin --address 0x8000 -o build/partitions_singleapp_encrypt.bin build/partitions_singleapp.bin
-       python $IDF_PATH/components/esptool_py/esptool/espsecure.py encrypt_flash_data --keyfile flash_encrypt_key.bin --address 0x10000 -o build/iot_encrypt.bin build/iot.bin
+密钥撤销功能需要满足以下前提条件：
 
-6. 烧写三个加密后的 bin 文件
+1. 芯片必须支持多个公钥（>1）且具备密钥撤销功能
+2. 设备出厂时已在 eFuse 中烧录至少两个公钥摘要（如 key #0 和 key #1）
+3. 二级引导加载程序（bootloader）使用多重签名机制，已由 key #0 和 key #1 对应的私钥进行签名
+4. 应用程序（app）仅使用其中一个密钥（如 key #0）进行签名
 
-   ::
+更多关于多重签名的信息，请参考：`多重签名 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/security/secure-boot-v2.html#multiple-keys>`_
 
-       python $IDF_PATH/components/esptool_py/esptool/esptool.py --baud 1152000 write_flash 0x0 build/bootloader/bootloader_digest_encrypt.bin
-       python $IDF_PATH/components/esptool_py/esptool/esptool.py --baud 1152000 write_flash 0x8000 build/partitions_singleapp_encrypt.bin
-       python $IDF_PATH/components/esptool_py/esptool/esptool.py --baud 1152000 write_flash 0x10000 build/iot_encrypt.bin
+**实施步骤**：
 
-7. 将 flash\_encryption\_key 烧入 efuse (仅在第一次boot前烧写):
+1. 使用新密钥（如 key #1）签名的 OTA 固件通过当前应用验证后写入备用分区
+2. 新应用启动后验证二级引导加载程序（bootloader）签名正常（确认 bootloader key #1 可用）
+3. 调用 `esp_ota_revoke_secure_boot_public_key（） <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/system/ota.html#_CPPv437esp_ota_revoke_secure_boot_public_key38esp_ota_secure_boot_public_key_index_t>`__ 撤销旧密钥（key #0 撤销）
+4. 旧密钥（key #0）被撤销后，使用该密钥签名的固件将无法通过验证
+5. 二级引导加载程序（bootloader）和应用程序（app）均使用新密钥（key #1）签名验证
 
-   ::
+密钥撤销详情：`密钥撤销 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/security/secure-boot-v2.html#key-revocation>`_
 
-       python $IDF_PATH/components/esptool_py/esptool/espefuse.py burn_key flash_encryption flash_encrypt_key.bin
+启用后的限制
+~~~~~~~~~~~~~
 
-8. 将 secure boot key 烧入efuse（仅在第一次boot前烧写）:
+**安全限制**：
 
-   ::
+- 启用硬件安全启动后，无禁用方法
+- 更新的引导加载程序或应用程序必须使用匹配的密钥签名
+- 禁用 USB-OTG USB 栈，不允许通过串行仿真或 DFU 更新
+- 禁用进一步的 eFuse 读保护，防止攻击者读保护安全启动公钥摘要
 
-       python $IDF_PATH/components/esptool_py/esptool/espefuse.py burn_key secure_boot ./build/bootloader/secure_boot_key.bin
+**调试接口**：
 
-9. 烧写 efuse 中的控制标志（仅在第一次boot前烧写）
+- JTAG 接口默认被禁用
+- UART 下载模式切换到安全模式
 
-   ::
+详细限制说明：`安全启动启用后的限制 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/security/secure-boot-v2.html#restrictions-after-secure-boot-is-enabled>`_
 
-       python $IDF_PATH/components/esptool_py/esptool/espefuse.py burn_efuse ABS_DONE_0
-       python $IDF_PATH/components/esptool_py/esptool/espefuse.py burn_efuse FLASH_CRYPT_CNT
-       python $IDF_PATH/components/esptool_py/esptool/espefuse.py burn_efuse FLASH_CRYPT_CONFIG 0xf
-       python $IDF_PATH/components/esptool_py/esptool/espefuse.py burn_efuse DISABLE_DL_ENCRYPT
-       python $IDF_PATH/components/esptool_py/esptool/espefuse.py burn_efuse DISABLE_DL_DECRYPT
-       python $IDF_PATH/components/esptool_py/esptool/espefuse.py burn_efuse DISABLE_DL_CACHE
+软件签名验证
+~~~~~~~~~~~~~~~
 
+软件签名验证提供了一种轻量级的签名验证机制，和硬件安全启动使用相同的签名方案，但仅在 OTA 更新时验证新镜像，适用于对启动速度敏感或物理安全要求较低的场景，但不具备完整的启动链保护能力。
 
+**软件签名 vs 硬件安全启动**：
+
+.. list-table:: 软件签名 vs 硬件安全启动
+    :header-rows: 1
+    :widths: 20 40 40
+
+    * - 项目
+      - 🛡️ Secure Boot v2（硬件）
+      - 🔓 软件签名验证机制（无 Secure Boot）
+    * - 启动时验证
+      - ✅ 验证 bootloader 和 app 镜像签名
+      - ❌ 不验证当前 app，假定其可信
+    * - OTA 更新验证
+      - ✅ 使用 eFuse 中密钥验证新 app 签名
+      - ✅ 使用当前 app 的签名块公钥验证新 app
+    * - 安全根（Root of Trust）
+      - eFuse 中烧录的公钥摘要
+      - 当前运行 app 的签名块中的公钥
+    * - eFuse 配置要求
+      - 必须烧录 SECURE_BOOT_EN 和 KEY_DIGESTx
+      - 无需烧录 Secure Boot 相关 eFuse
+    * - 密钥撤销机制
+      - ✅ 支持 KEY_REVOKE_x 和激进撤销策略
+      - ❌ 不支持密钥撤销
+    * - 签名块支持数量
+      - ✅ 最多 3 个签名块，支持多密钥验证
+      - ❌ 仅使用第一个签名块，忽略其他
+    * - 防篡改能力
+      - ✅ 防止 Flash 被替换或注入恶意代码
+      - ❌ 无法防止物理攻击或 Flash 替换
+    * - 启动性能
+      - ❌ 启动时有签名验证开销
+      - ✅ 启动更快，无验证延迟
+    * - 开发便利性
+      - ❌ 启用 eFuse 后不可逆，需谨慎操作
+      - ✅ 无不可逆操作，适合开发调试
+    * - 适用场景
+      - 量产部署、高安全性要求设备
+      - 开发测试、启动速度敏感、物理安全可控环境
+    * - 密钥管理灵活性
+      - ✅ 支持多密钥轮换与撤销
+      - ❌ 仅依赖当前 app 的公钥，无法轮换
+    * - 推荐使用
+      - ✅ 官方推荐用于正式产品
+      - ⚠️ 仅在明确威胁模型下使用，需谨慎评估
+
+**配置方法**：
+
+启用 ``CONFIG_SECURE_SIGNED_APPS_NO_SECURE_BOOT`` 选项。
+
+详情参考：`无硬件安全启动的签名应用程序验证 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/security/secure-boot-v2.html#signed-app-verification-without-hardware-secure-boot>`_
+
+示例代码
+~~~~~~~~~~~
+
+完整的安全启动使用示例请参考：
+
+- `ESP-IDF 安全启动示例 <https://github.com/espressif/esp-idf/tree/master/tools/test_apps/security/secure_boot>`_
+- `安全功能综合示例 <https://github.com/espressif/esp-idf/tree/master/examples/security/security_features_app>`_
+
+这些示例展示了：
+
+- 安全启动状态检查
+- 签名密钥生成和管理
+- 多密钥签名和撤销
+- 与 Flash 加密的配合使用
+
+最佳实践
+~~~~~~~~~~~
+
+1. **使用高质量熵源生成签名密钥**
+2. **始终保持签名密钥私密**
+3. **避免第三方观察密钥生成或签名过程**
+4. **启用所有安全启动配置选项**
+5. **结合 Flash 加密使用**
+6. **使用多个密钥减少单点故障**
+7. **制定密钥轮换策略**
+
+更多最佳实践：`安全启动最佳实践 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/security/secure-boot-v2.html#secure-boot-best-practices>`_
+
+常见问题 (FAQ)
+~~~~~~~~~~~~~~~~~
+
+* 请参考：`ESP-FAQ 安全部分 <https://docs.espressif.com/projects/esp-faq/zh_CN/latest/software-framework/security.html>`_
