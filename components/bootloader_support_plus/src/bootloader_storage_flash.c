@@ -14,12 +14,7 @@
 #include "bootloader_custom_malloc.h" // Note, this header is just used to provide malloc() and free() support.
 
 #ifdef CONFIG_BOOTLOADER_WDT_ENABLE
-#include "hal/wdt_hal.h"
-#if (ESP_IDF_VERSION_MAJOR == 5) && (ESP_IDF_VERSION_MINOR >= 1)
 static wdt_hal_context_t rtc_wdt_ctx = RWDT_HAL_CONTEXT_DEFAULT();
-#else
-static wdt_hal_context_t rtc_wdt_ctx = {.inst = WDT_RWDT, .rwdt_dev = &RTCCNTL};
-#endif // ESP_IDF_VERSION_MAJOR
 static bool rtc_wdt_ctx_enabled = false;
 #endif
 

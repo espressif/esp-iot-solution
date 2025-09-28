@@ -10,6 +10,17 @@
 #include "bootloader_utility.h"
 #include "bootloader_custom_ota.h"
 
+#ifdef CONFIG_BOOTLOADER_WDT_ENABLE
+#include "hal/wdt_hal.h"
+#if !defined(RWDT_HAL_CONTEXT_DEFAULT)
+#if CONFIG_IDF_TARGET_ESP32H2
+#define RWDT_HAL_CONTEXT_DEFAULT()     {.inst = WDT_RWDT, .rwdt_dev = &LP_WDT}
+#else
+#define RWDT_HAL_CONTEXT_DEFAULT()     {.inst = WDT_RWDT, .rwdt_dev = &RTCCNTL}
+#endif
+#endif // RWDT_HAL_CONTEXT_DEFAULT
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif

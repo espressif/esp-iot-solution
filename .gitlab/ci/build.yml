@@ -690,6 +690,10 @@ build_example_ota_simple_ota_example:
     matrix:
       - IMAGE: espressif/idf:release-v5.0
       - IMAGE: espressif/idf:release-v5.1
+      - IMAGE: espressif/idf:release-v5.2
+      - IMAGE: espressif/idf:release-v5.3
+      - IMAGE: espressif/idf:release-v5.4
+      - IMAGE: espressif/idf:release-v5.5
   variables:
     EXAMPLE_DIR: examples/ota/simple_ota_example
     WARNING_STR: "1/2 app partitions are too small"

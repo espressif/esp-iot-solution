@@ -7,14 +7,16 @@
 ## 概述
 bootloader support plus 是乐鑫基于 [ESP-IDF](https://github.com/espressif/esp-idf) 的 [custom_bootloader](https://github.com/espressif/esp-idf/tree/master/examples/custom_bootloader)  推出的增强版 bootloader，支持在 bootloader 阶段对`压缩`的固件进行 `解压缩`，来升级原有固件。在该方案中，您可以直接使用 ESP-IDF 中原生的 OTA 接口（比如 [esp_ota](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/ota.html#api-reference)、[esp_https_ota](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/esp_https_ota.html#api-reference)）。下表总结了适配 `bootloader support plus` 的乐鑫芯片以及其对应的 ESP-IDF 版本：
 
-| Chip     | ESP-IDF Release/v5.0                                         | ESP-IDF Release/v5.1                                  | ESP-IDF Release/v5.4+                 |
-| -------- | ------------------------------------------------------------ | ------------------------------------------------------------ |------------------------------ |
-| ESP32 | Supported | Supported | Supported |
-| ESP32-C2 | Supported | Supported | Supported |
-| ESP32-C3 | Supported | Supported | Supported |
-| ESP32-C5 | N/A | N/A | Supported |
-| ESP32-C6 | N/A | Supported | Supported |
-| ESP32-H2 | N/A | Supported | Supported |
+| Chip     | ESP-IDF Release/v5.0                                         | ESP-IDF Release/v5.1                                  | ESP-IDF Release/v5.4+                 | ESP-IDF Release/v5.5+                 |
+| -------- | ------------------------------------------------------------ | ------------------------------------------------------------ |------------------------------ |----------------------------- |
+| ESP32 | Supported | Supported | Supported | Supported |
+| ESP32-S3 | N/A | Supported | Supported | Supported |
+| ESP32-C2 | Supported | Supported | Supported | Supported |
+| ESP32-C3 | Supported | Supported | Supported | Supported |
+| ESP32-C5 | N/A | N/A | Supported | Supported |
+| ESP32-C6 | N/A | Supported | Supported | Supported |
+| ESP32-H2 | N/A | Supported | Supported | Supported |
+| ESP32-C61 | N/A | N/A  | N/A | Supported |
 
 ## 压缩率
 

@@ -1,0 +1,16 @@
+MEMORY
+{
+  iram_loader1_seg (RWX) :           org = 0x4084A000, len = 0x6000
+}
+
+SECTIONS
+{
+  .xz :
+  {
+    . = ALIGN(4);
+    *libbootloader_support_plus.a:(.literal .text .literal.* .text.*)
+    *libespressif__bootloader_support_plus.a:(.literal .text .literal.* .text.*)
+    *libespressif__xz.a:(.literal .text .literal.* .text.*)
+    *libxz.a:(.literal .text .literal.* .text.*)
+  } > iram_loader1_seg
+}
