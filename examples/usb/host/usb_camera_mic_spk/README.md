@@ -1,3 +1,5 @@
+| Supported Targets | ESP32-S2 | ESP32-S3 |
+| ----------------- | -------- | -------- |
 ## USB Stream Example
 
 This example demonstrates how to use `usb_stream` component with an ESP device. Example does the following steps:

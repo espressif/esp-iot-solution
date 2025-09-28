@@ -1,3 +1,5 @@
+| Supported Targets | ESP32-S2 | ESP32-S3 |
+| ----------------- | -------- | -------- |
 # USB Host CDC Basic Example
 
 This example demonstrates how to use [iot_usbh_cdc](https://components.espressif.com/components/espressif/iot_usbh_cdc) to communicate with USB CDC device.
