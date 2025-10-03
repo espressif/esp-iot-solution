@@ -248,7 +248,6 @@ static bool tud_audio_feature_unit_set_request(uint8_t rhport, audio_control_req
         if (s_uac_device->user_cfg.set_mute_cb) {
             s_uac_device->user_cfg.set_mute_cb(s_uac_device->mute[request->bChannelNumber], s_uac_device->user_cfg.cb_ctx);
         }
-
         return true;
     } else if (request->bControlSelector == AUDIO_FU_CTRL_VOLUME) {
         TU_VERIFY(request->wLength == sizeof(audio_control_cur_2_t));
@@ -258,6 +257,9 @@ static bool tud_audio_feature_unit_set_request(uint8_t rhport, audio_control_req
         TU_LOG1("Set speaker channel %d volume: %d dB (%d)\r\n", request->bChannelNumber, volume_db, volume);
         if (s_uac_device->user_cfg.set_volume_cb) {
             s_uac_device->user_cfg.set_volume_cb(volume, s_uac_device->user_cfg.cb_ctx);
+        }
+        if (s_uac_device->user_cfg.set_volume_db_cb) {
+            s_uac_device->user_cfg.set_volume_db_cb(volume_db, s_uac_device->user_cfg.cb_ctx);
         }
         return true;
     } else {
