@@ -503,6 +503,7 @@ esp_err_t uac_device_init(uac_device_config_t *config)
     s_uac_device->user_cfg.cb_ctx = config->cb_ctx;
     s_uac_device->user_cfg.set_mute_cb = config->set_mute_cb;
     s_uac_device->user_cfg.set_volume_cb = config->set_volume_cb;
+    s_uac_device->user_cfg.set_volume_db_cb = config->set_volume_db_cb;
     s_uac_device->current_sample_rate = DEFAULT_SAMPLE_RATE;
     s_uac_device->mic_buf_write = s_uac_device->mic_buf1;
     s_uac_device->mic_buf_read = s_uac_device->mic_buf2;
