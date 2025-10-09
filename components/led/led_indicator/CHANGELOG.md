@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v2.0.2 - 2025-10-08
+
+### Bugfix
+
+* Fixed requires in CMake for IDF6.
+
 ## v2.0.1 - 2025-8-12
 
 ### Bugfix
