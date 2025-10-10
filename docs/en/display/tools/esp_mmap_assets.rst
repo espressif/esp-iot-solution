@@ -49,7 +49,9 @@ The following options are supported. These options allow you to configure variou
    set(one_value_args
        MMAP_FILE_SUPPORT_FORMAT,
        MMAP_SPLIT_HEIGHT,
-       MMAP_RAW_FILE_FORMAT)
+       MMAP_RAW_FILE_FORMAT,
+       IMPORT_INC_PATH,
+       COPY_PREBUILT_BIN)
 
 Option Explanations
 ~~~~~~~~~~~~~~~~~~~~
@@ -62,6 +64,8 @@ General Options
    - ``FLASH_APPEND_APP``: Enables appending binary data (``bin``) to the application binary (``app_bin``).
 
    - ``IMPORT_INC_PATH``: Target path for generated include files. Defaults to referencing component location.
+   
+   - ``COPY_PREBUILT_BIN``: Copies pre-generated binary files to target directory. This option allows you to use externally generated asset binaries instead of building them from source files.
    
    - ``MMAP_FILE_SUPPORT_FORMAT``: Specifies supported file formats (e.g., ``.png``, ``.jpg``, ``.ttf``).
    
@@ -81,6 +85,18 @@ General demo
       my_folder
       FLASH_IN_PROJECT
       MMAP_FILE_SUPPORT_FORMAT ".jpg,.png,.ttf"
+   )
+
+Pre-built binary assets demo
+"""""""""""""""""""""""""""""""
+
+.. code:: c
+
+   spiffs_create_partition_assets(
+      my_spiffs_partition
+      "${ASSETS_DIR}"
+      FLASH_IN_PROJECT
+      COPY_PREBUILT_BIN "${ASSETS_DIR}/prebuilt.bin"
    )
 
 Supported Image Formats

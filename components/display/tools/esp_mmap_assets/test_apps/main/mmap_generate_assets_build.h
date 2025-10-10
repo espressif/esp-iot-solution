@@ -13,10 +13,10 @@
 
 #include "esp_mmap_assets.h"
 
-#define MMAP_ASSETS_FILES           2
-#define MMAP_ASSETS_CHECKSUM        0xB1AD
+#define MMAP_ASSETS_BUILD_FILES           2
+#define MMAP_ASSETS_BUILD_CHECKSUM        0xB1AD
 
-enum MMAP_ASSETS_LISTS {
-    MMAP_ASSETS_JPG_JPG = 0,        /*!< jpg.jpg */
-    MMAP_ASSETS_PNG_PNG = 1,        /*!< png.png */
+enum MMAP_ASSETS_BUILD_LISTS {
+    MMAP_ASSETS_BUILD_JPG_JPG = 0,        /*!< jpg.jpg */
+    MMAP_ASSETS_BUILD_PNG_PNG = 1,        /*!< png.png */
 };

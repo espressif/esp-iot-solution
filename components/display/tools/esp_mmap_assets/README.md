@@ -55,7 +55,8 @@ set(one_value_args
     MMAP_FILE_SUPPORT_FORMAT,
     MMAP_SPLIT_HEIGHT,
     MMAP_RAW_FILE_FORMAT
-    IMPORT_INC_PATH)
+    IMPORT_INC_PATH
+    COPY_PREBUILT_BIN)
 ```
 
 ### Option Explanations
@@ -65,15 +66,18 @@ set(one_value_args
 - **`FLASH_IN_PROJECT`**: Users can opt to have the image automatically flashed together with the app binaries, partition tables, etc. on `idf.py flash`
 - **`FLASH_APPEND_APP`**: Enables appending binary data (`bin`) to the application binary (`app_bin`).
 - **`IMPORT_INC_PATH`**: Target path for generated include files. Defaults to referencing component location.
+- **`COPY_PREBUILT_BIN`**: Copies pre-generated binary files to target directory. This option allows you to use externally generated asset binaries instead of building them from source files.
 - **`MMAP_FILE_SUPPORT_FORMAT`**: Specifies supported file formats (e.g., `.png`, `.jpg`, `.ttf`).
 - **`MMAP_SPLIT_HEIGHT`**: Defines height for image splitting to reduce memory usage. Depends on:
   - `MMAP_SUPPORT_SJPG`
   - `MMAP_SUPPORT_SPNG`
   - `MMAP_SUPPORT_SQOI`
+  - `MMAP_SUPPORT_PJPG`
 
   ##### General demo
 
     ```c
+    //general usage
     spiffs_create_partition_assets(
         my_spiffs_partition
         my_folder
@@ -82,8 +86,30 @@ set(one_value_args
    )
     ```
 
+    ```c
+    // Animation assets with custom include path
+    spiffs_create_partition_assets(
+        anim_boot
+        "${ASSETS_DIR}/boot"
+        FLASH_IN_PROJECT
+        MMAP_FILE_SUPPORT_FORMAT ".aaf,.eaf"
+        IMPORT_INC_PATH "${ASSETS_DIR}"
+    )
+    ```
+
+    ```c
+    // Pre-built binary assets
+    spiffs_create_partition_assets(
+        anim_icon
+        "${ASSETS_DIR}"
+        FLASH_IN_PROJECT
+        COPY_PREBUILT_BIN "${ASSETS_DIR}/prebuilt.bin"
+    )
+    ```
+
 #### Supported Image Formats
 
+- **`MMAP_SUPPORT_PJPG`**: Enables support for **PJPG** format. Converts PNG to JPG format and uses JPG decoder for PNG files.
 - **`MMAP_SUPPORT_SJPG`**: Enables support for **SJPG** format.
 - **`MMAP_SUPPORT_SPNG`**: Enables support for **SPNG** format.
 - **`MMAP_SUPPORT_QOI`**: Enables support for **QOI** format.

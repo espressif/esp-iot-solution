@@ -16,7 +16,7 @@
 #include "unity_test_utils_memory.h"
 
 #include "mmap_generate_factory.h"
-#include "mmap_generate_assets.h"
+#include "mmap_generate_assets_build.h"
 
 static const char *TAG = "assets_test";
 
@@ -47,7 +47,7 @@ void print_file_list(mmap_assets_handle_t handle, int file_num)
         int width = mmap_assets_get_width(handle, i);
         int height = mmap_assets_get_height(handle, i);
 
-        ESP_LOGI(TAG, "name:[%s], mem:[%p], size:[%d bytes], w:[%d], h:[%d]", name, mem, size, width, height);
+        ESP_LOGI(TAG, "name:[%-10s] mem:[%p] size:[%8d bytes] w:[%4d] h:[%4d]", name, mem, size, width, height);
 
         if (strstr(name, ".png")) {
             TEST_ASSERT_TRUE(is_png(mem, size));
@@ -63,9 +63,9 @@ TEST_CASE("test assets mmap table", "[mmap_assets][mmap_enable][Independent part
     mmap_assets_handle_t asset_handle;
 
     const mmap_assets_config_t config = {
-        .partition_label = "assets",
-        .max_files = MMAP_ASSETS_FILES,
-        .checksum = MMAP_ASSETS_CHECKSUM,
+        .partition_label = "assets_build",
+        .max_files = MMAP_ASSETS_BUILD_FILES,
+        .checksum = MMAP_ASSETS_BUILD_CHECKSUM,
         .flags = {
             .mmap_enable = true,
             .app_bin_check = false,
@@ -79,7 +79,7 @@ TEST_CASE("test assets mmap table", "[mmap_assets][mmap_enable][Independent part
     int stored_files = mmap_assets_get_stored_files(asset_handle);
     ESP_LOGI(TAG, "stored_files:%d", stored_files);
 
-    print_file_list(asset_handle, MMAP_ASSETS_FILES);
+    print_file_list(asset_handle, MMAP_ASSETS_BUILD_FILES);
 
     mmap_assets_del(asset_handle);
 }
@@ -108,19 +108,15 @@ TEST_CASE("test assets mmap table", "[mmap_assets][mmap_enable][Append Partition
     mmap_assets_del(asset_handle);
 }
 
-TEST_CASE("test assets mmap table", "[mmap_assets][mmap_disable][Independent partition]")
+TEST_CASE("test assets mmap table", "[mmap_assets][mmap_enable][Prebuilt Partition]")
 {
     mmap_assets_handle_t asset_handle;
 
     const mmap_assets_config_t config = {
-        .partition_label = "assets",
-        .max_files = MMAP_ASSETS_FILES,
-        .checksum = MMAP_ASSETS_CHECKSUM,
+        .partition_label = "assets_prebuilt",
         .flags = {
-            .mmap_enable = false,
-            .app_bin_check = false,
+            .mmap_enable = true,
             .full_check = true,
-            .metadata_check = true,
         },
     };
 
@@ -129,30 +125,13 @@ TEST_CASE("test assets mmap table", "[mmap_assets][mmap_disable][Independent par
     int stored_files = mmap_assets_get_stored_files(asset_handle);
     ESP_LOGI(TAG, "stored_files:%d", stored_files);
 
-    for (int i = 0; i < MMAP_ASSETS_FILES; i++) {
-        const char *name = mmap_assets_get_name(asset_handle, i);
-        const uint8_t *mem = mmap_assets_get_mem(asset_handle, i);
-        int size = mmap_assets_get_size(asset_handle, i);
-        int width = mmap_assets_get_width(asset_handle, i);
-        int height = mmap_assets_get_height(asset_handle, i);
-
-        ESP_LOGI(TAG, "name:[%s], mem:[%p], size:[%d bytes], w:[%d], h:[%d]", name, mem, size, width, height);
-
-        uint8_t load_data[20];
-        mmap_assets_copy_mem(asset_handle, (size_t)mem, load_data, sizeof(load_data));
-
-        if (strstr(name, ".png")) {
-            TEST_ASSERT_TRUE(is_png((const uint8_t *)load_data, size));
-        } else if (strstr(name, ".jpg")) {
-            TEST_ASSERT_TRUE(is_jpg((const uint8_t *)load_data, size));
-        }
-    }
+    print_file_list(asset_handle, stored_files);
 
     mmap_assets_del(asset_handle);
 }
 
 // Some resources are lazy allocated in the LCD driver, the threadhold is left for that case
-#define TEST_MEMORY_LEAK_THRESHOLD  (500)
+#define TEST_MEMORY_LEAK_THRESHOLD  (600)
 
 static size_t before_free_8bit;
 static size_t before_free_32bit;

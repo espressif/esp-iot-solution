@@ -501,8 +501,6 @@ def pack_assets(config: PackModelsConfig):
 
         output_header.write('};\n')
 
-    print(f'All bin files have been merged into {os.path.basename(out_file)}')
-
 def copy_assets(config: AssetCopyConfig):
     """
     Copy assets to target_path based on the provided configuration.
@@ -656,6 +654,8 @@ def process_assets_build(config_data):
         print(f'{RED}Error:Binary size exceeds partition size.{RESET}')
         sys.exit(1)
 
+    print(f'Assets binary generated: {os.path.basename(image_file)}')
+
 def process_assets_merge(config_data):
     app_bin_path = config_data['app_bin_path']
     image_file = config_data['image_file']
@@ -687,11 +687,51 @@ def process_assets_merge(config_data):
             combined_bin.write(img_bin.read())
 
     shutil.move(combined_bin_path, app_bin_path)
-    print(f'Append bin created: {os.path.basename(app_bin_path)}')
+    print(f'Binary merged: {os.path.basename(app_bin_path)}')
+
+def process_assets_copy(config_data):
+    """
+    Copy pre-built bin file to target location.
+    This function handles already merged bin files and only performs copy operation.
+    """
+    source_bin_path = config_data['source_bin_path']
+    image_file = config_data['image_file']
+
+    if not source_bin_path or source_bin_path == '':
+        print(f'{RED}Error: source_bin_path not specified in config{RESET}')
+        sys.exit(1)
+
+    if not os.path.exists(source_bin_path):
+        print(f'{RED}Error: Source bin file not found: {source_bin_path}{RESET}')
+        sys.exit(1)
+
+    # Create target directory if it doesn't exist
+    target_dir = os.path.dirname(image_file)
+    os.makedirs(target_dir, exist_ok=True)
+
+    # Copy the bin file
+    shutil.copy2(source_bin_path, image_file)
+
+    # Get file size for reporting
+    file_size = os.path.getsize(image_file)
+    partition_size = math.ceil(int(config_data['assets_size'], 16))
+
+    print(f'{"Copied bin size:":<30} {GREEN}{file_size / 1024:>8.2f}K ({file_size}){RESET}')
+    print(f'{"Partition size:":<30} {GREEN}{partition_size / 1024:>8.2f}K ({partition_size}){RESET}')
+
+    if file_size > partition_size:
+        recommended_size = math.ceil(file_size / 1024)
+        print(f'Recommended partition size: {GREEN}{recommended_size}K{RESET}')
+        print(f'{RED}Error:Binary size exceeds partition size.{RESET}')
+        sys.exit(1)
+
+    print(f'Binary copied: {os.path.basename(image_file)}')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Move and Pack assets.')
     parser.add_argument('--config', required=True, help='Path to the configuration file')
+    parser.add_argument('--copy', action='store_true', help='Copy pre-built bin file')
+    parser.add_argument('--build', action='store_true', help='Build assets')
     parser.add_argument('--merge', action='store_true', help='Merge assets with app binary')
     args = parser.parse_args()
 
@@ -700,5 +740,7 @@ if __name__ == '__main__':
 
     if args.merge:
         process_assets_merge(config_data)
-    else:
+    elif args.copy:
+        process_assets_copy(config_data)
+    elif args.build:
         process_assets_build(config_data)
