@@ -19,6 +19,7 @@
     "support_raw_ff": "@arg_MMAP_RAW_FILE_FORMAT@",
     "support_raw_cf": "@arg_MMAP_RAW_COLOR_FORMAT@",
     "app_bin_path": "@app_bin_path@",
-    "pjpg_processor": "@PJPG_PROCESSOR_PATH@"
-    ,"header_asset_name": "@partition@"
+    "pjpg_processor": "@PJPG_PROCESSOR_PATH@",
+    "header_asset_name": "@partition@",
+    "source_bin_path": "@source_bin_path@"
 }

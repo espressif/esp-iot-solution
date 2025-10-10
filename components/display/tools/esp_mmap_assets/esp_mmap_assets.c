@@ -166,25 +166,25 @@ esp_err_t mmap_assets_new(const mmap_assets_config_t *config, mmap_assets_handle
 
     map_asset->stored_files = stored_files;
 
-    item = (mmap_assets_item_t *)malloc(sizeof(mmap_assets_item_t) * config->max_files);
+    item = (mmap_assets_item_t *)malloc(sizeof(mmap_assets_item_t) * stored_files);
     ESP_GOTO_ON_FALSE(item, ESP_ERR_NO_MEM, err, TAG, "no mem for asset item");
 
     if (map_asset->flags.mmap_enable) {
         mmap_assets_table_t *table = (mmap_assets_table_t *)(root + ASSETS_TABLE_OFFSET);
-        for (int i = 0; i < config->max_files; i++) {
+        for (int i = 0; i < stored_files; i++) {
             (item + i)->table = (table + i);
-            (item + i)->asset_mem = (void *)(root + ASSETS_TABLE_OFFSET + config->max_files * sizeof(mmap_assets_table_t) + table[i].asset_offset);
+            (item + i)->asset_mem = (void *)(root + ASSETS_TABLE_OFFSET + stored_files * sizeof(mmap_assets_table_t) + table[i].asset_offset);
         }
     } else {
-        mmap_assets_table_t *table = malloc(sizeof(mmap_assets_table_t) * config->max_files);
-        for (int i = 0; i < config->max_files; i++) {
+        mmap_assets_table_t *table = malloc(sizeof(mmap_assets_table_t) * stored_files);
+        for (int i = 0; i < stored_files; i++) {
             esp_partition_read(partition, ASSETS_TABLE_OFFSET + i * sizeof(mmap_assets_table_t), (table + i), sizeof(mmap_assets_table_t));
             (item + i)->table = (table + i);
-            (item + i)->asset_mem = (char *)(ASSETS_TABLE_OFFSET + config->max_files * sizeof(mmap_assets_table_t) + table[i].asset_offset);
+            (item + i)->asset_mem = (char *)(ASSETS_TABLE_OFFSET + stored_files * sizeof(mmap_assets_table_t) + table[i].asset_offset);
         }
     }
 
-    for (int i = 0; i < config->max_files; i++) {
+    for (int i = 0; i < stored_files; i++) {
         ESP_LOGD(TAG, "[%d], offset:[%" PRIu32 "], size:[%" PRIu32 "], name:%s, %p",
                  i,
                  (item + i)->table->asset_offset,
@@ -207,7 +207,7 @@ esp_err_t mmap_assets_new(const mmap_assets_config_t *config, mmap_assets_handle
 
     map_asset->mmap_handle = mmap_handle;
     map_asset->item = item;
-    map_asset->max_asset = config->max_files;
+    map_asset->max_asset = stored_files;
     *ret_item = (mmap_assets_handle_t)map_asset;
 
     ESP_LOGD(TAG, "new asset handle:@%p", map_asset);

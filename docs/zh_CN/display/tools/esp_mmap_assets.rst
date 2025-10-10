@@ -49,7 +49,9 @@ CMake 选项
    set(one_value_args
        MMAP_FILE_SUPPORT_FORMAT,
        MMAP_SPLIT_HEIGHT,
-       MMAP_RAW_FILE_FORMAT)
+       MMAP_RAW_FILE_FORMAT,
+       IMPORT_INC_PATH,
+       COPY_PREBUILT_BIN)
 
 选项说明
 ~~~~~~~~~~~~~~~~~~~~
@@ -62,6 +64,8 @@ CMake 选项
    - ``FLASH_APPEND_APP``: 启用将二进制数据（``bin``）附加到应用程序二进制文件（``app_bin``）。
 
    - ``IMPORT_INC_PATH``: 指定生成头文件的目标路径。默认与引用组件位置相同。
+   
+   - ``COPY_PREBUILT_BIN``: 复制预生成的二进制文件到目标目录。此选项允许您使用外部生成的资产二进制文件，而不是从源文件构建。
    
    - ``MMAP_FILE_SUPPORT_FORMAT``: 指定支持的文件格式（例如，``.png``、``.jpg``、``.ttf``）。
    
@@ -81,6 +85,18 @@ CMake 选项
       my_folder
       FLASH_IN_PROJECT
       MMAP_FILE_SUPPORT_FORMAT ".jpg,.png,.ttf"
+   )
+
+预构建二进制资源示例
+"""""""""""""""""""""""""""""""
+
+.. code:: c
+
+   spiffs_create_partition_assets(
+      my_spiffs_partition
+      "${ASSETS_DIR}"
+      FLASH_IN_PROJECT
+      COPY_PREBUILT_BIN "${ASSETS_DIR}/prebuilt.bin"
    )
 
 支持的图像格式

@@ -32,15 +32,3 @@ spiffs_create_partition_assets(pjpg ../spiffs_assets FLASH_IN_PROJECT
     MMAP_SUPPORT_PJPG
     IMPORT_INC_PATH "${CMAKE_CURRENT_SOURCE_DIR}"
 )
-
-# Ensure headers are generated before compiling this component
-idf_build_get_property(build_components BUILD_COMPONENTS)
-foreach(COMPONENT ${build_components})
-    if(COMPONENT MATCHES "^esp_mmap_assets$" OR COMPONENT MATCHES "^espressif__esp_mmap_assets$")
-        add_dependencies(${COMPONENT_LIB}
-            assets_qoi_bin
-            assets_spng_bin
-            assets_sjpg_bin
-            assets_pjpg_bin)
-    endif()
-endforeach()

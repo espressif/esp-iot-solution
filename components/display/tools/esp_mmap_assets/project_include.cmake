@@ -20,7 +20,8 @@ function(spiffs_create_partition_assets partition base_dir)
                        MMAP_SPLIT_HEIGHT
                        MMAP_RAW_FILE_FORMAT
                        MMAP_RAW_COLOR_FORMAT
-                       IMPORT_INC_PATH)
+                       IMPORT_INC_PATH
+                       COPY_PREBUILT_BIN)
 
     # Define multi-value arguments
     set(multi DEPENDS)
@@ -32,111 +33,122 @@ function(spiffs_create_partition_assets partition base_dir)
                           "${multi}"
                           "${ARGN}")
 
-    if(NOT DEFINED arg_MMAP_FILE_SUPPORT_FORMAT OR arg_MMAP_FILE_SUPPORT_FORMAT STREQUAL "")
-        message(FATAL_ERROR "MMAP_FILE_SUPPORT_FORMAT is empty. Please input the file suffixes you want (e.g .png, .jpg).")
-    endif()
-
-    if(arg_MMAP_SUPPORT_QOI AND (arg_MMAP_SUPPORT_SJPG OR arg_MMAP_SUPPORT_SPNG))
-        message(FATAL_ERROR "MMAP_SUPPORT_QOI depends on !MMAP_SUPPORT_SJPG && !MMAP_SUPPORT_SPNG.")
-    endif()
-
-    if(arg_MMAP_SUPPORT_SQOI AND NOT arg_MMAP_SUPPORT_QOI)
-        message(FATAL_ERROR "MMAP_SUPPORT_SQOI depends on MMAP_SUPPORT_QOI.")
-    endif()
-
-    if( (arg_MMAP_SUPPORT_SJPG OR arg_MMAP_SUPPORT_SPNG OR arg_MMAP_SUPPORT_SQOI) AND
-        (NOT DEFINED arg_MMAP_SPLIT_HEIGHT OR arg_MMAP_SPLIT_HEIGHT LESS 1) )
-        message(FATAL_ERROR "MMAP_SPLIT_HEIGHT must be defined and its value >= 1 when MMAP_SUPPORT_SJPG, MMAP_SUPPORT_SPNG, or MMAP_SUPPORT_SQOI is enabled.")
-    endif()
-
-    if(DEFINED arg_MMAP_SPLIT_HEIGHT)
-        if(NOT (arg_MMAP_SUPPORT_SJPG OR arg_MMAP_SUPPORT_SPNG OR arg_MMAP_SUPPORT_SQOI))
-            message(FATAL_ERROR "MMAP_SPLIT_HEIGHT depends on MMAP_SUPPORT_SJPG || MMAP_SUPPORT_SPNG || MMAP_SUPPORT_SQOI.")
+    # Check if COPY_PREBUILT_BIN is enabled (has a path provided)
+    if(DEFINED arg_COPY_PREBUILT_BIN AND NOT arg_COPY_PREBUILT_BIN STREQUAL "")
+        if(NOT EXISTS "${arg_COPY_PREBUILT_BIN}")
+            message(FATAL_ERROR "COPY_PREBUILT_BIN file not found: ${arg_COPY_PREBUILT_BIN}")
         endif()
+        message(STATUS "Copy pre-built bin file: ${arg_COPY_PREBUILT_BIN}")
     endif()
 
-    if(arg_MMAP_SUPPORT_RAW AND (arg_MMAP_SUPPORT_SJPG OR arg_MMAP_SUPPORT_SPNG OR arg_MMAP_SUPPORT_QOI OR arg_MMAP_SUPPORT_SQOI OR arg_MMAP_SUPPORT_PJPG))
-        message(FATAL_ERROR "MMAP_SUPPORT_RAW and MMAP_SUPPORT_SJPG/MMAP_SUPPORT_SPNG/MMAP_SUPPORT_QOI/MMAP_SUPPORT_SQOI/MMAP_SUPPORT_PJPG cannot be enabled at the same time.")
-    endif()
+    # Skip format and conversion validations for copy mode
+    if(NOT (DEFINED arg_COPY_PREBUILT_BIN AND NOT arg_COPY_PREBUILT_BIN STREQUAL ""))
+        if(NOT DEFINED arg_MMAP_FILE_SUPPORT_FORMAT OR arg_MMAP_FILE_SUPPORT_FORMAT STREQUAL "")
+            message(FATAL_ERROR "MMAP_FILE_SUPPORT_FORMAT is empty. Please input the file suffixes you want (e.g .png, .jpg).")
+        endif()
 
-    # Try to install Pillow using pip
-    idf_build_get_property(python PYTHON)
-    execute_process(
-        COMMAND ${python} -c "import PIL"
-        RESULT_VARIABLE PIL_FOUND
-        OUTPUT_QUIET
-        ERROR_QUIET
-    )
+        if(arg_MMAP_SUPPORT_QOI AND (arg_MMAP_SUPPORT_SJPG OR arg_MMAP_SUPPORT_SPNG))
+            message(FATAL_ERROR "MMAP_SUPPORT_QOI depends on !MMAP_SUPPORT_SJPG && !MMAP_SUPPORT_SPNG.")
+        endif()
 
-    if(NOT PIL_FOUND EQUAL 0)
-        message(STATUS "Pillow not found. Attempting to install it using pip...")
+        if(arg_MMAP_SUPPORT_SQOI AND NOT arg_MMAP_SUPPORT_QOI)
+            message(FATAL_ERROR "MMAP_SUPPORT_SQOI depends on MMAP_SUPPORT_QOI.")
+        endif()
 
+        if( (arg_MMAP_SUPPORT_SJPG OR arg_MMAP_SUPPORT_SPNG OR arg_MMAP_SUPPORT_SQOI) AND
+            (NOT DEFINED arg_MMAP_SPLIT_HEIGHT OR arg_MMAP_SPLIT_HEIGHT LESS 1) )
+            message(FATAL_ERROR "MMAP_SPLIT_HEIGHT must be defined and its value >= 1 when MMAP_SUPPORT_SJPG, MMAP_SUPPORT_SPNG, or MMAP_SUPPORT_SQOI is enabled.")
+        endif()
+
+        if(DEFINED arg_MMAP_SPLIT_HEIGHT)
+            if(NOT (arg_MMAP_SUPPORT_SJPG OR arg_MMAP_SUPPORT_SPNG OR arg_MMAP_SUPPORT_SQOI))
+                message(FATAL_ERROR "MMAP_SPLIT_HEIGHT depends on MMAP_SUPPORT_SJPG || MMAP_SUPPORT_SPNG || MMAP_SUPPORT_SQOI.")
+            endif()
+        endif()
+
+        if(arg_MMAP_SUPPORT_RAW AND (arg_MMAP_SUPPORT_SJPG OR arg_MMAP_SUPPORT_SPNG OR arg_MMAP_SUPPORT_QOI OR arg_MMAP_SUPPORT_SQOI OR arg_MMAP_SUPPORT_PJPG))
+            message(FATAL_ERROR "MMAP_SUPPORT_RAW and MMAP_SUPPORT_SJPG/MMAP_SUPPORT_SPNG/MMAP_SUPPORT_QOI/MMAP_SUPPORT_SQOI/MMAP_SUPPORT_PJPG cannot be enabled at the same time.")
+        endif()
+
+        # Try to install Pillow using pip
+        idf_build_get_property(python PYTHON)
         execute_process(
-            COMMAND ${python} -m pip install -U Pillow
-            RESULT_VARIABLE result
-            OUTPUT_VARIABLE output
-            ERROR_VARIABLE error
-            OUTPUT_STRIP_TRAILING_WHITESPACE
-            ERROR_STRIP_TRAILING_WHITESPACE
+            COMMAND ${python} -c "import PIL"
+            RESULT_VARIABLE PIL_FOUND
+            OUTPUT_QUIET
+            ERROR_QUIET
         )
 
-        if(result)
-            message(FATAL_ERROR "Failed to install Pillow using pip. Please install it manually.\nError: ${error}")
-        else()
-            message(STATUS "Pillow successfully installed.")
+        if(NOT PIL_FOUND EQUAL 0)
+            message(STATUS "Pillow not found. Attempting to install it using pip...")
+
+            execute_process(
+                COMMAND ${python} -m pip install -U Pillow
+                RESULT_VARIABLE result
+                OUTPUT_VARIABLE output
+                ERROR_VARIABLE error
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+                ERROR_STRIP_TRAILING_WHITESPACE
+            )
+
+            if(result)
+                message(FATAL_ERROR "Failed to install Pillow using pip. Please install it manually.\nError: ${error}")
+            else()
+                message(STATUS "Pillow successfully installed.")
+            endif()
         endif()
-    endif()
-
-    execute_process(
-        COMMAND ${python} -c "import numpy"
-        RESULT_VARIABLE NUMPY_FOUND
-        OUTPUT_QUIET
-        ERROR_QUIET
-    )
-
-    if(NOT NUMPY_FOUND EQUAL 0)
-        message(STATUS "NumPy not found. Attempting to install it using pip...")
 
         execute_process(
-            COMMAND ${python} -m pip install -U numpy
-            RESULT_VARIABLE result
-            OUTPUT_VARIABLE output
-            ERROR_VARIABLE error
-            OUTPUT_STRIP_TRAILING_WHITESPACE
-            ERROR_STRIP_TRAILING_WHITESPACE
+            COMMAND ${python} -c "import numpy"
+            RESULT_VARIABLE NUMPY_FOUND
+            OUTPUT_QUIET
+            ERROR_QUIET
         )
 
-        if(result)
-            message(FATAL_ERROR "Failed to install NumPy using pip. Please install it manually.\nError: ${error}")
-        else()
-            message(STATUS "NumPy successfully installed.")
+        if(NOT NUMPY_FOUND EQUAL 0)
+            message(STATUS "NumPy not found. Attempting to install it using pip...")
+
+            execute_process(
+                COMMAND ${python} -m pip install -U numpy
+                RESULT_VARIABLE result
+                OUTPUT_VARIABLE output
+                ERROR_VARIABLE error
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+                ERROR_STRIP_TRAILING_WHITESPACE
+            )
+
+            if(result)
+                message(FATAL_ERROR "Failed to install NumPy using pip. Please install it manually.\nError: ${error}")
+            else()
+                message(STATUS "NumPy successfully installed.")
+            endif()
         endif()
-    endif()
 
-    # Try to install qoi-conv using pip
-    execute_process(
-        COMMAND ${python} -c "import importlib; importlib.import_module('qoi-conv')"
-        RESULT_VARIABLE PIL_FOUND
-        OUTPUT_QUIET
-        ERROR_QUIET
-    )
-
-    if(NOT PIL_FOUND EQUAL 0)
-        message(STATUS "qoi-conv not found. Attempting to install it using pip...")
-
+        # Try to install qoi-conv using pip
         execute_process(
-            COMMAND ${python} -m pip install -U qoi-conv
-            RESULT_VARIABLE result
-            OUTPUT_VARIABLE output
-            ERROR_VARIABLE error
-            OUTPUT_STRIP_TRAILING_WHITESPACE
-            ERROR_STRIP_TRAILING_WHITESPACE
+            COMMAND ${python} -c "import importlib; importlib.import_module('qoi-conv')"
+            RESULT_VARIABLE PIL_FOUND
+            OUTPUT_QUIET
+            ERROR_QUIET
         )
 
-        if(result)
-            message(FATAL_ERROR "Failed to install qoi-conv using pip. Please install it manually.\nError: ${error}")
-        else()
-            message(STATUS "qoi-conv successfully installed.")
+        if(NOT PIL_FOUND EQUAL 0)
+            message(STATUS "qoi-conv not found. Attempting to install it using pip...")
+
+            execute_process(
+                COMMAND ${python} -m pip install -U qoi-conv
+                RESULT_VARIABLE result
+                OUTPUT_VARIABLE output
+                ERROR_VARIABLE error
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+                ERROR_STRIP_TRAILING_WHITESPACE
+            )
+
+            if(result)
+                message(FATAL_ERROR "Failed to install qoi-conv using pip. Please install it manually.\nError: ${error}")
+            else()
+                message(STATUS "qoi-conv successfully installed.")
+            endif()
         endif()
     endif()
 
@@ -170,7 +182,7 @@ function(spiffs_create_partition_assets partition base_dir)
         set(image_file ${CMAKE_BINARY_DIR}/mmap_build/${base_dir_name}/${partition}/${partition}.bin)
         set(MVMODEL_EXE ${PY_TOOL_DIR}/spiffs_assets_gen.py)
 
-        if(arg_MMAP_SUPPORT_RAW)
+        if(arg_MMAP_SUPPORT_RAW AND NOT (DEFINED arg_COPY_PREBUILT_BIN AND NOT arg_COPY_PREBUILT_BIN STREQUAL ""))
             foreach(COMPONENT ${build_components})
             if(COMPONENT MATCHES "^lvgl$" OR COMPONENT MATCHES "^lvgl__lvgl$")
                 set(lvgl_name ${COMPONENT})
@@ -211,27 +223,41 @@ function(spiffs_create_partition_assets partition base_dir)
         string(TOLOWER "${arg_MMAP_RAW_BGR_MODE}" support_raw_bgr)
 
         set(app_bin_path "${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}.bin")
+        if(DEFINED arg_COPY_PREBUILT_BIN AND NOT arg_COPY_PREBUILT_BIN STREQUAL "")
+            set(source_bin_path "${arg_COPY_PREBUILT_BIN}")
+        else()
+            set(source_bin_path "")
+        endif()
 
         set(CONFIG_DIR "${CMAKE_BINARY_DIR}/mmap_build/${base_dir_name}")
         file(MAKE_DIRECTORY "${CONFIG_DIR}")
         set(CONFIG_FILE_PATH "${CONFIG_DIR}/${partition}.json")
         set(PJPG_PROCESSOR_PATH "${PY_TOOL_DIR}/png_processor.py")
         set(partition ${partition})
+
         configure_file(
             "${TARGET_COMPONENT_PATH}/config_template.json.in"
             "${CONFIG_FILE_PATH}"
             @ONLY
         )
 
-        add_custom_target(assets_${partition}_bin ALL
-            COMMENT "Move and Pack assets..."
-            COMMAND ${python} ${MVMODEL_EXE} --config "${CONFIG_FILE_PATH}"
-            DEPENDS ${arg_DEPENDS}
-            VERBATIM)
+        if(DEFINED arg_COPY_PREBUILT_BIN AND NOT arg_COPY_PREBUILT_BIN STREQUAL "")
+            add_custom_target(assets_${partition}_bin ALL
+                COMMENT "Copy prebuilt binary"
+                COMMAND ${python} ${MVMODEL_EXE} --config "${CONFIG_FILE_PATH}" --copy
+                DEPENDS ${arg_DEPENDS}
+                VERBATIM)
+        else()
+            add_custom_target(assets_${partition}_bin ALL
+                COMMENT "Build assets binary"
+                COMMAND ${python} ${MVMODEL_EXE} --config "${CONFIG_FILE_PATH}" --build
+                DEPENDS ${arg_DEPENDS}
+                VERBATIM)
+        endif()
 
         if(arg_FLASH_APPEND_APP)
             add_custom_target(assets_${partition}_merge_bin ALL
-            COMMENT "Merge Bin..."
+            COMMENT "Merge binary files"
             COMMAND ${python} ${MVMODEL_EXE} --config "${CONFIG_FILE_PATH}" --merge
             COMMAND ${CMAKE_COMMAND} -E rm "${build_dir}/.bin_timestamp" # Remove the timestamp file to force re-run
             DEPENDS assets_${partition}_bin app
