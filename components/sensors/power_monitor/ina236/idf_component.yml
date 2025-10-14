@@ -1,4 +1,4 @@
-version: "0.1.1"
+version: "0.1.2"
 description: INA236 power monitor component
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/sensors/power_monitor/ina236
 repository: https://github.com/espressif/esp-iot-solution.git

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -21,25 +21,25 @@ extern "C" {
  * @brief INA236 handle
  *
  */
-typedef struct ina236_t *ina236_handle_t;
+typedef struct ina236_dev_t *ina236_handle_t;
 
 /**
- * @brief ina236 alert callback function
+ * @brief INA236 alert callback function
  *
  */
 typedef void (*int236_alert_cb_t)(void *arg);
 
 /**
- * @brief ina236 configuration structure
+ * @brief INA236 configuration structure
  *
  */
 typedef struct {
     i2c_bus_handle_t bus;         /*!< I2C bus object */
-    bool alert_en;                /*!< Enable alert callback*/
+    bool alert_en;                /*!< Enable alert callback */
     uint8_t dev_addr;             /*!< I2C device address */
     uint8_t alert_pin;            /*!< Alert pin number */
     int236_alert_cb_t alert_cb;   /*!< Alert callback function */
-} ina236_config_t;
+} driver_ina236_config_t;
 
 /**
  * @brief Create and init object and return a handle
@@ -51,7 +51,7 @@ typedef struct {
  *     - ESP_OK Success
  *     - Others Fail
  */
-esp_err_t ina236_create(ina236_handle_t *handle, ina236_config_t *config);
+esp_err_t ina236_create(ina236_handle_t *handle, driver_ina236_config_t *config);
 
 /**
  * @brief Deinit object and free memory

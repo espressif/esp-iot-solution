@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.4.3 - 2025-9-26
+
+### Bug Fix:
+
+- Synchronize the version information for cmake_utilities
+
 ## v1.4.2 - 2025-8-26
 
 ### Bug Fix:

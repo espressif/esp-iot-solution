@@ -1,4 +1,5 @@
-/* SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+/*
+ * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -9,272 +10,219 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <esp_err.h>
-#include <esp_event.h>
 #include "driver/gpio.h"
+#include "i2c_bus.h"
+#include "power_measure_interface.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-/**
- * @brief STORGE_FACTOR_KEY
- */
-#define STORGE_FACTOR_KEY "factor"
 
 /**
- * @brief POWER_MEASURE event base
- */
-/** @cond **/
-ESP_EVENT_DECLARE_BASE(POWER_MEASURE_EVENT);
-/** @endcond **/
-
-/**
- * @brief Enumeration of power measurement events.
- */
-typedef enum {
-    POWER_MEASURE_INIT_DONE = 1,    /*!< Initialisation Done */
-    POWER_MEASURE_OVERCURRENT,      /*!< Overcurrent detected */
-    POWER_MEASURE_OVERVOLTAGE,      /*!< Overvoltage detected */
-    POWER_MEASURE_UNDERVOLTAGE,     /*!< Undervoltage */
-    POWER_MEASURE_ENERGY_REPORT,    /*!< report energy */
-    POWER_MEASURE_HOME_APPLIANCES_ONLINE,   /*!< appliances online */
-    POWER_MEASURE_HOME_APPLIANCES_OFFLINE,  /*!< appliances offline */
-} power_measure_event_t;
-
-/**
- * @brief Enumeration of rated voltage levels.
- */
-typedef enum {
-    RATED_VOLTAGE_110V = 110,       /*!< Rated voltage of 110 volts */
-    RATED_VOLTAGE_120V = 120,       /*!< Rated voltage of 120 volts */
-    RATED_VOLTAGE_220V = 220,       /*!< Rated voltage of 220 volts */
-} power_measure_rated_voltage_t;
-
-/**
- * @brief Enumeration of supported chip types.
- */
-typedef enum {
-    CHIP_BL0937 = 0,                 /*!< BL0937 chip type */
-    CHIP_MAX,                        /*!< Maximum chip type */
-} power_measure_chip_t;
-
-/**
- * @brief Data structure for overcurrent event data.
+ * @brief Common power measure configuration
  */
 typedef struct {
-    float current_value;             /*!< Current value measured during the overcurrent event */
-    uint16_t trigger_value;          /*!< Trigger threshold for overcurrent detection */
-} overcurrent_event_data_t;
-
-/**
- * @brief Data structure for overvoltage event data.
- */
-typedef struct {
-    float voltage_value;             /*!< Voltage value measured during the overvoltage event */
-    uint16_t overvalue;              /*!< Threshold value for overvoltage detection */
-} overvoltage_event_data_t;
-
-/**
- * @brief Data structure for undervoltage event data.
- */
-typedef struct {
-    float voltage_value;             /*!< Voltage value measured during the undervoltage event */
-    uint16_t undervalue;             /*!< Threshold value for undervoltage detection */
-} undervoltage_event_data_t;
-
-/**
- * @brief Structure for calibration parameters.
- */
-typedef struct {
-    float standard_power;            /*!< Standard power in watts */
-    float standard_voltage;          /*!< Standard voltage in volts */
-    float standard_current;          /*!< Standard current in amperes */
-} calibration_parameter_t;
-
-/**
- * @brief Structure for calibration factors.
- */
-typedef struct {
-    float ki;                        /*!< Calibration factor for current */
-    float ku;                        /*!< Calibration factor for voltage */
-    float kp;                        /*!< Calibration factor for power */
-} calibration_factor_t;
-
-/**
- * @brief Configuration structure for the chip.
- */
-typedef struct {
-    power_measure_chip_t type;      /*!< Type of the chip used */
-    calibration_factor_t factor;     /*!< Calibration factors for the chip */
-    gpio_num_t sel_gpio;            /*!< GPIO number for selection */
-    gpio_num_t cf1_gpio;            /*!< GPIO number for CF1 */
-    gpio_num_t cf_gpio;             /*!< GPIO number for CF */
-    uint8_t pin_mode;               /*!< Pin mode configuration */
-    float sampling_resistor;        /*!< Value of the sampling resistor */
-    float divider_resistor;         /*!< Value of the divider resistor */
-} chip_config_t;
-
-/**
- * @brief Initialization configuration structure for power measurement.
- */
-typedef struct {
-    chip_config_t chip_config;      /*!< Configuration for the chip */
     uint16_t overcurrent;            /*!< Overcurrent threshold */
     uint16_t overvoltage;            /*!< Overvoltage threshold */
     uint16_t undervoltage;           /*!< Undervoltage threshold */
-    bool enable_energy_detection;     /*!< Flag to enable energy detection */
-} power_measure_init_config_t;
+    bool enable_energy_detection;    /*!< Flag to enable energy detection */
+} power_measure_config_t;
 
 /**
- * @brief power measure component int
- *
- * @param config configuration for power measure hardware
- *
- * @return
- *     - ESP_OK
- *     - ESP_FAIL
- *     - ESP_ERR_NO_MEM
- *     - ESP_ERR_INVALID_ARG
- *     - ESP_ERR_INVALID_STATE
+ * @brief Power measure device handle
  */
-esp_err_t power_measure_init(power_measure_init_config_t* config);
+typedef struct power_measure_dev_t *power_measure_handle_t;
+
+// ============================================================================
+// Common API Functions
+// ============================================================================
 
 /**
- * @brief power measure component deint
+ * @brief Delete a power measurement device
  *
+ * @param handle Power measure device handle
  * @return
- *     - ESP_OK
- *     - ESP_FAIL
+ *     - ESP_OK: Success
+ *     - ESP_ERR_INVALID_ARG: Invalid handle
  */
-esp_err_t power_measure_deinit();
+esp_err_t power_measure_delete(power_measure_handle_t handle);
+
+// ============================================================================
+// Measurement API Functions
+// ============================================================================
 
 /**
- * @brief get current vltage (V)
+ * @brief Get current voltage (V)
  *
- * @param voltage current voltage (V)
- *
+ * @param handle Power measure device handle
+ * @param voltage Pointer to store the voltage value
  * @return
- *     - ESP_OK
- *     - ESP_FAIL
- *     - ESP_ERR_INVALID_ARG
- *     - ESP_ERR_INVALID_STATE
+ *     - ESP_OK: Success
+ *     - ESP_ERR_INVALID_ARG: Invalid arguments
+ *     - ESP_ERR_INVALID_STATE: Device not initialized
  */
-esp_err_t power_measure_get_voltage(float* voltage);
+esp_err_t power_measure_get_voltage(power_measure_handle_t handle, float* voltage);
 
 /**
- * @brief get current current (A)
+ * @brief Get current current (A)
  *
- * @param current current current (A)
- *
+ * @param handle Power measure device handle
+ * @param current Pointer to store the current value
  * @return
- *     - ESP_OK
- *     - ESP_FAIL
- *     - ESP_ERR_INVALID_ARG
- *     - ESP_ERR_INVALID_STATE
+ *     - ESP_OK: Success
+ *     - ESP_ERR_INVALID_ARG: Invalid arguments
+ *     - ESP_ERR_INVALID_STATE: Device not initialized
  */
-esp_err_t power_measure_get_current(float* current);
+esp_err_t power_measure_get_current(power_measure_handle_t handle, float* current);
 
 /**
- * @brief get current active power (W)
+ * @brief Get current active power (W)
  *
- * @param active_power current active power (W)
- *
+ * @param handle Power measure device handle
+ * @param power Pointer to store the power value
  * @return
- *     - ESP_OK
- *     - ESP_FAIL
- *     - ESP_ERR_INVALID_ARG
- *     - ESP_ERR_INVALID_STATE
+ *     - ESP_OK: Success
+ *     - ESP_ERR_INVALID_ARG: Invalid arguments
+ *     - ESP_ERR_INVALID_STATE: Device not initialized
  */
-esp_err_t power_measure_get_active_power(float* active_power);
+esp_err_t power_measure_get_active_power(power_measure_handle_t handle, float* power);
 
 /**
- * @brief get current power factor
+ * @brief Get power factor
  *
- * @param power_factor power factor
- *
+ * @param handle Power measure device handle
+ * @param power_factor Pointer to store the power factor value
  * @return
- *     - ESP_OK
- *     - ESP_FAIL
- *     - ESP_ERR_INVALID_ARG
- *     - ESP_ERR_INVALID_STATE
+ *     - ESP_OK: Success
+ *     - ESP_ERR_INVALID_ARG: Invalid arguments
+ *     - ESP_ERR_INVALID_STATE: Device not initialized
+ *     - ESP_ERR_NOT_SUPPORTED: Chip doesn't support this feature
  */
-esp_err_t power_measure_get_power_factor(float* power_factor);
+esp_err_t power_measure_get_power_factor(power_measure_handle_t handle, float* power_factor);
 
 /**
- * @brief get current energy (Kw/h)
+ * @brief Get energy consumption (kWh)
  *
- * @param energy Power consumed by the load (Kw/h)
- *
+ * @param handle Power measure device handle
+ * @param energy Pointer to store the energy value
  * @return
- *     - ESP_OK
- *     - ESP_FAIL
- *     - ESP_ERR_INVALID_ARG
- *     - ESP_ERR_INVALID_STATE
+ *     - ESP_OK: Success
+ *     - ESP_ERR_INVALID_ARG: Invalid arguments
+ *     - ESP_ERR_INVALID_STATE: Device not initialized
+ *     - ESP_ERR_NOT_SUPPORTED: Chip doesn't support this feature
  */
-esp_err_t power_measure_get_energy(float* energy);
+esp_err_t power_measure_get_energy(power_measure_handle_t handle, float* energy);
 
 /**
- * @brief start the energy calculation
+ * @brief Reset energy calculation
  *
+ * @param handle Power measure device handle
  * @return
- *     - ESP_OK
- *     - ESP_FAIL
- *     - ESP_ERR_INVALID_STATE
+ *     - ESP_OK: Success
+ *     - ESP_ERR_INVALID_ARG: Invalid handle
+ *     - ESP_ERR_INVALID_STATE: Device not initialized
+ *     - ESP_ERR_NOT_SUPPORTED: Chip doesn't support this feature
  */
-esp_err_t power_measure_start_energy_calculation();
+esp_err_t power_measure_reset_energy_calculation(power_measure_handle_t handle);
 
 /**
- * @brief stop the energy calculation
+ * @brief Get apparent power measurement
  *
+ * @param handle Power measure device handle
+ * @param apparent_power Pointer to store the apparent power value in volt-amperes (VA)
  * @return
- *     - ESP_OK
- *     - ESP_FAIL
- *     - ESP_ERR_INVALID_STATE
+ *     - ESP_OK: Success
+ *     - ESP_ERR_INVALID_ARG: Invalid arguments
+ *     - ESP_ERR_INVALID_STATE: Device not initialized
+ *     - ESP_ERR_NOT_SUPPORTED: Chip doesn't support this feature
  */
-esp_err_t power_measure_stop_energy_calculation();
+esp_err_t power_measure_get_apparent_power(power_measure_handle_t handle, float* apparent_power);
+
+// ============================================================================
+// Calibration API Functions (BL0937 specific)
+// ============================================================================
 
 /**
- * @brief reset the energy accumulated value in flash
+ * @brief Dynamic runtime calibration for voltage (BL0937 only)
  *
+ * @param handle Power measure device handle
+ * @param expected_voltage The known reference voltage value in volts
  * @return
- *     - ESP_OK
- *     - ESP_FAIL
- *     - ESP_ERR_INVALID_STATE
+ *     - ESP_OK: Success
+ *     - ESP_ERR_INVALID_ARG: Invalid arguments
+ *     - ESP_ERR_INVALID_STATE: Device not initialized
+ *     - ESP_ERR_NOT_SUPPORTED: Chip doesn't support this feature
  */
-esp_err_t power_measure_reset_energy_calculation();
+esp_err_t power_measure_calibrate_voltage(power_measure_handle_t handle, float expected_voltage);
 
 /**
- * @brief start calibration for factory test
+ * @brief Dynamic runtime calibration for current (BL0937 only)
  *
- * @param para calibration parameters
- *
+ * @param handle Power measure device handle
+ * @param expected_current The known reference current value in amperes
  * @return
- *     - ESP_OK
- *     - ESP_FAIL
- *     - ESP_ERR_INVALID_ARG
- *     - ESP_ERR_INVALID_STATE
+ *     - ESP_OK: Success
+ *     - ESP_ERR_INVALID_ARG: Invalid arguments
+ *     - ESP_ERR_INVALID_STATE: Device not initialized
+ *     - ESP_ERR_NOT_SUPPORTED: Chip doesn't support this feature
  */
-esp_err_t power_measure_start_calibration(calibration_parameter_t* para);
+esp_err_t power_measure_calibrate_current(power_measure_handle_t handle, float expected_current);
 
 /**
- * @brief get calibration factor from flash
+ * @brief Dynamic runtime calibration for power (BL0937 only)
  *
- * @param factor calibration factor
- *
+ * @param handle Power measure device handle
+ * @param expected_power The known reference power value in watts
  * @return
- *     - ESP_OK
- *     - ESP_FAIL
- *     - ESP_ERR_INVALID_STATE
+ *     - ESP_OK: Success
+ *     - ESP_ERR_INVALID_ARG: Invalid arguments
+ *     - ESP_ERR_INVALID_STATE: Device not initialized
+ *     - ESP_ERR_NOT_SUPPORTED: Chip doesn't support this feature
  */
-esp_err_t power_measure_get_calibration_factor(calibration_factor_t* factor);
+esp_err_t power_measure_calibrate_power(power_measure_handle_t handle, float expected_power);
+
+// ============================================================================
+// Advanced API Functions (BL0937 specific)
+// ============================================================================
 
 /**
- * @brief reset factor in flash
+ * @brief Get voltage multiplier (BL0937 only, advanced users)
  *
+ * @param handle Power measure device handle
+ * @param multiplier Pointer to store the voltage multiplier value
  * @return
- *     - ESP_OK
- *     - ESP_FAIL
+ *     - ESP_OK: Success
+ *     - ESP_ERR_INVALID_ARG: Invalid arguments
+ *     - ESP_ERR_INVALID_STATE: Device not initialized
+ *     - ESP_ERR_NOT_SUPPORTED: Chip doesn't support this feature
  */
-esp_err_t power_measure_calibration_factor_reset(void);
+esp_err_t power_measure_get_voltage_multiplier(power_measure_handle_t handle, float* multiplier);
+
+/**
+ * @brief Get current multiplier (BL0937 only, advanced users)
+ *
+ * @param handle Power measure device handle
+ * @param multiplier Pointer to store the current multiplier value
+ * @return
+ *     - ESP_OK: Success
+ *     - ESP_ERR_INVALID_ARG: Invalid arguments
+ *     - ESP_ERR_INVALID_STATE: Device not initialized
+ *     - ESP_ERR_NOT_SUPPORTED: Chip doesn't support this feature
+ */
+esp_err_t power_measure_get_current_multiplier(power_measure_handle_t handle, float* multiplier);
+
+/**
+ * @brief Get power multiplier (BL0937 only, advanced users)
+ *
+ * @param handle Power measure device handle
+ * @param multiplier Pointer to store the power multiplier value
+ * @return
+ *     - ESP_OK: Success
+ *     - ESP_ERR_INVALID_ARG: Invalid arguments
+ *     - ESP_ERR_INVALID_STATE: Device not initialized
+ *     - ESP_ERR_NOT_SUPPORTED: Chip doesn't support this feature
+ */
+esp_err_t power_measure_get_power_multiplier(power_measure_handle_t handle, float* multiplier);
 
 #ifdef __cplusplus
 }
