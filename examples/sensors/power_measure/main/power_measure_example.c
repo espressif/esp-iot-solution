@@ -10,8 +10,11 @@
 
 #include "driver/gpio.h"
 #include "i2c_bus.h"
+#include "driver/uart.h"
+#include "driver/spi_master.h"
 #include "power_measure.h"
 #include "power_measure_bl0937.h"
+#include "power_measure_bl0942.h"
 #include "power_measure_ina236.h"
 #include "math.h"
 
@@ -26,6 +29,17 @@
 #define I2C_MASTER_NUM              I2C_NUM_0   /*!< I2C port number for master dev */
 #define I2C_MASTER_FREQ_HZ          100000      /*!< I2C master clock frequency */
 
+// BL0942 UART definitions
+#define BL0942_UART_NUM             UART_NUM_1
+#define BL0942_TX_GPIO              CONFIG_BL0942_UART_TX_GPIO
+#define BL0942_RX_GPIO              CONFIG_BL0942_UART_RX_GPIO
+
+#define BL0942_SPI_HOST             SPI2_HOST
+#define BL0942_MOSI_GPIO            CONFIG_BL0942_SPI_MOSI_GPIO
+#define BL0942_MISO_GPIO            CONFIG_BL0942_SPI_MISO_GPIO
+#define BL0942_SCLK_GPIO            CONFIG_BL0942_SPI_SCLK_GPIO
+#define BL0942_CS_GPIO              CONFIG_BL0942_SPI_CS_GPIO
+
 static const char *TAG = "PowerMeasureExample";
 
 #define DEFAULT_KI 1.00f     // Current calibration factor
@@ -33,8 +47,12 @@ static const char *TAG = "PowerMeasureExample";
 #define DEFAULT_KP 1.00f     // Power calibration factor
 
 // Hardware configuration - Adjust these based on your actual hardware
-#define SAMPLING_RESISTOR    0.001f    // 1mΩ sampling resistor (adjust if different)
-#define DIVIDER_RESISTOR     2010.0f   // 2010.0Ω voltage divider (adjust if different)
+#define SAMPLING_RESISTOR    0.001f    // 1mΩ sampling resistor
+#define DIVIDER_RESISTOR     2010.0f   // 2010.0Ω voltage divider
+
+// BL0942 calibration and divider values
+#define BL0942_SHUNT_RESISTOR    0.001f    // 1mΩ shunt resistor
+#define BL0942_DIVIDER_RATIO     3760.0f   // Divider ratio
 
 static power_measure_handle_t power_handle = NULL;
 
@@ -132,6 +150,44 @@ static esp_err_t init_power_measurement(void)
     ESP_LOGI(TAG, "Creating INA236 power measurement device...");
     ret = power_measure_new_ina236_device(&common_config, &ina236_config, &power_handle);
 
+#elif CONFIG_POWER_MEASURE_CHIP_BL0942
+    // BL0942 specific configuration (defaults driven by Kconfig)
+#ifdef CONFIG_BL0942_USE_SPI
+    int USE_SPI = 1;
+#else
+    int USE_SPI = 0;
+#endif
+
+    power_measure_bl0942_config_t bl0942_config = {
+        .addr = CONFIG_BL0942_DEVICE_ADDRESS,
+        .shunt_resistor = BL0942_SHUNT_RESISTOR,
+        .divider_ratio = BL0942_DIVIDER_RATIO,
+        .use_spi = USE_SPI,
+    };
+
+    if (USE_SPI) {
+        bl0942_config.spi.spi_host = BL0942_SPI_HOST;
+        bl0942_config.spi.mosi_io = BL0942_MOSI_GPIO;
+        bl0942_config.spi.miso_io = BL0942_MISO_GPIO;
+        bl0942_config.spi.sclk_io = BL0942_SCLK_GPIO;
+        bl0942_config.spi.cs_io = BL0942_CS_GPIO;
+    } else {
+        bl0942_config.uart.uart_num = BL0942_UART_NUM;
+        bl0942_config.uart.tx_io = BL0942_TX_GPIO;
+        bl0942_config.uart.rx_io = BL0942_RX_GPIO;
+        bl0942_config.uart.sel_io = -1;
+        bl0942_config.uart.baud = CONFIG_BL0942_UART_BAUD_RATE;
+    }
+
+    if (USE_SPI) {
+        ESP_LOGI(TAG, "Creating BL0942 device (SPI mode)... MOSI:%d MISO:%d SCLK:%d CS:%d",
+                 BL0942_MOSI_GPIO, BL0942_MISO_GPIO, BL0942_SCLK_GPIO, BL0942_CS_GPIO);
+    } else {
+        ESP_LOGI(TAG, "Creating BL0942 device (UART mode)... UART%d TX:%d RX:%d Baud:%d",
+                 BL0942_UART_NUM, BL0942_TX_GPIO, BL0942_RX_GPIO, CONFIG_BL0942_UART_BAUD_RATE);
+    }
+    ret = power_measure_new_bl0942_device(&common_config, &bl0942_config, &power_handle);
+
 #else
     ESP_LOGE(TAG, "No chip type selected for demonstration");
     return ESP_ERR_INVALID_ARG;
@@ -218,6 +274,15 @@ void app_main(void)
     ESP_LOGI(TAG, "Selected chip: INA236 (I2C interface)");
     ESP_LOGI(TAG, "I2C pins - SCL:%d, SDA:%d",
              CONFIG_INA236_I2C_SCL_GPIO, CONFIG_INA236_I2C_SDA_GPIO);
+#elif CONFIG_POWER_MEASURE_CHIP_BL0942
+    ESP_LOGI(TAG, "Selected chip: BL0942 (UART/SPI interface)");
+#ifdef CONFIG_BL0942_USE_SPI
+    ESP_LOGI(TAG, "SPI pins - MOSI:%d, MISO:%d, SCLK:%d, CS:%d",
+             BL0942_MOSI_GPIO, BL0942_MISO_GPIO, BL0942_SCLK_GPIO, BL0942_CS_GPIO);
+#else
+    ESP_LOGI(TAG, "UART - UART%d, TX GPIO:%d, RX GPIO:%d, Baud:%d",
+             BL0942_UART_NUM, BL0942_TX_GPIO, BL0942_RX_GPIO, CONFIG_BL0942_UART_BAUD_RATE);
+#endif
 #endif
 
     esp_err_t ret = ESP_OK;

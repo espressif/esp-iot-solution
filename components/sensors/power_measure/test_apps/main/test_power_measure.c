@@ -11,6 +11,7 @@
 #include "esp_log.h"
 #include "power_measure.h"
 #include "power_measure_bl0937.h"
+#include "power_measure_bl0942.h"
 #include "power_measure_ina236.h"
 #include "unity.h"
 #include "i2c_bus.h"
@@ -28,6 +29,12 @@
 #define I2C_MASTER_NUM              I2C_NUM_0   /*!< I2C port number for master dev */
 #define I2C_MASTER_FREQ_HZ          100000      /*!< I2C master clock frequency */
 #define INA236_I2C_ADDRESS_DEFAULT      0x41
+
+/* BL0942 test pins */
+#define BL0942_UART_NUM             UART_NUM_1
+#define BL0942_TX_GPIO              GPIO_NUM_6
+#define BL0942_RX_GPIO              GPIO_NUM_7
+#define BL0942_SEL_GPIO             GPIO_NUM_5
 
 static const char *TAG = "PowerMeasureTest";
 
@@ -524,6 +531,58 @@ TEST_CASE("INA236 Get Current Test", "[power_measure][ina236]")
 
     cleanup_power_device();
     cleanup_i2c_bus();
+}
+
+/* BL0942 Tests */
+TEST_CASE("BL0942 Initialization Test", "[power_measure][bl0942]")
+{
+    // Clean up any existing device
+    cleanup_power_device();
+
+    power_measure_config_t config = {
+        .overcurrent = 15,
+        .overvoltage = 260,
+        .undervoltage = 180,
+        .enable_energy_detection = true
+    };
+
+    power_measure_bl0942_config_t bl0942_config = {
+        .addr = 0,
+        .shunt_resistor = 0.001f,
+        .divider_ratio = 1000.0f,
+        .use_spi = false,
+    };
+
+    bl0942_config.uart.uart_num = BL0942_UART_NUM;
+    bl0942_config.uart.tx_io = BL0942_TX_GPIO;
+    bl0942_config.uart.rx_io = BL0942_RX_GPIO;
+    bl0942_config.uart.sel_io = BL0942_SEL_GPIO;
+    bl0942_config.uart.baud = 9600;
+
+    esp_err_t ret = power_measure_new_bl0942_device(&config, &bl0942_config, &test_power_handle);
+    TEST_ASSERT_EQUAL(ESP_OK, ret);
+    TEST_ASSERT_NOT_NULL(test_power_handle);
+
+    // Test basic measurements
+    float voltage, current, power, energy;
+    ret = power_measure_get_voltage(test_power_handle, &voltage);
+    TEST_ASSERT_EQUAL(ESP_OK, ret);
+    ESP_LOGI(TAG, "BL0942 Voltage: %.2f V", voltage);
+
+    ret = power_measure_get_current(test_power_handle, &current);
+    TEST_ASSERT_EQUAL(ESP_OK, ret);
+    ESP_LOGI(TAG, "BL0942 Current: %.3f A", current);
+
+    ret = power_measure_get_active_power(test_power_handle, &power);
+    TEST_ASSERT_EQUAL(ESP_OK, ret);
+    ESP_LOGI(TAG, "BL0942 Power: %.2f W", power);
+
+    ret = power_measure_get_energy(test_power_handle, &energy);
+    TEST_ASSERT_EQUAL(ESP_OK, ret);
+    ESP_LOGI(TAG, "BL0942 Energy: %.2f Wh", energy);
+
+    // Clean up
+    cleanup_power_device();
 }
 
 static void check_leak(size_t before_free, size_t after_free, const char *type)
