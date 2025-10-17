@@ -87,11 +87,13 @@ static void configure_ble_scan(void)
 
     ble_hci_set_scan_param(&scan_param);
     ble_hci_set_register_scan_callback(&ble_hci_scan_cb);
-    ble_hci_add_to_accept_list(peer_mac, BLE_ADDR_TYPE_RANDOM);
+    ble_hci_addr_t peer_mac_addr = {0};
+    memcpy((uint8_t *)peer_mac_addr, peer_mac, BLE_HCI_ADDR_LEN);
+    ble_hci_add_to_accept_list(peer_mac_addr, BLE_ADDR_TYPE_RANDOM);
     ble_hci_set_scan_enable(true, true);
 }
 
-static void settings_store(bthome_handle_t handle, const char *key, uint8_t *data, uint8_t len)
+static void settings_store(bthome_handle_t handle, const char *key, const uint8_t *data, uint8_t len)
 {
     nvs_handle_t nvs_handle;
     esp_err_t err = nvs_open("storage", NVS_READWRITE, &nvs_handle);

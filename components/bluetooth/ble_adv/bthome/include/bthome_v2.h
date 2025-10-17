@@ -148,7 +148,7 @@ typedef struct {
 /**
  * @brief BTHome store function
  */
-typedef void (*bthome_store_func_t)(bthome_handle_t handle, const char *key, uint8_t *data, uint8_t len);
+typedef void (*bthome_store_func_t)(bthome_handle_t handle, const char *key, const uint8_t *data, uint8_t len);
 
 /**
  * @brief BTHome load function

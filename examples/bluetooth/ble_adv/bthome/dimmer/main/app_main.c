@@ -86,9 +86,9 @@ static void dimmer_task(void *arg)
     uint8_t advertisement_data[31] = {0};
     uint8_t payload_length = 0;
     uint8_t payload_data[31];
-    uint16_t advertisement_count = 0;
-
-    ble_hci_set_random_address(local_mac);
+    ble_hci_addr_t local_mac_addr = {0};
+    memcpy((uint8_t *)local_mac_addr, local_mac, BLE_HCI_ADDR_LEN);
+    ble_hci_set_random_address(local_mac_addr);
 
     ble_hci_adv_param_t adv_param = {
         .adv_int_min = 0x50,
@@ -194,7 +194,7 @@ static void knob_init(void)
     iot_knob_register_cb(s_dimmer->knob, KNOB_RIGHT, knob_event_cb, NULL);
 }
 
-static void button_init(void)
+static esp_err_t button_init(void)
 {
     button_config_t btn_cfg = {
         .type = BUTTON_TYPE_GPIO,
@@ -209,10 +209,10 @@ static void button_init(void)
     s_dimmer->btn = iot_button_create(&btn_cfg);
     assert(s_dimmer->btn);
     esp_err_t err = iot_button_register_cb(s_dimmer->btn, BUTTON_PRESS_DOWN, button_event_cb, (void *)BUTTON_SINGLE_CLICK);
-
+    return err;
 }
 
-static void settings_store(bthome_handle_t handle, const char *key, uint8_t *data, uint8_t len)
+static void settings_store(bthome_handle_t handle, const char *key, const uint8_t *data, uint8_t len)
 {
     nvs_handle_t nvs_handle;
     esp_err_t err = nvs_open("storage", NVS_READWRITE, &nvs_handle);
@@ -294,7 +294,7 @@ void app_main(void)
     };
     bthome_register_callbacks(s_dimmer->bthome, &callbacks);
     bthome_set_encrypt_key(s_dimmer->bthome, encrypt_key);
-    bthome_set_local_mac_addr(s_dimmer->bthome, local_mac);
+    bthome_set_local_mac_addr(s_dimmer->bthome, (uint8_t *)local_mac);
     bthome_load_params(s_dimmer->bthome);
 
     esp_err_t res = xTaskCreate(dimmer_task, "dimmer task", 4096, NULL, 10, &s_dimmer->task_handle);

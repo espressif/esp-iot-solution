@@ -85,6 +85,7 @@ TEST_CASE("ble_hci_test", "[ble hci scan]")
     ble_hci_set_scan_enable(true, false);
 
     vTaskDelay(5000 / portTICK_PERIOD_MS);
+
     ble_hci_set_scan_enable(false, false);
     ble_hci_deinit();
 }

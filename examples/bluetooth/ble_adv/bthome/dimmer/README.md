@@ -9,7 +9,7 @@ Software functionality:
 
 ### Hardware Requirements:
 
-Refer to the ESP-Dimmer hardware design, open-source address:
+Refer to the ESP-Dimmer hardware design, open-source address: https://oshwhub.com/esp-college/esp32-h2-switch
 
 ### Compilation and Flashing
 

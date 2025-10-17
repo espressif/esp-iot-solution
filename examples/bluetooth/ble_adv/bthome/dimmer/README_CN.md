@@ -7,7 +7,7 @@
   * 优化了低功耗配置项。
 
 ### 硬件需求：
-  参考 ESP-Dimmer 硬件设计，开源地址:
+  参考 ESP-Dimmer 硬件设计，开源地址: https://oshwhub.com/esp-college/esp32-h2-switch
 
 ### 编译和烧写
 
