@@ -16,12 +16,12 @@
 #include "led_strip.h"
 #include "nvs_flash.h"
 
-// GPIO assignment
-#define LED_STRIP_BLINK_GPIO  8
-// Numbers of the LED in the strip
-#define LED_STRIP_LED_NUMBERS 1
-// 10MHz resolution, 1 tick = 0.1us (led strip needs a high resolution)
-#define LED_STRIP_RMT_RES_HZ  (10 * 1000 * 1000)
+// GPIO assignment from kconfig
+#define LED_STRIP_BLINK_GPIO  CONFIG_EXAMPLE_LED_STRIP_BLINK_GPIO
+// Numbers of the LED in the strip from kconfig
+#define LED_STRIP_LED_NUMBERS CONFIG_EXAMPLE_LED_STRIP_LED_NUMBERS
+// RMT resolution from kconfig (led strip needs a high resolution)
+#define LED_STRIP_RMT_RES_HZ  CONFIG_EXAMPLE_LED_STRIP_RMT_RES_HZ
 
 static const char *TAG = "bt_home_bulb";
 
