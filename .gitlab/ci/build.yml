@@ -1073,6 +1073,18 @@ build_components_bluetooth_ble_hci_test_apps:
   variables:
     EXAMPLE_DIR: components/bluetooth/ble_hci/test_apps
 
+build_components_bluetooth_ble_adv_bthome_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_bluetooth_ble_adv_bthome_test_apps
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.0
+      - IMAGE: espressif/idf:release-v5.1
+      - IMAGE: espressif/idf:release-v5.2
+  variables:
+    EXAMPLE_DIR: components/bluetooth/ble_adv/bthome/test_apps
+
 build_components_button_test_apps:
   extends:
     - .build_examples_template

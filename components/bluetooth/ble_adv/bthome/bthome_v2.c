@@ -457,6 +457,7 @@ esp_err_t bthome_register_callbacks(bthome_handle_t handle, bthome_callbacks_t *
 
 esp_err_t bthome_load_params(bthome_handle_t handle)
 {
+    ESP_RETURN_ON_FALSE(handle, ESP_ERR_INVALID_ARG, TAG, "handle is null");
     bthome_t *bthome = (bthome_t *)handle;
     uint8_t counter[4];
     bthome->callbacks.load(handle, BTHOME_COUNTER_KEY, counter, sizeof(counter));

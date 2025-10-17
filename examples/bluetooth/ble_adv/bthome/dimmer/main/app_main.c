@@ -137,6 +137,8 @@ static void dimmer_task(void *arg)
             payload_length = bthome_payload_adv_add_evt_data(payload_data, payload_length, BTHOME_EVENT_ID_BUTTON, &btn_evt_id, 1);
             payload_length = bthome_payload_adv_add_evt_data(payload_data, payload_length, BTHOME_EVENT_ID_DIMMER, dim_evt, 2);
             adv_len = bthome_make_adv_data(s_dimmer->bthome, advertisement_data, name, sizeof(name), info, payload_data, payload_length);
+            ESP_LOGI(TAG, "adv_len %d", adv_len);
+            ESP_LOG_BUFFER_HEX_LEVEL("advertisement_data", advertisement_data, adv_len, ESP_LOG_WARN);
             ble_hci_set_adv_data(adv_len, advertisement_data);
             ble_hci_set_adv_enable(true);
             if (xTimerIsTimerActive(s_dimmer->timer_handle) == false) {
@@ -307,4 +309,5 @@ void app_main(void)
     knob_init();
     button_init();
 
+    xTaskNotify(s_dimmer->task_handle, TASK_EVENT_BTN, eSetValueWithOverwrite);
 }
