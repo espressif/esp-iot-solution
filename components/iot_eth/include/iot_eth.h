@@ -56,7 +56,6 @@ typedef esp_err_t (*static_input_cb_t)(iot_eth_handle_t handle, uint8_t *data, s
 typedef struct {
     iot_eth_driver_t *driver; /*!< Pointer to the Ethernet driver */
     static_input_cb_t stack_input; /*!< Function pointer for stack input */
-    void *user_data; /*!< User data for callbacks */
 } iot_eth_config_t;
 
 /*
@@ -73,7 +72,7 @@ typedef struct {
  *      - ESP_ERR_NO_MEM if memory allocation fails
  *      - Other error codes from initialization functions
  */
-esp_err_t iot_eth_install(iot_eth_config_t *config, iot_eth_handle_t *handle);
+esp_err_t iot_eth_install(const iot_eth_config_t *config, iot_eth_handle_t *handle);
 
 /*
  * @brief Uninstall Ethernet driver

@@ -2860,6 +2860,17 @@
     - <<: *if-dev-push
       changes: *patterns-components_usb_iot_usbh_cdc
 
+.rules:build:components_iot_eth_test:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_iot_eth
+
 .rules:build:components_usb_iot_usbh_modem_test:
   rules:
     - <<: *if-protected

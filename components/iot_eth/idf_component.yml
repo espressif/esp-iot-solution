@@ -1,4 +1,4 @@
-version: "0.1.0"
+version: "1.0.0"
 description: Ethernet interface driver for cellular modems and USB-to-Ethernet adapters
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/iot_eth
 repository: https://github.com/espressif/esp-iot-solution.git
