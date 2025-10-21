@@ -8,16 +8,19 @@ BTHome 组件用于实现 BTHome V2 协议，支持传感器数据上报、二�
 BTHome 使用方法
 -----------------
 1. 初始化 BTHome：
+
    - 使用 :cpp:func:`bthome_create` 创建 BTHome 实例
    - 使用 :cpp:func:`bthome_register_callbacks` 注册回调函数
    - 使用 :cpp:func:`bthome_set_encrypt_key` 设置加密密钥（可选）
    - 使用 :cpp:func:`bthome_set_peer_mac_addr` 设置对端 MAC 地址
 
 2. 配置存储：
+
    - 使用 :cpp:func:`settings_store` 存储配置
    - 使用 :cpp:func:`settings_load` 加载配置
 
 3. 解析广播数据：
+
    - 使用 :cpp:func:`bthome_parse_adv_data` 解析广播数据
    - 使用 :cpp:func:`bthome_free_reports` 释放报告数据
 

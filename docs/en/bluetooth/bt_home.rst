@@ -8,16 +8,19 @@ This component supports both encrypted and non-encrypted modes, and can be seaml
 BTHome Usage
 -----------------
 1. Initialize BTHome:
+
    - Use :cpp:func:`bthome_create` to create a BTHome instance
    - Use :cpp:func:`bthome_register_callbacks` to register callback functions
    - Use :cpp:func:`bthome_set_encrypt_key` to set encryption key (optional)
    - Use :cpp:func:`bthome_set_peer_mac_addr` to set peer MAC address
 
 2. Configuration Storage:
+
    - Use :cpp:func:`settings_store` to store configuration
    - Use :cpp:func:`settings_load` to load configuration
 
 3. Parse Advertising Data:
+
    - Use :cpp:func:`bthome_parse_adv_data` to parse advertising data
    - Use :cpp:func:`bthome_free_reports` to free report data
 
