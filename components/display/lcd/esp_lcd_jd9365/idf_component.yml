@@ -1,4 +1,4 @@
-version: "1.0.3"
+version: "1.0.4"
 targets:
   - esp32p4
 description: ESP LCD JD9365(MIPI-DSI)

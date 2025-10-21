@@ -168,11 +168,11 @@ static esp_err_t panel_hx8399_del(esp_lcd_panel_t *panel)
 {
     hx8399_panel_t *hx8399 = (hx8399_panel_t *)panel->user_data;
 
+    // Delete MIPI DPI panel
+    ESP_RETURN_ON_ERROR(hx8399->del(panel), TAG, "del hx8399 panel failed");
     if (hx8399->reset_gpio_num >= 0) {
         gpio_reset_pin(hx8399->reset_gpio_num);
     }
-    // Delete MIPI DPI panel
-    hx8399->del(panel);
     ESP_LOGD(TAG, "del hx8399 panel @%p", hx8399);
     free(hx8399);
 

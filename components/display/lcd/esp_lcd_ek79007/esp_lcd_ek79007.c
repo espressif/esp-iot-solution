@@ -191,11 +191,11 @@ static esp_err_t panel_ek79007_del(esp_lcd_panel_t *panel)
 {
     ek79007_panel_t *ek79007 = (ek79007_panel_t *)panel->user_data;
 
+    // Delete MIPI DPI panel
+    ESP_RETURN_ON_ERROR(ek79007->del(panel), TAG, "del ek79007 panel failed");
     if (ek79007->reset_gpio_num >= 0) {
         gpio_reset_pin(ek79007->reset_gpio_num);
     }
-    // Delete MIPI DPI panel
-    ek79007->del(panel);
     ESP_LOGD(TAG, "del ek79007 panel @%p", ek79007);
     free(ek79007);
 

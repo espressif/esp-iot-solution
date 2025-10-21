@@ -128,11 +128,11 @@ static esp_err_t panel_jd9165_del(esp_lcd_panel_t *panel)
 {
     jd9165_panel_t *jd9165 = (jd9165_panel_t *)panel->user_data;
 
+    // Delete MIPI DPI panel
+    ESP_RETURN_ON_ERROR(jd9165->del(panel), TAG, "del jd9165 panel failed");
     if (jd9165->reset_gpio_num >= 0) {
         gpio_reset_pin(jd9165->reset_gpio_num);
     }
-    // Delete MIPI DPI panel
-    jd9165->del(panel);
     ESP_LOGD(TAG, "del jd9165 panel @%p", jd9165);
     free(jd9165);
 
