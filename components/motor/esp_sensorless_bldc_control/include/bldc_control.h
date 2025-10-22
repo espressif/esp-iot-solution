@@ -22,9 +22,7 @@ extern "C" {
  * @brief using esp_event_handler_register() to register BLDC_CONTROL_EVENT
  *
  */
-/** @cond **/
 ESP_EVENT_DECLARE_BASE(BLDC_CONTROL_EVENT); /*!< esp event name */
-/** @endcond **/
 
 typedef enum {
     BLDC_CONTROL_START = 0,      /*!< BLDC control start event */

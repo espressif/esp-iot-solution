@@ -1,9 +1,11 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <stdbool.h>
+#include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "bldc_control.h"
@@ -32,6 +34,8 @@ typedef struct {
     void *zero_cross_handle;
     esp_err_t (*control_operation)(void *handle);
     int delayCnt;                     /*!< Delay count, each plus one is an interrupt function time */
+    bool is_running;                  /*!< avoid duplicate start */
+    mcpwm_timer_event_callbacks_t *cbs; /*!< dynamically allocated timer callbacks */
 } bldc_control_t;
 
 // Table to lookup bldc control event name
@@ -107,11 +111,17 @@ esp_err_t bldc_control_init(bldc_control_handle_t *handle, bldc_control_config_t
         ret = bldc_zero_cross_comparer_init(&control->zero_cross_handle, &config->zero_cross_comparer_config, &control->control_param);
         BLDC_CHECK_GOTO(ret == ESP_OK, "bldc_zero_cross_comparer_init failed", deinit);
         control->zero_cross = &bldc_zero_cross_comparer_operation;
-        mcpwm_timer_event_callbacks_t cbs = {
-            .on_full = &read_comparer_on_full,
-        };
-        config->six_step_config.upper_switch_config.bldc_mcpwm.cbs = &cbs;
+
+        control->cbs = malloc(sizeof(mcpwm_timer_event_callbacks_t));
+        if (!control->cbs) {
+            ESP_LOGE(TAG, "malloc cbs failed");
+            goto deinit;
+        }
+        memset(control->cbs, 0, sizeof(mcpwm_timer_event_callbacks_t));
+        control->cbs->on_full = &read_comparer_on_full;
+        config->six_step_config.upper_switch_config.bldc_mcpwm.cbs = control->cbs;
         config->six_step_config.upper_switch_config.bldc_mcpwm.timer_cb_user_data = (void *)control->zero_cross_handle;
+
         break;
     }
 #if CONFIG_SOC_MCPWM_SUPPORTED
@@ -123,11 +133,17 @@ esp_err_t bldc_control_init(bldc_control_handle_t *handle, bldc_control_config_t
             ESP_LOGE(TAG, "error: control type must be mcpwm");
             goto deinit;
         }
-        mcpwm_timer_event_callbacks_t cbs = {
-            .on_full = &read_adc_on_full,
-        };
-        config->six_step_config.upper_switch_config.bldc_mcpwm.cbs = &cbs;
+
+        control->cbs = malloc(sizeof(mcpwm_timer_event_callbacks_t));
+        if (!control->cbs) {
+            ESP_LOGE(TAG, "malloc cbs failed");
+            goto deinit;
+        }
+        memset(control->cbs, 0, sizeof(mcpwm_timer_event_callbacks_t));
+        control->cbs->on_full = &read_adc_on_full;
+        config->six_step_config.upper_switch_config.bldc_mcpwm.cbs = control->cbs;
         config->six_step_config.upper_switch_config.bldc_mcpwm.timer_cb_user_data = (void *)control->zero_cross_handle;
+
         break;
     }
 #endif
@@ -155,7 +171,12 @@ esp_err_t bldc_control_init(bldc_control_handle_t *handle, bldc_control_config_t
         pid_ctrl_config_t pid_ctrl_config = {
             .init_param = PID_CTRL_PARAMETER_DEFAULT(),
         };
-        pid_new_control_block(&pid_ctrl_config, &control->pid);
+        ret = pid_new_control_block(&pid_ctrl_config, &control->pid);
+        if (ret != ESP_OK || control->pid == NULL) {
+            ESP_LOGE(TAG, "pid_new_control_block failed: %d", ret);
+            ret = (ret != ESP_OK) ? ret : ESP_FAIL;
+            goto deinit;
+        }
     }
 
     control->speed_mode = config->speed_mode;
@@ -164,6 +185,9 @@ esp_err_t bldc_control_init(bldc_control_handle_t *handle, bldc_control_config_t
 
     return ESP_OK;
 deinit:
+    if (control->cbs) {
+        free(control->cbs);
+    }
     if (control->change_phase_handle) {
         // todo change_phase_deinit
         free(control->change_phase_handle);
@@ -204,6 +228,10 @@ esp_err_t bldc_control_deinit(bldc_control_handle_t *handle)
         break;
     }
 
+    if (control->cbs) {
+        free(control->cbs);
+        control->cbs = NULL;
+    }
     if (control->xSemaphore) {
         vSemaphoreDelete(control->xSemaphore);
     }
@@ -218,6 +246,9 @@ esp_err_t bldc_control_deinit(bldc_control_handle_t *handle)
 esp_err_t bldc_control_start(bldc_control_handle_t *handle, uint32_t expect_Speed_rpm)
 {
     bldc_control_t *control = (bldc_control_t *)handle;
+    if (control->is_running) {
+        return bldc_control_set_speed_rpm(handle, (int)expect_Speed_rpm);
+    }
     switch (control->control_mode) {
     case BLDC_SIX_STEP:
         bldc_six_step_start(control->change_phase_handle);
@@ -245,15 +276,27 @@ esp_err_t bldc_control_start(bldc_control_handle_t *handle, uint32_t expect_Spee
     control->control_param.inject_count = 0;
     control->control_param.adc_bemf_phase = 0;
 
-    pid_reset_ctrl_block(control->pid);
+    if (control->speed_mode == SPEED_CLOSED_LOOP) {
+        if (control->pid == NULL) {
+            ESP_LOGE(TAG, "PID not initialized in CLOSED_LOOP mode");
+            return ESP_ERR_INVALID_STATE;
+        }
+        pid_reset_ctrl_block(control->pid);
+    }
 
-    bldc_control_dispatch_event(BLDC_CONTROL_START, NULL, 0);
+    // Start timer then dispatch START event if success
 #if INJECT_ENABLE
     control->control_param.status = INJECT;
 #else
     control->control_param.status = ALIGNMENT;
 #endif // INJECT_ENABLE
-    bldc_gptimer_start(control->gptimer);
+    esp_err_t err = bldc_gptimer_start(control->gptimer);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "bldc_gptimer_start failed: %d", err);
+        return err;
+    }
+    control->is_running = true;
+    bldc_control_dispatch_event(BLDC_CONTROL_START, NULL, 0);
 
     return ESP_OK;
 }
@@ -284,6 +327,7 @@ esp_err_t bldc_control_stop(bldc_control_handle_t *handle)
         break;
     }
 
+    control->is_running = false;
     bldc_control_dispatch_event(BLDC_CONTROL_STOP, NULL, 0);
     return ESP_OK;
 }
