@@ -21,13 +21,9 @@
 #include "iot_button.h"
 #include "iot_knob.h"
 
-static const char *TAG = "bthome_dimmer";
-
-static const uint8_t encrypt_key[] = {0x23, 0x1d, 0x39, 0xc1, 0xd7, 0xcc, 0x1a, 0xb1, 0xae, 0xe2, 0x24, 0xcd, 0x09, 0x6d, 0xb9, 0x32};
-static const uint8_t local_mac[] = { 0x54, 0x48, 0xE6, 0x8F, 0x80, 0xA5};
-static const uint8_t peer_mac[] = { 0x54, 0x48, 0xE6, 0x8F, 0x80, 0xA6};
-
 #define GPIO_OUTPUT_PIN_SEL  (1ULL << CONFIG_EXAMPLE_POWER_CTRL_IO_NUM)
+
+static const char *TAG = "bthome_dimmer";
 
 typedef enum {
     TASK_EVENT_NONE = 0,
@@ -50,6 +46,9 @@ typedef struct {
     button_event_t button_event;
 } dimmer_t;
 
+static const uint8_t encrypt_key[] = {0x23, 0x1d, 0x39, 0xc1, 0xd7, 0xcc, 0x1a, 0xb1, 0xae, 0xe2, 0x24, 0xcd, 0x09, 0x6d, 0xb9, 0x32};
+static const uint8_t local_mac[] = { 0x54, 0x48, 0xE6, 0x8F, 0x80, 0xA5};
+static const uint8_t peer_mac[] = { 0x54, 0x48, 0xE6, 0x8F, 0x80, 0xA6};
 static dimmer_t *s_dimmer;
 
 static void knob_event_cb(void *arg, void *data)
@@ -258,7 +257,6 @@ static void settings_load(bthome_handle_t handle, const char *key, uint8_t *data
 
 void app_main(void)
 {
-
     // Initialize NVS
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
