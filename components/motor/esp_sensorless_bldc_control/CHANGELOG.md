@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.0.2 - 2025-10-24
+
+### Bug fix:
+
+* Change the default clock source for the LEDC timer to utilise the LEDC_USE_XTAL_CLK source when the target platform is H2、C6、P4.
+
 ## v1.0.1 - 2025-10-22
 
 ### Enhancements
