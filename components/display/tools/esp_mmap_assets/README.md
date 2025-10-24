@@ -21,6 +21,11 @@ This module is primarily used for packaging assets (such as images, fonts, etc.)
 5. **LVGL-Specific Binary Format Support**:
     - Supports image conversion to binary files required by LVGL, ensuring compatibility with the LVGL graphics library and optimizing performance for display rendering.
 
+6. **Multiple Access Modes**:
+    - **Partition Mode**: Access assets from ESP32 partition (default)
+    - **Memory Mapping Mode**: Direct memory access for maximum performance
+    - **File System Mode**: Access assets from file system for development and testing
+
 ## Add to Project
 
 Packages from this repository are uploaded to [Espressif's component service](https://components.espressif.com/). You can add them to your project via `idf.py add-dependency`, e.g.
@@ -177,6 +182,8 @@ set(one_value_args
     ```
 
 ### Initialization
+
+#### Partition Mode (Default)
 ```c
     mmap_assets_handle_t asset_handle;
 
@@ -192,13 +199,49 @@ set(one_value_args
         .max_files = MMAP_MY_FOLDER_FILES, //Get it from the compiled .h
         .checksum = MMAP_MY_FOLDER_CHECKSUM, //Get it from the compiled .h
         .flags = {
-            .mmap_enable = true,
+            .mmap_enable = false,  // Use partition mode
+            .use_fs = false,       // Not using file system
             .app_bin_check = true,
         },
     };
 
     ESP_ERROR_CHECK(mmap_assets_new(&config, &asset_handle));
+```
 
+#### Memory Mapping Mode
+```c
+    const mmap_assets_config_t config = {
+        .partition_label = "my_spiffs_partition",
+        .max_files = MMAP_MY_FOLDER_FILES,
+        .checksum = MMAP_MY_FOLDER_CHECKSUM,
+        .flags = {
+            .mmap_enable = true,   // Enable memory mapping
+            .use_fs = false,       // Not using file system
+            .app_bin_check = true,
+        },
+    };
+
+    ESP_ERROR_CHECK(mmap_assets_new(&config, &asset_handle));
+```
+
+#### File System Mode
+```c
+    const mmap_assets_config_t config = {
+        .partition_label = "/spiffs/assets.bin",  // File path instead of partition name
+        .max_files = MMAP_MY_FOLDER_FILES,
+        .checksum = MMAP_MY_FOLDER_CHECKSUM,
+        .flags = {
+            .mmap_enable = false,  // Disable memory mapping
+            .use_fs = true,        // Use file system
+            .app_bin_check = true,
+        },
+    };
+
+    ESP_ERROR_CHECK(mmap_assets_new(&config, &asset_handle));
+```
+
+#### Accessing Assets
+```c
     const char *name = mmap_assets_get_name(asset_handle, 0);
     const void *mem = mmap_assets_get_mem(asset_handle, 0);
     int size = mmap_assets_get_size(asset_handle, 0);
@@ -206,5 +249,19 @@ set(one_value_args
     int height = mmap_assets_get_height(asset_handle, 0);
 
     ESP_LOGI(TAG, "Asset - Name:[%s], Memory:[%p], Size:[%d bytes], Width:[%d px], Height:[%d px]", name, mem, size, width, height);
-
 ```
+
+### Access Mode Comparison
+
+| Mode | Performance | Memory Usage | Use Case |
+|------|-------------|--------------|----------|
+| **Partition** | Good | Low | Production deployment |
+| **Memory Mapping** | Best | Medium | High-performance applications |
+| **File System** | Good | Low | Development and testing |
+
+### Thread Safety
+
+All access modes are thread-safe:
+- **Partition Mode**: ESP-IDF handles thread safety internally
+- **Memory Mapping Mode**: Direct memory access (inherently thread-safe)
+- **File System Mode**: Protected by internal mutex for file operations
