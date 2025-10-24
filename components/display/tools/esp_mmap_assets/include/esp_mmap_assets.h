@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,15 +16,16 @@ extern "C" {
  * @brief Asset configuration structure, contains the asset table and other configuration information.
  */
 typedef struct {
-    const char *partition_label;            /*!< Label of the partition containing the assets */
+    const char *partition_label;            /*!< Label of the partition containing the assets, or file path when use_fs is enabled */
     int max_files;                          /*!< Maximum number of assets supported */
     uint32_t checksum;                      /*!< Checksum of the asset table for integrity verification */
     struct {
         unsigned int mmap_enable: 1;        /*!< Flag to indicate if memory-mapped I/O is enabled */
+        unsigned int use_fs: 1;             /*!< Flag to use file system (partition_label as file path) instead of partition */
         unsigned int app_bin_check: 1;      /*!< Flag to enable app header and bin file consistency check */
         unsigned int full_check: 1;         /*!< Flag to enable self-consistency check */
         unsigned int metadata_check: 1;     /*!< Flag to enable metadata verification */
-        unsigned int reserved: 28;          /*!< Reserved for future use */
+        unsigned int reserved: 27;          /*!< Reserved for future use */
     } flags;                                /*!< Configuration flags */
 } mmap_assets_config_t;
 
@@ -80,6 +81,21 @@ const uint8_t *mmap_assets_get_mem(mmap_assets_handle_t handle, int index);
  * @return The actual number of bytes copied, or 0 if the operation fails.
  */
 size_t mmap_assets_copy_mem(mmap_assets_handle_t handle, size_t offset, void *dest_buffer, size_t size);
+
+/**
+ * @brief Copy asset data by index to a destination buffer (one-step operation).
+ *
+ * This function combines get_mem and copy_mem operations into a single call.
+ * It retrieves the asset at the specified index and copies its data to the destination buffer.
+ *
+ * @param[in] handle        Asset instance handle.
+ * @param[in] index         Index of the asset.
+ * @param[out] dest_buffer  Pointer to the destination buffer where the asset data will be copied.
+ * @param[in] size          Number of bytes to copy from the asset to the destination buffer.
+ *
+ * @return The actual number of bytes copied, or 0 if the operation fails.
+ */
+size_t mmap_assets_copy_by_index(mmap_assets_handle_t handle, int index, void *dest_buffer, size_t size);
 
 /**
  * @brief Get the name of the asset at the specified index.

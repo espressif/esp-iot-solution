@@ -38,3 +38,5 @@ spiffs_create_partition_assets(
     FLASH_IN_PROJECT
     COPY_PREBUILT_BIN ${DIR_PREBUILT}/assets_build.bin
 )
+
+spiffs_create_partition_image(assets_storage ../spiffs_assets FLASH_IN_PROJECT)
