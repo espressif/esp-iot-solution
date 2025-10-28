@@ -1,3 +1,5 @@
+| Supported Targets | ESP32-S3 | ESP32-P4 |
+| ----------------- | -------- | -------- |
 # Touch Digit Recognition Based on ESP-DL
 
 This is a local touchpad handwriting recognition demo based on [ESP-DL](https://github.com/espressif/esp-dl). Based on a real touchpad, data from 0 to 9 was collected separately as the training set, as shown below:

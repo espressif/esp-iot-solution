@@ -1,3 +1,5 @@
+| Supported Targets | ESP32-S3 | ESP32-P4 |
+| ----------------- | -------- | -------- |
 # Human Activity Recognition Based on ESP-DL
 
 This is a human activity recognition model built using the [ESP-DL](https://github.com/espressif/esp-dl) framework, leveraging the [Human Activity Recognition with Smartphones Dataset](https://www.kaggle.com/datasets/uciml/human-activity-recognition-with-smartphones). The dataset was collected from 30 volunteers (aged 19-48) performing six activities (WALKING, WALKING_UPSTAIRS, WALKING_DOWNSTAIRS, SITTING, STANDING, LAYING) while carrying a waist-mounted smartphone (Samsung Galaxy S II). Data was recorded at 50Hz using the device's accelerometer and gyroscope. The dataset is manually labeled via video recordings and split into training (70%) and test (30%) sets. 

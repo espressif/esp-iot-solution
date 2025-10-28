@@ -1,3 +1,5 @@
+| Supported Targets | ESP32-S2 | ESP32-S3 |
+| ----------------- | -------- | -------- |
 ## USB MSC Wireless Disk
 
 Using ESP32-Sx as a USB Disk with Wireless accessibility. HTTP file server be used with both upload and download capability.

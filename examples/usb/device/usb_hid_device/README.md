@@ -1,3 +1,5 @@
+| Supported Targets | ESP32-S2 | ESP32-S3 |
+| ----------------- | -------- | -------- |
 ## USB HID Device example
 
 This example demonstrates how to use ESP32-S2/S3/P4 USB function as the HID device. Buttons are used to trigger such signals as a keyboard or mouse.
