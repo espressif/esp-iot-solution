@@ -13,24 +13,23 @@
 
 `esp_lcd` allows user to add their own panel drivers in the project scope (i.e. panel driver can live outside of esp-idf), so that the upper layer code like LVGL porting code can be reused without any modifications, as long as user-implemented panel driver follows the interface defined in the `esp_lcd` component.
 
-This example demonstrates how to avoid tearing when using LVGL with RGB interface screens in an esp-idf project. The example will use the LVGL library to draw a stylish music player.
+This example demonstrates how to avoid tearing when using LVGL with RGB interface screens in an esp-idf project. The example will use the LVGL library to draw a stylish benchmark demo.
 
-The LVGL-related parameter configurations, such as LVGL's registered resolution, LVGL task-related parameters, and tearing prevention methods, can be configured in lvgl_port_v8.h.
+This example uses the `esp_lvgl_adapter` component, which provides a unified LVGL adaptation layer for ESP-IDF. The adapter automatically handles:
+- Display registration with appropriate tearing avoidance mode (uses recommended default)
+- LVGL task management and timer handling
+- Thread-safe access through lock/unlock APIs
+- Automatic VSYNC synchronization
+
+The display rotation angle can be configured through `idf.py menuconfig` under `Example Configuration` menu. The adapter will automatically calculate the required number of frame buffers based on the rotation setting.
 
 This example uses the [esp_timer](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/esp_timer.html) to generate the ticks needed by LVGL and uses a dedicated task to run the `lv_timer_handler()`. Since the LVGL APIs are not thread-safe, this example uses a mutex which be invoked before the call of `lv_timer_handler()` and released after it. The same mutex needs to be used in other tasks and threads around every LVGL (lv_...) related function call and code. For more porting guides, please refer to [LVGL porting doc](https://docs.lvgl.io/master/porting/index.html).
 
-## Mode 4 optimization and temporary patch
+## Temporary patch (PPA freeze fix)
 
-### Why prioritize Mode 4
+To avoid a known sporadic PPA freeze issue when using rotation and anti-tearing features, you need to **temporarily apply the patch provided in this repository**:
 
-- In 90°/270° rotation scenarios, Mode 4’s data path is more efficient, and combined with PPA, it can greatly improve rotation performance.
-- Trade-off: consumes more SRAM (used for LVGL rendering buffers). Actual usage can be allocated as needed; in principle, the more allocated, the higher the frame rate.
-
-### Temporary patch (PPA freeze fix)
-
-To fully leverage Mode 4’s performance benefits in rotation and anti-tearing, and to avoid a known sporadic PPA freeze, you need to **temporarily apply the patch provided in this repository**:
-
-`examples/display/lcd/mipi_dsi_avoid_tearing/main/0001-bugfix-lcd-Fixed-PPA-freeze.patch`
+`components/display/tools/esp_lvgl_adapter/0001-bugfix-lcd-Fixed-PPA-freeze.patch`
 
 This patch targets ESP-IDF release v5.5 at commit `02c5f2dbb95859bc4a35fb6d82bbc0784968efc5`. It fixes a register configuration on the PPA SRM path to avoid freezes under heavy workloads.
 
@@ -54,7 +53,7 @@ git submodule update --init --recursive
 export IOT_SOLUTION=/path/to/esp-iot-solution
 
 cd $IDF_PATH
-git am $IOT_SOLUTION/examples/display/lcd/mipi_dsi_avoid_tearing/main/0001-bugfix-lcd-Fixed-PPA-freeze.patch
+git am $IOT_SOLUTION/components/display/tools/esp_lvgl_adapter/0001-bugfix-lcd-Fixed-PPA-freeze.patch
 ```
 
 3. With the patched ESP-IDF, go back to this example’s root and follow the “Build and Flash” steps below to build, flash, and verify.
@@ -108,11 +107,13 @@ The connection between ESP Board and the LCD is as follows:
 ```
 
 * The LCD parameters and GPIO number used by this example can be changed in [example_rgb_avoid_tearing.c](main/example_rgb_avoid_tearing.c). Especially, please pay attention to the **vendor specific initialization**, it can be different between manufacturers and should consult the LCD supplier for initialization sequence code.
-* The LVGL parameters can be changed not only through `menuconfig` but also directly in `lvgl_conf.h`
 
 ### Configure the Project
 
-Run `idf.py menuconfig` and navigate to `Example Configuration` menu.
+Run `idf.py menuconfig` and navigate to `Example Configuration` menu to configure:
+- **LCD Rotation Angle**: Choose from 0°, 90°, 180°, or 270° rotation (default: 0°)
+
+Note: The tearing avoidance mode is automatically set to the recommended default. The number of frame buffers is calculated automatically based on the rotation angle.
 
 ### Build and Flash
 

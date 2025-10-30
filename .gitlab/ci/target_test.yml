@@ -4,6 +4,8 @@ variables:
   DOCKER_TARGET_TEST_v5_1_ENV_IMAGE: "$CI_DOCKER_REGISTRY/target-test-env-v5.1:1"
   DOCKER_TARGET_TEST_v5_3_ENV_IMAGE: "$CI_DOCKER_REGISTRY/target-test-env-v5.3:1"
   DOCKER_TARGET_TEST_v5_4_ENV_IMAGE: "$CI_DOCKER_REGISTRY/target-test-env-v5.4:2"
+  DOCKER_TARGET_TEST_v5_5_ENV_IMAGE: "$CI_DOCKER_REGISTRY/target-test-env-v5.5:2"
+  DOCKER_TARGET_TEST_v6_0_ENV_IMAGE: "$CI_DOCKER_REGISTRY/target-test-env-v6.0:2"
 
 .test_template: &test_template
   image: DOCKER_TARGET_TEST_v5_0_ENV_IMAGE
@@ -554,6 +556,83 @@ components_test_esp_lv_decoder:
     TEST_FOLDER: components/display/tools/esp_lv_decoder
     TEST_ENV: ${ENV_TAG}
 
+components_test_esp_lvgl_adapter:
+  extends:
+    - .pytest_template
+    - .rules:build:components_display_tools_esp_lvgl_adapter_test_apps
+  needs:
+    - job: "build_components_display_tools_esp_lvgl_adapter_test_apps"
+      artifacts: true
+      optional: false
+  parallel:
+    matrix:
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "5.5"
+        ENV_TAG: esp-box-3
+      - IDF_TARGET: esp32p4
+        IDF_VERSION: "5.5"
+        ENV_TAG: esp32p4,esp32p4_function_ev_board,screen,touch
+      - IDF_TARGET: esp32c3
+        IDF_VERSION: "5.5"
+        ENV_TAG: esp32c3_lcdkit
+  tags:
+    - ${IDF_TARGET}
+    - ${ENV_TAG}
+  image: $DOCKER_TARGET_TEST_v5_5_ENV_IMAGE
+  variables:
+    TEST_TARGET: ${IDF_TARGET}
+    TEST_FOLDER: components/display/tools/esp_lvgl_adapter
+    TEST_ENV: ${ENV_TAG}
+
+.components_test_esp_lvgl_adapter_benchmark_template: &components_test_esp_lvgl_adapter_benchmark_template
+  extends:
+    - .pytest_template
+    - .rules:target_test:components_display_tools_esp_lvgl_adapter_benchmark
+  parallel:
+    matrix:
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "5.5"
+        ENV_TAG: generic
+      - IDF_TARGET: esp32p4
+        IDF_VERSION: "5.5"
+        ENV_TAG: generic
+      - IDF_TARGET: esp32c2
+        IDF_VERSION: "5.5"
+        ENV_TAG: xtal_40mhz
+      - IDF_TARGET: esp32c3
+        IDF_VERSION: "5.5"
+        ENV_TAG: generic
+      - IDF_TARGET: esp32c5
+        IDF_VERSION: "5.5"
+        ENV_TAG: generic
+      - IDF_TARGET: esp32c6
+        IDF_VERSION: "5.5"
+        ENV_TAG: generic
+  tags:
+    - ${IDF_TARGET}
+    - ${ENV_TAG}
+  image: $DOCKER_TARGET_TEST_v5_5_ENV_IMAGE
+  variables:
+    TEST_TARGET: ${IDF_TARGET}
+    TEST_FOLDER: components/display/tools/esp_lvgl_adapter/benchmark
+    TEST_ENV: ${ENV_TAG}
+  allow_failure: true
+  timeout: 2 hour
+
+components_test_esp_lvgl_adapter_benchmark:
+  <<: *components_test_esp_lvgl_adapter_benchmark_template
+  needs:
+    - job: "build_components_display_tools_esp_lvgl_adapter_benchmark"
+      artifacts: true
+      optional: false
+
+components_test_esp_lvgl_adapter_rgb888_benchmark:
+  <<: *components_test_esp_lvgl_adapter_benchmark_template
+  needs:
+    - job: "build_components_display_tools_esp_lvgl_adapter_rgb888_benchmark"
+      artifacts: true
+      optional: false
+
 components_test_esp_lv_fs:
   extends:
     - .pytest_template
@@ -853,43 +932,6 @@ components_test_ntc_driver:
     TEST_TARGET: ${IDF_TARGET}
     TEST_FOLDER: components/sensors/ntc_driver
     TEST_ENV: ${ENV_TAG}
-
-example_test_perf_benchmark:
-  extends:
-    - .pytest_template
-    - .rules:build:example_perf_benchmark
-  needs:
-    - job: "build_example_perf_benchmark"
-      artifacts: true
-      optional: false
-  parallel:
-    matrix:
-      - IDF_TARGET: esp32
-        IDF_VERSION: "5.3"
-        ENV_TAG: generic
-      - IDF_TARGET: esp32c3
-        IDF_VERSION: "5.3"
-        ENV_TAG: generic
-      - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.3"
-        ENV_TAG: generic
-  tags:
-    - ${IDF_TARGET}
-    - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
-  variables:
-    TEST_TARGET: ${IDF_TARGET}
-    TEST_FOLDER: examples/hmi/perf_benchmark
-    TEST_ENV: ${ENV_TAG}
-  artifacts:
-    when: always
-    paths:
-      - XUNIT_RESULT.xml
-      - "**/**/**/dut.log"
-      - pytest_embedded_log/
-    reports:
-      junit: XUNIT_RESULT.xml
-    expire_in: 4 days
 
 example_relinker:
   extends:

@@ -155,10 +155,6 @@ examples/camera/pic_server:
   enable:
     - if: IDF_TARGET in ["esp32s2","esp32s3"]
 
-examples/camera/pic_server:
-  enable:
-    - if: IDF_TARGET in ["esp32s2","esp32s3"]
-
 examples/camera/test_framerate:
   enable:
     - if: IDF_TARGET in ["esp32s2","esp32s3"]
@@ -203,6 +199,26 @@ examples/display/lcd/rgb_avoid_tearing:
   enable:
     - if: IDF_TARGET in ["esp32s3"]
 
+examples/display/gui/lvgl_common_demo:
+  enable:
+    - if: IDF_TARGET in ["esp32s3","esp32p4","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
+
+examples/display/gui/lvgl_decode_image:
+  enable:
+    - if: IDF_TARGET in ["esp32s3","esp32p4","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
+
+examples/display/gui/lvgl_dummy_draw:
+  enable:
+    - if: IDF_TARGET in ["esp32s3","esp32p4","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
+
+examples/display/gui/lvgl_freetype_font:
+  enable:
+    - if: IDF_TARGET in ["esp32s3","esp32p4","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
+
+examples/display/gui/lvgl_multi_screen:
+  enable:
+    - if: IDF_TARGET in ["esp32s3","esp32p4","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
+
 examples/extended_vfs/gpio/gpio_simple:
   enable:
     - if: IDF_TARGET in ["esp32","esp32s2","esp32s3","esp32c3"]
@@ -242,10 +258,6 @@ examples/get-started/knob_power_save:
 examples/sensors/power_measure:
   enable:
     - if: INCLUDE_DEFAULT == 1
-
-examples/hmi/perf_benchmark:
-  enable:
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c3"]
 
 examples/indicator:
   enable:
@@ -288,10 +300,6 @@ examples/ota/simple_ota_example:
     - if: IDF_TARGET in ["esp32c2","esp32c3","esp32"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
     - if: IDF_TARGET in ["esp32c2","esp32c3","esp32","esp32c6","esp32h2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
     - if: IDF_TARGET in ["esp32c61","esp32c5"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
-
-examples/screen:
-  enable:
-    - if: IDF_TARGET == "esp32" and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
 
 examples/sensors/sensor_control_led:
   enable:

@@ -33,3 +33,4 @@ include:
   - '.gitlab/ci/deploy.yml'
   - '.gitlab/ci/target_test.yml'
   - '.gitlab/ci/publish_docs_to_cdp.yml'
+  - '.gitlab/ci/upload_metrics.yml'

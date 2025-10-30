@@ -18,13 +18,6 @@ from collections import defaultdict, namedtuple
 from pathlib import Path
 from typing import List
 
-EXCLUDE_DOCS_LIST = ['examples/hmi/lvgl_example/components/lv_examples/lv_examples/**.md',
-                     'examples/hmi/lvgl_example/components/lv_examples/lv_examples/src/lv_demo_keypad_encoder/**.md',
-                     'examples/hmi/lvgl_wificonfig/lvgl_wificonfig_cn.md',
-                    'components/gui/lvgl_gui/lvgl/**/*.md',
-                     'components/gui/lvgl_gui/lvgl/*.md',
-                     'components/gui/lvgl_gui/lvgl/.github/**/*.md']
-
 # The apple apps links are not accessible from the company network for some reason
 EXCLUDE_URL_LIST = ['https://lvgl.io/','https://www.espressif.com/zh-hans/products/socs/esp32','http://www.espressif.com/zh-hans/support/download/all','https://www.espressif.com/zh-hans/support/download/all']
 

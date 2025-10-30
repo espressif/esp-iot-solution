@@ -47,12 +47,12 @@ INPUT = \
     $(PROJECT_PATH)/components/bluetooth/ble_services/wss/include/esp_wss.h \
     $(PROJECT_PATH)/components/bus/include/i2s_lcd_driver.h \
     $(PROJECT_PATH)/components/button/include/iot_button.h \
-    $(PROJECT_PATH)/components/display/screen/interface_driver/scr_interface_driver.h \
-    $(PROJECT_PATH)/components/display/screen/screen_driver.h \
     $(PROJECT_PATH)/components/display/tools/esp_lv_decoder/include/esp_lv_decoder.h \
     $(PROJECT_PATH)/components/display/tools/esp_lv_fs/include/esp_lv_fs.h \
+    $(PROJECT_PATH)/components/display/tools/esp_lvgl_adapter/include/esp_lv_adapter.h \
+    $(PROJECT_PATH)/components/display/tools/esp_lvgl_adapter/include/esp_lv_adapter_display.h \
+    $(PROJECT_PATH)/components/display/tools/esp_lvgl_adapter/include/esp_lv_adapter_input.h \
     $(PROJECT_PATH)/components/display/tools/esp_mmap_assets/include/esp_mmap_assets.h \
-    $(PROJECT_PATH)/components/display/touch_panel/touch_panel.h \
     $(PROJECT_PATH)/components/i2c_bus/include/i2c_bus.h \
     $(PROJECT_PATH)/components/iot_eth/include/iot_eth.h \
     $(PROJECT_PATH)/components/ir/ir_learn/include/ir_learn.h \

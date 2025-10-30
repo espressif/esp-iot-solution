@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v0.3.1 (2025-10-21)
+
+* Added mutex protection for the PJPG global buffer.
+* Added boundary checks to prevent buffer overflow.
+* Fixed the memory reallocation issue.
+* Prioritized detecting SP format using the file extension.
+
 ## v0.3.0 (2025-09-12)
 
 * Adapted PJPG format for parsing transparency scenarios

@@ -1,0 +1,12 @@
+# Build output directory
+build/
+
+# Downloaded font files (auto-downloaded during build)
+font_assets/
+
+# SDK config
+sdkconfig.old
+
+# Managed components
+managed_components/
+dependencies.lock

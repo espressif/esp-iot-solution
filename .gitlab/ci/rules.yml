@@ -149,11 +149,12 @@
 .patterns-components_display_lcd_touch_esp_lcd_touch_st7123: &patterns-components_display_lcd_touch_esp_lcd_touch_st7123
   - "components/display/lcd_touch/esp_lcd_touch_st7123/**/*"
 
-.patterns-components_display_screen: &patterns-components_display_screen
-  - "components/display/screen/**/*"
-
 .patterns-components_display_tools_esp_lv_decoder: &patterns-components_display_tools_esp_lv_decoder
   - "components/display/tools/esp_lv_decoder/**/*"
+  - "tools/cmake_utilities/package_manager.cmake"
+
+.patterns-components_display_tools_esp_lvgl_adapter: &patterns-components_display_tools_esp_lvgl_adapter
+  - "components/display/tools/esp_lvgl_adapter/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
 
 .patterns-components_display_tools_esp_lv_fs: &patterns-components_display_tools_esp_lv_fs
@@ -163,9 +164,6 @@
 .patterns-components_display_tools_esp_mmap_assets: &patterns-components_display_tools_esp_mmap_assets
   - "components/display/tools/esp_mmap_assets/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
-
-.patterns-components_display_touch_panel: &patterns-components_display_touch_panel
-  - "components/display/touch_panel/**/*"
 
 .patterns-components_keyboard_button: &patterns-components_keyboard_button
   - "components/keyboard_button/**/*"
@@ -177,9 +175,6 @@
 .patterns-components_extended_vfs: &patterns-components_extended_vfs
   - "components/extended_vfs/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
-
-.patterns-components_gui_lvgl_gui: &patterns-components_gui_lvgl_gui
-  - "components/gui/lvgl_gui/**/*"
 
 .patterns-components_ir_ir_learn: &patterns-components_ir_ir_learn
   - "components/ir/ir_learn/**/*"
@@ -424,12 +419,12 @@
   - "components/bluetooth/ble_services/wss/include/esp_wss.h"
   - "components/bus/include/i2s_lcd_driver.h"
   - "components/button/include/iot_button.h"
-  - "components/display/screen/interface_driver/scr_interface_driver.h"
-  - "components/display/screen/screen_driver.h"
   - "components/display/tools/esp_lv_decoder/include/esp_lv_decoder.h"
   - "components/display/tools/esp_lv_fs/include/esp_lv_fs.h"
+  - "components/display/tools/esp_lvgl_adapter/include/esp_lv_adapter.h"
+  - "components/display/tools/esp_lvgl_adapter/include/esp_lv_adapter_display.h"
+  - "components/display/tools/esp_lvgl_adapter/include/esp_lv_adapter_input.h"
   - "components/display/tools/esp_mmap_assets/include/esp_mmap_assets.h"
-  - "components/display/touch_panel/touch_panel.h"
   - "components/i2c_bus/include/i2c_bus.h"
   - "components/iot_eth/include/iot_eth.h"
   - "components/ir/ir_learn/include/ir_learn.h"
@@ -546,6 +541,21 @@
 .patterns-example_display_lcd_rgb_avoid_tearing: &patterns-example_display_lcd_rgb_avoid_tearing
   - "examples/display/lcd/rgb_avoid_tearing/**/*"
 
+.patterns-example_display_gui_lvgl_common_demo: &patterns-example_display_gui_lvgl_common_demo
+  - "examples/display/gui/lvgl_common_demo/**/*"
+
+.patterns-example_display_gui_lvgl_decode_image: &patterns-example_display_gui_lvgl_decode_image
+  - "examples/display/gui/lvgl_decode_image/**/*"
+
+.patterns-example_display_gui_lvgl_dummy_draw: &patterns-example_display_gui_lvgl_dummy_draw
+  - "examples/display/gui/lvgl_dummy_draw/**/*"
+
+.patterns-example_display_gui_lvgl_freetype_font: &patterns-example_display_gui_lvgl_freetype_font
+  - "examples/display/gui/lvgl_freetype_font/**/*"
+
+.patterns-example_display_gui_lvgl_multi_screen: &patterns-example_display_gui_lvgl_multi_screen
+  - "examples/display/gui/lvgl_multi_screen/**/*"
+
 .patterns-example_extended_vfs_gpio_gpio_simple: &patterns-example_extended_vfs_gpio_gpio_simple
   - "examples/extended_vfs/gpio/gpio_simple/**/*"
 
@@ -582,9 +592,6 @@
 .patterns-example_lighting_lightbulb: &patterns-example_lighting_lightbulb
   - "examples/lighting/lightbulb/**/*"
 
-.patterns-example_lvgl_freetype: &patterns-example_lvgl_freetype
-  - "examples/hmi/lvgl_freetype/**/*"
-
 .patterns-example_motor_bldc_fan_rainmaker: &patterns-example_motor_bldc_fan_rainmaker
   - "examples/motor/bldc_fan_rainmaker/**/*"
 
@@ -605,12 +612,6 @@
 
 .patterns-example_ota_simple_ota_example: &patterns-example_ota_simple_ota_example
   - "examples/ota/simple_ota_example/**/*"
-
-.patterns-example_perf_benchmark: &patterns-example_perf_benchmark
-  - "examples/hmi/perf_benchmark/**/*"
-
-.patterns-example_screen: &patterns-example_screen
-  - "examples/screen/**/*"
 
 .patterns-example_sensors_sensor_control_led: &patterns-example_sensors_sensor_control_led
   - "examples/sensors/sensor_control_led/**/*"
@@ -1048,6 +1049,76 @@
     - <<: *if-dev-push
       changes: *patterns-example_display_lcd_rgb_avoid_tearing
 
+.rules:build:example_display_gui_lvgl_common_demo:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_display_gui_lvgl_common_demo
+    - <<: *if-dev-push
+      changes: *patterns-components_display_tools_esp_lvgl_adapter
+
+.rules:build:example_display_gui_lvgl_decode_image:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_display_gui_lvgl_decode_image
+    - <<: *if-dev-push
+      changes: *patterns-components_display_tools_esp_lvgl_adapter
+    - <<: *if-dev-push
+      changes: *patterns-components_display_tools_esp_lv_decoder
+    - <<: *if-dev-push
+      changes: *patterns-components_display_tools_esp_lv_fs
+    - <<: *if-dev-push
+      changes: *patterns-components_display_tools_esp_mmap_assets
+
+.rules:build:example_display_gui_lvgl_dummy_draw:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_display_gui_lvgl_dummy_draw
+    - <<: *if-dev-push
+      changes: *patterns-components_display_tools_esp_lvgl_adapter
+
+.rules:build:example_display_gui_lvgl_freetype_font:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_display_gui_lvgl_freetype_font
+    - <<: *if-dev-push
+      changes: *patterns-components_display_tools_esp_lvgl_adapter
+    - <<: *if-dev-push
+      changes: *patterns-components_display_tools_esp_lv_fs
+    - <<: *if-dev-push
+      changes: *patterns-components_display_tools_esp_mmap_assets
+
+.rules:build:example_display_gui_lvgl_multi_screen:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_display_gui_lvgl_multi_screen
+    - <<: *if-dev-push
+      changes: *patterns-components_display_tools_esp_lvgl_adapter
+
 .rules:build:example_extended_vfs_gpio_gpio_simple:
   rules:
     - <<: *if-protected
@@ -1209,18 +1280,6 @@
     - <<: *if-dev-push
       changes: *patterns-example_lighting_lightbulb
 
-.rules:build:example_lvgl_freetype:
-  rules:
-    - <<: *if-protected
-    - <<: *if-label-build
-    - <<: *if-trigger-job
-    - <<: *if-dev-push
-      changes: *patterns-build_system
-    - <<: *if-dev-push
-      changes: *patterns-example_lvgl_freetype
-    - <<: *if-dev-push
-      changes: *patterns-components_display_tools_esp_mmap_assets
-
 .rules:build:example_motor_bldc_fan_rainmaker:
   rules:
     - <<: *if-protected
@@ -1308,34 +1367,6 @@
       changes: *patterns-components_bootloader_support_plus
     - <<: *if-dev-push
       changes: *patterns-example_ota_simple_ota_example
-
-.rules:build:example_perf_benchmark:
-  rules:
-    - <<: *if-protected
-    - <<: *if-label-build
-    - <<: *if-trigger-job
-    - <<: *if-dev-push
-      changes: *patterns-build_system
-    - <<: *if-dev-push
-      changes: *patterns-example_perf_benchmark
-    - <<: *if-dev-push
-      changes: *patterns-components_display_tools_esp_mmap_assets
-    - <<: *if-dev-push
-      changes: *patterns-components_display_tools_esp_lv_decoder
-    - <<: *if-dev-push
-      changes: *patterns-components_display_tools_esp_lv_fs
-
-.rules:build:example_screen:
-  rules:
-    - <<: *if-protected
-    - <<: *if-label-build
-    - <<: *if-trigger-job
-    - <<: *if-dev-push
-      changes: *patterns-build_system
-    - <<: *if-dev-push
-      changes: *patterns-components_display_screen
-    - <<: *if-dev-push
-      changes: *patterns-example_screen
 
 .rules:build:example_sensors_sensor_control_led:
   rules:
@@ -2212,17 +2243,6 @@
     - <<: *if-dev-push
       changes: *patterns-components_display_lcd_touch_esp_lcd_touch_st7123
 
-.rules:build:components_display_screen_test:
-  rules:
-    - <<: *if-protected
-    - <<: *if-label-build
-    - <<: *if-label-target_test
-    - <<: *if-trigger-job
-    - <<: *if-dev-push
-      changes: *patterns-build_system
-    - <<: *if-dev-push
-      changes: *patterns-components_display_screen
-
 .rules:build:components_display_tools_esp_lv_decoder_test_apps:
   rules:
     - <<: *if-protected
@@ -2249,6 +2269,32 @@
     - <<: *if-dev-push
       changes: *patterns-components_display_tools_esp_mmap_assets
 
+.rules:build:components_display_tools_esp_lvgl_adapter_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_display_tools_esp_lvgl_adapter
+
+.rules:build:components_display_tools_esp_lvgl_adapter_benchmark:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_display_tools_esp_lvgl_adapter
+    - when: manual
+      allow_failure: true # allow failure to avoid blocking the pipeline in manual trigger
+      variables:
+        MANUAL_TRIGGER_ESP_LVGL_ADAPTER_BENCHMARK: "true"
+
 .rules:build:components_display_tools_esp_mmap_assets_test_apps:
   rules:
     - <<: *if-protected
@@ -2259,17 +2305,6 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_display_tools_esp_mmap_assets
-
-.rules:build:components_display_touch_panel_test:
-  rules:
-    - <<: *if-protected
-    - <<: *if-label-build
-    - <<: *if-label-target_test
-    - <<: *if-trigger-job
-    - <<: *if-dev-push
-      changes: *patterns-build_system
-    - <<: *if-dev-push
-      changes: *patterns-components_display_touch_panel
 
 .rules:build:components_keyboard_button_test_apps:
   rules:
@@ -2882,6 +2917,11 @@
       changes: *patterns-components_tools_cmake_utilities_test_component1
     - <<: *if-dev-push
       changes: *patterns-components_tools_cmake_utilities_test_component2
+
+# For benchmark
+.rules:target_test:components_display_tools_esp_lvgl_adapter_benchmark:
+  rules:
+    - when: manual
 
 # For others
 .rules:build:docs:

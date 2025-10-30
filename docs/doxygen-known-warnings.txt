@@ -1,4 +1,4 @@
-bldc_control.h:line: warning: parameters of member bldc_control_config_t::@50 are not (all) documented
-bldc_control.h:line: warning: parameters of member bldc_control_config_t::@52 are not (all) documented
-sensor_type.h:line: warning: parameters of member sensor_data_t::@54 are not (all) documented
+bldc_control.h:line: warning: parameters of member bldc_control_config_t::@47 are not (all) documented
+bldc_control.h:line: warning: parameters of member bldc_control_config_t::@49 are not (all) documented
+sensor_type.h:line: warning: parameters of member sensor_data_t::@51 are not (all) documented
 

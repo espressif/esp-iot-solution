@@ -430,7 +430,7 @@ build_example_display_lcd_mipi_dsi_avoid_tearing:
     - .rules:build:example_display_lcd_mipi_dsi_avoid_tearing
   parallel:
     matrix:
-      - IMAGE: espressif/idf:release-v5.4
+      - IMAGE: espressif/idf:release-v5.5
   variables:
     EXAMPLE_DIR: examples/display/lcd/mipi_dsi_avoid_tearing
 
@@ -460,7 +460,7 @@ build_example_display_lcd_rgb_lcd_8bit:
     - .rules:build:example_display_lcd_rgb_lcd_8bit
   parallel:
     matrix:
-      - IMAGE: espressif/idf:release-v5.3
+      - IMAGE: espressif/idf:release-v5.5
   variables:
     EXAMPLE_DIR: examples/display/lcd/rgb_lcd_8bit
 
@@ -470,9 +470,49 @@ build_example_display_lcd_rgb_avoid_tearing:
     - .rules:build:example_display_lcd_rgb_avoid_tearing
   parallel:
     matrix:
-      - IMAGE: espressif/idf:release-v5.3
+      - IMAGE: espressif/idf:release-v5.5
   variables:
     EXAMPLE_DIR: examples/display/lcd/rgb_avoid_tearing
+
+build_example_display_gui_lvgl_dummy_draw:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_display_gui_lvgl_dummy_draw
+  variables:
+    EXAMPLE_DIR: examples/display/gui/lvgl_dummy_draw
+    IMAGE: espressif/idf:release-v5.5
+
+build_example_display_gui_lvgl_common_demo:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_display_gui_lvgl_common_demo
+  variables:
+    EXAMPLE_DIR: examples/display/gui/lvgl_common_demo
+    IMAGE: espressif/idf:release-v5.5
+
+build_example_display_gui_lvgl_decode_image:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_display_gui_lvgl_decode_image
+  variables:
+    EXAMPLE_DIR: examples/display/gui/lvgl_decode_image
+    IMAGE: espressif/idf:release-v5.5
+
+build_example_display_gui_lvgl_freetype_font:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_display_gui_lvgl_freetype_font
+  variables:
+    EXAMPLE_DIR: examples/display/gui/lvgl_freetype_font
+    IMAGE: espressif/idf:release-v5.5
+
+build_example_display_gui_lvgl_multi_screen:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_display_gui_lvgl_multi_screen
+  variables:
+    EXAMPLE_DIR: examples/display/gui/lvgl_multi_screen
+    IMAGE: espressif/idf:release-v5.5
 
 build_example_extended_vfs_gpio_gpio_simple:
   extends:
@@ -617,17 +657,6 @@ build_example_lighting_lightbulb:
   variables:
     EXAMPLE_DIR: examples/lighting/lightbulb
 
-build_example_lvgl_freetype:
-  extends:
-    - .build_examples_template
-    - .rules:build:example_lvgl_freetype
-  parallel:
-    matrix:
-        - IMAGE: espressif/idf:release-v5.1
-  variables:
-    EXAMPLE_TARGET: esp32s3
-    EXAMPLE_DIR: examples/hmi/lvgl_freetype
-
 build_example_motor_bldc_fan_rainmaker:
   extends:
     - .build_examples_template
@@ -697,24 +726,6 @@ build_example_ota_simple_ota_example:
   variables:
     EXAMPLE_DIR: examples/ota/simple_ota_example
     WARNING_STR: "1/2 app partitions are too small"
-
-build_example_perf_benchmark:
-  extends:
-    - .build_examples_template
-    - .rules:build:example_perf_benchmark
-  parallel:
-    matrix:
-        - IMAGE: espressif/idf:release-v5.3
-  variables:
-    EXAMPLE_DIR: examples/hmi/perf_benchmark
-
-build_example_screen:
-  extends:
-    - .build_examples_template
-    - .rules:build:example_screen
-  variables:
-    EXAMPLE_DIR: examples/screen
-    IMAGE: espressif/idf:release-v4.4
 
 build_example_sensors_sensor_control_led:
   extends:
@@ -1350,6 +1361,36 @@ build_components_display_tools_esp_lv_fs_test_apps:
       - IMAGE: espressif/idf:release-v5.0
   variables:
     EXAMPLE_DIR: components/display/tools/esp_lv_fs/test_apps
+
+build_components_display_tools_esp_lvgl_adapter_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_display_tools_esp_lvgl_adapter_test_apps
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.5
+  variables:
+    EXAMPLE_DIR: components/display/tools/esp_lvgl_adapter/test_apps
+
+.build_components_display_tools_esp_lvgl_adapter_benchmark_template: &build_components_display_tools_esp_lvgl_adapter_benchmark_template
+  extends:
+    - .build_examples_template
+    - .rules:build:components_display_tools_esp_lvgl_adapter_benchmark
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.5
+
+build_components_display_tools_esp_lvgl_adapter_benchmark:
+  <<: *build_components_display_tools_esp_lvgl_adapter_benchmark_template
+  variables:
+    EXAMPLE_CONFIG: "="
+    EXAMPLE_DIR: components/display/tools/esp_lvgl_adapter/benchmark
+
+build_components_display_tools_esp_lvgl_adapter_rgb888_benchmark:
+  <<: *build_components_display_tools_esp_lvgl_adapter_benchmark_template
+  variables:
+    EXAMPLE_CONFIG: "sdkconfig.ci.rgb888=default"
+    EXAMPLE_DIR: components/display/tools/esp_lvgl_adapter/benchmark
 
 build_components_display_tools_esp_mmap_assets_test_apps:
   extends:

@@ -1,0 +1,10 @@
+# ESP32-C3 default configuration
+
+CONFIG_IDF_TARGET="esp32c3"
+
+# Default LCD interface: SPI without PSRAM (only option for C3)
+CONFIG_EXAMPLE_LCD_INTERFACE_SPI_WITHOUT_PSRAM=y
+
+# ESP32-C3 uses encoder/knob input (not touch)
+CONFIG_ESP_LVGL_ADAPTER_ENABLE_BUTTON=y
+CONFIG_ESP_LVGL_ADAPTER_ENABLE_KNOB=y
