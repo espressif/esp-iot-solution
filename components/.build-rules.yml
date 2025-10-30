@@ -231,7 +231,7 @@ components/sensors/power_monitor/ina236/test_apps:
 
 components/bluetooth/ble_hci/test_apps:
   enable:
-    - if: IDF_TARGET in ["esp32","esp32c3","esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 3)
+    - if: IDF_TARGET in ["esp32","esp32c3","esp32s3"] and IDF_VERSION_MAJOR >= 5
 
 components/bluetooth/ble_adv/bthome/test_apps:
   enable:
