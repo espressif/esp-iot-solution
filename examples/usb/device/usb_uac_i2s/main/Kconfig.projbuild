@@ -1,0 +1,61 @@
+menu "Example Configuration"
+    
+    menu "Speaker I2S Pin Configuration"
+
+        config SPEAKER_I2S_DOUT
+            int "Speaker I2S Data Out Pin"
+            default 13
+            help
+                GPIO pin for I2S speaker data out (DOUT).
+
+        config SPEAKER_I2S_BCLK
+            int "Speaker I2S Bit Clock Pin"
+            default 14
+            help
+                GPIO pin for I2S speaker bit clock (BCLK).
+
+        config SPEAKER_I2S_LRC
+            int "Speaker I2S Left/Right Clock Pin"
+            default 21
+            help
+                GPIO pin for I2S speaker word select/left-right clock (LRC/WS).
+
+        config SPEAKER_SD_MODE_ENABLE
+            bool "Enable Speaker Shutdown/Mode Control Pin"
+            default y
+            help
+                Enable control of speaker amplifier shutdown/mode pin.
+                Disable this if your amplifier doesn't have a shutdown control pin.
+
+        config SPEAKER_SD_MODE
+            int "Speaker Shutdown/Mode Control Pin"
+            default 12
+            depends on SPEAKER_SD_MODE_ENABLE
+            help
+                GPIO pin for speaker amplifier shutdown/mode control.
+
+    endmenu
+
+    menu "Microphone I2S Pin Configuration"
+
+        config MIC_I2S_CLK
+            int "Microphone I2S Clock Pin"
+            default 9
+            help
+                GPIO pin for microphone PDM clock.
+
+        config MIC_I2S_LR
+            int "Microphone I2S L/R Pin"
+            default 10
+            help
+                GPIO pin for microphone L/R select.
+
+        config MIC_I2S_DATA
+            int "Microphone I2S Data Pin"
+            default 11
+            help
+                GPIO pin for microphone PDM data input.
+
+    endmenu
+
+endmenu
