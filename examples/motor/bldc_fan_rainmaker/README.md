@@ -22,3 +22,7 @@ The `bldc_fan_rainmaker` example connects a brushless motor-driven fan to the ES
     * Phase loss protection [feature]
 
 * [esp_rainmaker](https://components.espressif.com/components/espressif/esp_rainmaker) is a complete and lightweight AIoT solution that enables private cloud deployment for your business in a simple, cost-effective, and efficient manner.
+
+## Hardware Overview
+
+You can click [here](https://dl.espressif.com/AE/esp-iot-solution/bldc_fan_rainmaker_sch.pdf) to download the hardware schematic. By using the corresponding buttons, you can control the fan's start and stop, rotate the stepper motor, enable natural wind mode, and reset Rainmaker.

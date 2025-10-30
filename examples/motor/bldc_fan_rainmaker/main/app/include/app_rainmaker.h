@@ -8,6 +8,7 @@
 
 #include "esp_err.h"
 #include "esp_rmaker_core.h"
+#include "esp_rmaker_utils.h"
 
 #ifdef __cplusplus
 extern "C" {
