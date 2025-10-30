@@ -49,7 +49,7 @@ Code Snippets
 -------------
 
 BL0937 (GPIO)
-~~~~~~~~~~~~
+^^^^^^^^^^^^^
 
 .. code-block:: c
 
@@ -85,7 +85,7 @@ BL0937 (GPIO)
    power_measure_delete(h);
 
 INA236 (I2C)
-~~~~~~~~~~~~
+^^^^^^^^^^^^
 
 .. code-block:: c
 
@@ -133,13 +133,13 @@ Troubleshooting
 ---------------
 
 BL0937 Issues:
-~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^
 
 1. **Failed Initialization** : If the initialization fails, ensure that all GPIO pins are correctly defined and connected to the **BL0937** chip.
 2. **Measurement Failures** : If the measurements fail (e.g., voltage, current), verify that the **BL0937** chip is properly powered and communicating with your ESP32 series chips.
 
 INA236 Issues:
-~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^
 
 1. **I2C Bus Initialization Failed** : Check that the I2C pins (SDA/SCL) are correctly connected and not conflicting with other peripherals.
 2. **INA236 Not Detected** : Verify the I2C address (default 0x41) and ensure the chip is properly powered.

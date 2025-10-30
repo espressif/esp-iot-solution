@@ -84,6 +84,9 @@ test_multi_heap_host
 # VS Code Settings
 .vscode/
 
+# Cursor Settings
+.cursor/
+
 # VIM files
 *.swp
 *.swo

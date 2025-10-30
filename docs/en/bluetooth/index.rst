@@ -1,4 +1,3 @@
-
 Bluetooth
 *************************
 
@@ -11,3 +10,4 @@ Bluetooth
     BLE Services <ble_services>
     BLE Profiles <ble_profiles>
     BLE HCI <ble_hci>
+    BTHome <bt_home>

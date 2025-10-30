@@ -25,12 +25,12 @@
 
 1. **（可选）初始化 I2C 总线（仅 INA236）**：
 
-   - 使用 `i2c_bus_create()` 按 `I2C_MASTER_SCL_IO`/`I2C_MASTER_SDA_IO` 创建 I2C 总线。
+   - 使用 `i2c_bus_create()` 按 `I2C_MASTER_SCL_IO` / `I2C_MASTER_SDA_IO` 创建 I2C 总线。
 2. **创建功率测量设备**：
 
-   - 准备通用配置 `power_measure_config_t`（过流/过压/欠压阈值、是否启用能量检测）。
-   - 对 BL0937，准备 `power_measure_bl0937_config_t`（CF/CF1/SEL、分压/采样电阻、KI/KU/KP）。
-   - 对 INA236，准备 `power_measure_ina236_config_t`（I2C 句柄、地址、告警配置）。
+   - 准备通用配置 `power_measure_config_t` （过流/过压/欠压阈值、是否启用能量检测）。
+   - 对 BL0937，准备 `power_measure_bl0937_config_t` （CF/CF1/SEL、分压/采样电阻、KI/KU/KP）。
+   - 对 INA236，准备 `power_measure_ina236_config_t` （I2C 句柄、地址、告警配置）。
    - 使用 `power_measure_new_bl0937_device()` 或 `power_measure_new_ina236_device()` 创建设备并获得 `power_measure_handle_t` 句柄。
 3. **周期读取测量值**：
 
@@ -49,7 +49,7 @@
 --------
 
 BL0937（GPIO）
-~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: c
 
@@ -85,7 +85,7 @@ BL0937（GPIO）
    power_measure_delete(h);
 
 INA236（I2C）
-~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: c
 
@@ -133,13 +133,13 @@ INA236（I2C）
 --------
 
 BL0937 问题：
-~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^
 
 1. **初始化失败**：如果初始化失败，请确保所有 GPIO 引脚都已正确定义并连接到 **BL0937** 芯片。
 2. **测量失败**：如果测量失败（如电压、电流），请检查 **BL0937** 芯片是否正确供电并与 ESP32系列芯片 通信。
 
 INA236 问题：
-~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^
 
 1. **I2C 总线初始化失败**：检查 I2C 引脚（SDA/SCL）是否正确连接且未与其他外设冲突。
 2. **INA236 未检测到**：验证 I2C 地址（默认 0x41）并确保芯片正确供电。

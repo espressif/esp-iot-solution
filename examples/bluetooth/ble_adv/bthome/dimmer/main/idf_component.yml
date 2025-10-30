@@ -1,0 +1,11 @@
+## IDF Component Manager Manifest File
+dependencies:
+  espressif/button: "^3.2.2"
+  espressif/knob: "^0.1.4"
+  ## Required IDF version
+  idf:
+    version: ">=5.0"
+  bthome:
+    override_path: "../../../../../components/bluetooth/ble_adv/bthome"
+  ble_hci:
+    override_path: "../../../../../components/bluetooth/ble_hci"

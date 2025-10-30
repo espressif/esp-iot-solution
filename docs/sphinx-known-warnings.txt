@@ -1,7 +1,7 @@
 lightbulb.inc:line: WARNING: Duplicate C++ declaration, also defined at electrical_lighting_solution/lightbulb_driver:line.
 Declaration is '.. cpp:member:: lightbulb_color_mapping_data_t * table'.
 lightbulb.inc:line: WARNING: Duplicate C++ declaration, also defined at electrical_lighting_solution/lightbulb_driver:line.
-Declaration is '.. cpp:member:: struct lightbulb_config_t::@40::@44 precise'.
+Declaration is '.. cpp:member:: struct lightbulb_config_t::@41::@45 precise'.
 lightbulb.inc:line: WARNING: Duplicate C++ declaration, also defined at electrical_lighting_solution/lightbulb_driver:line.
 Declaration is '.. cpp:member:: lightbulb_chip_out_pin_t red'.
 lightbulb.inc:line: WARNING: Duplicate C++ declaration, also defined at electrical_lighting_solution/lightbulb_driver:line.
@@ -51,69 +51,4 @@ If the function has a return type:
       Invalid C++ declaration: Expecting "(" in parameters-and-qualifiers. [error at 28]
         SLIST_ENTRY (ir_learn_list_t) next
         ----------------------------^
-
-power_measure.rst:line: WARNING: Title underline too short.
-
-BL0937 (GPIO)
-~~~~~~~~~~~~
-power_measure.inc:line: CRITICAL: Title level inconsistent:
-
-Header File
-^^^^^^^^^^^
-power_measure.inc:line: CRITICAL: Title level inconsistent:
-
-Functions
-^^^^^^^^^
-power_measure.inc:line: CRITICAL: Title level inconsistent:
-
-Structures
-^^^^^^^^^^
-power_measure.inc:line: CRITICAL: Title level inconsistent:
-
-Type Definitions
-^^^^^^^^^^^^^^^^
-
-power_measure.rst:line: WARNING: Inline interpreted text or phrase reference start-string without end-string.
-power_measure.rst:line: WARNING: Inline interpreted text or phrase reference start-string without end-string.
-power_measure.rst:line: WARNING: Inline interpreted text or phrase reference start-string without end-string.
-power_measure.rst:line: WARNING: Title underline too short.
-
-BL0937（GPIO）
-~~~~~~~~~~~~
-power_measure.rst:line: WARNING: Title underline too short.
-
-INA236（I2C）
-~~~~~~~~~~~~
-power_measure.rst:line: WARNING: Title underline too short.
-
-INA236（I2C）
-~~~~~~~~~~~~
-power_measure.rst:line: WARNING: Title underline too short.
-
-BL0937 问题：
-~~~~~~~~~~~~
-power_measure.rst:line: WARNING: Title underline too short.
-
-INA236 问题：
-~~~~~~~~~~~~
-power_measure.rst:line: WARNING: Title underline too short.
-
-INA236 问题：
-~~~~~~~~~~~~
-power_measure.inc:line: CRITICAL: Title level inconsistent:
-
-Header File
-^^^^^^^^^^^
-power_measure.inc:line: CRITICAL: Title level inconsistent:
-
-Functions
-^^^^^^^^^
-power_measure.inc:line: CRITICAL: Title level inconsistent:
-
-Structures
-^^^^^^^^^^
-power_measure.inc:line: CRITICAL: Title level inconsistent:
-
-Type Definitions
-^^^^^^^^^^^^^^^^
 

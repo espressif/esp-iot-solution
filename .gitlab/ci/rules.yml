@@ -52,6 +52,10 @@
   - "components/bluetooth/ble_hci/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
 
+.patterns-components_bluetooth_ble_adv_bthome: &patterns-components_bluetooth_ble_adv_bthome
+  - "components/bluetooth/ble_adv/bthome/**/*"
+  - "tools/cmake_utilities/package_manager.cmake"
+
 .patterns-components_bootloader_support_plus: &patterns-components_bootloader_support_plus
   - "components/bootloader_support_plus/**/*"
   - "components/utilities/xz/**/*"
@@ -1866,6 +1870,17 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_bluetooth_ble_hci
+
+.rules:build:components_bluetooth_ble_adv_bthome_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_bluetooth_ble_adv_bthome
 
 .rules:build:component_bus_test:
   rules:

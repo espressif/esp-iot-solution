@@ -11,3 +11,4 @@
     BLE 服务 <ble_services>
     BLE 配置文件 <ble_profiles>
     BLE HCI <ble_hci>
+    BTHome <bt_home>
