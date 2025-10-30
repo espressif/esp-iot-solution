@@ -12,6 +12,16 @@ jobs:
       - uses: actions/checkout@master
         with:
           submodules: 'recursive'
+      - name: Copy common components to examples
+        run: |
+          mkdir -p examples/display/gui/lvgl_common_demo/components/
+          cp -r examples/display/gui/common/hw_init examples/display/gui/lvgl_common_demo/components/
+          mkdir -p examples/display/gui/lvgl_decode_image/components/
+          cp -r examples/display/gui/common/hw_init examples/display/gui/lvgl_decode_image/components/
+          mkdir -p examples/display/gui/lvgl_dummy_draw/components/
+          cp -r examples/display/gui/common/hw_init examples/display/gui/lvgl_dummy_draw/components/
+          mkdir -p examples/display/gui/lvgl_freetype_font/components/
+          cp -r examples/display/gui/common/hw_init examples/display/gui/lvgl_freetype_font/components/
       - name: Upload components to component service
         uses: espressif/upload-components-ci-action@v1
         with:
@@ -54,6 +64,7 @@ jobs:
             components/display/lcd_touch/esp_lcd_touch_st7123;
             components/display/tools/esp_lv_decoder;
             components/display/tools/esp_lv_fs;
+            components/display/tools/esp_lvgl_adapter;
             components/display/tools/esp_mmap_assets;
             components/elf_loader;
             components/expander/io_expander/mcp23017;
