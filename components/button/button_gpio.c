@@ -36,6 +36,12 @@ static uint8_t button_gpio_get_key_level(button_driver_t *button_driver)
     return level == gpio_btn->active_level ? 1 : 0;
 }
 
+static int button_gpio_get_pin(button_driver_t *button_driver)
+{
+    button_gpio_obj *gpio_btn = __containerof(button_driver, button_gpio_obj, base);
+    return (int)gpio_btn->gpio_num;
+}
+
 static esp_err_t button_gpio_enable_gpio_wakeup(uint32_t gpio_num, uint8_t active_level, bool enable)
 {
     esp_err_t ret;
@@ -135,6 +141,7 @@ esp_err_t iot_button_new_gpio_device(const button_config_t *button_config, const
     }
 
     gpio_btn->base.get_key_level = button_gpio_get_key_level;
+    gpio_btn->base.get_hardware_data = button_gpio_get_pin;
     gpio_btn->base.del = button_gpio_del;
 
     ret = iot_button_create(button_config, &gpio_btn->base, ret_button);
