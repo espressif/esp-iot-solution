@@ -229,6 +229,16 @@ esp_err_t iot_button_set_param(button_handle_t btn_handle, button_param_t param,
  */
 uint8_t iot_button_get_key_level(button_handle_t btn_handle);
 
+/** @brief Get button hardware gpio pin or adc channel number.
+*
+* @param btn_handle Button handle
+*
+* @return Depends button type:
+*      - BUTTON_GPIO: pin number
+*      - BUTTON_ADC:  channel number
+*/
+int iot_button_get_hardware_data(button_handle_t btn_handle);
+
 /**
  * @brief resume button timer, if button timer is stopped. Make sure iot_button_create() is called before calling this API.
  *
