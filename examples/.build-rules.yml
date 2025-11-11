@@ -219,6 +219,10 @@ examples/display/gui/lvgl_multi_screen:
   enable:
     - if: IDF_TARGET in ["esp32s3","esp32p4","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
 
+examples/display/gui/lvgl_light_sleep_demo:
+  enable:
+    - if: IDF_TARGET in ["esp32s3","esp32p4","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
+
 examples/extended_vfs/gpio/gpio_simple:
   enable:
     - if: IDF_TARGET in ["esp32","esp32s2","esp32s3","esp32c3"]

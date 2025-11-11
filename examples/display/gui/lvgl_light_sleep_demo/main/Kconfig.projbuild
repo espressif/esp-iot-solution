@@ -1,0 +1,11 @@
+menu "LVGL Light Sleep Demo Configuration"
+
+config EXAMPLE_LIGHT_SLEEP_WAKE_TIMER_MS
+    int "Light sleep wake timer (ms)"
+    range 100 600000
+    default 5000
+    help
+        Duration of the timer wake-up used after entering light sleep.
+        The example always relies on this timer to resume execution.
+
+endmenu

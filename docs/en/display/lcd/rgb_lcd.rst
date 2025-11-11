@@ -331,6 +331,44 @@ Below is an example code explanation using the `rgb_panel <https://github.com/es
     // ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(panel_handle, true));    // Control the on/off of LCD display through the `disp_gpio_num` pin,
                                                                           // only available when the pin is set and not equal to `-1`, otherwise an error will be reported
 
+**Timing Parameter Correspondence:**
+
+The correspondence between the timing parameters in the above code and the symbols in the `DE Mode` and `SYNC Mode` timing diagrams is as follows:
+
+.. list-table:: Horizontal Timing Parameter Correspondence
+    :widths: 30 30 40
+    :header-rows: 1
+
+    * - Code Parameter Name
+      - Timing Diagram Symbol
+      - Description
+    * - ``hsync_back_porch``
+      - Thbp
+      - Horizontal sync back porch
+    * - ``hsync_front_porch``
+      - Thfp
+      - Horizontal sync front porch
+    * - ``hsync_pulse_width``
+      - Thpw
+      - Horizontal sync pulse width
+
+.. list-table:: Vertical Timing Parameter Correspondence
+    :widths: 30 30 40
+    :header-rows: 1
+
+    * - Code Parameter Name
+      - Timing Diagram Symbol
+      - Description
+    * - ``vsync_back_porch``
+      - Tvbp
+      - Vertical sync back porch
+    * - ``vsync_front_porch``
+      - Tvfp
+      - Vertical sync front porch
+    * - ``vsync_pulse_width``
+      - Tvs
+      - Vertical sync pulse width
+
 For LCDs using both 3-wire SPI and RGB interfaces, start by creating an LCD device and obtaining a handle of data type ``esp_lcd_panel_handle_t`` using the ``esp_lcd_new_rgb_panel()`` function from the `RGB Interface Driver <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/src/esp_lcd_panel_rgb.c>`_. Then, use the `LCD General APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ to initialize the LCD device.
 
 For configuration parameters and explanations of certain functions related to the ``RGB`` interface, please refer to :ref:`RGB Configuration Parameters and Function Descriptions <rgb_parameter_configuration_and_functions>`.

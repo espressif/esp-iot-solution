@@ -16,6 +16,7 @@
 #include "esp_check.h"
 #include "esp_lv_adapter_input.h"
 #include "adapter_internal.h"
+#include "display_manager.h"
 
 /* Tag for logging */
 static const char *TAG = "esp_lvgl:touch";
@@ -160,6 +161,12 @@ lv_indev_t *esp_lv_adapter_register_touch(const esp_lv_adapter_touch_config_t *c
         /* Continue anyway, device will still work but won't be auto-cleaned */
     }
 
+    /* Associate with display for sleep mgmt */
+    esp_lv_adapter_display_node_t *display_node = display_manager_get_node(config->disp);
+    if (display_node && display_node->sleep.input_count < 8) {
+        display_node->sleep.associated_inputs[display_node->sleep.input_count++] = indev;
+    }
+
     ESP_LOGI(TAG, "Touch input device registered successfully (IRQ mode: %s)", with_irq ? "enabled" : "disabled");
     return indev;
 
@@ -246,27 +253,24 @@ static void lvgl_touch_read(lv_indev_t *indev_drv, lv_indev_data_t *data)
     }
 
     if (should_read) {
-        uint16_t touch_x[MAX_TOUCH_POINTS] = {0};
-        uint16_t touch_y[MAX_TOUCH_POINTS] = {0};
+        esp_lcd_touch_point_data_t touch_data[MAX_TOUCH_POINTS] = {0};
         uint8_t count = 0;
 
         /* Read touch data from hardware */
         esp_lcd_touch_read_data(touch_ctx->handle);
 
         /* Get touch coordinates */
-        bool pressed = esp_lcd_touch_get_coordinates(
-                           touch_ctx->handle,
-                           touch_x,
-                           touch_y,
-                           NULL,
-                           &count,
-                           MAX_TOUCH_POINTS
-                       );
+        esp_err_t ret = esp_lcd_touch_get_data(
+                            touch_ctx->handle,
+                            touch_data,
+                            &count,
+                            MAX_TOUCH_POINTS
+                        );
 
         /* Update last state */
-        if (pressed && count > 0) {
-            touch_ctx->last_point.x = (lv_coord_t)(touch_ctx->scale.x * touch_x[0]);
-            touch_ctx->last_point.y = (lv_coord_t)(touch_ctx->scale.y * touch_y[0]);
+        if (ret == ESP_OK && count > 0) {
+            touch_ctx->last_point.x = (lv_coord_t)(touch_ctx->scale.x * touch_data[0].x);
+            touch_ctx->last_point.y = (lv_coord_t)(touch_ctx->scale.y * touch_data[0].y);
             touch_ctx->last_state = LV_INDEV_STATE_PRESSED;
         } else {
             touch_ctx->last_state = LV_INDEV_STATE_RELEASED;
@@ -521,27 +525,24 @@ static void lvgl_touch_read(lv_indev_drv_t *indev_drv, lv_indev_data_t *data)
     }
 
     if (should_read) {
-        uint16_t touch_x[MAX_TOUCH_POINTS] = {0};
-        uint16_t touch_y[MAX_TOUCH_POINTS] = {0};
+        esp_lcd_touch_point_data_t touch_data[MAX_TOUCH_POINTS] = {0};
         uint8_t count = 0;
 
         /* Read touch data from hardware */
         esp_lcd_touch_read_data(touch_ctx->handle);
 
         /* Get touch coordinates */
-        bool pressed = esp_lcd_touch_get_coordinates(
-                           touch_ctx->handle,
-                           touch_x,
-                           touch_y,
-                           NULL,
-                           &count,
-                           MAX_TOUCH_POINTS
-                       );
+        esp_err_t ret = esp_lcd_touch_get_data(
+                            touch_ctx->handle,
+                            touch_data,
+                            &count,
+                            MAX_TOUCH_POINTS
+                        );
 
         /* Update last state */
-        if (pressed && count > 0) {
-            touch_ctx->last_point.x = (lv_coord_t)(touch_ctx->scale.x * touch_x[0]);
-            touch_ctx->last_point.y = (lv_coord_t)(touch_ctx->scale.y * touch_y[0]);
+        if (ret == ESP_OK && count > 0) {
+            touch_ctx->last_point.x = (lv_coord_t)(touch_ctx->scale.x * touch_data[0].x);
+            touch_ctx->last_point.y = (lv_coord_t)(touch_ctx->scale.y * touch_data[0].y);
             touch_ctx->last_state = LV_INDEV_STATE_PRESSED;
         } else {
             touch_ctx->last_state = LV_INDEV_STATE_RELEASED;

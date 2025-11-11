@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v0.3.2 (2025-11-17)
+
+* Fix the issue where the buffer space is insufficient when reading the image header.
+
 ## v0.3.1 (2025-10-21)
 
 * Added mutex protection for the PJPG global buffer.

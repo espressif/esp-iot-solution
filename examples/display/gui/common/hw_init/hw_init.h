@@ -10,6 +10,7 @@
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_panel_io.h"
 #include "esp_lv_adapter_display.h"
+#include "driver/gpio.h"
 #include "sdkconfig.h"
 
 #ifdef __cplusplus
@@ -52,6 +53,8 @@ esp_err_t hw_lcd_init(esp_lcd_panel_handle_t *panel_handle,
                       esp_lcd_panel_io_handle_t *io_handle,
                       esp_lv_adapter_tear_avoid_mode_t tear_avoid_mode,
                       esp_lv_adapter_rotation_t rotation);
+esp_err_t hw_lcd_deinit(void);
+int hw_lcd_get_te_gpio(void);
 
 #if HW_USE_TOUCH
 #include "esp_lcd_touch.h"
@@ -69,6 +72,10 @@ const knob_config_t *hw_knob_get_config(void);
 button_handle_t hw_knob_get_button(void);
 
 #endif
+
+uint32_t hw_lcd_get_bus_freq_hz(void);
+uint8_t hw_lcd_get_bus_data_lines(void);
+uint8_t hw_lcd_get_bits_per_pixel(void);
 
 #ifdef __cplusplus
 }

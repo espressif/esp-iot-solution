@@ -657,6 +657,10 @@ The following code example uses `EK79007 <https://components.espressif.com/compo
         ESP_ERROR_CHECK(esp_lcd_panel_init(panel_handle));
         ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(panel_handle, true));
 
+**Timing Parameter Description:**
+
+The timing parameter definitions for MIPI-DSI are consistent with the `SYNC Mode` of the RGB interface in terms of timing diagrams. Both use HSYNC and VSYNC synchronization signals and require configuration of blanking porch parameters. For detailed explanations of timing parameters, the correspondence between parameters and timing diagram symbols, and configuration methods, please refer to the "Timing Parameter Correspondence" section in :doc:`RGB LCD Introduction <rgb_lcd>`.
+
 Note that ESP32P4 requires a stable 2.5V power supply for the MIPI DSI PHY. The clock frequency calculation refers to the pixel_clock calculation method mentioned above. Color format, resolution, pulse width, and front/back porch parameters must strictly follow the panel datasheet requirements.
 
 Then create an LCD device through the ported driver component and obtain a handle of type ``esp_lcd_panel_handle_t``, then use `LCD General APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ to initialize the LCD device.

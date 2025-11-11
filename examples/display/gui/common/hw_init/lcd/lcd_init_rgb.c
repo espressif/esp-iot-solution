@@ -110,4 +110,35 @@ esp_err_t hw_lcd_init(esp_lcd_panel_handle_t *panel_handle, esp_lcd_panel_io_han
     return ESP_OK;
 }
 
+esp_err_t hw_lcd_deinit(void)
+{
+    if (s_panel_handle) {
+        esp_lcd_panel_disp_on_off(s_panel_handle, false);
+        esp_lcd_panel_del(s_panel_handle);
+        s_panel_handle = NULL;
+    }
+
+    return ESP_OK;
+}
+
+int hw_lcd_get_te_gpio(void)
+{
+    return GPIO_NUM_NC;
+}
+
+uint32_t hw_lcd_get_bus_freq_hz(void)
+{
+    return 0;
+}
+
+uint8_t hw_lcd_get_bus_data_lines(void)
+{
+    return HW_LCD_DATA_WIDTH;
+}
+
+uint8_t hw_lcd_get_bits_per_pixel(void)
+{
+    return HW_LCD_BIT_PER_PIXEL;
+}
+
 #endif

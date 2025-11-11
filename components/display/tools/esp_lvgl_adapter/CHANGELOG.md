@@ -1,5 +1,10 @@
 # ChangeLog
 
+## v0.1.0 (2025-11-17)
+
+* Add a sleep mechanism compatible with Light Sleep
+* Add a TE-based anti-tearing mechanism
+
 ## v0.1.0-beta.2 (2025-11-4)
 
 * Fix a crash that occurred in some cases when PPA acceleration was enabled

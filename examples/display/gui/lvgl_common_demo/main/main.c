@@ -11,12 +11,16 @@
  * This example demonstrates how to use LVGL with different LCD interfaces
  * (MIPI DSI, QSPI, RGB, SPI) in a single unified codebase.
  * The interface type and hardware configuration can be selected via menuconfig.
+ *
+ * For SPI/QSPI interfaces, the example automatically detects and uses GPIO TE
+ * (Tearing Effect) synchronization if the panel provides a TE signal.
  */
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
 #include "esp_err.h"
+#include "driver/gpio.h"
 #include "sdkconfig.h"
 #include "hw_init.h"
 #include "esp_lv_adapter.h"
@@ -74,16 +78,29 @@ void app_main()
     esp_lcd_panel_handle_t display_panel = NULL;
     esp_lcd_panel_io_handle_t display_io_handle = NULL;
     esp_lv_adapter_rotation_t rotation = get_configured_rotation();
+    esp_lv_adapter_tear_avoid_mode_t tear_avoid_mode;
+    esp_lv_adapter_display_config_t display_config;
 
-    /* Select tear effect mode based on LCD interface type */
+    /* Select tear effect mode based on LCD interface type and TE availability */
 #if CONFIG_EXAMPLE_LCD_INTERFACE_MIPI_DSI
-    esp_lv_adapter_tear_avoid_mode_t tear_avoid_mode = ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT_MIPI_DSI;
+    tear_avoid_mode = ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT_MIPI_DSI;
     ESP_LOGI(TAG, "Selected LCD interface: MIPI DSI");
 #elif CONFIG_EXAMPLE_LCD_INTERFACE_RGB
-    esp_lv_adapter_tear_avoid_mode_t tear_avoid_mode = ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT_RGB;
+    tear_avoid_mode = ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT_RGB;
     ESP_LOGI(TAG, "Selected LCD interface: RGB");
 #else
-    esp_lv_adapter_tear_avoid_mode_t tear_avoid_mode = ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT;
+    /* Check if TE (Tearing Effect) GPIO is available for SPI/QSPI interfaces */
+    int te_gpio = hw_lcd_get_te_gpio();
+    bool te_supported = (te_gpio != GPIO_NUM_NC);
+
+    /* For SPI/QSPI interfaces, use TE_SYNC if available, otherwise use default */
+    if (te_supported) {
+        tear_avoid_mode = ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC;
+        ESP_LOGI(TAG, "TE sync enabled on GPIO %d", te_gpio);
+    } else {
+        tear_avoid_mode = ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT;
+        ESP_LOGD(TAG, "TE sync disabled or unsupported (gpio=%d)", te_gpio);
+    }
 #if CONFIG_EXAMPLE_LCD_INTERFACE_QSPI
     ESP_LOGI(TAG, "Selected LCD interface: QSPI");
 #elif CONFIG_EXAMPLE_LCD_INTERFACE_SPI_WITH_PSRAM
@@ -103,17 +120,28 @@ void app_main()
 
     /* Register the display to the LVGL adapter with appropriate configuration */
 #if CONFIG_EXAMPLE_LCD_INTERFACE_MIPI_DSI
-    esp_lv_adapter_display_config_t display_config = ESP_LV_ADAPTER_DISPLAY_MIPI_DEFAULT_CONFIG(
-                                                         display_panel, display_io_handle, HW_LCD_H_RES, HW_LCD_V_RES, rotation);
+    display_config = ESP_LV_ADAPTER_DISPLAY_MIPI_DEFAULT_CONFIG(
+                         display_panel, display_io_handle, HW_LCD_H_RES, HW_LCD_V_RES, rotation);
 #elif CONFIG_EXAMPLE_LCD_INTERFACE_RGB
-    esp_lv_adapter_display_config_t display_config = ESP_LV_ADAPTER_DISPLAY_RGB_DEFAULT_CONFIG(
-                                                         display_panel, display_io_handle, HW_LCD_H_RES, HW_LCD_V_RES, rotation);
+    display_config = ESP_LV_ADAPTER_DISPLAY_RGB_DEFAULT_CONFIG(
+                         display_panel, display_io_handle, HW_LCD_H_RES, HW_LCD_V_RES, rotation);
 #elif CONFIG_EXAMPLE_LCD_INTERFACE_SPI_WITHOUT_PSRAM
-    esp_lv_adapter_display_config_t display_config = ESP_LV_ADAPTER_DISPLAY_SPI_WITHOUT_PSRAM_DEFAULT_CONFIG(
-                                                         display_panel, display_io_handle, HW_LCD_H_RES, HW_LCD_V_RES, rotation);
+    display_config = ESP_LV_ADAPTER_DISPLAY_SPI_WITHOUT_PSRAM_DEFAULT_CONFIG(
+                         display_panel, display_io_handle, HW_LCD_H_RES, HW_LCD_V_RES, rotation);
 #else  /* QSPI or SPI with PSRAM */
-    esp_lv_adapter_display_config_t display_config = ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_DEFAULT_CONFIG(
-                                                         display_panel, display_io_handle, HW_LCD_H_RES, HW_LCD_V_RES, rotation);
+    /* Use TE-enabled config if TE GPIO is available, otherwise use default config */
+    if (te_supported) {
+        display_config = ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_TE_DEFAULT_CONFIG(
+                             display_panel, display_io_handle,
+                             HW_LCD_H_RES, HW_LCD_V_RES, rotation,
+                             te_gpio,
+                             hw_lcd_get_bus_freq_hz(),
+                             hw_lcd_get_bus_data_lines(),
+                             hw_lcd_get_bits_per_pixel());
+    } else {
+        display_config = ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_DEFAULT_CONFIG(
+                             display_panel, display_io_handle, HW_LCD_H_RES, HW_LCD_V_RES, rotation);
+    }
 #endif
 
     lv_display_t *disp = esp_lv_adapter_register_display(&display_config);

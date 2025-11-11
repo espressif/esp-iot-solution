@@ -43,6 +43,21 @@ lv_display_t *display_manager_register(const esp_lv_adapter_display_config_t *cf
 esp_err_t display_manager_unregister(lv_display_t *disp);
 
 /**
+ * @brief Set area rounding callback for display
+ *
+ * @param disp Display handle
+ * @param rounder_cb Callback function (NULL to disable)
+ * @param user_data User data passed to callback
+ * @return
+ *      - ESP_OK: Success
+ *      - ESP_ERR_INVALID_ARG: Invalid display handle
+ *      - ESP_ERR_NOT_FOUND: Display not found
+ */
+esp_err_t display_manager_set_area_rounder_cb(lv_display_t *disp,
+                                              void (*rounder_cb)(lv_area_t *, void *),
+                                              void *user_data);
+
+/**
  * @brief Clear and destroy all registered displays
  */
 void display_manager_clear(void);
@@ -109,7 +124,6 @@ void display_manager_flush_ready(lv_disp_drv_t *drv);
 uint8_t display_manager_required_frame_buffer_count(esp_lv_adapter_tear_avoid_mode_t tear_avoid_mode,
                                                     esp_lv_adapter_rotation_t rotation);
 
-#if CONFIG_ESP_LVGL_ADAPTER_ENABLE_FPS_STATS
 /**
  * @brief Get display node by LVGL display handle
  *
@@ -117,7 +131,53 @@ uint8_t display_manager_required_frame_buffer_count(esp_lv_adapter_tear_avoid_mo
  * @return esp_lv_adapter_display_node_t* Display node, or NULL if not found
  */
 struct esp_lv_adapter_display_node *display_manager_get_node(lv_display_t *disp);
-#endif
+
+/**
+ * @brief Wait for any pending flush operations to complete
+ *
+ * This function blocks until all ongoing flush operations for the specified
+ * display have finished. It is used to ensure safe LCD panel detachment.
+ *
+ * @param disp Display handle
+ * @param timeout_ms Timeout in milliseconds (-1 for infinite)
+ * @return
+ *      - ESP_OK: All flushes completed
+ *      - ESP_ERR_TIMEOUT: Timeout waiting for flush completion
+ *      - ESP_ERR_INVALID_ARG: Invalid display handle
+ */
+esp_err_t display_manager_wait_flush_done(lv_display_t *disp, int32_t timeout_ms);
+
+/**
+ * @brief Refetch framebuffers from LCD panel and update all references
+ *
+ * This function re-obtains framebuffer pointers from the LCD panel hardware
+ * (for RGB/MIPI DSI interfaces) and updates all internal references in the
+ * display node and bridge.
+ *
+ * @param disp Display handle
+ * @return
+ *      - ESP_OK: Success
+ *      - ESP_ERR_INVALID_ARG: Invalid display handle
+ *      - ESP_ERR_NOT_FOUND: Display not found
+ *      - ESP_FAIL: Failed to refetch framebuffers
+ */
+esp_err_t display_manager_refetch_framebuffers(lv_display_t *disp);
+
+/**
+ * @brief Rebind LVGL draw buffers after framebuffers are refreshed
+ *
+ * Updates LVGL draw buffer references to point to the latest panel or
+ * software-allocated buffers. This is required when displays are recovered
+ * from sleep and new panel framebuffers are obtained.
+ *
+ * @param disp Display handle
+ * @return
+ *      - ESP_OK: Success
+ *      - ESP_ERR_INVALID_ARG: Invalid display handle
+ *      - ESP_ERR_NOT_FOUND: Display node not found
+ *      - ESP_ERR_INVALID_STATE: Draw buffer state invalid
+ */
+esp_err_t display_manager_rebind_draw_buffers(lv_display_t *disp);
 
 #ifdef __cplusplus
 }

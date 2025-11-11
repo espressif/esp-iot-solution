@@ -514,6 +514,14 @@ build_example_display_gui_lvgl_multi_screen:
     EXAMPLE_DIR: examples/display/gui/lvgl_multi_screen
     IMAGE: espressif/idf:release-v5.5
 
+build_example_display_gui_lvgl_light_sleep_demo:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_display_gui_lvgl_light_sleep_demo
+  variables:
+    EXAMPLE_DIR: examples/display/gui/lvgl_light_sleep_demo
+    IMAGE: espressif/idf:release-v5.5
+
 build_example_extended_vfs_gpio_gpio_simple:
   extends:
     - .build_examples_template

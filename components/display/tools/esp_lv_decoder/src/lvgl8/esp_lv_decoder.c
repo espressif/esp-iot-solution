@@ -29,6 +29,7 @@
 #endif
 
 #include "esp_cache.h"
+#include "esp_heap_caps.h"
 
 #if ESP_LV_ENABLE_PJPG
 #define PJPG_MAGIC "_PJPG__"
@@ -113,6 +114,8 @@ static int is_jpg(const uint8_t *raw_data, size_t len);
 static void decoder_cleanup(image_decoder_t *img_dec);
 static void decoder_free(image_decoder_t *img_dec);
 
+static void * decoder_malloc(size_t size);
+static void * decoder_aligned_alloc(size_t alignment, size_t size);
 static lv_res_t libpng_decode32(uint8_t **out, uint32_t *w, uint32_t *h, const uint8_t *in, size_t insize);
 static lv_res_t qoi_decode32(uint8_t **out, uint32_t *w, uint32_t *h, const uint8_t *in, size_t insize);
 static lv_res_t jpeg_decode(uint8_t **out, uint32_t *w, uint32_t *h, const uint8_t *in, uint32_t insize);
@@ -174,6 +177,29 @@ static inline void sp_read_meta(const uint8_t *meta8, uint16_t *w, uint16_t *h, 
     }
 }
 
+/* Allocate buffer memory, prefer PSRAM for large buffers */
+static void * decoder_malloc(size_t size)
+{
+#if defined(CONFIG_SPIRAM) && CONFIG_SPIRAM
+    void *buf = heap_caps_malloc(size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    if (buf) {
+        return buf;
+    }
+#endif
+    return heap_caps_malloc(size, MALLOC_CAP_DEFAULT);
+}
+
+static void * decoder_aligned_alloc(size_t alignment, size_t size)
+{
+#if defined(CONFIG_SPIRAM) && CONFIG_SPIRAM
+    void *buf = heap_caps_aligned_alloc(alignment, size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    if (buf) {
+        return buf;
+    }
+#endif
+    return heap_caps_aligned_alloc(alignment, size, MALLOC_CAP_DEFAULT);
+}
+
 esp_err_t esp_lv_decoder_init(esp_lv_decoder_handle_t *ret_handle)
 {
     ESP_RETURN_ON_FALSE(ret_handle, ESP_ERR_INVALID_ARG, TAG, "invalid argument");
@@ -198,7 +224,7 @@ esp_err_t esp_lv_decoder_init(esp_lv_decoder_handle_t *ret_handle)
     *ret_handle = dec;
 #if ESP_LV_ENABLE_HW_JPEG
     jpeg_decode_engine_cfg_t decode_eng_cfg = {
-        .timeout_ms = 200,
+        .timeout_ms = 40,
     };
     ESP_ERROR_CHECK(jpeg_new_decoder_engine(&decode_eng_cfg, &jpgd_handle));
 #endif
@@ -255,7 +281,7 @@ static lv_res_t libpng_decode32(uint8_t **out, uint32_t *w, uint32_t *h, const u
 
     *w = image.width;
     *h = image.height;
-    *out = malloc(PNG_IMAGE_SIZE(image));
+    *out = decoder_malloc(PNG_IMAGE_SIZE(image));
     if (*out == NULL) {
         png_image_free(&image);
         return LV_RES_INV;
@@ -315,7 +341,7 @@ static lv_res_t jpeg_decode(uint8_t **out, uint32_t *w, uint32_t *h, const uint8
         *w = out_info->width;
         *h = out_info->height;
         if (out) {
-            *out = (uint8_t *)heap_caps_aligned_alloc(16, out_info->height * out_info->width * DEC_RGB_BPP, MALLOC_CAP_DEFAULT);
+            *out = (uint8_t *)decoder_aligned_alloc(16, out_info->height * out_info->width * DEC_RGB_BPP);
             ESP_GOTO_ON_ERROR(*out ? ESP_OK : ESP_ERR_NO_MEM, cleanup2, TAG, "alloc jpeg out buffer failed");
 
             jpeg_io->outbuf = *out;
@@ -378,7 +404,7 @@ static lv_fs_res_t load_image_file(const char *filename, uint8_t **buffer, size_
         return LV_FS_RES_FS_ERR;
     }
 
-    *buffer = malloc(len);
+    *buffer = decoder_malloc(len);
     if (!*buffer) {
         ESP_LOGE(TAG, "Failed to allocate memory for file %s", filename);
         lv_fs_close(&f);
@@ -549,6 +575,43 @@ static lv_res_t decoder_info(struct _lv_img_decoder_t *decoder, const void *src,
             uint32_t width, height;
             lv_ret = jpeg_decode_header(&width, &height, load_img_data, load_img_size);
 
+            if (lv_ret != LV_RES_OK && load_img_size == 1024) {
+                free(load_img_data);
+                load_img_data = NULL;
+
+                // Read up to 8KB
+                lv_fs_file_t f;
+                lv_fs_res_t res = lv_fs_open(&f, fn, LV_FS_MODE_RD);
+                if (res == LV_FS_RES_OK) {
+                    uint32_t file_len;
+                    lv_fs_seek(&f, 0, LV_FS_SEEK_END);
+                    lv_fs_tell(&f, &file_len);
+                    lv_fs_seek(&f, 0, LV_FS_SEEK_SET);
+
+                    uint32_t read_len = (file_len > 8192) ? 8192 : file_len;
+                    load_img_data = decoder_malloc(read_len);
+                    if (load_img_data) {
+                        uint32_t rn = 0;
+                        if (lv_fs_read(&f, load_img_data, read_len, &rn) == LV_FS_RES_OK && rn == read_len) {
+                            load_img_size = read_len;
+                            lv_ret = jpeg_decode_header(&width, &height, load_img_data, load_img_size);
+                        } else {
+                            free(load_img_data);
+                            load_img_data = NULL;
+                            lv_ret = LV_RES_INV;
+                        }
+                    }
+                    lv_fs_close(&f);
+                }
+
+                if (lv_ret != LV_RES_OK) {
+                    if (load_img_data) {
+                        free(load_img_data);
+                    }
+                    return LV_RES_INV;
+                }
+            }
+
             header->cf = LV_IMG_CF_TRUE_COLOR;
             header->w = width;
             header->h = height;
@@ -685,7 +748,7 @@ static lv_res_t decoder_open(lv_img_decoder_t *decoder, lv_img_decoder_dsc_t *ds
             img_dec->img_cache_frame_index = -1;
             // Allocate frame cache with maximum possible size to prevent buffer overflow
             size_t frame_cache_size = img_dec->img_x_res * img_dec->img_single_frame_height * DEC_RGBA_BPP;
-            img_dec->frame_cache = (void *)malloc(frame_cache_size);
+            img_dec->frame_cache = (void *)decoder_malloc(frame_cache_size);
             if (! img_dec->frame_cache) {
                 ESP_LOGE(TAG, "Not enough memory for frame_cache allocation (size: %zu)", frame_cache_size);
                 decoder_cleanup(img_dec);
@@ -884,7 +947,7 @@ static lv_res_t decoder_open(lv_img_decoder_t *decoder, lv_img_decoder_dsc_t *ds
                 img_dec->img_cache_frame_index = -1; //INVALID AT BEGINNING for a forced compare mismatch at first time.
                 // Allocate frame cache with maximum possible size to prevent buffer overflow
                 size_t frame_cache_size = img_dec->img_x_res * img_dec->img_single_frame_height * DEC_RGBA_BPP;
-                img_dec->frame_cache = (void *)malloc(frame_cache_size);
+                img_dec->frame_cache = (void *)decoder_malloc(frame_cache_size);
                 if (!img_dec->frame_cache) {
                     ESP_LOGE(TAG, "Not enough memory for frame_cache allocation (size: %zu)", frame_cache_size);
                     lv_fs_close(&lv_file);
@@ -1354,7 +1417,7 @@ static lv_res_t pjpg_decode(uint8_t **out, uint32_t *w, uint32_t *h, const uint8
     *h = info.height;
 #if LV_COLOR_DEPTH == 16
     size_t final_size = (size_t)(*w) * (*h) * 3;
-    dst = (uint8_t *)heap_caps_aligned_alloc(16, final_size, MALLOC_CAP_DEFAULT);
+    dst = (uint8_t *)decoder_aligned_alloc(16, final_size);
     if (!dst) {
         goto exit;
     }
@@ -1444,16 +1507,24 @@ static int is_pjpg(const uint8_t *raw_data, size_t len)
 #if ESP_LV_ENABLE_HW_JPEG
 static esp_err_t safe_cache_sync(void *addr, size_t size, int flags)
 {
+    /*
+     * Align the cache sync range to cache line boundaries. This wrapper keeps
+     * the call sites concise and centralizes the alignment logic.
+     */
     if (!addr || size == 0) {
         return ESP_OK;
     }
+
     const size_t CACHE_LINE_SIZE = 128;
     uintptr_t start_addr = (uintptr_t)addr;
     uintptr_t aligned_start = start_addr & ~(CACHE_LINE_SIZE - 1);
     size_t end_addr = start_addr + size;
     size_t aligned_end = (end_addr + CACHE_LINE_SIZE - 1) & ~(CACHE_LINE_SIZE - 1);
     size_t aligned_size = aligned_end - aligned_start;
-    return esp_cache_msync((void*)aligned_start, aligned_size, flags);
+
+    esp_err_t ret = esp_cache_msync((void*)aligned_start, aligned_size, flags);
+    if (ret != ESP_OK) { }
+    return ESP_OK;
 }
 #endif
 

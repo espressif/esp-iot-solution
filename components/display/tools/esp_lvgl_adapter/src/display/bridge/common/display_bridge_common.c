@@ -16,6 +16,9 @@
 #include "esp_cache.h"
 #include "esp_private/esp_cache_private.h"
 #include "esp_heap_caps.h"
+#include "esp_log.h"
+
+static const char *TAG = "esp_lvgl:bridge";
 
 /**********************
  *   CACHE PROFILE
@@ -442,8 +445,6 @@ size_t display_bridge_get_cache_line_size(void)
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #endif
-
-static const char *TAG = "esp_lvgl:bridge";
 
 /**
  * @brief Initialize runtime information from configuration

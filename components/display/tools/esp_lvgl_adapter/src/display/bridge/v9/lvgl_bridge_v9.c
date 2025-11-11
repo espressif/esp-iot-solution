@@ -17,6 +17,7 @@
 #include "freertos/semphr.h"
 #include "soc/soc_caps.h"
 #include "esp_log.h"
+#include "esp_check.h"
 #include "esp_lcd_panel_io.h"
 #include "esp_lcd_panel_ops.h"
 #include "esp_cache.h"
@@ -25,6 +26,7 @@
 #include "display_bridge.h"
 #include "display_manager.h"
 #include "lvgl_port_ppa.h"
+#include "display_te_sync.h"
 #if LVGL_VERSION_MAJOR >= 9
 #include "lvgl_private.h"
 #endif
@@ -158,6 +160,15 @@ static inline uint8_t bridge_color_bytes(const esp_lv_adapter_display_bridge_v9_
 
 /* Lifecycle management */
 static void display_bridge_v9_destroy(esp_lv_adapter_display_bridge_t *bridge);
+static esp_err_t display_bridge_v9_update_panel(esp_lv_adapter_display_bridge_t *bridge,
+                                                const esp_lv_adapter_display_runtime_config_t *cfg);
+
+static void display_bridge_v9_set_area_rounder(esp_lv_adapter_display_bridge_t *bridge,
+                                               void (*rounder_cb)(lv_area_t *, void *),
+                                               void *user_data);
+
+/* Event callbacks */
+static void rounder_event_cb(lv_event_t *e);
 
 /* Core callbacks */
 static void display_bridge_v9_flush_entry(esp_lv_adapter_display_bridge_t *bridge,
@@ -206,6 +217,10 @@ static bool display_bridge_v9_on_io_color_trans_done(esp_lcd_panel_io_handle_t p
 
 /* Flush implementations */
 static void display_bridge_v9_flush_default(esp_lv_adapter_display_bridge_v9_t *impl,
+                                            lv_display_t *disp,
+                                            const lv_area_t *area,
+                                            uint8_t *color_map);
+static void display_bridge_v9_flush_gpio_te(esp_lv_adapter_display_bridge_v9_t *impl,
                                             lv_display_t *disp,
                                             const lv_area_t *area,
                                             uint8_t *color_map);
@@ -340,6 +355,8 @@ esp_lv_adapter_display_bridge_t *esp_lv_adapter_display_bridge_v9_create(const e
     impl->base.set_dummy_draw = display_bridge_v9_set_dummy_draw;
     impl->base.set_dummy_draw_callbacks = display_bridge_v9_set_dummy_draw_callbacks;
     impl->base.dummy_draw_blit = display_bridge_v9_dummy_draw_blit;
+    impl->base.update_panel = display_bridge_v9_update_panel;
+    impl->base.set_area_rounder = display_bridge_v9_set_area_rounder;
     impl->cfg = *cfg;
     impl->panel = cfg->base.panel;
     impl->dummy_draw = cfg->dummy_draw_enabled;
@@ -406,8 +423,56 @@ esp_lv_adapter_display_bridge_t *esp_lv_adapter_display_bridge_v9_create(const e
  */
 static void display_bridge_v9_destroy(esp_lv_adapter_display_bridge_t *bridge)
 {
+    esp_lv_adapter_display_bridge_v9_t *impl = (esp_lv_adapter_display_bridge_v9_t *)bridge;
+
+    /* Remove rounder event callback if exists */
+    if (impl && impl->cfg.rounder_cb && impl->cfg.lv_disp) {
+        lv_display_remove_event_cb_with_user_data(impl->cfg.lv_disp, rounder_event_cb, impl);
+    }
+
     /* Use unified destroy implementation for v8/v9 compatibility */
     display_bridge_common_destroy(bridge);
+}
+
+/**
+ * @brief Update panel handle and configuration for rebind
+ */
+static esp_err_t display_bridge_v9_update_panel(esp_lv_adapter_display_bridge_t *bridge,
+                                                const esp_lv_adapter_display_runtime_config_t *cfg)
+{
+    ESP_RETURN_ON_FALSE(bridge && cfg, ESP_ERR_INVALID_ARG, TAG, "Invalid arguments");
+
+    esp_lv_adapter_display_bridge_v9_t *impl = (esp_lv_adapter_display_bridge_v9_t *)bridge;
+
+    /* Update panel handle */
+    impl->panel = cfg->base.panel;
+
+    /* Update configuration */
+    impl->cfg = *cfg;
+
+    /* Reinitialize runtime info with new configuration */
+    display_bridge_init_runtime_info(&impl->runtime, cfg);
+
+    /* Reinitialize frame buffer pointers */
+    display_bridge_init_frame_buffer_pointers(
+        &impl->front_fb,
+        &impl->back_fb,
+        &impl->spare_fb,
+        &impl->rgb_last_buf,
+        &impl->rgb_next_buf,
+        &impl->rgb_flush_next_buf,
+        &impl->runtime
+    );
+
+    /* Reset dirty region tracking */
+    display_dirty_region_reset(&impl->dirty);
+
+    /* Re-register VSYNC callbacks for new panel */
+    if (cfg->base.panel) {
+        display_bridge_v9_register_vsync(impl);
+    }
+
+    return ESP_OK;
 }
 
 /**********************
@@ -424,10 +489,18 @@ static void display_bridge_v9_flush_entry(esp_lv_adapter_display_bridge_t *bridg
 {
     esp_lv_adapter_display_bridge_v9_t *impl = (esp_lv_adapter_display_bridge_v9_t *)bridge;
     lv_display_t *disp = (lv_display_t *)disp_ref;
+
     if (!impl || !area || !disp) {
         if (disp) {
             display_manager_flush_ready(disp);
         }
+        return;
+    }
+
+    /* Safety check: panel detached for sleep management */
+    if (!impl->panel) {
+        ESP_LOGD(TAG, "Panel detached, skipping flush");
+        display_manager_flush_ready(disp);
         return;
     }
 
@@ -473,6 +546,9 @@ static void display_bridge_v9_flush_entry(esp_lv_adapter_display_bridge_t *bridg
         break;
     case ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_PARTIAL:
         display_bridge_v9_flush_triple_diff(impl, disp, area, color_map);
+        break;
+    case ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC:
+        display_bridge_v9_flush_gpio_te(impl, disp, area, color_map);
         break;
     default:
         display_bridge_v9_flush_default(impl, disp, area, color_map);
@@ -570,6 +646,48 @@ static esp_err_t display_bridge_v9_dummy_draw_blit(esp_lv_adapter_display_bridge
     return ESP_OK;
 }
 
+/**
+ * @brief Event callback for area rounding (LVGL v9)
+ */
+static void rounder_event_cb(lv_event_t *e)
+{
+    esp_lv_adapter_display_bridge_v9_t *impl = (esp_lv_adapter_display_bridge_v9_t *)lv_event_get_user_data(e);
+    if (!impl || !impl->cfg.rounder_cb) {
+        return;
+    }
+
+    lv_area_t *area = lv_event_get_invalidated_area(e);
+    if (area) {
+        impl->cfg.rounder_cb(area, impl->cfg.rounder_user_data);
+    }
+}
+
+/**
+ * @brief Set area rounding callback
+ */
+static void display_bridge_v9_set_area_rounder(esp_lv_adapter_display_bridge_t *bridge,
+                                               void (*rounder_cb)(lv_area_t *, void *),
+                                               void *user_data)
+{
+    esp_lv_adapter_display_bridge_v9_t *impl = (esp_lv_adapter_display_bridge_v9_t *)bridge;
+    if (!impl || !impl->cfg.lv_disp) {
+        return;
+    }
+
+    /* Remove old event callback if exists */
+    if (impl->cfg.rounder_cb) {
+        lv_display_remove_event_cb_with_user_data(impl->cfg.lv_disp, rounder_event_cb, impl);
+    }
+
+    impl->cfg.rounder_cb = rounder_cb;
+    impl->cfg.rounder_user_data = user_data;
+
+    /* Add new event callback if rounder_cb is not NULL */
+    if (rounder_cb) {
+        lv_display_add_event_cb(impl->cfg.lv_disp, rounder_event_cb, LV_EVENT_INVALIDATE_AREA, impl);
+    }
+}
+
 /**********************
  *   DUMMY DRAW EVENTS
  **********************/
@@ -617,13 +735,15 @@ static bool IRAM_ATTR display_bridge_v9_handle_vsync(esp_lv_adapter_display_brid
     }
 
     if (impl->cfg.base.tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_NONE) {
-        lv_display_t *disp = lv_display_get_default();
+        lv_display_t *disp = impl->cfg.lv_disp ? impl->cfg.lv_disp : lv_display_get_default();
         if (disp) {
             display_manager_flush_ready(disp);
         }
 
         return (need_yield == pdTRUE);
-    } else if (impl->cfg.base.tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_FULL || impl->cfg.base.tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_DIRECT) {
+    } else if (impl->cfg.base.tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC ||
+               impl->cfg.base.tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_FULL ||
+               impl->cfg.base.tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_DIRECT) {
         TaskHandle_t notify_task = impl->notify_task;
         if (!notify_task) {
             esp_lv_adapter_context_t *ctx = esp_lv_adapter_get_context();
@@ -648,14 +768,17 @@ static bool IRAM_ATTR display_bridge_v9_on_mipi_color_trans_done(esp_lcd_panel_h
     (void)panel;
     (void)event_data;
     esp_lv_adapter_display_bridge_v9_t *impl = (esp_lv_adapter_display_bridge_v9_t *)user_ctx;
+
+    /* Safety check: panel detached for sleep management */
+    if (!impl || !impl->panel) {
+        return false;
+    }
+
     BaseType_t need_yield = pdFALSE;
     display_bridge_v9_signal_dummy_draw_event(impl, ESP_LV_ADAPTER_DUMMY_DRAW_EVT_COLOR_DONE, &need_yield);
-    if (impl && impl->dummy_draw && impl->cfg.dummy_draw_cbs.on_color_trans_done) {
+    if (impl->dummy_draw && impl->cfg.dummy_draw_cbs.on_color_trans_done) {
         lv_display_t *disp = impl->cfg.lv_disp ? impl->cfg.lv_disp : lv_display_get_default();
         impl->cfg.dummy_draw_cbs.on_color_trans_done(disp, true, impl->cfg.dummy_draw_user_ctx);
-    }
-    if (!impl) {
-        return (need_yield == pdTRUE);
     }
     bool vsync = false;
     if (impl->cfg.base.tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_NONE) {
@@ -671,6 +794,12 @@ static bool IRAM_ATTR display_bridge_v9_on_mipi_refresh_done(esp_lcd_panel_handl
     (void)panel;
     (void)event_data;
     esp_lv_adapter_display_bridge_v9_t *impl = (esp_lv_adapter_display_bridge_v9_t *)user_ctx;
+
+    /* Safety check: panel detached for sleep management */
+    if (!impl || !impl->panel) {
+        return false;
+    }
+
     BaseType_t need_yield = pdFALSE;
     display_bridge_v9_signal_dummy_draw_event(impl, ESP_LV_ADAPTER_DUMMY_DRAW_EVT_FRAME_DONE, &need_yield);
     bool vsync = display_bridge_v9_handle_vsync(impl);
@@ -686,14 +815,17 @@ static bool IRAM_ATTR display_bridge_v9_on_rgb_color_trans_done(esp_lcd_panel_ha
     (void)panel;
     (void)event_data;
     esp_lv_adapter_display_bridge_v9_t *impl = (esp_lv_adapter_display_bridge_v9_t *)user_ctx;
+
+    /* Safety check: panel detached for sleep management */
+    if (!impl || !impl->panel) {
+        return false;
+    }
+
     BaseType_t need_yield = pdFALSE;
     display_bridge_v9_signal_dummy_draw_event(impl, ESP_LV_ADAPTER_DUMMY_DRAW_EVT_COLOR_DONE, &need_yield);
-    if (impl && impl->dummy_draw && impl->cfg.dummy_draw_cbs.on_color_trans_done) {
+    if (impl->dummy_draw && impl->cfg.dummy_draw_cbs.on_color_trans_done) {
         lv_display_t *disp = impl->cfg.lv_disp ? impl->cfg.lv_disp : lv_display_get_default();
         impl->cfg.dummy_draw_cbs.on_color_trans_done(disp, true, impl->cfg.dummy_draw_user_ctx);
-    }
-    if (!impl) {
-        return (need_yield == pdTRUE);
     }
     bool vsync = false;
     if (impl->cfg.base.tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_NONE) {
@@ -709,6 +841,12 @@ static bool IRAM_ATTR display_bridge_v9_on_rgb_frame_complete(esp_lcd_panel_hand
     (void)panel;
     (void)event_data;
     esp_lv_adapter_display_bridge_v9_t *impl = (esp_lv_adapter_display_bridge_v9_t *)user_ctx;
+
+    /* Safety check: panel detached for sleep management */
+    if (!impl || !impl->panel) {
+        return false;
+    }
+
     BaseType_t need_yield = pdFALSE;
     display_bridge_v9_signal_dummy_draw_event(impl, ESP_LV_ADAPTER_DUMMY_DRAW_EVT_FRAME_DONE, &need_yield);
     bool vsync = display_bridge_v9_handle_vsync(impl);
@@ -723,14 +861,20 @@ static bool IRAM_ATTR display_bridge_v9_on_io_color_trans_done(esp_lcd_panel_io_
     (void)panel_io;
     (void)edata;
     esp_lv_adapter_display_bridge_v9_t *impl = (esp_lv_adapter_display_bridge_v9_t *)user_ctx;
+
+    /* Safety check: panel detached for sleep management */
+    if (!impl || !impl->panel) {
+        return false;
+    }
+
     BaseType_t need_yield = pdFALSE;
     display_bridge_v9_signal_dummy_draw_event(impl, ESP_LV_ADAPTER_DUMMY_DRAW_EVT_COLOR_DONE, &need_yield);
-    if (impl && impl->dummy_draw && impl->cfg.dummy_draw_cbs.on_color_trans_done) {
+    if (impl->cfg.te_ctx) {
+        esp_lv_adapter_te_sync_record_tx_done(impl->cfg.te_ctx);
+    }
+    if (impl->dummy_draw && impl->cfg.dummy_draw_cbs.on_color_trans_done) {
         lv_display_t *disp = impl->cfg.lv_disp ? impl->cfg.lv_disp : lv_display_get_default();
         impl->cfg.dummy_draw_cbs.on_color_trans_done(disp, true, impl->cfg.dummy_draw_user_ctx);
-    }
-    if (!impl) {
-        return (need_yield == pdTRUE);
     }
     bool vsync = display_bridge_v9_handle_vsync(impl);
     return vsync || (need_yield == pdTRUE);
@@ -756,7 +900,7 @@ static void display_bridge_v9_register_vsync(esp_lv_adapter_display_bridge_v9_t 
 
         esp_err_t ret = esp_lcd_dpi_panel_register_event_callbacks(impl->panel, &cbs, impl);
         if (ret != ESP_OK) {
-            ESP_LOGW(TAG, "register panel callbacks failed (%d)", ret);
+            ESP_LOGW(TAG, "MIPI DSI callback registration failed (%d)", ret);
         }
         break;
     }
@@ -823,6 +967,48 @@ static void display_bridge_v9_flush_default(esp_lv_adapter_display_bridge_v9_t *
     }
 
     esp_lcd_panel_draw_bitmap(panel_handle, offsetx1, offsety1, offsetx2 + 1, offsety2 + 1, color_map);
+}
+
+/**
+ * @brief GPIO TE synchronized flush
+ */
+static void display_bridge_v9_flush_gpio_te(esp_lv_adapter_display_bridge_v9_t *impl,
+                                            lv_display_t *disp,
+                                            const lv_area_t *area,
+                                            uint8_t *color_map)
+{
+    esp_lcd_panel_handle_t panel_handle = impl->panel;
+    const int offsetx1 = area->x1;
+    const int offsetx2 = area->x2;
+    const int offsety1 = area->y1;
+    const int offsety2 = area->y2;
+
+    /* Notify TE sync to start a new frame */
+    if (impl->cfg.te_ctx) {
+        esp_lv_adapter_te_sync_begin_frame(impl->cfg.te_ctx);
+    }
+
+    /* Prepare pixel data before waiting for TE to minimize TX latency */
+    if (impl->cfg.base.profile.interface == ESP_LV_ADAPTER_PANEL_IF_OTHER) {
+        lv_draw_sw_rgb565_swap(color_map, lv_area_get_size(area));
+    }
+
+    /* Wait for TE signal to avoid tearing */
+    if (impl->cfg.te_ctx) {
+        esp_lv_adapter_te_sync_wait_for_vsync(impl->cfg.te_ctx);
+    }
+
+    if (impl->cfg.te_ctx) {
+        esp_lv_adapter_te_sync_record_tx_start(impl->cfg.te_ctx);
+    }
+
+    esp_lcd_panel_draw_bitmap(panel_handle, offsetx1, offsety1, offsetx2 + 1, offsety2 + 1, color_map);
+
+    /* Wait for transmission to complete */
+    ulTaskNotifyValueClear(NULL, ULONG_MAX);
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+
+    display_manager_flush_ready(disp);
 }
 
 /**
@@ -1247,6 +1433,10 @@ static void IRAM_ATTR rotate_copy_strided_region(const void *src, void *dst_fb,
         }
 
         /* Configure and start PPA */
+        size_t buffer_size = heap_caps_get_allocated_size(dst_fb);
+        if (buffer_size == 0) {
+            buffer_size = LVGL_PORT_PPA_ALIGN_UP((size_t)color_bytes * hor_res * ver_res, hw_resource.data_cache_line_size);
+        }
         ppa_srm_oper_config_t oper_config = {
             .in.buffer          = src,
             .in.pic_w           = src_stride_px,
@@ -1258,7 +1448,7 @@ static void IRAM_ATTR rotate_copy_strided_region(const void *src, void *dst_fb,
             .in.srm_cm          = (LV_COLOR_DEPTH == COLOR_DEPTH_RGB888) ? PPA_SRM_COLOR_MODE_RGB888 : PPA_SRM_COLOR_MODE_RGB565,
 
                .out.buffer         = dst_fb,
-               .out.buffer_size    = LVGL_PORT_PPA_ALIGN_UP((size_t)color_bytes * hor_res * ver_res, hw_resource.data_cache_line_size),
+               .out.buffer_size    = buffer_size,
                .out.pic_w          = hor_res,
                .out.pic_h          = ver_res,
                .out.block_offset_x = x_offset,
@@ -1332,6 +1522,10 @@ static void IRAM_ATTR rotate_copy_region(esp_lv_adapter_display_bridge_v9_t *imp
         }
 
         /* Fill operation config for PPA rotation, without recalculating each time */
+        size_t buffer_size = heap_caps_get_allocated_size(to);
+        if (buffer_size == 0) {
+            buffer_size = LVGL_PORT_PPA_ALIGN_UP((size_t)color_bytes * w * h, hw_resource.data_cache_line_size);
+        }
         ppa_srm_oper_config_t oper_config = {
             .in.buffer = from,
             .in.pic_w = w,
@@ -1343,7 +1537,7 @@ static void IRAM_ATTR rotate_copy_region(esp_lv_adapter_display_bridge_v9_t *imp
             .in.srm_cm = (LV_COLOR_DEPTH == 24) ? PPA_SRM_COLOR_MODE_RGB888 : PPA_SRM_COLOR_MODE_RGB565,
 
                .out.buffer = to,
-               .out.buffer_size = LVGL_PORT_PPA_ALIGN_UP((size_t)color_bytes * w * h, hw_resource.data_cache_line_size),
+               .out.buffer_size = buffer_size,
                .out.pic_w = (ppa_rotation == PPA_SRM_ROTATION_ANGLE_90 || ppa_rotation == PPA_SRM_ROTATION_ANGLE_270) ? h : w,
                .out.pic_h = (ppa_rotation == PPA_SRM_ROTATION_ANGLE_90 || ppa_rotation == PPA_SRM_ROTATION_ANGLE_270) ? w : h,
                .out.block_offset_x = x_offset,

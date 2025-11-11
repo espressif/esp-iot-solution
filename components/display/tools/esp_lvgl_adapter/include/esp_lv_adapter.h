@@ -156,6 +156,82 @@ void esp_lv_adapter_unlock(void);
 esp_err_t esp_lv_adapter_refresh_now(lv_display_t *disp);
 
 /**
+ * @brief Pause LVGL worker
+ *
+ * Stops the LVGL worker task and waits for acknowledgement. This API is intended
+ * for advanced use cases requiring custom control over the LVGL rendering loop.
+ *
+ * @note You MUST pair this call with esp_lv_adapter_resume()
+ * @note Do NOT call esp_lv_adapter_sleep_prepare() while manually paused
+ * @note Handle timeout errors appropriately
+ *
+ * @param[in] timeout_ms Timeout in ms, -1 for infinite
+ * @return
+ *      - ESP_OK: Success
+ *      - ESP_ERR_TIMEOUT: Timeout waiting for pause acknowledgement
+ *      - ESP_ERR_INVALID_STATE: Adapter not initialized
+ */
+esp_err_t esp_lv_adapter_pause(int32_t timeout_ms);
+
+/**
+ * @brief Resume LVGL worker
+ *
+ * Resumes the LVGL worker task that was previously paused. Do not call this
+ * if the adapter was paused by esp_lv_adapter_sleep_prepare().
+ *
+ * @return
+ *      - ESP_OK: Success
+ *      - ESP_ERR_INVALID_STATE: Adapter not initialized
+ */
+esp_err_t esp_lv_adapter_resume(void);
+
+/**
+ * @brief Prepare all displays for sleep
+ *
+ * Automatically detaches all LCD panels while preserving LVGL display objects
+ * and UI state. This allows you to safely delete LCD hardware handles to release
+ * DMA and framebuffer resources.
+ *
+ * @note This function automatically pauses the LVGL worker and waits for all
+ *       pending flush operations to complete.
+ * @note After calling this function, you can safely call esp_lcd_panel_del()
+ *       for each display's panel handle.
+ * @note Touch inputs remain registered. If you need to power down touch hardware,
+ *       suspend it manually before calling this API.
+ *
+ * @return
+ *      - ESP_OK: Success
+ *      - ESP_ERR_INVALID_STATE: Adapter not initialized or already sleeping
+ */
+esp_err_t esp_lv_adapter_sleep_prepare(void);
+
+/**
+ * @brief Recover a display from sleep
+ *
+ * Re-binds a new LCD panel to an existing LVGL display, automatically updating
+ * all framebuffer references. The UI elements are preserved.
+ *
+ * @note LCD hardware must be initialized before calling this function.
+ * @note This function can be called multiple times to recover multiple displays.
+ *       When all displays are recovered, the adapter automatically resumes the
+ *       LVGL worker.
+ * @note This function automatically triggers a full screen refresh for the display.
+ *
+ * @param[in] disp LVGL display handle to rebind
+ * @param[in] panel New LCD panel handle
+ * @param[in] panel_io New LCD panel IO handle (can be NULL for RGB/MIPI DSI)
+ *
+ * @return
+ *      - ESP_OK: Success
+ *      - ESP_ERR_INVALID_STATE: Adapter not initialized or not sleeping
+ *      - ESP_ERR_INVALID_ARG: Invalid handles
+ *      - ESP_FAIL: Failed to rebind panel
+ */
+esp_err_t esp_lv_adapter_sleep_recover(lv_display_t *disp,
+                                       esp_lcd_panel_handle_t panel,
+                                       esp_lcd_panel_io_handle_t panel_io);
+
+/**
  * @brief Enable or disable dummy draw mode for a display
  *
  * In dummy draw mode, LVGL rendering is bypassed and the application takes direct
