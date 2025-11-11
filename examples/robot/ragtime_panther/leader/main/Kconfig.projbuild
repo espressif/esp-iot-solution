@@ -1,0 +1,63 @@
+menu "Example Configuration"
+
+    orsource "$IDF_PATH/examples/common_components/env_caps/$IDF_TARGET/Kconfig.env_caps"
+
+    menu "ESPNOW Configuration"
+        config ESPNOW_CHANNEL
+            int "Channel"
+            default 1
+            range 0 14
+            help
+                The channel on which sending and receiving ESPNOW data.
+
+        config ESPNOW_PMK
+            string "ESPNOW primary master key"
+            default "bot12345678901234"
+            help
+                ESPNOW primary master for the example to use. The length of ESPNOW primary master must be 16 bytes.
+
+        config ESPNOW_SLAVE_MAC
+            string "ESPNOW slave MAC address"
+            default "9c:9e:6e:52:f8:b8"
+            help
+                MAC address of the slave device in format "XX:XX:XX:XX:XX:XX" or "XXXXXXXXXXXX" (12 hex digits).
+    endmenu
+
+    menu "Hardware Configuration"
+        config XL330_M077_BAUD_RATE
+            int "XL330_M077 communication speed"
+            range 1200 115200
+            default 115200
+            help
+                XL330_M077 communication speed for the example.
+
+        config XL330_M077_RXD
+            int "XL330_M077 RXD pin number"
+            range ENV_GPIO_RANGE_MIN ENV_GPIO_IN_RANGE_MAX
+            default 5
+            help
+                GPIO number for XL330 M077 RX pin.
+
+        config XL330_M077_TXD
+            int "XL330_M077 TXD pin number"
+            range ENV_GPIO_RANGE_MIN ENV_GPIO_IN_RANGE_MAX
+            default 4
+            help
+                GPIO number for XL330 M077 TX pin.
+
+        config XL330_M077_INIT_POSITION
+            int "XL330_M077 init position"
+            range 0 360
+            default 180
+            help
+                XL330_M077 initial position. Please ensure to install the robotic arm at this initial position during assembly.
+
+        config XL330_M077_POSITION_TOLERANCE
+            int "XL330_M077 position tolerance"
+            range 5 10
+            default 5
+            help
+                XL330_M077 position tolerance. When the XL330_M077 is installed on the robotic arm, due to inertia issues, it may require several attempts to set the target position. If the difference between the target position and the current position is within the tolerance range, the position is considered successfully set.
+    endmenu
+
+endmenu

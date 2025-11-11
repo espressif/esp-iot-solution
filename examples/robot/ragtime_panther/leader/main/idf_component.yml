@@ -1,0 +1,5 @@
+version: "0.1.0"
+description: The leader robotic arm project for remote control of the Ragtime Panthera robotic arm.
+dependencies:
+  idf: ">=5.5"
+  cmake_utilities: "*"
