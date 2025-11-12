@@ -577,7 +577,7 @@ TEST_CASE("adapter dummy draw", "[adapter][dummy]")
     free(framebuffer);
 
     /* Give SPI driver time to cleanup resources */
-    vTaskDelay(pdMS_TO_TICKS(100));
+    vTaskDelay(pdMS_TO_TICKS(300));
 
     ESP_LOGI(TAG, "Dummy draw test completed");
 }

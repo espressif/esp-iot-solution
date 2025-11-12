@@ -14,6 +14,17 @@
 extern "C" {
 #endif
 
+/**
+ * @brief Shared runtime context for CO5300 panel instances.
+ *
+ * Stored in `esp_lcd_panel_t::user_data` so transport-specific helpers can be
+ * dispatched through the common public API.
+ */
+typedef struct {
+    void *driver_data;
+    esp_err_t (*apply_brightness)(void *driver_data, uint8_t brightness_percent);
+} co5300_panel_context_t;
+
 #if SOC_MIPI_DSI_SUPPORTED
 /**
  * @brief  Initialize CO5300 LCD panel with MIPI interface

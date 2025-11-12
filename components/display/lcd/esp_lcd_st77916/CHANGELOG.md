@@ -1,5 +1,15 @@
 # ChangeLog
 
+## v2.0.0 - 2025-10-29
+
+### Changes:
+
+* Compatible with ESP-IDF v6.0
+<<<<<<< HEAD
+=======
+* Add MIPI-DSI interface support
+>>>>>>> 04c15177b (feat(p4): update code)
+
 ## v1.0.1 - 2025-01-13
 
 ### bugfix:

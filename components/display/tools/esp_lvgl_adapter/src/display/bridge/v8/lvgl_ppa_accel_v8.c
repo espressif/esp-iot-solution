@@ -6,9 +6,6 @@
  * LVGL v8 PPA Hardware Acceleration
  */
 
-/*********************
- *      INCLUDES
- *********************/
 #include "lvgl_port_ppa.h"
 #include "soc/soc_caps.h"
 
@@ -19,67 +16,31 @@
 #include "esp_cache.h"
 #include "esp_private/esp_cache_private.h"
 #include "esp_heap_caps.h"
+#include "esp_memory_utils.h"
 #include "driver/ppa.h"
 #include "lvgl_port_alignment.h"
 #include "esp_log.h"
 #include "src/draw/sw/lv_draw_sw.h"
 #include "src/draw/sw/lv_draw_sw_blend.h"
 
-/**********************
- *  STATIC VARIABLES
- **********************/
 static ppa_client_handle_t s_blend_handle = NULL;
 static ppa_client_handle_t s_fill_handle = NULL;
 static size_t s_cache_align = 0;
 static lv_disp_drv_t *s_bound_drv = NULL;
 
-/**********************
- *  FORWARD DECLARATIONS
- **********************/
-
-/* Cache synchronization helpers */
 static size_t ppa_align(void);
-static void ppa_cache_sync_region(const lv_area_t *area,
-                                  const lv_area_t *buf_area,
-                                  void *buf,
-                                  int flag);
-static void ppa_cache_invalidate(const lv_area_t *area,
-                                 const lv_area_t *buf_area,
-                                 lv_color_t *buf);
-
-/* PPA operations */
-static void ppa_blend(lv_color_t *bg_buf,
-                      const lv_area_t *bg_area,
-                      const lv_color_t *fg_buf,
-                      const lv_area_t *fg_area,
-                      uint16_t fg_stride_px,
-                      const lv_area_t *block_area,
-                      lv_opa_t opa);
-static void ppa_fill(lv_color_t *bg_buf,
-                     const lv_area_t *bg_area,
-                     const lv_area_t *block_area,
-                     lv_color_t color);
-
-/* Core draw handlers */
+static void ppa_cache_sync_region(const lv_area_t *area, const lv_area_t *buf_area, void *buf, int flag);
+static void ppa_cache_invalidate(const lv_area_t *area, const lv_area_t *buf_area, lv_color_t *buf);
+static void ppa_blend(lv_color_t *bg_buf, const lv_area_t *bg_area, const lv_color_t *fg_buf,
+                      const lv_area_t *fg_area, uint16_t fg_stride_px, const lv_area_t *block_area, lv_opa_t opa);
+static void ppa_fill(lv_color_t *bg_buf, const lv_area_t *bg_area, const lv_area_t *block_area, lv_color_t color);
 static void lv_draw_ppa_ctx_init(lv_disp_drv_t *drv, lv_draw_ctx_t *draw_ctx);
 static void lv_draw_ppa_ctx_deinit(lv_disp_drv_t *drv, lv_draw_ctx_t *draw_ctx);
 static void lv_draw_ppa_blend(lv_draw_ctx_t *draw_ctx, const lv_draw_sw_blend_dsc_t *dsc);
 
-/**********************
- *   PUBLIC API
- **********************/
-
-/**
- * @brief Initialize PPA acceleration for LVGL v8 display driver
- *
- * @param drv Display driver to enable PPA acceleration for
- */
 void lvgl_port_ppa_v8_init(lv_disp_drv_t *drv)
 {
-    if (drv == NULL) {
-        return;
-    }
-    if (sizeof(lv_color_t) != 2) {
+    if (!drv || sizeof(lv_color_t) != 2) {
         return;
     }
     s_bound_drv = drv;
@@ -88,15 +49,6 @@ void lvgl_port_ppa_v8_init(lv_disp_drv_t *drv)
     drv->draw_ctx_deinit = lv_draw_ppa_ctx_deinit;
 }
 
-/**********************
- *   CACHE SYNC HELPERS
- **********************/
-
-/**
- * @brief Get PPA cache alignment size
- *
- * @return Cache alignment size in bytes
- */
 static size_t ppa_align(void)
 {
     if (s_cache_align == 0) {
@@ -105,38 +57,21 @@ static size_t ppa_align(void)
             s_cache_align = LVGL_PORT_PPA_ALIGNMENT;
         }
     }
-    if (s_cache_align == 0) {
-        s_cache_align = LVGL_PORT_PPA_ALIGNMENT;
-    }
     return s_cache_align;
 }
 
-/**
- * @brief Synchronize cache for a specific region
- *
- * @param area Target area to sync
- * @param buf_area Buffer area coordinates
- * @param buf Buffer pointer
- * @param flag Cache sync direction flag
- */
-static void ppa_cache_sync_region(const lv_area_t *area,
-                                  const lv_area_t *buf_area,
-                                  void *buf,
-                                  int flag)
+static void ppa_cache_sync_region(const lv_area_t *area, const lv_area_t *buf_area, void *buf, int flag)
 {
-    if (!area || !buf_area || !buf) {
+    if (!area || !buf_area || !buf || !esp_ptr_external_ram(buf)) {
         return;
     }
 
     size_t align = ppa_align();
-    if (align == 0) {
-        align = LVGL_PORT_PPA_ALIGNMENT;
-    }
-
     lv_coord_t width = lv_area_get_width(area);
     lv_coord_t height = lv_area_get_height(area);
     lv_coord_t buf_w = lv_area_get_width(buf_area);
     lv_coord_t buf_h = lv_area_get_height(buf_area);
+
     if (width <= 0 || height <= 0 || buf_w <= 0 || buf_h <= 0) {
         return;
     }
@@ -144,67 +79,29 @@ static void ppa_cache_sync_region(const lv_area_t *area,
     lv_coord_t off_x = area->x1 - buf_area->x1;
     lv_coord_t off_y = area->y1 - buf_area->y1;
 
-    if (off_x < 0 || off_y < 0) {
-        return;
-    }
-    if ((off_x + width) > buf_w || (off_y + height) > buf_h) {
+    if (off_x < 0 || off_y < 0 || (off_x + width) > buf_w || (off_y + height) > buf_h) {
         return;
     }
 
-    size_t element = sizeof(lv_color_t);
-    uint8_t *start = (uint8_t *)buf + ((size_t)off_y * buf_w + off_x) * element;
-    size_t bytes = (size_t)width * height * element;
-
+    uint8_t *start = (uint8_t *)buf + ((size_t)off_y * buf_w + off_x) * sizeof(lv_color_t);
+    size_t bytes = (size_t)width * height * sizeof(lv_color_t);
     uintptr_t addr = (uintptr_t)start;
     uintptr_t aligned_addr = addr & ~(align - 1);
-    size_t padding = addr - aligned_addr;
-    size_t total = LVGL_PORT_PPA_ALIGN_UP(bytes + padding, align);
+    size_t total = LVGL_PORT_PPA_ALIGN_UP(bytes + (addr - aligned_addr), align);
 
     esp_cache_msync((void *)aligned_addr, total, flag);
 }
 
-/**
- * @brief Invalidate cache for a specific region (M2C direction)
- *
- * @param area Target area to invalidate
- * @param buf_area Buffer area coordinates
- * @param buf Buffer pointer
- */
-static void ppa_cache_invalidate(const lv_area_t *area,
-                                 const lv_area_t *buf_area,
-                                 lv_color_t *buf)
+static void ppa_cache_invalidate(const lv_area_t *area, const lv_area_t *buf_area, lv_color_t *buf)
 {
     ppa_cache_sync_region(area, buf_area, buf, ESP_CACHE_MSYNC_FLAG_DIR_M2C);
 }
 
-/**********************
- *   PPA OPERATIONS
- **********************/
-
-/**
- * @brief Perform PPA blend operation
- *
- * @param bg_buf Background buffer
- * @param bg_area Background area
- * @param fg_buf Foreground buffer
- * @param fg_area Foreground area
- * @param fg_stride_px Foreground stride in pixels
- * @param block_area Block area to blend
- * @param opa Opacity value
- */
-static void ppa_blend(lv_color_t *bg_buf,
-                      const lv_area_t *bg_area,
-                      const lv_color_t *fg_buf,
-                      const lv_area_t *fg_area,
-                      uint16_t fg_stride_px,
-                      const lv_area_t *block_area,
-                      lv_opa_t opa)
+static void ppa_blend(lv_color_t *bg_buf, const lv_area_t *bg_area, const lv_color_t *fg_buf,
+                      const lv_area_t *fg_area, uint16_t fg_stride_px, const lv_area_t *block_area, lv_opa_t opa)
 {
     uint16_t bg_w = lv_area_get_width(bg_area);
     uint16_t bg_h = lv_area_get_height(bg_area);
-    uint16_t bg_off_x = block_area->x1 - bg_area->x1;
-    uint16_t bg_off_y = block_area->y1 - bg_area->y1;
-
     uint16_t block_w = lv_area_get_width(block_area);
     uint16_t block_h = lv_area_get_height(block_area);
     uint16_t fg_w = fg_stride_px;
@@ -227,8 +124,8 @@ static void ppa_blend(lv_color_t *bg_buf,
             .pic_h = bg_h,
             .block_w = block_w,
             .block_h = block_h,
-            .block_offset_x = bg_off_x,
-            .block_offset_y = bg_off_y,
+            .block_offset_x = block_area->x1 - bg_area->x1,
+            .block_offset_y = block_area->y1 - bg_area->y1,
             .blend_cm = PPA_BLEND_COLOR_MODE_RGB565,
         },
         .in_fg = {
@@ -246,16 +143,12 @@ static void ppa_blend(lv_color_t *bg_buf,
             .buffer_size = LVGL_PORT_PPA_ALIGN_UP(sizeof(lv_color_t) * bg_w * bg_h, align),
             .pic_w = bg_w,
             .pic_h = bg_h,
-            .block_offset_x = bg_off_x,
-            .block_offset_y = bg_off_y,
+            .block_offset_x = block_area->x1 - bg_area->x1,
+            .block_offset_y = block_area->y1 - bg_area->y1,
             .blend_cm = PPA_BLEND_COLOR_MODE_RGB565,
         },
-        .bg_rgb_swap = 0,
-        .bg_byte_swap = 0,
         .bg_alpha_update_mode = PPA_ALPHA_FIX_VALUE,
         .bg_alpha_fix_val = 255 - opa,
-        .fg_rgb_swap = 0,
-        .fg_byte_swap = 0,
         .fg_alpha_update_mode = PPA_ALPHA_FIX_VALUE,
         .fg_alpha_fix_val = opa,
         .mode = PPA_TRANS_MODE_BLOCKING,
@@ -264,26 +157,10 @@ static void ppa_blend(lv_color_t *bg_buf,
     ESP_ERROR_CHECK(ppa_do_blend(s_blend_handle, &cfg));
 }
 
-/**
- * @brief Perform PPA fill operation
- *
- * @param bg_buf Background buffer
- * @param bg_area Background area
- * @param block_area Block area to fill
- * @param color Fill color
- */
-static void ppa_fill(lv_color_t *bg_buf,
-                     const lv_area_t *bg_area,
-                     const lv_area_t *block_area,
-                     lv_color_t color)
+static void ppa_fill(lv_color_t *bg_buf, const lv_area_t *bg_area, const lv_area_t *block_area, lv_color_t color)
 {
     uint16_t bg_w = lv_area_get_width(bg_area);
     uint16_t bg_h = lv_area_get_height(bg_area);
-    uint16_t bg_off_x = block_area->x1 - bg_area->x1;
-    uint16_t bg_off_y = block_area->y1 - bg_area->y1;
-
-    uint16_t block_w = lv_area_get_width(block_area);
-    uint16_t block_h = lv_area_get_height(block_area);
     size_t align = ppa_align();
 
     ppa_fill_oper_config_t cfg = {
@@ -292,12 +169,12 @@ static void ppa_fill(lv_color_t *bg_buf,
             .buffer_size = LVGL_PORT_PPA_ALIGN_UP(sizeof(lv_color_t) * bg_w * bg_h, align),
             .pic_w = bg_w,
             .pic_h = bg_h,
-            .block_offset_x = bg_off_x,
-            .block_offset_y = bg_off_y,
+            .block_offset_x = block_area->x1 - bg_area->x1,
+            .block_offset_y = block_area->y1 - bg_area->y1,
             .fill_cm = PPA_FILL_COLOR_MODE_RGB565,
         },
-        .fill_block_w = block_w,
-        .fill_block_h = block_h,
+        .fill_block_w = lv_area_get_width(block_area),
+        .fill_block_h = lv_area_get_height(block_area),
         .fill_argb_color.val = lv_color_to32(color),
                         .mode = PPA_TRANS_MODE_BLOCKING,
     };
@@ -358,10 +235,11 @@ static void lv_draw_ppa_ctx_deinit(lv_disp_drv_t *drv, lv_draw_ctx_t *draw_ctx)
 }
 
 /**
- * @brief PPA-accelerated blend function
+ * @brief PPA hardware acceleration handler for LVGL v8 blending operations
  *
- * @param draw_ctx Draw context
- * @param dsc Blend descriptor
+ * Accelerates RGB565 image blending and opaque fills. Falls back to CPU for:
+ * - Semi-transparent fills (PPA has ~28% overhead: redundant DMA + cache sync)
+ * - Complex masking, small areas (<100px), unsupported formats
  */
 static void lv_draw_ppa_blend(lv_draw_ctx_t *draw_ctx, const lv_draw_sw_blend_dsc_t *dsc)
 {
@@ -370,31 +248,35 @@ static void lv_draw_ppa_blend(lv_draw_ctx_t *draw_ctx, const lv_draw_sw_blend_ds
         return;
     }
 
-    /* Validate prerequisites for PPA acceleration */
     if (sizeof(lv_color_t) != 2 || draw_ctx->buf == NULL || draw_ctx->buf_area == NULL) {
         lv_draw_sw_blend_basic(draw_ctx, dsc);
         return;
     }
 
     size_t align = ppa_align();
+
+    /* PPA doesn't support complex masking */
     if (dsc->mask_buf && dsc->mask_res != LV_DRAW_MASK_RES_FULL_COVER &&
             dsc->mask_res != LV_DRAW_MASK_RES_UNKNOWN) {
         lv_draw_sw_blend_basic(draw_ctx, dsc);
         return;
     }
+
+    /* Small areas: DMA setup overhead exceeds benefit */
     if (lv_area_get_size(&block_area) <= 100) {
         lv_draw_sw_blend_basic(draw_ctx, dsc);
         return;
     }
+
     if (((uintptr_t)draw_ctx->buf % align) != 0) {
         lv_draw_sw_blend_basic(draw_ctx, dsc);
         return;
     }
 
-    /* Sync cache before PPA operation */
+    /* Writeback cache before PPA reads */
     ppa_cache_sync_region(&block_area, draw_ctx->buf_area, draw_ctx->buf, ESP_CACHE_MSYNC_FLAG_DIR_C2M);
 
-    /* Handle image blending */
+    /* Image blending: RGB565 format only */
     if (dsc->src_buf) {
         /* Calculate source stride - handle both line buffer and full buffer cases */
         lv_coord_t src_w = lv_area_get_width(dsc->blend_area);
@@ -429,14 +311,13 @@ static void lv_draw_ppa_blend(lv_draw_ctx_t *draw_ctx, const lv_draw_sw_blend_ds
         return;
     }
 
-    /* Handle solid color fill */
     if (dsc->opa >= LV_OPA_MAX) {
         ppa_fill(draw_ctx->buf, draw_ctx->buf_area, &block_area, dsc->color);
         ppa_cache_invalidate(&block_area, draw_ctx->buf_area, draw_ctx->buf);
         return;
     }
 
-    /* Fallback to software rendering */
+    /* Semi-transparent fills: use CPU (more efficient than PPA) */
     lv_draw_sw_blend_basic(draw_ctx, dsc);
 }
 

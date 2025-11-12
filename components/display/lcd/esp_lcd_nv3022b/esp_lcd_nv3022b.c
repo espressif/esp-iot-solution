@@ -62,7 +62,7 @@ esp_err_t esp_lcd_new_panel_nv3022b(const esp_lcd_panel_io_handle_t io, const es
     }
 
 #if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
-    switch (panel_dev_config->color_space) {
+    switch (panel_dev_config->rgb_ele_order) {
     case ESP_LCD_COLOR_SPACE_RGB:
         nv3022b->madctl_val = 0;
         break;

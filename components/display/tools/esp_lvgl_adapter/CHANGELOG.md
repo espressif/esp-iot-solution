@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v0.1.0-beta.2 (2025-11-4)
+
+* Fix a crash that occurred in some cases when PPA acceleration was enabled
+
 ## v0.1.0-beta.1 (2025-10-27)
 
 * Support for LVGL v8.x and v9.x with unified API

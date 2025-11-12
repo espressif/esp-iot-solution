@@ -13,10 +13,15 @@ ESP LVGL Adapter 是专为 ESP32 全系列芯片设计的高性能 LVGL 适配�
 组件链接：https://components.espressif.com/components/espressif/esp_lvgl_adapter
 
 相关示例：
+
 - https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_common_demo
+
 - https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_dummy_draw
+
 - https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_decode_image
+
 - https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_freetype_font
+
 - https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_multi_screen
 
 .. _Thorvg component:

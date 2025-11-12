@@ -1,10 +1,11 @@
 # ChangeLog
 
-## v1.0.2 - 2025-09-29
+## v2.0.0 - 2025-10-29
 
-### bugfix:
+### Changes:
 
-* Check the return value of the underlying deletion function. If it fails, propagate the error
+* Compatible with ESP-IDF v6.0
+* Added brightness adjustment interface
 
 ## v1.0.1 - 2025-09-15
 

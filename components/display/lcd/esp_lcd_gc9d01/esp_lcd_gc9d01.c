@@ -64,7 +64,7 @@ esp_err_t esp_lcd_new_panel_gc9d01(const esp_lcd_panel_io_handle_t io, const esp
     }
 
 #if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
-    switch (panel_dev_config->color_space) {
+    switch (panel_dev_config->rgb_ele_order) {
     case ESP_LCD_COLOR_SPACE_RGB:
         gc9d01->madctl_val = 0;
         break;

@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v2.0.0 - 2025-10-29
+
+### Changes:
+
+* Compatible with ESP-IDF v6.0
+
 ## v1.0.2 - 2024-08-12
 
 ### Enhancements:

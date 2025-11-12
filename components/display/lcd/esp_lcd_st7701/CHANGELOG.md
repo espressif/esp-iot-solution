@@ -1,10 +1,10 @@
 # ChangeLog
 
-## v1.1.5 - 2025-09-29
+## v2.0.0 - 2025-10-29
 
-### bugfix:
+### Changes:
 
-* Check the return value of the underlying deletion function. If it fails, propagate the error
+* Compatible with ESP-IDF v6.0
 
 ## v1.1.4 - 2025-09-15
 

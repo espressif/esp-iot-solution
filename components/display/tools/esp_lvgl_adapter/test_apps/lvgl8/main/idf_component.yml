@@ -9,13 +9,3 @@ dependencies:
   hw_init:
     version: "*"
     override_path: "../components/hw_init"
-
-  esp_lv_fs:
-    version: "*"
-    override_path: "../../../../esp_lv_fs"
-    public: true
-
-  esp_lv_decoder:
-    version: "*"
-    override_path: "../../../../esp_lv_decoder"
-    public: true

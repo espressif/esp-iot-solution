@@ -73,6 +73,19 @@ typedef struct {
  */
 esp_err_t esp_lcd_new_panel_co5300(const esp_lcd_panel_io_handle_t io, const esp_lcd_panel_dev_config_t *panel_dev_config, esp_lcd_panel_handle_t *ret_panel);
 
+/**
+ * @brief Set brightness for CO5300 LCD panel
+ *
+ * @param[in] panel LCD panel handle
+ * @param[in] brightness_percent Brightness percentage (0-100)
+ * @return
+ *      - ESP_ERR_INVALID_ARG   if parameter is invalid
+ *      - ESP_ERR_INVALID_STATE if panel IO not initialized
+ *      - ESP_OK                on success
+ *      - Otherwise             on fail
+ */
+esp_err_t esp_lcd_panel_co5300_set_brightness(esp_lcd_panel_handle_t panel, uint8_t brightness_percent);
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////// Default Configuration Macros for SPI/QSPI Interface //////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

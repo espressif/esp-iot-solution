@@ -13,10 +13,15 @@ ESP LVGL Adapter is a high-performance LVGL adaptation layer designed specifical
 Component Link: https://components.espressif.com/components/espressif/esp_lvgl_adapter
 
 Related Example:
+
 - https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_common_demo
+
 - https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_dummy_draw
+
 - https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_decode_image
+
 - https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_freetype_font
+
 - https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_multi_screen
 
 .. _Thorvg component:

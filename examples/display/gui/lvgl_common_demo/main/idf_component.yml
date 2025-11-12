@@ -6,7 +6,7 @@ dependencies:
     version: "^9"
     public: true
 
-  esp_lvgl_adapter:
+  espressif/esp_lvgl_adapter:
     version: "*"
     override_path: "../../../../../components/display/tools/esp_lvgl_adapter"
     public: true
