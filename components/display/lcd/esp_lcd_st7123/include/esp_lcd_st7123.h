@@ -116,6 +116,35 @@ esp_err_t esp_lcd_new_panel_st7123(const esp_lcd_panel_io_handle_t io, const esp
         .flags.use_dma2d = true,                         \
     }
 
+/**
+ * @brief MIPI DPI configuration structure
+ *
+ * @note  refresh_rate = (dpi_clock_freq_mhz * 1000000) / (h_res + hsync_pulse_width + hsync_back_porch + hsync_front_porch)
+ *                                                      / (v_res + vsync_pulse_width + vsync_back_porch + vsync_front_porch)
+ *
+ * @param[in] color_format Input color format of the panel
+ *
+ */
+#define ST7123_1560_720_PANEL_60HZ_DPI_CONFIG_CF(color_format) \
+    {                                                    \
+        .dpi_clk_src = MIPI_DSI_DPI_CLK_SRC_DEFAULT,     \
+        .dpi_clock_freq_mhz = 78,                        \
+        .virtual_channel = 0,                            \
+        .in_color_format = color_format,                 \
+        .num_fbs = 1,                                    \
+        .video_timing = {                                \
+            .h_size = 720,                               \
+            .v_size = 1560,                              \
+            .hsync_back_porch = 40,                      \
+            .hsync_pulse_width = 2,                      \
+            .hsync_front_porch = 40,                     \
+            .vsync_back_porch = 4,                       \
+            .vsync_pulse_width = 2,                      \
+            .vsync_front_porch = 320,                    \
+        },                                               \
+        .flags.use_dma2d = true,                         \
+    }
+
 #ifdef __cplusplus
 }
 #endif

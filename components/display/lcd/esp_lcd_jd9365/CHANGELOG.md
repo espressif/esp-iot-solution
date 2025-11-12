@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v2.0.1 - 2025-11-12
+
+* Updated MIPI-DSI structs for IDF6
+
 ## v2.0.0 - 2025-10-29
 
 ### Changes:
