@@ -52,11 +52,7 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
     // };
     const esp_lcd_panel_dev_config_t panel_config = {
         .reset_gpio_num = EXAMPLE_PIN_NUM_LCD_RST,      // Set to -1 if not use
-#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
-        .color_space = ESP_LCD_COLOR_SPACE_RGB,
-#else
-        .rgb_endian = LCD_RGB_ENDIAN_RGB,
-#endif
+        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,     // Implemented by LCD command `36h`
         .bits_per_pixel = 16,                           // Implemented by LCD command `3Ah` (16/18)
         // .vendor_config = &vendor_config,            // Uncomment this line if use custom initialization commands
     };

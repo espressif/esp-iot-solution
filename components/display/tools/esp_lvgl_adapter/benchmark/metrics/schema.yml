@@ -21,7 +21,6 @@ patternProperties:
         unit: "s"
       pixel_format:
         type: string
-        pattern: "^RGB(888|565)$"
         description: "Pixel format"
         unit: ""
       data_count:

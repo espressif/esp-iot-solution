@@ -382,12 +382,12 @@ components_test_esp_lcd_axs15231b:
   parallel:
     matrix:
       - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.1"
+        IDF_VERSION: "5.3"
         ENV_TAG: "esp32s3_lcd_ev"
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
+  image: $DOCKER_TARGET_TEST_v5_3_ENV_IMAGE
   variables:
     TEST_TARGET: esp32s3
     TEST_FOLDER: components/display/lcd/esp_lcd_axs15231b
@@ -404,12 +404,12 @@ components_test_esp_lcd_gc9b71:
   parallel:
     matrix:
       - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.1"
+        IDF_VERSION: "5.3"
         ENV_TAG: "esp32s3_lcd_ev"
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
+  image: $DOCKER_TARGET_TEST_v5_3_ENV_IMAGE
   variables:
     TEST_TARGET: esp32s3
     TEST_FOLDER: components/display/lcd/esp_lcd_gc9b71
@@ -451,12 +451,12 @@ components_test_esp_lcd_sh8601:
   parallel:
     matrix:
       - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.1"
+        IDF_VERSION: "5.3"
         ENV_TAG: "esp32s3_lcd_ev"
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
+  image: $DOCKER_TARGET_TEST_v5_3_ENV_IMAGE
   variables:
     TEST_TARGET: esp32s3
     TEST_FOLDER: components/display/lcd/esp_lcd_sh8601
@@ -473,12 +473,12 @@ components_test_esp_lcd_spd2010:
   parallel:
     matrix:
       - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.1"
+        IDF_VERSION: "5.3"
         ENV_TAG: "esp32s3_lcd_ev"
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
+  image: $DOCKER_TARGET_TEST_v5_3_ENV_IMAGE
   variables:
     TEST_TARGET: esp32s3
     TEST_FOLDER: components/display/lcd/esp_lcd_spd2010
@@ -500,7 +500,7 @@ components_test_esp_lcd_st77903_qspi:
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
+  image: $DOCKER_TARGET_TEST_v5_3_ENV_IMAGE
   variables:
     TEST_TARGET: esp32s3
     TEST_FOLDER: components/display/lcd/esp_lcd_st77903_qspi
@@ -517,12 +517,12 @@ components_test_esp_lcd_st77903_rgb:
   parallel:
     matrix:
       - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.1"
+        IDF_VERSION: "5.4"
         ENV_TAG: "esp32s3_lcd_ev"
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
+  image: $DOCKER_TARGET_TEST_v5_4_ENV_IMAGE
   variables:
     TEST_TARGET: esp32s3
     TEST_FOLDER: components/display/lcd/esp_lcd_st77903_rgb
@@ -703,12 +703,12 @@ components_test_esp_lcd_nv3022b:
   parallel:
     matrix:
       - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.1"
+        IDF_VERSION: "5.3"
         ENV_TAG: "esp32s3_lcd_ev"
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
+  image: $DOCKER_TARGET_TEST_v5_3_ENV_IMAGE
   variables:
     TEST_TARGET: esp32s3
     TEST_FOLDER: components/display/lcd/esp_lcd_nv3022b
@@ -725,12 +725,12 @@ components_test_esp_lcd_st77916:
   parallel:
     matrix:
       - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.1"
+        IDF_VERSION: "5.4"
         ENV_TAG: "esp32s3_lcd_ev"
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
+  image: $DOCKER_TARGET_TEST_v5_4_ENV_IMAGE
   variables:
     TEST_TARGET: esp32s3
     TEST_FOLDER: components/display/lcd/esp_lcd_st77916
@@ -747,12 +747,12 @@ components_test_esp_lcd_st77922:
   parallel:
     matrix:
       - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.1"
+        IDF_VERSION: "5.4"
         ENV_TAG: "esp32s3_lcd_ev"
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
+  image: $DOCKER_TARGET_TEST_v5_4_ENV_IMAGE
   variables:
     TEST_TARGET: esp32s3
     TEST_FOLDER: components/display/lcd/esp_lcd_st77922

@@ -98,10 +98,11 @@ def make_resolution_key(width: int, height: int) -> str:
     return f'{width}x{height}'
 
 
-def build_results(props: dict) -> tuple[OrderedDict, int]:
+def build_results(props: dict) -> tuple[OrderedDict, int, str]:
 
     # Parse all fps_benchmark properties
     parsed_by_res: dict[str, dict] = {}
+    pixel_format = ''
     for value in props.get('fps_benchmark', []):
         try:
             bench = json.loads(value)
@@ -110,6 +111,9 @@ def build_results(props: dict) -> tuple[OrderedDict, int]:
         res_key = bench.get('resolution')
         if not res_key:
             continue
+        # Extract color_format from first fps_benchmark entry
+        if not pixel_format:
+            pixel_format = bench.get('pixel_format', '')
         # Normalize numeric fields to numbers
         result_obj = {
             'avg': bench.get('avg'),
@@ -132,7 +136,7 @@ def build_results(props: dict) -> tuple[OrderedDict, int]:
         ordered[key] = parsed_by_res.get(key, None)
 
     data_count = sum(1 for v in ordered.values() if v is not None)
-    return ordered, data_count
+    return ordered, data_count, pixel_format
 
 
 def main() -> None:
@@ -141,19 +145,16 @@ def main() -> None:
     xunit_path = args.xunit_path
 
     gitlab_pipeline_id, gitlab_project_id = get_env_strs()
-    commit_sha = os.environ.get('CI_COMMIT_SHA', '')
-    branch_name = os.environ.get('CI_COMMIT_REF_NAME', '')
 
     props = load_xunit_properties(xunit_path)
 
     # metadata basics
     idf_version = (props.get('idf_version', ['']) or [''])[0]
     target = (props.get('idf_target', ['']) or [''])[0]
-    pixel_format = (props.get('pixel_format', ['']) or [''])[0]
     ts = (props.get('testsuite_timestamp', ['']) or [''])[0]
     test_time = parse_testsuite_timestamp(ts) if ts else int(datetime.now().timestamp())
 
-    result_obj, data_count = build_results(props)
+    result_obj, data_count, pixel_format = build_results(props)
 
     metric_data = OrderedDict()
     metric_data['esp_idf_version'] = idf_version

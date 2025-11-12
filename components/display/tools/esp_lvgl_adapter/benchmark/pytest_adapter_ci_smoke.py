@@ -12,6 +12,13 @@ from typing import Callable
 import json
 import pytest
 from pytest_embedded import Dut
+import re
+import time
+import os
+
+testing_status_pattern = re.compile(
+    r'\[FPS\] Current: (?P<fps>\d+) fps|(?P<end>Performance Report)|(?P<process>\[STABLE\])'
+)
 
 def test_adapter_fps_benchmark(dut: Dut, record_property: Callable[[str, object], None]) -> None:
     """
@@ -22,12 +29,10 @@ def test_adapter_fps_benchmark(dut: Dut, record_property: Callable[[str, object]
     dut.expect('ESP LVGL Adapter FPS Benchmark Test', timeout=30)
     idf_target = dut.expect(r'ESP-IDF Target:\s+(esp\w+)', timeout=5).group(1).decode('utf-8')
     idf_version = dut.expect(r'ESP-IDF Version:\s+(v[\w\-\.\_]+)', timeout=5).group(1).decode('utf-8')
-    pixel_format = dut.expect(r'Pixel format:\s+(RGB888|RGB565)', timeout=5).group(1).decode('utf-8')
-    print(f'Target: {idf_target}, ESP-IDF Version: {idf_version}, Pixel format: {pixel_format}')
+    print(f'Target: {idf_target}, ESP-IDF Version: {idf_version}')
 
     record_property('idf_target', idf_target)
     record_property('idf_version', idf_version)
-    record_property('pixel_format', pixel_format)
 
     dut.expect_exact('Press ENTER to see the list of tests.', timeout=30)
     dut.write('[fps]')
@@ -48,17 +53,27 @@ def test_adapter_fps_benchmark(dut: Dut, record_property: Callable[[str, object]
         record_property('fps_progress', f'{test_num}/{resolution_count} {resolution}')
 
         dut.expect(f'Benchmarking {resolution}', timeout=10)
+        color_format_info = dut.expect(r'Display color format:\s*([^\r\n]+)', timeout=10)
+        color_format = color_format_info.group(1).decode('utf-8')
 
         stable_log_count = 0
+        stable_log_timestamp = time.time()
+        fps_values = []
         while True:
-            testing_status = dut.expect(r'(\[STABLE\]|Performance Report)', timeout=50).group(1).decode('utf-8')
-            if testing_status == 'STABLE':
+            testing_status_match = dut.expect(testing_status_pattern, timeout=15)
+            if testing_status_match.group('end'):
+                break
+            elif time.time() - stable_log_timestamp > 21:
+                raise Exception('Test timeout')
+            elif testing_status_match.group('process'):
+                stable_log_timestamp = time.time()
                 stable_log_count += 1
                 if stable_log_count > 7:
                     raise Exception('expected Performance Report, but got \'STABLE\'')
-                continue
-            elif testing_status == 'Performance Report':
-                break
+            elif testing_status_match.group('fps'):
+                fps_values.append(int(testing_status_match.group('fps')))
+            else:
+                raise Exception(f'unexpected testing line: {testing_status_match.group(0)}')
 
         # Match performance report format
         samples_result = dut.expect(r'Samples:\s+(\d+)\s+\(filtered:\s+(\d+)\)', timeout=5)
@@ -77,12 +92,13 @@ def test_adapter_fps_benchmark(dut: Dut, record_property: Callable[[str, object]
         p75_fps = distrubution_result.group(4).decode('utf-8')
         p90_fps = distrubution_result.group(5).decode('utf-8')
 
-        print(f'[{test_num}/{resolution_count}] {resolution}: AVG={average_fps} MIN={range_fps_min} P10={p10_fps} P25={p25_fps} P50={p50_fps} P75={p75_fps} P90={p90_fps} MAX={range_fps_max}')
+        print(f'[{test_num}/{resolution_count}] {resolution}: {color_format} AVG={average_fps} MIN={range_fps_min} P10={p10_fps} P25={p25_fps} P50={p50_fps} P75={p75_fps} P90={p90_fps} MAX={range_fps_max}')
 
         record_property(
             'fps_benchmark',
             json.dumps({
                 'resolution': resolution,
+                'pixel_format': color_format,
                 'samples': int(samples_count),
                 'filtered': int(filtered_count),
                 'avg': int(average_fps),
@@ -93,8 +109,14 @@ def test_adapter_fps_benchmark(dut: Dut, record_property: Callable[[str, object]
                 'p50': int(p50_fps),
                 'p75': int(p75_fps),
                 'p90': int(p90_fps),
+                'fps_values': fps_values,
             })
         )
+
+        # for test: use TEST_END_AFTER environment variable to set the number of resolutions to test
+        if os.environ.get('TEST_END_AFTER') is not None:
+            if i >= int(os.environ.get('TEST_END_AFTER')):
+                raise Exception('test finished by TEST_END_AFTER environment variable')
 
     dut.expect('Done', timeout=30)
     print(f'All {resolution_count} resolution tests finished!')

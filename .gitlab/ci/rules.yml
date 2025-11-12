@@ -86,6 +86,9 @@
 .patterns-components_display_lcd_esp_lcd_ek79007: &patterns-components_display_lcd_esp_lcd_ek79007
   - "components/display/lcd/esp_lcd_ek79007/**/*"
 
+.patterns-components_display_lcd_esp_lcd_er88577: &patterns-components_display_lcd_esp_lcd_er88577
+  - "components/display/lcd/esp_lcd_er88577/**/*"
+
 .patterns-components_display_lcd_esp_lcd_jd9165: &patterns-components_display_lcd_esp_lcd_jd9165
   - "components/display/lcd/esp_lcd_jd9165/**/*"
 
@@ -121,6 +124,9 @@
 
 .patterns-components_display_lcd_esp_lcd_st7701: &patterns-components_display_lcd_esp_lcd_st7701
   - "components/display/lcd/esp_lcd_st7701/**/*"
+
+.patterns-components_display_lcd_esp_lcd_st7123: &patterns-components_display_lcd_esp_lcd_st7123
+  - "components/display/lcd/esp_lcd_st7123/**/*"
 
 .patterns-components_display_lcd_esp_lcd_st7703: &patterns-components_display_lcd_esp_lcd_st7703
   - "components/display/lcd/esp_lcd_st7703/**/*"
@@ -2012,6 +2018,17 @@
     - <<: *if-dev-push
       changes: *patterns-components_display_lcd_esp_lcd_ek79007
 
+.rules:build:components_display_lcd_esp_lcd_er88577_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_display_lcd_esp_lcd_er88577
+
 .rules:build:components_display_lcd_esp_lcd_jd9165_test_apps:
   rules:
     - <<: *if-protected
@@ -2143,6 +2160,17 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_display_lcd_esp_lcd_st7701
+
+.rules:build:components_display_lcd_esp_lcd_st7123_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_display_lcd_esp_lcd_st7123
 
 .rules:build:components_display_lcd_esp_lcd_st7703_test_apps:
   rules:

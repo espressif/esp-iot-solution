@@ -1,5 +1,15 @@
 dependencies:
-  idf: ">5.0.4,!=5.1.1"
+  idf:
+    version: ">=5.5.0"
+
+  lvgl/lvgl:
+    version: "^9"
+    public: true
+
+  esp_lvgl_adapter:
+    version: "*"
+    override_path: "../../../../../components/display/tools/esp_lvgl_adapter"
+    public: true
 
   esp_lcd_touch_cst816s:
     version: "^1"
@@ -22,8 +32,4 @@ dependencies:
   esp_lcd_spd2010:
     version: "*"
     override_path: "../../../../../components/display/lcd/esp_lcd_spd2010"
-    public: true
-
-  lvgl/lvgl:
-    version: "^8"
     public: true

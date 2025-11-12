@@ -234,6 +234,9 @@ static void fps_monitor_task(void *arg)
     while (!ctx->finished) {
         uint32_t fps = 0;
         if (esp_lv_adapter_get_fps(disp, &fps) == ESP_OK && ctx->mutex) {
+            /* Real-time FPS logging */
+            ESP_LOGI(TAG, "[FPS] Current: %lu fps", (unsigned long)fps);
+
             if (xSemaphoreTake(ctx->mutex, portMAX_DELAY) == pdTRUE) {
                 switch (ctx->state) {
                 case FPS_STATE_STARTUP:
@@ -434,13 +437,13 @@ static void print_avg_fps(void)
     float iqr_ratio = (p50 > 0) ? ((float)iqr / (float)p50 * 100.0f) : 0.0f;
 
     const char *stability_rating;
-    if (iqr_ratio < 15.0f) {
+    if (iqr_ratio < 30.0f) {
         stability_rating = "Excellent";
-    } else if (iqr_ratio < 30.0f) {
+    } else if (iqr_ratio < 60.0f) {
         stability_rating = "Good";
-    } else if (iqr_ratio < 50.0f) {
+    } else if (iqr_ratio < 100.0f) {
         stability_rating = "Moderate";
-    } else if (iqr_ratio < 80.0f) {
+    } else if (iqr_ratio < 150.0f) {
         stability_rating = "Variable";
     } else {
         stability_rating = "High Variance";
@@ -545,6 +548,29 @@ static void run_headless_benchmark(uint16_t h_res, uint16_t v_res)
 
     TEST_ESP_OK(esp_lv_adapter_set_dummy_draw(headless_disp, true));
     lv_display_set_default(headless_disp);
+
+    /* Print actual color format */
+    lv_color_format_t cf = lv_display_get_color_format(headless_disp);
+    const char *format_str = "Unknown";
+    switch (cf) {
+    case LV_COLOR_FORMAT_RGB565:
+        format_str = "RGB565 (16-bit)";
+        break;
+    case LV_COLOR_FORMAT_RGB888:
+        format_str = "RGB888 (24-bit)";
+        break;
+    case LV_COLOR_FORMAT_XRGB8888:
+        format_str = "XRGB8888 (32-bit)";
+        break;
+    case LV_COLOR_FORMAT_ARGB8888:
+        format_str = "ARGB8888 (32-bit with alpha)";
+        break;
+    default:
+        format_str = "Other";
+        break;
+    }
+    ESP_LOGI(TAG, "Display color format: %s", format_str);
+
     esp_lv_adapter_unlock();
 
     TEST_ESP_OK(esp_lv_adapter_lock(pdMS_TO_TICKS(1000)));
@@ -641,11 +667,6 @@ void app_main(void)
 
     ESP_LOGI(TAG, "ESP-IDF Target: %s", CONFIG_IDF_TARGET);
     ESP_LOGI(TAG, "ESP-IDF Version: %s", esp_get_idf_version());
-#ifdef CONFIG_LV_COLOR_DEPTH_24
-    ESP_LOGI(TAG, "Pixel format: RGB888");
-#else
-    ESP_LOGI(TAG, "Pixel format: RGB565");
-#endif
 
     /* Initialize LVGL adapter */
     esp_lv_adapter_config_t adapter_config = ESP_LV_ADAPTER_DEFAULT_CONFIG();

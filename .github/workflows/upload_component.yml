@@ -41,6 +41,7 @@ jobs:
             components/display/lcd/esp_lcd_axs15231b;
             components/display/lcd/esp_lcd_co5300;
             components/display/lcd/esp_lcd_ek79007;
+            components/display/lcd/esp_lcd_er88577;
             components/display/lcd/esp_lcd_gc9107;
             components/display/lcd/esp_lcd_gc9b71;
             components/display/lcd/esp_lcd_gc9d01;
@@ -52,6 +53,7 @@ jobs:
             components/display/lcd/esp_lcd_panel_io_additions;
             components/display/lcd/esp_lcd_sh8601;
             components/display/lcd/esp_lcd_spd2010;
+            components/display/lcd/esp_lcd_st7123;
             components/display/lcd/esp_lcd_st7701;
             components/display/lcd/esp_lcd_st7703;
             components/display/lcd/esp_lcd_st77903_qspi;
