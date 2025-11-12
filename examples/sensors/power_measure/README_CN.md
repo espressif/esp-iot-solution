@@ -2,9 +2,9 @@
 
 ## 概述
 
-本示例演示了如何使用功率测量芯片（**BL0937** 和 **INA236**）来检测电压、电流、有功功率和能耗等电气参数。它使用 FreeRTOS 在 **ESP32系列芯片** 上实现，展示了如何配置和连接不同的功率测量芯片。该示例初始化功率测量系统、获取各种参数并定期记录。
+本示例演示了如何使用功率测量芯片（**BL0937**、**INA236** 和 **BL0942**）来检测电压、电流、有功功率和能耗等电气参数。它使用 FreeRTOS 在 **ESP32系列芯片** 上实现，展示了如何配置和连接不同的功率测量芯片。该示例初始化功率测量系统、获取各种参数并定期记录。
 
-本示例支持两种功率测量芯片：
+本示例支持三种功率测量芯片：
 
 ### BL0937 芯片
 
@@ -25,6 +25,17 @@
 3. **有功功率**
 4. **功率因数**（固定为1.0，DC电路）
 
+### BL0942 芯片
+
+能够测量：
+
+1. **电压**
+2. **电流**
+3. **有功功率**
+4. **功率因数**
+5. **能量**
+6. **频率**
+
 项目的主要目的是演示如何配置硬件引脚、初始化功率测量系统以及从不同芯片类型中获取数据。
 
 ## 配置说明
@@ -41,6 +52,7 @@ Component config → power_measure → Power measurement chip type
 
 - **BL0937** - 单相功率测量IC，支持GPIO接口
 - **INA236** - 精密数字功率监控器，支持I2C接口
+- **BL0942** - 单相功率测量IC，支持UART/SPI接口
 
 ### 硬件配置
 
@@ -56,6 +68,14 @@ Component config → power_measure → Power measurement chip type
 
 - I2C引脚配置（SCL、SDA）
 - I2C地址配置
+
+#### BL0942 配置
+
+- UART引脚配置（TX、RX）
+- SPI引脚配置（MOSI、MISO、SCLK、CS）
+- 接口模式选择（UART或SPI）
+- 硬件参数配置（分流电阻、分压比等）
+- 设备地址配置
 
 ## 硬件要求
 
@@ -91,6 +111,52 @@ Component config → power_measure → Power measurement chip type
 **注意：** 可通过 `idf.py menuconfig` 在 Component config → power_measure → GPIO Pin Configuration 中配置GPIO引脚。
 
 确保这些 GPIO 引脚正确连接到硬件设置中 **INA236** 芯片上的相应引脚。
+
+### BL0942 配置
+
+本示例支持通过 UART 或 SPI 接口连接 **BL0942** 功率测量芯片。要连接该芯片，须配置以下引脚：
+
+#### UART 模式配置
+
+| 变量                    | 默认GPIO引脚 | 芯片引脚 | 描述     |
+| ----------------------- | ------------ | -------- | -------- |
+| `BL0942_UART_TX_GPIO` | GPIO 6       | TX 引脚  | UART发送 |
+| `BL0942_UART_RX_GPIO` | GPIO 7       | RX 引脚  | UART接收 |
+
+**BL0942 UART 配置：**
+
+- UART 编号：`UART_NUM_1`
+- 波特率：`4800`（默认）
+- 数据位：8位
+- 停止位：1位
+- 奇偶校验：无
+- 设备地址：`0`（默认）
+
+#### SPI 模式配置
+
+| 变量                     | 默认GPIO引脚 | 芯片引脚 | 描述        |
+| ------------------------ | ------------ | -------- | ----------- |
+| `BL0942_SPI_MOSI_GPIO` | GPIO -1      | MOSI引脚 | SPI数据输出 |
+| `BL0942_SPI_MISO_GPIO` | GPIO -1      | MISO引脚 | SPI数据输入 |
+| `BL0942_SPI_SCLK_GPIO` | GPIO -1      | SCLK引脚 | SPI时钟     |
+| `BL0942_SPI_CS_GPIO`   | GPIO -1      | CS引脚   | SPI片选     |
+
+**BL0942 SPI 配置：**
+
+- SPI 主机：`SPI2_HOST`
+- 时钟速度：`800kHz`
+- 模式：`CPOL=0, CPHA=1`
+- 设备地址：`0`（默认）
+
+**硬件参数配置：**
+
+- 分流电阻：`1mΩ`（默认）
+- 分压比：`3760`（默认）
+- 接口模式：UART（默认，可通过配置选择SPI）
+
+**注意：** 可通过 `idf.py menuconfig` 在 Component config → power_measure → GPIO Pin Configuration 中配置GPIO引脚。
+
+确保这些 GPIO 引脚正确连接到硬件设置中 **BL0942** 芯片上的相应引脚。
 
 ## BL0937 校准因子使用指南
 
@@ -185,16 +251,15 @@ BL0937芯片通过测量脉冲频率来计算电气参数：
 
 ## 芯片选择
 
-要在不同的功率测量芯片之间切换，请修改源代码中的演示宏：
+要在不同的功率测量芯片之间切换，请通过 `idf.py menuconfig` 配置芯片类型：
 
-```c
-// 对于 BL0937
-#define DEMO_BL0937    1
-#define DEMO_INA236    0
-
-// 对于 INA236  
-#define DEMO_BL0937    0
-#define DEMO_INA236    1
+```bash
+idf.py menuconfig
+# 导航到：Component config → power_measure → Power measurement chip type
+# 选择以下选项之一：
+# - BL0937 (GPIO interface)
+# - INA236 (I2C interface)  
+# - BL0942 (UART/SPI interface)
 ```
 
 ## 软件要求
@@ -219,12 +284,17 @@ idf.py menuconfig
 
 可根据硬件与应用需要调整：
 
-- **芯片类型选择**：通过 `DEMO_BL0937` 和 `DEMO_INA236` 宏在不同芯片间切换。
-- **GPIO 与 I2C 引脚**：
+- **芯片类型选择**：通过 `DEMO_BL0937`、`DEMO_INA236` 和 `DEMO_BL0942` 宏在不同芯片间切换。
+- **GPIO 与通信引脚**：
   - BL0937：`BL0937_CF_GPIO`、`BL0937_SEL_GPIO`、`BL0937_CF1_GPIO`；
   - INA236：`I2C_MASTER_SDA_IO`、`I2C_MASTER_SCL_IO`、`I2C_MASTER_NUM`、`I2C_MASTER_FREQ_HZ`；
-- **I2C 参数（INA236）**：地址通常为 `0x41`，频率 `100kHz`（可调整）；
-- **校准参数（BL0937）**：`ki/ku/kp` 校准因子，可通过API函数动态调整或使用硬件标定结果；
+  - BL0942：`BL0942_UART_TX_GPIO`、`BL0942_UART_RX_GPIO`（UART模式）或 `BL0942_SPI_MOSI_GPIO`、`BL0942_SPI_MISO_GPIO`、`BL0942_SPI_SCLK_GPIO`、`BL0942_SPI_CS_GPIO`（SPI模式）；
+- **通信参数**：
+  - INA236：I2C地址通常为 `0x41`，频率 `100kHz`（可调整）；
+  - BL0942：UART波特率 `4800`，SPI时钟 `800kHz`，设备地址 `0`；
+- **硬件参数**：
+  - BL0937：`ki/ku/kp` 校准因子，可通过API函数动态调整或使用硬件标定结果；
+  - BL0942：分流电阻 `1mΩ`，分压比 `3760`，可根据实际硬件调整；
 - **阈值**：合理设置过流/过压/欠压以满足安全要求；
 - **能量检测**：仅在支持的芯片上启用（示例中 INA236 关闭）。
 
@@ -276,4 +346,23 @@ I (12352) PowerMeasureExample: Current: 125.50 mA
 I (12353) PowerMeasureExample: Power: 0.41 W (calculated)
 I (12354) PowerMeasureExample: Energy measurement not available for INA236
 I (12355) PowerMeasureExample: ---
+```
+
+### BL0942 输出：
+
+```
+I (12345) PowerMeasureExample: Power Measure Example Starting...
+I (12346) PowerMeasureExample: Selected chip: BL0942 (UART/SPI interface)
+I (12347) PowerMeasureExample: UART - UART1, TX GPIO:6, RX GPIO:7, Baud:4800
+I (12348) PowerMeasureExample: Creating BL0942 device (UART mode)... UART1 TX:6 RX:7 Baud:4800
+I (12349) BL0942: BL0942 UART configured: 4800-8N1 (with EMI protection)
+I (12350) PowerMeasureExample: Power measurement device created successfully
+I (12351) PowerMeasureExample: Power measurement initialized successfully
+I (12352) PowerMeasureExample: Starting measurement loop...
+I (12353) PowerMeasureExample: Voltage: 220.15 V
+I (12354) PowerMeasureExample: Current: 0.05 A
+I (12355) PowerMeasureExample: Active Power: 11.85 W
+I (12356) PowerMeasureExample: Power Factor: 1.000
+I (12357) PowerMeasureExample: Energy: 0.000 kWh
+I (12358) PowerMeasureExample: ---
 ```

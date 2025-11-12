@@ -1,4 +1,4 @@
-version: "0.2.0"
+version: "0.2.1"
 description: Support chips to measure voltage, current, energy
 issues: https://github.com/espressif/esp-iot-solution/issues
 repository: https://github.com/espressif/esp-iot-solution.git

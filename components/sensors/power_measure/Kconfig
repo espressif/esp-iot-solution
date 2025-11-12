@@ -19,6 +19,14 @@ menu "power_measure"
                 Features: Voltage, Current, Power measurement
                 Interface: I2C
                 Note: Does not support energy measurement or power factor
+
+        config POWER_MEASURE_CHIP_BL0942
+            bool "BL0942"
+            help
+                BL0942 is a single-phase power measurement IC with UART/SPI interface
+                Features: Voltage, Current, Power, Power Factor, Energy measurement
+                Interface: UART or SPI
+                Note: Supports both UART and SPI communication modes
     endchoice
 
     config BL0937_IRAM_OPTIMIZED
@@ -27,6 +35,13 @@ menu "power_measure"
         depends on POWER_MEASURE_CHIP_BL0937
         help
             Enable IRAM optimization for BL0937
+
+    config BL0942_UART_OPTIMIZED
+        bool "Enable UART optimization for BL0942"
+        default n
+        depends on POWER_MEASURE_CHIP_BL0942
+        help
+            Enable UART optimization for BL0942 communication
 
     menu "BL0937 Hardware Configuration"
         config BL0937_VREF_MV
@@ -62,6 +77,29 @@ menu "power_measure"
                 Values below 500000 (0.5s) are not recommended.
     endmenu
 
+    menu "BL0942 Hardware Configuration"
+        config BL0942_UART_BAUD_RATE
+            int "UART baud rate"
+            default 4800
+            depends on POWER_MEASURE_CHIP_BL0942
+            help
+                UART baud rate for BL0942 communication
+
+        config BL0942_DEVICE_ADDRESS
+            int "Device address"
+            default 0
+            depends on POWER_MEASURE_CHIP_BL0942
+            help
+                BL0942 device address (0-255)
+
+        config BL0942_USE_SPI
+            bool "Use SPI interface instead of UART"
+            default n
+            depends on POWER_MEASURE_CHIP_BL0942
+            help
+                Enable SPI interface for BL0942 communication
+    endmenu
+
     menu "GPIO Pin Configuration"
         menu "BL0937 GPIO Pins"
             config BL0937_CF_GPIO
@@ -95,6 +133,50 @@ menu "power_measure"
                 default 20
                 help
                     GPIO pin for I2C data line
+        endmenu
+
+        menu "BL0942 GPIO Pins"
+            config BL0942_UART_TX_GPIO
+                int "UART TX GPIO pin number"
+                default 6
+                depends on POWER_MEASURE_CHIP_BL0942
+                help
+                    GPIO pin for BL0942 UART TX
+
+            config BL0942_UART_RX_GPIO
+                int "UART RX GPIO pin number"
+                default 7
+                depends on POWER_MEASURE_CHIP_BL0942
+                help
+                    GPIO pin for BL0942 UART RX
+
+            config BL0942_SPI_MOSI_GPIO
+                int "SPI MOSI GPIO pin number"
+                default -1
+                depends on POWER_MEASURE_CHIP_BL0942
+                help
+                    GPIO pin for BL0942 SPI MOSI (set to -1 if not used)
+
+            config BL0942_SPI_MISO_GPIO
+                int "SPI MISO GPIO pin number"
+                default -1
+                depends on POWER_MEASURE_CHIP_BL0942
+                help
+                    GPIO pin for BL0942 SPI MISO (set to -1 if not used)
+
+            config BL0942_SPI_SCLK_GPIO
+                int "SPI SCLK GPIO pin number"
+                default -1
+                depends on POWER_MEASURE_CHIP_BL0942
+                help
+                    GPIO pin for BL0942 SPI SCLK (set to -1 if not used)
+
+            config BL0942_SPI_CS_GPIO
+                int "SPI CS GPIO pin number"
+                default -1
+                depends on POWER_MEASURE_CHIP_BL0942
+                help
+                    GPIO pin for BL0942 SPI CS (set to -1 if not used)
         endmenu
     endmenu
 endmenu
