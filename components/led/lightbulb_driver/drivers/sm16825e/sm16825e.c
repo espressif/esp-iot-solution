@@ -10,7 +10,8 @@
 #include <driver/spi_master.h>
 #include <hal/spi_hal.h>
 #include <driver/gpio.h>
-
+#include "esp_heap_caps.h"
+#include "esp_idf_version.h"
 #include "driver_utils.h"
 #include "sm16825e.h"
 
