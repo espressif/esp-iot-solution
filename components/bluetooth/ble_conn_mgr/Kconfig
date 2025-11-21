@@ -38,7 +38,7 @@ menu "BLE Connection Management"
 
     config BLE_CONN_MGR_EXTENDED_ADV_CAP
         int
-        range 0 15
+        range 0 255
         depends on BLE_CONN_MGR_EXTENDED_ADV
         default 0
         prompt "Set Extended Advertising Capability"
