@@ -1859,6 +1859,16 @@ build_example_relinker:
   variables:
     EXAMPLE_DIR: examples/relinker
 
+build_example_ragtime_panther_follower:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_ragtime_panther_follower
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.5
+  variables:
+    EXAMPLE_DIR: examples/robot/ragtime_panther/follower
+
 build_example_robot_ragtime_panther_leader:
   extends:
     - .build_examples_template

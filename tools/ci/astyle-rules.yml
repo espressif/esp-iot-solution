@@ -45,6 +45,7 @@ not_formatted_permanent:
     - "examples/usb/device/usb_webcam/eyes_show/"
     - "examples/usb/host/usb_camera_lcd_display/components/esp_painter/font/"
     - "examples/usb/host/usb_camera_mic_spk/main/wave_1ch_16bits.c"
+    - "examples/robot/ragtime_panther/follower/main/ui/"
 
 docs:
   # Docs directory contains some .inc files, which are not C include files
