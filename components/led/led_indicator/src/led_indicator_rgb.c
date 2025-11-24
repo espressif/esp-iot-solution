@@ -42,16 +42,28 @@ static esp_err_t led_indicator_rgb_init(void *param, void **ret_rgb)
         rgb->max_duty = pow(2, ledc_timer_cfg.duty_resolution) - 1;
     }
 
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 4, 0)
+    LED_RGB_CHECK(cfg->sleep_mode < LEDC_SLEEP_MODE_INVALID, "invalid sleep mode", return ESP_ERR_INVALID_ARG);
+#endif
     ledc_channel_config_t red_ch_cfg = LEDC_CHANNEL_CONFIG(cfg->timer_num, cfg->red_channel, cfg->red_gpio_num);
     red_ch_cfg.flags.output_invert = cfg->is_active_level_high ? false : true;
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 4, 0)
+    red_ch_cfg.sleep_mode = cfg->sleep_mode;
+#endif
     ret = ledc_channel_config(&red_ch_cfg);
     LED_RGB_CHECK(ESP_OK == ret, "red ledc_channel_config fail!", goto EXIT);
     ledc_channel_config_t green_ch_cfg = LEDC_CHANNEL_CONFIG(cfg->timer_num, cfg->green_channel, cfg->green_gpio_num);
     green_ch_cfg.flags.output_invert = cfg->is_active_level_high ? false : true;
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 4, 0)
+    green_ch_cfg.sleep_mode = cfg->sleep_mode;
+#endif
     ret = ledc_channel_config(&green_ch_cfg);
     LED_RGB_CHECK(ESP_OK == ret, "green ledc_channel_config fail!", goto EXIT);
     ledc_channel_config_t blue_ch_cfg = LEDC_CHANNEL_CONFIG(cfg->timer_num, cfg->blue_channel, cfg->blue_gpio_num);
     blue_ch_cfg.flags.output_invert = cfg->is_active_level_high ? false : true;
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 4, 0)
+    blue_ch_cfg.sleep_mode = cfg->sleep_mode;
+#endif
     ret = ledc_channel_config(&blue_ch_cfg);
     LED_RGB_CHECK(ESP_OK == ret, "blud ledc_channel_config fail!", goto EXIT);
     rgb->rgb_channel[0] = cfg->red_channel;
