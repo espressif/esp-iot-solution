@@ -45,6 +45,9 @@ static void usb_phy_init(void)
         .controller = USB_PHY_CTRL_OTG,
         .otg_mode = USB_OTG_MODE_DEVICE,
         .target = USB_PHY_TARGET_INT,
+#if CONFIG_TINYUSB_RHPORT_HS
+        .otg_speed = USB_PHY_SPEED_HIGH,
+#endif
     };
 #if CONFIG_SELF_POWERED_DEVICE
     const usb_phy_otg_io_conf_t otg_io_conf = USB_PHY_SELF_POWERED_DEVICE(CONFIG_VBUS_MONITOR_IO);
@@ -130,7 +133,11 @@ void app_main(void)
     _button_init();
     _knob_init();
 
-    tusb_init();
+    bool usb_init = tusb_init();
+    if (!usb_init) {
+        ESP_LOGE(TAG, "USB Device Stack Init Fail");
+        return;
+    }
 
     size_t timeout_tick = pdMS_TO_TICKS(10);
     while (1) {
