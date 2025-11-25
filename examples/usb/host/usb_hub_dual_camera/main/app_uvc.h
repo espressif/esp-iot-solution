@@ -12,7 +12,6 @@
 extern "C" {
 #endif
 
-#define MAX_CAMERAS   2
 #define MAX_RESOLUTION 10
 
 typedef struct {

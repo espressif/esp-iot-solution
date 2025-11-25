@@ -24,7 +24,7 @@ typedef struct {
 } camera_t;
 
 typedef struct {
-    camera_t cameras[MAX_CAMERAS];
+    camera_t *cameras;
     int camera_count;
     int active_camera_count;
 } camera_system_t;
@@ -35,6 +35,13 @@ static void update_camera_system(void)
 {
     int connected_num = 0;
     app_uvc_get_connect_dev_num(&connected_num);
+    if (camera_system.cameras == NULL) {
+        camera_system.cameras = calloc(connected_num, sizeof(camera_t));
+        if (camera_system.cameras == NULL) {
+            ESP_LOGE(TAG, "Failed to allocate memory for camera system");
+            return;
+        }
+    }
     camera_system.camera_count = connected_num;
     camera_system.active_camera_count = 0;
     for (int i = 0; i < connected_num; ++i) {
@@ -125,7 +132,7 @@ static esp_err_t get_cameras_handler(httpd_req_t *req)
     update_camera_system();
     char response[1024];
     int len = snprintf(response, sizeof(response),
-                       "{\"limit\":%d,\"cameras\":[", MAX_CAMERAS);
+                       "{\"limit\":%d,\"cameras\":[", camera_system.camera_count);
 
     for (int i = 0; i < camera_system.camera_count; ++i) {
         camera_t *cam = &camera_system.cameras[i];
@@ -364,6 +371,5 @@ void app_https_init(void)
     };
 
     ESP_ERROR_CHECK(esp_vfs_spiffs_register(&conf));
-    update_camera_system();
     ESP_ERROR_CHECK(start_webserver());
 }
