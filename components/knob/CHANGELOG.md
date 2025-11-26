@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v1.0.2 - 2025-11-26
+
+* Fixed incorrect gpio and timer deinit when deleting the knob.
+
 ## v1.0.1 - 2025-10-10
 
 * Fixed requires in CMake for IDF6.
