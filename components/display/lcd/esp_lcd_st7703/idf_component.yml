@@ -1,4 +1,4 @@
-version: "2.0.0"
+version: "2.0.1"
 targets:
   - esp32p4
 description: ESP LCD ST7703(MIPI-DSI)

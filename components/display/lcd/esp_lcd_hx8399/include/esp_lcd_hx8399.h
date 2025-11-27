@@ -113,6 +113,33 @@ esp_err_t esp_lcd_new_panel_hx8399(const esp_lcd_panel_io_handle_t io, const esp
         .flags.use_dma2d = true,                                 \
     }
 
+/**
+ * @brief MIPI DPI configuration structure
+ *
+ * @note  refresh_rate = (dpi_clock_freq_mhz * 1000000) / (h_res + hsync_pulse_width + hsync_back_porch + hsync_front_porch)
+ *                                                      / (v_res + vsync_pulse_width + vsync_back_porch + vsync_front_porch)
+ *
+ */
+#define HX8399_1080_1920_PANEL_30HZ_DPI_CONFIG_CF(color_format)            \
+    {                                                            \
+        .dpi_clk_src = MIPI_DSI_DPI_CLK_SRC_DEFAULT,             \
+        .dpi_clock_freq_mhz = 75,                                \
+        .virtual_channel = 0,                                    \
+        .in_color_format = color_format,                         \
+        .num_fbs = 1,                                            \
+        .video_timing = {                                        \
+            .h_size = 1080,                                      \
+            .v_size = 1920,                                      \
+            .hsync_back_porch = 20,                              \
+            .hsync_pulse_width = 22,                             \
+            .hsync_front_porch = 22,                             \
+            .vsync_back_porch = 7,                               \
+            .vsync_pulse_width = 7,                              \
+            .vsync_front_porch = 9,                              \
+        },                                                       \
+        .flags.use_dma2d = true,                                 \
+    }
+
 #ifdef __cplusplus
 }
 #endif

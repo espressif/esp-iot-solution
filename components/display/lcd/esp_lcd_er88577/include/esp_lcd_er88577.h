@@ -117,6 +117,35 @@ esp_err_t esp_lcd_new_panel_er88577(const esp_lcd_panel_io_handle_t io, const es
         .flags.use_dma2d = true,                         \
     }
 
+/**
+ * @brief MIPI DPI configuration structure
+ *
+ * @note  refresh_rate = (dpi_clock_freq_mhz * 1000000) / (h_res + hsync_pulse_width + hsync_back_porch + hsync_front_porch)
+ *                                                      / (v_res + vsync_pulse_width + vsync_back_porch + vsync_front_porch)
+ *
+ * @param[in] color_format Input color format of the panel
+ *
+ */
+#define ER88577_800_1280_PANEL_60HZ_DPI_CONFIG_CF(color_format) \
+    {                                                    \
+        .dpi_clk_src = MIPI_DSI_DPI_CLK_SRC_DEFAULT,     \
+        .dpi_clock_freq_mhz = 65,                        \
+        .virtual_channel = 0,                            \
+        .in_color_format = color_format,                 \
+        .num_fbs = 1,                                    \
+        .video_timing = {                                \
+            .h_size = 800,                               \
+            .v_size = 1280,                              \
+            .hsync_back_porch = 80,                      \
+            .hsync_pulse_width = 20,                     \
+            .hsync_front_porch = 80,                     \
+            .vsync_back_porch = 12,                      \
+            .vsync_pulse_width = 4,                      \
+            .vsync_front_porch = 20,                     \
+        },                                               \
+        .flags.use_dma2d = true,                         \
+    }
+
 #ifdef __cplusplus
 }
 #endif
