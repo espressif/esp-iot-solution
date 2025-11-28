@@ -8,4 +8,5 @@
     :maxdepth: 1
 
     OpenAI <openai>
+    MCP <mcp>
     Touch 手写数字识别 <touch_digit_recognition>

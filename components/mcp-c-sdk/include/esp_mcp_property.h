@@ -41,7 +41,7 @@ typedef struct esp_mcp_property_s esp_mcp_property_t;
  *
  * Opaque structure representing a collection of MCP properties.
  */
-typedef struct esp_mcp_property_list esp_mcp_property_list_t;
+typedef struct esp_mcp_property_list_s esp_mcp_property_list_t;
 
 /**
  * @brief Create a MCP property
@@ -52,7 +52,7 @@ typedef struct esp_mcp_property_list esp_mcp_property_list_t;
  * @param[in] type Property type
  * @return Pointer to the created property, or NULL on failure
  */
-esp_mcp_property_t* esp_mcp_property_create(const char* name, esp_mcp_property_type_t type);
+esp_mcp_property_t *esp_mcp_property_create(const char *name, esp_mcp_property_type_t type);
 
 /**
  * @brief Create a MCP property with a default boolean value
@@ -61,7 +61,7 @@ esp_mcp_property_t* esp_mcp_property_create(const char* name, esp_mcp_property_t
  * @param[in] default_value Default boolean value
  * @return Pointer to the created property, or NULL on failure
  */
-esp_mcp_property_t* esp_mcp_property_create_with_bool(const char* name, bool default_value);
+esp_mcp_property_t *esp_mcp_property_create_with_bool(const char *name, bool default_value);
 
 /**
  * @brief Create a MCP property with a default integer value
@@ -70,7 +70,7 @@ esp_mcp_property_t* esp_mcp_property_create_with_bool(const char* name, bool def
  * @param[in] default_value Default integer value
  * @return Pointer to the created property, or NULL on failure
  */
-esp_mcp_property_t* esp_mcp_property_create_with_int(const char* name, int default_value);
+esp_mcp_property_t *esp_mcp_property_create_with_int(const char *name, int default_value);
 
 /**
  * @brief Create a MCP property with a default float value
@@ -79,7 +79,7 @@ esp_mcp_property_t* esp_mcp_property_create_with_int(const char* name, int defau
  * @param[in] default_value Default float value
  * @return Pointer to the created property, or NULL on failure
  */
-esp_mcp_property_t* esp_mcp_property_create_with_float(const char* name, float default_value);
+esp_mcp_property_t *esp_mcp_property_create_with_float(const char *name, float default_value);
 
 /**
  * @brief Create a MCP property with a default string value
@@ -88,7 +88,7 @@ esp_mcp_property_t* esp_mcp_property_create_with_float(const char* name, float d
  * @param[in] default_value Default string value (must not be NULL)
  * @return Pointer to the created property, or NULL on failure
  */
-esp_mcp_property_t* esp_mcp_property_create_with_string(const char* name, const char* default_value);
+esp_mcp_property_t *esp_mcp_property_create_with_string(const char *name, const char *default_value);
 
 /**
  * @brief Create a MCP property with a default JSON array value
@@ -97,7 +97,7 @@ esp_mcp_property_t* esp_mcp_property_create_with_string(const char* name, const 
  * @param[in] default_value Default JSON array string (must be valid JSON, must not be NULL)
  * @return Pointer to the created property, or NULL on failure
  */
-esp_mcp_property_t* esp_mcp_property_create_with_array(const char* name, const char* default_value);
+esp_mcp_property_t *esp_mcp_property_create_with_array(const char *name, const char *default_value);
 
 /**
  * @brief Create a MCP property with a default JSON object value
@@ -106,7 +106,7 @@ esp_mcp_property_t* esp_mcp_property_create_with_array(const char* name, const c
  * @param[in] default_value Default JSON object string (must be valid JSON, must not be NULL)
  * @return Pointer to the created property, or NULL on failure
  */
-esp_mcp_property_t* esp_mcp_property_create_with_object(const char* name, const char* default_value);
+esp_mcp_property_t *esp_mcp_property_create_with_object(const char *name, const char *default_value);
 
 /**
  * @brief Create a MCP property with a range constraint
@@ -118,7 +118,7 @@ esp_mcp_property_t* esp_mcp_property_create_with_object(const char* name, const 
  * @param[in] max_value Maximum allowed value (must be >= min_value)
  * @return Pointer to the created property, or NULL on failure
  */
-esp_mcp_property_t* esp_mcp_property_create_with_range(const char* name, int min_value, int max_value);
+esp_mcp_property_t *esp_mcp_property_create_with_range(const char *name, int min_value, int max_value);
 
 /**
  * @brief Create a MCP property with a default value and range constraint
@@ -131,7 +131,7 @@ esp_mcp_property_t* esp_mcp_property_create_with_range(const char* name, int min
  * @param[in] max_value Maximum allowed value (must be >= min_value)
  * @return Pointer to the created property, or NULL on failure
  */
-esp_mcp_property_t* esp_mcp_property_create_with_int_and_range(const char* name, int default_value, int min_value, int max_value);
+esp_mcp_property_t *esp_mcp_property_create_with_int_and_range(const char *name, int default_value, int min_value, int max_value);
 
 /**
  * @brief Destroy a MCP property
@@ -143,29 +143,7 @@ esp_mcp_property_t* esp_mcp_property_create_with_int_and_range(const char* name,
  *      - ESP_OK: Property destroyed successfully
  *      - ESP_ERR_INVALID_ARG: Invalid parameter
  */
-esp_err_t esp_mcp_property_destroy(esp_mcp_property_t* property);
-
-/**
- * @brief Create a MCP property list
- *
- * Creates a new empty property list.
- *
- * @return Pointer to the created property list, or NULL on failure
- */
-esp_mcp_property_list_t* esp_mcp_property_list_create(void);
-
-/**
- * @brief Add a property to a property list
- *
- * Adds a property to the list. The list takes ownership of the property.
- *
- * @param[in] list Pointer to the property list (must not be NULL)
- * @param[in] property Pointer to the property to add (must not be NULL)
- * @return
- *      - ESP_OK: Property added successfully
- *      - ESP_ERR_INVALID_ARG: Invalid parameter
- */
-esp_err_t esp_mcp_property_list_add_property(esp_mcp_property_list_t* list, esp_mcp_property_t* property);
+esp_err_t esp_mcp_property_destroy(esp_mcp_property_t *property);
 
 /**
  * @brief Get a boolean property value from a property list
@@ -174,7 +152,7 @@ esp_err_t esp_mcp_property_list_add_property(esp_mcp_property_list_t* list, esp_
  * @param[in] name Property name (must not be NULL)
  * @return Boolean value, or false if property not found or type mismatch
  */
-bool esp_mcp_property_list_get_property_bool(const esp_mcp_property_list_t* list, const char* name);
+bool esp_mcp_property_list_get_property_bool(const esp_mcp_property_list_t *list, const char *name);
 
 /**
  * @brief Get an integer property value from a property list
@@ -183,7 +161,7 @@ bool esp_mcp_property_list_get_property_bool(const esp_mcp_property_list_t* list
  * @param[in] name Property name (must not be NULL)
  * @return Integer value, or 0 if property not found or type mismatch
  */
-int esp_mcp_property_list_get_property_int(const esp_mcp_property_list_t* list, const char* name);
+int esp_mcp_property_list_get_property_int(const esp_mcp_property_list_t *list, const char *name);
 
 /**
  * @brief Get a float property value from a property list
@@ -192,7 +170,7 @@ int esp_mcp_property_list_get_property_int(const esp_mcp_property_list_t* list, 
  * @param[in] name Property name (must not be NULL)
  * @return Float value, or 0.0 if property not found or type mismatch
  */
-float esp_mcp_property_list_get_property_float(const esp_mcp_property_list_t* list, const char* name);
+float esp_mcp_property_list_get_property_float(const esp_mcp_property_list_t *list, const char *name);
 
 /**
  * @brief Get a JSON array property value from a property list
@@ -201,7 +179,7 @@ float esp_mcp_property_list_get_property_float(const esp_mcp_property_list_t* li
  * @param[in] name Property name (must not be NULL)
  * @return Pointer to the JSON array string (internal pointer, do not free), or NULL if not found or type mismatch
  */
-const char* esp_mcp_property_list_get_property_array(const esp_mcp_property_list_t* list, const char* name);
+const char *esp_mcp_property_list_get_property_array(const esp_mcp_property_list_t *list, const char *name);
 
 /**
  * @brief Get a JSON object property value from a property list
@@ -210,7 +188,7 @@ const char* esp_mcp_property_list_get_property_array(const esp_mcp_property_list
  * @param[in] name Property name (must not be NULL)
  * @return Pointer to the JSON object string (internal pointer, do not free), or NULL if not found or type mismatch
  */
-const char* esp_mcp_property_list_get_property_object(const esp_mcp_property_list_t* list, const char* name);
+const char *esp_mcp_property_list_get_property_object(const esp_mcp_property_list_t *list, const char *name);
 
 /**
  * @brief Get a string property value from a property list
@@ -219,19 +197,7 @@ const char* esp_mcp_property_list_get_property_object(const esp_mcp_property_lis
  * @param[in] name Property name (must not be NULL)
  * @return Pointer to the string value (internal pointer, do not free), or NULL if not found or type mismatch
  */
-const char* esp_mcp_property_list_get_property_string(const esp_mcp_property_list_t* list, const char* name);
-
-/**
- * @brief Destroy a property list
- *
- * Frees all resources, including all properties in the list.
- *
- * @param[in] list Pointer to the property list to destroy (must not be NULL)
- * @return
- *      - ESP_OK: Property list destroyed successfully
- *      - ESP_ERR_INVALID_ARG: Invalid parameter
- */
-esp_err_t esp_mcp_property_list_destroy(esp_mcp_property_list_t* list);
+const char *esp_mcp_property_list_get_property_string(const esp_mcp_property_list_t *list, const char *name);
 
 #ifdef __cplusplus
 }

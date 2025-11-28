@@ -1,12 +1,29 @@
 # ESP32 MCP C SDK
 
 [![Component Registry](https://components.espressif.com/components/espressif/mcp-c-sdk/badge.svg)](https://components.espressif.com/components/espressif/mcp-c-sdk)
-[![ESP-IDF Version](https://img.shields.io/badge/ESP--IDF-v5.0%2B-blue)](https://github.com/espressif/esp-idf)
+[![ESP-IDF Version](https://img.shields.io/badge/ESP--IDF-v5.4%2B-blue)](https://github.com/espressif/esp-idf)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-yellow.svg)](https://opensource.org/licenses/Apache-2.0)
 
 **English** | [中文](README_CN.md)
 
-A comprehensive C SDK implementing the **Model Context Protocol (MCP)** server for ESP32 devices, providing a standardized way to integrate AI applications with ESP32 devices. This component enables your ESP32 to expose tools and capabilities that can be discovered and used by AI agents and applications.
+A comprehensive C SDK implementing the **Model Context Protocol (MCP)** for ESP32 devices, providing a standardized way to integrate AI applications with ESP32 devices. This component enables your ESP32 to expose tools and capabilities that can be discovered and used by AI agents and applications.
+
+## 📋 Protocol & Compatibility
+
+- **MCP Protocol Version**: `2024-11-05`
+- **JSON-RPC Version**: `2.0`
+- **Supported Methods**:
+  - `initialize` - Initialize MCP session and negotiate capabilities
+  - `tools/list` - List available tools with optional cursor-based pagination
+  - `tools/call` - Execute a tool with provided arguments
+  - `ping` - Health check endpoint
+- **Supported Capabilities**:
+  - ✅ **Tools**: Full support for tool registration, listing, and execution
+  - ✅ **Experimental Features**: Support for experimental MCP features
+  - ✅ **Cursor-based Pagination**: Support for paginated tool lists
+  - ✅ **Parameter Validation**: Built-in validation with type checking and range constraints
+  - ⚠️ **Prompts**: Not currently supported
+  - ⚠️ **Resources**: Not currently supported
 
 ## 🌟 Features
 
@@ -18,6 +35,7 @@ A comprehensive C SDK implementing the **Model Context Protocol (MCP)** server f
 - **📊 Type Safety**: Comprehensive data type support (boolean, integer, float, string, array, object)
 - **🛡️ Memory Safe**: Automatic memory management and cleanup
 - **✅ Parameter Validation**: Built-in parameter validation with range constraints
+- **🔒 Thread Safe**: All list operations are protected by mutex for multi-threaded environments
 - **🎯 MCP Compliant**: Fully compliant with MCP specification
 
 ## 📦 Installation
@@ -41,6 +59,8 @@ cp -r mcp-c-sdk your_project/components/
 
 ```c
 #include "esp_mcp_server.h"
+#include "esp_mcp_tool.h"
+#include "esp_mcp_property.h"
 #include "esp_mcp.h"
 
 // Tool callback function
@@ -63,7 +83,7 @@ static esp_mcp_value_t set_volume_callback(const esp_mcp_property_list_t* proper
 
 void app_main(void)
 {
-    // Initialize WiFi (using example_connect)
+    // Initialize Wi-Fi (using example_connect)
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     ESP_ERROR_CHECK(example_connect());
@@ -72,21 +92,19 @@ void app_main(void)
     esp_mcp_server_t *mcp_server = NULL;
     ESP_ERROR_CHECK(esp_mcp_server_create(&mcp_server));
     
-    // Create property list with volume parameter
-    esp_mcp_property_list_t *properties = esp_mcp_property_list_create();
-    
-    // Add volume property with range validation (0-100)
-    esp_mcp_property_list_add_property(properties, 
-        esp_mcp_property_create_with_range("volume", 0, 100));
-    
-    // Register tool with callback
-    esp_mcp_server_add_tool_with_callback(
-        mcp_server, 
+    // Create tool with callback
+    esp_mcp_tool_t *tool = esp_mcp_tool_create(
         "audio.set_volume",
         "Set audio speaker volume (0-100)",
-        properties, 
         set_volume_callback
     );
+    
+    // Add volume property with range validation (0-100)
+    esp_mcp_tool_add_property(tool, 
+        esp_mcp_property_create_with_range("volume", 0, 100));
+    
+    // Register tool to server
+    ESP_ERROR_CHECK(esp_mcp_server_add_tool(mcp_server, tool));
     
     // Initialize and start MCP with HTTP transport
     esp_mcp_handle_t mcp_handle = 0;
@@ -108,9 +126,6 @@ void app_main(void)
 // Create MCP server instance
 esp_err_t esp_mcp_server_create(esp_mcp_server_t **server);
 
-// Destroy MCP server and free all resources
-esp_err_t esp_mcp_server_destroy(esp_mcp_server_t *server);
-
 // Initialize MCP with transport configuration
 esp_err_t esp_mcp_init(esp_mcp_config_t *config, esp_mcp_handle_t *handle);
 
@@ -122,27 +137,43 @@ esp_err_t esp_mcp_stop(esp_mcp_handle_t handle);
 
 // Deinitialize MCP and cleanup resources
 esp_err_t esp_mcp_deinit(esp_mcp_handle_t handle);
+
+// Destroy MCP server and free all resources
+esp_err_t esp_mcp_server_destroy(esp_mcp_server_t *server);
 ```
 
 ### Tool Registration
 
 ```c
-// Register tool with callback function
-esp_err_t esp_mcp_server_add_tool_with_callback(
-    esp_mcp_server_t *server,
+// Create a tool
+esp_mcp_tool_t *esp_mcp_tool_create(
     const char *name,
     const char *description,
-    esp_mcp_property_list_t *properties,
     esp_mcp_tool_callback_t callback
+);
+
+// Add property to a tool
+esp_err_t esp_mcp_tool_add_property(
+    esp_mcp_tool_t *tool,
+    esp_mcp_property_t *property
+);
+
+// Add tool to server
+esp_err_t esp_mcp_server_add_tool(
+    esp_mcp_server_t *server,
+    esp_mcp_tool_t *tool
+);
+
+// Remove tool from server
+esp_err_t esp_mcp_server_remove_tool(
+    esp_mcp_server_t *server,
+    esp_mcp_tool_t *tool
 );
 ```
 
 ### Property Management
 
 ```c
-// Create property list
-esp_mcp_property_list_t* esp_mcp_property_list_create(void);
-
 // Create properties with different types
 esp_mcp_property_t* esp_mcp_property_create_with_bool(const char* name, bool default_value);
 esp_mcp_property_t* esp_mcp_property_create_with_int(const char* name, int default_value);
@@ -154,13 +185,18 @@ esp_mcp_property_t* esp_mcp_property_create_with_object(const char* name, const 
 // Create property with range validation
 esp_mcp_property_t* esp_mcp_property_create_with_range(const char* name, int min_value, int max_value);
 
-// Add property to property list
-esp_err_t esp_mcp_property_list_add_property(
-    esp_mcp_property_list_t* list,
-    esp_mcp_property_t* property
+// Create property with default value and range
+esp_mcp_property_t* esp_mcp_property_create_with_int_and_range(
+    const char* name, 
+    int default_value, 
+    int min_value, 
+    int max_value
 );
 
-// Get property values from list
+// Destroy a property
+esp_err_t esp_mcp_property_destroy(esp_mcp_property_t* property);
+
+// Get property values from list (thread-safe)
 int esp_mcp_property_list_get_property_int(const esp_mcp_property_list_t* list, const char* name);
 float esp_mcp_property_list_get_property_float(const esp_mcp_property_list_t* list, const char* name);
 bool esp_mcp_property_list_get_property_bool(const esp_mcp_property_list_t* list, const char* name);
@@ -183,7 +219,7 @@ esp_mcp_value_t esp_mcp_value_create_string(const char* value);
 
 The component includes a complete example in `examples/mcp/mcp_server/` demonstrating:
 
-- WiFi connection setup
+- Wi-Fi connection setup
 - MCP server initialization and configuration
 - Tool registration with various parameter types
 - Property validation (range constraints)
@@ -196,7 +232,7 @@ The component includes a complete example in `examples/mcp/mcp_server/` demonstr
 ```bash
 cd examples/mcp/mcp_server
 idf.py set-target esp32
-idf.py menuconfig  # Configure WiFi credentials
+idf.py menuconfig  # Configure Wi-Fi credentials
 idf.py build flash monitor
 ```
 
@@ -214,6 +250,8 @@ The example implements several tools:
 ## 🧪 Testing
 
 Test your MCP server using any MCP-compatible client or with `curl`:
+
+> **Note**: The request `id` field must be a **number** type. String or null IDs are not supported.
 
 ### List Available Tools
 
@@ -270,6 +308,7 @@ curl -X POST http://your-esp32-ip/mcp \
   - JSON-RPC 2.0 over HTTP POST
   - Default endpoint: `/mcp`
   - Configurable port (default: 80)
+  - **Request ID**: Only numeric IDs are supported (string or null IDs will be rejected)
 
 ### Custom Transport
 
@@ -308,6 +347,22 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](licens
 - [ESP-IDF](https://github.com/espressif/esp-idf)
 - [ESP-IoT-Solution](https://github.com/espressif/esp-iot-solution)
 
+## 🔒 Thread Safety
+
+All list operations (tools and properties) are thread-safe and protected by mutex:
+
+- **Tool List Operations**: All operations on tool lists are protected by mutex
+  - Adding tools - Thread-safe
+  - Finding tools - Thread-safe
+  - All list operations - Thread-safe
+
+- **Property List Operations**: All operations on property lists are protected by mutex
+  - `esp_mcp_property_list_add_property()` - Thread-safe
+  - All getter functions - Thread-safe
+  - All list operations - Thread-safe
+
+- **Thread Safety**: All list operations automatically use mutex protection. Direct access to internal list structures is not recommended.
+
 ## ❓ Q&A
 
 **Q1: I encountered the following problems when using the package manager**
@@ -326,6 +381,18 @@ CMakeLists.txt not found in project directory /home/username
 **Q3: Can I use multiple transport protocols simultaneously?**
 
 **A3:** Currently, only one transport can be active at a time. You need to choose either the built-in HTTP transport or implement a custom transport.
+
+**Q4: Is the SDK thread-safe?**
+
+**A4:** Yes! All list operations (tools and properties) are protected by mutex. The SDK is designed to be safe for use in multi-threaded environments. Always use the provided API functions instead of directly accessing internal list structures.
+
+**Q5: How do I iterate over tools or properties safely?**
+
+**A5:** All list operations are automatically thread-safe. The SDK uses mutex protection internally for all list access. For advanced use cases, refer to the internal API documentation.
+
+**Q6: What types of request IDs are supported?**
+
+**A6:** Only numeric (number) request IDs are supported. String IDs or null IDs in JSON-RPC requests will be rejected with an `INVALID_REQUEST` error. This is a limitation of the current implementation to simplify ID handling.
 
 ---
 

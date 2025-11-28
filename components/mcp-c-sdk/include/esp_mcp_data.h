@@ -39,7 +39,7 @@ typedef union {
     bool bool_value;            /*!< Boolean data value */
     int int_value;              /*!< Integer data value (signed 32-bit) */
     float float_value;          /*!< Floating-point data value (32-bit) */
-    char* string_value;         /*!< String data value (pointer to null-terminated C string) */
+    char *string_value;         /*!< String data value (pointer to null-terminated C string) */
 } esp_mcp_value_data_t;
 
 /**
@@ -96,7 +96,7 @@ esp_mcp_value_t esp_mcp_value_create_float(float value);
  *       or modify the original string after this call.
  * @note Always check if the returned type is ESP_MCP_VALUE_TYPE_INVALID before using.
  */
-esp_mcp_value_t esp_mcp_value_create_string(const char* value);
+esp_mcp_value_t esp_mcp_value_create_string(const char *value);
 
 /**
  * @brief Destroy a MCP value
@@ -111,7 +111,7 @@ esp_mcp_value_t esp_mcp_value_create_string(const char* value);
  *
  * @note After calling this function, the value structure should not be used again.
  */
-esp_err_t esp_mcp_value_destroy(esp_mcp_value_t* value);
+esp_err_t esp_mcp_value_destroy(esp_mcp_value_t *value);
 
 #ifdef __cplusplus
 }

@@ -12,209 +12,345 @@
 #include <esp_check.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+#include <freertos/event_groups.h>
+#include <freertos/semphr.h>
+#include <sys/queue.h>
 #include <cJSON.h>
 
 #include "esp_mcp_server.h"
-#include "esp_mcp_http.h"
 #include "esp_mcp.h"
 #include "esp_mcp_server_priv.h"
+#include "esp_mcp_error.h"
+#include "esp_mcp_item.h"
 
 static const char *TAG = "esp_mcp";
 
+/**
+ * @brief MCP endpoint structure
+ */
+typedef struct esp_mcp_ep {
+    const char *ep_name;                            /*!< Endpoint name (e.g., "tools/list") */
+    esp_mcp_ep_handler_t handler;                   /*!< Endpoint handler function pointer */
+    void *priv_data;                                /*!< Private data passed to handler */
+    SLIST_ENTRY(esp_mcp_ep) next;                   /*!< Next endpoint in the list */
+} esp_mcp_ep_t;
+
+/**
+ * @brief MCP item structure
+ */
 typedef struct esp_mcp_item_s {
-    esp_mcp_server_t*           server;     /*!< MCP server instance (for server role) */
-    esp_mcp_config_t            config;     /*!< MCP configuration */
-    esp_mcp_transport_funcs_t   funcs;      /*!< Transport callback functions */
-    char*                       mbuf;       /*!< MCP message buffer */
-    uint16_t                    mbuf_size;  /*!< MCP message buffer size */
-    bool                        run;        /*!< Flag to indicate if the instance is running */
+    esp_mcp_config_t config;                        /*!< MCP configuration */
+    void *transport_config;                         /*!< MCP transport configuration pointer */
+    esp_mcp_transport_handle_t transport_handle;    /*!< MCP transport handle */
+
+    SLIST_HEAD(ep_table_t, esp_mcp_ep) endpoints;   /*!< Endpoint list head */
+    SemaphoreHandle_t endpoints_mutex;              /*!< Mutex to protect endpoints list */
 } esp_mcp_item_t;
 
-static int esp_mcp_open(esp_mcp_handle_t t, esp_mcp_transport_config_t *config)
+static esp_err_t esp_mcp_message_handler(const uint8_t *inbuf, uint16_t inlen, uint8_t **outbuf, uint16_t *outlen, void *priv_data)
 {
-    esp_mcp_item_t *mcp = (esp_mcp_item_t *)t;
-    if (mcp && mcp->funcs.open) {
-        return mcp->funcs.open(mcp->funcs.transport, config);
+    uint8_t *tmp_outbuf = NULL;
+    uint16_t tmp_outlen = 0;
+    esp_mcp_item_t *mcp_ctx = (esp_mcp_item_t *)priv_data;
+    ESP_RETURN_ON_FALSE(mcp_ctx, ESP_ERR_INVALID_ARG, TAG, "Invalid MCP context");
+
+    esp_mcp_server_t *server = (esp_mcp_server_t *)mcp_ctx->config.instance;
+    ESP_RETURN_ON_FALSE(server, ESP_ERR_INVALID_ARG, TAG, "Invalid server");
+
+    ESP_LOGI(TAG, "Received message: %s", (char *)inbuf);
+    esp_mcp_server_parse_message(server, (char *)inbuf);
+    esp_mcp_server_get_mbuf(server, &tmp_outbuf, &tmp_outlen);
+
+    if (tmp_outbuf && tmp_outlen > 0) {
+        ESP_LOGI(TAG, "Sending response: %s", (char *)tmp_outbuf);
+        *outbuf = tmp_outbuf;
+        *outlen = tmp_outlen;
     }
-    return -1;
+
+    return ESP_OK;
 }
 
-static int esp_mcp_read(esp_mcp_handle_t t, char *buffer, int len, int timeout_ms)
+static esp_err_t esp_mcp_new(esp_mcp_item_t **mcp)
 {
-    esp_mcp_item_t *mcp = (esp_mcp_item_t *)t;
-    if (mcp && mcp->funcs.read) {
-        return mcp->funcs.read(mcp->funcs.transport, buffer, len, timeout_ms);
+    ESP_RETURN_ON_FALSE(mcp, ESP_ERR_INVALID_ARG, TAG, "Invalid arguments");
+
+    *mcp = (esp_mcp_item_t *)calloc(1, sizeof(esp_mcp_item_t));
+    ESP_RETURN_ON_FALSE(*mcp, ESP_ERR_NO_MEM, TAG, "Failed to allocate memory for MCP item");
+
+    SLIST_INIT(&(*mcp)->endpoints);
+
+    (*mcp)->endpoints_mutex = xSemaphoreCreateMutex();
+    if (!(*mcp)->endpoints_mutex) {
+        ESP_LOGE(TAG, "Failed to create endpoints mutex");
+        free(*mcp);
+        return ESP_ERR_NO_MEM;
     }
-    return -1;
+
+    return ESP_OK;
 }
 
-static int esp_mcp_write(esp_mcp_handle_t t, const char *buffer, int len, int timeout_ms)
+static esp_err_t esp_mcp_delete(esp_mcp_item_t *mcp)
 {
-    esp_mcp_item_t *mcp = (esp_mcp_item_t *)t;
-    if (mcp && mcp->funcs.write) {
-        return mcp->funcs.write(mcp->funcs.transport, buffer, len, timeout_ms);
+    ESP_RETURN_ON_FALSE(mcp, ESP_ERR_INVALID_ARG, TAG, "Invalid arguments");
+
+    if (mcp->endpoints_mutex) {
+        if (xSemaphoreTake(mcp->endpoints_mutex, portMAX_DELAY) == pdTRUE) {
+            esp_mcp_ep_t *ep, *ep_next;
+            SLIST_FOREACH_SAFE(ep, &mcp->endpoints, next, ep_next) {
+                if (ep) {
+                    if (ep->ep_name) {
+                        free((void *)ep->ep_name);
+                    }
+                    free(ep);
+                }
+            }
+            xSemaphoreGive(mcp->endpoints_mutex);
+            vSemaphoreDelete(mcp->endpoints_mutex);
+        }
     }
-    return -1;
+
+    free(mcp);
+    return ESP_OK;
 }
 
-static int esp_mcp_close(esp_mcp_handle_t t)
+static esp_mcp_ep_t *esp_mcp_search_endpoint(esp_mcp_item_t *mcp, const char *ep_name)
 {
-    esp_mcp_item_t *mcp = (esp_mcp_item_t *)t;
-    if (mcp && mcp->funcs.close) {
-        return mcp->funcs.close(mcp->funcs.transport);
+    if (!mcp || !ep_name) {
+        return NULL;
     }
-    return -1;
+
+    if (xSemaphoreTake(mcp->endpoints_mutex, portMAX_DELAY) != pdTRUE) {
+        ESP_LOGE(TAG, "Failed to take endpoints mutex");
+        return NULL;
+    }
+
+    esp_mcp_ep_t *ep;
+    SLIST_FOREACH(ep, &mcp->endpoints, next) {
+        if (ep && strcmp(ep->ep_name, ep_name) == 0) {
+            xSemaphoreGive(mcp->endpoints_mutex);
+            return ep;
+        }
+    }
+
+    xSemaphoreGive(mcp->endpoints_mutex);
+    return NULL;
 }
 
-static void esp_mcp_task(void *pvParameters)
+static esp_err_t esp_mcp_add_endpoint_internal(esp_mcp_item_t *mcp,
+                                               const char *ep_name,
+                                               esp_mcp_ep_handler_t handler,
+                                               void *priv_data)
 {
-    uint8_t *outbuf = NULL;
-    uint16_t outlen = 0;
-    int recv_len = 0;
-    esp_mcp_item_t *mcp = (esp_mcp_item_t *)pvParameters;
+    ESP_RETURN_ON_FALSE(mcp && ep_name && handler, ESP_ERR_INVALID_ARG, TAG, "Invalid arguments");
 
-    esp_mcp_transport_config_t config = {
-        .host = mcp->config.host,
-        .port = mcp->config.port,
-        .uri = mcp->config.uri,
-        .timeout_ms = mcp->config.timeout_ms
+    if (xSemaphoreTake(mcp->endpoints_mutex, portMAX_DELAY) != pdTRUE) {
+        ESP_LOGE(TAG, "Failed to take endpoints mutex");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    esp_mcp_ep_t *ep;
+    SLIST_FOREACH(ep, &mcp->endpoints, next) {
+        if (ep && strcmp(ep->ep_name, ep_name) == 0) {
+            xSemaphoreGive(mcp->endpoints_mutex);
+            ESP_LOGE(TAG, "Endpoint %s already exists", ep_name);
+            return ESP_ERR_INVALID_STATE;
+        }
+    }
+
+    ep = (esp_mcp_ep_t *)calloc(1, sizeof(esp_mcp_ep_t));
+    if (!ep) {
+        xSemaphoreGive(mcp->endpoints_mutex);
+        ESP_LOGE(TAG, "Failed to allocate endpoint");
+        return ESP_ERR_NO_MEM;
+    }
+
+    ep->ep_name = strdup(ep_name);
+    if (!ep->ep_name) {
+        ESP_LOGE(TAG, "Failed to allocate memory for endpoint name");
+        free(ep);
+        xSemaphoreGive(mcp->endpoints_mutex);
+        return ESP_ERR_NO_MEM;
+    }
+
+    ep->handler = handler;
+    ep->priv_data = priv_data;
+
+    SLIST_INSERT_HEAD(&mcp->endpoints, ep, next);
+    xSemaphoreGive(mcp->endpoints_mutex);
+
+    return ESP_OK;
+}
+
+static esp_err_t esp_mcp_remove_endpoint_internal(esp_mcp_item_t *mcp, const char *ep_name)
+{
+    ESP_RETURN_ON_FALSE(mcp && ep_name, ESP_ERR_INVALID_ARG, TAG, "Invalid arguments");
+
+    if (xSemaphoreTake(mcp->endpoints_mutex, portMAX_DELAY) != pdTRUE) {
+        ESP_LOGE(TAG, "Failed to take endpoints mutex");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    esp_mcp_ep_t *ep;
+    SLIST_FOREACH(ep, &mcp->endpoints, next) {
+        if (ep && strcmp(ep->ep_name, ep_name) == 0) {
+            SLIST_REMOVE(&mcp->endpoints, ep, esp_mcp_ep, next);
+            xSemaphoreGive(mcp->endpoints_mutex);
+
+            if (ep->ep_name) {
+                free((void *)ep->ep_name);
+            }
+            free(ep);
+            return ESP_OK;
+        }
+    }
+
+    xSemaphoreGive(mcp->endpoints_mutex);
+    ESP_LOGE(TAG, "Endpoint %s not found", ep_name);
+    return ESP_ERR_NOT_FOUND;
+}
+
+esp_err_t esp_mcp_init(esp_mcp_config_t config, esp_mcp_handle_t *handle)
+{
+    void *fn_ptrs[] = {
+        config.transport.init,
+        config.transport.deinit,
+        config.transport.start,
+        config.transport.stop,
+        config.transport.create_config,
+        config.transport.delete_config,
+        config.transport.register_endpoint,
+        config.transport.unregister_endpoint,
     };
-    esp_mcp_open((esp_mcp_handle_t)mcp, &config);
 
-    while (mcp->run) {
-        recv_len = esp_mcp_read((esp_mcp_handle_t)mcp, mcp->mbuf, mcp->config.mbuf_size, portMAX_DELAY);
-        if (recv_len < 0 || recv_len == 0) {
-            continue;
+    for (size_t i = 0; i < sizeof(fn_ptrs) / sizeof(fn_ptrs[0]); i++) {
+        if (!fn_ptrs[i]) {
+            return ESP_ERR_INVALID_ARG;
         }
-
-        ESP_LOGI(TAG, "content: %s", (char*)mcp->mbuf);
-        esp_mcp_server_parse_message(mcp->server, (char*)mcp->mbuf);
-        esp_mcp_server_get_mbuf(mcp->server, 0, &outlen, &outbuf);
-        if (outbuf) {
-            ESP_LOGI(TAG, "outbuf: %s", (char*)outbuf);
-        }
-        esp_mcp_write((esp_mcp_handle_t)mcp, (char*)outbuf, outlen, portMAX_DELAY);
     }
 
-    esp_mcp_close((esp_mcp_handle_t)mcp);
+    esp_mcp_item_t *mcp_ctx = NULL;
+    esp_err_t ret = esp_mcp_new(&mcp_ctx);
+    ESP_RETURN_ON_ERROR(ret, TAG, "Failed to create MCP context: %s", esp_err_to_name(ret));
+    ESP_RETURN_ON_FALSE(mcp_ctx, ESP_ERR_NO_MEM, TAG, "Failed to allocate memory for MCP manager context");
 
-    vTaskDelete(NULL);
+    mcp_ctx->config = config;
+
+    const esp_mcp_transport_t *transport = &mcp_ctx->config.transport;
+    transport->create_config(mcp_ctx->config.config, &mcp_ctx->transport_config);
+    if (!mcp_ctx->transport_config) {
+        ESP_LOGE(TAG, "failed to allocate provisioning transport configuration");
+        free(mcp_ctx);
+        return ESP_ERR_NO_MEM;
+    }
+
+    transport->init((esp_mcp_handle_t)mcp_ctx, &mcp_ctx->transport_handle);
+    if (!mcp_ctx->transport_handle) {
+        ESP_LOGE(TAG, "Failed to initialize transport");
+        transport->delete_config(mcp_ctx->transport_config);
+        mcp_ctx->transport_config = NULL;
+        free(mcp_ctx);
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    *handle = (esp_mcp_handle_t)mcp_ctx;
+
+    return ESP_OK;
 }
 
-esp_err_t esp_mcp_init(const esp_mcp_config_t* config, esp_mcp_handle_t* handle)
+esp_err_t esp_mcp_deinit(esp_mcp_handle_t handle)
 {
-    ESP_RETURN_ON_FALSE(config, ESP_ERR_INVALID_ARG, TAG, "Invalid config");
-    ESP_RETURN_ON_FALSE(handle, ESP_ERR_INVALID_ARG, TAG, "Invalid handle");
+    esp_mcp_item_t *mcp_ctx = (esp_mcp_item_t *)handle;
+    ESP_RETURN_ON_FALSE(mcp_ctx, ESP_ERR_INVALID_ARG, TAG, "Invalid MCP handle");
 
-    esp_mcp_item_t *mcp_item = NULL;
-    mcp_item = (esp_mcp_item_t *)calloc(1, sizeof(esp_mcp_item_t));
-    ESP_RETURN_ON_FALSE(mcp_item, ESP_ERR_NO_MEM, TAG, "Failed to allocate memory for MCP instance");
-
-    mcp_item->config.task_priority = config->task_priority;
-    mcp_item->config.stack_size = config->stack_size;
-    mcp_item->config.core_id = config->core_id;
-    mcp_item->config.task_caps = config->task_caps;
-    mcp_item->config.type = config->type;
-    mcp_item->config.host = config->host;
-    mcp_item->config.port = config->port;
-    mcp_item->config.timeout_ms = config->timeout_ms;
-    mcp_item->config.uri = config->uri;
-    mcp_item->config.mbuf_size = config->mbuf_size;
-
-    mcp_item->mbuf = (char*)calloc(1, mcp_item->config.mbuf_size);
-    ESP_RETURN_ON_FALSE(mcp_item->mbuf, ESP_ERR_NO_MEM, TAG, "Failed to allocate memory for MCP message buffer");
-
-    mcp_item->server = config->instance;
-    mcp_item->run = false;
-
-    *handle = (esp_mcp_handle_t)mcp_item;
-
-    switch (config->type) {
-#if CONFIG_MCP_TRANSPORT_HTTP
-    case ESP_MCP_TRANSPORT_TYPE_HTTP:
-        ESP_ERROR_CHECK(esp_mcp_http_init((esp_mcp_handle_t)mcp_item));
-        break;
-#endif
-    case ESP_MCP_TRANSPORT_TYPE_CUSTOM:
-        ESP_LOGI(TAG, "Custom transport mode - call esp_mcp_transport_set_funcs() before esp_mcp_start()");
-        break;
-    default:
-        ESP_LOGE(TAG, "Invalid or unsupported transport type: %d", config->type);
-        free(mcp_item->mbuf);
-        free(mcp_item);
-        return ESP_ERR_NOT_SUPPORTED;
+    const esp_mcp_transport_t *transport = &mcp_ctx->config.transport;
+    if (transport->delete_config) {
+        transport->delete_config(mcp_ctx->transport_config);
     }
+
+    if (transport->deinit) {
+        transport->deinit(mcp_ctx->transport_handle);
+    }
+
+    esp_mcp_delete(mcp_ctx);
 
     return ESP_OK;
 }
 
 esp_err_t esp_mcp_start(esp_mcp_handle_t handle)
 {
-    esp_mcp_item_t *mcp = (esp_mcp_item_t *)handle;
-    ESP_RETURN_ON_FALSE(mcp, ESP_ERR_INVALID_ARG, TAG, "Invalid MCP handle");
-    ESP_RETURN_ON_FALSE(!mcp->run, ESP_OK, TAG, "MCP instance is already running");
+    esp_mcp_item_t *mcp_ctx = (esp_mcp_item_t *)handle;
+    ESP_RETURN_ON_FALSE(mcp_ctx, ESP_ERR_INVALID_ARG, TAG, "Invalid MCP handle");
 
-    // Validate custom transport callbacks if using custom transport
-    if (mcp->config.type == ESP_MCP_TRANSPORT_TYPE_CUSTOM) {
-        ESP_RETURN_ON_FALSE(mcp->funcs.open && mcp->funcs.read && 
-                           mcp->funcs.write && mcp->funcs.close, 
-                           ESP_ERR_INVALID_STATE, TAG, 
-                           "Custom transport functions not set. Call esp_mcp_transport_set_funcs() first");
-    }
+    const esp_mcp_transport_t *transport = &mcp_ctx->config.transport;
 
-    mcp->run = true;
-    BaseType_t ret = xTaskCreate(esp_mcp_task, "esp_mcp_task", mcp->config.stack_size, mcp, mcp->config.task_priority, NULL);
-    if (ret != pdPASS) {
-        ESP_LOGE(TAG, "Failed to create MCP task");
-        mcp->run = false;
-        return ESP_FAIL;
-    }
-
-    ESP_LOGI(TAG, "MCP instance started successfully");
-    return ESP_OK;
+    return transport->start(mcp_ctx->transport_handle, mcp_ctx->transport_config);
 }
 
 esp_err_t esp_mcp_stop(esp_mcp_handle_t handle)
 {
-    esp_mcp_item_t *mcp = (esp_mcp_item_t *)handle;
-    ESP_RETURN_ON_FALSE(mcp, ESP_ERR_INVALID_ARG, TAG, "Invalid MCP handle");
-    ESP_RETURN_ON_FALSE(mcp->run, ESP_OK, TAG, "MCP instance is not running");
+    esp_mcp_item_t *mcp_ctx = (esp_mcp_item_t *)handle;
+    ESP_RETURN_ON_FALSE(mcp_ctx, ESP_ERR_INVALID_ARG, TAG, "Invalid MCP handle");
 
-    mcp->run = false;
+    const esp_mcp_transport_t *transport = &mcp_ctx->config.transport;
 
-    ESP_LOGI(TAG, "MCP instance stopped successfully");
-    return ESP_OK;
+    return transport->stop(mcp_ctx->transport_handle);
 }
 
-esp_err_t esp_mcp_deinit(esp_mcp_handle_t handle)
+esp_err_t esp_mcp_register_endpoint(esp_mcp_handle_t handle, const char *ep_name, void *priv_data)
 {
-    esp_mcp_item_t *mcp = (esp_mcp_item_t *)handle;
-    ESP_RETURN_ON_FALSE(mcp, ESP_ERR_INVALID_ARG, TAG, "Invalid MCP handle");
+    esp_mcp_item_t *mcp_ctx = (esp_mcp_item_t *)handle;
+    ESP_RETURN_ON_FALSE(mcp_ctx, ESP_ERR_INVALID_ARG, TAG, "Invalid MCP handle");
 
-    if (mcp->run) {
-        esp_mcp_stop(handle);
-    }
+    esp_err_t ret = esp_mcp_add_endpoint_internal(mcp_ctx, ep_name, esp_mcp_message_handler, mcp_ctx);
+    ESP_RETURN_ON_ERROR(ret, TAG, "Failed to add endpoint: %s", esp_err_to_name(ret));
 
-    if (mcp->mbuf) {
-        free(mcp->mbuf);
-    }
+    const esp_mcp_transport_t *transport = &mcp_ctx->config.transport;
 
-    free(mcp);
-
-    return ESP_OK;
+    return transport->register_endpoint(mcp_ctx->transport_handle, ep_name, priv_data);
 }
 
-esp_err_t esp_mcp_transport_set_funcs(esp_mcp_handle_t handle, esp_mcp_transport_funcs_t funcs)
+esp_err_t esp_mcp_unregister_endpoint(esp_mcp_handle_t handle, const char *ep_name)
 {
-    ESP_RETURN_ON_FALSE(handle, ESP_ERR_INVALID_ARG, TAG, "Invalid handle");
-    ESP_RETURN_ON_FALSE(funcs.open && funcs.read && funcs.write && funcs.close, 
-                       ESP_ERR_INVALID_ARG, TAG, 
-                       "All transport callback functions (open, read, write, close) must be provided");
+    esp_mcp_item_t *mcp_ctx = (esp_mcp_item_t *)handle;
+    ESP_RETURN_ON_FALSE(mcp_ctx, ESP_ERR_INVALID_ARG, TAG, "Invalid MCP handle");
 
+    esp_err_t ret = esp_mcp_remove_endpoint_internal(mcp_ctx, ep_name);
+    ESP_RETURN_ON_ERROR(ret, TAG, "Failed to remove endpoint: %s", esp_err_to_name(ret));
+
+    const esp_mcp_transport_t *transport = &mcp_ctx->config.transport;
+
+    return transport->unregister_endpoint(mcp_ctx->transport_handle, ep_name);
+}
+
+esp_err_t esp_mcp_req_handle(esp_mcp_handle_t handle,
+                             const char *ep_name,
+                             const uint8_t *inbuf,
+                             uint16_t inlen,
+                             uint8_t **outbuf,
+                             uint16_t *outlen)
+{
     esp_mcp_item_t *mcp = (esp_mcp_item_t *)handle;
+    ESP_RETURN_ON_FALSE(mcp && ep_name, ESP_ERR_INVALID_ARG, TAG, "Invalid arguments");
 
-    mcp->funcs = funcs;
+    esp_mcp_ep_t *ep = esp_mcp_search_endpoint(mcp, ep_name);
+    if (!ep) {
+        ESP_LOGE(TAG, "Endpoint %s not found", ep_name);
+        return ESP_ERR_NOT_FOUND;
+    }
 
-    ESP_LOGI(TAG, "Custom transport callbacks registered successfully");
-    return ESP_OK;
+    // Note: We release the mutex before calling the handler to avoid deadlock
+    // The handler callback should not modify the endpoints list
+    return ep->handler((const uint8_t *)inbuf, inlen, outbuf, outlen, ep->priv_data);
+}
+
+esp_err_t esp_mcp_req_destroy_response(esp_mcp_handle_t handle, uint8_t *response_buffer)
+{
+    esp_mcp_item_t *mcp_ctx = (esp_mcp_item_t *)handle;
+    ESP_RETURN_ON_FALSE(mcp_ctx, ESP_ERR_INVALID_ARG, TAG, "Invalid MCP handle");
+    ESP_RETURN_ON_FALSE(mcp_ctx->config.instance, ESP_ERR_INVALID_ARG, TAG, "Invalid server instance");
+    ESP_RETURN_ON_FALSE(response_buffer, ESP_ERR_INVALID_ARG, TAG, "Invalid response buffer");
+
+    esp_mcp_server_t *server = (esp_mcp_server_t *)mcp_ctx->config.instance;
+
+    return esp_mcp_server_remove_mbuf(server, response_buffer);
 }

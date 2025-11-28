@@ -13,181 +13,214 @@ extern "C" {
 #endif
 
 /**
- * @brief MCP handle type
+ * @brief MCP transport manager handle type
  *
- * Opaque handle representing an initialized MCP instance.
- * Created by esp_mcp_init() and used for all subsequent MCP operations.
+ * Opaque handle representing an initialized MCP (Model Context Protocol) transport manager instance.
+ * The transport manager handles communication between ESP32 devices and AI applications using
+ * the MCP protocol over various transport layers (HTTP, BLE, etc.).
+ * Created by esp_mcp_init() and used for all subsequent MCP transport operations.
  */
 typedef uint32_t esp_mcp_handle_t;
 
 /**
- * @brief MCP transport type enumeration
+ * @brief MCP transport handle type
  *
- * Supported transport types for MCP communication:
- * - Built-in: HTTP transport (enable via menuconfig)
- * - Custom: User-defined transport via callback functions
+ * Opaque handle representing an initialized MCP transport instance.
+ * A transport defines how MCP protocol messages are transmitted (e.g., HTTP, BLE).
+ * Created by the transport's new() function and used for transport-specific operations.
  */
-typedef enum esp_mcp_transport_type_e {
-    ESP_MCP_TRANSPORT_TYPE_HTTP = 0,          /*!< Built-in HTTP transport */
-    ESP_MCP_TRANSPORT_TYPE_CUSTOM = 0x80      /*!< Custom transport (user-defined) */
-} esp_mcp_transport_type_t;
+typedef uint32_t esp_mcp_transport_handle_t;
 
 /**
- * @brief MCP transport configuration structure
+ * @brief MCP transport function table
  *
- * Configuration parameters passed to the transport's open() callback.
- * Used for both built-in and custom transports.
+ * Structure defining the function callbacks for a specific MCP transport implementation.
+ * Each transport (HTTP, BLE, etc.) provides its own implementation of these functions
+ * to handle protocol-specific operations like starting/stopping the transport layer and
+ * managing endpoints for MCP message routing.
  */
-typedef struct esp_mcp_transport_config_s {
-    const char *host;               /*!< Host address or name */
-    uint16_t port;                  /*!< Port number */
-    const char *uri;                /*!< URI path */
-    const char *method;             /*!< HTTP method (for HTTP transport) */
-    uint16_t timeout_ms;            /*!< Operation timeout (milliseconds) */
-} esp_mcp_transport_config_t;
+typedef struct esp_mcp_transport_s {
+    esp_err_t (*init)(esp_mcp_handle_t handle, esp_mcp_transport_handle_t *transport_handle);   /*!< Create a new transport instance */
+    esp_err_t (*deinit)(esp_mcp_transport_handle_t handle);                                    /*!< Destroy a transport instance */
+    esp_err_t (*start)(esp_mcp_transport_handle_t handle, void *config);              /*!< Start the transport layer (e.g., start HTTP server) */
+    esp_err_t (*stop)(esp_mcp_transport_handle_t handle);                              /*!< Stop the transport layer (e.g., stop HTTP server) */
+    esp_err_t (*create_config)(const void *config, void **config_out);                        /*!< Create transport-specific configuration */
+    esp_err_t (*delete_config)(void *config);                                              /*!< Destroy transport-specific configuration */
+    esp_err_t (*register_endpoint)(esp_mcp_transport_handle_t handle, const char *ep_name, void *priv_data);   /*!< Register an MCP endpoint for message routing */
+    esp_err_t (*unregister_endpoint)(esp_mcp_transport_handle_t handle, const char *ep_name);     /*!< Unregister an MCP endpoint */
+} esp_mcp_transport_t;
 
 /**
- * @brief Transport callback functions structure
+ * @brief MCP transport manager configuration structure
  *
- * Structure containing callback functions for custom transport implementation.
- * Allows supporting any protocol not included in the built-in transport types.
- *
- * @note Usage for custom transport:
- *       1. Set config->type = ESP_MCP_TRANSPORT_TYPE_CUSTOM
- *       2. Implement all four callback functions (none can be NULL)
- *       3. Call esp_mcp_transport_set_funcs() before esp_mcp_start()
- *
- * @note The open() callback can implement either:
- *       - Server mode: listen and accept incoming connections
- *       - Client mode: connect to a remote server
+ * Configuration structure for initializing an MCP transport manager instance.
+ * Specifies the transport to use (HTTP, BLE, etc.) and associated configuration.
  */
 typedef struct {
-    uint32_t transport;                                                              /*!< User-defined transport handle/context */
-    int (*open)(esp_mcp_handle_t t, esp_mcp_transport_config_t *config);             /*!< Open/Connect callback */
-    int (*read)(esp_mcp_handle_t t, char *buffer, int len, int timeout_ms);          /*!< Read callback */
-    int (*write)(esp_mcp_handle_t t, const char *buffer, int len, int timeout_ms);   /*!< Write callback */
-    int (*close)(esp_mcp_handle_t t);                                                /*!< Close callback */
-} esp_mcp_transport_funcs_t;
-
-/**
- * @brief MCP instance configuration structure
- *
- * Configuration parameters for initializing a MCP instance.
- *
- * @note The MCP role (client/server) is determined by the transport's open() implementation:
- *       - Client: open() connects to a remote server
- *       - Server: open() listens and accepts incoming connections
- */
-typedef struct esp_mcp_config_s {
-    uint16_t    task_priority;      /*!< FreeRTOS task priority for MCP instance */
-    uint16_t    stack_size;         /*!< Stack size (bytes) for MCP task */
-    int16_t     core_id;            /*!< CPU core ID to run MCP task on (0 or 1) */
-    uint32_t    task_caps;          /*!< Memory capabilities for task stack allocation */
-
-    esp_mcp_transport_type_t type;  /*!< Transport type (HTTP or custom) */
-    const char *host;               /*!< Transport host address or name */
-    const char *uri;                /*!< Transport URI path */
-    uint16_t port;                  /*!< Transport port number */
-    uint16_t timeout_ms;            /*!< Transport operation timeout (milliseconds) */
-
-    uint16_t mbuf_size;             /*!< Message buffer size (bytes) */
-
-    void *instance;                 /*!< Instance context (e.g., esp_mcp_server_t* for server role) */
+    esp_mcp_transport_t transport;  /*!< Transport function table (e.g., esp_mcp_transport_http) */
+    void *config;                   /*!< Transport-specific configuration (e.g., HTTP server port, BLE service UUID) */
+    void *instance;                 /*!< MCP server instance context (esp_mcp_server_t *) for handling MCP protocol messages */
 } esp_mcp_config_t;
 
-/**
- * @brief Initialize MCP instance
- *
- * Allocates and initializes a MCP instance with the provided configuration.
- * The instance must be initialized before calling esp_mcp_start().
- *
- * @param[in] config Pointer to MCP configuration structure (must not be NULL)
- * @param[out] handle Pointer to store the initialized MCP handle (must not be NULL)
- *
- * @return
- *      - ESP_OK: Instance initialized successfully
- *      - ESP_ERR_INVALID_ARG: Invalid parameter
- *      - ESP_ERR_NO_MEM: Memory allocation failed
- *      - ESP_ERR_NOT_SUPPORTED: Unsupported transport type
- *
- * @note For custom transport, call esp_mcp_transport_set_funcs() after this function
- *       and before esp_mcp_start().
- */
-esp_err_t esp_mcp_init(const esp_mcp_config_t* config, esp_mcp_handle_t* handle);
+extern const esp_mcp_transport_t esp_mcp_transport_http;
 
 /**
- * @brief Start MCP instance
+ * @brief Initialize MCP transport manager
  *
- * Creates a FreeRTOS task to handle MCP communication. The task continuously
- * processes incoming messages and executes tool calls.
+ * Initializes an MCP (Model Context Protocol) transport manager with the specified
+ * transport (HTTP, BLE, etc.). The transport manager handles communication
+ * between ESP32 devices and AI applications using the MCP protocol.
  *
- * @param[in] handle MCP handle from esp_mcp_init()
+ * @param[in] config MCP transport manager configuration (transport, config, server instance)
+ * @param[out] handle Pointer to store the created MCP transport manager handle
  *
  * @return
- *      - ESP_OK: Instance started successfully
- *      - ESP_ERR_INVALID_ARG: Invalid handle
- *      - ESP_ERR_INVALID_STATE: Custom transport functions not set (for CUSTOM transport)
- *      - ESP_FAIL: Failed to create FreeRTOS task
- *
- * @note Must be called after esp_mcp_init().
- * @note For custom transport, esp_mcp_transport_set_funcs() must be called first.
+ *      - ESP_OK: MCP transport manager initialized successfully
+ *      - ESP_ERR_INVALID_ARG: Invalid arguments (NULL handle or invalid transport functions)
+ *      - ESP_ERR_NO_MEM: Out of memory
  */
-esp_err_t esp_mcp_start(esp_mcp_handle_t handle);
+esp_err_t esp_mcp_init(esp_mcp_config_t config, esp_mcp_handle_t *handle);
 
 /**
- * @brief Stop MCP instance
+ * @brief Deinitialize MCP transport manager
  *
- * Signals the MCP communication task to exit. The task finishes processing
- * the current message and then terminates.
+ * Deinitializes the MCP transport manager and releases all associated resources,
+ * including transport instances and configurations. The transport must
+ * be stopped (via esp_mcp_stop()) before deinitialization.
  *
- * @param[in] handle MCP handle from esp_mcp_init()
- *
- * @return
- *      - ESP_OK: Instance stopped successfully or was not running
- *      - ESP_ERR_INVALID_ARG: Invalid handle
- *
- * @note The instance can be restarted by calling esp_mcp_start() again.
- * @note Resources are freed only when esp_mcp_deinit() is called.
- */
-esp_err_t esp_mcp_stop(esp_mcp_handle_t handle);
-
-/**
- * @brief Deinitialize MCP instance
- *
- * Stops the instance (if running) and frees all allocated resources, including
- * the message buffer and instance structure.
- *
- * @param[in] handle MCP handle from esp_mcp_init()
+ * @param[in] handle MCP transport manager handle
  *
  * @return
- *      - ESP_OK: Instance deinitialized successfully
+ *      - ESP_OK: MCP transport manager deinitialized successfully
  *      - ESP_ERR_INVALID_ARG: Invalid handle
- *
- * @note The handle becomes invalid after successful return.
- * @note If running, the instance is stopped automatically before deinitialization.
  */
 esp_err_t esp_mcp_deinit(esp_mcp_handle_t handle);
 
 /**
- * @brief Set transport callback functions for custom transport
+ * @brief Start MCP transport layer
  *
- * Registers callback functions required for custom transport implementation.
- * Must be called after esp_mcp_init() and before esp_mcp_start() when using
- * ESP_MCP_TRANSPORT_TYPE_CUSTOM.
+ * Starts the underlying transport layer (e.g., HTTP server, BLE service) to begin
+ * accepting MCP protocol messages from AI applications. The transport manager must
+ * be initialized before calling this function.
  *
- * @param[in] handle MCP handle from esp_mcp_init()
- * @param[in] funcs Transport callback functions structure:
- *                  - transport: User-defined transport handle/context
- *                  - open: Open/connect callback (must not be NULL)
- *                  - read: Read data callback (must not be NULL)
- *                  - write: Write data callback (must not be NULL)
- *                  - close: Close callback (must not be NULL)
+ * @param[in] handle MCP transport manager handle
  *
  * @return
- *      - ESP_OK: Callbacks registered successfully
- *      - ESP_ERR_INVALID_ARG: Invalid handle or any callback is NULL
+ *      - ESP_OK: Transport layer started successfully
+ *      - ESP_ERR_INVALID_ARG: Invalid handle
+ *      - ESP_ERR_FAIL: Failed to start transport layer (e.g., port already in use)
  */
-esp_err_t esp_mcp_transport_set_funcs(esp_mcp_handle_t handle, esp_mcp_transport_funcs_t funcs);
+esp_err_t esp_mcp_start(esp_mcp_handle_t handle);
+
+/**
+ * @brief Stop MCP transport layer
+ *
+ * Stops the underlying transport layer (e.g., HTTP server, BLE service) and stops
+ * accepting new MCP protocol messages. Existing connections may be gracefully closed.
+ *
+ * @param[in] handle MCP transport manager handle
+ *
+ * @return
+ *      - ESP_OK: Transport layer stopped successfully
+ *      - ESP_ERR_INVALID_ARG: Invalid handle
+ */
+esp_err_t esp_mcp_stop(esp_mcp_handle_t handle);
+
+/**
+ * @brief Register an MCP endpoint
+ *
+ * Registers an endpoint (e.g., "tools/list", "tools/call") for routing MCP protocol
+ * messages. Endpoints are used to organize different types of MCP operations.
+ * The endpoint will be accessible via the transport layer (e.g., HTTP path).
+ *
+ * @param[in] handle MCP transport manager handle
+ * @param[in] ep_name Endpoint name (e.g., "mcp_server", "tools/list")
+ * @param[in] priv_data Private data passed to the endpoint handler (typically NULL or MCP server instance)
+ * @return
+ *      - ESP_OK: Endpoint registered successfully
+ *      - ESP_ERR_INVALID_ARG: Invalid arguments
+ *      - ESP_ERR_INVALID_STATE: Endpoint already exists
+ *      - ESP_ERR_NO_MEM: Memory allocation failed
+ */
+esp_err_t esp_mcp_register_endpoint(esp_mcp_handle_t handle, const char *ep_name, void *priv_data);
+
+/**
+ * @brief Unregister an MCP endpoint
+ *
+ * Removes an endpoint from the MCP transport manager. The endpoint will no longer
+ * accept MCP protocol messages. All associated resources are freed.
+ *
+ * @param[in] handle MCP transport manager handle
+ * @param[in] ep_name Endpoint name to remove
+ * @return
+ *      - ESP_OK: Endpoint removed successfully
+ *      - ESP_ERR_INVALID_ARG: Invalid arguments
+ *      - ESP_ERR_NOT_FOUND: Endpoint not found
+ */
+esp_err_t esp_mcp_unregister_endpoint(esp_mcp_handle_t handle, const char *ep_name);
+
+/**
+ * @brief Handle an MCP protocol request
+ *
+ * Processes an incoming MCP protocol message (JSON-RPC 2.0 format) and routes it
+ * to the appropriate endpoint handler. The handler parses the message, executes
+ * the requested MCP operation (e.g., initialize, tools/list, tools/call), and returns
+ * the response. This function is typically called by transport layer implementations
+ * (e.g., HTTP handler) when receiving MCP protocol messages from AI applications.
+ *
+ * @param[in] handle MCP transport manager handle
+ * @param[in] ep_name Endpoint name to route the request to (e.g., "mcp_server")
+ * @param[in] inbuf Input buffer containing the MCP protocol message (JSON-RPC 2.0 format, null-terminated)
+ * @param[in] inlen Length of the input buffer in bytes
+ * @param[out] outbuf Pointer to store the output buffer containing the MCP response JSON (caller must free with cJSON_free after use)
+ * @param[out] outlen Pointer to store the output buffer length in bytes
+ * @return
+ *      - ESP_OK: Request handled successfully, response available in outbuf
+ *      - ESP_ERR_INVALID_ARG: Invalid arguments (NULL pointer or empty endpoint name)
+ *      - ESP_ERR_NOT_FOUND: Endpoint not found
+ *      - ESP_FAIL: Failed to process MCP request (parse error, tool execution error, etc.)
+ *
+ * @note The caller is responsible for freeing the outbuf using cJSON_free() after sending the response.
+ * @note If the function returns an error, outbuf may be NULL or contain an error response.
+ */
+esp_err_t esp_mcp_req_handle(esp_mcp_handle_t handle, const char *ep_name, const uint8_t *inbuf, uint16_t inlen, uint8_t **outbuf, uint16_t *outlen);
+
+/**
+ * @brief Destroy a MCP response buffer
+ *
+ * Destroys a MCP response buffer and frees the memory. This function uses
+ * the message ID from the last request processed by the handler.
+ *
+ * @param[in] handle MCP transport manager handle
+ * @param[in] response_buffer MCP response buffer to destroy (currently unused, kept for API compatibility)
+ * @return
+ *      - ESP_OK: Response buffer destroyed successfully
+ *      - ESP_ERR_INVALID_ARG: Invalid arguments
+ *      - ESP_ERR_NOT_FOUND: Message ID not found
+ *
+ * @note This function uses the msg_id from the last request. For more precise control,
+ *       use esp_mcp_req_destroy_response_by_id() instead.
+ */
+esp_err_t esp_mcp_req_destroy_response(esp_mcp_handle_t handle, uint8_t *response_buffer);
+
+/**
+ * @brief Destroy a MCP response buffer by message ID
+ *
+ * Destroys a MCP response buffer for the specified message ID and frees the memory.
+ * This is the recommended way to free response buffers when you know the message ID.
+ *
+ * @param[in] handle MCP transport manager handle
+ * @param[in] id Message ID of the response to destroy
+ * @return
+ *      - ESP_OK: Response buffer destroyed successfully
+ *      - ESP_ERR_INVALID_ARG: Invalid arguments
+ *      - ESP_ERR_NOT_FOUND: Message ID not found
+ *
+ * @note This function should be called after sending the response to prevent memory leaks.
+ *       Each call to esp_mcp_server_add_mbuf() creates a mbuf entry that must be freed
+ *       using this function or esp_mcp_req_destroy_response().
+ */
+esp_err_t esp_mcp_req_destroy_response_by_id(esp_mcp_handle_t handle, uint16_t id);
 
 #ifdef __cplusplus
 }

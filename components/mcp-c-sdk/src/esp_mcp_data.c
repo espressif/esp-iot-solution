@@ -44,7 +44,7 @@ esp_mcp_value_t esp_mcp_value_create_float(float value)
     return mcp_value;
 }
 
-esp_mcp_value_t esp_mcp_value_create_string(const char* value)
+esp_mcp_value_t esp_mcp_value_create_string(const char *value)
 {
     esp_mcp_value_t mcp_value = {
         .type = ESP_MCP_VALUE_TYPE_INVALID,
@@ -64,11 +64,11 @@ esp_mcp_value_t esp_mcp_value_create_string(const char* value)
     return mcp_value;
 }
 
-esp_err_t esp_mcp_value_destroy(esp_mcp_value_t* value)
+esp_err_t esp_mcp_value_destroy(esp_mcp_value_t *value)
 {
     ESP_RETURN_ON_FALSE(value, ESP_ERR_INVALID_ARG, TAG, "Invalid value");
 
-    if (value->data.string_value) {
+    if (value->type == ESP_MCP_VALUE_TYPE_STRING && value->data.string_value) {
         free(value->data.string_value);
         value->data.string_value = NULL;
     }

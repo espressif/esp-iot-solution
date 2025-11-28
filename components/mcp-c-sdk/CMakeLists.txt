@@ -1,4 +1,4 @@
-set(srcs 
+set(srcs
     "src/esp_mcp.c"
     "src/esp_mcp_server.c"
     "src/esp_mcp_property.c"

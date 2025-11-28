@@ -17,7 +17,9 @@ extern "C" {
 /**
  * @brief Add a tool to the MCP server (internal API)
  *
- * Registers a tool with the server. The server takes ownership of the tool.
+ * Registers a tool with the server. The server takes ownership of the tool only on success.
+ * If the function returns an error, the tool ownership remains with the caller, who is
+ * responsible for destroying it.
  *
  * @note This is an internal API used by esp_mcp_server_add_tool_with_callback().
  *       Users should use esp_mcp_server_add_tool_with_callback() instead.
@@ -25,10 +27,12 @@ extern "C" {
  * @param[in] server Pointer to the server instance (must not be NULL)
  * @param[in] tool Pointer to the tool to add (must not be NULL)
  * @return
- *      - ESP_OK: Tool added successfully
- *      - ESP_ERR_INVALID_ARG: Invalid parameter
+ *      - ESP_OK: Tool added successfully (server takes ownership)
+ *      - ESP_ERR_INVALID_ARG: Invalid parameter (tool ownership remains with caller)
+ *      - ESP_ERR_INVALID_STATE: Tool with the same name already exists (tool ownership remains with caller)
+ *      - ESP_ERR_NO_MEM: Memory allocation failed (tool ownership remains with caller)
  */
-esp_err_t esp_mcp_server_add_tool(esp_mcp_server_t* server, esp_mcp_tool_t* tool);
+esp_err_t esp_mcp_server_add_tool(esp_mcp_server_t *server, esp_mcp_tool_t *tool);
 
 /**
  * @brief Parse an MCP message string (internal API)
@@ -43,7 +47,7 @@ esp_err_t esp_mcp_server_add_tool(esp_mcp_server_t* server, esp_mcp_tool_t* tool
  *      - ESP_ERR_INVALID_ARG: Invalid parameter
  *      - ESP_FAIL: Message parsing or tool execution failed
  */
-esp_err_t esp_mcp_server_parse_message(esp_mcp_server_t* server, const char* message);
+esp_err_t esp_mcp_server_parse_message(esp_mcp_server_t *server, const char *message);
 
 /**
  * @brief Get MCP message buffer (internal API)
@@ -52,17 +56,31 @@ esp_err_t esp_mcp_server_parse_message(esp_mcp_server_t* server, const char* mes
  * The buffer contains the JSON response to be sent to the client.
  *
  * @param[in] server Pointer to the server instance (must not be NULL)
- * @param[in] id Message ID
- * @param[out] outlen Pointer to store the output buffer length (must not be NULL)
  * @param[out] outbuf Pointer to store the output buffer pointer (must not be NULL)
+ * @param[out] outlen Pointer to store the output buffer length (must not be NULL)
  * @return
  *      - ESP_OK: Buffer retrieved successfully
  *      - ESP_ERR_INVALID_ARG: Invalid parameter
  *      - ESP_ERR_NOT_FOUND: Message ID not found
  */
-esp_err_t esp_mcp_server_get_mbuf(esp_mcp_server_t* server, uint16_t id, uint16_t *outlen, uint8_t **outbuf);
+esp_err_t esp_mcp_server_get_mbuf(esp_mcp_server_t *server, uint8_t **outbuf, uint16_t *outlen);
+
+/**
+ * @brief Remove and free MCP message buffer (internal API)
+ *
+ * Removes the message buffer for the specified message ID from the server's
+ * mbuf list and frees the associated memory. This should be called after
+ * the outbuf has been used and is no longer needed.
+ *
+ * @param[in] server Pointer to the server instance (must not be NULL)
+ * @param[in] outbuf Output buffer
+ * @return
+ *      - ESP_OK: Buffer removed and freed successfully
+ *      - ESP_ERR_INVALID_ARG: Invalid parameter
+ *      - ESP_ERR_NOT_FOUND: Message ID not found
+ */
+esp_err_t esp_mcp_server_remove_mbuf(esp_mcp_server_t *server, const uint8_t *outbuf);
 
 #ifdef __cplusplus
 }
 #endif
-

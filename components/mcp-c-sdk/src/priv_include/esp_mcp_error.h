@@ -54,7 +54,7 @@ typedef enum {
  */
 typedef struct esp_mcp_error_s {
     int code;                /*!< Error code from esp_mcp_error_code_t */
-    const char* message;     /*!< Human-readable error message */
+    const char *message;     /*!< Human-readable error message */
 } esp_mcp_error_t;
 
 #ifdef __cplusplus
