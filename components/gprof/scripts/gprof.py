@@ -6,11 +6,9 @@
 
 import logging
 import argparse
-import csv
 import os
 import subprocess
 import sys
-import re
 import struct
 from io import StringIO
 
@@ -46,36 +44,19 @@ def relink(args):
     open(args.output, 'w+').write('\n'.join(lines))
 
 def dump(args):
-    logging.debug('partition_csv:   %s'%(args.partition_csv))
     logging.debug('elf:             %s'%(args.elf))
     logging.debug('output:          %s'%(args.output))
     logging.debug('gcc:             %s'%(args.gcc))
     logging.debug('graphic:         %s'%(args.graphic))
 
-    offset = 0
-    found = False
-    for p in csv.DictReader(open(args.partition_csv, 'r'), skipinitialspace=True,
-                                 delimiter=',', quoting=csv.QUOTE_NONE):
-        if 'Offset' in p and p['Offset'] is not None:
-            if p['Type'] == 'data' and p['SubType'] == '0x3a':
-                found = True
-                break
-
-            if len(p['Offset']) > 0:
-                offset = parse_int(p['Offset']) + parse_int(p['Size'])
-            else:
-                offset = offset + parse_int(p['Size'])
-
-    if found == False:
-        raise Exception('gprof partition is not found')
-
-    logging.debug('offset is: %x'%(offset))
+    offset = parse_int(args.partition_offset, {'x': 16})
+    logging.debug('partition offset: %x'%(offset))
 
     READ_LEN = 4096
     new_env = os.environ.copy()
     new_env['LC_ALL'] = 'C'
-    esptool_cmd = args.esptool.split()
-    cmd = [esptool_cmd[0], esptool_cmd[1], 'read_flash', str(offset), str(READ_LEN), args.output]
+    esptool_cmd = [sys.executable, '-m', 'esptool']
+    cmd = [*esptool_cmd, 'read_flash', str(offset), str(READ_LEN), args.output]
     print('cmd: ', cmd)
     StringIO(subprocess.check_output(cmd, env=new_env).decode())
 
@@ -116,7 +97,7 @@ def dump(args):
         dump_info = StringIO(subprocess.check_output(cmd, env=new_env).decode())
 
 def main():
-    argparser = argparse.ArgumentParser(description='Relinker script generator')
+    argparser = argparse.ArgumentParser(description='Gprof profile data parser')
 
     argparser.add_argument(
         '--debug', '-d',
@@ -152,12 +133,6 @@ def main():
         help='Dump gprof information')
 
     parser_dump.add_argument(
-        '--partition_csv',
-        help='Partition CSV file',
-        type=str
-    )
-
-    parser_dump.add_argument(
         '--elf',
         help='Porject ELF file',
         type=str
@@ -177,15 +152,15 @@ def main():
 
     parser_dump.add_argument(
         '--graphic',
-        help='Generating graphic ',
+        help='Generate graphical output',
         action='store_true',
         default=False
     )
 
     parser_dump.add_argument(
-        '--esptool',
-        help='GCC toolchain',
-        type=str
+        '--partition-offset',
+        help='Offset of the gprof partition, in bytes',
+        type=str  # accept hex strings
     )
 
     args = argparser.parse_args()
