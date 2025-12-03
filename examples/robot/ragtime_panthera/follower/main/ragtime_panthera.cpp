@@ -7,17 +7,18 @@
 #include <iostream>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "argtable3/argtable3.h"
 #include "esp_log.h"
 #include "esp_err.h"
 #include "esp_console.h"
-#include "argtable3/argtable3.h"
+#include "esp_app_desc.h"
 #include "nvs_flash.h"
 #include "sdkconfig.h"
-#include "app_lcd.h"
 #include "dm_motor.h"
 #include "kinematic.h"
 #include "ui.h"
 #include "usb_camera.h"
+#include "app_lcd.h"
 #include "app_manager.h"
 #include "app_serial_flasher.h"
 #if CONFIG_CONSOLE_CONTROL
@@ -31,6 +32,10 @@ damiao::Motor_Control* motor_control = nullptr;
 extern "C" void app_main(void)
 {
     esp_err_t ret = ESP_OK;
+
+    const esp_app_desc_t* desc = esp_app_get_description();
+    ESP_LOGI(TAG, "Project Name: %s, Version: %s, Compile Time: %s-%s, IDF Version: %s", desc->project_name, desc->version, desc->time, desc->date, desc->idf_ver);
+
 #if CONFIG_ENABLE_UPDATE_C6_FLASH
     // Initialize the serial flasher
     const loader_esp32_config_t config = {

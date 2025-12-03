@@ -23,6 +23,10 @@ extern lv_obj_t * ui_SyncSwitch;
 extern lv_obj_t * ui_EnableLabel;
 extern lv_obj_t * ui_SyncLabel;
 extern lv_obj_t * ui_EnableSwitch;
+extern lv_obj_t * ui_GoZeroButton;
+extern lv_obj_t * ui_GoZeroLabel;
+extern lv_obj_t * ui_SetZeroButton;
+extern lv_obj_t * ui_SetZeroLabel;
 // CUSTOM VARIABLES
 
 #ifdef __cplusplus

@@ -4,7 +4,7 @@ menu "Panthera Follower Configuration"
 
     config CONSOLE_CONTROL
         bool "Direct control robot arm via console"
-        default n
+        default y
         help
             When set to Y, you can forcibly perform basic operations on the robot arm through the terminal, including kinematics testing, joint movement, enabling, and other actions.
 
@@ -45,7 +45,7 @@ menu "Panthera Follower Configuration"
 
         config FOLLOWER_OUTPUT_MAX
             int "Follower Output Maximum (x100 radians)"
-            default 628
+            default 500
             help
                 Maximum output angle for follower gripper mapping (in radians * 100, e.g., 628 for 6.28)
     endmenu
@@ -104,7 +104,7 @@ menu "Panthera Follower Configuration"
 
     menu "Receiver Serial Flash Config"
         config ENABLE_UPDATE_C6_FLASH
-        bool "Enable update C5 Flash"
+        bool "Enable update C6 Flash"
         default n
         help
             Enable this option will update the C6 firmware via serial flash every time

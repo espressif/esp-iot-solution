@@ -52,6 +52,10 @@ private:
         WAIT_ARRIVE,
         CLOSE_GRIPPER,
         WAIT_CLOSE,
+        MOVE_TO_RELEASE_POSITION,
+        WAIT_ARRIVE_RELEASE,
+        RELEASE_GRIPPER,
+        WAIT_RELEASE,
         RETURN_HOME,
         WAIT_HOME,
         COMPLETED
@@ -84,9 +88,15 @@ private:
     QueueHandle_t grasp_command_queue_;
     SemaphoreHandle_t detect_results_mutex_;
 
+    // Buffer pool for color detection (avoid frequent malloc/free)
+    static constexpr int COLOR_DETECT_BUFFER_POOL_SIZE = 3;
+    uint8_t* color_detect_buffer_pool_[COLOR_DETECT_BUFFER_POOL_SIZE];
+    QueueHandle_t color_detect_buffer_pool_queue_;  // Queue of available buffers
+
     // Grasp task state
     GraspState grasp_state_;
     Joint target_joint_;                                 /*!< Target joint angles for grasping */
+    Joint release_joint_;                                /*!< Joint angles for release position */
     float target_gripper_pos_;                           /*!< Target gripper position */
     static constexpr float POSITION_TOLERANCE = 0.05f;   /*!< Position tolerance in radians */
     static constexpr float GRIPPER_TOLERANCE = 0.1f;     /*!< Gripper position tolerance */

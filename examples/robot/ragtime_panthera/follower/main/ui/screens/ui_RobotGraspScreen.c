@@ -15,6 +15,10 @@ lv_obj_t * ui_SyncSwitch = NULL;
 lv_obj_t * ui_EnableLabel = NULL;
 lv_obj_t * ui_SyncLabel = NULL;
 lv_obj_t * ui_EnableSwitch = NULL;
+lv_obj_t * ui_GoZeroButton = NULL;
+lv_obj_t * ui_GoZeroLabel = NULL;
+lv_obj_t * ui_SetZeroButton = NULL;
+lv_obj_t * ui_SetZeroLabel = NULL;
 // event functions
 
 // build functions
@@ -96,11 +100,45 @@ void ui_RobotGraspScreen_screen_init(void)
     lv_obj_set_y(ui_EnableSwitch, -210);
     lv_obj_set_align(ui_EnableSwitch, LV_ALIGN_CENTER);
 
+    ui_GoZeroButton = lv_button_create(ui_RobotGraspScreen);
+    lv_obj_set_width(ui_GoZeroButton, 220);
+    lv_obj_set_height(ui_GoZeroButton, 65);
+    lv_obj_set_x(ui_GoZeroButton, 362);
+    lv_obj_set_y(ui_GoZeroButton, 25);
+    lv_obj_set_align(ui_GoZeroButton, LV_ALIGN_CENTER);
+    lv_obj_add_flag(ui_GoZeroButton, LV_OBJ_FLAG_SCROLL_ON_FOCUS);     /// Flags
+    lv_obj_remove_flag(ui_GoZeroButton, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
+
+    ui_GoZeroLabel = lv_label_create(ui_GoZeroButton);
+    lv_obj_set_width(ui_GoZeroLabel, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_GoZeroLabel, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_align(ui_GoZeroLabel, LV_ALIGN_CENTER);
+    lv_label_set_text(ui_GoZeroLabel, "Go Zero");
+    lv_obj_set_style_text_font(ui_GoZeroLabel, &lv_font_montserrat_20, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    ui_SetZeroButton = lv_button_create(ui_RobotGraspScreen);
+    lv_obj_set_width(ui_SetZeroButton, 220);
+    lv_obj_set_height(ui_SetZeroButton, 65);
+    lv_obj_set_x(ui_SetZeroButton, 362);
+    lv_obj_set_y(ui_SetZeroButton, 125);
+    lv_obj_set_align(ui_SetZeroButton, LV_ALIGN_CENTER);
+    lv_obj_add_flag(ui_SetZeroButton, LV_OBJ_FLAG_SCROLL_ON_FOCUS);     /// Flags
+    lv_obj_remove_flag(ui_SetZeroButton, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
+
+    ui_SetZeroLabel = lv_label_create(ui_SetZeroButton);
+    lv_obj_set_width(ui_SetZeroLabel, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_SetZeroLabel, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_align(ui_SetZeroLabel, LV_ALIGN_CENTER);
+    lv_label_set_text(ui_SetZeroLabel, "Set Zero");
+    lv_obj_set_style_text_font(ui_SetZeroLabel, &lv_font_montserrat_20, LV_PART_MAIN | LV_STATE_DEFAULT);
+
 }
 
 void ui_RobotGraspScreen_screen_destroy(void)
 {
-    if(ui_RobotGraspScreen) lv_obj_del(ui_RobotGraspScreen);
+    if (ui_RobotGraspScreen) {
+        lv_obj_del(ui_RobotGraspScreen);
+    }
 
     // NULL screen variables
     ui_RobotGraspScreen = NULL;
@@ -113,5 +151,9 @@ void ui_RobotGraspScreen_screen_destroy(void)
     ui_EnableLabel = NULL;
     ui_SyncLabel = NULL;
     ui_EnableSwitch = NULL;
+    ui_GoZeroButton = NULL;
+    ui_GoZeroLabel = NULL;
+    ui_SetZeroButton = NULL;
+    ui_SetZeroLabel = NULL;
 
 }

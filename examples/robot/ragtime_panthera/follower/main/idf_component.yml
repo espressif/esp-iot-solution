@@ -5,10 +5,12 @@ dependencies:
   espressif/esp32_p4_function_ev_board: "5.0.3"
   lvgl/lvgl: "9.4.0"
   espressif/usb_host_uvc:
-    git: "https://github.com/espressif/esp-usb"
+    # Temporary, will use the package manager component after merge
+    git: "https://github.com/YanKE01/esp-usb"
     version: fix/add_frame_checks_for_uvc
     path: host/class/uvc/usb_host_uvc
   color_detect:
+    # Temporary, will use the package manager component after merge
     git: "https://github.com/YanKE01/esp-dl"
     version: feat/upload_color_detect
     path: models/color_detect

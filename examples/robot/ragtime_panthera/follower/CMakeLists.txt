@@ -5,6 +5,9 @@ cmake_minimum_required(VERSION 3.16)
 # ensure the spiffs directory exists
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/spiffs)
 
+# project version
+set(PROJECT_VER "0.1.0")
+
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 
 list(APPEND CMAKE_CXX_FLAGS

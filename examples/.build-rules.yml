@@ -505,14 +505,14 @@ examples/relinker:
   enable:
     - if: IDF_TARGET in ["esp32c2","esp32c3"]
 
-examples/robot/ragtime_panther/follower:
+examples/robot/ragtime_panthera/follower:
   enable:
     - if: IDF_TARGET in ["esp32p4"] and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 5)
 
-examples/robot/ragtime_panther/follower/receiver:
+examples/robot/ragtime_panthera/follower/receiver:
   enable:
     - if: IDF_TARGET in ["esp32c6"] and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 5)
 
-examples/robot/ragtime_panther/leader:
+examples/robot/ragtime_panthera/leader:
   enable:
     - if: IDF_TARGET in ["esp32c3"] and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 5)

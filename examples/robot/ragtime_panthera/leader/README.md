@@ -6,6 +6,10 @@ This is a teleoperation robotic arm designed to control the [Ragtime_Panthera](h
   <img src="https://dl.espressif.com/AE/esp-iot-solution/trkc-dk1-leader.png" alt="trkc-dk1-leader" width="80%">
 </p>
 
+<p align="center">
+  <img src="https://dl.espressif.com/AE/esp-iot-solution/ragtime_panthera_remote_control.gif" alt="Ragtime Panthera Remote Control" width="90%">
+</p>
+
 ## Key Features
 
 - XL330_M077 bus servo driver: This project provides basic drivers for the XL330_M077 bus servos, including servo scanning, position reading, torque control, reboot, and other features. For communication protocol extensions, you can refer to [DYNAMIXEL Protocol 2.0](https://emanual.robotis.com/docs/en/dxl/protocol2/) for further additions.
@@ -28,9 +32,9 @@ When assembling the trlc-dk1-leader, please set each servo to the 180° (2048) p
 
 ## XL330_M077 Communication Circuit
 
-Since the bus servo uses a single-wire serial interface, it needs to be converted to a standard UART. You can refer to the following circuit design:
+Since the bus servo uses a single-wire serial interface, it needs to be converted to a standard UART. You can refer to the following circuit design. You can click [here](https://dl.espressif.com/AE/esp-iot-solution/LEADER_ESP32C3_DRIVER_BOARD.zip) to download the PCB Gerber files for PCB prototyping.
 
-![bus_servo_circuit](https://dl.espressif.com/AE/esp-iot-solution/bus_servo_circuit.png)
+![bus_servo_circuit](https://dl.espressif.com/AE/esp-iot-solution/leader_esp32c3_driver_board.jpg)
 
 In addition, you can also refer to the [official reference circuit](https://emanual.robotis.com/docs/en/dxl/x/xl330-m077/#communication-circuit) provided for the XL330-M077.
 

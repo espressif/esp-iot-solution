@@ -9,6 +9,7 @@
 #include "bsp/esp-bsp.h"
 #include "esp_check.h"
 #include "esp_crc.h"
+#include "esp_heap_caps.h"
 #include "ui/ui.h"
 #include "ui/screens/ui_RobotGraspScreen.h"
 #include "lvgl.h"
@@ -43,6 +44,7 @@ Manager::Manager(damiao::Motor_Control* motor_control)
     , color_detect_(nullptr)
     , lcd_refresh_task_handle_(nullptr)
     , grasp_task_handle_(nullptr)
+    , color_detect_buffer_pool_queue_(nullptr)
     , grasp_state_(GraspState::IDLE)
     , motors_enabled_(false)
     , esp_now_receiver_registered_(false)
@@ -53,6 +55,9 @@ Manager::Manager(damiao::Motor_Control* motor_control)
 
     // Initialize ESP-NOW servo angles to zero
     memset(esp_now_servo_angles_, 0, sizeof(esp_now_servo_angles_));
+
+    // Initialize buffer pool to nullptr
+    memset(color_detect_buffer_pool_, 0, sizeof(color_detect_buffer_pool_));
 
     // Read the version matrix from the NVS
     nvs_handle_t nvs_handle;
@@ -83,6 +88,8 @@ Manager::Manager(damiao::Motor_Control* motor_control)
 
     // Initialize the lvgl callback
     lv_obj_add_event_cb(ui_GraspButton, lvgl_button_clicked_event_handler, LV_EVENT_CLICKED, this);
+    lv_obj_add_event_cb(ui_GoZeroButton, lvgl_button_clicked_event_handler, LV_EVENT_CLICKED, this);
+    lv_obj_add_event_cb(ui_SetZeroButton, lvgl_button_clicked_event_handler, LV_EVENT_CLICKED, this);
     lv_obj_add_event_cb(ui_EnableSwitch, lvgl_switch_event_handler, LV_EVENT_VALUE_CHANGED, this);
     lv_obj_add_event_cb(ui_SyncSwitch, lvgl_switch_event_handler, LV_EVENT_VALUE_CHANGED, this);
 
@@ -113,6 +120,31 @@ Manager::Manager(damiao::Motor_Control* motor_control)
         ESP_LOGE(TAG, "Failed to create Color detect queue");
         return;
     }
+
+    // Initialize buffer pool for color detection (pre-allocated buffers to avoid malloc/free overhead)
+    color_detect_buffer_pool_queue_ = xQueueCreate(COLOR_DETECT_BUFFER_POOL_SIZE, sizeof(uint8_t*));
+    if (color_detect_buffer_pool_queue_ == nullptr) {
+        ESP_LOGE(TAG, "Failed to create buffer pool queue");
+        return;
+    }
+
+    // Pre-allocate buffers in SPIRAM
+    size_t buffer_size = 640 * 480 * 2;  // RGB565
+    for (int i = 0; i < COLOR_DETECT_BUFFER_POOL_SIZE; i++) {
+        color_detect_buffer_pool_[i] = (uint8_t*)heap_caps_malloc(buffer_size, MALLOC_CAP_SPIRAM);
+        if (color_detect_buffer_pool_[i] == nullptr) {
+            ESP_LOGE(TAG, "Failed to allocate buffer %d in pool", i);
+            // Free already allocated buffers
+            for (int j = 0; j < i; j++) {
+                heap_caps_free(color_detect_buffer_pool_[j]);
+                color_detect_buffer_pool_[j] = nullptr;
+            }
+            return;
+        }
+        // Add buffer to pool queue
+        xQueueSend(color_detect_buffer_pool_queue_, &color_detect_buffer_pool_[i], 0);
+    }
+    ESP_LOGI(TAG, "Color detect buffer pool initialized with %d buffers", COLOR_DETECT_BUFFER_POOL_SIZE);
 
     // Create the detect results mutex
     detect_results_mutex_ = xSemaphoreCreateMutex();
@@ -193,24 +225,21 @@ void Manager::lcd_refresh_task(void* arg)
     lv_obj_t* label_objects[max_boxes] = {nullptr};
     int box_count = 0;
 
+    // Restart the USB camera stream
+    uint32_t failed_get_frame_count = 0;
+
     while (1) {
         uvc_host_frame_t *frame = usb_camera_get_frame();
         if (frame == NULL) {
             // Add delay to avoid blocking CPU and allow other tasks to run
+            failed_get_frame_count++;
+            if (failed_get_frame_count > 5) {
+                ESP_LOGE(TAG, "Failed to get frame for 5 times, restarting USB camera stream");
+                usb_camera_restart_stream();
+                failed_get_frame_count = 0;
+            }
+            ESP_LOGW(TAG, "Frame is NULL, skipping");
             vTaskDelay(10 / portTICK_PERIOD_MS);
-            continue;
-        }
-
-        if (frame->data == NULL) {
-            ESP_LOGW(TAG, "Frame data is NULL, skipping");
-            usb_camera_return_frame(frame);
-            continue;
-        }
-
-        // Check JPEG magic bytes (SOI marker: 0xFF 0xD8)
-        if (frame->data_len < 2 || frame->data[0] != 0xFF || frame->data[1] != 0xD8) {
-            ESP_LOGW(TAG, "Invalid JPEG header, skipping frame");
-            usb_camera_return_frame(frame);
             continue;
         }
 
@@ -218,9 +247,20 @@ void Manager::lcd_refresh_task(void* arg)
         esp_err_t ret = jpeg_decoder_process(self->jpeg_decoder_handle_, &self->jpeg_decode_cfg_, frame->data, frame->data_len, self->jpeg_decode_buffer_, self->jpeg_decode_buffer_size_, &self->jpeg_decoded_size_);
         if (ret != ESP_OK) {
             ESP_LOGW(TAG, "JPEG decoder process failed: %s, skipping frame", esp_err_to_name(ret));
-            usb_camera_return_frame(frame);
+            esp_err_t ret_return = usb_camera_return_frame(frame);
+            if (ret_return != ESP_OK) {
+                ESP_LOGE(TAG, "Failed to return frame: %s", esp_err_to_name(ret_return));
+            }
             continue;
         }
+
+        // Return the frame to the USB camera
+        esp_err_t ret_return = usb_camera_return_frame(frame);
+        if (ret_return != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to return frame: %s", esp_err_to_name(ret_return));
+        }
+
+        failed_get_frame_count = 0;
 
         // Refresh the LCD with the decoded image
         bsp_display_lock(0);
@@ -228,7 +268,7 @@ void Manager::lcd_refresh_task(void* arg)
         lv_image_set_src(ui_uvcframe, &uvc_lv_img_dsc);
 
         // Draw the detection boxes
-        std::list<dl::detect::result_t> current_results;
+        std::list<dl::detect::result_t> current_results{};
         if (self->detect_results_mutex_ != nullptr) {
             if (xSemaphoreTake(self->detect_results_mutex_, pdMS_TO_TICKS(10)) == pdTRUE) {
                 current_results.assign(self->detect_results_.begin(), self->detect_results_.end());
@@ -306,14 +346,20 @@ void Manager::lcd_refresh_task(void* arg)
         bsp_display_unlock();
 
         // Send the decoded image to the color detect task
-        color_detect_queue_msg_t msg = {
-            .image_data = self->jpeg_decode_buffer_,
-            .image_size = self->jpeg_decoded_size_,
-        };
-        xQueueSend(self->color_detect_queue_, &msg, pdMS_TO_TICKS(10));
-
-        // Return the frame to the USB camera
-        usb_camera_return_frame(frame);
+        // Get a buffer from the pool (non-blocking, skip if no buffer available)
+        uint8_t* image_copy = nullptr;
+        if (xQueueReceive(self->color_detect_buffer_pool_queue_, &image_copy, 0) == pdTRUE) {
+            // Copy data to the buffer from pool
+            memcpy(image_copy, self->jpeg_decode_buffer_, self->jpeg_decoded_size_);
+            color_detect_queue_msg_t msg = {
+                .image_data = image_copy,
+                .image_size = self->jpeg_decoded_size_,
+            };
+            if (xQueueSend(self->color_detect_queue_, &msg, 0) != pdTRUE) {
+                // Queue is full, return buffer to pool
+                xQueueSend(self->color_detect_buffer_pool_queue_, &image_copy, 0);
+            }
+        }
 
         // Add delay to avoid blocking CPU and allow other tasks to run
         vTaskDelay(5 / portTICK_PERIOD_MS);
@@ -351,6 +397,11 @@ void Manager::color_detect_task(void* arg)
                     self->detect_results_.assign(results.begin(), results.end());
                     xSemaphoreGive(self->detect_results_mutex_);
                 }
+            }
+
+            // Return buffer to pool after processing
+            if (msg.image_data != nullptr) {
+                xQueueSend(self->color_detect_buffer_pool_queue_, &msg.image_data, 0);
             }
         }
         vTaskDelay(30 / portTICK_PERIOD_MS);
@@ -508,8 +559,141 @@ void Manager::grasp_task(void* arg)
             self->motor_control_->refresh_motor_status(*gripper_motor);
             float pos_error = fabs(gripper_motor->motor_fb_param.position - self->target_gripper_pos_);
             if (pos_error < self->GRIPPER_TOLERANCE) {
+                self->grasp_state_ = GraspState::MOVE_TO_RELEASE_POSITION;
+                ESP_LOGI(TAG, "Grasp task: Gripper closed, moving to release position");
+            } else {
+                // Continue sending position command
+                self->motor_control_->pos_vel_control(*gripper_motor, self->target_gripper_pos_, 5.0f);
+            }
+            break;
+        }
+
+        case GraspState::MOVE_TO_RELEASE_POSITION: {
+            // Calculate inverse kinematics for release position (0.32, 0, 0.397)
+            Joint j1 = Joint(0.0, DEG2RAD(30.0), DEG2RAD(-36.0), DEG2RAD(65.0), 0.0, 0.0);
+            TransformMatrix t1;
+            Kinematic kinematic;
+            kinematic.solve_forward_kinematics(j1, t1);
+
+            TransformMatrix t2 = t1;
+            t2(0, 3) = 0.32f;   // x position
+            t2(1, 3) = 0.0f;    // y position
+            t2(2, 3) = 0.045f;  // z position
+            Joint j2 = j1;
+            kinematic.solve_inverse_kinematics(t2, j2);
+            TransformMatrix t3;
+            kinematic.solve_forward_kinematics(j2, t3);
+
+            float error_x = t3(0, 3) - t2(0, 3);
+            float error_y = t3(1, 3) - t2(1, 3);
+            float error_z = t3(2, 3) - t2(2, 3);
+            if (fabs(error_x) > 0.01 || fabs(error_y) > 0.01 || fabs(error_z) > 0.01) {
+                ESP_LOGW(TAG, "Grasp task: Invalid release position, inverse kinematics error too large");
+                self->grasp_state_ = GraspState::RETURN_HOME;  // Fallback to return home
+                break;
+            }
+
+            self->release_joint_ = j2;
+
+            // Move to release position
+            const std::unordered_map<uint32_t, damiao::Motor*> &motor_map = self->motor_control_->get_motor_map();
+            std::vector<uint32_t> motor_ids;
+            motor_ids.reserve(motor_map.size());
+            for (const auto &pair : motor_map) {
+                motor_ids.push_back(pair.first);
+            }
+            std::sort(motor_ids.begin(), motor_ids.end());
+
+            int joint_count = (motor_ids.size() > 6) ? 6 : motor_ids.size();
+            for (int i = 0; i < joint_count; i++) {
+                uint32_t master_id = motor_ids[i];
+                auto it = motor_map.find(master_id);
+                if (it != motor_map.end() && it->second != nullptr) {
+                    damiao::Motor* motor = it->second;
+                    if (master_id == 0x13) {
+                        self->motor_control_->pos_vel_control(*motor, self->release_joint_[i] * -1.0f, 5.0f);
+                    } else {
+                        self->motor_control_->pos_vel_control(*motor, self->release_joint_[i], 2.0f);
+                    }
+                }
+            }
+            self->grasp_state_ = GraspState::WAIT_ARRIVE_RELEASE;
+            ESP_LOGI(TAG, "Grasp task: Moving to release position (0.32, 0, 0.397)");
+            break;
+        }
+
+        case GraspState::WAIT_ARRIVE_RELEASE: {
+            // Refresh motor status and check if all motors reached release position
+            const std::unordered_map<uint32_t, damiao::Motor*> &motor_map = self->motor_control_->get_motor_map();
+            std::vector<uint32_t> motor_ids;
+            motor_ids.reserve(motor_map.size());
+            for (const auto &pair : motor_map) {
+                motor_ids.push_back(pair.first);
+            }
+            std::sort(motor_ids.begin(), motor_ids.end());
+
+            int joint_count = (motor_ids.size() > 6) ? 6 : motor_ids.size();
+            bool all_reached = true;
+
+            for (int i = 0; i < joint_count; i++) {
+                uint32_t master_id = motor_ids[i];
+                auto it = motor_map.find(master_id);
+                if (it != motor_map.end() && it->second != nullptr) {
+                    damiao::Motor* motor = it->second;
+                    self->motor_control_->refresh_motor_status(*motor);
+
+                    float target_pos = self->release_joint_[i];
+                    if (master_id == 0x13) {
+                        target_pos = target_pos * -1.0f;
+                    }
+                    float pos_error = fabs(motor->motor_fb_param.position - target_pos);
+
+                    if (pos_error > self->POSITION_TOLERANCE) {
+                        all_reached = false;
+                        // Continue sending position command
+                        if (master_id == 0x13) {
+                            self->motor_control_->pos_vel_control(*motor, self->release_joint_[i] * -1.0f, 5.0f);
+                        } else {
+                            self->motor_control_->pos_vel_control(*motor, self->release_joint_[i], 2.0f);
+                        }
+                    }
+                }
+            }
+
+            if (all_reached) {
+                self->grasp_state_ = GraspState::RELEASE_GRIPPER;
+                ESP_LOGI(TAG, "Grasp task: Reached release position");
+            }
+            break;
+        }
+
+        case GraspState::RELEASE_GRIPPER: {
+            damiao::Motor* gripper_motor = self->motor_control_->get_motor_by_master_id(0x17);
+            if (gripper_motor == nullptr) {
+                ESP_LOGE(TAG, "Grasp task: Gripper motor not found");
+                self->grasp_state_ = GraspState::IDLE;
+                break;
+            }
+            self->target_gripper_pos_ = 5.0f;  // Open position (release)
+            self->motor_control_->pos_vel_control(*gripper_motor, self->target_gripper_pos_, 5.0f);
+            self->grasp_state_ = GraspState::WAIT_RELEASE;
+            ESP_LOGI(TAG, "Grasp task: Releasing gripper");
+            break;
+        }
+
+        case GraspState::WAIT_RELEASE: {
+            damiao::Motor* gripper_motor = self->motor_control_->get_motor_by_master_id(0x17);
+            if (gripper_motor == nullptr) {
+                ESP_LOGE(TAG, "Grasp task: Gripper motor not found");
+                self->grasp_state_ = GraspState::IDLE;
+                break;
+            }
+            // Refresh motor status and check if reached target
+            self->motor_control_->refresh_motor_status(*gripper_motor);
+            float pos_error = fabs(gripper_motor->motor_fb_param.position - self->target_gripper_pos_);
+            if (pos_error < self->GRIPPER_TOLERANCE) {
                 self->grasp_state_ = GraspState::RETURN_HOME;
-                ESP_LOGI(TAG, "Grasp task: Gripper closed");
+                ESP_LOGI(TAG, "Grasp task: Gripper released");
             } else {
                 // Continue sending position command
                 self->motor_control_->pos_vel_control(*gripper_motor, self->target_gripper_pos_, 5.0f);
@@ -535,8 +719,14 @@ void Manager::grasp_task(void* arg)
                     self->motor_control_->pos_vel_control(*motor, 0.0f, 1.0f);
                 }
             }
+            // Also return gripper to zero position
+            damiao::Motor* gripper_motor = self->motor_control_->get_motor_by_master_id(0x17);
+            if (gripper_motor != nullptr) {
+                self->target_gripper_pos_ = 0.0f;  // Zero position
+                self->motor_control_->pos_vel_control(*gripper_motor, self->target_gripper_pos_, 5.0f);
+            }
             self->grasp_state_ = GraspState::WAIT_HOME;
-            ESP_LOGI(TAG, "Grasp task: Returning home");
+            ESP_LOGI(TAG, "Grasp task: Returning home (including gripper)");
             break;
         }
 
@@ -569,10 +759,22 @@ void Manager::grasp_task(void* arg)
                 }
             }
 
+            // Also check if gripper reached zero position
+            damiao::Motor* gripper_motor = self->motor_control_->get_motor_by_master_id(0x17);
+            if (gripper_motor != nullptr) {
+                self->motor_control_->refresh_motor_status(*gripper_motor);
+                float gripper_pos_error = fabs(gripper_motor->motor_fb_param.position - 0.0f);
+                if (gripper_pos_error > self->GRIPPER_TOLERANCE) {
+                    all_reached = false;
+                    // Continue sending position command
+                    self->motor_control_->pos_vel_control(*gripper_motor, 0.0f, 5.0f);
+                }
+            }
+
             if (all_reached) {
                 self->grasp_state_ = GraspState::COMPLETED;
                 state_start_time = xTaskGetTickCount();
-                ESP_LOGI(TAG, "Grasp task: Returned home");
+                ESP_LOGI(TAG, "Grasp task: Returned home (including gripper)");
             }
             break;
         }
@@ -669,7 +871,7 @@ void Manager::lvgl_button_clicked_event_handler(lv_event_t *event)
                 TransformMatrix t2 = t1;
                 t2(0, 3) = world_x;
                 t2(1, 3) = world_y;
-                t2(2, 3) = 0.0f;
+                t2(2, 3) = 0.015f;
                 Joint j2 = j1;
                 kinematic.solve_inverse_kinematics(t2, j2);
                 TransformMatrix t3;
@@ -693,6 +895,28 @@ void Manager::lvgl_button_clicked_event_handler(lv_event_t *event)
                 }
             } else {
                 ESP_LOGW(TAG, "Invalid target box coordinates");
+            }
+        }
+    } else if (obj == ui_GoZeroButton) {
+        ESP_LOGI(TAG, "Go zero button clicked");
+        if (self->motor_control_ != nullptr) {
+            const std::unordered_map<uint32_t, damiao::Motor*> &motor_map = self->motor_control_->get_motor_map();
+            for (const auto &pair : motor_map) {
+                damiao::Motor* motor = pair.second;
+                if (motor != nullptr) {
+                    self->motor_control_->pos_vel_control(*motor, 0.0f, 5.0f);
+                }
+            }
+        }
+    } else if (obj == ui_SetZeroButton) {
+        ESP_LOGI(TAG, "Set zero button clicked");
+        if (self->motor_control_ != nullptr) {
+            const std::unordered_map<uint32_t, damiao::Motor*> &motor_map = self->motor_control_->get_motor_map();
+            for (const auto &pair : motor_map) {
+                damiao::Motor* motor = pair.second;
+                if (motor != nullptr) {
+                    self->motor_control_->save_zero_position(*motor);
+                }
             }
         }
     }
@@ -795,7 +1019,7 @@ void Manager::esp_now_receiver_task(void* arg)
         }
 
         memset(self->esp_now_buffer_, 0, sizeof(self->esp_now_buffer_));
-        int len = uart_read_bytes(self->esp_now_uart_port_, self->esp_now_buffer_, sizeof(self->esp_now_buffer_), pdMS_TO_TICKS(5));
+        int len = uart_read_bytes(self->esp_now_uart_port_, self->esp_now_buffer_, sizeof(self->esp_now_buffer_), pdMS_TO_TICKS(10));
 
         if (len >= PACKET_SIZE) {
             // Search for frame header (0xFF 0xFF)

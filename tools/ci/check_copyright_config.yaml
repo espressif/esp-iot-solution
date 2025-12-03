@@ -81,4 +81,4 @@ ignore:  # You can also select ignoring files here
     - 'examples/usb/device/usb_dongle/main/CLI_Commands.c'
     - 'examples/usb/device/usb_dongle/components/FreeRTOS-Plus-CLI/**/*'
     - 'components/display/tools/esp_lv_decoder/priv_include/qoi.h'
-    - 'examples/robot/ragtime_panther/follower/main/ui/**/*'
+    - 'examples/robot/ragtime_panthera/follower/main/ui/**/*'

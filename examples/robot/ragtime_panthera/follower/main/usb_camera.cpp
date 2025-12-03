@@ -9,8 +9,8 @@
 #include "esp_log.h"
 #include "usb_camera.h"
 
-#define JPG_MIN_SIZE 50000
-#define JPG_COMPRESSION_RATIO 4
+#define JPG_MIN_SIZE 40000
+#define JPG_COMPRESSION_RATIO 5
 #define max(a, b) ((a) > (b) ? (a) : (b))
 #define UVC_DESC_DWFRAMEINTERVAL_TO_FPS(dwFrameInterval) (((dwFrameInterval) != 0) ? 10000000 / ((float)(dwFrameInterval)) : 0)
 #define UVC_ESTIMATE_JPG_SIZE_B(width, height, bpp) (max(((width) * (height) * (bpp) / 8) / JPG_COMPRESSION_RATIO, JPG_MIN_SIZE))
@@ -196,7 +196,7 @@ static void uvc_task(void *pvParameter)
 
     // Create event group and frame queue
     dev->event_group = xEventGroupCreate();
-    dev->frame_queue = xQueueCreate(3, sizeof(uvc_host_frame_t *));
+    dev->frame_queue = xQueueCreate(2, sizeof(uvc_host_frame_t *));
 
     if (dev->event_group == NULL || dev->frame_queue == NULL) {
         ESP_LOGE(TAG, "uvc_task: Failed to create event_group or frame_queue");
@@ -485,7 +485,7 @@ esp_err_t usb_camera_init(size_t width, size_t height)
 
     uvc_host_driver_config_t default_driver_config = {};
     default_driver_config.driver_task_stack_size = 5 * 1024;
-    default_driver_config.driver_task_priority = 5;
+    default_driver_config.driver_task_priority = 16;
     default_driver_config.xCoreID = 1;
     default_driver_config.create_background_task = true;
     default_driver_config.event_cb = uvc_host_driver_event_cb;
@@ -502,7 +502,7 @@ uvc_host_frame_t *usb_camera_get_frame(void)
 
     uvc_host_frame_t *frame = NULL;
     // Use non-blocking receive to avoid blocking the calling task
-    if (xQueueReceive(g_uvc_dev->frame_queue, &frame, 0) == pdTRUE) {
+    if (xQueueReceive(g_uvc_dev->frame_queue, &frame, pdMS_TO_TICKS(1000)) == pdTRUE) {
         return frame;
     }
     return NULL;
@@ -515,4 +515,25 @@ esp_err_t usb_camera_return_frame(uvc_host_frame_t *frame)
     }
 
     return uvc_host_frame_return(g_uvc_dev->stream, frame);
+}
+
+esp_err_t usb_camera_restart_stream(void)
+{
+    if (g_uvc_dev == NULL || g_uvc_dev->stream == NULL) {
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    esp_err_t ret = uvc_host_stream_stop(g_uvc_dev->stream);
+    if (ret != ESP_OK) {
+        return ret;
+    }
+
+    vTaskDelay(100 / portTICK_PERIOD_MS); // Give time for stream to stop
+
+    ret = uvc_host_stream_start(g_uvc_dev->stream);
+    if (ret != ESP_OK) {
+        return ret;
+    }
+
+    return ESP_OK;
 }

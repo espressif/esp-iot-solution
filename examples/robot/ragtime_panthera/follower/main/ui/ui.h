@@ -14,13 +14,11 @@ extern "C" {
 
 #include "ui_events.h"
 
-
 ///////////////////// SCREENS ////////////////////
 
 #include "screens/ui_RobotGraspScreen.h"
 
 ///////////////////// VARIABLES ////////////////////
-
 
 // EVENTS
 

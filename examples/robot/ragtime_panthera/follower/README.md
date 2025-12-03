@@ -2,6 +2,10 @@
 
 A standalone implementation of the [Ragtime Panthera](https://github.com/Ragtime-LAB/Ragtime_Panthera) six-axis robotic arm control system on ESP32-P4. This project enables autonomous target grasping functionality with onboard vision detection, local kinematics computation, and motor control, all running on a single ESP32-P4 microcontroller.
 
+<p align="center">
+  <img src="https://dl.espressif.com/AE/esp-iot-solution/ragtime_panthera_grasp.gif" alt="Ragtime Panthera Follower Grasp" width="90%">
+</p>
+
 ## Key Features
 
 ### Onboard Kinematics
@@ -41,7 +45,7 @@ Combining vision detection, kinematics computation, and motor control, the syste
 
 1. Clone the repository and navigate to this example:
    ```bash
-   cd examples/robot/ragtime_panther/follower
+   cd examples/robot/ragtime_panthera/follower
    ```
 
 2. Configure the project:
@@ -64,7 +68,13 @@ In the original [Ragtime Panthera](https://github.com/Ragtime-LAB/Ragtime_Panthe
 
 For detailed assembly instructions, refer to the [Panthera Assembly Video](https://www.bilibili.com/video/BV1AoEAz2Ei8/?spm_id_from=333.337.search-card.all.click).
 
-![panthera_assembly](https://dl.espressif.com/AE/esp-iot-solution/robotic_arm_panthera_assembly.png)
+<p align="center">
+  <img src="https://dl.espressif.com/AE/esp-iot-solution/rangtime_panthera_follower.jpg" alt="Ragtime Panthera Follower" width="80%">
+</p>
+
+<p align="center">
+  <img src="https://dl.espressif.com/AE/esp-iot-solution/robotic_arm_panthera_assembly.png" alt="Ragtime Panthera Assembly" width="80%">
+</p>
 
 ## Kinematics
 
@@ -137,6 +147,7 @@ When `CONSOLE_CONTROL` is enabled in the project configuration, you can control 
 | `panthera_goto_zero` | Move all joints to zero position | `panthera_goto_zero` |
 | `panthera_set_zero` | Set current position as zero for all motors | `panthera_set_zero` |
 | `panthera_goto_position` | Move end-effector to specified Cartesian coordinates | `panthera_goto_position -x <x> -y <y> -z <z>` |
+| `panthera_read_position` | Read all joints position info | `panthera_read_position` |
 
 ### Vision Matrix Commands
 
@@ -209,25 +220,7 @@ Since the current [ESP-HOSTED-MCU](https://github.com/espressif/esp-hosted-mcu) 
 
 ## Building and Flashing
 
-### Build the Project
-
-```bash
-idf.py build
-```
-
-### Flash to Device
-
-```bash
-idf.py flash
-```
-
-### Monitor Output
-
-```bash
-idf.py monitor
-```
-
-Or combine all steps:
+### Build, Flash and Monitor
 
 ```bash
 idf.py build flash monitor

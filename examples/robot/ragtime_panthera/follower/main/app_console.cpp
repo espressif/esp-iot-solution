@@ -44,7 +44,7 @@ static struct {
     struct arg_dbl *m8;
     struct arg_dbl *m9;
     struct arg_end *end;
-} panthera_set_version_matrix_args;
+} panthera_set_vision_matrix_args;
 
 int panthera_enable_cmd(int argc, char **argv)
 {
@@ -162,7 +162,7 @@ int panthera_goto_position_cmd(int argc, char **argv)
                 damiao::Motor* motor = it->second;
                 // Joint 2 (master_id 0x13) needs to be inverted
                 if (master_id == 0x13) {
-                    g_motor_control->pos_vel_control(*motor, j2[i] * -1.0f, 5.0f);
+                    g_motor_control->pos_vel_control(*motor, j2[i] * -1.0f, 4.0f);
                 } else {
                     g_motor_control->pos_vel_control(*motor, j2[i], 2.0f);
                 }
@@ -179,26 +179,26 @@ int panthera_goto_position_cmd(int argc, char **argv)
     return 0;
 }
 
-int panthera_set_version_matrix_cmd(int argc, char **argv)
+int panthera_set_vision_matrix_cmd(int argc, char **argv)
 {
-    int nerrors = arg_parse(argc, argv, (void **) &panthera_set_version_matrix_args);
+    int nerrors = arg_parse(argc, argv, (void **) &panthera_set_vision_matrix_args);
     if (nerrors != 0) {
-        arg_print_errors(stderr, panthera_set_version_matrix_args.end, argv[0]);
+        arg_print_errors(stderr, panthera_set_vision_matrix_args.end, argv[0]);
         return 1;
     }
 
     // Collect matrix values from named arguments
     float matrix_values[9] = {0.0f};
     struct arg_dbl *matrix_args[] = {
-        panthera_set_version_matrix_args.m1,
-        panthera_set_version_matrix_args.m2,
-        panthera_set_version_matrix_args.m3,
-        panthera_set_version_matrix_args.m4,
-        panthera_set_version_matrix_args.m5,
-        panthera_set_version_matrix_args.m6,
-        panthera_set_version_matrix_args.m7,
-        panthera_set_version_matrix_args.m8,
-        panthera_set_version_matrix_args.m9
+        panthera_set_vision_matrix_args.m1,
+        panthera_set_vision_matrix_args.m2,
+        panthera_set_vision_matrix_args.m3,
+        panthera_set_vision_matrix_args.m4,
+        panthera_set_vision_matrix_args.m5,
+        panthera_set_vision_matrix_args.m6,
+        panthera_set_vision_matrix_args.m7,
+        panthera_set_vision_matrix_args.m8,
+        panthera_set_vision_matrix_args.m9
     };
 
     // Check if at least one matrix element is provided
@@ -217,7 +217,7 @@ int panthera_set_version_matrix_cmd(int argc, char **argv)
 
     // Print matrix
     for (int i = 0; i < 9; i += 3) {
-        printf("[%.5f %.5f %.5f]\n", matrix_values[i], matrix_values[i + 1], matrix_values[i + 2]);
+        printf("[%.6f %.6f %.6f]\n", matrix_values[i], matrix_values[i + 1], matrix_values[i + 2]);
     }
 
     nvs_handle_t nvs_handle;
@@ -246,12 +246,12 @@ int panthera_set_version_matrix_cmd(int argc, char **argv)
         return 1;
     }
     nvs_close(nvs_handle);
-    ESP_LOGI(TAG, "Version matrix stored successfully");
+    ESP_LOGI(TAG, "Vision matrix stored successfully");
 
     return 0;
 }
 
-int panthera_get_version_matrix_cmd(int argc, char **argv)
+int panthera_get_vision_matrix_cmd(int argc, char **argv)
 {
     float matrix_values[9] = {0.0f};
     bool all_found = true;
@@ -288,9 +288,45 @@ int panthera_get_version_matrix_cmd(int argc, char **argv)
     }
 
     // Print matrix in 3x3 format
-    ESP_LOGI(TAG, "Version matrix:");
+    ESP_LOGI(TAG, "Vision matrix:");
     for (int i = 0; i < 9; i += 3) {
-        printf("[%.5f %.5f %.5f]\n", matrix_values[i], matrix_values[i + 1], matrix_values[i + 2]);
+        printf("[%.6f %.6f %.6f]\n", matrix_values[i], matrix_values[i + 1], matrix_values[i + 2]);
+    }
+
+    return 0;
+}
+
+int panthera_read_position_cmd(int argc, char **argv)
+{
+    ESP_LOGI(TAG, "Reading panthera motor positions");
+
+    const std::unordered_map<uint32_t, damiao::Motor*> &motor_map = g_motor_control->get_motor_map();
+
+    // Extract master IDs and sort them to ensure consistent ordering
+    std::vector<uint32_t> motor_ids;
+    motor_ids.reserve(motor_map.size());
+    for (const auto &pair : motor_map) {
+        motor_ids.push_back(pair.first);
+    }
+    std::sort(motor_ids.begin(), motor_ids.end());
+
+    // Refresh motor status and read positions
+    ESP_LOGI(TAG, "Motor positions:");
+    printf("Master ID | Position (rad) | Position (deg)\n");
+    printf("----------|----------------|---------------\n");
+
+    for (uint32_t master_id : motor_ids) {
+        auto it = motor_map.find(master_id);
+        if (it != motor_map.end() && it->second != nullptr) {
+            damiao::Motor* motor = it->second;
+            // Refresh motor status to get latest position
+            g_motor_control->refresh_motor_status(*motor);
+            float position_rad = motor->motor_fb_param.position;
+            float position_deg = position_rad * 180.0f / 3.14159265359f;
+            printf("0x%02X      | %12.6f | %12.6f\n", master_id, position_rad, position_deg);
+        } else {
+            ESP_LOGW(TAG, "Motor with master ID 0x%02X not found", master_id);
+        }
     }
 
     return 0;
@@ -361,30 +397,38 @@ esp_err_t app_console_init(damiao::Motor_Control* motor_control)
         .argtable = &panthera_move_args,
     };
 
-    panthera_set_version_matrix_args.m1 = arg_dbl0("1", "m1", "<value>", "Matrix element m1 (row 0, col 0)");
-    panthera_set_version_matrix_args.m2 = arg_dbl0("2", "m2", "<value>", "Matrix element m2 (row 0, col 1)");
-    panthera_set_version_matrix_args.m3 = arg_dbl0("3", "m3", "<value>", "Matrix element m3 (row 0, col 2)");
-    panthera_set_version_matrix_args.m4 = arg_dbl0("4", "m4", "<value>", "Matrix element m4 (row 1, col 0)");
-    panthera_set_version_matrix_args.m5 = arg_dbl0("5", "m5", "<value>", "Matrix element m5 (row 1, col 1)");
-    panthera_set_version_matrix_args.m6 = arg_dbl0("6", "m6", "<value>", "Matrix element m6 (row 1, col 2)");
-    panthera_set_version_matrix_args.m7 = arg_dbl0("7", "m7", "<value>", "Matrix element m7 (row 2, col 0)");
-    panthera_set_version_matrix_args.m8 = arg_dbl0("8", "m8", "<value>", "Matrix element m8 (row 2, col 1)");
-    panthera_set_version_matrix_args.m9 = arg_dbl0("9", "m9", "<value>", "Matrix element m9 (row 2, col 2)");
-    panthera_set_version_matrix_args.end = arg_end(10);
+    panthera_set_vision_matrix_args.m1 = arg_dbl0("1", "m1", "<value>", "Matrix element m1 (row 0, col 0)");
+    panthera_set_vision_matrix_args.m2 = arg_dbl0("2", "m2", "<value>", "Matrix element m2 (row 0, col 1)");
+    panthera_set_vision_matrix_args.m3 = arg_dbl0("3", "m3", "<value>", "Matrix element m3 (row 0, col 2)");
+    panthera_set_vision_matrix_args.m4 = arg_dbl0("4", "m4", "<value>", "Matrix element m4 (row 1, col 0)");
+    panthera_set_vision_matrix_args.m5 = arg_dbl0("5", "m5", "<value>", "Matrix element m5 (row 1, col 1)");
+    panthera_set_vision_matrix_args.m6 = arg_dbl0("6", "m6", "<value>", "Matrix element m6 (row 1, col 2)");
+    panthera_set_vision_matrix_args.m7 = arg_dbl0("7", "m7", "<value>", "Matrix element m7 (row 2, col 0)");
+    panthera_set_vision_matrix_args.m8 = arg_dbl0("8", "m8", "<value>", "Matrix element m8 (row 2, col 1)");
+    panthera_set_vision_matrix_args.m9 = arg_dbl0("9", "m9", "<value>", "Matrix element m9 (row 2, col 2)");
+    panthera_set_vision_matrix_args.end = arg_end(10);
 
-    const esp_console_cmd_t panthera_set_version_matrix = {
-        .command = "panthera_set_version_matrix",
-        .help = "Set version matrix",
+    const esp_console_cmd_t panthera_set_vision_matrix = {
+        .command = "panthera_set_vision_matrix",
+        .help = "Set vision matrix",
         .hint = NULL,
-        .func = panthera_set_version_matrix_cmd,
-        .argtable = &panthera_set_version_matrix_args,
+        .func = panthera_set_vision_matrix_cmd,
+        .argtable = &panthera_set_vision_matrix_args,
     };
 
-    const esp_console_cmd_t panthera_get_version_matrix = {
-        .command = "panthera_get_version_matrix",
-        .help = "Get version matrix",
+    const esp_console_cmd_t panthera_get_vision_matrix = {
+        .command = "panthera_get_vision_matrix",
+        .help = "Get vision matrix",
         .hint = NULL,
-        .func = panthera_get_version_matrix_cmd,
+        .func = panthera_get_vision_matrix_cmd,
+        .argtable = NULL,
+    };
+
+    const esp_console_cmd_t panthera_read_position = {
+        .command = "panthera_read_position",
+        .help = "Read current position of all motors",
+        .hint = NULL,
+        .func = panthera_read_position_cmd,
         .argtable = NULL,
     };
 
@@ -392,8 +436,9 @@ esp_err_t app_console_init(damiao::Motor_Control* motor_control)
     ESP_ERROR_CHECK(esp_console_cmd_register(&panthera_goto_zero));
     ESP_ERROR_CHECK(esp_console_cmd_register(&panthera_set_zero));
     ESP_ERROR_CHECK(esp_console_cmd_register(&panthera_goto_position));
-    ESP_ERROR_CHECK(esp_console_cmd_register(&panthera_set_version_matrix));
-    ESP_ERROR_CHECK(esp_console_cmd_register(&panthera_get_version_matrix));
+    ESP_ERROR_CHECK(esp_console_cmd_register(&panthera_set_vision_matrix));
+    ESP_ERROR_CHECK(esp_console_cmd_register(&panthera_get_vision_matrix));
+    ESP_ERROR_CHECK(esp_console_cmd_register(&panthera_read_position));
     ESP_ERROR_CHECK(esp_console_start_repl(repl));
 
     return ESP_OK;

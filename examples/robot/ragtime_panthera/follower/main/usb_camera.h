@@ -31,3 +31,10 @@ uvc_host_frame_t *usb_camera_get_frame(void);
  * @return esp_err_t ESP_OK on success, other error code on failure
  */
 esp_err_t usb_camera_return_frame(uvc_host_frame_t *frame);
+
+/**
+ * @brief Restart the USB camera stream
+ *
+ * @return esp_err_t ESP_OK on success, other error code on failure
+ */
+esp_err_t usb_camera_restart_stream(void);
