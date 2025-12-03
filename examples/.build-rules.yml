@@ -510,3 +510,7 @@ examples/elf_loader/build_elf_file_example:
 examples/relinker:
   enable:
     - if: IDF_TARGET in ["esp32c2","esp32c3"]
+
+examples/robot/ragtime_panther/leader:
+  enable:
+    - if: IDF_TARGET in ["esp32c3"] and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 5)

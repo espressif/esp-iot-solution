@@ -1,0 +1,8 @@
+version: "0.1.0"
+description: A bus servo component designed for driving the XM330_M077 servo.
+dependencies:
+  idf: ">=5.0"
+  cmake_utilities: "*"
+sbom:
+  supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'
+  originator: 'Organization: Espressif Systems (Shanghai) CO LTD'
