@@ -1,3 +1,4 @@
 set(srcs "gprof_simple_main.c")
 
-idf_component_register(SRCS ${srcs})
+idf_component_register(SRCS ${srcs}
+                    PRIV_REQUIRES test_func)
