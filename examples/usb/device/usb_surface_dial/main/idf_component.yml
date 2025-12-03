@@ -4,7 +4,7 @@ dependencies:
   idf:
     version: ">=5.0"
   espressif/button:
-    version: ">=4.1.0"
+    override_path: "../../../../../components/button"
   espressif/tinyusb:
     version: ">=0.18.0~1"
   espressif/knob:
