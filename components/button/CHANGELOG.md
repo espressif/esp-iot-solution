@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v4.1.5 - 2025-12-3
+
+### Fix:
+
+* Fixed the unreasonable function name `iot_button_get_ticks_time` and renamed it to `iot_button_get_pressed_time`
+
 ## v4.1.4 - 2025-10-08
 
 ### Fix:

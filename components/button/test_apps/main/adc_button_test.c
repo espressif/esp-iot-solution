@@ -28,7 +28,7 @@ static void button_event_cb(void *arg, void *data)
     }
 
     if (BUTTON_PRESS_UP == event || BUTTON_LONG_PRESS_HOLD == event || BUTTON_LONG_PRESS_UP == event) {
-        ESP_LOGI(TAG, "\tTICKS[%"PRIu32"]", iot_button_get_ticks_time(arg));
+        ESP_LOGI(TAG, "\tPressed Time[%"PRIu32"]", iot_button_get_pressed_time(arg));
     }
 
     if (BUTTON_MULTIPLE_CLICK == event) {

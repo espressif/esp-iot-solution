@@ -152,8 +152,8 @@ static void button_handler(button_dev_t *btn)
             btn->event = (uint8_t)BUTTON_LONG_PRESS_START;
             btn->state = PRESS_LONG_PRESS_UP_CHECK;
             /** Calling callbacks for BUTTON_LONG_PRESS_START */
-            uint32_t ticks_time = iot_button_get_ticks_time(btn);
-            int32_t diff = ticks_time - btn->long_press_ticks * TICKS_INTERVAL;
+            uint32_t pressed_time = iot_button_get_pressed_time(btn);
+            int32_t diff = pressed_time - btn->long_press_ticks * TICKS_INTERVAL;
             if (btn->cb_info[btn->event] && btn->count[0] == 0) {
                 if (abs(diff) <= TOLERANCE && btn->cb_info[btn->event][btn->count[0]].event_args.long_press.press_time == (btn->long_press_ticks * TICKS_INTERVAL)) {
                     do {
@@ -229,7 +229,7 @@ static void button_handler(button_dev_t *btn)
             }
 
             /** Calling callbacks for BUTTON_LONG_PRESS_START based on press_time */
-            uint32_t ticks_time = iot_button_get_ticks_time(btn);
+            uint32_t pressed_time = iot_button_get_pressed_time(btn);
             if (btn->cb_info[BUTTON_LONG_PRESS_START]) {
                 button_cb_info_t *cb_info = btn->cb_info[BUTTON_LONG_PRESS_START];
                 uint16_t time = cb_info[btn->count[0]].event_args.long_press.press_time;
@@ -242,7 +242,7 @@ static void button_handler(button_dev_t *btn)
                         }
                     }
                 }
-                if (btn->count[0] < btn->size[BUTTON_LONG_PRESS_START] && abs((int)ticks_time - (int)time) <= TOLERANCE) {
+                if (btn->count[0] < btn->size[BUTTON_LONG_PRESS_START] && abs((int)pressed_time - (int)time) <= TOLERANCE) {
                     btn->event = (uint8_t)BUTTON_LONG_PRESS_START;
                     do {
                         cb_info[btn->count[0]].cb(btn, cb_info[btn->count[0]].usr_data);
@@ -267,7 +267,7 @@ static void button_handler(button_dev_t *btn)
                         }
                     }
                 }
-                if (btn->count[1] + 1 < btn->size[BUTTON_LONG_PRESS_UP] && abs((int)ticks_time - (int)time) <= TOLERANCE) {
+                if (btn->count[1] + 1 < btn->size[BUTTON_LONG_PRESS_UP] && abs((int)pressed_time - (int)time) <= TOLERANCE) {
                     do {
                         btn->count[1]++;
                         if (btn->count[1] + 1 >= btn->size[BUTTON_LONG_PRESS_UP]) {
@@ -550,11 +550,16 @@ uint8_t iot_button_get_repeat(button_handle_t btn_handle)
     return btn->repeat;
 }
 
-uint32_t iot_button_get_ticks_time(button_handle_t btn_handle)
+uint32_t iot_button_get_pressed_time(button_handle_t btn_handle)
 {
     BTN_CHECK(NULL != btn_handle, "Pointer of handle is invalid", 0);
     button_dev_t *btn = (button_dev_t *) btn_handle;
     return (btn->ticks * TICKS_INTERVAL);
+}
+
+uint32_t iot_button_get_ticks_time(button_handle_t btn_handle)
+{
+    return iot_button_get_pressed_time(btn_handle);
 }
 
 uint16_t iot_button_get_long_press_hold_cnt(button_handle_t btn_handle)
