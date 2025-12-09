@@ -807,14 +807,8 @@ static esp_err_t _cdc_close(usbh_cdc_t *cdc)
         ESP_ERROR_CHECK(_cdc_reset_transfer_endpoint(cdc->dev_hdl, cdc->data.in_xfer));
     }
 
-    ESP_ERROR_CHECK(_cdc_reset_transfer_endpoint(cdc->dev_hdl, cdc->data.out_xfer));
-
     if (cdc->notif.xfer) {
         ESP_ERROR_CHECK(_cdc_reset_transfer_endpoint(cdc->dev_hdl, cdc->notif.xfer));
-    }
-
-    if ((cdc->notif.intf_desc != NULL) && cdc->notif.intf_desc != cdc->data.intf_desc) {
-        ESP_ERROR_CHECK(usb_host_interface_release(p_usbh_cdc_obj->cdc_client_hdl, cdc->dev_hdl, cdc->notif.intf_desc->bInterfaceNumber));
     }
 
     if (cdc->data.out_xfer) {
@@ -823,6 +817,11 @@ static esp_err_t _cdc_close(usbh_cdc_t *cdc)
 
     // wait for transfers to complete
     vTaskDelay(10 / portTICK_PERIOD_MS);
+
+    if ((cdc->notif.intf_desc != NULL) && cdc->notif.intf_desc != cdc->data.intf_desc) {
+        ESP_ERROR_CHECK(usb_host_interface_release(p_usbh_cdc_obj->cdc_client_hdl, cdc->dev_hdl, cdc->notif.intf_desc->bInterfaceNumber));
+    }
+
     // Release all interfaces
     ESP_ERROR_CHECK(usb_host_interface_release(p_usbh_cdc_obj->cdc_client_hdl, cdc->dev_hdl, cdc->data.intf_desc->bInterfaceNumber));
 
