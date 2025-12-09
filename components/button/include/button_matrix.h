@@ -37,6 +37,7 @@ typedef struct {
     int32_t *col_gpios;        /**< GPIO number list for the column */
     uint32_t row_gpio_num;     /**< Number of GPIOs associated with the row */
     uint32_t col_gpio_num;     /**< Number of GPIOs associated with the column */
+    bool scan_inverted;        /**< Inverted GPIO levels (pulse low) for row scanning */
 } button_matrix_config_t;
 
 /**
